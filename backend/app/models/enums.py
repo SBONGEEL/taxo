@@ -80,11 +80,12 @@ class FeatureKey(StrEnum):
     تغييرُ كود فقط بلا ترحيلة. هذا النوع يحرس الكتابة عبر طبقة Pydantic.
     """
 
+    # لا مفتاح للعمولة هنا: مصدرها الوحيد `commission_settings` حيث تسكن نسبتها
+    # ونطاقها — مفتاح ثانٍ يعني حالتين قابلتين للاختلاف لأمرٍ مالي.
     CLIQ_ENABLED = "cliq_enabled"
     CARD_ENABLED = "card_enabled"
     WALLET_ENABLED = "wallet_enabled"
     WALLET_TRANSFER_ENABLED = "wallet_transfer_enabled"
-    COMMISSION_ENABLED = "commission_enabled"
 
 
 class AuditAction(StrEnum):

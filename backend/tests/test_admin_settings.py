@@ -161,7 +161,7 @@ async def test_unknown_feature_key_is_rejected(
 # ------------------------------------------------------------------- العمولة
 
 
-async def test_commission_starts_disabled_and_syncs_with_flag(
+async def test_commission_is_enabled_per_country(
     client: AsyncClient, admin_headers: dict
 ) -> None:
     response = await client.patch(
@@ -175,24 +175,32 @@ async def test_commission_starts_disabled_and_syncs_with_flag(
     assert body["commission_percent"] == "12.50"
     assert body["applies_to"] == "all_rides"
 
-    flags = await client.get("/admin/settings/feature-flags", headers=admin_headers)
-    by_country = {row["country_code"]: row["flags"] for row in flags.json()}
+    listed = await client.get("/admin/settings/commission", headers=admin_headers)
+    by_country = {row["country_code"]: row for row in listed.json()}
     assert by_country["JO"]["commission_enabled"] is True
-    assert by_country["LY"]["commission_enabled"] is False
+    assert "LY" not in by_country  # لم تُنشأ لدولة لم تُعدَّل
 
 
-async def test_flag_toggle_syncs_back_into_commission_setting(
+async def test_commission_has_no_feature_flag_counterpart(
     client: AsyncClient, admin_headers: dict
 ) -> None:
-    await client.put(
+    """مصدر تفعيل العمولة واحد: `commission_settings` لا `feature_flags`."""
+    await client.patch(
+        "/admin/settings/commission/JO",
+        json={"commission_enabled": True},
+        headers=admin_headers,
+    )
+
+    flags = await client.get("/admin/settings/feature-flags", headers=admin_headers)
+    for row in flags.json():
+        assert "commission_enabled" not in row["flags"]
+
+    rejected = await client.put(
         "/admin/settings/feature-flags",
         json={"country_code": "LY", "feature_key": "commission_enabled", "enabled": True},
         headers=admin_headers,
     )
-
-    listed = await client.get("/admin/settings/commission", headers=admin_headers)
-    by_country = {row["country_code"]: row for row in listed.json()}
-    assert by_country["LY"]["commission_enabled"] is True
+    assert rejected.status_code == 422
 
 
 async def test_commission_percent_is_bounded(

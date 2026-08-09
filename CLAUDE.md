@@ -125,6 +125,8 @@ Money columns use `models/base.py::MONEY` (`NUMERIC(12,3)`); currency is derived
 - Wallet balance is derived from the immutable `wallet_transactions` ledger. There is no balance column.
 - Pricing and all financial math happen in the backend only; the frontends display.
 - `rides.commission_percent_at_ride` is frozen at creation and never recomputed retroactively.
+- Commission is enabled **only** through `commission_settings`; there is deliberately no
+  `commission_enabled` feature flag, so the switch, the percent, and the scope cannot disagree.
 - Every endpoint touching a ride or wallet must verify ownership (no IDOR).
 
 Python is pinned to 3.12 in the Dockerfile even though the host has 3.14, because Celery (stage 7)

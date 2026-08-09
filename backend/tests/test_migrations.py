@@ -61,7 +61,7 @@ async def test_schema_is_built_by_migrations() -> None:
         )
 
     assert "alembic_version" in tables
-    assert revision == "0003"
+    assert revision == "0004"
     assert {
         "users",
         "drivers",

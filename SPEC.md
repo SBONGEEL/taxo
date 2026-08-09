@@ -140,11 +140,14 @@ taxo/
 
 ### commission_settings
 - `country_code`, `commission_enabled` (default **false**), `commission_percent`, `applies_to`
+- `applies_to`: `all_rides` (كل الرحلات) أو `cashless_rides` (البطاقة والمحفظة فقط — ما تمر أمواله عبر المنصة)
+- **هذا الجدول هو المصدر الوحيد لتفعيل العمولة.** لا مفتاح `commission_enabled` في `feature_flags`: التفعيل والنسبة والنطاق تسكن معاً في صف واحد، فلا تنشأ حالتان قابلتان للاختلاف في أمر مالي
 
 ### feature_flags
 - `country_code`, `feature_key`, `enabled`
-- المفاتيح المبدئية: `cliq_enabled`, `card_enabled`, `wallet_enabled`, `wallet_transfer_enabled`, `commission_enabled`
-- إعداد ليبيا الافتراضي: الكل **false** (كاش فقط) / الأردن: حسب الإطلاق
+- المفاتيح المبدئية: `cliq_enabled`, `card_enabled`, `wallet_enabled`, `wallet_transfer_enabled`
+- غياب الصف = الميزة **معطّلة** — لا يُفترض التفعيل أبداً
+- إعداد ليبيا الافتراضي: الكل **false** (كاش فقط) / الأردن: `cliq_enabled` و`card_enabled` و`wallet_enabled` مفعّلة، و`wallet_transfer_enabled` معطّل
 
 ### provider_credentials (بيانات عقود المزودين — تُدار من صفحة العقود)
 - **القاعدة: أي مزود خارجي يحتاج مفتاح/عقد API يُدار من هنا حصراً — بما فيهم Mapbox وTelr** — لا مفاتيح مزودين في `.env` أو الكود

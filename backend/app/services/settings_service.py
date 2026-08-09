@@ -80,13 +80,6 @@ async def set_flag(
         entity_id=flag.id,
         details=details,
     )
-
-    if key == FeatureKey.COMMISSION_ENABLED.value:
-        # المفتاح وجدول العمولة يصفان الشيء نفسه في SPEC — نُبقيهما متطابقين
-        # حتى لا يقرأ حساب الرحلة قيمة تخالف ما تعرضه اللوحة.
-        setting = await get_or_create_commission(session, country_code)
-        setting.commission_enabled = enabled
-
     return flag
 
 

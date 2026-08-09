@@ -215,22 +215,11 @@ async def update_commission_setting(
 ) -> CommissionSettingOut:
     """تعديل العمولة — يسري على الرحلات الجديدة فقط.
 
+    هذا هو المكان الوحيد لتفعيل العمولة؛ لا مفتاح مقابل في `feature_flags`.
     الرحلات القائمة تحمل `commission_percent_at_ride` مجمّدة (SPEC القسم 8).
     """
     setting = await settings_service.get_or_create_commission(session, country_code)
-    changes = payload.model_dump(exclude_unset=True)
-    changed = _apply_updates(setting, changes)
-
-    if "commission_enabled" in changes:
-        # المفتاح في feature_flags يعكس نفس الحالة
-        await settings_service.set_flag(
-            session,
-            country_code=country_code,
-            feature_key="commission_enabled",
-            enabled=setting.commission_enabled,
-            actor=admin,
-            reason="مزامنة مع إعداد العمولة",
-        )
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
 
     await audit.record(
         session,

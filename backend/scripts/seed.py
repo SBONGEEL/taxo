@@ -47,7 +47,6 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         FeatureKey.CARD_ENABLED: True,
         FeatureKey.WALLET_ENABLED: True,
         FeatureKey.WALLET_TRANSFER_ENABLED: False,
-        FeatureKey.COMMISSION_ENABLED: False,
     },
 }
 
