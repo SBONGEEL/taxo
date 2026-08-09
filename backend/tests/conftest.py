@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
@@ -10,6 +11,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
+from httpx_ws.transport import ASGIWebSocketTransport
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -86,17 +88,39 @@ async def _create_test_database() -> AsyncIterator[None]:
 
 @pytest.fixture(autouse=True)
 async def _clean_state() -> AsyncIterator[None]:
-    """كل اختبار يبدأ من جداول فارغة وRedis فارغ."""
+    """كل اختبار يبدأ من جداول فارغة وRedis فارغ.
+
+    مهام التوزيع تُوقف أولاً: مهمة ناجية من اختبار سابق ستقرأ رحلة حُذف صفها.
+    """
+    from app.services import dispatch, tracking
+
+    await dispatch.shutdown()
+    await tracking.shutdown()
     async with engine.begin() as conn:
         tables = ", ".join(f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables))
         await conn.exec_driver_sql(f"TRUNCATE {tables} RESTART IDENTITY CASCADE")
     await get_redis_client().flushdb()
     yield
+    await dispatch.shutdown()
+    await tracking.shutdown()
 
 
 @pytest.fixture
 async def client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as ac:
+        yield ac
+
+
+@asynccontextmanager
+async def ws_client() -> AsyncIterator[AsyncClient]:
+    """عميل يفتح مقابس WebSocket على نفس تطبيق ASGI وفي نفس حلقة الأحداث.
+
+    ليس fixture عمداً: ناقل httpx-ws يفتح مجموعة مهام anyio، وanyio يرفض
+    الخروج منها في مهمة غير التي دخلتها — وpytest-asyncio ينفّذ تفكيك الـ
+    fixture في مهمة أخرى. فتحُه داخل جسم الاختبار يبقي الدخول والخروج معاً.
+    """
+    transport = ASGIWebSocketTransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test/api/v1") as ac:
         yield ac
 
@@ -136,6 +160,69 @@ async def admin_headers() -> dict[str, str]:
 @pytest.fixture
 async def support_headers() -> dict[str, str]:
     return await _staff_headers("support", "+962790000002", "دعم الاختبار")
+
+
+@pytest.fixture(autouse=True)
+def fast_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """يضغط مهل التوزيع.
+
+    قيم SPEC الحقيقية (20 ثانية للعرض، دقيقتان للمحاولة كلها) صحيحة في
+    التشغيل ومستحيلة في اختبار. عدد المحاولات (5) يبقى كما هو لأنه جزء من
+    السلوك المُختبَر لا من سرعته.
+    """
+    from app.services import dispatch, tracking
+
+    monkeypatch.setattr(dispatch, "OFFER_TIMEOUT_SECONDS", 2)
+    monkeypatch.setattr(dispatch, "TOTAL_TIMEOUT_SECONDS", 5)
+    monkeypatch.setattr(dispatch, "IDLE_POLL_SECONDS", 0.2)
+    # المراقبة تسأل أسرع؛ حكمُها (اختفاء الحضور) يبقى كما هو
+    monkeypatch.setattr(tracking, "CHECK_INTERVAL_SECONDS", 0.2)
+
+
+@pytest.fixture(autouse=True)
+def stub_mapbox(monkeypatch: pytest.MonkeyPatch) -> None:
+    """يستبدل نداء Mapbox وحده — قراءة التوكن من عقود المزودين تبقى حقيقية."""
+    from app.services import directions
+    from tests.helpers import MAPBOX_SECRET, STUB_ROUTE
+
+    async def _fetch_route(token: str, pickup, dropoff):
+        assert token == MAPBOX_SECRET, "التوكن السري يجب أن يأتي من جدول العقود"
+        return STUB_ROUTE
+
+    monkeypatch.setattr(directions, "fetch_route", _fetch_route)
+
+
+@pytest.fixture
+async def jordan_settings(session_factory) -> None:
+    """تسعيرة الأردن + عقد Mapbox مفعّل — أدنى ما تحتاجه رحلة."""
+    from decimal import Decimal
+
+    from app.models.enums import CountryCode, ProviderKey, VehicleCategory
+    from app.models.pricing import PricingRule
+    from app.services.providers import credentials as credentials_service
+    from tests.helpers import CANCELLATION_FEE, MAPBOX_SECRET
+
+    async with session_factory() as session:
+        for category in VehicleCategory:
+            session.add(
+                PricingRule(
+                    country_code=CountryCode.JO,
+                    vehicle_category=category,
+                    base_fare=Decimal("1.000"),
+                    price_per_km=Decimal("0.500"),
+                    price_per_min=Decimal("0.100"),
+                    minimum_fare=Decimal("2.000"),
+                    cancellation_fee=Decimal(CANCELLATION_FEE),
+                )
+            )
+        await credentials_service.upsert(
+            session,
+            provider_key=ProviderKey.MAPBOX,
+            country_code=None,
+            values={"public_token": "pk.test", "secret_token": MAPBOX_SECRET},
+            is_active=True,
+        )
+        await session.commit()
 
 
 @pytest.fixture

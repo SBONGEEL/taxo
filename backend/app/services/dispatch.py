@@ -1,0 +1,397 @@
+"""خوارزمية إسناد الرحلات للكباتن (SPEC القسم 5.3).
+
+الطلب لا يُعرض على كل الكباتن دفعةً واحدة: يُعرض على **الأقرب أولاً** ولمدة
+عشرين ثانية، فإن رفض أو صمت انتقل للتالي. تنتهي المحاولة بعد خمسة عروض أو
+دقيقتين — أيهما أسبق — بحالة `no_driver_found`.
+
+كل رحلة يتبعها مهمة asyncio مستقلة تعيش داخل عملية التطبيق. لا Celery هنا
+قصداً: الأمر تفاعليّ بمقياس الثواني والراكب ينتظر على الشاشة، بينما Celery
+(المرحلة 7) لما يحتمل التأجيل كانتهاء الاشتراكات.
+
+**حالة العرض في Redis لا في الذاكرة**، فقبول الكبتن يُتحقق منه في أي عامل
+uvicorn وصله الطلب:
+
+- `dispatch:offer:{ride_id}` → الكبتن المعروض عليه الآن (بعمر المهلة)
+- `dispatch:driver_offer:{driver_id}` → الرحلة المعروضة عليه (بعمرها نفسه)،
+  يُكتب بـ NX فلا يُعرض على كبتن واحد طلبان في آن
+- `dispatch:signal:{ride_id}` → قائمة يوقظ بها القبولُ والرفضُ المهمةَ النائمة
+  بدل انتظار المهلة كاملة
+
+آخر أحكام الأهلية — الاشتراك الساري — يأتي في المرحلة 7 مع
+`driver_subscriptions`؛ موضعه مُعلَّم في `_eligible_driver_ids`.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import logging
+import time
+import uuid
+
+from redis.asyncio import Redis
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.db import SessionLocal
+from app.core.exceptions import NotFound, RideOfferExpired
+from app.core.redis_client import get_redis_client
+from app.models.driver import Driver
+from app.models.enums import DriverStatus, RideStatus, VehicleCategory
+from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
+from app.models.vehicle import Vehicle
+from app.services import geo
+from app.ws import events
+
+logger = logging.getLogger(__name__)
+
+# ثوابت SPEC القسم 5.3 — لا إعدادات: هذه قواعد التوزيع نفسها
+OFFER_TIMEOUT_SECONDS = 20
+MAX_ATTEMPTS = 5
+TOTAL_TIMEOUT_SECONDS = 120
+
+# مهلة بين دورتي بحث حين لا يوجد أي كبتن قريب — لا تُحتسب محاولة
+IDLE_POLL_SECONDS = 3.0
+
+_SIGNAL_ACCEPTED = "accepted"
+_SIGNAL_DECLINED = "declined"
+_SIGNAL_TTL_SECONDS = 60
+
+# حذف مشروط بالقيمة: مهمة قديمة يجب ألا تمحو عرضاً أحدث للكبتن نفسه
+_RELEASE_OFFER = """
+if redis.call('get', KEYS[1]) == ARGV[1] then redis.call('del', KEYS[1]) end
+if redis.call('get', KEYS[2]) == ARGV[2] then redis.call('del', KEYS[2]) end
+return 1
+"""
+
+# المهام الجارية — لإيقافها عند إطفاء التطبيق ومنع تكرارها للرحلة الواحدة
+_tasks: dict[uuid.UUID, asyncio.Task] = {}
+
+
+def offer_key(ride_id: uuid.UUID | str) -> str:
+    return f"dispatch:offer:{ride_id}"
+
+
+def driver_offer_key(driver_id: uuid.UUID | str) -> str:
+    return f"dispatch:driver_offer:{driver_id}"
+
+
+def signal_key(ride_id: uuid.UUID | str) -> str:
+    return f"dispatch:signal:{ride_id}"
+
+
+# ------------------------------------------------------------------- العروض
+
+
+async def current_offer(redis: Redis, ride_id: uuid.UUID) -> uuid.UUID | None:
+    """الكبتن المعروضة عليه هذه الرحلة الآن، إن وُجد."""
+    raw = await redis.get(offer_key(ride_id))
+    if raw is None:
+        return None
+    try:
+        return uuid.UUID(raw)
+    except ValueError:  # pragma: no cover - قيمة تالفة
+        return None
+
+
+async def require_offer(redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID) -> None:
+    """يمنع قبول رحلة لم تُعرض على هذا الكبتن — أو انتهت مهلته فيها."""
+    if await current_offer(redis, ride_id) != driver_id:
+        raise RideOfferExpired()
+
+
+async def release_offer(
+    redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID
+) -> None:
+    await redis.eval(
+        _RELEASE_OFFER,
+        2,
+        offer_key(ride_id),
+        driver_offer_key(driver_id),
+        str(driver_id),
+        str(ride_id),
+    )
+
+
+async def withdraw_offer(
+    session: AsyncSession, redis: Redis, ride_id: uuid.UUID
+) -> None:
+    """يسحب العرض القائم ويطوي بطاقته من شاشة الكبتن (إلغاء أثناء البحث)."""
+    driver_id = await current_offer(redis, ride_id)
+    if driver_id is None:
+        return
+
+    await release_offer(redis, ride_id, driver_id)
+    driver_user_id = await session.scalar(
+        select(Driver.user_id).where(Driver.id == driver_id)
+    )
+    if driver_user_id is not None:
+        await events.publish_offer_expired(
+            redis, driver_user_id=driver_user_id, ride_id=ride_id
+        )
+
+
+async def _reserve_offer(
+    redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID, ttl: int
+) -> bool:
+    """يحجز الكبتن لهذه الرحلة. False إن كان معروضاً عليه طلب آخر."""
+    reserved = await redis.set(
+        driver_offer_key(driver_id), str(ride_id), nx=True, ex=ttl
+    )
+    if not reserved:
+        return False
+    await redis.set(offer_key(ride_id), str(driver_id), ex=ttl)
+    return True
+
+
+# ------------------------------------------------------------------ الإشارات
+
+
+async def _signal(redis: Redis, ride_id: uuid.UUID, value: str) -> None:
+    pipe = redis.pipeline()
+    pipe.rpush(signal_key(ride_id), value)
+    pipe.expire(signal_key(ride_id), _SIGNAL_TTL_SECONDS)
+    await pipe.execute()
+
+
+async def notify_accepted(redis: Redis, ride_id: uuid.UUID) -> None:
+    """يوقظ المهمة فتتوقف فوراً بدل انتظار بقية المهلة."""
+    await _signal(redis, ride_id, _SIGNAL_ACCEPTED)
+
+
+async def notify_declined(
+    redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID
+) -> None:
+    """رفض صريح — ينتقل التوزيع للتالي بلا انتظار."""
+    await release_offer(redis, ride_id, driver_id)
+    await _signal(redis, ride_id, f"{_SIGNAL_DECLINED}:{driver_id}")
+
+
+async def _wait_for_signal(
+    redis: Redis, ride_id: uuid.UUID, timeout: float
+) -> str | None:
+    # BLPOP لا يقبل صفراً (معناه انتظار بلا نهاية)، وأدنى دقة له ثانية
+    result = await redis.blpop([signal_key(ride_id)], timeout=max(1, round(timeout)))
+    return result[1] if result else None
+
+
+# ------------------------------------------------------------------- الأهلية
+
+
+async def eligible_driver_ids(
+    session: AsyncSession,
+    driver_ids: list[uuid.UUID],
+    vehicle_category: VehicleCategory,
+) -> set[uuid.UUID]:
+    """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن.
+
+    تستعملها خريطة الراكب أيضاً، فما يُعرض «متاحاً» هو نفسه ما يُسنَد إليه.
+
+    شروط SPEC القسم 5.3: معتمد + أونلاين + بلا رحلة جارية، ومركبته من الفئة
+    المطلوبة. **المرحلة 7** تضيف هنا شرط الاشتراك الساري
+    (`expires_at > now` من `driver_subscriptions`) — لا رحلات بلا اشتراك.
+    """
+    if not driver_ids:
+        return set()
+
+    busy = (
+        select(Ride.id)
+        .where(Ride.driver_id == Driver.id, Ride.status.in_(ACTIVE_DRIVER_STATUSES))
+        .exists()
+    )
+    has_vehicle = (
+        select(Vehicle.id)
+        .where(Vehicle.driver_id == Driver.id, Vehicle.category == vehicle_category)
+        .exists()
+    )
+
+    rows = await session.scalars(
+        select(Driver.id).where(
+            Driver.id.in_(driver_ids),
+            Driver.status == DriverStatus.APPROVED,
+            Driver.is_online.is_(True),
+            Driver.current_ride_id.is_(None),
+            has_vehicle,
+            ~busy,
+        )
+    )
+    return set(rows.all())
+
+
+async def _next_candidate(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    ride: Ride,
+    tried: set[uuid.UUID],
+) -> geo.DriverPresence | None:
+    """أقرب كبتن مؤهل لم يُعرض عليه هذا الطلب بعد.
+
+    يبدأ البحث بثلاثة كيلومترات ويتوسع لسبعة إن خلت الدائرة (SPEC القسم 5.3).
+    """
+    for radius in (geo.SEARCH_RADIUS_KM, geo.MAX_SEARCH_RADIUS_KM):
+        presences = [
+            presence
+            for presence in await geo.nearby(
+                redis,
+                country_code=ride.country_code,
+                lat=ride.pickup_lat,
+                lng=ride.pickup_lng,
+                radius_km=radius,
+            )
+            if presence.driver_id not in tried
+            and presence.vehicle_category == ride.vehicle_category
+        ]
+        if not presences:
+            continue
+
+        eligible = await eligible_driver_ids(
+            session,
+            [presence.driver_id for presence in presences],
+            ride.vehicle_category,
+        )
+        # `presences` مرتبة من الأقرب، فأول مؤهل فيها هو الأقرب المؤهل
+        for presence in presences:
+            if presence.driver_id in eligible:
+                return presence
+
+    return None
+
+
+# ----------------------------------------------------------- تشغيل التوزيع
+
+
+async def _load_ride(session: AsyncSession, ride_id: uuid.UUID) -> Ride | None:
+    """الرحلة بعلاقاتها محمّلة: حمولة البث تحتاجها بعد إغلاق الجلسة."""
+    from app.services import rides as rides_service
+
+    try:
+        return await rides_service.get_ride(session, ride_id)
+    except NotFound:  # pragma: no cover - تُحذف الرحلة أثناء التوزيع
+        return None
+
+
+async def _locked_ride(session: AsyncSession, ride_id: uuid.UUID) -> Ride | None:
+    """قفل صف الرحلة قبل تغيير حالتها.
+
+    بلا القفل قد يقرأ التوزيعُ حالةً ويكتب فوق قبولٍ أو إلغاءٍ وقع بينهما.
+    """
+    return await session.scalar(
+        select(Ride).where(Ride.id == ride_id).with_for_update()
+    )
+
+
+async def _mark_no_driver_found(redis: Redis, ride_id: uuid.UUID) -> None:
+    from app.services import rides as rides_service
+
+    async with SessionLocal() as session:
+        locked = await _locked_ride(session, ride_id)
+        if locked is None or locked.status != RideStatus.SEARCHING:
+            return  # قُبلت أو أُلغيت بيننا وبين آخر فحص
+        ride = await rides_service.mark_no_driver_found(session, locked)
+        await session.commit()
+        await events.publish_ride_event(redis, ride, events.RideEvent.NO_DRIVER_FOUND)
+
+
+async def _run(ride_id: uuid.UUID) -> None:
+    from app.services import rides as rides_service
+
+    redis = get_redis_client()
+    deadline = time.monotonic() + TOTAL_TIMEOUT_SECONDS
+    tried: set[uuid.UUID] = set()
+    attempts = 0
+
+    # `requested → searching`: من هنا فصاعداً الراكب يرى «نبحث عن كبتن»
+    async with SessionLocal() as session:
+        locked = await _locked_ride(session, ride_id)
+        if locked is None or locked.status != RideStatus.REQUESTED:
+            return  # أُلغيت قبل أن يبدأ البحث
+        await rides_service.mark_searching(session, locked)
+        await session.commit()
+
+    while attempts < MAX_ATTEMPTS and time.monotonic() < deadline:
+        async with SessionLocal() as session:
+            ride = await _load_ride(session, ride_id)
+            # أُلغيت أو قُبلت من مسار آخر — لا شأن للتوزيع بها بعد الآن
+            if ride is None or ride.status != RideStatus.SEARCHING:
+                return
+            candidate = await _next_candidate(session, redis, ride=ride, tried=tried)
+            driver_user_id = (
+                await session.scalar(
+                    select(Driver.user_id).where(Driver.id == candidate.driver_id)
+                )
+                if candidate is not None
+                else None
+            )
+
+        # لا أحد قريب بعد — ننتظر ظهور كبتن، والانتظار خارج الجلسة حتى لا
+        # يُحجز اتصال بالقاعدة طوال المهلة. لا تُحتسب محاولة على غياب المرشحين.
+        if candidate is None:
+            await asyncio.sleep(IDLE_POLL_SECONDS)
+            continue
+
+        if not await _reserve_offer(
+            redis, ride_id, candidate.driver_id, OFFER_TIMEOUT_SECONDS
+        ):
+            # معروض عليه طلب آخر في هذه اللحظة — نتخطاه بلا احتساب محاولة
+            tried.add(candidate.driver_id)
+            continue
+
+        attempts += 1
+        tried.add(candidate.driver_id)
+        # تُمسح إشارات المحاولة السابقة حتى لا يُقرأ رفضٌ قديم على أنه جواب الآن
+        await redis.delete(signal_key(ride_id))
+        await events.publish_ride_offer(
+            redis,
+            driver_user_id=driver_user_id,
+            ride=ride,
+            distance_to_pickup_km=candidate.distance_km,
+            expires_in_seconds=OFFER_TIMEOUT_SECONDS,
+        )
+
+        remaining = min(OFFER_TIMEOUT_SECONDS, deadline - time.monotonic())
+        signal = await _wait_for_signal(redis, ride_id, remaining)
+        if signal == _SIGNAL_ACCEPTED:
+            return
+
+        # صمتَ أو رفض: تُطوى البطاقة من شاشته ويُحرَّر لطلب آخر
+        await release_offer(redis, ride_id, candidate.driver_id)
+        await events.publish_offer_expired(
+            redis, driver_user_id=driver_user_id, ride_id=ride_id
+        )
+
+    await _mark_no_driver_found(redis, ride_id)
+
+
+async def _guarded(ride_id: uuid.UUID) -> None:
+    try:
+        await _run(ride_id)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # pragma: no cover - لا يجوز أن يسقط التوزيع صامتاً
+        logger.exception("فشل توزيع الرحلة %s", ride_id)
+    finally:
+        _tasks.pop(ride_id, None)
+
+
+def start(ride_id: uuid.UUID) -> None:
+    """يبدأ توزيع رحلة **بعد الـ commit** — قبله لا يراها المهمة أصلاً."""
+    if ride_id in _tasks:
+        return
+    _tasks[ride_id] = asyncio.create_task(_guarded(ride_id), name=f"dispatch:{ride_id}")
+
+
+async def stop(ride_id: uuid.UUID) -> None:
+    """إيقاف التوزيع عند إلغاء الراكب رحلته وهي في `searching`."""
+    task = _tasks.pop(ride_id, None)
+    if task is None:
+        return
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+async def shutdown() -> None:
+    """إطفاء التطبيق: تُلغى المهام الجارية بدل أن تُقطع في منتصفها."""
+    for ride_id in list(_tasks):
+        await stop(ride_id)

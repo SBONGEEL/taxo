@@ -67,3 +67,26 @@ class DriverProfileOut(BaseModel):
     user: UserOut
     vehicles: list[VehicleOut]
     documents: list[DriverDocumentOut]
+
+
+class DriverLocationIn(BaseModel):
+    """بثّ موقع واحد من تطبيق الكبتن (SPEC القسم 10)."""
+
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    # اتجاه السير بالدرجات — تدور به أيقونة السيارة على خريطة الراكب
+    heading: float | None = Field(default=None, ge=0, lt=360)
+
+
+class NearbyDriverOut(BaseModel):
+    """سيارة على خريطة الراكب قبل الطلب — مجهّلة بالكامل (SPEC القسم 10).
+
+    لا هوية ولا لوحة ولا معرّف حقيقي: إحداثيات واتجاه وفئة، و`ref` بديل
+    مؤقت لا يُستدل منه على كبتن (انظر `services/drivers.py::anonymous_ref`).
+    """
+
+    ref: str
+    lat: float
+    lng: float
+    heading: float | None
+    vehicle_category: VehicleCategory

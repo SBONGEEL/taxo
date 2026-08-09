@@ -108,6 +108,13 @@ class InvalidRideTransition(Conflict):
     message = "لا يمكن تنفيذ هذا الإجراء على حالة الرحلة الحالية"
 
 
+class RideOfferExpired(Conflict):
+    """لا يقبل الرحلةَ إلا الكبتنُ المعروضة عليه الآن، وضمن مهلته."""
+
+    code = "ride_offer_expired"
+    message = "انتهت مهلة هذا الطلب أو عُرض على كبتن آخر"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:

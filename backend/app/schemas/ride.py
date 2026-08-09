@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,6 +13,9 @@ from app.models.enums import (
     RideStatus,
     VehicleCategory,
 )
+
+if TYPE_CHECKING:
+    from app.models.ride import Ride
 
 
 class CoordinatesIn(BaseModel):
@@ -67,6 +71,19 @@ class RideDriverOut(BaseModel):
     rating_avg: Decimal
     vehicle: RideVehicleOut | None = None
 
+    @classmethod
+    def from_ride(cls, ride: "Ride") -> "RideDriverOut | None":
+        """تتطلب تحميل `driver.user` و`driver.vehicles` مسبقاً (selectinload)."""
+        if ride.driver is None:
+            return None
+        vehicles = ride.driver.vehicles
+        return cls(
+            id=ride.driver.id,
+            name=ride.driver.user.name,
+            rating_avg=ride.driver.rating_avg,
+            vehicle=RideVehicleOut.model_validate(vehicles[0]) if vehicles else None,
+        )
+
 
 class RideOut(BaseModel):
     id: uuid.UUID
@@ -97,3 +114,33 @@ class RideOut(BaseModel):
     started_at: datetime | None
     completed_at: datetime | None
     cancelled_at: datetime | None
+
+    @classmethod
+    def from_ride(cls, ride: "Ride") -> "RideOut":
+        """التمثيل الوحيد للرحلة — يستعمله الراوتر وبثّ أحداث WebSocket معاً."""
+        return cls(
+            id=ride.id,
+            rider_id=ride.rider_id,
+            status=ride.status,
+            country_code=ride.country_code,
+            vehicle_category=ride.vehicle_category,
+            currency=ride.currency,
+            pickup=CoordinatesIn(lat=ride.pickup_lat, lng=ride.pickup_lng),
+            pickup_address=ride.pickup_address,
+            dropoff=CoordinatesIn(lat=ride.dropoff_lat, lng=ride.dropoff_lng),
+            dropoff_address=ride.dropoff_address,
+            distance_km=ride.distance_km,
+            duration_min=ride.duration_min,
+            estimated_fare=ride.estimated_fare,
+            final_fare=ride.final_fare,
+            cancellation_fee=ride.cancellation_fee,
+            commission_percent_at_ride=ride.commission_percent_at_ride,
+            cancelled_reason=ride.cancelled_reason,
+            driver=RideDriverOut.from_ride(ride),
+            created_at=ride.created_at,
+            accepted_at=ride.accepted_at,
+            arrived_at=ride.arrived_at,
+            started_at=ride.started_at,
+            completed_at=ride.completed_at,
+            cancelled_at=ride.cancelled_at,
+        )

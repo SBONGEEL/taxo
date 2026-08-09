@@ -11,12 +11,16 @@ from app.core.db import engine
 from app.core.exceptions import register_exception_handlers
 from app.core.redis_client import close_redis_client, get_redis_client
 from app.routers import api_router
+from app.services import dispatch, tracking
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     get_redis_client()
     yield
+    # مهام الخلفية تُلغى قبل إغلاق Redis والقاعدة اللتين تقرأ منهما
+    await dispatch.shutdown()
+    await tracking.shutdown()
     await close_redis_client()
     await engine.dispose()
 

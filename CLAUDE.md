@@ -11,9 +11,10 @@ not describe.
 **Section 16 of SPEC.md is a strict, ordered 13-stage plan — one stage per session.** Stages 1
 (infrastructure, FastAPI skeleton, Alembic, `users`/`drivers`/`vehicles`, phone+password auth with
 JWT), 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
-script, `GET /config`) and 3 (`rides`, Mapbox Directions pricing, request/status endpoints) are
-complete. Do not implement anything from a later stage unless the user asks for that stage. When a
-later-stage concern appears in current code (e.g. `accept_ride` does not check for a valid
+script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status endpoints) and 4
+(Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events) are complete. Do not
+implement anything from a later stage unless the user asks for that stage. When a later-stage
+concern appears in current code (e.g. `dispatch.eligible_driver_ids` does not check for a valid
 subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming the stage
 rather than building ahead.
 
@@ -72,8 +73,8 @@ because `env.py` calls `asyncio.run`, which cannot nest inside the test event lo
 ## Architecture
 
 `backend/app` is layered: `routers/` are thin HTTP wrappers, `services/` hold all business logic,
-`models/` are SQLAlchemy 2 async, `schemas/` are Pydantic v2. `ws/` and `tasks/` are placeholders for
-stages 4 and 7.
+`models/` are SQLAlchemy 2 async, `schemas/` are Pydantic v2. `ws/` is the realtime layer (channels,
+events, sockets); `tasks/` is still a placeholder for stage 7's Celery jobs.
 
 **Authentication is a swappable strategy, not a fixed flow.** `services/auth/` defines `AuthStrategy`
 with `PasswordAuthStrategy` (active) and `OtpAuthStrategy` (stage 8, currently raises 501).
@@ -133,6 +134,49 @@ need the same reload before serialization.
 Pricing lives in `services/pricing.py` and the Mapbox call in `services/directions.py`, which reads
 the `sk` token from `provider_credentials` — never `.env`. Tests monkeypatch the single
 `directions.fetch_route` seam so token resolution stays real while the network call does not happen.
+
+**A ride is offered to one driver at a time; nobody else can accept it.** `POST /rides` commits,
+then `dispatch.start(ride_id)` launches an asyncio task (not Celery — the rider is waiting on
+screen) that flips the ride to `searching` and offers it to the nearest eligible driver for 20s,
+then the next, until 5 attempts or 2 minutes produce `no_driver_found`. Those three numbers are
+SPEC rules, so they are module constants in `services/dispatch.py`, not settings; the test suite
+monkeypatches them. Offer state lives in Redis (`dispatch:offer:{ride_id}`,
+`dispatch:driver_offer:{driver_id}` written with `NX`), so `accept_ride` validates the offer no
+matter which worker serves the request, and `dispatch:signal:{ride_id}` is a list the dispatcher
+`BLPOP`s so an accept or decline wakes it instead of burning the rest of the timeout. Every state
+change the dispatcher makes reloads the row `with_for_update()` first — otherwise it would write
+`searching` over a cancel that landed in between. `ALLOWED_TRANSITIONS` no longer contains
+`requested → accepted`: acceptance is only reachable through an offer.
+
+**Live driver locations are Redis-only, never a column.** `services/geo.py` keeps a per-country GEO
+zset plus a `geo:presence:{driver_id}` hash carrying heading and vehicle category. The hash has a
+60s TTL and the zset cannot (Redis has no per-member TTL), so a member whose presence hash is gone
+counts as silent and is pruned lazily by the next `nearby()` call. A driver is dispatchable only
+after `is_online` **and** a first location broadcast.
+
+**`ws/` publishes nothing directly to sockets — it publishes to Redis pub/sub.** `ws/events.py`
+owns the channel names and the `RideEvent` enum; routers call `publish_ride_event` **after**
+`session.commit()` (before it, an announced state could still roll back), and each socket in
+`ws/routes.py` subscribes to its own `ws:user:{user_id}`. That is what lets more than one uvicorn
+worker run with no shared in-memory registry. Rider sockets additionally subscribe to
+`ws:driver_location:{driver_id}` only for the driver the database assigned them. WebSocket auth is
+`?token=` rather than a header because browsers cannot set headers on a WebSocket handshake.
+
+`services/tracking.py` implements SPEC section 5's "driver offline > 60s during `in_progress` alerts
+both parties and does **not** end the ride" — it starts on `POST /rides/{id}/start` and stops on
+complete/cancel. It has no code path that mutates a ride; the 60s threshold is not a second timer
+but the disappearance of the presence key, whose TTL already is 60s, so the two cannot disagree.
+
+Nearby drivers shown on the rider's map are anonymised per SPEC section 10: coordinates, heading
+and category only. `drivers.anonymous_ref` derives a per-connection pseudonym (blake2s keyed by a
+random salt) so the frontend can interpolate a car's movement between frames without the same
+driver being trackable across sessions.
+
+WebSocket tests use `httpx-ws`, whose `ASGIWebSocketTransport` runs the app in the *same* event
+loop; Starlette's `TestClient` would open its own loop in another thread and break the asyncpg
+pool. Its transport opens an anyio task group, and anyio refuses to exit one from a different task
+than entered it, so `ws_client()` in `conftest.py` is an `asynccontextmanager` used inside the test
+body — making it a fixture fails at teardown.
 
 ## Invariants from SPEC.md that constrain future stages
 

@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,18 +33,17 @@ from app.models.ride import (
     make_point,
 )
 from app.models.user import User
-from app.services import pricing, settings_service
+from app.services import dispatch, pricing, settings_service
 from app.services.directions import Coordinates
 
 # آلة الحالات — ما ليس هنا ممنوع (SPEC القسم 5)
 ALLOWED_TRANSITIONS: dict[RideStatus, frozenset[RideStatus]] = {
+    # لا قبول مباشر من `requested`: التوزيع هو من يعرض الرحلة، وأول ما يفعله
+    # نقلها إلى `searching`. القبول بلا عرضٍ سابق ليس له باب في هذه الآلة.
     RideStatus.REQUESTED: frozenset(
         {
-            # `searching` يدخلها التوزيع في المرحلة 4
             RideStatus.SEARCHING,
-            RideStatus.ACCEPTED,
             RideStatus.CANCELLED_BY_RIDER,
-            RideStatus.NO_DRIVER_FOUND,
         }
     ),
     RideStatus.SEARCHING: frozenset(
@@ -197,7 +197,11 @@ async def request_ride(
     pickup_address: str | None = None,
     dropoff_address: str | None = None,
 ) -> Ride:
-    """ينشئ رحلة بحالة `requested`. إسنادها للكبتن مهمة المرحلة 4."""
+    """ينشئ رحلة بحالة `requested`.
+
+    الإسناد لا يبدأ من هنا: الراوتر يُطلق `dispatch.start` **بعد الـ commit**،
+    لأن مهمة التوزيع تقرأ الرحلة من جلسة أخرى فلا ترى ما لم يُثبَّت بعد.
+    """
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()
 
@@ -243,14 +247,32 @@ async def request_ride(
 # -------------------------------------------------------------- الانتقالات
 
 
-async def accept_ride(session: AsyncSession, ride_id: uuid.UUID, driver: Driver) -> Ride:
-    """قبول الكبتن للرحلة.
+async def mark_searching(session: AsyncSession, ride: Ride) -> Ride:
+    """بداية التوزيع — يستدعيها `services/dispatch.py` وحدها."""
+    _require_transition(ride, RideStatus.SEARCHING)
+    ride.status = RideStatus.SEARCHING
+    return await _flush_and_reload(session, ride)
 
-    المرحلة 4 تضيف عرض الطلب للأقرب ومهلة العشرين ثانية، والمرحلة 7 تضيف شرط
-    الاشتراك الساري؛ ما يُفحص هنا هو ما يملك هذا الكبتن حق فعله الآن.
+
+async def mark_no_driver_found(session: AsyncSession, ride: Ride) -> Ride:
+    """نفدت المحاولات أو المهلة بلا قبول (SPEC القسم 5.3)."""
+    _require_transition(ride, RideStatus.NO_DRIVER_FOUND)
+    ride.status = RideStatus.NO_DRIVER_FOUND
+    return await _flush_and_reload(session, ride)
+
+
+async def accept_ride(
+    session: AsyncSession, redis: Redis, ride_id: uuid.UUID, driver: Driver
+) -> Ride:
+    """قبول الكبتن للرحلة المعروضة عليه.
+
+    لا يقبلها إلا من عُرضت عليه وضمن مهلته — التوزيع يعرضها على واحد في كل
+    مرة (SPEC القسم 5.3)، فالقبول من كبتن آخر لا يكون إلا التفافاً على الدور.
+    المرحلة 7 تضيف شرط الاشتراك الساري.
     """
     if driver.status != DriverStatus.APPROVED:
         raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+    await dispatch.require_offer(redis, ride_id, driver.id)
     if await _driver_has_active_ride(session, driver.id):
         raise RideAlreadyActive("لديك رحلة جارية بالفعل")
 
@@ -297,9 +319,10 @@ async def start_ride(session: AsyncSession, ride: Ride) -> Ride:
 async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ride:
     """إنهاء الرحلة وتثبيت `final_fare`.
 
-    المرحلة 4 تسجّل المسار الفعلي، وعندها يُعاد الحساب إن انحرف كثيراً
-    (SPEC القسم 5.7)؛ حتى ذلك الحين السعر النهائي = المقدّر. تحصيل المبلغ
-    وقيود المحفظة في المرحلتين 5 و6.
+    السعر النهائي = المقدّر. إعادة حسابه على المسار الفعلي عند الانحراف الكبير
+    (SPEC القسم 5.7) تأتي مع شاشة الدفع في المرحلة 6: بث المواقع الذي أضافته
+    المرحلة 4 لا يُخزَّن مساراً، فلا مصدر بعد لمسافةٍ فعلية موثوقة. تحصيل
+    المبلغ وقيود المحفظة في المرحلتين 5 و6.
     """
     _require_transition(ride, RideStatus.COMPLETED)
     ride.status = RideStatus.COMPLETED
@@ -320,6 +343,9 @@ async def cancel_ride(
 
     الرسوم تُثبَّت على الرحلة هنا؛ تحصيلها مع بقية الدفع في المرحلة 6.
     """
+    # قفل الصف قبل فحص الانتقال: قبولُ كبتنٍ وقع في هذه اللحظة لا يُدهس
+    await session.refresh(ride, with_for_update=True)
+
     target = (
         RideStatus.CANCELLED_BY_DRIVER
         if by_role == UserRole.DRIVER

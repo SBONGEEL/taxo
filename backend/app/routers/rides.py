@@ -2,26 +2,25 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import CurrentDriver, CurrentUser, DbSession, RiderUser
+from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import PermissionDenied
 from app.models.driver import Driver
-from app.models.enums import UserRole
+from app.models.enums import RideStatus, UserRole
 from app.models.ride import Ride
 from app.schemas.ride import (
     CoordinatesIn,
     RideCancelRequest,
     RideCreateRequest,
-    RideDriverOut,
     RideEstimateOut,
     RideEstimateRequest,
     RideOut,
-    RideVehicleOut,
 )
-from app.services import pricing, rides as rides_service
+from app.services import dispatch, pricing, rides as rides_service, tracking
 from app.services.directions import Coordinates
+from app.ws import events
 
 router = APIRouter(prefix="/rides", tags=["rides"])
 
@@ -30,47 +29,8 @@ def _coords(value: CoordinatesIn) -> Coordinates:
     return Coordinates(lat=value.lat, lng=value.lng)
 
 
-def _driver_card(ride: Ride) -> RideDriverOut | None:
-    """بيانات الكبتن للراكب — تتطلب تحميل العلاقات مسبقاً (selectinload)."""
-    if ride.driver is None:
-        return None
-
-    vehicles = ride.driver.vehicles
-    return RideDriverOut(
-        id=ride.driver.id,
-        name=ride.driver.user.name,
-        rating_avg=ride.driver.rating_avg,
-        vehicle=RideVehicleOut.model_validate(vehicles[0]) if vehicles else None,
-    )
-
-
 def _to_out(ride: Ride) -> RideOut:
-    return RideOut(
-        id=ride.id,
-        rider_id=ride.rider_id,
-        status=ride.status,
-        country_code=ride.country_code,
-        vehicle_category=ride.vehicle_category,
-        currency=ride.currency,
-        pickup=CoordinatesIn(lat=ride.pickup_lat, lng=ride.pickup_lng),
-        pickup_address=ride.pickup_address,
-        dropoff=CoordinatesIn(lat=ride.dropoff_lat, lng=ride.dropoff_lng),
-        dropoff_address=ride.dropoff_address,
-        distance_km=ride.distance_km,
-        duration_min=ride.duration_min,
-        estimated_fare=ride.estimated_fare,
-        final_fare=ride.final_fare,
-        cancellation_fee=ride.cancellation_fee,
-        commission_percent_at_ride=ride.commission_percent_at_ride,
-        cancelled_reason=ride.cancelled_reason,
-        driver=_driver_card(ride),
-        created_at=ride.created_at,
-        accepted_at=ride.accepted_at,
-        arrived_at=ride.arrived_at,
-        started_at=ride.started_at,
-        completed_at=ride.completed_at,
-        cancelled_at=ride.cancelled_at,
-    )
+    return RideOut.from_ride(ride)
 
 
 async def _assigned_ride(
@@ -116,6 +76,11 @@ async def estimate_ride(
 async def request_ride(
     payload: RideCreateRequest, rider: RiderUser, session: DbSession
 ) -> RideOut:
+    """يُنشئ الرحلة ويبدأ البحث عن كبتن فوراً (SPEC القسم 5).
+
+    ترجع الرحلة بحالة `requested`؛ انتقالها إلى `searching` ثم إسنادها يصل
+    الراكبَ عبر WebSocket، ويمكن استرجاعه في أي وقت من `GET /rides/me/active`.
+    """
     ride = await rides_service.request_ride(
         session,
         rider=rider,
@@ -127,7 +92,11 @@ async def request_ride(
     )
     await session.commit()
     # قراءة جديدة: خطا العرض والطول محسوبان في القاعدة ولا يعودان مع INSERT
-    return _to_out(await rides_service.get_ride(session, ride.id))
+    body = _to_out(await rides_service.get_ride(session, ride.id))
+    # التوزيع بعد الـ commit وحده (مهمته تقرأ الرحلة من جلسة أخرى) وبعد بناء
+    # الرد، فلا تسبق `searching` الجوابَ الذي يقول `requested`
+    dispatch.start(ride.id)
+    return body
 
 
 # ------------------------------------------------------------------ القراءة
@@ -165,43 +134,69 @@ async def get_ride(ride_id: uuid.UUID, user: CurrentUser, session: DbSession) ->
 
 @router.post("/{ride_id}/accept", response_model=RideOut)
 async def accept_ride(
-    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
 ) -> RideOut:
-    ride = await rides_service.accept_ride(session, ride_id, driver)
+    """قبول الطلب المعروض — لا يقبله غير المعروض عليه (SPEC القسم 5.3)."""
+    ride = await rides_service.accept_ride(session, redis, ride_id, driver)
     await session.commit()
+
+    # إيقاظ مهمة التوزيع لتتوقف، ثم إعلام الطرفين — كلاهما بعد الـ commit
+    await dispatch.notify_accepted(redis, ride_id)
+    await dispatch.release_offer(redis, ride_id, driver.id)
+    await events.publish_ride_event(redis, ride, events.RideEvent.DRIVER_ASSIGNED)
     return _to_out(ride)
+
+
+@router.post("/{ride_id}/decline", status_code=status.HTTP_204_NO_CONTENT)
+async def decline_ride(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
+) -> Response:
+    """رفض الطلب أو تجاهله قبل انتهاء العدّاد (SPEC القسم 12.3).
+
+    لا يمس حالة الرحلة: ينهي دور هذا الكبتن فقط فينتقل التوزيع للتالي بلا
+    انتظار بقية المهلة.
+    """
+    await dispatch.require_offer(redis, ride_id, driver.id)
+    await dispatch.notify_declined(redis, ride_id, driver.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{ride_id}/arrive", response_model=RideOut)
 async def mark_arrived(
-    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
 ) -> RideOut:
     ride = await rides_service.mark_arrived(
         session, await _assigned_ride(session, ride_id, driver)
     )
     await session.commit()
+    await events.publish_ride_event(redis, ride, events.RideEvent.DRIVER_ARRIVED)
     return _to_out(ride)
 
 
 @router.post("/{ride_id}/start", response_model=RideOut)
 async def start_ride(
-    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
 ) -> RideOut:
     ride = await rides_service.start_ride(
         session, await _assigned_ride(session, ride_id, driver)
     )
     await session.commit()
+    # من هنا يُراقَب اتصال الكبتن حتى نهاية الرحلة (SPEC القسم 5)
+    tracking.start(ride.id)
+    await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_STARTED)
     return _to_out(ride)
 
 
 @router.post("/{ride_id}/complete", response_model=RideOut)
 async def complete_ride(
-    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
 ) -> RideOut:
     ride = await rides_service.complete_ride(
         session, await _assigned_ride(session, ride_id, driver), driver
     )
     await session.commit()
+    await tracking.stop(ride.id)
+    await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_COMPLETED)
     return _to_out(ride)
 
 
@@ -211,6 +206,7 @@ async def cancel_ride(
     payload: RideCancelRequest,
     user: CurrentUser,
     session: DbSession,
+    redis: RedisDep,
 ) -> RideOut:
     """يلغيها الراكب صاحبها أو الكبتن المُسند إليها — لا أحد سواهما.
 
@@ -220,11 +216,18 @@ async def cancel_ride(
     if user.role not in (UserRole.RIDER, UserRole.DRIVER):
         raise PermissionDenied()
 
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    was_searching = ride.status == RideStatus.SEARCHING
+
     ride = await rides_service.cancel_ride(
-        session,
-        await rides_service.get_ride_for_user(session, ride_id, user),
-        by_role=user.role,
-        reason=payload.reason,
+        session, ride, by_role=user.role, reason=payload.reason
     )
     await session.commit()
+
+    if was_searching:
+        # إلغاء أثناء البحث: تتوقف المهمة وتُطوى البطاقة من شاشة المعروض عليه
+        await dispatch.stop(ride_id)
+        await dispatch.withdraw_offer(session, redis, ride_id)
+    await tracking.stop(ride_id)
+    await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_CANCELLED)
     return _to_out(ride)
