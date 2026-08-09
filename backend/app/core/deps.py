@@ -73,6 +73,11 @@ def require_roles(*roles: UserRole):
     return _dependency
 
 
+# admin كامل الصلاحية؛ support قراءة ومعالجة نزاعات فقط (SPEC القسم 13/8)
+AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
+StaffUser = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPPORT))]
+
+
 async def get_current_driver(
     session: DbSession,
     user: Annotated[User, Depends(require_roles(UserRole.DRIVER))],

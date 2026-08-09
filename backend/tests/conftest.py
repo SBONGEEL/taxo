@@ -38,7 +38,10 @@ os.environ["DATABASE_URL"] = _swap_db_name(_base_db_url, _TEST_DB_NAME)
 os.environ["REDIS_URL"] = _swap_redis_db(_base_redis_url, _TEST_REDIS_DB)
 os.environ["ENVIRONMENT"] = "test"
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
-os.environ.setdefault("SMS_PROVIDER", "")
+# مفتاح Fernet ثابت للاختبارات — لا علاقة له بمفتاح التطوير أو الإنتاج
+os.environ.setdefault(
+    "CREDENTIALS_ENCRYPTION_KEY", "dGVzdC1vbmx5LWtleS10ZXN0LW9ubHkta2V5LXRlc3Q="
+)
 
 from app.core.config import get_settings  # noqa: E402
 from app.core.db import engine  # noqa: E402
@@ -101,6 +104,38 @@ async def client() -> AsyncIterator[AsyncClient]:
 @pytest.fixture
 def session_factory() -> async_sessionmaker:
     return async_sessionmaker(bind=engine, expire_on_commit=False)
+
+
+async def _staff_headers(role: str, phone: str, name: str) -> dict[str, str]:
+    """حسابات admin/support تُنشأ من اللوحة لا بالتسجيل الذاتي — ننشئها مباشرة."""
+    from app.core.security import hash_password
+    from app.models.enums import CountryCode, UserRole
+    from app.models.user import User
+    from app.services import token_service
+
+    async with async_sessionmaker(bind=engine, expire_on_commit=False)() as session:
+        user = User(
+            phone=phone,
+            name=name,
+            role=UserRole(role),
+            country_code=CountryCode.JO,
+            password_hash=hash_password("StaffSecret123"),
+        )
+        session.add(user)
+        await session.commit()
+        tokens = await token_service.issue_token_pair(get_redis_client(), user)
+
+    return {"Authorization": f"Bearer {tokens.access_token}"}
+
+
+@pytest.fixture
+async def admin_headers() -> dict[str, str]:
+    return await _staff_headers("admin", "+962790000001", "مشرف الاختبار")
+
+
+@pytest.fixture
+async def support_headers() -> dict[str, str]:
+    return await _staff_headers("support", "+962790000002", "دعم الاختبار")
 
 
 @pytest.fixture

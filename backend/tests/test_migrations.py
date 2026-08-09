@@ -61,8 +61,19 @@ async def test_schema_is_built_by_migrations() -> None:
         )
 
     assert "alembic_version" in tables
-    assert revision == "0002"
-    assert {"users", "drivers", "vehicles", "driver_documents"} <= tables
+    assert revision == "0003"
+    assert {
+        "users",
+        "drivers",
+        "vehicles",
+        "driver_documents",
+        "pricing_rules",
+        "feature_flags",
+        "commission_settings",
+        "subscription_plans",
+        "provider_credentials",
+        "admin_audit_logs",
+    } <= tables
 
 
 async def test_downgrade_then_upgrade_is_clean() -> None:
@@ -74,6 +85,9 @@ async def test_downgrade_then_upgrade_is_clean() -> None:
     finally:
         # ضمان بقاء القاعدة على head مهما حدث، حتى لا تنهار بقية الاختبارات
         await asyncio.to_thread(command.upgrade, config, "head")
+        # أنواع ENUM أُعيد إنشاؤها بـ OIDs جديدة؛ اتصالات المجمع تحمل ذاكرة
+        # أنواع قديمة في asyncpg فتفشل لاحقاً بـ "cache lookup failed for type"
+        await engine.dispose()
 
     async with engine.connect() as conn:
         diffs = await conn.run_sync(_collect_diffs)

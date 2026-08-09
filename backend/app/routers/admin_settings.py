@@ -1,0 +1,349 @@
+from __future__ import annotations
+
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.currency import currency_for_country
+from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.exceptions import Conflict, NotFound
+from app.models.audit import AdminAuditLog
+from app.models.commission import CommissionSetting
+from app.models.enums import AuditAction, CountryCode
+from app.models.pricing import PricingRule
+from app.models.subscription import SubscriptionPlan
+from app.schemas.audit import AuditLogOut
+from app.schemas.settings import (
+    CommissionSettingOut,
+    CommissionSettingUpdate,
+    CountryFeatureFlagsOut,
+    FeatureFlagUpsert,
+    PricingRuleCreate,
+    PricingRuleOut,
+    PricingRuleUpdate,
+    SubscriptionPlanCreate,
+    SubscriptionPlanOut,
+    SubscriptionPlanUpdate,
+)
+from app.services import audit, settings_service
+
+router = APIRouter(prefix="/admin/settings", tags=["admin"])
+
+
+def _apply_updates(instance: object, changes: dict[str, Any]) -> list[str]:
+    """يطبّق الحقول المرسلة فقط ويعيد أسماء ما تغيّر فعلاً."""
+    changed = []
+    for field, value in changes.items():
+        if getattr(instance, field) != value:
+            setattr(instance, field, value)
+            changed.append(field)
+    return changed
+
+
+async def _flush(session: AsyncSession, *, conflict_message: str) -> None:
+    """flush مبكر للحصول على المُعرّف قبل قيد التدقيق — يترجم تعارض القيود."""
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise Conflict(conflict_message) from exc
+
+
+async def _commit(
+    session: AsyncSession,
+    instance: object | None = None,
+    *,
+    conflict_message: str = "تعارض في البيانات",
+) -> None:
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise Conflict(conflict_message) from exc
+
+    if instance is not None:
+        # `updated_at` يُحسب في SQL (onupdate) فتبقى القيمة منتهية بعد التحديث
+        await session.refresh(instance)
+
+
+# ---------------------------------------------------------------- التسعير
+
+
+@router.get("/pricing", response_model=list[PricingRuleOut])
+async def list_pricing_rules(
+    _staff: StaffUser, session: DbSession, country_code: CountryCode | None = None
+) -> list[PricingRuleOut]:
+    stmt = select(PricingRule).order_by(
+        PricingRule.country_code, PricingRule.vehicle_category
+    )
+    if country_code is not None:
+        stmt = stmt.where(PricingRule.country_code == country_code)
+    rules = (await session.scalars(stmt)).all()
+    return [PricingRuleOut.model_validate(rule) for rule in rules]
+
+
+@router.post(
+    "/pricing", response_model=PricingRuleOut, status_code=status.HTTP_201_CREATED
+)
+async def create_pricing_rule(
+    payload: PricingRuleCreate, admin: AdminUser, session: DbSession
+) -> PricingRuleOut:
+    rule = PricingRule(**payload.model_dump())
+    session.add(rule)
+    await _flush(session, conflict_message="توجد تسعيرة لهذه الدولة والفئة مسبقاً")
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="pricing_rule",
+        entity_id=rule.id,
+        details={
+            "country_code": payload.country_code.value,
+            "vehicle_category": payload.vehicle_category.value,
+        },
+    )
+    await _commit(session, rule)
+    return PricingRuleOut.model_validate(rule)
+
+
+@router.patch("/pricing/{rule_id}", response_model=PricingRuleOut)
+async def update_pricing_rule(
+    rule_id: uuid.UUID,
+    payload: PricingRuleUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> PricingRuleOut:
+    rule = await session.get(PricingRule, rule_id)
+    if rule is None:
+        raise NotFound("التسعيرة غير موجودة")
+
+    changed = _apply_updates(rule, payload.model_dump(exclude_unset=True))
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="pricing_rule",
+        entity_id=rule.id,
+        details={"changed_fields": changed},
+    )
+    await _commit(session, rule)
+    return PricingRuleOut.model_validate(rule)
+
+
+@router.delete("/pricing/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_pricing_rule(
+    rule_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    rule = await session.get(PricingRule, rule_id)
+    if rule is None:
+        raise NotFound("التسعيرة غير موجودة")
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="pricing_rule",
+        entity_id=rule.id,
+        details={
+            "country_code": rule.country_code.value,
+            "vehicle_category": rule.vehicle_category.value,
+        },
+    )
+    await session.delete(rule)
+    await _commit(session)
+
+
+# ------------------------------------------------------------ مفاتيح الميزات
+
+
+@router.get("/feature-flags", response_model=list[CountryFeatureFlagsOut])
+async def list_feature_flags(
+    _staff: StaffUser, session: DbSession
+) -> list[CountryFeatureFlagsOut]:
+    return [
+        CountryFeatureFlagsOut(
+            country_code=country,
+            flags=await settings_service.get_flags(session, country),
+        )
+        for country in CountryCode
+    ]
+
+
+@router.put("/feature-flags", response_model=CountryFeatureFlagsOut)
+async def upsert_feature_flag(
+    payload: FeatureFlagUpsert, admin: AdminUser, session: DbSession
+) -> CountryFeatureFlagsOut:
+    await settings_service.set_flag(
+        session,
+        country_code=payload.country_code,
+        feature_key=payload.feature_key,
+        enabled=payload.enabled,
+        actor=admin,
+    )
+    await _commit(session)
+    return CountryFeatureFlagsOut(
+        country_code=payload.country_code,
+        flags=await settings_service.get_flags(session, payload.country_code),
+    )
+
+
+# ------------------------------------------------------------------ العمولة
+
+
+@router.get("/commission", response_model=list[CommissionSettingOut])
+async def list_commission_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[CommissionSettingOut]:
+    settings_rows = (
+        await session.scalars(
+            select(CommissionSetting).order_by(CommissionSetting.country_code)
+        )
+    ).all()
+    return [CommissionSettingOut.model_validate(row) for row in settings_rows]
+
+
+@router.patch("/commission/{country_code}", response_model=CommissionSettingOut)
+async def update_commission_setting(
+    country_code: CountryCode,
+    payload: CommissionSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> CommissionSettingOut:
+    """تعديل العمولة — يسري على الرحلات الجديدة فقط.
+
+    الرحلات القائمة تحمل `commission_percent_at_ride` مجمّدة (SPEC القسم 8).
+    """
+    setting = await settings_service.get_or_create_commission(session, country_code)
+    changes = payload.model_dump(exclude_unset=True)
+    changed = _apply_updates(setting, changes)
+
+    if "commission_enabled" in changes:
+        # المفتاح في feature_flags يعكس نفس الحالة
+        await settings_service.set_flag(
+            session,
+            country_code=country_code,
+            feature_key="commission_enabled",
+            enabled=setting.commission_enabled,
+            actor=admin,
+            reason="مزامنة مع إعداد العمولة",
+        )
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="commission_setting",
+        entity_id=setting.id,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return CommissionSettingOut.model_validate(setting)
+
+
+# ------------------------------------------------------------ خطط الاشتراك
+
+
+@router.get("/subscription-plans", response_model=list[SubscriptionPlanOut])
+async def list_subscription_plans(
+    _staff: StaffUser, session: DbSession, country_code: CountryCode | None = None
+) -> list[SubscriptionPlanOut]:
+    stmt = select(SubscriptionPlan).order_by(
+        SubscriptionPlan.country_code, SubscriptionPlan.price
+    )
+    if country_code is not None:
+        stmt = stmt.where(SubscriptionPlan.country_code == country_code)
+    plans = (await session.scalars(stmt)).all()
+    return [SubscriptionPlanOut.model_validate(plan) for plan in plans]
+
+
+@router.post(
+    "/subscription-plans",
+    response_model=SubscriptionPlanOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_subscription_plan(
+    payload: SubscriptionPlanCreate, admin: AdminUser, session: DbSession
+) -> SubscriptionPlanOut:
+    plan = SubscriptionPlan(
+        **payload.model_dump(),
+        currency=currency_for_country(payload.country_code),
+    )
+    session.add(plan)
+    await _flush(session, conflict_message="توجد خطة بهذا الاسم في نفس الدولة")
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="subscription_plan",
+        entity_id=plan.id,
+        details={"country_code": payload.country_code.value, "name": payload.name},
+    )
+    await _commit(session, plan)
+    return SubscriptionPlanOut.model_validate(plan)
+
+
+@router.patch("/subscription-plans/{plan_id}", response_model=SubscriptionPlanOut)
+async def update_subscription_plan(
+    plan_id: uuid.UUID,
+    payload: SubscriptionPlanUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> SubscriptionPlanOut:
+    plan = await session.get(SubscriptionPlan, plan_id)
+    if plan is None:
+        raise NotFound("الخطة غير موجودة")
+
+    changed = _apply_updates(plan, payload.model_dump(exclude_unset=True))
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="subscription_plan",
+        entity_id=plan.id,
+        details={"changed_fields": changed},
+    )
+    await _commit(session, plan, conflict_message="توجد خطة بهذا الاسم في نفس الدولة")
+    return SubscriptionPlanOut.model_validate(plan)
+
+
+@router.delete(
+    "/subscription-plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_subscription_plan(
+    plan_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    plan = await session.get(SubscriptionPlan, plan_id)
+    if plan is None:
+        raise NotFound("الخطة غير موجودة")
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="subscription_plan",
+        entity_id=plan.id,
+        details={"country_code": plan.country_code.value, "name": plan.name},
+    )
+    await session.delete(plan)
+    await _commit(session)
+
+
+# ------------------------------------------------------------- سجل التدقيق
+
+
+@router.get("/audit-logs", response_model=list[AuditLogOut])
+async def list_audit_logs(
+    _staff: StaffUser,
+    session: DbSession,
+    entity_type: str | None = None,
+    limit: int = 50,
+) -> list[AuditLogOut]:
+    stmt = select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc())
+    if entity_type is not None:
+        stmt = stmt.where(AdminAuditLog.entity_type == entity_type)
+    entries = (await session.scalars(stmt.limit(min(limit, 200)))).all()
+    return [AuditLogOut.model_validate(entry) for entry in entries]

@@ -37,12 +37,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
 
-    # يُستخدم من المرحلة 2 لتشفير provider_credentials at rest
+    # تشفير provider_credentials at rest
     credentials_encryption_key: str | None = None
-
-    # فارغ = مصادقة بكلمة مرور. معبّأ = مصادقة OTP (المرحلة 8).
-    # المصدر النهائي لاحقاً هو جدول provider_credentials وليس البيئة.
-    sms_provider: str | None = None
 
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_seconds: int = 300

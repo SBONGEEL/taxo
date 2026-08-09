@@ -4,9 +4,12 @@ import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum as SAEnum, MetaData, func
+from sqlalchemy import DateTime, Enum as SAEnum, MetaData, Numeric, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+# كل عمود مالي في المشروع NUMERIC(12,3) — ممنوع float (SPEC القسم 4)
+MONEY = Numeric(12, 3)
 
 # تسمية موحّدة للقيود حتى تكون migrations قابلة للتنبؤ
 NAMING_CONVENTION = {

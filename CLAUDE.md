@@ -8,11 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 and constraint. If a requirement is ambiguous, ask before implementing. Do not add features it does
 not describe.
 
-**Section 16 of SPEC.md is a strict, ordered 13-stage plan — one stage per session.** Stage 1
+**Section 16 of SPEC.md is a strict, ordered 13-stage plan — one stage per session.** Stages 1
 (infrastructure, FastAPI skeleton, Alembic, `users`/`drivers`/`vehicles`, phone+password auth with
-JWT) is complete. Do not implement anything from a later stage unless the user asks for that stage.
-When a later-stage concern appears in stage-1 code (e.g. `Driver.current_ride_id` has no FK because
-`rides` does not exist yet), leave a comment naming the stage rather than building ahead.
+JWT) and 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
+script, `GET /config`) are complete. Do not implement anything from a later stage unless the user
+asks for that stage. When a later-stage concern appears in current code (e.g. `Driver.current_ride_id`
+has no FK because `rides` does not exist yet), leave a comment naming the stage rather than building
+ahead.
 
 **User-facing strings, comments, and docs are in Arabic.** Identifiers stay English. Match this.
 
@@ -38,13 +40,19 @@ DC_RUN='docker compose run --rm --no-deps
 
 $DC_RUN pytest -q
 $DC_RUN pytest tests/test_auth.py::test_refresh_rotates_and_invalidates_old_token   # single test
-$DC_RUN alembic revision --autogenerate -m "message" --rev-id 0003                  # sequential rev ids
+$DC_RUN alembic revision --autogenerate -m "message" --rev-id 0004                  # sequential rev ids
 $DC_RUN alembic upgrade head
 $DC_RUN alembic downgrade 0001
+$DC_RUN python -m scripts.seed                                                     # dev settings + provider tokens
 ```
 
 Postgres does not drop ENUM types with their tables, so every migration that creates one must
 `DROP TYPE IF EXISTS` it in `downgrade()` (see `0002_users_drivers_vehicles.py`) or a re-upgrade fails.
+Autogenerate also re-emits `CREATE TYPE` for enums an *earlier* migration already created; hand-edit
+those references to `postgresql.ENUM(..., create_type=False)` as `0003` does, or `upgrade` fails with
+"type already exists". Because the downgrade/upgrade cycle gives the enums new OIDs,
+`test_downgrade_then_upgrade_is_clean` ends with `engine.dispose()` — without it asyncpg's per-
+connection type cache poisons every later test with "cache lookup failed for type".
 `tests/test_migrations.py` enforces this: it runs the full `downgrade base → upgrade head` cycle, and
 `test_migrations_match_models` fails whenever autogenerate finds a difference between the models and
 the applied migrations — so a model change without a matching migration breaks the suite, and the
@@ -68,9 +76,21 @@ stages 4 and 7.
 
 **Authentication is a swappable strategy, not a fixed flow.** `services/auth/` defines `AuthStrategy`
 with `PasswordAuthStrategy` (active) and `OtpAuthStrategy` (stage 8, currently raises 501).
-`get_auth_strategy()` picks between them and `sms_provider_enabled()` is the single decision point —
-stage 2 changes it to read `provider_credentials` instead of the environment. Routers depend only on
-the interface, so activating an SMS provider must not require touching any endpoint.
+`get_auth_strategy()` picks between them and `sms_provider_enabled()` is the single decision point; it
+reads the `sms` row of `provider_credentials`, so saving and activating that contract from the admin
+panel flips every route to OTP. Routers depend only on the interface — activating a provider must
+never require touching an endpoint.
+
+**Provider contracts are the only home for external keys.** `services/providers/registry.py` declares
+each provider's fields (`secret` → encrypted + masked as `****` and never leaves the backend;
+`expose_to_clients` → published by `GET /config`, e.g. the Mapbox pk). `services/providers/credentials.py`
+is the only module that touches the table: the `credentials` column is a Fernet envelope
+`{"v": 1, "ciphertext": …}` over the whole value dict, and re-submitting `****` for a secret keeps the
+stored value instead of wiping it. Activating a per-country contract auto-syncs its `feature_key`
+flag. Read secrets with `credentials.get_values(session, ProviderKey.X, country)` — never from `.env`.
+
+**Every admin write records an audit entry** via `services/audit.py` in the *same* transaction, and
+`details` carries changed field names only, never values.
 
 **Phone number is the login identity and is always stored as E.164.** `core/phone.py` normalizes on
 every write and read path (`normalize_phone` with an explicit country, `resolve_phone` when the
@@ -88,15 +108,20 @@ single-use rotation — `rotate_refresh_token` deletes the key and rejects repla
 be revoked before expiry; account-level revocation goes through `revoke_all_for_user`.
 
 Enums are Postgres native types created via `models/base.py::pg_enum`, which stores the lowercase
-`.value` rather than the member name. Reuse it for every new enum column.
+`.value` rather than the member name. Reuse it for every new enum column. `feature_flags.feature_key`
+is the deliberate exception: a plain `String(64)` guarded by the `FeatureKey` enum in the schema layer,
+so stage 12's flags need code only, no migration.
+
+Money columns use `models/base.py::MONEY` (`NUMERIC(12,3)`); currency is derived from the country via
+`core/currency.py::currency_for_country` and is never accepted from a client.
 
 ## Invariants from SPEC.md that constrain future stages
 
 - Money columns are `NUMERIC(12,3)`. Never float.
 - Provider API keys (Mapbox, Telr, SMS, FCM, payout) belong in the encrypted `provider_credentials`
   table managed from the admin "contracts" page — never in `.env` or code. `.env.local` holds only
-  infrastructure secrets (DB, Redis, JWT, the Fernet key); its Mapbox tokens exist solely as input for
-  a stage-2 local seed script.
+  infrastructure secrets (DB, Redis, JWT, the Fernet key); its Mapbox/Telr tokens exist solely as
+  input for `scripts/seed.py`, which writes them encrypted and is idempotent.
 - Wallet balance is derived from the immutable `wallet_transactions` ledger. There is no balance column.
 - Pricing and all financial math happen in the backend only; the frontends display.
 - `rides.commission_percent_at_ride` is frozen at creation and never recomputed retroactively.

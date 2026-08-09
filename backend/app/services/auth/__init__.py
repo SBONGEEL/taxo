@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from app.core.config import settings
+from typing import Annotated
+
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.db import get_session
+from app.models.enums import ProviderKey
 from app.services.auth.base import AuthMethod, AuthStrategy
 from app.services.auth.otp import OtpAuthStrategy
 from app.services.auth.password import PasswordAuthStrategy
@@ -9,17 +15,22 @@ _password_strategy = PasswordAuthStrategy()
 _otp_strategy = OtpAuthStrategy()
 
 
-def sms_provider_enabled() -> bool:
+async def sms_provider_enabled(session: AsyncSession) -> bool:
     """هل يوجد مزود SMS مفعّل؟
 
-    المرحلة 1: تُقرأ من البيئة. المرحلة 2 فصاعداً يصبح المصدر جدول
-    `provider_credentials` (صفحة العقود) — نقطة التبديل هذه الدالة وحدها.
+    المصدر جدول `provider_credentials` (صفحة العقود) — إدخال عقد SMS وتفعيله
+    يحوّل الدخول إلى OTP بلا نشر كود ولا تعديل أي endpoint. هذه الدالة هي
+    نقطة القرار الوحيدة.
     """
-    return bool(settings.sms_provider and settings.sms_provider.strip())
+    from app.services.providers.credentials import provider_is_active
+
+    return await provider_is_active(session, ProviderKey.SMS)
 
 
-def get_auth_strategy() -> AuthStrategy:
-    return _otp_strategy if sms_provider_enabled() else _password_strategy
+async def get_auth_strategy(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> AuthStrategy:
+    return _otp_strategy if await sms_provider_enabled(session) else _password_strategy
 
 
 __all__ = [
