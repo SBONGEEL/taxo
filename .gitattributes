@@ -1,0 +1,32 @@
+# نهايات الأسطر موحّدة LF داخل المستودع مهما كان نظام المطوّر.
+# يمنع فروقاً وهمية بين ويندوز ولينكس، ويمنع كسر السكربتات داخل الحاويات.
+* text=auto eol=lf
+
+# ملفات ويندوز الأصلية تحتاج CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# سكربتات تُنفَّذ داخل حاويات لينكس — CRLF يكسر سطر الـ shebang
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.Dockerfile text eol=lf
+
+# ثنائيات: لا تحويل ولا محاولة دمج
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.mo    binary
+
+# ملفات القفل: تُدار بالأدوات، لا فائدة من مراجعتها في الـ diff
+package-lock.json  -diff linguist-generated
+pnpm-lock.yaml     -diff linguist-generated
+yarn.lock          -diff linguist-generated
