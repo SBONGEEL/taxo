@@ -1,0 +1,40 @@
+# ==== أسرار — لا تدخل Git أبداً ====
+.env
+.env.*
+!.env.example
+env.local
+*.pem
+*.key
+secrets/
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ==== Node / Frontend ====
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# ==== أدوات ومحرّرات ====
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ==== بيانات محلية ====
+uploads/
+media/
+*.log
+*.sqlite3
