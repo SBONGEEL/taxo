@@ -30,7 +30,9 @@ docker compose run --rm --no-deps \
 ```
 
 الاختبارات تُنشئ قاعدة `taxo_test` وتستخدم Redis رقم 15، ثم تنظّف بعدها —
-لا تلمس بيانات التطوير.
+لا تلمس بيانات التطوير. مخطط قاعدة الاختبار يُبنى بـ `alembic upgrade head`
+(لا `create_all`)، و`tests/test_migrations.py` يفشل إن انحرفت الموديلات عن
+الترحيلات أو نسيت ترحيلة إسقاط أنواع ENUM في `downgrade`.
 
 ## الـ endpoints المتاحة الآن
 

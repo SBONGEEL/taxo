@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 # قاعدة بيانات وقاعدة Redis منفصلتان عن التطوير — تُضبط قبل استيراد التطبيق
 _TEST_DB_NAME = "taxo_test"
@@ -43,9 +49,17 @@ from app.models import Base  # noqa: E402
 get_settings.cache_clear()
 
 
+def alembic_config() -> Config:
+    cfg = Config(str(BACKEND_DIR / "alembic.ini"))
+    cfg.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    # env.py يقرأ الرابط من الإعدادات (المضبوطة أعلاه على قاعدة الاختبار)
+    cfg.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+    return cfg
+
+
 @pytest.fixture(scope="session", autouse=True)
 async def _create_test_database() -> AsyncIterator[None]:
-    """ينشئ قاعدة اختبار نظيفة ويُسقطها في النهاية."""
+    """ينشئ قاعدة اختبار نظيفة، يبني مخططها بالترحيلات، ويُسقطها في النهاية."""
     admin_url = _swap_db_name(_base_db_url, "postgres")
     admin_engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
 
@@ -53,10 +67,10 @@ async def _create_test_database() -> AsyncIterator[None]:
         await conn.exec_driver_sql(f'DROP DATABASE IF EXISTS "{_TEST_DB_NAME}"')
         await conn.exec_driver_sql(f'CREATE DATABASE "{_TEST_DB_NAME}"')
 
-    async with engine.begin() as conn:
-        await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS postgis")
-        await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pgcrypto")
-        await conn.run_sync(Base.metadata.create_all)
+    # المخطط يُبنى من الترحيلات نفسها التي تعمل في الإنتاج — لا create_all —
+    # حتى تختبر الاختبارات ما سيُنشر فعلاً. يعمل في خيط منفصل لأن env.py
+    # يستدعي asyncio.run الذي لا يعمل داخل حلقة أحداث قائمة.
+    await asyncio.to_thread(command.upgrade, alembic_config(), "head")
 
     yield
 
