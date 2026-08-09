@@ -14,6 +14,7 @@ from app.models.enums import (
     DriverStatus,
     FeatureKey,
     ProviderKey,
+    RideStatus,
     SubscriptionDurationType,
     UserRole,
     VehicleCategory,
@@ -21,6 +22,7 @@ from app.models.enums import (
 from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.provider_credential import ProviderCredential
+from app.models.ride import Ride
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -43,6 +45,8 @@ __all__ = [
     "PricingRule",
     "ProviderCredential",
     "ProviderKey",
+    "Ride",
+    "RideStatus",
     "SubscriptionDurationType",
     "SubscriptionPlan",
     "User",

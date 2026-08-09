@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,6 +83,23 @@ async def set_flag(
         details=details,
     )
     return flag
+
+
+async def commission_percent_for(
+    session: AsyncSession, country_code: CountryCode
+) -> Decimal:
+    """النسبة السارية الآن — صفر ما لم يكن `commission_enabled` مرفوعاً.
+
+    قراءة فقط: طلبُ رحلة لا يجوز أن يُنشئ صف إعدادات. تقرأها المرحلة 3 مرة
+    واحدة لتُجمّدها في `rides.commission_percent_at_ride`؛ نطاق التطبيق
+    (`applies_to`) يُقيَّم لحظة الدفع في المرحلة 6.
+    """
+    setting = await session.scalar(
+        select(CommissionSetting).where(CommissionSetting.country_code == country_code)
+    )
+    if setting is None or not setting.commission_enabled:
+        return Decimal("0.00")
+    return setting.commission_percent
 
 
 async def get_or_create_commission(

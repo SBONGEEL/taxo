@@ -76,6 +76,38 @@ class FeatureNotAvailable(AppError):
     message = "هذه الميزة غير مفعّلة بعد"
 
 
+class PricingRuleMissing(AppError):
+    """لا تسعيرة لهذه الفئة في هذه الدولة — لا يجوز الاجتهاد بسعر افتراضي."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "pricing_rule_missing"
+    message = "لا توجد تسعيرة معتمدة لهذه الفئة في بلدك"
+
+
+class RoutingUnavailable(AppError):
+    """عقد Mapbox غير مُدخل أو غير مفعّل من صفحة العقود."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "routing_unavailable"
+    message = "خدمة المسارات غير مهيأة — راجع عقد Mapbox في لوحة الإدارة"
+
+
+class RoutingFailed(AppError):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    code = "routing_failed"
+    message = "تعذّر حساب المسار بين النقطتين"
+
+
+class RideAlreadyActive(Conflict):
+    code = "ride_already_active"
+    message = "لديك رحلة جارية بالفعل"
+
+
+class InvalidRideTransition(Conflict):
+    code = "invalid_ride_transition"
+    message = "لا يمكن تنفيذ هذا الإجراء على حالة الرحلة الحالية"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:

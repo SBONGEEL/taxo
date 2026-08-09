@@ -10,11 +10,12 @@ not describe.
 
 **Section 16 of SPEC.md is a strict, ordered 13-stage plan — one stage per session.** Stages 1
 (infrastructure, FastAPI skeleton, Alembic, `users`/`drivers`/`vehicles`, phone+password auth with
-JWT) and 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
-script, `GET /config`) are complete. Do not implement anything from a later stage unless the user
-asks for that stage. When a later-stage concern appears in current code (e.g. `Driver.current_ride_id`
-has no FK because `rides` does not exist yet), leave a comment naming the stage rather than building
-ahead.
+JWT), 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
+script, `GET /config`) and 3 (`rides`, Mapbox Directions pricing, request/status endpoints) are
+complete. Do not implement anything from a later stage unless the user asks for that stage. When a
+later-stage concern appears in current code (e.g. `accept_ride` does not check for a valid
+subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming the stage
+rather than building ahead.
 
 **User-facing strings, comments, and docs are in Arabic.** Identifiers stay English. Match this.
 
@@ -114,6 +115,24 @@ so stage 12's flags need code only, no migration.
 
 Money columns use `models/base.py::MONEY` (`NUMERIC(12,3)`); currency is derived from the country via
 `core/currency.py::currency_for_country` and is never accepted from a client.
+
+**Ride state changes go through `services/rides.py`, never a router.** Every transition is checked
+against `ALLOWED_TRANSITIONS` before it is applied; routers only resolve who is allowed to ask.
+`models/ride.py` owns the status groupings (`ACTIVE_RIDER_STATUSES`, `ACTIVE_DRIVER_STATUSES`) and
+builds the partial unique indexes `uq_rides_active_rider`/`uq_rides_active_driver` from those same
+tuples, so the database enforces "one active ride" even under a race and the service just turns the
+`IntegrityError` into a readable Arabic error.
+
+`rides.pickup_point`/`dropoff_point` are GeoAlchemy2 `geography(POINT,4326)` columns. Latitude and
+longitude are exposed as `column_property` expressions (`ST_Y`/`ST_X` over a cast to `geometry`), so
+they are computed by Postgres and arrive with any `select(Ride)` — but **an UPDATE expires them**.
+That is why the mutating helpers end with `_flush_and_reload`: without it, serializing the ride
+triggers a lazy load outside the async context and raises `MissingGreenlet`. Newly inserted rides
+need the same reload before serialization.
+
+Pricing lives in `services/pricing.py` and the Mapbox call in `services/directions.py`, which reads
+the `sk` token from `provider_credentials` — never `.env`. Tests monkeypatch the single
+`directions.fetch_route` seam so token resolution stays real while the network call does not happen.
 
 ## Invariants from SPEC.md that constrain future stages
 

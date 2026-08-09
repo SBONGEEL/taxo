@@ -45,6 +45,24 @@ class DocumentReviewStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class RideStatus(StrEnum):
+    """دورة حياة الرحلة (SPEC القسم 4/5).
+
+    `searching` تدخلها خوارزمية التوزيع في المرحلة 4، و`no_driver_found`
+    مخرجها حين تنفد المحاولات.
+    """
+
+    REQUESTED = "requested"
+    SEARCHING = "searching"
+    ACCEPTED = "accepted"
+    ARRIVED = "arrived"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED_BY_RIDER = "cancelled_by_rider"
+    CANCELLED_BY_DRIVER = "cancelled_by_driver"
+    NO_DRIVER_FOUND = "no_driver_found"
+
+
 class SubscriptionDurationType(StrEnum):
     DAILY = "daily"
     WEEKLY = "weekly"

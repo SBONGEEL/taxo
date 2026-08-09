@@ -42,9 +42,12 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     is_online: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, index=True
     )
-    # المفتاح الأجنبي لجدول rides يُضاف في المرحلة 3 عند إنشاء الجدول
+    # `use_alter`: بين الجدولين مرجع متبادل (rides.driver_id هنا وهناك)،
+    # فيُنشأ هذا القيد بعد الجدولين لا معهما
     current_ride_id: Mapped[uuid.UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), nullable=True
+        PgUUID(as_uuid=True),
+        ForeignKey("rides.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
     )
 
     user: Mapped["User"] = relationship(back_populates="driver")
