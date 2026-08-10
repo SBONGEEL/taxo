@@ -103,11 +103,11 @@
       <section>
         <h2>١. إعدادات تطبيق الويب</h2>
         <p class="muted">
-          <strong>مُعبّأة سلفاً بمشروع <code>taxo-84a5f</code></strong> — اضغط
-          الزر مباشرةً. ولتجربة مشروعٍ آخر: Firebase Console ← ⚙️ Project
-          settings ← General ← Your apps ← تطبيق الويب ←
+          تُعبَّأ سلفاً من <code>config.local.js</code> إن وُجد (انسخه من
+          <code>config.local.example.js</code>). وإلا: Firebase Console ← ⚙️
+          Project settings ← General ← Your apps ← تطبيق الويب ←
           <em>SDK setup and configuration</em> ← الصق كائن
-          <code>firebaseConfig</code> مكانها.
+          <code>firebaseConfig</code> هنا.
         </p>
 
         <label for="config">firebaseConfig</label>
@@ -187,32 +187,26 @@
       </section>
     </main>
 
+    <!-- قيم مشروعك — ملفٌّ محلي مُستثنى من Git. غيابُه لا يعطّل شيئاً:
+         تُلصق القيم في حقولها يدوياً (انظر config.local.example.js) -->
+    <script src="./config.local.js" onerror="window.TAXO_FCM_DEFAULTS = null"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
     <script>
       const $ = (id) => document.getElementById(id);
       const STORE = "taxo-fcm-tool";
 
-      // إعدادات مشروع TAXO — **عامّةٌ بطبيعتها** كلها: `apiKey` في Firebase
-      // مُعرِّفُ مشروعٍ لا مفتاحُ صلاحية (الصلاحية من قواعد الأمان وحسابات
-      // الخدمة)، ومفتاح VAPID نصفُ زوجٍ نصفُه الآخر عند Google. كلاهما يُنشر
-      // في حزمة كل تطبيق ويب يستقبل إشعارات — كتوكن Mapbox العام في
-      // `GET /config`. أما ما لا يُنشر فملفُّ حساب الخدمة في `secrets/`،
-      // وبه وحده تُرسل الخلفية.
-      const DEFAULT_CONFIG = {
-        apiKey: "AIzaSyA2AaA0QecT2iOUOUQwFjSgMmx5H0EOnBY",
-        authDomain: "taxo-84a5f.firebaseapp.com",
-        projectId: "taxo-84a5f",
-        storageBucket: "taxo-84a5f.firebasestorage.app",
-        messagingSenderId: "879288557931",
-        appId: "1:879288557931:web:970ea815796a2c714f2c2e",
-      };
-      const DEFAULT_VAPID =
-        "BD_ld64UnObUhdwMqEl0oGY5K1lvxwxulvGb68jWChsxOkB8Cv3uzTE6UKcVV33IYas8zPJAqbZjrtfF8JHnGcc";
+      // قيم مشروعك تأتي من `config.local.js` المُستثنى من Git — القيمُ
+      // نفسها عامّةٌ بطبيعتها (`apiKey` في Firebase مُعرِّفُ مشروعٍ لا مفتاحُ
+      // صلاحية، ومفتاح VAPID نصفُ زوجٍ نصفُه الآخر عند Google)، لكنها قيمُ
+      // بيئةٍ بعينها فلا مكان لها في مستودعٍ يخدم أكثر من واحدة.
+      const defaults = window.TAXO_FCM_DEFAULTS || {};
 
       const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
-      $("config").value = saved.config || JSON.stringify(DEFAULT_CONFIG, null, 2);
-      $("vapid").value = saved.vapid || DEFAULT_VAPID;
+      $("config").value =
+        saved.config ||
+        (defaults.config ? JSON.stringify(defaults.config, null, 2) : "");
+      $("vapid").value = saved.vapid || defaults.vapidKey || "";
       $("api").value = saved.api || "http://localhost:8001";
       $("admin").value = saved.admin || "";
 
@@ -228,7 +222,7 @@
             phone: $("phone").value,
           })
         );
-      $("phone").value = saved.phone || "";
+      $("phone").value = saved.phone || defaults.adminPhone || "";
       ["config", "vapid", "api", "admin", "phone"].forEach((id) =>
         $(id).addEventListener("change", remember)
       );

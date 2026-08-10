@@ -38,3 +38,7 @@ uploads/
 media/
 *.log
 *.sqlite3
+
+# قيم مشروع Firebase المحلية لأداة رمز الجهاز — عامّةٌ بطبيعتها لكنها
+# قيمُ بيئةٍ بعينها (القالب: config.local.example.js)
+tools/fcm-token/config.local.js
