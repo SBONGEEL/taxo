@@ -7,10 +7,20 @@ from app.models.driver import Driver
 from app.models.user import User
 
 
-async def test_auth_method_is_password_without_sms_provider(client: AsyncClient) -> None:
+async def test_login_is_always_password_and_verification_is_firebase(
+    client: AsyncClient,
+) -> None:
+    """الدخول ثابتٌ والمُحقِّق متغيّر (المرحلة 8-ب).
+
+    عقد التحقق الوهمي مثبَّت في كل اختبار، فالمُحقِّق `firebase`.
+    """
     response = await client.get("/auth/method")
     assert response.status_code == 200
-    assert response.json() == {"method": "password", "otp_length": None}
+    assert response.json() == {
+        "login": "password",
+        "verification": "firebase",
+        "otp_length": None,
+    }
 
 
 async def test_register_returns_user_and_tokens(

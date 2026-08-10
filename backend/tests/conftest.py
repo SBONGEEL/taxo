@@ -105,6 +105,36 @@ async def _clean_state() -> AsyncIterator[None]:
     await tracking.shutdown()
 
 
+@pytest.fixture(autouse=True)
+async def phone_verification(_clean_state) -> None:
+    """عقد تحقُّقٍ وهمي في كل اختبار — لأن التسجيل يشترط إثبات الرقم.
+
+    منذ المرحلة 8-ب لا حساب يُنشأ برقم غير محقق (SPEC القسم 4)، والمفتاح
+    `otp_verification_enabled` مفعّلٌ افتراضاً. فبيئة الاختبار تشبه الإنتاج:
+    مُحقِّقٌ مُهيأ وحساباتٌ محققة — لا مفتاحٌ مطفأ يخفي الحارس عن كل اختبار.
+    ومن أراد اختبار غيابه يُعطّل العقد أو يُطفئ المفتاح صراحةً.
+
+    الصفُّ يُكتب مباشرةً لا عبر `credentials_service.upsert`: ذاك يترك قيد
+    تدقيقٍ في كل اختبار فيُفسد ما يعدّ القيود.
+    """
+    from app.core.crypto import get_cipher
+    from app.models.enums import ProviderKey
+    from app.models.provider_credential import ProviderCredential
+
+    async with async_sessionmaker(bind=engine, expire_on_commit=False)() as session:
+        session.add(
+            ProviderCredential(
+                provider_key=ProviderKey.FIREBASE_AUTH,
+                country_code=None,
+                credentials=get_cipher().encrypt(
+                    {"project_id": "taxo-test-project", "use_mock": True}
+                ),
+                is_active=True,
+            )
+        )
+        await session.commit()
+
+
 @pytest.fixture
 async def client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
@@ -260,23 +290,30 @@ async def jordan_wallet(session_factory) -> None:
         await session.commit()
 
 
+def _signup(phone: str, name: str, country: str, role: str) -> dict:
+    """حمولة تسجيلٍ صالحة — ومنها **إثبات ملكية الرقم**.
+
+    منذ المرحلة 8-ب لا يُقبل تسجيلٌ بلا إثبات (SPEC القسم 4)، فالحمولة
+    «الصالحة» تحمله. والرمز من المُحقِّق الوهمي الذي يثبّته `phone_verification`.
+    """
+    from app.core.phone import normalize_phone
+    from app.services.firebase_auth import mock_token
+
+    return {
+        "phone": phone,
+        "name": name,
+        "password": "SuperSecret123",
+        "country_code": country,
+        "role": role,
+        "verification_token": mock_token(normalize_phone(phone, country)),
+    }
+
+
 @pytest.fixture
 def rider_payload() -> dict:
-    return {
-        "phone": "0791234567",
-        "name": "راكب تجريبي",
-        "password": "SuperSecret123",
-        "country_code": "JO",
-        "role": "rider",
-    }
+    return _signup("0791234567", "راكب تجريبي", "JO", "rider")
 
 
 @pytest.fixture
 def driver_payload() -> dict:
-    return {
-        "phone": "0917654321",
-        "name": "كبتن تجريبي",
-        "password": "SuperSecret123",
-        "country_code": "LY",
-        "role": "driver",
-    }
+    return _signup("0917654321", "كبتن تجريبي", "LY", "driver")

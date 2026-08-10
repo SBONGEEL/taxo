@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.deps import AdminUser, DbSession, StaffUser
-from app.core.exceptions import Conflict, NotFound
+from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
 from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode
@@ -179,12 +179,28 @@ async def list_feature_flags(
 async def upsert_feature_flag(
     payload: FeatureFlagUpsert, admin: AdminUser, session: DbSession
 ) -> CountryFeatureFlagsOut:
+    """`admin` وحده — و**إطفاءُ مفتاحٍ حارس يشترط سبباً مكتوباً**.
+
+    `otp_verification_enabled` ليس ميزةً تُجرَّب: إطفاؤه يسمح بإنشاء حساباتٍ
+    بأرقامٍ لم يملكها أصحابُها. فهو إجراءُ طوارئٍ يُسأل عنه، وسجلُّ تدقيقٍ
+    يقول «أُطفئ» بلا «لماذا» نصفُ سجل (SPEC القسم 13/6).
+    """
+    if (
+        payload.feature_key in settings_service.DEFAULT_ENABLED_FLAGS
+        and not payload.enabled
+        and not (payload.reason or "").strip()
+    ):
+        raise InvalidInput(
+            "إطفاء مفتاح التحقق إجراء طوارئ — اكتب سببه (8 أحرف على الأقل)"
+        )
+
     await settings_service.set_flag(
         session,
         country_code=payload.country_code,
         feature_key=payload.feature_key,
         enabled=payload.enabled,
         actor=admin,
+        reason=payload.reason,
     )
     await _commit(session)
     return CountryFeatureFlagsOut(

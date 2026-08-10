@@ -62,6 +62,9 @@ class FeatureFlagUpsert(BaseModel):
     country_code: CountryCode
     feature_key: FeatureKey
     enabled: bool
+    # **إلزامي لإطفاء مفتاحٍ حارس** (`otp_verification_enabled`): إجراءُ
+    # طوارئ يُسأل عنه لاحقاً، وسجلُّ تدقيقٍ يقول «أُطفئ» بلا «لماذا» نصفُ سجل
+    reason: str | None = Field(default=None, min_length=8, max_length=280)
 
 
 class CountryFeatureFlagsOut(BaseModel):

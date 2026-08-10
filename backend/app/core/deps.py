@@ -14,7 +14,6 @@ from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
-from app.services.auth import AuthStrategy, get_auth_strategy
 from app.services.token_service import access_token_subject
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -27,7 +26,6 @@ async def get_redis() -> Redis:
 
 
 RedisDep = Annotated[Redis, Depends(get_redis)]
-AuthStrategyDep = Annotated[AuthStrategy, Depends(get_auth_strategy)]
 
 
 def client_ip(request: Request) -> str:

@@ -1,18 +1,25 @@
+"""المصادقة: دخولٌ بكلمة المرور دائماً، وتحقّقٌ من الرقم في حدثين (8-ب).
+
+الحدثان اللذان يحتاجان إثبات ملكية الرقم — ولا ثالث لهما:
+
+1. **التسجيل**: يُثبَت الرقم مرةً ثم تُوضع كلمة المرور، فيُنشأ حسابٌ محقق.
+2. **الاستعادة**: يُثبَت الرقم ثم تُكتب كلمةٌ جديدة وتُبطَل كل الجلسات.
+
+ومفتاح `otp_verification_enabled` يعفي **التسجيل** وحده حين يُطفأ للطوارئ؛
+والاستعادةُ لا يعفيها شيء — عفوُها يجعل إطفاء المفتاح طريقاً للاستيلاء على
+أي حساب بمجرد معرفة رقمه.
+"""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, status
+from sqlalchemy import select
 
 from app.core import rate_limit
 from app.core.config import settings
-from app.core.deps import (
-    AuthStrategyDep,
-    ClientIP,
-    CurrentUser,
-    DbSession,
-    RedisDep,
-)
-from app.core.exceptions import InvalidInput, InvalidToken, RateLimited
-from app.core.phone import InvalidPhoneNumber, resolve_phone
+from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
+from app.core.exceptions import InvalidInput, InvalidToken, NotFound, RateLimited
+from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
 from app.models.user import User
 from app.schemas.auth import (
     AuthMethodResponse,
@@ -20,12 +27,16 @@ from app.schemas.auth import (
     ChallengeRequest,
     ChallengeResponse,
     LoginRequest,
+    PasswordResetRequest,
     RefreshRequest,
     RegisterRequest,
     TokenPair,
     UserOut,
+    VerifyPhoneRequest,
 )
-from app.services import token_service
+from app.services import otp, token_service, verification
+from app.services.auth import password_strategy
+from app.services.auth.password import set_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -35,11 +46,39 @@ OTP_PHONE_LIMIT = 5
 OTP_IP_LIMIT = 20
 OTP_WINDOW_SECONDS = 3600
 
+# **سقف الاستعادة يومي لا ساعي**: محاولةُ الاستيلاء على حسابٍ بعينه لا
+# تُستعجل، فنافذةٌ ساعيةٌ تعطي المهاجم مئةً وعشرين محاولة في اليوم بلا أثر.
+# والرقمُ سخيٌّ لمن نسي كلمته فعلاً ويكفي لتعثّرٍ أو تعثّرين
+PASSWORD_RESET_DAILY_LIMIT = 5
+PASSWORD_RESET_WINDOW_SECONDS = 86_400
+
+
+async def _resolve(phone: str, country_code=None) -> str:
+    try:
+        return resolve_phone(phone, country_code)
+    except InvalidPhoneNumber as exc:
+        raise InvalidInput(str(exc)) from exc
+
+
+async def _guard(redis, *keys_and_caps) -> None:
+    for key, cap, window in keys_and_caps:
+        limit = await rate_limit.hit(redis, key, limit=cap, window_seconds=window)
+        if not limit.allowed:
+            raise RateLimited(retry_after=limit.retry_after)
+
+
+# ------------------------------------------------------------------ الوصف
+
 
 @router.get("/method", response_model=AuthMethodResponse)
-async def auth_method(strategy: AuthStrategyDep) -> AuthMethodResponse:
-    """طريقة الدخول الحالية — تقرأها الواجهة بدل أن تفترضها."""
-    return strategy.describe()
+async def auth_method(session: DbSession) -> AuthMethodResponse:
+    """الدخول ثابتٌ والمُحقِّق متغيّر — تقرؤهما الواجهة بدل أن تفترضهما."""
+    method = await verification.active_method(session)
+    return AuthMethodResponse(
+        login="password",
+        verification=method,
+        otp_length=otp.CODE_LENGTH if method == verification.SMS_OTP else None,
+    )
 
 
 @router.post("/challenge", response_model=ChallengeResponse)
@@ -47,39 +86,29 @@ async def start_challenge(
     payload: ChallengeRequest,
     session: DbSession,
     redis: RedisDep,
-    strategy: AuthStrategyDep,
     ip: ClientIP,
 ) -> ChallengeResponse:
-    """«أرسل لي رمز التحقق» — يعمل قبل التسجيل وقبل الدخول معاً.
+    """«أرسل رمز التحقق» — للتسجيل. وللاستعادة مسارُها بسقفها الخاص.
 
-    في وضع كلمة المرور يعود `sent=false` بلا خطأ: المسار قائمٌ دائماً فلا
-    تحتاج الواجهة أن تعرف الاستراتيجية قبل أن تسأل (SPEC القسم 15/أ).
-
-    **سقفان: على الرقم وعلى الـ IP** (SPEC القسم 14). كل رسالة تكلف مالاً
-    وتصل هاتفَ إنسان، فمسارٌ بلا سقف مسارُ إغراقٍ لجيب المنصة ولصاحب الرقم.
-    ومهلةُ إعادة الإرسال في `services/otp.py` حارسٌ ثالث أضيق.
+    سقفان: على الرقم وعلى الـ IP (SPEC القسم 14). كل رسالة تكلف مالاً وتصل
+    هاتفَ إنسان، ومهلةُ إعادة الإرسال في `services/otp.py` حارسٌ ثالث أضيق.
     """
-    try:
-        phone = resolve_phone(payload.phone, payload.country_code)
-    except InvalidPhoneNumber as exc:
-        raise InvalidInput(str(exc)) from exc
+    phone = await _resolve(payload.phone, payload.country_code)
+    await _guard(
+        redis,
+        (f"otp:phone:{phone}", OTP_PHONE_LIMIT, OTP_WINDOW_SECONDS),
+        (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
+    )
 
-    for key, cap in (
-        (f"otp:phone:{phone}", OTP_PHONE_LIMIT),
-        (f"otp:ip:{ip}", OTP_IP_LIMIT),
-    ):
-        limit = await rate_limit.hit(
-            redis, key, limit=cap, window_seconds=OTP_WINDOW_SECONDS
-        )
-        if not limit.allowed:
-            raise RateLimited(retry_after=limit.retry_after)
-
-    challenge = await strategy.start_challenge(session, redis, phone)
+    challenge = await verification.challenge(session, redis, phone)
     return ChallengeResponse(
         sent=challenge.sent,
         expires_in=challenge.expires_in,
         resend_after=challenge.resend_after,
     )
+
+
+# ------------------------------------------------------- التسجيل والدخول
 
 
 @router.post(
@@ -89,9 +118,13 @@ async def register(
     payload: RegisterRequest,
     session: DbSession,
     redis: RedisDep,
-    strategy: AuthStrategyDep,
     ip: ClientIP,
 ) -> AuthResponse:
+    """حسابٌ جديد: رقمٌ مُثبَت + كلمة مرور يضعها صاحبه.
+
+    الترتيب مقصود: يُتحقق من الرقم **قبل** إنشاء الصف، فلا يبقى حسابٌ نصفُ
+    مُنشأ لرمزٍ لم يُقبل.
+    """
     limit = await rate_limit.hit(
         redis, f"register:{ip}", limit=10, window_seconds=3600
     )
@@ -99,10 +132,22 @@ async def register(
         raise RateLimited(retry_after=limit.retry_after)
 
     try:
-        user = await strategy.register(session, redis, payload)
+        phone = normalize_phone(payload.phone, payload.country_code)
     except InvalidPhoneNumber as exc:
         raise InvalidInput(str(exc)) from exc
 
+    verified_at = None
+    if await verification.required_for_signup(session, payload.country_code):
+        if not payload.verification_token:
+            raise InvalidInput("إثبات ملكية الرقم مطلوب للتسجيل")
+        await verification.verify(
+            session, redis, phone=phone, proof=payload.verification_token
+        )
+        verified_at = verification.verified_now()
+
+    user = await password_strategy.register(
+        session, payload, phone=phone, verified_at=verified_at
+    )
     await session.commit()
     await session.refresh(user)
 
@@ -115,30 +160,142 @@ async def login(
     payload: LoginRequest,
     session: DbSession,
     redis: RedisDep,
-    strategy: AuthStrategyDep,
     ip: ClientIP,
 ) -> AuthResponse:
-    try:
-        phone = resolve_phone(payload.phone, payload.country_code)
-    except InvalidPhoneNumber as exc:
-        raise InvalidInput(str(exc)) from exc
+    """كلمة المرور وحدها — لكل المستخدمين وفي كل الأحوال (المرحلة 8-ب)."""
+    phone = await _resolve(payload.phone, payload.country_code)
 
     # حدّان: على الرقم (منع تخمين كلمة مرور حساب بعينه) وعلى الـ IP
-    for key in (f"login:phone:{phone}", f"login:ip:{ip}"):
-        limit = await rate_limit.hit(
-            redis,
-            key,
-            limit=settings.login_rate_limit_attempts,
-            window_seconds=settings.login_rate_limit_window_seconds,
-        )
-        if not limit.allowed:
-            raise RateLimited(retry_after=limit.retry_after)
+    await _guard(
+        redis,
+        (
+            f"login:phone:{phone}",
+            settings.login_rate_limit_attempts,
+            settings.login_rate_limit_window_seconds,
+        ),
+        (
+            f"login:ip:{ip}",
+            settings.login_rate_limit_attempts,
+            settings.login_rate_limit_window_seconds,
+        ),
+    )
 
-    user = await strategy.authenticate(session, redis, phone, payload.password)
+    user = await password_strategy.authenticate(session, phone, payload.password)
 
     await rate_limit.reset(redis, f"login:phone:{phone}")
     tokens = await token_service.issue_token_pair(redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
+
+
+# ------------------------------------------------- التحقق بعد الإنشاء
+
+
+@router.post("/me/verify-phone", response_model=UserOut)
+async def verify_my_phone(
+    payload: VerifyPhoneRequest,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> UserOut:
+    """يُثبت رقمَ حسابٍ قائم — لمن أُنشئ حسابه والمفتاح مطفأ.
+
+    يطلبه التطبيق عند أول فرصة بعد إعادة تفعيل المفتاح، ويشترطه اعتمادُ
+    الكبتن دائماً (SPEC القسم 13.2).
+    """
+    if user.phone_verified:
+        return UserOut.model_validate(user)
+
+    await verification.verify(
+        session, redis, phone=user.phone, proof=payload.verification_token
+    )
+    verification.mark_verified(user)
+    await session.commit()
+    await session.refresh(user)
+    return UserOut.model_validate(user)
+
+
+# ------------------------------------------------- استعادة كلمة المرور
+
+
+@router.post("/password-reset/challenge", response_model=ChallengeResponse)
+async def start_password_reset(
+    payload: ChallengeRequest,
+    session: DbSession,
+    redis: RedisDep,
+    ip: ClientIP,
+) -> ChallengeResponse:
+    """يبدأ تحدي الاستعادة — بسقفٍ يومي لكل رقم.
+
+    **لا يكشف وجود الحساب**: الجواب واحد سواء أكان الرقم مسجّلاً أم لا،
+    فمسارُ الاستعادة لا يصير عدّاداً للحسابات.
+    """
+    phone = await _resolve(payload.phone, payload.country_code)
+    await _guard(
+        redis,
+        (
+            f"password-reset:phone:{phone}",
+            PASSWORD_RESET_DAILY_LIMIT,
+            PASSWORD_RESET_WINDOW_SECONDS,
+        ),
+        (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
+    )
+
+    challenge = await verification.challenge(session, redis, phone)
+    return ChallengeResponse(
+        sent=challenge.sent,
+        expires_in=challenge.expires_in,
+        resend_after=challenge.resend_after,
+    )
+
+
+@router.post("/password-reset", response_model=AuthResponse)
+async def reset_password(
+    payload: PasswordResetRequest,
+    session: DbSession,
+    redis: RedisDep,
+    ip: ClientIP,
+) -> AuthResponse:
+    """يُثبت الرقم ثم يكتب كلمةً جديدة ويُبطل كل الجلسات.
+
+    **التحقق مطلوبٌ هنا دائماً** ولا يعفيه `otp_verification_enabled`: عفوُه
+    يجعل إطفاء المفتاح طريقاً للاستيلاء على أي حساب بمجرد معرفة رقمه.
+
+    والتوكنات تُصدر **بعد** كتابة الكلمة لا بعد التحقق: إثباتُ ملكية الرقم
+    وحده لا يفتح جلسة، فلو انقطع الطلب بعده لم يبق للمهاجم شيء.
+    """
+    phone = await _resolve(payload.phone, payload.country_code)
+    await _guard(
+        redis,
+        (
+            f"password-reset:phone:{phone}",
+            PASSWORD_RESET_DAILY_LIMIT,
+            PASSWORD_RESET_WINDOW_SECONDS,
+        ),
+        (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
+    )
+
+    await verification.verify(
+        session, redis, phone=phone, proof=payload.verification_token
+    )
+
+    user = await session.scalar(select(User).where(User.phone == phone))
+    if user is None:
+        # بعد إثبات ملكية الرقم لم يعد الكشف تعداداً للحسابات: صاحب الطلب
+        # يملك الرقم فعلاً، وإخفاءُ الحقيقة عنه إرباكٌ بلا فائدة
+        raise NotFound("لا يوجد حساب بهذا الرقم")
+
+    await set_password(session, redis, user=user, new_password=payload.new_password)
+    # استعادةٌ ناجحة تُثبت الرقم أيضاً — أُثبِت للتوّ
+    verification.mark_verified(user)
+    await session.commit()
+    await session.refresh(user)
+
+    await rate_limit.reset(redis, f"password-reset:phone:{phone}")
+    tokens = await token_service.issue_token_pair(redis, user)
+    return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
+
+
+# ------------------------------------------------------------- الجلسات
 
 
 @router.post("/refresh", response_model=TokenPair)

@@ -67,7 +67,20 @@ MIN_WITHDRAWAL = "10.000"
 
 
 async def register(client: AsyncClient, payload: dict) -> dict:
-    response = await client.post("/auth/register", json=payload)
+    """تسجيلٌ كامل — بإثبات ملكية الرقم كما يفرضه المسار الحقيقي (8-ب).
+
+    الرمز من المُحقِّق الوهمي الذي يثبّته `conftest`، والرقم يُطبَّع هنا كما
+    يُطبَّع في الخلفية: المُحقِّق يقارن E.164 بـ E.164 (SPEC القسم 4).
+    """
+    from app.core.phone import normalize_phone
+    from app.services.firebase_auth import mock_token
+
+    body = dict(payload)
+    body.setdefault(
+        "verification_token",
+        mock_token(normalize_phone(payload["phone"], payload["country_code"])),
+    )
+    response = await client.post("/auth/register", json=body)
     assert response.status_code == 201, response.text
     return response.json()
 
@@ -550,6 +563,17 @@ async def enable_sms_provider(session_factory: Any, **overrides: Any) -> None:
             "use_mock": True,
         }
         | overrides,
+    )
+
+
+async def enable_firebase_auth(
+    session_factory: Any, *, project_id: str = "taxo-test-project", **overrides: Any
+) -> None:
+    """عقد Firebase وهمي — يجعل الدخول برمز هوية (SPEC القسم 15/أ)."""
+    await _enable_provider(
+        session_factory,
+        "firebase_auth",
+        {"project_id": project_id, "use_mock": True} | overrides,
     )
 
 

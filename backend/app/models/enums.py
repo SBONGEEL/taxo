@@ -194,6 +194,9 @@ class ProviderKey(StrEnum):
     CLIQ_ACQUIRER = "cliq_acquirer"
     FCM = "fcm"
     PAYOUT = "payout"
+    # التحقق من الهاتف لدى Firebase (المرحلة 8-ب): عقدٌ مستقل عن `fcm` وإن
+    # كان المشروع واحداً — إطفاءُ الإشعارات لا يجوز أن يُطفئ الدخول
+    FIREBASE_AUTH = "firebase_auth"
 
 
 class FeatureKey(StrEnum):
@@ -209,6 +212,11 @@ class FeatureKey(StrEnum):
     CARD_ENABLED = "card_enabled"
     WALLET_ENABLED = "wallet_enabled"
     WALLET_TRANSFER_ENABLED = "wallet_transfer_enabled"
+    # **الاستثناء الوحيد لقاعدة «غياب الصف = معطّل»** (المرحلة 8-ب): هذا
+    # مفتاح **حارس** لا ميزة، وإطفاؤه يفتح باباً لا يغلقه. فغيابُ صفّه يعني
+    # **مفعّلاً**، لأن القاعدة الأصلية وُضعت كي لا تُفتح ميزةٌ بالسكوت — وهنا
+    # السكوتُ يُطفئ حارساً. انظر `settings_service.DEFAULT_ENABLED_FLAGS`
+    OTP_VERIFICATION_ENABLED = "otp_verification_enabled"
 
 
 class WalletOwnerType(StrEnum):

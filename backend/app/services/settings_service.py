@@ -12,6 +12,21 @@ from app.models.user import User
 from app.models.wallet_setting import WalletSetting
 from app.services import audit
 
+# **الاستثناء الوحيد لقاعدة «غياب الصف = معطّل»** (SPEC القسم 4).
+#
+# القاعدة الأصلية تحرس من أن تُفتح ميزةٌ ماليةٌ بالسكوت. وهذه المفاتيح ليست
+# ميزاتٍ تُفتح بل **حرّاساً يُطفأون**: غيابُ صفّها يعني «لم يقرر أحدٌ إطفاءه»،
+# وقراءتُه معطّلاً تُسقط الحارس بلا قرار — وهو نقيضُ ما وُضعت القاعدة له.
+# القائمة مقصورةٌ على ما إطفاؤه أخطرُ من تفعيله، ولا يُضاف إليها مفتاح ميزة.
+DEFAULT_ENABLED_FLAGS: frozenset[str] = frozenset(
+    {FeatureKey.OTP_VERIFICATION_ENABLED.value}
+)
+
+
+def default_for(feature_key: FeatureKey | str) -> bool:
+    key = feature_key.value if isinstance(feature_key, FeatureKey) else feature_key
+    return key in DEFAULT_ENABLED_FLAGS
+
 
 async def get_flags(session: AsyncSession, country_code: CountryCode) -> dict[str, bool]:
     """كل المفاتيح المعروفة للدولة — الغائب منها معطّل.
@@ -23,7 +38,7 @@ async def get_flags(session: AsyncSession, country_code: CountryCode) -> dict[st
             select(FeatureFlag).where(FeatureFlag.country_code == country_code)
         )
     ).all()
-    flags = {key.value: False for key in FeatureKey}
+    flags = {key.value: default_for(key) for key in FeatureKey}
     flags.update({row.feature_key: row.enabled for row in rows})
     return flags
 
@@ -37,6 +52,8 @@ async def is_feature_enabled(
             FeatureFlag.country_code == country_code, FeatureFlag.feature_key == key
         )
     )
+    if enabled is None:
+        return default_for(key)
     return bool(enabled)
 
 

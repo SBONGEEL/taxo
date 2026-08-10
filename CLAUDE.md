@@ -170,18 +170,36 @@ because `env.py` calls `asyncio.run`, which cannot nest inside the test event lo
 events, sockets); `tasks/` holds the Celery app and its periodic jobs, each one a thin wrapper over
 a service.
 
-**Authentication is a swappable strategy, not a fixed flow.** `services/auth/` defines `AuthStrategy`
-with `PasswordAuthStrategy` and `OtpAuthStrategy` (both live since stage 8).
-`get_auth_strategy()` picks between them and `sms_provider_enabled()` is the single decision point; it
-reads the `sms` row of `provider_credentials`, so saving and activating that contract from the admin
-panel flips every route to OTP. Routers depend only on the interface — activating a provider must
-never require touching an endpoint. The `password` field carries a password or an OTP code depending
-on which strategy is live, so `RegisterRequest` only enforces a transport-level minimum and the
-8-character policy lives in `PasswordAuthStrategy`; a schema bound tight enough to reject a six-digit
-code would break the other path rather than guard this one. `services/otp.py` stores an HMAC of the
-code (never the code), consumes it on success, burns it after `MAX_ATTEMPTS`, and gates resends on a
-cooldown — `COOLDOWN_KEY` is public precisely so a test can fast-forward the minute instead of
-sleeping it.
+**Login is always a password. OTP is verification, not a login method.** That distinction is the
+whole shape of `services/auth/` and `services/verification.py`, and it replaced an earlier design
+where the active contract chose *how you log in*. Two login methods meant two contradictory answers
+to "how do I sign in": an account created under OTP has no password and stops working when the
+contract is switched off, and one created under a password is never asked for it when the contract is
+switched on. So login is fixed and the contracts govern **verification**, which is where differing
+providers actually help.
+
+Proving you own a phone happens exactly twice in an account's life — at signup (then you set your
+password) and at password reset. `services/verification.py` is the single decision point: an active
+`firebase_auth` contract wins, else an active `sms` contract, else nothing. Firebase first because it
+is the strongest proof and the cheapest to run; the order is not configurable, because a switch
+saying "which one first" is a second piece of state that can disagree with the contracts themselves.
+`OtpAuthStrategy` was deleted as a login method but `services/otp.py` was not: the SMS provider became
+the *second verifier*, so code generation, the HMAC digest, the attempt counter and the resend
+cooldown all still earn their keep. `COOLDOWN_KEY` is public precisely so a test can fast-forward the
+minute instead of sleeping it.
+
+The proof travels in its own `verification_token` field, never in `password` — the password is set in
+the same signup request, so one field cannot carry both. Password reset is a separate path that
+**issues no token until the new password is actually written** (a proof that opened a session would
+leave the attacker something if the request died right after it), revokes every refresh token for
+that user, and is capped **daily** rather than hourly: taking over a specific account is not a race,
+and an hourly window hands out 120 attempts a day.
+
+`users.phone_verified_at` is the record of that proof. It is only ever NULL when an admin turned the
+`otp_verification_enabled` guard off, and such accounts stay flagged and filterable in the panel
+(`GET /admin/users?phone_verified=false`). **Driver approval requires it regardless of the flag** —
+a driver's phone is where CliQ transfers land, so approving one we cannot prove owns it is sending
+money to an unknown number. `services/drivers.approve` is the only door that sets `approved`.
 
 **Every external provider follows one shape, and `card_gateway` is the template.** `services/sms/`,
 `services/push/`, `services/cliq/` and `services/payout/` each carry `base.py` (the contract),
@@ -229,6 +247,14 @@ Enums are Postgres native types created via `models/base.py::pg_enum`, which sto
 `.value` rather than the member name. Reuse it for every new enum column. `feature_flags.feature_key`
 is the deliberate exception: a plain `String(64)` guarded by the `FeatureKey` enum in the schema layer,
 so stage 12's flags need code only, no migration.
+
+**"Absence means disabled" has exactly one exception, and it is not a feature.**
+`settings_service.DEFAULT_ENABLED_FLAGS` lists *guard* flags — today only `otp_verification_enabled`
+— whose absent row reads as **enabled**. The original rule exists so a money feature is never switched
+on by silence; a guard is the mirror image, where silence would switch a protection *off*. Turning
+that flag off is admin-only and requires a written reason that lands in the audit log, it exempts
+**signup only**, and it never touches password reset: if it did, disabling it would become a way to
+take over any account by knowing its number. Do not add feature flags to that set.
 
 Money columns use `models/base.py::MONEY` (`NUMERIC(12,3)`); currency is derived from the country via
 `core/currency.py::currency_for_country` and is never accepted from a client.

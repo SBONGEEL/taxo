@@ -72,8 +72,17 @@ async def test_plate_number_is_unique(client: AsyncClient, driver_payload: dict)
     }
     assert (await client.post("/drivers/me/vehicles", json=vehicle, headers=headers)).status_code == 201
 
+    # الرمز يتبع الرقم: المُحقِّق يقارن هاتف الرمز بالهاتف المُرسَل (8-ب)
+    from app.services.firebase_auth import mock_token
+
     second_driver = await _register(
-        client, driver_payload | {"phone": "0918888888", "name": "كبتن آخر"}
+        client,
+        driver_payload
+        | {
+            "phone": "0918888888",
+            "name": "كبتن آخر",
+            "verification_token": mock_token("+218918888888"),
+        },
     )
     conflict = await client.post(
         "/drivers/me/vehicles", json=vehicle, headers=_auth(second_driver["tokens"])

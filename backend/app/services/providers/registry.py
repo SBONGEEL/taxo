@@ -101,6 +101,29 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             MOCK_FIELD,
         ),
     ),
+    ProviderKey.FIREBASE_AUTH: ProviderSpec(
+        key=ProviderKey.FIREBASE_AUTH,
+        label="Firebase — التحقق من الهاتف (OTP)",
+        # تفعيل هذا العقد يجعل الدخول برمز Firebase — لا feature flag له،
+        # القرار في `services/auth.get_auth_strategy` وحدها.
+        #
+        # **عقدٌ مستقل عن `fcm` وإن كان المشروع واحداً**، لسببين: التحقق من
+        # رمز الهوية لا يحتاج مفتاح حساب الخدمة أصلاً (يكفيه `project_id`
+        # ومفاتيح Google العامة)، فلا داعي لأن يحمل عقدُ الدخول سرّاً لا
+        # يستعمله؛ وإطفاءُ الإشعارات قرارٌ لا يجوز أن يُطفئ الدخول معه —
+        # وعقدٌ واحد يجعلهما مفتاحاً واحداً.
+        fields=(
+            ProviderField(
+                key="project_id",
+                label="معرّف مشروع Firebase",
+                secret=False,
+                # يُنشر للواجهات: تطبيقُ العميل يحتاجه ليتحقق من الرقم أصلاً،
+                # وهو معرِّفٌ عام كتوكن Mapbox العام
+                expose_to_clients=True,
+            ),
+            MOCK_FIELD,
+        ),
+    ),
     ProviderKey.CLIQ_ACQUIRER: ProviderSpec(
         key=ProviderKey.CLIQ_ACQUIRER,
         label="CliQ — التكامل الآلي (شحن المحفظة)",

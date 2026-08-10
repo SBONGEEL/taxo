@@ -72,6 +72,12 @@ async def _test_fcm(values: dict[str, Any]) -> str:
     return await build_provider(values).test_connection()
 
 
+async def _test_firebase_auth(values: dict[str, Any]) -> str:
+    from app.services.firebase_auth import build_verifier
+
+    return await build_verifier(values).test_connection()
+
+
 async def _test_cliq(values: dict[str, Any]) -> str:
     from app.services.cliq import build_provider
 
@@ -95,6 +101,8 @@ async def _run(
         return await _test_sms(values, test_phone)
     if provider_key is ProviderKey.FCM:
         return await _test_fcm(values)
+    if provider_key is ProviderKey.FIREBASE_AUTH:
+        return await _test_firebase_auth(values)
     if provider_key is ProviderKey.CLIQ_ACQUIRER:
         return await _test_cliq(values)
     return await _test_payout(values)

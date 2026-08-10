@@ -123,8 +123,15 @@ async def test_feature_flags_default_to_disabled(
 
     by_country = {row["country_code"]: row["flags"] for row in response.json()}
     assert set(by_country) == {"LY", "JO"}
-    # غياب الصف = معطّل — لا يُفترض التفعيل أبداً
-    assert not any(by_country["LY"].values())
+
+    # غياب الصف = معطّل — لا يُفترض التفعيل أبداً... إلا للمفاتيح **الحارسة**:
+    # `otp_verification_enabled` إطفاؤه يفتح باباً، فغيابُ صفّه يعني مفعّلاً
+    # (المرحلة 8-ب، `settings_service.DEFAULT_ENABLED_FLAGS`)
+    guards = {"otp_verification_enabled"}
+    assert not any(
+        enabled for key, enabled in by_country["LY"].items() if key not in guards
+    )
+    assert by_country["LY"]["otp_verification_enabled"] is True
     assert by_country["JO"]["cliq_enabled"] is False
 
 

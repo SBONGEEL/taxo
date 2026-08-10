@@ -4,18 +4,30 @@ from fastapi import APIRouter
 
 from app.core.config import settings
 from app.core.currency import currency_for_country
-from app.core.deps import AuthStrategyDep, DbSession
-from app.models.enums import CountryCode, ProviderKey, VehicleCategory
+from app.core.deps import DbSession
+from app.models.enums import CountryCode, VehicleCategory
+from app.schemas.auth import AuthMethodResponse
 from app.schemas.config import ConfigOut, CountryConfigOut
-from app.services import settings_service
+from app.services import otp, settings_service, verification
 from app.services.providers import credentials as credentials_service
+from app.services.providers.registry import PROVIDERS
 
 router = APIRouter(tags=["config"])
 
 
+async def _auth_method(session) -> AuthMethodResponse:
+    """نفس ما يعيده `GET /auth/method` — مصدرٌ واحد لا وصفان يفترقان."""
+    method = await verification.active_method(session)
+    return AuthMethodResponse(
+        login="password",
+        verification=method,
+        otp_length=otp.CODE_LENGTH if method == verification.SMS_OTP else None,
+    )
+
+
 @router.get("/config", response_model=ConfigOut)
 async def get_public_config(
-    session: DbSession, strategy: AuthStrategyDep, country_code: CountryCode | None = None
+    session: DbSession, country_code: CountryCode | None = None
 ) -> ConfigOut:
     """الإعدادات العامة للواجهات — بلا مصادقة (تحتاجها شاشة الدخول نفسها).
 
@@ -26,7 +38,7 @@ async def get_public_config(
 
     return ConfigOut(
         app=settings.app_name,
-        auth=strategy.describe(),
+        auth=await _auth_method(session),
         countries=[
             CountryConfigOut(
                 country_code=country,
@@ -36,9 +48,12 @@ async def get_public_config(
             )
             for country in countries
         ],
+        # كلُّ عقدٍ يحمل حقلاً `expose_to_clients` يُنشر هنا بحقوله العامة
+        # وحدها — لا قائمةً يدوية تُنسى عند إضافة مزود (المرحلة 8-ب أضافت
+        # `firebase_auth`، وواجهةُ الدخول لا تعمل بغير معرّف مشروعه)
         providers={
-            ProviderKey.MAPBOX.value: await credentials_service.client_config(
-                session, ProviderKey.MAPBOX
-            )
+            spec.key.value: await credentials_service.client_config(session, spec.key)
+            for spec in PROVIDERS.values()
+            if any(field.expose_to_clients for field in spec.fields)
         },
     )

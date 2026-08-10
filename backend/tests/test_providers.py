@@ -58,7 +58,8 @@ async def test_catalog_lists_every_provider_card(
     body = (await client.get("/admin/providers", headers=admin_headers)).json()
     keys = {provider["provider_key"] for provider in body["providers"]}
     assert keys == {key.value for key in ProviderKey}
-    assert body["credentials"] == []
+    # عقد التحقق الوهمي وحده محفوظ (يثبّته conftest لكل اختبار)
+    assert [row["provider_key"] for row in body["credentials"]] == ["firebase_auth"]
 
 
 # ---------------------------------------------------------- التخزين والتقنيع
@@ -247,7 +248,9 @@ async def test_config_is_public_and_hides_secrets(client: AsyncClient) -> None:
 
     body = response.json()
     assert body["app"] == "TAXO"
-    assert body["auth"]["method"] == "password"
+    # الدخول ثابتٌ والمُحقِّق متغيّر (المرحلة 8-ب)
+    assert body["auth"]["login"] == "password"
+    assert body["auth"]["verification"] == "firebase"
     assert {c["country_code"] for c in body["countries"]} == {"LY", "JO"}
     assert {c["country_code"]: c["currency"] for c in body["countries"]} == {
         "LY": "LYD",
@@ -293,11 +296,14 @@ async def test_config_reflects_feature_flags(
 # ----------------------------------------- تفعيل مزود SMS يحوّل الدخول لـ OTP
 
 
-async def test_activating_sms_provider_switches_auth_to_otp(
-    client: AsyncClient, admin_headers: dict
+async def test_activating_sms_provider_makes_it_the_second_verifier(
+    client: AsyncClient, admin_headers: dict, session_factory
 ) -> None:
-    """نقطة التبديل الوحيدة: حالة العقد في القاعدة، لا متغير بيئة ولا تعديل endpoint."""
-    assert (await client.get("/auth/method")).json()["method"] == "password"
+    """عقد SMS لم يعد يبدّل طريقة الدخول — صار المُحقِّق الثاني (8-ب).
+
+    والدخولُ كلمةُ مرور في الحالين؛ ما يتبدّل هو من يُثبت ملكية الرقم.
+    """
+    from tests.test_phone_verification import _disable_firebase
 
     saved = await client.put(
         "/admin/providers/sms",
@@ -306,6 +312,7 @@ async def test_activating_sms_provider_switches_auth_to_otp(
                 "provider_name": "mock",
                 "api_key": "sms-secret",
                 "sender_id": "TAXO",
+                "use_mock": True,
             },
             "is_active": True,
         },
@@ -313,19 +320,21 @@ async def test_activating_sms_provider_switches_auth_to_otp(
     )
     assert saved.status_code == 200, saved.text
 
-    assert (await client.get("/auth/method")).json()["method"] == "otp"
-    assert (await client.get("/config")).json()["auth"]["method"] == "otp"
+    # عقد Firebase مفعّل، وهو الأسبق في الترتيب
+    assert (await client.get("/auth/method")).json() == {
+        "login": "password",
+        "verification": "firebase",
+        "otp_length": None,
+    }
 
-    # المرحلة 8 بنت التدفق: الحقل نفسه صار رمزاً، ورمزٌ لم يُطلب يُرفض 401
-    # لا 501 — تفاصيله في `test_otp_auth.py`
-    login = await client.post(
-        "/auth/login",
-        json={"phone": "0791234567", "password": "123456", "country_code": "JO"},
-    )
-    assert login.status_code == 401
-    assert login.json()["code"] == "invalid_otp"
+    await _disable_firebase(session_factory)
+    assert (await client.get("/auth/method")).json() == {
+        "login": "password",
+        "verification": "sms_otp",
+        "otp_length": 6,
+    }
 
     await client.post(
         f"/admin/providers/{saved.json()['id']}/deactivate", headers=admin_headers
     )
-    assert (await client.get("/auth/method")).json()["method"] == "password"
+    assert (await client.get("/auth/method")).json()["verification"] == "none"

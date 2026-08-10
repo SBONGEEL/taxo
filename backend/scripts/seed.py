@@ -44,12 +44,16 @@ from app.services.providers import credentials as credentials_service
 
 # ليبيا مرحلة تجريب: كاش فقط. الأردن: كليك وبطاقة ومحفظة، بلا تحويل P2P ولا عمولة.
 FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
-    CountryCode.LY: {key: False for key in FeatureKey},
+    CountryCode.LY: {key: False for key in FeatureKey}
+    | {FeatureKey.OTP_VERIFICATION_ENABLED: True},
     CountryCode.JO: {
         FeatureKey.CLIQ_ENABLED: True,
         FeatureKey.CARD_ENABLED: True,
         FeatureKey.WALLET_ENABLED: True,
         FeatureKey.WALLET_TRANSFER_ENABLED: False,
+        # مفتاحٌ حارس: يُكتب صريحاً في الدولتين وإن كان افتراضُه مفعّلاً —
+        # صفٌّ ظاهرٌ في اللوحة أوضح من افتراضٍ في الكود (المرحلة 8-ب)
+        FeatureKey.OTP_VERIFICATION_ENABLED: True,
     },
 }
 
@@ -116,6 +120,25 @@ PLAN_DEFAULTS: dict[CountryCode, list[tuple[str, SubscriptionDurationType, str]]
 
 def _log(message: str) -> None:
     print(f"[seed] {message}")
+
+
+def _resolve_path(raw_path: str) -> Path:
+    """المسار النسبي يُقاس من مجلد التشغيل أولاً ثم من جذر المستودع.
+
+    الأول يخدم الحاوية (`secrets/` مربوط عند `/app/secrets`)، والثاني تشغيلاً
+    محلياً من `backend/`. وكلاهما موضعٌ معلوم لا تخمين.
+    """
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    return next(
+        (
+            candidate
+            for base in (Path.cwd(), REPO_ROOT)
+            if (candidate := base / raw_path).is_file()
+        ),
+        path,
+    )
 
 
 async def seed_feature_flags(session: AsyncSession) -> None:
@@ -282,19 +305,7 @@ async def seed_fcm(session: AsyncSession) -> None:
         _log("تخطّي FCM — FCM_SERVICE_ACCOUNT_PATH غير معبّأ")
         return
 
-    # المسار النسبي يُقاس من مجلد التشغيل أولاً ثم من جذر المستودع: الأول
-    # يخدم الحاوية (المجلد مربوط عند `/app/secrets`)، والثاني تشغيلاً محلياً
-    # من `backend/`. وكلاهما موضعٌ معلوم لا تخمين
-    path = Path(raw_path)
-    if not path.is_absolute():
-        path = next(
-            (
-                candidate
-                for base in (Path.cwd(), REPO_ROOT)
-                if (candidate := base / raw_path).is_file()
-            ),
-            path,
-        )
+    path = _resolve_path(raw_path)
     if not path.is_file():
         _log(f"تخطّي FCM — لا ملف حساب خدمة عند {path}")
         return
@@ -327,6 +338,54 @@ async def seed_fcm(session: AsyncSession) -> None:
         actor=None,
     )
     _log(f"عقد FCM: محفوظ ومفعّل — مشروع {project_id} (بلا مزود وهمي)")
+
+
+async def seed_firebase_auth(session: AsyncSession) -> None:
+    """يكتب عقد Firebase للتحقق من الهاتف — عقدٌ مستقل عن `fcm`.
+
+    **معرّف المشروع يُشتق من ملف حساب الخدمة نفسه** ما لم يُذكر صراحةً في
+    `FIREBASE_AUTH_PROJECT_ID`: المشروع واحد في الحالة الشائعة، ومتغيرُ بيئةٍ
+    ثانٍ يحمل نفس القيمة قيمتان تفترقان يوماً. والعقدان يبقيان مستقلَّين في
+    القاعدة على أي حال — إطفاءُ الإشعارات لا يُطفئ الدخول.
+
+    ولا يحتاج هذا العقد سرّاً: التحقق من رمز الهوية يجري بمفاتيح Google
+    العامة، فالمخزَّن معرِّفٌ عام لا غير.
+    """
+    project_id = os.environ.get("FIREBASE_AUTH_PROJECT_ID", "").strip()
+
+    if not project_id:
+        raw_path = os.environ.get("FCM_SERVICE_ACCOUNT_PATH", "").strip()
+        path = _resolve_path(raw_path) if raw_path else None
+        if path is not None and path.is_file():
+            try:
+                project_id = str(
+                    json.loads(path.read_text(encoding="utf-8")).get("project_id") or ""
+                ).strip()
+            except ValueError:
+                project_id = ""
+
+    if not project_id:
+        _log("تخطّي Firebase Auth — لا FIREBASE_AUTH_PROJECT_ID ولا ملف حساب خدمة")
+        return
+
+    if (
+        await credentials_service.get_credential(session, ProviderKey.FIREBASE_AUTH)
+        is not None
+    ):
+        return
+
+    await credentials_service.upsert(
+        session,
+        provider_key=ProviderKey.FIREBASE_AUTH,
+        country_code=None,
+        values={"project_id": project_id, "use_mock": False},
+        is_active=True,
+        actor=None,
+    )
+    _log(
+        f"عقد Firebase Auth: محفوظ ومفعّل — مشروع {project_id}. "
+        "الدخول صار برمز هوية Firebase"
+    )
 
 
 async def seed_bootstrap_admin(session: AsyncSession) -> None:
@@ -374,6 +433,7 @@ async def main() -> None:
         await seed_plans(session)
         await seed_providers(session)
         await seed_fcm(session)
+        await seed_firebase_auth(session)
         await seed_bootstrap_admin(session)
         await session.commit()
     await engine.dispose()

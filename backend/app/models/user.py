@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
@@ -29,8 +30,23 @@ class User(UUIDMixin, TimestampMixin, Base):
     # تُوقَف حركتها بينما يبقى صاحبها قادراً على الركوب والدفع نقداً
     wallet_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    # nullable: حسابات OTP-only بعد تفعيل مزود SMS لن يكون لها كلمة مرور
+    # كلمة المرور هي طريقة الدخول **دائماً** (المرحلة 8-ب). تبقى nullable
+    # لحساباتٍ أُنشئت قبل ذلك بـ OTP وحده، ولحسابٍ يُنشئه مسارٌ إداري ثم يضع
+    # صاحبه كلمته — ولا يُفتح حسابٌ بلا كلمة مرور بكلمةٍ يخترعها أحد
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # لحظةُ إثبات ملكية الرقم (Firebase أو رمز SMS). **فارغة تعني رقماً غير
+    # محقق**: يُنشأ الحساب هكذا فقط حين يُطفئ المشرف مفتاح
+    # `otp_verification_enabled` للطوارئ، ويبقى موسوماً في اللوحة ويُطالَب
+    # بالتحقق. ولا تُعتمد وثائق كبتنٍ قبل ملئها مهما كان المفتاح: رقمُ الكبتن
+    # هو ما يستلم عليه حوالات كليك (SPEC القسم 6/9)
+    phone_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    @property
+    def phone_verified(self) -> bool:
+        return self.phone_verified_at is not None
 
     # إشعارات الحملات التسويقية وحدها (المرحلة 8). **لا أثر له على
     # المعاملاتي**: أحداث الرحلة وعرض الطلب وتنبيه الاشتراك جزءٌ من الخدمة

@@ -160,3 +160,47 @@ def anonymous_ref(driver_id: uuid.UUID, salt: str) -> str:
     return hashlib.blake2s(
         str(driver_id).encode(), key=salt.encode()[:32], digest_size=8
     ).hexdigest()
+
+
+# ------------------------------------------------- اعتماد الكبتن (8-ب)
+
+
+async def set_status(
+    session: AsyncSession,
+    *,
+    driver: Driver,
+    status: DriverStatus,
+    actor: User,
+) -> Driver:
+    """يغيّر حالة الكبتن ويسجّلها في التدقيق. الـ commit مسؤولية الراوتر."""
+    from app.models.enums import AuditAction
+    from app.services import audit
+
+    driver.status = status
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.UPDATE,
+        entity_type="driver",
+        entity_id=driver.id,
+        details={"status": status.value},
+    )
+    await session.flush()
+    return driver
+
+
+async def approve(session: AsyncSession, *, driver: Driver, actor: User) -> Driver:
+    """اعتماد الكبتن — **ويشترط رقماً مُثبتاً مهما كان مفتاح التحقق**.
+
+    رقمُ الكبتن هو ما يستلم عليه حوالات كليك (SPEC القسم 6/9) وما تصله عليه
+    تنبيهاتُ الاشتراك؛ فاعتمادُ من لا نعرف أنه يملكه إرسالُ مالٍ إلى رقمٍ
+    مجهول. ولذلك لا يعفيه إطفاء `otp_verification_enabled`: ذاك يعفي
+    **التسجيل** ليمر الناس، لا الاعتماد ليمر المال.
+    """
+    from app.services import verification
+
+    owner = await session.get(User, driver.user_id)
+    verification.require_verified(owner)
+    return await set_status(
+        session, driver=driver, status=DriverStatus.APPROVED, actor=actor
+    )

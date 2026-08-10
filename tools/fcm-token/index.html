@@ -177,6 +177,40 @@
       </section>
 
       <section>
+        <h2>٣. الدخول برمز هوية Firebase (Phone Auth)</h2>
+        <p class="muted">
+          يحاكي ما سيفعله تطبيقا الراكب والكبتن: التحقق من الرقم عند Firebase،
+          ثم إرسال <strong>رمز الهوية</strong> إلى
+          <code>POST /api/v1/auth/login</code> — والخلفية تتحقق منه وتُصدر
+          توكناتها. الأرقام التجريبية المضافة في Firebase Console
+          (Authentication ← Sign-in method ← Phone ← أرقام اختبار) لا تُرسل
+          رسالة: يُكتب رمزها مباشرةً.
+        </p>
+
+        <label for="authPhone">رقم الهاتف (E.164)</label>
+        <input id="authPhone" spellcheck="false" placeholder="+962790000000" />
+
+        <div class="row">
+          <button id="sendCode" type="button">أرسل رمز التحقق</button>
+          <span id="recaptcha"></span>
+        </div>
+
+        <label for="smsCode">رمز التحقق</label>
+        <input id="smsCode" spellcheck="false" placeholder="000000" />
+
+        <div class="row">
+          <button id="verifyCode" type="button" disabled>تحقق واحصل على رمز الهوية</button>
+          <button id="backendLogin" class="ghost" type="button" disabled>
+            سجّل الدخول في TAXO بهذا الرمز
+          </button>
+        </div>
+
+        <label for="idToken">رمز الهوية (ID token)</label>
+        <textarea id="idToken" rows="4" readonly spellcheck="false"></textarea>
+        <div id="status3" class="status">أدخل رقماً ثم أرسل الرمز.</div>
+      </section>
+
+      <section>
         <h2>ما يصل والصفحة مفتوحة</h2>
         <p class="muted">
           إشعارُ المتصفح لا يظهر تلقائياً وصاحبُه على الصفحة — يصل إلى
@@ -192,6 +226,7 @@
     <script src="./config.local.js" onerror="window.TAXO_FCM_DEFAULTS = null"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script>
       const $ = (id) => document.getElementById(id);
       const STORE = "taxo-fcm-tool";
@@ -358,6 +393,92 @@
           say(status, `تعذّر الدخول: ${error.message}`, true);
         } finally {
           $("login").disabled = false;
+        }
+      });
+
+      // ------------------------------------------------ Phone Auth
+
+      let confirmation = null;
+
+      function firebaseApp() {
+        if (!firebase.apps.length) firebase.initializeApp(parseConfig($("config").value));
+        return firebase.app();
+      }
+
+      $("sendCode").addEventListener("click", async () => {
+        const status = $("status3");
+        $("sendCode").disabled = true;
+        try {
+          firebaseApp();
+          const auth = firebase.auth();
+          // أرقام الاختبار في Firebase تتخطى reCAPTCHA، لكن الواجهة تشترط
+          // وجود مُتحقِّقٍ على أي حال
+          if (!window._verifier) {
+            window._verifier = new firebase.auth.RecaptchaVerifier("recaptcha", {
+              size: "invisible",
+            });
+          }
+          confirmation = await auth.signInWithPhoneNumber(
+            $("authPhone").value.trim(),
+            window._verifier
+          );
+          $("verifyCode").disabled = false;
+          say(status, "أُرسل الرمز (أو استعمل رمز رقم الاختبار). أدخله ثم تحقق.");
+        } catch (error) {
+          say(status, `تعذّر الإرسال: ${error.message || error}`, true);
+        } finally {
+          $("sendCode").disabled = false;
+        }
+      });
+
+      $("verifyCode").addEventListener("click", async () => {
+        const status = $("status3");
+        $("verifyCode").disabled = true;
+        try {
+          if (!confirmation) throw new Error("أرسل الرمز أولاً");
+          const result = await confirmation.confirm($("smsCode").value.trim());
+          const token = await result.user.getIdToken();
+          $("idToken").value = token;
+          $("backendLogin").disabled = false;
+          say(
+            status,
+            `تم التحقق لدى Firebase — رمز هوية بطول ${token.length} حرفاً. ` +
+              "الآن سجّل الدخول في TAXO."
+          );
+        } catch (error) {
+          say(status, `فشل التحقق: ${error.message || error}`, true);
+        } finally {
+          $("verifyCode").disabled = false;
+        }
+      });
+
+      $("backendLogin").addEventListener("click", async () => {
+        const status = $("status3");
+        $("backendLogin").disabled = true;
+        try {
+          const response = await fetch(
+            `${$("api").value.replace(/\/$/, "")}/api/v1/auth/login`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                phone: $("authPhone").value.trim(),
+                // نفس الحقل الذي يحمل كلمة المرور — معناه يتبدّل بالمزود
+                password: $("idToken").value,
+                country_code: "JO",
+              }),
+            }
+          );
+          const payload = await response.json();
+          say(
+            status,
+            `HTTP ${response.status}\n${JSON.stringify(payload, null, 2)}`,
+            !response.ok
+          );
+        } catch (error) {
+          say(status, `تعذّر الاتصال بالخلفية: ${error.message}`, true);
+        } finally {
+          $("backendLogin").disabled = false;
         }
       });
 
