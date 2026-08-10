@@ -8,6 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 and constraint. If a requirement is ambiguous, ask before implementing. Do not add features it does
 not describe.
 
+**When you deviate from `SPEC.md` for a justified reason, update `SPEC.md` in the same session,
+before the commit.** A deviation that outlives its session stops being a decision and becomes a
+discrepancy nobody can tell from a bug.
+
 **Section 16 of SPEC.md is a strict, ordered 13-stage plan — one stage per session.** Stages 1
 (infrastructure, FastAPI skeleton, Alembic, `users`/`drivers`/`vehicles`, phone+password auth with
 JWT), 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
