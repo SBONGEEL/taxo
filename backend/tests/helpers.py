@@ -11,6 +11,7 @@ import asyncio
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -239,3 +240,131 @@ async def accepted_ride(
     )
     assert accepted.status_code == 200, accepted.text
     return accepted.json()
+
+
+async def started_ride(client: AsyncClient, rider_headers: dict, driver: dict) -> dict:
+    """رحلة في `in_progress` — من هنا يبدأ تسجيل المسار (SPEC القسم 5.7)."""
+    ride = await accepted_ride(client, rider_headers, driver)
+    for step in ("arrive", "start"):
+        response = await client.post(
+            f"/rides/{ride['id']}/{step}", headers=driver["headers"]
+        )
+        assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def completed_ride(
+    client: AsyncClient, rider_headers: dict, driver: dict
+) -> dict:
+    """رحلة منتهية — أساس كل اختبار دفعٍ أو تقييم."""
+    ride = await started_ride(client, rider_headers, driver)
+    response = await client.post(
+        f"/rides/{ride['id']}/complete", headers=driver["headers"]
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def broadcast_location(
+    client: AsyncClient, driver: dict, lat: float, lng: float
+) -> None:
+    response = await client.post(
+        "/drivers/me/location",
+        json={"lat": lat, "lng": lng, "heading": 90},
+        headers=driver["headers"],
+    )
+    assert response.status_code == 204, response.text
+
+
+# ---------------------------------------------------------------------- الدفع
+
+
+async def pay_ride(
+    client: AsyncClient,
+    rider_headers: dict,
+    ride_id: str,
+    method: str,
+    *,
+    key: str = "pay-key-0001",
+) -> Any:
+    return await client.post(
+        f"/rides/{ride_id}/payments",
+        json={"method": method, "idempotency_key": key},
+        headers=rider_headers,
+    )
+
+
+async def enable_features(session_factory: Any, *keys: str) -> None:
+    """يرفع مفاتيح الأردن — غياب الصف يعني معطّلاً، فلا اختبار يفترض التفعيل."""
+    from app.models.enums import CountryCode
+    from app.models.feature_flag import FeatureFlag
+
+    async with session_factory() as session:
+        for key in keys:
+            session.add(
+                FeatureFlag(
+                    country_code=CountryCode.JO, feature_key=key, enabled=True
+                )
+            )
+        await session.commit()
+
+
+async def set_commission(
+    session_factory: Any, percent: str, applies_to: str = "all_rides"
+) -> None:
+    """يفعّل عمولة الأردن **قبل** إنشاء الرحلة — النسبة تُجمَّد لحظة الإنشاء."""
+    from app.models.commission import CommissionSetting
+    from app.models.enums import CommissionAppliesTo, CountryCode
+
+    async with session_factory() as session:
+        session.add(
+            CommissionSetting(
+                country_code=CountryCode.JO,
+                commission_enabled=True,
+                commission_percent=Decimal(percent),
+                applies_to=CommissionAppliesTo(applies_to),
+            )
+        )
+        await session.commit()
+
+
+async def set_cliq_alias(
+    session_factory: Any, driver_id: uuid.UUID, alias: str = "0791234567"
+) -> None:
+    async with session_factory() as session:
+        driver = await session.get(Driver, driver_id)
+        driver.cliq_alias = alias
+        await session.commit()
+
+
+async def add_route_points(
+    session_factory: Any, ride_id: str, coordinates: list[tuple[float, float]]
+) -> None:
+    """يكتب مساراً معلوم الشكل مباشرةً.
+
+    مسار الالتقاط من بثّ الكبتن تختبره `test_route.py` بنفسه؛ اختبارات السعر
+    تحتاج مسافةً معلومة لا سباقاً مع نافذة أخذ العيّنة.
+
+    `created_at` صريحٌ متصاعد: هو ما يرتّب الخط في `ST_MakeLine`، و`now()`
+    الافتراضية تعطي الصفوف كلها نفس اللحظة فيصير الترتيب عشوائياً بالمُعرّف
+    وتخرج مسافةٌ غير التي رسمها الاختبار.
+    """
+    from app.models.ride import RideRoutePoint, make_point
+
+    base = datetime(2026, 8, 10, 9, 0, tzinfo=UTC)
+    async with session_factory() as session:
+        for index, (lat, lng) in enumerate(coordinates):
+            session.add(
+                RideRoutePoint(
+                    ride_id=uuid.UUID(ride_id),
+                    point=make_point(lat, lng),
+                    created_at=base + timedelta(seconds=20 * index),
+                )
+            )
+        await session.commit()
+
+
+async def payments_of(client: AsyncClient, headers: dict, ride_id: str) -> dict:
+    response = await client.get(f"/rides/{ride_id}/payments", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()

@@ -63,6 +63,63 @@ class RideStatus(StrEnum):
     NO_DRIVER_FOUND = "no_driver_found"
 
 
+class PaymentMethod(StrEnum):
+    """قنوات دفع الرحلة (SPEC القسم 4/6).
+
+    `card` هنا منذ الآن وإن كان مساره معطّلاً حتى المرحلة 6-ب: إضافة قيمة إلى
+    ENUM في postgres لاحقاً ترحيلةٌ وتعديلُ قيود، وشاشة الدفع تعرض القناة
+    مطفأةً لا محذوفة.
+    """
+
+    CASH = "cash"
+    CLIQ = "cliq"
+    CARD = "card"
+    WALLET = "wallet"
+
+
+class PaymentProvider(StrEnum):
+    """المزود الذي مرّت عليه العملية — فارغ لما لا مزود له (كاش، كليك، محفظة)."""
+
+    TELR = "telr"
+
+
+class PaymentStatus(StrEnum):
+    """`pending → confirmed | failed | disputed | refunded` (SPEC القسم 4)."""
+
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    FAILED = "failed"
+    DISPUTED = "disputed"
+    REFUNDED = "refunded"
+
+
+class PaymentConfirmedBy(StrEnum):
+    """من أكّد التحصيل: الكبتن يدوياً، أو المزود آلياً، أو الإدارة فصلاً لنزاع."""
+
+    DRIVER = "driver"
+    SYSTEM = "system"
+    ADMIN = "admin"
+
+
+class DisputeResolution(StrEnum):
+    """حكم الإدارة في نزاع دفعة (SPEC القسم 6/13.4).
+
+    `paid` = المبلغ وصل الكبتنَ فعلاً فتصير الدفعة `confirmed`، و`unpaid` =
+    لم يصل فتصير `failed`. القيمتان تصفان الواقعة لا الحالة الناتجة، فحالةُ
+    الدفعة تُشتق منهما في مكان واحد.
+    """
+
+    PAID = "paid"
+    UNPAID = "unpaid"
+
+
+class RatingRaterType(StrEnum):
+    """من يقيّم من — التقييم متبادل بعد `completed` (SPEC القسم 5.9)."""
+
+    RIDER = "rider"
+    DRIVER = "driver"
+
+
 class SubscriptionDurationType(StrEnum):
     DAILY = "daily"
     WEEKLY = "weekly"

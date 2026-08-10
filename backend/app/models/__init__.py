@@ -9,11 +9,17 @@ from app.models.enums import (
     CommissionAppliesTo,
     CountryCode,
     Currency,
+    DisputeResolution,
     DocumentReviewStatus,
     DocumentType,
     DriverStatus,
     FeatureKey,
+    PaymentConfirmedBy,
+    PaymentMethod,
+    PaymentProvider,
+    PaymentStatus,
     ProviderKey,
+    RatingRaterType,
     RideStatus,
     SubscriptionDurationType,
     TopupMethod,
@@ -26,9 +32,11 @@ from app.models.enums import (
     WithdrawalStatus,
 )
 from app.models.feature_flag import FeatureFlag
+from app.models.payment import Payment, SavedCard
 from app.models.pricing import PricingRule
 from app.models.provider_credential import ProviderCredential
-from app.models.ride import Ride
+from app.models.rating import Rating
+from app.models.ride import Ride, RideRoutePoint
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -47,6 +55,7 @@ __all__ = [
     "CommissionSetting",
     "CountryCode",
     "Currency",
+    "DisputeResolution",
     "DocumentReviewStatus",
     "DocumentType",
     "Driver",
@@ -54,11 +63,20 @@ __all__ = [
     "DriverStatus",
     "FeatureFlag",
     "FeatureKey",
+    "Payment",
+    "PaymentConfirmedBy",
+    "PaymentMethod",
+    "PaymentProvider",
+    "PaymentStatus",
     "PricingRule",
     "ProviderCredential",
     "ProviderKey",
+    "Rating",
+    "RatingRaterType",
     "Ride",
+    "RideRoutePoint",
     "RideStatus",
+    "SavedCard",
     "SubscriptionDurationType",
     "SubscriptionPlan",
     "TopupMethod",

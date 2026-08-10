@@ -33,8 +33,8 @@ from app.models.ride import (
     make_point,
 )
 from app.models.user import User
-from app.services import dispatch, pricing, settings_service
-from app.services.directions import Coordinates
+from app.services import dispatch, pricing, route, settings_service
+from app.services.directions import Coordinates, Route
 
 # آلة الحالات — ما ليس هنا ممنوع (SPEC القسم 5)
 ALLOWED_TRANSITIONS: dict[RideStatus, frozenset[RideStatus]] = {
@@ -317,19 +317,39 @@ async def start_ride(session: AsyncSession, ride: Ride) -> Ride:
 
 
 async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ride:
-    """إنهاء الرحلة وتثبيت `final_fare`.
+    """إنهاء الرحلة وتثبيت `final_fare` (SPEC القسم 5.7/5.8).
 
-    السعر النهائي = المقدّر. إعادة حسابه على المسار الفعلي عند الانحراف الكبير
-    (SPEC القسم 5.7) تأتي مع شاشة الدفع في المرحلة 6: بث المواقع الذي أضافته
-    المرحلة 4 لا يُخزَّن مساراً، فلا مصدر بعد لمسافةٍ فعلية موثوقة. تحصيل
-    المبلغ وقيود المحفظة في المرحلتين 5 و6.
+    السعر النهائي = المقدّر، **إلا** أن تنحرف المسافة الفعلية المحسوبة من نقاط
+    المسار انحرافاً كبيراً؛ فعندها يُعاد الحساب عليها بنفس تسعيرة الدولة
+    والفئة. المدة تبقى المقدّرة: القسم 5.7 يبني إعادة الحساب على **المسافة**
+    وحدها، وإقحامُ زمنٍ فعليٍّ لم يطلبه يحمّل الراكبَ ازدحامَ الطريق مرتين.
+
+    غياب النقاط (تطبيقُ كبتنٍ صامت) يُبقي المقدَّر حكماً — لا تخمين لمسافة.
+    تحصيل المبلغ نفسه في `services/payments.py` بعد هذه اللحظة.
     """
     _require_transition(ride, RideStatus.COMPLETED)
     ride.status = RideStatus.COMPLETED
     ride.completed_at = _now()
-    ride.final_fare = ride.estimated_fare
+
+    actual_km = await route.actual_distance_km(session, ride.id)
+    ride.actual_distance_km = actual_km
+    ride.final_fare = await _final_fare(session, ride, actual_km)
+
     driver.current_ride_id = None
     return await _flush_and_reload(session, ride)
+
+
+async def _final_fare(
+    session: AsyncSession, ride: Ride, actual_km: Decimal | None
+) -> Decimal:
+    if actual_km is None or not route.deviates(ride.distance_km, actual_km):
+        return ride.estimated_fare
+
+    rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
+    fare, _ = pricing.calculate_fare(
+        rule, Route(distance_km=actual_km, duration_min=ride.duration_min)
+    )
+    return fare
 
 
 async def cancel_ride(

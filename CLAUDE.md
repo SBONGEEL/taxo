@@ -16,12 +16,18 @@ discrepancy nobody can tell from a bug.
 (infrastructure, FastAPI skeleton, Alembic, `users`/`drivers`/`vehicles`, phone+password auth with
 JWT), 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
 script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status endpoints), 4
-(Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events) and 5 (the
-`wallet_transactions` ledger, rider topup/transfer, driver wallet and withdrawals) are complete. Do
-not implement anything from a later stage unless the user asks for that stage. When a later-stage
-concern appears in current code (e.g. `dispatch.eligible_driver_ids` does not check for a valid
-subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming the stage
-rather than building ahead.
+(Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events), 5 (the
+`wallet_transactions` ledger, rider topup/transfer, driver wallet and withdrawals) and **6-أ**
+(`payments` with cash/manual-CliQ/wallet/mixed and disputes, `ride_route_points` with `final_fare`
+recalculation, `ratings`) are complete. **Stage 6 is split in two at the external-provider line**:
+6-ب is the Telr Sandbox integration — hosted payment page, webhook signature verification, instant
+card wallet topup, filling `saved_cards` via tokenization, provider-side refunds. The `card`
+channel is already in the `payment_method` ENUM and answers 501 until then; adding an ENUM value to
+a live table later is a migration and a constraint edit, so the channel ships switched off rather
+than absent. Do not implement anything from a later stage unless the user asks for that stage. When
+a later-stage concern appears in current code (e.g. `dispatch.eligible_driver_ids` does not check
+for a valid subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming
+the stage rather than building ahead.
 
 **Any path that changes a row's status locks that row with `for_update` *before* it checks the
 transition.** Reading the row, validating `current → target`, then writing is not atomic on its own:
@@ -30,14 +36,21 @@ all pass the check, and all report success. Load the row with `select(...).with_
 .execution_options(populate_existing=True)` — see `topups.get_request` / `withdrawals.get_request`
 (`for_update=True`) and `rides.cancel_ride` (`session.refresh(..., with_for_update=True)`).
 
-**Lock order is always: the request row first, then the wallet advisory lock.** Every mutating path
-takes them in that order, which is why nothing deadlocks. When a single operation touches two
-wallets, their advisory locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a new
-lock means fitting it into this order, not inventing a second one.
+**Lock order is always: the ride row, then the request/payment row, then the wallet advisory lock.**
+Every mutating path takes them in that order, which is why nothing deadlocks. Creating payments
+locks the ride (`payments._payable_ride`) so two concurrent requests cannot both read the same
+outstanding amount; every status change locks its own row (`topups`/`withdrawals.get_request`,
+`payments.get_payment` with `for_update=True`, `rides.cancel_ride`); ledger writes take the wallet
+lock last. No path takes a payment row lock and then a ride lock. When a single operation touches
+two wallets, their advisory locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a
+new lock means fitting it into this order, not inventing a second one.
 
 Do not let an idempotency key stand in for either lock. It bounds the financial damage, but a guard
 that only works because the guard behind it also fired is a guard that has already failed — and
-this exact defect shipped in stage 5 and was caught only by a concurrency test.
+this exact defect shipped in stage 5 and was caught only by a concurrency test. Verify the tests
+you write for a new lock by deleting the lock and watching them fail: dropping `with_for_update()`
+from payment confirmation turns `Counter({200: 1, 409: 2})` into `Counter({200: 3})` while the
+ledger still shows one entry, which is precisely the failure a passing sequential test would hide.
 
 **A stage that touches money or state transitions is not done without a concurrency test.**
 Sequential request-then-assert tests never enter the code path the locks exist for, so they prove
@@ -203,6 +216,37 @@ and category only. `drivers.anonymous_ref` derives a per-connection pseudonym (b
 random salt) so the frontend can interpolate a car's movement between frames without the same
 driver being trackable across sessions.
 
+**`ride_route_points` is the one exception to "live location lives in Redis only."** SPEC section
+5.7 needs the broadcast to leave a durable trace for two things a 60s key cannot serve: the actual
+distance that `final_fare` is recomputed on, and dispute evidence in the admin panel.
+`services/route.py` hangs off the single `drivers.report_location` seam, so both the WebSocket and
+the REST fallback feed it. It samples one point per 20s (SPEC says 15–30) and **the sampling window
+is the Redis key's own TTL** (`SET NX EX`) rather than a separate timer — so nothing can disagree
+with it and two uvicorn workers cannot both write the same instant. Capture failures are logged and
+swallowed: a driver dropping out of dispatch because a route write failed is the worse loss.
+`route.begin`/`route.end` bracket `in_progress` from the router, and `complete` ends capture
+*before* computing the distance so a broadcast landing mid-calculation cannot extend a path already
+priced. Fewer than two points yields `None`, never zero — zero would read as "drove 0 km" and drop
+the fare to the minimum because an app went silent.
+
+**A ride is settled by `services/payments.py`, and one ride can have several payment rows.** Mixed
+payment (SPEC section 6) is wallet + cash on the same ride, so there is deliberately no unique
+index on `payments.ride_id`; "don't charge twice" is the sum of `OWING_PAYMENT_STATUSES` against
+`final_fare`, evaluated under the ride row lock. Money moves only at `confirmed`, exactly as it
+does for topups. Cash and CliQ get no `ride_earning` — the driver already holds that money (section
+9) — but commission is still owed on them under `all_rides` scope, which is the one path where a
+driver's empty wallet blocks confirmation rather than overdrawing. Earnings are recorded as a full
+`ride_earning` plus a separate `commission` debit rather than one net entry, so section 9's
+"earnings − commissions" reads literally and cash-ride commission is not the only commission line
+in the ledger; the reasoning is written into SPEC section 6. The frozen
+`commission_percent_at_ride` is never re-read from settings, but `applies_to` is read at payment
+time because it keys off the payment channel, which is unknowable at ride creation.
+
+`services/ratings.py` recomputes `drivers.rating_avg` from the whole table after each rider rating
+instead of rolling an average forward, for the same reason wallet balance is summed from its ledger.
+`rater_type_for` decides who may rate from the ride itself, not from the account role — another
+driver whose role is `driver` is not a party to this ride.
+
 **`wallet_transactions.owner_id` always references `users.id` — for riders *and* drivers.**
 `owner_type` is what distinguishes the two wallets. So a driver's balance is queried with
 `driver.user_id`, never `driver.id`; passing the latter silently returns zero because it matches no
@@ -252,6 +296,8 @@ body — making it a fixture fails at teardown.
 - Riders top up and transfer but **never** withdraw (SPEC section 7); only drivers have a withdrawal path.
 - Pricing and all financial math happen in the backend only; the frontends display.
 - `rides.commission_percent_at_ride` is frozen at creation and never recomputed retroactively.
+- `saved_cards` never stores a PAN or CVV — only the provider's token plus brand/last4/expiry. The
+  table exists from stage 6-أ but is written by stage 6-ب.
 - Commission is enabled **only** through `commission_settings`; there is deliberately no
   `commission_enabled` feature flag, so the switch, the percent, and the scope cannot disagree.
 - Every endpoint touching a ride or wallet must verify ownership (no IDOR).

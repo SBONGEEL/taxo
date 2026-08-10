@@ -10,6 +10,7 @@ from app.core.exceptions import PermissionDenied
 from app.models.driver import Driver
 from app.models.enums import RideStatus, UserRole
 from app.models.ride import Ride
+from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.ride import (
     CoordinatesIn,
     RideCancelRequest,
@@ -18,7 +19,14 @@ from app.schemas.ride import (
     RideEstimateRequest,
     RideOut,
 )
-from app.services import dispatch, pricing, rides as rides_service, tracking
+from app.services import (
+    dispatch,
+    pricing,
+    ratings as ratings_service,
+    rides as rides_service,
+    route,
+    tracking,
+)
 from app.services.directions import Coordinates
 from app.ws import events
 
@@ -183,6 +191,9 @@ async def start_ride(
     await session.commit()
     # من هنا يُراقَب اتصال الكبتن حتى نهاية الرحلة (SPEC القسم 5)
     tracking.start(ride.id)
+    # ومن هنا يبدأ تسجيل المسار الفعلي: قبل `in_progress` الكبتن في طريقه
+    # للراكب، وذاك ليس من مسار الرحلة (SPEC القسم 5.7)
+    await route.begin(redis, driver_id=driver.id, ride_id=ride.id)
     await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_STARTED)
     return _to_out(ride)
 
@@ -191,6 +202,12 @@ async def start_ride(
 async def complete_ride(
     ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
 ) -> RideOut:
+    """الإنهاء يثبّت `final_fare` على المسافة الفعلية إن انحرفت (القسم 5.7).
+
+    إيقاف التسجيل **قبل** إنهاء الرحلة لا بعده: بثّةٌ تصل بين الحسابِ
+    والإيقاف تضيف نقطةً لمسارٍ حُسبت مسافته بالفعل.
+    """
+    await route.end(redis, driver_id=driver.id)
     ride = await rides_service.complete_ride(
         session, await _assigned_ride(session, ride_id, driver), driver
     )
@@ -228,6 +245,42 @@ async def cancel_ride(
         # إلغاء أثناء البحث: تتوقف المهمة وتُطوى البطاقة من شاشة المعروض عليه
         await dispatch.stop(ride_id)
         await dispatch.withdraw_offer(session, redis, ride_id)
+    if ride.driver_id is not None:
+        await route.end(redis, driver_id=ride.driver_id)
     await tracking.stop(ride_id)
     await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_CANCELLED)
     return _to_out(ride)
+
+
+# ------------------------------------------------------------------ التقييم
+
+
+@router.get("/{ride_id}/ratings", response_model=list[RatingOut])
+async def list_ride_ratings(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> list[RatingOut]:
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    entries = await ratings_service.list_for_ride(session, ride.id)
+    return [RatingOut.model_validate(entry) for entry in entries]
+
+
+@router.post(
+    "/{ride_id}/ratings", response_model=RatingOut, status_code=status.HTTP_201_CREATED
+)
+async def rate_ride(
+    ride_id: uuid.UUID,
+    payload: RatingCreate,
+    user: CurrentUser,
+    session: DbSession,
+) -> RatingOut:
+    """تقييم متبادل بعد `completed` — مسار واحد لكلا الطرفين (SPEC القسم 5.9).
+
+    من يقيّم مَن يُشتق من الرحلة نفسها لا من دور الحساب: كبتنٌ آخر دورُه
+    `driver` ليس طرفاً في هذه الرحلة.
+    """
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    rating = await ratings_service.rate(
+        session, ride=ride, rater=user, stars=payload.stars, comment=payload.comment
+    )
+    await session.commit()
+    return RatingOut.model_validate(rating)

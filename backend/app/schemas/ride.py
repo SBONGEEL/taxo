@@ -99,6 +99,9 @@ class RideOut(BaseModel):
     dropoff_address: str | None
 
     distance_km: Decimal
+    # المسافة المسجَّلة فعلاً من نقاط المسار — فارغة قبل الإنهاء وحين صمت
+    # تطبيق الكبتن (SPEC القسم 5.7)
+    actual_distance_km: Decimal | None
     duration_min: Decimal
     estimated_fare: Decimal
     final_fare: Decimal | None
@@ -130,6 +133,7 @@ class RideOut(BaseModel):
             dropoff=CoordinatesIn(lat=ride.dropoff_lat, lng=ride.dropoff_lng),
             dropoff_address=ride.dropoff_address,
             distance_km=ride.distance_km,
+            actual_distance_km=ride.actual_distance_km,
             duration_min=ride.duration_min,
             estimated_fare=ride.estimated_fare,
             final_fare=ride.final_fare,

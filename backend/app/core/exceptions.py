@@ -152,6 +152,39 @@ class InvalidStatusTransition(Conflict):
     message = "لا يمكن تنفيذ هذا الإجراء على حالة الطلب الحالية"
 
 
+class InvalidPaymentTransition(Conflict):
+    """انتقال غير مسموح في آلة حالات الدفعة (SPEC القسم 4)."""
+
+    code = "invalid_payment_transition"
+    message = "لا يمكن تنفيذ هذا الإجراء على حالة الدفعة الحالية"
+
+
+class RideNotPayable(Conflict):
+    """لا تُدفع رحلةٌ لم تكتمل — شاشة الدفع تلي `completed` (SPEC القسم 5)."""
+
+    code = "ride_not_payable"
+    message = "لا يمكن الدفع قبل اكتمال الرحلة"
+
+
+class RideAlreadyPaid(Conflict):
+    """مجموع الدفعات القائمة يغطي `final_fare` — لا مبلغ متبقٍّ."""
+
+    code = "ride_already_paid"
+    message = "هذه الرحلة لها دفعة قائمة تغطي قيمتها"
+
+
+class RatingNotAllowed(Conflict):
+    """تقييمٌ لرحلة لم تكتمل، أو من ليس طرفاً فيها (SPEC القسم 5.9)."""
+
+    code = "rating_not_allowed"
+    message = "لا يمكن تقييم هذه الرحلة"
+
+
+class AlreadyRated(Conflict):
+    code = "already_rated"
+    message = "سبق أن قيّمت هذه الرحلة"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:

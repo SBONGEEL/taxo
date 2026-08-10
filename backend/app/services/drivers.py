@@ -19,7 +19,7 @@ from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import geo
+from app.services import geo, route
 from app.ws import events
 
 
@@ -93,6 +93,10 @@ async def report_location(
 
     البث غير مشروط برحلة جارية لأن قناة الموقع خاصة بالكبتن، ولا يشترك فيها
     إلا راكبٌ أسندت له القاعدة هذا الكبتن — فلا تسريب.
+
+    ومن هنا وحده يُلتقط مسار الرحلة (SPEC القسم 5.7): البثّ هو مصدر النقاط،
+    فوضعُ الالتقاط في مسارٍ آخر يعني مساراً ناقصاً لكبتنٍ يبث من القناة
+    الأخرى. `route.capture` يعرف بنفسه متى لا يكتب شيئاً.
     """
     await geo.update_location(
         redis,
@@ -102,6 +106,9 @@ async def report_location(
         lng=lng,
         heading=heading,
         vehicle_category=context.vehicle_category,
+    )
+    await route.capture(
+        redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading
     )
     await events.publish_driver_location(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading

@@ -103,6 +103,12 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "commission_percent_at_ride >= 0 AND commission_percent_at_ride <= 100",
             name="ride_commission_percent_range",
         ),
+        # قيد مستقل لا توسيعٌ للقيد أعلاه: توسيعه يعني إسقاطه وإعادة إنشائه في
+        # الترحيلة على جدولٍ فيه بيانات، والمكسب لا شيء
+        CheckConstraint(
+            "actual_distance_km IS NULL OR actual_distance_km >= 0",
+            name="ride_actual_distance_non_negative",
+        ),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
             "uq_rides_active_rider",
@@ -158,6 +164,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     distance_km: Mapped[Decimal] = mapped_column(Numeric(8, 3), nullable=False)
     duration_min: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
 
+    # المسافة المقطوعة فعلاً محسوبةً من `ride_route_points` عند الإنهاء
+    # (SPEC القسم 5.7). فارغة حين لا يكفي المسار نقطتين — رحلةٌ صمت فيها
+    # تطبيق الكبتن لا مسافة فعلية موثوقة لها، فيبقى المقدَّر هو الحكم.
+    actual_distance_km: Mapped[Decimal | None] = mapped_column(
+        Numeric(8, 3), nullable=True
+    )
+
     estimated_fare: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     final_fare: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     cancellation_fee: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
@@ -205,3 +218,43 @@ class Ride(UUIDMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<Ride {self.id} ({self.status})>"
+
+
+class RideRoutePoint(UUIDMixin, TimestampMixin, Base):
+    """نقطة واحدة من المسار الفعلي أثناء `in_progress` (SPEC القسم 5.7).
+
+    هذه هي الاستثناء الوحيد لقاعدة «الموقع اللحظي في Redis وحده»
+    (`services/geo.py`): بثّ الكبتن متطايرٌ بعمر ستين ثانية، وله هنا غرضان لا
+    يؤديهما المتطاير — المسافة الفعلية التي يُعاد عليها حساب `final_fare`،
+    ودليلُ «أين سار ومتى» عند الفصل في نزاع من اللوحة (القسم 13.4).
+
+    لا عمود `recorded_at`: حمولة البث `{lat, lng, heading}` بلا زمن، فزمن
+    التسجيل هو `created_at` نفسه — وعمودان لزمنٍ واحد عمودان يفترقان. الترتيب
+    الزمني للمسار يمر على الفهرس المركّب أدناه.
+
+    الصف يُكتب ولا يُعدَّل. لا مُشغّل يمنع ذلك كما في دفتر المحفظة: هذه أدلةٌ
+    لا قيودٌ مالية، وكلفةُ مُشغّلٍ على جدولٍ يستقبل نقطةً كل عشرين ثانية لكل
+    رحلة جارية أعلى من فائدته.
+    """
+
+    __tablename__ = "ride_route_points"
+    __table_args__ = (
+        # المسار يُقرأ دائماً «كل نقاط رحلةٍ مرتّبةً زمنياً» — هذا شكله
+        Index("ix_ride_route_points_ride_created", "ride_id", "created_at"),
+    )
+
+    ride_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        # RESTRICT كبقية ما يتعلق بالرحلة: دليلُ النزاع لا يُمحى بمحو غيره
+        ForeignKey("rides.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    point: Mapped[str] = mapped_column(_point_column(), nullable=False)
+    heading: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+
+    lat: Mapped[float] = column_property(_latitude(point))
+    lng: Mapped[float] = column_property(_longitude(point))
+
+    def __repr__(self) -> str:  # pragma: no cover - تشخيصي
+        return f"<RideRoutePoint {self.ride_id}>"
