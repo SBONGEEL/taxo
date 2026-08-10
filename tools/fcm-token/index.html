@@ -103,9 +103,11 @@
       <section>
         <h2>١. إعدادات تطبيق الويب</h2>
         <p class="muted">
-          Firebase Console ← ⚙️ Project settings ← General ← Your apps ← تطبيق
-          الويب ← <em>SDK setup and configuration</em> ← انسخ كائن
-          <code>firebaseConfig</code> والصقه كما هو.
+          <strong>مُعبّأة سلفاً بمشروع <code>taxo-84a5f</code></strong> — اضغط
+          الزر مباشرةً. ولتجربة مشروعٍ آخر: Firebase Console ← ⚙️ Project
+          settings ← General ← Your apps ← تطبيق الويب ←
+          <em>SDK setup and configuration</em> ← الصق كائن
+          <code>firebaseConfig</code> مكانها.
         </p>
 
         <label for="config">firebaseConfig</label>
@@ -142,8 +144,20 @@
         <label for="api">عنوان الخلفية</label>
         <input id="api" value="http://localhost:8001" spellcheck="false" />
 
+        <label for="phone">هاتف المشرف</label>
+        <input id="phone" spellcheck="false" placeholder="+9627…" />
+
+        <label for="password">كلمة المرور</label>
+        <input id="password" type="password" spellcheck="false" />
+
+        <button id="login" class="ghost" type="button">سجّل الدخول واملأ التوكن</button>
+
         <label for="admin">توكن المشرف (Bearer)</label>
         <input id="admin" spellcheck="false" placeholder="eyJhbGciOi…" />
+        <p class="muted">
+          عمرُه ثلاثون دقيقة — أعد الدخول إن ردّت الخلفية 401. ولا يُحفظ إلا في
+          متصفحك، وكلمةُ المرور لا تُحفظ أصلاً.
+        </p>
 
         <label for="title">العنوان</label>
         <input id="title" value="TAXO — إشعار تجريبي" dir="rtl" style="text-align: right" />
@@ -179,13 +193,25 @@
       const $ = (id) => document.getElementById(id);
       const STORE = "taxo-fcm-tool";
 
-      // مفتاح VAPID **عامٌّ بطبيعته** (النصف الآخر يبقى عند Google) — مثل
-      // توكن Mapbox العام: يُنشر في كل تطبيق ويب يستقبل إشعارات
+      // إعدادات مشروع TAXO — **عامّةٌ بطبيعتها** كلها: `apiKey` في Firebase
+      // مُعرِّفُ مشروعٍ لا مفتاحُ صلاحية (الصلاحية من قواعد الأمان وحسابات
+      // الخدمة)، ومفتاح VAPID نصفُ زوجٍ نصفُه الآخر عند Google. كلاهما يُنشر
+      // في حزمة كل تطبيق ويب يستقبل إشعارات — كتوكن Mapbox العام في
+      // `GET /config`. أما ما لا يُنشر فملفُّ حساب الخدمة في `secrets/`،
+      // وبه وحده تُرسل الخلفية.
+      const DEFAULT_CONFIG = {
+        apiKey: "AIzaSyA2AaA0QecT2iOUOUQwFjSgMmx5H0EOnBY",
+        authDomain: "taxo-84a5f.firebaseapp.com",
+        projectId: "taxo-84a5f",
+        storageBucket: "taxo-84a5f.firebasestorage.app",
+        messagingSenderId: "879288557931",
+        appId: "1:879288557931:web:970ea815796a2c714f2c2e",
+      };
       const DEFAULT_VAPID =
         "BD_ld64UnObUhdwMqEl0oGY5K1lvxwxulvGb68jWChsxOkB8Cv3uzTE6UKcVV33IYas8zPJAqbZjrtfF8JHnGcc";
 
       const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
-      $("config").value = saved.config || "";
+      $("config").value = saved.config || JSON.stringify(DEFAULT_CONFIG, null, 2);
       $("vapid").value = saved.vapid || DEFAULT_VAPID;
       $("api").value = saved.api || "http://localhost:8001";
       $("admin").value = saved.admin || "";
@@ -198,9 +224,12 @@
             vapid: $("vapid").value,
             api: $("api").value,
             admin: $("admin").value,
+            // الهاتف يُحفظ وكلمة المرور لا: راحةٌ في الأول، وخطرٌ في الثانية
+            phone: $("phone").value,
           })
         );
-      ["config", "vapid", "api", "admin"].forEach((id) =>
+      $("phone").value = saved.phone || "";
+      ["config", "vapid", "api", "admin", "phone"].forEach((id) =>
         $(id).addEventListener("change", remember)
       );
 
@@ -303,6 +332,39 @@
           $("status1"),
           "أُلغي تسجيل عامل الخدمة. امسح إذن الإشعارات من إعدادات الموقع ثم حدّث الصفحة."
         );
+      });
+
+      $("login").addEventListener("click", async () => {
+        const status = $("status2");
+        $("login").disabled = true;
+        try {
+          const response = await fetch(
+            `${$("api").value.replace(/\/$/, "")}/api/v1/auth/login`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                phone: $("phone").value.trim(),
+                password: $("password").value,
+                country_code: "JO",
+              }),
+            }
+          );
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.detail || `HTTP ${response.status}`);
+          }
+          if (payload.user.role !== "admin") {
+            throw new Error("هذا الحساب ليس مشرفاً — المسار لـ admin حصراً");
+          }
+          $("admin").value = payload.tokens.access_token;
+          remember();
+          say(status, `أهلاً ${payload.user.name} — التوكن جاهز.`);
+        } catch (error) {
+          say(status, `تعذّر الدخول: ${error.message}`, true);
+        } finally {
+          $("login").disabled = false;
+        }
       });
 
       $("send").addEventListener("click", async () => {
