@@ -7,6 +7,7 @@ import uuid
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, VehicleCategory
@@ -396,6 +397,38 @@ async def test_driver_without_a_vehicle_cannot_go_online(
 
     response = await client.post("/drivers/me/online", headers=headers)
     assert response.status_code == 409
+
+
+async def test_rest_location_is_rate_limited_per_driver(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """سقف بثّ الموقع عبر REST لكل كبتن على حدة (SPEC القسم 10)."""
+    driver = await _driver(client, session_factory, plate_number="AMM-1")
+    other = await _driver(
+        client, session_factory, SECOND_DRIVER, plate_number="AMM-7", location=FAR_PICKUP
+    )
+    body = {**NEAR_PICKUP, "heading": 90}
+
+    # `bring_online` استهلك طلباً واحداً من نافذة كل كبتن
+    for _ in range(settings.location_rate_limit_requests - 1):
+        response = await client.post(
+            "/drivers/me/location", json=body, headers=driver["headers"]
+        )
+        assert response.status_code == 204, response.text
+
+    blocked = await client.post(
+        "/drivers/me/location", json=body, headers=driver["headers"]
+    )
+    assert blocked.status_code == 429
+    assert blocked.json()["code"] == "rate_limited"
+    assert int(blocked.headers["Retry-After"]) > 0
+
+    # السقف لكل كبتن لا للمسار: زميله لم يُعاقَب بذنبه
+    assert (
+        await client.post(
+            "/drivers/me/location", json=body, headers=other["headers"]
+        )
+    ).status_code == 204
 
 
 async def test_going_offline_removes_the_driver_from_the_map(

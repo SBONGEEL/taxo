@@ -6,8 +6,10 @@ from fastapi import APIRouter, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.core import rate_limit
+from app.core.config import settings
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
-from app.core.exceptions import Conflict
+from app.core.exceptions import Conflict, RateLimited
 from app.models.driver import DriverDocument
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
@@ -121,7 +123,19 @@ async def report_location(
     القناة الأساسية هي `WS /ws/driver` (كل ثلاث ثوانٍ بلا كلفة طلب كامل)؛
     هذا المسار لتطبيقٍ فقد مقبسه ولم يُعِده بعد، فلا يختفي الكبتن من الخريطة
     لأجل انقطاع لحظي.
+
+    محكوم بسقف لكل كبتن (SPEC القسم 10): كتابةٌ في Redis تتكرر بلا كلفة على
+    العميل، فبغير سقفٍ يكفي توكن صالح واحد لإغراقها.
     """
+    limit = await rate_limit.hit(
+        redis,
+        f"location:driver:{driver.id}",
+        limit=settings.location_rate_limit_requests,
+        window_seconds=settings.location_rate_limit_window_seconds,
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
     context = await drivers_service.presence_context(session, driver)
     await drivers_service.report_location(
         redis, context, lat=payload.lat, lng=payload.lng, heading=payload.heading

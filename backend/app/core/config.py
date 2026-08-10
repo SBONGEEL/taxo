@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_seconds: int = 300
 
+    # بثّ الموقع عبر REST: الكبتن يبث كل 3 ثوانٍ (20 في الدقيقة)، والسقف
+    # يترك هامشاً لإعادة المحاولة بعد انقطاع (SPEC القسم 10)
+    location_rate_limit_requests: int = 30
+    location_rate_limit_window_seconds: int = 60
+
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:5174",
