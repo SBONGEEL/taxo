@@ -52,7 +52,7 @@ from app.models.notification import (
     NotificationSetting,
 )
 from app.models.user import User
-from app.services import audit, devices
+from app.services import audit, devices, inbox
 from app.services.push import PushMessage, PushProvider, get_push_provider_or_none
 
 logger = logging.getLogger(__name__)
@@ -60,6 +60,10 @@ logger = logging.getLogger(__name__)
 # دفعةُ مستخدمين واحدة. صغيرةٌ عمداً: كل مستخدمٍ نداءٌ للمزود، والمهمة يجب أن
 # تُنهي دفعتها قبل `task_time_limit` وتترك أثرها في القاعدة قبل أي سقوط
 BATCH_SIZE = 200
+
+# نوعُ صفِّ صندوق الوارد وحمولةِ Push للحملات — قيمةٌ واحدة فلا يفترق ما
+# يفتحه الضغط على الإشعار عمّا يفتحه الضغط على صفّه في الصندوق
+CAMPAIGN_KIND = "campaign"
 
 # نافذة الهدوء الافتراضية، بتوقيت الدولة لا بـ UTC
 DEFAULT_QUIET_START = time(22, 0)
@@ -433,7 +437,11 @@ async def _send_batch(
     tokens = await _tokens_by_user(
         session, [user_id for user_id in user_ids if user_id not in opted_out]
     )
-    message = PushMessage(title=campaign.title, body=campaign.body)
+    message = PushMessage(
+        title=campaign.title,
+        body=campaign.body,
+        data={"type": CAMPAIGN_KIND, "campaign_id": str(campaign.id)},
+    )
     now = _now()
 
     for user_id in user_ids:
@@ -458,6 +466,18 @@ async def _send_batch(
             )
         )
         if status is DeliveryStatus.SENT:
+            # صندوق الوارد **لمن أُرسل إليه فعلاً وحده** (المرحلة 9-ب): من
+            # أطفأ إشعارات العروض أطفأها، وإدخالُها صندوقَه من بابٍ آخر
+            # التفافٌ على إطفاءٍ صريح — و`skipped` تعني بالضبط «لم نُرسل
+            # عمداً»
+            await inbox.record(
+                session,
+                user_id=user_id,
+                kind=CAMPAIGN_KIND,
+                title=campaign.title,
+                body=campaign.body,
+                data=dict(message.data),
+            )
             result.sent += 1
         elif status is DeliveryStatus.SKIPPED:
             result.skipped += 1

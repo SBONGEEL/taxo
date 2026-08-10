@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import (
     DocumentReviewStatus,
@@ -39,14 +39,47 @@ class VehicleOut(BaseModel):
 
 
 class DriverDocumentOut(BaseModel):
+    """مستندٌ كما يراه صاحبه واللوحة.
+
+    **بلا `file_path`**: المسار تفصيلُ تخزينٍ داخلي، وكشفُه يغري ببناء رابطٍ
+    منه — والملف لا يُقرأ إلا من مسارٍ يتحقق من الملكية أولاً (القسم 14).
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     doc_type: DocumentType
-    file_path: str
+    content_type: str
+    size_bytes: int
     review_status: DocumentReviewStatus
     review_note: str | None
     reviewed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DocumentReviewIn(BaseModel):
+    """قرارُ مراجعةٍ واحد. الملاحظة **إلزامية عند الرفض**.
+
+    رفضٌ بلا سبب يترك الكبتن يعيد رفع الصورة نفسها ثم ينتظر النتيجة نفسها —
+    فيبقى «قيد المراجعة» بلا نهاية. والقبول لا يحتاج شرحاً.
+    """
+
+    approved: bool
+    note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _note_required_on_reject(self) -> "DocumentReviewIn":
+        if not self.approved and not (self.note or "").strip():
+            raise ValueError("سبب الرفض مطلوب")
+        return self
+
+
+class DriverDocumentsOut(BaseModel):
+    """مستندات كبتنٍ ومعها ما ينقصه للاعتماد — سؤالٌ واحد بجوابٍ واحد."""
+
+    documents: list[DriverDocumentOut]
+    missing_required: list[DocumentType]
 
 
 class DriverOut(BaseModel):

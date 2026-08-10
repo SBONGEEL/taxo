@@ -673,3 +673,86 @@ def mock_webhook_payload(cart_id: str, *, store_id: str = TELR_STORE_ID) -> dict
         "tran_ref": f"mock-{cart_id}",
         "tran_check": f"mock-check-{cart_id}",
     }
+
+
+# ------------------------------------------------------- مستندات الكبتن (9-ب)
+
+# ملفاتُ اختبارٍ صغيرة: `core/storage.py` يحكم على **التوقيع الثنائي** وحده،
+# فبضعُ بايتاتٍ صحيحةِ البداية تكفي وتُغني عن صورةٍ حقيقية في المستودع
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 48
+JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 48
+PDF_BYTES = b"%PDF-1.7\n" + b"0" * 48
+WEBP_BYTES = b"RIFF" + b"\x00\x00\x00\x20" + b"WEBP" + b"\x00" * 32
+NOT_A_DOCUMENT = b"<?php echo 1; ?>"
+
+# المستندات التي لا يُعتمد كبتنٌ قبل قبولها (`models/driver.py`)
+REQUIRED_DOC_TYPES = ("driving_license", "national_id", "vehicle_registration")
+
+
+async def upload_document(
+    client: AsyncClient,
+    headers: dict,
+    *,
+    doc_type: str = "driving_license",
+    content: bytes = PNG_BYTES,
+    filename: str = "license.png",
+    content_type: str = "image/png",
+    expect: int = 200,
+) -> dict:
+    """رفعُ مستندٍ واحد. `content_type` يُرسل عمداً لأن الخلفية لا تصدّقه."""
+    response = await client.put(
+        f"/drivers/me/documents/{doc_type}",
+        files={"file": (filename, content, content_type)},
+        headers=headers,
+    )
+    assert response.status_code == expect, response.text
+    return response.json() if response.content else {}
+
+
+async def review_document(
+    client: AsyncClient,
+    admin_headers: dict,
+    *,
+    driver_id: Any,
+    document_id: str,
+    approved: bool = True,
+    note: str | None = None,
+    expect: int = 200,
+) -> dict:
+    response = await client.post(
+        f"/admin/drivers/{driver_id}/documents/{document_id}/review",
+        json={"approved": approved, "note": note},
+        headers=admin_headers,
+    )
+    assert response.status_code == expect, response.text
+    return response.json() if response.content else {}
+
+
+async def approve_all_documents(
+    client: AsyncClient,
+    driver_headers: dict,
+    admin_headers: dict,
+    *,
+    driver_id: Any,
+) -> None:
+    """يرفع المستندات المطلوبة ويعتمدها — شرطُ اعتماد الكبتن منذ 9-ب."""
+    for doc_type in REQUIRED_DOC_TYPES:
+        document = await upload_document(
+            client, driver_headers, doc_type=doc_type, filename=f"{doc_type}.png"
+        )
+        await review_document(
+            client, admin_headers, driver_id=driver_id, document_id=document["id"]
+        )
+
+
+async def inbox_of(session_factory: Any, user_id: Any) -> list[Any]:
+    """صفوف صندوق وارد مستخدمٍ من القاعدة مباشرةً — أحدثُها أولاً."""
+    from app.models.notification import UserNotification
+
+    async with session_factory() as session:
+        rows = await session.scalars(
+            select(UserNotification)
+            .where(UserNotification.user_id == uuid.UUID(str(user_id)))
+            .order_by(UserNotification.created_at.desc())
+        )
+        return list(rows)

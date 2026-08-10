@@ -24,8 +24,10 @@ page, signed webhook, instant card wallet topup, `saved_cards` tokenization and 
 provider-side refunds), **7** (`driver_subscriptions`, purchase over all four channels, the
 dispatch subscription check, and the Celery sweep), **8** (the full contracts page with test
 connection, unified provider interfaces with mocks, and the OTP/Push/automatic-CliQ/payout
-integrations) and **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
-backend fields it needed) are complete. **The next stage is 10** (the driver PWA). Do not implement
+integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
+backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
+long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
+written from both send doors) are complete. **The next stage is 10** (the driver PWA). Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern appears
 in current code (e.g. no Celery job sweeps stale `provider_orders` yet, the CliQ confirmation
 deadline belongs with the driver's card in stage 10, and the campaigns page in the admin panel
@@ -337,6 +339,34 @@ worker run with no shared in-memory registry. Rider sockets additionally subscri
 `ws:driver_location:{driver_id}` only for the driver the database assigned them. WebSocket auth is
 `?token=` rather than a header because browsers cannot set headers on a WebSocket handshake.
 
+**Uploaded documents are the only user-supplied bytes the backend stores, and `core/storage.py` is
+the only module that touches the filesystem.** Three rules live there and nowhere else: the filename
+is server-generated (`uuid4` + an extension derived from the content, so the client's name never
+reaches a path), the type is decided by the magic bytes rather than the `Content-Type` header the
+client writes, and the size cap is enforced by reading in chunks rather than by trusting
+`Content-Length`. Stored paths are relative to the storage root, and every read goes through
+`resolve()`, which refuses anything that escapes it. Files are never served by a static mount:
+`routers/drivers.document_response` checks ownership first and answers with `nosniff` +
+`private, no-store`. Order matters in both directions — the file is written *before* its row, and a
+superseded file is deleted *after* the commit: an orphan file is litter, a row pointing at nothing
+is a visible fault.
+
+`services/documents.py` owns document state. Re-uploading a `doc_type` replaces its row (unique on
+`(driver_id, doc_type)`) and resets it to `pending`; `review` takes the row lock **inside the
+service, not in the router** — a guard each new caller has to remember is a guard that will be
+forgotten, and no test can own it. `tests/test_driver_documents_concurrency.py` calls the service
+with two sessions in a deliberately ordered interleaving (the first holds its transaction open while
+the second starts), exactly like the stage-8 test. Verified by deletion: dropping `for_update=True`
+turns `["first", "refused"]` into `["first", "second"]` with two audit rows for one document. An
+earlier HTTP-level version of that test passed *without* the lock — two `client.post` calls in
+`asyncio.gather` interleave only if the loop happens to schedule them that way, which is precisely
+the false confidence this project's rules exist to prevent.
+
+**`services/drivers.approve` now has two guards, not one**: a verified phone (stage 8-ب) and every
+required document approved (`REQUIRED_DOCUMENT_TYPES` in `models/driver.py` — licence, national ID,
+vehicle registration; the vehicle photo is deliberately optional). Without the second, review is a
+habit rather than a condition.
+
 **Nothing calls `ws/events.publish_*` directly any more; `services/notifications.py` does.** It
 publishes to Redis and then sends the same event as a push notification, so a channel cannot be added
 for one event and forgotten for another. Push goes only to devices whose socket is *not* open —
@@ -346,6 +376,17 @@ one rule also means the actor never gets pushed his own action: whoever pressed 
 open by definition. Ride offers are the only high-priority send — a twenty-second window does not
 survive Doze mode. Delivery failures are swallowed and logged; a ride must not fail because a remote
 service did.
+
+Since stage 9-ب that same door also writes the durable record: `_safe_notify` writes a
+`user_notifications` row through `services/inbox.py` **before** attempting push, and in its own
+try/except — the row is the trace of the event, not of the provider, so it exists with no FCM
+contract at all and when the socket was open so no push was sent. `kind` is `data["type"]` itself,
+so tapping the notification and tapping its inbox row cannot open different screens. Two exclusions
+carry real reasoning: `EPHEMERAL_KINDS` keeps the twenty-second ride offer out (once it expires,
+`driver_assigned` is the correct trace and a stale "new ride request" row opens nothing), and
+campaigns write a row only for `DeliveryStatus.SENT` — putting a marketing message in the inbox of
+someone who switched marketing push off is a way around an explicit opt-out. There is no retention
+sweep yet; the table grows, reads are capped, and the job belongs with stage 12's maintenance tasks.
 
 Transactional notifications are not a user preference and never read `users.marketing_push_enabled`;
 that column belongs to `services/campaigns.py` alone, along with per-country quiet hours. Campaigns

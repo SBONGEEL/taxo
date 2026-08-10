@@ -32,7 +32,7 @@ from sqlalchemy import (
     Time,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
@@ -170,3 +170,57 @@ class NotificationSetting(UUIDMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<NotificationSetting {self.country_code}>"
+
+
+class UserNotification(UUIDMixin, TimestampMixin, Base):
+    """صندوق وارد المستخدم: **أثرٌ دائم لإشعارٍ عابر** (المرحلة 9-ب).
+
+    قبل هذا الجدول كان الإشعار حدثاً بلا سجل: `services/notifications.py`
+    تبثّ على Redis وتبعث Push ثم تنسى. فمن أُغلق تطبيقُه ساعةً لا يعرف أن
+    اشتراكه انتهى، ولا أن نزاعه فُصل، ولا أن وثيقته رُفضت — وأيقونةُ الجرس
+    في التصميم تصف ميزةً لا مصدر لها.
+
+    ثلاث قواعد:
+
+    - **يُكتب من نفس نقطة الإرسال لا من جانبها.** كلُّ إشعارٍ يمر بـ
+      `services/inbox.py::record` من داخل `notifications.py` و`campaigns.py`،
+      وهما البابان الوحيدان للإرسال. قناةٌ ثالثة تُضاف يوماً تكتب هنا لأن
+      البابين هما ما يُضاف إليهما، لا لأن أحداً تذكّر.
+    - **يُكتب ولو لم يُرسل Push.** لا عقد FCM، أو الجهاز مفتوحٌ فلا يُرسل
+      إليه — كلاهما لا يعني أن الحدث لم يقع. الصفُّ أثرُ الحدث لا أثرُ
+      المزوّد.
+    - **`kind` هي `data["type"]` نفسها** التي تحملها حمولة Push، فلا يفترق
+      ما يفتحه الضغط على الإشعار عمّا يفتحه الضغط على صفّه في الصندوق.
+
+    و`ON DELETE CASCADE`: سجلُّ عرضٍ لا سجلٌّ مالي — يذهب مع صاحبه، كما
+    `device_tokens`.
+
+    **التقليم (retention) ليس هنا:** الجدول ينمو بلا حد اليوم. مهمةُ كنسٍ
+    دورية مكانها **المرحلة 12** مع بقية مهام الصيانة — وحتى ذلك الحين
+    القراءةُ مسقوفةٌ بـ `limit` والفهرس على `(user_id, created_at)`.
+    """
+
+    __tablename__ = "user_notifications"
+    __table_args__ = (
+        Index("ix_user_notifications_user_id_created_at", "user_id", "created_at"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    # نوع الحدث كما في `PushMessage.data["type"]` — نصٌّ لا ENUM: الأنواع
+    # تُضاف مع كل حدثٍ جديد، وترحيلةٌ لكل نصٍّ جديد ثمنٌ بلا مقابل. ونفس
+    # الاعتبار الذي جعل `feature_flags.feature_key` نصّاً
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    body: Mapped[str] = mapped_column(String(500), nullable=False)
+    # نفس حمولة Push: مُعرّفاتٌ تفتح الشاشة الصحيحة. **لا مال ولا سرّ فيها**
+    data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - تشخيصي
+        return f"<UserNotification {self.kind} ({self.user_id})>"

@@ -193,6 +193,22 @@ async def support_headers() -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
+def document_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """جذر تخزينٍ خاص بكل اختبار (المرحلة 9-ب).
+
+    بغيره يكتب اختبارُ الرفع في مجلد المستودع فيتسرب ملفٌ إلى Git، وتتقاسم
+    الاختبارات مجلداً واحداً فيرى أحدُها بقايا الآخر. و`core/storage.py`
+    يقرأ الجذر عند كل نداء لا عند الاستيراد — ولهذا السبب بالضبط.
+    """
+    from app.core.config import settings
+
+    root = tmp_path / "documents"
+    root.mkdir()
+    monkeypatch.setattr(settings, "document_storage_root", root)
+    return root
+
+
+@pytest.fixture(autouse=True)
 def fast_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
     """يضغط مهل التوزيع.
 

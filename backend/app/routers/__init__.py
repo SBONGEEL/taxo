@@ -13,6 +13,7 @@ from app.routers import (
     config,
     devices,
     drivers,
+    notifications,
     payments,
     rides,
     subscriptions,
@@ -24,6 +25,7 @@ api_router = APIRouter()
 api_router.include_router(config.router)
 api_router.include_router(auth.router)
 api_router.include_router(devices.router)
+api_router.include_router(notifications.router)
 api_router.include_router(drivers.router)
 api_router.include_router(rides.router)
 api_router.include_router(payments.router)

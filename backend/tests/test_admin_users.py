@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.models.driver import Driver
 from app.models.user import User
-from tests.helpers import DRIVER, RIDER, register
+from tests.helpers import DRIVER, RIDER, approve_all_documents, auth, register
 from tests.test_phone_verification import _set_verification_flag
 
 
@@ -104,6 +104,16 @@ async def test_driver_approval_requires_a_verified_phone(
     )
     assert verified.status_code == 200
 
+    # ...والحارس الثاني (9-ب) ما زال قائماً: رقمٌ مُثبت بلا مستندات لا يكفي
+    still_denied = await client.post(
+        f"/admin/drivers/{driver_id}/approve", headers=admin_headers
+    )
+    assert still_denied.status_code == 409
+    assert still_denied.json()["code"] == "documents_incomplete"
+
+    await approve_all_documents(
+        client, headers, admin_headers, driver_id=driver_id
+    )
     approved = await client.post(
         f"/admin/drivers/{driver_id}/approve", headers=admin_headers
     )
@@ -114,8 +124,9 @@ async def test_driver_approval_requires_a_verified_phone(
 async def test_verified_driver_is_approved_and_audited(
     client: AsyncClient, admin_headers: dict, session_factory
 ) -> None:
-    await register(client, DRIVER)
+    body = await register(client, DRIVER)
     driver_id = await _driver_id(session_factory, "+962792222222")
+    await approve_all_documents(client, auth(body), admin_headers, driver_id=driver_id)
 
     approved = await client.post(
         f"/admin/drivers/{driver_id}/approve", headers=admin_headers

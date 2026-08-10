@@ -28,12 +28,14 @@ from datetime import datetime
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.driver import DriverDocument
+from app.models.enums import DocumentReviewStatus
 from app.models.payment import Payment
 from app.models.ride import Ride
-from app.services import devices, presence
+from app.services import devices, documents, inbox, presence
 from app.services.push import PushMessage, PushResult, get_push_provider_or_none
 from app.ws import events
-from app.ws.events import RideEvent, SubscriptionEvent
+from app.ws.events import DocumentEvent, RideEvent, SubscriptionEvent
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,14 @@ RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
         "لم يقبل أي كبتن الطلب — حاول مرة أخرى",
     ),
 }
+
+# أحداثٌ تُرسل ولا تُحفظ في صندوق الوارد (المرحلة 9-ب).
+#
+# بطاقة الطلب وحدها: عمرُها عشرون ثانية بحكم `dispatch.OFFER_TIMEOUT_SECONDS`،
+# وبعدها إمّا قُبلت — فحدثُ `driver_assigned` هو الأثر الصحيح — أو انتقلت
+# لكبتنٍ آخر. وصفٌّ باقٍ يقول «طلب رحلة جديد» لطلبٍ مضى يفتح عند الضغط
+# لا شيء، ويملأ الصندوق بما لا يُقرأ حتى يصير الجرس بلا معنى.
+EPHEMERAL_KINDS: frozenset[str] = frozenset({RideEvent.RIDE_OFFER.value})
 
 SUBSCRIPTION_EVENT_TEXT: dict[SubscriptionEvent, tuple[str, str]] = {
     SubscriptionEvent.SUBSCRIPTION_EXPIRING: (
@@ -106,7 +116,35 @@ async def _safe_notify(
     user_id: uuid.UUID,
     message: PushMessage,
 ) -> None:
-    """إشعارٌ لا يُسقط ما استدعاه مهما كان جواب المزود."""
+    """صندوقُ الوارد ثم Push — ولا يُسقط أيُّهما ما استدعاه.
+
+    **الترتيب مقصود**: صفُّ الصندوق أثرُ الحدث لا أثرُ المزوّد، فيُكتب ولو
+    لم يكن ثمة عقد FCM أصلاً، ولو كان الجهاز مفتوحاً فلا Push له. وهو ما
+    يجعل الجرس في التطبيقين يعرض ما جرى لا ما نجح إرسالُه.
+
+    ومحاولتان منفصلتان لا واحدة: فشلُ الكتابة لا يمنع الإرسال، وفشلُ
+    الإرسال لا يمحو الأثر. وما في `EPHEMERAL_KINDS` يُرسل ولا يُحفظ.
+    """
+    # `kind` هو `data["type"]` نفسه، فلا يفترق ما يفتحه الضغط على الإشعار
+    # عمّا يفتحه الضغط على صفّه في الصندوق
+    kind = message.data.get("type", "")
+    if kind not in EPHEMERAL_KINDS:
+        try:
+            await inbox.record(
+                session,
+                user_id=user_id,
+                kind=kind,
+                title=message.title,
+                body=message.body,
+                data=dict(message.data),
+            )
+            # الـ commit هنا كما في `notify_user`: البثّ دائماً بعد commit
+            # المستدعي، فلا معاملةَ تُقطع ولا يبقى صفٌّ معلّقاً
+            await session.commit()
+        except Exception:  # pragma: no cover - يعتمد على عطل قاعدة
+            logger.exception("تعذّر تسجيل إشعار في صندوق %s", user_id)
+            await session.rollback()
+
     try:
         await notify_user(session, redis, user_id=user_id, message=message)
     except Exception:  # pragma: no cover - يعتمد على عطل خارجي
@@ -220,6 +258,59 @@ async def publish_cliq_transfer(
                 "type": events.PaymentEvent.CLIQ_TRANSFER_SUBMITTED.value,
                 "ride_id": str(ride_id),
                 "payment_id": str(payment.id),
+            },
+        ),
+    )
+
+
+# ------------------------------------------------- مراجعة المستندات
+
+
+async def publish_document_review(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    document: DriverDocument,
+) -> None:
+    """نتيجة مراجعة مستند إلى صاحبه (SPEC القسم 12/1 — المرحلة 9-ب).
+
+    **سبب الرفض جزءٌ من الإشعار** لا تفصيلٌ يُطلب بعده: كبتنٌ يعرف أن رخصته
+    رُفضت ولا يعرف لماذا يعيد رفع الصورة نفسها، ويبقى «قيد المراجعة» إلى
+    الأبد. وأولويةٌ عادية: المراجعة تستغرق ساعات فلا معنى لإيقاظ الجهاز.
+    """
+    approved = document.review_status is DocumentReviewStatus.APPROVED
+    event = (
+        DocumentEvent.DOCUMENT_APPROVED if approved else DocumentEvent.DOCUMENT_REJECTED
+    )
+    label = documents.label_for(document.doc_type)
+
+    await events.publish_document_event(
+        redis,
+        driver_user_id=driver_user_id,
+        event=event,
+        document_id=document.id,
+        doc_type=document.doc_type.value,
+        review_note=document.review_note,
+    )
+
+    if approved:
+        title, body = "اعتُمد مستندك", f"{label}: مقبولة"
+    else:
+        title = "رُفض مستندك"
+        body = f"{label}: {document.review_note or 'أعد رفعها بصورة أوضح'}"
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title=title,
+            body=body,
+            data={
+                "type": event.value,
+                "document_id": str(document.id),
+                "doc_type": document.doc_type.value,
             },
         ),
     )

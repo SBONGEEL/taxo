@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, time
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -94,3 +95,41 @@ class NotificationSettingUpdate(BaseModel):
     quiet_hours_start: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     quiet_hours_end: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     timezone: str = Field(min_length=3, max_length=64)
+
+
+# ------------------------------------------- صندوق وارد المستخدم (9-ب)
+
+
+class UserNotificationOut(BaseModel):
+    """صفٌّ في صندوق وارد المستخدم.
+
+    فئتا الإشعارات تلتقيان هنا وحدهما: المعاملاتي (`services/notifications.py`)
+    والتسويقي الذي وصل فعلاً (`services/campaigns.py`) — و`kind` هو ما
+    يفرّق بينهما للواجهة.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    kind: str
+    title: str
+    body: str
+    data: dict[str, Any] | None
+    read_at: datetime | None
+    created_at: datetime
+
+
+class UnreadCountOut(BaseModel):
+    """ما تُرسم منه النقطة الحمراء على الجرس."""
+
+    unread: int
+
+
+class MarkReadIn(BaseModel):
+    """تعليم الإشعارات مقروءةً.
+
+    `ids` غائبةً تعني «الكل» — وهو زرُّ «تعليم الكل كمقروء» في التصميم.
+    وقائمةٌ فارغة صريحة لا تعني الكل: من أرسل `[]` قصد لا شيء.
+    """
+
+    ids: list[uuid.UUID] | None = Field(default=None, max_length=200)

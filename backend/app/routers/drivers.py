@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 import secrets
+import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, File, Query, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.core import rate_limit
+from app.core import rate_limit, storage
 from app.core.config import settings
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import Conflict, RateLimited
 from app.models.driver import DriverDocument
+from app.models.enums import DocumentType
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
     DriverDocumentOut,
+    DriverDocumentsOut,
     DriverLocationIn,
     DriverOut,
     DriverProfileOut,
@@ -22,7 +27,7 @@ from app.schemas.driver import (
     VehicleCreate,
     VehicleOut,
 )
-from app.services import drivers as drivers_service
+from app.services import documents as documents_service, drivers as drivers_service
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
 
@@ -86,6 +91,96 @@ async def add_my_vehicle(
 
     await session.refresh(vehicle)
     return VehicleOut.model_validate(vehicle)
+
+
+# ------------------------------------------------------------- المستندات
+
+
+@router.get("/me/documents", response_model=DriverDocumentsOut)
+async def list_my_documents(
+    driver: CurrentDriver, session: DbSession
+) -> DriverDocumentsOut:
+    """مستنداتي وما ينقصني للاعتماد (SPEC القسم 12/1)."""
+    return DriverDocumentsOut(
+        documents=[
+            DriverDocumentOut.model_validate(document)
+            for document in await documents_service.list_for_driver(session, driver.id)
+        ],
+        missing_required=await documents_service.missing_required(session, driver.id),
+    )
+
+
+@router.put(
+    "/me/documents/{doc_type}",
+    response_model=DriverDocumentOut,
+    status_code=status.HTTP_200_OK,
+)
+async def upload_my_document(
+    doc_type: DocumentType,
+    driver: CurrentDriver,
+    session: DbSession,
+    redis: RedisDep,
+    file: Annotated[UploadFile, File(description="صورة أو PDF")],
+) -> DriverDocumentOut:
+    """رفع مستندٍ أو استبدالُ سابقه — والاستبدال يعيده «قيد المراجعة».
+
+    `PUT` لا `POST` لأن العملية إحلالٌ لا إضافة: النوع الواحد صفٌّ واحد
+    (`uq_driver_documents_driver_doc_type`)، فرفعُ رخصةٍ ثانية استبدالٌ
+    للأولى لا رخصتان.
+
+    ونوعُ الملف وحجمُه يُفحصان من **محتواه** لا من ترويسته (`core/storage.py`).
+    """
+    limit = await rate_limit.hit(
+        redis,
+        f"documents:driver:{driver.id}",
+        limit=settings.document_upload_rate_limit,
+        window_seconds=settings.document_upload_rate_limit_window_seconds,
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
+    document, superseded = await documents_service.upload(
+        session, driver=driver, doc_type=doc_type, reader=file
+    )
+    await session.commit()
+    await session.refresh(document)
+
+    # **بعد** الـ commit: ملفٌّ يتيم نفايةٌ تُنظَّف، وصفٌّ بلا ملفٍ عطلٌ يُرى
+    if superseded is not None:
+        await storage.delete(superseded)
+
+    return DriverDocumentOut.model_validate(document)
+
+
+@router.get("/me/documents/{document_id}/file")
+async def download_my_document(
+    document_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+) -> FileResponse:
+    """ملفُّ مستندي — لا خادمَ ملفاتٍ ساكن ولا رابطَ يُخمَّن (القسم 14)."""
+    document = await documents_service.get_for_driver(
+        session, driver_id=driver.id, document_id=document_id
+    )
+    return document_response(document)
+
+
+def document_response(document: DriverDocument) -> FileResponse:
+    """ردٌّ واحد لمسارَي التحميل — الكبتن واللوحة — بنفس الترويسات.
+
+    `nosniff` لأننا نخدم ملفاً رفعه مستخدم: بغيره قد يخمّن متصفحٌ نوعاً
+    أخطر مما استنتجناه. و`no-store` لأن المستند وثيقةُ هوية لا صفحةُ عرض.
+    """
+    path = storage.resolve(document.file_path)
+    return FileResponse(
+        path,
+        media_type=document.content_type,
+        headers={
+            "Content-Disposition": (
+                f'inline; filename="{document.doc_type.value}{path.suffix}"'
+            ),
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 # ------------------------------------------------- الاتصال والموقع اللحظي

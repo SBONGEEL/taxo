@@ -7,6 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/core/config.py -> parents[3] == جذر المستودع
 REPO_ROOT = Path(__file__).resolve().parents[3]
+# ...و parents[2] == مجلد `backend/` نفسه. الفرق مهم داخل الحاوية: المصدر
+# مربوطٌ على `/app` فيصير جذر المستودع `/` — صالحاً لملف `.env` الذي لا وجود
+# له هناك أصلاً (compose يمرر `env_file`)، غيرَ صالحٍ لمسارٍ نكتب فيه
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -47,6 +51,17 @@ class Settings(BaseSettings):
     # يترك هامشاً لإعادة المحاولة بعد انقطاع (SPEC القسم 10)
     location_rate_limit_requests: int = 30
     location_rate_limit_window_seconds: int = 60
+
+    # مستندات الكبتن (المرحلة 9-ب). **مسارٌ لا خدمةُ تخزينٍ سحابية**: مفاتيح
+    # أي مزوّد خارجي مكانها `provider_credentials` وصفحةُ العقود، فإدخال S3
+    # اليوم يعني مفتاحاً في `.env` — وهو بالضبط ما يمنعه القسم 14. المجلد على
+    # حجمٍ مسمّى في compose فلا يذهب مع إعادة البناء ولا يدخل Git.
+    document_storage_root: Path = BACKEND_ROOT / "var" / "documents"
+    document_max_bytes: int = 5 * 1024 * 1024
+    # الرفع عمليةٌ ثقيلة (قرص + تحقق)، والسقف لكل كبتن لا لكل عنوان: ثلاثة
+    # مستنداتٍ وإعادةُ رفعِ ما رُفض تكفيها هذه النافذة بفارقٍ واسع
+    document_upload_rate_limit: int = 20
+    document_upload_rate_limit_window_seconds: int = 3600
 
     # عنوانا العودة من صفحة الدفع المستضافة — عناوينُ نشرٍ لا أسرارُ مزود،
     # فمكانها هنا لا في `provider_credentials`. الأول عنوان هذه الخلفية كما

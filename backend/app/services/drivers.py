@@ -14,7 +14,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import Conflict, PermissionDenied
+from app.core.exceptions import Conflict, DocumentsIncomplete, PermissionDenied
 from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
@@ -190,17 +190,32 @@ async def set_status(
 
 
 async def approve(session: AsyncSession, *, driver: Driver, actor: User) -> Driver:
-    """اعتماد الكبتن — **ويشترط رقماً مُثبتاً مهما كان مفتاح التحقق**.
+    """اعتماد الكبتن — **بحارسين لا واحد**.
 
-    رقمُ الكبتن هو ما يستلم عليه حوالات كليك (SPEC القسم 6/9) وما تصله عليه
-    تنبيهاتُ الاشتراك؛ فاعتمادُ من لا نعرف أنه يملكه إرسالُ مالٍ إلى رقمٍ
-    مجهول. ولذلك لا يعفيه إطفاء `otp_verification_enabled`: ذاك يعفي
-    **التسجيل** ليمر الناس، لا الاعتماد ليمر المال.
+    **الأول: رقمٌ مُثبت مهما كان مفتاح التحقق.** رقمُ الكبتن هو ما يستلم عليه
+    حوالات كليك (SPEC القسم 6/9) وما تصله عليه تنبيهاتُ الاشتراك؛ فاعتمادُ من
+    لا نعرف أنه يملكه إرسالُ مالٍ إلى رقمٍ مجهول. ولذلك لا يعفيه إطفاء
+    `otp_verification_enabled`: ذاك يعفي **التسجيل** ليمر الناس، لا الاعتماد
+    ليمر المال.
+
+    **والثاني (المرحلة 9-ب): مستنداتٌ مطلوبةٌ مقبولةٌ كلها.** SPEC القسم 12/1
+    يقول «لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات»، والقسم 13/2 يجعل
+    المراجعة قبولاً أو رفضاً لكل مستند. وبغير هذا الحارس تصير المراجعة
+    عادةً لا شرطاً: زرُّ «اعتماد» يعمل والمستنداتُ فارغة، وهو ما كان يقع
+    فعلاً قبل هذه المرحلة.
+
+    وليس بينهما ترتيبٌ ذو معنى فيُفحص الأرخص أولاً.
     """
-    from app.services import verification
+    from app.services import documents, verification
 
     owner = await session.get(User, driver.user_id)
     verification.require_verified(owner)
+
+    missing = await documents.missing_required(session, driver.id)
+    if missing:
+        names = "، ".join(documents.label_for(item) for item in missing)
+        raise DocumentsIncomplete(f"مستندات لم تُعتمد بعد: {names}")
+
     return await set_status(
         session, driver=driver, status=DriverStatus.APPROVED, actor=actor
     )

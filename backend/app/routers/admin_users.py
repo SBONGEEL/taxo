@@ -8,6 +8,10 @@
 - **لا يُعتمد كبتنٌ غير محقق الرقم مهما كان المفتاح**: رقمُ الكبتن هو ما
   يستلم عليه حوالات كليك (SPEC القسم 6/9)، فاعتمادُ من لا نعرف أنه يملكه
   إرسالُ مالٍ إلى رقمٍ مجهول.
+
+وأضافت **المرحلة 9-ب** مراجعةَ المستندات إلى نفس الملف (SPEC القسم 13/2):
+معاينةُ كل مستند وقبولُه أو رفضُه بسبب. القراءة لـ staff والقرار لـ admin
+وحده — مراجعةٌ تفتح باب العمل على المنصة ليست إجراء دعمٍ فني (القسم 13/8).
 """
 
 from __future__ import annotations
@@ -15,16 +19,27 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Query
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import NotFound
 from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, UserRole
 from app.models.user import User
+from app.routers.drivers import document_response
 from app.schemas.auth import UserOut
-from app.schemas.driver import DriverOut
-from app.services import drivers as drivers_service
+from app.schemas.driver import (
+    DocumentReviewIn,
+    DriverDocumentOut,
+    DriverDocumentsOut,
+    DriverOut,
+)
+from app.services import (
+    documents as documents_service,
+    drivers as drivers_service,
+    notifications,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -57,11 +72,82 @@ async def list_users(
     return [UserOut.model_validate(row) for row in rows]
 
 
+@router.get("/drivers/{driver_id}/documents", response_model=DriverDocumentsOut)
+async def list_driver_documents(
+    driver_id: uuid.UUID, _staff: StaffUser, session: DbSession
+) -> DriverDocumentsOut:
+    """مستندات كبتنٍ للمراجعة، ومعها ما ينقصه للاعتماد (SPEC القسم 13/2)."""
+    await _driver(session, driver_id)
+    return DriverDocumentsOut(
+        documents=[
+            DriverDocumentOut.model_validate(document)
+            for document in await documents_service.list_for_driver(session, driver_id)
+        ],
+        missing_required=await documents_service.missing_required(session, driver_id),
+    )
+
+
+@router.get("/drivers/{driver_id}/documents/{document_id}/file")
+async def download_driver_document(
+    driver_id: uuid.UUID,
+    document_id: uuid.UUID,
+    _staff: StaffUser,
+    session: DbSession,
+) -> FileResponse:
+    """معاينة المستند في اللوحة — بنفس ترويسات مسار الكبتن."""
+    document = await documents_service.get_for_review(
+        session, driver_id=driver_id, document_id=document_id
+    )
+    return document_response(document)
+
+
+@router.post(
+    "/drivers/{driver_id}/documents/{document_id}/review",
+    response_model=DriverDocumentOut,
+)
+async def review_driver_document(
+    driver_id: uuid.UUID,
+    document_id: uuid.UUID,
+    payload: DocumentReviewIn,
+    admin: AdminUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> DriverDocumentOut:
+    """قبول مستند أو رفضه — **admin حصراً** (SPEC القسم 13/8).
+
+    المراجعة قرارٌ يفتح باب العمل على المنصة، لا إجراءَ دعمٍ فني. وقفلُ
+    الصفِّ داخل `documents.review` لا هنا: بغيره تمر ضغطتان متزامنتان فيصل
+    الكبتنَ إشعاران متناقضان عن وثيقةٍ واحدة.
+    """
+    driver = await _driver(session, driver_id)
+    document = await documents_service.review(
+        session,
+        driver_id=driver_id,
+        document_id=document_id,
+        actor=admin,
+        approved=payload.approved,
+        note=payload.note,
+    )
+    await session.commit()
+    await session.refresh(document)
+
+    # بعد الـ commit كما تفرض قاعدة البثّ: حالةٌ تُعلن ثم تُلغى أسوأ من
+    # حالةٍ تتأخر لحظة
+    await notifications.publish_document_review(
+        session, redis, driver_user_id=driver.user_id, document=document
+    )
+    return DriverDocumentOut.model_validate(document)
+
+
 @router.post("/drivers/{driver_id}/approve", response_model=DriverOut)
 async def approve_driver(
     driver_id: uuid.UUID, admin: AdminUser, session: DbSession
 ) -> DriverOut:
-    """اعتماد الكبتن بعد مراجعة مستنداته — ويشترط رقماً مُثبتاً."""
+    """اعتماد الكبتن — بحارسَي `services/drivers.approve`.
+
+    رقمٌ مُثبت (8-ب) **ومستنداتٌ مطلوبةٌ مقبولةٌ كلها** (9-ب). فالزرُّ لم يعد
+    يعمل والمستنداتُ فارغة، وهو ما كان يقع قبل هذه المرحلة.
+    """
     driver = await _driver(session, driver_id)
     driver = await drivers_service.approve(session, driver=driver, actor=admin)
     await session.commit()

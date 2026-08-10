@@ -4,7 +4,7 @@ from app.models.audit import AdminAuditLog
 from app.models.base import Base
 from app.models.commission import CommissionSetting
 from app.models.device import DeviceToken
-from app.models.driver import Driver, DriverDocument
+from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
 from app.models.enums import (
     AuditAction,
     CampaignAudience,
@@ -44,6 +44,7 @@ from app.models.notification import (
     NotificationCampaign,
     NotificationDelivery,
     NotificationSetting,
+    UserNotification,
 )
 from app.models.payment import Payment, SavedCard
 from app.models.pricing import PricingRule
@@ -99,6 +100,7 @@ __all__ = [
     "ProviderOrderStatus",
     "Rating",
     "RatingRaterType",
+    "REQUIRED_DOCUMENT_TYPES",
     "Ride",
     "RideRoutePoint",
     "RideStatus",
@@ -109,6 +111,7 @@ __all__ = [
     "TopupMethod",
     "TopupRequestStatus",
     "User",
+    "UserNotification",
     "UserRole",
     "Vehicle",
     "VehicleCategory",

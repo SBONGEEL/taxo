@@ -57,6 +57,18 @@ class PaymentEvent(StrEnum):
     CLIQ_TRANSFER_SUBMITTED = "cliq_transfer_submitted"
 
 
+class DocumentEvent(StrEnum):
+    """نتيجة مراجعة مستند كبتن (SPEC القسم 12/1 و13/2 — المرحلة 9-ب).
+
+    نوعٌ مستقل لأنه لا يخص رحلةً ولا دفعةً ولا اشتراكاً، ويُبث لصاحبه وحده.
+    وهو الحدث الذي يعرف به الكبتن **لماذا** ما زال ينتظر: «قيد المراجعة»
+    شاشةٌ لا تخبره شيئاً إن كانت رخصته رُفضت لصورةٍ غير واضحة.
+    """
+
+    DOCUMENT_APPROVED = "document_approved"
+    DOCUMENT_REJECTED = "document_rejected"
+
+
 class SubscriptionEvent(StrEnum):
     """أحداث اشتراك الكبتن (SPEC القسم 8).
 
@@ -176,6 +188,33 @@ async def publish_subscription_event(
         redis,
         user_channel(driver_user_id),
         {"type": event.value, "expires_at": expires_at.isoformat()},
+    )
+
+
+async def publish_document_event(
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    event: DocumentEvent,
+    document_id: uuid.UUID,
+    doc_type: str,
+    review_note: str | None,
+) -> None:
+    """نتيجة مراجعة مستندٍ لصاحبه وحده.
+
+    تحمل الملاحظة لأنها **سبب الرفض**: بغيرها يعيد الكبتن رفع نفس الصورة
+    غير الواضحة. ولا تحمل مسار الملف — لا يُبنى من عندنا رابطٌ لملفٍ يُقرأ
+    من مسارٍ يتحقق من الملكية.
+    """
+    await publish(
+        redis,
+        user_channel(driver_user_id),
+        {
+            "type": event.value,
+            "document_id": str(document_id),
+            "doc_type": doc_type,
+            "review_note": review_note,
+        },
     )
 
 

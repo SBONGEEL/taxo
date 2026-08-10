@@ -60,6 +60,11 @@ services:
       # للقراءة فقط، ومصدرُها الرسمي بعد البذر هو `provider_credentials`
       # مشفَّراً لا القرص (SPEC القسم 14)
       - ./secrets:/app/secrets:ro
+      # مستندات الكباتن (المرحلة 9-ب). حجمٌ مسمّى **فوق** الربط بالمصدر:
+      # بغيره تُكتب المرفوعات في مجلد المستودع على القرص المضيف فتدخل Git
+      # وتذهب مع كل استنساخ. ولا تُخدَم من هنا بخادم ملفاتٍ ساكن: القراءة
+      # تمر بمسارٍ يتحقق من الملكية (SPEC القسم 14)
+      - taxo_documents:/app/var/documents
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
@@ -159,3 +164,4 @@ volumes:
   taxo_pgdata:
   taxo_redisdata:
   taxo_customer_modules:
+  taxo_documents:

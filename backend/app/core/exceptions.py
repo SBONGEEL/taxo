@@ -214,6 +214,40 @@ class AlreadyRated(Conflict):
     message = "سبق أن قيّمت هذه الرحلة"
 
 
+class UnsupportedDocument(InvalidInput):
+    """نوع ملفٍ لا نقبله — والحكم على **محتواه** لا على ما ادّعاه العميل."""
+
+    code = "unsupported_document"
+    message = "نوع الملف غير مدعوم — الصور (JPEG/PNG/WebP) وملفات PDF فقط"
+
+
+class DocumentTooLarge(AppError):
+    """تجاوز الملف السقف — 413 لا 422: الحجم ليس خطأ صياغة.
+
+    الرقم صريحٌ لا ثابتُ starlette: الاسم تبدّل بين إصدارَيه
+    (`REQUEST_ENTITY_TOO_LARGE` ← `CONTENT_TOO_LARGE`) والرقم لم يتبدّل.
+    ونفس ما فعله `InvalidInput` مع 422.
+    """
+
+    status_code = 413
+    code = "document_too_large"
+    message = "حجم الملف أكبر من المسموح"
+
+
+class DocumentFileMissing(NotFound):
+    """الصفُّ موجود وملفُّه ليس على القرص — عطلٌ لا مدخلٌ خاطئ."""
+
+    code = "document_file_missing"
+    message = "تعذّر العثور على ملف المستند"
+
+
+class DocumentsIncomplete(Conflict):
+    """اعتمادُ كبتنٍ قبل اعتماد مستنداته المطلوبة (SPEC القسم 13/2)."""
+
+    code = "documents_incomplete"
+    message = "لا يُعتمد الكبتن قبل اعتماد مستنداته المطلوبة"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:
