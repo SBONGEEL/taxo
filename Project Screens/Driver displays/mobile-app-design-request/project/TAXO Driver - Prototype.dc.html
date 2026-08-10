@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e7e2;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+a{color:#e6edf3}a:hover{color:#fff}
+input,textarea,select{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.thm-dark{--bg:#14181d;--sur:#0d1014;--sur2:#1a2027;--brd:#2a313a;--tx:#e6edf3;--mut:#8b949e;--inv:#0d1014;--acc:#e6edf3;--ok:#3fb970;--warn:#d9a62e;--dng:#e5534b;--sa:#1c2128;--sb:#20262e;--dim:rgba(4,6,8,.6)}
+.thm-light{--bg:#f2f0eb;--sur:#ffffff;--sur2:#faf9f6;--brd:#ddd8cf;--tx:#171b20;--mut:#6e7681;--inv:#f2f0eb;--acc:#171b20;--ok:#1a7f4e;--warn:#9a6b00;--dng:#c73e36;--sa:#e6e3db;--sb:#ece9e1;--dim:rgba(20,24,29,.4)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scr{overflow-y:auto;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.fld{width:100%;box-sizing:border-box;background:var(--sur);border:1px solid var(--brd);border-radius:13px;padding:13px 15px;font-size:14.5px;color:var(--tx);outline:none}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 12px">
+<div class="{{ themeClass }}" dir="{{ dir }}" data-screen-label="TAXO Driver" style="width:390px;height:800px;border-radius:38px;background:var(--bg);color:var(--tx);box-shadow:0 24px 70px rgba(0,0,0,.35),0 0 0 10px #24262a,0 0 0 12px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+  <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;z-index:40">
+    <span style="font-size:12px;font-weight:600">9:41</span>
+    <div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div>
+  </div>
+
+  <sc-if value="{{ viewLogin }}" hint-placeholder-val="{{ true }}">
+    <div class="scr" style="position:absolute;inset:34px 0 0;display:flex;flex-direction:column;padding:30px 28px 24px;animation:fadein .3s">
+      <div style="display:flex;justify-content:flex-end"><span onClick="{{ toggleLang }}" style="font-size:12px;font-weight:600;color:var(--mut);border:1px solid var(--brd);border-radius:99px;padding:5px 12px;cursor:pointer">{{ t.langBtn }}</span></div>
+      <div style="margin-top:46px;margin-bottom:38px">
+        <div style="font-size:38px;font-weight:700;letter-spacing:.04em">TAXO</div>
+        <div style="font-size:14px;color:var(--mut);margin-top:4px">{{ t.driverApp }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.phone }}</div>
+        <input dir="ltr" class="fld" value="{{ phoneVal }}" onChange="{{ setPhone }}" placeholder="+962 7X XXX XXXX"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.password }}</div>
+        <input type="password" class="fld" value="{{ passVal }}" onChange="{{ setPass }}" placeholder="••••••••"></div>
+        <div onClick="{{ goForgot }}" style="font-size:12px;color:var(--mut);text-align:end;cursor:pointer;text-decoration:underline">{{ t.forgot }}</div>
+      </div>
+      <div onClick="{{ doLogin }}" style="margin-top:24px;background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.loginBtn }}</div>
+      <div style="margin-top:auto;text-align:center;font-size:13px;color:var(--mut)">{{ t.newDriver }} <b onClick="{{ goRegister }}" style="color:var(--tx);font-weight:600;cursor:pointer;text-decoration:underline">{{ t.registerNow }}</b></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewOtp }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;display:flex;flex-direction:column;padding:30px 28px;animation:fadein .3s">
+      <span onClick="{{ goLogin }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+      <div style="font-size:24px;font-weight:700;margin-top:24px">{{ t.otpTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:8px;line-height:1.6">{{ otpSubLine }}</div>
+      <div dir="ltr" style="display:flex;gap:10px;justify-content:center;margin:34px 0">
+        <sc-for list="{{ otpDigits }}" as="d" hint-placeholder-count="4">
+          <div style="width:58px;height:64px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">{{ d }}</div>
+        </sc-for>
+      </div>
+      <div onClick="{{ doOtp }}" style="background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.verify }}</div>
+      <div style="text-align:center;font-size:12.5px;color:var(--mut);margin-top:16px">{{ t.resend }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewRegInfo }}" hint-placeholder-val="{{ false }}">
+    <div class="scr" style="position:absolute;inset:34px 0 0;padding:26px 26px 24px;animation:fadein .3s">
+      <span onClick="{{ goLogin }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+      <div style="font-size:12px;color:var(--mut);margin-top:20px">{{ t.step1 }}</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:4px">{{ t.regTitle1 }}</div>
+      <div style="font-size:12.5px;color:var(--mut);margin-bottom:20px;line-height:1.6">{{ t.regSub1 }}</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.name }}</div><input class="fld" value="{{ regName }}" onChange="{{ setRegName }}" placeholder="{{ t.namePh }}"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.phone }}</div><input dir="ltr" class="fld" value="{{ regPhone }}" onChange="{{ setRegPhone }}" placeholder="+962 7X XXX XXXX"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.country }}</div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ countries }}" as="c" hint-placeholder-count="2">
+              <div onClick="{{ c.pick }}" style="flex:1;border:1px solid {{ c.border }};background:{{ c.bg }};border-radius:13px;padding:12px;text-align:center;font-size:13.5px;font-weight:600;cursor:pointer">{{ c.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.passwordNew }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.confirmPass }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+      </div>
+      <div onClick="{{ regToOtp }}" style="margin-top:20px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.next }}</div>
+      <div style="font-size:11.5px;color:var(--mut);margin-top:14px;line-height:1.7;text-align:center">{{ t.regNote }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewRegDocs }}" hint-placeholder-val="{{ false }}">
+    <div class="scr" style="position:absolute;inset:34px 0 0;padding:26px 26px 24px;animation:fadein .3s">
+      <div style="font-size:12px;color:var(--mut)">{{ t.step3 }}</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:4px">{{ t.regTitle3 }}</div>
+      <div style="font-size:12.5px;color:var(--mut);margin-bottom:18px;line-height:1.6">{{ t.regSub3 }}</div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+        <div style="font-size:13.5px;font-weight:700;margin-bottom:12px">{{ t.vehicle }}</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px"><input class="fld" placeholder="{{ t.vehicleMake }}" value="Toyota"><input class="fld" placeholder="{{ t.vehicleModel }}" value="Corolla"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px"><input class="fld" placeholder="{{ t.vehicleYear }}" value="2021"><input class="fld" placeholder="{{ t.vehicleColor }}" value="{{ t.white }}"></div>
+        <input dir="ltr" class="fld" placeholder="{{ t.plate }}" value="22-71483" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ categories }}" as="c" hint-placeholder-count="2">
+            <div onClick="{{ c.pick }}" style="flex:1;border:1px solid {{ c.border }};background:{{ c.bg }};border-radius:13px;padding:11px;text-align:center;font-size:13px;font-weight:600;cursor:pointer">{{ c.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px">
+        <div style="font-size:13.5px;font-weight:700;margin-bottom:12px">{{ t.docs }}</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ uploads }}" as="u" hint-placeholder-count="3">
+            <div onClick="{{ u.toggle }}" style="border:1px dashed {{ u.border }};border-radius:13px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;background:{{ u.bg }}">
+              <span style="width:38px;height:30px;border-radius:7px;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 6px,var(--sb) 6px,var(--sb) 12px);flex:none;display:block"></span>
+              <span style="flex:1;font-size:12.5px">{{ u.label }}</span>
+              <span style="font-size:11.5px;font-weight:700;color:{{ u.color }}">{{ u.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div><div style="font-size:12px;color:var(--mut);margin:14px 0 6px">{{ t.cliqAlias }}</div><input dir="ltr" class="fld" value="ABUMHMD79"></div>
+      <div onClick="{{ regSubmit }}" style="margin-top:18px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.submitApp }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewRegPending }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;display:flex;flex-direction:column;justify-content:center;padding:32px;text-align:center;animation:fadein .3s">
+      <div style="width:64px;height:64px;border-radius:99px;border:2px solid var(--warn);border-top-color:transparent;margin:0 auto 22px;animation:spin 2.4s linear infinite"></div>
+      <div style="font-size:21px;font-weight:700">{{ t.pendingTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:10px;line-height:1.7">{{ t.pendingSub }}</div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:13px 15px;margin-top:22px;font-size:12px;color:var(--mut);line-height:1.7;text-align:start">{{ t.pendingNote }}</div>
+      <div onClick="{{ enterApp }}" style="margin-top:24px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;font-size:14.5px;font-weight:700;cursor:pointer">{{ t.enterApp }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewForgot }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;padding:30px 28px;animation:fadein .3s">
+      <span onClick="{{ goLogin }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+      <div style="font-size:23px;font-weight:700;margin-top:24px">{{ t.fgTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:8px;line-height:1.6">{{ t.fgSub }}</div>
+      <div style="margin-top:24px"><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.phone }}</div><input dir="ltr" class="fld" value="{{ phoneVal }}" onChange="{{ setPhone }}"></div>
+      <div onClick="{{ fgToOtp }}" style="margin-top:20px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.sendCode }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewNewPass }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;padding:30px 28px;animation:fadein .3s">
+      <div style="font-size:23px;font-weight:700;margin-top:24px">{{ t.newPassTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:8px;line-height:1.6">{{ t.newPassSub }}</div>
+      <div style="margin-top:22px;display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.passwordNew }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.confirmPass }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+      </div>
+      <div onClick="{{ savePass }}" style="margin-top:20px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.savePass }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewApp }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0">
+
+      <sc-if value="{{ tabHome }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px);display:flex;align-items:center;justify-content:center">
+          <span style="font:400 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--mut)">{{ mapLabel }}</span>
+        </div>
+        <div style="position:absolute;top:0;left:0;right:0;height:60px;background:linear-gradient(var(--bg),transparent);pointer-events:none"></div>
+        <div style="position:absolute;top:12px;right:16px;left:16px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 13px">
+            <span style="width:8px;height:8px;border-radius:99px;background:{{ onlineDot }};display:block"></span>
+            <span style="font-size:12.5px;font-weight:600">{{ onlineLabel }}</span>
+          </div>
+          <div style="display:flex;gap:7px">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 12px;font-size:12.5px">{{ t.today }} <b style="font-weight:700">{{ earningsFmt }}</b></div>
+            <div onClick="{{ goNotifs }}" style="position:relative;background:var(--sur);border:1px solid var(--brd);border-radius:99px;width:33px;height:33px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px">◎<sc-if value="{{ unreadShow }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:5px;left:6px;width:7px;height:7px;border-radius:99px;background:var(--dng);display:block"></span></sc-if></div>
+            <div onClick="{{ toggleTheme }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:99px;width:33px;height:33px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px">{{ themeIcon }}</div>
+          </div>
+        </div>
+        <sc-if value="{{ subBannerShow }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:62px;right:16px;left:16px;background:var(--sur);border:1px solid {{ subBannerBorder }};border-radius:14px;padding:11px 13px;display:flex;gap:10px;align-items:center;animation:slideup .3s">
+            <span style="width:6px;height:36px;border-radius:4px;background:{{ subBannerColor }};display:block;flex:none"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:700">{{ subBannerTitle }}</div>
+              <div style="font-size:11px;color:var(--mut)">{{ subBannerSub }}</div>
+            </div>
+            <span onClick="{{ goSub }}" style="font-size:11.5px;font-weight:700;color:var(--inv);background:var(--acc);border-radius:9px;padding:7px 12px;cursor:pointer;flex:none">{{ subBannerCta }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ searchingShow }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:62px;left:50%;transform:translateX(-50%);background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:9px 18px;font-size:12.5px;font-weight:600;display:flex;gap:9px;align-items:center;animation:pulse 1.6s infinite"><span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block"></span>{{ t.waitingOffers }}</div>
+        </sc-if>
+        <div style="position:absolute;bottom:66px;right:0;left:0;padding:14px 16px 12px;background:linear-gradient(transparent,var(--bg) 55%)">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div onClick="{{ goWallet }}" style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:10px 12px;cursor:pointer"><div style="font-size:10px;color:var(--mut)">{{ t.wallet }}</div><div style="font-size:15px;font-weight:700">{{ walletFmt }}</div></div>
+            <div style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:10px 12px"><div style="font-size:10px;color:var(--mut)">{{ t.tripsToday }}</div><div style="font-size:15px;font-weight:700">{{ tripsFmt }}</div></div>
+            <div style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:10px 12px"><div style="font-size:10px;color:var(--mut)">{{ t.rating }}</div><div style="font-size:15px;font-weight:700">{{ ratingFmt }}</div></div>
+          </div>
+          <div onClick="{{ toggleOnline }}" style="background:{{ goBtnBg }};color:{{ goBtnColor }};border:1px solid var(--brd);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ goBtnLabel }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabRides }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px">
+          <div style="font-size:20px;font-weight:700;margin:6px 0 16px">{{ t.ridesTitle }}</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ rides }}" as="r" hint-placeholder-count="4">
+              <div onClick="{{ r.open }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:13px 14px;cursor:pointer">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+                  <span style="font-size:12px;color:var(--mut)">{{ r.when }}</span>
+                  <span style="font-size:15px;font-weight:700">{{ r.fare }}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:10px 1fr;gap:3px 9px">
+                  <span style="width:7px;height:7px;border-radius:99px;background:var(--tx);margin:5px auto 0"></span><div style="font-size:12.5px">{{ r.from }}</div>
+                  <span style="width:2px;height:9px;background:var(--brd);margin:0 auto"></span><span></span>
+                  <span style="width:7px;height:7px;border-radius:2px;background:var(--mut);margin:3px auto 0"></span><div style="font-size:12.5px;color:var(--mut)">{{ r.to }}</div>
+                </div>
+                <div style="display:flex;gap:9px;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd);font-size:11px;color:var(--mut)"><span>{{ r.method }}</span><span>·</span><span>{{ r.dist }}</span><span>·</span><span style="color:var(--warn)">★ {{ r.stars }}</span><span style="margin-inline-start:auto;color:{{ r.badgeColor }};font-weight:700">{{ r.badge }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabWallet }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px">
+            <div style="font-size:20px;font-weight:700">{{ t.wallet }}</div>
+            <span onClick="{{ goWithdrawals }}" style="font-size:12px;font-weight:600;color:var(--mut);border:1px solid var(--brd);border-radius:99px;padding:6px 12px;cursor:pointer">{{ t.withdrawalsRow }}</span>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:20px;padding:20px;margin-bottom:12px">
+            <div style="font-size:12px;color:var(--mut)">{{ t.available }}</div>
+            <div style="font-size:34px;font-weight:700;margin:2px 0 4px">{{ walletFmt }} <span style="font-size:14px;font-weight:500;color:var(--mut)">{{ t.jod }}</span></div>
+            <sc-if value="{{ heldShow }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:var(--warn)">{{ heldLine }}</div></sc-if>
+            <div onClick="{{ openWithdraw }}" style="margin-top:14px;background:var(--acc);color:var(--inv);border-radius:13px;padding:13px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ t.withdraw }}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;margin:16px 2px 10px;color:var(--mut)">{{ t.ledger }}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ txns }}" as="x" hint-placeholder-count="4">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+                <span style="width:34px;height:34px;border-radius:11px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">{{ x.icon }}</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ x.label }}</div><div style="font-size:11px;color:var(--mut)">{{ x.when }}</div></div>
+                <div style="text-align:end"><div style="font-size:14px;font-weight:700;color:{{ x.color }}">{{ x.amount }}</div><div style="font-size:10px;color:var(--mut)">{{ x.after }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabAccount }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px">
+          <div style="display:flex;align-items:center;gap:14px;margin:6px 0 16px">
+            <div style="width:54px;height:54px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">{{ initials }}</div>
+            <div style="flex:1"><div style="font-size:17px;font-weight:700">{{ t.driverName }}</div><div style="font-size:12px;color:var(--mut)">+962 79 555 0142 · ★ {{ ratingFmt }}</div></div>
+            <span onClick="{{ toggleLang }}" style="font-size:11.5px;font-weight:600;color:var(--mut);border:1px solid var(--brd);border-radius:99px;padding:5px 11px;cursor:pointer">{{ t.langBtn }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:10px 13px;margin-bottom:12px">
+            <span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block"></span>
+            <span style="font-size:12px;color:var(--mut)">{{ t.approvedDriver }}</span>
+          </div>
+          <div onClick="{{ goSub }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer">
+            <span style="width:6px;height:38px;border-radius:4px;background:{{ subChipColor }};display:block"></span>
+            <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ t.subscription }}</div><div style="font-size:11.5px;color:var(--mut)">{{ subLine }}</div></div>
+            <span style="color:var(--mut)">{{ chev }}</span>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+            <sc-for list="{{ accountRows }}" as="a" hint-placeholder-count="5">
+              <div onClick="{{ a.go }}" style="padding:14px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--brd)">
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:600">{{ a.label }}</div><div style="font-size:11px;color:var(--mut)">{{ a.sub }}</div></div>
+                <span style="color:var(--mut)">{{ chev }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ doLogout }}" style="margin-top:14px;text-align:center;font-size:13px;font-weight:600;color:var(--dng);cursor:pointer;padding:10px">{{ t.logout }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgSub }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.subscription }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid {{ subBannerBorder }};border-radius:18px;padding:17px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="width:9px;height:9px;border-radius:99px;background:{{ subChipColor }};display:block"></span>
+              <span style="font-size:14px;font-weight:700">{{ subStatusTitle }}</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--mut);line-height:1.6">{{ subStatusSub }}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;margin:0 2px 10px;color:var(--mut)">{{ t.plans }}</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ plans }}" as="p" hint-placeholder-count="3">
+              <div onClick="{{ p.buy }}" style="background:var(--sur);border:1px solid {{ p.border }};border-radius:16px;padding:15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <div style="flex:1"><div style="font-size:14px;font-weight:700">{{ p.name }}</div><div style="font-size:11.5px;color:var(--mut)">{{ p.sub }}</div></div>
+                <div style="text-align:end"><div style="font-size:17px;font-weight:700">{{ p.price }}</div><div style="font-size:10.5px;color:var(--mut)">{{ t.jod }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:14px;line-height:1.7">{{ t.payVia }}</div>
+          <div style="font-size:13px;font-weight:700;margin:18px 2px 10px;color:var(--mut)">{{ t.subHistory }}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ subHistory }}" as="h" hint-placeholder-count="3">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+                <div style="flex:1"><div style="font-size:12.5px;font-weight:600">{{ h.plan }}</div><div style="font-size:11px;color:var(--mut)">{{ h.range }} · {{ h.method }}</div></div>
+                <div style="text-align:end"><div style="font-size:13px;font-weight:700">{{ h.amount }}</div><div style="font-size:10px;color:{{ h.color }}">{{ h.status }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgCardPage }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:var(--sur2);z-index:65;display:flex;flex-direction:column;padding:22px;animation:fadein .25s">
+          <div style="display:flex;align-items:center;gap:9px;background:var(--sur);border:1px solid var(--brd);border-radius:11px;padding:9px 12px;font-size:11.5px;color:var(--mut)"><span style="color:var(--ok)">🔒</span><span dir="ltr" style="font-family:ui-monospace,Menlo,monospace">secure.telr.com</span></div>
+          <div style="margin-top:34px;text-align:center">
+            <div style="font-size:12px;color:var(--mut);letter-spacing:.14em">TELR · HOSTED PAYMENT</div>
+            <div style="font-size:32px;font-weight:700;margin-top:14px">{{ cardAmountFmt }} <span style="font-size:14px;color:var(--mut)">{{ t.jod }}</span></div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:4px">{{ cardPurpose }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px;margin-top:26px;display:flex;flex-direction:column;gap:10px">
+            <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">{{ t.cardNumber }}</div><input dir="ltr" class="fld" value="4242 4242 4242 4242"></div>
+            <div style="display:flex;gap:8px"><div style="flex:1"><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">{{ t.expiry }}</div><input dir="ltr" class="fld" value="09/28"></div><div style="flex:1"><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">CVV</div><input dir="ltr" class="fld" value="•••"></div></div>
+            <div onClick="{{ toggleSaveCard }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;margin-top:2px">
+              <span style="width:18px;height:18px;border-radius:5px;border:1px solid var(--brd);background:{{ saveCardBg }};display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--inv)">{{ saveCardMark }}</span>
+              <span style="font-size:12px;color:var(--mut)">{{ t.saveCard }}</span>
+            </div>
+          </div>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:9px">
+            <div onClick="{{ cardPaid }}" style="background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.payNow }}</div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ cardDeclined }}" style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:12px;text-align:center;font-size:12px;font-weight:600;color:var(--dng);cursor:pointer">{{ t.simDeclined }}</div>
+              <div onClick="{{ cardCancel }}" style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:12px;text-align:center;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.cancel }}</div>
+            </div>
+            <div style="text-align:center;font-size:10.5px;color:var(--mut);line-height:1.6">{{ t.mockNote }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgCards }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.savedCards }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ cards }}" as="c" hint-placeholder-count="2">
+              <div style="background:var(--sur);border:1px solid {{ c.border }};border-radius:16px;padding:15px;display:flex;align-items:center;gap:12px">
+                <span style="width:40px;height:27px;border-radius:5px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex:none">{{ c.brand }}</span>
+                <div style="flex:1"><div dir="ltr" style="font-size:13.5px;font-weight:700">•••• {{ c.last4 }}</div><div style="font-size:11px;color:var(--mut)">{{ c.exp }}</div></div>
+                <div style="text-align:end;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+                  <span onClick="{{ c.setDefault }}" style="font-size:10.5px;font-weight:700;color:{{ c.defColor }};cursor:pointer">{{ c.defLabel }}</span>
+                  <span onClick="{{ c.remove }}" style="font-size:10.5px;color:var(--dng);cursor:pointer">{{ t.remove }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ addCard }}" style="margin-top:12px;border:1px dashed var(--brd);border-radius:16px;padding:15px;text-align:center;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.addCard }}</div>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:14px;line-height:1.7">{{ t.tokenNote }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgRideDetail }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;background:var(--bg)">
+          <div style="height:170px;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px);display:flex;align-items:center;justify-content:center;position:relative">
+            <span style="font:400 10px ui-monospace,Menlo,monospace;color:var(--mut)">{{ t.routeTaken }}</span>
+            <span onClick="{{ goBack }}" style="position:absolute;top:14px;right:14px;left:auto;width:34px;height:34px;border-radius:99px;background:var(--sur);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx)">{{ backArrow }}</span>
+          </div>
+          <div style="padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+              <div><div style="font-size:12px;color:var(--mut)">{{ detailRide.when }}</div><div style="font-size:26px;font-weight:700">{{ detailRide.fare }}</div></div>
+              <span style="font-size:11.5px;font-weight:700;color:{{ detailRide.badgeColor }};border:1px solid var(--brd);border-radius:99px;padding:6px 11px">{{ detailRide.statusLabel }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 10px;margin-bottom:16px">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--tx);margin:5px auto 0"></span><div style="font-size:12.5px">{{ detailRide.from }}</div>
+              <span style="width:2px;height:12px;background:var(--brd);margin:0 auto"></span><span></span>
+              <span style="width:8px;height:8px;border-radius:2px;background:var(--mut);margin:2px auto 0"></span><div style="font-size:12.5px;color:var(--mut)">{{ detailRide.to }}</div>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+              <div style="font-size:13px;font-weight:700;margin-bottom:11px">{{ t.fareBreakdown }}</div>
+              <sc-for list="{{ detailBreakdown }}" as="b" hint-placeholder-count="4">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px"><span style="color:var(--mut)">{{ b.label }}</span><span style="color:{{ b.color }}">{{ b.value }}</span></div>
+              </sc-for>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px"><span style="color:var(--mut)">{{ t.paidVia }}</span><span style="font-weight:600">{{ detailRide.method }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--mut)">{{ t.ratingGiven }}</span><span style="color:var(--warn);font-weight:600">★ {{ detailRide.stars }}</span></div>
+            </div>
+            <sc-if value="{{ disputeCtaShow }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ goDispute }}" style="border:1px solid var(--dng);border-radius:15px;padding:14px;text-align:center;font-size:13.5px;font-weight:700;color:var(--dng);cursor:pointer">{{ t.openDispute }}</div>
+            </sc-if>
+            <sc-if value="{{ disputeOpenShow }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--sur);border:1px solid var(--warn);border-radius:15px;padding:14px;font-size:12.5px;color:var(--mut);line-height:1.6">{{ t.disputePending }}</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgDispute }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 14px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.disputeTitle }}</div>
+          </div>
+          <div style="font-size:12.5px;color:var(--mut);line-height:1.7;margin-bottom:16px">{{ t.disputeSub }}</div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:14px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--mut)">{{ detailRide.when }}</span><span style="font-weight:700">{{ detailRide.fare }}</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:14px">
+            <sc-for list="{{ disputeReasons }}" as="d" hint-placeholder-count="3">
+              <div onClick="{{ d.pick }}" style="background:var(--sur);border:1px solid {{ d.border }};border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer">
+                <span style="width:16px;height:16px;border-radius:99px;border:1px solid {{ d.border }};background:{{ d.dot }};flex:none;display:block"></span>
+                <span style="font-size:13px">{{ d.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.note }}</div><input class="fld" placeholder="{{ t.notePh }}"></div>
+          <div onClick="{{ submitDispute }}" style="margin-top:18px;background:var(--dng);color:#fff;border-radius:15px;padding:15px;text-align:center;font-size:14.5px;font-weight:700;cursor:pointer">{{ t.submitDispute }}</div>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:12px;line-height:1.7">{{ t.disputeNote }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgNotifs }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700;flex:1">{{ t.notifsTitle }}</div>
+            <span onClick="{{ markAllRead }}" style="font-size:11.5px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.markAll }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+              <div style="background:var(--sur);border:1px solid {{ n.border }};border-radius:15px;padding:13px 14px;display:flex;gap:12px;align-items:flex-start">
+                <span style="width:30px;height:30px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:13px;color:{{ n.color }};flex:none">{{ n.icon }}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:700">{{ n.title }}</div>
+                  <div style="font-size:11.5px;color:var(--mut);line-height:1.6;margin-top:2px">{{ n.body }}</div>
+                  <div style="font-size:10.5px;color:var(--mut);margin-top:5px">{{ n.when }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgSettings }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.settingsTitle }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+            <div onClick="{{ toggleMarketing }}" style="display:flex;align-items:center;gap:12px;cursor:pointer">
+              <div style="flex:1"><div style="font-size:13.5px;font-weight:600">{{ t.marketingPush }}</div><div style="font-size:11px;color:var(--mut);line-height:1.6">{{ t.marketingSub }}</div></div>
+              <div style="width:46px;height:27px;border-radius:99px;background:{{ mkToggleBg }};position:relative;flex:none;transition:background .2s"><span style="position:absolute;top:3px;inset-inline-start:{{ mkKnobPos }};width:21px;height:21px;border-radius:99px;background:{{ mkKnobColor }};display:block;transition:inset-inline-start .2s"></span></div>
+            </div>
+            <div style="border-top:1px solid var(--brd);margin-top:13px;padding-top:13px;display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:13px;font-weight:600">{{ t.quietHours }}</div><div style="font-size:11px;color:var(--mut)">{{ t.quietSub }}</div></div>
+              <span dir="ltr" style="font-size:12.5px;font-weight:700">22:00 – 08:00</span>
+            </div>
+            <div style="font-size:11px;color:var(--mut);margin-top:10px;line-height:1.6">{{ t.quietNote }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden;margin-bottom:12px">
+            <div onClick="{{ toggleLang }}" style="padding:14px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--brd);cursor:pointer"><span style="font-size:13.5px;font-weight:600">{{ t.langRow }}</span><span style="font-size:12.5px;color:var(--mut)">{{ langLabel }}</span></div>
+            <div onClick="{{ toggleTheme }}" style="padding:14px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span style="font-size:13.5px;font-weight:600">{{ t.themeRow }}</span><span style="font-size:12.5px;color:var(--mut)">{{ themeLabel }}</span></div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px">
+            <div style="font-size:13.5px;font-weight:700;margin-bottom:4px">{{ t.cliqAlias }}</div>
+            <div style="font-size:11px;color:var(--mut);margin-bottom:10px;line-height:1.6">{{ t.cliqSub }}</div>
+            <input dir="ltr" class="fld" value="{{ cliqVal }}" onChange="{{ setCliq }}">
+            <div onClick="{{ saveCliq }}" style="margin-top:11px;background:var(--acc);color:var(--inv);border-radius:12px;padding:12px;text-align:center;font-size:13.5px;font-weight:700;cursor:pointer">{{ t.save }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgVehicle }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.vehicle }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+            <div style="display:flex;gap:8px;margin-bottom:8px"><input class="fld" value="Toyota"><input class="fld" value="Corolla"></div>
+            <div style="display:flex;gap:8px;margin-bottom:8px"><input class="fld" value="2021"><input class="fld" value="{{ t.white }}"></div>
+            <input dir="ltr" class="fld" value="22-71483" style="margin-bottom:8px">
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ categories }}" as="c" hint-placeholder-count="2">
+                <div onClick="{{ c.pick }}" style="flex:1;border:1px solid {{ c.border }};background:{{ c.bg }};border-radius:13px;padding:11px;text-align:center;font-size:13px;font-weight:600;cursor:pointer">{{ c.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+            <div style="font-size:13.5px;font-weight:700;margin-bottom:12px">{{ t.docs }}</div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ docs }}" as="dd" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:8px;height:8px;border-radius:99px;background:{{ dd.color }};display:block;flex:none"></span>
+                  <span style="flex:1;font-size:12.5px">{{ dd.label }}</span>
+                  <span style="font-size:11px;font-weight:600;color:{{ dd.color }}">{{ dd.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div onClick="{{ saveVehicle }}" style="background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:14.5px;font-weight:700;cursor:pointer">{{ t.save }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgWithdrawals }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px 16px 12px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.withdrawalsTitle }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ withdrawals }}" as="w" hint-placeholder-count="3">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px">
+                <span style="width:6px;height:34px;border-radius:4px;background:{{ w.color }};display:block;flex:none"></span>
+                <div style="flex:1"><div style="font-size:14px;font-weight:700">{{ w.amount }}</div><div style="font-size:11px;color:var(--mut)">{{ w.when }} · {{ w.method }}</div></div>
+                <span style="font-size:11.5px;font-weight:700;color:{{ w.color }}">{{ w.status }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:14px;line-height:1.7">{{ t.withdrawNote }}</div>
+        </div>
+      </sc-if>
+
+      <div style="position:absolute;bottom:0;right:0;left:0;height:66px;background:var(--sur);border-top:1px solid var(--brd);display:flex;padding:8px 6px 12px;z-index:30">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+          <div onClick="{{ n.go }}" style="flex:1;text-align:center;cursor:pointer;opacity:{{ n.op }}">
+            <div style="width:19px;height:19px;border-radius:6px;background:{{ n.bg }};margin:0 auto 4px"></div>
+            <div style="font-size:9.5px;font-weight:{{ n.w }}">{{ n.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ offerShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:var(--dim);z-index:50;animation:fadein .25s">
+          <div style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:18px 18px 22px;animation:slideup .3s">
+            <div style="display:flex;align-items:center;gap:13px;margin-bottom:15px">
+              <div style="position:relative;width:54px;height:54px;flex:none">
+                <svg width="54" height="54" viewBox="0 0 56 56" style="transform:rotate(-90deg)"><circle cx="28" cy="28" r="26" fill="none" stroke="var(--brd)" stroke-width="3.5"></circle><circle cx="28" cy="28" r="26" fill="none" stroke="var(--tx)" stroke-width="3.5" stroke-dasharray="163" stroke-dashoffset="{{ ringOff }}" style="transition:stroke-dashoffset 1s linear"></circle></svg>
+                <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700">{{ offerLeftFmt }}</span>
+              </div>
+              <div style="flex:1">
+                <div style="font-size:23px;font-weight:700">{{ offerFareFmt }} <span style="font-size:12px;font-weight:500;color:var(--mut)">{{ t.jod }}</span></div>
+                <div style="font-size:11.5px;color:var(--mut)">{{ ridePayLabel }} · {{ t.economy }}</div>
+              </div>
+              <div style="text-align:end"><div style="font-size:15px;font-weight:700">{{ offerPickupDist }}</div><div style="font-size:10.5px;color:var(--mut)">{{ t.toRider }}</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 10px;margin-bottom:15px">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--tx);margin:5px auto 0"></span>
+              <div style="font-size:13px">{{ offerPickup }}</div>
+              <span style="width:2px;height:12px;background:var(--brd);margin:0 auto"></span><span></span>
+              <span style="width:8px;height:8px;border-radius:2px;background:var(--mut);margin:2px auto 0"></span>
+              <div style="font-size:13px;color:var(--mut)">{{ offerDrop }}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ acceptOffer }}" style="flex:2.5;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.accept }}</div>
+              <div onClick="{{ declineOffer }}" style="flex:1;border:1px solid var(--brd);border-radius:15px;padding:15px;text-align:center;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.decline }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ rideShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px);z-index:55">
+          <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 18px;font-size:12.5px;font-weight:700;white-space:nowrap">{{ phaseTitle }}</div>
+          <sc-if value="{{ connLostShow }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:58px;right:16px;left:16px;background:var(--sur);border:1px solid var(--dng);border-radius:14px;padding:11px 13px;display:flex;gap:10px;align-items:center;animation:slideup .3s">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--dng);display:block;flex:none;animation:pulse 1.2s infinite"></span>
+              <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--dng)">{{ t.connLost }}</div><div style="font-size:11px;color:var(--mut);line-height:1.5">{{ t.connLostSub }}</div></div>
+            </div>
+          </sc-if>
+          <div style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:22px 22px 0 0;padding:16px 18px 22px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:13px">
+              <div style="width:44px;height:44px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">{{ riderInitial }}</div>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700">{{ riderName }}</div><div style="font-size:11px;color:var(--mut)">★ 4.8 · {{ offerFareFmt }} {{ t.jod }} · {{ ridePayLabel }}</div></div>
+              <div style="width:38px;height:38px;border-radius:99px;border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:15px">✆</div>
+            </div>
+            <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 10px;margin-bottom:15px">
+              <span style="width:8px;height:8px;border-radius:99px;background:{{ pickupDotColor }};margin:5px auto 0"></span>
+              <div style="font-size:12.5px;color:{{ pickupTextColor }}">{{ offerPickup }}</div>
+              <span style="width:2px;height:12px;background:var(--brd);margin:0 auto"></span><span></span>
+              <span style="width:8px;height:8px;border-radius:2px;background:{{ dropDotColor }};margin:2px auto 0"></span>
+              <div style="font-size:12.5px;color:{{ dropTextColor }}">{{ offerDrop }}</div>
+            </div>
+            <div onClick="{{ advanceRide }}" style="background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ phaseBtn }}</div>
+            <div onClick="{{ openCancel }}" style="text-align:center;font-size:12px;font-weight:600;color:var(--mut);margin-top:11px;cursor:pointer">{{ t.cancelRide }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ cancelShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:var(--dim);z-index:66;animation:fadein .2s">
+          <div style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ t.cancelTitle }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:15px;line-height:1.6">{{ t.cancelSub }}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+              <sc-for list="{{ cancelReasons }}" as="c" hint-placeholder-count="4">
+                <div onClick="{{ c.pick }}" style="border:1px solid {{ c.border }};border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer">
+                  <span style="width:16px;height:16px;border-radius:99px;border:1px solid {{ c.border }};background:{{ c.dot }};flex:none;display:block"></span>
+                  <span style="font-size:13px">{{ c.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ confirmCancel }}" style="flex:2;background:var(--dng);color:#fff;border-radius:14px;padding:14px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ t.confirmCancel }}</div>
+              <div onClick="{{ closeCancel }}" style="flex:1;border:1px solid var(--brd);border-radius:14px;padding:14px;text-align:center;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.back }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ collectShow }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;justify-content:center;padding:26px;animation:fadein .3s">
+          <div style="text-align:center;margin-bottom:22px">
+            <div style="font-size:13px;color:var(--mut);margin-bottom:6px">{{ collectHeading }}</div>
+            <div style="font-size:44px;font-weight:700;line-height:1.1">{{ collectBigFmt }}</div>
+            <div style="font-size:13px;color:var(--mut);margin-top:4px">{{ t.jodFull }} · {{ ridePayLabel }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:14px 16px;margin-bottom:18px">
+            <sc-for list="{{ collectRows }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px"><span style="color:var(--mut)">{{ c.label }}</span><span style="color:{{ c.color }};font-weight:{{ c.weight }}">{{ c.value }}</span></div>
+            </sc-for>
+          </div>
+          <div onClick="{{ confirmCollect }}" style="background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ collectCta }}</div>
+          <div style="text-align:center;font-size:11.5px;color:var(--mut);margin-top:12px;line-height:1.6">{{ collectNote }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ rateShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;justify-content:center;padding:28px;text-align:center;animation:fadein .3s">
+          <div style="width:60px;height:60px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px;margin:0 auto 14px">{{ riderInitial }}</div>
+          <div style="font-size:19px;font-weight:700">{{ t.rateTitle }}</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">{{ riderName }}</div>
+          <div dir="ltr" style="display:flex;gap:8px;justify-content:center;margin:24px 0 30px">
+            <sc-for list="{{ stars }}" as="s" hint-placeholder-count="5">
+              <span onClick="{{ s.set }}" style="font-size:32px;cursor:pointer;color:{{ s.color }}">★</span>
+            </sc-for>
+          </div>
+          <div onClick="{{ submitRating }}" style="background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer">{{ t.submit }}</div>
+          <div onClick="{{ skipRating }}" style="font-size:12.5px;font-weight:600;color:var(--mut);margin-top:14px;cursor:pointer">{{ t.skip }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ payMethodShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closePayMethod }}" style="position:absolute;inset:0;background:var(--dim);z-index:68;animation:fadein .2s">
+          <div onClick="{{ stopProp }}" style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:3px">{{ t.choosePayment }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:15px">{{ payMethodSub }}</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ payMethods }}" as="m" hint-placeholder-count="3">
+                <div onClick="{{ m.pick }}" style="border:1px solid {{ m.border }};border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;opacity:{{ m.op }}">
+                  <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">{{ m.icon }}</span>
+                  <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ m.label }}</div><div style="font-size:11px;color:var(--mut)">{{ m.sub }}</div></div>
+                  <span style="color:var(--mut)">{{ chev }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ withdrawShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeWithdraw }}" style="position:absolute;inset:0;background:var(--dim);z-index:70;animation:fadein .2s">
+          <div onClick="{{ stopProp }}" style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ t.withdrawTitle }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:16px">{{ withdrawSub }}</div>
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+              <sc-for list="{{ wdAmounts }}" as="a" hint-placeholder-count="3">
+                <div onClick="{{ a.pick }}" style="flex:1;border:1px solid {{ a.border }};background:{{ a.bg }};border-radius:12px;padding:12px;text-align:center;font-size:14px;font-weight:700;cursor:pointer;color:var(--tx)">{{ a.label }}</div>
+              </sc-for>
+            </div>
+            <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:12px;padding:11px 14px;font-size:12px;color:var(--mut);margin-bottom:14px">{{ t.cliqTo }} <b dir="ltr" style="color:var(--tx);font-weight:700">{{ cliqVal }}</b></div>
+            <div onClick="{{ submitWithdraw }}" style="background:var(--acc);color:var(--inv);border-radius:14px;padding:15px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ t.sendRequest }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:82px;left:50%;transform:translateX(-50%);background:{{ toastBg }};color:{{ toastColor }};border-radius:99px;padding:10px 20px;font-size:12.5px;font-weight:700;z-index:80;max-width:88%;text-align:center;animation:slideup .25s">{{ toastMsg }}</div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:860},&quot;lang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ar&quot;,&quot;en&quot;],&quot;default&quot;:&quot;ar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;subState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;active&quot;,&quot;expiring&quot;,&quot;expired&quot;,&quot;none&quot;],&quot;default&quot;:&quot;active&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;ridePayment&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cash&quot;,&quot;mixed&quot;,&quot;wallet&quot;,&quot;card&quot;],&quot;default&quot;:&quot;cash&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+const L = {
+  ar: {
+    langBtn: "EN", langName: "العربية", driverApp: "تطبيق الكبتن", phone: "رقم الهاتف", password: "كلمة المرور",
+    forgot: "نسيت كلمة المرور؟", loginBtn: "دخول", newDriver: "كبتن جديد؟", registerNow: "سجّل الآن",
+    otpTitle: "تحقق من رقمك", otpSubReg: "أرسلنا رمز تحقق إلى ", otpSubTail: " — التحقق من الرقم مرة واحدة عند التسجيل.",
+    verify: "تحقق", resend: "إعادة الإرسال خلال ٠:٤٢",
+    step1: "الخطوة ١ من ٣", step3: "الخطوة ٣ من ٣",
+    regTitle1: "إنشاء حساب كبتن", regSub1: "الرقم هو مُعرّف دخولك، ويُخزَّن بصيغة دولية.",
+    name: "الاسم الكامل", namePh: "مثال: أبو محمد الزعبي", country: "الدولة", jordan: "الأردن", libya: "ليبيا",
+    passwordNew: "كلمة المرور", confirmPass: "تأكيد كلمة المرور", next: "التالي",
+    regNote: "بالمتابعة أنت توافق على شروط الاستخدام. الرقم يُثبت بالتحقق مرة واحدة.",
+    regTitle3: "المركبة والمستندات", regSub3: "لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات.",
+    vehicleMake: "الشركة", vehicleModel: "الطراز", vehicleYear: "سنة الصنع", vehicleColor: "اللون",
+    white: "أبيض", plate: "رقم اللوحة", economy: "اقتصادي", comfort: "مريح",
+    upload: "ارفع صورة", uploaded: "تم الرفع ✓", submitApp: "إرسال الطلب",
+    pendingTitle: "طلبك قيد المراجعة", pendingSub: "تراجع الإدارة مستنداتك عادةً خلال ٢٤ ساعة.",
+    pendingNote: "لن تستقبل طلبات قبل الاعتماد وقبل شراء اشتراك ساري. سيصلك إشعار عند اعتماد الحساب.",
+    enterApp: "الدخول إلى التطبيق (عرض)",
+    fgTitle: "استعادة كلمة المرور", fgSub: "سنرسل رمز تحقق إلى رقمك المسجّل — هذا إثبات ملكية الرقم لا دخولاً.",
+    sendCode: "إرسال الرمز", newPassTitle: "كلمة مرور جديدة", newPassSub: "بعد الحفظ تُبطل كل الجلسات الأخرى على أجهزتك.",
+    savePass: "حفظ كلمة المرور", toastPassSaved: "تم تغيير كلمة المرور ✓",
+    today: "اليوم", wallet: "المحفظة", tripsToday: "رحلات اليوم", rating: "التقييم",
+    online: "متصل", offline: "غير متصل", goOnline: "ابدأ الاستقبال", stopOnline: "إيقاف الاستقبال",
+    needSub: "ابدأ الاستقبال — يتطلب اشتراكاً سارياً", waitingOffers: "بانتظار الطلبات…",
+    jod: "د.أ", jodFull: "دينار أردني", cash: "كاش", card: "بطاقة", walletM: "محفظة", mixed: "مختلط (محفظة + كاش)",
+    cliq: "كليك", toRider: "حتى الراكب",
+    accept: "قبول", decline: "رفض", cancelRide: "إلغاء الرحلة", back: "رجوع",
+    phasePickup: "في الطريق إلى الراكب", phaseWait: "بانتظار الراكب", phaseGo: "الرحلة جارية",
+    btnArrived: "وصلتُ إلى الراكب", btnStart: "بدء الرحلة", btnFinish: "إنهاء الرحلة",
+    rideDone: "اكتملت الرحلة — حصّل الأجرة", rideDonePaid: "اكتملت الرحلة — مدفوعة إلكترونياً",
+    rideDoneMixed: "اكتملت الرحلة — حصّل المتبقي كاش",
+    estFare: "السعر المقدّر", actualDist: "المسافة الفعلية", finalFare: "السعر النهائي",
+    commission: "العمولة", zeroNow: "٠٪ حالياً", gotCash: "استلمت المبلغ كاش", finishRide: "إنهاء",
+    fromWallet: "مخصوم من محفظة الراكب", remainingCash: "المتبقي كاش",
+    collectNoteCash: "تأكيدك هو ما يُثبّت الدفعة. إن لم تستلم المال، افتح نزاعاً من تفاصيل الرحلة.",
+    collectNotePaid: "المال وصل قبل إنهائك الرحلة — قيدُ أرباحك في المحفظة تلقائي.",
+    rateTitle: "قيّم الراكب", submit: "إرسال", skip: "تخطي",
+    ridesTitle: "سجل الرحلات", available: "الرصيد المتاح", withdraw: "طلب سحب", ledger: "الحركات",
+    subscription: "الاشتراك", plans: "الخطط المتاحة", subHistory: "اشتراكات سابقة",
+    vehicle: "المركبة", docs: "المستندات", logout: "تسجيل الخروج", driverName: "أبو محمد الزعبي",
+    approvedDriver: "حساب معتمد · كل المستندات مقبولة",
+    payVia: "المحفظة والبطاقة فوريّتان من التطبيق. الكاش وكليك تسجّلهما الإدارة بعد قبض المال.",
+    withdrawTitle: "طلب سحب", cliqTo: "التحويل عبر كليك إلى", sendRequest: "إرسال الطلب",
+    subActiveT: "اشتراكك ساري", subActiveS: "أسبوعي · لا تجديد تلقائي — جدّد قبل انتهائه.",
+    subExpT: "ينتهي اشتراكك قريباً", subExpS: "باقٍ ١٩ ساعة — جدّد الآن لتبقى في التوزيع.",
+    subDeadT: "انتهى اشتراكك", subDeadS: "أنت خارج التوزيع حتى التجديد.",
+    subNoneT: "لا اشتراك بعد", subNoneS: "اشترك لتبدأ استقبال الطلبات.",
+    renew: "تجديد", subscribe: "اشترك", left5d: "ساري · باقٍ ٥ أيام", left19h: "ينتهي خلال ١٩ ساعة",
+    expiredLine: "منتهٍ — جدّد للعودة للتوزيع", noneLine: "لا اشتراك — اشترك للبدء",
+    planD: "يومي", planW: "أسبوعي", planM: "شهري", planDs: "٢٤ ساعة من لحظة الشراء",
+    planWs: "٧ أيام · الأوفر للدوام الجزئي", planMs: "٣٠ يوماً · الأوفر للمتفرغ",
+    toastSub: "تم التجديد — اشتراكك ساري ✓", toastWd: "أُرسل طلب السحب — بانتظار الموافقة",
+    toastMissed: "فاتك الطلب", toastRated: "شكراً — تم الإرسال", toastCancelled: "أُلغيت الرحلة",
+    toastDispute: "فُتح النزاع — ستتابعه الإدارة", toastCardFail: "رُفضت البطاقة — لم يُخصم شيء",
+    toastCardOk: "تم الدفع بالبطاقة ✓", toastSaved: "تم الحفظ ✓", toastCardAdded: "أُضيفت البطاقة ✓",
+    toastCardRemoved: "حُذفت البطاقة", toastDefault: "صارت البطاقة الافتراضية", toastMarketing: "حُدِّثت تفضيلات الإشعارات",
+    navHome: "الرئيسية", navRides: "الرحلات", navWallet: "المحفظة", navAccount: "حسابي",
+    themeIconDark: "☾", themeIconLight: "☀", themeDark: "ليلي", themeLight: "نهاري",
+    riderName: "سارة ع.", pickup: "دوار الداخلية، شارع سليمان النابلسي", drop: "العبدلي بوليفارد · ٥٫٤ كم · ~١٢ د",
+    mapDark: "MAPBOX dark-v11", mapLight: "MAPBOX streets-v12", routeTaken: "المسار الفعلي المسجَّل",
+    heldNote: "محجوز لطلب سحب معلّق: ", statusOk: "مقبول", statusRev: "قيد المراجعة",
+    docLicense: "رخصة القيادة", docId: "الهوية الشخصية", docCar: "صور المركبة",
+    choosePayment: "طريقة الدفع", payWallet: "من المحفظة", payWalletSub: "خصم فوري من رصيدك",
+    payCard: "بطاقة", payCardSub: "صفحة دفع مستضافة عبر Telr", payCardSaved: "بطاقة محفوظة",
+    payCashSub: "تُسجَّل من الإدارة بعد قبض المال — ليست من التطبيق",
+    cardNumber: "رقم البطاقة", expiry: "تاريخ الانتهاء", saveCard: "احفظ البطاقة للدفع بضغطة",
+    payNow: "ادفع الآن", simDeclined: "محاكاة رفض", cancel: "إلغاء",
+    mockNote: "صفحة المزود محاكاة (TELR_USE_MOCK) — لا يُخصم مال حقيقي.",
+    purposeSub: "اشتراك الكبتن", purposeCard: "حفظ بطاقة (تحقق ١ فلس)",
+    savedCards: "البطاقات المحفوظة", addCard: "+ إضافة بطاقة", remove: "حذف",
+    defaultCard: "افتراضية", setDefault: "اجعلها افتراضية",
+    tokenNote: "نحفظ رمزاً من المزود فقط — لا رقم بطاقة ولا CVV يُخزَّن عندنا.",
+    withdrawalsTitle: "طلبات السحب", statusPending: "معلّق", statusApproved: "موافَق عليه",
+    statusPaid: "مدفوع", statusRejected: "مرفوض",
+    withdrawNote: "الطلب المعلّق يحجز مبلغه من الرصيد المتاح، وقيد السحب يُكتب عند الدفع فقط.",
+    notifsTitle: "الإشعارات", markAll: "تعليم الكل كمقروء",
+    settingsTitle: "الإعدادات", marketingPush: "إشعارات العروض والحملات",
+    marketingSub: "إطفاؤها لا يمنع إشعارات الطلبات والرحلات إطلاقاً",
+    quietHours: "ساعات الهدوء", quietSub: "بتوقيت آسيا/عمّان",
+    quietNote: "تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.",
+    langRow: "اللغة", themeRow: "المظهر", cliqAlias: "alias كليك",
+    cliqSub: "عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.", save: "حفظ",
+    fareBreakdown: "تفصيل السعر", baseFare: "الأجرة الأساسية", perKm: "لكل كم", perMin: "لكل دقيقة",
+    paidVia: "طريقة الدفع", ratingGiven: "تقييمك للراكب",
+    openDispute: "لم أستلم المبلغ — افتح نزاعاً",
+    disputePending: "نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.",
+    disputeTitle: "فتح نزاع", disputeSub: "افتح نزاعاً إن لم يصلك مال الرحلة. تفصله الإدارة: مدفوعة أو غير مدفوعة.",
+    reasonNoPay: "الراكب لم يدفع إطلاقاً", reasonPartial: "دفع أقل من المطلوب", reasonLeft: "نزل وغادر دون دفع",
+    note: "ملاحظة", notePh: "اكتب ما حدث بإيجاز",
+    submitDispute: "إرسال النزاع",
+    disputeNote: "المسار الفعلي المسجَّل يُرفق تلقائياً كدليل مع النزاع.",
+    cancelTitle: "إلغاء الرحلة", cancelSub: "الإلغاء المتكرر يُراجع من الإدارة.",
+    cr1: "الراكب لم يحضر", cr2: "العنوان خاطئ أو غير موجود", cr3: "مشكلة في المركبة", cr4: "سبب آخر",
+    confirmCancel: "تأكيد الإلغاء",
+    connLost: "انقطع اتصالك", connLostSub: "لن تُنهى الرحلة آلياً — أُبلغ الراكب بالانقطاع.",
+    connBack: "عاد الاتصال ✓",
+    disputedBadge: "نزاع", nDisputeT: "نتيجة نزاع", nSubT: "تنبيه اشتراك", nCampT: "عرض من TAXO", nPayT: "أرباح رحلة"
+  },
+  en: {
+    langBtn: "عربي", langName: "English", driverApp: "Driver app", phone: "Phone number", password: "Password",
+    forgot: "Forgot password?", loginBtn: "Log in", newDriver: "New captain?", registerNow: "Register",
+    otpTitle: "Verify your number", otpSubReg: "We sent a code to ", otpSubTail: " — number ownership is proven once at registration.",
+    verify: "Verify", resend: "Resend in 0:42",
+    step1: "Step 1 of 3", step3: "Step 3 of 3",
+    regTitle1: "Create captain account", regSub1: "Your phone is your login ID, stored in international format.",
+    name: "Full name", namePh: "e.g. Abu Mohammad Zoubi", country: "Country", jordan: "Jordan", libya: "Libya",
+    passwordNew: "Password", confirmPass: "Confirm password", next: "Next",
+    regNote: "By continuing you accept the terms. Your number is verified once.",
+    regTitle3: "Vehicle & documents", regSub3: "No captain is approved before admin reviews the documents.",
+    vehicleMake: "Make", vehicleModel: "Model", vehicleYear: "Year", vehicleColor: "Color",
+    white: "White", plate: "Plate number", economy: "Economy", comfort: "Comfort",
+    upload: "Upload photo", uploaded: "Uploaded ✓", submitApp: "Submit application",
+    pendingTitle: "Application under review", pendingSub: "Admin usually reviews documents within 24 hours.",
+    pendingNote: "You won't receive offers before approval and an active subscription. We'll notify you once approved.",
+    enterApp: "Enter app (demo)",
+    fgTitle: "Reset password", fgSub: "We'll send a code to your registered number — proof of ownership, not a login.",
+    sendCode: "Send code", newPassTitle: "New password", newPassSub: "Saving revokes all other sessions on your devices.",
+    savePass: "Save password", toastPassSaved: "Password changed ✓",
+    today: "Today", wallet: "Wallet", tripsToday: "Trips today", rating: "Rating",
+    online: "Online", offline: "Offline", goOnline: "Go online", stopOnline: "Go offline",
+    needSub: "Go online — requires an active subscription", waitingOffers: "Waiting for offers…",
+    jod: "JOD", jodFull: "Jordanian Dinar", cash: "Cash", card: "Card", walletM: "Wallet", mixed: "Mixed (wallet + cash)",
+    cliq: "CliQ", toRider: "to rider",
+    accept: "Accept", decline: "Decline", cancelRide: "Cancel ride", back: "Back",
+    phasePickup: "Heading to rider", phaseWait: "Waiting for rider", phaseGo: "Ride in progress",
+    btnArrived: "I've arrived", btnStart: "Start ride", btnFinish: "End ride",
+    rideDone: "Ride complete — collect fare", rideDonePaid: "Ride complete — paid electronically",
+    rideDoneMixed: "Ride complete — collect the remainder in cash",
+    estFare: "Estimated fare", actualDist: "Actual distance", finalFare: "Final fare",
+    commission: "Commission", zeroNow: "0% for now", gotCash: "Cash received", finishRide: "Finish",
+    fromWallet: "Charged to rider's wallet", remainingCash: "Remaining in cash",
+    collectNoteCash: "Your confirmation is what settles the payment. If cash never arrived, open a dispute from ride details.",
+    collectNotePaid: "Money arrived before you ended the ride — your earning entry is automatic.",
+    rateTitle: "Rate the rider", submit: "Submit", skip: "Skip",
+    ridesTitle: "Ride history", available: "Available balance", withdraw: "Withdraw", ledger: "Activity",
+    subscription: "Subscription", plans: "Available plans", subHistory: "Past subscriptions",
+    vehicle: "Vehicle", docs: "Documents", logout: "Log out", driverName: "Abu Mohammad Zoubi",
+    approvedDriver: "Approved account · all documents accepted",
+    payVia: "Wallet and card are instant in-app. Cash and CliQ are recorded by admin after receipt.",
+    withdrawTitle: "Withdrawal request", cliqTo: "CliQ transfer to", sendRequest: "Send request",
+    subActiveT: "Subscription active", subActiveS: "Weekly · no auto-renew — renew before it expires.",
+    subExpT: "Expiring soon", subExpS: "19 hours left — renew now to stay in dispatch.",
+    subDeadT: "Subscription expired", subDeadS: "You're out of dispatch until you renew.",
+    subNoneT: "No subscription yet", subNoneS: "Subscribe to start receiving offers.",
+    renew: "Renew", subscribe: "Subscribe", left5d: "Active · 5 days left", left19h: "Expires in 19 hours",
+    expiredLine: "Expired — renew to rejoin dispatch", noneLine: "No subscription — subscribe to start",
+    planD: "Daily", planW: "Weekly", planM: "Monthly", planDs: "24 hours from purchase",
+    planWs: "7 days · best for part-time", planMs: "30 days · best for full-time",
+    toastSub: "Renewed — subscription active ✓", toastWd: "Withdrawal requested — pending approval",
+    toastMissed: "Offer missed", toastRated: "Thanks — submitted", toastCancelled: "Ride cancelled",
+    toastDispute: "Dispute opened — admin will review", toastCardFail: "Card declined — nothing charged",
+    toastCardOk: "Card payment successful ✓", toastSaved: "Saved ✓", toastCardAdded: "Card added ✓",
+    toastCardRemoved: "Card removed", toastDefault: "Set as default card", toastMarketing: "Notification prefs updated",
+    navHome: "Home", navRides: "Rides", navWallet: "Wallet", navAccount: "Account",
+    themeIconDark: "☾", themeIconLight: "☀", themeDark: "Dark", themeLight: "Light",
+    riderName: "Sara A.", pickup: "Dakhiliyeh Circle, Suleiman Nabulsi St", drop: "Abdali Boulevard · 5.4 km · ~12 min",
+    mapDark: "MAPBOX dark-v11", mapLight: "MAPBOX streets-v12", routeTaken: "Recorded actual route",
+    heldNote: "Held for pending withdrawal: ", statusOk: "Approved", statusRev: "In review",
+    docLicense: "Driver's license", docId: "National ID", docCar: "Vehicle photos",
+    choosePayment: "Payment method", payWallet: "From wallet", payWalletSub: "Instant deduction from balance",
+    payCard: "Card", payCardSub: "Hosted payment page via Telr", payCardSaved: "Saved card",
+    payCashSub: "Recorded by admin after cash is received — not from the app",
+    cardNumber: "Card number", expiry: "Expiry", saveCard: "Save card for one-tap payment",
+    payNow: "Pay now", simDeclined: "Simulate decline", cancel: "Cancel",
+    mockNote: "Provider page is mocked (TELR_USE_MOCK) — no real money moves.",
+    purposeSub: "Captain subscription", purposeCard: "Save card (1 fils verification)",
+    savedCards: "Saved cards", addCard: "+ Add card", remove: "Remove",
+    defaultCard: "Default", setDefault: "Make default",
+    tokenNote: "We store only a provider token — no card number or CVV is kept.",
+    withdrawalsTitle: "Withdrawal requests", statusPending: "Pending", statusApproved: "Approved",
+    statusPaid: "Paid", statusRejected: "Rejected",
+    withdrawNote: "A pending request holds its amount from available balance; the ledger entry is written only when paid.",
+    notifsTitle: "Notifications", markAll: "Mark all read",
+    settingsTitle: "Settings", marketingPush: "Offers & campaign notifications",
+    marketingSub: "Turning this off never affects ride and dispatch notifications",
+    quietHours: "Quiet hours", quietSub: "Asia/Amman time",
+    quietNote: "Applies to marketing campaigns only — ride offers reach you any time.",
+    langRow: "Language", themeRow: "Appearance", cliqAlias: "CliQ alias",
+    cliqSub: "Withdrawals are transferred here — make sure it matches your bank.", save: "Save",
+    fareBreakdown: "Fare breakdown", baseFare: "Base fare", perKm: "Per km", perMin: "Per minute",
+    paidVia: "Payment method", ratingGiven: "Your rating of the rider",
+    openDispute: "Cash never arrived — open dispute",
+    disputePending: "Your dispute is open and awaiting admin resolution. You'll be notified of the outcome.",
+    disputeTitle: "Open dispute", disputeSub: "Open a dispute if the ride money never reached you. Admin resolves it as paid or unpaid.",
+    reasonNoPay: "Rider didn't pay at all", reasonPartial: "Paid less than the fare", reasonLeft: "Got out and left without paying",
+    note: "Note", notePh: "Briefly describe what happened",
+    submitDispute: "Submit dispute",
+    disputeNote: "The recorded actual route is attached automatically as evidence.",
+    cancelTitle: "Cancel ride", cancelSub: "Frequent cancellations are reviewed by admin.",
+    cr1: "Rider didn't show up", cr2: "Wrong or nonexistent address", cr3: "Vehicle problem", cr4: "Other reason",
+    confirmCancel: "Confirm cancellation",
+    connLost: "Connection lost", connLostSub: "The ride won't end automatically — the rider was notified.",
+    connBack: "Reconnected ✓",
+    disputedBadge: "Dispute", nDisputeT: "Dispute outcome", nSubT: "Subscription alert", nCampT: "Offer from TAXO", nPayT: "Ride earning"
+  }
+};
+class Component extends DCLogic {
+  state = { view: "login", tab: "home", page: null, langOv: null, themeOv: null, subOv: null,
+    online: false, offerLeft: 20, phase: null, overlay: null, connLost: false,
+    withdrawOpen: false, wdPick: 1, starsN: 0, toast: null, toastKind: "ok",
+    payMethodOpen: false, cardCtx: null, saveCard: true, pendingPlan: null,
+    detailIdx: 0, disputed: {}, disputePick: 0, cancelPick: 0,
+    uploaded: [false, false, false], regCountry: 0, catPick: 0, marketing: true,
+    cliqVal: "ABUMHMD79", cardsRemoved: {}, defaultCard: 0, extraCard: false,
+    phoneVal: "+962 79 555 0142", passVal: "password", regName: "", regPhone: "",
+    earnings: 18.25, walletBal: 42.5, trips: 7, txnsExtra: [], held: 0, wdExtra: null, unread: true };
+  componentWillUnmount() { this._clearAll(); }
+  _clearAll() { clearTimeout(this._offerTo); clearInterval(this._tick); clearTimeout(this._connTo); clearTimeout(this._connBackTo); clearTimeout(this._toastTo); }
+  _lang() { return this.state.langOv ?? this.props.lang ?? "ar"; }
+  _theme() { return this.state.themeOv ?? this.props.theme ?? "dark"; }
+  _sub() { return this.state.subOv ?? this.props.subState ?? "active"; }
+  _payKind() { return this.props.ridePayment ?? "cash"; }
+  _fmtN(x, d) {
+    const loc = this._lang() === "ar" ? "ar-EG" : "en-US";
+    return x.toLocaleString(loc, { minimumFractionDigits: d ?? 0, maximumFractionDigits: d ?? 0 });
+  }
+  _toast(msg, kind) {
+    this.setState({ toast: msg, toastKind: kind || "ok" });
+    clearTimeout(this._toastTo);
+    this._toastTo = setTimeout(() => this.setState({ toast: null }), 2800);
+  }
+  _scheduleOffer() {
+    clearTimeout(this._offerTo);
+    this._offerTo = setTimeout(() => {
+      if (!this.state.online || this.state.overlay) return;
+      this.setState({ offerLeft: 20, overlay: "offer" });
+      this._tick = setInterval(() => {
+        const left = this.state.offerLeft - 1;
+        if (left <= 0) {
+          clearInterval(this._tick);
+          this.setState({ overlay: null });
+          this._toast(L[this._lang()].toastMissed, "warn");
+          this._scheduleOffer();
+        } else this.setState({ offerLeft: left });
+      }, 1000);
+    }, 3500);
+  }
+  _startConnWatch() {
+    clearTimeout(this._connTo); clearTimeout(this._connBackTo);
+    this._connTo = setTimeout(() => {
+      if (this.state.overlay !== "ride") return;
+      this.setState({ connLost: true });
+      this._connBackTo = setTimeout(() => {
+        this.setState({ connLost: false });
+        if (this.state.overlay === "ride") this._toast(L[this._lang()].connBack, "ok");
+      }, 7000);
+    }, 8000);
+  }
+  renderVals() {
+    const s = this.state, lang = this._lang(), t = L[lang], theme = this._theme(), sub = this._sub();
+    const rtl = lang === "ar", canGo = sub === "active" || sub === "expiring";
+    const money = (x) => this._fmtN(x, 3);
+    const payKind = this._payKind();
+    const payLabelMap = { cash: t.cash, wallet: t.walletM, card: t.card, mixed: t.mixed };
+    const subMap = {
+      active:   { color: "var(--ok)",   title: t.subActiveT, sub: t.subActiveS, line: t.left5d,      banner: false },
+      expiring: { color: "var(--warn)", title: t.subExpT,    sub: t.subExpS,    line: t.left19h,     banner: true, cta: t.renew },
+      expired:  { color: "var(--dng)",  title: t.subDeadT,   sub: t.subDeadS,   line: t.expiredLine, banner: true, cta: t.renew },
+      none:     { color: "var(--mut)",  title: t.subNoneT,   sub: t.subNoneS,   line: t.noneLine,    banner: true, cta: t.subscribe }
+    };
+    const sm = subMap[sub];
+    const rideData = lang === "ar" ? [
+      { when: "اليوم ٥:١٢ م", from: "الصويفية، شارع الوكالات", to: "دوار السابع", fare: 2.1, dist: "٣٫٨ كم", stars: "٥٫٠", method: t.cash, cash: true },
+      { when: "اليوم ٣:٤٠ م", from: "جبل عمان، الدوار الأول", to: "العبدلي بوليفارد", fare: 1.85, dist: "٣٫١ كم", stars: "٤٫٠", method: t.walletM, cash: false },
+      { when: "اليوم ١:٠٥ م", from: "الجاردنز، شارع وصفي التل", to: "مجمع رغدان", fare: 3.4, dist: "٧٫٢ كم", stars: "٥٫٠", method: t.card, cash: false },
+      { when: "أمس ٩:٢٠ م", from: "خلدا، شارع عمر مطر", to: "مكة مول", fare: 2.75, dist: "٥٫٤ كم", stars: "٥٫٠", method: t.cash, cash: true }
+    ] : [
+      { when: "Today 5:12 PM", from: "Sweifieh, Wakalat St", to: "7th Circle", fare: 2.1, dist: "3.8 km", stars: "5.0", method: t.cash, cash: true },
+      { when: "Today 3:40 PM", from: "Jabal Amman, 1st Circle", to: "Abdali Boulevard", fare: 1.85, dist: "3.1 km", stars: "4.0", method: t.walletM, cash: false },
+      { when: "Today 1:05 PM", from: "Gardens, Wasfi Al-Tal St", to: "Raghadan Complex", fare: 3.4, dist: "7.2 km", stars: "5.0", method: t.card, cash: false },
+      { when: "Yesterday 9:20 PM", from: "Khalda, Omar Matar St", to: "Mecca Mall", fare: 2.75, dist: "5.4 km", stars: "5.0", method: t.cash, cash: true }
+    ];
+    const rides = rideData.map((r, i) => ({
+      when: r.when, from: r.from, to: r.to, fare: money(r.fare) + " " + t.jod,
+      dist: r.dist, stars: r.stars, method: r.method,
+      badge: s.disputed[i] ? t.disputedBadge : "",
+      badgeColor: s.disputed[i] ? "var(--warn)" : "transparent",
+      open: () => this.setState({ page: "rideDetail", detailIdx: i })
+    }));
+    const dr = rideData[s.detailIdx];
+    const detailRide = {
+      when: dr.when, from: dr.from, to: dr.to, fare: money(dr.fare) + " " + t.jod,
+      method: dr.method, stars: dr.stars,
+      statusLabel: s.disputed[s.detailIdx] ? t.disputedBadge : t.statusOk,
+      badgeColor: s.disputed[s.detailIdx] ? "var(--warn)" : "var(--ok)"
+    };
+    const detailBreakdown = [
+      { label: t.baseFare, value: money(0.75), color: "var(--tx)" },
+      { label: t.perKm + " × " + dr.dist, value: money(dr.fare - 0.75), color: "var(--tx)" },
+      { label: t.commission, value: t.zeroNow, color: "var(--ok)" },
+      { label: t.finalFare, value: money(dr.fare) + " " + t.jod, color: "var(--tx)" }
+    ];
+    const baseTxns = lang === "ar" ? [
+      { icon: "↑", label: "أرباح رحلة", when: "اليوم ٥:١٢ م", amt: 2.1, bal: 42.5 },
+      { icon: "↑", label: "أرباح رحلة", when: "اليوم ٣:٤٠ م", amt: 1.85, bal: 40.4 },
+      { icon: "−", label: "اشتراك أسبوعي", when: "الأحد ٨:٠٠ ص", amt: -9, bal: 38.55 },
+      { icon: "↓", label: "سحب — كليك", when: "السبت ٦:٣٠ م", amt: -20, bal: 47.55 }
+    ] : [
+      { icon: "↑", label: "Ride earning", when: "Today 5:12 PM", amt: 2.1, bal: 42.5 },
+      { icon: "↑", label: "Ride earning", when: "Today 3:40 PM", amt: 1.85, bal: 40.4 },
+      { icon: "−", label: "Weekly subscription", when: "Sun 8:00 AM", amt: -9, bal: 38.55 },
+      { icon: "↓", label: "Withdrawal — CliQ", when: "Sat 6:30 PM", amt: -20, bal: 47.55 }
+    ];
+    const txns = [...s.txnsExtra.map(x => ({ ...x, label: lang === "ar" ? x.labelAr : x.labelEn })), ...baseTxns].map(x => ({
+      icon: x.icon, label: x.label, when: x.when,
+      amount: (x.amt > 0 ? "+" : "") + money(x.amt),
+      color: x.amt > 0 ? "var(--ok)" : "var(--tx)",
+      after: money(x.bal) + " " + t.jod
+    }));
+    const planDefs = [
+      { key: "d", name: t.planD, sub: t.planDs, price: 1.5 },
+      { key: "w", name: t.planW, sub: t.planWs, price: 9, hot: true },
+      { key: "m", name: t.planM, sub: t.planMs, price: 32 }
+    ];
+    const plans = planDefs.map(p => ({
+      name: p.name, sub: p.sub, price: money(p.price),
+      border: p.hot ? "var(--tx)" : "var(--brd)",
+      buy: () => this.setState({ payMethodOpen: true, pendingPlan: p })
+    }));
+    const subHistory = (lang === "ar" ? [
+      { plan: t.planW, range: "٣ – ١٠ آب", method: t.walletM, amount: 9, status: t.statusPaid },
+      { plan: t.planD, range: "٢ آب", method: t.cash, amount: 1.5, status: t.statusPaid },
+      { plan: t.planM, range: "تموز", method: t.card, amount: 32, status: t.statusPaid }
+    ] : [
+      { plan: t.planW, range: "Aug 3 – 10", method: t.walletM, amount: 9, status: t.statusPaid },
+      { plan: t.planD, range: "Aug 2", method: t.cash, amount: 1.5, status: t.statusPaid },
+      { plan: t.planM, range: "July", method: t.card, amount: 32, status: t.statusPaid }
+    ]).map(h => ({ plan: h.plan, range: h.range, method: h.method, amount: money(h.amount) + " " + t.jod, status: h.status, color: "var(--ok)" }));
+    const navDefs = [
+      { key: "home", label: t.navHome }, { key: "rides", label: t.navRides },
+      { key: "wallet", label: t.navWallet }, { key: "account", label: t.navAccount }
+    ];
+    const navItems = navDefs.map(n => ({
+      label: n.label, go: () => this.setState({ tab: n.key, page: null }),
+      bg: s.tab === n.key ? "var(--tx)" : "var(--brd)",
+      op: s.tab === n.key ? 1 : 0.65, w: s.tab === n.key ? 700 : 500
+    }));
+    const wdOpts = [10, 20, 30];
+    const wdAmounts = wdOpts.map((a, i) => ({
+      label: money(a), pick: () => this.setState({ wdPick: i }),
+      border: s.wdPick === i ? "var(--tx)" : "var(--brd)",
+      bg: s.wdPick === i ? "var(--sur2)" : "transparent"
+    }));
+    const wdBase = lang === "ar" ? [
+      { amount: 20, when: "السبت ٦:٣٠ م", method: t.cliq, status: t.statusPaid, color: "var(--ok)" },
+      { amount: 15, when: "٢٨ تموز", method: t.cliq, status: t.statusPaid, color: "var(--ok)" },
+      { amount: 40, when: "٢٠ تموز", method: t.cliq, status: t.statusRejected, color: "var(--dng)" }
+    ] : [
+      { amount: 20, when: "Sat 6:30 PM", method: t.cliq, status: t.statusPaid, color: "var(--ok)" },
+      { amount: 15, when: "Jul 28", method: t.cliq, status: t.statusPaid, color: "var(--ok)" },
+      { amount: 40, when: "Jul 20", method: t.cliq, status: t.statusRejected, color: "var(--dng)" }
+    ];
+    const wdList = s.wdExtra ? [{ amount: s.wdExtra, when: lang === "ar" ? "الآن" : "Now", method: t.cliq, status: t.statusPending, color: "var(--warn)" }, ...wdBase] : wdBase;
+    const withdrawals = wdList.map(w => ({ amount: money(w.amount) + " " + t.jod, when: w.when, method: w.method, status: w.status, color: w.color }));
+    const cardDefs = [
+      { brand: "VISA", last4: "4242", exp: (lang === "ar" ? "ينتهي " : "Expires ") + "09/28" },
+      { brand: "MC", last4: "8103", exp: (lang === "ar" ? "ينتهي " : "Expires ") + "03/27" }
+    ];
+    if (s.extraCard) cardDefs.push({ brand: "VISA", last4: "1919", exp: (lang === "ar" ? "ينتهي " : "Expires ") + "12/29" });
+    const cards = cardDefs.map((c, i) => ({
+      brand: c.brand, last4: c.last4, exp: c.exp,
+      border: s.defaultCard === i ? "var(--tx)" : "var(--brd)",
+      defLabel: s.defaultCard === i ? t.defaultCard : t.setDefault,
+      defColor: s.defaultCard === i ? "var(--ok)" : "var(--mut)",
+      setDefault: () => { this.setState({ defaultCard: i }); this._toast(t.toastDefault); },
+      remove: () => this._toast(t.toastCardRemoved, "warn")
+    })).filter((c, i) => !s.cardsRemoved[i]);
+    const notifs = (lang === "ar" ? [
+      { icon: "!", color: "var(--warn)", title: t.nSubT, body: "ينتهي اشتراكك خلال ٢٤ ساعة — جدّد لتبقى في التوزيع.", when: "قبل ٥ دقائق", unread: true },
+      { icon: "↑", color: "var(--ok)", title: t.nPayT, body: "أُضيف ٢٫١٠٠ د.أ إلى محفظتك من رحلة الصويفية.", when: "اليوم ٥:١٢ م", unread: true },
+      { icon: "⚖", color: "var(--tx)", title: t.nDisputeT, body: "فُصل نزاع رحلة ٢٩ تموز لصالحك: الدفعة مؤكدة.", when: "أمس", unread: false },
+      { icon: "●", color: "var(--mut)", title: t.nCampT, body: "ذروة الجمعة: ابقَ متصلاً بين ٦ و٩ مساءً.", when: "قبل يومين", unread: false }
+    ] : [
+      { icon: "!", color: "var(--warn)", title: t.nSubT, body: "Your subscription expires in 24 hours — renew to stay in dispatch.", when: "5 min ago", unread: true },
+      { icon: "↑", color: "var(--ok)", title: t.nPayT, body: "2.100 JOD added to your wallet from the Sweifieh ride.", when: "Today 5:12 PM", unread: true },
+      { icon: "⚖", color: "var(--tx)", title: t.nDisputeT, body: "Jul 29 ride dispute resolved in your favour: payment confirmed.", when: "Yesterday", unread: false },
+      { icon: "●", color: "var(--mut)", title: t.nCampT, body: "Friday peak: stay online between 6 and 9 PM.", when: "2 days ago", unread: false }
+    ]).map(n => ({ icon: n.icon, color: n.color, title: n.title, body: n.body, when: n.when, border: (n.unread && s.unread) ? "var(--tx)" : "var(--brd)" }));
+    const uploadDefs = [t.docLicense, t.docId, t.docCar];
+    const uploads = uploadDefs.map((label, i) => ({
+      label, status: s.uploaded[i] ? t.uploaded : t.upload,
+      color: s.uploaded[i] ? "var(--ok)" : "var(--mut)",
+      border: s.uploaded[i] ? "var(--ok)" : "var(--brd)",
+      bg: s.uploaded[i] ? "var(--sur2)" : "transparent",
+      toggle: () => { const u = [...s.uploaded]; u[i] = !u[i]; this.setState({ uploaded: u }); }
+    }));
+    const countries = [t.jordan, t.libya].map((label, i) => ({
+      label, pick: () => this.setState({ regCountry: i }),
+      border: s.regCountry === i ? "var(--tx)" : "var(--brd)",
+      bg: s.regCountry === i ? "var(--sur2)" : "transparent"
+    }));
+    const categories = [t.economy, t.comfort].map((label, i) => ({
+      label, pick: () => this.setState({ catPick: i }),
+      border: s.catPick === i ? "var(--tx)" : "var(--brd)",
+      bg: s.catPick === i ? "var(--sur2)" : "transparent"
+    }));
+    const disputeReasons = [t.reasonNoPay, t.reasonPartial, t.reasonLeft].map((label, i) => ({
+      label, pick: () => this.setState({ disputePick: i }),
+      border: s.disputePick === i ? "var(--tx)" : "var(--brd)",
+      dot: s.disputePick === i ? "var(--tx)" : "transparent"
+    }));
+    const cancelReasons = [t.cr1, t.cr2, t.cr3, t.cr4].map((label, i) => ({
+      label, pick: () => this.setState({ cancelPick: i }),
+      border: s.cancelPick === i ? "var(--tx)" : "var(--brd)",
+      dot: s.cancelPick === i ? "var(--tx)" : "transparent"
+    }));
+    const planPrice = s.pendingPlan ? s.pendingPlan.price : 9;
+    const payMethods = [
+      { icon: "◫", label: t.payWallet, sub: t.payWalletSub + " · " + money(s.walletBal) + " " + t.jod, border: "var(--brd)", op: 1,
+        pick: () => { this.setState({ payMethodOpen: false, subOv: "active", walletBal: s.walletBal - planPrice,
+          txnsExtra: [{ icon: "−", labelAr: "اشتراك " + (s.pendingPlan ? s.pendingPlan.name : ""), labelEn: (s.pendingPlan ? s.pendingPlan.name : "") + " subscription", when: lang === "ar" ? "الآن" : "Now", amt: -planPrice, bal: s.walletBal - planPrice }, ...s.txnsExtra] });
+          this._toast(t.toastSub); } },
+      { icon: "▭", label: t.payCardSaved + " · •••• 4242", sub: t.payCardSub, border: "var(--brd)", op: 1,
+        pick: () => this.setState({ payMethodOpen: false, page: "cardPage", cardCtx: "sub" }) },
+      { icon: "＋", label: t.payCard, sub: t.payCardSub, border: "var(--brd)", op: 1,
+        pick: () => this.setState({ payMethodOpen: false, page: "cardPage", cardCtx: "sub" }) },
+      { icon: "₵", label: t.cash + " / " + t.cliq, sub: t.payCashSub, border: "var(--brd)", op: 0.5, pick: () => {} }
+    ];
+    const phaseMap = {
+      to_pickup: { title: t.phasePickup, btn: t.btnArrived, next: "waiting" },
+      waiting: { title: t.phaseWait, btn: t.btnStart, next: "riding" },
+      riding: { title: t.phaseGo, btn: t.btnFinish, next: null }
+    };
+    const ph = s.phase ? phaseMap[s.phase] : null;
+    const enRoute = s.phase === "to_pickup" || s.phase === "waiting";
+    const fareFinal = 2.9, walletPart = 1.5, cashPart = fareFinal - walletPart;
+    const collectRows = [
+      { label: t.estFare, value: money(2.75), color: "var(--tx)", weight: 500 },
+      { label: t.actualDist, value: lang === "ar" ? "٥٫٧ كم" : "5.7 km", color: "var(--tx)", weight: 500 },
+      { label: t.finalFare, value: money(fareFinal) + " " + t.jod, color: "var(--tx)", weight: 700 },
+      { label: t.commission, value: t.zeroNow, color: "var(--ok)", weight: 500 }
+    ];
+    if (payKind === "mixed") {
+      collectRows.push({ label: t.fromWallet, value: "−" + money(walletPart), color: "var(--ok)", weight: 500 });
+      collectRows.push({ label: t.remainingCash, value: money(cashPart) + " " + t.jod, color: "var(--tx)", weight: 700 });
+    }
+    const isCash = payKind === "cash" || payKind === "mixed";
+    const goBackTarget = () => {
+      if (s.page === "dispute") return "rideDetail";
+      if (s.page === "cardPage") return s.cardCtx === "cards" ? "cards" : "sub";
+      return null;
+    };
+    return {
+      dir: rtl ? "rtl" : "ltr", themeClass: "thm-" + theme, t, lang,
+      themeIcon: theme === "dark" ? t.themeIconLight : t.themeIconDark,
+      themeLabel: theme === "dark" ? t.themeDark : t.themeLight, langLabel: t.langName,
+      chev: rtl ? "‹" : "›", backArrow: rtl ? "→" : "←",
+      mapLabel: theme === "dark" ? t.mapDark : t.mapLight,
+      viewLogin: s.view === "login", viewOtp: s.view === "otp" || s.view === "regOtp" || s.view === "fgOtp",
+      viewApp: s.view === "app", viewRegInfo: s.view === "regInfo", viewRegDocs: s.view === "regDocs",
+      viewRegPending: s.view === "regPending", viewForgot: s.view === "forgot", viewNewPass: s.view === "newPass",
+      otpSubLine: t.otpSubReg + (s.view === "regOtp" ? (s.regPhone || "+962 79 555 0142") : s.phoneVal) + t.otpSubTail,
+      phoneVal: s.phoneVal, passVal: s.passVal, regName: s.regName, regPhone: s.regPhone,
+      setPhone: (e) => this.setState({ phoneVal: e.target.value }),
+      setPass: (e) => this.setState({ passVal: e.target.value }),
+      setRegName: (e) => this.setState({ regName: e.target.value }),
+      setRegPhone: (e) => this.setState({ regPhone: e.target.value }),
+      doLogin: () => this.setState({ view: "otp" }),
+      goLogin: () => this.setState({ view: "login" }),
+      goRegister: () => this.setState({ view: "regInfo" }),
+      goForgot: () => this.setState({ view: "forgot" }),
+      regToOtp: () => this.setState({ view: "regOtp" }),
+      fgToOtp: () => this.setState({ view: "fgOtp" }),
+      doOtp: () => {
+        if (s.view === "regOtp") this.setState({ view: "regDocs" });
+        else if (s.view === "fgOtp") this.setState({ view: "newPass" });
+        else this.setState({ view: "app" });
+      },
+      savePass: () => { this.setState({ view: "login" }); this._toast(t.toastPassSaved); },
+      regSubmit: () => this.setState({ view: "regPending" }),
+      enterApp: () => this.setState({ view: "app", subOv: "none", tab: "home" }),
+      doLogout: () => { this._clearAll(); this.setState({ view: "login", online: false, overlay: null, tab: "home", page: null }); },
+      otpDigits: ["4", "8", "1", "9"],
+      toggleLang: () => this.setState({ langOv: lang === "ar" ? "en" : "ar" }),
+      toggleTheme: () => this.setState({ themeOv: theme === "dark" ? "light" : "dark" }),
+      tabHome: s.tab === "home" && !s.page, tabRides: s.tab === "rides" && !s.page,
+      tabWallet: s.tab === "wallet" && !s.page, tabAccount: s.tab === "account" && !s.page,
+      pgSub: s.page === "sub", pgCardPage: s.page === "cardPage", pgCards: s.page === "cards",
+      pgRideDetail: s.page === "rideDetail", pgDispute: s.page === "dispute",
+      pgNotifs: s.page === "notifs", pgSettings: s.page === "settings",
+      pgVehicle: s.page === "vehicle", pgWithdrawals: s.page === "withdrawals",
+      goBack: () => this.setState({ page: goBackTarget() }),
+      goSub: () => this.setState({ page: "sub" }),
+      goWallet: () => this.setState({ tab: "wallet", page: null }),
+      goNotifs: () => this.setState({ page: "notifs" }),
+      goWithdrawals: () => this.setState({ page: "withdrawals" }),
+      goDispute: () => this.setState({ page: "dispute" }),
+      markAllRead: () => this.setState({ unread: false }),
+      unreadShow: s.unread,
+      accountRows: [
+        { label: t.settingsTitle, sub: t.marketingPush, go: () => this.setState({ page: "settings" }) },
+        { label: t.vehicle, sub: t.vehicleMake + " · " + t.docs, go: () => this.setState({ page: "vehicle" }) },
+        { label: t.savedCards, sub: "•••• 4242", go: () => this.setState({ page: "cards" }) },
+        { label: t.withdrawalsTitle, sub: t.cliq + " · " + s.cliqVal, go: () => this.setState({ page: "withdrawals" }) },
+        { label: t.notifsTitle, sub: t.markAll, go: () => this.setState({ page: "notifs" }) }
+      ],
+      navItems,
+      onlineLabel: s.online ? t.online : t.offline,
+      onlineDot: s.online ? "var(--ok)" : "var(--mut)",
+      searchingShow: s.online && !s.overlay && !sm.banner,
+      toggleOnline: () => {
+        if (!canGo) { this.setState({ page: "sub" }); return; }
+        if (s.online) { this._clearAll(); this.setState({ online: false, overlay: null }); }
+        else { this.setState({ online: true }); this._scheduleOffer(); }
+      },
+      goBtnLabel: !canGo ? t.needSub : (s.online ? t.stopOnline : t.goOnline),
+      goBtnBg: !canGo ? "var(--sur2)" : (s.online ? "var(--sur)" : "var(--acc)"),
+      goBtnColor: !canGo ? "var(--mut)" : (s.online ? "var(--tx)" : "var(--inv)"),
+      subBannerShow: sm.banner, subBannerColor: sm.color,
+      subBannerBorder: sub === "active" ? "var(--brd)" : sm.color,
+      subBannerTitle: sm.title, subBannerSub: sm.sub, subBannerCta: sm.cta || t.renew,
+      subChipColor: sm.color, subLine: sm.line, subStatusTitle: sm.title, subStatusSub: sm.sub,
+      plans, subHistory,
+      earningsFmt: money(s.earnings), walletFmt: money(s.walletBal),
+      tripsFmt: this._fmtN(s.trips), ratingFmt: this._fmtN(4.9, 1),
+      rides, txns, detailRide, detailBreakdown, withdrawals, cards, notifs, uploads, countries, categories,
+      disputeReasons, cancelReasons, payMethods,
+      disputeCtaShow: dr.cash && !s.disputed[s.detailIdx],
+      disputeOpenShow: !!s.disputed[s.detailIdx],
+      submitDispute: () => {
+        const d = { ...s.disputed }; d[s.detailIdx] = true;
+        this.setState({ disputed: d, page: "rideDetail" });
+        this._toast(t.toastDispute, "warn");
+      },
+      heldShow: s.held > 0, heldLine: t.heldNote + money(s.held) + " " + t.jod,
+      offerShow: s.overlay === "offer",
+      offerLeftFmt: this._fmtN(s.offerLeft), ringOff: Math.round((1 - s.offerLeft / 20) * 163),
+      offerFareFmt: money(2.75), offerPickupDist: lang === "ar" ? "١٫٢ كم · ٤ د" : "1.2 km · 4 min",
+      offerPickup: t.pickup, offerDrop: t.drop, ridePayLabel: payLabelMap[payKind],
+      acceptOffer: () => { clearInterval(this._tick); this.setState({ overlay: "ride", phase: "to_pickup", connLost: false }); this._startConnWatch(); },
+      declineOffer: () => { clearInterval(this._tick); this.setState({ overlay: null }); this._scheduleOffer(); },
+      rideShow: s.overlay === "ride", connLostShow: s.connLost,
+      phaseTitle: ph ? ph.title : "", phaseBtn: ph ? ph.btn : "",
+      riderName: t.riderName, riderInitial: lang === "ar" ? "س" : "S",
+      pickupDotColor: enRoute ? "var(--ok)" : "var(--mut)",
+      pickupTextColor: enRoute ? "var(--tx)" : "var(--mut)",
+      dropDotColor: s.phase === "riding" ? "var(--ok)" : "var(--mut)",
+      dropTextColor: s.phase === "riding" ? "var(--tx)" : "var(--mut)",
+      advanceRide: () => {
+        if (ph && ph.next) this.setState({ phase: ph.next });
+        else { clearTimeout(this._connTo); clearTimeout(this._connBackTo); this.setState({ overlay: "collect", phase: null, connLost: false }); }
+      },
+      openCancel: () => this.setState({ overlay: "cancel" }),
+      closeCancel: () => this.setState({ overlay: "ride" }),
+      cancelShow: s.overlay === "cancel",
+      confirmCancel: () => { this._clearAll(); this.setState({ overlay: null, phase: null, connLost: false }); this._toast(t.toastCancelled, "warn"); this._scheduleOffer(); },
+      collectShow: s.overlay === "collect", collectRows,
+      collectHeading: payKind === "mixed" ? t.rideDoneMixed : (isCash ? t.rideDone : t.rideDonePaid),
+      collectBigFmt: payKind === "mixed" ? money(cashPart) : money(fareFinal),
+      collectCta: isCash ? t.gotCash : t.finishRide,
+      collectNote: isCash ? t.collectNoteCash : t.collectNotePaid,
+      confirmCollect: () => {
+        this.setState({ overlay: "rate", starsN: 0,
+          earnings: s.earnings + fareFinal, trips: s.trips + 1, walletBal: s.walletBal + fareFinal,
+          txnsExtra: [{ icon: "↑", labelAr: "أرباح رحلة", labelEn: "Ride earning",
+            when: lang === "ar" ? "الآن" : "Now", amt: fareFinal, bal: s.walletBal + fareFinal }, ...s.txnsExtra] });
+      },
+      rateShow: s.overlay === "rate",
+      stars: [1, 2, 3, 4, 5].map(n => ({ set: () => this.setState({ starsN: n }), color: n <= s.starsN ? "var(--warn)" : "var(--brd)" })),
+      submitRating: () => { this.setState({ overlay: null }); this._toast(t.toastRated); this._scheduleOffer(); },
+      skipRating: () => { this.setState({ overlay: null }); this._scheduleOffer(); },
+      payMethodShow: s.payMethodOpen,
+      payMethodSub: (s.pendingPlan ? s.pendingPlan.name : "") + " · " + money(planPrice) + " " + t.jod,
+      closePayMethod: () => this.setState({ payMethodOpen: false }),
+      cardAmountFmt: s.cardCtx === "cards" ? money(0.001) : money(planPrice),
+      cardPurpose: s.cardCtx === "cards" ? t.purposeCard : t.purposeSub,
+      saveCardBg: s.saveCard ? "var(--acc)" : "transparent",
+      saveCardMark: s.saveCard ? "✓" : "",
+      toggleSaveCard: () => this.setState({ saveCard: !s.saveCard }),
+      cardPaid: () => {
+        if (s.cardCtx === "cards") { this.setState({ page: "cards", extraCard: true }); this._toast(t.toastCardAdded); }
+        else { this.setState({ page: "sub", subOv: "active" }); this._toast(t.toastCardOk); }
+      },
+      cardDeclined: () => { this.setState({ page: s.cardCtx === "cards" ? "cards" : "sub" }); this._toast(t.toastCardFail, "dng"); },
+      cardCancel: () => this.setState({ page: s.cardCtx === "cards" ? "cards" : "sub" }),
+      addCard: () => this.setState({ page: "cardPage", cardCtx: "cards" }),
+      marketing: s.marketing,
+      mkToggleBg: s.marketing ? "var(--ok)" : "var(--brd)",
+      mkKnobPos: s.marketing ? "22px" : "3px",
+      mkKnobColor: s.marketing ? "#fff" : "var(--mut)",
+      toggleMarketing: () => { this.setState({ marketing: !s.marketing }); this._toast(t.toastMarketing); },
+      cliqVal: s.cliqVal, setCliq: (e) => this.setState({ cliqVal: e.target.value }),
+      saveCliq: () => this._toast(t.toastSaved),
+      saveVehicle: () => this._toast(t.toastSaved),
+      withdrawShow: s.withdrawOpen,
+      openWithdraw: () => this.setState({ withdrawOpen: true }),
+      closeWithdraw: () => this.setState({ withdrawOpen: false }),
+      stopProp: (e) => e.stopPropagation(),
+      wdAmounts, withdrawSub: t.available + ": " + money(s.walletBal) + " " + t.jod,
+      submitWithdraw: () => {
+        this.setState({ withdrawOpen: false, held: wdOpts[s.wdPick], wdExtra: wdOpts[s.wdPick] });
+        this._toast(t.toastWd, "warn");
+      },
+      initials: lang === "ar" ? "أم" : "AM",
+      docs: [
+        { label: t.docLicense, status: t.statusOk, color: "var(--ok)" },
+        { label: t.docId, status: t.statusOk, color: "var(--ok)" },
+        { label: t.docCar, status: t.statusRev, color: "var(--warn)" }
+      ],
+      toastShow: !!s.toast, toastMsg: s.toast || "",
+      toastBg: s.toastKind === "dng" ? "var(--dng)" : (s.toastKind === "warn" ? "var(--warn)" : "var(--acc)"),
+      toastColor: s.toastKind === "ok" ? "var(--inv)" : "#fff"
+    };
+  }
+}
+</script>
+</body>
+</html>

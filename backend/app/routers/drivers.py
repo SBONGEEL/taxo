@@ -18,6 +18,7 @@ from app.models.enums import DocumentType
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
+    DocumentUploadOut,
     DriverDocumentOut,
     DriverDocumentsOut,
     DriverLocationIn,
@@ -112,7 +113,7 @@ async def list_my_documents(
 
 @router.put(
     "/me/documents/{doc_type}",
-    response_model=DriverDocumentOut,
+    response_model=DocumentUploadOut,
     status_code=status.HTTP_200_OK,
 )
 async def upload_my_document(
@@ -121,7 +122,7 @@ async def upload_my_document(
     session: DbSession,
     redis: RedisDep,
     file: Annotated[UploadFile, File(description="صورة أو PDF")],
-) -> DriverDocumentOut:
+) -> DocumentUploadOut:
     """رفع مستندٍ أو استبدالُ سابقه — والاستبدال يعيده «قيد المراجعة».
 
     `PUT` لا `POST` لأن العملية إحلالٌ لا إضافة: النوع الواحد صفٌّ واحد
@@ -129,6 +130,8 @@ async def upload_my_document(
     للأولى لا رخصتان.
 
     ونوعُ الملف وحجمُه يُفحصان من **محتواه** لا من ترويسته (`core/storage.py`).
+    وإن كان الكبتن معتمداً والمستندُ مطلوباً عاد حسابُه `pending` — والجواب
+    يقول ذلك صراحةً.
     """
     limit = await rate_limit.hit(
         redis,
@@ -139,17 +142,22 @@ async def upload_my_document(
     if not limit.allowed:
         raise RateLimited(retry_after=limit.retry_after)
 
-    document, superseded = await documents_service.upload(
+    result = await documents_service.upload(
         session, driver=driver, doc_type=doc_type, reader=file
     )
     await session.commit()
-    await session.refresh(document)
+    await session.refresh(result.document)
+    await session.refresh(driver)
 
     # **بعد** الـ commit: ملفٌّ يتيم نفايةٌ تُنظَّف، وصفٌّ بلا ملفٍ عطلٌ يُرى
-    if superseded is not None:
-        await storage.delete(superseded)
+    if result.superseded_path is not None:
+        await storage.delete(result.superseded_path)
 
-    return DriverDocumentOut.model_validate(document)
+    return DocumentUploadOut(
+        document=DriverDocumentOut.model_validate(result.document),
+        driver_status=driver.status,
+        approval_reverted=result.approval_reverted,
+    )
 
 
 @router.get("/me/documents/{document_id}/file")

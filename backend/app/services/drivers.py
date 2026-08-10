@@ -170,20 +170,30 @@ async def set_status(
     *,
     driver: Driver,
     status: DriverStatus,
-    actor: User,
+    actor: User | None,
+    reason: str | None = None,
 ) -> Driver:
-    """يغيّر حالة الكبتن ويسجّلها في التدقيق. الـ commit مسؤولية الراوتر."""
+    """يغيّر حالة الكبتن ويسجّلها في التدقيق. الـ commit مسؤولية الراوتر.
+
+    `actor` يقبل `None` لتغييرٍ لم يقرره مشرف: استبدالُ الكبتن لمستندٍ مطلوب
+    يعيده `pending` من تلقاء الفعل لا من قرار أحد (المرحلة 9-ب). والقيدُ
+    يُكتب في الحالتين — سؤال «لماذا سقط اعتمادُه؟» يُسأل بعد شهر.
+    """
     from app.models.enums import AuditAction
     from app.services import audit
 
     driver.status = status
+    details: dict[str, str] = {"status": status.value}
+    if reason is not None:
+        details["reason"] = reason
+
     await audit.record(
         session,
         actor=actor,
         action=AuditAction.UPDATE,
         entity_type="driver",
         entity_id=driver.id,
-        details={"status": status.value},
+        details=details,
     )
     await session.flush()
     return driver

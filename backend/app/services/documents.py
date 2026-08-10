@@ -8,6 +8,11 @@
 - **صفٌّ واحد لكل نوع، والرفعُ يستبدل.** يفرضه الفريد
   `(driver_id, doc_type)`؛ والاستبدال يعيد الحالة `pending` ويمحو أثر
   المراجعة السابقة — وثيقةٌ جديدة مراجعةٌ جديدة.
+- **واستبدالُ مستندٍ مطلوبٍ يُسقط اعتماد الكبتن نفسه** إلى `pending`:
+  الاعتماد شهادةٌ على مستنداتٍ بعينها رآها مشرف، فمن استبدلها صار معتمَداً
+  على ما لم يره أحد. ويُرفض الاستبدال وحده أثناء رحلةٍ جارية — إسقاطُ
+  الاعتماد وسطها يُجمّد موقعَ الكبتن على خريطة راكبه ويُطلق تنبيه الانقطاع
+  على من لم ينقطع.
 - **الملف يُحفظ قبل الصف، ويُحذف بعد الـ commit.** ملفٌّ يتيمٌ بلا صفّ
   نفايةٌ تُنظَّف؛ وصفٌّ يشير إلى ملفٍ محذوف عطلٌ يراه المستخدم. ولذلك يعيد
   `upload` مسار الملف المُستبدَل ولا يحذفه بنفسه: من يملك الـ commit هو من
@@ -24,6 +29,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -33,9 +39,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import storage
 from app.core.exceptions import Conflict, NotFound
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
-from app.models.enums import AuditAction, DocumentReviewStatus, DocumentType
+from app.models.enums import (
+    AuditAction,
+    DocumentReviewStatus,
+    DocumentType,
+    DriverStatus,
+)
+from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
 from app.services import audit
+
+
+@dataclass(frozen=True, slots=True)
+class UploadResult:
+    """حصيلةُ رفعةٍ واحدة — وما على المستدعي أن يفعله بعدها.
+
+    `superseded_path` يُحذف **بعد** الـ commit لا قبله، و`approval_reverted`
+    يُعاد إلى التطبيق ليقول لصاحبه إن حسابه عاد للمراجعة بفعلٍ فعله للتوّ.
+    """
+
+    document: DriverDocument
+    superseded_path: str | None
+    approval_reverted: bool
+
 
 # الاسم المعروض لكل نوع — يقرؤه الإشعار ورسالةُ «مستندات لم تُعتمد بعد».
 # هنا لا في `notifications.py`: النوع مفهومُ هذه الطبقة، ومن يسمّيه في مكانين
@@ -122,18 +148,49 @@ async def missing_required(
 # ------------------------------------------------------------------- الرفع
 
 
+async def _has_active_ride(session: AsyncSession, driver_id: uuid.UUID) -> bool:
+    return bool(
+        await session.scalar(
+            select(Ride.id)
+            .where(
+                Ride.driver_id == driver_id,
+                Ride.status.in_(ACTIVE_DRIVER_STATUSES),
+            )
+            .limit(1)
+        )
+    )
+
+
 async def upload(
     session: AsyncSession,
     *,
     driver: Driver,
     doc_type: DocumentType,
     reader: storage.AsyncReader,
-) -> tuple[DriverDocument, str | None]:
-    """يحفظ الملف ويكتب صفَّه، ويعيد (المستند، مسارَ المُستبدَل إن وُجد).
+) -> UploadResult:
+    """يحفظ الملف ويكتب صفَّه، ويعيد ما يحتاجه المستدعي بعده.
 
     الـ commit **وحذفُ المُستبدَل** مسؤولية المستدعي؛ وإن فشل شيءٌ بعد الحفظ
     يُحذف الملف الجديد هنا فلا يبقى أثرٌ لرفعٍ لم يكتمل.
+
+    **وسياسةُ المرحلة 9-ب**: رفعُ مستندٍ **مطلوب** من كبتنٍ معتمد يعيده
+    `pending` تلقائياً حتى تُراجَع الوثيقة الجديدة. الاعتماد شهادةٌ على
+    مستنداتٍ بعينها رآها مشرف؛ فمن استبدلها صار معتمَداً على ما لم يره أحد —
+    وذاك بابُ تبديلِ رخصةٍ سارية برخصةٍ منتهية بعد الاعتماد.
     """
+    from app.services import drivers as drivers_service
+
+    reverts_approval = (
+        doc_type in REQUIRED_DOCUMENT_TYPES
+        and driver.status is DriverStatus.APPROVED
+    )
+    # الفحص **قبل** كتابة الملف: رفضٌ بعد الحفظ يترك ملفاً نحذفه فوراً
+    if reverts_approval and await _has_active_ride(session, driver.id):
+        # إسقاطُ الاعتماد وسط رحلة يُخرج الكبتن من `presence_context` فيتجمّد
+        # موقعُه على خريطة راكبه ثم يُطلق تنبيهَ «انقطع اتصال الكبتن» (القسم 5)
+        # على من لم ينقطع. والانتظارُ إلى نهاية الرحلة نافذةٌ واحدة قصيرة
+        raise Conflict("أنهِ رحلتك الجارية قبل استبدال مستنداتك")
+
     stored = await storage.save(reader, folder=str(driver.id))
 
     try:
@@ -178,7 +235,21 @@ async def upload(
             await session.rollback()
             raise Conflict("رفعٌ آخر لنفس المستند يجري الآن — أعد المحاولة") from exc
 
-        return document, superseded
+        if reverts_approval:
+            await drivers_service.set_status(
+                session,
+                driver=driver,
+                status=DriverStatus.PENDING,
+                # لا مشرفَ وراء هذا: فعلُ الكبتن نفسه هو ما أسقط الاعتماد
+                actor=None,
+                reason="document_replaced",
+            )
+
+        return UploadResult(
+            document=document,
+            superseded_path=superseded,
+            approval_reverted=reverts_approval,
+        )
     except BaseException:
         await storage.delete(stored.relative_path)
         raise

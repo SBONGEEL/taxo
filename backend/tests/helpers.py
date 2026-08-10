@@ -698,15 +698,25 @@ async def upload_document(
     filename: str = "license.png",
     content_type: str = "image/png",
     expect: int = 200,
+    envelope: bool = False,
 ) -> dict:
-    """رفعُ مستندٍ واحد. `content_type` يُرسل عمداً لأن الخلفية لا تصدّقه."""
+    """رفعُ مستندٍ واحد. `content_type` يُرسل عمداً لأن الخلفية لا تصدّقه.
+
+    يعيد المستند وحده افتراضاً، و`envelope=True` يعيد الغلاف كاملاً بحالة
+    الكبتن و`approval_reverted` (سياسة استبدال المستند — المرحلة 9-ب).
+    """
     response = await client.put(
         f"/drivers/me/documents/{doc_type}",
         files={"file": (filename, content, content_type)},
         headers=headers,
     )
     assert response.status_code == expect, response.text
-    return response.json() if response.content else {}
+    if not response.content:
+        return {}
+    body = response.json()
+    if expect != 200 or envelope:
+        return body
+    return body["document"]
 
 
 async def review_document(
@@ -756,3 +766,19 @@ async def inbox_of(session_factory: Any, user_id: Any) -> list[Any]:
             .order_by(UserNotification.created_at.desc())
         )
         return list(rows)
+
+
+async def set_driver_approved(session_factory: Any, driver_id: Any) -> None:
+    """يعيد الكبتن `approved` مباشرةً في القاعدة.
+
+    يلزم بعد `approve_all_documents` على كبتنٍ أنشأه `approved_driver`: ذاك
+    يضع `approved` بلا مستندات (اختصارُ تهيئة)، فأولُ رفعٍ لمستندٍ مطلوب
+    يُسقط اعتمادَه بحكم سياسة 9-ب — وهو السلوك الصحيح لا عطلٌ في الاختبار.
+    """
+    from app.models.driver import Driver
+    from app.models.enums import DriverStatus
+
+    async with session_factory() as session:
+        driver = await session.get(Driver, driver_id)
+        driver.status = DriverStatus.APPROVED
+        await session.commit()

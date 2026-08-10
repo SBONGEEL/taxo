@@ -27,12 +27,13 @@ connection, unified provider interfaces with mocks, and the OTP/Push/automatic-C
 integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
-written from both send doors) are complete. **The next stage is 10** (the driver PWA). Do not implement
-anything from a later stage unless the user asks for that stage. When a later-stage concern appears
-in current code (e.g. no Celery job sweeps stale `provider_orders` yet, the CliQ confirmation
-deadline belongs with the driver's card in stage 10, and the campaigns page in the admin panel
-lands in stage 11 while its endpoints already exist), leave a comment naming the stage rather than
-building ahead.
+written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-app/`) is in
+progress and reviewed three screens at a time** — the first session shipped the scaffolding plus
+login and password recovery. Do not implement anything from a later stage unless the user asks for
+that stage. When a later-stage concern appears in current code (e.g. no Celery job sweeps stale
+`provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
+admin panel lands in stage 11 while its endpoints already exist), leave a comment naming the stage
+rather than building ahead.
 
 **Any path that changes a row's status locks that row with `for_update` *before* it checks the
 transition.** Reading the row, validating `current → target`, then writing is not atomic on its own:
@@ -116,6 +117,14 @@ docker compose up -d --build          # db + redis + backend + worker + beat (ba
 docker compose logs -f backend
 curl http://localhost:8001/health     # reports db + redis status; also the container healthcheck
 ```
+
+`driver-app` (stage 10) is the captain PWA on **5174**, same shape as `customer-app` — a
+`node:22-alpine` container running Vite, `node_modules` in a named volume. Its
+`tailwind.config.js` is copied verbatim from `design/DESIGN.md` §6, which is the source: scale keys
+are pixel values (`text-14.5`, `p-16`, `rounded-13`) and Tailwind's own scales are **replaced, not
+extended**, so `text-sm` or `p-4` is a build error rather than a silent drift to the nearest default.
+Dark is the default and does not follow the system — a captain works for hours with the screen in the
+car, and a theme that flips at sunset whitens his screen in a tunnel.
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`

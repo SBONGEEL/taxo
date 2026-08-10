@@ -82,6 +82,19 @@ class DriverDocumentsOut(BaseModel):
     missing_required: list[DocumentType]
 
 
+class DocumentUploadOut(BaseModel):
+    """جوابُ الرفع — ومعه أثرُه على حالة الكبتن.
+
+    `approval_reverted` ليس تفصيلاً: استبدالُ مستندٍ مطلوبٍ يُسقط الاعتماد
+    (سياسة 9-ب)، فبغير هذا الحقل يكتشف الكبتن أنه خرج من التوزيع حين لا
+    تصله طلبات — لا حين فعلَ ما أخرجه.
+    """
+
+    document: DriverDocumentOut
+    driver_status: DriverStatus
+    approval_reverted: bool
+
+
 class DriverOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

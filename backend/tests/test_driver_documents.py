@@ -9,20 +9,26 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.models.driver import Driver, DriverDocument
+from app.models.enums import DriverStatus
 from app.models.user import User
 from tests.helpers import (
     DRIVER,
+    RIDER,
     JPEG_BYTES,
     NOT_A_DOCUMENT,
     PDF_BYTES,
     PNG_BYTES,
     SECOND_DRIVER,
     WEBP_BYTES,
+    accepted_ride,
     approve_all_documents,
+    approved_driver,
     auth,
+    bring_online,
     inbox_of,
     register,
     review_document,
+    set_driver_approved,
     upload_document,
 )
 
@@ -424,3 +430,111 @@ async def test_vehicle_photo_is_not_required(
     ).json()
     assert listed["missing_required"] == []
     assert "vehicle_photo" not in [d["doc_type"] for d in listed["documents"]]
+
+
+# ------------------------------------------- سياسة استبدال مستند معتمَد
+
+
+async def test_replacing_a_required_document_sends_an_approved_driver_back_to_review(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """الاعتماد شهادةٌ على مستنداتٍ رآها مشرف — فمن استبدلها لم يعد مشهوداً له."""
+    body = await register(client, DRIVER)
+    headers = auth(body)
+    driver = await _driver_row(session_factory, "+962792222222")
+    await approve_all_documents(client, headers, admin_headers, driver_id=driver.id)
+
+    approved = await client.post(
+        f"/admin/drivers/{driver.id}/approve", headers=admin_headers
+    )
+    assert approved.status_code == 200
+
+    replaced = await upload_document(
+        client, headers, doc_type="driving_license", envelope=True
+    )
+    assert replaced["approval_reverted"] is True
+    assert replaced["driver_status"] == "pending"
+    assert replaced["document"]["review_status"] == "pending"
+
+    async with session_factory() as session:
+        stored = await session.get(Driver, driver.id)
+        assert stored.status is DriverStatus.PENDING
+
+    # والسبب في سجل التدقيق بلا فاعلٍ مشرف: فعلُ الكبتن نفسه أسقط الاعتماد
+    logs = (
+        await client.get(
+            "/admin/settings/audit-logs?entity_type=driver", headers=admin_headers
+        )
+    ).json()
+    assert logs[0]["details"] == {"status": "pending", "reason": "document_replaced"}
+    assert logs[0]["actor_id"] is None
+
+    # ولا يعود معتمداً إلا بمراجعةٍ جديدة
+    blocked = await client.post(
+        f"/admin/drivers/{driver.id}/approve", headers=admin_headers
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["code"] == "documents_incomplete"
+
+
+async def test_an_optional_document_does_not_touch_approval(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """صورةُ المركبة لا تُشترط للاعتماد، فرفعُها لا يُسقطه."""
+    body = await register(client, DRIVER)
+    headers = auth(body)
+    driver = await _driver_row(session_factory, "+962792222222")
+    await approve_all_documents(client, headers, admin_headers, driver_id=driver.id)
+    await client.post(f"/admin/drivers/{driver.id}/approve", headers=admin_headers)
+
+    uploaded = await upload_document(
+        client, headers, doc_type="vehicle_photo", envelope=True
+    )
+    assert uploaded["approval_reverted"] is False
+    assert uploaded["driver_status"] == "approved"
+
+
+async def test_a_pending_driver_replacing_a_document_changes_nothing(
+    client: AsyncClient, session_factory
+) -> None:
+    """لا اعتمادَ يسقط أصلاً — والحقل يقول ذلك بدل أن يصمت."""
+    body = await register(client, DRIVER)
+    headers = auth(body)
+    await upload_document(client, headers)
+
+    again = await upload_document(client, headers, envelope=True)
+    assert again["approval_reverted"] is False
+    assert again["driver_status"] == "pending"
+
+
+async def test_replacement_waits_for_the_ride_to_end(
+    client: AsyncClient, admin_headers: dict, session_factory, jordan_settings
+) -> None:
+    """إسقاطُ الاعتماد وسط رحلة يُطلق تنبيه الانقطاع على من لم ينقطع."""
+    driver = await approved_driver(client, session_factory, DRIVER)
+    rider = await register(client, RIDER)
+    await approve_all_documents(
+        client, driver["headers"], admin_headers, driver_id=driver["driver_id"]
+    )
+    # `approved_driver` يضع `approved` بلا مستندات، فرفعُها أسقط الاعتماد —
+    # وهو السلوك الصحيح. نعيده معتمداً لنصل إلى الحالة التي يختبرها هذا
+    # الاختبار: كبتنٌ معتمدٌ **وفي رحلة**
+    await set_driver_approved(session_factory, driver["driver_id"])
+    await bring_online(client, driver)
+    await accepted_ride(client, auth(rider), driver)
+
+    refused = await client.put(
+        "/drivers/me/documents/driving_license",
+        files={"file": ("l.png", PNG_BYTES, "image/png")},
+        headers=driver["headers"],
+    )
+    assert refused.status_code == 409
+    assert "رحلتك الجارية" in refused.json()["detail"]
+
+    # ...والمستند الاختياري يمر: لا يمسّ الاعتماد فلا يمسّ الرحلة
+    allowed = await client.put(
+        "/drivers/me/documents/vehicle_photo",
+        files={"file": ("v.png", PNG_BYTES, "image/png")},
+        headers=driver["headers"],
+    )
+    assert allowed.status_code == 200

@@ -1,0 +1,15 @@
+{
+  "name": "TAXO — تطبيق الكبتن",
+  "short_name": "TAXO كبتن",
+  "description": "استقبل الطلبات وتابع أرباحك",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14181d",
+  "theme_color": "#14181d",
+  "icons": [
+    { "src": "/icons/taxo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e7e2;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+a{color:#e6edf3}a:hover{color:#fff}
+input,textarea{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.thm-dark{--bg:#14181d;--sur:#0d1014;--sur2:#1a2027;--brd:#2a313a;--tx:#e6edf3;--mut:#8b949e;--inv:#0d1014;--acc:#e6edf3;--ok:#3fb970;--warn:#d9a62e;--dng:#e5534b;--sa:#1c2128;--sb:#20262e;--dim:rgba(4,6,8,.6)}
+.thm-light{--bg:#f2f0eb;--sur:#ffffff;--sur2:#faf9f6;--brd:#ddd8cf;--tx:#171b20;--mut:#6e7681;--inv:#f2f0eb;--acc:#171b20;--ok:#1a7f4e;--warn:#9a6b00;--dng:#c73e36;--sa:#e6e3db;--sb:#ece9e1;--dim:rgba(20,24,29,.4)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes sweep{0%{transform:scale(.4);opacity:.55}100%{transform:scale(1.5);opacity:0}}
+.scr{overflow-y:auto;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.fld{width:100%;box-sizing:border-box;background:var(--sur);border:1px solid var(--brd);border-radius:13px;padding:13px 15px;font-size:14.5px;color:var(--tx);outline:none}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px 12px">
+<div class="{{ themeClass }}" dir="{{ dir }}" data-screen-label="TAXO Rider" style="width:390px;height:min(800px,calc(100vh - 32px));border-radius:38px;background:var(--bg);color:var(--tx);box-shadow:0 24px 70px rgba(0,0,0,.35),0 0 0 10px #24262a,0 0 0 12px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+  <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;z-index:40">
+    <span style="font-size:12px;font-weight:600">9:41</span>
+    <div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div>
+  </div>
+
+  <sc-if value="{{ viewLogin }}" hint-placeholder-val="{{ true }}">
+    <div class="scr" style="position:absolute;inset:34px 0 0;display:flex;flex-direction:column;padding:30px 28px 24px;animation:fadein .3s">
+      <div style="display:flex;justify-content:flex-end"><span onClick="{{ toggleLang }}" style="font-size:12px;font-weight:600;color:var(--mut);border:1px solid var(--brd);border-radius:99px;padding:5px 12px;cursor:pointer">{{ t.langBtn }}</span></div>
+      <div style="margin-top:46px;margin-bottom:38px">
+        <div style="font-size:38px;font-weight:700;letter-spacing:.04em">TAXO</div>
+        <div style="font-size:14px;color:var(--mut);margin-top:4px">{{ t.riderApp }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.phone }}</div><input dir="ltr" class="fld" value="{{ phoneVal }}" onChange="{{ setPhone }}" placeholder="+962 7X XXX XXXX"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.password }}</div><input type="password" class="fld" value="{{ passVal }}" onChange="{{ setPass }}" placeholder="••••••••"></div>
+        <div onClick="{{ goForgot }}" style="font-size:12px;color:var(--mut);text-align:end;cursor:pointer;text-decoration:underline">{{ t.forgot }}</div>
+      </div>
+      <div onClick="{{ doLogin }}" style="margin-top:24px;background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.loginBtn }}</div>
+      <div style="margin-top:auto;text-align:center;font-size:13px;color:var(--mut)">{{ t.newRider }} <b onClick="{{ goRegister }}" style="color:var(--tx);font-weight:600;cursor:pointer;text-decoration:underline">{{ t.registerNow }}</b></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewRegister }}" hint-placeholder-val="{{ false }}">
+    <div class="scr" style="position:absolute;inset:34px 0 0;padding:28px;animation:fadein .3s">
+      <span onClick="{{ goLogin }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+      <div style="font-size:23px;font-weight:700;margin-top:22px">{{ t.regTitle }}</div>
+      <div style="font-size:12.5px;color:var(--mut);margin:8px 0 20px;line-height:1.6">{{ t.regSub }}</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.name }}</div><input class="fld" placeholder="{{ t.namePh }}"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.phone }}</div><input dir="ltr" class="fld" placeholder="+962 7X XXX XXXX"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.country }}</div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ countries }}" as="c" hint-placeholder-count="2">
+              <div onClick="{{ c.pick }}" style="flex:1;border:1px solid {{ c.border }};background:{{ c.bg }};border-radius:13px;padding:12px;text-align:center;font-size:13.5px;font-weight:600;cursor:pointer">{{ c.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.passwordNew }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.confirmPass }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+      </div>
+      <div onClick="{{ regToOtp }}" style="margin-top:20px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.next }}</div>
+      <div style="font-size:11.5px;color:var(--mut);margin-top:14px;line-height:1.7;text-align:center">{{ t.regNote }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewOtp }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;display:flex;flex-direction:column;padding:30px 28px;animation:fadein .3s">
+      <span onClick="{{ goLogin }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+      <div style="font-size:24px;font-weight:700;margin-top:24px">{{ t.otpTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:8px;line-height:1.6">{{ t.otpSub }}</div>
+      <div dir="ltr" style="display:flex;gap:10px;justify-content:center;margin:34px 0">
+        <sc-for list="{{ otpDigits }}" as="d" hint-placeholder-count="4">
+          <div style="width:58px;height:64px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">{{ d }}</div>
+        </sc-for>
+      </div>
+      <div onClick="{{ doOtp }}" style="background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.verify }}</div>
+      <div style="text-align:center;font-size:12.5px;color:var(--mut);margin-top:16px">{{ t.resend }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewForgot }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;padding:30px 28px;animation:fadein .3s">
+      <span onClick="{{ goLogin }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+      <div style="font-size:23px;font-weight:700;margin-top:24px">{{ t.fgTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:8px;line-height:1.6">{{ t.fgSub }}</div>
+      <div style="margin-top:24px"><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.phone }}</div><input dir="ltr" class="fld" value="{{ phoneVal }}" onChange="{{ setPhone }}"></div>
+      <div onClick="{{ fgToOtp }}" style="margin-top:20px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.sendCode }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewNewPass }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0;padding:30px 28px;animation:fadein .3s">
+      <div style="font-size:23px;font-weight:700;margin-top:24px">{{ t.newPassTitle }}</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:8px;line-height:1.6">{{ t.newPassSub }}</div>
+      <div style="margin-top:22px;display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.passwordNew }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+        <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.confirmPass }}</div><input type="password" class="fld" placeholder="••••••••"></div>
+      </div>
+      <div onClick="{{ savePass }}" style="margin-top:20px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.savePass }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewApp }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:34px 0 0">
+
+      <sc-if value="{{ tabHome }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px);display:flex;align-items:center;justify-content:center">
+          <span style="font:400 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--mut)">{{ mapLabel }}</span>
+        </div>
+        <div style="position:absolute;top:0;left:0;right:0;height:60px;background:linear-gradient(var(--bg),transparent);pointer-events:none"></div>
+        <div style="position:absolute;top:12px;right:16px;left:16px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div onClick="{{ goAccount }}" style="width:36px;height:36px;border-radius:99px;background:var(--sur);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">{{ initials }}</div>
+          <div style="display:flex;gap:7px">
+            <div onClick="{{ goNotifs }}" style="position:relative;background:var(--sur);border:1px solid var(--brd);border-radius:99px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px">◎<sc-if value="{{ unreadShow }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:6px;left:7px;width:7px;height:7px;border-radius:99px;background:var(--dng);display:block"></span></sc-if></div>
+            <div onClick="{{ toggleTheme }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:99px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px">{{ themeIcon }}</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ flowIdle }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;bottom:66px;right:0;left:0;padding:16px;background:linear-gradient(transparent,var(--bg) 40%)">
+            <div onClick="{{ goSearch }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:18px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px">
+              <span style="width:9px;height:9px;border-radius:2px;background:var(--tx);display:block"></span>
+              <span style="flex:1;font-size:15px;font-weight:600">{{ t.whereTo }}</span>
+              <span style="font-size:11.5px;color:var(--mut);border:1px solid var(--brd);border-radius:8px;padding:5px 9px">{{ t.now }}</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <sc-for list="{{ savedShortcuts }}" as="p" hint-placeholder-count="2">
+                <div onClick="{{ p.go }}" style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:11px 13px;cursor:pointer">
+                  <div style="font-size:12.5px;font-weight:700">{{ p.label }}</div>
+                  <div style="font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.addr }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:11px 13px;display:flex;align-items:center;gap:10px">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block"></span>
+              <span style="flex:1;font-size:12px;color:var(--mut)">{{ nearbyLine }}</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ flowConfirm }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;bottom:66px;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:22px 22px 0 0;padding:14px 16px 16px;animation:slideup .3s;max-height:76%;overflow:auto">
+            <div style="display:grid;grid-template-columns:12px 1fr auto;gap:4px 10px;align-items:center;margin-bottom:12px">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--ok);margin:0 auto"></span>
+              <div onClick="{{ goSearchPickup }}" style="font-size:12.5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pickupName }}</div>
+              <span style="font-size:10.5px;color:var(--mut)">{{ t.edit }}</span>
+              <span style="width:2px;height:11px;background:var(--brd);margin:0 auto"></span><span></span><span></span>
+              <span style="width:8px;height:8px;border-radius:2px;background:var(--tx);margin:0 auto"></span>
+              <div onClick="{{ goSearch }}" style="font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dropName }}</div>
+              <span style="font-size:10.5px;color:var(--mut)">{{ t.edit }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+              <sc-for list="{{ categoriesList }}" as="c" hint-placeholder-count="2">
+                <div onClick="{{ c.pick }}" style="border:1px solid {{ c.border }};background:{{ c.bg }};border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                  <span style="width:42px;height:30px;border-radius:7px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">▭</span>
+                  <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ c.name }}</div><div style="font-size:11px;color:var(--mut)">{{ c.eta }} · {{ c.seats }}</div></div>
+                  <div style="text-align:end"><div style="font-size:15px;font-weight:700">{{ c.price }}</div><div style="font-size:10px;color:var(--mut)">{{ t.jod }}</div></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <div onClick="{{ openPayPick }}" style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:11px 13px;display:flex;align-items:center;gap:9px;cursor:pointer">
+                <span style="font-size:13px">{{ payIcon }}</span>
+                <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ payLabel }}</div></div>
+                <span style="color:var(--mut);font-size:12px">{{ chev }}</span>
+              </div>
+              <div onClick="{{ openPromo }}" style="border:1px solid {{ promoBorder }};border-radius:13px;padding:11px 13px;font-size:12.5px;font-weight:600;cursor:pointer;color:{{ promoColor }}">{{ promoLabel }}</div>
+            </div>
+            <sc-if value="{{ fareNoteShow }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:12px;padding:10px 13px;font-size:11.5px;color:var(--mut);line-height:1.6;margin-bottom:12px">{{ fareNote }}</div>
+            </sc-if>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ requestRide }}" style="flex:3;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ requestLabel }}</div>
+              <div onClick="{{ cancelPlanning }}" style="flex:1;border:1px solid var(--brd);border-radius:15px;padding:15px;text-align:center;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.back }}</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ flowSearching }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+            <span style="position:absolute;width:120px;height:120px;border-radius:99px;border:2px solid var(--ok);animation:sweep 2.2s ease-out infinite;display:block"></span>
+            <span style="position:absolute;width:120px;height:120px;border-radius:99px;border:2px solid var(--ok);animation:sweep 2.2s ease-out infinite 1.1s;display:block"></span>
+            <span style="width:14px;height:14px;border-radius:99px;background:var(--ok);display:block"></span>
+          </div>
+          <div style="position:absolute;bottom:66px;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:22px 22px 0 0;padding:18px 16px 18px;animation:slideup .3s">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div style="width:34px;height:34px;border-radius:99px;border:2px solid var(--brd);border-top-color:var(--tx);animation:spin 1s linear infinite;flex:none"></div>
+              <div style="flex:1"><div style="font-size:14.5px;font-weight:700">{{ t.searchingTitle }}</div><div style="font-size:11.5px;color:var(--mut)">{{ searchingSub }}</div></div>
+            </div>
+            <div onClick="{{ cancelSearch }}" style="border:1px solid var(--brd);border-radius:14px;padding:13px;text-align:center;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.cancelRequest }}</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ flowRide }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:60px;right:16px;left:16px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:10px 13px;display:flex;align-items:center;gap:10px">
+            <span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block;animation:pulse 1.8s infinite"></span>
+            <span style="flex:1;font-size:12.5px;font-weight:700">{{ phaseTitle }}</span>
+            <span style="font-size:12px;color:var(--mut)">{{ phaseEta }}</span>
+          </div>
+          <div style="position:absolute;bottom:66px;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:22px 22px 0 0;padding:16px;animation:slideup .3s">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:13px">
+              <div style="width:46px;height:46px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">{{ captainInitial }}</div>
+              <div style="flex:1">
+                <div style="font-size:14.5px;font-weight:700">{{ t.captainName }}</div>
+                <div style="font-size:11px;color:var(--mut)">★ 4.9 · {{ t.vehicleDesc }}</div>
+              </div>
+              <div dir="ltr" style="font-size:12px;font-weight:700;border:1px solid var(--brd);border-radius:7px;padding:5px 9px">22-71483</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:13px">
+              <div style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:11px;text-align:center;font-size:12.5px;font-weight:600">✆ {{ t.call }}</div>
+              <div style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:11px;text-align:center;font-size:12.5px;font-weight:600">✉ {{ t.message }}</div>
+              <div onClick="{{ openSafety }}" style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:11px;text-align:center;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--dng)">⛨ {{ t.safety }}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 10px;margin-bottom:13px">
+              <span style="width:8px;height:8px;border-radius:99px;background:{{ pickupDotColor }};margin:5px auto 0"></span>
+              <div style="font-size:12.5px;color:{{ pickupTextColor }}">{{ pickupName }}</div>
+              <span style="width:2px;height:12px;background:var(--brd);margin:0 auto"></span><span></span>
+              <span style="width:8px;height:8px;border-radius:2px;background:{{ dropDotColor }};margin:2px auto 0"></span>
+              <div style="font-size:12.5px;color:{{ dropTextColor }}">{{ dropName }}</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--brd);padding-top:12px;margin-bottom:12px">
+              <span style="font-size:12px;color:var(--mut)">{{ payLabel }}</span>
+              <span style="font-size:16px;font-weight:700">{{ fareFmt }} {{ t.jod }}</span>
+            </div>
+            <div onClick="{{ advanceRide }}" style="background:var(--acc);color:var(--inv);border-radius:14px;padding:13px;text-align:center;font-size:13.5px;font-weight:700;cursor:pointer">{{ t.simNext }}</div>
+            <div onClick="{{ openCancel }}" style="text-align:center;font-size:12px;font-weight:600;color:var(--mut);margin-top:10px;cursor:pointer">{{ cancelRideLabel }}</div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pgSearch }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;background:var(--bg);padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:18px;font-weight:700">{{ searchTitle }}</div>
+          </div>
+          <input class="fld" value="{{ searchQ }}" onChange="{{ setSearchQ }}" placeholder="{{ t.searchPh }}" style="margin-bottom:12px">
+          <div onClick="{{ pickOnMap }}" style="border:1px solid var(--brd);border-radius:13px;padding:12px 14px;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer;margin-bottom:14px">◎ {{ t.pickOnMap }}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--mut);margin:0 2px 9px">{{ t.saved }}</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+            <sc-for list="{{ savedPlaces }}" as="p" hint-placeholder-count="2">
+              <div onClick="{{ p.pick }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <span style="width:30px;height:30px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none">{{ p.icon }}</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ p.label }}</div><div style="font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.addr }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--mut);margin:0 2px 9px">{{ t.recent }}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ recentPlaces }}" as="p" hint-placeholder-count="4">
+              <div onClick="{{ p.pick }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <span style="width:30px;height:30px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mut);flex:none">◷</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ p.label }}</div><div style="font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.addr }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgPinMap }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0 0 66px;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)">
+          <span onClick="{{ goBack }}" style="position:absolute;top:14px;inset-inline-end:14px;width:34px;height:34px;border-radius:99px;background:var(--sur);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx)">{{ backArrow }}</span>
+          <div style="position:absolute;top:calc(50% - 46px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:7px 12px;font-size:11.5px;font-weight:700;white-space:nowrap">{{ t.dragMap }}</div>
+            <span style="width:3px;height:20px;background:var(--tx);display:block"></span>
+            <span style="width:11px;height:11px;border-radius:99px;background:var(--tx);display:block"></span>
+          </div>
+          <div style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:20px 20px 0 0;padding:16px">
+            <div style="font-size:11.5px;color:var(--mut);margin-bottom:3px">{{ pinTitle }}</div>
+            <div style="font-size:14.5px;font-weight:700;margin-bottom:14px">{{ pinAddress }}</div>
+            <div onClick="{{ confirmPin }}" style="background:var(--acc);color:var(--inv);border-radius:14px;padding:14px;text-align:center;font-size:14.5px;font-weight:700;cursor:pointer">{{ t.confirmLocation }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabRides }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px">
+          <div style="font-size:20px;font-weight:700;margin:6px 0 16px">{{ t.myRides }}</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ rides }}" as="r" hint-placeholder-count="4">
+              <div onClick="{{ r.open }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:13px 14px;cursor:pointer">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+                  <span style="font-size:12px;color:var(--mut)">{{ r.when }}</span>
+                  <span style="font-size:15px;font-weight:700;color:{{ r.fareColor }}">{{ r.fare }}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:10px 1fr;gap:3px 9px">
+                  <span style="width:7px;height:7px;border-radius:99px;background:var(--tx);margin:5px auto 0"></span><div style="font-size:12.5px">{{ r.from }}</div>
+                  <span style="width:2px;height:9px;background:var(--brd);margin:0 auto"></span><span></span>
+                  <span style="width:7px;height:7px;border-radius:2px;background:var(--mut);margin:3px auto 0"></span><div style="font-size:12.5px;color:var(--mut)">{{ r.to }}</div>
+                </div>
+                <div style="display:flex;gap:9px;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd);font-size:11px;color:var(--mut)"><span>{{ r.method }}</span><span>·</span><span>{{ r.captain }}</span><span style="margin-inline-start:auto;color:{{ r.statusColor }};font-weight:700">{{ r.status }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgRideDetail }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;background:var(--bg)">
+          <div style="height:160px;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px);display:flex;align-items:center;justify-content:center;position:relative">
+            <span style="font:400 10px ui-monospace,Menlo,monospace;color:var(--mut)">{{ t.routeTaken }}</span>
+            <span onClick="{{ goBack }}" style="position:absolute;top:14px;inset-inline-end:14px;width:34px;height:34px;border-radius:99px;background:var(--sur);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx)">{{ backArrow }}</span>
+          </div>
+          <div style="padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+              <div><div style="font-size:12px;color:var(--mut)">{{ detailRide.when }}</div><div style="font-size:26px;font-weight:700">{{ detailRide.fare }}</div></div>
+              <span style="font-size:11.5px;font-weight:700;color:{{ detailRide.statusColor }};border:1px solid var(--brd);border-radius:99px;padding:6px 11px">{{ detailRide.status }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 10px;margin-bottom:16px">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--tx);margin:5px auto 0"></span><div style="font-size:12.5px">{{ detailRide.from }}</div>
+              <span style="width:2px;height:12px;background:var(--brd);margin:0 auto"></span><span></span>
+              <span style="width:8px;height:8px;border-radius:2px;background:var(--mut);margin:2px auto 0"></span><div style="font-size:12.5px;color:var(--mut)">{{ detailRide.to }}</div>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+              <div style="font-size:13px;font-weight:700;margin-bottom:11px">{{ t.receipt }}</div>
+              <sc-for list="{{ detailBreakdown }}" as="b" hint-placeholder-count="4">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px"><span style="color:var(--mut)">{{ b.label }}</span><span style="color:{{ b.color }};font-weight:{{ b.weight }}">{{ b.value }}</span></div>
+              </sc-for>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+              <div style="width:40px;height:40px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ captainInitial }}</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700">{{ detailRide.captain }}</div><div style="font-size:11px;color:var(--mut)">{{ t.vehicleDesc }}</div></div>
+              <span style="font-size:12px;color:var(--warn);font-weight:700">★ {{ detailRide.stars }}</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ goReport }}" style="flex:1;border:1px solid var(--brd);border-radius:14px;padding:13px;text-align:center;font-size:13px;font-weight:600;color:var(--dng);cursor:pointer">{{ t.reportIssue }}</div>
+              <div onClick="{{ rebook }}" style="flex:1;border:1px solid var(--brd);border-radius:14px;padding:13px;text-align:center;font-size:13px;font-weight:600;cursor:pointer">{{ t.rebook }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgReport }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 14px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.reportTitle }}</div>
+          </div>
+          <div style="font-size:12.5px;color:var(--mut);line-height:1.7;margin-bottom:16px">{{ t.reportSub }}</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:14px">
+            <sc-for list="{{ reportReasons }}" as="d" hint-placeholder-count="4">
+              <div onClick="{{ d.pick }}" style="background:var(--sur);border:1px solid {{ d.border }};border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer">
+                <span style="width:16px;height:16px;border-radius:99px;border:1px solid {{ d.border }};background:{{ d.dot }};flex:none;display:block"></span>
+                <span style="font-size:13px">{{ d.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">{{ t.note }}</div><input class="fld" placeholder="{{ t.notePh }}"></div>
+          <div onClick="{{ submitReport }}" style="margin-top:18px;background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:14.5px;font-weight:700;cursor:pointer">{{ t.submitReport }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabWallet }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px">
+          <div style="font-size:20px;font-weight:700;margin:6px 0 16px">{{ t.wallet }}</div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:20px;padding:20px;margin-bottom:12px">
+            <div style="font-size:12px;color:var(--mut)">{{ t.balance }}</div>
+            <div style="font-size:34px;font-weight:700;margin:2px 0 4px">{{ walletFmt }} <span style="font-size:14px;font-weight:500;color:var(--mut)">{{ t.jod }}</span></div>
+            <div style="font-size:11.5px;color:var(--mut);line-height:1.6">{{ t.walletNote }}</div>
+            <div onClick="{{ openTopup }}" style="margin-top:14px;background:var(--acc);color:var(--inv);border-radius:13px;padding:13px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ t.topup }}</div>
+          </div>
+          <div onClick="{{ goCards }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:14px 15px;display:flex;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer">
+            <span style="width:34px;height:34px;border-radius:10px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">▭</span>
+            <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ t.savedCards }}</div><div style="font-size:11px;color:var(--mut)">•••• 4242 · {{ t.defaultCard }}</div></div>
+            <span style="color:var(--mut)">{{ chev }}</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;margin:14px 2px 10px;color:var(--mut)">{{ t.ledger }}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ txns }}" as="x" hint-placeholder-count="4">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+                <span style="width:34px;height:34px;border-radius:11px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">{{ x.icon }}</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ x.label }}</div><div style="font-size:11px;color:var(--mut)">{{ x.when }}</div></div>
+                <div style="text-align:end"><div style="font-size:14px;font-weight:700;color:{{ x.color }}">{{ x.amount }}</div><div style="font-size:10px;color:var(--mut)">{{ x.after }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgCards }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.savedCards }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ cards }}" as="c" hint-placeholder-count="2">
+              <div style="background:var(--sur);border:1px solid {{ c.border }};border-radius:16px;padding:15px;display:flex;align-items:center;gap:12px">
+                <span style="width:40px;height:27px;border-radius:5px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex:none">{{ c.brand }}</span>
+                <div style="flex:1"><div dir="ltr" style="font-size:13.5px;font-weight:700">•••• {{ c.last4 }}</div><div style="font-size:11px;color:var(--mut)">{{ c.exp }}</div></div>
+                <div style="text-align:end;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+                  <span onClick="{{ c.setDefault }}" style="font-size:10.5px;font-weight:700;color:{{ c.defColor }};cursor:pointer">{{ c.defLabel }}</span>
+                  <span onClick="{{ c.remove }}" style="font-size:10.5px;color:var(--dng);cursor:pointer">{{ t.remove }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ addCard }}" style="margin-top:12px;border:1px dashed var(--brd);border-radius:16px;padding:15px;text-align:center;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.addCard }}</div>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:14px;line-height:1.7">{{ t.tokenNote }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgCardPage }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:var(--sur2);z-index:65;display:flex;flex-direction:column;padding:22px;animation:fadein .25s">
+          <div style="display:flex;align-items:center;gap:9px;background:var(--sur);border:1px solid var(--brd);border-radius:11px;padding:9px 12px;font-size:11.5px;color:var(--mut)"><span style="color:var(--ok)">🔒</span><span dir="ltr" style="font-family:ui-monospace,Menlo,monospace">secure.telr.com</span></div>
+          <div style="margin-top:34px;text-align:center">
+            <div style="font-size:12px;color:var(--mut);letter-spacing:.14em">TELR · HOSTED PAYMENT</div>
+            <div style="font-size:32px;font-weight:700;margin-top:14px">{{ cardAmountFmt }} <span style="font-size:14px;color:var(--mut)">{{ t.jod }}</span></div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:4px">{{ cardPurpose }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px;margin-top:26px;display:flex;flex-direction:column;gap:10px">
+            <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">{{ t.cardNumber }}</div><input dir="ltr" class="fld" value="4242 4242 4242 4242"></div>
+            <div style="display:flex;gap:8px"><div style="flex:1"><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">{{ t.expiry }}</div><input dir="ltr" class="fld" value="09/28"></div><div style="flex:1"><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">CVV</div><input dir="ltr" class="fld" value="•••"></div></div>
+            <div onClick="{{ toggleSaveCard }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;margin-top:2px">
+              <span style="width:18px;height:18px;border-radius:5px;border:1px solid var(--brd);background:{{ saveCardBg }};display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--inv)">{{ saveCardMark }}</span>
+              <span style="font-size:12px;color:var(--mut)">{{ t.saveCard }}</span>
+            </div>
+          </div>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:9px">
+            <div onClick="{{ cardPaid }}" style="background:var(--acc);color:var(--inv);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ t.payNow }}</div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ cardDeclined }}" style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:12px;text-align:center;font-size:12px;font-weight:600;color:var(--dng);cursor:pointer">{{ t.simDeclined }}</div>
+              <div onClick="{{ cardCancel }}" style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:12px;text-align:center;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.cancel }}</div>
+            </div>
+            <div style="text-align:center;font-size:10.5px;color:var(--mut);line-height:1.6">{{ t.mockNote }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabAccount }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px">
+          <div style="display:flex;align-items:center;gap:14px;margin:6px 0 18px">
+            <div style="width:54px;height:54px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">{{ initials }}</div>
+            <div style="flex:1"><div style="font-size:17px;font-weight:700">{{ t.riderName }}</div><div style="font-size:12px;color:var(--mut);display:flex;gap:6px;align-items:center"><span dir="ltr">+962 79 555 0142</span><span>·</span><span>★ {{ ratingFmt }}</span></div></div>
+            <span onClick="{{ toggleLang }}" style="font-size:11.5px;font-weight:600;color:var(--mut);border:1px solid var(--brd);border-radius:99px;padding:5px 11px;cursor:pointer">{{ t.langBtn }}</span>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+            <sc-for list="{{ accountRows }}" as="a" hint-placeholder-count="6">
+              <div onClick="{{ a.go }}" style="padding:14px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--brd)">
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:600">{{ a.label }}</div><div style="font-size:11px;color:var(--mut)">{{ a.sub }}</div></div>
+                <span style="color:var(--mut)">{{ chev }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ doLogout }}" style="margin-top:14px;text-align:center;font-size:13px;font-weight:600;color:var(--dng);cursor:pointer;padding:10px">{{ t.logout }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgPlaces }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.savedPlaces }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ savedPlaces }}" as="p" hint-placeholder-count="2">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:14px;display:flex;align-items:center;gap:12px">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">{{ p.icon }}</span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700">{{ p.label }}</div><div style="font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.addr }}</div></div>
+                <span style="font-size:11.5px;color:var(--mut);cursor:pointer">{{ t.edit }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ addPlace }}" style="margin-top:12px;border:1px dashed var(--brd);border-radius:15px;padding:15px;text-align:center;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.addPlace }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgNotifs }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700;flex:1">{{ t.notifsTitle }}</div>
+            <span onClick="{{ markAllRead }}" style="font-size:11.5px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.markAll }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+              <div style="background:var(--sur);border:1px solid {{ n.border }};border-radius:15px;padding:13px 14px;display:flex;gap:12px;align-items:flex-start">
+                <span style="width:30px;height:30px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:13px;color:{{ n.color }};flex:none">{{ n.icon }}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:700">{{ n.title }}</div>
+                  <div style="font-size:11.5px;color:var(--mut);line-height:1.6;margin-top:2px">{{ n.body }}</div>
+                  <div style="font-size:10.5px;color:var(--mut);margin-top:5px">{{ n.when }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgSettings }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.settingsTitle }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px;margin-bottom:12px">
+            <div onClick="{{ toggleMarketing }}" style="display:flex;align-items:center;gap:12px;cursor:pointer">
+              <div style="flex:1"><div style="font-size:13.5px;font-weight:600">{{ t.marketingPush }}</div><div style="font-size:11px;color:var(--mut);line-height:1.6">{{ t.marketingSub }}</div></div>
+              <div style="width:46px;height:27px;border-radius:99px;background:{{ mkToggleBg }};position:relative;flex:none;transition:background .2s"><span style="position:absolute;top:3px;inset-inline-start:{{ mkKnobPos }};width:21px;height:21px;border-radius:99px;background:{{ mkKnobColor }};display:block;transition:inset-inline-start .2s"></span></div>
+            </div>
+            <div style="border-top:1px solid var(--brd);margin-top:13px;padding-top:13px;display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:13px;font-weight:600">{{ t.quietHours }}</div><div style="font-size:11px;color:var(--mut)">{{ t.quietSub }}</div></div>
+              <span dir="ltr" style="font-size:12.5px;font-weight:700">22:00 – 08:00</span>
+            </div>
+            <div style="font-size:11px;color:var(--mut);margin-top:10px;line-height:1.6">{{ t.quietNote }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+            <div onClick="{{ toggleLang }}" style="padding:14px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--brd);cursor:pointer"><span style="font-size:13.5px;font-weight:600">{{ t.langRow }}</span><span style="font-size:12.5px;color:var(--mut)">{{ langLabel }}</span></div>
+            <div onClick="{{ toggleTheme }}" style="padding:14px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span style="font-size:13.5px;font-weight:600">{{ t.themeRow }}</span><span style="font-size:12.5px;color:var(--mut)">{{ themeLabel }}</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pgSupport }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0 0 66px;padding:16px;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px">
+            <span onClick="{{ goBack }}" style="cursor:pointer;color:var(--mut);font-size:18px">{{ backArrow }}</span>
+            <div style="font-size:20px;font-weight:700">{{ t.support }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden;margin-bottom:12px">
+            <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="4">
+              <div style="padding:14px 15px;border-bottom:1px solid var(--brd)">
+                <div style="font-size:13px;font-weight:600;margin-bottom:4px">{{ f.q }}</div>
+                <div style="font-size:11.5px;color:var(--mut);line-height:1.65">{{ f.a }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px">
+            <div style="font-size:13.5px;font-weight:700;margin-bottom:8px">{{ t.contactUs }}</div>
+            <input class="fld" placeholder="{{ t.contactPh }}" style="margin-bottom:10px">
+            <div onClick="{{ sendSupport }}" style="background:var(--acc);color:var(--inv);border-radius:12px;padding:12px;text-align:center;font-size:13.5px;font-weight:700;cursor:pointer">{{ t.send }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="position:absolute;bottom:0;right:0;left:0;height:66px;background:var(--sur);border-top:1px solid var(--brd);display:flex;padding:8px 6px 12px;z-index:30">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+          <div onClick="{{ n.go }}" style="flex:1;text-align:center;cursor:pointer;opacity:{{ n.op }}">
+            <div style="width:19px;height:19px;border-radius:6px;background:{{ n.bg }};margin:0 auto 4px"></div>
+            <div style="font-size:9.5px;font-weight:{{ n.w }}">{{ n.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ payPickShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closePayPick }}" style="position:absolute;inset:0;background:var(--dim);z-index:68;animation:fadein .2s">
+          <div onClick="{{ stopProp }}" style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:14px">{{ t.choosePayment }}</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ payOptions }}" as="m" hint-placeholder-count="4">
+                <div onClick="{{ m.pick }}" style="border:1px solid {{ m.border }};border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                  <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">{{ m.icon }}</span>
+                  <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ m.label }}</div><div style="font-size:11px;color:var(--mut)">{{ m.sub }}</div></div>
+                  <span style="width:16px;height:16px;border-radius:99px;border:1px solid {{ m.border }};background:{{ m.dot }};flex:none;display:block"></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ promoShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closePromo }}" style="position:absolute;inset:0;background:var(--dim);z-index:68;animation:fadein .2s">
+          <div onClick="{{ stopProp }}" style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ t.promoTitle }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:14px">{{ t.promoSub }}</div>
+            <input class="fld" value="{{ promoInput }}" onChange="{{ setPromoInput }}" placeholder="TAXO20" style="margin-bottom:12px">
+            <div onClick="{{ applyPromo }}" style="background:var(--acc);color:var(--inv);border-radius:14px;padding:14px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ t.apply }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ cancelShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:var(--dim);z-index:66;animation:fadein .2s">
+          <div style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ t.cancelTitle }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:15px;line-height:1.6">{{ cancelSubLine }}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+              <sc-for list="{{ cancelReasons }}" as="c" hint-placeholder-count="4">
+                <div onClick="{{ c.pick }}" style="border:1px solid {{ c.border }};border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer">
+                  <span style="width:16px;height:16px;border-radius:99px;border:1px solid {{ c.border }};background:{{ c.dot }};flex:none;display:block"></span>
+                  <span style="font-size:13px">{{ c.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div onClick="{{ confirmCancel }}" style="flex:2;background:var(--dng);color:#fff;border-radius:14px;padding:14px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ t.confirmCancel }}</div>
+              <div onClick="{{ closeCancel }}" style="flex:1;border:1px solid var(--brd);border-radius:14px;padding:14px;text-align:center;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">{{ t.back }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ safetyShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeSafety }}" style="position:absolute;inset:0;background:var(--dim);z-index:69;animation:fadein .2s">
+          <div onClick="{{ stopProp }}" style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ t.safetyTitle }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:15px;line-height:1.6">{{ t.safetySub }}</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div onClick="{{ shareTrip }}" style="border:1px solid var(--brd);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;flex:none">↗</span>
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ t.shareTrip }}</div><div style="font-size:11px;color:var(--mut)">{{ t.shareTripSub }}</div></div>
+              </div>
+              <div onClick="{{ callEmergency }}" style="border:1px solid var(--dng);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;color:var(--dng);flex:none">!</span>
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:700;color:var(--dng)">{{ t.emergency }}</div><div style="font-size:11px;color:var(--mut)">{{ t.emergencySub }}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ topupShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeTopup }}" style="position:absolute;inset:0;background:var(--dim);z-index:70;animation:fadein .2s">
+          <div onClick="{{ stopProp }}" style="position:absolute;bottom:0;right:0;left:0;background:var(--sur);border-top:1px solid var(--brd);border-radius:24px 24px 0 0;padding:20px 18px 24px;animation:slideup .3s">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ t.topupTitle }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-bottom:14px">{{ topupSub }}</div>
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+              <sc-for list="{{ topupAmounts }}" as="a" hint-placeholder-count="3">
+                <div onClick="{{ a.pick }}" style="flex:1;border:1px solid {{ a.border }};background:{{ a.bg }};border-radius:12px;padding:12px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">{{ a.label }}</div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div onClick="{{ topupCard }}" style="border:1px solid var(--brd);border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;flex:none">▭</span>
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ t.byCard }}</div><div style="font-size:11px;color:var(--mut)">{{ t.byCardSub }}</div></div>
+                <span style="color:var(--mut)">{{ chev }}</span>
+              </div>
+              <div onClick="{{ topupCliq }}" style="border:1px solid var(--brd);border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+                <span style="width:32px;height:32px;border-radius:9px;background:var(--sur2);display:flex;align-items:center;justify-content:center;flex:none">₵</span>
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:700">{{ t.byCliq }}</div><div style="font-size:11px;color:var(--mut)">{{ t.byCliqSub }}</div></div>
+                <span style="color:var(--mut)">{{ chev }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ payShow }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;justify-content:center;padding:26px;animation:fadein .3s">
+          <div style="text-align:center;margin-bottom:22px">
+            <div style="font-size:13px;color:var(--mut);margin-bottom:6px">{{ payHeading }}</div>
+            <div style="font-size:44px;font-weight:700;line-height:1.1">{{ payBigFmt }}</div>
+            <div style="font-size:13px;color:var(--mut);margin-top:4px">{{ t.jodFull }} · {{ payLabel }}</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:14px 16px;margin-bottom:18px">
+            <sc-for list="{{ payRows }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px"><span style="color:var(--mut)">{{ c.label }}</span><span style="color:{{ c.color }};font-weight:{{ c.weight }}">{{ c.value }}</span></div>
+            </sc-for>
+          </div>
+          <div onClick="{{ confirmPay }}" style="background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">{{ payCta }}</div>
+          <div style="text-align:center;font-size:11.5px;color:var(--mut);margin-top:12px;line-height:1.6">{{ payNote }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ rateShow }}" hint-placeholder-val="{{ false }}">
+        <div class="scr" style="position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;justify-content:center;padding:26px;text-align:center;animation:fadein .3s">
+          <div style="width:60px;height:60px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px;margin:0 auto 14px">{{ captainInitial }}</div>
+          <div style="font-size:19px;font-weight:700">{{ t.rateTitle }}</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">{{ t.captainName }}</div>
+          <div dir="ltr" style="display:flex;gap:8px;justify-content:center;margin:22px 0 18px">
+            <sc-for list="{{ stars }}" as="s" hint-placeholder-count="5">
+              <span onClick="{{ s.set }}" style="font-size:32px;cursor:pointer;color:{{ s.color }}">★</span>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:20px">
+            <sc-for list="{{ compliments }}" as="c" hint-placeholder-count="4">
+              <span onClick="{{ c.toggle }}" style="border:1px solid {{ c.border }};background:{{ c.bg }};border-radius:99px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer">{{ c.label }}</span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ tipShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:8px;margin-bottom:18px">
+              <sc-for list="{{ tips }}" as="p" hint-placeholder-count="3">
+                <div onClick="{{ p.pick }}" style="flex:1;border:1px solid {{ p.border }};background:{{ p.bg }};border-radius:13px;padding:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer">{{ p.label }}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div onClick="{{ submitRating }}" style="background:var(--acc);color:var(--inv);border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer">{{ t.submit }}</div>
+          <div onClick="{{ skipRating }}" style="font-size:12.5px;font-weight:600;color:var(--mut);margin-top:14px;cursor:pointer">{{ t.skip }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:82px;left:50%;transform:translateX(-50%);background:{{ toastBg }};color:{{ toastColor }};border-radius:99px;padding:10px 20px;font-size:12.5px;font-weight:700;z-index:80;max-width:88%;text-align:center;animation:slideup .25s">{{ toastMsg }}</div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:860},&quot;lang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ar&quot;,&quot;en&quot;],&quot;default&quot;:&quot;ar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;payment&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cash&quot;,&quot;wallet&quot;,&quot;card&quot;,&quot;mixed&quot;],&quot;default&quot;:&quot;cash&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;supply&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;high&quot;,&quot;low&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+const L = {
+  ar: {
+    langBtn: "EN", langName: "العربية", riderApp: "اطلب تاكسي في ثوانٍ",
+    phone: "رقم الهاتف", password: "كلمة المرور", forgot: "نسيت كلمة المرور؟", loginBtn: "دخول",
+    newRider: "ليس لديك حساب؟", registerNow: "سجّل الآن",
+    regTitle: "إنشاء حساب", regSub: "رقمك هو مُعرّف دخولك، ويُخزَّن بصيغة دولية.",
+    name: "الاسم الكامل", namePh: "مثال: سارة العبداللات", country: "الدولة", jordan: "الأردن", libya: "ليبيا",
+    passwordNew: "كلمة المرور", confirmPass: "تأكيد كلمة المرور", next: "التالي",
+    regNote: "بالمتابعة أنت توافق على شروط الاستخدام. الرقم يُثبت بالتحقق مرة واحدة.",
+    otpTitle: "تحقق من رقمك", otpSub: "أرسلنا رمز تحقق إلى ‎+962 79 555 0142‎ — التحقق مرة واحدة عند التسجيل.",
+    verify: "تحقق", resend: "إعادة الإرسال خلال ٠:٤٢",
+    fgTitle: "استعادة كلمة المرور", fgSub: "سنرسل رمز تحقق إلى رقمك المسجّل — إثبات ملكية الرقم لا دخولاً.",
+    sendCode: "إرسال الرمز", newPassTitle: "كلمة مرور جديدة",
+    newPassSub: "بعد الحفظ تُبطل كل الجلسات الأخرى على أجهزتك.", savePass: "حفظ كلمة المرور",
+    whereTo: "إلى أين تريد الذهاب؟", now: "الآن", edit: "تعديل", back: "رجوع",
+    nearby: " كباتن قريبون منك الآن", nearbyNone: "لا كباتن قريبون — قد يطول الانتظار قليلاً",
+    searchTitleDrop: "الوجهة", searchTitlePickup: "نقطة الانطلاق",
+    searchPh: "ابحث عن مكان أو عنوان", pickOnMap: "تحديد على الخريطة",
+    saved: "أماكن محفوظة", recent: "وجهات أخيرة",
+    home: "المنزل", work: "العمل", homeAddr: "خلدا، شارع عمر مطر ١٢",
+    workAddr: "العبدلي بوليفارد، مبنى ٤", dragMap: "حرّك الخريطة لضبط الموقع",
+    pinPickup: "نقطة الانطلاق", pinDrop: "الوجهة", confirmLocation: "تأكيد الموقع",
+    economy: "اقتصادي", comfort: "مريح", seats4: "٤ ركاب", seats4c: "٤ ركاب · مركبة أحدث",
+    jod: "د.أ", jodFull: "دينار أردني", requestNow: "اطلب الآن",
+    cash: "كاش", walletM: "المحفظة", card: "بطاقة", cliq: "كليك", mixed: "مختلط (محفظة + كاش)",
+    choosePayment: "طريقة الدفع", walletSub: "الرصيد: ", cashSub: "ادفع للكبتن عند الوصول",
+    cardSub: "•••• 4242 · عبر صفحة Telr", mixedSub: "استخدم الرصيد ثم أكمل كاش",
+    promo: "كوبون", promoOn: "خصم مُطبَّق", promoTitle: "كوبون خصم", promoSub: "أدخل رمز الكوبون لتُخصم قيمته من الأجرة.",
+    apply: "تطبيق", promoApplied: "طُبِّق الكوبون — خصم ٢٠٪",
+    fareNoteMixed: "سيُخصم من رصيدك أولاً ثم تدفع المتبقي كاش للكبتن.",
+    fareNoteLow: "رصيدك لا يكفي كامل الأجرة — أضف رصيداً أو اختر طريقة أخرى.",
+    searchingTitle: "نبحث عن كبتن قريب…", searchingSub: "عادةً أقل من دقيقة",
+    cancelRequest: "إلغاء الطلب",
+    phaseComing: "الكبتن في الطريق إليك", phaseArrived: "الكبتن وصل — بانتظارك", phaseRiding: "في الطريق إلى وجهتك",
+    etaMin: " دقائق", etaNow: "الآن", etaTrip: "١٢ دقيقة",
+    captainName: "أبو محمد الزعبي", vehicleDesc: "تويوتا كورولا · أبيض",
+    call: "اتصال", message: "رسالة", safety: "أمان", simNext: "المرحلة التالية (عرض)",
+    cancelRide: "إلغاء الرحلة", cancelRideFee: "إلغاء الرحلة · قد تُطبَّق رسوم",
+    safetyTitle: "مركز الأمان", safetySub: "أدوات سريعة أثناء الرحلة.",
+    shareTrip: "مشاركة الرحلة", shareTripSub: "أرسل موقعك المباشر لشخص تثق به",
+    emergency: "اتصال طوارئ", emergencySub: "الاتصال بالرقم الوطني للطوارئ",
+    toastShared: "أُرسل رابط الرحلة ✓",
+    cancelTitle: "إلغاء الرحلة", cancelSubFree: "الإلغاء الآن مجاني.",
+    cancelSubFee: "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء.",
+    cr1: "تأخر الكبتن كثيراً", cr2: "غيّرت رأيي", cr3: "طلبت بالخطأ", cr4: "سبب آخر",
+    confirmCancel: "تأكيد الإلغاء", toastCancelled: "أُلغيت الرحلة",
+    payTitleCash: "ادفع للكبتن", payTitlePaid: "تم الدفع", payTitleMixed: "ادفع المتبقي كاش",
+    fareEst: "الأجرة المقدّرة", fareActual: "المسافة الفعلية", fareFinal: "الأجرة النهائية",
+    discount: "خصم الكوبون", fromWallet: "مخصوم من محفظتك", remainingCash: "المتبقي كاش",
+    payCtaCash: "دفعت كاش", payCtaPaid: "تم", payNoteCash: "سلّم المبلغ للكبتن — سيؤكد استلامه في تطبيقه.",
+    payNotePaid: "خُصم المبلغ إلكترونياً. إيصالك في سجل الرحلات.",
+    rateTitle: "قيّم كبتنك", submit: "إرسال", skip: "تخطي",
+    cmp1: "قيادة آمنة", cmp2: "مركبة نظيفة", cmp3: "ودود", cmp4: "وصل بسرعة",
+    tip: "بقشيش", noTip: "بدون",
+    myRides: "رحلاتي", statusDone: "مكتملة", statusCancelled: "ملغاة",
+    receipt: "الإيصال", baseFare: "الأجرة الأساسية", perKm: "لكل كم",
+    paidVia: "طريقة الدفع", cancelledNoCharge: "أُلغيت الرحلة — لم يُخصم أي مبلغ",
+    routeTaken: "المسار الفعلي المسجَّل", reportIssue: "الإبلاغ عن مشكلة", rebook: "أعد الطلب",
+    reportTitle: "الإبلاغ عن مشكلة", reportSub: "اختر نوع المشكلة وستراجعها الإدارة وتردّ عليك.",
+    rr1: "خُصم مبلغ خاطئ", rr2: "مسار أطول من اللازم", rr3: "سلوك الكبتن", rr4: "نسيت غرضاً في المركبة",
+    note: "ملاحظة", notePh: "اكتب ما حدث بإيجاز", submitReport: "إرسال البلاغ",
+    toastReport: "أُرسل البلاغ — سنرد عليك قريباً",
+    wallet: "المحفظة", balance: "الرصيد", topup: "شحن الرصيد",
+    walletNote: "استخدم الرصيد لدفع الرحلات كلياً أو جزئياً.",
+    topupTitle: "شحن الرصيد", byCard: "بطاقة", byCardSub: "شحن فوري عبر صفحة Telr",
+    byCliq: "كليك", byCliqSub: "حوّل ثم تُضيفه الإدارة بعد التأكد",
+    toastTopupCliq: "أرسلنا تعليمات التحويل — يُضاف بعد التأكد",
+    ledger: "الحركات", savedCards: "البطاقات المحفوظة", addCard: "+ إضافة بطاقة", remove: "حذف",
+    defaultCard: "افتراضية", setDefault: "اجعلها افتراضية",
+    tokenNote: "نحفظ رمزاً من المزود فقط — لا رقم بطاقة ولا CVV يُخزَّن عندنا.",
+    cardNumber: "رقم البطاقة", expiry: "تاريخ الانتهاء", saveCard: "احفظ البطاقة للدفع بضغطة",
+    payNow: "ادفع الآن", simDeclined: "محاكاة رفض", cancel: "إلغاء",
+    mockNote: "صفحة المزود محاكاة (TELR_USE_MOCK) — لا يُخصم مال حقيقي.",
+    purposeTopup: "شحن محفظة", purposeRide: "دفع رحلة", purposeCard: "حفظ بطاقة (تحقق ١ فلس)",
+    toastCardOk: "تم الدفع بالبطاقة ✓", toastCardFail: "رُفضت البطاقة — لم يُخصم شيء",
+    toastCardAdded: "أُضيفت البطاقة ✓", toastCardRemoved: "حُذفت البطاقة", toastDefault: "صارت البطاقة الافتراضية",
+    toastTopup: "شُحن رصيدك ✓", toastRated: "شكراً — تم الإرسال", toastSaved: "تم الحفظ ✓",
+    riderName: "سارة العبداللات",
+    savedPlaces: "الأماكن المحفوظة", addPlace: "+ إضافة مكان",
+    notifsTitle: "الإشعارات", markAll: "تعليم الكل كمقروء",
+    settingsTitle: "الإعدادات", marketingPush: "إشعارات العروض والكوبونات",
+    marketingSub: "إطفاؤها لا يمنع إشعارات رحلاتك إطلاقاً",
+    quietHours: "ساعات الهدوء", quietSub: "بتوقيت آسيا/عمّان",
+    quietNote: "تخص الحملات التسويقية وحدها — إشعارات رحلتك تصلك في أي وقت.",
+    langRow: "اللغة", themeRow: "المظهر", themeDark: "ليلي", themeLight: "نهاري",
+    support: "المساعدة", contactUs: "تواصل معنا", contactPh: "اكتب رسالتك…", send: "إرسال",
+    toastSupport: "وصلتنا رسالتك ✓",
+    faq1q: "كيف أدفع؟", faq1a: "كاش للكبتن، أو من رصيد محفظتك، أو ببطاقة عبر صفحة الدفع الآمنة، أو مزيج من الرصيد والكاش.",
+    faq2q: "متى يُخصم المبلغ؟", faq2a: "الدفع الإلكتروني يُخصم عند تأكيدك في نهاية الرحلة. الكاش يؤكده الكبتن عند استلامه.",
+    faq3q: "نسيت غرضاً في المركبة", faq3a: "افتح الرحلة من سجل رحلاتك ثم «الإبلاغ عن مشكلة» — نوصلك بالكبتن.",
+    faq4q: "هل تُطبَّق رسوم إلغاء؟", faq4a: "الإلغاء قبل قبول الكبتن مجاني. بعد تحركه إليك قد تُطبَّق رسوم رمزية.",
+    navHome: "الرئيسية", navRides: "رحلاتي", navWallet: "المحفظة", navAccount: "حسابي",
+    themeIconDark: "☾", themeIconLight: "☀",
+    mapDark: "MAPBOX dark-v11", mapLight: "MAPBOX streets-v12",
+    p1: "دوار الداخلية، شارع سليمان النابلسي", p2: "مجمع رغدان", p3: "الصويفية، شارع الوكالات", p4: "مستشفى الجامعة",
+    logout: "تسجيل الخروج",
+    nPromoT: "كوبون جديد", nRideT: "إيصال رحلتك", nWalletT: "شحن رصيد", nSupportT: "رد على بلاغك"
+  },
+  en: {
+    langBtn: "عربي", langName: "English", riderApp: "A taxi in seconds",
+    phone: "Phone number", password: "Password", forgot: "Forgot password?", loginBtn: "Log in",
+    newRider: "No account yet?", registerNow: "Register",
+    regTitle: "Create account", regSub: "Your phone is your login ID, stored in international format.",
+    name: "Full name", namePh: "e.g. Sara Abdallat", country: "Country", jordan: "Jordan", libya: "Libya",
+    passwordNew: "Password", confirmPass: "Confirm password", next: "Next",
+    regNote: "By continuing you accept the terms. Your number is verified once.",
+    otpTitle: "Verify your number", otpSub: "We sent a code to +962 79 555 0142 — verified once at registration.",
+    verify: "Verify", resend: "Resend in 0:42",
+    fgTitle: "Reset password", fgSub: "We'll send a code to your registered number — proof of ownership, not a login.",
+    sendCode: "Send code", newPassTitle: "New password",
+    newPassSub: "Saving revokes all other sessions on your devices.", savePass: "Save password",
+    whereTo: "Where to?", now: "Now", edit: "Edit", back: "Back",
+    nearby: " captains near you right now", nearbyNone: "No captains nearby — the wait may be longer",
+    searchTitleDrop: "Destination", searchTitlePickup: "Pickup point",
+    searchPh: "Search a place or address", pickOnMap: "Set on map",
+    saved: "Saved places", recent: "Recent destinations",
+    home: "Home", work: "Work", homeAddr: "Khalda, Omar Matar St 12",
+    workAddr: "Abdali Boulevard, Building 4", dragMap: "Drag the map to adjust",
+    pinPickup: "Pickup point", pinDrop: "Destination", confirmLocation: "Confirm location",
+    economy: "Economy", comfort: "Comfort", seats4: "4 seats", seats4c: "4 seats · newer car",
+    jod: "JOD", jodFull: "Jordanian Dinar", requestNow: "Request now",
+    cash: "Cash", walletM: "Wallet", card: "Card", cliq: "CliQ", mixed: "Mixed (wallet + cash)",
+    choosePayment: "Payment method", walletSub: "Balance: ", cashSub: "Pay the captain on arrival",
+    cardSub: "•••• 4242 · via Telr page", mixedSub: "Use balance, pay the rest in cash",
+    promo: "Promo", promoOn: "Discount applied", promoTitle: "Promo code", promoSub: "Enter a code to discount the fare.",
+    apply: "Apply", promoApplied: "Promo applied — 20% off",
+    fareNoteMixed: "Your balance is used first, then you pay the remainder in cash.",
+    fareNoteLow: "Your balance doesn't cover the fare — top up or pick another method.",
+    searchingTitle: "Finding a nearby captain…", searchingSub: "Usually under a minute",
+    cancelRequest: "Cancel request",
+    phaseComing: "Captain is on the way", phaseArrived: "Captain has arrived", phaseRiding: "On the way to your destination",
+    etaMin: " min away", etaNow: "Now", etaTrip: "12 min",
+    captainName: "Abu Mohammad Zoubi", vehicleDesc: "Toyota Corolla · White",
+    call: "Call", message: "Message", safety: "Safety", simNext: "Next phase (demo)",
+    cancelRide: "Cancel ride", cancelRideFee: "Cancel ride · a fee may apply",
+    safetyTitle: "Safety centre", safetySub: "Quick tools during your ride.",
+    shareTrip: "Share trip", shareTripSub: "Send your live location to someone you trust",
+    emergency: "Emergency call", emergencySub: "Call the national emergency number",
+    toastShared: "Trip link shared ✓",
+    cancelTitle: "Cancel ride", cancelSubFree: "Cancelling now is free.",
+    cancelSubFee: "The captain is on the way — a cancellation fee may apply.",
+    cr1: "Captain is taking too long", cr2: "Changed my mind", cr3: "Requested by mistake", cr4: "Other reason",
+    confirmCancel: "Confirm cancellation", toastCancelled: "Ride cancelled",
+    payTitleCash: "Pay the captain", payTitlePaid: "Payment complete", payTitleMixed: "Pay the remainder in cash",
+    fareEst: "Estimated fare", fareActual: "Actual distance", fareFinal: "Final fare",
+    discount: "Promo discount", fromWallet: "Charged to your wallet", remainingCash: "Remaining in cash",
+    payCtaCash: "I paid in cash", payCtaPaid: "Done", payNoteCash: "Hand the money to the captain — they'll confirm receipt in their app.",
+    payNotePaid: "Charged electronically. Your receipt is in ride history.",
+    rateTitle: "Rate your captain", submit: "Submit", skip: "Skip",
+    cmp1: "Safe driving", cmp2: "Clean car", cmp3: "Friendly", cmp4: "Arrived fast",
+    tip: "Tip", noTip: "None",
+    myRides: "My rides", statusDone: "Completed", statusCancelled: "Cancelled",
+    receipt: "Receipt", baseFare: "Base fare", perKm: "Per km",
+    paidVia: "Payment method", cancelledNoCharge: "Ride cancelled — nothing charged",
+    routeTaken: "Recorded actual route", reportIssue: "Report an issue", rebook: "Book again",
+    reportTitle: "Report an issue", reportSub: "Pick the issue type — admin reviews and replies to you.",
+    rr1: "Wrong amount charged", rr2: "Route longer than needed", rr3: "Captain behaviour", rr4: "Left an item in the car",
+    note: "Note", notePh: "Briefly describe what happened", submitReport: "Submit report",
+    toastReport: "Report sent — we'll reply soon",
+    wallet: "Wallet", balance: "Balance", topup: "Top up",
+    walletNote: "Use your balance to pay rides fully or partly.",
+    topupTitle: "Top up balance", byCard: "Card", byCardSub: "Instant via the Telr page",
+    byCliq: "CliQ", byCliqSub: "Transfer, then admin credits it after confirmation",
+    toastTopupCliq: "Transfer instructions sent — credited after confirmation",
+    ledger: "Activity", savedCards: "Saved cards", addCard: "+ Add card", remove: "Remove",
+    defaultCard: "Default", setDefault: "Make default",
+    tokenNote: "We store only a provider token — no card number or CVV is kept.",
+    cardNumber: "Card number", expiry: "Expiry", saveCard: "Save card for one-tap payment",
+    payNow: "Pay now", simDeclined: "Simulate decline", cancel: "Cancel",
+    mockNote: "Provider page is mocked (TELR_USE_MOCK) — no real money moves.",
+    purposeTopup: "Wallet top-up", purposeRide: "Ride payment", purposeCard: "Save card (1 fils verification)",
+    toastCardOk: "Card payment successful ✓", toastCardFail: "Card declined — nothing charged",
+    toastCardAdded: "Card added ✓", toastCardRemoved: "Card removed", toastDefault: "Set as default card",
+    toastTopup: "Balance topped up ✓", toastRated: "Thanks — submitted", toastSaved: "Saved ✓",
+    riderName: "Sara Abdallat",
+    savedPlaces: "Saved places", addPlace: "+ Add place",
+    notifsTitle: "Notifications", markAll: "Mark all read",
+    settingsTitle: "Settings", marketingPush: "Offers & promo notifications",
+    marketingSub: "Turning this off never affects your ride notifications",
+    quietHours: "Quiet hours", quietSub: "Asia/Amman time",
+    quietNote: "Applies to marketing campaigns only — ride notifications reach you any time.",
+    langRow: "Language", themeRow: "Appearance", themeDark: "Dark", themeLight: "Light",
+    support: "Help", contactUs: "Contact us", contactPh: "Write your message…", send: "Send",
+    toastSupport: "Message received ✓",
+    faq1q: "How do I pay?", faq1a: "Cash to the captain, from your wallet balance, by card on the secure payment page, or a mix of balance and cash.",
+    faq2q: "When am I charged?", faq2a: "Electronic payment is charged when you confirm at the end of the ride. Cash is confirmed by the captain on receipt.",
+    faq3q: "I left an item in the car", faq3a: "Open the ride in your history and tap Report an issue — we'll connect you with the captain.",
+    faq4q: "Are there cancellation fees?", faq4a: "Cancelling before a captain accepts is free. Once they're on the way a small fee may apply.",
+    navHome: "Home", navRides: "Rides", navWallet: "Wallet", navAccount: "Account",
+    themeIconDark: "☾", themeIconLight: "☀",
+    mapDark: "MAPBOX dark-v11", mapLight: "MAPBOX streets-v12",
+    p1: "Dakhiliyeh Circle, Suleiman Nabulsi St", p2: "Raghadan Complex", p3: "Sweifieh, Wakalat St", p4: "University Hospital",
+    logout: "Log out",
+    nPromoT: "New promo", nRideT: "Your ride receipt", nWalletT: "Wallet top-up", nSupportT: "Reply to your report"
+  }
+};
+class Component extends DCLogic {
+  state = { view: "login", tab: "home", page: null, flow: "idle", phase: null,
+    langOv: null, themeOv: null, payOv: null,
+    searchTarget: "drop", searchQ: "", pinTarget: "drop",
+    pickupIdx: -1, dropIdx: 0, catIdx: 0, promo: false, promoInput: "",
+    payPickOpen: false, promoOpen: false, cancelOpen: false, safetyOpen: false, topupOpen: false,
+    cardCtx: null, saveCard: true, topupPick: 1, defaultCard: 0, extraCard: false, cardsRemoved: {},
+    cancelPick: 0, reportPick: 0, detailIdx: 0, starsN: 0, cmp: {}, tipPick: 0,
+    walletBal: 6.5, txnsExtra: [], marketing: true, unread: true, toast: null, toastKind: "ok",
+    phoneVal: "+962 79 555 0142", passVal: "password", ridesExtra: [] };
+  componentWillUnmount() { clearTimeout(this._findTo); clearTimeout(this._toastTo); }
+  _lang() { return this.state.langOv ?? this.props.lang ?? "ar"; }
+  _theme() { return this.state.themeOv ?? this.props.theme ?? "dark"; }
+  _pay() { return this.state.payOv ?? this.props.payment ?? "cash"; }
+  _supply() { return this.props.supply ?? "normal"; }
+  _fmtN(x, d) {
+    const loc = this._lang() === "ar" ? "ar-EG" : "en-US";
+    return x.toLocaleString(loc, { minimumFractionDigits: d ?? 0, maximumFractionDigits: d ?? 0 });
+  }
+  _toast(msg, kind) {
+    this.setState({ toast: msg, toastKind: kind || "ok" });
+    clearTimeout(this._toastTo);
+    this._toastTo = setTimeout(() => this.setState({ toast: null }), 2800);
+  }
+  renderVals() {
+    const s = this.state, lang = this._lang(), t = L[lang], theme = this._theme(), rtl = lang === "ar";
+    const money = (x) => this._fmtN(x, 3);
+    const pay = this._pay(), supply = this._supply();
+    const places = [
+      { icon: "⌂", label: t.home, addr: t.homeAddr },
+      { icon: "▣", label: t.work, addr: t.workAddr }
+    ];
+    const recents = [
+      { label: t.p1, addr: lang === "ar" ? "عمّان" : "Amman" },
+      { label: t.p2, addr: lang === "ar" ? "وسط البلد" : "Downtown" },
+      { label: t.p3, addr: lang === "ar" ? "عمّان الغربية" : "West Amman" },
+      { label: t.p4, addr: lang === "ar" ? "الجبيهة" : "Jubaiha" }
+    ];
+    const dropName = s.dropIdx >= 0 ? recents[s.dropIdx].label : t.p1;
+    const pickupName = s.pickupIdx >= 0 ? places[s.pickupIdx].addr : t.homeAddr;
+    const cats = [
+      { name: t.economy, eta: (lang === "ar" ? "٤" : "4") + t.etaMin, seats: t.seats4, base: 2.75 },
+      { name: t.comfort, eta: (lang === "ar" ? "٧" : "7") + t.etaMin, seats: t.seats4c, base: 3.9 }
+    ];
+    const baseFare = cats[s.catIdx].base;
+    const discount = s.promo ? baseFare * 0.2 : 0;
+    const fare = baseFare - discount;
+    const finalFare = fare + 0.15;
+    const payLabels = { cash: t.cash, wallet: t.walletM, card: t.card, mixed: t.mixed };
+    const payIcons = { cash: "₵", wallet: "◫", card: "▭", mixed: "◫₵" };
+    const walletCovers = s.walletBal >= finalFare;
+    const walletPart = Math.min(s.walletBal, finalFare), cashPart = finalFare - walletPart;
+    const categoriesList = cats.map((c, i) => ({
+      name: c.name, eta: c.eta, seats: c.seats,
+      price: money(s.promo ? c.base * 0.8 : c.base),
+      border: s.catIdx === i ? "var(--tx)" : "var(--brd)",
+      bg: s.catIdx === i ? "var(--sur2)" : "transparent",
+      pick: () => this.setState({ catIdx: i })
+    }));
+    const payOptions = [
+      { key: "cash", icon: "₵", label: t.cash, sub: t.cashSub },
+      { key: "wallet", icon: "◫", label: t.walletM, sub: t.walletSub + money(s.walletBal) + " " + t.jod },
+      { key: "card", icon: "▭", label: t.card, sub: t.cardSub },
+      { key: "mixed", icon: "◫₵", label: t.mixed, sub: t.mixedSub }
+    ].map(m => ({
+      icon: m.icon, label: m.label, sub: m.sub,
+      border: pay === m.key ? "var(--tx)" : "var(--brd)",
+      dot: pay === m.key ? "var(--tx)" : "transparent",
+      pick: () => this.setState({ payOv: m.key, payPickOpen: false })
+    }));
+    const rideBase = lang === "ar" ? [
+      { when: "أمس ٧:٤٠ م", from: "خلدا، شارع عمر مطر", to: "الصويفية، شارع الوكالات", fare: 2.4, method: t.walletM, captain: "أبو محمد", stars: "٥٫٠", done: true },
+      { when: "٨ آب ٩:١٥ ص", from: "خلدا، شارع عمر مطر", to: "العبدلي بوليفارد", fare: 3.1, method: t.cash, captain: "خالد ن.", stars: "٤٫٠", done: true },
+      { when: "٦ آب ٢:٣٠ م", from: "مجمع رغدان", to: "مستشفى الجامعة", fare: 0, method: "—", captain: "سامي د.", stars: "—", done: false },
+      { when: "٣ آب ٦:٠٠ م", from: "الجاردنز", to: "مكة مول", fare: 1.9, method: t.card, captain: "أحمد ر.", stars: "٥٫٠", done: true }
+    ] : [
+      { when: "Yesterday 7:40 PM", from: "Khalda, Omar Matar St", to: "Sweifieh, Wakalat St", fare: 2.4, method: t.walletM, captain: "Abu Mohammad", stars: "5.0", done: true },
+      { when: "Aug 8, 9:15 AM", from: "Khalda, Omar Matar St", to: "Abdali Boulevard", fare: 3.1, method: t.cash, captain: "Khaled N.", stars: "4.0", done: true },
+      { when: "Aug 6, 2:30 PM", from: "Raghadan Complex", to: "University Hospital", fare: 0, method: "—", captain: "Sami D.", stars: "—", done: false },
+      { when: "Aug 3, 6:00 PM", from: "Gardens", to: "Mecca Mall", fare: 1.9, method: t.card, captain: "Ahmad R.", stars: "5.0", done: true }
+    ];
+    const rideAll = [...s.ridesExtra, ...rideBase];
+    const rides = rideAll.map((r, i) => ({
+      when: r.when, from: r.from, to: r.to,
+      fare: r.done ? money(r.fare) + " " + t.jod : "—",
+      fareColor: r.done ? "var(--tx)" : "var(--mut)",
+      method: r.method, captain: r.captain,
+      status: r.done ? t.statusDone : t.statusCancelled,
+      statusColor: r.done ? "var(--ok)" : "var(--dng)",
+      open: () => this.setState({ page: "rideDetail", detailIdx: i })
+    }));
+    const dr = rideAll[Math.min(s.detailIdx, rideAll.length - 1)];
+    const detailRide = {
+      when: dr.when, from: dr.from, to: dr.to, captain: dr.captain, stars: dr.stars,
+      fare: dr.done ? money(dr.fare) + " " + t.jod : "—",
+      status: dr.done ? t.statusDone : t.statusCancelled,
+      statusColor: dr.done ? "var(--ok)" : "var(--dng)"
+    };
+    const detailBreakdown = dr.done ? [
+      { label: t.baseFare, value: money(0.75), color: "var(--tx)", weight: 500 },
+      { label: t.perKm, value: money(Math.max(dr.fare - 0.75, 0)), color: "var(--tx)", weight: 500 },
+      { label: t.fareFinal, value: money(dr.fare) + " " + t.jod, color: "var(--tx)", weight: 700 },
+      { label: t.paidVia, value: dr.method, color: "var(--mut)", weight: 500 }
+    ] : [
+      { label: t.cancelledNoCharge, value: money(0) + " " + t.jod, color: "var(--mut)", weight: 700 }
+    ];
+    const baseTxns = lang === "ar" ? [
+      { icon: "−", label: "دفع رحلة", when: "أمس ٧:٤٠ م", amt: -2.4, bal: 6.5 },
+      { icon: "+", label: "شحن رصيد — بطاقة", when: "٨ آب", amt: 5, bal: 8.9 },
+      { icon: "−", label: "دفع رحلة", when: "٦ آب", amt: -1.6, bal: 3.9 }
+    ] : [
+      { icon: "−", label: "Ride payment", when: "Yesterday 7:40 PM", amt: -2.4, bal: 6.5 },
+      { icon: "+", label: "Top-up — card", when: "Aug 8", amt: 5, bal: 8.9 },
+      { icon: "−", label: "Ride payment", when: "Aug 6", amt: -1.6, bal: 3.9 }
+    ];
+    const txns = [...s.txnsExtra.map(x => ({ ...x, label: lang === "ar" ? x.labelAr : x.labelEn })), ...baseTxns].map(x => ({
+      icon: x.icon, label: x.label, when: x.when,
+      amount: (x.amt > 0 ? "+" : "") + money(x.amt),
+      color: x.amt > 0 ? "var(--ok)" : "var(--tx)",
+      after: money(x.bal) + " " + t.jod
+    }));
+    const cardDefs = [
+      { brand: "VISA", last4: "4242", exp: (lang === "ar" ? "ينتهي " : "Expires ") + "09/28" },
+      { brand: "MC", last4: "8103", exp: (lang === "ar" ? "ينتهي " : "Expires ") + "03/27" }
+    ];
+    if (s.extraCard) cardDefs.push({ brand: "VISA", last4: "1919", exp: (lang === "ar" ? "ينتهي " : "Expires ") + "12/29" });
+    const cards = cardDefs.map((c, i) => ({
+      brand: c.brand, last4: c.last4, exp: c.exp,
+      border: s.defaultCard === i ? "var(--tx)" : "var(--brd)",
+      defLabel: s.defaultCard === i ? t.defaultCard : t.setDefault,
+      defColor: s.defaultCard === i ? "var(--ok)" : "var(--mut)",
+      setDefault: () => { this.setState({ defaultCard: i }); this._toast(t.toastDefault); },
+      remove: () => this._toast(t.toastCardRemoved, "warn")
+    }));
+    const notifs = (lang === "ar" ? [
+      { icon: "%", color: "var(--warn)", title: t.nPromoT, body: "كوبون TAXO20 — خصم ٢٠٪ على رحلتك القادمة حتى الجمعة.", when: "قبل ساعة", unread: true },
+      { icon: "◱", color: "var(--tx)", title: t.nRideT, body: "رحلة خلدا ← الصويفية: ٢٫٤٠٠ د.أ مدفوعة من المحفظة.", when: "أمس", unread: true },
+      { icon: "+", color: "var(--ok)", title: t.nWalletT, body: "أُضيف ١٠٫٠٠٠ د.أ إلى رصيدك بنجاح.", when: "٨ آب", unread: false },
+      { icon: "✉", color: "var(--mut)", title: t.nSupportT, body: "راجعنا بلاغك عن رحلة ٦ آب — أُعيد المبلغ إلى محفظتك.", when: "٧ آب", unread: false }
+    ] : [
+      { icon: "%", color: "var(--warn)", title: t.nPromoT, body: "TAXO20 — 20% off your next ride, valid until Friday.", when: "1 hour ago", unread: true },
+      { icon: "◱", color: "var(--tx)", title: t.nRideT, body: "Khalda → Sweifieh: 2.400 JOD paid from wallet.", when: "Yesterday", unread: true },
+      { icon: "+", color: "var(--ok)", title: t.nWalletT, body: "10.000 JOD added to your balance.", when: "Aug 8", unread: false },
+      { icon: "✉", color: "var(--mut)", title: t.nSupportT, body: "We reviewed your Aug 6 report — the amount was refunded to your wallet.", when: "Aug 7", unread: false }
+    ]).map(n => ({ icon: n.icon, color: n.color, title: n.title, body: n.body, when: n.when, border: (n.unread && s.unread) ? "var(--tx)" : "var(--brd)" }));
+    const phaseMap = {
+      coming: { title: t.phaseComing, eta: (lang === "ar" ? "٤" : "4") + t.etaMin, next: "arrived" },
+      arrived: { title: t.phaseArrived, eta: t.etaNow, next: "riding" },
+      riding: { title: t.phaseRiding, eta: t.etaTrip, next: null }
+    };
+    const ph = s.phase ? phaseMap[s.phase] : null;
+    const isCashEnd = pay === "cash" || (pay === "mixed" && cashPart > 0) || (pay === "wallet" && !walletCovers);
+    const payRows = [
+      { label: t.fareEst, value: money(baseFare), color: "var(--tx)", weight: 500 },
+      { label: t.fareActual, value: lang === "ar" ? "٥٫٧ كم" : "5.7 km", color: "var(--tx)", weight: 500 }
+    ];
+    if (s.promo) payRows.push({ label: t.discount, value: "−" + money(discount), color: "var(--ok)", weight: 500 });
+    payRows.push({ label: t.fareFinal, value: money(finalFare) + " " + t.jod, color: "var(--tx)", weight: 700 });
+    if (pay === "mixed" || (pay === "wallet" && !walletCovers)) {
+      payRows.push({ label: t.fromWallet, value: "−" + money(walletPart), color: "var(--ok)", weight: 500 });
+      payRows.push({ label: t.remainingCash, value: money(cashPart) + " " + t.jod, color: "var(--tx)", weight: 700 });
+    }
+    const nearbyCount = supply === "low" ? 0 : (supply === "high" ? 12 : 5);
+    const finishRide = () => {
+      const spendWallet = pay === "wallet" || pay === "mixed" ? walletPart : 0;
+      const newBal = s.walletBal - spendWallet;
+      this.setState({
+        flow: "rate", phase: null, starsN: 0, cmp: {}, tipPick: 0,
+        walletBal: newBal,
+        txnsExtra: spendWallet > 0 ? [{ icon: "−", labelAr: "دفع رحلة", labelEn: "Ride payment", when: lang === "ar" ? "الآن" : "Now", amt: -spendWallet, bal: newBal }, ...s.txnsExtra] : s.txnsExtra,
+        ridesExtra: [{ when: lang === "ar" ? "الآن" : "Now", from: pickupName, to: dropName, fare: finalFare, method: payLabels[pay], captain: t.captainName, stars: "—", done: true }, ...s.ridesExtra]
+      });
+    };
+    return {
+      dir: rtl ? "rtl" : "ltr", themeClass: "thm-" + theme, t, lang,
+      themeIcon: theme === "dark" ? t.themeIconLight : t.themeIconDark,
+      themeLabel: theme === "dark" ? t.themeDark : t.themeLight, langLabel: t.langName,
+      chev: rtl ? "‹" : "›", backArrow: rtl ? "→" : "←",
+      mapLabel: theme === "dark" ? t.mapDark : t.mapLight,
+      initials: lang === "ar" ? "س" : "SA", ratingFmt: this._fmtN(4.9, 1),
+      captainInitial: lang === "ar" ? "أ" : "A",
+      viewLogin: s.view === "login", viewRegister: s.view === "register",
+      viewOtp: s.view === "otp" || s.view === "regOtp" || s.view === "fgOtp",
+      viewForgot: s.view === "forgot", viewNewPass: s.view === "newPass", viewApp: s.view === "app",
+      phoneVal: s.phoneVal, passVal: s.passVal,
+      setPhone: (e) => this.setState({ phoneVal: e.target.value }),
+      setPass: (e) => this.setState({ passVal: e.target.value }),
+      doLogin: () => this.setState({ view: "otp" }),
+      goLogin: () => this.setState({ view: "login" }),
+      goRegister: () => this.setState({ view: "register" }),
+      goForgot: () => this.setState({ view: "forgot" }),
+      regToOtp: () => this.setState({ view: "regOtp" }),
+      fgToOtp: () => this.setState({ view: "fgOtp" }),
+      doOtp: () => this.setState({ view: s.view === "fgOtp" ? "newPass" : "app" }),
+      savePass: () => { this.setState({ view: "login" }); this._toast(t.toastSaved); },
+      doLogout: () => { clearTimeout(this._findTo); this.setState({ view: "login", tab: "home", page: null, flow: "idle", phase: null }); },
+      otpDigits: ["4", "8", "1", "9"],
+      toggleLang: () => this.setState({ langOv: lang === "ar" ? "en" : "ar" }),
+      toggleTheme: () => this.setState({ themeOv: theme === "dark" ? "light" : "dark" }),
+      tabHome: s.tab === "home" && !s.page, tabRides: s.tab === "rides" && !s.page,
+      tabWallet: s.tab === "wallet" && !s.page, tabAccount: s.tab === "account" && !s.page,
+      pgSearch: s.page === "search", pgPinMap: s.page === "pin", pgRideDetail: s.page === "rideDetail",
+      pgReport: s.page === "report", pgCards: s.page === "cards", pgCardPage: s.page === "cardPage",
+      pgPlaces: s.page === "places", pgNotifs: s.page === "notifs", pgSettings: s.page === "settings",
+      pgSupport: s.page === "support",
+      goBack: () => this.setState({ page: s.page === "report" ? "rideDetail" : (s.page === "cardPage" ? "cards" : null) }),
+      goAccount: () => this.setState({ tab: "account", page: null }),
+      goNotifs: () => this.setState({ page: "notifs" }),
+      goCards: () => this.setState({ page: "cards" }),
+      goReport: () => this.setState({ page: "report" }),
+      markAllRead: () => this.setState({ unread: false }),
+      unreadShow: s.unread,
+      navItems: [
+        { key: "home", label: t.navHome }, { key: "rides", label: t.navRides },
+        { key: "wallet", label: t.navWallet }, { key: "account", label: t.navAccount }
+      ].map(n => ({
+        label: n.label, go: () => this.setState({ tab: n.key, page: null }),
+        bg: s.tab === n.key ? "var(--tx)" : "var(--brd)",
+        op: s.tab === n.key ? 1 : 0.65, w: s.tab === n.key ? 700 : 500
+      })),
+      accountRows: [
+        { label: t.savedPlaces, sub: t.home + " · " + t.work, go: () => this.setState({ page: "places" }) },
+        { label: t.savedCards, sub: "•••• 4242", go: () => this.setState({ page: "cards" }) },
+        { label: t.settingsTitle, sub: t.langRow + " · " + t.themeRow, go: () => this.setState({ page: "settings" }) },
+        { label: t.notifsTitle, sub: t.markAll, go: () => this.setState({ page: "notifs" }) },
+        { label: t.support, sub: t.contactUs, go: () => this.setState({ page: "support" }) }
+      ],
+      flowIdle: s.flow === "idle", flowConfirm: s.flow === "confirm",
+      flowSearching: s.flow === "searching", flowRide: s.flow === "ride",
+      savedShortcuts: places.map((p, i) => ({
+        label: p.label, addr: p.addr,
+        go: () => this.setState({ flow: "confirm", dropIdx: i === 0 ? 0 : 1 })
+      })),
+      nearbyLine: nearbyCount === 0 ? t.nearbyNone : this._fmtN(nearbyCount) + t.nearby,
+      pickupName, dropName,
+      searchTitle: s.searchTarget === "drop" ? t.searchTitleDrop : t.searchTitlePickup,
+      searchQ: s.searchQ, setSearchQ: (e) => this.setState({ searchQ: e.target.value }),
+      goSearch: () => this.setState({ page: "search", searchTarget: "drop", searchQ: "" }),
+      goSearchPickup: () => this.setState({ page: "search", searchTarget: "pickup", searchQ: "" }),
+      savedPlaces: places.map((p, i) => ({
+        icon: p.icon, label: p.label, addr: p.addr,
+        pick: () => {
+          if (s.searchTarget === "pickup") this.setState({ pickupIdx: i, page: null, flow: s.flow === "idle" ? "idle" : s.flow });
+          else this.setState({ dropIdx: i === 0 ? 0 : 1, page: null, flow: "confirm" });
+        }
+      })),
+      recentPlaces: recents.map((p, i) => ({
+        label: p.label, addr: p.addr,
+        pick: () => {
+          if (s.searchTarget === "pickup") this.setState({ pickupIdx: -1, page: null });
+          else this.setState({ dropIdx: i, page: null, flow: "confirm" });
+        }
+      })),
+      pickOnMap: () => this.setState({ page: "pin", pinTarget: s.searchTarget }),
+      pinTitle: s.pinTarget === "pickup" ? t.pinPickup : t.pinDrop,
+      pinAddress: s.pinTarget === "pickup" ? pickupName : dropName,
+      confirmPin: () => this.setState({ page: null, flow: s.pinTarget === "pickup" ? (s.flow === "idle" ? "idle" : s.flow) : "confirm" }),
+      addPlace: () => this._toast(t.toastSaved),
+      categoriesList,
+      payLabel: payLabels[pay], payIcon: payIcons[pay],
+      payPickShow: s.payPickOpen, payOptions,
+      openPayPick: () => this.setState({ payPickOpen: true }),
+      closePayPick: () => this.setState({ payPickOpen: false }),
+      promoShow: s.promoOpen, promoInput: s.promoInput,
+      setPromoInput: (e) => this.setState({ promoInput: e.target.value }),
+      promoLabel: s.promo ? t.promoOn : t.promo,
+      promoBorder: s.promo ? "var(--ok)" : "var(--brd)",
+      promoColor: s.promo ? "var(--ok)" : "var(--tx)",
+      openPromo: () => this.setState({ promoOpen: true }),
+      closePromo: () => this.setState({ promoOpen: false }),
+      applyPromo: () => { this.setState({ promo: true, promoOpen: false }); this._toast(t.promoApplied); },
+      fareNoteShow: pay === "mixed" || (pay === "wallet" && !walletCovers),
+      fareNote: pay === "mixed" ? t.fareNoteMixed : t.fareNoteLow,
+      requestLabel: t.requestNow + " · " + money(fare) + " " + t.jod,
+      requestRide: () => {
+        this.setState({ flow: "searching" });
+        clearTimeout(this._findTo);
+        this._findTo = setTimeout(() => {
+          if (this.state.flow === "searching") this.setState({ flow: "ride", phase: "coming" });
+        }, 3800);
+      },
+      cancelPlanning: () => this.setState({ flow: "idle" }),
+      searchingSub: nearbyCount === 0 ? t.nearbyNone : t.searchingSub,
+      cancelSearch: () => { clearTimeout(this._findTo); this.setState({ flow: "idle" }); this._toast(t.toastCancelled, "warn"); },
+      phaseTitle: ph ? ph.title : "", phaseEta: ph ? ph.eta : "",
+      pickupDotColor: s.phase === "riding" ? "var(--mut)" : "var(--ok)",
+      pickupTextColor: s.phase === "riding" ? "var(--mut)" : "var(--tx)",
+      dropDotColor: s.phase === "riding" ? "var(--ok)" : "var(--mut)",
+      dropTextColor: s.phase === "riding" ? "var(--tx)" : "var(--mut)",
+      fareFmt: money(fare),
+      advanceRide: () => { if (ph && ph.next) this.setState({ phase: ph.next }); else this.setState({ flow: "pay" }); },
+      cancelRideLabel: s.phase === "coming" ? t.cancelRideFee : t.cancelRide,
+      cancelShow: s.cancelOpen,
+      cancelSubLine: s.phase === "coming" ? t.cancelSubFee : t.cancelSubFree,
+      openCancel: () => this.setState({ cancelOpen: true }),
+      closeCancel: () => this.setState({ cancelOpen: false }),
+      cancelReasons: [t.cr1, t.cr2, t.cr3, t.cr4].map((label, i) => ({
+        label, pick: () => this.setState({ cancelPick: i }),
+        border: s.cancelPick === i ? "var(--tx)" : "var(--brd)",
+        dot: s.cancelPick === i ? "var(--tx)" : "transparent"
+      })),
+      confirmCancel: () => { this.setState({ cancelOpen: false, flow: "idle", phase: null }); this._toast(t.toastCancelled, "warn"); },
+      safetyShow: s.safetyOpen,
+      openSafety: () => this.setState({ safetyOpen: true }),
+      closeSafety: () => this.setState({ safetyOpen: false }),
+      shareTrip: () => { this.setState({ safetyOpen: false }); this._toast(t.toastShared); },
+      callEmergency: () => this.setState({ safetyOpen: false }),
+      payShow: s.flow === "pay", payRows,
+      payHeading: pay === "mixed" || (pay === "wallet" && !walletCovers) ? t.payTitleMixed : (pay === "cash" ? t.payTitleCash : t.payTitlePaid),
+      payBigFmt: isCashEnd ? money(pay === "cash" ? finalFare : cashPart) : money(finalFare),
+      payCta: isCashEnd ? t.payCtaCash : t.payCtaPaid,
+      payNote: isCashEnd ? t.payNoteCash : t.payNotePaid,
+      confirmPay: finishRide,
+      rateShow: s.flow === "rate",
+      stars: [1, 2, 3, 4, 5].map(n => ({ set: () => this.setState({ starsN: n }), color: n <= s.starsN ? "var(--warn)" : "var(--brd)" })),
+      compliments: [t.cmp1, t.cmp2, t.cmp3, t.cmp4].map((label, i) => ({
+        label, toggle: () => { const c = { ...s.cmp }; c[i] = !c[i]; this.setState({ cmp: c }); },
+        border: s.cmp[i] ? "var(--tx)" : "var(--brd)",
+        bg: s.cmp[i] ? "var(--sur2)" : "transparent"
+      })),
+      tipShow: s.starsN >= 4,
+      tips: [{ v: 0, label: t.noTip }, { v: 0.5, label: money(0.5) }, { v: 1, label: money(1) }].map((p, i) => ({
+        label: p.label, pick: () => this.setState({ tipPick: i }),
+        border: s.tipPick === i ? "var(--tx)" : "var(--brd)",
+        bg: s.tipPick === i ? "var(--sur2)" : "transparent"
+      })),
+      submitRating: () => { this.setState({ flow: "idle", promo: false }); this._toast(t.toastRated); },
+      skipRating: () => this.setState({ flow: "idle", promo: false }),
+      rides, detailRide, detailBreakdown, txns, cards, notifs,
+      reportReasons: [t.rr1, t.rr2, t.rr3, t.rr4].map((label, i) => ({
+        label, pick: () => this.setState({ reportPick: i }),
+        border: s.reportPick === i ? "var(--tx)" : "var(--brd)",
+        dot: s.reportPick === i ? "var(--tx)" : "transparent"
+      })),
+      submitReport: () => { this.setState({ page: "rideDetail" }); this._toast(t.toastReport); },
+      rebook: () => this.setState({ page: null, tab: "home", flow: "confirm" }),
+      walletFmt: money(s.walletBal),
+      topupShow: s.topupOpen,
+      openTopup: () => this.setState({ topupOpen: true }),
+      closeTopup: () => this.setState({ topupOpen: false }),
+      topupSub: t.balance + ": " + money(s.walletBal) + " " + t.jod,
+      topupAmounts: [5, 10, 20].map((a, i) => ({
+        label: money(a), pick: () => this.setState({ topupPick: i }),
+        border: s.topupPick === i ? "var(--tx)" : "var(--brd)",
+        bg: s.topupPick === i ? "var(--sur2)" : "transparent"
+      })),
+      topupCard: () => this.setState({ topupOpen: false, page: "cardPage", cardCtx: "topup" }),
+      topupCliq: () => { this.setState({ topupOpen: false }); this._toast(t.toastTopupCliq, "warn"); },
+      addCard: () => this.setState({ page: "cardPage", cardCtx: "cards" }),
+      cardAmountFmt: s.cardCtx === "cards" ? money(0.001) : money([5, 10, 20][s.topupPick]),
+      cardPurpose: s.cardCtx === "cards" ? t.purposeCard : t.purposeTopup,
+      saveCardBg: s.saveCard ? "var(--acc)" : "transparent",
+      saveCardMark: s.saveCard ? "✓" : "",
+      toggleSaveCard: () => this.setState({ saveCard: !s.saveCard }),
+      cardPaid: () => {
+        if (s.cardCtx === "cards") { this.setState({ page: "cards", extraCard: true }); this._toast(t.toastCardAdded); }
+        else {
+          const amt = [5, 10, 20][s.topupPick], nb = s.walletBal + amt;
+          this.setState({ page: null, tab: "wallet", walletBal: nb,
+            txnsExtra: [{ icon: "+", labelAr: "شحن رصيد — بطاقة", labelEn: "Top-up — card", when: lang === "ar" ? "الآن" : "Now", amt: amt, bal: nb }, ...s.txnsExtra] });
+          this._toast(t.toastTopup);
+        }
+      },
+      cardDeclined: () => { this.setState({ page: s.cardCtx === "cards" ? "cards" : null, tab: s.cardCtx === "cards" ? s.tab : "wallet" }); this._toast(t.toastCardFail, "dng"); },
+      cardCancel: () => this.setState({ page: s.cardCtx === "cards" ? "cards" : null }),
+      marketing: s.marketing,
+      mkToggleBg: s.marketing ? "var(--ok)" : "var(--brd)",
+      mkKnobPos: s.marketing ? "22px" : "3px",
+      mkKnobColor: s.marketing ? "#fff" : "var(--mut)",
+      toggleMarketing: () => { this.setState({ marketing: !s.marketing }); this._toast(t.toastSaved); },
+      faqs: [{ q: t.faq1q, a: t.faq1a }, { q: t.faq2q, a: t.faq2a }, { q: t.faq3q, a: t.faq3a }, { q: t.faq4q, a: t.faq4a }],
+      sendSupport: () => this._toast(t.toastSupport),
+      stopProp: (e) => e.stopPropagation(),
+      toastShow: !!s.toast, toastMsg: s.toast || "",
+      toastBg: s.toastKind === "dng" ? "var(--dng)" : (s.toastKind === "warn" ? "var(--warn)" : "var(--acc)"),
+      toastColor: s.toastKind === "ok" ? "var(--inv)" : "#fff"
+    };
+  }
+}
+</script>
+</body>
+</html>
