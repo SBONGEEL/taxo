@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import (
     CountryCode,
     Currency,
+    ProviderOrderStatus,
     TopupMethod,
     TopupRequestStatus,
     WalletOwnerType,
@@ -130,6 +131,40 @@ class DriverWalletOut(WalletOut):
 
 
 # ------------------------------------------------------- إجراءات الإدارة
+
+
+class CliqTopupCreate(BaseModel):
+    """شحن المحفظة بكليك الآلي (المرحلة 8) — المبلغ وحده."""
+
+    amount: Decimal = Field(gt=0)
+
+
+class CliqTopupOut(BaseModel):
+    """ما يُعرض للدافع: رمز الاستجابة السريعة ورابط تطبيق البنك.
+
+    الرمز يحمل alias الشركة والمبلغ ومرجعنا؛ والحسم يأتي من حساب التاجر لا
+    من العميل — ولذلك `cart_id` هو ما يُستعلم به لا حالةٌ يرسلها المتصفح.
+    """
+
+    cart_id: str
+    amount: Decimal
+    currency: Currency
+    status: ProviderOrderStatus
+    qr_payload: str | None
+    deep_link: str | None
+    transaction_id: uuid.UUID | None
+
+
+class WithdrawalPayoutOut(BaseModel):
+    """نتيجة التحويل الآلي.
+
+    `paid=false` مع طلبٍ ما زال `approved` تعني «قيد التنفيذ عند المزود» —
+    لا قيد في الدفتر، والمال ما زال محجوزاً بطلبه.
+    """
+
+    request: WithdrawalOut
+    paid: bool
+    provider_status: str
 
 
 class RejectRequest(BaseModel):

@@ -27,11 +27,16 @@ from app.core.config import settings
 # بالساعة في التوزيع، فمرورُ المهمة يُصلح الجدول لا يحرس المال.
 SWEEP_INTERVAL_SECONDS = 300
 
+# دورة إرسال الحملات (المرحلة 8). دقيقةٌ واحدة: الحملة تُجدول بدقةِ الدقيقة،
+# ودورةٌ أطول تجعل «أرسلها الثامنة» تعني «بين الثامنة والثامنة وخمس دقائق».
+# والدورة رخيصة حين لا حملة مستحقة — استعلامٌ واحد على فهرس الحالة والموعد.
+CAMPAIGN_INTERVAL_SECONDS = 60
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.subscriptions"],
+    include=["app.tasks.notifications", "app.tasks.subscriptions"],
 )
 
 celery_app.conf.update(
@@ -45,6 +50,10 @@ celery_app.conf.update(
         "sweep-subscriptions": {
             "task": "app.tasks.subscriptions.sweep_subscriptions",
             "schedule": SWEEP_INTERVAL_SECONDS,
+        },
+        "dispatch-campaigns": {
+            "task": "app.tasks.notifications.dispatch_campaigns",
+            "schedule": CAMPAIGN_INTERVAL_SECONDS,
         },
     },
 )

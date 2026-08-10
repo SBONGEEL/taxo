@@ -29,6 +29,28 @@ class InvalidToken(AppError):
     message = "جلسة غير صالحة أو منتهية"
 
 
+class InvalidOtpCode(InvalidCredentials):
+    """رمز تحقق خاطئ أو منتهٍ أو لم يُطلب أصلاً (المرحلة 8).
+
+    رسالةٌ واحدة للحالات الثلاث عمداً: التفريق بينها يخبر المخمّن أيَّ الأرقام
+    طُلب لها رمزٌ حيّ الآن.
+    """
+
+    code = "invalid_otp"
+    message = "رمز التحقق غير صحيح أو انتهت صلاحيته"
+
+
+class AccountNotRegistered(AppError):
+    """رمزٌ صحيح لرقمٍ لا حساب له — الدخول بـ OTP لا يُنشئ حساباً ضمناً.
+
+    الكشف هنا لا يُعدّ تعداداً للحسابات: صاحب الطلب أثبت ملكيته للرقم بالرمز.
+    """
+
+    status_code = status.HTTP_404_NOT_FOUND
+    code = "account_not_registered"
+    message = "لا يوجد حساب بهذا الرقم — أنشئ حساباً أولاً"
+
+
 class AccountBlocked(AppError):
     status_code = status.HTTP_403_FORBIDDEN
     code = "account_blocked"

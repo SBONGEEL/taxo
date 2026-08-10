@@ -18,8 +18,10 @@ from app.schemas.provider import (
     ProviderCredentialUpsert,
     ProviderFieldOut,
     ProviderSpecOut,
+    ProviderTestRequest,
+    ProviderTestResult,
 )
-from app.services.providers import credentials as credentials_service
+from app.services.providers import credentials as credentials_service, health
 from app.services.providers.registry import PROVIDERS, get_spec
 
 # صفحة العقود لـ admin حصراً — support لا يراها إطلاقاً (SPEC القسم 13/8)
@@ -112,6 +114,32 @@ async def _set_active(
     await session.commit()
     await session.refresh(credential)
     return _to_out(credential)
+
+
+@router.post("/{credential_id}/test", response_model=ProviderTestResult)
+async def test_provider_credential(
+    credential_id: uuid.UUID,
+    payload: ProviderTestRequest,
+    admin: AdminUser,
+    session: DbSession,
+) -> ProviderTestResult:
+    """زرّ «اختبار الاتصال» في بطاقة العقد (SPEC القسم 13/7).
+
+    يعود 200 حتى حين يفشل الاختبار: المشرف سأل فعرف، والنصُّ هو الفائدة.
+    ويعمل على عقدٍ **غير مفعّل** عمداً — يُختبر قبل أن يُفتح لا بعد.
+    """
+    credential = await session.get(ProviderCredential, credential_id)
+    if credential is None:
+        raise NotFound("العقد غير موجود")
+
+    result = await health.test_credential(
+        session, credential, actor=admin, test_phone=payload.test_phone
+    )
+    await session.commit()
+    await session.refresh(credential)
+    return ProviderTestResult(
+        ok=result.ok, detail=result.detail, credential=_to_out(credential)
+    )
 
 
 @router.post("/{credential_id}/activate", response_model=ProviderCredentialOut)

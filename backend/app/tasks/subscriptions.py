@@ -24,8 +24,8 @@ async def _sweep() -> dict[str, int]:
     async with SessionLocal() as session:
         result = await subscriptions.sweep(session)
         await session.commit()
-
-    await subscriptions.publish_sweep(get_redis_client(), result)
+        # البثّ بعد الـ commit وداخل الجلسة: Push يقرأ أجهزة الكبتن من القاعدة
+        await subscriptions.publish_sweep(session, get_redis_client(), result)
     return {"expired": len(result.expired), "expiring": len(result.expiring)}
 
 

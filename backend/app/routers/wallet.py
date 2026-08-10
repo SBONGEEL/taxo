@@ -14,6 +14,8 @@ from app.models.enums import UserRole, WalletOwnerType, WalletTransactionType
 from app.models.user import User
 from app.schemas.payment import CardOrderOut, CardTopupCreate
 from app.schemas.wallet import (
+    CliqTopupCreate,
+    CliqTopupOut,
     DriverWalletOut,
     TopupRequestCreate,
     TopupRequestOut,
@@ -26,6 +28,7 @@ from app.schemas.wallet import (
 )
 from app.services import (
     card_payments,
+    cliq_topups,
     settings_service,
     topups,
     wallet as wallet_service,
@@ -219,6 +222,64 @@ async def create_card_topup(
     )
     await session.commit()
     return CardOrderOut.model_validate(order)
+
+
+@router.post(
+    "/me/topups/cliq",
+    response_model=CliqTopupOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_cliq_topup(
+    payload: CliqTopupCreate,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> CliqTopupOut:
+    """شحن بكليك الآلي — رمز QR بالمبلغ ومرجعٍ يشهد عليه حساب التاجر.
+
+    503 حين لا عقد acquirer مفعّل: القناة اليدوية (`POST /me/topups`) هي
+    الطريق حينها، ولا تُدمج القناتان في مسارٍ واحد لأن ردّيهما مختلفان —
+    ذاك طلبٌ ينتظر موظفاً وهذا رمزٌ يُمسح (SPEC القسم 7).
+    """
+    limit = await rate_limit.hit(
+        redis,
+        f"wallet:cliq-topup:{user.id}",
+        limit=CARD_TOPUP_LIMIT,
+        window_seconds=CARD_TOPUP_WINDOW_SECONDS,
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
+    order = await cliq_topups.start_topup(session, owner=user, amount=payload.amount)
+    await session.commit()
+    return _cliq_out(order)
+
+
+@router.get("/me/topups/cliq/{cart_id}", response_model=CliqTopupOut)
+async def check_cliq_topup(
+    cart_id: str, user: CurrentUser, session: DbSession
+) -> CliqTopupOut:
+    """يسأل حساب التاجر عن الحوالة ويسوّي الشحن إن وصلت.
+
+    ليس مسار احتياط: هو المسار — لا webhook في هذه القناة، والدفتر لا يتحرك
+    إلا بجواب المزود للخلفية (نفس قاعدة قناة البطاقة، SPEC القسم 6.4).
+    """
+    order = await cliq_topups.order_for_user(session, cart_id, user)
+    order = await cliq_topups.reconcile(session, order)
+    await session.commit()
+    return _cliq_out(order)
+
+
+def _cliq_out(order) -> CliqTopupOut:
+    return CliqTopupOut(
+        cart_id=order.cart_id,
+        amount=order.amount,
+        currency=order.currency,
+        status=order.status,
+        qr_payload=order.qr_payload,
+        deep_link=order.redirect_url,
+        transaction_id=order.transaction_id,
+    )
 
 
 # -------------------------------------------------------------------- السحب

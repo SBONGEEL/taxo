@@ -80,6 +80,10 @@ services:
     volumes:
       - ./backend:/app
     command: celery -A app.tasks.celery_app:celery_app worker --loglevel=info
+    # فحص الصورة يستعلم منفذ الـ API، وهذه العملية لا تفتح منفذاً — فيبقى
+    # «unhealthy» أبداً بلا معنى. حياةُ العامل تُقرأ من سجلّه لا من HTTP
+    healthcheck:
+      disable: true
 
   # المجدول — **نسخة واحدة لا غير**: نسختان تُطلقان كل دورة مرتين
   beat:
@@ -101,6 +105,8 @@ services:
     command: >
       celery -A app.tasks.celery_app:celery_app beat --loglevel=info
       --schedule=/tmp/celerybeat-schedule
+    healthcheck:
+      disable: true
 
 volumes:
   taxo_pgdata:

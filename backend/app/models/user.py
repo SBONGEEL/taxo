@@ -32,6 +32,14 @@ class User(UUIDMixin, TimestampMixin, Base):
     # nullable: حسابات OTP-only بعد تفعيل مزود SMS لن يكون لها كلمة مرور
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # إشعارات الحملات التسويقية وحدها (المرحلة 8). **لا أثر له على
+    # المعاملاتي**: أحداث الرحلة وعرض الطلب وتنبيه الاشتراك جزءٌ من الخدمة
+    # لا إعلان، فمن أطفأ الإعلانات لم يطفئ «وصل الكبتن». مفتوحٌ افتراضياً
+    # وإطفاؤه بيد صاحبه من التطبيق
+    marketing_push_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+
     driver: Mapped["Driver | None"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )

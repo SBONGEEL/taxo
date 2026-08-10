@@ -105,8 +105,13 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
     cart_id: Mapped[str] = mapped_column(String(25), nullable=False)
     # مرجع الطلب لدى المزود — لا يُعرف إلا بعد جوابه على الإنشاء
     provider_order_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    # صفحة الدفع المستضافة؛ فارغة في الدفع بضغطة (لا صفحة تُفتح)
+    # صفحة الدفع المستضافة؛ فارغة في الدفع بضغطة (لا صفحة تُفتح). ولقناة كليك
+    # الآلية (المرحلة 8) هو الرابط الذي يفتح تطبيق البنك
     redirect_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # ما يحمله رمز الاستجابة السريعة في قناة كليك الآلية (المرحلة 8). يُحفظ
+    # لأن الراكب قد يغلق الشاشة ويعود، ورمزٌ يُفقد بإغلاق شاشة يعني طلباً
+    # معلّقاً لا سبيل لدفعه. فارغٌ في قناة البطاقة — لا رمز فيها أصلاً
+    qr_payload: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     # الدافع: الراكب في الغرضين. RESTRICT كبقية الجداول المالية
     user_id: Mapped[uuid.UUID] = mapped_column(

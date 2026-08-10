@@ -169,3 +169,11 @@ class CardGateway(Protocol):
     def verify_webhook(self, payload: Mapping[str, str]) -> WebhookNotice:
         """يتحقق من توقيع الإشعار أو يرفضه — يفشل مغلقاً دائماً."""
         ...
+
+    async def test_connection(self) -> str:
+        """زرّ «اختبار الاتصال» في بطاقة العقد (المرحلة 8، SPEC القسم 13/7).
+
+        **لا يفتح طلباً ولا يحرّك مالاً**: اختبارٌ يترك أثراً مالياً ليس
+        اختباراً. يعيد وصفاً يُعرض للمشرف، أو يرفع `CardGatewayError`.
+        """
+        ...

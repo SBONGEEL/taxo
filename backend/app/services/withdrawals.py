@@ -17,6 +17,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import currency_for_country
 from app.core.exceptions import (
     InsufficientBalance,
     InvalidInput,
@@ -35,6 +36,12 @@ from app.models.enums import (
 from app.models.user import User
 from app.models.wallet import PENDING_WITHDRAWAL_STATUSES, WithdrawalRequest
 from app.services import audit, settings_service, wallet
+from app.services.payout import (
+    PayoutError,
+    PayoutRequest,
+    PayoutState,
+    get_payout_provider,
+)
 from app.services.pricing import round_money
 
 # ما ليس هنا ممنوع — نفس نهج آلة حالات الرحلة
@@ -226,6 +233,69 @@ async def reject(
         target=WithdrawalStatus.REJECTED,
         actor=actor,
         note=note,
+    )
+
+
+async def pay_via_provider(
+    session: AsyncSession,
+    *,
+    request: WithdrawalRequest,
+    driver: Driver,
+    owner: User,
+    actor: User,
+) -> tuple[WithdrawalRequest, PayoutState]:
+    """تحويلٌ آلي عبر مزود payout ثم `paid` إن قال المزود «حوّلت».
+
+    يحل محل يد المحاسب لا حكمه: الطلب يظل يمر بـ `approved` قبل هذا المسار.
+
+    **النداء يقع تحت قفل صف الطلب، وهذا مقصود.** القاعدة العامة تمنع حجز صفٍّ
+    طوال نداءٍ شبكي *حين يمكن أن يسبق النداءُ القفل* — وهنا لا يمكن: النداء
+    نفسه يخرج المال، فتركُه خارج القفل يعني حوالتين لضغطتين متزامنتين. ونطاق
+    القفل صفٌّ واحد، والمهلة مسقوفة في `payout/base.py`.
+
+    `paid` لا تعني «طلبنا التحويل» بل «قال المزود إنه تم»: ما لم يُحسم يبقى
+    `approved` بلا قيدٍ في الدفتر — ورصيدُ الكبتن ما زال محجوزاً بطلبه، فلا
+    يُصرف مرتين ولا يضيع.
+    """
+    _require_transition(request, WithdrawalStatus.PAID)
+
+    if request.method is not WithdrawalMethod.CLIQ:
+        # لا عمود لحساب بنكي في `drivers` (SPEC القسم 4)، ووجهةٌ نخترعها
+        # حوالةٌ تذهب إلى لا مكان. الحوالة البنكية تبقى يدوية
+        raise InvalidInput("التحويل الآلي متاح لكليك وحدها — الحوالة البنكية يدوية")
+
+    destination = (driver.cliq_alias or "").strip()
+    if not destination:
+        raise InvalidInput("لا يوجد alias كليك لهذا الكبتن")
+
+    provider = await get_payout_provider(session, owner.country_code)
+    state = await provider.send_payout(
+        PayoutRequest(
+            # مرجعُنا يذهب مع الحوالة: به يميّز المزود إعادةَ الطلب من طلبٍ ثانٍ
+            reference=f"withdrawal:{request.id}",
+            amount=request.amount,
+            currency=currency_for_country(owner.country_code),
+            method=request.method,
+            beneficiary_name=owner.name,
+            destination=destination,
+        )
+    )
+
+    if state.settled and not state.paid:
+        raise PayoutError(f"رفض المزود الحوالة: {state.status_text}")
+    if not state.paid:
+        # قيد التنفيذ: لا قيد ولا تعليم. يُعاد الاستعلام لاحقاً أو يُحوَّل يدوياً
+        return request, state
+
+    return (
+        await mark_paid(
+            session,
+            request=request,
+            owner=owner,
+            actor=actor,
+            reference=state.provider_ref,
+        ),
+        state,
     )
 
 

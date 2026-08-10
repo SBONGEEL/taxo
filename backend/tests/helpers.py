@@ -507,6 +507,136 @@ async def simulate_card(
     )
 
 
+# ------------------------------------------- مزودو المرحلة 8 (وهميون)
+
+
+COMPANY_CLIQ_ALIAS = "TAXO.JO"
+
+
+async def _enable_provider(
+    session_factory: Any,
+    provider_key: str,
+    values: dict,
+    *,
+    country: str | None = None,
+) -> None:
+    """يُدخل عقد مزودٍ ويفعّله عبر الخدمة نفسها لا بكتابةٍ مباشرة.
+
+    مزامنةُ مفتاح الميزة مع العقد جزءٌ من السلوك المُختبَر (SPEC القسم 4).
+    """
+    from app.models.enums import CountryCode, ProviderKey
+    from app.services.providers import credentials as credentials_service
+
+    async with session_factory() as session:
+        await credentials_service.upsert(
+            session,
+            provider_key=ProviderKey(provider_key),
+            country_code=CountryCode(country) if country else None,
+            values=values,
+            is_active=True,
+        )
+        await session.commit()
+
+
+async def enable_sms_provider(session_factory: Any, **overrides: Any) -> None:
+    """عقد رسائل وهمي — يحوّل الدخول كله إلى OTP (SPEC القسم 15/أ)."""
+    await _enable_provider(
+        session_factory,
+        "sms",
+        {
+            "provider_name": "mock",
+            "api_key": "sms-secret",
+            "sender_id": "TAXO",
+            "use_mock": True,
+        }
+        | overrides,
+    )
+
+
+async def enable_push_provider(session_factory: Any, **overrides: Any) -> None:
+    await _enable_provider(
+        session_factory,
+        "fcm",
+        {"project_id": "taxo-test", "use_mock": True} | overrides,
+    )
+
+
+async def enable_cliq_provider(
+    session_factory: Any, *, country: str = "JO", **overrides: Any
+) -> None:
+    await _enable_provider(
+        session_factory,
+        "cliq_acquirer",
+        {
+            "merchant_id": "merchant-42",
+            "api_key": "cliq-secret",
+            "company_alias": COMPANY_CLIQ_ALIAS,
+            "use_mock": True,
+        }
+        | overrides,
+        country=country,
+    )
+
+
+async def enable_payout_provider(
+    session_factory: Any, *, country: str = "JO", **overrides: Any
+) -> None:
+    await _enable_provider(
+        session_factory,
+        "payout",
+        {"api_key": "payout-secret", "use_mock": True} | overrides,
+        country=country,
+    )
+
+
+async def read_otp(phone: str) -> str:
+    """يقرأ الرمز من رسالة المزود الوهمي — كما يقرؤه صاحب الهاتف."""
+    import re
+
+    from app.services.sms import last_message
+
+    body = await last_message(get_redis_client(), phone)
+    assert body is not None, f"لم تصل رسالة إلى {phone}"
+    match = re.search(r"\d{6}", body)
+    assert match is not None, f"لا رمز في الرسالة: {body}"
+    return match.group()
+
+
+async def fast_forward_otp_cooldown(phone: str) -> None:
+    """«مرّت دقيقة» بلا انتظار دقيقة.
+
+    مهلةُ إعادة الإرسال تُختبر مرةً واحدة في `test_resend_has_a_cooldown`؛
+    وبقيةُ الاختبارات تحتاج رمزاً ثانياً لا أن تعيد اختبار الحارس.
+    """
+    from app.services import otp
+
+    await get_redis_client().delete(otp.COOLDOWN_KEY.format(phone=phone))
+
+
+async def register_device(
+    client: AsyncClient,
+    headers: dict,
+    *,
+    device_id: str = "device-1",
+    token: str = "fcm-token-1",
+    platform: str = "android",
+) -> dict:
+    response = await client.put(
+        "/me/devices",
+        json={"device_id": device_id, "token": token, "platform": platform},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def pushes_to(token: str) -> list[dict]:
+    """ما «وصل» جهازاً بعينه من المزود الوهمي."""
+    from app.services.push import sent_messages
+
+    return await sent_messages(get_redis_client(), token)
+
+
 def mock_webhook_payload(cart_id: str, *, store_id: str = TELR_STORE_ID) -> dict:
     """حمولة إشعارٍ موقّعةً بتوقيع المزود الوهمي.
 

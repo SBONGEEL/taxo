@@ -78,9 +78,16 @@ class PaymentMethod(StrEnum):
 
 
 class PaymentProvider(StrEnum):
-    """المزود الذي مرّت عليه العملية — فارغ لما لا مزود له (كاش، كليك، محفظة)."""
+    """المزود الذي مرّت عليه العملية — فارغ لما لا مزود له (كاش، كليك، محفظة).
+
+    `cliq_acquirer` أضافته **المرحلة 8**: حساب التاجر الذي يشهد على شحن
+    المحفظة بكليك آلياً (SPEC القسم 7/15-أ). لا يظهر على `payments` أبداً —
+    دفعُ الرحلة بكليك يذهب إلى alias الكبتن لا إلى حساب الشركة، فلا مزود له
+    ولا تأكيد آلي (القسم 6).
+    """
 
     TELR = "telr"
+    CLIQ_ACQUIRER = "cliq_acquirer"
 
 
 class ProviderOrderPurpose(StrEnum):
@@ -263,6 +270,61 @@ class WithdrawalStatus(StrEnum):
     APPROVED = "approved"
     PAID = "paid"
     REJECTED = "rejected"
+
+
+class DevicePlatform(StrEnum):
+    """منصة الجهاز المسجَّل لإشعارات Push (SPEC القسم 4 — المرحلة 8).
+
+    تُقرأ عند الإرسال: أولوية FCM العالية تُكتب بحقلٍ مختلف لكل منصة
+    (`android.priority` و`apns-priority` و`Urgency`).
+    """
+
+    ANDROID = "android"
+    IOS = "ios"
+    WEB = "web"
+
+
+class CampaignAudience(StrEnum):
+    """جمهور الحملة الإدارية/التسويقية (SPEC القسم 13 — المرحلة 8).
+
+    `by_country` يعني «كل مستخدمي الدولة» ركاباً وكباتن؛ وعمود `country_code`
+    يبقى مستقلاً عن هذا الحقل لأنه **مُضيِّق** لأي جمهور: «كل الكباتن في
+    الأردن» جمهورٌ وتضييق، لا قيمةٌ ثالثة في الأنواع.
+
+    `segment` محجوزة لشرائح المرحلة 12 (الكوبونات والعروض) — تُرفض اليوم
+    برسالة صريحة بدل أن يُخترع لها معنى.
+    """
+
+    ALL_RIDERS = "all_riders"
+    ALL_DRIVERS = "all_drivers"
+    BY_COUNTRY = "by_country"
+    SEGMENT = "segment"
+
+
+class CampaignStatus(StrEnum):
+    """`draft → scheduled → sent`، و`cancelled` مخرجٌ من الأوليين.
+
+    لا حالة «قيد الإرسال»: الحملة تُرسل في دورةِ مهمةٍ واحدة على دفعات، وصفُّها
+    مقفولٌ طوالها — فمهمتان متزامنتان لا ترسلان حملةً مرتين. وسجلُّ
+    `notification_deliveries` هو ما يقول من وصله الإشعار فعلاً.
+    """
+
+    DRAFT = "draft"
+    SCHEDULED = "scheduled"
+    SENT = "sent"
+    CANCELLED = "cancelled"
+
+
+class DeliveryStatus(StrEnum):
+    """نتيجة إرسال حملةٍ إلى مستخدم بعينه.
+
+    `skipped` ليست فشلاً: أطفأ التسويق، أو لا جهاز مسجّل له — والفرق بينها
+    وبين `failed` هو الفرق بين «لم نرسل عمداً» و«أرسلنا فلم يصل».
+    """
+
+    SENT = "sent"
+    FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 class AuditAction(StrEnum):

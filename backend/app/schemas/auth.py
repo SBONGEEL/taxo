@@ -12,7 +12,11 @@ from app.models.enums import CountryCode, UserRole
 class RegisterRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20, examples=["0791234567"])
     name: str = Field(min_length=2, max_length=120)
-    password: str = Field(min_length=8, max_length=128)
+    # الحقل نفسه يحمل كلمة مرور أو رمز OTP حسب المزود المفعّل (المرحلة 8)،
+    # فالحدُّ الأدنى هنا حدُّ **نقلٍ** لا سياسة: سياسة كلمة المرور (8 خانات)
+    # في `PasswordAuthStrategy`، وسقفٌ في المخطط يمنع رمزاً من ستة أرقام
+    # يعطّل الطريق الآخر بدل أن يحرس هذا
+    password: str = Field(min_length=4, max_length=128)
     country_code: CountryCode
     # التسجيل الذاتي للركاب والكباتن فقط — حسابات admin/support تُنشأ من اللوحة
     role: Literal[UserRole.RIDER, UserRole.DRIVER] = UserRole.RIDER
@@ -22,6 +26,23 @@ class LoginRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
     password: str = Field(min_length=1, max_length=128)
     country_code: CountryCode | None = None
+
+
+class ChallengeRequest(BaseModel):
+    phone: str = Field(min_length=6, max_length=20)
+    country_code: CountryCode | None = None
+
+
+class ChallengeResponse(BaseModel):
+    """جواب «أرسل الرمز».
+
+    `sent=false` في وضع كلمة المرور: المسار موجودٌ دائماً فلا تحتاج الواجهة
+    أن تعرف أيَّ استراتيجية تعمل قبل أن تسأل.
+    """
+
+    sent: bool
+    expires_in: int | None = None
+    resend_after: int | None = None
 
 
 class RefreshRequest(BaseModel):

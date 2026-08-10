@@ -87,6 +87,9 @@ REF_FIELD = "tran_ref"
 SAVED_CARD_METHOD = "sale"
 SAVED_CARD_TOKEN_FIELD = "card_token"
 
+# مرجعٌ لا وجود له، يُستعلم عنه في اختبار الاتصال وحده
+TEST_ORDER_REF = "TAXO-CONNECTION-TEST"
+
 
 def _flag(value: object) -> str:
     return "1" if value in (True, "1", 1, "true", "True") else "0"
@@ -124,11 +127,11 @@ class TelrGateway:
             "ivp_test": _flag(self._test_mode),
         }
 
-    async def _post(self, url: str, data: dict[str, str]) -> dict[str, Any]:
-        """نداء واحد للمزود — نقطة الحقن الوحيدة في الاختبارات.
+    async def _raw_post(self, url: str, data: dict[str, str]) -> dict[str, Any]:
+        """النداء بلا تفسير: يرفع عند تعذّر الوصول، ويعيد جواب المزود كما هو.
 
-        نفس نهج `directions.fetch_route`: يُستبدل النداء وحده فتبقى قراءةُ
-        العقد من `provider_credentials` حقيقية.
+        يفصله عن `_post` سببٌ واحد: **اختبار الاتصال** (المرحلة 8) يريد أن
+        يعرف أن الخدمة تجيب، ورفضُها لطلبٍ اختباري جوابٌ لا انقطاع.
         """
         try:
             async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as http:
@@ -142,6 +145,15 @@ class TelrGateway:
 
         if not isinstance(payload, dict):
             raise CardGatewayError("جواب مزود الدفع غير مقروء")
+        return payload
+
+    async def _post(self, url: str, data: dict[str, str]) -> dict[str, Any]:
+        """نداء واحد للمزود — نقطة الحقن الوحيدة في الاختبارات.
+
+        نفس نهج `directions.fetch_route`: يُستبدل النداء وحده فتبقى قراءةُ
+        العقد من `provider_credentials` حقيقية.
+        """
+        payload = await self._raw_post(url, data)
 
         error = payload.get("error")
         if error:
@@ -151,6 +163,23 @@ class TelrGateway:
                 f"مزود الدفع رفض العملية: {message}" if message else None
             )
         return payload
+
+    async def test_connection(self) -> str:
+        """اختبار الاتصال من بطاقة العقد (SPEC القسم 13/7).
+
+        استعلامٌ عن مرجعٍ لا وجود له: **لا يفتح طلباً ولا يحرّك ديناراً**،
+        وجوابُ المزود عليه — قبولاً أو رفضاً — دليلُ أن الخدمة تجيب. ونصُّ
+        رفضه يُعرض للمشرف كما هو: هو وحده ما يفرّق «مفتاحٌ خاطئ» عن «طلبٌ
+        غير موجود»، ولا يُفسَّر هنا بغير توثيقٍ يُطابَق عليه.
+        """
+        payload = await self._raw_post(
+            ORDER_URL, self._credentials("check") | {"order_ref": TEST_ORDER_REF}
+        )
+        error = payload.get("error")
+        if error:
+            message = (error.get("message") if isinstance(error, dict) else None) or ""
+            return f"الخدمة تستجيب — جواب المزود: {message or 'رفض الطلب الاختباري'}"
+        return "الخدمة تستجيب وقبلت الاستعلام"
 
     # ------------------------------------------------------------- الإنشاء
 

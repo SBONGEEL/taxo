@@ -33,6 +33,7 @@ from app.schemas.wallet import (
     WalletOut,
     WalletTransactionOut,
     WithdrawalOut,
+    WithdrawalPayoutOut,
 )
 from app.services import audit, topups, wallet as wallet_service, withdrawals
 
@@ -273,6 +274,34 @@ async def reject_withdrawal(
     )
     await session.commit()
     return WithdrawalOut.model_validate(request)
+
+
+@router.post("/withdrawals/{request_id}/payout", response_model=WithdrawalPayoutOut)
+async def payout_withdrawal(
+    request_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> WithdrawalPayoutOut:
+    """تحويلٌ آلي عبر مزود payout بدل حوالةٍ يدوية (SPEC القسم 9/15-أ).
+
+    القفلُ قبل النداء عمداً: النداء نفسه يخرج المال، فضغطتان متزامنتان بلا
+    قفلٍ حوالتان. و`paid` لا تُعلَّم إلا إن قال المزود «حوّلت» — وما دون ذلك
+    يبقى الطلب `approved` بلا قيدٍ في الدفتر.
+    """
+    request = await withdrawals.get_request(session, request_id, for_update=True)
+    driver = await session.get(Driver, request.driver_id)
+    if driver is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
+        raise NotFound("الكبتن غير موجود")
+
+    owner = await _get_user(session, driver.user_id)
+    request, state = await withdrawals.pay_via_provider(
+        session, request=request, driver=driver, owner=owner, actor=admin
+    )
+    await session.commit()
+    await session.refresh(request)
+    return WithdrawalPayoutOut(
+        request=WithdrawalOut.model_validate(request),
+        paid=state.paid,
+        provider_status=state.status_text,
+    )
 
 
 @router.post("/withdrawals/{request_id}/paid", response_model=WithdrawalOut)

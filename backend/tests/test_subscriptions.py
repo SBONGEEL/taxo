@@ -477,7 +477,9 @@ async def test_sweep_notices_expiry_within_a_day_once(
 
     result = await _sweep(session_factory)
     assert [notice.subscription_id for notice in result.expiring] == [subscription_id]
-    await subscriptions_service.publish_sweep(redis, result)
+    async with session_factory() as session:
+        # منذ المرحلة 8 يمر البثّ بطبقة الإشعارات فيحتاج جلسةً لقراءة الأجهزة
+        await subscriptions_service.publish_sweep(session, redis, result)
 
     async def _next_event() -> dict | None:
         deadline = asyncio.get_running_loop().time() + 5
@@ -493,7 +495,10 @@ async def test_sweep_notices_expiry_within_a_day_once(
     assert event is not None and event["type"] == "subscription_expiring"
 
     # البث الثاني لا يقع: أثر التنبيه محفوظ في Redis
-    await subscriptions_service.publish_sweep(redis, await _sweep(session_factory))
+    async with session_factory() as session:
+        await subscriptions_service.publish_sweep(
+            session, redis, await _sweep(session_factory)
+        )
     assert await _next_event() is None
     await pubsub.unsubscribe(channel)
     await pubsub.aclose()

@@ -38,7 +38,11 @@ from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.driver import DriverLocationIn, NearbyDriverOut
 from app.schemas.ride import RideOut
-from app.services import drivers as drivers_service, rides as rides_service
+from app.services import (
+    drivers as drivers_service,
+    presence as socket_presence,
+    rides as rides_service,
+)
 from app.services.token_service import access_token_subject
 from app.ws import events
 from app.ws.hub import Subscription
@@ -74,6 +78,18 @@ async def _authenticate(
         await websocket.close(code=WS_FORBIDDEN, reason="لا تملك صلاحية هذه القناة")
         return None
     return user
+
+
+async def _mark_present(redis: Redis, user_id: uuid.UUID, device_id: str) -> None:
+    """يُبقي أثر هذا الجهاز حياً ما دام المقبس مفتوحاً (SPEC القسم 10).
+
+    الأثر هو ما يمنع إشعار Push المكرر: الحدث يصل هذه الشاشة عبر المقبس، فلا
+    يُرسل إليها إشعارٌ ثانٍ. وينعش دورياً لا مرةً واحدة، فمقبسٌ مات فجأةً
+    (شبكةٌ قُطعت بلا إغلاق) لا يحرم صاحبَه من الإشعارات إلا لدقيقة ونصف.
+    """
+    while True:
+        await socket_presence.heartbeat(redis, user_id, device_id)
+        await asyncio.sleep(socket_presence.REFRESH_SECONDS)
 
 
 async def _pump(websocket: WebSocket, subscription: Subscription) -> None:
@@ -125,7 +141,11 @@ async def _driver_reader(
 
 
 @ws_router.websocket("/driver")
-async def driver_socket(websocket: WebSocket, token: str = Query(...)) -> None:
+async def driver_socket(
+    websocket: WebSocket,
+    token: str = Query(...),
+    device_id: str | None = Query(default=None),
+) -> None:
     """قناة الكبتن: بثّ الموقع صعوداً، والطلبات والأحداث نزولاً.
 
     فتح المقبس هو نفسه رفع مفتاح Online؛ إغلاقه ينزله ويسقط الكبتن من الفهرس
@@ -163,10 +183,12 @@ async def driver_socket(websocket: WebSocket, token: str = Query(...)) -> None:
                 websocket,
                 _pump(websocket, subscription),
                 _driver_reader(websocket, redis, context),
+                *_presence_tasks(redis, user.id, device_id),
             )
     except WebSocketDisconnect:
         pass
     finally:
+        await _clear_presence(redis, user.id, device_id)
         async with SessionLocal() as session:
             offline = await session.get(Driver, driver.id)
             if offline is not None:
@@ -280,7 +302,11 @@ async def _apply_event(
 
 
 @ws_router.websocket("/rider")
-async def rider_socket(websocket: WebSocket, token: str = Query(...)) -> None:
+async def rider_socket(
+    websocket: WebSocket,
+    token: str = Query(...),
+    device_id: str | None = Query(default=None),
+) -> None:
     """قناة الراكب: الخريطة قبل الطلب، وكبتنه أثناء الرحلة، وأحداثها دائماً."""
     await websocket.accept()
     redis = get_redis_client()
@@ -308,9 +334,30 @@ async def rider_socket(websocket: WebSocket, token: str = Query(...)) -> None:
                 websocket,
                 _rider_loop(websocket, redis, user, state, subscription),
                 _rider_reader(websocket, state),
+                *_presence_tasks(redis, user.id, device_id),
             )
     except WebSocketDisconnect:
         pass
+    finally:
+        await _clear_presence(redis, user.id, device_id)
+
+
+def _presence_tasks(redis: Redis, user_id: uuid.UUID, device_id: str | None):
+    """مهمةُ الإنعاش إن عرّف العميل جهازه، وإلا لا شيء.
+
+    **مقبسٌ بلا `device_id` لا يمنع Push**: لا سبيل لمعرفة أيَّ جهازٍ هو،
+    وحرمانُ كل أجهزة الحساب لأن أحدها مفتوح يعني هاتفاً في الجيب لا يرنّ
+    لأن لوحاً على الطاولة مفتوح.
+    """
+    return () if not device_id else (_mark_present(redis, user_id, device_id),)
+
+
+async def _clear_presence(
+    redis: Redis, user_id: uuid.UUID, device_id: str | None
+) -> None:
+    """إغلاقُ المقبس يعيد Push إلى هذا الجهاز فوراً — بلا انتظار انتهاء الأثر."""
+    if device_id:
+        await socket_presence.leave(redis, user_id, device_id)
 
 
 __all__ = ["ws_router"]

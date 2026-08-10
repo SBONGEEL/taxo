@@ -49,6 +49,7 @@ __all__ = [
     "OrderState",
     "TelrGateway",
     "WebhookNotice",
+    "build_gateway",
     "get_gateway",
     "mock_page_url",
     "resolve_webhook",
@@ -77,7 +78,8 @@ def mock_page_url(cart_id: str) -> str:
     )
 
 
-def _build(values: Mapping[str, Any]) -> CardGateway:
+def build_gateway(values: Mapping[str, Any]) -> CardGateway:
+    """يبني المزود من قيم عقدٍ مفكوك التشفير — يُستدعى من هنا ومن زر الاختبار."""
     if _mock_allowed(values):
         return MockCardGateway(
             get_redis_client(), return_url_template=mock_page_url("{cart_id}")
@@ -102,7 +104,7 @@ async def get_gateway(
     )
     if not values:
         raise CardGatewayUnavailable()
-    return _build(values)
+    return build_gateway(values)
 
 
 async def resolve_webhook(
@@ -131,7 +133,7 @@ async def resolve_webhook(
         values = get_cipher().decrypt(row.credentials)
         if str(values.get("store_id") or "").strip() != store_id:
             continue
-        gateway = _build(values)
+        gateway = build_gateway(values)
         # التحقق يرفع الاستثناء بنفسه — لا يُصمت ولا يُجرَّب عقدٌ بعده
         return gateway, gateway.verify_webhook(payload)
 

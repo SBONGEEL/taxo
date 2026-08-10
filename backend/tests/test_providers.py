@@ -316,12 +316,14 @@ async def test_activating_sms_provider_switches_auth_to_otp(
     assert (await client.get("/auth/method")).json()["method"] == "otp"
     assert (await client.get("/config")).json()["auth"]["method"] == "otp"
 
-    # المرحلة 8 هي من تبني تدفق OTP — حتى ذلك الحين يرفض بوضوح لا بانهيار
+    # المرحلة 8 بنت التدفق: الحقل نفسه صار رمزاً، ورمزٌ لم يُطلب يُرفض 401
+    # لا 501 — تفاصيله في `test_otp_auth.py`
     login = await client.post(
         "/auth/login",
-        json={"phone": "0791234567", "password": "whatever1", "country_code": "JO"},
+        json={"phone": "0791234567", "password": "123456", "country_code": "JO"},
     )
-    assert login.status_code == 501
+    assert login.status_code == 401
+    assert login.json()["code"] == "invalid_otp"
 
     await client.post(
         f"/admin/providers/{saved.json()['id']}/deactivate", headers=admin_headers

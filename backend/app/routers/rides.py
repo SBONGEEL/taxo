@@ -21,6 +21,7 @@ from app.schemas.ride import (
 )
 from app.services import (
     dispatch,
+    notifications,
     pricing,
     ratings as ratings_service,
     rides as rides_service,
@@ -151,7 +152,9 @@ async def accept_ride(
     # إيقاظ مهمة التوزيع لتتوقف، ثم إعلام الطرفين — كلاهما بعد الـ commit
     await dispatch.notify_accepted(redis, ride_id)
     await dispatch.release_offer(redis, ride_id, driver.id)
-    await events.publish_ride_event(redis, ride, events.RideEvent.DRIVER_ASSIGNED)
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.DRIVER_ASSIGNED
+    )
     return _to_out(ride)
 
 
@@ -177,7 +180,9 @@ async def mark_arrived(
         session, await _assigned_ride(session, ride_id, driver)
     )
     await session.commit()
-    await events.publish_ride_event(redis, ride, events.RideEvent.DRIVER_ARRIVED)
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.DRIVER_ARRIVED
+    )
     return _to_out(ride)
 
 
@@ -194,7 +199,9 @@ async def start_ride(
     # ومن هنا يبدأ تسجيل المسار الفعلي: قبل `in_progress` الكبتن في طريقه
     # للراكب، وذاك ليس من مسار الرحلة (SPEC القسم 5.7)
     await route.begin(redis, driver_id=driver.id, ride_id=ride.id)
-    await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_STARTED)
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.RIDE_STARTED
+    )
     return _to_out(ride)
 
 
@@ -213,7 +220,9 @@ async def complete_ride(
     )
     await session.commit()
     await tracking.stop(ride.id)
-    await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_COMPLETED)
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.RIDE_COMPLETED
+    )
     return _to_out(ride)
 
 
@@ -248,7 +257,9 @@ async def cancel_ride(
     if ride.driver_id is not None:
         await route.end(redis, driver_id=ride.driver_id)
     await tracking.stop(ride_id)
-    await events.publish_ride_event(redis, ride, events.RideEvent.RIDE_CANCELLED)
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.RIDE_CANCELLED
+    )
     return _to_out(ride)
 
 

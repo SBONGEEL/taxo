@@ -137,6 +137,9 @@ class MockCardGateway:
     ) -> str:
         return f"mock-refund-{provider_order_ref}"
 
+    async def test_connection(self) -> str:
+        return "المزود الوهمي جاهز — لا شبكة خارجية"
+
     # -------------------------------------------------------------- التوقيع
 
     def expected_check(self, payload: Mapping[str, str]) -> str:

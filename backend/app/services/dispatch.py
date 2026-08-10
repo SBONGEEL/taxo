@@ -37,7 +37,7 @@ from app.models.driver import Driver
 from app.models.enums import DriverStatus, RideStatus, VehicleCategory
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.vehicle import Vehicle
-from app.services import geo, subscriptions
+from app.services import geo, notifications, subscriptions
 from app.ws import events
 
 logger = logging.getLogger(__name__)
@@ -291,7 +291,9 @@ async def _mark_no_driver_found(redis: Redis, ride_id: uuid.UUID) -> None:
             return  # قُبلت أو أُلغيت بيننا وبين آخر فحص
         ride = await rides_service.mark_no_driver_found(session, locked)
         await session.commit()
-        await events.publish_ride_event(redis, ride, events.RideEvent.NO_DRIVER_FOUND)
+        await notifications.publish_ride_event(
+            session, redis, ride, events.RideEvent.NO_DRIVER_FOUND
+        )
 
 
 async def _run(ride_id: uuid.UUID) -> None:
@@ -342,13 +344,17 @@ async def _run(ride_id: uuid.UUID) -> None:
         tried.add(candidate.driver_id)
         # تُمسح إشارات المحاولة السابقة حتى لا يُقرأ رفضٌ قديم على أنه جواب الآن
         await redis.delete(signal_key(ride_id))
-        await events.publish_ride_offer(
-            redis,
-            driver_user_id=driver_user_id,
-            ride=ride,
-            distance_to_pickup_km=candidate.distance_km,
-            expires_in_seconds=OFFER_TIMEOUT_SECONDS,
-        )
+        # جلسةٌ قصيرة للإشعار وحده: البثُّ لا يحتاجها لكن Push يقرأ أجهزة
+        # الكبتن من القاعدة، ولا تُحجز جلسةٌ طوال انتظار المهلة من أجل ذلك
+        async with SessionLocal() as session:
+            await notifications.publish_ride_offer(
+                session,
+                redis,
+                driver_user_id=driver_user_id,
+                ride=ride,
+                distance_to_pickup_km=candidate.distance_km,
+                expires_in_seconds=OFFER_TIMEOUT_SECONDS,
+            )
 
         remaining = min(OFFER_TIMEOUT_SECONDS, deadline - time.monotonic())
         signal = await _wait_for_signal(redis, ride_id, remaining)

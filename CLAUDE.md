@@ -21,13 +21,13 @@ script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status en
 (`payments` with cash/manual-CliQ/wallet/mixed and disputes, `ride_route_points` with `final_fare`
 recalculation, `ratings`), **6-ب** (Telr card integration — `provider_orders`, hosted payment
 page, signed webhook, instant card wallet topup, `saved_cards` tokenization and one-tap pay,
-provider-side refunds) and **7** (`driver_subscriptions`, purchase over all four channels, the
-dispatch subscription check, and the Celery sweep) are complete. **The next stage is 8**
-(completing the provider layer: the full contracts page, unified provider interfaces with mocks,
-and OTP/Push/automatic-CliQ/payout integrations waiting on contract data). Do not implement
+provider-side refunds), **7** (`driver_subscriptions`, purchase over all four channels, the
+dispatch subscription check, and the Celery sweep) and **8** (the full contracts page with test
+connection, unified provider interfaces with mocks, and the OTP/Push/automatic-CliQ/payout
+integrations) are complete. **The next stage is 9** (the rider PWA). Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern appears
-in current code (e.g. no Celery job sweeps stale `provider_orders` yet, and the 24h expiry notice
-reaches the driver over WebSocket because FCM push arrives in stage 8), leave a comment naming the
+in current code (e.g. no Celery job sweeps stale `provider_orders` yet, and the campaigns page in
+the admin panel lands in stage 11 while its endpoints already exist), leave a comment naming the
 stage rather than building ahead.
 
 **Any path that changes a row's status locks that row with `for_update` *before* it checks the
@@ -53,6 +53,13 @@ payment row lock and then a ride lock. When a single operation touches two walle
 locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a new lock means fitting it
 into this order, not inventing a second one.
 
+Stage 8 added two mutating paths and both fit the same order. `cliq_topups.apply_state` locks the
+provider-order row and then takes the wallet advisory lock (no ride and no payment row exist on a
+wallet topup), and asks the acquirer *before* any lock in `reconcile`. `withdrawals.pay_via_provider`
+is the deliberate exception to "never hold a row lock across a provider call": the call itself moves
+the money, so it cannot run first — two concurrent clicks without the lock are two transfers, and the
+lock's scope is one withdrawal row with a capped timeout.
+
 Note which guard actually protects what: the driver row lock is redundant on the wallet purchase
 path (the wallet advisory lock already serialises it) and is the *only* guard on the manual and
 card paths, which write no ledger entry at all. That is why the concurrency test for it fires two
@@ -75,7 +82,16 @@ ledger still shows one entry, which is precisely the failure a passing sequentia
 
 **A stage that touches money or state transitions is not done without a concurrency test.**
 Sequential request-then-assert tests never enter the code path the locks exist for, so they prove
-nothing about them. Fire the requests together with `asyncio.gather` against the `client` fixture
+nothing about them. And write the test against the invariant the lock actually owns. Three concurrent `GET
+/wallet/me/topups/cliq/{cart}` calls credit the wallet once *even with the row lock deleted* — the
+ledger idempotency key and the wallet advisory lock already cover that — so that assertion proves
+nothing about the lock. What the row lock alone owns is the order's **status**: `test_stage8_
+concurrency.py::test_two_provider_answers_at_once_leave_a_coherent_order` drives a paid and a failed
+settlement into a deliberately ordered interleaving (the first holds its transaction open while the
+second starts) and asserts `paid ⇔ exactly one ledger entry`, `failed ⇔ none`. Delete the
+`for_update` and it fails with a `failed` order whose money was credited.
+
+Fire the requests together with `asyncio.gather` against the `client` fixture
 (same event loop, separate session and transaction per request, so one really waits on the other's
 lock in Postgres) and assert the invariant, not the timing: exactly N of M succeed, the losers carry
 the *specific* error code, the ledger sum read straight from the database matches, and no
@@ -97,7 +113,8 @@ docker compose logs -f backend
 curl http://localhost:8001/health     # reports db + redis status; also the container healthcheck
 ```
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`). **Run exactly one `beat`** — a
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running the subscription sweep
+every five minutes and the stage-8 campaign dispatch every minute. **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
 pool bound to the previous one. Tasks are thin wrappers over `services/`, and the tests call the
@@ -154,11 +171,33 @@ events, sockets); `tasks/` holds the Celery app and its periodic jobs, each one 
 a service.
 
 **Authentication is a swappable strategy, not a fixed flow.** `services/auth/` defines `AuthStrategy`
-with `PasswordAuthStrategy` (active) and `OtpAuthStrategy` (stage 8, currently raises 501).
+with `PasswordAuthStrategy` and `OtpAuthStrategy` (both live since stage 8).
 `get_auth_strategy()` picks between them and `sms_provider_enabled()` is the single decision point; it
 reads the `sms` row of `provider_credentials`, so saving and activating that contract from the admin
 panel flips every route to OTP. Routers depend only on the interface — activating a provider must
-never require touching an endpoint.
+never require touching an endpoint. The `password` field carries a password or an OTP code depending
+on which strategy is live, so `RegisterRequest` only enforces a transport-level minimum and the
+8-character policy lives in `PasswordAuthStrategy`; a schema bound tight enough to reject a six-digit
+code would break the other path rather than guard this one. `services/otp.py` stores an HMAC of the
+code (never the code), consumes it on success, burns it after `MAX_ATTEMPTS`, and gates resends on a
+cooldown — `COOLDOWN_KEY` is public precisely so a test can fast-forward the minute instead of
+sleeping it.
+
+**Every external provider follows one shape, and `card_gateway` is the template.** `services/sms/`,
+`services/push/`, `services/cliq/` and `services/payout/` each carry `base.py` (the contract),
+`mock.py` (enabled by `use_mock` on the contract, refused in production), exactly one file that knows
+the real provider's wire format, and an `__init__` that is the single decision point reading the
+encrypted contract. Because no contract was delivered for SMS/CliQ/payout, those wire details are
+best-reading-of-the-common-shape and say so in their module docstrings, grouped into named constants
+like `telr.py`'s. Two of the four expose `get_*_or_none` rather than raising: an absent FCM or CliQ
+contract is the normal state, not an outage, and must never fail the request that triggered it.
+
+`services/providers/health.py` is the one place that knows which call tests which provider, and each
+provider answers from its own `test_connection`. A test must leave no trace — no order opened, no
+payout sent, no paid SMS unless the admin typed a number — it runs on inactive contracts (you test
+before you open the door, not after), it returns 200 with `ok=false` on failure because the admin
+asked to know, and it stamps `last_tested_at` either way: the question is when it was last tested,
+not when it last succeeded.
 
 **Provider contracts are the only home for external keys.** `services/providers/registry.py` declares
 each provider's fields (`secret` → encrypted + masked as `****` and never leaves the backend;
@@ -253,6 +292,24 @@ owns the channel names and the `RideEvent` enum; routers call `publish_ride_even
 worker run with no shared in-memory registry. Rider sockets additionally subscribe to
 `ws:driver_location:{driver_id}` only for the driver the database assigned them. WebSocket auth is
 `?token=` rather than a header because browsers cannot set headers on a WebSocket handshake.
+
+**Nothing calls `ws/events.publish_*` directly any more; `services/notifications.py` does.** It
+publishes to Redis and then sends the same event as a push notification, so a channel cannot be added
+for one event and forgotten for another. Push goes only to devices whose socket is *not* open —
+`services/presence.py` keeps a per-user hash of open `device_id`s (lazily pruned on read, since Redis
+has no per-field TTL), and the socket writes into it only when the client sends `?device_id=`. That
+one rule also means the actor never gets pushed his own action: whoever pressed the button has the app
+open by definition. Ride offers are the only high-priority send — a twenty-second window does not
+survive Doze mode. Delivery failures are swallowed and logged; a ride must not fail because a remote
+service did.
+
+Transactional notifications are not a user preference and never read `users.marketing_push_enabled`;
+that column belongs to `services/campaigns.py` alone, along with per-country quiet hours. Campaigns
+partition by country because quiet hours are per-country: a campaign spanning both markets sends in
+Jordan now and Libya later and stays `scheduled` until every country in scope is done. Progress lives
+in `notification_deliveries` (unique on `(campaign_id, user_id)`), never in the task's memory, so a
+task that dies mid-campaign is resumed rather than restarted — and a `skipped` row for an opted-out
+user is what makes honouring the opt-out provable instead of merely claimed.
 
 `services/tracking.py` implements SPEC section 5's "driver offline > 60s during `in_progress` alerts
 both parties and does **not** end the ride" — it starts on `POST /rides/{id}/start` and stops on
@@ -378,6 +435,12 @@ body — making it a fixture fails at teardown.
   status. Cash and CliQ are recorded from the admin panel *after* collection; wallet and card write
   the row only after the ledger or the provider says so.
 - Every endpoint touching a ride or wallet must verify ownership (no IDOR).
+- `device_tokens.token` never leaves the backend, for the same reason `saved_cards.provider_token`
+  doesn't: it is what lets someone send a notification in TAXO's name to a user's phone.
+- CliQ ride payments are never confirmed automatically, whatever contracts are active: that money goes
+  from the rider to the *driver's* alias and never touches the company account, so no acquirer can
+  witness it. The acquirer contract covers wallet topups only and does not move `cliq` out of
+  `DIRECTLY_COLLECTED_METHODS`.
 
 Python is pinned to 3.12 in the Dockerfile even though the host has 3.14, because Celery does not
 support 3.14 yet.

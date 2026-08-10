@@ -51,3 +51,25 @@ class ProviderCredentialOut(BaseModel):
 class ProviderCatalogOut(BaseModel):
     providers: list[ProviderSpecOut]
     credentials: list[ProviderCredentialOut]
+
+
+class ProviderTestRequest(BaseModel):
+    """رقمٌ اختياري لاختبار مزود الرسائل بإرسالٍ فعلي.
+
+    بغيره لا تُرسل رسالة مدفوعة: زرُّ اختبارٍ يرسل إلى رقمٍ لم يطلبه أحد
+    ليس اختباراً بريئاً.
+    """
+
+    test_phone: str | None = Field(default=None, max_length=20)
+
+
+class ProviderTestResult(BaseModel):
+    """نتيجة الاختبار — **200 حتى عند الفشل**.
+
+    فشلُ عقدٍ عند اختباره ليس خطأً في الطلب: المشرف طلب أن يعرف، وقد عرف.
+    ونصُّ السبب هو كل فائدة الزر.
+    """
+
+    ok: bool
+    detail: str
+    credential: ProviderCredentialOut

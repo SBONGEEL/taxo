@@ -3,12 +3,17 @@
 from app.models.audit import AdminAuditLog
 from app.models.base import Base
 from app.models.commission import CommissionSetting
+from app.models.device import DeviceToken
 from app.models.driver import Driver, DriverDocument
 from app.models.enums import (
     AuditAction,
+    CampaignAudience,
+    CampaignStatus,
     CommissionAppliesTo,
     CountryCode,
     Currency,
+    DeliveryStatus,
+    DevicePlatform,
     DisputeResolution,
     DocumentReviewStatus,
     DocumentType,
@@ -35,6 +40,11 @@ from app.models.enums import (
     WithdrawalStatus,
 )
 from app.models.feature_flag import FeatureFlag
+from app.models.notification import (
+    NotificationCampaign,
+    NotificationDelivery,
+    NotificationSetting,
+)
 from app.models.payment import Payment, SavedCard
 from app.models.pricing import PricingRule
 from app.models.provider_credential import ProviderCredential
@@ -55,10 +65,15 @@ __all__ = [
     "AdminAuditLog",
     "AuditAction",
     "Base",
+    "CampaignAudience",
+    "CampaignStatus",
     "CommissionAppliesTo",
     "CommissionSetting",
     "CountryCode",
     "Currency",
+    "DeliveryStatus",
+    "DevicePlatform",
+    "DeviceToken",
     "DisputeResolution",
     "DocumentReviewStatus",
     "DocumentType",
@@ -69,6 +84,9 @@ __all__ = [
     "FeatureFlag",
     "FeatureKey",
     "Payment",
+    "NotificationCampaign",
+    "NotificationDelivery",
+    "NotificationSetting",
     "PaymentConfirmedBy",
     "PaymentMethod",
     "PaymentProvider",

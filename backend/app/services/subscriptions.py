@@ -63,7 +63,7 @@ from app.models.enums import (
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
-from app.services import audit, geo, wallet
+from app.services import audit, geo, notifications, wallet
 from app.ws import events
 
 # مدة كل نوع خطة. أرقامٌ لا إعدادات: أسماء الخطط الثلاثة في SPEC القسم 4 هي
@@ -607,7 +607,9 @@ async def sweep(session: AsyncSession) -> SweepResult:
     )
 
 
-async def publish_sweep(redis: Redis, result: SweepResult) -> None:
+async def publish_sweep(
+    session: AsyncSession, redis: Redis, result: SweepResult
+) -> None:
     """يبث نتائج الدورة **بعد الـ commit** ويسقط حضور من خرج من التوزيع.
 
     الإخطار مرة واحدة لكل اشتراك: مفتاحٌ في Redis بعمرٍ أطول من النافذة، فمهمةٌ
@@ -619,7 +621,8 @@ async def publish_sweep(redis: Redis, result: SweepResult) -> None:
             await geo.go_offline(
                 redis, driver_id=notice.driver_id, country_code=notice.country_code
             )
-        await events.publish_subscription_event(
+        await notifications.publish_subscription_event(
+            session,
             redis,
             driver_user_id=notice.driver_user_id,
             event=events.SubscriptionEvent.SUBSCRIPTION_EXPIRED,
@@ -631,7 +634,8 @@ async def publish_sweep(redis: Redis, result: SweepResult) -> None:
             notice_key(notice.subscription_id), "1", nx=True, ex=_NOTICE_TTL_SECONDS
         ):
             continue
-        await events.publish_subscription_event(
+        await notifications.publish_subscription_event(
+            session,
             redis,
             driver_user_id=notice.driver_user_id,
             event=events.SubscriptionEvent.SUBSCRIPTION_EXPIRING,
