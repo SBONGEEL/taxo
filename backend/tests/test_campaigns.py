@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, time, timedelta
 
 from httpx import AsyncClient
@@ -301,6 +302,83 @@ async def test_dispatch_without_a_push_contract_keeps_the_campaign_scheduled(
     async with session_factory() as session:
         stored = await session.scalar(select(NotificationCampaign))
     assert stored.status is CampaignStatus.SCHEDULED
+
+
+# ------------------------------------------------------------ إشعار تجريبي
+
+
+async def test_test_push_reaches_the_named_token(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """مِجَسٌّ يتخطى جدول الأجهزة وقاعدة الاستثناء عمداً."""
+    await enable_push_provider(session_factory)
+
+    response = await client.post(
+        "/admin/campaigns/test-push",
+        json={"token": "fcm-probe-token", "title": "تجربة"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["delivered"] == 1
+    assert body["invalid_token"] is False
+
+    assert [m["title"] for m in await pushes_to("fcm-probe-token")] == ["تجربة"]
+
+
+async def test_test_push_reports_a_dead_token_without_failing(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    from app.services.push.mock import INVALID_TOKEN
+
+    await enable_push_provider(session_factory)
+
+    response = await client.post(
+        "/admin/campaigns/test-push",
+        json={"token": INVALID_TOKEN},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["invalid_token"] is True
+    assert response.json()["delivered"] == 0
+
+
+async def test_test_push_needs_a_contract_and_an_admin(
+    client: AsyncClient, admin_headers: dict, support_headers: dict, session_factory
+) -> None:
+    denied = await client.post(
+        "/admin/campaigns/test-push",
+        json={"token": "fcm-probe-token"},
+        headers=support_headers,
+    )
+    assert denied.status_code == 403
+
+    missing = await client.post(
+        "/admin/campaigns/test-push",
+        json={"token": "fcm-probe-token"},
+        headers=admin_headers,
+    )
+    assert missing.status_code == 503
+    assert missing.json()["code"] == "push_unavailable"
+
+
+async def test_test_push_is_audited_without_the_token(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    await enable_push_provider(session_factory)
+    await client.post(
+        "/admin/campaigns/test-push",
+        json={"token": "fcm-probe-token"},
+        headers=admin_headers,
+    )
+
+    logs = (
+        await client.get(
+            "/admin/settings/audit-logs?entity_type=push_test", headers=admin_headers
+        )
+    ).json()
+    assert len(logs) == 1
+    assert "fcm-probe-token" not in json.dumps(logs, ensure_ascii=False)
 
 
 # ------------------------------------------------------------ ساعات الهدوء

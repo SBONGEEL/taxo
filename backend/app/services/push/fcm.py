@@ -15,15 +15,22 @@
 منصة، ولذلك تُرسل الثلاثة معاً في كل رسالة: الحمولة واحدة والجهاز يقرأ ما
 يخصه.
 
-> ملاحظة تنفيذية: هذا المسار مبنيٌّ على توثيق FCM HTTP v1 العام، ولم يُختبر
-> على مشروع Firebase حقيقي في هذه الجلسة — لا بيانات عقد. **المزود الوهمي هو
-> ما بُني عليه النظام واختُبر** (SPEC القسم 15/أ). وخطأٌ هنا لا يكسر شيئاً
-> ماليّاً: الإرسال يُبتلع ويُسجَّل، والحدث وصل صاحبَه على WebSocket أصلاً.
+> **حالة التحقق (المرحلة 8).** بخلاف بقية مزودي هذه المرحلة، وصل عقد FCM
+> حقيقي فجُرِّب عليه المسار: مبادلةُ توكن OAuth بمفتاح حساب الخدمة تعمل، ونداء
+> `messages:send` يصل ويُصادَق عليه ويعود برفضٍ مقروء لرمز جهازٍ غير صالح
+> (`INVALID_ARGUMENT` → يُصنَّف رمزاً ميتاً). **الحلقة الوحيدة غير المُتحقَّق
+> منها هي وصولُ الإشعار إلى جهازٍ فعلي** — تحتاج رمز جهازٍ من تطبيقٍ مثبَّت،
+> ويُجرَّب بـ `POST /admin/campaigns/test-push`.
+>
+> وخطأٌ هنا لا يكسر شيئاً ماليّاً على أي حال: الإرسال يُبتلع ويُسجَّل، والحدث
+> وصل صاحبَه على WebSocket أصلاً. واختباراتُ السويت تجري على المزود الوهمي
+> (SPEC القسم 15/أ) — لا شبكةَ في اختبار.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Any
 
@@ -46,6 +53,8 @@ TOKEN_REFRESH_MARGIN_SECONDS = 120
 
 # ردود تعني «الرمز لم يعد يخص جهازاً»: تُعطَّل صفوفها ولا يُعاد الإرسال إليها
 UNREGISTERED_STATUSES = frozenset({"UNREGISTERED", "NOT_FOUND", "INVALID_ARGUMENT"})
+
+logger = logging.getLogger(__name__)
 
 
 class FcmPushProvider:
@@ -161,6 +170,13 @@ class FcmPushProvider:
                     continue
 
                 failed += 1
+                # نصُّ رفض المزود يُسجَّل ولا يُعرض: بغيره يصير كل فشلٍ
+                # «لم يصل» بلا سببٍ يُقرأ. ومقطوعٌ عمداً — الجواب قد يطول
+                logger.warning(
+                    "رفض FCM الإرسال (HTTP %s): %s",
+                    response.status_code,
+                    response.text[:400],
+                )
                 if self._is_unregistered(response):
                     invalid.append(token)
 

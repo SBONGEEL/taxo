@@ -15,7 +15,7 @@ from fastapi import APIRouter, Query
 
 from app.core.deps import AdminUser, DbSession
 from app.core.exceptions import InvalidInput
-from app.models.enums import CampaignStatus, CountryCode
+from app.models.enums import AuditAction, CampaignStatus, CountryCode
 from app.schemas.notification import (
     CampaignCreate,
     CampaignOut,
@@ -23,8 +23,11 @@ from app.schemas.notification import (
     DeliveryOut,
     NotificationSettingOut,
     NotificationSettingUpdate,
+    TestPushRequest,
+    TestPushResult,
 )
-from app.services import campaigns as campaigns_service
+from app.services import audit, campaigns as campaigns_service
+from app.services.push import PushMessage, get_push_provider
 
 router = APIRouter(prefix="/admin/campaigns", tags=["admin"])
 
@@ -115,6 +118,61 @@ async def list_deliveries(
         session, campaign_id, limit=limit, offset=offset
     )
     return [DeliveryOut.model_validate(row) for row in rows]
+
+
+# ------------------------------------------------------- إشعار تجريبي
+
+
+@router.post("/test-push", response_model=TestPushResult)
+async def send_test_push(
+    payload: TestPushRequest, admin: AdminUser, session: DbSession
+) -> TestPushResult:
+    """يرسل إشعاراً إلى **رمز جهازٍ يكتبه المشرف** — تحقّقٌ من العقد الحقيقي.
+
+    لماذا رمزٌ مكتوب لا مستخدمٌ مختار؟ لأن السلسلة تُختبر **قبل** أن يوجد
+    تطبيقٌ يسجّل أجهزته: بيدك رمزٌ من صفحة اختبار FCM أو من أول نسخة تجريبية،
+    فتعرف أن العقد وتوكن OAuth والشبكة والجهاز تعمل كلها — قبل أن يُبنى
+    الراكب والكبتن على افتراض أنها تعمل.
+
+    ولا يمر بقاعدة الاستثناء (`presence`) ولا بجدول الأجهزة: ذاك مسارُ
+    الإشعارات الحقيقية، وهذا مِجَسّ.
+    """
+    provider = await get_push_provider(session)
+    result = await provider.send(
+        [payload.token],
+        PushMessage(
+            title=payload.title,
+            body=payload.body,
+            data={"type": "test_push"},
+            high_priority=payload.high_priority,
+        ),
+    )
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="push_test",
+        # لا رمز في السجل: به يُرسل إشعارٌ باسم المنصة إلى جهاز صاحبه
+        details={"delivered": result.delivered, "failed": result.failed},
+    )
+    await session.commit()
+
+    invalid = bool(result.invalid_tokens)
+    if result.delivered:
+        detail = "أُرسل الإشعار — إن لم يظهر على الجهاز فالمشكلة في التطبيق لا في العقد"
+    elif invalid:
+        detail = "رفض المزود الرمز: غير مسجَّل أو غير صالح — راجع نسخ الرمز"
+    else:
+        detail = "لم يقبل المزود الإرسال — راجع سجل الخلفية"
+
+    return TestPushResult(
+        delivered=result.delivered,
+        failed=result.failed,
+        invalid_token=invalid,
+        provider=provider.provider_name,
+        detail=detail,
+    )
 
 
 # --------------------------------------------------------- ساعات الهدوء

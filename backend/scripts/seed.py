@@ -13,13 +13,15 @@ SPEC بأنه أول خطوة بعد تشغيل النظام (القسم 4). ا�
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from decimal import Decimal
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import REPO_ROOT, settings
 from app.core.currency import currency_for_country
 from app.core.db import SessionLocal, engine
 from app.core.phone import normalize_phone
@@ -265,6 +267,68 @@ async def seed_providers(session: AsyncSession) -> None:
     )
 
 
+async def seed_fcm(session: AsyncSession) -> None:
+    """يكتب عقد FCM من **مسار** ملف حساب الخدمة — مشفَّراً — إن لم يكن محفوظاً.
+
+    مسارٌ في البيئة لا محتوى: مفتاحُ RSA من ألفٍ وسبعمئة حرفٍ لا يُلصق في ملف
+    بيئة، والملفُّ نفسه في `secrets/` المُستثنى من Git. وما إن يُقرأ حتى يُكتب
+    مشفَّراً في `provider_credentials` ولا يُقرأ من القرص ثانيةً — نفس ما يفعله
+    الـ seed بتوكنات Mapbox (SPEC القسم 14).
+
+    و`use_mock` مطفأ صراحةً: العقد الحقيقي موجود، فلا معنى لمزودٍ وهمي بعده.
+    """
+    raw_path = os.environ.get("FCM_SERVICE_ACCOUNT_PATH", "").strip()
+    if not raw_path:
+        _log("تخطّي FCM — FCM_SERVICE_ACCOUNT_PATH غير معبّأ")
+        return
+
+    # المسار النسبي يُقاس من مجلد التشغيل أولاً ثم من جذر المستودع: الأول
+    # يخدم الحاوية (المجلد مربوط عند `/app/secrets`)، والثاني تشغيلاً محلياً
+    # من `backend/`. وكلاهما موضعٌ معلوم لا تخمين
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = next(
+            (
+                candidate
+                for base in (Path.cwd(), REPO_ROOT)
+                if (candidate := base / raw_path).is_file()
+            ),
+            path,
+        )
+    if not path.is_file():
+        _log(f"تخطّي FCM — لا ملف حساب خدمة عند {path}")
+        return
+
+    try:
+        account = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        _log(f"تخطّي FCM — الملف عند {path} ليس JSON صالحاً")
+        return
+
+    project_id = str(account.get("project_id") or "").strip()
+    if not project_id or not account.get("private_key"):
+        _log("تخطّي FCM — الملف ناقص project_id أو private_key")
+        return
+
+    if await credentials_service.get_credential(session, ProviderKey.FCM) is not None:
+        return
+
+    await credentials_service.upsert(
+        session,
+        provider_key=ProviderKey.FCM,
+        country_code=None,
+        values={
+            "project_id": project_id,
+            # النصُّ كما هو: `parse_service_account` يفكّه عند الإرسال
+            "service_account_json": path.read_text(encoding="utf-8"),
+            "use_mock": False,
+        },
+        is_active=True,
+        actor=None,
+    )
+    _log(f"عقد FCM: محفوظ ومفعّل — مشروع {project_id} (بلا مزود وهمي)")
+
+
 async def seed_bootstrap_admin(session: AsyncSession) -> None:
     """حساب المشرف الأول — بدونه لا يمكن الوصول للوحة أصلاً.
 
@@ -309,6 +373,7 @@ async def main() -> None:
         await seed_wallet_settings(session)
         await seed_plans(session)
         await seed_providers(session)
+        await seed_fcm(session)
         await seed_bootstrap_admin(session)
         await session.commit()
     await engine.dispose()

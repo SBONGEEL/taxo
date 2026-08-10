@@ -54,6 +54,30 @@ class DeliveryOut(BaseModel):
     sent_at: datetime | None
 
 
+class TestPushRequest(BaseModel):
+    """إشعار تجريبي إلى جهازٍ بعينه — أداةُ تحقّقٍ من العقد الحقيقي.
+
+    الرمز يُكتب هنا صراحةً ولا يُقرأ من الجدول: الغرض إثباتُ أن السلسلة
+    (عقد → توكن OAuth → FCM → الجهاز) تعمل **قبل** أن يوجد مستخدمٌ مسجَّل.
+    """
+
+    token: str = Field(min_length=8, max_length=512)
+    title: str = Field(default="TAXO — إشعار تجريبي", max_length=120)
+    body: str = Field(default="وصلك هذا الإشعار، فالسلسلة تعمل.", max_length=500)
+    high_priority: bool = False
+
+
+class TestPushResult(BaseModel):
+    """**200 حتى عند الفشل** — كزرّ اختبار الاتصال: المشرف سأل فعرف."""
+
+    delivered: int
+    failed: int
+    # رمزٌ ردّ عليه المزود «غير مسجَّل»: خطأٌ في النسخ أو جهازٌ حُذف عنه التطبيق
+    invalid_token: bool
+    provider: str
+    detail: str
+
+
 class NotificationSettingOut(BaseModel):
     """ساعات الهدوء per-country — بتوقيت الدولة لا بـ UTC."""
 
