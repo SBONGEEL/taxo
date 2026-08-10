@@ -510,16 +510,20 @@ async def test_support_cannot_refund(
 # ------------------------------------------------------------------- البطاقة
 
 
-async def test_card_is_a_known_channel_that_is_not_wired_yet(
+async def test_card_needs_a_provider_contract_not_just_the_flag(
     client: AsyncClient, jordan_settings: None, session_factory
 ) -> None:
-    """`card` في ENUM منذ الآن ومسارُه في المرحلة 6-ب — 501 لا 422."""
+    """البطاقة صارت مبنيّة في المرحلة 6-ب، فلم يبق لها 501.
+
+    مفتاحٌ مرفوعٌ بلا عقدٍ مفعّل يردّ 503 يدل على العقد، وغيابُ المفتاح يردّ 403
+    قراراً إدارياً. تدفّقُها كله في `test_card_payments.py`.
+    """
     await enable_features(session_factory, "card_enabled")
     rider, _driver, ride = await _ready_ride(client, session_factory)
 
     response = await pay_ride(client, rider["headers"], ride["id"], "card")
-    assert response.status_code == 501
-    assert response.json()["code"] == "feature_not_available"
+    assert response.status_code == 503
+    assert response.json()["code"] == "card_gateway_unavailable"
 
 
 # ------------------------------------------------------------------ الملكية

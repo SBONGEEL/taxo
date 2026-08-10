@@ -17,17 +17,16 @@ discrepancy nobody can tell from a bug.
 JWT), 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
 script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status endpoints), 4
 (Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events), 5 (the
-`wallet_transactions` ledger, rider topup/transfer, driver wallet and withdrawals) and **6-أ**
+`wallet_transactions` ledger, rider topup/transfer, driver wallet and withdrawals), **6-أ**
 (`payments` with cash/manual-CliQ/wallet/mixed and disputes, `ride_route_points` with `final_fare`
-recalculation, `ratings`) are complete. **Stage 6 is split in two at the external-provider line**:
-6-ب is the Telr Sandbox integration — hosted payment page, webhook signature verification, instant
-card wallet topup, filling `saved_cards` via tokenization, provider-side refunds. The `card`
-channel is already in the `payment_method` ENUM and answers 501 until then; adding an ENUM value to
-a live table later is a migration and a constraint edit, so the channel ships switched off rather
-than absent. Do not implement anything from a later stage unless the user asks for that stage. When
-a later-stage concern appears in current code (e.g. `dispatch.eligible_driver_ids` does not check
-for a valid subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming
-the stage rather than building ahead.
+recalculation, `ratings`) and **6-ب** (Telr card integration — `provider_orders`, hosted payment
+page, signed webhook, instant card wallet topup, `saved_cards` tokenization and one-tap pay,
+provider-side refunds) are complete. **The next stage is 7** (subscriptions: plans, purchase,
+dispatch check, Celery expiry). Do not implement anything from a later stage unless the user asks
+for that stage. When a later-stage concern appears in current code (e.g.
+`dispatch.eligible_driver_ids` does not check for a valid subscription because
+`driver_subscriptions` arrives in stage 7, and no Celery job sweeps stale `provider_orders` yet),
+leave a comment naming the stage rather than building ahead.
 
 **Any path that changes a row's status locks that row with `for_update` *before* it checks the
 transition.** Reading the row, validating `current → target`, then writing is not atomic on its own:
@@ -36,14 +35,25 @@ all pass the check, and all report success. Load the row with `select(...).with_
 .execution_options(populate_existing=True)` — see `topups.get_request` / `withdrawals.get_request`
 (`for_update=True`) and `rides.cancel_ride` (`session.refresh(..., with_for_update=True)`).
 
-**Lock order is always: the ride row, then the request/payment row, then the wallet advisory lock.**
-Every mutating path takes them in that order, which is why nothing deadlocks. Creating payments
-locks the ride (`payments._payable_ride`) so two concurrent requests cannot both read the same
-outstanding amount; every status change locks its own row (`topups`/`withdrawals.get_request`,
-`payments.get_payment` with `for_update=True`, `rides.cancel_ride`); ledger writes take the wallet
-lock last. No path takes a payment row lock and then a ride lock. When a single operation touches
-two wallets, their advisory locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a
-new lock means fitting it into this order, not inventing a second one.
+**Lock order is always: the ride row, then the request/payment row, then the provider-order row,
+then the wallet advisory lock.** Every mutating path takes them in that order, which is why nothing
+deadlocks. Creating payments locks the ride (`payments._payable_ride`) so two concurrent requests
+cannot both read the same outstanding amount; every status change locks its own row
+(`topups`/`withdrawals.get_request`, `payments.get_payment` with `for_update=True`,
+`rides.cancel_ride`); `card_payments._locked_order` locks the payment *before* the
+`provider_orders` row, because the admin refund path starts from the payment and then needs its
+provider order — reversing either side would deadlock the two against each other; ledger writes
+take the wallet lock last. No path takes a payment row lock and then a ride lock. When a single
+operation touches two wallets, their advisory locks are taken in sorted UUID order
+(`wallet._lock_wallets`). Adding a new lock means fitting it into this order, not inventing a
+second one.
+
+**Never hold a row lock across a provider HTTP call when the call can happen first.**
+`card_payments.reconcile` asks the provider *before* taking any lock, then applies the answer under
+it: two concurrent settlements each spend one harmless extra `check` instead of one waiting out the
+other's 20s network round-trip. Where the call genuinely must run inside the lock (opening an order
+under the ride row lock in `card_payments._start`), the lock scope is a single ride and the timeout
+is capped in `card_gateway/base.py`.
 
 Do not let an idempotency key stand in for either lock. It bounds the financial damage, but a guard
 that only works because the guard behind it also fired is a guard that has already failed — and
@@ -241,6 +251,32 @@ driver's empty wallet blocks confirmation rather than overdrawing. Earnings are 
 in the ledger; the reasoning is written into SPEC section 6. The frozen
 `commission_percent_at_ride` is never re-read from settings, but `applies_to` is read at payment
 time because it keys off the payment channel, which is unknowable at ride creation.
+
+**The card channel trusts exactly one source for money: the provider's answer to a backend-initiated
+call.** `services/card_gateway/` is a swappable strategy like `services/auth/`: `base.py` is the
+contract, `telr.py` is **the only module in the project that knows Telr's wire format** (field names,
+SHA-1 signature layout, order status codes), `mock.py` is the provider SPEC section 15 calls for, and
+`__init__.get_gateway()` is the single decision point — reading the Telr contract from
+`provider_credentials`, never `.env`, and refusing mock mode in production. A signed webhook is a
+wake-up call, not a source of truth: `card_payments.handle_webhook` verifies the signature, reads
+*only* the cart id from the payload, then calls `check_order` for the status and amount.
+`WebhookNotice` deliberately carries no amount so a network-supplied number cannot reach the ledger.
+All three entry points (webhook, client return lookup, one-tap charge) funnel into
+`card_payments.apply_state`, which is the only function in the channel that writes money.
+
+Because the Telr docs link SPEC section 6.4 promises was never delivered and no Sandbox credentials
+exist, three wire details in `telr.py` are best-reading-of-the-public-API and are flagged in its
+docstring as needing confirmation. They are deliberately arranged so that being wrong cannot move
+money wrongly: a bad signature layout rejects webhooks with a visible 400 while the client-return
+path still settles, and a bad stored-card charge returns 502 before any ledger write.
+
+**Card money never touches the rider's wallet.** `models/payment.py` has three method categories,
+not two: `DIRECTLY_COLLECTED_METHODS` (cash, CliQ — no `ride_earning` at all),
+`WALLET_FUNDED_METHODS` (wallet — the only channel that writes `ride_payment` against the rider),
+and card, which is in neither: the driver is credited but the rider is not debited, because his
+money left his card, not his balance. Refunds follow the same asymmetry — a card refund goes back
+through the provider (`provider_orders.refund_ref`) with no rider `refund` entry, while the driver's
+counter-`adjustment` is written either way.
 
 `services/ratings.py` recomputes `drivers.rating_avg` from the whole table after each rider rating
 instead of rolling an average forward, for the same reason wallet balance is summed from its ledger.

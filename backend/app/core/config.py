@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     location_rate_limit_requests: int = 30
     location_rate_limit_window_seconds: int = 60
 
+    # عنوانا العودة من صفحة الدفع المستضافة — عناوينُ نشرٍ لا أسرارُ مزود،
+    # فمكانها هنا لا في `provider_credentials`. الأول عنوان هذه الخلفية كما
+    # يراها العالم (يبنى عليه رابط المزود الوهمي)، والثاني صفحةُ الواجهة التي
+    # يعود إليها المتصفح ثم تسأل الخلفية عن الحال (SPEC القسم 6.4).
+    public_api_base_url: str = "http://localhost:8001"
+    card_return_url: str = "http://localhost:5173/payments/card/return"
+
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:5174",

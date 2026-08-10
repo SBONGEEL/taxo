@@ -19,6 +19,8 @@ from app.models.enums import (
     PaymentProvider,
     PaymentStatus,
     ProviderKey,
+    ProviderOrderPurpose,
+    ProviderOrderStatus,
     RatingRaterType,
     RideStatus,
     SubscriptionDurationType,
@@ -35,6 +37,7 @@ from app.models.feature_flag import FeatureFlag
 from app.models.payment import Payment, SavedCard
 from app.models.pricing import PricingRule
 from app.models.provider_credential import ProviderCredential
+from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
 from app.models.ride import Ride, RideRoutePoint
 from app.models.subscription import SubscriptionPlan
@@ -71,6 +74,9 @@ __all__ = [
     "PricingRule",
     "ProviderCredential",
     "ProviderKey",
+    "ProviderOrder",
+    "ProviderOrderPurpose",
+    "ProviderOrderStatus",
     "Rating",
     "RatingRaterType",
     "Ride",

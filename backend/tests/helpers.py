@@ -368,3 +368,68 @@ async def payments_of(client: AsyncClient, headers: dict, ride_id: str) -> dict:
     response = await client.get(f"/rides/{ride_id}/payments", headers=headers)
     assert response.status_code == 200, response.text
     return response.json()
+
+
+# ------------------------------------------------------------------ البطاقة
+
+
+TELR_STORE_ID = "test-store-42"
+TELR_AUTH_KEY = "test-auth-key"
+
+
+async def enable_card_provider(
+    session_factory: Any, *, use_mock: bool = True, country: str = "JO"
+) -> None:
+    """يُدخل عقد Telr للأردن ويفعّله — فيُرفع `card_enabled` تلقائياً.
+
+    عبر `credentials_service.upsert` لا بكتابةٍ مباشرة: مزامنةُ مفتاح الميزة مع
+    العقد جزءٌ من السلوك المُختبَر (SPEC القسم 4)، ولا يُقلَّد بيدٍ في اختبار.
+    """
+    from app.models.enums import CountryCode, ProviderKey
+    from app.services.providers import credentials as credentials_service
+
+    async with session_factory() as session:
+        await credentials_service.upsert(
+            session,
+            provider_key=ProviderKey.TELR,
+            country_code=CountryCode(country),
+            values={
+                "store_id": TELR_STORE_ID,
+                "auth_key": TELR_AUTH_KEY,
+                "test_mode": True,
+                "use_mock": use_mock,
+            },
+            is_active=True,
+        )
+        await session.commit()
+
+
+async def card_order_of(client: AsyncClient, headers: dict, cart_id: str) -> dict:
+    response = await client.get(f"/payments/card/orders/{cart_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def simulate_card(
+    client: AsyncClient, headers: dict, cart_id: str, outcome: str = "paid"
+) -> Any:
+    """يحاكي ضغطة الدافع على صفحة المزود الوهمي."""
+    return await client.post(
+        f"/payments/card/mock/{cart_id}",
+        json={"outcome": outcome},
+        headers=headers,
+    )
+
+
+def mock_webhook_payload(cart_id: str, *, store_id: str = TELR_STORE_ID) -> dict:
+    """حمولة إشعارٍ موقّعةً بتوقيع المزود الوهمي.
+
+    بلا مبلغ ولا حالة عمداً: الخلفية لا تقرأ منهما شيئاً أصلاً، وحمولةٌ تحملهما
+    في اختبارٍ توهم أنها تُقرأ.
+    """
+    return {
+        "tran_store": store_id,
+        "tran_cartid": cart_id,
+        "tran_ref": f"mock-{cart_id}",
+        "tran_check": f"mock-check-{cart_id}",
+    }

@@ -16,12 +16,17 @@ from app.core.deps import CurrentDriver, CurrentUser, DbSession, RiderUser
 from app.models.enums import PaymentMethod
 from app.models.ride import Ride
 from app.schemas.payment import (
+    CardOrderOut,
     PaymentCreate,
     PaymentDisputeRequest,
     PaymentOut,
     RidePaymentsOut,
 )
-from app.services import payments as payments_service, rides as rides_service
+from app.services import (
+    card_payments as card_service,
+    payments as payments_service,
+    rides as rides_service,
+)
 
 router = APIRouter(tags=["payments"])
 
@@ -31,6 +36,8 @@ async def _ride_payments_out(session: AsyncSession, ride: Ride) -> RidePaymentsO
     entries = await payments_service.list_for_ride(session, ride.id)
     # alias الكبتن لا يظهر إلا حيث يُحتاج فعلاً: مع دفعة كليك قائمة
     needs_alias = any(entry.method == PaymentMethod.CLIQ for entry in entries)
+    # وطلبُ البطاقة لا يظهر إلا وهو معلّق: منه يبني العميل «متابعة الدفع»
+    open_order = await card_service.open_order_for_ride(session, ride.id)
 
     return RidePaymentsOut(
         ride_id=ride.id,
@@ -40,6 +47,9 @@ async def _ride_payments_out(session: AsyncSession, ride: Ride) -> RidePaymentsO
         payments=[PaymentOut.model_validate(entry) for entry in entries],
         cliq_alias=(
             ride.driver.cliq_alias if needs_alias and ride.driver is not None else None
+        ),
+        card_order=(
+            CardOrderOut.model_validate(open_order) if open_order is not None else None
         ),
     )
 
@@ -67,7 +77,9 @@ async def pay_ride(
     """يختار الراكب قناة الدفع بعد اكتمال الرحلة.
 
     المحفظة تُخصم فوراً وقد تنقسم إلى دفعٍ مختلط (القسم 6)، والكاش وكليك
-    ينتظران تأكيد الكبتن. لذلك يعيد المسار **حال الرحلة كلها** لا دفعةً واحدة.
+    ينتظران تأكيد الكبتن، والبطاقة تعيد `card_order` برابط صفحة الدفع — أو
+    تُحسم فوراً إن كانت على بطاقة محفوظة (القسم 6.4). لذلك يعيد المسار **حال
+    الرحلة كلها** لا دفعةً واحدة.
     """
     await payments_service.pay_ride(
         session,
@@ -75,6 +87,8 @@ async def pay_ride(
         rider=rider,
         method=payload.method,
         idempotency_key=payload.idempotency_key,
+        save_card=payload.save_card,
+        saved_card_id=payload.saved_card_id,
     )
     await session.commit()
 

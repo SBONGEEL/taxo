@@ -224,28 +224,45 @@ async def seed_providers(session: AsyncSession) -> None:
 
     store_id = os.environ.get("TELR_STORE_ID", "").strip()
     auth_key = os.environ.get("TELR_AUTH_KEY", "").strip()
+    # مزودٌ وهمي حتى يصل حساب Sandbox (SPEC القسم 15): يشغّل مسار البطاقة كاملاً
+    # بلا شبكة. **صريحٌ لا افتراضي**: قناةُ دفعٍ لا تُفتَح بالسكوت، ولا يُفعَّل
+    # مزودٌ يقول «دُفع» بلا مال إلا بطلب صاحب البيئة.
+    use_mock = os.environ.get("TELR_USE_MOCK", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
 
-    if store_id and auth_key:
-        existing = await credentials_service.get_credential(
-            session, ProviderKey.TELR, CountryCode.JO
-        )
-        if existing is None:
-            # تفعيله يرفع card_enabled للأردن تلقائياً
-            await credentials_service.upsert(
-                session,
-                provider_key=ProviderKey.TELR,
-                country_code=CountryCode.JO,
-                values={
-                    "store_id": store_id,
-                    "auth_key": auth_key,
-                    "test_mode": True,
-                },
-                is_active=True,
-                actor=None,
-            )
-            _log("عقد Telr Sandbox (الأردن): محفوظ ومفعّل")
-    else:
-        _log("تخطّي Telr — TELR_STORE_ID/TELR_AUTH_KEY غير معبّأين")
+    if not (store_id and auth_key) and not use_mock:
+        _log("تخطّي Telr — TELR_STORE_ID/TELR_AUTH_KEY غير معبّأين (وTELR_USE_MOCK مطفأ)")
+        return
+
+    existing = await credentials_service.get_credential(
+        session, ProviderKey.TELR, CountryCode.JO
+    )
+    if existing is not None:
+        return
+
+    # تفعيله يرفع card_enabled للأردن تلقائياً
+    await credentials_service.upsert(
+        session,
+        provider_key=ProviderKey.TELR,
+        country_code=CountryCode.JO,
+        values={
+            # قيمتان لازمتان في العقد حتى مع المزود الوهمي: الحقلان مطلوبان في
+            # سجل المزود، ومطابقةُ الـ webhook تقع على `store_id`
+            "store_id": store_id or "mock-store",
+            "auth_key": auth_key or "mock-auth-key",
+            "test_mode": True,
+            "use_mock": use_mock,
+        },
+        is_active=True,
+        actor=None,
+    )
+    _log(
+        "عقد Telr (الأردن): محفوظ ومفعّل — "
+        + ("مزود وهمي" if use_mock else "Sandbox")
+    )
 
 
 async def seed_bootstrap_admin(session: AsyncSession) -> None:

@@ -66,6 +66,15 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
                 secret=False,
                 required=False,
             ),
+            # مزودٌ وهمي بلا شبكة ولا حساب (SPEC القسم 15): يُشغّل مسار البطاقة
+            # كاملاً للتجربة والاختبار قبل وصول بيانات Sandbox. يُتجاهل في
+            # الإنتاج — انظر `services/card_gateway/__init__.py`.
+            ProviderField(
+                key="use_mock",
+                label="مزود وهمي (تطوير واختبار فقط)",
+                secret=False,
+                required=False,
+            ),
         ),
         feature_key=FeatureKey.CARD_ENABLED,
         per_country=True,

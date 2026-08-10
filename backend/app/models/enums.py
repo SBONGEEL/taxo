@@ -83,6 +83,31 @@ class PaymentProvider(StrEnum):
     TELR = "telr"
 
 
+class ProviderOrderPurpose(StrEnum):
+    """لماذا فُتح طلبٌ لدى مزود الدفع (SPEC القسم 6.4/7).
+
+    غرضان لا ثالث لهما، وكلٌّ منهما يستقر في مكانٍ مختلف عند النجاح: أجرةُ
+    رحلة تستقر في صفّ `payments`، وشحنُ محفظة يستقر في قيد `topup` مباشرةً بلا
+    طلبِ شحنٍ ينتظر إنساناً — شحن البطاقة فوريٌّ آلي (القسم 7).
+    """
+
+    RIDE_PAYMENT = "ride_payment"
+    WALLET_TOPUP = "wallet_topup"
+
+
+class ProviderOrderStatus(StrEnum):
+    """حالة الطلب لدى المزود.
+
+    `created` تعني «فُتح ولم يُحسم»: الراكب على صفحة الدفع أو غادرها. الحسم
+    يأتي من المزود وحده — بـ webhook أو باستعلامٍ من الخلفية — لا من العميل.
+    """
+
+    CREATED = "created"
+    PAID = "paid"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 class PaymentStatus(StrEnum):
     """`pending → confirmed | failed | disputed | refunded` (SPEC القسم 4)."""
 

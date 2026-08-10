@@ -1,22 +1,26 @@
 """تحصيل أجرة الرحلة (SPEC القسم 6/9).
 
-أربع قنوات وسلوكان اثنان لا أكثر:
+أربع قنوات وثلاثة سلوكات:
 
 - **يقبضها الكبتن بيده** (كاش، كليك): لا يمر المال بنا، فلا قيد `ride_earning`
   له في الدفتر (القسم 9). الدفعة `pending` حتى يضغط الكبتن «استلمت»، وفي كليك
   وحدها له أن يضغط «لم يصلني» فتصير `disputed` وتنتقل للوحة الإدارة.
-- **يمر المال بالمنصة** (محفظة، وبطاقة في المرحلة 6-ب): يُخصم من الراكب
-  ويُقيَّد للكبتن في نفس المعاملة.
+- **يمر المال بالمنصة من محفظة الراكب** (المحفظة): يُخصم منه ويُقيَّد للكبتن في
+  نفس المعاملة.
+- **يمر المال بالمنصة من غير محفظة الراكب** (البطاقة، المرحلة 6-ب): يُقيَّد
+  للكبتن ولا يُخصم من محفظة الراكب — مالُه خرج من بطاقته لا من رصيده، فقيدُ
+  خصمٍ عليه خصمٌ ثانٍ. تسويةُ هذه القناة كلها في `services/card_payments.py`،
+  وهي تنتهي إلى `settle` هنا كما تنتهي إليه بقية القنوات.
 
 **الدفع المختلط** (القسم 6) ليس قناةً خامسة بل نتيجةُ رصيدٍ جزئي: يدفع الراكب
 ما في محفظته ويبقى الباقي كاشاً — صفّان على رحلة واحدة، أولهما `confirmed`
 فوراً والثاني ينتظر الكبتن.
 
-**ترتيب الأقفال: صف الرحلة ← صف الدفعة ← القفل الاستشاري للمحفظة.** إنشاء
-الدفعات يقفل الرحلة (فلا ينشئ طلبان متزامنان دفعتين لنفس المبلغ)، وكل تغيير
-حالةٍ يقفل صف الدفعة **قبل** فحص الانتقال (فلا يمر تأكيدان معاً على `pending`
-واحدة)، والقيود المالية تأخذ قفل المحفظة أخيراً. لا مسار يعكس هذا الترتيب،
-فلا جمود.
+**ترتيب الأقفال: صف الرحلة ← صف الدفعة ← صف طلب المزود ← القفل الاستشاري
+للمحفظة.** إنشاء الدفعات يقفل الرحلة (فلا ينشئ طلبان متزامنان دفعتين لنفس
+المبلغ)، وكل تغيير حالةٍ يقفل صف الدفعة **قبل** فحص الانتقال (فلا يمر تأكيدان
+معاً على `pending` واحدة)، وطلبُ المزود يُقفل بعد دفعته، والقيود المالية تأخذ
+قفل المحفظة أخيراً. لا مسار يعكس هذا الترتيب، فلا جمود.
 
 الـ commit مسؤولية الراوتر: دفعةٌ وقيدُها لا يُثبَّت نصفهما.
 """
@@ -35,7 +39,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
     FeatureDisabled,
-    FeatureNotAvailable,
     InsufficientBalance,
     InvalidInput,
     InvalidPaymentTransition,
@@ -55,11 +58,13 @@ from app.models.enums import (
     PaymentMethod,
     PaymentStatus,
     RideStatus,
+    UserRole,
     WalletTransactionType,
 )
 from app.models.payment import (
     DIRECTLY_COLLECTED_METHODS,
     OWING_PAYMENT_STATUSES,
+    WALLET_FUNDED_METHODS,
     Payment,
 )
 from app.models.ride import Ride
@@ -95,8 +100,16 @@ REFUNDABLE_METHODS: tuple[PaymentMethod, ...] = (
 )
 
 
+STAFF_ROLES: tuple[UserRole, ...] = (UserRole.ADMIN, UserRole.SUPPORT)
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def is_staff(user: User) -> bool:
+    """من يقرأ سجلات غيره بحكم دوره (SPEC القسم 13.8)."""
+    return user.role in STAFF_ROLES
 
 
 # ------------------------------------------------------------------ القراءة
@@ -108,7 +121,7 @@ async def get_payment(
     """`for_update` إلزامي لكل مسار يغيّر الحالة.
 
     بدونه تقرأ ضغطتان متزامنتان على «استلمت المبلغ» الحالةَ `pending` معاً قبل
-    أن يُثبّت أيّهما تغييره، فتمر كلتاهما من `_require_transition` ولا يمنع
+    أن يُثبّت أيّهما تغييره، فتمر كلتاهما من `require_transition` ولا يمنع
     القيدَ المزدوج إلا مفتاح عدم التكرار — والحارس لا يُترك حارساً وحيداً.
     نفس نهج `topups.get_request` و`withdrawals.get_request`.
     """
@@ -166,7 +179,8 @@ async def outstanding_amount(session: AsyncSession, ride: Ride) -> Decimal:
 # ------------------------------------------------------------------ الإنشاء
 
 
-def _require_transition(payment: Payment, target: PaymentStatus) -> None:
+def require_transition(payment: Payment, target: PaymentStatus) -> None:
+    """يُفحص **بعد** قفل صف الدفعة لا قبله — انظر `get_payment`."""
     if target not in ALLOWED_TRANSITIONS[payment.status]:
         raise InvalidPaymentTransition(
             f"لا يمكن الانتقال من «{payment.status.value}» إلى «{target.value}»"
@@ -226,10 +240,14 @@ async def pay_ride(
     rider: User,
     method: PaymentMethod,
     idempotency_key: str,
+    save_card: bool = False,
+    saved_card_id: uuid.UUID | None = None,
 ) -> Sequence[Payment]:
     """يفتح دفعات الرحلة بالقناة المختارة ويعيدها كلها.
 
     قد ترجع صفّين: رصيدٌ جزئي في المحفظة يعني دفعاً مختلطاً (القسم 6).
+    `save_card` و`saved_card_id` للبطاقة وحدها (القسم 6.4)، وتتجاهلهما بقية
+    القنوات: خيارُ حفظ بطاقةٍ في دفعةٍ نقدية لا معنى له فلا يُعطى معنى.
     """
     ride = await _payable_ride(session, ride_id)
     if ride.rider_id != rider.id:
@@ -248,9 +266,22 @@ async def pay_ride(
     await _require_method_enabled(session, ride, method)
 
     if method == PaymentMethod.CARD:
-        # البطاقة في ENUM منذ الآن وشاشتُها تعرضها، لكن مسارها (صفحة Telr
-        # والـ webhook والبطاقات المحفوظة) هو المرحلة 6-ب
-        raise FeatureNotAvailable("الدفع بالبطاقة يأتي مع تفعيل تكامل Telr")
+        # استيرادٌ داخل الدالة عمداً: `card_payments` يستورد هذا الملف ليصل إلى
+        # `settle` — وهو الاتجاه الصحيح، فالبطاقة تبني على التسوية لا العكس.
+        # استيرادُها هنا يكسر الحلقة في نقطةٍ واحدة معلومة بدل أن يوزّع
+        # الاعتماد على الطبقتين.
+        from app.services import card_payments
+
+        await card_payments.start_ride_payment(
+            session,
+            ride=ride,
+            rider=rider,
+            amount=outstanding,
+            idempotency_key=idempotency_key,
+            save_card=save_card,
+            saved_card_id=saved_card_id,
+        )
+        return await list_for_ride(session, ride.id)
 
     if method == PaymentMethod.WALLET:
         payments = await _pay_from_wallet(
@@ -346,7 +377,7 @@ async def _pay_from_wallet(
     await session.flush()
 
     # الخصم فوري: المحفظة قناةٌ لا تنتظر تأكيد أحد
-    await _settle(
+    await settle(
         session,
         payment=payments[0],
         ride=ride,
@@ -400,7 +431,7 @@ async def _commission_for(
     return percent
 
 
-async def _settle(
+async def settle(
     session: AsyncSession,
     *,
     payment: Payment,
@@ -411,9 +442,15 @@ async def _settle(
 ) -> None:
     """يثبّت الدفعة `confirmed` ويكتب قيودها في الدفتر.
 
+    بابُ التسوية لكل القنوات: يدخله الكبتن بضغطة «استلمت»، وتدخله المحفظة
+    فوراً، وتدخله البطاقة من `card_payments.apply_state` بعد جواب المزود. حالةٌ
+    واحدة تُكتب في مكان واحد.
+
     ثلاثة قيود ممكنة لكل دفعة، كلها بمفاتيح مشتقة من مُعرّفها فلا تتكرر:
 
-    - `ride_payment` خصماً من الراكب — للقنوات التي يمر مالها بنا وحدها.
+    - `ride_payment` خصماً من الراكب — **للمحفظة وحدها** (`WALLET_FUNDED_METHODS`).
+      البطاقة تمر بالمنصة ولا تمر بالمحفظة: مالُها خرج من بطاقة الراكب إلى
+      المزود، فقيدُ خصمٍ على رصيده يخصم منه مرتين.
     - `ride_earning` إضافةً للكبتن **بكامل المبلغ**، ثم `commission` خصماً
       بنسبتها. القسم 6.3 يصف نصيب الكبتن صافياً، والقسم 9 يكتب الرصيد
       «أرباح − عمولات»: القيدان المنفصلان يعطيان نفس الصافي ويُبقيان العمولة
@@ -424,11 +461,12 @@ async def _settle(
       محفظةٌ فارغة تعني رفضَ التأكيد برسالة صريحة: المحفظة مسبقة الدفع لا
       تُسحب على المكشوف (القسم 4).
     """
+    require_transition(payment, PaymentStatus.CONFIRMED)
     payment.status = PaymentStatus.CONFIRMED
     payment.confirmed_by = confirmed_by
     payment.confirmed_at = _now()
 
-    if payment.method not in DIRECTLY_COLLECTED_METHODS:
+    if payment.method in WALLET_FUNDED_METHODS:
         entry = await wallet.record(
             session,
             owner=rider,
@@ -492,9 +530,9 @@ async def confirm_by_driver(
     if payment.method not in DIRECTLY_COLLECTED_METHODS:
         raise InvalidPaymentTransition("هذه الدفعة تُحصَّل آلياً ولا تحتاج تأكيدك")
 
-    _require_transition(payment, PaymentStatus.CONFIRMED)
+    require_transition(payment, PaymentStatus.CONFIRMED)
     rider = await session.get(User, ride.rider_id)
-    await _settle(
+    await settle(
         session,
         payment=payment,
         ride=ride,
@@ -522,7 +560,7 @@ async def dispute_by_driver(
     if not reason.strip():
         raise InvalidInput("سبب النزاع مطلوب")
 
-    _require_transition(payment, PaymentStatus.DISPUTED)
+    require_transition(payment, PaymentStatus.DISPUTED)
     payment.status = PaymentStatus.DISPUTED
     payment.dispute_reason = reason.strip()
     payment.disputed_at = _now()
@@ -561,7 +599,7 @@ async def resolve_dispute(
         if resolution == DisputeResolution.PAID
         else PaymentStatus.FAILED
     )
-    _require_transition(payment, target)
+    require_transition(payment, target)
 
     payment.resolution = resolution
     payment.resolution_note = (note or "").strip() or None
@@ -571,7 +609,7 @@ async def resolve_dispute(
     if target == PaymentStatus.CONFIRMED:
         ride = await _ride_of(session, payment)
         rider = await session.get(User, ride.rider_id)
-        await _settle(
+        await settle(
             session,
             payment=payment,
             ride=ride,
@@ -597,11 +635,17 @@ async def resolve_dispute(
 async def refund(
     session: AsyncSession, *, payment: Payment, actor: User, reason: str
 ) -> Payment:
-    """يعيد دفعةً مرّ مالها بالمنصة إلى محفظة الراكب (SPEC القسم 6).
+    """يعيد دفعةً مرّ مالها بالمنصة إلى حيث خرج (SPEC القسم 6/6.4).
 
-    قيدان متقابلان لا محوٌ لقيد: `refund` للراكب بكامل المبلغ، و`adjustment`
-    مضاد على الكبتن بصافي ما قُيّد له (المبلغ − العمولة) — الدفتر لا يُعدَّل
-    ولا يُحذف منه، فالردّ قيدٌ جديد (القسم 4).
+    **الردُّ يعود من حيث جاء المال، لا إلى المحفظة دائماً:**
+
+    - المحفظة: قيد `refund` بكامل المبلغ في محفظة الراكب.
+    - البطاقة: ردٌّ **عند المزود** إلى نفس البطاقة (`card_payments`)، فلا قيد
+      للراكب في الدفتر — مالُه لم يدخل رصيده أصلاً، فردُّه إليه رصيداً يمنحه
+      مرتين. هذا ما تعنيه «الاسترداد عبر المزود» في المرحلة 6-ب.
+
+    وفي الحالتين `adjustment` مضاد على الكبتن بصافي ما قُيّد له (المبلغ −
+    العمولة): الدفتر لا يُعدَّل ولا يُحذف منه، فالردُّ قيدٌ جديد (القسم 4).
 
     الكاش وكليك خارج هذا الباب: مالهما لم يدخل المنصة أصلاً فلا تملك ردّه.
     """
@@ -609,23 +653,32 @@ async def refund(
         raise InvalidPaymentTransition(
             "الكاش وكليك يقبضهما الكبتن مباشرة — لا استرداد لهما من المنصة"
         )
-    _require_transition(payment, PaymentStatus.REFUNDED)
+    require_transition(payment, PaymentStatus.REFUNDED)
     if not reason.strip():
         raise InvalidInput("سبب الاسترداد مطلوب")
 
     ride = await _ride_of(session, payment)
     rider = await session.get(User, ride.rider_id)
 
-    await wallet.record(
-        session,
-        owner=rider,
-        tx_type=WalletTransactionType.REFUND,
-        amount=payment.amount,
-        ride_id=ride.id,
-        reference=reason.strip(),
-        created_by=actor.id,
-        idempotency_key=f"refund:{payment.id}",
-    )
+    if payment.method in WALLET_FUNDED_METHODS:
+        await wallet.record(
+            session,
+            owner=rider,
+            tx_type=WalletTransactionType.REFUND,
+            amount=payment.amount,
+            ride_id=ride.id,
+            reference=reason.strip(),
+            created_by=actor.id,
+            idempotency_key=f"refund:{payment.id}",
+        )
+    else:
+        # ردُّ المزود أولاً: لو رفضه ارتدّ الطلب كله ولم تُوسم الدفعة مردودةً
+        # ولم يُخصم من الكبتن — صفٌّ يقول «مردود» ومالٌ لم يُردّ أسوأ من فشلٍ
+        from app.services import card_payments
+
+        await card_payments.refund_via_provider(
+            session, payment=payment, reason=reason.strip()
+        )
 
     driver_user = await _driver_user(session, ride)
     if driver_user is not None:

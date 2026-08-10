@@ -6,6 +6,7 @@ from app.routers import (
     admin_settings,
     admin_wallets,
     auth,
+    card_payments,
     config,
     drivers,
     payments,
@@ -20,6 +21,7 @@ api_router.include_router(auth.router)
 api_router.include_router(drivers.router)
 api_router.include_router(rides.router)
 api_router.include_router(payments.router)
+api_router.include_router(card_payments.router)
 api_router.include_router(wallet.router)
 api_router.include_router(admin_settings.router)
 api_router.include_router(admin_providers.router)

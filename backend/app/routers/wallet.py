@@ -12,6 +12,7 @@ from app.core.exceptions import NotFound, RateLimited
 from app.core.phone import InvalidPhoneNumber, resolve_phone
 from app.models.enums import UserRole, WalletOwnerType, WalletTransactionType
 from app.models.user import User
+from app.schemas.payment import CardOrderOut, CardTopupCreate
 from app.schemas.wallet import (
     DriverWalletOut,
     TopupRequestCreate,
@@ -23,7 +24,13 @@ from app.schemas.wallet import (
     WithdrawalCreate,
     WithdrawalOut,
 )
-from app.services import settings_service, topups, wallet as wallet_service, withdrawals
+from app.services import (
+    card_payments,
+    settings_service,
+    topups,
+    wallet as wallet_service,
+    withdrawals,
+)
 
 router = APIRouter(prefix="/wallet", tags=["wallet"])
 
@@ -31,6 +38,10 @@ router = APIRouter(prefix="/wallet", tags=["wallet"])
 # أداةَ مسحٍ لدليل هواتف (SPEC القسم 14)
 RECIPIENT_LOOKUP_LIMIT = 20
 RECIPIENT_LOOKUP_WINDOW_SECONDS = 300
+
+# فتحُ عملية شحنٍ بالبطاقة نداءٌ لمزود خارجي — سقفٌ يكفي المحاولات المعقولة
+CARD_TOPUP_LIMIT = 10
+CARD_TOPUP_WINDOW_SECONDS = 300
 
 
 async def _wallet_out(session, user: User) -> WalletOut:
@@ -168,6 +179,46 @@ async def create_topup_request(
     )
     await session.commit()
     return TopupRequestOut.model_validate(request)
+
+
+@router.post(
+    "/me/topups/card",
+    response_model=CardOrderOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_card_topup(
+    payload: CardTopupCreate,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> CardOrderOut:
+    """شحن بالبطاقة — فوريٌّ آلي فلا يمر بطلبٍ ينتظر إنساناً (SPEC القسم 7).
+
+    مساره الخاص لا `POST /me/topups`: ذاك يعيد صفَّ طلبٍ معلّق، وهذا يعيد رابط
+    صفحة الدفع (أو حالاً نهائية إن كانت على بطاقة محفوظة). ردّان مختلفان
+    لعمليتين مختلفتين — ودمجُهما في مسار واحد يعني حقولاً فارغة في كل ردّ.
+
+    وله سقفٌ لكل مستخدم: كل نداءٍ يفتح عملية عند مزود خارجي، فمسارٌ بلا سقف
+    مسارٌ يُغرق المزود بحسابنا (القسم 14).
+    """
+    limit = await rate_limit.hit(
+        redis,
+        f"wallet:card-topup:{user.id}",
+        limit=CARD_TOPUP_LIMIT,
+        window_seconds=CARD_TOPUP_WINDOW_SECONDS,
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
+    order = await card_payments.start_wallet_topup(
+        session,
+        owner=user,
+        amount=payload.amount,
+        save_card=payload.save_card,
+        saved_card_id=payload.saved_card_id,
+    )
+    await session.commit()
+    return CardOrderOut.model_validate(order)
 
 
 # -------------------------------------------------------------------- السحب
