@@ -23,6 +23,32 @@ concern appears in current code (e.g. `dispatch.eligible_driver_ids` does not ch
 subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming the stage
 rather than building ahead.
 
+**Any path that changes a row's status locks that row with `for_update` *before* it checks the
+transition.** Reading the row, validating `current → target`, then writing is not atomic on its own:
+under Postgres' READ COMMITTED default, concurrent requests all read the same pre-commit status,
+all pass the check, and all report success. Load the row with `select(...).with_for_update()
+.execution_options(populate_existing=True)` — see `topups.get_request` / `withdrawals.get_request`
+(`for_update=True`) and `rides.cancel_ride` (`session.refresh(..., with_for_update=True)`).
+
+**Lock order is always: the request row first, then the wallet advisory lock.** Every mutating path
+takes them in that order, which is why nothing deadlocks. When a single operation touches two
+wallets, their advisory locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a new
+lock means fitting it into this order, not inventing a second one.
+
+Do not let an idempotency key stand in for either lock. It bounds the financial damage, but a guard
+that only works because the guard behind it also fired is a guard that has already failed — and
+this exact defect shipped in stage 5 and was caught only by a concurrency test.
+
+**A stage that touches money or state transitions is not done without a concurrency test.**
+Sequential request-then-assert tests never enter the code path the locks exist for, so they prove
+nothing about them. Fire the requests together with `asyncio.gather` against the `client` fixture
+(same event loop, separate session and transaction per request, so one really waits on the other's
+lock in Postgres) and assert the invariant, not the timing: exactly N of M succeed, the losers carry
+the *specific* error code, the ledger sum read straight from the database matches, and no
+`balance_after` is negative. For deadlock, wrap the gather in `asyncio.wait_for` — a deadlock hangs
+rather than raising, so only a timeout can fail the test. `tests/test_wallet_concurrency.py` is the
+model to copy.
+
 **User-facing strings, comments, and docs are in Arabic.** Identifiers stay English. Match this.
 
 ## Commands
@@ -195,13 +221,6 @@ correction is an opposing `adjustment` entry, never an edit; `TRUNCATE` does not
 so the test cleanup still works. The amount's sign is dictated by its type via a CHECK built from
 the same `CREDIT_TYPES`/`DEBIT_TYPES` tuples the service validates against, and `balance_after >= 0`
 is enforced in the database too.
-
-**Anything that changes a topup or withdrawal status must load the row with `for_update=True`**
-(`topups.get_request` / `withdrawals.get_request`), the same way `rides.cancel_ride` locks its row.
-Under READ COMMITTED, concurrent requests otherwise all read the pre-commit status, all pass
-`_require_transition`, and all return 200 — `tests/test_wallet_concurrency.py` caught exactly that.
-The idempotency key still prevented a double debit, but a guard must not be left leaning on the one
-behind it. Lock order is always request row → wallet advisory lock, uniformly, so nothing deadlocks.
 
 Idempotency (SPEC section 14) is a `UNIQUE (owner_id, idempotency_key)` on the ledger: the client
 sends the key on a transfer, and `topups`/`withdrawals` derive one from the request id
