@@ -28,8 +28,9 @@ integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ pa
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
 written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-app/`) is in
-progress and reviewed three screens at a time** — the first session shipped the scaffolding plus
-login and password recovery. Do not implement anything from a later stage unless the user asks for
+progress and reviewed three screens at a time** — scaffolding + login/password recovery, then
+registration in three steps, then the home screen with the offer card and the active ride. Do not
+implement anything from a later stage unless the user asks for
 that stage. When a later-stage concern appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
 admin panel lands in stage 11 while its endpoints already exist), leave a comment naming the stage
@@ -118,6 +119,16 @@ docker compose logs -f backend
 curl http://localhost:8001/health     # reports db + redis status; also the container healthcheck
 ```
 
+**A change to `requirements.txt` needs `docker compose build backend` *and then*
+`docker compose up -d backend` — never `restart`.** The source tree is bind-mounted, so code edits are
+picked up live and it is easy to assume dependencies are too; they are not. `restart` starts the same
+container from the same image, so a newly declared package is simply absent. And **the test suite will
+not catch it**: `docker compose run` builds a fresh container from the image each time, so tests pass
+against the new dependency while the long-running service still crashes on it. This shipped once —
+stage 9-ب added `python-multipart`, the suite went green, and the running backend answered every
+request with `RuntimeError: Form data requires "python-multipart"` until the container was recreated.
+Same rule for `worker` and `beat`: they run the same image.
+
 `driver-app` (stage 10) is the captain PWA on **5174**, same shape as `customer-app` — a
 `node:22-alpine` container running Vite, `node_modules` in a named volume. Its
 `tailwind.config.js` is copied verbatim from `design/DESIGN.md` §6, which is the source: scale keys
@@ -125,6 +136,13 @@ are pixel values (`text-14.5`, `p-16`, `rounded-13`) and Tailwind's own scales a
 extended**, so `text-sm` or `p-4` is a build error rather than a silent drift to the nearest default.
 Dark is the default and does not follow the system — a captain works for hours with the screen in the
 car, and a theme that flips at sunset whitens his screen in a tunnel.
+
+The pixel scale stops you writing the *wrong* value; `npm run check:scale` (wired into
+`npm run build`) stops you writing a *missing* one. A class whose key is absent from the scale —
+`size-33` when 33 is not in `spacing` — is not an error to Tailwind: it emits nothing, the element
+comes out with no size at all, and the build stays green. That shipped once in the first session that
+built the home screen, four classes deep. The script reads the scales from `tailwind.config.js`
+itself, so it cannot drift from them.
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`

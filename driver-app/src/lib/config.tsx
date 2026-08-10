@@ -94,6 +94,11 @@ export function firebaseConfigOf(
   };
 }
 
+/** التوكن العام للخرائط — من عقد Mapbox عبر `/config`، لا من `.env`. */
+export function useMapboxToken(): string | null {
+  return useConfig().config?.providers.mapbox?.public_token ?? null;
+}
+
 /** دولةُ شاشات ما قبل الدخول وبادئتُها — من `GET /config` وحده.
 
  * لا حسابَ بعدُ فلا دولةَ معروفة، والتصميم بلا منتقي دول؛ فالخلفية تنشر

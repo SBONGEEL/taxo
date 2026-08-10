@@ -1,0 +1,140 @@
+/** بطاقة الطلب الواردة — SPEC القسم 12/3، وشكلُها من `DESIGN.md` §2.10/5.3.
+ *
+ * **العدّاد يُحسب من لحظة الانتهاء لا بعدّ تنازلي مستقل**: عدّادٌ ينقص كل
+ * ثانية ينجرف مع كل إعادة رسم، وبطاقةٌ مهلتُها عشرون ثانية لا تحتمل انجرافاً.
+ * والمهلة نفسها من الخلفية (`expires_in_seconds`) لا رقمٌ مكتوبٌ هنا.
+ *
+ * والحلقة من §2.10 حرفاً: SVG بـ`viewBox="0 0 56 56"` مُدارةٌ `-90deg`،
+ * دائرتان `r=26` بعرض 3.5، و`stroke-dasharray: 163`، والإزاحة
+ * `(1 − المتبقي/الكل) × 163` بانتقالٍ `1s linear`.
+ *
+ * ولا تحمل هوية الراكب: نقطةُ الانطلاق والمسافة إليها والسعر والمهلة فقط.
+ */
+
+import { useEffect, useState } from "react";
+
+import type { Offer } from "@/lib/ride";
+import { arabicDigits } from "@/lib/utils";
+
+const DASH = 163;
+
+interface Props {
+  offer: Offer;
+  currencyLabel: string;
+  categoryLabel: string;
+  busy: boolean;
+  onAccept: () => void;
+  onDecline: () => void;
+}
+
+export function OfferSheet({
+  offer,
+  currencyLabel,
+  categoryLabel,
+  busy,
+  onAccept,
+  onDecline,
+}: Props) {
+  const [left, setLeft] = useState(() =>
+    Math.max(0, Math.ceil((offer.expiresAt - Date.now()) / 1_000)),
+  );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setLeft(Math.max(0, Math.ceil((offer.expiresAt - Date.now()) / 1_000)));
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [offer.expiresAt]);
+
+  const offset = Math.round((1 - left / offer.totalSeconds) * DASH);
+
+  return (
+    <div className="absolute inset-0 z-50 animate-fadein bg-dim">
+      <div className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-22 pt-18">
+        <div className="mb-15 flex items-center gap-13">
+          <div className="relative size-54 shrink-0">
+            <svg
+              width="54"
+              height="54"
+              viewBox="0 0 56 56"
+              className="-rotate-90"
+            >
+              <circle
+                cx="28"
+                cy="28"
+                r="26"
+                fill="none"
+                stroke="var(--brd)"
+                strokeWidth="3.5"
+              />
+              <circle
+                cx="28"
+                cy="28"
+                r="26"
+                fill="none"
+                stroke="var(--tx)"
+                strokeWidth="3.5"
+                strokeDasharray={DASH}
+                strokeDashoffset={offset}
+                style={{ transition: "stroke-dashoffset 1s linear" }}
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-17 font-bold text-ink">
+              {arabicDigits(String(left))}
+            </span>
+          </div>
+
+          <div className="flex-1">
+            <div className="text-23 font-bold text-ink">
+              {arabicDigits(offer.ride.estimated_fare)}{" "}
+              <span className="text-12 font-medium text-muted">
+                {currencyLabel}
+              </span>
+            </div>
+            <div className="text-11.5 text-muted">{categoryLabel}</div>
+          </div>
+
+          <div className="text-end">
+            <div className="text-15 font-bold text-ink">
+              {arabicDigits(offer.distanceKm.toFixed(1))} كم
+            </div>
+            <div className="text-10.5 text-muted">حتى الراكب</div>
+          </div>
+        </div>
+
+        <div className="mb-15 grid grid-cols-[12px_1fr] gap-x-10 gap-y-4">
+          <span className="mx-auto mt-5 block size-8 rounded-full bg-ink" />
+          <div className="text-13 text-ink">
+            {offer.ride.pickup_address ?? "نقطة الانطلاق"}
+          </div>
+          <span className="mx-auto block h-12 w-2 bg-line" />
+          <span />
+          <span className="mx-auto mt-2 block size-8 rounded-2 bg-muted" />
+          <div className="text-13 text-muted">
+            {offer.ride.dropoff_address ?? "الوجهة"}
+          </div>
+        </div>
+
+        <div className="flex gap-8">
+          <button
+            type="button"
+            onClick={onAccept}
+            disabled={busy}
+            style={{ flex: 2.5 }}
+            className="rounded-15 bg-accent p-15 text-center text-15 font-bold text-accent-ink disabled:opacity-50"
+          >
+            قبول
+          </button>
+          <button
+            type="button"
+            onClick={onDecline}
+            disabled={busy}
+            className="flex-1 rounded-15 border border-line p-15 text-center text-13 font-semibold text-muted disabled:opacity-50"
+          >
+            رفض
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

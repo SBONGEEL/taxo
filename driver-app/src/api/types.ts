@@ -127,3 +127,70 @@ export interface DocumentUpload {
   driver_status: DriverStatus;
   approval_reverted: boolean;
 }
+
+export type RideStatus =
+  | "requested"
+  | "searching"
+  | "accepted"
+  | "arrived"
+  | "in_progress"
+  | "completed"
+  | "cancelled_by_rider"
+  | "cancelled_by_driver"
+  | "no_driver_found";
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface Ride {
+  id: string;
+  rider_id: string;
+  status: RideStatus;
+  country_code: CountryCode;
+  vehicle_category: VehicleCategory;
+  currency: Currency;
+  pickup: Coordinates;
+  pickup_address: string | null;
+  dropoff: Coordinates;
+  dropoff_address: string | null;
+  distance_km: string;
+  actual_distance_km: string | null;
+  duration_min: string;
+  estimated_fare: string;
+  final_fare: string | null;
+  cancellation_fee: string | null;
+  commission_percent_at_ride: string;
+  cancelled_reason: string | null;
+  created_at: string;
+  accepted_at: string | null;
+  arrived_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface Wallet {
+  owner_id: string;
+  owner_type: "driver" | "rider";
+  balance: string;
+  currency: Currency;
+  frozen: boolean;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  duration_type: "daily" | "weekly" | "monthly";
+  price: string;
+  currency: Currency;
+}
+
+export interface MySubscription {
+  is_active: boolean;
+  coverage_until: string | null;
+  days_remaining: number;
+  current: { plan_name: string; expires_at: string } | null;
+  plans: SubscriptionPlan[];
+}

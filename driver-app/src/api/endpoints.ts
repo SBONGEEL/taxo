@@ -16,9 +16,12 @@ import type {
   Driver,
   DriverDocuments,
   DriverProfile,
+  MySubscription,
+  Ride,
   User,
   Vehicle,
   VehicleCategory,
+  Wallet,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -48,7 +51,10 @@ export const login = (
 export const getMe = () => api.get<User>("/auth/me");
 
 /** تحدّي إثبات الرقم عند **التسجيل** — مسارٌ غير مسار الاستعادة. */
-export const startSignupChallenge = (phone: string, country_code: CountryCode) =>
+export const startSignupChallenge = (
+  phone: string,
+  country_code: CountryCode,
+) =>
   api.post<ChallengeResponse>(
     "/auth/challenge",
     { phone, country_code },
@@ -120,6 +126,36 @@ export const addVehicle = (payload: {
   plate_number: string;
   category: VehicleCategory;
 }) => api.post<Vehicle>("/drivers/me/vehicles", payload);
+
+// ------------------------------------------------------------ الرحلة
+
+export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
+
+export const acceptRide = (rideId: string) =>
+  api.post<Ride>(`/rides/${rideId}/accept`);
+
+export const declineRide = (rideId: string) =>
+  api.post<void>(`/rides/${rideId}/decline`);
+
+export const arriveRide = (rideId: string) =>
+  api.post<Ride>(`/rides/${rideId}/arrive`);
+
+export const startRide = (rideId: string) =>
+  api.post<Ride>(`/rides/${rideId}/start`);
+
+export const completeRide = (rideId: string) =>
+  api.post<Ride>(`/rides/${rideId}/complete`);
+
+export const cancelRide = (rideId: string, reason: string) =>
+  api.post<Ride>(`/rides/${rideId}/cancel`, { reason });
+
+// ------------------------------------------------------------ المال
+
+/** محفظة الكبتن — مفتاحها `users.id` لا `drivers.id` (SPEC القسم 9). */
+export const getDriverWallet = () => api.get<Wallet>("/wallet/me/driver");
+
+export const getMySubscription = () =>
+  api.get<MySubscription>("/subscriptions/me");
 
 export const listDocuments = () =>
   api.get<DriverDocuments>("/drivers/me/documents");
