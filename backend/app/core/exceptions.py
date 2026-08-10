@@ -115,6 +115,43 @@ class RideOfferExpired(Conflict):
     message = "انتهت مهلة هذا الطلب أو عُرض على كبتن آخر"
 
 
+class FeatureDisabled(AppError):
+    """ميزة مبنيّة لكنها مطفأة لهذه الدولة من `feature_flags`.
+
+    تختلف عن `FeatureNotAvailable` (501): تلك ميزة لم تُبنَ بعد، وهذه مبنية
+    وقرارُ إطفائها إداري — فالجواب 403 لا 501.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "feature_disabled"
+    message = "هذه الميزة غير مفعّلة في بلدك"
+
+
+class WalletFrozen(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "wallet_frozen"
+    message = "المحفظة مجمّدة — راجع الدعم"
+
+
+class InsufficientBalance(Conflict):
+    code = "insufficient_balance"
+    message = "الرصيد غير كافٍ"
+
+
+class WalletLimitExceeded(Conflict):
+    """حد التحويل اليومي/الشهري أو الحد الأدنى للسحب (SPEC القسم 7/9)."""
+
+    code = "wallet_limit_exceeded"
+    message = "تجاوزت الحد المسموح"
+
+
+class InvalidStatusTransition(Conflict):
+    """انتقال غير مسموح في طلب شحن أو سحب."""
+
+    code = "invalid_status_transition"
+    message = "لا يمكن تنفيذ هذا الإجراء على حالة الطلب الحالية"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:

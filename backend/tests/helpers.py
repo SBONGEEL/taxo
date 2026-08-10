@@ -56,6 +56,11 @@ STUB_ROUTE = Route(distance_km=Decimal("10.000"), duration_min=Decimal("20.00"))
 EXPECTED_FARE = "8.000"
 CANCELLATION_FEE = "0.750"
 
+# حدود محفظة الأردن في الاختبارات (fixture: jordan_wallet)
+TRANSFER_DAILY_LIMIT = "50.000"
+TRANSFER_MONTHLY_LIMIT = "200.000"
+MIN_WITHDRAWAL = "10.000"
+
 
 # ------------------------------------------------------------------ الحسابات
 
@@ -114,7 +119,37 @@ async def approved_driver(
         await session.commit()
         driver_id = driver.id
 
-    return {"headers": headers, "token": token_of(body), "driver_id": driver_id}
+    return {
+        "headers": headers,
+        "token": token_of(body),
+        "driver_id": driver_id,
+        # محفظة الكبتن مفتاحها `users.id` لا `drivers.id`
+        "user_id": body["user"]["id"],
+    }
+
+
+async def topup_wallet(
+    client: AsyncClient,
+    admin_headers: dict,
+    user_id: str,
+    amount: str,
+    *,
+    method: str = "cash",
+) -> dict:
+    """يضع رصيداً في محفظة عبر المسار الحقيقي — لا كتابة مباشرة في الدفتر."""
+    response = await client.post(
+        f"/admin/wallets/{user_id}/topups",
+        json={"method": method, "amount": amount, "reference": "شحن اختبار"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def wallet_of(client: AsyncClient, headers: dict) -> dict:
+    response = await client.get("/wallet/me", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
 
 
 async def bring_online(

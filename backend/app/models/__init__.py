@@ -16,8 +16,14 @@ from app.models.enums import (
     ProviderKey,
     RideStatus,
     SubscriptionDurationType,
+    TopupMethod,
+    TopupRequestStatus,
     UserRole,
     VehicleCategory,
+    WalletOwnerType,
+    WalletTransactionType,
+    WithdrawalMethod,
+    WithdrawalStatus,
 )
 from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
@@ -26,6 +32,12 @@ from app.models.ride import Ride
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.models.wallet import (
+    WalletTopupRequest,
+    WalletTransaction,
+    WithdrawalRequest,
+)
+from app.models.wallet_setting import WalletSetting
 
 __all__ = [
     "AdminAuditLog",
@@ -49,8 +61,18 @@ __all__ = [
     "RideStatus",
     "SubscriptionDurationType",
     "SubscriptionPlan",
+    "TopupMethod",
+    "TopupRequestStatus",
     "User",
     "UserRole",
     "Vehicle",
     "VehicleCategory",
+    "WalletOwnerType",
+    "WalletSetting",
+    "WalletTopupRequest",
+    "WalletTransaction",
+    "WalletTransactionType",
+    "WithdrawalMethod",
+    "WithdrawalRequest",
+    "WithdrawalStatus",
 ]

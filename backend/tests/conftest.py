@@ -226,6 +226,41 @@ async def jordan_settings(session_factory) -> None:
 
 
 @pytest.fixture
+async def jordan_wallet(session_factory) -> None:
+    """محفظة الأردن مفعّلة بالتحويل وبحدود مضبوطة — أدنى ما يحتاجه تحويل.
+
+    المفتاحان يُرفعان صراحةً: غياب الصف يعني معطّلاً، ولا اختبار يفترض غير ذلك.
+    """
+    from decimal import Decimal
+
+    from app.models.enums import CountryCode, FeatureKey
+    from app.models.feature_flag import FeatureFlag
+    from app.models.wallet_setting import WalletSetting
+    from tests.helpers import (
+        TRANSFER_DAILY_LIMIT,
+        TRANSFER_MONTHLY_LIMIT,
+        MIN_WITHDRAWAL,
+    )
+
+    async with session_factory() as session:
+        for key in (FeatureKey.WALLET_ENABLED, FeatureKey.WALLET_TRANSFER_ENABLED):
+            session.add(
+                FeatureFlag(
+                    country_code=CountryCode.JO, feature_key=key.value, enabled=True
+                )
+            )
+        session.add(
+            WalletSetting(
+                country_code=CountryCode.JO,
+                transfer_daily_limit=Decimal(TRANSFER_DAILY_LIMIT),
+                transfer_monthly_limit=Decimal(TRANSFER_MONTHLY_LIMIT),
+                min_withdrawal_amount=Decimal(MIN_WITHDRAWAL),
+            )
+        )
+        await session.commit()
+
+
+@pytest.fixture
 def rider_payload() -> dict:
     return {
         "phone": "0791234567",

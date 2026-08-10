@@ -1,0 +1,174 @@
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from decimal import Decimal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.enums import (
+    CountryCode,
+    Currency,
+    TopupMethod,
+    TopupRequestStatus,
+    WalletOwnerType,
+    WalletTransactionType,
+    WithdrawalMethod,
+    WithdrawalStatus,
+)
+
+# نفس قيد الأعمدة المالية معبَّراً عنه في طبقة الإدخال
+Money = Field(gt=0, max_digits=12, decimal_places=3)
+OptionalLimitMoney = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+
+# مفتاح يولّده العميل ويعيده مع كل محاولة لنفس العملية (SPEC القسم 14)
+IdempotencyKey = Field(min_length=8, max_length=64)
+
+
+# ------------------------------------------------------------------ المحفظة
+
+
+class WalletOut(BaseModel):
+    """رصيد لحظي محسوب من الدفتر — لا عمود يقابله في القاعدة."""
+
+    owner_id: uuid.UUID
+    owner_type: WalletOwnerType
+    balance: Decimal
+    currency: Currency
+    frozen: bool
+
+
+class WalletTransactionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    type: WalletTransactionType
+    amount: Decimal
+    balance_after: Decimal
+    ride_id: uuid.UUID | None
+    reference: str | None
+    created_at: datetime
+
+
+# ------------------------------------------------------------------ التحويل
+
+
+class TransferRecipientOut(BaseModel):
+    """اسم المستلم للتأكيد قبل التنفيذ (SPEC القسم 7) — بلا مُعرّفه."""
+
+    phone: str
+    name: str
+
+
+class TransferRequest(BaseModel):
+    recipient_phone: str = Field(min_length=6, max_length=20)
+    amount: Decimal = Money
+    idempotency_key: str = IdempotencyKey
+
+
+# -------------------------------------------------------------------- الشحن
+
+
+class TopupRequestCreate(BaseModel):
+    # كليك وحدها تُطلب من التطبيق؛ الكاش من اللوحة والبطاقة فورية (المرحلة 6)
+    method: TopupMethod = TopupMethod.CLIQ
+    amount: Decimal = Money
+    reference: str = Field(min_length=3, max_length=120)
+
+
+class AdminTopupCreate(BaseModel):
+    """شحن يُنشئه الموظف مؤكداً — نقطة الكاش المعتمدة."""
+
+    method: TopupMethod = TopupMethod.CASH
+    amount: Decimal = Money
+    reference: str | None = Field(default=None, max_length=120)
+
+
+class TopupRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    method: TopupMethod
+    amount: Decimal
+    status: TopupRequestStatus
+    reference: str | None
+    note: str | None
+    transaction_id: uuid.UUID | None
+    processed_at: datetime | None
+    created_at: datetime
+
+
+# -------------------------------------------------------------------- السحب
+
+
+class WithdrawalCreate(BaseModel):
+    amount: Decimal = Money
+    method: WithdrawalMethod
+
+
+class WithdrawalOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    driver_id: uuid.UUID
+    amount: Decimal
+    method: WithdrawalMethod
+    status: WithdrawalStatus
+    reference: str | None
+    note: str | None
+    transaction_id: uuid.UUID | None
+    processed_at: datetime | None
+    created_at: datetime
+
+
+class DriverWalletOut(WalletOut):
+    """محفظة الكبتن + المتاح للسحب بعد حجز الطلبات القائمة."""
+
+    available_for_withdrawal: Decimal
+    min_withdrawal_amount: Decimal
+
+
+# ------------------------------------------------------- إجراءات الإدارة
+
+
+class RejectRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=255)
+
+
+class MarkPaidRequest(BaseModel):
+    reference: str = Field(min_length=3, max_length=120)
+
+
+class AdjustmentCreate(BaseModel):
+    """تصحيح إداري — الاتجاهان مسموحان، والسبب إلزامي.
+
+    القيد لا يُعدَّل ولا يُحذف، فتصحيحُ خطأٍ سابقٍ قيدٌ مضاد لا محوٌ للتاريخ.
+    """
+
+    amount: Decimal = Field(max_digits=12, decimal_places=3)
+    reason: str = Field(min_length=3, max_length=120)
+
+
+class WalletFreezeRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=255)
+
+
+# ------------------------------------------------------------ حدود المحفظة
+
+
+class WalletSettingUpdate(BaseModel):
+    transfer_daily_limit: Decimal | None = OptionalLimitMoney
+    transfer_monthly_limit: Decimal | None = OptionalLimitMoney
+    min_withdrawal_amount: Decimal | None = OptionalLimitMoney
+
+
+class WalletSettingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    country_code: CountryCode
+    transfer_daily_limit: Decimal
+    transfer_monthly_limit: Decimal
+    min_withdrawal_amount: Decimal
+    updated_at: datetime

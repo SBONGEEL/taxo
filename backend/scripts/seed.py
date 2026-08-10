@@ -37,6 +37,7 @@ from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
+from app.models.wallet_setting import WalletSetting
 from app.services.providers import credentials as credentials_service
 
 # ليبيا مرحلة تجريب: كاش فقط. الأردن: كليك وبطاقة ومحفظة، بلا تحويل P2P ولا عمولة.
@@ -79,6 +80,21 @@ PRICING_DEFAULTS: dict[tuple[CountryCode, VehicleCategory], dict[str, str]] = {
         "price_per_min": "0.070",
         "minimum_fare": "2.500",
         "cancellation_fee": "1.000",
+    },
+}
+
+# حدود المحفظة — قيم تطوير تُضبط نهائياً من اللوحة. التحويل معطّل في
+# الدولتين بمفتاحه، وهذه الحدود تنتظره جاهزة لا مفتوحة على مصراعيها.
+WALLET_DEFAULTS: dict[CountryCode, dict[str, str]] = {
+    CountryCode.LY: {
+        "transfer_daily_limit": "500.000",
+        "transfer_monthly_limit": "5000.000",
+        "min_withdrawal_amount": "50.000",
+    },
+    CountryCode.JO: {
+        "transfer_daily_limit": "200.000",
+        "transfer_monthly_limit": "2000.000",
+        "min_withdrawal_amount": "10.000",
     },
 }
 
@@ -127,6 +143,22 @@ async def seed_commission(session: AsyncSession) -> None:
             # العمولة صفر ومعطّلة افتراضياً (SPEC القسم 8)
             session.add(CommissionSetting(country_code=country))
             _log(f"إعداد عمولة: {country.value} (معطّل، 0%)")
+
+
+async def seed_wallet_settings(session: AsyncSession) -> None:
+    """حدود التحويل والسحب — بدونها يبقى التحويل مرفوضاً ولو رُفع مفتاحه."""
+    for country, limits in WALLET_DEFAULTS.items():
+        exists = await session.scalar(
+            select(WalletSetting.id).where(WalletSetting.country_code == country)
+        )
+        if exists is None:
+            session.add(
+                WalletSetting(
+                    country_code=country,
+                    **{key: Decimal(value) for key, value in limits.items()},
+                )
+            )
+            _log(f"حدود محفظة: {country.value}")
 
 
 async def seed_pricing(session: AsyncSession) -> None:
@@ -257,6 +289,7 @@ async def main() -> None:
         await seed_feature_flags(session)
         await seed_commission(session)
         await seed_pricing(session)
+        await seed_wallet_settings(session)
         await seed_plans(session)
         await seed_providers(session)
         await seed_bootstrap_admin(session)

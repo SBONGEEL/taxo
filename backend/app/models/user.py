@@ -25,6 +25,9 @@ class User(UUIDMixin, TimestampMixin, Base):
         pg_enum(CountryCode, "country_code"), nullable=False
     )
     is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # تجميد المحفظة وحدها دون حظر الحساب (SPEC القسم 7/13.3): محفظة مشبوهة
+    # تُوقَف حركتها بينما يبقى صاحبها قادراً على الركوب والدفع نقداً
+    wallet_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # nullable: حسابات OTP-only بعد تفعيل مزود SMS لن يكون لها كلمة مرور
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)

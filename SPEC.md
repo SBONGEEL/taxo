@@ -93,6 +93,7 @@ taxo/
 ### users
 - `phone` (unique — هو مُعرّف الدخول), `name`, `role` (rider/driver/admin/support)
 - `country_code` (LY/JO), `is_blocked`, `password_hash` — الدخول بهاتف + كلمة مرور، ويتحول لـ OTP آلياً عند تفعيل مزود SMS من صفحة العقود
+- `wallet_frozen` — تجميد المحفظة وحدها دون حظر الحساب (القسم 7/13.3): تُوقَف حركة محفظةٍ مشبوهة بينما يبقى صاحبها راكباً يدفع نقداً
 
 ### drivers (يمتد من users)
 - `user_id`, `status` (pending/approved/rejected/suspended)
@@ -122,14 +123,28 @@ taxo/
 - دعم الدفع المختلط: صفان مرتبطان بنفس الرحلة (wallet + cash)
 
 ### wallet_transactions (Ledger — سجل قيود غير قابل للتعديل)
-- `owner_type` (driver/rider), `owner_id`
+- `owner_type` (driver/rider), `owner_id` — **`owner_id` يشير إلى `users.id` في الحالتين** (مفتاح أجنبي حقيقي بـ RESTRICT)، و`owner_type` هو ما يميّز محفظة الراكب عن محفظة الكبتن. فرصيدُ كبتنٍ يُستعلم بـ `driver.user_id` لا `driver.id`
 - `type`: `topup | ride_payment | ride_earning | commission | transfer_in | transfer_out | withdrawal | refund | subscription_payment | adjustment`
 - `amount` (+/-), `balance_after`, `ride_id` (nullable), `reference`, `created_by`
+- `idempotency_key` (nullable، فريد لكل مالك) — منع تكرار عملية أُعيد إرسالها (القسم 14)
 - **قاعدة صارمة:** الرصيد يُحسب من القيود، لا عمود رصيد يُحدَّث. كل عملية = قيد جديد. التحويلات والخصومات داخل DB transaction ذرّية
+- **«غير قابل للتعديل» مفروضٌ في القاعدة** بمُشغّل يرفض UPDATE وDELETE على الجدول. تصحيح الخطأ قيدُ `adjustment` مضاد، لا تعديلُ صفٍّ ولا محوُه
+- إشارة `amount` يمليها النوع (قيد فحصٍ في القاعدة)، و`balance_after >= 0` دائماً: المحفظة مسبقة الدفع لا تُسحب على المكشوف
+
+### wallet_topup_requests (طلب شحن ينتظر تأكيداً بشرياً)
+- `owner_id`, `method` (cliq/cash/card), `amount`, `reference` (مرجع الحوالة), `note`
+- `status` (pending/confirmed/rejected), `processed_by`, `processed_at`, `transaction_id` (القيد الناتج)
+- كليك بلا API فيؤكدها إنسان (القسم 7)؛ الكاش يُنشئه الموظف مؤكداً؛ شحن Telr فوريٌّ آلي فلا يمر بطلب
+- **لا رصيد يتغيّر قبل `confirmed`** — الطلب المعلّق أثرٌ نصّي لا مالي
 
 ### withdrawal_requests (للكباتن فقط)
 - `driver_id`, `amount`, `method` (cliq/bank), `status` (pending/approved/paid/rejected)
-- `reference`, `processed_by`, `processed_at`
+- `reference`, `note`, `processed_by`, `processed_at`, `transaction_id`
+- قيد `withdrawal` يُكتب عند `paid` وحدها. الطلبات في `pending`/`approved` تحجز مبلغها من الرصيد المتاح، فلا يُطلب نفس المال مرتين
+
+### wallet_settings (حدود المحفظة per-country — تُدار من اللوحة)
+- `country_code`, `transfer_daily_limit`, `transfer_monthly_limit`, `min_withdrawal_amount`
+- صفرٌ في حدّي التحويل يعني **«لم يُضبط بعد»** فيُرفض التحويل — لا يخترع الكود حداً سخياً لقيمةٍ مالية غائبة
 
 ### subscription_plans
 - `name`, `duration_type` (daily/weekly/monthly), `price`, `currency`, `country_code`, `is_active`
@@ -164,6 +179,11 @@ taxo/
 
 ### ratings
 - `ride_id`, `rater_type` (rider/driver), `stars` (1-5), `comment`
+
+### admin_audit_logs (سجل التدقيق الذي يفرضه القسم 14)
+- `actor_id` (يبقى بعد حذف الحساب), `action` (create/update/activate/…), `entity_type`, `entity_id`, `details`
+- `details` يحمل **أسماء الحقول المتغيّرة فقط، لا قيمها** — سجلُّ تدقيقٍ يخزّن الأسرار يصير نسخةً ثانيةً منها
+- يُكتب في **نفس معاملة** التغيير: لا تغييرَ بلا قيد، ولا قيدَ لتغييرٍ فشل
 
 ---
 

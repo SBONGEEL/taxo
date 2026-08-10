@@ -16,6 +16,7 @@ from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
+from app.models.wallet_setting import WalletSetting
 from app.schemas.audit import AuditLogOut
 from app.schemas.settings import (
     CommissionSettingOut,
@@ -29,6 +30,7 @@ from app.schemas.settings import (
     SubscriptionPlanOut,
     SubscriptionPlanUpdate,
 )
+from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.services import audit, settings_service
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
@@ -319,6 +321,48 @@ async def delete_subscription_plan(
     )
     await session.delete(plan)
     await _commit(session)
+
+
+# ------------------------------------------------------------ حدود المحفظة
+
+
+@router.get("/wallet", response_model=list[WalletSettingOut])
+async def list_wallet_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[WalletSettingOut]:
+    rows = (
+        await session.scalars(select(WalletSetting).order_by(WalletSetting.country_code))
+    ).all()
+    return [WalletSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/wallet/{country_code}", response_model=WalletSettingOut)
+async def update_wallet_settings(
+    country_code: CountryCode,
+    payload: WalletSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> WalletSettingOut:
+    """حدود التحويل والسحب لكل دولة (SPEC القسم 7/9/13.6).
+
+    الصف يُنشأ بأصفار عند أول تعديل؛ صفرٌ في حدود التحويل يعني «غير مضبوط»
+    فيُرفض التحويل حتى تُدخل الإدارة قيمة صريحة.
+    """
+    setting = await settings_service.get_or_create_wallet_settings(
+        session, country_code
+    )
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="wallet_setting",
+        entity_id=setting.id,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return WalletSettingOut.model_validate(setting)
 
 
 # ------------------------------------------------------------- سجل التدقيق

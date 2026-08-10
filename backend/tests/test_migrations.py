@@ -5,6 +5,7 @@ import asyncio
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, inspect
 
 from app.core.db import engine
@@ -61,7 +62,10 @@ async def test_schema_is_built_by_migrations() -> None:
         )
 
     assert "alembic_version" in tables
-    assert revision == "0005"
+    # الرأس يُقرأ من مجلد الترحيلات لا يُكتب هنا: رقمٌ مكتوب بيدٍ يعني تعديل
+    # هذا الاختبار مع كل مرحلة، والمقصود أصلاً «القاعدة على الرأس» لا رقمُه
+    head = ScriptDirectory.from_config(alembic_config()).get_current_head()
+    assert revision == head
     assert {
         "users",
         "drivers",
@@ -74,6 +78,10 @@ async def test_schema_is_built_by_migrations() -> None:
         "subscription_plans",
         "provider_credentials",
         "admin_audit_logs",
+        "wallet_transactions",
+        "wallet_topup_requests",
+        "withdrawal_requests",
+        "wallet_settings",
     } <= tables
 
 

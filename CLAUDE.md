@@ -15,9 +15,10 @@ discrepancy nobody can tell from a bug.
 **Section 16 of SPEC.md is a strict, ordered 13-stage plan — one stage per session.** Stages 1
 (infrastructure, FastAPI skeleton, Alembic, `users`/`drivers`/`vehicles`, phone+password auth with
 JWT), 2 (per-country settings tables, encrypted `provider_credentials` with admin CRUD, seed
-script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status endpoints) and 4
-(Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events) are complete. Do not
-implement anything from a later stage unless the user asks for that stage. When a later-stage
+script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status endpoints), 4
+(Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events) and 5 (the
+`wallet_transactions` ledger, rider topup/transfer, driver wallet and withdrawals) are complete. Do
+not implement anything from a later stage unless the user asks for that stage. When a later-stage
 concern appears in current code (e.g. `dispatch.eligible_driver_ids` does not check for a valid
 subscription because `driver_subscriptions` arrives in stage 7), leave a comment naming the stage
 rather than building ahead.
@@ -176,6 +177,38 @@ and category only. `drivers.anonymous_ref` derives a per-connection pseudonym (b
 random salt) so the frontend can interpolate a car's movement between frames without the same
 driver being trackable across sessions.
 
+**`wallet_transactions.owner_id` always references `users.id` — for riders *and* drivers.**
+`owner_type` is what distinguishes the two wallets. So a driver's balance is queried with
+`driver.user_id`, never `driver.id`; passing the latter silently returns zero because it matches no
+row. `withdrawal_requests.driver_id` deliberately points at `drivers` instead, as SPEC section 4
+specifies — the two identifiers sit next to each other in `admin_wallets.mark_withdrawal_paid`,
+which resolves one to the other before writing the ledger entry.
+
+**There is no balance column and no balance cache.** `services/wallet.py::balance` sums the ledger.
+Every write goes through `record()`, which first takes a transaction-scoped Postgres advisory lock
+on the owner (`pg_advisory_xact_lock`, key derived from the UUID in Python so no dependency on
+`hashtextextended`) — `SELECT SUM` followed by an INSERT is not atomic on its own, and two
+concurrent debits would otherwise both read the same balance. The lock is re-entrant, so `transfer`
+pre-locks both wallets in sorted UUID order (deadlock avoidance) and the nested `record` calls just
+re-acquire. Migration `0006` installs a trigger that rejects UPDATE and DELETE on the table, so a
+correction is an opposing `adjustment` entry, never an edit; `TRUNCATE` does not fire row triggers,
+so the test cleanup still works. The amount's sign is dictated by its type via a CHECK built from
+the same `CREDIT_TYPES`/`DEBIT_TYPES` tuples the service validates against, and `balance_after >= 0`
+is enforced in the database too.
+
+Idempotency (SPEC section 14) is a `UNIQUE (owner_id, idempotency_key)` on the ledger: the client
+sends the key on a transfer, and `topups`/`withdrawals` derive one from the request id
+(`topup:{id}`, `withdrawal:{id}`) so a double-click cannot pay twice. The key is checked *after*
+the lock is taken, so concurrent retries serialise into a lookup hit rather than a constraint
+violation. Money enters a wallet only at `confirm` (topups) and leaves only at `paid`
+(withdrawals) — a `pending`/`approved` withdrawal reserves its amount against the available
+balance instead, because no entry exists yet to represent it.
+
+`wallet_enabled` gates topping up and paying, never reading: a balance from before the flag was
+switched off stays visible to its owner. A zero in `wallet_settings.transfer_*_limit` means
+"not configured yet" and blocks transfers with a message that says so, rather than being read as a
+generous default.
+
 WebSocket tests use `httpx-ws`, whose `ASGIWebSocketTransport` runs the app in the *same* event
 loop; Starlette's `TestClient` would open its own loop in another thread and break the asyncpg
 pool. Its transport opens an anyio task group, and anyio refuses to exit one from a different task
@@ -190,6 +223,7 @@ body — making it a fixture fails at teardown.
   infrastructure secrets (DB, Redis, JWT, the Fernet key); its Mapbox/Telr tokens exist solely as
   input for `scripts/seed.py`, which writes them encrypted and is idempotent.
 - Wallet balance is derived from the immutable `wallet_transactions` ledger. There is no balance column.
+- Riders top up and transfer but **never** withdraw (SPEC section 7); only drivers have a withdrawal path.
 - Pricing and all financial math happen in the backend only; the frontends display.
 - `rides.commission_percent_at_ride` is frozen at creation and never recomputed retroactively.
 - Commission is enabled **only** through `commission_settings`; there is deliberately no

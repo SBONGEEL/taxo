@@ -106,6 +106,67 @@ class FeatureKey(StrEnum):
     WALLET_TRANSFER_ENABLED = "wallet_transfer_enabled"
 
 
+class WalletOwnerType(StrEnum):
+    """صاحب المحفظة — الراكب أو الكبتن (SPEC القسم 4).
+
+    `owner_id` يشير إلى `users.id` في الحالتين؛ هذا العمود يميّز أي المحفظتين
+    هي، فحسابُ كبتنٍ ما هو إلا امتداد لحساب مستخدم.
+    """
+
+    RIDER = "rider"
+    DRIVER = "driver"
+
+
+class WalletTransactionType(StrEnum):
+    """أنواع قيود دفتر المحفظة (SPEC القسم 4).
+
+    ما لا يُنشئه كودُ هذه المرحلة موجود هنا لأن النوع جزء من المواصفة:
+    `ride_payment`/`ride_earning`/`commission`/`refund` تأتي مع الدفع
+    (المرحلة 6)، و`subscription_payment` مع الاشتراكات (المرحلة 7).
+    """
+
+    TOPUP = "topup"
+    RIDE_PAYMENT = "ride_payment"
+    RIDE_EARNING = "ride_earning"
+    COMMISSION = "commission"
+    TRANSFER_IN = "transfer_in"
+    TRANSFER_OUT = "transfer_out"
+    WITHDRAWAL = "withdrawal"
+    REFUND = "refund"
+    SUBSCRIPTION_PAYMENT = "subscription_payment"
+    ADJUSTMENT = "adjustment"
+
+
+class TopupMethod(StrEnum):
+    """قنوات شحن محفظة الراكب (SPEC القسم 7).
+
+    `card` هو Telr — شحن فوري آلي يأتي في المرحلة 6، فلا يمر بطلب ينتظر
+    تأكيداً بشرياً كما تمر `cliq` و`cash`.
+    """
+
+    CLIQ = "cliq"
+    CASH = "cash"
+    CARD = "card"
+
+
+class TopupRequestStatus(StrEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class WithdrawalMethod(StrEnum):
+    CLIQ = "cliq"
+    BANK = "bank"
+
+
+class WithdrawalStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    PAID = "paid"
+    REJECTED = "rejected"
+
+
 class AuditAction(StrEnum):
     CREATE = "create"
     UPDATE = "update"

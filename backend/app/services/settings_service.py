@@ -9,6 +9,7 @@ from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode, FeatureKey
 from app.models.feature_flag import FeatureFlag
 from app.models.user import User
+from app.models.wallet_setting import WalletSetting
 from app.services import audit
 
 
@@ -111,6 +112,33 @@ async def get_or_create_commission(
     )
     if setting is None:
         setting = CommissionSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    return setting
+
+
+async def get_wallet_settings(
+    session: AsyncSession, country_code: CountryCode
+) -> WalletSetting | None:
+    """قراءة فقط — مسار قراءةٍ لا يجوز أن يكتب صف إعدادات."""
+    return await session.scalar(
+        select(WalletSetting).where(WalletSetting.country_code == country_code)
+    )
+
+
+async def get_or_create_wallet_settings(
+    session: AsyncSession, country_code: CountryCode
+) -> WalletSetting:
+    """حدود محفظة الدولة — تُنشأ بأصفار إن لم توجد (SPEC القسم 7/9).
+
+    الصفر هنا «لم يُضبط بعد» ويمنع التحويل، لا «حدٌّ مقداره صفر»: قيمةٌ مالية
+    غائبة لا يجوز أن يخترع لها الكودُ افتراضاً سخياً.
+    """
+    setting = await session.scalar(
+        select(WalletSetting).where(WalletSetting.country_code == country_code)
+    )
+    if setting is None:
+        setting = WalletSetting(country_code=country_code)
         session.add(setting)
         await session.flush()
     return setting
