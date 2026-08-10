@@ -188,7 +188,7 @@ async def confirm_topup(
     request_id: uuid.UUID, admin: AdminUser, session: DbSession
 ) -> TopupRequestOut:
     """تأكيد وصول حوالة كليك/الكاش → الرصيد يتحرك الآن (SPEC القسم 7)."""
-    request = await topups.get_request(session, request_id)
+    request = await topups.get_request(session, request_id, for_update=True)
     owner = await _get_user(session, request.owner_id)
     request = await topups.confirm(
         session, request=request, owner=owner, actor=admin
@@ -204,7 +204,7 @@ async def reject_topup(
     admin: AdminUser,
     session: DbSession,
 ) -> TopupRequestOut:
-    request = await topups.get_request(session, request_id)
+    request = await topups.get_request(session, request_id, for_update=True)
     request = await topups.reject(
         session, request=request, actor=admin, note=payload.note
     )
@@ -254,7 +254,7 @@ async def list_withdrawal_requests(
 async def approve_withdrawal(
     request_id: uuid.UUID, admin: AdminUser, session: DbSession
 ) -> WithdrawalOut:
-    request = await withdrawals.get_request(session, request_id)
+    request = await withdrawals.get_request(session, request_id, for_update=True)
     request = await withdrawals.approve(session, request=request, actor=admin)
     await session.commit()
     return WithdrawalOut.model_validate(request)
@@ -267,7 +267,7 @@ async def reject_withdrawal(
     admin: AdminUser,
     session: DbSession,
 ) -> WithdrawalOut:
-    request = await withdrawals.get_request(session, request_id)
+    request = await withdrawals.get_request(session, request_id, for_update=True)
     request = await withdrawals.reject(
         session, request=request, actor=admin, note=payload.note
     )
@@ -283,7 +283,7 @@ async def mark_withdrawal_paid(
     session: DbSession,
 ) -> WithdrawalOut:
     """المحاسب حوّل وسجّل المرجع → قيد `withdrawal` يُكتب الآن."""
-    request = await withdrawals.get_request(session, request_id)
+    request = await withdrawals.get_request(session, request_id, for_update=True)
     driver = await session.get(Driver, request.driver_id)
     if driver is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
         raise NotFound("الكبتن غير موجود")

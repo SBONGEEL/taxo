@@ -196,6 +196,13 @@ so the test cleanup still works. The amount's sign is dictated by its type via a
 the same `CREDIT_TYPES`/`DEBIT_TYPES` tuples the service validates against, and `balance_after >= 0`
 is enforced in the database too.
 
+**Anything that changes a topup or withdrawal status must load the row with `for_update=True`**
+(`topups.get_request` / `withdrawals.get_request`), the same way `rides.cancel_ride` locks its row.
+Under READ COMMITTED, concurrent requests otherwise all read the pre-commit status, all pass
+`_require_transition`, and all return 200 — `tests/test_wallet_concurrency.py` caught exactly that.
+The idempotency key still prevented a double debit, but a guard must not be left leaning on the one
+behind it. Lock order is always request row → wallet advisory lock, uniformly, so nothing deadlocks.
+
 Idempotency (SPEC section 14) is a `UNIQUE (owner_id, idempotency_key)` on the ledger: the client
 sends the key on a transfer, and `topups`/`withdrawals` derive one from the request id
 (`topup:{id}`, `withdrawal:{id}`) so a double-click cannot pay twice. The key is checked *after*

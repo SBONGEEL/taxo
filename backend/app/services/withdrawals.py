@@ -65,9 +65,20 @@ def _require_transition(
 
 
 async def get_request(
-    session: AsyncSession, request_id: uuid.UUID
+    session: AsyncSession, request_id: uuid.UUID, *, for_update: bool = False
 ) -> WithdrawalRequest:
-    request = await session.get(WithdrawalRequest, request_id)
+    """`for_update` إلزامي لكل مسار يغيّر الحالة.
+
+    بدونه يقرأ ضغطتان متزامنتان على «مدفوع» الحالةَ نفسها قبل أن يُثبّت
+    أيّهما تغييره، فتمر كلتاهما من `_require_transition` — ولا يُنقذ المالَ
+    وقتها إلا مفتاح عدم التكرار، والحارس لا يُترك حارساً وحيداً. نفس نهج
+    `rides.cancel_ride` مع قفل صف الرحلة.
+    """
+    stmt = select(WithdrawalRequest).where(WithdrawalRequest.id == request_id)
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+
+    request = await session.scalar(stmt)
     if request is None:
         raise NotFound("طلب السحب غير موجود")
     return request

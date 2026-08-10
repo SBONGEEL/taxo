@@ -43,9 +43,19 @@ def _now() -> datetime:
 
 
 async def get_request(
-    session: AsyncSession, request_id: uuid.UUID
+    session: AsyncSession, request_id: uuid.UUID, *, for_update: bool = False
 ) -> WalletTopupRequest:
-    request = await session.get(WalletTopupRequest, request_id)
+    """`for_update` إلزامي لكل مسار يغيّر الحالة.
+
+    تأكيدان متزامنان يقرآن `pending` معاً قبل أن يُثبّت أحدهما تغييره، فيمر
+    كلاهما من فحص الحالة. مفتاح عدم التكرار يمنع الشحن مرتين، لكن حارس
+    الحالة يجب أن يحرس بنفسه لا أن يتّكل على الذي بعده.
+    """
+    stmt = select(WalletTopupRequest).where(WalletTopupRequest.id == request_id)
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+
+    request = await session.scalar(stmt)
     if request is None:
         raise NotFound("طلب الشحن غير موجود")
     return request
