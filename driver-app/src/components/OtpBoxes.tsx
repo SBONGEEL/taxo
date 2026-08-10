@@ -48,7 +48,9 @@ export function OtpBoxes({ value, onChange, length, disabled }: Props) {
         maxLength={length}
         disabled={disabled}
         value={value}
-        onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, length))}
+        onChange={(event) =>
+          onChange(event.target.value.replace(/\D/g, "").slice(0, length))
+        }
         className="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-transparent caret-transparent outline-none"
       />
     </div>

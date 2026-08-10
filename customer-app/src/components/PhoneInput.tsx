@@ -1,13 +1,20 @@
-/** حقل الهاتف: رمز الدولة إلى جانبه، والأرقام لاتينية دائماً.
+/** حقل الهاتف: بادئةُ الدولة أمامه، والأرقام لاتينية دائماً.
  *
- * الدولة تُختار هنا لا تُخمَّن: الخلفية تطبّع الرقم برمز الدولة المُرسل
- * (`core/phone.py::normalize_phone`)، و«٠٧٩…» بلا دولةٍ رقمان مختلفان في
- * سوقين.
+ * **البادئة من `GET /config`** (`countries[].dial_code`) لا من الواجهة:
+ * قيمةٌ مكتوبةٌ في تطبيقين تفترق عن `core/phone.py` يوماً، وتفترق عن نفسها
+ * في التطبيقين قبله.
+ *
+ * والصفرُ البادئ يُحذف فور كتابته: من يكتب `0791234567` وأمامه `+962` يقصد
+ * `+962791234567`.
+ *
+ * ومنتقي الدولة **اختياري**: شاشتا الدخول والاستعادة بلا منتقٍ (كما في
+ * التصميم، ودولتُهما `default_country_code`)، والتسجيلُ والتحويل يختاران.
  */
 
 import type { CountryCode } from "@/api/types";
 import { Field } from "@/components/ui/Field";
-import { COUNTRY_LABEL, DIAL_CODE, digitsOnly } from "@/lib/phone";
+import { usePhoneCountry } from "@/lib/config";
+import { COUNTRY_LABEL, toNational } from "@/lib/phone";
 
 export function PhoneInput({
   phone,
@@ -17,6 +24,7 @@ export function PhoneInput({
   countries,
   error,
   disabled,
+  showCountry = true,
 }: {
   phone: string;
   country: CountryCode;
@@ -25,27 +33,33 @@ export function PhoneInput({
   countries: CountryCode[];
   error?: string | null;
   disabled?: boolean;
+  showCountry?: boolean;
 }) {
+  const { dialCode, nationalLength } = usePhoneCountry(country);
   return (
     <div className="space-y-3">
-      <div>
-        <label className="label" htmlFor="country">
-          الدولة
-        </label>
-        <select
-          id="country"
-          className="field appearance-none"
-          value={country}
-          disabled={disabled}
-          onChange={(event) => onCountryChange(event.target.value as CountryCode)}
-        >
-          {countries.map((code) => (
-            <option key={code} value={code}>
-              {COUNTRY_LABEL[code]}
-            </option>
-          ))}
-        </select>
-      </div>
+      {showCountry ? (
+        <div>
+          <label className="label" htmlFor="country">
+            الدولة
+          </label>
+          <select
+            id="country"
+            className="field appearance-none"
+            value={country}
+            disabled={disabled}
+            onChange={(event) =>
+              onCountryChange(event.target.value as CountryCode)
+            }
+          >
+            {countries.map((code) => (
+              <option key={code} value={code}>
+                {COUNTRY_LABEL[code]}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <Field
         label="رقم الهاتف"
@@ -57,9 +71,12 @@ export function PhoneInput({
         value={phone}
         disabled={disabled}
         error={error}
-        prefix={<span dir="ltr">+{DIAL_CODE[country]}</span>}
-        placeholder="79 123 4567"
-        onChange={(event) => onPhoneChange(digitsOnly(event.target.value))}
+        prefix={<span dir="ltr">+{dialCode}</span>}
+        maxLength={nationalLength}
+        placeholder={"7".padEnd(nationalLength, "X")}
+        onChange={(event) =>
+          onPhoneChange(toNational(event.target.value, dialCode))
+        }
       />
     </div>
   );

@@ -109,3 +109,40 @@ async def test_vehicle_year_is_validated(client: AsyncClient, driver_payload: di
 
 async def test_vehicles_require_authentication(client: AsyncClient) -> None:
     assert (await client.get("/drivers/me/vehicles")).status_code == 401
+
+
+# ------------------------------------------------- alias كليك (المرحلة 10)
+
+
+async def test_driver_writes_his_own_cliq_alias(
+    client: AsyncClient, driver_payload: dict
+) -> None:
+    """عليه تصل حوالات السحب — فمن يملك الحساب البنكي هو من يكتب اسمه."""
+    body = await _register(client, driver_payload)
+    headers = _auth(body["tokens"])
+
+    updated = await client.patch(
+        "/drivers/me", json={"cliq_alias": "  ABUMHMD79  "}, headers=headers
+    )
+    assert updated.status_code == 200, updated.text
+    # يُقلَّم ولا يُخزَّن بفراغاته
+    assert updated.json()["cliq_alias"] == "ABUMHMD79"
+
+    profile = (await client.get("/drivers/me", headers=headers)).json()
+    assert profile["driver"]["cliq_alias"] == "ABUMHMD79"
+
+    # والفراغُ محوٌ لا سلسلةٌ فارغة تُخزَّن
+    cleared = await client.patch(
+        "/drivers/me", json={"cliq_alias": ""}, headers=headers
+    )
+    assert cleared.json()["cliq_alias"] is None
+
+
+async def test_only_a_driver_may_patch_a_driver_profile(
+    client: AsyncClient, rider_payload: dict
+) -> None:
+    rider = await _register(client, rider_payload)
+    denied = await client.patch(
+        "/drivers/me", json={"cliq_alias": "X"}, headers=_auth(rider["tokens"])
+    )
+    assert denied.status_code == 403

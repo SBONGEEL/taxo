@@ -5,8 +5,8 @@
  * والـOTP تحقُّقٌ لا دخول» (SPEC القسم 11/1، وقرارُ `DESIGN-DECISIONS.md`
  * بند 1) — ونصوصُ التصميم نفسها تقول ذلك: «التحقق مرة واحدة عند التسجيل».
  *
- * ولا منتقيَ دولةٍ هنا كما في التصميم: الخلفية تستنتجها من الصيغة الدولية
- * وترفض غيرها بعبارةٍ صريحة (`core/phone.py::resolve_phone`).
+ * ولا منتقيَ دولةٍ هنا كما في التصميم: البادئةُ ثابتةٌ أمام الحقل وقيمتُها من
+ * `GET /config`، والرقم الوطني وحده يُكتب (`PhoneField`).
  */
 
 import { useState } from "react";
@@ -14,15 +14,19 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
+import { PhoneField } from "@/components/PhoneField";
 import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
+import { usePhoneCountry } from "@/lib/config";
+import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 
 export function LoginScreen() {
   const navigate = useNavigate();
   const { signIn } = useSession();
+  const { country, dialCode, nationalLength } = usePhoneCountry();
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -33,9 +37,12 @@ export function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      signIn(await login(phone.trim(), password));
+      // يُرسل E.164 ومعه الدولة صراحةً: لا استنتاجَ ولا التباس
+      signIn(await login(toE164(phone, dialCode), password, country));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تسجيل الدخول");
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر تسجيل الدخول",
+      );
     } finally {
       setBusy(false);
     }
@@ -56,16 +63,7 @@ export function LoginScreen() {
           void submit();
         }}
       >
-        <Field
-          label="رقم الهاتف"
-          name="phone"
-          type="tel"
-          dir="ltr"
-          autoComplete="tel"
-          placeholder="+962 7X XXX XXXX"
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-        />
+        <PhoneField value={phone} onChange={setPhone} />
         <Field
           label="كلمة المرور"
           name="password"
@@ -89,7 +87,7 @@ export function LoginScreen() {
           type="submit"
           className="mt-24"
           loading={busy}
-          disabled={!phone.trim() || !password}
+          disabled={!looksComplete(phone, nationalLength) || !password}
         >
           دخول
         </Button>

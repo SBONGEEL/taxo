@@ -11,12 +11,12 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
-import type { CountryCode } from "@/api/types";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { useConfig } from "@/lib/config";
+import { usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { Brand } from "@/components/Brand";
@@ -26,8 +26,11 @@ export function LoginScreen() {
   const { signIn } = useSession();
   const navigate = useNavigate();
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? ["JO"];
-  const [country, setCountry] = useState<CountryCode>(countries[0] ?? "JO");
+  const countries = config?.countries.map((entry) => entry.country_code) ?? [
+    "JO",
+  ];
+  // لا منتقيَ دولةٍ هنا كما في التصميم: البادئة ثابتةٌ من `default_country_code`
+  const { country, nationalLength } = usePhoneCountry();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
@@ -63,8 +66,9 @@ export function LoginScreen() {
             country={country}
             countries={countries}
             onPhoneChange={setPhone}
-            onCountryChange={setCountry}
+            onCountryChange={() => undefined}
             disabled={busy}
+            showCountry={false}
           />
 
           <Field
@@ -81,7 +85,11 @@ export function LoginScreen() {
                 aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
                 className="text-muted transition hover:text-ink"
               >
-                {visible ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                {visible ? (
+                  <EyeOff className="size-5" />
+                ) : (
+                  <Eye className="size-5" />
+                )}
               </button>
             }
           />
@@ -92,7 +100,9 @@ export function LoginScreen() {
             type="submit"
             size="lg"
             loading={busy}
-            disabled={!looksComplete(phone, country) || password.length < 1}
+            disabled={
+              !looksComplete(phone, nationalLength) || password.length < 1
+            }
           >
             دخول
           </Button>

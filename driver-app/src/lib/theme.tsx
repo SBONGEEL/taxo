@@ -8,7 +8,14 @@
  * التطبيق ليلياً حتى قبل أن يُقلع React.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 
 type ThemeChoice = "dark" | "light";
@@ -60,7 +67,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [choice, dark, setChoice],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

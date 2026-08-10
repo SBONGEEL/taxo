@@ -55,14 +55,15 @@ export async function startPhoneVerification(
   containerId: string,
 ): Promise<PhoneChallenge> {
   const app = await firebaseApp(config);
-  const { getAuth, RecaptchaVerifier, signInWithPhoneNumber } = await import(
-    "firebase/auth"
-  );
+  const { getAuth, RecaptchaVerifier, signInWithPhoneNumber } =
+    await import("firebase/auth");
 
   const auth = getAuth(app);
   auth.languageCode = "ar";
 
-  const verifier = new RecaptchaVerifier(auth, containerId, { size: "invisible" });
+  const verifier = new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+  });
   let result: ConfirmationResult;
   try {
     result = await signInWithPhoneNumber(auth, phoneE164, verifier);
@@ -95,7 +96,8 @@ export async function requestPushToken(
   config: FirebaseWebConfig,
   vapidKey: string,
 ): Promise<string | null> {
-  if (!("Notification" in window) || !("serviceWorker" in navigator)) return null;
+  if (!("Notification" in window) || !("serviceWorker" in navigator))
+    return null;
   if (!vapidKey) return null;
 
   const permission =
@@ -105,7 +107,8 @@ export async function requestPushToken(
   if (permission !== "granted") return null;
 
   const app = await firebaseApp(config);
-  const { getMessaging, getToken, isSupported } = await import("firebase/messaging");
+  const { getMessaging, getToken, isSupported } =
+    await import("firebase/messaging");
   if (!(await isSupported())) return null;
 
   // عاملُ الخدمة الخاص بالرسائل: هو ما يعرض الإشعار والتطبيقُ مغلق
@@ -123,10 +126,15 @@ export async function requestPushToken(
 /** ما يصل والتطبيق مفتوح — لا يعرضه المتصفح، فنعرضه نحن داخل الشاشة. */
 export async function onForegroundMessage(
   config: FirebaseWebConfig,
-  handler: (payload: { title?: string; body?: string; data?: Record<string, string> }) => void,
+  handler: (payload: {
+    title?: string;
+    body?: string;
+    data?: Record<string, string>;
+  }) => void,
 ): Promise<() => void> {
   const app = await firebaseApp(config);
-  const { getMessaging, onMessage, isSupported } = await import("firebase/messaging");
+  const { getMessaging, onMessage, isSupported } =
+    await import("firebase/messaging");
   if (!(await isSupported())) return () => undefined;
 
   return onMessage(getMessaging(app), (payload) => {

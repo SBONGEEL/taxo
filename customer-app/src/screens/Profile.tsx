@@ -9,7 +9,14 @@
  * تطالبه الشاشة بالتحقق عند أول فرصة عبر `POST /auth/me/verify-phone`.
  */
 
-import { BellRing, LogOut, Moon, ShieldAlert, Sun, SunMoon } from "lucide-react";
+import {
+  BellRing,
+  LogOut,
+  Moon,
+  ShieldAlert,
+  Sun,
+  SunMoon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,7 +31,7 @@ import { PhoneVerification } from "@/components/PhoneVerification";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
-import { useConfig } from "@/lib/config";
+import { useConfig, usePhoneCountry } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -34,6 +41,7 @@ export function ProfileScreen() {
   const { user, signOut, refreshUser } = useSession();
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
+  const { dialCode } = usePhoneCountry(user?.country_code);
 
   const [marketing, setMarketing] = useState<boolean | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -53,7 +61,9 @@ export function ProfileScreen() {
       await setNotificationPreferences(value);
     } catch (caught) {
       setMarketing(!value);
-      setError(caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل");
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل",
+      );
     }
   }
 
@@ -65,7 +75,9 @@ export function ProfileScreen() {
       setVerifying(false);
       setDone("تم إثبات رقمك.");
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إثبات الرقم");
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر إثبات الرقم",
+      );
     }
   }
 
@@ -94,10 +106,12 @@ export function ProfileScreen() {
             {verifying ? (
               <PhoneVerification
                 phone={user.phone}
-                country={user.country_code}
+                dialCode={dialCode}
                 method={config?.auth.verification ?? "none"}
                 otpLength={config?.auth.otp_length ?? null}
-                requestChallenge={() => startChallenge(user.phone, user.country_code)}
+                requestChallenge={() =>
+                  startChallenge(user.phone, user.country_code)
+                }
                 onProven={provePhone}
                 onBack={() => setVerifying(false)}
               />

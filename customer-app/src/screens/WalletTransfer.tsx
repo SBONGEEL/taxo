@@ -21,6 +21,7 @@ import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { Screen } from "@/components/ui/Screen";
 import { useConfig, useCountryConfig } from "@/lib/config";
+import { usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { formatMoney, newIdempotencyKey } from "@/lib/utils";
@@ -31,8 +32,11 @@ export function WalletTransferScreen() {
   const { config } = useConfig();
   const country = useCountryConfig(user?.country_code);
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? ["JO"];
+  const countries = config?.countries.map((entry) => entry.country_code) ?? [
+    "JO",
+  ];
   const [code, setCode] = useState<CountryCode>(user?.country_code ?? "JO");
+  const { nationalLength } = usePhoneCountry(code);
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState<TransferRecipient | null>(null);
@@ -48,7 +52,9 @@ export function WalletTransferScreen() {
     try {
       setRecipient(await lookupRecipient(phone));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر العثور على الحساب");
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر العثور على الحساب",
+      );
     } finally {
       setBusy(false);
     }
@@ -69,7 +75,9 @@ export function WalletTransferScreen() {
       setPhone("");
       setAmount("");
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر تنفيذ التحويل");
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر تنفيذ التحويل",
+      );
     } finally {
       setBusy(false);
     }
@@ -82,7 +90,9 @@ export function WalletTransferScreen() {
           <div className="card flex items-center gap-3 p-4">
             <UserCheck className="size-6 text-success" />
             <div className="min-w-0">
-              <p className="truncate font-semibold text-ink">{recipient.name}</p>
+              <p className="truncate font-semibold text-ink">
+                {recipient.name}
+              </p>
               <p dir="ltr" className="text-sm text-muted">
                 {recipient.phone}
               </p>
@@ -113,7 +123,9 @@ export function WalletTransferScreen() {
             dir="ltr"
             className="text-start"
             value={amount}
-            onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
+            onChange={(event) =>
+              setAmount(event.target.value.replace(/[^\d.]/g, ""))
+            }
             suffix={country?.currency}
             hint="الحدّان اليومي والشهري يضبطهما فريق TAXO"
           />
@@ -123,7 +135,12 @@ export function WalletTransferScreen() {
         <SuccessNote message={done} />
 
         {recipient ? (
-          <Button size="lg" loading={busy} disabled={Number(amount) <= 0} onClick={send}>
+          <Button
+            size="lg"
+            loading={busy}
+            disabled={Number(amount) <= 0}
+            onClick={send}
+          >
             <ArrowLeftRight className="size-4" />
             تأكيد التحويل
           </Button>
@@ -131,7 +148,7 @@ export function WalletTransferScreen() {
           <Button
             size="lg"
             loading={busy}
-            disabled={!looksComplete(phone, code)}
+            disabled={!looksComplete(phone, nationalLength)}
             onClick={findRecipient}
           >
             متابعة
@@ -139,7 +156,11 @@ export function WalletTransferScreen() {
         )}
 
         {done ? (
-          <Button variant="ghost" className="w-full" onClick={() => navigate("/wallet")}>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => navigate("/wallet")}
+          >
             العودة للمحفظة
           </Button>
         ) : null}

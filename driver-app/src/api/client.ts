@@ -92,7 +92,7 @@ function refreshOnce(): Promise<boolean> {
 // ------------------------------------------------------------ الطلب
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   /** مسارٌ عام لا يحمل توكناً (`/config`، `/auth/*`). */
   anonymous?: boolean;
@@ -103,7 +103,8 @@ interface RequestOptions {
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
   const url = new URL(`${API_URL}${path}`);
   for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
+    if (value !== undefined && value !== "")
+      url.searchParams.set(key, String(value));
   }
   return url.toString();
 }
@@ -121,7 +122,11 @@ async function toError(response: Response): Promise<ApiError> {
   }
 }
 
-async function send<T>(path: string, options: RequestOptions, retry: boolean): Promise<T> {
+async function send<T>(
+  path: string,
+  options: RequestOptions,
+  retry: boolean,
+): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -133,7 +138,8 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
     response = await fetch(buildUrl(path, options.query), {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body:
+        options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal,
     });
   } catch (error) {
@@ -152,17 +158,51 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
   return (await response.json()) as T;
 }
 
-export function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   return send<T>(path, options, true);
 }
 
+/** رفعُ ملفٍ واحد بـ`multipart`.
+ *
+ * خارج `request` عمداً: ذاك يضع `Content-Type: application/json` ويُسلسِل
+ * الجسم، وكلاهما يفسد الرفع — حدُّ الأجزاء (boundary) يكتبه المتصفح ولا
+ * يجوز أن نكتبه نحن. ولا يشارك التجديد التلقائي لأن الملف لا يُقرأ مرتين:
+ * توكنٌ منتهٍ هنا يعني إعادةَ الرفع لا إعادةَ الطلب صامتةً.
+ */
+export async function upload<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const access = tokens.access();
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: "PUT",
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+  } catch {
+    throw new ApiError(0, "network_error", "لا اتصال بالإنترنت — حاول مجدداً");
+  }
+
+  if (!response.ok) throw await toError(response);
+  return (await response.json()) as T;
+}
+
 export const api = {
-  get: <T>(path: string, options: Omit<RequestOptions, "method" | "body"> = {}) =>
-    request<T>(path, { ...options, method: "GET" }),
+  get: <T>(
+    path: string,
+    options: Omit<RequestOptions, "method" | "body"> = {},
+  ) => request<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "PUT", body }),
+  patch: <T>(path: string, body?: unknown, options: RequestOptions = {}) =>
+    request<T>(path, { ...options, method: "PATCH", body }),
   del: <T>(path: string, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "DELETE" }),
 };

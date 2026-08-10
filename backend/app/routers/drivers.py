@@ -24,6 +24,7 @@ from app.schemas.driver import (
     DriverLocationIn,
     DriverOut,
     DriverProfileOut,
+    DriverUpdate,
     NearbyDriverOut,
     VehicleCreate,
     VehicleOut,
@@ -56,6 +57,25 @@ async def get_my_driver_profile(
         vehicles=[VehicleOut.model_validate(v) for v in vehicles],
         documents=[DriverDocumentOut.model_validate(d) for d in documents],
     )
+
+
+@router.patch("/me", response_model=DriverOut)
+async def update_my_driver_profile(
+    payload: DriverUpdate, driver: CurrentDriver, session: DbSession
+) -> DriverOut:
+    """تعديل ما يملكه الكبتن من ملفه — `cliq_alias` اليوم (SPEC القسم 9).
+
+    يُكتب في التسجيل (الخطوة الثالثة) ويُعدَّل من الإعدادات. ولا يمسّ
+    الاعتماد: alias خاطئ يعطّل سحباً واحداً ويُصحَّح، ولا علاقة له بمن يحق
+    له استقبال الطلبات.
+    """
+    if payload.cliq_alias is not None:
+        alias = payload.cliq_alias.strip()
+        driver.cliq_alias = alias or None
+
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)
 
 
 @router.get("/me/vehicles", response_model=list[VehicleOut])

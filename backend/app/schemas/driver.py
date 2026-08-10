@@ -115,6 +115,17 @@ class DriverProfileOut(BaseModel):
     documents: list[DriverDocumentOut]
 
 
+class DriverUpdate(BaseModel):
+    """ما يملك الكبتن تغييره في ملفه — و`cliq_alias` وحده اليوم.
+
+    عليه تصل حوالاتُ السحب (SPEC القسم 9)، فهو حقلُ الكبتن لا حقلُ الإدارة:
+    من يملك الحساب البنكي هو من يكتب اسمه. وما عداه (الحالة، التقييم،
+    الاتصال) يُكتب من مساراتٍ تملك قواعدَه.
+    """
+
+    cliq_alias: str | None = Field(default=None, max_length=64)
+
+
 class DriverLocationIn(BaseModel):
     """بثّ موقع واحد من تطبيق الكبتن (SPEC القسم 10)."""
 

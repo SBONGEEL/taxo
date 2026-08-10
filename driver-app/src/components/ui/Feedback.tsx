@@ -17,9 +17,11 @@ function Note({
   tone: "danger" | "ok" | "warn";
 }) {
   if (!message) return null;
-  const color = { danger: "border-danger text-danger", ok: "border-ok text-ok", warn: "border-warn text-warn" }[
-    tone
-  ];
+  const color = {
+    danger: "border-danger text-danger",
+    ok: "border-ok text-ok",
+    warn: "border-warn text-warn",
+  }[tone];
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
@@ -33,13 +35,17 @@ function Note({
   );
 }
 
-export const ErrorNote = ({ message }: { message: string | null | undefined }) => (
-  <Note message={message} tone="danger" />
-);
+export const ErrorNote = ({
+  message,
+}: {
+  message: string | null | undefined;
+}) => <Note message={message} tone="danger" />;
 
-export const SuccessNote = ({ message }: { message: string | null | undefined }) => (
-  <Note message={message} tone="ok" />
-);
+export const SuccessNote = ({
+  message,
+}: {
+  message: string | null | undefined;
+}) => <Note message={message} tone="ok" />;
 
 /** مؤشّرُ الانتظار من §2.10: حلقةٌ 34×34 بحدٍّ `--brd` وقمّةٍ `--tx`. */
 export function Spinner({ className }: { className?: string }) {

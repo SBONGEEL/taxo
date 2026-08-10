@@ -12,10 +12,7 @@ export type VehicleCategory = "economy" | "comfort";
 export type DriverStatus = "pending" | "approved" | "rejected" | "suspended";
 
 export type DocumentType =
-  | "driving_license"
-  | "national_id"
-  | "vehicle_registration"
-  | "vehicle_photo";
+  "driving_license" | "national_id" | "vehicle_registration" | "vehicle_photo";
 
 export type DocumentReviewStatus = "pending" | "approved" | "rejected";
 
@@ -63,6 +60,9 @@ export interface CountryConfig {
   currency: Currency;
   features: Record<string, boolean>;
   vehicle_categories: VehicleCategory[];
+  /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
+  dial_code: string;
+  national_number_length: number;
 }
 
 export interface AppConfig {
@@ -70,6 +70,8 @@ export interface AppConfig {
   auth: AuthMethod;
   countries: CountryConfig[];
   providers: Record<string, Record<string, string | undefined>>;
+  /** الدولة التي تفترضها شاشاتُ ما قبل الدخول (لا منتقيَ دولٍ فيها). */
+  default_country_code: CountryCode;
 }
 
 export interface Vehicle {
@@ -112,4 +114,16 @@ export interface DriverProfile {
   user: User;
   vehicles: Vehicle[];
   documents: DriverDocument[];
+}
+
+export interface DriverDocuments {
+  documents: DriverDocument[];
+  missing_required: DocumentType[];
+}
+
+/** جوابُ الرفع — ومعه أثرُه على حالة الكبتن (سياسة 9-ب). */
+export interface DocumentUpload {
+  document: DriverDocument;
+  driver_status: DriverStatus;
+  approval_reverted: boolean;
 }

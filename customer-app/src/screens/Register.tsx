@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { useConfig } from "@/lib/config";
+import { usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 
@@ -30,11 +31,14 @@ export function RegisterScreen() {
   const { signIn } = useSession();
   const navigate = useNavigate();
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? ["JO"];
+  const countries = config?.countries.map((entry) => entry.country_code) ?? [
+    "JO",
+  ];
   const verification = config?.auth.verification ?? "none";
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [country, setCountry] = useState<CountryCode>(countries[0] ?? "JO");
+  const { dialCode, nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +46,10 @@ export function RegisterScreen() {
   const [busy, setBusy] = useState(false);
 
   const ready = useMemo(
-    () => looksComplete(phone, country) && name.trim().length >= 2 && password.length >= 8,
+    () =>
+      looksComplete(phone, nationalLength) &&
+      name.trim().length >= 2 &&
+      password.length >= 8,
     [phone, country, name, password],
   );
 
@@ -61,7 +68,9 @@ export function RegisterScreen() {
       );
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إنشاء الحساب");
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر إنشاء الحساب",
+      );
       setStep("details");
     } finally {
       setBusy(false);
@@ -124,7 +133,7 @@ export function RegisterScreen() {
         ) : (
           <PhoneVerification
             phone={phone}
-            country={country}
+            dialCode={dialCode}
             method={verification}
             otpLength={config?.auth.otp_length ?? null}
             requestChallenge={() => startChallenge(phone, country)}

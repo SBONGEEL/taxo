@@ -1,4 +1,8 @@
-/** تطبيع الهاتف في الواجهة — مرآةٌ مبسّطة لـ `backend/app/core/phone.py`.
+/** الهاتف في الواجهة — **والبادئةُ من الخلفية لا من هنا**.
+ *
+ * `GET /config` ينشر لكل دولة `dial_code` و`national_number_length` من
+ * `core/phone.py` نفسه، فلا تُكتب «962» في كود أيّ تطبيق: بادئةٌ مكتوبةٌ في
+ * تطبيقين تفترق عن ذلك الجدول يوماً، وتفترق عن نفسها في التطبيقين قبله.
  *
  * الخلفية هي المرجع وتطبّع كل ما يصلها؛ وهذه النسخة لغرضين لا ثالث لهما:
  * **العرض** (رقمٌ يُقرأ كما كتبه صاحبه)، و**تدفّق Firebase** الذي يقع على
@@ -10,8 +14,6 @@
  */
 
 import type { CountryCode } from "@/api/types";
-
-export const DIAL_CODE: Record<CountryCode, string> = { JO: "962", LY: "218" };
 
 export const COUNTRY_LABEL: Record<CountryCode, string> = {
   JO: "🇯🇴 الأردن",
@@ -31,18 +33,25 @@ export function digitsOnly(input: string): string {
     .join("");
 }
 
-/** صيغة E.164 لرقمٍ محلي أو دولي — للعرض ولتدفّق Firebase. */
-export function toE164(raw: string, country: CountryCode): string {
-  const dial = DIAL_CODE[country];
-  let digits = digitsOnly(raw);
-
+/** الرقم الوطني كما يُكتب في حقلٍ أمامه بادئةٌ ثابتة.
+ *
+ * **يحذف الصفر البادئ** فور كتابته: من يكتب `0791234567` وأمامه `+962` يقصد
+ * `+962791234567` لا `+9620791234567`. ويسقط تكرارَ البادئة كذلك، فمن لصق
+ * رقماً دولياً كاملاً في حقلٍ يحمل بادئتَه لا يصير رقمُه ضِعفَين.
+ */
+export function toNational(input: string, dialCode: string): string {
+  let digits = digitsOnly(input);
   if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.startsWith(dial)) return `+${digits}`;
-  return `+${dial}${digits.replace(/^0+/, "")}`;
+  if (digits.startsWith(dialCode)) digits = digits.slice(dialCode.length);
+  return digits.replace(/^0+/, "");
+}
+
+/** صيغة E.164 لما يُرسل ولتدفّق Firebase. */
+export function toE164(raw: string, dialCode: string): string {
+  return `+${dialCode}${toNational(raw, dialCode)}`;
 }
 
 /** رقمٌ يبدو مكتملاً — حارسُ واجهةٍ يمنع نداءً فاشلاً، لا قاعدةَ تحقق. */
-export function looksComplete(raw: string, country: CountryCode): boolean {
-  const national = toE164(raw, country).slice(DIAL_CODE[country].length + 1);
-  return national.length >= 8 && national.length <= 12;
+export function looksComplete(raw: string, nationalLength: number): boolean {
+  return digitsOnly(raw).length === nationalLength;
 }

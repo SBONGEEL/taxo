@@ -44,7 +44,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     [config, error],
   );
 
-  return <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>;
+  return (
+    <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
+  );
 }
 
 export function useConfig() {
@@ -52,21 +54,34 @@ export function useConfig() {
 }
 
 /** إعدادات دولة المستخدم — منها تُقرأ مفاتيح الميزات وفئات المركبات. */
-export function useCountryConfig(country: CountryCode | undefined): CountryConfig | null {
+export function useCountryConfig(
+  country: CountryCode | undefined,
+): CountryConfig | null {
   const { config } = useConfig();
   if (!config || !country) return null;
-  return config.countries.find((entry) => entry.country_code === country) ?? null;
+  return (
+    config.countries.find((entry) => entry.country_code === country) ?? null
+  );
 }
 
 /** «هل هذه الميزة مفعّلة في هذه الدولة؟» — والغياب معطّل دائماً (SPEC القسم 4). */
-export function useFeature(country: CountryCode | undefined, key: string): boolean {
+export function useFeature(
+  country: CountryCode | undefined,
+  key: string,
+): boolean {
   return useCountryConfig(country)?.features[key] === true;
 }
 
 /** إعدادُ تطبيق الويب لدى Firebase من عقدٍ بعينه — `null` بغير عقد مكتمل. */
 export function firebaseConfigOf(
   values:
-    | { project_id?: string; api_key?: string; auth_domain?: string; app_id?: string; sender_id?: string }
+    | {
+        project_id?: string;
+        api_key?: string;
+        auth_domain?: string;
+        app_id?: string;
+        sender_id?: string;
+      }
     | undefined,
 ): FirebaseWebConfig | null {
   if (!values?.project_id || !values.api_key || !values.app_id) return null;
@@ -76,5 +91,27 @@ export function firebaseConfigOf(
     projectId: values.project_id,
     appId: values.app_id,
     messagingSenderId: values.sender_id,
+  };
+}
+
+/** دولةُ شاشات ما قبل الدخول وبادئتُها — من `GET /config` وحده.
+
+ * لا حسابَ بعدُ فلا دولةَ معروفة، والتصميم بلا منتقي دول؛ فالخلفية تنشر
+ * `default_country_code` وتنشر بادئةَ كل دولة وطولَ رقمها الوطني. والقيم
+ * الاحتياطية هنا لحظةَ ما قبل وصول الإعدادات فقط — والشاشات لا تُرسم قبله
+ * أصلاً (`Boot` في `App.tsx`).
+ */
+export function usePhoneCountry(override?: CountryCode): {
+  country: CountryCode;
+  dialCode: string;
+  nationalLength: number;
+} {
+  const { config } = useConfig();
+  const country = override ?? config?.default_country_code ?? "JO";
+  const entry = config?.countries.find((item) => item.country_code === country);
+  return {
+    country,
+    dialCode: entry?.dial_code ?? "962",
+    nationalLength: entry?.national_number_length ?? 9,
   };
 }

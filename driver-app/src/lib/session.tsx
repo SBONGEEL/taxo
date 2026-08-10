@@ -84,7 +84,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     requestPushToken(fcm, vapid)
       .then((token) =>
         token
-          ? registerDevice({ device_id: deviceId(), token, platform: platform() })
+          ? registerDevice({
+              device_id: deviceId(),
+              token,
+              platform: platform(),
+            })
           : null,
       )
       .catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
@@ -114,7 +118,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [user, loading, signIn, signOut, refreshUser],
   );
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
 export function useSession() {

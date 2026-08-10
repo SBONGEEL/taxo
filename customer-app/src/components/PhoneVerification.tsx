@@ -19,7 +19,7 @@ import { ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import type { ChallengeResponse, CountryCode, VerificationMethod } from "@/api/types";
+import type { ChallengeResponse, VerificationMethod } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
@@ -31,7 +31,8 @@ const RECAPTCHA_CONTAINER = "taxo-recaptcha";
 
 interface Props {
   phone: string;
-  country: CountryCode;
+  /** بادئةُ الدولة من `GET /config` — بها تُبنى E.164 لتدفّق Firebase. */
+  dialCode: string;
   method: VerificationMethod;
   otpLength: number | null;
   /** يبدأ التحدي عند مزود SMS — مسارُ التسجيل غير مسار الاستعادة. */
@@ -43,7 +44,7 @@ interface Props {
 
 export function PhoneVerification({
   phone,
-  country,
+  dialCode,
   method,
   otpLength,
   requestChallenge,
@@ -58,7 +59,7 @@ export function PhoneVerification({
   const [cooldown, setCooldown] = useState(0);
   const challenge = useRef<PhoneChallenge | null>(null);
 
-  const e164 = toE164(phone, country);
+  const e164 = toE164(phone, dialCode);
   const digits = otpLength ?? 6;
 
   const send = useCallback(async () => {
@@ -68,7 +69,9 @@ export function PhoneVerification({
       if (method === "firebase") {
         const firebase = firebaseConfigOf(config?.providers.firebase_auth);
         if (!firebase) {
-          throw new Error("إعداد Firebase غير مكتمل — راجع عقد المزود في لوحة الإدارة");
+          throw new Error(
+            "إعداد Firebase غير مكتمل — راجع عقد المزود في لوحة الإدارة",
+          );
         }
         challenge.current = await startPhoneVerification(
           firebase,
@@ -101,7 +104,10 @@ export function PhoneVerification({
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown((value) => value - 1), 1_000);
+    const timer = window.setTimeout(
+      () => setCooldown((value) => value - 1),
+      1_000,
+    );
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
@@ -118,7 +124,9 @@ export function PhoneVerification({
       onProven(code);
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "رمز التحقق غير صحيح أو انتهت صلاحيته",
+        caught instanceof Error
+          ? caught.message
+          : "رمز التحقق غير صحيح أو انتهت صلاحيته",
       );
     } finally {
       setChecking(false);
@@ -168,7 +176,11 @@ export function PhoneVerification({
       </Button>
 
       <div className="flex items-center justify-between text-sm">
-        <button type="button" onClick={onBack} className="text-muted hover:text-ink">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-muted hover:text-ink"
+        >
           تعديل الرقم
         </button>
         <button
@@ -177,7 +189,9 @@ export function PhoneVerification({
           disabled={cooldown > 0 || sending}
           className="font-medium text-ink disabled:text-muted"
         >
-          {cooldown > 0 ? `إعادة الإرسال بعد ${cooldown} ثانية` : "إعادة إرسال الرمز"}
+          {cooldown > 0
+            ? `إعادة الإرسال بعد ${cooldown} ثانية`
+            : "إعادة إرسال الرمز"}
         </button>
       </div>
     </motion.div>

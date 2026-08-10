@@ -5,6 +5,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.models.enums import CountryCode
+
 # backend/app/core/config.py -> parents[3] == جذر المستودع
 REPO_ROOT = Path(__file__).resolve().parents[3]
 # ...و parents[2] == مجلد `backend/` نفسه. الفرق مهم داخل الحاوية: المصدر
@@ -69,6 +71,11 @@ class Settings(BaseSettings):
     # يعود إليها المتصفح ثم تسأل الخلفية عن الحال (SPEC القسم 6.4).
     public_api_base_url: str = "http://localhost:8001"
     card_return_url: str = "http://localhost:5173/payments/card/return"
+
+    # الدولة التي تفترضها شاشاتُ ما قبل الدخول في التطبيقين (بادئةُ الهاتف
+    # الظاهرة أمام الحقل). إعدادُ نشرٍ لا سرّ، كـ`cors_origins`؛ ونشرُه في
+    # `GET /config` هو ما يمنع كتابة «962» في كود الواجهات
+    default_country_code: CountryCode = CountryCode.JO
 
     cors_origins: list[str] = [
         "http://localhost:5173",

@@ -13,6 +13,10 @@ class CountryConfigOut(BaseModel):
     currency: Currency
     features: dict[str, bool]
     vehicle_categories: list[VehicleCategory]
+    # بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` وحده، ليرسم
+    # التطبيقان الحقل بلا كتابة «962» في كودهما
+    dial_code: str
+    national_number_length: int
 
 
 class ConfigOut(BaseModel):
@@ -26,3 +30,7 @@ class ConfigOut(BaseModel):
     auth: AuthMethodResponse
     countries: list[CountryConfigOut]
     providers: dict[str, dict[str, Any]]
+    # الدولة التي تفترضها شاشاتُ ما قبل الدخول: لا حسابَ بعد فلا دولةَ
+    # معروفة، والتصميم بلا منتقي دول. إعدادُ نشرٍ لا سرّ — مكانه `settings`
+    # كـ`cors_origins` و`card_return_url`
+    default_country_code: CountryCode

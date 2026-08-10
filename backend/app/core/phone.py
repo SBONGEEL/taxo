@@ -18,6 +18,21 @@ class InvalidPhoneNumber(ValueError):
     """رقم هاتف لا يطابق قواعد الدولة."""
 
 
+def dial_code_for(country_code: CountryCode) -> str:
+    """بادئة الدولة كما تراها الواجهات — من نفس الجدول الذي يطبّع به.
+
+    تُنشر في `GET /config` لترسمها الواجهةُ ثابتةً أمام الحقل بدل أن تكتبها
+    في كودها: بادئةٌ مكتوبةٌ في تطبيقين تفترق عن هذا الجدول يوماً، وتفترق
+    عن نفسها في التطبيقين قبل ذلك.
+    """
+    return _COUNTRY_RULES[country_code][0]
+
+
+def national_length_for(country_code: CountryCode) -> int:
+    """طول الرقم الوطني بلا الصفر البادئ — تحدّ به الواجهةُ طولَ الحقل."""
+    return _COUNTRY_RULES[country_code][1][0]
+
+
 def normalize_phone(raw: str, country_code: CountryCode) -> str:
     """يُحوّل أي صيغة مدخلة إلى E.164 (`+962791234567`).
 

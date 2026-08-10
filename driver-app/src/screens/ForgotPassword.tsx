@@ -14,12 +14,14 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { resetPassword, startPasswordResetChallenge } from "@/api/endpoints";
+import { PhoneField } from "@/components/PhoneField";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { useConfig } from "@/lib/config";
+import { useConfig, usePhoneCountry } from "@/lib/config";
+import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 
 type Step = "phone" | "verify" | "password";
@@ -28,6 +30,7 @@ export function ForgotPasswordScreen() {
   const navigate = useNavigate();
   const { config } = useConfig();
   const { signIn } = useSession();
+  const { country, dialCode, nationalLength } = usePhoneCountry();
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -39,9 +42,10 @@ export function ForgotPasswordScreen() {
 
   const method = config?.auth.verification ?? "none";
 
+  const e164 = toE164(phone, dialCode);
   const requestChallenge = useCallback(
-    () => startPasswordResetChallenge(phone.trim()),
-    [phone],
+    () => startPasswordResetChallenge(e164, country),
+    [e164, country],
   );
 
   function toVerification() {
@@ -59,7 +63,8 @@ export function ForgotPasswordScreen() {
     try {
       signIn(
         await resetPassword({
-          phone: phone.trim(),
+          phone: e164,
+          country_code: country,
           verification_token: proof ?? "",
           new_password: password,
         }),
@@ -82,8 +87,7 @@ export function ForgotPasswordScreen() {
     return (
       <AuthScreen onBack={() => setStep("phone")}>
         <PhoneVerification
-          phone={phone.trim()}
-          country={undefined}
+          phone={e164}
           method={method}
           otpLength={config?.auth.otp_length ?? null}
           title="تحقق من رقمك"
@@ -171,16 +175,7 @@ export function ForgotPasswordScreen() {
             toVerification();
           }}
         >
-          <Field
-            label="رقم الهاتف"
-            name="phone"
-            type="tel"
-            dir="ltr"
-            autoComplete="tel"
-            placeholder="+962 7X XXX XXXX"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-          />
+          <PhoneField value={phone} onChange={setPhone} />
 
           <ErrorNote message={error} />
 
@@ -188,7 +183,7 @@ export function ForgotPasswordScreen() {
             type="submit"
             size="md"
             className="mt-20"
-            disabled={!phone.trim()}
+            disabled={!looksComplete(phone, nationalLength)}
           >
             إرسال الرمز
           </Button>

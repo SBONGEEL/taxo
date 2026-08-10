@@ -17,20 +17,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import type { ChallengeResponse, CountryCode, VerificationMethod } from "@/api/types";
+import type { ChallengeResponse, VerificationMethod } from "@/api/types";
 import { OtpBoxes } from "@/components/OtpBoxes";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { startPhoneVerification, type PhoneChallenge } from "@/lib/firebase";
-import { toE164 } from "@/lib/phone";
 import { arabicDigits } from "@/lib/utils";
 
 const RECAPTCHA_CONTAINER = "taxo-recaptcha";
 
 interface Props {
+  /** بصيغة E.164 جاهزةً — يبنيها المستدعي من بادئة `GET /config`. */
   phone: string;
-  country: CountryCode | undefined;
   method: VerificationMethod;
   otpLength: number | null;
   title: string;
@@ -44,7 +43,6 @@ interface Props {
 
 export function PhoneVerification({
   phone,
-  country,
   method,
   otpLength,
   title,
@@ -60,8 +58,7 @@ export function PhoneVerification({
   const [cooldown, setCooldown] = useState(0);
   const challenge = useRef<PhoneChallenge | null>(null);
 
-  // بلا دولةٍ صريحة يبقى الرقم كما كتبه صاحبه؛ والخلفية تستنتجها من صيغته
-  const e164 = country ? toE164(phone, country) : phone;
+  const e164 = phone;
   const digits = otpLength ?? 6;
 
   const send = useCallback(async () => {
@@ -71,7 +68,9 @@ export function PhoneVerification({
       if (method === "firebase") {
         const firebase = firebaseConfigOf(config?.providers.firebase_auth);
         if (!firebase) {
-          throw new Error("إعداد Firebase غير مكتمل — راجع عقد المزود في لوحة الإدارة");
+          throw new Error(
+            "إعداد Firebase غير مكتمل — راجع عقد المزود في لوحة الإدارة",
+          );
         }
         challenge.current = await startPhoneVerification(
           firebase,
@@ -103,7 +102,10 @@ export function PhoneVerification({
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown((value) => value - 1), 1_000);
+    const timer = window.setTimeout(
+      () => setCooldown((value) => value - 1),
+      1_000,
+    );
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
@@ -119,7 +121,9 @@ export function PhoneVerification({
       onProven(code);
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "رمز التحقق غير صحيح أو انتهت صلاحيته",
+        caught instanceof Error
+          ? caught.message
+          : "رمز التحقق غير صحيح أو انتهت صلاحيته",
       );
     }
   }
@@ -129,7 +133,12 @@ export function PhoneVerification({
       <h1 className="mt-24 text-24 font-bold text-ink">{title}</h1>
       <p className="mt-8 text-13 leading-snug text-muted">{subtitle}</p>
 
-      <OtpBoxes value={code} onChange={setCode} length={digits} disabled={sending} />
+      <OtpBoxes
+        value={code}
+        onChange={setCode}
+        length={digits}
+        disabled={sending}
+      />
 
       {/* الفجوة تقع بين عنصرين مرسومين فقط: بلا خطأٍ يلتصق الزرُّ بالخانات
           كما في التصميم (هامشها `34px 0` هو كل المسافة) */}

@@ -24,11 +24,7 @@ export type RideStatus =
 
 export type PaymentMethod = "cash" | "cliq" | "card" | "wallet";
 export type PaymentStatus =
-  | "pending"
-  | "confirmed"
-  | "failed"
-  | "disputed"
-  | "refunded";
+  "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 
 export type VerificationMethod = "firebase" | "sms_otp" | "none";
 
@@ -72,6 +68,9 @@ export interface CountryConfig {
   currency: Currency;
   features: Record<string, boolean>;
   vehicle_categories: VehicleCategory[];
+  /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
+  dial_code: string;
+  national_number_length: number;
 }
 
 export interface AppConfig {
@@ -98,6 +97,8 @@ export interface AppConfig {
     sms?: { provider_name?: string; sender_id?: string; endpoint?: string };
     telr?: { test_mode?: boolean };
   };
+  /** الدولة التي تفترضها شاشاتُ ما قبل الدخول (لا منتقيَ دولٍ فيها). */
+  default_country_code: CountryCode;
 }
 
 export interface Coordinates {
