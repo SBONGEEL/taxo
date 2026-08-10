@@ -333,11 +333,42 @@ async def seed_fcm(session: AsyncSession) -> None:
             # النصُّ كما هو: `parse_service_account` يفكّه عند الإرسال
             "service_account_json": path.read_text(encoding="utf-8"),
             "use_mock": False,
-        },
+        }
+        | _firebase_web_config(sender=True),
         is_active=True,
         actor=None,
     )
     _log(f"عقد FCM: محفوظ ومفعّل — مشروع {project_id} (بلا مزود وهمي)")
+
+
+def _firebase_web_config(*, sender: bool) -> dict[str, str]:
+    """إعدادُ تطبيق الويب العام — تحتاجه الواجهة لا الخلفية (المرحلة 9).
+
+    قيمٌ عامّةٌ بطبيعتها تُنشر في حزمة كل تطبيق ويب يستعمل Firebase، لكنها قيمُ
+    مشروعٍ بعينه — فمكانها العقد لا ملفُّ إعداداتٍ في الواجهة (SPEC القسم 14).
+    وغيابُها لا يعطّل شيئاً في الخلفية: تُدخل من صفحة العقود متى وُجد تطبيق.
+
+    `sender=True` لعقد FCM وحده: معرّف المُرسل ومفتاح VAPID لا معنى لهما في
+    عقد الدخول.
+    """
+    keys = {
+        "api_key": "FIREBASE_WEB_API_KEY",
+        "auth_domain": "FIREBASE_WEB_AUTH_DOMAIN",
+        "app_id": "FIREBASE_WEB_APP_ID",
+    }
+    if sender:
+        keys = {
+            "api_key": "FIREBASE_WEB_API_KEY",
+            "app_id": "FIREBASE_WEB_APP_ID",
+            "sender_id": "FIREBASE_WEB_SENDER_ID",
+            "vapid_key": "FIREBASE_WEB_VAPID_KEY",
+        }
+
+    values = {
+        field: os.environ.get(variable, "").strip()
+        for field, variable in keys.items()
+    }
+    return {field: value for field, value in values.items() if value}
 
 
 async def seed_firebase_auth(session: AsyncSession) -> None:
@@ -378,7 +409,8 @@ async def seed_firebase_auth(session: AsyncSession) -> None:
         session,
         provider_key=ProviderKey.FIREBASE_AUTH,
         country_code=None,
-        values={"project_id": project_id, "use_mock": False},
+        values={"project_id": project_id, "use_mock": False}
+        | _firebase_web_config(sender=False),
         is_active=True,
         actor=None,
     )

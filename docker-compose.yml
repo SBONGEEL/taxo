@@ -132,6 +132,30 @@ services:
       start_period: 60s
       retries: 3
 
+  # تطبيق الراكب (المرحلة 9) — خادم تطوير Vite. ليس في `depends_on` لأحد:
+  # واجهةٌ تعمل والخلفيةُ متوقفة تعرض خطأً يُقرأ، وهو أفضل من حاويةٍ لا تقلع.
+  # **المنفذ 5173 مسموحٌ في `cors_origins`**، وهو نفسه ما يبنى عليه
+  # `card_return_url` — فتبديله يقطع العودة من صفحة الدفع.
+  customer-app:
+    image: node:22-alpine
+    container_name: taxo-customer-app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      # المتصفح يخاطب الخلفية من جهاز المطوّر لا من داخل الشبكة، فالعنوان
+      # `localhost:8001` لا `backend:8000`
+      VITE_API_BASE_URL: http://localhost:8001
+    volumes:
+      - ./customer-app:/app
+      # مجلد الاعتماديات في حجمٍ باسمه: `node_modules` المبنيّ على Windows
+      # لا يعمل داخل alpine، وبغير هذا الحجم يحجب المجلدُ المضيفُ ما ثبّتته
+      # الحاوية
+      - taxo_customer_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+
 volumes:
   taxo_pgdata:
   taxo_redisdata:
+  taxo_customer_modules:

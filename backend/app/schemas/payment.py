@@ -41,6 +41,16 @@ class PaymentDisputeRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=255)
 
 
+class CliqReferenceRequest(BaseModel):
+    """مرجع الحوالة كما يقرؤه الراكب من تطبيق بنكه (SPEC القسم 6.3).
+
+    لا مبلغ ولا alias هنا: كلاهما مُجمَّد على الدفعة منذ فُتحت، وقبولُهما من
+    العميل يعني أن يقول الدافعُ كم دفع.
+    """
+
+    transfer_reference: str = Field(min_length=3, max_length=64)
+
+
 class PaymentResolveRequest(BaseModel):
     resolution: DisputeResolution
     note: str | None = Field(default=None, max_length=255)
@@ -64,6 +74,14 @@ class PaymentOut(BaseModel):
     confirmed_by: PaymentConfirmedBy | None
     confirmed_at: datetime | None
     transaction_id: uuid.UUID | None
+
+    # خطوات قناة كليك المسجَّلة على الصف (SPEC القسم 6.2 — المرحلة 9).
+    # `cliq_reference` المرجع الذي ولّده TAXO، و`cliq_transfer_reference` ما
+    # أدخله الراكب بعد أن حوّل. الاثنان يظهران للطرفين: بهما يتفاهمان.
+    cliq_alias: str | None
+    cliq_reference: str | None
+    cliq_transfer_reference: str | None
+    cliq_reference_at: datetime | None
 
     dispute_reason: str | None
     disputed_at: datetime | None
@@ -95,13 +113,35 @@ class CardOrderOut(BaseModel):
     created_at: datetime
 
 
+class CliqChargeOut(BaseModel):
+    """ما تعرضه صفحة دفع كليك داخل التطبيق (SPEC القسم 6.2 — المرحلة 9).
+
+    `qr_payload` نصٌّ ترسمه الواجهة رمزاً مربّعاً — **ولا تبنيه**: يحمل مبلغاً
+    ومرجعاً يُحاسَب عليهما، وبناؤهما في الخلفية حصراً (القسم 14). و`deep_link`
+    ما يفتح تطبيق البنك على شاشة تحويلٍ مملوءة.
+
+    يظهر ما دامت الدفعة `pending`: بعد أن يؤكد الكبتن لم يعد للرمز معنى.
+    """
+
+    payment_id: uuid.UUID
+    alias: str
+    reference: str
+    amount: Decimal
+    currency: Currency
+    qr_payload: str
+    deep_link: str
+    # ما أدخله الراكب — فارغٌ حتى يحوّل ويعود
+    transfer_reference: str | None = None
+    transfer_reference_at: datetime | None = None
+
+
 class RidePaymentsOut(BaseModel):
     """حال الدفع على رحلة كاملةً — لا دفعةً واحدة.
 
     الدفع المختلط صفّان (SPEC القسم 6)، فالردّ على «ادفع» قائمةٌ دائماً وإن
-    كان فيها عنصر واحد. `cliq_alias` يظهر مع دفعة كليك وحدها: هو ما تعرضه
-    شاشة الدفع مع زر النسخ (القسم 6.2). و`card_order` يظهر مع طلب بطاقةٍ لم
-    يُحسم: منه تبني الواجهة «متابعة الدفع» بعد عودةٍ مقطوعة (القسم 6.4).
+    كان فيها عنصر واحد. `cliq_charge` يظهر مع دفعة كليك قائمة: منه تبني
+    الواجهة الرمزَ والرابطَ وحقلَ المرجع (القسم 6.2). و`card_order` يظهر مع
+    طلب بطاقةٍ لم يُحسم: منه تبني «متابعة الدفع» بعد عودةٍ مقطوعة (القسم 6.4).
     """
 
     ride_id: uuid.UUID
@@ -109,7 +149,7 @@ class RidePaymentsOut(BaseModel):
     final_fare: Decimal | None
     outstanding: Decimal
     payments: list[PaymentOut]
-    cliq_alias: str | None = None
+    cliq_charge: CliqChargeOut | None = None
     card_order: CardOrderOut | None = None
 
 

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TAXO">
+  <rect width="512" height="512" rx="112" fill="#0b0f14"/>
+  <rect x="96" y="128" width="320" height="96" rx="24" fill="#facc15"/>
+  <rect x="136" y="256" width="240" height="40" rx="20" fill="#facc15" opacity="0.55"/>
+  <rect x="176" y="328" width="160" height="40" rx="20" fill="#facc15" opacity="0.3"/>
+</svg>

@@ -22,13 +22,15 @@ script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status en
 recalculation, `ratings`), **6-ب** (Telr card integration — `provider_orders`, hosted payment
 page, signed webhook, instant card wallet topup, `saved_cards` tokenization and one-tap pay,
 provider-side refunds), **7** (`driver_subscriptions`, purchase over all four channels, the
-dispatch subscription check, and the Celery sweep) and **8** (the full contracts page with test
+dispatch subscription check, and the Celery sweep), **8** (the full contracts page with test
 connection, unified provider interfaces with mocks, and the OTP/Push/automatic-CliQ/payout
-integrations) are complete. **The next stage is 9** (the rider PWA). Do not implement
+integrations) and **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
+backend fields it needed) are complete. **The next stage is 10** (the driver PWA). Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern appears
-in current code (e.g. no Celery job sweeps stale `provider_orders` yet, and the campaigns page in
-the admin panel lands in stage 11 while its endpoints already exist), leave a comment naming the
-stage rather than building ahead.
+in current code (e.g. no Celery job sweeps stale `provider_orders` yet, the CliQ confirmation
+deadline belongs with the driver's card in stage 10, and the campaigns page in the admin panel
+lands in stage 11 while its endpoints already exist), leave a comment naming the stage rather than
+building ahead.
 
 **Any path that changes a row's status locks that row with `for_update` *before* it checks the
 transition.** Reading the row, validating `current → target`, then writing is not atomic on its own:
@@ -112,6 +114,22 @@ docker compose up -d --build          # db + redis + backend + worker + beat (ba
 docker compose logs -f backend
 curl http://localhost:8001/health     # reports db + redis status; also the container healthcheck
 ```
+
+`customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
+That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`
+points at `/payments/card/return` on it. Its `node_modules` lives in a named volume because the
+host is Windows and the container is alpine. Frontend commands run on the host (node 22+):
+
+```bash
+cd customer-app && npm install
+npm run build     # full type-check (tsc -b) then a production build — the gate before committing
+npm run lint      # tsc --noEmit alone
+npm run dev       # if you'd rather not use the container
+```
+
+There is no frontend test runner: stage 9 added no business logic to test — pricing, balances and
+state transitions all stay in the backend, and the app displays what the API returns. `npm run
+build` is the check that runs, and it type-checks every file.
 
 `worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running the subscription sweep
 every five minutes and the stage-8 campaign dispatch every minute. **Run exactly one `beat`** — a
@@ -441,6 +459,24 @@ loop; Starlette's `TestClient` would open its own loop in another thread and bre
 pool. Its transport opens an anyio task group, and anyio refuses to exit one from a different task
 than entered it, so `ws_client()` in `conftest.py` is an `asynccontextmanager` used inside the test
 body — making it a fixture fails at teardown.
+
+**`customer-app/` decides nothing.** Every branch it takes is read from `GET /config`: which
+verification flow to draw (`auth.verification`), which payment channels exist in this country
+(`countries[].features`), which map token to use. A flag switched off in the contracts page
+disappears from the app with no deploy — that is the whole point of publishing the config, and it
+is why no feature name is hardcoded outside `screens/Payment.tsx::METHODS` and `lib/config.tsx`.
+Money is never computed there: amounts arrive as strings (`NUMERIC(12,3)` serialises to a string)
+and `lib/utils.ts::formatMoney` formats them **textually**, because passing money through
+`Intl.NumberFormat` means passing it through a float. Error text is whatever the backend's
+`{code, message}` says — the app never writes its own Arabic for an error the backend already
+named. `components/map/MapView.tsx` is the only file that imports `mapbox-gl`, and
+`services/cliq_qr.py` on the backend is the only thing that builds a CliQ payload — the app
+receives `qr_payload` and draws it.
+
+Three rules in the app exist because the backend cannot enforce them: the socket opens with the
+same `device_id` that registered the FCM token (otherwise the same event arrives twice — once on
+screen, once from the OS), logout deletes the device row *before* revoking the session, and the
+service worker never caches `/api/`.
 
 ## Invariants from SPEC.md that constrain future stages
 

@@ -82,6 +82,21 @@ class Payment(UUIDMixin, TimestampMixin, Base):
         # فريد على مستوى الجدول لا لكل راكب: مفتاح الدفع يولّده العميل لعملية
         # بعينها. NULL لا يتعارض مع NULL في postgres، فما لا مفتاح له لا يقيَّد.
         UniqueConstraint("idempotency_key", name="uq_payments_idempotency_key"),
+        # المرجع الداخلي لكليك: به يعرف الطرفان أيَّ حوالةٍ يتكلمان عنها، فلا
+        # يحمله صفّان (المرحلة 9)
+        UniqueConstraint("cliq_reference", name="uq_payments_cliq_reference"),
+        # حقول كليك لا تُملأ على دفعةٍ بقناةٍ أخرى: alias في دفعةٍ نقدية بيانٌ
+        # لا معنى له، وقارئُ السجل لا يعرف أهو خطأٌ أم قناةٌ تبدّلت
+        CheckConstraint(
+            "cliq_reference IS NULL OR method::text = 'cliq'",
+            name="payment_cliq_fields_method",
+        ),
+        # مرجعٌ بلا زمنٍ أو زمنٌ بلا مرجع نصفُ خطوةٍ في سجلٍ يُحتج به في نزاع —
+        # نفس منطق `payment_resolution_complete`
+        CheckConstraint(
+            "(cliq_transfer_reference IS NULL) = (cliq_reference_at IS NULL)",
+            name="payment_cliq_transfer_complete",
+        ),
         Index("ix_payments_ride_status", "ride_id", "status"),
     )
 
@@ -129,6 +144,25 @@ class Payment(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True),
         ForeignKey("wallet_transactions.id", ondelete="RESTRICT"),
         nullable=True,
+    )
+
+    # -------------------------------------------------------------- كليك
+    # خطوات القناة بطوابعها الزمنية كما يفرضها SPEC القسم 6 (المرحلة 9):
+    # المبلغ (`amount` أعلاه)، وalias المعروض، والمرجع الداخلي، ومرجع الحوالة،
+    # ومن أكّد ومتى (`confirmed_by`/`confirmed_at`). سجلٌّ يُكتب ولا يُعدَّل.
+
+    # **alias مجمّد لحظة فتح الدفعة** لا مقروءٌ من `drivers` عند العرض: الكبتن
+    # قد يغيّر aliasه غداً، فيقرأ فاصلُ النزاع بعد أسبوع وجهةً غير التي حُوِّل
+    # عليها فعلاً — وهي بالضبط المعلومة التي وُجد السجل لأجلها
+    cliq_alias: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # مرجعٌ يولّده TAXO ويُطبع في الرمز — به يربط الكبتن حوالةً بدفعة
+    cliq_reference: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # ما يُدخله الراكب بعد أن يحوّل من بنكه — **يُكتب مرةً واحدة**
+    cliq_transfer_reference: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    cliq_reference_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     # ------------------------------------------------------------- النزاع

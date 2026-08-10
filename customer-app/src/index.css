@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* لوحة الألوان متغيّراتُ CSS: النهاري افتراضي، والليلي يبدّل القيم نفسها —
+   فلا يحمل أيُّ مكوّن شرطاً بين الوضعين (SPEC القسم 2). */
+@layer base {
+  :root {
+    --bg: 247 248 250;
+    --surface: 255 255 255;
+    --line: 226 232 240;
+    --ink: 15 23 42;
+    --muted: 100 116 139;
+    --brand: 250 204 21;
+    --brand-ink: 26 26 26;
+    --danger: 220 38 38;
+    --success: 22 163 74;
+  }
+
+  .dark {
+    --bg: 11 15 20;
+    --surface: 22 28 36;
+    --line: 44 54 66;
+    --ink: 241 245 249;
+    --muted: 148 163 184;
+    --brand: 250 204 21;
+    --brand-ink: 26 26 26;
+    --danger: 248 113 113;
+    --success: 74 222 128;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-bg text-ink antialiased;
+    /* الأرقام العربية-الهندية تختلف عن أرقام لوحات المفاتيح وأرقام المراجع؛
+       التطبيق مالي فيلزمه شكلٌ واحد للرقم في كل شاشة */
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* الحشوات الآمنة: الخريطة ملء الشاشة وشريط الأزرار يلامس حافة الهاتف */
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-line bg-surface px-4 py-3 text-base
+      text-ink outline-none transition placeholder:text-muted
+      focus:border-brand focus:ring-2 focus:ring-brand/40 disabled:opacity-60;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-muted;
+  }
+
+  /* شبكة نقاطٍ خفيفة خلف الخريطة قبل تحميلها أو حين لا توكن Mapbox */
+  .map-placeholder {
+    background-image: radial-gradient(rgb(var(--line)) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+}
+
+/* عناصر Mapbox: الشعار والإسناد إلزاميان بشروط الاستخدام فيبقيان، ويُنقلان
+   فوق الورقة السفلية لا تحتها */
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right {
+  z-index: 5;
+}

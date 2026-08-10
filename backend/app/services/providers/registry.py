@@ -112,6 +112,14 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
         # ومفاتيح Google العامة)، فلا داعي لأن يحمل عقدُ الدخول سرّاً لا
         # يستعمله؛ وإطفاءُ الإشعارات قرارٌ لا يجوز أن يُطفئ الدخول معه —
         # وعقدٌ واحد يجعلهما مفتاحاً واحداً.
+        # **الحقول الأربعة العامة هي «إعداد تطبيق الويب»** الذي تحتاجه حزمة
+        # Firebase على الجهاز لتشغيل تدفّق التحقق (المرحلة 9). كلها تُنشر في
+        # حزمة أي تطبيق ويب يستعمل Firebase — عامّةٌ بطبيعتها كتوكن Mapbox
+        # العام — لكنها قيمُ مشروعٍ بعينه، فمكانها العقدُ لا ملفُّ إعداداتٍ في
+        # الواجهة (SPEC القسم 14: لا مفاتيح مزودين خارج هذا الجدول).
+        # وغيابُها لا يعطّل شيئاً في الخلفية: التحقق من رمز الهوية يكفيه
+        # `project_id` ومفاتيح Google العامة، فتبقى الثلاثة الأخرى اختيارية
+        # لعقدٍ لا واجهةَ ويب له.
         fields=(
             ProviderField(
                 key="project_id",
@@ -119,6 +127,27 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
                 secret=False,
                 # يُنشر للواجهات: تطبيقُ العميل يحتاجه ليتحقق من الرقم أصلاً،
                 # وهو معرِّفٌ عام كتوكن Mapbox العام
+                expose_to_clients=True,
+            ),
+            ProviderField(
+                key="api_key",
+                label="مفتاح الويب العام (apiKey)",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
+            ProviderField(
+                key="auth_domain",
+                label="نطاق التحقق (authDomain)",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
+            ProviderField(
+                key="app_id",
+                label="معرّف تطبيق الويب (appId)",
+                secret=False,
+                required=False,
                 expose_to_clients=True,
             ),
             MOCK_FIELD,
@@ -149,8 +178,50 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
     ProviderKey.FCM: ProviderSpec(
         key=ProviderKey.FCM,
         label="FCM — الإشعارات",
+        # **الحقول العامة الأربعة تكرارٌ مقصود لما في عقد `firebase_auth`**،
+        # وهو ثمنُ استقلال العقدين الذي يقرره القسم 15/أ: إطفاءُ الإشعارات لا
+        # يجوز أن يُطفئ الدخول، فلا يقرأ أحدهما حقولَ الآخر. والحالة التي
+        # تجعل التكرار ضرورةً لا زينة: مُحقِّقٌ عبر مزود SMS تقليدي وإشعاراتٌ
+        # عبر FCM — عقد الدخول حينها مطفأٌ تماماً والتطبيق ما زال يحتاج إعداد
+        # تطبيق الويب ليطلب رمز جهاز (المرحلة 9). والقيم عامّةٌ بطبيعتها:
+        # تُنشر في حزمة كل تطبيق ويب يستقبل إشعارات.
         fields=(
-            ProviderField(key="project_id", label="معرّف المشروع", secret=False),
+            ProviderField(
+                key="project_id",
+                label="معرّف المشروع",
+                secret=False,
+                expose_to_clients=True,
+            ),
+            ProviderField(
+                key="api_key",
+                label="مفتاح الويب العام (apiKey)",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
+            ProviderField(
+                key="app_id",
+                label="معرّف تطبيق الويب (appId)",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
+            ProviderField(
+                key="sender_id",
+                label="معرّف المُرسل (messagingSenderId)",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
+            # مفتاح Web Push العام (VAPID): بغيره لا يصدر المتصفح رمز جهاز
+            # أصلاً. عامٌّ بطبيعته — الخاصُّ منه يبقى عند Google
+            ProviderField(
+                key="vapid_key",
+                label="مفتاح Web Push العام (VAPID)",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
             ProviderField(
                 key="service_account_json",
                 label="حساب الخدمة (JSON)",

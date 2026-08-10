@@ -28,6 +28,7 @@ from datetime import datetime
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.payment import Payment
 from app.models.ride import Ride
 from app.services import devices, presence
 from app.services.push import PushMessage, PushResult, get_push_provider_or_none
@@ -175,6 +176,51 @@ async def publish_ride_offer(
                 "expires_in_seconds": str(expires_in_seconds),
             },
             high_priority=True,
+        ),
+    )
+
+
+# ----------------------------------------------------- أحداث شاشة الدفع
+
+
+async def publish_cliq_transfer(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    payment: Payment,
+) -> None:
+    """«إشعار فوري للكبتن» بعد أن يُدخل الراكب مرجع حوالته (SPEC القسم 6.2).
+
+    أولويةٌ عادية لا عالية: بطاقة التأكيد ليس لها عدّاد عشرين ثانية كبطاقة
+    الطلب، والمال في حساب الكبتن أصلاً — التأخر دقيقةً لا يُضيّع شيئاً.
+    """
+    await events.publish_cliq_transfer(
+        redis,
+        driver_user_id=driver_user_id,
+        ride_id=ride_id,
+        payment_id=payment.id,
+        amount=str(payment.amount),
+        currency=payment.currency.value,
+        transfer_reference=payment.cliq_transfer_reference or "",
+    )
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="حوالة كليك بانتظار تأكيدك",
+            body=(
+                f"{payment.amount} {payment.currency.value} — "
+                f"مرجع الحوالة {payment.cliq_transfer_reference}"
+            ),
+            data={
+                "type": events.PaymentEvent.CLIQ_TRANSFER_SUBMITTED.value,
+                "ride_id": str(ride_id),
+                "payment_id": str(payment.id),
+            },
         ),
     )
 

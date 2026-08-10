@@ -38,6 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
+    Conflict,
     FeatureDisabled,
     InsufficientBalance,
     InvalidInput,
@@ -69,7 +70,7 @@ from app.models.payment import (
 )
 from app.models.ride import Ride
 from app.models.user import User
-from app.services import audit, settings_service, wallet
+from app.services import audit, cliq_qr, settings_service, wallet
 from app.services.pricing import round_money
 
 # آلة حالات الدفعة — ما ليس هنا ممنوع (SPEC القسم 4)
@@ -221,6 +222,7 @@ def _new_payment(
     method: PaymentMethod,
     amount: Decimal,
     idempotency_key: str | None,
+    cliq_alias: str | None = None,
 ) -> Payment:
     return Payment(
         ride_id=ride.id,
@@ -230,6 +232,12 @@ def _new_payment(
         currency=currency_for_country(ride.country_code),
         status=PaymentStatus.PENDING,
         idempotency_key=idempotency_key,
+        cliq_alias=cliq_alias,
+        # المرجع الداخلي يولَد مع الدفعة لا عند عرض الشاشة: هو ما يُطبع في
+        # الرمز وما يكتبه الراكب في حوالته، فلو تولّد عند كل عرضٍ لحمل الرمزُ
+        # مرجعاً والحوالةُ آخر (SPEC القسم 6). عشوائيته تجعل التصادم على القيد
+        # الفريد أبعد من أن يُبرمَج له مسار
+        cliq_reference=cliq_qr.new_reference() if method == PaymentMethod.CLIQ else None,
     )
 
 
@@ -292,14 +300,18 @@ async def pay_ride(
             idempotency_key=idempotency_key,
         )
     else:
-        if method == PaymentMethod.CLIQ:
+        alias = (
             await _require_cliq_alias(session, ride)
+            if method == PaymentMethod.CLIQ
+            else None
+        )
         payments = [
             _new_payment(
                 ride,
                 method=method,
                 amount=outstanding,
                 idempotency_key=idempotency_key,
+                cliq_alias=alias,
             )
         ]
         session.add(payments[0])
@@ -322,13 +334,19 @@ async def _find_by_idempotency_key(
     )
 
 
-async def _require_cliq_alias(session: AsyncSession, ride: Ride) -> None:
-    """كليك تحويلٌ على alias الكبتن (القسم 6.2) — فبلا alias لا وجهة للمال."""
+async def _require_cliq_alias(session: AsyncSession, ride: Ride) -> str:
+    """كليك تحويلٌ على alias الكبتن (القسم 6.2) — فبلا alias لا وجهة للمال.
+
+    يعيد الـ alias ليُجمَّد على الدفعة: تغييرُ الكبتن aliasه غداً لا يجوز أن
+    يغيّر ما تقوله دفعةُ اليوم عن وجهة الحوالة (المرحلة 9).
+    """
     alias = await session.scalar(
         select(Driver.cliq_alias).where(Driver.id == ride.driver_id)
     )
-    if not (alias or "").strip():
+    cleaned = (alias or "").strip()
+    if not cleaned:
         raise InvalidInput("لم يضف الكبتن alias كليك — اختر قناة أخرى")
+    return cleaned
 
 
 async def _pay_from_wallet(
@@ -515,6 +533,59 @@ async def settle(
         raise InsufficientBalance(
             "رصيد محفظتك لا يغطي عمولة هذه الرحلة — اشحن المحفظة ثم أكّد"
         ) from exc
+
+
+# --------------------------------------------------------- قناة كليك اليدوية
+
+
+def cliq_charge(payment: Payment) -> cliq_qr.CliqRideCharge | None:
+    """ما تعرضه شاشة دفع كليك لهذه الدفعة (SPEC القسم 6.2 — المرحلة 9).
+
+    الرمز يُبنى عند القراءة ولا يُخزَّن: مشتقٌّ بالكامل من المُجمَّد على الصف
+    (alias والمبلغ والعملة والمرجع)، وعمودٌ يخزّن مشتقاً عمودٌ يفترق عن أصله
+    يوم تُصحَّح صيغة الرمز.
+    """
+    if payment.method != PaymentMethod.CLIQ or not payment.cliq_reference:
+        return None
+    return cliq_qr.build_charge(
+        alias=payment.cliq_alias or "",
+        amount=payment.amount,
+        currency=payment.currency,
+        reference=payment.cliq_reference,
+    )
+
+
+async def submit_cliq_reference(
+    session: AsyncSession, *, payment: Payment, rider: User, reference: str
+) -> Payment:
+    """«حوّلتُ، وهذا مرجع الحوالة» (SPEC القسم 6.3 — المرحلة 9).
+
+    **يُكتب مرةً واحدة ولا يُعدَّل**: السجل هو كل ما يملكه فاصلُ النزاع في
+    قناةٍ لا API يشهد عليها، ومرجعٌ يتبدّل بعد أن رآه الكبتن سجلٌّ لا يُحتج به.
+    من أخطأ في الرقم يقول الكبتنُ «لم يصلني» وتفصل الإدارة (القسم 13.4).
+
+    يُستدعى وصفُّ الدفعة مقفول (`get_payment(for_update=True)`): بغير القفل
+    تقرأ ضغطتان متزامنتان `cliq_transfer_reference` فارغاً معاً فتمرّان، ويكتب
+    آخرُهما فوق مرجعٍ أُعلن للكبتن بالفعل — وهو بالضبط ما يمنعه «يُكتب مرة».
+    """
+    ride = await _ride_of(session, payment)
+    if ride.rider_id != rider.id:
+        # 404 لا 403: وجود الدفعة ليس معلومة يستحقها غير صاحبها
+        raise NotFound("الدفعة غير موجودة")
+    if payment.method != PaymentMethod.CLIQ:
+        raise InvalidPaymentTransition("مرجع الحوالة يخص دفعات كليك وحدها")
+    if payment.status != PaymentStatus.PENDING:
+        raise InvalidPaymentTransition("هذه الدفعة لم تعد بانتظار حوالة")
+    if payment.cliq_transfer_reference is not None:
+        raise Conflict("مرجع الحوالة مسجَّل على هذه الدفعة ولا يُعدَّل")
+
+    cleaned = reference.strip()
+    if not cleaned:
+        raise InvalidInput("مرجع الحوالة مطلوب")
+
+    payment.cliq_transfer_reference = cleaned
+    payment.cliq_reference_at = _now()
+    return payment
 
 
 # ------------------------------------------------------------ إجراءات الكبتن

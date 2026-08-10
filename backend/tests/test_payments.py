@@ -242,14 +242,18 @@ async def test_frozen_wallet_cannot_pay(
 async def test_cliq_payment_exposes_the_driver_alias(
     client: AsyncClient, jordan_settings: None, session_factory
 ) -> None:
-    """شاشة الدفع تعرض alias الكبتن مع المبلغ (SPEC القسم 6.2)."""
+    """شاشة الدفع تعرض alias الكبتن مع المبلغ (SPEC القسم 6.2).
+
+    بقيةُ ما تحمله البطاقة — الرمز والرابط والمرجع — في
+    `test_cliq_ride_payment.py` مع صفحة الدفع كاملةً (المرحلة 9).
+    """
     await enable_features(session_factory, "cliq_enabled")
     rider, driver, ride = await _ready_ride(client, session_factory)
     await set_cliq_alias(session_factory, driver["driver_id"], "0799999999")
 
     body = (await pay_ride(client, rider["headers"], ride["id"], "cliq")).json()
     assert _only(body)["status"] == "pending"
-    assert body["cliq_alias"] == "0799999999"
+    assert body["cliq_charge"]["alias"] == "0799999999"
 
 
 async def test_cliq_without_an_alias_has_nowhere_to_send_the_money(

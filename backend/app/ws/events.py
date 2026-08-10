@@ -45,6 +45,18 @@ class RideEvent(StrEnum):
     DRIVER_RECONNECTED = "driver_reconnected"
 
 
+class PaymentEvent(StrEnum):
+    """أحداث شاشة الدفع (SPEC القسم 6.2).
+
+    نوعٌ مستقل عن `RideEvent` لأنه لا يصف انتقالاً في حالة الرحلة بل خطوةً في
+    تحصيل أجرتها، ولا يُبث للطرفين بل لطرفٍ واحد. `cliq_transfer_submitted` هو
+    «إشعارٌ فوري للكبتن» في القسم 6.2: الراكب أدخل مرجع حوالته، فتظهر عند
+    الكبتن بطاقةُ «وصلني / لم يصلني» — وهي شاشةُ المرحلة 10.
+    """
+
+    CLIQ_TRANSFER_SUBMITTED = "cliq_transfer_submitted"
+
+
 class SubscriptionEvent(StrEnum):
     """أحداث اشتراك الكبتن (SPEC القسم 8).
 
@@ -120,6 +132,35 @@ async def publish_offer_expired(
         redis,
         user_channel(driver_user_id),
         {"type": RideEvent.OFFER_EXPIRED.value, "ride_id": str(ride_id)},
+    )
+
+
+async def publish_cliq_transfer(
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    payment_id: uuid.UUID,
+    amount: str,
+    currency: str,
+    transfer_reference: str,
+) -> None:
+    """أدخل الراكب مرجع حوالته — تصل البطاقة الكبتنَ وحده (SPEC القسم 6.2).
+
+    الحمولة هي ما تحتاجه بطاقة التأكيد لا الدفعةَ كاملة: كم، وبأي مرجع، وعلى
+    أي رحلة. لا هوية راكبٍ فيها كما لا هوية في بطاقة الطلب.
+    """
+    await publish(
+        redis,
+        user_channel(driver_user_id),
+        {
+            "type": PaymentEvent.CLIQ_TRANSFER_SUBMITTED.value,
+            "ride_id": str(ride_id),
+            "payment_id": str(payment_id),
+            "amount": amount,
+            "currency": currency,
+            "transfer_reference": transfer_reference,
+        },
     )
 
 
