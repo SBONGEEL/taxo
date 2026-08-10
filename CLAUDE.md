@@ -19,14 +19,16 @@ script, `GET /config`), 3 (`rides`, Mapbox Directions pricing, request/status en
 (Redis GEO presence, dispatch algorithm, WebSocket tracking and ride events), 5 (the
 `wallet_transactions` ledger, rider topup/transfer, driver wallet and withdrawals), **6-أ**
 (`payments` with cash/manual-CliQ/wallet/mixed and disputes, `ride_route_points` with `final_fare`
-recalculation, `ratings`) and **6-ب** (Telr card integration — `provider_orders`, hosted payment
+recalculation, `ratings`), **6-ب** (Telr card integration — `provider_orders`, hosted payment
 page, signed webhook, instant card wallet topup, `saved_cards` tokenization and one-tap pay,
-provider-side refunds) are complete. **The next stage is 7** (subscriptions: plans, purchase,
-dispatch check, Celery expiry). Do not implement anything from a later stage unless the user asks
-for that stage. When a later-stage concern appears in current code (e.g.
-`dispatch.eligible_driver_ids` does not check for a valid subscription because
-`driver_subscriptions` arrives in stage 7, and no Celery job sweeps stale `provider_orders` yet),
-leave a comment naming the stage rather than building ahead.
+provider-side refunds) and **7** (`driver_subscriptions`, purchase over all four channels, the
+dispatch subscription check, and the Celery sweep) are complete. **The next stage is 8**
+(completing the provider layer: the full contracts page, unified provider interfaces with mocks,
+and OTP/Push/automatic-CliQ/payout integrations waiting on contract data). Do not implement
+anything from a later stage unless the user asks for that stage. When a later-stage concern appears
+in current code (e.g. no Celery job sweeps stale `provider_orders` yet, and the 24h expiry notice
+reaches the driver over WebSocket because FCM push arrives in stage 8), leave a comment naming the
+stage rather than building ahead.
 
 **Any path that changes a row's status locks that row with `for_update` *before* it checks the
 transition.** Reading the row, validating `current → target`, then writing is not atomic on its own:
@@ -36,17 +38,26 @@ all pass the check, and all report success. Load the row with `select(...).with_
 (`for_update=True`) and `rides.cancel_ride` (`session.refresh(..., with_for_update=True)`).
 
 **Lock order is always: the ride row, then the request/payment row, then the provider-order row,
-then the wallet advisory lock.** Every mutating path takes them in that order, which is why nothing
-deadlocks. Creating payments locks the ride (`payments._payable_ride`) so two concurrent requests
-cannot both read the same outstanding amount; every status change locks its own row
-(`topups`/`withdrawals.get_request`, `payments.get_payment` with `for_update=True`,
+then the driver row, then the wallet advisory lock.** Every mutating path takes them in that order,
+which is why nothing deadlocks. Creating payments locks the ride (`payments._payable_ride`) so two
+concurrent requests cannot both read the same outstanding amount; every status change locks its own
+row (`topups`/`withdrawals.get_request`, `payments.get_payment` with `for_update=True`,
 `rides.cancel_ride`); `card_payments._locked_order` locks the payment *before* the
 `provider_orders` row, because the admin refund path starts from the payment and then needs its
-provider order — reversing either side would deadlock the two against each other; ledger writes
-take the wallet lock last. No path takes a payment row lock and then a ride lock. When a single
-operation touches two wallets, their advisory locks are taken in sorted UUID order
-(`wallet._lock_wallets`). Adding a new lock means fitting it into this order, not inventing a
-second one.
+provider order — reversing either side would deadlock the two against each other; buying a
+subscription locks the driver row (`subscriptions._locked_driver`) before reading how far the
+driver's coverage already extends, so two concurrent purchases produce consecutive periods rather
+than two payments for one month — and the card path takes that lock *after* the provider-order row
+because a webhook starts from the order; ledger writes take the wallet lock last. No path takes a
+payment row lock and then a ride lock. When a single operation touches two wallets, their advisory
+locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a new lock means fitting it
+into this order, not inventing a second one.
+
+Note which guard actually protects what: the driver row lock is redundant on the wallet purchase
+path (the wallet advisory lock already serialises it) and is the *only* guard on the manual and
+card paths, which write no ledger entry at all. That is why the concurrency test for it fires two
+`POST /admin/subscriptions` at once rather than two wallet purchases — deleting the lock leaves the
+wallet test green and turns the manual one's two consecutive periods into two identical ones.
 
 **Never hold a row lock across a provider HTTP call when the call can happen first.**
 `card_payments.reconcile` asks the provider *before* taking any lock, then applies the answer under
@@ -81,10 +92,16 @@ the API is published on **8001** — an unrelated `taxo` stack and another servi
 developer's machine. Never run `docker compose down --remove-orphans`; it would delete their containers.
 
 ```bash
-docker compose up -d --build          # start db + redis + backend (runs alembic upgrade head on boot)
+docker compose up -d --build          # db + redis + backend + worker + beat (backend runs alembic upgrade head on boot)
 docker compose logs -f backend
 curl http://localhost:8001/health     # reports db + redis status; also the container healthcheck
 ```
+
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`). **Run exactly one `beat`** — a
+second scheduler fires every period twice. The worker process has no event loop of its own, so
+`celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
+pool bound to the previous one. Tasks are thin wrappers over `services/`, and the tests call the
+service directly — nothing in the suite needs a worker running.
 
 Tests and Alembic run in one-off containers. `--no-deps` avoids restarting healthy services, and the
 two env vars redirect the container from the `.env.local` localhost URLs to the compose hostnames:
@@ -106,7 +123,12 @@ Postgres does not drop ENUM types with their tables, so every migration that cre
 `DROP TYPE IF EXISTS` it in `downgrade()` (see `0002_users_drivers_vehicles.py`) or a re-upgrade fails.
 Autogenerate also re-emits `CREATE TYPE` for enums an *earlier* migration already created; hand-edit
 those references to `postgresql.ENUM(..., create_type=False)` as `0003` does, or `upgrade` fails with
-"type already exists". Because the downgrade/upgrade cycle gives the enums new OIDs,
+"type already exists". Adding a *value* to an existing enum is `ALTER TYPE … ADD VALUE IF NOT EXISTS`
+(`0009`), and Postgres forbids **using** that value later in the same transaction — so the check
+constraint that pairs `provider_orders.plan_id` with `purpose = 'subscription'` compares
+`purpose::text`, which never resolves the literal to the enum type and therefore ships in the same
+migration as the column. Enum values cannot be removed on downgrade; the type itself is dropped by
+whichever migration created it, so `IF NOT EXISTS` is what makes a partial downgrade re-upgradable. Because the downgrade/upgrade cycle gives the enums new OIDs,
 `test_downgrade_then_upgrade_is_clean` ends with `engine.dispose()` — without it asyncpg's per-
 connection type cache poisons every later test with "cache lookup failed for type".
 `tests/test_migrations.py` enforces this: it runs the full `downgrade base → upgrade head` cycle, and
@@ -128,7 +150,8 @@ because `env.py` calls `asyncio.run`, which cannot nest inside the test event lo
 
 `backend/app` is layered: `routers/` are thin HTTP wrappers, `services/` hold all business logic,
 `models/` are SQLAlchemy 2 async, `schemas/` are Pydantic v2. `ws/` is the realtime layer (channels,
-events, sockets); `tasks/` is still a placeholder for stage 7's Celery jobs.
+events, sockets); `tasks/` holds the Celery app and its periodic jobs, each one a thin wrapper over
+a service.
 
 **Authentication is a swappable strategy, not a fixed flow.** `services/auth/` defines `AuthStrategy`
 with `PasswordAuthStrategy` (active) and `OtpAuthStrategy` (stage 8, currently raises 501).
@@ -201,6 +224,21 @@ matter which worker serves the request, and `dispatch:signal:{ride_id}` is a lis
 change the dispatcher makes reloads the row `with_for_update()` first — otherwise it would write
 `searching` over a cancel that landed in between. `ALLOWED_TRANSITIONS` no longer contains
 `requested → accepted`: acceptance is only reachable through an offer.
+
+**A driver's subscription is a question about the clock, not a column.**
+`services/subscriptions.py::coverage_condition` is `status = 'active' AND starts_at <= now() AND
+expires_at > now()`, and `dispatch.eligible_driver_ids` (which the rider's map also calls) embeds it
+as an EXISTS. The Celery sweep marks expired rows every five minutes, but eligibility never waits
+for it — reading the status column alone would hand a ride to a driver whose period lapsed four
+minutes ago. Renewal is a new row (SPEC section 4), and an early renewal *stacks*: `_create` starts
+the new period at `coverage_until` — the **max** `expires_at`, not the newest row — so nobody loses
+the days they already paid for, and "when does my subscription end" is that same max everywhere
+(counter, 24h notice, sweep). Only the wallet channel writes a ledger entry
+(`subscription_payment`); cash, CliQ and card money never passes through the driver's wallet, which
+is the same asymmetry `WALLET_FUNDED_METHODS` draws for ride payments. The sweep leaves a driver
+who is mid-ride online — dropping his presence would cut his rider's map and fire the section 5
+"driver disconnected" alert at someone who never disconnected — and the 24h notice is deduplicated
+by a Redis key rather than a column, because a notification is an event, not a record.
 
 **Live driver locations are Redis-only, never a column.** `services/geo.py` keeps a per-country GEO
 zset plus a `geo:presence:{driver_id}` hash carrying heading and vehicle category. The hash has a
@@ -336,7 +374,10 @@ body — making it a fixture fails at teardown.
   table exists from stage 6-أ but is written by stage 6-ب.
 - Commission is enabled **only** through `commission_settings`; there is deliberately no
   `commission_enabled` feature flag, so the switch, the percent, and the scope cannot disagree.
+- A `driver_subscriptions` row exists only once its money has arrived — there is no `pending`
+  status. Cash and CliQ are recorded from the admin panel *after* collection; wallet and card write
+  the row only after the ledger or the provider says so.
 - Every endpoint touching a ride or wallet must verify ownership (no IDOR).
 
-Python is pinned to 3.12 in the Dockerfile even though the host has 3.14, because Celery (stage 7)
-does not support 3.14 yet.
+Python is pinned to 3.12 in the Dockerfile even though the host has 3.14, because Celery does not
+support 3.14 yet.

@@ -84,15 +84,18 @@ class PaymentProvider(StrEnum):
 
 
 class ProviderOrderPurpose(StrEnum):
-    """لماذا فُتح طلبٌ لدى مزود الدفع (SPEC القسم 6.4/7).
+    """لماذا فُتح طلبٌ لدى مزود الدفع (SPEC القسم 6.4/7/8).
 
-    غرضان لا ثالث لهما، وكلٌّ منهما يستقر في مكانٍ مختلف عند النجاح: أجرةُ
-    رحلة تستقر في صفّ `payments`، وشحنُ محفظة يستقر في قيد `topup` مباشرةً بلا
-    طلبِ شحنٍ ينتظر إنساناً — شحن البطاقة فوريٌّ آلي (القسم 7).
+    ثلاثة أغراض، وكلٌّ منها يستقر في مكانٍ مختلف عند النجاح: أجرةُ رحلة تستقر
+    في صفّ `payments`، وشحنُ محفظة يستقر في قيد `topup` مباشرةً بلا طلبِ شحنٍ
+    ينتظر إنساناً — شحن البطاقة فوريٌّ آلي (القسم 7) — واشتراكُ كبتنٍ يستقر في
+    صفّ `driver_subscriptions` بلا قيدٍ في الدفتر أصلاً: مالُه خرج من بطاقته لا
+    من محفظته (المرحلة 7، القسم 8).
     """
 
     RIDE_PAYMENT = "ride_payment"
     WALLET_TOPUP = "wallet_topup"
+    SUBSCRIPTION = "subscription"
 
 
 class ProviderOrderStatus(StrEnum):
@@ -149,6 +152,19 @@ class SubscriptionDurationType(StrEnum):
     DAILY = "daily"
     WEEKLY = "weekly"
     MONTHLY = "monthly"
+
+
+class SubscriptionStatus(StrEnum):
+    """حال اشتراك الكبتن (SPEC القسم 4/8).
+
+    حالتان لا ثالثة: الاشتراك يُنشأ مدفوعاً — لا صفّ لاشتراكٍ لم يصل ماله —
+    ويصير `expired` حين تتجاوزه الساعة. لا `cancelled`: اشتراكٌ مدفوعٌ مقدماً
+    لا يُلغى، ولا `pending`: القنوات اليدوية (كاش/كليك) تُسجَّل بعد قبض المال
+    لا قبله، تماماً كما لا يتغيّر رصيدٌ قبل تأكيد شحنته (القسم 7).
+    """
+
+    ACTIVE = "active"
+    EXPIRED = "expired"
 
 
 class CommissionAppliesTo(StrEnum):

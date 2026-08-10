@@ -1,8 +1,9 @@
-"""الدفع بالبطاقة عبر مزود خارجي (SPEC القسم 6.4/7 — المرحلة 6-ب).
+"""الدفع بالبطاقة عبر مزود خارجي (SPEC القسم 6.4/7/8).
 
 ثلاثة مسارات تنتهي كلها إلى بابٍ واحد:
 
-- **صفحة دفع مستضافة** لأجرة رحلة أو لشحن محفظة → يعود الراكب → تُسوّى.
+- **صفحة دفع مستضافة** لأجرة رحلة أو شحن محفظة أو اشتراك كبتن (المرحلة 7) →
+  يعود الدافع → تُسوّى.
 - **الدفع بضغطة** على بطاقة محفوظة → يُحسم في نداء واحد → تُسوّى.
 - **إشعار المزود (webhook)** يصل موقّعاً، ربما قبل عودة المتصفح أو مرتين.
 
@@ -15,9 +16,10 @@
 يسلسل الإشعارات المتزامنة، وحالةُ الطلب (`created` وحدها تُسوّى) تجعل الإشعار
 المُعاد لا حدثاً. وفوقها مفاتيح قيود الدفتر المشتقة من مُعرّف الطلب.
 
-**ترتيب الأقفال: صف الرحلة ← صف الدفعة ← صف الطلب ← القفل الاستشاري للمحفظة.**
-`_locked_order` يأخذ قفل الدفعة قبل قفل الطلب لأن الاسترداد الإداري يبدأ من
-الدفعة، فلو عكس أحدُ المسارين الترتيب تقابلا في جمود. ونداءُ المزود يقع
+**ترتيب الأقفال: صف الرحلة ← صف الدفعة ← صف الطلب ← صف الكبتن ← القفل الاستشاري
+للمحفظة.** `_locked_order` يأخذ قفل الدفعة قبل قفل الطلب لأن الاسترداد الإداري
+يبدأ من الدفعة، وصفُّ الكبتن يأتي بعد صف الطلب في مسار الاشتراك لأن الإشعار
+يبدأ من الطلب — فلو عكس أحدُ المسارين الترتيب تقابلا في جمود. ونداءُ المزود يقع
 **خارج** قفل الطلب حيث أمكن (`reconcile`)، فلا يُحتجز صفٌّ طولَ رحلةٍ عبر
 الشبكة.
 
@@ -55,11 +57,18 @@ from app.models.enums import (
     ProviderOrderStatus,
     WalletTransactionType,
 )
+from app.models.driver import Driver
 from app.models.payment import Payment, SavedCard
 from app.models.provider_order import OPEN_ORDER_STATUSES, ProviderOrder
 from app.models.ride import Ride
+from app.models.subscription import SubscriptionPlan
 from app.models.user import User
-from app.services import payments as payments_service, settings_service, wallet
+from app.services import (
+    payments as payments_service,
+    settings_service,
+    subscriptions as subscriptions_service,
+    wallet,
+)
 from app.services.card_gateway import (
     CardDetails,
     OrderRequest,
@@ -316,6 +325,51 @@ async def start_wallet_topup(
     )
 
 
+async def start_subscription(
+    session: AsyncSession,
+    *,
+    driver: Driver,
+    owner: User,
+    plan: SubscriptionPlan,
+    save_card: bool = False,
+    saved_card_id: uuid.UUID | None = None,
+) -> ProviderOrder:
+    """اشتراك كبتنٍ بالبطاقة — فوريٌّ آلي كشحن المحفظة (SPEC القسم 8).
+
+    **لا صفَّ اشتراكٍ يُنشأ هنا**: الطلب يحمل الخطة، والصف يولد في
+    `_activate_subscription` بعد أن يقول المزود «دُفع». اشتراكٌ مكتوبٌ قبل
+    الدفع يعطي رحلاتٍ بمالٍ لم يصل.
+
+    والمبلغ سعرُ الخطة من القاعدة لا من العميل: كل حساب مالي في الخلفية
+    (القسم 14).
+    """
+    await require_card_enabled(session, owner.country_code)
+    subscriptions_service.require_purchasable(driver)
+
+    order = ProviderOrder(
+        provider=PaymentProvider.TELR,
+        purpose=ProviderOrderPurpose.SUBSCRIPTION,
+        status=ProviderOrderStatus.CREATED,
+        cart_id=_new_cart_id("s"),
+        user_id=owner.id,
+        country_code=owner.country_code,
+        amount=plan.price,
+        currency=plan.currency,
+        plan_id=plan.id,
+        save_card=save_card,
+    )
+    session.add(order)
+    await session.flush()
+
+    return await _start(
+        session,
+        order=order,
+        payer=owner,
+        description="TAXO driver subscription",
+        saved_card_id=saved_card_id,
+    )
+
+
 # ------------------------------------------------------------------ التسوية
 
 
@@ -360,6 +414,8 @@ async def apply_state(
     order.status = ProviderOrderStatus.PAID
     if order.purpose == ProviderOrderPurpose.RIDE_PAYMENT:
         await _settle_ride_payment(session, order, payment)
+    elif order.purpose == ProviderOrderPurpose.SUBSCRIPTION:
+        await _activate_subscription(session, order)
     else:
         await _credit_wallet_topup(session, order)
 
@@ -431,6 +487,30 @@ async def _settle_ride_payment(
         confirmed_by=PaymentConfirmedBy.SYSTEM,
         # المزود هو من أكّد، لا مستخدمٌ ضغط زراً
         actor_id=None,
+    )
+
+
+async def _activate_subscription(
+    session: AsyncSession, order: ProviderOrder
+) -> None:
+    """يفتح اشتراك الكبتن بعد أن دفع المزود (SPEC القسم 8).
+
+    **لا قيد في الدفتر**: مال الكبتن خرج من بطاقته لا من محفظته — نفس عدم
+    التماثل الذي تسير عليه دفعةُ الرحلة بالبطاقة مع الراكب. وأثرُ الطلب هنا
+    صفُّ الاشتراك نفسه، فلا `transaction_id` له.
+
+    والقفل: صفُّ الطلب مأخوذٌ سلفاً في `_locked_order`، ويأتي صفُّ الكبتن بعده
+    داخل الخدمة — بهذا الترتيب لا عكسه.
+    """
+    owner = await session.get(User, order.user_id)
+    await subscriptions_service.activate_paid_order(
+        session,
+        driver_user=owner,
+        plan_id=order.plan_id,
+        amount=order.amount,
+        reference=order.provider_order_ref,
+        # الطلب نفسه مفتاح عدم التكرار: إشعاران لا يفتحان اشتراكين
+        idempotency_key=f"card-subscription:{order.id}",
     )
 
 

@@ -173,6 +173,13 @@ class RideAlreadyPaid(Conflict):
     message = "هذه الرحلة لها دفعة قائمة تغطي قيمتها"
 
 
+class SubscriptionAlreadyPurchased(Conflict):
+    """نفس مفتاح عدم التكرار وصل مرتين — الاشتراك مشترى فعلاً (SPEC القسم 14)."""
+
+    code = "subscription_already_purchased"
+    message = "هذه العملية نُفّذت بالفعل"
+
+
 class RatingNotAllowed(Conflict):
     """تقييمٌ لرحلة لم تكتمل، أو من ليس طرفاً فيها (SPEC القسم 5.9)."""
 

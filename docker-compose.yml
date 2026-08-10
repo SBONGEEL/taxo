@@ -60,6 +60,48 @@ services:
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
+  # عامل Celery: ما يحتمل التأجيل وحده (انتهاء الاشتراكات — SPEC القسم 8).
+  # توزيع الرحلات ليس هنا: يعيش في عملية التطبيق لأن الراكب ينتظر على الشاشة.
+  worker:
+    build:
+      context: ./backend
+    container_name: taxo-worker
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:-taxo}@db:5432/${POSTGRES_DB:-taxo}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: celery -A app.tasks.celery_app:celery_app worker --loglevel=info
+
+  # المجدول — **نسخة واحدة لا غير**: نسختان تُطلقان كل دورة مرتين
+  beat:
+    build:
+      context: ./backend
+    container_name: taxo-beat
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:-taxo}@db:5432/${POSTGRES_DB:-taxo}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    # ملف الجدول في /tmp: المجلد مربوط بالمصدر ولا يُكتب فيه أثرُ تشغيل
+    command: >
+      celery -A app.tasks.celery_app:celery_app beat --loglevel=info
+      --schedule=/tmp/celerybeat-schedule
+
 volumes:
   taxo_pgdata:
   taxo_redisdata:

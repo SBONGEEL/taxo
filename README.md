@@ -1,4 +1,4 @@
-# TAXO — الخلفية (المراحل 1–6)
+# TAXO — الخلفية (المراحل 1–7)
 
 المرجع الوحيد للمشروع هو [SPEC.md](SPEC.md). هذا الملف يشرح تشغيل ما أُنجز من
 القسم 16:
@@ -38,6 +38,19 @@
   عند وصول بيانات Sandbox: أدخلها من صفحة العقود وأطفئ «مزود وهمي» — لا يُعدَّل
   أيُّ endpoint. وراجع الثوابت الثلاثة المُعلَّمة في رأس
   `app/services/card_gateway/telr.py` بالتوثيق الرسمي قبل أول تشغيل حقيقي.
+- **المرحلة 7:** اشتراكات الكباتن — `driver_subscriptions` + الشراء بالقنوات
+  الأربع (المحفظة والبطاقة من تطبيق الكبتن فوريتين، والكاش وكليك تسجيلاً من
+  اللوحة بعد قبض المال) + **شرط الاشتراك الساري في التوزيع** وخريطة الراكب
+  معاً + مهمة Celery دورية تعلّم المنتهي وتُخرج صاحبه من التوزيع وتنبّه قبل
+  الانتهاء بأربع وعشرين ساعة.
+
+  ```bash
+  GET  /api/v1/subscriptions/plans           # خطط بلد الكبتن المفعّلة
+  GET  /api/v1/subscriptions/me              # الحالة + الأيام المتبقية + الخطط
+  POST /api/v1/subscriptions                 {"plan_id":"...","idempotency_key":"..."}
+  POST /api/v1/subscriptions/card            {"plan_id":"..."}   # يعيد redirect_url
+  POST /api/v1/admin/subscriptions           {"driver_id":"...","plan_id":"...","method":"cash"}
+  ```
 
 ## المتطلبات
 
@@ -50,7 +63,9 @@ cp .env.example .env.local   # ثم املأ القيم — الملف موجو�
 docker compose up -d --build
 ```
 
-عند الإقلاع يشغّل الحاوية `alembic upgrade head` تلقائياً ثم uvicorn.
+عند الإقلاع يشغّل الحاوية `alembic upgrade head` تلقائياً ثم uvicorn، وترتفع معها
+خدمتا Celery: `worker` للمهام و`beat` للجدولة (**نسخة واحدة من `beat` لا غير** —
+نسختان تُطلقان كل دورة مرتين).
 
 - فحص الصحة: <http://localhost:8001/health>
 - توثيق تفاعلي: <http://localhost:8001/docs>

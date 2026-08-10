@@ -16,9 +16,6 @@ uvicorn وصله الطلب:
   يُكتب بـ NX فلا يُعرض على كبتن واحد طلبان في آن
 - `dispatch:signal:{ride_id}` → قائمة يوقظ بها القبولُ والرفضُ المهمةَ النائمة
   بدل انتظار المهلة كاملة
-
-آخر أحكام الأهلية — الاشتراك الساري — يأتي في المرحلة 7 مع
-`driver_subscriptions`؛ موضعه مُعلَّم في `_eligible_driver_ids`.
 """
 
 from __future__ import annotations
@@ -40,7 +37,7 @@ from app.models.driver import Driver
 from app.models.enums import DriverStatus, RideStatus, VehicleCategory
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.vehicle import Vehicle
-from app.services import geo
+from app.services import geo, subscriptions
 from app.ws import events
 
 logger = logging.getLogger(__name__)
@@ -187,9 +184,11 @@ async def eligible_driver_ids(
 
     تستعملها خريطة الراكب أيضاً، فما يُعرض «متاحاً» هو نفسه ما يُسنَد إليه.
 
-    شروط SPEC القسم 5.3: معتمد + أونلاين + بلا رحلة جارية، ومركبته من الفئة
-    المطلوبة. **المرحلة 7** تضيف هنا شرط الاشتراك الساري
-    (`expires_at > now` من `driver_subscriptions`) — لا رحلات بلا اشتراك.
+    شروط SPEC القسم 5.3: معتمد + أونلاين + **اشتراك ساري** + بلا رحلة جارية،
+    ومركبته من الفئة المطلوبة. وشرط الاشتراك يُقرأ من الجدول **بالساعة** لا من
+    عمود الحالة وحده (`subscriptions.coverage_condition`): المهمة الدورية
+    تعلّم المنتهي كل بضع دقائق، والقسم 8 يقول «لا اشتراك ساري = لا رحلات» —
+    فالحكم للحظة الطلب لا لآخر مرور مهمة.
     """
     if not driver_ids:
         return set()
@@ -204,6 +203,7 @@ async def eligible_driver_ids(
         .where(Vehicle.driver_id == Driver.id, Vehicle.category == vehicle_category)
         .exists()
     )
+    subscribed = subscriptions.covered_driver_ids_subquery().exists()
 
     rows = await session.scalars(
         select(Driver.id).where(
@@ -212,6 +212,7 @@ async def eligible_driver_ids(
             Driver.is_online.is_(True),
             Driver.current_ride_id.is_(None),
             has_vehicle,
+            subscribed,
             ~busy,
         )
     )

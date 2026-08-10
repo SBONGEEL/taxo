@@ -86,6 +86,84 @@ async def rider_session(client: AsyncClient, payload: dict = RIDER) -> dict:
     return {"headers": auth(body), "token": token_of(body)}
 
 
+SUBSCRIPTION_PLAN_NAME = "خطة الاختبار الشهرية"
+SUBSCRIPTION_PLAN_PRICE = "30.000"
+
+
+async def ensure_plan(
+    session_factory: Any,
+    *,
+    country: str = "JO",
+    name: str = SUBSCRIPTION_PLAN_NAME,
+    price: str = SUBSCRIPTION_PLAN_PRICE,
+    duration: str = "monthly",
+    is_active: bool = True,
+) -> uuid.UUID:
+    """خطة اشتراك للدولة — تُنشأ مرة وتُعاد بعدها (فريدٌ على الدولة والاسم)."""
+    from app.core.currency import currency_for_country
+    from app.models.enums import CountryCode, SubscriptionDurationType
+    from app.models.subscription import SubscriptionPlan
+
+    country_code = CountryCode(country)
+    async with session_factory() as session:
+        plan = await session.scalar(
+            select(SubscriptionPlan).where(
+                SubscriptionPlan.country_code == country_code,
+                SubscriptionPlan.name == name,
+            )
+        )
+        if plan is None:
+            plan = SubscriptionPlan(
+                country_code=country_code,
+                name=name,
+                duration_type=SubscriptionDurationType(duration),
+                price=Decimal(price),
+                currency=currency_for_country(country_code),
+                is_active=is_active,
+            )
+            session.add(plan)
+            await session.commit()
+        return plan.id
+
+
+async def subscribe_driver(
+    session_factory: Any, driver_id: uuid.UUID, *, days: int = 30
+) -> None:
+    """اشتراكٌ ساري يُكتب مباشرة — كما تُكتب الموافقة مباشرة.
+
+    منذ المرحلة 7 لا يصل الكبتنَ عرضٌ بلا اشتراك ساري (SPEC القسم 5.3)، فصار
+    هذا شرطاً في كل اختبار توزيعٍ أو رحلة. مسارُ الشراء نفسه تختبره
+    `test_subscriptions.py` عبر الـ API لا من هنا.
+    """
+    from app.models.driver import Driver
+    from app.models.enums import PaymentMethod, SubscriptionStatus
+    from app.models.subscription import DriverSubscription
+    from app.models.user import User
+
+    async with session_factory() as session:
+        country = await session.scalar(
+            select(User.country_code)
+            .join(Driver, Driver.user_id == User.id)
+            .where(Driver.id == driver_id)
+        )
+
+    plan_id = await ensure_plan(session_factory, country=country.value)
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        session.add(
+            DriverSubscription(
+                driver_id=driver_id,
+                plan_id=plan_id,
+                starts_at=now - timedelta(minutes=1),
+                expires_at=now + timedelta(days=days),
+                amount_paid=Decimal(SUBSCRIPTION_PLAN_PRICE),
+                payment_method=PaymentMethod.CASH,
+                status=SubscriptionStatus.ACTIVE,
+            )
+        )
+        await session.commit()
+
+
 async def approved_driver(
     client: AsyncClient,
     session_factory: Any,
@@ -93,8 +171,13 @@ async def approved_driver(
     *,
     plate_number: str = "AMM-4242",
     category: str = "economy",
+    subscribed: bool = True,
 ) -> dict:
-    """كبتن معتمد بمركبة — الموافقة تتم من اللوحة (المرحلة 11) فنكتبها مباشرة."""
+    """كبتن معتمد بمركبة واشتراكٍ ساري — كلاهما يُكتب مباشرة.
+
+    `subscribed=False` للاختبارات التي تريد كبتناً بلا اشتراك: لا رحلات له
+    (SPEC القسم 8)، وهو ما تتحقق منه `test_subscriptions.py`.
+    """
     body = await register(client, payload)
     headers = auth(body)
 
@@ -119,6 +202,9 @@ async def approved_driver(
         driver.status = DriverStatus.APPROVED
         await session.commit()
         driver_id = driver.id
+
+    if subscribed:
+        await subscribe_driver(session_factory, driver_id)
 
     return {
         "headers": headers,

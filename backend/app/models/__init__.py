@@ -24,6 +24,7 @@ from app.models.enums import (
     RatingRaterType,
     RideStatus,
     SubscriptionDurationType,
+    SubscriptionStatus,
     TopupMethod,
     TopupRequestStatus,
     UserRole,
@@ -40,7 +41,7 @@ from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
 from app.models.ride import Ride, RideRoutePoint
-from app.models.subscription import SubscriptionPlan
+from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.wallet import (
@@ -64,6 +65,7 @@ __all__ = [
     "Driver",
     "DriverDocument",
     "DriverStatus",
+    "DriverSubscription",
     "FeatureFlag",
     "FeatureKey",
     "Payment",
@@ -85,6 +87,7 @@ __all__ = [
     "SavedCard",
     "SubscriptionDurationType",
     "SubscriptionPlan",
+    "SubscriptionStatus",
     "TopupMethod",
     "TopupRequestStatus",
     "User",

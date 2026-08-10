@@ -75,6 +75,14 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
             "(purpose = 'ride_payment') = (payment_id IS NOT NULL)",
             name="provider_order_payment_matches_purpose",
         ),
+        # واشتراكُ كبتنٍ لا يُفتح بلا خطةٍ يشتريها. المقارنة على النص لا على
+        # قيمة الـ ENUM عمداً: `subscription` قيمةٌ أُضيفت للنوع في ترحيلة
+        # `0009` نفسها، وpostgres يرفض استعمال قيمة enum جديدة في المعاملة التي
+        # أضافتها — فالنص هو ما يجعل القيد يولد مع العمود في ترحيلة واحدة
+        CheckConstraint(
+            "(purpose::text = 'subscription') = (plan_id IS NOT NULL)",
+            name="provider_order_plan_matches_purpose",
+        ),
         Index("ix_provider_orders_provider_ref", "provider", "provider_order_ref"),
     )
 
@@ -127,6 +135,14 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
     payment_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("payments.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    # الخطة المشتراة حين يكون الغرض اشتراكاً (المرحلة 7). الخطةُ لا الاشتراك:
+    # صفُّ الاشتراك لا يُنشأ إلا بعد أن يقول المزود «دُفع»، فالطلب يحمل ما
+    # يكفي لإنشائه لا وصلةً إلى صفٍّ قد لا يوجد أبداً
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("subscription_plans.id", ondelete="RESTRICT"),
         nullable=True,
     )
     # أثر شحن المحفظة في الدفتر — نفس دور `transaction_id` في طلبات الشحن

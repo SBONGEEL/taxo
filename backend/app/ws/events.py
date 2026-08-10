@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -42,6 +43,19 @@ class RideEvent(StrEnum):
     OFFER_EXPIRED = "offer_expired"
     DRIVER_CONNECTION_LOST = "driver_connection_lost"
     DRIVER_RECONNECTED = "driver_reconnected"
+
+
+class SubscriptionEvent(StrEnum):
+    """أحداث اشتراك الكبتن (SPEC القسم 8).
+
+    نوعٌ مستقل عن `RideEvent` لأنه لا يخص رحلةً ولا يُبث إلا لصاحبه: «إشعار قبل
+    الانتهاء بـ 24 ساعة» و«انتهى اشتراكك» في القسم 8. القناة نفسها
+    (`ws:user:{id}`) لأن الوجهة واحدة — تطبيق الكبتن وهو مفتوح؛ وإشعارات Push
+    (FCM) تأتي في **المرحلة 8** فتصل الكبتنَ والتطبيقُ مغلق (القسم 15/أ).
+    """
+
+    SUBSCRIPTION_EXPIRING = "subscription_expiring"
+    SUBSCRIPTION_EXPIRED = "subscription_expired"
 
 
 def user_channel(user_id: uuid.UUID | str) -> str:
@@ -106,6 +120,21 @@ async def publish_offer_expired(
         redis,
         user_channel(driver_user_id),
         {"type": RideEvent.OFFER_EXPIRED.value, "ride_id": str(ride_id)},
+    )
+
+
+async def publish_subscription_event(
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    event: SubscriptionEvent,
+    expires_at: datetime,
+) -> None:
+    """تنبيه اشتراكٍ للكبتن وحده — لا شأن لأحد غيره به."""
+    await publish(
+        redis,
+        user_channel(driver_user_id),
+        {"type": event.value, "expires_at": expires_at.isoformat()},
     )
 
 

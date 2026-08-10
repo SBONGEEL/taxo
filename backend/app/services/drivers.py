@@ -126,9 +126,8 @@ async def nearby_available(
 ) -> list[geo.DriverPresence]:
     """الكباتن المتاحون حول الراكب لعرضهم على خريطته (SPEC القسم 10).
 
-    «المتاحون فقط»: أونلاين + معتمد + بلا رحلة. المرحلة 7 تضيف الاشتراك
-    الساري — نفس شرط `dispatch.eligible_driver_ids`، فمن لا يصلح للإسناد لا
-    يُعرض سيارةً متاحة.
+    «المتاحون فقط»: أونلاين + معتمد + اشتراك ساري + بلا رحلة — بنفس استدعاء
+    `dispatch.eligible_driver_ids`، فمن لا يصلح للإسناد لا يُعرض سيارةً متاحة.
     """
     from app.services import dispatch
 

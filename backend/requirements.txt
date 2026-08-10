@@ -13,6 +13,9 @@ bcrypt>=4.1,<5.0
 # تشفير provider_credentials at rest (Fernet)
 cryptography>=42.0,<47.0
 redis>=5.0,<7.0
+# مهام الخلفية القابلة للتأجيل (انتهاء الاشتراكات) — بوسيط Redis نفسه.
+# التوزيع ليس منها: تفاعليٌّ بمقياس الثواني والراكب ينتظر، فمكانه asyncio.
+celery[redis]>=5.4,<6.0
 python-json-logger>=2.0,<4.0
 # استدعاء Mapbox Directions من الخلفية (وعميل الاختبارات كذلك)
 httpx>=0.27,<1.0
