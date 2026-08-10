@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TAXO — الحصول على رمز جهاز للإشعارات</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --card: #fff;
+        --line: #dfe3e8;
+        --text: #16191d;
+        --muted: #5d6570;
+        --accent: #1a7f5a;
+        --bad: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14171a;
+          --card: #1d2126;
+          --line: #333a42;
+          --text: #eceff3;
+          --muted: #9aa3ad;
+          --accent: #4cc38a;
+          --bad: #f2836b;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px 16px 64px;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.7 system-ui, "Segoe UI", Tahoma, sans-serif;
+      }
+      main { max-width: 760px; margin: 0 auto; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      .lede { color: var(--muted); margin: 0 0 24px; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 18px 20px;
+        margin-bottom: 18px;
+      }
+      h2 { font-size: 16px; margin: 0 0 12px; }
+      label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+      input, textarea {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font: 13px/1.6 ui-monospace, "Cascadia Code", Consolas, monospace;
+        direction: ltr;
+        text-align: left;
+      }
+      textarea { resize: vertical; }
+      button {
+        margin-top: 14px;
+        padding: 10px 18px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+      button:disabled { opacity: 0.55; cursor: default; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      .status { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); white-space: pre-wrap; }
+      .status.bad { border-color: var(--bad); color: var(--bad); }
+      ol { padding-inline-start: 20px; margin: 0; }
+      li { margin-bottom: 6px; }
+      code { background: var(--bg); padding: 1px 5px; border-radius: 4px; direction: ltr; display: inline-block; }
+      .muted { color: var(--muted); font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>رمز جهازٍ لإشعارات TAXO</h1>
+      <p class="lede">
+        صفحةٌ واحدة تطلب إذن الإشعارات من متصفحك وتُخرج رمز الجهاز لدى FCM —
+        هي أسرع طريق للتحقق من وصول الإشعار فعلياً قبل بناء تطبيقي الراكب
+        والكبتن. لا شيء منها يذهب إلى خادم: الإعدادات تبقى في متصفحك
+        (<code>localStorage</code>).
+      </p>
+
+      <section>
+        <h2>قبل البدء</h2>
+        <ol>
+          <li>شغّل الصفحة من خادم محلي لا بفتح الملف مباشرةً — عامل الخدمة لا يعمل على <code>file://</code>.</li>
+          <li>المنفذ <code>5174</code>: مسموحٌ في CORS فيعمل زر الإرسال أدناه، و<code>5173</code>
+              يشغله مشروعٌ آخر على هذا الجهاز.</li>
+          <li><code>cd tools/fcm-token &amp;&amp; python -m http.server 5174</code> ثم افتح <code>http://localhost:5174</code></li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>١. إعدادات تطبيق الويب</h2>
+        <p class="muted">
+          Firebase Console ← ⚙️ Project settings ← General ← Your apps ← تطبيق
+          الويب ← <em>SDK setup and configuration</em> ← انسخ كائن
+          <code>firebaseConfig</code> والصقه كما هو.
+        </p>
+
+        <label for="config">firebaseConfig</label>
+        <textarea id="config" rows="9" spellcheck="false" placeholder='{
+  "apiKey": "AIza…",
+  "authDomain": "taxo-84a5f.firebaseapp.com",
+  "projectId": "taxo-84a5f",
+  "messagingSenderId": "1234567890",
+  "appId": "1:1234567890:web:abc123"
+}'></textarea>
+
+        <label for="vapid">مفتاح VAPID العام (Cloud Messaging ← Web Push certificates)</label>
+        <input id="vapid" spellcheck="false" />
+
+        <div class="row">
+          <button id="get">اطلب الإذن واحصل على الرمز</button>
+          <button id="reset" class="ghost" type="button">امسح الإذن والرمز</button>
+        </div>
+        <div id="status1" class="status">بانتظار الإعدادات…</div>
+
+        <label for="token">رمز الجهاز</label>
+        <textarea id="token" rows="4" readonly spellcheck="false"></textarea>
+        <button id="copy" class="ghost" type="button">انسخ الرمز</button>
+      </section>
+
+      <section>
+        <h2>٢. أرسل إشعاراً تجريبياً من الخلفية</h2>
+        <p class="muted">
+          يستدعي <code>POST /api/v1/admin/campaigns/test-push</code>. توكن
+          الدخول من حساب <strong>admin</strong>:
+          <code>POST /api/v1/auth/login</code> ثم <code>tokens.access_token</code>.
+        </p>
+
+        <label for="api">عنوان الخلفية</label>
+        <input id="api" value="http://localhost:8001" spellcheck="false" />
+
+        <label for="admin">توكن المشرف (Bearer)</label>
+        <input id="admin" spellcheck="false" placeholder="eyJhbGciOi…" />
+
+        <label for="title">العنوان</label>
+        <input id="title" value="TAXO — إشعار تجريبي" dir="rtl" style="text-align: right" />
+
+        <label for="body">النص</label>
+        <input id="body" value="وصلك هذا الإشعار، فالسلسلة تعمل." dir="rtl" style="text-align: right" />
+
+        <div class="row">
+          <label class="muted" style="margin: 14px 0 0">
+            <input type="checkbox" id="priority" style="width: auto" />
+            أولوية عالية (كبطاقة طلب الرحلة)
+          </label>
+        </div>
+
+        <button id="send" disabled>أرسل الإشعار</button>
+        <div id="status2" class="status">احصل على الرمز أولاً.</div>
+      </section>
+
+      <section>
+        <h2>ما يصل والصفحة مفتوحة</h2>
+        <p class="muted">
+          إشعارُ المتصفح لا يظهر تلقائياً وصاحبُه على الصفحة — يصل إلى
+          <code>onMessage</code>، وهذا سجلّه. أما والصفحة مغلقة فيعرضه المتصفح
+          عبر عامل الخدمة.
+        </p>
+        <div id="inbox" class="status">لم يصل شيء بعد.</div>
+      </section>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const STORE = "taxo-fcm-tool";
+
+      // مفتاح VAPID **عامٌّ بطبيعته** (النصف الآخر يبقى عند Google) — مثل
+      // توكن Mapbox العام: يُنشر في كل تطبيق ويب يستقبل إشعارات
+      const DEFAULT_VAPID =
+        "BD_ld64UnObUhdwMqEl0oGY5K1lvxwxulvGb68jWChsxOkB8Cv3uzTE6UKcVV33IYas8zPJAqbZjrtfF8JHnGcc";
+
+      const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
+      $("config").value = saved.config || "";
+      $("vapid").value = saved.vapid || DEFAULT_VAPID;
+      $("api").value = saved.api || "http://localhost:8001";
+      $("admin").value = saved.admin || "";
+
+      const remember = () =>
+        localStorage.setItem(
+          STORE,
+          JSON.stringify({
+            config: $("config").value,
+            vapid: $("vapid").value,
+            api: $("api").value,
+            admin: $("admin").value,
+          })
+        );
+      ["config", "vapid", "api", "admin"].forEach((id) =>
+        $(id).addEventListener("change", remember)
+      );
+
+      function say(el, text, bad = false) {
+        el.textContent = text;
+        el.classList.toggle("bad", bad);
+      }
+
+      /** يقبل JSON أو كائن JS كما يُنسخ من الـ console (بمفاتيح بلا اقتباس). */
+      function parseConfig(raw) {
+        const text = raw.trim().replace(/^const\s+firebaseConfig\s*=\s*/, "").replace(/;$/, "");
+        if (!text) throw new Error("الصق كائن firebaseConfig أولاً");
+        try {
+          return JSON.parse(text);
+        } catch {
+          // eslint-disable-next-line no-new-func
+          return Function(`"use strict"; return (${text});`)();
+        }
+      }
+
+      $("get").addEventListener("click", async () => {
+        const status = $("status1");
+        $("get").disabled = true;
+        try {
+          if (!(await firebase.messaging.isSupported())) {
+            throw new Error("هذا المتصفح لا يدعم FCM على الويب");
+          }
+
+          const config = parseConfig($("config").value);
+          for (const key of ["apiKey", "projectId", "messagingSenderId", "appId"]) {
+            if (!config[key]) throw new Error(`الإعدادات ناقصة: ${key}`);
+          }
+          const vapidKey = $("vapid").value.trim();
+          if (!vapidKey) throw new Error("مفتاح VAPID مطلوب");
+          remember();
+
+          say(status, "نطلب إذن الإشعارات…");
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") {
+            throw new Error(
+              "رُفض الإذن. افتح إعدادات الموقع في المتصفح وأعد السماح ثم حدّث الصفحة"
+            );
+          }
+
+          say(status, "نسجّل عامل الخدمة…");
+          // الإعدادات تُمرَّر إليه في الاستعلام: الملف نفسه بلا أسرار
+          const query = new URLSearchParams({
+            apiKey: config.apiKey,
+            projectId: config.projectId,
+            messagingSenderId: config.messagingSenderId,
+            appId: config.appId,
+          });
+          const registration = await navigator.serviceWorker.register(
+            `./firebase-messaging-sw.js?${query}`
+          );
+          await navigator.serviceWorker.ready;
+
+          if (!firebase.apps.length) firebase.initializeApp(config);
+          const messaging = firebase.messaging();
+
+          say(status, "نطلب الرمز من FCM…");
+          const token = await messaging.getToken({
+            vapidKey,
+            serviceWorkerRegistration: registration,
+          });
+          if (!token) throw new Error("لم يُصدر FCM رمزاً — راجع مفتاح VAPID");
+
+          $("token").value = token;
+          $("send").disabled = false;
+          say(
+            status,
+            `تم. طول الرمز ${token.length} حرفاً — انسخه واستعمله في الإرسال أدناه.`
+          );
+
+          messaging.onMessage((payload) => {
+            const at = new Date().toLocaleTimeString("ar");
+            $("inbox").textContent =
+              `[${at}] ${JSON.stringify(payload, null, 2)}\n\n` +
+              ($("inbox").textContent === "لم يصل شيء بعد." ? "" : $("inbox").textContent);
+          });
+        } catch (error) {
+          say(status, `فشل: ${error.message || error}`, true);
+        } finally {
+          $("get").disabled = false;
+        }
+      });
+
+      $("copy").addEventListener("click", async () => {
+        if (!$("token").value) return;
+        await navigator.clipboard.writeText($("token").value);
+        say($("status1"), "نُسخ الرمز إلى الحافظة.");
+      });
+
+      $("reset").addEventListener("click", async () => {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((r) => r.unregister()));
+        $("token").value = "";
+        $("send").disabled = true;
+        say(
+          $("status1"),
+          "أُلغي تسجيل عامل الخدمة. امسح إذن الإشعارات من إعدادات الموقع ثم حدّث الصفحة."
+        );
+      });
+
+      $("send").addEventListener("click", async () => {
+        const status = $("status2");
+        $("send").disabled = true;
+        try {
+          remember();
+          const response = await fetch(
+            `${$("api").value.replace(/\/$/, "")}/api/v1/admin/campaigns/test-push`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${$("admin").value.trim()}`,
+              },
+              body: JSON.stringify({
+                token: $("token").value.trim(),
+                title: $("title").value,
+                body: $("body").value,
+                high_priority: $("priority").checked,
+              }),
+            }
+          );
+          const payload = await response.json();
+          say(
+            status,
+            `HTTP ${response.status}\n${JSON.stringify(payload, null, 2)}`,
+            !response.ok || payload.delivered === 0
+          );
+        } catch (error) {
+          say(
+            status,
+            `تعذّر الاتصال بالخلفية: ${error.message}\n` +
+              "تأكد أن الصفحة على المنفذ 5174 (المسموح في CORS) وأن الخلفية تعمل.",
+            true
+          );
+        } finally {
+          $("send").disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
