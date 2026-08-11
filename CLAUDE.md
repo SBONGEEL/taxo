@@ -29,8 +29,8 @@ backend fields it needed) and **9-ب** (backend only: driver-document upload/rev
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
 written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-app/`) is in
 progress and reviewed three screens at a time** — scaffolding + login/password recovery, then
-registration in three steps, then the home screen with the offer card and the active ride. Do not
-implement anything from a later stage unless the user asks for
+registration in three steps, then the home screen with the offer card and the active ride, then
+collect/rate/subscription. Do not implement anything from a later stage unless the user asks for
 that stage. When a later-stage concern appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
 admin panel lands in stage 11 while its endpoints already exist), leave a comment naming the stage
@@ -143,6 +143,16 @@ The pixel scale stops you writing the *wrong* value; `npm run check:scale` (wire
 comes out with no size at all, and the build stays green. That shipped once in the first session that
 built the home screen, four classes deep. The script reads the scales from `tailwind.config.js`
 itself, so it cannot drift from them.
+
+**`screens/Collect.tsx` is the screen where a wrong word costs a driver money**, and its whole job is
+to keep two amounts apart: what he is taking *in his hand right now* and what *landed in his wallet*.
+The distinction is a rule in the schema, not a presentation choice — cash and CliQ are
+`DIRECTLY_COLLECTED_METHODS` and write **no** `ride_earning` at all (the money never passes through
+the platform), while wallet and card credit the full fare; and commission is debited from his wallet
+in *both* cases, so a cash ride can leave his balance lower than it started. So the big number always
+carries a caption naming which of the two it is ("تقبض الآن من الراكب" / "أُضيف إلى محفظتك"), the
+breakdown splits the two only when a ride actually has both parts, and the footnote states where the
+money lives *before* it mentions disputes.
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`

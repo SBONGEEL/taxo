@@ -54,6 +54,11 @@ const HomeScreen = lazy(() =>
 const SoonScreen = lazy(() =>
   import("@/screens/Soon").then((m) => ({ default: m.SoonScreen })),
 );
+const SubscriptionScreen = lazy(() =>
+  import("@/screens/Subscription").then((m) => ({
+    default: m.SubscriptionScreen,
+  })),
+);
 
 function Loading() {
   return (
@@ -167,6 +172,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <DriverHome />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/subscription"
+                        element={
+                          <Guarded>
+                            <SubscriptionScreen />
                           </Guarded>
                         }
                       />

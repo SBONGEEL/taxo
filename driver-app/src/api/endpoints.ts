@@ -16,8 +16,12 @@ import type {
   Driver,
   DriverDocuments,
   DriverProfile,
+  DriverSubscription,
   MySubscription,
+  Payment,
+  Rating,
   Ride,
+  RidePayments,
   User,
   Vehicle,
   VehicleCategory,
@@ -149,6 +153,22 @@ export const completeRide = (rideId: string) =>
 export const cancelRide = (rideId: string, reason: string) =>
   api.post<Ride>(`/rides/${rideId}/cancel`, { reason });
 
+// ------------------------------------------------------------ الدفع
+
+export const getRidePayments = (rideId: string) =>
+  api.get<RidePayments>(`/payments/rides/${rideId}/payments`);
+
+/** «استلمت المبلغ» — تأكيدُ الكبتن هو ما يُثبّت دفعة الكاش (SPEC القسم 6.1). */
+export const confirmPayment = (paymentId: string) =>
+  api.post<Payment>(`/payments/${paymentId}/confirm`);
+
+/** «لم يصلني» على دفعة كليك → تنتقل للوحة الإدارة (القسم 6.2). */
+export const disputePayment = (paymentId: string, reason: string) =>
+  api.post<Payment>(`/payments/${paymentId}/dispute`, { reason });
+
+export const rateRide = (rideId: string, stars: number, comment?: string) =>
+  api.post<Rating>(`/rides/${rideId}/ratings`, { stars, comment });
+
 // ------------------------------------------------------------ المال
 
 /** محفظة الكبتن — مفتاحها `users.id` لا `drivers.id` (SPEC القسم 9). */
@@ -156,6 +176,16 @@ export const getDriverWallet = () => api.get<Wallet>("/wallet/me/driver");
 
 export const getMySubscription = () =>
   api.get<MySubscription>("/subscriptions/me");
+
+export const getSubscriptionHistory = () =>
+  api.get<DriverSubscription[]>("/subscriptions/me/history");
+
+/** الشراء من المحفظة — القناة الفورية الوحيدة من التطبيق مع البطاقة. */
+export const buySubscription = (planId: string, idempotencyKey: string) =>
+  api.post<DriverSubscription>("/subscriptions", {
+    plan_id: planId,
+    idempotency_key: idempotencyKey,
+  });
 
 export const listDocuments = () =>
   api.get<DriverDocuments>("/drivers/me/documents");

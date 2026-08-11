@@ -31,8 +31,10 @@ import {
   getMySubscription,
   startRide,
 } from "@/api/endpoints";
-import type { MySubscription, Wallet } from "@/api/types";
+import type { MySubscription, Ride, Wallet } from "@/api/types";
 import { ActiveRide } from "@/components/ActiveRide";
+import { CollectScreen } from "@/screens/Collect";
+import { RateRiderScreen } from "@/screens/RateRider";
 import { BottomNav } from "@/components/BottomNav";
 import { MapView } from "@/components/map/MapView";
 import { OfferSheet } from "@/components/OfferSheet";
@@ -45,6 +47,10 @@ import { useTheme } from "@/lib/theme";
 import { arabicDigits, cn } from "@/lib/utils";
 
 const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
+const CURRENCY_FULL: Record<string, string> = {
+  JOD: "دينار أردني",
+  LYD: "دينار ليبي",
+};
 const CATEGORY_LABEL: Record<string, string> = {
   economy: "اقتصادي",
   comfort: "مريح",
@@ -71,11 +77,18 @@ export function HomeScreen() {
     clearError,
   } = useRide();
 
+  // ما بعد الإنهاء: التحصيل ثم التقييم — رحلةٌ واحدة لا شاشتان مستقلتان،
+  // فالخروجُ منهما بيد الكبتن لا بحدثٍ من الخلفية
+  const [settling, setSettling] = useState<Ride | null>(null);
+  const [rating, setRating] = useState<Ride | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const currencyCode =
+    config?.countries.find((c) => c.country_code === user?.country_code)
+      ?.currency ?? "JOD";
   const currency =
     CURRENCY_LABEL[
       config?.countries.find((c) => c.country_code === user?.country_code)
@@ -115,8 +128,11 @@ export function HomeScreen() {
     await run(async () => {
       if (ride.status === "accepted") setRide(await arriveRide(ride.id));
       else if (ride.status === "arrived") setRide(await startRide(ride.id));
-      else if (ride.status === "in_progress")
-        setRide(await completeRide(ride.id));
+      else if (ride.status === "in_progress") {
+        const finished = await completeRide(ride.id);
+        setRide(null);
+        setSettling(finished);
+      }
     });
   }
 
@@ -127,6 +143,27 @@ export function HomeScreen() {
       : online
         ? "إيقاف الاستقبال"
         : "ابدأ الاستقبال";
+
+  // تسبقان كلَّ شيء: من أنهى رحلةً يُحصّل ثم يُقيّم قبل أن يرى الخريطة
+  if (settling) {
+    return (
+      <CollectScreen
+        ride={settling}
+        currencyLabel={currency}
+        currencyFull={CURRENCY_FULL[currencyCode] ?? ""}
+        onDone={() => {
+          setRating(settling);
+          setSettling(null);
+          getDriverWallet()
+            .then(setWallet)
+            .catch(() => undefined);
+        }}
+      />
+    );
+  }
+  if (rating) {
+    return <RateRiderScreen ride={rating} onDone={() => setRating(null)} />;
+  }
 
   return (
     <div className="relative h-full overflow-hidden bg-bg">
@@ -185,7 +222,7 @@ export function HomeScreen() {
           {subscription && !covered ? (
             <button
               type="button"
-              onClick={() => navigate("/account")}
+              onClick={() => navigate("/subscription")}
               className="absolute inset-x-16 top-62 flex animate-slideup items-center gap-10 rounded-14 border border-danger bg-surface px-13 py-11 text-start"
             >
               <span className="block h-36 w-6 shrink-0 rounded-4 bg-danger" />
@@ -248,7 +285,7 @@ export function HomeScreen() {
               disabled={connecting}
               onClick={() => {
                 clearError();
-                if (!covered) navigate("/account");
+                if (!covered) navigate("/subscription");
                 else if (online) goOffline();
                 else goOnline();
               }}

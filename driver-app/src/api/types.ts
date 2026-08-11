@@ -181,16 +181,68 @@ export interface Wallet {
 
 export interface SubscriptionPlan {
   id: string;
+  country_code: CountryCode;
   name: string;
   duration_type: "daily" | "weekly" | "monthly";
   price: string;
   currency: Currency;
+  is_active: boolean;
 }
 
 export interface MySubscription {
   is_active: boolean;
   coverage_until: string | null;
   days_remaining: number;
-  current: { plan_name: string; expires_at: string } | null;
+  current: DriverSubscription | null;
   plans: SubscriptionPlan[];
+}
+
+export type PaymentMethod = "cash" | "wallet" | "card" | "cliq" | "mixed";
+export type PaymentStatus =
+  | "pending"
+  | "awaiting_confirmation"
+  | "confirmed"
+  | "failed"
+  | "refunded"
+  | "disputed";
+
+export interface Payment {
+  id: string;
+  ride_id: string;
+  method: PaymentMethod;
+  amount: string;
+  currency: Currency;
+  status: PaymentStatus;
+  confirmed_at: string | null;
+  cliq_alias: string | null;
+  cliq_reference: string | null;
+  cliq_transfer_reference: string | null;
+}
+
+/** حالُ الدفع على رحلةٍ كاملة — الدفع المختلط صفّان (SPEC القسم 6). */
+export interface RidePayments {
+  ride_id: string;
+  currency: Currency;
+  final_fare: string | null;
+  outstanding: string;
+  payments: Payment[];
+}
+
+export interface Rating {
+  id: string;
+  ride_id: string;
+  stars: number;
+  comment: string | null;
+}
+
+export interface DriverSubscription {
+  id: string;
+  plan_name: string;
+  duration_type: "daily" | "weekly" | "monthly";
+  starts_at: string;
+  expires_at: string;
+  amount_paid: string;
+  currency: Currency;
+  payment_method: PaymentMethod;
+  status: "active" | "expired" | "cancelled";
 }
