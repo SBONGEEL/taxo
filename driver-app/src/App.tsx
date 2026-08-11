@@ -6,7 +6,8 @@
  *
  * **ما هو مبنيٌّ الآن**: الدخول واستعادة كلمة المرور، والتسجيل بخطواته
  * الثلاث، والرئيسيةُ ببطاقة الطلب والرحلة الجارية، والاشتراك، وسجلُّ الرحلات
- * بتفاصيله ونزاعه، والمحفظةُ بطلبات سحبها. و«حسابي» يُبنى في الجلسة التالية.
+ * بتفاصيله ونزاعه، والمحفظةُ بطلبات سحبها، وحسابي بإعداداته ومركبته وبطاقاته.
+ * والإشعاراتُ وبطاقةُ تأكيد حوالة كليك تُبنيان في الجلسة التالية.
  *
  * وحالةُ الكبتن هي ما يقرّر أيَّ شاشةٍ يرى بعد الدخول: غيرُ المعتمد يرى «قيد
  * المراجعة» ولا يرى الرئيسية — لا لأننا نخفيها، بل لأن التوزيع لا يعرفه
@@ -51,9 +52,6 @@ const PendingScreen = lazy(() =>
 const HomeScreen = lazy(() =>
   import("@/screens/Home").then((m) => ({ default: m.HomeScreen })),
 );
-const SoonScreen = lazy(() =>
-  import("@/screens/Soon").then((m) => ({ default: m.SoonScreen })),
-);
 const RidesScreen = lazy(() =>
   import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
 );
@@ -72,6 +70,18 @@ const WithdrawalsScreen = lazy(() =>
   import("@/screens/Withdrawals").then((m) => ({
     default: m.WithdrawalsScreen,
   })),
+);
+const AccountScreen = lazy(() =>
+  import("@/screens/Account").then((m) => ({ default: m.AccountScreen })),
+);
+const SettingsScreen = lazy(() =>
+  import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
+);
+const VehicleScreen = lazy(() =>
+  import("@/screens/Vehicle").then((m) => ({ default: m.VehicleScreen })),
+);
+const CardsScreen = lazy(() =>
+  import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
 const SubscriptionScreen = lazy(() =>
   import("@/screens/Subscription").then((m) => ({
@@ -247,7 +257,31 @@ export default function App() {
                         path="/account"
                         element={
                           <Guarded>
-                            <SoonScreen title="حسابي" />
+                            <AccountScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/settings"
+                        element={
+                          <Guarded>
+                            <SettingsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/vehicle"
+                        element={
+                          <Guarded>
+                            <VehicleScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/cards"
+                        element={
+                          <Guarded>
+                            <CardsScreen />
                           </Guarded>
                         }
                       />

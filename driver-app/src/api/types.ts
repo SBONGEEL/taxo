@@ -207,6 +207,34 @@ export interface WalletTransaction {
   created_at: string;
 }
 
+/** بطاقةٌ محفوظة كما تراها الواجهة — **لا رمزَ مزودٍ ولا رقمَ بطاقة**. */
+export interface SavedCard {
+  id: string;
+  provider: "telr";
+  brand: string | null;
+  last4: string;
+  expiry_month: number;
+  expiry_year: number;
+  is_default: boolean;
+  created_at: string;
+}
+
+/** صفٌّ في صندوق الوارد — `kind` هو `data.type` نفسه، فالنقرُ عليه والنقرُ
+ * على إشعار النظام يفتحان الشاشة ذاتها (`services/notifications.py`). */
+export interface UserNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  data: Record<string, string> | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationPreferences {
+  marketing_push_enabled: boolean;
+}
+
 export type WithdrawalMethod = "cliq" | "bank";
 export type WithdrawalStatus = "pending" | "approved" | "paid" | "rejected";
 

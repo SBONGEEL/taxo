@@ -26,6 +26,9 @@ import type {
   Vehicle,
   VehicleCategory,
   DriverWallet,
+  NotificationPreferences,
+  SavedCard,
+  UserNotification,
   WalletTransaction,
   Withdrawal,
   WithdrawalMethod,
@@ -211,6 +214,37 @@ export const buySubscription = (planId: string, idempotencyKey: string) =>
     plan_id: planId,
     idempotency_key: idempotencyKey,
   });
+
+// ------------------------------------------------------------ الحساب
+
+/** صندوق الوارد — أثرُ الحدث الدائم، يوجد ولو لم يُرسل Push (المرحلة 9-ب). */
+export const listNotifications = (limit = 30, offset = 0) =>
+  api.get<UserNotification[]>("/me/notifications", { query: { limit, offset } });
+
+export const getUnreadCount = () =>
+  api.get<{ unread: number }>("/me/notifications/unread-count");
+
+/** `ids` غائبةً تعني «الكل» — وقائمةٌ فارغة صريحة تعني لا شيء. */
+export const markNotificationsRead = (ids?: string[]) =>
+  api.post<{ unread: number }>("/me/notifications/read", ids ? { ids } : {});
+
+/** تفضيلاتُ الإشعارات — مفتاحٌ واحد: إشعارات العروض (SPEC القسم 11/8). */
+export const getNotificationPreferences = () =>
+  api.get<NotificationPreferences>("/me/notification-preferences");
+
+export const setNotificationPreferences = (marketing: boolean) =>
+  api.put<NotificationPreferences>("/me/notification-preferences", {
+    marketing_push_enabled: marketing,
+  });
+
+/** البطاقات المحفوظة — تُقرأ وتُحذف وتُجعل افتراضية، ولا تُضاف من هنا. */
+export const listSavedCards = () => api.get<SavedCard[]>("/payments/cards");
+
+export const makeCardDefault = (cardId: string) =>
+  api.post<SavedCard>(`/payments/cards/${cardId}/default`);
+
+export const deleteSavedCard = (cardId: string) =>
+  api.del<void>(`/payments/cards/${cardId}`);
 
 export const listDocuments = () =>
   api.get<DriverDocuments>("/drivers/me/documents");

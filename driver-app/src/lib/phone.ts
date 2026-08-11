@@ -42,6 +42,19 @@ export function toE164(national: string, dialCode: string): string {
   return `+${dialCode}${toNational(national, dialCode)}`;
 }
 
+/** للعرض: بادئةٌ ثم الرقم الوطني، بفراغٍ بينهما.
+ *
+ * ولا تجميعَ أبعد من ذلك: النموذج يكتب `+962 79 555 0142` بتجميعٍ أردنيّ،
+ * وتقسيمُ رقمٍ ليبيٍّ بالقاعدة نفسها يخرج رقماً لا يعرفه صاحبه. والبادئةُ من
+ * `/config` لا من هنا.
+ */
+export function forDisplay(e164: string, dialCode: string): string {
+  const digits = digitsOnly(e164);
+  return digits.startsWith(dialCode)
+    ? `+${dialCode} ${digits.slice(dialCode.length)}`
+    : `+${digits}`;
+}
+
 /** رقمٌ يبدو مكتملاً — حارسُ واجهةٍ يمنع نداءً فاشلاً، لا قاعدةَ تحقق. */
 export function looksComplete(national: string, length: number): boolean {
   return digitsOnly(national).length === length;

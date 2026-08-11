@@ -31,7 +31,8 @@ written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-
 progress and reviewed three screens at a time** — scaffolding + login/password recovery, then
 registration in three steps, then the home screen with the offer card and the active ride, then
 collect/rate/subscription, then the ride log with its details and dispute, then the wallet with its
-withdrawal sheet and request list. Do not implement
+withdrawal sheet and request list, then the account tab with settings, vehicle/documents and saved
+cards. Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern
 appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
@@ -174,6 +175,13 @@ cash ride with cash-flavoured reasons; a driver who was never handed cash simply
 "استلمت المبلغ كاش", and the payment stays `awaiting_confirmation` where the admin can see it. The
 three reasons were rewritten for CliQ for the same reason — the backend takes free text, so a reason
 that describes an impossible situation would land verbatim in the admin's queue.
+
+**Arabic-Indic digits are for quantities, not identifiers.** `arabicDigits` converts fares,
+distances, counts and dates; a plate number, a card's last4 and expiry, a CliQ reference and a
+payout reference are printed on something the driver is holding, and he compares them character by
+character — converting those makes him match a string against a differently-shaped one. The rule is
+written into `screens/Cards.tsx` and `screens/Vehicle.tsx` where the two kinds sit next to each
+other.
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`
