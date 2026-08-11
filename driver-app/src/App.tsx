@@ -5,8 +5,8 @@
  * مستخدم. والمظهرُ فوق الكل لأنه يُرسم قبل أن تصل أيُّ بيانات.
  *
  * **ما هو مبنيٌّ الآن**: الدخول واستعادة كلمة المرور، والتسجيل بخطواته
- * الثلاث، والرئيسيةُ ببطاقة الطلب والرحلة الجارية. وتبويبات الشريط السفلي
- * الثلاثة الباقية تُبنى في الجلسات التالية.
+ * الثلاث، والرئيسيةُ ببطاقة الطلب والرحلة الجارية، والاشتراك، وسجلُّ الرحلات
+ * بتفاصيله ونزاعه. والمحفظةُ وحسابي تُبنيان في الجلسات التالية.
  *
  * وحالةُ الكبتن هي ما يقرّر أيَّ شاشةٍ يرى بعد الدخول: غيرُ المعتمد يرى «قيد
  * المراجعة» ولا يرى الرئيسية — لا لأننا نخفيها، بل لأن التوزيع لا يعرفه
@@ -53,6 +53,17 @@ const HomeScreen = lazy(() =>
 );
 const SoonScreen = lazy(() =>
   import("@/screens/Soon").then((m) => ({ default: m.SoonScreen })),
+);
+const RidesScreen = lazy(() =>
+  import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
+);
+const RideDetailsScreen = lazy(() =>
+  import("@/screens/RideDetails").then((m) => ({
+    default: m.RideDetailsScreen,
+  })),
+);
+const DisputeScreen = lazy(() =>
+  import("@/screens/Dispute").then((m) => ({ default: m.DisputeScreen })),
 );
 const SubscriptionScreen = lazy(() =>
   import("@/screens/Subscription").then((m) => ({
@@ -183,15 +194,31 @@ export default function App() {
                           </Guarded>
                         }
                       />
-                      {/* تبويبات الشريط السفلي — تُبنى في الجلسات التالية */}
                       <Route
                         path="/rides"
                         element={
                           <Guarded>
-                            <SoonScreen title="سجل الرحلات" />
+                            <RidesScreen />
                           </Guarded>
                         }
                       />
+                      <Route
+                        path="/rides/:rideId"
+                        element={
+                          <Guarded>
+                            <RideDetailsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/rides/:rideId/dispute"
+                        element={
+                          <Guarded>
+                            <DisputeScreen />
+                          </Guarded>
+                        }
+                      />
+                      {/* تبويبات الشريط السفلي الباقية — الجلسات التالية */}
                       <Route
                         path="/wallet"
                         element={

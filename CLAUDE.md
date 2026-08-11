@@ -30,8 +30,9 @@ long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifica
 written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-app/`) is in
 progress and reviewed three screens at a time** — scaffolding + login/password recovery, then
 registration in three steps, then the home screen with the offer card and the active ride, then
-collect/rate/subscription. Do not implement anything from a later stage unless the user asks for
-that stage. When a later-stage concern appears in current code (e.g. no Celery job sweeps stale
+collect/rate/subscription, then the ride log with its details and dispute. Do not implement
+anything from a later stage unless the user asks for that stage. When a later-stage concern
+appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
 admin panel lands in stage 11 while its endpoints already exist), leave a comment naming the stage
 rather than building ahead.
@@ -153,6 +154,15 @@ in *both* cases, so a cash ride can leave his balance lower than it started. So 
 carries a caption naming which of the two it is ("تقبض الآن من الراكب" / "أُضيف إلى محفظتك"), the
 breakdown splits the two only when a ride actually has both parts, and the footnote states where the
 money lives *before* it mentions disputes.
+
+**The dispute button lives on a CliQ payment awaiting confirmation, and nowhere else.**
+`payments.dispute_by_driver` refuses every other method, so `screens/RideDetails.tsx` gates the CTA
+on exactly that pair (`method === "cliq" && status === "awaiting_confirmation"`) and
+`screens/Dispute.tsx` re-reads it rather than trusting the caller. The design draws the button on a
+cash ride with cash-flavoured reasons; a driver who was never handed cash simply does not press
+"استلمت المبلغ كاش", and the payment stays `awaiting_confirmation` where the admin can see it. The
+three reasons were rewritten for CliQ for the same reason — the backend takes free text, so a reason
+that describes an impossible situation would land verbatim in the admin's queue.
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`

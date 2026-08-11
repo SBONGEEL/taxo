@@ -217,6 +217,13 @@ export interface Payment {
   cliq_alias: string | null;
   cliq_reference: string | null;
   cliq_transfer_reference: string | null;
+  /** ما كتبه الكبتن حين قال «لم يصلني»، وفصلُ الإدارة فيه (القسم 6.2). */
+  dispute_reason: string | null;
+  disputed_at: string | null;
+  resolution: "paid" | "unpaid" | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
 }
 
 /** حالُ الدفع على رحلةٍ كاملة — الدفع المختلط صفّان (SPEC القسم 6). */
@@ -228,9 +235,12 @@ export interface RidePayments {
   payments: Payment[];
 }
 
+export type RatingRaterType = "rider" | "driver";
+
 export interface Rating {
   id: string;
   ride_id: string;
+  rater_type: RatingRaterType;
   stars: number;
   comment: string | null;
 }

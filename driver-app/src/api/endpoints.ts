@@ -135,6 +135,15 @@ export const addVehicle = (payload: {
 
 export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
 
+/** سجل الرحلات — «للكبتن ما أُسند إليه» (`rides.list_rides_for_user`). */
+export const listMyRides = (limit = 20, offset = 0) =>
+  api.get<Ride[]>("/rides/me", { query: { limit, offset } });
+
+export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
+
+export const listRideRatings = (rideId: string) =>
+  api.get<Rating[]>(`/rides/${rideId}/ratings`);
+
 export const acceptRide = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/accept`);
 

@@ -32,15 +32,8 @@ import { confirmPayment, getRidePayments } from "@/api/endpoints";
 import type { Payment, PaymentMethod, Ride, RidePayments } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { METHOD_LABEL, trimDistance } from "@/lib/rideFormat";
 import { arabicDigits } from "@/lib/utils";
-
-const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "كاش",
-  wallet: "محفظة",
-  card: "بطاقة",
-  cliq: "كليك",
-  mixed: "مختلط (محفظة + كاش)",
-};
 
 /** ما لا يمر بالمنصة فيبقى في يد الكبتن (`DIRECTLY_COLLECTED_METHODS`). */
 const IN_HAND: ReadonlySet<PaymentMethod> = new Set(["cash", "cliq"]);
@@ -142,7 +135,7 @@ export function CollectScreen({
         {ride.actual_distance_km ? (
           <Row
             label="المسافة الفعلية"
-            value={`${arabicDigits(trimDistance(ride.actual_distance_km))} كم`}
+            value={`${trimDistance(ride.actual_distance_km)} كم`}
           />
         ) : null}
         <Row
@@ -228,14 +221,6 @@ export function CollectScreen({
       </p>
     </div>
   );
-}
-
-/** المسافة ليست مالاً: `5.700` تُقرأ مبلغاً و`5.7` تُقرأ مسافة. وقصٌّ نصّي
- * لا قسمةٌ ولا `toFixed` — لا رقمَ يمر بـ`Number` في هذه الشاشة. */
-function trimDistance(value: string): string {
-  const [whole, fraction = ""] = value.split(".");
-  const first = fraction.slice(0, 1);
-  return first && first !== "0" ? `${whole}.${first}` : whole;
 }
 
 function Row({

@@ -61,6 +61,17 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
+/** لا شيء بعد — وليس عطلاً. عنوانٌ وسطرُ سببٍ، بلا رسمٍ ولا زرّ: القوائم
+ * الفارغة في هذا التطبيق تمتلئ بالعمل لا بضغطة. */
+export function EmptyNote({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="px-16 py-38 text-center">
+      <p className="text-14 font-bold text-ink">{title}</p>
+      <p className="mt-6 text-12.5 leading-note text-muted">{hint}</p>
+    </div>
+  );
+}
+
 export function CenteredMessage({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-16 px-28 text-center">
