@@ -125,8 +125,11 @@ export function WithdrawalsScreen() {
                 </div>
               ) : null}
               {request.reference ? (
-                <div dir="ltr" className="mt-3 text-11 text-muted">
-                  {request.reference}
+                <div className="mt-3 text-11 text-muted">
+                  مرجع التحويل{" "}
+                  <span dir="ltr" className="text-ink">
+                    {request.reference}
+                  </span>
                 </div>
               ) : null}
             </div>

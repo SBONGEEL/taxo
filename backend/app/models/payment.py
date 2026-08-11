@@ -97,6 +97,13 @@ class Payment(UUIDMixin, TimestampMixin, Base):
             "(cliq_transfer_reference IS NULL) = (cliq_reference_at IS NULL)",
             name="payment_cliq_transfer_complete",
         ),
+        # المهلةُ تُكتب مع المرجع ولا تُكتب بغيره: موعدُ انقضاءٍ بلا حوالةٍ
+        # يُنازِع دفعةً لم يقل الراكب إنه حوّلها أصلاً
+        CheckConstraint(
+            "cliq_confirmation_expires_at IS NULL "
+            "OR cliq_reference_at IS NOT NULL",
+            name="payment_cliq_deadline_needs_reference",
+        ),
         Index("ix_payments_ride_status", "ride_id", "status"),
     )
 
@@ -163,6 +170,13 @@ class Payment(UUIDMixin, TimestampMixin, Base):
     )
     cliq_reference_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # موعدُ انقضاء مهلة التأكيد (القسم 6.2/6) — **يُجمَّد على الصف** لحظة
+    # إدخال المرجع كما تُجمَّد `commission_percent_at_ride`: مهلةٌ تُحسب عند
+    # القراءة من إعدادٍ قابلٍ للتعديل تتحرك تحت دفعةٍ قائمة، فيرى الكبتن
+    # عدّاداً يقفز وتُنازَع دفعةٌ كان أمامها يوم
+    cliq_confirmation_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
 
     # ------------------------------------------------------------- النزاع

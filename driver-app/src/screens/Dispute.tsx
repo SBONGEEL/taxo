@@ -50,8 +50,7 @@ export function DisputeScreen() {
     setRide(one);
     setPayment(
       paid.payments.find(
-        (row) =>
-          row.method === "cliq" && row.status === "awaiting_confirmation",
+        (row) => row.method === "cliq" && row.status === "pending",
       ) ?? null,
     );
   }, [rideId]);

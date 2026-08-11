@@ -124,3 +124,20 @@ class SubscriptionPlanOut(BaseModel):
     currency: Currency
     is_active: bool
     updated_at: datetime
+
+
+class PaymentSettingOut(BaseModel):
+    """سياساتُ الدفع لدولة (SPEC القسم 6.2/13.6)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    country_code: CountryCode
+    cliq_confirmation_hours: int
+    updated_at: datetime
+
+
+class PaymentSettingUpdate(BaseModel):
+    """المهلة بالساعات — حدٌّ أعلى أسبوعٌ كي لا تُشلّ الميزة بقيمةٍ لا تنقضي."""
+
+    cliq_confirmation_hours: int = Field(ge=1, le=168)

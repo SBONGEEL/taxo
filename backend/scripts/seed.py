@@ -39,6 +39,10 @@ from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
+from app.models.payment_setting import (
+    DEFAULT_CLIQ_CONFIRMATION_HOURS,
+    PaymentSetting,
+)
 from app.models.wallet_setting import WalletSetting
 from app.services.providers import credentials as credentials_service
 
@@ -184,6 +188,20 @@ async def seed_wallet_settings(session: AsyncSession) -> None:
                 )
             )
             _log(f"حدود محفظة: {country.value}")
+
+
+async def seed_payment_settings(session: AsyncSession) -> None:
+    """مهلةُ تأكيد كليك لكل دولة — غيابُها يترك حوالاتٍ بلا موعدِ فصل."""
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(PaymentSetting.id).where(PaymentSetting.country_code == country)
+        )
+        if exists is None:
+            session.add(PaymentSetting(country_code=country))
+            _log(
+                f"سياسات دفع: {country.value} "
+                f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة)"
+            )
 
 
 async def seed_pricing(session: AsyncSession) -> None:
@@ -462,6 +480,7 @@ async def main() -> None:
         await seed_commission(session)
         await seed_pricing(session)
         await seed_wallet_settings(session)
+        await seed_payment_settings(session)
         await seed_plans(session)
         await seed_providers(session)
         await seed_fcm(session)

@@ -129,6 +129,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
           amount: event.amount,
           currency: event.currency,
           transferReference: event.transfer_reference,
+          expiresAt: event.expires_at,
         });
         break;
       default:

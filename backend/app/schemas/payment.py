@@ -82,6 +82,9 @@ class PaymentOut(BaseModel):
     cliq_reference: str | None
     cliq_transfer_reference: str | None
     cliq_reference_at: datetime | None
+    # موعدُ انقضاء المهلة — مجمَّدٌ على الصف، فترسمه الواجهة عدّاداً بلا أن
+    # تحسبه من إعدادٍ قد يتغيّر تحتها (القسم 6.2/6)
+    cliq_confirmation_expires_at: datetime | None
 
     dispute_reason: str | None
     disputed_at: datetime | None

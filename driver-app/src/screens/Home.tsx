@@ -32,7 +32,7 @@ import {
   getUnreadCount,
   startRide,
 } from "@/api/endpoints";
-import type { MySubscription, Ride, Wallet } from "@/api/types";
+import type { Currency, MySubscription, Ride, Wallet } from "@/api/types";
 import { ActiveRide } from "@/components/ActiveRide";
 import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
@@ -43,20 +43,15 @@ import { OfferSheet } from "@/components/OfferSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useConfig, useMapboxToken } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import {
+  CATEGORY_LABEL,
+  CURRENCY_FULL,
+  CURRENCY_LABEL,
+} from "@/lib/rideFormat";
 import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { arabicDigits, cn } from "@/lib/utils";
-
-const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
-const CURRENCY_FULL: Record<string, string> = {
-  JOD: "دينار أردني",
-  LYD: "دينار ليبي",
-};
-const CATEGORY_LABEL: Record<string, string> = {
-  economy: "اقتصادي",
-  comfort: "مريح",
-};
 
 export function HomeScreen() {
   const navigate = useNavigate();
@@ -91,14 +86,11 @@ export function HomeScreen() {
   const [unread, setUnread] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // عملةُ الدولة من `/config` — لا تُشتق في الواجهة (`currency_for_country`)
   const currencyCode =
     config?.countries.find((c) => c.country_code === user?.country_code)
       ?.currency ?? "JOD";
-  const currency =
-    CURRENCY_LABEL[
-      config?.countries.find((c) => c.country_code === user?.country_code)
-        ?.currency ?? "JOD"
-    ] ?? "";
+  const currency = CURRENCY_LABEL[currencyCode];
 
   useEffect(() => {
     getDriverWallet()
@@ -340,7 +332,7 @@ export function HomeScreen() {
         <OfferSheet
           offer={offer}
           currencyLabel={currency}
-          categoryLabel={CATEGORY_LABEL[offer.ride.vehicle_category] ?? ""}
+          categoryLabel={CATEGORY_LABEL[offer.ride.vehicle_category]}
           busy={busy}
           onAccept={() =>
             void run(async () => {
@@ -362,7 +354,7 @@ export function HomeScreen() {
       {transfer ? (
         <CliqTransferSheet
           transfer={transfer}
-          currencyLabel={CURRENCY_LABEL[transfer.currency] ?? ""}
+          currencyLabel={CURRENCY_LABEL[transfer.currency as Currency]}
           onConfirmed={dismissTransfer}
           onDispute={() => {
             const rideId = transfer.rideId;

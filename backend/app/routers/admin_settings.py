@@ -16,6 +16,7 @@ from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
+from app.models.payment_setting import PaymentSetting
 from app.models.wallet_setting import WalletSetting
 from app.schemas.audit import AuditLogOut
 from app.schemas.settings import (
@@ -23,6 +24,8 @@ from app.schemas.settings import (
     CommissionSettingUpdate,
     CountryFeatureFlagsOut,
     FeatureFlagUpsert,
+    PaymentSettingOut,
+    PaymentSettingUpdate,
     PricingRuleCreate,
     PricingRuleOut,
     PricingRuleUpdate,
@@ -379,6 +382,51 @@ async def update_wallet_settings(
     )
     await _commit(session, setting)
     return WalletSettingOut.model_validate(setting)
+
+
+# ------------------------------------------------------- سياسات الدفع
+
+
+@router.get("/payments", response_model=list[PaymentSettingOut])
+async def list_payment_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[PaymentSettingOut]:
+    rows = (
+        await session.scalars(
+            select(PaymentSetting).order_by(PaymentSetting.country_code)
+        )
+    ).all()
+    return [PaymentSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/payments/{country_code}", response_model=PaymentSettingOut)
+async def update_payment_settings(
+    country_code: CountryCode,
+    payload: PaymentSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> PaymentSettingOut:
+    """مهلةُ تأكيد حوالة كليك لكل دولة (SPEC القسم 6.2/13.6).
+
+    **ولا أثرَ رجعياً**: المهلة تُجمَّد على الدفعة لحظة إدخال المرجع، فتعديلُها
+    هنا يحكم ما يأتي بعده لا ما هو معلّقٌ الآن — كبتنٌ رأى «يبقى ٦ ساعات» لا
+    يجوز أن تتحول تحته إلى ساعة.
+    """
+    setting = await settings_service.get_or_create_payment_settings(
+        session, country_code
+    )
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="payment_setting",
+        entity_id=setting.id,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return PaymentSettingOut.model_validate(setting)
 
 
 # ------------------------------------------------------------- سجل التدقيق

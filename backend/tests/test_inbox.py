@@ -234,3 +234,32 @@ async def test_a_campaign_reaches_the_inbox_only_of_those_it_was_sent_to(
             select(func.count()).select_from(UserNotification)
         )
     assert total == 1
+
+
+# --------------------------------------- عقد الحمولة: قيمٌ خام لا جملة
+
+
+async def test_ride_event_data_carries_raw_values_not_a_sentence(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """`data` تحمل ما تصوغ به الواجهةُ جملتها (SPEC القسم 10).
+
+    الخلفية تكتب `title`/`body` لدرج نظام التشغيل — يرسمهما والتطبيق مغلق —
+    لكن ما ترسمه الواجهةُ بنفسها يجب أن يُصاغ عندها بخاناتها ولغتها. ولذلك
+    يفشل هذا الاختبار إن اختفى `amount` أو `currency` من الحمولة: عندها تعود
+    الشاشةُ تقرأ `body` فتظهر «4.100 JOD» وسط شاشةٍ عربيةٍ بالكامل.
+    """
+    rider = await register(client, RIDER)
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+    await accepted_ride(client, auth(rider), driver)
+
+    entries = await inbox_of(session_factory, rider["user"]["id"])
+    assigned = next(e for e in entries if e.kind == "driver_assigned")
+
+    assert assigned.data is not None
+    # المعرّف والقيمة والعملة — ولا رقمَ منسّقاً ولا عملةً مترجمة
+    assert set(assigned.data) >= {"type", "ride_id", "amount", "currency"}
+    assert assigned.data["currency"] == "JOD"
+    # مبلغٌ نصّي بثلاث منازل كما يخرج من `NUMERIC(12,3)`
+    assert assigned.data["amount"].count(".") == 1

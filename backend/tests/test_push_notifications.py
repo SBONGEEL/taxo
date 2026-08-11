@@ -103,9 +103,14 @@ async def test_ride_events_reach_a_closed_app_over_push(
 
     messages = await pushes_to(RIDER_TOKEN)
     assert [message["title"] for message in messages] == ["تم قبول رحلتك"]
+    # الحمولةُ عقدٌ (القسم 10): معرّفاتٌ وقيمٌ **خام** تصوغ بها الواجهةُ
+    # جملتها — لا نصَّ مصوغاً ولا رقماً منسّقاً
     assert messages[0]["data"] == {
         "type": "driver_assigned",
         "ride_id": ride["id"],
+        "amount": ride["estimated_fare"],
+        "currency": ride["currency"],
+        "status": ride["status"],
     }
     # حدث الرحلة ليس مستعجلاً كبطاقة الطلب — أولوية عادية
     assert messages[0]["high_priority"] is False

@@ -126,10 +126,13 @@ export function WalletScreen() {
             <span className="text-14 font-medium text-muted">{currency}</span>
           </div>
 
-          {/* ما حُجز — بمبلغ الطلب نفسه حين يكون واحداً، فلا تطرح الشاشة */}
+          {/* ما حُجز — بمبلغ الطلب نفسه حين يكون واحداً، فلا تطرح الشاشة.
+              ومعه الرصيدُ الكلي: من يرى «المتاح» وحده ينقص عمّا يذكر يظن
+              أن شيئاً ضاع، والرقمان كلاهما من الخلفية */}
           {holds.length === 1 ? (
             <p className="text-11.5 text-warn">
-              محجوز لطلب سحب معلّق: {arabicDigits(holds[0].amount)} {currency}
+              محجوز لطلب سحب معلّق: {arabicDigits(holds[0].amount)} {currency} —
+              من أصل {arabicDigits(wallet.balance)} {currency}
             </p>
           ) : holds.length > 1 ? (
             <p className="text-11.5 text-warn">

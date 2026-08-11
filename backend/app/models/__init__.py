@@ -47,6 +47,7 @@ from app.models.notification import (
     UserNotification,
 )
 from app.models.payment import Payment, SavedCard
+from app.models.payment_setting import PaymentSetting
 from app.models.pricing import PricingRule
 from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
@@ -116,6 +117,7 @@ __all__ = [
     "Vehicle",
     "VehicleCategory",
     "WalletOwnerType",
+    "PaymentSetting",
     "WalletSetting",
     "WalletTopupRequest",
     "WalletTransaction",

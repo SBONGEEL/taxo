@@ -13,6 +13,12 @@
  *
  * **و`kind` هو `data.type` نفسه**، فالنقرُ على الصف والنقرُ على إشعار نظام
  * التشغيل يفتحان الشاشة ذاتها — لا خريطتان تفترقان.
+ *
+ * **والنصُّ يُصاغ هنا من `data` لا يُقرأ من `body`.** الخلفية تكتب `title`
+ * و`body` لدرج نظام التشغيل — يرسمهما والتطبيق مغلق ولا واجهةَ تصوغ حينها —
+ * وتضع القيم خاماً في `data`. فما نعرف صياغته نصوغه بخاناتٍ عربيةٍ-هندية
+ * ورمزِ عملةٍ عربي، وما لا نعرفه يقع على نصّ الخلفية: نوعٌ جديد يظهر بنصٍّ
+ * صحيح بدل صفٍّ فارغ.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -22,6 +28,7 @@ import {
   BadgeCheck,
   CalendarClock,
   Car,
+  ChevronLeft,
   FileWarning,
   Megaphone,
   Wallet,
@@ -30,10 +37,10 @@ import {
 
 import { ApiError } from "@/api/client";
 import { listNotifications, markNotificationsRead } from "@/api/endpoints";
-import type { UserNotification } from "@/api/types";
+import type { Currency, UserNotification } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { formatWhen } from "@/lib/rideFormat";
-import { cn } from "@/lib/utils";
+import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
+import { arabicDigits, cn } from "@/lib/utils";
 
 const PAGE_SIZE = 30;
 
@@ -51,6 +58,37 @@ const KIND_STYLE: Record<string, { icon: LucideIcon; tone: string }> = {
   document_rejected: { icon: FileWarning, tone: "text-danger" },
   campaign: { icon: Megaphone, tone: "text-muted" },
 };
+
+/** نصُّ الصف مصوغاً من القيم الخام — و`null` يعني «قع على نصّ الخلفية». */
+function composeBody(entry: UserNotification): string | null {
+  const data = entry.data;
+  if (!data) return null;
+
+  const money =
+    data.amount && data.currency
+      ? `${arabicDigits(data.amount)} ${CURRENCY_LABEL[data.currency as Currency] ?? ""}`
+      : null;
+
+  switch (entry.kind) {
+    case "cliq_transfer_submitted":
+      return money && data.transfer_reference
+        ? `${money} — مرجع الحوالة ${data.transfer_reference}`
+        : money;
+    case "cliq_confirmation_expired":
+      return money ? `${money} — تفصل فيها الإدارة الآن.` : null;
+    case "ride_completed":
+      return money ? `أجرة الرحلة ${money}.` : null;
+    case "document_rejected":
+      return data.review_note || null;
+    case "subscription_expiring":
+    case "subscription_expired":
+      return data.expires_at
+        ? `تغطيتك حتى ${formatWhen(data.expires_at)}.`
+        : null;
+    default:
+      return null;
+  }
+}
 
 /** أين يذهب الصفُّ حين يُنقر — من `data` نفسها لا من نصّ العنوان. */
 function destinationOf(entry: UserNotification): string | null {
@@ -183,12 +221,16 @@ export function NotificationsScreen() {
                     {entry.title}
                   </span>
                   <span className="mt-2 block text-11.5 leading-snug text-muted">
-                    {entry.body}
+                    {composeBody(entry) ?? entry.body}
                   </span>
                   <span className="mt-5 block text-10.5 text-muted">
                     {formatWhen(entry.created_at)}
                   </span>
                 </span>
+                {/* سهمٌ لما يفتح شاشة: صفٌّ قابلٌ للنقر بلا علامةٍ لا يُنقر */}
+                {destinationOf(entry) ? (
+                  <ChevronLeft size={15} className="mt-3 shrink-0 text-muted" />
+                ) : null}
               </button>
             </li>
           );

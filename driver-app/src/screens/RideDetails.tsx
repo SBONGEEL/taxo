@@ -24,8 +24,20 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getRide, getRidePayments, listRideRatings } from "@/api/endpoints";
-import type { Payment, Rating, Ride, RidePayments } from "@/api/types";
+import {
+  confirmPayment,
+  getRide,
+  getRidePayments,
+  listRideRatings,
+} from "@/api/endpoints";
+import type {
+  Payment,
+  PaymentStatus,
+  Rating,
+  Ride,
+  RidePayments,
+} from "@/api/types";
+import { Button } from "@/components/ui/Button";
 import { MapView } from "@/components/map/MapView";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useMapboxToken } from "@/lib/config";
@@ -40,7 +52,7 @@ import {
 import { arabicDigits, cn } from "@/lib/utils";
 
 /** نصُّ فصل الإدارة — `paid` تصف الواقعة لا الحالة الناتجة. */
-const RESOLUTION_LABEL: Record<string, string> = {
+const RESOLUTION_LABEL: Record<"paid" | "unpaid", string> = {
   paid: "فصلت الإدارة: المبلغ وصلك",
   unpaid: "فصلت الإدارة: المبلغ لم يصلك",
 };
@@ -54,6 +66,7 @@ export function RideDetailsScreen() {
   const [payments, setPayments] = useState<RidePayments | null>(null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const load = useCallback(async () => {
     const [one, paid, rated] = await Promise.all([
@@ -75,6 +88,21 @@ export function RideDetailsScreen() {
     );
   }, [load]);
 
+  async function confirm(paymentId: string) {
+    setConfirming(true);
+    setError(null);
+    try {
+      await confirmPayment(paymentId);
+      await load();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر تأكيد الدفعة",
+      );
+    } finally {
+      setConfirming(false);
+    }
+  }
+
   if (!ride) {
     return (
       <div className="flex h-full items-center justify-center bg-bg px-16">
@@ -87,8 +115,7 @@ export function RideDetailsScreen() {
   const rows = payments?.payments ?? [];
   // النزاع من دفعةٍ واحدة: كليك تنتظر تأكيده
   const disputable: Payment | undefined = rows.find(
-    (payment) =>
-      payment.method === "cliq" && payment.status === "awaiting_confirmation",
+    (payment) => payment.method === "cliq" && payment.status === "pending",
   );
   const disputed = rows.find((payment) => payment.status === "disputed");
   const resolved = rows.find(
@@ -160,8 +187,12 @@ export function RideDetailsScreen() {
             label="السعر المقدّر"
             value={`${arabicDigits(ride.estimated_fare)} ${currency}`}
           />
+          {/* الفعليةُ تُسمّى فعلية: جدولٌ يخلط المقدَّر بالمحقَّق بلا اسمٍ
+              يجعل الكبتن يحسب على رقمٍ لا يعرف مصدره */}
           <Row
-            label="المسافة"
+            label={
+              ride.actual_distance_km ? "المسافة الفعلية" : "المسافة المقدّرة"
+            }
             value={`${trimDistance(ride.actual_distance_km ?? ride.distance_km)} كم`}
           />
           <Row
@@ -190,7 +221,7 @@ export function RideDetailsScreen() {
             {rows.map((payment) => (
               <Row
                 key={payment.id}
-                label={`${METHOD_LABEL[payment.method]} · ${PAYMENT_STATUS_LABEL[payment.status]}`}
+                label={`${METHOD_LABEL[payment.method]} · ${paymentStatusLabel(payment)}`}
                 value={`${arabicDigits(payment.amount)} ${currency}`}
                 tone={payment.status === "confirmed" ? "text-ink" : "text-warn"}
               />
@@ -208,7 +239,9 @@ export function RideDetailsScreen() {
 
         {resolved ? (
           <div className="rounded-15 border border-line bg-surface p-14 text-12.5 leading-snug text-muted">
-            {RESOLUTION_LABEL[resolved.resolution ?? ""] ?? "فُصل النزاع"}
+            {resolved.resolution
+              ? RESOLUTION_LABEL[resolved.resolution]
+              : "فُصل النزاع"}
             {resolved.resolution_note ? ` — ${resolved.resolution_note}` : ""}
           </div>
         ) : disputed ? (
@@ -216,22 +249,57 @@ export function RideDetailsScreen() {
             نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.
           </div>
         ) : disputable ? (
-          <button
-            type="button"
-            onClick={() => navigate(`/rides/${ride.id}/dispute`)}
-            className="w-full rounded-15 border border-danger p-14 text-center text-13.5 font-bold text-danger"
-          >
-            لم تصلني الحوالة — افتح نزاعاً
-          </button>
+          <>
+            {/* **الفعلُ الإيجابي أولاً**: من وصلته الحوالة يجد بابَه هنا لا في
+                بطاقةٍ عابرة قد يكون أغلقها. وشاشةٌ تعرض «افتح نزاعاً» وحده
+                تُملي على الكبتن الجوابَ الذي لم يقله */}
+            <div className="flex gap-10">
+              <Button
+                className="flex-1"
+                size="md"
+                loading={confirming}
+                onClick={() => void confirm(disputable.id)}
+              >
+                وصلتني
+              </Button>
+              <Button
+                className="flex-1 border-danger text-danger"
+                size="md"
+                variant="secondary"
+                disabled={confirming}
+                onClick={() => navigate(`/rides/${ride.id}/dispute`)}
+              >
+                لم تصلني
+              </Button>
+            </div>
+            {/* المهلةُ تُقال هنا أيضاً: من أغلق البطاقة لا يراها إلا هنا */}
+            {disputable.cliq_confirmation_expires_at ? (
+              <p className="mt-10 text-11.5 leading-note text-muted">
+                إن لم تؤكّد أو ترفض حتى{" "}
+                {formatWhen(disputable.cliq_confirmation_expires_at)} صارت
+                الدفعة نزاعاً تفصل فيه الإدارة.
+              </p>
+            ) : null}
+          </>
         ) : null}
       </div>
     </div>
   );
 }
 
-const PAYMENT_STATUS_LABEL: Record<string, string> = {
-  pending: "بانتظار الراكب",
-  awaiting_confirmation: "بانتظار تأكيدك",
+/** والاسمُ يختلف بالقناة لا بالحال: `pending` على كليك والكاش انتظارُ قولِ
+ * الكبتن، وعلى البطاقة انتظارُ جواب المزود. */
+function paymentStatusLabel(payment: Payment): string {
+  if (payment.status === "pending") {
+    return payment.method === "cash" || payment.method === "cliq"
+      ? "بانتظار تأكيدك"
+      : "بانتظار الدفع";
+  }
+  return PAYMENT_STATUS_LABEL[payment.status];
+}
+
+const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
+  pending: "بانتظار الدفع",
   confirmed: "مؤكدة",
   failed: "فاشلة",
   refunded: "مستردّة",

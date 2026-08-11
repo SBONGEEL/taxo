@@ -33,18 +33,23 @@ import {
   getMySubscription,
   getSubscriptionHistory,
 } from "@/api/endpoints";
-import type { DriverSubscription, MySubscription } from "@/api/types";
+import type {
+  DriverSubscription,
+  MySubscription,
+  SubscriptionDuration,
+  SubscriptionPlan,
+} from "@/api/types";
 import { BottomNav } from "@/components/BottomNav";
+import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
 
-const DURATION_LABEL: Record<string, string> = {
+const DURATION_LABEL: Record<SubscriptionDuration, string> = {
   daily: "٢٤ ساعة من لحظة الشراء",
   weekly: "٧ أيام · الأوفر للدوام الجزئي",
   monthly: "٣٠ يوماً · الأوفر للمتفرغ",
 };
-
-const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
 
 type State = "active" | "expiring" | "expired" | "none";
 
@@ -96,6 +101,9 @@ export function SubscriptionScreen() {
   const [history, setHistory] = useState<DriverSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  // خطوةُ تأكيدٍ قبل الخصم: ضغطةٌ واحدة تُخرج ثمانين ديناراً من محفظته،
+  // و«خصمتم مني بالخطأ» تذكرةُ دعمٍ لا تُغلق بغير قيدٍ مضاد
+  const [confirming, setConfirming] = useState<SubscriptionPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -146,8 +154,6 @@ export function SubscriptionScreen() {
 
   const state = stateOf(subscription);
   const copy = COPY[state];
-  const currency =
-    CURRENCY_LABEL[subscription?.plans[0]?.currency ?? "JOD"] ?? "";
 
   return (
     <div className="relative h-full bg-bg">
@@ -200,27 +206,37 @@ export function SubscriptionScreen() {
               key={plan.id}
               type="button"
               disabled={buying !== null}
-              onClick={() => void buy(plan.id)}
+              onClick={() => setConfirming(plan)}
               className={cn(
+                // ولا خطةَ «موصى بها» بإطار: الإطارُ الأبيض في هذا التطبيق
+                // معناه **مختار**، وإبرازُ الأسبوعي كان افتراضاً مكتوباً في
+                // الكود عن أسعارٍ تديرها الإدارة وقد تنقلب غداً
                 "flex items-center gap-12 rounded-16 border bg-surface p-15 text-start",
-                plan.duration_type === "weekly" ? "border-ink" : "border-line",
+                subscription?.current?.plan_name === plan.name
+                  ? "border-ink"
+                  : "border-line",
                 buying !== null && "opacity-60",
               )}
             >
               <span className="flex-1">
                 <span className="block text-14 font-bold text-ink">
                   {plan.name}
+                  {/* الإطارُ وحده غامض: كلمةٌ تقول لماذا هذه الخطة مؤطَّرة */}
+                  {subscription?.current?.plan_name === plan.name ? (
+                    <span className="ms-8 text-10.5 font-semibold text-muted">
+                      خطتك الحالية
+                    </span>
+                  ) : null}
                 </span>
                 <span className="block text-11.5 text-muted">
-                  {DURATION_LABEL[plan.duration_type] ?? ""}
+                  {DURATION_LABEL[plan.duration_type]}
                 </span>
               </span>
-              <span className="text-end">
-                <span className="block text-17 font-bold text-ink">
-                  {buying === plan.id ? "…" : arabicDigits(plan.price)}
-                </span>
-                <span className="block text-10.5 text-muted">
-                  {CURRENCY_LABEL[plan.currency] ?? currency}
+              {/* العملةُ بجانب الرقم كما في كل شاشةٍ مالية، لا سطراً تحته */}
+              <span className="whitespace-nowrap text-17 font-bold text-ink">
+                {buying === plan.id ? "…" : arabicDigits(plan.price)}{" "}
+                <span className="text-11 font-medium text-muted">
+                  {CURRENCY_LABEL[plan.currency]}
                 </span>
               </span>
             </button>
@@ -254,7 +270,7 @@ export function SubscriptionScreen() {
                   <span className="text-end">
                     <span className="block text-13 font-bold text-ink">
                       {arabicDigits(item.amount_paid)}{" "}
-                      {CURRENCY_LABEL[item.currency] ?? ""}
+                      {CURRENCY_LABEL[item.currency]}
                     </span>
                     <span
                       className={cn(
@@ -271,6 +287,57 @@ export function SubscriptionScreen() {
           </>
         ) : null}
       </div>
+
+      {confirming ? (
+        <div
+          className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
+          onClick={() => setConfirming(null)}
+        >
+          <div
+            className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="mb-4 text-16 font-bold text-ink">
+              تأكيد شراء {confirming.name}
+            </h2>
+            <p className="mb-16 text-12 leading-note text-muted">
+              يُخصم المبلغ من رصيد محفظتك فوراً، ويبدأ الاشتراك من انتهاء تغطيتك
+              الحالية إن كانت سارية.
+            </p>
+            <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
+              <span className="text-12.5 text-muted">المبلغ</span>
+              <span className="text-17 font-bold text-ink">
+                {arabicDigits(confirming.price)}{" "}
+                <span className="text-11 font-medium text-muted">
+                  {CURRENCY_LABEL[confirming.currency]}
+                </span>
+              </span>
+            </div>
+            <div className="flex gap-10">
+              <Button
+                className="flex-1"
+                size="md"
+                loading={buying !== null}
+                onClick={() => {
+                  const plan = confirming;
+                  setConfirming(null);
+                  void buy(plan.id);
+                }}
+              >
+                خصم وتفعيل
+              </Button>
+              <Button
+                className="flex-1"
+                size="md"
+                variant="secondary"
+                onClick={() => setConfirming(null)}
+              >
+                تراجع
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <BottomNav />
     </div>

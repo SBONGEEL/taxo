@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode, FeatureKey
 from app.models.feature_flag import FeatureFlag
+from app.models.payment_setting import PaymentSetting
 from app.models.user import User
 from app.models.wallet_setting import WalletSetting
 from app.services import audit
@@ -129,6 +130,34 @@ async def get_or_create_commission(
     )
     if setting is None:
         setting = CommissionSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    return setting
+
+
+async def get_payment_settings(
+    session: AsyncSession, country_code: CountryCode
+) -> PaymentSetting | None:
+    """قراءة فقط — مسار قراءةٍ لا يجوز أن يكتب صف إعدادات."""
+    return await session.scalar(
+        select(PaymentSetting).where(PaymentSetting.country_code == country_code)
+    )
+
+
+async def get_or_create_payment_settings(
+    session: AsyncSession, country_code: CountryCode
+) -> PaymentSetting:
+    """سياساتُ الدفع للدولة — تُنشأ بمهلة التأكيد الافتراضية (القسم 6.2).
+
+    وهنا **لا يصلح الصفر افتراضاً** كما في حدود المحفظة: صفرُ ساعاتٍ يعني
+    نزاعاً فورياً على كل حوالة، والسكوتُ لا يجوز أن يُنتج ذلك — فالافتراض
+    قيمةٌ صريحة في `models/payment_setting.py`.
+    """
+    setting = await session.scalar(
+        select(PaymentSetting).where(PaymentSetting.country_code == country_code)
+    )
+    if setting is None:
+        setting = PaymentSetting(country_code=country_code)
         session.add(setting)
         await session.flush()
     return setting

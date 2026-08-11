@@ -35,7 +35,10 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { METHOD_LABEL, trimDistance } from "@/lib/rideFormat";
 import { arabicDigits } from "@/lib/utils";
 
-/** ما لا يمر بالمنصة فيبقى في يد الكبتن (`DIRECTLY_COLLECTED_METHODS`). */
+/** ما لا يمر بالمنصة فيبقى في يد الكبتن (`DIRECTLY_COLLECTED_METHODS`).
+ *
+ * **وانتظارُ تأكيده حالُه `pending`** لا حالٌ باسمه: `PaymentStatus` خمسُ قيم،
+ * والذي يفرّق «دفعةٌ تنتظر المزود» عن «دفعةٌ تنتظر قولي» هو **القناة**. */
 const IN_HAND: ReadonlySet<PaymentMethod> = new Set(["cash", "cliq"]);
 
 interface Props {
@@ -83,8 +86,7 @@ export function CollectScreen({
 
   // دفعةٌ بيده تنتظر تأكيده — وهي وحدها ما يُقبض الآن
   const pending: Payment | undefined = state.payments.find(
-    (payment) =>
-      payment.status === "awaiting_confirmation" && IN_HAND.has(payment.method),
+    (payment) => payment.status === "pending" && IN_HAND.has(payment.method),
   );
   // ما مرّ بالمنصة فعلاً وقُيّد له (محفظة أو بطاقة)
   const credited = state.payments.filter(

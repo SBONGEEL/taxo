@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
 import { getMySubscription } from "@/api/endpoints";
-import type { MySubscription } from "@/api/types";
+import type { DriverStatus, MySubscription } from "@/api/types";
 import { BottomNav } from "@/components/BottomNav";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
@@ -23,8 +23,10 @@ import { forDisplay } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
 
-const STATUS_LINE: Record<string, { text: string; dot: string }> = {
-  approved: { text: "حساب معتمد · كل المستندات مقبولة", dot: "bg-ok" },
+/** والنوعُ `DriverStatus` لا `string`: حالٌ جديدةٌ في الخلفية تكسر البناء
+ * هنا بدل أن تخرج على الشاشة سطراً فارغاً. */
+const STATUS_LINE: Record<DriverStatus, { text: string; dot: string }> = {
+  approved: { text: "حساب معتمد", dot: "bg-ok" },
   pending: { text: "قيد المراجعة — لا تصلك طلبات بعد", dot: "bg-warn" },
   rejected: { text: "طلبك مرفوض — راجع الدعم", dot: "bg-danger" },
   suspended: { text: "حسابك موقوف — راجع الدعم", dot: "bg-danger" },
@@ -52,7 +54,7 @@ export function AccountScreen() {
   }
 
   const { driver, user, vehicles, documents } = profile;
-  const status = STATUS_LINE[driver.status] ?? STATUS_LINE.pending;
+  const status = STATUS_LINE[driver.status];
   const vehicle = vehicles[0];
 
   // سطرُ الاشتراك ولونُ شريطه — نفس الحالات الأربع في شاشة الاشتراك
@@ -69,9 +71,21 @@ export function AccountScreen() {
       ? "bg-warn"
       : "bg-ok";
 
-  const pendingDocs = documents.filter(
-    (document) => document.review_status !== "approved",
+  // ولا يُقال «كل المستندات مقبولة» من حال الكبتن: من اعتُمد ثم رُفض مستندٌ
+  // حدّثه يقرأ جملةً تكذّبها شاشةُ المستندات نفسها. والمرفوضُ ليس «بانتظار
+  // المراجعة» — هو بانتظار **الكبتن**
+  const rejectedDocs = documents.filter(
+    (document) => document.review_status === "rejected",
   ).length;
+  const pendingDocs = documents.filter(
+    (document) => document.review_status === "pending",
+  ).length;
+  const docsNote =
+    rejectedDocs > 0
+      ? `${arabicDigits(String(rejectedDocs))} مستند مرفوض — يحتاج رفعاً جديداً`
+      : pendingDocs > 0
+        ? `${arabicDigits(String(pendingDocs))} مستند قيد المراجعة`
+        : "كل المستندات مقبولة";
 
   return (
     <div className="relative h-full bg-bg">
@@ -99,7 +113,9 @@ export function AccountScreen() {
 
         <div className="mb-12 flex items-center gap-8 rounded-12 border border-line bg-surface px-13 py-10">
           <span className={cn("block size-8 rounded-full", status.dot)} />
-          <span className="text-12 text-muted">{status.text}</span>
+          <span className="text-12 text-muted">
+            {status.text} · {docsNote}
+          </span>
         </div>
 
         <button
@@ -120,7 +136,7 @@ export function AccountScreen() {
             label="المركبة والمستندات"
             sub={
               vehicle
-                ? `${vehicle.make} ${vehicle.model}${pendingDocs > 0 ? ` · ${arabicDigits(String(pendingDocs))} مستند بانتظار المراجعة` : ""}`
+                ? `${vehicle.make} ${vehicle.model}`
                 : "لم تُسجّل مركبة بعد"
             }
             onClick={() => navigate("/account/vehicle")}

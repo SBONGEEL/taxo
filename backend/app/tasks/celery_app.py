@@ -32,11 +32,20 @@ SWEEP_INTERVAL_SECONDS = 300
 # والدورة رخيصة حين لا حملة مستحقة — استعلامٌ واحد على فهرس الحالة والموعد.
 CAMPAIGN_INTERVAL_SECONDS = 60
 
+# دورة كنس مهل تأكيد كليك (القسم 6.2/6). خمسُ دقائق كدورة الاشتراكات: المهلة
+# نفسها بالساعات، فدقّةُ الدقيقة لا تشتري شيئاً — والتأخرُ خمس دقائق في فتح
+# نزاعٍ أهونُ من استعلامٍ كل دقيقة على جدول الدفعات.
+CLIQ_SWEEP_INTERVAL_SECONDS = 300
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.notifications", "app.tasks.subscriptions"],
+    include=[
+        "app.tasks.notifications",
+        "app.tasks.payments",
+        "app.tasks.subscriptions",
+    ],
 )
 
 celery_app.conf.update(
@@ -54,6 +63,10 @@ celery_app.conf.update(
         "dispatch-campaigns": {
             "task": "app.tasks.notifications.dispatch_campaigns",
             "schedule": CAMPAIGN_INTERVAL_SECONDS,
+        },
+        "sweep-cliq-confirmations": {
+            "task": "app.tasks.payments.sweep_cliq_confirmations",
+            "schedule": CLIQ_SWEEP_INTERVAL_SECONDS,
         },
     },
 )

@@ -4,7 +4,12 @@
  * هي بتبديل خاناتٍ فقط. وما يُحسب في هذا الملف تواريخُ ونصوصُ حالات لا أرقام.
  */
 
-import type { Currency, PaymentMethod, RideStatus } from "@/api/types";
+import type {
+  Currency,
+  PaymentMethod,
+  RideStatus,
+  VehicleCategory,
+} from "@/api/types";
 import { arabicDigits } from "@/lib/utils";
 
 export const CURRENCY_LABEL: Record<Currency, string> = {
@@ -12,12 +17,22 @@ export const CURRENCY_LABEL: Record<Currency, string> = {
   LYD: "د.ل",
 };
 
+/** الاسمُ الكامل — تحت الرقم الكبير حيث يتسع المكان لكلمة. */
+export const CURRENCY_FULL: Record<Currency, string> = {
+  JOD: "دينار أردني",
+  LYD: "دينار ليبي",
+};
+
+export const CATEGORY_LABEL: Record<VehicleCategory, string> = {
+  economy: "اقتصادي",
+  comfort: "مريح",
+};
+
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "كاش",
   wallet: "محفظة",
   card: "بطاقة",
   cliq: "كليك",
-  mixed: "مختلط (محفظة + كاش)",
 };
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {

@@ -17,6 +17,23 @@
 وهذه الفئة **غير قابلة للإطفاء من المستخدم**: جزءٌ من الخدمة لا إعلان.
 `users.marketing_push_enabled` لا يُقرأ هنا إطلاقاً — بيتُه
 `services/campaigns.py`.
+
+**و`data` تحمل القيم خاماً، و`title`/`body` لدرج النظام وحده.**
+
+كلُّ إشعارٍ هنا يضع في `data` ما تحتاجه الواجهةُ لتصوغ جملتَها بنفسها: مبلغاً
+ومعرّفَ رحلةٍ وعملةً وموعداً — لا جملةً مصوغة. والسبب أن الخلفية تكتب
+`f"{amount} {currency}"` فيخرج «4.100 JOD» بخاناتٍ لاتينية ورمزٍ إنجليزي في
+تطبيقٍ كلُّ أرقامه عربيةٌ-هندية وكلُّ نصّه عربي. والبديلُ الآخر — تعريبُ
+الخانات في الخلفية — يضع قرارَ عرضٍ في طبقةٍ لا تعرف من يقرأ ولا بأيّ لغة،
+ويمرّ بالمال في مكانٍ لا يجوز أن يمسّه إلا حسابياً.
+
+فتبقى `title`/`body` مكتوبتين هنا لأن **درج نظام التشغيل يرسمهما والتطبيق
+مغلق** ولا واجهةَ تصوغ شيئاً حينها؛ وتقرأ الشاشاتُ `data` وتصوغ نصَّها حين
+تكون هي من يرسم (صندوق الوارد، والأوراق السفلية). وصفُّ صندوق الوارد يخزّن
+الاثنين، فما لا تعرف الواجهةُ صياغته يبقى له نصُّ الخلفية احتياطاً.
+
+**والحملات التسويقية استثناء**: نصُّها هو المحتوى نفسه كما كتبه المشرف، فلا
+تصوغه الواجهة (`services/campaigns.py`).
 """
 
 from __future__ import annotations
@@ -171,7 +188,14 @@ async def publish_ride_event(
     message = PushMessage(
         title=text[0],
         body=text[1],
-        data={"type": event.value, "ride_id": str(ride.id)},
+        data={
+            "type": event.value,
+            "ride_id": str(ride.id),
+            # القيمُ خامٌ لتصوغها الواجهة بلغتها وخاناتها (انظر ترويسة الملف)
+            "amount": str(ride.final_fare or ride.estimated_fare),
+            "currency": ride.currency.value,
+            "status": ride.status.value,
+        },
     )
     await _safe_notify(session, redis, user_id=ride.rider_id, message=message)
     if ride.driver is not None:
@@ -212,6 +236,9 @@ async def publish_ride_offer(
                 "type": RideEvent.RIDE_OFFER.value,
                 "ride_id": str(ride.id),
                 "expires_in_seconds": str(expires_in_seconds),
+                "amount": str(ride.estimated_fare),
+                "currency": ride.currency.value,
+                "distance_to_pickup_km": str(distance_to_pickup_km),
             },
             high_priority=True,
         ),
@@ -242,6 +269,11 @@ async def publish_cliq_transfer(
         amount=str(payment.amount),
         currency=payment.currency.value,
         transfer_reference=payment.cliq_transfer_reference or "",
+        expires_at=(
+            payment.cliq_confirmation_expires_at.isoformat()
+            if payment.cliq_confirmation_expires_at
+            else None
+        ),
     )
 
     await _safe_notify(
@@ -258,7 +290,77 @@ async def publish_cliq_transfer(
                 "type": events.PaymentEvent.CLIQ_TRANSFER_SUBMITTED.value,
                 "ride_id": str(ride_id),
                 "payment_id": str(payment.id),
+                "amount": str(payment.amount),
+                "currency": payment.currency.value,
+                "transfer_reference": payment.cliq_transfer_reference or "",
+                "expires_at": (
+                    payment.cliq_confirmation_expires_at.isoformat()
+                    if payment.cliq_confirmation_expires_at
+                    else ""
+                ),
             },
+        ),
+    )
+
+
+async def publish_cliq_confirmation_expired(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    rider_user_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    payment: Payment,
+) -> None:
+    """انقضت المهلة فصارت الدفعة نزاعاً — **يُخطر الطرفان** (القسم 6.2/6).
+
+    الكبتنُ ليعرف أن دفعته خرجت من يده إلى الإدارة، والراكبُ ليعرف أن تحويله
+    لم يُؤكَّد وأن هناك من يفصل. وصمتُ النظام هنا يصنع تذكرتَي دعمٍ لا واحدة:
+    كلٌّ منهما يسأل «أين مالي» ولا أحد أخبره أن شيئاً وقع أصلاً.
+
+    ونصّان مختلفان لا نصٌّ واحد: ما يطمئن أحدَهما ليس ما يطمئن الآخر.
+    """
+    await events.publish_cliq_expired(
+        redis,
+        driver_user_id=driver_user_id,
+        rider_user_id=rider_user_id,
+        ride_id=ride_id,
+        payment_id=payment.id,
+    )
+
+    data = {
+        "type": events.PaymentEvent.CLIQ_CONFIRMATION_EXPIRED.value,
+        "ride_id": str(ride_id),
+        "payment_id": str(payment.id),
+        "amount": str(payment.amount),
+        "currency": payment.currency.value,
+    }
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="انقضت مهلة تأكيد الحوالة",
+            body=(
+                f"{payment.amount} {payment.currency.value} — "
+                "صارت الدفعة نزاعاً وتفصل فيها الإدارة."
+            ),
+            data=data,
+        ),
+    )
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_user_id,
+        message=PushMessage(
+            title="لم يؤكّد الكبتن حوالتك",
+            body=(
+                f"{payment.amount} {payment.currency.value} — "
+                "انتقلت الدفعة إلى الإدارة للفصل فيها."
+            ),
+            data=data,
         ),
     )
 
@@ -311,6 +413,8 @@ async def publish_document_review(
                 "type": event.value,
                 "document_id": str(document.id),
                 "doc_type": document.doc_type.value,
+                "review_status": document.review_status.value,
+                "review_note": document.review_note or "",
             },
         ),
     )
@@ -343,6 +447,9 @@ async def publish_subscription_event(
         message=PushMessage(
             title=title,
             body=body,
-            data={"type": event.value, "expires_at": expires_at.isoformat()},
+            data={
+                "type": event.value,
+                "expires_at": expires_at.isoformat(),
+            },
         ),
     )

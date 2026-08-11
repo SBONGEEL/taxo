@@ -55,6 +55,10 @@ class PaymentEvent(StrEnum):
     """
 
     CLIQ_TRANSFER_SUBMITTED = "cliq_transfer_submitted"
+    # انقضت المهلة فصارت الدفعة نزاعاً (القسم 6.2/6). يُبث **للطرفين**:
+    # الكبتنُ ليعرف أن دفعته لم تعد بيده، والراكبُ ليعرف أن تحويله لم يُؤكَّد —
+    # وصمتُ النظام هنا هو ما يصنع تذكرة دعمٍ من الطرفين معاً
+    CLIQ_CONFIRMATION_EXPIRED = "cliq_confirmation_expired"
 
 
 class DocumentEvent(StrEnum):
@@ -156,6 +160,7 @@ async def publish_cliq_transfer(
     amount: str,
     currency: str,
     transfer_reference: str,
+    expires_at: str | None,
 ) -> None:
     """أدخل الراكب مرجع حوالته — تصل البطاقة الكبتنَ وحده (SPEC القسم 6.2).
 
@@ -172,8 +177,28 @@ async def publish_cliq_transfer(
             "amount": amount,
             "currency": currency,
             "transfer_reference": transfer_reference,
+            # موعدُ انقضاء المهلة مجمَّداً (القسم 6.2/6) — منه تُرسم الحلقة
+            "expires_at": expires_at,
         },
     )
+
+
+async def publish_cliq_expired(
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    rider_user_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    payment_id: uuid.UUID,
+) -> None:
+    """انقضاء المهلة إلى طرفي الحوالة معاً (SPEC القسم 6.2/6)."""
+    payload = {
+        "type": PaymentEvent.CLIQ_CONFIRMATION_EXPIRED.value,
+        "ride_id": str(ride_id),
+        "payment_id": str(payment_id),
+    }
+    await publish(redis, user_channel(driver_user_id), payload)
+    await publish(redis, user_channel(rider_user_id), payload)
 
 
 async def publish_subscription_event(

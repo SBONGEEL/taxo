@@ -54,6 +54,7 @@ export type DriverSocketEvent =
       amount: string;
       currency: string;
       transfer_reference: string;
+      expires_at: string | null;
     }
   | { type: "error"; detail: string };
 // ولا عضوَ جامع `{ type: string }` في الاتحاد: وجودُه يجعل كل فرعٍ في

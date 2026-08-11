@@ -20,6 +20,7 @@ import { listDocuments, uploadDocument } from "@/api/endpoints";
 import type { DocumentType, DriverDocuments } from "@/api/types";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useDriver } from "@/lib/driver";
+import { CATEGORY_LABEL } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
 
 const DOC_LABEL: Record<DocumentType, string> = {
@@ -34,11 +35,6 @@ const REVIEW_LABEL = {
   pending: { text: "قيد المراجعة", tone: "text-warn", dot: "bg-warn" },
   rejected: { text: "مرفوض", tone: "text-danger", dot: "bg-danger" },
 } as const;
-
-const CATEGORY_LABEL: Record<string, string> = {
-  economy: "اقتصادي",
-  comfort: "مريح",
-};
 
 export function VehicleScreen() {
   const navigate = useNavigate();
@@ -110,7 +106,7 @@ export function VehicleScreen() {
                 {vehicle.make} {vehicle.model}
               </span>
               <span className="text-12 text-muted">
-                {CATEGORY_LABEL[vehicle.category] ?? vehicle.category}
+                {CATEGORY_LABEL[vehicle.category]}
               </span>
             </div>
             <Pair

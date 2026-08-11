@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -585,6 +585,14 @@ async def submit_cliq_reference(
 
     payment.cliq_transfer_reference = cleaned
     payment.cliq_reference_at = _now()
+    # المهلةُ تُجمَّد الآن من إعداد الدولة (القسم 6.2/6): بعدها تصير الدفعة
+    # نزاعاً بكنسٍ دوري، فيعرف الطرفان أن السكوت لا يُبقي المال معلّقاً أبداً
+    settings_row = await settings_service.get_or_create_payment_settings(
+        session, ride.country_code
+    )
+    payment.cliq_confirmation_expires_at = payment.cliq_reference_at + timedelta(
+        hours=settings_row.cliq_confirmation_hours
+    )
     return payment
 
 
@@ -594,10 +602,22 @@ async def submit_cliq_reference(
 async def confirm_by_driver(
     session: AsyncSession, *, payment: Payment, driver: Driver
 ) -> Payment:
-    """«استلمت المبلغ» — الكاش وكليك وحدهما (SPEC القسم 6.1/6.3)."""
+    """«استلمت المبلغ» — الكاش وكليك وحدهما (SPEC القسم 6.1/6.3).
+
+    **ولا يُقال على دفعةٍ صارت نزاعاً.** `ALLOWED_TRANSITIONS` يسمح
+    `disputed → confirmed` لأن **فصلَ الإدارة** يمر منه (القسم 13.4)، وليس
+    ليعود الكبتن فيسحب نزاعاً بضغطة: تأكيدُه حينها يُقيّد المال ويترك
+    `disputed_at` مكتوباً بلا `resolution` ولا `resolved_at` ولا من فصل —
+    فيختفي الصفُّ من طابور الإدارة بلا أن يفصل فيه أحد. ومن انقضت مهلته ثم
+    وصله المال يفصل له المشرفُ `paid`، فيبقى للقرار أثرٌ يُقرأ.
+    """
     ride = await _ride_of(session, payment)
     if ride.driver_id != driver.id:
         raise PermissionDenied("هذه الدفعة ليست على رحلة مُسندة إليك")
+    if payment.status is PaymentStatus.DISPUTED:
+        raise InvalidPaymentTransition(
+            "هذه الدفعة في نزاع — تفصل فيها الإدارة ولا تُؤكَّد من التطبيق"
+        )
     if payment.method not in DIRECTLY_COLLECTED_METHODS:
         raise InvalidPaymentTransition("هذه الدفعة تُحصَّل آلياً ولا تحتاج تأكيدك")
 
@@ -611,6 +631,54 @@ async def confirm_by_driver(
         confirmed_by=PaymentConfirmedBy.DRIVER,
         actor_id=driver.user_id,
     )
+    return payment
+
+
+# سببُ النزاع الآلي — نصٌّ ثابتٌ يميّزه فاصلُ النزاع عن نزاعٍ كتبه كبتن
+AUTO_DISPUTE_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ الكبتن"
+
+
+async def expired_cliq_payment_ids(session: AsyncSession) -> list[uuid.UUID]:
+    """معرّفاتُ دفعات كليك التي انقضت مهلتها (SPEC القسم 6.2/6).
+
+    قراءةٌ بلا قفل ثم قفلٌ لكل صفٍّ على حدة في `expire_cliq_confirmation`:
+    قفلُ الدفعات كلِّها في استعلامٍ واحد يحبس معاملةً طويلةً على صفوفٍ يضغط
+    عليها كباتنُها في اللحظة نفسها — والقفلُ يقع حيث يقع التغيير.
+    """
+    rows = await session.scalars(
+        select(Payment.id).where(
+            Payment.method == PaymentMethod.CLIQ,
+            Payment.status == PaymentStatus.PENDING,
+            Payment.cliq_confirmation_expires_at.is_not(None),
+            Payment.cliq_confirmation_expires_at <= _now(),
+        )
+    )
+    return list(rows)
+
+
+async def expire_cliq_confirmation(
+    session: AsyncSession, payment_id: uuid.UUID
+) -> Payment | None:
+    """يحوّل دفعةً انقضت مهلتها إلى `disputed` — أو لا شيء إن سبقه الكبتن.
+
+    **القفلُ قبل الفحص** كما في كل مسارٍ يغيّر حالة: بغيره يقرأ الكنسُ
+    `pending` بينما يؤكّد الكبتنُ في المعاملة المجاورة، فتُنازَع دفعةٌ وصل
+    مالُها فعلاً. وإعادةُ `None` هنا ليست فشلاً بل الحالُ الصحيحة: الكبتن
+    تكلّم قبل المهلة بثانية، وهو ما وُجدت المهلة لتشجيعه عليه.
+    """
+    payment = await get_payment(session, payment_id, for_update=True)
+    if payment.status is not PaymentStatus.PENDING:
+        return None
+    if payment.method is not PaymentMethod.CLIQ:  # pragma: no cover - يمنعه الاستعلام
+        return None
+    deadline = payment.cliq_confirmation_expires_at
+    if deadline is None or deadline > _now():
+        return None
+
+    require_transition(payment, PaymentStatus.DISPUTED)
+    payment.status = PaymentStatus.DISPUTED
+    payment.dispute_reason = AUTO_DISPUTE_REASON
+    payment.disputed_at = _now()
     return payment
 
 

@@ -251,11 +251,14 @@ export interface Withdrawal {
   created_at: string;
 }
 
+/** مرآةُ `SubscriptionDurationType` — والخطط الثلاث في القسم 8. */
+export type SubscriptionDuration = "daily" | "weekly" | "monthly";
+
 export interface SubscriptionPlan {
   id: string;
   country_code: CountryCode;
   name: string;
-  duration_type: "daily" | "weekly" | "monthly";
+  duration_type: SubscriptionDuration;
   price: string;
   currency: Currency;
   is_active: boolean;
@@ -269,14 +272,16 @@ export interface MySubscription {
   plans: SubscriptionPlan[];
 }
 
-export type PaymentMethod = "cash" | "wallet" | "card" | "cliq" | "mixed";
+/** مرآةُ `PaymentMethod` — أربعُ قنوات. **ولا `mixed` فيها**: الدفعُ المختلط
+ * (محفظة + كاش) **صفّان** على رحلةٍ واحدة لا قناةٌ ثالثة، ولذلك لا فهرس فريد
+ * على `payments.ride_id` أصلاً (القسم 6). */
+export type PaymentMethod = "cash" | "wallet" | "card" | "cliq";
+/** مرآةُ `PaymentStatus` في `app/models/enums.py` — خمسُ قيمٍ لا ستّ.
+ *
+ * ولا `awaiting_confirmation` فيها: انتظارُ تأكيد الكبتن **ليس حالاً** بل
+ * `pending` على قناةٍ يقبضها بيده — والتمييز من `method` لا من حقلٍ سادس. */
 export type PaymentStatus =
-  | "pending"
-  | "awaiting_confirmation"
-  | "confirmed"
-  | "failed"
-  | "refunded"
-  | "disputed";
+  "pending" | "confirmed" | "failed" | "refunded" | "disputed";
 
 export interface Payment {
   id: string;
@@ -289,6 +294,8 @@ export interface Payment {
   cliq_alias: string | null;
   cliq_reference: string | null;
   cliq_transfer_reference: string | null;
+  /** موعدُ انقضاء مهلة التأكيد، مجمَّدٌ على الصف (القسم 6.2/6). */
+  cliq_confirmation_expires_at: string | null;
   /** ما كتبه الكبتن حين قال «لم يصلني»، وفصلُ الإدارة فيه (القسم 6.2). */
   dispute_reason: string | null;
   disputed_at: string | null;
@@ -320,7 +327,7 @@ export interface Rating {
 export interface DriverSubscription {
   id: string;
   plan_name: string;
-  duration_type: "daily" | "weekly" | "monthly";
+  duration_type: SubscriptionDuration;
   starts_at: string;
   expires_at: string;
   amount_paid: string;

@@ -31,10 +31,7 @@ written from both send doors) are complete. **Stage 10's screens (the driver PWA
 complete** — login/recovery, three-step registration, home with the offer card and active ride,
 collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal
 sheet and request list, the account tab with settings/vehicle/cards, the notifications inbox and
-the CliQ confirmation card. **One SPEC item in stage 10 is deliberately unbuilt**: the CliQ
-confirmation *deadline* (§6.2/6) has no column and no sweep, so a CliQ payment stays
-`awaiting_confirmation` until the driver speaks — see `design/FUTURE-FEATURES.md` item 45, and note
-that the card draws no countdown ring precisely because nothing enforces one. Do not implement
+the CliQ confirmation card. Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern
 appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
@@ -171,10 +168,10 @@ money lives *before* it mentions disputes.
 
 **The dispute button lives on a CliQ payment awaiting confirmation, and nowhere else.**
 `payments.dispute_by_driver` refuses every other method, so `screens/RideDetails.tsx` gates the CTA
-on exactly that pair (`method === "cliq" && status === "awaiting_confirmation"`) and
+on exactly that pair (`method === "cliq" && status === "pending"`) and
 `screens/Dispute.tsx` re-reads it rather than trusting the caller. The design draws the button on a
 cash ride with cash-flavoured reasons; a driver who was never handed cash simply does not press
-"استلمت المبلغ كاش", and the payment stays `awaiting_confirmation` where the admin can see it. The
+"استلمت المبلغ كاش", and the payment stays `pending` where the admin can see it. The
 three reasons were rewritten for CliQ for the same reason — the backend takes free text, so a reason
 that describes an impossible situation would land verbatim in the admin's queue.
 
@@ -435,6 +432,36 @@ required document approved (`REQUIRED_DOCUMENT_TYPES` in `models/driver.py` — 
 vehicle registration; the vehicle photo is deliberately optional). Without the second, review is a
 habit rather than a condition.
 
+**The CliQ confirmation deadline is frozen on the payment, never read live.**
+`payment_settings.cliq_confirmation_hours` is the per-country policy an admin edits; the moment the
+rider submits a transfer reference, `payments.cliq_confirmation_expires_at` is stamped from it and
+never recomputed — same reasoning as `commission_percent_at_ride`. Editing the setting governs what
+comes after, not what a driver is already looking at a countdown for.
+`tasks/payments.py::sweep_cliq_confirmations` runs every five minutes, takes the payment row lock
+*before* re-checking the status, flips what expired to `disputed`, and notifies **both** parties —
+the driver that his payment left his hands, the rider that his transfer was never confirmed; silence
+here produces two support tickets, not one. And `confirm_by_driver` refuses a `disputed` payment
+outright: `disputed → confirmed` exists for the admin's resolution (§13.4), and letting the app walk
+through it would credit the money while leaving the dispute with no `resolution` and no record of who
+decided — the row would simply vanish from the admin queue.
+
+**`PaymentStatus` has five values and `awaiting_confirmation` is not one of them.** A cash or CliQ
+payment waiting for the driver's word sits in `pending`; what separates "waiting for the provider"
+from "waiting for me" is the **method**, not a sixth status. The driver app invented that status in
+its TypeScript union and three screens gated on it — `Collect` could never find the payment to
+confirm, so **no driver could confirm a cash ride**, and the dispute CTA never appeared. The build
+was green (the string was a valid member of the union the app itself declared) and the visual review
+passed because the preview fixtures were hand-written with the same invented value. Two rules follow:
+mirror `app/models/enums.py` literally in `api/types.ts`, and derive review fixtures from a real API
+response rather than from memory — a fixture that agrees with the bug proves nothing.
+`npm run check:enums` (wired into `npm run build`) now enforces the first rule: it reads every
+`StrEnum` member in `backend/app`, and fails any TypeScript string union that mixes real enum values
+with invented ones — which is exactly the shape of a union that was copied and then added to. A
+genuinely UI-derived union (the subscription's four display states) is exempted by name in
+`UI_UNIONS`, with its reason. The audit that introduced it also found a second instance already
+shipped: `PaymentMethod` carried `mixed`, a channel the provider never sends — mixed payment is
+**two payment rows on one ride**, which is why there is no unique index on `payments.ride_id`.
+
 **Nothing calls `ws/events.publish_*` directly any more; `services/notifications.py` does.** It
 publishes to Redis and then sends the same event as a push notification, so a channel cannot be added
 for one event and forgotten for another. Push goes only to devices whose socket is *not* open —
@@ -444,6 +471,18 @@ one rule also means the actor never gets pushed his own action: whoever pressed 
 open by definition. Ride offers are the only high-priority send — a twenty-second window does not
 survive Doze mode. Delivery failures are swallowed and logged; a ride must not fail because a remote
 service did.
+
+**A notification's `data` carries raw values; its `title`/`body` exist for the OS tray alone.**
+Every transactional sender puts `type`, `ride_id`, `amount`, `currency` and whatever else the event
+needs into `data` — never a composed sentence and never formatted numbers. A backend-built
+`f"{amount} {currency}"` renders "4.100 JOD" in Latin digits inside an app whose every numeral is
+Arabic-Indic, and the fix is not to convert digits in the backend: that puts a language decision in
+a layer that does not know who is reading, and runs money through a formatter for display reasons.
+`title`/`body` stay because the OS draws them while the app is closed and no UI is running to
+compose anything; every surface the app itself draws (the inbox, the sheets) composes from `data`
+and falls back to the stored strings for a `kind` it does not know — so a new backend event degrades
+to plain text instead of breaking the screen. Campaigns are the exception: their body *is* the
+content an admin wrote.
 
 Since stage 9-ب that same door also writes the durable record: `_safe_notify` writes a
 `user_notifications` row through `services/inbox.py` **before** attempting push, and in its own
