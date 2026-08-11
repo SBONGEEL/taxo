@@ -6,7 +6,7 @@
  *
  * **ما هو مبنيٌّ الآن**: الدخول واستعادة كلمة المرور، والتسجيل بخطواته
  * الثلاث، والرئيسيةُ ببطاقة الطلب والرحلة الجارية، والاشتراك، وسجلُّ الرحلات
- * بتفاصيله ونزاعه. والمحفظةُ وحسابي تُبنيان في الجلسات التالية.
+ * بتفاصيله ونزاعه، والمحفظةُ بطلبات سحبها. و«حسابي» يُبنى في الجلسة التالية.
  *
  * وحالةُ الكبتن هي ما يقرّر أيَّ شاشةٍ يرى بعد الدخول: غيرُ المعتمد يرى «قيد
  * المراجعة» ولا يرى الرئيسية — لا لأننا نخفيها، بل لأن التوزيع لا يعرفه
@@ -64,6 +64,14 @@ const RideDetailsScreen = lazy(() =>
 );
 const DisputeScreen = lazy(() =>
   import("@/screens/Dispute").then((m) => ({ default: m.DisputeScreen })),
+);
+const WalletScreen = lazy(() =>
+  import("@/screens/Wallet").then((m) => ({ default: m.WalletScreen })),
+);
+const WithdrawalsScreen = lazy(() =>
+  import("@/screens/Withdrawals").then((m) => ({
+    default: m.WithdrawalsScreen,
+  })),
 );
 const SubscriptionScreen = lazy(() =>
   import("@/screens/Subscription").then((m) => ({
@@ -223,7 +231,15 @@ export default function App() {
                         path="/wallet"
                         element={
                           <Guarded>
-                            <SoonScreen title="المحفظة" />
+                            <WalletScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet/withdrawals"
+                        element={
+                          <Guarded>
+                            <WithdrawalsScreen />
                           </Guarded>
                         }
                       />

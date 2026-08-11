@@ -179,6 +179,50 @@ export interface Wallet {
   frozen: boolean;
 }
 
+/** محفظة الكبتن: الرصيد **والمتاح منه** بعد حجز الطلبات القائمة (القسم 9). */
+export interface DriverWallet extends Wallet {
+  available_for_withdrawal: string;
+  min_withdrawal_amount: string;
+}
+
+export type WalletTransactionType =
+  | "topup"
+  | "ride_payment"
+  | "ride_earning"
+  | "commission"
+  | "transfer_in"
+  | "transfer_out"
+  | "withdrawal"
+  | "refund"
+  | "subscription_payment"
+  | "adjustment";
+
+export interface WalletTransaction {
+  id: string;
+  type: WalletTransactionType;
+  amount: string;
+  balance_after: string;
+  ride_id: string | null;
+  reference: string | null;
+  created_at: string;
+}
+
+export type WithdrawalMethod = "cliq" | "bank";
+export type WithdrawalStatus = "pending" | "approved" | "paid" | "rejected";
+
+export interface Withdrawal {
+  id: string;
+  driver_id: string;
+  amount: string;
+  method: WithdrawalMethod;
+  status: WithdrawalStatus;
+  reference: string | null;
+  note: string | null;
+  transaction_id: string | null;
+  processed_at: string | null;
+  created_at: string;
+}
+
 export interface SubscriptionPlan {
   id: string;
   country_code: CountryCode;

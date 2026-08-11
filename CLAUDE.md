@@ -30,7 +30,8 @@ long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifica
 written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-app/`) is in
 progress and reviewed three screens at a time** — scaffolding + login/password recovery, then
 registration in three steps, then the home screen with the offer card and the active ride, then
-collect/rate/subscription, then the ride log with its details and dispute. Do not implement
+collect/rate/subscription, then the ride log with its details and dispute, then the wallet with its
+withdrawal sheet and request list. Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern
 appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the
@@ -137,6 +138,16 @@ are pixel values (`text-14.5`, `p-16`, `rounded-13`) and Tailwind's own scales a
 extended**, so `text-sm` or `p-4` is a build error rather than a silent drift to the nearest default.
 Dark is the default and does not follow the system — a captain works for hours with the screen in the
 car, and a theme that flips at sunset whitens his screen in a tunnel.
+
+**`lib/utils.ts::cn` configures `tailwind-merge` with this project's font-size scale, and that is
+not optional.** tailwind-merge knows Tailwind's default scales, not ours: our sizes are pixel-named
+(`text-14.5`), not t-shirt-named, so it does not recognise them as font sizes and files them under
+*colour* — and then `cn("text-14 text-accent-ink")` drops one of the two at runtime. It shipped
+twice before it was caught: the bottom-nav label lost its 9.5px, and the wallet's "طلب سحب" button
+came out with an **invisible label** (the size ate `text-accent-ink`, so light text landed on a
+light fill). The build is green either way and `check:scale` cannot see it — the class is spelled
+correctly and is present in the CSS; what deletes it is the merge at runtime. `check:scale` does
+guard the list itself against drifting from `tailwind.config.js`.
 
 The pixel scale stops you writing the *wrong* value; `npm run check:scale` (wired into
 `npm run build`) stops you writing a *missing* one. A class whose key is absent from the scale —

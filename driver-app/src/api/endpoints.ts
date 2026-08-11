@@ -25,7 +25,10 @@ import type {
   User,
   Vehicle,
   VehicleCategory,
-  Wallet,
+  DriverWallet,
+  WalletTransaction,
+  Withdrawal,
+  WithdrawalMethod,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -181,7 +184,20 @@ export const rateRide = (rideId: string, stars: number, comment?: string) =>
 // ------------------------------------------------------------ المال
 
 /** محفظة الكبتن — مفتاحها `users.id` لا `drivers.id` (SPEC القسم 9). */
-export const getDriverWallet = () => api.get<Wallet>("/wallet/me/driver");
+export const getDriverWallet = () => api.get<DriverWallet>("/wallet/me/driver");
+
+/** دفتر المحفظة — قيودٌ لا تُعدَّل، فالتصحيح قيدٌ مضاد لا تحرير. */
+export const listWalletTransactions = (limit = 20, offset = 0) =>
+  api.get<WalletTransaction[]>("/wallet/me/transactions", {
+    query: { limit, offset },
+  });
+
+export const listWithdrawals = (limit = 20, offset = 0) =>
+  api.get<Withdrawal[]>("/wallet/me/withdrawals", { query: { limit, offset } });
+
+/** طلب سحب — للكباتن وحدهم (القسم 7)، ولا قيد في الدفتر قبل `paid`. */
+export const requestWithdrawal = (amount: string, method: WithdrawalMethod) =>
+  api.post<Withdrawal>("/wallet/me/withdrawals", { amount, method });
 
 export const getMySubscription = () =>
   api.get<MySubscription>("/subscriptions/me");

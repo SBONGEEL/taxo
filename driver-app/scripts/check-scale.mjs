@@ -69,6 +69,26 @@ for (const file of sources(join(process.cwd(), "src"))) {
   }
 }
 
+// سلّمُ `cn` في `lib/utils.ts` نسخةٌ ثانيةٌ من مقاسات الخط، ووجودُها ضرورة:
+// `tailwind-merge` لا يعرف سلّمنا فيخلط المقاسَ باللون ويُسقط أحدهما وقت
+// التشغيل — والبناءُ يبقى أخضر. فما دامت نسخةً، تُقارَن هنا بالأصل.
+const utils = readFileSync(join(process.cwd(), "src", "lib", "utils.ts"), "utf8");
+const declared = utils.match(/const FONT_SIZES = \[([\s\S]*?)\];/);
+if (declared === null) {
+  problems.push("src/lib/utils.ts: لم أجد `FONT_SIZES` — لا يمكن التحقق من سلّم الدمج");
+} else {
+  const listed = [...declared[1].matchAll(/"([0-9.]+)"/g)].map((m) => m[1]);
+  const expected = Object.keys(theme.fontSize);
+  const missing = expected.filter((key) => !listed.includes(key));
+  const extra = listed.filter((key) => !expected.includes(key));
+  for (const key of missing) {
+    problems.push(`src/lib/utils.ts: text-${key} ناقصٌ من FONT_SIZES — سيُقرأ لوناً`);
+  }
+  for (const key of extra) {
+    problems.push(`src/lib/utils.ts: text-${key} في FONT_SIZES وليس في السلّم`);
+  }
+}
+
 if (problems.length > 0) {
   console.error("أصنافٌ خارج سلّم DESIGN.md — ستسقط بصمت:\n");
   for (const problem of [...new Set(problems)]) console.error("  " + problem);
