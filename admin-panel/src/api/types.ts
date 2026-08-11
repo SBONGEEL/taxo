@@ -284,3 +284,25 @@ export interface ProviderTestResult {
   detail: string;
   credential: ProviderCredential;
 }
+
+// ------------------------------------------------------------ الإحصاءات
+
+export type StatsPeriod = "today" | "week" | "month";
+
+/** أرقامٌ جاهزة — التجميعُ في الخلفية حصراً (القسم 13/1). */
+export interface Overview {
+  period: StatsPeriod;
+  from_at: string;
+  to_at: string;
+  completed_rides: number;
+  cancelled_rides: number;
+  revenue: string;
+  online_drivers: number;
+  active_rides: number;
+  active_subscriptions: number;
+  open_disputes: number;
+  pending_documents: number;
+  pending_withdrawals: number;
+  rides_by_hour: number[];
+  payment_mix: Record<string, number>;
+}

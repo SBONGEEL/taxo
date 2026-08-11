@@ -58,7 +58,7 @@ export function LoginScreen() {
         config?.default_country_code,
       );
       signIn(response);
-      navigate("/drivers", { replace: true });
+      navigate("/overview", { replace: true });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر الدخول");
     } finally {

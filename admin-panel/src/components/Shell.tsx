@@ -31,7 +31,7 @@ const GROUPS: {
   {
     label: "العمليات",
     items: [
-      { label: "نظرة عامة" },
+      { label: "نظرة عامة", to: "/overview" },
       { label: "الخريطة الحيّة" },
       { label: "سجل الرحلات" },
     ],

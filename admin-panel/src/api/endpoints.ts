@@ -31,6 +31,8 @@ import type {
   ProviderCredential,
   ProviderKey,
   ProviderTestResult,
+  Overview,
+  StatsPeriod,
   User,
   WalletSetting,
   Withdrawal,
@@ -276,3 +278,10 @@ export const activateProvider = (id: string) =>
 
 export const deactivateProvider = (id: string) =>
   api.post<ProviderCredential>(`/admin/providers/${id}/deactivate`, {});
+
+// ------------------------------------------------------------ الإحصاءات
+
+export const getOverview = (country: CountryCode, period: StatsPeriod) =>
+  api.get<Overview>("/admin/stats/overview", {
+    query: { country_code: country, period },
+  });

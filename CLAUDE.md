@@ -29,10 +29,15 @@ backend fields it needed) and **9-ب** (backend only: driver-document upload/rev
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
 written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login, drivers/documents,
 finance (withdrawals and CliQ topups), disputes, campaigns, per-country settings and the provider
-contracts page. The two that remain — the overview and the live map — are blocked on backend that
-does not exist yet: there is no aggregation endpoint for today's rides or revenue (and the frontend
-may not compute money), and no admin endpoint that reads connected drivers **with their identity**,
-since the existing one anonymises for the rider's map.
+contracts page. The overview sits on `services/stats.py`, where three rules live: **aggregation happens in
+the backend, full stop** — the same reasoning §14 applies to money, because a panel that sums rows
+itself shows a number that disagrees with the database the moment a page is truncated; **"today" is
+the country's day**, computed in the timezone stored on `notification_settings` (a UTC server
+otherwise clips three hours off the start of an Amman day and adds three from yesterday); and
+**"online now" counts live presence keys in Redis, not `drivers.is_online`** — the column says "the
+switch is up", not "he is here", so an app killed mid-shift keeps its column raised until the key
+expires. The live map remains blocked: it needs an admin endpoint that reads connected drivers
+**with their identity**, and the existing one anonymises deliberately for the rider's map.
 **Stage 10's screens (the driver PWA, `driver-app/`) are
 complete** — login/recovery, three-step registration, home with the offer card and active ride,
 collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal

@@ -1,6 +1,6 @@
 /** جذر اللوحة: المزوّدون، والمسارات، وحارسُ الجلسة.
  *
- * **ما هو مبنيٌّ الآن**: الدخول، والسائقون والوثائق، والمالية، والنزاعات،
+ * **ما هو مبنيٌّ الآن**: الدخول، ونظرةٌ عامة، والسائقون والوثائق، والمالية، والنزاعات،
  * والإشعارات الجماعية، والإعدادات، وعقود المزوّدين. وبقيةُ الأقسام
  * مرسومةٌ في القائمة معطّلةً بشارة «قريباً» — تقول للمستخدم حالها بدل أن
  * تجعله يشك في اللوحة (انظر `components/Shell.tsx`).
@@ -24,6 +24,9 @@ import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider } from "@/lib/theme";
 import { LoginScreen } from "@/screens/Login";
 
+const OverviewScreen = lazy(() =>
+  import("@/screens/Overview").then((m) => ({ default: m.OverviewScreen })),
+);
 const CampaignsScreen = lazy(() =>
   import("@/screens/Campaigns").then((m) => ({ default: m.CampaignsScreen })),
 );
@@ -129,6 +132,14 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="/overview"
+                    element={
+                      <Guarded>
+                        <OverviewScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
                     path="/drivers"
                     element={
                       <Guarded>
@@ -170,7 +181,7 @@ export default function App() {
                   />
                   <Route
                     path="*"
-                    element={<Navigate to="/drivers" replace />}
+                    element={<Navigate to="/overview" replace />}
                   />
                 </Routes>
               </Suspense>
