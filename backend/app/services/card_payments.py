@@ -180,7 +180,7 @@ def _order_request(
         currency=currency,
         # وصفٌ بحروف لاتينية: يعبر نماذج HTTP لدى المزودين بلا لبس ترميز
         description=description,
-        return_url=return_url_for(cart_id),
+        return_url=return_url_for(cart_id, payer_role=payer.role),
         customer_name=payer.name,
         customer_phone=payer.phone,
         # مُعرّفٌ ثابت للدافع لدى المزود — به تُربط بطاقاته المحفوظة

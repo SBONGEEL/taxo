@@ -19,9 +19,14 @@
  * `coverage_until` **أقصى** انتهاء لا الأحدث: من جدّد مبكراً له صفّان
  * متتاليان، وعدُّ أيام أولهما يقول له إن اشتراكه ينتهي غداً وهو مغطّى شهراً.
  *
- * **والشراء من المحفظة وحده هنا**: البطاقة تحتاج صفحة المزود المستضافة
- * (المرحلة التالية)، والكاش وكليك **تسجّلهما الإدارة بعد قبض المال** ولا
- * تُشترى من التطبيق أصلاً (القسم 8) — فزرٌّ لهما هنا يعد بما لا يقع.
+ * **قناتان من التطبيق: المحفظة والبطاقة.** والكاش وكليك **تسجّلهما الإدارة
+ * بعد قبض المال** ولا تُشترى من التطبيق أصلاً (القسم 8) — فزرٌّ لهما هنا يعد
+ * بما لا يقع.
+ *
+ * والبطاقةُ تفتح صفحة المزود المستضافة ثم تعود إلى `/payments/card/return`
+ * **على هذا التطبيق**: صار لكل تطبيق عنوانُ عودةٍ تختاره الخلفية من دور
+ * الدافع، وكان العنوانُ واحداً يشير إلى تطبيق الراكب فتعيد الصفحةُ الكبتنَ
+ * إلى تطبيقٍ ليس تطبيقه.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -30,6 +35,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import {
   buySubscription,
+  buySubscriptionWithCard,
   getMySubscription,
   getSubscriptionHistory,
 } from "@/api/endpoints";
@@ -40,6 +46,8 @@ import type {
   SubscriptionPlan,
 } from "@/api/types";
 import { BottomNav } from "@/components/BottomNav";
+import { useFeature } from "@/lib/config";
+import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
@@ -97,6 +105,10 @@ const COPY: Record<
 
 export function SubscriptionScreen() {
   const navigate = useNavigate();
+  const { user } = useSession();
+  // القناةُ تظهر إن كان مفتاحُها مرفوعاً في دولة الكبتن — والغيابُ معطَّل
+  // دائماً (القسم 4). ولا اسمَ ميزةٍ مكتوبٌ هنا إلا هذا الواحد
+  const cardEnabled = useFeature(user?.country_code, "card_enabled");
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
   const [history, setHistory] = useState<DriverSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +150,29 @@ export function SubscriptionScreen() {
     } catch (caught) {
       setError(
         caught instanceof ApiError ? caught.message : "تعذّر إتمام الشراء",
+      );
+    } finally {
+      setBuying(null);
+    }
+  }
+
+  async function buyWithCard(planId: string) {
+    setBuying(planId);
+    setError(null);
+    setDone(null);
+    try {
+      const order = await buySubscriptionWithCard(planId);
+      if (!order.redirect_url) {
+        // لا اشتراكَ يُنشأ قبل جواب المزود، فغيابُ الرابط ليس نصفَ شراء
+        setError("تعذّر فتح صفحة الدفع — جرّب مرة أخرى أو ادفع من محفظتك.");
+        return;
+      }
+      // مغادرةٌ إلى صفحة المزود: الحسمُ يقع هناك، والعودةُ إلى
+      // `/payments/card/return` على هذا التطبيق
+      window.location.assign(order.redirect_url);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر فتح صفحة الدفع",
       );
     } finally {
       setBuying(null);
@@ -244,8 +279,9 @@ export function SubscriptionScreen() {
         </div>
 
         <p className="mt-14 text-11.5 leading-note text-muted">
-          الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال
-          — ليست من التطبيق.
+          {cardEnabled
+            ? "الشراء هنا من محفظتك أو ببطاقتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."
+            : "الشراء هنا من رصيد محفظتك. والكاش وكليك تسجّلهما الإدارة بعد قبض المال — ليست من التطبيق."}
         </p>
 
         {history.length > 0 ? (
@@ -313,9 +349,8 @@ export function SubscriptionScreen() {
                 </span>
               </span>
             </div>
-            <div className="flex gap-10">
+            <div className="flex flex-col gap-9">
               <Button
-                className="flex-1"
                 size="md"
                 loading={buying !== null}
                 onClick={() => {
@@ -324,16 +359,29 @@ export function SubscriptionScreen() {
                   void buy(plan.id);
                 }}
               >
-                خصم وتفعيل
+                خصم من المحفظة
               </Button>
-              <Button
-                className="flex-1"
-                size="md"
-                variant="secondary"
+              {cardEnabled ? (
+                <Button
+                  size="md"
+                  variant="secondary"
+                  disabled={buying !== null}
+                  onClick={() => {
+                    const plan = confirming;
+                    setConfirming(null);
+                    void buyWithCard(plan.id);
+                  }}
+                >
+                  الدفع ببطاقة
+                </Button>
+              ) : null}
+              <button
+                type="button"
                 onClick={() => setConfirming(null)}
+                className="w-full py-8 text-center text-12.5 font-semibold text-muted"
               >
                 تراجع
-              </Button>
+              </button>
             </div>
           </div>
         </div>

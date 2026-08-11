@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* لوحة الألوان من `design/DESIGN.md` §1.1 بقيمها الست عشرية كما هي.
+   والوضع الليلي افتراضُ اللوحة كذلك — كما يبدأ النموذج (`_theme() ?? "dark"`)
+   ومع مبدّلٍ في الرأس يُحفظ. فالجذر العاري ليليٌّ و`.light` يبدّل القيم
+   نفسها، ولا يحمل أيُّ مكوّن شرطاً بين الوضعين. */
+@layer base {
+  :root,
+  .dark {
+    --bg: #14181d;
+    --sur: #0d1014;
+    --sur2: #1a2027;
+    --brd: #2a313a;
+    --tx: #e6edf3;
+    --mut: #8b949e;
+    --inv: #0d1014;
+    --acc: #e6edf3;
+    --ok: #3fb970;
+    --warn: #d9a62e;
+    --dng: #e5534b;
+    --sa: #1c2128;
+    --sb: #20262e;
+    --dim: rgba(4, 6, 8, 0.6);
+  }
+
+  .light {
+    --bg: #f2f0eb;
+    --sur: #ffffff;
+    --sur2: #faf9f6;
+    --brd: #ddd8cf;
+    --tx: #171b20;
+    --mut: #6e7681;
+    --inv: #f2f0eb;
+    --acc: #171b20;
+    --ok: #1a7f4e;
+    --warn: #9a6b00;
+    --dng: #c73e36;
+    --sa: #e6e3db;
+    --sb: #ece9e1;
+    --dim: rgba(20, 24, 29, 0.4);
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    /* مقاس الجذر 14px (DESIGN.md §1.2) — كل مقاسات التصميم منسوبةٌ إليه */
+    @apply bg-bg text-14 text-ink antialiased;
+    margin: 0;
+    /* اللوحة مالية: شكلٌ واحد للرقم في كل جدول */
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* حقول الإدخال لا ترث الخط من `body` في المتصفحات (DESIGN.md §1.2) */
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+  }
+
+}
+
+@layer components {
+  /* `.fld` من DESIGN.md §2.3 — القيم كما هي بلا تقريب */
+  .fld {
+    @apply w-full rounded-13 border border-line bg-surface px-15 py-13 text-14.5
+      text-ink outline-none placeholder:text-muted disabled:opacity-60;
+    box-sizing: border-box;
+  }
+
+  /* التصميم لا يرسم حالة تركيز؛ وحدُّ لونِ النص أخفُّ ما يفي بالوصول بلا
+     إدخال لونٍ ليس في اللوحة */
+  .fld:focus {
+    @apply border-ink;
+  }
+
+  .label {
+    @apply mb-6 block text-12 text-muted;
+  }
+
+  /* شريطُ التمرير مخفيٌّ في المحمول (DESIGN.md §2.11) */
+  .scr {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .scr::-webkit-scrollbar {
+    display: none;
+  }
+}

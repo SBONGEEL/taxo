@@ -25,6 +25,7 @@ import type {
   User,
   Vehicle,
   VehicleCategory,
+  CardOrder,
   DriverWallet,
   NotificationPreferences,
   SavedCard,
@@ -207,6 +208,21 @@ export const getMySubscription = () =>
 
 export const getSubscriptionHistory = () =>
   api.get<DriverSubscription[]>("/subscriptions/me/history");
+
+/** الشراء بالبطاقة — يفتح عمليةً عند المزود ولا يُنشئ اشتراكاً قبل جوابه. */
+export const buySubscriptionWithCard = (
+  planId: string,
+  options: { saveCard?: boolean; savedCardId?: string } = {},
+) =>
+  api.post<CardOrder>("/subscriptions/card", {
+    plan_id: planId,
+    save_card: options.saveCard ?? false,
+    saved_card_id: options.savedCardId ?? null,
+  });
+
+/** حالُ الطلب بعد عودة المتصفح — تسأل الخلفيةُ المزودَ ثم تسوّي إن حُسم. */
+export const getCardOrder = (cartId: string) =>
+  api.get<CardOrder>(`/payments/card/orders/${cartId}`);
 
 /** الشراء من المحفظة — القناة الفورية الوحيدة من التطبيق مع البطاقة. */
 export const buySubscription = (planId: string, idempotencyKey: string) =>

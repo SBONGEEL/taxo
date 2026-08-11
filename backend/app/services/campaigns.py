@@ -98,6 +98,17 @@ class DispatchResult:
 # ------------------------------------------------------------ ساعات الهدوء
 
 
+async def get_settings(
+    session: AsyncSession, country_code: CountryCode
+) -> NotificationSetting | None:
+    """قراءة فقط — `GET /config` مسارٌ عام لا يجوز أن يكتب صفَّ إعدادات."""
+    return await session.scalar(
+        select(NotificationSetting).where(
+            NotificationSetting.country_code == country_code
+        )
+    )
+
+
 async def get_or_create_settings(
     session: AsyncSession, country_code: CountryCode
 ) -> NotificationSetting:

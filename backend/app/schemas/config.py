@@ -17,6 +17,14 @@ class CountryConfigOut(BaseModel):
     # التطبيقان الحقل بلا كتابة «962» في كودهما
     dial_code: str
     national_number_length: int
+    # ساعاتُ هدوء الحملات ومِنطقتُها الزمنية (القسم 10/13.6). عامّةٌ بطبيعتها:
+    # تخبر المستخدم متى **لا** تصله الحملات، ولا يُقرأ منها سرّ. وتُنشر
+    # لأن الواجهة لولاها تكتب رقماً من عندها فيخالف الجدول يوماً — والمنطقةُ
+    # معها، وإلا قُرئت الساعة بتوقيت الجهاز لا بتوقيت الدولة.
+    # و`null` تعني «لم تُضبط بعد» فلا تعرض الواجهةُ رقماً لا مصدر له
+    quiet_hours_start: str | None = None
+    quiet_hours_end: str | None = None
+    quiet_hours_timezone: str | None = None
 
 
 class ConfigOut(BaseModel):

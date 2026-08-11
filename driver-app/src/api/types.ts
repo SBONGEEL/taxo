@@ -63,6 +63,10 @@ export interface CountryConfig {
   /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
   dial_code: string;
   national_number_length: number;
+  /** ساعاتُ هدوء الحملات ومِنطقتُها — `null` تعني «لم تُضبط بعد». */
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  quiet_hours_timezone: string | null;
 }
 
 export interface AppConfig {
@@ -229,6 +233,17 @@ export interface UserNotification {
   data: Record<string, string> | null;
   read_at: string | null;
   created_at: string;
+}
+
+/** طلبُ الدفع لدى المزود كما تراه الواجهة (القسم 6.4) — بلا مرجعٍ داخلي. */
+export interface CardOrder {
+  cart_id: string;
+  provider: "telr";
+  purpose: "ride_payment" | "wallet_topup" | "subscription";
+  status: "created" | "pending" | "paid" | "failed" | "cancelled" | "refunded";
+  amount: string;
+  currency: Currency;
+  redirect_url: string | null;
 }
 
 export interface NotificationPreferences {

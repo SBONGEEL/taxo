@@ -70,17 +70,27 @@ class Settings(BaseSettings):
     # يراها العالم (يبنى عليه رابط المزود الوهمي)، والثاني صفحةُ الواجهة التي
     # يعود إليها المتصفح ثم تسأل الخلفية عن الحال (SPEC القسم 6.4).
     public_api_base_url: str = "http://localhost:8001"
+    # **عنوانٌ لكل تطبيق**: صفحةُ المزود تعيد المتصفح إلى من فتحها، وعنوانٌ
+    # واحد كان يعيد الكبتنَ إلى تطبيق الراكب — فقناةُ البطاقة كلُّها كانت
+    # معطّلةً عنده لا شاشةَ البطاقات وحدها
     card_return_url: str = "http://localhost:5173/payments/card/return"
+    card_return_url_driver: str = "http://localhost:5174/payments/card/return"
 
     # الدولة التي تفترضها شاشاتُ ما قبل الدخول في التطبيقين (بادئةُ الهاتف
     # الظاهرة أمام الحقل). إعدادُ نشرٍ لا سرّ، كـ`cors_origins`؛ ونشرُه في
     # `GET /config` هو ما يمنع كتابة «962» في كود الواجهات
     default_country_code: CountryCode = CountryCode.JO
 
+    # ومعها `127.0.0.1`: نفس المضيف باسمٍ آخر، و`localhost` على بعض أجهزة
+    # التطوير يُحلّ إلى `::1` بينما تنشر Docker على IPv4 وحده — فتفشل النداءات
+    # بخطأ CORS يبدو عطلاً في الواجهة وهو عطلُ اسمٍ لا أكثر
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
     ]
 
     @property

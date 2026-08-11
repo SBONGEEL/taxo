@@ -39,6 +39,7 @@ from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
+from app.services import campaigns
 from app.models.payment_setting import (
     DEFAULT_CLIQ_CONFIRMATION_HOURS,
     PaymentSetting,
@@ -202,6 +203,14 @@ async def seed_payment_settings(session: AsyncSession) -> None:
                 f"سياسات دفع: {country.value} "
                 f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة)"
             )
+
+
+async def seed_notification_settings(session: AsyncSession) -> None:
+    """ساعاتُ الهدوء لكل دولة — بغيرها تُنشر `null` وتصمت اللوحة عن قاعدةٍ
+    تحكم متى تصل الحملات فعلاً."""
+    for country in CountryCode:
+        await campaigns.get_or_create_settings(session, country)
+        _log(f"ساعات هدوء: {country.value}")
 
 
 async def seed_pricing(session: AsyncSession) -> None:
@@ -481,6 +490,7 @@ async def main() -> None:
         await seed_pricing(session)
         await seed_wallet_settings(session)
         await seed_payment_settings(session)
+        await seed_notification_settings(session)
         await seed_plans(session)
         await seed_providers(session)
         await seed_fcm(session)

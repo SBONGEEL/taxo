@@ -259,6 +259,36 @@ async def test_config_is_public_and_hides_secrets(client: AsyncClient) -> None:
     assert body["providers"]["mapbox"] == {}  # لا عقد محفوظ بعد
 
 
+async def test_config_publishes_quiet_hours_with_their_timezone(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """ساعاتُ الهدوء عامّةٌ وتُنشر — ومعها مِنطقتُها (SPEC القسم 10).
+
+    بلا نشرِها تكتب الواجهةُ رقماً من عندها فيخالف الجدول يوم يغيّره المشرف؛
+    وبلا المِنطقة تُقرأ الساعةُ بتوقيت الجهاز لا بتوقيت الدولة. والغائبةُ
+    `null` لا صفر: «لم تُضبط» ليست «منتصف الليل».
+    """
+    before = (await client.get("/config?country_code=JO")).json()["countries"][0]
+    assert before["quiet_hours_start"] is None
+    assert before["quiet_hours_timezone"] is None
+
+    saved = await client.put(
+        "/admin/campaigns/settings/JO",
+        json={
+            "quiet_hours_start": "23:00",
+            "quiet_hours_end": "07:30",
+            "timezone": "Asia/Amman",
+        },
+        headers=admin_headers,
+    )
+    assert saved.status_code == 200, saved.text
+
+    after = (await client.get("/config?country_code=JO")).json()["countries"][0]
+    assert after["quiet_hours_start"] == "23:00"
+    assert after["quiet_hours_end"] == "07:30"
+    assert after["quiet_hours_timezone"] == "Asia/Amman"
+
+
 async def test_config_exposes_only_publishable_mapbox_token(
     client: AsyncClient, admin_headers: dict
 ) -> None:

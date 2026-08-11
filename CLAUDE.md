@@ -27,7 +27,8 @@ connection, unified provider interfaces with mocks, and the OTP/Push/automatic-C
 integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
-written from both send doors) are complete. **Stage 10's screens (the driver PWA, `driver-app/`) are
+written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login and the campaigns page.
+**Stage 10's screens (the driver PWA, `driver-app/`) are
 complete** — login/recovery, three-step registration, home with the offer card and active ride,
 collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal
 sheet and request list, the account tab with settings/vehicle/cards, the notifications inbox and
@@ -181,6 +182,16 @@ payout reference are printed on something the driver is holding, and he compares
 character — converting those makes him match a string against a differently-shaped one. The rule is
 written into `screens/Cards.tsx` and `screens/Vehicle.tsx` where the two kinds sit next to each
 other.
+
+`admin-panel` (stage 11) is the operations panel on **5175**, the third origin in
+`settings.cors_origins`. It shares the design system verbatim — the same `tailwind.config.js`,
+the same `check:scale` and `check:enums` guards — and the same dark-first default the prototype
+starts in, with a toggle in the header. Three things differ from the two PWAs and are deliberate:
+no device registration (a desk panel receives no push), no WebSocket yet (the live map arrives with
+its own screen, not with the shell), and a **country switch in the header** that narrows what every
+screen shows — display state in `sessionStorage`, so two tabs on two markets do not fight.
+**`support` sees less than `admin` in the UI, and that is comfort, not protection**: every admin
+route enforces the role server-side (SPEC §13/8), and hiding a button never prevented a request.
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`
@@ -538,6 +549,16 @@ driver's empty wallet blocks confirmation rather than overdrawing. Earnings are 
 in the ledger; the reasoning is written into SPEC section 6. The frozen
 `commission_percent_at_ride` is never re-read from settings, but `applies_to` is read at payment
 time because it keys off the payment channel, which is unknowable at ride creation.
+
+**The hosted card page returns to the app that opened it, and the app is derived from the payer's
+role.** `settings.card_return_url` / `card_return_url_driver` are two publish addresses, and
+`card_gateway.return_url_for(cart_id, payer_role=…)` picks between them — not a header the client
+sends. In this system each role has exactly one app (`RiderUser` and `CurrentDriver` enforce it on
+every route), so the role states which app opened the page with certainty, and a client-supplied
+claim would be trust bought for nothing. The day one role uses two apps, the client has to declare
+it; until then this is the narrowest thing that works. Before it, one address pointed at the rider
+app, so a driver paying by card landed in an app that was not his — which disabled the whole card
+channel for drivers, not just the saved-cards screen.
 
 **The card channel trusts exactly one source for money: the provider's answer to a backend-initiated
 call.** `services/card_gateway/` is a swappable strategy like `services/auth/`: `base.py` is the

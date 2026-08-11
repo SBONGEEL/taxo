@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.vite/
+*.local
+# ذاكرةُ `tsc -b` بين البناءات — أثرُ تشغيلٍ على جهازٍ بعينه لا مصدر
+*.tsbuildinfo

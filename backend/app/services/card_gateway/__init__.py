@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.enums import UserRole
 from app.core.crypto import get_cipher
 from app.core.redis_client import get_redis_client
 from app.models.enums import CountryCode, ProviderKey
@@ -61,13 +62,24 @@ def _mock_allowed(values: Mapping[str, Any]) -> bool:
     return bool(values.get("use_mock")) and not settings.is_production
 
 
-def return_url_for(cart_id: str) -> str:
+def return_url_for(cart_id: str, *, payer_role: UserRole) -> str:
     """الصفحة التي يعود إليها المتصفح من صفحة المزود.
 
     عنوانُ واجهةٍ لا سرُّ مزود، فمكانه إعدادات البنية التحتية. الواجهة تقرأ
     `cart_id` منه وتسأل الخلفية عن الحال — ولا تُصدَّق في شيء آخر.
+
+    **ولكل تطبيقٍ عنوانه**، ويُختار من **دور الدافع** لا من ترويسةٍ يرسلها
+    العميل: في هذا النظام لكل دورٍ تطبيقُه — `RiderUser` و`CurrentDriver`
+    يفرضان ذلك على كل مسار — فالدور يقول أيّ تطبيقٍ فتح الصفحة بيقين، وترويسةٌ
+    من العميل بيانٌ يُصدَّق بلا داعٍ. ويوم يستعمل دورٌ واحد تطبيقين يصير
+    التصريح واجباً على العميل؛ وحتى ذلك اليوم هذا أضيقُ ما يكفي.
     """
-    return f"{settings.card_return_url}?cart_id={cart_id}"
+    base = (
+        settings.card_return_url_driver
+        if payer_role is UserRole.DRIVER
+        else settings.card_return_url
+    )
+    return f"{base}?cart_id={cart_id}"
 
 
 def mock_page_url(cart_id: str) -> str:

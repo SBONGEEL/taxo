@@ -4,11 +4,10 @@
  * إشعاراتُ الرحلة ليست خياراً — من يطفئ «طلبٌ جديد» ينتظر طلباتٍ لا تصله
  * ويظن المنطقة فارغة. ولذلك تقول الشاشة ذلك صراحةً تحت المفتاح.
  *
- * **وساعاتُ الهدوء تُعرض بلا أرقام**: قيمُها في `notification_settings`
- * لكل دولة وتُدار من اللوحة، و`GET /config` لا ينشرها. وكتابةُ «٢٢:٠٠ –
- * ٠٨:٠٠» كما في النموذج تعني رقماً في الواجهة قد يخالف الجدول — والقاعدةُ
- * وحدها هي ما يفيد الكبتن: الهدوءُ يخصّ الحملات، وبطاقةُ الطلب تصله في أي
- * وقت (`FUTURE-FEATURES.md` بند 42).
+ * **وساعاتُ الهدوء تُقرأ من `/config` لا تُكتب هنا**: صارت تُنشر لكل دولة
+ * ومعها مِنطقتُها الزمنية، فالمعروضُ ما في الجدول لا رقمٌ في الواجهة يخالفه
+ * يوم يغيّره المشرف. وغيابُها `null` يعني «لم تُضبط» فتبقى القاعدةُ وحدها —
+ * ولا يخترع الرقمَ أحد.
  *
  * ولا صفَّ لغة: التطبيق عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
  */
@@ -25,14 +24,23 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
+import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+import { arabicDigits, cn } from "@/lib/utils";
 
 export function SettingsScreen() {
   const navigate = useNavigate();
   const { profile, refresh } = useDriver();
   const { choice, toggle } = useTheme();
+  const { user } = useSession();
+  const country = useCountryConfig(user?.country_code);
+  // «٢٢:٠٠ – ٠٨:٠٠» بخاناتٍ عربية، و`null` تبقى فراغاً لا صفراً
+  const quietHours =
+    country?.quiet_hours_start && country.quiet_hours_end
+      ? `${arabicDigits(country.quiet_hours_start)} – ${arabicDigits(country.quiet_hours_end)}`
+      : null;
 
   const [marketing, setMarketing] = useState<boolean | null>(null);
   const [alias, setAlias] = useState("");
@@ -125,10 +133,19 @@ export function SettingsScreen() {
         </button>
 
         <div className="mt-13 border-t border-line pt-13">
-          <div className="text-13 font-semibold text-ink">ساعات الهدوء</div>
+          <div className="flex items-center justify-between">
+            <div className="text-13 font-semibold text-ink">ساعات الهدوء</div>
+            {quietHours ? (
+              <span dir="ltr" className="text-12.5 font-bold text-ink">
+                {quietHours}
+              </span>
+            ) : null}
+          </div>
           <div className="mt-4 text-11 leading-snug text-muted">
-            تحدّدها الإدارة لكل دولة، وتخص الحملات التسويقية وحدها — بطاقة الطلب
-            تصلك في أي وقت.
+            {country?.quiet_hours_timezone
+              ? `بتوقيت ${country.quiet_hours_timezone}. `
+              : ""}
+            تخص الحملات التسويقية وحدها — بطاقة الطلب تصلك في أي وقت.
           </div>
         </div>
       </section>

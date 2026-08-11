@@ -9,11 +9,29 @@ from app.core.deps import DbSession
 from app.models.enums import CountryCode, VehicleCategory
 from app.schemas.auth import AuthMethodResponse
 from app.schemas.config import ConfigOut, CountryConfigOut
-from app.services import otp, settings_service, verification
+from app.services import campaigns, otp, settings_service, verification
 from app.services.providers import credentials as credentials_service
 from app.services.providers.registry import PROVIDERS
 
 router = APIRouter(tags=["config"])
+
+
+async def _country_config(session, country: CountryCode) -> CountryConfigOut:
+    """إعدادات دولةٍ كما تراها الواجهات — قراءةٌ خالصة بلا إنشاء صفوف."""
+    quiet = await campaigns.get_settings(session, country)
+    return CountryConfigOut(
+        country_code=country,
+        currency=currency_for_country(country),
+        features=await settings_service.get_flags(session, country),
+        vehicle_categories=list(VehicleCategory),
+        dial_code=dial_code_for(country),
+        national_number_length=national_length_for(country),
+        quiet_hours_start=(
+            quiet.quiet_hours_start.strftime("%H:%M") if quiet else None
+        ),
+        quiet_hours_end=quiet.quiet_hours_end.strftime("%H:%M") if quiet else None,
+        quiet_hours_timezone=quiet.timezone if quiet else None,
+    )
 
 
 async def _auth_method(session) -> AuthMethodResponse:
@@ -42,14 +60,7 @@ async def get_public_config(
         default_country_code=settings.default_country_code,
         auth=await _auth_method(session),
         countries=[
-            CountryConfigOut(
-                country_code=country,
-                currency=currency_for_country(country),
-                features=await settings_service.get_flags(session, country),
-                vehicle_categories=list(VehicleCategory),
-                dial_code=dial_code_for(country),
-                national_number_length=national_length_for(country),
-            )
+            await _country_config(session, country)
             for country in countries
         ],
         # كلُّ عقدٍ يحمل حقلاً `expose_to_clients` يُنشر هنا بحقوله العامة

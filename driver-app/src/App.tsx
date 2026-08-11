@@ -83,6 +83,9 @@ const VehicleScreen = lazy(() =>
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
+const CardReturnScreen = lazy(() =>
+  import("@/screens/CardReturn").then((m) => ({ default: m.CardReturnScreen })),
+);
 const NotificationsScreen = lazy(() =>
   import("@/screens/Notifications").then((m) => ({
     default: m.NotificationsScreen,
@@ -279,6 +282,15 @@ export default function App() {
                         element={
                           <Guarded>
                             <VehicleScreen />
+                          </Guarded>
+                        }
+                      />
+                      {/* عنوانُ العودة من صفحة المزود — خاصٌّ بهذا التطبيق */}
+                      <Route
+                        path="/payments/card/return"
+                        element={
+                          <Guarded>
+                            <CardReturnScreen />
                           </Guarded>
                         }
                       />
