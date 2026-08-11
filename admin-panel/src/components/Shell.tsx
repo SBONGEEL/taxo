@@ -32,7 +32,7 @@ const GROUPS: {
     label: "العمليات",
     items: [
       { label: "نظرة عامة", to: "/overview" },
-      { label: "الخريطة الحيّة" },
+      { label: "الخريطة الحيّة", to: "/live-map", adminOnly: true },
       { label: "سجل الرحلات" },
     ],
   },

@@ -21,6 +21,7 @@ import type {
   DriverDocuments,
   DriverStatus,
   FeatureKey,
+  LiveMap,
   NotificationSetting,
   Payment,
   PaymentSetting,
@@ -285,3 +286,9 @@ export const getOverview = (country: CountryCode, period: StatsPeriod) =>
   api.get<Overview>("/admin/stats/overview", {
     query: { country_code: country, period },
   });
+
+// ------------------------------------------------------------ الخريطة الحيّة
+
+/** لـ`admin` وحده، ويُسجَّل من فتحها (القسم 13/1) — والخلفية هي من يفرض ذلك. */
+export const getLiveMap = (country: CountryCode) =>
+  api.get<LiveMap>("/admin/live/map", { query: { country_code: country } });

@@ -1,6 +1,6 @@
 /** جذر اللوحة: المزوّدون، والمسارات، وحارسُ الجلسة.
  *
- * **ما هو مبنيٌّ الآن**: الدخول، ونظرةٌ عامة، والسائقون والوثائق، والمالية، والنزاعات،
+ * **ما هو مبنيٌّ الآن**: الدخول، ونظرةٌ عامة، والخريطة الحيّة، والسائقون والوثائق، والمالية، والنزاعات،
  * والإشعارات الجماعية، والإعدادات، وعقود المزوّدين. وبقيةُ الأقسام
  * مرسومةٌ في القائمة معطّلةً بشارة «قريباً» — تقول للمستخدم حالها بدل أن
  * تجعله يشك في اللوحة (انظر `components/Shell.tsx`).
@@ -26,6 +26,9 @@ import { LoginScreen } from "@/screens/Login";
 
 const OverviewScreen = lazy(() =>
   import("@/screens/Overview").then((m) => ({ default: m.OverviewScreen })),
+);
+const LiveMapScreen = lazy(() =>
+  import("@/screens/LiveMap").then((m) => ({ default: m.LiveMapScreen })),
 );
 const CampaignsScreen = lazy(() =>
   import("@/screens/Campaigns").then((m) => ({ default: m.CampaignsScreen })),
@@ -136,6 +139,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <OverviewScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/live-map"
+                    element={
+                      <Guarded>
+                        <LiveMapScreen />
                       </Guarded>
                     }
                   />

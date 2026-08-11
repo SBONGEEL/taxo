@@ -306,3 +306,50 @@ export interface Overview {
   rides_by_hour: number[];
   payment_mix: Record<string, number>;
 }
+
+// ------------------------------------------------------------ الخريطة الحيّة
+
+/** منسوختان حرفياً من `app/models/enums.py` — و`check:enums` يحرسهما. */
+export type VehicleCategory = "economy" | "comfort";
+
+export type RideStatus =
+  | "requested"
+  | "searching"
+  | "accepted"
+  | "arrived"
+  | "in_progress"
+  | "completed"
+  | "cancelled_by_rider"
+  | "cancelled_by_driver"
+  | "no_driver_found";
+
+/** كبتنٌ **بهويته** — الشكلُ الوحيد في المنصة الذي يقرن اسماً بموقع.
+ *
+ * ولا يُعاد استعماله لأي خريطةٍ أخرى: خريطة الراكب مجهَّلةٌ بحكم القسم 10،
+ * ومصدرُها `NearbyDriver` في تطبيقه بحقولٍ مختلفةٍ عمداً.
+ */
+export interface LiveDriver {
+  driver_id: string;
+  name: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  vehicle_category: VehicleCategory;
+  plate_number: string | null;
+  on_ride: boolean;
+  ride_id: string | null;
+}
+
+export interface LivePendingRide {
+  ride_id: string;
+  lat: number;
+  lng: number;
+  status: RideStatus;
+  created_at: string;
+}
+
+export interface LiveMap {
+  drivers: LiveDriver[];
+  pending_rides: LivePendingRide[];
+}

@@ -341,3 +341,6 @@ class AuditAction(StrEnum):
     DELETE = "delete"
     ACTIVATE = "activate"
     DEACTIVATE = "deactivate"
+    # قراءةٌ تُسجَّل — نادرةٌ عمداً: تُكتب حيث تكون القراءةُ نفسها فعلاً يُسأل
+    # عنه، كفتح خريطة مواقع الناس بهوياتهم (القسم 13/1)
+    READ = "read"

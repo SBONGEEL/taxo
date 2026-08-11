@@ -27,7 +27,7 @@ connection, unified provider interfaces with mocks, and the OTP/Push/automatic-C
 integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
-written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login, drivers/documents,
+written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login, live map, drivers/documents,
 finance (withdrawals and CliQ topups), disputes, campaigns, per-country settings and the provider
 contracts page. The overview sits on `services/stats.py`, where three rules live: **aggregation happens in
 the backend, full stop** — the same reasoning §14 applies to money, because a panel that sums rows
@@ -197,9 +197,9 @@ other.
 `settings.cors_origins`. It shares the design system verbatim — the same `tailwind.config.js`,
 the same `check:scale` and `check:enums` guards — and the same dark-first default the prototype
 starts in, with a toggle in the header. Three things differ from the two PWAs and are deliberate:
-no device registration (a desk panel receives no push), no WebSocket yet (the live map arrives with
-its own screen, not with the shell), and a **country switch in the header** that narrows what every
-screen shows — display state in `sessionStorage`, so two tabs on two markets do not fight.
+no device registration (a desk panel receives no push), no WebSocket at all (see the live map
+below), and a **country switch in the header** that narrows what every screen shows — display state
+in `sessionStorage`, so two tabs on two markets do not fight.
 One backend rule the panel made visible: **`/admin/drivers/{id}/activate` goes through
 `drivers.approve`, not a bare status write** — otherwise suspending and reactivating a driver would
 be a way around the verified-phone and approved-documents guards, and the shortest path to a driver
@@ -209,6 +209,43 @@ admin to retry, while a disabled button that says why teaches them to fix.
 
 **`support` sees less than `admin` in the UI, and that is comfort, not protection**: every admin
 route enforces the role server-side (SPEC §13/8), and hiding a button never prevented a request.
+
+**`GET /admin/live/map` is the only route in the project that pairs an identity with a location**,
+and three rules follow from that. It is `AdminUser`, not `StaffUser` — the one read in the panel
+that support cannot make, because nothing in handling a dispute needs to know where every driver is
+standing right now. Opening it **writes an audit entry** (`AuditAction.READ` on `live_map`, the
+only `read` the project records), throttled by a Redis key in `live_map.record_access` so a
+monitoring session is one row rather than the two hundred an auto-refreshing screen would write in
+an hour. And the rider-facing paths were not touched: `drivers.nearby_available` +
+`anonymous_ref` and the `nearby_drivers` socket frame stay anonymised per SPEC §10, which is why
+`live_map.drivers_now` is a **separate function with a separate schema** rather than the same one
+with an `include_identity` flag —
+`test_admin_live_map.py::test_rider_facing_paths_still_carry_no_identity` sees the same driver
+named in the panel and pseudonymous to the rider, and any later "simplification" that merges the
+two will fail it. The screen also has no "assign driver" button: dispatch offers a ride to one
+driver at a time, so a panel button that jumps the offer is FUTURE-FEATURES item 27, not a
+convenience.
+
+`LiveCanvas.tsx` is the only file in the panel that imports `mapbox-gl`, and two traps in it both
+produce a *silent* failure. A `Marker` must be given `setLngLat` **before** `addTo` — `addTo` draws
+immediately and reads the marker's coordinates, so a marker added without one throws inside an
+effect and React blanks the whole screen (the panel has no error boundary). And the element you
+hand a `Marker` **belongs to mapbox**: it adds `mapboxgl-marker` (which carries
+`position: absolute`) to that element's class list, so writing `element.className = …` on it drops
+the marker out of the map into normal flow — no console error, just no marker. Both are why the
+visual styling lives on an inner child and the outer shell is never touched. Neither shows up in
+`npm run build`; both were caught by opening the screen.
+
+**Vite in these containers does not see host edits.** The source tree is bind-mounted from Windows
+into alpine and inotify does not cross that boundary, so HMR never fires and the dev server keeps
+serving the module it read at startup — a fix can look like it did nothing for as long as you care
+to test it. `docker compose restart <app>` before every browser check, and confirm with
+`curl http://127.0.0.1:5175/src/<path>` that the served text contains your edit. (The earlier note
+that `public/dev-login.html` only appears after a restart was this same fact, seen through one file.)
+
+Its refresh is a **5s poll, not a socket** — `ws/` publishes per-user channels, and a
+country-wide one would mean streaming everyone's position into an open connection to answer a
+question that is only ever "where are they now".
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`
