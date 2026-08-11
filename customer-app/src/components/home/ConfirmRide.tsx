@@ -3,19 +3,30 @@
  * **السعر يأتي من `POST /rides/estimate` ولا يُحسب هنا أبداً** (القسم 14):
  * الواجهة تعرض ما قالته الخلفية بحروفه — لا ضربَ مسافةٍ في تعرفة، ولا حتى
  * جمعَ رسمٍ على مبلغ. وتبديلُ الفئة يعيد السؤال لأن التعرفة لكل فئة.
+ *
+ * **واختيارُ «كبتنة فقط» يقول ثمنَه قبل الضغط لا بعده** (المرحلة 10-ج):
+ * الكبتنات أقل عدداً، فالانتظارُ أطول والبحثُ يتسع إلى ١٠كم. وقولُ ذلك هنا
+ * يجعل الانتظار خياراً اختارته؛ والسكوتُ عنه يجعله عطلاً يُشتكى منه — ثم
+ * «لم نجد كبتناً» بلا سبب.
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Car, CircleDot, MapPin, RefreshCw } from "lucide-react";
+import { Car, CircleDot, Clock, MapPin, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { estimateRide } from "@/api/endpoints";
-import type { Coordinates, RideEstimate, VehicleCategory } from "@/api/types";
+import type {
+  Coordinates,
+  GenderPreference,
+  RideEstimate,
+  VehicleCategory,
+} from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Sheet } from "@/components/ui/Sheet";
 import { VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
+import { useWomenService } from "@/lib/women";
 import { cn, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 export function ConfirmRide({
@@ -35,11 +46,16 @@ export function ConfirmRide({
   dropoffAddress: string | null;
   categories: VehicleCategory[];
   onEditDestination: () => void;
-  onRequest: (category: VehicleCategory) => void;
+  onRequest: (category: VehicleCategory, preference: GenderPreference) => void;
   requesting: boolean;
   requestError: string | null;
 }) {
+  const women = useWomenService();
   const [category, setCategory] = useState<VehicleCategory>(categories[0] ?? "economy");
+  // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها
+  const [preference, setPreference] = useState<GenderPreference>(
+    women.defaultPreference,
+  );
   const [estimate, setEstimate] = useState<RideEstimate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +127,42 @@ export function ConfirmRide({
           ))}
         </div>
 
+        {/* لا يظهر هذا الصف إلا لمن عُرضت عليها الخدمة — والقرارُ في
+            `lib/women.ts` وحده */}
+        {women.available ? (
+          <div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: "any", label: "أي كبتن" },
+                  { value: "female", label: "كبتنة فقط" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPreference(option.value)}
+                  className={cn(
+                    "rounded-xl border p-3 text-center text-sm font-medium transition",
+                    option.value === preference
+                      ? "border-brand bg-brand/10 text-ink"
+                      : "border-line bg-surface text-muted hover:bg-line/30",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {preference === "female" ? (
+              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+                <Clock className="mt-0.5 size-3.5 shrink-0" />
+                الكبتنات أقل عدداً، فقد ينتظر طلبك أطول — نوسّع البحث لمسافة
+                أبعد قبل أن نعتذر.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="rounded-xl border border-line bg-bg px-4 py-3">
           <AnimatePresence mode="wait">
             {loading ? (
@@ -156,7 +208,7 @@ export function ConfirmRide({
           size="lg"
           loading={requesting}
           disabled={!estimate || loading}
-          onClick={() => onRequest(category)}
+          onClick={() => onRequest(category, preference)}
         >
           اطلب الرحلة
         </Button>

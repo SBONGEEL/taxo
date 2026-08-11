@@ -21,10 +21,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import type { GenderPreference } from "@/api/types";
 import {
   getNotificationPreferences,
   setNotificationPreferences,
   startChallenge,
+  updateMe,
   verifyMyPhone,
 } from "@/api/endpoints";
 import { PhoneVerification } from "@/components/PhoneVerification";
@@ -34,6 +36,7 @@ import { Screen } from "@/components/ui/Screen";
 import { useConfig, usePhoneCountry } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { useBrand } from "@/lib/brand";
+import { useWomenService } from "@/lib/women";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +46,8 @@ export function ProfileScreen() {
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
   const { pink, available, setPink } = useBrand();
+  const { defaultPreference } = useWomenService();
+  const [savingPreference, setSavingPreference] = useState(false);
   const { dialCode } = usePhoneCountry(user?.country_code);
 
   const [marketing, setMarketing] = useState<boolean | null>(null);
@@ -84,6 +89,23 @@ export function ProfileScreen() {
   }
 
   if (!user) return null;
+
+  /** الحفظُ فوريّ بلا زرِّ «حفظ»: خيارٌ من اثنين لا نموذجُ إدخال. وعند الفشل
+   *  يعود المعروضُ إلى ما في الحساب، فلا تبقى الشاشة تقول ما لم يُحفظ. */
+  async function savePreference(next: GenderPreference) {
+    setSavingPreference(true);
+    setError(null);
+    try {
+      await updateMe({ ride_gender_preference: next });
+      await refreshUser();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل",
+      );
+    } finally {
+      setSavingPreference(false);
+    }
+  }
 
   return (
     <Screen title="الملف الشخصي" back="/menu">
@@ -183,6 +205,43 @@ export function ProfileScreen() {
             ))}
           </div>
         </section>
+
+        {/* التفضيلُ الافتراضي — يُنسخ إلى كل طلبٍ لا تختار فيه شيئاً، وتغييرُه
+            يحكم ما يأتي لا رحلةً جاريةً الآن (المرحلة 10-ج) */}
+        {available ? (
+          <section className="card space-y-3 p-4">
+            <div>
+              <p className="font-medium text-ink">من يقودني افتراضياً</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                يسري على كل طلبٍ لا تختارين فيه غيره — ولك تغييره لرحلةٍ واحدة
+                من شاشة الطلب.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: "any", label: "أي كبتن" },
+                  { value: "female", label: "كبتنة فقط" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  disabled={savingPreference}
+                  onClick={() => savePreference(option.value)}
+                  className={cn(
+                    "rounded-xl border px-2 py-3 text-sm font-medium transition",
+                    defaultPreference === option.value
+                      ? "border-brand bg-brand/10 text-ink"
+                      : "border-line text-muted hover:bg-line/30",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* السِمة الوردية — لا تظهر إلا لمن لها أن تختارها: الخدمة مفعّلة
             في دولتها وقد أعلنت جنسها. ومن ليست كذلك لا ترى مفتاحاً معطّلاً

@@ -153,7 +153,21 @@ export function RideProvider({ children }: { children: ReactNode }) {
           if (TERMINAL_EVENTS.has(event.type)) setDriverPing(null);
 
           const toast = EVENT_TOAST[event.type];
-          if (toast) notify(toast.title, toast.body);
+          if (toast) {
+            // «لم نجد كبتناً» على طلبٍ نسائي يحتاج سببَه: نصٌّ عامّ يقول
+            // «لم يقبل أحد» يُقرأ رفضاً شخصياً، والصحيحُ أن المتاحات كنّ
+            // بعيداتٍ أو مشغولات — ومعه المخرجُ الفعلي (المرحلة 10-ج)
+            const gendered =
+              withRide.ride && withRide.ride.gender_preference !== "any";
+            if (event.type === "no_driver_found" && gendered) {
+              notify(
+                "لم نجد كبتنة متاحة",
+                "لا كبتنة قريبة الآن. جرّبي بعد قليل، أو اطلبي أي كبتن.",
+              );
+            } else {
+              notify(toast.title, toast.body);
+            }
+          }
         }
       }
     },

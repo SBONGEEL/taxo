@@ -96,11 +96,20 @@ async def test_today_window_follows_the_country_timezone(
 
     amman = ZoneInfo("Asia/Amman")
     now = datetime.now(UTC)
-    # 00:30 بتوقيت عمّان اليوم — يومٌ واحدٌ في عمّان، وأمسٌ في UTC حين تسبق
-    # إزاحةُ عمّان منتصف الليل
-    local_midnight = datetime.combine(
+    # لحظةٌ بعد منتصف ليل عمّان بقليل: **يومٌ واحدٌ في عمّان وأمسٌ في UTC**،
+    # وهي بالضبط ما يخطئ فيه خادمٌ يحسب بـUTC.
+    #
+    # و`min` مع «الآن» ليست زينة: النافذة تنتهي عند اللحظة الحالية، فلو ثُبِّتت
+    # الرحلة على 00:30 وشُغِّل الاختبار في 00:10 لصارت الرحلةُ **في المستقبل**
+    # فتسقط من العدّ — واختبارٌ يرسب نصفَ ساعةٍ كل ليلة يُقرأ عطلاً في الكود
+    # لا في نفسه. وقع هذا فعلاً حين مرّت الجلسة بمنتصف الليل.
+    start_of_day = datetime.combine(
         now.astimezone(amman).date(), datetime.min.time(), tzinfo=amman
-    ) + timedelta(minutes=30)
+    )
+    local_midnight = max(
+        start_of_day,
+        min(start_of_day + timedelta(minutes=30), now.astimezone(amman) - timedelta(seconds=30)),
+    )
 
     async with session_factory() as session:
         row = await session.scalar(select(Ride).where(Ride.id == ride["id"]))

@@ -9,6 +9,7 @@ import type {
   AppConfig,
   AuthMethod,
   AuthResponse,
+  CardOrder,
   ChallengeResponse,
   CountryCode,
   DocumentType,
@@ -17,19 +18,19 @@ import type {
   DriverDocuments,
   DriverProfile,
   DriverSubscription,
+  DriverWallet,
+  GenderPreference,
   MySubscription,
+  NotificationPreferences,
   Payment,
   Rating,
   Ride,
   RidePayments,
+  SavedCard,
   User,
+  UserNotification,
   Vehicle,
   VehicleCategory,
-  CardOrder,
-  DriverWallet,
-  NotificationPreferences,
-  SavedCard,
-  UserNotification,
   WalletTransaction,
   Withdrawal,
   WithdrawalMethod,
@@ -126,8 +127,10 @@ export const unregisterDevice = (deviceId: string) =>
 export const getDriverProfile = () => api.get<DriverProfile>("/drivers/me");
 
 /** ما يملك الكبتن تغييره من ملفه — `cliq_alias` اليوم (SPEC القسم 9). */
-export const updateDriver = (payload: { cliq_alias?: string }) =>
-  api.patch<Driver>("/drivers/me", payload);
+export const updateDriver = (payload: {
+  cliq_alias?: string;
+  gender_preference?: GenderPreference;
+}) => api.patch<Driver>("/drivers/me", payload);
 
 export const addVehicle = (payload: {
   make: string;

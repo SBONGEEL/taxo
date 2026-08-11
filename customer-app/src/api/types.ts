@@ -34,6 +34,9 @@ export interface AuthMethod {
   otp_length: number | null;
 }
 
+/** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
+export type GenderPreference = "male" | "female" | "any";
+
 export interface User {
   id: string;
   phone: string;
@@ -45,7 +48,7 @@ export interface User {
   /** تعلنه الراكبة عن نفسها (المرحلة 10-ج)؛ `null` = لم تعلن. */
   gender: "male" | "female" | null;
   /** تفضيلُها الافتراضي لجنس الكبتن — يُنسخ إلى الرحلة عند الطلب. */
-  ride_gender_preference: "male" | "female" | "any";
+  ride_gender_preference: GenderPreference;
   created_at: string;
 }
 
@@ -154,6 +157,8 @@ export interface Ride {
   cancellation_fee: string | null;
   commission_percent_at_ride: string;
   cancelled_reason: string | null;
+  /** ما طُلب في هذه الرحلة من جنس الكبتن — **تفضيلُ الطلب لا جنسُ أحد**. */
+  gender_preference: GenderPreference;
   driver: RideDriver | null;
   created_at: string;
   accepted_at: string | null;

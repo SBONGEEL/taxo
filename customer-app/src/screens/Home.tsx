@@ -21,7 +21,12 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { requestRide } from "@/api/endpoints";
-import type { Coordinates, Ride, VehicleCategory } from "@/api/types";
+import type {
+  Coordinates,
+  GenderPreference,
+  Ride,
+  VehicleCategory,
+} from "@/api/types";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
@@ -127,7 +132,7 @@ export function HomeScreen() {
     if (pickup) map.current?.fitBounds(pickup, point);
   }
 
-  async function submit(category: VehicleCategory) {
+  async function submit(category: VehicleCategory, preference: GenderPreference) {
     if (!pickup || !dropoff) return;
     setRequesting(true);
     setError(null);
@@ -138,6 +143,7 @@ export function HomeScreen() {
         vehicle_category: category,
         pickup_address: pickupAddress,
         dropoff_address: dropoffAddress,
+        gender_preference: preference,
       });
       // الرحلة تعود `requested`؛ انتقالها إلى `searching` يصل عبر المقبس
       setRide(created);

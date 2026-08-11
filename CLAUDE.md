@@ -535,6 +535,23 @@ gender is female — with no disabled control and no apology otherwise — and `
 `Brand.tsx` is the single component allowed to branch on it, because the wordmark's normal colour
 is `--tx` and an unconditional `text-brand` would paint it the app's default yellow.
 
+On the screens, one rule is a **UI narrowing, not a backend constraint**, and it is written into
+`customer-app/src/lib/women.ts` — the single place either app answers "is this service offered to
+whoever is holding this phone". The `GenderPreference` enum is three-way everywhere, and a driver
+of any gender may restrict who he carries; but the *rider's* control is shown only to an account
+that declared itself female, because offering "request a female captain" to a male rider opens the
+exact door the service exists to close. Both PWAs also hide every trace of the feature — control,
+default, badge, pink theme — where `women_service_enabled` is off.
+
+The rider is told the cost of a gendered request **before** she commits (fewer captains, wider
+search, longer wait), again while searching, and `no_driver_found` on such a ride carries its own
+reason and a way out instead of the generic "nobody accepted", which reads as a personal rejection.
+The driver's badge sits **above** the fare on the offer card for the same reason: a captain who
+accepts and then discovers the ride is not his cancels, and that cancellation was preventable by a
+pill. `test_ws.py` asserts `gender_preference` is present in the `ride_offer` frame — a field the
+app reads and nobody sends is a badge that never appears, which is the `awaiting_confirmation`
+failure shape.
+
 **`services/drivers.approve` now has two guards, not one**: a verified phone (stage 8-ب) and every
 required document approved (`REQUIRED_DOCUMENT_TYPES` in `models/driver.py` — licence, national ID,
 vehicle registration; the vehicle photo is deliberately optional). Without the second, review is a

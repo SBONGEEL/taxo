@@ -173,6 +173,11 @@ async def test_offer_and_ride_events_reach_both_sides(
                 assert offer["ride"]["id"] == ride_id
                 assert offer["expires_in_seconds"] > 0
                 assert offer["distance_to_pickup_km"] >= 0
+                # عليه تُرسم شارة «طلب نسائي» في بطاقة العرض (المرحلة 10-ج):
+                # حقلٌ يقرؤه التطبيق ولا يرسله أحد هو الشارة التي لا تظهر أبداً
+                assert offer["ride"]["gender_preference"] == "any"
+                # ولا جنسَ لأحدٍ في البطاقة — لا للراكب ولا للكبتن
+                assert "gender" not in offer["ride"]
 
                 await wait_for_offer(ride_id, driver["driver_id"])
                 accepted = await client.post(

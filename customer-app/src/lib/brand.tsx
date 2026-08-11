@@ -28,8 +28,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { useFeature } from "@/lib/config";
-import { useSession } from "@/lib/session";
+import { useWomenService } from "@/lib/women";
 
 const KEY = "taxo.pink";
 
@@ -53,9 +52,8 @@ function storedChoice(): boolean | null {
 }
 
 export function BrandProvider({ children }: { children: ReactNode }) {
-  const { user } = useSession();
-  const enabled = useFeature(user?.country_code, "women_service_enabled");
-  const available = enabled && user?.gender === "female";
+  // نفسُ جواب «هل الخدمة معروضةٌ عليها» الذي تقرؤه شاشةُ الطلب والملف
+  const { available } = useWomenService();
 
   const [choice, setChoice] = useState<boolean | null>(storedChoice);
 

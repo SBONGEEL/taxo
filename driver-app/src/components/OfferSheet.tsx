@@ -85,6 +85,15 @@ export function OfferSheet({
           </div>
 
           <div className="flex-1">
+            {/* شارةُ الطلب النسائي (المرحلة 10-ج): وصفُ الطلب لا هويةُ صاحبته.
+                ومكانُها فوق السعر لأنها تُقرأ **قبل** قرار القبول لا بعده —
+                كبتنٌ يقبل ثم يكتشف أنه ليس أهلاً للطلب يُلغي، وإلغاءٌ كان
+                يمكن تجنّبه ببضع بكسلات. ولا تظهر على طلبٍ بلا تفضيل */}
+            {offer.ride.gender_preference !== "any" ? (
+              <span className="mb-4 inline-block rounded-full bg-brand px-9 py-3 text-10 font-bold text-brand-ink">
+                طلب نسائي
+              </span>
+            ) : null}
             <div className="text-23 font-bold text-ink">
               {arabicDigits(offer.ride.estimated_fare)}{" "}
               <span className="text-12 font-medium text-muted">

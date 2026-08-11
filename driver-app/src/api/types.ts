@@ -11,6 +11,9 @@ export type VehicleCategory = "economy" | "comfort";
 
 export type DriverStatus = "pending" | "approved" | "rejected" | "suspended";
 
+/** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
+export type GenderPreference = "male" | "female" | "any";
+
 export type DocumentType =
   "driving_license" | "national_id" | "vehicle_registration" | "vehicle_photo";
 
@@ -30,7 +33,7 @@ export interface User {
   // جنسُ الكبتن يضبطه المشرف من هويته (المرحلة 10-ج)؛ `null` = لم يُثبَّت
   // بعد. يقرؤه التطبيق لشيءٍ واحد: هل تُتاح السِمة الوردية لصاحبة الشاشة
   gender: "male" | "female" | null;
-  ride_gender_preference: "male" | "female" | "any";
+  ride_gender_preference: GenderPreference;
   created_at: string;
 }
 // وليس هنا `marketing_push_enabled`: `UserOut` في الخلفية لا يحمله، ومصدرُه
@@ -113,6 +116,8 @@ export interface Driver {
   user_id: string;
   status: DriverStatus;
   cliq_alias: string | null;
+  /** تفضيلُه **الدائم** لجنس الركاب — يملكه هو، بخلاف جنسه (المرحلة 10-ج). */
+  gender_preference: GenderPreference;
   rating_avg: string;
   is_online: boolean;
   current_ride_id: string | null;
@@ -173,6 +178,8 @@ export interface Ride {
   cancellation_fee: string | null;
   commission_percent_at_ride: string;
   cancelled_reason: string | null;
+  /** ما طُلب في هذه الرحلة من جنس الكبتن — **وصفُ الطلب لا جنسُ صاحبته**. */
+  gender_preference: GenderPreference;
   created_at: string;
   accepted_at: string | null;
   arrived_at: string | null;

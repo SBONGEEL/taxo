@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import type { GenderPreference } from "@/api/types";
 import {
   getNotificationPreferences,
   setNotificationPreferences,
@@ -29,7 +30,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useBrand } from "@/lib/brand";
-import { useCountryConfig } from "@/lib/config";
+import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -42,6 +43,9 @@ export function SettingsScreen() {
   const { pink, available, setPink } = useBrand();
   const { user } = useSession();
   const country = useCountryConfig(user?.country_code);
+  const womenService = useFeature(user?.country_code, "women_service_enabled");
+  const preference = profile?.driver.gender_preference ?? "any";
+  const [savingPreference, setSavingPreference] = useState(false);
   // «٢٢:٠٠ – ٠٨:٠٠» بخاناتٍ عربية، و`null` تبقى فراغاً لا صفراً
   const quietHours =
     country?.quiet_hours_start && country.quiet_hours_end
@@ -91,6 +95,23 @@ export function SettingsScreen() {
       setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
     } finally {
       setSavingAlias(false);
+    }
+  }
+
+  /** الحفظُ فوريّ بلا زرِّ «حفظ»: خيارٌ من ثلاثة لا نصٌّ يُكتب. وعند الفشل
+   *  يعود المعروضُ إلى ما في الملف — `refresh` هو مصدر القيمة لا حالةٌ محلية. */
+  async function savePreference(next: GenderPreference) {
+    setSavingPreference(true);
+    setError(null);
+    setDone(null);
+    try {
+      await updateDriver({ gender_preference: next });
+      await refresh();
+      setDone("حُفظ ✓");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+    } finally {
+      setSavingPreference(false);
     }
   }
 
@@ -204,6 +225,43 @@ export function SettingsScreen() {
           </button>
         ) : null}
       </div>
+
+      {/* تفضيلُ جنس الركاب — **دائمٌ لا لكل رحلة**، ومعروضٌ لكل كبتنٍ لا
+          للكبتنات وحدهنّ: أن يقصر كبتنٌ عمله على الرجال قرارٌ مثلُ نظيره.
+          ولا يظهر والخدمةُ مطفأة في دولته: مفتاحٌ لا أثر له اليوم يجعله يظن
+          أن طلباتِه تُصفّى وهي لا تُصفّى (المرحلة 10-ج) */}
+      {womenService ? (
+        <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+          <h2 className="mb-4 text-13.5 font-bold text-ink">من أُقلّ</h2>
+          <p className="mb-10 text-11 leading-snug text-muted">
+            يسري على كل الطلبات حتى تغيّره. وتضييقُه يقلّل ما يصلك منها.
+          </p>
+          <div className="grid grid-cols-3 gap-8">
+            {(
+              [
+                { value: "any", label: "الجميع" },
+                { value: "female", label: "النساء فقط" },
+                { value: "male", label: "الرجال فقط" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                disabled={savingPreference}
+                onClick={() => savePreference(option.value)}
+                className={cn(
+                  "rounded-11 border px-8 py-11 text-12 font-semibold transition-colors",
+                  preference === option.value
+                    ? "border-ink bg-stripe-a text-ink"
+                    : "border-line text-muted",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-16 border border-line bg-surface p-15">
         <h2 className="mb-4 text-13.5 font-bold text-ink">alias كليك</h2>

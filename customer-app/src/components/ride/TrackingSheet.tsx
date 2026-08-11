@@ -9,7 +9,7 @@
  */
 
 import { motion } from "framer-motion";
-import { Car, Phone, Share2, Star, X } from "lucide-react";
+import { Car, Clock, Phone, Share2, ShieldCheck, Star, X } from "lucide-react";
 import { useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -62,8 +62,11 @@ export function TrackingSheet({
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareHintClosed, setShareHintClosed] = useState(false);
 
   const searching = ride.status === "requested" || ride.status === "searching";
+  // «رحلةٌ نسائية» = ما طُلب فيها جنسٌ بعينه — وصفٌ للطلب لا لصاحبته
+  const gendered = ride.gender_preference !== "any";
   const afterAccept = ride.status === "accepted" || ride.status === "arrived";
 
   async function cancel() {
@@ -103,6 +106,63 @@ export function TrackingSheet({
         </div>
 
         {searching ? <SearchingPulse /> : null}
+
+        {/* الانتظارُ الأطول قيل ثمنُه قبل الضغط (`ConfirmRide`)، ويُعاد قوله
+            هنا لأن هذه هي اللحظة التي يُشعر فيها: دقيقةُ صمتٍ بلا سببٍ تُقرأ
+            عطلاً، والسببُ المكتوب يجعلها انتظاراً مفهوماً (المرحلة 10-ج) */}
+        {searching && gendered ? (
+          <p className="flex items-start gap-2 rounded-xl border border-line bg-bg px-3 py-2.5 text-xs leading-relaxed text-muted">
+            <Clock className="mt-0.5 size-3.5 shrink-0" />
+            نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع
+            دائرة البحث قبل أن نعتذر.
+          </p>
+        ) : null}
+
+        {/* اقتراحُ المشاركة عند بدء رحلةٍ نسائية (المرحلة 10-ج). الزرُّ قائمٌ
+            أسفل الورقة لكلِّ رحلة؛ وما يضيفه هذا الاقتراح **التوقيت**: لحظةَ
+            تحرّك السيارة لا قبلها، ولمن طلبت الخدمة لا للجميع — واقتراحٌ
+            يظهر لكل راكبٍ في كل رحلة يصير خلفيةً لا يراها أحد.
+            ويُطوى بالضغط: تذكيرٌ لا يُطوى يصير مضايقة */}
+        {ride.status === "in_progress" && gendered && !shareHintClosed ? (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3 rounded-xl border border-brand/40 bg-brand/10 p-3"
+          >
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ink" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-ink">
+                شاركي رحلتك مع من تثقين
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                نرسل اسم الكبتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const shared = await shareRide(ride);
+                    if (!shared) {
+                      setCopied(true);
+                      window.setTimeout(() => setCopied(false), 2_500);
+                    }
+                    setShareHintClosed(true);
+                  }}
+                >
+                  <Share2 className="size-4" />
+                  مشاركة
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShareHintClosed(true)}
+                >
+                  ليس الآن
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
 
         {ride.driver ? (
           <motion.div

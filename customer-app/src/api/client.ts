@@ -89,7 +89,7 @@ function refreshOnce(): Promise<boolean> {
 // ------------------------------------------------------------ الطلب
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   /** مسارٌ عام لا يحمل توكناً (`/config`، `/auth/*`). */
   anonymous?: boolean;
@@ -160,6 +160,8 @@ export const api = {
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "PUT", body }),
+  patch: <T>(path: string, body?: unknown, options: RequestOptions = {}) =>
+    request<T>(path, { ...options, method: "PATCH", body }),
   del: <T>(path: string, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "DELETE" }),
 };

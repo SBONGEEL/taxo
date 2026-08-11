@@ -11,9 +11,10 @@ import type {
   AuthResponse,
   ChallengeResponse,
   CliqTopup,
-  CountryCode,
   Coordinates,
+  CountryCode,
   Device,
+  GenderPreference,
   NearbyDriver,
   NotificationPreferences,
   Payment,
@@ -85,6 +86,12 @@ export const verifyMyPhone = (verificationToken: string) =>
 
 export const getMe = () => api.get<User>("/auth/me");
 
+/** ما تغيّره الراكبة في نفسها — الإعلان والتفضيل الافتراضي (المرحلة 10-ج). */
+export const updateMe = (payload: {
+  gender?: "male" | "female";
+  ride_gender_preference?: GenderPreference;
+}) => api.patch<User>("/auth/me", payload);
+
 export const logout = (refreshToken: string) =>
   api.post<void>("/auth/logout", { refresh_token: refreshToken });
 
@@ -102,6 +109,8 @@ export const requestRide = (payload: {
   vehicle_category: VehicleCategory;
   pickup_address?: string | null;
   dropoff_address?: string | null;
+  /** غيابُه يعني «خذ افتراضي ملفي» لا `any` — القرار في الخلفية. */
+  gender_preference?: GenderPreference;
 }) => api.post<Ride>("/rides", payload);
 
 export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
