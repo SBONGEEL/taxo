@@ -18,32 +18,32 @@ export function MenuScreen() {
 
   return (
     <Screen title="القائمة" back="/">
-      <div className="space-y-4">
-        <div className="card flex items-center gap-3 p-4">
-          <div className="flex size-12 items-center justify-center rounded-full bg-brand/20 text-lg font-bold text-ink">
+      <div className="space-y-16">
+        <div className="card flex items-center gap-12 p-16">
+          <div className="flex size-48 items-center justify-center rounded-full bg-brand-soft text-18 font-bold text-ink">
             {user?.name.slice(0, 1) ?? "?"}
           </div>
           <div className="min-w-0">
             <p className="truncate font-semibold text-ink">{user?.name}</p>
-            <p dir="ltr" className="text-sm text-muted">
+            <p dir="ltr" className="text-14 text-muted">
               {user?.phone}
             </p>
           </div>
         </div>
 
-        <ul className="space-y-2">
+        <ul className="space-y-8">
           {ITEMS.map(({ to, icon: Icon, label, hint }) => (
             <li key={to}>
               <Link
                 to={to}
-                className="card flex items-center gap-3 p-4 transition hover:bg-line/20"
+                className="card flex items-center gap-12 p-16 transition hover:bg-surface-2"
               >
-                <Icon className="size-5 text-ink" />
+                <Icon className="size-20 text-ink" />
                 <span className="flex-1">
                   <span className="block font-medium text-ink">{label}</span>
-                  <span className="block text-xs text-muted">{hint}</span>
+                  <span className="block text-12 text-muted">{hint}</span>
                 </span>
-                <ChevronLeft className="size-4 text-muted" />
+                <ChevronLeft className="size-16 text-muted" />
               </Link>
             </li>
           ))}

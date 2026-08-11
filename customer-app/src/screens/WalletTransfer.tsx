@@ -85,22 +85,22 @@ export function WalletTransferScreen() {
 
   return (
     <Screen title="تحويل رصيد" back="/wallet">
-      <div className="space-y-5">
+      <div className="space-y-20">
         {recipient ? (
-          <div className="card flex items-center gap-3 p-4">
-            <UserCheck className="size-6 text-success" />
+          <div className="card flex items-center gap-12 p-16">
+            <UserCheck className="size-24 text-ok" />
             <div className="min-w-0">
               <p className="truncate font-semibold text-ink">
                 {recipient.name}
               </p>
-              <p dir="ltr" className="text-sm text-muted">
+              <p dir="ltr" className="text-14 text-muted">
                 {recipient.phone}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setRecipient(null)}
-              className="ms-auto text-sm text-muted hover:text-ink"
+              className="ms-auto text-14 text-muted hover:text-ink"
             >
               تغيير
             </button>
@@ -141,7 +141,7 @@ export function WalletTransferScreen() {
             disabled={Number(amount) <= 0}
             onClick={send}
           >
-            <ArrowLeftRight className="size-4" />
+            <ArrowLeftRight className="size-16" />
             تأكيد التحويل
           </Button>
         ) : (

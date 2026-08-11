@@ -100,11 +100,11 @@ export function TrackingSheet({
 
   return (
     <Sheet>
-      <div className="space-y-4 pb-4">
-        <div className="flex items-start justify-between gap-3">
+      <div className="space-y-16 pb-16">
+        <div className="flex items-start justify-between gap-12">
           <div>
-            <p className="text-lg font-semibold text-ink">{RIDE_STATUS_LABEL[ride.status]}</p>
-            <p className="text-sm text-muted">
+            <p className="text-18 font-semibold text-ink">{RIDE_STATUS_LABEL[ride.status]}</p>
+            <p className="text-14 text-muted">
               {searching
                 ? "نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين"
                 : ride.status === "in_progress"
@@ -116,11 +116,11 @@ export function TrackingSheet({
             {/* شارةُ «رحلة نسائية» — وصفُ الطلب، وتطمينٌ بصريٌّ بأن الشرط
                 الذي طلبته سارٍ فعلاً على هذه الرحلة (المرحلة 10-ج) */}
             {gendered ? (
-              <span className="mb-1.5 inline-block rounded-full border border-brand-brd bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">
+              <span className="mb-6 inline-block rounded-full border border-brand-brd bg-brand-soft px-10 py-4 text-12 font-semibold text-brand">
                 رحلة نسائية
               </span>
             ) : null}
-            <p className="text-xs text-muted">السعر المقدّر</p>
+            <p className="text-12 text-muted">السعر المقدّر</p>
             <p className="font-bold text-ink">
               {formatMoney(ride.estimated_fare, ride.currency)}
             </p>
@@ -133,8 +133,8 @@ export function TrackingSheet({
             هنا لأن هذه هي اللحظة التي يُشعر فيها: دقيقةُ صمتٍ بلا سببٍ تُقرأ
             عطلاً، والسببُ المكتوب يجعلها انتظاراً مفهوماً (المرحلة 10-ج) */}
         {searching && gendered ? (
-          <p className="flex items-start gap-2 rounded-xl border border-line bg-bg px-3 py-2.5 text-xs leading-relaxed text-muted">
-            <Clock className="mt-0.5 size-3.5 shrink-0" />
+          <p className="flex items-start gap-8 rounded-12 border border-line bg-bg px-12 py-10 text-12 leading-relaxed text-muted">
+            <Clock className="mt-2 size-14 shrink-0" />
             نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع
             دائرة البحث قبل أن نعتذر.
           </p>
@@ -149,17 +149,17 @@ export function TrackingSheet({
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3 rounded-xl border border-brand/40 bg-brand/10 p-3"
+            className="flex items-start gap-12 rounded-12 border border-brand-brd bg-brand-soft p-12"
           >
-            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ink" />
+            <ShieldCheck className="mt-2 size-16 shrink-0 text-ink" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-ink">
+              <p className="text-14 font-medium text-ink">
                 شاركي رحلتك مع من تثقين
               </p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              <p className="mt-2 text-12 leading-relaxed text-muted">
                 نرسل اسم الكبتن ولوحة المركبة والوجهة — بلا موقعك اللحظي.
               </p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-8 flex gap-8">
                 <Button
                   size="sm"
                   onClick={async () => {
@@ -171,7 +171,7 @@ export function TrackingSheet({
                     setShareHintClosed(true);
                   }}
                 >
-                  <Share2 className="size-4" />
+                  <Share2 className="size-16" />
                   مشاركة
                 </Button>
                 <Button
@@ -190,15 +190,15 @@ export function TrackingSheet({
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 rounded-2xl border border-line bg-bg p-3"
+            className="flex items-center gap-12 rounded-16 border border-line bg-bg p-12"
           >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand/20 text-lg font-bold text-ink">
+            <div className="flex size-48 shrink-0 items-center justify-center rounded-full bg-brand-soft text-18 font-bold text-ink">
               {ride.driver.name.slice(0, 1)}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-ink">{ride.driver.name}</p>
-              <p className="flex items-center gap-1 text-sm text-muted">
-                <Star className="size-3.5 fill-brand text-brand" />
+              <p className="flex items-center gap-4 text-14 text-muted">
+                <Star className="size-14 fill-brand text-brand" />
                 {Number(ride.driver.rating_avg).toFixed(1)}
                 {ride.driver.vehicle ? (
                   <>
@@ -212,21 +212,21 @@ export function TrackingSheet({
               </p>
             </div>
             {ride.driver.vehicle ? (
-              <div className="shrink-0 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-center">
-                <p className="text-xs text-muted">اللوحة</p>
+              <div className="shrink-0 rounded-8 border border-line bg-surface px-10 py-6 text-center">
+                <p className="text-12 text-muted">اللوحة</p>
                 <p dir="ltr" className="font-bold text-ink">
                   {ride.driver.vehicle.plate_number}
                 </p>
               </div>
             ) : (
-              <Car className="size-6 text-muted" />
+              <Car className="size-24 text-muted" />
             )}
           </motion.div>
         ) : null}
 
         <ErrorNote message={error} />
 
-        <div className="flex gap-2">
+        <div className="flex gap-8">
           <Button
             variant="secondary"
             className="flex-1"
@@ -238,7 +238,7 @@ export function TrackingSheet({
               }
             }}
           >
-            <Share2 className="size-4" />
+            <Share2 className="size-16" />
             {copied ? "نُسخت التفاصيل" : "مشاركة الرحلة"}
           </Button>
 
@@ -249,7 +249,7 @@ export function TrackingSheet({
               onClick={() => setConfirming(true)}
               disabled={busy}
             >
-              <X className="size-4" />
+              <X className="size-16" />
               إلغاء
             </Button>
           ) : null}
@@ -259,9 +259,9 @@ export function TrackingSheet({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="space-y-3 rounded-xl border border-danger/40 bg-danger/5 p-3"
+            className="space-y-12 rounded-12 border border-danger bg-surface-2 p-12"
           >
-            <p className="text-sm text-ink">
+            <p className="text-14 text-ink">
               {afterAccept
                 ? "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء."
                 : "سيتوقف البحث عن كبتن. متأكد؟"}
@@ -271,7 +271,7 @@ export function TrackingSheet({
                 منه. و«ليس أنثى» لا تُعرض إلا على رحلةٍ طُلب فيها جنس — والخلفية
                 ترفضها في غيرها، فعرضُها هناك يعلّم الضغط ثم الارتداد */}
             {afterAccept ? (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-6">
                 {CANCEL_REASONS.filter(
                   (option) => option.code !== "gender_mismatch" || gendered,
                 ).map((option) => (
@@ -280,7 +280,7 @@ export function TrackingSheet({
                     type="button"
                     onClick={() => setReason(option)}
                     className={cn(
-                      "rounded-xl border px-3 py-2.5 text-start text-sm transition",
+                      "rounded-12 border px-12 py-10 text-start text-14 transition",
                       reason?.label === option.label
                         ? "border-brand-brd bg-brand-soft font-semibold text-brand"
                         : "border-line bg-surface text-ink",
@@ -290,7 +290,7 @@ export function TrackingSheet({
                   </button>
                 ))}
                 {reason?.code === "gender_mismatch" ? (
-                  <p className="rounded-xl border border-brand-brd bg-brand-soft p-3 text-xs leading-relaxed text-ink">
+                  <p className="rounded-12 border border-brand-brd bg-brand-soft p-12 text-12 leading-relaxed text-ink">
                     بلا رسوم إلغاء على أيٍّ من الطرفين. ويُسجَّل بلاغٌ على
                     الحساب الآخر، وتكرارُ البلاغات يوسم الحساب للمراجعة.
                   </p>
@@ -298,7 +298,7 @@ export function TrackingSheet({
               </div>
             ) : null}
 
-            <div className="flex gap-2">
+            <div className="flex gap-8">
               <Button variant="danger" className="flex-1" loading={busy} onClick={cancel}>
                 نعم، ألغِ الرحلة
               </Button>
@@ -310,8 +310,8 @@ export function TrackingSheet({
         ) : null}
 
         {ride.status === "arrived" ? (
-          <p className="flex items-center justify-center gap-2 text-sm text-muted">
-            <Phone className="size-4" />
+          <p className="flex items-center justify-center gap-8 text-14 text-muted">
+            <Phone className="size-16" />
             الكبتن ينتظرك في نقطة الانطلاق
           </p>
         ) : null}
@@ -324,14 +324,14 @@ export function TrackingSheet({
  * لا نعرف كم يبقى، وشريطٌ يتقدّم يَعِد بما لا نملكه. */
 function SearchingPulse() {
   return (
-    <div className="flex items-center justify-center py-2">
-      <span className="relative flex size-12 items-center justify-center">
-        <span className="absolute inline-flex size-12 rounded-full bg-brand/40 animate-pulse-ring" />
+    <div className="flex items-center justify-center py-8">
+      <span className="relative flex size-48 items-center justify-center">
+        <span className="absolute inline-flex size-48 rounded-full bg-brand-soft animate-pulse-ring" />
         <span
-          className="absolute inline-flex size-12 rounded-full bg-brand/30 animate-pulse-ring"
+          className="absolute inline-flex size-48 rounded-full bg-brand-soft animate-pulse-ring"
           style={{ animationDelay: "0.6s" }}
         />
-        <Car className="relative size-6 text-ink" />
+        <Car className="relative size-24 text-ink" />
       </span>
     </div>
   );

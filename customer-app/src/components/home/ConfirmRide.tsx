@@ -88,16 +88,16 @@ export function ConfirmRide({
 
   return (
     <Sheet>
-      <div className="space-y-4 pb-4">
+      <div className="space-y-16 pb-16">
         {/* المسار: نقطتان وخطٌّ بينهما — أوضح من سطرين نصّيين */}
-        <div className="flex gap-3">
-          <div className="flex flex-col items-center pt-1.5">
-            <CircleDot className="size-4 text-success" />
-            <span className="my-1 h-6 w-px bg-line" />
-            <MapPin className="size-4 text-danger" />
+        <div className="flex gap-12">
+          <div className="flex flex-col items-center pt-6">
+            <CircleDot className="size-16 text-ok" />
+            <span className="my-4 h-24 w-px bg-line" />
+            <MapPin className="size-16 text-danger" />
           </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <p className="truncate text-sm text-muted">
+          <div className="min-w-0 flex-1 space-y-12">
+            <p className="truncate text-14 text-muted">
               {pickupAddress ?? "نقطة الانطلاق المحددة"}
             </p>
             <button
@@ -110,24 +110,24 @@ export function ConfirmRide({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-8">
           {categories.map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setCategory(option)}
               className={cn(
-                "rounded-xl border p-3 text-start transition",
+                "rounded-12 border p-12 text-start transition",
                 option === category
-                  ? "border-brand bg-brand/10"
-                  : "border-line bg-surface hover:bg-line/30",
+                  ? "border-brand bg-brand-soft"
+                  : "border-line bg-surface hover:bg-surface-2",
               )}
             >
-              <span className="flex items-center gap-2 font-medium text-ink">
-                <Car className="size-4" />
+              <span className="flex items-center gap-8 font-medium text-ink">
+                <Car className="size-16" />
                 {VEHICLE_LABEL[option]}
               </span>
-              <span className="mt-0.5 block text-xs text-muted">
+              <span className="mt-2 block text-12 text-muted">
                 {VEHICLE_HINT[option]}
               </span>
             </button>
@@ -138,8 +138,8 @@ export function ConfirmRide({
             `lib/women.ts` وحده */}
         {women.available ? (
           <div>
-            <p className="mb-2 text-xs text-muted">تفضيل الكبتن</p>
-            <div className="grid grid-cols-3 gap-2">
+            <p className="mb-8 text-12 text-muted">تفضيل الكبتن</p>
+            <div className="grid grid-cols-3 gap-8">
               {(
                 [
                   { value: "female", label: "إناث" },
@@ -152,26 +152,26 @@ export function ConfirmRide({
                   type="button"
                   onClick={() => setPreference(option.value)}
                   className={cn(
-                    "rounded-xl border p-3 text-center text-sm font-medium transition",
+                    "rounded-12 border p-12 text-center text-14 font-medium transition",
                     option.value === preference
                       ? "border-brand bg-brand text-brand-ink"
-                      : "border-line bg-surface text-muted hover:bg-line/30",
+                      : "border-line bg-surface text-muted hover:bg-surface-2",
                   )}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
-            <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+            <p className="mt-8 flex items-start gap-6 text-12 leading-relaxed text-muted">
               {preference === "any" ? null : (
-                <Clock className="mt-0.5 size-3.5 shrink-0" />
+                <Clock className="mt-2 size-14 shrink-0" />
               )}
               {PREFERENCE_NOTE[preference]}
             </p>
           </div>
         ) : null}
 
-        <div className="rounded-xl border border-line bg-bg px-4 py-3">
+        <div className="rounded-12 border border-line bg-bg px-16 py-12">
           <AnimatePresence mode="wait">
             {loading ? (
               <motion.div
@@ -179,9 +179,9 @@ export function ConfirmRide({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2 text-sm text-muted"
+                className="flex items-center gap-8 text-14 text-muted"
               >
-                <RefreshCw className="size-4 animate-spin" />
+                <RefreshCw className="size-16 animate-spin" />
                 نحسب السعر المقدّر…
               </motion.div>
             ) : estimate ? (
@@ -193,15 +193,15 @@ export function ConfirmRide({
                 className="flex items-end justify-between"
               >
                 <div>
-                  <p className="text-xs text-muted">السعر المقدّر</p>
-                  <p className="text-2xl font-bold text-ink">
+                  <p className="text-12 text-muted">السعر المقدّر</p>
+                  <p className="text-24 font-bold text-ink">
                     {formatMoney(estimate.estimated_fare, estimate.currency)}
                   </p>
                   {estimate.minimum_fare_applied ? (
-                    <p className="mt-0.5 text-xs text-muted">طُبِّق الحد الأدنى للأجرة</p>
+                    <p className="mt-2 text-12 text-muted">طُبِّق الحد الأدنى للأجرة</p>
                   ) : null}
                 </div>
-                <div className="text-end text-sm text-muted">
+                <div className="text-end text-14 text-muted">
                   <p>{formatDistance(estimate.distance_km)}</p>
                   <p>{formatDuration(estimate.duration_min)}</p>
                 </div>
@@ -221,7 +221,7 @@ export function ConfirmRide({
           اطلب الرحلة
         </Button>
 
-        <p className="text-center text-xs text-muted">
+        <p className="text-center text-12 text-muted">
           السعر النهائي قد يتغيّر إن اختلف المسار الفعلي كثيراً عن المقدَّر.
         </p>
       </div>

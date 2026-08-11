@@ -122,21 +122,21 @@ export function ProfileScreen() {
 
   return (
     <Screen title="الملف الشخصي" back="/menu">
-      <div className="space-y-5">
-        <div className="card space-y-2 p-4">
-          <p className="text-lg font-semibold text-ink">{user.name}</p>
-          <p dir="ltr" className="text-sm text-muted">
+      <div className="space-y-20">
+        <div className="card space-y-8 p-16">
+          <p className="text-18 font-semibold text-ink">{user.name}</p>
+          <p dir="ltr" className="text-14 text-muted">
             {user.phone}
           </p>
         </div>
 
         {!user.phone_verified ? (
-          <section className="card space-y-3 border-brand/50 p-4">
-            <p className="flex items-center gap-2 font-medium text-ink">
-              <ShieldAlert className="size-5 text-brand" />
+          <section className="card space-y-12 border-brand-brd p-16">
+            <p className="flex items-center gap-8 font-medium text-ink">
+              <ShieldAlert className="size-20 text-brand" />
               رقمك غير مُثبَت
             </p>
-            <p className="text-sm text-muted">
+            <p className="text-14 text-muted">
               أثبت ملكية رقمك لتأمين حسابك — يُطلب مرةً واحدة.
             </p>
 
@@ -158,14 +158,14 @@ export function ProfileScreen() {
           </section>
         ) : null}
 
-        <section className="card space-y-3 p-4">
-          <div className="flex items-start justify-between gap-3">
+        <section className="card space-y-12 p-16">
+          <div className="flex items-start justify-between gap-12">
             <div>
-              <p className="flex items-center gap-2 font-medium text-ink">
-                <BellRing className="size-5" />
+              <p className="flex items-center gap-8 font-medium text-ink">
+                <BellRing className="size-20" />
                 إشعارات العروض
               </p>
-              <p className="mt-0.5 text-sm text-muted">
+              <p className="mt-2 text-14 text-muted">
                 عروضٌ وتخفيضات. إشعارات رحلتك تصلك دائماً.
               </p>
             </div>
@@ -177,23 +177,23 @@ export function ProfileScreen() {
               disabled={marketing === null}
               onClick={() => toggleMarketing(!marketing)}
               className={cn(
-                "relative h-7 w-12 shrink-0 rounded-full transition",
+                "relative h-28 w-48 shrink-0 rounded-full transition",
                 marketing ? "bg-brand" : "bg-line",
               )}
             >
               <span
                 className={cn(
-                  "absolute top-1 size-5 rounded-full bg-white transition-all",
-                  marketing ? "start-6" : "start-1",
+                  "absolute top-4 size-20 rounded-full bg-white transition-all",
+                  marketing ? "start-24" : "start-4",
                 )}
               />
             </button>
           </div>
         </section>
 
-        <section className="card space-y-3 p-4">
+        <section className="card space-y-12 p-16">
           <p className="font-medium text-ink">مظهر التطبيق</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-8">
             {(
               [
                 { value: "system", label: "النظام", icon: SunMoon },
@@ -206,13 +206,13 @@ export function ProfileScreen() {
                 type="button"
                 onClick={() => setChoice(value)}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-sm transition",
+                  "flex flex-col items-center gap-4 rounded-12 border px-8 py-12 text-14 transition",
                   choice === value
-                    ? "border-brand bg-brand/10 text-ink"
-                    : "border-line text-muted hover:bg-line/30",
+                    ? "border-brand bg-brand-soft text-ink"
+                    : "border-line text-muted hover:bg-surface-2",
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-20" />
                 {label}
               </button>
             ))}
@@ -223,15 +223,15 @@ export function ProfileScreen() {
             لو حُكم به لما استطاعت الإعلان لأن الإعلان شرطُ الإتاحة. وهو
             قابلٌ للتعديل: إقرارٌ ذاتيّ لا وثيقة (المرحلة 10-ج) */}
         {enabled ? (
-          <section className="card space-y-3 p-4">
+          <section className="card space-y-12 p-16">
             <div>
               <p className="font-medium text-ink">الجنس</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              <p className="mt-2 text-12 leading-relaxed text-muted">
                 إقرارٌ ذاتيّ — لا نطلب وثيقة، ولا يظهر لأي مستخدم آخر. عليه
                 تُبنى مطابقةُ تفضيلات الرحلات.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-8">
               {(
                 [
                   { value: "female", label: "أنثى" },
@@ -244,12 +244,12 @@ export function ProfileScreen() {
                   disabled={savingPreference}
                   onClick={() => saveGender(option.value)}
                   className={cn(
-                    "rounded-xl border px-2 py-3 text-sm font-medium transition",
+                    "rounded-12 border px-8 py-12 text-14 font-medium transition",
                     // نفسُ حالة «محدَّد» في المنتقيين معاً: تعبئةٌ صلبة كما
                     // في التصميم (`_opts`)، لا صلبةٌ هنا وخافتةٌ هناك
                     user?.gender === option.value
                       ? "border-brand bg-brand text-brand-ink"
-                      : "border-line text-muted hover:bg-line/30",
+                      : "border-line text-muted hover:bg-surface-2",
                   )}
                 >
                   {option.label}
@@ -262,15 +262,15 @@ export function ProfileScreen() {
         {/* التفضيلُ الافتراضي — يُنسخ إلى كل طلبٍ لا تختار فيه شيئاً، وتغييرُه
             يحكم ما يأتي لا رحلةً جاريةً الآن (المرحلة 10-ج) */}
         {available ? (
-          <section className="card space-y-3 p-4">
+          <section className="card space-y-12 p-16">
             <div>
               <p className="font-medium text-ink">من يقودني افتراضياً</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              <p className="mt-2 text-12 leading-relaxed text-muted">
                 يسري على كل طلبٍ لا تختارين فيه غيره — ولك تغييره لرحلةٍ واحدة
                 من شاشة الطلب.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-8">
               {(
                 [
                   { value: "female", label: "إناث" },
@@ -284,10 +284,10 @@ export function ProfileScreen() {
                   disabled={savingPreference}
                   onClick={() => savePreference(option.value)}
                   className={cn(
-                    "rounded-xl border px-2 py-3 text-sm font-medium transition",
+                    "rounded-12 border px-8 py-12 text-14 font-medium transition",
                     defaultPreference === option.value
                       ? "border-brand bg-brand text-brand-ink"
-                      : "border-line text-muted hover:bg-line/30",
+                      : "border-line text-muted hover:bg-surface-2",
                   )}
                 >
                   {option.label}
@@ -301,13 +301,13 @@ export function ProfileScreen() {
             في دولتها وقد أعلنت جنسها. ومن ليست كذلك لا ترى مفتاحاً معطّلاً
             ولا رسالةَ اعتذار (المرحلة 10-ج) */}
         {available ? (
-          <section className="card space-y-3 p-4">
-            <div className="flex items-start justify-between gap-4">
+          <section className="card space-y-12 p-16">
+            <div className="flex items-start justify-between gap-16">
               <div>
                 <p className="font-medium text-ink">السِمة الوردية</p>
                 {/* السببُ مكتوبٌ لأنه ليس ذوقاً: القرارُ عن المكان الذي أنتِ
                     فيه لا عن جمال اللون */}
-                <p className="mt-1 text-xs leading-relaxed text-muted">
+                <p className="mt-4 text-12 leading-relaxed text-muted">
                   هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها
                   من حولك.
                 </p>
@@ -319,14 +319,14 @@ export function ProfileScreen() {
                 aria-label="السِمة الوردية"
                 onClick={() => setPink(!pink)}
                 className={cn(
-                  "relative h-7 w-12 flex-none rounded-full transition",
+                  "relative h-28 w-48 flex-none rounded-full transition",
                   pink ? "bg-brand" : "bg-line",
                 )}
               >
                 <span
                   className={cn(
-                    "absolute top-1 size-5 rounded-full bg-surface transition-all",
-                    pink ? "start-6" : "start-1",
+                    "absolute top-4 size-20 rounded-full bg-surface transition-all",
+                    pink ? "start-24" : "start-4",
                   )}
                 />
               </button>
@@ -345,7 +345,7 @@ export function ProfileScreen() {
             navigate("/login", { replace: true });
           }}
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-16" />
           تسجيل الخروج
         </Button>
       </div>

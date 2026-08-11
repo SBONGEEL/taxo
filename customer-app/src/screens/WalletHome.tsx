@@ -60,15 +60,18 @@ export function WalletScreen() {
 
   return (
     <Screen title="محفظتي" back="/">
-      <div className="space-y-5">
-        <div className="card bg-gradient-to-bl from-brand/25 to-transparent p-5 text-center">
-          <p className="text-sm text-muted">الرصيد المتاح</p>
-          <p className="mt-1 text-4xl font-bold text-ink">
+      <div className="space-y-20">
+        {/* كان تدرّجاً بشفافيةٍ ٢٥٪ على `--brand`؛ ولوحةُ التصميم hex لا
+            تحتمل الشفافية (`index.css`)، فالتدرّجُ الآن من الرمز **الخافت**
+            وهو ما وُجد له. المرحلة 12-أ */}
+        <div className="card bg-gradient-to-bl from-brand-soft to-transparent p-20 text-center">
+          <p className="text-14 text-muted">الرصيد المتاح</p>
+          <p className="mt-4 text-38 font-bold text-ink">
             {formatMoney(wallet?.balance, wallet?.currency)}
           </p>
           {wallet?.frozen ? (
-            <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-danger">
-              <Snowflake className="size-4" />
+            <p className="mt-8 flex items-center justify-center gap-6 text-14 text-danger">
+              <Snowflake className="size-16" />
               محفظتك مجمّدة مؤقتاً — راجع الدعم
             </p>
           ) : null}
@@ -77,9 +80,9 @@ export function WalletScreen() {
         <ErrorNote message={error} />
 
         {walletEnabled ? (
-          <div className="flex gap-2">
+          <div className="flex gap-8">
             <Button className="flex-1" onClick={() => navigate("/wallet/topup")}>
-              <Plus className="size-4" />
+              <Plus className="size-16" />
               شحن الرصيد
             </Button>
             {transferEnabled ? (
@@ -88,27 +91,27 @@ export function WalletScreen() {
                 className="flex-1"
                 onClick={() => navigate("/wallet/transfer")}
               >
-                <ArrowUpRight className="size-4" />
+                <ArrowUpRight className="size-16" />
                 تحويل
               </Button>
             ) : null}
           </div>
         ) : (
-          <p className="rounded-xl border border-line bg-surface p-3 text-sm text-muted">
+          <p className="rounded-12 border border-line bg-surface p-12 text-14 text-muted">
             المحفظة غير مفعّلة في بلدك حالياً — رصيدك محفوظ ويظهر هنا.
           </p>
         )}
 
         {topups.length > 0 ? (
-          <section className="space-y-2">
+          <section className="space-y-8">
             <h2 className="label">طلبات شحن قيد المراجعة</h2>
             {topups.map((request) => (
-              <div key={request.id} className="card flex items-center justify-between p-3">
+              <div key={request.id} className="card flex items-center justify-between p-12">
                 <div>
                   <p className="font-medium text-ink">
                     {formatMoney(request.amount, request.currency)}
                   </p>
-                  <p className="text-xs text-muted">{formatDateTime(request.created_at)}</p>
+                  <p className="text-12 text-muted">{formatDateTime(request.created_at)}</p>
                 </div>
                 <Badge tone="warning">{TOPUP_STATUS_LABEL[request.status]}</Badge>
               </div>
@@ -116,40 +119,40 @@ export function WalletScreen() {
           </section>
         ) : null}
 
-        <section className="space-y-2">
+        <section className="space-y-8">
           <h2 className="label">سجل العمليات</h2>
           {entries.length === 0 ? (
             <EmptyState title="لا عمليات بعد" hint="ستظهر هنا كل حركة على رصيدك." />
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-8">
               {entries.map((entry) => {
                 const credit = !entry.amount.trimStart().startsWith("-");
                 return (
-                  <li key={entry.id} className="card flex items-center gap-3 p-3">
+                  <li key={entry.id} className="card flex items-center gap-12 p-12">
                     <span
                       className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
-                        credit ? "bg-success/15 text-success" : "bg-line/60 text-muted"
+                        credit ? "bg-surface-2 text-ok" : "bg-surface-2 text-muted"
                       }`}
                     >
                       {credit ? (
-                        <ArrowDownLeft className="size-4" />
+                        <ArrowDownLeft className="size-16" />
                       ) : (
-                        <ArrowUpRight className="size-4" />
+                        <ArrowUpRight className="size-16" />
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-ink">
                         {TRANSACTION_LABEL[entry.type]}
                       </p>
-                      <p className="truncate text-xs text-muted">
+                      <p className="truncate text-12 text-muted">
                         {entry.reference ?? formatDateTime(entry.created_at)}
                       </p>
                     </div>
                     <div className="text-end">
-                      <p className={credit ? "font-semibold text-success" : "font-semibold text-ink"}>
+                      <p className={credit ? "font-semibold text-ok" : "font-semibold text-ink"}>
                         {formatMoney(entry.amount, entry.currency)}
                       </p>
-                      <p className="text-xs text-muted">
+                      <p className="text-12 text-muted">
                         الرصيد {formatMoney(entry.balance_after)}
                       </p>
                     </div>

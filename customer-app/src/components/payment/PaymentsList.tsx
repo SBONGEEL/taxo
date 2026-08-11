@@ -19,12 +19,12 @@ const TONE = {
 
 export function PaymentsList({ payments }: { payments: Payment[] }) {
   return (
-    <section className="space-y-2">
+    <section className="space-y-8">
       <h2 className="label">دفعات هذه الرحلة</h2>
-      <ul className="space-y-2">
+      <ul className="space-y-8">
         {payments.map((payment) => (
-          <li key={payment.id} className="card p-3">
-            <div className="flex items-center justify-between gap-2">
+          <li key={payment.id} className="card p-12">
+            <div className="flex items-center justify-between gap-8">
               <span className="font-medium text-ink">
                 {PAYMENT_METHOD_LABEL[payment.method]}
               </span>
@@ -32,7 +32,7 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
                 {formatMoney(payment.amount, payment.currency)}
               </span>
             </div>
-            <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted">
+            <div className="mt-6 flex items-center justify-between gap-8 text-12 text-muted">
               <Badge tone={TONE[payment.status]}>
                 {PAYMENT_STATUS_LABEL[payment.status]}
               </Badge>
@@ -40,7 +40,7 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
             </div>
 
             {payment.cliq_transfer_reference ? (
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-8 text-12 text-muted">
                 مرجع الحوالة:{" "}
                 <span dir="ltr" className="text-ink">
                   {payment.cliq_transfer_reference}
@@ -49,7 +49,7 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
             ) : null}
 
             {payment.status === "disputed" && payment.dispute_reason ? (
-              <p className="mt-2 text-xs text-danger">
+              <p className="mt-8 text-12 text-danger">
                 نزاع: {payment.dispute_reason} — تفصل فيه الإدارة.
               </p>
             ) : null}

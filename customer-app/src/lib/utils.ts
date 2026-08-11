@@ -1,5 +1,16 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// prettier-ignore
+const FONT_SIZES = [
+  "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5",
+  "14", "14.5", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24",
+  "25", "26", "30", "32", "34", "38", "44",
+];
+
+const twMerge = extendTailwindMerge({
+  override: { classGroups: { "font-size": [{ text: FONT_SIZES }] } },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

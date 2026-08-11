@@ -45,7 +45,7 @@ export function QrCode({
   if (!dataUrl) {
     return (
       <div
-        className={cn("animate-pulse rounded-xl bg-line", className)}
+        className={cn("animate-pulse rounded-12 bg-line", className)}
         style={{ width: size, height: size }}
       />
     );
@@ -57,7 +57,7 @@ export function QrCode({
       alt="رمز الدفع"
       width={size}
       height={size}
-      className={cn("rounded-xl bg-white p-2", className)}
+      className={cn("rounded-12 bg-white p-8", className)}
     />
   );
 }

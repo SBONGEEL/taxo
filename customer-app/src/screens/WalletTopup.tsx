@@ -105,11 +105,11 @@ export function WalletTopupScreen() {
 
   return (
     <Screen title="شحن الرصيد" back="/wallet">
-      <div className="space-y-5">
+      <div className="space-y-20">
         {cliq ? (
-          <section className="card space-y-4 p-4">
+          <section className="card space-y-16 p-16">
             <h2 className="font-semibold text-ink">حوّل عبر كليك</h2>
-            <p className="text-sm text-muted">
+            <p className="text-14 text-muted">
               امسح الرمز من تطبيق بنكك بمبلغ {formatMoney(cliq.amount, cliq.currency)}.
             </p>
             {cliq.qr_payload ? (
@@ -149,17 +149,17 @@ export function WalletTopupScreen() {
                 }
                 suffix={currency}
               />
-              <div className="mt-2 flex gap-2">
+              <div className="mt-8 flex gap-8">
                 {QUICK_AMOUNTS.map((value) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => setAmount(value)}
                     className={cn(
-                      "flex-1 rounded-lg border px-2 py-2 text-sm transition",
+                      "flex-1 rounded-8 border px-8 py-8 text-14 transition",
                       amount === value
-                        ? "border-brand bg-brand/10 text-ink"
-                        : "border-line text-muted hover:bg-line/30",
+                        ? "border-brand bg-brand-soft text-ink"
+                        : "border-line text-muted hover:bg-surface-2",
                     )}
                   >
                     {value}
@@ -168,7 +168,7 @@ export function WalletTopupScreen() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-8">
               <p className="label">طريقة الشحن</p>
 
               {cliqEnabled ? (
@@ -250,14 +250,14 @@ function ChannelOption({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-start transition",
-        active ? "border-brand bg-brand/10" : "border-line bg-surface hover:bg-line/30",
+        "flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
+        active ? "border-brand bg-brand-soft" : "border-line bg-surface hover:bg-surface-2",
       )}
     >
-      <Icon className="size-5 text-ink" />
+      <Icon className="size-20 text-ink" />
       <span>
         <span className="block font-medium text-ink">{title}</span>
-        <span className="block text-xs text-muted">{hint}</span>
+        <span className="block text-12 text-muted">{hint}</span>
       </span>
     </button>
   );

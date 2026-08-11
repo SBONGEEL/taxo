@@ -47,7 +47,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", dark);
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", dark ? "#0b0f14" : "#f7f8fa");
+      // قيمتا `--bg` في `DESIGN.md` §1.1 — شريطُ النظام يجب أن يكون خلفيةَ
+      // الشاشة نفسها، ولونٌ من لوحةٍ سابقة يترك خطاً غريباً أعلى الهاتف
+      ?.setAttribute("content", dark ? "#14181d" : "#f2f0eb");
   }, [dark]);
 
   const setChoice = useCallback((next: ThemeChoice) => {

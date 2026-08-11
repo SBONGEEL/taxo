@@ -54,10 +54,10 @@ export function RatingScreen() {
 
   return (
     <Screen title="تقييم الرحلة" back="/">
-      <div className="space-y-6">
+      <div className="space-y-24">
         <p className="text-center text-muted">كيف كانت رحلتك مع الكبتن؟</p>
 
-        <div className="flex justify-center gap-2" role="radiogroup" aria-label="عدد النجوم">
+        <div className="flex justify-center gap-8" role="radiogroup" aria-label="عدد النجوم">
           {[1, 2, 3, 4, 5].map((value) => (
             <motion.button
               key={value}
@@ -68,11 +68,11 @@ export function RatingScreen() {
               whileTap={{ scale: 0.88 }}
               disabled={done}
               onClick={() => setStars(value)}
-              className="p-1 disabled:opacity-70"
+              className="p-4 disabled:opacity-70"
             >
               <Star
                 className={cn(
-                  "size-9 transition",
+                  "size-36 transition",
                   value <= stars ? "fill-brand text-brand" : "text-line",
                 )}
               />
@@ -86,7 +86,7 @@ export function RatingScreen() {
           </label>
           <textarea
             id="comment"
-            className="field min-h-24 resize-none"
+            className="field min-h-82 resize-none"
             maxLength={500}
             value={comment}
             disabled={done}

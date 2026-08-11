@@ -22,11 +22,11 @@ export function ErrorNote({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-2 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2.5 text-sm text-danger",
+        "flex items-start gap-8 rounded-12 border border-danger bg-surface-2 px-12 py-10 text-14 text-danger",
         className,
       )}
     >
-      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+      <AlertTriangle className="mt-2 size-16 shrink-0" />
       <span>{message}</span>
     </div>
   );
@@ -43,11 +43,11 @@ export function SuccessNote({
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-xl border border-success/40 bg-success/10 px-3 py-2.5 text-sm text-success",
+        "flex items-start gap-8 rounded-12 border border-ok bg-surface-2 px-12 py-10 text-14 text-ok",
         className,
       )}
     >
-      <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+      <CheckCircle2 className="mt-2 size-16 shrink-0" />
       <span>{message}</span>
     </div>
   );
@@ -55,19 +55,19 @@ export function SuccessNote({
 
 export function Spinner({ label }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-8 text-muted">
-      <Loader2 className="size-5 animate-spin" />
-      {label ? <span className="text-sm">{label}</span> : null}
+    <div className="flex items-center justify-center gap-8 py-32 text-muted">
+      <Loader2 className="size-20 animate-spin" />
+      {label ? <span className="text-14">{label}</span> : null}
     </div>
   );
 }
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 py-12 text-center">
-      <Inbox className="size-8 text-muted" />
+    <div className="flex flex-col items-center gap-8 py-48 text-center">
+      <Inbox className="size-32 text-muted" />
       <p className="font-medium text-ink">{title}</p>
-      {hint ? <p className="text-sm text-muted">{hint}</p> : null}
+      {hint ? <p className="text-14 text-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -80,13 +80,13 @@ export function Badge({
   tone?: "neutral" | "success" | "warning" | "danger";
 }) {
   const tones = {
-    neutral: "bg-line/60 text-muted",
-    success: "bg-success/15 text-success",
-    warning: "bg-brand/20 text-ink",
-    danger: "bg-danger/15 text-danger",
+    neutral: "bg-surface-2 text-muted",
+    success: "bg-surface-2 text-ok",
+    warning: "bg-brand-soft text-ink",
+    danger: "bg-surface-2 text-danger",
   } as const;
   return (
-    <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>
+    <span className={cn("rounded-full px-10 py-4 text-12 font-medium", tones[tone])}>
       {children}
     </span>
   );

@@ -41,29 +41,29 @@ export function CardChoice({
   if (cards === null) return null;
 
   return (
-    <section className="card space-y-3 p-4">
+    <section className="card space-y-12 p-16">
       <h2 className="font-semibold text-ink">الدفع بالبطاقة</h2>
 
       {cards.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="space-y-8">
           {cards.map((card) => (
             <li key={card.id}>
               <button
                 type="button"
                 onClick={() => setSelected(card.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-start transition",
+                  "flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
                   selected === card.id
-                    ? "border-brand bg-brand/10"
-                    : "border-line hover:bg-line/30",
+                    ? "border-brand bg-brand-soft"
+                    : "border-line hover:bg-surface-2",
                 )}
               >
-                <CreditCard className="size-5 text-ink" />
+                <CreditCard className="size-20 text-ink" />
                 <span className="flex-1">
                   <span className="block font-medium text-ink">
                     {card.brand ?? "بطاقة"} •••• {card.last4}
                   </span>
-                  <span className="block text-xs text-muted">
+                  <span className="block text-12 text-muted">
                     تنتهي {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
                   </span>
                 </span>
@@ -75,13 +75,13 @@ export function CardChoice({
               type="button"
               onClick={() => setSelected(null)}
               className={cn(
-                "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-start transition",
+                "flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
                 selected === null
-                  ? "border-brand bg-brand/10"
-                  : "border-line hover:bg-line/30",
+                  ? "border-brand bg-brand-soft"
+                  : "border-line hover:bg-surface-2",
               )}
             >
-              <Plus className="size-5 text-ink" />
+              <Plus className="size-20 text-ink" />
               <span className="font-medium text-ink">بطاقة جديدة</span>
             </button>
           </li>
@@ -89,10 +89,11 @@ export function CardChoice({
       ) : null}
 
       {selected === null ? (
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <label className="flex items-center gap-8 text-14 text-muted">
           <input
             type="checkbox"
-            className="size-4 accent-[rgb(var(--brand))]"
+            // اللوحة hex الآن لا ثلاثيّاتِ rgb (المرحلة 12-أ)
+            className="size-16 accent-[var(--brand)]"
             checked={save}
             onChange={(event) => setSave(event.target.checked)}
           />
@@ -100,7 +101,7 @@ export function CardChoice({
         </label>
       ) : null}
 
-      <div className="flex gap-2">
+      <div className="flex gap-8">
         <Button
           className="flex-1"
           loading={busy}

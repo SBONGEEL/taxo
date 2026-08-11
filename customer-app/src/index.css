@@ -2,59 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
-/* لوحة الألوان متغيّراتُ CSS: النهاري افتراضي، والليلي يبدّل القيم نفسها —
-   فلا يحمل أيُّ مكوّن شرطاً بين الوضعين (SPEC القسم 2). */
+/* لوحة الألوان من `design/DESIGN.md` §1.1 بقيمها الست عشرية كما هي
+   (المرحلة 12-أ). كانت ثلاثيّاتِ rgb بأسماءٍ أخرى منذ المرحلة 9، فوُحّدت مع
+   تطبيق الكبتن واللوحة.
+
+   **والنهاري هو الافتراضي هنا** — `:root` نهاري و`.dark` يبدّل القيم نفسها —
+   لأن هذا التطبيق يتبع تفضيل النظام منذ يومه الأول (خريطةٌ تُستعمل ليلاً
+   ونهاراً)، بينما تطبيق الكبتن ليليٌّ ثابت. سلوكٌ قائمٌ لم يمسّه الترحيل.
+
+   **ولا صيغة `rgb` مفكوكة**: التصميم يعرّف الألوان hex، وتفكيكُها يفتح باب
+   انحرافها عن المصدر. وثمنُه أن `bg-x/40` لا تعمل — ولذلك للسِمة رمزٌ خافت
+   (`--brand-soft`) بدل شفافيةٍ على `--brand`. */
 @layer base {
   :root {
-    --bg: 247 248 250;
-    --surface: 255 255 255;
-    --line: 226 232 240;
-    --ink: 15 23 42;
-    --muted: 100 116 139;
-    --brand: 250 204 21;
-    --brand-ink: 26 26 26;
-    /* خلفيةٌ خافتةٌ تحمل نصاً ملوّناً، وحدُّها — بلا سِمةٍ ورديةٍ هما السطحُ
-       والحدّ نفساهما (لا `--sur2` في لوحة المرحلة 9) */
-    --brand-soft: 255 255 255;
-    --brand-brd: 226 232 240;
-    --danger: 220 38 38;
-    --success: 22 163 74;
+    --bg: #f2f0eb;
+    --sur: #ffffff;
+    --sur2: #faf9f6;
+    --brd: #ddd8cf;
+    --tx: #171b20;
+    --mut: #6e7681;
+    --inv: #f2f0eb;
+    --acc: #171b20;
+    --ok: #1a7f4e;
+    --warn: #9a6b00;
+    --dng: #c73e36;
+    --sa: #e6e3db;
+    --sb: #ece9e1;
+    --dim: rgba(20, 24, 29, 0.4);
+    --brand: #171b20;
+    --brand-ink: #f2f0eb;
+    --brand-soft: #faf9f6;
+    --brand-brd: #ddd8cf;
   }
 
   .dark {
-    --bg: 11 15 20;
-    --surface: 22 28 36;
-    --line: 44 54 66;
-    --ink: 241 245 249;
-    --muted: 148 163 184;
-    --brand: 250 204 21;
-    --brand-ink: 26 26 26;
-    --brand-soft: 22 28 36;
-    --brand-brd: 44 54 66;
-    --danger: 248 113 113;
-    --success: 74 222 128;
+    --bg: #14181d;
+    --sur: #0d1014;
+    --sur2: #1a2027;
+    --brd: #2a313a;
+    --tx: #e6edf3;
+    --mut: #8b949e;
+    --inv: #0d1014;
+    --acc: #e6edf3;
+    --ok: #3fb970;
+    --warn: #d9a62e;
+    --dng: #e5534b;
+    --sa: #1c2128;
+    --sb: #20262e;
+    --dim: rgba(4, 6, 8, 0.6);
+    --brand: #e6edf3;
+    --brand-ink: #0d1014;
+    --brand-soft: #1a2027;
+    --brand-brd: #2a313a;
   }
 
-  /* السِمة الوردية (`design/DESIGN.md` §1.1-ب، المرحلة 10-ج).
-
-     في هذا التطبيق `--brand` موجودٌ أصلاً ومنه كلُّ لون الواجهة، فالسِمةُ
-     **تبديلُ رمزٍ واحد** لا لوحةٌ ثانية: الزرُّ والحقلُ النشط وشارةُ الحالة
-     والعلامةُ كلُّها مكتوبةٌ به منذ اليوم الأول، فتتحول معاً بلا لمس مكوّن.
-
-     والنصُّ فوق التعبئة يقلب اتجاهه بين الوضعين: الورديُّ الفاتح في الليلي
-     يحمل نصاً فحمياً، والغامقُ في النهاري يحمل نصاً أبيض. */
-  .pink {
-    --brand: 255 111 174;
-    --brand-ink: 20 24 29;
-    --brand-soft: 42 26 34;
-    --brand-brd: 77 43 57;
+  /* السِمة الوردية (`DESIGN.md` §1.1-ب): أربعةُ رموزٍ تتبدّل بصنفٍ واحد على
+     الجذر، فلا يحمل أيُّ مكوّن شرطاً بين السِمتين. والنصُّ فوق التعبئة يقلب
+     اتجاهه بين الوضعين لأن الورديَّ الفاتح لا يحمل نصاً أبيض. */
+  .pink.dark {
+    --brand: #ff6fae;
+    --brand-ink: #14181d;
+    --brand-soft: #2a1a22;
+    --brand-brd: #4d2b39;
   }
 
   .pink:not(.dark) {
-    --brand: 216 27 115;
-    --brand-ink: 255 255 255;
-    --brand-soft: 253 234 242;
-    --brand-brd: 242 183 209;
+    --brand: #d81b73;
+    --brand-ink: #ffffff;
+    --brand-soft: #fdeaf2;
+    --brand-brd: #f2b7d1;
   }
 
   html,
@@ -64,7 +80,8 @@
   }
 
   body {
-    @apply bg-bg text-ink antialiased;
+    /* مقاس الجذر 14px (DESIGN.md §1.2) — كل مقاسات التصميم منسوبةٌ إليه */
+    @apply bg-bg text-14 text-ink antialiased;
     /* الأرقام العربية-الهندية تختلف عن أرقام لوحات المفاتيح وأرقام المراجع؛
        التطبيق مالي فيلزمه شكلٌ واحد للرقم في كل شاشة */
     font-variant-numeric: tabular-nums;
@@ -83,22 +100,22 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-line bg-surface;
+    @apply rounded-16 border border-line bg-surface;
   }
 
   .field {
-    @apply w-full rounded-xl border border-line bg-surface px-4 py-3 text-base
+    @apply w-full rounded-13 border border-line bg-surface px-16 py-12 text-16
       text-ink outline-none transition placeholder:text-muted
-      focus:border-brand focus:ring-2 focus:ring-brand/40 disabled:opacity-60;
+      focus:border-brand disabled:opacity-60;
   }
 
   .label {
-    @apply mb-1.5 block text-sm font-medium text-muted;
+    @apply mb-6 block text-14 font-medium text-muted;
   }
 
   /* شبكة نقاطٍ خفيفة خلف الخريطة قبل تحميلها أو حين لا توكن Mapbox */
   .map-placeholder {
-    background-image: radial-gradient(rgb(var(--line)) 1px, transparent 1px);
+    background-image: radial-gradient(var(--brd) 1px, transparent 1px);
     background-size: 18px 18px;
   }
 }

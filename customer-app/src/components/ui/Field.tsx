@@ -29,30 +29,30 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
 
         <div className="relative flex items-center">
           {prefix ? (
-            <span className="pointer-events-none absolute start-3 text-muted">{prefix}</span>
+            <span className="pointer-events-none absolute start-12 text-muted">{prefix}</span>
           ) : null}
           <input
             ref={ref}
             id={inputId}
             className={cn(
               "field",
-              prefix && "ps-10",
-              suffix && "pe-16",
-              error && "border-danger focus:border-danger focus:ring-danger/30",
+              prefix && "ps-40",
+              suffix && "pe-64",
+              error && "border-danger focus:border-danger focus:ring-danger",
               className,
             )}
             aria-invalid={error ? true : undefined}
             {...props}
           />
           {suffix ? (
-            <span className="absolute end-3 text-sm text-muted">{suffix}</span>
+            <span className="absolute end-12 text-14 text-muted">{suffix}</span>
           ) : null}
         </div>
 
         {error ? (
-          <p className="mt-1.5 text-sm text-danger">{error}</p>
+          <p className="mt-6 text-14 text-danger">{error}</p>
         ) : hint ? (
-          <p className="mt-1.5 text-sm text-muted">{hint}</p>
+          <p className="mt-6 text-14 text-muted">{hint}</p>
         ) : null}
       </div>
     );

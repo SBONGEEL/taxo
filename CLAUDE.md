@@ -248,16 +248,28 @@ country-wide one would mean streaming everyone's position into an open connectio
 question that is only ever "where are they now".
 
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
-That port is not interchangeable: it is in `settings.cors_origins` and `settings.card_return_url`
-points at `/payments/card/return` on it. Its `node_modules` lives in a named volume because the
-host is Windows and the container is alpine. Frontend commands run on the host (node 22+):
+The **container** port is not interchangeable: it is in `settings.cors_origins` and
+`settings.card_return_url` points at `/payments/card/return` on it. Only the host publish is
+overridable, via `CUSTOMER_APP_PORT` (default 5173, and **5176** is the one documented fallback in
+`cors_origins`) for machines where something else already holds 5173. Its `node_modules` lives in a
+named volume because the host is Windows and the container is alpine. Frontend commands run on the
+host (node 22+):
 
 ```bash
 cd customer-app && npm install
-npm run build     # full type-check (tsc -b) then a production build — the gate before committing
+npm run build     # check:scale + check:enums, then tsc -b, then a production build
 npm run lint      # tsc --noEmit alone
 npm run dev       # if you'd rather not use the container
 ```
+
+**Stage 12-أ migrated it onto the design system**, so all three frontends now share one
+`tailwind.config.js` (a verbatim copy of `DESIGN.md` §6), one palette, and both guards — and the
+`cn` in each carries the pixel font-size scale, without which tailwind-merge silently drops classes.
+Two consequences are worth knowing before touching a rider screen. **The yellow is gone**: §1.1 has
+no brand colour, `--brand` defaults to `--tx`, and the app is charcoal/white unless the pink theme
+is on — that is what the design system says, not a regression. And **colour tokens are hex in a CSS
+variable, so `bg-brand/40` no longer works at all**; where the old palette used alpha, the system
+has `--brand-soft` / `--sur2` / `--sa`, and reaching for opacity is a sign you want one of those.
 
 There is no frontend test runner: stage 9 added no business logic to test — pricing, balances and
 state transitions all stay in the backend, and the app displays what the API returns. `npm run

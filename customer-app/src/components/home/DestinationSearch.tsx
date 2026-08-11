@@ -72,18 +72,18 @@ export function DestinationSearch({
 
   return (
     <DrawerSheet open={open} onOpenChange={onOpenChange} title="إلى أين؟">
-      <div className="space-y-4 pb-6">
+      <div className="space-y-16 pb-24">
         <div className="relative">
-          <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto size-5 text-muted" />
+          <Search className="pointer-events-none absolute inset-y-0 start-12 my-auto size-20 text-muted" />
           <input
             autoFocus
-            className="field ps-11"
+            className="field ps-44"
             placeholder="ابحث عن عنوان أو معلم"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           {searching ? (
-            <Loader2 className="absolute inset-y-0 end-3 my-auto size-5 animate-spin text-muted" />
+            <Loader2 className="absolute inset-y-0 end-12 my-auto size-20 animate-spin text-muted" />
           ) : null}
         </div>
 
@@ -93,13 +93,13 @@ export function DestinationSearch({
             onOpenChange(false);
             onPickOnMap();
           }}
-          className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-start transition hover:bg-line/30"
+          className="flex w-full items-center gap-12 rounded-12 border border-line bg-surface px-16 py-12 text-start transition hover:bg-surface-2"
         >
-          <Navigation className="size-5 text-brand" />
+          <Navigation className="size-20 text-brand" />
           <span className="font-medium text-ink">حدّدها على الخريطة بالدبوس</span>
         </button>
 
-        <ul className="space-y-1">
+        <ul className="space-y-4">
           {results.map((place) => (
             <li key={place.id}>
               <button
@@ -108,13 +108,13 @@ export function DestinationSearch({
                   onPick(place);
                   onOpenChange(false);
                 }}
-                className="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-start transition hover:bg-line/30"
+                className="flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
               >
-                <MapPin className="mt-0.5 size-5 shrink-0 text-muted" />
+                <MapPin className="mt-2 size-20 shrink-0 text-muted" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-ink">{place.name}</span>
                   {place.address ? (
-                    <span className="block truncate text-sm text-muted">{place.address}</span>
+                    <span className="block truncate text-14 text-muted">{place.address}</span>
                   ) : null}
                 </span>
               </button>
@@ -130,7 +130,7 @@ export function DestinationSearch({
         ) : null}
 
         {!token ? (
-          <p className="text-sm text-muted">
+          <p className="text-14 text-muted">
             البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة.
           </p>
         ) : null}

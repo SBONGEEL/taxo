@@ -132,19 +132,19 @@ export function PaymentScreen() {
 
   return (
     <Screen title="الدفع" back="/">
-      <div className="space-y-5">
-        <div className="card p-4 text-center">
-          <p className="text-sm text-muted">
+      <div className="space-y-20">
+        <div className="card p-16 text-center">
+          <p className="text-14 text-muted">
             {settled ? "إجمالي الأجرة" : "المتبقي على هذه الرحلة"}
           </p>
-          <p className="mt-1 text-3xl font-bold text-ink">
+          <p className="mt-4 text-30 font-bold text-ink">
             {formatMoney(
               settled ? (state?.final_fare ?? null) : (state?.outstanding ?? null),
               state?.currency,
             )}
           </p>
           {ride?.actual_distance_km ? (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-4 text-12 text-muted">
               حُسبت على المسافة الفعلية المسجَّلة للرحلة
             </p>
           ) : null}
@@ -160,7 +160,7 @@ export function PaymentScreen() {
               key="methods"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-2"
+              className="space-y-8"
             >
               <p className="label">اختر طريقة الدفع</p>
               {available.map(({ method, icon: Icon, hint }) => (
@@ -172,19 +172,19 @@ export function PaymentScreen() {
                     method === "card" ? setChoosingCard(true) : pay(method)
                   }
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 text-start transition",
-                    "hover:bg-line/30 disabled:opacity-60",
+                    "flex w-full items-center gap-12 rounded-12 border border-line bg-surface px-16 py-14 text-start transition",
+                    "hover:bg-surface-2 disabled:opacity-60",
                   )}
                 >
-                  <Icon className="size-5 text-ink" />
+                  <Icon className="size-20 text-ink" />
                   <span className="flex-1">
                     <span className="block font-medium text-ink">
                       {PAYMENT_METHOD_LABEL[method]}
                     </span>
-                    <span className="block text-xs text-muted">{hint}</span>
+                    <span className="block text-12 text-muted">{hint}</span>
                   </span>
                   {busy === method ? (
-                    <span className="text-sm text-muted">لحظة…</span>
+                    <span className="text-14 text-muted">لحظة…</span>
                   ) : null}
                 </button>
               ))}

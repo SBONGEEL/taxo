@@ -37,7 +37,7 @@ export function PhoneInput({
 }) {
   const { dialCode, nationalLength } = usePhoneCountry(country);
   return (
-    <div className="space-y-3">
+    <div className="space-y-12">
       {showCountry ? (
         <div>
           <label className="label" htmlFor="country">

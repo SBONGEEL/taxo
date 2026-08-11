@@ -48,7 +48,7 @@ export function CardsScreen() {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-12">
           <ErrorNote message={error} />
 
           {cards.length === 0 ? (
@@ -57,15 +57,15 @@ export function CardsScreen() {
               hint="عند الدفع بالبطاقة يمكنك اختيار حفظها للمرة القادمة."
             />
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-8">
               {cards.map((card) => (
-                <li key={card.id} className="card flex items-center gap-3 p-4">
-                  <CreditCard className="size-6 text-ink" />
+                <li key={card.id} className="card flex items-center gap-12 p-16">
+                  <CreditCard className="size-24 text-ink" />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-ink">
                       {card.brand ?? "بطاقة"} •••• {card.last4}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-12 text-muted">
                       تنتهي {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
                     </p>
                   </div>
@@ -76,20 +76,20 @@ export function CardsScreen() {
                     <button
                       type="button"
                       onClick={() => act(setDefaultCard(card.id))}
-                      className="rounded-lg p-2 text-muted transition hover:bg-line/50 hover:text-ink"
+                      className="rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-ink"
                       aria-label="اجعلها الافتراضية"
                     >
-                      <Star className="size-4" />
+                      <Star className="size-16" />
                     </button>
                   )}
 
                   <button
                     type="button"
                     onClick={() => act(deleteSavedCard(card.id))}
-                    className="rounded-lg p-2 text-muted transition hover:bg-danger/10 hover:text-danger"
+                    className="rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-danger"
                     aria-label="حذف البطاقة"
                   >
-                    <Trash2 className="size-4" />
+                    <Trash2 className="size-16" />
                   </button>
                 </li>
               ))}

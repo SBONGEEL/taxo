@@ -66,13 +66,13 @@ export function RideDetailsScreen() {
 
   return (
     <Screen title="تفاصيل الرحلة">
-      <div className="space-y-5">
-        <div className="card space-y-3 p-4">
+      <div className="space-y-20">
+        <div className="card space-y-12 p-16">
           <div className="flex items-center justify-between">
             <Badge tone={ride.status === "completed" ? "success" : "neutral"}>
               {RIDE_STATUS_LABEL[ride.status]}
             </Badge>
-            <span className="text-xs text-muted">{formatDateTime(ride.created_at)}</span>
+            <span className="text-12 text-muted">{formatDateTime(ride.created_at)}</span>
           </div>
 
           <Row label="من" value={ride.pickup_address ?? "نقطة على الخريطة"} />
@@ -91,7 +91,7 @@ export function RideDetailsScreen() {
           ) : null}
         </div>
 
-        <div className="card space-y-2 p-4">
+        <div className="card space-y-8 p-16">
           <Row
             label="السعر المقدّر"
             value={formatMoney(ride.estimated_fare, ride.currency)}
@@ -112,7 +112,7 @@ export function RideDetailsScreen() {
         </div>
 
         {ride.driver ? (
-          <div className="card space-y-2 p-4">
+          <div className="card space-y-8 p-16">
             <Row label="الكبتن" value={ride.driver.name} />
             {ride.driver.vehicle ? (
               <>
@@ -156,7 +156,7 @@ function Row({
   strong?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-sm">
+    <div className="flex items-start justify-between gap-12 text-14">
       <span className="shrink-0 text-muted">{label}</span>
       <span className={strong ? "text-end font-bold text-ink" : "text-end text-ink"}>
         {value}

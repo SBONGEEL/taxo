@@ -18,19 +18,19 @@ export function Brand({
   const { pink } = useBrand();
 
   return (
-    <div className={cn("space-y-2 text-center", className)}>
-      <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-brand">
-        <span className="text-2xl font-bold tracking-tight text-brand-ink">T</span>
+    <div className={cn("space-y-8 text-center", className)}>
+      <div className="mx-auto flex size-64 items-center justify-center rounded-16 bg-brand">
+        <span className="text-24 font-bold tracking-tight text-brand-ink">T</span>
       </div>
       <h1
         className={cn(
-          "text-3xl font-bold tracking-tight",
+          "text-30 font-bold tracking-tight",
           pink ? "text-brand" : "text-ink",
         )}
       >
         TAXO
       </h1>
-      {subtitle ? <p className="text-sm text-muted">{subtitle}</p> : null}
+      {subtitle ? <p className="text-14 text-muted">{subtitle}</p> : null}
     </div>
   );
 }

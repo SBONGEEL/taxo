@@ -26,24 +26,24 @@ export function Screen({
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-surface/95 px-3 pb-3 pt-safe backdrop-blur">
+      <header className="sticky top-0 z-10 flex items-center gap-8 border-b border-line bg-surface px-12 pb-12 pt-safe backdrop-blur">
         {back ? (
           <button
             type="button"
             onClick={() => (typeof back === "string" ? navigate(back) : navigate(-1))}
-            className="rounded-full p-2 text-ink transition hover:bg-line/50"
+            className="rounded-full p-8 text-ink transition hover:bg-surface-2"
             aria-label="رجوع"
           >
-            <ChevronRight className="size-5" />
+            <ChevronRight className="size-20" />
           </button>
         ) : (
-          <span className="w-2" />
+          <span className="w-8" />
         )}
-        <h1 className="flex-1 truncate text-lg font-semibold text-ink">{title}</h1>
+        <h1 className="flex-1 truncate text-18 font-semibold text-ink">{title}</h1>
         {action}
       </header>
 
-      <main className={cn("flex-1 overflow-y-auto px-4 py-4 pb-safe", className)}>
+      <main className={cn("flex-1 overflow-y-auto px-16 py-16 pb-safe", className)}>
         {children}
       </main>
     </div>

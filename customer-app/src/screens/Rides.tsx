@@ -42,25 +42,25 @@ export function RidesScreen() {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-12">
           <ErrorNote message={error} />
 
           {rides.length === 0 ? (
             <EmptyState title="لا رحلات بعد" hint="أول رحلة تبدأ من الشاشة الرئيسية." />
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-8">
               {rides.map((ride) => (
                 <li key={ride.id}>
                   <Link
                     to={`/rides/${ride.id}`}
-                    className="card flex items-center gap-3 p-3 transition hover:bg-line/20"
+                    className="card flex items-center gap-12 p-12 transition hover:bg-surface-2"
                   >
-                    <MapPin className="size-5 shrink-0 text-muted" />
+                    <MapPin className="size-20 shrink-0 text-muted" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-ink">
                         {ride.dropoff_address ?? "وجهة على الخريطة"}
                       </p>
-                      <p className="text-xs text-muted">
+                      <p className="text-12 text-muted">
                         {formatDateTime(ride.created_at)}
                       </p>
                     </div>
@@ -72,7 +72,7 @@ export function RidesScreen() {
                         {RIDE_STATUS_LABEL[ride.status]}
                       </Badge>
                     </div>
-                    <ChevronLeft className="size-4 shrink-0 text-muted" />
+                    <ChevronLeft className="size-16 shrink-0 text-muted" />
                   </Link>
                 </li>
               ))}

@@ -137,13 +137,13 @@ export function PhoneVerification({
     <motion.div
       initial={{ opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
-      className="space-y-5"
+      className="space-y-20"
     >
-      <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4">
-        <ShieldCheck className="mt-0.5 size-5 text-brand" />
-        <div className="text-sm">
+      <div className="flex items-start gap-12 rounded-16 border border-line bg-surface p-16">
+        <ShieldCheck className="mt-2 size-20 text-brand" />
+        <div className="text-14">
           <p className="font-medium text-ink">أرسلنا رمز التحقق إلى</p>
-          <p dir="ltr" className="mt-0.5 text-muted">
+          <p dir="ltr" className="mt-2 text-muted">
             {e164}
           </p>
         </div>
@@ -157,7 +157,7 @@ export function PhoneVerification({
         value={code}
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
         placeholder={"٠".repeat(digits)}
-        className="text-center text-2xl tracking-[0.5em]"
+        className="text-center text-24 tracking-[0.5em]"
         dir="ltr"
       />
 
@@ -175,7 +175,7 @@ export function PhoneVerification({
         تأكيد الرمز
       </Button>
 
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-14">
         <button
           type="button"
           onClick={onBack}

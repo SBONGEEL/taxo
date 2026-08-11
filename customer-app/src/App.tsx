@@ -84,13 +84,13 @@ function Boot({ children }: { children: ReactNode }) {
   // الإعدادات شرطٌ لرسم شاشة الدخول نفسها (أيُّ مُحقِّق، وأيُّ دول)
   if (!config && error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 px-6">
+      <div className="flex h-full flex-col items-center justify-center gap-16 px-24">
         <Brand subtitle="تعذّر الاتصال بالخادم" />
         <ErrorNote message={error} />
         <button
           type="button"
           onClick={reload}
-          className="text-sm font-semibold text-ink underline"
+          className="text-14 font-semibold text-ink underline"
         >
           إعادة المحاولة
         </button>
@@ -100,7 +100,7 @@ function Boot({ children }: { children: ReactNode }) {
 
   if (!config || loading) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-6">
+      <div className="flex h-full flex-col items-center justify-center gap-24">
         <Brand />
         <Spinner />
       </div>

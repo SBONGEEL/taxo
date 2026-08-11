@@ -60,28 +60,28 @@ export function CardReturnScreen() {
       {loading ? (
         <Spinner label="نسأل المزود عن حال العملية…" />
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-20">
           <ErrorNote message={error} />
 
           {order?.status === "paid" ? (
-            <div className="card flex flex-col items-center gap-2 p-6 text-center">
-              <CheckCircle2 className="size-10 text-success" />
-              <p className="text-lg font-semibold text-ink">تم الدفع</p>
+            <div className="card flex flex-col items-center gap-8 p-24 text-center">
+              <CheckCircle2 className="size-40 text-ok" />
+              <p className="text-18 font-semibold text-ink">تم الدفع</p>
               <p className="text-muted">{formatMoney(order.amount, order.currency)}</p>
             </div>
           ) : order?.status === "failed" || order?.status === "cancelled" ? (
-            <div className="card flex flex-col items-center gap-2 p-6 text-center">
-              <XCircle className="size-10 text-danger" />
-              <p className="text-lg font-semibold text-ink">لم تكتمل العملية</p>
-              <p className="text-sm text-muted">
+            <div className="card flex flex-col items-center gap-8 p-24 text-center">
+              <XCircle className="size-40 text-danger" />
+              <p className="text-18 font-semibold text-ink">لم تكتمل العملية</p>
+              <p className="text-14 text-muted">
                 {order.failure_reason ?? "يمكنك المحاولة بقناة أخرى."}
               </p>
             </div>
           ) : order ? (
-            <div className="card space-y-3 p-6 text-center">
-              <RefreshCw className="mx-auto size-8 text-muted" />
+            <div className="card space-y-12 p-24 text-center">
+              <RefreshCw className="mx-auto size-32 text-muted" />
               <p className="font-semibold text-ink">العملية قيد المعالجة</p>
-              <p className="text-sm text-muted">
+              <p className="text-14 text-muted">
                 لم يحسمها المزود بعد. لا نعدّها مدفوعةً ولا ساقطة — أعد الاستعلام بعد
                 لحظات.
               </p>

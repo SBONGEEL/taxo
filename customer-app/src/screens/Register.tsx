@@ -98,16 +98,16 @@ export function RegisterScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-6 py-10 pb-safe pt-safe">
+    <div className="flex min-h-full flex-col justify-center px-24 py-40 pb-safe pt-safe">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto w-full max-w-md space-y-6"
+        className="mx-auto w-full max-w-md space-y-24"
       >
         <Brand subtitle="أنشئ حسابك في دقيقة" />
 
         {step === "details" ? (
-          <form onSubmit={next} className="space-y-4">
+          <form onSubmit={next} className="space-y-16">
             <Field
               label="الاسم"
               autoComplete="name"
@@ -129,8 +129,8 @@ export function RegisterScreen() {
                 ويظهر حيث الخدمة مفتوحة في الدولة المختارة وحدها */}
             {womenService ? (
               <div>
-                <div className="mb-1.5 text-sm text-muted">الجنس</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="mb-6 text-14 text-muted">الجنس</div>
+                <div className="grid grid-cols-2 gap-8">
                   {(
                     [
                       { value: "female", label: "أنثى" },
@@ -144,17 +144,17 @@ export function RegisterScreen() {
                         setGender(gender === option.value ? null : option.value)
                       }
                       className={cn(
-                        "rounded-xl border p-3 text-center font-medium transition",
+                        "rounded-12 border p-12 text-center font-medium transition",
                         gender === option.value
                           ? "border-brand bg-brand text-brand-ink"
-                          : "border-line bg-surface text-muted hover:bg-line/30",
+                          : "border-line bg-surface text-muted hover:bg-surface-2",
                       )}
                     >
                       {option.label}
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-muted">
+                <p className="mt-8 text-12 leading-relaxed text-muted">
                   إقرارٌ ذاتيّ — لا نطلب وثيقة. يُستعمل لمطابقة تفضيلات الرحلات
                   فقط، ولا يظهر لأي مستخدم آخر.
                 </p>
@@ -188,7 +188,7 @@ export function RegisterScreen() {
           />
         )}
 
-        <p className="text-center text-sm text-muted">
+        <p className="text-center text-14 text-muted">
           لديك حساب؟{" "}
           <Link to="/login" className="font-semibold text-ink">
             سجّل الدخول

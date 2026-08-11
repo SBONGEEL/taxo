@@ -67,11 +67,11 @@ export function CliqPanel({
     <motion.section
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card space-y-4 p-4"
+      className="card space-y-16 p-16"
     >
       <header>
         <h2 className="font-semibold text-ink">الدفع عبر كليك</h2>
-        <p className="text-sm text-muted">
+        <p className="text-14 text-muted">
           حوّل {formatMoney(charge.amount, charge.currency)} إلى alias الكبتن، ثم أدخل
           مرجع الحوالة.
         </p>
@@ -81,7 +81,7 @@ export function CliqPanel({
         <QrCode payload={charge.qr_payload} />
       </div>
 
-      <dl className="space-y-2 text-sm">
+      <dl className="space-y-8 text-14">
         <CopyRow
           label="alias الكبتن"
           value={charge.alias}
@@ -94,7 +94,7 @@ export function CliqPanel({
           copied={copied === "reference"}
           onCopy={() => copy(charge.reference, "reference")}
         />
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-8">
           <dt className="text-muted">المبلغ</dt>
           <dd className="font-semibold text-ink">
             {formatMoney(charge.amount, charge.currency)}
@@ -104,27 +104,27 @@ export function CliqPanel({
 
       <Button variant="secondary" className="w-full" asChild>
         <a href={charge.deep_link}>
-          <ExternalLink className="size-4" />
+          <ExternalLink className="size-16" />
           افتح تطبيق البنك
         </a>
       </Button>
 
       {submitted ? (
-        <div className="flex items-start gap-2 rounded-xl border border-line bg-bg p-3 text-sm">
-          <Hourglass className="mt-0.5 size-4 shrink-0 text-muted" />
+        <div className="flex items-start gap-8 rounded-12 border border-line bg-bg p-12 text-14">
+          <Hourglass className="mt-2 size-16 shrink-0 text-muted" />
           <div>
             <p className="font-medium text-ink">أرسلنا مرجعك للكبتن — بانتظار تأكيده</p>
-            <p dir="ltr" className="mt-0.5 text-muted">
+            <p dir="ltr" className="mt-2 text-muted">
               {charge.transfer_reference}
             </p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-4 text-12 text-muted">
               المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكبتنَ سيفتح
               نزاعاً تفصل فيه الإدارة.
             </p>
           </div>
         </div>
       ) : (
-        <div className="space-y-3 border-t border-line pt-3">
+        <div className="space-y-12 border-t border-line pt-12">
           <Field
             label="مرجع الحوالة من تطبيق بنكك"
             value={reference}
@@ -161,22 +161,22 @@ function CopyRow({
   onCopy: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-8">
       <dt className="text-muted">{label}</dt>
-      <dd className="flex items-center gap-2">
+      <dd className="flex items-center gap-8">
         <span dir="ltr" className="font-semibold text-ink">
           {value}
         </span>
         <button
           type="button"
           onClick={onCopy}
-          className="rounded-lg p-1.5 text-muted transition hover:bg-line/50 hover:text-ink"
+          className="rounded-8 p-6 text-muted transition hover:bg-surface-2 hover:text-ink"
           aria-label={`نسخ ${label}`}
         >
           {copied ? (
-            <Check className="size-4 text-success" />
+            <Check className="size-16 text-ok" />
           ) : (
-            <Copy className="size-4" />
+            <Copy className="size-16" />
           )}
         </button>
       </dd>

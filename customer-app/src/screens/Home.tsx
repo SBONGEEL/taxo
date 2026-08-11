@@ -199,29 +199,29 @@ export function HomeScreen() {
 
       {/* دبوسٌ ثابت في المركز: الخريطة تتحرك تحته لا هو فوقها */}
       {picking ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-10">
-          <motion.div initial={{ y: -8 }} animate={{ y: 0 }} className="text-4xl">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-40">
+          <motion.div initial={{ y: -8 }} animate={{ y: 0 }} className="text-38">
             📍
           </motion.div>
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 px-4 pt-safe">
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-8 px-16 pt-safe">
         <button
           type="button"
           onClick={() => navigate("/menu")}
-          className="pointer-events-auto rounded-full border border-line bg-surface/95 p-3 shadow-sm backdrop-blur"
+          className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
           aria-label="القائمة"
         >
-          <Menu className="size-5 text-ink" />
+          <Menu className="size-20 text-ink" />
         </button>
         <button
           type="button"
           onClick={() => navigate("/wallet")}
-          className="pointer-events-auto rounded-full border border-line bg-surface/95 p-3 shadow-sm backdrop-blur"
+          className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
           aria-label="محفظتي"
         >
-          <Wallet className="size-5 text-ink" />
+          <Wallet className="size-20 text-ink" />
         </button>
       </div>
 
@@ -231,10 +231,10 @@ export function HomeScreen() {
           const position = await currentPosition();
           if (position) map.current?.flyTo(position, 15);
         }}
-        className="absolute bottom-[42%] end-4 rounded-full border border-line bg-surface/95 p-3 shadow-sm backdrop-blur"
+        className="absolute bottom-[42%] end-16 rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
         aria-label="موقعي الحالي"
       >
-        <Crosshair className="size-5 text-ink" />
+        <Crosshair className="size-20 text-ink" />
       </button>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto max-w-lg">
@@ -257,8 +257,8 @@ export function HomeScreen() {
               />
             ) : picking ? (
               <Sheet>
-                <div className="space-y-3 pb-4">
-                  <p className="text-center text-sm text-muted">
+                <div className="space-y-12 pb-16">
+                  <p className="text-center text-14 text-muted">
                     حرّك الخريطة حتى يقف الدبوس على{" "}
                     {phase === "pick-pickup" ? "نقطة الانطلاق" : "وجهتك"}
                   </p>
@@ -288,20 +288,20 @@ export function HomeScreen() {
               />
             ) : (
               <Sheet>
-                <div className="space-y-3 pb-4">
-                  <p className="text-lg font-semibold text-ink">إلى أين؟</p>
+                <div className="space-y-12 pb-16">
+                  <p className="text-18 font-semibold text-ink">إلى أين؟</p>
                   <button
                     type="button"
                     onClick={() => setSearchOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-line bg-bg px-4 py-3.5 text-start"
+                    className="flex w-full items-center gap-12 rounded-12 border border-line bg-bg px-16 py-14 text-start"
                   >
-                    <Search className="size-5 text-muted" />
+                    <Search className="size-20 text-muted" />
                     <span className="text-muted">ابحث عن وجهتك أو حدّدها بالدبوس</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setPhase("pick-pickup")}
-                    className="w-full truncate text-start text-sm text-muted"
+                    className="w-full truncate text-start text-14 text-muted"
                   >
                     نقطة الانطلاق:{" "}
                     <span className="text-ink">
@@ -347,12 +347,12 @@ function OutcomeSheet({
 
   return (
     <Sheet>
-      <div className="space-y-3 pb-4">
-        <p className="text-lg font-semibold text-ink">{RIDE_STATUS_LABEL[ride.status]}</p>
+      <div className="space-y-12 pb-16">
+        <p className="text-18 font-semibold text-ink">{RIDE_STATUS_LABEL[ride.status]}</p>
 
         {completed ? (
           <>
-            <p className="text-sm text-muted">
+            <p className="text-14 text-muted">
               الأجرة النهائية{" "}
               <span className="font-semibold text-ink">
                 {formatMoney(ride.final_fare ?? ride.estimated_fare, ride.currency)}
@@ -368,7 +368,7 @@ function OutcomeSheet({
                 التنازل عنه قرارُها هي — ونعرضه مرةً هنا لا نطبّقه عنها.
                 و«أنتظر كبتنة» ليس زراً بعد: لا مسارَ في الخلفية يواصل بحثاً
                 انتهى، فوعدٌ بلا مسارٍ أسوأ من غيابه (`FUTURE-FEATURES`) */}
-            <p className="text-sm leading-relaxed text-muted">
+            <p className="text-14 leading-relaxed text-muted">
               لا كبتنة متاحة قريبة الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو
               قبول أي كبتن متاح الآن — الاختيار لكِ.
             </p>
@@ -388,7 +388,7 @@ function OutcomeSheet({
             </Button>
           </>
         ) : (
-          <p className="text-sm text-muted">
+          <p className="text-14 text-muted">
             {ride.cancelled_reason ?? "يمكنك طلب رحلة جديدة الآن."}
           </p>
         )}

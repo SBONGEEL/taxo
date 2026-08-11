@@ -52,15 +52,15 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-6 py-10 pb-safe pt-safe">
+    <div className="flex min-h-full flex-col justify-center px-24 py-40 pb-safe pt-safe">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto w-full max-w-md space-y-6"
+        className="mx-auto w-full max-w-md space-y-24"
       >
         <Brand subtitle="أهلاً بعودتك — سجّل الدخول لتطلب رحلتك" />
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-16">
           <PhoneInput
             phone={phone}
             country={country}
@@ -86,9 +86,9 @@ export function LoginScreen() {
                 className="text-muted transition hover:text-ink"
               >
                 {visible ? (
-                  <EyeOff className="size-5" />
+                  <EyeOff className="size-20" />
                 ) : (
-                  <Eye className="size-5" />
+                  <Eye className="size-20" />
                 )}
               </button>
             }
@@ -108,7 +108,7 @@ export function LoginScreen() {
           </Button>
         </form>
 
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-14">
           <Link to="/forgot-password" className="text-muted hover:text-ink">
             نسيت كلمة المرور؟
           </Link>

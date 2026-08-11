@@ -76,11 +76,11 @@ export function ForgotPasswordScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-6 py-10 pb-safe pt-safe">
+    <div className="flex min-h-full flex-col justify-center px-24 py-40 pb-safe pt-safe">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto w-full max-w-md space-y-6"
+        className="mx-auto w-full max-w-md space-y-24"
       >
         <Brand subtitle="أثبت رقمك ثم اختر كلمة مرور جديدة" />
 
@@ -92,7 +92,7 @@ export function ForgotPasswordScreen() {
               event.preventDefault();
               setStep("verify");
             }}
-            className="space-y-4"
+            className="space-y-16"
           >
             <PhoneInput
               phone={phone}
@@ -130,7 +130,7 @@ export function ForgotPasswordScreen() {
           />
         )}
 
-        <p className="text-center text-sm text-muted">
+        <p className="text-center text-14 text-muted">
           <Link to="/login" className="font-semibold text-ink">
             العودة للدخول
           </Link>
