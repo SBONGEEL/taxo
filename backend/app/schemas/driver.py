@@ -11,6 +11,8 @@ from app.models.enums import (
     DocumentReviewStatus,
     DocumentType,
     DriverStatus,
+    Gender,
+    GenderPreference,
     VehicleCategory,
 )
 from app.schemas.auth import UserOut
@@ -103,6 +105,8 @@ class DriverOut(BaseModel):
     user_id: uuid.UUID
     status: DriverStatus
     cliq_alias: str | None
+    # تفضيلُه الدائم لجنس الركاب (المرحلة 10-ج) — يقرؤه تطبيقه ليرسم المفتاح
+    gender_preference: GenderPreference
     rating_avg: Decimal
     is_online: bool
     current_ride_id: uuid.UUID | None
@@ -116,6 +120,18 @@ class DriverProfileOut(BaseModel):
     documents: list[DriverDocumentOut]
 
 
+class DriverGenderUpdate(BaseModel):
+    """جنسُ الكبتن كما يقرؤه المشرف من هويته المرفوعة (المرحلة 10-ج).
+
+    مسارٌ إداريٌّ مستقل لا حقلٌ في `DriverUpdate`، لأن الكاتب مختلف: هذا يكتبه
+    المشرف عن غيره وله قيدُ تدقيق، وذاك يكتبه صاحبه عن نفسه. وضبطُه **لا يعيد
+    دورة اعتماد**: الهوية مرفوعةٌ ومراجَعةٌ أصلاً، وإرجاعُ كبتنٍ معتمدٍ إلى
+    الطابور لأجل حقلٍ واحد يجعل تفريغ المتراكم مستحيلاً عملياً.
+    """
+
+    gender: Gender
+
+
 class DriverUpdate(BaseModel):
     """ما يملك الكبتن تغييره في ملفه — و`cliq_alias` وحده اليوم.
 
@@ -125,6 +141,9 @@ class DriverUpdate(BaseModel):
     """
 
     cliq_alias: str | None = Field(default=None, max_length=64)
+    # تفضيلُ جنس الركاب — يملكه الكبتن لا الإدارة، بخلاف **جنسه هو** الذي
+    # يضبطه المشرف من الهوية (المرحلة 10-ج)
+    gender_preference: GenderPreference | None = None
 
 
 class DriverLocationIn(BaseModel):
@@ -171,6 +190,12 @@ class AdminDriverRow(BaseModel):
     documents_pending: int
     documents_rejected: int
     missing_required: list[DocumentType]
+    # جنسُ الكبتن ومعه هل خُتم (المرحلة 10-ج). تقرؤهما اللوحة لتُظهر **من
+    # يعمل بلا جنسٍ مثبت**: بغير هذا الفرز يبقى المتراكم غير مرئي، ولا يُطلب
+    # أحدٌ لخدمةٍ نسائية لأن أحداً لا يعرف من هي السائقة
+    gender: Gender | None
+    gender_verified: bool
+    gender_preference: GenderPreference
     created_at: datetime
 
 

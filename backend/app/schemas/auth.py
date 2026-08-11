@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import CountryCode, UserRole
+from app.models.enums import CountryCode, Gender, GenderPreference, UserRole
 
 # رمزُ إثبات ملكية الرقم: رمز هوية Firebase (JWT بألف حرف أو تزيد) أو رمز
 # SMS من ست خانات — حسب المُحقِّق المُهيأ. حدّاه هنا حدّا **نقلٍ** يتسعان
@@ -27,6 +27,21 @@ class RegisterRequest(BaseModel):
     # إثبات ملكية الرقم. مطلوبٌ ما لم يُطفئ المشرف `otp_verification_enabled`
     # لهذه الدولة — وحينها يُنشأ الحساب غير محقق ويبقى موسوماً
     verification_token: str | None = Field(default=None, max_length=4096)
+    # تعلنه الراكبة عن نفسها (المرحلة 10-ج). **ويُرفض على مسار الكبتن**: جنسُه
+    # يضبطه المشرف من هويته المرفوعة، وحقلٌ يكتبه هو عن نفسه يجعل «سائقة
+    # للنساء» شيئاً يُدّعى لا شيئاً يُثبَت
+    gender: Gender | None = None
+
+
+class ProfileUpdate(BaseModel):
+    """ما يملك صاحبُ الحساب تغييره بنفسه (المرحلة 10-ج).
+
+    الحقلان معاً إعلانٌ عن الذات واختيارٌ لها، وكلاهما للراكبة: جنسُ الكبتن
+    ليس منهما، وتفضيلُه الدائم في `PATCH /drivers/me`.
+    """
+
+    gender: Gender | None = None
+    ride_gender_preference: GenderPreference | None = None
 
 
 class LoginRequest(BaseModel):
@@ -97,6 +112,11 @@ class UserOut(BaseModel):
     is_blocked: bool
     # يقرؤه التطبيق فيطالب صاحبه بالتحقق، وتفلتر به اللوحة (SPEC القسم 13)
     phone_verified: bool
+    # حسابُ صاحبه يقرأ إعلانه وتفضيله ليرسمهما في ملفه (المرحلة 10-ج).
+    # وجنسُ **غيره** لا يصل إليه من أي مسار: ليس في `RideDriverOut` ولا في
+    # إطار `nearby_drivers` ولا في أي مخرَجٍ يراه الطرف الآخر
+    gender: Gender | None = None
+    ride_gender_preference: GenderPreference = GenderPreference.ANY
     created_at: datetime
 
 

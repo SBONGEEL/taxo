@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import (
+    CancelReasonCode,
     CountryCode,
     Currency,
+    GenderPreference,
     RideStatus,
     VehicleCategory,
 )
@@ -47,10 +49,16 @@ class RideCreateRequest(RideEstimateRequest):
     # عنوانان اختياريان: الاعتماد الأساسي على الدبوس والـ Geocoding مكمّل
     pickup_address: str | None = Field(default=None, max_length=255)
     dropoff_address: str | None = Field(default=None, max_length=255)
+    # `null` = «خذ افتراضي ملفي» لا `any`: التطبيق لا يرسل الحقل حين لا تختار
+    # الراكبة شيئاً، فيسري ما ضبطته مرةً في حسابها (المرحلة 10-ج)
+    gender_preference: GenderPreference | None = None
 
 
 class RideCancelRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=255)
+    # سببٌ مصنَّف بجانب النص الحر. `gender_mismatch` ليست وصفاً: هي التي
+    # تُسقط رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر يُقرأ باحتمالات
+    reason_code: CancelReasonCode | None = None
 
 
 class RideVehicleOut(BaseModel):
@@ -109,6 +117,10 @@ class RideOut(BaseModel):
     commission_percent_at_ride: Decimal
 
     cancelled_reason: str | None
+    # ما طُلب في هذه الرحلة من جنس الكبتن. يقرؤه تطبيق الكبتن ليرسم شارة
+    # «طلب نسائي» على بطاقة العرض، وتطبيقُ الراكبة لتعرض ما اختارته.
+    # **وهو تفضيلُ الطلب لا جنسُ صاحبه**: جنسُ أيّ طرفٍ لا يغادر الخلفية
+    gender_preference: GenderPreference
     driver: RideDriverOut | None = None
 
     created_at: datetime
@@ -140,6 +152,7 @@ class RideOut(BaseModel):
             cancellation_fee=ride.cancellation_fee,
             commission_percent_at_ride=ride.commission_percent_at_ride,
             cancelled_reason=ride.cancelled_reason,
+            gender_preference=ride.gender_preference,
             driver=RideDriverOut.from_ride(ride),
             created_at=ride.created_at,
             accepted_at=ride.accepted_at,

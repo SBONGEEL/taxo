@@ -19,13 +19,23 @@ from sqlalchemy.orm import selectinload
 
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
+    CancelReasonNotApplicable,
     InvalidRideTransition,
     NotFound,
     PermissionDenied,
     RideAlreadyActive,
+    WomenServiceUnavailable,
 )
 from app.models.driver import Driver
-from app.models.enums import DriverStatus, RideStatus, UserRole, VehicleCategory
+from app.models.enums import (
+    CancelReasonCode,
+    DriverStatus,
+    FeatureKey,
+    GenderPreference,
+    RideStatus,
+    UserRole,
+    VehicleCategory,
+)
 from app.models.ride import (
     ACTIVE_DRIVER_STATUSES,
     ACTIVE_RIDER_STATUSES,
@@ -196,14 +206,33 @@ async def request_ride(
     vehicle_category: VehicleCategory,
     pickup_address: str | None = None,
     dropoff_address: str | None = None,
+    gender_preference: GenderPreference | None = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
     الإسناد لا يبدأ من هنا: الراوتر يُطلق `dispatch.start` **بعد الـ commit**،
     لأن مهمة التوزيع تقرأ الرحلة من جلسة أخرى فلا ترى ما لم يُثبَّت بعد.
+
+    و`gender_preference` غيرُ الممرَّر يعني «خذ افتراضي الملف» لا «`any`»:
+    الراكبة تضبطه مرةً في حسابها فيسري على كل طلبٍ لا تختار فيه شيئاً — وهذا
+    هو الفرق بين إعدادٍ يعمل وإعدادٍ يُنسى.
     """
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()
+
+    preference = (
+        rider.ride_gender_preference if gender_preference is None else gender_preference
+    )
+    if preference is not GenderPreference.ANY and not await (
+        settings_service.is_feature_enabled(
+            session, rider.country_code, FeatureKey.WOMEN_SERVICE_ENABLED
+        )
+    ):
+        # الخدمة مطفأة في هذه الدولة، والتطبيقُ لا يعرض المفتاح أصلاً — فما
+        # يصل هنا طلبٌ مصنوع باليد أو تفضيلٌ في ملفٍ بقي من سوقٍ آخر. ولا
+        # يُبتلع صامتاً: طلبٌ يُسنَد لأيّ كبتنٍ بعد أن طُلب فيه غيرُه أسوأ من
+        # طلبٍ يُرفض بسببه
+        raise WomenServiceUnavailable()
 
     # السعر يُعاد حسابه هنا ولا يُقرأ من طلب العميل مهما أرسل
     quote = await pricing.estimate(
@@ -231,6 +260,8 @@ async def request_ride(
         commission_percent_at_ride=await settings_service.commission_percent_for(
             session, rider.country_code
         ),
+        # يُجمَّد كالعمولة: تغييرُ الملف بعد الطلب لا يغيّر لمن يُعرض هذا الطلب
+        gender_preference=preference,
     )
     session.add(ride)
 
@@ -352,16 +383,42 @@ async def _final_fare(
     return fare
 
 
+# كم بلاغَ «الطرف ليس بالجنس المعلَن» يوسم الحساب للمراجعة (المرحلة 10-ج).
+# ثلاثةٌ لا واحد: بلاغٌ واحد قد يكون سوءَ فهمٍ أو ضوءاً خافتاً أو كبتناً أرسل
+# غيرَه، ووسمُ حسابٍ من أول بلاغٍ يجعل الوسمَ سلاحاً بيد من يريد الإضرار
+GENDER_MISMATCH_FLAG_THRESHOLD = 3
+
+
+def _gender_mismatch_applies(ride: Ride, driver: Driver | None, by_role: UserRole) -> bool:
+    """هل لهذا السبب محلٌّ في هذه الرحلة أصلاً؟
+
+    - **الراكبة**: لا تُلغي مجاناً بحجّة الجنس إلا إن كانت قد طلبت جنساً.
+      وبغير هذا الشرط يصير السببُ باباً مفتوحاً للإفلات من رسوم الإلغاء.
+    - **الكبتن**: لا يُلغي بها إلا إن كان قد قصر عملَه على جنس. وهو لا يدفع
+      رسوماً أصلاً، لكن **البلاغ يُوسم به حسابُ الراكب** — فبلاغٌ بلا محلٍّ
+      يسم بريئاً.
+    """
+    if by_role == UserRole.DRIVER:
+        return driver is not None and driver.gender_preference is not GenderPreference.ANY
+    return ride.gender_preference is not GenderPreference.ANY
+
+
 async def cancel_ride(
     session: AsyncSession,
     ride: Ride,
     *,
     by_role: UserRole,
     reason: str | None = None,
+    reason_code: CancelReasonCode | None = None,
 ) -> Ride:
     """إلغاء مجاني قبل القبول، وبرسوم بعده (SPEC القسم 5).
 
     الرسوم تُثبَّت على الرحلة هنا؛ تحصيلها مع بقية الدفع في المرحلة 6.
+
+    و**`gender_mismatch` إلغاءٌ بلا رسوم لأيّ الطرفين** (المرحلة 10-ج): امرأةٌ
+    طلبت سائقةً فجاءها رجل لا تُغرَّم لأنها رفضت الركوب معه — وتغريمُها هنا
+    تجعل الأرخصَ لها أن تركب. ويُسجَّل البلاغ على حساب الطرف الآخر، فالتكرار
+    هو ما يميّز سوءَ الفهم من نمطٍ يتكرر.
     """
     # قفل الصف قبل فحص الانتقال: قبولُ كبتنٍ وقع في هذه اللحظة لا يُدهس
     await session.refresh(ride, with_for_update=True)
@@ -373,23 +430,59 @@ async def cancel_ride(
     )
     _require_transition(ride, target)
 
+    driver = (
+        await session.get(Driver, ride.driver_id)
+        if ride.driver_id is not None
+        else None
+    )
+    mismatch = reason_code is CancelReasonCode.GENDER_MISMATCH
+    if mismatch and not _gender_mismatch_applies(ride, driver, by_role):
+        raise CancelReasonNotApplicable()
+
     fee = Decimal("0.000")
     # لا رسوم على الكبتن الملغي — الرسم على من ألغى بعد ارتباط الطرفين
-    if by_role == UserRole.RIDER and ride.status in (
-        RideStatus.ACCEPTED,
-        RideStatus.ARRIVED,
+    if (
+        by_role == UserRole.RIDER
+        and not mismatch
+        and ride.status in (RideStatus.ACCEPTED, RideStatus.ARRIVED)
     ):
         rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
         fee = pricing.round_money(rule.cancellation_fee)
 
+    if mismatch:
+        await _record_gender_mismatch(session, ride, driver, by_role=by_role)
+
     ride.status = target
     ride.cancelled_at = _now()
     ride.cancelled_reason = reason
+    ride.cancel_reason_code = reason_code.value if reason_code else None
     ride.cancellation_fee = fee
 
-    if ride.driver_id is not None:
-        driver = await session.get(Driver, ride.driver_id)
-        if driver is not None and driver.current_ride_id == ride.id:
-            driver.current_ride_id = None
+    if driver is not None and driver.current_ride_id == ride.id:
+        driver.current_ride_id = None
 
     return await _flush_and_reload(session, ride)
+
+
+async def _record_gender_mismatch(
+    session: AsyncSession,
+    ride: Ride,
+    driver: Driver | None,
+    *,
+    by_role: UserRole,
+) -> None:
+    """يُدخل البلاغ على حساب **الطرف الآخر** — من أُبلغ عنه لا من أبلغ."""
+    reported_user_id = (
+        ride.rider_id if by_role == UserRole.DRIVER else (driver.user_id if driver else None)
+    )
+    if reported_user_id is None:
+        return  # لا كبتن مسنداً بعد: لا أحد يُبلَّغ عنه
+
+    reported = await session.get(User, reported_user_id, with_for_update=True)
+    if reported is not None:
+        reported.gender_mismatch_reports += 1
+
+
+def is_flagged_for_gender_mismatch(user: User) -> bool:
+    """الوسمُ سؤالٌ عن العدد لا عمودٌ يُكتب — فتغييرُ الحدّ يعيد تقييم الجميع."""
+    return user.gender_mismatch_reports >= GENDER_MISMATCH_FLAG_THRESHOLD

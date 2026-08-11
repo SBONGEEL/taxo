@@ -25,19 +25,29 @@ import contextlib
 import logging
 import time
 import uuid
+from dataclasses import dataclass
 
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import SessionLocal
 from app.core.exceptions import NotFound, RideOfferExpired
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
-from app.models.enums import DriverStatus, RideStatus, VehicleCategory
+from app.models.enums import (
+    CountryCode,
+    DriverStatus,
+    FeatureKey,
+    Gender,
+    GenderPreference,
+    RideStatus,
+    VehicleCategory,
+)
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
+from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import geo, notifications, subscriptions
+from app.services import geo, notifications, settings_service, subscriptions
 from app.ws import events
 
 logger = logging.getLogger(__name__)
@@ -175,10 +185,67 @@ async def _wait_for_signal(
 # ------------------------------------------------------------------- الأهلية
 
 
+@dataclass(frozen=True, slots=True)
+class GenderMatch:
+    """طرفا المطابقة في رحلةٍ واحدة (المرحلة 10-ج).
+
+    `None` بدل هذا الكائن يعني **لا مطابقةَ جنسٍ إطلاقاً**: إمّا لأن
+    `women_service_enabled` مطفأ في هذه الدولة، أو لأن المستدعي لا علاقة له
+    بالخدمة. وهو تمييزٌ مقصود عن `preference=any`: ذاك يعني «الراكبة لا يهمّها
+    من يأتي» — ويبقى تفضيلُ **الكبتن** نافذاً — وهذا يعني «الميزة غير موجودة».
+    """
+
+    rider_gender: Gender | None
+    preference: GenderPreference
+
+
+async def gender_match(
+    session: AsyncSession,
+    *,
+    country_code: CountryCode,
+    rider_gender: Gender | None,
+    preference: GenderPreference,
+) -> GenderMatch | None:
+    """شرطُ المطابقة لهذه الدولة — أو `None` إن كانت الخدمة مطفأة فيها.
+
+    نقطةُ قرارٍ واحدة يمرّ بها التوزيعُ وخريطةُ الراكب معاً، فلا تفترق «من
+    يُعرض متاحاً» عن «من يُسنَد إليه» — وهو الالتزام الذي تحمله
+    `drivers.nearby_available` منذ المرحلة 4.
+    """
+    if not await settings_service.is_feature_enabled(
+        session, country_code, FeatureKey.WOMEN_SERVICE_ENABLED
+    ):
+        return None
+    return GenderMatch(rider_gender=rider_gender, preference=preference)
+
+
+async def gender_match_for(
+    session: AsyncSession, *, ride: Ride, gender: Gender | None
+) -> GenderMatch | None:
+    """شرطُ المطابقة لرحلةٍ بعينها — بتفضيلها المجمَّد لا بتفضيل الملف."""
+    return await gender_match(
+        session,
+        country_code=ride.country_code,
+        rider_gender=gender,
+        preference=ride.gender_preference,
+    )
+
+
+async def rider_gender(session: AsyncSession, rider_id: uuid.UUID) -> Gender | None:
+    """جنسُ الراكب كما أعلنه — بلا شرط ختم.
+
+    الختمُ (`gender_verified_at`) شرطٌ في جانب الكبتن وحده: إعلانُ الراكبة
+    يقيّد رحلتَها هي، وإعلانُ الكبتن يقيّد أمانَ غيره.
+    """
+    return await session.scalar(select(User.gender).where(User.id == rider_id))
+
+
 async def eligible_driver_ids(
     session: AsyncSession,
     driver_ids: list[uuid.UUID],
     vehicle_category: VehicleCategory,
+    *,
+    gender: GenderMatch | None = None,
 ) -> set[uuid.UUID]:
     """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن.
 
@@ -189,6 +256,18 @@ async def eligible_driver_ids(
     عمود الحالة وحده (`subscriptions.coverage_condition`): المهمة الدورية
     تعلّم المنتهي كل بضع دقائق، والقسم 8 يقول «لا اشتراك ساري = لا رحلات» —
     فالحكم للحظة الطلب لا لآخر مرور مهمة.
+
+    **والمطابقة ثنائية الاتجاه** (المرحلة 10-ج) ومكانُها هنا لا في الراوتر:
+    هذه هي الدالة التي تجيب «من يصلح لهذا الطلب»، وأيُّ تصفيةٍ فوقها تُنسى في
+    أحد المسارين. الاتجاهان مستقلان تماماً:
+
+    - **ما تطلبه الراكبة**: تفضيلٌ غير `any` يقصر النتيجة على كبتنٍ جنسُه
+      **مختوم** بذلك الجنس. وغيرُ المختوم لا يُرشَّح لطلبٍ مجنَّس أصلاً.
+    - **ما يقبله الكبتن**: كبتنٌ تفضيلُه غير `any` لا يُعرض عليه إلا راكبٌ من
+      ذلك الجنس. وراكبٌ لم يعلن جنسه لا يطابق أحداً منهم.
+
+    فراكبٌ اختار «لا يهمّني» **لا يُعرض طلبُه** على كبتنةٍ اختارت النساء
+    وحدهن — الاتجاه الثاني لا يُلغيه سكوتُ الأول.
     """
     if not driver_ids:
         return set()
@@ -205,16 +284,32 @@ async def eligible_driver_ids(
     )
     subscribed = subscriptions.covered_driver_ids_subquery().exists()
 
-    rows = await session.scalars(
-        select(Driver.id).where(
-            Driver.id.in_(driver_ids),
-            Driver.status == DriverStatus.APPROVED,
-            Driver.is_online.is_(True),
-            Driver.current_ride_id.is_(None),
-            has_vehicle,
-            subscribed,
-            ~busy,
+    conditions = [
+        Driver.id.in_(driver_ids),
+        Driver.status == DriverStatus.APPROVED,
+        Driver.is_online.is_(True),
+        Driver.current_ride_id.is_(None),
+        has_vehicle,
+        subscribed,
+        ~busy,
+    ]
+    if gender is not None:
+        if gender.preference is not GenderPreference.ANY:
+            conditions.append(User.gender == Gender(gender.preference.value))
+            # الختمُ شرطٌ لا زينة: بغيره يصير الحقلُ ادّعاءً يكتبه صاحبه
+            conditions.append(User.gender_verified_at.is_not(None))
+        conditions.append(
+            Driver.gender_preference == GenderPreference.ANY
+            if gender.rider_gender is None
+            else or_(
+                Driver.gender_preference == GenderPreference.ANY,
+                Driver.gender_preference
+                == GenderPreference(gender.rider_gender.value),
+            )
         )
+
+    rows = await session.scalars(
+        select(Driver.id).join(User, Driver.user_id == User.id).where(*conditions)
     )
     return set(rows.all())
 
@@ -225,12 +320,21 @@ async def _next_candidate(
     *,
     ride: Ride,
     tried: set[uuid.UUID],
+    gender: GenderMatch | None = None,
 ) -> geo.DriverPresence | None:
     """أقرب كبتن مؤهل لم يُعرض عليه هذا الطلب بعد.
 
-    يبدأ البحث بثلاثة كيلومترات ويتوسع لسبعة إن خلت الدائرة (SPEC القسم 5.3).
+    يبدأ البحث بثلاثة كيلومترات ويتوسع لسبعة إن خلت الدائرة (SPEC القسم 5.3)
+    — **وإلى عشرة في الطلب المجنَّس** (المرحلة 10-ج)، لأن دائرة المرشَّحين فيه
+    أضيق ابتداءً فالتوسعةُ هي ما يفرق بين كبتنةٍ على بعد ثمانية كيلومترات
+    و«لم نجد كبتناً».
     """
-    for radius in (geo.SEARCH_RADIUS_KM, geo.MAX_SEARCH_RADIUS_KM):
+    widest = (
+        geo.GENDERED_MAX_SEARCH_RADIUS_KM
+        if gender is not None and gender.preference is not GenderPreference.ANY
+        else geo.MAX_SEARCH_RADIUS_KM
+    )
+    for radius in (geo.SEARCH_RADIUS_KM, widest):
         presences = [
             presence
             for presence in await geo.nearby(
@@ -250,6 +354,7 @@ async def _next_candidate(
             session,
             [presence.driver_id for presence in presences],
             ride.vehicle_category,
+            gender=gender,
         )
         # `presences` مرتبة من الأقرب، فأول مؤهل فيها هو الأقرب المؤهل
         for presence in presences:
@@ -318,7 +423,17 @@ async def _run(ride_id: uuid.UUID) -> None:
             # أُلغيت أو قُبلت من مسار آخر — لا شأن للتوزيع بها بعد الآن
             if ride is None or ride.status != RideStatus.SEARCHING:
                 return
-            candidate = await _next_candidate(session, redis, ride=ride, tried=tried)
+            # شرطُ المطابقة يُقرأ في كل دورة لا مرةً عند البدء: مفتاحُ الخدمة
+            # قد يُطفأ أثناء البحث، وجنسُ الكبتن قد يُختم في هذه الدقيقة —
+            # وقراءتُه هنا تكلّف استعلامين بجانب استعلام الأهلية نفسه
+            match = await gender_match_for(
+                session,
+                ride=ride,
+                gender=await rider_gender(session, ride.rider_id),
+            )
+            candidate = await _next_candidate(
+                session, redis, ride=ride, tried=tried, gender=match
+            )
             driver_user_id = (
                 await session.scalar(
                     select(Driver.user_id).where(Driver.id == candidate.driver_id)

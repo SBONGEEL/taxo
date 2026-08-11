@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
@@ -26,6 +27,7 @@ from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
 from app.models.enums import (
+    AuditAction,
     CountryCode,
     DocumentReviewStatus,
     DriverStatus,
@@ -39,10 +41,12 @@ from app.schemas.driver import (
     DocumentReviewIn,
     DriverDocumentOut,
     DriverDocumentsOut,
+    DriverGenderUpdate,
     DriverOut,
     DriverStatusUpdate,
 )
 from app.services import (
+    audit,
     documents as documents_service,
     drivers as drivers_service,
     notifications,
@@ -85,6 +89,10 @@ async def list_drivers(
     session: DbSession,
     status: DriverStatus | None = None,
     country_code: CountryCode | None = None,
+    gender_verified: bool | None = Query(
+        default=None,
+        description="فرزُ من يعمل بلا جنسٍ مثبت — متراكمُ ما قبل الخدمة النسائية",
+    ),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminDriverRow]:
@@ -114,6 +122,10 @@ async def list_drivers(
         stmt = stmt.where(Driver.status == status)
     if country_code is not None:
         stmt = stmt.where(User.country_code == country_code)
+    if gender_verified is True:
+        stmt = stmt.where(User.gender_verified_at.is_not(None))
+    elif gender_verified is False:
+        stmt = stmt.where(User.gender_verified_at.is_(None))
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     return [
@@ -127,6 +139,9 @@ async def list_drivers(
             phone_verified=user.phone_verified_at is not None,
             rating_avg=driver.rating_avg,
             is_online=driver.is_online,
+            gender=user.gender,
+            gender_verified=user.gender_verified_at is not None,
+            gender_preference=driver.gender_preference,
             documents_pending=pending_count,
             documents_rejected=rejected_count,
             # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد
@@ -188,6 +203,47 @@ async def activate_driver(
         raise InvalidInput("هذا الكبتن ليس موقوفاً")
 
     driver = await drivers_service.approve(session, driver=driver, actor=admin)
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)
+
+
+@router.put("/drivers/{driver_id}/gender", response_model=DriverOut)
+async def set_driver_gender(
+    driver_id: uuid.UUID,
+    payload: DriverGenderUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> DriverOut:
+    """يثبّت المشرفُ جنسَ الكبتن من هويته المرفوعة (المرحلة 10-ج).
+
+    **لـ admin لا support**: هذا الحقل هو ما يجعل حساباً «سائقةً للنساء»،
+    ومراجعةُ المستندات نفسها قرارُ admin (القسم 13/8).
+
+    **ويُختم بلحظته** (`gender_verified_at`)، لأن المطابقة تقرأ المختوم وحده:
+    بغير الختم لا فرق بين جنسٍ قرأه مشرفٌ من هوية وجنسٍ كتبه صاحبه عن نفسه.
+
+    **ولا يعيد دورة اعتماد**: الهوية مرفوعة ومراجَعة، وإرجاعُ كبتنٍ معتمدٍ إلى
+    الطابور لأجل حقلٍ واحد يجعل تفريغ المتراكم مستحيلاً عملياً — وهو المتراكم
+    الذي يبقى `women_service_enabled` مطفأً حتى يُفرَّغ.
+
+    وقيدُ التدقيق يحمل **اسم الحقل لا قيمته**، كبقية كتابات اللوحة.
+    """
+    driver = await _driver(session, driver_id)
+    user = await session.get(User, driver.user_id, with_for_update=True)
+    if user is None:  # pragma: no cover - حسابٌ محذوف تحت كبتن قائم
+        raise NotFound()
+
+    user.gender = payload.gender
+    user.gender_verified_at = datetime.now(UTC)
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="user",
+        entity_id=user.id,
+        details={"fields": ["gender", "gender_verified_at"]},
+    )
     await session.commit()
     await session.refresh(driver)
     return DriverOut.model_validate(driver)

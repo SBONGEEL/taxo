@@ -125,6 +125,24 @@ class RideAlreadyActive(Conflict):
     message = "لديك رحلة جارية بالفعل"
 
 
+class WomenServiceUnavailable(Conflict):
+    """طُلب تفضيلُ جنسٍ في دولةٍ خدمتُها النسائية مطفأة (المرحلة 10-ج)."""
+
+    code = "women_service_unavailable"
+    message = "خدمة التوصيل النسائي غير مفعّلة في هذه الدولة"
+
+
+class CancelReasonNotApplicable(Conflict):
+    """سببُ «الجنس لا يطابق» على رحلةٍ لم يُطلب فيها جنسٌ أصلاً.
+
+    ولا يُقبل صامتاً: هو السبب الذي يُسقط رسوم الإلغاء ويُدخل بلاغاً على
+    حسابٍ آخر، فقبولُه بلا محلٍّ يجعله باباً لتفادي الرسوم ووسمِ الأبرياء.
+    """
+
+    code = "cancel_reason_not_applicable"
+    message = "سبب الإلغاء لا ينطبق على هذه الرحلة"
+
+
 class InvalidRideTransition(Conflict):
     code = "invalid_ride_transition"
     message = "لا يمكن تنفيذ هذا الإجراء على حالة الرحلة الحالية"

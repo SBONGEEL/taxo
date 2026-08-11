@@ -23,7 +23,13 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
-from app.models.enums import CountryCode, Currency, RideStatus, VehicleCategory
+from app.models.enums import (
+    CountryCode,
+    Currency,
+    GenderPreference,
+    RideStatus,
+    VehicleCategory,
+)
 
 if TYPE_CHECKING:
     from app.models.driver import Driver
@@ -183,7 +189,20 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         Numeric(5, 2), nullable=False, default=Decimal("0.00")
     )
 
+    # تفضيلُ جنس الكبتن **لهذه الرحلة** — يُنسخ من ملف الراكبة عند الطلب
+    # ولا يُقرأ منه بعد ذلك: تغييرُ التفضيل في الملف يحكم الطلب القادم لا
+    # طلباً يبحث له عن كبتنٍ الآن (نفس منطق `commission_percent_at_ride`)
+    gender_preference: Mapped[GenderPreference] = mapped_column(
+        pg_enum(GenderPreference, "gender_preference"),
+        nullable=False,
+        default=GenderPreference.ANY,
+        server_default=GenderPreference.ANY.value,
+    )
+
     cancelled_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # سببٌ مصنَّف بجانب النص الحر (`CancelReasonCode`). نصٌّ محروسٌ في طبقة
+    # Pydantic لا `ENUM` في القاعدة، كـ`feature_flags.feature_key`
+    cancel_reason_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     accepted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

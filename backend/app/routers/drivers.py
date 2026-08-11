@@ -63,7 +63,7 @@ async def get_my_driver_profile(
 async def update_my_driver_profile(
     payload: DriverUpdate, driver: CurrentDriver, session: DbSession
 ) -> DriverOut:
-    """تعديل ما يملكه الكبتن من ملفه — `cliq_alias` اليوم (SPEC القسم 9).
+    """تعديل ما يملكه الكبتن من ملفه: `cliq_alias` وتفضيلُ جنس الركاب.
 
     يُكتب في التسجيل (الخطوة الثالثة) ويُعدَّل من الإعدادات. ولا يمسّ
     الاعتماد: alias خاطئ يعطّل سحباً واحداً ويُصحَّح، ولا علاقة له بمن يحق
@@ -72,6 +72,9 @@ async def update_my_driver_profile(
     if payload.cliq_alias is not None:
         alias = payload.cliq_alias.strip()
         driver.cliq_alias = alias or None
+    if payload.gender_preference is not None:
+        # تفضيلُه لا جنسُه: الأول يملكه، والثاني يضبطه المشرف من هويته
+        driver.gender_preference = payload.gender_preference
 
     await session.commit()
     await session.refresh(driver)
@@ -281,7 +284,7 @@ async def list_nearby_drivers(
     """
     salt = secrets.token_hex(16)
     presences = await drivers_service.nearby_available(
-        redis, session, country_code=rider.country_code, lat=lat, lng=lng
+        redis, session, country_code=rider.country_code, lat=lat, lng=lng, rider=rider
     )
     return [
         NearbyDriverOut(

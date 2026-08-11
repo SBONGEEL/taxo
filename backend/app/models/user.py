@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
-from app.models.enums import CountryCode, UserRole
+from app.models.enums import CountryCode, Gender, GenderPreference, UserRole
 
 if TYPE_CHECKING:
     from app.models.driver import Driver
@@ -54,6 +54,37 @@ class User(UUIDMixin, TimestampMixin, Base):
     # وإطفاؤه بيد صاحبه من التطبيق
     marketing_push_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
+    )
+
+    # ---------------------------------------------------- الخدمة النسائية
+
+    # جنسُ صاحب الحساب (المرحلة 10-ج). `NULL` = غير معلن، وهو الحال الطبيعي
+    # لكل حسابٍ أُنشئ قبل الميزة. **تُعلنه الراكبة عن نفسها عند التسجيل**،
+    # **ويضبطه المشرف للكبتن من هويته** — ولا يكتبه مسارُ تسجيل الكبتن أبداً
+    gender: Mapped[Gender | None] = mapped_column(
+        pg_enum(Gender, "gender"), nullable=True, index=True
+    )
+    # لحظةُ ختم المشرف على جنس الكبتن من الهوية. **المطابقةُ تقرأ المختوم
+    # وحده** في جانب الكبتن: بغير هذا الشرط يصير الحقلُ ادّعاءً، ويصير
+    # «سائقة للنساء» شيئاً يكتبه المرء عن نفسه. ويبقى فارغاً للركاب: إعلانُ
+    # الراكبة يقيّد رحلتَها هي، فلا معنى لختمه
+    gender_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # تفضيلُ الراكبة الافتراضي — يُنسخ إلى الرحلة عند الطلب ولا يُقرأ بعده
+    # (نفس منطق `commission_percent_at_ride`): تغييرُ التفضيل يحكم ما يأتي
+    # لا رحلةً جاريةً الآن
+    ride_gender_preference: Mapped[GenderPreference] = mapped_column(
+        pg_enum(GenderPreference, "gender_preference"),
+        nullable=False,
+        default=GenderPreference.ANY,
+        server_default=GenderPreference.ANY.value,
+    )
+    # عددُ بلاغات «الطرف ليس بالجنس المعلَن» على هذا الحساب. عدّادٌ لا راية:
+    # الوسمُ سؤالٌ عن العدد (`services/rides.GENDER_MISMATCH_FLAG_THRESHOLD`)،
+    # فتغييرُ الحدّ لا يترك حساباتٍ موسومةً بحدٍّ قديم
+    gender_mismatch_reports: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
     )
 
     driver: Mapped["Driver | None"] = relationship(

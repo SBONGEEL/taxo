@@ -123,11 +123,16 @@ async def nearby_available(
     lat: float,
     lng: float,
     radius_km: float = geo.SEARCH_RADIUS_KM,
+    rider: User | None = None,
 ) -> list[geo.DriverPresence]:
     """الكباتن المتاحون حول الراكب لعرضهم على خريطته (SPEC القسم 10).
 
     «المتاحون فقط»: أونلاين + معتمد + اشتراك ساري + بلا رحلة — بنفس استدعاء
     `dispatch.eligible_driver_ids`، فمن لا يصلح للإسناد لا يُعرض سيارةً متاحة.
+
+    **وتفضيلُ الجنس داخلٌ في «المتاح»** (المرحلة 10-ج) بتفضيل ملف الراكبة
+    الافتراضي — لا تفضيلِ رحلةٍ لم تُطلب بعد. فخريطةٌ ترسم سيارةً لن تأتيَ
+    أسوأُ من خريطةٍ فارغة: الأولى تُقرأ وعداً، والثانية تُقرأ واقعاً.
     """
     from app.services import dispatch
 
@@ -137,11 +142,22 @@ async def nearby_available(
     if not presences:
         return []
 
+    match = (
+        None
+        if rider is None
+        else await dispatch.gender_match(
+            session,
+            country_code=country_code,
+            rider_gender=rider.gender,
+            preference=rider.ride_gender_preference,
+        )
+    )
+
     available: list[geo.DriverPresence] = []
     for category in {presence.vehicle_category for presence in presences}:
         of_category = [p for p in presences if p.vehicle_category == category]
         eligible = await dispatch.eligible_driver_ids(
-            session, [p.driver_id for p in of_category], category
+            session, [p.driver_id for p in of_category], category, gender=match
         )
         available.extend(p for p in of_category if p.driver_id in eligible)
 

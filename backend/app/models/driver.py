@@ -19,7 +19,12 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
-from app.models.enums import DocumentReviewStatus, DocumentType, DriverStatus
+from app.models.enums import (
+    DocumentReviewStatus,
+    DocumentType,
+    DriverStatus,
+    GenderPreference,
+)
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -57,6 +62,15 @@ class Driver(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True),
         ForeignKey("rides.id", ondelete="SET NULL", use_alter=True),
         nullable=True,
+    )
+
+    # تفضيلُ الكبتن **دائم** لا لكل رحلة (المرحلة 10-ج): الراكبة تختار لرحلةٍ
+    # بعينها، والكبتن يقرر لعمله كلِّه — ولذلك مكانُه هنا لا على الرحلة
+    gender_preference: Mapped[GenderPreference] = mapped_column(
+        pg_enum(GenderPreference, "gender_preference"),
+        nullable=False,
+        default=GenderPreference.ANY,
+        server_default=GenderPreference.ANY.value,
     )
 
     user: Mapped["User"] = relationship(back_populates="driver")

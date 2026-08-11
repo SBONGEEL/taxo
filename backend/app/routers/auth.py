@@ -20,6 +20,7 @@ from app.core.config import settings
 from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
 from app.core.exceptions import InvalidInput, InvalidToken, NotFound, RateLimited
 from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.auth import (
     AuthMethodResponse,
@@ -28,6 +29,7 @@ from app.schemas.auth import (
     ChallengeResponse,
     LoginRequest,
     PasswordResetRequest,
+    ProfileUpdate,
     RefreshRequest,
     RegisterRequest,
     TokenPair,
@@ -320,4 +322,27 @@ async def logout(payload: RefreshRequest, redis: RedisDep) -> None:
 
 @router.get("/me", response_model=UserOut)
 async def me(user: CurrentUser) -> UserOut:
+    return UserOut.model_validate(user)
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    payload: ProfileUpdate, user: CurrentUser, session: DbSession
+) -> UserOut:
+    """ما يغيّره صاحبُ الحساب في نفسه (المرحلة 10-ج).
+
+    **والكبتن لا يكتب جنسه هنا**: يضبطه المشرف من هويته المرفوعة، وبغير هذا
+    الحارس يصير «سائقة للنساء» حقلاً يملؤه من يشاء. أما تفضيلُه فمكانه
+    `PATCH /drivers/me` — تفضيلٌ دائم لا اختيارُ رحلة.
+    """
+    if payload.gender is not None:
+        if user.role is UserRole.DRIVER:
+            raise InvalidInput("جنس الكبتن يثبّته المشرف من الهوية")
+        # إعلانُ الراكبة بلا ختم — والختمُ شرطُ جانب الكبتن وحده
+        user.gender = payload.gender
+    if payload.ride_gender_preference is not None:
+        user.ride_gender_preference = payload.ride_gender_preference
+
+    await session.commit()
+    await session.refresh(user)
     return UserOut.model_validate(user)

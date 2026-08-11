@@ -98,6 +98,7 @@ async def request_ride(
         vehicle_category=payload.vehicle_category,
         pickup_address=payload.pickup_address,
         dropoff_address=payload.dropoff_address,
+        gender_preference=payload.gender_preference,
     )
     await session.commit()
     # قراءة جديدة: خطا العرض والطول محسوبان في القاعدة ولا يعودان مع INSERT
@@ -246,7 +247,11 @@ async def cancel_ride(
     was_searching = ride.status == RideStatus.SEARCHING
 
     ride = await rides_service.cancel_ride(
-        session, ride, by_role=user.role, reason=payload.reason
+        session,
+        ride,
+        by_role=user.role,
+        reason=payload.reason,
+        reason_code=payload.reason_code,
     )
     await session.commit()
 

@@ -229,7 +229,14 @@ async def _send_nearby(
 ) -> None:
     async with SessionLocal() as session:
         presences = await drivers_service.nearby_available(
-            redis, session, country_code=user.country_code, lat=state.lat, lng=state.lng
+            redis,
+            session,
+            country_code=user.country_code,
+            lat=state.lat,
+            lng=state.lng,
+            # نفس تصفية الخريطة في المقبس: لولاها لاختلفت أول رسمةٍ عن التي
+            # تليها، وهو فرقٌ يظهر للراكبة كسيارةٍ تظهر ثم تختفي
+            rider=user,
         )
 
     await websocket.send_json(

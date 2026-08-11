@@ -492,6 +492,37 @@ earlier HTTP-level version of that test passed *without* the lock — two `clien
 `asyncio.gather` interleave only if the loop happens to schedule them that way, which is precisely
 the false confidence this project's rules exist to prevent.
 
+**The women's service (stage 10-ج) puts its matching inside `dispatch.eligible_driver_ids`, and
+that placement is the design.** That function is the single answer to "who can take this ride" —
+the dispatcher and the rider's map both call it — so a filter layered above it is a filter one of
+the two paths will forget. It takes a `GenderMatch | None`, and `None` is deliberately *not*
+`preference=any`: `None` means the country's `women_service_enabled` is off so there is **no gender
+matching at all**, while `any` means the rider does not care and the *driver's* preference still
+applies. Collapsing the two would leave a stale `female` preference on a driver's row quietly
+starving them of rides in a market where the service does not exist.
+
+The two directions are independent, and the second is the one an implementation drops: a rider who
+picked "any" is still **not** offered to a driver who restricted herself to women.
+`test_women_service.py` asserts that against `eligible_driver_ids` directly rather than against the
+ride reaching `no_driver_found` — the first version of that test asserted the terminal state and
+**passed with the rule deleted**, because a ride whose only candidate declines also ends
+`no_driver_found`. Every rule in that file was then verified by deletion.
+
+Two asymmetries carry real reasoning. A rider's `gender` is self-declared and unstamped, a driver's
+is written **only** by `PUT /admin/drivers/{id}/gender` and matching reads `gender_verified_at IS
+NOT NULL` — her declaration constrains her own ride, his constrains someone else's safety, so
+without the stamp "female driver" is a word someone types about himself. And that admin write is a
+**direct field, not a re-approval cycle**: the ID is already uploaded and reviewed, and sending
+approved drivers back through the queue for one field makes clearing the backlog impossible — which
+is the backlog the flag stays off for.
+
+`cancel_reason_code = gender_mismatch` is the only reason that **waives the cancellation fee after
+acceptance**, and it is refused where it has no place (a rider who asked for nobody, a driver who
+restricted no one) — otherwise it is a free way out of every fee and a way to flag an innocent
+account. The report lands on the *other* party's `gender_mismatch_reports`, and "flagged" is a
+comparison against a threshold in the service, never a written column, so changing the threshold
+re-evaluates everyone instead of leaving rows flagged by an old rule.
+
 **`services/drivers.approve` now has two guards, not one**: a verified phone (stage 8-ب) and every
 required document approved (`REQUIRED_DOCUMENT_TYPES` in `models/driver.py` — licence, national ID,
 vehicle registration; the vehicle photo is deliberately optional). Without the second, review is a

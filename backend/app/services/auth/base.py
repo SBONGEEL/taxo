@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import PhoneAlreadyRegistered
+from app.core.exceptions import InvalidInput, PhoneAlreadyRegistered
 from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
@@ -29,6 +29,12 @@ async def create_account(
     if existing is not None:
         raise PhoneAlreadyRegistered()
 
+    # جنسُ الكبتن لا يُكتب من مسار التسجيل مهما أُرسل — يضبطه المشرف من
+    # الهوية ويُختم (`PUT /admin/drivers/{id}/gender`). ولا يُبتلع صامتاً:
+    # حقلٌ يُرسَل ويُهمَل يبدو أنه عمل
+    if data.gender is not None and UserRole(data.role) is UserRole.DRIVER:
+        raise InvalidInput("جنس الكبتن يثبّته المشرف من الهوية، لا يُكتب عند التسجيل")
+
     user = User(
         phone=phone,
         name=data.name.strip(),
@@ -36,6 +42,8 @@ async def create_account(
         country_code=data.country_code,
         password_hash=password_hash,
         phone_verified_at=phone_verified_at,
+        # إعلانُ الراكبة عن نفسها. **بلا ختم**: يقيّد رحلتَها هي لا أمانَ غيرها
+        gender=data.gender,
     )
     session.add(user)
     await session.flush()
