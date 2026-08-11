@@ -27,9 +27,15 @@ export interface User {
   country_code: CountryCode;
   is_blocked: boolean;
   phone_verified: boolean;
-  marketing_push_enabled: boolean;
+  // جنسُ الكبتن يضبطه المشرف من هويته (المرحلة 10-ج)؛ `null` = لم يُثبَّت
+  // بعد. يقرؤه التطبيق لشيءٍ واحد: هل تُتاح السِمة الوردية لصاحبة الشاشة
+  gender: "male" | "female" | null;
+  ride_gender_preference: "male" | "female" | "any";
   created_at: string;
 }
+// وليس هنا `marketing_push_enabled`: `UserOut` في الخلفية لا يحمله، ومصدرُه
+// `GET /notification-preferences` وحده. كان مكتوباً هنا ولا يرسله أحد — حقلٌ
+// وهميّ من عائلة `awaiting_confirmation`، وُجد أثناء المرحلة 10-ج وحُذف
 
 export interface TokenPair {
   access_token: string;

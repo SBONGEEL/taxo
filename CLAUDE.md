@@ -523,6 +523,18 @@ account. The report lands on the *other* party's `gender_mismatch_reports`, and 
 comparison against a threshold in the service, never a written column, so changing the threshold
 re-evaluates everyone instead of leaving rows flagged by an old rule.
 
+The women's service also adds the one **brand colour** this design system has: `--brand` /
+`--brand-ink`, defined in `DESIGN.md` §1.1-ب and present in all three `tailwind.config.js` files
+(the panel never activates it, but the file has to stay a verbatim copy of §6 — "identical except
+two lines" is not identical). Its default value is `--tx`/`--inv`, so `text-brand` is a no-op until
+a `.pink` class lands on `<html>`; that is what lets components be written once for both themes.
+`lib/brand.tsx` in each PWA owns that class. Three rules live there: the choice is stored **per
+device, not on the account** (turning it off because someone is watching should not turn it off on
+her phone at home), it is offered only where `women_service_enabled` is on **and** the account's
+gender is female — with no disabled control and no apology otherwise — and `customer-app`'s
+`Brand.tsx` is the single component allowed to branch on it, because the wordmark's normal colour
+is `--tx` and an unconditional `text-brand` would paint it the app's default yellow.
+
 **`services/drivers.approve` now has two guards, not one**: a verified phone (stage 8-ب) and every
 required document approved (`REQUIRED_DOCUMENT_TYPES` in `models/driver.py` — licence, national ID,
 vehicle registration; the vehicle photo is deliberately optional). Without the second, review is a

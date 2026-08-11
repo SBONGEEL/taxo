@@ -24,6 +24,7 @@ import {
 import type { ReactNode } from "react";
 
 import { CenteredMessage, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { RideProvider } from "@/lib/ride";
@@ -113,7 +114,7 @@ function Boot({ children }: { children: ReactNode }) {
   if (!config && error) {
     return (
       <CenteredMessage>
-        <div className="text-38 font-bold tracking-brand text-ink">TAXO</div>
+        <div className="text-38 font-bold tracking-brand text-brand">TAXO</div>
         <ErrorNote message={error} />
         <button
           type="button"
@@ -129,7 +130,7 @@ function Boot({ children }: { children: ReactNode }) {
   if (!config || loading) {
     return (
       <CenteredMessage>
-        <div className="text-38 font-bold tracking-brand text-ink">TAXO</div>
+        <div className="text-38 font-bold tracking-brand text-brand">TAXO</div>
         <Spinner />
       </CenteredMessage>
     );
@@ -165,158 +166,162 @@ export default function App() {
     <ThemeProvider>
       <ConfigProvider>
         <SessionProvider>
-          <Boot>
-            <DriverProvider>
-              <RideProvider>
-                <Router>
-                  <Suspense fallback={<Loading />}>
-                    <Routes>
-                      <Route
-                        path="/login"
-                        element={
-                          <Anonymous>
-                            <LoginScreen />
-                          </Anonymous>
-                        }
-                      />
-                      <Route
-                        path="/forgot-password"
-                        element={
-                          <Anonymous>
-                            <ForgotPasswordScreen />
-                          </Anonymous>
-                        }
-                      />
-                      <Route
-                        path="/register"
-                        element={
-                          <Anonymous>
-                            <RegisterScreen />
-                          </Anonymous>
-                        }
-                      />
-                      {/* بعد الخطوة الأولى صار له حساب، فالخطوة الثالثة محميّة */}
-                      <Route
-                        path="/register/documents"
-                        element={
-                          <Guarded>
-                            <RegisterDocumentsScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/"
-                        element={
-                          <Guarded>
-                            <DriverHome />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/subscription"
-                        element={
-                          <Guarded>
-                            <SubscriptionScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/rides"
-                        element={
-                          <Guarded>
-                            <RidesScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/rides/:rideId"
-                        element={
-                          <Guarded>
-                            <RideDetailsScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/rides/:rideId/dispute"
-                        element={
-                          <Guarded>
-                            <DisputeScreen />
-                          </Guarded>
-                        }
-                      />
-                      {/* تبويبات الشريط السفلي الباقية — الجلسات التالية */}
-                      <Route
-                        path="/wallet"
-                        element={
-                          <Guarded>
-                            <WalletScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/wallet/withdrawals"
-                        element={
-                          <Guarded>
-                            <WithdrawalsScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/account"
-                        element={
-                          <Guarded>
-                            <AccountScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/account/settings"
-                        element={
-                          <Guarded>
-                            <SettingsScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/account/vehicle"
-                        element={
-                          <Guarded>
-                            <VehicleScreen />
-                          </Guarded>
-                        }
-                      />
-                      {/* عنوانُ العودة من صفحة المزود — خاصٌّ بهذا التطبيق */}
-                      <Route
-                        path="/payments/card/return"
-                        element={
-                          <Guarded>
-                            <CardReturnScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/notifications"
-                        element={
-                          <Guarded>
-                            <NotificationsScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
-                        path="/account/cards"
-                        element={
-                          <Guarded>
-                            <CardsScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </Suspense>
-                </Router>
-              </RideProvider>
-            </DriverProvider>
-          </Boot>
+          {/* تحت الجلسة والإعدادات: السِمة تُقرأ من جنس صاحبة الحساب ومن
+              مفتاح دولتها، فلا معنى لها قبلهما */}
+          <BrandProvider>
+            <Boot>
+              <DriverProvider>
+                <RideProvider>
+                  <Router>
+                    <Suspense fallback={<Loading />}>
+                      <Routes>
+                        <Route
+                          path="/login"
+                          element={
+                            <Anonymous>
+                              <LoginScreen />
+                            </Anonymous>
+                          }
+                        />
+                        <Route
+                          path="/forgot-password"
+                          element={
+                            <Anonymous>
+                              <ForgotPasswordScreen />
+                            </Anonymous>
+                          }
+                        />
+                        <Route
+                          path="/register"
+                          element={
+                            <Anonymous>
+                              <RegisterScreen />
+                            </Anonymous>
+                          }
+                        />
+                        {/* بعد الخطوة الأولى صار له حساب، فالخطوة الثالثة محميّة */}
+                        <Route
+                          path="/register/documents"
+                          element={
+                            <Guarded>
+                              <RegisterDocumentsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/"
+                          element={
+                            <Guarded>
+                              <DriverHome />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/subscription"
+                          element={
+                            <Guarded>
+                              <SubscriptionScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/rides"
+                          element={
+                            <Guarded>
+                              <RidesScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/rides/:rideId"
+                          element={
+                            <Guarded>
+                              <RideDetailsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/rides/:rideId/dispute"
+                          element={
+                            <Guarded>
+                              <DisputeScreen />
+                            </Guarded>
+                          }
+                        />
+                        {/* تبويبات الشريط السفلي الباقية — الجلسات التالية */}
+                        <Route
+                          path="/wallet"
+                          element={
+                            <Guarded>
+                              <WalletScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/wallet/withdrawals"
+                          element={
+                            <Guarded>
+                              <WithdrawalsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account"
+                          element={
+                            <Guarded>
+                              <AccountScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/settings"
+                          element={
+                            <Guarded>
+                              <SettingsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/vehicle"
+                          element={
+                            <Guarded>
+                              <VehicleScreen />
+                            </Guarded>
+                          }
+                        />
+                        {/* عنوانُ العودة من صفحة المزود — خاصٌّ بهذا التطبيق */}
+                        <Route
+                          path="/payments/card/return"
+                          element={
+                            <Guarded>
+                              <CardReturnScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/notifications"
+                          element={
+                            <Guarded>
+                              <NotificationsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/cards"
+                          element={
+                            <Guarded>
+                              <CardsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                      </Routes>
+                    </Suspense>
+                  </Router>
+                </RideProvider>
+              </DriverProvider>
+            </Boot>
+          </BrandProvider>
         </SessionProvider>
       </ConfigProvider>
     </ThemeProvider>

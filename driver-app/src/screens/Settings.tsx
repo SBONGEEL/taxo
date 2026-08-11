@@ -9,6 +9,10 @@
  * يوم يغيّره المشرف. وغيابُها `null` يعني «لم تُضبط» فتبقى القاعدةُ وحدها —
  * ولا يخترع الرقمَ أحد.
  *
+ * **والسِمة الوردية مفتاحٌ ثالث** (المرحلة 10-ج) لا يظهر إلا لمن لها أن
+ * تختارها. وهو مفتاحُ **عرضٍ على هذا الجهاز** لا تفضيلٌ على الحساب: من
+ * أطفأتها لأن حولها من ينظر لا تريد إطفاءها على هاتفها في بيتها.
+ *
  * ولا صفَّ لغة: التطبيق عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
  */
 
@@ -24,6 +28,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
+import { useBrand } from "@/lib/brand";
 import { useCountryConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
@@ -34,6 +39,7 @@ export function SettingsScreen() {
   const navigate = useNavigate();
   const { profile, refresh } = useDriver();
   const { choice, toggle } = useTheme();
+  const { pink, available, setPink } = useBrand();
   const { user } = useSession();
   const country = useCountryConfig(user?.country_code);
   // «٢٢:٠٠ – ٠٨:٠٠» بخاناتٍ عربية، و`null` تبقى فراغاً لا صفراً
@@ -161,6 +167,42 @@ export function SettingsScreen() {
             {choice === "dark" ? "ليلي" : "نهاري"}
           </span>
         </button>
+
+        {/* السِمة الوردية — لا تظهر إلا لمن لها أن تختارها: الخدمة مفعّلة
+            وجنسُها مثبت. ومن ليست كذلك لا ترى مفتاحاً معطّلاً ولا تفسيراً،
+            كما لا ترى الراكبةُ مفتاحَ التفضيل والخدمةُ مطفأة */}
+        {available ? (
+          <button
+            type="button"
+            onClick={() => setPink(!pink)}
+            className="flex w-full items-center justify-between gap-12 border-t border-line px-15 py-14 text-start"
+          >
+            <span>
+              <span className="block text-13.5 font-semibold text-ink">
+                السِمة الوردية
+              </span>
+              {/* السببُ مكتوبٌ لأنه ليس ذوقاً: الشاشة تُرى، وإطفاؤها قرارٌ
+                  عن المكان الذي أنت فيه لا عن جمال اللون */}
+              <span className="mt-3 block text-11 leading-snug text-muted">
+                هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من
+                حولك.
+              </span>
+            </span>
+            <span
+              className={cn(
+                "relative block h-27 w-46 flex-none rounded-full transition-colors",
+                pink ? "bg-brand" : "bg-line",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-3 block size-21 rounded-full bg-surface transition-all",
+                  pink ? "start-22" : "start-3",
+                )}
+              />
+            </span>
+          </button>
+        ) : null}
       </div>
 
       <section className="rounded-16 border border-line bg-surface p-15">

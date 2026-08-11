@@ -42,6 +42,10 @@ export interface User {
   country_code: CountryCode;
   is_blocked: boolean;
   phone_verified: boolean;
+  /** تعلنه الراكبة عن نفسها (المرحلة 10-ج)؛ `null` = لم تعلن. */
+  gender: "male" | "female" | null;
+  /** تفضيلُها الافتراضي لجنس الكبتن — يُنسخ إلى الرحلة عند الطلب. */
+  ride_gender_preference: "male" | "female" | "any";
   created_at: string;
 }
 

@@ -52,7 +52,7 @@ export function LoginScreen() {
     <AuthScreen>
       {/* الكتلة العلوية: `margin-top:46px; margin-bottom:38px` في التصميم */}
       <div className="mb-38 mt-46">
-        <div className="text-38 font-bold tracking-brand text-ink">TAXO</div>
+        <div className="text-38 font-bold tracking-brand text-brand">TAXO</div>
         <div className="mt-4 text-14 text-muted">تطبيق الكبتن</div>
       </div>
 

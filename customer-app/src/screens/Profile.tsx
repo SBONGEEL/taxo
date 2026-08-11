@@ -33,6 +33,7 @@ import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
 import { useConfig, usePhoneCountry } from "@/lib/config";
 import { useSession } from "@/lib/session";
+import { useBrand } from "@/lib/brand";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ export function ProfileScreen() {
   const { user, signOut, refreshUser } = useSession();
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
+  const { pink, available, setPink } = useBrand();
   const { dialCode } = usePhoneCountry(user?.country_code);
 
   const [marketing, setMarketing] = useState<boolean | null>(null);
@@ -181,6 +183,43 @@ export function ProfileScreen() {
             ))}
           </div>
         </section>
+
+        {/* السِمة الوردية — لا تظهر إلا لمن لها أن تختارها: الخدمة مفعّلة
+            في دولتها وقد أعلنت جنسها. ومن ليست كذلك لا ترى مفتاحاً معطّلاً
+            ولا رسالةَ اعتذار (المرحلة 10-ج) */}
+        {available ? (
+          <section className="card space-y-3 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium text-ink">السِمة الوردية</p>
+                {/* السببُ مكتوبٌ لأنه ليس ذوقاً: القرارُ عن المكان الذي أنتِ
+                    فيه لا عن جمال اللون */}
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها
+                  من حولك.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={pink}
+                aria-label="السِمة الوردية"
+                onClick={() => setPink(!pink)}
+                className={cn(
+                  "relative h-7 w-12 flex-none rounded-full transition",
+                  pink ? "bg-brand" : "bg-line",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-1 size-5 rounded-full bg-surface transition-all",
+                    pink ? "start-6" : "start-1",
+                  )}
+                />
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         <ErrorNote message={error} />
         <SuccessNote message={done} />

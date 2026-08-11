@@ -84,6 +84,10 @@ export default {
         ok: "var(--ok)",
         warn: "var(--warn)",
         danger: "var(--dng)",
+        // رمزُ السِمة الوردية — افتراضُه `--tx`/`--inv` فلا أثر له مطفأً
+        // (DESIGN.md §1.1-ب)
+        brand: "var(--brand)",
+        "brand-ink": "var(--brand-ink)",
         "stripe-a": "var(--sa)",
         "stripe-b": "var(--sb)",
         dim: "var(--dim)",

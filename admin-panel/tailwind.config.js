@@ -85,6 +85,11 @@ export default {
         ok: "var(--ok)",
         warn: "var(--warn)",
         danger: "var(--dng)",
+        // رمزُ السِمة الوردية (DESIGN.md §1.1-ب). لا تستعمله اللوحة — لا سِمةَ
+        // وردية على مكتب — لكنه هنا كي يبقى هذا الملف نسخةً حرفيةً من §6
+        // كما تقول `CLAUDE.md`: ملفٌ «متطابق إلا سطرين» ليس متطابقاً
+        brand: "var(--brand)",
+        "brand-ink": "var(--brand-ink)",
         "stripe-a": "var(--sa)",
         "stripe-b": "var(--sb)",
         dim: "var(--dim)",

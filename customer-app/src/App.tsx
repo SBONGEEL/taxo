@@ -16,6 +16,7 @@ import type { ReactNode } from "react";
 import { Brand } from "@/components/Brand";
 import { Toasts } from "@/components/Toasts";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { RideProvider } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
@@ -124,143 +125,147 @@ export default function App() {
     <ThemeProvider>
       <ConfigProvider>
         <SessionProvider>
-          <Boot>
-            <RideProvider>
-              <Router>
-                <Toasts />
-                <Suspense fallback={<Spinner />}>
-                  <Routes>
-                    <Route
-                      path="/login"
-                      element={
-                        <Anonymous>
-                          <LoginScreen />
-                        </Anonymous>
-                      }
-                    />
-                    <Route
-                      path="/register"
-                      element={
-                        <Anonymous>
-                          <RegisterScreen />
-                        </Anonymous>
-                      }
-                    />
-                    <Route
-                      path="/forgot-password"
-                      element={
-                        <Anonymous>
-                          <ForgotPasswordScreen />
-                        </Anonymous>
-                      }
-                    />
+          {/* تحت الجلسة والإعدادات: السِمة تُقرأ من إعلان صاحبة الحساب ومن
+              مفتاح دولتها، فلا معنى لها قبلهما */}
+          <BrandProvider>
+            <Boot>
+              <RideProvider>
+                <Router>
+                  <Toasts />
+                  <Suspense fallback={<Spinner />}>
+                    <Routes>
+                      <Route
+                        path="/login"
+                        element={
+                          <Anonymous>
+                            <LoginScreen />
+                          </Anonymous>
+                        }
+                      />
+                      <Route
+                        path="/register"
+                        element={
+                          <Anonymous>
+                            <RegisterScreen />
+                          </Anonymous>
+                        }
+                      />
+                      <Route
+                        path="/forgot-password"
+                        element={
+                          <Anonymous>
+                            <ForgotPasswordScreen />
+                          </Anonymous>
+                        }
+                      />
 
-                    {/* العودة من صفحة الدفع المستضافة — عنوانٌ يعرفه المزود
+                      {/* العودة من صفحة الدفع المستضافة — عنوانٌ يعرفه المزود
                       (`settings.card_return_url`)، فلا يتغير */}
-                    <Route
-                      path="/payments/card/return"
-                      element={
-                        <Guarded>
-                          <CardReturnScreen />
-                        </Guarded>
-                      }
-                    />
+                      <Route
+                        path="/payments/card/return"
+                        element={
+                          <Guarded>
+                            <CardReturnScreen />
+                          </Guarded>
+                        }
+                      />
 
-                    <Route
-                      path="/"
-                      element={
-                        <Guarded>
-                          <HomeScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/menu"
-                      element={
-                        <Guarded>
-                          <MenuScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/rides"
-                      element={
-                        <Guarded>
-                          <RidesScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/rides/:rideId"
-                      element={
-                        <Guarded>
-                          <RideDetailsScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/rides/:rideId/pay"
-                      element={
-                        <Guarded>
-                          <PaymentScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/rides/:rideId/rate"
-                      element={
-                        <Guarded>
-                          <RatingScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/wallet"
-                      element={
-                        <Guarded>
-                          <WalletScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/wallet/topup"
-                      element={
-                        <Guarded>
-                          <WalletTopupScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/wallet/transfer"
-                      element={
-                        <Guarded>
-                          <WalletTransferScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/cards"
-                      element={
-                        <Guarded>
-                          <CardsScreen />
-                        </Guarded>
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <Guarded>
-                          <ProfileScreen />
-                        </Guarded>
-                      }
-                    />
+                      <Route
+                        path="/"
+                        element={
+                          <Guarded>
+                            <HomeScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/menu"
+                        element={
+                          <Guarded>
+                            <MenuScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/rides"
+                        element={
+                          <Guarded>
+                            <RidesScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/rides/:rideId"
+                        element={
+                          <Guarded>
+                            <RideDetailsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/rides/:rideId/pay"
+                        element={
+                          <Guarded>
+                            <PaymentScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/rides/:rideId/rate"
+                        element={
+                          <Guarded>
+                            <RatingScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet"
+                        element={
+                          <Guarded>
+                            <WalletScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet/topup"
+                        element={
+                          <Guarded>
+                            <WalletTopupScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/wallet/transfer"
+                        element={
+                          <Guarded>
+                            <WalletTransferScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/cards"
+                        element={
+                          <Guarded>
+                            <CardsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          <Guarded>
+                            <ProfileScreen />
+                          </Guarded>
+                        }
+                      />
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </Suspense>
-              </Router>
-            </RideProvider>
-          </Boot>
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </Suspense>
+                </Router>
+              </RideProvider>
+            </Boot>
+          </BrandProvider>
         </SessionProvider>
       </ConfigProvider>
     </ThemeProvider>
