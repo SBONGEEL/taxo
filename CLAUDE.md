@@ -2,6 +2,63 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Where the project stands
+
+TAXO is a two-country (Jordan/Libya) ride-hailing platform: a FastAPI backend, two rider/driver
+PWAs, and an operations panel. `SPEC.md` §16 is a strict ordered plan; this is where it has got to.
+
+**Done — stages 1 through 10, 10-ج, and 12-أ.** Infrastructure and auth; per-country settings and
+encrypted provider contracts; rides and Mapbox pricing; Redis-GEO dispatch and the tracking
+sockets; the wallet ledger; payments, route points and ratings (6-أ); the Telr card channel (6-ب);
+driver subscriptions (7); the provider integrations and campaigns (8); the rider PWA (9); document
+upload/review and the notification inbox (9-ب); the driver PWA (10); the women's transport service
+end to end (10-ج); and the rider app's migration onto the design system (12-أ). **502 backend tests
+pass** (43 files); all three frontends build with `check:scale` + `check:enums` green.
+
+**Stage 11 (the admin panel) is the one in progress.** Built: login, overview, live map,
+drivers/documents, finance (withdrawals + CliQ topups), disputes, campaigns, per-country settings,
+provider contracts. Not built — drawn in the nav with a «قريباً» badge so the gap is visible rather
+than dead-clicky: **rides log, riders, subscriptions/plans, pricing, reports, users & permissions,
+audit log**. Finishing those is the next stage-shaped piece of work.
+
+**Then stage 12** (Phase-2 product features behind feature flags: scheduled rides, ride sharing,
+coupons, surge — none of it started, and each needs its own SPEC pass first) **and stage 13**
+(tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →
+rider requests → tracking → payment → withdrawal).
+
+### Open debt and decisions waiting on the owner
+
+1. **`women_service_enabled` is off in both countries and stays off until the backlog of already-
+   approved drivers has a verified gender** — that was the owner's call, and it is the one business
+   decision blocking a finished feature. The backend door exists (`PUT /admin/drivers/{id}/gender`,
+   admin-only, audited) and `GET /admin/drivers?gender_verified=false` is the worklist, **but the
+   panel's driver page has no control wired to either**. That UI is the smallest piece of stage-11
+   work with the largest unblocking effect.
+2. **Three screens were never opened in a browser**: the driver's cancel-reason sheet, the
+   «طلب نسائي» badge on the offer card, and the preference strip on the driver's home. All three
+   need an approved driver (verified phone + three approved documents) and a live assigned ride to
+   reach, so they are best checked during stage 13's manual run.
+3. **Provider wire formats are best-reading, not contracts.** Three details in
+   `services/card_gateway/telr.py` are flagged in its docstring as needing confirmation against
+   real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
+   `services/payout/` say the same in their module docstrings. They are arranged so being wrong
+   cannot move money wrongly, but they cannot go to production unverified.
+4. **Two maintenance jobs belong to stage 12 and do not exist yet**: nothing trims
+   `user_notifications` (the table grows; reads are capped and indexed) and no Celery sweep expires
+   stale `provider_orders`.
+5. **`FUTURE-FEATURES.md` items 45–49** are the deferred pieces of the women's service and its
+   design: the in-ride emergency button (deliberately *not* half-built — a button promising help
+   nobody answers is worse than none), referral incentives for female drivers, "wait for a female
+   captain" (needs a queue that outlives `no_driver_found`), the "3 available nearby" count, and
+   in-app calling/messaging (needs number masking).
+6. **One cosmetic bug left alone on purpose**: the amount field on the rider's topup screen shows
+   the raw currency code (`JOD`) as its suffix while every other money surface shows «د.أ» via
+   `formatMoney`. One line in `screens/WalletTopup.tsx`.
+7. **This machine only**: host port 5173 is taken by an unrelated `taxo-web` stack, so
+   `.env.local` sets `CUSTOMER_APP_PORT=5176`. 5176 is the one fallback allowed in
+   `settings.cors_origins`; the card-return URL still points at 5173, so testing the card channel
+   needs the canonical port.
+
 ## Project rules that override defaults
 
 **`SPEC.md` is the single source of truth.** It is written in Arabic and defines every table, flow,
@@ -36,8 +93,7 @@ the country's day**, computed in the timezone stored on `notification_settings` 
 otherwise clips three hours off the start of an Amman day and adds three from yesterday); and
 **"online now" counts live presence keys in Redis, not `drivers.is_online`** — the column says "the
 switch is up", not "he is here", so an app killed mid-shift keeps its column raised until the key
-expires. The live map remains blocked: it needs an admin endpoint that reads connected drivers
-**with their identity**, and the existing one anonymises deliberately for the rider's map.
+expires.
 **Stage 10's screens (the driver PWA, `driver-app/`) are
 complete** — login/recovery, three-step registration, home with the offer card and active ride,
 collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal
