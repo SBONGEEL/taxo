@@ -193,3 +193,94 @@ export interface Payment {
   resolved_at: string | null;
   created_at: string;
 }
+
+// ------------------------------------------------------------ الإعدادات
+
+/** مرآةُ `FeatureKey` — والعمود نصٌّ في القاعدة، فالنوع حارسُ كتابةٍ لا أكثر. */
+export type FeatureKey =
+  | "cliq_enabled"
+  | "card_enabled"
+  | "wallet_enabled"
+  | "wallet_transfer_enabled"
+  | "otp_verification_enabled";
+
+export interface CountryFeatureFlags {
+  country_code: CountryCode;
+  flags: Record<string, boolean>;
+}
+
+/** `cashless_rides` = ما تمر أمواله عبر المنصة (بطاقة ومحفظة)؛ والكاش وكليك
+ * يقبضهما الكبتن مباشرةً (القسم 9). */
+export type CommissionAppliesTo = "all_rides" | "cashless_rides";
+
+export interface CommissionSetting {
+  id: string;
+  country_code: CountryCode;
+  commission_enabled: boolean;
+  commission_percent: string;
+  applies_to: CommissionAppliesTo;
+  updated_at: string;
+}
+
+export interface WalletSetting {
+  id: string;
+  country_code: CountryCode;
+  transfer_daily_limit: string;
+  transfer_monthly_limit: string;
+  min_withdrawal_amount: string;
+  updated_at: string;
+}
+
+export interface PaymentSetting {
+  id: string;
+  country_code: CountryCode;
+  cliq_confirmation_hours: number;
+  updated_at: string;
+}
+
+// ------------------------------------------------------------ العقود
+
+export type ProviderKey =
+  | "mapbox"
+  | "telr"
+  | "sms"
+  | "fcm"
+  | "firebase_auth"
+  | "cliq_acquirer"
+  | "payout";
+
+export interface ProviderField {
+  key: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+}
+
+export interface ProviderSpec {
+  provider_key: ProviderKey;
+  label: string;
+  per_country: boolean;
+  feature_key: FeatureKey | null;
+  fields: ProviderField[];
+}
+
+export interface ProviderCredential {
+  id: string;
+  provider_key: ProviderKey;
+  country_code: CountryCode | null;
+  is_active: boolean;
+  values: Record<string, string | boolean | null>;
+  last_tested_at: string | null;
+  updated_at: string;
+}
+
+export interface ProviderCatalog {
+  providers: ProviderSpec[];
+  credentials: ProviderCredential[];
+}
+
+export interface ProviderTestResult {
+  ok: boolean;
+  detail: string;
+  credential: ProviderCredential;
+}

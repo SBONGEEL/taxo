@@ -1,7 +1,7 @@
 /** جذر اللوحة: المزوّدون، والمسارات، وحارسُ الجلسة.
  *
  * **ما هو مبنيٌّ الآن**: الدخول، والسائقون والوثائق، والمالية، والنزاعات،
- * والإشعارات الجماعية. وبقيةُ الأقسام
+ * والإشعارات الجماعية، والإعدادات، وعقود المزوّدين. وبقيةُ الأقسام
  * مرسومةٌ في القائمة معطّلةً بشارة «قريباً» — تقول للمستخدم حالها بدل أن
  * تجعله يشك في اللوحة (انظر `components/Shell.tsx`).
  *
@@ -35,6 +35,12 @@ const FinanceScreen = lazy(() =>
 );
 const DisputesScreen = lazy(() =>
   import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
+);
+const SettingsScreen = lazy(() =>
+  import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
+);
+const ProvidersScreen = lazy(() =>
+  import("@/screens/Providers").then((m) => ({ default: m.ProvidersScreen })),
 );
 
 function Centered({ children }: { children: ReactNode }) {
@@ -143,6 +149,22 @@ export default function App() {
                     element={
                       <Guarded>
                         <DisputesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <Guarded>
+                        <SettingsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/providers"
+                    element={
+                      <Guarded>
+                        <ProvidersScreen />
                       </Guarded>
                     }
                   />

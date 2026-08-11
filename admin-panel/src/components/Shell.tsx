@@ -64,8 +64,8 @@ const GROUPS: {
     items: [
       { label: "المستخدمون والصلاحيات" },
       { label: "سجل التدقيق" },
-      { label: "الإعدادات" },
-      { label: "عقود مزوّدي API", adminOnly: true },
+      { label: "الإعدادات", to: "/settings" },
+      { label: "عقود مزوّدي API", to: "/providers", adminOnly: true },
     ],
   },
 ];

@@ -28,7 +28,11 @@ integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ pa
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
 written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login, drivers/documents,
-finance (withdrawals and CliQ topups), disputes, and campaigns.
+finance (withdrawals and CliQ topups), disputes, campaigns, per-country settings and the provider
+contracts page. The two that remain — the overview and the live map — are blocked on backend that
+does not exist yet: there is no aggregation endpoint for today's rides or revenue (and the frontend
+may not compute money), and no admin endpoint that reads connected drivers **with their identity**,
+since the existing one anonymises for the rider's map.
 **Stage 10's screens (the driver PWA, `driver-app/`) are
 complete** — login/recovery, three-step registration, home with the offer card and active ride,
 collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal

@@ -11,18 +11,28 @@ import type {
   AuthResponse,
   Campaign,
   CampaignAudience,
+  CommissionAppliesTo,
+  CommissionSetting,
   CountryCode,
+  CountryFeatureFlags,
   Delivery,
   DisputeResolution,
   DriverDocument,
   DriverDocuments,
   DriverStatus,
+  FeatureKey,
   NotificationSetting,
   Payment,
+  PaymentSetting,
   PaymentStatus,
   TopupRequest,
   TopupStatus,
+  ProviderCatalog,
+  ProviderCredential,
+  ProviderKey,
+  ProviderTestResult,
   User,
+  WalletSetting,
   Withdrawal,
   WithdrawalStatus,
 } from "@/api/types";
@@ -190,3 +200,79 @@ export const resolveDispute = (
     resolution,
     note: note ?? null,
   });
+
+// ------------------------------------------------------------ الإعدادات
+
+export const listFeatureFlags = () =>
+  api.get<CountryFeatureFlags[]>("/admin/settings/feature-flags");
+
+/** `reason` إلزاميٌّ لإطفاء مفتاحٍ حارس — والخلفية ترفض بدونه. */
+export const setFeatureFlag = (payload: {
+  country_code: CountryCode;
+  feature_key: FeatureKey;
+  enabled: boolean;
+  reason?: string;
+}) => api.put<CountryFeatureFlags>("/admin/settings/feature-flags", payload);
+
+export const listCommission = () =>
+  api.get<CommissionSetting[]>("/admin/settings/commission");
+
+export const updateCommission = (
+  country: CountryCode,
+  payload: Partial<{
+    commission_enabled: boolean;
+    commission_percent: string;
+    applies_to: CommissionAppliesTo;
+  }>,
+) =>
+  api.patch<CommissionSetting>(
+    `/admin/settings/commission/${country}`,
+    payload,
+  );
+
+export const listWalletSettings = () =>
+  api.get<WalletSetting[]>("/admin/settings/wallet");
+
+export const updateWalletSettings = (
+  country: CountryCode,
+  payload: Partial<{
+    transfer_daily_limit: string;
+    transfer_monthly_limit: string;
+    min_withdrawal_amount: string;
+  }>,
+) => api.patch<WalletSetting>(`/admin/settings/wallet/${country}`, payload);
+
+export const listPaymentSettings = () =>
+  api.get<PaymentSetting[]>("/admin/settings/payments");
+
+export const updatePaymentSettings = (
+  country: CountryCode,
+  payload: { cliq_confirmation_hours: number },
+) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
+
+// ------------------------------------------------------------ العقود
+
+export const getProviderCatalog = () =>
+  api.get<ProviderCatalog>("/admin/providers");
+
+/** الحقلُ السرّي يعود مقنّعاً (`****`)؛ إعادتُه كما هو تُبقي المخزَّن. */
+export const saveProviderCredential = (
+  providerKey: ProviderKey,
+  payload: {
+    country_code?: CountryCode | null;
+    values: Record<string, string | boolean | null>;
+    is_active?: boolean;
+  },
+) => api.put<ProviderCredential>(`/admin/providers/${providerKey}`, payload);
+
+/** اختبارٌ لا يترك أثراً — ويعود 200 حتى عند الفشل، فالسبب هو الفائدة. */
+export const testProviderCredential = (id: string, testPhone?: string) =>
+  api.post<ProviderTestResult>(`/admin/providers/${id}/test`, {
+    test_phone: testPhone ?? null,
+  });
+
+export const activateProvider = (id: string) =>
+  api.post<ProviderCredential>(`/admin/providers/${id}/activate`, {});
+
+export const deactivateProvider = (id: string) =>
+  api.post<ProviderCredential>(`/admin/providers/${id}/deactivate`, {});
