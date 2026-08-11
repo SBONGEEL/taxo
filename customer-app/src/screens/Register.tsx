@@ -37,7 +37,12 @@ export function RegisterScreen() {
   const verification = config?.auth.verification ?? "none";
 
   const [step, setStep] = useState<"details" | "verify">("details");
-  const [country, setCountry] = useState<CountryCode>(countries[0] ?? "JO");
+  // الدولةُ الافتراضية من `/config` لا أولُ عنصرٍ في القائمة: ترتيبُ التعداد
+  // يجعل الأولَ ليبيا، فكانت شاشةُ التسجيل تفترض سوقاً وشاشةُ الدخول تفترض
+  // غيره — و`default_country_code` نُشر لهذا بعينه (SPEC القسم 4)
+  const [country, setCountry] = useState<CountryCode>(
+    config?.default_country_code ?? countries[0] ?? "JO",
+  );
   const { dialCode, nationalLength } = usePhoneCountry(country);
   // الدولةُ تُختار في هذه الشاشة، فالمفتاح يُقرأ منها لا من حسابٍ لا وجود له
   const womenService = useFeature(country, "women_service_enabled");
@@ -141,7 +146,7 @@ export function RegisterScreen() {
                       className={cn(
                         "rounded-xl border p-3 text-center font-medium transition",
                         gender === option.value
-                          ? "border-brand bg-brand/10 text-ink"
+                          ? "border-brand bg-brand text-brand-ink"
                           : "border-line bg-surface text-muted hover:bg-line/30",
                       )}
                     >

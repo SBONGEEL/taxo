@@ -245,8 +245,10 @@ export function ProfileScreen() {
                   onClick={() => saveGender(option.value)}
                   className={cn(
                     "rounded-xl border px-2 py-3 text-sm font-medium transition",
+                    // نفسُ حالة «محدَّد» في المنتقيين معاً: تعبئةٌ صلبة كما
+                    // في التصميم (`_opts`)، لا صلبةٌ هنا وخافتةٌ هناك
                     user?.gender === option.value
-                      ? "border-brand bg-brand-soft text-brand"
+                      ? "border-brand bg-brand text-brand-ink"
                       : "border-line text-muted hover:bg-line/30",
                   )}
                 >

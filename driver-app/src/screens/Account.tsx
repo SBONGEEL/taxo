@@ -103,12 +103,12 @@ export function AccountScreen() {
               {user.name}
             </div>
             <div className="text-12 text-muted">
+              {/* الرقم كما هو: معرّفٌ يُقارَن ويُملى، لا كمّيةٌ تُقرأ — نفس
+                  قاعدة `Cards.tsx` و`Vehicle.tsx` (`CLAUDE.md`) */}
               <span dir="ltr">
-                {arabicDigits(
-                  country
-                    ? forDisplay(user.phone, country.dial_code)
-                    : user.phone,
-                )}
+                {country
+                  ? forDisplay(user.phone, country.dial_code)
+                  : user.phone}
               </span>{" "}
               · ★ {arabicDigits(driver.rating_avg)}
             </div>
