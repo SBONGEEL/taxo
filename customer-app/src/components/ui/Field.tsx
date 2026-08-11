@@ -15,7 +15,7 @@ interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "prefix
 }
 
 export const Field = forwardRef<HTMLInputElement, FieldProps>(
-  ({ label, hint, error, suffix, prefix, className, id, ...props }, ref) => {
+  ({ label, hint, error, suffix, prefix, className, id, dir, ...props }, ref) => {
     const generated = useId();
     const inputId = id ?? generated;
 
@@ -27,7 +27,14 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
           </label>
         ) : null}
 
-        <div className="relative flex items-center">
+        {/* **`dir` على الغلاف لا على الحقل وحده.**
+         *
+         * الحشوةُ (`ps`/`pe`) تُحسب باتجاه **الحقل**، وموضعُ اللاحقة
+         * (`start`/`end`) باتجاه **أبيه**. فحقلٌ `dir="ltr"` داخل صفحةٍ عربية
+         * كان يحجز الحشوة يميناً ويضع اللاحقة يساراً — فتقع «د.أ» فوق المبلغ
+         * المكتوب، ويظهر رمزُ الدولة **بعد** الرقم في حقل الهاتف بدل أن
+         * يسبقه. ووضعُ الاتجاه على الغلاف يجعل الطرفين يقرآن الاتجاه نفسه. */}
+        <div className="relative flex items-center" dir={dir}>
           {prefix ? (
             <span className="pointer-events-none absolute start-12 text-muted">{prefix}</span>
           ) : null}
@@ -36,12 +43,16 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
             id={inputId}
             className={cn(
               "field",
-              prefix && "ps-40",
+              // الحشوةُ تحجز عرضَ السابقة/اللاحقة **وفراغاً بعدها**: «‎+962»
+              // بمقاس 16 نحوُ ٣٨px يبدأ عند 12، فأربعون كانت تُقصّ الرقمَ
+              // على حرفه الأول
+              prefix && "ps-52",
               suffix && "pe-64",
               error && "border-danger focus:border-danger focus:ring-danger",
               className,
             )}
             aria-invalid={error ? true : undefined}
+            dir={dir}
             {...props}
           />
           {suffix ? (
