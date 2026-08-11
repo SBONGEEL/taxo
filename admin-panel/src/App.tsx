@@ -1,6 +1,7 @@
 /** جذر اللوحة: المزوّدون، والمسارات، وحارسُ الجلسة.
  *
- * **ما هو مبنيٌّ الآن**: الدخول وصفحةُ الإشعارات الجماعية. وبقيةُ الأقسام
+ * **ما هو مبنيٌّ الآن**: الدخول، والسائقون والوثائق، والمالية، والنزاعات،
+ * والإشعارات الجماعية. وبقيةُ الأقسام
  * مرسومةٌ في القائمة معطّلةً بشارة «قريباً» — تقول للمستخدم حالها بدل أن
  * تجعله يشك في اللوحة (انظر `components/Shell.tsx`).
  *
@@ -25,6 +26,15 @@ import { LoginScreen } from "@/screens/Login";
 
 const CampaignsScreen = lazy(() =>
   import("@/screens/Campaigns").then((m) => ({ default: m.CampaignsScreen })),
+);
+const DriversScreen = lazy(() =>
+  import("@/screens/Drivers").then((m) => ({ default: m.DriversScreen })),
+);
+const FinanceScreen = lazy(() =>
+  import("@/screens/Finance").then((m) => ({ default: m.FinanceScreen })),
+);
+const DisputesScreen = lazy(() =>
+  import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
 );
 
 function Centered({ children }: { children: ReactNode }) {
@@ -113,8 +123,32 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="/drivers"
+                    element={
+                      <Guarded>
+                        <DriversScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/finance"
+                    element={
+                      <Guarded>
+                        <FinanceScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/disputes"
+                    element={
+                      <Guarded>
+                        <DisputesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
                     path="*"
-                    element={<Navigate to="/campaigns" replace />}
+                    element={<Navigate to="/drivers" replace />}
                   />
                 </Routes>
               </Suspense>

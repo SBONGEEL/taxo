@@ -7,6 +7,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import (
+    CountryCode,
     DocumentReviewStatus,
     DocumentType,
     DriverStatus,
@@ -147,3 +148,37 @@ class NearbyDriverOut(BaseModel):
     lng: float
     heading: float | None
     vehicle_category: VehicleCategory
+
+
+class AdminDriverRow(BaseModel):
+    """صفٌّ في قائمة الكباتن باللوحة (SPEC القسم 13/2).
+
+    يجمع ما يقرؤه المشرف في سطرٍ واحد ليقرر: من هو، وحاله، وهل رقمُه مُثبت،
+    وكم مستنداً ينتظر مراجعته. **وعدُّ المستندات هنا لا في نداءٍ لكل صف**:
+    صفحةٌ من خمسين كبتناً تصير خمسين نداءً، وقرارُ «من أراجع الآن» يُتخذ من
+    القائمة لا من فتح كل ملف.
+    """
+
+    driver_id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    phone: str
+    country_code: CountryCode
+    status: DriverStatus
+    phone_verified: bool
+    rating_avg: Decimal
+    is_online: bool
+    documents_pending: int
+    documents_rejected: int
+    missing_required: list[DocumentType]
+    created_at: datetime
+
+
+class DriverStatusUpdate(BaseModel):
+    """إيقافُ كبتنٍ أو إعادةُ تفعيله — بسببٍ يدخل سجل التدقيق.
+
+    السببُ إلزاميٌّ في الإيقاف: «لماذا أُوقف؟» سؤالٌ يُسأل بعد شهر، وحالةٌ بلا
+    سببٍ تجعل الجواب اجتهاداً. وهو اختياريٌّ في إعادة التفعيل.
+    """
+
+    reason: str | None = Field(default=None, max_length=255)

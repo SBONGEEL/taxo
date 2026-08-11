@@ -91,3 +91,105 @@ export interface NotificationSetting {
   quiet_hours_end: string;
   timezone: string;
 }
+
+// ------------------------------------------------------------ الكباتن
+
+export type DriverStatus = "pending" | "approved" | "rejected" | "suspended";
+
+export type DocumentType =
+  "driving_license" | "national_id" | "vehicle_registration" | "vehicle_photo";
+
+export type DocumentReviewStatus = "pending" | "approved" | "rejected";
+
+export interface AdminDriverRow {
+  driver_id: string;
+  user_id: string;
+  name: string;
+  phone: string;
+  country_code: CountryCode;
+  status: DriverStatus;
+  phone_verified: boolean;
+  rating_avg: string;
+  is_online: boolean;
+  documents_pending: number;
+  documents_rejected: number;
+  missing_required: DocumentType[];
+  created_at: string;
+}
+
+export interface DriverDocument {
+  id: string;
+  doc_type: DocumentType;
+  content_type: string;
+  size_bytes: number;
+  review_status: DocumentReviewStatus;
+  review_note: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DriverDocuments {
+  documents: DriverDocument[];
+  missing_required: DocumentType[];
+}
+
+// ------------------------------------------------------------ المالية
+
+export type TopupMethod = "cliq" | "cash";
+export type TopupStatus = "pending" | "confirmed" | "rejected";
+
+export interface TopupRequest {
+  id: string;
+  owner_id: string;
+  method: TopupMethod;
+  amount: string;
+  status: TopupStatus;
+  reference: string | null;
+  note: string | null;
+  transaction_id: string | null;
+  processed_at: string | null;
+  created_at: string;
+}
+
+export type WithdrawalMethod = "cliq" | "bank";
+export type WithdrawalStatus = "pending" | "approved" | "paid" | "rejected";
+
+export interface Withdrawal {
+  id: string;
+  driver_id: string;
+  amount: string;
+  method: WithdrawalMethod;
+  status: WithdrawalStatus;
+  reference: string | null;
+  note: string | null;
+  transaction_id: string | null;
+  processed_at: string | null;
+  created_at: string;
+}
+
+// ------------------------------------------------------------ النزاعات
+
+export type PaymentMethod = "cash" | "cliq" | "card" | "wallet";
+export type PaymentStatus =
+  "pending" | "confirmed" | "failed" | "disputed" | "refunded";
+export type DisputeResolution = "paid" | "unpaid";
+
+export interface Payment {
+  id: string;
+  ride_id: string;
+  method: PaymentMethod;
+  amount: string;
+  currency: Currency;
+  status: PaymentStatus;
+  cliq_alias: string | null;
+  cliq_reference: string | null;
+  cliq_transfer_reference: string | null;
+  cliq_confirmation_expires_at: string | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
+  resolution: DisputeResolution | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}

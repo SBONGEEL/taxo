@@ -53,6 +53,7 @@ from app.models.driver import Driver
 from app.models.enums import (
     AuditAction,
     CommissionAppliesTo,
+    CountryCode,
     DisputeResolution,
     FeatureKey,
     PaymentConfirmedBy,
@@ -152,13 +153,22 @@ async def list_all(
     session: AsyncSession,
     *,
     status: PaymentStatus | None,
+    country_code: CountryCode | None = None,
     limit: int,
     offset: int,
 ) -> Sequence[Payment]:
-    """قائمة اللوحة — الفلترة على `disputed` هي شاشة النزاعات (القسم 13.4)."""
+    """قائمة اللوحة — الفلترة على `disputed` هي شاشة النزاعات (القسم 13.4).
+
+    والدولةُ تُقرأ من الرحلة: لا عمودَ دولةٍ على `payments` لأن الدفعة تتبع
+    رحلتها، فالضمُّ هنا لا عمودٌ مكرَّر هناك.
+    """
     stmt = select(Payment).order_by(Payment.created_at.desc())
     if status is not None:
         stmt = stmt.where(Payment.status == status)
+    if country_code is not None:
+        stmt = stmt.join(Ride, Payment.ride_id == Ride.id).where(
+            Ride.country_code == country_code
+        )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 
 

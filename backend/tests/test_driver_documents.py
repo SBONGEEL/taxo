@@ -538,3 +538,82 @@ async def test_replacement_waits_for_the_ride_to_end(
         headers=driver["headers"],
     )
     assert allowed.status_code == 200
+
+
+# --------------------------------------------- قائمة الكباتن في اللوحة
+
+
+async def test_admin_driver_list_counts_documents_in_one_query(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """صفُّ القائمة يحمل ما يقرر به المشرف: الحال، والناقص، والمنتظر مراجعته.
+
+    **والعدُّ في الاستعلام**: بغيره تصير صفحةٌ من خمسين كبتناً خمسين نداءً،
+    فيُفتح كلُّ ملفٍ ليُعرف هل فيه ما يُراجَع.
+    """
+    body = await register(client, DRIVER)
+    await upload_document(client, auth(body))
+
+    rows = await client.get("/admin/drivers", headers=admin_headers)
+    assert rows.status_code == 200, rows.text
+    row = next(r for r in rows.json() if r["phone"].endswith("792222222"))
+
+    assert row["status"] == "pending"
+    assert row["documents_pending"] == 1
+    assert row["documents_rejected"] == 0
+    # رُفع مستندٌ واحد ولم يُقبل بعد، فالثلاثة المطلوبة كلها ناقصة
+    assert set(row["missing_required"]) == {
+        "driving_license",
+        "national_id",
+        "vehicle_registration",
+    }
+
+
+async def test_admin_driver_list_filters_by_status(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    await register(client, DRIVER)
+
+    approved = await client.get(
+        "/admin/drivers", headers=admin_headers, params={"status": "approved"}
+    )
+    assert approved.status_code == 200
+    assert all(row["status"] == "approved" for row in approved.json())
+
+    pending = await client.get(
+        "/admin/drivers", headers=admin_headers, params={"status": "pending"}
+    )
+    assert any(row["phone"].endswith("792222222") for row in pending.json())
+
+
+async def test_suspend_requires_a_reason_and_activation_re_checks_approval(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """الإيقافُ بسببٍ إلزامي، وإعادةُ التفعيل تمر بحارسَي الاعتماد نفسِهما.
+
+    ولو مرّت بغيرهما لصار الإيقافُ طريقاً للالتفاف على شرط المستندات: أوقِف
+    ثم فعّل، فيصير `approved` بلا وثيقةٍ مقبولة.
+    """
+    body = await register(client, DRIVER)
+    driver_id = (await client.get("/drivers/me", headers=auth(body))).json()[
+        "driver"
+    ]["id"]
+
+    naked = await client.post(
+        f"/admin/drivers/{driver_id}/suspend", json={}, headers=admin_headers
+    )
+    assert naked.status_code == 422, naked.text
+
+    stopped = await client.post(
+        f"/admin/drivers/{driver_id}/suspend",
+        json={"reason": "شكاوى متكررة"},
+        headers=admin_headers,
+    )
+    assert stopped.status_code == 200, stopped.text
+    assert stopped.json()["status"] == "suspended"
+
+    # لا مستنداتِ له، فإعادةُ التفعيل ترتد بنفس رسالة الاعتماد
+    back = await client.post(
+        f"/admin/drivers/{driver_id}/activate", json={}, headers=admin_headers
+    )
+    assert back.status_code == 409, back.text

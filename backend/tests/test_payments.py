@@ -586,3 +586,30 @@ async def test_outstanding_reflects_what_is_still_owed(
     after = await payments_of(client, rider["headers"], ride["id"])
     assert after["outstanding"] == "0.000"
     assert Decimal(after["payments"][0]["amount"]) == Decimal(EXPECTED_FARE)
+
+
+async def test_admin_payment_list_filters_by_the_ride_country(
+    client: AsyncClient, jordan_settings: None, session_factory, admin_headers: dict
+) -> None:
+    """مبدّلُ الدولة في اللوحة وعدٌ لكل شاشة (SPEC القسم 13).
+
+    ولا عمودَ دولةٍ على `payments` — الدفعة تتبع رحلتها — فالفلترة ضمٌّ إلى
+    `rides`. وبغيرها يرى مشرفُ السوق الليبي نزاعاتٍ أردنية ويفصل فيها.
+    """
+    _rider, _driver, payment = await _disputed_payment(client, session_factory)
+
+    jordan = await client.get(
+        "/admin/payments",
+        headers=admin_headers,
+        params={"status": "disputed", "country_code": "JO"},
+    )
+    assert jordan.status_code == 200, jordan.text
+    assert [row["id"] for row in jordan.json()] == [payment["id"]]
+
+    libya = await client.get(
+        "/admin/payments",
+        headers=admin_headers,
+        params={"status": "disputed", "country_code": "LY"},
+    )
+    assert libya.status_code == 200
+    assert libya.json() == []

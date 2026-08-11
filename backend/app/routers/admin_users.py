@@ -20,20 +20,27 @@ import uuid
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
-from app.core.exceptions import NotFound
-from app.models.driver import Driver
-from app.models.enums import CountryCode, DriverStatus, UserRole
+from app.core.exceptions import InvalidInput, NotFound
+from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
+from app.models.enums import (
+    CountryCode,
+    DocumentReviewStatus,
+    DriverStatus,
+    UserRole,
+)
 from app.models.user import User
 from app.routers.drivers import document_response
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
+    AdminDriverRow,
     DocumentReviewIn,
     DriverDocumentOut,
     DriverDocumentsOut,
     DriverOut,
+    DriverStatusUpdate,
 )
 from app.services import (
     documents as documents_service,
@@ -70,6 +77,120 @@ async def list_users(
 
     rows = (await session.scalars(stmt.limit(limit).offset(offset))).all()
     return [UserOut.model_validate(row) for row in rows]
+
+
+@router.get("/drivers", response_model=list[AdminDriverRow])
+async def list_drivers(
+    _staff: StaffUser,
+    session: DbSession,
+    status: DriverStatus | None = None,
+    country_code: CountryCode | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[AdminDriverRow]:
+    """قائمة الكباتن بحالها وعدّ مستنداتها (SPEC القسم 13/2).
+
+    **العدّ في الاستعلام لا في نداءٍ لكل صف**: القرار «من أراجع الآن» يُتخذ من
+    القائمة، وصفحةٌ من خمسين كبتناً لا يجوز أن تصير خمسين نداءً.
+    """
+    pending = func.count(DriverDocument.id).filter(
+        DriverDocument.review_status == DocumentReviewStatus.PENDING
+    )
+    rejected = func.count(DriverDocument.id).filter(
+        DriverDocument.review_status == DocumentReviewStatus.REJECTED
+    )
+    approved_types = func.array_agg(DriverDocument.doc_type).filter(
+        DriverDocument.review_status == DocumentReviewStatus.APPROVED
+    )
+
+    stmt = (
+        select(Driver, User, pending, rejected, approved_types)
+        .join(User, Driver.user_id == User.id)
+        .outerjoin(DriverDocument, DriverDocument.driver_id == Driver.id)
+        .group_by(Driver.id, User.id)
+        .order_by(Driver.created_at.desc())
+    )
+    if status is not None:
+        stmt = stmt.where(Driver.status == status)
+    if country_code is not None:
+        stmt = stmt.where(User.country_code == country_code)
+
+    rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
+    return [
+        AdminDriverRow(
+            driver_id=driver.id,
+            user_id=user.id,
+            name=user.name,
+            phone=user.phone,
+            country_code=user.country_code,
+            status=driver.status,
+            phone_verified=user.phone_verified_at is not None,
+            rating_avg=driver.rating_avg,
+            is_online=driver.is_online,
+            documents_pending=pending_count,
+            documents_rejected=rejected_count,
+            # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد
+            missing_required=[
+                doc_type
+                for doc_type in REQUIRED_DOCUMENT_TYPES
+                if doc_type.value not in (approved or [])
+            ],
+            created_at=driver.created_at,
+        )
+        for driver, user, pending_count, rejected_count, approved in rows
+    ]
+
+
+@router.post("/drivers/{driver_id}/suspend", response_model=DriverOut)
+async def suspend_driver(
+    driver_id: uuid.UUID,
+    payload: DriverStatusUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> DriverOut:
+    """إيقافُ كبتن (SPEC القسم 13/2) — **بسببٍ إلزامي يدخل التدقيق**.
+
+    والإيقافُ يُخرجه من التوزيع فوراً بحكم `dispatch.eligible_driver_ids`،
+    ولا يُنهي رحلةً جارية: قطعُ رحلةٍ في منتصفها يترك راكباً في الطريق، والقرارُ
+    الإداري يقع على ما بعدها.
+    """
+    if not (payload.reason or "").strip():
+        raise InvalidInput("سبب الإيقاف مطلوب")
+
+    driver = await _driver(session, driver_id)
+    driver = await drivers_service.set_status(
+        session,
+        driver=driver,
+        status=DriverStatus.SUSPENDED,
+        actor=admin,
+        reason=payload.reason.strip(),
+    )
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)
+
+
+@router.post("/drivers/{driver_id}/activate", response_model=DriverOut)
+async def activate_driver(
+    driver_id: uuid.UUID,
+    payload: DriverStatusUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> DriverOut:
+    """إعادةُ تفعيل موقوف — **بحارسَي الاعتماد نفسِهما**.
+
+    من أُوقف ثم رُفعت عنه العقوبة يعود إلى `approved`، وذلك اعتمادٌ جديد: لو
+    مرّ من باب غير `approve` لصار الإيقافُ طريقاً للالتفاف على شرط المستندات
+    والرقم المُثبت.
+    """
+    driver = await _driver(session, driver_id)
+    if driver.status is not DriverStatus.SUSPENDED:
+        raise InvalidInput("هذا الكبتن ليس موقوفاً")
+
+    driver = await drivers_service.approve(session, driver=driver, actor=admin)
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)
 
 
 @router.get("/drivers/{driver_id}/documents", response_model=DriverDocumentsOut)

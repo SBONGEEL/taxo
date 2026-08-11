@@ -27,7 +27,8 @@ connection, unified provider interfaces with mocks, and the OTP/Push/automatic-C
 integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
-written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login and the campaigns page.
+written from both send doors) are complete. **Stage 11 (the admin panel, `admin-panel/`) has begun** — shell, login, drivers/documents,
+finance (withdrawals and CliQ topups), disputes, and campaigns.
 **Stage 10's screens (the driver PWA, `driver-app/`) are
 complete** — login/recovery, three-step registration, home with the offer card and active ride,
 collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal
@@ -190,6 +191,13 @@ starts in, with a toggle in the header. Three things differ from the two PWAs an
 no device registration (a desk panel receives no push), no WebSocket yet (the live map arrives with
 its own screen, not with the shell), and a **country switch in the header** that narrows what every
 screen shows — display state in `sessionStorage`, so two tabs on two markets do not fight.
+One backend rule the panel made visible: **`/admin/drivers/{id}/activate` goes through
+`drivers.approve`, not a bare status write** — otherwise suspending and reactivating a driver would
+be a way around the verified-phone and approved-documents guards, and the shortest path to a driver
+working with no licence on file. The drivers screen reads those two guards *before* enabling its
+approve button and names what is missing, because a button that works and then bounces teaches the
+admin to retry, while a disabled button that says why teaches them to fix.
+
 **`support` sees less than `admin` in the UI, and that is comfort, not protection**: every admin
 route enforces the role server-side (SPEC §13/8), and hiding a button never prevented a request.
 
