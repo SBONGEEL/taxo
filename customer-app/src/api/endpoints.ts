@@ -58,6 +58,8 @@ export const register = (payload: {
   password: string;
   country_code: CountryCode;
   verification_token?: string;
+  /** إقرارٌ ذاتيّ اختياري (المرحلة 10-ج) — ولا يُخمَّن عمّن تركه. */
+  gender?: "male" | "female";
 }) => api.post<AuthResponse>("/auth/register", { ...payload, role: "rider" }, { anonymous: true });
 
 export const login = (phone: string, password: string, countryCode: CountryCode) =>
@@ -120,8 +122,17 @@ export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
 export const listMyRides = (limit = 20, offset = 0) =>
   api.get<Ride[]>("/rides/me", { query: { limit, offset } });
 
-export const cancelRide = (rideId: string, reason?: string) =>
-  api.post<Ride>(`/rides/${rideId}/cancel`, { reason: reason ?? null });
+/** `reason_code` سببٌ **مصنَّف** بجانب النص: `gender_mismatch` وحدها تُسقط
+ *  رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر (المرحلة 10-ج). */
+export const cancelRide = (
+  rideId: string,
+  reason?: string,
+  reasonCode?: "gender_mismatch" | "other",
+) =>
+  api.post<Ride>(`/rides/${rideId}/cancel`, {
+    reason: reason ?? null,
+    reason_code: reasonCode ?? null,
+  });
 
 export const nearbyDrivers = (lat: number, lng: number) =>
   api.get<NearbyDriver[]>("/drivers/nearby", { query: { lat, lng } });

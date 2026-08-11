@@ -19,9 +19,23 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Sheet } from "@/components/ui/Sheet";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
-import { formatDistance, formatMoney } from "@/lib/utils";
+import { cn, formatDistance, formatMoney } from "@/lib/utils";
 
 const CANCELLABLE = new Set(["requested", "searching", "accepted", "arrived"]);
+
+interface CancelReason {
+  label: string;
+  /** `undefined` = نصٌّ حر بلا أثرٍ على الرسوم؛ والمصنَّف يغيّر السلوك. */
+  code?: "gender_mismatch";
+}
+
+/** أسبابُ الإلغاء كما في التصميم — والنصُّ الحرّ يصل الإدارة كما كُتب. */
+const CANCEL_REASONS: CancelReason[] = [
+  { label: "الكبتن تأخر" },
+  { label: "غيّرت رأيي" },
+  { label: "الكبتن ليس أنثى — عدم تطابق", code: "gender_mismatch" },
+  { label: "عنوان الالتقاء خطأ" },
+];
 
 /** «مشاركة الرحلة» (SPEC القسم 11.4) — نصٌّ يُرسل عبر ورقة مشاركة النظام.
  *
@@ -63,6 +77,7 @@ export function TrackingSheet({
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareHintClosed, setShareHintClosed] = useState(false);
+  const [reason, setReason] = useState<CancelReason | null>(null);
 
   const searching = ride.status === "requested" || ride.status === "searching";
   // «رحلةٌ نسائية» = ما طُلب فيها جنسٌ بعينه — وصفٌ للطلب لا لصاحبته
@@ -73,7 +88,7 @@ export function TrackingSheet({
     setBusy(true);
     setError(null);
     try {
-      await cancelRide(ride.id);
+      await cancelRide(ride.id, reason?.label, reason?.code);
       onChanged();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إلغاء الرحلة");
@@ -98,6 +113,13 @@ export function TrackingSheet({
             </p>
           </div>
           <div className="text-end">
+            {/* شارةُ «رحلة نسائية» — وصفُ الطلب، وتطمينٌ بصريٌّ بأن الشرط
+                الذي طلبته سارٍ فعلاً على هذه الرحلة (المرحلة 10-ج) */}
+            {gendered ? (
+              <span className="mb-1.5 inline-block rounded-full border border-brand-brd bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">
+                رحلة نسائية
+              </span>
+            ) : null}
             <p className="text-xs text-muted">السعر المقدّر</p>
             <p className="font-bold text-ink">
               {formatMoney(ride.estimated_fare, ride.currency)}
@@ -244,6 +266,38 @@ export function TrackingSheet({
                 ? "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء."
                 : "سيتوقف البحث عن كبتن. متأكد؟"}
             </p>
+
+            {/* أسبابٌ مصنَّفة تظهر **بعد الإسناد** وحده: قبله لا كبتن يُشتكى
+                منه. و«ليس أنثى» لا تُعرض إلا على رحلةٍ طُلب فيها جنس — والخلفية
+                ترفضها في غيرها، فعرضُها هناك يعلّم الضغط ثم الارتداد */}
+            {afterAccept ? (
+              <div className="flex flex-col gap-1.5">
+                {CANCEL_REASONS.filter(
+                  (option) => option.code !== "gender_mismatch" || gendered,
+                ).map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => setReason(option)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2.5 text-start text-sm transition",
+                      reason?.label === option.label
+                        ? "border-brand-brd bg-brand-soft font-semibold text-brand"
+                        : "border-line bg-surface text-ink",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+                {reason?.code === "gender_mismatch" ? (
+                  <p className="rounded-xl border border-brand-brd bg-brand-soft p-3 text-xs leading-relaxed text-ink">
+                    بلا رسوم إلغاء على أيٍّ من الطرفين. ويُسجَّل بلاغٌ على
+                    الحساب الآخر، وتكرارُ البلاغات يوسم الحساب للمراجعة.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="flex gap-2">
               <Button variant="danger" className="flex-1" loading={busy} onClick={cancel}>
                 نعم، ألغِ الرحلة

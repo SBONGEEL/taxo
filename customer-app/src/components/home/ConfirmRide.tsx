@@ -29,6 +29,13 @@ import { VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { useWomenService } from "@/lib/women";
 import { cn, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
+/** نصٌّ لكل خيار — والثلاثةُ تقول أثرَه على الانتظار لا اسمَه. */
+const PREFERENCE_NOTE: Record<GenderPreference, string> = {
+  female: "سيبحث النظام عن كبتنات فقط، ضمن نطاق ١٠ كم بدل ٧ — قد يطول الانتظار.",
+  male: "سيبحث النظام عن كبتنٍ رجل فقط، ضمن نطاق ١٠ كم.",
+  any: "أي كبتن متاح — أسرع استجابة وأوسع نطاق.",
+};
+
 export function ConfirmRide({
   pickup,
   pickupAddress,
@@ -131,11 +138,13 @@ export function ConfirmRide({
             `lib/women.ts` وحده */}
         {women.available ? (
           <div>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="mb-2 text-xs text-muted">تفضيل الكبتن</p>
+            <div className="grid grid-cols-3 gap-2">
               {(
                 [
-                  { value: "any", label: "أي كبتن" },
-                  { value: "female", label: "كبتنة فقط" },
+                  { value: "female", label: "إناث" },
+                  { value: "male", label: "ذكور" },
+                  { value: "any", label: "الجميع" },
                 ] as const
               ).map((option) => (
                 <button
@@ -145,7 +154,7 @@ export function ConfirmRide({
                   className={cn(
                     "rounded-xl border p-3 text-center text-sm font-medium transition",
                     option.value === preference
-                      ? "border-brand bg-brand/10 text-ink"
+                      ? "border-brand bg-brand text-brand-ink"
                       : "border-line bg-surface text-muted hover:bg-line/30",
                   )}
                 >
@@ -153,13 +162,12 @@ export function ConfirmRide({
                 </button>
               ))}
             </div>
-            {preference === "female" ? (
-              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+            <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+              {preference === "any" ? null : (
                 <Clock className="mt-0.5 size-3.5 shrink-0" />
-                الكبتنات أقل عدداً، فقد ينتظر طلبك أطول — نوسّع البحث لمسافة
-                أبعد قبل أن نعتذر.
-              </p>
-            ) : null}
+              )}
+              {PREFERENCE_NOTE[preference]}
+            </p>
           </div>
         ) : null}
 

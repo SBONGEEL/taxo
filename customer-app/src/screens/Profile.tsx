@@ -46,7 +46,7 @@ export function ProfileScreen() {
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
   const { pink, available, setPink } = useBrand();
-  const { defaultPreference } = useWomenService();
+  const { enabled, defaultPreference } = useWomenService();
   const [savingPreference, setSavingPreference] = useState(false);
   const { dialCode } = usePhoneCountry(user?.country_code);
 
@@ -92,6 +92,19 @@ export function ProfileScreen() {
 
   /** الحفظُ فوريّ بلا زرِّ «حفظ»: خيارٌ من اثنين لا نموذجُ إدخال. وعند الفشل
    *  يعود المعروضُ إلى ما في الحساب، فلا تبقى الشاشة تقول ما لم يُحفظ. */
+  async function saveGender(next: "male" | "female") {
+    setSavingPreference(true);
+    setError(null);
+    try {
+      await updateMe({ gender: next });
+      await refreshUser();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر حفظ الجنس");
+    } finally {
+      setSavingPreference(false);
+    }
+  }
+
   async function savePreference(next: GenderPreference) {
     setSavingPreference(true);
     setError(null);
@@ -206,6 +219,44 @@ export function ProfileScreen() {
           </div>
         </section>
 
+        {/* إعلانُ الجنس — **محكومٌ بمفتاح الخدمة وحده** لا بـ`available`:
+            لو حُكم به لما استطاعت الإعلان لأن الإعلان شرطُ الإتاحة. وهو
+            قابلٌ للتعديل: إقرارٌ ذاتيّ لا وثيقة (المرحلة 10-ج) */}
+        {enabled ? (
+          <section className="card space-y-3 p-4">
+            <div>
+              <p className="font-medium text-ink">الجنس</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                إقرارٌ ذاتيّ — لا نطلب وثيقة، ولا يظهر لأي مستخدم آخر. عليه
+                تُبنى مطابقةُ تفضيلات الرحلات.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: "female", label: "أنثى" },
+                  { value: "male", label: "ذكر" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  disabled={savingPreference}
+                  onClick={() => saveGender(option.value)}
+                  className={cn(
+                    "rounded-xl border px-2 py-3 text-sm font-medium transition",
+                    user?.gender === option.value
+                      ? "border-brand bg-brand-soft text-brand"
+                      : "border-line text-muted hover:bg-line/30",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {/* التفضيلُ الافتراضي — يُنسخ إلى كل طلبٍ لا تختار فيه شيئاً، وتغييرُه
             يحكم ما يأتي لا رحلةً جاريةً الآن (المرحلة 10-ج) */}
         {available ? (
@@ -217,11 +268,12 @@ export function ProfileScreen() {
                 من شاشة الطلب.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(
                 [
-                  { value: "any", label: "أي كبتن" },
-                  { value: "female", label: "كبتنة فقط" },
+                  { value: "female", label: "إناث" },
+                  { value: "male", label: "ذكور" },
+                  { value: "any", label: "الجميع" },
                 ] as const
               ).map((option) => (
                 <button
@@ -232,7 +284,7 @@ export function ProfileScreen() {
                   className={cn(
                     "rounded-xl border px-2 py-3 text-sm font-medium transition",
                     defaultPreference === option.value
-                      ? "border-brand bg-brand/10 text-ink"
+                      ? "border-brand bg-brand text-brand-ink"
                       : "border-line text-muted hover:bg-line/30",
                   )}
                 >

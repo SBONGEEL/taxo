@@ -90,7 +90,7 @@ export function OfferSheet({
                 كبتنٌ يقبل ثم يكتشف أنه ليس أهلاً للطلب يُلغي، وإلغاءٌ كان
                 يمكن تجنّبه ببضع بكسلات. ولا تظهر على طلبٍ بلا تفضيل */}
             {offer.ride.gender_preference !== "any" ? (
-              <span className="mb-4 inline-block rounded-full bg-brand px-9 py-3 text-10 font-bold text-brand-ink">
+              <span className="mb-4 inline-block rounded-full border border-brand-brd bg-brand-soft px-9 py-3 text-10 font-bold text-brand">
                 طلب نسائي
               </span>
             ) : null}
@@ -130,7 +130,7 @@ export function OfferSheet({
             onClick={onAccept}
             disabled={busy}
             style={{ flex: 2.5 }}
-            className="rounded-15 bg-accent p-15 text-center text-15 font-bold text-accent-ink disabled:opacity-50"
+            className="rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
           >
             قبول
           </button>

@@ -157,6 +157,30 @@ export function HomeScreen() {
     }
   }
 
+  /** «أقبل أي كبتن» — **طلبٌ جديد بنفس النقطتين لا توسيعُ بحثٍ منتهٍ**.
+   *
+   * `no_driver_found` حالةٌ نهائية في الخلفية (القسم 4)، فلا شيء يُستأنف؛
+   * والسعرُ يُعاد حسابه لأن الرحلة الجديدة رحلةٌ جديدة — وذلك أصدق من إيهامها
+   * أن الطلب الأول ما زال حياً.
+   */
+  async function acceptAnyDriver(previous: Ride) {
+    setError(null);
+    try {
+      const created = await requestRide({
+        pickup: previous.pickup,
+        dropoff: previous.dropoff,
+        vehicle_category: previous.vehicle_category,
+        pickup_address: previous.pickup_address,
+        dropoff_address: previous.dropoff_address,
+        gender_preference: "any",
+      });
+      setDismissed(null);
+      setRide(created);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+    }
+  }
+
   const picking = phase === "pick-pickup" || phase === "pick-dropoff";
 
   return (
@@ -226,7 +250,11 @@ export function HomeScreen() {
             {tracking ? (
               <TrackingSheet ride={ride!} onChanged={() => void refresh()} />
             ) : outcome ? (
-              <OutcomeSheet ride={outcome} onDismiss={() => setDismissed(outcome.id)} />
+              <OutcomeSheet
+                ride={outcome}
+                onDismiss={() => setDismissed(outcome.id)}
+                onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
+              />
             ) : picking ? (
               <Sheet>
                 <div className="space-y-3 pb-4">
@@ -301,9 +329,21 @@ export function HomeScreen() {
 }
 
 /** خاتمةُ رحلة: الدفع بعد الإنهاء، وخبرٌ يُقرأ بعد الإلغاء (SPEC القسم 5). */
-function OutcomeSheet({ ride, onDismiss }: { ride: Ride; onDismiss: () => void }) {
+function OutcomeSheet({
+  ride,
+  onDismiss,
+  onAcceptAnyDriver,
+}: {
+  ride: Ride;
+  onDismiss: () => void;
+  onAcceptAnyDriver: () => Promise<void>;
+}) {
   const navigate = useNavigate();
+  const [retrying, setRetrying] = useState(false);
   const completed = ride.status === "completed";
+  // طلبٌ مجنَّس لم يجد كبتناً: هنا وحده يُعرض التنازل عن الشرط
+  const missedGendered =
+    ride.status === "no_driver_found" && ride.gender_preference !== "any";
 
   return (
     <Sheet>
@@ -320,6 +360,31 @@ function OutcomeSheet({ ride, onDismiss }: { ride: Ride; onDismiss: () => void }
             </p>
             <Button size="lg" onClick={() => navigate(`/rides/${ride.id}/pay`)}>
               الانتقال إلى الدفع
+            </Button>
+          </>
+        ) : missedGendered ? (
+          <>
+            {/* **تخييرٌ لا رفض**: الطلبُ سقط لأن الشرط لم يتحقق، والقرارُ في
+                التنازل عنه قرارُها هي — ونعرضه مرةً هنا لا نطبّقه عنها.
+                و«أنتظر كبتنة» ليس زراً بعد: لا مسارَ في الخلفية يواصل بحثاً
+                انتهى، فوعدٌ بلا مسارٍ أسوأ من غيابه (`FUTURE-FEATURES`) */}
+            <p className="text-sm leading-relaxed text-muted">
+              لا كبتنة متاحة قريبة الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو
+              قبول أي كبتن متاح الآن — الاختيار لكِ.
+            </p>
+            <Button
+              size="lg"
+              loading={retrying}
+              onClick={async () => {
+                setRetrying(true);
+                try {
+                  await onAcceptAnyDriver();
+                } finally {
+                  setRetrying(false);
+                }
+              }}
+            >
+              أقبل أي كبتن متاح
             </Button>
           </>
         ) : (

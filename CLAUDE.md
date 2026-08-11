@@ -552,6 +552,15 @@ pill. `test_ws.py` asserts `gender_preference` is present in the `ride_offer` fr
 app reads and nobody sends is a badge that never appears, which is the `awaiting_confirmation`
 failure shape.
 
+The women's-service design arrived **after** the feature was built, and reconciling the two turned
+up the failure mode neither the build nor the backend suite can see: **a rule with no door**. The
+matching, the fee waiver and the report counter were implemented and tested, while the rider had no
+field anywhere to declare her gender (so every gate downstream was permanently closed) and neither
+app could send `reason_code` at all. `useWomenService` therefore returns **two** flags — `enabled`
+opens the gender declaration itself, `available` opens everything that depends on it — because
+gating the declaration on `available` is a closed loop. When a backend rule ships, check that some
+screen can actually reach it; a green suite proves the rule works, not that anyone can use it.
+
 **`services/drivers.approve` now has two guards, not one**: a verified phone (stage 8-ب) and every
 required document approved (`REQUIRED_DOCUMENT_TYPES` in `models/driver.py` — licence, national ID,
 vehicle registration; the vehicle photo is deliberately optional). Without the second, review is a

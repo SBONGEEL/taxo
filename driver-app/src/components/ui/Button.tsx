@@ -23,7 +23,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-accent text-accent-ink font-bold",
+  primary: "bg-brand text-brand-ink font-bold",
   secondary: "border border-line text-ink font-semibold",
   danger: "bg-danger text-white font-bold",
   ghost: "text-muted font-semibold",

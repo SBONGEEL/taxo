@@ -47,6 +47,8 @@ export interface User {
   phone_verified: boolean;
   /** تعلنه الراكبة عن نفسها (المرحلة 10-ج)؛ `null` = لم تعلن. */
   gender: "male" | "female" | null;
+  /** ختمُ المشرف — للكبتن وحده، وفارغٌ عند الراكبة دائماً. */
+  gender_verified_at: string | null;
   /** تفضيلُها الافتراضي لجنس الكبتن — يُنسخ إلى الرحلة عند الطلب. */
   ride_gender_preference: GenderPreference;
   created_at: string;

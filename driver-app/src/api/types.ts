@@ -33,6 +33,8 @@ export interface User {
   // جنسُ الكبتن يضبطه المشرف من هويته (المرحلة 10-ج)؛ `null` = لم يُثبَّت
   // بعد. يقرؤه التطبيق لشيءٍ واحد: هل تُتاح السِمة الوردية لصاحبة الشاشة
   gender: "male" | "female" | null;
+  /** لحظةُ ختم المشرف — تقرؤها شاشةُ الحساب، وفارغةٌ عند الراكب دائماً. */
+  gender_verified_at: string | null;
   ride_gender_preference: GenderPreference;
   created_at: string;
 }

@@ -27,6 +27,8 @@
        الوردية، والرمزُ هنا كي لا يفترق الملف عن `DESIGN.md` §1.1-ب */
     --brand: #e6edf3;
     --brand-ink: #0d1014;
+    --brand-soft: #1a2027;
+    --brand-brd: #2a313a;
   }
 
   .light {
@@ -46,6 +48,8 @@
     --dim: rgba(20, 24, 29, 0.4);
     --brand: #171b20;
     --brand-ink: #f2f0eb;
+    --brand-soft: #faf9f6;
+    --brand-brd: #ddd8cf;
   }
 
   html,

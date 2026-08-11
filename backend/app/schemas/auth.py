@@ -116,6 +116,10 @@ class UserOut(BaseModel):
     # وجنسُ **غيره** لا يصل إليه من أي مسار: ليس في `RideDriverOut` ولا في
     # إطار `nearby_drivers` ولا في أي مخرَجٍ يراه الطرف الآخر
     gender: Gender | None = None
+    # لحظةُ ختم المشرف — تقرؤها **الكبتنة في شاشة وثائقها** لتعرف أن جنسها
+    # ثُبِّت ومتى، وأنه ليس حقلاً تعدّله هي. وفارغةٌ عند الراكبة دائماً:
+    # إعلانُها عن نفسها لا يُختم (المرحلة 10-ج)
+    gender_verified_at: datetime | None = None
     ride_gender_preference: GenderPreference = GenderPreference.ANY
     created_at: datetime
 

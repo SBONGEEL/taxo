@@ -21,10 +21,10 @@ import { PhoneVerification } from "@/components/PhoneVerification";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { useConfig } from "@/lib/config";
-import { usePhoneCountry } from "@/lib/config";
+import { useConfig, useFeature, usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 export function RegisterScreen() {
   const { config } = useConfig();
@@ -39,9 +39,12 @@ export function RegisterScreen() {
   const [step, setStep] = useState<"details" | "verify">("details");
   const [country, setCountry] = useState<CountryCode>(countries[0] ?? "JO");
   const { dialCode, nationalLength } = usePhoneCountry(country);
+  // الدولةُ تُختار في هذه الشاشة، فالمفتاح يُقرأ منها لا من حسابٍ لا وجود له
+  const womenService = useFeature(country, "women_service_enabled");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -64,6 +67,7 @@ export function RegisterScreen() {
           password,
           country_code: country,
           verification_token: verificationToken,
+          gender: gender ?? undefined,
         }),
       );
       navigate("/", { replace: true });
@@ -114,6 +118,43 @@ export function RegisterScreen() {
               onPhoneChange={setPhone}
               onCountryChange={setCountry}
             />
+
+            {/* إقرارٌ ذاتيّ بلا وثيقة (المرحلة 10-ج) — **اختياريّ**: من تركه
+                لا يُخمَّن عنه، ولا تصله طلبات مجنّسة ولا تُعرض عليه.
+                ويظهر حيث الخدمة مفتوحة في الدولة المختارة وحدها */}
+            {womenService ? (
+              <div>
+                <div className="mb-1.5 text-sm text-muted">الجنس</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { value: "female", label: "أنثى" },
+                      { value: "male", label: "ذكر" },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        setGender(gender === option.value ? null : option.value)
+                      }
+                      className={cn(
+                        "rounded-xl border p-3 text-center font-medium transition",
+                        gender === option.value
+                          ? "border-brand bg-brand/10 text-ink"
+                          : "border-line bg-surface text-muted hover:bg-line/30",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                  إقرارٌ ذاتيّ — لا نطلب وثيقة. يُستعمل لمطابقة تفضيلات الرحلات
+                  فقط، ولا يظهر لأي مستخدم آخر.
+                </p>
+              </div>
+            ) : null}
 
             <Field
               label="كلمة المرور"

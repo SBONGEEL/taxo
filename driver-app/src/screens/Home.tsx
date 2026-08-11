@@ -41,13 +41,9 @@ import { MapView } from "@/components/map/MapView";
 import { CliqTransferSheet } from "@/components/CliqTransferSheet";
 import { OfferSheet } from "@/components/OfferSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
-import { useConfig, useMapboxToken } from "@/lib/config";
+import { useConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
-import {
-  CATEGORY_LABEL,
-  CURRENCY_FULL,
-  CURRENCY_LABEL,
-} from "@/lib/rideFormat";
+import { CATEGORY_LABEL, CURRENCY_FULL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -56,8 +52,10 @@ import { arabicDigits, cn } from "@/lib/utils";
 export function HomeScreen() {
   const navigate = useNavigate();
   const { user } = useSession();
+  const womenService = useFeature(user?.country_code, "women_service_enabled");
   const { config } = useConfig();
   const { profile } = useDriver();
+  const preference = profile?.driver.gender_preference ?? "any";
   const { dark, toggle } = useTheme();
   const token = useMapboxToken();
   const {
@@ -284,6 +282,22 @@ export function HomeScreen() {
               ))}
             </div>
 
+            {/* التفضيلُ النافذ ظاهرٌ في الرئيسية لا في الإعدادات وحدها
+                (المرحلة 10-ج): من ضيّق من يُقلّهم يرى طلباتٍ أقل، وسببُ القلة
+                يجب أن يكون أمام عينه لا في شاشةٍ يفتحها بحثاً عن عطل */}
+            {womenService && preference !== "any" ? (
+              <button
+                type="button"
+                onClick={() => navigate("/account/settings")}
+                className="mb-10 flex w-full items-center justify-between rounded-14 border border-brand-brd bg-brand-soft px-14 py-12 text-start"
+              >
+                <span className="text-12.5 font-semibold text-brand">
+                  أستقبل ركاباً: {PREFERENCE_LABEL[preference]}
+                </span>
+                <span className="text-11.5 text-muted underline">تغيير</span>
+              </button>
+            ) : null}
+
             {error || actionError ? (
               <div className="mb-10">
                 <ErrorNote message={error ?? actionError} />
@@ -305,7 +319,7 @@ export function HomeScreen() {
                   ? "bg-surface-2 text-muted"
                   : online
                     ? "bg-surface text-ink"
-                    : "bg-accent text-accent-ink",
+                    : "bg-brand text-brand-ink",
               )}
             >
               {goLabel}
@@ -320,9 +334,10 @@ export function HomeScreen() {
           currencyLabel={currency}
           busy={busy}
           onAdvance={() => void advance()}
-          onCancel={() =>
+          genderPreference={profile?.driver.gender_preference ?? "any"}
+          onCancel={(reason) =>
             void run(async () =>
-              setRide(await cancelRide(ride.id, "إلغاء من الكبتن")),
+              setRide(await cancelRide(ride.id, reason.label, reason.code)),
             )
           }
         />

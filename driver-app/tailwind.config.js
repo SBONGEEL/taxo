@@ -88,6 +88,8 @@ export default {
         // (DESIGN.md §1.1-ب)
         brand: "var(--brand)",
         "brand-ink": "var(--brand-ink)",
+        "brand-soft": "var(--brand-soft)",
+        "brand-brd": "var(--brand-brd)",
         "stripe-a": "var(--sa)",
         "stripe-b": "var(--sb)",
         dim: "var(--dim)",

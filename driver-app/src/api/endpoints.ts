@@ -169,8 +169,17 @@ export const startRide = (rideId: string) =>
 export const completeRide = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/complete`);
 
-export const cancelRide = (rideId: string, reason: string) =>
-  api.post<Ride>(`/rides/${rideId}/cancel`, { reason });
+/** `reason_code` سببٌ **مصنَّف**: `gender_mismatch` وحدها تُسقط الرسوم وتُدخل
+ *  بلاغاً على الطرف الآخر، فلا تُترك لنصٍّ حر (المرحلة 10-ج). */
+export const cancelRide = (
+  rideId: string,
+  reason: string,
+  reasonCode?: "gender_mismatch" | "other",
+) =>
+  api.post<Ride>(`/rides/${rideId}/cancel`, {
+    reason,
+    reason_code: reasonCode ?? null,
+  });
 
 // ------------------------------------------------------------ الدفع
 

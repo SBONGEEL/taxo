@@ -17,7 +17,7 @@ import { getMySubscription } from "@/api/endpoints";
 import type { DriverStatus, MySubscription } from "@/api/types";
 import { BottomNav } from "@/components/BottomNav";
 import { Spinner } from "@/components/ui/Feedback";
-import { useCountryConfig } from "@/lib/config";
+import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { forDisplay } from "@/lib/phone";
 import { useSession } from "@/lib/session";
@@ -37,6 +37,10 @@ export function AccountScreen() {
   const { profile } = useDriver();
   const { signOut } = useSession();
   const country = useCountryConfig(profile?.user.country_code);
+  const womenService = useFeature(
+    profile?.user.country_code,
+    "women_service_enabled",
+  );
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
 
   useEffect(() => {
@@ -117,6 +121,39 @@ export function AccountScreen() {
             {status.text} · {docsNote}
           </span>
         </div>
+
+        {/* توثيقُ الجنس (المرحلة 10-ج): تقرؤه الكبتنة لتعرف أنه **مثبَّتٌ من
+            الإدارة عن هويتها** ومتى — لا حقلٌ نسيت ملأه. وقبل التثبيت لا
+            تصلها الطلبات المجنّسة أصلاً، وقولُ ذلك هنا يمنع سؤال «لماذا لا
+            تصلني طلبات النساء». ولا يُعدَّل من التطبيق */}
+        {womenService ? (
+          <div className="mb-10 rounded-16 border border-brand-brd bg-surface p-15">
+            <div className="flex items-center justify-between gap-10">
+              <span className="text-13.5 font-bold text-ink">الجنس</span>
+              <span className="text-13 font-bold text-brand">
+                {user.gender === "female"
+                  ? "أنثى"
+                  : user.gender === "male"
+                    ? "ذكر"
+                    : "غير مثبَّت"}
+              </span>
+            </div>
+            <p className="mt-8 text-11.5 leading-note text-muted">
+              {user.gender_verified_at
+                ? `موثّق من الهوية بواسطة الإدارة · ${new Date(
+                    user.gender_verified_at,
+                  ).toLocaleDateString("ar-EG", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}`
+                : "قبل التثبيت لا تصلك الطلبات التي تحدّد جنساً — لا كطلباتٍ مرفوضة، بل لا تُعرض أصلاً."}
+            </p>
+            <p className="mt-6 text-11.5 leading-note text-muted">
+              لا يُعدَّل من التطبيق. للتصحيح راسل الدعم.
+            </p>
+          </div>
+        ) : null}
 
         <button
           type="button"

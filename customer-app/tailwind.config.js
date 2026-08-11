@@ -18,6 +18,8 @@ export default {
         muted: "rgb(var(--muted) / <alpha-value>)",
         brand: "rgb(var(--brand) / <alpha-value>)",
         "brand-ink": "rgb(var(--brand-ink) / <alpha-value>)",
+        "brand-soft": "rgb(var(--brand-soft) / <alpha-value>)",
+        "brand-brd": "rgb(var(--brand-brd) / <alpha-value>)",
         danger: "rgb(var(--danger) / <alpha-value>)",
         success: "rgb(var(--success) / <alpha-value>)",
       },

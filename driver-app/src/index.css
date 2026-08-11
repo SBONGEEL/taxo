@@ -27,6 +27,8 @@
        فلا أثر له ما لم يُضَف `.pink` — فالمكوّنات تكتبه دائماً بلا شرط */
     --brand: #e6edf3;
     --brand-ink: #0d1014;
+    --brand-soft: #1a2027;
+    --brand-brd: #2a313a;
   }
 
   .light {
@@ -46,6 +48,8 @@
     --dim: rgba(20, 24, 29, 0.4);
     --brand: #171b20;
     --brand-ink: #f2f0eb;
+    --brand-soft: #faf9f6;
+    --brand-brd: #ddd8cf;
   }
 
   /* السِمة الوردية — **رمزان لا لوحة**: يُبدَّلان على الجذر فيتبدّل كل ما
@@ -55,11 +59,15 @@
   .pink:not(.light) {
     --brand: #ff6fae;
     --brand-ink: #14181d;
+    --brand-soft: #2a1a22;
+    --brand-brd: #4d2b39;
   }
 
   .pink.light {
-    --brand: #c2185b;
+    --brand: #d81b73;
     --brand-ink: #ffffff;
+    --brand-soft: #fdeaf2;
+    --brand-brd: #f2b7d1;
   }
 
   html,

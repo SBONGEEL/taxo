@@ -8,6 +8,11 @@
  *
  * 1. **`women_service_enabled` مفعّلٌ في دولتها** — ومطفأً لا يظهر شيءٌ
  *    إطلاقاً: لا خيارٌ معطّل ولا رسالةُ اعتذار (SPEC القسم 4/`feature_flags`).
+ * **والحقلان مفصولان لسببٍ عمليّ**: `enabled` يفتح **إعلانَ الجنس** نفسه،
+ * و`available` يفتح ما بعده. ولو حُكم الإعلانُ بـ`available` لصارت الحلقة
+ * مغلقة: لا تُعرض عليها الخدمة لأنها لم تُعلن، ولا تستطيع الإعلان لأن الخدمة
+ * لا تُعرض عليها — وهو ما شحنّاه فعلاً في أول جلسةٍ لهذه الشاشات.
+ *
  * 2. **وقد أعلنت جنسها أنثى**. وهذا قرارُ واجهةٍ لا قيدُ خلفية: التعدادُ
  *    ثلاثيٌّ في القاعدة، لكنّ عرضَ «اطلب كبتنة» على راكبٍ رجل يفتح بابَ ما
  *    وُجدت الخدمة لإغلاقه — أن يطلب رجلٌ امرأةً بعينها لتقوده. فالخدمةُ
@@ -19,12 +24,16 @@ import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
 
 export function useWomenService(): {
+  /** الخدمة مفتوحةٌ في دولتها — وهنا **يُعرض حقلُ إعلان الجنس** وحده. */
+  enabled: boolean;
+  /** أعلنت أنها أنثى فوق ذلك — وهنا يُعرض التفضيل والسِمة والشارة. */
   available: boolean;
   defaultPreference: GenderPreference;
 } {
   const { user } = useSession();
   const enabled = useFeature(user?.country_code, "women_service_enabled");
   return {
+    enabled,
     available: enabled && user?.gender === "female",
     defaultPreference: user?.ride_gender_preference ?? "any",
   };

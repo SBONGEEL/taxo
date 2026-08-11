@@ -6,6 +6,7 @@
 
 import type {
   Currency,
+  GenderPreference,
   PaymentMethod,
   RideStatus,
   VehicleCategory,
@@ -21,6 +22,13 @@ export const CURRENCY_LABEL: Record<Currency, string> = {
 export const CURRENCY_FULL: Record<Currency, string> = {
   JOD: "دينار أردني",
   LYD: "دينار ليبي",
+};
+
+/** تفضيلُ جنس الركاب كما يُقرأ في الشاشات — مصدرٌ واحد للثلاث. */
+export const PREFERENCE_LABEL: Record<GenderPreference, string> = {
+  female: "النساء فقط",
+  male: "الرجال فقط",
+  any: "الجميع",
 };
 
 export const CATEGORY_LABEL: Record<VehicleCategory, string> = {

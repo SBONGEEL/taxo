@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#efede8;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+a{color:#1a1a1a}a:hover{color:#000}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 14px/1.2 "IBM Plex Sans Arabic",sans-serif;color:#1a1a1a}
+.dv-sub{font:400 12px/1.5 "IBM Plex Sans Arabic",sans-serif;color:rgba(0,0,0,.55);margin:0 0 22px;max-width:720px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 "IBM Plex Sans Arabic",sans-serif;color:rgba(0,0,0,.55)}
+.dv-pair{display:flex;gap:14px}
+.dv-card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:26px;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden;width:300px;height:620px;position:relative}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:24px 0 0;font:12px/1.5 "IBM Plex Sans Arabic",sans-serif;color:rgba(0,0,0,.5)}
+.mapstripe-d{background:repeating-linear-gradient(45deg,#1c2128,#1c2128 10px,#20262e 10px,#20262e 20px)}
+.mapstripe-l{background:repeating-linear-gradient(45deg,#e8e6df,#e8e6df 10px,#eeece5 10px,#eeece5 20px)}
+.maplabel{font:400 9px ui-monospace,Menlo,monospace;letter-spacing:.08em;opacity:.45}
+@keyframes ringspin{from{stroke-dashoffset:0}to{stroke-dashoffset:163}}
+</style>
+</helmet>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">تطبيق الكبتن TAXO — ثلاثة اتجاهات (الرئيسية + بطاقة الطلب)</span></div>
+<p class="dv-sub">عربي RTL · الأردن (د.أ بثلاث منازل) · كل اتجاه يعرض شاشتين: الرئيسية وعرض الرحلة (مهلة ٢٠ ثانية). حالات الاشتراك موزعة على الاتجاهات: <a class="dv-oid" href="#1a">1a</a> منتهٍ، <a class="dv-oid" href="#1b">1b</a> ساري، <a class="dv-oid" href="#1c">1c</a> ينتهي قريباً.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>«فحم» — خريطة مهيمنة · داكن أحادي · كثافة عالية · الطلب Bottom Sheet</div>
+<div class="dv-pair" dir="rtl">
+<div class="dv-card" data-screen-label="1a الرئيسية" style="background:#14181d">
+  <div class="mapstripe-d" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span class="maplabel" style="color:#8b949e">MAPBOX dark-v11</span></div>
+  <div style="position:absolute;top:0;left:0;right:0;height:54px;background:linear-gradient(#14181dcc,transparent)"></div>
+  <div style="position:absolute;top:14px;right:16px;left:16px;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px;background:#0d1014e6;border:1px solid #2a313a;border-radius:99px;padding:7px 12px">
+      <span style="width:8px;height:8px;border-radius:99px;background:#57606a;display:block"></span>
+      <span style="font-size:12px;font-weight:600;color:#e6edf3">غير متصل</span>
+    </div>
+    <div style="background:#0d1014e6;border:1px solid #2a313a;border-radius:99px;padding:7px 12px;font-size:12px;color:#e6edf3">اليوم <b style="font-weight:700">١٨٫٢٥٠ د.أ</b></div>
+  </div>
+  <div style="position:absolute;top:64px;right:16px;left:16px;background:#2d1c1c;border:1px solid #5c2e2e;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center">
+    <span style="width:6px;height:34px;border-radius:4px;background:#e5534b;display:block"></span>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:#ffd8d3">انتهى اشتراكك — أنت خارج التوزيع</div>
+      <div style="font-size:10.5px;color:#d4a5a0">جدّد لتستقبل الطلبات من جديد</div>
+    </div>
+    <span style="font-size:11px;font-weight:700;color:#14181d;background:#e6edf3;border-radius:8px;padding:6px 10px">تجديد</span>
+  </div>
+  <div style="position:absolute;bottom:0;right:0;left:0;padding:14px 16px 18px;background:linear-gradient(transparent,#14181d 40%)">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="flex:1;background:#0d1014e6;border:1px solid #2a313a;border-radius:14px;padding:10px 12px"><div style="font-size:10px;color:#8b949e">المحفظة</div><div style="font-size:15px;font-weight:700;color:#e6edf3">٤٢٫٥٠٠ د.أ</div></div>
+      <div style="flex:1;background:#0d1014e6;border:1px solid #2a313a;border-radius:14px;padding:10px 12px"><div style="font-size:10px;color:#8b949e">رحلات اليوم</div><div style="font-size:15px;font-weight:700;color:#e6edf3">٧</div></div>
+      <div style="flex:1;background:#0d1014e6;border:1px solid #2a313a;border-radius:14px;padding:10px 12px"><div style="font-size:10px;color:#8b949e">التقييم</div><div style="font-size:15px;font-weight:700;color:#e6edf3">٤٫٩</div></div>
+    </div>
+    <div style="background:#57606a;border-radius:16px;padding:16px;text-align:center;font-size:15px;font-weight:700;color:#c8d1da;opacity:.7">ابدأ الاتصال — يتطلب اشتراكاً سارياً</div>
+  </div>
+</div>
+<div class="dv-card" data-screen-label="1a عرض الرحلة" style="background:#14181d">
+  <div class="mapstripe-d" style="position:absolute;inset:0;opacity:.35;display:flex;align-items:flex-start;justify-content:center;padding-top:40px"><span class="maplabel" style="color:#8b949e">MAPBOX dark-v11</span></div>
+  <div style="position:absolute;bottom:0;right:0;left:0;background:#0d1014;border-top:1px solid #2a313a;border-radius:22px 22px 0 0;padding:16px 16px 18px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="position:relative;width:52px;height:52px;flex:none">
+        <svg width="52" height="52" viewBox="0 0 56 56" style="transform:rotate(-90deg)"><circle cx="28" cy="28" r="26" fill="none" stroke="#2a313a" stroke-width="3"></circle><circle cx="28" cy="28" r="26" fill="none" stroke="#e6edf3" stroke-width="3" stroke-dasharray="163" stroke-dashoffset="0" style="animation:ringspin 20s linear forwards"></circle></svg>
+        <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#e6edf3">١٤</span>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:22px;font-weight:700;color:#e6edf3">٢٫٧٥٠ <span style="font-size:12px;font-weight:500;color:#8b949e">د.أ</span></div>
+        <div style="font-size:11px;color:#8b949e">كاش · اقتصادي</div>
+      </div>
+      <div style="text-align:left"><div style="font-size:15px;font-weight:700;color:#e6edf3">١٫٢ كم</div><div style="font-size:10.5px;color:#8b949e">حتى الراكب · ٤ د</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:12px 1fr;gap:4px 10px;margin-bottom:14px">
+      <span style="width:8px;height:8px;border-radius:99px;background:#e6edf3;margin:5px auto 0"></span>
+      <div style="font-size:12.5px;color:#e6edf3">دوار الداخلية، شارع سليمان النابلسي</div>
+      <span style="width:2px;height:12px;background:#2a313a;margin:0 auto"></span><span></span>
+      <span style="width:8px;height:8px;border-radius:2px;background:#8b949e;margin:2px auto 0"></span>
+      <div style="font-size:12.5px;color:#8b949e">العبدلي بوليفارد · ٥٫٤ كم · ~ ١٢ د</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:2.5;background:#e6edf3;border-radius:14px;padding:14px;text-align:center;font-size:15px;font-weight:700;color:#0d1014">قبول</div>
+      <div style="flex:1;background:transparent;border:1px solid #2a313a;border-radius:14px;padding:14px;text-align:center;font-size:13px;font-weight:600;color:#8b949e">رفض</div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>«إشارة» — بطاقات + أصفر تاكسي · رحب · تبويبات · الطلب شاشة كاملة</div>
+<div class="dv-pair" dir="rtl">
+<div class="dv-card" data-screen-label="1b الرئيسية" style="background:#faf9f6">
+  <div style="padding:18px 18px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div><div style="font-size:12px;color:#8a8478">مساء الخير، أبو محمد</div><div style="font-size:19px;font-weight:700;color:#181611">جاهز للعمل؟</div></div>
+      <div style="width:40px;height:40px;border-radius:99px;background:#181611;color:#ffc21a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">أم</div>
+    </div>
+    <div style="background:#181611;border-radius:20px;padding:18px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:11px;color:#b3ac9d">أرباح اليوم</div><div style="font-size:26px;font-weight:700;color:#fff">١٨٫٢٥٠ <span style="font-size:13px;font-weight:500;color:#b3ac9d">د.أ</span></div></div>
+        <div style="width:64px;height:34px;border-radius:99px;background:#ffc21a;position:relative"><span style="position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:99px;background:#181611;display:block"></span></div>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid #35301f">
+        <div style="font-size:11px;color:#b3ac9d">٧ رحلات</div><div style="font-size:11px;color:#b3ac9d">٤٢ كم</div><div style="font-size:11px;color:#ffc21a;font-weight:600">● متصل</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="flex:1;background:#fff;border:1px solid #e8e4da;border-radius:18px;padding:14px"><div style="font-size:11px;color:#8a8478;margin-bottom:4px">المحفظة</div><div style="font-size:17px;font-weight:700;color:#181611">٤٢٫٥٠٠</div><div style="font-size:10px;color:#8a8478">د.أ · سحب</div></div>
+      <div style="flex:1;background:#fff;border:1px solid #e8e4da;border-radius:18px;padding:14px"><div style="font-size:11px;color:#8a8478;margin-bottom:4px">الاشتراك</div><div style="font-size:13px;font-weight:700;color:#1a7f4e">ساري · أسبوعي</div><div style="font-size:10px;color:#8a8478">باقٍ ٥ أيام</div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e8e4da;border-radius:18px;overflow:hidden">
+      <div class="mapstripe-l" style="height:104px;display:flex;align-items:center;justify-content:center"><span class="maplabel" style="color:#181611">MAPBOX streets-v12</span></div>
+      <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:600;color:#181611">منطقتك نشطة — طلب مرتفع</span><span style="font-size:11px;color:#8a8478">جبل عمان</span></div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;right:0;left:0;background:#fff;border-top:1px solid #e8e4da;display:flex;padding:10px 8px 14px">
+    <div style="flex:1;text-align:center"><div style="width:20px;height:20px;border-radius:6px;background:#181611;margin:0 auto 3px"></div><div style="font-size:9.5px;font-weight:700;color:#181611">الرئيسية</div></div>
+    <div style="flex:1;text-align:center"><div style="width:20px;height:20px;border-radius:6px;background:#d9d4c8;margin:0 auto 3px"></div><div style="font-size:9.5px;color:#8a8478">الرحلات</div></div>
+    <div style="flex:1;text-align:center"><div style="width:20px;height:20px;border-radius:6px;background:#d9d4c8;margin:0 auto 3px"></div><div style="font-size:9.5px;color:#8a8478">المحفظة</div></div>
+    <div style="flex:1;text-align:center"><div style="width:20px;height:20px;border-radius:6px;background:#d9d4c8;margin:0 auto 3px"></div><div style="font-size:9.5px;color:#8a8478">حسابي</div></div>
+  </div>
+</div>
+<div class="dv-card" data-screen-label="1b عرض الرحلة" style="background:#181611">
+  <div style="height:6px;background:#35301f"><div style="width:68%;height:100%;background:#ffc21a"></div></div>
+  <div style="padding:22px 20px;text-align:center">
+    <div style="font-size:12px;color:#b3ac9d;margin-bottom:2px">طلب جديد · ينتهي خلال <b style="color:#ffc21a">١٤ ث</b></div>
+    <div style="font-size:44px;font-weight:700;color:#fff;line-height:1.1">٢٫٧٥٠</div>
+    <div style="font-size:13px;color:#b3ac9d">دينار أردني · كاش · اقتصادي</div>
+  </div>
+  <div style="margin:0 20px;background:#221f17;border:1px solid #35301f;border-radius:18px;padding:16px">
+    <div style="display:grid;grid-template-columns:14px 1fr auto;gap:6px 10px;align-items:start">
+      <span style="width:10px;height:10px;border-radius:99px;background:#ffc21a;margin-top:4px"></span>
+      <div><div style="font-size:13px;font-weight:600;color:#fff">دوار الداخلية</div><div style="font-size:11px;color:#b3ac9d">شارع سليمان النابلسي</div></div>
+      <div style="font-size:11px;color:#ffc21a;font-weight:700">١٫٢ كم · ٤ د</div>
+      <span style="width:2px;height:16px;background:#35301f;margin:2px auto"></span><span></span><span></span>
+      <span style="width:10px;height:10px;border-radius:3px;background:#8a8478;margin-top:4px"></span>
+      <div><div style="font-size:13px;font-weight:600;color:#fff">العبدلي بوليفارد</div><div style="font-size:11px;color:#b3ac9d">شارع رفيق الحريري</div></div>
+      <div style="font-size:11px;color:#b3ac9d">٥٫٤ كم · ١٢ د</div>
+    </div>
+  </div>
+  <div style="margin:14px 20px 0;display:flex;align-items:center;gap:10px;background:#221f17;border:1px solid #35301f;border-radius:14px;padding:10px 14px">
+    <div style="width:34px;height:34px;border-radius:99px;background:#35301f;display:flex;align-items:center;justify-content:center;color:#ffc21a;font-weight:700;font-size:12px">س</div>
+    <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:#fff">سارة ع.</div><div style="font-size:10.5px;color:#b3ac9d">★ ٤٫٨ · ٢١٠ رحلة</div></div>
+  </div>
+  <div style="position:absolute;bottom:0;right:0;left:0;padding:14px 20px 18px">
+    <div style="background:#ffc21a;border-radius:18px;padding:17px;text-align:center;font-size:16px;font-weight:700;color:#181611;margin-bottom:8px">قبول الطلب</div>
+    <div style="text-align:center;font-size:13px;font-weight:600;color:#8a8478">تجاهل</div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>«ورقة» — فاتح تحريري · أحادي + أخضر · Sheet بدل التبويبات · قبول بالسحب</div>
+<div class="dv-pair" dir="rtl">
+<div class="dv-card" data-screen-label="1c الرئيسية" style="background:#f4f2ec">
+  <div class="mapstripe-l" style="height:250px;display:flex;align-items:center;justify-content:center;position:relative"><span class="maplabel" style="color:#181611">MAPBOX streets-v12</span>
+    <div style="position:absolute;top:14px;right:14px;background:#181611;color:#fff;border-radius:99px;padding:7px 14px;font-size:12px;font-weight:700">متصل ●</div>
+  </div>
+  <div style="position:absolute;top:230px;right:0;left:0;bottom:0;background:#fdfcf9;border-radius:24px 24px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.07);padding:10px 20px 16px">
+    <div style="width:36px;height:4px;border-radius:99px;background:#d9d5c9;margin:0 auto 14px"></div>
+    <div style="background:#fff7e8;border:1px solid #f0dfb4;border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="width:8px;height:8px;border-radius:99px;background:#c98a00;flex:none"></span>
+      <div style="flex:1;font-size:12px;color:#6b5a2e"><b style="font-weight:700">اشتراكك ينتهي خلال ١٩ ساعة.</b> جدّد الآن لتبقى في التوزيع.</div>
+      <span style="font-size:11.5px;font-weight:700;color:#181611;text-decoration:underline">تجديد</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #e8e4d8;padding-bottom:14px;margin-bottom:14px">
+      <div style="font-size:13px;color:#777162">أرباح اليوم</div>
+      <div style="font-size:34px;font-weight:300;color:#181611;letter-spacing:-.02em">١٨٫٢٥٠ <span style="font-size:14px;color:#77716c">د.أ</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:0">
+      <div style="border-left:1px solid #e8e4d8"><div style="font-size:20px;font-weight:600;color:#181611">٧</div><div style="font-size:10.5px;color:#77716c">رحلات</div></div>
+      <div style="border-left:1px solid #e8e4d8"><div style="font-size:20px;font-weight:600;color:#181611">٤٢٫٥</div><div style="font-size:10.5px;color:#77716c">محفظة د.أ</div></div>
+      <div><div style="font-size:20px;font-weight:600;color:#1a7f4e">٤٫٩</div><div style="font-size:10.5px;color:#77716c">تقييم</div></div>
+    </div>
+    <div style="position:absolute;bottom:16px;right:20px;left:20px;display:flex;gap:8px">
+      <div style="flex:1;background:#181611;border-radius:14px;padding:14px;text-align:center;font-size:14px;font-weight:700;color:#fff">إيقاف الاستقبال</div>
+      <div style="width:52px;background:#fff;border:1px solid #e8e4d8;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#181611">☰</div>
+    </div>
+  </div>
+</div>
+<div class="dv-card" data-screen-label="1c عرض الرحلة" style="background:#f4f2ec">
+  <div class="mapstripe-l" style="position:absolute;inset:0;opacity:.5;display:flex;align-items:flex-start;justify-content:center;padding-top:36px"><span class="maplabel" style="color:#181611">MAPBOX streets-v12</span></div>
+  <div style="position:absolute;top:90px;right:16px;left:16px;background:#fdfcf9;border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,.14);overflow:hidden">
+    <div style="height:5px;background:#e8e4d8"><div style="width:68%;height:100%;background:#1a7f4e"></div></div>
+    <div style="padding:18px 18px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+        <div><div style="font-size:11px;color:#77716c">طلب جديد</div><div style="font-size:30px;font-weight:300;color:#181611">٢٫٧٥٠ <span style="font-size:13px;color:#77716c">د.أ</span></div></div>
+        <div style="text-align:left"><div style="font-size:16px;font-weight:700;color:#1a7f4e">١٤ ث</div><div style="font-size:10px;color:#77716c">للرد</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:12px 1fr;gap:5px 10px;margin-bottom:8px">
+        <span style="width:8px;height:8px;border-radius:99px;background:#1a7f4e;margin:5px auto 0"></span>
+        <div style="font-size:13px;color:#181611;font-weight:600">دوار الداخلية <span style="font-weight:400;color:#77716c">· ١٫٢ كم عنك</span></div>
+        <span style="width:2px;height:12px;background:#e8e4d8;margin:0 auto"></span><span></span>
+        <span style="width:8px;height:8px;border-radius:2px;background:#77716c;margin:2px auto 0"></span>
+        <div style="font-size:13px;color:#77716c">العبدلي بوليفارد · ٥٫٤ كم · ~١٢ د</div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:11px;color:#77716c;border-top:1px solid #eeeade;padding-top:10px;margin-bottom:14px"><span>كاش</span><span>·</span><span>اقتصادي</span><span>·</span><span>سارة ★ ٤٫٨</span></div>
+      <div style="background:#eeece4;border-radius:99px;padding:5px;display:flex;align-items:center;gap:10px">
+        <span style="width:46px;height:46px;border-radius:99px;background:#1a7f4e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none">‹</span>
+        <span style="flex:1;text-align:center;font-size:13.5px;font-weight:700;color:#181611">اسحب للقبول</span>
+        <span style="width:46px;flex:none"></span>
+      </div>
+      <div style="text-align:center;font-size:12px;font-weight:600;color:#a39d8e;margin-top:10px">رفض</div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">جرّب: «ابنِ النموذج التفاعلي على <a class="dv-oid" href="#1b">1b</a>» · «خذ خريطة <a class="dv-oid" href="#1a">1a</a> مع ألوان <a class="dv-oid" href="#1b">1b</a>» · «اتجاهات جديدة»</p>
+</section>
+</x-dc>
+</body>
+</html>

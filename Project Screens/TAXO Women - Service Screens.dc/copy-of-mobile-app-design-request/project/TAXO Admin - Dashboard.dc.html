@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+body{margin:0;background:#e9e7e2;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+a{color:#5aa9e6}a:hover{color:#8cc6f0}
+input,textarea,select,button{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.thm-dark{--bg:#14181d;--sur:#0d1014;--sur2:#1a2027;--brd:#2a313a;--tx:#e6edf3;--mut:#8b949e;--inv:#0d1014;--acc:#e6edf3;--ok:#3fb970;--warn:#d9a62e;--dng:#e5534b;--sa:#1c2128;--sb:#20262e;--dim:rgba(4,6,8,.6)}
+.thm-light{--bg:#f2f0eb;--sur:#ffffff;--sur2:#faf9f6;--brd:#ddd8cf;--tx:#171b20;--mut:#6e7681;--inv:#f2f0eb;--acc:#171b20;--ok:#1a7f4e;--warn:#9a6b00;--dng:#c73e36;--sa:#e6e3db;--sb:#ece9e1;--dim:rgba(20,24,29,.4)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes slidein{from{transform:translateX(0) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.scr{overflow:auto;scrollbar-width:thin}
+.scr::-webkit-scrollbar{width:8px;height:8px}.scr::-webkit-scrollbar-thumb{background:var(--brd);border-radius:8px}.scr::-webkit-scrollbar-track{background:transparent}
+.fld{box-sizing:border-box;background:var(--sur2);border:1px solid var(--brd);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--tx);outline:none}
+.fld:focus{border-color:var(--mut)}
+.lf{position:absolute;inset:0;border-radius:14px;overflow:hidden}
+.thm-dark .lf .leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(.92) contrast(.86) saturate(.6)}
+.leaflet-container{background:var(--sur2);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.leaflet-control-attribution{font-size:9px}
+</style>
+</helmet>
+<div class="{{ themeClass }}" dir="rtl" style="min-height:100vh;background:var(--bg);color:var(--tx);font-size:14px">
+
+  <div style="position:sticky;top:0;z-index:60;background:var(--sur);border-bottom:1px solid var(--brd)">
+    <div style="height:58px;display:flex;align-items:center;gap:14px;padding:0 20px">
+      <div style="display:flex;align-items:baseline;gap:9px">
+        <span style="font-size:21px;font-weight:700;letter-spacing:.14em">TAXO</span>
+        <span style="font-size:12.5px;color:var(--mut)">لوحة التحكم</span>
+      </div>
+      <div style="width:1px;height:26px;background:var(--brd)"></div>
+      <input class="fld" style="flex:1;max-width:360px" placeholder="ابحث عن سائق، راكب، أو رقم رحلة…" value="{{ search }}" onChange="{{ setSearch }}">
+      <div style="display:flex;gap:0;background:var(--sur2);border:1px solid var(--brd);border-radius:99px;padding:3px">
+        <span onClick="{{ setJO }}" style="{{ joPill }}">الأردن</span>
+        <span onClick="{{ setLY }}" style="{{ lyPill }}">ليبيا</span>
+      </div>
+      <div style="margin-inline-start:auto;display:flex;align-items:center;gap:10px">
+        <span style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut);border:1px solid var(--brd);border-radius:99px;padding:6px 12px">
+          <span style="width:7px;height:7px;border-radius:99px;background:var(--ok);animation:pulse 1.6s infinite;display:block"></span>{{ liveLabel }}
+        </span>
+        <span onClick="{{ toggleTheme }}" style="cursor:pointer;width:34px;height:34px;border:1px solid var(--brd);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px" style-hover="background:var(--sa)">{{ themeIcon }}</span>
+        <span onClick="{{ goAlerts }}" style="cursor:pointer;position:relative;width:34px;height:34px;border:1px solid var(--brd);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px" style-hover="background:var(--sa)">◔<span style="position:absolute;top:6px;inset-inline-end:7px;width:6px;height:6px;border-radius:99px;background:var(--dng)"></span></span>
+        <div style="display:flex;align-items:center;gap:9px;padding-inline-start:6px">
+          <div style="width:32px;height:32px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">ن.ع</div>
+          <div style="line-height:1.25"><div style="font-size:12.5px;font-weight:600">نادر العمري</div><div style="font-size:10.5px;color:var(--mut)">{{ roleLabel }}</div></div>
+          <span onClick="{{ doLogout }}" style="cursor:pointer;font-size:11.5px;color:var(--mut);border:1px solid var(--brd);border-radius:9px;padding:6px 11px" style-hover="background:var(--sa)">خروج</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:2px;padding:0 14px;align-items:center">
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+        <div style="position:relative">
+          <div onClick="{{ g.toggle }}" style="{{ g.style }}">{{ g.label }}<span style="{{ g.badgeStyle }}">{{ g.badge }}</span><span style="font-size:9px;color:var(--mut);margin-inline-start:5px">▼</span></div>
+          <sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:100%;inset-inline-start:6px;min-width:236px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:6px;z-index:70;box-shadow:0 16px 44px rgba(0,0,0,.3);animation:rise .14s">
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="5">
+                <div onClick="{{ it.go }}" style="{{ it.style }}">{{ it.label }}<span style="{{ it.badgeStyle }}">{{ it.badge }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <div style="margin-inline-start:auto;font-size:11.5px;color:var(--mut);padding-inline-end:10px">{{ crumb }}</div>
+    </div>
+  </div>
+
+  <div style="padding:20px 22px 48px;max-width:1780px;margin:0 auto">
+
+    <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="نظرة عامة" style="animation:fadein .25s">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">نظرة عامة</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ todayLine }}</div>
+          </div>
+          <div style="display:flex;gap:3px;background:var(--sur2);border:1px solid var(--brd);border-radius:99px;padding:3px">
+            <sc-for list="{{ periods }}" as="p" hint-placeholder-count="3"><span onClick="{{ p.go }}" style="{{ p.style }}">{{ p.label }}</span></sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:12px;margin-bottom:14px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="6">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:25px;font-weight:700;margin:5px 0 4px;letter-spacing:-.01em">{{ k.value }}</div>
+              <div style="font-size:11.5px;color:{{ k.color }}">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.9fr 1fr;gap:12px;margin-bottom:14px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+              <div style="font-size:14px;font-weight:700">الرحلات على مدار اليوم</div>
+              <div style="font-size:11.5px;color:var(--mut)">ذروة {{ peakLabel }}</div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:4px;height:150px">
+              <sc-for list="{{ hourly }}" as="h" hint-placeholder-count="24">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">
+                  <div style="width:100%;border-radius:4px 4px 0 0;background:{{ h.color }};height:{{ h.h }}"></div>
+                  <div style="font-size:8.5px;color:var(--mut)">{{ h.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px">توزيع طرق الدفع</div>
+            <sc-for list="{{ paySplit }}" as="p" hint-placeholder-count="4">
+              <div style="margin-bottom:13px">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span>{{ p.label }}</span><span style="color:var(--mut)">{{ p.pct }}</span></div>
+                <div style="height:7px;border-radius:99px;background:var(--sur2);overflow:hidden"><div style="height:100%;border-radius:99px;background:{{ p.color }};width:{{ p.w }}"></div></div>
+              </div>
+            </sc-for>
+            <div style="border-top:1px solid var(--brd);margin-top:16px;padding-top:13px;font-size:11.5px;color:var(--mut);line-height:1.7">الكاش يُسوّى يدوياً من قسم المحافظ · البطاقة عبر Telr</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ actionCards }}" as="a" hint-placeholder-count="3">
+            <div onClick="{{ a.go }}" style="background:var(--sur);border:1px solid {{ a.border }};border-radius:16px;padding:15px 16px;cursor:pointer;display:flex;align-items:center;gap:14px" style-hover="background:var(--sa)">
+              <div style="width:42px;height:42px;border-radius:12px;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:17px;color:{{ a.color }}">{{ a.icon }}</div>
+              <div style="flex:1"><div style="font-size:13.5px;font-weight:600">{{ a.title }}</div><div style="font-size:11.5px;color:var(--mut);margin-top:2px">{{ a.sub }}</div></div>
+              <div style="font-size:22px;font-weight:700;color:{{ a.color }}">{{ a.count }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 18px">
+            <div style="font-size:14px;font-weight:700">رحلات جارية الآن</div>
+            <span onClick="{{ goRides }}" style="font-size:12px;color:var(--mut);cursor:pointer;text-decoration:underline">كل الرحلات</span>
+          </div>
+          <div style="display:grid;grid-template-columns:110px 1.4fr 1.4fr 1fr 90px 100px;gap:10px;padding:9px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الرقم</div><div>من</div><div>إلى</div><div>السائق</div><div>الأجرة</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ ongoing }}" as="r" hint-placeholder-count="4">
+            <div onClick="{{ r.open }}" style="display:grid;grid-template-columns:110px 1.4fr 1.4fr 1fr 90px 100px;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center;cursor:pointer" style-hover="background:var(--sa)">
+              <div style="color:var(--mut);font-variant-numeric:tabular-nums">{{ r.id }}</div>
+              <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.from }}</div>
+              <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.to }}</div>
+              <div>{{ r.driver }}</div>
+              <div style="font-weight:600">{{ r.fare }}</div>
+              <div><span style="{{ r.badge }}">{{ r.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabLive }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الخريطة الحيّة" style="animation:fadein .25s">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:21px;font-weight:700">الخريطة الحيّة والتوزيع</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ liveSub }}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ liveStats }}" as="s" hint-placeholder-count="3">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:8px 14px;text-align:center">
+                <div style="font-size:10.5px;color:var(--mut)">{{ s.label }}</div>
+                <div style="font-size:16px;font-weight:700;margin-top:1px">{{ s.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100vh - 250px);min-height:560px">
+          <div class="scr" style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:14px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px">طلبات بانتظار سائق</div>
+            <sc-for list="{{ requests }}" as="q" hint-placeholder-count="3">
+              <div style="border:1px solid {{ q.border }};border-radius:13px;padding:12px;margin-bottom:9px;background:var(--sur2)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                  <span style="font-size:12.5px;font-weight:700">{{ q.rider }}</span>
+                  <span style="font-size:10.5px;color:{{ q.waitColor }}">{{ q.wait }}</span>
+                </div>
+                <div style="font-size:11.5px;color:var(--mut);line-height:1.7;margin-bottom:9px">{{ q.from }}<br>← {{ q.to }}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:11.5px;color:var(--mut)">{{ q.fare }} · {{ q.pay }}</span>
+                  <span onClick="{{ q.assign }}" style="{{ q.btn }}">{{ q.btnLabel }}</span>
+                </div>
+              </div>
+            </sc-for>
+            <div style="font-size:13px;font-weight:700;margin:16px 0 10px">سائقون متصلون</div>
+            <sc-for list="{{ onlineDrivers }}" as="d" hint-placeholder-count="5">
+              <div onClick="{{ d.open }}" style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-top:1px solid var(--brd);cursor:pointer" style-hover="background:var(--sa)">
+                <span style="width:8px;height:8px;border-radius:99px;background:{{ d.dot }};display:block"></span>
+                <div style="flex:1"><div style="font-size:12.5px;font-weight:600">{{ d.name }}</div><div style="font-size:10.5px;color:var(--mut)">{{ d.zone }}</div></div>
+                <div style="font-size:11px;color:var(--mut)">★ {{ d.rating }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="position:relative;background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:1px">
+            <div class="lf" ref="{{ mapRef }}"></div>
+            <div style="position:absolute;top:14px;inset-inline-start:14px;z-index:500;display:flex;gap:6px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:6px 12px;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,.18)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:99px;background:#3fb970;display:block"></span>متاح</span>
+              <span style="display:flex;align-items:center;gap:5px;margin-inline-start:8px"><span style="width:8px;height:8px;border-radius:99px;background:#d9a62e;display:block"></span>في رحلة</span>
+              <span style="display:flex;align-items:center;gap:5px;margin-inline-start:8px"><span style="width:8px;height:8px;border-radius:99px;background:#e5534b;display:block"></span>طلب معلّق</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabDrivers }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="السائقون" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:21px;font-weight:700">السائقون واعتماد الوثائق</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ driversSub }}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">تصدير CSV</span>
+            <span onClick="{{ doAdd }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer">+ إضافة سائق</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <sc-for list="{{ drvFilters }}" as="f" hint-placeholder-count="4"><span onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</span></sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.5fr 1.1fr .8fr .9fr 1fr .7fr .7fr .9fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>السائق</div><div>الهاتف</div><div>المدينة</div><div>الحالة</div><div>الاشتراك</div><div>التقييم</div><div>الرحلات</div><div>المحفظة</div><div>الوثائق</div>
+          </div>
+          <div class="scr" style="max-height:calc(100vh - 330px)">
+            <sc-for list="{{ driverRows }}" as="d" hint-placeholder-count="8">
+              <div onClick="{{ d.open }}" style="display:grid;grid-template-columns:1.5fr 1.1fr .8fr .9fr 1fr .7fr .7fr .9fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center;cursor:pointer" style-hover="background:var(--sa)">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="width:30px;height:30px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ d.initials }}</div>
+                  <span style="font-weight:600">{{ d.name }}</span>
+                </div>
+                <div dir="ltr" style="color:var(--mut);text-align:start;font-variant-numeric:tabular-nums">{{ d.phone }}</div>
+                <div style="color:var(--mut)">{{ d.city }}</div>
+                <div><span style="{{ d.statusBadge }}">{{ d.status }}</span></div>
+                <div style="color:{{ d.subColor }};font-size:12px">{{ d.sub }}</div>
+                <div>★ {{ d.rating }}</div>
+                <div style="color:var(--mut)">{{ d.trips }}</div>
+                <div style="font-weight:600">{{ d.wallet }}</div>
+                <div><span style="{{ d.docBadge }}">{{ d.docs }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabRiders }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الركّاب" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:21px;font-weight:700">الركّاب</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ ridersSub }}</div>
+          </div>
+          <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">تصدير CSV</span>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.6fr 1.2fr .9fr .8fr .9fr .8fr .9fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الراكب</div><div>الهاتف</div><div>المدينة</div><div>الرحلات</div><div>المحفظة</div><div>التقييم</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ riderRows }}" as="r" hint-placeholder-count="6">
+            <div onClick="{{ r.open }}" style="display:grid;grid-template-columns:1.6fr 1.2fr .9fr .8fr .9fr .8fr .9fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center;cursor:pointer" style-hover="background:var(--sa)">
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:30px;height:30px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ r.initials }}</div>
+                <span style="font-weight:600">{{ r.name }}</span>
+              </div>
+              <div dir="ltr" style="color:var(--mut);text-align:start;font-variant-numeric:tabular-nums">{{ r.phone }}</div>
+              <div style="color:var(--mut)">{{ r.city }}</div>
+              <div>{{ r.rides }}</div>
+              <div style="font-weight:600">{{ r.wallet }}</div>
+              <div>★ {{ r.rating }}</div>
+              <div><span style="{{ r.badge }}">{{ r.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabRides }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="سجل الرحلات" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:21px;font-weight:700">سجل الرحلات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ ridesSub }}</div>
+          </div>
+          <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">تصدير CSV</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+          <sc-for list="{{ rideFilters }}" as="f" hint-placeholder-count="4"><span onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</span></sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:100px 1fr 1.3fr 1.3fr 1fr .8fr .8fr .9fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الرقم</div><div>الوقت</div><div>من</div><div>إلى</div><div>السائق</div><div>الأجرة</div><div>الدفع</div><div>الحالة</div>
+          </div>
+          <div class="scr" style="max-height:calc(100vh - 340px)">
+            <sc-for list="{{ rideRows }}" as="r" hint-placeholder-count="8">
+              <div onClick="{{ r.open }}" style="display:grid;grid-template-columns:100px 1fr 1.3fr 1.3fr 1fr .8fr .8fr .9fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center;cursor:pointer" style-hover="background:var(--sa)">
+                <div style="color:var(--mut);font-variant-numeric:tabular-nums">{{ r.id }}</div>
+                <div style="color:var(--mut)">{{ r.when }}</div>
+                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.from }}</div>
+                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.to }}</div>
+                <div>{{ r.driver }}</div>
+                <div style="font-weight:600">{{ r.fare }}</div>
+                <div style="color:var(--mut)">{{ r.pay }}</div>
+                <div><span style="{{ r.badge }}">{{ r.status }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabSubs }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الاشتراكات" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">الاشتراكات والباقات</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:16px">{{ subsSub }}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ plans }}" as="p" hint-placeholder-count="3">
+            <div style="background:var(--sur);border:1px solid {{ p.border }};border-radius:16px;padding:18px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="font-size:15px;font-weight:700">{{ p.name }}</div>
+                <span onClick="{{ p.toggle }}" style="{{ p.pill }}">{{ p.state }}</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:4px">{{ p.sub }}</div>
+              <div style="display:flex;align-items:center;gap:12px;margin:16px 0 12px">
+                <span onClick="{{ p.dec }}" style="width:30px;height:30px;border:1px solid var(--brd);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px" style-hover="background:var(--sa)">−</span>
+                <div style="flex:1;text-align:center"><span style="font-size:28px;font-weight:700">{{ p.price }}</span> <span style="font-size:12px;color:var(--mut)">{{ p.cur }}</span></div>
+                <span onClick="{{ p.inc }}" style="width:30px;height:30px;border:1px solid var(--brd);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px" style-hover="background:var(--sa)">+</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut);border-top:1px solid var(--brd);padding-top:11px">
+                <span>مشتركون</span><span style="color:var(--tx);font-weight:600">{{ p.subs }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:6px">
+                <span>الإيراد هذا الشهر</span><span style="color:var(--tx);font-weight:600">{{ p.rev }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="padding:15px 18px;font-size:14px;font-weight:700">المشتركون</div>
+          <div style="display:grid;grid-template-columns:1.4fr .9fr 1fr 1fr .9fr .9fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>السائق</div><div>الباقة</div><div>البداية</div><div>الانتهاء</div><div>المبلغ</div><div>الدفع</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ subscribers }}" as="s" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1.4fr .9fr 1fr 1fr .9fr .9fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div style="font-weight:600">{{ s.name }}</div><div>{{ s.plan }}</div><div style="color:var(--mut)">{{ s.start }}</div>
+              <div style="color:var(--mut)">{{ s.end }}</div><div style="font-weight:600">{{ s.amount }}</div><div style="color:var(--mut)">{{ s.method }}</div>
+              <div><span style="{{ s.badge }}">{{ s.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabWallets }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="المحافظ والسحب" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">المحافظ وطلبات السحب</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:16px">{{ walletsSub }}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ walletKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:700;margin-top:5px;color:{{ k.color }}">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:12px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+            <div style="padding:15px 18px;display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:14px;font-weight:700">طلبات سحب معلّقة</div>
+              <span style="font-size:11.5px;color:var(--warn)">{{ wdPendingLabel }}</span>
+            </div>
+            <sc-for list="{{ withdrawals }}" as="w" hint-placeholder-count="4">
+              <div style="padding:13px 18px;border-top:1px solid var(--brd);display:flex;align-items:center;gap:12px">
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">{{ w.name }}</div>
+                  <div style="font-size:11px;color:var(--mut);margin-top:2px">{{ w.method }} · {{ w.ref }} · {{ w.when }}</div>
+                </div>
+                <div style="font-size:15px;font-weight:700">{{ w.amount }}</div>
+                <div style="display:flex;gap:6px;width:150px;justify-content:flex-end">
+                  <sc-if value="{{ w.pending }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ w.reject }}" style="border:1px solid var(--brd);border-radius:9px;padding:6px 12px;font-size:11.5px;cursor:pointer;color:var(--dng)" style-hover="background:var(--sa)">رفض</span>
+                    <span onClick="{{ w.approve }}" style="background:var(--acc);color:var(--inv);border-radius:9px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer">تحويل</span>
+                  </sc-if>
+                  <sc-if value="{{ w.done }}" hint-placeholder-val="{{ false }}">
+                    <span style="{{ w.badge }}">{{ w.status }}</span>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:12px">تسوية الكاش</div>
+              <div style="font-size:11.5px;color:var(--mut);line-height:1.8;margin-bottom:12px">مبالغ الكاش المحصّلة من الركّاب وتُسجَّل يدوياً بعد الاستلام من السائق.</div>
+              <sc-for list="{{ cashSettle }}" as="c" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--brd)">
+                  <div style="flex:1;font-size:12.5px">{{ c.name }}</div>
+                  <div style="font-size:13px;font-weight:600;color:{{ c.color }}">{{ c.amount }}</div>
+                  <span onClick="{{ c.settle }}" style="{{ c.btn }}">{{ c.btnLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:10px">آخر الحركات</div>
+              <sc-for list="{{ ledger }}" as="l" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--brd);font-size:12.5px">
+                  <div style="flex:1"><div>{{ l.label }}</div><div style="font-size:10.5px;color:var(--mut);margin-top:2px">{{ l.when }}</div></div>
+                  <div style="font-weight:600;color:{{ l.color }};font-variant-numeric:tabular-nums">{{ l.amount }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabDisputes }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="النزاعات والدعم" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">النزاعات والدعم</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:16px">{{ disputesSub }}</div>
+        <div style="display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100vh - 250px);min-height:540px">
+          <div class="scr" style="background:var(--sur);border:1px solid var(--brd);border-radius:16px">
+            <sc-for list="{{ tickets }}" as="k" hint-placeholder-count="5">
+              <div onClick="{{ k.open }}" style="{{ k.style }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                  <span style="font-size:12.5px;font-weight:700">{{ k.subject }}</span>
+                  <span style="{{ k.badge }}">{{ k.status }}</span>
+                </div>
+                <div style="font-size:11px;color:var(--mut)">{{ k.who }} · {{ k.ref }} · {{ k.when }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;display:flex;flex-direction:column;overflow:hidden">
+            <div style="padding:15px 18px;border-bottom:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:14px;font-weight:700">{{ ticketSubject }}</div>
+                <div style="font-size:11.5px;color:var(--mut);margin-top:3px">{{ ticketMeta }}</div>
+              </div>
+              <div style="display:flex;gap:7px">
+                <span onClick="{{ resolveRider }}" style="border:1px solid var(--brd);border-radius:9px;padding:8px 13px;font-size:12px;cursor:pointer" style-hover="background:var(--sa)">لصالح الراكب</span>
+                <span onClick="{{ resolveDriver }}" style="border:1px solid var(--brd);border-radius:9px;padding:8px 13px;font-size:12px;cursor:pointer" style-hover="background:var(--sa)">لصالح السائق</span>
+                <span onClick="{{ closeTicket }}" style="background:var(--acc);color:var(--inv);border-radius:9px;padding:8px 15px;font-size:12px;font-weight:700;cursor:pointer">إغلاق التذكرة</span>
+              </div>
+            </div>
+            <div class="scr" style="flex:1;padding:18px;display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ thread }}" as="m" hint-placeholder-count="4">
+                <div style="{{ m.wrap }}">
+                  <div style="{{ m.bubble }}">{{ m.text }}</div>
+                  <div style="font-size:10px;color:var(--mut);margin-top:5px">{{ m.who }} · {{ m.when }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border-top:1px solid var(--brd);padding:12px 16px;display:flex;gap:9px">
+              <input class="fld" style="flex:1" placeholder="اكتب رداً للطرفين…" value="{{ reply }}" onChange="{{ setReply }}">
+              <span onClick="{{ sendReply }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 20px;font-size:12.5px;font-weight:700;cursor:pointer">إرسال</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabPricing }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="التسعيرة والمناطق" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">التسعيرة والمناطق</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ pricingSub }}</div>
+          </div>
+          <span onClick="{{ savePricing }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">حفظ التغييرات</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px">
+          <sc-for list="{{ cityPrices }}" as="c" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div style="font-size:15px;font-weight:700">{{ c.city }}</div>
+                <span style="{{ c.badge }}">{{ c.state }}</span>
+              </div>
+              <sc-for list="{{ c.rows }}" as="p" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--brd)">
+                  <div style="flex:1;font-size:12.5px;color:var(--mut)">{{ p.label }}</div>
+                  <span onClick="{{ p.dec }}" style="width:26px;height:26px;border:1px solid var(--brd);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px" style-hover="background:var(--sa)">−</span>
+                  <div style="width:74px;text-align:center;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums">{{ p.value }}</div>
+                  <span onClick="{{ p.inc }}" style="width:26px;height:26px;border:1px solid var(--brd);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px" style-hover="background:var(--sa)">+</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="padding:15px 18px;font-size:14px;font-weight:700">مناطق الطلب ومضاعف الذروة</div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>المنطقة</div><div>المدينة</div><div>الطلبات/ساعة</div><div>سائقون متاحون</div><div>المضاعف</div>
+          </div>
+          <sc-for list="{{ zones }}" as="z" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center">
+              <div style="font-weight:600">{{ z.name }}</div><div style="color:var(--mut)">{{ z.city }}</div>
+              <div>{{ z.demand }}</div><div>{{ z.supply }}</div>
+              <div><span style="{{ z.badge }}">{{ z.mult }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabPromos }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="العروض والحملات" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">العروض والحملات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ promosSub }}</div>
+          </div>
+          <span onClick="{{ toggleNewPromo }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">{{ promoBtnLabel }}</span>
+        </div>
+        <sc-if value="{{ promoFormOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px;margin-bottom:12px;animation:rise .2s">
+            <div style="font-size:14px;font-weight:700;margin-bottom:14px">عرض جديد</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+              <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">الرمز</div><input class="fld" style="width:100%" dir="ltr" placeholder="TAXO25"></div>
+              <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">نوع الخصم</div><input class="fld" style="width:100%" value="نسبة مئوية"></div>
+              <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">القيمة</div><input class="fld" style="width:100%" value="٢٥٪"></div>
+              <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">حد الاستخدام</div><input class="fld" style="width:100%" value="١٠٠٠"></div>
+              <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">المدينة</div><input class="fld" style="width:100%" value="{{ mainCity }}"></div>
+              <div><div style="font-size:11.5px;color:var(--mut);margin-bottom:5px">ينتهي في</div><input class="fld" style="width:100%" value="٣٠ أيلول"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <span onClick="{{ createPromo }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 20px;font-size:12.5px;font-weight:700;cursor:pointer">إنشاء ونشر</span>
+              <span onClick="{{ toggleNewPromo }}" style="border:1px solid var(--brd);border-radius:10px;padding:10px 18px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">إلغاء</span>
+            </div>
+          </div>
+        </sc-if>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr 1fr .8fr 1.1fr 1fr 1fr .9fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الرمز</div><div>النوع</div><div>القيمة</div><div>الاستخدام</div><div>المدينة</div><div>ينتهي</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ promos }}" as="p" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:1fr 1fr .8fr 1.1fr 1fr 1fr .9fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center">
+              <div dir="ltr" style="font-weight:700;text-align:start">{{ p.code }}</div>
+              <div style="color:var(--mut)">{{ p.type }}</div><div style="font-weight:600">{{ p.value }}</div>
+              <div>
+                <div style="font-size:11px;color:var(--mut);margin-bottom:4px">{{ p.uses }}</div>
+                <div style="height:5px;border-radius:99px;background:var(--sur2);overflow:hidden"><div style="height:100%;background:var(--tx);width:{{ p.w }}"></div></div>
+              </div>
+              <div style="color:var(--mut)">{{ p.city }}</div><div style="color:var(--mut)">{{ p.until }}</div>
+              <div><span onClick="{{ p.toggle }}" style="{{ p.badge }}">{{ p.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabReports }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="التقارير" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">التقارير والإحصاءات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ reportsSub }}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">Excel</span>
+            <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">PDF</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ reportKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:700;margin:5px 0 3px">{{ k.value }}</div>
+              <div style="font-size:11.5px;color:{{ k.color }}">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:1.8fr 1fr;gap:12px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px">الإيراد اليومي · آخر ١٤ يوماً</div>
+            <div style="display:flex;align-items:flex-end;gap:7px;height:190px">
+              <sc-for list="{{ revBars }}" as="b" hint-placeholder-count="14">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <div style="font-size:9px;color:var(--mut)">{{ b.val }}</div>
+                  <div style="width:100%;border-radius:5px 5px 0 0;background:{{ b.color }};height:{{ b.h }}"></div>
+                  <div style="font-size:9px;color:var(--mut)">{{ b.day }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:14px">أعلى المناطق طلباً</div>
+              <sc-for list="{{ topZones }}" as="z" hint-placeholder-count="5">
+                <div style="margin-bottom:11px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span>{{ z.name }}</span><span style="color:var(--mut)">{{ z.pct }}</span></div>
+                  <div style="height:6px;border-radius:99px;background:var(--sur2);overflow:hidden"><div style="height:100%;background:var(--tx);width:{{ z.w }}"></div></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:12px">أفضل السائقين</div>
+              <sc-for list="{{ leaders }}" as="d" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:11px;padding:8px 0;border-top:1px solid var(--brd)">
+                  <div style="width:22px;font-size:12px;color:var(--mut);font-weight:700">{{ d.rank }}</div>
+                  <div style="flex:1;font-size:12.5px">{{ d.name }}</div>
+                  <div style="font-size:11.5px;color:var(--mut)">{{ d.trips }}</div>
+                  <div style="font-size:12.5px;font-weight:600">{{ d.rev }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabUsers }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="المستخدمون والصلاحيات" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">المستخدمون والصلاحيات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">{{ usersSub }}</div>
+          </div>
+          <span onClick="{{ doInvite }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ دعوة مستخدم</span>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden;margin-bottom:14px">
+          <div style="display:grid;grid-template-columns:1.3fr 1.6fr 1fr 1.1fr .9fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الاسم</div><div>البريد</div><div>الدور</div><div>آخر دخول</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ admins }}" as="u" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:1.3fr 1.6fr 1fr 1.1fr .9fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center">
+              <div style="font-weight:600">{{ u.name }}</div>
+              <div dir="ltr" style="color:var(--mut);text-align:start">{{ u.email }}</div>
+              <div>{{ u.role }}</div><div style="color:var(--mut)">{{ u.seen }}</div>
+              <div><span style="{{ u.badge }}">{{ u.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="padding:15px 18px;font-size:14px;font-weight:700">مصفوفة الصلاحيات <span style="font-size:11.5px;color:var(--mut);font-weight:400">— انقر لتفعيل أو تعطيل</span></div>
+          <div style="display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>القسم</div><div style="text-align:center">مالك</div><div style="text-align:center">عمليات</div><div style="text-align:center">دعم</div><div style="text-align:center">مالية</div>
+          </div>
+          <sc-for list="{{ permRows }}" as="row" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:10px;padding:10px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center">
+              <div>{{ row.label }}</div>
+              <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="4">
+                <div style="display:flex;justify-content:center"><span onClick="{{ c.toggle }}" style="{{ c.style }}">{{ c.mark }}</span></div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabBroadcast }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="إشعارات جماعية" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">إشعارات جماعية</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:16px">{{ bcSub }}</div>
+        <div style="display:grid;grid-template-columns:1.5fr 340px;gap:12px;margin-bottom:14px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+              <div>
+                <div style="font-size:11.5px;color:var(--mut);margin-bottom:7px">الجمهور</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap"><sc-for list="{{ bcAudiences }}" as="a" hint-placeholder-count="4"><span onClick="{{ a.go }}" style="{{ a.style }}">{{ a.label }}</span></sc-for></div>
+              </div>
+              <div>
+                <div style="font-size:11.5px;color:var(--mut);margin-bottom:7px">القناة</div>
+                <div style="display:flex;gap:5px"><sc-for list="{{ bcChannels }}" as="c" hint-placeholder-count="3"><span onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</span></sc-for></div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11.5px;color:var(--mut);margin-bottom:6px">العنوان</div>
+              <input class="fld" style="width:100%" value="{{ bcTitle }}" onChange="{{ setBcTitle }}">
+            </div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11.5px;color:var(--mut);margin-bottom:6px">النص</div>
+              <textarea class="fld" style="width:100%;height:96px;resize:none;line-height:1.7" value="{{ bcBody }}" onChange="{{ setBcBody }}"></textarea>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span onClick="{{ sendBroadcast }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer">إرسال الآن</span>
+              <span onClick="{{ scheduleBroadcast }}" style="border:1px solid var(--brd);border-radius:10px;padding:11px 18px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">جدولة</span>
+              <span style="font-size:11.5px;color:var(--mut);margin-inline-start:auto">{{ bcReach }}</span>
+            </div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px">
+            <div style="font-size:12px;color:var(--mut);margin-bottom:14px">معاينة على جهاز المستخدم</div>
+            <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:20px;padding:16px;min-height:190px">
+              <div style="font-size:10.5px;color:var(--mut);margin-bottom:10px">٩:٤١ · الآن</div>
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:13px">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+                  <div style="width:24px;height:24px;border-radius:7px;background:var(--acc);color:var(--inv);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">TX</div>
+                  <span style="font-size:11px;color:var(--mut)">TAXO</span>
+                </div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:5px">{{ bcTitle }}</div>
+                <div style="font-size:12px;color:var(--mut);line-height:1.7">{{ bcBody }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="padding:15px 18px;font-size:14px;font-weight:700">سجل الإرسال</div>
+          <div style="display:grid;grid-template-columns:1.6fr 1fr .9fr 1fr .9fr .9fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>العنوان</div><div>الجمهور</div><div>القناة</div><div>التاريخ</div><div>وصلت</div><div>فُتحت</div>
+          </div>
+          <sc-for list="{{ bcHistory }}" as="b" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:1.6fr 1fr .9fr 1fr .9fr .9fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center">
+              <div style="font-weight:600">{{ b.title }}</div><div style="color:var(--mut)">{{ b.audience }}</div>
+              <div style="color:var(--mut)">{{ b.channel }}</div><div style="color:var(--mut)">{{ b.when }}</div>
+              <div>{{ b.sent }}</div><div style="color:var(--ok)">{{ b.opened }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ tabScheduled }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الرحلات المجدولة" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">الرحلات المجدولة</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">حجوزات مسبقة وذهاب وإياب ورحلات متكررة</div>
+          </div>
+          <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">تصدير الجدول</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ schKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:700;margin-top:5px;color:{{ k.color }}">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.1fr 1.2fr 1.3fr 1.3fr 1.1fr 1fr 1.1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>موعد الانطلاق</div><div>الراكب</div><div>من</div><div>إلى</div><div>السائق</div><div>التكرار</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ scheduled }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1.1fr 1.2fr 1.3fr 1.3fr 1.1fr 1fr 1.1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div style="font-weight:600">{{ r.when }}</div>
+              <div>{{ r.rider }}</div>
+              <div style="color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.from }}</div>
+              <div style="color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.to }}</div>
+              <div>{{ r.driver }}</div>
+              <div style="color:var(--mut)">{{ r.repeat }}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+                <span style="{{ r.badge }}">{{ r.status }}</span>
+                <span onClick="{{ r.assign }}" style="{{ r.btn }}">{{ r.btnLabel }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabB2B }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="حسابات الشركات" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">حسابات الشركات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">عقود مؤسسية · فوترة شهرية مجمّعة بدل الدفع لكل رحلة</div>
+          </div>
+          <span onClick="{{ doAddCompany }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ شركة جديدة</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ b2bKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:700;margin-top:5px;color:{{ k.color }}">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.5fr .9fr 1fr 1.4fr 1fr 1fr .9fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الشركة</div><div>الموظفون</div><div>رحلات الشهر</div><div>السقف الشهري</div><div>الفوترة</div><div>العقد</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ companies }}" as="c" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:1.5fr .9fr 1fr 1.4fr 1fr 1fr .9fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div style="font-weight:600">{{ c.name }}</div>
+              <div>{{ c.staff }}</div>
+              <div>{{ c.rides }}</div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-bottom:4px"><span>{{ c.spent }}</span><span>{{ c.cap }}</span></div>
+                <div style="height:5px;border-radius:99px;background:var(--sur2);overflow:hidden"><div style="height:100%;background:{{ c.barColor }};width:{{ c.w }}"></div></div>
+              </div>
+              <div style="color:var(--mut)">{{ c.billing }}</div>
+              <div><span onClick="{{ c.viewContract }}" style="font-size:11.5px;color:var(--tx);text-decoration:underline;cursor:pointer">{{ c.contract }}</span></div>
+              <div><span style="{{ c.badge }}">{{ c.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabFleet }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="المركبات" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">إدارة المركبات والأسطول</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">الفحص الفني والتأمين وربط المركبة بالسائق</div>
+          </div>
+          <span onClick="{{ doAddCar }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ تسجيل مركبة</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ fleetKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:700;margin-top:5px;color:{{ k.color }}">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr 1.3fr .7fr 1.3fr 1.1fr 1.1fr .9fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>رقم اللوحة</div><div>الطراز</div><div>السنة</div><div>السائق</div><div>الفحص الفني</div><div>التأمين</div><div>الملكية</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ vehicles }}" as="v" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1fr 1.3fr .7fr 1.3fr 1.1fr 1.1fr .9fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div dir="ltr" style="text-align:start;font-weight:700">{{ v.plate }}</div>
+              <div>{{ v.model }}</div><div style="color:var(--mut)">{{ v.year }}</div><div>{{ v.driver }}</div>
+              <div style="color:{{ v.inspColor }}">{{ v.insp }}</div>
+              <div style="color:{{ v.insColor }}">{{ v.ins }}</div>
+              <div style="color:var(--mut)">{{ v.own }}</div>
+              <div><span style="{{ v.badge }}">{{ v.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabContracts }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="العقود" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:21px;font-weight:700">العقود والاتفاقيات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">توقيع إلكتروني · تتبّع الانتهاء · معاينة وطباعة</div>
+          </div>
+          <span onClick="{{ newContract }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ إرسال عقد للتوقيع</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <sc-for list="{{ ctrTabs }}" as="f" hint-placeholder-count="2"><span onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</span></sc-for>
+        </div>
+        <sc-if value="{{ ctrShowTemplates }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+            <sc-for list="{{ ctrTemplates }}" as="t" hint-placeholder-count="4">
+              <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                  <div style="font-size:15px;font-weight:700">{{ t.name }}</div>
+                  <span style="{{ t.badge }}">{{ t.version }}</span>
+                </div>
+                <div style="font-size:12px;color:var(--mut);line-height:1.8;min-height:58px">{{ t.desc }}</div>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);border-top:1px solid var(--brd);padding-top:12px;margin-top:8px">
+                  <span>آخر تحديث {{ t.updated }}</span><span>{{ t.used }}</span>
+                </div>
+                <div style="display:flex;gap:7px;margin-top:12px">
+                  <span onClick="{{ t.preview }}" style="flex:1;text-align:center;border:1px solid var(--brd);border-radius:9px;padding:8px;font-size:12px;cursor:pointer" style-hover="background:var(--sa)">معاينة</span>
+                  <span onClick="{{ t.send }}" style="flex:1;text-align:center;background:var(--acc);color:var(--inv);border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">إرسال للتوقيع</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ ctrShowSigned }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1fr 1.3fr 1.4fr 1fr 1fr 1fr 1.1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+              <div>الرقم</div><div>نوع العقد</div><div>الطرف الثاني</div><div>تاريخ التوقيع</div><div>ينتهي</div><div>القيمة</div><div>الحالة</div>
+            </div>
+            <sc-for list="{{ contracts }}" as="c" hint-placeholder-count="7">
+              <div onClick="{{ c.preview }}" style="display:grid;grid-template-columns:1fr 1.3fr 1.4fr 1fr 1fr 1fr 1.1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center;cursor:pointer" style-hover="background:var(--sa)">
+                <div style="color:var(--mut);font-variant-numeric:tabular-nums">{{ c.id }}</div>
+                <div>{{ c.type }}</div>
+                <div style="font-weight:600">{{ c.party }}</div>
+                <div style="color:var(--mut)">{{ c.signed }}</div>
+                <div style="color:{{ c.endColor }}">{{ c.end }}</div>
+                <div style="font-weight:600">{{ c.value }}</div>
+                <div><span style="{{ c.badge }}">{{ c.status }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabApi }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="عقود مزودي API" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">عقود مزوّدي الخدمات وواجهات API</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">المدفوعات والرسائل والخرائط — الاشتراك والحصص ومفاتيح الربط</div>
+          </div>
+          <span onClick="{{ doAddProvider }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ ربط مزوّد</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px">
+          <sc-for list="{{ providers }}" as="p" hint-placeholder-count="5">
+            <div style="background:var(--sur);border:1px solid {{ p.border }};border-radius:16px;padding:18px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <div style="width:40px;height:40px;border-radius:11px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ p.logo }}</div>
+                <div style="flex:1">
+                  <div style="font-size:14.5px;font-weight:700">{{ p.name }}</div>
+                  <div style="font-size:11.5px;color:var(--mut);margin-top:2px">{{ p.kind }}</div>
+                </div>
+                <span style="{{ p.badge }}">{{ p.status }}</span>
+              </div>
+              <div style="font-size:12px;line-height:2.1;border-top:1px solid var(--brd);padding-top:11px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">نوع العقد</span><span>{{ p.contract }}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">التكلفة</span><span>{{ p.cost }}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">يُجدَّد في</span><span style="color:{{ p.renewColor }}">{{ p.renew }}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--mut)">مفتاح الربط</span><span dir="ltr" style="font-size:11px;background:var(--sur2);border:1px solid var(--brd);border-radius:7px;padding:2px 8px">{{ p.key }}</span></div>
+              </div>
+              <div style="margin-top:12px">
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:5px"><span>الاستهلاك هذا الشهر</span><span>{{ p.usage }}</span></div>
+                <div style="height:6px;border-radius:99px;background:var(--sur2);overflow:hidden"><div style="height:100%;background:{{ p.barColor }};width:{{ p.w }}"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+                <span onClick="{{ p.toggleSandbox }}" style="{{ p.sandboxStyle }}"><span style="{{ p.knob }}"></span></span>
+                <span style="font-size:11.5px;color:var(--mut);flex:1">وضع الاختبار</span>
+                <span onClick="{{ p.preview }}" style="border:1px solid var(--brd);border-radius:9px;padding:7px 13px;font-size:11.5px;cursor:pointer" style-hover="background:var(--sa)">معاينة العقد</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabInvoices }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الفواتير" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">الفواتير والمحاسبة</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">فواتير الاشتراكات والشركات وعمولات المنصة</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span onClick="{{ doExport }}" style="border:1px solid var(--brd);border-radius:10px;padding:9px 14px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">تصدير محاسبي</span>
+            <span onClick="{{ newInvoice }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer">+ فاتورة</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+          <sc-for list="{{ invKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:11.5px;color:var(--mut)">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:700;margin-top:5px;color:{{ k.color }}">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr 1.5fr 1.1fr 1fr .9fr 1fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>رقم الفاتورة</div><div>الجهة</div><div>النوع</div><div>المبلغ</div><div>الضريبة</div><div>التاريخ</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ invoices }}" as="v" hint-placeholder-count="7">
+            <div style="display:grid;grid-template-columns:1fr 1.5fr 1.1fr 1fr .9fr 1fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div dir="ltr" style="text-align:start;color:var(--mut)">{{ v.id }}</div>
+              <div style="font-weight:600">{{ v.party }}</div>
+              <div style="color:var(--mut)">{{ v.type }}</div>
+              <div style="font-weight:600">{{ v.amount }}</div>
+              <div style="color:var(--mut)">{{ v.tax }}</div>
+              <div style="color:var(--mut)">{{ v.date }}</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+                <span style="{{ v.badge }}">{{ v.status }}</span>
+                <span onClick="{{ v.print }}" style="font-size:11px;color:var(--mut);cursor:pointer;text-decoration:underline">PDF</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabIncentives }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الحوافز" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">الحوافز ومكافآت السائقين</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">برامج تُصرف تلقائياً للمحفظة عند تحقق الشرط</div>
+          </div>
+          <span onClick="{{ newIncentive }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ برنامج حوافز</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px">
+          <sc-for list="{{ incentives }}" as="i" hint-placeholder-count="3">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-size:15px;font-weight:700">{{ i.name }}</div>
+                <span onClick="{{ i.toggle }}" style="{{ i.badge }}">{{ i.status }}</span>
+              </div>
+              <div style="font-size:12px;color:var(--mut);line-height:1.8;min-height:44px">{{ i.rule }}</div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;border-top:1px solid var(--brd);padding-top:12px;margin-top:6px">
+                <span style="color:var(--mut)">المكافأة</span><span style="font-weight:700">{{ i.reward }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:7px">
+                <span style="color:var(--mut)">مشاركون / مؤهلون</span><span style="font-weight:600">{{ i.joined }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:7px">
+                <span style="color:var(--mut)">المصروف حتى الآن</span><span style="font-weight:600;color:var(--warn)">{{ i.spent }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px">الأقرب لإنجاز الحافز الأسبوعي</div>
+          <sc-for list="{{ incProgress }}" as="p" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--brd)">
+              <div style="width:150px;font-size:12.5px;font-weight:600">{{ p.name }}</div>
+              <div style="flex:1;height:8px;border-radius:99px;background:var(--sur2);overflow:hidden"><div style="height:100%;background:{{ p.color }};width:{{ p.w }}"></div></div>
+              <div style="width:110px;text-align:end;font-size:12px;color:var(--mut)">{{ p.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabRatings }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="التقييمات" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">التقييمات والشكاوى</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:16px">مؤشر جودة الخدمة وأسباب التقييم المنخفض</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px">
+            <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px">
+              <div style="text-align:center">
+                <div style="font-size:38px;font-weight:700;line-height:1">{{ avgRating }}</div>
+                <div style="font-size:11.5px;color:var(--mut);margin-top:4px">من {{ ratingCount }} تقييم</div>
+              </div>
+              <div style="flex:1">
+                <sc-for list="{{ ratingDist }}" as="d" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">
+                    <span style="font-size:11px;color:var(--mut);width:24px">{{ d.stars }}★</span>
+                    <span style="flex:1;height:6px;border-radius:99px;background:var(--sur2);overflow:hidden;display:block"><span style="height:100%;background:{{ d.color }};width:{{ d.w }};display:block"></span></span>
+                    <span style="font-size:11px;color:var(--mut);width:40px;text-align:end">{{ d.pct }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:18px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:14px">أسباب الشكاوى الأكثر تكراراً</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ complaintTags }}" as="c" hint-placeholder-count="6">
+                <div style="border:1px solid var(--brd);border-radius:99px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
+                  {{ c.label }}<span style="color:var(--mut);font-size:11px">{{ c.count }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="padding:15px 18px;font-size:14px;font-weight:700">تقييمات منخفضة تحتاج متابعة</div>
+          <div style="display:grid;grid-template-columns:.7fr 1.3fr 1.3fr 2fr 1fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>التقييم</div><div>السائق</div><div>الراكب</div><div>الملاحظة</div><div>الرحلة</div><div>الإجراء</div>
+          </div>
+          <sc-for list="{{ lowRatings }}" as="r" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:.7fr 1.3fr 1.3fr 2fr 1fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center">
+              <div style="color:var(--dng);font-weight:700">{{ r.stars }}★</div>
+              <div style="font-weight:600">{{ r.driver }}</div>
+              <div style="color:var(--mut)">{{ r.rider }}</div>
+              <div style="color:var(--mut)">{{ r.note }}</div>
+              <div style="color:var(--mut)">{{ r.ride }}</div>
+              <div><span onClick="{{ r.act }}" style="{{ r.btn }}">{{ r.btnLabel }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabAudit }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="سجل التدقيق" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">سجل التدقيق</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:14px">كل إجراء حساس مسجَّل باسم المستخدم والوقت وعنوان الجهاز</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <sc-for list="{{ auditFilters }}" as="f" hint-placeholder-count="4"><span onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</span></sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.1fr 1.2fr 2fr 1.4fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>الوقت</div><div>المستخدم</div><div>الإجراء</div><div>العنصر</div><div>الجهاز</div>
+          </div>
+          <sc-for list="{{ auditRows }}" as="a" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:1.1fr 1.2fr 2fr 1.4fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div style="color:var(--mut)">{{ a.when }}</div>
+              <div style="font-weight:600">{{ a.user }}</div>
+              <div><span style="{{ a.badge }}">{{ a.kind }}</span> <span style="margin-inline-start:8px">{{ a.action }}</span></div>
+              <div style="color:var(--mut)">{{ a.target }}</div>
+              <div dir="ltr" style="text-align:start;color:var(--mut);font-size:11px">{{ a.ip }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabSettings }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الإعدادات" style="animation:fadein .25s">
+        <div style="font-size:21px;font-weight:700;margin-bottom:3px">الإعدادات العامة والتكاملات</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:16px">إعدادات تسري على تطبيقَي الراكب والسائق فور الحفظ</div>
+        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:12px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:6px 18px 12px">
+            <sc-for list="{{ settingRows }}" as="st" hint-placeholder-count="7">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--brd)">
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">{{ st.label }}</div>
+                  <div style="font-size:11.5px;color:var(--mut);margin-top:3px;line-height:1.7">{{ st.desc }}</div>
+                </div>
+                <span onClick="{{ st.toggle }}" style="{{ st.track }}"><span style="{{ st.knob }}"></span></span>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <span onClick="{{ saveSettings }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:11px 20px;font-size:12.5px;font-weight:700;cursor:pointer">حفظ الإعدادات</span>
+            </div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:16px 18px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:12px">حالة التكاملات</div>
+            <sc-for list="{{ integrations }}" as="g" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid var(--brd)">
+                <span style="width:8px;height:8px;border-radius:99px;background:{{ g.dot }};display:block"></span>
+                <div style="flex:1"><div style="font-size:12.5px;font-weight:600">{{ g.name }}</div><div style="font-size:11px;color:var(--mut);margin-top:2px">{{ g.detail }}</div></div>
+                <span onClick="{{ g.test }}" style="border:1px solid var(--brd);border-radius:8px;padding:6px 11px;font-size:11px;cursor:pointer" style-hover="background:var(--sa)">اختبار</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabLegal }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="الشروط والسياسات" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">الشروط والسياسات</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">نصوص قانونية تظهر داخل التطبيقات — كل نشر يُنشئ نسخة جديدة</div>
+          </div>
+          <span onClick="{{ publishLegal }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">نشر نسخة جديدة</span>
+        </div>
+        <div style="display:grid;grid-template-columns:290px 1fr;gap:12px">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+            <sc-for list="{{ legalDocs }}" as="d" hint-placeholder-count="5">
+              <div onClick="{{ d.go }}" style="{{ d.style }}">
+                <div style="font-size:12.5px;font-weight:600">{{ d.name }}</div>
+                <div style="font-size:11px;color:var(--mut);margin-top:3px">{{ d.meta }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:22px 26px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <div style="font-size:17px;font-weight:700">{{ legalTitle }}</div>
+              <span style="{{ legalBadge }}">{{ legalVersion }}</span>
+            </div>
+            <div style="font-size:13px;line-height:2.2;color:var(--tx);white-space:pre-line;max-width:70ch">{{ legalBody }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tabHelp }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="مركز المساعدة" style="animation:fadein .25s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:700">مركز المساعدة والأسئلة</div>
+            <div style="font-size:12.5px;color:var(--mut);margin-top:3px">مقالات تظهر داخل التطبيقين حسب نوع المستخدم</div>
+          </div>
+          <span onClick="{{ newArticle }}" style="background:var(--acc);color:var(--inv);border-radius:10px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer">+ مقال جديد</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px">
+          <sc-for list="{{ helpCats }}" as="c" hint-placeholder-count="4">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:15px 16px">
+              <div style="font-size:13px;font-weight:600">{{ c.name }}</div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:5px">{{ c.count }} · {{ c.views }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;padding:10px 18px;background:var(--sur2);font-size:11px;color:var(--mut);font-weight:600">
+            <div>العنوان</div><div>التصنيف</div><div>الجمهور</div><div>المشاهدات</div><div>الحالة</div>
+          </div>
+          <sc-for list="{{ articles }}" as="a" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;padding:12px 18px;border-top:1px solid var(--brd);font-size:12.5px;align-items:center" style-hover="background:var(--sa)">
+              <div style="font-weight:600">{{ a.title }}</div>
+              <div style="color:var(--mut)">{{ a.cat }}</div>
+              <div style="color:var(--mut)">{{ a.aud }}</div>
+              <div style="color:var(--mut)">{{ a.views }}</div>
+              <div><span style="{{ a.badge }}">{{ a.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ docPreviewOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDoc }}" style="position:fixed;inset:0;background:var(--dim);z-index:85;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadein .2s">
+      <div onClick="{{ stop }}" style="width:720px;max-height:88vh;display:flex;flex-direction:column;background:var(--sur);border:1px solid var(--brd);border-radius:18px;overflow:hidden;animation:rise .22s">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--brd)">
+          <div>
+            <div style="font-size:15px;font-weight:700">{{ docTitle }}</div>
+            <div style="font-size:11.5px;color:var(--mut);margin-top:3px">{{ docMeta }}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span onClick="{{ docPrint }}" style="border:1px solid var(--brd);border-radius:9px;padding:8px 14px;font-size:12px;cursor:pointer" style-hover="background:var(--sa)">طباعة PDF</span>
+            <span onClick="{{ closeDoc }}" style="cursor:pointer;color:var(--mut);font-size:18px;padding:4px">✕</span>
+          </div>
+        </div>
+        <div class="scr" style="flex:1;padding:26px;background:var(--sur2)">
+          <div style="background:#ffffff;color:#171b20;border-radius:6px;padding:44px 46px;max-width:620px;margin:0 auto;box-shadow:0 6px 26px rgba(0,0,0,.18)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #171b20;padding-bottom:14px;margin-bottom:22px">
+              <div style="font-size:20px;font-weight:700;letter-spacing:.12em">TAXO</div>
+              <div style="text-align:end;font-size:11px;color:#6e7681;line-height:1.8">{{ docRef }}<br>{{ docDate }}</div>
+            </div>
+            <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:20px">{{ docTitle }}</div>
+            <div style="font-size:12.5px;line-height:2.3;white-space:pre-line">{{ docBody }}</div>
+            <div style="display:flex;gap:40px;margin-top:38px;padding-top:20px;border-top:1px dashed #ddd8cf">
+              <div style="flex:1">
+                <div style="font-size:11px;color:#6e7681;margin-bottom:26px">الطرف الأول · TAXO</div>
+                <div style="border-top:1px solid #171b20;padding-top:7px;font-size:11px">التوقيع والختم</div>
+              </div>
+              <div style="flex:1">
+                <div style="font-size:11px;color:#6e7681;margin-bottom:8px">الطرف الثاني · {{ docParty }}</div>
+                <div style="font-size:13px;font-family:'IBM Plex Sans Arabic';font-style:italic;color:#1a7f4e;margin-bottom:5px">{{ docSignature }}</div>
+                <div style="border-top:1px solid #171b20;padding-top:7px;font-size:11px">{{ docSignMeta }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:var(--dim);z-index:80;animation:fadein .2s"></div>
+    <div class="scr" style="position:fixed;top:0;bottom:0;inset-inline-start:0;width:440px;background:var(--sur);border-inline-end:1px solid var(--brd);z-index:81;padding:22px;animation:slidein .22s">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:48px;height:48px;border-radius:99px;background:var(--sur2);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">{{ dwInitials }}</div>
+          <div>
+            <div style="font-size:16px;font-weight:700">{{ dwName }}</div>
+            <div dir="ltr" style="font-size:12px;color:var(--mut);text-align:start;margin-top:2px">{{ dwPhone }}</div>
+          </div>
+        </div>
+        <span onClick="{{ closeDrawer }}" style="cursor:pointer;color:var(--mut);font-size:18px;padding:4px">✕</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px">
+        <sc-for list="{{ dwStats }}" as="s" hint-placeholder-count="3">
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:12px;padding:11px;text-align:center">
+            <div style="font-size:10.5px;color:var(--mut)">{{ s.label }}</div>
+            <div style="font-size:15px;font-weight:700;margin-top:3px">{{ s.value }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ dwIsDriver }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">الوثائق</div>
+        <sc-for list="{{ dwDocs }}" as="d" hint-placeholder-count="3">
+          <div style="border:1px solid var(--brd);border-radius:13px;padding:13px;margin-bottom:9px;background:var(--sur2)">
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
+              <div style="width:52px;height:38px;border-radius:8px;background:repeating-linear-gradient(45deg,var(--sur),var(--sur) 5px,var(--brd) 5px,var(--brd) 6px);border:1px solid var(--brd)"></div>
+              <div style="flex:1"><div style="font-size:12.5px;font-weight:600">{{ d.name }}</div><div style="font-size:10.5px;color:var(--mut);margin-top:2px">{{ d.meta }}</div></div>
+              <span style="{{ d.badge }}">{{ d.status }}</span>
+            </div>
+            <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:7px">
+                <span onClick="{{ d.reject }}" style="flex:1;text-align:center;border:1px solid var(--brd);border-radius:9px;padding:7px;font-size:11.5px;cursor:pointer;color:var(--dng)" style-hover="background:var(--sa)">رفض</span>
+                <span onClick="{{ d.approve }}" style="flex:1;text-align:center;background:var(--acc);color:var(--inv);border-radius:9px;padding:7px;font-size:11.5px;font-weight:700;cursor:pointer">اعتماد</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="font-size:13px;font-weight:700;margin:18px 0 10px">المركبة</div>
+        <div style="border:1px solid var(--brd);border-radius:13px;padding:13px;background:var(--sur2);font-size:12.5px;line-height:2">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">الطراز</span><span>{{ dwCar }}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">رقم اللوحة</span><span dir="ltr">{{ dwPlate }}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">سنة الصنع</span><span>{{ dwYear }}</span></div>
+        </div>
+      </sc-if>
+      <div style="font-size:13px;font-weight:700;margin:18px 0 10px">آخر الرحلات</div>
+      <sc-for list="{{ dwRides }}" as="r" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--brd);font-size:12.5px">
+          <div style="flex:1"><div>{{ r.route }}</div><div style="font-size:10.5px;color:var(--mut);margin-top:2px">{{ r.when }} · {{ r.pay }}</div></div>
+          <div style="font-weight:600">{{ r.fare }}</div>
+        </div>
+      </sc-for>
+      <div style="display:flex;gap:8px;margin-top:22px">
+        <span onClick="{{ dwSuspend }}" style="flex:1;text-align:center;border:1px solid var(--brd);border-radius:11px;padding:11px;font-size:12.5px;cursor:pointer;color:var(--dng)" style-hover="background:var(--sa)">{{ dwSuspendLabel }}</span>
+        <span onClick="{{ dwNotify }}" style="flex:1;text-align:center;border:1px solid var(--brd);border-radius:11px;padding:11px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">إرسال إشعار</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ rideModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeRide }}" style="position:fixed;inset:0;background:var(--dim);z-index:80;display:flex;align-items:center;justify-content:center;animation:fadein .2s">
+      <div onClick="{{ stop }}" style="width:560px;max-height:86vh;overflow:auto;background:var(--sur);border:1px solid var(--brd);border-radius:20px;padding:24px;animation:rise .22s">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+          <div>
+            <div style="font-size:17px;font-weight:700">رحلة {{ rmId }}</div>
+            <div style="font-size:12px;color:var(--mut);margin-top:3px">{{ rmWhen }} · {{ rmDist }}</div>
+          </div>
+          <span onClick="{{ closeRide }}" style="cursor:pointer;color:var(--mut);font-size:18px;padding:4px">✕</span>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:18px">
+          <div style="flex:1;background:var(--sur2);border:1px solid var(--brd);border-radius:13px;padding:13px">
+            <div style="font-size:10.5px;color:var(--mut);margin-bottom:4px">السائق</div>
+            <div style="font-size:13px;font-weight:600">{{ rmDriver }}</div>
+          </div>
+          <div style="flex:1;background:var(--sur2);border:1px solid var(--brd);border-radius:13px;padding:13px">
+            <div style="font-size:10.5px;color:var(--mut);margin-bottom:4px">الراكب</div>
+            <div style="font-size:13px;font-weight:600">{{ rmRider }}</div>
+          </div>
+        </div>
+        <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:13px;padding:15px;margin-bottom:16px">
+          <div style="display:flex;gap:11px;font-size:12.5px;line-height:1.7">
+            <div style="display:flex;flex-direction:column;align-items:center;padding-top:5px">
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block"></span>
+              <span style="width:1px;flex:1;background:var(--brd);display:block;margin:4px 0"></span>
+              <span style="width:8px;height:8px;border-radius:99px;background:var(--dng);display:block"></span>
+            </div>
+            <div style="flex:1">
+              <div>{{ rmFrom }}</div>
+              <div style="height:14px"></div>
+              <div>{{ rmTo }}</div>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid var(--brd);border-radius:13px;overflow:hidden;margin-bottom:16px">
+          <sc-for list="{{ rmBreakdown }}" as="b" hint-placeholder-count="5">
+            <div style="display:flex;justify-content:space-between;padding:11px 15px;border-bottom:1px solid var(--brd);font-size:12.5px">
+              <span style="color:var(--mut)">{{ b.label }}</span><span style="font-weight:600;color:{{ b.color }}">{{ b.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span onClick="{{ rmRefund }}" style="flex:1;text-align:center;border:1px solid var(--brd);border-radius:11px;padding:11px;font-size:12.5px;cursor:pointer" style-hover="background:var(--sa)">استرجاع المبلغ</span>
+          <span onClick="{{ rmDispute }}" style="flex:1;text-align:center;border:1px solid var(--brd);border-radius:11px;padding:11px;font-size:12.5px;cursor:pointer;color:var(--warn)" style-hover="background:var(--sa)">فتح نزاع</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--acc);color:var(--inv);border-radius:12px;padding:12px 22px;font-size:13px;font-weight:600;z-index:95;animation:rise .2s;box-shadow:0 10px 30px rgba(0,0,0,.3)">{{ toastText }}</div>
+  </sc-if>
+
+  <sc-if value="{{ showLogin }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;grid-template-columns:1fr 1fr;animation:fadein .25s">
+      <div style="display:flex;flex-direction:column;justify-content:space-between;padding:52px;background:var(--sur);border-inline-end:1px solid var(--brd)">
+        <div style="font-size:26px;font-weight:700;letter-spacing:.14em">TAXO</div>
+        <div>
+          <div style="font-size:30px;font-weight:700;line-height:1.5;max-width:15ch">لوحة تحكم العمليات</div>
+          <div style="font-size:14px;color:var(--mut);margin-top:14px;line-height:2;max-width:34ch">إدارة الأسطول والرحلات والمحافظ والعقود في الأردن وليبيا من مكان واحد.</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--mut)">الدخول مقيّد بالمستخدمين المصرّح لهم · كل إجراء يُسجَّل في سجل التدقيق</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:40px">
+        <div style="width:340px">
+          <div style="font-size:20px;font-weight:700;margin-bottom:6px">تسجيل الدخول</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-bottom:26px">استخدم بريد العمل الخاص بك</div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:11.5px;color:var(--mut);margin-bottom:6px">البريد الإلكتروني</div>
+            <input class="fld" dir="ltr" style="width:100%" value="{{ loginEmail }}" onChange="{{ setEmail }}">
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:11.5px;color:var(--mut);margin-bottom:6px">كلمة المرور</div>
+            <input class="fld" type="password" dir="ltr" style="width:100%" value="{{ loginPass }}" onChange="{{ setPass }}">
+          </div>
+          <div style="text-align:end;font-size:11.5px;color:var(--mut);text-decoration:underline;cursor:pointer;margin-bottom:20px">نسيت كلمة المرور؟</div>
+          <div onClick="{{ doLogin }}" style="background:var(--acc);color:var(--inv);border-radius:12px;padding:14px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">متابعة</div>
+          <div style="font-size:11px;color:var(--mut);text-align:center;margin-top:18px;line-height:1.9">محمي بالتحقق الثنائي · جلسة تنتهي بعد ٣٠ دقيقة خمول</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ show2fa }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;animation:fadein .25s">
+      <div style="width:360px;text-align:center">
+        <div style="font-size:22px;font-weight:700;letter-spacing:.14em;margin-bottom:30px">TAXO</div>
+        <div style="font-size:19px;font-weight:700;margin-bottom:7px">التحقق الثنائي</div>
+        <div style="font-size:12.5px;color:var(--mut);line-height:1.9;margin-bottom:24px">أدخل الرمز المكوّن من ٦ أرقام من تطبيق المصادقة المرتبط بحسابك</div>
+        <input class="fld" dir="ltr" maxlength="6" style="width:100%;text-align:center;font-size:26px;letter-spacing:.42em;padding:15px;font-weight:700" value="{{ code2fa }}" onChange="{{ setCode }}" placeholder="000000">
+        <div onClick="{{ doVerify }}" style="background:var(--acc);color:var(--inv);border-radius:12px;padding:14px;text-align:center;font-size:14px;font-weight:700;cursor:pointer;margin-top:16px">تأكيد الدخول</div>
+        <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:11.5px;color:var(--mut)">
+          <span onClick="{{ backToLogin }}" style="cursor:pointer;text-decoration:underline">رجوع</span>
+          <span onClick="{{ resendCode }}" style="cursor:pointer;text-decoration:underline">إعادة إرسال الرمز</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1512,&quot;height&quot;:950},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;العرض&quot;},&quot;country&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;jo&quot;,&quot;ly&quot;],&quot;default&quot;:&quot;jo&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;العرض&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;owner&quot;,&quot;ops&quot;,&quot;support&quot;],&quot;default&quot;:&quot;owner&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;الصلاحيات&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: "overview", theme: null, country: null, period: "day",
+    search: "", drvFilter: "all", rideFilter: "all",
+    drawer: null, drawerKind: "driver", rideModal: null, ticket: 0,
+    docs: {}, wd: {}, cash: {}, assigned: {}, planOff: {}, planAdj: {},
+    priceAdj: {}, promoOff: {}, perm: {}, reply: "", extraMsgs: [],
+    promoForm: false, bcAud: "الكل", bcChan: "إشعار داخل التطبيق",
+    bcTitle: "خصم ٢٥٪ على رحلات نهاية الأسبوع",
+    bcBody: "استخدم الرمز TAXO25 على أول رحلتين يومي الجمعة والسبت. الخصم يُطبّق تلقائياً عند الدفع.",
+    bcExtra: [], toast: "", suspended: {},
+    auth: "login", loginEmail: "nader@taxo.jo", loginPass: "••••••••", code2fa: "",
+    menu: null, ctrTab: "signed", doc: null, sandbox: {}, incOff: {},
+    auditFilter: "all", settings: {}, legalSel: 0
+  };
+
+  componentDidMount() { this._initMap(); }
+  componentWillUnmount() { clearTimeout(this._toastTo); clearInterval(this._mapWait); }
+
+  _lang() { return "ar"; }
+  _theme() { return this.state.theme ?? this.props.theme ?? "dark"; }
+  _country() { return this.state.country ?? this.props.country ?? "jo"; }
+  _n(x, d) { return x.toLocaleString("ar-EG", { minimumFractionDigits: d ?? 0, maximumFractionDigits: d ?? 0 }); }
+  _cur() { return this._country() === "jo" ? "د.أ" : "د.ل"; }
+  _money(x) { return this._n(x, 3) + " " + this._cur(); }
+  _toast(msg) {
+    clearTimeout(this._toastTo);
+    this.setState({ toast: msg });
+    this._toastTo = setTimeout(() => this.setState({ toast: "" }), 2200);
+  }
+  _initials(name) { const p = name.split(" "); return (p[0][0] || "") + (p[1] ? p[1][0] : ""); }
+
+  _geo() {
+    return this._country() === "jo"
+      ? { center: [31.955, 35.91], zoom: 12, pts: [
+          [31.9539, 35.9106, "ok"], [31.9484, 35.8735, "ok"], [31.9866, 35.8749, "busy"],
+          [31.9908, 35.8385, "ok"], [31.9497, 35.9239, "busy"], [31.9718, 35.9709, "ok"],
+          [31.9280, 35.8720, "req"], [31.9668, 35.9330, "ok"], [31.9105, 35.9350, "busy"],
+          [32.0100, 35.8890, "ok"], [31.9390, 35.9520, "req"], [31.9750, 35.9080, "ok"] ] }
+      : { center: [32.875, 13.19], zoom: 12, pts: [
+          [32.8872, 13.1913, "ok"], [32.8600, 13.1300, "busy"], [32.8153, 13.0116, "ok"],
+          [32.8836, 13.3504, "ok"], [32.8450, 13.2200, "req"], [32.8990, 13.1700, "busy"],
+          [32.8330, 13.1500, "ok"], [32.8700, 13.2600, "ok"], [32.8200, 13.1800, "req"],
+          [32.9000, 13.2200, "ok"] ] };
+  }
+
+  _initMap() {
+    if (this._mapHost) return;
+    const start = Date.now();
+    this._mapWait = setInterval(() => {
+      if (window.L) {
+        clearInterval(this._mapWait);
+        const host = document.createElement("div");
+        host.style.cssText = "position:absolute;inset:0";
+        this._mapHost = host;
+        this._pendingMap = true;
+        this.forceUpdate();
+      } else if (Date.now() - start > 12000) { clearInterval(this._mapWait); }
+    }, 120);
+  }
+
+  _buildMap() {
+    if (!window.L || !this._mapHost || this._map) return;
+    const g = this._geo();
+    this._map = window.L.map(this._mapHost, { zoomControl: true, attributionControl: true }).setView(g.center, g.zoom);
+    window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors", maxZoom: 19
+    }).addTo(this._map);
+    this._layer = window.L.layerGroup().addTo(this._map);
+    this._drawPins();
+  }
+
+  _drawPins() {
+    if (!this._layer) return;
+    this._layer.clearLayers();
+    const colors = { ok: "#3fb970", busy: "#d9a62e", req: "#e5534b" };
+    const labels = { ok: "سائق متاح", busy: "في رحلة", req: "طلب بانتظار سائق" };
+    this._geo().pts.forEach((p) => {
+      window.L.circleMarker([p[0], p[1]], {
+        radius: p[2] === "req" ? 9 : 7, color: colors[p[2]], weight: 2,
+        fillColor: colors[p[2]], fillOpacity: p[2] === "req" ? 0.35 : 0.85
+      }).bindTooltip(labels[p[2]], { direction: "top" }).addTo(this._layer);
+    });
+  }
+
+  _syncMap() {
+    if (!this._map) return;
+    const g = this._geo();
+    this._map.setView(g.center, g.zoom);
+    this._drawPins();
+    setTimeout(() => this._map && this._map.invalidateSize(), 80);
+  }
+
+  _data() {
+    const jo = {
+      cities: ["عمّان", "إربد", "الزرقاء", "العقبة"],
+      drivers: [
+        { n: "أبو محمد الزعبي", p: "+962 79 555 0142", c: "عمّان", s: "online", sub: "فعّال", r: 4.9, t: 1284, w: 42.5, d: "معتمدة", car: "هيونداي إلنترا", pl: "24-71534", y: "٢٠١٩" },
+        { n: "خالد النعيمات", p: "+962 77 812 3390", c: "عمّان", s: "busy", sub: "فعّال", r: 4.7, t: 903, w: 18.25, d: "معتمدة", car: "كيا سيراتو", pl: "33-40921", y: "٢٠٢٠" },
+        { n: "سامر الحوراني", p: "+962 78 664 2201", c: "إربد", s: "online", sub: "ينتهي قريباً", r: 4.8, t: 512, w: 7.75, d: "بانتظار المراجعة", car: "تويوتا كورولا", pl: "12-88450", y: "٢٠١٨" },
+        { n: "محمد العدوان", p: "+962 79 330 8874", c: "الزرقاء", s: "offline", sub: "منتهٍ", r: 4.5, t: 245, w: 0, d: "بانتظار المراجعة", car: "هيونداي أكسنت", pl: "45-12097", y: "٢٠١٧" },
+        { n: "يوسف المومني", p: "+962 77 145 9082", c: "عمّان", s: "online", sub: "فعّال", r: 5.0, t: 1566, w: 63.0, d: "معتمدة", car: "سكودا أوكتافيا", pl: "28-33210", y: "٢٠٢١" },
+        { n: "عبدالله الشوابكة", p: "+962 78 902 1145", c: "العقبة", s: "offline", sub: "فعّال", r: 4.6, t: 388, w: 12.1, d: "بانتظار المراجعة", car: "كيا ريو", pl: "51-77120", y: "٢٠١٩" },
+        { n: "رامي القضاة", p: "+962 79 774 5533", c: "عمّان", s: "busy", sub: "فعّال", r: 4.9, t: 1102, w: 30.75, d: "معتمدة", car: "تويوتا يارس", pl: "19-45008", y: "٢٠٢٠" },
+        { n: "زياد أبو ندى", p: "+962 78 551 7788", c: "عمّان", s: "suspended", sub: "منتهٍ", r: 3.9, t: 640, w: 5.5, d: "مرفوضة", car: "نيسان صني", pl: "62-90114", y: "٢٠١٦" }
+      ],
+      riders: [
+        { n: "سارة عبداللات", p: "+962 79 441 2280", c: "عمّان", rd: 128, w: 12.4, r: 4.9, st: "نشط" },
+        { n: "لينا الخطيب", p: "+962 77 663 9021", c: "عمّان", rd: 64, w: 3.0, r: 4.8, st: "نشط" },
+        { n: "عمر الصمادي", p: "+962 78 220 1174", c: "إربد", rd: 41, w: 0, r: 4.6, st: "نشط" },
+        { n: "هبة النجار", p: "+962 79 887 3345", c: "عمّان", rd: 210, w: 25.75, r: 5.0, st: "مميّز" },
+        { n: "طارق السعيد", p: "+962 77 302 8890", c: "الزرقاء", rd: 12, w: 0, r: 4.1, st: "محظور" },
+        { n: "دانا فاخوري", p: "+962 78 119 6602", c: "عمّان", rd: 87, w: 8.25, r: 4.9, st: "نشط" }
+      ],
+      places: [
+        ["دوار الداخلية", "العبدلي بوليفارد"], ["الصويفية، شارع الوكالات", "الدوار السابع"],
+        ["الجاردنز، وصفي التل", "مجمع رغدان"], ["خلدا، عمر مطر", "مكة مول"],
+        ["جبل عمّان، الدوار الأول", "شارع الرينبو"], ["ماركا الشمالية", "المدينة الرياضية"],
+        ["الشميساني", "مستشفى الأردن"], ["طبربور", "دوار الواحة"]
+      ],
+      zones: [["العبدلي", 42, 11, "١٫٠×"], ["الصويفية", 36, 6, "١٫٣×"], ["الجاردنز", 29, 9, "١٫٠×"], ["خلدا", 21, 3, "١٫٥×"], ["إربد المركز", 18, 7, "١٫٠×"]],
+      main: "عمّان"
+    };
+    const ly = {
+      cities: ["طرابلس", "بنغازي", "مصراتة", "سبها"],
+      drivers: [
+        { n: "أسامة الفيتوري", p: "+218 91 234 5567", c: "طرابلس", s: "online", sub: "فعّال", r: 4.8, t: 742, w: 96.0, d: "معتمدة", car: "تويوتا كامري", pl: "9-11284", y: "٢٠١٨" },
+        { n: "مروان الزنتاني", p: "+218 92 771 4408", c: "طرابلس", s: "busy", sub: "فعّال", r: 4.6, t: 511, w: 44.5, d: "معتمدة", car: "هيونداي سوناتا", pl: "4-55901", y: "٢٠١٩" },
+        { n: "هيثم بن عيسى", p: "+218 94 330 2219", c: "مصراتة", s: "online", sub: "ينتهي قريباً", r: 4.7, t: 305, w: 21.0, d: "بانتظار المراجعة", car: "كيا سيراتو", pl: "6-20477", y: "٢٠٢٠" },
+        { n: "طارق الورفلي", p: "+218 91 882 6640", c: "بنغازي", s: "offline", sub: "منتهٍ", r: 4.3, t: 188, w: 0, d: "بانتظار المراجعة", car: "تويوتا كورولا", pl: "2-71130", y: "٢٠١٧" },
+        { n: "نبيل الترهوني", p: "+218 92 145 8873", c: "طرابلس", s: "online", sub: "فعّال", r: 4.9, t: 968, w: 132.5, d: "معتمدة", car: "شيفروليه ماليبو", pl: "9-40028", y: "٢٠٢١" },
+        { n: "عماد الشريف", p: "+218 94 662 0091", c: "سبها", s: "offline", sub: "فعّال", r: 4.4, t: 122, w: 15.0, d: "معتمدة", car: "هيونداي أكسنت", pl: "7-88342", y: "٢٠١٦" }
+      ],
+      riders: [
+        { n: "نور الصديق", p: "+218 91 500 3312", c: "طرابلس", rd: 74, w: 30.0, r: 4.9, st: "نشط" },
+        { n: "أنس بن غشير", p: "+218 92 224 7789", c: "طرابلس", rd: 33, w: 0, r: 4.7, st: "نشط" },
+        { n: "ريم الفرجاني", p: "+218 94 118 2204", c: "بنغازي", rd: 96, w: 55.5, r: 5.0, st: "مميّز" },
+        { n: "معتز الشيباني", p: "+218 91 773 6650", c: "مصراتة", rd: 19, w: 0, r: 4.2, st: "نشط" },
+        { n: "سهام القبائلي", p: "+218 92 909 4471", c: "طرابلس", rd: 51, w: 12.0, r: 4.8, st: "نشط" }
+      ],
+      places: [
+        ["شارع عمر المختار", "ميدان الشهداء"], ["حي الأندلس", "جامعة طرابلس"],
+        ["جنزور", "طريق المطار"], ["تاجوراء", "سوق الجمعة"],
+        ["أبو سليم", "المدينة القديمة"], ["الظهرة", "شارع الجمهورية"],
+        ["قرقارش", "غوط الشعال"], ["سيدي المصري", "باب بن غشير"]
+      ],
+      zones: [["وسط طرابلس", 38, 9, "١٫٠×"], ["حي الأندلس", 27, 5, "١٫٣×"], ["جنزور", 22, 8, "١٫٠×"], ["تاجوراء", 16, 3, "١٫٤×"], ["بنغازي المركز", 24, 6, "١٫٠×"]],
+      main: "طرابلس"
+    };
+    return this._country() === "jo" ? jo : ly;
+  }
+
+  _groupDefs() {
+    return [
+      { k: "ops", l: "العمليات", items: [["overview", "نظرة عامة"], ["live", "الخريطة الحيّة", 3], ["rides", "سجل الرحلات"], ["scheduled", "الرحلات المجدولة", 2]] },
+      { k: "people", l: "الأشخاص", items: [["drivers", "السائقون والوثائق", 4], ["riders", "الركّاب"], ["b2b", "حسابات الشركات"], ["ratings", "التقييمات والشكاوى"], ["disputes", "النزاعات والدعم", 2]] },
+      { k: "fleet", l: "الأسطول والعقود", items: [["fleet", "المركبات"], ["contracts", "العقود والاتفاقيات", 2], ["api", "عقود مزوّدي API"]] },
+      { k: "money", l: "المالية", items: [["wallets", "المحافظ والسحب", 3], ["subs", "الاشتراكات والباقات"], ["invoices", "الفواتير والمحاسبة"], ["pricing", "التسعيرة والمناطق"], ["incentives", "الحوافز والمكافآت"], ["promos", "العروض والحملات"]] },
+      { k: "growth", l: "التقارير", items: [["reports", "التقارير والإحصاءات"], ["broadcast", "الإشعارات الجماعية"]] },
+      { k: "system", l: "النظام", items: [["users", "المستخدمون والصلاحيات"], ["audit", "سجل التدقيق"], ["settings", "الإعدادات والتكاملات"], ["legal", "الشروط والسياسات"], ["help", "مركز المساعدة"]] }
+    ];
+  }
+  _openDoc(d) { this.setState({ doc: d, menu: null }); }
+  _switch(on) {
+    return {
+      track: "cursor:pointer;width:38px;height:22px;border-radius:99px;display:flex;align-items:center;padding:2px;background:" + (on ? "var(--ok)" : "var(--brd)") + ";justify-content:" + (on ? "flex-end" : "flex-start"),
+      knob: "width:18px;height:18px;border-radius:99px;background:#fff;display:block"
+    };
+  }
+
+  _pill(active) {
+    return active
+      ? "cursor:pointer;padding:6px 14px;border-radius:99px;background:var(--acc);color:var(--inv);font-size:12px;font-weight:700"
+      : "cursor:pointer;padding:6px 14px;border-radius:99px;color:var(--mut);font-size:12px;font-weight:600";
+  }
+  _filterPill(active) {
+    return active
+      ? "cursor:pointer;padding:8px 15px;border-radius:10px;background:var(--acc);color:var(--inv);font-size:12.5px;font-weight:700"
+      : "cursor:pointer;padding:8px 15px;border-radius:10px;border:1px solid var(--brd);color:var(--mut);font-size:12.5px";
+  }
+  _badge(text, color) {
+    return "display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;color:" + color + ";background:var(--sur2);border:1px solid " + color + "33";
+  }
+
+  renderVals() {
+    const s = this.state, D = this._data(), cur = this._cur(), money = (x) => this._money(x);
+    const jo = this._country() === "jo";
+    if (this._pendingMap && s.tab === "live") { /* handled by ref */ }
+
+    const gDefs = this._groupDefs();
+    const activeGroup = gDefs.find(g => g.items.some(i => i[0] === s.tab));
+    const groups = gDefs.map(g => {
+      const gb = g.items.reduce((a, i) => a + (i[2] || 0), 0);
+      const isActive = activeGroup && activeGroup.k === g.k;
+      return {
+        label: g.l,
+        badge: gb ? this._n(gb) : "",
+        badgeStyle: gb ? "margin-inline-start:7px;font-size:10px;background:var(--dng);color:#fff;border-radius:99px;padding:1px 6px" : "display:none",
+        style: "cursor:pointer;display:flex;align-items:center;white-space:nowrap;padding:12px 14px 10px;font-size:13px;font-weight:600;border-bottom:2px solid " +
+          (isActive ? "var(--acc);color:var(--tx)" : "transparent;color:var(--mut)"),
+        open: s.menu === g.k,
+        toggle: () => this.setState({ menu: s.menu === g.k ? null : g.k }),
+        items: g.items.map(it => ({
+          label: it[1],
+          badge: it[2] ? this._n(it[2]) : "",
+          badgeStyle: it[2] ? "margin-inline-start:auto;font-size:10px;background:var(--dng);color:#fff;border-radius:99px;padding:1px 7px" : "display:none",
+          style: "cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;font-size:12.5px;" +
+            (s.tab === it[0] ? "background:var(--sa);font-weight:700" : "font-weight:500"),
+          go: () => { this.setState({ tab: it[0], menu: null }); if (it[0] === "live") setTimeout(() => this._map && this._map.invalidateSize(), 120); }
+        }))
+      };
+    });
+    const crumb = activeGroup ? activeGroup.l + " › " + activeGroup.items.filter(i => i[0] === s.tab)[0][1] : "";
+
+    const periodDefs = [["day", "اليوم"], ["week", "الأسبوع"], ["month", "الشهر"]];
+    const periods = periodDefs.map(p => ({ label: p[1], style: this._pill(s.period === p[0]), go: () => this.setState({ period: p[0] }) }));
+
+    const mult = s.period === "day" ? 1 : s.period === "week" ? 6.4 : 27;
+    const base = jo ? 1 : 0.62;
+    const kpiRaw = [
+      ["الرحلات المكتملة", Math.round(842 * mult * base), 0, "+٨٫٤٪ عن الفترة السابقة", "var(--ok)"],
+      ["إجمالي الإيراد", 2184 * mult * base, 1, "+١١٫٢٪", "var(--ok)"],
+      ["سائقون متصلون الآن", jo ? 96 : 58, 0, "من أصل " + this._n(jo ? 214 : 132) + " سائقاً", "var(--mut)"],
+      ["معدّل قبول الطلبات", 0, 0, "متوسط زمن القبول ١٤ ثانية", "var(--mut)"],
+      ["اشتراكات فعّالة", jo ? 178 : 104, 0, "٩ تنتهي خلال ٤٨ ساعة", "var(--warn)"],
+      ["نزاعات مفتوحة", 3, 0, "أقدمها منذ ١٩ ساعة", "var(--dng)"]
+    ];
+    const kpis = kpiRaw.map((k, i) => ({
+      label: k[0],
+      value: i === 1 ? this._n(k[1], 0) + " " + cur : i === 3 ? "٩٢٪" : this._n(k[1]),
+      delta: k[3], color: k[4]
+    }));
+
+    const hourlyRaw = [12, 8, 5, 4, 6, 14, 28, 42, 38, 30, 26, 24, 27, 31, 35, 40, 52, 61, 48, 36, 30, 26, 20, 15];
+    const maxH = Math.max(...hourlyRaw);
+    const hourly = hourlyRaw.map((v, i) => ({
+      h: Math.round((v / maxH) * 120) + "px",
+      color: v === maxH ? "var(--tx)" : "var(--brd)",
+      label: i % 3 === 0 ? this._n(i) : ""
+    }));
+
+    const paySplitRaw = [["كاش", 46, "var(--warn)"], ["محفظة", 27, "var(--ok)"], ["بطاقة", 19, "var(--tx)"], ["مختلط", 8, "var(--mut)"]];
+    const paySplit = paySplitRaw.map(p => ({ label: p[0], pct: this._n(p[1]) + "٪", w: p[1] + "%", color: p[2] }));
+
+    const actionCards = [
+      { icon: "▣", title: "وثائق بانتظار الاعتماد", sub: "سائقون جدد لا يمكنهم العمل قبل المراجعة", count: this._n(4), color: "var(--warn)", border: "var(--brd)", go: () => this.setState({ tab: "drivers", drvFilter: "pending" }) },
+      { icon: "↑", title: "طلبات سحب معلّقة", sub: "تحويلات CliQ بانتظار موافقة المالية", count: this._n(3), color: "var(--ok)", border: "var(--brd)", go: () => this.setState({ tab: "wallets" }) },
+      { icon: "⚖", title: "نزاعات مفتوحة", sub: "شكاوى دفع وسلوك بحاجة لقرار", count: this._n(2), color: "var(--dng)", border: "var(--brd)", go: () => this.setState({ tab: "disputes" }) }
+    ];
+
+    const payNames = ["كاش", "محفظة", "بطاقة", "مختلط"];
+    const statuses = [["مكتملة", "var(--ok)"], ["جارية", "var(--warn)"], ["ملغاة", "var(--dng)"]];
+    const rideAll = D.places.map((pl, i) => {
+      const st = i < 3 ? (i === 0 ? 1 : 0) : (i === 6 ? 2 : 0);
+      const fare = (jo ? 1.75 : 9.5) + i * (jo ? 0.45 : 2.3);
+      return {
+        id: "#" + this._n(48210 + i * 7),
+        when: ["الآن", "قبل ٣ د", "قبل ١١ د", "١:٠٥ م", "١٢:٤٠ م", "١١:٢٢ ص", "١٠:٥٨ ص", "٩:٣٠ ص"][i],
+        from: pl[0], to: pl[1],
+        driver: D.drivers[i % D.drivers.length].n.split(" ").slice(0, 2).join(" "),
+        rider: D.riders[i % D.riders.length].n,
+        fare: money(fare), fareN: fare, dist: this._n(3 + i * 0.8, 1) + " كم",
+        pay: payNames[i % 4], status: statuses[st][0], color: statuses[st][1], stKey: st
+      };
+    });
+    const withBadge = (r) => ({ ...r, badge: this._badge(r.status, r.color) });
+    const ongoing = rideAll.filter(r => r.stKey === 1 || r.stKey === 0).slice(0, 4).map(r => ({
+      ...withBadge(r), open: () => this.setState({ rideModal: rideAll.indexOf(r) })
+    }));
+    const rideFilterDefs = [["all", "الكل"], ["done", "مكتملة"], ["live", "جارية"], ["cancel", "ملغاة"]];
+    const rideFilters = rideFilterDefs.map(f => ({ label: f[1], style: this._filterPill(s.rideFilter === f[0]), go: () => this.setState({ rideFilter: f[0] }) }));
+    const rideRows = rideAll
+      .filter(r => s.rideFilter === "all" || (s.rideFilter === "done" && r.stKey === 0) || (s.rideFilter === "live" && r.stKey === 1) || (s.rideFilter === "cancel" && r.stKey === 2))
+      .filter(r => !s.search || r.from.includes(s.search) || r.driver.includes(s.search) || r.id.includes(s.search))
+      .map(r => ({ ...withBadge(r), open: () => this.setState({ rideModal: rideAll.indexOf(r) }) }));
+
+    const stMap = { online: ["متصل", "var(--ok)"], busy: ["في رحلة", "var(--warn)"], offline: ["غير متصل", "var(--mut)"], suspended: ["موقوف", "var(--dng)"] };
+    const drvFilterDefs = [["all", "الكل"], ["online", "متصلون"], ["pending", "بانتظار الاعتماد"], ["suspended", "موقوفون"]];
+    const drvFilters = drvFilterDefs.map(f => ({ label: f[1], style: this._filterPill(s.drvFilter === f[0]), go: () => this.setState({ drvFilter: f[0] }) }));
+    const driverRows = D.drivers
+      .map((d, i) => ({ d, i }))
+      .filter(({ d }) => s.drvFilter === "all" || (s.drvFilter === "online" && d.s === "online") || (s.drvFilter === "pending" && d.d === "بانتظار المراجعة") || (s.drvFilter === "suspended" && d.s === "suspended"))
+      .filter(({ d }) => !s.search || d.n.includes(s.search) || d.p.includes(s.search))
+      .map(({ d, i }) => {
+        const sus = s.suspended[i] || d.s === "suspended";
+        const st = sus ? stMap.suspended : stMap[d.s];
+        const docState = s.docs["d" + i] || d.d;
+        return {
+          name: d.n, initials: this._initials(d.n), phone: d.p, city: d.c,
+          status: st[0], statusBadge: this._badge(st[0], st[1]),
+          sub: d.sub, subColor: d.sub === "فعّال" ? "var(--ok)" : d.sub === "منتهٍ" ? "var(--dng)" : "var(--warn)",
+          rating: this._n(d.r, 1), trips: this._n(d.t), wallet: money(d.w),
+          docs: docState, docBadge: this._badge(docState, docState === "معتمدة" ? "var(--ok)" : docState === "مرفوضة" ? "var(--dng)" : "var(--warn)"),
+          open: () => this.setState({ drawer: i, drawerKind: "driver" })
+        };
+      });
+
+    const riderRows = D.riders.map((r, i) => ({
+      name: r.n, initials: this._initials(r.n), phone: r.p, city: r.c,
+      rides: this._n(r.rd), wallet: money(r.w), rating: this._n(r.r, 1),
+      status: r.st, badge: this._badge(r.st, r.st === "محظور" ? "var(--dng)" : r.st === "مميّز" ? "var(--ok)" : "var(--mut)"),
+      open: () => this.setState({ drawer: i, drawerKind: "rider" })
+    }));
+
+    const reqRaw = D.places.slice(0, 3).map((pl, i) => ({
+      rider: D.riders[i].n, from: pl[0], to: pl[1],
+      wait: "بانتظار " + this._n(35 + i * 40) + " ث", waitLong: i === 2,
+      fare: money((jo ? 2.2 : 11) + i), pay: payNames[i % 3]
+    }));
+    const requests = reqRaw.map((q, i) => {
+      const done = s.assigned[i];
+      return {
+        rider: q.rider, from: q.from, to: q.to, fare: q.fare, pay: q.pay,
+        wait: done ? "تم التعيين" : q.wait,
+        waitColor: done ? "var(--ok)" : q.waitLong ? "var(--dng)" : "var(--mut)",
+        border: done ? "var(--ok)" : q.waitLong ? "var(--dng)" : "var(--brd)",
+        btnLabel: done ? "✓ مُعيَّنة" : "تعيين سائق",
+        btn: done
+          ? "font-size:11.5px;color:var(--ok);padding:6px 12px"
+          : "cursor:pointer;background:var(--acc);color:var(--inv);border-radius:9px;padding:6px 14px;font-size:11.5px;font-weight:700",
+        assign: () => { if (!done) { this.setState({ assigned: { ...s.assigned, [i]: true } }); this._toast("تم تعيين أقرب سائق ✓"); } }
+      };
+    });
+    const onlineDrivers = D.drivers.filter(d => d.s !== "offline" && d.s !== "suspended").map((d) => ({
+      name: d.n, zone: d.c + " · " + (d.s === "busy" ? "في رحلة" : "متاح"),
+      dot: d.s === "busy" ? "var(--warn)" : "var(--ok)", rating: this._n(d.r, 1),
+      open: () => this.setState({ tab: "drivers", drawer: D.drivers.indexOf(d), drawerKind: "driver" })
+    }));
+    const liveStats = [
+      { label: "متصلون", value: this._n(jo ? 96 : 58) },
+      { label: "في رحلة", value: this._n(jo ? 41 : 23) },
+      { label: "طلبات معلّقة", value: this._n(3) }
+    ];
+
+    const planDefs = [
+      { k: "d", name: "يومي", sub: "صلاحية ٢٤ ساعة", price: jo ? 1.5 : 8, subs: jo ? 34 : 19, rev: jo ? 460 : 1520 },
+      { k: "w", name: "أسبوعي", sub: "٧ أيام · الأكثر شيوعاً", price: jo ? 9 : 45, subs: jo ? 112 : 61, rev: jo ? 1008 : 2745 },
+      { k: "m", name: "شهري", sub: "٣٠ يوماً · أفضل قيمة", price: jo ? 32 : 160, subs: jo ? 32 : 24, rev: jo ? 1024 : 3840 }
+    ];
+    const plans = planDefs.map(p => {
+      const adj = s.planAdj[p.k] || 0;
+      const off = s.planOff[p.k];
+      return {
+        name: p.name, sub: p.sub, cur,
+        price: this._n(p.price + adj * (jo ? 0.5 : 5), jo ? 2 : 0),
+        subs: this._n(p.subs), rev: this._n(p.rev) + " " + cur,
+        state: off ? "متوقفة" : "نشطة",
+        pill: off ? this._badge("متوقفة", "var(--dng)") + ";cursor:pointer" : this._badge("نشطة", "var(--ok)") + ";cursor:pointer",
+        border: off ? "var(--brd)" : "var(--brd)",
+        toggle: () => this.setState({ planOff: { ...s.planOff, [p.k]: !off } }),
+        inc: () => this.setState({ planAdj: { ...s.planAdj, [p.k]: adj + 1 } }),
+        dec: () => this.setState({ planAdj: { ...s.planAdj, [p.k]: adj - 1 } })
+      };
+    });
+    const subStatus = [["سارٍ", "var(--ok)"], ["ينتهي غداً", "var(--warn)"], ["منتهٍ", "var(--dng)"]];
+    const subscribers = D.drivers.slice(0, 6).map((d, i) => {
+      const st = subStatus[i % 3];
+      const pl = planDefs[i % 3];
+      return {
+        name: d.n, plan: pl.name, start: ["٣ آب", "٥ آب", "١ آب", "٧ آب", "٢ آب", "٦ آب"][i],
+        end: ["١٠ آب", "١٢ آب", "٣١ آب", "٨ آب", "٩ آب", "١٣ آب"][i],
+        amount: money(pl.price), method: payNames[i % 3],
+        status: st[0], badge: this._badge(st[0], st[1])
+      };
+    });
+
+    const walletKpis = [
+      { label: "إجمالي أرصدة السائقين", value: this._n(jo ? 4820 : 18240, 0) + " " + cur, color: "var(--tx)" },
+      { label: "محجوز لطلبات سحب", value: this._n(jo ? 615 : 2400, 0) + " " + cur, color: "var(--warn)" },
+      { label: "مدفوع هذا الشهر", value: this._n(jo ? 12750 : 47600, 0) + " " + cur, color: "var(--ok)" },
+      { label: "كاش مستحق على السائقين", value: this._n(jo ? 388 : 1620, 0) + " " + cur, color: "var(--dng)" }
+    ];
+    const wdRaw = [
+      { n: D.drivers[0].n, a: jo ? 40 : 180, m: "CliQ", ref: jo ? "ABUMHMD79" : "LY-BANK-4471", w: "قبل ١٢ د" },
+      { n: D.drivers[4].n, a: jo ? 60 : 250, m: "CliQ", ref: jo ? "YOUSEF77" : "LY-BANK-9902", w: "قبل ٤٠ د" },
+      { n: D.drivers[1].n, a: jo ? 15 : 90, m: "حوالة بنكية", ref: "****4471", w: "اليوم ١٠:٢٠ ص" },
+      { n: D.drivers[2].n, a: jo ? 7.5 : 45, m: "CliQ", ref: jo ? "SAMER22" : "LY-BANK-1120", w: "أمس" }
+    ];
+    const withdrawals = wdRaw.map((w, i) => {
+      const st = s.wd[i];
+      return {
+        name: w.n, method: w.m, ref: w.ref, when: w.w, amount: money(w.a),
+        pending: !st, done: !!st,
+        status: st === "ok" ? "حُوّل ✓" : st === "no" ? "مرفوض" : "",
+        badge: this._badge(st === "ok" ? "حُوّل ✓" : "مرفوض", st === "ok" ? "var(--ok)" : "var(--dng)"),
+        approve: () => { this.setState({ wd: { ...s.wd, [i]: "ok" } }); this._toast("تم تنفيذ التحويل ✓"); },
+        reject: () => { this.setState({ wd: { ...s.wd, [i]: "no" } }); this._toast("رُفض الطلب وأُعيد الرصيد"); }
+      };
+    });
+    const cashSettle = D.drivers.slice(0, 4).map((d, i) => {
+      const done = s.cash[i];
+      return {
+        name: d.n, amount: money((jo ? 18.5 : 82) + i * (jo ? 9 : 40)),
+        color: done ? "var(--ok)" : "var(--dng)",
+        btnLabel: done ? "مُسوّى ✓" : "تسجيل استلام",
+        btn: done ? "font-size:11px;color:var(--ok)" : "cursor:pointer;border:1px solid var(--brd);border-radius:8px;padding:5px 10px;font-size:11px",
+        settle: () => { if (!done) { this.setState({ cash: { ...s.cash, [i]: true } }); this._toast("سُجّل استلام الكاش ✓"); } }
+      };
+    });
+    const ledger = [
+      { label: "قيد أرباح رحلة #٤٨٢١٠", when: "قبل ٤ د", amount: "+" + money(jo ? 2.1 : 11), color: "var(--ok)" },
+      { label: "خصم اشتراك أسبوعي", when: "قبل ٢٢ د", amount: "−" + money(jo ? 9 : 45), color: "var(--tx)" },
+      { label: "سحب مُنفّذ · CliQ", when: "اليوم ١١:٠٥ ص", amount: "−" + money(jo ? 40 : 180), color: "var(--tx)" },
+      { label: "شحن محفظة راكب · بطاقة", when: "اليوم ١٠:٤٠ ص", amount: "+" + money(jo ? 20 : 100), color: "var(--ok)" },
+      { label: "تسوية كاش", when: "أمس", amount: "−" + money(jo ? 18.5 : 82), color: "var(--tx)" }
+    ];
+
+    const ticketDefs = [
+      { subject: "لم أستلم أجرة الرحلة كاش", who: D.drivers[0].n, ref: "#٤٨٢١٧", when: "قبل ١٩ س", st: ["مفتوحة", "var(--dng)"],
+        msgs: [["السائق", "الراكب نزل ولم يدفع، والرحلة سُجّلت مكتملة.", "١١:٠٢ ص", 0], ["الدعم", "شكراً، سنراجع سجل الرحلة ونعود إليك خلال ساعة.", "١١:٢٠ ص", 1], ["الراكب", "دفعت المبلغ كاش وقت النزول.", "١٢:٠٥ م", 0]] },
+      { subject: "خصم مضاعف من المحفظة", who: D.riders[0].n, ref: "#٤٨١٩٤", when: "قبل ٥ س", st: ["قيد المراجعة", "var(--warn)"],
+        msgs: [["الراكب", "انخصم المبلغ مرتين من محفظتي على نفس الرحلة.", "٨:٤٠ ص", 0], ["الدعم", "تم رصد عملية مكررة، جارٍ استرجاع المبلغ.", "٩:١٥ ص", 1]] },
+      { subject: "سلوك غير لائق من السائق", who: D.riders[2].n, ref: "#٤٨١٥٠", when: "أمس", st: ["مفتوحة", "var(--dng)"],
+        msgs: [["الراكب", "السائق رفض تشغيل التكييف وتكلم بأسلوب سيئ.", "٧:٣٠ م", 0]] },
+      { subject: "طلب إلغاء اشتراك", who: D.drivers[3].n, ref: "—", when: "قبل يومين", st: ["مغلقة", "var(--mut)"],
+        msgs: [["السائق", "أريد إلغاء الاشتراك الشهري واسترجاع المتبقي.", "٤:١٠ م", 0], ["الدعم", "تمت المعالجة وأُعيد المبلغ للمحفظة.", "٥:٠٠ م", 1]] }
+    ];
+    const tickets = ticketDefs.map((k, i) => ({
+      subject: k.subject, who: k.who, ref: k.ref, when: k.when,
+      status: k.st[0], badge: this._badge(k.st[0], k.st[1]),
+      style: "cursor:pointer;padding:14px 16px;border-bottom:1px solid var(--brd);border-inline-start:3px solid " +
+        (s.ticket === i ? "var(--acc);background:var(--sa)" : "transparent"),
+      open: () => this.setState({ ticket: i })
+    }));
+    const tk = ticketDefs[s.ticket];
+    const thread = [...tk.msgs, ...s.extraMsgs.filter(m => m[4] === s.ticket)].map(m => ({
+      text: m[1], who: m[0], when: m[2],
+      wrap: "max-width:74%;align-self:" + (m[3] ? "flex-end" : "flex-start") + ";text-align:" + (m[3] ? "end" : "start"),
+      bubble: "padding:12px 15px;border-radius:14px;font-size:12.5px;line-height:1.8;" +
+        (m[3] ? "background:var(--acc);color:var(--inv)" : "background:var(--sur2);border:1px solid var(--brd)")
+    }));
+
+    const priceLabels = [["base", "التعرفة الأساسية"], ["km", "لكل كيلومتر"], ["min", "لكل دقيقة"], ["minimum", "الحد الأدنى"], ["night", "رسوم ليلية"], ["comm", "عمولة المنصة ٪"]];
+    const priceBase = jo ? { base: 0.75, km: 0.35, min: 0.05, minimum: 1.2, night: 0.25, comm: 0 } : { base: 4, km: 1.8, min: 0.3, minimum: 6, night: 1.5, comm: 0 };
+    const cityPrices = D.cities.map((city, ci) => ({
+      city,
+      state: ci === 0 ? "مفعّلة" : ci < 3 ? "مفعّلة" : "قيد الإطلاق",
+      badge: this._badge(ci < 3 ? "مفعّلة" : "قيد الإطلاق", ci < 3 ? "var(--ok)" : "var(--warn)"),
+      rows: priceLabels.map(([k, label]) => {
+        const key = ci + "-" + k;
+        const adj = s.priceAdj[key] || 0;
+        const step = k === "comm" ? 1 : jo ? 0.05 : 0.5;
+        const val = priceBase[k] + adj * step;
+        return {
+          label, value: k === "comm" ? this._n(val) + "٪" : this._n(val, jo ? 2 : 1) + " " + cur,
+          inc: () => this.setState({ priceAdj: { ...s.priceAdj, [key]: adj + 1 } }),
+          dec: () => this.setState({ priceAdj: { ...s.priceAdj, [key]: adj - 1 } })
+        };
+      })
+    }));
+    const zones = D.zones.map(z => ({
+      name: z[0], city: z[0].includes("بنغازي") ? "بنغازي" : z[0].includes("إربد") ? "إربد" : D.main,
+      demand: this._n(z[1]), supply: this._n(z[2]), mult: z[3],
+      badge: this._badge(z[3], z[3] === "١٫٠×" ? "var(--mut)" : "var(--warn)")
+    }));
+
+    const promoDefs = [
+      { code: "TAXO25", type: "نسبة مئوية", value: "٢٥٪", used: 640, cap: 1000, city: D.main, until: "٣٠ أيلول", on: true },
+      { code: "WELCOME", type: "مبلغ ثابت", value: money(jo ? 1 : 5), used: 2140, cap: 5000, city: "كل المدن", until: "دائم", on: true },
+      { code: "NIGHT10", type: "نسبة مئوية", value: "١٠٪", used: 310, cap: 400, city: D.cities[1], until: "١٥ آب", on: true },
+      { code: "RAMADAN", type: "نسبة مئوية", value: "٢٠٪", used: 4900, cap: 5000, city: "كل المدن", until: "انتهى", on: false },
+      { code: "DRIVER5", type: "خصم اشتراك", value: "٥٠٪", used: 88, cap: 200, city: D.main, until: "٢٠ آب", on: true }
+    ];
+    const promos = promoDefs.map((p, i) => {
+      const on = s.promoOff[i] ? !p.on : p.on;
+      return {
+        code: p.code, type: p.type, value: p.value, city: p.city, until: p.until,
+        uses: this._n(p.used) + " / " + this._n(p.cap),
+        w: Math.min(100, Math.round((p.used / p.cap) * 100)) + "%",
+        status: on ? "نشط" : "متوقف",
+        badge: this._badge(on ? "نشط" : "متوقف", on ? "var(--ok)" : "var(--mut)") + ";cursor:pointer",
+        toggle: () => { this.setState({ promoOff: { ...s.promoOff, [i]: !s.promoOff[i] } }); this._toast(on ? "أُوقف العرض" : "فُعّل العرض ✓"); }
+      };
+    });
+
+    const revRaw = [180, 210, 165, 240, 275, 320, 410, 290, 250, 300, 355, 380, 470, 520];
+    const maxR = Math.max(...revRaw);
+    const revBars = revRaw.map((v, i) => ({
+      val: this._n(Math.round(v * (jo ? 1 : 4.2))),
+      h: Math.round((v / maxR) * 140) + "px",
+      color: i === revRaw.length - 1 ? "var(--tx)" : "var(--brd)",
+      day: this._n(i + 1)
+    }));
+    const reportKpis = [
+      { label: "إجمالي الإيراد", value: this._n(Math.round(4365 * (jo ? 1 : 4.2))) + " " + cur, delta: "+١٤٪ عن الأسبوعين السابقين", color: "var(--ok)" },
+      { label: "متوسط قيمة الرحلة", value: money(jo ? 2.35 : 11.4), delta: "+٣٪", color: "var(--ok)" },
+      { label: "معدّل الإلغاء", value: "٦٫٢٪", delta: "−١٫١٪", color: "var(--ok)" },
+      { label: "سائقون نشطون أسبوعياً", value: this._n(jo ? 168 : 97), delta: "+٩ سائقين", color: "var(--ok)" }
+    ];
+    const topZones = D.zones.map(z => ({ name: z[0], pct: this._n(z[1]) + "٪", w: z[1] + "%" }));
+    const leaders = D.drivers.slice(0, 5).map((d, i) => ({
+      rank: this._n(i + 1) + ".", name: d.n, trips: this._n(d.t) + " رحلة",
+      rev: this._n(Math.round(d.t * (jo ? 1.9 : 8)), 0) + " " + cur
+    }));
+
+    const admins = [
+      { n: "نادر العمري", e: "nader@taxo.jo", r: "مالك", s: "الآن", st: "نشط" },
+      { n: "رهام السالم", e: "reham@taxo.jo", r: "عمليات", s: "قبل ١٢ د", st: "نشط" },
+      { n: "أحمد الشريدة", e: "ahmad@taxo.jo", r: "دعم", s: "قبل ساعتين", st: "نشط" },
+      { n: "ليان قطيشات", e: "layan@taxo.jo", r: "مالية", s: "أمس", st: "نشط" },
+      { n: "مالك الحمود", e: "malek@taxo.ly", r: "عمليات", s: "قبل ٣ أيام", st: "موقوف" }
+    ].map(u => ({
+      name: u.n, email: u.e, role: u.r, seen: u.s, status: u.st,
+      badge: this._badge(u.st, u.st === "نشط" ? "var(--ok)" : "var(--dng)")
+    }));
+    const permModules = ["الخريطة والتوزيع", "السائقون والوثائق", "الركّاب", "الرحلات", "الاشتراكات", "المحافظ والسحب", "النزاعات", "التسعيرة", "الإشعارات الجماعية"];
+    const permDefault = [
+      [1, 1, 1, 0], [1, 1, 0, 0], [1, 1, 1, 0], [1, 1, 1, 1],
+      [1, 1, 0, 1], [1, 0, 0, 1], [1, 1, 1, 0], [1, 0, 0, 1], [1, 1, 0, 0]
+    ];
+    const permRows = permModules.map((label, ri) => ({
+      label,
+      cells: [0, 1, 2, 3].map(ci => {
+        const key = ri + "-" + ci;
+        const on = s.perm[key] === undefined ? !!permDefault[ri][ci] : s.perm[key];
+        return {
+          mark: on ? "✓" : "—",
+          style: "cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;" +
+            (on ? "background:var(--acc);color:var(--inv)" : "border:1px solid var(--brd);color:var(--mut)"),
+          toggle: () => this.setState({ perm: { ...s.perm, [key]: !on } })
+        };
+      })
+    }));
+
+    const audDefs = ["الكل", "السائقون", "الركّاب", "سائقون بلا اشتراك"];
+    const bcAudiences = audDefs.map(a => ({ label: a, style: this._filterPill(s.bcAud === a), go: () => this.setState({ bcAud: a }) }));
+    const chanDefs = ["إشعار داخل التطبيق", "SMS"];
+    const bcChannels = chanDefs.map(c => ({ label: c, style: this._filterPill(s.bcChan === c), go: () => this.setState({ bcChan: c }) }));
+    const reachMap = { "الكل": jo ? 8420 : 3980, "السائقون": jo ? 214 : 132, "الركّاب": jo ? 8206 : 3848, "سائقون بلا اشتراك": jo ? 36 : 28 };
+    const bcHistory = [...s.bcExtra, ...[
+      { t: "تحديث التطبيق الجديد", a: "الكل", c: "إشعار داخل التطبيق", w: "٨ آب", sent: this._n(8210), op: "٦٤٪" },
+      { t: "ذروة الجمعة — ابقَ متصلاً", a: "السائقون", c: "إشعار داخل التطبيق", w: "٧ آب", sent: this._n(212), op: "٨١٪" },
+      { t: "خصم ٢٠٪ على رحلات الصباح", a: "الركّاب", c: "SMS", w: "٤ آب", sent: this._n(7980), op: "٤٢٪" },
+      { t: "تذكير تجديد الاشتراك", a: "سائقون بلا اشتراك", c: "SMS", w: "٢ آب", sent: this._n(41), op: "٧٧٪" }
+    ]].map(b => ({ title: b.t, audience: b.a, channel: b.c, when: b.w, sent: b.sent, opened: b.op }));
+
+    const dwIsDriver = s.drawerKind === "driver";
+    const dwItem = s.drawer === null ? null : (dwIsDriver ? D.drivers[s.drawer] : D.riders[s.drawer]);
+    const docNames = [["رخصة القيادة", "تنتهي ١٢/٢٠٢٦"], ["الهوية الشخصية", "صورة أمامية وخلفية"], ["رخصة المركبة والتأمين", "تنتهي ٠٣/٢٠٢٧"]];
+    const dwDocs = !dwItem || !dwIsDriver ? [] : docNames.map((d, di) => {
+      const key = s.drawer + "-" + di;
+      const st = s.docs[key] || (dwItem.d === "معتمدة" ? "معتمدة" : dwItem.d === "مرفوضة" ? "مرفوضة" : "بانتظار المراجعة");
+      return {
+        name: d[0], meta: d[1], status: st,
+        badge: this._badge(st, st === "معتمدة" ? "var(--ok)" : st === "مرفوضة" ? "var(--dng)" : "var(--warn)"),
+        pending: st === "بانتظار المراجعة",
+        approve: () => { this.setState({ docs: { ...s.docs, [key]: "معتمدة" } }); this._toast("اعتُمدت الوثيقة ✓"); },
+        reject: () => { this.setState({ docs: { ...s.docs, [key]: "مرفوضة" } }); this._toast("رُفضت الوثيقة — أُبلغ السائق"); }
+      };
+    });
+    const dwStats = !dwItem ? [] : dwIsDriver
+      ? [{ label: "الرحلات", value: this._n(dwItem.t) }, { label: "التقييم", value: "★ " + this._n(dwItem.r, 1) }, { label: "المحفظة", value: this._n(dwItem.w, 1) }]
+      : [{ label: "الرحلات", value: this._n(dwItem.rd) }, { label: "التقييم", value: "★ " + this._n(dwItem.r, 1) }, { label: "المحفظة", value: this._n(dwItem.w, 1) }];
+    const dwRides = !dwItem ? [] : D.places.slice(0, 3).map((pl, i) => ({
+      route: pl[0] + " ← " + pl[1], when: ["اليوم ٥:١٢ م", "اليوم ٣:٤٠ م", "أمس ٩:٢٠ م"][i],
+      pay: payNames[i % 3], fare: money((jo ? 2.1 : 10.5) + i)
+    }));
+
+    const rm = s.rideModal === null ? null : rideAll[s.rideModal];
+    const rmBreakdown = !rm ? [] : [
+      { label: "التعرفة الأساسية", value: money(jo ? 0.75 : 4), color: "var(--tx)" },
+      { label: "المسافة · " + rm.dist, value: money(rm.fareN - (jo ? 0.75 : 4)), color: "var(--tx)" },
+      { label: "طريقة الدفع", value: rm.pay, color: "var(--tx)" },
+      { label: "عمولة المنصة", value: "٠٪ حالياً", color: "var(--ok)" },
+      { label: "الإجمالي", value: rm.fare, color: "var(--tx)" }
+    ];
+
+    const cName = jo ? "الأردن" : "ليبيا";
+    const drvContractBody = "المادة الأولى — أطراف العقد\nحُرّر هذا العقد بين شركة تاكسو للنقل الذكي، ويُشار إليها بالطرف الأول، وبين السائق المذكور أدناه، ويُشار إليه بالطرف الثاني.\n\nالمادة الثانية — موضوع العقد\nيقدّم الطرف الثاني خدمة نقل الركاب عبر منصة TAXO باستخدام مركبته المرخّصة، وفق أنظمة النقل السارية في " + cName + "، ودون أن ينشأ عن ذلك أي علاقة عمل تبعية بين الطرفين.\n\nالمادة الثالثة — العمولة والمستحقات\nتُحتسب عمولة المنصة بواقع (٠٪) خلال فترة الإطلاق، وتُقيَّد أرباح كل رحلة في محفظة الطرف الثاني فور إنهائها، وتُصرف عبر طلبات السحب المعتمدة.\n\nالمادة الرابعة — مدة العقد\nمدة هذا العقد سنة ميلادية تبدأ من تاريخ التوقيع، وتُجدَّد تلقائياً ما لم يُخطر أحد الطرفين الآخر خطياً قبل ثلاثين يوماً من تاريخ الانتهاء.\n\nالمادة الخامسة — التزامات الطرف الثاني\nسريان رخصة القيادة ورخصة المركبة والفحص الفني والتأمين طوال مدة العقد، والالتزام بمعايير السلوك والنظافة، وعدم قبول الطلبات خارج المنصة.\n\nالمادة السادسة — الإنهاء\nيحق للطرف الأول إيقاف الحساب فوراً عند مخالفة أحكام هذا العقد أو تكرار الشكاوى الجوهرية، مع تسوية المستحقات القائمة خلال سبعة أيام عمل.";
+    const apiContractBody = "المادة الأولى — نطاق الخدمة\nيوفّر المزوّد للطرف الأول (TAXO) الوصول إلى واجهات برمجة التطبيقات الخاصة به وفق الحصص والخطة المتفق عليها في هذا العقد.\n\nالمادة الثانية — مستوى الخدمة\nيلتزم المزوّد بجاهزية لا تقل عن ٩٩٫٥٪ شهرياً، وبزمن استجابة وسطي لا يتجاوز ٤٠٠ مللي ثانية، مع تعويض على شكل رصيد خدمة عند الإخلال.\n\nالمادة الثالثة — الرسوم والفوترة\nتُحتسب الرسوم شهرياً وفق الاستهلاك الفعلي، وتُصدر الفاتورة في اليوم الأول من كل شهر ميلادي وتُسدَّد خلال خمسة عشر يوماً.\n\nالمادة الرابعة — حماية البيانات\nتبقى بيانات المستخدمين ملكاً للطرف الأول، ولا يجوز للمزوّد استخدامها أو مشاركتها لأي غرض خارج تقديم الخدمة.\n\nالمادة الخامسة — المدة والإنهاء\nمدة العقد اثنا عشر شهراً قابلة للتجديد، ويحق لأي طرف إنهاؤه بإشعار مسبق مدته ثلاثون يوماً.";
+
+    const schStatus = [["مؤكدة", "var(--ok)"], ["بانتظار سائق", "var(--warn)"], ["ملغاة", "var(--dng)"]];
+    const scheduled = D.places.slice(0, 6).map((pl, i) => {
+      const st = schStatus[i === 1 || i === 4 ? 1 : i === 5 ? 2 : 0];
+      const has = st[0] === "مؤكدة";
+      const done = s.assigned["sch" + i];
+      return {
+        when: ["غداً ٧:٣٠ ص", "غداً ٨:١٥ ص", "غداً ٥:٠٠ م", "الخميس ٦:٤٥ ص", "الخميس ٩:٠٠ ص", "الجمعة ١١:٠٠ ص"][i],
+        rider: D.riders[i % D.riders.length].n, from: pl[0], to: pl[1],
+        driver: has || done ? D.drivers[i % D.drivers.length].n.split(" ").slice(0, 2).join(" ") : "— غير معيّن",
+        repeat: ["يومي عمل", "مرة واحدة", "ذهاب وإياب", "يومي عمل", "مرة واحدة", "أسبوعي"][i],
+        status: done ? "مؤكدة" : st[0], badge: this._badge(done ? "مؤكدة" : st[0], done ? "var(--ok)" : st[1]),
+        btnLabel: has || done ? "" : st[0] === "ملغاة" ? "" : "تعيين",
+        btn: has || done || st[0] === "ملغاة" ? "display:none" : "cursor:pointer;border:1px solid var(--brd);border-radius:8px;padding:5px 10px;font-size:11px",
+        assign: () => { this.setState({ assigned: { ...s.assigned, ["sch" + i]: true } }); this._toast("عُيّن سائق للرحلة المجدولة ✓"); }
+      };
+    });
+    const schKpis = [
+      { label: "رحلات مجدولة هذا الأسبوع", value: this._n(jo ? 64 : 28), color: "var(--tx)" },
+      { label: "بانتظار تعيين سائق", value: this._n(2), color: "var(--warn)" },
+      { label: "عقود يومية متكررة", value: this._n(jo ? 18 : 7), color: "var(--tx)" },
+      { label: "نسبة الالتزام بالموعد", value: "٩٦٪", color: "var(--ok)" }
+    ];
+
+    const compDefs = jo
+      ? [["مستشفى الأردن", 240, 612, 3200, 4000, "شهرية"], ["بنك الإسكان", 180, 421, 2650, 3000, "شهرية"], ["أمنية للاتصالات", 320, 780, 4890, 5000, "شهرية"], ["جامعة العلوم التطبيقية", 95, 188, 640, 2000, "ربع سنوية"], ["فندق لاندمارك", 60, 152, 980, 1500, "شهرية"]]
+      : [["شركة الخليج للنفط", 210, 540, 14200, 18000, "شهرية"], ["مصرف الوحدة", 160, 388, 9800, 12000, "شهرية"], ["جامعة طرابلس", 120, 240, 4200, 9000, "ربع سنوية"], ["فندق كورنثيا", 75, 190, 7600, 8000, "شهرية"]];
+    const companies = compDefs.map((c, i) => {
+      const pct = Math.round((c[3] / c[4]) * 100);
+      return {
+        name: c[0], staff: this._n(c[1]), rides: this._n(c[2]),
+        spent: this._n(c[3]) + " " + cur, cap: this._n(c[4]),
+        w: pct + "%", barColor: pct > 90 ? "var(--dng)" : pct > 70 ? "var(--warn)" : "var(--ok)",
+        billing: c[5], contract: "عقد #" + this._n(2201 + i),
+        status: pct > 90 ? "قارب السقف" : "نشط",
+        badge: this._badge(pct > 90 ? "قارب السقف" : "نشط", pct > 90 ? "var(--warn)" : "var(--ok)"),
+        viewContract: () => this._openDoc({
+          title: "عقد خدمات نقل مؤسسي", meta: "شركة · موقّع إلكترونياً", ref: "عقد رقم " + this._n(2201 + i),
+          date: "٢٠٢٦/٠٢/١٤", body: drvContractBody, party: c[0], signature: c[0],
+          signMeta: "توقيع إلكتروني موثّق · " + this._n(2201 + i)
+        })
+      };
+    });
+    const b2bKpis = [
+      { label: "شركات متعاقدة", value: this._n(compDefs.length), color: "var(--tx)" },
+      { label: "رحلات مؤسسية هذا الشهر", value: this._n(jo ? 2153 : 1358), color: "var(--tx)" },
+      { label: "إيراد مؤسسي", value: this._n(jo ? 12360 : 35800) + " " + cur, color: "var(--ok)" },
+      { label: "فواتير غير مسددة", value: this._n(2), color: "var(--warn)" }
+    ];
+
+    const vehicles = D.drivers.map((d, i) => {
+      const insp = i % 4 === 3 ? "منتهٍ" : i % 3 === 1 ? "ينتهي خلال ١٢ يوم" : "سارٍ حتى ٠٤/٢٠٢٧";
+      const ins = i % 5 === 2 ? "ينتهي خلال ٦ أيام" : "سارٍ حتى ١١/٢٠٢٦";
+      const ok = insp === "منتهٍ" ? "متوقفة" : "مفعّلة";
+      return {
+        plate: d.pl, model: d.car, year: d.y, driver: d.n,
+        insp, inspColor: insp === "منتهٍ" ? "var(--dng)" : insp.includes("ينتهي") ? "var(--warn)" : "var(--mut)",
+        ins, insColor: ins.includes("ينتهي") ? "var(--warn)" : "var(--mut)",
+        own: i % 3 === 0 ? "ملك السائق" : i % 3 === 1 ? "إيجار من المنصة" : "ملك شركة",
+        status: ok, badge: this._badge(ok, ok === "مفعّلة" ? "var(--ok)" : "var(--dng)")
+      };
+    });
+    const fleetKpis = [
+      { label: "مركبات مسجّلة", value: this._n(D.drivers.length), color: "var(--tx)" },
+      { label: "فحص فني منتهٍ", value: this._n(2), color: "var(--dng)" },
+      { label: "تأمين ينتهي خلال شهر", value: this._n(1), color: "var(--warn)" },
+      { label: "مركبات بالإيجار", value: this._n(jo ? 3 : 2), color: "var(--tx)" }
+    ];
+
+    const ctrTabs = [["signed", "العقود الموقّعة"], ["templates", "القوالب"]].map(t => ({
+      label: t[1], style: this._filterPill(s.ctrTab === t[0]), go: () => this.setState({ ctrTab: t[0] })
+    }));
+    const tplDefs = [
+      { name: "عقد سائق — شراكة", desc: "الاتفاقية الأساسية لتشغيل السائق على المنصة: العمولة، المستحقات، الالتزامات، وحالات الإيقاف.", v: "نسخة ٣٫١", u: "مستخدم في " + this._n(jo ? 196 : 118) + " عقداً", up: "١٢ حزيران" },
+      { name: "عقد إيجار مركبة", desc: "تأجير مركبة من أسطول المنصة للسائق: البدل الأسبوعي، الصيانة، التأمين، والحد الأقصى للكيلومترات.", v: "نسخة ٢٫٠", u: "مستخدم في " + this._n(jo ? 12 : 7) + " عقداً", up: "٤ آذار" },
+      { name: "عقد شركة / مؤسسة", desc: "حساب مؤسسي بفوترة شهرية مجمّعة وسقف إنفاق ومراكز تكلفة للأقسام.", v: "نسخة ١٫٤", u: "مستخدم في " + this._n(companies.length) + " عقود", up: "٢٨ أيار" },
+      { name: "ملحق حماية البيانات", desc: "ملحق يُرفق بعقود المزوّدين والشركات لتنظيم معالجة بيانات المستخدمين.", v: "نسخة ١٫٠", u: "ملحق إلزامي", up: "٩ كانون الثاني" }
+    ];
+    const ctrTemplates = tplDefs.map(t => ({
+      name: t.name, desc: t.desc, version: t.v, badge: this._badge(t.v, "var(--mut)"), used: t.u, updated: t.up,
+      preview: () => this._openDoc({ title: t.name, meta: "قالب · " + t.v, ref: "قالب " + t.v, date: "آخر تحديث " + t.up, body: drvContractBody, party: "—", signature: "", signMeta: "مكان توقيع الطرف الثاني" }),
+      send: () => this._toast("أُرسل العقد للتوقيع الإلكتروني ✓")
+    }));
+    const ctrStatus = [["موقّع", "var(--ok)"], ["بانتظار التوقيع", "var(--warn)"], ["منتهٍ", "var(--dng)"]];
+    const contractDefs = [
+      { type: "عقد سائق — شراكة", party: D.drivers[0].n, signed: "٢٠٢٥/٠٩/١٤", end: "٢٠٢٦/٠٩/١٤", val: "٠٪ عمولة", st: 0 },
+      { type: "عقد سائق — شراكة", party: D.drivers[2].n, signed: "—", end: "—", val: "٠٪ عمولة", st: 1 },
+      { type: "عقد إيجار مركبة", party: D.drivers[1].n, signed: "٢٠٢٦/٠١/٠٥", end: "٢٠٢٦/٠٨/٢٠", val: money(jo ? 45 : 220) + " / أسبوع", st: 0 },
+      { type: "عقد شركة", party: compDefs[0][0], signed: "٢٠٢٦/٠٢/١٤", end: "٢٠٢٧/٠٢/١٤", val: this._n(compDefs[0][4]) + " " + cur + " / شهر", st: 0 },
+      { type: "عقد شركة", party: compDefs[1][0], signed: "٢٠٢٥/١١/٠١", end: "٢٠٢٦/٠٨/١٥", val: this._n(compDefs[1][4]) + " " + cur + " / شهر", st: 0 },
+      { type: "عقد سائق — شراكة", party: D.drivers[D.drivers.length - 1].n, signed: "٢٠٢٤/٠٧/٢٢", end: "٢٠٢٥/٠٧/٢٢", val: "٠٪ عمولة", st: 2 },
+      { type: "عقد إيجار مركبة", party: D.drivers[3].n, signed: "—", end: "—", val: money(jo ? 45 : 220) + " / أسبوع", st: 1 }
+    ];
+    const contracts = contractDefs.map((c, i) => {
+      const st = ctrStatus[c.st];
+      const soon = c.end !== "—" && (c.end.indexOf("٢٠٢٦/٠٨") === 0);
+      return {
+        id: "#" + this._n(9040 + i), type: c.type, party: c.party, signed: c.signed, end: c.end,
+        endColor: c.st === 2 ? "var(--dng)" : soon ? "var(--warn)" : "var(--mut)",
+        value: c.val, status: st[0], badge: this._badge(st[0], st[1]),
+        preview: () => this._openDoc({
+          title: c.type, meta: st[0] + " · " + c.party, ref: "عقد رقم " + this._n(9040 + i),
+          date: c.signed === "—" ? "لم يُوقّع بعد" : "تاريخ التوقيع " + c.signed,
+          body: drvContractBody, party: c.party,
+          signature: c.st === 1 ? "" : c.party,
+          signMeta: c.st === 1 ? "بانتظار التوقيع الإلكتروني" : "توقيع إلكتروني موثّق · " + c.signed
+        })
+      };
+    });
+
+    const provDefs = [
+      { name: "Telr", logo: "TLR", kind: "بوابة مدفوعات — بطاقات", contract: "سنوي · تجديد تلقائي", cost: "٢٫٢٪ + " + money(0.1) + " لكل عملية", renew: "٢٠٢٦/١١/٠١", key: "tlr_live_••••9f2c", usage: this._n(18400) + " عملية / " + this._n(25000), pct: 74, st: ["متصل", "var(--ok)"] },
+      { name: "بوابة الرسائل القصيرة", logo: "SMS", kind: "رسائل تحقق وإشعارات", contract: "حزمة مدفوعة مسبقاً", cost: money(jo ? 0.012 : 0.06) + " للرسالة", renew: "٢٠٢٦/٠٩/١٥", key: "sms_••••4471", usage: this._n(62000) + " رسالة / " + this._n(80000), pct: 78, st: ["متصل", "var(--ok)"] },
+      { name: "خرائط ومسارات", logo: "MAP", kind: "خرائط وحساب المسافات", contract: "شهري حسب الاستهلاك", cost: money(jo ? 3.5 : 18) + " لكل ١٠٠٠ طلب", renew: "شهري", key: "map_••••11ac", usage: this._n(940000) + " طلب / " + this._n(1000000), pct: 94, st: ["قارب الحصة", "var(--warn)"] },
+      { name: jo ? "CliQ — التحويلات البنكية" : "بوابة التحويلات المصرفية", logo: "BNK", kind: "صرف مستحقات السائقين", contract: "اتفاقية بنكية", cost: money(jo ? 0.25 : 1.5) + " لكل تحويل", renew: "٢٠٢٧/٠١/٣١", key: "bnk_••••7788", usage: this._n(1240) + " تحويل / " + this._n(3000), pct: 41, st: ["متصل", "var(--ok)"] },
+      { name: "التحقق من الهوية", logo: "KYC", kind: "مطابقة الوثائق والوجه", contract: "سنوي", cost: money(jo ? 0.4 : 2) + " لكل تحقق", renew: "٢٠٢٦/٠٨/٢٥", key: "kyc_••••02de", usage: this._n(310) + " تحقق / " + this._n(2000), pct: 16, st: ["يحتاج تجديد", "var(--warn)"] }
+    ];
+    const providers = provDefs.map((p, i) => {
+      const sb = !!s.sandbox[i];
+      const sw = this._switch(sb);
+      return {
+        name: p.name, logo: p.logo, kind: p.kind, contract: p.contract, cost: p.cost,
+        renew: p.renew, renewColor: p.st[0] === "يحتاج تجديد" ? "var(--warn)" : "var(--mut)",
+        key: p.key, usage: p.usage, w: p.pct + "%",
+        barColor: p.pct > 90 ? "var(--dng)" : p.pct > 70 ? "var(--warn)" : "var(--ok)",
+        status: p.st[0], badge: this._badge(p.st[0], p.st[1]),
+        border: p.st[1] === "var(--warn)" ? "var(--warn)" : "var(--brd)",
+        sandboxStyle: sw.track, knob: sw.knob,
+        toggleSandbox: () => { this.setState({ sandbox: { ...s.sandbox, [i]: !sb } }); this._toast(sb ? "عاد المزوّد لوضع الإنتاج" : "فُعّل وضع الاختبار"); },
+        preview: () => this._openDoc({ title: "عقد خدمة — " + p.name, meta: "مزوّد خدمة · " + p.contract, ref: "عقد مزوّد #" + this._n(710 + i), date: "يُجدَّد في " + p.renew, body: apiContractBody, party: p.name, signature: p.name, signMeta: "توقيع إلكتروني موثّق" })
+      };
+    });
+
+    const invStatus = [["مدفوعة", "var(--ok)"], ["مستحقة", "var(--warn)"], ["متأخرة", "var(--dng)"]];
+    const invDefs = [
+      { party: compDefs[0][0], type: "حساب شركة", amt: compDefs[0][3], st: 0, d: "٠١/٠٨" },
+      { party: compDefs[1][0], type: "حساب شركة", amt: compDefs[1][3], st: 1, d: "٠١/٠٨" },
+      { party: D.drivers[0].n, type: "اشتراك أسبوعي", amt: jo ? 9 : 45, st: 0, d: "٠٣/٠٨" },
+      { party: provDefs[0].name, type: "فاتورة مزوّد", amt: jo ? 412 : 1980, st: 1, d: "٠١/٠٨" },
+      { party: compDefs[2][0], type: "حساب شركة", amt: compDefs[2][3], st: 2, d: "١٥/٠٧" },
+      { party: D.drivers[4].n, type: "اشتراك شهري", amt: jo ? 32 : 160, st: 0, d: "٠٢/٠٨" },
+      { party: provDefs[1].name, type: "فاتورة مزوّد", amt: jo ? 744 : 3600, st: 0, d: "٠١/٠٨" }
+    ];
+    const invoices = invDefs.map((v, i) => {
+      const st = invStatus[v.st];
+      return {
+        id: "INV-" + this._n(26080 + i), party: v.party, type: v.type,
+        amount: this._n(v.amt, 0) + " " + cur, tax: this._n(v.amt * 0.16, 0) + " " + cur,
+        date: v.d, status: st[0], badge: this._badge(st[0], st[1]),
+        print: () => this._openDoc({ title: "فاتورة ضريبية", meta: v.type + " · " + v.party, ref: "INV-" + this._n(26080 + i), date: v.d, body: "الجهة: " + v.party + "\nنوع الفاتورة: " + v.type + "\n\nالمبلغ قبل الضريبة: " + this._n(v.amt, 0) + " " + cur + "\nضريبة المبيعات (١٦٪): " + this._n(v.amt * 0.16, 0) + " " + cur + "\nالإجمالي المستحق: " + this._n(v.amt * 1.16, 0) + " " + cur + "\n\nطريقة الدفع: تحويل بنكي\nحالة الفاتورة: " + st[0] + "\n\nتُعدّ هذه الفاتورة مستنداً محاسبياً معتمداً وصادرة إلكترونياً ولا تحتاج ختماً يدوياً.", party: v.party, signature: "", signMeta: "الإدارة المالية · TAXO" })
+      };
+    });
+    const invKpis = [
+      { label: "إجمالي الفواتير هذا الشهر", value: this._n(jo ? 21400 : 62800) + " " + cur, color: "var(--tx)" },
+      { label: "محصّل", value: this._n(jo ? 17800 : 51200) + " " + cur, color: "var(--ok)" },
+      { label: "مستحق", value: this._n(jo ? 2900 : 9400) + " " + cur, color: "var(--warn)" },
+      { label: "متأخر أكثر من ٣٠ يوماً", value: this._n(jo ? 700 : 2200) + " " + cur, color: "var(--dng)" }
+    ];
+
+    const incDefs = [
+      { name: "حافز الذروة المسائي", rule: "أكمل ١٢ رحلة بين ٤ و٩ مساءً خلال يوم واحد.", reward: money(jo ? 5 : 25), joined: this._n(64) + " / " + this._n(96), spent: money(jo ? 240 : 1150), on: true },
+      { name: "المكافأة الأسبوعية", rule: "أكمل ٨٠ رحلة خلال الأسبوع بتقييم لا يقل عن ٤٫٧.", reward: money(jo ? 25 : 120), joined: this._n(38) + " / " + this._n(112), spent: money(jo ? 575 : 2760), on: true },
+      { name: "مكافأة سائق جديد", rule: "أول ٢٠ رحلة خلال أسبوعين من اعتماد الوثائق.", reward: money(jo ? 15 : 75), joined: this._n(11) + " / " + this._n(18), spent: money(jo ? 105 : 525), on: false }
+    ];
+    const incentives = incDefs.map((it, i) => {
+      const on = s.incOff[i] ? !it.on : it.on;
+      return {
+        name: it.name, rule: it.rule, reward: it.reward, joined: it.joined, spent: it.spent,
+        status: on ? "نشط" : "متوقف",
+        badge: this._badge(on ? "نشط" : "متوقف", on ? "var(--ok)" : "var(--mut)") + ";cursor:pointer",
+        toggle: () => { this.setState({ incOff: { ...s.incOff, [i]: !s.incOff[i] } }); this._toast(on ? "أُوقف البرنامج" : "فُعّل البرنامج ✓"); }
+      };
+    });
+    const incProgress = D.drivers.slice(0, 5).map((d, i) => {
+      const done = [74, 61, 52, 40, 28][i];
+      return {
+        name: d.n, w: Math.round((done / 80) * 100) + "%",
+        color: done > 70 ? "var(--ok)" : done > 45 ? "var(--warn)" : "var(--brd)",
+        label: this._n(done) + " / " + this._n(80) + " رحلة"
+      };
+    });
+
+    const distRaw = [72, 16, 6, 3, 3];
+    const ratingDist = distRaw.map((v, i) => ({
+      stars: this._n(5 - i), pct: this._n(v) + "٪", w: v + "%",
+      color: i < 2 ? "var(--ok)" : i === 2 ? "var(--warn)" : "var(--dng)"
+    }));
+    const complaintTags = [
+      { label: "تأخر الوصول", count: this._n(41) }, { label: "قيادة متهورة", count: this._n(23) },
+      { label: "التكييف", count: this._n(19) }, { label: "أسلوب الحديث", count: this._n(14) },
+      { label: "مسار أطول", count: this._n(12) }, { label: "نظافة المركبة", count: this._n(8) }
+    ];
+    const lowRatings = D.drivers.slice(0, 5).map((d, i) => {
+      const acted = s.cash["r" + i];
+      return {
+        stars: this._n([2, 1, 3, 2, 3][i]), driver: d.n, rider: D.riders[i % D.riders.length].n,
+        note: ["تأخر ١٥ دقيقة عن الموعد", "رفض تشغيل التكييف", "سلك طريقاً أطول", "قيادة متهورة", "لم يساعد في الحقائب"][i],
+        ride: "#" + this._n(48120 + i * 5),
+        btnLabel: acted ? "تم التنبيه ✓" : "تنبيه السائق",
+        btn: acted ? "font-size:11px;color:var(--ok)" : "cursor:pointer;border:1px solid var(--brd);border-radius:8px;padding:5px 10px;font-size:11px",
+        act: () => { if (!acted) { this.setState({ cash: { ...s.cash, ["r" + i]: true } }); this._toast("أُرسل تنبيه للسائق ✓"); } }
+      };
+    });
+
+    const auditDefs = [
+      { u: "ليان قطيشات", k: "مالية", a: "اعتمدت طلب سحب", t: D.drivers[0].n + " · " + money(jo ? 40 : 180), w: "قبل ٦ د" },
+      { u: "رهام السالم", k: "عمليات", a: "اعتمدت وثيقة رخصة قيادة", t: D.drivers[2].n, w: "قبل ٢٢ د" },
+      { u: "نادر العمري", k: "حساس", a: "عدّل عمولة المنصة", t: D.cities[0] + " · من ٠٪ إلى ٠٪", w: "قبل ساعة" },
+      { u: "أحمد الشريدة", k: "دعم", a: "أغلق تذكرة نزاع لصالح الراكب", t: "#٤٨١٩٤", w: "قبل ٣ ساعات" },
+      { u: "نادر العمري", k: "حساس", a: "منح صلاحية المالية", t: "ليان قطيشات", w: "أمس ٤:٢٠ م" },
+      { u: "رهام السالم", k: "عمليات", a: "أوقفت حساب سائق", t: D.drivers[D.drivers.length - 1].n, w: "أمس ١:٠٥ م" },
+      { u: "أحمد الشريدة", k: "دعم", a: "أرسل إشعاراً جماعياً", t: "كل الركّاب · ٨٢١٠ مستخدم", w: "٨ آب" },
+      { u: "ليان قطيشات", k: "مالية", a: "أصدرت فاتورة شركة", t: compDefs[0][0], w: "٠١ آب" }
+    ];
+    const auditKinds = { "حساس": "var(--dng)", "مالية": "var(--warn)", "عمليات": "var(--tx)", "دعم": "var(--mut)" };
+    const auditFilters = [["all", "الكل"], ["حساس", "إجراءات حساسة"], ["مالية", "مالية"], ["عمليات", "عمليات"]].map(f => ({
+      label: f[1], style: this._filterPill(s.auditFilter === f[0]), go: () => this.setState({ auditFilter: f[0] })
+    }));
+    const auditRows = auditDefs.filter(a => s.auditFilter === "all" || a.k === s.auditFilter).map((a, i) => ({
+      when: a.w, user: a.u, kind: a.k, badge: this._badge(a.k, auditKinds[a.k]),
+      action: a.a, target: a.t, ip: "10.4.2." + (18 + i)
+    }));
+
+    const setDefs = [
+      { k: "auto", label: "قبول تسجيل السائقين تلقائياً", desc: "عند التفعيل يستطيع السائق العمل فور رفع الوثائق قبل المراجعة اليدوية.", on: false },
+      { k: "card", label: "الدفع بالبطاقة داخل التطبيق", desc: "تفعيل بوابة Telr للركّاب والسائقين.", on: true },
+      { k: "cash", label: "السماح بالدفع كاش", desc: "إيقافه يفرض المحفظة أو البطاقة على كل الرحلات.", on: true },
+      { k: "surge", label: "تسعير الذروة التلقائي", desc: "رفع الأجرة تلقائياً عند اختلال العرض والطلب في المنطقة.", on: true },
+      { k: "sub", label: "إلزام الاشتراك للعمل", desc: "لا يستطيع السائق استقبال الطلبات دون اشتراك ساري.", on: true },
+      { k: "wd", label: "موافقة يدوية على طلبات السحب", desc: "إيقافه يجعل التحويلات تلقائية فور الطلب.", on: true },
+      { k: "share", label: "مشاركة الرحلة مع جهة موثوقة", desc: "زر مشاركة مسار الرحلة المباشر داخل تطبيق الراكب.", on: true }
+    ];
+    const settingRows = setDefs.map(d => {
+      const on = s.settings[d.k] === undefined ? d.on : s.settings[d.k];
+      const sw = this._switch(on);
+      return { label: d.label, desc: d.desc, track: sw.track, knob: sw.knob, toggle: () => this.setState({ settings: { ...s.settings, [d.k]: !on } }) };
+    });
+    const integrations = [
+      { name: "Telr — المدفوعات", detail: "متصل · آخر عملية قبل ٣ دقائق", dot: "var(--ok)" },
+      { name: "بوابة الرسائل القصيرة", detail: "متصل · ٦٢٬٠٠٠ رسالة هذا الشهر", dot: "var(--ok)" },
+      { name: "خرائط ومسارات", detail: "قارب حصة الاستهلاك ٩٤٪", dot: "var(--warn)" },
+      { name: jo ? "CliQ — التحويلات" : "بوابة التحويلات المصرفية", detail: "متصل · ١٬٢٤٠ تحويل", dot: "var(--ok)" },
+      { name: "التحقق من الهوية", detail: "عقد يحتاج تجديداً قبل ٢٥/٠٨", dot: "var(--warn)" }
+    ].map(g => ({ ...g, test: () => this._toast("تم اختبار الاتصال بنجاح ✓") }));
+
+    const legalDefs = [
+      { name: "شروط استخدام تطبيق الراكب", meta: "نسخة ٤٫٢ · نُشرت ١٢ حزيران", body: "أولاً — قبول الشروط\nباستخدامك تطبيق TAXO فإنك تقرّ بقراءة هذه الشروط والموافقة عليها، وتسري النسخة المنشورة وقت استخدامك للخدمة.\n\nثانياً — الحساب\nرقم هاتفك هو معرّفك، وأنت مسؤول عن سرية بيانات الدخول وعن كل نشاط يجري عبر حسابك.\n\nثالثاً — الأجرة والدفع\nتُحتسب الأجرة وفق التعرفة المعتمدة في مدينتك وتشمل التعرفة الأساسية والمسافة والزمن، وقد يُطبّق مضاعف ذروة يظهر لك قبل تأكيد الطلب.\n\nرابعاً — الإلغاء\nالإلغاء بعد قبول السائق وانطلاقه نحوك قد يترتب عليه رسم إلغاء يظهر في التطبيق.\n\nخامساً — السلوك\nيُحظر التدخين والإضرار بالمركبة والتصرفات المسيئة، وللمنصة إيقاف الحساب عند تكرار المخالفات." },
+      { name: "شروط استخدام تطبيق السائق", meta: "نسخة ٣٫٩ · نُشرت ٤ آذار", body: "أولاً — الأهلية\nيشترط سريان رخصة القيادة ورخصة المركبة والفحص الفني والتأمين طوال فترة العمل على المنصة.\n\nثانياً — الاشتراك\nاستقبال الطلبات يتطلب اشتراكاً سارياً، ولا يُسترد بدل الاشتراك عن المدة المستخدمة.\n\nثالثاً — المستحقات\nتُقيَّد أرباح الرحلات في محفظتك فور إنهاء الرحلة، وتُصرف عبر طلبات السحب وفق الأيام المعتمدة.\n\nرابعاً — النزاعات\nتأكيدك لاستلام الأجرة كاش هو ما يُثبّت الدفعة، وفي حال عدم الاستلام يجب فتح نزاع من تفاصيل الرحلة خلال ٢٤ ساعة." },
+      { name: "سياسة الخصوصية", meta: "نسخة ٢٫١ · نُشرت ٩ كانون الثاني", body: "البيانات التي نجمعها\nالاسم ورقم الهاتف وبيانات الموقع أثناء الرحلة وسجل الرحلات والمدفوعات.\n\nكيف نستخدمها\nلتشغيل الخدمة وتوزيع الطلبات وحساب الأجرة ومعالجة النزاعات وتحسين جودة الخدمة.\n\nمشاركة البيانات\nلا نشارك بياناتك مع أطراف ثالثة إلا بالقدر اللازم لتشغيل الخدمة أو تنفيذاً لطلب قضائي.\n\nحقوقك\nيمكنك طلب نسخة من بياناتك أو حذف حسابك عبر مركز المساعدة." },
+      { name: "سياسة الإلغاء والاسترجاع", meta: "نسخة ١٫٣ · نُشرت ٢٨ أيار", body: "الإلغاء المجاني\nخلال دقيقتين من قبول السائق أو قبل انطلاقه نحو نقطة الالتقاء.\n\nرسم الإلغاء\nيُطبّق بعد ذلك ويُحوّل بالكامل للسائق تعويضاً عن المسافة المقطوعة.\n\nالاسترجاع\nطلبات الاسترجاع تُدرس خلال ٤٨ ساعة، ويُعاد المبلغ إلى محفظة الراكب أو بطاقته حسب وسيلة الدفع." },
+      { name: "سياسة السلامة والإبلاغ", meta: "نسخة ١٫٠ · نُشرت ١ آب", body: "زر الطوارئ\nمتاح داخل الرحلة لكل من الراكب والسائق ويتصل بالجهات المختصة ويشارك الموقع مع فريق العمليات.\n\nالإبلاغ عن حادث\nيجب الإبلاغ خلال ساعة من وقوعه مع صور المركبة، ويُجمَّد الحساب مؤقتاً لحين استكمال التحقق.\n\nالمخالفات الجسيمة\nتؤدي إلى إيقاف دائم دون إشعار مسبق." }
+    ];
+    const legalDocs = legalDefs.map((d, i) => ({
+      name: d.name, meta: d.meta,
+      style: "cursor:pointer;padding:14px 16px;border-bottom:1px solid var(--brd);border-inline-start:3px solid " + (s.legalSel === i ? "var(--acc);background:var(--sa)" : "transparent"),
+      go: () => this.setState({ legalSel: i })
+    }));
+    const legalCur = legalDefs[s.legalSel];
+
+    const helpCats = [
+      { name: "الركّاب — البداية", count: this._n(12) + " مقالاً", views: this._n(9400) + " مشاهدة" },
+      { name: "الدفع والمحفظة", count: this._n(9) + " مقالات", views: this._n(7100) + " مشاهدة" },
+      { name: "السائقون — الاشتراك", count: this._n(11) + " مقالاً", views: this._n(5200) + " مشاهدة" },
+      { name: "السلامة والنزاعات", count: this._n(7) + " مقالات", views: this._n(3300) + " مشاهدة" }
+    ];
+    const artDefs = [
+      ["كيف أطلب رحلة لأول مرة؟", "الركّاب — البداية", "الركّاب", 2140, 0],
+      ["ما الفرق بين الدفع كاش والمحفظة؟", "الدفع والمحفظة", "الركّاب", 1870, 0],
+      ["كيف أشحن محفظتي بالبطاقة؟", "الدفع والمحفظة", "الجميع", 1420, 0],
+      ["متى تُصرف أرباحي وكيف أسحبها؟", "السائقون — الاشتراك", "السائقون", 1180, 0],
+      ["لماذا لا أستطيع استقبال الطلبات؟", "السائقون — الاشتراك", "السائقون", 990, 0],
+      ["كيف أفتح نزاعاً على رحلة؟", "السلامة والنزاعات", "الجميع", 640, 1]
+    ];
+    const articles = artDefs.map(a => ({
+      title: a[0], cat: a[1], aud: a[2], views: this._n(a[3]),
+      status: a[4] ? "مسودة" : "منشور", badge: this._badge(a[4] ? "مسودة" : "منشور", a[4] ? "var(--warn)" : "var(--ok)")
+    }));
+
+    return {
+      groups, crumb,
+      tabScheduled: s.tab === "scheduled", tabB2B: s.tab === "b2b", tabFleet: s.tab === "fleet",
+      tabContracts: s.tab === "contracts", tabApi: s.tab === "api", tabInvoices: s.tab === "invoices",
+      tabIncentives: s.tab === "incentives", tabRatings: s.tab === "ratings", tabAudit: s.tab === "audit",
+      tabSettings: s.tab === "settings", tabLegal: s.tab === "legal", tabHelp: s.tab === "help",
+      scheduled, schKpis, companies, b2bKpis, vehicles, fleetKpis,
+      ctrTabs, ctrShowTemplates: s.ctrTab === "templates", ctrShowSigned: s.ctrTab === "signed",
+      ctrTemplates, contracts, providers, invoices, invKpis, incentives, incProgress,
+      avgRating: this._n(4.8, 1), ratingCount: this._n(jo ? 12840 : 5960), ratingDist, complaintTags, lowRatings,
+      auditFilters, auditRows, settingRows, integrations,
+      legalDocs, legalTitle: legalCur.name, legalBody: legalCur.body,
+      legalVersion: legalCur.meta.split(" · ")[0], legalBadge: this._badge(legalCur.meta.split(" · ")[0], "var(--ok)"),
+      helpCats, articles,
+      doAddCompany: () => this._toast("نموذج شركة جديدة — قيد الإنشاء"),
+      doAddCar: () => this._toast("نموذج تسجيل مركبة — قيد الإنشاء"),
+      doAddProvider: () => this._toast("نموذج ربط مزوّد — قيد الإنشاء"),
+      newContract: () => this._toast("اختر قالباً ثم أرسله للتوقيع"),
+      newInvoice: () => this._toast("نموذج فاتورة جديدة — قيد الإنشاء"),
+      newIncentive: () => this._toast("نموذج برنامج حوافز — قيد الإنشاء"),
+      newArticle: () => this._toast("محرر المقالات — قيد الإنشاء"),
+      saveSettings: () => this._toast("حُفظت الإعدادات وسُرّيت على التطبيقات ✓"),
+      publishLegal: () => this._toast("نُشرت نسخة جديدة وأُبلغ المستخدمون ✓"),
+      docPreviewOpen: !!s.doc,
+      docTitle: s.doc ? s.doc.title : "", docMeta: s.doc ? s.doc.meta : "",
+      docRef: s.doc ? s.doc.ref : "", docDate: s.doc ? s.doc.date : "",
+      docBody: s.doc ? s.doc.body : "", docParty: s.doc ? s.doc.party : "",
+      docSignature: s.doc ? s.doc.signature : "", docSignMeta: s.doc ? s.doc.signMeta : "",
+      closeDoc: () => this.setState({ doc: null }),
+      docPrint: () => this._toast("جارٍ تجهيز نسخة PDF للطباعة…"),
+      showLogin: s.auth === "login", show2fa: s.auth === "2fa",
+      loginEmail: s.loginEmail, loginPass: s.loginPass, code2fa: s.code2fa,
+      setEmail: (e) => this.setState({ loginEmail: e.target.value }),
+      setPass: (e) => this.setState({ loginPass: e.target.value }),
+      setCode: (e) => this.setState({ code2fa: e.target.value }),
+      doLogin: () => this.setState({ auth: "2fa" }),
+      doVerify: () => { this.setState({ auth: "in" }); this._toast("أهلاً بك — تسجيل دخول ناجح"); },
+      backToLogin: () => this.setState({ auth: "login", code2fa: "" }),
+      resendCode: () => this._toast("أُرسل رمز جديد لتطبيق المصادقة"),
+      doLogout: () => this.setState({ auth: "login", code2fa: "", menu: null, tab: "overview" }),
+      themeClass: "thm-" + this._theme(),
+      themeIcon: this._theme() === "dark" ? "☀" : "☾",
+      toggleTheme: () => this.setState({ theme: this._theme() === "dark" ? "light" : "dark" }),
+      roleLabel: { owner: "مالك · صلاحيات كاملة", ops: "عمليات", support: "دعم فني" }[this.props.role ?? "owner"],
+      joPill: this._pill(jo), lyPill: this._pill(!jo),
+      setJO: () => { this.setState({ country: "jo", drawer: null }, () => this._syncMap()); },
+      setLY: () => { this.setState({ country: "ly", drawer: null }, () => this._syncMap()); },
+      liveLabel: "مباشر · " + (jo ? "الأردن" : "ليبيا"),
+      search: s.search, setSearch: (e) => this.setState({ search: e.target.value }),
+      goAlerts: () => this.setState({ tab: "disputes" }),
+      tabOverview: s.tab === "overview", tabLive: s.tab === "live", tabDrivers: s.tab === "drivers",
+      tabRiders: s.tab === "riders", tabRides: s.tab === "rides", tabSubs: s.tab === "subs",
+      tabWallets: s.tab === "wallets", tabDisputes: s.tab === "disputes", tabPricing: s.tab === "pricing",
+      tabPromos: s.tab === "promos", tabReports: s.tab === "reports", tabUsers: s.tab === "users",
+      tabBroadcast: s.tab === "broadcast",
+
+      todayLine: "الأحد ٩ آب ٢٠٢٦ · " + (jo ? "عمّان" : "طرابلس") + " · آخر تحديث قبل دقيقة",
+      periods, kpis, hourly, peakLabel: "٥:٠٠ م", paySplit, actionCards, ongoing,
+      goRides: () => this.setState({ tab: "rides" }),
+
+      liveSub: "توزيع الطلبات ومتابعة الأسطول لحظة بلحظة — " + (jo ? "الأردن" : "ليبيا"),
+      liveStats, requests, onlineDrivers,
+      mapRef: (el) => {
+        if (!el || !this._mapHost) return;
+        if (this._mapHost.parentNode !== el) el.appendChild(this._mapHost);
+        if (!this._map) this._buildMap();
+        setTimeout(() => this._map && this._map.invalidateSize(), 60);
+      },
+
+      driversSub: this._n(D.drivers.length) + " سائقاً في القائمة · ٤ بانتظار اعتماد الوثائق",
+      drvFilters, driverRows,
+      doExport: () => this._toast("جارٍ تجهيز الملف للتنزيل…"),
+      doAdd: () => this._toast("نموذج إضافة سائق — قيد الإنشاء"),
+      ridersSub: this._n(D.riders.length) + " راكباً مسجلاً · " + this._n(jo ? 8206 : 3848) + " إجمالاً",
+      riderRows,
+      ridesSub: "كل الرحلات في " + (jo ? "الأردن" : "ليبيا") + " مع تفاصيل الأجرة والدفع",
+      rideFilters, rideRows,
+
+      subsSub: "أسعار الباقات تنعكس مباشرة على تطبيق السائق",
+      plans, subscribers,
+      walletsSub: "أرصدة السائقين، طلبات السحب، وتسوية الكاش",
+      walletKpis, withdrawals, cashSettle, ledger,
+      wdPendingLabel: this._n(withdrawals.filter(w => w.pending).length) + " بانتظار القرار",
+
+      disputesSub: "شكاوى الدفع والسلوك — القرار هنا يعدّل المحافظ مباشرة",
+      tickets, thread, ticketSubject: tk.subject,
+      ticketMeta: tk.who + " · رحلة " + tk.ref + " · " + tk.when,
+      reply: s.reply, setReply: (e) => this.setState({ reply: e.target.value }),
+      sendReply: () => {
+        if (!s.reply.trim()) return;
+        this.setState({ extraMsgs: [...s.extraMsgs, ["الدعم", s.reply, "الآن", 1, s.ticket]], reply: "" });
+        this._toast("أُرسل الرد للطرفين ✓");
+      },
+      resolveRider: () => this._toast("سُوّي النزاع لصالح الراكب — أُعيد المبلغ للمحفظة"),
+      resolveDriver: () => this._toast("سُوّي النزاع لصالح السائق — قُيّدت الأرباح"),
+      closeTicket: () => this._toast("أُغلقت التذكرة ✓"),
+
+      pricingSub: "تسعيرة مستقلة لكل مدينة · العملة " + cur,
+      cityPrices, zones, savePricing: () => this._toast("حُفظت التسعيرة وسُرّيت على التطبيقات ✓"),
+
+      promosSub: "أكواد الخصم والحملات التسويقية",
+      promos, promoFormOpen: s.promoForm, mainCity: D.main,
+      promoBtnLabel: s.promoForm ? "إخفاء النموذج" : "+ عرض جديد",
+      toggleNewPromo: () => this.setState({ promoForm: !s.promoForm }),
+      createPromo: () => { this.setState({ promoForm: false }); this._toast("أُنشئ العرض ونُشر ✓"); },
+
+      reportsSub: "آخر ١٤ يوماً · " + (jo ? "الأردن" : "ليبيا"),
+      reportKpis, revBars, topZones, leaders,
+
+      usersSub: "٥ مستخدمين للوحة · ٤ أدوار",
+      admins, permRows, doInvite: () => this._toast("أُرسلت الدعوة بالبريد ✓"),
+
+      bcSub: "رسائل مباشرة للسائقين والركّاب",
+      bcAudiences, bcChannels, bcTitle: s.bcTitle, bcBody: s.bcBody,
+      setBcTitle: (e) => this.setState({ bcTitle: e.target.value }),
+      setBcBody: (e) => this.setState({ bcBody: e.target.value }),
+      bcReach: "سيصل إلى " + this._n(reachMap[s.bcAud]) + " مستخدماً",
+      sendBroadcast: () => {
+        this.setState({ bcExtra: [{ t: s.bcTitle, a: s.bcAud, c: s.bcChan, w: "الآن", sent: this._n(reachMap[s.bcAud]), op: "—" }, ...s.bcExtra] });
+        this._toast("أُرسل الإشعار ✓");
+      },
+      scheduleBroadcast: () => this._toast("جُدول الإرسال غداً ٩:٠٠ ص"),
+      bcHistory,
+
+      drawerOpen: s.drawer !== null,
+      closeDrawer: () => this.setState({ drawer: null }),
+      dwIsDriver, dwName: dwItem ? dwItem.n : "", dwPhone: dwItem ? dwItem.p : "",
+      dwInitials: dwItem ? this._initials(dwItem.n) : "", dwStats, dwDocs, dwRides,
+      dwCar: dwItem && dwIsDriver ? dwItem.car : "", dwPlate: dwItem && dwIsDriver ? dwItem.pl : "",
+      dwYear: dwItem && dwIsDriver ? dwItem.y : "",
+      dwSuspendLabel: dwItem && s.suspended[s.drawer] ? "إعادة التفعيل" : "إيقاف الحساب",
+      dwSuspend: () => {
+        this.setState({ suspended: { ...s.suspended, [s.drawer]: !s.suspended[s.drawer] } });
+        this._toast(s.suspended[s.drawer] ? "أُعيد تفعيل الحساب ✓" : "أُوقف الحساب");
+      },
+      dwNotify: () => this._toast("أُرسل الإشعار ✓"),
+
+      rideModalOpen: s.rideModal !== null,
+      closeRide: () => this.setState({ rideModal: null }),
+      stop: (e) => e.stopPropagation(),
+      rmId: rm ? rm.id : "", rmWhen: rm ? rm.when : "", rmDist: rm ? rm.dist : "",
+      rmDriver: rm ? rm.driver : "", rmRider: rm ? rm.rider : "",
+      rmFrom: rm ? rm.from : "", rmTo: rm ? rm.to : "", rmBreakdown,
+      rmRefund: () => { this.setState({ rideModal: null }); this._toast("أُعيد المبلغ لمحفظة الراكب ✓"); },
+      rmDispute: () => { this.setState({ rideModal: null, tab: "disputes" }); this._toast("فُتح نزاع مرتبط بالرحلة"); },
+
+      toastShow: !!s.toast, toastText: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

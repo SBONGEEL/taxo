@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+a{color:#d81b73}a:hover{color:#a8145a}
+input,textarea{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.thm-dark{--bg:#14181d;--sur:#0d1014;--sur2:#1a2027;--brd:#2a313a;--tx:#e6edf3;--mut:#8b949e;--inv:#0d1014;--acc:#e6edf3;--ok:#3fb970;--warn:#d9a62e;--dng:#e5534b;--sa:#1c2128;--sb:#20262e;--canvas:#0a0c0f;--brand:#e6edf3;--brand-ink:#0d1014;--brand-soft:#1a2027;--brand-brd:#2a313a}
+.thm-light{--bg:#f2f0eb;--sur:#ffffff;--sur2:#faf9f6;--brd:#ddd8cf;--tx:#171b20;--mut:#6e7681;--inv:#f2f0eb;--acc:#171b20;--ok:#1a7f4e;--warn:#9a6b00;--dng:#c73e36;--sa:#e6e3db;--sb:#ece9e1;--canvas:#e9e7e2;--brand:#171b20;--brand-ink:#f2f0eb;--brand-soft:#faf9f6;--brand-brd:#ddd8cf}
+.pink.thm-light{--brand:#d81b73;--brand-ink:#ffffff;--brand-soft:#fdeaf2;--brand-brd:#f2b7d1}
+.pink.thm-dark{--brand:#ff6fae;--brand-ink:#14181d;--brand-soft:#2a1a22;--brand-brd:#4d2b39}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes sweep{0%{transform:scale(.35);opacity:.5}100%{transform:scale(1.6);opacity:0}}
+.scr{overflow-y:auto;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.fld{width:100%;box-sizing:border-box;background:var(--sur);border:1px solid var(--brd);border-radius:13px;padding:12px 14px;font-size:14px;color:var(--tx);outline:none}
+</style>
+</helmet>
+
+<div class="{{ rootClass }}" dir="rtl" style="min-height:100vh;background:var(--canvas);color:var(--tx);padding:34px 40px 60px">
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:34px;max-width:1720px">
+    <div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:30px;font-weight:700;letter-spacing:.04em;color:var(--brand)">TAXO</span>
+        <span style="font-size:13px;font-weight:600;color:var(--brand);background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:99px;padding:5px 13px">الخدمة النسائية</span>
+      </div>
+      <div style="font-size:13.5px;color:var(--mut);margin-top:8px;line-height:1.7;max-width:640px">شاشات تطبيق الراكبة والسائقة — من إقرار الجنس عند التسجيل حتى الإلغاء لعدم التطابق. الشعار والزر الأساسي والخيار المحدد فقط هي ما يتلوّن؛ الأسطح والنصوص والخريطة كما هي.</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div onClick="{{ togglePink }}" style="display:flex;align-items:center;gap:9px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600">
+        <span style="width:34px;height:19px;border-radius:99px;background:{{ pinkTrack }};position:relative;display:block;transition:background .2s"><span style="position:absolute;top:2px;{{ pinkKnobSide }}:2px;width:15px;height:15px;border-radius:99px;background:#fff;display:block"></span></span>
+        السِمة الوردية
+      </div>
+      <div onClick="{{ toggleTheme }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:600">{{ themeLabel }}</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+    <span style="font-size:17px;font-weight:700">تطبيق الراكبة</span>
+    <span style="height:1px;flex:1;background:var(--brd)"></span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:34px;margin-bottom:56px">
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">١ · التسجيل — تحديد الجنس</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">إقرار ذاتي بلا توثيق. من جنسه غير محدد لا تصله أي طلبات مجنّسة.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div class="scr" style="position:absolute;inset:34px 0 0;padding:26px 28px">
+          <span style="color:var(--mut);font-size:18px">→</span>
+          <div style="font-size:23px;font-weight:700;margin-top:20px">إنشاء حساب</div>
+          <div style="font-size:12.5px;color:var(--mut);margin:8px 0 20px;line-height:1.6">بياناتك محفوظة ولا تُعرض على السائقين.</div>
+          <div style="display:flex;flex-direction:column;gap:13px">
+            <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">الاسم</div><input class="fld" placeholder="سارة العتوم"></div>
+            <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">رقم الهاتف</div><input dir="ltr" class="fld" placeholder="+962 7X XXX XXXX"></div>
+            <div>
+              <div style="font-size:12px;color:var(--mut);margin-bottom:6px">الجنس</div>
+              <div style="display:flex;gap:9px">
+                <sc-for list="{{ genderOpts }}" as="g" hint-placeholder-count="2">
+                  <div onClick="{{ g.pick }}" style="flex:1;border:1px solid {{ g.brd }};background:{{ g.bg }};color:{{ g.col }};border-radius:13px;padding:13px;text-align:center;font-size:14px;font-weight:600;cursor:pointer">{{ g.label }}</div>
+                </sc-for>
+              </div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:9px;line-height:1.7">إقرار ذاتي — لا نطلب وثيقة. يُستخدم لمطابقة تفضيلات الرحلات فقط، ولا يظهر لأي مستخدم آخر.</div>
+            </div>
+            <div><div style="font-size:12px;color:var(--mut);margin-bottom:6px">كلمة المرور</div><input type="password" class="fld" placeholder="••••••••"></div>
+          </div>
+          <div style="margin-top:22px;background:var(--brand);color:var(--brand-ink);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">متابعة</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٢ · شاشة الطلب — التفضيل</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">قيمة افتراضية من الملف، قابلة للتغيير لكل رحلة. جرّب الخيارات.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div style="position:absolute;top:44px;right:18px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 15px;font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--brand)">TAXO</div>
+        <div style="position:absolute;left:18px;top:44px;width:40px;height:40px;border-radius:99px;background:var(--sur);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:15px">☰</div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:20px 22px 26px;box-shadow:0 -14px 34px rgba(0,0,0,.14)">
+          <div style="width:38px;height:4px;border-radius:99px;background:var(--brd);margin:0 auto 16px"></div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+            <div style="display:flex;align-items:center;gap:11px;background:var(--sur);border:1px solid var(--brd);border-radius:13px;padding:12px 14px"><span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block"></span><span style="font-size:13.5px">الشميساني — موقعي الحالي</span></div>
+            <div style="display:flex;align-items:center;gap:11px;background:var(--sur);border:1px solid var(--brd);border-radius:13px;padding:12px 14px"><span style="width:8px;height:8px;border-radius:2px;background:var(--dng);display:block"></span><span style="font-size:13.5px">مستشفى الجامعة</span></div>
+          </div>
+          <div style="font-size:12px;color:var(--mut);margin-bottom:8px">تفضيل السائق</div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ riderPrefOpts }}" as="p" hint-placeholder-count="3">
+              <div onClick="{{ p.pick }}" style="flex:1;border:1px solid {{ p.brd }};background:{{ p.bg }};color:{{ p.col }};border-radius:12px;padding:11px;text-align:center;font-size:13.5px;font-weight:600;cursor:pointer">{{ p.label }}</div>
+            </sc-for>
+          </div>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:9px;line-height:1.7">{{ riderPrefNote }}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px">
+            <span style="font-size:13.5px;color:var(--mut)">اقتصادية · ٤ دقائق</span>
+            <span style="font-size:19px;font-weight:700">٣٫٢٥٠ د.أ</span>
+          </div>
+          <div style="background:var(--brand);color:var(--brand-ink);border-radius:16px;padding:16px;text-align:center;font-size:15.5px;font-weight:700;cursor:pointer">اطلب الآن</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٣ · البحث عن سائقة</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">نطاق ١٠ كم بدل ٧ — السائقات أقل عدداً، والحصر يعني رفضاً سريعاً.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div style="position:absolute;top:300px;left:50%;transform:translate(-50%,-50%);width:150px;height:150px">
+          <span style="position:absolute;inset:0;border-radius:99px;border:2px solid var(--brand);display:block;animation:sweep 2.4s infinite"></span>
+          <span style="position:absolute;inset:0;border-radius:99px;border:2px solid var(--brand);display:block;animation:sweep 2.4s infinite 1.2s"></span>
+          <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:99px;background:var(--brand);display:block;animation:pulse 1.6s infinite"></span>
+        </div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:24px 24px 28px;box-shadow:0 -14px 34px rgba(0,0,0,.14)">
+          <div style="font-size:19px;font-weight:700">نبحث عن سائقة قريبة…</div>
+          <div style="font-size:13px;color:var(--mut);margin-top:9px;line-height:1.75">نطاق البحث ١٠ كم · تُعرض الرحلة على الأقرب أولاً مع مهلة ٢٠ ثانية لكل سائقة.</div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:600;color:var(--brand);background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:99px;padding:6px 12px">سائقات فقط</span>
+            <span style="font-size:12px;color:var(--mut);background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:6px 12px">٣ متاحات ضمن النطاق</span>
+          </div>
+          <div style="margin-top:20px;border:1px solid var(--brd);border-radius:15px;padding:14px;text-align:center;font-size:14.5px;font-weight:600;color:var(--mut);cursor:pointer">إلغاء الطلب</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٤ · لا توجد سائقة — القرار للراكبة</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">بدل رفض صامت: تخيير بين الانتظار وقبول أي سائق.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.34)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;color:#fff"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid #fff;border-radius:3px;display:block;opacity:.7"></span><span style="width:12px;height:10px;background:#fff;border-radius:2px;display:block;opacity:.6"></span></div></div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:24px 24px 28px;animation:fadein .3s">
+          <div style="width:38px;height:4px;border-radius:99px;background:var(--brd);margin:0 auto 18px"></div>
+          <div style="font-size:19px;font-weight:700;line-height:1.5">لا توجد سائقة متاحة قريبة الآن</div>
+          <div style="font-size:13px;color:var(--mut);margin-top:10px;line-height:1.75">يمكنك الانتظار حتى تتصل إحداهن، أو قبول أي سائق متاح الآن. الاختيار لكِ.</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+            <div onClick="{{ pickWait }}" style="background:var(--brand);color:var(--brand-ink);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">أنتظر سائقة</div>
+            <div onClick="{{ pickAny }}" style="border:1px solid var(--brd);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:600;cursor:pointer">أقبل أي سائق متاح</div>
+            <div style="text-align:center;font-size:13px;color:var(--mut);padding:6px;cursor:pointer">إلغاء الطلب</div>
+          </div>
+          <sc-if value="{{ noDriverMsg }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:13px;padding:12px 14px;font-size:12.5px;line-height:1.7;color:var(--tx)">{{ noDriverMsg }}</div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٥ · السائقة في الطريق</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">شارة «رحلة نسائية» — أول موضع يستحق اللون كله.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div style="position:absolute;top:44px;right:18px;left:18px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 15px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13.5px;font-weight:600">تصل خلال ٤ دقائق</span>
+          <span style="font-size:12px;font-weight:600;color:var(--brand);background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:99px;padding:5px 11px">رحلة نسائية</span>
+        </div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:22px 22px 26px;box-shadow:0 -14px 34px rgba(0,0,0,.14)">
+          <div style="display:flex;align-items:center;gap:13px">
+            <span style="width:54px;height:54px;border-radius:99px;background:var(--brand-soft);border:1px solid var(--brand-brd);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--brand)">ر</span>
+            <div style="flex:1">
+              <div style="font-size:16px;font-weight:700">ريم ح.</div>
+              <div style="font-size:12.5px;color:var(--mut);margin-top:3px">هيونداي إلنترا · بيضاء</div>
+            </div>
+            <div style="text-align:end">
+              <div dir="ltr" style="font-size:14px;font-weight:700">٤٫٩ ★</div>
+              <div dir="ltr" style="font-size:12.5px;color:var(--mut);margin-top:3px;font-family:ui-monospace,Menlo,monospace">١٢-٣٤٥٦٧</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:9px;margin-top:16px">
+            <div style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:13px;text-align:center;font-size:14px;font-weight:600;cursor:pointer">اتصال</div>
+            <div style="flex:1;border:1px solid var(--brd);border-radius:13px;padding:13px;text-align:center;font-size:14px;font-weight:600;cursor:pointer">رسالة</div>
+            <div style="flex:1;background:var(--brand);color:var(--brand-ink);border-radius:13px;padding:13px;text-align:center;font-size:14px;font-weight:700;cursor:pointer">مشاركة الرحلة</div>
+          </div>
+          <div onClick="{{ openCancel }}" style="margin-top:11px;text-align:center;font-size:13.5px;color:var(--dng);padding:9px;cursor:pointer">إلغاء الرحلة</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٦ · إلغاء لعدم التطابق</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">الحماية الأخيرة: بلا رسوم على أي طرف، وبلاغ يُسجَّل على الآخر.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.34)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;color:#fff"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid #fff;border-radius:3px;display:block;opacity:.7"></span><span style="width:12px;height:10px;background:#fff;border-radius:2px;display:block;opacity:.6"></span></div></div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:22px 22px 26px">
+          <div style="width:38px;height:4px;border-radius:99px;background:var(--brd);margin:0 auto 18px"></div>
+          <div style="font-size:18px;font-weight:700">سبب الإلغاء</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">
+            <sc-for list="{{ cancelOpts }}" as="c" hint-placeholder-count="4">
+              <div onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:11px;border:1px solid {{ c.brd }};background:{{ c.bg }};border-radius:13px;padding:13px 14px;cursor:pointer">
+                <span style="width:17px;height:17px;border-radius:99px;border:2px solid {{ c.dot }};display:block;flex:none"></span>
+                <span style="font-size:13.5px;font-weight:{{ c.weight }};color:{{ c.col }}">{{ c.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ mismatchPicked }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:14px;background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:13px;padding:14px;font-size:12.5px;line-height:1.8;color:var(--tx)">بلا رسوم إلغاء على أي من الطرفين. يُسجَّل بلاغ على الحساب الآخر، وتكرار البلاغات يوسم الحساب للمراجعة الإدارية.</div>
+          </sc-if>
+          <div style="margin-top:16px;background:var(--dng);color:#fff;border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">تأكيد الإلغاء</div>
+          <div style="text-align:center;font-size:13px;color:var(--mut);padding:10px 0 0;cursor:pointer">تراجع</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٧ · إعدادات الراكبة</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">السِمة على الجهاز لا على الحساب. المفتاح يبدّل كل الشاشات هنا.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div class="scr" style="position:absolute;inset:34px 0 0;padding:24px 22px">
+          <div style="font-size:22px;font-weight:700;margin-bottom:20px">الإعدادات</div>
+          <div style="font-size:11.5px;color:var(--mut);margin-bottom:9px">المظهر</div>
+          <div onClick="{{ togglePink }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer">
+            <div>
+              <div style="font-size:14.5px;font-weight:600">السِمة الوردية</div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.7">مفعّلة افتراضياً للنساء · على هذا الجهاز فقط</div>
+            </div>
+            <span style="width:44px;height:25px;border-radius:99px;background:{{ pinkTrack }};position:relative;display:block;flex:none"><span style="position:absolute;top:3px;{{ pinkKnobSide }}:3px;width:19px;height:19px;border-radius:99px;background:#fff;display:block"></span></span>
+          </div>
+          <div style="font-size:11.5px;color:var(--mut);margin:22px 0 9px">الرحلات</div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px">
+            <div style="font-size:14.5px;font-weight:600;margin-bottom:12px">تفضيل السائق الافتراضي</div>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ riderPrefOpts }}" as="p" hint-placeholder-count="3">
+                <div onClick="{{ p.pick }}" style="flex:1;border:1px solid {{ p.brd }};background:{{ p.bg }};color:{{ p.col }};border-radius:11px;padding:10px;text-align:center;font-size:13px;font-weight:600;cursor:pointer">{{ p.label }}</div>
+              </sc-for>
+            </div>
+            <div style="font-size:11.5px;color:var(--mut);margin-top:10px;line-height:1.7">يمكن تغييره في كل طلب من شاشة الرحلة.</div>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px;margin-top:10px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:14.5px;font-weight:600">الجنس</div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:5px">إقرار ذاتي — قابل للتعديل</div>
+            </div>
+            <span style="font-size:13.5px;font-weight:600;color:var(--brand)">{{ genderLabel }}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--mut);margin:22px 0 9px">الخصوصية</div>
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:15px;padding:15px;font-size:12.5px;color:var(--mut);line-height:1.85">لا يظهر جنس السائقات على خريطة السيارات القريبة — الموقع والاتجاه والفئة فقط. جنسكِ لا يُعرض لأي سائق قبل القبول.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+    <span style="font-size:17px;font-weight:700">تطبيق السائقة</span>
+    <span style="height:1px;flex:1;background:var(--brd)"></span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:34px">
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٨ · توثيق الجنس من الهوية</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">السائقة لا تُدخله. المشرف يثبّته في مراجعة الوثائق ويُختم بتاريخ.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div class="scr" style="position:absolute;inset:34px 0 0;padding:24px 22px">
+          <span style="color:var(--mut);font-size:18px">→</span>
+          <div style="font-size:22px;font-weight:700;margin-top:18px">وثائقي</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px;display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-size:14.5px;font-weight:600">الهوية الشخصية</div><div style="font-size:11.5px;color:var(--mut);margin-top:5px">تنتهي ٢٠٢٩/٠٤/١٢</div></div>
+              <span style="font-size:12px;font-weight:600;color:var(--ok);background:var(--sur2);border:1px solid var(--brd);border-radius:99px;padding:5px 11px">مقبولة</span>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px;display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-size:14.5px;font-weight:600">رخصة القيادة</div><div style="font-size:11.5px;color:var(--mut);margin-top:5px">تنتهي ٢٠٢٧/٠١/٣٠</div></div>
+              <span style="font-size:12px;font-weight:600;color:var(--ok);background:var(--sur2);border:1px solid var(--brd);border-radius:99px;padding:5px 11px">مقبولة</span>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brand-brd);border-radius:15px;padding:15px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:14.5px;font-weight:600">الجنس</div>
+                <span style="font-size:13.5px;font-weight:700;color:var(--brand)">أنثى</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:8px;line-height:1.75">موثّق من الهوية بواسطة الإدارة · ٢٠٢٥/١١/٠٣</div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:6px;line-height:1.75">لا يمكن تعديله من التطبيق. للتصحيح راسلي الدعم.</div>
+            </div>
+          </div>
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:15px;padding:15px;margin-top:18px;font-size:12.5px;color:var(--mut);line-height:1.85">قبل التوثيق لا تصلكِ الطلبات التي تحدّد جنساً — لا كطلبات مرفوضة، بل لا تُعرض أصلاً.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">٩ · تفضيل الركاب — إعداد دائم</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">الشرط ثنائي الاتجاه: لا تُعرض الرحلة إلا إذا قبِل كل طرف جنس الآخر.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div class="scr" style="position:absolute;inset:34px 0 0;padding:24px 22px">
+          <div style="font-size:22px;font-weight:700;margin-bottom:20px">الإعدادات</div>
+          <div style="font-size:11.5px;color:var(--mut);margin-bottom:9px">الطلبات</div>
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px">
+            <div style="font-size:14.5px;font-weight:600;margin-bottom:12px">أستقبل ركاباً من</div>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ driverPrefOpts }}" as="p" hint-placeholder-count="3">
+                <div onClick="{{ p.pick }}" style="flex:1;border:1px solid {{ p.brd }};background:{{ p.bg }};color:{{ p.col }};border-radius:11px;padding:11px;text-align:center;font-size:13px;font-weight:600;cursor:pointer">{{ p.label }}</div>
+              </sc-for>
+            </div>
+            <div style="font-size:11.5px;color:var(--mut);margin-top:11px;line-height:1.8">{{ driverPrefNote }}</div>
+          </div>
+          <div onClick="{{ togglePink }}" style="background:var(--sur);border:1px solid var(--brd);border-radius:15px;padding:15px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer">
+            <div>
+              <div style="font-size:14.5px;font-weight:600">السِمة الوردية</div>
+              <div style="font-size:11.5px;color:var(--mut);margin-top:5px">على هذا الجهاز فقط</div>
+            </div>
+            <span style="width:44px;height:25px;border-radius:99px;background:{{ pinkTrack }};position:relative;display:block;flex:none"><span style="position:absolute;top:3px;{{ pinkKnobSide }}:3px;width:19px;height:19px;border-radius:99px;background:#fff;display:block"></span></span>
+          </div>
+          <div style="font-size:11.5px;color:var(--mut);margin:22px 0 9px">كيف تعمل المطابقة</div>
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:15px;padding:16px;font-size:12.5px;color:var(--mut);line-height:1.9">تصلكِ الرحلة فقط إذا قبِل تفضيل الراكب جنسكِ، وقبِل تفضيلكِ جنسه — الاتجاهان معاً. راكب اختار «الجميع» لن تصله رحلتكِ إن كان تفضيلكِ «إناث فقط».</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">١٠ · عرض طلب نسائي</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">تطبيق السائقة أحادي الفحم — الشارة هي الموضع الوحيد الملوّن.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.3)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;color:#fff"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid #fff;border-radius:3px;display:block;opacity:.7"></span><span style="width:12px;height:10px;background:#fff;border-radius:2px;display:block;opacity:.6"></span></div></div>
+        <div style="position:absolute;inset:auto 12px 14px;background:var(--bg);border-radius:24px;padding:20px;box-shadow:0 -14px 34px rgba(0,0,0,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <span style="font-size:12px;font-weight:700;color:var(--brand);background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:99px;padding:6px 13px">طلب نسائي</span>
+            <span style="font-size:12.5px;color:var(--mut)">اقتصادية</span>
+          </div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font-size:30px;font-weight:700">٣٫٢٥٠</span>
+            <span style="font-size:13px;color:var(--mut)">د.أ · ٦٫٤ كم · ١٤ دقيقة</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin:18px 0">
+            <div style="display:flex;align-items:center;gap:11px"><span style="width:8px;height:8px;border-radius:99px;background:var(--ok);display:block;flex:none"></span><span style="font-size:13.5px">الشميساني · شارع عبدالحميد شرف</span></div>
+            <div style="display:flex;align-items:center;gap:11px"><span style="width:8px;height:8px;border-radius:2px;background:var(--dng);display:block;flex:none"></span><span style="font-size:13.5px">مستشفى الجامعة · البوابة الشمالية</span></div>
+          </div>
+          <div style="height:5px;border-radius:99px;background:var(--sur2);overflow:hidden;margin-bottom:8px"><span style="display:block;height:100%;width:62%;background:var(--brand);border-radius:99px"></span></div>
+          <div style="font-size:11.5px;color:var(--mut);margin-bottom:16px">١٢ ثانية للرد</div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;border:1px solid var(--brd);border-radius:14px;padding:15px;text-align:center;font-size:14.5px;font-weight:600;color:var(--mut);cursor:pointer">تجاهل</div>
+            <div style="flex:2;background:var(--brand);color:var(--brand-ink);border-radius:14px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">قبول</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">١١ · الرئيسية — متصلة</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">التفضيل النافذ ظاهر دائماً حتى لا تُفاجأ بقلة الطلبات.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div></div>
+        <div style="position:absolute;top:44px;right:18px;left:18px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 15px;font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--brand)">TAXO</span>
+          <span style="background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:8px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px"><span style="width:7px;height:7px;border-radius:99px;background:var(--ok);display:block;animation:pulse 1.8s infinite"></span>متصلة</span>
+        </div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:20px 22px 26px;box-shadow:0 -14px 34px rgba(0,0,0,.14)">
+          <div style="width:38px;height:4px;border-radius:99px;background:var(--brd);margin:0 auto 16px"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div>
+              <div style="font-size:11.5px;color:var(--mut)">أرباح اليوم</div>
+              <div style="font-size:26px;font-weight:700;margin-top:5px">٢٤٫٧٥٠ <span style="font-size:14px;color:var(--mut);font-weight:600">د.أ</span></div>
+            </div>
+            <div style="text-align:end">
+              <div style="font-size:11.5px;color:var(--mut)">رحلات</div>
+              <div style="font-size:26px;font-weight:700;margin-top:5px">٩</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--brand-soft);border:1px solid var(--brand-brd);border-radius:14px;padding:13px 15px">
+            <span style="font-size:13px;font-weight:600;color:var(--brand)">أستقبل ركاباً: {{ driverPrefLabel }}</span>
+            <span style="font-size:12px;color:var(--mut);text-decoration:underline;cursor:pointer">تغيير</span>
+          </div>
+          <div style="margin-top:14px;border:1px solid var(--brd);border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:600;cursor:pointer">إنهاء الدوام</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:390px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">١٢ · إلغاء السائقة لعدم التطابق</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px;line-height:1.6">متاح عند نقطة الالتقاء — بلا رسوم، مع بلاغ على الراكب.</div>
+      <div style="width:390px;height:800px;border-radius:38px;background:var(--bg);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 0 9px #24262a,0 0 0 11px #3a3d42;position:relative;overflow:hidden;font-size:14px">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)"></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.34)"></div>
+        <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;color:#fff"><span style="font-size:12px;font-weight:600">9:41</span><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid #fff;border-radius:3px;display:block;opacity:.7"></span><span style="width:12px;height:10px;background:#fff;border-radius:2px;display:block;opacity:.6"></span></div></div>
+        <div style="position:absolute;inset:auto 0 0 0;background:var(--bg);border-radius:26px 26px 0 0;padding:22px 22px 26px">
+          <div style="width:38px;height:4px;border-radius:99px;background:var(--brd);margin:0 auto 18px"></div>
+          <div style="font-size:18px;font-weight:700">إلغاء الرحلة</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:8px;line-height:1.7">الراكب في نقطة الالتقاء · رحلة نسائية</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">
+            <div style="display:flex;align-items:center;gap:11px;border:1px solid var(--brd);border-radius:13px;padding:13px 14px"><span style="width:17px;height:17px;border-radius:99px;border:2px solid var(--brd);display:block;flex:none"></span><span style="font-size:13.5px">الراكب غير موجود</span></div>
+            <div style="display:flex;align-items:center;gap:11px;border:1px solid var(--brand-brd);background:var(--brand-soft);border-radius:13px;padding:13px 14px"><span style="width:17px;height:17px;border-radius:99px;border:5px solid var(--brand);display:block;flex:none"></span><span style="font-size:13.5px;font-weight:700;color:var(--brand)">الراكب ليس أنثى — عدم تطابق</span></div>
+            <div style="display:flex;align-items:center;gap:11px;border:1px solid var(--brd);border-radius:13px;padding:13px 14px"><span style="width:17px;height:17px;border-radius:99px;border:2px solid var(--brd);display:block;flex:none"></span><span style="font-size:13.5px">سلوك غير لائق</span></div>
+          </div>
+          <div style="margin-top:14px;background:var(--sur2);border:1px solid var(--brd);border-radius:13px;padding:14px;font-size:12.5px;line-height:1.85;color:var(--mut)">لن تُحتسب عليكِ رسوم إلغاء ولن يتأثر معدل قبولكِ. يُسجَّل بلاغ على حساب الراكب للمراجعة.</div>
+          <div style="margin-top:16px;background:var(--dng);color:#fff;border-radius:15px;padding:15px;text-align:center;font-size:15px;font-weight:700;cursor:pointer">تأكيد الإلغاء</div>
+          <div style="text-align:center;font-size:13px;color:var(--mut);padding:10px 0 0;cursor:pointer">تراجع</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;\&quot;light\&quot; | \&quot;dark\&quot;&quot;},&quot;pink&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const PREFS = [{ k: "m", label: "ذكور" }, { k: "f", label: "إناث" }, { k: "all", label: "الجميع" }];
+
+class Component extends DCLogic {
+  state = {
+    theme: this.props.theme ?? "light",
+    pink: this.props.pink ?? true,
+    gender: "f",
+    riderPref: "f",
+    driverPref: "f",
+    noDriver: null,
+    cancel: "mismatch"
+  };
+  _opts(list, cur, set) {
+    const on = this.state.pink;
+    return list.map(o => ({
+      label: o.label,
+      bg: cur === o.k ? "var(--brand)" : "var(--sur)",
+      brd: cur === o.k ? "var(--brand)" : "var(--brd)",
+      col: cur === o.k ? "var(--brand-ink)" : "var(--tx)",
+      pick: () => this.setState(set(o.k))
+    }));
+  }
+  renderVals() {
+    const s = this.state;
+    const cancelList = [
+      { k: "late", label: "السائقة تأخرت" },
+      { k: "mind", label: "غيّرت رأيي" },
+      { k: "mismatch", label: "السائق ليس أنثى — عدم تطابق" },
+      { k: "wrong", label: "عنوان الالتقاء خطأ" }
+    ];
+    return {
+      rootClass: (s.theme === "dark" ? "thm-dark" : "thm-light") + (s.pink ? " pink" : ""),
+      themeLabel: s.theme === "dark" ? "الوضع النهاري" : "الوضع الليلي",
+      toggleTheme: () => this.setState(p => ({ theme: p.theme === "dark" ? "light" : "dark" })),
+      togglePink: () => this.setState(p => ({ pink: !p.pink })),
+      pinkTrack: s.pink ? "var(--brand)" : "var(--brd)",
+      pinkKnobSide: s.pink ? "left" : "right",
+      genderOpts: this._opts([{ k: "f", label: "أنثى" }, { k: "m", label: "ذكر" }], s.gender, k => ({ gender: k })),
+      genderLabel: s.gender === "f" ? "أنثى" : "ذكر",
+      riderPrefOpts: this._opts(PREFS, s.riderPref, k => ({ riderPref: k })),
+      riderPrefNote: s.riderPref === "f"
+        ? "سيبحث النظام عن سائقات فقط ضمن نطاق ١٠ كم بدل ٧."
+        : s.riderPref === "m"
+          ? "سيبحث النظام عن سائقين فقط ضمن نطاق ١٠ كم."
+          : "أي سائق متاح — أسرع استجابة وأوسع نطاق.",
+      driverPrefOpts: this._opts(PREFS, s.driverPref, k => ({ driverPref: k })),
+      driverPrefLabel: (PREFS.find(p => p.k === s.driverPref) || {}).label,
+      driverPrefNote: s.driverPref === "all"
+        ? "تفضيل دائم يبقى نافذاً حتى تغيّريه. «الجميع» يعني أكبر عدد طلبات."
+        : "تفضيل دائم يبقى نافذاً حتى تغيّريه. لن تصلكِ طلبات من غير هذه الفئة، حتى لو اختار صاحبها «الجميع».",
+      pickWait: () => this.setState({ noDriver: "wait" }),
+      pickAny: () => this.setState({ noDriver: "any" }),
+      noDriverMsg: s.noDriver === "wait"
+        ? "سنواصل البحث عن سائقة ونخبركِ فور توفّر واحدة. يمكنكِ الإلغاء بلا رسوم في أي وقت."
+        : s.noDriver === "any"
+          ? "تم توسيع البحث لكل السائقين المتاحين. يبقى بإمكانكِ الإلغاء بلا رسوم عند الوصول."
+          : null,
+      openCancel: () => this.setState({ cancel: "mismatch" }),
+      mismatchPicked: s.cancel === "mismatch",
+      cancelOpts: cancelList.map(c => ({
+        label: c.label,
+        bg: s.cancel === c.k ? "var(--brand-soft)" : "var(--sur)",
+        brd: s.cancel === c.k ? "var(--brand-brd)" : "var(--brd)",
+        dot: s.cancel === c.k ? "var(--brand)" : "var(--brd)",
+        col: s.cancel === c.k ? "var(--brand)" : "var(--tx)",
+        weight: s.cancel === c.k ? "700" : "500",
+        pick: () => this.setState({ cancel: c.k })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
