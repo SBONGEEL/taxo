@@ -219,7 +219,9 @@ export const buySubscription = (planId: string, idempotencyKey: string) =>
 
 /** صندوق الوارد — أثرُ الحدث الدائم، يوجد ولو لم يُرسل Push (المرحلة 9-ب). */
 export const listNotifications = (limit = 30, offset = 0) =>
-  api.get<UserNotification[]>("/me/notifications", { query: { limit, offset } });
+  api.get<UserNotification[]>("/me/notifications", {
+    query: { limit, offset },
+  });
 
 export const getUnreadCount = () =>
   api.get<{ unread: number }>("/me/notifications/unread-count");

@@ -45,6 +45,16 @@ export type DriverSocketEvent =
       type: "document_approved" | "document_rejected";
       review_note: string | null;
     }
+  // أدخل الراكب مرجع حوالته — الحمولة ما تحتاجه بطاقة التأكيد لا الدفعة
+  // كاملة، ولا هوية راكبٍ فيها كما لا هوية في بطاقة الطلب
+  | {
+      type: "cliq_transfer_submitted";
+      ride_id: string;
+      payment_id: string;
+      amount: string;
+      currency: string;
+      transfer_reference: string;
+    }
   | { type: "error"; detail: string };
 // ولا عضوَ جامع `{ type: string }` في الاتحاد: وجودُه يجعل كل فرعٍ في
 // `switch` غيرَ مُضيَّق فيصير كلُّ حقلٍ `unknown`. والأحداثُ غيرُ المعروفة

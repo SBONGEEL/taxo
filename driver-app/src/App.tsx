@@ -7,7 +7,7 @@
  * **ما هو مبنيٌّ الآن**: الدخول واستعادة كلمة المرور، والتسجيل بخطواته
  * الثلاث، والرئيسيةُ ببطاقة الطلب والرحلة الجارية، والاشتراك، وسجلُّ الرحلات
  * بتفاصيله ونزاعه، والمحفظةُ بطلبات سحبها، وحسابي بإعداداته ومركبته وبطاقاته.
- * والإشعاراتُ وبطاقةُ تأكيد حوالة كليك تُبنيان في الجلسة التالية.
+ * والإشعاراتُ وبطاقةُ تأكيد حوالة كليك. وبذلك تمّت شاشات المرحلة 10.
  *
  * وحالةُ الكبتن هي ما يقرّر أيَّ شاشةٍ يرى بعد الدخول: غيرُ المعتمد يرى «قيد
  * المراجعة» ولا يرى الرئيسية — لا لأننا نخفيها، بل لأن التوزيع لا يعرفه
@@ -82,6 +82,11 @@ const VehicleScreen = lazy(() =>
 );
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
+);
+const NotificationsScreen = lazy(() =>
+  import("@/screens/Notifications").then((m) => ({
+    default: m.NotificationsScreen,
+  })),
 );
 const SubscriptionScreen = lazy(() =>
   import("@/screens/Subscription").then((m) => ({
@@ -274,6 +279,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <VehicleScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/notifications"
+                        element={
+                          <Guarded>
+                            <NotificationsScreen />
                           </Guarded>
                         }
                       />

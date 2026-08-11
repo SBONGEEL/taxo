@@ -29,6 +29,7 @@ import {
   declineRide,
   getDriverWallet,
   getMySubscription,
+  getUnreadCount,
   startRide,
 } from "@/api/endpoints";
 import type { MySubscription, Ride, Wallet } from "@/api/types";
@@ -37,6 +38,7 @@ import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
 import { BottomNav } from "@/components/BottomNav";
 import { MapView } from "@/components/map/MapView";
+import { CliqTransferSheet } from "@/components/CliqTransferSheet";
 import { OfferSheet } from "@/components/OfferSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useConfig, useMapboxToken } from "@/lib/config";
@@ -68,12 +70,14 @@ export function HomeScreen() {
     connecting,
     ride,
     offer,
+    transfer,
     position,
     error,
     goOnline,
     goOffline,
     setRide,
     dismissOffer,
+    dismissTransfer,
     clearError,
   } = useRide();
 
@@ -84,6 +88,7 @@ export function HomeScreen() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
   const [busy, setBusy] = useState(false);
+  const [unread, setUnread] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const currencyCode =
@@ -103,6 +108,14 @@ export function HomeScreen() {
       .then(setSubscription)
       .catch(() => undefined);
   }, []);
+
+  // العدّاد يُقرأ عند كل عودةٍ إلى الرئيسية: صفوفُ الوارد تُكتب من الخلفية
+  // (اشتراكٌ يوشك، مستندٌ رُوجع) بلا أن يفتح الكبتن شيئاً
+  useEffect(() => {
+    getUnreadCount()
+      .then((count) => setUnread(count.unread))
+      .catch(() => undefined);
+  }, [transfer, ride]);
 
   const tracking = isActive(ride);
   // اشتراكٌ ساري شرطُ التوزيع (القسم 8) — والزرُّ يقول ذلك بدل أن يفتح
@@ -197,11 +210,16 @@ export function HomeScreen() {
             <div className="flex gap-7">
               <button
                 type="button"
-                onClick={() => navigate("/account")}
+                onClick={() => navigate("/notifications")}
                 aria-label="الإشعارات"
-                className="flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
+                className="relative flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
               >
                 <Bell className="size-16" />
+                {/* نقطةٌ لا عدد: العددُ الدقيق لا يغيّر ما سيفعله الكبتن،
+                    ورسمُه يطلب نداءً يتكرر مع كل تحديث */}
+                {unread > 0 ? (
+                  <span className="absolute end-6 top-6 block size-7 rounded-full bg-danger" />
+                ) : null}
               </button>
               <button
                 type="button"
@@ -336,6 +354,22 @@ export function HomeScreen() {
               dismissOffer();
             })
           }
+        />
+      ) : null}
+
+      {/* بطاقةُ حوالة كليك — تصل من المقبس في أي وقت، وقد يكون الكبتن على
+          الرئيسية لا على شاشة التحصيل (القسم 6.2) */}
+      {transfer ? (
+        <CliqTransferSheet
+          transfer={transfer}
+          currencyLabel={CURRENCY_LABEL[transfer.currency] ?? ""}
+          onConfirmed={dismissTransfer}
+          onDispute={() => {
+            const rideId = transfer.rideId;
+            dismissTransfer();
+            navigate(`/rides/${rideId}/dispute`);
+          }}
+          onDismiss={dismissTransfer}
         />
       ) : null}
     </div>

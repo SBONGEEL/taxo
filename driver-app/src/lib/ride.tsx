@@ -28,6 +28,7 @@ import type { ReactNode } from "react";
 
 import { getActiveRide } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
+import type { CliqTransfer } from "@/components/CliqTransferSheet";
 import { DriverSocket, type DriverSocketEvent } from "@/lib/socket";
 import { useSession } from "@/lib/session";
 
@@ -55,12 +56,15 @@ interface RideState {
   connecting: boolean;
   ride: Ride | null;
   offer: Offer | null;
+  /** حوالةُ كليك أدخل الراكب مرجعها وتنتظر قولَ الكبتن (القسم 6.2). */
+  transfer: CliqTransfer | null;
   position: Coordinates | null;
   error: string | null;
   goOnline: () => void;
   goOffline: () => void;
   setRide: (ride: Ride | null) => void;
   dismissOffer: () => void;
+  dismissTransfer: () => void;
   clearError: () => void;
 }
 
@@ -69,12 +73,14 @@ const RideContext = createContext<RideState>({
   connecting: false,
   ride: null,
   offer: null,
+  transfer: null,
   position: null,
   error: null,
   goOnline: () => undefined,
   goOffline: () => undefined,
   setRide: () => undefined,
   dismissOffer: () => undefined,
+  dismissTransfer: () => undefined,
   clearError: () => undefined,
 });
 
@@ -84,6 +90,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [ride, setRide] = useState<Ride | null>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
+  const [transfer, setTransfer] = useState<CliqTransfer | null>(null);
   const [position, setPosition] = useState<Coordinates | null>(null);
   const [error, setError] = useState<string | null>(null);
   const socket = useRef<DriverSocket | null>(null);
@@ -114,6 +121,15 @@ export function RideProvider({ children }: { children: ReactNode }) {
       case "ride_cancelled":
         setOffer(null);
         setRide(event.ride);
+        break;
+      case "cliq_transfer_submitted":
+        setTransfer({
+          rideId: event.ride_id,
+          paymentId: event.payment_id,
+          amount: event.amount,
+          currency: event.currency,
+          transferReference: event.transfer_reference,
+        });
         break;
       default:
         break;
@@ -197,15 +213,27 @@ export function RideProvider({ children }: { children: ReactNode }) {
       connecting,
       ride,
       offer,
+      transfer,
       position,
       error,
       goOnline,
       goOffline,
       setRide,
       dismissOffer: () => setOffer(null),
+      dismissTransfer: () => setTransfer(null),
       clearError: () => setError(null),
     }),
-    [online, connecting, ride, offer, position, error, goOnline, goOffline],
+    [
+      online,
+      connecting,
+      ride,
+      offer,
+      transfer,
+      position,
+      error,
+      goOnline,
+      goOffline,
+    ],
   );
 
   return <RideContext.Provider value={value}>{children}</RideContext.Provider>;

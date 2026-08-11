@@ -27,12 +27,14 @@ connection, unified provider interfaces with mocks, and the OTP/Push/automatic-C
 integrations), **9** (`customer-app/` — the rider PWA, plus the in-app CliQ payment page and the
 backend fields it needed) and **9-ب** (backend only: driver-document upload/review on the
 long-dormant `driver_documents` table, `core/storage.py`, and the `user_notifications` inbox
-written from both send doors) are complete. **Stage 10 (the driver PWA, `driver-app/`) is in
-progress and reviewed three screens at a time** — scaffolding + login/password recovery, then
-registration in three steps, then the home screen with the offer card and the active ride, then
-collect/rate/subscription, then the ride log with its details and dispute, then the wallet with its
-withdrawal sheet and request list, then the account tab with settings, vehicle/documents and saved
-cards. Do not implement
+written from both send doors) are complete. **Stage 10's screens (the driver PWA, `driver-app/`) are
+complete** — login/recovery, three-step registration, home with the offer card and active ride,
+collect/rate/subscription, the ride log with details and dispute, the wallet with its withdrawal
+sheet and request list, the account tab with settings/vehicle/cards, the notifications inbox and
+the CliQ confirmation card. **One SPEC item in stage 10 is deliberately unbuilt**: the CliQ
+confirmation *deadline* (§6.2/6) has no column and no sweep, so a CliQ payment stays
+`awaiting_confirmation` until the driver speaks — see `design/FUTURE-FEATURES.md` item 45, and note
+that the card draws no countdown ring precisely because nothing enforces one. Do not implement
 anything from a later stage unless the user asks for that stage. When a later-stage concern
 appears in current code (e.g. no Celery job sweeps stale
 `provider_orders` yet, no retention sweep trims `user_notifications`, and the campaigns page in the

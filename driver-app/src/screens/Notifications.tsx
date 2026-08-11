@@ -98,7 +98,9 @@ export function NotificationsScreen() {
       // القراءةُ محلياً كذلك: الخلفية تردّ العدّاد لا الصفوف
       setEntries((current) =>
         (current ?? []).map((entry) =>
-          entry.read_at ? entry : { ...entry, read_at: new Date().toISOString() },
+          entry.read_at
+            ? entry
+            : { ...entry, read_at: new Date().toISOString() },
         ),
       );
     } catch (caught) {
@@ -153,7 +155,10 @@ export function NotificationsScreen() {
 
       <ul className="flex flex-col gap-9">
         {(entries ?? []).map((entry) => {
-          const style = KIND_STYLE[entry.kind] ?? { icon: Bell, tone: "text-muted" };
+          const style = KIND_STYLE[entry.kind] ?? {
+            icon: Bell,
+            tone: "text-muted",
+          };
           const Icon = style.icon;
           return (
             <li key={entry.id}>
