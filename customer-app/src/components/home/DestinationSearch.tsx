@@ -2,15 +2,20 @@
  *
  * لذلك زرُّ «حدّدها على الخريطة» ظاهرٌ دائماً بجانب النتائج، ولا يعتمد شيءٌ
  * هنا على نجاح البحث: عنوانٌ لم يُعثر عليه لا يمنع رحلة.
+ *
+ * **والأماكنُ المحفوظة والوجهاتُ الأخيرة تظهران قبل الكتابة وتختفيان بعدها**
+ * (`FUTURE-FEATURES` بند 1 و2): من فتح الورقة ليذهب إلى بيته لا يكتب، ومن
+ * بدأ يكتب لا يريد قائمةً تزاحم نتائجه.
  */
 
-import { Loader2, MapPin, Navigation, Search } from "lucide-react";
+import { Briefcase, Clock, House, Loader2, MapPin, Navigation, Search, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { CountryCode, Coordinates } from "@/api/types";
 import { DrawerSheet } from "@/components/ui/Sheet";
 import { EmptyState } from "@/components/ui/Feedback";
 import { searchPlaces, type Place } from "@/lib/geocode";
+import { usePlaces } from "@/lib/places";
 
 const DEBOUNCE_MS = 350;
 
@@ -31,9 +36,11 @@ export function DestinationSearch({
   onPick: (place: Place) => void;
   onPickOnMap: () => void;
 }) {
+  const { places, recents } = usePlaces();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
+  const typing = query.trim().length >= 2;
 
   useEffect(() => {
     if (!open) {
@@ -99,6 +106,75 @@ export function DestinationSearch({
           <span className="font-medium text-ink">حدّدها على الخريطة بالدبوس</span>
         </button>
 
+        {!typing && places.length > 0 ? (
+          <section>
+            <p className="mb-8 text-12 text-muted">أماكن محفوظة</p>
+            <ul className="space-y-4">
+              {places.map((place) => (
+                <li key={place.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onPick({
+                        id: `place:${place.id}`,
+                        name: place.label,
+                        address: place.address ?? "",
+                        coordinates: { lat: place.lat, lng: place.lng },
+                      });
+                      onOpenChange(false);
+                    }}
+                    className="flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
+                  >
+                    <PlaceIconMark icon={place.icon} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-ink">
+                        {place.label}
+                      </span>
+                      {place.address ? (
+                        <span className="block truncate text-14 text-muted">
+                          {place.address}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {!typing && recents.length > 0 ? (
+          <section>
+            <p className="mb-8 text-12 text-muted">وجهات أخيرة</p>
+            <ul className="space-y-4">
+              {recents.map((recent) => (
+                <li key={recent.key}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onPick({
+                        id: `recent:${recent.key}`,
+                        name: recent.address,
+                        address: "",
+                        coordinates: recent.point,
+                      });
+                      onOpenChange(false);
+                    }}
+                    className="flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
+                  >
+                    <Clock className="mt-2 size-20 shrink-0 text-muted" />
+                    {/* سطرٌ واحدٌ كاملاً — تفكيكُ العنوان إلى مكانٍ ومنطقة
+                        تخمينٌ يخطئ على ما لا يشبه المثال (البند 2) */}
+                    <span className="min-w-0 truncate font-medium text-ink">
+                      {recent.address}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         <ul className="space-y-4">
           {results.map((place) => (
             <li key={place.id}>
@@ -137,4 +213,11 @@ export function DestinationSearch({
       </div>
     </DrawerSheet>
   );
+}
+
+/** أيقونةُ المكان — و**المجهولُ نجمة** لا فراغ: نوعٌ جديد في الخلفية يظهر
+ * بشكلٍ محايد بدل أن يختفي الصف. */
+function PlaceIconMark({ icon }: { icon: string }) {
+  const Mark = icon === "home" ? House : icon === "work" ? Briefcase : Star;
+  return <Mark className="mt-2 size-20 shrink-0 text-brand" />;
 }

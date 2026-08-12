@@ -200,6 +200,19 @@ export interface RideStop {
   over_max_wait: boolean;
 }
 
+/** مكانٌ محفوظ — و`icon` نصٌّ محروسٌ في الخلفية لا `ENUM` في القاعدة. */
+export type PlaceIcon = "home" | "work" | "star";
+
+export interface SavedPlace {
+  id: string;
+  label: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+  icon: string;
+  created_at: string;
+}
+
 export interface Payment {
   id: string;
   ride_id: string;

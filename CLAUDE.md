@@ -32,6 +32,14 @@ Behind `multi_stop_enabled`, off by default, seeded explicitly, and **not** in
 entirely (the `women_service_enabled` rule) and blocks new requests only: rides already running
 finish normally.
 
+**`FUTURE-FEATURES` items 1–3 are built** on top of it: `saved_places` (a table, capped per user,
+unique label, ownership checked on every route) with shortcuts on Home, a section in the search
+sheet, and a page under the menu; recent destinations **derived from `GET /rides/me` with no table**,
+folded by rounded coordinates rather than address text (the same point gets two spellings from
+Geocoding) and with saved places filtered out so one sheet never lists a destination twice; and
+"re-order" from a finished ride, which starts a **new request** at the same two points — the price
+is recomputed, stops are not copied, and the preference is read from the profile.
+
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — none of it started, and each needs its own SPEC pass first) **and stage 13**
 (tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →

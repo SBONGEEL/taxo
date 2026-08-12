@@ -19,6 +19,7 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { RideProvider } from "@/lib/ride";
+import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider } from "@/lib/theme";
 import { LoginScreen } from "@/screens/Login";
@@ -69,6 +70,9 @@ const WalletTransferScreen = lazy(() =>
 );
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
+);
+const PlacesScreen = lazy(() =>
+  import("@/screens/Places").then((m) => ({ default: m.PlacesScreen })),
 );
 const CardReturnScreen = lazy(() =>
   import("@/screens/CardReturn").then((m) => ({ default: m.CardReturnScreen })),
@@ -129,6 +133,8 @@ export default function App() {
               مفتاح دولتها، فلا معنى لها قبلهما */}
           <BrandProvider>
             <Boot>
+              {/* تحت الجلسة: الأماكنُ والوجهاتُ الأخيرة كلاهما لحسابٍ بعينه */}
+              <PlacesProvider>
               <RideProvider>
                 <Router>
                   <Toasts />
@@ -243,6 +249,14 @@ export default function App() {
                         }
                       />
                       <Route
+                        path="/places"
+                        element={
+                          <Guarded>
+                            <PlacesScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
                         path="/cards"
                         element={
                           <Guarded>
@@ -264,6 +278,7 @@ export default function App() {
                   </Suspense>
                 </Router>
               </RideProvider>
+              </PlacesProvider>
             </Boot>
           </BrandProvider>
         </SessionProvider>

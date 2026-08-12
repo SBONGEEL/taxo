@@ -130,6 +130,27 @@ class DriverWalletOut(WalletOut):
     min_withdrawal_amount: Decimal
 
 
+class EarningsOut(BaseModel):
+    """ملخّصُ أرباح الكبتن على نافذة (SPEC القسم 9 و12/7).
+
+    **ثلاثةُ أرقامٍ لا رقم**: ما دخل المحفظة، وما اقتُطع عمولةً، وما قبضه
+    بيده كاشاً أو كليكاً — والأخيرُ **لا يزيد رصيده** ويُعرض موسوماً، لأن
+    كشفاً يخفي نصف دخله كشفٌ لا يُصدَّق (القسم 9).
+    """
+
+    period: str
+    from_at: datetime
+    to_at: datetime
+    currency: str
+
+    wallet_earnings: Decimal
+    commission: Decimal
+    # **قد يكون سالباً**: عمولةُ رحلةٍ نقدية تُخصم بلا أرباحَ تقابلها
+    net: Decimal
+    directly_collected: Decimal
+    completed_rides: int
+
+
 # ------------------------------------------------------- إجراءات الإدارة
 
 

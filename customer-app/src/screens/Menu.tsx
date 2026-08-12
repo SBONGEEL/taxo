@@ -1,6 +1,6 @@
 /** القائمة: مدخل بقية الشاشات (SPEC القسم 11.6–11.8). */
 
-import { ChevronLeft, Clock, CreditCard, User, Wallet } from "lucide-react";
+import { ChevronLeft, Clock, CreditCard, MapPin, User, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Screen } from "@/components/ui/Screen";
@@ -9,6 +9,7 @@ import { useSession } from "@/lib/session";
 const ITEMS = [
   { to: "/rides", icon: Clock, label: "رحلاتي", hint: "السجل والتفاصيل" },
   { to: "/wallet", icon: Wallet, label: "محفظتي", hint: "الرصيد والشحن والسجل" },
+  { to: "/places", icon: MapPin, label: "الأماكن المحفوظة", hint: "المنزل والعمل وغيرهما" },
   { to: "/cards", icon: CreditCard, label: "بطاقاتي", hint: "الدفع بضغطة" },
   { to: "/profile", icon: User, label: "الملف الشخصي", hint: "بياناتك وإشعاراتك" },
 ];

@@ -17,7 +17,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Crosshair, Menu, Search, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { requestRide, updateMe } from "@/api/endpoints";
@@ -38,14 +38,25 @@ import { useCountryConfig, useMapboxToken } from "@/lib/config";
 import { DEFAULT_CENTER, currentPosition, reverseGeocode, type Place } from "@/lib/geocode";
 import { RIDE_STATUS_LABEL } from "@/lib/labels";
 import { isActive, useRide } from "@/lib/ride";
+import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
+/** ما يحمله «أعد الطلب» — نقطتان وعنواناهما، **بلا محطاتٍ ولا سعر**. */
+interface AgainState {
+  pickup: Coordinates;
+  pickupAddress: string | null;
+  dropoff: Coordinates;
+  dropoffAddress: string | null;
+}
+
 export function HomeScreen() {
   const navigate = useNavigate();
   const { user, refreshUser } = useSession();
+  const { places } = usePlaces();
+  const location = useLocation();
   const { ride, drivers, driverPing, setViewport, refresh, setRide } = useRide();
   const token = useMapboxToken();
   const countryConfig = useCountryConfig(user?.country_code);
@@ -87,6 +98,20 @@ export function HomeScreen() {
       cancelled = true;
     };
   }, []);
+
+  // **«أعد الطلب»**: يصل بنقطتَي رحلةٍ مضت في حالة التنقّل، فتُفتح شاشةُ
+  // التأكيد بهما مباشرةً (`FUTURE-FEATURES` بند 3). و`replace` بعدها: رجوعٌ
+  // إلى الخلف ثم تقدّمٌ لا يجوز أن يعيد فتحها من جديد
+  useEffect(() => {
+    const again = (location.state as { again?: AgainState } | null)?.again;
+    if (!again) return;
+    setPickup(again.pickup);
+    setPickupAddress(again.pickupAddress);
+    setDropoff(again.dropoff);
+    setDropoffAddress(again.dropoffAddress);
+    setPhase("confirm");
+    window.history.replaceState({}, "");
+  }, [location.state]);
 
   // مركز الخريطة يذهب للخلفية فترسل السيارات حوله — لا سياراتَ بلا مركز
   useEffect(() => {
@@ -358,6 +383,36 @@ export function HomeScreen() {
                     <Search className="size-20 text-muted" />
                     <span className="text-muted">ابحث عن وجهتك أو حدّدها بالدبوس</span>
                   </button>
+                  {/* اختصارا «المنزل» و«العمل» — أولُ مكانين محفوظين
+                      (`FUTURE-FEATURES` بند 1). ولا يظهر الصفُّ بلا أماكن:
+                      صفٌّ فارغٌ دائمٌ لأجل حالةٍ لم تقع بعد */}
+                  {places.length > 0 ? (
+                    <div className="flex gap-8">
+                      {places.slice(0, 2).map((place) => (
+                        <button
+                          key={place.id}
+                          type="button"
+                          onClick={() =>
+                            pickPlace({
+                              id: `place:${place.id}`,
+                              name: place.label,
+                              address: place.address ?? "",
+                              coordinates: { lat: place.lat, lng: place.lng },
+                            })
+                          }
+                          className="min-w-0 flex-1 rounded-12 border border-line bg-surface px-12 py-10 text-start transition hover:bg-surface-2"
+                        >
+                          <span className="block truncate font-medium text-ink">
+                            {place.label}
+                          </span>
+                          <span className="block truncate text-12 text-muted">
+                            {place.address ?? "نقطة محفوظة"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
                   <button
                     type="button"
                     onClick={() => setPhase("pick-pickup")}

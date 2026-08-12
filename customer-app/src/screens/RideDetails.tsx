@@ -141,6 +141,32 @@ export function RideDetailsScreen() {
             قيّم هذه الرحلة
           </Button>
         ) : null}
+
+        {/* «أعد الطلب» — **طلبٌ جديد بنفس النقطتين لا نسخُ رحلةٍ مضت**
+            (`FUTURE-FEATURES` بند 3): السعرُ يُعاد حسابه، والمحطاتُ لا
+            تُنسخ (قد لا تكون الخدمة مفعّلة اليوم)، والتفضيلُ يُقرأ من الملف
+            كأي طلبٍ جديد. ولا يظهر إلا على رحلةٍ انتهت: إعادةُ طلبِ رحلةٍ
+            جارية تعني رحلتين */}
+        {ride.status === "completed" ? (
+          <Button
+            size="lg"
+            variant="secondary"
+            onClick={() =>
+              navigate("/", {
+                state: {
+                  again: {
+                    pickup: ride.pickup,
+                    pickupAddress: ride.pickup_address,
+                    dropoff: ride.dropoff,
+                    dropoffAddress: ride.dropoff_address,
+                  },
+                },
+              })
+            }
+          >
+            أعد الطلب
+          </Button>
+        ) : null}
       </div>
     </Screen>
   );

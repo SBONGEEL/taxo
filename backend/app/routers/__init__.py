@@ -18,6 +18,7 @@ from app.routers import (
     drivers,
     notifications,
     payments,
+    places,
     rides,
     subscriptions,
     wallet,
@@ -30,6 +31,7 @@ api_router.include_router(auth.router)
 api_router.include_router(devices.router)
 api_router.include_router(notifications.router)
 api_router.include_router(drivers.router)
+api_router.include_router(places.router)
 api_router.include_router(rides.router)
 api_router.include_router(payments.router)
 api_router.include_router(card_payments.router)

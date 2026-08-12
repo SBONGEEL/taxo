@@ -19,11 +19,13 @@ import type {
   NotificationPreferences,
   Payment,
   PaymentMethod,
+  PlaceIcon,
   Rating,
   Ride,
   RideEstimate,
   RidePayments,
   SavedCard,
+  SavedPlace,
   TopupRequest,
   TransferRecipient,
   User,
@@ -117,6 +119,31 @@ export const requestRide = (payload: {
   gender_preference?: GenderPreference;
   stops?: { lat: number; lng: number; address?: string | null }[];
 }) => api.post<Ride>("/rides", payload);
+
+// ------------------------------------------------------- الأماكن المحفوظة
+
+export const listPlaces = () => api.get<SavedPlace[]>("/me/places");
+
+export const createPlace = (payload: {
+  label: string;
+  lat: number;
+  lng: number;
+  address?: string | null;
+  icon?: PlaceIcon;
+}) => api.post<SavedPlace>("/me/places", payload);
+
+export const updatePlace = (
+  id: string,
+  payload: Partial<{
+    label: string;
+    lat: number;
+    lng: number;
+    address: string | null;
+    icon: PlaceIcon;
+  }>,
+) => api.patch<SavedPlace>(`/me/places/${id}`, payload);
+
+export const deletePlace = (id: string) => api.del<void>(`/me/places/${id}`);
 
 export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
 
