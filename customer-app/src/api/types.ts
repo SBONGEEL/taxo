@@ -24,7 +24,9 @@ export type RideStatus =
   | "cancelled_by_driver"
   | "no_driver_found";
 
-export type PaymentMethod = "cash" | "cliq" | "card" | "wallet";
+/** ومنها `promo` (12-ز): **قناةٌ لا يدفعها الراكب** — تُنشئها المنصةُ بقيمة
+ *  خصم الكوبون فتظهر صفَّاً في الإيصال. لا تُعرض خياراً في شاشة الدفع. */
+export type PaymentMethod = "cash" | "cliq" | "card" | "wallet" | "promo";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 
@@ -83,6 +85,15 @@ export interface ChallengeResponse {
   resend_after: number | null;
   /** القناةُ التي أُرسل فيها الرمز فعلاً — تقولها الشاشة لصاحبها. */
   channel: string | null;
+}
+
+/** معاينةُ كوبونٍ كما ردّتها الخلفية (12-ز) — **لا تحسبها الشاشة**. */
+export interface PromoPreview {
+  code: string;
+  discount_type: "percent" | "fixed";
+  discount: string;
+  fare_after: string;
+  currency: Currency;
 }
 
 /** البقشيش (المرحلة 12-و) — **والخلفيةُ تقرّر أن يُعرض أصلاً**. */

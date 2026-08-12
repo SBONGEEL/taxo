@@ -371,7 +371,9 @@ export interface MySubscription {
 /** مرآةُ `PaymentMethod` — أربعُ قنوات. **ولا `mixed` فيها**: الدفعُ المختلط
  * (محفظة + كاش) **صفّان** على رحلةٍ واحدة لا قناةٌ ثالثة، ولذلك لا فهرس فريد
  * على `payments.ride_id` أصلاً (القسم 6). */
-export type PaymentMethod = "cash" | "wallet" | "card" | "cliq";
+/** ومنها `promo` (12-ز): خصمُ كوبونٍ تدفعه الشركة — يُقيَّد للكبتن كأي دفعةٍ
+ *  تمرّ بالمنصة، فيراه في كشفه لا في «تقبض الآن». */
+export type PaymentMethod = "cash" | "wallet" | "card" | "cliq" | "promo";
 /** مرآةُ `PaymentStatus` في `app/models/enums.py` — خمسُ قيمٍ لا ستّ.
  *
  * ولا `awaiting_confirmation` فيها: انتظارُ تأكيد الكبتن **ليس حالاً** بل

@@ -297,6 +297,12 @@ async def _payment_mix(
 
     عدداً لأن السؤال «بأي شيء يدفع الناس»، ومبلغُ قناةٍ واحدة قد ترفعه رحلةٌ
     طويلة فتقرأ اللوحة عادةً لا وجود لها.
+
+    **و`promo` خارج المزيج** (12-ز): السؤال «بأي شيء **يدفع الناس**»، وخصمُ
+    الكوبون قناةٌ لا يختارها أحد — تدفعها الشركةُ عن الراكب ولا تُعرض له في شاشة
+    الدفع أصلاً. وإدخالُها يضيف شريحةً تُقرأ سلوكَ ركّابٍ وهي قرارُ تسويقٍ، ويغيّر
+    معنى رسمٍ قائمٍ في اللوحة بلا أن يطلب أحدٌ تغييره. وكلفةُ الحملة لها أرقامُها
+    في جدول الرموز (`spent`/`committed`).
     """
     rows = await session.execute(
         select(Payment.method, func.count())
@@ -309,8 +315,12 @@ async def _payment_mix(
         )
         .group_by(Payment.method)
     )
-    mix = {method.value: 0 for method in PaymentMethod}
+    mix = {
+        method.value: 0 for method in PaymentMethod if method is not PaymentMethod.PROMO
+    }
     for method, count in rows.all():
+        if method is PaymentMethod.PROMO:
+            continue
         mix[method.value] = int(count)
     return mix
 

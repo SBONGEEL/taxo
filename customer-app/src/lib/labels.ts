@@ -53,6 +53,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cliq: "كليك",
   card: "بطاقة",
   cash: "كاش",
+  // خصمُ كوبونٍ (12-ز) — **تدفعه الشركة** لا الراكب، فيقرؤه صفَّاً في إيصاله
+  promo: "خصم كوبون",
 };
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {

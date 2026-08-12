@@ -181,7 +181,11 @@ export function HomeScreen() {
     if (pickup) map.current?.fitBounds(pickup, point);
   }
 
-  async function submit(category: VehicleCategory, preference: GenderPreference) {
+  async function submit(
+    category: VehicleCategory,
+    preference: GenderPreference,
+    promoCode?: string,
+  ) {
     if (!pickup || !dropoff) return;
     setRequesting(true);
     setError(null);
@@ -193,6 +197,9 @@ export function HomeScreen() {
         pickup_address: pickupAddress,
         dropoff_address: dropoffAddress,
         gender_preference: preference,
+        // **الرمزُ يُرسل مع الطلب** (12-ز): الخلفيةُ تُجمّد قاعدتَه على الرحلة،
+        // ورمزٌ خاطئ يرفض الطلبَ كلَّه بدل أن يمرّ بلا خصمٍ في صمت
+        promo_code: promoCode,
         stops: stops.map((stop) => ({
           lat: stop.lat,
           lng: stop.lng,

@@ -10,6 +10,12 @@
  * تسعيرة الدولة المنشورة؟ لا تُنشر. فالسطرُ يُصاغ من **الرسوم المجمَّدة على
  * الرحلة** بعد الطلب، وقبله يقول ما يقع لا كم يكلّف — وهذا هو الصدق الممكن.
  *
+ * **والكوبونُ يُتحقق منه في الخلفية لا هنا** (المرحلة 12-ز، القسم 6.6): الشاشةُ
+ * ترسل الرمزَ إلى `POST /rides/promo/validate` وتعرض ما ردّته — لا تضرب نسبةً
+ * في تقدير. ثم يُرسل الرمزُ **مع الطلب** فتُجمَّد قاعدتُه على الرحلة، والخصمُ
+ * النهائي يُحسب على الأجرة الفعلية عند الإنهاء. فما يُعرض هنا **عرضٌ لا
+ * التزام**، والسطرُ يقولها.
+ *
  * **واختيارُ «كبتنة فقط» يقول ثمنَه قبل الضغط لا بعده** (المرحلة 10-ج):
  * الكبتنات أقل عدداً، فالانتظارُ أطول والبحثُ يتسع إلى ١٠كم. وقولُ ذلك هنا
  * يجعل الانتظار خياراً اختارته؛ والسكوتُ عنه يجعله عطلاً يُشتكى منه — ثم
@@ -17,14 +23,15 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Car, CircleDot, Clock, MapPin, RefreshCw } from "lucide-react";
+import { Car, CircleDot, Clock, MapPin, RefreshCw, TicketPercent, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { estimateRide } from "@/api/endpoints";
+import { estimateRide, validatePromo } from "@/api/endpoints";
 import type {
   Coordinates,
   GenderPreference,
+  PromoPreview,
   RideEstimate,
   VehicleCategory,
 } from "@/api/types";
@@ -34,6 +41,8 @@ import { ErrorNote } from "@/components/ui/Feedback";
 import { Sheet } from "@/components/ui/Sheet";
 import { VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { useMultiStop } from "@/lib/multistop";
+import { usePromoCodes } from "@/lib/promo";
+import { useSession } from "@/lib/session";
 import { useWomenService } from "@/lib/women";
 import { cn, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
@@ -66,7 +75,11 @@ export function ConfirmRide({
   dropoffAddress: string | null;
   categories: VehicleCategory[];
   onEditDestination: () => void;
-  onRequest: (category: VehicleCategory, preference: GenderPreference) => void;
+  onRequest: (
+    category: VehicleCategory,
+    preference: GenderPreference,
+    promoCode?: string,
+  ) => void;
   requesting: boolean;
   requestError: string | null;
   stops: DraftStop[];
@@ -78,6 +91,7 @@ export function ConfirmRide({
   onClearPreference: () => void;
 }) {
   const women = useWomenService();
+  // دولةُ الحساب — الكوبونُ per-country فالتحقّقُ يحملها
   const multiStop = useMultiStop();
   const [category, setCategory] = useState<VehicleCategory>(categories[0] ?? "economy");
   // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها
@@ -87,6 +101,31 @@ export function ConfirmRide({
   const [estimate, setEstimate] = useState<RideEstimate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // الكوبون (12-ز): `applied` هو ما قبلته الخلفيةُ — لا ما كتبه الراكب
+  const promoEnabled = usePromoCodes();
+  const { user } = useSession();
+  const country = user?.country_code ?? "JO";
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [applied, setApplied] = useState<PromoPreview | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  // **الخصمُ يُعاد التحقق منه إن تغيّر التقدير**: تبديلُ الفئة أو إضافةُ محطةٍ
+  // يغيّر الأجرة، وخصمُ نسبةٍ محسوبٌ عليها — فرقمٌ قديمٌ يبقى معروضاً يكذب
+  useEffect(() => {
+    if (applied === null || estimate === null) return;
+    let cancelled = false;
+    validatePromo(applied.code, estimate.estimated_fare, country)
+      .then((next) => !cancelled && setApplied(next))
+      .catch(() => !cancelled && setApplied(null));
+    return () => {
+      cancelled = true;
+    };
+    // `applied.code` لا `applied`: الكائنُ يتبدّل بكل تحقّقٍ فتدور الحلقة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimate?.estimated_fare, applied?.code]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +152,25 @@ export function ConfirmRide({
     // المحطاتُ في التبعيات: إضافةُ محطةٍ أو ترتيبُها يغيّر المسار والرسم،
     // فيُعاد السؤال — ولا يُجمع فرقٌ في الواجهة
   }, [pickup, dropoff, category, stops]);
+
+  async function apply() {
+    if (!estimate) return;
+    setChecking(true);
+    setCouponError(null);
+    try {
+      // **الخلفيةُ تحسب الخصم** — والشاشةُ تعرض ما ردّته (القسم 14)
+      setApplied(
+        await validatePromo(couponInput.trim(), estimate.estimated_fare, country),
+      );
+      setCouponOpen(false);
+    } catch (caught) {
+      setCouponError(
+        caught instanceof ApiError ? caught.message : "تعذّر التحقق من الرمز",
+      );
+    } finally {
+      setChecking(false);
+    }
+  }
 
   return (
     <Sheet>
@@ -234,9 +292,22 @@ export function ConfirmRide({
               >
                 <div>
                   <p className="text-12 text-muted">السعر المقدّر</p>
-                  <p className="text-24 font-bold text-ink">
-                    {formatMoney(estimate.estimated_fare, estimate.currency)}
-                  </p>
+                  {applied ? (
+                    // **الأصلُ مشطوبٌ والمخصومُ بارز**: رقمٌ واحدٌ بعد الخصم
+                    // يخفي أن هناك خصماً، ورقمان بلا شطبٍ يُقرآن مبلغين
+                    <p className="flex items-baseline gap-8">
+                      <span className="text-24 font-bold text-ok">
+                        {formatMoney(applied.fare_after, estimate.currency)}
+                      </span>
+                      <span className="text-14 text-muted line-through">
+                        {formatMoney(estimate.estimated_fare, estimate.currency)}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-24 font-bold text-ink">
+                      {formatMoney(estimate.estimated_fare, estimate.currency)}
+                    </p>
+                  )}
                   {estimate.minimum_fare_applied ? (
                     <p className="mt-2 text-12 text-muted">طُبِّق الحد الأدنى للأجرة</p>
                   ) : null}
@@ -249,6 +320,70 @@ export function ConfirmRide({
             ) : null}
           </AnimatePresence>
         </div>
+
+        {/* ورقةُ الكوبون (12-ز) — وتُخفى كلُّها حيث المفتاح مطفأ: زرٌّ يقول
+            «كوبون» في سوقٍ لا كوبوناتَ فيه يفتح حقلاً لا رمزَ يُقبل فيه */}
+        {promoEnabled ? (
+          <div className="rounded-12 border border-line bg-surface p-12">
+            {applied ? (
+              <div className="flex items-center justify-between gap-8">
+                <span className="flex items-center gap-8 text-14 font-medium text-ok">
+                  <TicketPercent className="size-16" />
+                  خصم مُطبَّق — {formatMoney(applied.discount, applied.currency)}
+                </span>
+                <button
+                  type="button"
+                  aria-label="أزل الكوبون"
+                  onClick={() => {
+                    setApplied(null);
+                    setCouponInput("");
+                    setCouponError(null);
+                  }}
+                  className="text-muted"
+                >
+                  <X className="size-16" />
+                </button>
+              </div>
+            ) : couponOpen ? (
+              <div className="space-y-8">
+                <label className="text-12 text-muted" htmlFor="promo">
+                  رمز الكوبون
+                </label>
+                <div className="flex gap-8">
+                  <input
+                    id="promo"
+                    dir="ltr"
+                    autoFocus
+                    maxLength={32}
+                    placeholder="WELCOME"
+                    className="field flex-1 uppercase"
+                    value={couponInput}
+                    onChange={(event) => setCouponInput(event.target.value)}
+                  />
+                  <Button
+                    size="md"
+                    className="w-auto px-16"
+                    loading={checking}
+                    disabled={couponInput.trim().length < 2 || !estimate}
+                    onClick={() => void apply()}
+                  >
+                    تطبيق
+                  </Button>
+                </div>
+                <ErrorNote message={couponError} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCouponOpen(true)}
+                className="flex w-full items-center gap-8 text-14 font-medium text-ink"
+              >
+                <TicketPercent className="size-16 text-muted" />
+                عندي كوبون خصم
+              </button>
+            )}
+          </div>
+        ) : null}
 
         {blockedByPreference ? (
           <div className="rounded-12 border border-warn bg-surface-2 px-14 py-12">
@@ -276,7 +411,7 @@ export function ConfirmRide({
           size="lg"
           loading={requesting}
           disabled={!estimate || loading}
-          onClick={() => onRequest(category, preference)}
+          onClick={() => onRequest(category, preference, applied?.code)}
         >
           اطلب الرحلة
         </Button>

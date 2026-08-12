@@ -27,6 +27,7 @@ import type {
   RideEstimate,
   RidePayments,
   SavedCard,
+  PromoPreview,
   SavedPlace,
   Tip,
   TipOptions,
@@ -130,6 +131,8 @@ export const requestRide = (payload: {
   /** غيابُه يعني «خذ افتراضي ملفي» لا `any` — القرار في الخلفية. */
   gender_preference?: GenderPreference;
   stops?: { lat: number; lng: number; address?: string | null }[];
+  /** رمزُ الكوبون كما قبلته الخلفيةُ في التحقق (12-ز) — ورمزٌ خاطئ يرفض الطلب. */
+  promo_code?: string;
 }) => api.post<Ride>("/rides", payload);
 
 // ------------------------------------------------------- الأماكن المحفوظة
@@ -183,6 +186,19 @@ export const nearbyDrivers = (lat: number, lng: number) =>
 
 export const listRideRatings = (rideId: string) =>
   api.get<Rating[]>(`/rides/${rideId}/ratings`);
+
+/** تحقّقٌ من كوبونٍ **لا يستهلكه** (12-ز): الخصمُ يُحسب في الخلفية على التقدير،
+ *  والرمزُ يُرسل بعدها مع الطلب فتُجمَّد قاعدتُه على الرحلة. */
+export const validatePromo = (
+  code: string,
+  fare: string,
+  countryCode: CountryCode,
+) =>
+  api.post<PromoPreview>("/rides/promo/validate", {
+    code,
+    country_code: countryCode,
+    fare,
+  });
 
 /** خيارا البقشيش وسقفُه — أو `offered=false` فلا تُرسم الأزرار (12-و). */
 export const getTipOptions = (rideId: string) =>

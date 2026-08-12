@@ -2,7 +2,13 @@
  *
  * الدفع المختلط رحلةٌ واحدة بصفّين: ما كفاه رصيد المحفظة والباقي كاش (SPEC
  * القسم 6). فعرضُ «الدفعة» مفرداً يخفي نصف ما دُفع.
+ *
+ * **وصفُّ `promo` خصمٌ لا دفعة** (12-ز): تدفعه الشركةُ عن الراكب، فيُرسم
+ * بإشارة ناقصٍ وبلون `--ok` بلا حالةٍ ولا تاريخ — «مؤكَّد» على خصمٍ تلقائيٍّ
+ * كلامٌ زائد، وعرضُه كدفعةٍ عادية يجعل الراكب يظن أنه دفع مبلغين.
  */
+
+import { TicketPercent } from "lucide-react";
 
 import type { Payment } from "@/api/types";
 import { Badge } from "@/components/ui/Feedback";
@@ -22,7 +28,21 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
     <section className="space-y-8">
       <h2 className="label">دفعات هذه الرحلة</h2>
       <ul className="space-y-8">
-        {payments.map((payment) => (
+        {payments.map((payment) =>
+          payment.method === "promo" ? (
+            <li
+              key={payment.id}
+              className="card flex items-center justify-between gap-8 p-12"
+            >
+              <span className="flex items-center gap-8 font-medium text-ok">
+                <TicketPercent className="size-16" />
+                {PAYMENT_METHOD_LABEL.promo}
+              </span>
+              <span className="font-semibold text-ok">
+                −{formatMoney(payment.amount, payment.currency)}
+              </span>
+            </li>
+          ) : (
           <li key={payment.id} className="card p-12">
             <div className="flex items-center justify-between gap-8">
               <span className="font-medium text-ink">
@@ -54,7 +74,8 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
               </p>
             ) : null}
           </li>
-        ))}
+          ),
+        )}
       </ul>
     </section>
   );

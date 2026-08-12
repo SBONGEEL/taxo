@@ -15,8 +15,8 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **614 backend tests pass**
-(55 files); all three frontends build with `check:scale` + `check:enums` green.
+contracts, users & permissions, audit log. Every nav entry has a screen. **637 backend tests pass**
+(57 files); all three frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -147,6 +147,33 @@ each serialises on its own. Deleting **both** turns two 1.500 tips on a 2.000 ba
 avoidance), not the double read — the same shape as the driver-row lock being redundant on the wallet
 subscription path and the only guard on the manual one. Verify a lock by deleting it, and if nothing
 fails, look for the other lock before believing the test.
+
+**Stage 12-ز — coupons — is done end to end** (`SPEC.md` §6.6, `promo_codes` + four frozen ride
+columns in §4, `services/promo.py`, the rider's coupon sheet, the receipt line, and the panel's codes
+table). **The decision the whole feature turns on came from reading the code, not from taste**:
+`ride_earning` and `commission` are both computed from `payment.amount` in `payments.settle`, so a
+discount that reduced `final_fare` would reduce what the *driver* earns — and the owner decided the
+*company* bears it. So the discount is **a second payment row with method `promo`**, created and
+auto-confirmed by the platform at completion; the mixed-payment machinery from 6-أ then does all the
+arithmetic with no new money rule. `promo` sits in **neither** method tuple — like card: not in
+`DIRECTLY_COLLECTED_METHODS` so the driver is credited, not in `WALLET_FUNDED_METHODS` so **the rider
+is never debited** (putting it there would make the rider pay their own coupon, which
+`test_the_riders_wallet_is_never_touched_by_the_discount` now prevents). A side effect worth knowing:
+"first ride free" needs no special case — a full discount makes `outstanding` zero and
+`create_payment` refuses on its own, so no second door writes money at completion.
+
+**Three columns deliberately absent**, each from an earlier lesson: no `budget_spent` (the spend is
+the sum of `promo` payments — the "no balance column" rule), no redemptions table (the ride carries
+the code, the payment carries the amount), and no `bearer` (one possible value today; the panel says
+"تتحمّلها الشركة" in words — the same reasoning that removed `status` from `tips`).
+
+**And the concurrency test found the budget cap guarding nothing.** It measured *spent* — confirmed
+`promo` payments — which only exist at completion, so three simultaneous requests on a
+one-ride budget all passed (`[201, 201, 201]`). The cap now measures **committed exposure**: confirmed
+payments + the discount of each in-flight ride computed on its estimate + the ride being requested.
+Verified by deletion: dropping `for_update` gives `[201, 201, 404]`. The per-user test, by contrast,
+**passes without the lock** — `uq_rides_active_rider` means one rider can never have two in-flight
+rides — so it is documented as guarding behaviour, not the lock.
 
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
@@ -362,6 +389,17 @@ are pixel values (`text-14.5`, `p-16`, `rounded-13`) and Tailwind's own scales a
 extended**, so `text-sm` or `p-4` is a build error rather than a silent drift to the nearest default.
 Dark is the default and does not follow the system — a captain works for hours with the screen in the
 car, and a theme that flips at sunset whitens his screen in a tunnel.
+
+**`overflow-x-auto` on a bar that contains a hover menu is a clipping bug waiting to happen.** CSS
+computes the *other* axis to `auto` when one axis is `auto` (`visible` becomes `auto`), so the panel's
+nav strip silently became a vertical clipping-and-scrolling box and its 130px dropdown was cut
+entirely — measured as `scrollHeight 172` inside `clientHeight 42`, which made the browser draw a
+vertical scrollbar (on the **left** edge in RTL). There is no `overflow-x: auto` with
+`overflow-y: visible` in CSS, so the fix is structural: `flex-wrap` instead of a scroll container.
+Judge this class of bug by measuring in the browser (`getComputedStyle().overflowY`,
+`offsetHeight - clientHeight`, `elementFromPoint` at the menu's edge), never from a screenshot — and
+note that `scrollHeight` on a `visible` box reports content bounds without anything being clipped, so
+it is the wrong probe for "is this cut off".
 
 **`lib/utils.ts::cn` configures `tailwind-merge` with this project's font-size scale, and that is
 not optional.** tailwind-merge knows Tailwind's default scales, not ours: our sizes are pixel-named

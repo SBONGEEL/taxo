@@ -43,22 +43,30 @@ const TYPE_LABEL: Record<PromoCode["discount_type"], string> = {
   fixed: "مبلغ ثابت",
 };
 
-function currencyOf(country: CountryCode): string {
-  return currencyLabel(country === "JO" ? "JOD" : "LYD");
+/** **رمزُ العملة لا تسميتُها**: `money()` هي التي تحوّل الرمزَ إلى «د.أ»
+ *  (`format.ts`)، فتمريرُ التسمية إليها يجعلها تبحث عن «د.أ» في جدول الرموز
+ *  فلا تجدها — فتُطبع المبالغُ **بلا عملةٍ أصلاً**. وهو ما وقع فعلاً حتى
+ *  قُرئ عقدُ الدالة. والتسميةُ وحدها تُطلب صريحةً حيث يلزم نصُّها. */
+function codeOf(country: CountryCode): "JOD" | "LYD" {
+  return country === "JO" ? "JOD" : "LYD";
+}
+
+function labelOf(country: CountryCode): string {
+  return currencyLabel(codeOf(country));
 }
 
 /** قيمةُ الخصم كما تُقرأ: «٥٠٪ حتى ٢ د.أ» أو «١ د.أ». */
 function describe(row: PromoCode, country: CountryCode): string {
   if (row.discount_type === "percent") {
     const cap = row.max_discount
-      ? ` حتى ${money(row.max_discount, currencyOf(country))}`
+      ? ` حتى ${money(row.max_discount, codeOf(country))}`
       : " حتى كامل الأجرة";
     // **بلا أصفار النقدية**: النسبةُ تأتي `NUMERIC(12,3)` أي «50.000»، وطبعُها
     // كما هي يقرأ «٥٠.٠٠٠٪». وهي نسبةٌ لا مبلغ، فتُقصّ أصفارُها الزائدة
     const percent = row.discount_value.replace(/\.?0+$/, "");
     return `${arabicDigits(percent)}٪${cap}`;
   }
-  return money(row.discount_value, currencyOf(country));
+  return money(row.discount_value, codeOf(country));
 }
 
 export function PromoCodes({ onError }: { onError: (message: string) => void }) {
@@ -153,13 +161,13 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
                       </span>
                     </td>
                     <td className="p-8 text-ink">
-                      {money(row.budget_total, currencyOf(row.country_code))}
+                      {money(row.budget_total, codeOf(row.country_code))}
                     </td>
                     <td className={cn("p-8", over ? "text-warn" : "text-ink")}>
-                      {money(row.committed, currencyOf(row.country_code))}
+                      {money(row.committed, codeOf(row.country_code))}
                       <span className="text-muted">
                         {" / "}
-                        {money(row.spent, currencyOf(row.country_code))}
+                        {money(row.spent, codeOf(row.country_code))}
                       </span>
                     </td>
                     <td className="p-8 text-ink">
@@ -281,7 +289,7 @@ function NewPromoModal({
           <option value="fixed">مبلغ ثابت</option>
         </Select>
         <Field
-          label={type === "percent" ? "النسبة ٪" : `المبلغ (${currencyOf(country)})`}
+          label={type === "percent" ? "النسبة ٪" : `المبلغ (${labelOf(country)})`}
           id="promo-value"
           dir="ltr"
           inputMode="decimal"
@@ -293,7 +301,7 @@ function NewPromoModal({
       {type === "percent" ? (
         <div className="mt-12">
           <Field
-            label={`سقف الخصم (${currencyOf(country)}) — اتركه فارغاً لكامل الأجرة`}
+            label={`سقف الخصم (${labelOf(country)}) — اتركه فارغاً لكامل الأجرة`}
             id="promo-cap"
             dir="ltr"
             inputMode="decimal"
@@ -309,7 +317,7 @@ function NewPromoModal({
 
       <div className="mt-12 grid grid-cols-2 gap-10">
         <Field
-          label={`ميزانية الحملة (${currencyOf(country)})`}
+          label={`ميزانية الحملة (${labelOf(country)})`}
           id="promo-budget"
           dir="ltr"
           inputMode="decimal"
