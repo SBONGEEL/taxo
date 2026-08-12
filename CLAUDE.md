@@ -18,7 +18,21 @@ finance, subscriptions/plans, pricing, reports, campaigns, per-country settings,
 contracts, users & permissions, audit log. Every nav entry has a screen. **523 backend tests pass**
 (46 files); all three frontends build with `check:scale` + `check:enums` green.
 
-**Next is stage 12** (Phase-2 product features behind feature flags: scheduled rides, ride sharing,
+**Next is stage 12-ب — multi-stop**, specced in SPEC §5.10 / §16 and not yet coded. Up to three
+destinations per ride: two intermediate rows in `ride_stops`, the last one staying
+`rides.dropoff_point` (moving it would mean either touching pricing, dispatch, the offer card, the
+admin log and the socket frames, or keeping the column as a *mirror* of the last row — and a value
+with two homes diverges). Waiting is three admin-managed per-country fields plus a cap, all four
+**frozen on the ride** exactly like `commission_percent_at_ride`. The clock is stamped in the
+backend (`ride_stops.arrived_at`/`resumed_at`, no `waited_minutes` column — two columns for one
+time diverge); the app renders elapsed *time* locally and receives the *amount* computed by the
+backend, because showing time is a time calculation and showing money is a money calculation.
+Behind `multi_stop_enabled`, off by default, seeded explicitly, and **not** in
+`DEFAULT_ENABLED_FLAGS` — that list is guards only. Turning it off hides the "add stop" button
+entirely (the `women_service_enabled` rule) and blocks new requests only: rides already running
+finish normally.
+
+**Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — none of it started, and each needs its own SPEC pass first) **and stage 13**
 (tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →
 rider requests → tracking → payment → withdrawal).
