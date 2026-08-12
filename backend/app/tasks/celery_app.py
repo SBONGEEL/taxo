@@ -35,6 +35,7 @@ CAMPAIGN_INTERVAL_SECONDS = 60
 # دورة كنس مهل تأكيد كليك (القسم 6.2/6). خمسُ دقائق كدورة الاشتراكات: المهلة
 # نفسها بالساعات، فدقّةُ الدقيقة لا تشتري شيئاً — والتأخرُ خمس دقائق في فتح
 # نزاعٍ أهونُ من استعلامٍ كل دقيقة على جدول الدفعات.
+STOP_WAIT_INTERVAL_SECONDS = 60.0
 CLIQ_SWEEP_INTERVAL_SECONDS = 300
 
 celery_app = Celery(
@@ -44,6 +45,7 @@ celery_app = Celery(
     include=[
         "app.tasks.notifications",
         "app.tasks.payments",
+        "app.tasks.stops",
         "app.tasks.subscriptions",
     ],
 )
@@ -67,6 +69,12 @@ celery_app.conf.update(
         "sweep-cliq-confirmations": {
             "task": "app.tasks.payments.sweep_cliq_confirmations",
             "schedule": CLIQ_SWEEP_INTERVAL_SECONDS,
+        },
+        # كل دقيقة: السقفُ يُقاس بالدقائق، ودورةٌ كل خمسٍ تجعل تنبيهاً عن
+        # تجاوزٍ يصل بعد خمس دقائق من وقوعه — والراكب واقفٌ يقرأ عدّاده
+        "sweep-stop-waiting": {
+            "task": "app.tasks.stops.sweep_stop_waiting",
+            "schedule": STOP_WAIT_INTERVAL_SECONDS,
         },
     },
 )

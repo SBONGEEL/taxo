@@ -18,7 +18,7 @@ finance, subscriptions/plans, pricing, reports, campaigns, per-country settings,
 contracts, users & permissions, audit log. Every nav entry has a screen. **523 backend tests pass**
 (46 files); all three frontends build with `check:scale` + `check:enums` green.
 
-**Next is stage 12-ب — multi-stop**, specced in SPEC §5.10 / §16 and not yet coded. Up to three
+**Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
 `rides.dropoff_point` (moving it would mean either touching pricing, dispatch, the offer card, the
 admin log and the socket frames, or keeping the column as a *mirror* of the last row — and a value
@@ -535,6 +535,44 @@ take over any account by knowing its number. Do not add feature flags to that se
 
 Money columns use `models/base.py::MONEY` (`NUMERIC(12,3)`); currency is derived from the country via
 `core/currency.py::currency_for_country` and is never accepted from a client.
+
+**Multi-stop (12-ب) lives inside that same door, and four details are worth knowing before
+touching it.** `at_stop` sits between `in_progress` and itself, with a third exit to `completed`
+for the wait cap; it is in **both** `ACTIVE_*_STATUSES` (a rider waiting at his stop is not free to
+order another ride), which is why migration `0018` rebuilds the two partial unique indexes.
+That migration is also where two Postgres traps met: `ALTER TYPE … ADD VALUE` cannot be used in the
+same transaction, and the `::text` cast that `0009` used to dodge that in a CHECK is rejected in an
+**index predicate** (`functions in index predicate must be marked IMMUTABLE`). Since `env.py` wraps
+the whole chain in one transaction, splitting into two files would not help either — so `0018`
+issues an explicit `COMMIT` after the `ALTER TYPE`, and everything after it is written
+`IF NOT EXISTS` because that commit means a later failure no longer rolls back.
+
+**`current_leg` has exactly one writer** (`rides.resume_from_stop`, under the ride row lock) and
+`route.capture` copies it onto each point. Deriving the leg by counting resumed stops would put a
+COUNT on a path that runs every 20s per active ride; letting the capture guess would put a second
+writer on a value that must not disagree with itself.
+
+**Waiting is measured from `ride_stops.arrived_at`/`resumed_at` and nothing else** — no
+`waited_minutes` column, because two columns for one duration diverge. The amount is always
+computed in the backend (`pricing.waiting_charge`, at the rates frozen on the ride); the app renders
+the running clock from `arrived_at` locally. Showing elapsed time is a time calculation and showing
+money is a money calculation — §14 only forbids the second. Free minutes are **per stop**: someone
+who waited two minutes at each of two stops kept nobody waiting four minutes.
+
+**A new `RideStatus` value has to be added to four lists, not one**, and the two the compiler
+cannot see are what the visual pass caught. `models/ride.py` has `ACTIVE_RIDER_STATUSES` and
+`ACTIVE_DRIVER_STATUSES`; the rider app has `ACTIVE_RIDE_STATUSES` in `lib/labels.ts` and the driver
+app has `ACTIVE` in `lib/ride.tsx`. Both frontends are `RideStatus[]`/`Set<string>` — not string
+unions — so `check:enums` and `tsc` are both blind to a missing member. With `at_stop` absent, the
+rider saw the *ride-ended* sheet and the driver was returned to «ابدأ الاستقبال», both while the car
+was standing at the stop with the passenger in it. Nothing failed; the screens simply lied.
+
+**The cap notifies and never ends the ride.** `tasks/stops.py` runs every minute, stamps
+`notified_at` under the row lock so two workers cannot double-notify, and sends *different* text to
+each party (the rider learns the meter is now charging, the driver learns he has an exit) — which is
+why it has its own notifier like the CliQ expiry rather than a `RIDE_EVENT_TEXT` entry. Ending is
+the driver's act; a periodic task that completes a ride on a human's behalf does something nobody
+reviewed.
 
 **Ride state changes go through `services/rides.py`, never a router.** Every transition is checked
 against `ALLOWED_TRANSITIONS` before it is applied; routers only resolve who is allowed to ask.

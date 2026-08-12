@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint, SmallInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
@@ -23,6 +23,11 @@ class PricingRule(UUIDMixin, TimestampMixin, Base):
             "AND minimum_fare >= 0 AND cancellation_fee >= 0",
             name="pricing_amounts_non_negative",
         ),
+        CheckConstraint(
+            "stop_fee >= 0 AND stop_price_per_min >= 0 "
+            "AND stop_free_minutes >= 0 AND stop_max_wait_minutes >= 0",
+            name="pricing_stop_amounts_non_negative",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -37,6 +42,25 @@ class PricingRule(UUIDMixin, TimestampMixin, Base):
     price_per_min: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     minimum_fare: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     cancellation_fee: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+
+    # --- المحطات الوسيطة (المرحلة 12-ب، SPEC القسم 5.10) ---
+    # كلُّها **صفرٌ افتراضاً**: لا تُفتح كلفةٌ على راكبٍ بالسكوت، كما لا
+    # تُفعَّل عمولةٌ بالسكوت. والمشرف يضبطها per-country من شاشة التسعيرة
+    stop_fee: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
+    )
+    stop_free_minutes: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+    stop_price_per_min: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
+    )
+    # **صفرٌ يعني «لا سقف»** لا «سقفٌ مقداره صفر» — كما يُقرأ صفرُ حدِّ
+    # التحويل «لم يُضبط» (SPEC القسم 7). وسقفٌ مقداره صفرٌ كان سينبّه الطرفين
+    # لحظةَ الوصول
+    stop_max_wait_minutes: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<PricingRule {self.country_code}/{self.vehicle_category}>"

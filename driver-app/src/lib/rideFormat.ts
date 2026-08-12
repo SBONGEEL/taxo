@@ -48,6 +48,7 @@ export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
   searching: "نبحث عن كبتن",
   accepted: "مقبولة",
   arrived: "الكبتن وصل",
+  at_stop: "وقوفٌ عند محطة",
   in_progress: "جارية",
   completed: "مكتملة",
   cancelled_by_rider: "ألغاها الراكب",

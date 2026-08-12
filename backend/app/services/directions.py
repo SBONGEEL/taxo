@@ -1,4 +1,4 @@
-"""Mapbox Directions — المسافة والمدة بين نقطتين.
+"""Mapbox Directions — المسافة والمدة على مسارٍ من نقطتين أو أكثر.
 
 تُستدعى من الخلفية حصراً (SPEC القسم 2): التوكن السري لا يغادرها، والواجهة
 لا تحسب سعراً ولا مسافة. مصدر التوكن هو `provider_credentials` — لا `.env`.
@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -39,11 +40,18 @@ class Route:
     duration_min: Decimal
 
 
-async def fetch_route(
-    token: str, pickup: Coordinates, dropoff: Coordinates
-) -> Route:
-    """نداء HTTP واحد لـ Mapbox — نقطة الحقن الوحيدة في الاختبارات."""
-    url = f"{MAPBOX_DIRECTIONS_URL}/{pickup.as_mapbox()};{dropoff.as_mapbox()}"
+async def fetch_route(token: str, *waypoints: Coordinates) -> Route:
+    """نداء HTTP واحد لـ Mapbox — نقطة الحقن الوحيدة في الاختبارات.
+
+    **نقطتان أو أكثر** (المرحلة 12-ب): Mapbox يقبل سلسلةَ إحداثياتٍ مفصولةً
+    بفاصلةٍ منقوطة ويعيد مسافةَ المسار كلِّه ومدتَه. فالرحلةُ متعددة المحطات
+    **نداءٌ واحد** لا نداءٌ لكل ساق: المجموعُ هو ما يُسعَّر، ونداءاتٌ متفرقة
+    تُحمّل الراكبَ التفافاً لا يقع (المسارُ الأمثل عبر المحطات أقصرُ من
+    مجموع المسارات المستقلة).
+    """
+    if len(waypoints) < 2:  # pragma: no cover - خطأ برمجي لا مدخلُ مستخدم
+        raise ValueError("المسار يحتاج نقطتين على الأقل")
+    url = f"{MAPBOX_DIRECTIONS_URL}/{';'.join(p.as_mapbox() for p in waypoints)}"
     params = {
         "access_token": token,
         "alternatives": "false",
@@ -81,8 +89,12 @@ async def route_between(
     pickup: Coordinates,
     dropoff: Coordinates,
     country_code: CountryCode | None = None,
+    stops: Sequence[Coordinates] = (),
 ) -> Route:
-    """المسار بين نقطتين بتوكن Mapbox السري المحفوظ في عقود المزودين."""
+    """المسار بتوكن Mapbox السري المحفوظ في عقود المزودين.
+
+    و`stops` محطاتٌ **وسيطة** بترتيبها بين الانطلاق والوجهة الأخيرة.
+    """
     values = await credentials_service.get_values(
         session, ProviderKey.MAPBOX, country_code
     )
@@ -90,4 +102,4 @@ async def route_between(
     if not token:
         raise RoutingUnavailable()
 
-    return await fetch_route(token, pickup, dropoff)
+    return await fetch_route(token, pickup, *stops, dropoff)

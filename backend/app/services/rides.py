@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -20,7 +21,9 @@ from sqlalchemy.orm import selectinload
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
     CancelReasonNotApplicable,
+    InvalidInput,
     InvalidRideTransition,
+    MultiStopUnavailable,
     NotFound,
     PermissionDenied,
     RideAlreadyActive,
@@ -39,12 +42,27 @@ from app.models.enums import (
 from app.models.ride import (
     ACTIVE_DRIVER_STATUSES,
     ACTIVE_RIDER_STATUSES,
+    MAX_INTERMEDIATE_STOPS,
     Ride,
+    RideStop,
     make_point,
 )
 from app.models.user import User
 from app.services import dispatch, pricing, route, settings_service
 from app.services.directions import Coordinates, Route
+
+@dataclass(frozen=True, slots=True)
+class StopRequest:
+    """محطةٌ وسيطة كما تصل من الطلب — **بترتيبها في القائمة**.
+
+    الترتيبُ والحذفُ يقعان في شاشة الطلب قبل التأكيد (SPEC القسم 5.10)، فتصل
+    الخلفيةَ قائمةٌ مرتَّبة ولا مسارَ لإعادة ترتيبِ رحلةٍ قائمة.
+    """
+
+    lat: float
+    lng: float
+    address: str | None = None
+
 
 # آلة الحالات — ما ليس هنا ممنوع (SPEC القسم 5)
 ALLOWED_TRANSITIONS: dict[RideStatus, frozenset[RideStatus]] = {
@@ -77,8 +95,13 @@ ALLOWED_TRANSITIONS: dict[RideStatus, frozenset[RideStatus]] = {
             RideStatus.CANCELLED_BY_DRIVER,
         }
     ),
-    # لا إلغاء بعد بدء الرحلة: الإنهاء هو المخرج الوحيد
-    RideStatus.IN_PROGRESS: frozenset({RideStatus.COMPLETED}),
+    # لا إلغاء بعد بدء الرحلة: الإنهاء هو المخرج الوحيد — ومعه الوقوفُ عند
+    # محطةٍ وسيطة (المرحلة 12-ب)
+    RideStatus.IN_PROGRESS: frozenset({RideStatus.COMPLETED, RideStatus.AT_STOP}),
+    # **ولا إلغاء من `at_stop` كما لا إلغاء من `in_progress`**: الراكب في
+    # السيارة، والانتظارُ جزءٌ من الرحلة لا فاصلٌ يعيد فتح ما أُغلق. ومخرجاها
+    # استئنافٌ، أو إنهاءٌ عند المحطة حين يتجاوز الانتظارُ سقفَه (القسم 5.10)
+    RideStatus.AT_STOP: frozenset({RideStatus.IN_PROGRESS, RideStatus.COMPLETED}),
     RideStatus.COMPLETED: frozenset(),
     RideStatus.CANCELLED_BY_RIDER: frozenset(),
     RideStatus.CANCELLED_BY_DRIVER: frozenset(),
@@ -207,6 +230,7 @@ async def request_ride(
     pickup_address: str | None = None,
     dropoff_address: str | None = None,
     gender_preference: GenderPreference | None = None,
+    stops: Sequence[StopRequest] = (),
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -219,6 +243,18 @@ async def request_ride(
     """
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()
+
+    # **الفحصُ عند الإنشاء لا عند العرض** (SPEC القسم 4/`multi_stop_enabled`):
+    # واجهةٌ تخفي زرَّ «إضافة محطة» لا تمنع طلباً مصنوعاً بيد. وإطفاءُ المفتاح
+    # يمنع الطلبات الجديدة وحدها — الرحلاتُ الجارية بمحطاتها تكمل
+    if stops and not await settings_service.is_feature_enabled(
+        session, rider.country_code, FeatureKey.MULTI_STOP_ENABLED
+    ):
+        raise MultiStopUnavailable()
+    if len(stops) > MAX_INTERMEDIATE_STOPS:
+        raise InvalidInput(
+            f"أقصى عدد محطاتٍ وسيطة {MAX_INTERMEDIATE_STOPS}"
+        )
 
     preference = (
         rider.ride_gender_preference if gender_preference is None else gender_preference
@@ -241,7 +277,10 @@ async def request_ride(
         vehicle_category=vehicle_category,
         pickup=pickup,
         dropoff=dropoff,
+        stops=[Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops],
     )
+    # تسعيرةُ الدولة تُقرأ مرةً واحدة: منها التقديرُ ومنها الحقولُ المجمَّدة
+    rule = await pricing.get_rule(session, rider.country_code, vehicle_category)
 
     ride = Ride(
         rider_id=rider.id,
@@ -262,8 +301,27 @@ async def request_ride(
         ),
         # يُجمَّد كالعمولة: تغييرُ الملف بعد الطلب لا يغيّر لمن يُعرض هذا الطلب
         gender_preference=preference,
+        # المحطاتُ ومعدلاتُ انتظارها **مجمَّدةٌ لحظتها** (SPEC القسم 5.10):
+        # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن
+        # يتغيّر عدّادُها تحت عين راكبها
+        stops_count=len(stops),
+        stop_fee_at_ride=rule.stop_fee,
+        stop_free_minutes_at_ride=rule.stop_free_minutes,
+        stop_price_per_min_at_ride=rule.stop_price_per_min,
+        stop_max_wait_minutes_at_ride=rule.stop_max_wait_minutes,
     )
     session.add(ride)
+
+    # الإلحاقُ بالمجموعة لا `RideStop(ride=…)`: العلاقةُ أحاديةُ الاتجاه
+    # (`Ride.stops` بلا `back_populates`)، والـcascade هو ما يكتب `ride_id`
+    for index, stop in enumerate(stops, start=1):
+        ride.stops.append(
+            RideStop(
+                sequence=index,
+                point=make_point(stop.lat, stop.lng),
+                address=stop.address,
+            )
+        )
 
     try:
         await session.flush()
@@ -373,14 +431,125 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
 async def _final_fare(
     session: AsyncSession, ride: Ride, actual_km: Decimal | None
 ) -> Decimal:
-    if actual_km is None or not route.deviates(ride.distance_km, actual_km):
-        return ride.estimated_fare
+    """الأجرةُ النهائية = أجرةُ الطريق + رسمُ الانتظار.
 
-    rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
-    fare, _ = pricing.calculate_fare(
-        rule, Route(distance_km=actual_km, duration_min=ride.duration_min)
+    ورسمُ الانتظار يُحسب **بالمعدلات المجمَّدة على الرحلة** لا من الإعدادات:
+    تعديلُ المشرف يحكم ما بعده (SPEC القسم 5.10). ويُضاف **بعد** الحدّ
+    الأدنى لا قبله: الحدُّ الأدنى حدُّ أجرةِ طريق، ورسمُ انتظارٍ يُبتلع فيه
+    يعني كبتناً وقف عشرين دقيقةً بلا مقابل.
+    """
+    base = ride.estimated_fare
+    if actual_km is not None and route.deviates(ride.distance_km, actual_km):
+        rule = await pricing.get_rule(
+            session, ride.country_code, ride.vehicle_category
+        )
+        base, _ = pricing.calculate_fare(
+            rule,
+            Route(distance_km=actual_km, duration_min=ride.duration_min),
+            ride.stops_count,
+        )
+
+    return pricing.round_money(base + await waiting_charge_for(session, ride))
+
+
+async def waiting_charge_for(
+    session: AsyncSession, ride: Ride, now: datetime | None = None
+) -> Decimal:
+    """رسمُ انتظارِ هذه الرحلة حتى اللحظة — بمعدلاتها المجمَّدة.
+
+    **يُقرأ أثناء الرحلة كما يُقرأ عند إنهائها**: منه يرى الراكبُ رسمَه
+    الحالي وهو واقف، فلا مفاجأةَ في شاشة الدفع (SPEC القسم 5.10). والمحطةُ
+    التي لم تُستأنف بعد تُقاس حتى الآن.
+    """
+    if ride.stops_count == 0:
+        return Decimal("0.000")
+
+    stops = await stops_of(session, ride.id)
+    return pricing.waiting_charge(
+        stops,
+        free_minutes=ride.stop_free_minutes_at_ride,
+        price_per_min=ride.stop_price_per_min_at_ride,
+        now=now or _now(),
     )
-    return fare
+
+
+async def stops_of(session: AsyncSession, ride_id: uuid.UUID) -> list[RideStop]:
+    return list(
+        (
+            await session.scalars(
+                select(RideStop)
+                .where(RideStop.ride_id == ride_id)
+                .order_by(RideStop.sequence)
+            )
+        ).all()
+    )
+
+
+# ------------------------------------------------- المحطات الوسيطة (12-ب)
+
+
+async def arrive_at_stop(
+    session: AsyncSession, ride: Ride, stop_id: uuid.UUID
+) -> tuple[Ride, RideStop]:
+    """وصل الكبتنُ محطةً وسيطة — يبدأ عدّادُ الانتظار.
+
+    **الصفُّ يُقفل قبل فحص الانتقال** كما تفرض قاعدة المشروع على كل تغيير
+    حالة: بغير القفل تمر ضغطتان متزامنتان فتكتبان ختمين، ويبدأ العدّادُ من
+    الثاني فيضيع على الكبتن ما انتظره بينهما.
+    """
+    stop = await _locked_stop(session, ride, stop_id)
+    if stop.arrived_at is not None:
+        raise InvalidRideTransition("وصلتَ هذه المحطة بالفعل")
+
+    _require_transition(ride, RideStatus.AT_STOP)
+    ride.status = RideStatus.AT_STOP
+    stop.arrived_at = _now()
+    await session.flush()
+    return await _flush_and_reload(session, ride), stop
+
+
+async def resume_from_stop(
+    session: AsyncSession, ride: Ride, stop_id: uuid.UUID
+) -> tuple[Ride, RideStop]:
+    """يستأنف الكبتنُ السير — يُقفل عدّادُ الانتظار وتبدأ الساقُ التالية.
+
+    و**زيادةُ `current_leg` هنا وحدها**: هذا هو كاتبُ العمود الوحيد، تحت قفل
+    صفِّ الرحلة. بغيره تُزاد مرتين بضغطتين متزامنتين، فتُنسب نقاطُ ساقٍ إلى
+    ساقٍ لم تبدأ ويُقرأ دليلُ النزاع خطأً.
+    """
+    stop = await _locked_stop(session, ride, stop_id)
+    if stop.arrived_at is None:
+        raise InvalidRideTransition("لم تصل هذه المحطة بعد")
+    if stop.resumed_at is not None:
+        raise InvalidRideTransition("استأنفتَ من هذه المحطة بالفعل")
+
+    _require_transition(ride, RideStatus.IN_PROGRESS)
+    ride.status = RideStatus.IN_PROGRESS
+    ride.current_leg = ride.current_leg + 1
+    stop.resumed_at = _now()
+    await session.flush()
+    return await _flush_and_reload(session, ride), stop
+
+
+async def _locked_stop(
+    session: AsyncSession, ride: Ride, stop_id: uuid.UUID
+) -> RideStop:
+    """يقفل صفَّ الرحلة ثم صفَّ المحطة — **بهذا الترتيب**.
+
+    ترتيبُ الأقفال في المشروع يبدأ بصفِّ الرحلة (`CLAUDE.md`)، فمن يقفل
+    المحطةَ أولاً ثم الرحلة يفتح باب جمودٍ مع كل مسارٍ آخر يمس الرحلة.
+    """
+    await session.refresh(ride, with_for_update=True)
+
+    stop = await session.scalar(
+        select(RideStop)
+        .where(RideStop.id == stop_id, RideStop.ride_id == ride.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if stop is None:
+        raise NotFound("المحطة غير موجودة في هذه الرحلة")
+    return stop
 
 
 # كم بلاغَ «الطرف ليس بالجنس المعلَن» يوسم الحساب للمراجعة (المرحلة 10-ج).
@@ -486,3 +655,60 @@ async def _record_gender_mismatch(
 def is_flagged_for_gender_mismatch(user: User) -> bool:
     """الوسمُ سؤالٌ عن العدد لا عمودٌ يُكتب — فتغييرُ الحدّ يعيد تقييم الجميع."""
     return user.gender_mismatch_reports >= GENDER_MISMATCH_FLAG_THRESHOLD
+
+
+async def stops_over_max_wait(
+    session: AsyncSession, now: datetime | None = None
+) -> list[tuple[uuid.UUID, uuid.UUID]]:
+    """محطاتٌ تجاوز انتظارُها سقفَها ولم تُخطَر بعد — `(ride_id, stop_id)`.
+
+    **الشرطُ يُقرأ بالساعة لا بعمود** كشرط الاشتراك: المقارنةُ بين `now` وبين
+    `arrived_at + السقف`، والسقفُ **المجمَّد على الرحلة** لا الذي في الإعدادات.
+    و`stop_max_wait_minutes_at_ride = 0` يعني **لا سقف** فتُستثنى رحلتُه.
+    """
+    moment = now or _now()
+    rows = await session.execute(
+        select(Ride.id, RideStop.id)
+        .join(RideStop, RideStop.ride_id == Ride.id)
+        .where(
+            Ride.status == RideStatus.AT_STOP,
+            Ride.stop_max_wait_minutes_at_ride > 0,
+            RideStop.arrived_at.is_not(None),
+            RideStop.resumed_at.is_(None),
+            RideStop.notified_at.is_(None),
+            # `عدد × interval '1 minute'` بدل `make_interval(mins=…)`:
+            # `func` في SQLAlchemy لا يمرّر وسائط مسمّاة إلى دوال SQL
+            RideStop.arrived_at
+            + Ride.stop_max_wait_minutes_at_ride * text("interval '1 minute'")
+            <= moment,
+        )
+    )
+    return [(ride_id, stop_id) for ride_id, stop_id in rows.all()]
+
+
+async def mark_stop_notified(
+    session: AsyncSession, stop_id: uuid.UUID
+) -> tuple[Ride, RideStop] | None:
+    """يختم `notified_at` تحت قفل الصف — أو `None` إن سبقه أحد.
+
+    **القفلُ هو ما يجعل التنبيه واحداً**: عاملان يقرآن نفس الصف في نفس الدورة
+    ويكتبان ختمين، فيصل الطرفين إشعاران عن وقوفٍ واحد. والفحصُ **بعد** القفل
+    لا قبله — وهذا هو الفرق بين حارسٍ يعمل وحارسٍ يبدو أنه يعمل.
+    """
+    stop = await session.scalar(
+        select(RideStop)
+        .where(RideStop.id == stop_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if stop is None or stop.notified_at is not None or stop.resumed_at is not None:
+        return None
+
+    ride = await get_ride(session, stop.ride_id)
+    # استأنف الكبتنُ بين القراءة والقفل: لا تجاوزَ يُخطَر عنه
+    if ride.status is not RideStatus.AT_STOP:
+        return None
+
+    stop.notified_at = _now()
+    await session.flush()
+    return ride, stop

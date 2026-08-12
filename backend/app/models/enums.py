@@ -57,6 +57,11 @@ class RideStatus(StrEnum):
     ACCEPTED = "accepted"
     ARRIVED = "arrived"
     IN_PROGRESS = "in_progress"
+    # وقوفٌ عند محطةٍ وسيطة (المرحلة 12-ب). حالةٌ **داخل** الرحلة لا فاصلٌ
+    # بينها وبين غيرها: الراكب في السيارة، فلا إلغاءَ منها كما لا إلغاء من
+    # `in_progress`. ومخرجاها `in_progress` باستئنافٍ، أو `completed` حين
+    # يُنهي الكبتن عند المحطة بعد تجاوز سقف الانتظار (SPEC القسم 5.10)
+    AT_STOP = "at_stop"
     COMPLETED = "completed"
     CANCELLED_BY_RIDER = "cancelled_by_rider"
     CANCELLED_BY_DRIVER = "cancelled_by_driver"
@@ -268,6 +273,10 @@ class FeatureKey(StrEnum):
     # يُرشَّح تفضيلٌ ولا يُصفّى سائق، وإلا لأبقى تفضيلٌ قديمٌ على حساب كبتنٍ
     # يحجب عنه الطلبات في سوقٍ لا خدمةَ نسائيةً فيه
     WOMEN_SERVICE_ENABLED = "women_service_enabled"
+    # تعدد الوجهات (المرحلة 12-ب). **ميزةٌ لا حارس**، فغيابُ صفّها معطَّلة —
+    # ولا تُضاف إلى `DEFAULT_ENABLED_FLAGS` مهما بدت صغيرة. وإطفاؤها يمنع
+    # **الطلبات الجديدة** وحدها: رحلةٌ جارية بمحطاتها تكمل، ومحطاتُها مجمَّدة
+    MULTI_STOP_ENABLED = "multi_stop_enabled"
 
 
 class WalletOwnerType(StrEnum):

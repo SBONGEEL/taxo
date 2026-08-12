@@ -212,7 +212,8 @@ export type FeatureKey =
   | "wallet_enabled"
   | "wallet_transfer_enabled"
   | "otp_verification_enabled"
-  | "women_service_enabled";
+  | "women_service_enabled"
+  | "multi_stop_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
@@ -328,6 +329,8 @@ export type RideStatus =
   | "accepted"
   | "arrived"
   | "in_progress"
+  /** وقوفٌ عند محطةٍ وسيطة (المرحلة 12-ب) — رحلةٌ **جارية** لا حالٌ ثالثة. */
+  | "at_stop"
   | "completed"
   | "cancelled_by_rider"
   | "cancelled_by_driver"
@@ -535,6 +538,12 @@ export interface PricingRule {
   price_per_min: string;
   minimum_fare: string;
   cancellation_fee: string;
+  /** حقولُ المحطات الوسيطة (المرحلة 12-ب) — صفرٌ يعني «بلا رسم»، وصفرُ
+   * السقف يعني **لا سقف** لا «سقفٌ مقداره صفر». */
+  stop_fee: string;
+  stop_free_minutes: number;
+  stop_price_per_min: string;
+  stop_max_wait_minutes: number;
   updated_at: string;
 }
 

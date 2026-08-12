@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -27,10 +27,22 @@ class CoordinatesIn(BaseModel):
     lng: float = Field(ge=-180, le=180, examples=[35.9106])
 
 
+class StopIn(BaseModel):
+    """محطةٌ وسيطة كما ترسلها الواجهة — **بترتيبها في القائمة**."""
+
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    address: str | None = Field(default=None, max_length=255)
+
+
 class RideEstimateRequest(BaseModel):
     pickup: CoordinatesIn
     dropoff: CoordinatesIn
     vehicle_category: VehicleCategory = VehicleCategory.ECONOMY
+    # المحطاتُ الوسيطة — والوجهةُ الأخيرة تبقى `dropoff` (SPEC القسم 5.10).
+    # السقفُ في طبقة الإدخال **ومعه فحصٌ في الخدمة**: هذا يحرس الشكل وذاك
+    # يحرس القاعدة، ومن اكتفى بالأول حرس ما يصل من تطبيقه هو
+    stops: list[StopIn] = Field(default_factory=list, max_length=2)
 
 
 class RideEstimateOut(BaseModel):
@@ -59,6 +71,27 @@ class RideCancelRequest(BaseModel):
     # سببٌ مصنَّف بجانب النص الحر. `gender_mismatch` ليست وصفاً: هي التي
     # تُسقط رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر يُقرأ باحتمالات
     reason_code: CancelReasonCode | None = None
+
+
+class RideStopOut(BaseModel):
+    """محطةٌ وسيطة كما يراها الطرفان — ومعها **ما استحقّ عندها**.
+
+    `waited_minutes` و`waiting_charge` **محسوبان في الخلفية** (SPEC القسم
+    5.10/14): الواجهةُ ترسم عدّاداً من `arrived_at` — وذاك حسابُ وقت — أما
+    المبلغُ فيصلها محسوباً، فلا تخترع الشاشةُ رقماً مالياً.
+    """
+
+    id: uuid.UUID
+    sequence: int
+    lat: float
+    lng: float
+    address: str | None
+    arrived_at: datetime | None
+    resumed_at: datetime | None
+    waited_minutes: Decimal
+    waiting_charge: Decimal
+    # هل تجاوز انتظارُ هذه المحطة سقفَها — وعنده يُفتح للكبتن خيارُ الإنهاء
+    over_max_wait: bool
 
 
 class RideVehicleOut(BaseModel):
@@ -123,6 +156,16 @@ class RideOut(BaseModel):
     gender_preference: GenderPreference
     driver: RideDriverOut | None = None
 
+    # --- تعدد الوجهات (المرحلة 12-ب) ---
+    stops: list[RideStopOut] = Field(default_factory=list)
+    current_leg: int = 0
+    # رسمُ الانتظار **حتى اللحظة**: يُقرأ أثناء الوقوف كما يُقرأ بعده، فيرى
+    # الراكبُ رسمَه الحالي ولا يفاجئه في شاشة الدفع
+    waiting_charge: Decimal = Decimal("0.000")
+    stop_free_minutes: int = 0
+    stop_price_per_min: Decimal = Decimal("0.000")
+    stop_max_wait_minutes: int = 0
+
     created_at: datetime
     accepted_at: datetime | None
     arrived_at: datetime | None
@@ -131,9 +174,56 @@ class RideOut(BaseModel):
     cancelled_at: datetime | None
 
     @classmethod
-    def from_ride(cls, ride: "Ride") -> "RideOut":
-        """التمثيل الوحيد للرحلة — يستعمله الراوتر وبثّ أحداث WebSocket معاً."""
+    def from_ride(cls, ride: "Ride", now: datetime | None = None) -> "RideOut":
+        """التمثيل الوحيد للرحلة — يستعمله الراوتر وبثّ أحداث WebSocket معاً.
+
+        و`now` نقطةُ قياسِ الانتظار: تُمرَّر في الاختبارات وتُترك فارغةً في
+        التشغيل. **يحتاج `ride.stops` محمّلةً** — وهي `lazy="selectin"` فتصل
+        مع الرحلة بلا نداءٍ ثانٍ.
+        """
+        from app.services import pricing
+
+        moment = now or datetime.now(UTC)
+        stops = [
+            RideStopOut(
+                id=stop.id,
+                sequence=stop.sequence,
+                lat=stop.lat,
+                lng=stop.lng,
+                address=stop.address,
+                arrived_at=stop.arrived_at,
+                resumed_at=stop.resumed_at,
+                waited_minutes=pricing.round_money(
+                    pricing.waiting_minutes(stop, moment)
+                ),
+                waiting_charge=pricing.waiting_charge(
+                    [stop],
+                    free_minutes=ride.stop_free_minutes_at_ride,
+                    price_per_min=ride.stop_price_per_min_at_ride,
+                    now=moment,
+                ),
+                over_max_wait=(
+                    ride.stop_max_wait_minutes_at_ride > 0
+                    and stop.arrived_at is not None
+                    and stop.resumed_at is None
+                    and pricing.waiting_minutes(stop, moment)
+                    > ride.stop_max_wait_minutes_at_ride
+                ),
+            )
+            for stop in ride.stops
+        ]
         return cls(
+            stops=stops,
+            current_leg=ride.current_leg,
+            waiting_charge=pricing.waiting_charge(
+                ride.stops,
+                free_minutes=ride.stop_free_minutes_at_ride,
+                price_per_min=ride.stop_price_per_min_at_ride,
+                now=moment,
+            ),
+            stop_free_minutes=ride.stop_free_minutes_at_ride,
+            stop_price_per_min=ride.stop_price_per_min_at_ride,
+            stop_max_wait_minutes=ride.stop_max_wait_minutes_at_ride,
             id=ride.id,
             rider_id=ride.rider_id,
             status=ride.status,

@@ -53,7 +53,19 @@ const FIELDS = [
   { key: "cancellation_fee", label: "رسوم الإلغاء" },
 ] as const;
 
-type FieldKey = (typeof FIELDS)[number]["key"];
+/** حقولُ المحطات الوسيطة (المرحلة 12-ب) — **مجموعةٌ على حدة** لأنها لا تُقرأ
+ * مع الخمسة: تلك تسعّر الطريق وهذه تسعّر الوقوف، ومن خلطهما قرأ سبعةَ حقولٍ
+ * لا يعرف أيُّها يعمل متى. و`money` منها ما هو مبلغ و`minutes` ما هو زمن. */
+const STOP_FIELDS = [
+  { key: "stop_fee", label: "رسم المحطة الواحدة", kind: "money" },
+  { key: "stop_free_minutes", label: "دقائق مجانية لكل محطة", kind: "minutes" },
+  { key: "stop_price_per_min", label: "لكل دقيقة انتظار بعدها", kind: "money" },
+  { key: "stop_max_wait_minutes", label: "سقف الانتظار للمحطة", kind: "minutes" },
+] as const;
+
+type FieldKey =
+  | (typeof FIELDS)[number]["key"]
+  | (typeof STOP_FIELDS)[number]["key"];
 
 const EMPTY: Record<FieldKey, string> = {
   base_fare: "",
@@ -61,6 +73,10 @@ const EMPTY: Record<FieldKey, string> = {
   price_per_min: "",
   minimum_fare: "",
   cancellation_fee: "",
+  stop_fee: "0",
+  stop_free_minutes: "0",
+  stop_price_per_min: "0",
+  stop_max_wait_minutes: "0",
 };
 
 export function PricingScreen() {
@@ -151,6 +167,10 @@ function CategoryCard({
             price_per_min: rule.price_per_min,
             minimum_fare: rule.minimum_fare,
             cancellation_fee: rule.cancellation_fee,
+            stop_fee: rule.stop_fee,
+            stop_free_minutes: String(rule.stop_free_minutes),
+            stop_price_per_min: rule.stop_price_per_min,
+            stop_max_wait_minutes: String(rule.stop_max_wait_minutes),
           }
         : EMPTY,
     );
@@ -159,17 +179,32 @@ function CategoryCard({
   const currency = currencyLabel(country === "JO" ? "JOD" : "LYD");
   const filled = FIELDS.every(({ key }) => values[key].trim() !== "");
 
+  /** الدقائقُ أعدادٌ صحيحة والمبالغُ نصوص — والخلفيةُ ترفض النصَّ مكان العدد. */
+  function payload() {
+    return {
+      base_fare: values.base_fare,
+      price_per_km: values.price_per_km,
+      price_per_min: values.price_per_min,
+      minimum_fare: values.minimum_fare,
+      cancellation_fee: values.cancellation_fee,
+      stop_fee: values.stop_fee || "0",
+      stop_price_per_min: values.stop_price_per_min || "0",
+      stop_free_minutes: Number(values.stop_free_minutes || 0),
+      stop_max_wait_minutes: Number(values.stop_max_wait_minutes || 0),
+    };
+  }
+
   async function save() {
     setBusy(true);
     try {
       if (rule) {
-        await updatePricing(rule.id, values);
+        await updatePricing(rule.id, payload());
         onDone(`حُفظت تسعيرة ${CATEGORY_LABEL[category]}`);
       } else {
         await createPricing({
           country_code: country,
           vehicle_category: category,
-          ...values,
+          ...payload(),
         });
         onDone(`ضُبطت تسعيرة ${CATEGORY_LABEL[category]}`);
       }
@@ -214,6 +249,30 @@ function CategoryCard({
           />
         ))}
       </div>
+
+      <h3 className="mb-10 mt-18 text-13 font-bold text-muted">
+        المحطات الوسيطة
+      </h3>
+      <div className="grid gap-12 md:grid-cols-2">
+        {STOP_FIELDS.map(({ key, label, kind }) => (
+          <Field
+            key={key}
+            label={`${label} (${kind === "money" ? currency : "دقيقة"})`}
+            inputMode="decimal"
+            dir="ltr"
+            disabled={!canEdit}
+            value={values[key]}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, [key]: event.target.value }))
+            }
+          />
+        ))}
+      </div>
+      <p className="mt-8 text-11 leading-note text-muted">
+        صفرٌ في الرسمين يعني «بلا رسم»، وصفرٌ في السقف يعني لا سقف لا سقفاً
+        مقداره صفر. والأربعةُ تُجمَّد على الرحلة لحظة الطلب، فتعديلُها يحكم ما
+        يأتي لا رحلةً واقفةً الآن.
+      </p>
 
       {canEdit ? (
         <div className="mt-16 flex gap-10">

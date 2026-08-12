@@ -48,7 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.driver import DriverDocument
 from app.models.enums import DocumentReviewStatus
 from app.models.payment import Payment
-from app.models.ride import Ride
+from app.models.ride import Ride, RideStop
 from app.services import devices, documents, inbox, presence
 from app.services.push import PushMessage, PushResult, get_push_provider_or_none
 from app.ws import events
@@ -70,6 +70,11 @@ RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
         "لم نجد كبتناً متاحاً",
         "لم يقبل أي كبتن الطلب — حاول مرة أخرى",
     ),
+    # المحطات الوسيطة (المرحلة 12-ب). و`stop_wait_exceeded` **ليس هنا**: نصُّه
+    # يختلف بين الطرفين — الراكبُ يُقال له إن العدّاد صار يُحتسب، والكبتنُ إن
+    # له مخرجاً — فبابُه `publish_stop_wait_exceeded` كما لانقضاء مهلة كليك
+    RideEvent.STOP_REACHED: ("وصل الكبتن إلى المحطة", "بانتظارك عند المحطة"),
+    RideEvent.STOP_RESUMED: ("استُؤنفت الرحلة", "في الطريق إلى الوجهة التالية"),
 }
 
 # أحداثٌ تُرسل ولا تُحفظ في صندوق الوارد (المرحلة 9-ب).
@@ -363,6 +368,60 @@ async def publish_cliq_confirmation_expired(
             data=data,
         ),
     )
+
+
+async def publish_stop_wait_exceeded(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    ride: Ride,
+    stop: RideStop,
+) -> None:
+    """تجاوز الانتظارُ عند محطةٍ سقفَه — **يُخطر الطرفان** (القسم 5.10).
+
+    ونصّان مختلفان لأن ما يعنيه الحدثُ لكلٍّ منهما مختلف: الراكبُ يُقال له إن
+    العدّاد تجاوز المجاني — فيعرف أن ما يقرؤه صار يُحتسب، وهو ما يمنع مفاجأةَ
+    شاشة الدفع؛ والكبتنُ يُقال له إن له **مخرجاً** — فبغيره يقف ينتظر ظانّاً
+    أن لا خيار له إلا الانتظار.
+
+    **ولا إنهاءَ في هذه الدالة ولا في مستدعيها**: الإنهاءُ فعلُ الكبتن.
+    """
+    driver_user_id = ride.driver.user_id if ride.driver is not None else None
+
+    # البثُّ بنفس بابِ بقية أحداث الرحلة، فتصل الواجهةَ `RideOut` واحدة
+    await events.publish_ride_event(redis, ride, RideEvent.STOP_WAIT_EXCEEDED)
+
+    # قيمٌ خام لا جملةٌ مصوغة ولا رقمٌ منسّق (القسم 10)
+    data = {
+        "type": RideEvent.STOP_WAIT_EXCEEDED.value,
+        "ride_id": str(ride.id),
+        "stop_id": str(stop.id),
+        "sequence": str(stop.sequence),
+        "max_wait_minutes": str(ride.stop_max_wait_minutes_at_ride),
+    }
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=ride.rider_id,
+        message=PushMessage(
+            title="تجاوز الانتظار عند المحطة",
+            body="العدّاد تجاوز الدقائق المجانية — وما بعدها يُحتسب على الرحلة.",
+            data=data,
+        ),
+    )
+
+    if driver_user_id is not None:
+        await _safe_notify(
+            session,
+            redis,
+            user_id=driver_user_id,
+            message=PushMessage(
+                title="طال الانتظار عند المحطة",
+                body="تجاوز الراكب سقف الانتظار — يمكنك إنهاء الرحلة عند هذه المحطة.",
+                data=data,
+            ),
+        )
 
 
 # ------------------------------------------------- مراجعة المستندات

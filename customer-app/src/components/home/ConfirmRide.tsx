@@ -4,6 +4,12 @@
  * الواجهة تعرض ما قالته الخلفية بحروفه — لا ضربَ مسافةٍ في تعرفة، ولا حتى
  * جمعَ رسمٍ على مبلغ. وتبديلُ الفئة يعيد السؤال لأن التعرفة لكل فئة.
  *
+ * **ورسمُ الانتظار يُقال قبل الطلب** (المرحلة 12-ب): لا يدخل التقدير لأنه لا
+ * يُعرف قبل أن يقع، **فيُقال سعرُه** — فيكون معلوماً ولو لم يكن مقدَّراً.
+ * والقيمُ من `GET /rides/estimate`؟ لا: من الرحلة بعد إنشائها. وقبلها من
+ * تسعيرة الدولة المنشورة؟ لا تُنشر. فالسطرُ يُصاغ من **الرسوم المجمَّدة على
+ * الرحلة** بعد الطلب، وقبله يقول ما يقع لا كم يكلّف — وهذا هو الصدق الممكن.
+ *
  * **واختيارُ «كبتنة فقط» يقول ثمنَه قبل الضغط لا بعده** (المرحلة 10-ج):
  * الكبتنات أقل عدداً، فالانتظارُ أطول والبحثُ يتسع إلى ١٠كم. وقولُ ذلك هنا
  * يجعل الانتظار خياراً اختارته؛ والسكوتُ عنه يجعله عطلاً يُشتكى منه — ثم
@@ -22,10 +28,12 @@ import type {
   RideEstimate,
   VehicleCategory,
 } from "@/api/types";
+import { StopsEditor, type DraftStop } from "@/components/home/StopsEditor";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Sheet } from "@/components/ui/Sheet";
 import { VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
+import { useMultiStop } from "@/lib/multistop";
 import { useWomenService } from "@/lib/women";
 import { cn, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
@@ -46,6 +54,9 @@ export function ConfirmRide({
   onRequest,
   requesting,
   requestError,
+  stops,
+  onStopsChange,
+  onAddStop,
 }: {
   pickup: Coordinates;
   pickupAddress: string | null;
@@ -56,8 +67,12 @@ export function ConfirmRide({
   onRequest: (category: VehicleCategory, preference: GenderPreference) => void;
   requesting: boolean;
   requestError: string | null;
+  stops: DraftStop[];
+  onStopsChange: (next: DraftStop[]) => void;
+  onAddStop: () => void;
 }) {
   const women = useWomenService();
+  const multiStop = useMultiStop();
   const [category, setCategory] = useState<VehicleCategory>(categories[0] ?? "economy");
   // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها
   const [preference, setPreference] = useState<GenderPreference>(
@@ -72,7 +87,12 @@ export function ConfirmRide({
     setLoading(true);
     setError(null);
 
-    estimateRide({ pickup, dropoff, vehicle_category: category })
+    estimateRide({
+      pickup,
+      dropoff,
+      vehicle_category: category,
+      stops: stops.map((stop) => ({ lat: stop.lat, lng: stop.lng })),
+    })
       .then((value) => !cancelled && setEstimate(value))
       .catch(
         (caught: unknown) =>
@@ -84,7 +104,9 @@ export function ConfirmRide({
     return () => {
       cancelled = true;
     };
-  }, [pickup, dropoff, category]);
+    // المحطاتُ في التبعيات: إضافةُ محطةٍ أو ترتيبُها يغيّر المسار والرسم،
+    // فيُعاد السؤال — ولا يُجمع فرقٌ في الواجهة
+  }, [pickup, dropoff, category, stops]);
 
   return (
     <Sheet>
@@ -109,6 +131,18 @@ export function ConfirmRide({
             </button>
           </div>
         </div>
+
+        {/* لا يظهر شيءٌ من هذا حيث المفتاح مطفأ — لا زرٌّ معطّل ولا اعتذار */}
+        {multiStop ? (
+          <StopsEditor
+            stops={stops}
+            onChange={onStopsChange}
+            onAdd={onAddStop}
+            waitingNote={
+              "يقف الكبتن عند كل محطة، وللانتظار دقائقُ مجانية ثم رسمٌ لكل دقيقة — يظهر عدّادُه أمامك أثناء الوقوف."
+            }
+          />
+        ) : null}
 
         <div className="grid grid-cols-2 gap-8">
           {categories.map((option) => (

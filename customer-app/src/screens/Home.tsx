@@ -30,6 +30,7 @@ import type {
 import { DestinationSearch } from "@/components/home/DestinationSearch";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
+import type { DraftStop } from "@/components/home/StopsEditor";
 import { TrackingSheet } from "@/components/ride/TrackingSheet";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
@@ -40,7 +41,7 @@ import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
 
-type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "confirm";
+type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
 export function HomeScreen() {
   const navigate = useNavigate();
@@ -58,6 +59,9 @@ export function HomeScreen() {
   const [pickupAddress, setPickupAddress] = useState<string | null>(null);
   const [dropoff, setDropoff] = useState<Coordinates | null>(null);
   const [dropoffAddress, setDropoffAddress] = useState<string | null>(null);
+  // المحطاتُ الوسيطة **بترتيبها** — تُرتَّب وتُحذف هنا قبل التأكيد، فلا
+  // مسارَ لتعديلها على رحلةٍ قائمة (SPEC القسم 5.10)
+  const [stops, setStops] = useState<DraftStop[]>([]);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -90,7 +94,11 @@ export function HomeScreen() {
   // أثناء الرحلة: الإطار يضم الكبتن والوجهة معاً
   useEffect(() => {
     if (!ride || !tracking) return;
-    const target = ride.status === "in_progress" ? ride.dropoff : ride.pickup;
+    // **بعد ركوب الراكب الإطارُ يضم الوجهة لا نقطة الانطلاق** — و`at_stop`
+    // منها (المرحلة 12-ب): قفزةٌ إلى الانطلاق وسط الرحلة تُرجع الخريطة إلى
+    // مكانٍ غادره الاثنان
+    const riding = ride.status === "in_progress" || ride.status === "at_stop";
+    const target = riding ? ride.dropoff : ride.pickup;
     if (driverPing) {
       map.current?.fitBounds({ lat: driverPing.lat, lng: driverPing.lng }, target);
     } else {
@@ -126,6 +134,20 @@ export function HomeScreen() {
       setPhase(dropoff ? "confirm" : "idle");
       return;
     }
+    if (phase === "pick-stop") {
+      // العنوانُ يُطلب بعد الإضافة فيظهر السطر فوراً ثم يُستبدل باسمه
+      setStops((current) => [...current, { ...point, address: null }]);
+      setPhase("confirm");
+      if (token) {
+        const index = stops.length;
+        void reverseGeocode(token, point).then((address) =>
+          setStops((current) =>
+            current.map((stop, at) => (at === index ? { ...stop, address } : stop)),
+          ),
+        );
+      }
+      return;
+    }
     setDropoff(point);
     void describe(point, "dropoff");
     setPhase("confirm");
@@ -144,6 +166,11 @@ export function HomeScreen() {
         pickup_address: pickupAddress,
         dropoff_address: dropoffAddress,
         gender_preference: preference,
+        stops: stops.map((stop) => ({
+          lat: stop.lat,
+          lng: stop.lng,
+          address: stop.address,
+        })),
       });
       // الرحلة تعود `requested`؛ انتقالها إلى `searching` يصل عبر المقبس
       setRide(created);
@@ -181,7 +208,8 @@ export function HomeScreen() {
     }
   }
 
-  const picking = phase === "pick-pickup" || phase === "pick-dropoff";
+  const picking =
+    phase === "pick-pickup" || phase === "pick-dropoff" || phase === "pick-stop";
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
@@ -285,6 +313,9 @@ export function HomeScreen() {
                 onRequest={submit}
                 requesting={requesting}
                 requestError={error}
+                stops={stops}
+                onStopsChange={setStops}
+                onAddStop={() => setPhase("pick-stop")}
               />
             ) : (
               <Sheet>

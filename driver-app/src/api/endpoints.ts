@@ -166,6 +166,14 @@ export const arriveRide = (rideId: string) =>
 export const startRide = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/start`);
 
+/** وصل الكبتنُ محطةً وسيطة — **من هنا يبدأ ختمُ الانتظار في الخلفية**. */
+export const arriveAtStop = (rideId: string, stopId: string) =>
+  api.post<Ride>(`/rides/${rideId}/stops/${stopId}/arrive`, {});
+
+/** استئنافٌ — يُقفل العدّاد وتبدأ الساقُ التالية. */
+export const resumeFromStop = (rideId: string, stopId: string) =>
+  api.post<Ride>(`/rides/${rideId}/stops/${stopId}/resume`, {});
+
 export const completeRide = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/complete`);
 

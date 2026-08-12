@@ -17,6 +17,7 @@ export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
   searching: "نبحث عن كبتن",
   accepted: "الكبتن في الطريق",
   arrived: "وصل الكبتن",
+  at_stop: "وقوفٌ عند محطة",
   in_progress: "الرحلة جارية",
   completed: "انتهت الرحلة",
   cancelled_by_rider: "ألغيتَ الرحلة",
@@ -24,12 +25,17 @@ export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {
   no_driver_found: "لم نجد كبتناً متاحاً",
 };
 
+/** مرآةُ `ACTIVE_RIDER_STATUSES` في `models/ride.py` — و**نقصُها يُنهي رحلةً
+ * جارية في الواجهة وحدها**: حالةٌ غائبة عن هذه القائمة تُقرأ «انتهت»، فتظهر
+ * ورقةُ الخاتمة والرحلةُ ما زالت تسير. وقع ذلك فعلاً مع `at_stop` وكشفه
+ * الفحصُ البصري وحده — `check:enums` لا يرى مصفوفةً، يرى اتحادات. */
 export const ACTIVE_RIDE_STATUSES: RideStatus[] = [
   "requested",
   "searching",
   "accepted",
   "arrived",
   "in_progress",
+  "at_stop",
 ];
 
 export const VEHICLE_LABEL: Record<VehicleCategory, string> = {

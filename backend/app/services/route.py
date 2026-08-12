@@ -25,11 +25,11 @@ import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
 from redis.asyncio import Redis
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import SessionLocal
-from app.models.ride import RideRoutePoint, make_point
+from app.models.ride import Ride, RideRoutePoint, make_point
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +100,19 @@ async def capture(
 
     try:
         async with SessionLocal() as session:
+            # **الساقُ تُقرأ من الرحلة لا تُحسب هنا** (المرحلة 12-ب): كاتبُ
+            # `current_leg` واحدٌ (`rides.resume_from_stop` تحت قفل الصف)،
+            # والملتقِطُ ينسخ ما وجده. وقراءةُ عمودٍ واحدٍ أرخصُ من عدِّ
+            # المحطات المستأنَفة في مسارٍ يمرّ كل عشرين ثانية لكل رحلة
+            leg = await session.scalar(
+                select(Ride.current_leg).where(Ride.id == uuid.UUID(ride_id))
+            )
             session.add(
                 RideRoutePoint(
                     ride_id=uuid.UUID(ride_id),
                     point=make_point(lat, lng),
                     heading=None if heading is None else Decimal(str(heading)),
+                    leg=leg or 0,
                 )
             )
             await session.commit()

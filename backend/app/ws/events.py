@@ -43,6 +43,12 @@ class RideEvent(StrEnum):
     OFFER_EXPIRED = "offer_expired"
     DRIVER_CONNECTION_LOST = "driver_connection_lost"
     DRIVER_RECONNECTED = "driver_reconnected"
+    # المحطات الوسيطة (المرحلة 12-ب). ثلاثةٌ لا واحد: الوصولُ يبدأ عدّاد
+    # الراكب، والاستئنافُ يقفله، وبلوغُ السقف حدثٌ **لا يقع بفعل أحد** — تراه
+    # مهمةٌ دورية فتخطر الطرفين، وبغير بثِّه لا يعرف أحدٌ أن الساعة تجاوزت
+    STOP_REACHED = "stop_reached"
+    STOP_RESUMED = "stop_resumed"
+    STOP_WAIT_EXCEEDED = "stop_wait_exceeded"
 
 
 class PaymentEvent(StrEnum):

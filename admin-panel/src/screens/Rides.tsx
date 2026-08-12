@@ -50,6 +50,7 @@ const STATUS_LABEL: Record<RideStatus, string> = {
   searching: "يُبحث عن سائق",
   accepted: "مقبولة",
   arrived: "وصل السائق",
+  at_stop: "وقوفٌ عند محطة",
   in_progress: "جارية",
   completed: "مكتملة",
   cancelled_by_rider: "ألغاها الراكب",
@@ -63,6 +64,7 @@ const STATUS_TONE: Record<RideStatus, Tone> = {
   searching: "warn",
   accepted: "warn",
   arrived: "warn",
+  at_stop: "warn",
   in_progress: "warn",
   completed: "ok",
   cancelled_by_rider: "danger",
@@ -128,6 +130,7 @@ export function RidesScreen() {
         options={[
           { key: "all", label: "الكل" },
           { key: "in_progress", label: "جارية" },
+          { key: "at_stop", label: "عند محطة" },
           { key: "completed", label: "مكتملة" },
           { key: "cancelled_by_rider", label: "ألغاها الراكب" },
           { key: "cancelled_by_driver", label: "ألغاها السائق" },

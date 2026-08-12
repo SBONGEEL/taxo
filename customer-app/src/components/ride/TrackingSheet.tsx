@@ -17,6 +17,7 @@ import { cancelRide } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
+import { StopProgress } from "@/components/ride/StopProgress";
 import { Sheet } from "@/components/ui/Sheet";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { cn, formatDistance, formatMoney } from "@/lib/utils";
@@ -128,6 +129,10 @@ export function TrackingSheet({
         </div>
 
         {searching ? <SearchingPulse /> : null}
+
+        {/* المحطاتُ وعدّادُ الانتظار — يظهران بمجرد وجود محطة، لا عند الوقوف
+            وحده: الراكبُ يريد أن يرى أين هو من طريقه قبل أن يقف */}
+        <StopProgress ride={ride} />
 
         {/* الانتظارُ الأطول قيل ثمنُه قبل الضغط (`ConfirmRide`)، ويُعاد قوله
             هنا لأن هذه هي اللحظة التي يُشعر فيها: دقيقةُ صمتٍ بلا سببٍ تُقرأ

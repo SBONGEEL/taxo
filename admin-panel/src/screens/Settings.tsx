@@ -68,6 +68,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "التحقق من الرقم",
     hint: "حارسٌ لا ميزة — إطفاؤه للطوارئ فقط، ويسمح بحساباتٍ برقمٍ غير مُثبت.",
   },
+  multi_stop_enabled: {
+    title: "تعدد الوجهات",
+    hint: "يظهر زرُّ «إضافة محطة» في شاشة الطلب — حتى ثلاث وجهات. واضبط رسوم المحطات في «التسعيرة» أولاً، فصفرُها يعني محطاتٍ بلا كلفة. والإطفاءُ يمنع الطلبات الجديدة ولا يقطع رحلةً جارية.",
+  },
   women_service_enabled: {
     title: "خدمة التوصيل النسائي",
     hint: "لا تُشعَل قبل مراجعة أجناس الكباتن المعتمدين — خدمةٌ بلا سائقاتٍ يمكن ترشيحُهنّ تُقرأ ميزةً معطوبة. اعرض «من لم يُثبَّت جنسُه» في صفحة السائقين.",
@@ -80,6 +84,7 @@ const FLAGS: FeatureKey[] = [
   "card_enabled",
   "wallet_enabled",
   "wallet_transfer_enabled",
+  "multi_stop_enabled",
   "women_service_enabled",
   "otp_verification_enabled",
 ];

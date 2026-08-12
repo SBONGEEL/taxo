@@ -37,6 +37,9 @@ const ACTIVE: ReadonlySet<string> = new Set([
   "accepted",
   "arrived",
   "in_progress",
+  // الوقوفُ عند محطةٍ رحلةٌ جارية (المرحلة 12-ب) — ونقصُها هنا كان يُسقط
+  // الرحلةَ من الشاشة فيعود الكبتن إلى «ابدأ الاستقبال» وهو واقفٌ بالراكب
+  "at_stop",
 ]);
 
 export function isActive(ride: Ride | null): ride is Ride {

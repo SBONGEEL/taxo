@@ -103,6 +103,8 @@ export const estimateRide = (payload: {
   pickup: Coordinates;
   dropoff: Coordinates;
   vehicle_category: VehicleCategory;
+  /** محطاتٌ **وسيطة** بترتيبها — والوجهةُ الأخيرة تبقى `dropoff`. */
+  stops?: { lat: number; lng: number; address?: string | null }[];
 }) => api.post<RideEstimate>("/rides/estimate", payload);
 
 export const requestRide = (payload: {
@@ -113,6 +115,7 @@ export const requestRide = (payload: {
   dropoff_address?: string | null;
   /** غيابُه يعني «خذ افتراضي ملفي» لا `any` — القرار في الخلفية. */
   gender_preference?: GenderPreference;
+  stops?: { lat: number; lng: number; address?: string | null }[];
 }) => api.post<Ride>("/rides", payload);
 
 export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");

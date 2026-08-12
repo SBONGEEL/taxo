@@ -1,7 +1,8 @@
 /** الرحلة النشطة — SPEC القسم 12/4، وشكلُها من `DESIGN.md` §5.3.
  *
  * ثلاثةُ أطوارٍ بزرٍّ واحد يتبدّل نصُّه: «وصلتُ إلى الراكب» ← «بدء الرحلة»
- * ← «إنهاء الرحلة». والانتقالُ يُطلب من الخلفية وحدها
+ * ← «إنهاء الرحلة». **وطوران خامسٌ وسادس مع المحطات** (المرحلة 12-ب):
+ * «وصلتُ المحطة» ثم «استئناف». والانتقالُ يُطلب من الخلفية وحدها
  * (`services/rides.py::ALLOWED_TRANSITIONS`) — الزرُّ يسأل ولا يقرّر، والحالةُ
  * الجديدة تأتي من ردّها لا من افتراضٍ محلي.
  *
@@ -35,6 +36,7 @@ const PHASES = {
   accepted: { title: "في الطريق إلى الراكب", action: "وصلتُ إلى الراكب" },
   arrived: { title: "بانتظار الراكب", action: "بدء الرحلة" },
   in_progress: { title: "الرحلة جارية", action: "إنهاء الرحلة" },
+  at_stop: { title: "وقوفٌ عند محطة", action: "استئناف الرحلة" },
 } as const;
 
 type Phase = keyof typeof PHASES;
@@ -48,6 +50,8 @@ interface Props {
   onCancel: (reason: CancelReason) => void;
   /** تفضيلُ الكبتن الدائم — به وحده يظهر سببُ «عدم التطابق». */
   genderPreference: GenderPreference;
+  onArriveStop: (stopId: string) => void;
+  onResumeStop: (stopId: string) => void;
 }
 
 export function ActiveRide({
@@ -57,9 +61,22 @@ export function ActiveRide({
   onAdvance,
   onCancel,
   genderPreference,
+  onArriveStop,
+  onResumeStop,
 }: Props) {
   const phase = PHASES[ride.status as Phase] ?? PHASES.accepted;
-  const riding = ride.status === "in_progress";
+  const riding = ride.status === "in_progress" || ride.status === "at_stop";
+  // المحطةُ التي يقف عندها الآن، وأولُ محطةٍ لم يصلها بعد
+  const waiting = ride.stops.find(
+    (stop) => stop.arrived_at !== null && stop.resumed_at === null,
+  );
+  const nextStop = ride.stops.find((stop) => stop.arrived_at === null);
+  // **زرُّ «وصلتُ المحطة» يسبق «إنهاء الرحلة»**: ما دامت محطةٌ لم تُبلغ،
+  // فالإنهاءُ ليس الفعلَ التالي — والزرُّ الأول هو ما يقع تسعاً من عشر
+  const stopAction =
+    ride.status === "in_progress" && nextStop !== undefined
+      ? { label: `وصلتُ المحطة ${arabicDigits(String(nextStop.sequence))}`, stop: nextStop }
+      : null;
   const [picking, setPicking] = useState(false);
   const [reason, setReason] = useState<CancelReason | null>(null);
   const reasons = CANCEL_REASONS.filter(
@@ -90,6 +107,8 @@ export function ActiveRide({
               الكبتن (القسم 14)، فالزرّ يُخفى حتى يُبنى الاتصال المُقنَّع */}
         </div>
 
+        <StopStrip ride={ride} currencyLabel={currencyLabel} />
+
         <div className="mb-15 grid grid-cols-[12px_1fr] gap-x-10 gap-y-4">
           <span
             className={cn(
@@ -113,22 +132,48 @@ export function ActiveRide({
           </div>
         </div>
 
+        {stopAction ? (
+          <button
+            type="button"
+            onClick={() => onArriveStop(stopAction.stop.id)}
+            disabled={busy}
+            className="mb-11 w-full rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
+          >
+            {stopAction.label}
+          </button>
+        ) : null}
+
         <button
           type="button"
-          onClick={onAdvance}
+          onClick={() =>
+            waiting ? onResumeStop(waiting.id) : onAdvance()
+          }
           disabled={busy}
-          className="w-full rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
+          className={cn(
+            "w-full rounded-15 p-15 text-center text-15 font-bold disabled:opacity-50",
+            stopAction
+              ? "border border-line text-ink"
+              : "bg-brand text-brand-ink",
+          )}
         >
           {phase.action}
         </button>
-        <button
-          type="button"
-          onClick={() => setPicking(true)}
-          disabled={busy}
-          className="mt-11 w-full text-center text-12 font-semibold text-muted"
-        >
-          إلغاء الرحلة
-        </button>
+        {/* **لا إلغاء بعد بدء الرحلة** — لا من `in_progress` ولا من
+            `at_stop`: الراكب في السيارة، و`ALLOWED_TRANSITIONS` تجعل الإنهاء
+            المخرجَ الوحيد (SPEC القسم 5). كان الزرُّ يظهر في `in_progress`
+            **منذ المرحلة 10** فيرتدّ بـ409 — عطبٌ قديمٌ كشفه فحصُ المحطات.
+            وزرٌّ يعمل ثم يرتدّ يعلّم الكبتن أن يجرّب؛ وغيابُه يقول إن الباب
+            مغلق */}
+        {riding ? null : (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            disabled={busy}
+            className="mt-11 w-full text-center text-12 font-semibold text-muted"
+          >
+            إلغاء الرحلة
+          </button>
+        )}
       </div>
 
       {/* ورقةُ أسباب الإلغاء — و«الراكب ليس أنثى» لا تُعرض إلا إن كان الكبتن
@@ -203,5 +248,79 @@ export function ActiveRide({
         </div>
       ) : null}
     </>
+  );
+}
+
+
+/** شريطُ تقدّم المحطات — `DESIGN.md` §2.8-ب/§5.3.
+ *
+ * حبّةٌ لكل محطة: المنتهيةُ `--ok`، والحاليةُ محدَّدةٌ بـ`--tx`، والقادمةُ
+ * `--mut`. ومعها **رسمُ الانتظار محسوباً من الخلفية** أثناء الوقوف: الكبتن
+ * يرى ما يتراكم لصالحه، فوقوفٌ طويل يصير قراراً لا خسارة صامتة.
+ *
+ * **ولا شريطَ لرحلةٍ بلا محطات**: صفٌّ فارغ فوق كل رحلةٍ عادية ضجيجٌ دائم
+ * لأجل حالةٍ نادرة.
+ */
+function StopStrip({
+  ride,
+  currencyLabel,
+}: {
+  ride: Ride;
+  currencyLabel: string;
+}) {
+  if (ride.stops.length === 0) return null;
+
+  const waiting = ride.stops.find(
+    (stop) => stop.arrived_at !== null && stop.resumed_at === null,
+  );
+
+  return (
+    <div className="mb-13 rounded-13 border border-line bg-surface-2 px-13 py-11">
+      <div className="flex flex-wrap items-center gap-6">
+        {ride.stops.map((stop) => {
+          const done = stop.resumed_at !== null;
+          const here = stop.arrived_at !== null && stop.resumed_at === null;
+          return (
+            <span
+              key={stop.id}
+              className={cn(
+                "rounded-full px-10 py-4 text-11 font-semibold",
+                done
+                  ? "bg-ok text-inv"
+                  : here
+                    ? "border border-ink text-ink"
+                    : "text-muted",
+              )}
+            >
+              محطة {arabicDigits(String(stop.sequence))}
+            </span>
+          );
+        })}
+        <span className="rounded-full px-10 py-4 text-11 font-semibold text-muted">
+          الوجهة
+        </span>
+      </div>
+
+      {waiting ? (
+        <div className="mt-8 flex items-center justify-between text-11.5">
+          {/* **دقائقُ صحيحة لا ثلاثُ منازل**: `2.168` رقمٌ لا يقرؤه أحد،
+              والكبتنُ يريد «كم وقفتُ» لا كسرَ الدقيقة */}
+          <span className="text-muted">
+            انتظارٌ {arabicDigits(String(Math.floor(Number(waiting.waited_minutes))))}{" "}
+            دقيقة
+          </span>
+          <span className="font-semibold text-ink">
+            {arabicDigits(ride.waiting_charge)} {currencyLabel}
+          </span>
+        </div>
+      ) : null}
+
+      {waiting?.over_max_wait ? (
+        <p className="mt-6 text-11 leading-note text-warn">
+          تجاوز الانتظارُ السقف — يمكنك إنهاء الرحلة عند هذه المحطة بدل
+          الاستئناف.
+        </p>
+      ) : null}
+    </div>
   );
 }

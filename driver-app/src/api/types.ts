@@ -151,6 +151,8 @@ export type RideStatus =
   | "accepted"
   | "arrived"
   | "in_progress"
+  /** وقوفٌ عند محطةٍ وسيطة (المرحلة 12-ب) — حالةٌ **داخل** الرحلة. */
+  | "at_stop"
   | "completed"
   | "cancelled_by_rider"
   | "cancelled_by_driver"
@@ -182,12 +184,36 @@ export interface Ride {
   cancelled_reason: string | null;
   /** ما طُلب في هذه الرحلة من جنس الكبتن — **وصفُ الطلب لا جنسُ صاحبته**. */
   gender_preference: GenderPreference;
+
+  // --- تعدد الوجهات (المرحلة 12-ب) ---
+  stops: RideStop[];
+  current_leg: number;
+  waiting_charge: string;
+  stop_free_minutes: number;
+  stop_price_per_min: string;
+  stop_max_wait_minutes: number;
+
   created_at: string;
   accepted_at: string | null;
   arrived_at: string | null;
   started_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+}
+
+/** محطةٌ وسيطة — و`waiting_charge` **محسوبٌ في الخلفية** لا هنا (القسم 14). */
+export interface RideStop {
+  id: string;
+  sequence: number;
+  lat: number;
+  lng: number;
+  address: string | null;
+  arrived_at: string | null;
+  resumed_at: string | null;
+  waited_minutes: string;
+  waiting_charge: string;
+  /** تجاوز السقف — وعنده يُفتح للكبتن خيارُ إنهاء الرحلة عند المحطة. */
+  over_max_wait: boolean;
 }
 
 export interface Wallet {

@@ -316,22 +316,35 @@ async def wait_for_status(
 
 
 async def request_ride(
-    client: AsyncClient, headers: dict, *, category: str = "economy"
+    client: AsyncClient,
+    headers: dict,
+    *,
+    category: str = "economy",
+    stops: list[dict] | None = None,
 ) -> dict:
-    response = await client.post(
-        "/rides",
-        json={"pickup": PICKUP, "dropoff": DROPOFF, "vehicle_category": category},
-        headers=headers,
-    )
+    body: dict[str, Any] = {
+        "pickup": PICKUP,
+        "dropoff": DROPOFF,
+        "vehicle_category": category,
+    }
+    # المحطاتُ الوسيطة (المرحلة 12-ب) — تُرسل حين تُطلب فقط، فبقية
+    # الاختبارات ترسل نفس الحمولة التي كانت ترسلها
+    if stops:
+        body["stops"] = stops
+    response = await client.post("/rides", json=body, headers=headers)
     assert response.status_code == 201, response.text
     return response.json()
 
 
 async def accepted_ride(
-    client: AsyncClient, rider_headers: dict, driver: dict
+    client: AsyncClient,
+    rider_headers: dict,
+    driver: dict,
+    *,
+    stops: list[dict] | None = None,
 ) -> dict:
     """المسار الكامل حتى القبول — أساس كل اختبار لما بعد الإسناد."""
-    ride = await request_ride(client, rider_headers)
+    ride = await request_ride(client, rider_headers, stops=stops)
     await wait_for_offer(ride["id"], driver["driver_id"])
 
     accepted = await client.post(
@@ -341,9 +354,15 @@ async def accepted_ride(
     return accepted.json()
 
 
-async def started_ride(client: AsyncClient, rider_headers: dict, driver: dict) -> dict:
+async def started_ride(
+    client: AsyncClient,
+    rider_headers: dict,
+    driver: dict,
+    *,
+    stops: list[dict] | None = None,
+) -> dict:
     """رحلة في `in_progress` — من هنا يبدأ تسجيل المسار (SPEC القسم 5.7)."""
-    ride = await accepted_ride(client, rider_headers, driver)
+    ride = await accepted_ride(client, rider_headers, driver, stops=stops)
     for step in ("arrive", "start"):
         response = await client.post(
             f"/rides/{ride['id']}/{step}", headers=driver["headers"]

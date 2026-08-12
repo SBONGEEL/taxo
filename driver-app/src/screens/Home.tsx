@@ -25,7 +25,9 @@ import {
   acceptRide,
   arriveRide,
   cancelRide,
+  arriveAtStop,
   completeRide,
+  resumeFromStop,
   declineRide,
   getDriverWallet,
   getMySubscription,
@@ -131,7 +133,9 @@ export function HomeScreen() {
     await run(async () => {
       if (ride.status === "accepted") setRide(await arriveRide(ride.id));
       else if (ride.status === "arrived") setRide(await startRide(ride.id));
-      else if (ride.status === "in_progress") {
+      else if (ride.status === "in_progress" || ride.status === "at_stop") {
+        // **الإنهاءُ من `at_stop` مسموحٌ عمداً**: مخرجُ السقف حين يطول
+        // انتظارُ الراكب (SPEC القسم 5.10) — والخلفيةُ هي من يجيزه
         const finished = await completeRide(ride.id);
         setRide(null);
         setSettling(finished);
@@ -334,6 +338,12 @@ export function HomeScreen() {
           currencyLabel={currency}
           busy={busy}
           onAdvance={() => void advance()}
+          onArriveStop={(stopId) =>
+            void run(async () => setRide(await arriveAtStop(ride.id, stopId)))
+          }
+          onResumeStop={(stopId) =>
+            void run(async () => setRide(await resumeFromStop(ride.id, stopId)))
+          }
           genderPreference={profile?.driver.gender_preference ?? "any"}
           onCancel={(reason) =>
             void run(async () =>

@@ -462,6 +462,10 @@ export const createPricing = (payload: {
   price_per_min: string;
   minimum_fare: string;
   cancellation_fee: string;
+  stop_fee: string;
+  stop_free_minutes: number;
+  stop_price_per_min: string;
+  stop_max_wait_minutes: number;
 }) => api.post<PricingRule>("/admin/settings/pricing", payload);
 
 export const updatePricing = (
@@ -472,6 +476,10 @@ export const updatePricing = (
     price_per_min: string;
     minimum_fare: string;
     cancellation_fee: string;
+    stop_fee: string;
+    stop_free_minutes: number;
+    stop_price_per_min: string;
+    stop_max_wait_minutes: number;
   }>,
 ) => api.patch<PricingRule>(`/admin/settings/pricing/${id}`, payload);
 

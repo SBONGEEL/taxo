@@ -52,7 +52,7 @@ from app.models.pricing import PricingRule
 from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
-from app.models.ride import Ride, RideRoutePoint
+from app.models.ride import Ride, RideRoutePoint, RideStop
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -104,6 +104,7 @@ __all__ = [
     "REQUIRED_DOCUMENT_TYPES",
     "Ride",
     "RideRoutePoint",
+    "RideStop",
     "RideStatus",
     "SavedCard",
     "SubscriptionDurationType",

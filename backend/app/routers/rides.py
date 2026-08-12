@@ -66,6 +66,7 @@ async def estimate_ride(
         vehicle_category=payload.vehicle_category,
         pickup=_coords(payload.pickup),
         dropoff=_coords(payload.dropoff),
+        stops=[_coords(stop) for stop in payload.stops],
     )
     return RideEstimateOut(
         country_code=quote.country_code,
@@ -99,6 +100,12 @@ async def request_ride(
         pickup_address=payload.pickup_address,
         dropoff_address=payload.dropoff_address,
         gender_preference=payload.gender_preference,
+        stops=[
+            rides_service.StopRequest(
+                lat=stop.lat, lng=stop.lng, address=stop.address
+            )
+            for stop in payload.stops
+        ],
     )
     await session.commit()
     # قراءة جديدة: خطا العرض والطول محسوبان في القاعدة ولا يعودان مع INSERT
@@ -202,6 +209,47 @@ async def start_ride(
     await route.begin(redis, driver_id=driver.id, ride_id=ride.id)
     await notifications.publish_ride_event(
         session, redis, ride, events.RideEvent.RIDE_STARTED
+    )
+    return _to_out(ride)
+
+
+@router.post("/{ride_id}/stops/{stop_id}/arrive", response_model=RideOut)
+async def arrive_at_stop(
+    ride_id: uuid.UUID,
+    stop_id: uuid.UUID,
+    driver: CurrentDriver,
+    session: DbSession,
+    redis: RedisDep,
+) -> RideOut:
+    """وصل الكبتنُ محطةً وسيطة — **من هنا يبدأ ختمُ الانتظار** (القسم 5.10).
+
+    والراوترُ يُحلّ من له الحق ولا يكتب حالة: الانتقالُ والقفلُ في الخدمة.
+    """
+    ride, _ = await rides_service.arrive_at_stop(
+        session, await _assigned_ride(session, ride_id, driver), stop_id
+    )
+    await session.commit()
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.STOP_REACHED
+    )
+    return _to_out(ride)
+
+
+@router.post("/{ride_id}/stops/{stop_id}/resume", response_model=RideOut)
+async def resume_from_stop(
+    ride_id: uuid.UUID,
+    stop_id: uuid.UUID,
+    driver: CurrentDriver,
+    session: DbSession,
+    redis: RedisDep,
+) -> RideOut:
+    """يستأنف الكبتنُ السير — يُقفل عدّادُ الانتظار وتبدأ الساقُ التالية."""
+    ride, _ = await rides_service.resume_from_stop(
+        session, await _assigned_ride(session, ride_id, driver), stop_id
+    )
+    await session.commit()
+    await notifications.publish_ride_event(
+        session, redis, ride, events.RideEvent.STOP_RESUMED
     )
     return _to_out(ride)
 

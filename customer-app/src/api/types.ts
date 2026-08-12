@@ -17,6 +17,8 @@ export type RideStatus =
   | "accepted"
   | "arrived"
   | "in_progress"
+  /** وقوفٌ عند محطةٍ وسيطة (المرحلة 12-ب) — حالةٌ **داخل** الرحلة. */
+  | "at_stop"
   | "completed"
   | "cancelled_by_rider"
   | "cancelled_by_driver"
@@ -162,12 +164,40 @@ export interface Ride {
   /** ما طُلب في هذه الرحلة من جنس الكبتن — **تفضيلُ الطلب لا جنسُ أحد**. */
   gender_preference: GenderPreference;
   driver: RideDriver | null;
+
+  // --- تعدد الوجهات (المرحلة 12-ب) ---
+  stops: RideStop[];
+  current_leg: number;
+  /** رسمُ الانتظار **حتى اللحظة** — يصل محسوباً ويتجدد مع كل قراءة. */
+  waiting_charge: string;
+  stop_free_minutes: number;
+  stop_price_per_min: string;
+  stop_max_wait_minutes: number;
+
   created_at: string;
   accepted_at: string | null;
   arrived_at: string | null;
   started_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+}
+
+/** محطةٌ وسيطة ومعها **ما استحقّ عندها** — والمبلغُ محسوبٌ في الخلفية.
+ *
+ * الواجهةُ ترسم العدّاد من `arrived_at` (حسابُ وقت)، ولا تحسب مبلغاً
+ * (حسابُ مال — القسم 14). فما تعرضه من رسمٍ هو `waiting_charge` كما وصل.
+ */
+export interface RideStop {
+  id: string;
+  sequence: number;
+  lat: number;
+  lng: number;
+  address: string | null;
+  arrived_at: string | null;
+  resumed_at: string | null;
+  waited_minutes: string;
+  waiting_charge: string;
+  over_max_wait: boolean;
 }
 
 export interface Payment {

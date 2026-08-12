@@ -132,6 +132,17 @@ class WomenServiceUnavailable(Conflict):
     message = "خدمة التوصيل النسائي غير مفعّلة في هذه الدولة"
 
 
+class MultiStopUnavailable(Conflict):
+    """طُلبت محطاتٌ وسيطة في دولةٍ مفتاحُها مطفأ (المرحلة 12-ب).
+
+    ولا يُبتلع صامتاً بحذف المحطات: راكبٌ طلب ثلاث وجهاتٍ فسار الكبتن إلى
+    واحدة أسوأ من طلبٍ يُرفض بسببه.
+    """
+
+    code = "multi_stop_unavailable"
+    message = "تعدد الوجهات غير مفعّل في هذه الدولة"
+
+
 class CancelReasonNotApplicable(Conflict):
     """سببُ «الجنس لا يطابق» على رحلةٍ لم يُطلب فيها جنسٌ أصلاً.
 

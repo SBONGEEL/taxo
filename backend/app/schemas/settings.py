@@ -23,6 +23,11 @@ OptionalMoney = Field(default=None, ge=0, max_digits=12, decimal_places=3)
 # ---------------------------------------------------------------- التسعير
 
 
+# حقولُ المحطات (المرحلة 12-ب) — كلُّها **صفرٌ افتراضاً** فلا تُفتح كلفةٌ
+# على راكبٍ بالسكوت، وصفرُ السقف يعني «لا سقف» لا «سقفٌ مقداره صفر»
+StopMinutes = Field(default=0, ge=0, le=240)
+
+
 class PricingRuleCreate(BaseModel):
     country_code: CountryCode
     vehicle_category: VehicleCategory
@@ -32,6 +37,13 @@ class PricingRuleCreate(BaseModel):
     minimum_fare: Decimal = Money
     cancellation_fee: Decimal = Money
 
+    stop_fee: Decimal = Field(default=Decimal("0"), ge=0, max_digits=12, decimal_places=3)
+    stop_free_minutes: int = StopMinutes
+    stop_price_per_min: Decimal = Field(
+        default=Decimal("0"), ge=0, max_digits=12, decimal_places=3
+    )
+    stop_max_wait_minutes: int = StopMinutes
+
 
 class PricingRuleUpdate(BaseModel):
     base_fare: Decimal | None = OptionalMoney
@@ -39,6 +51,11 @@ class PricingRuleUpdate(BaseModel):
     price_per_min: Decimal | None = OptionalMoney
     minimum_fare: Decimal | None = OptionalMoney
     cancellation_fee: Decimal | None = OptionalMoney
+
+    stop_fee: Decimal | None = OptionalMoney
+    stop_free_minutes: int | None = Field(default=None, ge=0, le=240)
+    stop_price_per_min: Decimal | None = OptionalMoney
+    stop_max_wait_minutes: int | None = Field(default=None, ge=0, le=240)
 
 
 class PricingRuleOut(BaseModel):
@@ -52,6 +69,12 @@ class PricingRuleOut(BaseModel):
     price_per_min: Decimal
     minimum_fare: Decimal
     cancellation_fee: Decimal
+
+    stop_fee: Decimal
+    stop_free_minutes: int
+    stop_price_per_min: Decimal
+    stop_max_wait_minutes: int
+
     updated_at: datetime
 
 

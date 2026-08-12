@@ -14,7 +14,9 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Numeric,
+    SmallInteger,
     String,
+    UniqueConstraint,
     cast,
     func,
     text,
@@ -42,6 +44,9 @@ ACTIVE_RIDER_STATUSES: tuple[RideStatus, ...] = (
     RideStatus.ACCEPTED,
     RideStatus.ARRIVED,
     RideStatus.IN_PROGRESS,
+    # الوقوفُ عند محطةٍ رحلةٌ جارية لا فاصلٌ بينها وبين غيرها (المرحلة 12-ب):
+    # راكبٌ ينتظر عند محطته لا يطلب رحلةً ثانية، وكبتنٌ واقفٌ لأجله ليس متاحاً
+    RideStatus.AT_STOP,
 )
 
 # حالات تعني «الكبتن مشغول» — شرط التوزيع في المرحلة 4 يقرأ نفس القائمة
@@ -49,6 +54,7 @@ ACTIVE_DRIVER_STATUSES: tuple[RideStatus, ...] = (
     RideStatus.ACCEPTED,
     RideStatus.ARRIVED,
     RideStatus.IN_PROGRESS,
+    RideStatus.AT_STOP,
 )
 
 # حالات نهائية لا يخرج منها انتقال
@@ -199,6 +205,34 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         server_default=GenderPreference.ANY.value,
     )
 
+    # --- تعدد الوجهات (المرحلة 12-ب) ---
+    # عددُ المحطات الوسيطة: عمودٌ لا عدٌّ للجدول، لأنه يُقرأ في كل بطاقة عرضٍ
+    # وكل صفٍّ في اللوحة — وعدُّ جدولٍ لكل صفٍّ هو ما تتجنبه بقية القوائم
+    stops_count: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+    # أيُّ ساقٍ يسير فيها الكبتن الآن، ومنها تُنسب نقاطُ المسار. **كاتبُها
+    # واحدٌ لا غير** (`rides.resume_stop` تحت قفل صف الرحلة)
+    current_leg: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+    # أربعةُ حقولِ انتظارٍ مجمَّدةٌ لحظة الإنشاء كالعمولة (SPEC القسم 5.10):
+    # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن يتغيّر
+    # عدّادُها تحت عين راكبها
+    stop_fee_at_ride: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
+    )
+    stop_free_minutes_at_ride: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+    stop_price_per_min_at_ride: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
+    )
+    # صفرٌ يعني **لا سقف** لا «سقفٌ مقداره صفر» — كصفر حدِّ التحويل
+    stop_max_wait_minutes_at_ride: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+
     cancelled_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # سببٌ مصنَّف بجانب النص الحر (`CancelReasonCode`). نصٌّ محروسٌ في طبقة
     # Pydantic لا `ENUM` في القاعدة، كـ`feature_flags.feature_key`
@@ -230,6 +264,14 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     # drivers.current_ride_id) فلا يستطيع SQLAlchemy الاختيار وحده
     rider: Mapped["User"] = relationship("User", foreign_keys=[rider_id])
     driver: Mapped["Driver | None"] = relationship("Driver", foreign_keys=[driver_id])
+    # المحطاتُ **مرتَّبةً بالترتيب** لا بالإدراج: القراءةُ الوحيدة لها هي
+    # «ما هي محطاتُ هذه الرحلة بالتتابع»، وترتيبٌ يُترك للقاعدة يتغيّر
+    stops: Mapped[list["RideStop"]] = relationship(
+        "RideStop",
+        order_by="RideStop.sequence",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     @property
     def is_active(self) -> bool:
@@ -271,9 +313,83 @@ class RideRoutePoint(UUIDMixin, TimestampMixin, Base):
     )
     point: Mapped[str] = mapped_column(_point_column(), nullable=False)
     heading: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    # أيُّ ساقٍ من الرحلة (المرحلة 12-ب): صفرٌ من الانطلاق إلى المحطة الأولى،
+    # ثم واحدٌ منها إلى التالية. **تُنسخ من `rides.current_leg`** لحظة
+    # الالتقاط فلا يعرفها الملتقِط من عنده ولا تُحسب من الصفوف
+    leg: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
 
     lat: Mapped[float] = column_property(_latitude(point))
     lng: Mapped[float] = column_property(_longitude(point))
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<RideRoutePoint {self.ride_id}>"
+
+
+# أقصى ما يضيفه الراكب من محطاتٍ **وسيطة**: وجهتان وسيطتان والأخيرة
+# `rides.dropoff_point` — أي ثلاثُ وجهاتٍ في الرحلة (SPEC القسم 5.10).
+# ثابتُ كودٍ لا إعداد: الرقمُ قاعدةٌ في المواصفة كعدد محاولات التوزيع
+MAX_INTERMEDIATE_STOPS = 2
+
+
+class RideStop(UUIDMixin, TimestampMixin, Base):
+    """محطةٌ وسيطة في رحلةٍ متعددة الوجهات (SPEC القسم 5.10، المرحلة 12-ب).
+
+    **الوسيطةُ وحدها هنا**، والوجهةُ الأخيرة تبقى `rides.dropoff_point`: نقلُها
+    إلى الجدول يعني إمّا تعديلَ كلِّ ما يقرؤها اليوم (التسعير والتوزيع وبطاقة
+    العرض وسجل اللوحة وإطارات المقبس)، وإمّا إبقاءَ العمود **مرآةً** لآخر صفٍّ
+    — ومرآةٌ تُكتب في مكانين تفترق يوماً.
+
+    **ونافذةُ الانتظار عمودان لا ثلاثة**: `arrived_at` و`resumed_at`، والمدةُ
+    تُشتق منهما. عمودُ `waited_minutes` كان سيصير زمناً ثانياً يفترق عن
+    الأول — نفس سبب غياب `recorded_at` عن `ride_route_points`.
+
+    **والزمنُ يُختم هنا لا في الواجهة** (SPEC القسم 14): مؤقتٌ في التطبيق
+    يقيس ما تراه شاشةٌ لا ما وقع، ويُحتسب عليه مال.
+    """
+
+    __tablename__ = "ride_stops"
+    __table_args__ = (
+        # ترتيبُ المحطة في الرحلة — والقيدُ يمنع محطتين بنفس الترتيب
+        UniqueConstraint("ride_id", "sequence", name="uq_ride_stops_ride_sequence"),
+        CheckConstraint(
+            f"sequence >= 1 AND sequence <= {MAX_INTERMEDIATE_STOPS}",
+            name="ride_stop_sequence_range",
+        ),
+        # لا استئنافَ قبل وصول: القيدُ يمنع صفّاً يقول «انصرف ولم يصل»
+        CheckConstraint(
+            "resumed_at IS NULL OR arrived_at IS NOT NULL",
+            name="ride_stop_resume_needs_arrival",
+        ),
+    )
+
+    ride_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        # RESTRICT كبقية ما يتعلق بالرحلة: المحطة جزءٌ من فاتورة
+        ForeignKey("rides.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    sequence: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    point: Mapped[str] = mapped_column(_point_column(), nullable=False)
+    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    arrived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    resumed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # لحظةُ تنبيه الطرفين ببلوغ السقف — **أثرٌ يمنع تكرار التنبيه** في كل
+    # دورة كنس (نفس دور مفتاح Redis في تنبيه الاشتراك، وعمودٌ هنا لأن الصفَّ
+    # قائمٌ أصلاً فلا يحتاج مفتاحاً ثانياً يعيش خارجه)
+    notified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    lat: Mapped[float] = column_property(_latitude(point))
+    lng: Mapped[float] = column_property(_longitude(point))
+
+    def __repr__(self) -> str:  # pragma: no cover - تشخيصي
+        return f"<RideStop {self.ride_id}#{self.sequence}>"
