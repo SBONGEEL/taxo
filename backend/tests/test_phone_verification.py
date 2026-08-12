@@ -13,6 +13,7 @@ from sqlalchemy import select
 from app.models.user import User
 from app.services.firebase_auth import mock_token
 from tests.helpers import (
+    disable_provider,
     enable_sms_provider,
     fast_forward_otp_cooldown,
     read_otp,
@@ -141,6 +142,7 @@ async def test_sms_provider_serves_as_the_second_verifier(
         "login": "password",
         "verification": "sms_otp",
         "otp_length": 6,
+        "channels": ["sms_otp"],
     }
 
     challenge = await client.post(
@@ -155,14 +157,23 @@ async def test_sms_provider_serves_as_the_second_verifier(
     assert created.json()["user"]["phone_verified"] is True
 
 
-async def test_firebase_wins_over_the_sms_contract(
+async def test_the_sms_contract_now_wins_over_firebase(
     client: AsyncClient, session_factory
 ) -> None:
-    await enable_sms_provider(session_factory)
-    assert (await client.get("/auth/method")).json()["verification"] == "firebase"
+    """**تبدّلت الأولوية بقرار المالك في 12-هـ**: كان Firebase أولاً.
 
-    await _disable_firebase(session_factory)
-    assert (await client.get("/auth/method")).json()["verification"] == "sms_otp"
+    والترتيبُ الآن `whatsapp_otp ← sms_otp ← firebase`، وتبعتُه صريحة: عقدُ
+    Firebase مفعّلاً **لا يُستعمل** ما دام عقدُ رسائلٍ مفعّلاً — فمن أراده
+    يُطفئ ما قبله. وهذا الاختبارُ هو ما يمنع «تصحيحاً» لاحقاً يعيد القديم.
+    """
+    await enable_sms_provider(session_factory)
+    body = (await client.get("/auth/method")).json()
+    assert body["verification"] == "sms_otp"
+    # والقناتان معلنتان بترتيبهما: الثانيةُ مخرجٌ لا سرّ
+    assert body["channels"] == ["sms_otp", "firebase"]
+
+    await disable_provider(session_factory, "sms")
+    assert (await client.get("/auth/method")).json()["verification"] == "firebase"
 
 
 async def test_no_verifier_blocks_signup_loudly(

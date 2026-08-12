@@ -37,10 +37,15 @@ export function ForgotPasswordScreen() {
   const countries = config?.countries.map((entry) => entry.country_code) ?? [
     "JO",
   ];
-  const verification = config?.auth.verification ?? "none";
-
   const [step, setStep] = useState<"details" | "verify">("details");
   const [country, setCountry] = useState<CountryCode>(countries[0] ?? "JO");
+  // المُحقِّقُ يتبع الدولةَ المختارة لا الافتراضية (12-هـ)
+  const verification =
+    config?.countries.find((entry) => entry.country_code === country)
+      ?.verification ??
+    config?.auth.verification ??
+    "none";
+
   const { dialCode, nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -124,7 +129,9 @@ export function ForgotPasswordScreen() {
             dialCode={dialCode}
             method={verification}
             otpLength={config?.auth.otp_length ?? null}
-            requestChallenge={() => startPasswordReset(phone, country)}
+            requestChallenge={(channel) =>
+              startPasswordReset(phone, country, channel)
+            }
             onProven={(token) => void apply(token)}
             onBack={() => setStep("details")}
           />

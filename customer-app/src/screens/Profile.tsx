@@ -146,8 +146,8 @@ export function ProfileScreen() {
                 dialCode={dialCode}
                 method={config?.auth.verification ?? "none"}
                 otpLength={config?.auth.otp_length ?? null}
-                requestChallenge={() =>
-                  startChallenge(user.phone, user.country_code)
+                requestChallenge={(channel) =>
+                  startChallenge(user.phone, user.country_code, channel)
                 }
                 onProven={provePhone}
                 onBack={() => setVerifying(false)}

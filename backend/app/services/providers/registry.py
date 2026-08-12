@@ -101,6 +101,50 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             MOCK_FIELD,
         ),
     ),
+    ProviderKey.WHATSAPP: ProviderSpec(
+        key=ProviderKey.WHATSAPP,
+        label="WhatsApp — التحقق من الهاتف (OTP)",
+        # **ولا `feature_key` هنا عمداً** خلافاً لعقود البطاقة وكليك: المزامنةُ
+        # التلقائية تُشعل مفتاحَ **دولة العقد** عند تفعيله، وهذا عقدٌ عامٌّ لا
+        # دولةَ له — فمزامنتُه ستُشعل مفتاحاً بلا سوقٍ محدد. والمالكُ طلب أن يبقى
+        # المفتاح `whatsapp_otp_enabled` بيده: مطفأً حتى يُشعله لكل سوقٍ بضغطة
+        # زر في شاشة الإعدادات. فالعقدُ يقول «نستطيع» والمفتاحُ يقول «نفعل هنا».
+        #
+        # **والواجهة رسميةٌ من ميتا حصراً** (WhatsApp Cloud API على Graph):
+        # لا مكتبةَ واتساب غير رسمية في هذا المشروع — أتمتةُ حسابٍ شخصي مخالفةٌ
+        # لشروط واتساب وعقوبتُها حظرُ الرقم، أي توقّفُ تسجيل المستخدمين كلهم بلا
+        # إنذارٍ ومن رقمٍ لا يُسترجَع.
+        fields=(
+            ProviderField(
+                key="phone_number_id",
+                label="معرّف رقم الأعمال (Phone Number ID)",
+                secret=False,
+            ),
+            # سرٌّ حقيقي: من يملكه يرسل بصفتنا إلى كل من كلّمنا
+            ProviderField(key="access_token", label="رمز الوصول (Access Token)"),
+            ProviderField(
+                key="template_name",
+                label="اسم قالب المصادقة",
+                secret=False,
+            ),
+            ProviderField(
+                key="template_language",
+                label="لغة القالب (رمز مثل ar)",
+                secret=False,
+                required=False,
+            ),
+            # اختياريٌّ للإرسال، **ولازمٌ لاختبار القالب**: بغيره يتحقق زرُّ
+            # الاختبار من الرقم والتوكن ولا يعرف إن كان اسمُ القالب صحيحاً —
+            # وهو أكثرُ ما يُخطئ فيه الإعداد
+            ProviderField(
+                key="waba_id",
+                label="معرّف حساب الأعمال (WABA ID)",
+                secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+    ),
     ProviderKey.FIREBASE_AUTH: ProviderSpec(
         key=ProviderKey.FIREBASE_AUTH,
         label="Firebase — التحقق من الهاتف (OTP)",

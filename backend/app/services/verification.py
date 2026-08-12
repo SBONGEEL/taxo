@@ -1,4 +1,4 @@
-"""إثبات ملكية رقم الهاتف — **تحقّقٌ لا دخول** (المرحلة 8-ب).
+"""إثبات ملكية رقم الهاتف — **تحقّقٌ لا دخول** (المرحلة 8-ب، ثم 12-هـ).
 
 هذا هو التحوّل الذي أعاد ترتيب طبقة المصادقة كلها: OTP لم يعد طريقةَ دخول
 بل **حدثاً يقع مرتين في عمر الحساب**:
@@ -10,15 +10,29 @@
 والدخول اليومي **كلمة مرور دائماً ولكل المستخدمين** (`services/auth`).
 
 **لماذا حُذفت `OtpAuthStrategy` كطريقة دخول ولم يُحذف كودُها؟** لأن مزود SMS
-التقليدي لم يمت — تغيّر دورُه. كان بديلاً للدخول فصار **المُحقِّق الثاني**:
-حيث لا يعمل Firebase (أو حيث عقدٌ محليٌّ أرخص) يبقى `services/otp.py` بكامله
-— توليدُ الرمز وبصمتُه وعدّادُ المحاولات ومهلةُ الإرسال — يخدم نفس الحدثين.
+التقليدي لم يمت — تغيّر دورُه. كان بديلاً للدخول فصار **مُحقِّقاً**: حيث لا
+يعمل Firebase (أو حيث عقدٌ محليٌّ أرخص) يبقى `services/otp.py` بكامله —
+توليدُ الرمز وبصمتُه وعدّادُ المحاولات ومهلةُ الإرسال — يخدم نفس الحدثين.
 أما إبقاؤه طريقةَ دخولٍ ثانية فكان يعني جوابين متناقضين لسؤال «كيف أدخل»،
 وحساباتٍ أُنشئت تحت أحدهما لا تعمل تحت الآخر.
 
-**نقطة القرار صارت في التحقق لا في الدخول**، وترتيبها:
-`firebase` ← `sms_otp` ← لا مُحقِّق. ومفتاح `otp_verification_enabled`
-يعلوها جميعاً **في التسجيل وحده** — ولا يمسّ الاستعادة أبداً.
+**نقطة القرار في التحقق لا في الدخول**، وترتيبها بعد المرحلة 12-هـ:
+`whatsapp_otp` ← `sms_otp` ← `firebase` ← لا مُحقِّق. ومفتاح
+`otp_verification_enabled` يعلوها جميعاً **في التسجيل وحده** — ولا يمسّ
+الاستعادة أبداً.
+
+**والترتيبُ تبدّل بقرار المالك** (كان Firebase أولاً، وكانت حجّتُه أنه الأقوى
+إثباتاً والأرخص تشغيلاً): واتساب أوثقُ وصولاً في السوقين — لا شريحةَ تُبدَّل ولا
+رسالةٌ تضيع في بوابةٍ محلية، والناسُ يقرؤونه أولاً. **وتبعتُه صريحة**: عقدُ
+Firebase مفعّلاً لا يُستعمل ما دام قبله عقدٌ مفعّل، فمن أراده يُطفئ ما قبله.
+والترتيبُ ثابتٌ في الكود لا يُقرأ من إعداد: مفتاحٌ يقول «أيُّها أولاً» حالةٌ
+ثانية تختلف يوماً عن حالة العقود نفسها.
+
+**والقناةُ الأولى وحدها تُختار تلقائياً؛ وما بعدها يُطلب صراحةً.** فشلُ إرسالِ
+واتساب لا يُبدّل القناةَ في صمت: الرمزُ ربما وصل فعلاً، وتبديلٌ صامتٌ يجعل
+صاحبَه يقرأ رمزاً من قناةٍ ويكتب رمزاً من أخرى فيُحرق الرمزان. فيُرفع
+`VerificationSendFailed` حاملاً **القناةَ التالية المتاحة**، والواجهةُ ترسم
+زرَّها — رفضٌ بلا مخرجٍ ليس رفضاً.
 """
 
 from __future__ import annotations
@@ -30,29 +44,67 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.core.phone import country_for_phone
 from app.models.enums import CountryCode, FeatureKey, ProviderKey
 from app.models.user import User
 from app.services import otp, settings_service
 
 # ما تراه الواجهة فتعرف أيَّ تدفّقٍ ترسم
-VerificationMethod = Literal["firebase", "sms_otp", "none"]
+VerificationMethod = Literal["firebase", "sms_otp", "whatsapp_otp", "none"]
 
 FIREBASE = "firebase"
 SMS_OTP = "sms_otp"
+WHATSAPP_OTP = "whatsapp_otp"
 NONE = "none"
+
+# القنواتُ التي نولّد فيها الرمز ونرسله نحن — يخدمها `services/otp.py`.
+# وFirebase ليست منها: الرسالةُ تُرسل من جهاز المستخدم ولا رمزَ عندنا أصلاً
+CODE_CHANNELS: tuple[str, ...] = (WHATSAPP_OTP, SMS_OTP)
 
 
 class VerificationUnavailable(AppError):
     """التحقق مطلوب ولا مُحقِّق مُهيأ — عقدٌ ناقص لا خطأُ مستخدم.
 
     503 صريحة عمداً بدل السماح بالمرور: «لا حساب يُنشأ برقم غير محقق» قاعدةٌ
-    لا تُخرق لأن العقد غائب. ومخرجُها إداري: أدخل عقد Firebase أو عقد SMS،
-    أو أطفئ `otp_verification_enabled` للطوارئ وأنت تعرف ما تفعل.
+    لا تُخرق لأن العقد غائب. ومخرجُها إداري: أدخل عقد واتساب أو Firebase أو
+    عقد SMS، أو أطفئ `otp_verification_enabled` للطوارئ وأنت تعرف ما تفعل.
     """
 
     status_code = 503
     code = "verification_unavailable"
     message = "خدمة التحقق من الهاتف غير مهيأة — راجع عقود المزودين في اللوحة"
+
+
+class ChannelUnavailable(AppError):
+    """قناةٌ طُلبت صراحةً وليست متاحةً لهذا الرقم.
+
+    400 لا 503: المطلوبُ خاطئ لا النظامُ معطَّل. وتُرفض ولا تُستبدل بالمتاح —
+    طلبٌ يُنفَّذ في قناةٍ غير المطلوبة أسوأ من طلبٍ يُرفض بوضوح.
+    """
+
+    status_code = 400
+    code = "verification_channel_unavailable"
+    message = "قناة التحقق المطلوبة غير متاحة لهذا الرقم"
+
+
+class VerificationSendFailed(AppError):
+    """تعذّر إيصالُ الرمز في القناة المختارة — **ومعه المخرج**.
+
+    502 لأن العطل عند مزودٍ خارجي لا في مدخلات المستخدم. و`fallback_channel`
+    في جسم الخطأ هو ما يجعل الرفضَ ذا مخرج: الواجهةُ ترسم زرَّ القناة التالية
+    بدل أن تُعلّق صاحبَ الرقم أمام رسالةٍ لا تفعل شيئاً. وغيابُه (`null`) جوابٌ
+    صادقٌ أيضاً — لا قناةَ أخرى مهيأة، ومكانُ إصلاحه صفحةُ العقود لا هذه الشاشة.
+    """
+
+    status_code = 502
+    code = "verification_send_failed"
+    message = "تعذّر إرسال رمز التحقق"
+
+    def __init__(
+        self, *, channel: str, fallback: str | None, detail: str | None = None
+    ) -> None:
+        super().__init__(detail or self.message)
+        self.extra = {"channel": channel, "fallback_channel": fallback}
 
 
 class PhoneNotVerified(AppError):
@@ -70,22 +122,59 @@ def _now() -> datetime:
 # ------------------------------------------------------------- من يُحقِّق
 
 
-async def active_method(session: AsyncSession) -> VerificationMethod:
-    """المُحقِّق المُهيأ الآن — بصرف النظر عن مفتاح الميزة.
+async def available_methods(
+    session: AsyncSession, country_code: CountryCode | None = None
+) -> list[VerificationMethod]:
+    """المُحقِّقون المُهيأون **بترتيب الأولوية** — وأوّلُهم هو المُختار تلقائياً.
 
-    الترتيب: Firebase أولاً لأنه الأقوى إثباتاً والأرخص تشغيلاً (لا رسائل
-    ندفع ثمنها ولا recaptcha نبنيه)، ثم مزود SMS التقليدي. والترتيب ثابتٌ لا
-    يُقرأ من إعداد: مفتاحٌ يقول «أيّهما أولاً» حالةٌ ثانية قابلة للاختلاف عن
-    حالة العقود، ومن أراد الثاني يُطفئ عقد الأول.
+    وواتساب يشترط **العقدَ والمفتاحَ معاً**: العقدُ عامٌّ (رقمُ أعمالٍ واحد عند
+    ميتا يخدم السوقين) والمفتاحُ per-country — فالعقدُ يقول «نستطيع» والمفتاحُ
+    يقول «نفعل في هذا السوق». **وبلا دولةٍ معروفة لا تُعرض القناة**: مفتاحٌ
+    per-country لا يُقرأ بلا دولة، و«افترض الدولةَ الافتراضية» يجعل سوقاً يُرسل
+    بقناةٍ أُطفئت فيه.
     """
     from app.services.firebase_auth import firebase_auth_enabled
     from app.services.providers.credentials import provider_is_active
 
-    if await firebase_auth_enabled(session):
-        return FIREBASE
+    methods: list[VerificationMethod] = []
+
+    if (
+        country_code is not None
+        and await settings_service.is_feature_enabled(
+            session, country_code, FeatureKey.WHATSAPP_OTP_ENABLED
+        )
+        and await provider_is_active(session, ProviderKey.WHATSAPP)
+    ):
+        methods.append(WHATSAPP_OTP)
+
     if await provider_is_active(session, ProviderKey.SMS):
-        return SMS_OTP
-    return NONE
+        methods.append(SMS_OTP)
+    if await firebase_auth_enabled(session):
+        methods.append(FIREBASE)
+
+    return methods
+
+
+async def active_method(
+    session: AsyncSession, country_code: CountryCode | None = None
+) -> VerificationMethod:
+    """المُحقِّق المُختار الآن — بصرف النظر عن `otp_verification_enabled`."""
+    methods = await available_methods(session, country_code)
+    return methods[0] if methods else NONE
+
+
+async def method_for_phone(
+    session: AsyncSession, phone: str
+) -> tuple[VerificationMethod, list[VerificationMethod]]:
+    """(المُختار، المتاحون) لرقمٍ بصيغة E.164 — والدولةُ تُشتق من الرقم نفسه.
+
+    فحيث يوجد الرقم لا يُخمَّن السوق: بادئتُه تقول دولته، والمفتاحُ per-country
+    يُقرأ لها. وهو ما يجعل **ما يُعلنه `/auth/method` وما يقع في `challenge`
+    شيئاً واحداً** — وإعلانُ قناةٍ لا تُستعمل هو بعينه عطبُ «قاعدةٍ بلا باب»
+    الذي تكرر في هذا المشروع.
+    """
+    methods = await available_methods(session, country_for_phone(phone))
+    return (methods[0] if methods else NONE), methods
 
 
 async def required_for_signup(
@@ -101,17 +190,75 @@ async def required_for_signup(
     )
 
 
+# ------------------------------------------------------------- التحدي
+
+
+def _next_code_channel(
+    methods: list[VerificationMethod], after: str
+) -> str | None:
+    """القناةُ التالية التي نرسل فيها رمزاً — أو `None` إن لم يبق مخرج."""
+    remaining = [m for m in methods if m in CODE_CHANNELS and m != after]
+    return remaining[0] if remaining else None
+
+
 async def challenge(
-    session: AsyncSession, redis: Redis, phone: str
+    session: AsyncSession,
+    redis: Redis,
+    phone: str,
+    *,
+    channel: str | None = None,
 ) -> otp.Challenge:
     """يبدأ التحدي إن كان المُحقِّق يحتاج ذلك.
 
     Firebase لا يحتاج: الرسالة تُرسل من جهاز المستخدم، فيعود `sent=false`
     بدل خطأ — والواجهة تسأل دائماً ولا تحتاج أن تعرف المُحقِّق قبل أن تسأل.
+
+    و`channel` هو **اختيارُ المستخدم الصريح** بعد فشل قناة (زرُّ «أرسله برسالة
+    نصية»)، ويُرفض إن لم تكن القناةُ متاحةً لهذا الرقم.
     """
-    if await active_method(session) == SMS_OTP:
-        return await otp.issue(session, redis, phone)
-    return otp.Challenge(sent=False)
+    chosen, methods = await method_for_phone(session, phone)
+
+    if channel is not None:
+        if channel not in methods:
+            raise ChannelUnavailable()
+        chosen = channel  # type: ignore[assignment]
+
+    if chosen == WHATSAPP_OTP:
+        from app.services.whatsapp import WhatsAppError, get_provider_or_none
+
+        provider = await get_provider_or_none(session)
+        if provider is None:
+            # عقدٌ اختفى بين قراءةٍ وأخرى — يُعامل كفشل إرسالٍ لا كعطل نظام:
+            # صاحبُ الرقم يحتاج مخرجاً لا تشخيصاً
+            raise VerificationSendFailed(
+                channel=WHATSAPP_OTP,
+                fallback=_next_code_channel(methods, WHATSAPP_OTP),
+            )
+        try:
+            sent = await otp.issue(session, redis, phone, sender=provider)
+        except WhatsAppError as exc:
+            raise VerificationSendFailed(
+                channel=WHATSAPP_OTP,
+                fallback=_next_code_channel(methods, WHATSAPP_OTP),
+                detail=exc.message,
+            ) from exc
+        return otp.Challenge(
+            sent=sent.sent,
+            expires_in=sent.expires_in,
+            resend_after=sent.resend_after,
+            channel=WHATSAPP_OTP,
+        )
+
+    if chosen == SMS_OTP:
+        sent = await otp.issue(session, redis, phone)
+        return otp.Challenge(
+            sent=sent.sent,
+            expires_in=sent.expires_in,
+            resend_after=sent.resend_after,
+            channel=SMS_OTP,
+        )
+
+    return otp.Challenge(sent=False, channel=chosen)
 
 
 async def verify(
@@ -119,10 +266,10 @@ async def verify(
 ) -> None:
     """يتحقق من إثبات ملكية الرقم، أو يرفع خطأً. لا يعيد شيئاً عند النجاح.
 
-    `proof` رمزُ هوية Firebase أو رمز SMS من ست خانات — حسب المُحقِّق المُهيأ.
+    `proof` رمزُ هوية Firebase أو رمزٌ من ست خانات — حسب المُحقِّق المُهيأ.
     والرقم يُمرَّر بصيغة E.164 كما يُخزَّن (SPEC القسم 4).
     """
-    method = await active_method(session)
+    method, _ = await method_for_phone(session, phone)
 
     if method == FIREBASE:
         from app.services.auth.firebase_identity import verify_phone_ownership
@@ -130,7 +277,12 @@ async def verify(
         await verify_phone_ownership(session, phone=phone, id_token=proof)
         return
 
-    if method == SMS_OTP:
+    # **بابُ تحقّقٍ واحد لكل الرموز**: واتساب والرسائل كلتاهما تُوصل رمزاً
+    # ولّده `services/otp.py` وحفظ بصمتَه **بالرقم لا بالقناة**. فمن أُرسل إليه
+    # في واتساب ثم ارتدّ إلى الرسائل يُتحقق منه هنا بلا أن نسأل من أوصله — ولو
+    # كان التحققُ مرتبطاً بالقناة لبطل الرمزُ بمجرد الارتداد، وذاك هو الفخُّ
+    # الذي يجعل «الارتداد الآمن» غيرَ آمن
+    if method in CODE_CHANNELS:
         await otp.verify(redis, phone, proof)
         return
 

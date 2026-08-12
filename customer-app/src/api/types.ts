@@ -28,12 +28,21 @@ export type PaymentMethod = "cash" | "cliq" | "card" | "wallet";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 
-export type VerificationMethod = "firebase" | "sms_otp" | "none";
+export type VerificationMethod =
+  | "firebase"
+  | "sms_otp"
+  | "whatsapp_otp"
+  | "none";
+
+/** القنواتُ التي نرسل فيها رمزاً نحن — وما بينها مخرجُ ارتدادٍ (12-هـ). */
+export type OtpChannel = "whatsapp_otp" | "sms_otp";
 
 export interface AuthMethod {
   login: "password";
   verification: VerificationMethod;
   otp_length: number | null;
+  /** القنواتُ المهيأة بترتيب الأولوية — أوّلُها هو `verification` (12-هـ). */
+  channels?: string[];
 }
 
 /** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
@@ -72,6 +81,8 @@ export interface ChallengeResponse {
   sent: boolean;
   expires_in: number | null;
   resend_after: number | null;
+  /** القناةُ التي أُرسل فيها الرمز فعلاً — تقولها الشاشة لصاحبها. */
+  channel: string | null;
 }
 
 export interface CountryConfig {
@@ -82,6 +93,13 @@ export interface CountryConfig {
   /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
   dial_code: string;
   national_number_length: number;
+  /** المُحقِّقُ **لهذه الدولة** وقنواتُه (12-هـ) — لا مُحقِّقُ الدولة الافتراضية.
+   *
+   * قناةُ واتساب مفتاحُها per-country، فقراءةُ `auth.verification` وحدها تجعل
+   * شاشةَ التسجيل تُعلن قناةً وترسل الخلفيةُ في أخرى.
+   */
+  verification: VerificationMethod;
+  verification_channels: string[];
 }
 
 export interface AppConfig {

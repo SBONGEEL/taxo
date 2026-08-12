@@ -1,14 +1,20 @@
 /** إثبات ملكية الرقم — شاشةٌ واحدة بمُحقِّقين (SPEC القسم 12/1 و15/أ).
  *
- * **الواجهة لا تفترض المُحقِّق**: تقرؤه من `GET /config` (`auth.verification`)
- * وترسم التدفّق المناسب. ولا تعرف ترتيب المُحقِّقين ولا تختار بينهما — ذاك
- * قرارُ `services/verification.py` وحده.
+ * **الواجهة لا تفترض المُحقِّق**: تقرؤه من `GET /config` — و**من صفِّ دولة
+ * الحساب** (`countries[].verification`) لا من `auth.verification` الذي يخصّ
+ * الدولةَ الافتراضية (12-هـ). وترسم التدفّق المناسب، ولا تعرف ترتيب المُحقِّقين
+ * ولا تختار بينهم — ذاك قرارُ `services/verification.py` وحده.
  *
  * | المُحقِّق | من يرسل الرمز | ما يصل الخلفية |
  * |---|---|---|
  * | `firebase` | Firebase من جهاز الكبتن | **رمز الهوية** بعد إدخال الرمز |
  * | `sms_otp`  | خلفيتنا عبر مزود SMS     | **الرمز** نفسه كما كتبه |
+ * | `whatsapp_otp` | خلفيتنا عبر WhatsApp Cloud API | **الرمز** نفسه (12-هـ) |
  * | `none`     | لا أحد                    | لا شيء — الخطوة تُتخطى |
+ *
+ * **وفشلُ قناةٍ لا يترك الكبتن عالقاً**: الخلفية تردّ الخطأ ومعه
+ * `fallback_channel`، فيُرسم زرُّ القناة التالية. ولا ارتدادَ صامت: الرمزُ ربما
+ * وصل، وتبديلٌ لا يعلمه صاحبُه يجعله يكتب رمزاً من قناةٍ أخرى.
  *
  * والشكل من `design/DESIGN.md` §5.3 (شاشة «تحقق من رقمك»): عنوان 24/700،
  * نصٌّ فرعي 13 بسطرٍ 1.6، الخانات، زرٌّ أساسي، ثم سطرُ إعادة الإرسال 12.5.
@@ -17,7 +23,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import type { ChallengeResponse, VerificationMethod } from "@/api/types";
+import type {
+  ChallengeResponse,
+  OtpChannel,
+  VerificationMethod,
+} from "@/api/types";
 import { OtpBoxes } from "@/components/OtpBoxes";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
@@ -27,6 +37,23 @@ import { arabicDigits } from "@/lib/utils";
 
 const RECAPTCHA_CONTAINER = "taxo-recaptcha";
 
+/** نصُّ القناة التي وصل فيها الرمز فعلاً (12-هـ).
+ *
+ * ليس تجميلاً: من ينتظر رسالةً نصيةً وقد وصله واتساب يفتح تطبيقاً خطأً ثم يضغط
+ * «إعادة الإرسال» — وكلُّ إعادةٍ رسالةٌ مدفوعة. والقناةُ تأتي من الخلفية لا
+ * تُخمَّن هنا: هي وحدها تعرف أيَّ عقدٍ أرسل.
+ */
+const CHANNEL_LABEL: Record<string, string> = {
+  whatsapp_otp: "في واتساب",
+  sms_otp: "برسالة نصية",
+};
+
+const FALLBACK_LABEL: Record<string, string> = {
+  whatsapp_otp: "أرسله في واتساب",
+  sms_otp: "أرسله برسالة نصية",
+};
+
+
 interface Props {
   /** بصيغة E.164 جاهزةً — يبنيها المستدعي من بادئة `GET /config`. */
   phone: string;
@@ -34,8 +61,8 @@ interface Props {
   otpLength: number | null;
   title: string;
   subtitle: string;
-  /** يبدأ التحدي عند مزود SMS — مسارُ الاستعادة غير مسار التسجيل. */
-  requestChallenge: () => Promise<ChallengeResponse>;
+  /** يبدأ التحدي عند قناةٍ نرسل منها — مسارُ الاستعادة غير مسار التسجيل. */
+  requestChallenge: (channel?: OtpChannel) => Promise<ChallengeResponse>;
   /** يسلّم **إثباتاً** جاهزاً للإرسال مع بقية الطلب. */
   onProven: (verificationToken: string) => void;
   submitting?: boolean;
@@ -56,14 +83,17 @@ export function PhoneVerification({
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(true);
   const [cooldown, setCooldown] = useState(0);
+  const [channel, setChannel] = useState<string | null>(null);
+  const [fallback, setFallback] = useState<OtpChannel | null>(null);
   const challenge = useRef<PhoneChallenge | null>(null);
 
   const e164 = phone;
   const digits = otpLength ?? 6;
 
-  const send = useCallback(async () => {
+  const send = useCallback(async (pick?: OtpChannel) => {
     setSending(true);
     setError(null);
+    setFallback(null);
     try {
       if (method === "firebase") {
         const firebase = firebaseConfigOf(config?.providers.firebase_auth);
@@ -80,14 +110,22 @@ export function PhoneVerification({
         setCooldown(60);
         return;
       }
-      const response = await requestChallenge();
+      const response = await requestChallenge(pick);
       // `sent=false` ليست خطأً: مُحقِّقٌ لا يحتاج تحدياً من عندنا
+      setChannel(response.channel);
       setCooldown(response.resend_after ?? 60);
     } catch (caught) {
       setError(
         caught instanceof ApiError || caught instanceof Error
           ? caught.message
           : "تعذّر إرسال رمز التحقق",
+      );
+      // القناةُ التالية تأتي من الخلفية — وغيابُها يعني ألّا مخرجَ آخر، فلا
+      // يُرسم زرٌّ لا يعمل
+      const next =
+        caught instanceof ApiError ? caught.field("fallback_channel") : null;
+      setFallback(
+        next === "sms_otp" || next === "whatsapp_otp" ? next : null,
       );
     } finally {
       setSending(false);
@@ -131,7 +169,10 @@ export function PhoneVerification({
   return (
     <>
       <h1 className="mt-24 text-24 font-bold text-ink">{title}</h1>
-      <p className="mt-8 text-13 leading-snug text-muted">{subtitle}</p>
+      <p className="mt-8 text-13 leading-snug text-muted">
+        {subtitle}
+        {channel && CHANNEL_LABEL[channel] ? ` · أُرسل ${CHANNEL_LABEL[channel]}` : ""}
+      </p>
 
       <OtpBoxes
         value={code}
@@ -155,11 +196,22 @@ export function PhoneVerification({
         >
           تحقق
         </Button>
+
+        {/* مخرجُ القناة التالية — يظهر عند فشل الإرسال وحده */}
+        {fallback ? (
+          <Button
+            variant="secondary"
+            onClick={() => void send(fallback)}
+            disabled={sending}
+          >
+            {FALLBACK_LABEL[fallback]}
+          </Button>
+        ) : null}
       </div>
 
       <button
         type="button"
-        onClick={send}
+        onClick={() => void send()}
         disabled={cooldown > 0 || sending}
         className="mt-16 w-full text-center text-12.5 text-muted disabled:opacity-100"
       >

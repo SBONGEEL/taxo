@@ -13,6 +13,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import type { OtpChannel } from "@/api/types";
 import { resetPassword, startPasswordResetChallenge } from "@/api/endpoints";
 import { PhoneField } from "@/components/PhoneField";
 import { PhoneVerification } from "@/components/PhoneVerification";
@@ -40,11 +41,17 @@ export function ForgotPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const method = config?.auth.verification ?? "none";
+  // المُحقِّقُ يتبع الدولةَ المختارة لا الافتراضية (12-هـ)
+  const method =
+    config?.countries.find((entry) => entry.country_code === country)
+      ?.verification ??
+    config?.auth.verification ??
+    "none";
 
   const e164 = toE164(phone, dialCode);
+  // القناةُ تُمرَّر لا تُهمَل — انظر `Register.tsx`
   const requestChallenge = useCallback(
-    () => startPasswordResetChallenge(e164, country),
+    (channel?: OtpChannel) => startPasswordResetChallenge(e164, country, channel),
     [e164, country],
   );
 

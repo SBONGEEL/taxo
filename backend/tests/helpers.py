@@ -585,6 +585,42 @@ async def enable_sms_provider(session_factory: Any, **overrides: Any) -> None:
     )
 
 
+async def enable_whatsapp_provider(session_factory: Any, **overrides: Any) -> None:
+    """عقد واتساب وهمي (المرحلة 12-هـ) — **والعقدُ وحده لا يفتح القناة**.
+
+    المفتاحُ `whatsapp_otp_enabled` per-country شرطٌ ثانٍ، فمن نسيه في اختباره
+    يجد `sms_otp` أو `firebase` — وذاك هو السلوك الصحيح لا عطبٌ في المساعد.
+    """
+    await _enable_provider(
+        session_factory,
+        "whatsapp",
+        {
+            "phone_number_id": "111222333",
+            "access_token": "wa-secret",
+            "template_name": "taxo_otp",
+            "waba_id": "999888777",
+            "use_mock": True,
+        }
+        | overrides,
+    )
+
+
+async def disable_provider(session_factory: Any, provider_key: str) -> None:
+    """يُطفئ عقداً قائماً — لاختبار ترتيب المُحقِّقين وما بعد آخرهم."""
+    from sqlalchemy import update
+
+    from app.models.enums import ProviderKey
+    from app.models.provider_credential import ProviderCredential
+
+    async with session_factory() as session:
+        await session.execute(
+            update(ProviderCredential)
+            .where(ProviderCredential.provider_key == ProviderKey(provider_key))
+            .values(is_active=False)
+        )
+        await session.commit()
+
+
 async def enable_firebase_auth(
     session_factory: Any, *, project_id: str = "taxo-test-project", **overrides: Any
 ) -> None:
@@ -632,17 +668,31 @@ async def enable_payout_provider(
     )
 
 
-async def read_otp(phone: str) -> str:
-    """يقرأ الرمز من رسالة المزود الوهمي — كما يقرؤه صاحب الهاتف."""
+def _code_in(body: str | None, phone: str) -> str:
     import re
 
-    from app.services.sms import last_message
-
-    body = await last_message(get_redis_client(), phone)
     assert body is not None, f"لم تصل رسالة إلى {phone}"
     match = re.search(r"\d{6}", body)
     assert match is not None, f"لا رمز في الرسالة: {body}"
     return match.group()
+
+
+async def read_otp(phone: str) -> str:
+    """يقرأ الرمز من رسالة مزود **الرسائل** الوهمي — كما يقرؤه صاحب الهاتف."""
+    from app.services.sms import last_message
+
+    return _code_in(await last_message(get_redis_client(), phone), phone)
+
+
+async def read_whatsapp_otp(phone: str) -> str:
+    """ونفسُه من قناة **واتساب** — ومفتاحان منفصلان عمداً (12-هـ).
+
+    اختبارٌ يقرأ رمزَ واتساب من مفتاح الرسائل يمرّ وهو يقيس شيئاً آخر: يكفي أن
+    تكون قناةٌ سابقةٌ قد أرسلت في نفس الاختبار.
+    """
+    from app.services.whatsapp import last_message
+
+    return _code_in(await last_message(get_redis_client(), phone), phone)
 
 
 async def fast_forward_otp_cooldown(phone: str) -> None:

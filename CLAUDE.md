@@ -108,6 +108,16 @@ the code with `code_at` and verifies it with `match_step`, so a wrong HOTP trunc
 both sides agreeing on the same error and nobody able to log in with Google Authenticator. That is
 literally the `awaiting_confirmation` failure shape.
 
+**Stage 12-هـ — WhatsApp as a third phone verifier — is done end to end**: `services/whatsapp/`
+(base + `cloud_api.py` as the only file that knows Meta's wire format + mock + a single decision
+point), migration `0021` for the `ProviderKey` value, the per-country `whatsapp_otp_enabled` flag
+seeded explicitly off, the flag's switch in the panel's settings screen, and the channel label plus
+the fallback button in both PWAs. Its rules are in the architecture notes below. **Adding an enum
+value needs the running backend recreated, not just migrated** — asyncpg caches the type per
+connection, so `alembic upgrade head` alone leaves the live container answering
+`invalid input value for enum provider_key`. This is the same cache trap `test_migrations` handles
+with `engine.dispose()`; on the dev stack it is `docker compose restart backend`.
+
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
 `FUTURE-FEATURES`; scheduled rides and sharing are unstarted, and **surge the owner decided not to
@@ -534,6 +544,33 @@ because `env.py` calls `asyncio.run`, which cannot nest inside the test event lo
 `models/` are SQLAlchemy 2 async, `schemas/` are Pydantic v2. `ws/` is the realtime layer (channels,
 events, sockets); `tasks/` holds the Celery app and its periodic jobs, each one a thin wrapper over
 a service.
+
+**WhatsApp is the third verifier (12-هـ), and the priority chain changed with it.** It is now
+`whatsapp_otp ← sms_otp ← firebase ← none` — the owner reversed the old Firebase-first order, and the
+consequence is explicit: **an active Firebase contract goes unused while any contract ahead of it is
+active**, so whoever wants Firebase turns off what precedes it. Four rules travel with the channel.
+**Only the official Meta API** (WhatsApp Cloud API over Graph) — never `whatsapp-web.js`, `Baileys`,
+or anything like them: those automate a personal account through the web interface, which violates
+WhatsApp's terms and is punished by banning the number, i.e. new-user signup stops platform-wide,
+without warning, from a number nobody can get back. **The contract is global while the flag is
+per-country** — one business number serves both markets and the phone carries its own country, so the
+contract says "we can" and `whatsapp_otp_enabled` says "we do here"; that is also why this provider
+has no `feature_key` in the registry (the auto-sync would light up the *contract's* country, and this
+contract has none). **Authentication templates take no free text** — the template is pre-approved at
+Meta and we pass one parameter, the code — which is why `services/otp.py` now asks for an
+`OtpSender.send_code` instead of composing the body itself: an interface that accepts text would lie
+to its caller. And **a failed send never switches channel silently**: the code may in fact have
+arrived, and a silent switch makes someone read a code from one channel and type a code from another,
+burning both. The request bounces 502 carrying `fallback_channel`, and the app draws that button.
+Verification itself is one door for every channel — the digest is stored **by phone, not by channel**
+— because binding it to the channel would make the fallback itself invalid.
+
+**A bug found while wiring that fallback, and fixed in all three frontends**: the backend's error
+body is `{code, detail}` (see `core/exceptions.py`) and every client read `body.message`, so **every
+Arabic error message the backend wrote was being replaced by the client's own generic fallback**. The
+documented rule ("the app never writes its own Arabic for an error the backend already named") was
+written and not running. `ApiError` now reads `detail` first and keeps the whole body in `extra`,
+which is what lets `fallback_channel` reach the button.
 
 **Login is always a password, and TOTP (12-د) does not change that — it adds a second step, never a
 second method.** `POST /auth/login` still takes only a password; if the account has a *confirmed*
@@ -1036,8 +1073,10 @@ than entered it, so `ws_client()` in `conftest.py` is an `asynccontextmanager` u
 body — making it a fixture fails at teardown.
 
 **`customer-app/` decides nothing.** Every branch it takes is read from `GET /config`: which
-verification flow to draw (`auth.verification`), which payment channels exist in this country
-(`countries[].features`), which map token to use. A flag switched off in the contracts page
+verification flow to draw (**`countries[].verification`** since 12-هـ — `auth.verification` is the
+*default country's* answer and stays only as a fallback, because reading it while the user has picked
+the other market announces one channel and sends in another), which payment channels exist in this
+country (`countries[].features`), which map token to use. A flag switched off in the contracts page
 disappears from the app with no deploy — that is the whole point of publishing the config, and it
 is why no feature name is hardcoded outside `screens/Payment.tsx::METHODS` and `lib/config.tsx`.
 Money is never computed there: amounts arrive as strings (`NUMERIC(12,3)` serialises to a string)

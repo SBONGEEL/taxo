@@ -10,6 +10,7 @@ import type {
   AuthMethod,
   AuthResponse,
   ChallengeResponse,
+  OtpChannel,
   CliqTopup,
   Coordinates,
   CountryCode,
@@ -48,10 +49,14 @@ export const getConfig = (countryCode?: CountryCode) =>
 export const getAuthMethod = () =>
   api.get<AuthMethod>("/auth/method", { anonymous: true });
 
-export const startChallenge = (phone: string, countryCode: CountryCode) =>
+export const startChallenge = (
+  phone: string,
+  countryCode: CountryCode,
+  channel?: OtpChannel,
+) =>
   api.post<ChallengeResponse>(
     "/auth/challenge",
-    { phone, country_code: countryCode },
+    { phone, country_code: countryCode, channel },
     { anonymous: true },
   );
 
@@ -72,10 +77,14 @@ export const login = (phone: string, password: string, countryCode: CountryCode)
     { anonymous: true },
   );
 
-export const startPasswordReset = (phone: string, countryCode: CountryCode) =>
+export const startPasswordReset = (
+  phone: string,
+  countryCode: CountryCode,
+  channel?: OtpChannel,
+) =>
   api.post<ChallengeResponse>(
     "/auth/password-reset/challenge",
-    { phone, country_code: countryCode },
+    { phone, country_code: countryCode, channel },
     { anonymous: true },
   );
 

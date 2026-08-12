@@ -68,6 +68,21 @@ def normalize_phone(raw: str, country_code: CountryCode) -> str:
     return f"+{dial_code}{national}"
 
 
+def country_for_phone(phone: str) -> CountryCode | None:
+    """دولةُ رقمٍ مُطبَّع (E.164) من بادئته — من نفس جدول القواعد.
+
+    يلزم حيث تكون السياسةُ per-country والمُدخَلُ رقماً وحده: قناةُ التحقق
+    (المرحلة 12-هـ) مفتاحُها per-country، والرقمُ يحمل دولتَه — فاشتقاقُها منه
+    أصدقُ من افتراض الدولة الافتراضية، وذاك الافتراضُ يُرسل في سوقٍ بقناةٍ
+    أُطفئت فيه. و`None` تعني رقماً من خارج السوقين.
+    """
+    value = _NON_DIGITS.sub("", (phone or "").strip()).lstrip("+")
+    for code, (dial_code, _, _) in _COUNTRY_RULES.items():
+        if value.startswith(dial_code):
+            return code
+    return None
+
+
 def resolve_phone(raw: str, country_code: CountryCode | None = None) -> str:
     """تطبيع رقم عند الدخول حيث قد لا تُرسل الواجهة رمز الدولة.
 

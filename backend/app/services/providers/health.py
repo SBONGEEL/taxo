@@ -66,6 +66,12 @@ async def _test_sms(values: dict[str, Any], test_phone: str | None) -> str:
     return await build_provider(values).test_connection(test_phone)
 
 
+async def _test_whatsapp(values: dict[str, Any], test_phone: str | None) -> str:
+    from app.services.whatsapp import build_provider
+
+    return await build_provider(values).test_connection(test_phone)
+
+
 async def _test_fcm(values: dict[str, Any]) -> str:
     from app.services.push import build_provider
 
@@ -99,6 +105,8 @@ async def _run(
         return await _test_telr(values)
     if provider_key is ProviderKey.SMS:
         return await _test_sms(values, test_phone)
+    if provider_key is ProviderKey.WHATSAPP:
+        return await _test_whatsapp(values, test_phone)
     if provider_key is ProviderKey.FCM:
         return await _test_fcm(values)
     if provider_key is ProviderKey.FIREBASE_AUTH:

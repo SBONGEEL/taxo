@@ -25,6 +25,14 @@ class CountryConfigOut(BaseModel):
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
     quiet_hours_timezone: str | None = None
+    # **المُحقِّق لهذه الدولة بعينها** (12-هـ) وقنواتُه بترتيبها.
+    #
+    # وُجد لأن قناةَ واتساب مفتاحُها per-country: فبلا هذا الحقل تقرأ شاشةُ
+    # التسجيل مُحقِّقَ **الدولة الافتراضية** ثم يرسل المستخدمُ رمزاً من قناةٍ
+    # أخرى — وهو بعينه عطبُ «ما يُعلن غيرُ ما يقع» الذي تكرر في هذا المشروع.
+    # و`auth` أعلى الجواب يبقى للدولة الافتراضية: توافقٌ خلفيٌّ لا مصدرٌ ثانٍ.
+    verification: str
+    verification_channels: list[str] = []
 
 
 class ConfigOut(BaseModel):

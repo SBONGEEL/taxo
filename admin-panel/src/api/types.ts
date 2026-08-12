@@ -88,6 +88,8 @@ export interface CountryConfig {
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   quiet_hours_timezone: string | null;
+  verification: string;
+  verification_channels: string[];
 }
 
 export interface AppConfig {
@@ -257,7 +259,8 @@ export type FeatureKey =
   | "wallet_transfer_enabled"
   | "otp_verification_enabled"
   | "women_service_enabled"
-  | "multi_stop_enabled";
+  | "multi_stop_enabled"
+  | "whatsapp_otp_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
@@ -299,6 +302,7 @@ export type ProviderKey =
   | "mapbox"
   | "telr"
   | "sms"
+  | "whatsapp"
   | "fcm"
   | "firebase_auth"
   | "cliq_acquirer"

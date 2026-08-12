@@ -19,6 +19,7 @@ router = APIRouter(tags=["config"])
 async def _country_config(session, country: CountryCode) -> CountryConfigOut:
     """إعدادات دولةٍ كما تراها الواجهات — قراءةٌ خالصة بلا إنشاء صفوف."""
     quiet = await campaigns.get_settings(session, country)
+    channels = await verification.available_methods(session, country)
     return CountryConfigOut(
         country_code=country,
         currency=currency_for_country(country),
@@ -31,16 +32,26 @@ async def _country_config(session, country: CountryCode) -> CountryConfigOut:
         ),
         quiet_hours_end=quiet.quiet_hours_end.strftime("%H:%M") if quiet else None,
         quiet_hours_timezone=quiet.timezone if quiet else None,
+        verification=channels[0] if channels else verification.NONE,
+        verification_channels=list(channels),
     )
 
 
-async def _auth_method(session) -> AuthMethodResponse:
-    """نفس ما يعيده `GET /auth/method` — مصدرٌ واحد لا وصفان يفترقان."""
-    method = await verification.active_method(session)
+async def _auth_method(session, country: CountryCode) -> AuthMethodResponse:
+    """نفس ما يعيده `GET /auth/method` — مصدرٌ واحد لا وصفان يفترقان.
+
+    وبدولةٍ منذ 12-هـ: قناةُ واتساب مفتاحُها per-country، فوصفٌ بلا دولةٍ يعلن
+    قناةً قد تكون مطفأةً في سوق القارئ.
+    """
+    methods = await verification.available_methods(session, country)
+    method = methods[0] if methods else verification.NONE
     return AuthMethodResponse(
         login="password",
         verification=method,
-        otp_length=otp.CODE_LENGTH if method == verification.SMS_OTP else None,
+        otp_length=(
+            otp.CODE_LENGTH if method in verification.CODE_CHANNELS else None
+        ),
+        channels=list(methods),
     )
 
 
@@ -58,7 +69,7 @@ async def get_public_config(
     return ConfigOut(
         app=settings.app_name,
         default_country_code=settings.default_country_code,
-        auth=await _auth_method(session),
+        auth=await _auth_method(session, country_code or settings.default_country_code),
         countries=[
             await _country_config(session, country)
             for country in countries

@@ -34,8 +34,6 @@ export function RegisterScreen() {
   const countries = config?.countries.map((entry) => entry.country_code) ?? [
     "JO",
   ];
-  const verification = config?.auth.verification ?? "none";
-
   const [step, setStep] = useState<"details" | "verify">("details");
   // الدولةُ الافتراضية من `/config` لا أولُ عنصرٍ في القائمة: ترتيبُ التعداد
   // يجعل الأولَ ليبيا، فكانت شاشةُ التسجيل تفترض سوقاً وشاشةُ الدخول تفترض
@@ -43,6 +41,13 @@ export function RegisterScreen() {
   const [country, setCountry] = useState<CountryCode>(
     config?.default_country_code ?? countries[0] ?? "JO",
   );
+  // المُحقِّقُ يتبع الدولةَ المختارة لا الافتراضية (12-هـ)
+  const verification =
+    config?.countries.find((entry) => entry.country_code === country)
+      ?.verification ??
+    config?.auth.verification ??
+    "none";
+
   const { dialCode, nationalLength } = usePhoneCountry(country);
   // الدولةُ تُختار في هذه الشاشة، فالمفتاح يُقرأ منها لا من حسابٍ لا وجود له
   const womenService = useFeature(country, "women_service_enabled");
@@ -182,7 +187,9 @@ export function RegisterScreen() {
             dialCode={dialCode}
             method={verification}
             otpLength={config?.auth.otp_length ?? null}
-            requestChallenge={() => startChallenge(phone, country)}
+            requestChallenge={(channel) =>
+              startChallenge(phone, country, channel)
+            }
             onProven={(token) => void create(token)}
             onBack={() => setStep("details")}
           />

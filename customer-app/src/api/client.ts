@@ -29,9 +29,22 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly retryAfter?: number,
+    /** حقولٌ إضافية يحملها جسمُ الخطأ — مثل `fallback_channel` (12-هـ).
+     *
+     * `AppError.extra` في الخلفية يُدمج في الجسم، وهو ما يجعل الرفضَ ذا مخرج:
+     * «تعذّر إرسال رمز واتساب» + القناةُ التالية = زرٌّ يُرسم، بدل رسالةٍ لا
+     * تفعل شيئاً.
+     */
+    readonly extra: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = "ApiError";
+  }
+
+  /** قيمةٌ نصّية من حقولِ الخطأ الإضافية، أو `null`. */
+  field(key: string): string | null {
+    const value = this.extra[key];
+    return typeof value === "string" ? value : null;
   }
 }
 
@@ -111,8 +124,13 @@ async function toError(response: Response): Promise<ApiError> {
   try {
     const body = await response.json();
     code = body.code ?? code;
-    message = body.message ?? message;
-    return new ApiError(response.status, code, message, body.retry_after);
+    // **الحقلُ `detail` لا `message`**: هذا ما يكتبه معالجُ الأخطاء في
+    // `core/exceptions.py` (`{"code": …, "detail": …}`). وقراءةُ `message`
+    // وحدها كانت تُسقط كلَّ نصٍّ عربيٍّ كتبته الخلفية فتحلّ محلَّه رسالةٌ عامة
+    // — أي أن قاعدةَ «لا تخترع الواجهةُ نصّاً لخطأٍ سمّته الخلفية» كانت
+    // مكتوبةً ولا تعمل. و`message` تبقى مقروءةً احتياطاً لا أكثر
+    message = body.detail ?? body.message ?? message;
+    return new ApiError(response.status, code, message, body.retry_after, body);
   } catch {
     return new ApiError(response.status, code, message);
   }

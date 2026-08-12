@@ -53,8 +53,16 @@ class LoginRequest(BaseModel):
 
 
 class ChallengeRequest(BaseModel):
+    """«أرسل لي رمز التحقق» — و`channel` اختيارُ المستخدم الصريح (12-هـ).
+
+    غيابُه يعني «القناةُ الأولى المتاحة» وهو الطبيعي؛ ووجودُه يعني أن صاحبَ
+    الرقم ضغط «أرسله برسالة نصية» بعد أن فشل واتساب. ولا يُقبل إلا لقناةٍ
+    متاحةٍ فعلاً لهذا الرقم — وإلا رُفض بلا استبدالٍ صامت.
+    """
+
     phone: str = Field(min_length=6, max_length=20)
     country_code: CountryCode | None = None
+    channel: Literal["whatsapp_otp", "sms_otp"] | None = None
 
 
 class ChallengeResponse(BaseModel):
@@ -68,6 +76,10 @@ class ChallengeResponse(BaseModel):
     sent: bool
     expires_in: int | None = None
     resend_after: int | None = None
+    # القناةُ التي أُرسل فيها الرمز فعلاً (12-هـ) — تقولها الشاشة لصاحبها: من
+    # ينتظر رسالةً نصيةً وقد وصله واتساب يفتح تطبيقاً خطأً ثم يطلب إعادة
+    # الإرسال، وكلُّ إعادةٍ رسالةٌ مدفوعة
+    channel: str | None = None
 
 
 class VerifyPhoneRequest(BaseModel):
@@ -178,5 +190,9 @@ class AuthMethodResponse(BaseModel):
     """
 
     login: Literal["password"] = "password"
-    verification: Literal["firebase", "sms_otp", "none"]
+    verification: Literal["firebase", "sms_otp", "whatsapp_otp", "none"]
     otp_length: int | None = None
+    # كلُّ القنوات المهيأة بترتيب الأولوية (12-هـ): الأولى هي `verification`،
+    # وما بعدها مخرجٌ ترسمه الواجهة عند الفشل — قائمةٌ بلا بابٍ تعني زرَّ ارتدادٍ
+    # لا يظهر حين يلزم
+    channels: list[str] = []

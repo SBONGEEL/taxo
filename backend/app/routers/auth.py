@@ -32,7 +32,7 @@ from app.core.exceptions import (
     TotpEnforcementActive,
 )
 from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
-from app.models.enums import UserRole
+from app.models.enums import CountryCode, UserRole
 from app.models.user import User
 from app.schemas.auth import (
     AuthMethodResponse,
@@ -113,13 +113,25 @@ async def _issue(session, redis, user: User) -> TokenPair:
 
 
 @router.get("/method", response_model=AuthMethodResponse)
-async def auth_method(session: DbSession) -> AuthMethodResponse:
-    """الدخول ثابتٌ والمُحقِّق متغيّر — تقرؤهما الواجهة بدل أن تفترضهما."""
-    method = await verification.active_method(session)
+async def auth_method(
+    session: DbSession, country_code: CountryCode | None = None
+) -> AuthMethodResponse:
+    """الدخول ثابتٌ والمُحقِّق متغيّر — تقرؤهما الواجهة بدل أن تفترضهما.
+
+    و`country_code` لازمٌ منذ 12-هـ: قناةُ واتساب مفتاحُها per-country،
+    فجوابٌ بلا دولةٍ يُعلن قناةً غير التي ستُستعمل فعلاً. وبغيابه تُقرأ الدولةُ
+    الافتراضية — وهو ما ترسله الواجهاتُ الثلاث أصلاً من `GET /config`.
+    """
+    country = country_code or settings.default_country_code
+    methods = await verification.available_methods(session, country)
+    method = methods[0] if methods else verification.NONE
     return AuthMethodResponse(
         login="password",
         verification=method,
-        otp_length=otp.CODE_LENGTH if method == verification.SMS_OTP else None,
+        otp_length=(
+            otp.CODE_LENGTH if method in verification.CODE_CHANNELS else None
+        ),
+        channels=list(methods),
     )
 
 
@@ -142,11 +154,14 @@ async def start_challenge(
         (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
     )
 
-    challenge = await verification.challenge(session, redis, phone)
+    challenge = await verification.challenge(
+        session, redis, phone, channel=payload.channel
+    )
     return ChallengeResponse(
         sent=challenge.sent,
         expires_in=challenge.expires_in,
         resend_after=challenge.resend_after,
+        channel=challenge.channel,
     )
 
 
@@ -350,11 +365,14 @@ async def start_password_reset(
         (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
     )
 
-    challenge = await verification.challenge(session, redis, phone)
+    challenge = await verification.challenge(
+        session, redis, phone, channel=payload.channel
+    )
     return ChallengeResponse(
         sent=challenge.sent,
         expires_in=challenge.expires_in,
         resend_after=challenge.resend_after,
+        channel=challenge.channel,
     )
 
 

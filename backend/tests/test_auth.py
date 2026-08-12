@@ -20,6 +20,8 @@ async def test_login_is_always_password_and_verification_is_firebase(
         "login": "password",
         "verification": "firebase",
         "otp_length": None,
+        # كلُّ القنوات المهيأة بترتيبها (12-هـ) — والأولى هي `verification`
+        "channels": ["firebase"],
     }
 
 

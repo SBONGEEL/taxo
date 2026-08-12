@@ -20,7 +20,14 @@ export type DocumentType =
 export type DocumentReviewStatus = "pending" | "approved" | "rejected";
 
 /** أيُّ مُحقِّقٍ فعّالٌ الآن — تقرؤه الواجهة ولا تختاره (SPEC القسم 15/أ). */
-export type VerificationMethod = "firebase" | "sms_otp" | "none";
+export type VerificationMethod =
+  | "firebase"
+  | "sms_otp"
+  | "whatsapp_otp"
+  | "none";
+
+/** القنواتُ التي نرسل فيها رمزاً نحن — وما بينها مخرجُ ارتدادٍ (12-هـ). */
+export type OtpChannel = "whatsapp_otp" | "sms_otp";
 
 export interface User {
   id: string;
@@ -59,11 +66,15 @@ export interface AuthMethod {
   verification: VerificationMethod;
   otp_length: number | null;
   otp_ttl_seconds: number | null;
+  /** القنواتُ المهيأة بترتيب الأولوية — أوّلُها هو `verification` (12-هـ). */
+  channels?: string[];
 }
 
 export interface ChallengeResponse {
   sent: boolean;
   resend_after: number | null;
+  /** القناةُ التي أُرسل فيها الرمز فعلاً — تقولها الشاشة لصاحبها (12-هـ). */
+  channel: string | null;
 }
 
 export interface CountryConfig {
@@ -78,6 +89,13 @@ export interface CountryConfig {
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   quiet_hours_timezone: string | null;
+  /** المُحقِّقُ **لهذه الدولة** وقنواتُه (12-هـ) — لا مُحقِّقُ الدولة الافتراضية.
+   *
+   * قناةُ واتساب مفتاحُها per-country، فقراءةُ `auth.verification` وحدها تجعل
+   * شاشةَ التسجيل تُعلن قناةً وترسل الخلفيةُ في أخرى.
+   */
+  verification: VerificationMethod;
+  verification_channels: string[];
 }
 
 export interface AppConfig {

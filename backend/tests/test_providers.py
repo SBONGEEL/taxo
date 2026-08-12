@@ -350,21 +350,24 @@ async def test_activating_sms_provider_makes_it_the_second_verifier(
     )
     assert saved.status_code == 200, saved.text
 
-    # عقد Firebase مفعّل، وهو الأسبق في الترتيب
-    assert (await client.get("/auth/method")).json() == {
-        "login": "password",
-        "verification": "firebase",
-        "otp_length": None,
-    }
-
-    await _disable_firebase(session_factory)
+    # **عقدُ الرسائل أسبقُ من Firebase منذ 12-هـ** (كان العكس): تفعيلُه من
+    # صفحة العقود يبدّل المُحقِّقَ بلا نشرِ كود — وهو ما يفعله المشرف فعلاً
     assert (await client.get("/auth/method")).json() == {
         "login": "password",
         "verification": "sms_otp",
         "otp_length": 6,
+        "channels": ["sms_otp", "firebase"],
     }
 
     await client.post(
         f"/admin/providers/{saved.json()['id']}/deactivate", headers=admin_headers
     )
+    assert (await client.get("/auth/method")).json() == {
+        "login": "password",
+        "verification": "firebase",
+        "otp_length": None,
+        "channels": ["firebase"],
+    }
+
+    await _disable_firebase(session_factory)
     assert (await client.get("/auth/method")).json()["verification"] == "none"

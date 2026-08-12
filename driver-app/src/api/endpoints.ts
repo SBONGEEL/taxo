@@ -11,6 +11,7 @@ import type {
   AuthResponse,
   CardOrder,
   ChallengeResponse,
+  OtpChannel,
   CountryCode,
   DocumentType,
   DocumentUpload,
@@ -69,10 +70,11 @@ export const getMe = () => api.get<User>("/auth/me");
 export const startSignupChallenge = (
   phone: string,
   country_code: CountryCode,
+  channel?: OtpChannel,
 ) =>
   api.post<ChallengeResponse>(
     "/auth/challenge",
-    { phone, country_code },
+    { phone, country_code, channel },
     { anonymous: true },
   );
 
@@ -98,10 +100,11 @@ export const logout = (refresh_token: string) =>
 export const startPasswordResetChallenge = (
   phone: string,
   country_code?: CountryCode,
+  channel?: OtpChannel,
 ) =>
   api.post<ChallengeResponse>(
     "/auth/password-reset/challenge",
-    { phone, country_code },
+    { phone, country_code, channel },
     { anonymous: true },
   );
 

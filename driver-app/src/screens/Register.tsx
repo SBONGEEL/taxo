@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { registerAccount, startSignupChallenge } from "@/api/endpoints";
-import type { CountryCode } from "@/api/types";
+import type { CountryCode, OtpChannel } from "@/api/types";
 import { PhoneField } from "@/components/PhoneField";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { AuthScreen } from "@/components/ui/AuthScreen";
@@ -53,11 +53,18 @@ export function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const method = config?.auth.verification ?? "none";
+  // المُحقِّقُ يتبع الدولةَ المختارة لا الافتراضية (12-هـ)
+  const method =
+    config?.countries.find((entry) => entry.country_code === country)
+      ?.verification ??
+    config?.auth.verification ??
+    "none";
   const e164 = toE164(phone, dialCode);
 
+  // **والقناةُ تُمرَّر لا تُهمَل**: زرُّ الارتداد يعطي القناةَ التالية، فمُغلَّفٌ
+  // يتجاهلها يعيد الإرسال في القناة الفاشلة نفسها — زرٌّ يعمل ولا يفعل شيئاً
   const requestChallenge = useCallback(
-    () => startSignupChallenge(e164, country),
+    (channel?: OtpChannel) => startSignupChallenge(e164, country, channel),
     [e164, country],
   );
 

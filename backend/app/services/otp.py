@@ -21,6 +21,7 @@ import hashlib
 import hmac
 import secrets
 from dataclasses import dataclass
+from typing import Protocol
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,11 +47,17 @@ MESSAGE_TEMPLATE = "TAXO: رمز التحقق {code}. صالح {minutes} دقا�
 
 @dataclass(frozen=True, slots=True)
 class Challenge:
-    """ما تحتاجه الواجهة لرسم شاشة الرمز — بلا الرمز نفسه بالطبع."""
+    """ما تحتاجه الواجهة لرسم شاشة الرمز — بلا الرمز نفسه بالطبع.
+
+    و`channel` (المرحلة 12-هـ) ليس تفصيلاً تشخيصياً: الشاشةُ تقول «أرسلنا
+    الرمز في واتساب» أو «برسالة نصية»، ومن ينتظر رسالةً نصيةً وقد وصله واتساب
+    يفتح تطبيقاً خطأً ثم يطلب إعادة الإرسال — وكلُّ إعادةٍ رسالةٌ مدفوعة.
+    """
 
     sent: bool
     expires_in: int | None = None
     resend_after: int | None = None
+    channel: str | None = None
 
 
 def _digest(code: str) -> str:
@@ -64,11 +71,52 @@ def generate_code() -> str:
     return f"{secrets.randbelow(10 ** CODE_LENGTH):0{CODE_LENGTH}d}"
 
 
-async def issue(session: AsyncSession, redis: Redis, phone: str) -> Challenge:
-    """يولّد رمزاً ويرسله عبر المزود المفعّل.
+class OtpSender(Protocol):
+    """من يوصل الرمز — **ويعرف كيف يُصاغ في قناته** (المرحلة 12-هـ).
+
+    قبل واتساب كان هذا الملف يصوغ النصَّ ويسلّمه لمزود الرسائل. ولا يصحّ ذلك
+    مع قوالب المصادقة في واتساب: القالبُ معتمدٌ عند ميتا ولا يقبل نصّاً حرّاً،
+    وما يُرسل مُعامِلٌ واحد هو الرمز. فصار العقدُ «أوصِل هذا الرمز» لا «أرسل
+    هذا النص» — والصياغةُ عند من يملكها.
+    """
+
+    provider_name: str
+
+    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str: ...
+
+
+class SmsCodeSender:
+    """يكيّف مزودَ الرسائل على عقد `OtpSender` — وهو من يصوغ نصَّ الرسالة.
+
+    والنصُّ يبقى في هذا الملف لأنه نصُّ **الرمز** لا نصُّ المزود: تغييرُ صياغته
+    قرارٌ واحد لكل مزودي الرسائل، لا قرارٌ في ملف أسلاكِ كلٍّ منهم.
+    """
+
+    def __init__(self, provider) -> None:
+        self._provider = provider
+        self.provider_name = getattr(provider, "provider_name", "sms")
+
+    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str:
+        return await self._provider.send(
+            to, MESSAGE_TEMPLATE.format(code=code, minutes=ttl_minutes)
+        )
+
+
+async def issue(
+    session: AsyncSession,
+    redis: Redis,
+    phone: str,
+    *,
+    sender: OtpSender | None = None,
+) -> Challenge:
+    """يولّد رمزاً ويوصله عبر القناة المعطاة — أو عبر مزود الرسائل افتراضاً.
 
     الترتيب مقصود: يُحفظ الرمز **قبل** الإرسال ويُمحى إن فشل الإرسال — فلا
     يبقى رمزٌ حيٌّ لم يصل صاحبَه، ولا يصل رمزٌ لا أثر له عندنا.
+
+    و`sender` غائباً يعني مزودَ الرسائل: القناةُ تُقرَّر في
+    `services/verification.py` وحدها، وافتراضُ الرسائل هنا يبقي كل مستدعٍ قديم
+    على حاله بدل أن يصير القرارُ في موضعين.
     """
     cooldown = await redis.ttl(COOLDOWN_KEY.format(phone=phone))
     if cooldown and cooldown > 0:
@@ -76,7 +124,7 @@ async def issue(session: AsyncSession, redis: Redis, phone: str) -> Challenge:
             f"انتظر {cooldown} ثانية قبل طلب رمز جديد", retry_after=cooldown
         )
 
-    provider = await get_sms_provider(session)
+    channel = sender or SmsCodeSender(await get_sms_provider(session))
     code = generate_code()
 
     await redis.set(
@@ -85,9 +133,8 @@ async def issue(session: AsyncSession, redis: Redis, phone: str) -> Challenge:
     await redis.delete(_ATTEMPTS_KEY.format(phone=phone))
 
     try:
-        await provider.send(
-            phone,
-            MESSAGE_TEMPLATE.format(code=code, minutes=CODE_TTL_SECONDS // 60),
+        await channel.send_code(
+            phone, code, ttl_minutes=CODE_TTL_SECONDS // 60
         )
     except Exception:
         await redis.delete(_CODE_KEY.format(phone=phone))
