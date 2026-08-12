@@ -13,6 +13,7 @@ from app.models.driver import Driver
 from app.models.enums import RideStatus, UserRole
 from app.models.ride import Ride
 from app.schemas.rating import RatingCreate, RatingOut
+from app.schemas.promo import PromoPreviewOut, PromoValidateRequest
 from app.schemas.tip import TipCreate, TipOptionsOut, TipOut
 from app.schemas.ride import (
     CoordinatesIn,
@@ -27,6 +28,8 @@ from app.services import (
     dispatch,
     notifications,
     pricing,
+    pricing,
+    promo as promo_service,
     ratings as ratings_service,
     tips as tips_service,
     ride_log,
@@ -106,6 +109,7 @@ async def request_ride(
         pickup_address=payload.pickup_address,
         dropoff_address=payload.dropoff_address,
         gender_preference=payload.gender_preference,
+        promo_code=payload.promo_code,
         stops=[
             rides_service.StopRequest(
                 lat=stop.lat, lng=stop.lng, address=stop.address
@@ -369,6 +373,37 @@ async def rate_ride(
     )
     await session.commit()
     return RatingOut.model_validate(rating)
+
+
+# ----------------------------------------------------- الكوبون (12-ز)
+
+
+@router.post("/promo/validate", response_model=PromoPreviewOut)
+async def validate_promo(
+    payload: PromoValidateRequest, rider: RiderUser, session: DbSession
+) -> PromoPreviewOut:
+    """زرُّ «تطبيق» في ورقة التأكيد — **تحقّقٌ لا يستهلك شيئاً**.
+
+    ويرفع نفسَ أخطاء الطلب الحقيقي (رمزٌ خاطئ، عرضٌ نفد، استعملتَه سابقاً): زرٌّ
+    يقول «مقبول» ثم يرتدّ عند الطلب يُعلّم الراكبَ ألّا يثق بالشاشة.
+
+    **والمسارُ تحت `/rides` لأن الرمزَ يخصّ رحلةً لم توجد بعد**، والخصمُ يُحسب
+    على تقديرها. و`RiderUser`: الكبتنُ لا يطبّق كوبوناً على راكب.
+    """
+    promo, discount = await promo_service.preview(
+        session,
+        code=payload.code,
+        country=payload.country_code,
+        rider=rider,
+        fare=payload.fare,
+    )
+    return PromoPreviewOut(
+        code=promo.code,
+        discount_type=promo.discount_type,
+        discount=discount,
+        fare_after=pricing.round_money(payload.fare - discount),
+        currency=currency_for_country(payload.country_code).value,
+    )
 
 
 # ----------------------------------------------------- البقشيش (12-و)

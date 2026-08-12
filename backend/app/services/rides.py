@@ -231,6 +231,7 @@ async def request_ride(
     dropoff_address: str | None = None,
     gender_preference: GenderPreference | None = None,
     stops: Sequence[StopRequest] = (),
+    promo_code: str | None = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -311,6 +312,16 @@ async def request_ride(
         stop_max_wait_minutes_at_ride=rule.stop_max_wait_minutes,
     )
     session.add(ride)
+
+    # **الكوبونُ يُجمَّد قبل الـflush** (12-ز): الرمزُ يُتحقق منه تحت قفل صفّه،
+    # فطلبان متزامنان بنفس الرمز لا يتجاوزان حدَّ المستخدم ولا الميزانية. ولا
+    # مبلغَ يُكتب — الأجرةُ النهائية لا تُعرف قبل الإنهاء (القسم 6.6)
+    if promo_code:
+        from app.services import promo as promo_service
+
+        await promo_service.apply_to_ride(
+            session, ride=ride, rider=rider, code=promo_code
+        )
 
     # الإلحاقُ بالمجموعة لا `RideStop(ride=…)`: العلاقةُ أحاديةُ الاتجاه
     # (`Ride.stops` بلا `back_populates`)، والـcascade هو ما يكتب `ride_id`
@@ -423,6 +434,16 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
     actual_km = await route.actual_distance_km(session, ride.id)
     ride.actual_distance_km = actual_km
     ride.final_fare = await _final_fare(session, ride, actual_km)
+
+    # **خصمُ الكوبون دفعةٌ تُنشأ هنا وتؤكَّد** (12-ز، القسم 6.6): الأجرةُ صارت
+    # معلومةً للتوّ، والقاعدةُ مجمَّدةٌ على الرحلة. وبها يصير ما على الراكب
+    # الأجرةَ ناقصَ الخصم تلقائياً، وتُجمع أرباحُ الكبتن من الصفَّين كأن لا كوبون
+    if ride.promo_code_id is not None:
+        from app.services import promo as promo_service
+
+        rider = await session.get(User, ride.rider_id)
+        if rider is not None:
+            await promo_service.settle_discount(session, ride, rider=rider)
 
     driver.current_ride_id = None
     return await _flush_and_reload(session, ride)

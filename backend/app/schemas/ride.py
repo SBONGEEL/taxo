@@ -65,6 +65,10 @@ class RideCreateRequest(RideEstimateRequest):
     # `null` = «خذ افتراضي ملفي» لا `any`: التطبيق لا يرسل الحقل حين لا تختار
     # الراكبة شيئاً، فيسري ما ضبطته مرةً في حسابها (المرحلة 10-ج)
     gender_preference: GenderPreference | None = None
+    # رمزُ الكوبون كما كتبه الراكب (12-ز) — يُطبَّع ويُتحقق منه في الخدمة، ورمزٌ
+    # خاطئ **يرفض الطلبَ كلَّه** ولا يمرّ بلا خصم: من كتب رمزاً ينتظر خصمه، ورحلةٌ
+    # تبدأ بسعرٍ كامل بعد رمزٍ سقط صامتاً شكوى دعمٍ لا صفقة
+    promo_code: str | None = Field(default=None, max_length=32)
 
 
 class RideCancelRequest(BaseModel):

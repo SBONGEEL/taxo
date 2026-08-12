@@ -23,6 +23,7 @@ from app.models.enums import (
     PaymentMethod,
     PaymentProvider,
     PaymentStatus,
+    PromoDiscountType,
     ProviderKey,
     ProviderOrderPurpose,
     ProviderOrderStatus,
@@ -49,6 +50,7 @@ from app.models.notification import (
 from app.models.payment import Payment, SavedCard
 from app.models.payment_setting import PaymentSetting
 from app.models.pricing import PricingRule
+from app.models.promo import PromoCode
 from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
@@ -98,6 +100,8 @@ __all__ = [
     "PaymentProvider",
     "PaymentStatus",
     "PricingRule",
+    "PromoCode",
+    "PromoDiscountType",
     "ProviderCredential",
     "ProviderKey",
     "ProviderOrder",

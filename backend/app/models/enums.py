@@ -80,6 +80,13 @@ class PaymentMethod(StrEnum):
     CLIQ = "cliq"
     CARD = "card"
     WALLET = "wallet"
+    # خصمُ الكوبون (المرحلة 12-ز): **قناةٌ لا يدفعها الراكب** — تُنشئها المنصةُ
+    # وتؤكّدها بنفسها لحظةَ الإنهاء بقيمة الخصم. وهي **كالبطاقة: ليست في أيٍّ من
+    # تصنيفَي القنوات** — لا في `DIRECTLY_COLLECTED_METHODS` (كي يُكتب للكبتن
+    # `ride_earning`) ولا في `WALLET_FUNDED_METHODS` (كي لا يُخصم من محفظة
+    # الراكب شيء). ولو وُضعت في الثاني لدفع الراكبُ الخصمَ من رصيده — أي لانقلب
+    # الكوبونُ ضريبةً عليه، وهو نقيضُ الغرض كلِّه
+    PROMO = "promo"
 
 
 class PaymentProvider(StrEnum):
@@ -93,6 +100,17 @@ class PaymentProvider(StrEnum):
 
     TELR = "telr"
     CLIQ_ACQUIRER = "cliq_acquirer"
+
+
+class PromoDiscountType(StrEnum):
+    """نوعُ خصم الكوبون (المرحلة 12-ز).
+
+    النسبةُ للحملات، والثابتُ لأول رحلةٍ مجاناً وللتعويضات (قرارُ المالك).
+    والنسبةُ تحتاج سقفاً (`max_discount`) وإلا ابتلع كوبونُ ٥٠٪ رحلةً طويلة.
+    """
+
+    PERCENT = "percent"
+    FIXED = "fixed"
 
 
 class ProviderOrderPurpose(StrEnum):
@@ -292,6 +310,10 @@ class FeatureKey(StrEnum):
     # تُضاف إلى `DEFAULT_ENABLED_FLAGS`. وتحكم **ما يُرسله التطبيق كما تحكم ما
     # يرسمه**: مطفأةً لا تظهر الأزرار ولا يُقبل النداء
     TIPS_ENABLED = "tips_enabled"
+    # الكوبونات (المرحلة 12-ز). **ميزةٌ لا حارس** فغيابُ صفّها معطَّلة، وتحكم
+    # **ما يُرسله التطبيق كما تحكم ما يرسمه**: مطفأةً لا تظهر ورقةُ الكوبون ولا
+    # يُقبل رمزٌ في طلب الرحلة
+    PROMO_CODES_ENABLED = "promo_codes_enabled"
 
 
 class WalletOwnerType(StrEnum):

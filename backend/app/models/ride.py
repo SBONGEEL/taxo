@@ -26,6 +26,7 @@ from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import (
+    PromoDiscountType,
     CountryCode,
     Currency,
     GenderPreference,
@@ -219,6 +220,24 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     # أربعةُ حقولِ انتظارٍ مجمَّدةٌ لحظة الإنشاء كالعمولة (SPEC القسم 5.10):
     # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن يتغيّر
     # عدّادُها تحت عين راكبها
+    # ---------------------------------------------- كوبونُ الخصم (12-ز)
+    #
+    # **القاعدةُ مجمَّدةٌ والمبلغُ لا** (SPEC القسم 6.6): المبلغُ يعتمد على
+    # `final_fare` الذي لا يُعرف قبل الإنهاء (يُعاد حسابه على المسافة الفعلية)،
+    # فيُحسب مرةً عند الإنهاء ويسكن في **صفِّ دفعة `promo`** — بيتٌ واحدٌ لا
+    # بيتان، وقيمةٌ لها بيتان تفترقان (درسُ `waited_minutes` في 12-ب).
+    #
+    # والتجميدُ كتجميد العمولة: تعديلُ الرمز في اللوحة يحكم ما يأتي بعده لا
+    # رحلةً رأى صاحبُها خصمَها على الشاشة قبل أن يطلب.
+    promo_code_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("promo_codes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    promo_type_at_ride: Mapped[PromoDiscountType | None] = mapped_column(
+        pg_enum(PromoDiscountType, "promo_discount_type"), nullable=True
+    )
+    promo_value_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    promo_cap_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+
     stop_fee_at_ride: Mapped[Decimal] = mapped_column(
         MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
     )
