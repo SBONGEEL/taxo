@@ -184,6 +184,11 @@ function MyFactorCard({
         بعد كلمة المرور. ولا رسائلَ ولا شرائح: الرمزُ يولّده هاتفك بلا شبكة.
       </p>
 
+      {/* **قبل كل شيء آخر**: لا يُثبت أحدٌ رمزاً لم يره بعد، ولا يُقرأ «جرّب رمزاً
+          من ورقتك» قبل أن تظهر الورقة. وهي معروضةٌ مرةً واحدةً في عمر الحساب،
+          فمكانُها أعلى ما في البطاقة لا أسفلَه */}
+      {codes ? <RecoveryCodes codes={codes} /> : null}
+
       {status.confirmed ? (
         <>
           <dl className="mb-14 grid grid-cols-2 gap-y-8 text-12.5">
@@ -370,7 +375,6 @@ function MyFactorCard({
         </>
       )}
 
-      {codes ? <RecoveryCodes codes={codes} /> : null}
     </section>
   );
 }
@@ -463,7 +467,9 @@ function PolicyCard({
 
       <div className="mt-16 border-t border-line pt-14">
         <Field
-          label={`مهلة الخمول (دقائق — بين ${policy.min_idle_timeout_minutes} و${policy.max_idle_timeout_minutes})`}
+          label={`مهلة الخمول (دقائق — بين ${arabicDigits(
+            String(policy.min_idle_timeout_minutes),
+          )} و${arabicDigits(String(policy.max_idle_timeout_minutes))})`}
           id="idle"
           dir="ltr"
           inputMode="numeric"
