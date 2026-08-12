@@ -49,7 +49,7 @@ export function RidesScreen() {
             <EmptyState title="لا رحلات بعد" hint="أول رحلة تبدأ من الشاشة الرئيسية." />
           ) : (
             <ul className="space-y-8">
-              {rides.map(({ ride }) => (
+              {rides.map(({ ride, has_open_dispute }) => (
                 <li key={ride.id}>
                   <Link
                     to={`/rides/${ride.id}`}
@@ -68,9 +68,14 @@ export function RidesScreen() {
                       <p className="font-semibold text-ink">
                         {formatMoney(ride.final_fare ?? ride.estimated_fare, ride.currency)}
                       </p>
-                      <Badge tone={ride.status === "completed" ? "success" : "neutral"}>
-                        {RIDE_STATUS_LABEL[ride.status]}
-                      </Badge>
+                      <div className="flex items-center justify-end gap-6">
+                        {/* شارةُ النزاع — نفسُ نغمة «متنازع فيها» في قائمة الدفعات،
+                            لا نغمةَ تطبيق الكبتن: الراكب يرى الحالتين في شاشةٍ واحدة. */}
+                        {has_open_dispute ? <Badge tone="danger">نزاع</Badge> : null}
+                        <Badge tone={ride.status === "completed" ? "success" : "neutral"}>
+                          {RIDE_STATUS_LABEL[ride.status]}
+                        </Badge>
+                      </div>
                     </div>
                     <ChevronLeft className="size-16 shrink-0 text-muted" />
                   </Link>
