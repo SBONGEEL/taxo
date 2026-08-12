@@ -296,6 +296,9 @@ async def test_the_secret_is_never_readable_again(
     status = await client.get("/auth/me/totp", headers=admin_headers)
     assert status.status_code == 200
     assert "secret" not in status.json()
+    # ومهلةُ الخمول تصل من هنا: مؤقّتُ اللوحة يقرؤها بدل أن يكتبها في كوده،
+    # و`support` يحتاجها ولا يقرأ `GET /admin/security`
+    assert status.json()["session_idle_timeout_minutes"] == 30
     assert status.json()["confirmed"] is True
     assert status.json()["recovery_codes_remaining"] == totp.RECOVERY_CODE_COUNT
 

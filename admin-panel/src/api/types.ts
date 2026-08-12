@@ -34,6 +34,50 @@ export interface AuthResponse {
   tokens: TokenPair;
 }
 
+/** جوابُ الدخول — إمّا جلسةٌ كاملة، وإمّا تحدٍّ ثانٍ **بلا توكن** (12-د).
+ *
+ * شكلٌ واحدٌ لا اتحادٌ بين شكلين، كما تردّه الخلفية: `totp_required` يُفحص
+ * أولاً، وحين يكون `true` فـ`user` و`tokens` غائبان — ولا توكنَ قبل العاملين.
+ */
+export interface LoginResponse {
+  totp_required: boolean;
+  user: User | null;
+  tokens: TokenPair | null;
+  challenge_token: string | null;
+  expires_in: number | null;
+}
+
+export interface TotpStatus {
+  enrolled: boolean;
+  confirmed: boolean;
+  confirmed_at: string | null;
+  recovery_verified_at: string | null;
+  recovery_codes_remaining: number;
+  required: boolean;
+  session_idle_timeout_minutes: number;
+}
+
+export interface TotpEnrollment {
+  secret: string;
+  uri: string;
+  digits: number;
+  period_seconds: number;
+}
+
+export interface TotpConfirmation {
+  confirmed_at: string;
+  /** تُعرض **مرةً واحدة** ولا يعيدها أي مسار — فالشاشةُ التي تعرضها هي الوحيدة. */
+  recovery_codes: string[];
+}
+
+export interface SecurityPolicy {
+  admin_totp_required: boolean;
+  admin_idle_timeout_minutes: number;
+  min_idle_timeout_minutes: number;
+  max_idle_timeout_minutes: number;
+  my_factor: TotpStatus;
+}
+
 export interface CountryConfig {
   country_code: CountryCode;
   currency: Currency;

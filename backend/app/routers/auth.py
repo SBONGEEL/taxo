@@ -451,6 +451,9 @@ async def totp_status(user: SecuritySelfUser, session: DbSession) -> TotpStatusO
         recovery_verified_at=record.recovery_codes_verified_at if record else None,
         recovery_codes_remaining=await totp.remaining_recovery_codes(session, user.id),
         required=await security_settings.totp_required_for(session, user),
+        session_idle_timeout_minutes=await security_settings.idle_timeout_minutes(
+            session
+        ),
     )
 
 
@@ -498,6 +501,9 @@ async def totp_verify_recovery(
         recovery_verified_at=record.recovery_codes_verified_at,
         recovery_codes_remaining=remaining,
         required=await security_settings.totp_required_for(session, user),
+        session_idle_timeout_minutes=await security_settings.idle_timeout_minutes(
+            session
+        ),
     )
 
 

@@ -72,6 +72,9 @@ const UsersScreen = lazy(() =>
 const AuditScreen = lazy(() =>
   import("@/screens/Audit").then((m) => ({ default: m.AuditScreen })),
 );
+const SecurityScreen = lazy(() =>
+  import("@/screens/Security").then((m) => ({ default: m.SecurityScreen })),
+);
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -118,6 +121,18 @@ function Boot({ children }: { children: ReactNode }) {
 }
 
 function Guarded({ children }: { children: ReactNode }) {
+  const { user, enrollmentRequired } = useSession();
+  if (!user) return <Navigate to="/login" replace />;
+  // **بوابةُ الإلزام** (12-د): الخلفيةُ ردّت `totp_enrollment_required`، فكلُّ
+  // مسارٍ إداريٍّ مغلقٌ حتى يُسجّل عاملَه. وقيادتُه إلى الشاشة التي تفتح البابَ
+  // أصدقُ من ترك كل شاشةٍ ترسم خطأً أحمر لا مخرجَ منه
+  if (enrollmentRequired) return <Navigate to="/security" replace />;
+  return <>{children}</>;
+}
+
+/** شاشةُ الأمان وحدها لا تخضع لبوابة الإلزام — وإلا صارت الحلقةُ مغلقة:
+ *  «سجّل عاملاً» على بابٍ لا يُفتح قبل تسجيل عامل. */
+function SecurityGuarded({ children }: { children: ReactNode }) {
   const { user } = useSession();
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
@@ -268,6 +283,14 @@ export default function App() {
                       <Guarded>
                         <AuditScreen />
                       </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/security"
+                    element={
+                      <SecurityGuarded>
+                        <SecurityScreen />
+                      </SecurityGuarded>
                     }
                   />
                   <Route

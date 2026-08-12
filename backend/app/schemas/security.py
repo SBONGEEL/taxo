@@ -79,6 +79,12 @@ class TotpStatusOut(BaseModel):
     recovery_verified_at: datetime | None = None
     recovery_codes_remaining: int
     required: bool
+    # **مهلةُ خمول جلسته هو** — لا سياسةٌ تُنشر: الطبقةُ التي تُقفل تبويباً
+    # متروكاً على مكتب تعيش في اللوحة (القسم 14.1)، ومؤقّتٌ في المتصفح بمدةٍ
+    # مكتوبةٍ في كوده يفترق عن `security_settings` أولَ مرةٍ تُعدَّل. وهو هنا
+    # لا في `GET /admin/security` لأن `support` يحتاجه ولا يقرأ ذاك المسار،
+    # ولا في `GET /config` لأن العابرَ لا شأن له بمهلة مكتبٍ إداريّ
+    session_idle_timeout_minutes: int
 
 
 class SecuritySettingOut(BaseModel):

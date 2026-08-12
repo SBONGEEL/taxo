@@ -58,6 +58,18 @@ export function setSessionLostHandler(handler: () => void) {
   onSessionLost = handler;
 }
 
+/** يُستدعى حين تردّ الخلفية `totp_enrollment_required` (SPEC §14.1، 12-د).
+ *
+ * الإلزامُ يسري على جلسةٍ قائمة لحظةَ إشعاله — الحارسُ في الخلفية يقرأ الصفَّ
+ * في كل طلب — فقد يرتدّ **أيُّ** نداءٍ في أيّ شاشة. ولو تُرك لكل شاشة أن
+ * تترجمه بنفسها لرأى المشرفُ خطأً أحمر في كل بطاقة بدل بابٍ يفتح: مكانُه هنا،
+ * فتقوده طبقةُ الجلسة إلى شاشة الأمان مرةً واحدة.
+ */
+let onEnrollmentRequired: () => void = () => {};
+export function setEnrollmentRequiredHandler(handler: () => void) {
+  onEnrollmentRequired = handler;
+}
+
 // ------------------------------------------------------------ التجديد
 
 let refreshing: Promise<boolean> | null = null;
@@ -152,7 +164,11 @@ async function send<T>(
     onSessionLost();
   }
 
-  if (!response.ok) throw await toError(response);
+  if (!response.ok) {
+    const error = await toError(response);
+    if (error.code === "totp_enrollment_required") onEnrollmentRequired();
+    throw error;
+  }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
@@ -202,6 +218,8 @@ export const api = {
     request<T>(path, { ...options, method: "PUT", body }),
   patch: <T>(path: string, body?: unknown, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "PATCH", body }),
+  // **بجسمٍ**: إطفاءُ التحقق الثنائي يطلب رمزاً حاضراً (SPEC §14.1)، ورمزٌ في
+  // مسار URL يسكن سجلَّ الوصول وسِجلَّ المتصفح — وهو بيانُ اعتمادٍ لا مُعرّف
   del: <T>(path: string, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "DELETE" }),
 };

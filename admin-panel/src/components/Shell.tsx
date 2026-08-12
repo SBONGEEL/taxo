@@ -67,6 +67,9 @@ const GROUPS: {
       { label: "المستخدمون والصلاحيات", to: "/users" },
       { label: "سجل التدقيق", to: "/audit" },
       { label: "الإعدادات", to: "/settings" },
+      // بلا `adminOnly`: بطاقةُ «عاملي» لكل من يدخل اللوحة، وبطاقةُ السياسة
+      // وحدها للـ`admin` — والشاشةُ تُخفيها بنفسها (SPEC §14.1)
+      { label: "الأمان", to: "/security" },
       { label: "عقود مزوّدي API", to: "/providers", adminOnly: true },
     ],
   },

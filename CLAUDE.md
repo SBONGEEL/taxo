@@ -67,8 +67,21 @@ when it matters); and the edit is refused mid-ride. **Category is not editable f
 — it decides the tariff, so it is an admin decision. The CliQ alias half of item 18 needed nothing:
 `PATCH /drivers/me` and the settings field shipped in stage 10.
 
-**Stage 12-د — two-factor login for the panel (TOTP) — is done on the backend**, and its four
-screens in the panel are the next slot. It is the first item of the owner-approved bundle
+**Stage 12-د — two-factor login for the panel (TOTP) — is done end to end**: backend, the two-step
+login screen, the «الأمان» screen (enroll → QR drawn **in the browser** → confirm → the ten recovery
+codes shown once, plus the recovery proof and the enforcement switch), and the browser-side idle
+timer. Three panel-side rules are worth keeping. **The idle timer measures the human, not the
+network** — `lib/idle.ts` listens for pointerdown/keydown/wheel/touch and deliberately **not**
+`mousemove` (a mouse nudged by a desk vibration keeps a session alive with nobody there), and it
+compares a **timestamp on an interval** rather than resetting a `setTimeout`, because a laptop with
+a closed lid freezes timers — it would wake with an unexpired timer and resume an hour-old session,
+while a timestamp read on wake logs out immediately. Its duration comes from
+`GET /auth/me/totp.session_idle_timeout_minutes`, never from a constant in the panel: a number in
+the browser diverges from `security_settings` the first time it is edited, and `support` needs it
+while being unable to read `GET /admin/security`. And **`totp_enrollment_required` is translated in
+the HTTP client, once** — the backend guard reads the row on every request so *any* call can bounce,
+and per-screen handling would paint a red error on every card instead of opening the one door;
+`/security` itself is exempt from that gate, or the loop never opens. It is the first item of the owner-approved bundle
 **12-د → البقشيش (13) → الكوبونات (12) → إحالة السائقات (46)**, and it is first because it is the
 only one of the four that touches neither `pricing`, nor `payments`, nor the ledger: the money doors
 the other three open are all fields written by whoever got into the panel. SPEC §14.1 has the rules;

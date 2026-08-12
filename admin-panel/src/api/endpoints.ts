@@ -27,6 +27,7 @@ import type {
   FeatureKey,
   Gender,
   LiveMap,
+  LoginResponse,
   NotificationSetting,
   Payment,
   PaymentMethod,
@@ -35,12 +36,16 @@ import type {
   PricingRule,
   Reports,
   RideStatus,
+  SecurityPolicy,
   Subscription,
   SubscriptionDurationType,
   SubscriptionPlan,
   SubscriptionStatus,
   TopupRequest,
   TopupStatus,
+  TotpConfirmation,
+  TotpEnrollment,
+  TotpStatus,
   ProviderCatalog,
   ProviderCredential,
   ProviderKey,
@@ -70,13 +75,50 @@ export const getConfig = () =>
  * هاتفٍ بصيغة E.164 لكل الأدوار (`DESIGN-DECISIONS.md` بند 3).
  */
 export const login = (phone: string, password: string, country?: CountryCode) =>
-  api.post<AuthResponse>(
+  api.post<LoginResponse>(
     "/auth/login",
     { phone, password, country_code: country },
     { anonymous: true },
   );
 
+/** الخطوةُ الثانية — وهنا وحدها تُصدر التوكنات (SPEC §14.1، المرحلة 12-د).
+ *
+ * `code` رمزُ اللحظة و`recovery_code` رمزُ الاسترداد، وأحدُهما لا كلاهما: من
+ * فقد هاتفه لا يملك الأول، والرموزُ وُجدت لهذه اللحظة بعينها.
+ */
+export const loginWithTotp = (
+  challenge_token: string,
+  proof: { code?: string; recovery_code?: string },
+) =>
+  api.post<AuthResponse>(
+    "/auth/login/totp",
+    { challenge_token, ...proof },
+    { anonymous: true },
+  );
+
 export const getMe = () => api.get<User>("/auth/me");
+
+// ------------------------------------------- التحقق الثنائي (المرحلة 12-د)
+
+export const getMyTotp = () => api.get<TotpStatus>("/auth/me/totp");
+
+export const enrollTotp = () => api.post<TotpEnrollment>("/auth/me/totp/enroll");
+
+export const confirmTotp = (code: string) =>
+  api.post<TotpConfirmation>("/auth/me/totp/confirm", { code });
+
+export const verifyRecoveryCode = (recovery_code: string) =>
+  api.post<TotpStatus>("/auth/me/totp/recovery/verify", { recovery_code });
+
+export const disableTotp = (proof: { code?: string; recovery_code?: string }) =>
+  api.del<void>("/auth/me/totp", { body: proof });
+
+export const getSecurityPolicy = () => api.get<SecurityPolicy>("/admin/security");
+
+export const updateSecurityPolicy = (body: {
+  admin_totp_required?: boolean;
+  admin_idle_timeout_minutes?: number;
+}) => api.put<SecurityPolicy>("/admin/security", body);
 
 export const logout = (refreshToken: string) =>
   api.post<void>("/auth/logout", { refresh_token: refreshToken });
