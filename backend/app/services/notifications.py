@@ -512,3 +512,38 @@ async def publish_subscription_event(
             },
         ),
     )
+
+
+# ------------------------------------------- أحداث الأمان (المرحلة 12-د)
+
+
+async def publish_security_event(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+    kind: str,
+    title: str,
+    body: str,
+    data: dict[str, str] | None = None,
+) -> None:
+    """حدثُ أمانٍ على حساب صاحبه — استهلاكُ رمز استرداد أو إطفاءُ العامل.
+
+    **ولا بثَّ مقبس هنا** بخلاف بقية النواشر: اللوحة بلا WebSocket أصلاً (SPEC
+    القسم 13)، فقناةٌ لا يسمعها أحدٌ عملٌ بلا قارئ. والصفُّ في الصندوق هو كلُّ
+    المقصود — وهذان الحدثان بالذات ما يفعله من استولى على حساب، وصاحبُه أوّلُ
+    من يجب أن يعرف.
+
+    ويمرّ من هذا الباب لا من `inbox.record` مباشرةً: بابٌ واحدٌ للقناتين هو ما
+    يمنع أن تُضاف قناةٌ لحدثٍ وتُنسى لآخر (المرحلة 8).
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title=title,
+            body=body,
+            data={"type": kind, **(data or {})},
+        ),
+    )

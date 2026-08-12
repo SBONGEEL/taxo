@@ -53,6 +53,8 @@ from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
 from app.models.place import SavedPlace
+from app.models.security_setting import SecuritySetting
+from app.models.totp import UserRecoveryCode, UserTotp
 from app.models.ride import Ride, RideRoutePoint, RideStop
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
@@ -109,6 +111,7 @@ __all__ = [
     "RideStop",
     "RideStatus",
     "SavedCard",
+    "SecuritySetting",
     "SubscriptionDurationType",
     "SubscriptionPlan",
     "SubscriptionStatus",
@@ -116,7 +119,9 @@ __all__ = [
     "TopupRequestStatus",
     "User",
     "UserNotification",
+    "UserRecoveryCode",
     "UserRole",
+    "UserTotp",
     "Vehicle",
     "VehicleCategory",
     "WalletOwnerType",

@@ -277,6 +277,63 @@ class DocumentsIncomplete(Conflict):
     message = "لا يُعتمد الكبتن قبل اعتماد مستنداته المطلوبة"
 
 
+class InvalidTotpCode(InvalidCredentials):
+    """رمزُ العامل الثاني خاطئ أو مستعمَل (SPEC القسم 14.1، المرحلة 12-د).
+
+    401 كأختِها لا 422: الرمزُ الصحيحُ صياغةً والخاطئُ قيمةً ليس مدخلاً فاسداً
+    بل بيانَ اعتمادٍ لم يُقبَل. **ونصُّها واحدٌ للخاطئ وللمستعمَل**: من يعرف
+    أن رمزَه «سبق استعمالُه» يعرف أنه كان صحيحاً.
+    """
+
+    code = "invalid_totp"
+    message = "رمز التحقق الثنائي غير صحيح أو انتهت صلاحيته"
+
+
+class TotpEnrollmentRequired(AppError):
+    """الإلزامُ مشتعلٌ وصاحبُ الحساب بلا عامل — 403 على كل مسارٍ إداريّ.
+
+    يدخل بكلمة مروره ويجد كلَّ بابٍ مردوداً إلا بابَ التسجيل. والحارسُ يقرأ
+    الصفَّ في كل طلبٍ كما يقرأ `is_blocked`، فلا مطالبةٌ تعيش في توكن.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "totp_enrollment_required"
+    message = "الدخول إلى اللوحة يستلزم تسجيل التحقق الثنائي أولاً"
+
+
+class TotpNotEnrolled(Conflict):
+    code = "totp_not_enrolled"
+    message = "لا يوجد تحقق ثنائي مسجّل على هذا الحساب"
+
+
+class TotpAlreadyEnrolled(Conflict):
+    """إعادةُ التسجيل على عاملٍ مؤكَّد — مخرجُها الإطفاءُ برمزٍ حاضر.
+
+    ولو مرّت لكانت «أعد التسجيل» طريقاً لتبديل العامل من جلسةٍ مسروقة بلا
+    رمزٍ واحد.
+    """
+
+    code = "totp_already_enrolled"
+    message = "للحساب تحققٌ ثنائيٌّ مسجّل — أطفئه أولاً"
+
+
+class TotpEnforcementActive(Conflict):
+    """إطفاءُ العامل وقتَ الإلزام — مفتاحٌ يُخرج منه كلُّ مشرفٍ ليس إلزاماً."""
+
+    code = "totp_enforcement_active"
+    message = "لا يمكن إطفاء التحقق الثنائي وهو مُلزَمٌ على دورك"
+
+
+class TotpRecoveryProofRequired(Conflict):
+    """إشعالُ الإلزام قبل إثبات أن الاسترداد يعمل (قرارُ المالك).
+
+    الشرطُ على **المشرف الطالب نفسه**: عاملٌ مؤكَّد ورمزُ استردادٍ جُرِّب فعلاً.
+    """
+
+    code = "totp_recovery_proof_required"
+    message = "أثبت أن رمز الاسترداد يعمل قبل إلزام الجميع بالتحقق الثنائي"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:

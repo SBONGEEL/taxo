@@ -60,21 +60,46 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-def require_roles(*roles: UserRole):
-    """يقيّد endpoint على أدوار محددة."""
+def require_roles(*roles: UserRole, enforce_two_factor: bool = True):
+    """يقيّد endpoint على أدوار محددة — ومعه حارسُ التحقق الثنائي.
 
-    async def _dependency(user: CurrentUser) -> User:
+    `enforce_two_factor=False` لبابِ تسجيل العامل وحده (القسم 14.1): الحارسُ
+    يردّ المشرفَ المُلزَمَ بلا عامل، فلو حرس بابَ التسجيل أيضاً صار الإلزامُ
+    حلقةً مغلقة — «سجّل عاملاً» على بابٍ لا يُفتح قبل تسجيل عامل. والاستثناءُ
+    وسيطٌ صريحٌ هنا لا مطابقةُ مسارٍ بالنصّ: مسارٌ يُطابَق باسمه يُنسى عند أول
+    إعادة تسمية، والوسيطُ يظهر في تعريف الـendpoint نفسه.
+
+    والحارسُ **لا يُستعلم عنه إلا لطاقم اللوحة**: مسارُ راكبٍ لا يدفع استعلاماً
+    عن سياسةٍ لا تخصّه. وفي الحالة الغالبة (المفتاح مطفأ) هو استعلامٌ واحدٌ عن
+    صفٍّ واحد، ولا يُسأل عن العامل أصلاً.
+    """
+
+    async def _dependency(user: CurrentUser, session: DbSession) -> User:
         if user.role not in roles:
             raise PermissionDenied()
+        if enforce_two_factor and user.role in _STAFF_ROLES:
+            from app.services import security_settings
+
+            await security_settings.ensure_factor_ready(session, user)
         return user
 
     return _dependency
 
 
+_STAFF_ROLES = frozenset({UserRole.ADMIN, UserRole.SUPPORT})
+
 # admin كامل الصلاحية؛ support قراءة ومعالجة نزاعات فقط (SPEC القسم 13/8)
 AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
 StaffUser = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPPORT))]
 RiderUser = Annotated[User, Depends(require_roles(UserRole.RIDER))]
+
+# بابُ «أمان حسابي» وحده — يفتح لطاقم اللوحة قبل أن يكون لهم عاملٌ مسجّل
+SecuritySelfUser = Annotated[
+    User,
+    Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT, enforce_two_factor=False)
+    ),
+]
 
 
 async def get_current_driver(

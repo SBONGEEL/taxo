@@ -15,8 +15,8 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **564 backend tests pass**
-(50 files); all three frontends build with `check:scale` + `check:enums` green.
+contracts, users & permissions, audit log. Every nav entry has a screen. **588 backend tests pass**
+(52 files); all three frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -67,8 +67,38 @@ when it matters); and the edit is refused mid-ride. **Category is not editable f
 — it decides the tariff, so it is an admin decision. The CliQ alias half of item 18 needed nothing:
 `PATCH /drivers/me` and the settings field shipped in stage 10.
 
+**Stage 12-د — two-factor login for the panel (TOTP) — is done on the backend**, and its four
+screens in the panel are the next slot. It is the first item of the owner-approved bundle
+**12-د → البقشيش (13) → الكوبونات (12) → إحالة السائقات (46)**, and it is first because it is the
+only one of the four that touches neither `pricing`, nor `payments`, nor the ledger: the money doors
+the other three open are all fields written by whoever got into the panel. SPEC §14.1 has the rules;
+three are worth knowing before touching it. **The secret is encrypted and the recovery codes are
+hashed** — verification *reads* the first (we regenerate the code from it) and *compares* the
+second; and the hash is HMAC-SHA256, not bcrypt, because high-entropy codes buy nothing from a slow
+KDF while a deterministic digest allows an indexed single-row lookup — which is what lets the lock
+sit on **one** row instead of ten. **`security_settings` is a global single-row table**, the one
+settings table in the project that is not per-country: a staff account belongs to one country while
+the panel serves both, so enforcement read from the account's country would be dodged by an account
+whose country is the other one. And **its default is `false`, which does not contradict
+`DEFAULT_ENABLED_FLAGS`**: that rule covers flags where silence switches a protection *off*, and
+here silence would switch a lock *on* over a door with no key — a missing row read as "required"
+locks every admin out with no way back in from inside.
+
+Two more, both learned by running it. **`last_step` is written under the row lock** (a code accepted
+once is never accepted again), which means **the confirm step burns its own step** — so the first
+login right after enrolling must use the next code, and that is why confirming does **not** revoke
+sessions while disabling does: the access token cannot be revoked before it expires anyway, so
+revoking on confirm only kills the refresh (a silent logout fifteen minutes later) and lands the
+user on a burned code. And `tests/test_admin_totp.py::test_the_codes_match_the_rfc_6238_vectors` is
+the only test in that file whose data comes from outside this codebase — every other one generates
+the code with `code_at` and verifies it with `match_step`, so a wrong HOTP truncation would have
+both sides agreeing on the same error and nobody able to log in with Google Authenticator. That is
+literally the `awaiting_confirmation` failure shape.
+
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
-coupons, surge — none of it started, and each needs its own SPEC pass first) **and stage 13**
+coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
+`FUTURE-FEATURES`; scheduled rides and sharing are unstarted, and **surge the owner decided not to
+build**: with no real demand data it would be tuned wrong and turn riders away) **and stage 13**
 (tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →
 rider requests → tracking → payment → withdrawal).
 
@@ -446,7 +476,17 @@ $DC_RUN alembic revision --autogenerate -m "message" --rev-id 0004              
 $DC_RUN alembic upgrade head
 $DC_RUN alembic downgrade 0001
 $DC_RUN python -m scripts.seed                                                     # dev settings + provider tokens
+$DC_RUN python -m scripts.totp_reset --phone +962790000000 --release-enforcement   # 2FA escape hatch (12-د)
 ```
+
+**`scripts/totp_reset.py` is not a convenience; it is the reason enforcement is allowed to exist.**
+Once `admin_totp_required` is on, an admin who loses both the phone and the recovery sheet cannot
+turn his own factor off from inside the panel (that refusal is what makes enforcement enforcement) —
+so without a door outside the network this would be the one unrecoverable fault in the platform.
+It writes an audit entry with **no actor** (the actor is a human on the server, and a row naming
+someone who did not act is worse than a row naming nobody), revokes every session, and writes the
+account's owner an inbox row. `--release-enforcement` also drops the global switch, for the case
+where no admin holds a working factor any more.
 
 Postgres does not drop ENUM types with their tables, so every migration that creates one must
 `DROP TYPE IF EXISTS` it in `downgrade()` (see `0002_users_drivers_vehicles.py`) or a re-upgrade fails.
@@ -481,6 +521,18 @@ because `env.py` calls `asyncio.run`, which cannot nest inside the test event lo
 `models/` are SQLAlchemy 2 async, `schemas/` are Pydantic v2. `ws/` is the realtime layer (channels,
 events, sockets); `tasks/` holds the Celery app and its periodic jobs, each one a thin wrapper over
 a service.
+
+**Login is always a password, and TOTP (12-د) does not change that — it adds a second step, never a
+second method.** `POST /auth/login` still takes only a password; if the account has a *confirmed*
+factor it answers `{totp_required: true, challenge_token}` **with no tokens at all**, and
+`POST /auth/login/totp` is the only place a session is issued. The challenge is a random value in
+Redis bound to the user for five minutes and single-use — deliberately **not** a real access token
+with a reduced scope, because such a token becomes a full session the moment one guard is wrong. The
+two-step shape mirrors password reset ("no token until the new password is actually written"), and
+the second step accepts a **recovery code** as well as a code, because someone who lost the phone is
+exactly who those codes exist for. `require_roles(..., enforce_two_factor=False)` is the one
+exemption and it is an explicit argument, not a path match: without it "enroll a factor" would sit
+behind a door that only opens for accounts that already have one.
 
 **Login is always a password. OTP is verification, not a login method.** That distinction is the
 whole shape of `services/auth/` and `services/verification.py`, and it replaced an earlier design

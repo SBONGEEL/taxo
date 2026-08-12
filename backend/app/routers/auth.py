@@ -17,8 +17,20 @@ from sqlalchemy import select
 
 from app.core import rate_limit
 from app.core.config import settings
-from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
-from app.core.exceptions import InvalidInput, InvalidToken, NotFound, RateLimited
+from app.core.deps import (
+    ClientIP,
+    CurrentUser,
+    DbSession,
+    RedisDep,
+    SecuritySelfUser,
+)
+from app.core.exceptions import (
+    InvalidInput,
+    InvalidToken,
+    NotFound,
+    RateLimited,
+    TotpEnforcementActive,
+)
 from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
 from app.models.enums import UserRole
 from app.models.user import User
@@ -28,15 +40,32 @@ from app.schemas.auth import (
     ChallengeRequest,
     ChallengeResponse,
     LoginRequest,
+    LoginResponse,
     PasswordResetRequest,
     ProfileUpdate,
     RefreshRequest,
     RegisterRequest,
     TokenPair,
+    TotpLoginRequest,
     UserOut,
     VerifyPhoneRequest,
 )
-from app.services import otp, token_service, verification
+from app.schemas.security import (
+    TotpConfirmOut,
+    TotpConfirmRequest,
+    TotpDisableRequest,
+    TotpEnrollOut,
+    TotpRecoveryVerifyRequest,
+    TotpStatusOut,
+)
+from app.services import (
+    notifications,
+    otp,
+    security_settings,
+    token_service,
+    totp,
+    verification,
+)
 from app.services.auth import password_strategy
 from app.services.auth.password import set_password
 
@@ -67,6 +96,17 @@ async def _guard(redis, *keys_and_caps) -> None:
         limit = await rate_limit.hit(redis, key, limit=cap, window_seconds=window)
         if not limit.allowed:
             raise RateLimited(retry_after=limit.retry_after)
+
+
+async def _issue(session, redis, user: User) -> TokenPair:
+    """كلُّ إصدارِ زوجِ توكناتٍ يمرّ من هنا — ومعه مهلةُ خمول اللوحة.
+
+    بابٌ واحد لأن الطبقةَ الأولى من المهلة (القسم 14.1) هي عمرُ مفتاح الـ
+    refresh: مسارٌ يصدر التوكنات بنفسه ينسى المهلةَ، فتبقى جلسةُ مشرفٍ حيّةً
+    أياماً لأن كلمةَ مروره كُتبت من مسارٍ آخر.
+    """
+    ttl = await security_settings.refresh_ttl_for(session, user)
+    return await token_service.issue_token_pair(redis, user, refresh_ttl_seconds=ttl)
 
 
 # ------------------------------------------------------------------ الوصف
@@ -153,18 +193,24 @@ async def register(
     await session.commit()
     await session.refresh(user)
 
-    tokens = await token_service.issue_token_pair(redis, user)
+    tokens = await _issue(session, redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login", response_model=LoginResponse)
 async def login(
     payload: LoginRequest,
     session: DbSession,
     redis: RedisDep,
     ip: ClientIP,
-) -> AuthResponse:
-    """كلمة المرور وحدها — لكل المستخدمين وفي كل الأحوال (المرحلة 8-ب)."""
+) -> LoginResponse:
+    """كلمةُ المرور أولاً دائماً (المرحلة 8-ب)، ثم عاملٌ ثانٍ إن كان مسجّلاً.
+
+    **والعاملُ يُسأل بعد كلمة المرور لا قبلها**: جوابٌ يقول «هذا الحساب محميٌّ
+    بعاملٍ ثانٍ» قبل إثبات كلمة المرور يخبر من لا يملكها بما لا يحتاج معرفته.
+    ولا شيء في هذا الجواب يُعلن السياسة قبل ذلك، ولا ينشرها `GET /config`:
+    «هل تكفي كلمةُ المرور هنا» سؤالٌ لا يفيد إلا من لا يملكها.
+    """
     phone = await _resolve(payload.phone, payload.country_code)
 
     # حدّان: على الرقم (منع تخمين كلمة مرور حساب بعينه) وعلى الـ IP
@@ -185,7 +231,69 @@ async def login(
     user = await password_strategy.authenticate(session, phone, payload.password)
 
     await rate_limit.reset(redis, f"login:phone:{phone}")
-    tokens = await token_service.issue_token_pair(redis, user)
+
+    if await totp.has_confirmed_factor(session, user.id):
+        challenge = await totp.start_challenge(redis, user)
+        return LoginResponse(
+            totp_required=True,
+            challenge_token=challenge.token,
+            expires_in=challenge.expires_in,
+        )
+
+    tokens = await _issue(session, redis, user)
+    return LoginResponse(user=UserOut.model_validate(user), tokens=tokens)
+
+
+@router.post("/login/totp", response_model=AuthResponse)
+async def login_with_totp(
+    payload: TotpLoginRequest,
+    session: DbSession,
+    redis: RedisDep,
+) -> AuthResponse:
+    """الخطوةُ الثانية — وهنا وحدها تُصدر التوكنات (القسم 14.1).
+
+    الترتيب مقصود: يُهدَم التحدي **قبل** الإصدار، فلا يبقى تحدٍّ مستعملٌ صالحاً
+    لو انقطع الطلبُ بعده؛ ورمزُ الاسترداد يُقبل كرمزِ اللحظة لأن من فقد هاتفه
+    لا يملك الثاني — ثم يُخبَر صاحبُ الحساب أن رمزاً استُهلك، فهو أوّلُ من يجب
+    أن يعرف إن لم يكن هو من فعل.
+    """
+    user_id = await totp.resolve_challenge(redis, payload.challenge_token)
+    await totp.guard_attempt(redis, payload.challenge_token, user_id)
+
+    user = await session.get(User, user_id)
+    if user is None or user.is_blocked:
+        await totp.drop_challenge(redis, payload.challenge_token)
+        raise InvalidToken()
+
+    used_recovery = bool(payload.recovery_code)
+    if used_recovery:
+        await totp.consume_recovery_code(
+            session, user_id=user.id, code=payload.recovery_code, actor=user
+        )
+    elif payload.code:
+        await totp.verify_code(session, user_id=user.id, code=payload.code)
+    else:
+        raise InvalidInput("مطلوب رمزُ التحقق الثنائي أو رمزُ استرداد")
+
+    await session.commit()
+    await totp.drop_challenge(redis, payload.challenge_token)
+    # المحاولاتُ الناجحة لا تُعاقَب (كما في `/auth/login`): سقفٌ يعدّ النجاحات
+    # يُقفل مشرفاً يعمل في يومٍ مزدحمٍ على مكتبين
+    await rate_limit.reset(redis, f"totp:user:{user.id}")
+
+    if used_recovery:
+        remaining = await totp.remaining_recovery_codes(session, user.id)
+        await notifications.publish_security_event(
+            session,
+            redis,
+            user_id=user.id,
+            kind="recovery_code_used",
+            title="استُخدم رمز استرداد",
+            body=f"دخلتَ اللوحة برمز استرداد. بقي {remaining} من رموزك.",
+            data={"remaining": str(remaining)},
+        )
+
+    tokens = await _issue(session, redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
 
 
@@ -293,7 +401,7 @@ async def reset_password(
     await session.refresh(user)
 
     await rate_limit.reset(redis, f"password-reset:phone:{phone}")
-    tokens = await token_service.issue_token_pair(redis, user)
+    tokens = await _issue(session, redis, user)
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
 
 
@@ -312,7 +420,7 @@ async def refresh(
         await token_service.revoke_all_for_user(redis, user_id)
         raise InvalidToken()
 
-    return await token_service.issue_token_pair(redis, user)
+    return await _issue(session, redis, user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -323,6 +431,101 @@ async def logout(payload: RefreshRequest, redis: RedisDep) -> None:
 @router.get("/me", response_model=UserOut)
 async def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)
+
+
+# ------------------------------------------- التحقق الثنائي (المرحلة 12-د)
+#
+# كلُّها `SecuritySelfUser` لا `StaffUser`: الحارسُ الذي يردّ المشرفَ المُلزَمَ
+# بلا عامل يجب أن يستثني بابَ التسجيل نفسه، وإلا صار الإلزامُ حلقةً مغلقة —
+# «سجّل عاملاً» على بابٍ لا يُفتح قبل تسجيل عامل. والاستثناءُ **تبعيّةٌ أخرى
+# صريحة** لا مطابقةُ مسارٍ بالنصّ: مسارٌ يُطابَق باسمه يُنسى عند أول إعادة تسمية.
+
+
+@router.get("/me/totp", response_model=TotpStatusOut)
+async def totp_status(user: SecuritySelfUser, session: DbSession) -> TotpStatusOut:
+    record = await totp.get_record(session, user.id)
+    return TotpStatusOut(
+        enrolled=record is not None,
+        confirmed=bool(record and record.is_confirmed),
+        confirmed_at=record.confirmed_at if record else None,
+        recovery_verified_at=record.recovery_codes_verified_at if record else None,
+        recovery_codes_remaining=await totp.remaining_recovery_codes(session, user.id),
+        required=await security_settings.totp_required_for(session, user),
+    )
+
+
+@router.post("/me/totp/enroll", response_model=TotpEnrollOut)
+async def totp_enroll(user: SecuritySelfUser, session: DbSession) -> TotpEnrollOut:
+    """يُنشئ سرّاً غيرَ مؤكَّدٍ ويردّه **مرةً واحدة**."""
+    enrollment = await totp.enroll(session, user)
+    await session.commit()
+    return TotpEnrollOut(secret=enrollment.secret, uri=enrollment.uri)
+
+
+@router.post("/me/totp/confirm", response_model=TotpConfirmOut)
+async def totp_confirm(
+    payload: TotpConfirmRequest, user: SecuritySelfUser, session: DbSession
+) -> TotpConfirmOut:
+    """يؤكّد العامل ويردّ رموزَ الاسترداد **مرةً واحدة**.
+
+    **ولا تُبطَل الجلسات هنا، بخلاف الإطفاء** — والفرقُ اتجاهُ التغيير: الإطفاءُ
+    يُضعف الحماية فتبقى جلساتٌ فُتحت بسياسةٍ أقوى، والتأكيدُ يقوّيها وكلمةُ
+    المرور التي فتحت الجلسة لم تتبدّل. وإخراجُ صاحبها لا يحمي شيئاً: التوكنُ
+    الحاليُّ لا يُبطَل قبل انتهائه أصلاً (القسم 14)، فالإبطالُ يقتل تجديدَه
+    وحده — خروجٌ صامتٌ بعد ربع ساعة، ومعه رمزُ الخطوة المحروقة للتوّ في التأكيد
+    يجعل أول دخولٍ يبدو رفضاً.
+    """
+    codes = await totp.confirm(session, user, payload.code)
+    await session.commit()
+
+    record = await totp.get_record(session, user.id)
+    return TotpConfirmOut(confirmed_at=record.confirmed_at, recovery_codes=codes)
+
+
+@router.post("/me/totp/recovery/verify", response_model=TotpStatusOut)
+async def totp_verify_recovery(
+    payload: TotpRecoveryVerifyRequest, user: SecuritySelfUser, session: DbSession
+) -> TotpStatusOut:
+    """يُثبت أن الاسترداد يعمل **باستهلاك رمزٍ حقيقي** — شرطُ إشعال الإلزام."""
+    remaining = await totp.verify_recovery_works(session, user, payload.recovery_code)
+    await session.commit()
+
+    record = await totp.get_record(session, user.id)
+    return TotpStatusOut(
+        enrolled=True,
+        confirmed=True,
+        confirmed_at=record.confirmed_at,
+        recovery_verified_at=record.recovery_codes_verified_at,
+        recovery_codes_remaining=remaining,
+        required=await security_settings.totp_required_for(session, user),
+    )
+
+
+@router.delete("/me/totp", status_code=status.HTTP_204_NO_CONTENT)
+async def totp_disable(
+    payload: TotpDisableRequest,
+    user: SecuritySelfUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> None:
+    """يُطفئ العامل بعاملٍ حاضر — ويُرفض وقتَ الإلزام على دور صاحبه."""
+    if await security_settings.totp_required_for(session, user):
+        raise TotpEnforcementActive()
+
+    await totp.disable(
+        session, user, code=payload.code, recovery_code=payload.recovery_code
+    )
+    await session.commit()
+    await token_service.revoke_all_for_user(redis, user.id)
+
+    await notifications.publish_security_event(
+        session,
+        redis,
+        user_id=user.id,
+        kind="totp_disabled",
+        title="أُطفئ التحقق الثنائي",
+        body="أُطفئ التحقق الثنائي على حسابك. إن لم تكن أنت من فعل، راجع الإدارة فوراً.",
+    )
 
 
 @router.patch("/me", response_model=UserOut)

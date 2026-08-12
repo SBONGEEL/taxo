@@ -139,6 +139,37 @@ class AuthResponse(BaseModel):
     tokens: TokenPair
 
 
+class TotpLoginRequest(BaseModel):
+    """الخطوةُ الثانية من دخول اللوحة (القسم 14.1، المرحلة 12-د).
+
+    **ورمزُ الاسترداد مقبولٌ هنا** لا في مسارٍ آخر: من فقد هاتفه لا يملك رمزَ
+    اللحظة، ورموزُ الاسترداد وُجدت لهذه اللحظة بالذات — فمسارٌ لا يقبلها يجعل
+    هاتفاً مفقوداً حساباً مفقوداً بينما الرموزُ في جيب صاحبه.
+    """
+
+    challenge_token: str = Field(min_length=8, max_length=128)
+    code: str | None = Field(default=None, min_length=6, max_length=16)
+    recovery_code: str | None = Field(default=None, min_length=8, max_length=32)
+
+
+class LoginResponse(BaseModel):
+    """جوابُ الدخول — إمّا جلسةٌ كاملة، وإمّا تحدٍّ ثانٍ **بلا توكن**.
+
+    شكلٌ واحدٌ لا اتحادٌ بين شكلين: التطبيقان يقرآن `user`/`tokens` كما كانا
+    (فـ`totp_required=false` حقلٌ زائدٌ لا يضرّهما)، واللوحةُ تفحص العلم أولاً.
+
+    **ولا توكنَ قبل العاملين**: حين يكون العاملُ مطلوباً يخرج هذا الجواب
+    بـ`user=None` و`tokens=None`. وهي قاعدةُ استعادة كلمة المرور نفسُها —
+    إثباتٌ ناقصٌ لا يفتح جلسة، فلو انقطع الطلبُ بعده لم يبق للمهاجم شيء.
+    """
+
+    totp_required: bool = False
+    user: UserOut | None = None
+    tokens: TokenPair | None = None
+    challenge_token: str | None = None
+    expires_in: int | None = None
+
+
 class AuthMethodResponse(BaseModel):
     """ما تحتاج الواجهة معرفته قبل رسم شاشة الدخول.
 

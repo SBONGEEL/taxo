@@ -6,6 +6,7 @@ from app.routers import (
     admin_payments,
     admin_providers,
     admin_rides,
+    admin_security,
     admin_settings,
     admin_stats,
     admin_subscriptions,
@@ -47,6 +48,7 @@ api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(admin_rides.router)
+api_router.include_router(admin_security.router)
 # مقابس التتبع تحت نفس بادئة الإصدار: /api/v1/ws/...
 api_router.include_router(ws_router)
 

@@ -22,8 +22,17 @@ def _refresh_key(user_id: uuid.UUID | str, jti: str) -> str:
     return f"{_REFRESH_PREFIX}:{user_id}:{jti}"
 
 
-async def issue_token_pair(redis: Redis, user: User) -> TokenPair:
-    """يصدر access + refresh ويسجّل الـ refresh في Redis (قابل للإبطال)."""
+async def issue_token_pair(
+    redis: Redis, user: User, *, refresh_ttl_seconds: int | None = None
+) -> TokenPair:
+    """يصدر access + refresh ويسجّل الـ refresh في Redis (قابل للإبطال).
+
+    `refresh_ttl_seconds` هو **مهلةُ خمول اللوحة** (القسم 14.1، المرحلة 12-د):
+    مفتاحُ الـrefresh لطاقم اللوحة يُكتب بهذا العمر ويُجدَّد عند كل تدوير، فلا
+    عمودَ «آخرِ نشاط» ولا مؤقّتٌ ثانٍ يمكن أن يخالفه — التدويرُ لمرةٍ واحدة
+    القائمُ أصلاً هو النبضة. و**`min` لا إحلال**: المهلةُ تُقصِّر عمرَ المفتاح
+    ولا تمدّه بعد انتهاء صلاحية التوكن نفسه، وإلا بقي مفتاحٌ حيّاً لتوكنٍ ميّت.
+    """
     subject = str(user.id)
     access_token, _, access_expires = create_access_token(
         subject, {"role": user.role.value, "country": user.country_code.value}
@@ -31,6 +40,8 @@ async def issue_token_pair(redis: Redis, user: User) -> TokenPair:
     refresh_token, refresh_jti, refresh_expires = create_refresh_token(subject)
 
     ttl = int((refresh_expires - datetime.now(timezone.utc)).total_seconds())
+    if refresh_ttl_seconds is not None:
+        ttl = min(ttl, refresh_ttl_seconds)
     await redis.set(_refresh_key(subject, refresh_jti), "1", ex=max(ttl, 1))
 
     return TokenPair(
