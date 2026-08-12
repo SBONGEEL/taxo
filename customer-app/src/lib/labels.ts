@@ -74,6 +74,10 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   refund: "استرداد",
   subscription_payment: "اشتراك",
   adjustment: "تسوية",
+  // البقشيش (12-و): الراكبُ يرى `tip_payment` في كشفه، و`tip` لا يقع له —
+  // لكنه في التعداد فيُسمّى، فلا تظهر سلسلةٌ خامٌ في كشفٍ يوماً
+  tip: "بقشيش وارد",
+  tip_payment: "بقشيش للكبتن",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

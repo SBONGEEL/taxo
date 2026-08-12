@@ -15,8 +15,8 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **599 backend tests pass**
-(53 files); all three frontends build with `check:scale` + `check:enums` green.
+contracts, users & permissions, audit log. Every nav entry has a screen. **614 backend tests pass**
+(55 files); all three frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -118,21 +118,35 @@ connection, so `alembic upgrade head` alone leaves the live container answering
 `invalid input value for enum provider_key`. This is the same cache trap `test_migrations` handles
 with `engine.dispose()`; on the dev stack it is `docker compose restart backend`.
 
-**Stage 12-و — tipping — has its SPEC pass written and is waiting for the owner's nod** (`SPEC.md`
-§6.5, the `tips` table and three `payment_settings` fields in §4, the stage in §16). No code yet. The
-owner's two money decisions were already settled — the rider funds it, the driver keeps all of it with
-no commission — and the spec **narrows one of his answers with a number**: he approved "wallet or
-card", and a card tip of half a dinar costs more in gateway fees than it collects, so the spec is
-wallet-only and says so. Three rules in it are the ones worth defending in review. **A tip is never a
-`payments` row** — "don't pay the ride twice" is the sum of `OWING_PAYMENT_STATUSES` against
-`final_fare`, so a tip row there makes a fully-paid ride look overpaid, or an unconfirmed tip look
-like a debt. **The ≥4-stars rule is a UI narrowing, not a backend constraint** (the women's-service
-distinction): someone who rated 3 and wants to thank the driver for carrying a suitcase is not
-refused by a rule that exists only to avoid asking at a bad moment, and money must not follow a rating
-that can be edited. And the tip is **the driver's only income with no commission against it**, so it
-gets its own line in his earnings screen — an amount that raises "what entered the wallet" without
-raising "what left as commission" makes the two numbers stop reconciling for anyone who adds them up
-by hand.
+**Stage 12-و — tipping — is done end to end** (`SPEC.md` §6.5, the `tips` table and three
+`payment_settings` fields in §4, `services/tips.py`, the rating-screen buttons, the earnings line, and
+the panel's amount fields). The owner settled the money questions — the rider funds it, the driver
+keeps all of it with no commission — and approved narrowing his own answer once he saw the number:
+**wallet only, no card**, because a card tip of half a dinar costs more in gateway fees than it
+collects. Four rules are worth defending in review.
+
+**A tip is never a `payments` row** — "don't pay the ride twice" is the sum of
+`OWING_PAYMENT_STATUSES` against `final_fare`, so a tip row there makes a fully-paid ride look
+overpaid, or an unconfirmed tip look like a debt. **The ≥4-stars rule is a UI narrowing, not a backend
+constraint** (the women's-service distinction): someone who rated 3 and wants to thank the driver for
+carrying a suitcase is not refused by a rule that exists only to avoid asking at a bad moment, and
+money must not follow a rating that can be edited — `test_a_low_rating_does_not_block_a_tip` is what
+stops a later "completion" from adding it. The tip is **the driver's only income with no commission
+against it**, so it gets its own line in his earnings screen; an amount that raises "what entered the
+wallet" without raising "what left as commission" makes the two numbers stop reconciling for anyone
+who adds them by hand. And **the table has no `status` and no `method` column** — a simplification
+found while building: the wallet settles in the same transaction, so a failed debit rolls the whole
+row back and `failed` could never be written. A value that can never be written is exactly
+`awaiting_confirmation`; the row's existence *is* the money having moved, as with
+`driver_subscriptions`. When card arrives, `method` arrives with it defaulting to `wallet`.
+
+**The tip concurrency test taught something about which lock owns what.** Deleting *either* the
+advisory lock in `wallet.record` or the sorted pre-lock in `tips.create` leaves both tests passing —
+each serialises on its own. Deleting **both** turns two 1.500 tips on a 2.000 balance into
+`[201, 201]`: money from nothing. So what the sorted pre-lock owns is **lock ordering** (deadlock
+avoidance), not the double read — the same shape as the driver-row lock being redundant on the wallet
+subscription path and the only guard on the manual one. Verify a lock by deleting it, and if nothing
+fails, look for the other lock before believing the test.
 
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
@@ -322,6 +336,14 @@ docker compose up -d --build          # db + redis + backend + worker + beat (ba
 docker compose logs -f backend
 curl http://localhost:8001/health     # reports db + redis status; also the container healthcheck
 ```
+
+**Two operational facts that bit this session.** A migration that adds an **ENUM value** needs the
+running backend *recreated*, not just migrated — asyncpg caches the type per connection, so
+`alembic upgrade head` alone leaves the live container answering `invalid input value for enum`. And a
+migration that adds a **column with a default** leaves existing rows at that default while
+`scripts/seed.py` (idempotent by design) skips them: after `0022` both countries' tip amounts are
+zero, which reads as "not configured" and correctly hides the feature — so on an existing install the
+amounts are set in the panel, not by re-seeding.
 
 **A change to `requirements.txt` needs `docker compose build backend` *and then*
 `docker compose up -d backend` — never `restart`.** The source tree is bind-mounted, so code edits are

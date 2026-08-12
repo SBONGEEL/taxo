@@ -11,6 +11,7 @@ import {
   Banknote,
   CalendarCheck,
   Car,
+  Gift,
   Percent,
   Scale,
   Undo2,
@@ -35,6 +36,10 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   refund: "استرجاع",
   subscription_payment: "اشتراك",
   adjustment: "تسوية",
+  // البقشيش (12-و). و`tip_payment` لا يظهر في كشف الكبتن أبداً — هو خصمُ
+  // الراكب — لكن الاتحادَ مرآةُ التعداد فيُسمّى، فلا تظهر سلسلةٌ خامٌ يوماً
+  tip: "بقشيش",
+  tip_payment: "بقشيش مدفوع",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -52,6 +57,8 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   refund: Undo2,
   subscription_payment: CalendarCheck,
   adjustment: Scale,
+  tip: Gift,
+  tip_payment: Gift,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

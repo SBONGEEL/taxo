@@ -56,6 +56,11 @@ class Earnings:
 
     wallet_earnings: Decimal
     commission: Decimal
+    # **سطرٌ ثالثٌ مستقل** (المرحلة 12-و): البقشيشُ دخلٌ دخل المحفظة **بلا
+    # عمولةٍ عليه**، وهو الوحيد كذلك. ودمجُه في `wallet_earnings` يجعل الكبتن
+    # يرى «ما دخل» يزيد بلا أن يزيد «ما خرج عمولةً» فلا يتّسق الرقمان لمن
+    # يجمعهما بيده — والسطرُ هو ما يفسّر الفرق
+    tips: Decimal
     net: Decimal
     directly_collected: Decimal
     completed_rides: int
@@ -113,6 +118,9 @@ async def summary(
     commission = await _ledger_sum(
         session, user_id, WalletTransactionType.COMMISSION, from_at, to_at
     )
+    tips = await _ledger_sum(
+        session, user_id, WalletTransactionType.TIP, from_at, to_at
+    )
 
     # ما قبضه بيده: دفعاتٌ مؤكدة بقناةٍ لا تمر بالمنصة، على رحلاته هو
     directly_collected = await session.scalar(
@@ -147,10 +155,13 @@ async def summary(
         currency=currency_for_country(country).value,
         wallet_earnings=wallet_earnings,
         commission=commission,
+        tips=tips,
         # **قد يكون سالباً** ولا يُقصّ عند الصفر: يومٌ كلُّه كاش بعمولةٍ
         # `all_rides` يترك على الكبتن عمولةً بلا أرباحَ تقابلها، وإخفاءُ ذلك
         # يجعله يكتشف نقصان رصيده بلا سبب ظاهر
-        net=pricing.round_money(wallet_earnings - commission),
+        # والبقشيشُ داخلٌ في الصافي: هو مالٌ **دخل المحفظة فعلاً**، وصافيٌّ لا
+        # يشمله لا يطابق ما يراه صاحبُه في رصيده
+        net=pricing.round_money(wallet_earnings + tips - commission),
         directly_collected=pricing.round_money(Decimal(directly_collected or 0)),
         completed_rides=int(completed or 0),
     )

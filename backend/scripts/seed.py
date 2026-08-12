@@ -73,6 +73,9 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # بلا قالبٍ معتمد يجعل كلَّ تسجيلٍ يرتدّ من ميتا، ومَن يُشعلها يجب أن
         # يرى المفتاح ويعرف أنه قرارٌ لا سهو
         FeatureKey.WHATSAPP_OTP_ENABLED: False,
+        # **مطفأٌ صراحةً** (المرحلة 12-و): المبالغُ مبذورةٌ أدناه والقناةُ
+        # المحفظة، والإشعالُ قرارُ تشغيلٍ يراه المشرف في الشاشة فيعرف أنه قرار
+        FeatureKey.TIPS_ENABLED: False,
     },
 }
 
@@ -205,17 +208,44 @@ async def seed_wallet_settings(session: AsyncSession) -> None:
             _log(f"حدود محفظة: {country.value}")
 
 
+# مبالغُ البقشيش المبدئية (المرحلة 12-و) — **قرارُ المالك**، وتُعدَّل من
+# اللوحة عند التشغيل الحقيقي. وليبيا أكبرُ رقماً لأن دينارَها أصغرُ قيمةً،
+# **وخدمتُها كاشٌ اليوم بلا محافظَ مشحونة** — فالأرقامُ هناك تنتظر التشغيل ولا
+# تعمل حتى يُشعل المفتاحُ ومفتاحُ المحفظة معه
+TIP_DEFAULTS: dict[CountryCode, dict[str, str]] = {
+    CountryCode.JO: {
+        "tip_preset_small": "0.500",
+        "tip_preset_medium": "1.000",
+        "tip_max": "5.000",
+    },
+    CountryCode.LY: {
+        "tip_preset_small": "1.000",
+        "tip_preset_medium": "2.000",
+        "tip_max": "10.000",
+    },
+}
+
+
 async def seed_payment_settings(session: AsyncSession) -> None:
-    """مهلةُ تأكيد كليك لكل دولة — غيابُها يترك حوالاتٍ بلا موعدِ فصل."""
+    """مهلةُ تأكيد كليك ومبالغُ البقشيش لكل دولة.
+
+    غيابُ المهلة يترك حوالاتٍ بلا موعدِ فصل، وأصفارُ البقشيش تُخفي الميزةَ حتى
+    تُضبط — فالبذرُ يكتب الرقمين معاً كي لا يُشعل المشرفُ مفتاحاً فلا يجد شيئاً.
+    """
     for country in CountryCode:
         exists = await session.scalar(
             select(PaymentSetting.id).where(PaymentSetting.country_code == country)
         )
         if exists is None:
-            session.add(PaymentSetting(country_code=country))
+            amounts = {
+                key: Decimal(value) for key, value in TIP_DEFAULTS[country].items()
+            }
+            session.add(PaymentSetting(country_code=country, **amounts))
             _log(
                 f"سياسات دفع: {country.value} "
-                f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة)"
+                f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة، "
+                f"بقشيش {amounts['tip_preset_small']}/{amounts['tip_preset_medium']} "
+                f"بسقف {amounts['tip_max']})"
             )
 
 

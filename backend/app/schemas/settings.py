@@ -157,10 +157,22 @@ class PaymentSettingOut(BaseModel):
     id: uuid.UUID
     country_code: CountryCode
     cliq_confirmation_hours: int
+    # مبالغُ البقشيش (المرحلة 12-و) — صفرٌ يعني «لم يُضبط» فتُخفى الميزة
+    tip_preset_small: Decimal
+    tip_preset_medium: Decimal
+    tip_max: Decimal
     updated_at: datetime
 
 
 class PaymentSettingUpdate(BaseModel):
-    """المهلة بالساعات — حدٌّ أعلى أسبوعٌ كي لا تُشلّ الميزة بقيمةٍ لا تنقضي."""
+    """سياساتُ الدفع — والحقولُ **اختياريةٌ كلُّها** فيُعدَّل ما يُرسل وحده.
 
-    cliq_confirmation_hours: int = Field(ge=1, le=168)
+    مهلةُ كليك بالساعات وحدُّها الأعلى أسبوعٌ كي لا تُشلّ الميزة بقيمةٍ لا
+    تنقضي. ومبالغُ البقشيش (المرحلة 12-و) **صفرُها يعني «لم يُضبط»** فتُخفى
+    الميزة — فلا حدَّ أدنى يمنع المشرفَ من إطفائها بإعادتها إلى الصفر.
+    """
+
+    cliq_confirmation_hours: int | None = Field(default=None, ge=1, le=168)
+    tip_preset_small: Decimal | None = Field(default=None, ge=0, le=1000)
+    tip_preset_medium: Decimal | None = Field(default=None, ge=0, le=1000)
+    tip_max: Decimal | None = Field(default=None, ge=0, le=1000)

@@ -85,6 +85,23 @@ export interface ChallengeResponse {
   channel: string | null;
 }
 
+/** البقشيش (المرحلة 12-و) — **والخلفيةُ تقرّر أن يُعرض أصلاً**. */
+export interface TipOptions {
+  offered: boolean;
+  currency: Currency;
+  presets: string[];
+  max_amount: string;
+  given: Tip | null;
+}
+
+export interface Tip {
+  id: string;
+  ride_id: string;
+  amount: string;
+  currency: Currency;
+  created_at: string;
+}
+
 export interface CountryConfig {
   country_code: CountryCode;
   currency: Currency;
@@ -322,7 +339,9 @@ export type WalletTransactionType =
   | "withdrawal"
   | "refund"
   | "subscription_payment"
-  | "adjustment";
+  | "adjustment"
+  | "tip"
+  | "tip_payment";
 
 export interface WalletTransaction {
   id: string;

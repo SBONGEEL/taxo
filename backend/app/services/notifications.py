@@ -547,3 +547,36 @@ async def publish_security_event(
             data={"type": kind, **(data or {})},
         ),
     )
+
+
+async def publish_tip_received(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    tip,
+) -> None:
+    """بقشيشٌ وصل الكبتن (المرحلة 12-و).
+
+    **والحمولةُ قيمٌ خام**: مبلغٌ وعملةٌ ومُعرّفُ رحلة، لا جملةٌ مصوغة ولا رقمٌ
+    منسَّق — الخلفيةُ لا تعرف بأي أرقامٍ يقرأ صاحبُ الجهاز (القسم 10). و
+    و`title`/`body` للدرج وحده حين يكون التطبيق مغلقاً.
+
+    وأولويةٌ عادية: البقشيشُ خبرٌ سارّ لا مهلةَ فيه — والإيقاظُ لبطاقة الطلب
+    وحدها.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="بقشيش من راكب",
+            body="شكرك راكبٌ ببقشيش — أُضيف إلى محفظتك.",
+            data={
+                "type": "tip_received",
+                "ride_id": str(tip.ride_id),
+                "amount": str(tip.amount),
+                "currency": tip.currency,
+            },
+        ),
+    )

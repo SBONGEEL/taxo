@@ -28,6 +28,8 @@ import type {
   RidePayments,
   SavedCard,
   SavedPlace,
+  Tip,
+  TipOptions,
   TopupRequest,
   TransferRecipient,
   User,
@@ -181,6 +183,13 @@ export const nearbyDrivers = (lat: number, lng: number) =>
 
 export const listRideRatings = (rideId: string) =>
   api.get<Rating[]>(`/rides/${rideId}/ratings`);
+
+/** خيارا البقشيش وسقفُه — أو `offered=false` فلا تُرسم الأزرار (12-و). */
+export const getTipOptions = (rideId: string) =>
+  api.get<TipOptions>(`/rides/${rideId}/tip`);
+
+export const addTip = (rideId: string, amount: string) =>
+  api.post<Tip>(`/rides/${rideId}/tip`, { amount });
 
 export const rateRide = (rideId: string, stars: number, comment?: string) =>
   api.post<Rating>(`/rides/${rideId}/ratings`, { stars, comment: comment || null });

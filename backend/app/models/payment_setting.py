@@ -1,14 +1,23 @@
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, Integer
+from decimal import Decimal
+
+from sqlalchemy import CheckConstraint, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
+from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import CountryCode
 
 # ما يبدأ به صفُّ دولةٍ جديد. ليس افتراضاً سخياً كأصفار `wallet_settings`:
 # الصفر هنا يعني «لا مهلة» أي نزاعٌ فوري، وهو أسوأ ما يمكن أن يقع بالسكوت.
 DEFAULT_CLIQ_CONFIRMATION_HOURS = 24
+
+# **أصفارٌ كأصفار `wallet_settings` لا كمهلة كليك**: البقشيش ميزةٌ تُفتح لا
+# حارسٌ يُطفأ، والصفرُ فيها يعني «لم يُضبط» فتُخفى الأزرارُ كلُّها — لا
+# «بقشيشاً مقداره صفر». وقيمُ الدولتين يكتبها البذرُ ويعدّلها المشرف
+# (SPEC القسم 6.5).
+DEFAULT_TIP_PRESET = Decimal("0")
+DEFAULT_TIP_MAX = Decimal("0")
 
 
 class PaymentSetting(UUIDMixin, TimestampMixin, Base):
@@ -30,6 +39,12 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
             "cliq_confirmation_hours > 0",
             name="payment_cliq_confirmation_positive",
         ),
+        # لا مبالغَ سالبة، والسقفُ حارسٌ في القاعدة أيضاً: مبلغٌ يمرّ من طبقةٍ
+        # عليا لا يجوز أن يجد الجدولَ مفتوحاً بعدها (نفس منهج قيود الدفتر)
+        CheckConstraint(
+            "tip_preset_small >= 0 AND tip_preset_medium >= 0 AND tip_max >= 0",
+            name="payment_tip_amounts_not_negative",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -38,6 +53,27 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     cliq_confirmation_hours: Mapped[int] = mapped_column(
         Integer, nullable=False, default=DEFAULT_CLIQ_CONFIRMATION_HOURS
     )
+
+    # مبلغا زرَّي البقشيش وسقفُه (المرحلة 12-و). **per-country** لأن نصفَ
+    # دينارٍ أردنيٍّ ليس نصفَ دينارٍ ليبيّ، ورقمٌ مكتوبٌ في التطبيق يخالف
+    # السوقَ الآخر يومَ إطلاقه
+    tip_preset_small: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, server_default=text("0"), default=DEFAULT_TIP_PRESET
+    )
+    tip_preset_medium: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, server_default=text("0"), default=DEFAULT_TIP_PRESET
+    )
+    # سقفٌ يحرس من إصبعٍ تزلّ على شاشةٍ في سيارة — وصفرُه يعني «لم يُضبط»
+    tip_max: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, server_default=text("0"), default=DEFAULT_TIP_MAX
+    )
+
+    @property
+    def tips_configured(self) -> bool:
+        """هل ضُبطت مبالغُ البقشيش؟ صفرٌ في السقف يعني «لا» فتُخفى الميزة."""
+        return self.tip_max > 0 and (
+            self.tip_preset_small > 0 or self.tip_preset_medium > 0
+        )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<PaymentSetting {self.country_code}>"

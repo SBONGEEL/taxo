@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import currency_for_country
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import PermissionDenied
 from app.models.driver import Driver
 from app.models.enums import RideStatus, UserRole
 from app.models.ride import Ride
 from app.schemas.rating import RatingCreate, RatingOut
+from app.schemas.tip import TipCreate, TipOptionsOut, TipOut
 from app.schemas.ride import (
     CoordinatesIn,
     RideListItem,
@@ -25,6 +28,7 @@ from app.services import (
     notifications,
     pricing,
     ratings as ratings_service,
+    tips as tips_service,
     ride_log,
     rides as rides_service,
     route,
@@ -365,3 +369,68 @@ async def rate_ride(
     )
     await session.commit()
     return RatingOut.model_validate(rating)
+
+
+# ----------------------------------------------------- البقشيش (12-و)
+
+
+@router.get("/{ride_id}/tip", response_model=TipOptionsOut)
+async def tip_options(
+    ride_id: uuid.UUID, user: RiderUser, session: DbSession
+) -> TipOptionsOut:
+    """ما ترسمه شاشةُ التقييم — **والخلفيةُ تقرّر أن تُعرض أصلاً**.
+
+    ثلاثةُ شروطٍ تجتمع (مفتاحٌ، محفظةٌ مفعّلة، مبالغُ مضبوطة)، ولا يعرفها
+    التطبيقُ من عنده. و`RiderUser` لأن البقشيشَ يُعطى ولا يُطلب: الكبتنُ لا
+    يسأل عن بقشيشِ رحلةٍ ولا يراه إلا في أرباحه.
+    """
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    country = ride.country_code
+    given = await tips_service.for_ride(session, ride.id)
+    row = await tips_service.settings_for(session, country)
+    offered = await tips_service.offered_in(session, country)
+
+    return TipOptionsOut(
+        offered=offered,
+        currency=currency_for_country(country).value,
+        presets=(
+            [
+                amount
+                for amount in (row.tip_preset_small, row.tip_preset_medium)
+                if row and amount > 0
+            ]
+            if offered and row
+            else []
+        ),
+        max_amount=row.tip_max if offered and row else Decimal("0"),
+        given=TipOut.model_validate(given) if given else None,
+    )
+
+
+@router.post(
+    "/{ride_id}/tip", response_model=TipOut, status_code=status.HTTP_201_CREATED
+)
+async def add_tip(
+    ride_id: uuid.UUID,
+    payload: TipCreate,
+    user: RiderUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> TipOut:
+    """بقشيشٌ من الراكب للكبتن — **بلا عمولةٍ عليه** (قرارُ المالك).
+
+    والإشعارُ بعد الـcommit كقاعدة المشروع: حدثٌ يُعلَن قبل أن يستقر قد يُعلَن
+    ثم يتراجع.
+    """
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    tip = await tips_service.create(session, ride=ride, rider=user, amount=payload.amount)
+    await session.commit()
+    await session.refresh(tip)
+
+    await notifications.publish_tip_received(
+        session,
+        redis,
+        driver_user_id=tip.driver_id,
+        tip=tip,
+    )
+    return TipOut.model_validate(tip)

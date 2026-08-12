@@ -324,9 +324,15 @@ export const updateWalletSettings = (
 export const listPaymentSettings = () =>
   api.get<PaymentSetting[]>("/admin/settings/payments");
 
+/** سياساتُ الدفع — والحقولُ اختياريةٌ كلُّها فيُرسل ما تغيّر وحده (12-و). */
 export const updatePaymentSettings = (
   country: CountryCode,
-  payload: { cliq_confirmation_hours: number },
+  payload: {
+    cliq_confirmation_hours?: number;
+    tip_preset_small?: string;
+    tip_preset_medium?: string;
+    tip_max?: string;
+  },
 ) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
 
 // ------------------------------------------------------------ العقود

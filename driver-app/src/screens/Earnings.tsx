@@ -107,6 +107,15 @@ export function EarningsScreen() {
                 عمولة {arabicDigits(data.commission)}
               </span>
             </div>
+            {/* **سطرٌ ثالثٌ مستقل** (12-و): البقشيشُ دخلَ المحفظة **بلا عمولةٍ
+                عليه** وهو الوحيد كذلك — فبغير سطرِه لا يتّسق «أرباح الرحلات»
+                مع «عمولة» لمن يجمعهما بيده. ويظهر حين يوجد فقط: صفرٌ دائمٌ في
+                سوقٍ لا بقشيشَ فيه سطرٌ يشغل الشاشة بلا معنى */}
+            {Number(data.tips) > 0 ? (
+              <div className="mt-4 text-11.5 text-ok">
+                بقشيش {arabicDigits(data.tips)} — كاملاً بلا عمولة
+              </div>
+            ) : null}
             {negative ? (
               <p className="mt-8 text-11 leading-note text-warn">
                 العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات

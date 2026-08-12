@@ -57,6 +57,7 @@ from app.models.security_setting import SecuritySetting
 from app.models.totp import UserRecoveryCode, UserTotp
 from app.models.ride import Ride, RideRoutePoint, RideStop
 from app.models.subscription import DriverSubscription, SubscriptionPlan
+from app.models.tip import Tip
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.wallet import (
@@ -115,6 +116,7 @@ __all__ = [
     "SubscriptionDurationType",
     "SubscriptionPlan",
     "SubscriptionStatus",
+    "Tip",
     "TopupMethod",
     "TopupRequestStatus",
     "User",

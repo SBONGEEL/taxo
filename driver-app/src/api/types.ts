@@ -247,6 +247,8 @@ export interface Earnings {
   currency: Currency;
   wallet_earnings: string;
   commission: string;
+  /** البقشيش (12-و) — **الدخلُ الوحيد بلا عمولةٍ عليه**، فسطرٌ مستقل. */
+  tips: string;
   net: string;
   directly_collected: string;
   completed_rides: number;
@@ -276,7 +278,9 @@ export type WalletTransactionType =
   | "withdrawal"
   | "refund"
   | "subscription_payment"
-  | "adjustment";
+  | "adjustment"
+  | "tip"
+  | "tip_payment";
 
 export interface WalletTransaction {
   id: string;

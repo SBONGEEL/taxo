@@ -116,10 +116,19 @@ async def lock_wallet(session: AsyncSession, owner_id: uuid.UUID) -> None:
     await session.execute(select(func.pg_advisory_xact_lock(_lock_key(owner_id))))
 
 
-async def _lock_wallets(session: AsyncSession, *owner_ids: uuid.UUID) -> None:
-    """قفل عدة محافظ بترتيب ثابت — بغيره يتقابل تحويلان متعاكسان في جمود."""
+async def lock_wallets(session: AsyncSession, *owner_ids: uuid.UUID) -> None:
+    """قفل عدة محافظ بترتيب ثابت — بغيره يتقابل تحويلان متعاكسان في جمود.
+
+    **وعامٌّ لا خاصّ منذ المرحلة 12-و**: البقشيش عمليةٌ ثانية تمسّ محفظتين في
+    معاملةٍ واحدة (راكبٌ وكبتن)، ودالةٌ خاصةٌ تُستدعى من خدمةٍ أخرى تُقرأ إذناً
+    بتجاهل الترتيب — والترتيبُ هو كلُّ ما يمنع الجمود هنا.
+    """
     for owner_id in sorted(set(owner_ids), key=lambda value: value.bytes):
         await lock_wallet(session, owner_id)
+
+
+# اسمٌ قديم يبقى للمستدعين داخل هذا الملف
+_lock_wallets = lock_wallets
 
 
 # ------------------------------------------------------------------ القراءة

@@ -94,9 +94,13 @@ def token_of(body: dict) -> str:
 
 
 async def rider_session(client: AsyncClient, payload: dict = RIDER) -> dict:
-    """يُرجع الترويسات وتوكن المقبس معاً."""
+    """يُرجع الترويسات وتوكن المقبس والحسابَ نفسه.
+
+    و`user` معه منذ المرحلة 12-و: شحنُ محفظةٍ من المسار الإداري يحتاج مُعرّفَ
+    صاحبها، وقراءتُه من جسم التسجيل في كل اختبارٍ تكرارٌ يُنسى مرة.
+    """
     body = await register(client, payload)
-    return {"headers": auth(body), "token": token_of(body)}
+    return {"headers": auth(body), "token": token_of(body), "user": body["user"]}
 
 
 SUBSCRIPTION_PLAN_NAME = "خطة الاختبار الشهرية"

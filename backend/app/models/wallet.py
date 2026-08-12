@@ -48,6 +48,7 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.RIDE_EARNING,
     WalletTransactionType.TRANSFER_IN,
     WalletTransactionType.REFUND,
+    WalletTransactionType.TIP,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
@@ -56,6 +57,7 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.TRANSFER_OUT,
     WalletTransactionType.WITHDRAWAL,
     WalletTransactionType.SUBSCRIPTION_PAYMENT,
+    WalletTransactionType.TIP_PAYMENT,
 )
 
 # `adjustment` وحده يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص

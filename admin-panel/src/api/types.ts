@@ -260,7 +260,8 @@ export type FeatureKey =
   | "otp_verification_enabled"
   | "women_service_enabled"
   | "multi_stop_enabled"
-  | "whatsapp_otp_enabled";
+  | "whatsapp_otp_enabled"
+  | "tips_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
@@ -293,6 +294,10 @@ export interface PaymentSetting {
   id: string;
   country_code: CountryCode;
   cliq_confirmation_hours: number;
+  /** مبالغُ البقشيش (12-و) — **صفرٌ يعني «لم يُضبط»** فتُخفى الميزةُ في التطبيق. */
+  tip_preset_small: string;
+  tip_preset_medium: string;
+  tip_max: string;
   updated_at: string;
 }
 

@@ -288,6 +288,10 @@ class FeatureKey(StrEnum):
     # وهي **per-country كبقية المفاتيح** بينما العقد عام: العقدُ يقول «نستطيع»
     # والمفتاحُ يقول «نفعل في هذا السوق» — فيُجرَّب في سوقٍ قبل الآخر
     WHATSAPP_OTP_ENABLED = "whatsapp_otp_enabled"
+    # البقشيش (المرحلة 12-و). **ميزةٌ لا حارس** فغيابُ صفّها معطَّلة، ولا
+    # تُضاف إلى `DEFAULT_ENABLED_FLAGS`. وتحكم **ما يُرسله التطبيق كما تحكم ما
+    # يرسمه**: مطفأةً لا تظهر الأزرار ولا يُقبل النداء
+    TIPS_ENABLED = "tips_enabled"
 
 
 class WalletOwnerType(StrEnum):
@@ -319,6 +323,11 @@ class WalletTransactionType(StrEnum):
     REFUND = "refund"
     SUBSCRIPTION_PAYMENT = "subscription_payment"
     ADJUSTMENT = "adjustment"
+    # البقشيش (المرحلة 12-و) — زوجٌ يقابل زوجَ الأجرة حرفياً: خصمٌ على الراكب
+    # وإضافةٌ للكبتن. **ولا `commission` يقابلهما**: الكبتن يقبضه كاملاً
+    # (قرارُ المالك)، فهو دخلُه الوحيد بلا عمولةٍ عليه
+    TIP = "tip"
+    TIP_PAYMENT = "tip_payment"
 
 
 class TopupMethod(StrEnum):

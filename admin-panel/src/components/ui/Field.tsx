@@ -5,6 +5,7 @@
  * نصُّ الخطأ يظهر تحت النموذج بلون `--dng` (انظر `Feedback`).
  */
 
+import { useId } from "react";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
@@ -14,7 +15,13 @@ interface Props extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Field({ label, className, id, ...rest }: Props) {
-  const inputId = id ?? rest.name;
+  // **مُعرّفٌ مولَّدٌ حين لا يُمرَّر**: بغيره يصير `htmlFor={undefined}` فلا
+  // تُربَط التسميةُ بحقلها — نقرُ التسمية لا يركّز الحقل، وقارئُ الشاشة يقرأ
+  // حقلاً بلا اسم. وكانت خمسةٌ وعشرون من تسعةٍ وعشرين حقلاً في اللوحة كذلك،
+  // لأن أغلبَ المستدعين لا يمرّرون `id` ولا `name`. و`useId` من React موجودٌ
+  // لهذا بعينه، فالإصلاحُ في المكوّن يصلح كلَّ مستدعٍ بلا لمسه
+  const generated = useId();
+  const inputId = id ?? rest.name ?? generated;
   return (
     <div>
       {label ? (
@@ -35,7 +42,8 @@ export function Select({
   children,
   ...rest
 }: SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
-  const inputId = id ?? rest.name;
+  const generated = useId();
+  const inputId = id ?? rest.name ?? generated;
   return (
     <div>
       {label ? (

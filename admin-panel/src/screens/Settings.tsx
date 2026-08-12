@@ -17,6 +17,14 @@
  *    صفر». والشاشة تقولها بدل أن يقرأ المشرف صفراً ويظنه سخاءً.
  *
  * ولا تُحسب هنا نسبةٌ ولا مبلغ: الحقولُ تُرسل كما تُكتب، والخلفيةُ تتحقق.
+ *
+ * **و`key={row.country_code}` على النماذج الثلاثة ليس تفصيلاً في React بل حارسٌ
+ * ماليّ**: كلُّ نموذجٍ يبدأ حالتَه من `row`، وReact لا يعيد قراءة قيمةِ
+ * `useState` الأولى عند تغيّر الـprop — فمبدّلُ الدولة كان يُبقي أرقامَ السوق
+ * السابق في الحقول (النسبة، وحدود التحويل، ومبالغ البقشيش) بينما تحت الحقل
+ * سطرٌ يقول القيمةَ الصحيحة. ومن ضغط «حفظ» بعده يكتب **أرقام الأردن في ليبيا**.
+ * والمفتاحُ يُعيد تركيبَ النموذج فتُقرأ القيمُ من جديد. كشفه فحصٌ بصريٌّ في
+ * متصفح: `tsc` لا يرى حالةً قديمة.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -72,6 +80,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "تعدد الوجهات",
     hint: "يظهر زرُّ «إضافة محطة» في شاشة الطلب — حتى ثلاث وجهات. واضبط رسوم المحطات في «التسعيرة» أولاً، فصفرُها يعني محطاتٍ بلا كلفة. والإطفاءُ يمنع الطلبات الجديدة ولا يقطع رحلةً جارية.",
   },
+  tips_enabled: {
+    title: "البقشيش",
+    hint: "أزرارُ شكرٍ في شاشة تقييم الراكب — يُخصم من محفظته ويصل الكبتنَ كاملاً بلا عمولة. ويشترط المحفظةَ مفعّلةً (قناتُه الوحيدة) ومبالغَ مضبوطةً أدناه؛ وصفرُ السقف يُخفي الميزةَ ولو كان المفتاح مشتعلاً.",
+  },
   whatsapp_otp_enabled: {
     title: "التحقق عبر واتساب",
     hint: "يُرسل رمزَ التحقق في واتساب بدل الرسائل القصيرة — ويشترط عقد WhatsApp مفعّلاً في صفحة العقود. ولا تُشعَل قبل اعتماد قالب المصادقة بلغة هذا السوق: قالبٌ غير معتمد يجعل كلَّ تسجيلٍ يرتدّ. وعند فشل الإرسال يُعرض على المستخدم الارتداد إلى الرسائل.",
@@ -91,6 +103,7 @@ const FLAGS: FeatureKey[] = [
   "multi_stop_enabled",
   "women_service_enabled",
   "whatsapp_otp_enabled",
+  "tips_enabled",
   "otp_verification_enabled",
 ];
 
@@ -218,6 +231,7 @@ export function SettingsScreen() {
             </p>
             {commissionRow ? (
               <CommissionForm
+                key={commissionRow.country_code}
                 row={commissionRow}
                 disabled={!isAdmin}
                 onSaved={(message) => {
@@ -242,6 +256,7 @@ export function SettingsScreen() {
             </p>
             {walletRow ? (
               <WalletForm
+                key={walletRow.country_code}
                 row={walletRow}
                 disabled={!isAdmin}
                 onSaved={(message) => {
@@ -257,10 +272,15 @@ export function SettingsScreen() {
             )}
           </section>
 
+          {/* **«سياسات الدفع» لا «مهلة تأكيد كليك»**: البطاقةُ صارت تحمل شيئين
+              (المهلةَ ومبالغَ البقشيش)، وعنوانٌ يسمّي أحدَهما يجعل الآخرَ لا
+              يُوجد لمن يبحث عنه. والاسمُ هو اسمُ جدولها `payment_settings` —
+              نفسُ السبب الذي جعلها جدولاً مستقلاً عن `wallet_settings`. */}
           <section className="rounded-16 border border-line bg-surface p-18">
-            <h2 className="mb-4 text-14 font-bold text-ink">
+            <h2 className="mb-4 text-14 font-bold text-ink">سياسات الدفع</h2>
+            <h3 className="mb-2 mt-12 text-12.5 font-bold text-ink">
               مهلة تأكيد حوالة كليك
-            </h2>
+            </h3>
             <p className="mb-12 text-11 leading-snug text-muted">
               بعدها تصير الدفعةُ نزاعاً ويُخطر الطرفان.{" "}
               <b className="text-ink">ولا أثرَ رجعياً</b>: المهلةُ تُجمَّد على
@@ -269,6 +289,7 @@ export function SettingsScreen() {
             </p>
             {paymentRow ? (
               <PaymentForm
+                key={paymentRow.country_code}
                 row={paymentRow}
                 disabled={!isAdmin}
                 onSaved={(message) => {
@@ -494,7 +515,26 @@ function PaymentForm({
   onError: (message: string) => void;
 }) {
   const [hours, setHours] = useState(String(row.cliq_confirmation_hours));
+  const [small, setSmall] = useState(row.tip_preset_small);
+  const [medium, setMedium] = useState(row.tip_preset_medium);
+  const [max, setMax] = useState(row.tip_max);
   const [busy, setBusy] = useState(false);
+
+  /** مبلغُ مالٍ كما يُكتب — **بلا أرقامٍ عربية-هندية**: حقلٌ يُكتب فيه لا يُقرأ. */
+  const money = (value: string) => value.replace(/[^0-9.]/g, "");
+
+  function save(
+    payload: Parameters<typeof updatePaymentSettings>[1],
+    message: string,
+  ) {
+    setBusy(true);
+    updatePaymentSettings(row.country_code, payload)
+      .then(() => onSaved(message))
+      .catch((caught) =>
+        onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+      )
+      .finally(() => setBusy(false));
+  }
 
   return (
     <>
@@ -517,22 +557,72 @@ function PaymentForm({
         size="sm"
         disabled={disabled || !hours}
         loading={busy}
-        onClick={() => {
-          setBusy(true);
-          updatePaymentSettings(row.country_code, {
-            cliq_confirmation_hours: Number(hours),
-          })
-            .then(() => onSaved("حُفظت المهلة — تسري على ما يأتي بعدها"))
-            .catch((caught) =>
-              onError(
-                caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
-              ),
-            )
-            .finally(() => setBusy(false));
-        }}
+        onClick={() =>
+          save(
+            { cliq_confirmation_hours: Number(hours) },
+            "حُفظت المهلة — تسري على ما يأتي بعدها",
+          )
+        }
       >
         حفظ
       </Button>
+
+      {/* مبالغُ البقشيش (12-و) — في بطاقة **سياسات الدفع** لا في «التسعيرة»:
+          الجدولُ هو `payment_settings`، وحقلٌ يسكن شاشةً غير جدوله يجعل
+          البحثَ عنه تخميناً. والصفرُ يُخفي الميزةَ فلا حدَّ أدنى يمنع إطفاءها */}
+      <div className="mt-18 border-t border-line pt-14">
+        <h3 className="mb-2 text-12.5 font-bold text-ink">مبالغ البقشيش</h3>
+        <p className="mb-12 text-11 leading-snug text-muted">
+          زرّان يراهما الراكب بعد التقييم، وسقفٌ يحرس من إصبعٍ تزلّ. والصفرُ يعني
+          «لم يُضبط» فتُخفى الأزرار — لا بقشيشاً مقداره صفر. ويصل الكبتنَ كاملاً
+          بلا عمولة.
+        </p>
+        <div className="grid grid-cols-3 gap-10">
+          <Field
+            label="الزر الأول"
+            dir="ltr"
+            inputMode="decimal"
+            value={small}
+            disabled={disabled}
+            onChange={(event) => setSmall(money(event.target.value))}
+          />
+          <Field
+            label="الزر الثاني"
+            dir="ltr"
+            inputMode="decimal"
+            value={medium}
+            disabled={disabled}
+            onChange={(event) => setMedium(money(event.target.value))}
+          />
+          <Field
+            label="السقف"
+            dir="ltr"
+            inputMode="decimal"
+            value={max}
+            disabled={disabled}
+            onChange={(event) => setMax(money(event.target.value))}
+          />
+        </div>
+        <Button
+          className="mt-14"
+          size="sm"
+          variant="secondary"
+          disabled={disabled || !small || !medium || !max}
+          loading={busy}
+          onClick={() =>
+            save(
+              {
+                tip_preset_small: small,
+                tip_preset_medium: medium,
+                tip_max: max,
+              },
+              "حُفظت مبالغ البقشيش",
+            )
+          }
+        >
+          حفظ المبالغ
+        </Button>
+      </div>
     </>
   );
 }
