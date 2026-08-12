@@ -57,6 +57,8 @@ export function ConfirmRide({
   stops,
   onStopsChange,
   onAddStop,
+  blockedByPreference,
+  onClearPreference,
 }: {
   pickup: Coordinates;
   pickupAddress: string | null;
@@ -70,6 +72,10 @@ export function ConfirmRide({
   stops: DraftStop[];
   onStopsChange: (next: DraftStop[]) => void;
   onAddStop: () => void;
+  /** ارتدّ الطلبُ بتفضيلٍ نسائيٍّ لا تستطيع تغييره — الخدمةُ مطفأة فالمفتاح
+   * مخفيّ. وهنا يُفتح لها الباب بدل رفضٍ مسدود. */
+  blockedByPreference: boolean;
+  onClearPreference: () => void;
 }) {
   const women = useWomenService();
   const multiStop = useMultiStop();
@@ -244,7 +250,27 @@ export function ConfirmRide({
           </AnimatePresence>
         </div>
 
-        <ErrorNote message={error ?? requestError} />
+        {blockedByPreference ? (
+          <div className="rounded-12 border border-warn bg-surface-2 px-14 py-12">
+            <p className="text-14 font-medium text-ink">
+              خدمة الكبتنات غير مفعّلة في بلدك الآن
+            </p>
+            <p className="mt-4 text-12 leading-relaxed text-muted">
+              في حسابك تفضيلٌ محفوظ بطلب كبتنة، ولا يمكن تنفيذه هنا — فتُرفض كل
+              رحلة. أعِد التفضيل إلى «أي كبتن» لتتمكّني من الطلب، ويبقى بإمكانك
+              تغييره متى عادت الخدمة.
+            </p>
+            <button
+              type="button"
+              onClick={onClearPreference}
+              className="mt-10 w-full rounded-12 border border-line bg-surface py-10 text-14 font-medium text-ink"
+            >
+              اقبل أي كبتن
+            </button>
+          </div>
+        ) : (
+          <ErrorNote message={error ?? requestError} />
+        )}
 
         <Button
           size="lg"

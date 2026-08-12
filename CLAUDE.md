@@ -693,7 +693,16 @@ The women's service also adds the one **brand colour** this design system has: `
 (the panel never activates it, but the file has to stay a verbatim copy of §6 — "identical except
 two lines" is not identical). Its default value is `--tx`/`--inv`, so `text-brand` is a no-op until
 a `.pink` class lands on `<html>`; that is what lets components be written once for both themes.
-`lib/brand.tsx` in each PWA owns that class. Three rules live there: the choice is stored **per
+`lib/brand.tsx` in each PWA owns that class.
+
+**A flag that gates a feature must also gate what the app *sends*, not just what it draws.**
+`useWomenService().defaultPreference` used to return the stored `ride_gender_preference` regardless
+of whether the service was on — so with the flag off the app hid the selector and still sent
+`female`, and every ride request bounced with `women_service_unavailable` while she had no control
+anywhere to change it. The backend was right to refuse (silently downgrading a gendered request is
+worse), so the fix belongs in the app: it now sends `any` whenever the service is not offered to
+this account, and the stored value is left alone — it is her choice and returns when the service
+does; what stops is the *sending*, not the saving. A refusal with no way out is not a refusal. Three rules live there: the choice is stored **per
 device, not on the account** (turning it off because someone is watching should not turn it off on
 her phone at home), it is offered only where `women_service_enabled` is on **and** the account's
 gender is female — with no disabled control and no apology otherwise — and `customer-app`'s

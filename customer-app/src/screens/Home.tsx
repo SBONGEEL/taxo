@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { requestRide } from "@/api/endpoints";
+import { requestRide, updateMe } from "@/api/endpoints";
 import type {
   Coordinates,
   GenderPreference,
@@ -45,7 +45,7 @@ type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { user, refreshUser } = useSession();
   const { ride, drivers, driverPing, setViewport, refresh, setRide } = useRide();
   const token = useMapboxToken();
   const countryConfig = useCountryConfig(user?.country_code);
@@ -62,6 +62,8 @@ export function HomeScreen() {
   // المحطاتُ الوسيطة **بترتيبها** — تُرتَّب وتُحذف هنا قبل التأكيد، فلا
   // مسارَ لتعديلها على رحلةٍ قائمة (SPEC القسم 5.10)
   const [stops, setStops] = useState<DraftStop[]>([]);
+  // ارتدّ الطلبُ بسبب تفضيلٍ لا تستطيع تغييره — فيُفتح لها الباب
+  const [blockedByPreference, setBlockedByPreference] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -179,8 +181,33 @@ export function HomeScreen() {
       setDropoffAddress(null);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+      // **رفضٌ بلا مخرجٍ ليس رفضاً**: تفضيلٌ نسائيٌّ بقي في ملفها من سوقٍ
+      // الخدمةُ فيه مشتعلة يجعل كلَّ طلبٍ يرتدّ، والمفتاحُ لا يظهر لتغيّره
+      // (لأن الخدمة مطفأة). فيُعرض هنا زرٌّ يعيده إلى `any` — والسببُ مكتوب
+      setBlockedByPreference(
+        caught instanceof ApiError &&
+          caught.code === "women_service_unavailable",
+      );
     } finally {
       setRequesting(false);
+    }
+  }
+
+  /** يعيد التفضيل المخزَّن إلى «أي كبتن» ثم يفتح الطريق للطلب من جديد.
+   *
+   * ويكتب في الملف لا في هذه الشاشة وحدها: التفضيلُ عمودٌ على الحساب، وقيمةٌ
+   * تُتجاوَز محلياً تعود بأول شاشةٍ أخرى تقرؤها.
+   */
+  async function clearGenderPreference() {
+    setError(null);
+    try {
+      await updateMe({ ride_gender_preference: "any" });
+      await refreshUser();
+      setBlockedByPreference(false);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر تعديل التفضيل",
+      );
     }
   }
 
@@ -316,6 +343,8 @@ export function HomeScreen() {
                 stops={stops}
                 onStopsChange={setStops}
                 onAddStop={() => setPhase("pick-stop")}
+                blockedByPreference={blockedByPreference}
+                onClearPreference={() => void clearGenderPreference()}
               />
             ) : (
               <Sheet>

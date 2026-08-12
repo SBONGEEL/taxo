@@ -32,9 +32,18 @@ export function useWomenService(): {
 } {
   const { user } = useSession();
   const enabled = useFeature(user?.country_code, "women_service_enabled");
+  const available = enabled && user?.gender === "female";
   return {
     enabled,
-    available: enabled && user?.gender === "female",
-    defaultPreference: user?.ride_gender_preference ?? "any",
+    available,
+    // **لا يُرسَل تفضيلٌ لخدمةٍ لا تُعرض.** كان هذا يعيد المخزَّن دائماً،
+    // فتخفي الشاشةُ المفتاح وترسل `female` من ملفٍ ضُبط في سوقٍ الخدمةُ فيه
+    // مشتعلة — فترتدّ كلُّ رحلةٍ بـ`women_service_unavailable` **بلا مخرج**:
+    // لا مفتاحَ يظهر لتغيّره، ولا رسالةَ تقول ما العطب. راكبةٌ محبوسةٌ خارج
+    // التطبيق كلِّه لأن إعداداً بقي من سوقٍ آخر.
+    //
+    // **والمخزَّن لا يُمحى**: هو اختيارُها ويعود حين تعود الخدمة — الذي
+    // يتوقف هو **إرسالُه** لا حفظُه.
+    defaultPreference: available ? user?.ride_gender_preference ?? "any" : "any",
   };
 }
