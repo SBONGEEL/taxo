@@ -34,6 +34,7 @@ import type {
   PaymentSetting,
   PaymentStatus,
   PricingRule,
+  PromoCode,
   Reports,
   RideStatus,
   SecurityPolicy,
@@ -61,6 +62,33 @@ import type {
   Withdrawal,
   WithdrawalStatus,
 } from "@/api/types";
+
+// ------------------------------------------------------ الكوبونات (12-ز)
+
+export const listPromoCodes = (country?: CountryCode) =>
+  api.get<PromoCode[]>("/admin/promo-codes", { query: { country_code: country } });
+
+export const createPromoCode = (payload: {
+  code: string;
+  country_code: CountryCode;
+  discount_type: "percent" | "fixed";
+  discount_value: string;
+  max_discount?: string | null;
+  budget_total: string;
+  per_user_limit?: number;
+  total_usage_limit?: number | null;
+  valid_until?: string | null;
+}) => api.post<PromoCode>("/admin/promo-codes", payload);
+
+/** **ولا `code` فيه**: رحلاتٌ تشير إليه بمعرّفه، وتغييرُ نصِّه يجعل ملصقاً في
+ *  الشارع يشير إلى عرضٍ آخر. والرمزُ الخاطئ يُطفأ ويُنشأ غيرُه. */
+export const updatePromoCode = (
+  id: string,
+  payload: { is_active?: boolean; budget_total?: string },
+) => api.patch<PromoCode>(`/admin/promo-codes/${id}`, payload);
+
+export const deletePromoCode = (id: string) =>
+  api.del<void>(`/admin/promo-codes/${id}`);
 
 // ------------------------------------------------------------ الإعدادات
 

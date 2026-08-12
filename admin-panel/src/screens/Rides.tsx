@@ -77,6 +77,7 @@ const METHOD_LABEL: Record<PaymentMethod, string> = {
   cliq: "كليك",
   card: "بطاقة",
   wallet: "محفظة",
+  promo: "خصم كوبون",
 };
 
 const COLUMNS = "0.7fr 1fr 1.1fr 1.1fr 1.6fr 0.9fr 0.9fr 1fr";

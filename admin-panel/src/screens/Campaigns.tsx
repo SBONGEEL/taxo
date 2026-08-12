@@ -16,6 +16,11 @@
  *
  * **ولا قناةَ SMS هنا**: النموذج يعرض قناتين، والحملات تسير على FCM وحده
  * (`FUTURE-FEATURES.md` بند 14) — وخيارٌ لا يقع أسوأ من غيابه.
+ *
+ * **ورموزُ الخصم أسفلَها** (12-ز): القسم 13 يسمّي القسمَ «العروض والحملات»،
+ * وهما شيئان في صفحةٍ واحدة فلكلٍّ عنوانُه — وجدولُ الرموز في مكوّنه
+ * (`components/PromoCodes.tsx`) لا في هذا الملف: شاشةٌ تحمل جدولين ومنمذجَين
+ * تصير ألفَ سطرٍ لا يقرؤها أحد.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -33,6 +38,8 @@ import type {
   CampaignStatus,
   Delivery,
 } from "@/api/types";
+import { PromoCodes } from "@/components/PromoCodes";
+import { Modal } from "@/components/ui/Modal";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -246,6 +253,8 @@ export function CampaignsScreen() {
           onClose={() => setOpen(null)}
         />
       ) : null}
+
+      <PromoCodes onError={setError} />
     </Shell>
   );
 }
@@ -427,27 +436,3 @@ function DeliveriesModal({
 }
 
 /** نافذةٌ بنمط `DESIGN.md` §3.5 — تعتيمٌ وسطُ الشاشة ولوحٌ بنصف قطر 20. */
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[86vh] w-modal max-w-full overflow-auto rounded-20 border border-line bg-surface p-24"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 className="mb-16 text-16 font-bold text-ink">{title}</h2>
-        {children}
-      </div>
-    </div>
-  );
-}

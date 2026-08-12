@@ -155,7 +155,15 @@ export function Shell({
           </div>
         </div>
 
-        <nav className="flex items-end gap-2 overflow-x-auto px-20">
+        {/* **بلا `overflow-x-auto`** — وهذا ليس تفصيلاً تجميلياً: CSS يجعل المحورَ
+            الآخر `auto` حين يكون أحدُهما `auto` (`visible` تُحسب `auto`)، فيصير
+            الشريطُ حاويةَ قصٍّ رأسياً وقائمتُه المنسدلة **ابنتُه**. وقياسُ
+            المتصفح: القائمةُ 130px تُقَص كاملةً (`menuBottom 230` مقابل
+            `navBottom 100`) فيصير `scrollHeight` 172 في صندوقٍ ارتفاعُه 42، ويرسم
+            المتصفحُ شريطَ تمريرٍ عمودياً — على الحافة اليسرى في RTL.
+            و`flex-wrap` بدلَه: خمسُ مجموعاتٍ × 72px لا تحتاج تمريراً في شريطٍ
+            عرضُه 1024 فما فوق، وتلتفّ إن ضاق أكثر. */}
+        <nav className="flex flex-wrap items-end gap-2 px-20">
           {GROUPS.map((group) => (
             <div key={group.label} className="group relative">
               <span className="block cursor-default px-14 pb-10 pt-12 text-13 font-semibold text-muted">

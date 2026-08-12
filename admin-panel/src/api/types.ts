@@ -225,7 +225,7 @@ export interface Withdrawal {
 
 // ------------------------------------------------------------ النزاعات
 
-export type PaymentMethod = "cash" | "cliq" | "card" | "wallet";
+export type PaymentMethod = "cash" | "cliq" | "card" | "wallet" | "promo";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 export type DisputeResolution = "paid" | "unpaid";
@@ -299,6 +299,28 @@ export interface PaymentSetting {
   tip_preset_medium: string;
   tip_max: string;
   updated_at: string;
+}
+
+/** رمزُ خصمٍ كما تراه اللوحة (12-ز) — وثلاثةُ أرقامٍ **محسوبة** لا مراكمة. */
+export interface PromoCode {
+  id: string;
+  code: string;
+  country_code: CountryCode;
+  discount_type: "percent" | "fixed";
+  discount_value: string;
+  max_discount: string | null;
+  budget_total: string;
+  per_user_limit: number;
+  total_usage_limit: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  is_active: boolean;
+  /** ما دُفع فعلاً (دفعات `promo` المؤكَّدة). */
+  spent: string;
+  /** ما دُفع **ومعه ما وُعد به في رحلاتٍ جارية** — وهو ما يُقاس به السقف،
+   *  و**قد يتجاوزه**: السقفُ يمنع تطبيقاً جديداً لا رحلةً تحمل الرمز. */
+  committed: string;
+  used_count: number;
 }
 
 // ------------------------------------------------------------ العقود
