@@ -46,7 +46,13 @@ const ACTION_TONE: Record<AuditAction, Tone> = {
   read: "danger",
 };
 
-/** أنواعُ العناصر كما تكتبها الخدمات — ما ليس هنا يُعرض كما هو. */
+/** أنواعُ العناصر كما تكتبها الخدمات — ما ليس هنا يُعرض كما هو.
+ *
+ * **القائمة منسوخةٌ من `entity_type=` في الخلفية حرفاً بحرف**، وقد كُتبت أولَ
+ * مرة من الذاكرة فخرج منها `wallet_topup_request` باسمٍ مختصر و`push_test`
+ * بلا اسمٍ أصلاً — فظهرا في الشاشة بمفاتيحهما الإنجليزية. والسقوطُ إلى المفتاح
+ * الخام مقصودٌ ويبقى: نوعٌ جديد في الخلفية يُقرأ باسمه البرمجي ولا يختفي.
+ */
 const ENTITY_LABEL: Record<string, string> = {
   user: "حساب",
   driver: "سائق",
@@ -54,7 +60,7 @@ const ENTITY_LABEL: Record<string, string> = {
   payment: "دفعة",
   wallet: "محفظة",
   wallet_transaction: "قيد محفظة",
-  topup_request: "طلب شحن",
+  wallet_topup_request: "طلب شحن",
   withdrawal_request: "طلب سحب",
   driver_subscription: "اشتراك",
   subscription_plan: "باقة",
@@ -65,7 +71,7 @@ const ENTITY_LABEL: Record<string, string> = {
   feature_flag: "مفتاح ميزة",
   provider_credential: "عقد مزوّد",
   notification_campaign: "حملة",
-  notification_setting: "ساعات هدوء",
+  push_test: "مِجَسّ إشعار",
   live_map: "الخريطة الحيّة",
 };
 

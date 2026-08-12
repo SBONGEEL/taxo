@@ -58,3 +58,19 @@ export function shortDay(iso: string) {
 export function daysUntil(iso: string, now: number = Date.now()) {
   return Math.ceil((new Date(iso).getTime() - now) / 86_400_000);
 }
+
+/** «يوم» مع عددها بتمييزٍ عربيٍّ صحيح.
+ *
+ * العددُ في العربية يغيّر تمييزَه: واحدٌ واثنان بلا عدد، ومن ثلاثةٍ إلى عشرة
+ * جمعٌ (**أيام**)، ومن أحدَ عشرَ فصاعداً مفردٌ منصوب (**يوماً**). و«٣٠ يوم»
+ * تُقرأ ركيكةً في شاشةٍ كلُّ نصِّها عربيٌّ مضبوط — والرقمُ نفسه لا يتغيّر،
+ * فالتمييزُ وحده ما يُصحَّح.
+ */
+export function days(count: number): string {
+  const n = Math.abs(count);
+  const digits = arabicDigits(String(n));
+  if (n === 1) return "يوم واحد";
+  if (n === 2) return "يومان";
+  if (n >= 3 && n <= 10) return `${digits} أيام`;
+  return `${digits} يوماً`;
+}

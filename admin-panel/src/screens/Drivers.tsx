@@ -447,8 +447,8 @@ function DriverDrawer({
           </div>
 
           <p className="mt-6 text-11 leading-note text-muted">
-            {PREFERENCE_LABEL[row.gender_preference]} — تفضيلُه الدائم، يضبطه من
-            تطبيقه.
+            {PREFERENCE_LABEL[row.gender_preference]} — تفضيلٌ دائم يضبطه صاحبُ
+            الحساب من تطبيقه.
           </p>
 
           {canDecide ? (

@@ -46,7 +46,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
-import { currencyLabel, day, daysUntil, money } from "@/lib/format";
+import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { arabicDigits } from "@/lib/utils";
 
@@ -85,7 +85,7 @@ function coverage(row: Subscription): { label: string; tone: Tone } {
       : { label: "منتهٍ", tone: "muted" };
   }
   if (left <= 1) return { label: "ينتهي غداً", tone: "warn" };
-  return { label: `سارٍ · ${arabicDigits(String(left))} يوم`, tone: "ok" };
+  return { label: `سارٍ · ${days(left)}`, tone: "ok" };
 }
 
 export function SubscriptionsScreen() {
@@ -291,7 +291,7 @@ function PlansPanel({
             </span>
             <span className="text-muted">
               {DURATION_LABEL[plan.duration_type]} ·{" "}
-              {arabicDigits(String(DURATION_DAYS[plan.duration_type]))} يوم
+              {days(DURATION_DAYS[plan.duration_type])}
             </span>
             <span className="font-semibold text-ink">
               {money(plan.price, plan.currency)}

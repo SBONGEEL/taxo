@@ -33,6 +33,18 @@ const UI_UNIONS = new Set([
   "Channel",
 ]);
 
+/** يمحو تعليقات `/* *\/` و`//` ويترك ما عداها بطوله.
+ *
+ * لا يفهم السلاسل، فـ`"// ليس تعليقاً"` داخل نصٍّ يُمحى خطأً — وهو مقبولٌ هنا:
+ * الضررُ الوحيد أن يفحص الحارس اتحاداً بعضوٍ ناقص، لا أن يتخطّى اتحاداً.
+ * والخطأُ في هذا الاتجاه هو الاتجاه الصحيح للخطأ في حارس.
+ */
+function stripComments(text) {
+  const block = /\/\*[\s\S]*?\*\//g;
+  const line = new RegExp("//[^\n]*", "g");
+  return text.replace(block, " ").replace(line, " ");
+}
+
 function walk(dir, test) {
   return readdirSync(dir).flatMap((entry) => {
     if (entry === "__pycache__" || entry === "node_modules") return [];
@@ -61,7 +73,12 @@ for (const file of walk(BACKEND, (p) => p.endsWith(".py"))) {
 // ------------------------------------------------------------- الواجهة
 const problems = [];
 for (const file of walk(SRC, (p) => /\.tsx?$/.test(p))) {
-  const text = readFileSync(file, "utf8");
+  // **التعليقات تُحذف قبل المطابقة.** النمطُ أدناه يقبل سلاسلَ وأنابيبَ فقط،
+  // فتعليقٌ بين أعضاء الاتحاد يجعله لا يطابق — فيمر الاتحادُ **بلا فحص**
+  // والبناءُ أخضر. وقع هذا فعلاً في `AuditAction` بلوحة الإدارة: شرحُ
+  // `read` كُتب بين العضوين فتوقّف الحارس عن رؤية الاتحاد كله، ولا شيء
+  // يقول ذلك. حارسٌ يُتخطّى بصمتٍ أسوأ من حارسٍ غائب — الغائبُ يُعرف.
+  const text = stripComments(readFileSync(file, "utf8"));
   for (const match of text.matchAll(
     /type\s+(\w+)\s*=\s*((?:\s*\|?\s*"[^"]+")+)\s*;/g,
   )) {

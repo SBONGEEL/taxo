@@ -228,7 +228,12 @@ function RevenueBars({ data }: { data: Reports }) {
     <div className="flex items-end gap-7">
       {days.map((row, index) => (
         <div key={row.day} className="flex flex-1 flex-col items-center gap-6">
-          <span className="text-9 text-muted">{arabicDigits(row.revenue)}</span>
+          {/* **قيمةُ اليوم الصفري لا تُكتب**: نافذةُ الشهر ثلاثون عموداً،
+              وكتابةُ «٠.٠٠٠» فوق تسعةٍ وعشرين منها ضجيجٌ يخفي الرقم الوحيد
+              الذي يُقرأ. والعمودُ الصفري نفسه يبقى — الفجوةُ معلومة */}
+          <span className="text-9 text-muted">
+            {Number(row.revenue) > 0 ? arabicDigits(row.revenue) : ""}
+          </span>
           <span
             className={cn(
               "w-full rounded-t-5",
