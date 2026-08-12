@@ -124,6 +124,16 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class UserBlockUpdate(BaseModel):
+    """حظرُ حسابٍ أو رفعُ الحظر (SPEC القسم 13/3) — **بسببٍ إلزامي عند الحظر**.
+
+    السببُ يدخل سجل التدقيق ولا يصل صاحبَ الحساب: هو جوابُ «لماذا حُظر؟» حين
+    يُسأل بعد شهر، لا رسالةٌ إليه. ورفعُ الحظر لا يشترطه.
+    """
+
+    reason: str | None = Field(default=None, max_length=255)
+
+
 class AuthResponse(BaseModel):
     user: UserOut
     tokens: TokenPair

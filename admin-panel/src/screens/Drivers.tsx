@@ -16,6 +16,18 @@
  *
  * **والقرار لـ admin وحده** (القسم 13/8) — والحمايةُ في الخلفية؛ ما تخفيه
  * الشاشة عن `support` راحةٌ لا حماية.
+ *
+ * **وتوثيقُ الجنس بابٌ ثانٍ في نفس الدرج** (المرحلة 10-ج). الخلفية تملكه منذ
+ * تلك المرحلة (`PUT /admin/drivers/{id}/gender` و`?gender_verified=false`)
+ * ولم يكن له في اللوحة زرٌّ — وقاعدةٌ بلا باب لا تُستعمل. وثلاثة أشياء تجعله
+ * ما هو:
+ *
+ * - **فرزُه محورٌ مستقل عن الحالة** فلا يُدسّ في حبّات الحالة: «معتمدون» و«بلا
+ *   جنسٍ مثبت» سؤالان يُسألان معاً لا بديلين. ولذلك مفتاحٌ بجانب الحبّات.
+ * - **الجنسُ عمودٌ في القائمة** لا حقلٌ يُكتشف بفتح كل ملف: المتراكم الذي
+ *   يبقى `women_service_enabled` مطفأً حتى يُفرَّغ لا يُفرَّغ إن لم يُرَ.
+ * - **والحفظُ يعيد قراءة القائمة**: ردُّ المسار `DriverOut` والجنسُ عمودٌ على
+ *   `users`، فلا يحمله الردُّ ولا تخمّنه الشاشة.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -28,6 +40,7 @@ import {
   listDrivers,
   rejectDriver,
   reviewDocument,
+  setDriverGender,
   suspendDriver,
 } from "@/api/endpoints";
 import type {
@@ -35,11 +48,13 @@ import type {
   DocumentType,
   DriverDocuments,
   DriverStatus,
+  Gender,
+  GenderPreference,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Pills, Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
+import { Checkbox, Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
@@ -66,13 +81,28 @@ const DOC_LABEL: Record<DocumentType, string> = {
   vehicle_photo: "صورة المركبة",
 };
 
-const COLUMNS = "1.6fr 1.1fr 0.9fr 1fr 0.7fr 1.2fr";
+const GENDER_LABEL: Record<Gender, string> = {
+  male: "ذكر",
+  female: "أنثى",
+};
+
+/** تفضيلُ الكبتن **دائمٌ لا لكل رحلة**، ويفسّر جفافَ الطلبات عن حسابٍ قيّد نفسه. */
+const PREFERENCE_LABEL: Record<GenderPreference, string> = {
+  any: "يقبل كل الركاب",
+  male: "لا يقلّ إلا الرجال",
+  female: "لا تقلّ إلا النساء",
+};
+
+const COLUMNS = "1.6fr 1.1fr 0.9fr 1fr 0.8fr 0.6fr 1.2fr";
 
 export function DriversScreen() {
   const { country } = useCountry();
   const { isAdmin } = useSession();
 
   const [filter, setFilter] = useState<DriverStatus | "all">("pending");
+  // محورٌ ثانٍ مستقل عن الحالة — لا حبّةٌ سادسة بينها: «معتمدون» و«بلا جنسٍ
+  // مثبت» سؤالان يُسألان معاً، وحبّةٌ واحدة تجعلهما بديلين
+  const [unverifiedGender, setUnverifiedGender] = useState(false);
   const [rows, setRows] = useState<AdminDriverRow[] | null>(null);
   const [open, setOpen] = useState<AdminDriverRow | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,9 +114,10 @@ export function DriversScreen() {
       await listDrivers({
         country_code: country,
         status: filter === "all" ? undefined : filter,
+        gender_verified: unverifiedGender ? false : undefined,
       }),
     );
-  }, [country, filter]);
+  }, [country, filter, unverifiedGender]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -113,13 +144,33 @@ export function DriversScreen() {
         ]}
       />
 
+      <div className="mb-14 max-w-prose">
+        <Checkbox checked={unverifiedGender} onChange={setUnverifiedGender}>
+          <span className="block text-12.5 font-semibold text-ink">
+            من لم يُثبَّت جنسُه بعد
+          </span>
+          <span className="block text-11 leading-note text-muted">
+            المتراكمُ الذي تبقى الخدمة النسائية مطفأةً حتى يُفرَّغ — تشغيلُها
+            قبله يعني خدمةً بلا سائقاتٍ يمكن ترشيحُهنّ.
+          </span>
+        </Checkbox>
+      </div>
+
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
       <div className="mt-12">
         <Table
           columns={COLUMNS}
-          headers={["السائق", "الهاتف", "الحالة", "الوثائق", "التقييم", ""]}
+          headers={[
+            "السائق",
+            "الهاتف",
+            "الحالة",
+            "الوثائق",
+            "الجنس",
+            "التقييم",
+            "",
+          ]}
           rows={rows}
           keyOf={(row) => row.driver_id}
           empty={{
@@ -164,6 +215,16 @@ export function DriversScreen() {
                   </span>
                 ) : (
                   <span className="text-ok">مكتملة</span>
+                )}
+              </span>
+
+              {/* المطابقةُ تقرأ المختوم وحده، فغيرُ المختوم «لم يُثبَّت» لا
+                  «ذكر» — عرضُ قيمةٍ بلا ختمٍ يجعلها تبدو معتبَرة وهي ليست */}
+              <span>
+                {row.gender_verified && row.gender ? (
+                  <span className="text-ink">{GENDER_LABEL[row.gender]}</span>
+                ) : (
+                  <span className="text-warn">لم يُثبَّت</span>
                 )}
               </span>
 
@@ -364,6 +425,70 @@ function DriverDrawer({
             ))}
           </ul>
         )}
+
+        <h3 className="mb-10 mt-18 text-13 font-bold text-muted">
+          توثيق الجنس
+        </h3>
+        <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+          <div className="flex items-center gap-10">
+            <span className="flex-1 text-13 font-semibold text-ink">
+              {row.gender_verified && row.gender
+                ? `مُثبت — ${GENDER_LABEL[row.gender]}`
+                : "لم يُثبَّت بعد"}
+            </span>
+            <span
+              className={cn(
+                "text-11.5 font-bold",
+                row.gender_verified ? "text-ok" : "text-warn",
+              )}
+            >
+              {row.gender_verified ? "مختوم" : "بانتظار المشرف"}
+            </span>
+          </div>
+
+          <p className="mt-6 text-11 leading-note text-muted">
+            {PREFERENCE_LABEL[row.gender_preference]} — تفضيلُه الدائم، يضبطه من
+            تطبيقه.
+          </p>
+
+          {canDecide ? (
+            <>
+              <div className="mt-10 flex gap-8">
+                {(["female", "male"] as Gender[]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(
+                        () => setDriverGender(row.driver_id, value),
+                        `ثُبّت الجنس: ${GENDER_LABEL[value]}`,
+                      )
+                    }
+                    className={cn(
+                      "flex-1 rounded-10 border py-8 text-11.5 font-semibold disabled:opacity-60",
+                      row.gender_verified && row.gender === value
+                        ? "border-ink text-ink"
+                        : "border-line text-muted",
+                    )}
+                  >
+                    {GENDER_LABEL[value]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-8 text-11 leading-note text-muted">
+                يُقرأ من الهوية المرفوعة أعلاه، لا من قول صاحبه: بلا ختمِ مشرفٍ
+                يصير بلوغُ صفة «سائقة للنساء» كتابةَ كلمةٍ في حقل. والضبطُ لا
+                يعيد دورة اعتماد — الوثائق مراجَعةٌ أصلاً.
+              </p>
+            </>
+          ) : (
+            <p className="mt-8 text-11 leading-note text-muted">
+              الضبطُ لـ admin وحده — إعلانُ جنس الكبتن يقيّد أمان غيره
+              (القسم 13/8).
+            </p>
+          )}
+        </div>
 
         {canDecide ? (
           <div className="mt-14">

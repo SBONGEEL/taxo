@@ -1,0 +1,441 @@
+/** الركّاب — SPEC القسم 13/3، و`DESIGN.md` §3.3/3.5.
+ *
+ * ثلاثة أشياء يفعلها القسم 13/3 وثلاثةٌ فقط: **قائمة، حظر، تجميد محفظة**.
+ * والاثنان الأخيران **بابان لا باب**، والخلط بينهما يفقد نصف المعنى:
+ *
+ * - **الحظر يغلق الحساب كلَّه**: يُقرأ في كل طلبٍ مُصادَق عليه، فلا دخولَ ولا
+ *   رحلة ولا تجديدَ جلسة.
+ * - **وتجميدُ المحفظة يوقف حركةَ المال وحدها** ويبقي صاحبَها راكباً يدفع
+ *   نقداً (القسم 4/13.3). ذاك عقابٌ على السلوك وهذا احتواءٌ لمالٍ مشبوه،
+ *   والدمجُ بينهما يعني إمّا أن يُغلق حسابٌ لأجل شكٍّ مالي أو أن يبقى مالٌ
+ *   مشبوهٌ يتحرك لأن صاحبَه لم يستحق الإغلاق.
+ *
+ * **والحسابُ غير محقق الرقم موسومٌ وقابلٌ للفلترة** (القسم 13/3): حالةٌ لا تقع
+ * إلا بإطفاء مفتاح الطوارئ، ولا تُعالَج إن لم تُرَ.
+ *
+ * **والرصيد يُقرأ في الدرج لا في الصف**: هو مجموعُ الدفتر لا عمود، فنداءٌ لكل
+ * صفٍّ في صفحةٍ من خمسين يعني خمسين استعلامَ جمع — نفس السبب الذي جعل عدَّ
+ * وثائق الكبتن يقع داخل استعلام القائمة.
+ *
+ * **ولا زرَّ إنشاء حساب**: الحسابُ يُنشأ بإثبات رقمٍ من التطبيق (القسم 15/أ)،
+ * وحسابٌ تفتحه اللوحة حسابٌ بلا إثباتٍ لرقمه.
+ */
+
+import { useCallback, useEffect, useState } from "react";
+
+import { ApiError } from "@/api/client";
+import {
+  blockUser,
+  freezeWallet,
+  getWallet,
+  listUsers,
+  listWalletTransactions,
+  unblockUser,
+  unfreezeWallet,
+} from "@/api/endpoints";
+import type { User, Wallet, WalletTransaction } from "@/api/types";
+import { Shell } from "@/components/Shell";
+import { Pills, Table } from "@/components/Table";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
+import { useCountry } from "@/lib/country";
+import { moment, money } from "@/lib/format";
+import { useSession } from "@/lib/session";
+import { arabicDigits, cn } from "@/lib/utils";
+
+/** فلترةُ عرضٍ خالصة لا مرآةَ تعدادٍ في الخلفية — ولا قيمةَ فيها تساوي قيمةَ
+ * عمود. القيم مسبوقةٌ بـ`only_` عمداً كي لا تتصادم أسماؤها مع `active` في
+ * `SubscriptionStatus` ونظائرها: `check:enums` يرفض اتحاداً يخلط قيمةَ تعدادٍ
+ * حقيقيةً بقيمةٍ مخترعة — وهي بصمةُ الاتحاد المنسوخ ثم المزيد عليه. وإعفاءٌ
+ * بالاسم كان سيُطفئ الحارسَ عن كل اتحادٍ يُسمّى `Filter` بعدها.
+ */
+type RiderFilter = "only_active" | "only_blocked" | "only_unverified";
+
+const TX_LABEL: Record<string, string> = {
+  topup: "شحن",
+  ride_payment: "دفع رحلة",
+  ride_earning: "أرباح رحلة",
+  commission: "عمولة",
+  transfer_in: "تحويل وارد",
+  transfer_out: "تحويل صادر",
+  withdrawal: "سحب",
+  refund: "استرداد",
+  subscription_payment: "اشتراك",
+  adjustment: "تسوية",
+};
+
+const COLUMNS = "1.6fr 1.2fr 1fr 1fr 1fr";
+
+export function RidersScreen() {
+  const { country } = useCountry();
+  const { isAdmin } = useSession();
+
+  const [filter, setFilter] = useState<RiderFilter | "all">("all");
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<User[] | null>(null);
+  const [open, setOpen] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setRows(null);
+    setRows(
+      await listUsers({
+        role: "rider",
+        country_code: country,
+        is_blocked:
+          filter === "only_blocked"
+            ? true
+            : filter === "only_active"
+              ? false
+              : undefined,
+        phone_verified: filter === "only_unverified" ? false : undefined,
+        q: query || undefined,
+      }),
+    );
+  }, [country, filter, query]);
+
+  useEffect(() => {
+    load().catch((caught) =>
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر قراءة القائمة",
+      ),
+    );
+  }, [load]);
+
+  return (
+    <Shell
+      title="الركّاب"
+      subtitle="حظرُ الحساب وتجميدُ المحفظة بابان مختلفان — والأول يغلق كل شيء والثاني يوقف المال وحده"
+    >
+      <Pills
+        value={filter}
+        onPick={(key) => setFilter(key)}
+        options={[
+          { key: "all", label: "الكل" },
+          { key: "only_active", label: "نشطون" },
+          { key: "only_blocked", label: "محظورون" },
+          { key: "only_unverified", label: "رقمٌ غير مُثبت" },
+        ]}
+      />
+
+      <form
+        className="mb-14 flex max-w-modal items-end gap-9"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setQuery(search.trim());
+        }}
+      >
+        <div className="flex-1">
+          <Field
+            label="بحث"
+            placeholder="اسمٌ أو رقم هاتف"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+        <button
+          type="submit"
+          className="rounded-13 border border-line px-16 py-13 text-13 font-semibold text-ink"
+        >
+          ابحث
+        </button>
+      </form>
+
+      <ErrorNote message={error} />
+      <SuccessNote message={done} />
+
+      <div className="mt-12">
+        <Table
+          columns={COLUMNS}
+          headers={["الراكب", "الهاتف", "الحالة", "منذ", ""]}
+          rows={rows}
+          keyOf={(row) => row.id}
+          empty={{
+            title: "لا ركّاب في هذه الحال",
+            hint: "بدّل الفلترة أو الدولة، أو امسح نصّ البحث.",
+          }}
+          render={(row) => (
+            <>
+              <span className="flex items-center gap-9">
+                <span className="flex size-30 flex-none items-center justify-center rounded-full border border-line bg-surface-2 text-11 font-bold text-ink">
+                  {row.name.trim().slice(0, 1)}
+                </span>
+                <span className="min-w-0 truncate font-semibold text-ink">
+                  {row.name}
+                </span>
+              </span>
+
+              <span dir="ltr" className="text-start text-muted">
+                {row.phone}
+              </span>
+
+              <span className="flex flex-wrap items-center gap-6">
+                {row.is_blocked ? (
+                  <Badge tone="danger">محظور</Badge>
+                ) : (
+                  <Badge tone="ok">نشط</Badge>
+                )}
+                {!row.phone_verified ? (
+                  <Badge tone="warn">رقمٌ غير مُثبت</Badge>
+                ) : null}
+              </span>
+
+              <span className="text-muted">{moment(row.created_at)}</span>
+
+              <span className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setOpen(row)}
+                  className="text-11.5 font-semibold text-ink underline"
+                >
+                  الملف والمحفظة
+                </button>
+              </span>
+            </>
+          )}
+        />
+      </div>
+
+      {open ? (
+        <RiderDrawer
+          user={open}
+          canDecide={isAdmin}
+          onClose={() => setOpen(null)}
+          onChanged={(message) => {
+            setDone(message);
+            setOpen(null);
+            void load();
+          }}
+        />
+      ) : null}
+    </Shell>
+  );
+}
+
+/** الدرج — `DESIGN.md` §3.5. */
+function RiderDrawer({
+  user,
+  canDecide,
+  onClose,
+  onChanged,
+}: {
+  user: User;
+  canDecide: boolean;
+  onClose: () => void;
+  onChanged: (message: string) => void;
+}) {
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [ledger, setLedger] = useState<WalletTransaction[] | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const loadWallet = useCallback(async () => {
+    setWallet(await getWallet(user.id));
+    setLedger(await listWalletTransactions(user.id, 10));
+  }, [user.id]);
+
+  useEffect(() => {
+    loadWallet().catch((caught) =>
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر قراءة المحفظة",
+      ),
+    );
+  }, [loadWallet]);
+
+  async function run(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      onChanged(message);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      setBusy(false);
+    }
+  }
+
+  /** التجميدُ لا يغلق الدرج: قرارٌ على المحفظة وحدها، والصفحةُ لا تتغيّر به. */
+  async function toggleFreeze() {
+    if (wallet === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const written = reason.trim() || undefined;
+      setWallet(
+        wallet.frozen
+          ? await unfreezeWallet(user.id, written)
+          : await freezeWallet(user.id, written),
+      );
+      setNote(wallet.frozen ? "رُفع تجميد المحفظة" : "جُمّدت المحفظة");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-dim" onClick={onClose}>
+      <div
+        className="scr absolute bottom-0 start-0 top-0 w-drawer max-w-full animate-slidein border-e border-line bg-surface p-22"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-18 flex items-start gap-12">
+          <span className="flex size-48 flex-none items-center justify-center rounded-full border border-line bg-surface-2 text-16 font-bold text-ink">
+            {user.name.trim().slice(0, 1)}
+          </span>
+          <div className="flex-1">
+            <div className="text-16 font-bold text-ink">{user.name}</div>
+            <div dir="ltr" className="text-12 text-muted">
+              {user.phone}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="إغلاق"
+            className="text-18 text-muted"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mb-16 flex flex-wrap gap-6">
+          {user.is_blocked ? (
+            <Badge tone="danger">محظور</Badge>
+          ) : (
+            <Badge tone="ok">نشط</Badge>
+          )}
+          {user.phone_verified ? null : (
+            <Badge tone="warn">رقمٌ غير مُثبت</Badge>
+          )}
+          {wallet?.frozen ? <Badge tone="warn">محفظةٌ مجمّدة</Badge> : null}
+        </div>
+
+        <h3 className="mb-10 text-13 font-bold text-muted">المحفظة</h3>
+        {wallet === null ? (
+          <Spinner className="mx-auto" />
+        ) : (
+          <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+            <div className="text-22 font-bold text-ink">
+              {money(wallet.balance, wallet.currency)}
+            </div>
+            <p className="mt-4 text-11 leading-note text-muted">
+              رصيدٌ محسوبٌ من الدفتر لا عمودٌ مخزَّن — ولا يُعدَّل قيدٌ بل يُكتب
+              قيدٌ مضاد.
+            </p>
+            {canDecide ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void toggleFreeze()}
+                className={cn(
+                  "mt-10 w-full rounded-10 border py-8 text-11.5 font-semibold disabled:opacity-60",
+                  wallet.frozen
+                    ? "border-line text-ink"
+                    : "border-warn text-warn",
+                )}
+              >
+                {wallet.frozen ? "رفع التجميد" : "تجميد المحفظة"}
+              </button>
+            ) : null}
+          </div>
+        )}
+
+        {ledger && ledger.length > 0 ? (
+          <>
+            <h3 className="mb-10 mt-16 text-13 font-bold text-muted">
+              آخر الحركات
+            </h3>
+            <ul className="flex flex-col gap-7">
+              {ledger.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex items-center gap-10 rounded-12 border border-line px-13 py-9"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-12.5 text-ink">
+                      {TX_LABEL[entry.type] ?? entry.type}
+                    </span>
+                    <span className="block text-10.5 text-muted">
+                      {moment(entry.created_at)}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "text-12.5 font-semibold",
+                      entry.amount.startsWith("-") ? "text-danger" : "text-ok",
+                    )}
+                  >
+                    {arabicDigits(entry.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+
+        <ErrorNote message={error} />
+        <SuccessNote message={note} />
+
+        {canDecide ? (
+          <div className="mt-16">
+            <Field
+              label="السبب"
+              placeholder="يدخل سجل التدقيق ولا يصل صاحب الحساب — ويصحب الحظر والتجميد معاً"
+              value={reason}
+              maxLength={255}
+              onChange={(event) => setReason(event.target.value)}
+            />
+            <div className="mt-12">
+              {user.is_blocked ? (
+                <Button
+                  size="md"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(
+                      () => unblockUser(user.id, reason.trim() || undefined),
+                      "رُفع الحظر عن الحساب",
+                    )
+                  }
+                >
+                  رفع الحظر
+                </Button>
+              ) : (
+                <Button
+                  size="md"
+                  variant="secondary"
+                  className="border-danger text-danger"
+                  disabled={busy || reason.trim().length < 3}
+                  onClick={() =>
+                    void run(
+                      () => blockUser(user.id, reason.trim()),
+                      "حُظر الحساب — لا يدخل ولا يطلب رحلة",
+                    )
+                  }
+                >
+                  حظر الحساب
+                </Button>
+              )}
+            </div>
+            <p className="mt-8 text-11 leading-note text-muted">
+              الحظرُ يسري على الجلسة القائمة فوراً: العمود يُقرأ في كل طلب، فلا
+              ينتظر انتهاء التوكن.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-16 text-11.5 leading-note text-muted">
+            الحظرُ والتجميد لـ admin وحده — القسم 13/8 يعطي الدعمَ قراءةً
+            ومعالجةَ نزاعات.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

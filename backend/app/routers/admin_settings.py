@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
+from app.models.user import User
 from app.models.payment_setting import PaymentSetting
 from app.models.wallet_setting import WalletSetting
 from app.schemas.audit import AuditLogOut
@@ -437,10 +438,37 @@ async def list_audit_logs(
     _staff: StaffUser,
     session: DbSession,
     entity_type: str | None = None,
-    limit: int = 50,
+    action: AuditAction | None = None,
+    actor_id: uuid.UUID | None = None,
+    entity_id: uuid.UUID | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
 ) -> list[AuditLogOut]:
-    stmt = select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc())
+    """سجلُّ التدقيق (SPEC القسم 14) — يُقرأ ولا يُكتب من مسار.
+
+    كلُّ قيدٍ فيه كتبته **معاملةُ التغيير نفسها**: لا بابَ هنا يضيف قيداً ولا
+    يعدّله ولا يحذفه — سجلٌّ يُكتب من الخارج سجلٌّ يمكن أن يقول غير ما جرى.
+
+    والفلاترُ الأربع هي أسئلة القراءة الحقيقية: ماذا جرى على **هذا العنصر**،
+    وماذا فعل **هذا المشرف**، وأيُّ نوعٍ من الإجراءات. و`entity_id` هو ما
+    يجعل درجَ سائقٍ يفتح تاريخَه بدل أن يُبحث عنه في قائمةٍ عامة.
+    """
+    stmt = (
+        select(AdminAuditLog, User.name)
+        .outerjoin(User, AdminAuditLog.actor_id == User.id)
+        .order_by(AdminAuditLog.created_at.desc())
+    )
     if entity_type is not None:
         stmt = stmt.where(AdminAuditLog.entity_type == entity_type)
-    entries = (await session.scalars(stmt.limit(min(limit, 200)))).all()
-    return [AuditLogOut.model_validate(entry) for entry in entries]
+    if action is not None:
+        stmt = stmt.where(AdminAuditLog.action == action)
+    if actor_id is not None:
+        stmt = stmt.where(AdminAuditLog.actor_id == actor_id)
+    if entity_id is not None:
+        stmt = stmt.where(AdminAuditLog.entity_id == entity_id)
+
+    rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
+    return [
+        AuditLogOut.model_validate(entry).model_copy(update={"actor_name": name})
+        for entry, name in rows
+    ]

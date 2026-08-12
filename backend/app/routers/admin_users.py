@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
@@ -35,7 +35,7 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.routers.drivers import document_response
-from app.schemas.auth import UserOut
+from app.schemas.auth import UserBlockUpdate, UserOut
 from app.schemas.driver import (
     AdminDriverRow,
     DocumentReviewIn,
@@ -65,6 +65,8 @@ async def list_users(
         default=None,
         description="فلترة الحسابات غير المحققة — تُعالَج أولاً بعد إعادة تفعيل المفتاح",
     ),
+    is_blocked: bool | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمٌ أو رقم"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[UserOut]:
@@ -78,9 +80,99 @@ async def list_users(
         stmt = stmt.where(User.phone_verified_at.is_not(None))
     elif phone_verified is False:
         stmt = stmt.where(User.phone_verified_at.is_(None))
+    if is_blocked is not None:
+        stmt = stmt.where(User.is_blocked.is_(is_blocked))
+    if (q or "").strip():
+        # البحثُ على الاسم والرقم معاً — والرقمُ يُبحث كما هو مخزَّن (E.164)
+        # وكما قد يكتبه المشرف محلياً، فـ`ilike` بالاحتواء لا بالبادئة
+        pattern = f"%{q.strip()}%"
+        stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
 
     rows = (await session.scalars(stmt.limit(limit).offset(offset))).all()
     return [UserOut.model_validate(row) for row in rows]
+
+
+@router.post("/users/{user_id}/block", response_model=UserOut)
+async def block_user(
+    user_id: uuid.UUID,
+    payload: UserBlockUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> UserOut:
+    """حظرُ حساب (SPEC القسم 13/3) — **`admin` لا `support`**.
+
+    القسم 13/8 يعطي الدعمَ قراءةً ومعالجةَ نزاعات، وإغلاقُ حسابٍ ليس منهما.
+
+    **ولا حاجةَ لإبطال الجلسات**: `core/deps.get_current_user` يقرأ العمود في
+    كل طلبٍ مُصادَق عليه، و`auth.refresh` يقرؤه كذلك — فالحظرُ يسري على
+    التوكن القائم لا على ما بعده. إبطالُ الجلسات هنا كان سيوهم أن الحماية منه
+    وهي من قراءة العمود.
+
+    **والحظرُ غير تجميد المحفظة** (`/admin/wallets/{id}/freeze`): ذاك يوقف
+    حركةَ محفظةٍ مشبوهة ويبقي صاحبَها راكباً يدفع نقداً (القسم 4/13.3)، وهذا
+    يغلق الحساب كلَّه. الاثنان بابان لأن الحالتين مختلفتان.
+    """
+    if not (payload.reason or "").strip():
+        raise InvalidInput("سبب الحظر مطلوب")
+
+    return await _set_blocked(
+        session, user_id=user_id, blocked=True, admin=admin, reason=payload.reason
+    )
+
+
+@router.post("/users/{user_id}/unblock", response_model=UserOut)
+async def unblock_user(
+    user_id: uuid.UUID,
+    payload: UserBlockUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> UserOut:
+    """رفعُ الحظر — بلا سببٍ إلزامي: القيدُ يُسأل عنه لا الإفراج."""
+    return await _set_blocked(
+        session, user_id=user_id, blocked=False, admin=admin, reason=payload.reason
+    )
+
+
+async def _set_blocked(
+    session,
+    *,
+    user_id: uuid.UUID,
+    blocked: bool,
+    admin: User,
+    reason: str | None,
+) -> UserOut:
+    """البابُ الوحيد لتغيير `is_blocked` — والقيدُ في نفس المعاملة (القسم 14).
+
+    والصفُّ يُقفل قبل الكتابة كما تفرض قاعدة المشروع على كل تغيير حالة: بلا
+    قفلٍ يمرّ حظرٌ ورفعُ حظرٍ متزامنان فيكتب أحدهما فوق الآخر، ويحمل السجلُّ
+    قيدين متناقضين لا يقول أيُّهما الأخير.
+    """
+    user = await session.get(User, user_id, with_for_update=True)
+    if user is None:
+        raise NotFound("الحساب غير موجود")
+    if user.role in (UserRole.ADMIN, UserRole.SUPPORT):
+        # حظرُ حسابٍ إداريٍّ من اللوحة بابٌ يُغلق به مشرفٌ على زملائه — وإدارةُ
+        # حسابات الموظفين ليست في القسم 13/3 أصلاً (هو عن الركاب)
+        raise InvalidInput("لا يُحظر حسابٌ إداريٌّ من هذه الشاشة")
+
+    user.is_blocked = blocked
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="user",
+        entity_id=user.id,
+        # نفس شكل `drivers.set_status`: الحالةُ الجديدة وسببُها. والسببُ
+        # قرارُ مشرفٍ لا قيمةُ حقلٍ سرّية، فحفظُه هو الغرض من القيد
+        details=(
+            {"blocked": blocked, "reason": reason}
+            if reason
+            else {"blocked": blocked}
+        ),
+    )
+    await session.commit()
+    await session.refresh(user)
+    return UserOut.model_validate(user)
 
 
 @router.get("/drivers", response_model=list[AdminDriverRow])
@@ -93,6 +185,7 @@ async def list_drivers(
         default=None,
         description="فرزُ من يعمل بلا جنسٍ مثبت — متراكمُ ما قبل الخدمة النسائية",
     ),
+    q: str | None = Query(default=None, max_length=120, description="اسمٌ أو رقم"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminDriverRow]:
@@ -126,6 +219,9 @@ async def list_drivers(
         stmt = stmt.where(User.gender_verified_at.is_not(None))
     elif gender_verified is False:
         stmt = stmt.where(User.gender_verified_at.is_(None))
+    if (q or "").strip():
+        pattern = f"%{q.strip()}%"
+        stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     return [

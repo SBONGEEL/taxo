@@ -7,7 +7,11 @@
 import { api } from "@/api/client";
 import type {
   AdminDriverRow,
+  AdminRideDetail,
+  AdminRideRow,
   AppConfig,
+  AuditAction,
+  AuditLog,
   AuthResponse,
   Campaign,
   CampaignAudience,
@@ -21,11 +25,20 @@ import type {
   DriverDocuments,
   DriverStatus,
   FeatureKey,
+  Gender,
   LiveMap,
   NotificationSetting,
   Payment,
+  PaymentMethod,
   PaymentSetting,
   PaymentStatus,
+  PricingRule,
+  Reports,
+  RideStatus,
+  Subscription,
+  SubscriptionDurationType,
+  SubscriptionPlan,
+  SubscriptionStatus,
   TopupRequest,
   TopupStatus,
   ProviderCatalog,
@@ -35,7 +48,11 @@ import type {
   Overview,
   StatsPeriod,
   User,
+  UserRole,
+  VehicleCategory,
+  Wallet,
   WalletSetting,
+  WalletTransaction,
   Withdrawal,
   WithdrawalStatus,
 } from "@/api/types";
@@ -118,6 +135,9 @@ export const listDrivers = (
   params: {
     status?: DriverStatus;
     country_code?: CountryCode;
+    /** `false` هو **قائمةُ عملٍ** لا فلترةَ عرض: من يعمل بلا جنسٍ مثبت. */
+    gender_verified?: boolean;
+    q?: string;
     limit?: number;
     offset?: number;
   } = {},
@@ -158,6 +178,20 @@ export const activateDriver = (driverId: string) =>
   api.post<{ id: string; status: DriverStatus }>(
     `/admin/drivers/${driverId}/activate`,
     {},
+  );
+
+/** يثبّت المشرفُ جنسَ الكبتن من هويته المرفوعة — `admin` حصراً، بقيدِ تدقيق.
+ *
+ * **والردُّ `DriverOut` لا يحمل الجنس** لأنه عمودٌ على `users` لا على
+ * `drivers`؛ فالشاشة تعيد قراءة القائمة بعد الحفظ ولا تخمّن الحالة الجديدة
+ * من ردٍّ لا تحملها. ولا يعيد هذا المسارُ دورةَ اعتماد: الهوية مراجَعةٌ
+ * أصلاً، وإرجاعُ معتمدٍ إلى الطابور لأجل حقلٍ واحد يجعل تفريغ المتراكم
+ * مستحيلاً — وهو المتراكم الذي يبقى `women_service_enabled` مطفأً حتى يُفرَّغ.
+ */
+export const setDriverGender = (driverId: string, gender: Gender) =>
+  api.put<{ id: string; status: DriverStatus }>(
+    `/admin/drivers/${driverId}/gender`,
+    { gender },
   );
 
 // ------------------------------------------------------------ المالية
@@ -292,3 +326,167 @@ export const getOverview = (country: CountryCode, period: StatsPeriod) =>
 /** لـ`admin` وحده، ويُسجَّل من فتحها (القسم 13/1) — والخلفية هي من يفرض ذلك. */
 export const getLiveMap = (country: CountryCode) =>
   api.get<LiveMap>("/admin/live/map", { query: { country_code: country } });
+
+/** تقاريرُ الفترة (القسم 13/5) — نِسَبٌ ومتوسطاتٌ محسوبةٌ في الخلفية. */
+export const getReports = (country: CountryCode, period: StatsPeriod) =>
+  api.get<Reports>("/admin/stats/reports", {
+    query: { country_code: country, period },
+  });
+
+// ------------------------------------------------------------ سجل الرحلات
+
+export const listRides = (
+  params: {
+    country_code?: CountryCode;
+    ride_status?: RideStatus;
+    driver_id?: string;
+    rider_id?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  } = {},
+) => api.get<AdminRideRow[]>("/admin/rides", { query: params });
+
+/** التفاصيلُ ومعها **المسار الفعلي** — دليلُ النزاع (القسم 5.7/13.4). */
+export const getRide = (rideId: string) =>
+  api.get<AdminRideDetail>(`/admin/rides/${rideId}`);
+
+// ------------------------------------------------------------ الحسابات
+
+export const listUsers = (
+  params: {
+    role?: UserRole;
+    country_code?: CountryCode;
+    phone_verified?: boolean;
+    is_blocked?: boolean;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  } = {},
+) => api.get<User[]>("/admin/users", { query: params });
+
+/** الحظرُ **بسببٍ إلزامي** يدخل سجل التدقيق ولا يصل صاحب الحساب. */
+export const blockUser = (userId: string, reason: string) =>
+  api.post<User>(`/admin/users/${userId}/block`, { reason });
+
+export const unblockUser = (userId: string, reason?: string) =>
+  api.post<User>(`/admin/users/${userId}/unblock`, { reason: reason ?? null });
+
+// ---------------------------------------------------- محفظةُ حسابٍ بعينه
+
+export const getWallet = (userId: string) =>
+  api.get<Wallet>(`/admin/wallets/${userId}`);
+
+export const listWalletTransactions = (userId: string, limit = 20) =>
+  api.get<WalletTransaction[]>(`/admin/wallets/${userId}/transactions`, {
+    query: { limit },
+  });
+
+/** تجميدٌ يوقف حركة المحفظة **ويبقي صاحبها راكباً يدفع نقداً** (القسم 13/3).
+ *
+ * والسببُ اختياريٌّ في الخلفية، ويُرسل حين يكتبه المشرف: قيدُ تدقيقٍ يقول
+ * «جُمّدت» بلا «لماذا» نصفُ قيد.
+ */
+export const freezeWallet = (userId: string, reason?: string) =>
+  api.post<Wallet>(`/admin/wallets/${userId}/freeze`, {
+    reason: reason ?? null,
+  });
+
+export const unfreezeWallet = (userId: string, reason?: string) =>
+  api.post<Wallet>(`/admin/wallets/${userId}/unfreeze`, {
+    reason: reason ?? null,
+  });
+
+// ------------------------------------------------------ الاشتراكات والباقات
+
+export const listSubscriptions = (
+  params: {
+    subscription_status?: SubscriptionStatus;
+    driver_id?: string;
+    country_code?: CountryCode;
+    limit?: number;
+    offset?: number;
+  } = {},
+) => api.get<Subscription[]>("/admin/subscriptions", { query: params });
+
+/** تسجيلُ اشتراكٍ **قُبض** كاشاً أو كليكاً — بعد وصول المال لا قبله. */
+export const recordSubscription = (payload: {
+  driver_id: string;
+  plan_id: string;
+  method: PaymentMethod;
+  amount_paid?: string | null;
+  reference?: string | null;
+}) => api.post<Subscription>("/admin/subscriptions", payload);
+
+export const listPlans = () =>
+  api.get<SubscriptionPlan[]>("/admin/settings/subscription-plans");
+
+export const createPlan = (payload: {
+  country_code: CountryCode;
+  name: string;
+  duration_type: SubscriptionDurationType;
+  price: string;
+  is_active: boolean;
+}) =>
+  api.post<SubscriptionPlan>("/admin/settings/subscription-plans", payload);
+
+export const updatePlan = (
+  id: string,
+  payload: Partial<{
+    name: string;
+    duration_type: SubscriptionDurationType;
+    price: string;
+    is_active: boolean;
+  }>,
+) =>
+  api.patch<SubscriptionPlan>(
+    `/admin/settings/subscription-plans/${id}`,
+    payload,
+  );
+
+export const deletePlan = (id: string) =>
+  api.del<void>(`/admin/settings/subscription-plans/${id}`);
+
+// ------------------------------------------------------------ التسعيرة
+
+export const listPricing = (country?: CountryCode) =>
+  api.get<PricingRule[]>("/admin/settings/pricing", {
+    query: { country_code: country },
+  });
+
+export const createPricing = (payload: {
+  country_code: CountryCode;
+  vehicle_category: VehicleCategory;
+  base_fare: string;
+  price_per_km: string;
+  price_per_min: string;
+  minimum_fare: string;
+  cancellation_fee: string;
+}) => api.post<PricingRule>("/admin/settings/pricing", payload);
+
+export const updatePricing = (
+  id: string,
+  payload: Partial<{
+    base_fare: string;
+    price_per_km: string;
+    price_per_min: string;
+    minimum_fare: string;
+    cancellation_fee: string;
+  }>,
+) => api.patch<PricingRule>(`/admin/settings/pricing/${id}`, payload);
+
+export const deletePricing = (id: string) =>
+  api.del<void>(`/admin/settings/pricing/${id}`);
+
+// ------------------------------------------------------------ سجل التدقيق
+
+export const listAuditLogs = (
+  params: {
+    entity_type?: string;
+    action?: AuditAction;
+    actor_id?: string;
+    entity_id?: string;
+    limit?: number;
+    offset?: number;
+  } = {},
+) => api.get<AuditLog[]>("/admin/settings/audit-logs", { query: params });

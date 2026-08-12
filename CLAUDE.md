@@ -7,33 +7,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 TAXO is a two-country (Jordan/Libya) ride-hailing platform: a FastAPI backend, two rider/driver
 PWAs, and an operations panel. `SPEC.md` §16 is a strict ordered plan; this is where it has got to.
 
-**Done — stages 1 through 10, 10-ج, and 12-أ.** Infrastructure and auth; per-country settings and
-encrypted provider contracts; rides and Mapbox pricing; Redis-GEO dispatch and the tracking
+**Done — stages 1 through 11, plus 10-ج and 12-أ.** Infrastructure and auth; per-country settings
+and encrypted provider contracts; rides and Mapbox pricing; Redis-GEO dispatch and the tracking
 sockets; the wallet ledger; payments, route points and ratings (6-أ); the Telr card channel (6-ب);
 driver subscriptions (7); the provider integrations and campaigns (8); the rider PWA (9); document
 upload/review and the notification inbox (9-ب); the driver PWA (10); the women's transport service
-end to end (10-ج); and the rider app's migration onto the design system (12-أ). **502 backend tests
-pass** (43 files); all three frontends build with `check:scale` + `check:enums` green.
+end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
+(11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
+finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
+contracts, users & permissions, audit log. Every nav entry has a screen. **523 backend tests pass**
+(46 files); all three frontends build with `check:scale` + `check:enums` green.
 
-**Stage 11 (the admin panel) is the one in progress.** Built: login, overview, live map,
-drivers/documents, finance (withdrawals + CliQ topups), disputes, campaigns, per-country settings,
-provider contracts. Not built — drawn in the nav with a «قريباً» badge so the gap is visible rather
-than dead-clicky: **rides log, riders, subscriptions/plans, pricing, reports, users & permissions,
-audit log**. Finishing those is the next stage-shaped piece of work.
-
-**Then stage 12** (Phase-2 product features behind feature flags: scheduled rides, ride sharing,
+**Next is stage 12** (Phase-2 product features behind feature flags: scheduled rides, ride sharing,
 coupons, surge — none of it started, and each needs its own SPEC pass first) **and stage 13**
 (tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →
 rider requests → tracking → payment → withdrawal).
 
+**The panel's screens have never been opened in a browser.** They type-check, `check:scale` and
+`check:enums` pass, and the backend routes behind them are covered by tests — but the failures
+those three cannot see (a dropped tailwind-merge class, a marker that never renders, a grid whose
+header and rows disagree) are exactly the ones this project has shipped before. A visual pass over
+the seven new screens belongs with stage 13's manual run.
+
 ### Open debt and decisions waiting on the owner
 
 1. **`women_service_enabled` is off in both countries and stays off until the backlog of already-
-   approved drivers has a verified gender** — that was the owner's call, and it is the one business
-   decision blocking a finished feature. The backend door exists (`PUT /admin/drivers/{id}/gender`,
-   admin-only, audited) and `GET /admin/drivers?gender_verified=false` is the worklist, **but the
-   panel's driver page has no control wired to either**. That UI is the smallest piece of stage-11
-   work with the largest unblocking effect.
+   approved drivers has a verified gender** — that was the owner's call, and it is now the one
+   business decision blocking a finished feature, with no code left under it. The panel's driver
+   page carries the control: a gender column in the list, a filter toggle that opens
+   `GET /admin/drivers?gender_verified=false` (kept as a **second axis, not a status pill** — "approved"
+   and "no verified gender" are asked together, not instead of each other), and a card in the drawer
+   that writes `PUT /admin/drivers/{id}/gender`. An unstamped driver reads «لم يُثبَّت», never a
+   gender: matching reads only `gender_verified_at IS NOT NULL`, and showing an unstamped value
+   makes it look like it counts. The flag itself is now in the settings screen too — the panel's
+   `FeatureKey` union was missing `women_service_enabled`, so there was no switch to turn the
+   service on with once the backlog cleared. Clearing the backlog is now data entry, not development.
 2. **Three screens were never opened in a browser**: the driver's cancel-reason sheet, the
    «طلب نسائي» badge on the offer card, and the preference strip on the driver's home. All three
    need an approved driver (verified phone + three approved documents) and a live assigned ride to
@@ -303,6 +311,34 @@ Its refresh is a **5s poll, not a socket** — `ws/` publishes per-user channels
 country-wide one would mean streaming everyone's position into an open connection to answer a
 question that is only ever "where are they now".
 
+**The panel reads; it does not invent a second place to decide.** Four screens deliberately have no
+button where a design or a habit would put one, and each absence has a reason that outlives it:
+`Rides.tsx` has no cancel/refund/assign — a refund is a decision **on a payment row** (one ride can
+carry two, so a ride-level button would not know which), cancelling names its actor in the status
+itself (`cancelled_by_rider` / `..._by_driver`, and an admin is neither), and manual assignment is
+`FUTURE-FEATURES` 27 because dispatch offers to one driver at a time. `Pricing.tsx` has no
+commission field — `commission_settings` is its single source and lives in `Settings.tsx`; two
+screens writing one money rule is two states that can disagree. `Users.tsx` renders the permission
+matrix **read-only**: `UserRole` has two staff roles, `core/deps` enforces them, and a clickable
+cell would become a second source of truth that the guard ignores. `Audit.tsx` has no write path at
+all — entries are written by the transaction that made the change.
+
+**Aggregation stays in the backend even when it is only a count.** `services/stats.py::reports`
+returns `avg_ride_fare` and `cancellation_rate` already divided, because numerator and denominator
+are both summed over the whole table: dividing two capped page-loads in the browser yields the
+average *of the page* under a label that says "of the month". Same reasoning as §14 for money.
+`services/ride_log.py::payment_summaries` is the shape that rule takes for lists — a **second
+query** over the same ride ids rather than a join, because joining payments multiplies a mixed-payment
+ride into two rows and a page of fifty silently becomes a page of forty-nine rides.
+
+Three shared pieces were added with these screens and are worth reusing rather than re-deriving:
+`components/ui/Badge.tsx` (the one rule from `DESIGN.md` §2.6 that generates every panel badge,
+taking a **tone** not a status — ride, payment, subscription and audit states all share five tones),
+`Checkbox`/`Select` in `components/ui/Field.tsx`, and `lib/format.ts` (`money`, `moment`, `day`,
+`currencyLabel`). The checkbox is a `role="checkbox"` button, not a styled `<input>`, because
+`accent-ink` resolves to the palette's `accent-ink` colour (`--inv`) rather than to "accent-color:
+var(--tx)" — a name collision that paints the box the background colour.
+
 `customer-app` (stage 9) is the rider PWA on **5173** — a `node:22-alpine` container running Vite.
 The **container** port is not interchangeable: it is in `settings.cors_origins` and
 `settings.card_return_url` points at `/payments/card/return` on it. Only the host publish is
@@ -444,7 +480,16 @@ stored value instead of wiping it. Activating a per-country contract auto-syncs 
 flag. Read secrets with `credentials.get_values(session, ProviderKey.X, country)` — never from `.env`.
 
 **Every admin write records an audit entry** via `services/audit.py` in the *same* transaction, and
-`details` carries changed field names only, never values.
+`details` carries changed field names only, never values. The deliberate exception is a **written
+reason** — driver suspension, blocking a user, switching off a guard flag: that string is the whole
+point of the entry, and it is a supervisor's decision, not a stored secret.
+
+**`is_blocked` has exactly one door** (`admin_users._set_blocked`, admin-only, reason required,
+row locked before the write). No session revocation runs with it and none is needed:
+`core/deps.get_current_user` and `auth.refresh` both read the column on every request, so a block
+lands on the live token — adding a revoke here would suggest the protection comes from it. Staff
+accounts are refused by that door on purpose; SPEC §13/3 is about riders, and it must not become
+the way one admin closes another out.
 
 **Phone number is the login identity and is always stored as E.164.** `core/phone.py` normalizes on
 every write and read path (`normalize_phone` with an explicit country, `resolve_phone` when the

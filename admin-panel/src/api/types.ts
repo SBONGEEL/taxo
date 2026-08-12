@@ -101,6 +101,11 @@ export type DocumentType =
 
 export type DocumentReviewStatus = "pending" | "approved" | "rejected";
 
+/** قيمتان لا ثلاث، و**الغيابُ `null` لا عضوٌ ثالث**: «غير معروف» ليس جنساً. */
+export type Gender = "male" | "female";
+
+export type GenderPreference = "male" | "female" | "any";
+
 export interface AdminDriverRow {
   driver_id: string;
   user_id: string;
@@ -111,6 +116,10 @@ export interface AdminDriverRow {
   phone_verified: boolean;
   rating_avg: string;
   is_online: boolean;
+  /** ما قرأه المشرف من الهوية — و`gender_verified` هو ما تقرؤه المطابقة. */
+  gender: Gender | null;
+  gender_verified: boolean;
+  gender_preference: GenderPreference;
   documents_pending: number;
   documents_rejected: number;
   missing_required: DocumentType[];
@@ -202,7 +211,8 @@ export type FeatureKey =
   | "card_enabled"
   | "wallet_enabled"
   | "wallet_transfer_enabled"
-  | "otp_verification_enabled";
+  | "otp_verification_enabled"
+  | "women_service_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
@@ -352,4 +362,246 @@ export interface LivePendingRide {
 export interface LiveMap {
   drivers: LiveDriver[];
   pending_rides: LivePendingRide[];
+}
+
+// ------------------------------------------------------------ سجل الرحلات
+
+export interface RideParty {
+  user_id: string;
+  name: string;
+  phone: string;
+}
+
+export interface RideDriverParty extends RideParty {
+  driver_id: string;
+  plate_number: string | null;
+}
+
+/** صفٌّ في سجل الرحلات — وحالُ الدفع **مجموعٌ في الخلفية**.
+ *
+ * `payment_methods` قائمةٌ لا قيمة: الدفعُ المختلط صفّان على رحلةٍ واحدة
+ * (محفظة + كاش)، فقناةٌ واحدة تخفي نصف الواقعة.
+ */
+export interface AdminRideRow {
+  id: string;
+  status: RideStatus;
+  country_code: CountryCode;
+  vehicle_category: VehicleCategory;
+  currency: Currency;
+  rider: RideParty;
+  driver: RideDriverParty | null;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  distance_km: string;
+  actual_distance_km: string | null;
+  estimated_fare: string;
+  final_fare: string | null;
+  cancellation_fee: string | null;
+  payment_methods: PaymentMethod[];
+  paid_amount: string;
+  has_open_dispute: boolean;
+  created_at: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface RidePayment {
+  id: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount: string;
+  dispute_reason: string | null;
+  resolution: DisputeResolution | null;
+  created_at: string;
+}
+
+export type RatingRaterType = "rider" | "driver";
+
+export interface RideRating {
+  rater_type: RatingRaterType;
+  stars: number;
+  comment: string | null;
+  created_at: string;
+}
+
+/** نقطةٌ من المسار الفعلي — و`created_at` هو زمنُها (لا عمود `recorded_at`). */
+export interface RidePoint {
+  lat: number;
+  lng: number;
+  created_at: string;
+}
+
+export type CancelReasonCode = "gender_mismatch" | "other";
+
+export interface AdminRideDetail extends AdminRideRow {
+  pickup_lat: number;
+  pickup_lng: number;
+  dropoff_lat: number;
+  dropoff_lng: number;
+  duration_min: string;
+  commission_percent_at_ride: string;
+  gender_preference: GenderPreference;
+  cancelled_reason: string | null;
+  cancel_reason_code: CancelReasonCode | null;
+  accepted_at: string | null;
+  arrived_at: string | null;
+  started_at: string | null;
+  payments: RidePayment[];
+  ratings: RideRating[];
+  route: RidePoint[];
+  /** المسارُ الطويل يُقصّ — والقصُّ يُقال، فدليلٌ ناقصٌ يُقرأ كاملاً يكذب. */
+  route_truncated: boolean;
+}
+
+// ------------------------------------------------------------ المحافظ
+
+export type WalletOwnerType = "rider" | "driver";
+
+export type WalletTransactionType =
+  | "topup"
+  | "ride_payment"
+  | "ride_earning"
+  | "commission"
+  | "transfer_in"
+  | "transfer_out"
+  | "withdrawal"
+  | "refund"
+  | "subscription_payment"
+  | "adjustment";
+
+/** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
+export interface Wallet {
+  owner_id: string;
+  owner_type: WalletOwnerType;
+  balance: string;
+  currency: Currency;
+  frozen: boolean;
+}
+
+export interface WalletTransaction {
+  id: string;
+  type: WalletTransactionType;
+  amount: string;
+  balance_after: string;
+  ride_id: string | null;
+  reference: string | null;
+  created_at: string;
+}
+
+// ------------------------------------------------------ الاشتراكات والباقات
+
+export type SubscriptionDurationType = "daily" | "weekly" | "monthly";
+
+/** حالتان لا ثالثة: لا `pending` — الصفُّ لا يُنشأ قبل وصول ماله. */
+export type SubscriptionStatus = "active" | "expired";
+
+export interface SubscriptionPlan {
+  id: string;
+  country_code: CountryCode;
+  name: string;
+  duration_type: SubscriptionDurationType;
+  price: string;
+  currency: Currency;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface Subscription {
+  id: string;
+  driver_id: string;
+  plan_id: string;
+  plan_name: string;
+  duration_type: SubscriptionDurationType;
+  country_code: CountryCode;
+  currency: Currency;
+  starts_at: string;
+  expires_at: string;
+  amount_paid: string;
+  payment_method: PaymentMethod;
+  status: SubscriptionStatus;
+  transaction_id: string | null;
+  reference: string | null;
+  created_at: string;
+}
+
+// ------------------------------------------------------------ التسعيرة
+
+export interface PricingRule {
+  id: string;
+  country_code: CountryCode;
+  vehicle_category: VehicleCategory;
+  base_fare: string;
+  price_per_km: string;
+  price_per_min: string;
+  minimum_fare: string;
+  cancellation_fee: string;
+  updated_at: string;
+}
+
+// ------------------------------------------------------------ التقارير
+
+export interface DayRevenue {
+  day: string;
+  revenue: string;
+  rides: number;
+}
+
+export interface TopDriver {
+  driver_id: string;
+  name: string;
+  completed_rides: number;
+  revenue: string;
+  rating_avg: string;
+}
+
+export interface PlanSales {
+  plan_id: string;
+  plan_name: string;
+  sold: number;
+  revenue: string;
+}
+
+/** النِسَبُ والمتوسطاتُ تصل **محسوبة** — قسمةُ رقمين مسقوفَين في الواجهة
+ * تعطي متوسط الصفحة لا متوسط الفترة. */
+export interface Reports {
+  period: StatsPeriod;
+  from_at: string;
+  to_at: string;
+  currency: Currency;
+  revenue_by_day: DayRevenue[];
+  avg_ride_fare: string;
+  cancellation_rate: string;
+  active_drivers: number;
+  subscriptions_sold: number;
+  subscription_revenue: string;
+  sales_by_plan: PlanSales[];
+  top_drivers: TopDriver[];
+}
+
+// ------------------------------------------------------------ سجل التدقيق
+
+/** و`read` هي القراءةُ الوحيدة المسجَّلة في المشروع: فتحُ الخريطة الحيّة.
+ *
+ * والتعليقُ **فوق** الاتحاد لا بين أعضائه: `check:enums` يطابق اتحاداً من
+ * سلاسلَ وأنابيبَ فقط، فتعليقٌ في وسطه يجعل النمط لا يطابق — فيمر الاتحادُ
+ * بلا فحصٍ والبناءُ أخضر. حارسٌ يُتخطّى بصمتٍ أسوأ من حارسٍ يرفض.
+ */
+export type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "activate"
+  | "deactivate"
+  | "read";
+
+export interface AuditLog {
+  id: string;
+  actor_id: string | null;
+  /** يذهب بحذف الحساب ويبقى `actor_id` — الأثرُ يبقى والاسمُ يضيع. */
+  actor_name: string | null;
+  action: AuditAction;
+  entity_type: string;
+  entity_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
 }

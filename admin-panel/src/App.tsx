@@ -1,9 +1,10 @@
 /** جذر اللوحة: المزوّدون، والمسارات، وحارسُ الجلسة.
  *
- * **ما هو مبنيٌّ الآن**: الدخول، ونظرةٌ عامة، والخريطة الحيّة، والسائقون والوثائق، والمالية، والنزاعات،
- * والإشعارات الجماعية، والإعدادات، وعقود المزوّدين. وبقيةُ الأقسام
- * مرسومةٌ في القائمة معطّلةً بشارة «قريباً» — تقول للمستخدم حالها بدل أن
- * تجعله يشك في اللوحة (انظر `components/Shell.tsx`).
+ * **وأقسامُ المرحلة 11 كلُّها مبنيّةٌ الآن**: الدخول، ونظرةٌ عامة، والخريطة
+ * الحيّة، وسجل الرحلات، والسائقون والوثائق، والركّاب، والنزاعات، والمالية،
+ * والاشتراكات والباقات، والتسعيرة، والتقارير، والإشعارات الجماعية،
+ * والمستخدمون والصلاحيات، وسجل التدقيق، والإعدادات، وعقود المزوّدين.
+ * وآليةُ «قريباً» في `components/Shell.tsx` باقيةٌ لأقسام المرحلة 12.
  *
  * والدولةُ الافتراضية من `/config` لا مكتوبةً هنا، فمزوّدُها تحت `Boot`.
  */
@@ -47,6 +48,29 @@ const SettingsScreen = lazy(() =>
 );
 const ProvidersScreen = lazy(() =>
   import("@/screens/Providers").then((m) => ({ default: m.ProvidersScreen })),
+);
+const RidesScreen = lazy(() =>
+  import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
+);
+const RidersScreen = lazy(() =>
+  import("@/screens/Riders").then((m) => ({ default: m.RidersScreen })),
+);
+const SubscriptionsScreen = lazy(() =>
+  import("@/screens/Subscriptions").then((m) => ({
+    default: m.SubscriptionsScreen,
+  })),
+);
+const PricingScreen = lazy(() =>
+  import("@/screens/Pricing").then((m) => ({ default: m.PricingScreen })),
+);
+const ReportsScreen = lazy(() =>
+  import("@/screens/Reports").then((m) => ({ default: m.ReportsScreen })),
+);
+const UsersScreen = lazy(() =>
+  import("@/screens/Users").then((m) => ({ default: m.UsersScreen })),
+);
+const AuditScreen = lazy(() =>
+  import("@/screens/Audit").then((m) => ({ default: m.AuditScreen })),
 );
 
 function Centered({ children }: { children: ReactNode }) {
@@ -187,6 +211,62 @@ export default function App() {
                     element={
                       <Guarded>
                         <ProvidersScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/rides"
+                    element={
+                      <Guarded>
+                        <RidesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/riders"
+                    element={
+                      <Guarded>
+                        <RidersScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/subscriptions"
+                    element={
+                      <Guarded>
+                        <SubscriptionsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/pricing"
+                    element={
+                      <Guarded>
+                        <PricingScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/reports"
+                    element={
+                      <Guarded>
+                        <ReportsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/users"
+                    element={
+                      <Guarded>
+                        <UsersScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/audit"
+                    element={
+                      <Guarded>
+                        <AuditScreen />
                       </Guarded>
                     }
                   />

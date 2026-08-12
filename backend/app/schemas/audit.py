@@ -14,6 +14,10 @@ class AuditLogOut(BaseModel):
 
     id: uuid.UUID
     actor_id: uuid.UUID | None
+    # اسمُ من فعل، مضموماً في نفس الاستعلام — و`None` حين حُذف حسابُه
+    # (`actor_id` بـ`SET NULL`): يبقى القيدُ ويضيع الاسم، لا العكس. وضمُّه هنا
+    # لا نداءً لكل صف: صفحةٌ من مئتي قيدٍ لا تصير مئتي استعلام
+    actor_name: str | None = None
     action: AuditAction
     entity_type: str
     entity_id: uuid.UUID | None

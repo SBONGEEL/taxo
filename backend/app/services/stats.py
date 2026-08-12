@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -38,14 +38,18 @@ from app.models.enums import (
 )
 from app.models.payment import Payment
 from app.models.ride import ACTIVE_RIDER_STATUSES, Ride
-from app.models.subscription import DriverSubscription
+from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
 from app.models.wallet import WithdrawalRequest
+from app.core.currency import currency_for_country
 from app.services import campaigns, geo, subscriptions
 
 # نوافذ التقرير الثلاث كما في `DESIGN.md` §3.2 (اليوم/الأسبوع/الشهر)
 PERIOD_DAYS = {"today": 1, "week": 7, "month": 30}
 DEFAULT_TIMEZONE = "Asia/Amman"
+
+# «أفضل السائقين» في التصميم لوحٌ قصير — خمسةٌ تُقرأ، وعشرون قائمةٌ ثانية
+TOP_DRIVERS = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +70,60 @@ class Overview:
     pending_withdrawals: int
     rides_by_hour: list[int]
     payment_mix: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
+class DayRevenue:
+    """يومٌ واحد في شريط الإيراد — `day` تاريخُ **يوم الدولة** لا يوم UTC."""
+
+    day: str
+    revenue: Decimal
+    rides: int
+
+
+@dataclass(frozen=True, slots=True)
+class TopDriver:
+    driver_id: uuid.UUID
+    name: str
+    completed_rides: int
+    revenue: Decimal
+    rating_avg: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class PlanSales:
+    plan_id: uuid.UUID
+    plan_name: str
+    sold: int
+    revenue: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class Reports:
+    """«التقارير والإحصاءات» (SPEC القسم 13/5 وDESIGN §5.4).
+
+    **ما ليس فيها مقصودٌ كما ما فيها**: لا «أعلى المناطق طلباً» لأن المناطق
+    لا وجود لها في هذا المخطط — لا جدولَ مناطق ولا عمودَ منطقةٍ على الرحلة،
+    ورسمُها من الإحداثيات اختراعُ تقسيمٍ لم يقله أحد. ولا «معدّل قبول
+    الطلبات» لأن `ride_offers` لم يُبنَ (القسم 16/9-ب)، وحسابُه من الرحلات
+    وحدها يقيس شيئاً آخر ويسمّيه باسمه.
+    """
+
+    period: str
+    from_at: datetime
+    to_at: datetime
+    currency: str
+
+    revenue_by_day: list[DayRevenue]
+    avg_ride_fare: Decimal
+    cancellation_rate: Decimal
+    active_drivers: int
+
+    subscriptions_sold: int
+    subscription_revenue: Decimal
+    sales_by_plan: list[PlanSales]
+
+    top_drivers: list[TopDriver]
 
 
 async def _zone(session: AsyncSession, country: CountryCode) -> ZoneInfo:
@@ -255,6 +313,170 @@ async def _payment_mix(
     for method, count in rows.all():
         mix[method.value] = int(count)
     return mix
+
+
+def _days_in(zone: ZoneInfo, from_at: datetime, to_at: datetime) -> list[date]:
+    """أيامُ النافذة **بتقويم الدولة** — من أولها إلى يومها الأخير ضمناً."""
+    first = from_at.astimezone(zone).date()
+    last = to_at.astimezone(zone).date()
+    return [first + timedelta(days=offset) for offset in range((last - first).days + 1)]
+
+
+async def reports(
+    session: AsyncSession,
+    *,
+    country: CountryCode,
+    period: str,
+    now: datetime,
+) -> Reports:
+    """تقاريرُ الفترة — بنفس نافذة «نظرة عامة» وبنفس قاعدة «يومُ الدولة».
+
+    ولا معدّلَ يُحسب في الواجهة: «متوسط قيمة الرحلة» قسمةُ مجموعٍ على عدد،
+    وكلاهما ينزل من استعلامٍ مسقوفٍ لو تُرك للوحة — فتقرأ الشاشةُ متوسطَ
+    الخمسين صفاً الأولى وتسمّيه متوسط الشهر.
+    """
+    zone = await _zone(session, country)
+    from_at, to_at = _window(zone, period, now)
+    in_window = (
+        Ride.country_code == country,
+        Ride.created_at >= from_at,
+        Ride.created_at <= to_at,
+    )
+    fare = func.coalesce(Ride.final_fare, Ride.estimated_fare)
+    day = func.date(func.timezone(str(zone), Ride.created_at)).label("day")
+
+    day_rows = await session.execute(
+        select(day, func.coalesce(func.sum(fare), 0), func.count())
+        .where(*in_window, Ride.status == RideStatus.COMPLETED)
+        .group_by(day)
+        .order_by(day)
+    )
+    # **كلُّ يومٍ في النافذة صفٌّ ولو بصفر.** الاستعلام لا يعيد إلا الأيام التي
+    # فيها رحلة، ورسمُ الأعمدة على ما يعود يضغط الفجوات فيُقرأ أسبوعٌ فيه ثلاثة
+    # أيام عملٍ ثلاثةَ أيامٍ متتالية — رسمٌ يكذب بلا رقمٍ خاطئ فيه. والملءُ هنا
+    # لا في الواجهة: هي لا تعرف حدود النافذة ولا مِنطقة الدولة
+    found = {
+        value: (Decimal(total), int(count))
+        for value, total, count in day_rows.all()
+    }
+    revenue_by_day = [
+        DayRevenue(
+            day=value.isoformat(),
+            revenue=found.get(value, (Decimal(0), 0))[0],
+            rides=found.get(value, (Decimal(0), 0))[1],
+        )
+        for value in _days_in(zone, from_at, to_at)
+    ]
+
+    completed = sum(row.rides for row in revenue_by_day)
+    revenue = sum((row.revenue for row in revenue_by_day), Decimal(0))
+    cancelled = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Ride)
+            .where(
+                *in_window,
+                Ride.status.in_(
+                    (RideStatus.CANCELLED_BY_RIDER, RideStatus.CANCELLED_BY_DRIVER)
+                ),
+            )
+        )
+        or 0
+    )
+
+    # «سائقٌ نشط» = من أنهى رحلةً في الفترة، لا من رفع `is_online` مرةً:
+    # الحضورُ نيّةٌ والرحلةُ عمل
+    active_drivers = int(
+        await session.scalar(
+            select(func.count(func.distinct(Ride.driver_id))).where(
+                *in_window,
+                Ride.status == RideStatus.COMPLETED,
+                Ride.driver_id.is_not(None),
+            )
+        )
+        or 0
+    )
+
+    top_rows = await session.execute(
+        select(
+            Driver.id,
+            User.name,
+            func.count(),
+            func.coalesce(func.sum(fare), 0),
+            Driver.rating_avg,
+        )
+        .select_from(Ride)
+        .join(Driver, Ride.driver_id == Driver.id)
+        .join(User, Driver.user_id == User.id)
+        .where(*in_window, Ride.status == RideStatus.COMPLETED)
+        .group_by(Driver.id, User.name)
+        .order_by(func.count().desc())
+        .limit(TOP_DRIVERS)
+    )
+    top_drivers = [
+        TopDriver(
+            driver_id=driver_id,
+            name=name,
+            completed_rides=int(count),
+            revenue=Decimal(total),
+            rating_avg=rating,
+        )
+        for driver_id, name, count, total, rating in top_rows.all()
+    ]
+
+    # تقاريرُ الاشتراكات (القسم 13/5): ما **بيع** في الفترة لا ما هو سارٍ
+    # الآن — ذاك رقمُ «نظرة عامة»، وهذا إيرادُ الشهر
+    sold_in_window = (
+        User.country_code == country,
+        DriverSubscription.created_at >= from_at,
+        DriverSubscription.created_at <= to_at,
+    )
+    plan_rows = await session.execute(
+        select(
+            SubscriptionPlan.id,
+            SubscriptionPlan.name,
+            func.count(),
+            func.coalesce(func.sum(DriverSubscription.amount_paid), 0),
+        )
+        .select_from(DriverSubscription)
+        .join(SubscriptionPlan, DriverSubscription.plan_id == SubscriptionPlan.id)
+        .join(Driver, DriverSubscription.driver_id == Driver.id)
+        .join(User, Driver.user_id == User.id)
+        .where(*sold_in_window)
+        .group_by(SubscriptionPlan.id, SubscriptionPlan.name)
+        .order_by(func.count().desc())
+    )
+    sales_by_plan = [
+        PlanSales(
+            plan_id=plan_id, plan_name=name, sold=int(count), revenue=Decimal(total)
+        )
+        for plan_id, name, count, total in plan_rows.all()
+    ]
+
+    total_rides = completed + cancelled
+    return Reports(
+        period=period,
+        from_at=from_at,
+        to_at=to_at,
+        currency=currency_for_country(country).value,
+        revenue_by_day=revenue_by_day,
+        # القسمةُ على `Decimal` لا على float: هذه أرقامُ مال (القسم 14)
+        avg_ride_fare=(
+            (revenue / completed).quantize(Decimal("0.001"))
+            if completed
+            else Decimal("0.000")
+        ),
+        cancellation_rate=(
+            (Decimal(cancelled) * 100 / total_rides).quantize(Decimal("0.01"))
+            if total_rides
+            else Decimal("0.00")
+        ),
+        active_drivers=active_drivers,
+        subscriptions_sold=sum(row.sold for row in sales_by_plan),
+        subscription_revenue=sum((row.revenue for row in sales_by_plan), Decimal(0)),
+        sales_by_plan=sales_by_plan,
+        top_drivers=top_drivers,
+    )
 
 
 async def online_driver_count(redis: Redis, country: CountryCode) -> int:

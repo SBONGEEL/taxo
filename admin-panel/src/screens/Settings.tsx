@@ -68,6 +68,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "التحقق من الرقم",
     hint: "حارسٌ لا ميزة — إطفاؤه للطوارئ فقط، ويسمح بحساباتٍ برقمٍ غير مُثبت.",
   },
+  women_service_enabled: {
+    title: "خدمة التوصيل النسائي",
+    hint: "لا تُشعَل قبل مراجعة أجناس الكباتن المعتمدين — خدمةٌ بلا سائقاتٍ يمكن ترشيحُهنّ تُقرأ ميزةً معطوبة. اعرض «من لم يُثبَّت جنسُه» في صفحة السائقين.",
+  },
 };
 
 /** المفاتيحُ التي يملك المشرف إطفاءها من هنا، وحارسُها آخرُ القائمة عمداً. */
@@ -76,6 +80,7 @@ const FLAGS: FeatureKey[] = [
   "card_enabled",
   "wallet_enabled",
   "wallet_transfer_enabled",
+  "women_service_enabled",
   "otp_verification_enabled",
 ];
 
