@@ -155,7 +155,9 @@ async def payment_summaries(
     return {
         ride_id: PaymentSummary(
             methods=[PaymentMethod(value) for value in sorted(methods or [])],
-            paid_amount=Decimal(paid),
+            # ثلاثُ منازل كبقية المال: `Decimal(0)` يخرج «0» فيقرأ الصفَّ
+            # مختلفاً عن جاره في نفس العمود
+            paid_amount=Decimal(paid).quantize(Decimal("0.001")),
             has_open_dispute=bool(disputed),
         )
         for ride_id, methods, paid, disputed in rows.all()

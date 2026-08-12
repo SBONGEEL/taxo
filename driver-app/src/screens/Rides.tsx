@@ -2,11 +2,11 @@
  *
  * «للكبتن ما أُسند إليه» — الخلفية تفصل ذلك، والشاشة لا تفلتر بيدها.
  *
- * **وشارةُ النزاع ليست في هذه القائمة**: حالُ الدفع تعيش على `payments` لا
- * على `rides`، و`GET /rides/me` لا يحملها. وسؤالُ الخلفية عن دفعات كل صفٍّ
- * على حدة عشرون نداءً لصفحةٍ واحدة. فالشارة مكانُها التفاصيل حيث يُسأل عن
- * رحلةٍ واحدة — والتصميم يعرضها في القائمة، وهذا انحرافٌ مقصود مذكورٌ في
- * تقرير الجلسة.
+ * **وشارةُ النزاع في القائمة الآن** (`FUTURE-FEATURES` بند 19). كانت غائبةً
+ * لأن حالَ الدفع تعيش على `payments` و`GET /rides/me` لا يحملها، وسؤالُ
+ * الخلفية عن دفعات كل صفٍّ عشرون نداءً لصفحةٍ واحدة. فصار المسارُ يضمّ
+ * الملخّصَ **في استعلامٍ ثانٍ لصفحةٍ كاملة** — لا نداءٌ لكل صف ولا حقلٌ
+ * يُثقل `Ride` في كل إطار مقبس.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { listMyRides } from "@/api/endpoints";
-import type { Ride } from "@/api/types";
+import type { RideListItem } from "@/api/types";
 import { BottomNav } from "@/components/BottomNav";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import {
@@ -31,7 +31,7 @@ const PAGE_SIZE = 20;
 
 export function RidesScreen() {
   const navigate = useNavigate();
-  const [rides, setRides] = useState<Ride[] | null>(null);
+  const [rides, setRides] = useState<RideListItem[] | null>(null);
   const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +76,7 @@ export function RidesScreen() {
         ) : null}
 
         <ul className="flex flex-col gap-10">
-          {(rides ?? []).map((ride) => (
+          {(rides ?? []).map(({ ride, has_open_dispute }) => (
             <li key={ride.id}>
               <button
                 type="button"
@@ -112,6 +112,12 @@ export function RidesScreen() {
                     {trimDistance(ride.actual_distance_km ?? ride.distance_km)}{" "}
                     كم
                   </span>
+                  {/* شارةُ النزاع — برتقاليةٌ في ذيل الصف كما في التصميم */}
+                  {has_open_dispute ? (
+                    <span className="rounded-full border border-warn px-8 py-2 text-10 font-bold text-warn">
+                      نزاع
+                    </span>
+                  ) : null}
                   <span
                     className={cn("ms-auto font-bold", statusTone(ride.status))}
                   >

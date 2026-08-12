@@ -22,6 +22,7 @@ import type {
   PlaceIcon,
   Rating,
   Ride,
+  RideListItem,
   RideEstimate,
   RidePayments,
   SavedCard,
@@ -150,7 +151,7 @@ export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
 export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
 
 export const listMyRides = (limit = 20, offset = 0) =>
-  api.get<Ride[]>("/rides/me", { query: { limit, offset } });
+  api.get<RideListItem[]>("/rides/me", { query: { limit, offset } });
 
 /** `reason_code` سببٌ **مصنَّف** بجانب النص: `gender_mismatch` وحدها تُسقط
  *  رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر (المرحلة 10-ج). */

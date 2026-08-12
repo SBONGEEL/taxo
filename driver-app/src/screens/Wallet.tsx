@@ -110,13 +110,22 @@ export function WalletScreen() {
       <div className="scr h-full px-16 pb-nav pt-safe">
         <div className="mb-16 mt-6 flex items-center justify-between">
           <h1 className="text-20 font-bold text-ink">المحفظة</h1>
-          <button
-            type="button"
-            onClick={() => navigate("/wallet/withdrawals")}
-            className="rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
-          >
-            طلبات السحب
-          </button>
+          <div className="flex gap-8">
+            <button
+              type="button"
+              onClick={() => navigate("/wallet/earnings")}
+              className="rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
+            >
+              أرباحي
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/wallet/withdrawals")}
+              className="rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
+            >
+              طلبات السحب
+            </button>
+          </div>
         </div>
 
         <section className="mb-12 rounded-20 border border-line bg-surface p-20">

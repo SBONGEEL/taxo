@@ -235,6 +235,13 @@ async def upload(
             await session.rollback()
             raise Conflict("رفعٌ آخر لنفس المستند يجري الآن — أعد المحاولة") from exc
 
+        # **يُعاد قراءةُ الحالة تحت قفل الصف** قبل الإسقاط: القراءةُ الأولى
+        # فوق كانت لفحصٍ مبكّر يوفّر حفظ ملفٍ سيُرفض، لا لقرارٍ يُكتب.
+        # وبغير هذا يُلغي استبدالُ مستندٍ إيقافاً إدارياً وقع أثناء الرفع
+        if reverts_approval:
+            await drivers_service.lock(session, driver)
+            reverts_approval = driver.status is DriverStatus.APPROVED
+
         if reverts_approval:
             await drivers_service.set_status(
                 session,

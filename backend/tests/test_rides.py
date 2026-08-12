@@ -415,8 +415,10 @@ async def test_my_rides_lists_both_sides(
     rider_list = await client.get("/rides/me", headers=rider_headers)
     driver_list = await client.get("/rides/me", headers=driver["headers"])
 
-    assert [r["id"] for r in rider_list.json()] == [ride_id]
-    assert [r["id"] for r in driver_list.json()] == [ride_id]
+    # الصفُّ صار `RideListItem`: الرحلةُ ومعها ملخّصُ دفعها (البند 19)
+    assert [r["ride"]["id"] for r in rider_list.json()] == [ride_id]
+    assert [r["ride"]["id"] for r in driver_list.json()] == [ride_id]
+    assert rider_list.json()[0]["has_open_dispute"] is False
 
 
 async def test_active_ride_endpoint_reflects_current_state(

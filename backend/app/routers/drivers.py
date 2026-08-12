@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from typing import Annotated
+from dataclasses import asdict
+from datetime import UTC, datetime
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
@@ -28,8 +30,16 @@ from app.schemas.driver import (
     NearbyDriverOut,
     VehicleCreate,
     VehicleOut,
+    VehicleUpdate,
+    VehicleUpdateResultOut,
 )
-from app.services import documents as documents_service, drivers as drivers_service
+from app.schemas.wallet import EarningsOut
+from app.services import (
+    documents as documents_service,
+    drivers as drivers_service,
+    earnings as earnings_service,
+    vehicles as vehicles_service,
+)
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
 
@@ -118,6 +128,60 @@ async def add_my_vehicle(
 
 
 # ------------------------------------------------------------- المستندات
+
+
+@router.patch(
+    "/me/vehicles/{vehicle_id}", response_model=VehicleUpdateResultOut
+)
+async def update_my_vehicle(
+    vehicle_id: uuid.UUID,
+    payload: VehicleUpdate,
+    driver: CurrentDriver,
+    session: DbSession,
+) -> VehicleUpdateResultOut:
+    """تعديلُ بيانات المركبة (`FUTURE-FEATURES` بند 43/18).
+
+    **وتغييرُ ما تشهد عليه رخصةُ المركبة يُسقط الاعتماد** — نفس سياسة استبدال
+    المستند في المرحلة 9-ب، لأن الأثر واحد: اعتمادٌ صدر لمركبةٍ يُشغَّل به
+    غيرُها. والقواعدُ في `services/vehicles.py`، والجوابُ يقول ما وقع.
+    """
+    result = await vehicles_service.update(
+        session,
+        driver=driver,
+        vehicle_id=vehicle_id,
+        changes=payload.model_dump(exclude_unset=True, exclude_none=True),
+    )
+    await session.commit()
+    await session.refresh(result.vehicle)
+    await session.refresh(driver)
+    return VehicleUpdateResultOut(
+        vehicle=VehicleOut.model_validate(result.vehicle),
+        approval_reverted=result.approval_reverted,
+        driver_status=driver.status,
+    )
+
+
+@router.get("/me/earnings", response_model=EarningsOut)
+async def my_earnings(
+    driver: CurrentDriver,
+    user: CurrentUser,
+    session: DbSession,
+    period: Literal["today", "week", "month"] = Query(default="today"),
+) -> EarningsOut:
+    """ملخّصُ الأرباح على نافذة (SPEC القسم 9 و12/7).
+
+    **والتجميعُ في الخلفية** كبقية الأرقام: تطبيقٌ يجمع صفحةً مسقوفة من الدفتر
+    يعرض رقماً لا يطابقه. والنافذةُ **يومُ الدولة** لا يومُ الخادم.
+    """
+    result = await earnings_service.summary(
+        session,
+        driver=driver,
+        user_id=user.id,
+        country=user.country_code,
+        period=period,
+        now=datetime.now(UTC),
+    )
+    return EarningsOut(**asdict(result))
 
 
 @router.get("/me/documents", response_model=DriverDocumentsOut)

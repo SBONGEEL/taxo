@@ -213,6 +213,19 @@ export interface SavedPlace {
   created_at: string;
 }
 
+/** صفٌّ في سجل الرحلات — الرحلةُ **ومعها حالُ دفعها**.
+ *
+ * الملخّصُ مضمومٌ في الخلفية في استعلامٍ ثانٍ لا نداءٍ لكل صف
+ * (`FUTURE-FEATURES` بند 19). **ونوعٌ مستقلٌّ عن `Ride`**: تلك تُبثّ في كل
+ * إطار مقبس، فحملُها ملخّصَ دفعٍ عملٌ لا يقرؤه أحد هناك.
+ */
+export interface RideListItem {
+  ride: Ride;
+  has_open_dispute: boolean;
+  payment_methods: PaymentMethod[];
+  paid_amount: string;
+}
+
 export interface Payment {
   id: string;
   ride_id: string;

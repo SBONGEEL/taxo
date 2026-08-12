@@ -216,6 +216,24 @@ export interface RideStop {
   over_max_wait: boolean;
 }
 
+/** ملخّصُ الأرباح (SPEC القسم 9 و12/7).
+ *
+ * **ثلاثةُ أرقامٍ لا رقم**: ما دخل المحفظة، وما اقتُطع عمولةً، وما قُبض
+ * باليد — والأخيرُ **لا يزيد الرصيد** ويُعرض موسوماً. و`net` قد يكون سالباً
+ * حين تُخصم عمولةُ رحلةٍ نقدية بلا أرباحَ تقابلها.
+ */
+export interface Earnings {
+  period: "today" | "week" | "month";
+  from_at: string;
+  to_at: string;
+  currency: Currency;
+  wallet_earnings: string;
+  commission: string;
+  net: string;
+  directly_collected: string;
+  completed_rides: number;
+}
+
 export interface Wallet {
   owner_id: string;
   owner_type: "driver" | "rider";
@@ -338,6 +356,19 @@ export type PaymentMethod = "cash" | "wallet" | "card" | "cliq";
  * `pending` على قناةٍ يقبضها بيده — والتمييز من `method` لا من حقلٍ سادس. */
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "refunded" | "disputed";
+
+/** صفٌّ في سجل الرحلات — الرحلةُ **ومعها حالُ دفعها**.
+ *
+ * الملخّصُ مضمومٌ في الخلفية في استعلامٍ ثانٍ لا نداءٍ لكل صف
+ * (`FUTURE-FEATURES` بند 19). **ونوعٌ مستقلٌّ عن `Ride`**: تلك تُبثّ في كل
+ * إطار مقبس، فحملُها ملخّصَ دفعٍ عملٌ لا يقرؤه أحد هناك.
+ */
+export interface RideListItem {
+  ride: Ride;
+  has_open_dispute: boolean;
+  payment_methods: PaymentMethod[];
+  paid_amount: string;
+}
 
 export interface Payment {
   id: string;

@@ -12,6 +12,7 @@ from app.models.enums import (
     CountryCode,
     Currency,
     GenderPreference,
+    PaymentMethod,
     RideStatus,
     VehicleCategory,
 )
@@ -71,6 +72,29 @@ class RideCancelRequest(BaseModel):
     # سببٌ مصنَّف بجانب النص الحر. `gender_mismatch` ليست وصفاً: هي التي
     # تُسقط رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر يُقرأ باحتمالات
     reason_code: CancelReasonCode | None = None
+
+
+class RideListItem(BaseModel):
+    """صفٌّ في سجل الرحلات — الرحلةُ **ومعها حالُ دفعها**.
+
+    (`FUTURE-FEATURES` بند 19) شارةُ «نزاع» في سجل الكبتن تحتاج أن يعرف الصفُّ
+    حالَ دفعته، و`RideOut` وحدها لا تحملها. والبندُ خيّر بين ضمِّ ملخّصٍ إلى
+    الصف ونداءٍ ثانٍ لكل صف — و**الضمُّ هو الجواب**: صفحةٌ من عشرين رحلة لا
+    يجوز أن تصير عشرين نداءً، وهي نفسُ القاعدة التي بُني عليها `AdminRideRow`.
+
+    **ونوعٌ مستقلٌّ لا حقولٌ تُضاف إلى `RideOut`**: تلك تُبثّ في كل إطار مقبس
+    وفي بطاقة العرض، فحسابُ ملخّصِ دفعٍ لكل واحدةٍ منها عملٌ لا يقرؤه أحد.
+    """
+
+    ride: "RideOut"
+    # هل على هذه الرحلة نزاعٌ مفتوح — وهو ما ترسمه الشارة
+    has_open_dispute: bool
+    # قنواتُ الدفع عليها: المختلطُ صفّان، فقناةٌ واحدة تخفي نصف الواقعة.
+    # **بالتعداد لا بالنص**: `check:enums` في التطبيقات يقابل هذا الاتحاد
+    # بأعضاء `PaymentMethod` نفسِها، فقيمةٌ مخترعةٌ تسقط في البناء
+    payment_methods: list[PaymentMethod]
+    # مجموعُ ما تأكّد — يُقارَن بالأجرة فتُقرأ الرحلةُ غيرَ مسدَّدة
+    paid_amount: Decimal
 
 
 class RideStopOut(BaseModel):

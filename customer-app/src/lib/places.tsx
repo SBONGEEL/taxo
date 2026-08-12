@@ -91,7 +91,7 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         );
         const seen = new Set<string>();
         const found: RecentDestination[] = [];
-        for (const ride of rides.value) {
+        for (const { ride } of rides.value) {
           const key = pointKey(ride.dropoff);
           if (seen.has(key) || saved.has(key)) continue;
           seen.add(key);

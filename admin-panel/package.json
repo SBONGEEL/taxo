@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npm run check:scale && npm run check:enums && tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
+    "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
     "check:enums": "node scripts/check-enums.mjs"
   },

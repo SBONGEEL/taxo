@@ -15,6 +15,8 @@ import type {
   DocumentType,
   DocumentUpload,
   Driver,
+  DriverStatus,
+  Earnings,
   DriverDocuments,
   DriverProfile,
   DriverSubscription,
@@ -25,6 +27,7 @@ import type {
   Payment,
   Rating,
   Ride,
+  RideListItem,
   RidePayments,
   SavedCard,
   User,
@@ -145,9 +148,34 @@ export const addVehicle = (payload: {
 
 export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
 
-/** سجل الرحلات — «للكبتن ما أُسند إليه» (`rides.list_rides_for_user`). */
+/** تعديلُ بيانات المركبة (`FUTURE-FEATURES` بند 43).
+ *
+ * **والجوابُ يقول ما وقع للاعتماد** (`approval_reverted`): تغييرُ ما تشهد
+ * عليه رخصةُ المركبة يعيد الكبتن إلى المراجعة — نفس سياسة استبدال المستند.
+ */
+export const updateVehicle = (
+  vehicleId: string,
+  payload: Partial<{
+    make: string;
+    model: string;
+    year: number;
+    color: string;
+    plate_number: string;
+  }>,
+) =>
+  api.patch<{
+    vehicle: Vehicle;
+    approval_reverted: boolean;
+    driver_status: DriverStatus;
+  }>(`/drivers/me/vehicles/${vehicleId}`, payload);
+
+/** ملخّصُ الأرباح — **مجموعٌ في الخلفية** بنافذة يوم الدولة (القسم 9 و12/7). */
+export const getEarnings = (period: "today" | "week" | "month") =>
+  api.get<Earnings>("/drivers/me/earnings", { query: { period } });
+
+/** سجل الرحلات — «للكبتن ما أُسند إليه»، ومعه ملخّصُ دفع كل صف (البند 19). */
 export const listMyRides = (limit = 20, offset = 0) =>
-  api.get<Ride[]>("/rides/me", { query: { limit, offset } });
+  api.get<RideListItem[]>("/rides/me", { query: { limit, offset } });
 
 export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
 

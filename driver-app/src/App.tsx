@@ -67,6 +67,9 @@ const DisputeScreen = lazy(() =>
 const WalletScreen = lazy(() =>
   import("@/screens/Wallet").then((m) => ({ default: m.WalletScreen })),
 );
+const EarningsScreen = lazy(() =>
+  import("@/screens/Earnings").then((m) => ({ default: m.EarningsScreen })),
+);
 const WithdrawalsScreen = lazy(() =>
   import("@/screens/Withdrawals").then((m) => ({
     default: m.WithdrawalsScreen,
@@ -262,6 +265,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <WithdrawalsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/wallet/earnings"
+                          element={
+                            <Guarded>
+                              <EarningsScreen />
                             </Guarded>
                           }
                         />

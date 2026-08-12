@@ -15,8 +15,8 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **523 backend tests pass**
-(46 files); all three frontends build with `check:scale` + `check:enums` green.
+contracts, users & permissions, audit log. Every nav entry has a screen. **564 backend tests pass**
+(50 files); all three frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -40,16 +40,43 @@ Geocoding) and with saved places filtered out so one sheet never lists a destina
 "re-order" from a finished ride, which starts a **new request** at the same two points — the price
 is recomputed, stops are not copied, and the preference is read from the profile.
 
+**`FUTURE-FEATURES` items 17, 19 and 43/18 are built too.** Three rules in them are worth carrying
+forward. **The driver's earnings screen shows three numbers, not two** (`services/earnings.py`):
+what entered the wallet, what left it as commission, and **what he took in his hand** — cash and
+CliQ never pass through the wallet (SPEC §9), so a statement that omits them hides half his income;
+and **the net is allowed to be negative and is never clipped at zero**, because an all-cash day
+under `all_rides` commission leaves commission with no earnings against it, and hiding that leaves
+him watching his balance fall for no visible reason. The window is the **country's day**, and the
+sums are computed in the database, like `services/stats.py`.
+
+**`GET /rides/me` now returns `RideListItem`** — the ride plus `has_open_dispute`,
+`payment_methods` and `paid_amount` — which is what the driver's «نزاع» badge reads. The summary is
+a **second query over the whole page**, never a join into the first: mixed payment is two rows on
+one ride (there is no unique index on `payments.ride_id`), so joining multiplies the ride and drops
+part of it out of a capped page — the same reasoning as `services/ride_log.py`. `Ride` itself was
+left alone: it is broadcast in every socket frame, and a payment summary is work nobody reads there.
+
+**Editing a vehicle follows stage 9-ب's document policy, not a new one** (`services/vehicles.py`).
+The vehicle registration is one of the three required documents, so changing what it attests to —
+`IDENTITY_FIELDS`: plate, make, model, year, category — sends an approved driver back to
+`pending_review`, while colour does not. Three details make it honest rather than merely strict: the
+comparison is against what **actually changed**, not what was submitted (re-sending the same plate
+is not a change); the screen states the cost **before** the save and only when the edit really
+touches identity (a warning that fires on a colour correction reads as noise and then goes unread
+when it matters); and the edit is refused mid-ride. **Category is not editable from the app at all**
+— it decides the tariff, so it is an admin decision. The CliQ alias half of item 18 needed nothing:
+`PATCH /drivers/me` and the settings field shipped in stage 10.
+
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — none of it started, and each needs its own SPEC pass first) **and stage 13**
 (tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →
 rider requests → tracking → payment → withdrawal).
 
-**The panel's screens have never been opened in a browser.** They type-check, `check:scale` and
-`check:enums` pass, and the backend routes behind them are covered by tests — but the failures
-those three cannot see (a dropped tailwind-merge class, a marker that never renders, a grid whose
-header and rows disagree) are exactly the ones this project has shipped before. A visual pass over
-the seven new screens belongs with stage 13's manual run.
+**The panel's seven new screens have now been opened in a browser**, and so has every screen the
+bundles below added. Keep doing that before calling one done: the failures `tsc`, `check:scale` and
+`check:enums` cannot see — a value missing from an *array* rather than a union, a dropped
+tailwind-merge class, a marker that never renders, a button that works and then 409s — are exactly
+the ones this project has shipped before, and every one found since has been of that shape.
 
 ### Open debt and decisions waiting on the owner
 
@@ -144,7 +171,16 @@ all pass the check, and all report success. Load the row with `select(...).with_
 
 **Lock order is always: the ride row, then the request/payment row, then the provider-order row,
 then the driver row, then the wallet advisory lock.** Every mutating path takes them in that order,
-which is why nothing deadlocks. Creating payments locks the ride (`payments._payable_ride`) so two
+which is why nothing deadlocks. **Two paths let the driver himself drop his own approval —
+replacing a required document and editing a vehicle's identity fields — and both re-read
+`drivers.status` under `drivers_service.lock` (a `refresh(..., with_for_update=True)`), never from
+the object the router handed them.** What that lock owns is not duplicate work but a **cancelled
+suspension**: an admin suspending a driver at the moment he changes his plate would otherwise have
+`suspended` overwritten by a `pending` computed from an `approved` read before it, putting a
+suspended driver back in the review queue — one approval away from working again.
+`test_vehicle_update_concurrency.py` drives exactly that interleaving and fails when the lock is
+deleted. In `documents.upload` the lock is taken **after** the document row's, not before, because
+the driver row must not be held across an upload whose length the client dictates. Creating payments locks the ride (`payments._payable_ride`) so two
 concurrent requests cannot both read the same outstanding amount; every status change locks its own
 row (`topups`/`withdrawals.get_request`, `payments.get_payment` with `for_update=True`,
 `rides.cancel_ride`); `card_payments._locked_order` locks the payment *before* the

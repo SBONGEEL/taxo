@@ -1,10 +1,12 @@
 /** المركبة والمستندات — SPEC القسم 12/1، وشكلُها من `DESIGN.md` §5.3.
  *
- * **المركبةُ تُعرض ولا تُحرَّر**: النموذج يرسم حقولاً قابلةً للكتابة، ولا
- * منفذَ في الخلفية لتعديل مركبة — `POST /drivers/me/vehicles` يضيف فقط. وحقلٌ
- * يكتب فيه الكبتن ثم لا يُحفظ أسوأ من حقلٍ لا يوجد؛ ولو حُفظ لكان تغييرُ
- * اللوحة بعد الاعتماد تغييراً للمركبة التي رُوجعت أوراقُها، وذلك قرارُ
- * مراجعةٍ لا حقلُ نصّ (`FUTURE-FEATURES.md` بند 43).
+ * **والمركبةُ تُحرَّر الآن** (`FUTURE-FEATURES` بند 43): كانت تُعرض ولا
+ * تُحرَّر لأن لا منفذَ في الخلفية، وصار `PATCH /drivers/me/vehicles/{id}`.
+ * والسؤالُ الذي أخّرها — «هل يعيد تغييرُ اللوحة الكبتنَ إلى المراجعة؟» —
+ * جوابُه **نفسُ سياسة 9-ب**: رخصةُ المركبة أحدُ المستندات الثلاثة، فتغييرُ
+ * ما تشهد عليه هو استبدالُ مستندٍ بحرفه. **فحقولُ الهوية تُسقط الاعتماد
+ * واللونُ لا** — وتقول الشاشةُ ذلك **قبل الحفظ لا بعده**، كما تقوله عن
+ * استبدال المستند.
  *
  * **والمستندُ يُستبدل، والاستبدالُ له ثمن**: رفعُ نوعٍ ثانيةً يستبدل صفّه
  * ويعيده `pending`، **ويعيد الكبتن المعتمد إلى «قيد المراجعة»** حتى تُراجَع
@@ -16,8 +18,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { listDocuments, uploadDocument } from "@/api/endpoints";
-import type { DocumentType, DriverDocuments } from "@/api/types";
+import { listDocuments, updateVehicle, uploadDocument } from "@/api/endpoints";
+import type { DocumentType, DriverDocuments, Vehicle } from "@/api/types";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useDriver } from "@/lib/driver";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
@@ -41,6 +43,8 @@ export function VehicleScreen() {
   const { profile, refresh } = useDriver();
   const [state, setState] = useState<DriverDocuments | null>(null);
   const [busy, setBusy] = useState<DocumentType | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [reverted, setReverted] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,16 +113,41 @@ export function VehicleScreen() {
                 {CATEGORY_LABEL[vehicle.category]}
               </span>
             </div>
-            <Pair
-              label="سنة الصنع"
-              value={arabicDigits(String(vehicle.year))}
-            />
-            <Pair label="اللون" value={vehicle.color} />
-            {/* اللوحةُ معرّفٌ مطبوعٌ على المركبة — تُعرض كما هي */}
-            <Pair label="رقم اللوحة" value={vehicle.plate_number} ltr last />
-            <p className="mt-11 text-11 leading-snug text-muted">
-              تعديلُ بيانات المركبة يمر بالإدارة — أوراقُها مربوطةٌ باعتمادك.
-            </p>
+            {editing ? (
+              <VehicleForm
+                vehicle={vehicle}
+                approved={profile?.driver.status === "approved"}
+                onCancel={() => setEditing(false)}
+                onSaved={(reverted) => {
+                  setEditing(false);
+                  setReverted(reverted);
+                  void refresh();
+                }}
+              />
+            ) : (
+              <>
+                <Pair
+                  label="سنة الصنع"
+                  value={arabicDigits(String(vehicle.year))}
+                />
+                <Pair label="اللون" value={vehicle.color} />
+                {/* اللوحةُ معرّفٌ مطبوعٌ على المركبة — تُعرض كما هي */}
+                <Pair label="رقم اللوحة" value={vehicle.plate_number} ltr last />
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="mt-11 w-full rounded-12 border border-line py-9 text-center text-12 font-semibold text-ink"
+                >
+                  تعديل بيانات المركبة
+                </button>
+                {reverted ? (
+                  <p className="mt-9 rounded-12 border border-warn bg-surface-2 px-12 py-10 text-11 leading-note text-warn">
+                    غُيّرت بياناتٌ في رخصة المركبة، فعاد حسابُك «قيد المراجعة»
+                    حتى يعتمدها المشرف — ولا تصلك طلباتٌ حتى ذلك.
+                  </p>
+                ) : null}
+              </>
+            )}
           </>
         ) : (
           <p className="text-12.5 leading-note text-muted">
@@ -242,6 +271,113 @@ function Pair({
       <span dir={ltr ? "ltr" : undefined} className="font-medium text-ink">
         {value}
       </span>
+    </div>
+  );
+}
+
+
+/** نموذجُ تعديل المركبة — **يقول ثمنَ التعديل قبل الحفظ**.
+ *
+ * حقولُ الهوية (اللوحة والطراز والصنع والسنة والفئة) تُسقط الاعتماد؛ واللونُ
+ * لا. والتحذيرُ يظهر **حين يمسّ التعديلُ هويةً فعلاً** لا دائماً: تحذيرٌ
+ * يظهر مع تصحيح لونٍ يُقرأ ضجيجاً ثم لا يُقرأ حين يهمّ.
+ */
+function VehicleForm({
+  vehicle,
+  approved,
+  onCancel,
+  onSaved,
+}: {
+  vehicle: Vehicle;
+  approved: boolean;
+  onCancel: () => void;
+  onSaved: (reverted: boolean) => void;
+}) {
+  const [form, setForm] = useState({
+    make: vehicle.make,
+    model: vehicle.model,
+    year: String(vehicle.year),
+    color: vehicle.color,
+    plate_number: vehicle.plate_number,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // نفس مجموعة `services/vehicles.py::IDENTITY_FIELDS` — والفئةُ لا تُحرَّر
+  // من هذه الشاشة (تحدّد التسعيرة، فتغييرُها قرارُ إدارة)
+  const identityChanged =
+    form.make !== vehicle.make ||
+    form.model !== vehicle.model ||
+    form.year !== String(vehicle.year) ||
+    form.plate_number !== vehicle.plate_number;
+
+  function field(key: keyof typeof form, label: string, ltr = false) {
+    return (
+      <label className="mb-9 block">
+        <span className="mb-4 block text-11 text-muted">{label}</span>
+        <input
+          dir={ltr ? "ltr" : undefined}
+          value={form[key]}
+          onChange={(event) =>
+            setForm((current) => ({ ...current, [key]: event.target.value }))
+          }
+          className="w-full rounded-12 border border-line bg-bg px-12 py-10 text-13 text-ink"
+        />
+      </label>
+    );
+  }
+
+  return (
+    <div>
+      {field("make", "الصنع")}
+      {field("model", "الطراز")}
+      {field("year", "سنة الصنع", true)}
+      {field("color", "اللون")}
+      {field("plate_number", "رقم اللوحة", true)}
+
+      {identityChanged && approved ? (
+        <p className="mb-10 rounded-12 border border-warn bg-surface-2 px-12 py-10 text-11 leading-note text-warn">
+          هذه بياناتٌ في رخصة المركبة — حفظُها يعيد حسابك «قيد المراجعة» حتى
+          يعتمدها المشرف، ولا تصلك طلباتٌ حتى ذلك.
+        </p>
+      ) : null}
+
+      <ErrorNote message={error} />
+
+      <div className="mt-10 flex gap-8">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => {
+            setSaving(true);
+            setError(null);
+            updateVehicle(vehicle.id, {
+              make: form.make.trim(),
+              model: form.model.trim(),
+              year: Number(form.year),
+              color: form.color.trim(),
+              plate_number: form.plate_number.trim(),
+            })
+              .then((result) => onSaved(result.approval_reverted))
+              .catch((caught) => {
+                setError(
+                  caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
+                );
+                setSaving(false);
+              });
+          }}
+          className="flex-1 rounded-12 bg-brand py-10 text-center text-13 font-bold text-brand-ink disabled:opacity-60"
+        >
+          حفظ
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-12 border border-line py-10 text-center text-13 font-semibold text-muted"
+        >
+          إلغاء
+        </button>
+      </div>
     </div>
   );
 }

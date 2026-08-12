@@ -27,6 +27,32 @@ class VehicleCreate(BaseModel):
     category: VehicleCategory = VehicleCategory.ECONOMY
 
 
+class VehicleUpdate(BaseModel):
+    """تعديلٌ جزئي لبيانات المركبة (`FUTURE-FEATURES` بند 43).
+
+    **وحقولُ الهوية منها تُسقط الاعتماد** — انظر `services/vehicles.py`.
+    """
+
+    make: str | None = Field(default=None, min_length=1, max_length=60)
+    model: str | None = Field(default=None, min_length=1, max_length=60)
+    year: int | None = Field(default=None, ge=1990, le=2100)
+    color: str | None = Field(default=None, min_length=1, max_length=40)
+    plate_number: str | None = Field(default=None, min_length=2, max_length=32)
+    category: VehicleCategory | None = None
+
+
+class VehicleUpdateResultOut(BaseModel):
+    """المركبةُ بعد التعديل **ومعها ما وقع للاعتماد**.
+
+    يقولها الجوابُ صراحةً كجواب رفع المستند (المرحلة 9-ب): بغيرها يكتشف
+    الكبتن أنه خرج من التوزيع حين لا تصله طلبات، لا حين فعلَ ما أخرجه.
+    """
+
+    vehicle: "VehicleOut"
+    approval_reverted: bool
+    driver_status: DriverStatus
+
+
 class VehicleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

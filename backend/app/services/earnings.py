@@ -40,6 +40,7 @@ from app.models.enums import (
 from app.models.payment import DIRECTLY_COLLECTED_METHODS, Payment
 from app.models.ride import Ride
 from app.models.wallet import WalletTransaction
+from app.services import pricing
 from app.services.stats import PERIOD_DAYS, _window, _zone
 
 # نوافذُ الشاشة الثلاث كما يسمّيها القسم 12/7 — نفس مفاتيح «نظرة عامة»
@@ -81,7 +82,10 @@ async def _ledger_sum(
             WalletTransaction.created_at <= to_at,
         )
     )
-    return Decimal(total or 0)
+    # **ثلاثُ منازل دائماً**: `Decimal(0)` يخرج «0» فتعرضه الشاشة «٠» بينما
+    # كلُّ مالٍ آخر فيها «٠.٠٠٠». والتقريبُ في الخدمة لا في الواجهة —
+    # تنسيقُ المال قرارُ عرض، لكن **عددَ منازله جزءٌ من القيمة** هنا
+    return pricing.round_money(Decimal(total or 0))
 
 
 async def summary(
@@ -146,7 +150,7 @@ async def summary(
         # **قد يكون سالباً** ولا يُقصّ عند الصفر: يومٌ كلُّه كاش بعمولةٍ
         # `all_rides` يترك على الكبتن عمولةً بلا أرباحَ تقابلها، وإخفاءُ ذلك
         # يجعله يكتشف نقصان رصيده بلا سبب ظاهر
-        net=wallet_earnings - commission,
-        directly_collected=Decimal(directly_collected or 0),
+        net=pricing.round_money(wallet_earnings - commission),
+        directly_collected=pricing.round_money(Decimal(directly_collected or 0)),
         completed_rides=int(completed or 0),
     )

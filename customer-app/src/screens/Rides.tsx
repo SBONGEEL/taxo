@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { listMyRides } from "@/api/endpoints";
-import type { Ride } from "@/api/types";
+import type { RideListItem } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
@@ -16,7 +16,7 @@ import { formatDateTime, formatMoney } from "@/lib/utils";
 const PAGE = 20;
 
 export function RidesScreen() {
-  const [rides, setRides] = useState<Ride[]>([]);
+  const [rides, setRides] = useState<RideListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [more, setMore] = useState(false);
@@ -49,7 +49,7 @@ export function RidesScreen() {
             <EmptyState title="لا رحلات بعد" hint="أول رحلة تبدأ من الشاشة الرئيسية." />
           ) : (
             <ul className="space-y-8">
-              {rides.map((ride) => (
+              {rides.map(({ ride }) => (
                 <li key={ride.id}>
                   <Link
                     to={`/rides/${ride.id}`}

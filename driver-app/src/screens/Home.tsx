@@ -30,11 +30,18 @@ import {
   resumeFromStop,
   declineRide,
   getDriverWallet,
+  getEarnings,
   getMySubscription,
   getUnreadCount,
   startRide,
 } from "@/api/endpoints";
-import type { Currency, MySubscription, Ride, Wallet } from "@/api/types";
+import type {
+  Currency,
+  Earnings,
+  MySubscription,
+  Ride,
+  Wallet,
+} from "@/api/types";
 import { ActiveRide } from "@/components/ActiveRide";
 import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
@@ -82,6 +89,7 @@ export function HomeScreen() {
   const [rating, setRating] = useState<Ride | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
+  const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [busy, setBusy] = useState(false);
   const [unread, setUnread] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -100,6 +108,15 @@ export function HomeScreen() {
       .then(setSubscription)
       .catch(() => undefined);
   }, []);
+
+  // أرباحُ اليوم وعددُ رحلاته — تُعاد قراءتها حين **تتبدّل الرحلة الجارية**
+  // لا عند كل تحديثٍ لها: العدد لا يتغير بين «وصلت» و«بدأت»، وربطُ الأثر
+  // بالكائن نفسِه يجعل كلَّ إطارِ حالةٍ نداءً لا يغيّر رقماً
+  useEffect(() => {
+    getEarnings("today")
+      .then(setEarnings)
+      .catch(() => undefined);
+  }, [ride?.id ?? null]);
 
   // العدّاد يُقرأ عند كل عودةٍ إلى الرئيسية: صفوفُ الوارد تُكتب من الخلفية
   // (اشتراكٌ يوشك، مستندٌ رُوجع) بلا أن يفتح الكبتن شيئاً
@@ -268,7 +285,12 @@ export function HomeScreen() {
                   label: "المحفظة",
                   value: wallet ? arabicDigits(wallet.balance) : "—",
                 },
-                { label: "رحلات اليوم", value: "—" },
+                {
+                  label: "رحلات اليوم",
+                  value: earnings
+                    ? arabicDigits(String(earnings.completed_rides))
+                    : "—",
+                },
                 {
                   label: "التقييم",
                   value: profile

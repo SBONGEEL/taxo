@@ -13,6 +13,7 @@ from app.models.ride import Ride
 from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.ride import (
     CoordinatesIn,
+    RideListItem,
     RideCancelRequest,
     RideCreateRequest,
     RideEstimateOut,
@@ -24,6 +25,7 @@ from app.services import (
     notifications,
     pricing,
     ratings as ratings_service,
+    ride_log,
     rides as rides_service,
     route,
     tracking,
@@ -119,18 +121,33 @@ async def request_ride(
 # ------------------------------------------------------------------ القراءة
 
 
-@router.get("/me", response_model=list[RideOut])
+@router.get("/me", response_model=list[RideListItem])
 async def list_my_rides(
     user: CurrentUser,
     session: DbSession,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-) -> list[RideOut]:
-    """سجل الرحلات: للراكب رحلاته، وللكبتن ما أُسند إليه."""
+) -> list[RideListItem]:
+    """سجل الرحلات: للراكب رحلاته، وللكبتن ما أُسند إليه.
+
+    **ومعها ملخّصُ دفعها في استعلامٍ ثانٍ لا في نداءٍ لكل صف** (بند 19):
+    صفحةٌ من عشرين رحلة لا تصير عشرين نداءً — نفس ما يفعله سجلُّ اللوحة.
+    """
     rides = await rides_service.list_rides_for_user(
         session, user, limit=limit, offset=offset
     )
-    return [_to_out(ride) for ride in rides]
+    summaries = await ride_log.payment_summaries(session, [ride.id for ride in rides])
+    return [
+        RideListItem(
+            ride=_to_out(ride),
+            has_open_dispute=summary.has_open_dispute,
+            payment_methods=summary.methods,
+            paid_amount=summary.paid_amount,
+        )
+        for ride, summary in (
+            (ride, summaries.get(ride.id, ride_log.EMPTY_SUMMARY)) for ride in rides
+        )
+    ]
 
 
 @router.get("/me/active", response_model=RideOut | None)
