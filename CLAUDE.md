@@ -15,8 +15,9 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **637 backend tests pass**
-(57 files); all three frontends build with `check:scale` + `check:enums` green.
+contracts, users & permissions, audit log. Every nav entry has a screen. **626 backend tests pass**
+(57 test files of 58; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
+frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -174,6 +175,26 @@ payments + the discount of each in-flight ride computed on its estimate + the ri
 Verified by deletion: dropping `for_update` gives `[201, 201, 404]`. The per-user test, by contrast,
 **passes without the lock** — `uq_rides_active_rider` means one rider can never have two in-flight
 rides — so it is documented as guarding behaviour, not the lock.
+
+**All three surfaces were then opened in a browser, including the receipt** — which meant driving a
+real ride end to end over the API (approve a driver with three uploaded documents, record a cash
+subscription, go online and broadcast a location, request with the code, accept the offer, arrive,
+start, complete) because **the `promo` row does not exist until `complete_ride` runs**, and a
+hand-written fixture that agrees with your own assumptions is what let `awaiting_confirmation` pass a
+full visual review. The receipt shows the discount as a row with `−` and the ok colour, no status and
+no date, beside the cash row for the remainder, while `final_fare` stays the *undiscounted* fare —
+that last part is the SPEC decision made visible, not a bug.
+
+Two facts found in that pass, both of which nearly became "fixes":
+
+- **`customer-app` has no `arabicDigits` at all.** Its `formatMoney` groups and pads *textually* and
+  leaves Latin digits, on every money surface; the driver app and the panel convert. So Latin digits
+  in the rider app are its convention — changing one screen to Arabic-Indic would make that screen
+  the odd one, and changing all of them is a design decision, not a defect fix.
+- **The four frozen promo columns are exposed by no schema** — not `RideOut`, not the panel's ride
+  detail. They exist for correctness (an admin editing a code must not move a running ride's
+  discount), and what any human reads is the amount on the `promo` payment row. Guarding them is
+  `tests/test_promo.py`, which reads the database.
 
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
