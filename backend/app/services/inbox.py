@@ -21,16 +21,27 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import UserNotification
 
-# سقفُ قراءةٍ واحد لكل المسارات: الصندوق ينمو بلا تقليم حتى المرحلة 12
+# سقفُ قراءةٍ واحد لكل المسارات
 MAX_PAGE_SIZE = 100
+
+# **مدةُ الحفظ — ثابتٌ في الخدمة لا إعدادٌ per-country** (المرحلة 12، الصيانة):
+# سياسةٌ تشغيليةٌ لا يراها مستخدمٌ ولا تختلف بين سوقٍ وسوق، فحقلٌ لها في اللوحة
+# حالةٌ ثانيةٌ يمكن أن تفترق عن سلوكٍ لا أحدَ يقيسه — نفسُ سببِ كون أرقامِ
+# `services/dispatch.py` ثوابتَ لا إعدادات.
+RETENTION_DAYS = 90
+
+# سقفُ الحذف في الدورة الواحدة. **الحذفُ على دفعاتٍ لا مرةً واحدة**: جدولٌ
+# متراكمٌ من شهورٍ يعني `DELETE` بمئات الألوف يقفل ويُنفخ، ودورةٌ كلَّ يومٍ
+# تلحق بما يتراكم في يوم. والدفعةُ الأولى بعد الترحيل تأخذ أياماً — وذلك مقصود.
+TRIM_BATCH = 5_000
 
 
 def _now() -> datetime:
@@ -92,6 +103,37 @@ async def unread_count(session: AsyncSession, user_id: uuid.UUID) -> int:
         )
         or 0
     )
+
+
+async def trim(
+    session: AsyncSession,
+    *,
+    older_than_days: int = RETENTION_DAYS,
+    limit: int = TRIM_BATCH,
+) -> int:
+    """يحذف أقدمَ ما تجاوز مدةَ الحفظ ويعيد عددَ المحذوف. الـcommit للمستدعي.
+
+    **ويحذف المقروءَ وغيرَه معاً**، وهذا قرارٌ لا سهو: إشعارٌ لم يُقرأ بعد
+    تسعين يوماً لن يُقرأ، والصندوقُ **أثرٌ للحدث لا مصدرُه** — الرحلةُ ودفعتُها
+    وقيدُ الدفتر تحمل الحقيقةَ كلَّها ولا تُحذف. أما إبقاءُ غير المقروء إلى
+    الأبد فيجعل الجدولَ ينمو بمن لا يفتح تطبيقَه، وهو أسوأُ من نمُوِّه بالجميع.
+
+    **ولا يُحذف بـ`DELETE … WHERE created_at < …` مكشوفاً**: صفوفٌ بمئات
+    الألوف في معاملةٍ واحدة تقفل الجدولَ وتنفخه، فالحذفُ بدفعةٍ مسقوفةٍ يعيد
+    عددَها — والمهمةُ الدورية تعود في اليوم التالي لما بقي.
+    """
+    cutoff = _now() - timedelta(days=older_than_days)
+    doomed = (
+        select(UserNotification.id)
+        .where(UserNotification.created_at < cutoff)
+        .order_by(UserNotification.created_at)
+        .limit(limit)
+        .scalar_subquery()
+    )
+    result = await session.execute(
+        delete(UserNotification).where(UserNotification.id.in_(doomed))
+    )
+    return int(result.rowcount or 0)
 
 
 async def mark_read(

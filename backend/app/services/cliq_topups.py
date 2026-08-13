@@ -179,6 +179,24 @@ async def apply_state(
     return order
 
 
+async def drop_unopened(
+    session: AsyncSession, order: ProviderOrder
+) -> ProviderOrder:
+    """يُسقط طلبَ شحنٍ **لم يصل المزودَ** (لا مرجع له). لا دفعةَ هنا تُحرَّر:
+    شحنُ المحفظة لا يمرّ بـ`payments` (القسم 7)، فالساقطُ هو الطلبُ وحده —
+    ورصيدُ صاحبه لم يُمسّ أصلاً لأن القيدَ لا يُكتب إلا عند `paid`.
+    """
+    order = await get_order(session, order.cart_id, for_update=True)
+    if order.status not in OPEN_ORDER_STATUSES:
+        return order
+    if order.provider_order_ref is not None:
+        return order
+    order.status = ProviderOrderStatus.FAILED
+    order.failure_reason = "لم يُفتح لدى المزود"
+    await session.flush()
+    return order
+
+
 async def reconcile(session: AsyncSession, order: ProviderOrder) -> ProviderOrder:
     """يسأل المزود ثم يسوّي — يستدعيه العميل وهو ينتظر وصول حوالته.
 

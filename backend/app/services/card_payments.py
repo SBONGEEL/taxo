@@ -536,6 +536,32 @@ async def _credit_wallet_topup(
 # ---------------------------------------------------------------- الاستعلام
 
 
+async def drop_unopened(
+    session: AsyncSession, order: ProviderOrder
+) -> ProviderOrder:
+    """يُسقط طلباً **لم يصل المزودَ أصلاً** (لا مرجع له) ويُحرّر دفعتَه.
+
+    يستدعيه كنسُ الصيانة وحده (`services/order_maintenance.py`)، وشرطُه هناك:
+    لا `provider_order_ref` ومضى عليه ما يكفي. والبابُ هنا لا هناك لأن تحريرَ
+    صفِّ الدفعة شأنُ هذه القناة — وبغيره تبقى `pending` تحجز مبلغَ رحلةٍ لم
+    تُدفع، وهو ما يمنع صاحبَها من اختيار قناةٍ أخرى.
+    """
+    order = await _locked_order(session, order.cart_id)
+    if order.status not in OPEN_ORDER_STATUSES:
+        return order
+    # **ومرجعٌ ظهر بين القراءتين يمنع الإسقاط**: نداءُ فتحٍ متأخرٌ كتبه، فالطلبُ
+    # موجودٌ لدى المزود بعد كل شيء — والحكمُ يعود إليه لا إلينا
+    if order.provider_order_ref is not None:
+        return order
+
+    payment = (
+        await payments_service.get_payment(session, order.payment_id, for_update=True)
+        if order.payment_id is not None
+        else None
+    )
+    return await _mark_failed(session, order, payment, "لم يُفتح لدى المزود")
+
+
 async def reconcile(session: AsyncSession, order: ProviderOrder) -> ProviderOrder:
     """يسأل المزود عن الطلب ثم يسوّيه — مسار عودة العميل من صفحة الدفع.
 

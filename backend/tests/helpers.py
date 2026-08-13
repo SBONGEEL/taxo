@@ -276,11 +276,19 @@ async def bring_online(
 async def wait_until(
     predicate: Callable[[], Awaitable[Any]],
     *,
-    timeout: float = 10.0,
+    timeout: float = 20.0,
     interval: float = 0.05,
     message: str = "لم يتحقق الشرط",
 ) -> Any:
-    """ينتظر أثر مهمة تعمل في الخلفية — التوزيع لا يستجيب لحظياً."""
+    """ينتظر أثر مهمة تعمل في الخلفية — التوزيع لا يستجيب لحظياً.
+
+    **والسقفُ يحدّ زمنَ الفشل لا زمنَ النجاح**: الشرطُ يُقرأ كلَّ ٥٠ms ويعود
+    لحظةَ تحقّقه، فرفعُ السقف لا يُبطئ اختباراً ناجحاً بشيء. وكان عشرَ ثوانٍ —
+    ضِعفَ مهلة التوزيع نفسِها (خمسٌ في الاختبار) — فسقط
+    `test_a_gendered_request_reaches_further_than_seven_kilometres` مرةً واحدةً
+    في مجموعةٍ كاملةٍ على جهازٍ مشغولٍ ببناءَين، ومرّ منفرداً. وهامشٌ يضيع تحت
+    الحمل ليس هامشاً، ووقتُ الفشل الأطولُ ثمنٌ لا يُدفع إلا عند فشلٍ حقيقي.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         result = await predicate()

@@ -44,12 +44,23 @@ CLIQ_SWEEP_INTERVAL_SECONDS = 300
 # `rewarded_at IS NULL`
 REFERRAL_INTERVAL_SECONDS = 600
 
+# كنسُ الطلبات المعلّقة (المرحلة 12، الصيانة). عشرُ دقائق: مهلةُ إعادة السؤال
+# عشرون دقيقة، فدورةٌ أسرعُ لا تجد ما تسأل عنه — ودورةٌ أبطأُ تُطيل حبسَ راكبٍ
+# دفعتُه المعلّقة تحجز أجرةَ رحلته
+ORDER_SWEEP_INTERVAL_SECONDS = 600
+
+# تقليمُ صندوق الوارد. **يوميّاً لا كلَّ دقيقة**: مدةُ الحفظ تسعون يوماً، وما
+# يتجاوزها في يومٍ يُحذف في دورةٍ واحدة. والدفعةُ مسقوفةٌ فالأولى بعد التشغيل
+# تأخذ أياماً — وذلك مقصودٌ لا عجز
+NOTIFICATION_TRIM_INTERVAL_SECONDS = 86_400
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
     backend=settings.redis_url,
     include=[
         "app.tasks.notifications",
+        "app.tasks.maintenance",
         "app.tasks.payments",
         "app.tasks.referrals",
         "app.tasks.stops",
@@ -86,6 +97,14 @@ celery_app.conf.update(
         "pay-referral-rewards": {
             "task": "app.tasks.referrals.pay_referral_rewards",
             "schedule": REFERRAL_INTERVAL_SECONDS,
+        },
+        "sweep-provider-orders": {
+            "task": "app.tasks.maintenance.sweep_provider_orders",
+            "schedule": ORDER_SWEEP_INTERVAL_SECONDS,
+        },
+        "trim-notifications": {
+            "task": "app.tasks.maintenance.trim_notifications",
+            "schedule": NOTIFICATION_TRIM_INTERVAL_SECONDS,
         },
     },
 )

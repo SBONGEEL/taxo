@@ -254,6 +254,30 @@ already warned about. `FLAG_LABEL` needs no check; it is a `Record<FeatureKey, �
 owns it. Both halves were verified by reproducing them (and the union half caught a real clobbering of
 `types.ts` minutes after being written).
 
+**The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`, seven beat jobs now).
+Neither is interesting except for one rule each, and both rules are about what the job must *not* do.
+
+**The inbox trim deletes by age alone, read or unread** (`inbox.trim`, 90 days, 5000 rows a cycle).
+An unread notification older than three months will not be read, and the inbox is **the trace of an
+event, not its source** — the ride, its payments and the ledger hold the truth and are never trimmed.
+Keeping unread rows forever would grow the table by exactly the people who never open the app. The
+retention is a module constant, not a per-country setting: an operational number no user sees and no
+market differs on, so a field for it in the panel is a second state that can disagree with behaviour
+nobody measures.
+
+**The stale-order sweep asks the provider and never invents a verdict** (`order_maintenance.sweep`).
+What it exists to fix is not litter: an abandoned card order leaves a `pending` payment, and `pending`
+is in `OWING_PAYMENT_STATUSES` — so the ride reads as paid by a payment that will never confirm, and
+its owner cannot pay by any other channel. That is `card_payments._mark_failed`'s own docstring, and
+this job is what runs it when nobody returns to the page. But **`apply_state` refuses anything that is
+not `created`**, so a locally-written `cancelled` would make the provider's later webhook be ignored —
+a card charged and a wallet never credited. Hence: orders **with** a provider ref are re-asked
+(`reconcile`) and left open if the provider still says open; orders **without** one never reached the
+provider, so they are dropped through their own channel's door (`drop_unopened`, which releases the
+payment) after 30 minutes — long enough that an interrupted open call's webhook has landed, and the
+residual risk is written down rather than denied. Each order commits in its own transaction, so one
+provider outage cannot undo what was already settled.
+
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
 `FUTURE-FEATURES`; scheduled rides and sharing are unstarted, and **surge the owner decided not to
@@ -289,9 +313,11 @@ the ones this project has shipped before, and every one found since has been of 
    real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
    `services/payout/` say the same in their module docstrings. They are arranged so being wrong
    cannot move money wrongly, but they cannot go to production unverified.
-4. **Two maintenance jobs belong to stage 12 and do not exist yet**: nothing trims
-   `user_notifications` (the table grows; reads are capped and indexed) and no Celery sweep expires
-   stale `provider_orders`.
+4. **The scheduled-rides spec (§5.11, stage 12-ط) waits on the owner** — no code under it. Its
+   pivotal decision is that **a booking is not a ride**: `ride_bookings` is its own row and the
+   `rides` row is born at execution, because a `scheduled` ride sitting in wait would break
+   `uq_rides_active_rider` (blocking today's ride because you booked tomorrow's), freeze a commission
+   a week early, and teach a new status to every active-status list — the `at_stop` lesson.
 5. **`FUTURE-FEATURES.md` items 45–49** are the deferred pieces of the women's service and its
    design: the in-ride emergency button (deliberately *not* half-built — a button promising help
    nobody answers is worse than none), referral incentives for female drivers, "wait for a female
