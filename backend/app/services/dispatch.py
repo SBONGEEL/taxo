@@ -401,6 +401,33 @@ async def _mark_no_driver_found(redis: Redis, ride_id: uuid.UUID) -> None:
         )
 
 
+async def _try_sharing(ride_id: uuid.UUID) -> bool:
+    """يحاول إلحاق الرحلة بمجموعةٍ قائمة — `True` إن التحقت فلا توزيع.
+
+    **وفشلُه ليس فشلَ الطلب**: أيُّ تعثّرٍ هنا يعيد `False` فتمضي الرحلةُ في
+    التوزيع العادي. المشاركةُ **زيادةٌ محتملة** بنصِّ قرار المالك الثالث — الوعدُ
+    محفوظٌ بخصمه ولو لم يوجد شريك — فمعاملةٌ متعثّرةٌ في بحثٍ عن شريكٍ يجب ألّا
+    تترك راكباً بلا سيارة.
+    """
+    from app.services import sharing as sharing_service
+
+    try:
+        async with SessionLocal() as session:
+            ride = await _load_ride(session, ride_id)
+            if ride is None or ride.share_discount_percent_at_ride <= 0:
+                return False
+            rider = await session.get(User, ride.rider_id)
+            if rider is None:  # pragma: no cover - مفتاحٌ أجنبيٌّ يمنعه
+                return False
+            joined = await sharing_service.try_join(
+                session, get_redis_client(), ride=ride, rider=rider
+            )
+            return joined is not None
+    except Exception:  # noqa: BLE001 - مشاركةٌ متعثّرة لا تُلغي توزيعاً
+        logger.warning("تعثّرت مطابقةُ المشاركة للرحلة %s", ride_id, exc_info=True)
+        return False
+
+
 async def _run(ride_id: uuid.UUID) -> None:
     from app.services import rides as rides_service
 
@@ -416,6 +443,14 @@ async def _run(ride_id: uuid.UUID) -> None:
             return  # أُلغيت قبل أن يبدأ البحث
         await rides_service.mark_searching(session, locked)
         await session.commit()
+
+    # **المشاركةُ تُجرَّب قبل أوّل عرض** (12-ي): المقعدُ الثاني في سيارةٍ سائرةٍ
+    # أصلاً أسرعُ للراكب وأربحُ للكبتن من إيقاظ سيارةٍ أخرى — وإن لم يوجد، تمضي
+    # الحلقةُ أدناه كأن الميزةَ غيرُ موجودة. **ومكانُه هنا لا في الراوتر**: طلبُ
+    # الرحلة يجيب فوراً بـ`requested`، والمطابقةُ نداءُ Mapbox لا يجوز أن يقف
+    # عليه ردُّ الطلب — كما لا يقف عليه العرضُ الأول.
+    if await _try_sharing(ride_id):
+        return
 
     while attempts < MAX_ATTEMPTS and time.monotonic() < deadline:
         async with SessionLocal() as session:

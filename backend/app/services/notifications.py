@@ -741,3 +741,55 @@ async def publish_share_partner_cancelled(
             },
         ),
     )
+
+
+async def publish_share_partner_joined(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    lead_rider_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    detour_minutes: str,
+) -> None:
+    """التحق شريكٌ بمجموعة الرحلة (المرحلة 12-ي) — للكبتن ولصاحب المقعد الأول.
+
+    **ولا يُخطر به الملتحقُ من هنا**: رحلتُه انتقلت إلى `accepted` بكبتنٍ معيَّن،
+    فحدثُه هو `driver_assigned` نفسُه الذي يصل كلَّ راكبٍ أُسند إليه كبتن — بابٌ
+    واحدٌ لحالةٍ واحدة، لا رسالةٌ ثانيةٌ تقول نصفَ ما تقوله الأولى.
+
+    **والكبتنُ يُخطَر ولا يُستأذَن**، وهذا ما يجعله مقبولاً: الرحلةُ عُرضت عليه
+    معلَّمةً بالمشاركة وقَبِلها بها — فالمقعدُ الثاني احتمالٌ وافق عليه، لا أمرٌ
+    وقع عليه. ونصُّه يحمل **دقائقَ الالتفاف** لأن ما يعنيه عملياً طولُ طريقه.
+
+    **وصاحبُ المقعد الأول يُخطَر كذلك**: راكبٌ ثانٍ سيصعد سيارتَه، وهو من طلب
+    المشاركة أصلاً — فاكتشافُه بالمفاجأة على الرصيف هو ما يُفسد ميزةً وافق عليها.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="انضم راكب ثانٍ",
+            body="أُضيف راكبٌ ثانٍ إلى رحلتك المشتركة — راجع المسار في التطبيق.",
+            data={
+                "type": "share_partner_joined",
+                "ride_id": str(ride_id),
+                "detour_minutes": detour_minutes,
+            },
+        ),
+    )
+    await _safe_notify(
+        session,
+        redis,
+        user_id=lead_rider_id,
+        message=PushMessage(
+            title="وجدنا شريكاً لرحلتك",
+            body="سيشاركك الرحلة راكبٌ آخر كما طلبت، وسعرك المخصوم كما هو.",
+            data={
+                "type": "share_partner_joined",
+                "ride_id": str(ride_id),
+                "detour_minutes": detour_minutes,
+            },
+        ),
+    )

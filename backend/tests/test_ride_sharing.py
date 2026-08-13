@@ -28,6 +28,7 @@ from tests.helpers import (
     enable_features,
     rider_session,
     wait_for_offer,
+    wait_until,
 )
 
 DISCOUNT = Decimal("25.00")
@@ -44,6 +45,25 @@ async def _set_discount(session_factory, percent: Decimal = DISCOUNT) -> None:
             row = RideSharingSetting(country_code=CountryCode.JO)
             session.add(row)
         row.discount_percent = percent
+        await session.commit()
+
+
+async def _widen_matching(session_factory) -> None:
+    """يوسّع أرقامَ المطابقة الثلاثة حتى لا يردَّ الاختبارَ رقمُ إعداد.
+
+    ومسارُ الاختبار عشرون دقيقةً لكل ساق، فالمشتركةُ ثلاثُ سيقانٍ والالتفافُ
+    أربعون. والحدودُ نفسُها مقيسةٌ في `test_ride_sharing_matching.py` — هنا
+    تُوسَّع عمداً كي يقيس هذا الاختبارُ **الباب** لا الحدّ.
+    """
+    async with session_factory() as session:
+        row = await session.scalar(
+            select(RideSharingSetting).where(
+                RideSharingSetting.country_code == CountryCode.JO
+            )
+        )
+        row.corridor_km = Decimal("5.000")
+        row.max_detour_minutes = 45
+        row.partner_wait_seconds = 300
         await session.commit()
 
 
@@ -381,3 +401,100 @@ async def test_cancelling_after_departure_keeps_the_partners_price(
     async with session_factory() as session:
         kept = await session.get(Ride, other_id)
     assert kept.share_discount_percent_at_ride == DISCOUNT
+
+
+async def test_a_second_request_joins_the_first_ride_end_to_end(
+    client: AsyncClient, session_factory, jordan_settings, sharing_on
+):
+    """**الميزةُ من بابها الحقيقي**: طلبان عبر الـAPI، وسيارةٌ واحدةٌ تحملهما.
+
+    وهذا الاختبارُ هو ما يفصل «قاعدةٌ مكتوبة» عن «قاعدةٌ يبلغها أحد»: كلُّ ما
+    قبله يستدعي الخدمةَ مباشرةً، وهذا يمرّ من `POST /rides` ومن مهمة التوزيع —
+    فلو لم يكن للمطابقة بابٌ في المسار الحيّ لبقيت خضراءَ ولا تعمل. وهذا الشكلُ
+    بعينه شحن في هذا المشروع من قبل: قاعدةٌ بلا باب.
+
+    **ولا يُعرض الطلبُ الثاني على أحد**: من التحق دخل على قبولٍ وقع، فلا بطاقةَ
+    عرضٍ ولا عدّادَ عشرين ثانية.
+    """
+    await _widen_matching(session_factory)
+    driver = await approved_driver(client, session_factory)
+    await bring_online(client, driver)
+
+    first_rider = await rider_session(client)
+    first = await _request(client, first_rider["headers"], share=True)
+    assert first["status"] == 201, first["body"]
+    await wait_for_offer(first["body"]["id"], driver["driver_id"])
+    accepted = await client.post(
+        f"/rides/{first['body']['id']}/accept", headers=driver["headers"]
+    )
+    assert accepted.status_code == 200, accepted.text
+
+    second_rider = await rider_session(
+        client,
+        {
+            "phone": "+962795550999",
+            "password": "Rider12345",
+            "name": "الراكب الثاني",
+            "country_code": "JO",
+            "role": "rider",
+        },
+    )
+    second = await _request(client, second_rider["headers"], share=True)
+    assert second["status"] == 201, second["body"]
+
+    async def _joined():
+        async with session_factory() as session:
+            ride = await session.get(Ride, second["body"]["id"])
+            return ride if ride.status is RideStatus.ACCEPTED else None
+
+    joined = await wait_until(_joined, message="لم يلتحق الطلبُ الثاني بالمجموعة")
+
+    async with session_factory() as session:
+        lead = await session.get(Ride, first["body"]["id"])
+        partner = await session.get(Ride, joined.id)
+        assert partner.driver_id == lead.driver_id
+        assert partner.share_group_id == lead.share_group_id is not None
+        assert partner.share_seat == 2 and lead.share_seat == 1
+
+
+async def test_the_estimate_carries_the_shared_price(
+    client: AsyncClient, session_factory, jordan_settings, sharing_on
+):
+    """**السعرُ المخصوم يصل محسوباً**، فلا يضرب التطبيقُ نسبةً في أجرة.
+
+    وحقلٌ لا يقرؤه اختبارٌ حقلٌ يمكن أن يختفي بلا أن يسقط شيء — ثم يرسم التطبيقُ
+    خيارَ مشاركةٍ بلا سعر، أو يخترع صفراً يُقرأ «مجاناً».
+    """
+    rider = await rider_session(client)
+    response = await client.post(
+        "/rides/estimate",
+        json={
+            "pickup": {"lat": 31.95, "lng": 35.91},
+            "dropoff": {"lat": 31.98, "lng": 35.86},
+            "vehicle_category": "economy",
+        },
+        headers=rider["headers"],
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    fare = Decimal(body["estimated_fare"])
+    assert Decimal(body["share_discount"]) == fare * DISCOUNT / 100
+    assert Decimal(body["share_fare"]) == fare - Decimal(body["share_discount"])
+
+
+async def test_a_market_without_sharing_publishes_no_shared_price(
+    client: AsyncClient, session_factory, jordan_settings
+):
+    """و`null` لا صفر: صفرٌ في حقل مالٍ يُقرأ سعراً، والغيابُ يُقرأ غياباً."""
+    rider = await rider_session(client)
+    response = await client.post(
+        "/rides/estimate",
+        json={
+            "pickup": {"lat": 31.95, "lng": 35.91},
+            "dropoff": {"lat": 31.98, "lng": 35.86},
+            "vehicle_category": "economy",
+        },
+        headers=rider["headers"],
+    )
+    assert response.json()["share_discount"] is None
+    assert response.json()["share_fare"] is None

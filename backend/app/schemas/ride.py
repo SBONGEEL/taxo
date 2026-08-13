@@ -56,6 +56,12 @@ class RideEstimateOut(BaseModel):
     duration_min: Decimal
     estimated_fare: Decimal
     minimum_fare_applied: bool
+    # **سعرُ المشاركة يُحسب هنا لا في التطبيق** (القسم 14): نسبةٌ مضروبةٌ في
+    # أجرةٍ حسابُ مال، وواجهةٌ تضربها تصير طرفاً في تحديد ما يُدفع. و`null`
+    # تعني «لا مشاركةَ في هذا السوق» — فلا يرسم التطبيقُ خياراً بلا سعر،
+    # ولا يخترع صفراً يقرأ «مجاناً»
+    share_discount: Decimal | None = None
+    share_fare: Decimal | None = None
 
 
 class RideCreateRequest(RideEstimateRequest):

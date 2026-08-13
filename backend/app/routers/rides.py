@@ -77,7 +77,12 @@ async def estimate_ride(
         dropoff=_coords(payload.dropoff),
         stops=[_coords(stop) for stop in payload.stops],
     )
+    shared = await sharing.preview(
+        session, fare=quote.fare, country=rider.country_code
+    )
     return RideEstimateOut(
+        share_discount=shared[0] if shared else None,
+        share_fare=shared[1] if shared else None,
         country_code=quote.country_code,
         vehicle_category=quote.vehicle_category,
         currency=quote.currency,
