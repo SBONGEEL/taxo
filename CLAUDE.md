@@ -28,7 +28,7 @@ recorded, and no code exists for it**; it is the one thing left before stage 13,
 decided not to build** (with no real demand data it would be tuned wrong and turn riders away), so
 stage 12 closes with sharing.
 
-**681 backend tests pass** across 61 test files — measured, not estimated, on 2026-08-13. All three
+**689 backend tests pass** across 62 test files — measured, not estimated, on 2026-08-13. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -402,11 +402,32 @@ from existing without a group.
 group. No unique index compares two rows, and the failure mode is mis-grouping rather than money from
 nothing — so it is written down as the service's job under the lock, not assumed to be covered.
 
-**Still unbuilt for 12-ي**: `services/sharing.py` (corridor matching against the first ride's route,
-the detour cap, the partner wait window — three per-country numbers now seeded in
-`ride_sharing_settings`), the discount as a company-borne `promo`-style payment row, dispatch and
-request-path integration, the cancellation rules (SPEC decisions 5–8), notifications, the money-path
-concurrency tests, and both PWAs.
+**The money path is now built and tested too** (`services/sharing.py`, migration `0028`,
+`tests/test_ride_sharing.py`). A rider sends `share: true`; the per-country percent is **frozen on the
+ride** (`share_discount_percent_at_ride`, zero meaning "not shared" — so there is no second boolean
+that can disagree with it); at completion a **company-borne payment row with method `share`** is
+created and confirmed through `payments.settle`, exactly as the coupon does. The driver is paid on the
+undiscounted fare and the rider's wallet is never touched, which is decision 3's whole point — and
+**the discount applies even with no partner**, because decision 3 says the promise is kept.
+
+**`share` is its own `PaymentMethod`, and the reason is not the label.** `promo.spent()` measures a
+coupon's budget by summing `promo` rows, so a share discount written on that channel would eat the
+**coupon's** budget — a money cap consumed by something that isn't it. The label follows: «خصم كوبون»
+on a ride with no coupon is a lie.
+
+**And the same mistake then appeared in two more places, so the concept is now named once.**
+`stats._payment_mix` excluded `promo` *by name* to answer "what do people pay with"; `share` is the
+same kind and silently entered the mix as if riders had chosen it (`test_admin_stats` caught it). The
+rider app's `PayableMethod = Exclude<PaymentMethod, "promo">` had the identical shape and put `share`
+in the payment picker — caught by `tsc` at the `CTA` record. Both now read from a named concept:
+`models/payment.py::PLATFORM_WRITTEN_METHODS` in the backend, `PlatformWrittenMethod` in the app.
+
+**Still unbuilt for 12-ي**: the matching itself — the corridor around the first ride's route, the
+detour cap and the partner wait window (three per-country numbers already seeded in
+`ride_sharing_settings`, and a Mapbox call per candidate), which is what actually puts a second rider
+in the car; dispatch integration for offering a group; the cancellation rules (SPEC decisions 5–8);
+notifications; and both PWAs. Until matching exists every shared ride is a group of one — which is a
+**correct, shippable state** by decision 3, not a broken one.
 
 **The original text of this section follows, and is still the design.** `SPEC.md` §5.12 holds the design and the
 owner's four decisions, and a fresh session can start from there: **two riders to a group** keyed by

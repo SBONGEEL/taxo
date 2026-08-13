@@ -60,7 +60,10 @@ async def test_overview_counts_and_sums_completed_rides(
     ]
     assert len(body["rides_by_hour"]) == 24
     assert sum(body["rides_by_hour"]) == 1
-    # القنواتُ الأربع حاضرةٌ دائماً ولو بصفر — رسمٌ بخانةٍ غائبة يقرأ ناقصاً
+    # القنواتُ الأربع حاضرةٌ دائماً ولو بصفر — رسمٌ بخانةٍ غائبة يقرأ ناقصاً.
+    # **وقنواتُ المنصة خارجها** (`PLATFORM_WRITTEN_METHODS`): خصما الكوبون
+    # والمشاركة تدفعهما الشركةُ ولا يختارهما راكب، فشريحةٌ لهما في «بأي شيء
+    # يدفع الناس» تقرأ قرارَ شركةٍ سلوكَ ركّاب
     assert set(body["payment_mix"]) == {"cash", "cliq", "card", "wallet"}
 
 

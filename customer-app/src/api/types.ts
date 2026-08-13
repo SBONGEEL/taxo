@@ -26,7 +26,8 @@ export type RideStatus =
 
 /** ومنها `promo` (12-ز): **قناةٌ لا يدفعها الراكب** — تُنشئها المنصةُ بقيمة
  *  خصم الكوبون فتظهر صفَّاً في الإيصال. لا تُعرض خياراً في شاشة الدفع. */
-export type PaymentMethod = "cash" | "cliq" | "card" | "wallet" | "promo";
+export type PaymentMethod =
+  "cash" | "cliq" | "card" | "wallet" | "promo" | "share";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 

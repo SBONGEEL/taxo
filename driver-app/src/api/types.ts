@@ -376,7 +376,8 @@ export interface MySubscription {
  * على `payments.ride_id` أصلاً (القسم 6). */
 /** ومنها `promo` (12-ز): خصمُ كوبونٍ تدفعه الشركة — يُقيَّد للكبتن كأي دفعةٍ
  *  تمرّ بالمنصة، فيراه في كشفه لا في «تقبض الآن». */
-export type PaymentMethod = "cash" | "wallet" | "card" | "cliq" | "promo";
+export type PaymentMethod =
+  "cash" | "wallet" | "card" | "cliq" | "promo" | "share";
 /** مرآةُ `PaymentStatus` في `app/models/enums.py` — خمسُ قيمٍ لا ستّ.
  *
  * ولا `awaiting_confirmation` فيها: انتظارُ تأكيد الكبتن **ليس حالاً** بل

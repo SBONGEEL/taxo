@@ -225,7 +225,8 @@ export interface Withdrawal {
 
 // ------------------------------------------------------------ النزاعات
 
-export type PaymentMethod = "cash" | "cliq" | "card" | "wallet" | "promo";
+export type PaymentMethod =
+  "cash" | "cliq" | "card" | "wallet" | "promo" | "share";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 export type DisputeResolution = "paid" | "unpaid";

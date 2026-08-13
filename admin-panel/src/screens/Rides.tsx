@@ -78,6 +78,8 @@ const METHOD_LABEL: Record<PaymentMethod, string> = {
   card: "بطاقة",
   wallet: "محفظة",
   promo: "خصم كوبون",
+  // خصمُ المشاركة (12-ي) — تتحمّله الشركة كالكوبون، وقناةٌ مستقلةٌ عنه
+  share: "خصم مشاركة",
 };
 
 const COLUMNS = "0.7fr 1fr 1.1fr 1.1fr 1.6fr 0.9fr 0.9fr 1fr";

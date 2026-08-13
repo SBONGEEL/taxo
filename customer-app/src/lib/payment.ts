@@ -32,8 +32,19 @@ import { Banknote, CreditCard, Smartphone, Wallet } from "lucide-react";
 
 import type { CountryConfig, PaymentMethod } from "@/api/types";
 
-/** ما يجوز لصاحب الحساب اختياره — و`promo` تكتبها المنصّة وحدها. */
-export type PayableMethod = Exclude<PaymentMethod, "promo">;
+/** القنواتُ التي **تكتبها المنصّةُ عن الراكب** ولا يختارها أحد: خصمُ الكوبون
+ *  (12-ز) وخصمُ المشاركة (12-ي). كلتاهما تتحمّلها الشركةُ وتُنشأ عند الإنهاء.
+ *
+ *  **وقائمةٌ لا قيمةٌ واحدة** لأن ما يجمعها مفهومٌ لا اسم: كُتب هذا أصلاً
+ *  `Exclude<PaymentMethod, "promo">` وكان صحيحاً بقناةٍ واحدة، ثم أضافت 12-ي
+ *  `share` فصارت **تظهر خياراً في مُنتقي الدفع** — أي زرٌّ يعد الراكبَ بأن
+ *  يدفع بخصمٍ تتحمّله الشركة. وأمسكه المصرّفُ عند `CTA` لا في متصفح، لأن
+ *  `Record<PayableMethod, …>` يفرض عضواً لكلِّ قيمة.
+ */
+type PlatformWrittenMethod = "promo" | "share";
+
+/** ما يجوز لصاحب الحساب اختياره. */
+export type PayableMethod = Exclude<PaymentMethod, PlatformWrittenMethod>;
 
 export interface PaymentChannel {
   method: PayableMethod;

@@ -233,6 +233,8 @@ async def request_ride(
     stops: Sequence[StopRequest] = (),
     promo_code: str | None = None,
     scheduled_for: datetime | None = None,
+    share: bool = False,
+    share_gender_confirmed: bool = False,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -271,6 +273,26 @@ async def request_ride(
         # يُبتلع صامتاً: طلبٌ يُسنَد لأيّ كبتنٍ بعد أن طُلب فيه غيرُه أسوأ من
         # طلبٍ يُرفض بسببه
         raise WomenServiceUnavailable()
+
+    # **المشاركةُ تُفحص عند الإنشاء كالمحطات** (12-ي): واجهةٌ تخفي المفتاح لا
+    # تمنع طلباً مصنوعاً بيد. و`share_percent` صفرٌ يعني رحلةً غيرَ مشتركة
+    share_percent = Decimal("0.00")
+    if share:
+        from app.services import sharing as sharing_service
+
+        await sharing_service.require_available(session, rider.country_code)
+        # **أضيقُ من المواصفة بقرار المالك الرابع**: طلبٌ بتفضيلٍ نسائيٍّ لا
+        # يُشارَك إلا بخيارٍ صريحٍ من صاحبته — والقبولُ الصامتُ لا يكفي أمناً
+        sharing_service.guard_gender_choice(
+            preference, share_confirmed=share_gender_confirmed
+        )
+        # **بلا محطاتٍ في القطع الأول** (SPEC §5.12): مسارٌ بمحطاتٍ لا يُطابَق
+        # عليه ممرٌّ، ووعدُ التفافٍ محدودٍ لا يُحفظ فوق التفافاتٍ اختارها الأول
+        if stops:
+            raise InvalidInput("المشاركة لا تجتمع مع محطاتٍ وسيطة")
+        row = await sharing_service.settings_for(session, rider.country_code)
+        assert row is not None  # `require_available` تحقّق منه
+        share_percent = row.discount_percent
 
     # السعر يُعاد حسابه هنا ولا يُقرأ من طلب العميل مهما أرسل
     quote = await pricing.estimate(
@@ -313,6 +335,8 @@ async def request_ride(
         stop_free_minutes_at_ride=rule.stop_free_minutes,
         stop_price_per_min_at_ride=rule.stop_price_per_min,
         stop_max_wait_minutes_at_ride=rule.stop_max_wait_minutes,
+        # تُجمَّد كالعمولة: تعديلُ النسبة في اللوحة يحكم ما يأتي لا رحلةً سائرة
+        share_discount_percent_at_ride=share_percent,
     )
     session.add(ride)
 
@@ -447,6 +471,18 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
         rider = await session.get(User, ride.rider_id)
         if rider is not None:
             await promo_service.settle_discount(session, ride, rider=rider)
+
+    # **وخصمُ المشاركة صفٌّ ثانٍ مستقل** (12-ي) بنفس الآلية وبقناته `share`.
+    # ويجتمعان على رحلةٍ واحدة بلا قاعدةٍ جديدة: الدفعُ المختلط من 6-أ يجمع
+    # الصفوفَ ويطرحها من `final_fare`، فتُخصم النسبتان معاً ويقبض الكبتنُ كأن
+    # لا خصمَ في واحدةٍ منهما. **ومستقلٌّ لا مدموج** لأن `promo.spent()` يقيس
+    # ميزانيةَ الكوبون بجمع دفعات `promo` وحدَها
+    if ride.share_discount_percent_at_ride > 0:
+        from app.services import sharing as sharing_service
+
+        rider = await session.get(User, ride.rider_id)
+        if rider is not None:
+            await sharing_service.settle_discount(session, ride, rider=rider)
 
     driver.current_ride_id = None
     return await _flush_and_reload(session, ride)

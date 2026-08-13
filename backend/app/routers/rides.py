@@ -110,6 +110,8 @@ async def request_ride(
         dropoff_address=payload.dropoff_address,
         gender_preference=payload.gender_preference,
         promo_code=payload.promo_code,
+        share=payload.share,
+        share_gender_confirmed=payload.share_gender_confirmed,
         stops=[
             rides_service.StopRequest(
                 lat=stop.lat, lng=stop.lng, address=stop.address

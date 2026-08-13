@@ -67,6 +67,19 @@ DIRECTLY_COLLECTED_METHODS: tuple[PaymentMethod, ...] = (
 # (`ride_earning` — القسم 6.3)، فالفئة الثالثة تختلف في طرفٍ واحد لا في طرفين.
 WALLET_FUNDED_METHODS: tuple[PaymentMethod, ...] = (PaymentMethod.WALLET,)
 
+# قنواتٌ **تكتبها المنصةُ عن الراكب ولا يختارها أحد**: خصمُ الكوبون (12-ز)
+# وخصمُ المشاركة (12-ي). كلتاهما تتحمّلها الشركةُ وتُنشأ وتُؤكَّد عند الإنهاء.
+#
+# **وقائمةٌ لا مقارنةٌ باسمٍ واحد**، لأن ما يجمعها مفهومٌ لا اسم: كان
+# `stats._payment_mix` يستثني `promo` وحدَها بالاسم، فأضافت 12-ي قناةً من
+# الصنف نفسِه فدخلت المزيجَ وصارت تُقرأ **سلوكَ ركّابٍ** وهي قرارُ شركة. وقد
+# وقع الشيءُ نفسُه في `customer-app/src/lib/payment.ts` (حيث أدخلها في مُنتقي
+# الدفع) — نفسُ العطب في طبقتين، فيُسمّى المفهومُ مرةً هنا ويُقاس عليه.
+PLATFORM_WRITTEN_METHODS: tuple[PaymentMethod, ...] = (
+    PaymentMethod.PROMO,
+    PaymentMethod.SHARE,
+)
+
 
 class Payment(UUIDMixin, TimestampMixin, Base):
     """دفعة واحدة على رحلة، بقناة واحدة."""

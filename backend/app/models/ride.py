@@ -135,6 +135,11 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "share_seat IN (1, 2) AND (share_seat = 1 OR share_group_id IS NOT NULL)",
             name="ride_share_seat_valid",
         ),
+        CheckConstraint(
+            "share_discount_percent_at_ride >= 0 "
+            "AND share_discount_percent_at_ride <= 100",
+            name="ride_share_discount_percent_range",
+        ),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
             "uq_rides_active_rider",
@@ -269,6 +274,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     # و`NULL` تعني **رحلةً منفردة**، وهي الحالُ الغالبة.
     share_group_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), nullable=True, index=True
+    )
+    # **نسبةُ خصم المشاركة مجمَّدةٌ لحظة الطلب** كالعمولة ورسومِ الانتظار
+    # (12-ب): مشرفٌ يعدّل النسبة ورحلةٌ سائرةٌ الآن لا يتغيّر خصمُها تحت عين
+    # راكبها. و**صفرٌ يعني رحلةً غيرَ مشتركة** — فلا عمودَ `share_requested`
+    # ثانٍ يمكن أن يخالفه: وجودُ نسبةٍ هو الطلبُ والخصمُ معاً
+    share_discount_percent_at_ride: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0.00"), server_default="0"
     )
     # **المقعدُ هو ما يحرسه الفهرس** لا المجموعة (انظر `__table_args__`):
     # ١ للرحلة الأولى وكلِّ رحلةٍ منفردة، و٢ لشريكها. وافتراضُه ١ يجعل كلَّ

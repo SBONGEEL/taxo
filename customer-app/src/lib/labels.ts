@@ -55,6 +55,9 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "كاش",
   // خصمُ كوبونٍ (12-ز) — **تدفعه الشركة** لا الراكب، فيقرؤه صفَّاً في إيصاله
   promo: "خصم كوبون",
+  // خصمُ المشاركة (12-ي) — تدفعه الشركةُ كذلك، **وقناةٌ مستقلةٌ عن الكوبون**
+  // كي لا يُقرأ خصمُ مشاركةٍ «خصم كوبون» على رحلةٍ بلا كوبون
+  share: "خصم مشاركة",
 };
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {

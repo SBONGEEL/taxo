@@ -69,6 +69,14 @@ class RideCreateRequest(RideEstimateRequest):
     # خاطئ **يرفض الطلبَ كلَّه** ولا يمرّ بلا خصم: من كتب رمزاً ينتظر خصمه، ورحلةٌ
     # تبدأ بسعرٍ كامل بعد رمزٍ سقط صامتاً شكوى دعمٍ لا صفقة
     promo_code: str | None = Field(default=None, max_length=32)
+    # **المشاركة (12-ي)**: الخصمُ يُطبَّق ولو لم يوجد شريك — الشركةُ تتحمّله
+    # (قرارُ المالك الثالث)، فالوعدُ يُحترم ولا يُفاجأ صاحبُه برفع سعر
+    share: bool = False
+    # **خيارٌ صريحٌ منفصل، وهو شرطُ المشاركة على طلبٍ مجنَّس** (قرارُ المالك
+    # الرابع): «كانت ستوافق لو سُئلت» ليست موافقة. ولا يُدمج مع `share` في حقلٍ
+    # واحد لأن ما يقوله كلٌّ منهما مختلف — الأولُ «أقبل المشاركة»، والثاني
+    # «أقبلها وأنا أعلم أن شريكي قد لا يوافق تفضيلي في جنس الكبتن»
+    share_gender_confirmed: bool = False
 
 
 class RideCancelRequest(BaseModel):
@@ -198,6 +206,18 @@ class RideOut(BaseModel):
     stop_price_per_min: Decimal = Decimal("0.000")
     stop_max_wait_minutes: int = 0
 
+    # ------------------------------------ مشاركةُ الرحلة (12-ي)
+    # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
+    # «رحلة مشتركة» ويعرض الراكبُ توفيرَه. وصفرٌ يعني رحلةً غيرَ مشتركة.
+    #
+    # **ولا يُنشر مبلغُ الخصم هنا**: يُحسب على `final_fare` عند الإنهاء، وقبله
+    # لا وجودَ له — ورقمٌ يُعرض قبل أن يوجد وعدٌ لا يملكه أحد. وما يقرؤه أيُّ
+    # إنسانٍ بعد الإنهاء صفُّ الدفعة بقناة `share` في الإيصال
+    share_discount_percent: Decimal = Decimal("0.00")
+    # هل معك راكبٌ آخر فعلاً؟ — و`None` تعني رحلةً منفردة
+    share_group_id: uuid.UUID | None = None
+    share_seat: int = 1
+
     created_at: datetime
     accepted_at: datetime | None
     arrived_at: datetime | None
@@ -247,6 +267,9 @@ class RideOut(BaseModel):
         return cls(
             stops=stops,
             current_leg=ride.current_leg,
+            share_discount_percent=ride.share_discount_percent_at_ride,
+            share_group_id=ride.share_group_id,
+            share_seat=ride.share_seat,
             waiting_charge=pricing.waiting_charge(
                 ride.stops,
                 free_minutes=ride.stop_free_minutes_at_ride,

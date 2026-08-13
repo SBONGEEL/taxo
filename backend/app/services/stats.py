@@ -36,7 +36,7 @@ from app.models.enums import (
     RideStatus,
     WithdrawalStatus,
 )
-from app.models.payment import Payment
+from app.models.payment import PLATFORM_WRITTEN_METHODS, Payment
 from app.models.ride import ACTIVE_RIDER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
@@ -298,11 +298,15 @@ async def _payment_mix(
     عدداً لأن السؤال «بأي شيء يدفع الناس»، ومبلغُ قناةٍ واحدة قد ترفعه رحلةٌ
     طويلة فتقرأ اللوحة عادةً لا وجود لها.
 
-    **و`promo` خارج المزيج** (12-ز): السؤال «بأي شيء **يدفع الناس**»، وخصمُ
-    الكوبون قناةٌ لا يختارها أحد — تدفعها الشركةُ عن الراكب ولا تُعرض له في شاشة
-    الدفع أصلاً. وإدخالُها يضيف شريحةً تُقرأ سلوكَ ركّابٍ وهي قرارُ تسويقٍ، ويغيّر
-    معنى رسمٍ قائمٍ في اللوحة بلا أن يطلب أحدٌ تغييره. وكلفةُ الحملة لها أرقامُها
-    في جدول الرموز (`spent`/`committed`).
+    **وقنواتُ المنصة خارج المزيج** (`PLATFORM_WRITTEN_METHODS`): السؤال «بأي شيء
+    **يدفع الناس**»، وخصما الكوبون (12-ز) والمشاركة (12-ي) قناتان لا يختارهما
+    أحد — تدفعهما الشركةُ عن الراكب ولا تُعرضان له في شاشة الدفع أصلاً.
+    وإدخالُهما يضيف شرائحَ تُقرأ سلوكَ ركّابٍ وهي قراراتُ شركة، ويغيّر معنى رسمٍ
+    قائمٍ في اللوحة بلا أن يطلب أحدٌ تغييره. وكلفةُ الحملة لها أرقامُها في جدول
+    الرموز (`spent`/`committed`).
+
+    **والاستثناءُ بالقائمة لا بالاسم**: كان `promo` وحدَها مستثناةً بالاسم، فدخلت
+    `share` المزيجَ أولَ ما أُضيفت — وهو ما أسقط `test_admin_stats`.
     """
     rows = await session.execute(
         select(Payment.method, func.count())
@@ -316,10 +320,12 @@ async def _payment_mix(
         .group_by(Payment.method)
     )
     mix = {
-        method.value: 0 for method in PaymentMethod if method is not PaymentMethod.PROMO
+        method.value: 0
+        for method in PaymentMethod
+        if method not in PLATFORM_WRITTEN_METHODS
     }
     for method, count in rows.all():
-        if method is PaymentMethod.PROMO:
+        if method in PLATFORM_WRITTEN_METHODS:
             continue
         mix[method.value] = int(count)
     return mix
