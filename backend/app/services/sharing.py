@@ -25,7 +25,9 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import select
+from dataclasses import dataclass
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
@@ -36,6 +38,7 @@ from app.models.enums import (
     PaymentConfirmedBy,
     PaymentMethod,
     PaymentStatus,
+    RideStatus,
 )
 from app.models.payment import Payment
 from app.models.ride import SHARE_SEAT_LEAD, Ride
@@ -187,3 +190,75 @@ async def group_members(
 
 def is_lead(ride: Ride) -> bool:
     return ride.share_seat == SHARE_SEAT_LEAD
+
+
+# **قبل الانطلاق**: هنا وحدَه يُرفع السعرُ إلى المنفرد (قرارُ المالك الخامس)
+BEFORE_DEPARTURE = (
+    RideStatus.REQUESTED,
+    RideStatus.SEARCHING,
+    RideStatus.ACCEPTED,
+    RideStatus.ARRIVED,
+)
+# **وبعده لا يُرفع** (القرار السادس) — لا لأن المبلغ كبير بل لأن الإخبارَ حينئذٍ
+# بلا بديل: من يُخبَر وهو في السيارة لا يملك قبولاً ولا رفضاً
+AFTER_DEPARTURE = (RideStatus.IN_PROGRESS, RideStatus.AT_STOP)
+
+
+@dataclass(frozen=True, slots=True)
+class Aftermath:
+    """من بقي بعد إلغاء شريكه، وهل بقي سعرُه كما وافق عليه."""
+
+    ride_id: uuid.UUID
+    rider_id: uuid.UUID
+    price_kept: bool
+
+
+async def on_member_cancelled(
+    session: AsyncSession, cancelled: Ride
+) -> Aftermath | None:
+    """يطبّق قرارَي المالك الخامس والسادس على **من بقي**.
+
+    ولا يفعل شيئاً لمن ألغى: قرارُ المالك الخامس نصُّه أن **الرسمَ العاديَّ عليه
+    وحدَه** — وذلك ما يفعله `rides.cancel_ride` أصلاً بلا حرفٍ جديد. وهو ما
+    اشتُري بالشكل (ب): كلُّ صفِّ رحلةٍ يُحاسَب بمفرده.
+
+    **وجملةُ `UPDATE` واحدةٌ لا قفلُ صفٍّ ثانٍ**، وهذا مقصود: قفلُ صفِّ الشريك
+    بعد صفِّ الملغي يفتح جموداً حقيقياً — راكبان يلغيان معاً (وهي حالٌ واقعية
+    حين يتأخر الكبتن) فيقفل كلٌّ صفَّه ثم ينتظر صفَّ الآخر. والجملةُ الواحدة
+    تأخذ قفلَها وتُفلته في نفسها، وشرطُها على الحالة يجعلها **جامدةَ التكرار**:
+    الثانيةُ لا تجد صفّاً مطابقاً لأن الأولى أخرجته من الحالات النشطة.
+
+    **وتصفيرُ النسبة المجمَّدة هو رفعُ السعر نفسُه**: `settle_discount` تقرؤها
+    عند الإنهاء، فصفرُها يعني ألّا صفَّ خصمٍ يُكتب — ولا مكانَ ثانٍ يقرّر.
+    """
+    if cancelled.share_group_id is None:
+        return None
+
+    raised = (
+        await session.execute(
+            update(Ride)
+            .where(
+                Ride.share_group_id == cancelled.share_group_id,
+                Ride.id != cancelled.id,
+                Ride.status.in_(BEFORE_DEPARTURE),
+            )
+            .values(share_discount_percent_at_ride=Decimal("0.00"))
+            .returning(Ride.id, Ride.rider_id)
+        )
+    ).first()
+    if raised is not None:
+        return Aftermath(ride_id=raised.id, rider_id=raised.rider_id, price_kept=False)
+
+    # وإلا: إمّا لا شريكَ نشط، وإمّا شريكٌ انطلقت رحلتُه فيبقى سعرُه كما هو
+    departed = (
+        await session.execute(
+            select(Ride.id, Ride.rider_id).where(
+                Ride.share_group_id == cancelled.share_group_id,
+                Ride.id != cancelled.id,
+                Ride.status.in_(AFTER_DEPARTURE),
+            )
+        )
+    ).first()
+    if departed is None:
+        return None
+    return Aftermath(ride_id=departed.id, rider_id=departed.rider_id, price_kept=True)

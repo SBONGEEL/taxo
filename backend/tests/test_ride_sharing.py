@@ -12,7 +12,13 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.models.enums import CountryCode, FeatureKey, PaymentMethod, PaymentStatus
+from app.models.enums import (
+    CountryCode,
+    FeatureKey,
+    PaymentMethod,
+    PaymentStatus,
+    RideStatus,
+)
 from app.models.payment import Payment
 from app.models.ride import Ride
 from app.models.sharing import RideSharingSetting
@@ -240,3 +246,138 @@ async def test_the_share_discount_is_not_counted_as_coupon_spend(
             )
         )
     assert promo_rows == []
+
+
+async def _group(session_factory, ride_id: str, partner_rider_id, driver_id) -> str:
+    """يضع رحلةً قائمةً وشريكاً لها في مجموعةٍ واحدة — بلا مطابقةٍ جغرافية.
+
+    المطابقةُ لم تُبنَ بعد (تحتاج ممرّاً ونداءَ Mapbox لكل مرشَّح)، وما يُختبر
+    هنا **قاعدةُ الإلغاء** لا كيف تكوّنت المجموعة. فتُبنى بيدٍ كما تبنيها
+    الخدمةُ حين تُبنى: مقعدٌ لكلٍّ ومجموعةٌ واحدة.
+    """
+    import uuid as _uuid
+
+    from app.models.ride import SHARE_SEAT_LEAD, SHARE_SEAT_PARTNER, make_point
+
+    group = _uuid.uuid4()
+    async with session_factory() as session:
+        lead = await session.get(Ride, ride_id)
+        lead.share_group_id = group
+        lead.share_seat = SHARE_SEAT_LEAD
+        session.add(
+            Ride(
+                rider_id=partner_rider_id,
+                driver_id=driver_id,
+                share_group_id=group,
+                share_seat=SHARE_SEAT_PARTNER,
+                share_discount_percent_at_ride=DISCOUNT,
+                country_code=CountryCode.JO,
+                vehicle_category="economy",
+                pickup_point=make_point(31.95, 35.91),
+                dropoff_point=make_point(31.98, 35.86),
+                status=lead.status,
+                distance_km=Decimal("5.000"),
+                duration_min=Decimal("12.00"),
+                estimated_fare=Decimal("3.500"),
+                currency=lead.currency,
+                commission_percent_at_ride=Decimal("0.00"),
+            )
+        )
+        await session.commit()
+    return str(group)
+
+
+async def test_cancelling_before_departure_raises_the_partners_price(
+    client: AsyncClient, session_factory, jordan_settings, sharing_on
+):
+    """**قرارُ المالك الخامس**: من بقي تصير رحلتُه منفردةً بسعرها الكامل.
+
+    وتصفيرُ النسبة المجمَّدة **هو** رفعُ السعر: `settle_discount` تقرؤها عند
+    الإنهاء، فصفرُها يعني ألّا صفَّ خصمٍ يُكتب.
+    """
+    rider = await rider_session(client)
+    partner = await rider_session(
+        client,
+        {"phone": "+962795550311", "password": "Rider12345",
+         "name": "شريكة", "country_code": "JO", "role": "rider"},
+    )
+    driver = await approved_driver(client, session_factory)
+    await bring_online(client, driver)
+
+    result = await _request(client, rider["headers"], share=True)
+    ride_id = result["body"]["id"]
+    await wait_for_offer(ride_id, driver["driver_id"])
+    accepted = await client.post(
+        f"/rides/{ride_id}/accept", headers=driver["headers"]
+    )
+    assert accepted.status_code == 200
+    group = await _group(session_factory, ride_id, partner["user"]["id"], driver["driver_id"])
+
+    cancelled = await client.post(
+        f"/rides/{ride_id}/cancel", json={"reason": "غيّرت رأيي"},
+        headers=rider["headers"],
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    async with session_factory() as session:
+        others = list(
+            await session.scalars(
+                select(Ride).where(
+                    Ride.share_group_id == group, Ride.id != ride_id
+                )
+            )
+        )
+    assert len(others) == 1
+    # **رُفع السعرُ إلى المنفرد**
+    assert others[0].share_discount_percent_at_ride == 0
+    # **ورسمُ الإلغاء على من ألغى وحدَه** — ولا شيء على من بقي
+    async with session_factory() as session:
+        mine = await session.get(Ride, ride_id)
+    assert mine.cancellation_fee > 0
+    assert others[0].cancellation_fee is None
+
+
+async def test_cancelling_after_departure_keeps_the_partners_price(
+    client: AsyncClient, session_factory, jordan_settings, sharing_on
+):
+    """**قرارُ المالك السادس**: رحلةٌ انطلقت لا يُرفع سعرُها.
+
+    ورفعُه حينئذٍ هو الخيارُ المرفوضُ بحرفه — لا لأن المبلغ كبير بل لأن من
+    يُخبَر وهو في السيارة لا يملك قبولاً ولا رفضاً.
+    """
+    rider = await rider_session(client)
+    partner = await rider_session(
+        client,
+        {"phone": "+962795550312", "password": "Rider12345",
+         "name": "شريكٌ سائر", "country_code": "JO", "role": "rider"},
+    )
+    driver = await approved_driver(client, session_factory)
+    await bring_online(client, driver)
+
+    result = await _request(client, rider["headers"], share=True)
+    ride_id = result["body"]["id"]
+    await wait_for_offer(ride_id, driver["driver_id"])
+    for step in ("accept", "arrive"):
+        assert (
+            await client.post(f"/rides/{ride_id}/{step}", headers=driver["headers"])
+        ).status_code == 200
+
+    group = await _group(session_factory, ride_id, partner["user"]["id"], driver["driver_id"])
+    # الشريكُ وحدَه ينطلق — والملغي ما زال عند `arrived` فيجوز إلغاؤه
+    async with session_factory() as session:
+        other = await session.scalar(
+            select(Ride).where(Ride.share_group_id == group, Ride.id != ride_id)
+        )
+        other.status = RideStatus.IN_PROGRESS
+        await session.commit()
+        other_id = other.id
+
+    cancelled = await client.post(
+        f"/rides/{ride_id}/cancel", json={"reason": "غيّرت رأيي"},
+        headers=rider["headers"],
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    async with session_factory() as session:
+        kept = await session.get(Ride, other_id)
+    assert kept.share_discount_percent_at_ride == DISCOUNT

@@ -28,7 +28,7 @@ recorded, and no code exists for it**; it is the one thing left before stage 13,
 decided not to build** (with no real demand data it would be tuned wrong and turn riders away), so
 stage 12 closes with sharing.
 
-**689 backend tests pass** across 62 test files — measured, not estimated, on 2026-08-13. All three
+**691 backend tests pass** across 62 test files — measured, not estimated, on 2026-08-13. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -432,6 +432,16 @@ same kind and silently entered the mix as if riders had chosen it (`test_admin_s
 rider app's `PayableMethod = Exclude<PaymentMethod, "promo">` had the identical shape and put `share`
 in the payment picker — caught by `tsc` at the `CTA` record. Both now read from a named concept:
 `models/payment.py::PLATFORM_WRITTEN_METHODS` in the backend, `PlatformWrittenMethod` in the app.
+
+**The cancellation rules are built** (`sharing.on_member_cancelled`, decisions 5–8). Whoever cancels
+pays the ordinary fee alone — which needed **no new code at all**, because `rides.cancel_ride` already
+charges exactly that; that is what shape (ب) bought. The remaining rider's ride has its frozen percent
+zeroed **before departure only** (zeroing it *is* raising the price: `settle_discount` reads it at
+completion), keeps it after (decision 6 — raising a price with no alternative is the rejected option),
+and is told either way. **It is one conditional `UPDATE`, not a second row lock**: locking the partner's
+row after the canceller's opens a real deadlock when both riders cancel at once, which happens when a
+driver is late. The statement takes and releases its own lock, and its status predicate makes it
+idempotent — the second cancel matches no row because the first moved it out of the active statuses.
 
 **Still unbuilt for 12-ي**: the matching itself — the corridor around the first ride's route, the
 detour cap and the partner wait window (three per-country numbers already seeded in

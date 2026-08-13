@@ -28,13 +28,13 @@ from app.services import (
     dispatch,
     notifications,
     pricing,
-    pricing,
     promo as promo_service,
     ratings as ratings_service,
-    tips as tips_service,
     ride_log,
     rides as rides_service,
     route,
+    sharing,
+    tips as tips_service,
     tracking,
 )
 from app.services.directions import Coordinates
@@ -328,7 +328,20 @@ async def cancel_ride(
         reason=payload.reason,
         reason_code=payload.reason_code,
     )
+    # **ومن بقي من مجموعة المشاركة** (12-ي): يُرفع سعرُه إلى المنفرد قبل
+    # الانطلاق ولا يُرفع بعده — والقرارُ كلُّه في `sharing`، وهنا نداؤه.
+    # وقبل الإيداع لأنه تعديلُ صفٍّ، والإشعارُ بعده كبقية الأحداث
+    aftermath = await sharing.on_member_cancelled(session, ride)
     await session.commit()
+
+    if aftermath is not None:
+        await notifications.publish_share_partner_cancelled(
+            session,
+            redis,
+            rider_id=aftermath.rider_id,
+            ride_id=aftermath.ride_id,
+            price_kept=aftermath.price_kept,
+        )
 
     if was_searching:
         # إلغاء أثناء البحث: تتوقف المهمة وتُطوى البطاقة من شاشة المعروض عليه
