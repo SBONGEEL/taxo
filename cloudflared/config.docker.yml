@@ -10,7 +10,7 @@
 # النتيجةُ «يعمل أحياناً».
 
 tunnel: taxo-dev
-credentials-file: /root/.cloudflared/taxo-dev.json
+credentials-file: /root/.cloudflared/e0ef1dd8-3d62-4af9-81d0-514056d41dc7.json
 
 ingress:
   - hostname: api.tajora.ly

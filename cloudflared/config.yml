@@ -12,7 +12,7 @@
 # انظر `README.md` لما تفعله بيدك خارج الكود.
 
 tunnel: taxo-dev
-credentials-file: C:\Users\loly3\.cloudflared\taxo-dev.json
+credentials-file: C:\Users\loly3\.cloudflared\e0ef1dd8-3d62-4af9-81d0-514056d41dc7.json
 
 # **ترتيبُ القواعد يهمّ**: أوّلُ ما يطابق يفوز، والقاعدةُ الأخيرة (بلا
 # `hostname`) إلزاميةٌ في cloudflared — وهي هنا رفضٌ صريح: أيُّ اسمٍ لم يُذكر

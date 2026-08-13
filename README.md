@@ -299,9 +299,14 @@ Phase 2 خلف feature flags (12) · التشغيل التجريبي الكام�
 **بـ`cloudflared` المثبَّت على ويندوز (الأبسط):**
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d   # التطبيقات بعناوين النفق
-cloudflared tunnel --config cloudflared/config.yml run                     # النفق في نافذةٍ أمامك
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+cloudflared tunnel --config cloudflared/config.yml run   # النفق في نافذةٍ أمامك
 ```
+
+**و`--env-file .env.local` ليست زينة**: `env_file` في compose يغذّي **داخل**
+الحاوية، أمّا `${CUSTOMER_APP_PORT}` في سطر المنافذ فاستبدالٌ يقرأ الصدفةَ
+و`.env` وحدهما. وبدونها يرتدّ تطبيقُ الراكب إلى 5173 — المنفذِ الذي تشغله حزمةٌ
+أخرى على هذا الجهاز — فيفشل الإنشاء بـ«port is already allocated». وقِيس.
 
 الإيقاف: `Ctrl+C` في نافذة النفق، ثم `docker compose up -d` (بلا `-f` الثانية)
 لإعادة التطبيقات إلى عناوينها المحلية.
@@ -343,4 +348,6 @@ docker compose -f docker-compose.yml -f docker-compose.tunnel.yml stop cloudflar
 | **CORS** | مضبوطٌ في طبقة النفق | `CORS_ORIGINS` تحمل النطاقاتِ الثلاثةَ **والمحليةَ معها**، فيبقى الفتحُ من الجهاز عاملاً بينما النفقُ قائم |
 | **`Host` في Vite** | مضبوطٌ في الكود | `server.allowedHosts: [".tajora.ly"]` في الثلاثة — وبلاه يردّ خادمُ التطوير «Blocked request» بدل الصفحة |
 | **HMR** | قد لا يتصل عبر النفق | لا يضرّ التجربة: أعد تحميلَ الصفحة بعد كلِّ تعديل. (ومع Docker على ويندوز لا يعمل HMR أصلاً — انظر «ملاحظات معمارية») |
+| **بطءُ أوّل فتح** | ٤–٦ ثوانٍ، ثم عادي | خادمُ التطوير يرسل الوحداتِ مفرّقةً (٦٤ طلباً لشاشة الدخول)، وكلُّ واحدةٍ رحلةٌ عبر Cloudflare. مقيسٌ على هذا الجهاز — وليس عطلاً |
+| **HMR عبر النفق** | يعمل | يفتح `wss://app.tajora.ly/?token=…` بنفسه (مقيس). ومع ذلك يبقى تعديلُ الملفات غيرَ مرئيٍّ من الحاوية على ويندوز، فأعد التشغيلَ كالمعتاد |
 | **الكوكيز** | لا أثر | الجلسةُ توكنٌ في `localStorage` لا كوكي، فلا `SameSite` ولا `Secure` في الطريق |
