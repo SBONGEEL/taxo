@@ -1,4 +1,4 @@
-/** محفظتي: الرصيد والشحن والتحويل والسجل (SPEC القسم 11.6).
+/** المحفظة: الرصيد والشحن والتحويل والحركات (SPEC القسم 11.6).
  *
  * قاعدتان تظهران في هذه الشاشة بالتحديد:
  *
@@ -8,7 +8,14 @@
  *   لا الرقم.
  */
 
-import { ArrowDownLeft, ArrowUpRight, Plus, Snowflake } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  CreditCard,
+  Plus,
+  Snowflake,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -59,20 +66,23 @@ export function WalletScreen() {
 
   if (loading) {
     return (
-      <Screen title="محفظتي" back="/">
+      <Screen title="المحفظة" back="/">
         <Spinner />
       </Screen>
     );
   }
 
   return (
-    <Screen title="محفظتي" back="/">
+    <Screen title="المحفظة" back="/">
       <div className="space-y-20">
         {/* كان تدرّجاً بشفافيةٍ ٢٥٪ على `--brand`؛ ولوحةُ التصميم hex لا
             تحتمل الشفافية (`index.css`)، فالتدرّجُ الآن من الرمز **الخافت**
             وهو ما وُجد له. المرحلة 12-أ */}
         <div className="card bg-gradient-to-bl from-brand-soft to-transparent p-20 text-center">
-          <p className="text-14 text-muted">الرصيد المتاح</p>
+          {/* **«الرصيد» لا «الرصيد المتاح»** (قرار 23): الراكبُ لا يملك محجوزاً
+              — لا سحبَ له ولا طلبَ ينتظر — فالوصفُ يفرّق بلا فرق. و«المتاح»
+              تبقى للكبتن حيث المحجوزُ حقيقةٌ (طلبُ سحبٍ معلَّق) */}
+          <p className="text-14 text-muted">الرصيد</p>
           <p className="mt-4 text-38 font-bold text-ink">
             {formatMoney(wallet?.balance, wallet?.currency)}
           </p>
@@ -126,8 +136,31 @@ export function WalletScreen() {
           </section>
         ) : null}
 
+        {/* **البطاقاتُ صفٌّ داخل المحفظة** كما في التصميم (`tabWallet`) لا
+            بندٌ في القائمة وحدها: البطاقةُ وسيلةُ دفعٍ ورصيد، ومن يفتح المحفظة
+            ليضيف مالاً هو من يريد إدارتها. **وخلف مفتاحها**: صفٌّ لقناةٍ مطفأةٍ
+            في السوق يفتح شاشةً لا تعمل */}
+        {cardEnabled ? (
+          <button
+            type="button"
+            onClick={() => navigate("/cards")}
+            className="card flex w-full items-center gap-12 p-14 text-start transition hover:bg-surface-2"
+          >
+            <CreditCard className="size-20 text-muted" />
+            <span className="flex-1">
+              <span className="block font-medium text-ink">
+                البطاقات المحفوظة
+              </span>
+              <span className="block text-12 text-muted">
+                الدفع بضغطة، وبطاقةٌ افتراضية
+              </span>
+            </span>
+            <ChevronLeft className="size-16 text-muted" />
+          </button>
+        ) : null}
+
         <section className="space-y-8">
-          <h2 className="label">سجل العمليات</h2>
+          <h2 className="label">الحركات</h2>
           {entries.length === 0 ? (
             <EmptyState title="لا عمليات بعد" hint="ستظهر هنا كل حركة على رصيدك." />
           ) : (

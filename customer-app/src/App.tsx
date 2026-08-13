@@ -71,6 +71,9 @@ const WalletTransferScreen = lazy(() =>
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
+const SettingsScreen = lazy(() =>
+  import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
+);
 const NotificationsScreen = lazy(() =>
   import("@/screens/Notifications").then((m) => ({
     default: m.NotificationsScreen,
@@ -269,6 +272,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <BookingsScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/settings"
+                        element={
+                          <Guarded>
+                            <SettingsScreen />
                           </Guarded>
                         }
                       />

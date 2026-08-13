@@ -121,6 +121,12 @@ export interface CountryConfig {
   /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
   dial_code: string;
   national_number_length: number;
+  /** ساعاتُ هدوء الحملات ومنطقتُها (`FUTURE-FEATURES` 5) — تنشرها الخلفيةُ منذ
+   *  المرحلة 8 ولم يكن هذا النوعُ يحملها، فلم تصل الشاشة. و`null` تعني «لم
+   *  تُضبط بعد» فلا يُعرض رقمٌ لا مصدرَ له. */
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  quiet_hours_timezone: string | null;
   /** المُحقِّقُ **لهذه الدولة** وقنواتُه (12-هـ) — لا مُحقِّقُ الدولة الافتراضية.
    *
    * قناةُ واتساب مفتاحُها per-country، فقراءةُ `auth.verification` وحدها تجعل

@@ -17,7 +17,7 @@ import { useSession } from "@/lib/session";
 
 const ITEMS = [
   { to: "/rides", icon: Clock, label: "رحلاتي", hint: "السجل والتفاصيل" },
-  { to: "/wallet", icon: Wallet, label: "محفظتي", hint: "الرصيد والشحن والسجل" },
+  { to: "/wallet", icon: Wallet, label: "المحفظة", hint: "الرصيد والشحن والحركات" },
   { to: "/places", icon: MapPin, label: "الأماكن المحفوظة", hint: "المنزل والعمل وغيرهما" },
   {
     to: "/bookings",
@@ -29,7 +29,7 @@ const ITEMS = [
     feature: "scheduled_rides_enabled",
   },
   { to: "/cards", icon: CreditCard, label: "بطاقاتي", hint: "الدفع بضغطة" },
-  { to: "/profile", icon: User, label: "الملف الشخصي", hint: "بياناتك وإشعاراتك" },
+  { to: "/profile", icon: User, label: "حسابي", hint: "بياناتك وإشعاراتك" },
 ];
 
 export function MenuScreen() {

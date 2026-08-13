@@ -15,7 +15,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Crosshair, Menu, Search, Wallet } from "lucide-react";
+import { Bell, Crosshair, Menu, Moon, Search, Sun, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -40,6 +40,7 @@ import { RIDE_STATUS_LABEL } from "@/lib/labels";
 import { isActive, useRide } from "@/lib/ride";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
+import { useTheme } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
@@ -54,6 +55,15 @@ interface AgainState {
 
 export function HomeScreen() {
   const navigate = useNavigate();
+  // مبدّلُ السِمة في رأس الخريطة (قرار 25) — **إضافةً** إلى صفِّ الإعدادات لا
+  // بدلاً منه: من يبدّلها لأن الشمس على الشاشة يبدّلها وهو ينظر إلى الخريطة
+  const { dark, setChoice } = useTheme();
+  // **عنوانُ الدبوس يُقرأ أثناء التحريك** (تصميمُ `pgPinMap`): بغيره تؤكّد
+  // نقطةً لا تعرف أين هي — والخريطةُ وحدها لا تقول «الجبيهة» ولا «شارع كذا».
+  // **ومهلةٌ بعد سكون الحركة لا نداءٌ لكل إطار**: `onMoveEnd` يقع مرةً لكل
+  // سحبة، لكن سحبتين متتاليتين ندءان، فيُلغى الأولُ بعلَمِ إبطال
+  const [pinAddress, setPinAddress] = useState<string | null>(null);
+  const [pinLoading, setPinLoading] = useState(false);
   const { user, refreshUser } = useSession();
   const { places } = usePlaces();
   const location = useLocation();
@@ -329,7 +339,17 @@ export function HomeScreen() {
         pickup={tracking ? ride!.pickup : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
         driverLocation={driverPing}
-        onMoveEnd={setCenter}
+        onMoveEnd={(point) => {
+          setCenter(point);
+          // بلا رمزٍ لا نداء — كما في `describe` بالضبط
+          if (!picking || !token) return;
+          setPinLoading(true);
+          setPinAddress(null);
+          void reverseGeocode(token, point)
+            .then((address) => setPinAddress(address))
+            .catch(() => setPinAddress(null))
+            .finally(() => setPinLoading(false));
+        }}
       />
 
       {/* دبوسٌ ثابت في المركز: الخريطة تتحرك تحته لا هو فوقها */}
@@ -349,6 +369,21 @@ export function HomeScreen() {
           aria-label="القائمة"
         >
           <Menu className="size-20 text-ink" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setChoice(dark ? "light" : "dark")}
+          aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
+          // **`pointer-events-auto`**: الحاويةُ `pointer-events-none` كي تمرّ
+          // إيماءاتُ الخريطة، فكلُّ زرٍّ فيها يُعيد تمكينَ نفسه — وبغيره يُرسم
+          // الزرُّ ولا يُنقر (وقع ذلك في الجرس، وكشفه `elementFromPoint`)
+          className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+        >
+          {dark ? (
+            <Sun className="size-20 text-ink" />
+          ) : (
+            <Moon className="size-20 text-ink" />
+          )}
         </button>
         <button
           type="button"
@@ -372,7 +407,7 @@ export function HomeScreen() {
           type="button"
           onClick={() => navigate("/wallet")}
           className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
-          aria-label="محفظتي"
+          aria-label="المحفظة"
         >
           <Wallet className="size-20 text-ink" />
         </button>
@@ -414,6 +449,14 @@ export function HomeScreen() {
                   <p className="text-center text-14 text-muted">
                     حرّك الخريطة حتى يقف الدبوس على{" "}
                     {phase === "pick-pickup" ? "نقطة الانطلاق" : "وجهتك"}
+                  </p>
+                  {/* **العنوانُ المعكوس جغرافياً** كما في التصميم: تأكيدُ نقطةٍ
+                      بلا اسمها تأكيدٌ على العمى. و«نقرأ العنوان…» أثناء النداء
+                      لأن صمتاً ثم ظهورَ نصٍّ يُقرأ وميضاً */}
+                  <p className="rounded-12 border border-line bg-bg px-14 py-12 text-13.5 text-ink">
+                    {pinLoading
+                      ? "نقرأ العنوان…"
+                      : (pinAddress ?? "حرّك الخريطة لقراءة العنوان")}
                   </p>
                   <Button size="lg" onClick={confirmPin}>
                     تأكيد الموقع

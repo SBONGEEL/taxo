@@ -1,4 +1,4 @@
-/** الملف الشخصي: بياناتك، وإشعارات العروض، والخروج (SPEC القسم 11.8).
+/** حسابي: بياناتك، وإشعارات العروض والكوبونات، والخروج (SPEC القسم 11.8).
  *
  * **مفتاحٌ واحد لا اثنان**: `marketing_push_enabled` وحده. إشعارات الرحلة
  * ليست خياراً — «من يطفئ (وصل الكبتن) ينتظر كبتناً لا يعرف أنه وصل» (القسم
@@ -9,22 +9,13 @@
  * تطالبه الشاشة بالتحقق عند أول فرصة عبر `POST /auth/me/verify-phone`.
  */
 
-import {
-  BellRing,
-  LogOut,
-  Moon,
-  ShieldAlert,
-  Sun,
-  SunMoon,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronLeft, LogOut, ShieldAlert, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import type { GenderPreference } from "@/api/types";
 import {
-  getNotificationPreferences,
-  setNotificationPreferences,
   startChallenge,
   updateMe,
   verifyMyPhone,
@@ -37,47 +28,29 @@ import { useConfig, usePhoneCountry } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { useBrand } from "@/lib/brand";
 import { useWomenService } from "@/lib/women";
-import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 export function ProfileScreen() {
   const navigate = useNavigate();
   const { user, signOut, refreshUser } = useSession();
   const { config } = useConfig();
-  const { choice, setChoice } = useTheme();
   // **اسمان لا اسمٌ واحد** (البند 6 من قرار المالك 2026-08-13): إتاحةُ السِمة
   // إقرارٌ وحده، وإتاحةُ **ما يَعِد بخدمة** مفتاحٌ قُطريٌّ مع الإقرار. ودمجُهما
   // في `available` واحدٍ يعرض «من يقودني افتراضياً» في سوقٍ لا خدمةَ فيه —
   // وهو بعينه الرفضُ بلا مخرجٍ الذي وقع في 10-ج
-  const { pink, available: themeAvailable, setPink } = useBrand();
+  // إتاحةُ السِمة (الإقرارُ وحده) — تحكم **ملاحظةَ الخصوصية** هنا، والمفتاحُ
+  // نفسُه صار في «الإعدادات» مع ما يخصّ الجهاز
+  const { available: themeAvailable } = useBrand();
   // `available` من الخدمة: مفتاحٌ قُطريٌّ **مع** الإقرار — شرطُ ما يَعِد بمطابقة
   const { enabled, available, defaultPreference } = useWomenService();
   const [savingPreference, setSavingPreference] = useState(false);
   const { dialCode } = usePhoneCountry(user?.country_code);
 
-  const [marketing, setMarketing] = useState<boolean | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  useEffect(() => {
-    getNotificationPreferences()
-      .then((preferences) => setMarketing(preferences.marketing_push_enabled))
-      .catch(() => setMarketing(null));
-  }, []);
 
-  async function toggleMarketing(value: boolean) {
-    setMarketing(value);
-    setError(null);
-    try {
-      await setNotificationPreferences(value);
-    } catch (caught) {
-      setMarketing(!value);
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر حفظ التفضيل",
-      );
-    }
-  }
 
   async function provePhone(token: string) {
     setError(null);
@@ -126,7 +99,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <Screen title="الملف الشخصي" back="/menu">
+    <Screen title="حسابي" back="/menu">
       <div className="space-y-20">
         <div className="card space-y-8 p-16">
           <p className="text-18 font-semibold text-ink">{user.name}</p>
@@ -163,66 +136,9 @@ export function ProfileScreen() {
           </section>
         ) : null}
 
-        <section className="card space-y-12 p-16">
-          <div className="flex items-start justify-between gap-12">
-            <div>
-              <p className="flex items-center gap-8 font-medium text-ink">
-                <BellRing className="size-20" />
-                إشعارات العروض
-              </p>
-              <p className="mt-2 text-14 text-muted">
-                عروضٌ وتخفيضات. إشعارات رحلتك تصلك دائماً.
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={marketing === true}
-              aria-label="إشعارات العروض"
-              disabled={marketing === null}
-              onClick={() => toggleMarketing(!marketing)}
-              className={cn(
-                "relative h-28 w-48 shrink-0 rounded-full transition",
-                marketing ? "bg-brand" : "bg-line",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-4 size-20 rounded-full bg-white transition-all",
-                  marketing ? "start-24" : "start-4",
-                )}
-              />
-            </button>
-          </div>
-        </section>
 
-        <section className="card space-y-12 p-16">
-          <p className="font-medium text-ink">مظهر التطبيق</p>
-          <div className="grid grid-cols-3 gap-8">
-            {(
-              [
-                { value: "system", label: "النظام", icon: SunMoon },
-                { value: "light", label: "نهاري", icon: Sun },
-                { value: "dark", label: "ليلي", icon: Moon },
-              ] as const
-            ).map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setChoice(value)}
-                className={cn(
-                  "flex flex-col items-center gap-4 rounded-12 border px-8 py-12 text-14 transition",
-                  choice === value
-                    ? "border-brand bg-brand-soft text-ink"
-                    : "border-line text-muted hover:bg-surface-2",
-                )}
-              >
-                <Icon className="size-20" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </section>
+
+
 
         {/* إعلانُ الجنس — **محكومٌ بمفتاح الخدمة وحده** لا بـ`available`:
             لو حُكم به لما استطاعت الإعلان لأن الإعلان شرطُ الإتاحة. وهو
@@ -304,42 +220,26 @@ export function ProfileScreen() {
           </section>
         ) : null}
 
-        {/* السِمة الوردية — **إقرارُها وحده يكفي** (البند 6): عرضٌ بصريٌّ لا
-            يَعِد بخدمة، فلا يُعلَّق على مفتاحٍ قُطريٍّ ولا على ختمِ الإدارة.
-            ومن ليست كذلك لا ترى مفتاحاً معطّلاً ولا رسالةَ اعتذار */}
-        {themeAvailable ? (
-          <section className="card space-y-12 p-16">
-            <div className="flex items-start justify-between gap-16">
-              <div>
-                <p className="font-medium text-ink">السِمة الوردية</p>
-                {/* السببُ مكتوبٌ لأنه ليس ذوقاً: القرارُ عن المكان الذي أنتِ
-                    فيه لا عن جمال اللون */}
-                <p className="mt-4 text-12 leading-relaxed text-muted">
-                  هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها
-                  من حولك.
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={pink}
-                aria-label="السِمة الوردية"
-                onClick={() => setPink(!pink)}
-                className={cn(
-                  "relative h-28 w-48 flex-none rounded-full transition",
-                  pink ? "bg-brand" : "bg-line",
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute top-4 size-20 rounded-full bg-surface transition-all",
-                    pink ? "start-24" : "start-4",
-                  )}
-                />
-              </button>
-            </div>
-          </section>
-        ) : null}
+
+        {/* **«الإعدادات» شاشةٌ مستقلةٌ كما في التصميم** (`pgSettings`): ما
+            يخصّ **الجهاز** (مظهرٌ وسِمةٌ وإشعاراتُ عروض) لا يخصّ **الحساب**
+            (اسمٌ وجنسٌ وتفضيل) — وشاشةٌ تجمعهما تجعل من يبحث عن مفتاحٍ يقرأ
+            بياناته. وهذا الصفُّ هو بابُها كما في `tabAccount` */}
+        <button
+          type="button"
+          onClick={() => navigate("/settings")}
+          className="card flex w-full items-center gap-12 p-16 text-start transition hover:bg-surface-2"
+        >
+          <SlidersHorizontal className="size-20 text-ink" />
+          <span className="flex-1">
+            <span className="block font-medium text-ink">الإعدادات</span>
+            <span className="block text-12 text-muted">
+              المظهر · إشعارات العروض
+            </span>
+          </span>
+          <ChevronLeft className="size-16 text-muted" />
+        </button>
+
         {/* **«الخصوصية» — التصميمُ النسائيُّ (شاشة ٧) يضعها هنا نصّاً**، وهي
             تخبرها **بأمانٍ تملكه ولا تعرفه**: أن جنسَها لا يُعرض لأحد، وأن
             خريطةَ السيارات القريبة مجهَّلةٌ أصلاً. وكلُّ حرفٍ فيها يصف سلوكاً

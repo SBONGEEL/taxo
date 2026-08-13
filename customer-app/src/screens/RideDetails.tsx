@@ -16,7 +16,12 @@ import { Button } from "@/components/ui/Button";
 import { Badge, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
-import { formatDateTime, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
+import {
+  formatDateTime,
+  formatDistance,
+  formatDuration,
+  formatMoney,
+} from "@/lib/utils";
 
 export function RideDetailsScreen() {
   const { rideId = "" } = useParams();
@@ -111,21 +116,39 @@ export function RideDetailsScreen() {
           ) : null}
         </div>
 
+        {/* **بطاقةُ الكبتن كما في التصميم (`pgRideDetail`)** لا صفوفَ
+            «حقلٌ: قيمة»: الصفوفُ للأرقام التي تُقارن (أجرةٌ ومسافة)، والكبتنُ
+            **شخصٌ يُتعرَّف عليه** — حرفٌ أولُ واسمٌ ومركبةٌ ونجوم. ومن يفتح
+            رحلةً مضت يسأل «من أوصلني» لا «ما قيمةُ حقل الكبتن».
+            **واللوحةُ لاتينيةٌ بلا تحويل خانات**: تُطابَق حرفاً بحرف. */}
         {ride.driver ? (
-          <div className="card space-y-8 p-16">
-            <Row label="الكبتن" value={ride.driver.name} />
-            {ride.driver.vehicle ? (
-              <>
-                <Row
-                  label="المركبة"
-                  value={`${ride.driver.vehicle.make} ${ride.driver.vehicle.model} — ${ride.driver.vehicle.color}`}
-                />
-                <Row label="اللوحة" value={ride.driver.vehicle.plate_number} />
-              </>
+          <div className="card flex items-center gap-12 p-14">
+            <div className="flex size-44 shrink-0 items-center justify-center rounded-full bg-brand-soft text-16 font-bold text-ink">
+              {ride.driver.name.slice(0, 1)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-ink">
+                {ride.driver.name}
+              </p>
+              {ride.driver.vehicle ? (
+                <p className="mt-2 truncate text-12.5 text-muted">
+                  {ride.driver.vehicle.make} {ride.driver.vehicle.model} ·{" "}
+                  {ride.driver.vehicle.color}
+                  {" · "}
+                  <span dir="ltr">{ride.driver.vehicle.plate_number}</span>
+                </p>
+              ) : null}
+            </div>
+            {Number(ride.driver.rating_avg) > 0 ? (
+              <span className="shrink-0 text-13 font-semibold text-ink">
+                {/* **خاناتٌ لاتينيةٌ لأنها عُرفُ هذا التطبيق**: لا وجودَ
+                    لـ`arabicDigits` في `customer-app` أصلاً، وكلُّ سطرِ مالٍ
+                    ومسافةٍ فيه لاتينيّ — فتعريبُ رقمٍ واحدٍ يجعله الشاذَّ */}
+                {Number(ride.driver.rating_avg).toFixed(1)} ★
+              </span>
             ) : null}
           </div>
         ) : null}
-
         {payments && payments.payments.length > 0 ? (
           <PaymentsList payments={payments.payments} />
         ) : null}
