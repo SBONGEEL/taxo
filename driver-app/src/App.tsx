@@ -15,7 +15,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { Suspense, lazy, useEffect } from "react";
+import { lazy, useEffect } from "react";
 import {
   Navigate,
   Route,
@@ -26,6 +26,7 @@ import {
 import type { ReactNode } from "react";
 
 import { CenteredMessage, Spinner } from "@/components/ui/Feedback";
+import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { hideSplash } from "@/lib/splash";
@@ -218,8 +219,13 @@ export default function App() {
               <DriverProvider>
                 <RideProvider>
                   <Router>
-                    <Suspense fallback={<Loading />}>
-                      <Routes>
+                    {/* **الحركةُ فوق `Suspense` لا تحته**، و`Routes` مُثبَّتةٌ على
+                        الموقع الذي تحمله الورقةُ الخارجة — نفسُ ما قِيس في تطبيق
+                        الراكب: بلا الأولى يموت الانتقال عند أوّل مسارٍ كسول،
+                        وبلا الثانية ترسم الورقةُ الخارجةُ الشاشةَ الداخلة */}
+                    <RouteTransition>
+                      {(animated) => (
+                      <Routes location={animated}>
                         <Route
                           path="/login"
                           element={
@@ -377,7 +383,8 @@ export default function App() {
                         />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
-                    </Suspense>
+                      )}
+                    </RouteTransition>
                     <NavBar />
                   </Router>
                 </RideProvider>
