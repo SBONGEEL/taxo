@@ -17,7 +17,6 @@
  */
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import type { GenderPreference } from "@/api/types";
@@ -44,9 +43,10 @@ import {
   soundsEnabled,
 } from "@/lib/sound";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 export function SettingsScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const { profile, refresh } = useDriver();
   const { choice, toggle } = useTheme();
   const { pink, available, setPink } = useBrand();
@@ -132,7 +132,7 @@ export function SettingsScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

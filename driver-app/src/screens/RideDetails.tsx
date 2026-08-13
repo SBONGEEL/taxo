@@ -50,6 +50,7 @@ import {
   trimDistance,
 } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 /** نصُّ فصل الإدارة — `paid` تصف الواقعة لا الحالة الناتجة. */
 const RESOLUTION_LABEL: Record<"paid" | "unpaid", string> = {
@@ -60,6 +61,7 @@ const RESOLUTION_LABEL: Record<"paid" | "unpaid", string> = {
 export function RideDetailsScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const token = useMapboxToken();
 
   const [ride, setRide] = useState<Ride | null>(null);
@@ -138,7 +140,7 @@ export function RideDetailsScreen() {
         />
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable absolute start-14 top-14 flex size-34 items-center justify-center rounded-full border border-line bg-surface text-ink"
         >

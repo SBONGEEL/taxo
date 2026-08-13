@@ -595,3 +595,49 @@ async def try_join(
         logger.warning("تعذّر إبلاغ أطراف المشاركة", exc_info=True)
 
     return joined
+
+
+async def ensure_settings(
+    session: AsyncSession, country: CountryCode
+) -> RideSharingSetting:
+    """صفُّ إعداداتٍ لدولةٍ إن لم يكن — بقيمِ الافتراض ونسبةِ صفر.
+
+    **وصفرُ النسبة يبقى صفراً حتى يقرّرها المالك** (`models/sharing.py`): إنشاءُ
+    الصفِّ لا يفتح الميزة، فهو مجرّدُ مكانٍ للأرقام لا قرارٍ فيها.
+    """
+    row = await settings_for(session, country)
+    if row is not None:
+        return row
+    row = RideSharingSetting(country_code=country)
+    session.add(row)
+    await session.flush()
+    return row
+
+
+async def update_settings(
+    session: AsyncSession,
+    *,
+    country: CountryCode,
+    discount_percent: Decimal | None = None,
+    corridor_km: Decimal | None = None,
+    max_detour_minutes: int | None = None,
+    partner_wait_seconds: int | None = None,
+) -> RideSharingSetting:
+    """تعديلُ الأربعة — **ويحكم ما يأتي لا ما جرى**.
+
+    نسبةُ الخصم مجمَّدةٌ على كلِّ رحلةٍ قائمة (`share_discount_percent_at_ride`)،
+    فخفضُها لا يمسّ من طلب المشاركةَ قبل دقيقة. وأرقامُ المطابقة الثلاثةُ تُقرأ
+    لحظةَ البحث، فتعديلُها يحكم الطلبَ التالي — ولا شيءَ فيها مجمَّدٌ لأن لا أحدَ
+    وُعد بها: الراكبُ لا يرى ممرّاً ولا سقفَ التفاف.
+    """
+    row = await ensure_settings(session, country)
+    if discount_percent is not None:
+        row.discount_percent = discount_percent
+    if corridor_km is not None:
+        row.corridor_km = corridor_km
+    if max_detour_minutes is not None:
+        row.max_detour_minutes = max_detour_minutes
+    if partner_wait_seconds is not None:
+        row.partner_wait_seconds = partner_wait_seconds
+    await session.flush()
+    return row

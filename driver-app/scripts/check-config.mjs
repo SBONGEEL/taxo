@@ -55,6 +55,12 @@ const MIRRORS = [
   { file: "auth.py", model: "AuthResponse", type: "AuthResponse", required: true },
   { file: "auth.py", model: "TokenPair", type: "TokenPair", required: true },
   { file: "auth.py", model: "ChallengeResponse", type: "ChallengeResponse" },
+  // تقديرُ السعر — أُضيف مع 12-ي، حين صار يحمل **سعرَ المشاركة محسوباً**
+  // (`share_discount`/`share_fare`). وهو أوّلُ زوجٍ هنا ليس إعداداً ولا مصادقة،
+  // والسببُ أنه الشكلُ نفسُه: حقلُ مالٍ تنشره الخلفيةُ ويكتب التطبيقُ نوعَه بيده،
+  // فيسقط بصمتٍ ويُرسم خيارُ مشاركةٍ بلا رقم. ولا يُطلب من كلِّ تطبيق: الكبتنُ
+  // واللوحةُ لا يقدّران سعراً
+  { file: "ride.py", model: "RideEstimateOut", type: "RideEstimate" },
 ];
 
 /** حقولُ نموذج Pydantic بأسمائها.

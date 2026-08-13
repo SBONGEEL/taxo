@@ -307,6 +307,19 @@ export interface ReferralSetting {
   required_rides: number;
 }
 
+/** إعداداتُ مشاركة الرحلة (12-ي) — النسبةُ مالٌ والثلاثةُ الباقيةُ معايرةٌ.
+ *
+ * **والأرقامُ نصوصٌ كما تصل**: `NUMERIC` يُسلسَل نصّاً، وتحويلُه إلى `number`
+ * هنا تمريرٌ لمالٍ عبر عائم — وهي القاعدةُ التي يقوم عليها `formatMoney` كلُّه.
+ */
+export interface RideSharingSetting {
+  country_code: CountryCode;
+  discount_percent: string;
+  corridor_km: string;
+  max_detour_minutes: number;
+  partner_wait_seconds: number;
+}
+
 /** مجاميعُ سوقٍ واحد — **من الخلفية**: جمعُ صفحةٍ مقصوصةٍ هنا يكذب بعنوانه. */
 export interface ReferralSummary {
   country_code: CountryCode;

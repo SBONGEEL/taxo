@@ -498,3 +498,73 @@ async def test_a_market_without_sharing_publishes_no_shared_price(
     )
     assert response.json()["share_discount"] is None
     assert response.json()["share_fare"] is None
+
+
+# ------------------------------------------------------- إعداداتُ اللوحة
+
+
+async def test_only_an_admin_writes_the_sharing_numbers(
+    client: AsyncClient,
+    session_factory,
+    jordan_settings,
+    admin_headers: dict,
+    support_headers: dict,
+):
+    """**نسبةُ الخصم مالٌ تتحمّله الشركة** — فبابُها `admin` لا `support`.
+
+    والقراءةُ لكلِّ موظف: من يتابع شكوى «لماذا شاركني أحد» يحتاج أن يرى الأرقام
+    لا أن يعدّلها.
+    """
+    read = await client.get(
+        "/admin/sharing/settings?country_code=JO", headers=support_headers
+    )
+    assert read.status_code == 200, read.text
+
+    refused = await client.put(
+        "/admin/sharing/settings?country_code=JO",
+        json={"discount_percent": "30.00"},
+        headers=support_headers,
+    )
+    assert refused.status_code == 403
+
+    written = await client.put(
+        "/admin/sharing/settings?country_code=JO",
+        json={
+            "discount_percent": "30.00",
+            "corridor_km": "3.500",
+            "max_detour_minutes": 9,
+            "partner_wait_seconds": 120,
+        },
+        headers=admin_headers,
+    )
+    assert written.status_code == 200, written.text
+    body = written.json()
+    assert Decimal(body["discount_percent"]) == Decimal("30.00")
+    assert body["max_detour_minutes"] == 9 and body["partner_wait_seconds"] == 120
+
+
+async def test_editing_the_percent_does_not_move_a_running_ride(
+    client: AsyncClient,
+    session_factory,
+    jordan_settings,
+    sharing_on,
+    admin_headers: dict,
+):
+    """**ما جُمِّد لا يُحرَّك**: مشرفٌ يخفض النسبة ورحلةٌ قائمةٌ بخصمها كما وافق عليه.
+
+    وهي قاعدةُ `commission_percent_at_ride` نفسُها، ولها هنا وجهٌ ثانٍ: الخفضُ
+    مالٌ يخصم من راكبٍ رأى رقماً غيرَه على شاشته قبل أن يضغط.
+    """
+    rider = await rider_session(client)
+    ride = await _request(client, rider["headers"], share=True)
+    assert ride["status"] == 201
+
+    await client.put(
+        "/admin/sharing/settings?country_code=JO",
+        json={"discount_percent": "5.00"},
+        headers=admin_headers,
+    )
+
+    async with session_factory() as session:
+        row = await session.get(Ride, ride["body"]["id"])
+        assert row.share_discount_percent_at_ride == DISCOUNT

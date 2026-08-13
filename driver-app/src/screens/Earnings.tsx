@@ -13,7 +13,6 @@
 */
 
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getEarnings } from "@/api/endpoints";
@@ -21,6 +20,7 @@ import type { Earnings } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 type Period = Earnings["period"];
 
@@ -31,7 +31,7 @@ const PERIOD_LABEL: Record<Period, string> = {
 };
 
 export function EarningsScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const [period, setPeriod] = useState<Period>("today");
   const [data, setData] = useState<Earnings | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function EarningsScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

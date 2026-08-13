@@ -32,6 +32,7 @@ import {
   MapPin,
   RefreshCw,
   TicketPercent,
+  Users,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -55,6 +56,7 @@ import { PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels"
 import { usePaymentPreference } from "@/lib/payment";
 import { useMultiStop } from "@/lib/multistop";
 import { usePromoCodes } from "@/lib/promo";
+import { useRideSharing } from "@/lib/sharing";
 import {
   earliest,
   latest,
@@ -101,6 +103,7 @@ export function ConfirmRide({
     category: VehicleCategory,
     preference: GenderPreference,
     promoCode?: string,
+    sharing?: { share: boolean; shareGenderConfirmed: boolean },
   ) => void;
   requesting: boolean;
   requestError: string | null;
@@ -165,6 +168,13 @@ export function ConfirmRide({
 
   // الكوبون (12-ز): `applied` هو ما قبلته الخلفيةُ — لا ما كتبه الراكب
   const promoEnabled = usePromoCodes();
+  // المشاركة (12-ي): المفتاحُ يقول «تُعرض»، و`share_fare` هو الرقم — وغيابُه
+  // يعني ألّا نسبةَ قُرِّرت، فيُخفى الصفُّ ولو كان المفتاح مشتعلاً
+  const sharingEnabled = useRideSharing();
+  const [share, setShare] = useState(false);
+  // **موافقةٌ ثانيةٌ منفصلة** لا مدموجةٌ في الأولى (قرارُ المالك الرابع): من
+  // حدّدت جنسَ الكبتن لا تُشارَك رحلتُها إلا باختيارٍ صريحٍ تختاره هي
+  const [shareGendered, setShareGendered] = useState(false);
   const { user } = useSession();
   const country = user?.country_code ?? "JO";
   const [couponOpen, setCouponOpen] = useState(false);
@@ -235,7 +245,16 @@ export function ConfirmRide({
 
   // ما سيُدفع فعلاً: المخصومُ إن طُبِّق كوبون، وإلا المقدَّر. ولا جمعَ ولا ضربَ
   // هنا — كلا الرقمين جاء من الخلفية كما هو (القسم 14)
-  const shownFare = applied?.fare_after ?? estimate?.estimated_fare ?? null;
+  // **المشاركةُ تُخفى ما دام لا سعرَ لها**: تبديلُ الفئة يعيد حساب التقدير،
+  // وصفُّ خصمٍ بلا رقمٍ يَعِد بما لا يُعرض
+  const shareOffered = sharingEnabled && estimate?.share_fare != null;
+  const shareGuarded = preference !== "any";
+  const shareReady = share && (!shareGuarded || shareGendered);
+  const shownFare =
+    (shareReady ? estimate?.share_fare : null) ??
+    applied?.fare_after ??
+    estimate?.estimated_fare ??
+    null;
 
   /** ملاحظةُ المحفظة — وهي **وصفُ ما تفعله الخلفيةُ فعلاً**، لا وعدُ شاشة.
    *
@@ -426,6 +445,55 @@ export function ConfirmRide({
           </button>
         ) : null}
 
+        {/* **صفُّ المشاركة** (12-ي): مفتاحٌ واحدٌ ومعه الرقمُ الذي يوفّره —
+            «شارك» بلا رقمٍ كلمةٌ لا عرض. ويُخفى كلُّه حيث لا مشاركة، فمفتاحٌ
+            معطّلٌ يَعِد بما لا يقع.
+            **والموافقةُ الثانيةُ تظهر بشرطها**: طلبٌ بتفضيلٍ نسائيٍّ لا يُشارَك
+            إلا باختيارٍ صريح — والسطرُ يقول ماذا يعني قبل أن تختاره، لا بعده. */}
+        {shareOffered ? (
+          <div className="rounded-12 border border-line bg-surface p-12">
+            <label className="flex items-center gap-10">
+              <input
+                type="checkbox"
+                className="size-16 shrink-0 accent-brand"
+                checked={share}
+                onChange={(event) => {
+                  setShare(event.target.checked);
+                  // موافقةٌ أُعطيت ثم أُطفئ المفتاحُ لا تبقى محفوظةً لمرةٍ ثانية
+                  if (!event.target.checked) setShareGendered(false);
+                }}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-6 text-14 font-medium text-ink">
+                  <Users className="size-16 text-muted" />
+                  شارك الرحلة ووفّر
+                </span>
+                <span className="mt-2 block text-11.5 leading-snug text-muted">
+                  قد ينضم راكبٌ آخر في طريقك، وتدفع{" "}
+                  {formatMoney(estimate!.share_fare!, estimate?.currency)} بدل{" "}
+                  {formatMoney(estimate!.estimated_fare, estimate?.currency)} —
+                  وتصل متأخراً قليلاً. والسعرُ لك حتى لو لم يوجد شريك.
+                </span>
+              </span>
+            </label>
+
+            {share && shareGuarded ? (
+              <label className="mt-10 flex items-start gap-10 rounded-12 border border-brand-brd bg-brand-soft p-10">
+                <input
+                  type="checkbox"
+                  className="mt-2 size-16 shrink-0 accent-brand"
+                  checked={shareGendered}
+                  onChange={(event) => setShareGendered(event.target.checked)}
+                />
+                <span className="text-11.5 leading-snug text-ink">
+                  طلبكِ يحدّد جنس الكبتن. أوافق على أن تشاركني الرحلةَ{" "}
+                  <b>راكبةٌ أخرى</b> — ولن يُضاف راكبٌ من غير ذلك.
+                </span>
+              </label>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* ورقةُ الكوبون (12-ز) — وتُخفى كلُّها حيث المفتاح مطفأ: زرٌّ يقول
             «كوبون» في سوقٍ لا كوبوناتَ فيه يفتح حقلاً لا رمزَ يُقبل فيه */}
         {promoEnabled ? (
@@ -530,7 +598,12 @@ export function ConfirmRide({
             className="w-auto flex-[3]"
             loading={requesting}
             disabled={!estimate || loading}
-            onClick={() => onRequest(category, preference, applied?.code)}
+            onClick={() =>
+              onRequest(category, preference, applied?.code, {
+                share: shareReady,
+                shareGenderConfirmed: shareReady && shareGuarded,
+              })
+            }
           >
             اطلب الرحلة
             {shownFare && !loading ? (

@@ -244,6 +244,7 @@ export function HomeScreen() {
     category: VehicleCategory,
     preference: GenderPreference,
     promoCode?: string,
+    sharing?: { share: boolean; shareGenderConfirmed: boolean },
   ) {
     if (!pickup || !dropoff) return;
     setRequesting(true);
@@ -259,6 +260,11 @@ export function HomeScreen() {
         // **الرمزُ يُرسل مع الطلب** (12-ز): الخلفيةُ تُجمّد قاعدتَه على الرحلة،
         // ورمزٌ خاطئ يرفض الطلبَ كلَّه بدل أن يمرّ بلا خصمٍ في صمت
         promo_code: promoCode,
+        // **المشاركةُ حقلان لا واحد** (12-ي): الثاني موافقةٌ صريحةٌ على أن
+        // تشاركها راكبةٌ أخرى، والخلفيةُ **ترفض** طلباً مجنَّساً بلا موافقة ولا
+        // تُسقطها بصمت — فالتطبيقُ يرسل ما اختارته لا ما يُريحه
+        share: sharing?.share,
+        share_gender_confirmed: sharing?.shareGenderConfirmed,
         stops: stops.map((stop) => ({
           lat: stop.lat,
           lng: stop.lng,

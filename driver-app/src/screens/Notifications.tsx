@@ -42,6 +42,7 @@ import type { Currency, UserNotification } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 const PAGE_SIZE = 30;
 
@@ -105,6 +106,7 @@ function destinationOf(entry: UserNotification): string | null {
 
 export function NotificationsScreen() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const [entries, setEntries] = useState<UserNotification[] | null>(null);
   const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -163,7 +165,7 @@ export function NotificationsScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

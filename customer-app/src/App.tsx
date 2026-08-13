@@ -5,7 +5,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { Suspense, lazy, useEffect } from "react";
+import { lazy, useEffect } from "react";
 import {
   Navigate,
   Route,
@@ -15,7 +15,6 @@ import {
 import type { ReactNode } from "react";
 
 import { Toasts } from "@/components/Toasts";
-import { Spinner } from "@/components/ui/Feedback";
 import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
@@ -179,9 +178,13 @@ export default function App() {
               <RideProvider>
                 <Router>
                   <Toasts />
-                  <Suspense fallback={<Spinner />}>
-                    <RouteTransition>
-                    <Routes>
+                  {/* **الحركةُ فوق `Suspense` لا تحته** (`ui/Motion.tsx`):
+                      البديلُ فوقها كان يستبدل الشجرةَ المتحركةَ كلَّها فيموت
+                      الانتقال — قِيس في المتصفح. و`Routes` مُثبَّتةٌ على الموقع
+                      الذي تحمله الورقةُ الخارجة، وإلا رسمت الخارجةُ الداخلةَ */}
+                  <RouteTransition>
+                    {(animated) => (
+                    <Routes location={animated}>
                       <Route
                         path="/login"
                         element={
@@ -341,8 +344,8 @@ export default function App() {
 
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
-                    </RouteTransition>
-                  </Suspense>
+                    )}
+                  </RouteTransition>
                 </Router>
               </RideProvider>
               </PlacesProvider>

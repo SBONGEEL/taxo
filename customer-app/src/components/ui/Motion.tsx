@@ -9,22 +9,52 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
+import { Suspense, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 
+import { Spinner } from "@/components/ui/Feedback";
 import { DURATION, EASE, SLIDE_PX, STAGGER_STEP } from "@/lib/motion";
+import { isBackward } from "@/lib/nav-order";
 import { cn } from "@/lib/utils";
 
-/** انتقالُ الشاشات **باتجاه التنقّل** لا باتجاهٍ ثابت.
+/** انتقالُ الشاشات — **باتجاه التنقّل، ومقيساً في المتصفح لا مفترضاً**.
  *
- * `useNavigationType()` يميّز `POP` (رجوعٌ بزرِّ النظام أو بسهم الشاشة) من
- * `PUSH`. والاتجاهُ **منطقيٌّ لا فيزيائي**: التطبيقُ عربيٌّ RTL، فالتقدّمُ
- * يدخل من جهة البداية (اليسار بصرياً) والرجوعُ يعكسه — وشاشةٌ تدخل من الجهة
- * الخطأ تُقرأ رجوعاً وهي تقدّم.
+ * ثلاثةُ أشياء يجب أن تجتمع، وكان اثنان منها ناقصَين حتى قِيست الحركةُ في
+ * المتصفح فتبيّن أنها **لا تعمل على أيِّ مسار**: لا `transform` ولا `opacity`
+ * يتغيّران في أيِّ إطار، والشاشةُ تُستبدل استبدالاً.
+ *
+ * ١. **`Suspense` تحت الحركة لا فوقها.** المساراتُ كسولةٌ (`lazy`)، فأوّلُ
+ *    انتقالٍ إلى شاشةٍ لم تُحمَّل يُعلِّق الشجرةَ — و`Suspense` فوق
+ *    `AnimatePresence` يستبدل **الشجرةَ كلَّها** ببديله، فيموت الخروجُ قبل أن
+ *    يبدأ ويولد الدخولُ بلا أبٍ يتحرك. قِيس: مؤشّرُ تحميلٍ يظهر في منتصف كلِّ
+ *    انتقال. فصار البديلُ **داخل** العنصر المتحرك: الورقةُ تنزلق وفيها مؤشّرُها.
+ * ٢. **`Routes` مُثبَّتةٌ على موقعها.** بلا `location` تقرأ `Routes` الموقعَ
+ *    الحاليَّ من السياق، فتُعيد النسخةُ **الخارجة** رسمَ الشاشة **الداخلة** —
+ *    أي أن ما يخرج مسحوباً هو الشاشةُ الجديدة نفسُها. حركةٌ تقول عكسَ ما يقع.
+ * ٣. **الاتجاهُ من رتبة المسار** (`lib/nav-order.ts`) لا من نوع التنقّل وحدَه:
+ *    `navigate("/account")` بعد حفظٍ رجوعٌ يقرؤه السجلُّ تقدّماً.
+ *
+ * **و`prefers-reduced-motion` يُعطَّل من مكانٍ واحد**: `MotionConfig` في `App`
+ * بـ`reducedMotion="user"` — فتصير كلُّ حركةٍ في Framer فوريةً بلا أن يفحص
+ * مكوّنٌ واحدٌ التفضيل. وما يبقى من انتقالات CSS يُلغى بـ`motion-reduce:`.
+ *
+ * والاتجاهُ **منطقيٌّ لا فيزيائي**: التطبيقُ عربيٌّ RTL، فالتقدّمُ يدخل من جهة
+ * البداية والرجوعُ يعكسه — وشاشةٌ تدخل من الجهة الخطأ تُقرأ رجوعاً وهي تقدّم.
  */
-export function RouteTransition({ children }: { children: ReactNode }) {
+export function RouteTransition({
+  children,
+}: {
+  /** دالةٌ تأخذ الموقعَ المُثبَّت وتعيد `Routes` — انظر (٢) أعلاه. */
+  children: (location: ReturnType<typeof useLocation>) => ReactNode;
+}) {
   const location = useLocation();
-  const back = useNavigationType() === "POP";
+  const popped = useNavigationType() === "POP";
+  const previous = useRef(location.pathname);
+  const back = isBackward(previous.current, location.pathname, popped);
+  useEffect(() => {
+    previous.current = location.pathname;
+  }, [location.pathname]);
   const from = back ? SLIDE_PX : -SLIDE_PX;
 
   return (
@@ -37,7 +67,7 @@ export function RouteTransition({ children }: { children: ReactNode }) {
         exit={{ opacity: 0, x: -from }}
         transition={{ duration: DURATION.med, ease: EASE.standard }}
       >
-        {children}
+        <Suspense fallback={<Spinner />}>{children(location)}</Suspense>
       </motion.div>
     </AnimatePresence>
   );

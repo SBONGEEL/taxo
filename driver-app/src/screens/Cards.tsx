@@ -15,7 +15,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
@@ -25,10 +24,11 @@ import {
 } from "@/api/endpoints";
 import type { SavedCard } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { useGoBack } from "@/lib/back";
 import { cn } from "@/lib/utils";
 
 export function CardsScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const [cards, setCards] = useState<SavedCard[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function CardsScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

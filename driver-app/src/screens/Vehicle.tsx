@@ -15,7 +15,6 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { listDocuments, updateVehicle, uploadDocument } from "@/api/endpoints";
@@ -24,6 +23,7 @@ import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useDriver } from "@/lib/driver";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
@@ -39,7 +39,7 @@ const REVIEW_LABEL = {
 } as const;
 
 export function VehicleScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const { profile, refresh } = useDriver();
   const [state, setState] = useState<DriverDocuments | null>(null);
   const [busy, setBusy] = useState<DocumentType | null>(null);
@@ -93,7 +93,7 @@ export function VehicleScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

@@ -30,7 +30,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
@@ -53,6 +52,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 const DURATION_LABEL: Record<SubscriptionDuration, string> = {
   daily: "٢٤ ساعة من لحظة الشراء",
@@ -105,7 +105,7 @@ const COPY: Record<
 };
 
 export function SubscriptionScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const { user } = useSession();
   // القناةُ تظهر إن كان مفتاحُها مرفوعاً في دولة الكبتن — والغيابُ معطَّل
   // دائماً (القسم 4). ولا اسمَ ميزةٍ مكتوبٌ هنا إلا هذا الواحد
@@ -197,7 +197,7 @@ export function SubscriptionScreen() {
         <div className="mb-16 flex items-center gap-10">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => goBack()}
             aria-label="رجوع"
             className="pressable text-18 text-muted"
           >

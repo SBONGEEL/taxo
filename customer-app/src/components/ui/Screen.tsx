@@ -9,6 +9,11 @@
  * عند أوّل صفٍّ يُضغط يجعل الانتقالَ من «الإعدادات» إلى «المحفظة» رجعتين بدل
  * ضغطة، وهو ما يوجد الشريطُ ليمنعه.
  *
+ * **و`back` وجهةٌ احتياطيةٌ لا وجهةٌ ثابتة** (12-ي+، بعد عطبِ الجرس): الشاشةُ
+ * التي لها بابان — كالإشعارات: من رأس الخريطة ومن «حسابي» — كانت تُرجع الجميعَ
+ * إلى الأب المكتوب، فيهبط من دخل من الخريطة في «حسابي» وهو لم يزره. القرارُ في
+ * `lib/back.ts`: من حيث جئت، والمكتوبُ لمن لا تاريخَ له.
+ *
  * وجذرُ التبويب هو `nav` مع `back={false}`: لا «خلفَ» له — من ضغط «رحلاتي» من
  * «المحفظة» لم يدخل شيئاً ليخرج منه، وسهمٌ هناك يعيده إلى تبويبٍ آخر فيُقرأ
  * عطلاً. وكلاهما `prop` لا استنتاجٌ من المسار: الشاشةُ تعرف دورَها، وقائمةُ
@@ -16,10 +21,10 @@
  */
 
 import { ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
+import { useGoBack } from "@/lib/back";
 import { cn } from "@/lib/utils";
 
 export function Screen({
@@ -38,7 +43,9 @@ export function Screen({
   children: ReactNode;
   className?: string;
 }) {
-  const navigate = useNavigate();
+  // **المسارُ المكتوب مخرجٌ احتياطيٌّ لا وجهة** (`lib/back.ts`): الرجوعُ يعيدك
+  // من حيث جئت، ولا يُستعمل هذا المسارُ إلا حين لا تاريخَ داخل التطبيق
+  const goBack = useGoBack(typeof back === "string" ? back : "/");
   const showBack = back;
 
   return (
@@ -47,9 +54,7 @@ export function Screen({
         {showBack ? (
           <button
             type="button"
-            onClick={() =>
-              typeof showBack === "string" ? navigate(showBack) : navigate(-1)
-            }
+            onClick={goBack}
             className="pressable rounded-full p-8 text-ink transition hover:bg-surface-2"
             aria-label="رجوع"
           >

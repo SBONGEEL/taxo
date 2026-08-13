@@ -14,7 +14,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
@@ -30,6 +29,7 @@ import {
   withdrawalTone,
 } from "@/lib/walletFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 const PAGE_SIZE = 20;
 
@@ -42,7 +42,7 @@ const BAR_TONE: Record<Withdrawal["status"], string> = {
 };
 
 export function WithdrawalsScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   // العملةُ ليست حقلاً على طلب السحب — تُقرأ من دولة الكبتن كما يشتقّها
   // `currency_for_country` في الخلفية، ولا تُخمَّن ولا تُكتب في الواجهة
   const { user } = useSession();
@@ -79,7 +79,7 @@ export function WithdrawalsScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

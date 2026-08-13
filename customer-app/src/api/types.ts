@@ -197,6 +197,13 @@ export interface RideEstimate {
   duration_min: string;
   estimated_fare: string;
   minimum_fare_applied: boolean;
+  /** سعرُ المشاركة **محسوباً في الخلفية** (12-ي): الخصمُ والأجرةُ بعده.
+   *
+   *  و`null` تعني «لا مشاركةَ في هذا السوق» — وليست صفراً: صفرٌ في حقلِ مالٍ
+   *  يُقرأ سعراً، والغيابُ يُقرأ غياباً. والتطبيقُ لا يضرب نسبةً في أجرةٍ
+   *  ليصل إليهما (القسم 14). */
+  share_discount: string | null;
+  share_fare: string | null;
 }
 
 export interface RideVehicle {
@@ -236,6 +243,15 @@ export interface Ride {
   /** ما طُلب في هذه الرحلة من جنس الكبتن — **تفضيلُ الطلب لا جنسُ أحد**. */
   gender_preference: GenderPreference;
   driver: RideDriver | null;
+
+  /** المشاركة (12-ي): نسبةُ الخصم **المجمَّدة** على هذه الرحلة، ومجموعتُها
+   *  ومقعدُها فيها. وصفرُ النسبة يعني «رحلةٌ منفردة» — ولا عمودَ ثانٍ يخالفه.
+   *
+   *  **والنسبةُ لا تُضرب في التطبيق**: ما يُعرض من مال يصل محسوباً (القسم 14)،
+   *  وهذه تُقرأ لسؤالٍ واحد: هل هذه رحلةٌ مشتركة. */
+  share_discount_percent: string;
+  share_group_id: string | null;
+  share_seat: number;
 
   // --- تعدد الوجهات (المرحلة 12-ب) ---
   stops: RideStop[];

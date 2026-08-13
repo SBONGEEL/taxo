@@ -23,12 +23,14 @@ items 1–3; the driver's earnings summary = 17; the dispute badge in both ride 
 editing and the CliQ alias = 43/18) ·
 12-د two-factor login for the panel · 12-هـ WhatsApp as a third phone verifier · 12-و tipping ·
 12-ز coupons · 12-ح the female-driver referral incentive · 12-ط scheduled rides · plus the two
-maintenance jobs. **12-ي — ride sharing — is specified in `SPEC.md` §5.12 with the owner's decisions
-recorded, and no code exists for it**; it is the one thing left before stage 13, and nothing is queued ahead of it. **Surge the owner
-decided not to build** (with no real demand data it would be tuned wrong and turn riders away), so
-stage 12 closes with sharing.
+maintenance jobs. **12-ي — ride sharing — is built end to end** (`SPEC.md` §5.12): the seat-based
+indexes and their concurrency tests, the geographic matching, dispatch integration, the panel's four
+numbers and both PWAs — all opened in a browser. **Surge the owner decided not to build** (with no
+real demand data it would be tuned wrong and turn riders away), so **stage 12 is closed and stage 13
+is next**. One money question inside sharing stays open by his decision: whether the company bears the
+remaining rider's difference **before** departure.
 
-**691 backend tests pass** across 62 test files — measured, not estimated, on 2026-08-13. All three
+**711 backend tests pass** across 64 test files — measured, not estimated, on 2026-08-13. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -42,6 +44,13 @@ runtime — the `awaiting_confirmation` shape. Types are deliberately not compar
 open dict each app narrows to what it reads, and `auth` is inline in the panel and named in the two
 PWAs. It sits in **all three** apps because all three call `GET /config`. Verified by reproducing both
 directions and both models before being trusted.
+
+**And widened again in 12-ي to `RideEstimateOut`** — the first watched pair that is neither config nor
+auth, added the moment the estimate started carrying **money** (`share_discount`/`share_fare`,
+computed in the backend per §14). It is the same shape as the rest: a field the backend publishes and
+the app types by hand, whose silent absence draws a "share and save" row with no number. Not
+`required`, since only the rider app estimates a fare. Verified by deleting `share_fare` from the
+mirror and watching it fail.
 
 **It was widened to the auth responses after `LoginResponse` shipped unmirrored** in both PWAs: the
 backend answers `POST /auth/login` with `{totp_required, user: null, tokens: null}` when a second factor
@@ -61,10 +70,10 @@ Fixed in the same session. The guard works; what failed was running it.
 
 **The rider design-matching work is finished**: `customer-app` was matched to the rider prototype in
 five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per session, and **all five are delivered** —
-see "Rider design-matching" below for what each settled. **So sharing (12-ي) is the next thing to
-build**, and nothing sequences ahead of it any more.
+see "Rider design-matching" below for what each settled. **Sharing (12-ي) followed them and is
+done**, so nothing is queued before stage 13.
 
-**Stage 13 is what follows sharing**: tests plus a full manual run of the whole scenario — driver
+**Stage 13 is next**: tests plus a full manual run of the whole scenario — driver
 signs up → approved → subscribes → rider requests → tracking → payment → withdrawal. Three screens
 listed in the debt below are waiting for that run because they cannot be reached without it.
 
@@ -387,8 +396,11 @@ payment) after 30 minutes — long enough that an interrupted open call's webhoo
 residual risk is written down rather than denied. Each order commits in its own transaction, so one
 provider outage cannot undo what was already settled.
 
-**Stage 12-ي — ride sharing — has its data layer built and its guard measured; the service layer, the
-routes and both apps are not built.** What exists (migration `0027`, `models/sharing.py`,
+**Stage 12-ي — ride sharing — is now built end to end and opened in a browser** (backend, matching,
+dispatch, the panel's numbers, both PWAs). The passage below is the record of how it was built, in
+order; the two paragraphs after "Still unbuilt" are what has since landed.
+
+**Stage 12-ي's data layer came first and its guard was measured.** What exists (migration `0027`, `models/sharing.py`,
 `tests/test_ride_sharing_index.py`, the `ride_sharing_enabled` flag and its panel switch, seeded off
 with a zero discount) is the piece the owner ordered first, and it produced a correction to his own
 decision.
@@ -443,12 +455,46 @@ row after the canceller's opens a real deadlock when both riders cancel at once,
 driver is late. The statement takes and releases its own lock, and its status predicate makes it
 idempotent — the second cancel matches no row because the first moved it out of the active statuses.
 
-**Still unbuilt for 12-ي**: the matching itself — the corridor around the first ride's route, the
-detour cap and the partner wait window (three per-country numbers already seeded in
-`ride_sharing_settings`, and a Mapbox call per candidate), which is what actually puts a second rider
-in the car; dispatch integration for offering a group; the cancellation rules (SPEC decisions 5–8);
-notifications; and both PWAs. Until matching exists every shared ride is a group of one — which is a
-**correct, shippable state** by decision 3, not a broken one.
+**Group formation and matching are built, and the concurrency test came before either** — and it
+corrected a second assumption in the same decision. `tests/test_ride_sharing_join_concurrency.py`
+fires two joiners at one lead: one seat is filled and the other is refused — **but deleting the lead's
+`with_for_update` leaves it green**, because the partial index `(driver_id, share_seat)` is what
+catches the second. So the seat belongs to the index, and that test guards *behaviour* (the refusal
+code a rider reads), like 12-ز's per-user coupon test. **What the lock alone owns is the lead's state
+between the check and the write**: a captain departing in that gap leaves a rider attached to a car
+that has left — a perfectly valid row saying what never happened, with no exception and no log line.
+Deleting it yields `ok` instead of `share_group_unavailable`.
+
+**The matching is a corridor in the database and a detour cap from Mapbox** (`sharing.find_lead`).
+The corridor is `ST_DWithin` around the **straight line** between the lead's two points — a filter,
+not the verdict, and it exists so one request does not call Mapbox once per open ride in the country.
+Dropping **both** `geography` casts puts a ride 70 km away inside a 2 km corridor (measured; two tests
+fail), though **either cast alone suffices** — PostGIS casts the other side implicitly, which is
+exactly why both are written rather than relying on a conversion only its author knows about. The
+itinerary measured is **the worst ordering for the lead** (lead pickup → partner → partner's drop →
+lead's drop), **one call per candidate**, at most **three candidates, oldest first**: so the cap holds
+however the captain actually drives, and whoever waited longest is served first. Its home is
+`dispatch._run` — after `searching`, before the first offer — because the request must answer
+immediately and a Mapbox call must not stand in front of the reply; any failure there falls back to
+ordinary dispatch, since sharing is a **possible bonus**, not a condition of the ride.
+
+**The captain is notified, not asked, and that rests on the badge**: the offer card carries «مشتركة —
+قد ينضم راكب ثانٍ» *above* the fare, so accepting is consent to the second seat — the women's-badge
+argument exactly. A card that does not draw it invalidates the decision, which is why the three
+`RideOut` fields are mirrored in both apps' `Ride` types (they were in neither: a field with no
+mirror). And `join_group` reads `ALLOWED_TRANSITIONS` from `services/rides.py` rather than copying it,
+so there is no second door to `accepted`.
+
+**Verified in a browser, end to end**: two riders requested sharing, the second joined the first's
+car with no new offer, and the first rider's badge changed from «بانتظار شريك» to «رحلة مشتركة» —
+plus the confirm sheet's share row in dark/light/pink (with the separate gendered consent), the
+panel's four numbers in both themes, and the captain's offer and active cards. That pass also found a
+wording collision — the tracking sheet's old «مشاركة الرحلة» button now sits under a «رحلة مشتركة»
+badge meaning something else — so the older label became «أرسل تفاصيل رحلتك» (decision 56).
+
+**Still open in 12-ي**: whether the company bears the remaining rider's difference **before**
+departure (the owner's one deferred money question, SPEC §5.12), and the captain-consent decision is
+recorded there as the one of the six implementation decisions that is his to confirm.
 
 **The original text of this section follows, and is still the design.** `SPEC.md` §5.12 holds the design and the
 owner's four decisions, and a fresh session can start from there: **two riders to a group** keyed by
@@ -659,8 +705,9 @@ form, and the decision is recorded in `design/DESIGN-DECISIONS.md`.**
     prototype puts it in `accountRows`. The header now carries the account initial, the bell and the
     theme toggle, exactly as the prototype does.
 
-**All five packages are delivered.** What is left before stage 13 is sharing (12-ي), whose design and
-eight owner decisions are in `SPEC.md` §5.12.
+**All five packages are delivered**, and sharing (12-ي) followed them and is done — so **stage 13 is
+what remains**. `SPEC.md` §5.12 holds the eight owner decisions plus the six implementation ones the
+build added.
 
 **Four items are deferred by the owner's decision until after launch** and are marked ⏸️ in
 `FUTURE-FEATURES.md` (dated 2026-08-13): report a problem, the help centre, the "N cars nearby" line,

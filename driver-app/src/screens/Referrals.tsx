@@ -15,7 +15,6 @@
 import { useEffect, useState } from "react";
 import { Copy, Check, Share2 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
@@ -25,6 +24,7 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 /** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن. */
 function stageOf(row: ReferralStage): { text: string; tone: string } {
@@ -47,7 +47,7 @@ function stageOf(row: ReferralStage): { text: string; tone: string } {
 }
 
 export function ReferralsScreen() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const { user } = useSession();
   // العملةُ من دولة الحساب — والخلفيةُ ترسلها على المكافأة المدفوعة وحدها
   const currency = user?.country_code === "LY" ? CURRENCY_LABEL.LYD : CURRENCY_LABEL.JOD;
@@ -101,7 +101,7 @@ export function ReferralsScreen() {
       <div className="mb-16 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

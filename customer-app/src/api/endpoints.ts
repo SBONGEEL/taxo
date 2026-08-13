@@ -136,6 +136,11 @@ export const requestRide = (payload: {
   stops?: { lat: number; lng: number; address?: string | null }[];
   /** رمزُ الكوبون كما قبلته الخلفيةُ في التحقق (12-ز) — ورمزٌ خاطئ يرفض الطلب. */
   promo_code?: string;
+  /** المشاركة (12-ي) — و`share_gender_confirmed` **حقلٌ مستقلٌّ لا مدموج**:
+   *  طلبٌ بتفضيلٍ نسائيٍّ لا يُشارَك إلا باختيارٍ صريحٍ من صاحبته، ودمجُه في
+   *  `share` يجعل الموافقةَ ضمنيةً — والقبولُ الصامتُ لا يكفي أمناً. */
+  share?: boolean;
+  share_gender_confirmed?: boolean;
 }) => api.post<Ride>("/rides", payload);
 
 // ------------------------------------------------------- الأماكن المحفوظة

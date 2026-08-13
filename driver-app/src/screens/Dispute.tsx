@@ -24,6 +24,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
 import { arabicDigits, cn } from "@/lib/utils";
+import { useGoBack } from "@/lib/back";
 
 const REASONS = [
   "لم تصلني الحوالة إطلاقاً",
@@ -34,6 +35,7 @@ const REASONS = [
 export function DisputeScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack();
 
   const [ride, setRide] = useState<Ride | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -96,7 +98,7 @@ export function DisputeScreen() {
       <div className="mb-14 mt-6 flex items-center gap-10">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => goBack()}
           aria-label="رجوع"
           className="pressable text-18 text-muted"
         >

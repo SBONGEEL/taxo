@@ -7,6 +7,7 @@ from app.routers import (
     admin_promo,
     bookings,
     admin_referrals,
+    admin_sharing,
     admin_providers,
     admin_rides,
     admin_security,
@@ -48,6 +49,7 @@ api_router.include_router(admin_settings.router)
 api_router.include_router(admin_providers.router)
 api_router.include_router(admin_promo.router)
 api_router.include_router(admin_referrals.router)
+api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 api_router.include_router(admin_payments.router)
 api_router.include_router(admin_live_map.router)

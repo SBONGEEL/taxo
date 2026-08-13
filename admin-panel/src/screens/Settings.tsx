@@ -34,12 +34,14 @@ import {
   listCommission,
   listFeatureFlags,
   getReferralSettings,
+  getSharingSettings,
   listPaymentSettings,
   listWalletSettings,
   setFeatureFlag,
   updateCommission,
   updatePaymentSettings,
   updateReferralSettings,
+  updateSharingSettings,
   updateWalletSettings,
 } from "@/api/endpoints";
 import type {
@@ -48,6 +50,7 @@ import type {
   FeatureKey,
   PaymentSetting,
   ReferralSetting,
+  RideSharingSetting,
   WalletSetting,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
@@ -140,12 +143,13 @@ export function SettingsScreen() {
   const [wallet, setWallet] = useState<WalletSetting[]>([]);
   const [payment, setPayment] = useState<PaymentSetting[]>([]);
   const [referral, setReferral] = useState<ReferralSetting | null>(null);
+  const [sharing, setSharing] = useState<RideSharingSetting | null>(null);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r] = await Promise.all([
+    const [f, c, w, p, r, sh] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
@@ -153,12 +157,14 @@ export function SettingsScreen() {
       // **منفذُ الإحالة لدولةٍ واحدة** لا قائمة، فيدخل السوقُ في التبعيات —
       // وبغيره يبقى معروضاً إعدادُ السوق الأول بعد تبديل الرأس
       getReferralSettings(country),
+      getSharingSettings(country),
     ]);
     setFlags(f);
     setCommission(c);
     setWallet(w);
     setPayment(p);
     setReferral(r);
+    setSharing(sh);
   }, [country]);
 
   useEffect(() => {
@@ -357,6 +363,36 @@ export function SettingsScreen() {
               />
             ) : (
               <p className="text-12.5 text-muted">لا إعداد إحالةٍ لهذه الدولة.</p>
+            )}
+          </section>
+
+          {/* مشاركةُ الرحلة (12-ي) — بطاقةٌ مستقلةٌ لجدولٍ مستقل، وأرقامُ
+              المعايرةِ الثلاثةُ **مع النسبة لا في شاشةٍ أخرى**: من يضبط الخصم
+              يحتاج أن يرى ما يجعل المشاركةَ تقع أصلاً */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">مشاركة الرحلة</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              راكبان في سيارةٍ واحدة بخصمٍ لكليهما{" "}
+              <b className="text-ink">تتحمّله الشركة</b> — فلا يَنقص ما يقبضه
+              الكبتن. <b className="text-ink">وصفرُ النسبة يعني «لم تُحدَّد»</b>{" "}
+              فلا تُعرض المشاركةُ ولو كان المفتاح مشتعلاً. وعاير النسبةَ على
+              قاعدةٍ واحدة: ما يقبضه الكبتن من رحلتين أعلى بوضوحٍ مما يقبضه من
+              منفردة، وإلا رفض المشاركةَ وهو محقّ. والثلاثةُ الباقيةُ تحكم من
+              يُطابَق بمن، وتسري على الطلب التالي لا على رحلةٍ سائرة.
+            </p>
+            {sharing ? (
+              <SharingForm
+                key={sharing.country_code}
+                row={sharing}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={setError}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">لا إعداد مشاركةٍ لهذه الدولة.</p>
             )}
           </section>
         </div>
@@ -812,5 +848,109 @@ function GuardModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/** أرقامُ المشاركة الأربعة (12-ي).
+ *
+ * **والنسبةُ وحدَها في صفٍّ ثم الثلاثةُ تحتها**، لأنها الوحيدةُ التي تعني مالاً:
+ * الثلاثةُ الأخرى معايرةٌ تشغيليةٌ لا يراها راكبٌ ولا كبتن. وخلطُها في شبكةٍ
+ * واحدةٍ يجعل حقلَ المال يُقرأ كأحدها.
+ */
+function SharingForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: RideSharingSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [percent, setPercent] = useState(row.discount_percent);
+  const [corridor, setCorridor] = useState(row.corridor_km);
+  const [detour, setDetour] = useState(String(row.max_detour_minutes));
+  const [wait, setWait] = useState(String(row.partner_wait_seconds));
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <>
+      <Field
+        label="نسبة الخصم ٪"
+        dir="ltr"
+        inputMode="decimal"
+        value={percent}
+        disabled={disabled}
+        onChange={(event) =>
+          setPercent(event.target.value.replace(/[^0-9.]/g, ""))
+        }
+      />
+      <p className="mt-6 text-11 text-muted">
+        {Number(row.discount_percent) > 0
+          ? `الحالي: خصمٌ ${arabicDigits(row.discount_percent)}٪ لكلِّ راكبٍ في المجموعة`
+          : "لم تُحدَّد نسبةٌ بعد — والمشاركةُ لا تُعرض على أحد"}
+      </p>
+
+      <div className="mt-14 grid grid-cols-3 gap-10">
+        <Field
+          label="عرض الممر (كم)"
+          dir="ltr"
+          inputMode="decimal"
+          value={corridor}
+          disabled={disabled}
+          onChange={(event) =>
+            setCorridor(event.target.value.replace(/[^0-9.]/g, ""))
+          }
+        />
+        <Field
+          label="أقصى التفاف (دقيقة)"
+          dir="ltr"
+          inputMode="numeric"
+          value={detour}
+          disabled={disabled}
+          onChange={(event) => setDetour(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <Field
+          label="انتظار الشريك (ثانية)"
+          dir="ltr"
+          inputMode="numeric"
+          value={wait}
+          disabled={disabled}
+          onChange={(event) => setWait(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-snug text-muted">
+        الممرُّ يحدّد من يُعرض عليه الالتحاق: نقطتا الراكب الثاني داخل هذه
+        المسافة من مسار الأول. والالتفافُ سقفُ ما تطول به رحلةُ{" "}
+        <b className="text-ink">من قَبِل أولاً</b> — يحميه هو لا الثاني.
+        والانتظارُ كم تبقى رحلتُه مفتوحةً لشريك.
+      </p>
+
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || percent === "" || corridor === "" || detour === "" || wait === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateSharingSettings(row.country_code, {
+            discount_percent: percent,
+            corridor_km: corridor,
+            max_detour_minutes: Number(detour),
+            partner_wait_seconds: Number(wait),
+          })
+            .then(() =>
+              onSaved("حُفظت المشاركة — تسري على الطلب التالي، ولا تمسّ رحلةً قائمة"),
+            )
+            .catch((caught) =>
+              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
   );
 }

@@ -34,6 +34,7 @@ import type {
   PaymentMethod,
   PaymentSetting,
   ReferralSetting,
+  RideSharingSetting,
   ReferralSummary,
   PaymentStatus,
   PricingRule,
@@ -377,6 +378,25 @@ export const updateReferralSettings = (
 ) =>
   api.put<ReferralSetting>(
     `/admin/referrals/settings?country_code=${country}`,
+    payload,
+  );
+
+// ------------------------------------------- مشاركةُ الرحلة (12-ي)
+
+export const getSharingSettings = (country: CountryCode) =>
+  api.get<RideSharingSetting>(`/admin/sharing/settings?country_code=${country}`);
+
+export const updateSharingSettings = (
+  country: CountryCode,
+  payload: {
+    discount_percent?: string;
+    corridor_km?: string;
+    max_detour_minutes?: number;
+    partner_wait_seconds?: number;
+  },
+) =>
+  api.put<RideSharingSetting>(
+    `/admin/sharing/settings?country_code=${country}`,
     payload,
   );
 

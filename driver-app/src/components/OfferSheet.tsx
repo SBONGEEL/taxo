@@ -99,6 +99,17 @@ export function OfferSheet({
                 تُخبر والموعدُ يُفيد. كبتنٌ يصل قبل الموعد فيجد الراكبَ غير جاهزٍ
                 يُلغي ويتذمّر، ومن يقرأ «موعدها ٧:٠٠» يعرف قبل أن يقبل. ومكانُها
                 فوق السعر لأنها تُقرأ **قبل** قرار القبول كشارة الطلب النسائي */}
+            {/* شارةُ المشاركة (12-ي) — **وهي شرطُ صحّةِ ما يقع بعدها**: راكبٌ
+                ثانٍ قد يُضاف إلى هذه الرحلة بلا استئذانٍ ثانٍ، وما يجعل ذلك
+                مقبولاً أنه مكتوبٌ هنا **قبل** القبول. فقبولُها قبولٌ بالمقعد
+                الثاني، لا مفاجأةٌ تصله وهو في الطريق.
+                ولا تَعِد بمن لم يأتِ: «قد ينضم» لا «سينضم» — المطابقةُ احتمالٌ
+                يقع أو لا يقع، ووعدٌ بشريكٍ لا يجيء يُقرأ خُلفاً */}
+            {Number(offer.ride.share_discount_percent) > 0 ? (
+              <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
+                مشتركة — قد ينضم راكب ثانٍ
+              </span>
+            ) : null}
             {offer.ride.scheduled_for ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
                 محجوزة — {bookedTime(offer.ride.scheduled_for)}
