@@ -37,7 +37,7 @@ export function WomenModeNotice() {
         type="button"
         onClick={dismissNotice}
         aria-label="إغلاق"
-        className="-me-6 shrink-0 rounded-full p-4 opacity-70 transition hover:opacity-100"
+        className="pressable -me-6 shrink-0 rounded-full p-4 opacity-70 transition hover:opacity-100"
       >
         <X className="size-14" />
       </button>

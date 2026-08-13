@@ -165,7 +165,7 @@ export function ProfileScreen() {
                   disabled={savingPreference}
                   onClick={() => saveGender(option.value)}
                   className={cn(
-                    "rounded-12 border px-8 py-12 text-14 font-medium transition",
+                    "pressable rounded-12 border px-8 py-12 text-14 font-medium transition",
                     // نفسُ حالة «محدَّد» في المنتقيين معاً: تعبئةٌ صلبة كما
                     // في التصميم (`_opts`)، لا صلبةٌ هنا وخافتةٌ هناك
                     user?.gender === option.value
@@ -207,7 +207,7 @@ export function ProfileScreen() {
                   disabled={savingPreference}
                   onClick={() => savePreference(option.value)}
                   className={cn(
-                    "rounded-12 border px-8 py-12 text-14 font-medium transition",
+                    "pressable rounded-12 border px-8 py-12 text-14 font-medium transition",
                     defaultPreference === option.value
                       ? "border-brand bg-brand text-brand-ink"
                       : "border-line text-muted hover:bg-surface-2",

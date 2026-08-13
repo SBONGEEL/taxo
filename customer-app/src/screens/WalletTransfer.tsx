@@ -100,7 +100,7 @@ export function WalletTransferScreen() {
             <button
               type="button"
               onClick={() => setRecipient(null)}
-              className="ms-auto text-14 text-muted hover:text-ink"
+              className="pressable ms-auto text-14 text-muted hover:text-ink"
             >
               تغيير
             </button>

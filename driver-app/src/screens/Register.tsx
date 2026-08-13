@@ -170,7 +170,7 @@ export function RegisterScreen() {
                 type="button"
                 onClick={() => setCountry(code)}
                 className={cn(
-                  "flex-1 rounded-13 border p-12 text-13.5 font-semibold",
+                  "pressable flex-1 rounded-13 border p-12 text-13.5 font-semibold",
                   code === country
                     ? "border-ink bg-surface-2 text-ink"
                     : "border-line text-ink",

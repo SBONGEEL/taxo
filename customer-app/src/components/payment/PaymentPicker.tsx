@@ -64,7 +64,7 @@ export function PaymentPicker({
                     onClose();
                   }}
                   className={cn(
-                    "flex w-full items-center gap-12 rounded-14 border p-13 text-start transition",
+                    "pressable flex w-full items-center gap-12 rounded-14 border p-13 text-start transition",
                     method === selected
                       ? "border-brand bg-brand-soft"
                       : "border-line bg-bg hover:bg-surface-2",

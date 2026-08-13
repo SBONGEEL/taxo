@@ -50,7 +50,7 @@ export function Screen({
             onClick={() =>
               typeof showBack === "string" ? navigate(showBack) : navigate(-1)
             }
-            className="rounded-full p-8 text-ink transition hover:bg-surface-2"
+            className="pressable rounded-full p-8 text-ink transition hover:bg-surface-2"
             aria-label="رجوع"
           >
             <ChevronRight className="size-20" />

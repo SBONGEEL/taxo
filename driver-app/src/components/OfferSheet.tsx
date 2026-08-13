@@ -140,7 +140,7 @@ export function OfferSheet({
             onClick={onAccept}
             disabled={busy}
             style={{ flex: 2.5 }}
-            className="rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
+            className="pressable rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
           >
             قبول
           </button>
@@ -148,7 +148,7 @@ export function OfferSheet({
             type="button"
             onClick={onDecline}
             disabled={busy}
-            className="flex-1 rounded-15 border border-line p-15 text-center text-13 font-semibold text-muted disabled:opacity-50"
+            className="pressable flex-1 rounded-15 border border-line p-15 text-center text-13 font-semibold text-muted disabled:opacity-50"
           >
             رفض
           </button>

@@ -82,7 +82,7 @@ export function RidesScreen() {
               <button
                 type="button"
                 onClick={() => navigate(`/rides/${ride.id}`)}
-                className="w-full rounded-16 border border-line bg-surface px-14 py-13 text-start"
+                className="pressable w-full rounded-16 border border-line bg-surface px-14 py-13 text-start"
               >
                 <div className="mb-8 flex items-baseline justify-between">
                   <span className="text-12 text-muted">
@@ -135,7 +135,7 @@ export function RidesScreen() {
             type="button"
             disabled={busy}
             onClick={() => void load(rides?.length ?? 0)}
-            className="mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
+            className="pressable mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
           >
             {busy ? "…" : "عرض المزيد"}
           </button>

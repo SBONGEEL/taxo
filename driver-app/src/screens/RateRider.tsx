@@ -66,7 +66,7 @@ export function RateRiderScreen({ ride, onDone }: Props) {
             aria-label={`${value} نجوم`}
             onClick={() => setStars(value)}
             className={cn(
-              "text-32 leading-hero",
+              "pressable text-32 leading-hero",
               value <= stars ? "text-warn" : "text-line",
             )}
           >
@@ -88,7 +88,7 @@ export function RateRiderScreen({ ride, onDone }: Props) {
       <button
         type="button"
         onClick={onDone}
-        className="mt-14 text-12.5 font-semibold text-muted"
+        className="pressable mt-14 text-12.5 font-semibold text-muted"
       >
         تخطي
       </button>

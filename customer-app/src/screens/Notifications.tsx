@@ -134,7 +134,7 @@ export function NotificationsScreen() {
           <button
             type="button"
             onClick={() => void markAll()}
-            className="flex items-center gap-6 text-12.5 font-semibold text-muted"
+            className="pressable flex items-center gap-6 text-12.5 font-semibold text-muted"
           >
             <CheckCheck className="size-14" />
             تحديد الكل كمقروء
@@ -166,7 +166,7 @@ export function NotificationsScreen() {
                 disabled={to === null}
                 onClick={() => to && navigate(to)}
                 className={cn(
-                  "card flex w-full items-start gap-12 p-14 text-start",
+                  "pressable card flex w-full items-start gap-12 p-14 text-start",
                   to ? "transition hover:bg-surface-2" : "cursor-default",
                   // **غيرُ المقروء يُعلَم بحدٍّ لا بخلفيةٍ ملوّنة**: الخلفيةُ
                   // الملوّنة على صفوفٍ كثيرةٍ تصير هي الصفحةَ لا التمييز

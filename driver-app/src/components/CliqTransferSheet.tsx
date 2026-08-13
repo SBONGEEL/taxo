@@ -159,7 +159,7 @@ export function CliqTransferSheet({
         <button
           type="button"
           onClick={onDismiss}
-          className="mt-12 w-full text-center text-11.5 font-semibold text-muted"
+          className="pressable mt-12 w-full text-center text-11.5 font-semibold text-muted"
         >
           لاحقاً — تبقى في تفاصيل الرحلة
         </button>

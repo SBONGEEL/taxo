@@ -33,7 +33,7 @@ export function Toasts() {
             <button
               type="button"
               onClick={() => dismissToast(toast.id)}
-              className="rounded-8 p-4 text-muted transition hover:bg-surface-2"
+              className="pressable rounded-8 p-4 text-muted transition hover:bg-surface-2"
               aria-label="إغلاق"
             >
               <X className="size-16" />

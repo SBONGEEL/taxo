@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { listWithdrawals } from "@/api/endpoints";
 import type { Withdrawal } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
@@ -80,7 +81,7 @@ export function WithdrawalsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -98,9 +99,9 @@ export function WithdrawalsScreen() {
         />
       ) : null}
 
-      <ul className="flex flex-col gap-9">
+      <Stagger className="flex flex-col gap-9">
         {(requests ?? []).map((request) => (
-          <li
+          <StaggerItem
             key={request.id}
             className="flex items-center gap-12 rounded-15 border border-line bg-surface px-14 py-13"
           >
@@ -141,16 +142,16 @@ export function WithdrawalsScreen() {
             >
               {WITHDRAWAL_STATUS_LABEL[request.status]}
             </span>
-          </li>
+          </StaggerItem>
         ))}
-      </ul>
+      </Stagger>
 
       {more ? (
         <button
           type="button"
           disabled={busy}
           onClick={() => void load(requests?.length ?? 0)}
-          className="mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
+          className="pressable mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
         >
           {busy ? "…" : "عرض المزيد"}
         </button>

@@ -89,7 +89,7 @@ export function PlacesScreen() {
                     <button
                       type="button"
                       onClick={() => setEditing(place)}
-                      className="text-14 font-medium text-ink underline"
+                      className="pressable text-14 font-medium text-ink underline"
                     >
                       تعديل
                     </button>
@@ -149,7 +149,7 @@ export function PlacesScreen() {
                       type="button"
                       disabled={busy}
                       onClick={() => setNaming(recent)}
-                      className="text-14 font-medium text-brand underline disabled:opacity-50"
+                      className="pressable text-14 font-medium text-brand underline disabled:opacity-50"
                     >
                       احفظ
                     </button>
@@ -196,7 +196,7 @@ function PlaceForm({
             type="button"
             onClick={() => setIcon(option.value)}
             className={cn(
-              "flex items-center justify-center gap-6 rounded-12 border p-10 text-14",
+              "pressable flex items-center justify-center gap-6 rounded-12 border p-10 text-14",
               option.value === icon
                 ? "border-brand bg-brand-soft text-ink"
                 : "border-line text-muted",
@@ -241,7 +241,7 @@ function ConfirmDelete({
         type="button"
         aria-label="حذف"
         onClick={() => setArmed(true)}
-        className="text-danger"
+        className="pressable text-danger"
       >
         <Trash2 className="size-18" />
       </button>
@@ -253,14 +253,14 @@ function ConfirmDelete({
         type="button"
         disabled={busy}
         onClick={onConfirm}
-        className="text-14 font-medium text-danger underline disabled:opacity-50"
+        className="pressable text-14 font-medium text-danger underline disabled:opacity-50"
       >
         تأكيد
       </button>
       <button
         type="button"
         onClick={() => setArmed(false)}
-        className="text-14 text-muted"
+        className="pressable text-14 text-muted"
       >
         تراجع
       </button>

@@ -140,7 +140,7 @@ export function RideDetailsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="absolute start-14 top-14 flex size-34 items-center justify-center rounded-full border border-line bg-surface text-ink"
+          className="pressable absolute start-14 top-14 flex size-34 items-center justify-center rounded-full border border-line bg-surface text-ink"
         >
           →
         </button>

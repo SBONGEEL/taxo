@@ -171,7 +171,7 @@ function Quick({
       type="button"
       onClick={() => onPick(value)}
       className={cn(
-        "flex-1 rounded-12 border p-12 text-center text-ink",
+        "pressable flex-1 rounded-12 border p-12 text-center text-ink",
         active ? "border-ink bg-surface-2" : "border-line",
       )}
     >

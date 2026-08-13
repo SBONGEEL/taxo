@@ -87,7 +87,7 @@ export function LoginScreen() {
         <button
           type="button"
           onClick={() => navigate("/forgot-password")}
-          className="cursor-pointer text-end text-12 text-muted underline"
+          className="pressable cursor-pointer text-end text-12 text-muted underline"
         >
           نسيت كلمة المرور؟
         </button>
@@ -109,7 +109,7 @@ export function LoginScreen() {
         <button
           type="button"
           onClick={() => navigate("/register")}
-          className="cursor-pointer font-semibold text-ink underline"
+          className="pressable cursor-pointer font-semibold text-ink underline"
         >
           سجّل الآن
         </button>

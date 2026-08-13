@@ -285,7 +285,7 @@ export function TrackingSheet({
                     type="button"
                     onClick={() => setReason(option)}
                     className={cn(
-                      "rounded-12 border px-12 py-10 text-start text-14 transition",
+                      "pressable rounded-12 border px-12 py-10 text-start text-14 transition",
                       reason?.label === option.label
                         ? "border-brand-brd bg-brand-soft font-semibold text-brand"
                         : "border-line bg-surface text-ink",

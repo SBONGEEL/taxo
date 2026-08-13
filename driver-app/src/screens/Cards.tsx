@@ -65,7 +65,7 @@ export function CardsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -115,7 +115,7 @@ export function CardsScreen() {
                   onClick={() =>
                     void act(card.id, () => makeCardDefault(card.id))
                   }
-                  className="text-10.5 font-bold text-muted disabled:opacity-60"
+                  className="pressable text-10.5 font-bold text-muted disabled:opacity-60"
                 >
                   اجعلها افتراضية
                 </button>
@@ -126,7 +126,7 @@ export function CardsScreen() {
                 onClick={() =>
                   void act(card.id, () => deleteSavedCard(card.id))
                 }
-                className="text-10.5 text-danger disabled:opacity-60"
+                className="pressable text-10.5 text-danger disabled:opacity-60"
               >
                 حذف
               </button>

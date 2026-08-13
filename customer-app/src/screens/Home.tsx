@@ -376,7 +376,7 @@ export function HomeScreen() {
         <button
           type="button"
           onClick={() => navigate("/account")}
-          className="pointer-events-auto flex size-44 items-center justify-center rounded-full border border-brand-brd bg-surface text-14 font-bold text-brand shadow-sm backdrop-blur"
+          className="pressable pointer-events-auto flex size-44 items-center justify-center rounded-full border border-brand-brd bg-surface text-14 font-bold text-brand shadow-sm backdrop-blur"
           aria-label="حسابي"
         >
           {user?.name.slice(0, 1) ?? "؟"}
@@ -390,7 +390,7 @@ export function HomeScreen() {
             // كي تمرّ إيماءاتُ الخريطة من حولها، فكلُّ زرٍّ فيها يُعيد تمكينَ
             // نفسه. وبغيره يُرسم الزرُّ ويُقاس ويبدو سليماً **ولا يُنقر** —
             // والقياسُ وحده يكشفه: `elementFromPoint` يعيد canvas الخريطة
-            className="pointer-events-auto relative rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+            className="pressable pointer-events-auto relative rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
           >
             <Bell className="size-20 text-ink" />
             {/* **نقطةٌ لا رقم** كما في التصميم (`unreadShow`): الرقمُ يحتاج قراءةً
@@ -404,7 +404,7 @@ export function HomeScreen() {
             type="button"
             onClick={() => setChoice(dark ? "light" : "dark")}
             aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
-            className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+            className="pressable pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
           >
             {dark ? (
               <Sun className="size-20 text-ink" />
@@ -421,7 +421,7 @@ export function HomeScreen() {
           const position = await currentPosition();
           if (position) map.current?.flyTo(position, 15);
         }}
-        className="absolute bottom-[42%] end-16 rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+        className="pressable absolute bottom-[42%] end-16 rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
         aria-label="موقعي الحالي"
       >
         <Crosshair className="size-20 text-ink" />
@@ -510,7 +510,7 @@ export function HomeScreen() {
                   <button
                     type="button"
                     onClick={() => setSearchOpen(true)}
-                    className="flex w-full items-center gap-12 rounded-12 border border-line bg-bg px-16 py-14 text-start"
+                    className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-bg px-16 py-14 text-start"
                   >
                     <Search className="size-20 text-muted" />
                     <span className="text-muted">ابحث عن وجهتك أو حدّدها بالدبوس</span>
@@ -532,7 +532,7 @@ export function HomeScreen() {
                               coordinates: { lat: place.lat, lng: place.lng },
                             })
                           }
-                          className="min-w-0 flex-1 rounded-12 border border-line bg-surface px-12 py-10 text-start transition hover:bg-surface-2"
+                          className="pressable min-w-0 flex-1 rounded-12 border border-line bg-surface px-12 py-10 text-start transition hover:bg-surface-2"
                         >
                           <span className="block truncate font-medium text-ink">
                             {place.label}
@@ -548,7 +548,7 @@ export function HomeScreen() {
                   <button
                     type="button"
                     onClick={() => setPhase("pick-pickup")}
-                    className="w-full truncate text-start text-14 text-muted"
+                    className="pressable w-full truncate text-start text-14 text-muted"
                   >
                     نقطة الانطلاق:{" "}
                     <span className="text-ink">

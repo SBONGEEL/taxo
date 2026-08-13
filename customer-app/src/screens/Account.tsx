@@ -73,7 +73,7 @@ export function AccountScreen() {
             type="button"
             onClick={() => navigate(row.to)}
             className={cn(
-              "flex w-full items-center gap-12 px-15 py-14 text-start transition hover:bg-surface-2",
+              "pressable flex w-full items-center gap-12 px-15 py-14 text-start transition hover:bg-surface-2",
               index === rows.length - 1 ? null : "border-b border-line",
             )}
           >
@@ -91,7 +91,7 @@ export function AccountScreen() {
       <button
         type="button"
         onClick={() => void signOut()}
-        className="mt-14 w-full p-10 text-center text-13 font-semibold text-danger"
+        className="pressable mt-14 w-full p-10 text-center text-13 font-semibold text-danger"
       >
         تسجيل الخروج
       </button>

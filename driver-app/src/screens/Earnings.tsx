@@ -57,7 +57,7 @@ export function EarningsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -71,7 +71,7 @@ export function EarningsScreen() {
             type="button"
             onClick={() => setPeriod(key)}
             className={cn(
-              "flex-1 rounded-13 border py-10 text-12.5 font-semibold",
+              "pressable flex-1 rounded-13 border py-10 text-12.5 font-semibold",
               key === period
                 ? "border-ink text-ink"
                 : "border-line text-muted",

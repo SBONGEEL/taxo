@@ -95,7 +95,7 @@ export function VehicleScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -136,7 +136,7 @@ export function VehicleScreen() {
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="mt-11 w-full rounded-12 border border-line py-9 text-center text-12 font-semibold text-ink"
+                  className="pressable mt-11 w-full rounded-12 border border-line py-9 text-center text-12 font-semibold text-ink"
                 >
                   تعديل بيانات المركبة
                 </button>
@@ -246,7 +246,7 @@ function DocumentRow({
         type="button"
         disabled={busy}
         onClick={() => input.current?.click()}
-        className="mt-10 w-full rounded-12 border border-dashed border-line py-10 text-center text-12 font-semibold text-muted disabled:opacity-60"
+        className="pressable mt-10 w-full rounded-12 border border-dashed border-line py-10 text-center text-12 font-semibold text-muted disabled:opacity-60"
       >
         {busy ? "…" : review ? "استبدال الملف" : "ارفع صورة"}
       </button>
@@ -373,7 +373,7 @@ function VehicleForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-12 border border-line py-10 text-center text-13 font-semibold text-muted"
+          className="pressable flex-1 rounded-12 border border-line py-10 text-center text-13 font-semibold text-muted"
         >
           إلغاء
         </button>

@@ -90,7 +90,7 @@ export function SettingsScreen() {
               disabled={marketing === null}
               onClick={() => toggleMarketing(!marketing)}
               className={cn(
-                "relative h-28 w-48 shrink-0 rounded-full transition",
+                "pressable relative h-28 w-48 shrink-0 rounded-full transition",
                 marketing ? "bg-brand" : "bg-line",
               )}
             >
@@ -184,7 +184,7 @@ export function SettingsScreen() {
                 type="button"
                 onClick={() => setChoice(value)}
                 className={cn(
-                  "flex flex-col items-center gap-4 rounded-12 border px-8 py-12 text-14 transition",
+                  "pressable flex flex-col items-center gap-4 rounded-12 border px-8 py-12 text-14 transition",
                   choice === value
                     ? "border-brand bg-brand-soft text-ink"
                     : "border-line text-muted hover:bg-surface-2",
@@ -219,7 +219,7 @@ export function SettingsScreen() {
                 aria-label="السِمة الوردية"
                 onClick={() => setPink(!pink)}
                 className={cn(
-                  "relative h-28 w-48 flex-none rounded-full transition",
+                  "pressable relative h-28 w-48 flex-none rounded-full transition",
                   pink ? "bg-brand" : "bg-line",
                 )}
               >
@@ -257,7 +257,7 @@ function Toggle({
       aria-label={label}
       onClick={onToggle}
       className={cn(
-        "relative h-28 w-48 shrink-0 rounded-full transition",
+        "pressable relative h-28 w-48 shrink-0 rounded-full transition",
         on ? "bg-brand" : "bg-line",
       )}
     >

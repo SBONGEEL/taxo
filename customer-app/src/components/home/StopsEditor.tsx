@@ -57,7 +57,7 @@ export function StopsEditor({
           <button
             type="button"
             onClick={onAdd}
-            className="flex items-center gap-4 text-12 font-medium text-ink"
+            className="pressable flex items-center gap-4 text-12 font-medium text-ink"
           >
             <Plus className="size-14" />
             إضافة محطة
@@ -91,7 +91,7 @@ export function StopsEditor({
                 aria-label="تحريك لأعلى"
                 disabled={index === 0}
                 onClick={() => move(index, -1)}
-                className="text-muted disabled:opacity-30"
+                className="pressable text-muted disabled:opacity-30"
               >
                 <ArrowUp className="size-16" />
               </button>
@@ -100,7 +100,7 @@ export function StopsEditor({
                 aria-label="تحريك لأسفل"
                 disabled={index === stops.length - 1}
                 onClick={() => move(index, 1)}
-                className="text-muted disabled:opacity-30"
+                className="pressable text-muted disabled:opacity-30"
               >
                 <ArrowDown className="size-16" />
               </button>
@@ -108,7 +108,7 @@ export function StopsEditor({
                 type="button"
                 aria-label="حذف المحطة"
                 onClick={() => onChange(stops.filter((_, at) => at !== index))}
-                className="text-danger"
+                className="pressable text-danger"
               >
                 <X className="size-16" />
               </button>

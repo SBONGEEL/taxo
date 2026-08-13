@@ -59,7 +59,7 @@ export function BottomNav() {
       />
       <div className="flex h-full px-6">
         {TABS.map((tab) => (
-          <NavLink key={tab.to} to={tab.to} end={tab.to === "/"} className="flex-1">
+          <NavLink key={tab.to} to={tab.to} end={tab.to === "/"} className="pressable flex-1">
             {({ isActive }) => (
               <span className="block text-center">
                 <tab.icon

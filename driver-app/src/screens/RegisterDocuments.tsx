@@ -188,7 +188,7 @@ export function RegisterDocumentsScreen() {
               type="button"
               onClick={() => setCategory(value)}
               className={cn(
-                "flex-1 rounded-13 border p-11 text-13 font-semibold",
+                "pressable flex-1 rounded-13 border p-11 text-13 font-semibold",
                 value === category
                   ? "border-ink bg-surface-2 text-ink"
                   : "border-line text-ink",
@@ -212,7 +212,7 @@ export function RegisterDocumentsScreen() {
                   onClick={() => pickers.current[doc]?.click()}
                   disabled={uploading !== null}
                   className={cn(
-                    "flex w-full items-center gap-12 rounded-13 border border-dashed p-13 text-start",
+                    "pressable flex w-full items-center gap-12 rounded-13 border border-dashed p-13 text-start",
                     done ? "border-ok bg-surface-2" : "border-line",
                   )}
                 >

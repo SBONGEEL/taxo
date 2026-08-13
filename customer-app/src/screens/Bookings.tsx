@@ -141,7 +141,7 @@ export function BookingsScreen() {
                 ) : booking.ride_id ? (
                   <Link
                     to={`/rides/${booking.ride_id}`}
-                    className="text-12 font-semibold text-ink underline"
+                    className="pressable text-12 font-semibold text-ink underline"
                   >
                     تفاصيل الرحلة
                   </Link>

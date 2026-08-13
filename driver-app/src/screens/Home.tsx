@@ -223,7 +223,7 @@ export function HomeScreen() {
                 type="button"
                 onClick={() => navigate("/notifications")}
                 aria-label="الإشعارات"
-                className="relative flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
+                className="pressable relative flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
               >
                 <Bell className="size-16" />
                 {/* نقطةٌ لا عدد: العددُ الدقيق لا يغيّر ما سيفعله الكبتن،
@@ -236,7 +236,7 @@ export function HomeScreen() {
                 type="button"
                 onClick={toggle}
                 aria-label="تبديل المظهر"
-                className="flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
+                className="pressable flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
               >
                 {dark ? (
                   <Sun className="size-16" />
@@ -252,7 +252,7 @@ export function HomeScreen() {
             <button
               type="button"
               onClick={() => navigate("/subscription")}
-              className="absolute inset-x-16 top-62 flex animate-slideup items-center gap-10 rounded-14 border border-danger bg-surface px-13 py-11 text-start"
+              className="pressable absolute inset-x-16 top-62 flex animate-slideup items-center gap-10 rounded-14 border border-danger bg-surface px-13 py-11 text-start"
             >
               <span className="block h-36 w-6 shrink-0 rounded-4 bg-danger" />
               <span className="min-w-0 flex-1">
@@ -315,7 +315,7 @@ export function HomeScreen() {
               <button
                 type="button"
                 onClick={() => navigate("/account/settings")}
-                className="mb-10 flex w-full items-center justify-between rounded-14 border border-brand-brd bg-brand-soft px-14 py-12 text-start"
+                className="pressable mb-10 flex w-full items-center justify-between rounded-14 border border-brand-brd bg-brand-soft px-14 py-12 text-start"
               >
                 <span className="text-12.5 font-semibold text-brand">
                   أستقبل ركاباً: {PREFERENCE_LABEL[preference]}
@@ -340,7 +340,7 @@ export function HomeScreen() {
                 else goOnline();
               }}
               className={cn(
-                "w-full rounded-16 border border-line p-16 text-center text-15 font-bold",
+                "pressable w-full rounded-16 border border-line p-16 text-center text-15 font-bold",
                 !covered
                   ? "bg-surface-2 text-muted"
                   : online

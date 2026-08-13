@@ -134,7 +134,7 @@ export function SettingsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -193,7 +193,7 @@ export function SettingsScreen() {
           type="button"
           onClick={() => void flipMarketing()}
           disabled={marketing === null}
-          className="flex w-full items-center gap-12 text-start"
+          className="pressable flex w-full items-center gap-12 text-start"
         >
           <span className="flex-1">
             <span className="block text-13.5 font-semibold text-ink">
@@ -257,7 +257,7 @@ export function SettingsScreen() {
           <button
             type="button"
             onClick={() => setPink(!pink)}
-            className="flex w-full items-center justify-between gap-12 border-t border-line px-15 py-14 text-start"
+            className="pressable flex w-full items-center justify-between gap-12 border-t border-line px-15 py-14 text-start"
           >
             <span>
               <span className="block text-13.5 font-semibold text-ink">
@@ -317,7 +317,7 @@ export function SettingsScreen() {
                 disabled={savingPreference}
                 onClick={() => savePreference(option.value)}
                 className={cn(
-                  "rounded-11 border px-8 py-11 text-12 font-semibold transition-colors",
+                  "pressable rounded-11 border px-8 py-11 text-12 font-semibold transition-colors",
                   preference === option.value
                     ? "border-ink bg-stripe-a text-ink"
                     : "border-line text-muted",

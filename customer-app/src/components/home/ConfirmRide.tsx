@@ -275,7 +275,7 @@ export function ConfirmRide({
             <button
               type="button"
               onClick={onEditDestination}
-              className="block w-full truncate text-start font-medium text-ink"
+              className="pressable block w-full truncate text-start font-medium text-ink"
             >
               {dropoffAddress ?? "الوجهة المحددة"}
             </button>
@@ -301,7 +301,7 @@ export function ConfirmRide({
               type="button"
               onClick={() => setCategory(option)}
               className={cn(
-                "rounded-12 border p-12 text-start transition",
+                "pressable rounded-12 border p-12 text-start transition",
                 option === category
                   ? "border-brand bg-brand-soft"
                   : "border-line bg-surface hover:bg-surface-2",
@@ -336,7 +336,7 @@ export function ConfirmRide({
                   type="button"
                   onClick={() => setPreference(option.value)}
                   className={cn(
-                    "rounded-12 border p-12 text-center text-14 font-medium transition",
+                    "pressable rounded-12 border p-12 text-center text-14 font-medium transition",
                     option.value === preference
                       ? "border-brand bg-brand text-brand-ink"
                       : "border-line bg-surface text-muted hover:bg-surface-2",
@@ -416,7 +416,7 @@ export function ConfirmRide({
           <button
             type="button"
             onClick={() => setPickingPay(true)}
-            className="flex w-full items-center gap-9 rounded-13 border border-line bg-surface px-13 py-11 text-start"
+            className="pressable flex w-full items-center gap-9 rounded-13 border border-line bg-surface px-13 py-11 text-start"
           >
             <payMethod.icon className="size-16 shrink-0 text-muted" />
             <span className="min-w-0 flex-1 truncate text-12.5 font-semibold text-ink">
@@ -444,7 +444,7 @@ export function ConfirmRide({
                     setCouponInput("");
                     setCouponError(null);
                   }}
-                  className="text-muted"
+                  className="pressable text-muted"
                 >
                   <X className="size-16" />
                 </button>
@@ -481,7 +481,7 @@ export function ConfirmRide({
               <button
                 type="button"
                 onClick={() => setCouponOpen(true)}
-                className="flex w-full items-center gap-8 text-14 font-medium text-ink"
+                className="pressable flex w-full items-center gap-8 text-14 font-medium text-ink"
               >
                 <TicketPercent className="size-16 text-muted" />
                 عندي كوبون خصم
@@ -503,7 +503,7 @@ export function ConfirmRide({
             <button
               type="button"
               onClick={onClearPreference}
-              className="mt-10 w-full rounded-12 border border-line bg-surface py-10 text-14 font-medium text-ink"
+              className="pressable mt-10 w-full rounded-12 border border-line bg-surface py-10 text-14 font-medium text-ink"
             >
               اقبل أي كبتن
             </button>
@@ -542,7 +542,7 @@ export function ConfirmRide({
           <button
             type="button"
             onClick={onBack}
-            className="flex-1 rounded-12 border border-line py-15 text-13 font-semibold text-muted transition hover:bg-surface-2"
+            className="pressable flex-1 rounded-12 border border-line py-15 text-13 font-semibold text-muted transition hover:bg-surface-2"
           >
             رجوع
           </button>
@@ -583,7 +583,7 @@ export function ConfirmRide({
                 <button
                   type="button"
                   onClick={() => setScheduling(false)}
-                  className="rounded-13 border border-line px-16 text-13 text-muted"
+                  className="pressable rounded-13 border border-line px-16 text-13 text-muted"
                 >
                   إلغاء
                 </button>
@@ -596,7 +596,7 @@ export function ConfirmRide({
                 setWhen(localInputValue(earliest()));
                 setScheduling(true);
               }}
-              className="flex w-full items-center justify-center gap-8 rounded-13 border border-line py-12 text-13.5 font-semibold text-ink"
+              className="pressable flex w-full items-center justify-center gap-8 rounded-13 border border-line py-12 text-13.5 font-semibold text-ink"
             >
               <CalendarClock className="size-16 text-muted" />
               حدّد موعداً

@@ -213,7 +213,7 @@ export function PhoneVerification({
         type="button"
         onClick={() => void send()}
         disabled={cooldown > 0 || sending}
-        className="mt-16 w-full text-center text-12.5 text-muted disabled:opacity-100"
+        className="pressable mt-16 w-full text-center text-12.5 text-muted disabled:opacity-100"
       >
         {cooldown > 0
           ? `إعادة الإرسال خلال ٠:${arabicDigits(String(cooldown).padStart(2, "0"))}`

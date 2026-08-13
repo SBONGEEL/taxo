@@ -11,6 +11,7 @@
 import { TicketPercent } from "lucide-react";
 
 import type { Payment } from "@/api/types";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { Badge } from "@/components/ui/Feedback";
 import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/labels";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -27,10 +28,10 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
   return (
     <section className="space-y-8">
       <h2 className="label">دفعات هذه الرحلة</h2>
-      <ul className="space-y-8">
+      <Stagger className="space-y-8">
         {payments.map((payment) =>
           payment.method === "promo" ? (
-            <li
+            <StaggerItem
               key={payment.id}
               className="card flex items-center justify-between gap-8 p-12"
             >
@@ -41,9 +42,9 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
               <span className="font-semibold text-ok">
                 −{formatMoney(payment.amount, payment.currency)}
               </span>
-            </li>
+            </StaggerItem>
           ) : (
-          <li key={payment.id} className="card p-12">
+          <StaggerItem key={payment.id} className="card p-12">
             <div className="flex items-center justify-between gap-8">
               <span className="font-medium text-ink">
                 {PAYMENT_METHOD_LABEL[payment.method]}
@@ -73,10 +74,10 @@ export function PaymentsList({ payments }: { payments: Payment[] }) {
                 نزاع: {payment.dispute_reason} — تفصل فيه الإدارة.
               </p>
             ) : null}
-          </li>
+          </StaggerItem>
           ),
         )}
-      </ul>
+      </Stagger>
     </section>
   );
 }

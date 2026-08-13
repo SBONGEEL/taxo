@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 
 import { ApiError } from "@/api/client";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { listNotifications, markNotificationsRead } from "@/api/endpoints";
 import type { Currency, UserNotification } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
@@ -164,7 +165,7 @@ export function NotificationsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -173,7 +174,7 @@ export function NotificationsScreen() {
           <button
             type="button"
             onClick={() => void readAll()}
-            className="text-11.5 font-semibold text-muted"
+            className="pressable text-11.5 font-semibold text-muted"
           >
             تعليم الكل كمقروء
           </button>
@@ -191,7 +192,7 @@ export function NotificationsScreen() {
         />
       ) : null}
 
-      <ul className="flex flex-col gap-9">
+      <Stagger className="flex flex-col gap-9">
         {(entries ?? []).map((entry) => {
           const style = KIND_STYLE[entry.kind] ?? {
             icon: Bell,
@@ -199,12 +200,12 @@ export function NotificationsScreen() {
           };
           const Icon = style.icon;
           return (
-            <li key={entry.id}>
+            <StaggerItem key={entry.id}>
               <button
                 type="button"
                 onClick={() => void open(entry)}
                 className={cn(
-                  "flex w-full items-start gap-12 rounded-15 border bg-surface px-14 py-13 text-start",
+                  "pressable flex w-full items-start gap-12 rounded-15 border bg-surface px-14 py-13 text-start",
                   entry.read_at ? "border-line" : "border-ink",
                 )}
               >
@@ -232,17 +233,17 @@ export function NotificationsScreen() {
                   <ChevronLeft size={15} className="mt-3 shrink-0 text-muted" />
                 ) : null}
               </button>
-            </li>
+            </StaggerItem>
           );
         })}
-      </ul>
+      </Stagger>
 
       {more ? (
         <button
           type="button"
           disabled={busy}
           onClick={() => void load(entries?.length ?? 0)}
-          className="mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
+          className="pressable mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
         >
           {busy ? "…" : "عرض المزيد"}
         </button>

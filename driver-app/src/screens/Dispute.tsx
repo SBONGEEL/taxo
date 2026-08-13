@@ -98,7 +98,7 @@ export function DisputeScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -149,7 +149,7 @@ export function DisputeScreen() {
                 type="button"
                 onClick={() => setReason(option)}
                 className={cn(
-                  "flex items-center gap-11 rounded-14 border bg-surface px-14 py-13 text-start",
+                  "pressable flex items-center gap-11 rounded-14 border bg-surface px-14 py-13 text-start",
                   reason === option ? "border-ink" : "border-line",
                 )}
               >

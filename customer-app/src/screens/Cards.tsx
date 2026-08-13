@@ -77,7 +77,7 @@ export function CardsScreen() {
                     <button
                       type="button"
                       onClick={() => act(setDefaultCard(card.id))}
-                      className="rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-ink"
+                      className="pressable rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-ink"
                       aria-label="اجعلها الافتراضية"
                     >
                       <Star className="size-16" />
@@ -87,7 +87,7 @@ export function CardsScreen() {
                   <button
                     type="button"
                     onClick={() => act(deleteSavedCard(card.id))}
-                    className="rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-danger"
+                    className="pressable rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-danger"
                     aria-label="حذف البطاقة"
                   >
                     <Trash2 className="size-16" />

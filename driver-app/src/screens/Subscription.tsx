@@ -33,6 +33,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import {
   buySubscription,
   buySubscriptionWithCard,
@@ -198,7 +199,7 @@ export function SubscriptionScreen() {
             type="button"
             onClick={() => navigate(-1)}
             aria-label="رجوع"
-            className="text-18 text-muted"
+            className="pressable text-18 text-muted"
           >
             →
           </button>
@@ -289,9 +290,9 @@ export function SubscriptionScreen() {
             <h2 className="mb-10 mt-18 text-13 font-bold text-muted">
               اشتراكات سابقة
             </h2>
-            <ul className="flex flex-col gap-8">
+            <Stagger className="flex flex-col gap-8">
               {history.map((item) => (
-                <li
+                <StaggerItem
                   key={item.id}
                   className="flex items-center gap-10 rounded-14 border border-line bg-surface px-14 py-12"
                 >
@@ -317,9 +318,9 @@ export function SubscriptionScreen() {
                       {item.status === "active" ? "ساري" : "منتهٍ"}
                     </span>
                   </span>
-                </li>
+                </StaggerItem>
               ))}
-            </ul>
+            </Stagger>
           </>
         ) : null}
       </div>
@@ -378,7 +379,7 @@ export function SubscriptionScreen() {
               <button
                 type="button"
                 onClick={() => setConfirming(null)}
-                className="w-full py-8 text-center text-12.5 font-semibold text-muted"
+                className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
               >
                 تراجع
               </button>

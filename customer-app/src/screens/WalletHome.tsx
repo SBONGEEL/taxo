@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { getWallet, listTopups, listTransactions } from "@/api/endpoints";
 import type { TopupRequest, Wallet, WalletTransaction } from "@/api/types";
 import { TopupSheet } from "@/components/wallet/TopupSheet";
@@ -144,7 +145,7 @@ export function WalletScreen() {
           <button
             type="button"
             onClick={() => navigate("/account/cards")}
-            className="card flex w-full items-center gap-12 p-14 text-start transition hover:bg-surface-2"
+            className="pressable card flex w-full items-center gap-12 p-14 text-start transition hover:bg-surface-2"
           >
             <CreditCard className="size-20 text-muted" />
             <span className="flex-1">
@@ -164,11 +165,11 @@ export function WalletScreen() {
           {entries.length === 0 ? (
             <EmptyState title="لا عمليات بعد" hint="ستظهر هنا كل حركة على رصيدك." />
           ) : (
-            <ul className="space-y-8">
+            <Stagger className="space-y-8">
               {entries.map((entry) => {
                 const credit = !entry.amount.trimStart().startsWith("-");
                 return (
-                  <li key={entry.id} className="card flex items-center gap-12 p-12">
+                  <StaggerItem key={entry.id} className="card flex items-center gap-12 p-12">
                     <span
                       className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
                         credit ? "bg-surface-2 text-ok" : "bg-surface-2 text-muted"
@@ -196,10 +197,10 @@ export function WalletScreen() {
                         الرصيد {formatMoney(entry.balance_after)}
                       </p>
                     </div>
-                  </li>
+                  </StaggerItem>
                 );
               })}
-            </ul>
+            </Stagger>
           )}
         </section>
       </div>

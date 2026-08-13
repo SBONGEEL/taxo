@@ -18,6 +18,7 @@ import { Copy, Check, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { getMyReferrals } from "@/api/endpoints";
 import type { MyReferrals, ReferralStage } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
@@ -102,7 +103,7 @@ export function ReferralsScreen() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="رجوع"
-          className="text-18 text-muted"
+          className="pressable text-18 text-muted"
         >
           →
         </button>
@@ -127,7 +128,7 @@ export function ReferralsScreen() {
               <button
                 type="button"
                 onClick={() => void copy()}
-                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
+                className="pressable flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? "نُسخ" : "انسخ"}
@@ -135,7 +136,7 @@ export function ReferralsScreen() {
               <button
                 type="button"
                 onClick={() => void share()}
-                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
+                className="pressable flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
               >
                 <Share2 size={16} />
                 شارك
@@ -178,11 +179,11 @@ export function ReferralsScreen() {
                 لم يسجّل أحدٌ برمزك بعد.
               </p>
             ) : (
-              <ul className="space-y-8">
+              <Stagger className="space-y-8">
                 {data.referrals.map((row) => {
                   const where = stageOf(row);
                   return (
-                    <li
+                    <StaggerItem
                       key={row.id}
                       className="flex items-center justify-between gap-10 rounded-13 border border-line bg-surface p-12"
                     >
@@ -200,10 +201,10 @@ export function ReferralsScreen() {
                             }`
                           : null}
                       </span>
-                    </li>
+                    </StaggerItem>
                   );
                 })}
-              </ul>
+              </Stagger>
             )}
           </section>
         </div>

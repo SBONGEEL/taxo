@@ -164,7 +164,7 @@ export function AccountScreen() {
         <button
           type="button"
           onClick={() => navigate("/subscription")}
-          className="mb-10 flex w-full items-center gap-12 rounded-16 border border-line bg-surface p-15 text-start"
+          className="pressable mb-10 flex w-full items-center gap-12 rounded-16 border border-line bg-surface p-15 text-start"
         >
           <span className={cn("block h-38 w-6 rounded-4", subTone)} />
           <span className="flex-1">
@@ -207,7 +207,7 @@ export function AccountScreen() {
         <button
           type="button"
           onClick={() => void signOut()}
-          className="mt-14 w-full p-10 text-center text-13 font-semibold text-danger"
+          className="pressable mt-14 w-full p-10 text-center text-13 font-semibold text-danger"
         >
           تسجيل الخروج
         </button>
@@ -234,7 +234,7 @@ function Row({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-12 px-15 py-14 text-start",
+        "pressable flex w-full items-center gap-12 px-15 py-14 text-start",
         last ? "" : "border-b border-line",
       )}
     >

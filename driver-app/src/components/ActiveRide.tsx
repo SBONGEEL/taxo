@@ -137,7 +137,7 @@ export function ActiveRide({
             type="button"
             onClick={() => onArriveStop(stopAction.stop.id)}
             disabled={busy}
-            className="mb-11 w-full rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
+            className="pressable mb-11 w-full rounded-15 bg-brand p-15 text-center text-15 font-bold text-brand-ink disabled:opacity-50"
           >
             {stopAction.label}
           </button>
@@ -150,7 +150,7 @@ export function ActiveRide({
           }
           disabled={busy}
           className={cn(
-            "w-full rounded-15 p-15 text-center text-15 font-bold disabled:opacity-50",
+            "pressable w-full rounded-15 p-15 text-center text-15 font-bold disabled:opacity-50",
             stopAction
               ? "border border-line text-ink"
               : "bg-brand text-brand-ink",
@@ -169,7 +169,7 @@ export function ActiveRide({
             type="button"
             onClick={() => setPicking(true)}
             disabled={busy}
-            className="mt-11 w-full text-center text-12 font-semibold text-muted"
+            className="pressable mt-11 w-full text-center text-12 font-semibold text-muted"
           >
             إلغاء الرحلة
           </button>
@@ -191,7 +191,7 @@ export function ActiveRide({
                   type="button"
                   onClick={() => setReason(option)}
                   className={cn(
-                    "flex items-center gap-11 rounded-13 border p-13 text-start",
+                    "pressable flex items-center gap-11 rounded-13 border p-13 text-start",
                     reason?.label === option.label
                       ? "border-brand-brd bg-brand-soft"
                       : "border-line",
@@ -233,14 +233,14 @@ export function ActiveRide({
                 setPicking(false);
                 onCancel(reason!);
               }}
-              className="mt-16 w-full rounded-15 bg-danger p-15 text-center text-15 font-bold text-white disabled:opacity-50"
+              className="pressable mt-16 w-full rounded-15 bg-danger p-15 text-center text-15 font-bold text-white disabled:opacity-50"
             >
               تأكيد الإلغاء
             </button>
             <button
               type="button"
               onClick={() => setPicking(false)}
-              className="w-full pt-10 text-center text-13 text-muted"
+              className="pressable w-full pt-10 text-center text-13 text-muted"
             >
               تراجع
             </button>

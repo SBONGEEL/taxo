@@ -72,7 +72,7 @@ export function TopupSheet({
                   type="button"
                   onClick={() => setAmount(value)}
                   className={cn(
-                    "flex-1 rounded-8 border px-8 py-8 text-14 transition",
+                    "pressable flex-1 rounded-8 border px-8 py-8 text-14 transition",
                     amount === value
                       ? "border-brand bg-brand-soft text-ink"
                       : "border-line text-muted hover:bg-surface-2",
@@ -96,7 +96,7 @@ export function TopupSheet({
                     })
                   }
                   disabled={!valid}
-                  className="flex w-full items-center gap-12 rounded-12 border border-line bg-bg p-14 text-start transition hover:bg-surface-2 disabled:opacity-50"
+                  className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-bg p-14 text-start transition hover:bg-surface-2 disabled:opacity-50"
                 >
                   <CreditCard className="size-20 text-muted" />
                   <span className="flex-1">
@@ -116,7 +116,7 @@ export function TopupSheet({
                     })
                   }
                   disabled={!valid}
-                  className="flex w-full items-center gap-12 rounded-12 border border-line bg-bg p-14 text-start transition hover:bg-surface-2 disabled:opacity-50"
+                  className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-bg p-14 text-start transition hover:bg-surface-2 disabled:opacity-50"
                 >
                   <Landmark className="size-20 text-muted" />
                   <span className="flex-1">

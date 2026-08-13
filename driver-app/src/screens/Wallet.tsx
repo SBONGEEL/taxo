@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import {
   getDriverWallet,
   listWalletTransactions,
@@ -114,14 +115,14 @@ export function WalletScreen() {
             <button
               type="button"
               onClick={() => navigate("/wallet/earnings")}
-              className="rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
+              className="pressable rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
             >
               أرباحي
             </button>
             <button
               type="button"
               onClick={() => navigate("/wallet/withdrawals")}
-              className="rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
+              className="pressable rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
             >
               طلبات السحب
             </button>
@@ -185,12 +186,12 @@ export function WalletScreen() {
           />
         ) : null}
 
-        <ul className="flex flex-col gap-8">
+        <Stagger className="flex flex-col gap-8">
           {entries.map((entry) => {
             const debit = isDebit(entry.amount);
             const Icon = TRANSACTION_ICON[entry.type];
             return (
-              <li
+              <StaggerItem
                 key={entry.id}
                 className="flex items-center gap-12 rounded-14 border border-line bg-surface px-14 py-12"
               >
@@ -226,17 +227,17 @@ export function WalletScreen() {
                     الرصيد {arabicDigits(entry.balance_after)}
                   </div>
                 </div>
-              </li>
+              </StaggerItem>
             );
           })}
-        </ul>
+        </Stagger>
 
         {more ? (
           <button
             type="button"
             disabled={busy}
             onClick={() => void loadMore()}
-            className="mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
+            className="pressable mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
           >
             {busy ? "…" : "عرض المزيد"}
           </button>

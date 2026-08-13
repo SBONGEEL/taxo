@@ -91,7 +91,7 @@ export function LoginScreen() {
                 type="button"
                 onClick={() => setVisible((value) => !value)}
                 aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-                className="text-muted transition hover:text-ink"
+                className="pressable text-muted transition hover:text-ink"
               >
                 {visible ? (
                   <EyeOff className="size-20" />
@@ -117,7 +117,7 @@ export function LoginScreen() {
         </form>
 
         <div className="text-14">
-          <Link to="/forgot-password" className="text-muted hover:text-ink">
+          <Link to="/forgot-password" className="pressable text-muted hover:text-ink">
             نسيت كلمة المرور؟
           </Link>
         </div>
@@ -128,7 +128,7 @@ export function LoginScreen() {
           النموذج — ولا يزاحم الزرَّ الأساسي */}
       <p className="mt-auto pt-24 text-center text-13 text-muted">
         ليس لديك حساب؟{" "}
-        <Link to="/register" className="font-semibold text-ink underline">
+        <Link to="/register" className="pressable font-semibold text-ink underline">
           سجّل الآن
         </Link>
       </p>

@@ -188,7 +188,7 @@ export function PhoneVerification({
           type="button"
           onClick={onLeave}
           aria-label="رجوع"
-          className="-ms-8 -mt-8 block rounded-full p-8 text-muted transition hover:bg-surface-2"
+          className="pressable -ms-8 -mt-8 block rounded-full p-8 text-muted transition hover:bg-surface-2"
         >
           <ChevronRight className="size-20" />
         </button>
@@ -250,7 +250,7 @@ export function PhoneVerification({
         <button
           type="button"
           onClick={onBack}
-          className="text-muted hover:text-ink"
+          className="pressable text-muted hover:text-ink"
         >
           تعديل الرقم
         </button>
@@ -258,7 +258,7 @@ export function PhoneVerification({
           type="button"
           onClick={() => void send()}
           disabled={cooldown > 0 || sending}
-          className="font-medium text-ink disabled:text-muted"
+          className="pressable font-medium text-ink disabled:text-muted"
         >
           {cooldown > 0
             ? `إعادة الإرسال بعد ${cooldown} ثانية`

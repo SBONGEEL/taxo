@@ -167,7 +167,7 @@ export function WalletTopupScreen() {
                     type="button"
                     onClick={() => setAmount(value)}
                     className={cn(
-                      "flex-1 rounded-8 border px-8 py-8 text-14 transition",
+                      "pressable flex-1 rounded-8 border px-8 py-8 text-14 transition",
                       amount === value
                         ? "border-brand bg-brand-soft text-ink"
                         : "border-line text-muted hover:bg-surface-2",
@@ -261,7 +261,7 @@ function ChannelOption({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
+        "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
         active ? "border-brand bg-brand-soft" : "border-line bg-surface hover:bg-surface-2",
       )}
     >

@@ -123,7 +123,7 @@ export function RegisterScreen() {
           type="button"
           onClick={() => navigate("/login")}
           aria-label="رجوع"
-          className="-ms-8 -mt-8 w-fit rounded-full p-8 text-muted transition hover:bg-surface-2"
+          className="pressable -ms-8 -mt-8 w-fit rounded-full p-8 text-muted transition hover:bg-surface-2"
         >
           <ChevronRight className="size-20" />
         </button>
@@ -152,7 +152,7 @@ export function RegisterScreen() {
                       type="button"
                       onClick={() => setCountry(code)}
                       className={cn(
-                        "flex-1 rounded-13 border p-12 text-center text-13.5 font-semibold transition",
+                        "pressable flex-1 rounded-13 border p-12 text-center text-13.5 font-semibold transition",
                         code === country
                           ? "border-brand bg-brand text-brand-ink"
                           : "border-line bg-surface text-muted hover:bg-surface-2",
@@ -194,7 +194,7 @@ export function RegisterScreen() {
                         setGender(gender === option.value ? null : option.value)
                       }
                       className={cn(
-                        "rounded-12 border p-12 text-center font-medium transition",
+                        "pressable rounded-12 border p-12 text-center font-medium transition",
                         gender === option.value
                           ? "border-brand bg-brand text-brand-ink"
                           : "border-line bg-surface text-muted hover:bg-surface-2",
@@ -259,7 +259,7 @@ export function RegisterScreen() {
 
         <p className="text-center text-14 text-muted">
           لديك حساب؟{" "}
-          <Link to="/login" className="font-semibold text-ink">
+          <Link to="/login" className="pressable font-semibold text-ink">
             سجّل الدخول
           </Link>
         </p>

@@ -142,7 +142,7 @@ export function ForgotPasswordScreen() {
             الخطوة يكفي لتصحيح خطأٍ في الرقم */}
         {step === "details" ? (
           <p className="text-center text-14 text-muted">
-            <Link to="/login" className="font-semibold text-ink">
+            <Link to="/login" className="pressable font-semibold text-ink">
               العودة للدخول
             </Link>
           </p>

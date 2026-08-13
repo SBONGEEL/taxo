@@ -312,7 +312,7 @@ export function PaymentScreen() {
                 <button
                   type="button"
                   onClick={() => setPicking(true)}
-                  className="block w-full text-center text-12.5 font-semibold text-muted"
+                  className="pressable block w-full text-center text-12.5 font-semibold text-muted"
                 >
                   طريقة أخرى
                 </button>

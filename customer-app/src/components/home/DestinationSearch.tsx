@@ -100,7 +100,7 @@ export function DestinationSearch({
             onOpenChange(false);
             onPickOnMap();
           }}
-          className="flex w-full items-center gap-12 rounded-12 border border-line bg-surface px-16 py-12 text-start transition hover:bg-surface-2"
+          className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-surface px-16 py-12 text-start transition hover:bg-surface-2"
         >
           <Navigation className="size-20 text-brand" />
           <span className="font-medium text-ink">حدّدها على الخريطة بالدبوس</span>
@@ -123,7 +123,7 @@ export function DestinationSearch({
                       });
                       onOpenChange(false);
                     }}
-                    className="flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
+                    className="pressable flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
                   >
                     <PlaceIconMark icon={place.icon} />
                     <span className="min-w-0">
@@ -160,7 +160,7 @@ export function DestinationSearch({
                       });
                       onOpenChange(false);
                     }}
-                    className="flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
+                    className="pressable flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
                   >
                     <Clock className="mt-2 size-20 shrink-0 text-muted" />
                     {/* سطرٌ واحدٌ كاملاً — تفكيكُ العنوان إلى مكانٍ ومنطقة
@@ -184,7 +184,7 @@ export function DestinationSearch({
                   onPick(place);
                   onOpenChange(false);
                 }}
-                className="flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
+                className="pressable flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
               >
                 <MapPin className="mt-2 size-20 shrink-0 text-muted" />
                 <span className="min-w-0">

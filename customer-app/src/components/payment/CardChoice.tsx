@@ -52,7 +52,7 @@ export function CardChoice({
                 type="button"
                 onClick={() => setSelected(card.id)}
                 className={cn(
-                  "flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
+                  "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
                   selected === card.id
                     ? "border-brand bg-brand-soft"
                     : "border-line hover:bg-surface-2",
@@ -75,7 +75,7 @@ export function CardChoice({
               type="button"
               onClick={() => setSelected(null)}
               className={cn(
-                "flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
+                "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
                 selected === null
                   ? "border-brand bg-brand-soft"
                   : "border-line hover:bg-surface-2",

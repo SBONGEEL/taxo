@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 
 import { listDocuments } from "@/api/endpoints";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import type { DocumentType, DriverDocument } from "@/api/types";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
@@ -68,11 +69,11 @@ export function PendingScreen() {
       </div>
 
       {documents.length > 0 ? (
-        <ul className="mt-12 flex flex-col gap-9 text-start">
+        <Stagger className="mt-12 flex flex-col gap-9 text-start">
           {documents.map((document) => {
             const status = STATUS[document.review_status];
             return (
-              <li
+              <StaggerItem
                 key={document.id}
                 className="rounded-14 border border-line bg-surface p-13"
               >
@@ -100,16 +101,16 @@ export function PendingScreen() {
                     {document.review_note}
                   </p>
                 ) : null}
-              </li>
+              </StaggerItem>
             );
           })}
-        </ul>
+        </Stagger>
       ) : null}
 
       <button
         type="button"
         onClick={() => void signOut()}
-        className="mt-24 p-10 text-13 font-semibold text-danger"
+        className="pressable mt-24 p-10 text-13 font-semibold text-danger"
       >
         تسجيل الخروج
       </button>

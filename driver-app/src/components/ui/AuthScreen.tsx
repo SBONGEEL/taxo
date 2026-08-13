@@ -34,7 +34,7 @@ export function AuthScreen({ onBack, children, className }: Props) {
           type="button"
           onClick={onBack}
           aria-label="رجوع"
-          className="w-fit text-18 text-muted"
+          className="pressable w-fit text-18 text-muted"
         >
           →
         </button>

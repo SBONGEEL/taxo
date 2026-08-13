@@ -39,7 +39,7 @@ export function Stage({
           type="button"
           onClick={onBack}
           aria-label="رجوع"
-          className="absolute end-16 top-16 rounded-full p-8 text-muted transition hover:bg-surface-2"
+          className="pressable absolute end-16 top-16 rounded-full p-8 text-muted transition hover:bg-surface-2"
         >
           <ChevronRight className="size-20" />
         </button>

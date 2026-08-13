@@ -170,7 +170,7 @@ function CopyRow({
         <button
           type="button"
           onClick={onCopy}
-          className="rounded-8 p-6 text-muted transition hover:bg-surface-2 hover:text-ink"
+          className="pressable rounded-8 p-6 text-muted transition hover:bg-surface-2 hover:text-ink"
           aria-label={`نسخ ${label}`}
         >
           {copied ? (
