@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**711 backend tests pass** across 64 test files — measured, not estimated, on 2026-08-13. All three
+**712 backend tests pass** across 65 test files — measured, not estimated, on 2026-08-14. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -612,6 +612,38 @@ manifest still declared that background as its `theme_color`. They are rendered 
 app by a scratch Playwright script rather than by adding an image dependency. First attempt set
 `stroke-width` to 26 directly instead of letting the ×1.375 group scale the splash's 8; the letters
 fused into a blob, which the file viewer showed and no check would have.
+
+### Stage 13 — the trial run, and what only a real ride could show (2026-08-14)
+
+**`tests/test_stage13_scenario.py` drives the whole journey through real doors**: registration, a
+vehicle, **a refused approval with no documents** (409 `documents_incomplete`), three uploads and three
+reviews, approval through `drivers.approve` — its only door — a subscription bought with money that was
+topped up, a ride through real dispatch and a real offer, location broadcasts, a mixed payment, a
+rating, then a withdrawal approved and paid. Every other test file shortcuts this with
+`helpers.approved_driver`, which writes `approved` and a subscription row directly — correct setup for
+a feature test, wrong for the question stage 13 asks. **The verdict is not "200 everywhere" but that
+the ledger adds up**: each wallet's balance equals the sum of its entries, no `balance_after` is
+negative, and what entered the driver's wallet is the wallet-funded part alone — not the whole fare.
+
+**And the browser run found the captain's collect screen was dead.** `getRidePayments` called
+`/payments/rides/{id}/payments` while the payments router carries **no prefix**, so the real path is
+`/rides/{id}/payments`. The 404 left the screen rendering nothing — a **blank screen at the moment he
+collects cash**. It had shipped since stage 10 because reaching it needs a completed ride with a real
+driver, which no visual pass had ever done. Now it draws the fare, the split, the commission line and
+the "the rider has not chosen a method yet" note.
+
+**The three screens listed as never-opened are now opened**: the «طلب نسائي» badge above the fare on a
+live gendered offer, the cancel-reason sheet with «الراكب ليس أنثى — عدم تطابق» (shown only to a captain
+who restricted her rides), and the preference strip on her home — which appears only once she has
+actually restricted, so the probe had to set it from her own settings screen first.
+
+**Two defects from the floating-bar package surfaced here too, both about layering over decisions.**
+The bar swallowed «قبول» on the offer card — `elementFromPoint` at the button's centre returned the bar
+— because the route sheet carries a `transform` and therefore its own stacking context, so `z-50`
+inside it never beats `z-30` outside. And the women's-mode notice stood over «ابدأ الاستقبال» and then
+over a cancel *reason*. Both now follow one rule: **nothing overlays a decision** — the bar and the
+notice hide while a ride or an offer owns the screen. The notice also went back to `--acc`; its own
+docstring had said pink would make it announce itself twice, and that was still right.
 
 ### The floating bottom bar, and three defects the browser found (2026-08-13)
 

@@ -41,17 +41,26 @@ export function DriverProvider({ children }: { children: ReactNode }) {
     setProfile(await getDriverProfile());
   }, [user]);
 
+  // **بالمُعرِّف لا بالكائن**: `user` كائنٌ جديدٌ مع كلِّ تحديثِ جلسة، فالاعتمادُ
+  // عليه يُعيد الجلبَ بلا سبب — وكلُّ إعادةِ جلبٍ فرصةٌ لأن يسقط الملفُّ كلُّه
+  const userId = user?.id ?? null;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setProfile(null);
       return;
     }
     setLoading(true);
     getDriverProfile()
       .then(setProfile)
-      .catch(() => setProfile(null))
+      // **جلبٌ متعثّرٌ لا يمسح ملفاً قائماً** (قِيس في تشغيل المرحلة 13):
+      // كان `setProfile(null)` — ونداءٌ واحدٌ يفشل بعد إنهاء رحلةٍ يترك
+      // الكبتنَ أمام دوّامةٍ لا تنتهي أبداً (`DriverHome` يرسم `Loading` ما دام
+      // الملفُّ فارغاً)، في اللحظة التي عليه أن يقبض فيها مالاً. والصامتُ هنا
+      // أسوأُ من الخطأ: لا رسالةَ ولا زرَّ إعادة
+      .catch(() => undefined)
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [userId]);
 
   const value = useMemo<DriverState>(
     () => ({ profile, loading, refresh }),

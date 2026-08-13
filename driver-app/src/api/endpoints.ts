@@ -224,8 +224,11 @@ export const cancelRide = (
 
 // ------------------------------------------------------------ الدفع
 
+/** **`/rides/…` لا `/payments/rides/…`**: راوترُ الدفع بلا بادئة، فالمسارُ
+ *  المكرَّرُ يردّ 404 — وشاشةُ التحصيل تُرسم فارغةً بلا رسالة. قِيس في تشغيل
+ *  المرحلة 13: الكبتنُ يُنهي الرحلة فيجد شاشةً بيضاء في اللحظة التي يقبض فيها. */
 export const getRidePayments = (rideId: string) =>
-  api.get<RidePayments>(`/payments/rides/${rideId}/payments`);
+  api.get<RidePayments>(`/rides/${rideId}/payments`);
 
 /** «استلمت المبلغ» — تأكيدُ الكبتن هو ما يُثبّت دفعة الكاش (SPEC القسم 6.1). */
 export const confirmPayment = (paymentId: string) =>
