@@ -15,7 +15,7 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **671 backend tests pass**
+contracts, users & permissions, audit log. Every nav entry has a screen. **672 backend tests pass**
 (62 test files of 63; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
 frontends build with `check:scale` + `check:enums` green.
 
