@@ -504,6 +504,29 @@ of the design packages below. Keep doing that before calling one done: the failu
 tailwind-merge class, a marker that never renders, a button that works and then 409s — are exactly
 the ones this project has shipped before, and every one found since has been of that shape.
 
+### The queue the owner set (2026-08-13), in order
+
+**② sound → ③ motion → ④ map effects.** Each is a session.
+
+1. **Sound** — the motif is **approved and written down** (`DESIGN.md` §9): `A4→D5→E5` in D
+   pentatonic, every cue derived from it, generated with Web Audio oscillators (no asset files), the
+   splash signature moved to **the first tap after login** because browsers block audio before a
+   gesture and a chime nobody hears on first launch is the launch that forms the impression. Two
+   device-level switches; the driver's incoming-request tone survives the general switch and only its
+   own switch silences it. The iOS silent-switch caveat goes in `README` and is never claimed as a
+   guarantee.
+2. **Motion** — `DESIGN.md` §8 already defines the tokens (three durations, two curves,
+   `motion-reduce`) and `BottomNav` already uses them. What remains: route transitions by direction,
+   sheets, press feedback, list stagger, and **a skeleton for ride details** (it shows a bare spinner
+   for ~8s while three calls resolve).
+3. **Map effects** — pulse on own location, heading rotation smoothed, `easeTo` framing, pulse on the
+   pickup pin while searching. The owner's constraint — **CSS/SVG, never a render loop** — is to be
+   *measured* in the browser, not assumed: a captain's battery runs for hours.
+
+**Also still open**: the splash changes he asked for (longer minimum, network-loss and weak-network
+states with real disconnection testing, continuous `O` spin) — the sound part of those is gated on §9,
+the rest is not.
+
 ### The splash screen and the app icons
 
 **The splash lives in `index.html`, not in React, and that is the whole point** (`DESIGN.md` §7). The
