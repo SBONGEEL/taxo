@@ -613,6 +613,45 @@ app by a scratch Playwright script rather than by adding an image dependency. Fi
 `stroke-width` to 26 directly instead of letting the ×1.375 group scale the splash's 8; the letters
 fused into a blob, which the file viewer showed and no check would have.
 
+### The floating bottom bar, and three defects the browser found (2026-08-13)
+
+**The bar is one component in `App`, above the route transition — not one per screen.** The owner
+asked for an indicator that *slides* between tabs (`layoutId`). It didn't: every screen drew its own
+`BottomNav`, so each navigation tore one down and built another, and **`layoutId` only animates
+between two elements that existed in the same moment**. Measured: 3 sampled positions in the rider
+app, none at all in the driver app; after hoisting, 6 and 8. It sits *outside* `RouteTransition` too,
+so it does not slide away with the page it navigates to.
+
+**Which routes carry it is declared per app, and the two lists point opposite ways on purpose.**
+`customer-app/src/lib/tabs.ts` uses a **deny** list (rider sub-pages keep the bar — decision 53), the
+driver app an **allow** list (its sub-pages cover it). So in each app the *default* is what its own
+prototype says, and a forgotten new screen lands on the right side of the line.
+
+**`spacing.nav` went 66 → 84** (62 bar + 14 below + **8 above**). The 8 is not padding for taste: with
+76 the bottom sheet ended exactly at the bar's top edge (measured 768 = 768), so a floating pill read
+as attached to it.
+
+**`MotionConfig reducedMotion="user"` cancels the animation, not the starting value.** With reduced
+motion the route sheet still painted one frame at `x: -24` before settling — a jump for someone who
+asked for none. `initial={{ x }}` is a value, not a transition, so the component that declares the
+offset is the one that must zero it (`useReducedMotion()` in `RouteTransition` alone).
+
+**And the route transition was dead on every path until it was measured.** No transform and no opacity
+change in any frame. Two causes, both invisible to `tsc`: `Suspense` sat *above* `AnimatePresence`, so
+the first navigation to a lazy route replaced the whole animated subtree with the fallback; and
+`<Routes>` without an explicit `location` re-renders the **exiting** copy with the **entering** route,
+so what slides out is the screen that is arriving. Direction now comes from `lib/nav-order.ts` — the
+route's rank (tab index, then depth) — because `useNavigationType()` reads a programmatic
+`navigate("/account")` after a save as *forward* when it is a return.
+
+**«رجوع» means where you came from, and the written path is only a fallback** (`lib/back.ts`, both
+apps). The bell in the map header opens `/account/notifications`, whose `back="/account"` was a fixed
+destination — so anyone who entered from the map landed in «حسابي», a tab they never visited, with the
+wrong tab lit. **The parent in the tree is not the parent in the journey**, and a screen with two doors
+makes one of them a lie. `navigate(-1)` alone is not the fix either: a deep link has no in-app history,
+so it would exit the app; `history.state.idx > 0` is what separates the two. Three rider screens have
+two doors today (notifications, bookings, cards) and all three were wrong.
+
 ### Rider design-matching: five packages, all delivered
 
 A screen-by-screen comparison of `customer-app` against the rider prototype (and the women's screens
