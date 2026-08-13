@@ -25,7 +25,6 @@ import {
   listWithdrawals,
 } from "@/api/endpoints";
 import type { DriverWallet, WalletTransaction, Withdrawal } from "@/api/types";
-import { BottomNav } from "@/components/BottomNav";
 import { WithdrawSheet } from "@/components/WithdrawSheet";
 import { Button } from "@/components/ui/Button";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
@@ -259,7 +258,6 @@ export function WalletScreen() {
         />
       ) : null}
 
-      <BottomNav />
     </div>
   );
 }

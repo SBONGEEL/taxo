@@ -183,7 +183,7 @@ export function RideDetailsScreen() {
           </div>
         </div>
 
-        <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+        <section className="mb-12 card p-15">
           <h2 className="mb-11 text-13 font-bold text-ink">تفصيل السعر</h2>
           <Row
             label="السعر المقدّر"
@@ -219,7 +219,7 @@ export function RideDetailsScreen() {
         </section>
 
         {rows.length > 0 || mine ? (
-          <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+          <section className="mb-12 card p-15">
             {rows.map((payment) => (
               <Row
                 key={payment.id}

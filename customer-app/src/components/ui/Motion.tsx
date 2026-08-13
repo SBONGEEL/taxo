@@ -8,7 +8,7 @@
  * مكوّنٌ واحدٌ التفضيل. وما يبقى من انتقالات CSS يُلغى بـ`motion-reduce:`.
  */
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Suspense, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
@@ -49,13 +49,18 @@ export function RouteTransition({
   children: (location: ReturnType<typeof useLocation>) => ReactNode;
 }) {
   const location = useLocation();
+  // **`MotionConfig` يُلغي الحركةَ لا نقطةَ البدء**، وقِيس: مع تقليل الحركة كانت
+  // الورقةُ تُرسم إطاراً واحداً على `-24` ثم تستقر — قفزةٌ لمن طلب ألّا يرى حركة.
+  // فالمكوّنُ الذي **يصرّح** بإزاحةٍ هو من يلغيها؛ وما يلغيه `MotionConfig` هو
+  // الانتقالُ بينهما لا القيمةُ الأولى نفسُها
+  const reduce = useReducedMotion();
   const popped = useNavigationType() === "POP";
   const previous = useRef(location.pathname);
   const back = isBackward(previous.current, location.pathname, popped);
   useEffect(() => {
     previous.current = location.pathname;
   }, [location.pathname]);
-  const from = back ? SLIDE_PX : -SLIDE_PX;
+  const from = reduce ? 0 : back ? SLIDE_PX : -SLIDE_PX;
 
   return (
     <AnimatePresence mode="wait" initial={false}>

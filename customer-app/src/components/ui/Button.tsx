@@ -7,7 +7,7 @@ import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const button = cva(
-  "inline-flex items-center justify-center gap-8 rounded-12 font-semibold " +
+  "inline-flex items-center justify-center gap-8 font-semibold " +
     "transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
   {
@@ -19,9 +19,10 @@ const button = cva(
         danger: "bg-danger text-white hover:brightness-95",
       },
       size: {
-        sm: "h-36 px-12 text-14",
-        md: "h-44 px-16 text-16",
-        lg: "h-54 px-24 text-18 w-full",
+        // نصفُ القطر يتبع المقاس (§10.3) — سلّمٌ واحدٌ في التطبيقين
+        sm: "h-36 rounded-14 px-12 text-14",
+        md: "h-44 rounded-16 px-16 text-16",
+        lg: "h-54 w-full rounded-18 px-24 text-18",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },

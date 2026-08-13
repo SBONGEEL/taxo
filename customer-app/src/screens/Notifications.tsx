@@ -186,7 +186,7 @@ export function NotificationsScreen() {
                   </span>
                 </span>
                 {entry.read_at === null ? (
-                  <span className="mt-6 size-8 shrink-0 rounded-full bg-accent" />
+                  <span className="mt-6 size-8 shrink-0 rounded-full bg-brand" />
                 ) : null}
               </button>
             </StaggerItem>

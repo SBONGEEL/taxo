@@ -132,7 +132,7 @@ export function CollectScreen({
         </div>
       </div>
 
-      <div className="mb-18 rounded-16 border border-line bg-surface px-16 py-14">
+      <div className="mb-18 card px-16 py-14">
         <Row label="السعر المقدّر" value={arabicDigits(ride.estimated_fare)} />
         {ride.actual_distance_km ? (
           <Row

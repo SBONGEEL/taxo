@@ -142,7 +142,7 @@ export function RegisterDocumentsScreen() {
         لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات.
       </p>
 
-      <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+      <section className="mb-12 card p-15">
         <h2 className="mb-12 text-13.5 font-bold text-ink">المركبة</h2>
         <div className="mb-8 flex gap-8">
           <Field
@@ -200,7 +200,7 @@ export function RegisterDocumentsScreen() {
         </div>
       </section>
 
-      <section className="rounded-16 border border-line bg-surface p-15">
+      <section className="card p-15">
         <h2 className="mb-12 text-13.5 font-bold text-ink">المستندات</h2>
         <div className="flex flex-col gap-10">
           {ORDER.map((doc) => {

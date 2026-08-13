@@ -66,7 +66,7 @@ export default {
       "150": "150px", // ارتفاع رسم أعمدة الساعات (§3.4)
       "170": "170px", // شريط الخريطة في تفاصيل الرحلة
       // بنيةٌ ثابتة
-      status: "34px", nav: "66px", header: "58px",
+      status: "34px", nav: "84px", header: "58px",
     },
     transitionDuration: {
       // §8 — مددٌ ثلاثٌ لا أرقامٌ متفرقة

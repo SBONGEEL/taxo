@@ -45,7 +45,6 @@ import type {
   SubscriptionDuration,
   SubscriptionPlan,
 } from "@/api/types";
-import { BottomNav } from "@/components/BottomNav";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
@@ -388,7 +387,6 @@ export function SubscriptionScreen() {
         </div>
       ) : null}
 
-      <BottomNav />
     </div>
   );
 }

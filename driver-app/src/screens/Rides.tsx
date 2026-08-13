@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { listMyRides } from "@/api/endpoints";
 import type { RideListItem } from "@/api/types";
-import { BottomNav } from "@/components/BottomNav";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import {
@@ -82,7 +81,7 @@ export function RidesScreen() {
               <button
                 type="button"
                 onClick={() => navigate(`/rides/${ride.id}`)}
-                className="pressable w-full rounded-16 border border-line bg-surface px-14 py-13 text-start"
+                className="pressable w-full card px-14 py-13 text-start"
               >
                 <div className="mb-8 flex items-baseline justify-between">
                   <span className="text-12 text-muted">
@@ -142,7 +141,6 @@ export function RidesScreen() {
         ) : null}
       </div>
 
-      <BottomNav />
     </div>
   );
 }

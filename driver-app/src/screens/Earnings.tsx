@@ -88,7 +88,7 @@ export function EarningsScreen() {
         error ? null : <Spinner className="mx-auto my-38" />
       ) : (
         <div className="mt-14 space-y-10">
-          <div className="rounded-16 border border-line bg-surface p-16">
+          <div className="card p-16">
             <div className="text-11.5 text-muted">صافي ما دخل محفظتك</div>
             <div
               className={cn(
@@ -124,7 +124,7 @@ export function EarningsScreen() {
             ) : null}
           </div>
 
-          <div className="rounded-16 border border-line bg-surface p-16">
+          <div className="card p-16">
             <div className="flex items-baseline justify-between">
               <span className="text-11.5 text-muted">مُحصَّل مباشرة</span>
               <span className="text-15 font-bold text-ink">
@@ -138,7 +138,7 @@ export function EarningsScreen() {
             </p>
           </div>
 
-          <div className="rounded-16 border border-line bg-surface p-16">
+          <div className="card p-16">
             <div className="flex items-baseline justify-between">
               <span className="text-11.5 text-muted">رحلات مكتملة</span>
               <span className="text-15 font-bold text-ink">

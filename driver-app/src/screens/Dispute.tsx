@@ -112,7 +112,7 @@ export function DisputeScreen() {
         مدفوعة.
       </p>
 
-      <div className="mb-12 rounded-16 border border-line bg-surface p-14">
+      <div className="mb-12 card p-14">
         <div className="flex justify-between text-12.5">
           <span className="text-muted">{formatWhen(ride.created_at)}</span>
           <span className="font-bold text-ink">

@@ -2,7 +2,9 @@
  *
  * السهم `ChevronRight` لا `ChevronLeft`: في واجهةٍ عربية «رجوع» يشير يميناً.
  *
- * **و`nav` يرسم الشريطَ السفلي** (الحزمة أ) ويُنهي المحتوى فوقه بـ`pb-nav`.
+ * **و`nav` يحجز مكانَ الشريط السفلي** (`pb-nav`) ولا يرسمه: الشريطُ صار واحداً
+ * فوق الملاح كلِّه (`App.tsx::NavBar`)، لأن شريطاً يُفكَّك ويُركَّب مع كلِّ شاشة
+ * لا تنزلق حبّتُه — `layoutId` لا يقيس بين عنصرين لم يجتمعا في لحظة.
  * **وهو مستقلٌّ عن `back` عمداً**، لأن القياس فرض ذلك: صفحاتُ النموذج الداخلية
  * (`pgPlaces`، `pgSettings`، `pgNotifs`، `pgCards`، `pgRideDetail`) كلُّها
  * `inset:0 0 66px` — أي **سهمُ رجوعٍ والشريطُ معاً**. وهو الصواب: شريطٌ يختفي
@@ -23,7 +25,6 @@
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { BottomNav } from "@/components/BottomNav";
 import { useGoBack } from "@/lib/back";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +78,6 @@ export function Screen({
         {children}
       </main>
 
-      {nav ? <BottomNav /> : null}
     </div>
   );
 }

@@ -102,7 +102,7 @@ export function VehicleScreen() {
         <h1 className="text-20 font-bold text-ink">المركبة والمستندات</h1>
       </div>
 
-      <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+      <section className="mb-12 card p-15">
         {vehicle ? (
           <>
             <div className="mb-11 flex items-baseline justify-between">

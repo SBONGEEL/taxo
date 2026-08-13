@@ -143,7 +143,7 @@ export function SettingsScreen() {
 
       {/* **أصواتُ التطبيق** (`DESIGN.md` §9): ثلاثةُ مفاتيحَ لا اثنان — انظر
           الثالثَ أدناه. وكلُّها **على الجهاز لا الحساب** كالسِمة */}
-      <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+      <section className="mb-12 card p-15">
         <SoundToggle
           title="أصوات التطبيق"
           hint="نغماتٌ قصيرة عند التحصيل ودخول المال وتنبيهات الاشتراك."
@@ -188,7 +188,7 @@ export function SettingsScreen() {
         </div>
       </section>
 
-      <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+      <section className="mb-12 card p-15">
         <button
           type="button"
           onClick={() => void flipMarketing()}
@@ -236,7 +236,7 @@ export function SettingsScreen() {
         </div>
       </section>
 
-      <div className="mb-12 overflow-hidden rounded-16 border border-line bg-surface">
+      <div className="mb-12 overflow-hidden card">
         <button
           type="button"
           onClick={toggle}
@@ -292,7 +292,7 @@ export function SettingsScreen() {
           ولا يظهر والخدمةُ مطفأة في دولته: مفتاحٌ لا أثر له اليوم يجعله يظن
           أن طلباتِه تُصفّى وهي لا تُصفّى (المرحلة 10-ج) */}
       {womenService ? (
-        <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+        <section className="mb-12 card p-15">
           {/* **«الطلبات» عنوانُ القسم كما في التصميم النسائي (شاشة ٩)**، و«من
               أُقلّ» عنوانُ الحقل داخله: التصميمُ يجمع تحت «الطلبات» ما يحكم ما
               يصل الكبتنَ من عمل، وعنوانٌ واحدٌ للقسم والحقل يجعل القسمَ حقلاً */}
@@ -344,7 +344,7 @@ export function SettingsScreen() {
         </section>
       ) : null}
 
-      <section className="rounded-16 border border-line bg-surface p-15">
+      <section className="card p-15">
         <h2 className="mb-4 text-13.5 font-bold text-ink">alias كليك</h2>
         <p className="mb-10 text-11 leading-snug text-muted">
           عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.
@@ -403,7 +403,10 @@ function SoundToggle({
       <span
         className={cn(
           "relative block h-27 w-46 flex-none rounded-full transition-colors",
-          on ? "bg-ok" : "bg-line",
+          // **`--brand` لا `--ok`** (§2.3، مُحدَّثة 2026-08-13): كان الأخضرَ هنا
+          // والورديَّ في تطبيق الراكب — مفتاحان لفعلٍ واحد بلونين. والأخضرُ
+          // يبقى لونَ **الحالة** (متصل، مدفوع) لا لونَ ما يختاره المستخدم
+          on ? "bg-brand" : "bg-line",
         )}
       >
         <span

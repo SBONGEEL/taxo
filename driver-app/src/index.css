@@ -97,6 +97,12 @@
   .pt-safe {
     padding-top: max(16px, env(safe-area-inset-top));
   }
+/* الفراغُ تحت الشريط العائم (§10.1): `max(14px, safe-area)` — العَوَمُ يُقرأ
+     عَوَماً ولو بلا شقٍّ في الجهاز، والشقُّ يزيده ولا ينقصه */
+  .pb-float {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
   .pb-safe {
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
@@ -111,7 +117,7 @@
 
   /* `.fld` من DESIGN.md §2.3 — القيم كما هي بلا تقريب */
   .fld {
-    @apply w-full rounded-13 border border-line bg-surface px-15 py-13 text-14.5
+    @apply w-full rounded-14 border border-line bg-surface px-15 py-13 text-14.5
       text-ink outline-none placeholder:text-muted disabled:opacity-60;
     box-sizing: border-box;
   }
@@ -120,6 +126,30 @@
      إدخال لونٍ ليس في اللوحة */
   .fld:focus {
     @apply border-ink;
+  }
+
+  /* **البطاقة** (`DESIGN.md` §10.3) — تعريفٌ واحدٌ للتطبيقين.
+   *
+   * كانت في هذا التطبيق أصنافاً مسطورةً في كلِّ شاشة (`rounded-16 border
+   * border-line bg-surface`) — إحدى وعشرين مرة. فأوّلُ نعومةٍ تُطلب تصير إحدى
+   * وعشرين تعديلاً، وأوّلُ واحدةٍ تُنسى تصير شاشةً تخالف أختها. */
+  .card {
+    @apply rounded-18 border border-line bg-surface;
+  }
+
+  /* **زرٌّ عائمٌ فوق الخريطة** (`DESIGN.md` §10.2) — تعريفٌ واحدٌ لكلِّ أزرار
+   * الخريطة في التطبيقين: الجرسُ ومبدّلُ الوضع وزرُّ «موقعي» وحرفُ الحساب.
+   *
+   * **ويتبع `--brand`**: كانت محايدةً (`--tx`/`--brd`) في سِمةٍ كلُّ ما حولها
+   * فيها ورديّ — وشاشةٌ نصفُها يتبع السِمةَ ونصفُها لا يتبعها تُقرأ عطباً.
+   * و`--brand` قيمتُها `--tx` والسِمةُ مطفأة، فلا يتغيّر شيءٌ للحساب المحايد.
+   *
+   * **والخلفيةُ سطحٌ معتمٌ لا شفافية**، فالتباينُ محفوظٌ في الوضعين مهما كان
+   * لونُ الخريطة تحته — والضبابيةُ لحافّته لا لنصّه. */
+  .ctl {
+    @apply pressable pointer-events-auto flex items-center justify-center
+      rounded-full border border-brand-brd bg-surface text-brand shadow-sheet
+      backdrop-blur transition hover:bg-surface-2;
   }
 
   .label {

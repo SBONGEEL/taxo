@@ -11,9 +11,11 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
+  useLocation,
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { BottomNav } from "@/components/BottomNav";
 import { Toasts } from "@/components/Toasts";
 import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
@@ -21,6 +23,7 @@ import { ConfigProvider, useConfig } from "@/lib/config";
 import { RideProvider } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
+import { showsNav } from "@/lib/tabs";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { ThemeProvider } from "@/lib/theme";
@@ -159,6 +162,20 @@ function Guarded({ children }: { children: ReactNode }) {
 function Anonymous({ children }: { children: ReactNode }) {
   const { user } = useSession();
   return user ? <Navigate to="/" replace /> : <>{children}</>;
+}
+
+/** الشريطُ **خارج الحركة وفوقها** — وهذا شرطُ انزلاق الحبّة لا تنميق.
+ *
+ * كان كلُّ شاشةٍ ترسم شريطَها، فمع كلِّ تنقّلٍ يُفكَّك شريطٌ ويُركَّب آخر —
+ * و`layoutId` لا يقيس بين عنصرين لم يجتمعا في لحظة، فتقفز الحبّةُ ولا تنزلق.
+ * قِيس: ثلاثةُ مواضعَ في تطبيق الراكب ولا موضعَ في الكبتن.
+ *
+ * وهو خارج `RouteTransition` كذلك كي **لا ينزلق مع الصفحة**: شريطُ تنقّلٍ
+ * يسافر مع ما ينقلك إليه يُقرأ جزءاً من الصفحة لا ثابتاً فوقها.
+ */
+function NavBar() {
+  const { pathname } = useLocation();
+  return showsNav(pathname) ? <BottomNav /> : null;
 }
 
 export default function App() {
@@ -346,6 +363,7 @@ export default function App() {
                     </Routes>
                     )}
                   </RouteTransition>
+                  <NavBar />
                 </Router>
               </RideProvider>
               </PlacesProvider>

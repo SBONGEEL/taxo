@@ -115,7 +115,7 @@ export function ReferralsScreen() {
         <Spinner />
       ) : (
         <div className="space-y-14">
-          <section className="rounded-16 border border-line bg-surface p-16 text-center">
+          <section className="card p-16 text-center">
             <p className="text-12 text-muted">رمز الإحالة الخاص بك</p>
             {/* **لاتينيٌّ ومتباعدُ الحروف**: يُقرأ ليُنطق ويُكتب في شاشةٍ أخرى */}
             <p
@@ -144,7 +144,7 @@ export function ReferralsScreen() {
             </div>
           </section>
 
-          <section className="rounded-16 border border-line bg-surface p-16">
+          <section className="card p-16">
             <h2 className="text-13.5 font-bold text-ink">كيف تعمل</h2>
             <ol className="mt-8 space-y-6 text-12.5 leading-relaxed text-muted">
               <li>١. تسجّل السائقةُ حسابها وتكتب رمزك.</li>
@@ -175,7 +175,7 @@ export function ReferralsScreen() {
           <section>
             <h2 className="mb-8 text-13.5 font-bold text-ink">من سجّل برمزك</h2>
             {data.referrals.length === 0 ? (
-              <p className="rounded-16 border border-line bg-surface p-16 text-center text-12.5 text-muted">
+              <p className="card p-16 text-center text-12.5 text-muted">
                 لم يسجّل أحدٌ برمزك بعد.
               </p>
             ) : (

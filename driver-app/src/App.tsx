@@ -21,6 +21,7 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
+  useLocation,
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -32,6 +33,8 @@ import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { RideProvider } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
+import { BottomNav } from "@/components/BottomNav";
+import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { LoginScreen } from "@/screens/Login";
 
@@ -190,6 +193,15 @@ function DriverHome() {
   ) : (
     <PendingScreen />
   );
+}
+
+/** الشريطُ **خارج الحركة وفوقها** — انظر `customer-app/src/App.tsx` لنفس العلّة:
+ * شريطٌ يُفكَّك ويُركَّب مع كلِّ شاشةٍ لا تنزلق حبّتُه، لأن `layoutId` لا يقيس
+ * بين عنصرين لم يجتمعا في لحظة. قِيس: لا موضعَ واحدٌ يتغيّر في هذا التطبيق.
+ */
+function NavBar() {
+  const { pathname } = useLocation();
+  return showsNav(pathname) ? <BottomNav /> : null;
 }
 
 export default function App() {
@@ -366,6 +378,7 @@ export default function App() {
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </Suspense>
+                    <NavBar />
                   </Router>
                 </RideProvider>
               </DriverProvider>

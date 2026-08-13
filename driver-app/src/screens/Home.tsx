@@ -45,7 +45,6 @@ import type {
 import { ActiveRide } from "@/components/ActiveRide";
 import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
-import { BottomNav } from "@/components/BottomNav";
 import { MapView } from "@/components/map/MapView";
 import { CliqTransferSheet } from "@/components/CliqTransferSheet";
 import { OfferSheet } from "@/components/OfferSheet";
@@ -223,7 +222,7 @@ export function HomeScreen() {
                 type="button"
                 onClick={() => navigate("/notifications")}
                 aria-label="الإشعارات"
-                className="pressable relative flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
+                className="ctl relative size-33"
               >
                 <Bell className="size-16" />
                 {/* نقطةٌ لا عدد: العددُ الدقيق لا يغيّر ما سيفعله الكبتن،
@@ -236,7 +235,7 @@ export function HomeScreen() {
                 type="button"
                 onClick={toggle}
                 aria-label="تبديل المظهر"
-                className="pressable flex size-33 items-center justify-center rounded-full border border-line bg-surface text-ink"
+                className="ctl size-33"
               >
                 {dark ? (
                   <Sun className="size-16" />
@@ -263,7 +262,7 @@ export function HomeScreen() {
                   اشترك لتبدأ استقبال الطلبات.
                 </span>
               </span>
-              <span className="shrink-0 rounded-9 bg-accent px-12 py-7 text-11.5 font-bold text-accent-ink">
+              <span className="shrink-0 rounded-9 bg-brand px-12 py-7 text-11.5 font-bold text-brand-ink">
                 اشترك
               </span>
             </button>
@@ -352,7 +351,6 @@ export function HomeScreen() {
             </button>
           </div>
 
-          <BottomNav />
         </>
       ) : (
         <ActiveRide

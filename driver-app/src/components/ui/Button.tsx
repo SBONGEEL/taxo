@@ -30,11 +30,13 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 // المقاسات الثلاثة من §2.1: (نصف القطر، الحشوة، مقاس الخط).
+// **ونصفُ القطر نُعِّم في §10.3 (2026-08-13)**: ١٤ · ١٦ · ١٨ — سلّمٌ واحدٌ
+// في التطبيقين، فالزرُّ الصغيرُ هنا أخو الصغيرِ هناك.
 // الحشوة متساويةُ الجوانب كما في التصميم (`padding:16px` لا `16px 24px`)
 const SIZES: Record<Size, string> = {
-  lg: "rounded-16 p-16 text-15",
-  md: "rounded-15 p-15 text-15",
-  sm: "rounded-13 p-13 text-13.5",
+  lg: "rounded-18 p-16 text-15",
+  md: "rounded-16 p-15 text-15",
+  sm: "rounded-14 p-13 text-13.5",
 };
 
 export function Button({

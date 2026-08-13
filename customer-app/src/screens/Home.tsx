@@ -27,7 +27,6 @@ import type {
   Ride,
   VehicleCategory,
 } from "@/api/types";
-import { BottomNav } from "@/components/BottomNav";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
@@ -382,7 +381,7 @@ export function HomeScreen() {
         <button
           type="button"
           onClick={() => navigate("/account")}
-          className="pressable pointer-events-auto flex size-44 items-center justify-center rounded-full border border-brand-brd bg-surface text-14 font-bold text-brand shadow-sm backdrop-blur"
+          className="ctl size-44 text-14 font-bold"
           aria-label="حسابي"
         >
           {user?.name.slice(0, 1) ?? "؟"}
@@ -396,9 +395,9 @@ export function HomeScreen() {
             // كي تمرّ إيماءاتُ الخريطة من حولها، فكلُّ زرٍّ فيها يُعيد تمكينَ
             // نفسه. وبغيره يُرسم الزرُّ ويُقاس ويبدو سليماً **ولا يُنقر** —
             // والقياسُ وحده يكشفه: `elementFromPoint` يعيد canvas الخريطة
-            className="pressable pointer-events-auto relative rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+            className="ctl relative size-44"
           >
-            <Bell className="size-20 text-ink" />
+            <Bell className="size-20" />
             {/* **نقطةٌ لا رقم** كما في التصميم (`unreadShow`): الرقمُ يحتاج قراءةً
                 ثانيةً كلَّ فتحةٍ للرئيسية، والنقطةُ تجيب السؤالَ الوحيد الذي
                 يُسأل هنا — «هل ثمّ جديد؟». والعددُ نفسُه في الشاشة */}
@@ -410,13 +409,9 @@ export function HomeScreen() {
             type="button"
             onClick={() => setChoice(dark ? "light" : "dark")}
             aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
-            className="pressable pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+            className="ctl size-44"
           >
-            {dark ? (
-              <Sun className="size-20 text-ink" />
-            ) : (
-              <Moon className="size-20 text-ink" />
-            )}
+            {dark ? <Sun className="size-20" /> : <Moon className="size-20" />}
           </button>
         </div>
       </div>
@@ -427,10 +422,10 @@ export function HomeScreen() {
           const position = await currentPosition();
           if (position) map.current?.flyTo(position, 15);
         }}
-        className="pressable absolute bottom-[42%] end-16 rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+        className="ctl absolute bottom-[42%] end-16 size-44"
         aria-label="موقعي الحالي"
       >
-        <Crosshair className="size-20 text-ink" />
+        <Crosshair className="size-20" />
       </button>
 
       {/* **الأوراقُ تنتهي فوق الشريط** (`bottom:66px` في النموذج): ورقةٌ تلتصق
@@ -578,7 +573,6 @@ export function HomeScreen() {
         onPickOnMap={() => setPhase("pick-dropoff")}
       />
 
-      <BottomNav />
     </div>
   );
 }

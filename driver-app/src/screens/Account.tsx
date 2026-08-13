@@ -15,7 +15,6 @@ import { ChevronLeft } from "lucide-react";
 
 import { getMySubscription } from "@/api/endpoints";
 import type { DriverStatus, MySubscription } from "@/api/types";
-import { BottomNav } from "@/components/BottomNav";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
@@ -164,7 +163,7 @@ export function AccountScreen() {
         <button
           type="button"
           onClick={() => navigate("/subscription")}
-          className="pressable mb-10 flex w-full items-center gap-12 rounded-16 border border-line bg-surface p-15 text-start"
+          className="pressable mb-10 flex w-full items-center gap-12 card p-15 text-start"
         >
           <span className={cn("block h-38 w-6 rounded-4", subTone)} />
           <span className="flex-1">
@@ -174,7 +173,7 @@ export function AccountScreen() {
           <ChevronLeft size={16} className="text-muted" />
         </button>
 
-        <div className="overflow-hidden rounded-16 border border-line bg-surface">
+        <div className="overflow-hidden card">
           <Row
             label="المركبة والمستندات"
             sub={
@@ -213,7 +212,6 @@ export function AccountScreen() {
         </button>
       </div>
 
-      <BottomNav />
     </div>
   );
 }
