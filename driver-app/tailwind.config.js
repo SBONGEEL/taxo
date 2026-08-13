@@ -68,6 +68,16 @@ export default {
       // بنيةٌ ثابتة
       status: "34px", nav: "66px", header: "58px",
     },
+    transitionDuration: {
+      // §8 — مددٌ ثلاثٌ لا أرقامٌ متفرقة
+      fast: "120ms",
+      med: "200ms",
+      slow: "320ms",
+    },
+    transitionTimingFunction: {
+      standard: "cubic-bezier(0.2, 0, 0, 1)",
+      "out-soft": "cubic-bezier(0, 0, 0, 1)",
+    },
     extend: {
       colors: {
         // كل لون متغيّرُ CSS ليتبدّل الوضعان بلا شرطٍ في أيّ مكوّن.

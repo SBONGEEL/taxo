@@ -516,7 +516,7 @@ export function ConfirmRide({
             لأنها تصف ما سيقع بعد الضغط، وتظهر بشرطها وحده: صندوقٌ رماديٌّ دائم
             يُقرأ زينةً ثم لا يُقرأ حين يعني شيئاً */}
         {walletNote ? (
-          <p className="rounded-12 border border-line bg-surface-2 px-13 py-10 text-11.5 leading-snug text-muted">
+          <p className="rounded-12 border border-brand-brd bg-brand-soft px-13 py-10 text-11.5 leading-snug text-muted">
             {walletNote}
           </p>
         ) : null}

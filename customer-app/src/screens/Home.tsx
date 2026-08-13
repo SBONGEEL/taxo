@@ -370,7 +370,7 @@ export function HomeScreen() {
         <button
           type="button"
           onClick={() => navigate("/account")}
-          className="pointer-events-auto flex size-44 items-center justify-center rounded-full border border-line bg-surface text-14 font-bold text-ink shadow-sm backdrop-blur"
+          className="pointer-events-auto flex size-44 items-center justify-center rounded-full border border-brand-brd bg-surface text-14 font-bold text-brand shadow-sm backdrop-blur"
           aria-label="حسابي"
         >
           {user?.name.slice(0, 1) ?? "؟"}

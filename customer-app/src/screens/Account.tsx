@@ -55,7 +55,7 @@ export function AccountScreen() {
   return (
     <Screen title="حسابي" nav back={false}>
       <div className="mb-18 flex items-center gap-14">
-        <div className="flex size-54 items-center justify-center rounded-full border border-line bg-surface-2 text-18 font-bold text-ink">
+        <div className="flex size-54 items-center justify-center rounded-full border border-brand-brd bg-brand-soft text-18 font-bold text-brand">
           {user?.name.slice(0, 1) ?? "؟"}
         </div>
         <div className="min-w-0 flex-1">

@@ -1,61 +1,86 @@
 /** الشريط السفلي — `DESIGN.md` §1.4/§5.3 والقرار 22.
  *
- * **نسخةٌ من `driver-app/src/components/BottomNav.tsx` بتسمياتٍ أخرى**، لا
- * اشتقاقٌ جديد: التطبيقان يتقاسمان نظامَ التصميم نفسَه، وشريطان مبنيّان مرتين
- * يفترقان في أوّل قيمةٍ تُعدَّل في أحدهما. الارتفاع 66 والحشوة `8px 6px 12px`،
- * ومربّعٌ 19×19 نصفُ قطره 6 بلون `--tx` للنشط و`--brd` لغيره، وتسميةٌ 9.5px
- * بوزن 700 للنشط و500 لغيره، وشفافيةٌ 0.65 لغير النشط.
+ * **نسخةٌ من `driver-app/src/components/BottomNav.tsx` بتسمياتٍ وأيقونات أخرى**،
+ * لا اشتقاقٌ جديد: التطبيقان يتقاسمان نظامَ التصميم نفسَه، وشريطان مبنيّان
+ * مرتين يفترقان في أوّل قيمةٍ تُعدَّل في أحدهما. الارتفاع 66 والحشوة
+ * `8px 6px 12px`، وتسميةٌ 9.5px بوزن 700 للنشط و500 لغيره.
  *
- * **والأيقونات مربّعاتٌ صمّاء كما في النموذج** لا أيقونات lucide: القرار 19
- * استبدل رموزَه اليونيكودية بـlucide **حيث كانت رموزاً**، وهذه عناصرُ شكلٍ لم
- * يُرسم لها بديل.
+ * **وأيقوناتُ lucide لا مربّعاتٌ صمّاء** (2026-08-13): كان المربّعُ نقلاً حرفياً
+ * عن النموذج الذي رسمه شكلاً لا رمزاً، والقرارُ 19 يستبدل محارفَ النموذج
+ * بـlucide **حيث كانت رموزاً** — والتبويبُ رمزٌ يُقرأ قبل نصِّه.
  *
- * **و«حسابي» ينشط على كلِّ ما تحته** (`/account/*`): التبويبُ الرابع حاوية،
- * فمن دخل «الأماكن المحفوظة» لم يغادر «حسابي» — وشريطٌ يُطفئ تبويبَه عند أول
- * صفٍّ يُضغط يجعل القارئَ يظنّ أنه خرج منه.
+ * **والنشطُ بـ`--brand` والخاملُ بـ`--mut`**، فيتبعان الوضعَ والسِمة بلا شرطٍ في
+ * المكوّن: `--brand` قيمتُها `--tx` والسِمةُ مطفأة، فلا يتغيّر شيءٌ اليوم
+ * ويتلوّن الشريطُ وحدَه حين تُشعَل (§1.1-ب).
+ *
+ * **والمؤشِّرُ ينزلق ولا يقفز**: عنصرٌ **واحد** يُنقل بـ`translate` بين المواضع
+ * لا أربعةٌ يظهر أحدُها ويختفي الآخر — وأربعةٌ تعني وميضاً في مكانين، لا انتقالاً
+ * بينهما. وموضعُه محسوبٌ من ترتيب التبويب لا من قياسٍ في المتصفح: أربعةٌ
+ * متساويةٌ بعرض `100% / 4`.
+ *
+ * **والحركةُ المخفَّضة توقفه**: `transition` وحدها هي ما يُلغى، فيبقى المؤشِّرُ
+ * في موضعه الصحيح فوراً (`DESIGN.md` §8).
  */
 
-import { NavLink } from "react-router-dom";
+import { Home, Clock, Wallet, User } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { to: "/", label: "الرئيسية" },
-  { to: "/rides", label: "رحلاتي" },
-  { to: "/wallet", label: "المحفظة" },
-  { to: "/account", label: "حسابي" },
+  { to: "/", label: "الرئيسية", icon: Home },
+  { to: "/rides", label: "رحلاتي", icon: Clock },
+  { to: "/wallet", label: "المحفظة", icon: Wallet },
+  { to: "/account", label: "حسابي", icon: User },
 ];
 
+/** أيُّ تبويبٍ يملك هذا المسار — و«حسابي» يملك كلَّ ما تحته (`/account/*`). */
+function activeIndex(pathname: string): number {
+  const found = TABS.findIndex(
+    (tab) => tab.to !== "/" && pathname.startsWith(tab.to),
+  );
+  return found === -1 ? 0 : found;
+}
+
 export function BottomNav() {
+  const { pathname } = useLocation();
+  const index = activeIndex(pathname);
+
   return (
-    <nav className="absolute inset-x-0 bottom-0 z-30 flex h-nav border-t border-line bg-surface px-6 pb-12 pt-8">
-      {TABS.map((tab) => (
-        <NavLink key={tab.to} to={tab.to} end={tab.to === "/"} className="flex-1">
-          {({ isActive }) => (
-            <span
-              className={cn(
-                "block text-center",
-                isActive ? "opacity-100" : "opacity-65",
-              )}
-            >
-              <span
-                className={cn(
-                  "mx-auto mb-4 block size-19 rounded-6",
-                  isActive ? "bg-ink" : "bg-line",
-                )}
-              />
-              <span
-                className={cn(
-                  "block text-9.5 text-ink",
-                  isActive ? "font-bold" : "font-medium",
-                )}
-              >
-                {tab.label}
+    <nav className="absolute inset-x-0 bottom-0 z-30 h-nav border-t border-line bg-surface pb-12 pt-8">
+      {/* المؤشِّر: عنصرٌ واحد ينزلق. و`start` لا `left` — الشريطُ في RTL */}
+      <span
+        aria-hidden
+        className="absolute top-0 h-2 rounded-full bg-brand transition-[inset-inline-start] duration-med ease-standard motion-reduce:transition-none"
+        // العرضُ والموضعُ كلاهما مشتقٌّ من **عدد التبويبات**، فيُكتبان هنا معاً:
+        // صنفٌ كسريٌّ ثابت يكذب أوّلَ ما يُضاف تبويبٌ خامس، ويقرؤه `check:scale`
+        // مقاساً خارج السلّم (يمسح النصَّ كلَّه لا الأصنافَ وحدها)
+        style={{ width: `${100 / TABS.length}%`, insetInlineStart: `${index * (100 / TABS.length)}%` }}
+      />
+      <div className="flex h-full px-6">
+        {TABS.map((tab) => (
+          <NavLink key={tab.to} to={tab.to} end={tab.to === "/"} className="flex-1">
+            {({ isActive }) => (
+              <span className="block text-center">
+                <tab.icon
+                  className={cn(
+                    "mx-auto mb-4 size-20 transition-transform duration-med ease-standard motion-reduce:transition-none",
+                    isActive ? "scale-110 text-brand" : "text-muted",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "block text-9.5",
+                    isActive ? "font-bold text-brand" : "font-medium text-muted",
+                  )}
+                >
+                  {tab.label}
+                </span>
               </span>
-            </span>
-          )}
-        </NavLink>
-      ))}
+            )}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   );
 }

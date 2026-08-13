@@ -144,7 +144,7 @@ export function ProfileScreen() {
             لو حُكم به لما استطاعت الإعلان لأن الإعلان شرطُ الإتاحة. وهو
             قابلٌ للتعديل: إقرارٌ ذاتيّ لا وثيقة (المرحلة 10-ج) */}
         {enabled ? (
-          <section className="card space-y-12 p-16">
+          <section className="space-y-12 rounded-16 border border-brand-brd bg-surface p-16">
             <div>
               <p className="font-medium text-ink">الجنس</p>
               <p className="mt-2 text-12 leading-relaxed text-muted">
@@ -241,7 +241,7 @@ export function ProfileScreen() {
             حقيقةٌ عن **بياناتها** تسري والخدمةُ مطفأةٌ كما تسري وهي مشتعلة —
             فلا تُعلن عن غير موجود (قاعدةُ القرار 48). */}
         {themeAvailable ? (
-          <section className="card space-y-8 p-16">
+          <section className="space-y-8 rounded-16 border border-brand-brd bg-brand-soft p-16">
             <p className="text-14 font-semibold text-ink">الخصوصية</p>
             <p className="text-12.5 leading-relaxed text-muted">
               جنسُكِ لا يُعرض لأي كبتن — لا قبل القبول ولا بعده. وخريطةُ
