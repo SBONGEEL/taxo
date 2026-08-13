@@ -34,6 +34,15 @@ import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
+import {
+  notificationSoundEnabled,
+  offerSoundEnabled,
+  play,
+  setNotificationSoundEnabled,
+  setOfferSoundEnabled,
+  setSoundsEnabled,
+  soundsEnabled,
+} from "@/lib/sound";
 import { arabicDigits, cn } from "@/lib/utils";
 
 export function SettingsScreen() {
@@ -53,6 +62,9 @@ export function SettingsScreen() {
       : null;
 
   const [marketing, setMarketing] = useState<boolean | null>(null);
+  const [sounds, setSounds] = useState(soundsEnabled);
+  const [notifySound, setNotifySound] = useState(notificationSoundEnabled);
+  const [offerSound, setOfferSound] = useState(offerSoundEnabled);
   const [alias, setAlias] = useState("");
   const [savingAlias, setSavingAlias] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -128,6 +140,53 @@ export function SettingsScreen() {
         </button>
         <h1 className="text-20 font-bold text-ink">الإعدادات</h1>
       </div>
+
+      {/* **أصواتُ التطبيق** (`DESIGN.md` §9): ثلاثةُ مفاتيحَ لا اثنان — انظر
+          الثالثَ أدناه. وكلُّها **على الجهاز لا الحساب** كالسِمة */}
+      <section className="mb-12 rounded-16 border border-line bg-surface p-15">
+        <SoundToggle
+          title="أصوات التطبيق"
+          hint="نغماتٌ قصيرة عند التحصيل ودخول المال وتنبيهات الاشتراك."
+          on={sounds}
+          onToggle={() => {
+            const next = !sounds;
+            setSoundsEnabled(next);
+            setSounds(next);
+            if (next) play("notify");
+          }}
+        />
+        <div className="mt-13 border-t border-line pt-13">
+          <SoundToggle
+            title="صوت الإشعارات"
+            hint="نغمةُ الإشعارات وحدها — مستقلّةٌ عن بقية الأصوات."
+            on={notifySound}
+            onToggle={() => {
+              const next = !notifySound;
+              setNotificationSoundEnabled(next);
+              setNotifySound(next);
+              if (next) play("notify");
+            }}
+          />
+        </div>
+        <div className="mt-13 border-t border-line pt-13">
+          {/* **مفتاحٌ ثالثٌ مستقلّ، وهو الاستثناء الوحيد** (قرارُ المالك §9.2):
+              نغمةُ الطلب الوارد **لا يُسكتها المفتاحُ العام**. كبتنٌ يُطفئ
+              الأصواتَ في اجتماعٍ ثم يفوّت طلباتٍ لا يعرف أنها وصلت يخسر دخلاً
+              ويلوم التطبيق — والعلاقةُ بين ما أطفأه وما خسره لا تظهر له. فلا
+              يُسكتها إلا من قصدها بعينها، وهذا النصُّ يقول ذلك صراحةً */}
+          <SoundToggle
+            title="نغمة الطلب الوارد"
+            hint="تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات."
+            on={offerSound}
+            onToggle={() => {
+              const next = !offerSound;
+              setOfferSoundEnabled(next);
+              setOfferSound(next);
+              if (next) play("offer");
+            }}
+          />
+        </div>
+      </section>
 
       <section className="mb-12 rounded-16 border border-line bg-surface p-15">
         <button
@@ -312,5 +371,48 @@ export function SettingsScreen() {
         <SuccessNote message={done} />
       </div>
     </div>
+  );
+}
+
+
+/** صفُّ مفتاحٍ صوتيٍّ بشكل مفاتيح هذه الشاشة — ثلاثةٌ تستعمله. */
+function SoundToggle({
+  title,
+  hint,
+  on,
+  onToggle,
+}: {
+  title: string;
+  hint: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={title}
+      onClick={onToggle}
+      className="flex w-full items-center gap-12 text-start"
+    >
+      <span className="flex-1">
+        <span className="block text-13.5 font-semibold text-ink">{title}</span>
+        <span className="block text-11 leading-snug text-muted">{hint}</span>
+      </span>
+      <span
+        className={cn(
+          "relative block h-27 w-46 flex-none rounded-full transition-colors",
+          on ? "bg-ok" : "bg-line",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-3 block size-21 rounded-full bg-surface transition-all",
+            on ? "start-22" : "start-3",
+          )}
+        />
+      </span>
+    </button>
   );
 }

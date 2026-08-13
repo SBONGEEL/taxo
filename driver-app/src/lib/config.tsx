@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 
 import { getConfig } from "@/api/endpoints";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
+import { onSplashRetry, setSplashStatus } from "@/lib/splash";
 import type { FirebaseWebConfig } from "@/lib/firebase";
 
 interface ConfigState {
@@ -24,20 +25,89 @@ const ConfigContext = createContext<ConfigState>({
   reload: () => undefined,
 });
 
+/** بعدها يُقرأ الصمتُ بطءاً لا سكوناً — أطولُ من نداءٍ سويٍّ وأقصرُ من صبرِ أحد. */
+const SLOW_AFTER_MS = 4_000;
+
 export function ConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [attempt, setAttempt] = useState(0);
 
+  /** **الانقطاعُ والبطءُ حالان لا حال** (`DESIGN.md` §7.8):
+   *
+   * - **انقطاع**: `navigator.onLine === false`، أو سقوطُ النداء بخطأ شبكة.
+   * - **بطء**: مضت `SLOW_AFTER_MS` ولا ردَّ ولا خطأ — الطلبُ ما زال معلّقاً.
+   *
+   * وتمييزُهما ليس تجميلاً: «لا اتصال» يقول افتح الشبكة، و«ضعيفة» يقول لا
+   * تفعل شيئاً. ونصٌّ واحدٌ للحالين يجعل أحدَ الجوابين خطأً دائماً.
+   *
+   * **وإعادةُ المحاولة تلقائيةٌ بتباعدٍ متزايد** (٢ ← ٤ ← ٨ ← ١٥ ثانيةً سقفاً):
+   * محاولةٌ كلَّ ثانيةٍ على شبكةٍ مقطوعة تستنزف بطاريةً بلا فائدة، ومحاولةٌ
+   * واحدةٌ ثم انتظارُ ضغطةٍ تترك التطبيقَ معلّقاً على شبكةٍ عادت وحدها.
+   *
+   * **والعودةُ فورَ عودة الاتصال بلا ضغطة**: حدثُ `online` يُسقط التباعدَ كلَّه.
+   */
   useEffect(() => {
     let cancelled = false;
+    let slowTimer: number | null = null;
+
+    if (!navigator.onLine) {
+      setSplashStatus("offline");
+    } else {
+      slowTimer = window.setTimeout(
+        () => !cancelled && setSplashStatus("slow"),
+        SLOW_AFTER_MS,
+      );
+    }
+
     getConfig()
-      .then((value) => !cancelled && (setConfig(value), setError(null)))
-      .catch((err: Error) => !cancelled && setError(err.message));
+      .then((value) => {
+        if (cancelled) return;
+        setConfig(value);
+        setError(null);
+        setSplashStatus(null);
+        setAttempt(0);
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setError(err.message);
+        setSplashStatus(navigator.onLine ? "slow" : "offline");
+        setAttempt((n) => n + 1);
+      })
+      .finally(() => slowTimer !== null && window.clearTimeout(slowTimer));
+
     return () => {
       cancelled = true;
+      if (slowTimer !== null) window.clearTimeout(slowTimer);
     };
   }, [nonce]);
+
+  // التباعدُ المتزايد — ولا يعمل بعد أن تصل الإعدادات
+  useEffect(() => {
+    if (config || attempt === 0) return;
+    const delay = Math.min(2_000 * 2 ** (attempt - 1), 15_000);
+    const timer = window.setTimeout(() => setNonce((n) => n + 1), delay);
+    return () => window.clearTimeout(timer);
+  }, [attempt, config]);
+
+  // عودةُ الاتصال تُسقط الانتظارَ كلَّه — بلا ضغطةٍ من أحد
+  useEffect(() => {
+    const back = () => {
+      setAttempt(0);
+      setNonce((n) => n + 1);
+    };
+    window.addEventListener("online", back);
+    return () => window.removeEventListener("online", back);
+  }, []);
+
+  // زرُّ «إعادة المحاولة» على الشاشة الترحيبية
+  useEffect(() => {
+    onSplashRetry(() => {
+      setAttempt(0);
+      setNonce((n) => n + 1);
+    });
+  }, []);
 
   const value = useMemo<ConfigState>(
     () => ({ config, error, reload: () => setNonce((n) => n + 1) }),

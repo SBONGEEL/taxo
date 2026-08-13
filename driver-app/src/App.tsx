@@ -23,10 +23,11 @@ import {
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
-import { CenteredMessage, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { CenteredMessage, Spinner } from "@/components/ui/Feedback";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { hideSplash } from "@/lib/splash";
+import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { RideProvider } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
@@ -113,32 +114,52 @@ function Loading() {
   );
 }
 
+/** يفتح الصوتَ عند أوّل إيماءةٍ ويعزف توقيعَ العلامة مرةً واحدة.
+ *
+ * **التوقيعُ هنا لا في الشاشة الترحيبية** (قرارُ المالك §9.2): المتصفحاتُ تمنع
+ * الصوتَ قبل إيماءةٍ من المستخدم، فنغمةُ الإقلاع **لا تُسمع في أوّل فتحة** —
+ * وهي الفتحةُ التي يُبنى فيها الانطباعُ الأول. فتُنقل إلى أوّل لمسةٍ **بعد
+ * الدخول**: أوّلُ ما يفعله صاحبُ الحساب في جلسته يُقابَل بتوقيع العلامة.
+ *
+ * ومرةً واحدةً في الجلسة: توقيعٌ يتكرر مع كل لمسةٍ يصير إزعاجاً لا هوية.
+ */
+function useSoundUnlock(active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+    const open = () => {
+      const first = !isUnlocked();
+      unlock();
+      // التوقيعُ بعد الفتح مباشرةً — و`isUnlocked` قبله يميّز أوّلَ لمسةٍ فعلاً
+      if (first && isUnlocked()) play("signature");
+    };
+    // `pointerdown` لا `click`: يقع أبكر، ويكفي المتصفحَ إيماءةً
+    window.addEventListener("pointerdown", open, { once: true });
+    window.addEventListener("keydown", open, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", open);
+      window.removeEventListener("keydown", open);
+    };
+  }, [active]);
+}
+
 function Boot({ children }: { children: ReactNode }) {
-  const { config, error, reload } = useConfig();
+  const { config } = useConfig();
   const { loading } = useSession();
 
   // **الترحيبيةُ تُزال حين ينتهي الإقلاع** (`DESIGN.md` §7.5) — بنجاحٍ أو بخطأ
   const booted = Boolean(config) && !loading;
   useEffect(() => {
-    if (booted || error) hideSplash();
-  }, [booted, error]);
+    // **لا تُزال عند الخطأ**: الترحيبيةُ نفسُها هي من يعرض حالَ الشبكة الآن
+    // (`DESIGN.md` §7.8) — تُبقي الشعارَ والدورانَ ونصَّ السبب وزرَّ المحاولة.
+    // وكانت تُزال هنا حين كان الخطأُ يعني شاشةً بديلة، فصار إزالتُها تُدخل
+    // المستخدمَ إلى واجهةٍ فارغة — وهو بعينه ما طُلب منعُه
+    if (booted) hideSplash();
+  }, [booted]);
 
   // الإعدادات شرطٌ لرسم شاشة الدخول نفسها: منها يُعرف أيُّ مُحقِّقٍ يرسم
-  if (!config && error) {
-    return (
-      <CenteredMessage>
-        <div className="text-38 font-bold tracking-brand text-brand">TAXO</div>
-        <ErrorNote message={error} />
-        <button
-          type="button"
-          onClick={reload}
-          className="text-13 font-semibold text-ink underline"
-        >
-          إعادة المحاولة
-        </button>
-      </CenteredMessage>
-    );
-  }
+  // **ولا شاشةَ خطأٍ ثانية**: الترحيبيةُ باقيةٌ فوق كل شيء وتحمل السببَ
+  // وزرَّ المحاولة (§7.8)، وشاشةٌ تحتها لا يراها أحد
+  if (!config) return null;
 
   // **ولا شاشةَ انتظارٍ ثانية**: الترحيبيةُ ما زالت فوق كل شيء (§7.5)
   if (!config || loading) return null;
@@ -153,6 +174,8 @@ function Anonymous({ children }: { children: ReactNode }) {
 
 function Guarded({ children }: { children: ReactNode }) {
   const { user } = useSession();
+  // **بعد الدخول وحدَه**: التوقيعُ هويةُ من دخل، لا صوتٌ يُقابل به من يكتب كلمةَ مروره
+  useSoundUnlock(Boolean(user));
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
