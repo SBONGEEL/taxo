@@ -154,3 +154,56 @@
 .mapboxgl-ctrl-bottom-right {
   z-index: 5;
 }
+
+/* ------------------------------------------------- نبضُ الخريطة (`DESIGN.md` §8.2)
+ *
+ * **CSS خالصٌ لا حلقةُ رسم**: المتصفحُ يحرّك `transform`/`opacity` على مُركِّب
+ * الطبقات (compositor) بلا إيقاظ JS في كل إطار — وتطبيقُ الكبتن يبقى مفتوحاً
+ * ساعاتٍ في السيارة.
+ *
+ * **ولونُه `--brand`** فيتبع الوضعَ والسِمةَ الورديةَ بلا شرطٍ في أيّ مكوّن. */
+.taxo-pulse {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+.taxo-pulse::before,
+.taxo-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  background: var(--brand);
+  animation: taxo-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+/* حلقتان بفارقٍ نصفَ دورة: موجةٌ متصلةٌ لا نبضةٌ منقطعة */
+.taxo-pulse::after { animation-delay: 1.2s; }
+.taxo-pulse > .taxo-pulse-core {
+  position: absolute;
+  inset: 4px;
+  border-radius: 99px;
+  background: var(--brand);
+  border: 2px solid var(--sur);
+}
+
+@keyframes taxo-ping {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  80%  { transform: scale(2.6); opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* **يتوقف حين يغيب التطبيق** — الصنفُ يُوضع على الجذر من `visibilitychange`.
+ * وrAF يتوقف وحده في الخلفية، أمّا حركاتُ CSS فتستمر في بعض المتصفحات. */
+html.is-hidden .taxo-pulse::before,
+html.is-hidden .taxo-pulse::after {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taxo-pulse::before,
+  .taxo-pulse::after {
+    animation: none;
+    opacity: 0.28;
+    transform: scale(1.6);
+  }
+}

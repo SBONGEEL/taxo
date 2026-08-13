@@ -17,7 +17,14 @@
  */
 
 import mapboxgl from "mapbox-gl";
-import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  forwardRef,
+} from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -54,6 +61,10 @@ interface MapViewProps {
    *  المسارُ الفعليُّ مسجَّلٌ في `ride_route_points` ولا منفذَ يقرؤه، فخطٌّ
    *  مستقيمٌ من عندنا يوهم بمسارٍ لم يقله أحد. */
   tripLine?: boolean;
+  /** نبضةٌ حول موقع المستخدم — لونُها `--brand` فتتبع الوضعَ والسِمة. */
+  showMyLocation?: Coordinates | null;
+  /** نبضةٌ حول دبوس الانطلاق **أثناء البحث عن كبتن** — تتوقف عند القبول. */
+  searching?: boolean;
   onMoveEnd?: (center: Coordinates) => void;
   className?: string;
 }
@@ -62,6 +73,9 @@ interface TweenedMarker {
   marker: mapboxgl.Marker;
   from: Coordinates;
   to: Coordinates;
+  /** الاتجاهُ يُنعَّم كالموضع — **وإلا دارت الأيقونةُ قفزةً** مع كل بثّ. */
+  headingFrom: number;
+  headingTo: number;
   startedAt: number;
   duration: number;
   element: HTMLElement;
@@ -77,6 +91,20 @@ function carElement(color: string): HTMLElement {
             stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-linejoin="round"/>
     </svg>`;
   element.style.willChange = "transform";
+  return element;
+}
+
+/** حلقةُ نبضٍ — `taxo-pulse` في `index.css` (CSS خالص، §8.2). */
+function pulseElement(label: string): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "taxo-pulse";
+  element.setAttribute("aria-label", label);
+  // **الطبقةُ الداخلية هي ما يُنسَّق**: mapbox يضيف `mapboxgl-marker` (وفيها
+  // `position:absolute`) إلى العنصر الذي نسلّمه، فالكتابةُ على `className`
+  // تُسقط العلامةَ خارج الخريطة (`CLAUDE.md`)
+  const core = document.createElement("div");
+  core.className = "taxo-pulse-core";
+  element.appendChild(core);
   return element;
 }
 
@@ -96,6 +124,13 @@ function lerp(from: number, to: number, ratio: number) {
   return from + (to - from) * ratio;
 }
 
+/** تنعيمُ زاويةٍ **بأقصر قوس**: من 350° إلى 10° عشرون درجةً لا ثلاثُمئةٍ وأربعون
+ *  — وبغيره تلفّ السيارةُ حول نفسها كاملةً عند كل عبورٍ للشمال. */
+function lerpAngle(from: number, to: number, ratio: number) {
+  const delta = ((to - from + 540) % 360) - 180;
+  return from + delta * ratio;
+}
+
 export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   {
     token,
@@ -105,6 +140,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     pickup,
     dropoff,
     tripLine = true,
+    showMyLocation = null,
+    searching = false,
     driverLocation,
     interactive = true,
     onMoveEnd,
@@ -121,6 +158,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   const carMarkers = useRef(new Map<string, TweenedMarker>());
   const driverMarker = useRef<TweenedMarker | null>(null);
   const pickupMarker = useRef<mapboxgl.Marker | null>(null);
+  const myLocationMarker = useRef<mapboxgl.Marker | null>(null);
+  const searchPulse = useRef<mapboxgl.Marker | null>(null);
   const dropoffMarker = useRef<mapboxgl.Marker | null>(null);
   const frame = useRef<number | null>(null);
   const moveEnd = useRef(onMoveEnd);
@@ -173,31 +212,51 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   }, [dark]);
 
   // ------------------------------------------------- حلقة التنعيم الواحدة
-  useEffect(() => {
+  //
+  // **تعمل عند الحاجة وحدها ثم تتوقف.** كانت `requestAnimationFrame` تُجدَّد بلا
+  // شرطٍ ما دامت الشاشةُ مفتوحة — ستون إطاراً في الثانية على خريطةٍ ساكنةٍ لا
+  // تتحرك فيها سيارة. وتطبيقُ الكبتن يبقى مفتوحاً ساعاتٍ في السيارة، فهذه
+  // الحلقةُ وحدها كانت تستهلك بطاريتَه بلا أن ترسم شيئاً.
+  //
+  // فالآن: تبدأ حين يبدأ انتقالٌ، وتتوقف حين ينتهي آخرُه.
+  const ensureLoop = useCallback(() => {
+    if (frame.current !== null) return;
+
     const step = () => {
       const now = performance.now();
+      let moving = false;
 
       const advance = (entry: TweenedMarker) => {
         const ratio = Math.min(1, (now - entry.startedAt) / entry.duration);
+        if (ratio < 1) moving = true;
         // تسارعٌ ثم تباطؤ: حركةُ سيارةٍ لا انتقالُ نقطة
         const eased = ratio < 0.5 ? 2 * ratio * ratio : 1 - (-2 * ratio + 2) ** 2 / 2;
         entry.marker.setLngLat([
           lerp(entry.from.lng, entry.to.lng, eased),
           lerp(entry.from.lat, entry.to.lat, eased),
         ]);
+        entry.element.style.rotate = `${lerpAngle(
+          entry.headingFrom,
+          entry.headingTo,
+          eased,
+        )}deg`;
       };
 
       for (const entry of carMarkers.current.values()) advance(entry);
       if (driverMarker.current) advance(driverMarker.current);
 
-      frame.current = requestAnimationFrame(step);
+      frame.current = moving ? requestAnimationFrame(step) : null;
     };
 
     frame.current = requestAnimationFrame(step);
-    return () => {
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
-    };
   }, []);
+
+  useEffect(
+    () => () => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
 
   // -------------------------------------------------- سيارات الكباتن القريبين
   useEffect(() => {
@@ -217,7 +276,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         existing.from = { lat: shown.lat, lng: shown.lng };
         existing.to = point;
         existing.startedAt = performance.now();
-        existing.element.style.rotate = `${driver.heading ?? 0}deg`;
+        existing.headingFrom = existing.headingTo;
+        existing.headingTo = driver.heading ?? existing.headingTo;
+        ensureLoop();
         continue;
       }
 
@@ -231,6 +292,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         element,
         from: point,
         to: point,
+        headingFrom: driver.heading ?? 0,
+        headingTo: driver.heading ?? 0,
         startedAt: performance.now(),
         duration: NEARBY_TWEEN_MS,
       });
@@ -242,7 +305,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         carMarkers.current.delete(ref);
       }
     }
-  }, [drivers]);
+  }, [drivers, ensureLoop]);
 
   // ------------------------------------------------- موقع الكبتن المُسنَد
   useEffect(() => {
@@ -261,7 +324,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       driverMarker.current.from = { lat: shown.lat, lng: shown.lng };
       driverMarker.current.to = point;
       driverMarker.current.startedAt = performance.now();
-      driverMarker.current.element.style.rotate = `${driverLocation.heading ?? 0}deg`;
+      driverMarker.current.headingFrom = driverMarker.current.headingTo;
+      driverMarker.current.headingTo =
+        driverLocation.heading ?? driverMarker.current.headingTo;
+      ensureLoop();
       return;
     }
 
@@ -274,10 +340,55 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       element,
       from: point,
       to: point,
+      headingFrom: driverLocation.heading ?? 0,
+      headingTo: driverLocation.heading ?? 0,
       startedAt: performance.now(),
       duration: DRIVER_TWEEN_MS,
     };
-  }, [driverLocation]);
+  }, [driverLocation, ensureLoop]);
+
+  // ------------------------------------------------ نبضةُ الموقع والبحث
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+
+    if (!showMyLocation) {
+      myLocationMarker.current?.remove();
+      myLocationMarker.current = null;
+      return;
+    }
+    if (!myLocationMarker.current) {
+      myLocationMarker.current = new mapboxgl.Marker({
+        element: pulseElement("موقعي"),
+      })
+        .setLngLat([showMyLocation.lng, showMyLocation.lat])
+        .addTo(instance);
+      return;
+    }
+    myLocationMarker.current.setLngLat([showMyLocation.lng, showMyLocation.lat]);
+  }, [showMyLocation]);
+
+  // نبضةٌ حول دبوس الانطلاق ما دام البحثُ جارياً — **وتتوقف عند القبول**:
+  // نبضٌ يبقى بعد أن يُسنَد الكبتن يقول «ما زلنا نبحث» وقد وُجد
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+
+    if (!searching || !pickup) {
+      searchPulse.current?.remove();
+      searchPulse.current = null;
+      return;
+    }
+    if (!searchPulse.current) {
+      searchPulse.current = new mapboxgl.Marker({
+        element: pulseElement("جارٍ البحث عن كبتن"),
+      })
+        .setLngLat([pickup.lng, pickup.lat])
+        .addTo(instance);
+      return;
+    }
+    searchPulse.current.setLngLat([pickup.lng, pickup.lat]);
+  }, [searching, pickup]);
 
   // ----------------------------------------------------- الدبابيس والخط
   useEffect(() => {
@@ -366,11 +477,14 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   useImperativeHandle(
     ref,
     (): MapHandle => ({
+      // **`easeTo` لا `flyTo`**: الثانيةُ تُبعد الكاميرا ثم تقرّبها (قوسُ طيران)
+      // فتُقرأ قفزةً على مسافةٍ قصيرة — وأكثرُ نداءاتنا قصيرة
       flyTo: (point, level) =>
-        map.current?.flyTo({
+        map.current?.easeTo({
           center: [point.lng, point.lat],
           zoom: level ?? map.current.getZoom(),
           duration: 700,
+          easing: (t) => 1 - (1 - t) ** 3,
         }),
       fitBounds: (a, b) =>
         map.current?.fitBounds(

@@ -340,6 +340,12 @@ export function HomeScreen() {
         pickup={tracking ? ride!.pickup : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
         driverLocation={driverPing}
+        // **نبضةُ الموقع الحالي** — لونُها `--brand` فتتبع الوضعَ والسِمة.
+        // وتختفي أثناء الرحلة: الانتباهُ حينها لسيارة الكبتن لا لموقعي
+        showMyLocation={tracking || picking ? null : pickup}
+        // **ونبضةٌ حول الانطلاق ما دام البحثُ جارياً** — تتوقف عند القبول،
+        // فنبضٌ يبقى بعد الإسناد يقول «ما زلنا نبحث» وقد وُجد
+        searching={ride?.status === "searching" || ride?.status === "requested"}
         onMoveEnd={(point) => {
           setCenter(point);
           // بلا رمزٍ لا نداء — كما في `describe` بالضبط
