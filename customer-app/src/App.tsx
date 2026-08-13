@@ -16,11 +16,12 @@ import {
 import type { ReactNode } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
+import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
 import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
-import { RideProvider } from "@/lib/ride";
+import { RideProvider, useRide } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
 import { showsNav } from "@/lib/tabs";
@@ -175,7 +176,17 @@ function Anonymous({ children }: { children: ReactNode }) {
  */
 function NavBar() {
   const { pathname } = useLocation();
-  return showsNav(pathname) ? <BottomNav /> : null;
+  // **ولا إشعارَ فوق قرار**: رحلةٌ جاريةٌ تعني ورقةَ تتبّعٍ فيها «إلغاء»
+  // و«أرسل تفاصيل رحلتك» — وتعريفٌ بمفتاحٍ يقف فوق أحدهما يُقرأ عطباً.
+  // القاعدةُ نفسُها في تطبيق الكبتن، وهناك قِيست مرتين
+  const { ride } = useRide();
+  if (ride !== null) return null;
+  return (
+    <>
+      <WomenModeNotice />
+      {showsNav(pathname) ? <BottomNav /> : null}
+    </>
+  );
 }
 
 export default function App() {

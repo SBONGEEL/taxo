@@ -30,7 +30,7 @@ export function WomenModeNotice() {
       // بلا `right` يتقلّص في ما بقي من الشاشة (قُيس: ٢٠١ من ٤٠٢)، فتلتفّ
       // جملةٌ قصيرةٌ ثلاثةَ أسطر. والإزاحةُ تُعيد التمركزَ **بعد** أن يُحسب
       // العرض، فلا تُصلحه. وهذا ما يفعله `Toasts.tsx` أصلاً
-      className="fixed inset-x-16 bottom-nav z-[80] mx-auto flex w-max max-w-[88%] items-center gap-10 rounded-full bg-brand px-20 py-10 text-12.5 font-bold text-brand-ink shadow-toast"
+      className="fixed inset-x-16 bottom-nav z-[80] mx-auto flex w-max max-w-[88%] items-center gap-10 rounded-full bg-accent px-20 py-10 text-12.5 font-bold text-accent-ink shadow-toast"
     >
       <span>تم تفعيل الوضع النسائي — يمكنك إطفاؤه من الإعدادات</span>
       <button

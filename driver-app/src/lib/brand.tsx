@@ -34,7 +34,6 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { useSession } from "@/lib/session";
 
 const KEY = "taxo.driver.pink";
@@ -120,7 +119,6 @@ export function BrandProvider({ children }: { children: ReactNode }) {
       {children}
       {/* داخل المزوّد لا في شاشةٍ بعينها: الإشعارُ يخصّ الجهازَ لا مساراً،
           وأول فتحةٍ قد تكون على أي شاشة */}
-      <WomenModeNotice />
     </BrandContext.Provider>
   );
 }

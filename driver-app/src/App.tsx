@@ -27,12 +27,13 @@ import type { ReactNode } from "react";
 
 import { CenteredMessage, Spinner } from "@/components/ui/Feedback";
 import { RouteTransition } from "@/components/ui/Motion";
+import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
-import { RideProvider } from "@/lib/ride";
+import { RideProvider, useRide } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
 import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
@@ -202,7 +203,26 @@ function DriverHome() {
  */
 function NavBar() {
   const { pathname } = useLocation();
-  return showsNav(pathname) ? <BottomNav /> : null;
+  // **ولا يظهر ورحلةٌ أو عرضٌ يملأ الشاشة** — وهذا سلوكٌ كان قائماً وكاد يضيع
+  // حين رُفع الشريطُ من الشاشات إلى `App`: كان يُرسم في فرع «لا رحلة» وحدَه.
+  // وضياعُه ليس تشويشاً بصرياً: قِيس أن `elementFromPoint` في منتصف زرِّ
+  // «قبول» يعيد **الشريطَ** لا الزر — أي أن العرضَ لا يُقبل أصلاً. والسببُ
+  // بنيويّ: ورقةُ المسار تحمل `transform` فتصنع سياقَ تكديسٍ خاصاً بها،
+  // فـ`z-50` داخلها لا يعلو `z-30` خارجَها مهما كبر
+  const { ride, offer } = useRide();
+  const covered = ride !== null || offer !== null;
+  if (covered) return null;
+  return (
+    <>
+      {/* **وإشعارُ السِمة معه بالشرط نفسِه** (قِيس مرتين 2026-08-13): كان
+          مثبّتاً بإزاحةٍ من الأسفل، فوقع مرةً على «ابدأ الاستقبال» ومرةً على
+          سببِ «عدم التطابق» في ورقة الإلغاء — وهو أخطرُ الاثنين: كبتنةٌ ألغت
+          لسببٍ أمنيٍّ لا تراه. وأيُّ إزاحةٍ ثابتةٍ ستصطدم بشيءٍ في شاشةٍ ما،
+          فالقاعدةُ ليست رقماً بل شرطاً: **لا يُعرض تعريفٌ بمفتاحٍ فوق قرار**. */}
+      <WomenModeNotice />
+      {showsNav(pathname) ? <BottomNav /> : null}
+    </>
+  );
 }
 
 export default function App() {
