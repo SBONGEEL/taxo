@@ -15,12 +15,12 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Crosshair, Menu, Search, Wallet } from "lucide-react";
+import { Bell, Crosshair, Menu, Search, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { createBooking, requestRide, updateMe } from "@/api/endpoints";
+import { createBooking, requestRide, unreadCount, updateMe } from "@/api/endpoints";
 import type {
   Coordinates,
   GenderPreference,
@@ -78,6 +78,19 @@ export function HomeScreen() {
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
+  // **قراءةٌ واحدةٌ عند فتح الرئيسية** لا استفتاءٌ دوريّ: ما يصل والتطبيقُ مفتوح
+  // يصل على المقبس (`Toasts`)، وما فاتها يُقرأ حين تعود — فاستفتاءٌ كلَّ ثوانٍ
+  // يسأل عن جوابٍ لا يتغيّر إلا بحدثٍ نراه أصلاً
+  const [unreadNotifications, setUnreadNotifications] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    unreadCount()
+      .then((body) => !cancelled && setUnreadNotifications(body.unread > 0))
+      .catch(() => undefined); // جرسٌ بلا نقطةٍ أهونُ من شاشةِ خطأ
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const tracking = isActive(ride);
   // رحلةٌ انتهت أو أُلغيت تبقى على الشاشة حتى يراها صاحبها: شاشة الدفع تلي
@@ -336,6 +349,24 @@ export function HomeScreen() {
           aria-label="القائمة"
         >
           <Menu className="size-20 text-ink" />
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/notifications")}
+          aria-label="الإشعارات"
+          // **`pointer-events-auto` لا زينة**: الحاويةُ `pointer-events-none`
+          // كي تمرّ إيماءاتُ الخريطة من حولها، فكلُّ زرٍّ فيها يُعيد تمكينَ
+          // نفسه. وبغيره يُرسم الزرُّ ويُقاس ويبدو سليماً **ولا يُنقر** —
+          // والقياسُ وحده يكشفه: `elementFromPoint` يعيد canvas الخريطة
+          className="pointer-events-auto relative rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+        >
+          <Bell className="size-20 text-ink" />
+          {/* **نقطةٌ لا رقم** كما في التصميم (`unreadShow`): الرقمُ يحتاج قراءةً
+              ثانيةً كلَّ فتحةٍ للرئيسية، والنقطةُ تجيب السؤالَ الوحيد الذي
+              يُسأل هنا — «هل ثمّ جديد؟». والعددُ نفسُه في الشاشة */}
+          {unreadNotifications ? (
+            <span className="absolute end-8 top-8 size-8 rounded-full bg-danger" />
+          ) : null}
         </button>
         <button
           type="button"

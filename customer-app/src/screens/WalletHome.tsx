@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { getWallet, listTopups, listTransactions } from "@/api/endpoints";
 import type { TopupRequest, Wallet, WalletTransaction } from "@/api/types";
+import { TopupSheet } from "@/components/wallet/TopupSheet";
 import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
@@ -28,6 +29,9 @@ export function WalletScreen() {
   const { user } = useSession();
   const country = useCountryConfig(user?.country_code);
 
+  // **ورقةٌ لا تنقّل** (تصميمُ `topupShow`): اختيارُ المبلغ والقناة يقع فوق
+  // الرصيد الذي تنظر إليه — ومن غيّر رأيه يُغلق الورقةَ ويبقى مكانه
+  const [topupOpen, setTopupOpen] = useState(false);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [entries, setEntries] = useState<WalletTransaction[]>([]);
   const [topups, setTopups] = useState<TopupRequest[]>([]);
@@ -48,6 +52,9 @@ export function WalletScreen() {
   }, []);
 
   const walletEnabled = country?.features.wallet_enabled === true;
+  const currency = country?.currency;
+  const cardEnabled = country?.features.card_enabled === true;
+  const cliqEnabled = country?.features.cliq_enabled === true;
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
 
   if (loading) {
@@ -81,7 +88,7 @@ export function WalletScreen() {
 
         {walletEnabled ? (
           <div className="flex gap-8">
-            <Button className="flex-1" onClick={() => navigate("/wallet/topup")}>
+            <Button className="flex-1" onClick={() => setTopupOpen(true)}>
               <Plus className="size-16" />
               شحن الرصيد
             </Button>
@@ -163,6 +170,15 @@ export function WalletScreen() {
           )}
         </section>
       </div>
+      {topupOpen ? (
+        <TopupSheet
+          currency={currency}
+          cardEnabled={cardEnabled}
+          cliqEnabled={cliqEnabled}
+          onClose={() => setTopupOpen(false)}
+        />
+      ) : null}
+
     </Screen>
   );
 }

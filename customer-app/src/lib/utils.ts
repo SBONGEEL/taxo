@@ -18,6 +18,16 @@ export function cn(...inputs: ClassValue[]) {
 
 const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
 
+/** تسميةُ العملة للعرض — **لا يُعرض الرمزُ الخام في واجهةٍ عربية**.
+ *
+ * كان حقلُ مبلغ الشحن يعرض `JOD` لاحقةً بينما كلُّ سطرِ مالٍ آخر يعرض «د.أ»
+ * (دَينٌ مسجَّلٌ في `CLAUDE.md`)، ثم استنسختُه في ورقة الشحن الجديدة — فصار
+ * البيتُ الواحد للتسمية هو الإصلاح: `formatMoney` يقرؤه، وكذلك أيُّ لاحقةِ حقل.
+ */
+export function currencyLabel(currency: string | null | undefined): string {
+  return currency ? (CURRENCY_LABEL[currency] ?? currency) : "";
+}
+
 /** المبالغ نصوصٌ من الخلفية ولا تُحوَّل إلى `number` (SPEC القسم 4).
  *
  * `Intl.NumberFormat` يأخذ رقماً فيمرّ المال بالفاصلة العائمة ولو للعرض —

@@ -349,6 +349,114 @@ async def test_a_driver_cannot_declare_his_own_gender(
     assert from_profile.status_code == 422, from_profile.text
 
 
+async def _declare_female(client: AsyncClient, session_factory, payload: dict) -> dict:
+    """كبتنةٌ أقرّت جنسَها عند التسجيل — والإقرارُ يُكتب مباشرةً هنا.
+
+    ومسارُ التسجيل يرفض `gender` للكبتن عمداً (المرحلة 10-ج)، فالإقرارُ في
+    الواقع يقع من التطبيق قبل الاعتماد؛ وما يُختبر هنا هو ما بعده.
+    """
+    from app.models.enums import Gender
+
+    driver = await approved_driver(client, session_factory, payload)
+    async with session_factory() as session:
+        user = await session.get(User, uuid.UUID(driver["user_id"]))
+        user.gender = Gender.FEMALE
+        user.gender_verified_at = None
+        await session.commit()
+    return driver
+
+
+async def test_a_stamp_that_contradicts_her_declaration_needs_a_reason(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**ختمٌ يخالف الإقرار يُلغي الوضعَ النسائي، فسببُه مطلوب** (2026-08-13).
+
+    والسببُ هو **فائدةُ قيد التدقيق** حينها لا اسمُ الحقل: من يقرأ السجلَّ بعد
+    شهرٍ يسأل «لماذا أُلغي عن هذا الحساب» لا «أيُّ عمودٍ كُتب».
+    """
+    driver = await _declare_female(client, session_factory, DRIVER)
+
+    refused = await client.put(
+        f"/admin/drivers/{driver['driver_id']}/gender",
+        headers=admin_headers,
+        json={"gender": "male"},
+    )
+    assert refused.status_code == 422, refused.text
+    assert "سبب" in refused.json()["detail"]
+
+    # والإقرارُ لم يُلمس بالمحاولة الفاشلة
+    async with session_factory() as session:
+        user = await session.get(User, uuid.UUID(driver["user_id"]))
+        assert user.gender is not None and user.gender.value == "female"
+
+
+async def test_a_contradicting_stamp_revokes_women_mode_with_audit_and_notice(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """الإلغاءُ ثلاثةُ أشياءَ معاً: الجنسُ المختوم، وقيدٌ بسببه، وإشعارٌ لها.
+
+    **ولا عمودَ «مُلغى»**: الوضعُ النسائيُّ مبنيٌّ على `gender = female` وحده،
+    فالختمُ المخالف يُلغيه بنفسه — وعمودٌ ثانٍ يقول الشيءَ نفسَه يفترق عنه.
+    """
+    from app.models.audit import AdminAuditLog
+    from app.models.notification import UserNotification
+
+    driver = await _declare_female(client, session_factory, DRIVER)
+
+    response = await client.put(
+        f"/admin/drivers/{driver['driver_id']}/gender",
+        headers=admin_headers,
+        json={"gender": "male", "reason": "الهوية المرفوعة تقول ذكر"},
+    )
+    assert response.status_code == 200, response.text
+
+    async with session_factory() as session:
+        user = await session.get(User, uuid.UUID(driver["user_id"]))
+        assert user.gender is not None and user.gender.value == "male"
+        # والختمُ موجود: المطابقةُ تقرأ المختوم، والإلغاءُ ليس محوَ ختم
+        assert user.gender_verified_at is not None
+
+        entry = await session.scalar(
+            select(AdminAuditLog)
+            .where(AdminAuditLog.entity_id == user.id)
+            .order_by(AdminAuditLog.created_at.desc())
+        )
+        assert entry is not None
+        assert entry.details.get("women_mode_revoked") is True
+        assert entry.details.get("reason") == "الهوية المرفوعة تقول ذكر"
+
+        # وإشعارٌ صريحٌ لها: اختفاءُ لونٍ وميزةٍ بلا تفسيرٍ تذكرةُ دعمٍ فوراً
+        inbox = await session.scalars(
+            select(UserNotification).where(UserNotification.user_id == user.id)
+        )
+        kinds = [row.kind for row in inbox]
+    assert "women_mode_revoked" in kinds
+
+
+async def test_a_matching_stamp_needs_no_reason_and_revokes_nothing(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """والختمُ المطابقُ يمرّ بلا سبب — سببٌ على كل ختمٍ حقلٌ يُملأ ليمرّ الطلب."""
+    from app.models.notification import UserNotification
+
+    driver = await _declare_female(client, session_factory, DRIVER)
+    response = await client.put(
+        f"/admin/drivers/{driver['driver_id']}/gender",
+        headers=admin_headers,
+        json={"gender": "female"},
+    )
+    assert response.status_code == 200, response.text
+
+    async with session_factory() as session:
+        user = await session.get(User, uuid.UUID(driver["user_id"]))
+        assert user.gender_verified_at is not None
+        inbox = await session.scalars(
+            select(UserNotification).where(UserNotification.user_id == user.id)
+        )
+        kinds = [row.kind for row in inbox]
+    assert "women_mode_revoked" not in kinds
+
+
 async def test_admin_stamps_the_gender_and_it_is_audited(
     client: AsyncClient, session_factory, admin_headers: dict
 ) -> None:

@@ -24,7 +24,7 @@ import { addTip, getTipOptions, listRideRatings, rateRide } from "@/api/endpoint
 import type { TipOptions } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
-import { Screen } from "@/components/ui/Screen";
+import { Stage } from "@/components/ui/Stage";
 import { cn, formatMoney } from "@/lib/utils";
 
 /** أقلُّ عددِ نجومٍ يُسأل عنده عن بقشيش — تضييقُ واجهةٍ لا قاعدةَ خلفية. */
@@ -91,7 +91,7 @@ export function RatingScreen() {
   }
 
   return (
-    <Screen title="تقييم الرحلة" back="/">
+    <Stage onBack={() => navigate("/", { replace: true })}>
       <div className="space-y-24">
         <p className="text-center text-muted">كيف كانت رحلتك مع الكبتن؟</p>
 
@@ -190,6 +190,6 @@ export function RatingScreen() {
           </>
         )}
       </div>
-    </Screen>
+    </Stage>
   );
 }

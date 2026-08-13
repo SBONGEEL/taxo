@@ -6,6 +6,7 @@
 
 import { api } from "@/api/client";
 import type {
+  UserNotification,
   Booking,
   AppConfig,
   AuthMethod,
@@ -330,3 +331,19 @@ export const createBooking = (body: {
 
 export const cancelBooking = (bookingId: string) =>
   api.del<Booking>(`/me/bookings/${bookingId}`);
+
+// ------------------------------------------------ صندوق الإشعارات (9-ب)
+
+/** **صندوقُ وارد لا سجلُّ إرسال**: الصفُّ أثرُ الحدث لا أثرُ المزود — يوجد بلا
+ *  عقد FCM، ويوجد حين كان المقبسُ مفتوحاً فلم يُرسل Push أصلاً. */
+export const listNotifications = (limit = 30, offset = 0) =>
+  api.get<UserNotification[]>(
+    `/me/notifications?limit=${limit}&offset=${offset}`,
+  );
+
+export const unreadCount = () =>
+  api.get<{ unread: number }>("/me/notifications/unread-count");
+
+/** بلا `ids` = الكلُّ مقروء — وهو ما يفعله زرُّ «تحديد الكل كمقروء». */
+export const markNotificationsRead = (ids?: string[]) =>
+  api.post<{ unread: number }>("/me/notifications/read", ids ? { ids } : {});

@@ -31,6 +31,7 @@ from app.models.enums import (
     CountryCode,
     DocumentReviewStatus,
     DriverStatus,
+    Gender,
     UserRole,
 )
 from app.models.user import User
@@ -310,6 +311,7 @@ async def set_driver_gender(
     payload: DriverGenderUpdate,
     admin: AdminUser,
     session: DbSession,
+    redis: RedisDep,
 ) -> DriverOut:
     """يثبّت المشرفُ جنسَ الكبتن من هويته المرفوعة (المرحلة 10-ج).
 
@@ -330,6 +332,19 @@ async def set_driver_gender(
     if user is None:  # pragma: no cover - حسابٌ محذوف تحت كبتن قائم
         raise NotFound()
 
+    # **مخالفةُ الوثائق لما أقرّته** (قرارُ المالك 2026-08-13): ختمٌ يخالف
+    # إقراراً سابقاً يُلغي الوضعَ النسائيَّ عن الحساب — السِمةُ وخيارُها معاً،
+    # لأن كليهما مبنيٌّ على `gender = female` وحده. ولا عمودَ «مُلغى» يُضاف:
+    # الجنسُ المختوم **هو** الحقيقة، وعمودٌ ثانٍ يقول الشيءَ نفسَه يفترق عنه.
+    revoking = (
+        user.gender is Gender.FEMALE
+        and payload.gender is not Gender.FEMALE
+    )
+    if revoking and not (payload.reason or "").strip():
+        raise InvalidInput(
+            "سببُ المخالفة مطلوب — فهو ما يُقرأ في سجل التدقيق بعد شهر"
+        )
+
     user.gender = payload.gender
     user.gender_verified_at = datetime.now(UTC)
     await audit.record(
@@ -338,10 +353,27 @@ async def set_driver_gender(
         action=AuditAction.UPDATE,
         entity_type="user",
         entity_id=user.id,
-        details={"fields": ["gender", "gender_verified_at"]},
+        # **والسببُ يُكتب حيث يُلغى وضعٌ لا حيث يُثبَّت حقل**: قاعدةُ «الأسماءُ
+        # لا القيم» تُستثنى للسببِ المكتوب وحده (الإيقاف، الحظر، إطفاءُ حارس)
+        details=(
+            {
+                "fields": ["gender", "gender_verified_at"],
+                "women_mode_revoked": True,
+                "reason": payload.reason,
+            }
+            if revoking
+            else {"fields": ["gender", "gender_verified_at"]}
+        ),
     )
     await session.commit()
     await session.refresh(driver)
+
+    # **الإشعارُ بعد الـcommit** كبقية البثّ. واختفاءُ لونٍ وميزةٍ بلا تفسيرٍ
+    # يفتح تذكرةَ دعمٍ فوراً — والنصُّ يقول السببَ العامَّ ولا يزيد
+    if revoking:
+        await notifications.publish_women_mode_revoked(
+            session, redis, user_id=user.id
+        )
     return DriverOut.model_validate(driver)
 
 

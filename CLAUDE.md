@@ -378,9 +378,11 @@ the ones this project has shipped before, and every one found since has been of 
    nobody answers is worse than none), referral incentives for female drivers, "wait for a female
    captain" (needs a queue that outlives `no_driver_found`), the "3 available nearby" count, and
    in-app calling/messaging (needs number masking).
-6. **One cosmetic bug left alone on purpose**: the amount field on the rider's topup screen shows
-   the raw currency code (`JOD`) as its suffix while every other money surface shows «د.أ» via
-   `formatMoney`. One line in `screens/WalletTopup.tsx`.
+6. **Closed** (2026-08-13): the rider's topup amount field showed the raw currency code (`JOD`)
+   while every other money surface showed «د.أ». It was one line — and it stayed a "known cosmetic
+   bug" long enough that I **reproduced it in the new topup sheet** by passing the same raw code.
+   The fix is a single exported `currencyLabel` in `lib/utils.ts`, so the label has one home that
+   `formatMoney` and any field suffix both read.
 7. **This machine only**: host port 5173 is taken by an unrelated `taxo-web` stack, so
    `.env.local` sets `CUSTOMER_APP_PORT=5176`. 5176 is the one fallback allowed in
    `settings.cors_origins`; the card-return URL still points at 5173, so testing the card channel
@@ -1108,6 +1110,36 @@ accepts and then discovers the ride is not his cancels, and that cancellation wa
 pill. `test_ws.py` asserts `gender_preference` is present in the `ride_offer` frame — a field the
 app reads and nobody sends is a badge that never appears, which is the `awaiting_confirmation`
 failure shape.
+
+**The pink theme activates on the self-declaration alone, and that line is the whole rule**
+(owner's decision 2026-08-13, `DESIGN-DECISIONS.md` 50). A woman who declares herself female sees it
+from her first open in either app — **no admin stamp and no country flag** — because the theme
+*promises nothing*: it opens no door, enters no matching, and makes no account "a female driver".
+What stays gated on `gender_verified_at` is matching and receiving gendered offers. Conflating the two
+breaks it in both directions: a colour waiting on an admin queue makes the design wait on data entry,
+and a stamp inferred from a colour buys safety with a self-declaration.
+
+Its practical shape in the code is **two names, not one**: `useBrand().available` is the declaration
+alone (the theme), and `useWomenService().available` is the flag *with* the declaration (everything
+that promises matching). Merging them showed «من يقودني افتراضياً» in a market with no women's service
+— the same no-way-out refusal 10-ج already fixed once.
+
+Three more rules travel with it. **The one-time notice stays until she closes it**, unlike the 2800ms
+toast in `DESIGN.md` §2.7: that lifetime is right for an *event* toast ("paid ✓") where nothing remains
+to be done, and wrong for **introducing a switch** — someone who looks away for three seconds loses it
+forever and is left with a mode she cannot turn off. Its "seen" flag is a **separate** storage key from
+the choice, because a device with no choice set that has already seen the notice is a real state, and
+merging them replays the notice on every open. And **`fixed left-1/2 -translate-x-1/2` caps a
+shrink-to-fit box at half the viewport** — measured 201px of 402 — because the translate re-centres
+*after* the width is computed; `inset-x-0 mx-auto` is what `Toasts.tsx` already does.
+
+**Revocation reuses the existing gender door rather than adding a column.** When the documents
+contradict the declaration, the admin stamps the real gender with a **mandatory written reason** (422
+without it), `gender` stops being `female`, and the theme and its switch disappear together — because
+both were built on the declaration alone. No `revoked` column: the stamped gender *is* the truth, and a
+second column saying the same thing diverges the first time one is written without the other. She gets
+an explicit notice (`women_mode_revoked`) carrying the general reason only — the admin's written reason
+is for the audit log a month later, and forwarding it would turn a clerk's judgement into a letter.
 
 The women's-service design arrived **after** the feature was built, and reconciling the two turned
 up the failure mode neither the build nor the backend suite can see: **a rule with no door**. The

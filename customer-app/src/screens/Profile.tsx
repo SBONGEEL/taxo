@@ -45,8 +45,13 @@ export function ProfileScreen() {
   const { user, signOut, refreshUser } = useSession();
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
-  const { pink, available, setPink } = useBrand();
-  const { enabled, defaultPreference } = useWomenService();
+  // **اسمان لا اسمٌ واحد** (البند 6 من قرار المالك 2026-08-13): إتاحةُ السِمة
+  // إقرارٌ وحده، وإتاحةُ **ما يَعِد بخدمة** مفتاحٌ قُطريٌّ مع الإقرار. ودمجُهما
+  // في `available` واحدٍ يعرض «من يقودني افتراضياً» في سوقٍ لا خدمةَ فيه —
+  // وهو بعينه الرفضُ بلا مخرجٍ الذي وقع في 10-ج
+  const { pink, available: themeAvailable, setPink } = useBrand();
+  // `available` من الخدمة: مفتاحٌ قُطريٌّ **مع** الإقرار — شرطُ ما يَعِد بمطابقة
+  const { enabled, available, defaultPreference } = useWomenService();
   const [savingPreference, setSavingPreference] = useState(false);
   const { dialCode } = usePhoneCountry(user?.country_code);
 
@@ -257,10 +262,12 @@ export function ProfileScreen() {
               ))}
             </div>
           </section>
+
         ) : null}
 
         {/* التفضيلُ الافتراضي — يُنسخ إلى كل طلبٍ لا تختار فيه شيئاً، وتغييرُه
-            يحكم ما يأتي لا رحلةً جاريةً الآن (المرحلة 10-ج) */}
+            يحكم ما يأتي لا رحلةً جاريةً الآن (المرحلة 10-ج).
+            **وشرطُه إتاحةُ الخدمة لا إتاحةُ السِمة**: هذا يَعِد بمطابقة */}
         {available ? (
           <section className="card space-y-12 p-16">
             <div>
@@ -297,10 +304,10 @@ export function ProfileScreen() {
           </section>
         ) : null}
 
-        {/* السِمة الوردية — لا تظهر إلا لمن لها أن تختارها: الخدمة مفعّلة
-            في دولتها وقد أعلنت جنسها. ومن ليست كذلك لا ترى مفتاحاً معطّلاً
-            ولا رسالةَ اعتذار (المرحلة 10-ج) */}
-        {available ? (
+        {/* السِمة الوردية — **إقرارُها وحده يكفي** (البند 6): عرضٌ بصريٌّ لا
+            يَعِد بخدمة، فلا يُعلَّق على مفتاحٍ قُطريٍّ ولا على ختمِ الإدارة.
+            ومن ليست كذلك لا ترى مفتاحاً معطّلاً ولا رسالةَ اعتذار */}
+        {themeAvailable ? (
           <section className="card space-y-12 p-16">
             <div className="flex items-start justify-between gap-16">
               <div>
@@ -331,6 +338,29 @@ export function ProfileScreen() {
                 />
               </button>
             </div>
+          </section>
+        ) : null}
+        {/* **«الخصوصية» — التصميمُ النسائيُّ (شاشة ٧) يضعها هنا نصّاً**، وهي
+            تخبرها **بأمانٍ تملكه ولا تعرفه**: أن جنسَها لا يُعرض لأحد، وأن
+            خريطةَ السيارات القريبة مجهَّلةٌ أصلاً. وكلُّ حرفٍ فيها يصف سلوكاً
+            **مبنيّاً ومختبَراً** لا وعداً: `drivers.anonymous_ref` يعطي كنيةً
+            لكل اتصالٍ (إحداثياتٌ واتجاهٌ وفئةٌ فقط، SPEC §10)، و`RideDriverOut`
+            وإطارُ `nearby_drivers` لا يحملان جنساً لأي طرف —
+            و`test_admin_live_map.py::test_rider_facing_paths_still_carry_no_identity`
+            يمنع انحرافَ ذلك.
+
+            **وشرطُها الإقرارُ وحده** (كالسِمة): من لم تعلن جنسها ليس لديها ما
+            تُطمأن عليه، والنصُّ لها لا عنها. ولا تذكر «سائقات» ولا خدمةً: هي
+            حقيقةٌ عن **بياناتها** تسري والخدمةُ مطفأةٌ كما تسري وهي مشتعلة —
+            فلا تُعلن عن غير موجود (قاعدةُ القرار 48). */}
+        {themeAvailable ? (
+          <section className="card space-y-8 p-16">
+            <p className="text-14 font-semibold text-ink">الخصوصية</p>
+            <p className="text-12.5 leading-relaxed text-muted">
+              جنسُكِ لا يُعرض لأي كبتن — لا قبل القبول ولا بعده. وخريطةُ
+              السيارات القريبة تعرض موقعاً واتجاهاً وفئةَ مركبةٍ فقط، بلا اسمٍ
+              ولا لوحةٍ ولا أي معرّفٍ يُتابَع بين الجلسات.
+            </p>
           </section>
         ) : null}
 

@@ -31,10 +31,14 @@ import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { Screen } from "@/components/ui/Screen";
 import { useCountryConfig } from "@/lib/config";
-import { useSession } from "@/lib/session";
-import { cn, formatMoney } from "@/lib/utils";
+import { useLocation } from "react-router-dom";
 
-const QUICK_AMOUNTS = ["5", "10", "20", "50"];
+import { useSession } from "@/lib/session";
+import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
+import { cn, formatMoney, currencyLabel } from "@/lib/utils";
+
+// **بيتٌ واحدٌ للورقة والشاشة** — وثلاثةٌ لا أربعة (قرار 20 والتصميم)
+const QUICK_AMOUNTS = QUICK_TOPUP_AMOUNTS;
 
 type Channel = "card" | "cliq" | "manual";
 
@@ -42,8 +46,15 @@ export function WalletTopupScreen() {
   const { user } = useSession();
   const country = useCountryConfig(user?.country_code);
 
-  const [amount, setAmount] = useState("10");
-  const [channel, setChannel] = useState<Channel>("cliq");
+  // **اختيارُ الورقة يصل في حالة المسار** (تصميمُ `topupShow`): الورقةُ تجمع
+  // المبلغَ والقناةَ والشاشةُ تنفّذ — فلا منطقَ قناةٍ في مكانين. والدخولُ
+  // المباشر إلى `/wallet/topup` (رابطٌ محفوظ) يبقى عاملاً بقيمه الافتراضية
+  const handoff = (useLocation().state ?? null) as {
+    amount?: string;
+    channel?: Channel;
+  } | null;
+  const [amount, setAmount] = useState(handoff?.amount ?? "10");
+  const [channel, setChannel] = useState<Channel>(handoff?.channel ?? "cliq");
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +158,7 @@ export function WalletTopupScreen() {
                 onChange={(event) =>
                   setAmount(event.target.value.replace(/[^\d.]/g, ""))
                 }
-                suffix={currency}
+                suffix={currencyLabel(currency)}
               />
               <div className="mt-8 flex gap-8">
                 {QUICK_AMOUNTS.map((value) => (

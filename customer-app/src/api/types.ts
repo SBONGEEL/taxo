@@ -463,3 +463,20 @@ export interface Booking {
   cancelled_at: string | null;
   created_at: string;
 }
+
+
+/** صفٌّ في صندوق الوارد (9-ب).
+ *
+ * **و`kind` هو `data.type` نفسه**، فالنقرُ على الصف والنقرُ على إشعار نظام
+ * التشغيل يفتحان الشاشةَ ذاتها — لا خريطتان تفترقان. و`title`/`body` لدرج
+ * النظام حين يكون التطبيق مغلقاً؛ وما تعرف الشاشةُ صياغتَه تصوغه من `data`.
+ */
+export interface UserNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  data: Record<string, string> | null;
+  read_at: string | null;
+  created_at: string;
+}

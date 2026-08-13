@@ -1,21 +1,27 @@
-/** السِمة الوردية — `design/DESIGN.md` §1.1-ب (المرحلة 10-ج).
+/** السِمة الوردية — `design/DESIGN.md` §1.1-ب (المرحلة 10-ج، وسلوكُها 2026-08-13).
  *
  * **رمزان لا لوحة**: `--brand` و`--brand-ink` وحدهما يتبدّلان، والتبديلُ صنفٌ
  * واحد (`.pink`) على الجذر. وهذا التطبيق مكتوبٌ بهما منذ اليوم الأول — الزرُّ
  * والحقلُ النشط والشارة — فتتحول واجهتُه كلُّها بلا لمس مكوّن واحد.
  *
- * **مفتوحةٌ افتراضاً لمن جنسُها أنثى، ومطفأةٌ بمفتاح.** والسببُ أن الشاشة
- * تُرى: هاتفٌ ورديُّ الواجهة في يدٍ أو على طاولة **يُعلن جنسَ صاحبته لمن ينظر
- * إليه**، وقد لا تريد ذلك في مكانٍ بعينه أو يومٍ بعينه. فالافتراضُ لطفٌ
- * والإطفاءُ حق.
+ * **تُفعَّل تلقائياً بإقرارها الذاتي** (قرارُ المالك 2026-08-13): من أعلنت أنها
+ * أنثى ترى السِمةَ من أول فتحةٍ بلا أن تبحث عن مفتاح، ولها إطفاؤها. والسببُ أن
+ * الشاشة تُرى: هاتفٌ ورديُّ الواجهة **يُعلن جنسَ صاحبته لمن ينظر إليه**، وقد لا
+ * تريد ذلك في مكانٍ بعينه أو يومٍ بعينه — فالافتراضُ لطفٌ والإطفاءُ حق.
  *
- * **والاختيار محليٌّ على الجهاز لا على الحساب**، وذلك من نفس السبب: من أطفأتها
- * لأن حولها من ينظر لا تريد أن تُطفأ على هاتفها الآخر في بيتها، ومن سلّمت
- * هاتفها لغيرها تُطفئها هنا وحدها. تفضيلٌ على الحساب كان سيجعل قراراً عن
- * **هذه اللحظة وهذا المكان** قراراً عن كل شاشاتها.
+ * **والإقرارُ وحده يكفيها** (قرارُ المالك، البند 6): السِمةُ **عرضٌ بصريّ** لا
+ * تَعِد بخدمةٍ ولا تفتح باباً، فلا تُعلَّق على `gender_verified_at` ولا على
+ * `women_service_enabled`. أما **دخولُ المطابقة واستقبالُ الطلبات النسائية**
+ * فيبقى على الختم كما هو مبنيّ — ولا يُخلط بينهما. (وهذا ينقض السطرَ الأخير من
+ * القرار 47 في `DESIGN-DECISIONS.md`، وسببُ النقض مكتوبٌ هناك.)
  *
- * **ولا تظهر ولا مفتاحُها حيث `women_service_enabled` مطفأ**: هويةٌ لخدمةٍ لم
- * تُفتح تُعلن عن غير موجود — وهي نفسُ قاعدة إخفاء مفتاح التفضيل.
+ * **والاختيار محليٌّ على الجهاز لا على الحساب**: من أطفأتها لأن حولها من ينظر
+ * لا تريد أن تُطفأ على هاتفها الآخر في بيتها. فالافتراضُ يُطبَّق على جهازٍ لم
+ * يُضبط فيه شيء، **ولا يُعيد تفعيلَ نفسه على جهازٍ أطفأته فيه**.
+ *
+ * **ويُلغى الوضعُ النسائيُّ عن الحساب** حين يخالف ما تثبّته الإدارةُ من الوثائق
+ * ما أُقرّ: حينها `gender` لا يعود `female`، فتختفي السِمةُ ومفتاحُها معاً —
+ * ويصلها إشعارٌ صريح من الخلفية، لأن اختفاءَ لونٍ وميزةٍ بلا تفسيرٍ تذكرةُ دعم.
  */
 
 import {
@@ -28,22 +34,31 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { useWomenService } from "@/lib/women";
+import { WomenModeNotice } from "@/components/WomenModeNotice";
+import { useSession } from "@/lib/session";
 
 const KEY = "taxo.pink";
+// أثرُ «قيل لها مرةً» — مفتاحٌ منفصلٌ عن الاختيار: جهازٌ لم يُضبط فيه اختيارٌ
+// وقد رأت الإشعارَ فيه حالةٌ قائمة، ودمجُهما يعيد الإشعارَ كلَّ فتحة
+const NOTICE_KEY = "taxo.pink.notice";
 
 interface BrandState {
   /** هل السِمة مرسومةٌ الآن؟ */
   pink: boolean;
-  /** هل لصاحبة الشاشة أن تختارها أصلاً؟ (الخدمة مفعّلة وجنسُها أنثى) */
+  /** هل لصاحبة الشاشة أن تختارها أصلاً؟ (**إقرارُها وحده** — البند 6) */
   available: boolean;
   setPink: (next: boolean) => void;
+  /** هل يُعرض إشعارُ «فُعِّل الوضع النسائي» الآن؟ مرةً واحدةً في عمر الجهاز. */
+  showNotice: boolean;
+  dismissNotice: () => void;
 }
 
 const BrandContext = createContext<BrandState>({
   pink: false,
   available: false,
   setPink: () => undefined,
+  showNotice: false,
+  dismissNotice: () => undefined,
 });
 
 function storedChoice(): boolean | null {
@@ -52,14 +67,28 @@ function storedChoice(): boolean | null {
 }
 
 export function BrandProvider({ children }: { children: ReactNode }) {
-  // نفسُ جواب «هل الخدمة معروضةٌ عليها» الذي تقرؤه شاشةُ الطلب والملف
-  const { available } = useWomenService();
+  // **الإقرارُ وحده** لا `useWomenService().available`: ذاك يجمع المفتاحَ
+  // القُطريَّ مع الإقرار، وهو الشرطُ الصحيح لما **يَعِد بخدمة** (منتقي التفضيل،
+  // الشارات) لا لما هو **عرضٌ بصريٌّ** (البند 6 من قرار المالك)
+  const { user } = useSession();
+  const available = user?.gender === "female";
 
   const [choice, setChoice] = useState<boolean | null>(storedChoice);
 
   // الاختيارُ الصريح يسبق الافتراض، والافتراضُ هو الإتاحة نفسها — فمن لم
-  // تُتَح لها لا تُرسم لها ولو بقي في جهازها اختيارٌ من سوقٍ آخر
+  // تُتَح لها لا تُرسم لها ولو بقي في جهازها اختيارٌ من قبل
   const pink = available && (choice ?? true);
+
+  // **إشعارُ مرةٍ واحدة**: يظهر لمن فُعِّلت لها بالافتراض ولم تُخبَر بعد. ويُطفأ
+  // بإغلاقها أو بأول تغييرٍ للإعداد — فمن عرفت الطريقَ إلى المفتاح لا تُخبَر به
+  const [noticeSeen, setNoticeSeen] = useState(
+    () => localStorage.getItem(NOTICE_KEY) === "1",
+  );
+  const showNotice = pink && choice === null && !noticeSeen;
+  const dismissNotice = useCallback(() => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    setNoticeSeen(true);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("pink", pink);
@@ -67,16 +96,24 @@ export function BrandProvider({ children }: { children: ReactNode }) {
 
   const setPink = useCallback((next: boolean) => {
     localStorage.setItem(KEY, next ? "on" : "off");
+    // من ضبطت الإعدادَ بنفسها تعرف مكانَه — فلا يُعرض عليها إشعارُ التعريف به
+    localStorage.setItem(NOTICE_KEY, "1");
+    setNoticeSeen(true);
     setChoice(next);
   }, []);
 
   const value = useMemo<BrandState>(
-    () => ({ pink, available, setPink }),
-    [pink, available, setPink],
+    () => ({ pink, available, setPink, showNotice, dismissNotice }),
+    [pink, available, setPink, showNotice, dismissNotice],
   );
 
   return (
-    <BrandContext.Provider value={value}>{children}</BrandContext.Provider>
+    <BrandContext.Provider value={value}>
+      {children}
+      {/* داخل المزوّد لا في شاشةٍ بعينها: الإشعارُ يخصّ الجهازَ لا مساراً،
+          وأول فتحةٍ قد تكون على أي شاشة */}
+      <WomenModeNotice />
+    </BrandContext.Provider>
   );
 }
 
