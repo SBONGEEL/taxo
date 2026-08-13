@@ -14,6 +14,7 @@
  * أصلاً (`dispatch.eligible_driver_ids`).
  */
 
+import { MotionConfig } from "framer-motion";
 import { Suspense, lazy, useEffect } from "react";
 import {
   Navigate,
@@ -192,7 +193,9 @@ function DriverHome() {
 }
 
 export default function App() {
+  // **`reducedMotion="user"` من مكانٍ واحد** (§8)
   return (
+    <MotionConfig reducedMotion="user">
     <ThemeProvider>
       <ConfigProvider>
         <SessionProvider>
@@ -371,5 +374,6 @@ export default function App() {
         </SessionProvider>
       </ConfigProvider>
     </ThemeProvider>
+    </MotionConfig>
   );
 }

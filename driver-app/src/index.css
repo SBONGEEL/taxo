@@ -103,6 +103,12 @@
 }
 
 @layer components {
+  /* **استجابةُ اللمس** (§8): كلُّ ما يُضغط يتراجع قليلاً تحت الإصبع. */
+  .pressable {
+    @apply transition-transform duration-fast ease-standard active:scale-[0.98]
+      motion-reduce:transition-none motion-reduce:active:scale-100;
+  }
+
   /* `.fld` من DESIGN.md §2.3 — القيم كما هي بلا تقريب */
   .fld {
     @apply w-full rounded-13 border border-line bg-surface px-15 py-13 text-14.5

@@ -7,9 +7,11 @@
  *   شاشة الدفع). مبنيةٌ على `vaul` وهو ما يبني عليه shadcn/ui نفسه.
  */
 
+import { motion } from "framer-motion";
 import { Drawer } from "vaul";
 import type { ReactNode } from "react";
 
+import { DURATION, EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 export function Sheet({
@@ -20,7 +22,13 @@ export function Sheet({
   className?: string;
 }) {
   return (
-    <div
+    // **تنزلق وتختفي** (§8): الورقةُ تظهر من أسفل وتغادر إليه، فيُقرأ أنها
+    // طبقةٌ فوق الشاشة لا محتوىً بدّل مكانَه فجأة
+    <motion.div
+      initial={{ y: 24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 24, opacity: 0 }}
+      transition={{ duration: DURATION.med, ease: EASE.standard }}
       className={cn(
         "pointer-events-auto rounded-t-sheet border-t border-line bg-surface",
         "px-5 pt-4 shadow-[0_-8px_32px_-12px_rgb(0_0_0/0.25)] pb-safe",
@@ -29,7 +37,7 @@ export function Sheet({
     >
       <div className="mx-auto mb-12 h-6 w-40 rounded-full bg-line" aria-hidden />
       {children}
-    </div>
+    </motion.div>
   );
 }
 

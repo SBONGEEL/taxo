@@ -4,6 +4,7 @@
  * عقد FCM من الإعدادات، و`Session` قبل `Ride` لأن المقبس لا يُفتح بلا مستخدم.
  */
 
+import { MotionConfig } from "framer-motion";
 import { Suspense, lazy, useEffect } from "react";
 import {
   Navigate,
@@ -15,6 +16,7 @@ import type { ReactNode } from "react";
 
 import { Toasts } from "@/components/Toasts";
 import { Spinner } from "@/components/ui/Feedback";
+import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { RideProvider } from "@/lib/ride";
@@ -161,8 +163,11 @@ function Anonymous({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // **`reducedMotion="user"` من مكانٍ واحد** (§8): كلُّ حركةِ Framer في التطبيق
+  // تصير فوريةً لمن طلب تقليلَ الحركة، بلا أن يفحص مكوّنٌ واحدٌ التفضيل
   return (
-    <ThemeProvider>
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider>
       <ConfigProvider>
         <SessionProvider>
           {/* تحت الجلسة والإعدادات: السِمة تُقرأ من إعلان صاحبة الحساب ومن
@@ -175,6 +180,7 @@ export default function App() {
                 <Router>
                   <Toasts />
                   <Suspense fallback={<Spinner />}>
+                    <RouteTransition>
                     <Routes>
                       <Route
                         path="/login"
@@ -335,6 +341,7 @@ export default function App() {
 
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
+                    </RouteTransition>
                   </Suspense>
                 </Router>
               </RideProvider>
@@ -343,6 +350,7 @@ export default function App() {
           </BrandProvider>
         </SessionProvider>
       </ConfigProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </MotionConfig>
   );
 }

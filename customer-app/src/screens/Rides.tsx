@@ -9,6 +9,7 @@ import { listMyRides } from "@/api/endpoints";
 import type { RideListItem } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { Screen } from "@/components/ui/Screen";
 import { PAYMENT_METHOD_LABEL, RIDE_STATUS_LABEL } from "@/lib/labels";
 import { formatDateTime, formatDistance, formatMoney } from "@/lib/utils";
@@ -48,12 +49,12 @@ export function RidesScreen() {
           {rides.length === 0 ? (
             <EmptyState title="لا رحلات بعد" hint="أول رحلة تبدأ من الشاشة الرئيسية." />
           ) : (
-            <ul className="space-y-8">
+            <Stagger className="space-y-8">
               {rides.map(({ ride, has_open_dispute, payment_methods }) => (
-                <li key={ride.id}>
+                <StaggerItem key={ride.id}>
                   <Link
                     to={`/rides/${ride.id}`}
-                    className="card flex items-center gap-12 p-12 transition hover:bg-surface-2"
+                    className="pressable card flex items-center gap-12 p-12 hover:bg-surface-2"
                   >
                     <div className="min-w-0 flex-1 space-y-8">
                       <div className="flex items-baseline justify-between gap-8">
@@ -112,9 +113,9 @@ export function RidesScreen() {
                     </div>
                     <ChevronLeft className="size-16 shrink-0 self-center text-muted" />
                   </Link>
-                </li>
+                </StaggerItem>
               ))}
-            </ul>
+            </Stagger>
           )}
 
           {more ? (

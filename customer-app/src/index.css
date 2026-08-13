@@ -109,6 +109,14 @@
       focus:border-brand disabled:opacity-60;
   }
 
+  /* **استجابةُ اللمس** (§8): كلُّ ما يُضغط يتراجع قليلاً تحت الإصبع — ردٌّ
+   * فوريٌّ بلا انتظار شبكة. و`Button` يحملها في `cva` أصلاً، وهذا الصنفُ لبقية
+   * ما يُضغط: صفوفُ القوائم والبطاقاتُ القابلة للضغط. */
+  .pressable {
+    @apply transition-transform duration-fast ease-standard active:scale-[0.98]
+      motion-reduce:transition-none motion-reduce:active:scale-100;
+  }
+
   .label {
     @apply mb-6 block text-14 font-medium text-muted;
   }

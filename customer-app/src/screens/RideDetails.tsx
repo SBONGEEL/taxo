@@ -13,9 +13,10 @@ import { getRide, getRidePayments, listRideRatings } from "@/api/endpoints";
 import type { Rating, Ride, RidePayments } from "@/api/types";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { Button } from "@/components/ui/Button";
-import { Badge, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Badge, ErrorNote } from "@/components/ui/Feedback";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import { useMapboxToken } from "@/lib/config";
+import { Skeleton } from "@/components/ui/Motion";
 import { Screen } from "@/components/ui/Screen";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import {
@@ -61,9 +62,22 @@ export function RideDetailsScreen() {
   }, [ride]);
 
   if (loading) {
+    // **هيكلٌ لا دوّامة** (§8): ثلاثةُ نداءاتٍ متتابعة تعني ثوانيَ من السواد،
+    // والهيكلُ يرسم **شكلَ ما سيصل** فتستقرّ العينُ على مواضعه ولا تقفز حين يصل
     return (
       <Screen title="تفاصيل الرحلة" nav>
-        <Spinner />
+        <div className="space-y-20">
+          <Skeleton className="-mx-16 -mt-16 h-170 rounded-none" />
+          <div className="flex items-start justify-between gap-12">
+            <div className="space-y-8">
+              <Skeleton className="h-12 w-82" />
+              <Skeleton className="h-26 w-150" />
+            </div>
+            <Skeleton className="h-24 w-82 rounded-full" />
+          </div>
+          <Skeleton className="h-150" />
+          <Skeleton className="h-82" />
+        </div>
       </Screen>
     );
   }
