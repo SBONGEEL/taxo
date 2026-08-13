@@ -6,6 +6,7 @@
 
 import { api } from "@/api/client";
 import type {
+  Booking,
   AppConfig,
   AuthMethod,
   AuthResponse,
@@ -309,3 +310,23 @@ export const setNotificationPreferences = (marketingPushEnabled: boolean) =>
   api.put<NotificationPreferences>("/me/notification-preferences", {
     marketing_push_enabled: marketingPushEnabled,
   });
+
+// --------------------------------------------- الرحلات المجدولة (12-ط)
+
+export const listBookings = () => api.get<Booking[]>("/me/bookings");
+
+/** حجزٌ جديد — **والموعدُ يُرسل بمنطقته الزمنية**: `datetime-local` يعطي وقتاً
+ *  بلا منطقة، وإرسالُه كما هو يجعل الخلفيةَ ترفضه (وهي تفعل ذلك صراحةً بدل أن
+ *  تخمّن منطقةً فتحجز موعداً غير الذي رآه صاحبُه). */
+export const createBooking = (body: {
+  pickup: Coordinates;
+  dropoff: Coordinates;
+  scheduled_at: string;
+  vehicle_category: VehicleCategory;
+  pickup_address?: string | null;
+  dropoff_address?: string | null;
+  gender_preference?: GenderPreference;
+}) => api.post<Booking>("/me/bookings", body);
+
+export const cancelBooking = (bookingId: string) =>
+  api.del<Booking>(`/me/bookings/${bookingId}`);

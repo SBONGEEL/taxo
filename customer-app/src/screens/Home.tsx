@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { requestRide, updateMe } from "@/api/endpoints";
+import { createBooking, requestRide, updateMe } from "@/api/endpoints";
 import type {
   Coordinates,
   GenderPreference,
@@ -179,6 +179,41 @@ export function HomeScreen() {
     void describe(point, "dropoff");
     setPhase("confirm");
     if (pickup) map.current?.fitBounds(pickup, point);
+  }
+
+  /** حجزٌ لموعد (12-ط) — **لا يُنشئ رحلةً ولا يغيّر شاشة**: الحجزُ ليس رحلة،
+   * فتبقى الرئيسيةُ كما هي ويُذهب به إلى «رحلاتي المجدولة» ليراه مكتوباً. */
+  async function schedule(
+    category: VehicleCategory,
+    preference: GenderPreference,
+    when: string,
+  ) {
+    if (!pickup || !dropoff) return;
+    setRequesting(true);
+    setError(null);
+    try {
+      await createBooking({
+        pickup,
+        dropoff,
+        vehicle_category: category,
+        pickup_address: pickupAddress,
+        dropoff_address: dropoffAddress,
+        gender_preference: preference,
+        // **بمنطقةٍ زمنية**: `datetime-local` يعطي وقتاً محلياً بلا منطقة،
+        // و`new Date(value)` يقرؤه بمنطقة الجهاز — فيصل الموعدُ كما رآه صاحبُه
+        scheduled_at: new Date(when).toISOString(),
+      });
+      setPhase("idle");
+      setDropoff(null);
+      setDropoffAddress(null);
+      navigate("/bookings");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر تثبيت الحجز",
+      );
+    } finally {
+      setRequesting(false);
+    }
   }
 
   async function submit(
@@ -370,6 +405,7 @@ export function HomeScreen() {
                 categories={countryConfig?.vehicle_categories ?? ["economy"]}
                 onEditDestination={() => setSearchOpen(true)}
                 onRequest={submit}
+                onSchedule={schedule}
                 requesting={requesting}
                 requestError={error}
                 stops={stops}

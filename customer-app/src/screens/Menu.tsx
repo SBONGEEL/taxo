@@ -1,21 +1,45 @@
 /** القائمة: مدخل بقية الشاشات (SPEC القسم 11.6–11.8). */
 
-import { ChevronLeft, Clock, CreditCard, MapPin, User, Wallet } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronLeft,
+  Clock,
+  CreditCard,
+  MapPin,
+  User,
+  Wallet,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Screen } from "@/components/ui/Screen";
+import { useScheduledRides } from "@/lib/bookings";
 import { useSession } from "@/lib/session";
 
 const ITEMS = [
   { to: "/rides", icon: Clock, label: "رحلاتي", hint: "السجل والتفاصيل" },
   { to: "/wallet", icon: Wallet, label: "محفظتي", hint: "الرصيد والشحن والسجل" },
   { to: "/places", icon: MapPin, label: "الأماكن المحفوظة", hint: "المنزل والعمل وغيرهما" },
+  {
+    to: "/bookings",
+    icon: CalendarClock,
+    label: "رحلاتي المجدولة",
+    hint: "حجوزٌ بمواعيد",
+    // **خلف مفتاحه** (12-ط): بندٌ يفتح شاشةً فارغةً لا سبيلَ لملئها في سوقٍ
+    // مطفأٍ يُقرأ عطباً لا ميزةً مغلقة
+    feature: "scheduled_rides_enabled",
+  },
   { to: "/cards", icon: CreditCard, label: "بطاقاتي", hint: "الدفع بضغطة" },
   { to: "/profile", icon: User, label: "الملف الشخصي", hint: "بياناتك وإشعاراتك" },
 ];
 
 export function MenuScreen() {
   const { user } = useSession();
+  // **البندُ يُخفى لا يُعطَّل** حيث المفتاح مطفأ: شاشةٌ فارغةٌ لا سبيلَ لملئها
+  // تُقرأ عطباً، وبندٌ معطَّلٌ يرفع سؤالاً لا جوابَ له في التطبيق
+  const scheduled = useScheduledRides();
+  const items = ITEMS.filter(
+    (item) => item.feature !== "scheduled_rides_enabled" || scheduled,
+  );
 
   return (
     <Screen title="القائمة" back="/">
@@ -33,7 +57,7 @@ export function MenuScreen() {
         </div>
 
         <ul className="space-y-8">
-          {ITEMS.map(({ to, icon: Icon, label, hint }) => (
+          {items.map(({ to, icon: Icon, label, hint }) => (
             <li key={to}>
               <Link
                 to={to}

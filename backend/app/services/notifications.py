@@ -580,3 +580,88 @@ async def publish_tip_received(
             },
         ),
     )
+
+
+async def publish_booking_missed(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    booking_id: uuid.UUID,
+) -> None:
+    """حجزٌ حلَّ موعدُه وصاحبُه في رحلةٍ جارية (المرحلة 12-ط).
+
+    **ولا يُترك بصمت**: من حجز موعداً ورتّب عليه يومَه يقف على الرصيف ينتظر
+    سيارةً لم تُطلب. والصمتُ هنا ليس حياداً بل خبرٌ خاطئ.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="لم يُنفَّذ حجزك",
+            body="حلَّ موعدُ حجزك وأنت في رحلةٍ جارية، فلم نطلب سيارةً أخرى.",
+            data={"type": "booking_missed", "booking_id": str(booking_id)},
+        ),
+    )
+
+
+async def publish_booking_no_driver(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    booking_id: uuid.UUID,
+    ride_id: uuid.UUID,
+) -> None:
+    """حجزٌ سُلّم للتوزيع فلم يجد كبتناً (المرحلة 12-ط).
+
+    **وهو غيرُ إشعار `no_driver_found` على رحلةٍ فورية** وإن تشابها: ذاك يراه
+    صاحبُه على الشاشة وهو ينتظر، وهذا يوقظ من حجز موعدَ مطارٍ ونام. فالنصُّ
+    يقول «حجزك»، والحمولةُ تحمل `booking_id` كي يفتح الضغطُ الحجزَ لا الرحلة.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="لم نجد كبتناً لحجزك",
+            body="لم يقبل أيُّ كبتنٍ رحلتَك المجدولة. جرّب الطلبَ الآن.",
+            data={
+                "type": "booking_no_driver",
+                "booking_id": str(booking_id),
+                "ride_id": str(ride_id),
+            },
+        ),
+    )
+
+
+async def publish_booking_preference_dropped(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    booking_id: uuid.UUID,
+    ride_id: uuid.UUID,
+) -> None:
+    """حجزٌ نُفِّذ بلا تفضيل الجنس لأن الخدمةَ أُطفئت بعده (المرحلة 12-ط).
+
+    **ثلاثةُ مسالكَ ورابعُها هذا**: رفضُ الرحلة يتركها بلا سيارةٍ في موعدٍ رتّبت
+    حياتَها عليه؛ وإسقاطُ التفضيل بصمتٍ يجعلها تركب مع من لم تقبله؛ وإبقاؤه يعني
+    رحلةً لا تجد كبتناً أبداً (لا مطابقةَ حيث الخدمةُ مطفأة). فالمخرجُ الوحيد
+    الذي لا يكذب ولا يهجر: تُطلب الرحلةُ **ويُقال لها**.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="طُلبت رحلتك بلا تفضيل",
+            body="خدمةُ الكبتنات غير مفعّلة الآن، فطُلبت رحلتُك من أي كبتنٍ متاح.",
+            data={
+                "type": "booking_preference_dropped",
+                "booking_id": str(booking_id),
+                "ride_id": str(ride_id),
+            },
+        ),
+    )

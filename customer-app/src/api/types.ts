@@ -436,3 +436,30 @@ export interface Device {
 export interface NotificationPreferences {
   marketing_push_enabled: boolean;
 }
+
+/** حالُ حجزٍ مجدول (12-ط) — **ثلاثٌ ولا رابعة**: ما جرى بعد التسليم تقوله
+ *  الرحلةُ نفسُها، فلا `fulfilled` هنا ولا `no_driver`. */
+export type BookingStatus = "pending" | "dispatched" | "missed" | "cancelled";
+
+export interface Booking {
+  id: string;
+  status: BookingStatus;
+  scheduled_at: string;
+  vehicle_category: VehicleCategory;
+  gender_preference: GenderPreference;
+  payment_method_hint: PaymentMethod | null;
+  pickup_lat: number;
+  pickup_lng: number;
+  pickup_address: string | null;
+  dropoff_lat: number;
+  dropoff_lng: number;
+  dropoff_address: string | null;
+  /** **تقديرٌ لحظةَ الحجز لا أجرة**: تُحسب عند التنفيذ (القسم 5.11). */
+  estimated_fare_at_booking: string | null;
+  currency: Currency;
+  ride_id: string | null;
+  /** مقروءةٌ من الرحلة — لا عمودٌ على الحجز. */
+  ride_status: RideStatus | null;
+  cancelled_at: string | null;
+  created_at: string;
+}

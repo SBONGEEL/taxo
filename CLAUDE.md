@@ -15,8 +15,8 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **645 backend tests pass**
-(59 test files of 60; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
+contracts, users & permissions, audit log. Every nav entry has a screen. **671 backend tests pass**
+(62 test files of 63; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
 frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
@@ -254,6 +254,54 @@ already warned about. `FLAG_LABEL` needs no check; it is a `Record<FeatureKey, �
 owns it. Both halves were verified by reproducing them (and the union half caught a real clobbering of
 `types.ts` minutes after being written).
 
+**Stage 12-ط — scheduled rides — is done in the backend and the rider app** (`SPEC.md` §5.11,
+`ride_bookings` in §4, migration `0025`, `services/bookings.py`, `tasks/bookings.py`, the rider's
+«حدّد موعداً» sheet and «رحلاتي المجدولة» screen). Behind `scheduled_rides_enabled`, per-country, off
+by default and seeded explicitly.
+
+**The decision the whole stage rests on: a booking is not a ride** (owner-approved). `ride_bookings`
+is its own row and the `rides` row is born at execution, because a `scheduled` ride sitting in wait
+would break `uq_rides_active_rider` (you book tomorrow, and today you cannot order), freeze
+`commission_percent_at_ride` a week early, and teach a new status to every active-status list — the
+`at_stop` lesson. `test_a_booking_creates_no_ride_row` and
+`test_a_rider_in_a_ride_can_still_book_for_tomorrow` are the two halves of that.
+
+Five rules worth carrying forward:
+
+- **Execution calls `rides.request_ride`; there is no second door to create a ride.** Every rule
+  lives there — the active-ride index, the stops guard, the gender preference, the commission freeze.
+  A second creation path is a rule checked in one place and forgotten in the other.
+- **The status set is four values and excludes the outcome.** `pending → dispatched`, plus `missed`
+  and `cancelled`. No `fulfilled`, no `no_driver`: **what happened after hand-off is what the ride
+  says**, and a column here would diverge the first time a ride with a driver gets cancelled. This
+  corrected the first draft of §5.11, which had listed both — the correction is recorded there.
+- **Three things are reported rather than swallowed**, all because the booker is asleep, not watching
+  a screen: a booking whose owner is mid-ride at execution becomes `missed` **with a notice**; a
+  dispatch that finds nobody gets a booking-shaped notice (the instant-ride text says nothing about
+  *which* booking, and `no_driver_found` is only visible to someone watching); and a booking whose
+  gendered preference can no longer be honoured **is dispatched without it and the rider is told** —
+  refusing strands her at a time she planned around, and silently dropping it puts her in a car she
+  did not accept. All three go through `services/notifications.py` like every other notice, so the
+  inbox row and the push stay one door.
+- **Turning the flag off blocks new bookings and honours standing ones** (the `multi_stop_enabled`
+  rule): a flag must not silently cancel a promise someone arranged their morning around.
+- **Cancelling before dispatch is free with no new money rule.** The cancellation fee compensates a
+  driver who drove; before hand-off there is no driver. After hand-off it is an ordinary ride cancel
+  at the ordinary fee.
+
+**Both concurrency tests own exactly one lock each, verified by deleting them — and what deletion
+produces is worse than an exception, in both cases a row that lies to its owner.** Deleting the
+execute lock leaves the booking `missed` **while its ride exists**, so the rider is told "we did not
+order you a car" with a car on the way. Deleting the cancel lock yields `['created', 'cancelled']` — a
+ride created and the booking marked cancelled, so the rider is in a ride they cancelled, and pays the
+fee if they cancel it again after acceptance. Neither raises, neither logs.
+
+Two smaller things the build caught. `pricing.estimate` returns `.fare`, not `.estimated_fare`, and my
+first `except Exception` around it **swallowed the AttributeError and stored NULL** — the swallow is
+now narrowed to provider errors, which is the rule the project already had. And `BookingOut` carries
+`currency` beside the amount: a money value serialized without its currency prints bare in the app,
+which is exactly what shipped in the panel's coupon table two days earlier.
+
 **The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`, seven beat jobs now).
 Neither is interesting except for one rule each, and both rules are about what the job must *not* do.
 
@@ -313,11 +361,11 @@ the ones this project has shipped before, and every one found since has been of 
    real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
    `services/payout/` say the same in their module docstrings. They are arranged so being wrong
    cannot move money wrongly, but they cannot go to production unverified.
-4. **The scheduled-rides spec (§5.11, stage 12-ط) waits on the owner** — no code under it. Its
-   pivotal decision is that **a booking is not a ride**: `ride_bookings` is its own row and the
-   `rides` row is born at execution, because a `scheduled` ride sitting in wait would break
-   `uq_rides_active_rider` (blocking today's ride because you booked tomorrow's), freeze a commission
-   a week early, and teach a new status to every active-status list — the `at_stop` lesson.
+4. **The driver app has no scheduled-rides surface, and that is a decision** — see the 12-ط notes
+   below. If a badge on the offer card is wanted («موعدها ٧:٠٠»), it needs a `scheduled_for` column
+   on `rides`: the offer frame is pure `RideOut.from_ride` serialization with no queries, and a
+   per-offer lookup would put a query on the socket path. That column is a second home for the
+   booking's own time, so it waits for a reason to exist.
 5. **`FUTURE-FEATURES.md` items 45–49** are the deferred pieces of the women's service and its
    design: the in-ride emergency button (deliberately *not* half-built — a button promising help
    nobody answers is worse than none), referral incentives for female drivers, "wait for a female

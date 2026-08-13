@@ -54,12 +54,18 @@ ORDER_SWEEP_INTERVAL_SECONDS = 600
 # تأخذ أياماً — وذلك مقصودٌ لا عجز
 NOTIFICATION_TRIM_INTERVAL_SECONDS = 86_400
 
+# دورةُ الرحلات المجدولة (المرحلة 12-ط). **دقيقةٌ واحدة**: الموعدُ بالدقيقة،
+# ودورةٌ أطول تجعل «حجزَ السابعة» يعني «بين السابعة وبعدها بخمس» — ومن حجز
+# موعدَ طائرةٍ لا يقبل ذلك. والدورةُ رخيصةٌ حين لا مستحقّ: استعلامٌ على فهرسٍ جزئي
+BOOKING_INTERVAL_SECONDS = 60
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
     backend=settings.redis_url,
     include=[
         "app.tasks.notifications",
+        "app.tasks.bookings",
         "app.tasks.maintenance",
         "app.tasks.payments",
         "app.tasks.referrals",
@@ -101,6 +107,10 @@ celery_app.conf.update(
         "sweep-provider-orders": {
             "task": "app.tasks.maintenance.sweep_provider_orders",
             "schedule": ORDER_SWEEP_INTERVAL_SECONDS,
+        },
+        "run-due-bookings": {
+            "task": "app.tasks.bookings.run_due_bookings",
+            "schedule": BOOKING_INTERVAL_SECONDS,
         },
         "trim-notifications": {
             "task": "app.tasks.maintenance.trim_notifications",

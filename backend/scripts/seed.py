@@ -90,6 +90,9 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # ذاك ينتظر تصفيةَ متراكمِ إثبات الجنس، والحافزُ هو ما يبني العرضَ الذي
         # ينتظره — فربطُهما يجعله ينتظر ما لا سبيلَ لبنائه
         FeatureKey.DRIVER_REFERRALS_ENABLED: False,
+        # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
+        # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل
+        FeatureKey.SCHEDULED_RIDES_ENABLED: False,
     },
 }
 

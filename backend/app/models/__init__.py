@@ -1,5 +1,6 @@
 """نماذج SQLAlchemy — كل النماذج تُستورد هنا ليراها Alembic autogenerate."""
 
+from app.models.booking import RideBooking
 from app.models.audit import AdminAuditLog
 from app.models.base import Base
 from app.models.commission import CommissionSetting
@@ -74,6 +75,7 @@ __all__ = [
     "AdminAuditLog",
     "AuditAction",
     "Base",
+    "BookingStatus",
     "CampaignAudience",
     "CampaignStatus",
     "CommissionAppliesTo",
@@ -114,6 +116,7 @@ __all__ = [
     "ReferralSetting",
     "REQUIRED_DOCUMENT_TYPES",
     "Ride",
+    "RideBooking",
     "RideRoutePoint",
     "SavedPlace",
     "RideStop",

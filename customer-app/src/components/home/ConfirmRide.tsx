@@ -23,7 +23,16 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Car, CircleDot, Clock, MapPin, RefreshCw, TicketPercent, X } from "lucide-react";
+import {
+  CalendarClock,
+  Car,
+  CircleDot,
+  Clock,
+  MapPin,
+  RefreshCw,
+  TicketPercent,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -42,6 +51,12 @@ import { Sheet } from "@/components/ui/Sheet";
 import { VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { useMultiStop } from "@/lib/multistop";
 import { usePromoCodes } from "@/lib/promo";
+import {
+  earliest,
+  latest,
+  localInputValue,
+  useScheduledRides,
+} from "@/lib/bookings";
 import { useSession } from "@/lib/session";
 import { useWomenService } from "@/lib/women";
 import { cn, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
@@ -68,6 +83,7 @@ export function ConfirmRide({
   onAddStop,
   blockedByPreference,
   onClearPreference,
+  onSchedule,
 }: {
   pickup: Coordinates;
   pickupAddress: string | null;
@@ -89,8 +105,19 @@ export function ConfirmRide({
    * مخفيّ. وهنا يُفتح لها الباب بدل رفضٍ مسدود. */
   blockedByPreference: boolean;
   onClearPreference: () => void;
+  /** «حدّد موعداً» (12-ط) — يُمرَّر ما اختارته من فئةٍ وتفضيلٍ كما يُمرَّر للطلب
+   *  الفوري، فالحجزُ نفسُ الطلب بموعدٍ لا طلبٌ آخر. */
+  onSchedule: (
+    category: VehicleCategory,
+    preference: GenderPreference,
+    when: string,
+  ) => void;
 }) {
   const women = useWomenService();
+  // الحجزُ (12-ط) — مفتاحُه يخفي الزرَّ كلَّه لا يعطّله
+  const scheduled = useScheduledRides();
+  const [scheduling, setScheduling] = useState(false);
+  const [when, setWhen] = useState("");
   // دولةُ الحساب — الكوبونُ per-country فالتحقّقُ يحملها
   const multiStop = useMultiStop();
   const [category, setCategory] = useState<VehicleCategory>(categories[0] ?? "economy");
@@ -415,6 +442,62 @@ export function ConfirmRide({
         >
           اطلب الرحلة
         </Button>
+
+        {/* **حدّد موعداً** (12-ط) — وتُخفى كلُّها حيث المفتاح مطفأ. وهي زرٌّ
+            ثانويٌّ لا مساوٍ للأول: الطلبُ الفوريُّ هو الغالب، وزرّان متساويان
+            يجعلان أحدَهما يُضغط بالخطأ */}
+        {scheduled ? (
+          scheduling ? (
+            <div className="space-y-8 rounded-12 border border-line bg-surface p-12">
+              <label className="text-12 text-muted" htmlFor="booking-when">
+                موعد الانطلاق
+              </label>
+              <input
+                id="booking-when"
+                type="datetime-local"
+                className="field w-full"
+                value={when}
+                min={localInputValue(earliest())}
+                max={localInputValue(latest())}
+                onChange={(event) => setWhen(event.target.value)}
+              />
+              <p className="text-11 leading-snug text-muted">
+                نبدأ البحث عن كبتنٍ قبل موعدك بعشر دقائق.{" "}
+                <b className="text-ink">والسعر يُحسب عند التنفيذ</b> — الرقمُ
+                أعلاه تقديرُ اليوم.
+              </p>
+              <div className="flex gap-8">
+                <Button
+                  size="md"
+                  className="flex-1"
+                  disabled={!when}
+                  onClick={() => onSchedule(category, preference, when)}
+                >
+                  ثبّت الحجز
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setScheduling(false)}
+                  className="rounded-13 border border-line px-16 text-13 text-muted"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setWhen(localInputValue(earliest()));
+                setScheduling(true);
+              }}
+              className="flex w-full items-center justify-center gap-8 rounded-13 border border-line py-12 text-13.5 font-semibold text-ink"
+            >
+              <CalendarClock className="size-16 text-muted" />
+              حدّد موعداً
+            </button>
+          )
+        ) : null}
 
         <p className="text-center text-12 text-muted">
           السعر النهائي قد يتغيّر إن اختلف المسار الفعلي كثيراً عن المقدَّر.

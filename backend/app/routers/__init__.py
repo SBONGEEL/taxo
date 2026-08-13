@@ -5,6 +5,7 @@ from app.routers import (
     admin_live_map,
     admin_payments,
     admin_promo,
+    bookings,
     admin_referrals,
     admin_providers,
     admin_rides,
@@ -35,6 +36,7 @@ api_router.include_router(auth.router)
 api_router.include_router(devices.router)
 api_router.include_router(notifications.router)
 api_router.include_router(drivers.router)
+api_router.include_router(bookings.router)
 api_router.include_router(places.router)
 api_router.include_router(referrals.router)
 api_router.include_router(rides.router)
