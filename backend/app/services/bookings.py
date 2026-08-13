@@ -359,6 +359,9 @@ async def execute(
             pickup_address=booking.pickup_address,
             dropoff_address=booking.dropoff_address,
             gender_preference=preference,
+            # **ما عُرض على الكبتن يُجمَّد على الرحلة**: الشارةُ تُقرأ من الرحلة
+            # لا من الحجز، فتبقى صحيحةً وإن تغيّر أصلُها (قرارُ المالك)
+            scheduled_for=booking.scheduled_at,
         )
     except RideAlreadyActive:
         # **صاحبُه في رحلةٍ الآن**: الفهرسُ يمنع الثانية، فيصير الحجزُ `missed`

@@ -173,6 +173,20 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
 
+    # موعدُ الحجز الذي وُلدت منه (المرحلة 12-ط) — و`NULL` لرحلةٍ فورية.
+    #
+    # **تجميدٌ لا بيتٌ ثانٍ** (قرارُ المالك 2026-08-13): الرحلةُ تحمل **ما عُرض
+    # على الكبتن**، كما تحمل `commission_percent_at_ride` نسبةً لا تُعاد قراءتُها
+    # من الإعدادات. والحجزُ أصلٌ قد يُعدَّل أو يُلغى، والعرضُ الذي قَبِله الكبتن
+    # لا يتغيّر بعده.
+    #
+    # **وسببُه تشغيليٌّ قبل أن يكون معمارياً**: كبتنٌ يصل فيجد الراكبَ غير جاهز
+    # يُلغي ويتذمّر — والشارةُ على بطاقة العرض («موعدها ٧:٠٠») تجعله يعرف قبل أن
+    # يقبل. وهي تصله بلا استعلامٍ إضافي: إطارُ العرض تسلسلٌ خالصٌ من هذا الصف
+    scheduled_for: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # من Mapbox Directions — تُستدعى من الخلفية حصراً (SPEC القسم 2)
     distance_km: Mapped[Decimal] = mapped_column(Numeric(8, 3), nullable=False)
     duration_min: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)

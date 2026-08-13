@@ -202,6 +202,9 @@ export interface Ride {
   cancelled_reason: string | null;
   /** ما طُلب في هذه الرحلة من جنس الكبتن — **وصفُ الطلب لا جنسُ صاحبته**. */
   gender_preference: GenderPreference;
+  /** موعدُ الحجز الذي وُلدت منه (12-ط) — و`null` لرحلةٍ فورية. **مجمَّدٌ على
+   *  الرحلة** لا مقروءٌ من الحجز: هو ما عُرض على الكبتن حين قَبِل. */
+  scheduled_for: string | null;
 
   // --- تعدد الوجهات (المرحلة 12-ب) ---
   stops: RideStop[];

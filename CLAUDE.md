@@ -296,6 +296,17 @@ order you a car" with a car on the way. Deleting the cancel lock yields `['creat
 ride created and the booking marked cancelled, so the rider is in a ride they cancelled, and pays the
 fee if they cancel it again after acceptance. Neither raises, neither logs.
 
+**The driver's offer card carries the booked time** (`rides.scheduled_for`, migration `0026`), and the
+owner's reasoning is the one to keep: **this is a freeze, not a second home**. The ride carries *what
+was shown to the captain*, exactly as it carries `commission_percent_at_ride` — the booking is the
+source and may change, the offer that was accepted may not. The operational reason came first: a
+captain who arrives and finds the rider not ready cancels and complains, and a pill he reads *before*
+accepting prevents that — which is why it sits above the fare like the women's-service badge, for the
+same reason. And because the offer frame is pure `RideOut.from_ride` serialization, the badge reaches
+him with no extra query. The test asserts the value in the row **and** in the route output, because a
+field the app reads and nobody sends is a badge that never appears — this project has shipped that
+exact shape before.
+
 Two smaller things the build caught. `pricing.estimate` returns `.fare`, not `.estimated_fare`, and my
 first `except Exception` around it **swallowed the AttributeError and stored NULL** — the swallow is
 now narrowed to provider errors, which is the rule the project already had. And `BookingOut` carries
@@ -361,11 +372,7 @@ the ones this project has shipped before, and every one found since has been of 
    real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
    `services/payout/` say the same in their module docstrings. They are arranged so being wrong
    cannot move money wrongly, but they cannot go to production unverified.
-4. **The driver app has no scheduled-rides surface, and that is a decision** — see the 12-ط notes
-   below. If a badge on the offer card is wanted («موعدها ٧:٠٠»), it needs a `scheduled_for` column
-   on `rides`: the offer frame is pure `RideOut.from_ride` serialization with no queries, and a
-   per-offer lookup would put a query on the socket path. That column is a second home for the
-   booking's own time, so it waits for a reason to exist.
+4. **`FUTURE-FEATURES.md` items 45–49** — see item 5 below; this slot is free.
 5. **`FUTURE-FEATURES.md` items 45–49** are the deferred pieces of the women's service and its
    design: the in-ride emergency button (deliberately *not* half-built — a button promising help
    nobody answers is worse than none), referral incentives for female drivers, "wait for a female

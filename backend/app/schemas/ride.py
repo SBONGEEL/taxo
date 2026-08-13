@@ -182,6 +182,10 @@ class RideOut(BaseModel):
     # «طلب نسائي» على بطاقة العرض، وتطبيقُ الراكبة لتعرض ما اختارته.
     # **وهو تفضيلُ الطلب لا جنسُ صاحبه**: جنسُ أيّ طرفٍ لا يغادر الخلفية
     gender_preference: GenderPreference
+    # موعدُ الحجز إن وُلدت منه (المرحلة 12-ط) — و`null` لرحلةٍ فورية. يقرؤه
+    # تطبيقُ الكبتن ليرسم «موعدها ٧:٠٠» على بطاقة العرض: من يعرف أن الرحلةَ
+    # محجوزةٌ لا يتذمّر من راكبٍ يخرج في موعده لا في لحظة وصوله
+    scheduled_for: datetime | None = None
     driver: RideDriverOut | None = None
 
     # --- تعدد الوجهات (المرحلة 12-ب) ---
@@ -269,6 +273,7 @@ class RideOut(BaseModel):
             final_fare=ride.final_fare,
             cancellation_fee=ride.cancellation_fee,
             commission_percent_at_ride=ride.commission_percent_at_ride,
+            scheduled_for=ride.scheduled_for,
             cancelled_reason=ride.cancelled_reason,
             gender_preference=ride.gender_preference,
             driver=RideDriverOut.from_ride(ride),

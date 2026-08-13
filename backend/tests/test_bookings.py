@@ -258,6 +258,49 @@ async def test_execution_creates_the_ride_through_the_one_door(
     assert row["ride_status"] in {"requested", "searching"}
 
 
+async def test_the_booked_time_is_frozen_on_the_ride_and_reaches_the_offer(
+    client: AsyncClient, session_factory, jordan_settings
+):
+    """**الشارةُ تُقرأ من الرحلة**: `scheduled_for` مجمَّدٌ عليها لا مقروءٌ من الحجز.
+
+    و**حقلٌ يقرؤه التطبيق ولا يرسله أحد شارةٌ لا تظهر أبداً** — وهي بصمةُ عطبٍ
+    شحنت في هذا المشروع (`gender_preference` في إطار العرض). فيُفحص الحقلُ في
+    الصفِّ وفي مخرَج المسار معاً.
+    """
+    await enable_features(session_factory, "scheduled_rides_enabled")
+    driver = await approved_driver(client, session_factory)
+    await bring_online(client, driver)
+    rider = await rider_session(client)
+    _status, booking = await _book(client, rider["headers"])
+    await _due_now(session_factory, booking["id"])
+
+    from app.core.redis_client import get_redis_client
+
+    async with session_factory() as session:
+        ride = await bookings_service.execute(
+            session, get_redis_client(), uuid.UUID(booking["id"])
+        )
+        await session.commit()
+    assert ride is not None
+
+    # في الصف: مجمَّدٌ بموعد الحجز نفسه
+    async with session_factory() as session:
+        row = await session.get(Ride, ride.id)
+        stored = row.scheduled_for
+        booked = await session.get(RideBooking, uuid.UUID(booking["id"]))
+    assert stored is not None
+    assert stored == booked.scheduled_at
+
+    # وفي المخرَج الذي يقرؤه التطبيقان (وهو نفسُه إطارُ العرض)
+    read = await client.get(f"/rides/{ride.id}", headers=rider["headers"])
+    assert read.json()["scheduled_for"] is not None
+
+    # **ورحلةٌ فوريةٌ تبقى `null`** — لا افتراضَ سخيّ
+    await client.post(f"/rides/{ride.id}/cancel", json={}, headers=rider["headers"])
+    instant = await request_ride(client, rider["headers"])
+    assert instant["scheduled_for"] is None
+
+
 async def test_a_second_cycle_does_not_execute_the_same_booking_twice(
     client: AsyncClient, session_factory, jordan_settings
 ):

@@ -232,6 +232,7 @@ async def request_ride(
     gender_preference: GenderPreference | None = None,
     stops: Sequence[StopRequest] = (),
     promo_code: str | None = None,
+    scheduled_for: datetime | None = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -287,6 +288,8 @@ async def request_ride(
         rider_id=rider.id,
         country_code=rider.country_code,
         vehicle_category=vehicle_category,
+        # موعدُ الحجز مجمَّداً على الرحلة (12-ط) — و`None` للطلب الفوري
+        scheduled_for=scheduled_for,
         pickup_point=make_point(pickup.lat, pickup.lng),
         pickup_address=pickup_address,
         dropoff_point=make_point(dropoff.lat, dropoff.lng),

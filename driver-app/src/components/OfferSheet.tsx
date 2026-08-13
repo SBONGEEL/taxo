@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 
 import type { Offer } from "@/lib/ride";
+import { bookedTime } from "@/lib/rideFormat";
 import { arabicDigits } from "@/lib/utils";
 
 const DASH = 163;
@@ -92,6 +93,15 @@ export function OfferSheet({
             {offer.ride.gender_preference !== "any" ? (
               <span className="mb-4 inline-block rounded-full border border-brand-brd bg-brand-soft px-9 py-3 text-10 font-bold text-brand">
                 طلب نسائي
+              </span>
+            ) : null}
+            {/* شارةُ الحجز (12-ط) — **بموعدها لا بكلمة «مجدولة» وحدها**: الكلمةُ
+                تُخبر والموعدُ يُفيد. كبتنٌ يصل قبل الموعد فيجد الراكبَ غير جاهزٍ
+                يُلغي ويتذمّر، ومن يقرأ «موعدها ٧:٠٠» يعرف قبل أن يقبل. ومكانُها
+                فوق السعر لأنها تُقرأ **قبل** قرار القبول كشارة الطلب النسائي */}
+            {offer.ride.scheduled_for ? (
+              <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
+                محجوزة — {bookedTime(offer.ride.scheduled_for)}
               </span>
             ) : null}
             <div className="text-23 font-bold text-ink">

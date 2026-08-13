@@ -96,3 +96,21 @@ export function trimDistance(value: string): string {
   const first = fraction.slice(0, 1);
   return arabicDigits(first && first !== "0" ? `${whole}.${first}` : whole);
 }
+
+
+/** وقتُ حجزٍ كما يقرؤه الكبتن: ساعةٌ ودقيقةٌ بأرقامٍ عربية، ويومٌ إن لم يكن اليوم.
+ *
+ * **والأرقامُ عربيةٌ هنا لأنها كمّية لا معرِّف** (قاعدةُ `Cards.tsx`): الساعةُ
+ * تُقرأ ولا تُطابق حرفاً بحرفٍ كلوحةٍ أو مرجعِ حوالة.
+ */
+export function bookedTime(iso: string): string {
+  const date = new Date(iso);
+  const time = date.toLocaleTimeString("ar", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const sameDay = new Date().toDateString() === date.toDateString();
+  if (sameDay) return time;
+  const day = date.toLocaleDateString("ar", { weekday: "long" });
+  return `${day} ${time}`;
+}
