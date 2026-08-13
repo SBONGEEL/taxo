@@ -26,6 +26,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   CalendarClock,
   Car,
+  ChevronLeft,
   CircleDot,
   Clock,
   MapPin,
@@ -36,19 +37,22 @@ import {
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { estimateRide, validatePromo } from "@/api/endpoints";
+import { estimateRide, getWallet, validatePromo } from "@/api/endpoints";
 import type {
   Coordinates,
+  CountryConfig,
   GenderPreference,
   PromoPreview,
   RideEstimate,
   VehicleCategory,
 } from "@/api/types";
 import { StopsEditor, type DraftStop } from "@/components/home/StopsEditor";
+import { PaymentPicker } from "@/components/payment/PaymentPicker";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Sheet } from "@/components/ui/Sheet";
-import { VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
+import { PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
+import { usePaymentPreference } from "@/lib/payment";
 import { useMultiStop } from "@/lib/multistop";
 import { usePromoCodes } from "@/lib/promo";
 import {
@@ -84,6 +88,8 @@ export function ConfirmRide({
   blockedByPreference,
   onClearPreference,
   onSchedule,
+  onBack,
+  countryConfig,
 }: {
   pickup: Coordinates;
   pickupAddress: string | null;
@@ -112,6 +118,10 @@ export function ConfirmRide({
     preference: GenderPreference,
     when: string,
   ) => void;
+  /** «رجوع» من التصميم — يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟». */
+  onBack: () => void;
+  /** إعداداتُ دولة الحساب — منها تُقرأ قنواتُ الدفع المتاحة وعملتُها. */
+  countryConfig: CountryConfig | null;
 }) {
   const women = useWomenService();
   // الحجزُ (12-ط) — مفتاحُه يخفي الزرَّ كلَّه لا يعطّله
@@ -128,6 +138,30 @@ export function ConfirmRide({
   const [estimate, setEstimate] = useState<RideEstimate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // **طريقةُ الدفع تفضيلٌ محلّي** (قرار 3): تُعرض هنا وتُمرَّر إلى شاشة الدفع،
+  // ولا تُرسل مع الطلب ولا تُقيّد صاحبَها بعد الرحلة
+  const { available: channels, resolved: payMethod, choose } =
+    usePaymentPreference(countryConfig);
+  const [pickingPay, setPickingPay] = useState(false);
+
+  // الرصيدُ يُقرأ لسطرِ الملاحظة وحدَه (`walletSub` و`fareNote` في التصميم) —
+  // **ولا يُحسب منه شيء**: المقارنةُ «هل يغطّي؟» عرضٌ لا قرارُ مال، والقرارُ
+  // في `payments._pay_from_wallet` بعد الرحلة تحت قفل المحفظة
+  const [balance, setBalance] = useState<string | null>(null);
+  const walletOffered = channels.some((channel) => channel.method === "wallet");
+  useEffect(() => {
+    if (!walletOffered) return;
+    let cancelled = false;
+    // القراءةُ لا يحرسها `wallet_enabled` (يحرس الشحنَ والدفع)، وفشلُها يعني
+    // سطرَ ملاحظةٍ أقل — لا شاشةَ خطأ فوق ورقةِ طلب
+    getWallet()
+      .then((row) => !cancelled && setBalance(row.balance))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [walletOffered]);
 
   // الكوبون (12-ز): `applied` هو ما قبلته الخلفيةُ — لا ما كتبه الراكب
   const promoEnabled = usePromoCodes();
@@ -198,6 +232,31 @@ export function ConfirmRide({
       setChecking(false);
     }
   }
+
+  // ما سيُدفع فعلاً: المخصومُ إن طُبِّق كوبون، وإلا المقدَّر. ولا جمعَ ولا ضربَ
+  // هنا — كلا الرقمين جاء من الخلفية كما هو (القسم 14)
+  const shownFare = applied?.fare_after ?? estimate?.estimated_fare ?? null;
+
+  /** ملاحظةُ المحفظة — وهي **وصفُ ما تفعله الخلفيةُ فعلاً**، لا وعدُ شاشة.
+   *
+   * `payments._pay_from_wallet` يخصم `min(balance, outstanding)` ويكتب الباقيَ
+   * صفَّ **كاش**، ويرفض تماماً حين يكون الرصيد صفراً. فالسطران أدناه ترجمةُ
+   * ذلك السلوك حرفاً بحرف — ولذلك لا وجودَ لقناةٍ اسمها «مختلط» في المُنتقي:
+   * الخلطُ **نتيجةُ اختيار المحفظة** لا خياراً خامساً بجانبها (القرار 51).
+   *
+   * والمقارنةُ عرضٌ لا حساب: «هل يغطّي؟» سؤالُ نعم/لا، ولا يُشتقّ منه مبلغٌ
+   * يُعرض — وهو الفرقُ الذي يُبقي القسم 14 قائماً (وسابقتُه `settled` في
+   * `screens/Payment.tsx`). والصياغةُ تقديرٌ لا إخبار («ستُخصم» لا «خُصمت»)
+   * كما يفرض القرار 3: الأجرةُ النهائيةُ تُحسب على المسار الفعلي.
+   */
+  const walletNote =
+    payMethod?.method !== "wallet" || balance === null || shownFare === null
+      ? null
+      : Number(balance) <= 0
+        ? "لا رصيد في محفظتك — اشحنها أو اختر طريقةً أخرى عند الدفع."
+        : Number(balance) < Number(shownFare)
+          ? "رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن."
+          : null;
 
   return (
     <Sheet>
@@ -348,6 +407,25 @@ export function ConfirmRide({
           </AnimatePresence>
         </div>
 
+        {/* **صفُّ طريقة الدفع** (تصميمُ الراكب، القراران 3 و26): يُعرض قبل
+            الطلب لأن معرفةَ ما ستدفع به معلومةٌ صحيحةٌ ومفيدة، **ولا يُرسل مع
+            الطلب** — فلا عمودَ له على `rides` ولا تجميدَ لقاعدة عمولةٍ قبل أن
+            تُعرف الأجرة. ولا يظهر الصفُّ بقناةٍ واحدة: منتقٍ بخيارٍ وحيد
+            يَعِد باختيارٍ لا وجودَ له */}
+        {payMethod && channels.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => setPickingPay(true)}
+            className="flex w-full items-center gap-9 rounded-13 border border-line bg-surface px-13 py-11 text-start"
+          >
+            <payMethod.icon className="size-16 shrink-0 text-muted" />
+            <span className="min-w-0 flex-1 truncate text-12.5 font-semibold text-ink">
+              {PAYMENT_METHOD_LABEL[payMethod.method]}
+            </span>
+            <ChevronLeft className="size-16 shrink-0 text-muted" />
+          </button>
+        ) : null}
+
         {/* ورقةُ الكوبون (12-ز) — وتُخفى كلُّها حيث المفتاح مطفأ: زرٌّ يقول
             «كوبون» في سوقٍ لا كوبوناتَ فيه يفتح حقلاً لا رمزَ يُقبل فيه */}
         {promoEnabled ? (
@@ -434,14 +512,41 @@ export function ConfirmRide({
           <ErrorNote message={error ?? requestError} />
         )}
 
-        <Button
-          size="lg"
-          loading={requesting}
-          disabled={!estimate || loading}
-          onClick={() => onRequest(category, preference, applied?.code)}
-        >
-          اطلب الرحلة
-        </Button>
+        {/* ملاحظةُ الدفع المختلط (`fareNote` في التصميم) — تحت الزرّ لا فوقه
+            لأنها تصف ما سيقع بعد الضغط، وتظهر بشرطها وحده: صندوقٌ رماديٌّ دائم
+            يُقرأ زينةً ثم لا يُقرأ حين يعني شيئاً */}
+        {walletNote ? (
+          <p className="rounded-12 border border-line bg-surface-2 px-13 py-10 text-11.5 leading-snug text-muted">
+            {walletNote}
+          </p>
+        ) : null}
+
+        {/* **السعرُ على الزرّ** (تصميمُ `requestLabel`): آخرُ ما تقع عليه العينُ
+            قبل الضغط هو الرقم — ويختفي وحدَه ما دام يُحسب، فرقمٌ قديمٌ على زرِّ
+            التزامٍ أسوأ من لا رقم. و«رجوع» بجانبه بثلثِ عرضه: مخرجٌ لا ندٌّ */}
+        <div className="flex gap-8">
+          <Button
+            size="lg"
+            className="w-auto flex-[3]"
+            loading={requesting}
+            disabled={!estimate || loading}
+            onClick={() => onRequest(category, preference, applied?.code)}
+          >
+            اطلب الرحلة
+            {shownFare && !loading ? (
+              <span className="font-medium">
+                · {formatMoney(shownFare, estimate?.currency)}
+              </span>
+            ) : null}
+          </Button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex-1 rounded-12 border border-line py-15 text-13 font-semibold text-muted transition hover:bg-surface-2"
+          >
+            رجوع
+          </button>
+        </div>
 
         {/* **حدّد موعداً** (12-ط) — وتُخفى كلُّها حيث المفتاح مطفأ. وهي زرٌّ
             ثانويٌّ لا مساوٍ للأول: الطلبُ الفوريُّ هو الغالب، وزرّان متساويان
@@ -503,6 +608,20 @@ export function ConfirmRide({
           السعر النهائي قد يتغيّر إن اختلف المسار الفعلي كثيراً عن المقدَّر.
         </p>
       </div>
+
+      {pickingPay && payMethod ? (
+        <PaymentPicker
+          channels={channels}
+          selected={payMethod.method}
+          onSelect={choose}
+          onClose={() => setPickingPay(false)}
+          walletHint={
+            balance === null
+              ? null
+              : `الرصيد: ${formatMoney(balance, estimate?.currency ?? countryConfig?.currency)}`
+          }
+        />
+      ) : null}
     </Sheet>
   );
 }

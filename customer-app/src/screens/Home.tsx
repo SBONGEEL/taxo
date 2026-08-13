@@ -487,6 +487,17 @@ export function HomeScreen() {
                 onAddStop={() => setPhase("pick-stop")}
                 blockedByPreference={blockedByPreference}
                 onClearPreference={() => void clearGenderPreference()}
+                countryConfig={countryConfig}
+                // «رجوع» (الحزمة ب): يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟».
+                // ويمسح الوجهةَ لأن بقاءها يترك الشاشةَ في حالٍ لا زرَّ يعيدها
+                // منه إلى ورقة التأكيد — أما المحطاتُ فمعها، إذ لا معنى
+                // لمحطاتٍ بلا وجهة
+                onBack={() => {
+                  setPhase("idle");
+                  setDropoff(null);
+                  setDropoffAddress(null);
+                  setStops([]);
+                }}
               />
             ) : (
               <Sheet>

@@ -29,7 +29,24 @@ decided not to build** (with no real demand data it would be tuned wrong and tur
 stage 12 closes with sharing.
 
 **675 backend tests pass** across 60 test files — measured, not estimated, on 2026-08-13. All three
-frontends build with `check:scale`, `check:enums` and (in the panel) `check:flags` green.
+frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
+green.
+
+**`check:config` is the third build guard and it closes the «field with no mirror» debt** — the shape
+where a backend field is published, arrives on every call, and is discarded because the TypeScript type
+never mirrored it (`quiet_hours_*` did exactly that from stage 8 to 12-هـ). It compares
+`CountryConfigOut` and `ConfigOut` in `backend/app/schemas/config.py` against `CountryConfig` and
+`AppConfig` in each app's `api/types.ts`, **in both directions and by field name only**: a missing
+mirror is data thrown away, and an extra one is a type promising a value that reads `undefined` at
+runtime — the `awaiting_confirmation` shape. Types are deliberately not compared: `providers` is an
+open dict each app narrows to what it reads, and `auth` is inline in the panel and named in the two
+PWAs. It sits in **all three** apps because all three call `GET /config`. Verified by reproducing both
+directions and both models before being trusted.
+
+**And it immediately found a seventh flag with no button**: `scheduled_rides_enabled` (12-ط) was never
+added to the panel's `FeatureKey` union or its `FLAGS` array, so the panel build was **already red** —
+`check:flags` (built in 12-ح for exactly this) had been failing on master and the switch did not exist.
+Fixed in the same session. The guard works; what failed was running it.
 
 **What is actually in progress is not a stage**: matching `customer-app` to the rider prototype, in
 five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per session. **Three are delivered and (ب) is
@@ -372,11 +389,28 @@ shareable by default, even with another woman, and becomes shareable only by an 
 makes**, because "she would probably accept" is not consent and silence is not a decision in a safety
 question.
 
-**One money question in §5.12 is still open and must not be answered by assumption**: the cancellation
-fee when one of two riders cancels. Cancelling first after the second has boarded does not cancel the
-second's ride, and what the first is charged is a money rule the owner decides. Until he does, the
-first cut applies the ordinary per-ride fee to each row on its own — recorded in SPEC as the weakest
-assumption available, explicitly so nobody later reads it as a decision.
+**The cancellation fee is now decided too** (owner, 2026-08-13, SPEC §5.12 decision 5) — **two halves,
+because the incident has two parties and only one of them acted**. **Whoever cancels pays the ordinary
+fee alone**: no new sharing fee and no doubling, their row cancels through `rides.cancel_ride` and its
+frozen fee exactly as a solo ride would — which is precisely what shape (ب) was bought for, each ride
+row settling on its own. **Whoever remains has their ride converted to solo at its full price and is
+told explicitly**: the discount was the price of a sharing that did not happen, and keeping it once its
+reason is gone is a discount for nothing. **The explicit notice is what separates this from the option
+§5.12 rejects** — the rejected one is being told *at the end of the ride* that the price changed; being
+told *when it happens* is question 3's option (b), applied to the cancellation case rather than the
+never-found-a-partner case. That is why it does not contradict decision 3: decision 3 governs a partner
+who never existed (promise honoured, company bears it), this governs a partner who existed and left.
+
+**One cost question stays open, deliberately: does the company bear the remaining rider's difference?**
+The owner's answer is "open until I see the numbers", and the reason it is safe to defer is that the
+answer is **a setting, not a build** — the mechanism is 12-ز's, a `promo`-channel payment row the
+company bears. **Three branches it opens are recorded in SPEC as undecided and must not be given
+behaviour in code**: what happens to a remaining rider already `in_progress` (raising the price then is
+the rejected option verbatim, so the SPEC's *apparent* reading is that the company bears it there — but
+that is an inference, not a decision); whether a remaining rider who refuses the new price is spared the
+cancellation fee (a **second** fee waiver, where the system has exactly one today — `gender_mismatch` —
+so it is not added by inference); and whether a third partner is sought (SPEC assumes not: two riders,
+no second waiting window).
 
 **Every screen these stages added has been opened in a browser**, including the panel's seven and each
 of the design packages below. Keep doing that before calling one done: the failures `tsc`, `check:scale` and
@@ -384,11 +418,11 @@ of the design packages below. Keep doing that before calling one done: the failu
 tailwind-merge class, a marker that never renders, a button that works and then 409s — are exactly
 the ones this project has shipped before, and every one found since has been of that shape.
 
-### Rider design-matching: five packages, three delivered
+### Rider design-matching: five packages, four delivered
 
 A screen-by-screen comparison of `customer-app` against the rider prototype (and the women's screens
 against what 10-ج actually built) produced five packages. **The owner approved the order
-هـ ← ج ← د ← ب ← أ, one package per session**, and three are delivered. The rule applied throughout is
+هـ ← ج ← د ← ب ← أ, one package per session**, and four are delivered. The rule applied throughout is
 his: **in the design but not in the project → `FUTURE-FEATURES`, not built; in the project without a
 design → derive from the design's idiom; a behavioural conflict → SPEC and the backend win except in
 form, and the decision is recorded in `design/DESIGN-DECISIONS.md`.**
@@ -413,16 +447,47 @@ form, and the decision is recorded in `design/DESIGN-DECISIONS.md`.**
   category**: everything in it belongs to the *device* (appearance, pink theme, offer notifications), and
   everything belonging to the *account* (name, gender, preference, privacy) stays in «حسابي».
 
-**(ب) is next.** The rest of the confirm sheet: the payment-method picker **as a local preference**
-(decision 3 — the method is chosen before the ride, and `screens/Payment.tsx::METHODS` stays the single
-list of channels), the mixed-payment note, the price on the CTA, and «رجوع». **Without per-category
-pricing** — the owner excluded it explicitly; it stays deferred in `FUTURE-FEATURES`. **And the Payment
-screen's migration to the centred `payShow` layout belongs to this package**, not to (ج): that layout
-presumes the channel was already chosen in the confirm sheet, which is exactly what (ب) builds.
+- **(ب) — done.** The rest of the confirm sheet — the payment-method picker as a local preference
+  (decision 3), the mixed-payment note, the price on the CTA, «رجوع» — plus the Payment screen's
+  migration to the centred `payShow` layout, which belonged here rather than in (ج) because that layout
+  presumes the channel was already chosen. **Without per-category pricing**, which the owner excluded
+  explicitly; it stays deferred in `FUTURE-FEATURES`. Five things in it are worth carrying forward:
 
-**(أ) is last because it touches every route**: the four-tab bottom bar, deleting `/menu`, «حسابي» as a
-container screen, and re-classifying six routes underneath it. Doing it before (ب)–(د) would mean
-moving screens that were about to change anyway.
+  - **`METHODS` moved out of `screens/Payment.tsx` into `lib/payment.ts`** because the list now has two
+    readers. It is still *one* list — that is the whole point of decision 4 — but a component importing
+    it from a screen is a second home waiting to happen. `PAYMENT_CHANNELS` and `usePaymentPreference`
+    live there together, and the preference is **filtered by what the country allows**: a stored `card`
+    in a market whose card flag is off would otherwise print «بطاقة» on the CTA and then not exist on
+    the payment screen — the women's-service rule that a flag gating a screen must gate what it carries.
+  - **There is no «مختلط» channel, and there must never be** (`DESIGN-DECISIONS.md` 51). The design
+    lists one; in this backend mixing is not a choice but what *happens* —
+    `payments._pay_from_wallet` debits `min(balance, outstanding)` and writes the remainder as a **cash
+    row** itself. So the design's note survives verbatim (it describes real behaviour) and the channel
+    dies: adding it would be a value the app invents and the backend never sends, which is
+    `PaymentMethod.mixed` shipping a second time.
+  - **The picker portals to `document.body`, and that is not tidiness.** `ConfirmRide` renders inside a
+    `motion.div` carrying `y: 40` — and a non-zero `transform` **makes itself the containing block for
+    every `fixed` descendant**, so `inset-0` would have been measured against the bottom sheet, not the
+    viewport. The parent is also `pointer-events-none` and `max-w-lg`. Measured after the fix: scrim
+    `y=0, height=844` of an 844 viewport. No build sees this class of bug.
+  - **`.scr` was a class with no definition.** `Stage.tsx` has written `className="scr max-h-full"`
+    since package (ج), copied from the prototype where `.scr` is `overflow-y:auto` — but it was never
+    added to `index.css`, so `Stage` clipped anything taller than the viewport with no way to scroll.
+    Spelled correctly, present in the markup, doing nothing: the sibling of the missing-scale-key bug
+    `check:scale` exists for, and the build is green either way. Now defined, which repairs Rating too.
+  - **The payment screen was telling riders a paid ride was paid when it wasn't** — found only by
+    driving a real ride and paying it from a wallet that didn't cover the fare. `settled` was
+    `outstanding <= 0`, and `pending` is inside `OWING_PAYMENT_STATUSES` — correct for the backend's
+    question ("is a new payment row still needed?"), wrong for the rider's ("do I still owe something in
+    hand?"). The screen said «اكتمل دفع هذه الرحلة — شكراً لك» in green with «كاش ٢٫٤٨١ بانتظار التأكيد»
+    two lines below it. It is now **three states, not two**: pay CTA · nothing left to start but a
+    `pending` row, which names the amount and its channel and offers no thanks · fully confirmed. This
+    shipped in stage 9 and survived every pass since, because reaching it needs exactly the state (ب)
+    built in order to test its own note.
+
+**(أ) is next, and it is last because it touches every route**: the four-tab bottom bar, deleting
+`/menu`, «حسابي» as a container screen, and re-classifying six routes underneath it. Doing it before
+(ب)–(د) would have meant moving screens that were about to change anyway.
 
 **Four items are deferred by the owner's decision until after launch** and are marked ⏸️ in
 `FUTURE-FEATURES.md` (dated 2026-08-13): report a problem, the help centre, the "N cars nearby" line,
@@ -457,7 +522,8 @@ and per-category pricing. Do not build them; he decides after launch.
    number.** `scripts/seed.py::FEATURE_DEFAULTS` is the intended state, and everything built since
    10-ج seeds **off in both countries**: `women_service_enabled`, `multi_stop_enabled`,
    `whatsapp_otp_enabled`, `tips_enabled`, `promo_codes_enabled`, `driver_referrals_enabled`,
-   `scheduled_rides_enabled`. Each has a switch in the panel's settings screen. **Tipping does
+   `scheduled_rides_enabled`. Each has a switch in the panel's settings screen — `scheduled_rides_enabled`'s
+   was missing until 2026-08-13 and is now there. **Tipping does
    nothing until its three amounts are entered in the panel**: migration `0022` left both countries
    at zero, which correctly reads as "not configured" and hides the feature, and re-seeding will not
    fix it because `seed.py` is idempotent and skips existing rows. The referral reward is dormant
@@ -801,7 +867,7 @@ host (node 22+):
 
 ```bash
 cd customer-app && npm install
-npm run build     # check:scale + check:enums, then tsc -b, then a production build
+npm run build     # check:scale + check:enums + check:config, then tsc -b, then a production build
 npm run lint      # tsc --noEmit alone
 npm run dev       # if you'd rather not use the container
 ```
@@ -1490,7 +1556,7 @@ verification flow to draw (**`countries[].verification`** since 12-هـ — `aut
 the other market announces one channel and sends in another), which payment channels exist in this
 country (`countries[].features`), which map token to use. A flag switched off in the contracts page
 disappears from the app with no deploy — that is the whole point of publishing the config, and it
-is why no feature name is hardcoded outside `screens/Payment.tsx::METHODS` and `lib/config.tsx`.
+is why no feature name is hardcoded outside `lib/payment.ts::PAYMENT_CHANNELS` and `lib/config.tsx`.
 Money is never computed there: amounts arrive as strings (`NUMERIC(12,3)` serialises to a string)
 and `lib/utils.ts::formatMoney` formats them **textually**, because passing money through
 `Intl.NumberFormat` means passing it through a float. Error text is whatever the backend's

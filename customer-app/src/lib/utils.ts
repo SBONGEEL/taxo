@@ -28,6 +28,18 @@ export function currencyLabel(currency: string | null | undefined): string {
   return currency ? (CURRENCY_LABEL[currency] ?? currency) : "";
 }
 
+const CURRENCY_NAME: Record<string, string> = {
+  JOD: "دينار أردني",
+  LYD: "دينار ليبي",
+};
+
+/** اسمُ العملة كاملاً — لسطرٍ واحدٍ تحت المبلغ الكبير في طبقة الدفع
+ *  (`t.jodFull` في تصميم الراكب). ويسكن هنا لا في الشاشة، لأن تسميةَ العملة
+ *  دَينٌ أُغلق مرةً بجعلها بيتاً واحداً؛ وبيتان لها يفترقان كما افترقا. */
+export function currencyName(currency: string | null | undefined): string {
+  return currency ? (CURRENCY_NAME[currency] ?? currency) : "";
+}
+
 /** المبالغ نصوصٌ من الخلفية ولا تُحوَّل إلى `number` (SPEC القسم 4).
  *
  * `Intl.NumberFormat` يأخذ رقماً فيمرّ المال بالفاصلة العائمة ولو للعرض —

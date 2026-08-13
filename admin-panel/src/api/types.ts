@@ -263,7 +263,8 @@ export type FeatureKey =
   | "whatsapp_otp_enabled"
   | "tips_enabled"
   | "promo_codes_enabled"
-  | "driver_referrals_enabled";
+  | "driver_referrals_enabled"
+  | "scheduled_rides_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
