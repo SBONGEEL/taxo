@@ -31,6 +31,7 @@ import { ApiError } from "@/api/client";
 import { listNotifications, markNotificationsRead } from "@/api/endpoints";
 import type { UserNotification } from "@/api/types";
 import { Screen } from "@/components/ui/Screen";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { formatMoney } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -150,7 +151,7 @@ export function NotificationsScreen() {
         />
       ) : null}
 
-      <ul className="space-y-8">
+      <Stagger className="space-y-8">
         {(rows ?? []).map((entry) => {
           const style = KIND_STYLE[entry.kind] ?? {
             icon: Bell,
@@ -159,7 +160,7 @@ export function NotificationsScreen() {
           const Icon = style.icon;
           const to = destinationOf(entry);
           return (
-            <li key={entry.id}>
+            <StaggerItem key={entry.id}>
               <button
                 type="button"
                 disabled={to === null}
@@ -188,10 +189,10 @@ export function NotificationsScreen() {
                   <span className="mt-6 size-8 shrink-0 rounded-full bg-accent" />
                 ) : null}
               </button>
-            </li>
+            </StaggerItem>
           );
         })}
-      </ul>
+      </Stagger>
     </Screen>
   );
 }

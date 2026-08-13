@@ -240,7 +240,7 @@ export function SettingsScreen() {
         <button
           type="button"
           onClick={toggle}
-          className="flex w-full items-center justify-between px-15 py-14"
+          className="pressable flex w-full items-center justify-between px-15 py-14"
         >
           <span className="text-13.5 font-semibold text-ink">المظهر</span>
           <span className="text-12.5 text-muted">
@@ -394,7 +394,7 @@ function SoundToggle({
       aria-checked={on}
       aria-label={title}
       onClick={onToggle}
-      className="flex w-full items-center gap-12 text-start"
+      className="pressable flex w-full items-center gap-12 text-start"
     >
       <span className="flex-1">
         <span className="block text-13.5 font-semibold text-ink">{title}</span>

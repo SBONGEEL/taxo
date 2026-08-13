@@ -15,6 +15,7 @@ import { deleteSavedCard, listSavedCards, setDefaultCard } from "@/api/endpoints
 import type { SavedCard } from "@/api/types";
 import { Badge, EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 
 export function CardsScreen() {
   const [cards, setCards] = useState<SavedCard[]>([]);
@@ -57,9 +58,9 @@ export function CardsScreen() {
               hint="عند الدفع بالبطاقة يمكنك اختيار حفظها للمرة القادمة."
             />
           ) : (
-            <ul className="space-y-8">
+            <Stagger className="space-y-8">
               {cards.map((card) => (
-                <li key={card.id} className="card flex items-center gap-12 p-16">
+                <StaggerItem key={card.id} className="card flex items-center gap-12 p-16">
                   <CreditCard className="size-24 text-ink" />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-ink">
@@ -91,9 +92,9 @@ export function CardsScreen() {
                   >
                     <Trash2 className="size-16" />
                   </button>
-                </li>
+                </StaggerItem>
               ))}
-            </ul>
+            </Stagger>
           )}
         </div>
       )}

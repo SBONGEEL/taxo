@@ -16,6 +16,7 @@ import { ApiError } from "@/api/client";
 import { cancelBooking, listBookings } from "@/api/endpoints";
 import type { Booking } from "@/api/types";
 import { Screen } from "@/components/ui/Screen";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { formatMoney } from "@/lib/utils";
@@ -98,11 +99,11 @@ export function BookingsScreen() {
         />
       ) : null}
 
-      <ul className="space-y-10">
+      <Stagger className="space-y-10">
         {(rows ?? []).map((booking) => {
           const state = stateOf(booking);
           return (
-            <li
+            <StaggerItem
               key={booking.id}
               className="rounded-16 border border-line bg-surface p-14"
             >
@@ -146,10 +147,10 @@ export function BookingsScreen() {
                   </Link>
                 ) : null}
               </div>
-            </li>
+            </StaggerItem>
           );
         })}
-      </ul>
+      </Stagger>
     </Screen>
   );
 }

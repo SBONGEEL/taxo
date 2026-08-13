@@ -16,6 +16,7 @@ import { ApiError } from "@/api/client";
 import { listMyRides } from "@/api/endpoints";
 import type { RideListItem } from "@/api/types";
 import { BottomNav } from "@/components/BottomNav";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import {
   CURRENCY_LABEL,
@@ -75,9 +76,9 @@ export function RidesScreen() {
           />
         ) : null}
 
-        <ul className="flex flex-col gap-10">
+        <Stagger className="flex flex-col gap-10">
           {(rides ?? []).map(({ ride, has_open_dispute }) => (
-            <li key={ride.id}>
+            <StaggerItem key={ride.id}>
               <button
                 type="button"
                 onClick={() => navigate(`/rides/${ride.id}`)}
@@ -125,9 +126,9 @@ export function RidesScreen() {
                   </span>
                 </div>
               </button>
-            </li>
+            </StaggerItem>
           ))}
-        </ul>
+        </Stagger>
 
         {more ? (
           <button

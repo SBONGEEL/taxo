@@ -18,6 +18,7 @@ import type { PlaceIcon, SavedPlace } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, EmptyState } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
+import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { usePlaces, type RecentDestination } from "@/lib/places";
 import { cn } from "@/lib/utils";
 
@@ -64,9 +65,9 @@ export function PlacesScreen() {
             hint="احفظ وجهةً من رحلاتك الأخيرة أدناه، فتصير ضغطةً واحدة في المرة القادمة"
           />
         ) : (
-          <ul className="space-y-8">
+          <Stagger className="space-y-8">
             {places.map((place) => (
-              <li key={place.id} className="card p-16">
+              <StaggerItem key={place.id} className="card p-16">
                 {editing?.id === place.id ? (
                   <PlaceForm
                     initial={place}
@@ -98,9 +99,9 @@ export function PlacesScreen() {
                     />
                   </div>
                 )}
-              </li>
+              </StaggerItem>
             ))}
-          </ul>
+          </Stagger>
         )}
 
         {/* الإضافةُ من الوجهات الأخيرة: نقطةٌ سبق أن ذهب إليها — فلا حاجة
@@ -136,10 +137,10 @@ export function PlacesScreen() {
               </div>
             ) : null}
 
-            <ul className="space-y-8">
+            <Stagger className="space-y-8">
               {/* المزوّدُ يُخرج المحفوظَ من «الأخيرة» أصلاً — فلا تصفيةَ هنا */}
               {recents.map((recent) => (
-                  <li key={recent.key} className="card flex items-center gap-12 p-16">
+                  <StaggerItem key={recent.key} className="card flex items-center gap-12 p-16">
                     <MapPin className="size-20 shrink-0 text-muted" />
                     <span className="min-w-0 flex-1 truncate text-14 text-ink">
                       {recent.address}
@@ -152,9 +153,9 @@ export function PlacesScreen() {
                     >
                       احفظ
                     </button>
-                  </li>
+                  </StaggerItem>
               ))}
-            </ul>
+            </Stagger>
           </section>
         ) : null}
       </div>
