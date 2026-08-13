@@ -50,6 +50,10 @@ interface MapViewProps {
   dropoff?: Coordinates | null;
   driverLocation?: { lat: number; lng: number; heading: number | null } | null;
   interactive?: boolean;
+  /** خطُّ الوصل بين النقطتين. **يُطفأ في شريط التفاصيل** (القرار 38): هناك
+   *  المسارُ الفعليُّ مسجَّلٌ في `ride_route_points` ولا منفذَ يقرؤه، فخطٌّ
+   *  مستقيمٌ من عندنا يوهم بمسارٍ لم يقله أحد. */
+  tripLine?: boolean;
   onMoveEnd?: (center: Coordinates) => void;
   className?: string;
 }
@@ -100,6 +104,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     drivers,
     pickup,
     dropoff,
+    tripLine = true,
     driverLocation,
     interactive = true,
     onMoveEnd,
@@ -312,7 +317,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
     const id = "taxo-trip-line";
     const line =
-      pickup && dropoff
+      tripLine && pickup && dropoff
         ? {
             type: "Feature" as const,
             properties: {},
@@ -344,7 +349,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       source: id,
       layout: { "line-cap": "round" },
       paint: {
-        "line-color": "#facc15",
+        // **من لوحة §1.1 لا من اللوحة المحذوفة**: كان `#facc15` — أصفرُ اللوحة
+        // التي أُسقطت في 12-أ. و`paint` في mapbox لا يقرأ متغيّرات CSS، فالقيمةُ
+        // تُختار من الوضع كما يُختار ستايلُ الخريطة نفسُه أعلاه
+        "line-color": dark ? "#e6edf3" : "#171b20",
         "line-width": 4,
         "line-opacity": 0.85,
         // متقطّعٌ عمداً: خطٌّ مستقيم بين نقطتين ليس مسار الطريق، والتقطيع
@@ -352,7 +360,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         "line-dasharray": [1.5, 1.5],
       },
     });
-  }, [pickup, dropoff, styleVersion]);
+  }, [pickup, dropoff, tripLine, dark, styleVersion]);
 
   // ------------------------------------------------------------ التحكّم
   useImperativeHandle(

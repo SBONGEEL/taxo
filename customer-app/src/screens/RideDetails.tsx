@@ -5,7 +5,7 @@
  * كيلومتر» (SPEC القسم 4/5.7).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -14,6 +14,8 @@ import type { Rating, Ride, RidePayments } from "@/api/types";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { Button } from "@/components/ui/Button";
 import { Badge, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { MapView, type MapHandle } from "@/components/map/MapView";
+import { useMapboxToken } from "@/lib/config";
 import { Screen } from "@/components/ui/Screen";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import {
@@ -50,6 +52,14 @@ export function RideDetailsScreen() {
       .finally(() => setLoading(false));
   }, [rideId]);
 
+  const token = useMapboxToken();
+  // **الإطارُ يضمّ النقطتين**: `center` وحدَه يضع الانطلاقَ في الوسط ويترك
+  // الوصولَ خارج الشريط — ودبوسٌ واحدٌ في خريطةِ رحلةٍ لا يقول شيئاً
+  const map = useRef<MapHandle>(null);
+  useEffect(() => {
+    if (ride) map.current?.fitBounds(ride.pickup, ride.dropoff);
+  }, [ride]);
+
   if (loading) {
     return (
       <Screen title="تفاصيل الرحلة" nav>
@@ -72,14 +82,41 @@ export function RideDetailsScreen() {
   return (
     <Screen title="تفاصيل الرحلة" nav>
       <div className="space-y-20">
-        <div className="card space-y-12 p-16">
-          <div className="flex items-center justify-between">
-            <Badge tone={ride.status === "completed" ? "success" : "neutral"}>
-              {RIDE_STATUS_LABEL[ride.status]}
-            </Badge>
-            <span className="text-12 text-muted">{formatDateTime(ride.created_at)}</span>
+        {/* **شريطُ الخريطة 170px** (القرار 38): دبوسا الانطلاق والوصول
+            **بلا خطِّ مسار** — المسارُ الفعليُّ مسجَّلٌ في `ride_route_points`
+            للخلفية ولا منفذَ يقرؤه، وخطٌّ مستقيمٌ من عندنا يوهم بمسارٍ لم يقله
+            أحد. ولذلك **لا تُكتب عليه «المسار الفعلي المسجَّل»** كما في
+            النموذج: عنوانٌ يَعِد بما لا يُرسم */}
+        {token ? (
+          <div className="-mx-16 -mt-16 h-170 overflow-hidden">
+            <MapView
+              ref={map}
+              token={token}
+              center={ride.pickup}
+              pickup={ride.pickup}
+              dropoff={ride.dropoff}
+              tripLine={false}
+              interactive={false}
+              className="h-full w-full"
+            />
           </div>
+        ) : null}
 
+        {/* رأسٌ بأجرةٍ كبيرةٍ وشارةِ حالة (تخطيطُ التصميم): الرقمُ هو ما يُفتح
+            له هذا السجلُّ أصلاً، فيُقرأ قبل أن تُقرأ الحقول */}
+        <div className="flex items-start justify-between gap-12">
+          <div>
+            <p className="text-12 text-muted">{formatDateTime(ride.created_at)}</p>
+            <p className="text-26 font-bold text-ink">
+              {formatMoney(ride.final_fare ?? ride.estimated_fare, ride.currency)}
+            </p>
+          </div>
+          <Badge tone={ride.status === "completed" ? "success" : "neutral"}>
+            {RIDE_STATUS_LABEL[ride.status]}
+          </Badge>
+        </div>
+
+        <div className="card space-y-12 p-16">
           <Row label="من" value={ride.pickup_address ?? "نقطة على الخريطة"} />
           <Row label="إلى" value={ride.dropoff_address ?? "نقطة على الخريطة"} />
           <Row label="المسافة المقدّرة" value={formatDistance(ride.distance_km)} />
