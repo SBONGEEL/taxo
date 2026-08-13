@@ -44,6 +44,12 @@ from app.models.payment_setting import (
     DEFAULT_CLIQ_CONFIRMATION_HOURS,
     PaymentSetting,
 )
+from app.models.sharing import (
+    DEFAULT_CORRIDOR_KM,
+    DEFAULT_DISCOUNT_PERCENT,
+    DEFAULT_MAX_DETOUR_MINUTES,
+    RideSharingSetting,
+)
 from app.models.referral import (
     DEFAULT_REQUIRED_RIDES,
     DEFAULT_REWARD_AMOUNT,
@@ -93,6 +99,11 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل
         FeatureKey.SCHEDULED_RIDES_ENABLED: False,
+        # **مطفأٌ صراحةً** (المرحلة 12-ي): ونسبةُ الخصم صفرٌ فوقه، فتشحن
+        # الميزةُ خامدةً مرتين كالبقشيش وحافزِ الإحالة. والنسبةُ قرارُ مالٍ
+        # مقيَّدٌ بشرطٍ صريح — **ما يقبضه الكبتن من رحلتين أعلى بوضوحٍ مما
+        # يقبضه من منفردة** — فبذرُ رقمٍ هنا يجعله يبدو قراراً ولم يُقرَّر
+        FeatureKey.RIDE_SHARING_ENABLED: False,
     },
 }
 
@@ -263,6 +274,29 @@ async def seed_payment_settings(session: AsyncSession) -> None:
                 f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة، "
                 f"بقشيش {amounts['tip_preset_small']}/{amounts['tip_preset_medium']} "
                 f"بسقف {amounts['tip_max']})"
+            )
+
+
+async def seed_sharing_settings(session: AsyncSession) -> None:
+    """إعداداتُ المشاركة لكل دولة — **الخصمُ صفرٌ حتى يقرّره المالك** (12-ي).
+
+    ويُبذر الصفُّ وإن كانت قيمُه هي الافتراضات، لنفس سببِ بذر حافز الإحالة:
+    بغيره لا تجد شاشةُ اللوحة صفاً تعدّله فيبدو الحقلُ عطباً لا «لم يُحدَّد».
+    وأرقامُ المطابقة الثلاثة تُبذر بقيمٍ عاملة — فهي **تشغيليةٌ لا مالية**،
+    وصفرُها يعني ممرّاً بلا عرضٍ فلا يُطابَق أحدٌ أبداً.
+    """
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(RideSharingSetting.id).where(
+                RideSharingSetting.country_code == country
+            )
+        )
+        if exists is None:
+            session.add(RideSharingSetting(country_code=country))
+            _log(
+                f"مشاركة الرحلة: {country.value} "
+                f"(الخصم {DEFAULT_DISCOUNT_PERCENT}% — لم يُحدَّد بعد، "
+                f"وممرّ {DEFAULT_CORRIDOR_KM}كم والتفاف {DEFAULT_MAX_DETOUR_MINUTES}د)"
             )
 
 
@@ -572,6 +606,7 @@ async def main() -> None:
         await seed_wallet_settings(session)
         await seed_payment_settings(session)
         await seed_referral_settings(session)
+        await seed_sharing_settings(session)
         await seed_notification_settings(session)
         await seed_plans(session)
         await seed_providers(session)

@@ -264,7 +264,8 @@ export type FeatureKey =
   | "tips_enabled"
   | "promo_codes_enabled"
   | "driver_referrals_enabled"
-  | "scheduled_rides_enabled";
+  | "scheduled_rides_enabled"
+  | "ride_sharing_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;

@@ -93,6 +93,12 @@ def _status_in(statuses: Iterable[RideStatus]) -> str:
     return "status IN (" + ", ".join(f"'{s.value}'" for s in statuses) + ")"
 
 
+# مقعدُ الراكب في مجموعة المشاركة: ١ للرحلة الأولى (وكلِّ رحلةٍ منفردة)، و٢
+# لشريكها. **وهو ما يحمل الحارسَ، لا `share_group_id`** — انظر `__table_args__`.
+SHARE_SEAT_LEAD = 1
+SHARE_SEAT_PARTNER = 2
+
+
 def make_point(lat: float, lng: float) -> WKTElement:
     """نقطة WKT — ترتيبها (خط الطول، خط العرض) عكس ما تُكتب به عادةً."""
     return WKTElement(f"POINT({lng} {lat})", srid=SRID)
@@ -122,6 +128,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "actual_distance_km IS NULL OR actual_distance_km >= 0",
             name="ride_actual_distance_non_negative",
         ),
+        # المقعدُ الثاني لا يوجد بلا مجموعة: شريكٌ بلا من يشاركه تناقضٌ في
+        # الحدّ، ولولا هذا القيدُ لأمكن حجزُ المقعد الثاني لرحلةٍ منفردة
+        # فيحمل الكبتنُ رحلتين لا تجمعهما مشاركة
+        CheckConstraint(
+            "share_seat IN (1, 2) AND (share_seat = 1 OR share_group_id IS NOT NULL)",
+            name="ride_share_seat_valid",
+        ),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
             "uq_rides_active_rider",
@@ -129,11 +142,37 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             unique=True,
             postgresql_where=text(_status_in(ACTIVE_RIDER_STATUSES)),
         ),
+        # ------------------------------ حارسُ الكبتن بعد المشاركة (12-ي)
+        #
+        # **المقعدُ هو المفتاح، لا المجموعة.** اقترحت المواصفةُ أولاً
+        # `(driver_id, COALESCE(share_group_id, id))`، وقياسُه في
+        # `test_ride_sharing_index.py` أظهر أنه **مقلوبٌ تماماً**: يرفض
+        # الرحلتين اللتين وُجد ليسمح بهما (مفتاحُهما واحدٌ لأن مجموعتهما
+        # واحدة)، ويسمح بما وُجد ليمنعه — رحلتان منفردتان على كبتنٍ واحد
+        # (مفتاحُ كلٍّ منهما مُعرِّفُها هي، فيختلفان)، ومجموعتان على كبتنٍ
+        # واحد. أي أنه كان **يُلغي الحارسَ الذي جاء ليوسّعه** بلا أن يُسقط
+        # اختباراً قائماً واحداً. والتصحيحُ مثبَّتٌ في SPEC §5.12.
+        #
+        # وما يحرسه هذا الفهرس: **كبتنٌ له مقعدٌ واحدٌ من كلِّ رقم**، أي رحلتان
+        # نشطتان على الأكثر. والرحلةُ المنفردة مقعدُها ١ دائماً، فرحلتان
+        # منفردتان تتنازعان المقعدَ نفسَه ويسقط الثانية — وهكذا **ينجو الحارسُ
+        # القديم بحرفه** بدل أن يُستبدل.
         Index(
             "uq_rides_active_driver",
             "driver_id",
+            "share_seat",
             unique=True,
             postgresql_where=text(_status_in(ACTIVE_DRIVER_STATUSES)),
+        ),
+        # وحدُّ المجموعة نفسِها: راكبان لا أكثر، ولو كانا على كبتنين بخطأ.
+        Index(
+            "uq_rides_active_share_group",
+            "share_group_id",
+            "share_seat",
+            unique=True,
+            postgresql_where=text(
+                _status_in(ACTIVE_DRIVER_STATUSES) + " AND share_group_id IS NOT NULL"
+            ),
         ),
     )
 
@@ -218,6 +257,24 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         default=GenderPreference.ANY,
         server_default=GenderPreference.ANY.value,
+    )
+
+    # ---------------------------------------- مشاركةُ الرحلة (المرحلة 12-ي)
+    #
+    # **الشكلُ (ب): رحلتان في مجموعةٍ واحدة** (SPEC القسم 5.12، قرارُ المالك ١):
+    # يبقى كلُّ صفِّ رحلةٍ لراكبه بملكيته ودفعته وتقييمه ونزاعه كما هي، ويجمعهما
+    # هذا العمود على كبتنٍ واحد. فلا قاعدةَ مالٍ تُعاد كتابتُها، ويبقى «من يملك
+    # هذه الرحلة» سؤالاً بجوابٍ واحد — وهو السؤالُ الذي يحرس كلَّ منفذ (القسم 14).
+    #
+    # و`NULL` تعني **رحلةً منفردة**، وهي الحالُ الغالبة.
+    share_group_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), nullable=True, index=True
+    )
+    # **المقعدُ هو ما يحرسه الفهرس** لا المجموعة (انظر `__table_args__`):
+    # ١ للرحلة الأولى وكلِّ رحلةٍ منفردة، و٢ لشريكها. وافتراضُه ١ يجعل كلَّ
+    # صفٍّ قائمٍ في القاعدة صحيحاً بلا ترحيلِ بيانات
+    share_seat: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=SHARE_SEAT_LEAD, server_default="1"
     )
 
     # --- تعدد الوجهات (المرحلة 12-ب) ---

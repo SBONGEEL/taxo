@@ -28,7 +28,7 @@ recorded, and no code exists for it**; it is the one thing left before stage 13,
 decided not to build** (with no real demand data it would be tuned wrong and turn riders away), so
 stage 12 closes with sharing.
 
-**675 backend tests pass** across 60 test files — measured, not estimated, on 2026-08-13. All three
+**681 backend tests pass** across 61 test files — measured, not estimated, on 2026-08-13. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -376,7 +376,39 @@ payment) after 30 minutes — long enough that an interrupted open call's webhoo
 residual risk is written down rather than denied. Each order commits in its own transaction, so one
 provider outage cannot undo what was already settled.
 
-**Stage 12-ي — ride sharing — is specified and not built.** `SPEC.md` §5.12 holds the design and the
+**Stage 12-ي — ride sharing — has its data layer built and its guard measured; the service layer, the
+routes and both apps are not built.** What exists (migration `0027`, `models/sharing.py`,
+`tests/test_ride_sharing_index.py`, the `ride_sharing_enabled` flag and its panel switch, seeded off
+with a zero discount) is the piece the owner ordered first, and it produced a correction to his own
+decision.
+
+**The index he approved was inverted, and only the test showed it.** SPEC proposed
+`UNIQUE(driver_id, COALESCE(share_group_id, id))`. Measured, it **rejects the two rides it exists to
+allow** (same group → same key) and **permits both things it exists to forbid**: two solo rides on one
+driver (each keyed by its own id, so the keys differ — i.e. it *deletes the guard it was extending*)
+and two separate groups on one driver. None of that would have failed an existing test, because the
+old guard had no concurrency test of its own — which is exactly why the owner put this first.
+
+**What actually guards is the seat, not the group.** `rides.share_seat` is 1 for the first ride **and
+for every solo ride**, 2 for its partner. Then `uq_rides_active_driver` is
+`UNIQUE(driver_id, share_seat)` over the same partial predicate: a driver holds at most one seat of
+each number, and **two solo rides collide on seat 1, so the old guarantee survives verbatim** rather
+than being replaced. `uq_rides_active_share_group` is `UNIQUE(share_group_id, share_seat)` and bounds
+the *group* to two riders however their drivers differ — the one case the driver index cannot see,
+which is why it needed its own test after deletion showed no other test owned it. A CHECK keeps seat 2
+from existing without a group.
+
+**What the database cannot own, and the service must**: that the partner's group is *the driver's own*
+group. No unique index compares two rows, and the failure mode is mis-grouping rather than money from
+nothing — so it is written down as the service's job under the lock, not assumed to be covered.
+
+**Still unbuilt for 12-ي**: `services/sharing.py` (corridor matching against the first ride's route,
+the detour cap, the partner wait window — three per-country numbers now seeded in
+`ride_sharing_settings`), the discount as a company-borne `promo`-style payment row, dispatch and
+request-path integration, the cancellation rules (SPEC decisions 5–8), notifications, the money-path
+concurrency tests, and both PWAs.
+
+**The original text of this section follows, and is still the design.** `SPEC.md` §5.12 holds the design and the
 owner's four decisions, and a fresh session can start from there: **two riders to a group** keyed by
 `rides.share_group_id`; the driver-side index becomes the composite
 `(driver_id, COALESCE(share_group_id, id))` **and its concurrency test comes before any screen** —

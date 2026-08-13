@@ -60,6 +60,7 @@ from app.models.place import SavedPlace
 from app.models.security_setting import SecuritySetting
 from app.models.totp import UserRecoveryCode, UserTotp
 from app.models.ride import Ride, RideRoutePoint, RideStop
+from app.models.sharing import RideSharingSetting
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.tip import Tip
 from app.models.user import User
@@ -120,6 +121,7 @@ __all__ = [
     "RideRoutePoint",
     "SavedPlace",
     "RideStop",
+    "RideSharingSetting",
     "RideStatus",
     "SavedCard",
     "SecuritySetting",
