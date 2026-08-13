@@ -20,6 +20,7 @@ async def _country_config(session, country: CountryCode) -> CountryConfigOut:
     """إعدادات دولةٍ كما تراها الواجهات — قراءةٌ خالصة بلا إنشاء صفوف."""
     quiet = await campaigns.get_settings(session, country)
     channels = await verification.available_methods(session, country)
+    method = channels[0] if channels else verification.NONE
     return CountryConfigOut(
         country_code=country,
         currency=currency_for_country(country),
@@ -32,8 +33,11 @@ async def _country_config(session, country: CountryCode) -> CountryConfigOut:
         ),
         quiet_hours_end=quiet.quiet_hours_end.strftime("%H:%M") if quiet else None,
         quiet_hours_timezone=quiet.timezone if quiet else None,
-        verification=channels[0] if channels else verification.NONE,
+        verification=method,
         verification_channels=list(channels),
+        otp_length=(
+            otp.CODE_LENGTH if method in verification.CODE_CHANNELS else None
+        ),
     )
 
 

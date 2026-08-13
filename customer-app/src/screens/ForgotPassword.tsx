@@ -17,15 +17,13 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { resetPassword, startPasswordReset } from "@/api/endpoints";
-import type { CountryCode } from "@/api/types";
 import { Brand } from "@/components/Brand";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { useConfig } from "@/lib/config";
-import { usePhoneCountry } from "@/lib/config";
+import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 
@@ -34,17 +32,17 @@ export function ForgotPasswordScreen() {
   const { signIn } = useSession();
   const navigate = useNavigate();
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? [
-    "JO",
-  ];
   const [step, setStep] = useState<"details" | "verify">("details");
-  const [country, setCountry] = useState<CountryCode>(countries[0] ?? "JO");
-  // المُحقِّقُ يتبع الدولةَ المختارة لا الافتراضية (12-هـ)
+  // **من `useAuthCountry` لا من `countries[0]`**: الترتيبُ في `/config` تعدادٌ
+  // (`LY, JO`) لا أفضلية، فكانت هذه الشاشةُ تفترض ليبيا **ومنتقيها مخفيّ** —
+  // أردنيٌّ يدخل بحسابه ولا يستطيع استعادة كلمته
+  const { country, countries } = useAuthCountry();
+  // المُحقِّقُ **وطولُ رمزه** يتبعان الدولةَ لا الافتراضية (12-هـ وتكملتُه)
+  const entry = config?.countries.find(
+    (item) => item.country_code === country,
+  );
   const verification =
-    config?.countries.find((entry) => entry.country_code === country)
-      ?.verification ??
-    config?.auth.verification ??
-    "none";
+    entry?.verification ?? config?.auth.verification ?? "none";
 
   const { dialCode, nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
@@ -104,7 +102,7 @@ export function ForgotPasswordScreen() {
               country={country}
               countries={countries}
               onPhoneChange={setPhone}
-              onCountryChange={setCountry}
+              onCountryChange={() => undefined}
               showCountry={false}
             />
 
@@ -128,20 +126,27 @@ export function ForgotPasswordScreen() {
             phone={phone}
             dialCode={dialCode}
             method={verification}
-            otpLength={config?.auth.otp_length ?? null}
+            otpLength={entry?.otp_length ?? null}
             requestChallenge={(channel) =>
               startPasswordReset(phone, country, channel)
             }
             onProven={(token) => void apply(token)}
             onBack={() => setStep("details")}
+            onLeave={() => navigate("/login")}
           />
         )}
 
-        <p className="text-center text-14 text-muted">
-          <Link to="/login" className="font-semibold text-ink">
-            العودة للدخول
-          </Link>
-        </p>
+        {/* **لا مخرجَ في خطوة الإثبات** كما في التصميم (`viewNewPass` بلا سهم
+            رجوع): الكلمةُ الجديدة كُتبت والرمزُ في الطريق، ورابطٌ يغادر هنا
+            يترك صاحبَه ظانّاً أنه غيّرها وهي لم تتغيّر. و«تعديل الرقم» داخل
+            الخطوة يكفي لتصحيح خطأٍ في الرقم */}
+        {step === "details" ? (
+          <p className="text-center text-14 text-muted">
+            <Link to="/login" className="font-semibold text-ink">
+              العودة للدخول
+            </Link>
+          </p>
+        ) : null}
       </motion.div>
     </div>
   );

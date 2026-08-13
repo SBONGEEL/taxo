@@ -6,36 +6,37 @@
 
 import { api } from "@/api/client";
 import type {
-  UserNotification,
-  Booking,
   AppConfig,
   AuthMethod,
   AuthResponse,
+  Booking,
   ChallengeResponse,
-  OtpChannel,
   CliqTopup,
   Coordinates,
   CountryCode,
   Device,
   GenderPreference,
+  LoginResponse,
   NearbyDriver,
   NotificationPreferences,
+  OtpChannel,
   Payment,
   PaymentMethod,
   PlaceIcon,
+  PromoPreview,
   Rating,
   Ride,
-  RideListItem,
   RideEstimate,
+  RideListItem,
   RidePayments,
   SavedCard,
-  PromoPreview,
   SavedPlace,
   Tip,
   TipOptions,
   TopupRequest,
   TransferRecipient,
   User,
+  UserNotification,
   VehicleCategory,
   Wallet,
   WalletTransaction,
@@ -76,7 +77,7 @@ export const register = (payload: {
 }) => api.post<AuthResponse>("/auth/register", { ...payload, role: "rider" }, { anonymous: true });
 
 export const login = (phone: string, password: string, countryCode: CountryCode) =>
-  api.post<AuthResponse>(
+  api.post<LoginResponse>(
     "/auth/login",
     { phone, password, country_code: countryCode },
     { anonymous: true },

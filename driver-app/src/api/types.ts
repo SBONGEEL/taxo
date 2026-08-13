@@ -53,7 +53,11 @@ export interface TokenPair {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  expires_in: number;
+  /** **لحظةُ الانتهاء لا مدّتُه**: الخلفيةُ ترسل `expires_at` (ISO)، وكان هذا
+   *  النوع يكتب `expires_in: number` — حقلاً لا يُرسل أبداً. لم يقرأه أحدٌ بعد،
+   *  فبقي كذبةً نائمة: أوّلُ من يبني تجديداً استباقياً للتوكن منه يقرأ
+   *  `undefined`. كشفه `check:config` حين اتّسع لأجوبة المصادقة. */
+  expires_at: string;
 }
 
 export interface AuthResponse {
@@ -70,8 +74,24 @@ export interface AuthMethod {
   channels?: string[];
 }
 
+/** جوابُ الدخول — إمّا جلسةٌ كاملة، وإمّا تحدٍّ ثانٍ **بلا توكن** (12-د).
+ *
+ * **مرآةٌ لازمة وإن لم يُسجّل راكبٌ عاملاً ثانياً قط**: حارسُ الخلفية على
+ * **الحساب** لا على الدور، و`POST /auth/login` يردّ هذا الشكل لكلِّ من يناديه.
+ * وكان هذا الملف يكتبه `AuthResponse` بـ`tokens` غير قابلةٍ للغياب — فحسابٌ
+ * يحمل عاملاً كان يمرّ إلى `tokens.save(undefined)` بلا خطأٍ يُرى.
+ */
+export interface LoginResponse {
+  totp_required: boolean;
+  user: User | null;
+  tokens: TokenPair | null;
+  challenge_token: string | null;
+  expires_in: number | null;
+}
+
 export interface ChallengeResponse {
   sent: boolean;
+  expires_in: number | null;
   resend_after: number | null;
   /** القناةُ التي أُرسل فيها الرمز فعلاً — تقولها الشاشة لصاحبها (12-هـ). */
   channel: string | null;
@@ -96,6 +116,10 @@ export interface CountryConfig {
    */
   verification: VerificationMethod;
   verification_channels: string[];
+  /** طولُ الرمز **لهذه الدولة** (لا للافتراضية) — و`null` لمُحقِّقٍ لا يأخذ
+   *  رمزاً منّا. نُقل `verification` إلى صفِّ الدولة في 12-هـ وبقي هذا يُقرأ
+   *  من `auth`، فترسم الشاشةُ خاناتِ سوقٍ وتتحقق الخلفيةُ بطول سوقٍ آخر. */
+  otp_length: number | null;
 }
 
 export interface AppConfig {

@@ -21,7 +21,7 @@
  */
 
 import { motion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
+import { ChevronRight, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -67,6 +67,13 @@ interface Props {
   /** يسلّم **إثباتاً** جاهزاً للإرسال مع بقية الطلب. */
   onProven: (verificationToken: string) => void;
   onBack: () => void;
+  /** مغادرةُ المصادقة كلِّها — سهمُ التصميم أعلى شاشة الرمز.
+   *
+   * **مخرجان لا واحد، وهما مختلفان**: «تعديل الرقم» يصحّح خطأً في الرقم ويبقى
+   * في التدفّق، والسهمُ يغادره إلى الدخول. والتصميمُ يرسم الثاني وحدَه، وكان
+   * المبنيُّ يرسم الأولَ وحدَه — فمن فتح الشاشة بالخطأ لم يجد بابَ خروج.
+   */
+  onLeave?: () => void;
 }
 
 export function PhoneVerification({
@@ -77,6 +84,7 @@ export function PhoneVerification({
   requestChallenge,
   onProven,
   onBack,
+  onLeave,
 }: Props) {
   const { config } = useConfig();
   const [code, setCode] = useState("");
@@ -175,6 +183,17 @@ export function PhoneVerification({
       animate={{ opacity: 1, x: 0 }}
       className="space-y-20"
     >
+      {onLeave ? (
+        <button
+          type="button"
+          onClick={onLeave}
+          aria-label="رجوع"
+          className="-ms-8 -mt-8 block rounded-full p-8 text-muted transition hover:bg-surface-2"
+        >
+          <ChevronRight className="size-20" />
+        </button>
+      ) : null}
+
       <div className="flex items-start gap-12 rounded-16 border border-line bg-surface p-16">
         <ShieldCheck className="mt-2 size-20 text-brand" />
         <div className="text-14">

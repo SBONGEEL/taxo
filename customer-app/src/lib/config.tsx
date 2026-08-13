@@ -77,6 +77,30 @@ export function useFeature(
  * لا حسابَ بعدُ فلا دولةَ معروفة؛ فالخلفية تنشر `default_country_code` وتنشر
  * بادئةَ كل دولة وطولَ رقمها الوطني من `core/phone.py`.
  */
+/** دولةُ **شاشات المصادقة** — بيتٌ واحدٌ لا اجتهادٌ لكل شاشة.
+ *
+ * قبل هذا كانت كلُّ شاشةٍ تختار بنفسها: الدخول من `default_country_code`،
+ * والتسجيل من `default_country_code ?? countries[0]`، **والاستعادة من
+ * `countries[0]` وحدها** — و`/config` يردّ الدول بترتيب التعداد `LY, JO`
+ * بينما الافتراضية `JO`. فكانت شاشةُ الاستعادة تفترض ليبيا **ومنتقي الدولة
+ * فيها مخفيّ**، أي أن أردنياً يدخل بحسابه ولا يستطيع استعادة كلمته: رقمُه
+ * يُطبَّع بمفتاح `+218` فلا يجد حساباً. وقد كُتب في `Register.tsx` تعليقٌ
+ * يشرح هذا العطبَ بعينه — أُصلح في شاشةٍ ونُسي في أختها، فصار المصدرُ هنا.
+ *
+ * ولا يُقرأ من هنا شيءٌ عن **حساب** قائم: بعد الدخول تُقرأ دولةُ صاحبه من
+ * `user.country_code` (`usePhoneCountry(user?.country_code)`).
+ */
+export function useAuthCountry(): {
+  country: CountryCode;
+  countries: CountryCode[];
+} {
+  const { config } = useConfig();
+  return {
+    country: config?.default_country_code ?? "JO",
+    countries: config?.countries.map((entry) => entry.country_code) ?? ["JO"],
+  };
+}
+
 export function usePhoneCountry(override?: CountryCode): {
   country: CountryCode;
   dialCode: string;

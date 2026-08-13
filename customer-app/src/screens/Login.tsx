@@ -15,22 +15,19 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { useConfig } from "@/lib/config";
-import { usePhoneCountry } from "@/lib/config";
+import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { Brand } from "@/components/Brand";
 
 export function LoginScreen() {
-  const { config } = useConfig();
   const { signIn } = useSession();
   const navigate = useNavigate();
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? [
-    "JO",
-  ];
-  // لا منتقيَ دولةٍ هنا كما في التصميم: البادئة ثابتةٌ من `default_country_code`
-  const { country, nationalLength } = usePhoneCountry();
+  // **مصدرٌ واحدٌ لدولة شاشات المصادقة** (`useAuthCountry`) — ولا منتقيَ هنا
+  // كما في التصميم: البادئة ثابتةٌ من `default_country_code`
+  const { country, countries } = useAuthCountry();
+  const { nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
@@ -42,7 +39,18 @@ export function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      signIn(await login(phone, password, country));
+      const response = await login(phone, password, country);
+      // **جوابان لا جواب**: حسابٌ يحمل عاملاً ثانياً يعود بلا توكن (12-د).
+      // ولا يُسجَّل عاملٌ إلا لحسابات اللوحة (`SecuritySelfUser`)، فهذا الجواب
+      // هنا يعني حساب طاقمٍ يحاول الدخول من تطبيقٍ ليس له — ويُقال له ذلك
+      // صراحةً بدل أن يُحفظ توكنٌ غائبٌ فتُفتح جلسةٌ فارغة
+      if (response.totp_required || !response.user || !response.tokens) {
+        setError(
+          "هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة.",
+        );
+        return;
+      }
+      signIn({ user: response.user, tokens: response.tokens });
       navigate("/", { replace: true });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر الدخول");
@@ -52,13 +60,13 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col justify-center px-24 py-40 pb-safe pt-safe">
+    <div className="flex min-h-full flex-col px-24 py-40 pb-safe pt-safe">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto w-full max-w-md space-y-24"
+        className="mx-auto mt-auto w-full max-w-md space-y-24"
       >
-        <Brand subtitle="أهلاً بعودتك — سجّل الدخول لتطلب رحلتك" />
+        <Brand subtitle="اطلب تاكسي في ثوانٍ" />
 
         <form onSubmit={submit} className="space-y-16">
           <PhoneInput
@@ -108,15 +116,22 @@ export function LoginScreen() {
           </Button>
         </form>
 
-        <div className="flex items-center justify-between text-14">
+        <div className="text-14">
           <Link to="/forgot-password" className="text-muted hover:text-ink">
             نسيت كلمة المرور؟
           </Link>
-          <Link to="/register" className="font-semibold text-ink">
-            حساب جديد
-          </Link>
         </div>
       </motion.div>
+
+      {/* **مثبَّتٌ أسفل الشاشة** كما في التصميم (`margin-top:auto`): سطرٌ
+          يُقرأ بعد أن يفشل الدخول أو قبل أن يُحاوَل، فمكانُه الطرفُ لا وسطُ
+          النموذج — ولا يزاحم الزرَّ الأساسي */}
+      <p className="mt-auto pt-24 text-center text-13 text-muted">
+        ليس لديك حساب؟{" "}
+        <Link to="/register" className="font-semibold text-ink underline">
+          سجّل الآن
+        </Link>
+      </p>
     </div>
   );
 }

@@ -26,7 +26,11 @@ export interface TokenPair {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  expires_in: number;
+  /** **لحظةُ الانتهاء لا مدّتُه**: الخلفيةُ ترسل `expires_at` (ISO)، وكان هذا
+   *  النوع يكتب `expires_in: number` — حقلاً لا يُرسل أبداً. لم يقرأه أحدٌ بعد،
+   *  فبقي كذبةً نائمة: أوّلُ من يبني تجديداً استباقياً للتوكن منه يقرأ
+   *  `undefined`. كشفه `check:config` حين اتّسع لأجوبة المصادقة. */
+  expires_at: string;
 }
 
 export interface AuthResponse {
@@ -90,6 +94,7 @@ export interface CountryConfig {
   quiet_hours_timezone: string | null;
   verification: string;
   verification_channels: string[];
+  otp_length: number | null;
 }
 
 export interface AppConfig {

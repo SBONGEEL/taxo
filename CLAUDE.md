@@ -32,7 +32,7 @@ stage 12 closes with sharing.
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
-**`check:config` is the third build guard and it closes the «field with no mirror» debt** — the shape
+**`check:config` covers `GET /config` *and the auth responses*, and it closes the «field with no mirror» debt** — the shape
 where a backend field is published, arrives on every call, and is discarded because the TypeScript type
 never mirrored it (`quiet_hours_*` did exactly that from stage 8 to 12-هـ). It compares
 `CountryConfigOut` and `ConfigOut` in `backend/app/schemas/config.py` against `CountryConfig` and
@@ -42,6 +42,17 @@ runtime — the `awaiting_confirmation` shape. Types are deliberately not compar
 open dict each app narrows to what it reads, and `auth` is inline in the panel and named in the two
 PWAs. It sits in **all three** apps because all three call `GET /config`. Verified by reproducing both
 directions and both models before being trusted.
+
+**It was widened to the auth responses after `LoginResponse` shipped unmirrored** in both PWAs: the
+backend answers `POST /auth/login` with `{totp_required, user: null, tokens: null}` when a second factor
+is due, while both apps typed it as `AuthResponse` with non-nullable tokens — so `tokens.save(undefined)`
+was one confirmed factor away. Latent (only `admin`/`support` can enroll, via `SecuritySelfUser`) but
+the guard is on the **account**, not the role. Widening it then found two more dormant lies in the same
+pass: `TokenPair.expires_in` in the driver app and the panel (the backend sends `expires_at`, so the
+first proactive-refresh feature would have read `undefined`) and a missing `ChallengeResponse.expires_in`.
+`MIRRORS` now carries a `required` flag — `LoginResponse` is required in all three because all three
+call `/auth/login`, while `ChallengeResponse` is checked only where declared (the panel has no phone
+verification).
 
 **And it immediately found a seventh flag with no button**: `scheduled_rides_enabled` (12-ط) was never
 added to the panel's `FeatureKey` union or its `FLAGS` array, so the panel build was **already red** —

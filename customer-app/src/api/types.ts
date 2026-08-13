@@ -80,6 +80,21 @@ export interface AuthResponse {
   tokens: TokenPair;
 }
 
+/** جوابُ الدخول — إمّا جلسةٌ كاملة، وإمّا تحدٍّ ثانٍ **بلا توكن** (12-د).
+ *
+ * **مرآةٌ لازمة وإن لم يُسجّل راكبٌ عاملاً ثانياً قط**: حارسُ الخلفية على
+ * **الحساب** لا على الدور، و`POST /auth/login` يردّ هذا الشكل لكلِّ من يناديه.
+ * وكان هذا الملف يكتبه `AuthResponse` بـ`tokens` غير قابلةٍ للغياب — فحسابٌ
+ * يحمل عاملاً كان يمرّ إلى `tokens.save(undefined)` بلا خطأٍ يُرى.
+ */
+export interface LoginResponse {
+  totp_required: boolean;
+  user: User | null;
+  tokens: TokenPair | null;
+  challenge_token: string | null;
+  expires_in: number | null;
+}
+
 export interface ChallengeResponse {
   sent: boolean;
   expires_in: number | null;
@@ -135,6 +150,10 @@ export interface CountryConfig {
    */
   verification: VerificationMethod;
   verification_channels: string[];
+  /** طولُ الرمز **لهذه الدولة** (لا للافتراضية) — و`null` لمُحقِّقٍ لا يأخذ
+   *  رمزاً منّا. نُقل `verification` إلى صفِّ الدولة في 12-هـ وبقي هذا يُقرأ
+   *  من `auth`، فترسم الشاشةُ خاناتِ سوقٍ وتتحقق الخلفيةُ بطول سوقٍ آخر. */
+  otp_length: number | null;
 }
 
 export interface AppConfig {

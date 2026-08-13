@@ -38,7 +38,18 @@ export function LoginScreen() {
     setError(null);
     try {
       // يُرسل E.164 ومعه الدولة صراحةً: لا استنتاجَ ولا التباس
-      signIn(await login(toE164(phone, dialCode), password, country));
+      const response = await login(toE164(phone, dialCode), password, country);
+      // **جوابان لا جواب**: حسابٌ يحمل عاملاً ثانياً يعود بلا توكن (12-د).
+      // ولا يُسجَّل عاملٌ إلا لحسابات اللوحة (`SecuritySelfUser`)، فهذا الجواب
+      // هنا يعني حساب طاقمٍ يحاول الدخول من تطبيقٍ ليس له — ويُقال له ذلك
+      // صراحةً بدل أن يُحفظ توكنٌ غائبٌ فتُفتح جلسةٌ فارغة
+      if (response.totp_required || !response.user || !response.tokens) {
+        setError(
+          "هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة.",
+        );
+        return;
+      }
+      signIn({ user: response.user, tokens: response.tokens });
     } catch (caught) {
       setError(
         caught instanceof ApiError ? caught.message : "تعذّر تسجيل الدخول",

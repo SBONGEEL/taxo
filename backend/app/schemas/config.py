@@ -33,6 +33,13 @@ class CountryConfigOut(BaseModel):
     # و`auth` أعلى الجواب يبقى للدولة الافتراضية: توافقٌ خلفيٌّ لا مصدرٌ ثانٍ.
     verification: str
     verification_channels: list[str] = []
+    # **وطولُ الرمز معه per-country** — وهو تكملةُ الإصلاح نفسِه: كان
+    # `verification` قد نُقل إلى صفِّ الدولة في 12-هـ **وبقي `otp_length` يُقرأ
+    # من `auth` أي من الدولة الافتراضية**، فترسم الشاشةُ عددَ خاناتٍ لسوقٍ
+    # وتتحقق الخلفيةُ بطول سوقٍ آخر. إصلاحٌ نصفُه ليس إصلاحاً.
+    #
+    # و`null` تعني مُحقِّقاً لا يأخذ رمزاً منّا (Firebase أو لا مُحقِّق).
+    otp_length: int | None = None
 
 
 class ConfigOut(BaseModel):
