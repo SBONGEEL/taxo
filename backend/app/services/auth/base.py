@@ -10,6 +10,7 @@ from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.auth import RegisterRequest
+from app.services import referrals
 
 async def create_account(
     session: AsyncSession,
@@ -35,6 +36,11 @@ async def create_account(
     if data.gender is not None and UserRole(data.role) is UserRole.DRIVER:
         raise InvalidInput("جنس الكبتن يثبّته المشرف من الهوية، لا يُكتب عند التسجيل")
 
+    # ورمزُ الإحالة على مسار الراكب يُرفض لا يُهمَل (المرحلة 12-ح): الحافزُ
+    # لجذب السائقات، ورمزٌ يُقبل ثم لا يُسند شيئاً يبدو أنه عمل
+    if data.referral_code and UserRole(data.role) is not UserRole.DRIVER:
+        raise InvalidInput("رمز الإحالة لحسابات الكباتن")
+
     user = User(
         phone=phone,
         name=data.name.strip(),
@@ -49,8 +55,16 @@ async def create_account(
     await session.flush()
 
     if user.role is UserRole.DRIVER:
-        # ملف الكبتن يُنشأ فوراً بحالة pending بانتظار مراجعة المستندات
-        session.add(Driver(user_id=user.id))
+        # ملف الكبتن يُنشأ فوراً بحالة pending بانتظار مراجعة المستندات.
+        # **ورمزُ الإحالة معه** (المرحلة 12-ح): توليدٌ متأخرٌ عند أول قراءةٍ
+        # يحتاج قفلاً على صفٍّ لا يُكتب فيه شيءٌ آخر، وبغيره تُنتج ضغطتان رمزين
+        driver = Driver(user_id=user.id, referral_code=referrals.generate_code())
+        session.add(driver)
         await session.flush()
+
+        # الرمزُ الذي جاء به — إن جاء. **والإسنادُ لا يُفحص استحقاقُه هنا**:
+        # هذا سجلُّ ما وقع، والاستحقاقُ سؤالٌ يُطرح لاحقاً (SPEC القسم 9.1)
+        if data.referral_code:
+            await referrals.attach(session, referred=driver, code=data.referral_code)
 
     return user

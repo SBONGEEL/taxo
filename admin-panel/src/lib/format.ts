@@ -11,7 +11,7 @@
  * مئوية) فلا مانع من صياغتها، ومع ذلك تمر بنفس الباب كي لا يبقى بابان.
  */
 
-import type { Currency } from "@/api/types";
+import type { CountryCode, Currency } from "@/api/types";
 
 import { arabicDigits } from "@/lib/utils";
 
@@ -20,6 +20,16 @@ export const CURRENCY_LABEL: Record<Currency, string> = {
   JOD: "د.أ",
   LYD: "د.ل",
 };
+
+/** عملةُ الدولة — **الخلفيةُ لا تُرسلها مع كل إعدادٍ per-country**، فتُشتق هنا.
+ *
+ * وبيتٌ واحدٌ لها لا نسخةٌ في كل شاشة: النسخةُ المحلية في `PromoCodes.tsx` هي
+ * ما جعل تمريرَ **التسمية** مكانَ **الرمز** ممكناً، فطُبعت المبالغُ بلا عملةٍ
+ * أصلاً. والفرقُ بين `"JOD"` و`"د.أ"` لا يراه المصرِّف.
+ */
+export function currencyOf(country: CountryCode): Currency {
+  return country === "JO" ? "JOD" : "LYD";
+}
 
 export function currencyLabel(currency: Currency | string | null | undefined) {
   return CURRENCY_LABEL[(currency ?? "JOD") as Currency] ?? "";

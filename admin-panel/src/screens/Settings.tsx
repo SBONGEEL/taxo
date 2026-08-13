@@ -33,11 +33,13 @@ import { ApiError } from "@/api/client";
 import {
   listCommission,
   listFeatureFlags,
+  getReferralSettings,
   listPaymentSettings,
   listWalletSettings,
   setFeatureFlag,
   updateCommission,
   updatePaymentSettings,
+  updateReferralSettings,
   updateWalletSettings,
 } from "@/api/endpoints";
 import type {
@@ -45,6 +47,7 @@ import type {
   CountryFeatureFlags,
   FeatureKey,
   PaymentSetting,
+  ReferralSetting,
   WalletSetting,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
@@ -52,6 +55,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { currencyLabel, currencyOf, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
 
@@ -88,6 +92,14 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "التحقق عبر واتساب",
     hint: "يُرسل رمزَ التحقق في واتساب بدل الرسائل القصيرة — ويشترط عقد WhatsApp مفعّلاً في صفحة العقود. ولا تُشعَل قبل اعتماد قالب المصادقة بلغة هذا السوق: قالبٌ غير معتمد يجعل كلَّ تسجيلٍ يرتدّ. وعند فشل الإرسال يُعرض على المستخدم الارتداد إلى الرسائل.",
   },
+  promo_codes_enabled: {
+    title: "رموز الخصم",
+    hint: "تظهر ورقةُ «عندي كوبون» في شاشة تأكيد الرحلة. والخصمُ **تتحمّله الشركة**: يُسجَّل دفعةً بقناة «كوبون» فلا يَنقص أجرةَ الكبتن ولا عمولته. وأنشئ الرموزَ في «العروض والحملات» — مفتاحٌ مشتعلٌ بلا رموز يفتح حقلاً لا يُقبل فيه شيء.",
+  },
+  driver_referrals_enabled: {
+    title: "حافز إحالة السائقات",
+    hint: "مكافأةٌ لمن يُحيل سائقةً تُدفع في محفظته بعد اعتماد حسابها وإكمالها عددَ الرحلات المطلوب — واضبط المبلغَ أدناه، فصفرُه يعني «لم يُحدَّد» فلا تُدفع مكافأة ولا يُوعَد بها أحد. والرمزُ يظهر للكبتن على كل حال فالإحالاتُ تُسجَّل ولو كان المفتاح مطفأً.",
+  },
   women_service_enabled: {
     title: "خدمة التوصيل النسائي",
     hint: "لا تُشعَل قبل مراجعة أجناس الكباتن المعتمدين — خدمةٌ بلا سائقاتٍ يمكن ترشيحُهنّ تُقرأ ميزةً معطوبة. اعرض «من لم يُثبَّت جنسُه» في صفحة السائقين.",
@@ -104,6 +116,8 @@ const FLAGS: FeatureKey[] = [
   "women_service_enabled",
   "whatsapp_otp_enabled",
   "tips_enabled",
+  "promo_codes_enabled",
+  "driver_referrals_enabled",
   "otp_verification_enabled",
 ];
 
@@ -115,22 +129,27 @@ export function SettingsScreen() {
   const [commission, setCommission] = useState<CommissionSetting[]>([]);
   const [wallet, setWallet] = useState<WalletSetting[]>([]);
   const [payment, setPayment] = useState<PaymentSetting[]>([]);
+  const [referral, setReferral] = useState<ReferralSetting | null>(null);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p] = await Promise.all([
+    const [f, c, w, p, r] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
       listPaymentSettings(),
+      // **منفذُ الإحالة لدولةٍ واحدة** لا قائمة، فيدخل السوقُ في التبعيات —
+      // وبغيره يبقى معروضاً إعدادُ السوق الأول بعد تبديل الرأس
+      getReferralSettings(country),
     ]);
     setFlags(f);
     setCommission(c);
     setWallet(w);
     setPayment(p);
-  }, []);
+    setReferral(r);
+  }, [country]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -300,6 +319,34 @@ export function SettingsScreen() {
               />
             ) : (
               <p className="text-12.5 text-muted">لا إعداد دفعٍ لهذه الدولة.</p>
+            )}
+          </section>
+
+          {/* حافزُ الإحالة (12-ح) — بطاقةٌ مستقلةٌ لأن جدولَه مستقل
+              (`referral_settings`)، ونفسُ سببِ استقلال «سياسات الدفع» عن
+              «حدود المحفظة»: حقلٌ يسكن شاشةً غير جدوله يصير البحثُ عنه تخميناً */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">حافز إحالة السائقات</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              مكافأةٌ تُدفع في محفظة من أحال، بعد أن يُعتمد حسابُ المُحالة{" "}
+              <b className="text-ink">ويُثبَّت جنسُها</b> وتُكمل عددَ الرحلات
+              أدناه. <b className="text-ink">وصفرُ المبلغ يعني «لم يُحدَّد»</b>{" "}
+              فلا تُدفع مكافأةٌ ولا يُوعَد بها أحد — والإحالاتُ تُسجَّل على كل
+              حال. وتعديلُ الحدِّ يعيد تقييمَ ما لم يُدفع، ولا يمسّ ما دُفع.
+            </p>
+            {referral ? (
+              <ReferralForm
+                key={referral.country_code}
+                row={referral}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={setError}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">لا إعداد إحالةٍ لهذه الدولة.</p>
             )}
           </section>
         </div>
@@ -502,6 +549,78 @@ function WalletForm({
     </>
   );
 }
+
+/** مبلغُ الحافز وحدُّ الرحلات. **و`key={country}` عليه كبقية النماذج**:
+ *  `useState(row.…)` لا يُعاد قراءتُه عند تبدّل الخاصية، فتبديلُ السوق يكتب
+ *  رقمَ سوقٍ في سوقٍ آخر — وهو عطبٌ وقع في هذه الشاشة نفسها. */
+function ReferralForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ReferralSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [amount, setAmount] = useState(row.reward_amount);
+  const [rides, setRides] = useState(String(row.required_rides));
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          label={`مبلغ المكافأة (${currencyLabel(currencyOf(row.country_code))})`}
+          dir="ltr"
+          inputMode="decimal"
+          value={amount}
+          disabled={disabled}
+          onChange={(event) =>
+            setAmount(event.target.value.replace(/[^0-9.]/g, ""))
+          }
+        />
+        <Field
+          label="رحلات المُحالة المطلوبة"
+          dir="ltr"
+          inputMode="numeric"
+          value={rides}
+          disabled={disabled}
+          onChange={(event) => setRides(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+      </div>
+      <p className="mt-6 text-11 text-muted">
+        {Number(row.reward_amount) > 0
+          ? `الحالي: ${money(row.reward_amount, currencyOf(row.country_code))} بعد ${arabicDigits(String(row.required_rides))} رحلات`
+          : `لم يُحدَّد مبلغٌ بعد — والشرطُ ${arabicDigits(String(row.required_rides))} رحلات`}
+      </p>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || amount === "" || rides === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateReferralSettings(row.country_code, {
+            reward_amount: amount,
+            required_rides: Number(rides),
+          })
+            .then(() =>
+              onSaved("حُفظ الحافز — يُقيَّم ما لم يُدفع بالحدّ الجديد"),
+            )
+            .catch((caught) =>
+              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
 
 function PaymentForm({
   row,

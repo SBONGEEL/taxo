@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Field";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
-import { currencyLabel, day, money } from "@/lib/format";
+import { currencyLabel, currencyOf, day, money } from "@/lib/format";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
@@ -47,26 +47,23 @@ const TYPE_LABEL: Record<PromoCode["discount_type"], string> = {
  *  (`format.ts`)، فتمريرُ التسمية إليها يجعلها تبحث عن «د.أ» في جدول الرموز
  *  فلا تجدها — فتُطبع المبالغُ **بلا عملةٍ أصلاً**. وهو ما وقع فعلاً حتى
  *  قُرئ عقدُ الدالة. والتسميةُ وحدها تُطلب صريحةً حيث يلزم نصُّها. */
-function codeOf(country: CountryCode): "JOD" | "LYD" {
-  return country === "JO" ? "JOD" : "LYD";
-}
-
+/** التسميةُ حيث يلزم نصُّها (عنوانُ حقلٍ مثلاً)؛ والرمزُ يمرّ إلى `money`. */
 function labelOf(country: CountryCode): string {
-  return currencyLabel(codeOf(country));
+  return currencyLabel(currencyOf(country));
 }
 
 /** قيمةُ الخصم كما تُقرأ: «٥٠٪ حتى ٢ د.أ» أو «١ د.أ». */
 function describe(row: PromoCode, country: CountryCode): string {
   if (row.discount_type === "percent") {
     const cap = row.max_discount
-      ? ` حتى ${money(row.max_discount, codeOf(country))}`
+      ? ` حتى ${money(row.max_discount, currencyOf(country))}`
       : " حتى كامل الأجرة";
     // **بلا أصفار النقدية**: النسبةُ تأتي `NUMERIC(12,3)` أي «50.000»، وطبعُها
     // كما هي يقرأ «٥٠.٠٠٠٪». وهي نسبةٌ لا مبلغ، فتُقصّ أصفارُها الزائدة
     const percent = row.discount_value.replace(/\.?0+$/, "");
     return `${arabicDigits(percent)}٪${cap}`;
   }
-  return money(row.discount_value, codeOf(country));
+  return money(row.discount_value, currencyOf(country));
 }
 
 export function PromoCodes({ onError }: { onError: (message: string) => void }) {
@@ -161,13 +158,13 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
                       </span>
                     </td>
                     <td className="p-8 text-ink">
-                      {money(row.budget_total, codeOf(row.country_code))}
+                      {money(row.budget_total, currencyOf(row.country_code))}
                     </td>
                     <td className={cn("p-8", over ? "text-warn" : "text-ink")}>
-                      {money(row.committed, codeOf(row.country_code))}
+                      {money(row.committed, currencyOf(row.country_code))}
                       <span className="text-muted">
                         {" / "}
-                        {money(row.spent, codeOf(row.country_code))}
+                        {money(row.spent, currencyOf(row.country_code))}
                       </span>
                     </td>
                     <td className="p-8 text-ink">

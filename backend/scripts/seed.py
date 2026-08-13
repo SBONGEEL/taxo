@@ -44,6 +44,11 @@ from app.models.payment_setting import (
     DEFAULT_CLIQ_CONFIRMATION_HOURS,
     PaymentSetting,
 )
+from app.models.referral import (
+    DEFAULT_REQUIRED_RIDES,
+    DEFAULT_REWARD_AMOUNT,
+    ReferralSetting,
+)
 from app.models.wallet_setting import WalletSetting
 from app.services.providers import credentials as credentials_service
 
@@ -80,6 +85,11 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # تسويقٍ بميزانيةٍ يكتبها المشرف، وكوبونٌ يُبذر في التطوير يصير عرضاً
         # حقيقياً في الإنتاج بلا أن يقرره أحد
         FeatureKey.PROMO_CODES_ENABLED: False,
+        # **مطفأٌ صراحةً** (المرحلة 12-ح): ومبلغُ الحافز صفرٌ فوقه — فالميزةُ
+        # تشحن خامدةً مرتين بقرار المالك. **ولا يُربط بـ`women_service_enabled`**:
+        # ذاك ينتظر تصفيةَ متراكمِ إثبات الجنس، والحافزُ هو ما يبني العرضَ الذي
+        # ينتظره — فربطُهما يجعله ينتظر ما لا سبيلَ لبنائه
+        FeatureKey.DRIVER_REFERRALS_ENABLED: False,
     },
 }
 
@@ -250,6 +260,26 @@ async def seed_payment_settings(session: AsyncSession) -> None:
                 f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة، "
                 f"بقشيش {amounts['tip_preset_small']}/{amounts['tip_preset_medium']} "
                 f"بسقف {amounts['tip_max']})"
+            )
+
+
+async def seed_referral_settings(session: AsyncSession) -> None:
+    """حافزُ الإحالة لكل دولة — **صفرٌ وثلاثُ رحلات** (قرارُ المالك 2026-08-12).
+
+    ويُبذر الصفُّ وإن كانت قيمُه هي الافتراضات: بغيره لا تجد شاشةُ اللوحة صفاً
+    تعدّله، فيبدو الحقلُ فارغاً كأنه عطبٌ لا كأنه «لم يُحدَّد بعد». وصفرُ
+    المبلغ يمنع كتابةَ أي قيد — الآليةُ تعمل والمالُ ينتظر قرارَه.
+    """
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(ReferralSetting.id).where(ReferralSetting.country_code == country)
+        )
+        if exists is None:
+            session.add(ReferralSetting(country_code=country))
+            _log(
+                f"حافز إحالة: {country.value} "
+                f"(المبلغ {DEFAULT_REWARD_AMOUNT} — لم يُحدَّد بعد، "
+                f"وشرطُه {DEFAULT_REQUIRED_RIDES} رحلات)"
             )
 
 
@@ -538,6 +568,7 @@ async def main() -> None:
         await seed_pricing(session)
         await seed_wallet_settings(session)
         await seed_payment_settings(session)
+        await seed_referral_settings(session)
         await seed_notification_settings(session)
         await seed_plans(session)
         await seed_providers(session)

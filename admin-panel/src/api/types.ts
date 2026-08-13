@@ -261,7 +261,9 @@ export type FeatureKey =
   | "women_service_enabled"
   | "multi_stop_enabled"
   | "whatsapp_otp_enabled"
-  | "tips_enabled";
+  | "tips_enabled"
+  | "promo_codes_enabled"
+  | "driver_referrals_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
@@ -288,6 +290,41 @@ export interface WalletSetting {
   transfer_monthly_limit: string;
   min_withdrawal_amount: string;
   updated_at: string;
+}
+
+/** حافزُ الإحالة per-country (12-ح) — **صفرُ المبلغ «لم يُحدَّد»** فلا يُدفع. */
+export interface ReferralSetting {
+  country_code: CountryCode;
+  reward_amount: string;
+  required_rides: number;
+}
+
+/** مجاميعُ سوقٍ واحد — **من الخلفية**: جمعُ صفحةٍ مقصوصةٍ هنا يكذب بعنوانه. */
+export interface ReferralSummary {
+  country_code: CountryCode;
+  total_rewarded: string;
+  rewarded_count: number;
+  pending_count: number;
+}
+
+/** صفٌّ في جدول الإحالات — **حقائقُ لا جملةُ حالة**: النصَّ تبنيه الشاشة. */
+export interface AdminReferralRow {
+  id: string;
+  created_at: string;
+  referrer_name: string;
+  referrer_phone: string;
+  referred_name: string;
+  referred_phone: string;
+  code_used: string;
+  driver_approved: boolean;
+  gender_ready: boolean;
+  rides_done: number;
+  rides_required: number;
+  qualifies: boolean;
+  rewarded: boolean;
+  reward_amount: string | null;
+  reward_currency: string | null;
+  rewarded_at: string | null;
 }
 
 export interface PaymentSetting {

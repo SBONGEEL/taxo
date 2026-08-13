@@ -54,6 +54,7 @@ from app.models.promo import PromoCode
 from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
+from app.models.referral import DriverReferral, ReferralSetting
 from app.models.place import SavedPlace
 from app.models.security_setting import SecuritySetting
 from app.models.totp import UserRecoveryCode, UserTotp
@@ -87,6 +88,7 @@ __all__ = [
     "DocumentType",
     "Driver",
     "DriverDocument",
+    "DriverReferral",
     "DriverStatus",
     "DriverSubscription",
     "FeatureFlag",
@@ -109,6 +111,7 @@ __all__ = [
     "ProviderOrderStatus",
     "Rating",
     "RatingRaterType",
+    "ReferralSetting",
     "REQUIRED_DOCUMENT_TYPES",
     "Ride",
     "RideRoutePoint",

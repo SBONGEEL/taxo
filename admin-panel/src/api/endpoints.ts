@@ -24,6 +24,7 @@ import type {
   DriverDocument,
   DriverDocuments,
   DriverStatus,
+  AdminReferralRow,
   FeatureKey,
   Gender,
   LiveMap,
@@ -32,6 +33,8 @@ import type {
   Payment,
   PaymentMethod,
   PaymentSetting,
+  ReferralSetting,
+  ReferralSummary,
   PaymentStatus,
   PricingRule,
   PromoCode,
@@ -362,6 +365,31 @@ export const updatePaymentSettings = (
     tip_max?: string;
   },
 ) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
+
+// ------------------------------------------------- إحالةُ السائقات (12-ح)
+
+export const getReferralSettings = (country: CountryCode) =>
+  api.get<ReferralSetting>(`/admin/referrals/settings?country_code=${country}`);
+
+export const updateReferralSettings = (
+  country: CountryCode,
+  payload: { reward_amount?: string; required_rides?: number },
+) =>
+  api.put<ReferralSetting>(
+    `/admin/referrals/settings?country_code=${country}`,
+    payload,
+  );
+
+export const getReferralSummary = (country: CountryCode) =>
+  api.get<ReferralSummary>(`/admin/referrals/summary?country_code=${country}`);
+
+/** جدولُ الإحالات — و**دولةُ المُحيلة** هي مقياسُ الفرز: مالُ المكافأة يخرج
+ *  من ميزانية سوقه ويدخل محفظته بعملته. */
+export const listReferrals = (country: CountryCode, rewarded?: boolean) =>
+  api.get<AdminReferralRow[]>(
+    `/admin/referrals?country_code=${country}` +
+      (rewarded === undefined ? "" : `&rewarded=${rewarded}`),
+  );
 
 // ------------------------------------------------------------ العقود
 

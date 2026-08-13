@@ -39,6 +39,7 @@ import type {
   Delivery,
 } from "@/api/types";
 import { PromoCodes } from "@/components/PromoCodes";
+import { Referrals } from "@/components/Referrals";
 import { Modal } from "@/components/ui/Modal";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
@@ -255,6 +256,10 @@ export function CampaignsScreen() {
       ) : null}
 
       <PromoCodes onError={setError} />
+
+      {/* الإحالاتُ هنا لا في «السائقين»: هي وحملاتُ الخصم شيءٌ واحد — عرضٌ
+          تتحمّله الشركة، ومجموعُ كلفته يُقرأ في مكانٍ واحد */}
+      <Referrals onError={setError} />
     </Shell>
   );
 }

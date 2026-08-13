@@ -87,6 +87,9 @@ const VehicleScreen = lazy(() =>
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
+const ReferralsScreen = lazy(() =>
+  import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
+);
 const CardReturnScreen = lazy(() =>
   import("@/screens/CardReturn").then((m) => ({ default: m.CardReturnScreen })),
 );
@@ -322,6 +325,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <CardsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/referrals"
+                          element={
+                            <Guarded>
+                              <ReferralsScreen />
                             </Guarded>
                           }
                         />

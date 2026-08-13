@@ -73,6 +73,15 @@ class Driver(UUIDMixin, TimestampMixin, Base):
         server_default=GenderPreference.ANY.value,
     )
 
+    # رمزُ الإحالة (المرحلة 12-ح). **فريدٌ عالمياً لا per-country**: الرمزُ
+    # يُقال في مكالمة، وواحدٌ في الأردن يطابق واحداً في ليبيا هو رمزٌ يذهب
+    # لصاحب الحساب الخطأ. ويُولَّد عند إنشاء الكبتن — لا عند أول فتحةٍ للشاشة:
+    # توليدٌ عند القراءة يحتاج قفلاً على صفٍّ لا يُكتب فيه شيءٌ آخر، وبغيره
+    # تُنتج ضغطتان رمزين. و`nullable` لأن القائمين قبل الترحيلة يأخذونه فيها
+    referral_code: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, unique=True, index=True
+    )
+
     user: Mapped["User"] = relationship(back_populates="driver")
     vehicles: Mapped[list["Vehicle"]] = relationship(
         back_populates="driver", cascade="all, delete-orphan"

@@ -38,6 +38,12 @@ CAMPAIGN_INTERVAL_SECONDS = 60
 STOP_WAIT_INTERVAL_SECONDS = 60.0
 CLIQ_SWEEP_INTERVAL_SECONDS = 300
 
+# دورةُ مكافآت الإحالة (المرحلة 12-ح). عشرُ دقائق: الاستحقاقُ يقع بإكمال رحلةٍ
+# أو باعتماد حساب، وكلاهما لا ينتظره أحدٌ على شاشة — ومكافأةٌ تصل بعد عشر دقائق
+# مكافأةٌ وصلت. والدورةُ رخيصةٌ حين لا مستحقّ: استعلامٌ واحدٌ على فهرس
+# `rewarded_at IS NULL`
+REFERRAL_INTERVAL_SECONDS = 600
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
@@ -45,6 +51,7 @@ celery_app = Celery(
     include=[
         "app.tasks.notifications",
         "app.tasks.payments",
+        "app.tasks.referrals",
         "app.tasks.stops",
         "app.tasks.subscriptions",
     ],
@@ -75,6 +82,10 @@ celery_app.conf.update(
         "sweep-stop-waiting": {
             "task": "app.tasks.stops.sweep_stop_waiting",
             "schedule": STOP_WAIT_INTERVAL_SECONDS,
+        },
+        "pay-referral-rewards": {
+            "task": "app.tasks.referrals.pay_referral_rewards",
+            "schedule": REFERRAL_INTERVAL_SECONDS,
         },
     },
 )

@@ -23,6 +23,7 @@ import type {
   DriverSubscription,
   DriverWallet,
   GenderPreference,
+  MyReferrals,
   MySubscription,
   NotificationPreferences,
   Payment,
@@ -321,3 +322,10 @@ export const listDocuments = () =>
 /** رفعُ مستند — `multipart` لا JSON، فيمر خارج `api.*` بعميلٍ يعرف الملفات. */
 export const uploadDocument = (docType: DocumentType, file: File) =>
   upload<DocumentUpload>(`/drivers/me/documents/${docType}`, file);
+
+// ------------------------------------------------- إحالةُ السائقات (12-ح)
+
+/** رمزي ومن سجّل به. **قراءةٌ وحدها**: الرمزُ يُولَّد مع الحساب، والإسنادُ في
+ *  التسجيل، والدفعُ مهمةٌ دورية — فلا زرَّ «اطلب مكافأتي» يصير باباً ثانياً. */
+export const getMyReferrals = () =>
+  api.get<MyReferrals>("/drivers/me/referrals");

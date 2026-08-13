@@ -15,8 +15,8 @@ upload/review and the notification inbox (9-ب); the driver PWA (10); the women'
 end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
 (11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
 finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **626 backend tests pass**
-(57 test files of 58; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
+contracts, users & permissions, audit log. Every nav entry has a screen. **645 backend tests pass**
+(59 test files of 60; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
 frontends build with `check:scale` + `check:enums` green.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
@@ -195,6 +195,64 @@ Two facts found in that pass, both of which nearly became "fixes":
   detail. They exist for correctness (an admin editing a code must not move a running ride's
   discount), and what any human reads is the amount on the `promo` payment row. Guarding them is
   `tests/test_promo.py`, which reads the database.
+
+**Stage 12-ح — the female-driver referral incentive — is done** (`SPEC.md` §9.1, `driver_referrals`
++ `referral_settings` in §4, migration `0024`, `services/referrals.py`, `tasks/referrals.py`, the
+driver's «أَحِلْ سائقة» screen, the panel's table and its two settings fields). It **ships dormant
+twice over** by the owner's decision: the flag is off and the amount is zero, and zero reads as "not
+decided yet" — so the mechanism records and measures while no ledger entry is written and **no screen
+promises money nobody has decided**.
+
+Four rules in it are worth carrying forward:
+
+- **The qualification is a live comparison, never a stamped column.** There is no `qualified_at` and
+  no `status`: rides-completed is counted against a settings threshold at read time, so lowering the
+  threshold in the panel pays everyone who was waiting without touching a row — the same rule as
+  "flagged" in the gender-mismatch reports. **Only the payment is frozen** (`rewarded_at`,
+  `reward_amount`, `reward_currency`, `transaction_id`, written together or not at all, enforced by an
+  all-or-nothing CHECK), because money is not re-evaluated.
+- **The gender condition applies to the referred driver only, and only with the admin's stamp.** A
+  referrer of any gender qualifies — a captain signing up his sister grows the supply exactly as a
+  female captain does, and restricting the referrer halves the reach while protecting nothing. That
+  deviation from `FUTURE-FEATURES` 46's wording was **approved by the owner on 2026-08-13** — "the
+  guard sits on the referred driver, where it matters" — and is recorded in SPEC.
+- **The reward is paid by a periodic task, never on the ride path.** A failed bonus write must not
+  fail a ride completion, and must not be swallowed the way a failed route-point capture is —
+  money is not a trace. A separate cycle makes failure a retry.
+- **The code is consumed at signup and nowhere else.** There is no route that attaches a referral to
+  an existing account: retroactive attribution is the one manipulation door that cannot be closed
+  after it is opened. A rider who sends `referral_code` is **refused, not ignored** (the `gender`-on-
+  the-driver-path rule).
+
+`referral_bonus` is a credit with **no matching debit** — the company bears it, as with the coupon
+discount, and the company's pot is not a wallet in this system.
+
+**The concurrency test taught the same lesson twice over.** The first version passed with the lock
+deleted, because an `asyncio.Event` woke the holder at the exact moment the second call started, so
+the commit landed first and the second read a committed row. Rewritten with explicit delays (the
+stage-8 shape: the writer holds its transaction open for 400ms, the second starts after 100ms), the
+deletion now fails it — and **what it produces is not an exception**: `['paid', 'paid']`, because
+`wallet.record` finds the idempotency key and returns the *existing* entry silently, so the second
+call stamps `rewarded_at` again and reports a payment that does not exist in the ledger. The platform
+would believe it paid twice while the ledger holds one entry — worse than a crash, because a crash is
+visible in the log and this is read as a number in a cost report.
+
+**And building it found a defect in stage 12-ز that had already shipped**: `promo_codes_enabled` was
+never added to the panel's `FeatureKey` union, so **coupons could not be switched on from the panel at
+all** — the sixth flag this project has shipped with no button, with the rule written in this file the
+whole time. So the rule is now a **build guard**, by the owner's decision ("a written rule is not
+enough; a guard is"): `admin-panel/scripts/check-flags.mjs`, wired into `npm run build` as
+`check:flags`.
+
+It makes **two** comparisons, because the defect arrives through two doors and `tsc` sees neither.
+The union in `api/types.ts` must equal the backend's `FeatureKey` exactly — **a union that is merely
+*smaller* is valid TypeScript**, so nothing but this check notices a missing member, and while it is
+missing the button cannot even be written. And the `FLAGS` array in `screens/Settings.tsx` — the list
+that actually draws the switches — must contain every key: **an array missing an element is not a type
+error**, which is precisely the "value missing from an *array* rather than a union" failure this file
+already warned about. `FLAG_LABEL` needs no check; it is a `Record<FeatureKey, …>` and the compiler
+owns it. Both halves were verified by reproducing them (and the union half caught a real clobbering of
+`types.ts` minutes after being written).
 
 **Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
 coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
@@ -575,8 +633,9 @@ There is no frontend test runner: stage 9 added no business logic to test — pr
 state transitions all stay in the backend, and the app displays what the API returns. `npm run
 build` is the check that runs, and it type-checks every file.
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running the subscription sweep
-every five minutes and the stage-8 campaign dispatch every minute. **Run exactly one `beat`** — a
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running five periodic jobs: the
+subscription sweep and the CliQ-confirmation sweep every five minutes, the stage-8 campaign dispatch
+and the multi-stop wait cap every minute, and the referral-bonus payout every ten (12-ح). **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
 pool bound to the previous one. Tasks are thin wrappers over `services/`, and the tests call the

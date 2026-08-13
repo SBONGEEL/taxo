@@ -446,3 +446,30 @@ export interface DriverSubscription {
   payment_method: PaymentMethod;
   status: "active" | "expired" | "cancelled";
 }
+
+
+/** إحالةٌ واحدةٌ كما تصل — **حقائقُ لا جملةُ حالة** (المرحلة 12-ح). */
+export interface ReferralStage {
+  id: string;
+  created_at: string;
+  driver_approved: boolean;
+  gender_ready: boolean;
+  rides_done: number;
+  rides_required: number;
+  qualifies: boolean;
+  rewarded: boolean;
+  reward_amount: string | null;
+  reward_currency: string | null;
+  rewarded_at: string | null;
+}
+
+/** قسمُ الإحالة في الحساب. **و`reward_amount === "0"` تعني «لم يُحدَّد»**
+ *  فلا تعرض الشاشةُ مبلغاً ولا تَعِد به — وعدٌ بمالٍ لم يقرّره أحدٌ أسوأ من صمت. */
+export interface MyReferrals {
+  code: string;
+  enabled: boolean;
+  reward_amount: string;
+  required_rides: number;
+  total_rewarded: string;
+  referrals: ReferralStage[];
+}

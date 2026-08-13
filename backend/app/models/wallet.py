@@ -49,6 +49,8 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.TRANSFER_IN,
     WalletTransactionType.REFUND,
     WalletTransactionType.TIP,
+    # حافزُ الإحالة (12-ح): دائنٌ وحده — لا صفَّ مدينٍ يقابله، فالشركةُ تتحمّله
+    WalletTransactionType.REFERRAL_BONUS,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (

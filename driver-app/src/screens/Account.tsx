@@ -41,6 +41,12 @@ export function AccountScreen() {
     profile?.user.country_code,
     "women_service_enabled",
   );
+  // **الصفُّ خلف مفتاحه** (12-ح): قسمٌ يعرض رمزاً في سوقٍ لا حافزَ فيه يَعِد
+  // بما لا وجودَ له. والإحالاتُ تُسجَّل على كل حال — ما يُخفى هو العرض
+  const referralsOn = useFeature(
+    profile?.user.country_code,
+    "driver_referrals_enabled",
+  );
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
 
   useEffect(() => {
@@ -183,6 +189,13 @@ export function AccountScreen() {
             sub="بطاقاتُ الدفع التي حفظتَها"
             onClick={() => navigate("/account/cards")}
           />
+          {referralsOn ? (
+            <Row
+              label="أَحِلْ سائقة"
+              sub="رمزك ومن سجّل به"
+              onClick={() => navigate("/account/referrals")}
+            />
+          ) : null}
           <Row
             label="الإعدادات"
             sub="الإشعارات · المظهر · alias كليك"
