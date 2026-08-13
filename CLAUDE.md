@@ -7,17 +7,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 TAXO is a two-country (Jordan/Libya) ride-hailing platform: a FastAPI backend, two rider/driver
 PWAs, and an operations panel. `SPEC.md` §16 is a strict ordered plan; this is where it has got to.
 
-**Done — stages 1 through 11, plus 10-ج and 12-أ.** Infrastructure and auth; per-country settings
-and encrypted provider contracts; rides and Mapbox pricing; Redis-GEO dispatch and the tracking
-sockets; the wallet ledger; payments, route points and ratings (6-أ); the Telr card channel (6-ب);
-driver subscriptions (7); the provider integrations and campaigns (8); the rider PWA (9); document
-upload/review and the notification inbox (9-ب); the driver PWA (10); the women's transport service
-end to end (10-ج); the rider app's migration onto the design system (12-أ); and **the admin panel
-(11), now complete** — login, overview, live map, rides log, drivers/documents, riders, disputes,
-finance, subscriptions/plans, pricing, reports, campaigns, per-country settings, provider
-contracts, users & permissions, audit log. Every nav entry has a screen. **672 backend tests pass**
-(62 test files of 63; `conftest.py` holds none) — measured, not estimated, on 2026-08-13; all three
-frontends build with `check:scale` + `check:enums` green.
+**Done — stages 1 through 11, plus 10-ج, and every part of stage 12 except ride sharing.**
+Infrastructure and auth; per-country settings and encrypted provider contracts; rides and Mapbox
+pricing; Redis-GEO dispatch and the tracking sockets; the wallet ledger; payments, route points and
+ratings (6-أ); the Telr card channel (6-ب); driver subscriptions (7); the provider integrations and
+campaigns (8); the rider PWA (9); document upload/review and the notification inbox (9-ب); the driver
+PWA (10); the women's transport service end to end (10-ج); and **the admin panel (11), complete** —
+login, overview, live map, rides log, drivers/documents, riders, disputes, finance,
+subscriptions/plans, pricing, reports, campaigns, per-country settings, provider contracts, users &
+permissions, audit log. Every nav entry has a screen.
+
+**Stage 12, item by item**: 12-أ the rider app's migration onto the design system · 12-ب multi-stop ·
+12-ج the `FUTURE-FEATURES` bundles sitting on 12-ب (saved places / recent destinations / re-order =
+items 1–3; the driver's earnings summary = 17; the dispute badge in both ride logs = 19; vehicle
+editing and the CliQ alias = 43/18) ·
+12-د two-factor login for the panel · 12-هـ WhatsApp as a third phone verifier · 12-و tipping ·
+12-ز coupons · 12-ح the female-driver referral incentive · 12-ط scheduled rides · plus the two
+maintenance jobs. **12-ي — ride sharing — is specified in `SPEC.md` §5.12 with the owner's decisions
+recorded, and no code exists for it**; it is the one thing left before stage 13. **Surge the owner
+decided not to build** (with no real demand data it would be tuned wrong and turn riders away), so
+stage 12 closes with sharing.
+
+**675 backend tests pass** across 60 test files — measured, not estimated, on 2026-08-13. All three
+frontends build with `check:scale`, `check:enums` and (in the panel) `check:flags` green.
+
+**What is actually in progress is not a stage**: matching `customer-app` to the rider prototype, in
+five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per session. **Three are delivered and (ب) is
+next** — see "Rider design-matching" below before starting anything else. Sharing (12-ي) waits behind
+those packages by his sequencing, not by any technical dependency.
+
+**Stage 13 is what follows sharing**: tests plus a full manual run of the whole scenario — driver
+signs up → approved → subscribes → rider requests → tracking → payment → withdrawal. Three screens
+listed in the debt below are waiting for that run because they cannot be reached without it.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -313,7 +334,8 @@ now narrowed to provider errors, which is the rule the project already had. And 
 `currency` beside the amount: a money value serialized without its currency prints bare in the app,
 which is exactly what shipped in the panel's coupon table two days earlier.
 
-**The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`, seven beat jobs now).
+**The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`; the beat schedule now holds
+eight jobs).
 Neither is interesting except for one rule each, and both rules are about what the job must *not* do.
 
 **The inbox trim deletes by age alone, read or unread** (`inbox.trim`, 90 days, 5000 rows a cycle).
@@ -337,18 +359,74 @@ payment) after 30 minutes — long enough that an interrupted open call's webhoo
 residual risk is written down rather than denied. Each order commits in its own transaction, so one
 provider outage cannot undo what was already settled.
 
-**Then stage 12** (the rest of Phase-2 behind feature flags: scheduled rides, ride sharing,
-coupons, surge — coupons are now bundle item 3 with the owner's decisions recorded in
-`FUTURE-FEATURES`; scheduled rides and sharing are unstarted, and **surge the owner decided not to
-build**: with no real demand data it would be tuned wrong and turn riders away) **and stage 13**
-(tests plus a full manual run of the whole scenario: driver signs up → approved → subscribes →
-rider requests → tracking → payment → withdrawal).
+**Stage 12-ي — ride sharing — is specified and not built.** `SPEC.md` §5.12 holds the design and the
+owner's four decisions, and a fresh session can start from there: **two riders to a group** keyed by
+`rides.share_group_id`; the driver-side index becomes the composite
+`(driver_id, COALESCE(share_group_id, id))` **and its concurrency test comes before any screen** —
+that index is what stops a shared ride from being read as two active rides for one driver, and it is
+the one place the whole feature can produce money from nothing; a **flat per-country discount
+percentage**, sized so the driver's share of two rides is clearly above a solo ride, with **the
+company bearing the gap in the first cut** (the coupon rule: a discount must not reduce what the
+driver earns); and the safety rule the owner strengthened himself — **a gendered request is not
+shareable by default, even with another woman, and becomes shareable only by an explicit choice she
+makes**, because "she would probably accept" is not consent and silence is not a decision in a safety
+question.
 
-**The panel's seven new screens have now been opened in a browser**, and so has every screen the
-bundles below added. Keep doing that before calling one done: the failures `tsc`, `check:scale` and
+**One money question in §5.12 is still open and must not be answered by assumption**: the cancellation
+fee when one of two riders cancels. Cancelling first after the second has boarded does not cancel the
+second's ride, and what the first is charged is a money rule the owner decides. Until he does, the
+first cut applies the ordinary per-ride fee to each row on its own — recorded in SPEC as the weakest
+assumption available, explicitly so nobody later reads it as a decision.
+
+**Every screen these stages added has been opened in a browser**, including the panel's seven and each
+of the design packages below. Keep doing that before calling one done: the failures `tsc`, `check:scale` and
 `check:enums` cannot see — a value missing from an *array* rather than a union, a dropped
 tailwind-merge class, a marker that never renders, a button that works and then 409s — are exactly
 the ones this project has shipped before, and every one found since has been of that shape.
+
+### Rider design-matching: five packages, three delivered
+
+A screen-by-screen comparison of `customer-app` against the rider prototype (and the women's screens
+against what 10-ج actually built) produced five packages. **The owner approved the order
+هـ ← ج ← د ← ب ← أ, one package per session**, and three are delivered. The rule applied throughout is
+his: **in the design but not in the project → `FUTURE-FEATURES`, not built; in the project without a
+design → derive from the design's idiom; a behavioural conflict → SPEC and the backend win except in
+form, and the decision is recorded in `design/DESIGN-DECISIONS.md`.**
+
+- **(هـ) — done** (`2131535`). Three passages that all describe **already-built** behaviour nobody was
+  told about: the privacy note in the rider's profile (her gender is shown to no captain, and the
+  nearby-cars map is anonymised already — `anonymous_ref` and its test), the **two-way** matching
+  explanation in the female captain's settings (the direction every version of this feature drops, and
+  the answer to "why did my offers dry up?"), and the «الطلبات» section heading.
+- **(ج) — done** (`2131535`), and **measuring the prototype changed its scope**: `payShow` and
+  `rateShow` are `inset:0` over a full scrim (z 60) — *screens*, not sheets — and only `topupShow` is a
+  real bottom sheet. So one thing needed converting, not three: the topup sheet (three amounts and two
+  channels, holding **no channel logic** — it hands off to `/wallet/topup`, which owns it), plus the
+  `Stage` layer for rating. The package's real content was **the rider's notifications screen and its
+  bell** — a functional gap, not a cosmetic one: the inbox has existed since 9-ب and the driver app
+  reads it, while the rider could not see a dispute's outcome or any notice he missed.
+- **(د) — done** (`07c2dd5`). The labels of decision 23 (all decision numbers here are
+  `design/DESIGN-DECISIONS.md`); the theme toggle in the map header (**in addition to**
+  the settings row, not instead of it); the pin address reverse-geocoded **while the map moves**, not at
+  confirmation; the captain **card** in ride details instead of field/value rows; the cards row **inside**
+  the wallet; and «الإعدادات» as a separate screen — where what groups it is **the owner, not the
+  category**: everything in it belongs to the *device* (appearance, pink theme, offer notifications), and
+  everything belonging to the *account* (name, gender, preference, privacy) stays in «حسابي».
+
+**(ب) is next.** The rest of the confirm sheet: the payment-method picker **as a local preference**
+(decision 3 — the method is chosen before the ride, and `screens/Payment.tsx::METHODS` stays the single
+list of channels), the mixed-payment note, the price on the CTA, and «رجوع». **Without per-category
+pricing** — the owner excluded it explicitly; it stays deferred in `FUTURE-FEATURES`. **And the Payment
+screen's migration to the centred `payShow` layout belongs to this package**, not to (ج): that layout
+presumes the channel was already chosen in the confirm sheet, which is exactly what (ب) builds.
+
+**(أ) is last because it touches every route**: the four-tab bottom bar, deleting `/menu`, «حسابي» as a
+container screen, and re-classifying six routes underneath it. Doing it before (ب)–(د) would mean
+moving screens that were about to change anyway.
+
+**Four items are deferred by the owner's decision until after launch** and are marked ⏸️ in
+`FUTURE-FEATURES.md` (dated 2026-08-13): report a problem, the help centre, the "N cars nearby" line,
+and per-category pricing. Do not build them; he decides after launch.
 
 ### Open debt and decisions waiting on the owner
 
@@ -371,22 +449,47 @@ the ones this project has shipped before, and every one found since has been of 
    `services/card_gateway/telr.py` are flagged in its docstring as needing confirmation against
    real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
    `services/payout/` say the same in their module docstrings. They are arranged so being wrong
-   cannot move money wrongly, but they cannot go to production unverified.
-4. **`FUTURE-FEATURES.md` items 45–49** — see item 5 below; this slot is free.
-5. **`FUTURE-FEATURES.md` items 45–49** are the deferred pieces of the women's service and its
-   design: the in-ride emergency button (deliberately *not* half-built — a button promising help
-   nobody answers is worse than none), referral incentives for female drivers, "wait for a female
-   captain" (needs a queue that outlives `no_driver_found`), the "3 available nearby" count, and
-   in-app calling/messaging (needs number masking).
-6. **Closed** (2026-08-13): the rider's topup amount field showed the raw currency code (`JOD`)
-   while every other money surface showed «د.أ». It was one line — and it stayed a "known cosmetic
-   bug" long enough that I **reproduced it in the new topup sheet** by passing the same raw code.
-   The fix is a single exported `currencyLabel` in `lib/utils.ts`, so the label has one home that
-   `formatMoney` and any field suffix both read.
+   cannot move money wrongly, but they cannot go to production unverified. **`services/whatsapp/`
+   is the one provider written against real published documentation** (Meta's Cloud API), so it is
+   not in this list — but its authentication template must be approved in the Meta console before
+   the channel works anywhere.
+4. **Six finished features are switched off waiting for the owner, and two of them also wait on a
+   number.** `scripts/seed.py::FEATURE_DEFAULTS` is the intended state, and everything built since
+   10-ج seeds **off in both countries**: `women_service_enabled`, `multi_stop_enabled`,
+   `whatsapp_otp_enabled`, `tips_enabled`, `promo_codes_enabled`, `driver_referrals_enabled`,
+   `scheduled_rides_enabled`. Each has a switch in the panel's settings screen. **Tipping does
+   nothing until its three amounts are entered in the panel**: migration `0022` left both countries
+   at zero, which correctly reads as "not configured" and hides the feature, and re-seeding will not
+   fix it because `seed.py` is idempotent and skips existing rows. The referral reward is dormant
+   the same way *by his explicit decision* — flag off **and** amount zero, so the mechanism records
+   and measures while no screen promises money nobody has decided.
+   **And do not read the dev database as the intended default**: visual checks toggle flags (JO's
+   women's service is switched off and LY's on there right now, from this week's runs), so
+   `FEATURE_DEFAULTS` is the answer to "what ships", never `SELECT * FROM feature_flags`.
+5. **`FUTURE-FEATURES.md` items 45, 47 and 49** are what remains deferred from the women's service:
+   the in-ride emergency button (deliberately *not* half-built — a button promising help nobody
+   answers is worse than none), "wait for a female captain" (needs a queue that outlives
+   `no_driver_found`), and in-app calling/messaging (needs number masking). Item 46 (referral
+   incentives) shipped as 12-ح; item 48 (the "3 nearby" count) is now one of the four post-launch
+   deferrals above.
+6. **`GET /config` publishes no wallet limits**, so `customer-app/src/lib/wallet.ts` holds the three
+   quick-topup amounts as a local constant. They are *suggestion chips*, not limits — the backend
+   still validates every amount — but they are the one place the rider app carries a number the
+   backend did not send, and the honest fix is to publish `wallet_settings` in the config payload.
+   Small, and worth doing the next time a wallet screen is touched.
 7. **This machine only**: host port 5173 is taken by an unrelated `taxo-web` stack, so
    `.env.local` sets `CUSTOMER_APP_PORT=5176`. 5176 is the one fallback allowed in
    `settings.cors_origins`; the card-return URL still points at 5173, so testing the card channel
    needs the canonical port.
+
+**Two debts closed on 2026-08-13, recorded because each had already outlived its excuse.** The
+rider's topup amount field showed the raw currency code (`JOD`) while every other money surface
+showed «د.أ»; it was one line, and it stayed a "known cosmetic bug" long enough that I
+**reproduced it in the new topup sheet** by passing the same raw code — the fix is a single exported
+`currencyLabel` in `lib/utils.ts`. And quiet hours had been published by the backend since stage 8
+while the rider app's `CountryConfig` **type never mirrored them**, so the data arrived and was
+discarded: a new shape of this project's recurring failure — not a rule with no door, but **a field
+with no mirror**.
 
 ## Project rules that override defaults
 
@@ -716,9 +819,11 @@ There is no frontend test runner: stage 9 added no business logic to test — pr
 state transitions all stay in the backend, and the app displays what the API returns. `npm run
 build` is the check that runs, and it type-checks every file.
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running five periodic jobs: the
-subscription sweep and the CliQ-confirmation sweep every five minutes, the stage-8 campaign dispatch
-and the multi-stop wait cap every minute, and the referral-bonus payout every ten (12-ح). **Run exactly one `beat`** — a
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **eight** periodic jobs:
+the subscription sweep and the CliQ-confirmation sweep every five minutes; the stage-8 campaign
+dispatch, the multi-stop wait cap and **due bookings** (12-ط) every minute; the referral-bonus payout
+(12-ح) every ten; and the two stage-12 maintenance jobs — the stale-provider-order sweep and the inbox
+trim. **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
 pool bound to the previous one. Tasks are thin wrappers over `services/`, and the tests call the
@@ -749,6 +854,43 @@ It writes an audit entry with **no actor** (the actor is a human on the server, 
 someone who did not act is worse than a row naming nobody), revokes every session, and writes the
 account's owner an inbox row. `--release-enforcement` also drops the global switch, for the case
 where no admin holds a working factor any more.
+
+### Five accounts exist on the dev stack, and the visual checks need them
+
+These live in the local Postgres only, they are **never** to be created anywhere a browser other than
+this machine's can reach, and the shared password `TaxoTest123` is written down here for exactly that
+reason: it is worth nothing outside a container on one desk, and rebuilding four accounts by hand at
+the start of every session costs an hour.
+
+| phone | who | state |
+| --- | --- | --- |
+| `+962790000000` | مشرف التطوير | `admin` — the panel |
+| `+962790000011` | زيد السائق | driver, `approved` (three documents), male |
+| `+962790000012` | هناء السائقة | driver, `approved`, **female with `gender_verified_at` stamped** |
+| `+962790000021` | عمر الراكب | rider, male |
+| `+962790000022` | ليلى الراكبة | rider, **self-declared female** (the pink theme and privacy note) |
+
+Two operational traps around them, both of which cost time this week. **Login is rate-limited per
+phone, and polling it does not extend the window — it only keeps you locked out**; the limiter's Redis
+key must be deleted **inside** the container (`docker compose exec redis redis-cli`), because a
+Windows shell appends `\r` to the key name and deletes nothing. And **a 429 must never fall through to
+a registration attempt**: that is how a session ends up creating a second account on a number that
+already has one, with a password neither half remembers.
+
+**The visual harness is worth rebuilding the same way each time**: Playwright driving the *installed*
+Edge (`channel: "msedge"` — no browser download), with
+`args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]` so `mapbox-gl`
+renders headless. One helper that logs in and caches tokens into `localStorage`
+(`taxo.access_token` / `taxo.refresh_token`, and `taxo.driver.*` for the captain app), one script per
+package printing `✓/✗` per assertion, and screenshots in **both** themes. Keep it in the scratchpad,
+not the repo: it asserts against a database state that only exists here.
+
+**And read the API's actual shape before asserting on it.** Three of this week's "missing" features
+were my probe's error, not the app's: `GET /rides/me` returns `{ride, has_open_dispute,
+payment_methods, paid_amount}` with the ride **nested**, `RideOut` carries the captain as a nested
+`driver` object rather than a `driver_id`, and `customer-app` has **no `arabicDigits` at all** (its
+digits are Latin by convention). When a check reports "no data to test this", suspect the probe's
+shape before believing the absence.
 
 Postgres does not drop ENUM types with their tables, so every migration that creates one must
 `DROP TYPE IF EXISTS` it in `downgrade()` (see `0002_users_drivers_vehicles.py`) or a re-upgrade fails.
@@ -1087,20 +1229,21 @@ of whether the service was on — so with the flag off the app hid the selector 
 anywhere to change it. The backend was right to refuse (silently downgrading a gendered request is
 worse), so the fix belongs in the app: it now sends `any` whenever the service is not offered to
 this account, and the stored value is left alone — it is her choice and returns when the service
-does; what stops is the *sending*, not the saving. A refusal with no way out is not a refusal. Three rules live there: the choice is stored **per
+does; what stops is the *sending*, not the saving. A refusal with no way out is not a refusal. Two rules live there: the choice is stored **per
 device, not on the account** (turning it off because someone is watching should not turn it off on
-her phone at home), it is offered only where `women_service_enabled` is on **and** the account's
-gender is female — with no disabled control and no apology otherwise — and `customer-app`'s
-`Brand.tsx` is the single component allowed to branch on it, because the wordmark's normal colour
-is `--tx` and an unconditional `text-brand` would paint it the app's default yellow.
+her phone at home), and `customer-app`'s `Brand.tsx` is the single component allowed to branch on it,
+because the wordmark's normal colour is `--tx` and an unconditional `text-brand` would paint it the
+app's default yellow. **What the theme is conditioned on changed on 2026-08-13 — the declaration
+alone, no country flag — see the decision below; do not re-gate it on `women_service_enabled`.**
 
 On the screens, one rule is a **UI narrowing, not a backend constraint**, and it is written into
 `customer-app/src/lib/women.ts` — the single place either app answers "is this service offered to
 whoever is holding this phone". The `GenderPreference` enum is three-way everywhere, and a driver
 of any gender may restrict who he carries; but the *rider's* control is shown only to an account
 that declared itself female, because offering "request a female captain" to a male rider opens the
-exact door the service exists to close. Both PWAs also hide every trace of the feature — control,
-default, badge, pink theme — where `women_service_enabled` is off.
+exact door the service exists to close. Both PWAs hide every trace that **promises matching** —
+control, default preference, badge — where `women_service_enabled` is off. **The pink theme is not in
+that list any more**: it promises nothing, so it follows the declaration alone (the decision below).
 
 The rider is told the cost of a gendered request **before** she commits (fewer captains, wider
 search, longer wait), again while searching, and `no_driver_found` on such a ride carries its own
