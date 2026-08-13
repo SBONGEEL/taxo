@@ -41,6 +41,8 @@ const KEY = "taxo.pink";
 // أثرُ «قيل لها مرةً» — مفتاحٌ منفصلٌ عن الاختيار: جهازٌ لم يُضبط فيه اختيارٌ
 // وقد رأت الإشعارَ فيه حالةٌ قائمة، ودمجُهما يعيد الإشعارَ كلَّ فتحة
 const NOTICE_KEY = "taxo.pink.notice";
+/** آخرُ قيمةٍ محسوبةٍ للسِمة — تقرؤها الشاشةُ الترحيبية وحدها (§7.6). */
+const ACTIVE_KEY = "taxo.pink.active";
 
 interface BrandState {
   /** هل السِمة مرسومةٌ الآن؟ */
@@ -92,6 +94,12 @@ export function BrandProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("pink", pink);
+    // **أثرٌ للرسم قبل الإقلاع لا مصدرٌ ثانٍ** (`DESIGN.md` §7.6): الشاشةُ
+    // الترحيبية تُرسم قبل الحزمة، ولا سبيلَ لها إلى معرفة `available` — فهي
+    // تنتظر الجلسة. فلو خمّنت من الاختيار وحده لصبغت شعارَ من لا تُتاح له.
+    // ويُكتب من `pink` المحسوب نفسِه في نفس اللحظة، فلا يستطيع أن يخالفه:
+    // ما يُقرأ في الفتحة القادمة هو ما وقع في هذه
+    localStorage.setItem(ACTIVE_KEY, pink ? "1" : "0");
   }, [pink]);
 
   const setPink = useCallback((next: boolean) => {

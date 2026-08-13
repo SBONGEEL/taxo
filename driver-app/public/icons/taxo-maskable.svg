@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TAXO RIDER">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TAXO DRIVER">
   <!-- ألوانُ `DESIGN.md` §1.1 (الوضع الليلي ثابتاً — أيقونةُ النظام لا تتبع
        سِمةَ التطبيق). وأُسقط `#facc15` على `#0b0f14`: أصفرُ اللوحة التي حُذفت
        في 12-أ، وخلفيةٌ ليست في §1.1 أصلاً -->
-  <rect width="512" height="512" rx="114" fill="#14181d"/>
-  <g transform="translate(256 256) scale(1.0) translate(-256 -256)">
+  <rect width="512" height="512" fill="#14181d"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
     <g fill="none" stroke="#e6edf3" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
        transform="translate(98 160) scale(1.375)">
       <path d="M8 24 H52 M30 24 V72"/>
@@ -13,6 +13,6 @@
     </g>
     <text x="256" y="322" text-anchor="middle" fill="#8b949e"
           font-family="'IBM Plex Sans Arabic', system-ui, sans-serif"
-          font-size="38" font-weight="600" letter-spacing="5.3">RIDER</text>
+          font-size="38" font-weight="600" letter-spacing="5.3">DRIVER</text>
   </g>
 </svg>

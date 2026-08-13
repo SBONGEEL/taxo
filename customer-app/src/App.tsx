@@ -4,7 +4,7 @@
  * عقد FCM من الإعدادات، و`Session` قبل `Ride` لأن المقبس لا يُفتح بلا مستخدم.
  */
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import {
   Navigate,
   Route,
@@ -21,6 +21,7 @@ import { ConfigProvider, useConfig } from "@/lib/config";
 import { RideProvider } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
+import { hideSplash } from "@/lib/splash";
 import { ThemeProvider } from "@/lib/theme";
 import { LoginScreen } from "@/screens/Login";
 
@@ -96,6 +97,13 @@ function Boot({ children }: { children: ReactNode }) {
   const { config, error, reload } = useConfig();
   const { loading } = useSession();
 
+  // **الترحيبيةُ تُزال حين ينتهي الإقلاع** (`DESIGN.md` §7.5) — سواءٌ انتهى
+  // بنجاحٍ أو بخطأ: شاشةُ خطأٍ تحت شاشةٍ ترحيبيةٍ باقيةٍ خطأٌ لا يراه أحد
+  const booted = Boolean(config) && !loading;
+  useEffect(() => {
+    if (booted || error) hideSplash();
+  }, [booted, error]);
+
   // الإعدادات شرطٌ لرسم شاشة الدخول نفسها (أيُّ مُحقِّق، وأيُّ دول)
   if (!config && error) {
     return (
@@ -113,14 +121,9 @@ function Boot({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!config || loading) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-24">
-        <Brand />
-        <Spinner />
-      </div>
-    );
-  }
+  // **ولا شاشةَ انتظارٍ ثانية**: الترحيبيةُ ما زالت فوق كل شيء حتى الآن،
+  // وشاشتان متتاليتان تُقرآن تعثّراً (§7.5)
+  if (!config || loading) return null;
 
   return <>{children}</>;
 }

@@ -14,7 +14,7 @@
  * أصلاً (`dispatch.eligible_driver_ids`).
  */
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import {
   Navigate,
   Route,
@@ -26,6 +26,7 @@ import type { ReactNode } from "react";
 import { CenteredMessage, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
+import { hideSplash } from "@/lib/splash";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { RideProvider } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
@@ -116,6 +117,12 @@ function Boot({ children }: { children: ReactNode }) {
   const { config, error, reload } = useConfig();
   const { loading } = useSession();
 
+  // **الترحيبيةُ تُزال حين ينتهي الإقلاع** (`DESIGN.md` §7.5) — بنجاحٍ أو بخطأ
+  const booted = Boolean(config) && !loading;
+  useEffect(() => {
+    if (booted || error) hideSplash();
+  }, [booted, error]);
+
   // الإعدادات شرطٌ لرسم شاشة الدخول نفسها: منها يُعرف أيُّ مُحقِّقٍ يرسم
   if (!config && error) {
     return (
@@ -133,14 +140,8 @@ function Boot({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!config || loading) {
-    return (
-      <CenteredMessage>
-        <div className="text-38 font-bold tracking-brand text-brand">TAXO</div>
-        <Spinner />
-      </CenteredMessage>
-    );
-  }
+  // **ولا شاشةَ انتظارٍ ثانية**: الترحيبيةُ ما زالت فوق كل شيء (§7.5)
+  if (!config || loading) return null;
 
   return <>{children}</>;
 }

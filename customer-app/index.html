@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/icons/taxo.svg" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,8 +24,151 @@
     />
 
     <title>TAXO</title>
+
+    <!-- **السِمة قبل أول إطار** (`DESIGN.md` §7.6): `index.css` وReact كلاهما
+         في الحزمة المؤجَّلة، فبغير هذا السطر تُرسم الشاشةُ الترحيبية نهاريةً ثم
+         تنقلب ليليةً — ومضةٌ في كل فتحة لمن اختار الليلي. ويقرأ نفس مفتاحَي
+         `lib/theme.ts` و`lib/brand.tsx` حرفاً بحرف -->
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement;
+          var theme = localStorage.getItem("taxo.theme") || "system";
+          var dark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) root.classList.add("dark");
+          // **آخرُ قيمةٍ محسوبة** لا الاختيارُ الخام: السِمةُ تشترط إقرارَ
+          // الجنس، وهو في الجلسة التي لم تصل بعد — فاختيارٌ باقٍ في جهازٍ
+          // بدّل صاحبَه كان سيصبغ شعارَ من لا تُتاح له
+          if (localStorage.getItem("taxo.pink.active") === "1")
+            root.classList.add("pink");
+        } catch (e) {
+          /* تخزينٌ محجوب: تبقى الافتراضاتُ كما هي — ولا تُمنع الشاشة */
+        }
+      })();
+    </script>
+
+    <!-- **الشاشة الترحيبية** (`DESIGN.md` §7). قيمُ الألوان **نسخةٌ حرفية من
+         §1.1** ولا تُقرأ من `index.css` لأنه في الحزمة المؤجَّلة — وهي الحالُ
+         الوحيدة المسموح فيها بالنسخ، وثمنُها أن `check:scale` لا يراها -->
+    <style>
+      #splash {
+        --sp-bg: #f2f0eb;
+        --sp-ink: #171b20;
+        --sp-mut: #6e7681;
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: var(--sp-bg);
+        transition: opacity 200ms ease-out;
+      }
+      html.dark #splash {
+        --sp-bg: #14181d;
+        --sp-ink: #e6edf3;
+        --sp-mut: #8b949e;
+      }
+      /* السِمة الوردية — نفس قيم §1.1-ب، ولا تمسّ إلا الشعار */
+      html.pink #splash { --sp-ink: #d81b73; }
+      html.pink.dark #splash { --sp-ink: #ff6fae; }
+
+      #splash.is-gone { opacity: 0; pointer-events: none; }
+
+      #splash svg { width: 172px; height: auto; display: block; }
+
+      #splash .tx {
+        fill: none;
+        stroke: var(--sp-ink);
+        stroke-width: 8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 100;
+        stroke-dashoffset: 100;
+        /* **مخفيٌّ حتى يحين دورُه**: `linecap: round` يرسم نقطةً مستديرةً عند
+           بداية المسار ولو كان الشرطُ مزاحاً بالكامل — فكانت نقطةٌ شاردةٌ تسبق
+           كلَّ حرفٍ لم يبدأ. كشفه فتحُ الشاشة لا قراءةُ القاعدة */
+        opacity: 0;
+        animation: tx-draw 520ms ease-out forwards;
+      }
+      #splash .tx-a { animation-delay: 170ms; }
+      #splash .tx-x { animation-delay: 340ms; }
+
+      /* الـ`O`: تُرسم كأخواتها ثم تنفتح قوساً وتدور — ثلاثُ حركاتٍ متعاقبة
+         تبدأ كلُّ واحدةٍ من حال ما قبلها بالضبط، فلا قفزة (§7.2) */
+      #splash .tx-o {
+        transform-box: fill-box;
+        transform-origin: 50% 50%;
+        animation:
+          tx-draw 520ms ease-out 510ms forwards,
+          tx-open 300ms ease-in-out 1030ms forwards,
+          tx-rotate 900ms linear 1030ms infinite;
+      }
+
+      @keyframes tx-draw {
+        from { opacity: 1; stroke-dashoffset: 100; }
+        to { opacity: 1; stroke-dashoffset: 0; }
+      }
+      /* مرةً واحدة لا مع كل دورة: وإلا ومضت الدائرةُ كاملةً في كل لفّة */
+      @keyframes tx-open {
+        from { stroke-dasharray: 100 0; }
+        to { stroke-dasharray: 30 70; }
+      }
+      @keyframes tx-rotate { to { transform: rotate(360deg); } }
+
+      /* تمييزُ التطبيقين — أسفل الكلمة وإلى بدايتها (يمينُ RTL)، §7.3 */
+      #splash .tx-edition {
+        width: 172px;
+        text-align: start;
+        font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        color: var(--sp-mut);
+      }
+
+      #splash .tx-loading {
+        display: none;
+        font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
+        font-size: 12px;
+        color: var(--sp-mut);
+      }
+
+      /* **بلا رسمٍ ولا دوران** (§7.4): الحروفُ كاملةٌ من أول إطار، ويحلّ سطرٌ
+         ساكنٌ محلَّ المؤشِّر الدائر — حركةٌ مستمرة تؤذي بعض المستخدمين */
+      @media (prefers-reduced-motion: reduce) {
+        #splash .tx,
+        #splash .tx-o {
+          animation: none;
+          opacity: 1;
+          stroke-dashoffset: 0;
+          stroke-dasharray: 100 0;
+        }
+        #splash .tx-loading { display: block; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" role="status" aria-label="جارٍ تشغيل TAXO">
+      <svg viewBox="0 0 230 96" aria-hidden="true">
+        <!-- T -->
+        <path class="tx tx-t" pathLength="100" d="M8 24 H52 M30 24 V72" />
+        <!-- A -->
+        <path class="tx tx-a" pathLength="100" d="M64 72 L86 24 L108 72 M72 58 H100" />
+        <!-- X -->
+        <path class="tx tx-x" pathLength="100" d="M120 24 L164 72 M164 24 L120 72" />
+        <!-- O — تُرسم ثم تصير مؤشِّرَ التحميل -->
+        <circle class="tx tx-o" pathLength="100" cx="198" cy="48" r="24" />
+      </svg>
+      <div class="tx-edition">RIDER</div>
+      <div class="tx-loading">جارٍ التحميل…</div>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -494,6 +494,46 @@ of the design packages below. Keep doing that before calling one done: the failu
 tailwind-merge class, a marker that never renders, a button that works and then 409s — are exactly
 the ones this project has shipped before, and every one found since has been of that shape.
 
+### The splash screen and the app icons
+
+**The splash lives in `index.html`, not in React, and that is the whole point** (`DESIGN.md` §7). The
+JS bundle is deferred, so anything a component draws appears *after* the moment the splash exists to
+fill. It therefore carries its own copy of the four tokens it needs (`--bg`/`--tx`/`--mut`/`--brand`
+values from §1.1) inside a `<style>` in the same file — `index.css` is in the bundle too. That copy is
+the one place in the project where duplicating design values is allowed, and its price is that
+`check:scale` cannot see them (it reads `.tsx`/`.ts`).
+
+`TAXO` is four stroked SVG paths, each `pathLength="100"` so the dash maths is a percentage rather than
+a measured length. They draw in sequence (520ms each, 170ms apart) — **drawn, not revealed**; four at
+once reads as one flash. Then the `O` alone becomes the loading indicator: `tx-open` widens the dash
+gap once (a full circle rotating is invisible, so the arc has to open) and `tx-rotate` spins forever,
+both starting at exactly the state the draw ended in, so there is no jump. `prefers-reduced-motion`
+removes all three and shows a still logo with a plain «جارٍ التحميل…» line.
+
+Four things in it are worth carrying forward:
+
+- **It is removed when the app is ready, not when the animation ends** (`lib/splash.ts::hideSplash`,
+  called from `Boot`). The animation fills a wait; it must never create one. And `Boot` no longer draws
+  its own logo-and-spinner — two loading screens in a row read as a stumble.
+- **A pre-paint script sets the theme class**, or the splash paints light and flips dark one frame
+  later, every launch, for everyone who chose dark.
+- **The pink theme reaches it through a written hint, not a guess.** `pink` requires
+  `user.gender === "female"`, which lives in a session the splash cannot wait for; guessing from the
+  raw choice would paint a pink logo for someone it is not offered to. So `BrandProvider` writes the
+  **computed** value to `taxo.pink.active` in the same effect that toggles the class — a paint hint
+  that cannot disagree with what it mirrors, because it is written from it.
+- **`stroke-linecap: round` draws a dot on a fully-offset dash**, so every letter showed a stray pen
+  point before its turn. The letters are `opacity: 0` until their own keyframes start. Caught by
+  opening the screen, not by reading the CSS.
+
+**The icons were off-palette and are rebuilt** at ten `any` sizes plus two `maskable` plus an
+apple-touch icon, per app, carrying `RIDER`/`DRIVER` under the wordmark. The old one was `#facc15` on
+`#0b0f14` — the yellow dropped in 12-أ over a background that was never in §1.1 — and the rider
+manifest still declared that background as its `theme_color`. They are rendered from one master SVG per
+app by a scratch Playwright script rather than by adding an image dependency. First attempt set
+`stroke-width` to 26 directly instead of letting the ×1.375 group scale the splash's 8; the letters
+fused into a blob, which the file viewer showed and no check would have.
+
 ### Rider design-matching: five packages, all delivered
 
 A screen-by-screen comparison of `customer-app` against the rider prototype (and the women's screens
