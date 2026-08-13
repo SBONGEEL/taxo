@@ -1,0 +1,40 @@
+# نفقُ Cloudflare — نفقٌ واحدٌ بأربعة نطاقاتٍ فرعية (المرحلة 13).
+#
+# **إضافةٌ لا استبدال**: لا يمسّ هذا الملفُّ منفذاً محلياً ولا يغيّر شيئاً في
+# `docker-compose.yml`. المنافذُ كما هي (٨٠٠١ للخلفية، و٥١٧٦/٥١٧٤/٥١٧٥
+# للتطبيقات الثلاثة)، والنفقُ يقف أمامها فقط.
+#
+# **ولماذا نفقٌ واحدٌ لا أربعة**: النفقُ في Cloudflare **اتصالٌ صادرٌ من جهازك**
+# لا منفذٌ مفتوحٌ فيه. وواحدٌ بأربعة `ingress` يعني اعتماداً واحداً يُدار
+# ويُغلق بأمرٍ واحد — وأربعةُ أنفاقٍ تعني أربعةَ أشياءَ يُنسى إغلاقُ أحدها.
+#
+# `TUNNEL_ID` و`credentials-file` يكتبهما `cloudflared tunnel create` بنفسه؛
+# انظر `README.md` لما تفعله بيدك خارج الكود.
+
+tunnel: taxo-dev
+credentials-file: C:\Users\loly3\.cloudflared\taxo-dev.json
+
+# **ترتيبُ القواعد يهمّ**: أوّلُ ما يطابق يفوز، والقاعدةُ الأخيرة (بلا
+# `hostname`) إلزاميةٌ في cloudflared — وهي هنا رفضٌ صريح: أيُّ اسمٍ لم يُذكر
+# أعلاه لا يصل إلى شيء.
+ingress:
+  # الخلفية — ومعها مقبسُ التتبّع على المسار نفسه (`/ws/...`).
+  # cloudflared يرقّي الاتصالَ إلى WebSocket تلقائياً على http، فلا إعدادَ
+  # إضافي؛ وما يتغيّر هو **جهةُ العميل**: `wss://` لا `ws://` (انظر README).
+  - hostname: api.tajora.ly
+    service: http://localhost:8001
+
+  # تطبيقُ الراكب. **٥١٧٦ لا ٥١٧٣** على هذا الجهاز: المنفذُ الافتراضي مشغولٌ
+  # بحزمة `taxo-web` غير ذات صلة، و`CUSTOMER_APP_PORT` في `.env.local` يوثّق
+  # ذلك منذ المرحلة 9. غيّرْه هنا إن غيّرتَه هناك.
+  - hostname: app.tajora.ly
+    service: http://localhost:5176
+
+  - hostname: driver.tajora.ly
+    service: http://localhost:5174
+
+  - hostname: admin.tajora.ly
+    service: http://localhost:5175
+
+  # القاعدةُ الأخيرة الإلزامية
+  - service: http_status:404

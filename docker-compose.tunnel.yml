@@ -1,0 +1,62 @@
+# طبقةُ النفق — **تُضاف فوق `docker-compose.yml` ولا تحلّ محلَّه** (المرحلة 13).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+#
+# بلا هذا الملف يبقى التشغيلُ المحليُّ كما هو حرفاً بحرف: نفسُ المنافذ، ونفسُ
+# `VITE_API_BASE_URL: http://localhost:8001`، ونفسُ عناوين عودة البطاقة.
+#
+# **ولماذا ملفٌّ منفصلٌ لا متغيّراتٌ في الأصل**: العنوانُ الذي يُبنى به التطبيق
+# يقرّر إلى أين يخاطب المتصفحُ الخلفيةَ **وأين يفتح المقبس**. فجعلُه متغيّراً في
+# الملف الأصلي يعني أن نسيانَ تصديره مرةً واحدةً يوجّه هاتفاً على الإنترنت إلى
+# `localhost` — أي إلى الهاتف نفسِه. والفصلُ يجعل الحالتين اختياراً لا سهواً.
+
+services:
+  # **الخلفيةُ تقبل النطاقات الأربعة أصلاً؟ لا** — فتُضاف هنا.
+  #
+  # `CORS_ORIGINS` تُستبدل استبدالاً لا تُضاف إلى الافتراضي (قائمةُ
+  # Pydantic تُقرأ كاملةً من البيئة)، فتُكتب المحليةُ معها كي يبقى فتحُ
+  # `127.0.0.1:5176` عاملاً بينما النفقُ قائم.
+  backend:
+    environment:
+      CORS_ORIGINS: >-
+        ["https://app.tajora.ly","https://driver.tajora.ly","https://admin.tajora.ly",
+         "http://localhost:5173","http://localhost:5174","http://localhost:5175",
+         "http://localhost:5176","http://127.0.0.1:5173","http://127.0.0.1:5174",
+         "http://127.0.0.1:5175","http://127.0.0.1:5176"]
+      # **عودةُ صفحة البطاقة تتبع التطبيقَ الذي فتحها** (`card_gateway.return_url_for`):
+      # عنوانٌ محليٌّ في جلسةٍ على هاتفٍ يعيد الراكبَ إلى جهازٍ ليس بيده
+      CARD_RETURN_URL: https://app.tajora.ly/payments/card/return
+      CARD_RETURN_URL_DRIVER: https://driver.tajora.ly/payments/card/return
+      # عنوانُ الخلفية كما يراه العالم — تُبنى عليه صفحةُ المزوّد الوهمي
+      # (`card_gateway/__init__.py`)، فعنوانٌ محليٌّ فيها يفتح صفحةً لا يبلغها هاتف
+      PUBLIC_API_BASE_URL: https://api.tajora.ly
+
+  customer-app:
+    environment:
+      VITE_API_BASE_URL: https://api.tajora.ly
+
+  driver-app:
+    environment:
+      VITE_API_BASE_URL: https://api.tajora.ly
+
+  admin-panel:
+    environment:
+      VITE_API_BASE_URL: https://api.tajora.ly
+
+  # النفقُ نفسُه — **اتصالٌ صادرٌ من الجهاز**، فلا منفذَ يُفتح عليه ولا يحتاج
+  # `ports`. ويخاطب الخدماتِ عبر `host.docker.internal` لأن `localhost` داخل
+  # الحاوية هي الحاويةُ نفسُها (`cloudflared/config.docker.yml`).
+  #
+  # **ولا `restart: unless-stopped`**: نفقٌ يعود وحدَه بعد إعادة تشغيل الجهاز
+  # هو نفقٌ يعمل ليلاً بلا أن يعرف أحد — وهذا بعينه ما يحذّر منه README.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: taxo-tunnel
+    restart: "no"
+    command: tunnel --config /etc/cloudflared/config.docker.yml run
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+      # اعتمادُ النفق الذي يكتبه `cloudflared tunnel create` على جهازك
+      - ${USERPROFILE}/.cloudflared:/root/.cloudflared:ro

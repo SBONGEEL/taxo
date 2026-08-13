@@ -1,0 +1,29 @@
+# نسخةُ الحاوية من `config.yml` — **والفرقُ سطرُ العنوان وحدَه**.
+#
+# داخل الحاوية `localhost` هي الحاويةُ نفسُها لا الجهاز، فالخدماتُ تُخاطَب عبر
+# `host.docker.internal` (يوفّرها Docker Desktop على ويندوز وماك).
+#
+# **وأيُّهما تستعمل؟** الأصلُ (`config.yml`) مع `cloudflared` مثبَّتاً على
+# ويندوز مباشرةً — وهو الأبسط والأقلُّ مفاجآت. وهذه مع
+# `docker compose -f docker-compose.yml -f docker-compose.tunnel.yml`.
+# ولا تُشغَّل الاثنتان معاً: نفقان بالاسم نفسِه يتقاسمان الطلبات فتُقرأ
+# النتيجةُ «يعمل أحياناً».
+
+tunnel: taxo-dev
+credentials-file: /root/.cloudflared/taxo-dev.json
+
+ingress:
+  - hostname: api.tajora.ly
+    service: http://host.docker.internal:8001
+
+  # ٥١٧٦ لا ٥١٧٣ على هذا الجهاز (`CUSTOMER_APP_PORT` في `.env.local`)
+  - hostname: app.tajora.ly
+    service: http://host.docker.internal:5176
+
+  - hostname: driver.tajora.ly
+    service: http://host.docker.internal:5174
+
+  - hostname: admin.tajora.ly
+    service: http://host.docker.internal:5175
+
+  - service: http_status:404
