@@ -54,7 +54,7 @@ export function PlacesScreen() {
   }
 
   return (
-    <Screen title="الأماكن المحفوظة" back="/menu">
+    <Screen title="الأماكن المحفوظة" back="/account" nav>
       <div className="space-y-16">
         <ErrorNote message={error} />
 

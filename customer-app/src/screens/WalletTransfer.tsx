@@ -84,7 +84,7 @@ export function WalletTransferScreen() {
   }
 
   return (
-    <Screen title="تحويل رصيد" back="/wallet">
+    <Screen title="تحويل رصيد" back="/wallet" nav>
       <div className="space-y-20">
         {recipient ? (
           <div className="card flex items-center gap-12 p-16">

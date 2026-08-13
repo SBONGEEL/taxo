@@ -66,14 +66,14 @@ export function WalletScreen() {
 
   if (loading) {
     return (
-      <Screen title="المحفظة" back="/">
+      <Screen title="المحفظة" nav back={false}>
         <Spinner />
       </Screen>
     );
   }
 
   return (
-    <Screen title="المحفظة" back="/">
+    <Screen title="المحفظة" nav back={false}>
       <div className="space-y-20">
         {/* كان تدرّجاً بشفافيةٍ ٢٥٪ على `--brand`؛ ولوحةُ التصميم hex لا
             تحتمل الشفافية (`index.css`)، فالتدرّجُ الآن من الرمز **الخافت**
@@ -143,7 +143,7 @@ export function WalletScreen() {
         {cardEnabled ? (
           <button
             type="button"
-            onClick={() => navigate("/cards")}
+            onClick={() => navigate("/account/cards")}
             className="card flex w-full items-center gap-12 p-14 text-start transition hover:bg-surface-2"
           >
             <CreditCard className="size-20 text-muted" />

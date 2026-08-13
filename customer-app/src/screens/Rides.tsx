@@ -38,7 +38,7 @@ export function RidesScreen() {
   }, []);
 
   return (
-    <Screen title="رحلاتي" back="/menu">
+    <Screen title="رحلاتي" nav back={false}>
       {loading ? (
         <Spinner />
       ) : (

@@ -9,7 +9,7 @@
  * تطالبه الشاشة بالتحقق عند أول فرصة عبر `POST /auth/me/verify-phone`.
  */
 
-import { ChevronLeft, LogOut, ShieldAlert, SlidersHorizontal } from "lucide-react";
+import { LogOut, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -99,7 +99,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <Screen title="حسابي" back="/menu">
+    <Screen title="بياناتي" back="/account" nav>
       <div className="space-y-20">
         <div className="card space-y-8 p-16">
           <p className="text-18 font-semibold text-ink">{user.name}</p>
@@ -221,24 +221,11 @@ export function ProfileScreen() {
         ) : null}
 
 
-        {/* **«الإعدادات» شاشةٌ مستقلةٌ كما في التصميم** (`pgSettings`): ما
-            يخصّ **الجهاز** (مظهرٌ وسِمةٌ وإشعاراتُ عروض) لا يخصّ **الحساب**
-            (اسمٌ وجنسٌ وتفضيل) — وشاشةٌ تجمعهما تجعل من يبحث عن مفتاحٍ يقرأ
-            بياناته. وهذا الصفُّ هو بابُها كما في `tabAccount` */}
-        <button
-          type="button"
-          onClick={() => navigate("/settings")}
-          className="card flex w-full items-center gap-12 p-16 text-start transition hover:bg-surface-2"
-        >
-          <SlidersHorizontal className="size-20 text-ink" />
-          <span className="flex-1">
-            <span className="block font-medium text-ink">الإعدادات</span>
-            <span className="block text-12 text-muted">
-              المظهر · إشعارات العروض
-            </span>
-          </span>
-          <ChevronLeft className="size-16 text-muted" />
-        </button>
+        {/* **بابُ «الإعدادات» انتقل إلى `tabAccount`** (الحزمة أ): القرارُ (د)
+            فصل ما يخصّ **الجهاز** عمّا يخصّ **الحساب**، ووضع بابَها هنا لأن
+            حاويةَ «حسابي» لم تكن قد بُنيت بعد — والنموذجُ يضعه في `accountRows`.
+            وقد بُنيت، فبقاؤه هنا بابٌ ثانٍ لشاشةٍ واحدة يفترق عن الأول أوّلَ
+            مرةٍ يتغيّر أحدُهما */}
 
         {/* **«الخصوصية» — التصميمُ النسائيُّ (شاشة ٧) يضعها هنا نصّاً**، وهي
             تخبرها **بأمانٍ تملكه ولا تعرفه**: أن جنسَها لا يُعرض لأحد، وأن

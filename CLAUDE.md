@@ -24,7 +24,7 @@ editing and the CliQ alias = 43/18) ·
 12-د two-factor login for the panel · 12-هـ WhatsApp as a third phone verifier · 12-و tipping ·
 12-ز coupons · 12-ح the female-driver referral incentive · 12-ط scheduled rides · plus the two
 maintenance jobs. **12-ي — ride sharing — is specified in `SPEC.md` §5.12 with the owner's decisions
-recorded, and no code exists for it**; it is the one thing left before stage 13. **Surge the owner
+recorded, and no code exists for it**; it is the one thing left before stage 13, and nothing is queued ahead of it. **Surge the owner
 decided not to build** (with no real demand data it would be tuned wrong and turn riders away), so
 stage 12 closes with sharing.
 
@@ -48,10 +48,10 @@ added to the panel's `FeatureKey` union or its `FLAGS` array, so the panel build
 `check:flags` (built in 12-ح for exactly this) had been failing on master and the switch did not exist.
 Fixed in the same session. The guard works; what failed was running it.
 
-**What is actually in progress is not a stage**: matching `customer-app` to the rider prototype, in
-five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per session. **Three are delivered and (ب) is
-next** — see "Rider design-matching" below before starting anything else. Sharing (12-ي) waits behind
-those packages by his sequencing, not by any technical dependency.
+**The rider design-matching work is finished**: `customer-app` was matched to the rider prototype in
+five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per session, and **all five are delivered** —
+see "Rider design-matching" below for what each settled. **So sharing (12-ي) is the next thing to
+build**, and nothing sequences ahead of it any more.
 
 **Stage 13 is what follows sharing**: tests plus a full manual run of the whole scenario — driver
 signs up → approved → subscribes → rider requests → tracking → payment → withdrawal. Three screens
@@ -401,16 +401,28 @@ told *when it happens* is question 3's option (b), applied to the cancellation c
 never-found-a-partner case. That is why it does not contradict decision 3: decision 3 governs a partner
 who never existed (promise honoured, company bears it), this governs a partner who existed and left.
 
-**One cost question stays open, deliberately: does the company bear the remaining rider's difference?**
-The owner's answer is "open until I see the numbers", and the reason it is safe to defer is that the
-answer is **a setting, not a build** — the mechanism is 12-ز's, a `promo`-channel payment row the
-company bears. **Three branches it opens are recorded in SPEC as undecided and must not be given
-behaviour in code**: what happens to a remaining rider already `in_progress` (raising the price then is
-the rejected option verbatim, so the SPEC's *apparent* reading is that the company bears it there — but
-that is an inference, not a decision); whether a remaining rider who refuses the new price is spared the
-cancellation fee (a **second** fee waiver, where the system has exactly one today — `gender_mismatch` —
-so it is not added by inference); and whether a third partner is sought (SPEC assumes not: two riders,
-no second waiting window).
+**The three branches that decision opened are now decided too** (owner, 2026-08-13, SPEC §5.12
+decisions 6–8), and the first of them sharpened decision 5 itself.
+
+- **A remaining rider already `in_progress` keeps the discounted price and the company bears the
+  difference.** Raising it mid-route is the rejected option verbatim — and what makes it rejected is not
+  the amount but **the absence of an alternative**: someone told the price while sitting in the car can
+  neither accept nor refuse, so the telling is notification of a fait accompli, not a notice a decision
+  rests on. So decision 5's condition is not "he is told" but **"he is told while he can still act"**.
+- **No fee waiver for a remaining rider who refuses the new price.** Two reasons: a **second** waiver in
+  a system with exactly one opens a door — and `gender_mismatch` rests on a condition verifiable from
+  the row itself, while "I refused a price" is a state anyone who cancels for any reason can claim; and
+  **he was shown the price before he proceeded**, so cancelling after it is an ordinary cancellation
+  made knowingly. **The two decisions complete rather than collide**: decision 6 forbids raising the
+  price where there is no alternative, so all that is left for decision 7 is the case where there *is*
+  one — before departure, where the notice precedes the going and refusing is free by its own nature
+  (cancelling before acceptance carries no fee at all; after it, the ordinary fee like any ride).
+- **No search for a third partner in the first cut** — two riders, and a second waiting window would
+  lengthen the remaining rider's trip for a discount that no longer applies to him.
+
+**What stays open is now only half of the cost question**: whether the company bears the difference for
+a remaining rider **before** departure. After departure decision 6 settles it. Both answers run through
+12-ز's mechanism, so the difference between them is **a setting, not a build**.
 
 **Every screen these stages added has been opened in a browser**, including the panel's seven and each
 of the design packages below. Keep doing that before calling one done: the failures `tsc`, `check:scale` and
@@ -418,11 +430,11 @@ of the design packages below. Keep doing that before calling one done: the failu
 tailwind-merge class, a marker that never renders, a button that works and then 409s — are exactly
 the ones this project has shipped before, and every one found since has been of that shape.
 
-### Rider design-matching: five packages, four delivered
+### Rider design-matching: five packages, all delivered
 
 A screen-by-screen comparison of `customer-app` against the rider prototype (and the women's screens
 against what 10-ج actually built) produced five packages. **The owner approved the order
-هـ ← ج ← د ← ب ← أ, one package per session**, and four are delivered. The rule applied throughout is
+هـ ← ج ← د ← ب ← أ, one package per session**, and all five are delivered. The rule applied throughout is
 his: **in the design but not in the project → `FUTURE-FEATURES`, not built; in the project without a
 design → derive from the design's idiom; a behavioural conflict → SPEC and the backend win except in
 form, and the decision is recorded in `design/DESIGN-DECISIONS.md`.**
@@ -485,9 +497,33 @@ form, and the decision is recorded in `design/DESIGN-DECISIONS.md`.**
     shipped in stage 9 and survived every pass since, because reaching it needs exactly the state (ب)
     built in order to test its own note.
 
-**(أ) is next, and it is last because it touches every route**: the four-tab bottom bar, deleting
-`/menu`, «حسابي» as a container screen, and re-classifying six routes underneath it. Doing it before
-(ب)–(د) would have meant moving screens that were about to change anyway.
+- **(أ) — done, and it was last because it touches every route**: the four-tab bottom bar
+  (`الرئيسية · رحلاتي · المحفظة · حسابي`), `/menu` deleted, «حسابي» as a container screen, and the six
+  routes re-pathed under it — `/account/{profile,places,bookings,cards,notifications,settings}`. Four
+  things in it are worth carrying forward:
+
+  - **`BottomNav` is a copy of `driver-app`'s, not a re-derivation.** Both apps share one design system;
+    two bars built twice diverge at the first value edited in one of them. Same 66px, same 19px square,
+    same 9.5px label — only the labels differ.
+  - **`nav` and `back` are two independent props, and collapsing them is what shipped first.** With a
+    single `tab` prop the bar vanished on all six sub-pages while `BottomNav`'s own docstring promised
+    «حسابي» stays active underneath — a written rule with no door, caught only by opening all six routes
+    and measuring which tab was lit. A tab root is `nav` with `back={false}`; a sub-page is both.
+  - **The prototype's measurement overrode decision 22's prose** (`DESIGN-DECISIONS.md` 53). It says
+    "ride, payment, rating and provider screens cover the bar", but `pgRideDetail` measures
+    `inset:0 0 66px` exactly like `pgPlaces`/`pgSettings`/`pgNotifs`/`pgCards` — bar **and** back arrow.
+    Only `payShow`, `rateShow` and `pgCardPage` truly cover it, which they do for free here because both
+    are `Stage` (`fixed inset-0 z-60`). "Ride screens" in decision 22 means the *running* ride on Home,
+    not the history detail. Measure, then read the prose.
+  - **Two doors closed rather than left as conveniences.** The map header's «القائمة» and wallet buttons
+    are gone — the first *became* the bar, the second is a tab in it, and a shortcut above the map to a
+    tab visible below it is two doors to one place. Same reasoning removed the «الإعدادات» row from
+    `Profile.tsx`: package (د) put it there because the account container did not exist yet, and the
+    prototype puts it in `accountRows`. The header now carries the account initial, the bell and the
+    theme toggle, exactly as the prototype does.
+
+**All five packages are delivered.** What is left before stage 13 is sharing (12-ي), whose design and
+eight owner decisions are in `SPEC.md` §5.12.
 
 **Four items are deferred by the owner's decision until after launch** and are marked ⏸️ in
 `FUTURE-FEATURES.md` (dated 2026-08-13): report a problem, the help centre, the "N cars nearby" line,

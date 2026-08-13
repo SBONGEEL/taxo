@@ -80,7 +80,7 @@ function composeBody(entry: UserNotification): string | null {
 function destinationOf(entry: UserNotification): string | null {
   const rideId = entry.data?.ride_id;
   const bookingId = entry.data?.booking_id;
-  if (bookingId && !rideId) return "/bookings";
+  if (bookingId && !rideId) return "/account/bookings";
   if (rideId) return `/rides/${rideId}`;
   if (entry.kind === "topup_confirmed") return "/wallet";
   return null;
@@ -126,6 +126,8 @@ export function NotificationsScreen() {
   return (
     <Screen
       title="الإشعارات"
+      back="/account"
+      nav
       action={
         unread ? (
           <button

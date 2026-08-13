@@ -38,8 +38,8 @@ const ForgotPasswordScreen = lazy(() =>
     default: m.ForgotPasswordScreen,
   })),
 );
-const MenuScreen = lazy(() =>
-  import("@/screens/Menu").then((m) => ({ default: m.MenuScreen })),
+const AccountScreen = lazy(() =>
+  import("@/screens/Account").then((m) => ({ default: m.AccountScreen })),
 );
 const RidesScreen = lazy(() =>
   import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
@@ -196,14 +196,6 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/menu"
-                        element={
-                          <Guarded>
-                            <MenuScreen />
-                          </Guarded>
-                        }
-                      />
-                      <Route
                         path="/rides"
                         element={
                           <Guarded>
@@ -260,7 +252,15 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/places"
+                        path="/account"
+                        element={
+                          <Guarded>
+                            <AccountScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/places"
                         element={
                           <Guarded>
                             <PlacesScreen />
@@ -268,7 +268,7 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/bookings"
+                        path="/account/bookings"
                         element={
                           <Guarded>
                             <BookingsScreen />
@@ -276,7 +276,7 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/settings"
+                        path="/account/settings"
                         element={
                           <Guarded>
                             <SettingsScreen />
@@ -284,7 +284,7 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/notifications"
+                        path="/account/notifications"
                         element={
                           <Guarded>
                             <NotificationsScreen />
@@ -292,7 +292,7 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/cards"
+                        path="/account/cards"
                         element={
                           <Guarded>
                             <CardsScreen />
@@ -300,7 +300,7 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/profile"
+                        path="/account/profile"
                         element={
                           <Guarded>
                             <ProfileScreen />

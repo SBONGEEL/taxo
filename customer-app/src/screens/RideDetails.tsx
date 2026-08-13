@@ -52,7 +52,7 @@ export function RideDetailsScreen() {
 
   if (loading) {
     return (
-      <Screen title="تفاصيل الرحلة">
+      <Screen title="تفاصيل الرحلة" nav>
         <Spinner />
       </Screen>
     );
@@ -60,7 +60,7 @@ export function RideDetailsScreen() {
 
   if (!ride) {
     return (
-      <Screen title="تفاصيل الرحلة">
+      <Screen title="تفاصيل الرحلة" nav>
         <ErrorNote message={error ?? "الرحلة غير موجودة"} />
       </Screen>
     );
@@ -70,7 +70,7 @@ export function RideDetailsScreen() {
   const rated = ratings.some((entry) => entry.rater_type === "rider");
 
   return (
-    <Screen title="تفاصيل الرحلة">
+    <Screen title="تفاصيل الرحلة" nav>
       <div className="space-y-20">
         <div className="card space-y-12 p-16">
           <div className="flex items-center justify-between">

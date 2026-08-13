@@ -59,7 +59,7 @@ export function SettingsScreen() {
   }
 
   return (
-    <Screen title="الإعدادات" back="/profile">
+    <Screen title="الإعدادات" back="/account" nav>
       <ErrorNote message={error} />
       <div className="space-y-14">
         <section className="card space-y-12 p-16">

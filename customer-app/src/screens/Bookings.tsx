@@ -88,7 +88,7 @@ export function BookingsScreen() {
   }
 
   return (
-    <Screen title="رحلاتي المجدولة" back>
+    <Screen title="رحلاتي المجدولة" back="/account" nav>
       <ErrorNote message={error} />
       {rows === null && !error ? <Spinner /> : null}
       {rows?.length === 0 ? (

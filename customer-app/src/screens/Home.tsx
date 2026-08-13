@@ -15,7 +15,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Crosshair, Menu, Moon, Search, Sun, Wallet } from "lucide-react";
+import { Bell, Crosshair, Moon, Search, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -27,6 +27,7 @@ import type {
   Ride,
   VehicleCategory,
 } from "@/api/types";
+import { BottomNav } from "@/components/BottomNav";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
@@ -229,7 +230,7 @@ export function HomeScreen() {
       setPhase("idle");
       setDropoff(null);
       setDropoffAddress(null);
-      navigate("/bookings");
+      navigate("/account/bookings");
     } catch (caught) {
       setError(
         caught instanceof ApiError ? caught.message : "تعذّر تثبيت الحجز",
@@ -361,56 +362,51 @@ export function HomeScreen() {
         </div>
       ) : null}
 
+      {/* رأسُ الخريطة كما في النموذج بعد الحزمة (أ): **حرفُ الحساب** في طرفٍ،
+          والجرسُ ومبدّلُ السِمة في الآخر. وسقط منه زرّا «القائمة» و«المحفظة»:
+          الأولُ صار الشريطَ السفليَّ كلَّه (فحُذفت `/menu`)، والثاني تبويباً
+          فيه — واختصارٌ فوق الخريطة إلى تبويبٍ ظاهرٍ أسفلَها بابان لشيءٍ واحد */}
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-8 px-16 pt-safe">
         <button
           type="button"
-          onClick={() => navigate("/menu")}
-          className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
-          aria-label="القائمة"
+          onClick={() => navigate("/account")}
+          className="pointer-events-auto flex size-44 items-center justify-center rounded-full border border-line bg-surface text-14 font-bold text-ink shadow-sm backdrop-blur"
+          aria-label="حسابي"
         >
-          <Menu className="size-20 text-ink" />
+          {user?.name.slice(0, 1) ?? "؟"}
         </button>
-        <button
-          type="button"
-          onClick={() => setChoice(dark ? "light" : "dark")}
-          aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
-          // **`pointer-events-auto`**: الحاويةُ `pointer-events-none` كي تمرّ
-          // إيماءاتُ الخريطة، فكلُّ زرٍّ فيها يُعيد تمكينَ نفسه — وبغيره يُرسم
-          // الزرُّ ولا يُنقر (وقع ذلك في الجرس، وكشفه `elementFromPoint`)
-          className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
-        >
-          {dark ? (
-            <Sun className="size-20 text-ink" />
-          ) : (
-            <Moon className="size-20 text-ink" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/notifications")}
-          aria-label="الإشعارات"
-          // **`pointer-events-auto` لا زينة**: الحاويةُ `pointer-events-none`
-          // كي تمرّ إيماءاتُ الخريطة من حولها، فكلُّ زرٍّ فيها يُعيد تمكينَ
-          // نفسه. وبغيره يُرسم الزرُّ ويُقاس ويبدو سليماً **ولا يُنقر** —
-          // والقياسُ وحده يكشفه: `elementFromPoint` يعيد canvas الخريطة
-          className="pointer-events-auto relative rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
-        >
-          <Bell className="size-20 text-ink" />
-          {/* **نقطةٌ لا رقم** كما في التصميم (`unreadShow`): الرقمُ يحتاج قراءةً
-              ثانيةً كلَّ فتحةٍ للرئيسية، والنقطةُ تجيب السؤالَ الوحيد الذي
-              يُسأل هنا — «هل ثمّ جديد؟». والعددُ نفسُه في الشاشة */}
-          {unreadNotifications ? (
-            <span className="absolute end-8 top-8 size-8 rounded-full bg-danger" />
-          ) : null}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/wallet")}
-          className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
-          aria-label="المحفظة"
-        >
-          <Wallet className="size-20 text-ink" />
-        </button>
+        <div className="flex items-center gap-8">
+          <button
+            type="button"
+            onClick={() => navigate("/account/notifications")}
+            aria-label="الإشعارات"
+            // **`pointer-events-auto` لا زينة**: الحاويةُ `pointer-events-none`
+            // كي تمرّ إيماءاتُ الخريطة من حولها، فكلُّ زرٍّ فيها يُعيد تمكينَ
+            // نفسه. وبغيره يُرسم الزرُّ ويُقاس ويبدو سليماً **ولا يُنقر** —
+            // والقياسُ وحده يكشفه: `elementFromPoint` يعيد canvas الخريطة
+            className="pointer-events-auto relative rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+          >
+            <Bell className="size-20 text-ink" />
+            {/* **نقطةٌ لا رقم** كما في التصميم (`unreadShow`): الرقمُ يحتاج قراءةً
+                ثانيةً كلَّ فتحةٍ للرئيسية، والنقطةُ تجيب السؤالَ الوحيد الذي
+                يُسأل هنا — «هل ثمّ جديد؟». والعددُ نفسُه في الشاشة */}
+            {unreadNotifications ? (
+              <span className="absolute end-8 top-8 size-8 rounded-full bg-danger" />
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setChoice(dark ? "light" : "dark")}
+            aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
+            className="pointer-events-auto rounded-full border border-line bg-surface p-12 shadow-sm backdrop-blur"
+          >
+            {dark ? (
+              <Sun className="size-20 text-ink" />
+            ) : (
+              <Moon className="size-20 text-ink" />
+            )}
+          </button>
+        </div>
       </div>
 
       <button
@@ -425,7 +421,9 @@ export function HomeScreen() {
         <Crosshair className="size-20 text-ink" />
       </button>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto max-w-lg">
+      {/* **الأوراقُ تنتهي فوق الشريط** (`bottom:66px` في النموذج): ورقةٌ تلتصق
+          بأسفل الشاشة تحت شريطٍ ثابتٍ تُخفي سطرَها الأخير — وهو زرُّ الطلب */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-nav mx-auto max-w-lg">
         <AnimatePresence mode="wait">
           <motion.div
             key={tracking || outcome ? `ride-${ride!.status}` : phase}
@@ -567,6 +565,8 @@ export function HomeScreen() {
         onPick={pickPlace}
         onPickOnMap={() => setPhase("pick-dropoff")}
       />
+
+      <BottomNav />
     </div>
   );
 }

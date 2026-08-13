@@ -44,7 +44,7 @@ export function CardsScreen() {
   }
 
   return (
-    <Screen title="بطاقاتي" back="/menu">
+    <Screen title="بطاقاتي" back="/account" nav>
       {loading ? (
         <Spinner />
       ) : (

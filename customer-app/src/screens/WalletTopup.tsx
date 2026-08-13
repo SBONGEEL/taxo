@@ -115,7 +115,7 @@ export function WalletTopupScreen() {
   }
 
   return (
-    <Screen title="شحن الرصيد" back="/wallet">
+    <Screen title="شحن الرصيد" back="/wallet" nav>
       <div className="space-y-20">
         {cliq ? (
           <section className="card space-y-16 p-16">
