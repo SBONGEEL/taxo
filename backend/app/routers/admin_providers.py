@@ -57,6 +57,7 @@ async def list_providers(_admin: AdminUser, session: DbSession) -> ProviderCatal
                     ProviderFieldOut(
                         key=field.key,
                         label=field.label,
+                        kind=field.kind,
                         secret=field.secret,
                         required=field.required,
                     )

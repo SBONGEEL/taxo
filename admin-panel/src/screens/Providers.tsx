@@ -37,7 +37,7 @@ import type {
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
+import { Checkbox, Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
@@ -286,11 +286,16 @@ function CredentialModal({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [values, setValues] = useState<Record<string, string>>(() =>
+  const [values, setValues] = useState<Record<string, string | boolean>>(() =>
     Object.fromEntries(
       spec.fields.map((field) => [
         field.key,
-        String(credential?.values[field.key] ?? ""),
+        // **المفتاحُ منطقٌ لا نصّ** (2026-08-14): كان كلُّ حقلٍ يُحوَّل إلى
+        // `String(...)`، فيصير «لا» النصَّ `"false"` — و`bool("false")` في
+        // بايثون **صادق**، فيشتغل المزوّدُ الوهميُّ وهو مطفأ. قِيس من القاعدة.
+        field.kind === "toggle"
+          ? credential?.values[field.key] === true
+          : String(credential?.values[field.key] ?? ""),
       ]),
     ),
   );
@@ -298,7 +303,7 @@ function CredentialModal({
   const [error, setError] = useState<string | null>(null);
 
   const missing = spec.fields.filter(
-    (field) => field.required && !values[field.key]?.trim(),
+    (field) => field.required && !String(values[field.key] ?? "").trim(),
   );
 
   return (
@@ -318,20 +323,32 @@ function CredentialModal({
         </p>
 
         <div className="flex flex-col gap-12">
-          {spec.fields.map((field) => (
-            <Field
-              key={field.key}
-              label={`${field.label}${field.required ? "" : " (اختياري)"}`}
-              dir="ltr"
-              value={values[field.key]}
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  [field.key]: event.target.value,
-                }))
-              }
-            />
-          ))}
+          {spec.fields.map((field) =>
+            field.kind === "toggle" ? (
+              <Checkbox
+                key={field.key}
+                checked={values[field.key] === true}
+                onChange={(next) =>
+                  setValues((current) => ({ ...current, [field.key]: next }))
+                }
+              >
+                {field.label}
+              </Checkbox>
+            ) : (
+              <Field
+                key={field.key}
+                label={`${field.label}${field.required ? "" : " (اختياري)"}`}
+                dir="ltr"
+                value={String(values[field.key] ?? "")}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    [field.key]: event.target.value,
+                  }))
+                }
+              />
+            ),
+          )}
         </div>
 
         <ErrorNote message={error} />

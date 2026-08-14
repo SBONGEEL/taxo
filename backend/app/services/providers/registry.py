@@ -19,6 +19,13 @@ class ProviderField:
     label: str
     secret: bool = True
     required: bool = True
+    # **نوعُ الحقل — أُضيف 2026-08-14 بعد عطبٍ كلّف تشخيصاً كاملاً.**
+    # كانت البطاقةُ تصف الحقولَ بلا نوع، فترسم اللوحةُ **كلَّ حقلٍ صندوقَ نصّ**
+    # — بما فيها مفاتيحُ التشغيل. فمن كتب «false» أرسل النصَّ `"false"`،
+    # و`bool("false")` في بايثون **صادق**: أيُّ نصٍّ غيرِ فارغ صادق. فكان
+    # مفتاحُ «مزوّد وهمي» **يُشعَل حين يُطفأ** في سبعة عقود، ومعه `test_mode`
+    # في بوابة البطاقة — أي ثمانيةُ مواضعَ من شكلٍ واحد.
+    kind: str = "text"
     expose_to_clients: bool = False
 
 
@@ -48,6 +55,7 @@ MOCK_FIELD = ProviderField(
     label="مزود وهمي (تطوير واختبار فقط)",
     secret=False,
     required=False,
+    kind="toggle",
 )
 
 
@@ -72,6 +80,7 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             ProviderField(key="store_id", label="معرّف المتجر"),
             ProviderField(key="auth_key", label="مفتاح المصادقة"),
             ProviderField(
+                kind="toggle",
                 key="test_mode",
                 label="وضع Sandbox",
                 secret=False,

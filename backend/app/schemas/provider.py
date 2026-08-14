@@ -17,6 +17,9 @@ class ProviderFieldOut(BaseModel):
 
     key: str
     label: str
+    # `text` أو `secret` أو `toggle` — واللوحةُ ترسم مفتاحاً للأخير لا صندوقَ
+    # نصّ، فترسل `true`/`false` منطقيّاً لا كلمةً تُقرأ عكسَ معناها
+    kind: str = "text"
     secret: bool
     required: bool
 

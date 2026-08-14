@@ -43,7 +43,7 @@ __all__ = [
 
 
 def build_provider(values: Mapping[str, Any]) -> PushProvider:
-    if bool(values.get("use_mock")) and not settings.is_production:
+    if credentials_service.is_mock(values) and not settings.is_production:
         return MockPushProvider(get_redis_client())
 
     project_id = str(values.get("project_id") or "").strip()

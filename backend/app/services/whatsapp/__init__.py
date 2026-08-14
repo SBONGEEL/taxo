@@ -51,7 +51,7 @@ __all__ = [
 
 def build_provider(values: Mapping[str, Any]) -> WhatsAppOtpProvider:
     """يبني المزود من قيم عقدٍ مفكوك التشفير — من هنا ومن زر الاختبار."""
-    if bool(values.get("use_mock")) and not settings.is_production:
+    if credentials_service.is_mock(values) and not settings.is_production:
         return MockWhatsAppProvider(get_redis_client())
 
     phone_number_id = str(values.get("phone_number_id") or "").strip()

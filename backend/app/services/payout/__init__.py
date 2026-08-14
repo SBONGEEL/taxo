@@ -40,7 +40,7 @@ __all__ = [
 
 
 def build_provider(values: Mapping[str, Any]) -> PayoutProvider:
-    if bool(values.get("use_mock")) and not settings.is_production:
+    if credentials_service.is_mock(values) and not settings.is_production:
         return MockPayoutProvider(get_redis_client())
 
     endpoint = str(values.get("endpoint") or "").strip()

@@ -396,6 +396,8 @@ export type ProviderKey =
 export interface ProviderField {
   key: string;
   label: string;
+  /** `text` · `secret` · `toggle` — والأخيرُ يُرسم مفتاحاً لا صندوقَ نصّ. */
+  kind: "text" | "secret" | "toggle";
   secret: boolean;
   required: boolean;
 }

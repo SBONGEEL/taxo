@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping
+
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import select
@@ -122,7 +124,7 @@ async def get_values(
     )
     if credential is None:
         return None
-    return get_cipher().decrypt(credential.credentials)
+    return normalize_toggles(get_cipher().decrypt(credential.credentials))
 
 
 async def client_config(
@@ -266,3 +268,55 @@ async def delete(
         },
     )
     await session.delete(credential)
+
+
+# ---------------------------------------------------- مفاتيحُ التشغيل في العقود
+
+def _toggle_keys() -> frozenset[str]:
+    """مفاتيحُ التشغيل كما تعلنها البطاقات — لا قائمةٌ مكتوبةٌ بيد."""
+    from app.services.providers.registry import PROVIDERS
+
+    return frozenset(
+        field.key
+        for spec in PROVIDERS.values()
+        for field in spec.fields
+        if field.kind == "toggle"
+    )
+
+
+def normalize_toggles(values: dict[str, Any]) -> dict[str, Any]:
+    """يحوّل نصوصَ المفاتيح إلى منطق — **عند القراءة والكتابة معاً**.
+
+    **ولماذا هنا لا في ترحيلةٍ للقاعدة**: القيمُ مخزَّنةٌ داخل مغلَّفٍ مشفَّر،
+    وترحيلُها يعني فكَّ كلِّ عقدٍ وإعادةَ تشفيره — عمليةٌ على مالٍ ومفاتيحَ
+    لإصلاحِ قراءةٍ. والتطبيعُ في البابِ الوحيد الذي يقرأ العقود يصلح المخزَّنَ
+    والجديدَ معاً، بلا لمسِ صفٍّ واحد.
+
+    و«false» و«0» و«» تُقرأ إطفاءً، وما عداها إشعالاً — فالنصُّ الذي كتبه
+    مشرفٌ يُفهم كما قصده لا كما يفهمه `bool()`.
+    """
+    keys = _toggle_keys()
+    out = dict(values)
+    for key in keys & out.keys():
+        raw = out[key]
+        if isinstance(raw, str):
+            out[key] = raw.strip().lower() not in ("", "false", "0", "no", "off")
+        else:
+            out[key] = bool(raw)
+    return out
+
+
+def is_on(values: Mapping[str, Any] | None, key: str) -> bool:
+    """قراءةٌ صارمةٌ لمفتاحِ تشغيل — **البابُ الوحيد**.
+
+    كان كلُّ مستهلكٍ يكتب `bool(values.get("use_mock"))` بنفسه، ثمانيَ مرات،
+    فوقع الخطأُ ثماني مرات. والبابُ الواحد يجعل تصحيحَه تصحيحاً واحداً.
+    """
+    if not values:
+        return False
+    return normalize_toggles(dict(values)).get(key) is True
+
+
+def is_mock(values: Mapping[str, Any] | None) -> bool:
+    """هل يطلب هذا العقدُ مزوّداً وهمياً؟"""
+    return is_on(values, "use_mock")

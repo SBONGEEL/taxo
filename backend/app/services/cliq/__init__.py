@@ -49,7 +49,7 @@ def company_alias(values: Mapping[str, Any]) -> str:
 
 
 def build_provider(values: Mapping[str, Any]) -> CliqProvider:
-    if bool(values.get("use_mock")) and not settings.is_production:
+    if credentials_service.is_mock(values) and not settings.is_production:
         return MockCliqProvider(
             get_redis_client(), company_alias=company_alias(values) or "TAXO"
         )

@@ -46,7 +46,7 @@ def build_verifier(values: Mapping[str, Any]) -> IdTokenVerifier:
     if not project_id:
         raise FirebaseAuthUnavailable("عقد Firebase بلا معرّف مشروع")
 
-    if bool(values.get("use_mock")) and not settings.is_production:
+    if credentials_service.is_mock(values) and not settings.is_production:
         return MockIdTokenVerifier(project_id=project_id)
     return FirebaseIdTokenVerifier(project_id=project_id)
 

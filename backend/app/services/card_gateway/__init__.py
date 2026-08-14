@@ -59,7 +59,7 @@ __all__ = [
 
 
 def _mock_allowed(values: Mapping[str, Any]) -> bool:
-    return bool(values.get("use_mock")) and not settings.is_production
+    return credentials_service.is_mock(values) and not settings.is_production
 
 
 def return_url_for(cart_id: str, *, payer_role: UserRole) -> str:
@@ -103,7 +103,7 @@ def build_gateway(values: Mapping[str, Any]) -> CardGateway:
     return TelrGateway(
         store_id=store_id,
         auth_key=auth_key,
-        test_mode=bool(values.get("test_mode")),
+        test_mode=credentials_service.is_on(values, "test_mode"),
     )
 
 
