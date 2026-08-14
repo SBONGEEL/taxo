@@ -742,6 +742,15 @@ async def attempt_renewal(
     user = await session.get(User, candidate.driver_user_id)
     if driver is None or user is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
         return None
+
+    # **تجديدٌ وقع فعلاً لا يُعاد إعلانُه**: مفتاحُ التكرار يجعل `purchase_with_wallet`
+    # تعيد الاشتراكَ القائم بلا خصم — وهذا صحيحٌ للمال وخاطئٌ للخبر: من جُدِّد
+    # له مرةً يصله إشعارٌ ثانٍ بلا شيءٍ جديد. قِيس على الجهاز: دورةٌ أُعيدت
+    # يدوياً فكتبت صفَّ «جُدِّد اشتراكك» مرتين والدفترُ فيه قيدٌ واحد
+    key = f"autorenew:{candidate.subscription_id}"
+    if await _find_by_idempotency_key(session, key) is not None:
+        return None
+
     try:
         return await purchase_with_wallet(
             session,
@@ -752,7 +761,7 @@ async def attempt_renewal(
             # تجديدٌ **واحد** يُحاول ثلاثاً، لا ثلاثةُ تجديدات. وبمفتاحٍ لكل
             # موعدٍ وقع الخصمُ مرتين حين استحقّ موعدان في دورةٍ واحدة — كشفه
             # `test_it_renews_once_per_attempt_window` قبل أن يُشحن.
-            idempotency_key=f"autorenew:{candidate.subscription_id}",
+            idempotency_key=key,
         )
     except AppError as exc:
         # **يُبتلع خطأُ المجال وحدَه**: رصيدٌ لا يكفي، أو محفظةٌ مجمَّدة، أو خطةٌ

@@ -155,6 +155,67 @@ async def test_an_empty_wallet_is_silent_until_the_last_attempt(
     assert await _count_subscriptions(session_factory, driver["driver_id"]) == 1
 
 
+async def test_a_second_cycle_does_not_announce_the_same_renewal(
+    client: AsyncClient, session_factory
+) -> None:
+    """**تجديدٌ وقع لا يُعاد إعلانُه** — قِيس على الجهاز قبل أن يُكتب هذا.
+
+    مفتاحُ التكرار يجعل `purchase_with_wallet` تعيد الاشتراكَ القائم بلا خصم،
+    وهذا صحيحٌ للمال وخاطئٌ للخبر: صفَّان في صندوق الوارد بقيدٍ واحدٍ في الدفتر.
+    """
+    from app.models.notification import UserNotification
+
+    driver = await approved_driver(
+        client,
+        session_factory,
+        DRIVER | {"phone": "0796660015", "name": "كبتنُ الإعلان"},
+        plate_number="AMM-1515",
+        subscribed=False,
+    )
+    plan = await ensure_plan(session_factory)
+    await _subscription_ending_in(
+        session_factory, driver["driver_id"], ends_in=timedelta(hours=3), plan_id=plan
+    )
+    await _enable_auto_renew(session_factory, driver["driver_id"])
+    await _topup(session_factory, driver["user_id"], "500.000")
+
+    redis = get_redis_client()
+    assert await subscriptions_service.renew_due(redis) == 1
+
+    # أثرُ المحاولات يُمحى — كما لو أُعيدت الدورةُ يدوياً أو انهارت وأُعيدت
+    for attempt in subscriptions_service.RENEWAL_ATTEMPTS:
+        await redis.delete(
+            subscriptions_service.renewal_key(
+                (await _newest_subscription_id(session_factory, driver["driver_id"])),
+                attempt,
+            )
+        )
+    assert await subscriptions_service.renew_due(redis) == 0, (
+        "أُعلن التجديدُ مرتين — والدفترُ فيه قيدٌ واحد"
+    )
+
+    async with session_factory() as session:
+        rows = await session.scalars(
+            select(UserNotification).where(
+                UserNotification.user_id == uuid.UUID(str(driver["user_id"])),
+                UserNotification.kind == "subscription_renewed",
+            )
+        )
+        assert len(list(rows)) == 1
+
+
+async def _newest_subscription_id(session_factory, driver_id: str) -> uuid.UUID:
+    async with session_factory() as session:
+        row = await session.scalar(
+            select(DriverSubscription.id)
+            .where(DriverSubscription.driver_id == uuid.UUID(str(driver_id)))
+            .order_by(DriverSubscription.created_at.desc())
+            .limit(1)
+        )
+        assert row is not None
+        return row
+
+
 async def test_the_last_attempt_says_it_failed(
     client: AsyncClient, session_factory
 ) -> None:
