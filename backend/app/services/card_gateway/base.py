@@ -35,7 +35,7 @@ class CardGatewayUnavailable(AppError):
 
     status_code = 503
     code = "card_gateway_unavailable"
-    message = "خدمة الدفع بالبطاقة غير مهيأة — راجع عقد Telr في لوحة الإدارة"
+    message = "الدفع بالبطاقة غير متاح الآن — اختر طريقة دفع أخرى."
 
 
 class CardGatewayError(AppError):

@@ -12,3 +12,7 @@ android/.gradle/
 android/local.properties
 android/app/src/main/assets/public/
 android/app/google-services.json
+
+# حزمُ التصحيح تُنسخ إلى `public/` لتنزيلها على الهاتف عبر النفق — أثرُ
+# تشغيلٍ لا مصدر، وتُحذف بعد التثبيت (README: النفق يُغلق بعد التجربة)
+public/*.apk

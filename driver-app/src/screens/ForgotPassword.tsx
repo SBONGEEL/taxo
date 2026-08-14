@@ -24,6 +24,7 @@ import { Field } from "@/components/ui/Field";
 import { useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
+import { passwordError } from "@/lib/password";
 
 type Step = "phone" | "verify" | "password";
 
@@ -132,6 +133,7 @@ export function ForgotPasswordScreen() {
             placeholder="••••••••"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            error={passwordError(password) ?? undefined}
           />
           <Field
             label="تأكيد كلمة المرور"

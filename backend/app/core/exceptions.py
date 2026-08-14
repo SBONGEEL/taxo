@@ -4,6 +4,14 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 
+# **الرسالةُ تُكتب لمن يقرؤها** (2026-08-14، بعد أن قرأ راكبٌ على هاتفه «راجع
+# عقد Firebase في لوحة الإدارة»). ولا يعني ذلك «لا تذكر العقود» بل قسمةً بحسب
+# من يصل إليه الخطأ: ما يظهر في تطبيقَي الراكب والكبتن يقول **ما جرى وما يفعله
+# القارئ**، وما لا يظهر إلا في اللوحة (التحويل الآلي، اختبارُ الاتصال، مفتاحُ
+# التشفير) يبقى بلغة المشرف — فتلك جملتُه هو. والرمزُ (`code`) هو ما يبحث به
+# المشرفُ في السجل، فلا يضيع التشخيص.
+
+
 class AppError(Exception):
     """خطأ أعمال معروف — يُترجم لاستجابة JSON موحّدة."""
 
@@ -111,7 +119,7 @@ class RoutingUnavailable(AppError):
 
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     code = "routing_unavailable"
-    message = "خدمة المسارات غير مهيأة — راجع عقد Mapbox في لوحة الإدارة"
+    message = "تعذّر حساب المسار الآن. حاول بعد قليل."
 
 
 class RoutingFailed(AppError):

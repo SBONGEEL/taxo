@@ -24,7 +24,7 @@ class FirebaseAuthUnavailable(AppError):
 
     status_code = 503
     code = "firebase_auth_unavailable"
-    message = "خدمة التحقق من الهاتف غير مهيأة — راجع عقد Firebase في لوحة الإدارة"
+    message = "التحقق من رقم هاتفك غير متاح حالياً. حاول بعد قليل."
 
 
 class InvalidIdToken(AppError):

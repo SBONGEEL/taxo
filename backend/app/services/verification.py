@@ -72,7 +72,7 @@ class VerificationUnavailable(AppError):
 
     status_code = 503
     code = "verification_unavailable"
-    message = "خدمة التحقق من الهاتف غير مهيأة — راجع عقود المزودين في اللوحة"
+    message = "التحقق من رقم هاتفك غير متاح حالياً. حاول بعد قليل."
 
 
 class ChannelUnavailable(AppError):

@@ -28,6 +28,7 @@ import { useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { confirmError, passwordError, passwordsReady } from "@/lib/password";
 
 const COUNTRY_LABEL: Record<CountryCode, string> = {
   JO: "الأردن",
@@ -71,8 +72,7 @@ export function RegisterScreen() {
   const complete =
     name.trim().length >= 2 &&
     looksComplete(phone, nationalLength) &&
-    password.length >= 8 &&
-    confirmation.length >= 8;
+    passwordsReady(password, confirmation);
 
   function next() {
     setError(null);
@@ -190,6 +190,7 @@ export function RegisterScreen() {
           placeholder="••••••••"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          error={passwordError(password) ?? undefined}
         />
         <Field
           label="تأكيد كلمة المرور"
@@ -198,6 +199,7 @@ export function RegisterScreen() {
           autoComplete="new-password"
           placeholder="••••••••"
           value={confirmation}
+          error={confirmError(password, confirmation) ?? undefined}
           onChange={(event) => setConfirmation(event.target.value)}
         />
 

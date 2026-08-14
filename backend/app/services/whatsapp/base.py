@@ -32,7 +32,7 @@ class WhatsAppUnavailable(AppError):
 
     status_code = 503
     code = "whatsapp_unavailable"
-    message = "خدمة واتساب غير مهيأة — راجع عقد WhatsApp في لوحة الإدارة"
+    message = "تعذّر إرسال الرمز عبر واتساب الآن. جرّب طريقة أخرى."
 
 
 class WhatsAppError(AppError):

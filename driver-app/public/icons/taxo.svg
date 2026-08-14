@@ -1,18 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TAXO DRIVER">
-  <!-- ألوانُ `DESIGN.md` §1.1 (الوضع الليلي ثابتاً — أيقونةُ النظام لا تتبع
-       سِمةَ التطبيق). وأُسقط `#facc15` على `#0b0f14`: أصفرُ اللوحة التي حُذفت
-       في 12-أ، وخلفيةٌ ليست في §1.1 أصلاً -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TAXO Driver">
+  <!-- **علامةُ الكبتن — أختُ علامة الراكب لا نسخةٌ منها** (2026-08-14).
+       الحلقةُ نفسُها بالوزن نفسِه (حرف O من الاسم، وهو مؤشِّرُ التحميل في
+       الشاشة الترحيبية — `DESIGN.md` §7)، فيُقرأ التطبيقان من عائلةٍ واحدة.
+
+       **والفرقُ شكلٌ لا لون**: مِقودٌ داخل الحلقة — محورٌ وثلاثةُ أذرع. يُقرأ
+       «سائق» في لمحةٍ بلا كلمة، ويبقى مميَّزاً عن نقطة الراكب حتى في 48px
+       وحتى بالأبيض والأسود. ولم يُستعمل اللونُ للتمييز عمداً: الورديُّ محجوزٌ
+       للسِمة النسائية (§1.1-ب)، وأيُّ لونٍ ثالثٍ يدخل خارج اللوحة.
+
+       ألوانُ §1.1 ليليةً ثابتة: أيقونةُ النظام لا تتبع سِمةَ التطبيق. -->
   <rect width="512" height="512" rx="114" fill="#14181d"/>
-  <g transform="translate(256 256) scale(1.0) translate(-256 -256)">
-    <g fill="none" stroke="#e6edf3" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
-       transform="translate(98 160) scale(1.375)">
-      <path d="M8 24 H52 M30 24 V72"/>
-      <path d="M64 72 L86 24 L108 72 M72 58 H100"/>
-      <path d="M120 24 L164 72 M164 24 L120 72"/>
-      <circle cx="198" cy="48" r="24"/>
-    </g>
-    <text x="256" y="322" text-anchor="middle" fill="#8b949e"
-          font-family="'IBM Plex Sans Arabic', system-ui, sans-serif"
-          font-size="38" font-weight="600" letter-spacing="5.3">DRIVER</text>
+
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e6edf3" stroke-width="46"
+          stroke-linecap="round" stroke-dasharray="800 143" transform="rotate(-64 256 256)"/>
+
+  <!-- المِقود: محورٌ وثلاثةُ أذرع — أعلى، وأسفلَ يميناً، وأسفلَ يساراً -->
+  <g stroke="#e6edf3" stroke-width="34" stroke-linecap="round">
+    <path d="M256 256 V162"/>
+    <path d="M256 256 L337 303"/>
+    <path d="M256 256 L175 303"/>
   </g>
+  <circle cx="256" cy="256" r="40" fill="#e6edf3"/>
 </svg>

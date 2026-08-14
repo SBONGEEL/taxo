@@ -98,9 +98,12 @@ export function PhoneVerification({
       if (method === "firebase") {
         const firebase = firebaseConfigOf(config?.providers.firebase_auth);
         if (!firebase) {
-          throw new Error(
-            "إعداد Firebase غير مكتمل — راجع عقد المزود في لوحة الإدارة",
-          );
+          // **جملةُ من يقرؤها لا جملةُ من يصلحها** (2026-08-14): كانت
+          // «راجع عقد المزود في لوحة الإدارة» — وهي تعليماتٌ لمشرفٍ وصلت
+          // راكباً على هاتفه، فقرأ اسمَ نظامٍ لا يعرفه وطُلب منه فتحُ لوحةٍ
+          // لا يملكها. والسببُ الفنيُّ يبقى في `console` لمن يفتحه.
+          console.error("firebase config missing in GET /config providers");
+          throw new Error("التحقق من رقم هاتفك غير متاح حالياً. حاول بعد قليل.");
         }
         challenge.current = await startPhoneVerification(
           firebase,

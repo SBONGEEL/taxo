@@ -31,6 +31,7 @@ import {
 import { COUNTRY_LABEL, looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { confirmError, passwordError, passwordsReady } from "@/lib/password";
 
 export function RegisterScreen() {
   const { config } = useConfig();
@@ -64,13 +65,11 @@ export function RegisterScreen() {
   // **والتأكيدُ شرطٌ في الواجهة وحدها** (التصميم): الخلفيةُ تأخذ كلمةً واحدة،
   // وما يحرسه الحقلُ الثاني خطأُ طباعةٍ في كلمةٍ **لا تُعرض** — ومن أخطأ فيها
   // لا يكتشف ذلك إلا حين يعجز عن الدخول، ثم يمرّ بمسار استعادةٍ كامل
-  const mismatch = confirm.length > 0 && confirm !== password;
   const ready = useMemo(
     () =>
       looksComplete(phone, nationalLength) &&
       name.trim().length >= 2 &&
-      password.length >= 8 &&
-      confirm === password,
+      passwordsReady(password, confirm),
     [phone, nationalLength, name, password, confirm],
   );
 
@@ -218,6 +217,7 @@ export function RegisterScreen() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               hint="ثمانية أحرف على الأقل"
+              error={passwordError(password) ?? undefined}
             />
 
             <Field
@@ -226,7 +226,7 @@ export function RegisterScreen() {
               autoComplete="new-password"
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
-              error={mismatch ? "الكلمتان غير متطابقتين" : undefined}
+              error={confirmError(password, confirm) ?? undefined}
             />
 
             <ErrorNote message={error} />

@@ -27,7 +27,7 @@ class CliqUnavailable(AppError):
 
     status_code = 503
     code = "cliq_acquirer_unavailable"
-    message = "خدمة كليك الآلية غير مهيأة — راجع عقد CliQ في لوحة الإدارة"
+    message = "الشحن عبر كليك غير متاح الآن — جرّب طريقة أخرى."
 
 
 class CliqError(AppError):

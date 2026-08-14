@@ -26,6 +26,7 @@ import { Field } from "@/components/ui/Field";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
+import { MIN_PASSWORD, passwordError } from "@/lib/password";
 
 export function ForgotPasswordScreen() {
   const { config } = useConfig();
@@ -51,7 +52,7 @@ export function ForgotPasswordScreen() {
   const [busy, setBusy] = useState(false);
 
   const ready = useMemo(
-    () => looksComplete(phone, nationalLength) && password.length >= 8,
+    () => looksComplete(phone, nationalLength) && password.length >= MIN_PASSWORD,
     [phone, country, password],
   );
 
@@ -112,6 +113,7 @@ export function ForgotPasswordScreen() {
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              error={passwordError(password) ?? undefined}
               hint="ثمانية أحرف على الأقل — وستُغلق كل الجلسات المفتوحة على حسابك"
             />
 

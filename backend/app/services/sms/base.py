@@ -26,7 +26,7 @@ class SmsUnavailable(AppError):
 
     status_code = 503
     code = "sms_unavailable"
-    message = "خدمة الرسائل غير مهيأة — راجع عقد مزود SMS في لوحة الإدارة"
+    message = "تعذّر إرسال رمز التحقق الآن. حاول بعد قليل."
 
 
 class SmsError(AppError):
