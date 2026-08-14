@@ -13,6 +13,10 @@
     "check:config": "node scripts/check-config.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.8",
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/geolocation": "^7.1.8",
+    "@capacitor/splash-screen": "^7.0.5",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-switch": "^1.1.2",
@@ -30,6 +34,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.8",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^22.10.5",
     "@types/qrcode": "^1.5.5",

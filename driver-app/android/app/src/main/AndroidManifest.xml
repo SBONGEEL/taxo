@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- الموقع: دقيقٌ وتقريبيٌّ معاً — أندرويد 12+ يعطي المستخدمَ خيارَ
+         «تقريبي» ولو طلبتَ الدقيق، وطلبُ الدقيق وحدَه يترك من اختاره بلا
+         موقعٍ إطلاقاً. والكبتنُ موقعُه هو الخدمة. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- **الموقعُ في الخلفية — للكبتن وحدَه** (تطبيقُ الراكب لا يطلبه ولا يحتاجه).
+         وثلاثةُ أشياءَ يجب أن تُقال عنه بصراحة:
+         ١. أندرويد 10+ **لا يمنحه من داخل التطبيق**: أقصى ما يستطيعه الحوارُ
+            هو «أثناء الاستخدام»، و«السماح طوال الوقت» يُختار يدوياً من إعدادات
+            النظام. فزرٌّ في التطبيق يَعِد به يَعِد بما لا يملكه.
+         ٢. Google Play يقيّده بمراجعةٍ وسياسةٍ مكتوبة — وهذا بناءُ تصحيحٍ لا نشر.
+         ٣. وبثُّ الموقع اليوم يقع والتطبيقُ مفتوح؛ البثُّ والشاشةُ مطفأةٌ يحتاج
+            **خدمةً أماميةً** (foreground service) بإشعارٍ دائم، وهي بندٌ مستقلّ. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- الإشعارات: إذنٌ صريحٌ منذ أندرويد 13 — ويُطلب عند أول حدثٍ يستحقّه
+         لا عند الإقلاع: طلبٌ على شاشةٍ فارغةٍ يُرفض ثم لا يُسأل ثانية. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+</manifest>

@@ -45,3 +45,9 @@ backend/var/
 # قيم مشروع Firebase المحلية لأداة رمز الجهاز — عامّةٌ بطبيعتها لكنها
 # قيمُ بيئةٍ بعينها (القالب: config.local.example.js)
 tools/fcm-token/config.local.js
+
+# مفاتيحُ Firebase لكلِّ حزمة (المرحلة 13، تغليفُ Capacitor).
+# **لا تدخل المستودع**: ملفٌّ يخصّ مشروعَ Firebase وحسابَه، ويُنزَّل من
+# لوحته لكلِّ حزمةٍ على حدة — ونسخةٌ قديمةٌ في Git تُقرأ أحدثَ مما في اليد.
+google-services.json
+google-services*.json

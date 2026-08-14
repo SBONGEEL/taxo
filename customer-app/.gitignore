@@ -4,3 +4,11 @@ dist/
 *.local
 # ذاكرةُ `tsc -b` بين البناءات — أثرُ تشغيلٍ على جهازٍ بعينه لا مصدر
 *.tsbuildinfo
+
+# مخرجاتُ بناء أندرويد (المرحلة 13) — تُبنى ولا تُخزَّن
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/google-services.json

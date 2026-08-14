@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- خلفيةُ الأيقونة التكيّفية = لونُ الخلفية الليلي bg (DESIGN.md §1.1): فنُّ
+         الأيقونة مرسومٌ على داكن، وأبيضُ Capacitor الافتراضي يجعل الحروفَ
+         البيضاء تختفي على أجهزةٍ تقصّ الأيقونةَ دائرةً -->
+    <color name="ic_launcher_background">#14181d</color>
+</resources>
