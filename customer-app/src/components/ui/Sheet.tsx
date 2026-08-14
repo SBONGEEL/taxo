@@ -30,12 +30,22 @@ export function Sheet({
       exit={{ y: 24, opacity: 0 }}
       transition={{ duration: DURATION.med, ease: EASE.standard }}
       className={cn(
-        "pointer-events-auto rounded-t-sheet border-t border-line bg-surface",
-        "px-5 pt-4 shadow-[0_-8px_32px_-12px_rgb(0_0_0/0.25)] pb-safe",
+        // **`rounded-t-22` لا `rounded-t-sheet`**: لا مفتاحَ `sheet` في سلّم
+        // أنصاف الأقطار، فالصنفُ كان **لا يولّد شيئاً** — قِيس على الجهاز
+        // `border-radius: 0px`، وعُدَّ في CSS المبنيّ: صفرُ قواعد. وهي أختُ
+        // `.scr`: صنفٌ مكتوبٌ صحيحاً، حاضرٌ في الوسم، لا وجودَ له في المخرَج،
+        // والبناءُ أخضر. و٢٢ ليست اختياراً: `DESIGN.md` §1.3 يقول «ورقة
+        // الرحلة/التأكيد المدمجة (22px 22px 0 0)».
+        "pointer-events-auto rounded-t-22 border-t border-line bg-surface",
+        // **والظلُّ من السلّم لا رقمٌ مسطور**: كان `rgba(0,0,0,.25)` — يختفي في
+        // الوضع الليلي (أسودُ على أسود) فتُقرأ الورقةُ ملتصقةً بالخريطة، ويثقل
+        // في النهاري. و`shadow-sheet` معرَّفٌ في §6 لهذا الموضع بالضبط.
+        "px-16 pt-8 shadow-sheet pb-safe",
         className,
       )}
     >
-      <div className="mx-auto mb-12 h-6 w-40 rounded-full bg-line" aria-hidden />
+      {/* المقبض: أعرضُ وبلون `--mut` لا `--brd` — كان يذوب في حدِّ الورقة */}
+      <div className="mx-auto mb-14 h-6 w-44 rounded-full bg-muted" aria-hidden />
       {children}
     </motion.div>
   );
@@ -67,9 +77,9 @@ export function DrawerSheet({
              الرأسُ ينجو بستّة بكسلاتٍ عند الإطار الكامل: نجاةُ صدفةٍ لا قاعدة.
              و٧٦ = ١٦ (علوُّ الأزرار) + ٤٤ (قطرُها) + ١٦ (فرجة). */
           className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[calc(100dvh-76px)]
-            max-w-lg flex-col rounded-t-sheet border-t border-line bg-surface outline-none"
+            max-w-lg flex-col rounded-t-24 border-t border-line bg-surface outline-none"
         >
-          <div className="mx-auto my-12 h-6 w-40 shrink-0 rounded-full bg-line" aria-hidden />
+          <div className="mx-auto my-12 h-6 w-44 shrink-0 rounded-full bg-muted" aria-hidden />
           {title ? (
             <Drawer.Title className="px-20 pb-8 text-18 font-semibold text-ink">
               {title}

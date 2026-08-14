@@ -15,7 +15,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Crosshair, Moon, Search, Sun } from "lucide-react";
+import { Bell, Crosshair, MapPin, Moon, Search, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -540,15 +540,23 @@ export function HomeScreen() {
               />
             ) : (
               <Sheet>
-                <div className="space-y-12 pb-16">
+                <div className="space-y-12 pb-8">
                   <p className="text-18 font-semibold text-ink">إلى أين؟</p>
+                  {/* **حقلٌ لا زرٌّ بشكل حقل**: ارتفاعٌ لا ينزل عن 48 (هدفُ لمسٍ
+                      مريح)، وتعبئةُ `--sur2` فوق سطح الورقة `--sur` فيُقرأ حدُّه
+                      من الفرق لا من خطٍّ باهت، و`rounded-13` نصفُ قطر «حقل
+                      الإدخال في المحمول» (`DESIGN.md` §1.3).
+                      **وحالةُ التركيز تتبع `--brand`** فتتبدّل مع السِمة الوردية
+                      بلا شرطٍ في هذا الملف. */}
                   <button
                     type="button"
                     onClick={() => setSearchOpen(true)}
-                    className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-bg px-16 py-14 text-start"
+                    className="pressable flex min-h-48 w-full items-center gap-12 rounded-13 border border-line bg-bg px-16 text-start transition focus-visible:border-brand active:border-brand"
                   >
-                    <Search className="size-20 text-muted" />
-                    <span className="text-muted">ابحث عن وجهتك أو حدّدها بالدبوس</span>
+                    <Search className="size-20 shrink-0 text-muted" />
+                    <span className="truncate text-14.5 text-muted">
+                      ابحث عن وجهتك أو حدّدها بالدبوس
+                    </span>
                   </button>
                   {/* اختصارا «المنزل» و«العمل» — أولُ مكانين محفوظين
                       (`FUTURE-FEATURES` بند 1). ولا يظهر الصفُّ بلا أماكن:
@@ -580,15 +588,26 @@ export function HomeScreen() {
                     </div>
                   ) : null}
 
+                  {/* **صفٌّ لا سطرٌ معلّق**: كان نصّاً عارياً تحت الحقل يُقرأ
+                      زائدةً لا عنصراً — بلا أيقونةٍ تقول «مكان»، وبلا حدٍّ يربطه
+                      بما فوقه، وبلا ما يقول إنه **يُضغط**. وهو يُضغط: منه يدخل
+                      طورُ `pick-pickup`. فصار صفاً بأيقونة موقعٍ بلون `--brand`
+                      (فيتبع السِمة)، وتسميةٍ فوق القيمة، وكلمةِ «تغيير» تقول
+                      وظيفتَه — بنفس ارتفاع الحقل ونصفِ قطره، فيُقرأ الاثنان
+                      عائلةً واحدة. */}
                   <button
                     type="button"
                     onClick={() => setPhase("pick-pickup")}
-                    className="pressable w-full truncate text-start text-14 text-muted"
+                    className="pressable flex min-h-48 w-full items-center gap-12 rounded-13 border border-line px-16 text-start transition focus-visible:border-brand active:border-brand"
                   >
-                    نقطة الانطلاق:{" "}
-                    <span className="text-ink">
-                      {pickupAddress ?? (pickup ? "الموقع المحدد" : "موقعي الحالي")}
+                    <MapPin className="size-18 shrink-0 text-brand" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-11.5 text-muted">نقطة الانطلاق</span>
+                      <span className="block truncate text-14 text-ink">
+                        {pickupAddress ?? (pickup ? "الموقع المحدد" : "موقعي الحالي")}
+                      </span>
                     </span>
+                    <span className="shrink-0 text-12 text-muted">تغيير</span>
                   </button>
                 </div>
               </Sheet>
