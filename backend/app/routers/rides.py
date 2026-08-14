@@ -23,6 +23,7 @@ from app.schemas.ride import (
     RideEstimateOut,
     RideEstimateRequest,
     RideOut,
+    RouteLineOut,
 )
 from app.services import (
     dispatch,
@@ -33,6 +34,7 @@ from app.services import (
     ride_log,
     rides as rides_service,
     route,
+    route_line,
     sharing,
     tips as tips_service,
     tracking,
@@ -178,6 +180,25 @@ async def get_ride(ride_id: uuid.UUID, user: CurrentUser, session: DbSession) ->
     return _to_out(ride)
 
 
+@router.get("/{ride_id}/route-line", response_model=RouteLineOut)
+async def get_route_line(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> RouteLineOut:
+    """شكلُ المسار على الطرق — للطرفين بعد القبول (البند ٨).
+
+    **الملكيةُ أولاً**: `get_ride_for_user` هو نفسُ بابِ بقية قراءات الرحلة، فلا
+    يُقرأ مسارُ رحلةِ غيرك (القسم 14). و**يُجلب هنا إن لم يكن مكتوباً**: القبول
+    يطلبه، وهذا يغطّي قبولاً وقع ونداءُ Mapbox فيه سقط — بلا أن يُعاد الطلبُ
+    لمن كُتب له.
+
+    ومسارٌ فارغٌ جوابٌ صحيح (`points: []`): التطبيقُ يرسم الدبوسين وحدهما.
+    """
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    points = await route_line.ensure(session, ride.id)
+    await session.commit()
+    return RouteLineOut(points=points or [])
+
+
 # -------------------------------------------------------------- حالات الرحلة
 
 
@@ -195,7 +216,19 @@ async def accept_ride(
     await notifications.publish_ride_event(
         session, redis, ride, events.RideEvent.DRIVER_ASSIGNED
     )
-    return _to_out(ride)
+
+    # **الجوابُ يُبنى قبل أيِّ commit ثانٍ**: `pickup_lat`/`dropoff_lat` خصائصُ
+    # محسوبةٌ في القاعدة (`column_property`)، والـcommit يُبطلها — فقراءتُها
+    # بعده تُطلق تحميلاً كسولاً خارج السياق غير المتزامن (`MissingGreenlet`).
+    # وهي المصيدةُ التي من أجلها تنتهي كلُّ دالةٍ مُعدِّلةٍ بـ`_flush_and_reload`
+    out = _to_out(ride)
+
+    # **وشكلُ المسار يُطلب مرةً هنا** (البند ٨، قرارُ المالك): بعد الـcommit فلا
+    # يُحمل قفلُ صفِّ الرحلة عبر نداء Mapbox، وقبل أن يفتح أيُّ طرفٍ خريطته.
+    # وفشلُه لا يمسّ القبول — `ensure` تبتلع خطأ المزوّد وتعيد `None`
+    if await route_line.ensure(session, ride.id) is not None:
+        await session.commit()
+    return out
 
 
 @router.post("/{ride_id}/decline", status_code=status.HTTP_204_NO_CONTENT)

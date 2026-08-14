@@ -38,9 +38,15 @@ class Coordinates:
 class Route:
     distance_km: Decimal
     duration_min: Decimal
+    # إحداثياتُ المسار `[[lng, lat], …]` — **لا تُطلب إلا حين تُرسم** (البند ٨).
+    # فارغةٌ على مسار التسعير: التقديرُ يُنادى مع كل تحريكٍ للدبوس، وشكلُ المسار
+    # حمولةٌ تُرسل لمن لم يطلب رحلةً بعد
+    geometry: list[list[float]] | None = None
 
 
-async def fetch_route(token: str, *waypoints: Coordinates) -> Route:
+async def fetch_route(
+    token: str, *waypoints: Coordinates, with_geometry: bool = False
+) -> Route:
     """نداء HTTP واحد لـ Mapbox — نقطة الحقن الوحيدة في الاختبارات.
 
     **نقطتان أو أكثر** (المرحلة 12-ب): Mapbox يقبل سلسلةَ إحداثياتٍ مفصولةً
@@ -55,8 +61,14 @@ async def fetch_route(token: str, *waypoints: Coordinates) -> Route:
     params = {
         "access_token": token,
         "alternatives": "false",
-        # لا نحتاج شكل المسار هنا؛ الملاحة في تطبيق الكبتن (المرحلة 10)
-        "overview": "false",
+        # **الشكلُ لا يُطلب إلا لمن يرسمه** (البند ٨، 2026-08-14): كان
+        # `overview=false` دائماً — فالمسارُ الذي يمرّ به Mapbox معروفٌ له
+        # ومجهولٌ لنا، وخريطةُ الرحلة بلا خط. ويبقى مطفأً على مسار التسعير:
+        # ذاك يُنادى مع كل تحريكِ دبوس، وحمولةُ الشكل تُرسل لمن لم يطلب بعد.
+        # و`simplified` لا `full`: خطٌّ يُرسم على شاشة هاتفٍ لا يفيده تفصيلُ
+        # كلِّ منعطفٍ بالمتر، ويكلّفه حجماً يمرّ في كل قراءة
+        "overview": "simplified" if with_geometry else "false",
+        **({"geometries": "geojson"} if with_geometry else {}),
     }
 
     try:
@@ -78,9 +90,18 @@ async def fetch_route(token: str, *waypoints: Coordinates) -> Route:
     except (KeyError, TypeError, ArithmeticError) as exc:
         raise RoutingFailed() from exc
 
+    # الشكلُ **لا يُفشل المسار إن غاب**: المسافةُ والمدةُ هما ما يُسعَّر، وخريطةٌ
+    # بلا خطٍّ أهونُ من رحلةٍ بلا سعر
+    geometry: list[list[float]] | None = None
+    if with_geometry:
+        coordinates = (best.get("geometry") or {}).get("coordinates")
+        if isinstance(coordinates, list) and len(coordinates) >= 2:
+            geometry = [[float(point[0]), float(point[1])] for point in coordinates]
+
     return Route(
         distance_km=(meters / 1000).quantize(_KM, rounding=ROUND_HALF_UP),
         duration_min=(seconds / 60).quantize(_MIN, rounding=ROUND_HALF_UP),
+        geometry=geometry,
     )
 
 
@@ -90,10 +111,12 @@ async def route_between(
     dropoff: Coordinates,
     country_code: CountryCode | None = None,
     stops: Sequence[Coordinates] = (),
+    with_geometry: bool = False,
 ) -> Route:
     """المسار بتوكن Mapbox السري المحفوظ في عقود المزودين.
 
     و`stops` محطاتٌ **وسيطة** بترتيبها بين الانطلاق والوجهة الأخيرة.
+    و`with_geometry` لمن يرسم الخط لا لمن يسعّر (البند ٨).
     """
     values = await credentials_service.get_values(
         session, ProviderKey.MAPBOX, country_code
@@ -102,4 +125,6 @@ async def route_between(
     if not token:
         raise RoutingUnavailable()
 
-    return await fetch_route(token, pickup, *stops, dropoff)
+    return await fetch_route(
+        token, pickup, *stops, dropoff, with_geometry=with_geometry
+    )

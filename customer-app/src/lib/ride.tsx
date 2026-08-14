@@ -19,7 +19,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { getActiveRide } from "@/api/endpoints";
+import { getActiveRide, nearbyDrivers } from "@/api/endpoints";
 import type { Coordinates, NearbyDriver, Ride } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { onForegroundMessage } from "@/lib/firebase";
@@ -101,6 +101,12 @@ export function RideProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const socket = useRef<RiderSocket | null>(null);
   const toastId = useRef(0);
+  /** كم إطارَ `nearby_drivers` وصل — صفرٌ يعني أن المقبس لم يتكلّم بعد. */
+  const framesSeen = useRef(0);
+  /** لقطةٌ في الطريق — الخريطةُ تُحرَّك كثيراً قبل أن يفتح المقبس، وبلا هذا
+   *  الحارس يُطلق كلُّ تحريكٍ نداءً ثانياً لا يضيف شيئاً (قِيس: نداءان في
+   *  ثانيةٍ واحدةٍ على أوّل رسمة). */
+  const snapshotting = useRef(false);
 
   const notify = useCallback((title: string, body?: string) => {
     const id = ++toastId.current;
@@ -131,6 +137,9 @@ export function RideProvider({ children }: { children: ReactNode }) {
           return;
 
         case "nearby_drivers":
+          // العدّادُ يفصل «وصل إطارٌ» عن «لم يصل بعد»: اللقطةُ من REST تُطبَّق
+          // ما دام صفراً، ولا تدهس إطاراً وصل أثناء انتظارها (`setViewport`)
+          framesSeen.current += 1;
           setDrivers((event as { drivers: NearbyDriver[] }).drivers);
           return;
 
@@ -192,7 +201,13 @@ export function RideProvider({ children }: { children: ReactNode }) {
         // ما فات أثناء الانقطاع لا يُبثّ ثانيةً (SPEC القسم 10)
         void refresh();
       },
-      onClose: () => setConnected(false),
+      onClose: () => {
+        setConnected(false);
+        // **وبانقطاعه تعود اللقطةُ باباً**: القسم 10 يجعل REST مصدرَ أوّل رسمة
+        // **وما بعد الانقطاع** — فبلا هذا التصفير تبقى الخريطة على آخر إطارٍ
+        // وصل، أي على سياراتٍ قد لا تكون هناك
+        framesSeen.current = 0;
+      },
     });
     instance.open();
     socket.current = instance;
@@ -219,8 +234,38 @@ export function RideProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe?.();
   }, [user, config, notify]);
 
+  /** يحرك المنظور، **ويملأ أوّلَ رسمةٍ من REST بدل انتظار المقبس**.
+   *
+   * قِيس (2026-08-14، البند ٧): كبتنٌ يبثّ فعلاً من وسط عمّان، وأوّلُ سيارةٍ
+   * تظهر على خريطة الراكب بعد **٣٦٣٤ms** — كلُّها انتظارُ إقلاعٍ ثم اتصالِ
+   * مقبسٍ ثم ذهابِ المنظور وعودةِ أوّل إطار. وذلك على المحليّ؛ وعبر النفق على
+   * الهاتف أطولُ بكثير، **وبلا نهايةٍ إن لم يفتح المقبسُ أصلاً** — وهي الحالُ
+   * التي رآها المالك: «السائقون لا يظهرون».
+   *
+   * **والمنفذُ موجودٌ منذ المرحلة 4 ولا يستدعيه أحد**: `GET /drivers/nearby`
+   * مكتوبٌ في وثيقته أنه «لأول رسمة وبعد انقطاع المقبس (SPEC القسم 10)»،
+   * ومعلنٌ في `api/endpoints.ts`، وليس له نداءٌ واحد في التطبيق. قاعدةٌ بلا باب.
+   *
+   * **ولا تدهس اللقطةُ إطاراً أحدثَ منها**: الردُّ قد يصل بعد أوّل إطارِ مقبس،
+   * فيُختم رقمُ الإطارات قبل النداء ولا يُطبَّق الردُّ إن تغيّر بعده. وأمّا
+   * اختلافُ `ref` بين اللقطة والإطار فمقصودٌ في الخلفية (مِلحٌ جديدٌ لكل طلب،
+   * فلا يُربط كبتنٌ بين لقطتين) — وثمنُه أن تُعاد العلّامةُ بناءً مرةً واحدة.
+   */
   const setViewport = useCallback((center: Coordinates) => {
     socket.current?.setViewport(center);
+    if (framesSeen.current > 0 || snapshotting.current) return;
+
+    const at = framesSeen.current;
+    snapshotting.current = true;
+    nearbyDrivers(center.lat, center.lng)
+      .then((snapshot) => {
+        if (framesSeen.current === at) setDrivers(snapshot);
+      })
+      // لقطةٌ فاشلة لا تُعلن شيئاً: المقبسُ هو المصدرُ الدائم وهذه تسبقه
+      .catch(() => undefined)
+      .finally(() => {
+        snapshotting.current = false;
+      });
   }, []);
 
   const value = useMemo<RideState>(

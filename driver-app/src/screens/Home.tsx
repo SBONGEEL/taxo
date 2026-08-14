@@ -32,6 +32,7 @@ import {
   getDriverWallet,
   getEarnings,
   getMySubscription,
+  getRouteLine,
   getUnreadCount,
   startRide,
 } from "@/api/endpoints";
@@ -126,6 +127,27 @@ export function HomeScreen() {
   }, [transfer, ride]);
 
   const tracking = isActive(ride);
+
+  // **خطُّ المسار على الطرق** (البند ٨): يُقرأ مرةً لكل رحلةٍ مُسنَدة — الخلفيةُ
+  // جمّدته لحظةَ القبول، فما يراه الكبتن هو ما يراه راكبُه. ويُصفَّر بانتهائها
+  const [routeLine, setRouteLine] = useState<number[][] | null>(null);
+  useEffect(() => {
+    const id = tracking ? ride.id : null;
+    if (!id) {
+      setRouteLine(null);
+      return;
+    }
+    let cancelled = false;
+    getRouteLine(id)
+      .then((line) => {
+        // فارغٌ جوابٌ صحيح: تُرسم الدبابيسُ وحدها بلا خطأ يُعرض للكبتن
+        if (!cancelled) setRouteLine(line.points.length >= 2 ? line.points : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [tracking ? ride.id : null]);
   // اشتراكٌ ساري شرطُ التوزيع (القسم 8) — والزرُّ يقول ذلك بدل أن يفتح
   // مقبساً ترفضه الخلفية
   const covered = subscription?.is_active === true;
@@ -196,6 +218,9 @@ export function HomeScreen() {
         pickup={tracking ? ride.pickup : null}
         dropoff={tracking ? ride.dropoff : null}
         fit={tracking}
+        // ويتقلّص الخطُّ خلفه كلّما تقدّم — من موقعه هو، فهو من يسير فيه
+        routePoints={routeLine}
+        trimAt={position}
       />
 
       {/* تدرّجٌ علوي 60px يفصل الشريط عن الخريطة (§2.9) */}

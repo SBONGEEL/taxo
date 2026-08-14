@@ -20,7 +20,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { createBooking, requestRide, unreadCount, updateMe } from "@/api/endpoints";
+import {
+  createBooking,
+  getRouteLine,
+  requestRide,
+  unreadCount,
+  updateMe,
+} from "@/api/endpoints";
 import type {
   Coordinates,
   GenderPreference,
@@ -103,6 +109,31 @@ export function HomeScreen() {
   }, []);
 
   const tracking = isActive(ride);
+
+  // **مسارُ الرحلة على الطرق** (البند ٨): يُقرأ **مرةً لكل رحلة** بعد القبول —
+  // الخلفيةُ جمّدته على الرحلة لحظتَها، فقراءةٌ ثانية تعيد الشيءَ نفسَه.
+  // ويُصفَّر بتبدّل الرحلة كي لا يبقى خطُّ رحلةٍ انتهت على خريطة التالية
+  const [routeLine, setRouteLine] = useState<number[][] | null>(null);
+  const drawableRide = ride && tracking && ride.status !== "searching" && ride.driver
+    ? ride.id
+    : null;
+  useEffect(() => {
+    if (!drawableRide) {
+      setRouteLine(null);
+      return;
+    }
+    let cancelled = false;
+    getRouteLine(drawableRide)
+      .then((line) => {
+        // قائمةٌ فارغةٌ جوابٌ صحيح: تُرسم الدبابيسُ وحدها بلا خطأ يُعرض
+        if (!cancelled) setRouteLine(line.points.length >= 2 ? line.points : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [drawableRide]);
+
   // رحلةٌ انتهت أو أُلغيت تبقى على الشاشة حتى يراها صاحبها: شاشة الدفع تلي
   // `completed` مباشرةً في تدفّق القسم 5، و«لم نجد كبتناً» خبرٌ يُقرأ لا حالةٌ
   // تختفي. ويطويها المستخدم بيده
@@ -345,6 +376,9 @@ export function HomeScreen() {
         pickup={tracking ? ride!.pickup : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
         driverLocation={driverPing}
+        // **مسارُ الرحلة على الطرق بعد القبول** (البند ٨) — ويتقلّص خلف الكبتن
+        routePoints={routeLine}
+        trimAt={driverPing}
         // **نبضةُ الموقع الحالي** — لونُها `--brand` فتتبع الوضعَ والسِمة.
         // وتختفي أثناء الرحلة: الانتباهُ حينها لسيارة الكبتن لا لموقعي
         showMyLocation={tracking || picking ? null : pickup}

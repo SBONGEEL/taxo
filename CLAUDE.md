@@ -637,6 +637,58 @@ live gendered offer, the cancel-reason sheet with «الراكب ليس أنثى
 who restricted her rides), and the preference strip on her home — which appears only once she has
 actually restricted, so the probe had to set it from her own settings screen first.
 
+### The device trial list, items 7 and 8 (2026-08-14)
+
+**The owner tests on a real phone now** (both apps are Capacitor shells around the live tunnel), and his
+numbered list drives the work. Items 1–3, 5 and 6 shipped earlier; 7 and 8 landed here.
+
+**Item 7 — "drivers do not appear on the rider's map" — was not a broken chain.** Measured with a real
+captain broadcasting: `GET /drivers/nearby` returns him, and the socket delivers `nearby_drivers`
+frames. What was wrong is *when*: the app drew cars **only** from the socket, so the map stayed empty
+until connect + viewport + first frame — 3634ms on localhost, far worse through the tunnel, and
+**forever if the socket never opens**. And the REST snapshot the SPEC prescribes for exactly this
+(§10: "for the first paint and after a socket drop") was declared in `api/endpoints.ts` and **called by
+nobody** — this project's signature failure, a route with no door. `setViewport` now fetches it while
+`framesSeen` is still zero, a socket close resets that counter (so the snapshot is a door again after a
+drop), and an in-flight ref stops a pan from firing N calls. Measured after: snapshot at 1952ms, socket
+frame at 2139ms — REST first, which is the whole point. A late snapshot can never overwrite a newer
+frame, because the counter is captured before the call and compared after it.
+
+**Item 8 — the route line — was one parameter away the whole time.** `services/directions.py` has
+called Mapbox Directions since stage 3 and passed **`overview=false`** with a comment saying the shape
+was not needed. So the geometry was never requested, never stored, and both maps drew a dashed straight
+line. Now `fetch_route(..., with_geometry=True)` asks for `geometries=geojson&overview=simplified`, and
+**`services/route_line.py` stores it on `rides.route_polyline` once, at acceptance** (owner's decision):
+not on the estimate path, which is called on every pin drag and would ship a payload to someone who has
+not ordered a ride yet; and **never re-fetched**, because a second call on a busier road returns a
+different line and the rider would see one route while his captain sees another — the freeze rule that
+governs `commission_percent_at_ride`. Failure is not fatal: `ensure` catches provider errors only
+(never a bare `except`, the 12-ط lesson) and returns `None`, the endpoint answers `points: []`, and the
+apps fall back to the dashed straight line. **Dashed vs solid is the honest distinction**: dashed says
+"between you two", solid says "this is the road" — which is why `DESIGN-DECISIONS` 38 is not contradicted
+(it forbids a line *we* invent, not one Mapbox returned).
+
+Three things worth carrying forward from building it:
+
+- **The accept route builds its response before the extra commit.** `route_line.ensure` + `commit`
+  after `_to_out` expired `pickup_lat`/`dropoff_lat` (they are `column_property` expressions) and the
+  serializer then lazy-loaded outside the greenlet — `MissingGreenlet`, the exact trap `_flush_and_reload`
+  exists for. Build the output first, then commit.
+- **One shared test fake hid behind 252 failures.** `conftest.stub_mapbox` is the *only* place the suite
+  patches `fetch_route`, and its signature did not accept the new keyword — so every ride test raised
+  `TypeError`. It now mirrors the provider (geometry only when asked) rather than simplifying it: a fake
+  that always returns a shape would let a test pass while the estimate path asks for one.
+- **Progress tracking is a trim, not a re-fetch.** `lib/route-line.ts` (one copy per app, like
+  `BottomNav`) slices the stored line at the nearest vertex to the driver. Drawing is not a money
+  calculation, so §14 is untouched — the same split as the waiting clock in 12-ب.
+
+**And the device harness is `adb` + raw CDP, not Playwright.** Android WebView publishes no
+browser-level endpoint (`/json/version` carries no `webSocketDebuggerUrl`), so `connectOverCDP` times
+out; attaching to the **page** target's socket works. Two operational facts cost time: a **dozing**
+phone freezes the WebView so every CDP call hangs (wake it and `svc power stayon usb`), and **injecting
+a refresh token into the app rotates it**, invalidating the harness's copy and sending every probe back
+to the rate-limited login door — inject the access token alone.
+
 **Two defects from the floating-bar package surfaced here too, both about layering over decisions.**
 The bar swallowed «قبول» on the offer card — `elementFromPoint` at the button's centre returned the bar
 — because the route sheet carries a `transform` and therefore its own stacking context, so `z-50`

@@ -353,3 +353,12 @@ export const unreadCount = () =>
 /** بلا `ids` = الكلُّ مقروء — وهو ما يفعله زرُّ «تحديد الكل كمقروء». */
 export const markNotificationsRead = (ids?: string[]) =>
   api.post<{ unread: number }>("/me/notifications/read", ids ? { ids } : {});
+
+/** شكلُ مسار الرحلة على الطرق — للطرفين بعد القبول (البند ٨).
+ *
+ * **يُقرأ مرةً لكل رحلة**: الخلفيةُ تجمّده على الرحلة لحظةَ القبول، فقراءتُه
+ * ثانيةً تعيد الشيءَ نفسَه — والتتبّعُ بعد البدء قصٌّ في المتصفح لا نداءٌ جديد.
+ * وقائمةٌ فارغةٌ جوابٌ صحيح: تُرسم الدبابيسُ وحدها.
+ */
+export const getRouteLine = (rideId: string) =>
+  api.get<{ points: number[][] }>(`/rides/${rideId}/route-line`);

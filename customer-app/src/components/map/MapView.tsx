@@ -29,6 +29,7 @@ import {
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import type { Coordinates, NearbyDriver } from "@/api/types";
+import { trimRoute } from "@/lib/route-line";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,15 @@ interface MapViewProps {
    *  المسارُ الفعليُّ مسجَّلٌ في `ride_route_points` ولا منفذَ يقرؤه، فخطٌّ
    *  مستقيمٌ من عندنا يوهم بمسارٍ لم يقله أحد. */
   tripLine?: boolean;
+  /** **مسارُ الرحلة على الطرق كما قاله Mapbox** — `[[lng, lat], …]` (البند ٨).
+   *
+   *  حين يصل يُرسم **متّصلاً**، وحين يغيب يبقى الخطُّ المستقيمُ **متقطّعاً**:
+   *  والتقطيعُ هو ما يفرّق بينهما بلا نصّ — مستقيمٌ يقول «بينكما»، ومتّصلٌ
+   *  يقول «هذا الطريق». وهو تفريقُ القرار 38 نفسِه: يمنع خطاً نرسمه نحن، لا
+   *  مساراً قاله Mapbox. */
+  routePoints?: number[][] | null;
+  /** موضعُ الكبتن الآن — ما قبله من المسار يُقصّ (تتبّعُ التقدّم بعد البدء). */
+  trimAt?: Coordinates | null;
   /** نبضةٌ حول موقع المستخدم — لونُها `--brand` فتتبع الوضعَ والسِمة. */
   showMyLocation?: Coordinates | null;
   /** نبضةٌ حول دبوس الانطلاق **أثناء البحث عن كبتن** — تتوقف عند القبول. */
@@ -140,6 +150,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     pickup,
     dropoff,
     tripLine = true,
+    routePoints = null,
+    trimAt = null,
     showMyLocation = null,
     searching = false,
     driverLocation,
@@ -427,20 +439,25 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     if (!instance || styleVersion === 0) return;
 
     const id = "taxo-trip-line";
-    const line =
+    // **المسارُ الحقيقيُّ يسبق المستقيم**، وما مضى منه يُقصّ عند موضع الكبتن
+    const drawn = routePoints && routePoints.length >= 2
+      ? trimRoute(routePoints, trimAt)
+      : null;
+    const straight =
       tripLine && pickup && dropoff
-        ? {
-            type: "Feature" as const,
-            properties: {},
-            geometry: {
-              type: "LineString" as const,
-              coordinates: [
-                [pickup.lng, pickup.lat],
-                [dropoff.lng, dropoff.lat],
-              ],
-            },
-          }
+        ? [
+            [pickup.lng, pickup.lat],
+            [dropoff.lng, dropoff.lat],
+          ]
         : null;
+    const coordinates = drawn ?? straight;
+    const line = coordinates
+      ? {
+          type: "Feature" as const,
+          properties: {},
+          geometry: { type: "LineString" as const, coordinates },
+        }
+      : null;
 
     const source = instance.getSource(id) as mapboxgl.GeoJSONSource | undefined;
     if (!line) {
@@ -450,6 +467,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
     if (source) {
       source.setData(line);
+      instance.setPaintProperty(id, "line-dasharray", drawn ? [1, 0] : [1.5, 1.5]);
       return;
     }
 
@@ -466,12 +484,16 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         "line-color": dark ? "#e6edf3" : "#171b20",
         "line-width": 4,
         "line-opacity": 0.85,
-        // متقطّعٌ عمداً: خطٌّ مستقيم بين نقطتين ليس مسار الطريق، والتقطيع
-        // يقول ذلك بلا نصّ
-        "line-dasharray": [1.5, 1.5],
       },
     });
-  }, [pickup, dropoff, tripLine, dark, styleVersion]);
+    instance.setPaintProperty(
+      id,
+      "line-dasharray",
+      // متقطّعٌ عمداً حيث لا مسار: خطٌّ مستقيم بين نقطتين ليس مسار الطريق،
+      // والتقطيعُ يقول ذلك بلا نصّ. والمتّصلُ يقول «هذا هو الطريق»
+      drawn ? [1, 0] : [1.5, 1.5],
+    );
+  }, [pickup, dropoff, tripLine, routePoints, trimAt, dark, styleVersion]);
 
   // ------------------------------------------------------------ التحكّم
   useImperativeHandle(

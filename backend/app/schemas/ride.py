@@ -313,3 +313,15 @@ class RideOut(BaseModel):
             completed_at=ride.completed_at,
             cancelled_at=ride.cancelled_at,
         )
+
+
+class RouteLineOut(BaseModel):
+    """شكلُ مسار الرحلة كما قاله Mapbox — `[[lng, lat], …]` (البند ٨).
+
+    **وقائمةٌ فارغةٌ جوابٌ صحيحٌ لا خطأ**: عقدُ Mapbox قد يكون مطفأً أو النداءُ
+    سقط، والتطبيقُ حينها يرسم الدبوسين وحدهما. و**الترتيبُ (طول، عرض)** كما
+    يكتبه Mapbox وGeoJSON — عكسُ المألوف، فاسمُ الحقل وحدَه لا يكفي والتوثيقُ
+    هنا هو ما يمنع خطاً مرسوماً في البحر.
+    """
+
+    points: list[list[float]]

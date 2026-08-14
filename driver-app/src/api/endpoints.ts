@@ -333,3 +333,11 @@ export const uploadDocument = (docType: DocumentType, file: File) =>
  *  التسجيل، والدفعُ مهمةٌ دورية — فلا زرَّ «اطلب مكافأتي» يصير باباً ثانياً. */
 export const getMyReferrals = () =>
   api.get<MyReferrals>("/drivers/me/referrals");
+
+/** شكلُ مسار الرحلة على الطرق — نفسُ الخطِّ الذي يراه الراكب (البند ٨).
+ *
+ * **مجمَّدٌ على الرحلة منذ القبول**، فقراءتُه ثانيةً تعيد الشيءَ نفسَه — ولا
+ * يُطلب مسارٌ جديدٌ لحركة الكبتن: التقدّمُ قصٌّ في التطبيق لا نداءٌ لكل بثّة.
+ */
+export const getRouteLine = (rideId: string) =>
+  api.get<{ points: number[][] }>(`/rides/${rideId}/route-line`);

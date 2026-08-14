@@ -232,7 +232,7 @@ def stub_mapbox(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.services.directions import Route
     from tests.helpers import MAPBOX_SECRET, STUB_ROUTE
 
-    async def _fetch_route(token: str, *waypoints):
+    async def _fetch_route(token: str, *waypoints, with_geometry: bool = False):
         assert token == MAPBOX_SECRET, "التوكن السري يجب أن يأتي من جدول العقود"
         # **المسافةُ تكبر بعدد السيقان** (المرحلة 12-ب): بغير ذلك تعطي رحلةٌ
         # بمحطتين نفسَ مسافة رحلةٍ مباشرة، فيمرّ تسعيرٌ لا يمرّ بالمحطات
@@ -240,6 +240,14 @@ def stub_mapbox(monkeypatch: pytest.MonkeyPatch) -> None:
         return Route(
             distance_km=STUB_ROUTE.distance_km * legs,
             duration_min=STUB_ROUTE.duration_min * legs,
+            # **والشكلُ يُعطى حين يُطلب وحدَه** (البند ٨): البديلُ يحاكي المزوّد
+            # لا يبسّطه — فاختبارٌ يمرّ مع بديلٍ يعطي شكلاً دائماً لا يحرس
+            # القاعدةَ التي تمنع طلبَه على مسار التسعير
+            geometry=(
+                [[point.lng, point.lat] for point in waypoints]
+                if with_geometry
+                else None
+            ),
         )
 
     monkeypatch.setattr(directions, "fetch_route", _fetch_route)

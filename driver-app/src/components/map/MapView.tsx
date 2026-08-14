@@ -9,9 +9,13 @@
  *    بلونَي `--sa`/`--sb` كما في التصميم، لا شاشةٌ بيضاء — بقيةُ التطبيق
  *    تعمل، وبطاقةُ الطلب لا تحتاج خريطة.
  *
- * **ولا خطَّ مسارٍ بين النقطتين**: هندسة المسار تأتي من Mapbox Directions
- * ونداؤها من الخلفية حصراً (القسم 2/14)، وما يصل الواجهة مسافةٌ ومدةٌ وسعر.
- * وخطٌّ نرسمه من عندنا يوهم بمسارٍ لم يقله أحد — نفس قرار تطبيق الراكب.
+ * 4. **خطُّ المسار على الطرق** (البند ٨، 2026-08-14) — يصل من الخلفية مجمَّداً
+ *    على الرحلة منذ القبول، فما يراه الكبتن هو ما يراه راكبُه بالضبط.
+ *
+ * **ولا يزال لا يُرسم خطٌّ من عندنا**: هندسةُ المسار تأتي من Mapbox Directions
+ * ونداؤها من الخلفية حصراً (القسم 2/14)، وخطٌّ نرسمه بين نقطتين يوهم بمسارٍ لم
+ * يقله أحد (`DESIGN-DECISIONS` بند 38). والفرقُ بين الاثنين هو الفرقُ كلُّه:
+ * هذا **مسارٌ قاله Mapbox**، وذاك خطٌّ نخترعه.
  */
 
 import mapboxgl from "mapbox-gl";
@@ -20,6 +24,7 @@ import { useEffect, useRef } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import type { Coordinates } from "@/api/types";
+import { trimRoute } from "@/lib/route-line";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +42,14 @@ interface Props {
   dropoff?: Coordinates | null;
   /** يضم النقطتين في الإطار — أثناء الرحلة لا قبلها. */
   fit?: boolean;
+  /** **مسارُ الرحلة على الطرق كما قاله Mapbox** — `[[lng, lat], …]` (البند ٨).
+   *
+   *  وهذا لا ينقض «لا خطَّ مسارٍ بين النقطتين» في رأس هذا الملف: ذاك يمنع خطاً
+   *  **نرسمه نحن** فيوهم بمسارٍ لم يقله أحد، وهذا مسارٌ **قاله Mapbox** وجُمِّد
+   *  على الرحلة لحظةَ القبول — فما يراه الكبتن هو ما يراه راكبُه بالضبط. */
+  routePoints?: number[][] | null;
+  /** موضعُه الآن — ما مضى من المسار يُقصّ خلفه (تتبّعُ التقدّم بعد البدء). */
+  trimAt?: Coordinates | null;
   className?: string;
 }
 
@@ -74,6 +87,8 @@ export function MapView({
   pickup,
   dropoff,
   fit = false,
+  routePoints = null,
+  trimAt = null,
   className,
 }: Props) {
   const { dark } = useTheme();
@@ -173,6 +188,54 @@ export function MapView({
       }
     }
   }, [pickup, dropoff]);
+
+  // **خطُّ المسار** (البند ٨) — يُضاف حين يصل ويُحدَّث حين يتقدّم الكبتن.
+  // و`styleVersion` ليست هنا كما في تطبيق الراكب لأن هذا المكوّن لا يعيد بناء
+  // الستايل إلا بتبديل الوضع، فيُعاد الرسمُ من `dark` نفسِها
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+
+    const id = "taxo-route-line";
+    const coordinates =
+      routePoints && routePoints.length >= 2 ? trimRoute(routePoints, trimAt) : null;
+
+    const draw = () => {
+      const source = instance.getSource(id) as mapboxgl.GeoJSONSource | undefined;
+      if (!coordinates) {
+        source?.setData({ type: "FeatureCollection", features: [] });
+        return;
+      }
+      const data = {
+        type: "Feature" as const,
+        properties: {},
+        geometry: { type: "LineString" as const, coordinates },
+      };
+      if (source) {
+        source.setData(data);
+        return;
+      }
+      instance.addSource(id, { type: "geojson", data });
+      instance.addLayer({
+        id,
+        type: "line",
+        source: id,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          // `paint` في mapbox لا يقرأ متغيّرات CSS — فالقيمةُ تُختار من الوضع
+          // كما يُختار ستايلُ الخريطة نفسُه
+          "line-color": dark ? "#e6edf3" : "#171b20",
+          "line-width": 5,
+          "line-opacity": 0.9,
+        },
+      });
+    };
+
+    // **الستايلُ قد لا يكون جاهزاً**: `addLayer` قبل تحميله يرمي، وتبديلُ الوضع
+    // يمسح المصادر كلَّها — فيُعاد الرسمُ على `style.load` كذلك
+    if (instance.isStyleLoaded()) draw();
+    else instance.once("style.load", draw);
+  }, [routePoints, trimAt, dark]);
 
   useEffect(() => {
     const instance = map.current;
