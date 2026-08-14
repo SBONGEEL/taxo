@@ -12,6 +12,7 @@ from app.models.driver import Driver, DriverDocument
 from app.models.enums import DriverStatus
 from app.models.user import User
 from tests.helpers import (
+    REQUIRED_DOC_TYPES,
     DRIVER,
     RIDER,
     JPEG_BYTES,
@@ -58,11 +59,10 @@ async def test_upload_lists_and_shrinks_what_is_missing(
 
     before = (await client.get("/drivers/me/documents", headers=headers)).json()
     assert before["documents"] == []
-    assert before["missing_required"] == [
-        "driving_license",
-        "national_id",
-        "vehicle_registration",
-    ]
+    # **من قائمة الخلفية لا من نسخةٍ مسطورة**: البند ١١ زاد ثلاثاً، ولو كُتبت
+    # هنا بيدها لسقط الاختبارُ على كلِّ إضافةٍ لاحقة بلا أن يكشف عطباً
+    assert before["missing_required"] == list(REQUIRED_DOC_TYPES)
+    assert before["required"] == list(REQUIRED_DOC_TYPES)
 
     document = await upload_document(client, headers)
     assert document["review_status"] == "pending"
@@ -406,6 +406,14 @@ async def test_a_driver_is_not_approved_before_his_documents_are(
     await review_document(
         client, admin_headers, driver_id=driver.id, document_id=rejected["id"]
     )
+
+    # **وثلاثُ صورٍ للمركبة صارت شرطاً كذلك** (البند ١١): الأمام والخلف واللوحة
+    for doc_type in ("vehicle_front", "vehicle_back", "vehicle_plate"):
+        photo = await upload_document(client, headers, doc_type=doc_type)
+        await review_document(
+            client, admin_headers, driver_id=driver.id, document_id=photo["id"]
+        )
+
     approved = await client.post(
         f"/admin/drivers/{driver.id}/approve", headers=admin_headers
     )
@@ -413,10 +421,11 @@ async def test_a_driver_is_not_approved_before_his_documents_are(
     assert approved.json()["status"] == "approved"
 
 
-async def test_vehicle_photo_is_not_required(
+async def test_the_optional_vehicle_photos_are_not_required(
     client: AsyncClient, admin_headers: dict, session_factory
 ) -> None:
-    """صورةُ المركبة تُطمئن الراكب ولا تُثبت حقاً — فخارج المطلوب."""
+    """**ثلاثٌ من الستّ تكفي** (البند ١١): الأمام والخلف واللوحة شرطُ اعتماد،
+    والجانبان والداخل يزيدان الثقة ولا يمنعان كبتناً من العمل."""
     body = await register(client, DRIVER)
     driver = await _driver_row(session_factory, "+962792222222")
     await approve_all_documents(
@@ -429,7 +438,16 @@ async def test_vehicle_photo_is_not_required(
         )
     ).json()
     assert listed["missing_required"] == []
-    assert "vehicle_photo" not in [d["doc_type"] for d in listed["documents"]]
+    uploaded = [d["doc_type"] for d in listed["documents"]]
+    for optional in ("vehicle_side_right", "vehicle_side_left", "vehicle_interior"):
+        assert optional not in uploaded
+
+
+async def test_the_helper_list_matches_the_backend() -> None:
+    """نسخةُ الاختبارات من قائمة المطلوب تُقاس بالأصل، فلا تفترق صامتةً."""
+    from app.models.driver import REQUIRED_DOCUMENT_TYPES
+
+    assert tuple(item.value for item in REQUIRED_DOCUMENT_TYPES) == REQUIRED_DOC_TYPES
 
 
 # ------------------------------------------- سياسة استبدال مستند معتمَد
@@ -488,7 +506,7 @@ async def test_an_optional_document_does_not_touch_approval(
     await client.post(f"/admin/drivers/{driver.id}/approve", headers=admin_headers)
 
     uploaded = await upload_document(
-        client, headers, doc_type="vehicle_photo", envelope=True
+        client, headers, doc_type="vehicle_interior", envelope=True
     )
     assert uploaded["approval_reverted"] is False
     assert uploaded["driver_status"] == "approved"
@@ -533,7 +551,7 @@ async def test_replacement_waits_for_the_ride_to_end(
 
     # ...والمستند الاختياري يمر: لا يمسّ الاعتماد فلا يمسّ الرحلة
     allowed = await client.put(
-        "/drivers/me/documents/vehicle_photo",
+        "/drivers/me/documents/vehicle_interior",
         files={"file": ("v.png", PNG_BYTES, "image/png")},
         headers=driver["headers"],
     )
@@ -561,12 +579,9 @@ async def test_admin_driver_list_counts_documents_in_one_query(
     assert row["status"] == "pending"
     assert row["documents_pending"] == 1
     assert row["documents_rejected"] == 0
-    # رُفع مستندٌ واحد ولم يُقبل بعد، فالثلاثة المطلوبة كلها ناقصة
-    assert set(row["missing_required"]) == {
-        "driving_license",
-        "national_id",
-        "vehicle_registration",
-    }
+    # رُفع مستندٌ واحد ولم يُقبل بعد، فالمطلوبةُ كلُّها ناقصة — **والقائمةُ من
+    # الخلفية** لا من نسخةٍ مسطورةٍ تسقط مع كلِّ إضافةٍ بلا أن تكشف عطباً
+    assert set(row["missing_required"]) == set(REQUIRED_DOC_TYPES)
 
 
 async def test_admin_driver_list_filters_by_status(

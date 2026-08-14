@@ -766,8 +766,19 @@ PDF_BYTES = b"%PDF-1.7\n" + b"0" * 48
 WEBP_BYTES = b"RIFF" + b"\x00\x00\x00\x20" + b"WEBP" + b"\x00" * 32
 NOT_A_DOCUMENT = b"<?php echo 1; ?>"
 
-# المستندات التي لا يُعتمد كبتنٌ قبل قبولها (`models/driver.py`)
-REQUIRED_DOC_TYPES = ("driving_license", "national_id", "vehicle_registration")
+# المستندات التي لا يُعتمد كبتنٌ قبل قبولها (`models/driver.py`) — **وثلاثٌ من
+# صور المركبة الستّ منها** منذ البند ١١: الأمام والخلف واللوحة.
+# **ويُقرأ من الخلفية لا يُكتب هنا** لو أمكن؛ لكن الاختبارات تُشغَّل بلا استيرادٍ
+# للنماذج في بعض الملفات، فهذه نسخةٌ **مقيسةٌ باختبارٍ يقارنها بالأصل**
+# (`test_the_helper_list_matches_the_backend`) فلا تفترق صامتةً
+REQUIRED_DOC_TYPES = (
+    "driving_license",
+    "national_id",
+    "vehicle_registration",
+    "vehicle_front",
+    "vehicle_back",
+    "vehicle_plate",
+)
 
 
 async def upload_document(

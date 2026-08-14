@@ -148,7 +148,18 @@ export interface NotificationSetting {
 export type DriverStatus = "pending" | "approved" | "rejected" | "suspended";
 
 export type DocumentType =
-  "driving_license" | "national_id" | "vehicle_registration" | "vehicle_photo";
+  
+  | "driving_license"
+  | "national_id"
+  | "vehicle_registration"
+  /** مهجورٌ: كان صورةَ المركبة الواحدة قبل أن تصير ستّاً مسمّاة (البند ١١). */
+  | "vehicle_photo"
+  | "vehicle_front"
+  | "vehicle_back"
+  | "vehicle_side_right"
+  | "vehicle_side_left"
+  | "vehicle_interior"
+  | "vehicle_plate";
 
 export type DocumentReviewStatus = "pending" | "approved" | "rejected";
 

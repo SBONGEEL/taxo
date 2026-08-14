@@ -105,10 +105,17 @@ class DocumentReviewIn(BaseModel):
 
 
 class DriverDocumentsOut(BaseModel):
-    """مستندات كبتنٍ ومعها ما ينقصه للاعتماد — سؤالٌ واحد بجوابٍ واحد."""
+    """مستندات كبتنٍ ومعها ما ينقصه للاعتماد — سؤالٌ واحد بجوابٍ واحد.
+
+    **و`required` كاملةً لا `missing` وحدها** (البند ١١): صار من المستندات ما
+    هو اختياريٌّ يُرفع ويُراجَع ولا يحبس اعتماداً، والناقصُ لا يفرّق بينه وبين
+    المرفوع — فمن رفع صورةً اختياريةً يظهر كمن رفع مطلوباً. والقائمةُ من
+    الخلفية لا من نسخةٍ في التطبيق: نسختان لشرطِ اعتمادٍ تفترقان يومَ يتغيّر.
+    """
 
     documents: list[DriverDocumentOut]
     missing_required: list[DocumentType]
+    required: list[DocumentType]
 
 
 class DocumentUploadOut(BaseModel):

@@ -36,7 +36,25 @@ const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
   national_id: "الهوية الشخصية",
   vehicle_registration: "رخصة المركبة والتأمين",
-  vehicle_photo: "صور المركبة",
+  // مهجورٌ ولا يُعرض — بقي للصفوف القديمة (البند ١١)
+  vehicle_photo: "صورة المركبة",
+  vehicle_front: "المركبة من الأمام",
+  vehicle_back: "المركبة من الخلف",
+  vehicle_side_right: "الجانب الأيمن",
+  vehicle_side_left: "الجانب الأيسر",
+  vehicle_interior: "من الداخل",
+  vehicle_plate: "لوحة المركبة",
+};
+
+/** **ما يُقرأ تحت اسم كل صورة**: صورةٌ تُرفض لأنها من زاويةٍ خطأ تُعاد مرتين،
+ *  وسطرٌ واحدٌ يقول ما المطلوب يوفّر الدورتين. */
+const DOC_HINT: Partial<Record<DocumentType, string>> = {
+  vehicle_front: "الواجهة كاملةً واللوحة ظاهرة",
+  vehicle_back: "الخلف كاملاً واللوحة ظاهرة",
+  vehicle_side_right: "الجانب الأيمن كاملاً",
+  vehicle_side_left: "الجانب الأيسر كاملاً",
+  vehicle_interior: "المقاعد الأمامية والخلفية",
+  vehicle_plate: "اللوحة وحدها، واضحةَ الأرقام",
 };
 
 const CATEGORY_LABEL: Record<VehicleCategory, string> = {
@@ -44,12 +62,29 @@ const CATEGORY_LABEL: Record<VehicleCategory, string> = {
   comfort: "مريح",
 };
 
-const ORDER: DocumentType[] = [
+/** **الوثائقُ أولاً ثم صورُ المركبة** — قسمان لا قائمةٌ من تسعة.
+ *
+ * والمطلوبُ للاعتماد ثلاثةُ وثائق وثلاثُ صور (الأمام والخلف واللوحة)، والباقي
+ * يزيد الثقة ولا يحبس اعتماداً (قرارُ المالك 2026-08-14). **ويُقال ذلك في
+ * الشاشة**: «اختياري» مكتوبةٌ بجانبه — فمن يراه مطلوباً يظنّ نفسَه ممنوعاً.
+ */
+const PAPERS: DocumentType[] = [
   "driving_license",
   "national_id",
   "vehicle_registration",
-  "vehicle_photo",
 ];
+
+const VEHICLE_PHOTOS: DocumentType[] = [
+  "vehicle_front",
+  "vehicle_back",
+  "vehicle_plate",
+  "vehicle_side_right",
+  "vehicle_side_left",
+  "vehicle_interior",
+];
+
+const ORDER: DocumentType[] = [...PAPERS, ...VEHICLE_PHOTOS];
+
 
 export function RegisterDocumentsScreen() {
   const navigate = useNavigate();
@@ -71,6 +106,9 @@ export function RegisterDocumentsScreen() {
 
   const [uploaded, setUploaded] = useState<Set<DocumentType>>(new Set());
   const [required, setRequired] = useState<DocumentType[]>([]);
+  // **القائمةُ الكاملة من الخلفية** (البند ١١): بها وحدها يُعرف الاختياريُّ من
+  // المرفوع — والناقصُ لا يفرّق بينهما
+  const [requiredAll, setRequiredAll] = useState<DocumentType[]>([]);
   const [uploading, setUploading] = useState<DocumentType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,6 +123,7 @@ export function RegisterDocumentsScreen() {
       .then((response) => {
         setUploaded(new Set(response.documents.map((item) => item.doc_type)));
         setRequired(response.missing_required);
+        setRequiredAll(response.required);
       })
       .catch(() => undefined);
   }, []);
@@ -219,8 +258,18 @@ export function RegisterDocumentsScreen() {
                   <span className="block h-30 w-38 shrink-0 rounded-7 bg-stripe" />
                   <span className="flex-1 text-12.5 text-ink">
                     {DOC_LABEL[doc]}
-                    {required.includes(doc) && !done ? (
+                    {/* **«اختياري» تُقال، و«مطلوب» تُقال للناقص وحدَه**: من رأى
+                        صورةً بلا وسمٍ ظنّها مطلوبةً فانتظر اعتماداً يحبسه شيءٌ
+                        لا يحبسه. والقائمةُ من الخلفية لا من نسخةٍ هنا */}
+                    {requiredAll.length > 0 && !requiredAll.includes(doc) ? (
+                      <span className="text-muted"> · اختياري</span>
+                    ) : required.includes(doc) && !done ? (
                       <span className="text-muted"> · مطلوب</span>
+                    ) : null}
+                    {DOC_HINT[doc] ? (
+                      <span className="mt-2 block text-11 leading-snug text-muted">
+                        {DOC_HINT[doc]}
+                      </span>
                     ) : null}
                   </span>
                   <span

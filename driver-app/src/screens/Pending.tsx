@@ -22,7 +22,13 @@ const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
   national_id: "الهوية الشخصية",
   vehicle_registration: "رخصة المركبة والتأمين",
-  vehicle_photo: "صور المركبة",
+  vehicle_photo: "صورة المركبة",
+  vehicle_front: "المركبة من الأمام",
+  vehicle_back: "المركبة من الخلف",
+  vehicle_side_right: "الجانب الأيمن",
+  vehicle_side_left: "الجانب الأيسر",
+  vehicle_interior: "من الداخل",
+  vehicle_plate: "لوحة المركبة",
 };
 
 const STATUS = {

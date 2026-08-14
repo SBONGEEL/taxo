@@ -15,7 +15,7 @@ from app.core import rate_limit, storage
 from app.core.config import settings
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import Conflict, RateLimited
-from app.models.driver import DriverDocument
+from app.models.driver import REQUIRED_DOCUMENT_TYPES, DriverDocument
 from app.models.enums import DocumentType
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
@@ -197,6 +197,7 @@ async def list_my_documents(
             for document in await documents_service.list_for_driver(session, driver.id)
         ],
         missing_required=await documents_service.missing_required(session, driver.id),
+        required=list(REQUIRED_DOCUMENT_TYPES),
     )
 
 

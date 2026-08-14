@@ -159,10 +159,31 @@ class DriverDocument(UUIDMixin, TimestampMixin, Base):
 
 
 # المستندات التي لا يُعتمد كبتنٌ قبل قبولها كلها (SPEC القسم 12/1 و13/2).
-# `VEHICLE_PHOTO` خارجها عمداً: صورةُ المركبة تُطمئن الراكب ولا تُثبت حقاً،
-# والمستندُ القانوني للمركبة هو `VEHICLE_REGISTRATION` وهو داخلها.
+#
+# **وثلاثٌ من صور المركبة الستّ داخلها** (البند ١١، قرارُ المالك 2026-08-14):
+# الأمام والخلف واللوحة — «الثلاثةُ تكفي للتحقق، والباقي يزيد الثقة ولا يمنع
+# كبتناً من العمل». فالجانبان والداخل يُرفعان ويُراجَعان ولا يحبسان اعتماداً.
+#
+# **والاستبدالُ يُسقط الاعتماد لهذه الستّ كما لغيرها** (قاعدةُ 9-ب): ما دام
+# النوعُ مطلوباً فتبديلُ ما يشهد عليه يعيده إلى المراجعة — ومن بدّل لوحتَه
+# بصورةِ لوحةٍ أخرى بدّل ما اعتُمد عليه.
 REQUIRED_DOCUMENT_TYPES: tuple[DocumentType, ...] = (
     DocumentType.DRIVING_LICENSE,
     DocumentType.NATIONAL_ID,
     DocumentType.VEHICLE_REGISTRATION,
+    DocumentType.VEHICLE_FRONT,
+    DocumentType.VEHICLE_BACK,
+    DocumentType.VEHICLE_PLATE,
+)
+
+# صورُ المركبة كلُّها — ما يعرضه التطبيق في قسمٍ واحد، بترتيب العرض.
+# **والاختياريُّ منها ليس أقلَّ مراجعةً**: يُقبل أو يُرفض كغيره، ولا يحبس
+# اعتماداً — فرقُهما في `REQUIRED_DOCUMENT_TYPES` وحدَه
+VEHICLE_PHOTO_TYPES: tuple[DocumentType, ...] = (
+    DocumentType.VEHICLE_FRONT,
+    DocumentType.VEHICLE_BACK,
+    DocumentType.VEHICLE_SIDE_RIGHT,
+    DocumentType.VEHICLE_SIDE_LEFT,
+    DocumentType.VEHICLE_INTERIOR,
+    DocumentType.VEHICLE_PLATE,
 )

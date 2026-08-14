@@ -33,10 +33,27 @@ class VehicleCategory(StrEnum):
 
 
 class DocumentType(StrEnum):
+    """مستنداتُ الكبتن — **أنواعٌ مسمّاةٌ لا صورٌ مرقَّمة** (البند ١١).
+
+    قرارُ المالك (2026-08-14): «الصورة الجانبية مرفوضة» جملةٌ مفهومة، و«الصورة
+    الثالثة مرفوضة» ليست كذلك. فكلُّ صورةٍ نوعٌ باسمه، ويبقى القيدُ الفريد
+    `(driver_id, doc_type)` على حاله — صفٌّ واحدٌ لكل نوع، ورفعُه ثانيةً استبدال.
+    """
+
     DRIVING_LICENSE = "driving_license"
     NATIONAL_ID = "national_id"
     VEHICLE_REGISTRATION = "vehicle_registration"
+    # **مهجورٌ ولا يُعرض** (البند ١١): كان صورةَ المركبة الواحدة قبل أن تصير ستّاً
+    # مسمّاة. ويبقى في التعداد لأن Postgres لا يحذف قيمةً منه، ولأن صفوفاً قديمةً
+    # تحمله — وحذفُه من الكود يجعل صفّاً في القاعدة بلا اسمٍ يقرؤه أحد
     VEHICLE_PHOTO = "vehicle_photo"
+    # صورُ المركبة الستّ — ثلاثٌ منها شرطُ اعتماد (`REQUIRED_DOCUMENT_TYPES`)
+    VEHICLE_FRONT = "vehicle_front"
+    VEHICLE_BACK = "vehicle_back"
+    VEHICLE_SIDE_RIGHT = "vehicle_side_right"
+    VEHICLE_SIDE_LEFT = "vehicle_side_left"
+    VEHICLE_INTERIOR = "vehicle_interior"
+    VEHICLE_PLATE = "vehicle_plate"
 
 
 class DocumentReviewStatus(StrEnum):

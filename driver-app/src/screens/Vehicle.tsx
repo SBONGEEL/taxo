@@ -30,6 +30,12 @@ const DOC_LABEL: Record<DocumentType, string> = {
   national_id: "الهوية الشخصية",
   vehicle_registration: "رخصة المركبة",
   vehicle_photo: "صورة المركبة",
+  vehicle_front: "المركبة من الأمام",
+  vehicle_back: "المركبة من الخلف",
+  vehicle_side_right: "الجانب الأيمن",
+  vehicle_side_left: "الجانب الأيسر",
+  vehicle_interior: "من الداخل",
+  vehicle_plate: "لوحة المركبة",
 };
 
 const REVIEW_LABEL = {
@@ -81,11 +87,18 @@ export function VehicleScreen() {
   }
 
   const vehicle = profile?.vehicles[0];
+  // **الوثائقُ ثم صورُ المركبة الستّ** (البند ١١) — نفسُ ترتيب شاشة التسجيل،
+  // فمن رفع هناك يجد الترتيبَ نفسَه هنا حين يستبدل
   const types: DocumentType[] = [
     "driving_license",
     "national_id",
     "vehicle_registration",
-    "vehicle_photo",
+    "vehicle_front",
+    "vehicle_back",
+    "vehicle_plate",
+    "vehicle_side_right",
+    "vehicle_side_left",
+    "vehicle_interior",
   ];
 
   return (

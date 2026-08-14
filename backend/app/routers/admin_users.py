@@ -389,6 +389,7 @@ async def list_driver_documents(
             for document in await documents_service.list_for_driver(session, driver_id)
         ],
         missing_required=await documents_service.missing_required(session, driver_id),
+        required=list(REQUIRED_DOCUMENT_TYPES),
     )
 
 
