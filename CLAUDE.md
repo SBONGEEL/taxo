@@ -371,6 +371,27 @@ now narrowed to provider errors, which is the rule the project already had. And 
 `currency` beside the amount: a money value serialized without its currency prints bare in the app,
 which is exactly what shipped in the panel's coupon table two days earlier.
 
+### `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15)
+
+**`dist` on this machine is not a check artifact; it is what the container serves to the phones over
+the tunnel.** So a plain `npm run build` — no `VITE_API_BASE_URL` — silently overwrites it with a bundle
+that calls `http://localhost:8001`, an address that does not exist inside the phone. The app then sits on
+the splash saying «الشبكة ضعيفة — جارٍ المحاولة» while the network is fine and a raw `fetch` from the same
+WebView returns 200. **Nothing else can see it**: the build succeeds, `tsc` passes, and `check:scale`,
+`check:enums` and `check:config` are all green, because the defect is not in the code — it is a variable
+that was not passed. It cost this session twice.
+
+**It is two gates, and their order is the difference between a warning and a guard.** `check:target`
+(`--intent`) runs **before** `vite build` and refuses an undeclared target, so the wrong `dist` is never
+written — a post-build check alone lets the damage land and then tells you about it while the container
+is already serving it. `check:dist` (`--dist`) runs after and measures the output: the declared host must
+appear in the bundle, and no `localhost`/`127.0.0.1` URL may survive anywhere in it — which catches a
+*stale file left in the directory* from an earlier build, something the variable cannot know about.
+
+**The default is the safe one and the intent is declared**: a local build needs `DEV_BUILD=1`, and
+type-checking alone was never a reason to build — `npm run lint` does that. It sits in both PWAs and
+**not** in the panel, which is served on `127.0.0.1:5175` by design.
+
 ### Item 15 — driver advances, the first money the platform lends (2026-08-14)
 
 **Nine decisions were answered before the first line** (`design/DRIVER-ADVANCES.md` §9, `SPEC.md` §9.2),
