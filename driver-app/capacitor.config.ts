@@ -40,7 +40,7 @@ const config: CapacitorConfig = {
       // الليلي وشعارٌ في وسطها، فلا يرى فاتحُ التطبيق بياضاً ثم سواداً
       launchShowDuration: 1200,
       launchAutoHide: true,
-      backgroundColor: "#14181d",
+      backgroundColor: "#000000",
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
