@@ -48,7 +48,7 @@ export function PaymentPicker({
         className="fixed inset-0 z-[67] bg-dim"
       />
       <div className="fixed inset-x-0 bottom-0 z-[68] mx-auto max-w-lg">
-        <Sheet>
+        <Sheet attached>
           <div className="space-y-12 pb-16">
             <p className="text-16 font-semibold text-ink">طريقة الدفع</p>
 

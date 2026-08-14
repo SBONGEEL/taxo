@@ -46,7 +46,7 @@ export function TopupSheet({
         className="fixed inset-0 z-[69] bg-dim"
       />
       <div className="fixed inset-x-0 bottom-0 z-[70]">
-        <Sheet>
+        <Sheet attached>
           <div className="space-y-14 pb-16">
             <div>
               <p className="text-16 font-semibold text-ink">شحن الرصيد</p>
