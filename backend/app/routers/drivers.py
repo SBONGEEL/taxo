@@ -73,7 +73,7 @@ async def get_my_driver_profile(
 async def update_my_driver_profile(
     payload: DriverUpdate, driver: CurrentDriver, session: DbSession
 ) -> DriverOut:
-    """تعديل ما يملكه الكبتن من ملفه: `cliq_alias` وتفضيلُ جنس الركاب.
+    """تعديل ما يملكه الكبتن من ملفه: `cliq_alias` وتفضيلُ الركاب والتجديد.
 
     يُكتب في التسجيل (الخطوة الثالثة) ويُعدَّل من الإعدادات. ولا يمسّ
     الاعتماد: alias خاطئ يعطّل سحباً واحداً ويُصحَّح، ولا علاقة له بمن يحق
@@ -85,6 +85,8 @@ async def update_my_driver_profile(
     if payload.gender_preference is not None:
         # تفضيلُه لا جنسُه: الأول يملكه، والثاني يضبطه المشرف من هويته
         driver.gender_preference = payload.gender_preference
+    if payload.auto_renew is not None:
+        driver.auto_renew = payload.auto_renew
 
     await session.commit()
     await session.refresh(driver)

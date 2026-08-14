@@ -37,13 +37,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import logging
+
 from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.db import SessionLocal
 from app.core.exceptions import (
+    AppError,
     Conflict,
     InvalidInput,
     NotFound,
@@ -96,14 +100,37 @@ EXPIRY_NOTICE_WINDOWS: tuple[tuple[timedelta, timedelta | None], ...] = (
     (EXPIRY_NOTICE_WINDOW, None),
 )
 
+# **محاولاتُ التجديد التلقائي ثلاثٌ داخل نافذة اليوم** (قرارُ المالك 2026-08-14،
+# البند ١٤): عند التنبيه، ثم بعد ثماني ساعات، ثم قبل الانتهاء بساعتين.
+# **وواحدةٌ لا تكفي**: الرصيدُ قد يصل بينها — دفعةُ بطاقة، أو شحنٌ تأكّد، أو سحبٌ
+# أُلغي — ومحاولةٌ واحدة تعني كبتناً كان يملك المال بعدها بساعة.
+# وتُقاس **من نهاية التغطية** لا من لحظة التنبيه، فلا تنزلق مع دورة الكنس.
+RENEWAL_ATTEMPTS: tuple[timedelta, ...] = (
+    EXPIRY_NOTICE_WINDOW,       # قبل الانتهاء بـ24 ساعة — مع التنبيه نفسِه
+    timedelta(hours=16),        # بعده بثماني ساعات
+    timedelta(hours=2),         # آخرُ فرصة
+)
+
 # الإشعار حدثٌ لا سجلٌّ محاسبي، فأثرُه مفتاحُ Redis لا عمودٌ في الجدول: المهمة
 # الدورية تعمل كل بضع دقائق، وبغير أثرٍ يُنبَّه الكبتن في كل دورة حتى ينتهي
 # اشتراكه. وعمرُ المفتاح أطول من النافذة نفسها فلا يُعاد التنبيه داخلها.
 _NOTICE_TTL_SECONDS = int(EARLY_NOTICE_WINDOW.total_seconds()) * 2
 
 
+logger = logging.getLogger(__name__)
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def renewal_key(subscription_id: uuid.UUID, before: timedelta) -> str:
+    """أثرُ محاولةٍ واحدة — **بمفتاحٍ لكلِّ موعد**، كالتنبيه سواءً بسواء.
+
+    والمهمّةُ تعمل كلَّ خمس دقائق، فبغير أثرٍ تُعاد المحاولةُ اثنتَي عشرةَ مرةً
+    في الساعة على محفظةٍ لا يكفي رصيدُها — ضجيجٌ في الدفتر وفي صندوق الوارد.
+    """
+    return f"subscription:renew_tried:{subscription_id}:{int(before.total_seconds())}"
 
 
 def notice_key(subscription_id: uuid.UUID, within: timedelta) -> str:
@@ -492,6 +519,68 @@ class SubscriptionNotice:
 
 
 @dataclass(frozen=True, slots=True)
+class RenewalCandidate:
+    """كبتنٌ رفع مفتاحَ التجديد وغطاؤه ينتهي داخل النافذة."""
+
+    driver_id: uuid.UUID
+    driver_user_id: uuid.UUID
+    subscription_id: uuid.UUID
+    plan_id: uuid.UUID
+    expires_at: datetime
+    country_code: CountryCode
+    #: موعدُ المحاولة الذي استحقّ الآن — يميّز أثرَها في Redis
+    attempt: timedelta
+    #: أهي الأخيرة؟ فشلُها يُقال صراحةً لا يُبتلع
+    last: bool
+
+
+async def due_renewals(session: AsyncSession) -> list[RenewalCandidate]:
+    """من استحقّت لهم محاولةُ تجديدٍ الآن (البند ١٤).
+
+    **ولا مهمّةَ ثالثة**: تُقرأ في دورة الكنس نفسِها التي تُخطر — قرارُ المالك،
+    وسببُه أن النافذة واحدة والصفوفَ هي هي، ومهمّةٌ ثانيةٌ على الجدول نفسِه
+    تعني جدولين يقرآن حالةً واحدةً ويفترقان يومَ يتأخر أحدهما.
+    """
+    now = _now()
+    candidates: list[RenewalCandidate] = []
+    for index, before in enumerate(RENEWAL_ATTEMPTS):
+        # الموعدُ يُقاس من **نهاية التغطية**: كلُّ من بقي له أقلُّ من `before`
+        # ولم تُسجَّل له محاولةُ هذا الموعد بعد
+        horizon = now + before
+        rows = (
+            await session.scalars(
+                select(DriverSubscription)
+                .join(Driver, Driver.id == DriverSubscription.driver_id)
+                .where(
+                    *coverage_condition(now),
+                    DriverSubscription.expires_at <= horizon,
+                    Driver.auto_renew.is_(True),
+                )
+            )
+        ).all()
+        for subscription in rows:
+            until = await coverage_until(session, subscription.driver_id)
+            if until is None or until > horizon:
+                continue  # جدّد فعلاً — لا شأن لهذا الموعد به
+            context = await _driver_context(session, subscription.driver_id)
+            if context is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
+                continue
+            candidates.append(
+                RenewalCandidate(
+                    driver_id=subscription.driver_id,
+                    driver_user_id=context[0],
+                    subscription_id=subscription.id,
+                    plan_id=subscription.plan_id,
+                    expires_at=until,
+                    country_code=context[1],
+                    attempt=before,
+                    last=index == len(RENEWAL_ATTEMPTS) - 1,
+                )
+            )
+    return candidates
+
+
+@dataclass(frozen=True, slots=True)
 class SweepResult:
     expired: list[SubscriptionNotice]
     # **مع نافذتها**: النصُّ يختلف بين «ثلاثة أيام» و«أقل من يوم»، والمفتاحُ
@@ -633,6 +722,103 @@ async def sweep(session: AsyncSession) -> SweepResult:
         for notice in await expiring_soon(session, within=within, after=after):
             expiring.append((within, notice))
     return SweepResult(expired=await expire_due(session), expiring=expiring)
+
+
+async def attempt_renewal(
+    session: AsyncSession, candidate: RenewalCandidate
+) -> DriverSubscription | None:
+    """محاولةُ تجديدٍ واحدة — **من المحفظة وحدَها** (قرارُ المالك).
+
+    الـcommit للمستدعي، ويعيد `None` إن لم يقع التجديد لأيِّ سبب.
+
+    **ولا بابَ ثانٍ للمال**: تمرّ من `purchase_with_wallet` نفسِها التي يضغطها
+    الكبتن بيده — فقفلُ صفِّ الكبتن ومفتاحُ التكرار وتراكمُ المدة من
+    `coverage_until` كلُّها تعمل كما هي، ولا قاعدةَ تُكتب مرتين لتفترق مرة.
+
+    **ومفتاحُ التكرار من الاشتراك والموعد** لا من الوقت: دورتان متزامنتان على
+    الموعد نفسِه تجدان الاشتراكَ الأول بدل أن تخصما مرتين.
+    """
+    driver = await session.get(Driver, candidate.driver_id)
+    user = await session.get(User, candidate.driver_user_id)
+    if driver is None or user is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
+        return None
+    try:
+        return await purchase_with_wallet(
+            session,
+            driver=driver,
+            user=user,
+            plan_id=candidate.plan_id,
+            # **المفتاحُ من الاشتراك وحدَه لا من الموعد**: المحاولاتُ الثلاث
+            # تجديدٌ **واحد** يُحاول ثلاثاً، لا ثلاثةُ تجديدات. وبمفتاحٍ لكل
+            # موعدٍ وقع الخصمُ مرتين حين استحقّ موعدان في دورةٍ واحدة — كشفه
+            # `test_it_renews_once_per_attempt_window` قبل أن يُشحن.
+            idempotency_key=f"autorenew:{candidate.subscription_id}",
+        )
+    except AppError as exc:
+        # **يُبتلع خطأُ المجال وحدَه**: رصيدٌ لا يكفي، أو محفظةٌ مجمَّدة، أو خطةٌ
+        # أُوقفت، أو كبتنٌ مُعلَّق — كلُّها حالاتٌ عاديةٌ في مهمّةٍ دورية. وما
+        # عداها يصعد كي لا يُبتلع عطبٌ في الكود صامتاً (درسُ 12-ط)
+        await session.rollback()
+        logger.info(
+            "تعذّر التجديد التلقائي للاشتراك %s: %s",
+            candidate.subscription_id,
+            exc.code,
+        )
+        return None
+
+
+async def renew_due(redis: Redis) -> int:
+    """يحاول التجديدَ لمن استحقّ، ويعيد عددَ من جُدِّد له (البند ١٤).
+
+    **كلُّ محاولةٍ في معاملتها**: فشلُ واحدةٍ لا يُسقط الدورة، ونجاحُ واحدةٍ
+    يُثبَّت قبل أن تبدأ التالية — نفسُ شكلِ `referrals.pay_due`.
+
+    **والأثرُ يُكتب قبل المحاولة لا بعدها**: `SET NX` هو ما يمنع دورتين
+    متزامنتين من محاولةِ الموعد نفسِه، فكتابتُه بعد النجاح تترك النافذةَ
+    مفتوحةً بينهما. وثمنُه أن انهياراً في منتصف المحاولة يُفوّت موعداً واحداً
+    من ثلاثة — وذاك أهونُ من خصمين.
+    """
+    renewed = 0
+    async with SessionLocal() as session:
+        candidates = await due_renewals(session)
+
+    # **من جُدِّد له في هذه الدورة يُتجاوز**: موعدان قد يستحقّان معاً (من بقي له
+    # ثلاثُ ساعاتٍ داخلَ موعدَي 24 و16)، ومفتاحُ التكرار يمنع الخصمَ الثاني —
+    # لكنه لا يمنع إشعاراً ثانياً ولا عدّاً ثانياً. والقائمةُ قُرئت مرةً، فحالُها
+    # لا تعرف ما وقع بعدها
+    done: set[uuid.UUID] = set()
+
+    for candidate in candidates:
+        if candidate.driver_id in done:
+            continue
+        key = renewal_key(candidate.subscription_id, candidate.attempt)
+        if not await redis.set(key, "1", nx=True, ex=_NOTICE_TTL_SECONDS):
+            continue
+        async with SessionLocal() as session:
+            subscription = await attempt_renewal(session, candidate)
+            if subscription is not None:
+                await session.commit()
+                renewed += 1
+                done.add(candidate.driver_id)
+                await notifications.publish_subscription_event(
+                    session,
+                    redis,
+                    driver_user_id=candidate.driver_user_id,
+                    event=events.SubscriptionEvent.SUBSCRIPTION_RENEWED,
+                    expires_at=subscription.expires_at,
+                )
+            elif candidate.last:
+                # **آخرُ محاولةٍ تفشل تُقال صراحةً** (قرارُ المالك): وما قبلها
+                # يصمت — ثلاثةُ إشعاراتٍ بفشلٍ واحدٍ في يومٍ واحد ضجيج،
+                # والرصيدُ قد يصل قبل التالية فيصير الإشعارُ الأولُ كذباً
+                await notifications.publish_subscription_event(
+                    session,
+                    redis,
+                    driver_user_id=candidate.driver_user_id,
+                    event=events.SubscriptionEvent.SUBSCRIPTION_RENEWAL_FAILED,
+                    expires_at=candidate.expires_at,
+                )
+    return renewed
 
 
 async def publish_sweep(

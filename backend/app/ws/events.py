@@ -90,6 +90,9 @@ class SubscriptionEvent(StrEnum):
 
     SUBSCRIPTION_EXPIRING = "subscription_expiring"
     SUBSCRIPTION_EXPIRED = "subscription_expired"
+    # التجديدُ التلقائي (البند ١٤): يُقال وقع، ويُقال لم يقع — ولا صمتَ بينهما
+    SUBSCRIPTION_RENEWED = "subscription_renewed"
+    SUBSCRIPTION_RENEWAL_FAILED = "subscription_renewal_failed"
 
 
 def user_channel(user_id: uuid.UUID | str) -> str:

@@ -38,6 +38,7 @@ import {
   buySubscriptionWithCard,
   getMySubscription,
   getSubscriptionHistory,
+  updateDriver,
 } from "@/api/endpoints";
 import type {
   DriverSubscription,
@@ -46,6 +47,7 @@ import type {
   SubscriptionPlan,
 } from "@/api/types";
 import { useFeature } from "@/lib/config";
+import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
@@ -109,6 +111,28 @@ export function SubscriptionScreen() {
   // القناةُ تظهر إن كان مفتاحُها مرفوعاً في دولة الكبتن — والغيابُ معطَّل
   // دائماً (القسم 4). ولا اسمَ ميزةٍ مكتوبٌ هنا إلا هذا الواحد
   const cardEnabled = useFeature(user?.country_code, "card_enabled");
+  // **المفتاحُ تفاؤليٌّ ويعود عند الرفض**: يجب أن يتحرك تحت الإصبع، ولا يجوز
+  // أن يبقى مرفوعاً وقد رفضت الخلفيةُ — إذنٌ بمالٍ يُقرأ من الشاشة
+  const { profile, refresh: refreshDriver } = useDriver();
+  const [autoRenew, setAutoRenew] = useState(false);
+  const [savingRenew, setSavingRenew] = useState(false);
+  useEffect(() => {
+    setAutoRenew(profile?.driver.auto_renew ?? false);
+  }, [profile?.driver.auto_renew]);
+
+  const toggleRenew = useCallback(async () => {
+    const next = !autoRenew;
+    setAutoRenew(next);
+    setSavingRenew(true);
+    try {
+      await updateDriver({ auto_renew: next });
+      await refreshDriver();
+    } catch {
+      setAutoRenew(!next);
+    } finally {
+      setSavingRenew(false);
+    }
+  }, [autoRenew, refreshDriver]);
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
   const [history, setHistory] = useState<DriverSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,6 +228,45 @@ export function SubscriptionScreen() {
           </button>
           <h1 className="text-20 font-bold text-ink">الاشتراك</h1>
         </div>
+
+        {/* **مفتاحُ التجديد التلقائي** (البند ١٤): موضعُه هنا لا في «الإعدادات»
+            — يُقرأ معناه بجوار حالة الاشتراك وثمنِه، لا بين أصواتٍ ومظهر.
+            **والنصُّ يقول ما يقع بالضبط**: من أين يُخصم، ومتى، وأنه لن يقع
+            بلا رصيد — فإذنٌ بمالٍ لا يُنتزع بجملةٍ عامة. */}
+        <section className="mb-16 card p-15">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoRenew}
+            aria-label="التجديد التلقائي"
+            disabled={savingRenew}
+            onClick={() => void toggleRenew()}
+            className="pressable flex w-full items-center gap-12 text-start"
+          >
+            <span className="flex-1">
+              <span className="block text-13.5 font-semibold text-ink">
+                التجديد التلقائي
+              </span>
+              <span className="block text-11 leading-snug text-muted">
+                يُخصم ثمنُ خطتك من محفظتك قبل الانتهاء بيوم. لا يقع بلا رصيدٍ
+                كافٍ، ونُخبرك إن تعذّر.
+              </span>
+            </span>
+            <span
+              className={cn(
+                "relative block h-27 w-46 flex-none rounded-full transition-colors",
+                autoRenew ? "bg-brand" : "bg-surface-2 border border-line",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-3 block size-21 rounded-full bg-surface transition-all",
+                  autoRenew ? "start-22" : "start-3",
+                )}
+              />
+            </span>
+          </button>
+        </section>
 
         <section
           className={cn("mb-16 rounded-18 border bg-surface p-17", copy.tone)}

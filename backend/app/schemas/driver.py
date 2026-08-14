@@ -134,6 +134,8 @@ class DriverOut(BaseModel):
     # تفضيلُه الدائم لجنس الركاب (المرحلة 10-ج) — يقرؤه تطبيقه ليرسم المفتاح
     gender_preference: GenderPreference
     rating_avg: Decimal
+    # مفتاحُ التجديد التلقائي (البند ١٤) — يقرؤه تطبيقُه ليرسم المفتاح
+    auto_renew: bool
     is_online: bool
     current_ride_id: uuid.UUID | None
     created_at: datetime
@@ -177,6 +179,9 @@ class DriverUpdate(BaseModel):
     # تفضيلُ جنس الركاب — يملكه الكبتن لا الإدارة، بخلاف **جنسه هو** الذي
     # يضبطه المشرف من الهوية (المرحلة 10-ج)
     gender_preference: GenderPreference | None = None
+    # **إذنُ التجديد التلقائي** (البند ١٤): مالٌ يخرج من محفظته بلا ضغطةٍ منه،
+    # فالمفتاحُ بيده وحدَه — لا بيد الإدارة ولا بحكم الافتراض
+    auto_renew: bool | None = None
 
 
 class DriverLocationIn(BaseModel):
@@ -219,6 +224,9 @@ class AdminDriverRow(BaseModel):
     status: DriverStatus
     phone_verified: bool
     rating_avg: Decimal
+    # **ولا `auto_renew` هنا**: مفتاحٌ يملكه الكبتن على محفظته هو، ولا يقرأ منه
+    # المشرفُ قراراً في قائمةٍ يفرز بها من يراجع. أُقحم مرةً بتعديلٍ أصاب
+    # المخطّطين معاً، فسقط صفُّ اللوحة كلُّه بحقلٍ لا يرسله الاستعلام
     is_online: bool
     documents_pending: int
     documents_rejected: int

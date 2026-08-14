@@ -138,6 +138,8 @@ export const getDriverProfile = () => api.get<DriverProfile>("/drivers/me");
 export const updateDriver = (payload: {
   cliq_alias?: string;
   gender_preference?: GenderPreference;
+  /** إذنُ التجديد التلقائي (البند ١٤) — بيد الكبتن وحدَه. */
+  auto_renew?: boolean;
 }) => api.patch<Driver>("/drivers/me", payload);
 
 export const addVehicle = (payload: {

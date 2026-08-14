@@ -162,6 +162,8 @@ export interface Driver {
   cliq_alias: string | null;
   /** تفضيلُه **الدائم** لجنس الركاب — يملكه هو، بخلاف جنسه (المرحلة 10-ج). */
   gender_preference: GenderPreference;
+  /** إذنُه بالتجديد التلقائي من محفظته (البند ١٤) — مطفأٌ حتى يرفعه هو. */
+  auto_renew: boolean;
   rating_avg: string;
   is_online: boolean;
   current_ride_id: string | null;

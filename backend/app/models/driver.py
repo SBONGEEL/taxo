@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -78,6 +79,12 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # لصاحب الحساب الخطأ. ويُولَّد عند إنشاء الكبتن — لا عند أول فتحةٍ للشاشة:
     # توليدٌ عند القراءة يحتاج قفلاً على صفٍّ لا يُكتب فيه شيءٌ آخر، وبغيره
     # تُنتج ضغطتان رمزين. و`nullable` لأن القائمين قبل الترحيلة يأخذونه فيها
+    # **التجديدُ التلقائي إذنٌ صريحٌ لا افتراض** (البند ١٤): مالٌ يخرج من محفظته
+    # بلا ضغطةٍ منه يحتاج مفتاحاً يرفعه هو — والافتراضُ مطفأ، كبقيةِ ما يمسّ مالاً.
+    auto_renew: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
     referral_code: Mapped[str | None] = mapped_column(
         String(16), nullable=True, unique=True, index=True
     )
