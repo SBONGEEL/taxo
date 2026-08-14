@@ -15,7 +15,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { register, startChallenge } from "@/api/endpoints";
-import type { CountryCode } from "@/api/types";
 import { Brand } from "@/components/Brand";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PhoneVerification } from "@/components/PhoneVerification";
@@ -39,11 +38,12 @@ export function RegisterScreen() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState<"details" | "verify">("details");
-  // **الدولةُ من `useAuthCountry`** — بيتٌ واحدٌ لشاشات المصادقة الثلاث،
-  // وهنا وحدها يملك المستخدم تغييرَها فتُنسخ إلى حالةٍ محلية
-  const auth = useAuthCountry();
-  const countries = auth.countries;
-  const [country, setCountry] = useState<CountryCode>(auth.country);
+  // **الدولةُ من `useAuthCountry`** — بيتٌ واحدٌ لشاشات المصادقة الثلاث.
+  // **ولا نسخةَ محليةً بعد اليوم** (البند ١٠): الاختيارُ صار محفوظاً على
+  // الجهاز داخل الخطّاف نفسِه، ونسخةٌ محليةٌ هنا تعني اختياراً يُنسى بين
+  // «التسجيل» و«الدخول» — وهو ما يجعل صاحبَ الرقم الليبيّ يعيد اختيارَه
+  // في كل شاشة
+  const { country, countries, setCountry } = useAuthCountry();
   // المُحقِّقُ **وطولُ رمزه** يتبعان الدولةَ المختارة لا الافتراضية (12-هـ)
   const entry = config?.countries.find(
     (item) => item.country_code === country,
@@ -170,7 +170,7 @@ export function RegisterScreen() {
               countries={countries}
               onPhoneChange={setPhone}
               onCountryChange={setCountry}
-              showCountry={false}
+              showCountry={countries.length > 1}
             />
 
             {/* إقرارٌ ذاتيّ بلا وثيقة (المرحلة 10-ج) — **اختياريّ**: من تركه

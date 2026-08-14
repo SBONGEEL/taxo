@@ -37,7 +37,7 @@ export function ForgotPasswordScreen() {
   // **من `useAuthCountry` لا من `countries[0]`**: الترتيبُ في `/config` تعدادٌ
   // (`LY, JO`) لا أفضلية، فكانت هذه الشاشةُ تفترض ليبيا **ومنتقيها مخفيّ** —
   // أردنيٌّ يدخل بحسابه ولا يستطيع استعادة كلمته
-  const { country, countries } = useAuthCountry();
+  const { country, countries, setCountry } = useAuthCountry();
   // المُحقِّقُ **وطولُ رمزه** يتبعان الدولةَ لا الافتراضية (12-هـ وتكملتُه)
   const entry = config?.countries.find(
     (item) => item.country_code === country,
@@ -103,8 +103,8 @@ export function ForgotPasswordScreen() {
               country={country}
               countries={countries}
               onPhoneChange={setPhone}
-              onCountryChange={() => undefined}
-              showCountry={false}
+              onCountryChange={setCountry}
+              showCountry={countries.length > 1}
             />
 
             <Field

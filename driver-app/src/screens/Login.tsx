@@ -14,19 +14,23 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
+import { CountryPicker } from "@/components/CountryPicker";
 import { PhoneField } from "@/components/PhoneField";
 import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { usePhoneCountry } from "@/lib/config";
+import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 
 export function LoginScreen() {
   const navigate = useNavigate();
   const { signIn } = useSession();
-  const { country, dialCode, nationalLength } = usePhoneCountry();
+  // **منتقي الدولة في الثلاث لا في التسجيل وحدَه** (البند ١٠): من يحمل رقماً
+  // ليبياً كان يرى مفتاحَ الأردن فيُرفض رقمُه بلا أن يفهم لماذا
+  const { country, countries, setCountry } = useAuthCountry();
+  const { dialCode, nationalLength } = usePhoneCountry(country);
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -74,7 +78,13 @@ export function LoginScreen() {
           void submit();
         }}
       >
-        <PhoneField value={phone} onChange={setPhone} />
+        <CountryPicker
+          country={country}
+          countries={countries}
+          onChange={setCountry}
+        />
+
+        <PhoneField value={phone} onChange={setPhone} country={country} />
         <Field
           label="كلمة المرور"
           name="password"

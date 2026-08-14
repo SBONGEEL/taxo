@@ -15,13 +15,14 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import type { OtpChannel } from "@/api/types";
 import { resetPassword, startPasswordResetChallenge } from "@/api/endpoints";
+import { CountryPicker } from "@/components/CountryPicker";
 import { PhoneField } from "@/components/PhoneField";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { useConfig, usePhoneCountry } from "@/lib/config";
+import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { passwordError } from "@/lib/password";
@@ -32,7 +33,10 @@ export function ForgotPasswordScreen() {
   const navigate = useNavigate();
   const { config } = useConfig();
   const { signIn } = useSession();
-  const { country, dialCode, nationalLength } = usePhoneCountry();
+  // **منتقي الدولة في الثلاث لا في التسجيل وحدَه** (البند ١٠): من يحمل رقماً
+  // ليبياً كان يرى مفتاحَ الأردن فيُرفض رقمُه بلا أن يفهم لماذا
+  const { country, countries, setCountry } = useAuthCountry();
+  const { dialCode, nationalLength } = usePhoneCountry(country);
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -184,7 +188,13 @@ export function ForgotPasswordScreen() {
             toVerification();
           }}
         >
-          <PhoneField value={phone} onChange={setPhone} />
+          <CountryPicker
+          country={country}
+          countries={countries}
+          onChange={setCountry}
+        />
+
+        <PhoneField value={phone} onChange={setPhone} country={country} />
 
           <ErrorNote message={error} />
 

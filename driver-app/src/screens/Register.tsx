@@ -17,33 +17,27 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { registerAccount, startSignupChallenge } from "@/api/endpoints";
-import type { CountryCode, OtpChannel } from "@/api/types";
+import type { OtpChannel } from "@/api/types";
+import { CountryPicker } from "@/components/CountryPicker";
 import { PhoneField } from "@/components/PhoneField";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
-import { useConfig, usePhoneCountry } from "@/lib/config";
+import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
 import { confirmError, passwordError, passwordsReady } from "@/lib/password";
-
-const COUNTRY_LABEL: Record<CountryCode, string> = {
-  JO: "الأردن",
-  LY: "ليبيا",
-};
 
 export function RegisterScreen() {
   const navigate = useNavigate();
   const { config } = useConfig();
   const { signIn } = useSession();
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? [];
-  const [country, setCountry] = useState<CountryCode>(
-    config?.default_country_code ?? "JO",
-  );
+  // **الاختيارُ محفوظٌ على الجهاز** (البند ١٠): نسخةٌ محليةٌ هنا تعني اختياراً
+  // يُنسى بين التسجيل والدخول، فيعيده صاحبُ الرقم الليبيّ في كل شاشة
+  const { country, countries, setCountry } = useAuthCountry();
   const { dialCode, nationalLength } = usePhoneCountry(country);
 
   const [step, setStep] = useState<"details" | "verify">("details");
@@ -159,28 +153,11 @@ export function RegisterScreen() {
 
         <PhoneField value={phone} onChange={setPhone} country={country} />
 
-        {/* منتقي الدولة هنا وحده — التصميم يضعه في التسجيل لا في الدخول،
-            وهو الموضع الذي تُعرف فيه الدولة أصلاً */}
-        <div>
-          <span className="label">الدولة</span>
-          <div className="flex gap-8">
-            {countries.map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setCountry(code)}
-                className={cn(
-                  "pressable flex-1 rounded-13 border p-12 text-13.5 font-semibold",
-                  code === country
-                    ? "border-ink bg-surface-2 text-ink"
-                    : "border-line text-ink",
-                )}
-              >
-                {COUNTRY_LABEL[code]}
-              </button>
-            ))}
-          </div>
-        </div>
+        <CountryPicker
+          country={country}
+          countries={countries}
+          onChange={setCountry}
+        />
 
         <Field
           label="كلمة المرور"

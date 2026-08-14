@@ -72,7 +72,19 @@ export function RouteTransition({
         exit={{ opacity: 0, x: -from }}
         transition={{ duration: DURATION.med, ease: EASE.standard }}
       >
-        <Suspense fallback={<Spinner />}>{children(location)}</Suspense>
+        {/* **البديلُ يملأ الورقةَ ويتوسّط** (البند ٤، قِيس في تطبيق الراكب على
+            الجهاز): `Spinner` عارياً يجلس في **أعلى** الورقة وينزلق معها،
+            فيُقرأ أيقونةً تائهةً في الزاوية. ونسخةٌ واحدةٌ لكلِّ تطبيقٍ كعادة
+            النظام — والعلّةُ واحدةٌ فيهما لأن المكوّن منسوخٌ بينهما. */}
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center">
+              <Spinner />
+            </div>
+          }
+        >
+          {children(location)}
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );

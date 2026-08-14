@@ -5,7 +5,14 @@
  * تستعمل. مفتاحٌ يُطفأ من اللوحة يختفي أثرُه من التطبيق بلا نشر (SPEC القسم 4).
  */
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 
 import { getConfig } from "@/api/endpoints";
@@ -176,6 +183,39 @@ export function useMapboxToken(): string | null {
  * الاحتياطية هنا لحظةَ ما قبل وصول الإعدادات فقط — والشاشات لا تُرسم قبله
  * أصلاً (`Boot` في `App.tsx`).
  */
+/** مفتاحُ اختيار الدولة **على الجهاز لا على الحساب** (`DESIGN-DECISIONS` 59):
+ *  من يدخل ليس له حسابٌ بعد، فلا مكانَ آخرَ يحفظ اختيارَه. */
+const COUNTRY_KEY = "taxo.auth.country";
+
+/** دولةُ شاشات المصادقة: المختارةُ إن اختار، وإلا افتراضيةُ `/config`.
+ *
+ * **والقائمةُ هي الحاكمة**: اختيارٌ لا تعرفه `/config` (سوقٌ أُغلق، أو مفتاحٌ
+ * عبث به أحد) يُهمَل ويعود إلى الافتراضي — بدل أن يُرسَل رمزُ دولةٍ لا وجود لها.
+ */
+export function useAuthCountry(): {
+  country: CountryCode;
+  countries: CountryCode[];
+  setCountry: (value: CountryCode) => void;
+} {
+  const { config } = useConfig();
+  const countries = config?.countries.map((entry) => entry.country_code) ?? ["JO"];
+  const fallback = config?.default_country_code ?? "JO";
+
+  const [chosen, setChosen] = useState<CountryCode | null>(() => {
+    const held = localStorage.getItem(COUNTRY_KEY);
+    return held ? (held as CountryCode) : null;
+  });
+
+  const country = chosen && countries.includes(chosen) ? chosen : fallback;
+
+  const setCountry = useCallback((value: CountryCode) => {
+    localStorage.setItem(COUNTRY_KEY, value);
+    setChosen(value);
+  }, []);
+
+  return { country, countries, setCountry };
+}
+
 export function usePhoneCountry(override?: CountryCode): {
   country: CountryCode;
   dialCode: string;

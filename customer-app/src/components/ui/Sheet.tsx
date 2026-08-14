@@ -58,8 +58,16 @@ export function DrawerSheet({
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/50" />
         <Drawer.Content
           dir="rtl"
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] max-w-lg
-            flex-col rounded-t-sheet border-t border-line bg-surface outline-none"
+          /* **سقفُها مساحةٌ محجوزةٌ من الأعلى لا نسبةٌ من الإطار** (البند ٩،
+             قِيس على الجهاز 2026-08-14): كانت `max-h-[92dvh]`، و`dvh` يتبع
+             الإطارَ فيتقلّص مع لوحة المفاتيح — قِيس: الإطارُ ٨٢٠ ⇐ ٤٦٢،
+             فصارت الورقةُ ٤٢٥ وبدأت عند y=37، **وأزرارُ الرأس في 16..60**.
+             فقُطعت الأيقوناتُ نصفَين، و`elementFromPoint` في منتصف الجرس يعيد
+             **الورقةَ** لا الجرس — أي زرٌّ مقصوصٌ وميّتٌ معاً. وبالنسبة كان
+             الرأسُ ينجو بستّة بكسلاتٍ عند الإطار الكامل: نجاةُ صدفةٍ لا قاعدة.
+             و٧٦ = ١٦ (علوُّ الأزرار) + ٤٤ (قطرُها) + ١٦ (فرجة). */
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[calc(100dvh-76px)]
+            max-w-lg flex-col rounded-t-sheet border-t border-line bg-surface outline-none"
         >
           <div className="mx-auto my-12 h-6 w-40 shrink-0 rounded-full bg-line" aria-hidden />
           {title ? (
@@ -69,7 +77,10 @@ export function DrawerSheet({
           ) : (
             <Drawer.Title className="sr-only">قائمة</Drawer.Title>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto px-20 pb-safe">{children}</div>
+          {/* `scr` لا `overflow-y-auto` وحدَها: شريطُ التمرير مخفيٌّ في المحمول
+              (`DESIGN.md` §2.11) — وبدونه يُرسم شريطٌ رماديٌّ على حافة الورقة،
+              وهو ما يُقرأ «غيرَ منتظم» (البند ٩). و`Stage.tsx` يفعلها أصلاً. */}
+          <div className="scr min-h-0 flex-1 px-20 pb-safe">{children}</div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

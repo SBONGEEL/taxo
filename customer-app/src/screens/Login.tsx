@@ -26,7 +26,7 @@ export function LoginScreen() {
 
   // **مصدرٌ واحدٌ لدولة شاشات المصادقة** (`useAuthCountry`) — ولا منتقيَ هنا
   // كما في التصميم: البادئة ثابتةٌ من `default_country_code`
-  const { country, countries } = useAuthCountry();
+  const { country, countries, setCountry } = useAuthCountry();
   const { nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -74,9 +74,9 @@ export function LoginScreen() {
             country={country}
             countries={countries}
             onPhoneChange={setPhone}
-            onCountryChange={() => undefined}
+            onCountryChange={setCountry}
             disabled={busy}
-            showCountry={false}
+            showCountry={countries.length > 1}
           />
 
           <Field

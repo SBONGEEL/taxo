@@ -5,7 +5,14 @@
  * تستعمل. مفتاحٌ يُطفأ من اللوحة يختفي أثرُه من التطبيق بلا نشر (SPEC القسم 4).
  */
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 
 import { getConfig } from "@/api/endpoints";
@@ -160,15 +167,34 @@ export function useFeature(
  * ولا يُقرأ من هنا شيءٌ عن **حساب** قائم: بعد الدخول تُقرأ دولةُ صاحبه من
  * `user.country_code` (`usePhoneCountry(user?.country_code)`).
  */
+/** مفتاحُ اختيار الدولة **على الجهاز لا على الحساب** (`DESIGN-DECISIONS` 59):
+ *  من يدخل ليس له حسابٌ بعد، فلا مكانَ آخرَ يحفظ اختيارَه. */
+const COUNTRY_KEY = "taxo.auth.country";
+
 export function useAuthCountry(): {
   country: CountryCode;
   countries: CountryCode[];
+  setCountry: (value: CountryCode) => void;
 } {
   const { config } = useConfig();
-  return {
-    country: config?.default_country_code ?? "JO",
-    countries: config?.countries.map((entry) => entry.country_code) ?? ["JO"],
-  };
+  const countries = config?.countries.map((entry) => entry.country_code) ?? ["JO"];
+  const fallback = config?.default_country_code ?? "JO";
+
+  const [chosen, setChosen] = useState<CountryCode | null>(() => {
+    const held = localStorage.getItem(COUNTRY_KEY);
+    return held ? (held as CountryCode) : null;
+  });
+
+  // **اختيارٌ لا تعرفه `/config` يُهمَل**: سوقٌ أُغلق، أو مفتاحٌ عبث به أحد —
+  // فالقائمةُ هي الحاكمة، ويعود إلى الافتراضي بدل أن يُرسل دولةً لا وجود لها
+  const country = chosen && countries.includes(chosen) ? chosen : fallback;
+
+  const setCountry = useCallback((value: CountryCode) => {
+    localStorage.setItem(COUNTRY_KEY, value);
+    setChosen(value);
+  }, []);
+
+  return { country, countries, setCountry };
 }
 
 export function usePhoneCountry(override?: CountryCode): {

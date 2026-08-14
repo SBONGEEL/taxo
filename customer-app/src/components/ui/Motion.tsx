@@ -72,7 +72,19 @@ export function RouteTransition({
         exit={{ opacity: 0, x: -from }}
         transition={{ duration: DURATION.med, ease: EASE.standard }}
       >
-        <Suspense fallback={<Spinner />}>{children(location)}</Suspense>
+        {/* **البديلُ يملأ الورقةَ ويتوسّط** (البند ٤، قِيس على الجهاز): `Spinner`
+            عارياً `flex justify-center py-32` — فيجلس في **أعلى** الورقة بلا
+            ارتفاع، وينزلق معها فيُقرأ أيقونةً تائهةً في الزاوية. قِيس قبله:
+            `x=-8, y=72, w=352` من إطارٍ عرضُه 384. */}
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center">
+              <Spinner />
+            </div>
+          }
+        >
+          {children(location)}
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );
