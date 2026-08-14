@@ -190,7 +190,7 @@ export function MapView({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-stripe font-mono text-10 tracking-map text-muted",
+          "flex h-full w-full items-center justify-center bg-stripe font-mono text-10 tracking-map text-muted",
           className,
         )}
       >
@@ -199,5 +199,14 @@ export function MapView({
     );
   }
 
-  return <div ref={host} className={className} />;
+  // **المقاسُ بالطول والعرض لا بالإزاحة** — والسببُ مقيسٌ في المتصفح:
+  // `mapbox-gl.css` يعلن `.mapboxgl-map { position: relative }`، وهو ملفٌ
+  // يُحمَّل **بعد** أدوات Tailwind وبنفس الأولوية (قِيس: `.absolute` في
+  // `index-*.css` والقاعدةُ المقابلة في `MapView-*.css` بعدها) — فيفوز
+  // `relative` ويصير `inset-0` كلاماً بلا أثرٍ على المقاس. وارتفاعُ الحاوية
+  // **صفر** بينما أبوها 844: خريطةٌ مبنيّةٌ ومقبسٌ مفتوحٌ وشاشةٌ لا خريطةَ فيها.
+  // ولا يُدفع الصنفُ إلى العنصر الذي تملكه Mapbox: هي تكتب صنفَها عليه، وما
+  // نكتبه نحن قد يُهزم — فالمقاسُ يُطلب من الأب (`h-full w-full`) لا من موضعٍ
+  // تملكه هي. وهو نفسُ ما يفعله تطبيقُ الراكب ولوحةُ الإدارة أصلاً.
+  return <div ref={host} className={cn("h-full w-full", className)} />;
 }

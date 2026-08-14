@@ -196,7 +196,6 @@ export function HomeScreen() {
         pickup={tracking ? ride.pickup : null}
         dropoff={tracking ? ride.dropoff : null}
         fit={tracking}
-        className="absolute inset-0"
       />
 
       {/* تدرّجٌ علوي 60px يفصل الشريط عن الخريطة (§2.9) */}

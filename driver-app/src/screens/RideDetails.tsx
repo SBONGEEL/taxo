@@ -136,7 +136,6 @@ export function RideDetailsScreen() {
           pickup={ride.pickup}
           dropoff={ride.dropoff}
           fit
-          className="absolute inset-0"
         />
         <button
           type="button"
