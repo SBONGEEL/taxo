@@ -33,19 +33,9 @@ const config: CapacitorConfig = {
     // أوّلَ خطأ عنوانٍ يمرّ بلا أن يُرى بدل أن يُرفض
     cleartext: false,
   },
-  plugins: {
-    SplashScreen: {
-      // الشاشةُ الترحيبيةُ التي بنيناها تعيش في `index.html` — أي **بعد**
-      // اتصال الشبكة. فالشاشةُ الأصلية تسدّ ما قبلها: خلفيةٌ بلون `--bg`
-      // الليلي وشعارٌ في وسطها، فلا يرى فاتحُ التطبيق بياضاً ثم سواداً
-      launchShowDuration: 1200,
-      launchAutoHide: true,
-      backgroundColor: "#000000",
-      androidSplashResourceName: "splash",
-      androidScaleType: "CENTER_CROP",
-      showSpinner: false,
-    },
-  },
+  // **لا إضافةَ شاشةِ بدء** (قرارُ المالك 2026-08-14): كانت ترسم الشعارَ ثم
+  // ترسمه الشاشةُ الترحيبيةُ المتحركة مرةً ثانية. فحُذفت الإضافةُ كلُّها،
+  // وبقيت نافذةُ الإقلاع لوناً صامتاً في `styles.xml` يتبع وضعَ النظام.
 };
 
 export default config;

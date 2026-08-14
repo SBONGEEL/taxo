@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- لونُ `—bg` الليلي — وتطبيقُ الكبتن ليليٌّ ثابتٌ بقرار التصميم
+         (شاشةٌ في سيارةٍ ساعاتٍ طويلة)، فالنهاريُّ عنده هو الليليُّ نفسُه -->
+    <color name="launch_background">#14181d</color>
+</resources>

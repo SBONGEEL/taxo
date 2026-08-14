@@ -16,7 +16,15 @@
     </style>
 
 
+    <!-- **نافذةُ الإقلاع لونٌ صامتٌ لا صورة** (2026-08-14، بقرار المالك).
+         كانت تعرض الشعارَ ثم تعرضه الشاشةُ الترحيبيةُ المتحركة مرةً ثانية —
+         شاشتان متتاليتان لشيءٍ واحد، وبينهما قفزةُ لون. فما يبقى هنا هو
+         **لونُ الخلفية وحدَه**: يملأ ما بين ضغطةِ الأيقونة وأوّلِ رسمةٍ من
+         `index.html`، فلا وميضَ أبيضَ ولا أسود، ثم تبدأ حركةُ TAXO فوقه بلا
+         انتقالٍ يُرى. واللونُ يتبع وضعَ النظام عبر `values-night`. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="android:background">@color/launch_background</item>
+        <item name="windowSplashScreenBackground">@color/launch_background</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

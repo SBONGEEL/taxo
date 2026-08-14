@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- لونُ `—bg` النهاري — وهذا التطبيق يتبع وضعَ النظام -->
+    <color name="launch_background">#f2f0eb</color>
+</resources>
