@@ -88,7 +88,7 @@ EPHEMERAL_KINDS: frozenset[str] = frozenset({RideEvent.RIDE_OFFER.value})
 SUBSCRIPTION_EVENT_TEXT: dict[SubscriptionEvent, tuple[str, str]] = {
     SubscriptionEvent.SUBSCRIPTION_EXPIRING: (
         "اشتراكك يقارب الانتهاء",
-        "يتبقى أقل من 24 ساعة — جدّد لتبقى ضمن التوزيع",
+        "جدّد لتبقى ضمن التوزيع",
     ),
     SubscriptionEvent.SUBSCRIPTION_EXPIRED: (
         "انتهى اشتراكك",
@@ -489,8 +489,14 @@ async def publish_subscription_event(
     driver_user_id: uuid.UUID,
     event: SubscriptionEvent,
     expires_at: datetime,
+    hours_left: int | None = None,
 ) -> None:
-    """تنبيه الاشتراك — هذا ما كانت المرحلة 7 تنتظره من المرحلة 8."""
+    """تنبيه الاشتراك — هذا ما كانت المرحلة 7 تنتظره من المرحلة 8.
+
+    و`hours_left` نافذةُ التنبيه (البند ١٢): **رقمٌ خام في `data`** تبني منه
+    الواجهةُ جملتَها، ونصُّ الصينية يذكره لأن نظامَ التشغيل يرسمه والتطبيقُ
+    مغلق. وبغيره يقول التنبيهان الجملةَ نفسَها، فيُقرأ الثاني تكراراً لا إلحاحاً.
+    """
     await events.publish_subscription_event(
         redis,
         driver_user_id=driver_user_id,
@@ -499,6 +505,13 @@ async def publish_subscription_event(
     )
 
     title, body = SUBSCRIPTION_EVENT_TEXT[event]
+    if hours_left is not None:
+        remaining = (
+            f"يتبقى أقل من {hours_left // 24} أيام"
+            if hours_left >= 48
+            else f"يتبقى أقل من {hours_left} ساعة"
+        )
+        body = f"{remaining} — {body}"
     await _safe_notify(
         session,
         redis,
@@ -509,6 +522,7 @@ async def publish_subscription_event(
             data={
                 "type": event.value,
                 "expires_at": expires_at.isoformat(),
+                **({"hours_left": hours_left} if hours_left is not None else {}),
             },
         ),
     )

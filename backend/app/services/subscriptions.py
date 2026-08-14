@@ -83,18 +83,33 @@ STAFF_METHODS: tuple[PaymentMethod, ...] = (PaymentMethod.CASH, PaymentMethod.CL
 # «إشعار قبل الانتهاء بـ 24 ساعة» (SPEC القسم 8)
 EXPIRY_NOTICE_WINDOW = timedelta(hours=24)
 
+# **ونافذةٌ ثانيةٌ قبلها بثلاثة أيام** (قرارُ المالك 2026-08-14، البند ١٢):
+# «تنبيهُ 24 ساعة قد يصل والكبتن نائمٌ أو مشغول». والأوسعُ أولاً في الترتيب
+# لأن `sweep` تمرّ عليها من الأوسع إلى الأضيق.
+EARLY_NOTICE_WINDOW = timedelta(days=3)
+
+# **كلُّ نافذةٍ تُطلق في نطاقها وحدَه**: من بقي له عشرون ساعةً هو داخلَ نافذة
+# الثلاثة أيام أيضاً — وبلا حدٍّ أدنى لكلِّ نطاق يصله التنبيهان في اللحظة
+# نفسِها، فيُقرأ الأول كذباً («ثلاثة أيام» وقد بقي يوم). فالنطاقُ (أدنى، أقصى].
+EXPIRY_NOTICE_WINDOWS: tuple[tuple[timedelta, timedelta | None], ...] = (
+    (EARLY_NOTICE_WINDOW, EXPIRY_NOTICE_WINDOW),
+    (EXPIRY_NOTICE_WINDOW, None),
+)
+
 # الإشعار حدثٌ لا سجلٌّ محاسبي، فأثرُه مفتاحُ Redis لا عمودٌ في الجدول: المهمة
 # الدورية تعمل كل بضع دقائق، وبغير أثرٍ يُنبَّه الكبتن في كل دورة حتى ينتهي
 # اشتراكه. وعمرُ المفتاح أطول من النافذة نفسها فلا يُعاد التنبيه داخلها.
-_NOTICE_TTL_SECONDS = int(EXPIRY_NOTICE_WINDOW.total_seconds()) * 2
+_NOTICE_TTL_SECONDS = int(EARLY_NOTICE_WINDOW.total_seconds()) * 2
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def notice_key(subscription_id: uuid.UUID) -> str:
-    return f"subscription:expiry_notified:{subscription_id}"
+def notice_key(subscription_id: uuid.UUID, within: timedelta) -> str:
+    """مفتاحٌ **لكل نافذة**: مفتاحٌ واحدٌ للاثنتين يجعل الأولى تبتلع الثانية،
+    فمن أُخطر قبل ثلاثة أيام لا يُخطر قبل يوم — وهو أشدُّ التنبيهين لزوماً."""
+    return f"subscription:expiry_notified:{subscription_id}:{int(within.total_seconds())}"
 
 
 # ------------------------------------------------------------------ القراءة
@@ -479,7 +494,9 @@ class SubscriptionNotice:
 @dataclass(frozen=True, slots=True)
 class SweepResult:
     expired: list[SubscriptionNotice]
-    expiring: list[SubscriptionNotice]
+    # **مع نافذتها**: النصُّ يختلف بين «ثلاثة أيام» و«أقل من يوم»، والمفتاحُ
+    # الذي يمنع التكرار يحمل النافذةَ كذلك (البند ١٢)
+    expiring: list[tuple[timedelta, SubscriptionNotice]]
 
 
 async def _driver_context(
@@ -564,14 +581,21 @@ async def expire_due(session: AsyncSession) -> list[SubscriptionNotice]:
 
 
 async def expiring_soon(
-    session: AsyncSession, *, within: timedelta = EXPIRY_NOTICE_WINDOW
+    session: AsyncSession,
+    *,
+    within: timedelta = EXPIRY_NOTICE_WINDOW,
+    after: timedelta | None = None,
 ) -> list[SubscriptionNotice]:
     """من ينتهي غطاؤه خلال النافذة ولم يجدّد بعد (SPEC القسم 8).
 
     الشرط على **نهاية التغطية** لا على الصف: من اشترى شهرين بصفّين ينتهي أولهما
     غداً، وتنبيهُه أن اشتراكه ينتهي غداً كذبٌ يدفعه لدفعٍ لا يحتاجه.
+
+    و`after` حدُّ النطاق الأدنى (البند ١٢): نافذةُ الثلاثة أيام تستثني من دخل
+    نافذةَ الأربع والعشرين ساعة، فلا يصل التنبيهان معاً.
     """
     horizon = _now() + within
+    floor = _now() + after if after is not None else None
     rows = (
         await session.scalars(
             select(DriverSubscription).where(
@@ -585,6 +609,8 @@ async def expiring_soon(
         until = await coverage_until(session, subscription.driver_id)
         if until is None or until > horizon:
             continue  # جدّد فعلاً — غطاؤه يتجاوز النافذة
+        if floor is not None and until <= floor:
+            continue  # داخلَ نافذةٍ أضيق — تلك صاحبةُ التنبيه
         context = await _driver_context(session, subscription.driver_id)
         if context is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
             continue
@@ -602,9 +628,11 @@ async def expiring_soon(
 
 async def sweep(session: AsyncSession) -> SweepResult:
     """دورة المهمة الخلفية كاملةً — بلا بثٍّ ولا Redis. الـ commit للمستدعي."""
-    return SweepResult(
-        expired=await expire_due(session), expiring=await expiring_soon(session)
-    )
+    expiring: list[tuple[timedelta, SubscriptionNotice]] = []
+    for within, after in EXPIRY_NOTICE_WINDOWS:
+        for notice in await expiring_soon(session, within=within, after=after):
+            expiring.append((within, notice))
+    return SweepResult(expired=await expire_due(session), expiring=expiring)
 
 
 async def publish_sweep(
@@ -629,9 +657,12 @@ async def publish_sweep(
             expires_at=notice.expires_at,
         )
 
-    for notice in result.expiring:
+    for within, notice in result.expiring:
         if not await redis.set(
-            notice_key(notice.subscription_id), "1", nx=True, ex=_NOTICE_TTL_SECONDS
+            notice_key(notice.subscription_id, within),
+            "1",
+            nx=True,
+            ex=_NOTICE_TTL_SECONDS,
         ):
             continue
         await notifications.publish_subscription_event(
@@ -640,4 +671,5 @@ async def publish_sweep(
             driver_user_id=notice.driver_user_id,
             event=events.SubscriptionEvent.SUBSCRIPTION_EXPIRING,
             expires_at=notice.expires_at,
+            hours_left=int(within.total_seconds() // 3600),
         )

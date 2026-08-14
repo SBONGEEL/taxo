@@ -455,6 +455,79 @@ async def test_sweep_ignores_a_driver_who_already_renewed(
     assert result.expiring == []
 
 
+async def test_the_three_day_notice_fires_in_its_own_band(
+    client: AsyncClient, session_factory
+) -> None:
+    """نافذتان لا واحدة (البند ١٢) — **وكلٌّ في نطاقها وحدَه**.
+
+    من بقي له عشرون ساعةً هو داخلَ نافذة الثلاثة أيام أيضاً؛ وبلا حدٍّ أدنى
+    لكلِّ نطاق يصله التنبيهان في اللحظة نفسِها، فيقول الأولُ «ثلاثة أيام» وقد
+    بقي يوم. والاختبارُ يفشل بحذف `after` من `EXPIRY_NOTICE_WINDOWS`.
+    """
+    early = await approved_driver(client, session_factory, subscribed=False)
+    await _write_subscription(
+        session_factory,
+        early["driver_id"],
+        starts_in=-timedelta(days=27),
+        ends_in=timedelta(days=2),
+    )
+    soon = await approved_driver(
+        client,
+        session_factory,
+        DRIVER | {"phone": "0796660001", "name": "كبتنٌ يوشك"},
+        plate_number="AMM-6601",
+        subscribed=False,
+    )
+    await _write_subscription(
+        session_factory,
+        soon["driver_id"],
+        starts_in=-timedelta(days=29),
+        ends_in=timedelta(hours=20),
+    )
+
+    result = await _sweep(session_factory)
+    windows = {
+        str(notice.driver_id): int(within.total_seconds() // 3600)
+        for within, notice in result.expiring
+    }
+    assert windows[str(early["driver_id"])] == 72
+    assert windows[str(soon["driver_id"])] == 24
+    # ولا يظهر أحدُهما في نافذتين
+    assert len(result.expiring) == 2
+
+
+async def test_the_two_windows_do_not_share_one_key(
+    client: AsyncClient, session_factory
+) -> None:
+    """مفتاحٌ لكلِّ نافذة — وإلا ابتلعت الأولى الثانيةَ وهي أشدُّ لزوماً."""
+    from app.core.redis_client import get_redis_client
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    subscription_id = await _write_subscription(
+        session_factory,
+        driver["driver_id"],
+        starts_in=-timedelta(days=27),
+        ends_in=timedelta(days=2),
+    )
+    redis = get_redis_client()
+    async with session_factory() as session:
+        await subscriptions_service.publish_sweep(
+            session, redis, await _sweep(session_factory)
+        )
+
+    early = subscriptions_service.notice_key(
+        subscription_id, subscriptions_service.EARLY_NOTICE_WINDOW
+    )
+    late = subscriptions_service.notice_key(
+        subscription_id, subscriptions_service.EXPIRY_NOTICE_WINDOW
+    )
+    assert early != late
+    assert await redis.get(early) is not None, "لم يُسجَّل تنبيهُ الثلاثة أيام"
+    assert await redis.get(late) is None, (
+        "مفتاحُ نافذة اليوم كُتب مع الثلاثة أيام — فتنبيهُ الغد لن يصل"
+    )
+
+
 async def test_sweep_notices_expiry_within_a_day_once(
     client: AsyncClient, session_factory
 ) -> None:
@@ -476,7 +549,12 @@ async def test_sweep_notices_expiry_within_a_day_once(
     await pubsub.subscribe(channel)
 
     result = await _sweep(session_factory)
-    assert [notice.subscription_id for notice in result.expiring] == [subscription_id]
+    # **مع نافذتها** منذ البند ١٢: النطاقُ (24 ساعة] هو صاحبُ هذا التنبيه،
+    # ونافذةُ الثلاثة أيام تستثنيه فلا يصل التنبيهان معاً
+    assert [
+        (int(within.total_seconds() // 3600), notice.subscription_id)
+        for within, notice in result.expiring
+    ] == [(24, subscription_id)]
     async with session_factory() as session:
         # منذ المرحلة 8 يمر البثّ بطبقة الإشعارات فيحتاج جلسةً لقراءة الأجهزة
         await subscriptions_service.publish_sweep(session, redis, result)
