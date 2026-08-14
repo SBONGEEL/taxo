@@ -31,17 +31,28 @@ services:
       # (`card_gateway/__init__.py`)، فعنوانٌ محليٌّ فيها يفتح صفحةً لا يبلغها هاتف
       PUBLIC_API_BASE_URL: https://api.tajora.ly
 
+
+  # **يُخدَم البناءُ المحزَّم لا خادمُ التطوير** (2026-08-14، بعد قياسٍ على النفق):
+  # الترحيبيةُ تظهر في 0.72s — لكن الشاشةَ تكتمل في 5.59s عبر **٦٧ طلباً**،
+  # لأن Vite يرسل الوحداتِ مفرَّقةً وكلُّ واحدةٍ رحلةٌ عبر Cloudflare. والبناءُ
+  # يجمعها في ملفاتٍ معدودة. **والبناءُ على المضيف لا في الحاوية**: حارسا
+  #  و يقرآن `backend/app`، والحاويةُ لا تحمله
+  # (`ENOENT`) — فتبني أنت ثم تخدم هي `dist`. **وثمنُه صريح**: تعديلُ الكود لا يظهر حتى
+  # `npm run build` — فهذا للتجربة على الهاتف لا للتطوير عليه.
   customer-app:
     environment:
       VITE_API_BASE_URL: https://api.tajora.ly
+    command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5173"
 
   driver-app:
     environment:
       VITE_API_BASE_URL: https://api.tajora.ly
+    command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5174"
 
   admin-panel:
     environment:
       VITE_API_BASE_URL: https://api.tajora.ly
+    command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5175"
 
   # النفقُ نفسُه — **اتصالٌ صادرٌ من الجهاز**، فلا منفذَ يُفتح عليه ولا يحتاج
   # `ports`. ويخاطب الخدماتِ عبر `host.docker.internal` لأن `localhost` داخل
@@ -58,5 +69,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./cloudflared:/etc/cloudflared:ro
-      # اعتمادُ النفق الذي يكتبه `cloudflared tunnel create` على جهازك
-      - ${USERPROFILE}/.cloudflared:/root/.cloudflared:ro
+      # اعتمادُ النفق الذي يكتبه `cloudflared tunnel create` على جهازك.
+      # **إلى `/creds` لا `/root`**: الصورةُ تعمل بمستخدم 65532، و`/root` مغلقٌ
+      # عليه — فالمركَّبُ هناك لا يُرى (`cloudflared/config.docker.yml`)
+      - ${USERPROFILE}/.cloudflared:/creds:ro
