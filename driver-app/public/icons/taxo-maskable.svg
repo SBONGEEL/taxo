@@ -1,20 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TAXO">
-  <!-- **القابلةُ للقصّ**: الخلفيةُ تملأ المربّعَ كلَّه بلا زوايا مستديرة (يقصّها
-       المشغِّل بشكله)، والعلامةُ مصغَّرةٌ إلى ٪٧٦ حول المركز — فتبقى كاملةً
-       داخل الدائرة مهما كان شكلُ القناع. مولَّدةٌ من `taxo.svg` نفسِه فلا
-       تفترق نسختان. -->
-  <rect width="512" height="512" fill="#14181d"/>
-  <g transform="translate(256 256) scale(0.76) translate(-256 -256)">
+  <!-- القابلةُ للقصّ — مولَّدةٌ من `taxo.svg` نفسِه، ومصغَّرةٌ إلى ٪٧٤ فتبقى
+       داخل دائرة القناع مهما كان شكلُه. -->
+  <rect width="512" height="512" fill="#e6edf3"/>
+  <g transform="translate(256 256) scale(0.74) translate(-256 -256)">
 
-  <circle cx="256" cy="256" r="150" fill="none" stroke="#e6edf3" stroke-width="46"
-          stroke-linecap="round" stroke-dasharray="800 143" transform="rotate(-64 256 256)"/>
-
-  <!-- المِقود: محورٌ وثلاثةُ أذرع — أعلى، وأسفلَ يميناً، وأسفلَ يساراً -->
-  <g stroke="#e6edf3" stroke-width="34" stroke-linecap="round">
-    <path d="M256 256 V162"/>
-    <path d="M256 256 L337 303"/>
-    <path d="M256 256 L175 303"/>
+  <g fill="none" stroke="#14181d" stroke-width="36" stroke-linecap="round" stroke-linejoin="round">
+    <!-- **الأربعةُ بارتفاعٍ واحد** (120) وسماكةٍ واحدة (36): كان `O` قطرُه 116
+         وإخوتُه 132، فيُقرأ حرفاً صغيراً معلّقاً لا رابعاً في الكلمة. والقطرُ
+         الخارجي هنا = ارتفاعُ الحرف بالضبط. -->
+    <path d="M52 176 H132"/>
+    <path d="M92 176 V296"/>
+    <path d="M152 296 L189 176 L226 296"/>
+    <path d="M166 258 H212"/>
+    <path d="M246 176 L320 296"/>
+    <path d="M320 176 L246 296"/>
+    <circle cx="400" cy="236" r="42"/>
   </g>
-  <circle cx="256" cy="256" r="40" fill="#e6edf3"/>
+
+  <rect x="130" y="344" width="252" height="70" rx="35" fill="#14181d"/>
+  <text x="256" y="393" text-anchor="middle" fill="#e6edf3"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="40" font-weight="700" letter-spacing="6">DRIVER</text>
   </g>
 </svg>
