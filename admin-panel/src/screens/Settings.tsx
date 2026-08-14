@@ -534,6 +534,7 @@ function WalletForm({
   const [daily, setDaily] = useState(row.transfer_daily_limit);
   const [monthly, setMonthly] = useState(row.transfer_monthly_limit);
   const [minimum, setMinimum] = useState(row.min_withdrawal_amount);
+  const [reserve, setReserve] = useState(row.withdrawal_reserve_amount);
   const [busy, setBusy] = useState(false);
 
   const clean = (value: string) => value.replace(/[^0-9.]/g, "");
@@ -568,6 +569,20 @@ function WalletForm({
           onChange={(event) => setMinimum(clean(event.target.value))}
         />
       </div>
+      <div className="mt-12">
+        <Field
+          label="الرصيد المحتجَز (لا يُسحب)"
+          dir="ltr"
+          inputMode="decimal"
+          value={reserve}
+          disabled={disabled}
+          onChange={(event) => setReserve(clean(event.target.value))}
+        />
+        <p className="mt-6 text-11 leading-note text-muted">
+          يبقى في محفظة الكبتن ولا يدخل المتاح للسحب، ويُصرف عند إلغاء تفعيل
+          حسابه. **وصفرٌ يعني لا احتجاز.**
+        </p>
+      </div>
 
       <Button
         className="mt-14"
@@ -580,6 +595,7 @@ function WalletForm({
             transfer_daily_limit: daily,
             transfer_monthly_limit: monthly,
             min_withdrawal_amount: minimum,
+            withdrawal_reserve_amount: reserve,
           })
             .then(() => onSaved("حُفظت الحدود"))
             .catch((caught) =>

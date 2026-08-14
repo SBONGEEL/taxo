@@ -25,8 +25,10 @@ from sqlalchemy import func, or_, select
 
 from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
+from app.models.deactivation import DeactivationRequest
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
 from app.models.enums import (
+    DeactivationStatus,
     AuditAction,
     CountryCode,
     DocumentReviewStatus,
@@ -38,6 +40,8 @@ from app.models.user import User
 from app.routers.drivers import document_response
 from app.schemas.auth import UserBlockUpdate, UserOut
 from app.schemas.driver import (
+    DeactivationDecisionIn,
+    DeactivationRequestOut,
     AdminDriverRow,
     DocumentReviewIn,
     DriverDocumentOut,
@@ -46,6 +50,7 @@ from app.schemas.driver import (
     DriverOut,
     DriverStatusUpdate,
 )
+from app.services import deactivation
 from app.services import (
     audit,
     documents as documents_service,
@@ -479,3 +484,45 @@ async def _driver(session, driver_id: uuid.UUID) -> Driver:
     if driver is None:
         raise NotFound("الكبتن غير موجود")
     return driver
+
+
+@router.get(
+    "/drivers/deactivations", response_model=list[DeactivationRequestOut]
+)
+async def list_deactivations(
+    _: AdminUser,
+    session: DbSession,
+    status: DeactivationStatus | None = None,
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[DeactivationRequestOut]:
+    """طلباتُ إغلاق الحسابات — المعلّقةُ أولاً بحكم الترتيب."""
+    stmt = select(DeactivationRequest).order_by(
+        DeactivationRequest.created_at.desc()
+    )
+    if status is not None:
+        stmt = stmt.where(DeactivationRequest.status == status)
+    rows = await session.scalars(stmt.limit(limit).offset(offset))
+    return [DeactivationRequestOut.model_validate(row) for row in rows]
+
+
+@router.patch(
+    "/drivers/deactivations/{request_id}", response_model=DeactivationRequestOut
+)
+async def decide_deactivation(
+    request_id: uuid.UUID,
+    payload: DeactivationDecisionIn,
+    admin: AdminUser,
+    session: DbSession,
+) -> DeactivationRequestOut:
+    """قرارُ المشرف — والموافقةُ تُعيد قراءةَ الموانع لحظتَها لا لحظةَ الطلب."""
+    row = await deactivation.decide(
+        session,
+        request_id=request_id,
+        admin=admin,
+        approved=payload.approved,
+        note=payload.note,
+    )
+    await session.commit()
+    await session.refresh(row)
+    return DeactivationRequestOut.model_validate(row)

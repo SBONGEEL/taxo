@@ -128,6 +128,9 @@ class DriverWalletOut(WalletOut):
 
     available_for_withdrawal: Decimal
     min_withdrawal_amount: Decimal
+    # **يُقال برقمه** (البند ١٣): من يرى رصيداً لا يستطيع سحبَه كلَّه يستحق أن
+    # يعرف كم منه محتجَزٌ ولماذا — لا جملةً عامة عن «رصيدٍ غير متاح»
+    withdrawal_reserve_amount: Decimal
 
 
 class EarningsOut(BaseModel):
@@ -222,6 +225,8 @@ class WalletSettingUpdate(BaseModel):
     transfer_daily_limit: Decimal | None = OptionalLimitMoney
     transfer_monthly_limit: Decimal | None = OptionalLimitMoney
     min_withdrawal_amount: Decimal | None = OptionalLimitMoney
+    # الرصيدُ المحتجَز (البند ١٣) — صفرٌ يعني «لا احتجاز»
+    withdrawal_reserve_amount: Decimal | None = OptionalLimitMoney
 
 
 class WalletSettingOut(BaseModel):
@@ -232,4 +237,5 @@ class WalletSettingOut(BaseModel):
     transfer_daily_limit: Decimal
     transfer_monthly_limit: Decimal
     min_withdrawal_amount: Decimal
+    withdrawal_reserve_amount: Decimal
     updated_at: datetime

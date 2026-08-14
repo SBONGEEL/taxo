@@ -25,6 +25,11 @@ class DriverStatus(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
     SUSPENDED = "suspended"
+    # **ألغى تفعيلَ حسابه بطلبه** (البند ١٣) — لا عقوبةً كـ`suspended` بل
+    # خروجاً باختياره. وهي حالةٌ مستقلة لأن السجلَّ يُقرأ بعد شهر: «لماذا لا
+    # تصله طلبات» جوابُها «أوقفناه» غير جوابها «طلب الإغلاق».
+    # **والعودةُ من باب `approve` وحدَه** بشروطه — لا بضغطةٍ تعكس الحالة
+    DEACTIVATED = "deactivated"
 
 
 class VehicleCategory(StrEnum):
@@ -54,6 +59,19 @@ class DocumentType(StrEnum):
     VEHICLE_SIDE_LEFT = "vehicle_side_left"
     VEHICLE_INTERIOR = "vehicle_interior"
     VEHICLE_PLATE = "vehicle_plate"
+
+
+class DeactivationStatus(StrEnum):
+    """حالُ طلب إلغاء التفعيل (البند ١٣) — أربعٌ لا أكثر.
+
+    `cancelled` للكبتن يعدل عن طلبه، و`rejected` للمشرف يرفضه بسببٍ مكتوب.
+    وخلطُهما يجعل «من أنهى الطلب» سؤالاً بلا جواب في سجلٍّ يُقرأ بعد شهر.
+    """
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
 
 
 class DocumentReviewStatus(StrEnum):

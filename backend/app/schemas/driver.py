@@ -7,6 +7,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import (
+    DeactivationStatus,
     CountryCode,
     DocumentReviewStatus,
     DocumentType,
@@ -255,3 +256,45 @@ class DriverStatusUpdate(BaseModel):
     """
 
     reason: str | None = Field(default=None, max_length=255)
+
+
+class DeactivationRequestIn(BaseModel):
+    """طلبُ الكبتن إغلاقَ حسابه (البند ١٣) — والسببُ اختياريٌّ ونصٌّ حرّ.
+
+    من يترك يقول لماذا إن شاء، ولا يُحبس خروجُه على قائمةٍ نختارها له.
+    """
+
+    reason: str | None = Field(default=None, max_length=300)
+
+
+class DeactivationDecisionIn(BaseModel):
+    """قرارُ المشرف — والرفضُ بسببٍ مكتوبٍ كرفض المستند."""
+
+    approved: bool
+    note: str | None = Field(default=None, max_length=300)
+
+
+class DeactivationRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    driver_id: uuid.UUID
+    status: DeactivationStatus
+    reason: str | None
+    review_note: str | None
+    resolved_at: datetime | None
+    created_at: datetime
+
+
+class DeactivationStateOut(BaseModel):
+    """ما تحتاجه شاشةُ الكبتن في نداءٍ واحد.
+
+    **والموانعُ قائمةٌ لا أوّلُ سبب**: من أُخبر بمانعٍ فأزاله ثم صُدم بثانٍ
+    يقرأ الرفضَ مماطلة. **والمحتجَزُ يُقال برقمه** لا بجملةٍ عامة: من يرى
+    رصيداً لا يستطيع سحبَه كلَّه يستحق أن يعرف كم منه ولماذا.
+    """
+
+    request: DeactivationRequestOut | None
+    blockers: list[str]
+    reserve_amount: Decimal
+    currency: str

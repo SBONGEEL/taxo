@@ -6,6 +6,7 @@
 
 import { api } from "@/api/client";
 import type {
+  DeactivationRequestRow,
   AdminDriverRow,
   AdminRideDetail,
   AdminRideRow,
@@ -350,6 +351,7 @@ export const updateWalletSettings = (
     transfer_daily_limit: string;
     transfer_monthly_limit: string;
     min_withdrawal_amount: string;
+    withdrawal_reserve_amount: string;
   }>,
 ) => api.patch<WalletSetting>(`/admin/settings/wallet/${country}`, payload);
 
@@ -622,3 +624,14 @@ export const listAuditLogs = (
     offset?: number;
   } = {},
 ) => api.get<AuditLog[]>("/admin/settings/audit-logs", { query: params });
+
+/** طلباتُ إلغاء التفعيل — والمعلّقةُ أولاً بحكم ترتيب الخلفية (البند ١٣). */
+export const listDeactivations = (status?: string) =>
+  api.get<DeactivationRequestRow[]>(
+    "/admin/drivers/deactivations" + (status ? `?status=${status}` : ""),
+  );
+
+export const decideDeactivation = (
+  id: string,
+  payload: { approved: boolean; note?: string },
+) => api.patch<DeactivationRequestRow>(`/admin/drivers/deactivations/${id}`, payload);

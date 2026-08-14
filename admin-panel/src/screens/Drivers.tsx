@@ -51,6 +51,7 @@ import type {
   Gender,
   GenderPreference,
 } from "@/api/types";
+import { Deactivations } from "@/components/Deactivations";
 import { Shell } from "@/components/Shell";
 import { Pills, Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
@@ -253,6 +254,11 @@ export function DriversScreen() {
           )}
         />
       </div>
+
+      {/* **طلباتُ إلغاء التفعيل تحت قائمة الكباتن** (البند ١٣): هنا يُقرأ حالُ
+          الكبتن أصلاً، وقرارٌ يُخرجه من التوزيع يسكن حيث تُقرأ حالتُه — لا في
+          «المالية» رغم أنه يُطلق مالاً محتجَزاً */}
+      <Deactivations onError={setError} />
 
       {open ? (
         <DriverDrawer

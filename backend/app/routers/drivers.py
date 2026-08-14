@@ -15,11 +15,16 @@ from app.core import rate_limit, storage
 from app.core.config import settings
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import Conflict, RateLimited
+from app.models.user import User
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, DriverDocument
 from app.models.enums import DocumentType
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
+    DeactivationDecisionIn,
+    DeactivationRequestIn,
+    DeactivationRequestOut,
+    DeactivationStateOut,
     DocumentUploadOut,
     DriverDocumentOut,
     DriverDocumentsOut,
@@ -34,10 +39,13 @@ from app.schemas.driver import (
     VehicleUpdateResultOut,
 )
 from app.schemas.wallet import EarningsOut
+from app.core.currency import currency_for_country
 from app.services import (
+    deactivation,
     documents as documents_service,
     drivers as drivers_service,
     earnings as earnings_service,
+    settings_service,
     vehicles as vehicles_service,
 )
 
@@ -363,3 +371,49 @@ async def list_nearby_drivers(
         )
         for presence in presences
     ]
+
+
+# ------------------------------------------------- إلغاءُ تفعيل الحساب (البند ١٣)
+
+
+@router.get("/me/deactivation", response_model=DeactivationStateOut)
+async def my_deactivation_state(
+    driver: CurrentDriver, session: DbSession
+) -> DeactivationStateOut:
+    """حالُ طلبه وموانعُه والمحتجَزُ برقمه — سؤالٌ واحدٌ بجوابٍ واحد."""
+    user = await session.get(User, driver.user_id)
+    assert user is not None  # كبتنٌ بلا حسابٍ لا يمرّ من `CurrentDriver`
+    limits = await settings_service.get_or_create_wallet_settings(
+        session, user.country_code
+    )
+    pending = await deactivation.pending_for(session, driver.id)
+    return DeactivationStateOut(
+        request=(
+            DeactivationRequestOut.model_validate(pending) if pending else None
+        ),
+        blockers=await deactivation.blockers(session, driver),
+        reserve_amount=limits.withdrawal_reserve_amount,
+        currency=currency_for_country(user.country_code).value,
+    )
+
+
+@router.post("/me/deactivation", response_model=DeactivationRequestOut, status_code=201)
+async def request_deactivation(
+    payload: DeactivationRequestIn, driver: CurrentDriver, session: DbSession
+) -> DeactivationRequestOut:
+    """يفتح طلبَ إغلاق — يُرفض إن كان عليه ما لا يُترك خلفه (SPEC القسم 7)."""
+    row = await deactivation.request(session, driver=driver, reason=payload.reason)
+    await session.commit()
+    await session.refresh(row)
+    return DeactivationRequestOut.model_validate(row)
+
+
+@router.delete("/me/deactivation", response_model=DeactivationRequestOut)
+async def cancel_deactivation(
+    driver: CurrentDriver, session: DbSession
+) -> DeactivationRequestOut:
+    """يعدل عن طلبه ما دام معلّقاً — والقفلُ يمنع سباقَه مع قرار المشرف."""
+    row = await deactivation.cancel(session, driver=driver)
+    await session.commit()
+    await session.refresh(row)
+    return DeactivationRequestOut.model_validate(row)

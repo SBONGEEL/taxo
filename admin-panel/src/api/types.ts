@@ -308,6 +308,8 @@ export interface WalletSetting {
   transfer_daily_limit: string;
   transfer_monthly_limit: string;
   min_withdrawal_amount: string;
+  /** يبقى في محفظة الكبتن ولا يُسحب — يخرج عند إلغاء التفعيل (البند ١٣). */
+  withdrawal_reserve_amount: string;
   updated_at: string;
 }
 
@@ -758,5 +760,16 @@ export interface AuditLog {
   entity_type: string;
   entity_id: string | null;
   details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/** طلبُ إلغاء تفعيل حساب كبتن (البند ١٣). */
+export interface DeactivationRequestRow {
+  id: string;
+  driver_id: string;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  reason: string | null;
+  review_note: string | null;
+  resolved_at: string | null;
   created_at: string;
 }

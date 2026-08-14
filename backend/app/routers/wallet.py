@@ -305,6 +305,11 @@ async def get_my_driver_wallet(
         min_withdrawal_amount=(
             limits.min_withdrawal_amount if limits is not None else Decimal("0.000")
         ),
+        withdrawal_reserve_amount=(
+            limits.withdrawal_reserve_amount
+            if limits is not None
+            else Decimal("0.000")
+        ),
     )
 
 

@@ -318,6 +318,8 @@ export interface Wallet {
 export interface DriverWallet extends Wallet {
   available_for_withdrawal: string;
   min_withdrawal_amount: string;
+  /** يبقى في المحفظة ولا يُسحب — يخرج عند إلغاء التفعيل (البند ١٣). */
+  withdrawal_reserve_amount: string;
 }
 
 export type WalletTransactionType =
@@ -525,4 +527,23 @@ export interface MyReferrals {
   required_rides: number;
   total_rewarded: string;
   referrals: ReferralStage[];
+}
+
+/** حالُ طلب إلغاء التفعيل وموانعُه (البند ١٣). */
+export interface DeactivationRequest {
+  id: string;
+  driver_id: string;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  reason: string | null;
+  review_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface DeactivationState {
+  request: DeactivationRequest | null;
+  /** **قائمةٌ لا أوّلُ سبب**: من أزال مانعاً ثم صُدم بثانٍ يقرأ الرفضَ مماطلة. */
+  blockers: string[];
+  reserve_amount: string;
+  currency: string;
 }

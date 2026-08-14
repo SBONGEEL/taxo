@@ -5,6 +5,7 @@ from app.models.audit import AdminAuditLog
 from app.models.base import Base
 from app.models.commission import CommissionSetting
 from app.models.device import DeviceToken
+from app.models.deactivation import DeactivationRequest
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
 from app.models.enums import (
     AuditAction,
@@ -89,6 +90,7 @@ __all__ = [
     "DisputeResolution",
     "DocumentReviewStatus",
     "DocumentType",
+    "DeactivationRequest",
     "Driver",
     "DriverDocument",
     "DriverReferral",

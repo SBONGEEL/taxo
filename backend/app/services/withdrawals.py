@@ -27,6 +27,7 @@ from app.core.exceptions import (
 )
 from app.models.driver import Driver
 from app.models.enums import (
+    DriverStatus,
     AuditAction,
     WalletOwnerType,
     WalletTransactionType,
@@ -135,9 +136,24 @@ async def _reserved_amount(session: AsyncSession, driver_id: uuid.UUID) -> Decim
 async def available_balance(
     session: AsyncSession, driver: Driver, user: User
 ) -> Decimal:
-    """الرصيد القابل للسحب = الرصيد − ما حجزته طلبات قائمة."""
+    """الرصيد القابل للسحب = الرصيد − ما حجزته طلبات قائمة − **المحتجَز**.
+
+    **والمحتجَزُ شرطٌ لا قيد** (البند ١٣): لا تُكتب حركةٌ تحجزه، فقيدٌ يُكتب
+    لحجزه يجعل الرصيدَ يكذب على صاحبه — يقرأ رقماً ناقصاً بلا أن يُدفع له.
+    وهو نفسُ شكلِ `_reserved_amount` القائم منذ المرحلة 5.
+
+    **ويسقط شرطُه لمن أُلغي تفعيلُ حسابه**: المحتجَزُ وُجد ليَخرج في تلك
+    اللحظة بعينها، فبقاؤه بعدها احتجازٌ لمالٍ بلا سبب.
+    """
     current = await wallet.balance(session, user.id, WalletOwnerType.DRIVER)
-    return current - await _reserved_amount(session, driver.id)
+    held = await _reserved_amount(session, driver.id)
+    reserve = Decimal("0.000")
+    if driver.status is not DriverStatus.DEACTIVATED:
+        limits = await settings_service.get_or_create_wallet_settings(
+            session, user.country_code
+        )
+        reserve = limits.withdrawal_reserve_amount
+    return current - held - reserve
 
 
 async def create_request(

@@ -6,6 +6,8 @@
 
 import { api, upload } from "@/api/client";
 import type {
+  DeactivationRequest,
+  DeactivationState,
   AppConfig,
   AuthMethod,
   AuthResponse,
@@ -343,3 +345,13 @@ export const getMyReferrals = () =>
  */
 export const getRouteLine = (rideId: string) =>
   api.get<{ points: number[][] }>(`/rides/${rideId}/route-line`);
+
+/** حالُ إلغاء التفعيل: طلبُه إن وُجد، وموانعُه، والمحتجَزُ برقمه (البند ١٣). */
+export const getDeactivationState = () =>
+  api.get<DeactivationState>("/drivers/me/deactivation");
+
+export const requestDeactivation = (reason?: string) =>
+  api.post<DeactivationRequest>("/drivers/me/deactivation", { reason });
+
+export const cancelDeactivation = () =>
+  api.del<DeactivationRequest>("/drivers/me/deactivation");
