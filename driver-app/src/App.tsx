@@ -38,6 +38,7 @@ import { SessionProvider, useSession } from "@/lib/session";
 import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
+import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
 
 const ForgotPasswordScreen = lazy(() =>
@@ -201,6 +202,13 @@ function DriverHome() {
  * شريطٌ يُفكَّك ويُركَّب مع كلِّ شاشةٍ لا تنزلق حبّتُه، لأن `layoutId` لا يقيس
  * بين عنصرين لم يجتمعا في لحظة. قِيس: لا موضعَ واحدٌ يتغيّر في هذا التطبيق.
  */
+/** زرُّ الجهاز يُربط هنا لا في `main.tsx`: القاعدةُ تقرأ تاريخَ الملاح،
+ *  فلا معنى لها خارج `Router`. */
+function HardwareBack() {
+  useEffect(() => bindHardwareBack(), []);
+  return null;
+}
+
 function NavBar() {
   const { pathname } = useLocation();
   // **ولا يظهر ورحلةٌ أو عرضٌ يملأ الشاشة** — وهذا سلوكٌ كان قائماً وكاد يضيع
@@ -405,7 +413,8 @@ export default function App() {
                       </Routes>
                       )}
                     </RouteTransition>
-                    <NavBar />
+                    <HardwareBack />
+                  <NavBar />
                   </Router>
                 </RideProvider>
               </DriverProvider>

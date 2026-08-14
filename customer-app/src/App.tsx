@@ -28,6 +28,7 @@ import { showsNav } from "@/lib/tabs";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { ThemeProvider } from "@/lib/theme";
+import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
 
 // شاشة الدخول وحدها تُحمَّل مباشرةً؛ وما عداها كسولٌ. والرئيسية أهمُّها:
@@ -174,6 +175,13 @@ function Anonymous({ children }: { children: ReactNode }) {
  * وهو خارج `RouteTransition` كذلك كي **لا ينزلق مع الصفحة**: شريطُ تنقّلٍ
  * يسافر مع ما ينقلك إليه يُقرأ جزءاً من الصفحة لا ثابتاً فوقها.
  */
+/** زرُّ الجهاز يُربط هنا لا في `main.tsx`: القاعدةُ تقرأ تاريخَ الملاح،
+ *  فلا معنى لها خارج `Router`. */
+function HardwareBack() {
+  useEffect(() => bindHardwareBack(), []);
+  return null;
+}
+
 function NavBar() {
   const { pathname } = useLocation();
   // **ولا إشعارَ فوق قرار**: رحلةٌ جاريةٌ تعني ورقةَ تتبّعٍ فيها «إلغاء»
@@ -374,6 +382,7 @@ export default function App() {
                     </Routes>
                     )}
                   </RouteTransition>
+                  <HardwareBack />
                   <NavBar />
                 </Router>
               </RideProvider>
