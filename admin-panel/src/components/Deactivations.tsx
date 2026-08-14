@@ -84,7 +84,9 @@ export function Deactivations({ onError }: { onError: (message: string) => void 
           <>
             <span className="font-mono text-11.5">{row.driver_id.slice(0, 8)}</span>
             <span className="text-12 text-muted">{row.reason ?? "—"}</span>
-            <Badge tone={TONE[row.status]}>{LABEL[row.status]}</Badge>
+            <span className="flex items-center gap-6">
+              <Badge tone={TONE[row.status]}>{LABEL[row.status]}</Badge>
+            </span>
             <span className="text-12 text-muted">{moment(row.created_at)}</span>
             {row.status === "pending" ? (
               <div className="flex items-center gap-8">

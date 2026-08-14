@@ -6,6 +6,8 @@
 
 import { api, upload } from "@/api/client";
 import type {
+  Advance,
+  AdvanceState,
   DeactivationRequest,
   DeactivationState,
   AppConfig,
@@ -355,3 +357,12 @@ export const requestDeactivation = (reason?: string) =>
 
 export const cancelDeactivation = () =>
   api.del<DeactivationRequest>("/drivers/me/deactivation");
+
+/** حالُ السلف: الأهليةُ بشروطها والسقفُ والدَّين (البند ١٥). */
+export const getAdvanceState = () => api.get<AdvanceState>("/drivers/me/advances");
+
+export const requestAdvance = (amount: string) =>
+  api.post<Advance>("/drivers/me/advances", { amount });
+
+/** سدادٌ كاملٌ من المحفظة — ويرفع الإيقافَ في المسار نفسِه لا بدورةٍ تالية. */
+export const repayAdvance = () => api.post<Advance>("/drivers/me/advances/repay", {});

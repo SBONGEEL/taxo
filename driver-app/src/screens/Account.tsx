@@ -46,6 +46,13 @@ export function AccountScreen() {
     profile?.user.country_code,
     "driver_referrals_enabled",
   );
+  // **والسلفةُ خلف مفتاحها كذلك** (البند ١٥): صفٌّ يَعِد بقرضٍ في سوقٍ لا
+  // سلفَ فيه أسوأُ من غيابه — والخلفيةُ ترفض على كل حال، فالمنعُ ببابٍ
+  // مغلقٍ لا برسالةِ رفض
+  const advancesOn = useFeature(
+    profile?.user.country_code,
+    "driver_advances_enabled",
+  );
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
 
   useEffect(() => {
@@ -188,6 +195,13 @@ export function AccountScreen() {
             sub="بطاقاتُ الدفع التي حفظتَها"
             onClick={() => navigate("/account/cards")}
           />
+          {advancesOn ? (
+            <Row
+              label="السلفة"
+              sub="سلفةٌ تُقتطع من أرباح رحلاتك"
+              onClick={() => navigate("/account/advances")}
+            />
+          ) : null}
           {referralsOn ? (
             <Row
               label="أَحِلْ سائقة"

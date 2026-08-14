@@ -27,7 +27,9 @@ from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.deactivation import DeactivationRequest
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
+from app.models.advance import DriverAdvance
 from app.models.enums import (
+    AdvanceStatus,
     DeactivationStatus,
     AuditAction,
     CountryCode,
@@ -40,6 +42,11 @@ from app.models.user import User
 from app.routers.drivers import document_response
 from app.schemas.auth import UserBlockUpdate, UserOut
 from app.schemas.driver import (
+    AdminAdvanceIn,
+    AdminAdvanceOut,
+    AdvanceCapIn,
+    AdvanceOut,
+    AdvanceWriteOffIn,
     DeactivationDecisionIn,
     DeactivationRequestOut,
     AdminDriverRow,
@@ -52,6 +59,7 @@ from app.schemas.driver import (
 )
 from app.services import deactivation
 from app.services import (
+    advances as advances_service,
     audit,
     documents as documents_service,
     drivers as drivers_service,
@@ -526,3 +534,118 @@ async def decide_deactivation(
     await session.commit()
     await session.refresh(row)
     return DeactivationRequestOut.model_validate(row)
+
+
+# ------------------------------------------------------- السلف (البند ١٥)
+
+
+@router.get("/drivers/advances", response_model=list[AdminAdvanceOut])
+async def list_advances(
+    _: AdminUser,
+    session: DbSession,
+    status: AdvanceStatus | None = None,
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[AdminAdvanceOut]:
+    """السلفُ بمتبقّيها — **والمتبقّي يُجمع من الدفتر لكل صف**.
+
+    وهي صفحةٌ محدودةٌ لا جدولٌ كامل، فالجمعُ لكلٍّ منها استعلامٌ صغيرٌ على
+    فهرسٍ — لا جمعٌ في المتصفح: مجموعُ صفحةٍ تحت عنوانٍ يقول «الكل» رقمٌ يكذب
+    (قاعدةُ `services/stats.py`).
+    """
+    stmt = select(DriverAdvance).order_by(DriverAdvance.created_at.desc())
+    if status is not None:
+        stmt = stmt.where(DriverAdvance.status == status)
+    rows = list(await session.scalars(stmt.limit(limit).offset(offset)))
+    out: list[AdminAdvanceOut] = []
+    for row in rows:
+        paid = await advances_service.repaid_amount(session, row.id)
+        out.append(
+            AdminAdvanceOut(
+                **AdvanceOut.model_validate(row).model_dump(),
+                remaining=row.amount - paid,
+                overdue=(
+                    row.status is AdvanceStatus.OUTSTANDING
+                    and row.due_at <= datetime.now(UTC)
+                ),
+            )
+        )
+    return out
+
+
+@router.post("/drivers/advances", response_model=AdvanceOut, status_code=201)
+async def disburse_advance(
+    payload: AdminAdvanceIn, admin: AdminUser, session: DbSession
+) -> AdvanceOut:
+    """صرفٌ بموافقة مشرف — **البابُ الوحيد لما يتجاوز السقف** (القرار ٢)."""
+    driver = await session.get(Driver, payload.driver_id)
+    if driver is None:
+        raise NotFound("الكبتن غير موجود")
+    driver = await drivers_service.lock(session, driver)
+    user = await session.get(User, driver.user_id)
+    assert user is not None
+    advance = await advances_service.disburse(
+        session,
+        driver=driver,
+        user=user,
+        country=user.country_code,
+        amount=payload.amount,
+        approved_by=admin,
+    )
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="driver_advance",
+        entity_id=advance.id,
+        details={"amount": str(advance.amount)},
+    )
+    await session.commit()
+    await session.refresh(advance)
+    return AdvanceOut.model_validate(advance)
+
+
+@router.patch("/drivers/advances/{advance_id}/writeoff", response_model=AdvanceOut)
+async def write_off_advance(
+    advance_id: uuid.UUID,
+    payload: AdvanceWriteOffIn,
+    admin: AdminUser,
+    session: DbSession,
+) -> AdvanceOut:
+    """شطبُ دَينٍ بقرارٍ إداريٍّ مسجَّل (القرار ٧).
+
+    **ولا شطبَ آليّ**: تسعون يوماً تجعله *مقترحاً*، والاعترافُ بالخسارة قرارُ
+    إنسانٍ باسمه. **ويرفع الإيقاف**: الشطبُ اعترافٌ بأن هذا المال لن يعود،
+    وإبقاءُ الحساب موقوفاً بعده عقوبةٌ على دَينٍ لم يعد قائماً.
+    """
+    advance = await advances_service.write_off(
+        session, advance_id=advance_id, admin=admin, reason=payload.reason
+    )
+    await session.commit()
+    await session.refresh(advance)
+    return AdvanceOut.model_validate(advance)
+
+
+@router.put("/drivers/{driver_id}/advance-cap", response_model=DriverOut)
+async def set_advance_cap(
+    driver_id: uuid.UUID,
+    payload: AdvanceCapIn,
+    admin: AdminUser,
+    session: DbSession,
+) -> DriverOut:
+    """سقفُ كبتنٍ بعينه — **`null` لا تخصيص، وصفرٌ منعٌ**، والسببُ في التدقيق."""
+    driver = await _driver(session, driver_id)
+    driver.advance_cap_override = payload.cap
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="driver",
+        entity_id=driver.id,
+        # **السببُ المكتوبُ استثناءُ «لا قيمَ في التدقيق»**: هو نفسُه محتوى
+        # القيد — قرارُ مشرفٍ لا قيمةٌ مخزَّنة
+        details={"advance_cap_override": True, "reason": payload.reason},
+    )
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)

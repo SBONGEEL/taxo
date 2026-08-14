@@ -36,7 +36,9 @@ import {
   getReferralSettings,
   getSharingSettings,
   listPaymentSettings,
+  listAdvanceSettings,
   listWalletSettings,
+  updateAdvanceSettings,
   setFeatureFlag,
   updateCommission,
   updatePaymentSettings,
@@ -45,6 +47,7 @@ import {
   updateWalletSettings,
 } from "@/api/endpoints";
 import type {
+  AdvanceSetting,
   CommissionSetting,
   CountryFeatureFlags,
   FeatureKey,
@@ -79,6 +82,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "التحويل بين الركّاب",
     hint: "يحتاج حدّي تحويلٍ غير صفريّين أدناه، وإلا رُفض التحويل.",
   },
+  driver_advances_enabled: {
+    title: "سلف الكباتن",
+    hint: "سلفةٌ نقديةٌ تُقتطع من أرباح الرحلات. أساسُ سقفها سعرُ خطتك اليومية، فلا خطةَ يومية = لا سلف ولو أُشعل المفتاح. واضبط الاقتطاعَ والمهلةَ وشروطَ الأهلية في «سياسة السلف» أدناه — والقرارُ سوقٌ واحدٌ أولاً.",
+  },
   otp_verification_enabled: {
     title: "التحقق من الرقم",
     hint: "حارسٌ لا ميزة — إطفاؤه للطوارئ فقط، ويسمح بحساباتٍ برقمٍ غير مُثبت.",
@@ -97,7 +104,7 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
   },
   promo_codes_enabled: {
     title: "رموز الخصم",
-    hint: "تظهر ورقةُ «عندي كوبون» في شاشة تأكيد الرحلة. والخصمُ **تتحمّله الشركة**: يُسجَّل دفعةً بقناة «كوبون» فلا يَنقص أجرةَ الكبتن ولا عمولته. وأنشئ الرموزَ في «العروض والحملات» — مفتاحٌ مشتعلٌ بلا رموز يفتح حقلاً لا يُقبل فيه شيء.",
+    hint: "تظهر ورقةُ «عندي كوبون» في شاشة تأكيد الرحلة. والخصمُ تتحمّله الشركة: يُسجَّل دفعةً بقناة «كوبون» فلا يَنقص أجرةَ الكبتن ولا عمولته. وأنشئ الرموزَ في «العروض والحملات» — مفتاحٌ مشتعلٌ بلا رموز يفتح حقلاً لا يُقبل فيه شيء.",
   },
   driver_referrals_enabled: {
     title: "حافز إحالة السائقات",
@@ -105,11 +112,11 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
   },
   ride_sharing_enabled: {
     title: "مشاركة الرحلة بين ركاب",
-    hint: "راكبان في سيارةٍ واحدة بخصمٍ لكليهما — **تتحمّله الشركة** فلا يَنقص ما يقبضه الكبتن. واضبط نسبةَ الخصم أدناه، فصفرُها يعني «لم تُحدَّد» فلا تُعرض المشاركة أصلاً. وطلبٌ بتفضيلٍ نسائيٍّ لا يُشارَك إلا باختيارٍ صريحٍ من صاحبته. وإطفاؤه يمنع طلباتٍ جديدة **ولا يفكّ مجموعةً سائرةً الآن**.",
+    hint: "راكبان في سيارةٍ واحدة بخصمٍ لكليهما — تتحمّله الشركة فلا يَنقص ما يقبضه الكبتن. واضبط نسبةَ الخصم أدناه، فصفرُها يعني «لم تُحدَّد» فلا تُعرض المشاركة أصلاً. وطلبٌ بتفضيلٍ نسائيٍّ لا يُشارَك إلا باختيارٍ صريحٍ من صاحبته. وإطفاؤه يمنع طلباتٍ جديدة ولا يفكّ مجموعةً سائرةً الآن.",
   },
   scheduled_rides_enabled: {
     title: "الرحلات المجدولة",
-    hint: "يظهر «حدّد موعداً» في ورقة تأكيد الرحلة، ويبدأ البحثُ عن كبتنٍ قبل الموعد بعشر دقائق. والسعرُ يُحسب عند التنفيذ لا عند الحجز. وإطفاؤه يمنع حجوزاً جديدة **ويُنفّذ القائمةَ منها**: موعدٌ رتّب صاحبُه صباحَه عليه لا يُلغى بمفتاح.",
+    hint: "يظهر «حدّد موعداً» في ورقة تأكيد الرحلة، ويبدأ البحثُ عن كبتنٍ قبل الموعد بعشر دقائق. والسعرُ يُحسب عند التنفيذ لا عند الحجز. وإطفاؤه يمنع حجوزاً جديدة ويُنفّذ القائمةَ منها: موعدٌ رتّب صاحبُه صباحَه عليه لا يُلغى بمفتاح.",
   },
   women_service_enabled: {
     title: "خدمة التوصيل النسائي",
@@ -131,6 +138,7 @@ const FLAGS: FeatureKey[] = [
   "driver_referrals_enabled",
   "scheduled_rides_enabled",
   "ride_sharing_enabled",
+  "driver_advances_enabled",
   "otp_verification_enabled",
 ];
 
@@ -144,12 +152,13 @@ export function SettingsScreen() {
   const [payment, setPayment] = useState<PaymentSetting[]>([]);
   const [referral, setReferral] = useState<ReferralSetting | null>(null);
   const [sharing, setSharing] = useState<RideSharingSetting | null>(null);
+  const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, sh] = await Promise.all([
+    const [f, c, w, p, r, sh, adv] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
@@ -158,6 +167,7 @@ export function SettingsScreen() {
       // وبغيره يبقى معروضاً إعدادُ السوق الأول بعد تبديل الرأس
       getReferralSettings(country),
       getSharingSettings(country),
+      listAdvanceSettings(),
     ]);
     setFlags(f);
     setCommission(c);
@@ -165,6 +175,7 @@ export function SettingsScreen() {
     setPayment(p);
     setReferral(r);
     setSharing(sh);
+    setAdvance(adv);
   }, [country]);
 
   useEffect(() => {
@@ -179,6 +190,7 @@ export function SettingsScreen() {
   const commissionRow = commission.find((row) => row.country_code === country);
   const walletRow = wallet.find((row) => row.country_code === country);
   const paymentRow = payment.find((row) => row.country_code === country);
+  const advanceRow = advance.find((row) => row.country_code === country);
 
   async function flip(key: FeatureKey, enabled: boolean, reason?: string) {
     setError(null);
@@ -363,6 +375,35 @@ export function SettingsScreen() {
               />
             ) : (
               <p className="text-12.5 text-muted">لا إعداد إحالةٍ لهذه الدولة.</p>
+            )}
+          </section>
+
+          {/* سياسةُ السلف (البند ١٥) — بطاقةٌ مستقلةٌ لجدولٍ مستقل
+              (`advance_settings`): ذاك حدودُ محفظة، وهذه سياسةُ إقراض */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">سياسة السلف</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              <b className="text-ink">سقفُ السلفة الأولى هو سعرُ خطتك اليومية</b>{" "}
+              — فلا خطةَ يوميةٌ مفعّلة يعني لا سلف، ولو أُشعل المفتاح. وينمو
+              السقفُ بنسبةٍ عن <b className="text-ink">كل سلفةٍ سُدِّدت</b> وحدها،
+              محدوداً بالسقف الأقصى؛ وصفرُ النموّ يُبقيه عند اليوميّ — وهو ما
+              يجعل أسوأَ خسارةٍ ممكنةٍ اشتراكاً يومياً واحداً. والمهلةُ{" "}
+              <b className="text-ink">تُجمَّد على كل سلفةٍ لحظةَ صرفها</b>، فتعديلُها
+              يحكم ما يأتي لا ما ينظر إليه كبتنٌ في شاشته الآن.
+            </p>
+            {advanceRow ? (
+              <AdvanceForm
+                key={advanceRow.country_code}
+                row={advanceRow}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={setError}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">لا سياسةَ سلفٍ لهذه الدولة.</p>
             )}
           </section>
 
@@ -958,6 +999,126 @@ function SharingForm({
           })
             .then(() =>
               onSaved("حُفظت المشاركة — تسري على الطلب التالي، ولا تمسّ رحلةً قائمة"),
+            )
+            .catch((caught) =>
+              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+
+function AdvanceForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: AdvanceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [percent, setPercent] = useState(String(row.deduction_percent));
+  const [kept, setKept] = useState(row.min_kept_amount);
+  const [term, setTerm] = useState(String(row.term_days));
+  const [rides, setRides] = useState(String(row.min_completed_rides));
+  const [rating, setRating] = useState(row.min_rating);
+  const [growth, setGrowth] = useState(String(row.growth_percent_per_repaid));
+  const [ceiling, setCeiling] = useState(String(row.max_multiplier_percent));
+  const [busy, setBusy] = useState(false);
+
+  const digits = (value: string) => value.replace(/[^0-9]/g, "");
+  const decimal = (value: string) => value.replace(/[^0-9.]/g, "");
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          label="نسبة الاقتطاع من الرحلة (٪)"
+          dir="ltr"
+          inputMode="numeric"
+          value={percent}
+          disabled={disabled}
+          onChange={(event) => setPercent(digits(event.target.value))}
+        />
+        <Field
+          label={`أقل ما يبقى له من الرحلة (${currencyLabel(currencyOf(row.country_code))})`}
+          dir="ltr"
+          inputMode="decimal"
+          value={kept}
+          disabled={disabled}
+          onChange={(event) => setKept(decimal(event.target.value))}
+        />
+        <Field
+          label="مهلة التحصيل (يوماً)"
+          dir="ltr"
+          inputMode="numeric"
+          value={term}
+          disabled={disabled}
+          onChange={(event) => setTerm(digits(event.target.value))}
+        />
+        <Field
+          label="رحلات مكتملة مطلوبة"
+          dir="ltr"
+          inputMode="numeric"
+          value={rides}
+          disabled={disabled}
+          onChange={(event) => setRides(digits(event.target.value))}
+        />
+        <Field
+          label="أدنى تقييم مطلوب"
+          dir="ltr"
+          inputMode="decimal"
+          value={rating}
+          disabled={disabled}
+          onChange={(event) => setRating(decimal(event.target.value))}
+        />
+        <Field
+          label="نمو السقف عن كل سلفة سُدِّدت (٪)"
+          dir="ltr"
+          inputMode="numeric"
+          value={growth}
+          disabled={disabled}
+          onChange={(event) => setGrowth(digits(event.target.value))}
+        />
+        <Field
+          label="السقف الأقصى (٪ من اليومي)"
+          dir="ltr"
+          inputMode="numeric"
+          value={ceiling}
+          disabled={disabled}
+          onChange={(event) => setCeiling(digits(event.target.value))}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        الاقتطاعُ يقف عند ثلاثةِ حدود: النسبة، والمتبقّي من الدَّين، وما يجب أن
+        يبقى للكبتن — فاقتطاعٌ يستنزف أرباحَه يوقفه عن العمل، فيمتنع السدادُ
+        نفسُه. وصفرُ «أقل ما يبقى» يعني «لا حدَّ» فالنسبةُ وحدها تحكم.
+      </p>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || percent === "" || term === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateAdvanceSettings(row.country_code, {
+            deduction_percent: Number(percent),
+            min_kept_amount: kept,
+            term_days: Number(term),
+            min_completed_rides: Number(rides),
+            min_rating: rating,
+            growth_percent_per_repaid: Number(growth),
+            max_multiplier_percent: Number(ceiling),
+          })
+            .then(() =>
+              onSaved("حُفظت السياسة — تسري على ما يُصرف بعدها لا على سلفةٍ قائمة"),
             )
             .catch((caught) =>
               onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),

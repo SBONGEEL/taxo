@@ -55,6 +55,11 @@ from app.models.referral import (
     DEFAULT_REWARD_AMOUNT,
     ReferralSetting,
 )
+from app.models.advance import (
+    DEFAULT_DEDUCTION_PERCENT,
+    DEFAULT_TERM_DAYS,
+    AdvanceSetting,
+)
 from app.models.wallet_setting import WalletSetting
 from app.services.providers import credentials as credentials_service
 
@@ -104,6 +109,11 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # مقيَّدٌ بشرطٍ صريح — **ما يقبضه الكبتن من رحلتين أعلى بوضوحٍ مما
         # يقبضه من منفردة** — فبذرُ رقمٍ هنا يجعله يبدو قراراً ولم يُقرَّر
         FeatureKey.RIDE_SHARING_ENABLED: False,
+        # **مطفأٌ صراحةً** (البند ١٥): وقرارُ المالك «سوقٌ واحدٌ أولاً — الأردن»
+        # هو قرارُ **إشعال**، لا بذرٌ مُشعَل. فالبذرةُ تصف ما يشحن، والإشعالُ
+        # فعلٌ يقع في اللوحة حين يُقرَّر — وسلفةٌ تُصرف في التطوير بلا قرارٍ
+        # تشغيليٍّ هي **مالٌ يخرج**، لا ميزةٌ تُجرَّب
+        FeatureKey.DRIVER_ADVANCES_ENABLED: False,
     },
 }
 
@@ -297,6 +307,29 @@ async def seed_sharing_settings(session: AsyncSession) -> None:
                 f"مشاركة الرحلة: {country.value} "
                 f"(الخصم {DEFAULT_DISCOUNT_PERCENT}% — لم يُحدَّد بعد، "
                 f"وممرّ {DEFAULT_CORRIDOR_KM}كم والتفاف {DEFAULT_MAX_DETOUR_MINUTES}د)"
+            )
+
+
+async def seed_advance_settings(session: AsyncSession) -> None:
+    """سياسةُ السلف لكل دولة — بافتراضاتها، **ونموُّ السقف صفرٌ** (البند ١٥).
+
+    ويُبذر الصفُّ وإن كانت قيمُه هي الافتراضات، كصفِّ حافز الإحالة: بغيره تجد
+    شاشةُ اللوحة حقولاً فارغةً تُقرأ عطباً لا «لم يُحدَّد بعد».
+
+    **وصفرُ النموِّ يعني «تبقى عند قيمة الاشتراك اليومي»** — وهو الحدُّ الذي
+    يجعل أسوأَ خسارةٍ ممكنةٍ اشتراكاً يومياً واحداً: «الحمايةُ في الحجم لا في
+    التحصيل» (قرارُ المالك ٧). ورفعُه قرارٌ يُتخذ بعد أن تُسدَّد سلفٌ فعلاً.
+    """
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(AdvanceSetting.id).where(AdvanceSetting.country_code == country)
+        )
+        if exists is None:
+            session.add(AdvanceSetting(country_code=country))
+            _log(
+                f"سياسة سلف: {country.value} "
+                f"(اقتطاع {DEFAULT_DEDUCTION_PERCENT}٪، "
+                f"مهلة {DEFAULT_TERM_DAYS} يوماً، ولا نموّ للسقف)"
             )
 
 
@@ -606,6 +639,7 @@ async def main() -> None:
         await seed_wallet_settings(session)
         await seed_payment_settings(session)
         await seed_referral_settings(session)
+        await seed_advance_settings(session)
         await seed_sharing_settings(session)
         await seed_notification_settings(session)
         await seed_plans(session)

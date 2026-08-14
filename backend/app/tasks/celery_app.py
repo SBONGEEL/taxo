@@ -68,6 +68,7 @@ celery_app = Celery(
         "app.tasks.bookings",
         "app.tasks.maintenance",
         "app.tasks.payments",
+        "app.tasks.advances",
         "app.tasks.referrals",
         "app.tasks.stops",
         "app.tasks.subscriptions",
@@ -99,6 +100,13 @@ celery_app.conf.update(
         "sweep-stop-waiting": {
             "task": "app.tasks.stops.sweep_stop_waiting",
             "schedule": STOP_WAIT_INTERVAL_SECONDS,
+        },
+        # السلف (البند ١٥): الإيقافُ بانقضاء المهلة وتنبيهُ اقترابها. وكلُّ
+        # عشر دقائق تكفي — المهلةُ أيامٌ لا دقائق، ورفعُ الإيقاف لا ينتظر هذه
+        # الدورة أصلاً بل يقع في مسار السداد نفسِه
+        "sweep-advances": {
+            "task": "app.tasks.advances.sweep_advances",
+            "schedule": 600.0,
         },
         "pay-referral-rewards": {
             "task": "app.tasks.referrals.pay_referral_rewards",

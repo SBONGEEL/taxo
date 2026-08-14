@@ -101,6 +101,11 @@ const DeactivationScreen = lazy(() =>
     default: m.DeactivationScreen,
   })),
 );
+const AdvancesScreen = lazy(() =>
+  import("@/screens/Advances").then((m) => ({
+    default: m.AdvancesScreen,
+  })),
+);
 const ReferralsScreen = lazy(() =>
   import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
 );
@@ -403,6 +408,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <CardsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/advances"
+                          element={
+                            <Guarded>
+                              <AdvancesScreen />
                             </Guarded>
                           }
                         />

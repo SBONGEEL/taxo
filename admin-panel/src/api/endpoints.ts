@@ -62,6 +62,8 @@ import type {
   UserRole,
   VehicleCategory,
   Wallet,
+  AdvanceRow,
+  AdvanceSetting,
   WalletSetting,
   WalletTransaction,
   Withdrawal,
@@ -635,3 +637,32 @@ export const decideDeactivation = (
   id: string,
   payload: { approved: boolean; note?: string },
 ) => api.patch<DeactivationRequestRow>(`/admin/drivers/deactivations/${id}`, payload);
+
+// ------------------------------------------------------ السلف (البند ١٥)
+
+/** سياسةُ السلف لكل دولة — والقائمةُ لأن الجدولَ صغيرٌ ودولتان لا أكثر. */
+export const listAdvanceSettings = () =>
+  api.get<AdvanceSetting[]>("/admin/settings/advances");
+
+export const updateAdvanceSettings = (
+  country: CountryCode,
+  payload: Partial<Omit<AdvanceSetting, "country_code">>,
+) => api.patch<AdvanceSetting>(`/admin/settings/advances/${country}`, payload);
+
+/** السلفُ بمتبقّيها — **مطروحاً في الخلفية** لا في المتصفح. */
+export const listAdvances = (status?: string) =>
+  api.get<AdvanceRow[]>("/admin/drivers/advances" + (status ? `?status=${status}` : ""));
+
+/** صرفٌ بموافقة مشرف — البابُ الوحيد لما يتجاوز سقفَ الكبتن. */
+export const disburseAdvance = (payload: { driver_id: string; amount: string }) =>
+  api.post<AdvanceRow>("/admin/drivers/advances", payload);
+
+/** شطبُ دَينٍ بقرارٍ مسجَّل — والسببُ مطلوبٌ لا اختياري. */
+export const writeOffAdvance = (id: string, reason: string) =>
+  api.patch<AdvanceRow>(`/admin/drivers/advances/${id}/writeoff`, { reason });
+
+/** سقفُ كبتنٍ بعينه — `null` لا تخصيص، وصفرٌ منعٌ من السلف. */
+export const setAdvanceCap = (
+  driverId: string,
+  payload: { cap: string | null; reason: string },
+) => api.put(`/admin/drivers/${driverId}/advance-cap`, payload);

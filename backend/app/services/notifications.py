@@ -41,6 +41,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -815,6 +816,56 @@ async def publish_share_partner_joined(
                 "type": "share_partner_joined",
                 "ride_id": str(ride_id),
                 "detour_minutes": detour_minutes,
+            },
+        ),
+    )
+
+
+# ------------------------------------------------------- السلف (البند ١٥)
+
+# **أربعةُ أحداثٍ لا حدثٌ واحد** (§٨ من المواصفة): صرفٌ، واقترابُ مهلة، وإيقافٌ،
+# وسداد. **والإيقافُ خصوصاً لا يجوز أن يصل صامتاً**: كبتنٌ يستيقظ خارج التوزيع
+# بلا سببٍ مكتوبٍ يظنّ العطبَ في التطبيق فيتّصل بالدعم، وقد كان يكفيه سطرٌ
+# يقول ما عليه وكيف يخرج منه
+ADVANCE_EVENT_TEXT: dict[str, tuple[str, str]] = {
+    "advance_disbursed": ("وصلتك السلفة", "أُضيفت إلى محفظتك، وتُقتطع من أرباح رحلاتك"),
+    "advance_due_soon": ("مهلةُ السلفة تقترب", "سدّد ما تبقّى قبل انقضائها"),
+    "advance_overdue": (
+        "أُوقفت الطلبات — سلفةٌ تجاوزت مهلتها",
+        "سدّد ما تبقّى ليعود حسابُك إلى التوزيع",
+    ),
+    "advance_repaid": ("سُدِّدت السلفة", "شكراً — حسابُك يعمل كالمعتاد"),
+}
+
+
+async def publish_advance_event(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    kind: str,
+    amount: Decimal,
+    currency: str,
+    due_at: datetime | None = None,
+) -> None:
+    """حدثُ سلفةٍ يصل صاحبَه (البند ١٥).
+
+    **والحمولةُ قيمٌ خام**: مبلغٌ وعملةٌ ومهلة، والجملةُ تُبنى في التطبيق —
+    فالخلفيةُ لا تعرف بأي أرقامٍ يقرأ صاحبُ الجهاز. و`title`/`body` للدرج وحده.
+    """
+    title, body = ADVANCE_EVENT_TEXT[kind]
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title=title,
+            body=body,
+            data={
+                "type": kind,
+                "amount": str(amount),
+                "currency": currency,
+                **({"due_at": due_at.isoformat()} if due_at else {}),
             },
         ),
     )

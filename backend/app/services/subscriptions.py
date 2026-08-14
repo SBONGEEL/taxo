@@ -67,7 +67,7 @@ from app.models.enums import (
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
-from app.services import audit, geo, notifications, wallet
+from app.services import advances, audit, geo, notifications, wallet
 from app.ws import events
 
 # مدة كل نوع خطة. أرقامٌ لا إعدادات: أسماء الخطط الثلاثة في SPEC القسم 4 هي
@@ -340,6 +340,18 @@ async def _create(
 
     بدايته من حيث تنتهي تغطيته القائمة إن وُجدت، وإلا فمن الآن.
     """
+    # **لا اشتراكَ يوميٌّ وعليه سلفةٌ تجاوزت مهلتها** (القرار ٥، البند ١٥):
+    # وإلا موّلت السلفةُ نفسَها — سلفةٌ بقيمة يوميٍّ تُشترى بها يوميّاتٌ إلى ما
+    # لا نهاية فلا يُسدَّد شيء. وموضعُه هنا لا في الراوترات: هذا هو البابُ
+    # الوحيد الذي يكتب صفَّ اشتراك، وشرطٌ فوقه يُنسى في إحدى قنواته الأربع.
+    # **والمنعُ على اليوميِّ وحدَه**: الأسبوعيُّ والشهريُّ ليسا حيلةَ التفافٍ
+    # على مهلةٍ انقضت، ومنعُهما يمنعه من العمل الذي يسدّد به
+    if plan.duration_type is SubscriptionDurationType.DAILY:
+        if await advances.blocks_daily_subscription(session, driver.id):
+            raise Conflict(
+                "عليك سلفةٌ تجاوزت مهلتها — سدّدها ثم اشترِ اشتراكاً يومياً"
+            )
+
     starts_at = await coverage_until(session, driver.id) or _now()
     subscription = DriverSubscription(
         driver_id=driver.id,

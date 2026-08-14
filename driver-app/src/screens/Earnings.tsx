@@ -116,6 +116,14 @@ export function EarningsScreen() {
                 بقشيش {arabicDigits(data.tips)} — كاملاً بلا عمولة
               </div>
             ) : null}
+            {/* **وسطرٌ خامسٌ منذ البند ١٥**: ما اقتُطع سداداً للسلفة —
+                رقمٌ ينقص من الأرباح بلا سببٍ مكتوبٍ يُقرأ عطباً، ويُسأل عنه
+                الدعمُ مرةً لكلِّ كبتن. ولا يظهر لمن لا سلفةَ له */}
+            {Number(data.advance_repaid) > 0 ? (
+              <div className="mt-4 text-11.5 text-muted">
+                سدادُ سلفة {arabicDigits(data.advance_repaid)}
+              </div>
+            ) : null}
             {negative ? (
               <p className="mt-8 text-11 leading-note text-warn">
                 العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات

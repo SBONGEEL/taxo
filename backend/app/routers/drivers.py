@@ -21,6 +21,11 @@ from app.models.enums import DocumentType
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
+    AdvanceDebtOut,
+    AdvanceOut,
+    AdvanceRequestIn,
+    AdvanceRequirementOut,
+    AdvanceStateOut,
     DeactivationDecisionIn,
     DeactivationRequestIn,
     DeactivationRequestOut,
@@ -41,6 +46,8 @@ from app.schemas.driver import (
 from app.schemas.wallet import EarningsOut
 from app.core.currency import currency_for_country
 from app.services import (
+    advances as advances_service,
+    notifications,
     deactivation,
     documents as documents_service,
     drivers as drivers_service,
@@ -417,3 +424,99 @@ async def cancel_deactivation(
     await session.commit()
     await session.refresh(row)
     return DeactivationRequestOut.model_validate(row)
+
+
+# ------------------------------------------------------- السلف (البند ١٥)
+
+
+def _state_out(state: advances_service.Eligibility) -> AdvanceStateOut:
+    return AdvanceStateOut(
+        offered=state.offered,
+        eligible=state.eligible,
+        requirements=[
+            AdvanceRequirementOut(
+                key=item.key, met=item.met, value=item.value, needed=item.needed
+            )
+            for item in state.requirements
+        ],
+        cap=state.cap,
+        currency=state.currency,
+        debt=(
+            AdvanceDebtOut(
+                advance=AdvanceOut.model_validate(state.debt.advance),
+                remaining=state.debt.remaining,
+                overdue=state.debt.overdue,
+            )
+            if state.debt
+            else None
+        ),
+    )
+
+
+@router.get("/me/advances", response_model=AdvanceStateOut)
+async def my_advance_state(
+    driver: CurrentDriver, user: CurrentUser, session: DbSession
+) -> AdvanceStateOut:
+    """الأهليةُ بشروطها والسقفُ والدَّينُ — نداءٌ واحدٌ لشاشةٍ واحدة."""
+    state = await advances_service.eligibility(
+        session, driver=driver, country=user.country_code
+    )
+    return _state_out(state)
+
+
+@router.post("/me/advances", response_model=AdvanceOut, status_code=201)
+async def request_advance(
+    payload: AdvanceRequestIn,
+    driver: CurrentDriver,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> AdvanceOut:
+    """يصرف سلفةً **داخل السقف تلقائياً** — وما فوقه بابُ الإدارة (القرار ٢).
+
+    **وصفُّ الكبتن يُقفل قبل قراءة أهليته**: بغير القفل يقرأ طلبان متزامنان
+    «لا سلفةَ قائمة» معاً فيمرّان، ويخرج مالٌ مرتين على سقفٍ واحد.
+    """
+    locked = await drivers_service.lock(session, driver)
+    advance = await advances_service.disburse(
+        session,
+        driver=locked,
+        user=user,
+        country=user.country_code,
+        amount=payload.amount,
+    )
+    await session.commit()
+    await session.refresh(advance)
+    # **بعد الـcommit دائماً**: حالٌ يُعلَن قبل تثبيته قد يتراجع
+    await notifications.publish_advance_event(
+        session,
+        redis,
+        driver_user_id=user.id,
+        kind="advance_disbursed",
+        amount=advance.amount,
+        currency=advance.currency.value,
+        due_at=advance.due_at,
+    )
+    return AdvanceOut.model_validate(advance)
+
+
+@router.post("/me/advances/repay", response_model=AdvanceOut)
+async def repay_advance(
+    driver: CurrentDriver, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> AdvanceOut:
+    """سدادٌ كاملٌ من المحفظة — ويرفع الإيقافَ في المسار نفسِه لا بدورةٍ تالية."""
+    locked = await drivers_service.lock(session, driver)
+    advance = await advances_service.repay_in_full(
+        session, driver=locked, user=user
+    )
+    await session.commit()
+    await session.refresh(advance)
+    await notifications.publish_advance_event(
+        session,
+        redis,
+        driver_user_id=user.id,
+        kind="advance_repaid",
+        amount=advance.amount,
+        currency=advance.currency.value,
+    )
+    return AdvanceOut.model_validate(advance)

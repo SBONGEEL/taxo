@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**712 backend tests pass** across 65 test files — measured, not estimated, on 2026-08-14. All three
+**762 backend tests pass** across 71 test files — measured, not estimated, on 2026-08-15. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -371,8 +371,51 @@ now narrowed to provider errors, which is the rule the project already had. And 
 `currency` beside the amount: a money value serialized without its currency prints bare in the app,
 which is exactly what shipped in the panel's coupon table two days earlier.
 
+### Item 15 — driver advances, the first money the platform lends (2026-08-14)
+
+**Nine decisions were answered before the first line** (`design/DRIVER-ADVANCES.md` §9, `SPEC.md` §9.2),
+by the owner's instruction. The one the whole feature rests on: **a debt is not a negative balance.**
+`balance_after >= 0` is a CHECK in the database itself, and lifting it would drop a guard protecting
+*every* money path to serve one feature — "a price not paid". So: `driver_advances` is its own table,
+and the ledger carries two entries — `advance` (credit at disbursement) and `advance_repayment` (debit
+at each deduction). **The remaining amount is summed from the ledger, never a column** (the wallet rule),
+which is what `wallet_transactions.advance_id` exists for.
+
+Five rules worth carrying forward:
+
+- **Eligibility is named metrics, never a "credibility score"** (decision 1). `Requirement(key, met,
+  value, needed)` goes back to the screen as a list: someone refused reads «رحلاتٌ مكتملة ٣١ / ٥٠» and
+  knows what to do; «مصداقيتك ٣٫٢» tells him nothing. And a requirement whose threshold is zero prints
+  its value alone — «٧ / ٠» invents a comparison where there is no requirement.
+- **"A weekly or monthly subscription that has *passed*" means `expires_at <= now`, not `starts_at`.**
+  My first cut read the start date, which let a subscription an hour old qualify — the exact case the
+  owner's decision exists to exclude ("bought a monthly today and asks for an advance an hour later has
+  proven nothing"). Caught by opening the screen on the phone and reading the condition back against his
+  words. `test_a_subscription_still_running_does_not_qualify` is now the guard.
+- **The deduction lives inside `payments.settle`'s `not in DIRECTLY_COLLECTED_METHODS` branch.** Cash and
+  CliQ never enter the wallet, so there is nothing there to deduct from — and it **never fails a
+  settlement**: an insufficient balance defers the deduction to the next ride, the debt stays in its table.
+- **Dispatch reads a prepared column** (`drivers.advance_blocked`), written by a 10-minute job — a ledger
+  sum in `eligible_driver_ids` would put a money calculation in the path every request and every rider's
+  map takes. **But it is cleared in the repayment path itself**, not by the next cycle: someone who paid
+  and stays blocked for ten minutes reads the payment as having had no effect.
+- **The reserve-vs-debt decision needed no code.** The reserve is a condition on *withdrawal* and a
+  deduction is not a withdrawal, and an outstanding advance blocks closing the account anyway — so "the
+  debt is taken from the reserve first, the rest is paid out" is what already happens.
+
+**And the concurrency test repeated the tips lesson exactly.** Three guards, and deleting them one at a
+time proves nothing: the partial index `uq_advance_outstanding` owns **disbursement** alone (both locks
+deleted, still green), while the driver-row lock and the advance-row lock each own **repayment** and
+**either suffices**. Only deleting both turns two simultaneous repayments into `Counter({200: 2})` —
+4.000 debited from a wallet for a 2.000 debt, with no exception and no log line. Measure, then write down
+what you measured.
+
+**Write-off is an admin act with a written reason, and writes no ledger entry**: no money moved in
+anyone's wallet, and a fake "settlement" entry would make the statement say he repaid. 90 days makes it
+*available*, never automatic.
+
 **The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`; the beat schedule now holds
-eight jobs).
+nine jobs).
 Neither is interesting except for one rule each, and both rules are about what the job must *not* do.
 
 **The inbox trim deletes by age alone, read or unread** (`inbox.trim`, 90 days, 5000 rows a cycle).

@@ -1,6 +1,7 @@
 """نماذج SQLAlchemy — كل النماذج تُستورد هنا ليراها Alembic autogenerate."""
 
 from app.models.booking import RideBooking
+from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.audit import AdminAuditLog
 from app.models.base import Base
 from app.models.commission import CommissionSetting
@@ -8,6 +9,7 @@ from app.models.device import DeviceToken
 from app.models.deactivation import DeactivationRequest
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
 from app.models.enums import (
+    AdvanceStatus,
     AuditAction,
     CampaignAudience,
     CampaignStatus,
@@ -75,6 +77,9 @@ from app.models.wallet_setting import WalletSetting
 
 __all__ = [
     "AdminAuditLog",
+    "AdvanceSetting",
+    "AdvanceStatus",
+    "DriverAdvance",
     "AuditAction",
     "Base",
     "BookingStatus",

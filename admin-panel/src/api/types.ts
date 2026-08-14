@@ -282,7 +282,8 @@ export type FeatureKey =
   | "promo_codes_enabled"
   | "driver_referrals_enabled"
   | "scheduled_rides_enabled"
-  | "ride_sharing_enabled";
+  | "ride_sharing_enabled"
+  | "driver_advances_enabled";
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;
@@ -772,4 +773,32 @@ export interface DeactivationRequestRow {
   review_note: string | null;
   resolved_at: string | null;
   created_at: string;
+}
+
+/** سلفةُ كبتنٍ كما تراها اللوحة (البند ١٥). */
+export interface AdvanceRow {
+  id: string;
+  driver_id: string;
+  amount: string;
+  currency: string;
+  status: "outstanding" | "repaid" | "written_off";
+  due_at: string;
+  settled_at: string | null;
+  created_at: string;
+  /** **مطروحٌ في الخلفية** لا في المتصفح: جمعُ صفحةٍ مسقوفةٍ رقمٌ يخالف القاعدة. */
+  remaining: string;
+  overdue: boolean;
+}
+
+/** سياسةُ السلف لدولة (البند ١٥) — **ولا حقلَ لقيمة السلفة**: أساسُ السقف
+ *  سعرُ الخطة اليومية نفسُه، ورقمٌ ثانٍ له يتقادم يومَ تتغيّر الأسعار. */
+export interface AdvanceSetting {
+  country_code: CountryCode;
+  deduction_percent: number;
+  min_kept_amount: string;
+  term_days: number;
+  min_completed_rides: number;
+  min_rating: string;
+  growth_percent_per_repaid: number;
+  max_multiplier_percent: number;
 }

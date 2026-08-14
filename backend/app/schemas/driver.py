@@ -7,6 +7,8 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import (
+    AdvanceStatus,
+    CountryCode,
     DeactivationStatus,
     CountryCode,
     DocumentReviewStatus,
@@ -298,3 +300,122 @@ class DeactivationStateOut(BaseModel):
     blockers: list[str]
     reserve_amount: Decimal
     currency: str
+
+
+# --------------------------------------------------- سلفُ الكباتن (البند ١٥)
+
+
+class AdvanceRequirementOut(BaseModel):
+    """شرطٌ **باسمه ورقمه وحاله** — القرار ١ في شكله النهائي.
+
+    لا «نقاطَ مصداقية»: من مُنع بسبب «مصداقيتك ٣٫٢» لا يعرف ماذا يفعل، ومن
+    قرأ «رحلاتٌ مكتملة ٣١ من ٥٠» يعرف. **والنصُّ في التطبيق والرمزُ هنا**،
+    كرموز موانع إلغاء التفعيل: الخلفيةُ لا تعرف من يقرأ.
+    """
+
+    key: str
+    met: bool
+    value: Decimal | None = None
+    needed: Decimal | None = None
+
+
+class AdvanceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    driver_id: uuid.UUID
+    amount: Decimal
+    currency: str
+    status: AdvanceStatus
+    due_at: datetime
+    settled_at: datetime | None
+    created_at: datetime
+
+
+class AdvanceDebtOut(BaseModel):
+    """السلفةُ القائمة ومتبقّيها — **والمتبقّي محسوبٌ من الدفتر لا عمودٌ**."""
+
+    advance: AdvanceOut
+    remaining: Decimal
+    overdue: bool
+
+
+class AdvanceStateOut(BaseModel):
+    """ما تحتاجه شاشةُ السلف في نداءٍ واحد.
+
+    **و`offered=false` تعني «لا سلفَ في هذا السوق»** لا «رُفضتَ»: المفتاحُ
+    مطفأٌ أو لا خطةَ يوميةً يُبنى عليها سقف. والفرقُ بينهما وبين شرطٍ لم
+    يتحقق هو الفرقُ بين بابٍ غير موجودٍ وبابٍ يُفتح بعملٍ يقوم به.
+    """
+
+    offered: bool
+    eligible: bool
+    requirements: list[AdvanceRequirementOut]
+    cap: Decimal
+    currency: str
+    debt: AdvanceDebtOut | None
+
+
+class AdvanceRequestIn(BaseModel):
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+
+
+class AdminAdvanceIn(BaseModel):
+    """صرفُ مشرفٍ سلفةً — **الطريقُ الوحيد لما يتجاوز السقف** (القرار ٢)."""
+
+    driver_id: uuid.UUID
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+
+
+class AdvanceWriteOffIn(BaseModel):
+    """شطبٌ بقرارٍ إداريٍّ مسجَّل (القرار ٧) — والسببُ مطلوبٌ لا اختياري.
+
+    خسارةٌ تُعترف بها بلا اسمٍ ولا سببٍ خسارةٌ لا يملكها أحد.
+    """
+
+    reason: str = Field(min_length=3, max_length=300)
+
+
+class AdvanceCapIn(BaseModel):
+    """سقفُ كبتنٍ بعينه — **`null` لا تخصيص، وصفرٌ منعٌ من السلف**."""
+
+    cap: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+    reason: str = Field(min_length=3, max_length=300)
+
+
+class AdminAdvanceOut(AdvanceOut):
+    """صفُّ اللوحة: السلفةُ ومتبقّيها وهل تجاوزت مهلتها.
+
+    **والمتبقّي يُحسب في الخلفية** كبقية المجاميع (`services/stats.py`): طرحٌ
+    في المتصفح على صفحةٍ محدودةٍ رقمٌ يخالف القاعدة.
+    """
+
+    remaining: Decimal
+    overdue: bool
+
+
+class AdvanceSettingOut(BaseModel):
+    """سياسةُ السلف لدولة (البند ١٥)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    country_code: CountryCode
+    deduction_percent: int
+    min_kept_amount: Decimal
+    term_days: int
+    min_completed_rides: int
+    min_rating: Decimal
+    growth_percent_per_repaid: int
+    max_multiplier_percent: int
+
+
+class AdvanceSettingUpdate(BaseModel):
+    """**ولا حقلَ لقيمة السلفة**: أساسُ السقف سعرُ الخطة اليومية نفسُه."""
+
+    deduction_percent: int | None = Field(default=None, gt=0, le=100)
+    min_kept_amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+    term_days: int | None = Field(default=None, gt=0, le=365)
+    min_completed_rides: int | None = Field(default=None, ge=0)
+    min_rating: Decimal | None = Field(default=None, ge=0, le=5, max_digits=3, decimal_places=2)
+    growth_percent_per_repaid: int | None = Field(default=None, ge=0, le=500)
+    max_multiplier_percent: int | None = Field(default=None, ge=100, le=1000)

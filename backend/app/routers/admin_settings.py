@@ -34,6 +34,8 @@ from app.schemas.settings import (
     SubscriptionPlanOut,
     SubscriptionPlanUpdate,
 )
+from app.models.advance import AdvanceSetting
+from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.services import audit, settings_service
 
@@ -383,6 +385,55 @@ async def update_wallet_settings(
     )
     await _commit(session, setting)
     return WalletSettingOut.model_validate(setting)
+
+
+# ------------------------------------------------------- سياسة السلف
+
+
+@router.get("/advances", response_model=list[AdvanceSettingOut])
+async def list_advance_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[AdvanceSettingOut]:
+    rows = (
+        await session.scalars(
+            select(AdvanceSetting).order_by(AdvanceSetting.country_code)
+        )
+    ).all()
+    return [AdvanceSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/advances/{country_code}", response_model=AdvanceSettingOut)
+async def update_advance_settings(
+    country_code: CountryCode,
+    payload: AdvanceSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> AdvanceSettingOut:
+    """سياسةُ السلف لكل دولة (البند ١٥).
+
+    **وما يُعدَّل هنا يحكم ما يأتي لا ما صُدر**: مهلةُ التحصيل مجمَّدةٌ على كل
+    سلفةٍ لحظةَ صرفها — كنسبة العمولة على الرحلة تماماً. فتقصيرُ المهلة اليوم
+    لا يُقصّر مهلةً ينظر إليها كبتنٌ في شاشته الآن.
+    """
+    setting = await session.scalar(
+        select(AdvanceSetting).where(AdvanceSetting.country_code == country_code)
+    )
+    if setting is None:
+        setting = AdvanceSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="advance_setting",
+        entity_id=setting.id,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return AdvanceSettingOut.model_validate(setting)
 
 
 # ------------------------------------------------------- سياسات الدفع

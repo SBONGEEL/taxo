@@ -301,6 +301,8 @@ export interface Earnings {
   commission: string;
   /** البقشيش (12-و) — **الدخلُ الوحيد بلا عمولةٍ عليه**، فسطرٌ مستقل. */
   tips: string;
+  /** ما اقتُطع سداداً لسلفة (البند ١٥) — وهو داخلٌ في `net`. */
+  advance_repaid: string;
   net: string;
   directly_collected: string;
   completed_rides: number;
@@ -546,4 +548,45 @@ export interface DeactivationState {
   blockers: string[];
   reserve_amount: string;
   currency: string;
+}
+
+/** سلفُ الكباتن (البند ١٥). */
+export interface Advance {
+  id: string;
+  driver_id: string;
+  amount: string;
+  currency: string;
+  status: "outstanding" | "repaid" | "written_off";
+  due_at: string;
+  settled_at: string | null;
+  created_at: string;
+}
+
+/** شرطُ أهليةٍ **باسمه ورقمه وحاله** — لا «نقاطَ مصداقية» (قرارُ المالك ١).
+ *
+ * والنصُّ العربيُّ في التطبيق والرمزُ من الخلفية، كرموز موانع إلغاء التفعيل:
+ * الخلفيةُ لا تعرف من يقرأ.
+ */
+export interface AdvanceRequirement {
+  key: string;
+  met: boolean;
+  value: string | null;
+  needed: string | null;
+}
+
+export interface AdvanceDebt {
+  advance: Advance;
+  /** **مطروحٌ من الدفتر** لا عمودٌ على السلفة. */
+  remaining: string;
+  overdue: boolean;
+}
+
+export interface AdvanceState {
+  /** **«غيرُ معروضة» غيرُ «رُفضتَ»**: بابٌ لا وجودَ له لا بابٌ يُفتح بعمل. */
+  offered: boolean;
+  eligible: boolean;
+  requirements: AdvanceRequirement[];
+  cap: string;
+  currency: string;
+  debt: AdvanceDebt | null;
 }

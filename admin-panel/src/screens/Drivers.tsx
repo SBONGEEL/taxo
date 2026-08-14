@@ -51,6 +51,7 @@ import type {
   Gender,
   GenderPreference,
 } from "@/api/types";
+import { Advances } from "@/components/Advances";
 import { Deactivations } from "@/components/Deactivations";
 import { Shell } from "@/components/Shell";
 import { Pills, Table } from "@/components/Table";
@@ -259,6 +260,7 @@ export function DriversScreen() {
           الكبتن أصلاً، وقرارٌ يُخرجه من التوزيع يسكن حيث تُقرأ حالتُه — لا في
           «المالية» رغم أنه يُطلق مالاً محتجَزاً */}
       <Deactivations onError={setError} />
+      <Advances onError={setError} />
 
       {open ? (
         <DriverDrawer

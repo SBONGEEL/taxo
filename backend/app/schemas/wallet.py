@@ -153,6 +153,10 @@ class EarningsOut(BaseModel):
     wallet_earnings: Decimal
     commission: Decimal
     tips: Decimal
+    # **وخامسٌ منذ البند ١٥**: ما اقتُطع سداداً لسلفة — ورقمٌ ينقص بلا سببٍ
+    # مكتوبٍ في الكشف يُقرأ عطباً. **وصرفُ السلفة نفسُه ليس هنا**: قرضٌ يُعرض
+    # في كشف الأرباح يُقرأ ربحاً
+    advance_repaid: Decimal
     # **قد يكون سالباً**: عمولةُ رحلةٍ نقدية تُخصم بلا أرباحَ تقابلها
     net: Decimal
     directly_collected: Decimal

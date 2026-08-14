@@ -61,6 +61,10 @@ class Earnings:
     # يرى «ما دخل» يزيد بلا أن يزيد «ما خرج عمولةً» فلا يتّسق الرقمان لمن
     # يجمعهما بيده — والسطرُ هو ما يفسّر الفرق
     tips: Decimal
+    # **سطرٌ خامسٌ منذ البند ١٥**: ما اقتُطع سداداً لسلفة. ورقمٌ ينقص من
+    # الأرباح بلا سببٍ مكتوبٍ في الكشف يُقرأ عطباً، فيُسأل عنه الدعمُ مرةً
+    # واحدةً لكل كبتن — نفسُ سببِ إفراد سطر البقشيش
+    advance_repaid: Decimal
     net: Decimal
     directly_collected: Decimal
     completed_rides: int
@@ -121,6 +125,9 @@ async def summary(
     tips = await _ledger_sum(
         session, user_id, WalletTransactionType.TIP, from_at, to_at
     )
+    advance_repaid = await _ledger_sum(
+        session, user_id, WalletTransactionType.ADVANCE_REPAYMENT, from_at, to_at
+    )
 
     # ما قبضه بيده: دفعاتٌ مؤكدة بقناةٍ لا تمر بالمنصة، على رحلاته هو
     directly_collected = await session.scalar(
@@ -161,7 +168,12 @@ async def summary(
         # يجعله يكتشف نقصان رصيده بلا سبب ظاهر
         # والبقشيشُ داخلٌ في الصافي: هو مالٌ **دخل المحفظة فعلاً**، وصافيٌّ لا
         # يشمله لا يطابق ما يراه صاحبُه في رصيده
-        net=pricing.round_money(wallet_earnings + tips - commission),
+        advance_repaid=advance_repaid,
+        # **والاقتطاعُ يدخل الصافي**: مالٌ خرج من المحفظة فعلاً، وصافيٌّ لا
+        # يطرحه لا يطابق ما يراه صاحبُه في رصيده — نفسُ حجّة إدخال البقشيش
+        net=pricing.round_money(
+            wallet_earnings + tips - commission - advance_repaid
+        ),
         directly_collected=pricing.round_money(Decimal(directly_collected or 0)),
         completed_rides=int(completed or 0),
     )

@@ -289,6 +289,10 @@ async def eligible_driver_ids(
         Driver.status == DriverStatus.APPROVED,
         Driver.is_online.is_(True),
         Driver.current_ride_id.is_(None),
+        # **موقوفٌ لدَينِ سلفةٍ تجاوز مهلته** (البند ١٥): عمودٌ محضَّرٌ تكتبه
+        # المهمّةُ الدورية وتطفئه لحظةُ السداد — وجمعُ دفترٍ هنا يضع حساباً
+        # ماليّاً في مسارٍ يمرّ به كلُّ طلبٍ وكلُّ خريطةِ راكب
+        Driver.advance_blocked.is_(False),
         has_vehicle,
         subscribed,
         ~busy,

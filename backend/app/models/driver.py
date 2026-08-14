@@ -19,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
+from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import (
     DocumentReviewStatus,
     DocumentType,
@@ -85,6 +85,18 @@ class Driver(UUIDMixin, TimestampMixin, Base):
         Boolean, nullable=False, default=False, server_default=text("false")
     )
 
+    # **سقفُ السلفة لهذا الكبتن وحدَه** (البند ١٥) — تكتبه الإدارةُ بسببٍ
+    # مسجَّلٍ في التدقيق. و**`NULL` يعني «لا تخصيص»** فيُحسب سقفُه من السياسة،
+    # **وصفرٌ يعني «ممنوعٌ من السلف»**: حالتان لا يجوز أن يحملهما رقمٌ واحد
+    advance_cap_override: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    # **عمودٌ محضَّرٌ يقرؤه التوزيع** (البند ١٥): «موقوفٌ لدَينٍ تجاوز مهلته».
+    # وموضعُه هنا لا استعلامٌ في `eligible_driver_ids` مقصود: تلك الدالةُ تُنادى
+    # لكل طلبٍ ولخريطة كل راكب، وجمعُ دفترٍ داخلها يضع حساباً ماليّاً في المسار
+    # الحرج. **ويُطفأ في مسار السداد نفسِه لا بدورةٍ تالية**: من سدَّد وبقي
+    # ممنوعاً عشر دقائق يقرأ السدادَ بلا أثر
+    advance_blocked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     referral_code: Mapped[str | None] = mapped_column(
         String(16), nullable=True, unique=True, index=True
     )

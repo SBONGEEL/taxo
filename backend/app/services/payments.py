@@ -71,7 +71,7 @@ from app.models.payment import (
 )
 from app.models.ride import Ride
 from app.models.user import User
-from app.services import audit, cliq_qr, settings_service, wallet
+from app.services import advances, audit, cliq_qr, settings_service, wallet
 from app.services.pricing import round_money
 
 # آلة حالات الدفعة — ما ليس هنا ممنوع (SPEC القسم 4)
@@ -429,6 +429,13 @@ async def _driver_user(session: AsyncSession, ride: Ride) -> User | None:
     return await session.get(User, user_id) if user_id else None
 
 
+async def _driver_row(session: AsyncSession, ride: Ride) -> Driver:
+    """صفُّ الكبتن نفسُه — يحتاجه اقتطاعُ السلفة ليطفئ إيقافَه لحظةَ السداد."""
+    driver = await session.get(Driver, ride.driver_id)
+    assert driver is not None  # لا تُسوّى رحلةٌ بلا كبتن
+    return driver
+
+
 async def _commission_for(
     session: AsyncSession, ride: Ride, method: PaymentMethod
 ) -> Decimal:
@@ -519,6 +526,20 @@ async def settle(
             ride_id=ride.id,
             created_by=actor_id,
             idempotency_key=f"earning:{payment.id}",
+        )
+
+        # **اقتطاعُ السلفة** (البند ١٥): خصمٌ من أرباحٍ **داخلة** — وموضعُه هنا
+        # داخل الشرط لا خارجه، لأن الكاشَ وكليكاً لا يكتبان `ride_earning`
+        # أصلاً (القسم 9): المالُ في يده لا في محفظته، فلا شيءَ يُقتطع منه.
+        # ولا يُفشل هذا التسويةَ أبداً — الدَّينُ يبقى في جدوله
+        await advances.deduct_from_earning(
+            session,
+            driver=await _driver_row(session, ride),
+            user=driver_user,
+            country=ride.country_code,
+            earning=payment.amount,
+            ride_id=ride.id,
+            payment_id=payment.id,
         )
 
     percent = await _commission_for(session, ride, payment.method)

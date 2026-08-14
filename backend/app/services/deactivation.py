@@ -36,7 +36,7 @@ from app.models.enums import (
 from app.models.payment import Payment
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
-from app.services import audit
+from app.services import advances, audit
 
 
 class DeactivationBlocked(Conflict):
@@ -87,8 +87,12 @@ async def blockers(session: AsyncSession, driver: Driver) -> list[str]:
         found.append("active_ride")
     if await _has_open_dispute(session, driver.id):
         found.append("open_dispute")
-    # دَينُ السلف (البند ١٥) يُوصَل هنا حين يُبنى جدولُه — ولا عمودَ يُخترع له
-    # اليوم: شرطٌ بلا مصدرٍ يقرؤه هو شرطٌ لا يعمل
+    # **دَينُ السلفة** (البند ١٥) — وُصل حين بُني جدولُه. وهو ما يجعل قرارَ
+    # المالك في المحتجَز يعمل بلا سطرٍ واحد: **الاحتجازُ شرطٌ على السحب لا
+    # قيدٌ في الدفتر**، والاقتطاعُ ليس سحباً — فالدَّينُ يُستوفى من الرصيد
+    # كلِّه ثم يُصرف الباقي، وهو نصُّ «يُقتطع للدَّين أولاً»
+    if await advances.outstanding_for(session, driver.id) is not None:
+        found.append("unpaid_advance")
     return found
 
 

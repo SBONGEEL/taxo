@@ -51,6 +51,9 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.TIP,
     # حافزُ الإحالة (12-ح): دائنٌ وحده — لا صفَّ مدينٍ يقابله، فالشركةُ تتحمّله
     WalletTransactionType.REFERRAL_BONUS,
+    # صرفُ السلفة (البند ١٥): مالٌ يدخل محفظتَه فعلاً — ولذلك هو دائنٌ عاديّ،
+    # والدَّينُ مقابلَه ليس في هذا الدفتر بل في جدوله
+    WalletTransactionType.ADVANCE,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
@@ -60,6 +63,9 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.WITHDRAWAL,
     WalletTransactionType.SUBSCRIPTION_PAYMENT,
     WalletTransactionType.TIP_PAYMENT,
+    # اقتطاعُ السلفة: **خصمٌ من أرباحٍ داخلة لا سحبٌ على المكشوف** — فلا يقع
+    # الرصيدُ تحت الصفر أبداً، ولا يُمسّ حارسٌ قائم
+    WalletTransactionType.ADVANCE_REPAYMENT,
 )
 
 # `adjustment` وحده يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص
@@ -126,6 +132,15 @@ class WalletTransaction(UUIDMixin, TimestampMixin, Base):
     ride_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True),
         ForeignKey("rides.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    # السلفةُ التي يخصّها القيد (البند ١٥) — صرفاً أو اقتطاعاً. **وهو ما
+    # يجعل «المتبقّي» مجموعاً يُطرح** بدل عمودِ رصيدٍ على الجدول: نفسُ دورِ
+    # `ride_id` تماماً، وبغيره لا سبيلَ لجمع اقتطاعات سلفةٍ بعينها
+    advance_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("driver_advances.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
