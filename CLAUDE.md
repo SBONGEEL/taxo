@@ -119,31 +119,69 @@ second (3.411 min ⇒ 0.141) on parameters frozen on the ride.
    stop, while the rider's screen ticks a live clock from `arrived_at`. The project's own rule («the app
    renders the clock, the backend sends the money») is followed by one app and broken by the other.
 
-### What stands between here and launch (2026-08-15)
+### What stands between here and launch — the whole list, in order (2026-08-15)
 
-**Blocking, and not code:**
+**Nothing here is guesswork: every line has a written spec or an owner decision behind it.**
+
+#### 0. The pending batch first (above) — the last money defect is in it.
+
+#### 1. Blocking, and not code
 
 - **Phone verification has no working channel.** Firebase answers `auth/billing-not-enabled`, so **nobody
-  can register**; the owner decided against Blaze and is starting the **official WhatsApp route** (Meta
-  Business + a dedicated number + an approved authentication template). The channel is built (12-هـ); what
-  is missing is the contract. Recorded in `FUTURE-FEATURES.md` as a **launch blocker**, with the rule that
-  an active SMS contract silently outranks Firebase in the chain — so it must not be left enabled in
-  production by accident. A **mock** SMS contract is active **on the dev stack only**; the code refuses
-  mock in production.
+  can register**. The owner decided against Blaze and is starting the **official WhatsApp route** (Meta
+  Business + a dedicated number + an approved authentication template). The channel is built (12-هـ); the
+  contract is what is missing. Recorded in `FUTURE-FEATURES.md` as a launch blocker, with the rule that an
+  **active SMS contract silently outranks Firebase** in the chain — so it must not be left enabled in
+  production by accident. A mock SMS contract is active **on the dev stack only**; the code refuses mock in
+  production.
 - **Provider wire formats** (Telr, SMS, CliQ, payout) are best-reading, never verified against real
-  credentials — see debt item 3.
-- **Backups do not exist yet.** `design/BACKUP-AND-RESTORE.md` is a full plan with the owner's seven
-  decisions answered; **nothing is built**. A launch without it is a launch with no way back.
+  credentials — debt item 3 below.
 
-**Built and deliberately switched off** (`scripts/seed.py::FEATURE_DEFAULTS` is the intended state):
-women's service, multi-stop, WhatsApp OTP, tips, promo codes, driver referrals, scheduled rides, ride
-sharing, driver advances. Several also wait on a number (tip amounts, referral reward, share percent,
-advance growth) — zero reads as "not configured yet" and correctly hides the feature.
+#### 2. Backups — `design/BACKUP-AND-RESTORE.md`, plan complete, nothing built
 
-**Queued after the pending batch**, with decisions already recorded: the map work
-(`FUTURE-FEATURES.md` 16–17 — «افتح في قوقل ماب» first, then gestures, then the three-state locate button,
-then a **locally computed** live ETA, reroute cap, `steps`, navigation camera; traffic and the info card
-deferred), and the deferred queue items (sound §9, motion, map effects).
+The owner's seven decisions are answered in §9 of that file. Build order inside it: **the server side
+first** (`scripts/backup.sh` + a beat job + `backup_settings`/`backup_runs` + retention and alerts), **then
+the pull to his machine** (`pull-backup.ps1` over SSH, no API — the moment you need a backup is the moment
+the app is down; plus Windows Task Scheduler), **then the panel** (button, table, schedule, guarded
+download), **then a real restore test** whose verdict is the ledger, not the absence of errors. Two rules
+carry: the **Fernet key never enters the archive** (and `backup.sh` must not read `.env.local`), and the
+archive is **gpg-encrypted before it leaves the server**, its passphrase kept where the key is kept.
+**A launch without this is a launch with no way back.**
+
+#### 3. The three registered specs, in the owner's order
+
+| # | Item | Spec |
+|---|---|---|
+| 1 | **The driver's profile photo** — required, except for a verified female driver | `FUTURE-FEATURES` 52 |
+| 2 | **Generalising referrals** — rider→rider and driver→driver on 12-ح's machinery | `design/REFERRALS-GENERALIZATION.md`, `FUTURE-FEATURES` 51 |
+| 3 | **Missions, levels and badges** — with the owner's cap: the level's effect is a **distance discount, at most 100 m** | `design/MISSIONS-LEVELS.md`, `FUTURE-FEATURES` 53 |
+
+#### 4. «افتح في خرائط قوقل» — one hour, and it solves the real problem
+
+`FUTURE-FEATURES` 16. Hands the right destination (pickup → dropoff → next stop, by ride state) to whatever
+maps app is installed, with a web fallback so the button is never dead. Google knows the traffic and the
+closed roads better than we will, and knows them today. **Measure it inside the Capacitor shell before
+promising it works** — leaving a WebView for an external intent behaves differently there.
+
+#### 5. The map work — the owner's cut and his order (`FUTURE-FEATURES` 17)
+
+**The item is halved: the captain's half is what gets built**; the rider's map reassures him and most of it
+exists. Then, in order:
+
+| # | What | Size | Note |
+|---|---|---|---|
+| 1 | **Full gestures** (rotate, pitch, double-tap) | ~1h | **Absent in all three apps** — measured; a defect, not a gap |
+| 2 | **Three-state locate button** (follow · follow-with-heading · free) | 2–3h | |
+| 3 | **Live ETA, computed locally** | 4–6h | Remaining distance on the stored line ÷ measured speed. **No polling** — the owner's words: seven times the bill for a number that changes by the minute is a price not paid |
+| 4 | **Capped reroute** | ~1d | The **only** thing that calls Directions again |
+| 5 | **Next instruction** (store `steps`) | 6–8h | Needs a schema change: today only the geometry is stored |
+| 6 | **Navigation camera** (pitch ~60°, bearing, zoom ~17) | ~1d | Heaviest on battery, so last — and **measure frames on the device**, stop everything in the background |
+
+**Deferred by decision**: traffic overlays (a day+ for an uncertain return) and the tap-a-point info card.
+
+**The cost arithmetic that produced this order** (at 1,000 rides/day): today ≈ 4 Directions calls per ride
+→ 120k/month; navigation with a capped reroute → 270k; **a polled live ETA → 870k**. Navigation is not what
+raises the bill — polling is.
 
 ### The dev stack has been mutated by the scenarios — do not read it as the intended state
 
