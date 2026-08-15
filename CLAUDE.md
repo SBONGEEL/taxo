@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**766 backend tests pass** across 71 test files — measured, not estimated, on 2026-08-15. All three
+**804 backend tests pass** across 75 test files — measured, not estimated, on 2026-08-15. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -87,9 +87,10 @@ on two real phones** (rider on an S21, captain on a Note 20, both Capacitor shel
 5. **Multi-stop** with a paid wait.
 6. **The women's service, both directions.**
 
-**Thirteen defects came out of it. Eleven are fixed and committed; four remain as one pending batch**
-(two of them are the last two of the thirteen, plus two small ones found in the multi-stop run) — see
-"The pending batch" below. **The ledger held in every scenario**: sum of entries = last `balance_after`
+**Thirteen defects came out of it, and all thirteen are now fixed and committed** — eleven during the
+scenarios, and the last two plus the two found in the multi-stop run in the batch of six below (which also
+carried two defects the owner reported afterwards: the gender buttons and the cross-app login).
+**The ledger held in every scenario**: sum of entries = last `balance_after`
 for both parties, never negative, cash and CliQ writing commission with no earning, waiting charged to the
 second (3.411 min ⇒ 0.141) on parameters frozen on the ride.
 
@@ -97,56 +98,92 @@ second (3.411 min ⇒ 0.141) on parameters frozen on the ride.
 (measured **above** the fare — `٢٠ / طلب نسائي / ٩٫٨٢٦ د.أ`), the captain's preference strip («أستقبل
 ركاباً: النساء فقط»), and the cancel-reason sheet.
 
-### The pending batch — six fixes, build in this order, nothing else before them
+### The batch of six is built and committed (`eac926e`, 2026-08-15) — and four things remain
 
-1. **The cancellation fee, whole** — `design/CANCELLATION-FEE.md` is the spec, written from the owner's
-   decisions and **approved to build**. It is the one open **money** defect: `rides.cancellation_fee` is
-   frozen (0.750 measured) and **never collected** — no payment row, no ledger entry either side, and the
-   captain who drove toward the pickup gets nothing, while SPEC §5 says «تُطبَّق». **Six branches in §11 of
-   that file are still the owner's to answer** — they are listed there, and (أ) blocks the first line of
-   code: what happens when the captain has no broadcast location at the moment of cancellation.
-2. **The one `settled` cure** — the rider's payment screen calls a ride settled when `outstanding <= 0`
-   and nothing is `pending`, which is the *backend's* question. It has now lied three times: on a mixed
-   payment (fixed in package ب), on a **cancelled** ride, and on a **disputed** payment — both measured on
-   the phone, both saying «اكتمل دفع هذه الرحلة — شكراً لك». The cure is one positive definition —
-   **every payment `confirmed` and the ride not cancelled** — and the owner's condition on the test: it
-   must **iterate `PaymentStatus`** so a fourth value added later enters it by itself, not enumerate
-   today's three.
-3. **The stop badge on the offer card** — `RideOut.from_ride` broadcasts `stops` in every offer and
-   `OfferSheet` draws none of it, so a captain accepts a detour and a wait he cannot see, with a higher
-   fare and no reason. Same family as `paid_amount`: data that arrives and nobody reads.
-4. **The captain's waiting counter** — it prints the backend's `waited_minutes`, frozen at 0 for the whole
-   stop, while the rider's screen ticks a live clock from `arrived_at`. The project's own rule («the app
-   renders the clock, the backend sends the money») is followed by one app and broken by the other.
-5. **The role guard, in the backend** — **a security defect, measured**: `POST /auth/login` issues a full
-   session for any role, **and nothing in the request says which app is asking** — no header, no separate
-   endpoint — while no app checks the role afterwards (the panel computes `isAdmin` for display only). So
-   driver credentials open the rider app, and both open the panel. The fix is **at the door, not on the
-   screen**: the client declares its app in a header its API client always sends, and login refuses a
-   mismatch with a code the app translates («هذا حساب كبتن — استخدم تطبيق الكبتن»). Hiding a button leaves
-   the door open. **Owner's decision (2026-08-15): each app for its role alone — `admin`/`support` do not
-   enter the rider or driver apps either**; whoever wants to test creates an account with that role, because
-   one account with two roles makes the guard meaningless.
-6. **The gender buttons come out of «حسابي»** in both apps. Gender is never changed from a screen: the rider
-   declares it once at signup and a later change is an **admin review by request, not a button**; the
-   captain's is stamped by the admin already, so he has no door at all. **The reason is the whole women's
-   service**: gender constrains matching and the other party's safety, so changing it with a tap undoes with
-   one word the very thing the stamp was built for.
+**All twelve owner decisions were recorded first** (`SPEC.md` §5.10-ب for the stop point,
+`design/CANCELLATION-FEE.md` §11 for the fee), three of them carrying his reasoning verbatim so it cannot
+be undone later, plus his addition on branch (ب): **a captain who cancels pays nothing but is counted for
+the supervisor** — and that count is a **live comparison** over `cancelled_by_driver`, never a stored
+column, the same rule as "flagged" in the gender-mismatch reports.
 
-### Two decisions block the batch, and both are the owner's
+Then the six were built in his order. What each settled:
 
-1. **The six cancellation-fee branches** — `design/CANCELLATION-FEE.md` §11. **(أ) blocks the first line of
-   code**: the captain's location is read from `geo:presence:{driver_id}`, whose key lives 60 seconds, so a
-   captain who dropped out a minute before the cancellation **has no location at all** — is the fee waived,
-   or measured from the pickup point? The other five: (ب) a captain who cancels, (ج) a rider with an older
-   unpaid fee, (د) a partial top-up by the carrying captain, (هـ) a cancelled shared ride, (و) whether the
-   platform's commission or the other captain's money comes first when the carrying captain is short.
-2. **The six stop-point branches** — `SPEC.md` §5.10-ب: the per-stop or total cap and its behaviour, who
-   stops the counter (recommendation: the captain, by a tap — a counter that traffic pauses is a counter
-   nobody trusts), whether the number of stops is capped, whether the arrival counter starts on the tap or
-   on entering the pickup radius, who bears it when the **captain** is the late one (recommendation: outside
-   the radius no counter starts, or a false «I have arrived» becomes a way to earn), and whether it enters
-   `final_fare` or shows as its own line.
+1. **The cancellation fee is collected** — `services/cancellation.py`, `models/cancellation.py`, migration
+   `0034`. See below; this was the project's last open **money** defect.
+2. **One `settled` cure, not three** — `services/settlement.py`. Four screens were answering one question
+   with four private comparisons, and three of them lied: `pending` read as "payment complete", a
+   **cancelled** ride read as settled, and an open dispute not seen at all. The backend now answers once
+   and publishes `settlement` (`not_due` · `due` · `awaiting` · `disputed` · `settled`); every screen reads
+   it. **And the test iterates `PaymentStatus` itself** — the owner's condition — so a sixth value added
+   tomorrow fails three tests in three places until it is classified in `_STATUS_ROLE`; proven by adding
+   one temporarily and watching them fall.
+3. **The role guard is at the door** — `core/app_scope.py`. Driver credentials opened the rider app. Each
+   client declares its app on every session-issuing route, and login refuses a role that does not belong to
+   it, with a message that says **where to go** rather than "forbidden". **The client's claim is accepted
+   here because it only narrows**: whoever claims an app that is not his role merely locks himself out —
+   which is why this does not contradict `card_gateway.return_url_for`, where such a claim would *direct
+   money*. The test sweeps every (app × role) pair from the table itself: both directions and the panel.
+4. **The gender buttons are gone from «حسابي»**, and the declared value stays visible with «لتعديله راجع
+   الدعم». Three things flip on a tap otherwise — the pink theme, the women's-service control, and
+   matching — and none of them is announced to whoever tapped.
+5. **The stop badge is on the offer card**, above the fare like the women's and booking badges: a captain
+   accepting a detour he cannot see cancels when he discovers it. **The count, not the addresses** — the
+   card is read in seconds before the offer expires.
+6. **The captain's waiting counter ticks locally** (`useElapsedMinutes`, every 10s — minutes are displayed,
+   so a per-second timer wakes the screen sixty times to write the same number). It printed the backend's
+   `waited_minutes` and froze at «٠ دقيقة» until a frame arrived, so a captain standing at a stop read a
+   dead counter and **assumed his arrival was never recorded**. The project's own rule — the app renders
+   the clock, the backend sends the money — was followed by one app and broken by the other.
+
+**804 backend tests pass** (up from 766); all three frontends build with their five guards green.
+
+#### The cancellation fee: what is built, and the four things left
+
+**The defect it closed**: `rides.cancellation_fee` was frozen (0.750 measured), displayed to the rider —
+and **never collected**. No payment row, no ledger entry on either side, nothing for the captain who drove
+toward the pickup. A number telling a rider he owes something **with no door to pay it**.
+
+Built: `ride_cancellation_charges` with **both parties named** (the money passes between two users; the
+platform carries it and does not own it), `cancellation_settings` per country, two ledger types
+(`cancellation_fee` debit, `cancellation_compensation` credit — **two entries, never one net one**), the
+proximity exemption measured from the **last broadcast location**, the **exemption on silence** (branch أ),
+immediate collection when the wallet covers it, a debt when it does not — **and a cancellation is never
+refused for an empty wallet** — plus the repeat-offence block on the request path (a live comparison; zero
+means "no block"). The rider's wallet shows the debt *beside* the balance, the captain's shows pending dues
+*outside* it, and the captain is told **which of the two happened**: "it reached you" and "it is waiting on
+the rider" are different facts about his own money.
+
+Still to build, all specified in `design/CANCELLATION-FEE.md` §0:
+
+1. **Collection with a later ride** (§5) — two separate ledger entries: the current captain's fare earning,
+   and a **collection entry to the injured captain**. Folding it into the fare would charge commission on
+   money that is not his and hide that the creditor is another captain.
+2. **The cash carrier path** (§6-أ) — the captain who takes the fee in his hand: his wallet debited and the
+   injured captain's credited (the cash-commission mechanism from 6-أ), the reward, the grace period, **and
+   the card on the offer telling him before he accepts** — the sharing-badge consent argument. Card and
+   wallet are deliberately **not** in this path (§6-ب): that money never passes through anyone's hand.
+3. **The unpaid outcome** (§10) — the two settings columns exist and default to "no action"; the periodic
+   job and the audit entry naming who decided do not.
+4. **The two panel screens** — the per-country policy fields, and the waive action with its written reason
+   (the `waived` status and its all-or-nothing CHECK are already in the table).
+
+#### Three things the build itself taught, all worth keeping
+
+- **`check:enums` caught a real collision.** Naming a `SettlementState` member `"none"` made `"none"` a
+  *known backend value*, which flipped `VerificationMethod` from a pure UI union into a **mixed** one — the
+  exact shape the guard exists for. The fix was the more accurate name (`not_due`), which solved both.
+- **The concurrency test passed first with the lock order reversed**, so it did not own its invariant. The
+  cure was an explicit interleave (the first holds its transaction 400ms while the second starts), and what
+  deletion then produces is **not a wrong number**: `wallet.record` raises `InsufficientBalance` *inside
+  the cancel path*, so the rider who pressed «ألغِ» ends up **in a ride that was not cancelled**. Read the
+  order in `cancellation.try_collect` as the rule — **lock, then read the balance**; the reverse lets two
+  concurrent debits read the same number.
+- **`MissingGreenlet` on the exemption path.** Zeroing `cancellation_fee` on the ride expires
+  `pickup_lat`/`dropoff_lat` (they are `column_property` expressions), and the serializer then lazy-loads
+  outside the greenlet — a 500 on an *exempt* cancellation, found by the first test run. **Any update to a
+  ride after it was read needs a second read**, always. And one more from the same file: a CHECK constraint
+  whose full name exceeds Postgres' 63 characters is **truncated and hashed**, so its name in the database
+  stops matching the model and `test_migrations_match_models` reports drift on every run.
 
 ### «An empty map is not a defect» — the three points, in order (2026-08-15)
 
@@ -174,7 +211,10 @@ Proven end to end afterwards: a captain went online → `geo:drivers:JO` + his p
 
 **Nothing here is guesswork: every line has a written spec or an owner decision behind it.**
 
-#### 0. The pending batch first (above) — the last money defect is in it.
+#### 0. What is left of the cancellation fee (above) — four items, all specified
+
+The last open **money** defect is closed: the fee is collected and the ledger carries it between the two
+parties. What remains of that feature is listed above and needs no new decision.
 
 #### 1. Blocking, and not code
 
@@ -242,7 +282,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**766 backend tests pass** across 71 test files, measured on 2026-08-15; all three frontends build with
+**804 backend tests pass** across 75 test files, measured on 2026-08-15; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1212,18 +1252,16 @@ and per-category pricing. Do not build them; he decides after launch.
 
 ### Open debt and decisions waiting on the owner
 
-**Answer these before the next build starts** (2026-08-15):
+**No decision is waiting on the owner as of 2026-08-15.** The twelve branches (six for the cancellation
+fee, six for the stop point) were answered and recorded in their files, and everything else — the backup
+plan's seven, the map plan's four, the nine advance decisions, the eight sharing decisions — was already
+recorded in its own file. The one thing still open by his own deferral is inside sharing: whether the
+company bears the remaining rider's difference **before** departure (`SPEC.md` §5.12).
 
-- **The six cancellation-fee branches** in `design/CANCELLATION-FEE.md` §11. **(أ) blocks the first line**:
-  a captain whose presence key expired has no broadcast location, so there is no way to measure whether he
-  approached — recommendation is to waive the fee (no evidence of effort, and the doubt belongs to whoever
-  would be charged), with the panel's objection route after the fact. The other five are (ب) a captain who
-  cancels, (ج) a rider with an older unpaid fee, (د) partial top-up by the carrying captain, (هـ) a
-  cancelled shared ride, and (و) which comes first when the carrying captain's balance is short — the
-  platform's commission or the other captain's money.
-- **Everything else is answered**: the backup plan's seven decisions, the map plan's four, the nine advance
-  decisions, and the eight sharing decisions are all recorded in their files.
-
+**And the stop point (`SPEC.md` §5.10-ب) is now decided and not yet built**: a per-country cap that
+notifies and never ends the ride, the counter stopped by the captain's tap, no cap on the number of stops,
+the arrival counter starting on that tap, **no counter outside the pickup radius** (or a false «وصلت»
+becomes a way to earn), and the amount inside `final_fare` with its own line in the breakdown.
 
 1. **`women_service_enabled` is off in both countries and stays off until the backlog of already-
    approved drivers has a verified gender** — that was the owner's call, and it is now the one
@@ -1879,6 +1917,44 @@ take over any account by knowing its number. Do not add feature flags to that se
 
 Money columns use `models/base.py::MONEY` (`NUMERIC(12,3)`); currency is derived from the country via
 `core/currency.py::currency_for_country` and is never accepted from a client.
+
+**«Is this ride settled?» has exactly one answer, and it lives in `services/settlement.py`.**
+`SettlementState` is five values, not two, because "not settled" hides three different situations that
+call for three different actions: pay now (`due`), the money is handed over and awaits the other party's
+word (`awaiting`), and a dispute is open (`disputed`) — plus `not_due` and `settled`. It is published on
+`RidePaymentsOut`, `RideListItem` and `AdminRideRow`, and **no screen computes it any more**; that is the
+§14 rule applied to a decision rather than to an amount. Two properties keep it honest. It reads **what
+the ride owes** (`chargeable_of`: the final fare, else the cancellation fee, else `None`) and never the
+ride's *status*, which is why the cancellation fee needed no new line in it. And `_STATUS_ROLE` is a
+**total map over `PaymentStatus`** whose `role_of` raises on an unclassified member, with
+`tests/test_settlement.py` iterating the enum and cross-checking `RELEASES ⇔ not in
+OWING_PAYMENT_STATUSES` — one concept, two homes, and the test is what stops them drifting.
+
+**`core/app_scope.py` is the door guard, not a permission system.** Each client declares `app` on login,
+TOTP login and register; `_ROLES` maps rider/driver/panel to the roles allowed in each, and a mismatch is
+**403 with a message naming the right app** — someone who typed correct credentials in the wrong app
+otherwise concludes the account is broken and registers a second one on the same number, which has already
+happened on this project. Three properties: the guard runs **after** the password (so it tells nothing to
+whoever cannot log in) and **before** the TOTP challenge (so no challenge is opened for a door that will
+close); `app=None` **passes**, because this prevents role confusion in our three apps and is not a second
+authentication factor — without that, adding it would log out every existing client; and it does **not**
+replace `RiderUser`/`CurrentDriver`/`require_roles`, which guard *what may be done* rather than *where one
+may enter*.
+
+**The cancellation fee is the first debt between two users** (`services/cancellation.py`,
+`models/cancellation.py`). An advance (item 15) is the platform lending to a captain; this is **a captain's
+money held by a rider**, and the platform only carries it — which is where every rule in the file comes
+from: both parties are named columns, the ledger takes **two** entries rather than one net one, and a
+`pending` charge is shown to the captain **outside** his balance, because an entry means money that
+*arrived*. Four more worth knowing before touching it. The proximity exemption is measured from
+`geo.last_position` — the GEO index for the coordinates and the **presence key for liveness**, since Redis
+cannot expire a zset member, so a member with no presence hash is a stale position; **no position at all
+means the rider is exempt** (the owner's branch أ: no evidence of effort, and the doubt belongs to whoever
+would be charged). Collection is attempted inside the cancel transaction and **failure is not an error** —
+an insufficient balance is the *answer* (a debt), never a refusal to cancel. `try_collect` takes the wallet
+locks **before** reading the balance, and the reverse order is what the concurrency test now catches. And
+`blocks_new_ride` sits in `rides.request_ride`, not in the router, because scheduled bookings create rides
+through that same door and a guard in the router is a guard the second door forgets.
 
 **Multi-stop (12-ب) lives inside that same door, and four details are worth knowing before
 touching it.** `at_stop` sits between `in_progress` and itself, with a third exit to `completed`
