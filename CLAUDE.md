@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**762 backend tests pass** across 71 test files — measured, not estimated, on 2026-08-15. All three
+**766 backend tests pass** across 71 test files — measured, not estimated, on 2026-08-15. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -73,10 +73,89 @@ five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per sessio
 see "Rider design-matching" below for what each settled. **Sharing (12-ي) followed them and is
 done**, so nothing is queued before stage 13.
 
-**Stage 13 is done** (2026-08-15): the scenario test (`tests/test_stage13_scenario.py`) **and** the full
-manual run on two phones — a driver created from the app's own screens, approved, subscribed, driving a
-real ride for a rider on the second phone, paid, rated, and withdrawing money the admin then transferred.
-Five defects came out of it and are fixed; see "Stage 13 — the full manual run" below.
+**Stage 13 is complete** (2026-08-15) — `tests/test_stage13_scenario.py` **and six manual scenarios driven
+on two real phones** (rider on an S21, captain on a Note 20, both Capacitor shells over the live tunnel):
+
+1. **The whole journey** — a captain created from the app's own screens, three-step signup, vehicle and
+   nine documents, admin review and approval in the panel, wallet topup, subscription bought from his
+   screen, online, a real ride requested from the second phone, payment, rating, withdrawal request, and
+   the admin's transfer.
+2. **The cash round trip** — both sides at every step, with force-stop-and-reopen before *and* after the
+   captain confirms.
+3. **A CliQ dispute** — reference submitted by the rider, «لم تصلني» by the captain, resolved in the panel.
+4. **Cancellation after acceptance.**
+5. **Multi-stop** with a paid wait.
+6. **The women's service, both directions.**
+
+**Thirteen defects came out of it. Eleven are fixed and committed; four remain as one pending batch**
+(two of them are the last two of the thirteen, plus two small ones found in the multi-stop run) — see
+"The pending batch" below. **The ledger held in every scenario**: sum of entries = last `balance_after`
+for both parties, never negative, cash and CliQ writing commission with no earning, waiting charged to the
+second (3.411 min ⇒ 0.141) on parameters frozen on the ride.
+
+**The three screens that had never been opened are now opened** on a real device: the «طلب نسائي» badge
+(measured **above** the fare — `٢٠ / طلب نسائي / ٩٫٨٢٦ د.أ`), the captain's preference strip («أستقبل
+ركاباً: النساء فقط»), and the cancel-reason sheet.
+
+### The pending batch — build in this order, nothing else before it
+
+1. **The cancellation fee, whole** — `design/CANCELLATION-FEE.md` is the spec, written from the owner's
+   decisions and **approved to build**. It is the one open **money** defect: `rides.cancellation_fee` is
+   frozen (0.750 measured) and **never collected** — no payment row, no ledger entry either side, and the
+   captain who drove toward the pickup gets nothing, while SPEC §5 says «تُطبَّق». **Six branches in §11 of
+   that file are still the owner's to answer** — they are listed there, and (أ) blocks the first line of
+   code: what happens when the captain has no broadcast location at the moment of cancellation.
+2. **The one `settled` cure** — the rider's payment screen calls a ride settled when `outstanding <= 0`
+   and nothing is `pending`, which is the *backend's* question. It has now lied three times: on a mixed
+   payment (fixed in package ب), on a **cancelled** ride, and on a **disputed** payment — both measured on
+   the phone, both saying «اكتمل دفع هذه الرحلة — شكراً لك». The cure is one positive definition —
+   **every payment `confirmed` and the ride not cancelled** — and the owner's condition on the test: it
+   must **iterate `PaymentStatus`** so a fourth value added later enters it by itself, not enumerate
+   today's three.
+3. **The stop badge on the offer card** — `RideOut.from_ride` broadcasts `stops` in every offer and
+   `OfferSheet` draws none of it, so a captain accepts a detour and a wait he cannot see, with a higher
+   fare and no reason. Same family as `paid_amount`: data that arrives and nobody reads.
+4. **The captain's waiting counter** — it prints the backend's `waited_minutes`, frozen at 0 for the whole
+   stop, while the rider's screen ticks a live clock from `arrived_at`. The project's own rule («the app
+   renders the clock, the backend sends the money») is followed by one app and broken by the other.
+
+### What stands between here and launch (2026-08-15)
+
+**Blocking, and not code:**
+
+- **Phone verification has no working channel.** Firebase answers `auth/billing-not-enabled`, so **nobody
+  can register**; the owner decided against Blaze and is starting the **official WhatsApp route** (Meta
+  Business + a dedicated number + an approved authentication template). The channel is built (12-هـ); what
+  is missing is the contract. Recorded in `FUTURE-FEATURES.md` as a **launch blocker**, with the rule that
+  an active SMS contract silently outranks Firebase in the chain — so it must not be left enabled in
+  production by accident. A **mock** SMS contract is active **on the dev stack only**; the code refuses
+  mock in production.
+- **Provider wire formats** (Telr, SMS, CliQ, payout) are best-reading, never verified against real
+  credentials — see debt item 3.
+- **Backups do not exist yet.** `design/BACKUP-AND-RESTORE.md` is a full plan with the owner's seven
+  decisions answered; **nothing is built**. A launch without it is a launch with no way back.
+
+**Built and deliberately switched off** (`scripts/seed.py::FEATURE_DEFAULTS` is the intended state):
+women's service, multi-stop, WhatsApp OTP, tips, promo codes, driver referrals, scheduled rides, ride
+sharing, driver advances. Several also wait on a number (tip amounts, referral reward, share percent,
+advance growth) — zero reads as "not configured yet" and correctly hides the feature.
+
+**Queued after the pending batch**, with decisions already recorded: the map work
+(`FUTURE-FEATURES.md` 16–17 — «افتح في قوقل ماب» first, then gestures, then the three-state locate button,
+then a **locally computed** live ETA, reroute cap, `steps`, navigation camera; traffic and the info card
+deferred), and the deferred queue items (sound §9, motion, map effects).
+
+### The dev stack has been mutated by the scenarios — do not read it as the intended state
+
+The scenarios needed real values, so the local database now has: **JO commission 10% `all_rides`**,
+**multi-stop enabled for JO** with stop fees (0.500 + 0.100/min, 2 free, 15 cap), **min withdrawal 5.000
+and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO**, and a fresh captain
+`سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
+`SELECT * FROM feature_flags` — is still the answer to "what ships".
+
+**766 backend tests pass** across 71 test files, measured on 2026-08-15; all three frontends build with
+their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
+`check:dist`, and `check:flags` in the panel).
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -1044,6 +1123,19 @@ and per-category pricing. Do not build them; he decides after launch.
 
 ### Open debt and decisions waiting on the owner
 
+**Answer these before the next build starts** (2026-08-15):
+
+- **The six cancellation-fee branches** in `design/CANCELLATION-FEE.md` §11. **(أ) blocks the first line**:
+  a captain whose presence key expired has no broadcast location, so there is no way to measure whether he
+  approached — recommendation is to waive the fee (no evidence of effort, and the doubt belongs to whoever
+  would be charged), with the panel's objection route after the fact. The other five are (ب) a captain who
+  cancels, (ج) a rider with an older unpaid fee, (د) partial top-up by the carrying captain, (هـ) a
+  cancelled shared ride, and (و) which comes first when the carrying captain's balance is short — the
+  platform's commission or the other captain's money.
+- **Everything else is answered**: the backup plan's seven decisions, the map plan's four, the nine advance
+  decisions, and the eight sharing decisions are all recorded in their files.
+
+
 1. **`women_service_enabled` is off in both countries and stays off until the backlog of already-
    approved drivers has a verified gender** — that was the owner's call, and it is now the one
    business decision blocking a finished feature, with no code left under it. The panel's driver
@@ -1055,10 +1147,9 @@ and per-category pricing. Do not build them; he decides after launch.
    makes it look like it counts. The flag itself is now in the settings screen too — the panel's
    `FeatureKey` union was missing `women_service_enabled`, so there was no switch to turn the
    service on with once the backlog cleared. Clearing the backlog is now data entry, not development.
-2. **Three screens were never opened in a browser**: the driver's cancel-reason sheet, the
-   «طلب نسائي» badge on the offer card, and the preference strip on the driver's home. All three
-   need an approved driver (verified phone + three approved documents) and a live assigned ride to
-   reach, so they are best checked during stage 13's manual run.
+2. ✅ **Closed on 2026-08-15**: the three screens that had never been opened — the cancel-reason sheet,
+   the «طلب نسائي» badge, and the captain's preference strip — were all opened on a real phone during
+   stage 13's scenarios.
 3. **Provider wire formats are best-reading, not contracts.** Three details in
    `services/card_gateway/telr.py` are flagged in its docstring as needing confirmation against
    real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
