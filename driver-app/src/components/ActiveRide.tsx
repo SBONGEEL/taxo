@@ -14,7 +14,7 @@
  * فالزرُّ الأخير ينهي الرحلة ويعود بالكبتن إلى الرئيسية حتى تُبنى.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { GenderPreference, Ride } from "@/api/types";
 import { arabicDigits, cn } from "@/lib/utils";
@@ -272,6 +272,37 @@ export function ActiveRide({
  * **ولا شريطَ لرحلةٍ بلا محطات**: صفٌّ فارغ فوق كل رحلةٍ عادية ضجيجٌ دائم
  * لأجل حالةٍ نادرة.
  */
+/** دقائقُ الانتظار **تُحسب في الجهاز وتتقدّم من نفسها**.
+ *
+ * القاعدةُ من 12-ب: عرضُ الوقت حسابُ وقت، وعرضُ المال حسابُ مال — والقسم 14
+ * يمنع الثاني وحدَه. فالدقائقُ هنا، و`waiting_charge` يبقى كما تحسبه الخلفية
+ * بالأسعار المجمَّدة على الرحلة.
+ *
+ * **والعطبُ الذي وُجد لأجله** (تجربةُ المرحلة ١٣ على الهاتفين): كان الرقمُ
+ * يُقرأ من `waited_minutes` الواصلِ مع الرحلة، فيقف على «انتظارٌ ٠ دقيقة» ولا
+ * يتحرك حتى يصل إطارٌ جديد — وقد يتأخر دقائق. فكبتنٌ واقفٌ ينتظر يرى عدّاداً
+ * لا يتقدّم، **فيظن أن وصولَه لم يُسجَّل** فيضغط «وصلتُ» ثانيةً أو يتصل
+ * بالدعم. عدّادٌ جامدٌ أسوأُ من لا عدّاد: الأولُ يكذب والثاني يسكت.
+ *
+ * **وكل عشر ثوانٍ لا كل ثانية**: المعروضُ دقائقُ صحيحة، فتحديثٌ في الثانية
+ * يوقظ الشاشةَ ستين مرةً ليكتب الرقمَ نفسَه — وبطاريةُ الكبتن تعمل ساعات.
+ */
+function useElapsedMinutes(since: string | null): number {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (since === null) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 10_000);
+    return () => window.clearInterval(timer);
+  }, [since]);
+
+  if (since === null) return 0;
+  const started = new Date(since).getTime();
+  if (Number.isNaN(started)) return 0;
+  return Math.max(0, Math.floor((now - started) / 60_000));
+}
+
 function StopStrip({
   ride,
   currencyLabel,
@@ -279,11 +310,13 @@ function StopStrip({
   ride: Ride;
   currencyLabel: string;
 }) {
-  if (ride.stops.length === 0) return null;
-
   const waiting = ride.stops.find(
     (stop) => stop.arrived_at !== null && stop.resumed_at === null,
   );
+  // **قبل الخروج المبكر**: خطّافٌ بعد `return` يكسر ترتيبَ الخطّافات
+  const waitedMinutes = useElapsedMinutes(waiting?.arrived_at ?? null);
+
+  if (ride.stops.length === 0) return null;
 
   return (
     <div className="mb-13 rounded-13 border border-line bg-surface-2 px-13 py-11">
@@ -315,10 +348,10 @@ function StopStrip({
       {waiting ? (
         <div className="mt-8 flex items-center justify-between text-11.5">
           {/* **دقائقُ صحيحة لا ثلاثُ منازل**: `2.168` رقمٌ لا يقرؤه أحد،
-              والكبتنُ يريد «كم وقفتُ» لا كسرَ الدقيقة */}
+              والكبتنُ يريد «كم وقفتُ» لا كسرَ الدقيقة. **والعدّادُ محليٌّ
+              يتقدّم** (`useElapsedMinutes`) لا رقماً واصلاً مع الرحلة */}
           <span className="text-muted">
-            انتظارٌ {arabicDigits(String(Math.floor(Number(waiting.waited_minutes))))}{" "}
-            دقيقة
+            انتظارٌ {arabicDigits(String(waitedMinutes))} دقيقة
           </span>
           <span className="font-semibold text-ink">
             {arabicDigits(ride.waiting_charge)} {currencyLabel}

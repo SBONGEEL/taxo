@@ -306,10 +306,11 @@ function RideModal({
 }
 
 function RideBody({ ride }: { ride: AdminRideDetail }) {
-  const fare = ride.final_fare ?? ride.estimated_fare;
-  // **مقارنةٌ لا مبلغ**: نتيجتُها سطرُ تنبيهٍ لا رقمٌ يُعرض، فلا يمر مالٌ عبر
-  // `Number` إلى الشاشة. المبالغُ نفسها تُطبع نصّاً كما وصلت (`formatMoney`)
-  const unsettled = Number(fare) > Number(ride.paid_amount);
+  // **الحكمُ يصل محسوباً** (`settlement`، من `services/settlement.py`): كانت
+  // المقارنةُ هنا `Number(fare) > Number(paid_amount)` فتقرأ رحلةً ملغاةً
+  // بلا أجرةٍ نهائية «مسدَّدة»، ودفعةً منتظِرةً «ناقصة» بلا تمييزٍ عن نزاع
+  const unsettled =
+    ride.settlement === "due" || ride.settlement === "awaiting";
 
   return (
     <>
@@ -403,8 +404,12 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
           label="المُحصَّل"
           value={money(ride.paid_amount, ride.currency)}
           hint={
-            ride.status === "completed" && unsettled
-              ? "أقلُّ من الأجرة — الرحلة غير مسدَّدة بالكامل"
+            unsettled
+              ? ride.settlement === "awaiting"
+                ? "صفُّ دفعةٍ قائمٌ بانتظار التأكيد — لم يصل المال بعد"
+                : "أقلُّ من الأجرة — الرحلة غير مسدَّدة بالكامل"
+              : ride.settlement === "disputed"
+                ? "عليها نزاعٌ مفتوح"
               : undefined
           }
         />

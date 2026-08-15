@@ -115,6 +115,20 @@ export function OfferSheet({
                 محجوزة — {bookedTime(offer.ride.scheduled_for)}
               </span>
             ) : null}
+            {/* شارةُ المحطات (12-ب) — **وهي من صنف الشارتين فوقها لا زينة**:
+                رحلةٌ بمحطتين وسيطتين رحلةٌ أطول ووقوفٌ ينتظره، وكان يقبلها
+                وهو يرى نقطتين فيكتشف الثالثةَ بعد أن ركب الراكب. وكشفتها
+                تجربةُ المرحلة ١٣ على الهاتفين: العنوانان يظهران والمحطاتُ
+                تصل في `ride.stops` ولا يقرؤها أحد — بابٌ بلا قارئ.
+                **والعددُ لا الأسماء**: البطاقةُ تُقرأ في ثوانٍ قبل انتهاء
+                العرض، والعناوينُ الثلاثةُ فيها تُقرأ فلا يُقرأ السعر */}
+            {offer.ride.stops.length > 0 ? (
+              <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
+                {offer.ride.stops.length === 1
+                  ? "محطة وسيطة واحدة"
+                  : `${arabicDigits(String(offer.ride.stops.length))} محطات وسيطة`}
+              </span>
+            ) : null}
             <div className="text-23 font-bold text-ink">
               {arabicDigits(offer.ride.estimated_fare)}{" "}
               <span className="text-12 font-medium text-muted">

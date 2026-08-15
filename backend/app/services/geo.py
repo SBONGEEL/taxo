@@ -60,6 +60,14 @@ class DriverPresence:
     distance_km: float
 
 
+@dataclass(frozen=True, slots=True)
+class Position:
+    """موقعٌ مقروءٌ من الفهرس — لا حالةَ حضورٍ ولا اتجاه."""
+
+    lat: float
+    lng: float
+
+
 async def update_location(
     redis: Redis,
     *,
@@ -93,6 +101,28 @@ async def go_offline(
     pipe.zrem(geo_key(country_code), str(driver_id))
     pipe.delete(presence_key(driver_id))
     await pipe.execute()
+
+
+async def last_position(
+    redis: Redis, *, driver_id: uuid.UUID, country_code: CountryCode
+) -> Position | None:
+    """آخرُ موقعٍ بثّه كبتنٌ — و`None` تعني **صمتاً**، لا موقعاً عند الصفر.
+
+    يُقرأ الموقعُ من الفهرس الجغرافي و**الحياةُ من مفتاح الحضور**: الفهرسُ
+    لا يقبل عمراً لعضوٍ فيه (قيدُ Redis نفسُه الذي بُني عليه التنظيفُ الكسول
+    في `nearby`)، فعضوٌ باقٍ فيه بلا مفتاحِ حضورٍ موقعٌ قديمٌ لا يُقاس عليه.
+
+    ويُقرأ في رسم الإلغاء: **بلا موقعٍ مبثوثٍ لا دليلَ على تحرّك** (قرارُ
+    المالك 2026-08-15) — والتمييزُ بين «لم يتحرك» و«لا نعرف» هو الفرقُ بين
+    راكبٍ يُخصم منه بحقٍّ وراكبٍ يُخصم منه بظنّ.
+    """
+    if not await redis.exists(presence_key(driver_id)):
+        return None
+    positions = await redis.geopos(geo_key(country_code), str(driver_id))
+    if not positions or positions[0] is None:
+        return None
+    lng, lat = positions[0]
+    return Position(lat=float(lat), lng=float(lng))
 
 
 async def nearby(

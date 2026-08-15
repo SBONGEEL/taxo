@@ -352,3 +352,15 @@ def register_exception_handlers(app: FastAPI) -> None:
         if isinstance(exc, RateLimited) and "retry_after" in exc.extra:
             headers["Retry-After"] = str(exc.extra["retry_after"])
         return JSONResponse(status_code=exc.status_code, content=body, headers=headers)
+
+
+class CancellationDebtBlocked(AppError):
+    """رسومُ إلغاءٍ متراكمةٌ بلغت حدَّ الإيقاف (`design/CANCELLATION-FEE.md` §4).
+
+    **والنصُّ يقول ما يُفعل**: «لا يمكنك الطلب» وحدَها تُرسل صاحبَها إلى الدعم
+    ليكتشف أن الحلَّ شحنُ محفظته — وهو ما كان يستطيعه وحدَه لو قيل له.
+    """
+
+    status_code = 402
+    code = "cancellation_debt_blocked"
+    message = "عليك رسومُ إلغاءٍ غيرُ مسدَّدة — اشحن محفظتك ليُخصم المستحق ثم أعد الطلب"

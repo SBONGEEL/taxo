@@ -66,6 +66,7 @@ def _row(ride: Ride, summary: ride_log.PaymentSummary) -> AdminRideRow:
         payment_methods=summary.methods,
         paid_amount=summary.paid_amount,
         has_open_dispute=summary.has_open_dispute,
+        settlement=ride_log.settlement_of(ride, summary),
         created_at=ride.created_at,
         completed_at=ride.completed_at,
         cancelled_at=ride.cancelled_at,

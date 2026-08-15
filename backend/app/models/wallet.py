@@ -54,6 +54,9 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     # صرفُ السلفة (البند ١٥): مالٌ يدخل محفظتَه فعلاً — ولذلك هو دائنٌ عاديّ،
     # والدَّينُ مقابلَه ليس في هذا الدفتر بل في جدوله
     WalletTransactionType.ADVANCE,
+    # تعويضُ الإلغاء: دائنٌ للمتضرر — ومدينُه على **الراكب** لا على المنصّة،
+    # فهما قيدان في دفترين لا قيدٌ من العدم كحافز الإحالة
+    WalletTransactionType.CANCELLATION_COMPENSATION,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
@@ -66,6 +69,9 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     # اقتطاعُ السلفة: **خصمٌ من أرباحٍ داخلة لا سحبٌ على المكشوف** — فلا يقع
     # الرصيدُ تحت الصفر أبداً، ولا يُمسّ حارسٌ قائم
     WalletTransactionType.ADVANCE_REPAYMENT,
+    # رسمُ الإلغاء: مدينٌ على من ألغى — أو على الكبتن الحاملِ الذي قبض المبلغَ
+    # نقداً وليس كلُّه له (آليةُ عمولةِ رحلةِ الكاش نفسُها منذ 6-أ)
+    WalletTransactionType.CANCELLATION_FEE,
 )
 
 # `adjustment` وحده يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص

@@ -23,6 +23,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.services.settlement import SettlementState
 from app.models.enums import (
     CountryCode,
     Currency,
@@ -73,6 +74,10 @@ class AdminRideRow(BaseModel):
     # مجموعُ ما تأكّد فعلاً — يُقارَن بالأجرة لتُقرأ الرحلةُ غيرَ مسدَّدة
     paid_amount: Decimal
     has_open_dispute: bool
+    # حالُ السداد من المصدر الواحد (`services/settlement.py`) — لا مقارنةٌ في
+    # الجدول: كان `Number(fare) > Number(paid_amount)` يقرأ دفعةً منتظِرةً
+    # «غيرَ مسدَّدة» ورحلةً ملغاةً «مسدَّدة»
+    settlement: SettlementState
 
     created_at: datetime
     completed_at: datetime | None

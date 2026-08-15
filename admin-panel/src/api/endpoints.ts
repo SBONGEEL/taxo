@@ -109,10 +109,19 @@ export const getConfig = () =>
  * النموذج يكتب «استخدم بريد العمل الخاص بك»، والهوية في هذا النظام رقمُ
  * هاتفٍ بصيغة E.164 لكل الأدوار (`DESIGN-DECISIONS.md` بند 3).
  */
+/** **التطبيقُ يُعلن نفسَه في كل بابٍ يُصدر جلسة** (`core/app_scope.py`).
+ *
+ * قرارُ المالك 2026-08-15: كلُّ تطبيقٍ لدوره وحدَه، و`admin`/`support` لا
+ * يدخلان تطبيقَي الراكب والكبتن. والرفضُ في الخلفية — وهذا الحقلُ هو ما
+ * يجعلها تعرف من يسأل. **ودعوى تضييقٍ لا توسيع**: من ادّعى تطبيقاً ليس دورَه
+ * مَنَع نفسَه ولم ينل شيئاً.
+ */
+export const CLIENT_APP = "panel";
+
 export const login = (phone: string, password: string, country?: CountryCode) =>
   api.post<LoginResponse>(
     "/auth/login",
-    { phone, password, country_code: country },
+    { phone, password, country_code: country, app: CLIENT_APP },
     { anonymous: true },
   );
 
@@ -127,7 +136,7 @@ export const loginWithTotp = (
 ) =>
   api.post<AuthResponse>(
     "/auth/login/totp",
-    { challenge_token, ...proof },
+    { challenge_token, ...proof, app: CLIENT_APP },
     { anonymous: true },
   );
 

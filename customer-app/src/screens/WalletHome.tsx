@@ -87,6 +87,17 @@ export function WalletScreen() {
           <p className="mt-4 text-38 font-bold text-ink">
             {formatMoney(wallet?.balance, wallet?.currency)}
           </p>
+          {/* **دَينُ الإلغاء بجانب الرصيد لا مطروحاً منه**
+              (`design/CANCELLATION-FEE.md` §4): رقمٌ واحدٌ يجمع مالاً موجوداً
+              وديناً قائماً لا يُقرأ أيّاً منهما. **ويقول ما يقع تلقائياً** —
+              أنه يُخصم من أوّل شحنٍ بلا فعلٍ منه — وإلا بحث عن زرِّ سدادٍ لا
+              وجودَ له. ورقمُه يصل من الخلفية محسوباً (القسم 14) */}
+          {Number(wallet?.cancellation_debt ?? 0) > 0 ? (
+            <p className="mt-8 text-12.5 leading-note text-warn">
+              عليك رسومُ إلغاء {formatMoney(wallet?.cancellation_debt, wallet?.currency)}
+              {" "}— تُخصم تلقائياً من أول شحنٍ لمحفظتك.
+            </p>
+          ) : null}
           {wallet?.frozen ? (
             <p className="mt-8 flex items-center justify-center gap-6 text-14 text-danger">
               <Snowflake className="size-16" />

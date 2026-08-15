@@ -77,7 +77,7 @@ export function RidesScreen() {
 
         <Stagger className="flex flex-col gap-10">
           {(rides ?? []).map(
-            ({ ride, has_open_dispute, paid_amount, payment_methods }) => (
+            ({ ride, has_open_dispute, settlement }) => (
             <StaggerItem key={ride.id}>
               <button
                 type="button"
@@ -116,18 +116,16 @@ export function RidesScreen() {
                   {/* **مالٌ لم يُقفل بعد** — كشفته تجربةُ المرحلة ١٣: بعد
                       إعادة فتح التطبيق يختفي كلُّ ما يدلّ على رحلةٍ تنتظر
                       تأكيدَه، فيبقى المالُ في يده والدفعةُ `pending` بلا أن
-                      يعرف. و`paid_amount` كان يصل في كل نداءٍ ولا يقرؤه أحد —
-                      ووصفُه في المخطّط يطلب هذه المقارنةَ بعينها.
-                      **ومقارنةُ عرضٍ لا حسابُ مال**: رقمان من الخلفية */}
-                  {ride.status === "completed" &&
-                  Number(paid_amount) <
-                    Number(ride.final_fare ?? ride.estimated_fare) ? (
+                      يعرف. **والحكمُ يصل الآن محسوباً** (`settlement`) من
+                      `services/settlement.py` بعد أن كانت المقارنةُ هنا
+                      إحدى أربعٍ تجيب سؤالاً واحداً بأربع طرق */}
+                  {settlement === "due" || settlement === "awaiting" ? (
                     <span className="rounded-full border border-warn px-8 py-2 text-10 font-bold text-warn">
                       {/* **«بانتظار تأكيدك» غيرُ «لم تُدفع»**: الأولى صفُّ
                           دفعةٍ ينتظر ضغطتَه هو، والثانيةُ راكبٌ لم يختر بعد —
                           وعليه في الأولى عملٌ وليس عليه في الثانية شيء.
                           وخلطُهما يجعله يفتش عن زرٍّ لا وجودَ له */}
-                      {payment_methods.length > 0 ? "بانتظار تأكيدك" : "لم تُدفع"}
+                      {settlement === "awaiting" ? "بانتظار تأكيدك" : "لم تُدفع"}
                     </span>
                   ) : null}
                   {/* شارةُ النزاع — برتقاليةٌ في ذيل الصف كما في التصميم */}

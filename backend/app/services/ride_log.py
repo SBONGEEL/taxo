@@ -33,8 +33,11 @@ from app.models.enums import CountryCode, PaymentMethod, PaymentStatus, RideStat
 from app.models.payment import Payment
 from app.models.rating import Rating
 from app.models.ride import Ride, RideRoutePoint
+from app.models.payment import OWING_PAYMENT_STATUSES
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.services import settlement
+from app.services.settlement import SettlementState
 
 # سقفُ نقاط المسار في شاشة التفاصيل. رحلةٌ بنقطةٍ كل عشرين ثانية تكتب مئةً
 # وثمانين نقطةً في الساعة، فألفٌ تغطي أطول رحلةٍ معقولة؛ وما تجاوزها يُقصّ
@@ -53,11 +56,25 @@ class PaymentSummary:
     methods: list[PaymentMethod]
     paid_amount: Decimal
     has_open_dispute: bool
+    # ما تشغله الصفوفُ القائمة — **غيرُ ما تأكّد**: دفعةٌ `pending` تمنع فتحَ
+    # صفٍّ جديد ولا تُقرأ «وصلت»، والفرقُ بينهما هو الفرقُ بين «بانتظار
+    # التأكيد» و«اكتمل الدفع» على الشاشة (`services/settlement.py`)
+    held_amount: Decimal = Decimal("0.000")
 
 
 EMPTY_SUMMARY = PaymentSummary(
     methods=[], paid_amount=Decimal("0.000"), has_open_dispute=False
 )
+
+
+def settlement_of(ride: Ride, summary: PaymentSummary) -> SettlementState:
+    """حالُ سدادِ صفٍّ في السجل — **من المصدر الواحد، لا بحسابٍ في الشاشة**."""
+    return settlement.state_from_totals(
+        chargeable=settlement.chargeable_of(ride),
+        held=summary.held_amount,
+        paid=summary.paid_amount,
+        contested=summary.has_open_dispute,
+    )
 
 
 def _base_query():
@@ -147,6 +164,12 @@ async def payment_summaries(
                 func.sum(Payment.amount).filter(Payment.status == SETTLED_STATUS), 0
             ),
             func.count().filter(Payment.status == PaymentStatus.DISPUTED) > 0,
+            func.coalesce(
+                func.sum(Payment.amount).filter(
+                    Payment.status.in_(OWING_PAYMENT_STATUSES)
+                ),
+                0,
+            ),
         )
         .where(Payment.ride_id.in_(ride_ids))
         .group_by(Payment.ride_id)
@@ -159,8 +182,9 @@ async def payment_summaries(
             # مختلفاً عن جاره في نفس العمود
             paid_amount=Decimal(paid).quantize(Decimal("0.001")),
             has_open_dispute=bool(disputed),
+            held_amount=Decimal(held).quantize(Decimal("0.001")),
         )
-        for ride_id, methods, paid, disputed in rows.all()
+        for ride_id, methods, paid, disputed, held in rows.all()
     }
 
 

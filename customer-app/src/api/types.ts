@@ -312,6 +312,7 @@ export interface RideListItem {
   has_open_dispute: boolean;
   payment_methods: PaymentMethod[];
   paid_amount: string;
+  settlement: SettlementState;
 }
 
 export interface Payment {
@@ -369,6 +370,7 @@ export interface RidePayments {
   currency: Currency;
   final_fare: string | null;
   outstanding: string;
+  settlement: SettlementState;
   payments: Payment[];
   cliq_charge: CliqCharge | null;
   card_order: CardOrder | null;
@@ -380,6 +382,9 @@ export interface Wallet {
   balance: string;
   currency: Currency;
   frozen: boolean;
+  /** رسومُ إلغاءٍ عليه لم تُحصَّل — تُعرض **بجانب** الرصيد لا مطروحةً منه. */
+  cancellation_debt: string;
+  pending_compensation: string;
 }
 
 export type WalletTransactionType =
@@ -522,3 +527,17 @@ export interface UserNotification {
   read_at: string | null;
   created_at: string;
 }
+
+/** حالُ سدادِ رحلة — **محسوبةٌ في الخلفية، ومرآتُها هنا**
+ * (`backend/app/services/settlement.py`).
+ *
+ * كانت كلُّ شاشةٍ تستنتجها بمقارنةٍ خاصةٍ بها فأخطأت ثلاثٌ من أربع: `pending`
+ * تُقرأ «اكتمل الدفع»، ورحلةٌ ملغاةٌ تُقرأ «مسدَّدة»، ونزاعٌ مفتوحٌ لا يُرى.
+ * وهي قاعدةُ القسم 14 نفسُها — القرارُ الماليُّ في الخلفية والواجهةُ تعرض.
+ */
+export type SettlementState =
+  | "not_due"
+  | "due"
+  | "awaiting"
+  | "disputed"
+  | "settled";

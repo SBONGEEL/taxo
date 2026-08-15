@@ -74,12 +74,21 @@ export const register = (payload: {
   verification_token?: string;
   /** إقرارٌ ذاتيّ اختياري (المرحلة 10-ج) — ولا يُخمَّن عمّن تركه. */
   gender?: "male" | "female";
-}) => api.post<AuthResponse>("/auth/register", { ...payload, role: "rider" }, { anonymous: true });
+}) => api.post<AuthResponse>("/auth/register", { ...payload, role: "rider", app: CLIENT_APP }, { anonymous: true });
+
+/** **التطبيقُ يُعلن نفسَه في كل بابٍ يُصدر جلسة** (`core/app_scope.py`).
+ *
+ * قرارُ المالك 2026-08-15: كلُّ تطبيقٍ لدوره وحدَه، و`admin`/`support` لا
+ * يدخلان تطبيقَي الراكب والكبتن. والرفضُ في الخلفية — وهذا الحقلُ هو ما
+ * يجعلها تعرف من يسأل. **ودعوى تضييقٍ لا توسيع**: من ادّعى تطبيقاً ليس دورَه
+ * مَنَع نفسَه ولم ينل شيئاً.
+ */
+export const CLIENT_APP = "rider";
 
 export const login = (phone: string, password: string, countryCode: CountryCode) =>
   api.post<LoginResponse>(
     "/auth/login",
-    { phone, password, country_code: countryCode },
+    { phone, password, country_code: countryCode, app: CLIENT_APP },
     { anonymous: true },
   );
 

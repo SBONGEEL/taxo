@@ -37,6 +37,13 @@ class WalletOut(BaseModel):
     balance: Decimal
     currency: Currency
     frozen: bool
+    # **رسومُ إلغاءٍ عليه لم تُحصَّل** (`design/CANCELLATION-FEE.md` §4) — دَينٌ
+    # يُسدَّد من أوّل رصيدٍ يدخل، ويُعرض **بجانب** الرصيد لا مطروحاً منه: رقمٌ
+    # واحدٌ يجمع مالاً موجوداً وديناً قائماً لا يُقرأ أيّاً منهما
+    cancellation_debt: Decimal = Decimal("0.000")
+    # **ومستحقاتٌ معلّقةٌ للكبتن** (§8): تُعرض ولا تدخل الرصيدَ المتاح —
+    # رصيدٌ يشمل مالاً لم يصل يكذب على صاحبه، وهي قاعدةُ المحتجَز في البند ١٣
+    pending_compensation: Decimal = Decimal("0.000")
 
 
 class WalletTransactionOut(BaseModel):

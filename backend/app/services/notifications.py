@@ -46,8 +46,8 @@ from decimal import Decimal
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.driver import DriverDocument
-from app.models.enums import DocumentReviewStatus
+from app.models.driver import Driver, DriverDocument
+from app.models.enums import Currency, DocumentReviewStatus
 from app.models.payment import Payment
 from app.models.ride import Ride, RideStop
 from app.services import devices, documents, inbox, presence
@@ -833,6 +833,52 @@ async def publish_share_partner_cancelled(
                 "type": "share_partner_cancelled",
                 "ride_id": str(ride_id),
                 "price_kept": price_kept,
+            },
+        ),
+    )
+
+
+async def publish_cancellation_compensation(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    amount: Decimal,
+    currency: Currency,
+    settled: bool,
+) -> None:
+    """أُلغيت رحلةٌ بعد قبولها، فاستحقّ الكبتنُ تعويضاً (`CANCELLATION-FEE.md` §8).
+
+    **وحالُه في النصّ لا في شاشةٍ يفتحها لاحقاً**: «وصلك الآن» غيرُ «معلّقٌ حتى
+    يسدّد الراكب». من يقرأ الأول ولا يجد المالَ في رصيده يظن العطبَ في المنصّة،
+    ومن يقرأ الثاني يعرف أنه ينتظر إنساناً — وكلاهما مالُه، لكن أحدَهما وصل.
+
+    **ومعرّفُ الكبتن لا معرّفُ مستخدمه**: الصفُّ يعرف `drivers.id`، ووجهةُ
+    الإشعار `users.id` — وخلطُهما يرسل إشعاراً إلى معرّفٍ لا مستخدمَ له، وهو
+    الفخُّ الذي يحرسه `wallet_transactions.owner_id` في كل مسارٍ مالي.
+    """
+    driver = await session.get(Driver, driver_id)
+    if driver is None:  # pragma: no cover
+        return
+    body = (
+        "أُلغيت الرحلة بعد قبولك، وأُضيف تعويضُها إلى محفظتك."
+        if settled
+        else "أُلغيت الرحلة بعد قبولك. تعويضُك مسجَّلٌ ويصلك حين يسدّده الراكب."
+    )
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver.user_id,
+        message=PushMessage(
+            title="تعويضُ إلغاء",
+            body=body,
+            data={
+                "type": "cancellation_compensation",
+                "ride_id": str(ride_id),
+                "amount": str(amount),
+                "currency": currency.value,
+                "settled": settled,
             },
         ),
     )

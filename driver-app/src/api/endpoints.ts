@@ -59,6 +59,15 @@ export const getAuthMethod = () =>
 /** `country_code` اختياري: شاشةُ الدخول في التصميم بلا منتقي دولة، والخلفية
  * تستنتجها من الصيغة الدولية (`core/phone.py::resolve_phone`) وترفض بعبارةٍ
  * صريحة ما ليس دولياً — فلا تخترع الواجهة استنتاجاً من عندها. */
+/** **التطبيقُ يُعلن نفسَه في كل بابٍ يُصدر جلسة** (`core/app_scope.py`).
+ *
+ * قرارُ المالك 2026-08-15: كلُّ تطبيقٍ لدوره وحدَه، و`admin`/`support` لا
+ * يدخلان تطبيقَي الراكب والكبتن. والرفضُ في الخلفية — وهذا الحقلُ هو ما
+ * يجعلها تعرف من يسأل. **ودعوى تضييقٍ لا توسيع**: من ادّعى تطبيقاً ليس دورَه
+ * مَنَع نفسَه ولم ينل شيئاً.
+ */
+export const CLIENT_APP = "driver";
+
 export const login = (
   phone: string,
   password: string,
@@ -66,7 +75,7 @@ export const login = (
 ) =>
   api.post<LoginResponse>(
     "/auth/login",
-    { phone, password, country_code },
+    { phone, password, country_code, app: CLIENT_APP },
     { anonymous: true },
   );
 
@@ -95,7 +104,7 @@ export const registerAccount = (payload: {
 }) =>
   api.post<AuthResponse>(
     "/auth/register",
-    { ...payload, role: "driver" },
+    { ...payload, role: "driver", app: CLIENT_APP },
     { anonymous: true },
   );
 

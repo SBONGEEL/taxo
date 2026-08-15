@@ -51,3 +51,4 @@ tools/fcm-token/config.local.js
 # لوحته لكلِّ حزمةٍ على حدة — ونسخةٌ قديمةٌ في Git تُقرأ أحدثَ مما في اليد.
 google-services.json
 google-services*.json
+backend/.suite.out

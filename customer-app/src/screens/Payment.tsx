@@ -137,10 +137,16 @@ export function PaymentScreen() {
    * ولم يظهر قبل اليوم لأن بلوغَه يحتاج رحلةً حقيقيةً تُدفع بمحفظةٍ أقلَّ من
    * أجرتها — وهي الحالُ التي بَنَتها الحزمةُ (ب) لتفحص ملاحظةَ الدفع المختلط،
    * فوجدت أن ما تَعِد به الملاحظةُ تنقضه الشاشةُ التالية.
+   *
+   * **والدواءُ صار حقلاً في الردّ لا حساباً هنا** (2026-08-15): تجيب الخلفيةُ
+   * بـ`settlement` من `services/settlement.py`، وكانت هذه الشاشةُ واحدةً من
+   * أربعٍ تستنتج الجوابَ بحسابها الخاص — فأخطأت ثلاثٌ منها بثلاث طرق. ونصُّ
+   * الشرح باقٍ فوق لأن الخطأ يعود بعودة الحساب، لا بعودة الحقل.
    */
-  const nothingToStart = state !== null && Number(state.outstanding) <= 0;
+  const settlement = state?.settlement ?? "not_due";
   const awaiting = (state?.payments ?? []).filter((row) => row.status === "pending");
-  const settled = nothingToStart && awaiting.length === 0;
+  const settled = settlement === "settled";
+  const nothingToStart = settlement === "awaiting" || settlement === "disputed";
 
   /** **الشاشةُ تسأل ما دامت دفعةٌ تنتظر قولَ الكبتن** — وجدته تجربةُ المرحلة
    * ١٣ على الهاتفين: يضغط الكبتنُ «استلمت المبلغ» فلا يتغيّر في شاشة الراكب
@@ -285,6 +291,19 @@ export function PaymentScreen() {
                 (لا صفَّ جديد يُنشأ) ولا «شكراً» (المالُ لم يصل). والنصُّ يسمّي
                 القناةَ والمبلغَ لأن «بانتظار التأكيد» وحدَها لا تقول لمن يقرؤها
                 هل عليه أن يُخرج نقداً من جيبه الآن أم ينتظر */}
+            {/* **والنزاعُ لا يُقرأ «بانتظار التأكيد»**: صفُّه لا ينتظر ضغطةً
+                من أحد بل قراراً من الإدارة، ومن يقرأ «بانتظار» يعود ينتظر */}
+            {settlement === "disputed" ? (
+              <div className="rounded-12 border border-danger bg-surface-2 px-14 py-12">
+                <p className="text-14 font-medium text-ink">
+                  على دفعة هذه الرحلة نزاعٌ مفتوح
+                </p>
+                <p className="mt-4 text-12 leading-snug text-muted">
+                  تنظر فيه الإدارة، ولا يُطلب منك دفعٌ جديدٌ الآن. يصلك الجوابُ
+                  في الإشعارات.
+                </p>
+              </div>
+            ) : null}
             {awaiting.map((row) => (
               <div
                 key={row.id}

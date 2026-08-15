@@ -551,6 +551,7 @@ export interface AdminRideRow {
   cancellation_fee: string | null;
   payment_methods: PaymentMethod[];
   paid_amount: string;
+  settlement: SettlementState;
   has_open_dispute: boolean;
   created_at: string;
   completed_at: string | null;
@@ -802,3 +803,17 @@ export interface AdvanceSetting {
   growth_percent_per_repaid: number;
   max_multiplier_percent: number;
 }
+
+/** حالُ سدادِ رحلة — **محسوبةٌ في الخلفية، ومرآتُها هنا**
+ * (`backend/app/services/settlement.py`).
+ *
+ * كانت كلُّ شاشةٍ تستنتجها بمقارنةٍ خاصةٍ بها فأخطأت ثلاثٌ من أربع: `pending`
+ * تُقرأ «اكتمل الدفع»، ورحلةٌ ملغاةٌ تُقرأ «مسدَّدة»، ونزاعٌ مفتوحٌ لا يُرى.
+ * وهي قاعدةُ القسم 14 نفسُها — القرارُ الماليُّ في الخلفية والواجهةُ تعرض.
+ */
+export type SettlementState =
+  | "not_due"
+  | "due"
+  | "awaiting"
+  | "disputed"
+  | "settled";

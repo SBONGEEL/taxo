@@ -150,6 +150,18 @@ export function WalletScreen() {
             </p>
           ) : null}
 
+          {/* **مستحقاتٌ معلّقة** (`design/CANCELLATION-FEE.md` §8): تعويضُ
+              إلغاءٍ استحقّه ولم يسدّده الراكبُ بعد. **يُعرض ولا يُجمع مع
+              الرصيد** — رصيدٌ يشمل مالاً لم يصل يكذب على صاحبه، وهي قاعدةُ
+              «المتاح للسحب» فوقه بعينها. **ويقول لماذا لم يصل**: من يقرأ رقماً
+              معلّقاً بلا سبب يظن العطبَ في المنصّة فيسأل الدعم */}
+          {Number(wallet.pending_compensation) > 0 ? (
+            <p className="mt-8 text-11.5 leading-note text-warn">
+              مستحقاتٌ معلّقة: {arabicDigits(wallet.pending_compensation)} {currency}
+              {" "}— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.
+            </p>
+          ) : null}
+
           {wallet.frozen ? (
             <p className="mt-8 text-11.5 leading-note text-danger">
               محفظتك مجمّدة — راجع الدعم. الرصيد محفوظ ولا يُسحب حتى ترفع

@@ -318,6 +318,9 @@ export interface Wallet {
   balance: string;
   currency: Currency;
   frozen: boolean;
+  /** مستحقاتٌ معلّقةٌ من رسوم إلغاء — تُعرض ولا تدخل الرصيدَ المتاح. */
+  cancellation_debt: string;
+  pending_compensation: string;
 }
 
 /** محفظة الكبتن: الرصيد **والمتاح منه** بعد حجز الطلبات القائمة (القسم 9). */
@@ -453,6 +456,7 @@ export interface RideListItem {
   has_open_dispute: boolean;
   payment_methods: PaymentMethod[];
   paid_amount: string;
+  settlement: SettlementState;
 }
 
 export interface Payment {
@@ -483,6 +487,7 @@ export interface RidePayments {
   currency: Currency;
   final_fare: string | null;
   outstanding: string;
+  settlement: SettlementState;
   payments: Payment[];
 }
 
@@ -594,3 +599,17 @@ export interface AdvanceState {
   currency: string;
   debt: AdvanceDebt | null;
 }
+
+/** حالُ سدادِ رحلة — **محسوبةٌ في الخلفية، ومرآتُها هنا**
+ * (`backend/app/services/settlement.py`).
+ *
+ * كانت كلُّ شاشةٍ تستنتجها بمقارنةٍ خاصةٍ بها فأخطأت ثلاثٌ من أربع: `pending`
+ * تُقرأ «اكتمل الدفع»، ورحلةٌ ملغاةٌ تُقرأ «مسدَّدة»، ونزاعٌ مفتوحٌ لا يُرى.
+ * وهي قاعدةُ القسم 14 نفسُها — القرارُ الماليُّ في الخلفية والواجهةُ تعرض.
+ */
+export type SettlementState =
+  | "not_due"
+  | "due"
+  | "awaiting"
+  | "disputed"
+  | "settled";

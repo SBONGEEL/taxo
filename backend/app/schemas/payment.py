@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.services.settlement import SettlementState
 from app.models.enums import (
     Currency,
     DisputeResolution,
@@ -151,6 +152,10 @@ class RidePaymentsOut(BaseModel):
     currency: Currency
     final_fare: Decimal | None
     outstanding: Decimal
+    # **الحكمُ لا الرقم**: `outstanding <= 0` كانت تُقرأ «اكتمل الدفع» بينما
+    # صفٌّ `pending` قائم، فقالت الشاشةُ «شكراً لك» فوق «بانتظار التأكيد».
+    # المصدرُ واحدٌ لأربع شاشات — `services/settlement.py`
+    settlement: SettlementState
     payments: list[PaymentOut]
     cliq_charge: CliqChargeOut | None = None
     card_order: CardOrderOut | None = None

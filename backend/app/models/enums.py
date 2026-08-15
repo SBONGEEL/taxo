@@ -450,6 +450,40 @@ class WalletTransactionType(StrEnum):
     # رقمٌ في جدوله يُقرأ بطرح المدين من الدائن (قرارُ المالك 2026-08-14)
     ADVANCE = "advance"
     ADVANCE_REPAYMENT = "advance_repayment"
+    # رسمُ الإلغاء (`design/CANCELLATION-FEE.md`) — **زوجٌ بين مستخدمَين لا بين
+    # المنصّة وأحدهما**: `cancellation_fee` مدينٌ على من ألغى (أو على الكبتن
+    # الحاملِ الذي قبض المبلغَ بيده نقداً)، و`cancellation_compensation` دائنٌ
+    # للكبتن المتضرر. **ولا يدخلان أرباحَ الرحلات ولا عمولةَ عليهما**: تعويضٌ
+    # عن وقتٍ أُنفق لا أجرةُ رحلةٍ وقعت — وإدخالُهما يجعل الكشفَ يكذب على
+    # الطرفين معاً، وهي قاعدةُ البقشيش نفسُها من الجهة الأخرى
+    CANCELLATION_FEE = "cancellation_fee"
+    CANCELLATION_COMPENSATION = "cancellation_compensation"
+
+
+class CancellationChargeStatus(StrEnum):
+    """حالُ رسمِ إلغاءٍ استُحقّ (`design/CANCELLATION-FEE.md` §9).
+
+    أربعٌ كلُّها تُكتب: `pending` لم يُحصَّل، و`settled` وصل المتضرر،
+    و`waived` أعفته الإدارة، و`written_off` مضت مدّتُه فتحمّلته الشركة بقرارٍ
+    مسجَّل. **ولا حالةَ «جزئيّ»**: لا سدادَ جزئيّ بقرار المالك.
+    """
+
+    PENDING = "pending"
+    SETTLED = "settled"
+    WAIVED = "waived"
+    WRITTEN_OFF = "written_off"
+
+
+class UnpaidCancellationOutcome(StrEnum):
+    """مآلُ دَينِ إلغاءٍ لم يعد صاحبُه (`design/CANCELLATION-FEE.md` §10).
+
+    **الإدارةُ تختار، والكودُ لا يحسم** (قرارُ المالك): يبقى معلّقاً، أو
+    تشطبه الإدارة بقرارٍ مسجَّل، أو تتحمّله الشركةُ فيصل المتضررَ ماله.
+    """
+
+    KEEP_PENDING = "keep_pending"
+    ADMIN_DECIDES = "admin_decides"
+    COMPANY_BEARS = "company_bears"
 
 
 class AdvanceStatus(StrEnum):

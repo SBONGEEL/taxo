@@ -21,6 +21,7 @@ from sqlalchemy.orm import selectinload
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
     CancelReasonNotApplicable,
+    CancellationDebtBlocked,
     InvalidInput,
     InvalidRideTransition,
     MultiStopUnavailable,
@@ -48,6 +49,7 @@ from app.models.ride import (
     make_point,
 )
 from app.models.user import User
+from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service
 from app.services.directions import Coordinates, Route
 
@@ -247,6 +249,16 @@ async def request_ride(
     """
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()
+
+    # **ديونُ الإلغاء تمنع الطلبَ عند حدٍّ تحدّده الإدارة** (§4 من المواصفة).
+    # وهو **سؤالٌ واحدٌ مسقوفٌ لا جمعُ دَينٍ في المسار الحرج**: مقارنةُ عددٍ
+    # على مؤشّرٍ جزئيّ، وصفرُ الحدِّ يعني «لا إيقاف» فلا يُستدعى شيءٌ أصلاً.
+    # ومكانُه هنا لا في الراوتر: الحجزُ المجدول ينشئ رحلاتِه من هذا الباب
+    # نفسِه (12-ط)، وحارسٌ في الراوتر بابٌ يُنسى في الباب الثاني
+    if await cancellation.blocks_new_ride(
+        session, user_id=rider.id, country=rider.country_code
+    ):
+        raise CancellationDebtBlocked()
 
     # **الفحصُ عند الإنشاء لا عند العرض** (SPEC القسم 4/`multi_stop_enabled`):
     # واجهةٌ تخفي زرَّ «إضافة محطة» لا تمنع طلباً مصنوعاً بيد. وإطفاءُ المفتاح

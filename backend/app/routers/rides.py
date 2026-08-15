@@ -10,7 +10,7 @@ from app.core.currency import currency_for_country
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import PermissionDenied
 from app.models.driver import Driver
-from app.models.enums import RideStatus, UserRole
+from app.models.enums import CancellationChargeStatus, RideStatus, UserRole
 from app.models.ride import Ride
 from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.promo import PromoPreviewOut, PromoValidateRequest
@@ -25,6 +25,7 @@ from app.schemas.ride import (
     RideOut,
     RouteLineOut,
 )
+from app.services import cancellation
 from app.services import (
     dispatch,
     notifications,
@@ -160,6 +161,7 @@ async def list_my_rides(
             has_open_dispute=summary.has_open_dispute,
             payment_methods=summary.methods,
             paid_amount=summary.paid_amount,
+            settlement=ride_log.settlement_of(ride, summary),
         )
         for ride, summary in (
             (ride, summaries.get(ride.id, ride_log.EMPTY_SUMMARY)) for ride in rides
@@ -366,6 +368,14 @@ async def cancel_ride(
         reason=payload.reason,
         reason_code=payload.reason_code,
     )
+    # **ورسمُ الإلغاء يُحصَّل هنا لا يُعرض وحده** (`design/CANCELLATION-FEE.md`):
+    # كان الرقمُ يُجمَّد على الرحلة ولا يُكتب له صفٌّ ولا قيد، فيقرأ الراكبُ
+    # ديناً بلا بابٍ يدفع منه، ولا يصل من تحرّك شيء. **وفي معاملة الإلغاء
+    # نفسِها** — رسمٌ يُكتب بعد إيداعٍ منفصل يضيع بأولِ انقطاع
+    charge = await cancellation.charge_for(
+        session, redis, ride=ride, fee=ride.cancellation_fee or Decimal("0.000")
+    )
+
     # **ومن بقي من مجموعة المشاركة** (12-ي): يُرفع سعرُه إلى المنفرد قبل
     # الانطلاق ولا يُرفع بعده — والقرارُ كلُّه في `sharing`، وهنا نداؤه.
     # وقبل الإيداع لأنه تعديلُ صفٍّ، والإشعارُ بعده كبقية الأحداث
@@ -379,6 +389,19 @@ async def cancel_ride(
             rider_id=aftermath.rider_id,
             ride_id=aftermath.ride_id,
             price_kept=aftermath.price_kept,
+        )
+
+    # **والكبتنُ يُخبَر بحاله لا بوقوعه فقط** (القسم ٨): «وصلك الآن» غيرُ
+    # «معلّقٌ حتى يدفع» — والثاني يجعله يفتّش عن مالٍ في رصيده ليس فيه
+    if charge is not None:
+        await notifications.publish_cancellation_compensation(
+            session,
+            redis,
+            driver_id=charge.beneficiary_driver_id,
+            ride_id=ride.id,
+            amount=charge.amount,
+            currency=charge.currency,
+            settled=charge.status is CancellationChargeStatus.SETTLED,
         )
 
     if was_searching:

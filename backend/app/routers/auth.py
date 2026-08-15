@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from app.core import rate_limit
 from app.core.config import settings
+from app.core import app_scope
 from app.core.deps import (
     ClientIP,
     CurrentUser,
@@ -193,6 +194,10 @@ async def register(
     except InvalidPhoneNumber as exc:
         raise InvalidInput(str(exc)) from exc
 
+    # **قبل الرمز وقبل الصف**: تسجيلُ راكبٍ من تطبيق الكبتن يُنشئ حساباً لا
+    # يستطيع صاحبُه الدخولَ إليه من التطبيق الذي أنشأه — حسابٌ يولد مقفلاً
+    app_scope.guard(payload.role, payload.app)
+
     verified_at = None
     if await verification.required_for_signup(session, payload.country_code):
         if not payload.verification_token:
@@ -245,6 +250,11 @@ async def login(
 
     user = await password_strategy.authenticate(session, phone, payload.password)
 
+    # **بعد كلمة المرور لا قبلها**: «هذا حسابُ كبتن» جوابٌ عن الحساب، فلا
+    # يُقال إلا لمن أثبت أنه صاحبُه — نفسُ ترتيبِ العامل الثاني فوق. وقبل
+    # التحدي أيضاً: تحدٍّ يُفتح لبابٍ سيُغلق عملٌ لا ينتهي إلى شيء
+    app_scope.guard(user.role, payload.app)
+
     await rate_limit.reset(redis, f"login:phone:{phone}")
 
     if await totp.has_confirmed_factor(session, user.id):
@@ -279,6 +289,8 @@ async def login_with_totp(
     if user is None or user.is_blocked:
         await totp.drop_challenge(redis, payload.challenge_token)
         raise InvalidToken()
+
+    app_scope.guard(user.role, payload.app)
 
     used_recovery = bool(payload.recovery_code)
     if used_recovery:

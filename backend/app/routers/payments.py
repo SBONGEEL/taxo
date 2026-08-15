@@ -26,6 +26,7 @@ from app.schemas.payment import (
     PaymentOut,
     RidePaymentsOut,
 )
+from app.services import settlement
 from app.services import (
     card_payments as card_service,
     notifications,
@@ -83,6 +84,11 @@ async def _ride_payments_out(session: AsyncSession, ride: Ride) -> RidePaymentsO
         final_fare=ride.final_fare,
         outstanding=await payments_service.outstanding_amount(session, ride),
         payments=[PaymentOut.model_validate(entry) for entry in entries],
+        # الحكمُ يأتي محسوباً من مصدرٍ واحد، ولا تستنتجه الشاشةُ من
+        # `outstanding`: تلك تجيب «أأفتح صفّاً جديداً؟» لا «أعليَّ شيءٌ بيدي؟»
+        settlement=settlement.state_for(
+            chargeable=settlement.chargeable_of(ride), payments=entries
+        ),
         cliq_charge=_cliq_charge_out(entries),
         card_order=(
             CardOrderOut.model_validate(open_order) if open_order is not None else None

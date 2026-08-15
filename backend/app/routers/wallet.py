@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Query, status
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import rate_limit
 from app.core.currency import currency_for_country
@@ -11,6 +12,7 @@ from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, Rider
 from app.core.exceptions import NotFound, RateLimited
 from app.core.phone import InvalidPhoneNumber, resolve_phone
 from app.models.enums import UserRole, WalletOwnerType, WalletTransactionType
+from app.models.driver import Driver
 from app.models.user import User
 from app.schemas.payment import CardOrderOut, CardTopupCreate
 from app.schemas.wallet import (
@@ -26,6 +28,7 @@ from app.schemas.wallet import (
     WithdrawalCreate,
     WithdrawalOut,
 )
+from app.services import cancellation
 from app.services import (
     card_payments,
     cliq_topups,
@@ -55,7 +58,25 @@ async def _wallet_out(session, user: User) -> WalletOut:
         balance=await wallet_service.balance(session, user.id, owner_type),
         currency=currency_for_country(user.country_code),
         frozen=user.wallet_frozen,
+        # **الاثنان معاً في نداءٍ واحد**: شاشةُ المحفظة تُفتح مرةً، ونداءٌ
+        # ثانٍ لرقمٍ يُعرض بجانب الرصيد يجعل الشاشةَ ترسم نصفَ حقيقةٍ ثم تكملها
+        cancellation_debt=(
+            await cancellation.debt_of(session, user.id)
+            if user.role is UserRole.RIDER
+            else Decimal("0.000")
+        ),
+        pending_compensation=await _pending_compensation(session, user),
     )
+
+
+async def _pending_compensation(session: AsyncSession, user: User) -> Decimal:
+    """مستحقاتُ كبتنٍ لم تصل بعد — وصفرٌ لمن ليس كبتناً."""
+    if user.role is not UserRole.DRIVER:
+        return Decimal("0.000")
+    driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
+    if driver is None:
+        return Decimal("0.000")
+    return await cancellation.pending_for_driver(session, driver.id)
 
 
 # ------------------------------------------------------------------ الرصيد

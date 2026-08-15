@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.app_scope import ClientApp
 from app.models.enums import CountryCode, Gender, GenderPreference, UserRole
 
 # رمزُ إثبات ملكية الرقم: رمز هوية Firebase (JWT بألف حرف أو تزيد) أو رمز
@@ -37,6 +38,9 @@ class RegisterRequest(BaseModel):
     # لا يُهمَل: الحافزُ لجذب السائقات، ورمزٌ يُقبل ثم لا يُسند شيئاً يبدو أنه
     # عمل — نفسُ قاعدةِ `gender` على مسار الكبتن
     referral_code: str | None = Field(default=None, min_length=4, max_length=16)
+    # **أيُّ تطبيقٍ يطلب** (`core/app_scope.py`، قرارُ المالك 2026-08-15):
+    # كلُّ تطبيقٍ لدوره وحدَه. وغيابُه يمرّ — دعوى تضييقٍ لا توسيع
+    app: ClientApp | None = None
 
 
 class ProfileUpdate(BaseModel):
@@ -56,6 +60,9 @@ class LoginRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
     password: str = Field(min_length=1, max_length=128)
     country_code: CountryCode | None = None
+    # **أيُّ تطبيقٍ يطلب** (`core/app_scope.py`، قرارُ المالك 2026-08-15):
+    # كلُّ تطبيقٍ لدوره وحدَه. وغيابُه يمرّ — دعوى تضييقٍ لا توسيع
+    app: ClientApp | None = None
 
 
 class ChallengeRequest(BaseModel):
@@ -168,6 +175,9 @@ class TotpLoginRequest(BaseModel):
     challenge_token: str = Field(min_length=8, max_length=128)
     code: str | None = Field(default=None, min_length=6, max_length=16)
     recovery_code: str | None = Field(default=None, min_length=8, max_length=32)
+    # **أيُّ تطبيقٍ يطلب** (`core/app_scope.py`، قرارُ المالك 2026-08-15):
+    # كلُّ تطبيقٍ لدوره وحدَه. وغيابُه يمرّ — دعوى تضييقٍ لا توسيع
+    app: ClientApp | None = None
 
 
 class LoginResponse(BaseModel):

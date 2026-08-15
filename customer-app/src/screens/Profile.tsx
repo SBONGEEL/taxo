@@ -68,21 +68,6 @@ export function ProfileScreen() {
 
   if (!user) return null;
 
-  /** الحفظُ فوريّ بلا زرِّ «حفظ»: خيارٌ من اثنين لا نموذجُ إدخال. وعند الفشل
-   *  يعود المعروضُ إلى ما في الحساب، فلا تبقى الشاشة تقول ما لم يُحفظ. */
-  async function saveGender(next: "male" | "female") {
-    setSavingPreference(true);
-    setError(null);
-    try {
-      await updateMe({ gender: next });
-      await refreshUser();
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر حفظ الجنس");
-    } finally {
-      setSavingPreference(false);
-    }
-  }
-
   async function savePreference(next: GenderPreference) {
     setSavingPreference(true);
     setError(null);
@@ -140,45 +125,28 @@ export function ProfileScreen() {
 
 
 
-        {/* إعلانُ الجنس — **محكومٌ بمفتاح الخدمة وحده** لا بـ`available`:
-            لو حُكم به لما استطاعت الإعلان لأن الإعلان شرطُ الإتاحة. وهو
-            قابلٌ للتعديل: إقرارٌ ذاتيّ لا وثيقة (المرحلة 10-ج) */}
-        {enabled ? (
-          <section className="space-y-12 rounded-16 border border-brand-brd bg-surface p-16">
-            <div>
+        {/* **الجنسُ يُعرض ولا يُبدَّل من هنا** (قرارُ المالك 2026-08-15).
+            كان زرّان يكتبان `gender` بضغطة، وثلاثةُ أشياء تتعلّق به لا يجوز
+            أن تنقلب بضغطةٍ في شاشةِ بيانات: سمةُ الوردي، وإتاحةُ «سائقة
+            تقودني»، ومطابقةُ الطلبات المجنَّسة. فمن يضغط «ذكر» يفقد الثلاثةَ
+            بلا أن يُقال له، ومن يضغط «أنثى» يفتحها عن نفسه لحظةً بلا نيّة.
+            وهو **إقرارٌ يُعطى مرةً عند التسجيل** — وتغييرُه واقعةٌ نادرةٌ
+            يشهدها الدعم، لا خيارٌ من اثنين. والعرضُ باقٍ: من لا يرى ما أقرّه
+            لا يعرف على أيِّ أساسٍ يُعامَل */}
+        {enabled && user.gender ? (
+          <section className="card space-y-8 p-16">
+            <div className="flex items-baseline justify-between gap-8">
               <p className="font-medium text-ink">الجنس</p>
-              <p className="mt-2 text-12 leading-relaxed text-muted">
-                إقرارٌ ذاتيّ — لا نطلب وثيقة، ولا يظهر لأي مستخدم آخر. عليه
-                تُبنى مطابقةُ تفضيلات الرحلات.
+              <p className="text-14 text-ink">
+                {user.gender === "female" ? "أنثى" : "ذكر"}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              {(
-                [
-                  { value: "female", label: "أنثى" },
-                  { value: "male", label: "ذكر" },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={savingPreference}
-                  onClick={() => saveGender(option.value)}
-                  className={cn(
-                    "pressable rounded-12 border px-8 py-12 text-14 font-medium transition",
-                    // نفسُ حالة «محدَّد» في المنتقيين معاً: تعبئةٌ صلبة كما
-                    // في التصميم (`_opts`)، لا صلبةٌ هنا وخافتةٌ هناك
-                    user?.gender === option.value
-                      ? "border-brand bg-brand text-brand-ink"
-                      : "border-line text-muted hover:bg-surface-2",
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <p className="text-12 leading-relaxed text-muted">
+              إقرارٌ ذاتيّ أعطيتَه عند التسجيل — لا نطلب وثيقة، ولا يظهر لأي
+              مستخدمٍ آخر. عليه تُبنى مطابقةُ تفضيلات الرحلات، ولتعديله راجع
+              الدعم.
+            </p>
           </section>
-
         ) : null}
 
         {/* التفضيلُ الافتراضي — يُنسخ إلى كل طلبٍ لا تختار فيه شيئاً، وتغييرُه

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.services.settlement import SettlementState
 from app.models.enums import (
     CancelReasonCode,
     CountryCode,
@@ -111,8 +112,11 @@ class RideListItem(BaseModel):
     # **بالتعداد لا بالنص**: `check:enums` في التطبيقات يقابل هذا الاتحاد
     # بأعضاء `PaymentMethod` نفسِها، فقيمةٌ مخترعةٌ تسقط في البناء
     payment_methods: list[PaymentMethod]
-    # مجموعُ ما تأكّد — يُقارَن بالأجرة فتُقرأ الرحلةُ غيرَ مسدَّدة
+    # مجموعُ ما تأكّد — رقمٌ يُعرض، **لا حكمٌ يُستنتج منه**
     paid_amount: Decimal
+    # حالُ السداد محسوبةً في الخلفية (`services/settlement.py`): كانت كلُّ
+    # شاشةٍ تستنتجها بمقارنةٍ خاصةٍ بها فأخطأت ثلاثٌ من أربع
+    settlement: SettlementState
 
 
 class RideStopOut(BaseModel):
