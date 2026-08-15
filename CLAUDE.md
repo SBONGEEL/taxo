@@ -97,7 +97,7 @@ second (3.411 min ⇒ 0.141) on parameters frozen on the ride.
 (measured **above** the fare — `٢٠ / طلب نسائي / ٩٫٨٢٦ د.أ`), the captain's preference strip («أستقبل
 ركاباً: النساء فقط»), and the cancel-reason sheet.
 
-### The pending batch — build in this order, nothing else before it
+### The pending batch — six fixes, build in this order, nothing else before them
 
 1. **The cancellation fee, whole** — `design/CANCELLATION-FEE.md` is the spec, written from the owner's
    decisions and **approved to build**. It is the one open **money** defect: `rides.cancellation_fee` is
@@ -118,6 +118,57 @@ second (3.411 min ⇒ 0.141) on parameters frozen on the ride.
 4. **The captain's waiting counter** — it prints the backend's `waited_minutes`, frozen at 0 for the whole
    stop, while the rider's screen ticks a live clock from `arrived_at`. The project's own rule («the app
    renders the clock, the backend sends the money») is followed by one app and broken by the other.
+5. **The role guard, in the backend** — **a security defect, measured**: `POST /auth/login` issues a full
+   session for any role, **and nothing in the request says which app is asking** — no header, no separate
+   endpoint — while no app checks the role afterwards (the panel computes `isAdmin` for display only). So
+   driver credentials open the rider app, and both open the panel. The fix is **at the door, not on the
+   screen**: the client declares its app in a header its API client always sends, and login refuses a
+   mismatch with a code the app translates («هذا حساب كبتن — استخدم تطبيق الكبتن»). Hiding a button leaves
+   the door open. **Owner's decision (2026-08-15): each app for its role alone — `admin`/`support` do not
+   enter the rider or driver apps either**; whoever wants to test creates an account with that role, because
+   one account with two roles makes the guard meaningless.
+6. **The gender buttons come out of «حسابي»** in both apps. Gender is never changed from a screen: the rider
+   declares it once at signup and a later change is an **admin review by request, not a button**; the
+   captain's is stamped by the admin already, so he has no door at all. **The reason is the whole women's
+   service**: gender constrains matching and the other party's safety, so changing it with a tap undoes with
+   one word the very thing the stamp was built for.
+
+### Two decisions block the batch, and both are the owner's
+
+1. **The six cancellation-fee branches** — `design/CANCELLATION-FEE.md` §11. **(أ) blocks the first line of
+   code**: the captain's location is read from `geo:presence:{driver_id}`, whose key lives 60 seconds, so a
+   captain who dropped out a minute before the cancellation **has no location at all** — is the fee waived,
+   or measured from the pickup point? The other five: (ب) a captain who cancels, (ج) a rider with an older
+   unpaid fee, (د) a partial top-up by the carrying captain, (هـ) a cancelled shared ride, (و) whether the
+   platform's commission or the other captain's money comes first when the carrying captain is short.
+2. **The six stop-point branches** — `SPEC.md` §5.10-ب: the per-stop or total cap and its behaviour, who
+   stops the counter (recommendation: the captain, by a tap — a counter that traffic pauses is a counter
+   nobody trusts), whether the number of stops is capped, whether the arrival counter starts on the tap or
+   on entering the pickup radius, who bears it when the **captain** is the late one (recommendation: outside
+   the radius no counter starts, or a false «I have arrived» becomes a way to earn), and whether it enters
+   `final_fare` or shows as its own line.
+
+### «An empty map is not a defect» — the three points, in order (2026-08-15)
+
+The owner reported that captains had stopped appearing on the rider's map — the same symptom as trial item
+7, which had been fixed and measured weeks earlier. **Nothing had regressed: nobody was broadcasting.** The
+driver app on the phone had been logged out by the scenario probes, `geo:*` held no keys at all, and
+`GET /drivers/nearby` answered `200 []` **truthfully**.
+
+**So measure these three, in this order, before calling it a defect:**
+
+1. **Is there a presence key in Redis?** `geo:drivers:{country}` and `geo:presence:{driver_id}` — a captain
+   who is not broadcasting is not on any map, and `drivers.is_online` does not answer this question.
+2. **What does `GET /drivers/nearby` return?** An empty array with a live presence key is a backend defect;
+   an empty array with no key is the truth.
+3. **What *kind* of markers are on the map — not how many.** Measured twice in one session: the rider's map
+   always carries his own pulse and the destination pin, so `.mapboxgl-marker` count > 0 proves nothing.
+   Distinguish them by their content (`taxo-pulse` / the pin `viewBox` / a car) — **counting markers lied
+   twice in a single session**.
+
+Proven end to end afterwards: a captain went online → `geo:drivers:JO` + his presence hash appeared →
+`/drivers/nearby` returned `{"ref":"2681554d…","heading":124.9}` → the rider's map drew
+`["موقعي","دبوس","سيارة"]`.
 
 ### What stands between here and launch — the whole list, in order (2026-08-15)
 
@@ -1188,7 +1239,13 @@ and per-category pricing. Do not build them; he decides after launch.
 2. ✅ **Closed on 2026-08-15**: the three screens that had never been opened — the cancel-reason sheet,
    the «طلب نسائي» badge, and the captain's preference strip — were all opened on a real phone during
    stage 13's scenarios.
-3. **Provider wire formats are best-reading, not contracts.** Three details in
+3. **`drivers.is_online` stays `true` for captains with no presence in Redis** — measured on 2026-08-15:
+   two rows said online while `geo:*` was empty, left behind by apps force-stopped without their sockets
+   closing cleanly. It harms no money and draws no phantom cars (every map path reads Redis), but **a column
+   that says what is not the case will mislead a report one day**, and the owner asked for it on the list.
+   The honest fix is to stop treating it as an answer to "is he here": either derive "online" from presence
+   wherever it is read outside dispatch, or have a periodic sweep clear the column when the key is gone.
+4. **Provider wire formats are best-reading, not contracts.** Three details in
    `services/card_gateway/telr.py` are flagged in its docstring as needing confirmation against
    real Telr docs/sandbox credentials (never delivered), and `services/sms/`, `services/cliq/`,
    `services/payout/` say the same in their module docstrings. They are arranged so being wrong
@@ -1196,7 +1253,7 @@ and per-category pricing. Do not build them; he decides after launch.
    is the one provider written against real published documentation** (Meta's Cloud API), so it is
    not in this list — but its authentication template must be approved in the Meta console before
    the channel works anywhere.
-4. **Six finished features are switched off waiting for the owner, and two of them also wait on a
+5. **Six finished features are switched off waiting for the owner, and two of them also wait on a
    number.** `scripts/seed.py::FEATURE_DEFAULTS` is the intended state, and everything built since
    10-ج seeds **off in both countries**: `women_service_enabled`, `multi_stop_enabled`,
    `whatsapp_otp_enabled`, `tips_enabled`, `promo_codes_enabled`, `driver_referrals_enabled`,
@@ -1210,18 +1267,18 @@ and per-category pricing. Do not build them; he decides after launch.
    **And do not read the dev database as the intended default**: visual checks toggle flags (JO's
    women's service is switched off and LY's on there right now, from this week's runs), so
    `FEATURE_DEFAULTS` is the answer to "what ships", never `SELECT * FROM feature_flags`.
-5. **`FUTURE-FEATURES.md` items 45, 47 and 49** are what remains deferred from the women's service:
+6. **`FUTURE-FEATURES.md` items 45, 47 and 49** are what remains deferred from the women's service:
    the in-ride emergency button (deliberately *not* half-built — a button promising help nobody
    answers is worse than none), "wait for a female captain" (needs a queue that outlives
    `no_driver_found`), and in-app calling/messaging (needs number masking). Item 46 (referral
    incentives) shipped as 12-ح; item 48 (the "3 nearby" count) is now one of the four post-launch
    deferrals above.
-6. **`GET /config` publishes no wallet limits**, so `customer-app/src/lib/wallet.ts` holds the three
+7. **`GET /config` publishes no wallet limits**, so `customer-app/src/lib/wallet.ts` holds the three
    quick-topup amounts as a local constant. They are *suggestion chips*, not limits — the backend
    still validates every amount — but they are the one place the rider app carries a number the
    backend did not send, and the honest fix is to publish `wallet_settings` in the config payload.
    Small, and worth doing the next time a wallet screen is touched.
-7. **This machine only**: host port 5173 is taken by an unrelated `taxo-web` stack, so
+8. **This machine only**: host port 5173 is taken by an unrelated `taxo-web` stack, so
    `.env.local` sets `CUSTOMER_APP_PORT=5176`. 5176 is the one fallback allowed in
    `settings.cors_origins`; the card-return URL still points at 5173, so testing the card channel
    needs the canonical port.
