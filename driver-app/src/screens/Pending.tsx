@@ -10,8 +10,10 @@
  */
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { listDocuments } from "@/api/endpoints";
+import { Button } from "@/components/ui/Button";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import type { DocumentType, DriverDocument } from "@/api/types";
 import { useDriver } from "@/lib/driver";
@@ -40,11 +42,18 @@ const STATUS = {
 export function PendingScreen() {
   const { signOut } = useSession();
   const { profile } = useDriver();
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<DriverDocument[]>([]);
+  // **ما ينقص للاعتماد** — من الخلفية لا من قائمةٍ في الشاشة: القائمةُ تغيّرت
+  // مرةً (البند ١١) ونسخةٌ ثانيةٌ لها هنا تفترق عن الأولى
+  const [missing, setMissing] = useState<DocumentType[]>([]);
 
   useEffect(() => {
     listDocuments()
-      .then((response) => setDocuments(response.documents))
+      .then((response) => {
+        setDocuments(response.documents);
+        setMissing(response.awaiting_upload);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -111,6 +120,18 @@ export function PendingScreen() {
             );
           })}
         </Stagger>
+      ) : null}
+
+      {/* **البابُ إلى ما ينقص** — وهذا ما وجدته المرحلةُ ١٣: الشاشةُ كانت تعرض
+          «مرفوض» و«ناقص» بلا أيِّ طريقٍ إلى إعادة الرفع، فيقرأ الكبتنُ سببَ
+          الرفض ولا يملك أن يفعل به شيئاً. وقاعدةٌ بلا بابٍ ليست قاعدة */}
+      {missing.length > 0 || rejected ? (
+        <Button
+          className="mt-20"
+          onClick={() => navigate("/register/documents")}
+        >
+          {rejected ? "أعد رفع المستندات" : "أكمِل ما ينقص"}
+        </Button>
       ) : null}
 
       <button

@@ -402,6 +402,9 @@ async def list_driver_documents(
             for document in await documents_service.list_for_driver(session, driver_id)
         ],
         missing_required=await documents_service.missing_required(session, driver_id),
+        # اللوحةُ تقرأ سؤالَ الحارس، وهذا يُملأ لأن المخطّط واحد — والمشرفُ
+        # يرى بعينه ما ينتظر رفعاً وما ينتظر قراره
+        awaiting_upload=await documents_service.awaiting_upload(session, driver_id),
         required=list(REQUIRED_DOCUMENT_TYPES),
     )
 

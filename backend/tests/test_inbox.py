@@ -263,3 +263,37 @@ async def test_ride_event_data_carries_raw_values_not_a_sentence(
     assert assigned.data["currency"] == "JOD"
     # مبلغٌ نصّي بثلاث منازل كما يخرج من `NUMERIC(12,3)`
     assert assigned.data["amount"].count(".") == 1
+
+
+async def test_the_driver_is_not_told_the_riders_sentence(
+    client, session_factory, admin_headers: dict
+) -> None:
+    """**طرفان لا يُقال لهما الشيءُ نفسُه** — وجدته المرحلةُ ١٣ على الجهاز.
+
+    كانت رسالةٌ واحدةٌ تُرسل للاثنين، فيقرأ الكبتنُ عن نفسه «تم قبول رحلتك —
+    الكبتن في طريقه إلى نقطة الانطلاق». والقاعدةُ مكتوبةٌ منذ 12-ب في سقف
+    الانتظار، ولم تكن مطبَّقةً على أحداث الرحلة.
+    """
+    from app.models.enums import RideEvent
+    from app.services.notifications import (
+        DRIVER_RIDE_EVENT_TEXT,
+        RIDE_EVENT_TEXT,
+    )
+
+    # ما يفعله بيده لا يُخبَر به
+    for event in (
+        RideEvent.DRIVER_ASSIGNED,
+        RideEvent.DRIVER_ARRIVED,
+        RideEvent.RIDE_STARTED,
+    ):
+        assert DRIVER_RIDE_EVENT_TEXT[event] is None, event
+
+    # وما يقع عليه يصله **بنصّه هو** لا بنصّ الراكب
+    for event in (RideEvent.RIDE_COMPLETED, RideEvent.RIDE_CANCELLED):
+        driver_text = DRIVER_RIDE_EVENT_TEXT[event]
+        assert driver_text is not None
+        assert driver_text != RIDE_EVENT_TEXT[event], event
+
+    # ولا حدثَ يسقط من الخريطة بلا قرار: من أضاف حدثاً يقرّر نصَّه أو غيابَه
+    missing = [e for e in RIDE_EVENT_TEXT if e not in DRIVER_RIDE_EVENT_TEXT]
+    assert not missing, f"أحداثٌ بلا قرارٍ للكبتن: {[e.value for e in missing]}"

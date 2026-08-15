@@ -75,6 +75,13 @@ async def test_upload_lists_and_shrinks_what_is_missing(
     assert [d["doc_type"] for d in listed["documents"]] == ["driving_license"]
     # المفقود لا يتغير بالرفع وحده: القبول هو ما يُسقط النوع من القائمة
     assert "driving_license" in listed["missing_required"]
+    # **وسؤالُ الكبتن غيرُ سؤال الحارس**: ما رُفع وينتظر المراجعة ليس عليه فيه
+    # شيء. وخلطُهما جعله يقرأ «ناقص» عمّا رفعه للتوّ فيعيد رفعه — وهو ما
+    # كشفته المرحلةُ ١٣ على الجهاز
+    assert "driving_license" not in listed["awaiting_upload"]
+    assert set(listed["awaiting_upload"]) == set(listed["missing_required"]) - {
+        "driving_license"
+    }
 
 
 @pytest.mark.parametrize(
@@ -632,3 +639,46 @@ async def test_suspend_requires_a_reason_and_activation_re_checks_approval(
         f"/admin/drivers/{driver_id}/activate", json={}, headers=admin_headers
     )
     assert back.status_code == 409, back.text
+
+
+async def test_a_rejected_document_returns_to_what_he_must_upload(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**والمرفوضُ يعود مطلوباً**: عليه فيه عملٌ فعلاً — أن يرفعه من جديد.
+
+    فبغير ذلك يقرأ سببَ الرفض ولا يجد ما يقول له إن عليه أن يفعل شيئاً.
+    """
+    body = await register(client, DRIVER | {"phone": "0796667711"})
+    headers = auth(body)
+    document = await upload_document(client, headers)
+
+    listed = (await client.get("/drivers/me/documents", headers=headers)).json()
+    assert "driving_license" not in listed["awaiting_upload"]
+
+    driver = await _driver_row(session_factory, "+962796667711")
+    refused = await client.post(
+        f"/admin/drivers/{driver.id}/documents/{document['id']}/review",
+        json={"approved": False, "note": "الصورة غير واضحة"},
+        headers=admin_headers,
+    )
+    assert refused.status_code == 200, refused.text
+
+    after = (await client.get("/drivers/me/documents", headers=headers)).json()
+    assert "driving_license" in after["awaiting_upload"], (
+        "رُفض مستندُه ولم يعد مطلوباً — فلا شيء يقول له إن عليه إعادته"
+    )
+
+
+def test_every_document_type_has_an_arabic_label() -> None:
+    """**قيمةٌ بلا تسميةٍ تُخرج اسمَها الإنجليزي إلى إشعارٍ عربي.**
+
+    و`label_for` تسقط إلى `doc_type.value` بلا صوت، فلا يكشفها بناءٌ ولا نوع —
+    كشفتها المرحلةُ ١٣ في صندوق الوارد: «vehicle_plate: مقبولة». وهذا الاختبار
+    هو ما يجعل إضافةَ قيمةٍ سابعةٍ تسقط هنا لا في هاتف كبتن.
+    """
+    from app.models.enums import DocumentType
+    from app.services.documents import DOCUMENT_TYPE_LABEL, label_for
+
+    missing = [doc for doc in DocumentType if doc not in DOCUMENT_TYPE_LABEL]
+    assert not missing, f"أنواعٌ بلا تسمية عربية: {[d.value for d in missing]}"
+    assert all(label_for(doc) != doc.value for doc in DocumentType)

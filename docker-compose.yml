@@ -155,7 +155,7 @@ services:
     environment:
       # المتصفح يخاطب الخلفية من جهاز المطوّر لا من داخل الشبكة، فالعنوان
       # `localhost:8001` لا `backend:8000`
-      VITE_API_BASE_URL: http://localhost:8001
+      VITE_API_BASE_URL: http://127.0.0.1:8001
     volumes:
       - ./customer-app:/app
       # مجلد الاعتماديات في حجمٍ باسمه: `node_modules` المبنيّ على Windows
@@ -175,7 +175,7 @@ services:
     restart: unless-stopped
     working_dir: /app
     environment:
-      VITE_API_BASE_URL: http://localhost:8001
+      VITE_API_BASE_URL: http://127.0.0.1:8001
     volumes:
       - ./driver-app:/app
       # `node_modules` المبنيّ على Windows لا يعمل داخل alpine
@@ -190,7 +190,7 @@ services:
     restart: unless-stopped
     working_dir: /app
     environment:
-      VITE_API_BASE_URL: http://localhost:8001
+      VITE_API_BASE_URL: http://127.0.0.1:8001
     volumes:
       - ./admin-panel:/app
       # `node_modules` المبنيّ على Windows لا يعمل داخل alpine

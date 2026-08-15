@@ -196,16 +196,26 @@ function Guarded({ children }: { children: ReactNode }) {
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-/** جذرُ الكبتن: المعتمد يرى الرئيسية، وغيرُه يرى سببَ انتظاره. */
+/** جذرُ الكبتن: المعتمد يرى الرئيسية، ومن لم يُقدّم بعدُ يُساق إلى خطوته
+ *  الثالثة، ومن قدّم يرى سببَ انتظاره.
+ *
+ * **والقرارُ هنا لا في تنقّلٍ بعد التسجيل**، وهذا ما وجدته المرحلةُ ١٣: شاشةُ
+ * «الخطوة ٣ من ٣» كاملةٌ ولا بابَ إليها إلا سطرُ `navigate` في نهاية التسجيل —
+ * فإذا سبقَه `Anonymous` بردِّه إلى الجذر (والجلسةُ صارت قائمة) هبط الكبتنُ على
+ * «طلبك قيد المراجعة» **بلا مركبةٍ ولا مستند**: تُراجَع الإدارةُ ما لا وجودَ
+ * له، ولا زرَّ في التطبيق كلِّه يوصله إلى الرفع. وهي قاعدةٌ بلا باب بعينها.
+ *
+ * **ومن لا مركبةَ له لم يبدأ أصلاً**: المركبةُ أوّلُ ما تُنشئه تلك الشاشة، فلا
+ * تحتاج نداءَ مستنداتٍ ثانياً لتعرف — والملفُّ محمولٌ أصلاً.
+ */
 function DriverHome() {
   const { profile, loading } = useDriver();
 
   if (loading || !profile) return <Loading />;
-  return profile.driver.status === "approved" ? (
-    <HomeScreen />
-  ) : (
-    <PendingScreen />
-  );
+  if (profile.driver.status === "approved") return <HomeScreen />;
+  if (profile.vehicles.length === 0)
+    return <Navigate to="/register/documents" replace />;
+  return <PendingScreen />;
 }
 
 /** الشريطُ **خارج الحركة وفوقها** — انظر `customer-app/src/App.tsx` لنفس العلّة:

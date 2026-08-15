@@ -122,7 +122,9 @@ export function RegisterDocumentsScreen() {
     listDocuments()
       .then((response) => {
         setUploaded(new Set(response.documents.map((item) => item.doc_type)));
-        setRequired(response.missing_required);
+        // **ما عليه هو** لا ما ينقص الحارس: المرفوعُ المنتظِرُ مراجعةً
+        // لا يُوسم «مطلوب»، وإلا رفعه صاحبُه مرةً ثانية
+        setRequired(response.awaiting_upload);
         setRequiredAll(response.required);
       })
       .catch(() => undefined);

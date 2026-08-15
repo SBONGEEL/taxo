@@ -78,6 +78,27 @@ RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
     RideEvent.STOP_RESUMED: ("استُؤنفت الرحلة", "في الطريق إلى الوجهة التالية"),
 }
 
+# **ونصُّ الكبتن غيرُ نصِّ الراكب** — وجدته المرحلةُ ١٣ في صندوق الوارد على
+# الجهاز: كانت الرسالةُ الواحدة تُرسل للطرفين، فيقرأ الكبتنُ في هاتفه «تم قبول
+# رحلتك — الكبتن في طريقه إلى نقطة الانطلاق» **عن نفسه**. وهي القاعدةُ نفسُها
+# التي دفعت `stop_wait_exceeded` خارج هذه الخريطة منذ 12-ب: طرفان لا يُقال لهما
+# الشيءُ نفسُه.
+#
+# **و`None` تعني «ليس من شأنه»**: ما فعله بيده (قَبِل، وصل، بدأ) لا يُخبَر به،
+# وصفٌّ في صندوقه يقول له ما فعله للتوّ يملأ الصندوق بما لا يُقرأ — نفسُ حجّة
+# `EPHEMERAL_KINDS`. وما يقع **عليه** (إلغاءُ الراكب، انتهاءُ الرحلة، انقضاءُ
+# البحث) يصله بنصٍّ يخصّه.
+DRIVER_RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str] | None] = {
+    RideEvent.DRIVER_ASSIGNED: None,
+    RideEvent.DRIVER_ARRIVED: None,
+    RideEvent.RIDE_STARTED: None,
+    RideEvent.STOP_REACHED: None,
+    RideEvent.STOP_RESUMED: None,
+    RideEvent.RIDE_COMPLETED: ("انتهت الرحلة", "بانتظار اختيار الراكب طريقةَ الدفع"),
+    RideEvent.RIDE_CANCELLED: ("أُلغيت الرحلة", "أُلغيت الرحلة — أنت متاحٌ لطلبٍ جديد"),
+    RideEvent.NO_DRIVER_FOUND: None,
+}
+
 # أحداثٌ تُرسل ولا تُحفظ في صندوق الوارد (المرحلة 9-ب).
 #
 # بطاقة الطلب وحدها: عمرُها عشرون ثانية بحكم `dispatch.OFFER_TIMEOUT_SECONDS`،
@@ -215,10 +236,20 @@ async def publish_ride_event(
         },
     )
     await _safe_notify(session, redis, user_id=ride.rider_id, message=message)
-    if ride.driver is not None:
-        await _safe_notify(
-            session, redis, user_id=ride.driver.user_id, message=message
-        )
+
+    if ride.driver is None:
+        return
+    driver_text = DRIVER_RIDE_EVENT_TEXT.get(event, text)
+    if driver_text is None:
+        return
+    await _safe_notify(
+        session,
+        redis,
+        user_id=ride.driver.user_id,
+        # **الحمولةُ نفسُها والجملةُ غيرُها**: `data` خامٌ لا لغةَ فيه، والعنوانُ
+        # والنصُّ لدرج النظام — وهما ما يختلف بين طرفين
+        message=PushMessage(title=driver_text[0], body=driver_text[1], data=message.data),
+    )
 
 
 async def publish_ride_offer(

@@ -212,6 +212,7 @@ async def list_my_documents(
             for document in await documents_service.list_for_driver(session, driver.id)
         ],
         missing_required=await documents_service.missing_required(session, driver.id),
+        awaiting_upload=await documents_service.awaiting_upload(session, driver.id),
         required=list(REQUIRED_DOCUMENT_TYPES),
     )
 

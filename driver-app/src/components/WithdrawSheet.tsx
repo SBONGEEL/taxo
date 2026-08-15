@@ -49,6 +49,11 @@ export function WithdrawSheet({
   onClose,
 }: Props) {
   const [amount, setAmount] = useState("");
+  // **مقارنةُ عرضٍ لا حسابُ مال** (§14): لا ضربَ ولا قسمة — رقمان من الخلفية
+  // يُقارنان ليُقال للكبتن لماذا لا يستطيع، والحكمُ نفسُه يبقى للخلفية
+  const blocked =
+    Number(wallet.available_for_withdrawal) <
+    Number(wallet.min_withdrawal_amount);
   const [alias, setAlias] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -88,6 +93,23 @@ export function WithdrawSheet({
           يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند
           الطلب.
         </p>
+
+        {/* **حين يعلو الحدُّ الأدنى على المتاح**: الزرّان السريعان كلاهما
+            يؤدّي إلى ٤٠٩ — «الحد الأدنى» أكبرُ من رصيده، و«كل المتاح» أقلُّ من
+            الحدّ. فيضغط ويرتدّ ويعيد، وهو ما تمنعه قاعدةُ «زرٌّ معطَّلٌ يقول
+            لماذا خيرٌ من زرٍّ يعمل ثم يرتدّ». وجدته المرحلةُ ١٣ على الجهاز */}
+        {blocked ? (
+          <p className="mb-14 rounded-12 border border-warn bg-surface-2 px-14 py-11 text-11.5 leading-note text-warn">
+            لا يمكن السحب الآن: الحدُّ الأدنى{" "}
+            {arabicDigits(wallet.min_withdrawal_amount)} {currencyLabel}،
+            والمتاح لديك {arabicDigits(wallet.available_for_withdrawal)}{" "}
+            {currencyLabel}
+            {Number(wallet.withdrawal_reserve_amount) > 0
+              ? ` — ومنها ${arabicDigits(wallet.withdrawal_reserve_amount)} محتجَزةٌ لا تُسحب`
+              : ""}
+            .
+          </p>
+        ) : null}
 
         <div className="mb-14 flex gap-8">
           <Quick
@@ -143,7 +165,9 @@ export function WithdrawSheet({
           className="mt-16"
           size="md"
           loading={busy}
-          disabled={!amount || (!hasAlias && alias.trim().length === 0)}
+          disabled={
+            blocked || !amount || (!hasAlias && alias.trim().length === 0)
+          }
           onClick={() => void submit()}
         >
           إرسال الطلب

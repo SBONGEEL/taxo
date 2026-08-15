@@ -66,11 +66,24 @@ class UploadResult:
 # الاسم المعروض لكل نوع — يقرؤه الإشعار ورسالةُ «مستندات لم تُعتمد بعد».
 # هنا لا في `notifications.py`: النوع مفهومُ هذه الطبقة، ومن يسمّيه في مكانين
 # يجعلهما يفترقان
+# **تسميةٌ لكل قيمة، ولا سقوطَ إلى الاسم الإنجليزي**: هذه التسميات تدخل
+# **نصَّ الإشعار وعنوانَ درج النظام** — وهما المكانان الوحيدان اللذان تكتب فيهما
+# الخلفيةُ جملةً للقارئ (`data` خامٌ في كل ما عداهما). فقيمةٌ ناقصةٌ هنا تُخرج
+# «vehicle_plate: مقبولة» إلى كبتنٍ عربيّ، وهو ما وقع فعلاً: البند ١١ أضاف ستَّ
+# قيمٍ ولم يمرّ على هذه الخريطة، فكشفته المرحلةُ ١٣ في صندوق الوارد على الجهاز.
+# ويحرسه الآن `test_every_document_type_has_an_arabic_label`
 DOCUMENT_TYPE_LABEL: dict[DocumentType, str] = {
     DocumentType.DRIVING_LICENSE: "رخصة القيادة",
     DocumentType.NATIONAL_ID: "الهوية الشخصية",
     DocumentType.VEHICLE_REGISTRATION: "رخصة المركبة والتأمين",
+    # مهجورٌ منذ البند ١١ ويبقى للصفوف القديمة
     DocumentType.VEHICLE_PHOTO: "صور المركبة",
+    DocumentType.VEHICLE_FRONT: "المركبة من الأمام",
+    DocumentType.VEHICLE_BACK: "المركبة من الخلف",
+    DocumentType.VEHICLE_SIDE_RIGHT: "الجانب الأيمن",
+    DocumentType.VEHICLE_SIDE_LEFT: "الجانب الأيسر",
+    DocumentType.VEHICLE_INTERIOR: "المركبة من الداخل",
+    DocumentType.VEHICLE_PLATE: "لوحة المركبة",
 }
 
 
@@ -130,10 +143,47 @@ async def get_for_review(
     return document
 
 
+async def awaiting_upload(
+    session: AsyncSession, driver_id: uuid.UUID
+) -> list[DocumentType]:
+    """**ما على الكبتن أن يرفعه الآن** — وهو سؤالٌ آخرُ غيرُ سؤال الاعتماد.
+
+    `missing_required` تجيب سؤالَ **الحارس**: «هل يجوز اعتمادُه؟» فتعدّ
+    المقبولَ وحدَه. وهذه تجيب سؤالَ **صاحب الهاتف**: «ماذا بقي عليّ؟» — فما
+    رُفع وينتظر المراجعة **ليس عليه فيه شيء**.
+
+    وخلطُهما وجدته المرحلةُ ١٣ على الجهاز: كبتنٌ رفع تسعَ صورٍ وقرأ في شاشته
+    أن الستَّ المطلوبةَ كلَّها «ناقصة»، وزرَّاً يقول «أكمِل ما ينقص» ولا شيءَ
+    ينقصه — فيعيد الرفعَ ظانّاً أن شيئاً لم يصل. وهو بعينه شكلُ عطبِ شاشة
+    الدفع في حزمة (ب): سؤالُ الخلفية يُقرأ جواباً لسؤال المستخدم.
+
+    **والمرفوضُ يعود مطلوباً**: عليه فيه عملٌ فعلاً — أن يرفعه من جديد.
+    """
+    rows = {
+        doc_type: status
+        for doc_type, status in (
+            await session.execute(
+                select(DriverDocument.doc_type, DriverDocument.review_status).where(
+                    DriverDocument.driver_id == driver_id
+                )
+            )
+        ).all()
+    }
+    return [
+        doc_type
+        for doc_type in REQUIRED_DOCUMENT_TYPES
+        if rows.get(doc_type) in (None, DocumentReviewStatus.REJECTED)
+    ]
+
+
 async def missing_required(
     session: AsyncSession, driver_id: uuid.UUID
 ) -> list[DocumentType]:
-    """أنواعُ المستندات المطلوبة التي لا مستندَ مقبولاً لها بعد."""
+    """أنواعُ المستندات المطلوبة التي لا مستندَ **مقبولاً** لها بعد.
+
+    **حارسُ الاعتماد وحدَه** (`drivers.approve`): ما ينتظر المراجعةَ ليس مقبولاً
+    فلا يُعتمد به. ولا تُعرض هذه على الكبتن — `awaiting_upload` هي جوابُه.
+    """
     approved = set(
         await session.scalars(
             select(DriverDocument.doc_type).where(

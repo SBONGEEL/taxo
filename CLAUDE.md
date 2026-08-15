@@ -73,9 +73,10 @@ five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per sessio
 see "Rider design-matching" below for what each settled. **Sharing (12-ي) followed them and is
 done**, so nothing is queued before stage 13.
 
-**Stage 13 is next**: tests plus a full manual run of the whole scenario — driver
-signs up → approved → subscribes → rider requests → tracking → payment → withdrawal. Three screens
-listed in the debt below are waiting for that run because they cannot be reached without it.
+**Stage 13 is done** (2026-08-15): the scenario test (`tests/test_stage13_scenario.py`) **and** the full
+manual run on two phones — a driver created from the app's own screens, approved, subscribed, driving a
+real ride for a rider on the second phone, paid, rated, and withdrawing money the admin then transferred.
+Five defects came out of it and are fixed; see "Stage 13 — the full manual run" below.
 
 **Stage 12-ب — multi-stop — is done end to end** (SPEC §5.10 / §16): backend, both apps, and a visual pass on the running ride. Up to three
 destinations per ride: two intermediate rows in `ride_stops`, the last one staying
@@ -370,6 +371,84 @@ first `except Exception` around it **swallowed the AttributeError and stored NUL
 now narrowed to provider errors, which is the rule the project already had. And `BookingOut` carries
 `currency` beside the amount: a money value serialized without its currency prints bare in the app,
 which is exactly what shipped in the panel's coupon table two days earlier.
+
+### Stage 13 — the full manual run on two phones (2026-08-15)
+
+**A fresh driver was created from the app's own screens and taken all the way to a paid withdrawal**:
+registration (3 steps) → vehicle + nine documents → admin review and approval in the panel → wallet
+topup → subscription bought from the screen → online → a real ride from the rider's phone (offer card,
+accept, arrive, start, complete) → payment from the rider's screen → rating → withdrawal request →
+admin approve + "record the transfer". **The verdict is the ledger, not the status codes**: four entries,
+sum 10.804 = the last `balance_after`, nothing negative.
+
+**Five defects, and four of them are the same shape — a screen answering a question nobody asked it.**
+
+1. **The driver app had no door to step 3.** `Register` navigates to `/register/documents` after
+   `signIn()`, but `Anonymous` redirects a now-logged-in user to `/`, and the root showed **Pending** to
+   every unapproved driver. So a new captain landed on «طلبك قيد المراجعة» **with no vehicle and no
+   documents** — the admin reviewing nothing, and no button anywhere in the app leading to the upload
+   screen. Fixed where the decision belongs: **the root routes on state** (`profile.vehicles.length === 0`
+   → the documents step), so the race, a closed app mid-signup, and a reinstall all land correctly.
+   `PendingScreen` also gained a CTA for what is still missing or rejected.
+2. **`missing_required` was answering the guard's question and being read as the driver's.** It counts
+   types with no **approved** document — right for `drivers.approve`, wrong for «ماذا أرفع؟»: after
+   uploading all nine, the app told him the six required were still missing and offered «أكمِل ما ينقص».
+   Now `documents.awaiting_upload` (no row **or** rejected) is its own function and its own field, and
+   both driver screens read it. Same shape as the rider payment screen from package (ب).
+3. **The panel kept the review buttons on a decided document.** Nine clicks sent nine reviews for the
+   **first** document (`Counter` of 409s) because approved cards still rendered «اعتماد»/«رفض», and
+   `documents.review` refuses anything not `pending`. The buttons now render only for `pending` — the
+   "a disabled button that says why beats a button that works and then 409s" rule.
+4. **The withdrawal sheet offered two amounts that both 409.** With `min_withdrawal_amount` above
+   `available_for_withdrawal` (which the item-13 reserve can cause), «الحد الأدنى» exceeds the balance and
+   «كل المتاح» is under the minimum. The sheet now states all three numbers and disables the submit.
+5. **`localhost` is a coin flip on this machine and it hung the whole panel.** With a session the panel
+   sat on its splash forever: measured, `/auth/me` completed while `/config` and `/auth/me/totp` **started
+   and never finished**. Cause: `http://[::1]:8001` accepts the connection and never answers (Docker
+   publishes IPv4 only), and Chrome resolves `localhost` to IPv6 for some connections. The dev fallback in
+   all three clients and the compose env are now `127.0.0.1:8001`. Nothing was wrong with the backend —
+   curl answered every one of those calls in under 40ms.
+
+**Two more found by driving a cash ride and reading the inbox, both money-adjacent.**
+
+6. **A cash payment had exactly one confirmation door, and it disappears.** `RideDetails` labels a
+   pending cash payment «بانتظار تأكيدك» but built the CTA for `cliq` only — the real button lives on the
+   Collect card inside Home, which is gone the moment the app is reopened (a completed ride is not
+   "active", so `getActiveRide` never restores it). A captain who took the cash and closed his app could
+   never confirm it: the payment stays `pending`, so the ride reads as **unpaid** and its `outstanding` is
+   still owed. `RideDetails` now carries «استلمت المبلغ كاش» for `cash && pending` — **with no dispute
+   button beside it**, because `dispute_by_driver` refuses anything but CliQ.
+7. **`DOCUMENT_TYPE_LABEL` never learned item 11's six new types**, so `label_for` fell through to
+   `doc_type.value` and the driver's inbox read «vehicle_plate: مقبولة» — a raw enum inside the one place
+   the backend writes a sentence for a human (`title`/`body` for the OS tray; everything else is raw
+   `data`). Nothing catches a missing dict key: not `tsc`, not `check:enums`, not a build.
+   `test_every_document_type_has_an_arabic_label` iterates the enum and now does.
+
+8. **One `PushMessage` was sent to both parties, and it was written for the rider.** The captain's inbox
+   read «تم قبول رحلتك — الكبتن في طريقه إلى نقطة الانطلاق» **about himself**, and «شاشة الدفع بانتظارك»
+   for a fare he is owed. The rule was already in this file — `stop_wait_exceeded` was pushed *out* of
+   `RIDE_EVENT_TEXT` in 12-ب precisely because two parties are not told the same thing — it just had never
+   been applied to the ride events themselves. `DRIVER_RIDE_EVENT_TEXT` now decides per event, and
+   **`None` means "not his business"**: what he did with his own hand (accepted, arrived, started) writes
+   him no row, while what happens *to* him (the rider cancelled, the ride ended) reaches him in his own
+   words. A test asserts every event in the rider map has a decision in the driver map, so a new event
+   cannot inherit the rider's sentence by default.
+
+**And the cash path was verified against the ledger on the device**: with commission at 10%, a cash ride
+writes **`commission −0.980` and no `ride_earning`** — the balance goes 10.804 → 9.824, which is the
+documented case of a cash ride leaving a captain's balance lower than it started, seen on a real phone.
+
+**And one thing that is not a defect: closing the driver's socket switches him offline** (`ws/routes.py`
+marks `go_offline` in its `finally`). Reloading the page from the harness did it, and it looked like the
+app switching itself off.
+
+**Two operational facts for the next device run.** Firebase phone auth answers
+`auth/billing-not-enabled`, so **no one can register through it** — a mock SMS contract was activated on
+the dev stack to get past it, and per the priority chain (`whatsapp ← sms ← firebase`) an active SMS
+contract silently outranks Firebase. And CDP's `DOM.setFileInputFiles` cannot hand the WebView a readable
+file under Android scoped storage: the upload path is exercised by building a `File` from a canvas blob
+and setting `input.files` via `DataTransfer`, which runs **the app's own upload code**; only the SAF
+picker itself stays a human tap.
 
 ### `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15)
 

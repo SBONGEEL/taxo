@@ -118,6 +118,9 @@ class DriverDocumentsOut(BaseModel):
 
     documents: list[DriverDocumentOut]
     missing_required: list[DocumentType]
+    # **ما على الكبتن أن يرفعه** — غيرُ ما ينقص الحارسَ: المرفوعُ المنتظِرُ
+    # مراجعةً ليس على صاحبه فيه شيء (البند: المرحلة ١٣)
+    awaiting_upload: list[DocumentType]
     required: list[DocumentType]
 
 

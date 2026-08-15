@@ -119,6 +119,16 @@ export function RideDetailsScreen() {
   const disputable: Payment | undefined = rows.find(
     (payment) => payment.method === "cliq" && payment.status === "pending",
   );
+  // **والكاشُ يُؤكَّد من هنا أيضاً** — وجدته المرحلةُ ١٣ على الجهاز: الشاشةُ
+  // تكتب «بانتظار تأكيدك» على دفعةٍ نقدية ولا تبني لها زرّاً، والبابُ الوحيد
+  // بطاقةُ التحصيل في الرئيسية — وهي تختفي بإعادة فتح التطبيق أو بأيّ تنقّل،
+  // لأن الرحلةَ المكتملة ليست «جارية» فلا يستعيدها `getActiveRide`. فمن قبض
+  // مالَه ثم أغلق تطبيقَه لا يجد أبداً ما يؤكّد به، والدفعةُ تبقى `pending`
+  // فتُقرأ الرحلةُ **غيرَ مدفوعة**. **ولا زرَّ نزاعٍ معه**: `dispute_by_driver`
+  // يرفض غيرَ كليك، ومن لم يُسلَّم مالاً لا يضغط «استلمت»
+  const collectable: Payment | undefined = rows.find(
+    (payment) => payment.method === "cash" && payment.status === "pending",
+  );
   const disputed = rows.find((payment) => payment.status === "disputed");
   const resolved = rows.find(
     (payment) => payment.disputed_at !== null && payment.resolution !== null,
@@ -249,6 +259,14 @@ export function RideDetailsScreen() {
           <div className="rounded-15 border border-warn bg-surface p-14 text-12.5 leading-snug text-muted">
             نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.
           </div>
+        ) : collectable ? (
+          <Button
+            size="md"
+            loading={confirming}
+            onClick={() => void confirm(collectable.id)}
+          >
+            استلمت المبلغ كاش
+          </Button>
         ) : disputable ? (
           <>
             {/* **الفعلُ الإيجابي أولاً**: من وصلته الحوالة يجد بابَه هنا لا في

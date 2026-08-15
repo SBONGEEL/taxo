@@ -190,7 +190,11 @@ export interface DriverProfile {
 
 export interface DriverDocuments {
   documents: DriverDocument[];
+  /** ما ينقص **حارسَ الاعتماد** — يعدّ المقبولَ وحدَه، فلا يُعرض على الكبتن. */
   missing_required: DocumentType[];
+  /** **ما على الكبتن أن يرفعه**: ما لا صفَّ له أو رُفض. والمنتظِرُ مراجعةً
+   *  ليس عليه فيه شيء — وخلطُ السؤالين جعله يقرأ «ناقص» عمّا رفعه للتوّ. */
+  awaiting_upload: DocumentType[];
   /** ما لا يُعتمد الكبتنُ بدونه كاملاً — لا الناقصَ وحدَه (البند ١١). */
   required: DocumentType[];
 }
