@@ -18,6 +18,7 @@ import {
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { CountryProvider } from "@/lib/country";
@@ -156,6 +157,7 @@ export default function App() {
                   </Centered>
                 }
               >
+                <ErrorBoundary>
                 <Routes>
                   <Route
                     path="/login"
@@ -298,6 +300,7 @@ export default function App() {
                     element={<Navigate to="/overview" replace />}
                   />
                 </Routes>
+                </ErrorBoundary>
               </Suspense>
             </Router>
           </Boot>

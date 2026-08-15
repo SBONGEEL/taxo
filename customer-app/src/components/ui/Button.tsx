@@ -38,9 +38,27 @@ interface ButtonProps
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild, loading, children, disabled, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
+    // **`Slot` يقبل ابناً واحداً بالضبط** — و`React.Children.only` يعدّ
+    // `{null}` ابناً. فسطرُ التحميل بجانب `children` يجعلهما اثنين، فيرمي
+    // Radix استثناءً **غيرَ ملتقَط** (لا حدودَ خطأٍ في هذا التطبيق) ⇒ **شاشةٌ
+    // بيضاء**. وكان يقع على شاشتين ماليّتين: الدفعُ بكليك وشحنُ المحفظة.
+    //
+    // **ولا سطرَ تحميلٍ مع `asChild` أصلاً**: الابنُ رابطٌ يفتح تطبيقَ البنك،
+    // ولا حالةَ «جارٍ» له — فالحذفُ هنا ليس تنازلاً عن ميزة.
+    if (asChild) {
+      return (
+        <Slot
+          ref={ref}
+          className={cn(button({ variant, size }), className)}
+          {...props}
+        >
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
+      <button
         ref={ref}
         className={cn(button({ variant, size }), className)}
         disabled={disabled || loading}
@@ -48,7 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading ? <Loader2 className="size-20 animate-spin" /> : null}
         {children}
-      </Comp>
+      </button>
     );
   },
 );

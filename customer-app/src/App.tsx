@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
@@ -197,6 +198,13 @@ function NavBar() {
   );
 }
 
+/** يلفّ الشاشاتِ بحدِّ خطأ، ويصفّره عند كل تنقّل — فرسالةُ عطبٍ في شاشةٍ
+ *  لا تبقى على التي بعدها. */
+function BoundaryByRoute({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;
+}
+
 export default function App() {
   // **`reducedMotion="user"` من مكانٍ واحد** (§8): كلُّ حركةِ Framer في التطبيق
   // تصير فوريةً لمن طلب تقليلَ الحركة، بلا أن يفحص مكوّنٌ واحدٌ التفضيل
@@ -218,6 +226,10 @@ export default function App() {
                       البديلُ فوقها كان يستبدل الشجرةَ المتحركةَ كلَّها فيموت
                       الانتقال — قِيس في المتصفح. و`Routes` مُثبَّتةٌ على الموقع
                       الذي تحمله الورقةُ الخارجة، وإلا رسمت الخارجةُ الداخلةَ */}
+                  {/* **حدُّ الخطأ حول الشاشات** — لا فوق المزوّدين: خطأُ
+                      شاشةٍ يُستبدل بها وحدها وتبقى السِمةُ والجلسةُ والشريط.
+                      و`resetKey` المسارُ نفسُه، فلا تعلق الرسالةُ بعد تنقّل */}
+                  <BoundaryByRoute>
                   <RouteTransition>
                     {(animated) => (
                     <Routes location={animated}>
@@ -382,6 +394,7 @@ export default function App() {
                     </Routes>
                     )}
                   </RouteTransition>
+                  </BoundaryByRoute>
                   <HardwareBack />
                   <NavBar />
                 </Router>

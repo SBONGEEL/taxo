@@ -372,6 +372,41 @@ now narrowed to provider errors, which is the rule the project already had. And 
 `currency` beside the amount: a money value serialized without its currency prints bare in the app,
 which is exactly what shipped in the panel's coupon table two days earlier.
 
+### `check:slot` and the error boundaries — the fourth family member, and the guard that was missing (2026-08-15)
+
+**A blank screen on two money surfaces, from one line.** `Button` with `asChild` renders Radix `Slot`
+and passed it **two children** — the loading node and `children`. `Slot` uses `React.Children.only`,
+**and `{null}` counts as a child**, so it threw; nothing caught it; React unmounted the tree. Measured on
+the phone: `document.body` with **zero text and two elements**. It hit `CliqPanel` (paying by CliQ) and
+`WalletTopup` (topping up the wallet) — so **the rider could neither pay by CliQ nor add money**, with no
+message and nothing in any log.
+
+**And no build could see it**: the types are perfectly correct; the break is at runtime inside a third-party
+component. That makes it **the fourth shape in this project's "what the build cannot see" family** —
+after a class silently dropped by tailwind-merge, a key missing from the pixel scale, and a value missing
+from an *array* rather than a union.
+
+**So it has a guard now, and the guard parses rather than greps.** `check:slot` walks every `.tsx` with
+**TypeScript's own parser**, finds any element carrying `asChild` (or a literal `<Slot>`), and requires
+**exactly one meaningful child** — whitespace text excluded, and a lone `{cond ? … : null}` child rejected
+too, because `Children.only(null)` throws just as two children do. A regex would have to decide where a
+JSX tag ends and would lie in both directions; a guard that lies is a guard that gets disabled. Verified by
+reproducing **both** shapes and watching it fail, then pass again.
+
+**And the sweep found the rest of the family is empty**: two `asChild` call sites, both in the rider app,
+both single-child at the call site — the defect was in the shared `Button`, not the callers. The driver app
+and the panel import no `Slot` at all, so the guard passes trivially there and starts working the day
+someone adds one.
+
+**The boundaries exist because the silence is what cost the day.** `ErrorBoundary` now wraps the routes in
+all three apps — **inside** the providers, so a screen crash replaces that screen while the theme, the
+session and the bottom bar stay alive. Three rules: it **logs first** (`console.error` with the component
+stack — a boundary that hides the cause is worse than the crash), it **promises nothing** («لم يقع شيءٌ على
+حسابك أو رحلتك — المشكلة في العرض وحده») and offers two doors, and it **resets on navigation** via
+`resetKey={location.pathname}` so an error message cannot stick to the next screen. Verified by feeding the
+rides list a row with `ride: null` — measured: message rendered, error logged, bottom bar intact, and the
+screen healthy again after the cause was removed.
+
 ### Stage 13 — the full manual run on two phones (2026-08-15)
 
 **A fresh driver was created from the app's own screens and taken all the way to a paid withdrawal**:

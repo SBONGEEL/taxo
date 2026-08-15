@@ -26,6 +26,7 @@ import {
 import type { ReactNode } from "react";
 
 import { CenteredMessage, Spinner } from "@/components/ui/Feedback";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/Motion";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { BrandProvider } from "@/lib/brand";
@@ -253,6 +254,11 @@ function NavBar() {
   );
 }
 
+function BoundaryByRoute({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;
+}
+
 export default function App() {
   // **`reducedMotion="user"` من مكانٍ واحد** (§8)
   return (
@@ -271,6 +277,10 @@ export default function App() {
                         الموقع الذي تحمله الورقةُ الخارجة — نفسُ ما قِيس في تطبيق
                         الراكب: بلا الأولى يموت الانتقال عند أوّل مسارٍ كسول،
                         وبلا الثانية ترسم الورقةُ الخارجةُ الشاشةَ الداخلة */}
+                    {/* **حدُّ الخطأ حول الشاشات** — انظر تطبيق الراكب:
+                        استثناءٌ غيرُ ملتقَطٍ يُبيّض الشاشةَ صامتاً، وقد مرّ
+                        عطبٌ ماليٌّ كذلك يوماً كاملاً */}
+                    <BoundaryByRoute>
                     <RouteTransition>
                       {(animated) => (
                       <Routes location={animated}>
@@ -449,6 +459,7 @@ export default function App() {
                       </Routes>
                       )}
                     </RouteTransition>
+                    </BoundaryByRoute>
                     <HardwareBack />
                   <NavBar />
                   </Router>
