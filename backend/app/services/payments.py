@@ -737,6 +737,11 @@ async def dispute_by_driver(
     return payment
 
 
+async def ride_of(session: AsyncSession, payment: Payment) -> Ride:
+    """رحلةُ الدفعة — يحتاجها الراوترُ ليبثّ للراكب بعد التأكيد."""
+    return await _ride_of(session, payment)
+
+
 async def _ride_of(session: AsyncSession, payment: Payment) -> Ride:
     ride = await session.get(Ride, payment.ride_id)
     if ride is None:  # pragma: no cover - يمنعه المفتاح الأجنبي

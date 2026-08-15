@@ -450,6 +450,34 @@ file under Android scoped storage: the upload path is exercised by building a `F
 and setting `input.files` via `DataTransfer`, which runs **the app's own upload code**; only the SAF
 picker itself stays a human tap.
 
+### The cash-payment round trip, measured on both phones (2026-08-15)
+
+**Re-running the cash flow from scratch after the item-6 fix found three more gaps, all on the far side
+of the confirmation.** The fix gave the captain a door; nothing told either party what happened through it.
+
+- **`POST /payments/{id}/confirm` published nothing at all.** The row changed and no one was told: the
+  rider's open screen kept saying «سلّم المبلغ للكبتن» — measured at 15 seconds, unchanged — after the
+  cash was handed over *and* confirmed, and his inbox held no trace that the ride was settled. Now
+  `notifications.publish_payment_confirmed` runs after the commit, to **the rider only** (the captain
+  pressed the button; nobody is told what they just did — the `DRIVER_RIDE_EVENT_TEXT` rule).
+- **The rider's payment screen now polls while — and only while — a payment of his is `pending`.** Five
+  seconds, stopping the moment nothing awaits, which is the panel's live-map argument applied to a
+  question whose answer is only ever "has he confirmed yet?". Measured after: the screen turned itself to
+  «اكتمل دفع هذه الرحلة» **4 seconds** after the captain pressed, with nobody touching it.
+- **Neither ride log showed payment state, and `paid_amount` had been arriving in every list call with no
+  reader** — its own schema comment says «يُقارَن بالأجرة فتُقرأ الرحلةُ غيرَ مسدَّدة». A rider saw the
+  same row for a settled ride and one he never paid; a captain reopening his app had **nothing pointing at
+  the money he still had to confirm**. Both logs now carry a badge, and both distinguish the two cases the
+  same way: **payments exist but the sum is short → «بانتظار التأكيد»/«بانتظار تأكيدك»; no payment row at
+  all → «لم تُدفع»**. That distinction is not cosmetic — one means the captain has a button to press, the
+  other means he has nothing to do and the rider does.
+
+**What the restart tests established** (force-stop, relaunch, re-attach — a real close-and-open): the
+captain's confirm door survives a restart and the Home collect card does not, which is exactly why the
+door had to live on the ride's own screen; the rider's screen reads «اكتمل» after a restart in either
+direction; and **the only button left on a settled ride is «قيّم رحلتك»** — there is no second payment
+door. Both ledgers reconcile after every step: sum of entries = last `balance_after`, nothing negative.
+
 ### `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15)
 
 **`dist` on this machine is not a check artifact; it is what the container serves to the phones over
@@ -1198,6 +1226,22 @@ against the new dependency while the long-running service still crashes on it. T
 stage 9-ب added `python-multipart`, the suite went green, and the running backend answered every
 request with `RuntimeError: Form data requires "python-multipart"` until the container was recreated.
 Same rule for `worker` and `beat`: they run the same image.
+
+**And `docker compose run` inherits `restart: unless-stopped` from the service, so a detached test run
+restarts itself forever.** `docker compose run -d --rm ... backend pytest -q` looks like a background job
+that ends with a verdict; what actually happens is that pytest exits, Docker restarts the container by
+policy, **pytest starts over, and `docker logs` is truncated to the new run** — so the summary line
+appears, vanishes, and the suite silently re-runs from zero. It cost two "the result disappeared" rounds
+in one session, and the symptom reads exactly like a killed job. Two ways out: run it in the foreground,
+or make the result outlive the container — `sh -c "pytest -q >> /app/.suite.out 2>&1"` writes into the
+bind-mounted tree, so the verdict is on the host whatever the container does afterwards.
+
+**These three are one family, and it is worth reading them together**: a `restart` that keeps the old
+image (so a new dependency is missing), a bind mount that inotify cannot cross (so Vite serves the module
+it read at startup), and a `run` that inherits a restart policy (so a finished test run starts again).
+**Each one makes the container look like it did what you asked while it did something else**, and none of
+them produces an error message — which is why every one of them was found by measuring the running
+system, not by reading the compose file.
 
 `driver-app` (stage 10) is the captain PWA on **5174**, same shape as `customer-app` — a
 `node:22-alpine` container running Vite, `node_modules` in a named volume. Its

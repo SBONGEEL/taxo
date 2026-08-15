@@ -522,6 +522,44 @@ async def publish_document_review(
     )
 
 
+async def publish_payment_confirmed(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    payment,
+) -> None:
+    """«وصلني المبلغ» يصل الراكبَ — وجدته تجربةُ المرحلة ١٣ على الهاتفين.
+
+    **كان التأكيدُ لا يخرج من مكانه**: يضغط الكبتنُ «استلمت»، فيتغيّر الصفُّ في
+    القاعدة ولا يُبثّ شيء — فتبقى شاشةُ الراكب المفتوحة تقول «سلّم المبلغ» بلا
+    نهاية، ولا يصل صندوقَه أثرٌ يقول إن دفعتَه أُغلقت. ومن أغلق تطبيقَه لا يعرف
+    أبداً أن الرحلةَ سُدِّدت إلا بفتح شاشتها من جديد.
+
+    **وهو للراكب وحدَه**: الكبتنُ هو من ضغط، ومن فعل شيئاً لا يُخبَر به — قاعدةُ
+    `DRIVER_RIDE_EVENT_TEXT` نفسُها.
+
+    **والحمولةُ خام**: مبلغٌ وقناةٌ وعملة، والجملةُ تُبنى في التطبيق.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="اكتمل دفع رحلتك",
+            body="أكّد الكبتنُ استلام المبلغ — شكراً لك.",
+            data={
+                "type": "payment_confirmed",
+                "ride_id": str(payment.ride_id),
+                "payment_id": str(payment.id),
+                "amount": str(payment.amount),
+                "currency": payment.currency,
+                "method": payment.method.value,
+            },
+        ),
+    )
+
+
 # --------------------------------------------------- أحداث الاشتراك
 
 

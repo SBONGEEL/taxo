@@ -48,7 +48,13 @@ async def _unread(client: AsyncClient, headers: dict) -> int:
 async def test_a_ride_event_lands_in_both_inboxes_without_any_push_contract(
     client: AsyncClient, session_factory, jordan_settings
 ) -> None:
-    """لا عقد FCM في هذا الاختبار — والصفّان يُكتبان مع ذلك."""
+    """لا عقد FCM في هذا الاختبار — والصفوفُ تُكتب مع ذلك.
+
+    **وما يصل كلَّ طرفٍ غيرُ ما يصل الآخر** (تجربةُ المرحلة ١٣): القبولُ فعلُ
+    الكبتن، فلا يُكتب له صفٌّ عنه — كان يُكتب، وبنصِّ الراكب: «تم قبول رحلتك
+    — الكبتن في طريقه إلى نقطة الانطلاق» يقرؤه الكبتنُ عن نفسه. والإنهاءُ
+    يصل الاثنين، **كلٌّ بجملته**.
+    """
     rider = await register(client, RIDER)
     driver = await approved_driver(client, session_factory, DRIVER)
     await bring_online(client, driver)
@@ -62,8 +68,26 @@ async def test_a_ride_event_lands_in_both_inboxes_without_any_push_contract(
     assert rider_entries[0].read_at is None
 
     # **وبطاقةُ الطلب ليست فيها**: عمرُها عشرون ثانية، وصفٌّ باقٍ يقول «طلب
-    # رحلة جديد» لطلبٍ مضى يفتح عند الضغط لا شيء (`EPHEMERAL_KINDS`)
-    assert [entry.kind for entry in driver_entries] == ["driver_assigned"]
+    # رحلة جديد» لطلبٍ مضى يفتح عند الضغط لا شيء (`EPHEMERAL_KINDS`).
+    # **ولا صفَّ عن فعله هو**: قَبِل بيده، فلا يُخبَر بأنه قَبِل
+    assert driver_entries == []
+
+    # وما يقع عليه يصله — **بنصِّه لا بنصِّ الراكب**
+    for step in ("arrive", "start", "complete"):
+        response = await client.post(
+            f"/rides/{ride['id']}/{step}", headers=driver["headers"]
+        )
+        assert response.status_code == 200, response.text
+
+    rider_after = await inbox_of(session_factory, rider["user"]["id"])
+    driver_after = await inbox_of(session_factory, driver["user_id"])
+    assert "ride_completed" in [entry.kind for entry in rider_after]
+    completed = [e for e in driver_after if e.kind == "ride_completed"]
+    assert len(completed) == 1, [e.kind for e in driver_after]
+    rider_completed = [e for e in rider_after if e.kind == "ride_completed"][0]
+    assert completed[0].body != rider_completed.body, (
+        "وصلت الجملةُ نفسُها للطرفين — و«شاشة الدفع بانتظارك» لا تُقال لمن ينتظر ماله"
+    )
 
 
 async def test_the_kind_matches_the_push_payload_type(
@@ -274,7 +298,7 @@ async def test_the_driver_is_not_told_the_riders_sentence(
     الكبتن في طريقه إلى نقطة الانطلاق». والقاعدةُ مكتوبةٌ منذ 12-ب في سقف
     الانتظار، ولم تكن مطبَّقةً على أحداث الرحلة.
     """
-    from app.models.enums import RideEvent
+    from app.ws.events import RideEvent
     from app.services.notifications import (
         DRIVER_RIDE_EVENT_TEXT,
         RIDE_EVENT_TEXT,

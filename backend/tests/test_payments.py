@@ -613,3 +613,41 @@ async def test_admin_payment_list_filters_by_the_ride_country(
     )
     assert libya.status_code == 200
     assert libya.json() == []
+
+
+async def test_confirming_cash_tells_the_rider(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**التأكيدُ يخرج من مكانه** — وجدته تجربةُ المرحلة ١٣ على الهاتفين.
+
+    كان الكبتنُ يضغط «استلمت» فيتغيّر الصفُّ ولا يُبثّ شيء: شاشةُ الراكب
+    المفتوحة تقول «سلّم المبلغ» بلا نهاية، وصندوقُه بلا أثرٍ يقول إن دفعتَه
+    أُغلقت. **وللراكب وحدَه**: من ضغط لا يُخبَر بما فعل.
+    """
+    import uuid
+
+    from sqlalchemy import select
+
+    from app.models.notification import UserNotification
+
+    rider, driver, ride = await _ready_ride(client, session_factory)
+    created = await pay_ride(client, rider["headers"], ride["id"], "cash")
+    assert created.status_code == 201, created.text
+    payment = _only(created.json())
+
+    confirmed = await client.post(
+        f"/payments/{payment['id']}/confirm", headers=driver["headers"]
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["status"] == "confirmed"
+
+    async with session_factory() as session:
+        rows = list(
+            await session.scalars(
+                select(UserNotification).where(
+                    UserNotification.user_id == uuid.UUID(str(rider["user_id"])),
+                    UserNotification.kind == "payment_confirmed",
+                )
+            )
+        )
+    assert len(rows) == 1, "أُكِّدت دفعتُه ولم يصله شيء"

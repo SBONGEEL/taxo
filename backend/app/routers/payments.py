@@ -173,14 +173,22 @@ async def submit_cliq_reference(
 
 @router.post("/payments/{payment_id}/confirm", response_model=PaymentOut)
 async def confirm_payment(
-    payment_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+    payment_id: uuid.UUID,
+    driver: CurrentDriver,
+    session: DbSession,
+    redis: RedisDep,
 ) -> PaymentOut:
     """«استلمت المبلغ» في تطبيق الكبتن (SPEC القسم 6.1/12.4)."""
     payment = await payments_service.get_payment(session, payment_id, for_update=True)
     payment = await payments_service.confirm_by_driver(
         session, payment=payment, driver=driver
     )
+    ride = await payments_service.ride_of(session, payment)
     await session.commit()
+    # **بعد الـcommit** كبقية البثّ: حالٌ يُعلَن قبل تثبيته قد يتراجع
+    await notifications.publish_payment_confirmed(
+        session, redis, rider_id=ride.rider_id, payment=payment
+    )
     return PaymentOut.model_validate(payment)
 
 

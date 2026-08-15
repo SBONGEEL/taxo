@@ -50,7 +50,7 @@ export function RidesScreen() {
             <EmptyState title="لا رحلات بعد" hint="أول رحلة تبدأ من الشاشة الرئيسية." />
           ) : (
             <Stagger className="space-y-8">
-              {rides.map(({ ride, has_open_dispute, payment_methods }) => (
+              {rides.map(({ ride, has_open_dispute, payment_methods, paid_amount }) => (
                 <StaggerItem key={ride.id}>
                   <Link
                     to={`/rides/${ride.id}`}
@@ -103,6 +103,21 @@ export function RidesScreen() {
                           {/* شارةُ النزاع — نفسُ نغمة «متنازع فيها» في قائمة
                               الدفعات، لا نغمةَ تطبيق الكبتن */}
                           {has_open_dispute ? <Badge tone="danger">نزاع</Badge> : null}
+                          {/* **ورحلةٌ لم يكتمل دفعُها تُقال في صفّها** — كان
+                              السجلُّ يعرض «انتهت الرحلة» على المدفوعة وغيرِها
+                              سواء، فلا يرى صاحبُه ما عليه إلا بفتح كل رحلة.
+                              و«بانتظار التأكيد» غيرُ «لم تُدفع»: الأولى صفُّ
+                              دفعةٍ قائمٌ ينتظر قولَ الكبتن، والثانيةُ لا دفعةَ
+                              فيها أصلاً — وهما فعلان مختلفان لصاحبها */}
+                          {ride.status === "completed" &&
+                          Number(paid_amount) <
+                            Number(ride.final_fare ?? ride.estimated_fare) ? (
+                            <Badge tone="warning">
+                              {payment_methods.length > 0
+                                ? "بانتظار التأكيد"
+                                : "لم تُدفع"}
+                            </Badge>
+                          ) : null}
                           <Badge
                             tone={ride.status === "completed" ? "success" : "neutral"}
                           >
