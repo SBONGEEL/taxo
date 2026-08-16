@@ -13,7 +13,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import NotFound
 from app.models.driver import Driver
 from app.models.enums import (
@@ -35,7 +35,13 @@ from app.schemas.wallet import (
     WithdrawalOut,
     WithdrawalPayoutOut,
 )
-from app.services import audit, topups, wallet as wallet_service, withdrawals
+from app.services import (
+    audit,
+    cancellation,
+    topups,
+    wallet as wallet_service,
+    withdrawals,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -186,7 +192,7 @@ async def list_topup_requests(
 
 @router.post("/topups/{request_id}/confirm", response_model=TopupRequestOut)
 async def confirm_topup(
-    request_id: uuid.UUID, admin: AdminUser, session: DbSession
+    request_id: uuid.UUID, admin: AdminUser, session: DbSession, redis: RedisDep
 ) -> TopupRequestOut:
     """تأكيد وصول حوالة كليك/الكاش → الرصيد يتحرك الآن (SPEC القسم 7)."""
     request = await topups.get_request(session, request_id, for_update=True)
@@ -195,6 +201,9 @@ async def confirm_topup(
         session, request=request, owner=owner, actor=admin
     )
     await session.commit()
+    # شحنٌ اكتمل قد يكون سدّد رسمَ إلغاءٍ معلّقاً (`CANCELLATION-FEE.md` §7)،
+    # فيُخبَر من وصله مالُه — **بعد الـcommit** كبقية البثّ
+    await cancellation.announce_settled_for_debtor(session, redis, user=owner)
     return TopupRequestOut.model_validate(request)
 
 
@@ -219,6 +228,7 @@ async def create_staff_topup(
     payload: AdminTopupCreate,
     admin: AdminUser,
     session: DbSession,
+    redis: RedisDep,
 ) -> TopupRequestOut:
     """شحن كاش من نقطة معتمدة — يُنشأ ويُؤكَّد معاً (SPEC القسم 7)."""
     owner = await _get_user(session, user_id)
@@ -231,6 +241,7 @@ async def create_staff_topup(
         reference=payload.reference,
     )
     await session.commit()
+    await cancellation.announce_settled_for_debtor(session, redis, user=owner)
     return TopupRequestOut.model_validate(request)
 
 

@@ -61,6 +61,10 @@ DEFAULT_BLOCK_AFTER_UNPAID = 0
 # «لا إجراء»، وهو الافتراضُ حتى يضبطها المالك كبقية الإعدادات المالية
 DEFAULT_UNPAID_AFTER_DAYS = 0
 
+# **مهلةُ الكبتن الحاملِ ليحوّل ما قبضه بيده** (القسم ٦-أ) — وصفرُها «لا مهلة
+# ولا إيقاف»، كبقية أصفار الإعدادات المالية: «لم يُضبط بعد» لا «أوقفه فوراً»
+DEFAULT_CARRIER_GRACE_HOURS = 0
+
 
 class CancellationSetting(TimestampMixin, Base):
     """سياسةُ رسم الإلغاء لدولةٍ واحدة — **والقيمةُ نفسُها ليست هنا**.
@@ -92,6 +96,14 @@ class CancellationSetting(TimestampMixin, Base):
     # التكرار (القسم ٤): كم ديناً قائماً قبل أن يُمنع من الطلب
     block_after_unpaid: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text(str(DEFAULT_BLOCK_AFTER_UNPAID))
+    )
+
+    # **مهلةُ الحامل** (القسم ٦-أ): كبتنٌ قبض الدَّينَ نقداً مع أجرته ولم يكفِ
+    # رصيدُه لتحويله، فيُمهَل ثم يُمنع من الطلبات حتى يشحن. وصفرٌ «لا مهلة ولا
+    # منع» — والمنعُ **من التوزيع لا تجميدُ محفظته**: محفظةٌ مجمَّدةٌ تمنعه من
+    # الشحن، أي من السداد نفسِه الذي وُضع المنعُ ليحمله عليه
+    carrier_grace_hours: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text(str(DEFAULT_CARRIER_GRACE_HOURS))
     )
 
     # حين لا يعود الراكبُ أبداً (القسم ١٠) — **الإدارةُ تقرّر، لا الكود**
@@ -130,10 +142,24 @@ class RideCancellationCharge(UUIDMixin, TimestampMixin, Base):
             # و`test_migrations_match_models` يقرأ ذلك انحرافاً في كل تشغيل
             name="cancellation_waive_needs_actor",
         ),
+        # **والشطبُ يحمل سببَه ووقتَه، ولا يلزمه فاعل** (القسم ١٠): تشطبه
+        # الإدارةُ باسمها، أو تتحمّله الشركةُ بدورةٍ لا إنسانَ فيها — وصفٌّ
+        # يسمّي من لم يفعل أسوأُ من صفٍّ لا يسمّي أحداً (قاعدةُ `totp_reset`)
+        CheckConstraint(
+            "(status <> 'written_off') OR "
+            "(written_off_at IS NOT NULL AND writeoff_reason IS NOT NULL)",
+            name="cancellation_writeoff_needs_reason",
+        ),
         # مؤشّرُ «ما عليه من دَين» — سؤالُ مسارِ الطلب في كل رحلة
         Index(
             "ix_cancellation_charge_payer_pending",
             "payer_user_id",
+            postgresql_where=text("status = 'pending'"),
+        ),
+        # **ومؤشّرُ «ما على الحامل»** — سؤالُ شاشة محفظته وسؤالُ المتاح للسحب
+        Index(
+            "ix_cancellation_charge_carrier_pending",
+            "carrier_driver_id",
             postgresql_where=text("status = 'pending'"),
         ),
     )
@@ -165,9 +191,20 @@ class RideCancellationCharge(UUIDMixin, TimestampMixin, Base):
     collected_from_ride_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("rides.id", ondelete="SET NULL"), nullable=True
     )
-    # الكبتنُ الحاملُ في حالة الكاش (القسم ٦-أ): قبض بيده ما ليس كلُّه له
+    # الكبتنُ الحاملُ في حالة الكاش (القسم ٦-أ): قبض بيده ما ليس كلُّه له.
+    # **وكتابتُه تنقل الدَّينَ من الراكب إليه**: من سلّم المبلغَ نقداً سدَّد،
+    # فلا يُعدّ عليه بعدها في `debt_of` ولا في حدِّ الإيقاف — ولذلك يُقرأ هذا
+    # العمودُ في كل سؤالٍ عن «من عليه»، لا الحالةُ وحدَها
     carrier_driver_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("drivers.id", ondelete="SET NULL"), nullable=True
+    )
+    carrier_assigned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # **مهلتُه مجمَّدةٌ لحظةَ القبض** كـ`cliq_confirmation_expires_at`: تقصيرُ
+    # المهلة في اللوحة غداً لا يُقصّر مهلةً ينظر إليها كبتنٌ في شاشته الآن
+    carrier_due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     settled_at: Mapped[datetime | None] = mapped_column(
@@ -177,3 +214,14 @@ class RideCancellationCharge(UUIDMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     waive_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # الشطب (القسم ١٠) — **بشكل شطبِ السلفة حرفياً** (`driver_advances`): وقتٌ
+    # وفاعلٌ يجوز أن يكون فارغاً وسببٌ مكتوب. والتسميةُ نفسُها كي يقرأ من رأى
+    # ذاك هذا بلا أن يتعلّم شكلاً ثانياً لواقعةٍ واحدة
+    written_off_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    written_off_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    writeoff_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)

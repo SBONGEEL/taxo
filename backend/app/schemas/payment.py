@@ -156,6 +156,12 @@ class RidePaymentsOut(BaseModel):
     # صفٌّ `pending` قائم، فقالت الشاشةُ «شكراً لك» فوق «بانتظار التأكيد».
     # المصدرُ واحدٌ لأربع شاشات — `services/settlement.py`
     settlement: SettlementState
+    # **رسمُ إلغاءٍ سابقٌ يُسدَّد مع هذه الرحلة** (`CANCELLATION-FEE.md` §4/§5)
+    # — **بجانب `outstanding` لا داخله**: ذاك ما تبقّى من **أجرة هذه الرحلة**
+    # ومنه تُحسب العمولةُ ونصيبُ الكبتن، وضمُّ الدَّين إليه يحسب عمولةً على
+    # مالٍ لا يخصّه ويُخفي أن صاحبَه كبتنٌ آخر (نصُّ §5). والرقمُ هنا كي يعرف
+    # الراكبُ كم يسلّم نقداً: رقمٌ لا يراه لا يُدفع
+    cancellation_debt: Decimal = Decimal("0.000")
     payments: list[PaymentOut]
     cliq_charge: CliqChargeOut | None = None
     card_order: CardOrderOut | None = None

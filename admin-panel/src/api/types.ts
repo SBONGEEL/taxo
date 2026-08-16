@@ -804,6 +804,59 @@ export interface AdvanceSetting {
   max_multiplier_percent: number;
 }
 
+/** سياسةُ رسم الإلغاء لدولة (`design/CANCELLATION-FEE.md`) — **ولا حقلَ
+ *  للمبلغ**: قيمةُ الرسم في `pricing_rules` لأنها **لكل فئةِ مركبة**، ونقلُها
+ *  إلى هنا يجعلها رقماً واحداً لدولةٍ فيُفقد ما يميّزها. وما هنا سياسةٌ: متى
+ *  يُستحقّ، ومتى يُعفى، وماذا يقع إن لم يُسدَّد. */
+export interface CancellationSetting {
+  country_code: CountryCode;
+  exempt_within_meters: number;
+  exempt_when_location_unknown: boolean;
+  block_after_unpaid: number;
+  carrier_grace_hours: number;
+  unpaid_after_days: number;
+  unpaid_outcome: UnpaidCancellationOutcome;
+}
+
+/** مآلُ دَينٍ لم يعد صاحبُه — **الإدارةُ تختار والكودُ لا يحسم** (قرارُ المالك).
+ *  و`admin_decides` ليست فعلاً للدورة: تتركه معلّقاً ظاهراً ليشطبه إنسانٌ
+ *  باسمه، وإلا صارت هي و`company_bears` خياراً واحداً. */
+export type UnpaidCancellationOutcome =
+  | "keep_pending"
+  | "admin_decides"
+  | "company_bears";
+
+export type CancellationChargeStatus =
+  | "pending"
+  | "settled"
+  | "waived"
+  | "written_off";
+
+/** رسمُ إلغاءٍ واحد بطرفَيه — **والاسمُ لا المُعرّف**: قرارُ الإعفاء قرارٌ في
+ *  حقِّ إنسانَين، ومن يقرأ ثمانيةَ محارفَ من UUID لا يعرف عمّن يقرّر. */
+export interface CancellationChargeRow {
+  id: string;
+  ride_id: string;
+  country_code: CountryCode;
+  amount: string;
+  currency: string;
+  status: CancellationChargeStatus;
+  payer_name: string | null;
+  payer_phone: string | null;
+  beneficiary_driver_id: string;
+  beneficiary_name: string | null;
+  /** الحاملُ (§6-أ) — وحضورُه يعني أن الراكب سدَّد نقداً وأن المطلوبَ الآن
+   *  تحويلٌ من يدِ كبتن، لا مطالبةُ راكب. */
+  carrier_driver_id: string | null;
+  carrier_name: string | null;
+  carrier_due_at: string | null;
+  collected_from_ride_id: string | null;
+  settled_at: string | null;
+  waive_reason: string | null;
+  writeoff_reason: string | null;
+  created_at: string;
+}
+
 /** حالُ سدادِ رحلة — **محسوبةٌ في الخلفية، ومرآتُها هنا**
  * (`backend/app/services/settlement.py`).
  *

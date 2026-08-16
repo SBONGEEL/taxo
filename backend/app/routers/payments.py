@@ -28,6 +28,7 @@ from app.schemas.payment import (
 )
 from app.services import settlement
 from app.services import (
+    cancellation,
     card_payments as card_service,
     notifications,
     payments as payments_service,
@@ -89,6 +90,7 @@ async def _ride_payments_out(session: AsyncSession, ride: Ride) -> RidePaymentsO
         settlement=settlement.state_for(
             chargeable=settlement.chargeable_of(ride), payments=entries
         ),
+        cancellation_debt=await cancellation.debt_of(session, ride.rider_id),
         cliq_charge=_cliq_charge_out(entries),
         card_order=(
             CardOrderOut.model_validate(open_order) if open_order is not None else None
@@ -115,6 +117,7 @@ async def pay_ride(
     payload: PaymentCreate,
     rider: RiderUser,
     session: DbSession,
+    redis: RedisDep,
 ) -> RidePaymentsOut:
     """يختار الراكب قناة الدفع بعد اكتمال الرحلة.
 
@@ -133,6 +136,10 @@ async def pay_ride(
         saved_card_id=payload.saved_card_id,
     )
     await session.commit()
+
+    # رسمُ إلغاءٍ سابقٌ قد يكون حُصِّل مع هذه الدفعة (`CANCELLATION-FEE.md` §5)
+    # — ويُعلَن **بعد الـcommit** كبقية البثّ
+    await cancellation.announce_ride_collection(session, redis, ride_id=ride_id)
 
     # قراءة جديدة: بطاقة الكبتن (ومنها alias كليك) تحتاج علاقاتٍ محمّلة
     ride = await rides_service.get_ride(session, ride_id)
@@ -195,6 +202,8 @@ async def confirm_payment(
     await notifications.publish_payment_confirmed(
         session, redis, rider_id=ride.rider_id, payment=payment
     )
+    # وإن حمل معها رسمَ إلغاءٍ سابقاً لكبتنٍ آخر (§6-أ) قيل لكلٍّ ما يخصّه
+    await cancellation.announce_ride_collection(session, redis, ride_id=ride.id)
     return PaymentOut.model_validate(payment)
 
 

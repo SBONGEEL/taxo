@@ -97,6 +97,13 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     advance_blocked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # **وعمودٌ ثانٍ بنفس الشكل ولدَينٍ آخر** (`CANCELLATION-FEE.md` §6-أ):
+    # «قبض رسمَ إلغاءٍ نقداً لكبتنٍ آخر ولم يحوّله حتى انقضت مهلتُه». وهو
+    # **ليس `advance_blocked`** وإن تشابها: دَينان لمُقرِضَين مختلفَين، وعمودٌ
+    # واحدٌ يحملهما يجعل سدادَ أحدهما يرفع منعَ الآخر
+    cancellation_carry_blocked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     referral_code: Mapped[str | None] = mapped_column(
         String(16), nullable=True, unique=True, index=True
     )

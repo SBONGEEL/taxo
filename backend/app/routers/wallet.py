@@ -278,7 +278,7 @@ async def create_cliq_topup(
 
 @router.get("/me/topups/cliq/{cart_id}", response_model=CliqTopupOut)
 async def check_cliq_topup(
-    cart_id: str, user: CurrentUser, session: DbSession
+    cart_id: str, user: CurrentUser, session: DbSession, redis: RedisDep
 ) -> CliqTopupOut:
     """يسأل حساب التاجر عن الحوالة ويسوّي الشحن إن وصلت.
 
@@ -288,6 +288,8 @@ async def check_cliq_topup(
     order = await cliq_topups.order_for_user(session, cart_id, user)
     order = await cliq_topups.reconcile(session, order)
     await session.commit()
+    # شحنٌ اكتمل قد يكون سدّد رسمَ إلغاءٍ معلّقاً (`CANCELLATION-FEE.md` §7)
+    await cancellation.announce_settled_for_debtor(session, redis, user=user)
     return _cliq_out(order)
 
 
@@ -322,6 +324,8 @@ async def get_my_driver_wallet(
         ),
         currency=currency_for_country(user.country_code),
         frozen=user.wallet_frozen,
+        pending_compensation=await cancellation.pending_for_driver(session, driver.id),
+        carrier_dues=await cancellation.carrier_dues_of(session, driver.id),
         available_for_withdrawal=available,
         min_withdrawal_amount=(
             limits.min_withdrawal_amount if limits is not None else Decimal("0.000")

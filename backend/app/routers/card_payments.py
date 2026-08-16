@@ -28,7 +28,7 @@ from app.core import rate_limit
 from app.core.deps import ClientIP, CurrentUser, DbSession, RedisDep
 from app.core.exceptions import FeatureNotAvailable, RateLimited
 from app.schemas.payment import CardOrderOut, SavedCardOut
-from app.services import card_payments as card_service
+from app.services import cancellation, card_payments as card_service
 from app.services.card_gateway import get_gateway
 from app.services.card_gateway.mock import OUTCOMES, MockCardGateway
 
@@ -109,12 +109,19 @@ async def card_webhook(
 
 @router.get("/payments/card/orders/{cart_id}", response_model=CardOrderOut)
 async def get_card_order(
-    cart_id: str, user: CurrentUser, session: DbSession
+    cart_id: str, user: CurrentUser, session: DbSession, redis: RedisDep
 ) -> CardOrderOut:
     """حال طلب الدفع بعد عودة المتصفح — يسأل المزود ثم يسوّي إن حُسم."""
     order = await card_service.order_for_user(session, cart_id, user)
     order = await card_service.reconcile(session, order)
     await session.commit()
+    # شحنةُ محفظةٍ اكتملت قد تكون سدّدت رسمَ إلغاءٍ معلّقاً (§7)، ودفعةُ رحلةٍ
+    # قد تكون حملت واحداً (§5) — والاثنان يُعلَنان **بعد الـcommit**
+    await cancellation.announce_settled_for_debtor(session, redis, user=user)
+    if order.ride_id is not None:
+        await cancellation.announce_ride_collection(
+            session, redis, ride_id=order.ride_id
+        )
     return CardOrderOut.model_validate(order)
 
 

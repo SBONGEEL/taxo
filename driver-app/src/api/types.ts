@@ -241,6 +241,13 @@ export interface Ride {
   estimated_fare: string;
   final_fare: string | null;
   cancellation_fee: string | null;
+  /** **مبلغٌ مستوفى لكبتنٍ آخر** يُسلَّم نقداً مع الأجرة (`CANCELLATION-FEE.md`
+   *  §6-أ) — مجمَّدٌ لحظةَ الطلب، فهو **ما عُرض على الكبتن قبل أن يقبل**.
+   *
+   *  ووصولُه إلى بطاقة العرض شرطُ صحّة §6-أ نفسِه: من قَبِل وهو يعرف لا يشتكي،
+   *  ومن لم يُرد رفض العرضَ بلا عقوبة. فحقلٌ يصل ولا يُرسم يُبطل القاعدةَ.
+   *  و`null`/صفرٌ يعني «لا شيءَ محمول». */
+  carried_cancellation_fee: string | null;
   commission_percent_at_ride: string;
   cancelled_reason: string | null;
   /** ما طُلب في هذه الرحلة من جنس الكبتن — **وصفُ الطلب لا جنسُ صاحبته**. */
@@ -326,6 +333,10 @@ export interface Wallet {
 /** محفظة الكبتن: الرصيد **والمتاح منه** بعد حجز الطلبات القائمة (القسم 9). */
 export interface DriverWallet extends Wallet {
   available_for_withdrawal: string;
+  /** **مالُ كبتنٍ آخر في يده** (`CANCELLATION-FEE.md` §6-أ): قبضه نقداً مع
+   *  أجرةِ رحلةٍ وعليه تحويله. **لا أجرةٌ ولا خصمٌ عليه** فسطرُه مستقل،
+   *  و**مطروحٌ من المتاح للسحب** لأنه ليس ماله. */
+  carrier_dues: string;
   min_withdrawal_amount: string;
   /** يبقى في المحفظة ولا يُسحب — يخرج عند إلغاء التفعيل (البند ١٣). */
   withdrawal_reserve_amount: string;

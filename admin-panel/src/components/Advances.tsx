@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Table } from "@/components/Table";
-import { currencyLabel, day, money } from "@/lib/format";
+import { day, money } from "@/lib/format";
 
 const TONE: Record<AdvanceRow["status"], Parameters<typeof Badge>[0]["tone"]> = {
   outstanding: "warn",
@@ -85,10 +85,10 @@ export function Advances({ onError }: { onError: (message: string) => void }) {
           <>
             <span className="font-mono text-11.5">{row.driver_id.slice(0, 8)}</span>
             <span className="text-12 text-ink">
-              {money(row.amount, currencyLabel(row.currency))}
+              {money(row.amount, row.currency)}
             </span>
             <span className="text-12 text-ink">
-              {money(row.remaining, currencyLabel(row.currency))}
+              {money(row.remaining, row.currency)}
             </span>
             {/* **الشارةُ في `span` لا عاريةً في الشبكة**: خليةُ `grid`
                 تمطّ ابنَها على عرض العمود، فتخرج حبّةٌ بعرض الجدول — وهو

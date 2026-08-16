@@ -193,6 +193,11 @@ class RideOut(BaseModel):
     estimated_fare: Decimal
     final_fare: Decimal | None
     cancellation_fee: Decimal | None
+    # **مبلغٌ مستوفى لكبتنٍ آخر يُسلَّم نقداً مع الأجرة** (§6-أ)، مجمَّدٌ لحظةَ
+    # الطلب. يقرؤه تطبيقُ الكبتن ليرسم بطاقةً **قبل** القبول: من قَبِل وهو
+    # يعرف لا يشتكي، وحجّتُه حجّةُ شارتي «مشتركة» و«طلب نسائي» بعينها.
+    # و`null`/صفرٌ يعني «لا شيءَ محمول» فلا تُرسم بطاقة
+    carried_cancellation_fee: Decimal | None
     commission_percent_at_ride: Decimal
 
     cancelled_reason: str | None
@@ -305,6 +310,7 @@ class RideOut(BaseModel):
             estimated_fare=ride.estimated_fare,
             final_fare=ride.final_fare,
             cancellation_fee=ride.cancellation_fee,
+            carried_cancellation_fee=ride.carried_cancellation_fee,
             commission_percent_at_ride=ride.commission_percent_at_ride,
             scheduled_for=ride.scheduled_for,
             cancelled_reason=ride.cancelled_reason,

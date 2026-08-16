@@ -884,6 +884,85 @@ async def publish_cancellation_compensation(
     )
 
 
+async def publish_cancellation_collected(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    amount: Decimal,
+    currency: Currency,
+) -> None:
+    """وصل التعويضُ المعلَّقُ محفظةَ المتضرر (`CANCELLATION-FEE.md` §8).
+
+    **وهو الخبرُ الثاني لا تكرارُ الأول**: الأولُ قال «مسجَّلٌ ويصلك حين يسدّد
+    الراكب»، وهذا يقول إنه وصل — ومن لا يُخبَر بالثاني يبقى يراقب رقماً في
+    قسمِ «المعلّق» لا يعرف متى ينتقل.
+    """
+    driver = await session.get(Driver, driver_id)
+    if driver is None:  # pragma: no cover
+        return
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver.user_id,
+        message=PushMessage(
+            title="وصلك تعويضُ الإلغاء",
+            body="أُضيف تعويضُ الرحلة الملغاة إلى رصيدك المتاح.",
+            data={
+                "type": "cancellation_collected",
+                "ride_id": str(ride_id),
+                "amount": str(amount),
+                "currency": currency.value,
+            },
+        ),
+    )
+
+
+async def publish_cancellation_carried(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    amount: Decimal,
+    currency: Currency,
+    transferred: bool,
+    due_at: datetime | None,
+) -> None:
+    """قبض كبتنٌ نقداً مبلغاً مستوفىً لكبتنٍ آخر (§6-أ) — **وحالُه في النصّ**.
+
+    «حُوِّل من محفظتك» غيرُ «بانتظار شحنِ محفظتك»: الأولُ واقعةٌ انتهت، والثاني
+    مطلوبٌ منه فعلٌ له مهلة. ومن يقرأ الأول ورصيدُه لم ينقص يظن عطباً، ومن
+    يقرأ الثاني ولا يعرف أن عليه شيئاً يُوقَف حسابُه وهو لا يدري لماذا.
+    """
+    body = (
+        "استلمتَ مع الأجرة مبلغاً مستوفىً لكبتنٍ آخر، وحُوِّل من محفظتك إليه."
+        if transferred
+        else (
+            "استلمتَ مع الأجرة مبلغاً مستوفىً لكبتنٍ آخر ولم يكفِ رصيدُك "
+            "لتحويله — اشحن محفظتك ليصله."
+        )
+    )
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="مبلغٌ مستوفى لكبتنٍ آخر",
+            body=body,
+            data={
+                "type": "cancellation_carried",
+                "ride_id": str(ride_id),
+                "amount": str(amount),
+                "currency": currency.value,
+                "transferred": transferred,
+                "due_at": due_at.isoformat() if due_at else None,
+            },
+        ),
+    )
+
+
 async def publish_share_partner_joined(
     session: AsyncSession,
     redis: Redis,

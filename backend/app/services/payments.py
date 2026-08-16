@@ -71,7 +71,14 @@ from app.models.payment import (
 )
 from app.models.ride import Ride
 from app.models.user import User
-from app.services import advances, audit, cliq_qr, settings_service, wallet
+from app.services import (
+    advances,
+    audit,
+    cancellation,
+    cliq_qr,
+    settings_service,
+    wallet,
+)
 from app.services.pricing import round_money
 
 # آلة حالات الدفعة — ما ليس هنا ممنوع (SPEC القسم 4)
@@ -517,6 +524,38 @@ async def settle(
     if driver_user is None:  # pragma: no cover - رحلة مكتملة لها كبتن دائماً
         return
 
+    await _distribute(
+        session,
+        payment=payment,
+        ride=ride,
+        driver_user=driver_user,
+        actor_id=actor_id,
+    )
+
+    # **وآخرَ ما يقع: دَينُ إلغاءٍ سابق** (`CANCELLATION-FEE.md` §5 و§6-و).
+    # موضعُه **بعد** الأجرة والعمولة كلِّها هو نصُّ الفرع (و): «العمولةُ أولاً —
+    # حقُّ المنصّة على رحلةٍ وقعت، والدَّينُ يبقى مطلوباً»، وبالقياس نفسِه أجرةُ
+    # كبتنِ اليوم قبل دَينِ الأمس. **ولا يُفشل التسويةَ أبداً**: رصيدٌ لا يكفي
+    # يعني ديناً يبقى في جدوله، لا دفعةً تُرفض (قاعدةُ اقتطاع السلفة نفسُها)
+    await cancellation.collect_with_ride(
+        session, ride=ride, rider=rider, method=payment.method
+    )
+
+
+async def _distribute(
+    session: AsyncSession,
+    *,
+    payment: Payment,
+    ride: Ride,
+    driver_user: User,
+    actor_id: uuid.UUID | None,
+) -> None:
+    """نصيبُ الكبتن وعمولتُه — نصفُ `settle` الذي يخصّ **أجرة هذه الرحلة**.
+
+    وفُصل عنها كي يبقى ما بعده (دَينُ إلغاءٍ سابق) واقعاً على كل حال: كان
+    الخروجُ المبكّر عند «لا عمولة» يتخطّى ما يليه، وهو الشكلُ الذي يجعل قاعدةً
+    تعمل في نصف الحالات بلا أن يفشل شيء.
+    """
     if payment.method not in DIRECTLY_COLLECTED_METHODS:
         await wallet.record(
             session,

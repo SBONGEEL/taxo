@@ -238,6 +238,13 @@ export interface Ride {
   estimated_fare: string;
   final_fare: string | null;
   cancellation_fee: string | null;
+  /** **مبلغٌ مستوفى لكبتنٍ آخر** يُسلَّم نقداً مع الأجرة (`CANCELLATION-FEE.md`
+   *  §6-أ) — مجمَّدٌ لحظةَ الطلب، فهو **ما عُرض على الكبتن قبل أن يقبل**.
+   *
+   *  ووصولُه إلى بطاقة العرض شرطُ صحّة §6-أ نفسِه: من قَبِل وهو يعرف لا يشتكي،
+   *  ومن لم يُرد رفض العرضَ بلا عقوبة. فحقلٌ يصل ولا يُرسم يُبطل القاعدةَ.
+   *  و`null`/صفرٌ يعني «لا شيءَ محمول». */
+  carried_cancellation_fee: string | null;
   commission_percent_at_ride: string;
   cancelled_reason: string | null;
   /** ما طُلب في هذه الرحلة من جنس الكبتن — **تفضيلُ الطلب لا جنسُ أحد**. */
@@ -371,6 +378,10 @@ export interface RidePayments {
   final_fare: string | null;
   outstanding: string;
   settlement: SettlementState;
+  /** **رسمُ إلغاءٍ سابقٌ يُسدَّد مع هذه الرحلة** (`CANCELLATION-FEE.md` §4/§5)
+   *  — **بجانب `outstanding` لا داخله**: ذاك أجرةُ هذه الرحلة ومنها تُحسب
+   *  العمولةُ ونصيبُ الكبتن. ويُعرض كي يعرف الراكبُ كم يسلّم نقداً. */
+  cancellation_debt: string;
   payments: Payment[];
   cliq_charge: CliqCharge | null;
   card_order: CardOrder | null;

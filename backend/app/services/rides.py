@@ -349,6 +349,10 @@ async def request_ride(
         stop_max_wait_minutes_at_ride=rule.stop_max_wait_minutes,
         # تُجمَّد كالعمولة: تعديلُ النسبة في اللوحة يحكم ما يأتي لا رحلةً سائرة
         share_discount_percent_at_ride=share_percent,
+        # **ما سيراه الكبتنُ على بطاقة العرض قبل أن يقبل** (§6-أ): دَينُ إلغاءٍ
+        # على هذا الراكب يُسلَّم نقداً مع الأجرة. يُجمَّد هنا كموعد الحجز
+        # ونسبةِ العمولة — الرحلةُ تحمل **ما عُرض**، والمصدرُ يبقى الجدول
+        carried_cancellation_fee=await cancellation.debt_of(session, rider.id),
     )
     session.add(ride)
 

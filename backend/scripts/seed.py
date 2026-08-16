@@ -60,6 +60,10 @@ from app.models.advance import (
     DEFAULT_TERM_DAYS,
     AdvanceSetting,
 )
+from app.models.cancellation import (
+    DEFAULT_EXEMPT_WITHIN_METERS,
+    CancellationSetting,
+)
 from app.models.wallet_setting import WalletSetting
 from app.services.providers import credentials as credentials_service
 
@@ -307,6 +311,32 @@ async def seed_sharing_settings(session: AsyncSession) -> None:
                 f"مشاركة الرحلة: {country.value} "
                 f"(الخصم {DEFAULT_DISCOUNT_PERCENT}% — لم يُحدَّد بعد، "
                 f"وممرّ {DEFAULT_CORRIDOR_KM}كم والتفاف {DEFAULT_MAX_DETOUR_MINUTES}د)"
+            )
+
+
+async def seed_cancellation_settings(session: AsyncSession) -> None:
+    """سياسةُ رسم الإلغاء لكل دولة (`design/CANCELLATION-FEE.md`).
+
+    ويُبذر الصفُّ وإن كانت قيمُه هي الافتراضات، كصفِّ سياسة السلف: بغيره تجد
+    شاشةُ اللوحة حقولاً فارغةً تُقرأ عطباً لا «لم يُحدَّد بعد».
+
+    **وأصفارُه الثلاثةُ مقصودة**: لا إيقافَ عند التكرار، ولا مهلةَ للحامل، ولا
+    إجراءَ على دَينٍ قديم — «لم يُضبط بعد» حتى يقرّر المالك، كأصفار البقشيش
+    والإحالة والمشاركة. **وحدَه الإعفاءُ بالقرب مفعَّلٌ افتراضاً** (٣٠٠ متراً)
+    لأنه حارسٌ في صالح من سيُخصم منه، وسكوتُه يُحصِّل بلا شرطٍ راجعه أحد.
+    """
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(CancellationSetting.country_code).where(
+                CancellationSetting.country_code == country
+            )
+        )
+        if exists is None:
+            session.add(CancellationSetting(country_code=country))
+            _log(
+                f"سياسة إلغاء: {country.value} "
+                f"(إعفاءٌ دون {DEFAULT_EXEMPT_WITHIN_METERS} متراً، "
+                "ولا إيقافَ ولا مهلةَ حاملٍ ولا إجراءَ على دَينٍ قديم)"
             )
 
 
@@ -640,6 +670,7 @@ async def main() -> None:
         await seed_payment_settings(session)
         await seed_referral_settings(session)
         await seed_advance_settings(session)
+        await seed_cancellation_settings(session)
         await seed_sharing_settings(session)
         await seed_notification_settings(session)
         await seed_plans(session)

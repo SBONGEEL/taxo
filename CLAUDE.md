@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**804 backend tests pass** across 75 test files — measured, not estimated, on 2026-08-15. All three
+**820 backend tests pass** across 76 test files — measured, not estimated, on 2026-08-16. (One, `test_card_payments::test_card_money_never_passes_through_the_riders_wallet`, is flaky under full-suite load: it fails at `accept` with `ride_offer_expired` and passes in isolation — a dispatch timing race in the test, not a rule.) All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -135,7 +135,7 @@ Then the six were built in his order. What each settled:
    dead counter and **assumed his arrival was never recorded**. The project's own rule — the app renders
    the clock, the backend sends the money — was followed by one app and broken by the other.
 
-**804 backend tests pass** (up from 766); all three frontends build with their five guards green.
+**804 backend tests passed** at that point (up from 766); all three frontends built with their five guards green.
 
 #### The cancellation fee: what is built, and the four things left
 
@@ -153,19 +153,69 @@ means "no block"). The rider's wallet shows the debt *beside* the balance, the c
 *outside* it, and the captain is told **which of the two happened**: "it reached you" and "it is waiting on
 the rider" are different facts about his own money.
 
-Still to build, all specified in `design/CANCELLATION-FEE.md` §0:
+#### The four that remained are built (2026-08-15, second session) — and one item is deferred by a decision
 
-1. **Collection with a later ride** (§5) — two separate ledger entries: the current captain's fare earning,
-   and a **collection entry to the injured captain**. Folding it into the fare would charge commission on
-   money that is not his and hide that the creditor is another captain.
-2. **The cash carrier path** (§6-أ) — the captain who takes the fee in his hand: his wallet debited and the
-   injured captain's credited (the cash-commission mechanism from 6-أ), the reward, the grace period, **and
-   the card on the offer telling him before he accepts** — the sharing-badge consent argument. Card and
-   wallet are deliberately **not** in this path (§6-ب): that money never passes through anyone's hand.
-3. **The unpaid outcome** (§10) — the two settings columns exist and default to "no action"; the periodic
-   job and the audit entry naming who decided do not.
-4. **The two panel screens** — the per-country policy fields, and the waive action with its written reason
-   (the `waived` status and its all-or-nothing CHECK are already in the table).
+**All four landed**: collection with a later ride (§5), the cash carrier path (§6-أ), the unpaid outcome
+(§10), and both panel surfaces. Migration `0035`, `services/cancellation.py`,
+`tasks/cancellation.py`, `routers/admin_cancellations.py`, and `tests/test_cancellation_collection.py`.
+Six rules in them are worth carrying forward:
+
+1. **Collection sits at the end of `payments.settle`, and its position *is* branch (و).** «العمولةُ
+   أولاً — حقُّ المنصّة على رحلةٍ وقعت، والدَّينُ يبقى مطلوباً»; by the same reasoning today's captain's
+   fare comes before yesterday's debt. That meant splitting `settle`'s second half into `_distribute`,
+   because the old early `return` on "no commission" would have skipped everything after it — the shape
+   that makes a rule work in half the cases with nothing failing.
+2. **Assigning a carrier *moves* the debt, it does not add one.** The moment the rider hands the cash
+   over, his liability is discharged **even if the carrier's wallet is empty** — so
+   `carrier_driver_id IS NULL` is a condition in *every* question about what the rider owes
+   (`_rider_debt_predicate`). Without it he is blocked from ordering over a debt he paid by hand, which
+   is the worst thing a block threshold can do.
+3. **The card channel deliberately does not carry the debt, and the reason is written down.**
+   `ride_earning` and `commission` are both computed from `payment.amount`, so raising the charge by the
+   debt charges commission on money that is not a fare — exactly what §5 forbids; and a second payment row
+   would credit `ride_earning` to the **current** captain, not the injured one. Its exit is the topup
+   (§7, wired into all three topup doors through one `on_wallet_funded`), and its guard is the block
+   threshold. **A written decision, not a hole.**
+4. **One wallet on both sides of a transfer is a real case** — a captain collecting, in cash, a fee owed
+   **to him**. Both entries are still written (net zero); what changes is that they need **two different
+   idempotency keys** and the credit goes first. With one key `wallet.record` finds the existing entry
+   and returns it *silently*, writing half the event — the 12-ح referral lesson exactly.
+5. **What he carries leaves `available_for_withdrawal`**, as the reserve does: a condition on withdrawal,
+   never a ledger entry — an entry means money that *arrived*, and this is money in his pocket that is not
+   his. And the grace expiry blocks him **from dispatch** through a prepared column
+   (`drivers.cancellation_carry_blocked`), which is deliberately **not** `advance_blocked`: two debts to
+   two different creditors in one column means repaying one lifts the other's block. Freezing the wallet
+   would have been the wrong door — it would block the topup, i.e. the very repayment the block exists to
+   force.
+6. **`admin_decides` is not an action for the periodic job.** The three outcomes are «stays pending» ·
+   «the admin writes it off» · «the company bears it», and a job that writes off in both of the last two
+   collapses them into one and deletes the decision the setting exists to carry. So the job applies
+   `company_bears` only — a credit with no matching debit, like `referral_bonus`, with an **actorless**
+   audit entry naming the setting that decided (the `totp_reset` rule).
+
+**And opening the panel found a second shipped defect — a money amount with no currency.**
+`lib/format.ts::money(value, currency)` resolves the label itself, so `money(row.amount,
+currencyLabel(row.currency))` hands it an already-resolved label, `CURRENCY_LABEL["د.أ"]` is
+`undefined`, and the `?? ""` prints the number bare. `components/Advances.tsx` has done exactly that on
+**both** its columns since item 15 — the same shape as the coupon table's bare `JOD`, arriving through
+the opposite door. It was copied into the new charges table and caught by reading the DOM
+(`٠.٧٥٠ ` with a trailing space), which is the rule: **measure the text, never the screenshot** — at
+that size «د.أ» and «-.» are indistinguishable in pixels. Both call sites now pass `row.currency`.
+
+**And the build found a shipped defect of this project's signature shape: a field with no sender.** The
+driver's wallet screen has drawn «مستحقاتٌ معلّقة» from `pending_compensation` since the first batch — but
+it reads `GET /wallet/me/driver`, and only `GET /wallet/me` (which the driver app never calls) was filling
+that field. `DriverWalletOut` inherits it with a `0.000` default, so the line was silently never drawn and
+nothing failed: not `tsc`, not `check:config` (which watches `GET /config` and the auth responses, not this
+pair). An injured captain had no way to see what he was owed. Fixed in `get_my_driver_wallet`, which now
+fills both that and the new `carrier_dues`.
+
+**One item is deferred by a decision, and deliberately not half-built: the carrier's reward** (§6-أ — a
+rating boost and a subscription coupon). The rating boost needs either a second column added to a value
+`services/ratings.py` recomputes from the whole ratings table, or a synthetic rating row with no rider
+behind it; and 12-ز's `promo_codes` is a **ride** payment channel — `driver_subscriptions` has no discount
+concept at all, so this is a new money path, not "reuse 12-ز's machinery". Everything else in §6-أ works
+without it. Recorded in `design/CANCELLATION-FEE.md` §6-أ with both reasons.
 
 #### Three things the build itself taught, all worth keeping
 
@@ -211,10 +261,13 @@ Proven end to end afterwards: a captain went online → `geo:drivers:JO` + his p
 
 **Nothing here is guesswork: every line has a written spec or an owner decision behind it.**
 
-#### 0. What is left of the cancellation fee (above) — four items, all specified
+#### 0. The cancellation fee is finished — one sub-item waits on an owner decision
 
-The last open **money** defect is closed: the fee is collected and the ledger carries it between the two
-parties. What remains of that feature is listed above and needs no new decision.
+The last open **money** defect is closed and the feature is complete end to end: the fee is collected, the
+ledger carries it between the two parties, a later ride settles it, the cash carrier path works, the unpaid
+outcome is a per-country setting applied by a job, and the panel has both surfaces. **The only thing left
+is the carrier's reward** (rating boost + subscription coupon), which is not buildable on existing
+machinery without a decision — see above and `design/CANCELLATION-FEE.md` §6-أ.
 
 #### 1. Blocking, and not code
 
@@ -282,7 +335,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**804 backend tests pass** across 75 test files, measured on 2026-08-15; all three frontends build with
+**820 backend tests pass** across 76 test files, measured on 2026-08-16; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -786,7 +839,7 @@ anyone's wallet, and a fake "settlement" entry would make the statement say he r
 *available*, never automatic.
 
 **The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`; the beat schedule now holds
-nine jobs).
+eleven jobs).
 Neither is interesting except for one rule each, and both rules are about what the job must *not* do.
 
 **The inbox trim deletes by age alone, read or unread** (`inbox.trim`, 90 days, 5000 rows a cycle).
@@ -1252,11 +1305,20 @@ and per-category pricing. Do not build them; he decides after launch.
 
 ### Open debt and decisions waiting on the owner
 
-**No decision is waiting on the owner as of 2026-08-15.** The twelve branches (six for the cancellation
-fee, six for the stop point) were answered and recorded in their files, and everything else — the backup
-plan's seven, the map plan's four, the nine advance decisions, the eight sharing decisions — was already
-recorded in its own file. The one thing still open by his own deferral is inside sharing: whether the
-company bears the remaining rider's difference **before** departure (`SPEC.md` §5.12).
+**Two decisions are waiting on the owner as of 2026-08-15**, and both were raised by finishing the
+cancellation fee rather than by anyone guessing:
+
+1. **The carrier's reward** (`design/CANCELLATION-FEE.md` §6-أ) — a rating boost and a subscription
+   coupon, neither of which exists as machinery. The rating is recomputed from the whole ratings table,
+   so a boost needs either a second column or a synthetic rating row; and `promo_codes` is a **ride**
+   payment channel, so a subscription discount is a new money path. Everything else in §6-أ ships and
+   works without it.
+2. **Whether the company bears the remaining rider's difference *before* departure** in ride sharing —
+   his own earlier deferral (`SPEC.md` §5.12).
+
+Everything else — the twelve branches (six for the cancellation fee, six for the stop point), the backup
+plan's seven, the map plan's four, the nine advance decisions, the eight sharing decisions — is answered
+and recorded in its own file.
 
 **And the stop point (`SPEC.md` §5.10-ب) is now decided and not yet built**: a per-country cap that
 notifies and never ends the ride, the counter stopped by the captain's tap, no cap on the number of stops,
@@ -1384,7 +1446,7 @@ all pass the check, and all report success. Load the row with `select(...).with_
 (`for_update=True`) and `rides.cancel_ride` (`session.refresh(..., with_for_update=True)`).
 
 **Lock order is always: the ride row, then the request/payment row, then the provider-order row,
-then the driver row, then the wallet advisory lock.** Every mutating path takes them in that order,
+then the driver row, then the cancellation-charge row, then the wallet advisory lock.** Every mutating path takes them in that order,
 which is why nothing deadlocks. **Two paths let the driver himself drop his own approval —
 replacing a required document and editing a vehicle's identity fields — and both re-read
 `drivers.status` under `drivers_service.lock` (a `refresh(..., with_for_update=True)`), never from
@@ -1407,6 +1469,13 @@ because a webhook starts from the order; ledger writes take the wallet lock last
 payment row lock and then a ride lock. When a single operation touches two wallets, their advisory
 locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a new lock means fitting it
 into this order, not inventing a second one.
+
+The cancellation-charge row sits between the driver row and the wallet locks, and **all three of its
+paths enter from above it**: `collect_with_ride` from inside `payments.settle` (ride → payment →
+charge → wallets), `on_wallet_funded` from a topup (no ride, no payment), and the panel's waive /
+write-off from the charge itself. Its lock is taken **before** the status is checked, like every other
+status change: without it two concurrent waives both read `pending` and one writes "waived" over a
+collection that already moved money out of a rider's wallet.
 
 Stage 8 added two mutating paths and both fit the same order. `cliq_topups.apply_state` locks the
 provider-order row and then takes the wallet advisory lock (no ride and no payment row exist on a
@@ -1614,6 +1683,14 @@ to test it. `docker compose restart <app>` before every browser check, and confi
 `curl http://127.0.0.1:5175/src/<path>` that the served text contains your edit. (The earlier note
 that `public/dev-login.html` only appears after a restart was this same fact, seen through one file.)
 
+**And on this machine right now the panel is not running Vite dev at all — it is `vite preview`
+serving `dist`** (the tunnel stack overrides the compose command). So a panel source edit is invisible
+until `npm run build`, and no number of container restarts will help. **Measure which one you are
+talking to before debugging a "stale module"**: the request list is the answer — `/src/main.tsx` and
+per-file module URLs mean dev, `/assets/index-<hash>.js` means a build. That question cost this session
+four restarts, a cleared `node_modules/.vite`, and two wrong theories (browser cache, then Vite's
+transform cache) before the request list settled it in one look.
+
 Its refresh is a **5s poll, not a socket** — `ws/` publishes per-user channels, and a
 country-wide one would mean streaming everyone's position into an open connection to answer a
 question that is only ever "where are they now".
@@ -1674,11 +1751,11 @@ There is no frontend test runner: stage 9 added no business logic to test — pr
 state transitions all stay in the backend, and the app displays what the API returns. `npm run
 build` is the check that runs, and it type-checks every file.
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **eight** periodic jobs:
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **eleven** periodic jobs:
 the subscription sweep and the CliQ-confirmation sweep every five minutes; the stage-8 campaign
 dispatch, the multi-stop wait cap and **due bookings** (12-ط) every minute; the referral-bonus payout
-(12-ح) every ten; and the two stage-12 maintenance jobs — the stale-provider-order sweep and the inbox
-trim. **Run exactly one `beat`** — a
+(12-ح), the advance sweep (item 15) and the **cancellation-charge sweep** every ten; and the two
+stage-12 maintenance jobs — the stale-provider-order sweep and the inbox trim. **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
 pool bound to the previous one. Tasks are thin wrappers over `services/`, and the tests call the
@@ -1955,6 +2032,16 @@ an insufficient balance is the *answer* (a debt), never a refusal to cancel. `tr
 locks **before** reading the balance, and the reverse order is what the concurrency test now catches. And
 `blocks_new_ride` sits in `rides.request_ride`, not in the router, because scheduled bookings create rides
 through that same door and a guard in the router is a guard the second door forgets.
+
+**Collection has exactly two doors and they answer different questions.** `collect_with_ride` runs at the
+end of `payments.settle` and asks "who is holding this money now" — cash/CliQ put it in the current
+captain's hand (he becomes the **carrier**), the wallet takes it from the rider, and card takes nothing
+(reason in the function's docstring). `on_wallet_funded` runs after every completed topup — all three
+topup paths call it — and asks the same question of whoever's wallet just grew. Both end in `try_collect`,
+which reads the debtor from `carrier_driver_id` **first** and only then from `payer_user_id`: after a cash
+handoff the rider has paid and the captain owes. Notifications are published from the routers **after the
+commit** (`announce_ride_collection` / `announce_settled_for_debtor`), deduplicated by a Redis key rather
+than a column — a notice is an event, not a record.
 
 **Multi-stop (12-ب) lives inside that same door, and four details are worth knowing before
 touching it.** `at_stop` sits between `in_progress` and itself, with a third exit to `completed`

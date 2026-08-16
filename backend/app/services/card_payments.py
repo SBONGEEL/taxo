@@ -64,6 +64,7 @@ from app.models.ride import Ride
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.services import (
+    cancellation,
     payments as payments_service,
     settings_service,
     subscriptions as subscriptions_service,
@@ -531,6 +532,10 @@ async def _credit_wallet_topup(
         idempotency_key=f"card-topup:{order.id}",
     )
     order.transaction_id = entry.id
+    # دَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن (`CANCELLATION-FEE.md` §7).
+    # **وهذا هو مخرجُ قناة البطاقة**: الشحنةُ لا تحمل الدَّينَ في مسار الأجرة
+    # (تفسيرُه في `cancellation.collect_with_ride`)، فمن يشحن محفظته يسدّد هنا
+    await cancellation.on_wallet_funded(session, user=owner)
 
 
 # ---------------------------------------------------------------- الاستعلام

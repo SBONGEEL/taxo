@@ -246,6 +246,16 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     estimated_fare: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     final_fare: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     cancellation_fee: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    # **ما قد يحمله كبتنُ هذه الرحلة لكبتنٍ آخر** (`CANCELLATION-FEE.md` §6-أ):
+    # دَينُ إلغاءٍ على الراكب يُسلَّم نقداً مع الأجرة. **وهو تجميدٌ لا بيتٌ ثانٍ**:
+    # المصدرُ `ride_cancellation_charges` ويتغيّر (قد يسدّده الراكبُ بشحنٍ قبل
+    # أن يركب)، وهذا **ما عُرض على الكبتن قبل أن يقبل** — وعليه بُني رضاه، كما
+    # يحمل `commission_percent_at_ride` نسبتَه و`scheduled_for` موعدَه.
+    # **والبطاقةُ على العرض هي ما يجعل هذا مشاركةً لا إلزاماً**: من قَبِل وهو
+    # يعرف لا يشتكي، ومن لم يُرد رفض العرضَ بلا عقوبة
+    carried_cancellation_fee: Mapped[Decimal | None] = mapped_column(
+        MONEY, nullable=True
+    )
     currency: Mapped[Currency] = mapped_column(
         pg_enum(Currency, "currency"), nullable=False
     )

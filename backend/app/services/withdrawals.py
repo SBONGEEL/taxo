@@ -36,7 +36,7 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import PENDING_WITHDRAWAL_STATUSES, WithdrawalRequest
-from app.services import audit, settings_service, wallet
+from app.services import audit, cancellation, settings_service, wallet
 from app.services.payout import (
     PayoutError,
     PayoutRequest,
@@ -147,13 +147,18 @@ async def available_balance(
     """
     current = await wallet.balance(session, user.id, WalletOwnerType.DRIVER)
     held = await _reserved_amount(session, driver.id)
+    # **وما قبضه بيده لكبتنٍ آخر ليس ماله** (`CANCELLATION-FEE.md` §6-أ): دخل
+    # رصيدَه قيداً؟ لا — لم يدخله أصلاً، لكنه في جيبه نقداً وعليه تحويلُه.
+    # فسحبُه كلَّ رصيده يجعل المنصّةَ تدفع له ما تعرف أنه عند غيره، ثم تطالبه
+    # به بلا شيءٍ يُخصم منه. **شرطٌ على السحب لا قيدٌ في الدفتر**، كالمحتجَز
+    carried = await cancellation.carrier_dues_of(session, driver.id)
     reserve = Decimal("0.000")
     if driver.status is not DriverStatus.DEACTIVATED:
         limits = await settings_service.get_or_create_wallet_settings(
             session, user.country_code
         )
         reserve = limits.withdrawal_reserve_amount
-    return current - held - reserve
+    return current - held - reserve - carried
 
 
 async def create_request(

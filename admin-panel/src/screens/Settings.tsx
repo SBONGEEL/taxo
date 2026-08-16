@@ -37,6 +37,8 @@ import {
   getSharingSettings,
   listPaymentSettings,
   listAdvanceSettings,
+  listCancellationSettings,
+  updateCancellationSettings,
   listWalletSettings,
   updateAdvanceSettings,
   setFeatureFlag,
@@ -48,6 +50,8 @@ import {
 } from "@/api/endpoints";
 import type {
   AdvanceSetting,
+  CancellationSetting,
+  UnpaidCancellationOutcome,
   CommissionSetting,
   CountryFeatureFlags,
   FeatureKey,
@@ -58,7 +62,7 @@ import type {
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
+import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { currencyLabel, currencyOf, money } from "@/lib/format";
@@ -153,12 +157,13 @@ export function SettingsScreen() {
   const [referral, setReferral] = useState<ReferralSetting | null>(null);
   const [sharing, setSharing] = useState<RideSharingSetting | null>(null);
   const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
+  const [cancel, setCancel] = useState<CancellationSetting[]>([]);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, sh, adv] = await Promise.all([
+    const [f, c, w, p, r, sh, adv, cxl] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
@@ -168,6 +173,7 @@ export function SettingsScreen() {
       getReferralSettings(country),
       getSharingSettings(country),
       listAdvanceSettings(),
+      listCancellationSettings(),
     ]);
     setFlags(f);
     setCommission(c);
@@ -176,6 +182,7 @@ export function SettingsScreen() {
     setReferral(r);
     setSharing(sh);
     setAdvance(adv);
+    setCancel(cxl);
   }, [country]);
 
   useEffect(() => {
@@ -191,6 +198,7 @@ export function SettingsScreen() {
   const walletRow = wallet.find((row) => row.country_code === country);
   const paymentRow = payment.find((row) => row.country_code === country);
   const advanceRow = advance.find((row) => row.country_code === country);
+  const cancellationRow = cancel.find((row) => row.country_code === country);
 
   async function flip(key: FeatureKey, enabled: boolean, reason?: string) {
     setError(null);
@@ -404,6 +412,38 @@ export function SettingsScreen() {
               />
             ) : (
               <p className="text-12.5 text-muted">لا سياسةَ سلفٍ لهذه الدولة.</p>
+            )}
+          </section>
+
+          {/* سياسةُ رسم الإلغاء (`design/CANCELLATION-FEE.md`) — **ولا حقلَ
+              للمبلغ هنا**: قيمتُه في «التسعيرة» لأنها لكل فئةِ مركبة، وهذه
+              سياسةٌ لا سعر */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">رسم الإلغاء</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              <b className="text-ink">تعويضٌ لا غرامة</b> — يقبضه الكبتنُ الذي
+              تحرّك، لا الشركة. <b className="text-ink">ولا رسمَ على إلغاءٍ لم
+              يُتعِب أحداً</b>: يُقاس القربُ من آخر موقعٍ بثّه الكبتن، فمن لم
+              يبرح مكانَه لا يُحصَّل له شيء. <b className="text-ink">وقيمةُ الرسم
+              في «التسعيرة»</b> لأنها لكل فئةِ مركبة. والأصفارُ هنا تعني «لم
+              يُضبط» لا «صفراً»: لا إيقاف، ولا مهلةَ للحامل، ولا إجراءَ على
+              دَينٍ قديم.
+            </p>
+            {cancellationRow ? (
+              <CancellationForm
+                key={cancellationRow.country_code}
+                row={cancellationRow}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={setError}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">
+                لا سياسةَ إلغاءٍ لهذه الدولة بعد — تُكتب بأول حفظ.
+              </p>
             )}
           </section>
 
@@ -1119,6 +1159,134 @@ function AdvanceForm({
           })
             .then(() =>
               onSaved("حُفظت السياسة — تسري على ما يُصرف بعدها لا على سلفةٍ قائمة"),
+            )
+            .catch((caught) =>
+              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** سياسةُ رسم الإلغاء — **ولا حقلَ للمبلغ**: قيمتُه في «التسعيرة» لأنها لكل
+ *  فئةِ مركبة (`design/CANCELLATION-FEE.md`).
+ *
+ *  **و`key={country}` عليه كبقية النماذج**: بغيره تبقى أرقامُ السوق السابق في
+ *  الحقول بعد تبديل الرأس، فيُحفظ إعدادُ الأردن في ليبيا.
+ */
+function CancellationForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: CancellationSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [metres, setMetres] = useState(String(row.exempt_within_meters));
+  const [silent, setSilent] = useState(row.exempt_when_location_unknown);
+  const [block, setBlock] = useState(String(row.block_after_unpaid));
+  const [grace, setGrace] = useState(String(row.carrier_grace_hours));
+  const [days, setDays] = useState(String(row.unpaid_after_days));
+  const [outcome, setOutcome] = useState<UnpaidCancellationOutcome>(
+    row.unpaid_outcome,
+  );
+  const [busy, setBusy] = useState(false);
+
+  const digits = (value: string) => value.replace(/[^0-9]/g, "");
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          label="مسافة الإعفاء (متراً)"
+          dir="ltr"
+          inputMode="numeric"
+          value={metres}
+          disabled={disabled}
+          onChange={(event) => setMetres(digits(event.target.value))}
+        />
+        <Field
+          label="عدد الرسوم قبل إيقاف الطلب"
+          dir="ltr"
+          inputMode="numeric"
+          value={block}
+          disabled={disabled}
+          onChange={(event) => setBlock(digits(event.target.value))}
+        />
+        <Field
+          label="مهلة الكبتن الحامل (ساعة)"
+          dir="ltr"
+          inputMode="numeric"
+          value={grace}
+          disabled={disabled}
+          onChange={(event) => setGrace(digits(event.target.value))}
+        />
+        <Field
+          label="مدة الدَّين قبل الإجراء (يوماً)"
+          dir="ltr"
+          inputMode="numeric"
+          value={days}
+          disabled={disabled}
+          onChange={(event) => setDays(digits(event.target.value))}
+        />
+      </div>
+
+      <div className="mt-10">
+        <Select
+          label="مآل الدَّين بعد المدة"
+          value={outcome}
+          disabled={disabled}
+          onChange={(event) =>
+            setOutcome(event.target.value as UnpaidCancellationOutcome)
+          }
+        >
+          <option value="keep_pending">يبقى معلّقاً — لا إجراء</option>
+          <option value="admin_decides">تشطبه الإدارة يدوياً</option>
+          <option value="company_bears">تتحمّله الشركة ويصل الكبتن</option>
+        </Select>
+      </div>
+
+      {/* **الصمتُ حالةٌ ثالثةٌ لا حالتان**: «لم يتحرك» واقعةٌ مقيسة، و«لا نعرف
+          أين كان» جهلٌ — وخلطُهما يجعل مشرفاً يظن أنه يضبط رقماً واحداً */}
+      <div className="mt-12">
+        <Checkbox checked={silent} disabled={disabled} onChange={setSilent}>
+          <span className="text-12.5 text-ink">
+            أعفِ الراكب إن لم يكن للكبتن موقعٌ مبثوث
+          </span>
+        </Checkbox>
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        بلا موقعٍ مبثوثٍ <b className="text-ink">لا دليلَ على تحرّك</b>، والشكُّ
+        لمن سيُخصم منه — ومن تحرّك فعلاً يعترض، فتُعفيه في «رسوم الإلغاء».
+        وإطفاؤه يجعل البعدَ يُقاس من نقطة الالتقاء فيُحصَّل على كبتنٍ انقطع
+        اتصالُه. <b className="text-ink">ومهلةُ الحامل مجمَّدةٌ لحظةَ قبضه</b>،
+        فتقصيرُها هنا يحكم ما يأتي لا ما ينظر إليه كبتنٌ في شاشته الآن.
+      </p>
+
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || metres === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateCancellationSettings(row.country_code, {
+            exempt_within_meters: Number(metres),
+            exempt_when_location_unknown: silent,
+            block_after_unpaid: Number(block),
+            carrier_grace_hours: Number(grace),
+            unpaid_after_days: Number(days),
+            unpaid_outcome: outcome,
+          })
+            .then(() =>
+              onSaved("حُفظت السياسة — تسري على ما يقع بعدها لا على رسمٍ قائم"),
             )
             .catch((caught) =>
               onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),

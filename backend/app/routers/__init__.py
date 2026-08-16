@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.routers import (
     admin_campaigns,
+    admin_cancellations,
     admin_live_map,
     admin_payments,
     admin_promo,
@@ -59,6 +60,7 @@ api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(admin_rides.router)
 api_router.include_router(admin_security.router)
+api_router.include_router(admin_cancellations.router)
 # مقابس التتبع تحت نفس بادئة الإصدار: /api/v1/ws/...
 api_router.include_router(ws_router)
 

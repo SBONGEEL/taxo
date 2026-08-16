@@ -12,6 +12,7 @@ from app.core.currency import currency_for_country
 from app.core.deps import AdminUser, DbSession, StaffUser
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
+from app.models.cancellation import CancellationSetting
 from app.models.commission import CommissionSetting
 from app.models.enums import AuditAction, CountryCode
 from app.models.pricing import PricingRule
@@ -20,6 +21,10 @@ from app.models.user import User
 from app.models.payment_setting import PaymentSetting
 from app.models.wallet_setting import WalletSetting
 from app.schemas.audit import AuditLogOut
+from app.schemas.cancellation import (
+    CancellationSettingOut,
+    CancellationSettingUpdate,
+)
 from app.schemas.settings import (
     CommissionSettingOut,
     CommissionSettingUpdate,
@@ -434,6 +439,57 @@ async def update_advance_settings(
     )
     await _commit(session, setting)
     return AdvanceSettingOut.model_validate(setting)
+
+
+# --------------------------------------------------- سياسة رسم الإلغاء
+
+
+@router.get("/cancellation", response_model=list[CancellationSettingOut])
+async def list_cancellation_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[CancellationSettingOut]:
+    rows = (
+        await session.scalars(
+            select(CancellationSetting).order_by(CancellationSetting.country_code)
+        )
+    ).all()
+    return [CancellationSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/cancellation/{country_code}", response_model=CancellationSettingOut)
+async def update_cancellation_settings(
+    country_code: CountryCode,
+    payload: CancellationSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> CancellationSettingOut:
+    """سياسةُ رسم الإلغاء لكل دولة (`design/CANCELLATION-FEE.md`).
+
+    **وما يُعدَّل هنا يحكم ما يأتي لا ما وقع**: مبلغُ الرسم مجمَّدٌ على الرحلة
+    لحظةَ إلغائها، ومهلةُ الحامل مجمَّدةٌ لحظةَ قبضه — فتقصيرُ المهلة اليوم لا
+    يُقصّر مهلةً ينظر إليها كبتنٌ في شاشته الآن.
+
+    **واثنان يُقرآن حيّين عمداً**: حدُّ الإيقاف ومدّةُ الدَّين القديم. كلاهما
+    **سؤالٌ عن سياسةٍ تُراجَع** لا وعدٌ قيل لأحد، فرفعُ الحدِّ يُطلق سراحَ من
+    كان ممنوعاً بلا لمس صفٍّ واحد — قاعدةُ «flagged» في تقارير عدم التطابق.
+    """
+    setting = await session.get(CancellationSetting, country_code)
+    if setting is None:
+        setting = CancellationSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="cancellation_setting",
+        entity_id=None,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return CancellationSettingOut.model_validate(setting)
 
 
 # ------------------------------------------------------- سياسات الدفع

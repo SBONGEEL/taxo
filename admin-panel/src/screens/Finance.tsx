@@ -29,6 +29,7 @@ import {
   rejectWithdrawal,
 } from "@/api/endpoints";
 import type { TopupRequest, Withdrawal, WithdrawalStatus } from "@/api/types";
+import { CancellationCharges } from "@/components/CancellationCharges";
 import { Shell } from "@/components/Shell";
 import { Pills, Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
@@ -56,9 +57,14 @@ function when(iso: string): string {
   return `${at.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} ${at.toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}`;
 }
 
+/** **ورسومُ الإلغاء ثالثةٌ هنا لا في شاشةٍ مستقلة**: مالٌ ينتظر قراراً
+ *  إدارياً، وهو بالضبط ما تعنيه هذه الشاشة — غير أن مالَه يمرّ بين
+ *  **مستخدمَين** لا بين المنصّة وأحدهما، ولذلك لا زرَّ تحصيلٍ فيه. */
+type Tab = "withdrawals" | "topups" | "cancellations";
+
 export function FinanceScreen() {
   const { isAdmin } = useSession();
-  const [tab, setTab] = useState<"withdrawals" | "topups">("withdrawals");
+  const [tab, setTab] = useState<Tab>("withdrawals");
 
   const [withdrawals, setWithdrawals] = useState<Withdrawal[] | null>(null);
   const [topups, setTopups] = useState<TopupRequest[] | null>(null);
@@ -100,10 +106,11 @@ export function FinanceScreen() {
     >
       <Pills
         value={tab}
-        onPick={(key) => setTab(key as "withdrawals" | "topups")}
+        onPick={(key) => setTab(key as Tab)}
         options={[
           { key: "withdrawals", label: "طلبات السحب" },
           { key: "topups", label: "شحنات بانتظار التأكيد" },
+          { key: "cancellations", label: "رسوم الإلغاء" },
         ]}
       />
 
@@ -111,7 +118,9 @@ export function FinanceScreen() {
       <SuccessNote message={done} />
 
       <div className="mt-12">
-        {tab === "withdrawals" ? (
+        {tab === "cancellations" ? (
+          <CancellationCharges onError={setError} />
+        ) : tab === "withdrawals" ? (
           <Table
             columns="1fr 0.8fr 1fr 1fr 1.4fr"
             headers={["المبلغ", "القناة", "الطلب", "الحالة", ""]}
@@ -237,12 +246,16 @@ export function FinanceScreen() {
         )}
       </div>
 
-      {/* لا نجومَ Markdown في JSX: النصُّ يخرج كما هو، والتوكيدُ وسمٌ */}
+      {/* لا نجومَ Markdown في JSX: النصُّ يخرج كما هو، والتوكيدُ وسمٌ.
+          **ولا يُعرض على تبويب رسوم الإلغاء**: ذاك مالٌ بين مستخدمَين لا يحجز
+          شيئاً ولا يُقيَّد بزرٍّ هنا، وله سطرُه الخاصُّ به */}
+      {tab === "cancellations" ? null : (
       <p className="mt-14 text-11.5 leading-note text-muted">
         الطلب المعلّق أو الموافَق عليه <b className="text-ink">يحجز</b> مبلغه من
         رصيد الكبتن المتاح، وقيد السحب لا يُكتب في الدفتر إلا عند تسجيل التحويل.
         وتأكيدُ الشحنة هو ما يقيّد رصيد الراكب — فلا يُؤكَّد إلا بعد رؤية المال.
       </p>
+      )}
 
       {paying ? (
         <PayoutModal

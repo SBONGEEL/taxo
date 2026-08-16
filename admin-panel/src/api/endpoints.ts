@@ -64,6 +64,9 @@ import type {
   Wallet,
   AdvanceRow,
   AdvanceSetting,
+  CancellationChargeRow,
+  CancellationChargeStatus,
+  CancellationSetting,
   WalletSetting,
   WalletTransaction,
   Withdrawal,
@@ -657,6 +660,43 @@ export const updateAdvanceSettings = (
   country: CountryCode,
   payload: Partial<Omit<AdvanceSetting, "country_code">>,
 ) => api.patch<AdvanceSetting>(`/admin/settings/advances/${country}`, payload);
+
+/** سياسةُ رسم الإلغاء (`design/CANCELLATION-FEE.md`). */
+export const listCancellationSettings = () =>
+  api.get<CancellationSetting[]>("/admin/settings/cancellation");
+
+export const updateCancellationSettings = (
+  country: CountryCode,
+  payload: Partial<Omit<CancellationSetting, "country_code">>,
+) =>
+  api.patch<CancellationSetting>(
+    `/admin/settings/cancellation/${country}`,
+    payload,
+  );
+
+/** رسومُ الإلغاء بطرفَيها — والدولةُ تُقرأ من الرحلة لا من عمودٍ على الصف. */
+export const listCancellationCharges = (
+  country: CountryCode,
+  status?: CancellationChargeStatus,
+) =>
+  api.get<CancellationChargeRow[]>(
+    `/admin/cancellation-charges?country_code=${country}` +
+      (status ? `&status=${status}` : ""),
+  );
+
+/** الإعفاء — **بابُ الاعتراض بعد الحدث**، وسببُه مطلوبٌ لا اختياري. */
+export const waiveCancellationCharge = (id: string, reason: string) =>
+  api.post<CancellationChargeRow>(
+    `/admin/cancellation-charges/${id}/waive`,
+    { reason },
+  );
+
+/** الشطب (§10) — اعترافٌ بالخسارة باسم من قرّرها، ولا قيدَ له في الدفتر. */
+export const writeOffCancellationCharge = (id: string, reason: string) =>
+  api.post<CancellationChargeRow>(
+    `/admin/cancellation-charges/${id}/write-off`,
+    { reason },
+  );
 
 /** السلفُ بمتبقّيها — **مطروحاً في الخلفية** لا في المتصفح. */
 export const listAdvances = (status?: string) =>

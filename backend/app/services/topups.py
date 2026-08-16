@@ -27,7 +27,7 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import WalletTopupRequest
-from app.services import audit, wallet
+from app.services import audit, cancellation, wallet
 from app.services.pricing import round_money
 
 # القنوات التي يفتح الراكب طلبها بنفسه: كليك وحدها. الكاش يُنشئه الموظف
@@ -155,6 +155,11 @@ async def confirm(
     request.processed_by = actor.id
     request.processed_at = _now()
     request.transaction_id = entry.id
+
+    # **ودَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن** (`CANCELLATION-FEE.md` §7):
+    # «فوريٌّ كلما دخل المالُ المنصّة» — بلا مراجعةٍ إداريةٍ وبلا دورةٍ مجدولة،
+    # وإلا سأل الكبتنُ الدعمَ عن مالٍ في الطريق
+    await cancellation.on_wallet_funded(session, user=owner)
 
     await audit.record(
         session,

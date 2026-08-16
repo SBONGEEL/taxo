@@ -35,7 +35,7 @@ from app.models.enums import (
 )
 from app.models.provider_order import OPEN_ORDER_STATUSES, ProviderOrder
 from app.models.user import User
-from app.services import settings_service, wallet
+from app.services import cancellation, settings_service, wallet
 from app.services.cliq import (
     CliqChargeRequest,
     CliqChargeState,
@@ -176,6 +176,8 @@ async def apply_state(
     order.transaction_id = entry.id
     order.status = ProviderOrderStatus.PAID
     await session.flush()
+    # دَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن (`CANCELLATION-FEE.md` §7)
+    await cancellation.on_wallet_funded(session, user=owner)
     return order
 
 

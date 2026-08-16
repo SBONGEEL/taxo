@@ -190,6 +190,18 @@ export function PaymentScreen() {
               strong: false,
             }
           : null,
+        // **رسمُ إلغاءٍ سابق** (`CANCELLATION-FEE.md` §4/§5) — سطرٌ مستقلٌّ
+        // **لا مضمومٌ إلى المتبقّي**: المتبقّي أجرةُ هذه الرحلة ومنها تُحسب
+        // عمولةُ كبتنها ونصيبُه، وضمُّ الدَّين إليه يحسب عمولةً على مالٍ لا
+        // يخصّه. وبلا سطرٍ يراه صاحبُه لا يعرف كم يسلّم نقداً — وهو بعينه
+        // العطبُ الأول: رقمٌ يُقال له إنه مدينٌ به بلا بابٍ يدفع منه
+        Number(state?.cancellation_debt ?? 0) > 0
+          ? {
+              label: "رسمُ إلغاءٍ سابق",
+              value: formatMoney(state?.cancellation_debt, state?.currency),
+              strong: false,
+            }
+          : null,
       ].filter((row): row is { label: string; value: string; strong: boolean } =>
         row !== null,
       ),

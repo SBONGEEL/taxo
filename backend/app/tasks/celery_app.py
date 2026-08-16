@@ -59,6 +59,11 @@ NOTIFICATION_TRIM_INTERVAL_SECONDS = 86_400
 # موعدَ طائرةٍ لا يقبل ذلك. والدورةُ رخيصةٌ حين لا مستحقّ: استعلامٌ على فهرسٍ جزئي
 BOOKING_INTERVAL_SECONDS = 60
 
+# دورةُ رسوم الإلغاء (`design/CANCELLATION-FEE.md`). عشرُ دقائق كالسلف: مهلةُ
+# الحامل بالساعات ومدّةُ الدَّين بالأيام، فدقّةُ الدقيقة لا تشتري شيئاً — ولا
+# ينتظرها **رفعُ** المنع، فهو يقع في مسار الشحن نفسِه
+CANCELLATION_INTERVAL_SECONDS = 600
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
@@ -69,6 +74,7 @@ celery_app = Celery(
         "app.tasks.maintenance",
         "app.tasks.payments",
         "app.tasks.advances",
+        "app.tasks.cancellation",
         "app.tasks.referrals",
         "app.tasks.stops",
         "app.tasks.subscriptions",
@@ -123,6 +129,14 @@ celery_app.conf.update(
         "trim-notifications": {
             "task": "app.tasks.maintenance.trim_notifications",
             "schedule": NOTIFICATION_TRIM_INTERVAL_SECONDS,
+        },
+        # رسومُ الإلغاء (`design/CANCELLATION-FEE.md` §6-أ و§10): منعُ حاملٍ
+        # انقضت مهلتُه، ومآلُ دَينٍ لم يعد صاحبُه. **وعشرُ دقائق كالسلف**:
+        # المهلتان ساعاتٌ وأيام، ورفعُ المنع لا ينتظر هذه الدورة أصلاً بل يقع
+        # في مسار الشحن نفسِه
+        "sweep-cancellation-charges": {
+            "task": "app.tasks.cancellation.sweep_cancellation_charges",
+            "schedule": CANCELLATION_INTERVAL_SECONDS,
         },
     },
 )

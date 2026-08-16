@@ -129,6 +129,19 @@ export function OfferSheet({
                   : `${arabicDigits(String(offer.ride.stops.length))} محطات وسيطة`}
               </span>
             ) : null}
+            {/* مبلغٌ مستوفى لكبتنٍ آخر (`CANCELLATION-FEE.md` §6-أ) —
+                **والشرحُ قبل أن يقبل لا بعدها**: هذا الراكبُ عليه رسمُ إلغاءٍ
+                يسلّمه نقداً مع الأجرة، وعلى من يقبض تحويلَه من محفظته. ومن
+                قَبِل وهو يعرف لا يشتكي، ومن لا يريد يرفض العرضَ بلا عقوبة —
+                وهي حجّةُ شارتي «مشتركة» و«طلب نسائي» بعينها.
+                **وبالمبلغ لا بكلمةٍ عامة**: «تحمل مبلغاً» تُقلق، و«٠٫٧٥٠»
+                يقرّر. ومكانُها فوق السعر لأن السعرَ وحده لا يقول كم سيقبض */}
+            {Number(offer.ride.carried_cancellation_fee ?? 0) > 0 ? (
+              <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-warn">
+                تحمل {arabicDigits(offer.ride.carried_cancellation_fee ?? "0")}{" "}
+                {currencyLabel} لكبتنٍ آخر
+              </span>
+            ) : null}
             <div className="text-23 font-bold text-ink">
               {arabicDigits(offer.ride.estimated_fare)}{" "}
               <span className="text-12 font-medium text-muted">
