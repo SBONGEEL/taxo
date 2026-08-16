@@ -62,6 +62,8 @@ from app.models.promo import PromoCode
 from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
+from app.models.badge import Badge, DriverBadge
+from app.models.mission import LevelSetting, Mission
 from app.models.referral import Referral, ReferralSetting
 from app.models.place import SavedPlace
 from app.models.security_setting import SecuritySetting
@@ -107,6 +109,10 @@ __all__ = [
     "DeactivationRequest",
     "Driver",
     "DriverDocument",
+    "Badge",
+    "DriverBadge",
+    "LevelSetting",
+    "Mission",
     "Referral",
     "DriverStatus",
     "DriverSubscription",

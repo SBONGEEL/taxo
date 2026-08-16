@@ -34,6 +34,10 @@ import type {
   Payment,
   PaymentMethod,
   PaymentSetting,
+  Badge,
+  LevelOverview,
+  LevelSetting,
+  Mission,
   ReferralSetting,
   RideSharingSetting,
   ReferralSummary,
@@ -748,3 +752,47 @@ export const setAdvanceCap = (
   driverId: string,
   payload: { cap: string | null; reason: string },
 ) => api.put(`/admin/drivers/${driverId}/advance-cap`, payload);
+
+// ------------------------------------------- المهامُّ والمستويات (البند ٥٣)
+
+export const listMissions = (country: CountryCode, month?: string) =>
+  api.get<Mission[]>(
+    `/admin/missions?country_code=${country}${month ? `&month=${month}` : ""}`,
+  );
+
+export const createMission = (
+  country: CountryCode,
+  payload: {
+    month: string;
+    title: string;
+    description?: string | null;
+    metric: string;
+    target: string;
+  },
+) => api.post<Mission>(`/admin/missions?country_code=${country}`, payload);
+
+export const updateMission = (
+  id: string,
+  payload: { title?: string; target?: string; is_active?: boolean },
+) => api.patch<Mission>(`/admin/missions/${id}`, payload);
+
+export const getLevelOverview = (country: CountryCode) =>
+  api.get<LevelOverview>(`/admin/levels?country_code=${country}`);
+
+/** **والحدُّ ١٠٠م يحرسه ثلاثةٌ**: هذا النموذج، والخدمة، والقاعدة. */
+export const setLevelEffect = (
+  country: CountryCode,
+  level: number,
+  meters: number,
+) =>
+  api.put<LevelSetting>(`/admin/levels/${level}?country_code=${country}`, {
+    discount_meters: meters,
+  });
+
+export const listBadges = () => api.get<Badge[]>("/admin/badges");
+
+export const createBadge = (payload: {
+  key: string;
+  label: string;
+  description?: string | null;
+}) => api.post<Badge>("/admin/badges", payload);

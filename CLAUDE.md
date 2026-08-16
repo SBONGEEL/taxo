@@ -30,7 +30,12 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**820 backend tests pass** across 76 test files — measured, not estimated, on 2026-08-16. (One, `test_card_payments::test_card_money_never_passes_through_the_riders_wallet`, is flaky under full-suite load: it fails at `accept` with `ride_offer_expired` and passes in isolation — a dispatch timing race in the test, not a rule.) All three
+**872 backend tests pass** across 78 test files — measured, not estimated, on 2026-08-16. **Zero failures on 2026-08-16** — including the two that used to be flaky under full-suite load
+(`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
+The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
+per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
+where there is nothing to reorder fixed both the rule and the test — which is the reminder that
+"flaky under load" is a hypothesis, not a diagnosis. All three
 frontends build with `check:scale`, `check:enums`, `check:config` and (in the panel) `check:flags`
 green.
 
@@ -326,9 +331,109 @@ archive is **gpg-encrypted before it leaves the server**, its passphrase kept wh
 
 | # | Item | Spec |
 |---|---|---|
-| 1 | ✅ **The driver's profile photo** — **built 2026-08-16**, see below | `FUTURE-FEATURES` 52 |
-| 2 | **Generalising referrals** — rider→rider and driver→driver on 12-ح's machinery | `design/REFERRALS-GENERALIZATION.md`, `FUTURE-FEATURES` 51 |
-| 3 | **Missions, levels and badges** — with the owner's cap: the level's effect is a **distance discount, at most 100 m** | `design/MISSIONS-LEVELS.md`, `FUTURE-FEATURES` 53 |
+| 1 | ✅ **The driver's profile photo** — built 2026-08-16, see below | `FUTURE-FEATURES` 52 |
+| 2 | ✅ **Generalising referrals** — built 2026-08-16, backend + all three surfaces | `design/REFERRALS-GENERALIZATION.md`, `FUTURE-FEATURES` 51 |
+| 3 | ✅ **Missions, levels and badges** — built 2026-08-16 | `design/MISSIONS-LEVELS.md`, `FUTURE-FEATURES` 53 |
+
+**All three are done, so what remains before launch is backups, then «افتح في خرائط قوقل», then the
+map work** — plus two small tails recorded below (the `active_hours` metric and the badge-grant
+button), and the WhatsApp/provider items in §1.
+
+##### Generalising referrals (item 2) — four owner decisions, and the two defects only a browser found
+
+`referrals` replaced `driver_referrals` with **both sides pointing at `users`** (migration `0038`), and
+`referral_code` moved from `drivers` to `users` with it. **The alternative — a `referral_type` column on
+the old table — makes a table with a column that lies**: a rider has no `drivers` row at all, so the
+type would say "rider" while the FK pointed at a captain. **And there is no `referral_type` on the
+referral row either**: the type is derived from `users.role`, which is fixed for the life of an account;
+where it *is* written is the **settings** table, because a row there **is** the programme.
+
+The owner's four answers, each with the condition he attached:
+
+1. **The female bonus is a bonus, not a third programme** — added to `reward_amount` in **one ledger
+   entry** when the referred driver is *stamped* female. Had it been its own programme with its own
+   amount, an unset amount (zero) would pay **nothing** for referring a woman and the full amount for
+   referring a man — the incentive inverted in silence. His guard: never stored negative (service *and*
+   CHECK), and never displayed apart from the base — the panel and both apps state the **total**.
+2. **The programme is chosen by the referred user's role**, not the referrer's. So a rider signing up
+   with a code is now **accepted where it used to be refused** — and the refusal itself had become the
+   lie ("wrong code" about a correct one).
+3. **The monthly cap blocks payment, not attachment**, measured by the **month the referral was created**
+   (by payment month it would be a disbursement schedule, not a cap). The referral is still recorded and
+   attributed, and the referrer is told: `over_monthly_cap` is published and both apps render it.
+4. **"Subscription" means bought at least once**, not "active at payment time" — his words: a right
+   earned is not erased by the passage of time, and reading it live makes entitlement dance with the
+   captain's calendar. `driver_subscriptions` has no `pending` status, so the row's existence *is* the
+   purchase.
+
+**The lock that guards the cap is the referrer's wallet lock, not the referral row's.** The row lock
+stops one referral being paid twice; it does nothing about **two different rows for one referrer** paid
+at once, each reading the same count. And the first version of that test **passed with the lock
+deleted** — `asyncio.gather` finished the first before the second began. Rewritten with an explicit
+interleave (400ms hold, 100ms stagger) it now fails on deletion: two payments of 5.000 against a cap of
+one, with no exception and no log line.
+
+**The welcome coupon sits in an `else`, not beside it.** Whoever typed a code chose that offer;
+substituting another — even a larger one — shows them what they did not ask for. And **it never fails
+the ride**: the rider did not ask for this gift, so an error on "request a ride" because of it is the
+worst thing a welcome offer can do. Only the expected refusal is swallowed (`AppError`), so a
+programming error stays visible — the 12-ط lesson. `promo.find()` now hides `is_public=false` from the
+request path: a private code passed between people makes money earmarked for one person available to
+everyone who learns it, and its budget is consumed by people nobody referred.
+
+**Two defects the browser found, and neither had any other detector:**
+
+- **The referral code box was empty.** `0038` moved the captains' codes — all that existed — so every
+  account that is not a captain had `NULL` (20 of 35 here), and "copy"/"share" worked and copied
+  nothing. The backfill is migration `0039`, **not lazy generation on first read**: that needs a lock,
+  and without one two taps generate two codes and one overwrites the other — possibly after the first
+  was copied and sent. And its `downgrade` deliberately **does not erase them**: a code in a friend's
+  hand must not be invalidated by a reverse migration.
+- **«٨ د.أ» beside «٥٫٠٠٠ د.أ»** — I was summing the total in the app with `Number(a) + Number(b)`,
+  which is money through a float, forbidden by §14. `female_total_amount` is now computed in the backend
+  and read by all three surfaces. The same pass found `rewarded_total` serialising as `"0"` while a
+  `MONEY` column serialises as `"5.000"`; it is quantized now.
+
+##### Missions and levels (item 3) — the constraint is the whole feature
+
+**The nearest driver stays first. The level separates the close ones and never outranks distance.** The
+built formula is the owner's choice (b): **effective distance = distance − the level's discount in
+metres, capped at 100 m**, guarded in the request model, the service **and** a CHECK. The rejected
+slab formula is kept in the design file as the reason it was rejected: its edge is hard — 499 m and
+501 m fall in different slabs, so two metres flip the rule — and its worst displacement is the whole
+slab, not the stated number.
+
+Three rules are worth carrying forward:
+
+- **The level is a computed value with exactly one writer**, and that resolves an apparent conflict
+  between two project rules: "never store a judgement" (referrals) versus "no extra query on the
+  dispatch path". Its precedent already exists — `drivers.rating_avg`, rebuilt in full from its source
+  and read in dispatch without a query. The difference from the rejected `qualified_at` is not storage
+  but **who writes and when**. `tasks/levels.py` is the only writer; the ride-completion and rating
+  paths do not touch it, and `level_computed_at` gives "when was it computed?" one answer.
+- **Progress is measured live and never accumulated in a column** — so lowering a target in the panel
+  raises whoever was waiting on it in the next cycle, touching no row. And editing a mission triggers an
+  **immediate** re-evaluation for that country, or the level would outlive the definition it was
+  computed from.
+- **Badges never enter the dispatch order, and that is why they are a separate table.** The level is
+  measured from work done; a badge is human recognition. Letting recognition raise ride volume makes the
+  supervisor **hand out money**. There is deliberately no "raise this captain's level" button anywhere.
+
+**And the driver's screen states the effect in metres because a measured sentence can be checked.**
+"Brings you 50 m closer to nearby requests — and the nearest to you is always still first" is true and
+verifiable; "priority on requests" is read as a promise of more rides, which the captain then counts and
+does not find.
+
+**One thing the suite caught that was mine, not flakiness**: the ordering read the per-country discount
+on *every* offer attempt — an extra query inside the 20-second window, which is exactly what §5-ج
+forbids. It now reads it only when there is more than one candidate to reorder; a single candidate is
+first whatever its level.
+
+**What is not built, and is written down rather than half-done**: the `active_hours` metric (presence is
+a 60-second Redis key and `is_online` says "the switch is up", so it needs a new daily capture table —
+its own item), and **the badge-grant button in the panel's driver drawer**: the catalogue, the grant and
+revoke endpoints and their tests exist, but no button reaches them yet — a door with no button, which is
+this project's own recurring shape and is why it is named here.
 
 ##### The profile photo (item 1) is built — and its two hard edges are the interesting part
 
@@ -397,7 +502,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**820 backend tests pass** across 76 test files, measured on 2026-08-16; all three frontends build with
+**872 backend tests pass** across 78 test files, measured on 2026-08-16; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -901,7 +1006,7 @@ anyone's wallet, and a fake "settlement" entry would make the statement say he r
 *available*, never automatic.
 
 **The two stage-12 maintenance jobs are done** (`tasks/maintenance.py`; the beat schedule now holds
-eleven jobs).
+twelve jobs).
 Neither is interesting except for one rule each, and both rules are about what the job must *not* do.
 
 **The inbox trim deletes by age alone, read or unread** (`inbox.trim`, 90 days, 5000 rows a cycle).
@@ -1813,10 +1918,11 @@ There is no frontend test runner: stage 9 added no business logic to test — pr
 state transitions all stay in the backend, and the app displays what the API returns. `npm run
 build` is the check that runs, and it type-checks every file.
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **eleven** periodic jobs:
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **twelve** periodic jobs:
 the subscription sweep and the CliQ-confirmation sweep every five minutes; the stage-8 campaign
 dispatch, the multi-stop wait cap and **due bookings** (12-ط) every minute; the referral-bonus payout
-(12-ح), the advance sweep (item 15) and the **cancellation-charge sweep** every ten; and the two
+(12-ح), the advance sweep (item 15) and the **cancellation-charge sweep** every ten;
+**the driver-level re-evaluation hourly** (item 53); and the two
 stage-12 maintenance jobs — the stale-provider-order sweep and the inbox trim. **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg

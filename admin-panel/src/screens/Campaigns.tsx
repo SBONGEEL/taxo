@@ -39,6 +39,8 @@ import type {
   Delivery,
 } from "@/api/types";
 import { PromoCodes } from "@/components/PromoCodes";
+import { MissionsLevels } from "@/components/MissionsLevels";
+import { useSession } from "@/lib/session";
 import { Referrals } from "@/components/Referrals";
 import { Modal } from "@/components/ui/Modal";
 import { Shell } from "@/components/Shell";
@@ -89,6 +91,7 @@ function when(iso: string | null): string {
 }
 
 export function CampaignsScreen() {
+  const { isAdmin } = useSession();
   const { country } = useCountry();
   const countryConfig = useCountryConfig(country);
 
@@ -260,6 +263,11 @@ export function CampaignsScreen() {
       {/* الإحالاتُ هنا لا في «السائقين»: هي وحملاتُ الخصم شيءٌ واحد — عرضٌ
           تتحمّله الشركة، ومجموعُ كلفته يُقرأ في مكانٍ واحد */}
       <Referrals onError={setError} />
+
+      {/* المهامُّ والمستوياتُ هنا لا في «السائقين»: هي — كالإحالة والكوبون —
+          **أداةُ تحفيزٍ تتحمّلها الشركة**، وقراءتُها بجانب كلفتها في مكانٍ
+          واحد. والفرقُ أن ثمنَها ليس مالاً بل **أمتاراً في ترتيب التوزيع** */}
+      <MissionsLevels onError={setError} isAdmin={isAdmin} />
     </Shell>
   );
 }

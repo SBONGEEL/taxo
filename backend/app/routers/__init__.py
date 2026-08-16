@@ -7,6 +7,7 @@ from app.routers import (
     admin_payments,
     admin_promo,
     bookings,
+    admin_missions,
     admin_referrals,
     admin_sharing,
     admin_providers,
@@ -25,6 +26,7 @@ from app.routers import (
     notifications,
     payments,
     places,
+    missions,
     referrals,
     rides,
     subscriptions,
@@ -40,6 +42,7 @@ api_router.include_router(notifications.router)
 api_router.include_router(drivers.router)
 api_router.include_router(bookings.router)
 api_router.include_router(places.router)
+api_router.include_router(missions.router)
 api_router.include_router(referrals.router)
 api_router.include_router(rides.router)
 api_router.include_router(payments.router)
@@ -49,6 +52,7 @@ api_router.include_router(subscriptions.router)
 api_router.include_router(admin_settings.router)
 api_router.include_router(admin_providers.router)
 api_router.include_router(admin_promo.router)
+api_router.include_router(admin_missions.router)
 api_router.include_router(admin_referrals.router)
 api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)

@@ -287,6 +287,7 @@ export type FeatureKey =
   | "driver_referrals_enabled"
   | "rider_referrals_enabled"
   | "referred_reward_enabled"
+  | "driver_levels_enabled"
   | "scheduled_rides_enabled"
   | "ride_sharing_enabled"
   | "driver_advances_enabled";
@@ -930,4 +931,41 @@ export interface OtpSetting {
 export interface OtpExhausted {
   day: string;
   phones: string[];
+}
+
+// --------------------------------------------- المهامُّ والمستويات (البند ٥٣)
+
+export interface Mission {
+  id: string;
+  country_code: CountryCode;
+  month: string;
+  title: string;
+  description: string | null;
+  metric: string;
+  target: string;
+  is_active: boolean;
+}
+
+export interface LevelSetting {
+  country_code: CountryCode;
+  level: number;
+  discount_meters: number;
+}
+
+/** **كم كبتناً في كل مستوى ومتى حُسب** — مجموعٌ في الخلفية (القسم 14). */
+export interface LevelOverview {
+  country_code: CountryCode;
+  enabled: boolean;
+  counts: Record<string, number>;
+  settings: LevelSetting[];
+  last_computed_at: string | null;
+}
+
+export interface Badge {
+  id: string;
+  key: string;
+  label: string;
+  description: string | null;
+  icon: string | null;
+  is_active: boolean;
 }

@@ -6,6 +6,7 @@
 
 import { api, upload } from "@/api/client";
 import type {
+  MyProgress,
   Advance,
   AdvanceState,
   DeactivationRequest,
@@ -375,3 +376,7 @@ export const requestAdvance = (amount: string) =>
 
 /** سدادٌ كاملٌ من المحفظة — ويرفع الإيقافَ في المسار نفسِه لا بدورةٍ تالية. */
 export const repayAdvance = () => api.post<Advance>("/drivers/me/advances/repay", {});
+
+/** مهامُّ الشهر ومستواي وشاراتي — **قراءةٌ فقط**: للعمود كاتبٌ واحدٌ هو
+ *  المهمّةُ الدورية، وزرٌّ يقول «حدّث مستواي» يجعل له كاتباً ثانياً. */
+export const getMyProgress = () => api.get<MyProgress>("/drivers/me/progress");

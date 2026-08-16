@@ -80,6 +80,7 @@ celery_app = Celery(
         "app.tasks.payments",
         "app.tasks.advances",
         "app.tasks.cancellation",
+        "app.tasks.levels",
         "app.tasks.referrals",
         "app.tasks.stops",
         "app.tasks.subscriptions",
@@ -123,6 +124,12 @@ celery_app.conf.update(
         "pay-referral-rewards": {
             "task": "app.tasks.referrals.pay_referral_rewards",
             "schedule": REFERRAL_INTERVAL_SECONDS,
+        },
+        # **كلَّ ساعة** (قرارُ المالك ٥): المستوى حكمٌ على أداء شهرٍ كامل، ودورةٌ
+        # أسرعُ تُعيد حسابَ ألفِ صفٍّ لتغيّرٍ لا يراه أحد
+        "reevaluate-driver-levels": {
+            "task": "app.tasks.levels.reevaluate_driver_levels",
+            "schedule": 3600.0,
         },
         "sweep-provider-orders": {
             "task": "app.tasks.maintenance.sweep_provider_orders",

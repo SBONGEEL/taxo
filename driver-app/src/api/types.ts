@@ -649,3 +649,54 @@ export type SettlementState =
   | "awaiting"
   | "disputed"
   | "settled";
+
+// --------------------------------------------- المهامُّ والمستويات (البند ٥٣)
+
+/** مهمّةُ شهرٍ واحدة — والنصُّ من الإدارة، والأرقامُ حقائق. */
+export interface Mission {
+  id: string;
+  country_code: CountryCode;
+  month: string;
+  title: string;
+  description: string | null;
+  metric: string;
+  target: string;
+  is_active: boolean;
+}
+
+/** **حقائقُ لا جملةُ حالة** — «أكملتَ ٢٧ من ٤٠» تبنيها الشاشة. */
+export interface MissionProgress {
+  mission: Mission;
+  value: string;
+  target: string;
+  done: boolean;
+}
+
+export interface Badge {
+  id: string;
+  key: string;
+  label: string;
+  description: string | null;
+  icon: string | null;
+  is_active: boolean;
+}
+
+/** **ولا `note` هنا**: سببُ المنح كلامُ مشرفٍ لمشرف لا خطابٌ لصاحبه. */
+export interface GrantedBadge {
+  badge: Badge;
+  granted_at: string;
+}
+
+/** شاشةُ المهامّ. **و`level_effect_meters` يُقال بصدق أو لا يُقال**: «يقرّبك
+ *  ٥٠م» جملةٌ تُقاس، و«أولويةٌ في الطلبات» وعدٌ يعدّه صاحبُه ولا يجده. */
+export interface MyProgress {
+  enabled: boolean;
+  level: number;
+  max_level: number;
+  level_computed_at: string | null;
+  level_effect_meters: number;
+  missions_done: number;
+  missions_total: number;
+  missions: MissionProgress[];
+  badges: GrantedBadge[];
+}

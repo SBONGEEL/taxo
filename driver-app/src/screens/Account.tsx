@@ -40,11 +40,16 @@ export function AccountScreen() {
     profile?.user.country_code,
     "women_service_enabled",
   );
-  // **الصفُّ خلف مفتاحه** (12-ح): قسمٌ يعرض رمزاً في سوقٍ لا حافزَ فيه يَعِد
-  // بما لا وجودَ له. والإحالاتُ تُسجَّل على كل حال — ما يُخفى هو العرض
-  const referralsOn = useFeature(
+  // **والصفُّ صار بلا مفتاحٍ بعد التعميم**: الرمزُ واحدٌ ويعمل في برنامجين،
+  // فإخفاؤه بمفتاح أحدهما يخفي الآخرَ معه — والإحالاتُ تُسجَّل على كل حال،
+  // فمن دعا اليومَ يُحفظ أثرُه ليُكافأ يومَ يُحدَّد المبلغ. وما يُخفى داخل
+  // الشاشة هو **المبلغُ** لا الرمز (`referrals.attach` لا تسأل عن المفتاح)
+
+  // **والمهامُّ خلف مفتاحها** (البند ٥٣، §٧): مطفأً لا مستوىً يُحسب أصلاً،
+  // فشاشةٌ تعرض «مستواك: مبتدئ» في سوقٍ لا مستوياتِ فيه تصف حالةً لا وجودَ لها
+  const levelsOn = useFeature(
     profile?.user.country_code,
-    "driver_referrals_enabled",
+    "driver_levels_enabled",
   );
   // **والسلفةُ خلف مفتاحها كذلك** (البند ١٥): صفٌّ يَعِد بقرضٍ في سوقٍ لا
   // سلفَ فيه أسوأُ من غيابه — والخلفيةُ ترفض على كل حال، فالمنعُ ببابٍ
@@ -202,13 +207,18 @@ export function AccountScreen() {
               onClick={() => navigate("/account/advances")}
             />
           ) : null}
-          {referralsOn ? (
+          {levelsOn ? (
             <Row
-              label="أَحِلْ سائقة"
-              sub="رمزك ومن سجّل به"
-              onClick={() => navigate("/account/referrals")}
+              label="مهامّي ومستواي"
+              sub="مهامُّ الشهر وشاراتي"
+              onClick={() => navigate("/account/missions")}
             />
           ) : null}
+          <Row
+            label="أَحِلْ صديقك"
+            sub="رمزك ومن سجّل به"
+            onClick={() => navigate("/account/referrals")}
+          />
           <Row
             label="الإعدادات"
             sub="الإشعارات · المظهر · alias كليك"

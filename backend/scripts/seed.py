@@ -117,6 +117,10 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # الوحيد فيها الذي تتحمّله الشركةُ **عن الطرف الثاني** — فيُشعَل
         # ويُطفأ بلا مساسٍ بما وُعد به المُحيلون
         FeatureKey.RIDER_REFERRALS_ENABLED: False,
+        # **مطفأٌ صراحةً** (البند ٥٣): الميزةُ تشحن خامدةً مرتين — مفتاحٌ مطفأٌ
+        # و`level_settings.discount_meters` صفرٌ فوقه. ومطفأً **لا يُحسب مستوىً
+        # أصلاً**، فلا تُشحن يوماً مستوياتٌ بُنيت في الظلّ على تعريفٍ لم يره أحد
+        FeatureKey.DRIVER_LEVELS_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

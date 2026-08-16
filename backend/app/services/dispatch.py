@@ -47,7 +47,13 @@ from app.models.enums import (
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import geo, notifications, settings_service, subscriptions
+from app.services import (
+    geo,
+    missions,
+    notifications,
+    settings_service,
+    subscriptions,
+)
 from app.ws import events
 
 logger = logging.getLogger(__name__)
@@ -240,14 +246,14 @@ async def rider_gender(session: AsyncSession, rider_id: uuid.UUID) -> Gender | N
     return await session.scalar(select(User.gender).where(User.id == rider_id))
 
 
-async def eligible_driver_ids(
+async def _eligible_levels(
     session: AsyncSession,
     driver_ids: list[uuid.UUID],
     vehicle_category: VehicleCategory,
     *,
     gender: GenderMatch | None = None,
-) -> set[uuid.UUID]:
-    """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن.
+) -> dict[uuid.UUID, int]:
+    """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن — **ومستواه معه**.
 
     تستعملها خريطة الراكب أيضاً، فما يُعرض «متاحاً» هو نفسه ما يُسنَد إليه.
 
@@ -270,7 +276,7 @@ async def eligible_driver_ids(
     وحدهن — الاتجاه الثاني لا يُلغيه سكوتُ الأول.
     """
     if not driver_ids:
-        return set()
+        return {}
 
     busy = (
         select(Ride.id)
@@ -317,10 +323,32 @@ async def eligible_driver_ids(
             )
         )
 
-    rows = await session.scalars(
-        select(Driver.id).join(User, Driver.user_id == User.id).where(*conditions)
+    rows = await session.execute(
+        select(Driver.id, Driver.level)
+        .join(User, Driver.user_id == User.id)
+        .where(*conditions)
     )
-    return set(rows.all())
+    return {driver_id: level for driver_id, level in rows.all()}
+
+
+async def eligible_driver_ids(
+    session: AsyncSession,
+    driver_ids: list[uuid.UUID],
+    vehicle_category: VehicleCategory,
+    *,
+    gender: GenderMatch | None = None,
+) -> set[uuid.UUID]:
+    """المؤهَّلون وحدَهم — وهو ما تقرؤه خريطةُ الراكب.
+
+    **و`_eligible_levels` تقرأ المستوى في الاستعلام نفسِه** (البند ٥٣، §٥-ج):
+    `drivers.level` عمودٌ في الصفِّ الذي يُقرأ أصلاً، فلا ضمَّ جديدٌ ولا استعلامٌ
+    ثانٍ — ومسارُ العرض هذا **لا يزيد استعلاماً واحداً** عمّا كان.
+    """
+    return set(
+        await _eligible_levels(
+            session, driver_ids, vehicle_category, gender=gender
+        )
+    )
 
 
 async def _next_candidate(
@@ -359,16 +387,46 @@ async def _next_candidate(
         if not presences:
             continue
 
-        eligible = await eligible_driver_ids(
+        levels = await _eligible_levels(
             session,
             [presence.driver_id for presence in presences],
             ride.vehicle_category,
             gender=gender,
         )
+        ranked = [p for p in presences if p.driver_id in levels]
+        if not ranked:
+            continue
+
+        # **الأقربُ يبقى الأول، والمستوى يفصل بين المتقاربين** (البند ٥٣، §٥).
+        #
+        # وصيغةُ **الخصم بالأمتار** (قرارُ المالك ١): المسافةُ المؤثِّرة =
+        # المسافة − خصمُ المستوى، بحدٍّ أقصى ١٠٠م. **ولا عتبةَ حادّة**: صيغةُ
+        # الشرائح المرفوضة كانت تجعل فرقَ مترين بين ٤٩٩ و٥٠١ يقلب القاعدة.
+        # **وأقصى إزاحةٍ = الخصمُ نفسُه**، فيُقرأ «كم مترٍ يساوي هذا المستوى».
+        #
+        # **ومطفأً تُعاد خريطةٌ فارغة فيصير الخصمُ صفراً للجميع** — والترتيبُ
+        # حرفياً كما هو اليوم، بلا فرعٍ ثانٍ في الشيفرة يقول «رتّب بطريقةٍ أخرى»
+        # **ولا يُسأل عن الخصم إلا حين يكون هناك ما يُرتَّب** (§٥-ج): مرشَّحٌ
+        # واحدٌ هو الأوّلُ مهما كان مستواه، فقراءةُ الإعدادات له استعلامان في
+        # نافذةِ العشرين ثانية بلا أن يتغيّر شيء. وهي الحالُ الغالبةُ فعلاً —
+        # سوقٌ فيه كبتنٌ واحدٌ قريبٌ أشيعُ من سوقٍ فيه اثنان متقاربان
+        discounts = (
+            await missions.discounts_for(session, ride.country_code)
+            if len(ranked) > 1
+            else {}
+        )
+        if discounts:
+            ranked.sort(
+                key=lambda p: (
+                    p.distance_km * 1000 - discounts.get(levels[p.driver_id], 0),
+                    # **والمسافةُ الحقيقيةُ فاصلٌ ثانٍ**: متساويان في المؤثِّرة
+                    # يُرتَّبان بالأقرب فعلاً، فلا يقرّر ترتيبُ ريدِس بينهما
+                    p.distance_km,
+                )
+            )
+
         # `presences` مرتبة من الأقرب، فأول مؤهل فيها هو الأقرب المؤهل
-        for presence in presences:
-            if presence.driver_id in eligible:
-                return presence
+        return ranked[0]
 
     return None
 

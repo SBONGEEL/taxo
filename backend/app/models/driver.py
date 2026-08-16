@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Numeric,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -94,6 +95,22 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # لكل طلبٍ ولخريطة كل راكب، وجمعُ دفترٍ داخلها يضع حساباً ماليّاً في المسار
     # الحرج. **ويُطفأ في مسار السداد نفسِه لا بدورةٍ تالية**: من سدَّد وبقي
     # ممنوعاً عشر دقائق يقرأ السدادَ بلا أثر
+    # **المستوى: حاصلُ حسابٍ مادّيٍّ له كاتبٌ واحد** (البند ٥٣، §٣) — لا حكمٌ
+    # مجمَّد. وسابقتُه هنا `rating_avg`: يُعاد بناؤه كاملاً من مصدره، ويُقرأ في
+    # التوزيع بلا استعلام. والفرقُ بينه وبين `qualified_at` المرفوض ليس التخزينَ
+    # بل **من يكتب ومتى**: هذا كاتبُه `tasks/levels.py` وحدَه ويُعاد بناؤه، وذاك
+    # ختمٌ يُكتب مرةً ويبقى يحكم بمعيارٍ زال.
+    #
+    # **ولا يُحدَّث في مسار إنهاء الرحلة ولا في مسار التقييم** — كاتبٌ واحدٌ كما
+    # لـ`current_leg` في 12-ب. و`level_computed_at` تجعل «متى حُسب؟» له جوابٌ
+    # واحدٌ بدل تخمين
+    level: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default=text("0")
+    )
+    level_computed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     advance_blocked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
