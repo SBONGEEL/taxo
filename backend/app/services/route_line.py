@@ -28,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.core.redis_client import get_redis_client
 from app.models.ride import Ride, RideStop
 from app.services import directions
 
@@ -50,6 +51,86 @@ def decode(stored: str | None) -> list[list[float]] | None:
     if not isinstance(points, list) or len(points) < 2:
         return None
     return points
+
+
+# **سقفُ إعادة التوجيه لكل رحلة** (البند ١٧-٤) — وهو **الشيءُ الوحيد الذي يعاود
+# نداءَ Directions**، فالسقفُ هو ما يجعل الفاتورةَ محسوبةً سلفاً.
+#
+# وحسابُ المالك: عند ألف رحلةٍ يومياً، ٤ نداءاتٍ لكل رحلة اليومَ → ١٢٠ ألفاً
+# شهرياً؛ وبثلاثِ إعاداتٍ كحدٍّ أقصى → ٢٧٠ ألفاً. **والسقفُ في الخلفية لا في
+# التطبيق**: عميلٌ يعدّ لنفسه هو عميلٌ يوجّه إنفاقاً — والقاعدةُ نفسُها التي
+# تجعل `card_gateway.return_url_for` لا يقبل ادّعاءَ العميل.
+MAX_REROUTES = 3
+
+
+async def reroute(
+    session: AsyncSession, ride_id: uuid.UUID
+) -> tuple[list[list[float]] | None, int]:
+    """يعيد رسمَ المسار من موضع الكبتن — **إن بقي من سقفها شيء**.
+
+    يعيد (المسار، ما بقي من السقف). الـcommit للمستدعي.
+
+    **ولا يُعاد الرسمُ من نقطة الانطلاق** بل **من موقع الكبتن الآن**: من انحرف
+    عن الطريق لا يعيده خطٌّ يبدأ حيث لم يعد.
+
+    **وفشلُه يُبقي الخطَّ القديم** ولا يمحوه: خطٌّ قديمٌ أنفعُ من لا خطّ، وهو
+    قاعدةُ `ensure` نفسُها — الخطُّ زينةُ خريطةٍ لا شرطُ رحلة.
+
+    **والسقفُ يُستهلك بالمحاولة الناجحة وحدَها**: نداءٌ سقط لم يكلّف شيئاً،
+    وخصمُه من رصيدِ كبتنٍ انحرف مرةً يجعل العطبَ عقوبةً عليه.
+    """
+    from app.services import geo
+
+    ride = await session.get(Ride, ride_id)
+    if ride is None:  # pragma: no cover
+        return None, 0
+    if ride.status.value not in DRAWABLE_STATUSES or ride.driver_id is None:
+        return decode(ride.route_polyline), 0
+
+    left = MAX_REROUTES - (ride.reroute_count or 0)
+    if left <= 0:
+        return decode(ride.route_polyline), 0
+
+    position = await geo.last_position(
+        get_redis_client(),
+        driver_id=ride.driver_id,
+        country_code=ride.country_code,
+    )
+    if position is None:
+        # **ولا يُعاد الرسمُ بلا موضعٍ معروف**: البديلُ هو الانطلاقُ من نقطةٍ
+        # مضت، وهو أسوأُ من الخطِّ القائم
+        return decode(ride.route_polyline), left
+
+    stops = (
+        await session.scalars(
+            select(RideStop)
+            .where(RideStop.ride_id == ride.id, RideStop.arrived_at.is_(None))
+            .order_by(RideStop.sequence)
+        )
+    ).all()
+
+    try:
+        route = await directions.route_between(
+            session,
+            directions.Coordinates(lat=position.lat, lng=position.lng),
+            directions.Coordinates(lat=ride.dropoff_lat, lng=ride.dropoff_lng),
+            country_code=ride.country_code,
+            stops=[
+                directions.Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops
+            ],
+            with_geometry=True,
+        )
+    except AppError as exc:
+        logger.warning("تعذّرت إعادة توجيه الرحلة %s: %s", ride_id, exc.code)
+        return decode(ride.route_polyline), left
+
+    if route.geometry is None:
+        return decode(ride.route_polyline), left
+
+    ride.route_polyline = json.dumps(route.geometry, separators=(",", ":"))
+    ride.reroute_count = (ride.reroute_count or 0) + 1
+    await session.flush()
+    return route.geometry, MAX_REROUTES - ride.reroute_count
 
 
 async def ensure(session: AsyncSession, ride_id: uuid.UUID) -> list[list[float]] | None:

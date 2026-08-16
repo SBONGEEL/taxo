@@ -19,14 +19,16 @@
  */
 
 import mapboxgl from "mapbox-gl";
-import { useEffect, useRef } from "react";
+import { Compass, LocateFixed, Navigation2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import type { Coordinates } from "@/api/types";
+import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
 import { trimRoute } from "@/lib/route-line";
 import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+import { arabicDigits, cn } from "@/lib/utils";
 
 const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
 const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
@@ -50,6 +52,9 @@ interface Props {
   routePoints?: number[][] | null;
   /** موضعُه الآن — ما مضى من المسار يُقصّ خلفه (تتبّعُ التقدّم بعد البدء). */
   trimAt?: Coordinates | null;
+  /** دقائقُ الوصول — **محسوبةٌ في الجهاز** (البند ١٧-٣)، و`null` فلا يُعرض شيء:
+   *  رقمٌ مبنيٌّ على سرعةٍ لم تُقَس يُقرأ وعداً ثم يُخلَف. */
+  etaMinutes?: number | null;
   className?: string;
 }
 
@@ -89,6 +94,7 @@ export function MapView({
   fit = false,
   routePoints = null,
   trimAt = null,
+  etaMinutes = null,
   className,
 }: Props) {
   const { dark } = useTheme();
@@ -99,6 +105,17 @@ export function MapView({
     {},
   );
   const animation = useRef<number | null>(null);
+
+  // **طورُ المتابعة** (البند ١٧-٢) — و`ref` بجانب الحالة لأن مُعالِج السحب
+  // يُسجَّل مرةً واحدةً عند بناء الخريطة، فقراءتُه للحالة تُجمّد أوّلَ قيمة
+  const [follow, setFollow] = useState<FollowMode>("follow");
+  const followRef = useRef<FollowMode>("follow");
+  followRef.current = follow;
+  // **متابعةٌ برمجيةٌ لا تُفهم سحباً**: `easeTo` يُطلق `dragstart`? لا — لكنه
+  // يُطلق `movestart`، ولو رُبط الخروجُ به لخرجت الكاميرا من المتابعة **بفعل
+  // المتابعة نفسِها**. فالحدثُ المرصود `dragstart` و`touchstart` بإصبعين:
+  // ما يفعله إنسانٌ بيده لا ما تفعله الكاميرا بنفسها
+
 
   useEffect(() => {
     if (!token || !host.current || map.current) return;
@@ -112,7 +129,29 @@ export function MapView({
       ],
       zoom: 14,
       attributionControl: true,
+      // **الإيماءاتُ الكاملةُ مكتوبةٌ صراحةً لا موروثةٌ من افتراضِ المكتبة**
+      // (البند ١٧-١): دورانٌ وميلٌ ونقرةٌ مزدوجة. وقيمتُها اليومَ هي افتراضُ
+      // `mapbox-gl` نفسِه — **وكتابتُها هي المقصود**: ترقيةُ مكتبةٍ تُبدّل
+      // افتراضاً تُسقط إيماءةً بلا سطرٍ يتغيّر عندنا ولا اختبارٍ يفشل، وهو
+      // الشكلُ الذي لا يُكتشف إلا بشكوى كبتن.
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchZoomRotate: true,
+      touchPitch: true,
+      doubleClickZoom: true,
+      // **وسقفُ الميل ٦٠°** — وهو ما تحتاجه كاميرا الملاحة (البند ١٧-٦)، ولا
+      // يُترك للافتراض كي لا يصير الحدُّ قراراً في مكتبةٍ لا نملكها
+      maxPitch: 60,
     });
+    // **السحبُ بيده يُخرج إلى `free`** — وكاميرا تعيده قسراً بعد ثانيةٍ تجعل
+    // النظرَ إلى ما بعد المنعطف مستحيلاً، وهي أشيعُ شكوى في تطبيقات الملاحة
+    const release = () => {
+      if (followRef.current !== "free") setFollow("free");
+    };
+    map.current.on("dragstart", release);
+    map.current.on("rotatestart", release);
+    map.current.on("pitchstart", release);
+
     return () => {
       if (animation.current !== null) cancelAnimationFrame(animation.current);
       map.current?.remove();
@@ -139,6 +178,19 @@ export function MapView({
       return;
     }
 
+    // **الكاميرا تتبع في الطورين لا في `free`** — والتحريكُ برمجيٌّ فلا يُقرأ
+    // سحباً (`easeTo` لا يُطلق `dragstart`)
+    if (followRef.current !== "free" && !fit) {
+      instance.easeTo({
+        center: [center.lng, center.lat],
+        bearing: followRef.current === "heading" ? (heading ?? 0) : 0,
+        duration: 900,
+        // **ولا نبضةَ ولا قفزة**: `easeTo` بمدّةٍ أطول قليلاً من دورة البثّ
+        // يجعل الحركةَ مستمرةً بدل وثباتٍ كل ثلاث ثوانٍ
+        essential: true,
+      });
+    }
+
     const marker = self.current;
     const from = marker.getLngLat();
     const startedAt = performance.now();
@@ -154,6 +206,22 @@ export function MapView({
     };
     animation.current = requestAnimationFrame(step);
   }, [center]);
+
+  const cycle = useCallback(() => {
+    const instance = map.current;
+    setFollow((current) => {
+      const next = nextMode(current);
+      if (instance && center) {
+        instance.easeTo({
+          center: [center.lng, center.lat],
+          bearing: next === "heading" ? (heading ?? 0) : 0,
+          duration: 500,
+          essential: true,
+        });
+      }
+      return next;
+    });
+  }, [center, heading]);
 
   useEffect(() => {
     const element = self.current?.getElement();
@@ -271,5 +339,43 @@ export function MapView({
   // ولا يُدفع الصنفُ إلى العنصر الذي تملكه Mapbox: هي تكتب صنفَها عليه، وما
   // نكتبه نحن قد يُهزم — فالمقاسُ يُطلب من الأب (`h-full w-full`) لا من موضعٍ
   // تملكه هي. وهو نفسُ ما يفعله تطبيقُ الراكب ولوحةُ الإدارة أصلاً.
-  return <div ref={host} className={cn("h-full w-full", className)} />;
+  return (
+    <div className={cn("relative h-full w-full", className)}>
+      <div ref={host} className="h-full w-full" />
+
+      {/* **الوصولُ المتوقَّع** — يظهر حين يُقاس ويختفي حين لا يُقاس */}
+      {etaMinutes !== null ? (
+        <div className="pointer-events-none absolute start-14 top-64 z-10 rounded-full border border-line bg-surface px-12 py-7 text-12 font-bold text-ink shadow-md">
+          {arabicDigits(String(etaMinutes))} دقيقة
+        </div>
+      ) : null}
+
+      {/* **زرُّ التموضع ثلاثيُّ الأطوار** (البند ١٧-٢) — وموضعُه فوق الخريطة
+          وتحت بطاقةِ الرحلة، فلا يزاحم قراراً (قاعدةُ «لا شيءَ يعلو قراراً»).
+          **ونصُّه يقول الطورَ الحاليَّ لا الفعلَ التالي**: أيقونةٌ وحدَها تجعل
+          الكبتنَ يضغط ليعرف ماذا تفعل، وهو يقود */}
+      {center ? (
+        <button
+          type="button"
+          onClick={cycle}
+          aria-label={labelFor(follow)}
+          title={labelFor(follow)}
+          className={cn(
+            "pressable absolute end-14 top-64 z-10 flex size-40 items-center justify-center rounded-full border shadow-md",
+            follow === "free"
+              ? "border-line bg-surface text-muted"
+              : "border-ok bg-surface text-ok",
+          )}
+        >
+          {follow === "heading" ? (
+            <Navigation2 size={18} />
+          ) : follow === "follow" ? (
+            <LocateFixed size={18} />
+          ) : (
+            <Compass size={18} />
+          )}
+        </button>
+      ) : null}
+    </div>
+  );
 }

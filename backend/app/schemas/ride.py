@@ -335,3 +335,6 @@ class RouteLineOut(BaseModel):
     """
 
     points: list[list[float]]
+    # **كم إعادةَ توجيهٍ بقيت** (البند ١٧-٤) — يقرؤها التطبيقُ فيكفّ عن الطلب.
+    # و`None` على القراءة العادية: السؤالُ لا معنى له إلا بعد إعادةِ توجيه
+    reroutes_left: int | None = None

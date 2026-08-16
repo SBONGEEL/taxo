@@ -590,3 +590,25 @@ async def add_tip(
         tip=tip,
     )
     return TipOut.model_validate(tip)
+
+
+@router.post("/{ride_id}/reroute", response_model=RouteLineOut)
+async def reroute_ride(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+) -> RouteLineOut:
+    """يعيد رسمَ المسار من موضع الكبتن — **بسقفٍ في الخلفية** (البند ١٧-٤).
+
+    **وللكبتن وحدَه**: هو من انحرف وهو من يقود، والراكبُ يرى الخطَّ المجمَّد على
+    رحلته. ولو فُتح للراكب لصار لكلِّ رحلةٍ طالبان لنداءٍ واحدٍ مدفوع.
+
+    **والسقفُ هنا لا في التطبيق**: عميلٌ يعدّ لنفسه عميلٌ يوجّه إنفاقاً — وهي
+    قاعدةُ `card_gateway.return_url_for` نفسُها. والتطبيقُ يقرأ `reroutes_left`
+    فيكفّ عن الطلب، **وكفُّه راحةٌ لا حراسة**.
+    """
+    ride = await rides_service.get_ride(session, ride_id)
+    if ride.driver_id != driver.id:
+        raise NotFound("الرحلة غير موجودة")
+
+    points, left = await route_line.reroute(session, ride_id)
+    await session.commit()
+    return RouteLineOut(points=points or [], reroutes_left=left)

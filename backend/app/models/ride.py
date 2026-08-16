@@ -14,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Numeric,
+    Integer,
     SmallInteger,
     String,
     Text,
@@ -324,6 +325,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     # **وفارغةٌ حالٌ مقبولة**: عقدُ Mapbox قد يكون مطفأً أو النداءُ فشل —
     # وخريطةٌ بلا خطٍّ أهونُ من رحلةٍ لا تُقبل. والتطبيقُ يرسم الدبوسين وحدهما.
     route_polyline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # **كم مرةً أُعيد رسمُ المسار** (البند ١٧-٤). وعمودٌ لا عدّادٌ في الذاكرة:
+    # السقفُ يجب أن يبقى بعد إعادة تشغيل العامل وبين حاويتين، وعدّادٌ في عملية
+    # يُصفَّر بأوّل نشر — فيصير السقفُ اقتراحاً. **وهو الشيءُ الوحيد الذي يعاود
+    # نداءَ Directions**، فحفظُه هو ما يجعل الفاتورةَ محسوبةً سلفاً
+    reroute_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
     # أربعةُ حقولِ انتظارٍ مجمَّدةٌ لحظة الإنشاء كالعمولة (SPEC القسم 5.10):
     # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن يتغيّر
     # عدّادُها تحت عين راكبها

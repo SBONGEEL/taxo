@@ -191,6 +191,15 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       zoom,
       attributionControl: true,
       interactive,
+      // **الإيماءاتُ الكاملةُ صراحةً** (البند ١٧-١) — انظر تعليقَ تطبيق الكبتن:
+      // قيمتُها افتراضُ المكتبة اليوم، وكتابتُها تمنع ترقيةً تُسقط إيماءةً بصمت.
+      // **و`interactive: false` يعلوها كلَّها** فتبقى الخرائطُ الساكنة ساكنة
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchZoomRotate: true,
+      touchPitch: true,
+      doubleClickZoom: true,
+      maxPitch: 60,
       // لغةُ الخريطة عربية حيث تتوفر التسميات
       locale: {},
     });

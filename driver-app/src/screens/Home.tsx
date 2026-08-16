@@ -17,7 +17,7 @@
  */
 
 import { Bell, Moon, Sun } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -34,6 +34,7 @@ import {
   getMySubscription,
   getRouteLine,
   getUnreadCount,
+  rerouteRide,
   startRide,
 } from "@/api/endpoints";
 import type {
@@ -43,6 +44,13 @@ import type {
   Ride,
   Wallet,
 } from "@/api/types";
+import {
+  etaMinutes,
+  offRouteMeters,
+  OFF_ROUTE_METERS,
+  OFF_ROUTE_STREAK,
+  type Sample,
+} from "@/lib/eta";
 import { ActiveRide } from "@/components/ActiveRide";
 import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
@@ -131,6 +139,48 @@ export function HomeScreen() {
   // **خطُّ المسار على الطرق** (البند ٨): يُقرأ مرةً لكل رحلةٍ مُسنَدة — الخلفيةُ
   // جمّدته لحظةَ القبول، فما يراه الكبتن هو ما يراه راكبُه. ويُصفَّر بانتهائها
   const [routeLine, setRouteLine] = useState<number[][] | null>(null);
+
+  // **الوصولُ المتوقَّع يُحسب هنا ولا يُطلب** (البند ١٧-٣): المسافةُ من الخطّ
+  // المجمَّد على الرحلة، والسرعةُ من حركة الكبتن نفسِه. واستفتاءُ الخادم عنه
+  // كان سيرفع فاتورةَ Directions سبعةَ أضعافٍ لرقمٍ يتبدّل بالدقيقة
+  const samples = useRef<Sample[]>([]);
+  const [eta, setEta] = useState<number | null>(null);
+  useEffect(() => {
+    if (!position) return;
+    samples.current = [...samples.current.slice(-11), { at: position, t: Date.now() }];
+    setEta(etaMinutes(routeLine, position, samples.current));
+  }, [position, routeLine]);
+  // **إعادةُ التوجيه عند انحرافٍ مستمرّ** (البند ١٧-٤) — **وثلاثُ قراءاتٍ
+  // متتالية** لا واحدة: قفزةُ GPS تُنتج نداءً مدفوعاً بلا أن ينحرف أحد.
+  // **والسقفُ في الخلفية**، وهذا العدّادُ راحةٌ لا حراسة: يكفّ عن الطلب حين
+  // ينفد فلا يُرسل نداءً يُرَدّ
+  const drift = useRef(0);
+  const [reroutesLeft, setReroutesLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!ride || !position || !routeLine || reroutesLeft === 0) return;
+    const away = offRouteMeters(routeLine, position);
+    if (away === null || away < OFF_ROUTE_METERS) {
+      drift.current = 0;
+      return;
+    }
+    drift.current += 1;
+    if (drift.current < OFF_ROUTE_STREAK) return;
+    drift.current = 0;
+    rerouteRide(ride.id)
+      .then((line) => {
+        if (line.points.length >= 2) setRouteLine(line.points);
+        setReroutesLeft(line.reroutes_left ?? null);
+      })
+      // **وفشلُه صامتٌ**: الخطُّ القديم باقٍ، وكبتنٌ يقود لا يُقاطَع برسالة خطأ
+      .catch(() => undefined);
+  }, [position, routeLine, ride, reroutesLeft]);
+
+  // **وتُنسى القراءاتُ عند تبدّل المسار**: سرعةٌ مقيسةٌ في رحلةٍ انتهت لا تصف
+  // هذه، وأوّلُ رقمٍ يظهر في رحلةٍ جديدةٍ يكون محسوباً من حركةٍ ليست فيها
+  useEffect(() => {
+    samples.current = [];
+    setEta(null);
+  }, [routeLine]);
   useEffect(() => {
     const id = tracking ? ride.id : null;
     if (!id) {
@@ -221,6 +271,7 @@ export function HomeScreen() {
         // ويتقلّص الخطُّ خلفه كلّما تقدّم — من موقعه هو، فهو من يسير فيه
         routePoints={routeLine}
         trimAt={position}
+        etaMinutes={eta}
       />
 
       {/* تدرّجٌ علوي 60px يفصل الشريط عن الخريطة (§2.9) */}

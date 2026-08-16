@@ -380,3 +380,11 @@ export const repayAdvance = () => api.post<Advance>("/drivers/me/advances/repay"
 /** مهامُّ الشهر ومستواي وشاراتي — **قراءةٌ فقط**: للعمود كاتبٌ واحدٌ هو
  *  المهمّةُ الدورية، وزرٌّ يقول «حدّث مستواي» يجعل له كاتباً ثانياً. */
 export const getMyProgress = () => api.get<MyProgress>("/drivers/me/progress");
+
+/** يعيد رسمَ المسار من موضعه — **بسقفٍ تحرسه الخلفية** (البند ١٧-٤).
+ *  و`reroutes_left` يقرؤها التطبيقُ فيكفّ عن الطلب: **راحةٌ لا حراسة**. */
+export const rerouteRide = (rideId: string) =>
+  api.post<{ points: number[][]; reroutes_left: number | null }>(
+    `/rides/${rideId}/reroute`,
+    {},
+  );
