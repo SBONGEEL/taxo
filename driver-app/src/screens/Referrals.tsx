@@ -1,47 +1,62 @@
-/** «أَحِلْ سائقة» — رمزي ومن سجّل به (SPEC القسم 9.1، المرحلة 12-ح).
+/** «أَحِلْ صديقك» — رمزي ومن سجّل به (SPEC §9.1، 12-ح ثم تعميمُها).
  *
- * **وثلاثُ قواعدَ في هذه الشاشة تحمل قراراتٍ لا تفاصيلَ عرض:**
+ * **وأربعُ قواعدَ في هذه الشاشة تحمل قراراتٍ لا تفاصيلَ عرض:**
  *
  * 1. **الرمزُ لاتينيٌّ بلا تحويلِ خانات**: يُنطق في مكالمةٍ ويُكتب في شاشةٍ
  *    أخرى حرفاً حرفاً — كاللوحة والمرجع، لا كالمبالغ (`Cards.tsx`/`Vehicle.tsx`).
  * 2. **ولا يُذكر مبلغٌ حيث لم يُحدَّد**: `reward_amount === 0` تعني «لم يقرّره
  *    أحدٌ بعد» لا «صفراً»، فالشاشةُ تعرض الرمزَ والعدَّ وتصمت عن المال — ووعدٌ
  *    بمالٍ لم يُقرَّر أسوأُ من صمت، ويُقرأ خُلفاً للوعد يومَ لا يصل.
- * 3. **وجملةُ الحالة تُبنى هنا** من حقائقَ ترسلها الخلفية (معتمدة؟ مثبَّتة
- *    الجنس؟ كم رحلةً من كم؟) لا نصّاً جاهزاً — نفسُ قاعدةِ بناء نصِّ الإشعار
- *    من `data`: الخلفيةُ لا تعرف من يقرأ.
+ * 3. **والبرنامجان يُشرحان معاً** (شرطُ المالك الثاني بحرفه): الرمزُ يعمل مع
+ *    الاثنين، والمكافأةُ تختلف بحسب من يسجّل به — **فمن يدعو سائقاً لا يُفاجأ
+ *    بمبلغٍ غير الذي توقّعه**. وعرضُ مبلغٍ واحدٍ كان سيكذب على نصف من يقرأ.
+ * 4. **والسقفُ يُعلن قبل أن يدعو لا بعد أن يُرفض دفعُه** (شرطُه الثالث): كم
+ *    السقفُ وكم بقي منه هذا الشهر. ومن تجاوز يرى إحالتَه **مسجَّلةً وموسومةً**
+ *    بأنها فوق السقف — لا صمتَ ولا رقمٌ يختفي.
+ *
+ * **وجملةُ الحالة تُبنى هنا** من حقائقَ ترسلها الخلفية لا نصّاً جاهزاً — نفسُ
+ * قاعدةِ بناء نصِّ الإشعار من `data`: الخلفيةُ لا تعرف من يقرأ.
  */
 
 import { useEffect, useState } from "react";
 import { Copy, Check, Share2 } from "lucide-react";
 
-
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { getMyReferrals } from "@/api/endpoints";
-import type { MyReferrals, ReferralStage } from "@/api/types";
+import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
-/** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن. */
+/** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن.
+ *
+ * **ولا «بانتظار إثبات الجنس» بعد التعميم**: كان شرطاً فصار علاوةً، فوسمُه
+ * كان سيقول إن الإحالةَ متوقّفةٌ على ما لا يوقفها.
+ */
 function stageOf(row: ReferralStage): { text: string; tone: string } {
   if (row.rewarded) return { text: "وصلت المكافأة", tone: "text-ok" };
-  if (!row.driver_approved) {
-    return { text: "حسابها قيد المراجعة", tone: "text-muted" };
-  }
-  if (!row.gender_ready) {
-    return { text: "بانتظار إثبات بياناتها", tone: "text-muted" };
+  if (row.referral_type === "driver") {
+    if (!row.driver_approved) {
+      return { text: "حسابه قيد المراجعة", tone: "text-muted" };
+    }
+    if (!row.has_subscription) {
+      return { text: "لم يشترِ اشتراكاً بعد", tone: "text-muted" };
+    }
   }
   if (row.rides_done < row.rides_required) {
     return {
-      text: `أكملت ${arabicDigits(String(row.rides_done))} من ${arabicDigits(
+      text: `أكمل ${arabicDigits(String(row.rides_done))} من ${arabicDigits(
         String(row.rides_required),
       )} رحلات`,
       tone: "text-muted",
     };
+  }
+  // **فوق السقف يُقال، لا يُصمت عنه**: «مستحقّة ولن تُدفع» حقيقةٌ يملكها صاحبُها
+  if (row.over_monthly_cap) {
+    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "text-warn" };
   }
   return { text: "استحقّت — المكافأة في الطريق", tone: "text-ink" };
 }
@@ -50,7 +65,8 @@ export function ReferralsScreen() {
   const goBack = useGoBack();
   const { user } = useSession();
   // العملةُ من دولة الحساب — والخلفيةُ ترسلها على المكافأة المدفوعة وحدها
-  const currency = user?.country_code === "LY" ? CURRENCY_LABEL.LYD : CURRENCY_LABEL.JOD;
+  const currency =
+    user?.country_code === "LY" ? CURRENCY_LABEL.LYD : CURRENCY_LABEL.JOD;
   const [data, setData] = useState<MyReferrals | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -68,8 +84,18 @@ export function ReferralsScreen() {
   // **شرطان لا شرط** — نفسُ `referrals.policy_for(...).pays` في الخلفية:
   // مفتاحٌ مطفأٌ ومبلغٌ مضبوطٌ (سوقٌ يُجهَّز للإطلاق) يجعل الشاشةَ تَعِد بمكافأةٍ
   // لا تُدفع، وهو أسوأُ من صمتٍ لأنه يُقرأ خُلفاً للوعد لا تأجيلاً له
-  const pays =
-    data !== null && data.enabled && Number(data.reward_amount) > 0;
+  const paying = (data?.programs ?? []).filter(
+    (program) => program.enabled && Number(program.reward_amount) > 0,
+  );
+  const pays = paying.length > 0;
+
+  // **والسقفُ يُقرأ من البرنامج الذي يدفع**، وإن دفع الاثنان فأصغرُهما هو
+  // القيدُ الفعليّ — وعرضُ الأوسع يَعِد بما لا يُدفع
+  const cap = paying
+    .map((program) => program.monthly_cap)
+    .filter((value): value is number => value !== null)
+    .sort((a, b) => a - b)[0];
+  const left = cap === undefined ? null : Math.max(0, cap - (data?.paid_this_month ?? 0));
 
   async function copy() {
     if (!data) return;
@@ -84,7 +110,7 @@ export function ReferralsScreen() {
 
   async function share() {
     if (!data) return;
-    const text = `سجّلي كسائقة في تاكسو برمزي ${data.code}`;
+    const text = `سجّل في تاكسو برمزي ${data.code}`;
     if (navigator.share) {
       try {
         await navigator.share({ text });
@@ -94,6 +120,10 @@ export function ReferralsScreen() {
       }
     }
     void copy();
+  }
+
+  function amountOf(program: ReferralProgram) {
+    return `${arabicDigits(program.reward_amount)} ${currency}`;
   }
 
   return (
@@ -107,7 +137,7 @@ export function ReferralsScreen() {
         >
           →
         </button>
-        <h1 className="text-20 font-bold text-ink">أَحِلْ سائقة</h1>
+        <h1 className="text-20 font-bold text-ink">أَحِلْ صديقك</h1>
       </div>
 
       <ErrorNote message={error} />
@@ -144,33 +174,86 @@ export function ReferralsScreen() {
             </div>
           </section>
 
-          <section className="card p-16">
-            <h2 className="text-13.5 font-bold text-ink">كيف تعمل</h2>
-            <ol className="mt-8 space-y-6 text-12.5 leading-relaxed text-muted">
-              <li>١. تسجّل السائقةُ حسابها وتكتب رمزك.</li>
-              <li>٢. تُراجع مستنداتُها ويُعتمد حسابها.</li>
-              <li>
-                ٣. تُكمل {arabicDigits(String(data.required_rides))} رحلات.
-              </li>
-              {/* السطرُ الرابعُ يُذكر مبلغاً — فلا يُكتب حيث لا مبلغ */}
-              {pays ? (
-                <li>
-                  ٤. تصلك{" "}
-                  <b className="text-ink">
-                    {arabicDigits(data.reward_amount)} {currency}
-                  </b>{" "}
-                  في محفظتك.
-                </li>
-              ) : (
-                <li>٤. تُسجَّل الإحالةُ في حسابك.</li>
-              )}
-            </ol>
-            {pays ? (
-              <p className="mt-10 text-11.5 text-muted">
+          {/* **رمزٌ واحدٌ وبرنامجان** — شرطُ المالك الثاني: النصُّ يشرح أن الرمز
+              يعمل مع الاثنين وأن المكافأة تختلف بحسب من يسجّل به */}
+          {pays ? (
+            <section className="card p-16">
+              <h2 className="text-13.5 font-bold text-ink">
+                رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به
+              </h2>
+              <div className="mt-10 space-y-8">
+                {data.programs.map((program) => {
+                  const active =
+                    program.enabled && Number(program.reward_amount) > 0;
+                  const isDriver = program.referral_type === "driver";
+                  return (
+                    <div
+                      key={program.referral_type}
+                      className="flex items-start justify-between gap-10 rounded-13 border border-line bg-surface-2 p-12"
+                    >
+                      <div>
+                        <p className="text-12.5 font-semibold text-ink">
+                          {isDriver ? "سجّل كبتناً" : "سجّل راكباً"}
+                        </p>
+                        <p className="mt-4 text-11.5 text-muted">
+                          {isDriver
+                            ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${arabicDigits(
+                                String(program.required_rides),
+                              )} رحلات`
+                            : `يُكمل ${arabicDigits(
+                                String(program.required_rides),
+                              )} رحلات`}
+                        </p>
+                        {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** —
+                            ورقمان منفصلان يُقرأ ثانيهما بديلاً عن الأول */}
+                        {isDriver && Number(program.female_bonus_amount) > 0 ? (
+                          <p className="mt-4 text-11.5 text-ok">
+                            وإن كانت سائقةً موثَّقة:{" "}
+                            {arabicDigits(program.female_total_amount)} {currency}{" "}
+                            — الأساسُ وعلاوتُه معاً
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 text-13 font-bold",
+                          active ? "text-ink" : "text-muted",
+                        )}
+                      >
+                        {active ? amountOf(program) : "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* **السقفُ قبل أن يدعو** — شرطُ المالك الثالث بحرفه */}
+              {cap !== undefined ? (
+                <p
+                  className={cn(
+                    "mt-10 text-11.5",
+                    left === 0 ? "text-warn" : "text-muted",
+                  )}
+                >
+                  {left === 0
+                    ? `بلغتَ سقفَ هذا الشهر (${arabicDigits(String(cap))}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
+                    : `سقفُ هذا الشهر ${arabicDigits(String(cap))} إحالات — بقي لك ${arabicDigits(String(left))}.`}
+                </p>
+              ) : null}
+
+              <p className="mt-8 text-11.5 text-muted">
                 مجموع ما وصلك: {arabicDigits(data.total_rewarded)} {currency}
               </p>
-            ) : null}
-          </section>
+            </section>
+          ) : (
+            <section className="card p-16">
+              <h2 className="text-13.5 font-bold text-ink">كيف تعمل</h2>
+              <p className="mt-8 text-12.5 leading-relaxed text-muted">
+                شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الإحالةُ في
+                حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.
+              </p>
+            </section>
+          )}
 
           <section>
             <h2 className="mb-8 text-13.5 font-bold text-ink">من سجّل برمزك</h2>
@@ -187,8 +270,15 @@ export function ReferralsScreen() {
                       key={row.id}
                       className="flex items-center justify-between gap-10 rounded-13 border border-line bg-surface p-12"
                     >
-                      <span className={cn("text-12.5 font-medium", where.tone)}>
-                        {where.text}
+                      <span>
+                        <span
+                          className={cn("block text-12.5 font-medium", where.tone)}
+                        >
+                          {where.text}
+                        </span>
+                        <span className="mt-2 block text-11 text-muted">
+                          {row.referral_type === "driver" ? "كبتن" : "راكب"}
+                        </span>
                       </span>
                       <span className="text-11.5 text-muted">
                         {row.rewarded && row.reward_amount

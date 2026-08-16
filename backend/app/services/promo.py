@@ -326,7 +326,12 @@ async def _check_limits(
 
 
 async def apply_to_ride(
-    session: AsyncSession, *, ride: Ride, rider: User, code: str
+    session: AsyncSession,
+    *,
+    ride: Ride,
+    rider: User,
+    code: str,
+    include_private: bool = False,
 ) -> PromoCode:
     """يُجمّد قاعدةَ الرمز على الرحلة — **تحت قفل صفِّ الرمز**.
 
@@ -340,7 +345,9 @@ async def apply_to_ride(
     if not await enabled_in(session, country):
         raise PromoUnavailable()
 
-    promo = await find(session, code, country, for_update=True)
+    promo = await find(
+        session, code, country, for_update=True, include_private=include_private
+    )
     if promo is None:
         raise PromoInvalid()
 

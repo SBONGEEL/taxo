@@ -347,7 +347,7 @@ export const uploadDocument = (docType: DocumentType, file: File) =>
 /** رمزي ومن سجّل به. **قراءةٌ وحدها**: الرمزُ يُولَّد مع الحساب، والإسنادُ في
  *  التسجيل، والدفعُ مهمةٌ دورية — فلا زرَّ «اطلب مكافأتي» يصير باباً ثانياً. */
 export const getMyReferrals = () =>
-  api.get<MyReferrals>("/drivers/me/referrals");
+  api.get<MyReferrals>("/me/referrals");
 
 /** شكلُ مسار الرحلة على الطرق — نفسُ الخطِّ الذي يراه الراكب (البند ٨).
  *

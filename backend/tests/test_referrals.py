@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 
 from app.models.driver import Driver
 from app.models.enums import Gender, WalletTransactionType
+from app.models.ride import Ride
 from app.models.referral import REFERRAL_TYPE_DRIVER, Referral
 from app.models.user import User
 from app.models.wallet import WalletTransaction
@@ -740,3 +741,158 @@ async def test_a_driver_who_never_bought_a_subscription_is_not_rewarded(
     mine = await _my_referrals(client, auth(referrer))
     assert mine["referrals"][0]["has_subscription"] is False
     assert mine["referrals"][0]["qualifies"] is False
+
+
+# ----------------------------------------------------- كوبونُ ترحيب المُحال
+
+
+async def _welcome_code(
+    session_factory, admin_headers, client, *, code: str = "WELCOME1",
+    is_public: bool = False,
+) -> str:
+    """رمزٌ خاصٌّ تكتبه المنصّةُ وتربطه ببرنامج الركاب."""
+    from app.models.enums import CountryCode, PromoDiscountType
+    from app.models.promo import PromoCode
+
+    async with session_factory() as session:
+        promo = PromoCode(
+            code=code,
+            country_code=CountryCode.JO,
+            discount_type=PromoDiscountType("percent"),
+            discount_value=Decimal("50"),
+            max_discount=Decimal("10.000"),
+            budget_total=Decimal("100.000"),
+            per_user_limit=1,
+            is_public=is_public,
+        )
+        session.add(promo)
+        await session.commit()
+        promo_id = str(promo.id)
+
+    async with session_factory() as session:
+        row = await referrals_service.ensure_settings(
+            session, CountryCode.JO, "rider"
+        )
+        row.referred_promo_code_id = uuid.UUID(promo_id)
+        await session.commit()
+    return promo_id
+
+
+async def _fresh_ride(client: AsyncClient, headers: dict, code: str | None = None):
+    from tests.helpers import DROPOFF, PICKUP
+
+    body: dict = {"pickup": PICKUP, "dropoff": DROPOFF, "vehicle_category": "economy"}
+    if code:
+        body["promo_code"] = code
+    return await client.post("/rides", json=body, headers=headers)
+
+
+async def test_a_referred_rider_gets_the_welcome_coupon_without_typing_it(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_settings: None
+):
+    """الهديةُ تُطبَّق بلا أن يكتب شيئاً — وهي كلُّ فكرة «كوبون الترحيب»."""
+    await enable_features(
+        session_factory, "referred_reward_enabled", "promo_codes_enabled"
+    )
+    await _welcome_code(session_factory, admin_headers, client)
+
+    referrer = await register(client, DRIVER)
+    code = (await _my_referrals(client, auth(referrer)))["code"]
+    rider = await rider_session(client, RIDER | {"referral_code": code})
+
+    created = await _fresh_ride(client, rider["headers"])
+    assert created.status_code == 201, created.text
+
+    async with session_factory() as session:
+        ride = await session.get(Ride, uuid.UUID(created.json()["id"]))
+        assert ride.promo_code_id is not None
+
+
+async def test_a_rider_who_was_never_referred_gets_nothing(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_settings: None
+):
+    """ولا كوبونَ لمن لم يُحِله أحد — الميزانيةُ لغرضها لا لكل من طلب رحلة."""
+    await enable_features(
+        session_factory, "referred_reward_enabled", "promo_codes_enabled"
+    )
+    await _welcome_code(session_factory, admin_headers, client)
+    rider = await rider_session(client)
+
+    created = await _fresh_ride(client, rider["headers"])
+    assert created.status_code == 201
+
+    async with session_factory() as session:
+        ride = await session.get(Ride, uuid.UUID(created.json()["id"]))
+        assert ride.promo_code_id is None
+
+
+async def test_a_code_the_rider_typed_wins_over_the_welcome_one(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_settings: None
+):
+    """**المكتوبُ بيده يفوز**: من كتب رمزاً اختار عرضاً بعينه.
+
+    وإحلالُ غيره محلَّه — ولو كان أكبر — يجعل الشاشةَ تعرض ما لم يطلبه.
+    """
+    await enable_features(
+        session_factory, "referred_reward_enabled", "promo_codes_enabled"
+    )
+    await _welcome_code(session_factory, admin_headers, client)
+    typed = await _welcome_code(
+        session_factory, admin_headers, client, code="TYPED1", is_public=True
+    )
+    # `_welcome_code` تربط آخرَ ما أنشأت، فتُعاد الرابطةُ للأول
+    await _welcome_code(session_factory, admin_headers, client, code="WELCOME2")
+
+    referrer = await register(client, DRIVER)
+    ref_code = (await _my_referrals(client, auth(referrer)))["code"]
+    rider = await rider_session(client, RIDER | {"referral_code": ref_code})
+
+    created = await _fresh_ride(client, rider["headers"], code="TYPED1")
+    assert created.status_code == 201, created.text
+
+    async with session_factory() as session:
+        ride = await session.get(Ride, uuid.UUID(created.json()["id"]))
+        assert str(ride.promo_code_id) == typed
+
+
+async def test_a_private_code_is_refused_when_someone_types_it(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_settings: None
+):
+    """**الخاصُّ محجوبٌ عن باب الطلب**: رمزٌ يُنقل بين الناس يجعل مالاً خُصّص
+    لواحدٍ متاحاً لكل من عرفه، وميزانيتُه تُستهلك بمن لم يُحِله أحد."""
+    await enable_features(
+        session_factory, "referred_reward_enabled", "promo_codes_enabled"
+    )
+    await _welcome_code(session_factory, admin_headers, client)
+    rider = await rider_session(client)
+
+    refused = await _fresh_ride(client, rider["headers"], code="WELCOME1")
+    assert refused.status_code == 404, refused.text
+
+
+async def test_an_exhausted_welcome_coupon_never_fails_the_ride(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_settings: None
+):
+    """**الفشلُ لا يُفشل الرحلة**: ردُّ خطأٍ على «اطلب رحلة» بسبب هديةٍ لم
+    يسألها أحد هو أسوأُ ما يمكن أن يفعله عرضُ ترحيب."""
+    await enable_features(
+        session_factory, "referred_reward_enabled", "promo_codes_enabled"
+    )
+    promo_id = await _welcome_code(session_factory, admin_headers, client)
+    # ميزانيةٌ نفدت — الرفضُ المتوقَّع بعينه
+    async with session_factory() as session:
+        from app.models.promo import PromoCode
+
+        row = await session.get(PromoCode, uuid.UUID(promo_id))
+        row.budget_total = Decimal("0.001")
+        await session.commit()
+
+    referrer = await register(client, DRIVER)
+    code = (await _my_referrals(client, auth(referrer)))["code"]
+    rider = await rider_session(client, RIDER | {"referral_code": code})
+
+    created = await _fresh_ride(client, rider["headers"])
+    assert created.status_code == 201, created.text
+    async with session_factory() as session:
+        ride = await session.get(Ride, uuid.UUID(created.json()["id"]))
+        assert ride.promo_code_id is None

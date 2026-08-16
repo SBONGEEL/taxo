@@ -7,6 +7,7 @@
 import { api } from "@/api/client";
 import type {
   AppConfig,
+  MyReferrals,
   AuthMethod,
   AuthResponse,
   Booking,
@@ -371,3 +372,7 @@ export const markNotificationsRead = (ids?: string[]) =>
  */
 export const getRouteLine = (rideId: string) =>
   api.get<{ points: number[][] }>(`/rides/${rideId}/route-line`);
+
+/** رمزُ الإحالة ومن سجّل به — **منفذٌ واحدٌ للتطبيقين** (`/me/` لا `/drivers/me/`):
+ *  الرمزُ صار لكل حساب، ومسارٌ تحت `/drivers` بابٌ لا يفتح للراكب أصلاً. */
+export const getMyReferrals = () => api.get<MyReferrals>("/me/referrals");

@@ -388,15 +388,24 @@ export const updatePaymentSettings = (
 
 // ------------------------------------------------- إحالةُ السائقات (12-ح)
 
-export const getReferralSettings = (country: CountryCode) =>
-  api.get<ReferralSetting>(`/admin/referrals/settings?country_code=${country}`);
+export const getReferralSettings = (country: CountryCode, type: string) =>
+  api.get<ReferralSetting>(
+    `/admin/referrals/settings?country_code=${country}&referral_type=${type}`,
+  );
 
 export const updateReferralSettings = (
   country: CountryCode,
-  payload: { reward_amount?: string; required_rides?: number },
+  type: string,
+  payload: {
+    reward_amount?: string;
+    required_rides?: number;
+    female_bonus_amount?: string;
+    monthly_cap?: number;
+    clear_monthly_cap?: boolean;
+  },
 ) =>
   api.put<ReferralSetting>(
-    `/admin/referrals/settings?country_code=${country}`,
+    `/admin/referrals/settings?country_code=${country}&referral_type=${type}`,
     payload,
   );
 

@@ -323,8 +323,14 @@ export interface WalletSetting {
 /** حافزُ الإحالة per-country (12-ح) — **صفرُ المبلغ «لم يُحدَّد»** فلا يُدفع. */
 export interface ReferralSetting {
   country_code: CountryCode;
+  /** برنامجٌ واحد: `rider` أو `driver` — والصفُّ **هو** البرنامج. */
+  referral_type: string;
   reward_amount: string;
   required_rides: number;
+  /** **تُضاف إلى الأساس لا تحلّ محلَّه** — والشاشةُ تقول ذلك بجملةٍ صريحة. */
+  female_bonus_amount: string;
+  /** `null` = بلا سقف. والصفرُ في هذا المشروع «لم يُحدَّد»، فلا يُستعمل هنا. */
+  monthly_cap: number | null;
 }
 
 /** إعداداتُ مشاركة الرحلة (12-ي) — النسبةُ مالٌ والثلاثةُ الباقيةُ معايرةٌ.
@@ -357,8 +363,10 @@ export interface AdminReferralRow {
   referred_name: string;
   referred_phone: string;
   code_used: string;
+  referral_type: string;
   driver_approved: boolean;
-  gender_ready: boolean;
+  has_subscription: boolean;
+  female_verified: boolean;
   rides_done: number;
   rides_required: number;
   qualifies: boolean;

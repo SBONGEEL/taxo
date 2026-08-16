@@ -365,6 +365,14 @@ async def request_ride(
         await promo_service.apply_to_ride(
             session, ride=ride, rider=rider, code=promo_code
         )
+    else:
+        # **وكوبونُ ترحيب المُحال في `else` لا بجانبه** (تعميمُ الإحالة): من
+        # كتب رمزاً اختار عرضاً بعينه، وإحلالُ غيره محلَّه — ولو كان أكبر —
+        # يجعل الشاشةَ تعرض ما لم يطلبه. **ولا يُفشل الطلبَ بحال**: الراكبُ لم
+        # يسأل هذه الهدية، فردُّ خطأٍ على «اطلب رحلة» بسببها أسوأُ من غيابها
+        from app.services import referrals as referrals_service
+
+        await referrals_service.apply_welcome_promo(session, ride=ride, rider=rider)
 
     # الإلحاقُ بالمجموعة لا `RideStop(ride=…)`: العلاقةُ أحاديةُ الاتجاه
     # (`Ride.stops` بلا `back_populates`)، والـcascade هو ما يكتب `ride_id`

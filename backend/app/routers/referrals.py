@@ -56,6 +56,7 @@ def _program(policy: referrals_service.Policy) -> ReferralProgramOut:
         reward_amount=policy.reward_amount,
         required_rides=policy.required_rides,
         female_bonus_amount=policy.female_bonus_amount,
+        female_total_amount=policy.female_total_amount,
         monthly_cap=policy.monthly_cap,
     )
 

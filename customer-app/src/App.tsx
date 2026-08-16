@@ -87,6 +87,9 @@ const NotificationsScreen = lazy(() =>
     default: m.NotificationsScreen,
   })),
 );
+const ReferralsScreen = lazy(() =>
+  import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
+);
 const BookingsScreen = lazy(() =>
   import("@/screens/Bookings").then((m) => ({ default: m.BookingsScreen })),
 );
@@ -346,6 +349,14 @@ export default function App() {
                         element={
                           <Guarded>
                             <PlacesScreen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/referrals"
+                        element={
+                          <Guarded>
+                            <ReferralsScreen />
                           </Guarded>
                         }
                       />

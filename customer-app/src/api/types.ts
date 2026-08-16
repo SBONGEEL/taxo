@@ -552,3 +552,52 @@ export type SettlementState =
   | "awaiting"
   | "disputed"
   | "settled";
+
+// ------------------------------------------------- حوافزُ الإحالة (تعميمُ 12-ح)
+
+/** أين وصلت إحالةٌ واحدة — **حقائقُ لا جملةُ حالة**: النصَّ تبنيه الشاشة. */
+export interface ReferralStage {
+  id: string;
+  created_at: string;
+  /** برنامجُ هذا الصف — **من دور المُحال**، فالرمزُ واحدٌ يخدم الاثنين. */
+  referral_type: string;
+  driver_approved: boolean;
+  has_subscription: boolean;
+  /** **علاوةٌ لا شرط**: وسمُها يزيد المبلغَ ولا يمنع الدفع. */
+  female_verified: boolean;
+  rides_done: number;
+  rides_required: number;
+  qualifies: boolean;
+  rewarded: boolean;
+  /** استحقّت ولن تُدفع لأنها فوق سقف الشهر — **يُقال صراحةً لا يُصمت عنه**. */
+  over_monthly_cap: boolean;
+  reward_amount: string | null;
+  reward_currency: string | null;
+  rewarded_at: string | null;
+}
+
+/** سياسةُ برنامجٍ واحد — والمبلغان مختلفان لأن قيمةَ الحسابين مختلفة. */
+export interface ReferralProgram {
+  referral_type: string;
+  enabled: boolean;
+  reward_amount: string;
+  required_rides: number;
+  /** تُضاف إلى `reward_amount` حين تكون المُحالةُ موثَّقةَ الجنس — لا تحلّ محلَّه. */
+  female_bonus_amount: string;
+  /** **المُحصَّلُ (الأساسُ + العلاوة) من الخلفية** — لا يُجمع هنا: جمعُ المال
+   *  في الواجهة تمريرٌ له عبر عائم، وقد أخرج «٨» بلا كسورٍ بجانب «٥٫٠٠٠». */
+  female_total_amount: string;
+  /** `null` = بلا سقف. */
+  monthly_cap: number | null;
+}
+
+/** قسمُ الإحالة في الحساب. **و`reward_amount === "0"` تعني «لم يُحدَّد»**
+ *  فلا تعرض الشاشةُ مبلغاً ولا تَعِد به — وعدٌ بمالٍ لم يقرّره أحدٌ أسوأ من صمت. */
+export interface MyReferrals {
+  code: string;
+  programs: ReferralProgram[];
+  /** كم دُفع له هذا الشهر — يُقارَن بـ`monthly_cap` **قبل أن يدعو**. */
+  paid_this_month: number;
+  total_rewarded: string;
+  referrals: ReferralStage[];
+}

@@ -177,17 +177,21 @@ export function SettingsScreen() {
   const [burned, setBurned] = useState<OtpExhausted | null>(null);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [riderReferral, setRiderReferral] = useState<ReferralSetting | null>(
+    null,
+  );
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, sh, adv, cxl, otpRows, spent] = await Promise.all([
+    const [f, c, w, p, r, rr, sh, adv, cxl, otpRows, spent] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
       listPaymentSettings(),
       // **منفذُ الإحالة لدولةٍ واحدة** لا قائمة، فيدخل السوقُ في التبعيات —
       // وبغيره يبقى معروضاً إعدادُ السوق الأول بعد تبديل الرأس
-      getReferralSettings(country),
+      getReferralSettings(country, "driver"),
+      getReferralSettings(country, "rider"),
       getSharingSettings(country),
       listAdvanceSettings(),
       listCancellationSettings(),
@@ -199,6 +203,7 @@ export function SettingsScreen() {
     setWallet(w);
     setPayment(p);
     setReferral(r);
+    setRiderReferral(rr);
     setSharing(sh);
     setAdvance(adv);
     setCancel(cxl);
@@ -392,17 +397,23 @@ export function SettingsScreen() {
               فلا تُدفع مكافأةٌ ولا يُوعَد بها أحد — والإحالاتُ تُسجَّل على كل
               حال. وتعديلُ الحدِّ يعيد تقييمَ ما لم يُدفع، ولا يمسّ ما دُفع.
             </p>
-            {referral ? (
-              <ReferralForm
-                key={referral.country_code}
-                row={referral}
-                disabled={!isAdmin}
-                onSaved={(message) => {
-                  setDone(message);
-                  void load();
-                }}
-                onError={setError}
-              />
+            {/* **برنامجان في قسمٍ واحد**: الرمزُ واحدٌ عند صاحبه، ومبلغان
+                في شاشتين يجعلان المشرفَ يضبط أحدَهما ويظنّ الآخرَ تبعاً له */}
+            {referral && riderReferral ? (
+              <div className="grid gap-16">
+                {[referral, riderReferral].map((program) => (
+                  <ReferralForm
+                    key={`${program.country_code}:${program.referral_type}`}
+                    row={program}
+                    disabled={!isAdmin}
+                    onSaved={(message) => {
+                      setDone(message);
+                      void load();
+                    }}
+                    onError={setError}
+                  />
+                ))}
+              </div>
             ) : (
               <p className="text-12.5 text-muted">لا إعداد إحالةٍ لهذه الدولة.</p>
             )}
@@ -780,6 +791,12 @@ function WalletForm({
 /** مبلغُ الحافز وحدُّ الرحلات. **و`key={country}` عليه كبقية النماذج**:
  *  `useState(row.…)` لا يُعاد قراءتُه عند تبدّل الخاصية، فتبديلُ السوق يكتب
  *  رقمَ سوقٍ في سوقٍ آخر — وهو عطبٌ وقع في هذه الشاشة نفسها. */
+/** برنامجُ إحالةٍ واحد — والنسائيُّ **علاوةٌ بجانب الأساس لا حقلٌ مستقل**.
+ *
+ * **حارسُ المالك (2026-08-16)**: مشرفٌ يرى رقمين منفصلين قد يظنّ الثاني بديلاً
+ * عن الأول — وهو بالضبط سوءُ الفهم الذي يصنع الفخَّ نفسَه من بابٍ آخر. فالحقلُ
+ * لا يُعرض إلا في برنامج السائقين، وتحته جملةٌ تقول **المُحصَّل** لا العلاوة.
+ */
 function ReferralForm({
   row,
   disabled,
@@ -793,13 +810,24 @@ function ReferralForm({
 }) {
   const [amount, setAmount] = useState(row.reward_amount);
   const [rides, setRides] = useState(String(row.required_rides));
+  const [bonus, setBonus] = useState(row.female_bonus_amount);
+  const [cap, setCap] = useState(
+    row.monthly_cap === null ? "" : String(row.monthly_cap),
+  );
   const [busy, setBusy] = useState(false);
 
+  const isDriver = row.referral_type === "driver";
+  const currency = currencyOf(row.country_code);
+  const total = (Number(amount) || 0) + (Number(bonus) || 0);
+
   return (
-    <>
+    <div className="rounded-13 border border-line p-14">
+      <h3 className="mb-10 text-13 font-bold text-ink">
+        {isDriver ? "من يُحيل كبتناً" : "من يُحيل راكباً"}
+      </h3>
       <div className="grid grid-cols-2 gap-10">
         <Field
-          label={`مبلغ المكافأة (${currencyLabel(currencyOf(row.country_code))})`}
+          label={`مبلغ المكافأة (${currencyLabel(currency)})`}
           dir="ltr"
           inputMode="decimal"
           value={amount}
@@ -809,19 +837,56 @@ function ReferralForm({
           }
         />
         <Field
-          label="رحلات المُحالة المطلوبة"
+          label={isDriver ? "رحلات المُحال المطلوبة" : "رحلات المُحال المطلوبة"}
           dir="ltr"
           inputMode="numeric"
           value={rides}
           disabled={disabled}
           onChange={(event) => setRides(event.target.value.replace(/[^0-9]/g, ""))}
         />
+        {isDriver ? (
+          <Field
+            label={`علاوة إحالة سائقة (${currencyLabel(currency)})`}
+            dir="ltr"
+            inputMode="decimal"
+            value={bonus}
+            disabled={disabled}
+            onChange={(event) =>
+              setBonus(event.target.value.replace(/[^0-9.]/g, ""))
+            }
+          />
+        ) : null}
+        <Field
+          label="سقف شهري لكل مُحيل"
+          dir="ltr"
+          inputMode="numeric"
+          value={cap}
+          placeholder="بلا سقف"
+          disabled={disabled}
+          onChange={(event) => setCap(event.target.value.replace(/[^0-9]/g, ""))}
+        />
       </div>
+
+      {/* **الجملةُ تقول المُحصَّل لا العلاوة** — شرطُ المالك بحرفه */}
+      {isDriver && Number(bonus) > 0 ? (
+        <p className="mt-8 text-11 text-ok">
+          المُحصَّل للإحالة النسائية ={" "}
+          <b>{money(String(total.toFixed(3)), currency)}</b> — الأساسُ{" "}
+          {money(amount || "0", currency)} + العلاوةُ {money(bonus, currency)}.
+          والعلاوةُ تُضاف إليه ولا تحلّ محلَّه.
+        </p>
+      ) : null}
+
       <p className="mt-6 text-11 text-muted">
         {Number(row.reward_amount) > 0
-          ? `الحالي: ${money(row.reward_amount, currencyOf(row.country_code))} بعد ${arabicDigits(String(row.required_rides))} رحلات`
+          ? `الحالي: ${money(row.reward_amount, currency)} بعد ${arabicDigits(String(row.required_rides))} رحلات`
           : `لم يُحدَّد مبلغٌ بعد — والشرطُ ${arabicDigits(String(row.required_rides))} رحلات`}
+        {row.monthly_cap === null
+          ? " · بلا سقفٍ شهري"
+          : ` · سقفُ ${arabicDigits(String(row.monthly_cap))} إحالاتٍ في الشهر لكل مُحيل`}
       </p>
+      {/* **والحقلُ الفارغ يعني «بلا سقف» صراحةً** لا «لا تلمسه»: حالتان لا
+          يحملهما رقمٌ واحد، فيُرسل `clear_monthly_cap` بدل صفرٍ يُقرأ خطأً */}
       <Button
         className="mt-14"
         size="sm"
@@ -829,9 +894,13 @@ function ReferralForm({
         loading={busy}
         onClick={() => {
           setBusy(true);
-          updateReferralSettings(row.country_code, {
+          updateReferralSettings(row.country_code, row.referral_type, {
             reward_amount: amount,
             required_rides: Number(rides),
+            ...(isDriver ? { female_bonus_amount: bonus || "0" } : {}),
+            ...(cap === ""
+              ? { clear_monthly_cap: true }
+              : { monthly_cap: Number(cap) }),
           })
             .then(() =>
               onSaved("حُفظ الحافز — يُقيَّم ما لم يُدفع بالحدّ الجديد"),
@@ -844,7 +913,7 @@ function ReferralForm({
       >
         حفظ
       </Button>
-    </>
+    </div>
   );
 }
 

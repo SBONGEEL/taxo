@@ -144,6 +144,16 @@ class Policy:
         """هل تُدفع مكافأةٌ فعلاً؟ **صفرٌ يعني «لم يُحدَّد»** لا «صفراً»."""
         return self.enabled and self.reward_amount > 0
 
+    @property
+    def female_total_amount(self) -> Decimal:
+        """المُحصَّلُ للإحالة النسائية — **محسوبٌ هنا لا في التطبيق** (§14).
+
+        وحسابُه في الواجهة كان `Number(a) + Number(b)`: مالٌ يمرّ بعائم، ويخرج
+        «٨» بلا كسورٍ بجانب «٥٫٠٠٠» — وهو ما وجدته قراءةُ الشاشة. والقاعدةُ
+        نفسُها التي تمنع `Intl.NumberFormat` على المبالغ.
+        """
+        return self.amount_for(female_verified=True)
+
     def amount_for(self, *, female_verified: bool) -> Decimal:
         """المبلغُ المستحقّ — **الأساسُ والعلاوةُ قيدٌ واحد**.
 
@@ -469,8 +479,13 @@ async def list_for_referrer(
 
 
 async def rewarded_total(session: AsyncSession, user_id: uuid.UUID) -> Decimal:
-    """مجموعُ ما قبضه حسابٌ من مكافآت — **يُجمع في القاعدة** (القسم 14)."""
-    return Decimal(
+    """مجموعُ ما قبضه حسابٌ من مكافآت — **يُجمع في القاعدة** (القسم 14).
+
+    **ويُقاس بثلاث خانات كعمود `MONEY`**: مجموعٌ محسوبٌ يُسلسَل «0» بينما مبلغٌ
+    من عمودٍ يُسلسَل «5.000»، فتعرض الشاشةُ الواحدةُ رقمين بشكلين — وهو فرقٌ
+    يُقرأ عطباً لا تنسيقاً.
+    """
+    return _money(
         await session.scalar(
             select(func.coalesce(func.sum(Referral.reward_amount), 0)).where(
                 Referral.referrer_user_id == user_id,
@@ -479,6 +494,10 @@ async def rewarded_total(session: AsyncSession, user_id: uuid.UUID) -> Decimal:
         )
         or 0
     )
+
+
+def _money(value) -> Decimal:
+    return Decimal(value).quantize(Decimal("0.001"))
 
 
 def _month_start(moment: datetime) -> datetime:
@@ -674,3 +693,60 @@ async def update_settings(
         row.referred_promo_code_id = referred_promo_code_id
     await session.flush()
     return row
+
+
+# ------------------------------------------------------------ كوبونُ الترحيب
+
+
+async def apply_welcome_promo(
+    session: AsyncSession, *, ride, rider: User
+) -> bool:
+    """يطبّق كوبونَ ترحيب المُحال على رحلته — إن استحقّه ولم يكتب هو رمزاً.
+
+    **والمكتوبُ بيده يفوز** (شرطُ الترتيب): من كتب كوبوناً اختار عرضاً بعينه،
+    وإحلالُ عرضٍ آخر محلَّه — ولو كان أكبر — يجعل الشاشةَ تعرض ما لم يطلبه.
+    فهذه الدالةُ لا تُستدعى أصلاً إن جاء `promo_code`.
+
+    **والفشلُ لا يُفشل الرحلة أبداً.** الراكبُ لم يطلب هذا الكوبون، فرفضُه
+    (سقفُ استعمال، ميزانيةٌ نفدت، أجرةٌ دون الحدّ) خبرٌ عن عرضٍ لا عن طلبه —
+    وردُّ ٤٠٩ على «اطلب رحلة» بسبب هديةٍ لم يسألها أحد هو أسوأُ ما يمكن أن
+    يفعله عرضُ ترحيب. وهي القاعدةُ نفسُها التي تحكم التقاطَ نقاط المسار،
+    **إلا في شيء**: هنا يُبتلع الرفضُ المتوقَّع وحدَه (`AppError`)، فخطأُ برمجةٍ
+    يبقى ظاهراً — «لا `except Exception` عارية» (درسُ 12-ط).
+
+    **ومرّةً واحدةً يحرسها `_check_limits`** لا عدَّادٌ هنا: حدُّ الاستعمال لكل
+    مستخدمٍ على الرمز نفسِه هو البابُ الذي يقرّر، وعدٌّ ثانٍ في هذا الملف حالةٌ
+    ثانيةٌ تخالف الأولى أوّلَ ما يُعدَّل الرمز.
+    """
+    from app.core.exceptions import AppError
+    from app.models.promo import PromoCode
+    from app.services import promo as promo_service
+
+    country = ride.country_code
+    if not await settings_service.is_feature_enabled(
+        session, country, FeatureKey.REFERRED_REWARD_ENABLED
+    ):
+        return False
+
+    referral = await session.scalar(
+        select(Referral).where(Referral.referred_user_id == rider.id)
+    )
+    if referral is None:
+        return False
+
+    # **برنامجُ المُحال هو دورُه هو** — وهو راكبٌ بالضرورة هنا (`RiderUser`)
+    policy = await policy_for(session, country, type_for_role(rider.role))
+    if policy.referred_promo_code_id is None:
+        return False
+
+    promo = await session.get(PromoCode, policy.referred_promo_code_id)
+    if promo is None:  # pragma: no cover - حُذف الرمزُ بعد ربطه
+        return False
+
+    try:
+        await promo_service.apply_to_ride(
+            session, ride=ride, rider=rider, code=promo.code, include_private=True
+        )
+    except AppError:
+        return False
+    return True
