@@ -271,13 +271,43 @@ machinery without a decision — see above and `design/CANCELLATION-FEE.md` §6-
 
 #### 1. Blocking, and not code
 
-- **Phone verification has no working channel.** Firebase answers `auth/billing-not-enabled`, so **nobody
-  can register**. The owner decided against Blaze and is starting the **official WhatsApp route** (Meta
-  Business + a dedicated number + an approved authentication template). The channel is built (12-هـ); the
-  contract is what is missing. Recorded in `FUTURE-FEATURES.md` as a launch blocker, with the rule that an
-  **active SMS contract silently outranks Firebase** in the chain — so it must not be left enabled in
-  production by accident. A mock SMS contract is active **on the dev stack only**; the code refuses mock in
-  production.
+- ✅ **Phone verification now has a working channel — the self-hosted WhatsApp gateway** (owner's
+  decision, 2026-08-16). Firebase answers `auth/billing-not-enabled` and the owner declined Blaze; the
+  official Meta route needs a business contract and an approved template that had not arrived, and until
+  one of them did **nobody could register at all**. So Baileys runs in a sidecar container behind the same
+  `WhatsAppOtpProvider` built in 12-هـ, chosen by one contract field. **The official Cloud API path stays
+  live in the same interface** — switching back is editing `transport` from `baileys` to `cloud` in the
+  contracts page, no code and no deploy. An **active SMS contract silently outranks both** in the chain, so
+  it must not be left enabled in production by accident; a mock SMS contract is active **on the dev stack
+  only** and the code refuses mock in production.
+- **Provider wire formats** (Telr, SMS, CliQ, payout) are best-reading, never verified against real
+  credentials — debt item 3 below.
+
+##### The WhatsApp emergency plan — what to do when, and how long it takes
+
+**Read this before touching the gateway.** The channel is deliberately the *first* in the chain
+(`whatsapp_otp ← sms_otp ← firebase`), which means its failure is the one that stops signup — and its
+recovery time is a business number, not a technical one.
+
+| What happened | How you know | What you do | How long until signup works again |
+|---|---|---|---|
+| **Session dropped (transient)** | Panel says «منقطعة — تحاول العودة»; no alert for the first minute | Nothing. It reconnects with backoff | Seconds. **Codes fall back to SMS meanwhile** if an SMS contract is active |
+| **Session logged out** (phone unlinked the device, or WhatsApp expired it) | Panel says «بانتظار مسح الرمز» **and every admin gets a push** | Scan the QR from the panel with the dedicated phone | **~1 minute** — the time to open the panel and scan |
+| **Gateway container down** | Panel says «البوابة لا تُجيب» + push | `docker compose up -d whatsapp-gateway` | ~30s. The auth state is on a volume, so it relinks itself |
+| **The number is banned** | Sends fail with a Baileys error and the session will not stay linked | **Switch the contract**: `transport` → `cloud` if the Meta contract has arrived, otherwise deactivate the WhatsApp contract entirely so the chain falls to SMS | **~2 minutes**, and it is a field edit in the contracts page — no deploy |
+| **Nothing else works** | — | Turn off `otp_verification_enabled` for the country (admin-only, written reason, lands in the audit log) | Immediate — **and it lets accounts be created with an unproven number**, so it is an emergency measure with a cost, not a fix |
+
+**The number is banned is the scenario the design is arranged around.** Nothing in the platform depends
+on that number beyond OTP: no rider or captain ever sees it, no ride references it, and the *only* thing
+lost is the channel. That is why the fallback is a contract field and not a migration — and why the
+official Cloud API path was kept alive rather than deleted.
+
+**Two rules that must not be relaxed while this channel is live**, because they are what keeps the ban
+from happening: the number is **dedicated** and never used for ordinary WhatsApp (a human chatting from
+it is what makes automation look like automation), and the message is **one fixed text with no links**,
+composed *in the gateway* — the backend physically cannot inject text, so the guarantee survives whoever
+adds the next caller.
+
 - **Provider wire formats** (Telr, SMS, CliQ, payout) are best-reading, never verified against real
   credentials — debt item 3 below.
 
@@ -1802,6 +1832,16 @@ the start of every session costs an hour.
 | `+962790000021` | عمر الراكب | rider, male |
 | `+962790000022` | ليلى الراكبة | rider, **self-declared female** (the pink theme and privacy note) |
 
+**⚠️ And a trap that is new since the self-hosted WhatsApp channel went live: these numbers are
+fabricated for the dev database, but they are *shaped* like real Jordanian numbers — and some of them
+are registered on WhatsApp by their real owners.** Passing one as `test_phone` to the WhatsApp contract's
+test button **sends a real message to a real stranger**. It happened on 2026-08-16: `+962790000021`
+(«عمر الراكب» in the table below) was assumed not to be on WhatsApp, `onWhatsApp` reported that it *was*,
+and a code message went out with a real `wamid` returned. The guard worked exactly as designed — it just
+found the number genuinely exists. **So `test_phone` on the WhatsApp contract takes a number you own and
+nothing else**; to prove the wire without sending anything, leave it blank — the test then reports the
+linked number and its link time, which is what the question usually is.
+
 Two operational traps around them, both of which cost time this week. **Login is rate-limited per
 phone, and polling it does not extend the window — it only keeps you locked out**; the limiter's Redis
 key must be deleted **inside** the container (`docker compose exec redis redis-cli`), because a
@@ -1861,11 +1901,25 @@ a service.
 **WhatsApp is the third verifier (12-هـ), and the priority chain changed with it.** It is now
 `whatsapp_otp ← sms_otp ← firebase ← none` — the owner reversed the old Firebase-first order, and the
 consequence is explicit: **an active Firebase contract goes unused while any contract ahead of it is
-active**, so whoever wants Firebase turns off what precedes it. Four rules travel with the channel.
-**Only the official Meta API** (WhatsApp Cloud API over Graph) — never `whatsapp-web.js`, `Baileys`,
-or anything like them: those automate a personal account through the web interface, which violates
-WhatsApp's terms and is punished by banning the number, i.e. new-user signup stops platform-wide,
-without warning, from a number nobody can get back. **The contract is global while the flag is
+active**, so whoever wants Firebase turns off what precedes it.
+
+**And since 2026-08-16 the channel has two wires behind one contract**, chosen by its `transport` field:
+`cloud` (Meta's official Cloud API over Graph) and `baileys` (a self-hosted gateway on a dedicated
+number). **This reverses a rule that used to be written here** — "only the official Meta API, never
+`Baileys` or anything like it" — and the reversal is the owner's, made with the cost in view. The old
+rule's reasoning still stands and is worth keeping in front of you: automating an account through an
+unofficial library violates WhatsApp's terms and is punished by **banning the number**, and a ban arrives
+without warning. What changed is the alternative: the official route needed a business contract and an
+approved template that had not arrived, and **until one of them did, nobody could register at all** —
+the platform's single hardest launch blocker. A channel that might be banned beat a channel that did not
+exist.
+
+So the decision came with guards, and they are the reason it is defensible: a **dedicated number** never
+used for ordinary WhatsApp, **per-number and per-hour caps** measured in Redis before anything reaches
+the wire, **randomised spacing** and **one fixed link-free text** inside the gateway, an **immediate alert**
+to every admin when the session drops, and **an emergency plan with measured recovery times** (above in
+"what stands between here and launch"). And the official path was **kept alive in the same interface** —
+going back is editing one field, not writing code. **The contract is global while the flag is
 per-country** — one business number serves both markets and the phone carries its own country, so the
 contract says "we can" and `whatsapp_otp_enabled` says "we do here"; that is also why this provider
 has no `feature_key` in the registry (the auto-sync would light up the *contract's* country, and this
@@ -1877,6 +1931,48 @@ arrived, and a silent switch makes someone read a code from one channel and type
 burning both. The request bounces 502 carrying `fallback_channel`, and the app draws that button.
 Verification itself is one door for every channel — the digest is stored **by phone, not by channel**
 — because binding it to the channel would make the fallback itself invalid.
+
+**Requesting a code is capped on the phone, in the backend, for every channel** (owner's decision,
+2026-08-16 — `otp_settings` per-country, `services/otp_limits.py`). Before this there was only a flat 60s
+cooldown and a *verify*-attempt limit: nothing stopped someone asking for a hundred codes an hour, which
+on a self-hosted WhatsApp number is how the number gets burned. **Three caps, because each stops what the
+others cannot** — a short window (a burst), a daily total (someone who waits the window out and returns),
+and **a lifetime-per-registration cap**, which is the one that cannot be bought with patience: whoever
+asked for ten codes on a number and never completed a signup is not a struggling user, and waiting a day
+does not make him one. That third counter is cleared by `create_account` — the single creation door —
+because once the signup happened its subject is gone; the window and daily counters are deliberately
+*not* cleared, so a fresh account gets no free allowance in the same minute.
+
+Four placement rules travel with it. **The guard sits in `otp.issue`**, the one door every channel we
+generate and send a code through passes — so the cap is account policy, not a channel property, and
+switching channel does not buy a new allowance (Firebase is outside it by its shape, not by oversight:
+its code is sent from the user's device and never passes through us). **Counting is on the phone, never
+on IP** — dozens of users behind one café's network must not throttle each other, and the abuser is
+followed alone; the same reasoning as the location-broadcast cap. **Counting happens after a successful
+send**, so a bounced gateway does not consume anyone's allowance — a cap is a penalty for insistence, not
+for our own outage. And **every refusal carries `retry_after`**, which both apps already render as a
+countdown, so the resend button is never live-but-inert. Verified on the live stack: three real requests
+returned `resend_after` 5 → 10 → `429` with the wait named, and the third arrived over **SMS**, which is
+the account-not-channel rule showing itself.
+
+**The self-hosted wire (`baileys`) is a sidecar container, and four placement decisions carry it.**
+`whatsapp-gateway/` runs Baileys with **no published port** — the backend alone reaches it, over the
+compose network, with a shared key from `.env.local`; two guards, because "no port" is a deploy condition
+that one line in another file can undo while a key check is in the code. **The caps live in the backend
+and the spacing lives in the gateway**, which is not an arbitrary split: a cap is *policy* — measured,
+tested, and surviving a restart on Redis — while spacing is *wire rhythm*, and a cap held in a process's
+memory is erased by the first crash loop. **The gateway will not accept a message body**: `/send` takes a
+number and a code, and the one fixed link-free text is composed there — so "no links" is guaranteed by
+whoever owns the wire rather than by whoever calls it, which is the difference between a rule and a rule
+that survives the next caller. And **the auth state is a named volume**, because otherwise every rebuild
+needs a human with a phone.
+
+**Its failure modes are announced, not discovered.** `tasks/whatsapp.py` reads the session every minute
+and pushes every admin **on a transition** — never on the state, because an alert that repeats every
+minute is ignored within the hour, which is the hour it matters. `disconnected` waits two cycles first
+(a transient blip returns by itself and waking someone for it teaches them to ignore the next one), while
+`awaiting_qr` and `unreachable` are said immediately: neither returns without a human. And recovery is
+announced too — whoever was woken deserves to know it ended.
 
 **A bug found while wiring that fallback, and fixed in all three frontends**: the backend's error
 body is `{code, detail}` (see `core/exceptions.py`) and every client read `body.message`, so **every

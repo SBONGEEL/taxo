@@ -176,3 +176,47 @@ class PaymentSettingUpdate(BaseModel):
     tip_preset_small: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_preset_medium: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_max: Decimal | None = Field(default=None, ge=0, le=1000)
+
+
+# --------------------------------------------------- سقوف طلب رمز التحقق
+
+
+class OtpSettingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    country_code: CountryCode
+    window_minutes: int
+    max_per_window: int
+    max_per_day: int
+    max_per_registration: int
+    lockout_minutes: int
+    resend_base_seconds: int
+    resend_max_seconds: int
+    updated_at: datetime
+
+
+class OtpSettingUpdate(BaseModel):
+    """ما يُرسَل يُطبَّق وحدَه — والحقلُ الغائب لا يُلمس.
+
+    **وصفرُ أيِّ سقفٍ يعني «لا سقف»** ويُكتب صراحةً: هذه حرّاسٌ لا ميزات،
+    فانفتاحُها يجب أن يكون قراراً مكتوباً لا سكوتاً.
+    """
+
+    window_minutes: int | None = Field(default=None, ge=1, le=1440)
+    max_per_window: int | None = Field(default=None, ge=0, le=100)
+    max_per_day: int | None = Field(default=None, ge=0, le=500)
+    max_per_registration: int | None = Field(default=None, ge=0, le=500)
+    lockout_minutes: int | None = Field(default=None, ge=0, le=1440)
+    resend_base_seconds: int | None = Field(default=None, ge=5, le=600)
+    resend_max_seconds: int | None = Field(default=None, ge=5, le=3600)
+
+
+class OtpExhaustedOut(BaseModel):
+    """أرقامٌ بلغت سقفاً اليوم — **رؤيةٌ لا منع**.
+
+    والمنعُ يقع من العدّادات نفسِها؛ هذه القائمةُ ليرى المشرفُ تكراراً مشبوهاً
+    **قبل** أن يحرق رقمَ الإرسال، لا بعده.
+    """
+
+    day: str
+    phones: list[str]

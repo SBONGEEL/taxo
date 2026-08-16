@@ -20,8 +20,10 @@ from app.schemas.provider import (
     ProviderSpecOut,
     ProviderTestRequest,
     ProviderTestResult,
+    WhatsAppSessionOut,
 )
 from app.services.providers import credentials as credentials_service, health
+from app.services.whatsapp import session as whatsapp_session
 from app.services.providers.registry import PROVIDERS, get_spec
 
 # صفحة العقود لـ admin حصراً — support لا يراها إطلاقاً (SPEC القسم 13/8)
@@ -167,3 +169,35 @@ async def delete_provider_credential(
 
     await credentials_service.delete(session, credential, actor=admin)
     await session.commit()
+
+
+# ------------------------------------------------- جلسةُ واتساب الذاتية
+
+
+@router.get("/whatsapp/session", response_model=WhatsAppSessionOut)
+async def read_whatsapp_session(
+    _admin: AdminUser, session: DbSession
+) -> WhatsAppSessionOut:
+    """حالُ جلسة البوابة — **ورمزُ الربط معها في نداءٍ واحد**.
+
+    نداءان (حالةٌ ثم رمز) يجعلان الشاشةَ ترسم «تنتظر المسح» ثم تنتظر نداءً
+    ثانياً لترسم المربّع، فيرى المشرفُ فراغاً في اللحظة التي يحتاج فيها الرمز.
+
+    **ولا يرمي حين تسقط البوابة**: الحالُ `unreachable` **جوابٌ** لا خطأ — وهي
+    بعينها ما وُجدت الشاشةُ لتقوله.
+    """
+    return await whatsapp_session.read(session)
+
+
+@router.post("/whatsapp/session/logout", response_model=WhatsAppSessionOut)
+async def logout_whatsapp_session(
+    admin: AdminUser, session: DbSession
+) -> WhatsAppSessionOut:
+    """يفصل الجلسةَ ويمحوها — البابُ الوحيد لربط رقمٍ آخر.
+
+    **وقيدُ تدقيقٍ عليه**: فصلُ الجلسة يوقف تسجيلَ المستخدمين حتى يمسح إنسانٌ
+    رمزاً جديداً، فهو من أثقل ما يُضغط في هذه الصفحة — ومن فعله يُعرف باسمه.
+    """
+    result = await whatsapp_session.logout(session, admin=admin)
+    await session.commit()
+    return result

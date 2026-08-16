@@ -38,6 +38,9 @@ import {
   listPaymentSettings,
   listAdvanceSettings,
   listCancellationSettings,
+  listOtpExhausted,
+  listOtpSettings,
+  updateOtpSettings,
   updateCancellationSettings,
   listWalletSettings,
   updateAdvanceSettings,
@@ -51,6 +54,8 @@ import {
 import type {
   AdvanceSetting,
   CancellationSetting,
+  OtpExhausted,
+  OtpSetting,
   UnpaidCancellationOutcome,
   CommissionSetting,
   CountryFeatureFlags,
@@ -158,12 +163,14 @@ export function SettingsScreen() {
   const [sharing, setSharing] = useState<RideSharingSetting | null>(null);
   const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
   const [cancel, setCancel] = useState<CancellationSetting[]>([]);
+  const [otp, setOtp] = useState<OtpSetting[]>([]);
+  const [burned, setBurned] = useState<OtpExhausted | null>(null);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, sh, adv, cxl] = await Promise.all([
+    const [f, c, w, p, r, sh, adv, cxl, otpRows, spent] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
@@ -174,6 +181,8 @@ export function SettingsScreen() {
       getSharingSettings(country),
       listAdvanceSettings(),
       listCancellationSettings(),
+      listOtpSettings(),
+      listOtpExhausted(),
     ]);
     setFlags(f);
     setCommission(c);
@@ -183,6 +192,8 @@ export function SettingsScreen() {
     setSharing(sh);
     setAdvance(adv);
     setCancel(cxl);
+    setOtp(otpRows);
+    setBurned(spent);
   }, [country]);
 
   useEffect(() => {
@@ -199,6 +210,7 @@ export function SettingsScreen() {
   const paymentRow = payment.find((row) => row.country_code === country);
   const advanceRow = advance.find((row) => row.country_code === country);
   const cancellationRow = cancel.find((row) => row.country_code === country);
+  const otpRow = otp.find((row) => row.country_code === country);
 
   async function flip(key: FeatureKey, enabled: boolean, reason?: string) {
     setError(null);
@@ -413,6 +425,68 @@ export function SettingsScreen() {
             ) : (
               <p className="text-12.5 text-muted">لا سياسةَ سلفٍ لهذه الدولة.</p>
             )}
+          </section>
+
+          {/* سقوفُ طلب رمز التحقق — **سياسةُ حسابٍ لا خاصيةُ قناة**:
+              تُقاس على الرقم فتسري على واتساب والرسائل معاً، ومن استنفد
+              محاولاته لا يلتفّ عليها بتبديل القناة */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">سقوف رمز التحقق</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              <b className="text-ink">ثلاثةُ سقوفٍ لا واحد</b>: نافذةٌ قصيرةٌ
+              تمنع الرشق، ويوميٌّ يمنع من ينتظر الساعةَ ثم يعود،{" "}
+              <b className="text-ink">وعمرُ التسجيل</b> — وهو الذي لا يُشترى
+              بالصبر، لأن التسجيل حدثٌ مرةً لا حدثٌ متكرر (ويُصفَّر بإنشاء
+              الحساب). <b className="text-ink">وصفرُ أيِّها «لا سقف»</b>، وهي
+              حرّاسٌ لا ميزات فلا تُفتح بالسكوت. والعدُّ على{" "}
+              <b className="text-ink">الرقم لا على الشبكة</b>: مقهىً كاملاً لا
+              يخنقه مسيءٌ واحد.
+            </p>
+            {otpRow ? (
+              <OtpForm
+                key={otpRow.country_code}
+                row={otpRow}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={setError}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">
+                لا سقوفَ محفوظةٌ لهذه الدولة — تُكتب بأول حفظ، والافتراضاتُ
+                الحارسةُ سارية.
+              </p>
+            )}
+
+            {/* **ومؤشّرُ من استنفد اليوم** — رؤيةٌ قبل أن يحرق الرقمَ لا بعده */}
+            <div className="mt-14 rounded-12 border border-line bg-surface-2 px-14 py-12">
+              <p className="text-12 font-bold text-ink">
+                أرقامٌ استنفدت محاولاتها اليوم
+                {burned && burned.phones.length > 0
+                  ? ` (${arabicDigits(String(burned.phones.length))})`
+                  : ""}
+              </p>
+              {burned && burned.phones.length > 0 ? (
+                <ul className="mt-8 flex flex-wrap gap-8">
+                  {burned.phones.map((phone) => (
+                    <li
+                      key={phone}
+                      dir="ltr"
+                      className="rounded-full border border-line px-9 py-3 text-11 text-warn"
+                    >
+                      {phone}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-11 text-muted">
+                  لا شيء اليوم — وتكرارٌ مشبوهٌ هنا يعني محاولةَ استنزافٍ تُرى
+                  قبل أن تُحرق رقمَ الإرسال.
+                </p>
+              )}
+            </div>
           </section>
 
           {/* سياسةُ رسم الإلغاء (`design/CANCELLATION-FEE.md`) — **ولا حقلَ
@@ -1288,6 +1362,129 @@ function CancellationForm({
             .then(() =>
               onSaved("حُفظت السياسة — تسري على ما يقع بعدها لا على رسمٍ قائم"),
             )
+            .catch((caught) =>
+              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** سقوفُ طلب رمز التحقق — **سبعةُ أرقامٍ تحكم بابَ الدخول إلى المنصّة كلِّها**.
+ *
+ * وتُقرأ حيّةً لا مجمَّدة: توسيعُها يُطلق سراحَ من كان محجوزاً في الحال،
+ * وتضييقُها يسري على الطلب التالي — كحدِّ إيقاف رسوم الإلغاء. **ولا يمسّ
+ * التعديلُ حجزاً قائماً**: من قيل له «بعد ساعة» لا تُقصَّر تحته ولا تُطال.
+ */
+function OtpForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: OtpSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [windowMinutes, setWindowMinutes] = useState(String(row.window_minutes));
+  const [perWindow, setPerWindow] = useState(String(row.max_per_window));
+  const [perDay, setPerDay] = useState(String(row.max_per_day));
+  const [perSignup, setPerSignup] = useState(String(row.max_per_registration));
+  const [lockout, setLockout] = useState(String(row.lockout_minutes));
+  const [resendBase, setResendBase] = useState(String(row.resend_base_seconds));
+  const [resendMax, setResendMax] = useState(String(row.resend_max_seconds));
+  const [busy, setBusy] = useState(false);
+
+  const digits = (value: string) => value.replace(/[^0-9]/g, "");
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          label="طول النافذة (دقيقة)"
+          dir="ltr"
+          inputMode="numeric"
+          value={windowMinutes}
+          disabled={disabled}
+          onChange={(event) => setWindowMinutes(digits(event.target.value))}
+        />
+        <Field
+          label="أقصى طلبات في النافذة"
+          dir="ltr"
+          inputMode="numeric"
+          value={perWindow}
+          disabled={disabled}
+          onChange={(event) => setPerWindow(digits(event.target.value))}
+        />
+        <Field
+          label="أقصى طلبات في اليوم"
+          dir="ltr"
+          inputMode="numeric"
+          value={perDay}
+          disabled={disabled}
+          onChange={(event) => setPerDay(digits(event.target.value))}
+        />
+        <Field
+          label="أقصى طلبات لتسجيلٍ واحد"
+          dir="ltr"
+          inputMode="numeric"
+          value={perSignup}
+          disabled={disabled}
+          onChange={(event) => setPerSignup(digits(event.target.value))}
+        />
+        <Field
+          label="الانتظار بعد الاستنفاد (دقيقة)"
+          dir="ltr"
+          inputMode="numeric"
+          value={lockout}
+          disabled={disabled}
+          onChange={(event) => setLockout(digits(event.target.value))}
+        />
+        <Field
+          label="مهلة الإعادة الأولى (ثانية)"
+          dir="ltr"
+          inputMode="numeric"
+          value={resendBase}
+          disabled={disabled}
+          onChange={(event) => setResendBase(digits(event.target.value))}
+        />
+        <Field
+          label="سقف مهلة الإعادة (ثانية)"
+          dir="ltr"
+          inputMode="numeric"
+          value={resendMax}
+          disabled={disabled}
+          onChange={(event) => setResendMax(digits(event.target.value))}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        مهلةُ الإعادة <b className="text-ink">تتضاعف بالتكرار</b> من الأولى حتى
+        سقفها — الضغطةُ المكرّرة تُعالَج بثوانٍ، والآلةُ بدقائق. والسقفُ عليها
+        ليس تجميلاً: مهلةٌ تتضاعف بلا حدٍّ تبلغ ساعاتٍ فتصير منعاً دائماً لم
+        يقرّره أحد. ويرى المستخدم عدّاداً بالثواني، لا زرّاً يُضغط بلا أثر.
+      </p>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || windowMinutes === "" || resendBase === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateOtpSettings(row.country_code, {
+            window_minutes: Number(windowMinutes),
+            max_per_window: Number(perWindow),
+            max_per_day: Number(perDay),
+            max_per_registration: Number(perSignup),
+            lockout_minutes: Number(lockout),
+            resend_base_seconds: Number(resendBase),
+            resend_max_seconds: Number(resendMax),
+          })
+            .then(() => onSaved("حُفظت السقوف — تسري على الطلب التالي في الحال"))
             .catch((caught) =>
               onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
             )

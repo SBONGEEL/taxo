@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
@@ -142,9 +143,19 @@ async def test_declining_hands_the_offer_to_the_next_driver(
 
 
 async def test_silence_expires_the_offer_and_moves_on(
-    client: AsyncClient, jordan_settings: None, session_factory
+    client: AsyncClient,
+    jordan_settings: None,
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """لا يقبل ولا يرفض — تنقضي المهلة فينتقل الطلب للتالي."""
+    """لا يقبل ولا يرفض — تنقضي المهلة فينتقل الطلب للتالي.
+
+    **والمهلةُ تُضبط هنا لا في `fast_dispatch`**: هي **موضوعُ** هذا الاختبار لا
+    ظرفُه، فمن يعدّل المشتركةَ غداً لا يُبطل قياسَه من حيث لا يدري. وقد وقع ذلك
+    فعلاً مرةً: رُفعت المشتركةُ إلى عشرٍ مقابل كلّيةٍ خمسٍ فلم يعد العرضُ يدور
+    على كبتنٍ ثانٍ أصلاً — واختبارٌ يقرأ ظرفَه من ملفٍ آخر يصمت حين يتغيّر.
+    """
+    monkeypatch.setattr(dispatch, "OFFER_TIMEOUT_SECONDS", 1)
     near = await _driver(client, session_factory, plate_number="AMM-1")
     far = await _driver(
         client, session_factory, SECOND_DRIVER, plate_number="AMM-7", location=FAR_PICKUP

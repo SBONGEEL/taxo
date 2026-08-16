@@ -67,6 +67,9 @@ import type {
   CancellationChargeRow,
   CancellationChargeStatus,
   CancellationSetting,
+  OtpExhausted,
+  OtpSetting,
+  WhatsAppSession,
   WalletSetting,
   WalletTransaction,
   Withdrawal,
@@ -660,6 +663,27 @@ export const updateAdvanceSettings = (
   country: CountryCode,
   payload: Partial<Omit<AdvanceSetting, "country_code">>,
 ) => api.patch<AdvanceSetting>(`/admin/settings/advances/${country}`, payload);
+
+/** جلسةُ بوابة واتساب الذاتية — الحالُ ورمزُ الربط في نداءٍ واحد. */
+export const getWhatsAppSession = () =>
+  api.get<WhatsAppSession>("/admin/providers/whatsapp/session");
+
+/** فصلٌ ومحوٌ لربط رقمٍ آخر — **يوقف الإرسالَ حتى يُمسح رمزٌ جديد**. */
+export const logoutWhatsAppSession = () =>
+  api.post<WhatsAppSession>("/admin/providers/whatsapp/session/logout");
+
+/** سقوفُ طلب رمز التحقق — **لكل القنوات لا لواتساب وحدها**. */
+export const listOtpSettings = () =>
+  api.get<OtpSetting[]>("/admin/settings/otp");
+
+export const updateOtpSettings = (
+  country: CountryCode,
+  payload: Partial<Omit<OtpSetting, "country_code">>,
+) => api.patch<OtpSetting>(`/admin/settings/otp/${country}`, payload);
+
+/** من استنفد اليوم — قائمةٌ تُقرأ ولا يُبنى عليها منع. */
+export const listOtpExhausted = () =>
+  api.get<OtpExhausted>("/admin/settings/otp/exhausted");
 
 /** سياسةُ رسم الإلغاء (`design/CANCELLATION-FEE.md`). */
 export const listCancellationSettings = () =>

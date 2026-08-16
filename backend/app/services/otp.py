@@ -28,6 +28,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import InvalidOtpCode, RateLimited
+from app.models.enums import CountryCode
+from app.services import otp_limits
 from app.services.sms import get_sms_provider
 
 CODE_LENGTH = 6
@@ -107,6 +109,7 @@ async def issue(
     redis: Redis,
     phone: str,
     *,
+    country: CountryCode | None = None,
     sender: OtpSender | None = None,
 ) -> Challenge:
     """يولّد رمزاً ويوصله عبر القناة المعطاة — أو عبر مزود الرسائل افتراضاً.
@@ -117,12 +120,18 @@ async def issue(
     و`sender` غائباً يعني مزودَ الرسائل: القناةُ تُقرَّر في
     `services/verification.py` وحدها، وافتراضُ الرسائل هنا يبقي كل مستدعٍ قديم
     على حاله بدل أن يصير القرارُ في موضعين.
+
+    **وهذا البابُ هو موضعُ سقوف الطلب** (`services/otp_limits.py`، قرارُ المالك
+    2026-08-16): كلُّ قناةٍ **نولّد فيها الرمزَ ونرسله نحن** تمرّ من هنا، فسقفٌ
+    هنا سقفٌ على الحساب لا على قناة — ومن استنفد محاولاته لا يلتفّ عليها
+    بتبديل القناة. و`country` يُمرَّر من `verification.py` التي تعرف دولةَ
+    الرقم؛ وغيابُه يقرأ سياسةَ الدولة الافتراضية بدل أن يُسقط الحارس.
+
+    **والعدُّ بعد نجاح الإرسال لا قبله**: من ارتدّت رسالتُه لانقطاع البوابة لم
+    يستهلك محاولةً — والسقفُ عقوبةُ إلحاحٍ لا عقوبةُ عطبٍ عندنا.
     """
-    cooldown = await redis.ttl(COOLDOWN_KEY.format(phone=phone))
-    if cooldown and cooldown > 0:
-        raise RateLimited(
-            f"انتظر {cooldown} ثانية قبل طلب رمز جديد", retry_after=cooldown
-        )
+    market = country or settings.default_country_code
+    await otp_limits.guard(session, redis, phone, market)
 
     channel = sender or SmsCodeSender(await get_sms_provider(session))
     code = generate_code()
@@ -140,13 +149,15 @@ async def issue(
         await redis.delete(_CODE_KEY.format(phone=phone))
         raise
 
-    await redis.set(
-        COOLDOWN_KEY.format(phone=phone), "1", ex=RESEND_COOLDOWN_SECONDS
-    )
+    resend_after = await otp_limits.record(session, redis, phone, market)
+    # **والمفتاحُ القديم يبقى مكتوباً**: اختباراتٌ قائمةٌ تمحوه لتتخطّى المهلة،
+    # وهو أيضاً ما يقرؤه أيُّ مسارٍ لم يُنقل بعد. والمهلةُ الحقيقيةُ في
+    # `otp_limits` — وهذا صدىً لها بعمرها نفسِه لا مصدرٌ ثانٍ يخالفها
+    await redis.set(COOLDOWN_KEY.format(phone=phone), "1", ex=resend_after)
     return Challenge(
         sent=True,
         expires_in=CODE_TTL_SECONDS,
-        resend_after=RESEND_COOLDOWN_SECONDS,
+        resend_after=resend_after,
     )
 
 

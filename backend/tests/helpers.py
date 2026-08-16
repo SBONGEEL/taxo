@@ -355,13 +355,38 @@ async def accepted_ride(
     *,
     stops: list[dict] | None = None,
 ) -> dict:
-    """المسار الكامل حتى القبول — أساس كل اختبار لما بعد الإسناد."""
-    ride = await request_ride(client, rider_headers, stops=stops)
-    await wait_for_offer(ride["id"], driver["driver_id"])
+    """المسار الكامل حتى القبول — أساس كل اختبار لما بعد الإسناد.
 
-    accepted = await client.post(
-        f"/rides/{ride['id']}/accept", headers=driver["headers"]
-    )
+    **ويعيد المحاولةَ حين تنقضي مهلةُ العرض تحت الحمل**، وهذا ليس تليينَ
+    اختبارٍ بل إصلاحُ سباقٍ في المساعد نفسِه: بين رؤية العرض في Redis وبين
+    وصول `POST /accept` إلى الخادم **رحلةٌ ثانيةٌ على الشبكة**، وتحت الحمل
+    تتجاوز مهلةَ العرض. والخسارةُ ليست فشلاً في المُختبَر: التوزيعُ يدور على
+    الكبتن نفسِه من جديد (وهو الوحيد المتصل في هذه الاختبارات)، فالانتظارُ
+    والمحاولةُ ثانيةً هما ما يفعله كبتنٌ حقيقيٌّ فاتته بطاقة.
+
+    **وبغيرها يُقرأ إنذارٌ كاذبٌ في كل تشغيل**: اختبارٌ يسقط تحت الضغط وحدَه
+    يُفحص مرةً ثم يُتجاهَل، ويسقط معه ما يصدق.
+
+    **ولا تُخفي فشلاً حقيقياً**: `409` من غير `ride_offer_expired` يرتفع فوراً،
+    وانقضاءُ فرص التوزيع كلِّها يظهر في `wait_for_offer` بنصِّه.
+    """
+    ride = await request_ride(client, rider_headers, stops=stops)
+
+    attempts = 3
+    for attempt in range(attempts):
+        await wait_for_offer(ride["id"], driver["driver_id"])
+        accepted = await client.post(
+            f"/rides/{ride['id']}/accept", headers=driver["headers"]
+        )
+        if accepted.status_code == 200:
+            return accepted.json()
+        expired = (
+            accepted.status_code == 409
+            and accepted.json().get("code") == "ride_offer_expired"
+        )
+        if not expired or attempt == attempts - 1:
+            break
+
     assert accepted.status_code == 200, accepted.text
     return accepted.json()
 

@@ -76,3 +76,26 @@ class ProviderTestResult(BaseModel):
     ok: bool
     detail: str
     credential: ProviderCredentialOut
+
+
+class WhatsAppSessionOut(BaseModel):
+    """حالُ جلسة البوابة الذاتية — **خمسُ حالاتٍ لا اثنتان**.
+
+    `linked` · `awaiting_qr` · `disconnected` · `unreachable` · `off`،
+    وتفصيلُ كلٍّ منها في `services/whatsapp/session.py`. و**دمجُها في
+    «متصل/غير متصل» هو ما يجعل جلسةً تسقط صامتة**: من يقرأ «غير متصل» لا يعرف
+    أينتظر إنساناً يمسح رمزاً أم شبكةً تعود، وتسجيلُ المستخدمين واقفٌ طوالها.
+
+    **و`qr` نصٌّ خامٌّ لا صورة**: اللوحةُ ترسمه مربّعاً في المتصفح كما ترسم رمزَ
+    العامل الثاني — وخدمةُ QR خارجية تعني إرسالَ مفتاحِ ربطِ حسابنا إلى طرفٍ
+    ثالث في نداءٍ لا يراه أحد.
+    """
+
+    state: str
+    phone: str | None = None
+    since: str | None = None
+    last_error: str | None = None
+    # `true` يعني «لن تعود وحدها»: امسح رمزاً أو بدّل القناة
+    needs_human: bool = False
+    queue_depth: int = 0
+    qr: str | None = None

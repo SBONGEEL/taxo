@@ -4,6 +4,7 @@ from app.models.booking import RideBooking
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting, RideCancellationCharge
+from app.models.otp_setting import OtpSetting
 from app.models.base import Base
 from app.models.commission import CommissionSetting
 from app.models.device import DeviceToken
@@ -86,6 +87,7 @@ __all__ = [
     "AuditAction",
     "CancellationChargeStatus",
     "CancellationSetting",
+    "OtpSetting",
     "RideCancellationCharge",
     "UnpaidCancellationOutcome",
     "Base",

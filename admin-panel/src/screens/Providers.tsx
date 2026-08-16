@@ -36,6 +36,7 @@ import type {
   ProviderSpec,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
+import { WhatsAppSession } from "@/components/WhatsAppSession";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
@@ -100,6 +101,12 @@ export function ProvidersScreen() {
     >
       <ErrorNote message={error} />
       <SuccessNote message={done} />
+
+      {/* **بطاقةُ الجلسة فوق العقود لا بينها**: العقدُ يُدخَل مرةً وتُقرأ
+          الجلسةُ كلَّ يوم — ومن يفتح هذه الصفحة وواتساب ساقطٌ يفتحها لها */}
+      <div className="mt-12">
+        <WhatsAppSession onError={setError} />
+      </div>
 
       {catalog === null ? (
         <Spinner className="mx-auto" />

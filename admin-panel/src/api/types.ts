@@ -870,3 +870,50 @@ export type SettlementState =
   | "awaiting"
   | "disputed"
   | "settled";
+
+/** حالُ جلسة بوابة واتساب الذاتية — **خمسٌ لا اثنتان**.
+ *
+ * `linked` مرتبطة · `awaiting_qr` تنتظر إنساناً يمسح رمزاً · `disconnected`
+ * سقطت وتعود وحدها · `unreachable` البوابةُ نفسُها لا تُجيب · `off` العقدُ
+ * ليس على القناة الذاتية.
+ *
+ * **ودمجُها في «متصل/غير متصل» هو ما يجعل جلسةً تسقط صامتة**: من يقرأ «غير
+ * متصل» لا يعرف أينتظر فعلاً منه أم شبكةً تعود — وتسجيلُ المستخدمين واقفٌ
+ * طوال ترددِه.
+ */
+export interface WhatsAppSession {
+  state: "linked" | "awaiting_qr" | "disconnected" | "unreachable" | "off";
+  phone: string | null;
+  since: string | null;
+  last_error: string | null;
+  /** `true` يعني «لن تعود وحدها» — امسح رمزاً أو بدّل القناة. */
+  needs_human: boolean;
+  queue_depth: number;
+  /** نصٌّ خامٌّ ترسمه اللوحةُ مربّعاً في المتصفح — لا صورةٌ من خدمةٍ خارجية. */
+  qr: string | null;
+}
+
+/** سقوفُ طلب رمز التحقق لدولة (قرارُ المالك 2026-08-16).
+ *
+ * **ثلاثةُ سقوفٍ لا واحد**: نافذةٌ قصيرة (رشقٌ آليّ)، ويوميّ (من ينتظر الساعة
+ * ثم يعود)، **وعمرُ التسجيل** — وهو الذي لا يُشترى بالصبر، لأن التسجيل حدثٌ
+ * مرةً لا حدثٌ متكرر. **وصفرُ أيِّها يعني «لا سقف»** ويُكتب صراحةً: هذه حرّاسٌ
+ * لا ميزات، فانفتاحُها قرارٌ مكتوبٌ لا سكوت.
+ */
+export interface OtpSetting {
+  country_code: CountryCode;
+  window_minutes: number;
+  max_per_window: number;
+  max_per_day: number;
+  max_per_registration: number;
+  lockout_minutes: number;
+  resend_base_seconds: number;
+  resend_max_seconds: number;
+}
+
+/** أرقامٌ بلغت سقفاً اليوم — **رؤيةٌ لا منع**: تكرارٌ مشبوهٌ يُرى قبل أن يحرق
+ *  رقمَ الإرسال، لا بعده. */
+export interface OtpExhausted {
+  day: string;
+  phones: string[];
+}

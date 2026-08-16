@@ -217,6 +217,9 @@ async def challenge(
     نصية»)، ويُرفض إن لم تكن القناةُ متاحةً لهذا الرقم.
     """
     chosen, methods = await method_for_phone(session, phone)
+    # **دولةُ الرقم هي سوقُ السقوف**: الأرقامُ per-country، ومن يطلب رمزاً على
+    # رقمٍ ليبيٍّ يخضع لسقوف ليبيا مهما كان مصدرُ الطلب — الرقمُ يحمل دولتَه
+    market = country_for_phone(phone)
 
     if channel is not None:
         if channel not in methods:
@@ -235,7 +238,9 @@ async def challenge(
                 fallback=_next_code_channel(methods, WHATSAPP_OTP),
             )
         try:
-            sent = await otp.issue(session, redis, phone, sender=provider)
+            sent = await otp.issue(
+                session, redis, phone, country=market, sender=provider
+            )
         except WhatsAppError as exc:
             raise VerificationSendFailed(
                 channel=WHATSAPP_OTP,
@@ -250,7 +255,7 @@ async def challenge(
         )
 
     if chosen == SMS_OTP:
-        sent = await otp.issue(session, redis, phone)
+        sent = await otp.issue(session, redis, phone, country=market)
         return otp.Challenge(
             sent=sent.sent,
             expires_in=sent.expires_in,

@@ -14,6 +14,7 @@ from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting
 from app.models.commission import CommissionSetting
+from app.models.otp_setting import OtpSetting
 from app.models.enums import AuditAction, CountryCode
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
@@ -27,6 +28,9 @@ from app.schemas.cancellation import (
 )
 from app.schemas.settings import (
     CommissionSettingOut,
+    OtpExhaustedOut,
+    OtpSettingOut,
+    OtpSettingUpdate,
     CommissionSettingUpdate,
     CountryFeatureFlagsOut,
     FeatureFlagUpsert,
@@ -42,7 +46,8 @@ from app.schemas.settings import (
 from app.models.advance import AdvanceSetting
 from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
-from app.services import audit, settings_service
+from app.core.deps import RedisDep
+from app.services import audit, otp_limits, settings_service
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
 
@@ -535,6 +540,72 @@ async def update_payment_settings(
     )
     await _commit(session, setting)
     return PaymentSettingOut.model_validate(setting)
+
+
+# ----------------------------------------------- سقوف طلب رمز التحقق
+
+
+@router.get("/otp", response_model=list[OtpSettingOut])
+async def list_otp_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[OtpSettingOut]:
+    rows = (
+        await session.scalars(select(OtpSetting).order_by(OtpSetting.country_code))
+    ).all()
+    return [OtpSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/otp/{country_code}", response_model=OtpSettingOut)
+async def update_otp_settings(
+    country_code: CountryCode,
+    payload: OtpSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> OtpSettingOut:
+    """سقوفُ طلب الرمز لكل دولة (قرارُ المالك 2026-08-16).
+
+    **وتسري على القنوات كلِّها لا على واتساب وحدها**: السقفُ سياسةُ حسابٍ
+    يُقاس على الرقم، فمن استنفد محاولاته لا يلتفّ عليها بتبديل القناة.
+
+    **وتُقرأ حيّةً لا مجمَّدة**: توسيعُها هنا يُطلق سراحَ من كان محجوزاً في
+    الحال، وتضييقُها يسري على الطلب التالي — وهي قاعدةُ حدِّ الإيقاف نفسُها.
+    ولا يمسّ التعديلُ **حجزاً قائماً** (`lockout`): مهلتُه كُتبت بعمرها لحظةَ
+    وقوعها، ومن قيل له «بعد ساعة» لا تُقصَّر تحته ولا تُطال.
+    """
+    setting = await session.get(OtpSetting, country_code)
+    if setting is None:
+        setting = OtpSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="otp_setting",
+        entity_id=None,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return OtpSettingOut.model_validate(setting)
+
+
+@router.get("/otp/exhausted", response_model=OtpExhaustedOut)
+async def list_exhausted_phones(
+    _staff: StaffUser, redis: RedisDep
+) -> OtpExhaustedOut:
+    """أرقامُ اليوم التي بلغت سقفاً — **تكرارٌ مشبوهٌ يُرى قبل أن يحرق الرقم**.
+
+    ومصدرُها Redis لا القاعدة: مجموعةٌ بعمر يومين، لأن السؤال «من استنفد
+    اليوم» لا «من استنفد يوماً ما» — وجدولٌ يحفظ الثاني ينمو بلا قارئ.
+    """
+    from datetime import UTC, datetime
+
+    return OtpExhaustedOut(
+        day=datetime.now(UTC).date().isoformat(),
+        phones=await otp_limits.exhausted_today(redis),
+    )
 
 
 # ------------------------------------------------------------- سجل التدقيق

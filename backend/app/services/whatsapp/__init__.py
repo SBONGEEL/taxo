@@ -32,11 +32,25 @@ from app.services.whatsapp.base import (
     WhatsAppOtpProvider,
     WhatsAppUnavailable,
 )
+from app.services.whatsapp.baileys import (
+    DEFAULT_HOURLY,
+    DEFAULT_PER_PHONE_HOURLY,
+    BaileysGatewayProvider,
+)
 from app.services.whatsapp.cloud_api import WhatsAppCloudProvider
 from app.services.whatsapp.mock import MockWhatsAppProvider, last_message
 
+# قيمتا حقل `transport` في العقد — والغيابُ يُقرأ `cloud` (ما كان قبل الحقل)
+TRANSPORT_CLOUD = "cloud"
+TRANSPORT_BAILEYS = "baileys"
+
 __all__ = [
+    "DEFAULT_HOURLY",
+    "DEFAULT_PER_PHONE_HOURLY",
     "REQUEST_TIMEOUT_SECONDS",
+    "TRANSPORT_BAILEYS",
+    "TRANSPORT_CLOUD",
+    "BaileysGatewayProvider",
     "MockWhatsAppProvider",
     "WhatsAppCloudProvider",
     "WhatsAppError",
@@ -49,10 +63,57 @@ __all__ = [
 ]
 
 
+def _int_or(values: Mapping[str, Any], key: str, fallback: int) -> int:
+    """رقمٌ من حقل عقد — والفارغُ يعني «الافتراضي» لا صفراً.
+
+    وصفرٌ **مكتوبٌ صراحةً** يعني «لا سقف»: حالتان لا يجوز أن يحملهما حقلٌ
+    فارغ (درسُ أصفار `wallet_settings`).
+    """
+    raw = str(values.get(key) or "").strip()
+    if not raw:
+        return fallback
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return fallback
+
+
+def _build_baileys(values: Mapping[str, Any]) -> WhatsAppOtpProvider:
+    """القناةُ الذاتية — بوابةٌ داخليةٌ لا تُرى من خارج شبكة المشروع."""
+    base_url = str(values.get("gateway_url") or "").strip()
+    gateway_key = str(values.get("gateway_key") or "").strip()
+    if not base_url or not gateway_key:
+        raise WhatsAppUnavailable(
+            "عقد واتساب الذاتي ناقص: يلزم عنوان البوابة ومفتاحُها"
+        )
+    return BaileysGatewayProvider(
+        base_url=base_url,
+        gateway_key=gateway_key,
+        redis=get_redis_client(),
+        per_phone_hourly=_int_or(values, "per_phone_hourly", DEFAULT_PER_PHONE_HOURLY),
+        hourly=_int_or(values, "hourly_limit", DEFAULT_HOURLY),
+    )
+
+
 def build_provider(values: Mapping[str, Any]) -> WhatsAppOtpProvider:
-    """يبني المزود من قيم عقدٍ مفكوك التشفير — من هنا ومن زر الاختبار."""
+    """يبني المزود من قيم عقدٍ مفكوك التشفير — من هنا ومن زر الاختبار.
+
+    **وحقلُ `transport` هو كلُّ الفرق بين القناتين** (قرارُ المالك 2026-08-16):
+    الرسميةُ (`cloud`) والذاتيةُ (`baileys`) خلف الواجهة نفسِها، والتبديلُ
+    بينهما **حقلٌ يُعدَّل في صفحة العقود بلا كودٍ جديد ولا نشر**.
+
+    **وغيابُه يُقرأ `cloud`**: هو ما كان يعمل قبل هذا الحقل، فعقدٌ قائمٌ لا
+    يتبدّل سلوكُه بترقية. وهي قاعدةُ «الغيابُ يعني ما كان» — لا «يعني الأحدث».
+
+    **ومفتاحان لا يجتمعان**: مزوّدان مفعّلان معاً كانا سيفتحان سؤالَ «أيُّهما
+    أولاً»، وهو سؤالٌ يُجاب بحالةٍ ثانيةٍ يمكن أن تخالف العقود — فالعقدُ واحدٌ
+    وحقلٌ فيه يقول أيَّ سلكٍ يمشي عليه.
+    """
     if credentials_service.is_mock(values) and not settings.is_production:
         return MockWhatsAppProvider(get_redis_client())
+
+    if str(values.get("transport") or TRANSPORT_CLOUD).strip() == TRANSPORT_BAILEYS:
+        return _build_baileys(values)
 
     phone_number_id = str(values.get("phone_number_id") or "").strip()
     access_token = str(values.get("access_token") or "").strip()

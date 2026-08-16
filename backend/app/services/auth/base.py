@@ -10,7 +10,8 @@ from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.auth import RegisterRequest
-from app.services import referrals
+from app.core.redis_client import get_redis_client
+from app.services import otp_limits, referrals
 
 async def create_account(
     session: AsyncSession,
@@ -40,6 +41,13 @@ async def create_account(
     # لجذب السائقات، ورمزٌ يُقبل ثم لا يُسند شيئاً يبدو أنه عمل
     if data.referral_code and UserRole(data.role) is not UserRole.DRIVER:
         raise InvalidInput("رمز الإحالة لحسابات الكباتن")
+
+    # **وعدّادُ رموز التسجيل يُصفَّر هنا** (`otp_limits`، قرارُ المالك
+    # 2026-08-16): السقفُ الثالث يقيس «كم رمزاً طُلب على رقمٍ **بلا أن يُسجَّل
+    # به أحد**» — فبإنشاء الحساب زال موضوعُه. **ولا تُمحى النافذةُ ولا
+    # اليوميّ**: من سجّل للتوّ لا يُمنح رصيداً جديداً من الرسائل في الدقيقة
+    # نفسِها. وموضعُه هذا البابُ وحدَه لأنه بابُ الإنشاء الوحيد
+    await otp_limits.clear_for_registration(get_redis_client(), phone)
 
     user = User(
         phone=phone,

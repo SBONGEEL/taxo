@@ -69,6 +69,33 @@ services:
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
+  # بوابةُ واتساب الذاتية (Baileys) — **لا `ports:` هنا بقصد**.
+  #
+  # الخدمةُ تُرى من شبكة المشروع الداخلية وحدها، فلا تصلها واجهةٌ ولا متصفّح:
+  # الخلفيةُ وحدها تكلّمها، ومعها مفتاحٌ مشترك. وحارسان لا واحد — «لا منفذ»
+  # شرطُ نشرٍ يُنقض بسطرٍ في ملفٍ آخر، والمفتاحُ شرطٌ في الكود.
+  #
+  # **وحالةُ المصادقة على حجمٍ مسمّى لا في الحاوية**: إعادةُ بناءِ الصورة أو
+  # إعادةُ تشغيلها لا تُفقد الجلسة — وبغيره يحتاج كلُّ نشرٍ هاتفاً يمسح رمزاً.
+  # وهو **مفاتيحُ حسابٍ كاملة**، فيدخل النسخَ الاحتياطي مشفّراً كمفتاح Fernet.
+  whatsapp-gateway:
+    build:
+      context: ./whatsapp-gateway
+    container_name: taxo-whatsapp-gateway
+    restart: unless-stopped
+    # **المفتاحُ من `.env.local` كبقية أسرار البنية** (DB وRedis وFernet):
+    # compose يفسّر `${VAR}` من `.env` وحدَه لا من `.env.local`، فالإحالةُ
+    # بالتفسير كانت تُمرّر فراغاً والبوابةُ ترفض الإقلاع بحقّ.
+    # **ولا `:?` في التفسير**: تلك تجعل كلَّ أمر compose يرفض — حتى
+    # `run backend` لاختبارٍ لا علاقةَ له بواتساب. والحارسُ في الخدمة نفسِها
+    env_file:
+      - .env.local
+    environment:
+      WA_PORT: "8080"
+      WA_AUTH_DIR: /data/auth
+    volumes:
+      - taxo_wa_auth:/data
+
   # عامل Celery: ما يحتمل التأجيل وحده (انتهاء الاشتراكات — SPEC القسم 8).
   # توزيع الرحلات ليس هنا: يعيش في عملية التطبيق لأن الراكب ينتظر على الشاشة.
   worker:
@@ -200,6 +227,7 @@ services:
       - "5175:5175"
 
 volumes:
+  taxo_wa_auth:
   taxo_pgdata:
   taxo_redisdata:
   taxo_customer_modules:

@@ -64,6 +64,12 @@ from app.models.cancellation import (
     DEFAULT_EXEMPT_WITHIN_METERS,
     CancellationSetting,
 )
+from app.models.otp_setting import (
+    DEFAULT_MAX_PER_DAY,
+    DEFAULT_MAX_PER_REGISTRATION,
+    DEFAULT_MAX_PER_WINDOW,
+    OtpSetting,
+)
 from app.models.wallet_setting import WalletSetting
 from app.services.providers import credentials as credentials_service
 
@@ -311,6 +317,29 @@ async def seed_sharing_settings(session: AsyncSession) -> None:
                 f"مشاركة الرحلة: {country.value} "
                 f"(الخصم {DEFAULT_DISCOUNT_PERCENT}% — لم يُحدَّد بعد، "
                 f"وممرّ {DEFAULT_CORRIDOR_KM}كم والتفاف {DEFAULT_MAX_DETOUR_MINUTES}د)"
+            )
+
+
+async def seed_otp_settings(session: AsyncSession) -> None:
+    """سقوفُ طلب رمز التحقق لكل دولة (قرارُ المالك 2026-08-16).
+
+    **وقيمُها الافتراضيةُ حارسةٌ لا مفتوحة** — عكسُ أصفار البقشيش والإحالة:
+    تلك ميزاتٌ لا تُفتح بالسكوت، وهذه حرّاسٌ لا تُطفأ به. والصفُّ يُبذر ليجد
+    المشرفُ أرقاماً في شاشته لا حقولاً فارغةً تُقرأ عطباً.
+    """
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(OtpSetting.country_code).where(
+                OtpSetting.country_code == country
+            )
+        )
+        if exists is None:
+            session.add(OtpSetting(country_code=country))
+            _log(
+                f"سقوف الرمز: {country.value} "
+                f"({DEFAULT_MAX_PER_WINDOW} في النافذة، "
+                f"{DEFAULT_MAX_PER_DAY} يومياً، "
+                f"{DEFAULT_MAX_PER_REGISTRATION} لتسجيلٍ واحد)"
             )
 
 
@@ -671,6 +700,7 @@ async def main() -> None:
         await seed_referral_settings(session)
         await seed_advance_settings(session)
         await seed_cancellation_settings(session)
+        await seed_otp_settings(session)
         await seed_sharing_settings(session)
         await seed_notification_settings(session)
         await seed_plans(session)

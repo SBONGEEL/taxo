@@ -64,6 +64,11 @@ BOOKING_INTERVAL_SECONDS = 60
 # ينتظرها **رفعُ** المنع، فهو يقع في مسار الشحن نفسِه
 CANCELLATION_INTERVAL_SECONDS = 600
 
+# دورةُ مراقبة جلسة واتساب الذاتية. **دقيقةٌ واحدة**: الجلسةُ حين تسقط توقف
+# تسجيلَ المستخدمين الجدد كلَّهم، والفرقُ بين دقيقةٍ وخمسٍ هو أربعُ دقائقَ من
+# بابٍ مغلقٍ لا يعلم به أحد
+WHATSAPP_WATCH_INTERVAL_SECONDS = 60
+
 celery_app = Celery(
     "taxo",
     broker=settings.redis_url,
@@ -78,6 +83,7 @@ celery_app = Celery(
         "app.tasks.referrals",
         "app.tasks.stops",
         "app.tasks.subscriptions",
+        "app.tasks.whatsapp",
     ],
 )
 
@@ -137,6 +143,14 @@ celery_app.conf.update(
         "sweep-cancellation-charges": {
             "task": "app.tasks.cancellation.sweep_cancellation_charges",
             "schedule": CANCELLATION_INTERVAL_SECONDS,
+        },
+        # جلسةُ واتساب الذاتية — **كلَّ دقيقة**: سقوطُها يوقف تسجيلَ المستخدمين
+        # الجدد كلَّهم، ودورةٌ كلَّ خمسٍ تعني خمسَ دقائقَ من تسجيلٍ واقفٍ بلا أن
+        # يعلم أحد. والدورةُ رخيصةٌ: نداءٌ واحدٌ داخل الشبكة، ولا تنبيهَ إلا
+        # على **تحوّل** الحال
+        "watch-whatsapp-session": {
+            "task": "app.tasks.whatsapp.watch_whatsapp_session",
+            "schedule": WHATSAPP_WATCH_INTERVAL_SECONDS,
         },
     },
 )
