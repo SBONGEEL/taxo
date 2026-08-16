@@ -38,12 +38,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import storage
 from app.core.exceptions import Conflict, NotFound
-from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
+from app.models.driver import (
+    Driver,
+    DriverDocument,
+    required_document_types,
+)
 from app.models.enums import (
     AuditAction,
     DocumentReviewStatus,
     DocumentType,
     DriverStatus,
+    Gender,
 )
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
@@ -84,6 +89,7 @@ DOCUMENT_TYPE_LABEL: dict[DocumentType, str] = {
     DocumentType.VEHICLE_SIDE_LEFT: "الجانب الأيسر",
     DocumentType.VEHICLE_INTERIOR: "المركبة من الداخل",
     DocumentType.VEHICLE_PLATE: "لوحة المركبة",
+    DocumentType.PROFILE_PHOTO: "الصورة الشخصية",
 }
 
 
@@ -171,9 +177,35 @@ async def awaiting_upload(
     }
     return [
         doc_type
-        for doc_type in REQUIRED_DOCUMENT_TYPES
+        # **والمطلوبُ لهذا الكبتن لا للجميع** (البند ٥٢): من أُعفيت من
+        # الصورة الشخصية لا تُطالَب بها في شاشتها — وإلا قرأت «ينقصك» ما لا
+        # ينقصها، وهو عطبُ `missing_required` في المرحلة ١٣ بعينه
+        for doc_type in await required_for(session, driver_id)
         if rows.get(doc_type) in (None, DocumentReviewStatus.REJECTED)
     ]
+
+
+async def required_for(
+    session: AsyncSession, driver_id: uuid.UUID
+) -> tuple[DocumentType, ...]:
+    """المطلوبُ من **هذا الكبتن** — والصورةُ الشخصية هي ما يجعله متغيّراً.
+
+    تُقرأ من `users.gender_verified_at` لا من الإقرار: الاستثناءُ يُسقط شرطاً،
+    وما يُسقط شرطاً يحتاج ختماً (البند ٥٢ و`models/driver.py`).
+    """
+    row = (
+        await session.execute(
+            select(User.gender, User.gender_verified_at)
+            .join(Driver, Driver.user_id == User.id)
+            .where(Driver.id == driver_id)
+        )
+    ).first()
+    exempt = bool(
+        row is not None
+        and row[0] is Gender.FEMALE
+        and row[1] is not None
+    )
+    return required_document_types(gender_verified_female=exempt)
 
 
 async def missing_required(
@@ -183,6 +215,10 @@ async def missing_required(
 
     **حارسُ الاعتماد وحدَه** (`drivers.approve`): ما ينتظر المراجعةَ ليس مقبولاً
     فلا يُعتمد به. ولا تُعرض هذه على الكبتن — `awaiting_upload` هي جوابُه.
+
+    **والمطلوبُ يُقرأ لكل كبتنٍ على حدة** منذ البند ٥٢: الصورةُ الشخصية شرطٌ
+    إلا على من ثبَّتت الإدارةُ جنسَها أنثى — وجدولٌ ثابتٌ للجميع كان سيمنع
+    اعتمادَ من أُعفي من الشرط أصلاً.
     """
     approved = set(
         await session.scalars(
@@ -192,7 +228,27 @@ async def missing_required(
             )
         )
     )
-    return [doc_type for doc_type in REQUIRED_DOCUMENT_TYPES if doc_type not in approved]
+    required = await required_for(session, driver_id)
+    return [doc_type for doc_type in required if doc_type not in approved]
+
+
+async def approved_photo(
+    session: AsyncSession, driver_id: uuid.UUID
+) -> DriverDocument | None:
+    """صورةُ الكبتن **المقبولة** — و`None` فيما عداها.
+
+    **والمقبولةُ وحدَها تُنشر**: ما ينتظر المراجعة قد يكون صورةَ شخصٍ آخر أو
+    صورةً مسيئة، وعرضُه قبل أن يراه مشرفٌ يُبطل المراجعةَ من أصلها. و`None`
+    تعني للتطبيق «ارسم الحرفَ الأول» — وهو ما يرسمه للمُعفاة أيضاً، فالحالان
+    متشابهان في الشاشة بقصد (البند ٥٢).
+    """
+    return await session.scalar(
+        select(DriverDocument).where(
+            DriverDocument.driver_id == driver_id,
+            DriverDocument.doc_type == DocumentType.PROFILE_PHOTO,
+            DriverDocument.review_status == DocumentReviewStatus.APPROVED,
+        )
+    )
 
 
 # ------------------------------------------------------------------- الرفع
@@ -230,8 +286,25 @@ async def upload(
     """
     from app.services import drivers as drivers_service
 
+    # **والمطلوبُ لهذا الكبتن لا للجميع** (البند ٥٢)، **وبشرطِ أن يكون
+    # استبدالاً حقاً**: القاعدةُ تقول إن من بدّل ما اعتُمد عليه صار معتمَداً على
+    # ما لم يره أحد — وهي عن **الاستبدال**. ورفعُ نوعٍ **لا صفَّ له** لا يناقض
+    # شيئاً رآه مشرف، فلا يُسقط اعتماداً.
+    #
+    # وهذا الشرطُ لم يكن يلزم قبل اليوم لأن المعتمَد يملك كلَّ المطلوب بالضرورة
+    # (وإلا لما اعتُمد). وقد كسره قرارُ المالك 2026-08-16: الصورةُ تسري على من
+    # يُعتمد بعدها، فصار في السوق **معتمَدون بلا صورة** — ولولا هذا الشرطُ
+    # لأسقط أوّلُ امتثالٍ منهم اعتمادَهم، أي **لعاقبناهم على أنهم فعلوا ما طُلب**.
+    required_now = await required_for(session, driver.id)
+    already_uploaded = await session.scalar(
+        select(DriverDocument.id).where(
+            DriverDocument.driver_id == driver.id,
+            DriverDocument.doc_type == doc_type,
+        )
+    )
     reverts_approval = (
-        doc_type in REQUIRED_DOCUMENT_TYPES
+        doc_type in required_now
+        and already_uploaded is not None
         and driver.status is DriverStatus.APPROVED
     )
     # الفحص **قبل** كتابة الملف: رفضٌ بعد الحفظ يترك ملفاً نحذفه فوراً

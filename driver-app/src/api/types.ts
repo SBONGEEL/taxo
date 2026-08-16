@@ -26,7 +26,11 @@ export type DocumentType =
   | "vehicle_side_right"
   | "vehicle_side_left"
   | "vehicle_interior"
-  | "vehicle_plate";
+  | "vehicle_plate"
+  /** الصورةُ الشخصية (البند ٥٢) — **مستندٌ يُراجَع وصورةٌ تُنشر معاً**.
+   *  شرطُ اعتمادٍ إلا على سائقةٍ مثبَّتةِ الجنس، وحيث لا صورةَ يُرسم أوّلُ حرفٍ
+   *  من الاسم — لا مربعٌ فارغ ولا أيقونةٌ عامة. */
+  | "profile_photo";
 
 export type DocumentReviewStatus = "pending" | "approved" | "rejected";
 

@@ -4,11 +4,13 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Query, Response, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
-from app.core.exceptions import PermissionDenied
+from app.core import storage
+from app.core.exceptions import NotFound, PermissionDenied
 from app.models.driver import Driver
 from app.models.enums import CancellationChargeStatus, RideStatus, UserRole
 from app.models.ride import Ride
@@ -28,6 +30,7 @@ from app.schemas.ride import (
 from app.services import cancellation
 from app.services import (
     dispatch,
+    documents as documents_service,
     notifications,
     pricing,
     promo as promo_service,
@@ -202,6 +205,48 @@ async def get_route_line(
 
 
 # -------------------------------------------------------------- حالات الرحلة
+
+
+@router.get("/{ride_id}/driver/photo")
+async def get_driver_photo(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> FileResponse:
+    """صورةُ كبتن هذه الرحلة — **لطرفَيها وحدهما** (البند ٥٢).
+
+    **ومنفذٌ ثانٍ أضيقُ من منفذ المستندات لا توسيعٌ له**: `document_response`
+    يفحص ملكيةَ الكبتن لمستنده ويردّ `private, no-store` — وهو الصواب لوثيقة
+    هوية، ولا يصلح لصورةٍ **يراها الراكب**. والبديلُ المرفوض مسارٌ يأخذ
+    `driver_id` فيعرض وجوهَ الكباتن لمن يعدّ المعرّفات؛ فالمفتاحُ هنا
+    **الرحلةُ** لا الكبتن، و`get_ride_for_user` هو الحارسُ القائم الذي يقول
+    «أنت طرفٌ فيها».
+
+    **ولا تُردّ إلا مقبولةً**: صورةٌ تنتظر المراجعة قد تكون صورةَ شخصٍ آخر أو
+    صورةً مسيئة — وعرضُها قبل أن يراها مشرفٌ يُبطل المراجعةَ نفسَها. و404
+    حينها هو الجواب الصحيح: التطبيقُ يرسم الحرفَ الأول، وهو ما يرسمه للمُعفاة
+    أيضاً — **والحالان متشابهان في الشاشة بقصد**، فغيابُ الصورة لا يُعلن أنها
+    امرأة.
+
+    **و`no-store` تبقى**: الصورةُ لطرفِ رحلةٍ لا لأيِّ قارئ، وتخزينُها في
+    وسيطٍ مشترك يجعلها تُقرأ من غير مسارها.
+    """
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    if ride.driver_id is None:
+        raise NotFound("لا كبتن لهذه الرحلة بعد")
+
+    photo = await documents_service.approved_photo(session, ride.driver_id)
+    if photo is None:
+        raise NotFound("لا صورة لهذا الكبتن")
+
+    path = storage.resolve(photo.file_path)
+    return FileResponse(
+        path,
+        media_type=photo.content_type,
+        headers={
+            "Content-Disposition": f'inline; filename="driver{path.suffix}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("/{ride_id}/accept", response_model=RideOut)

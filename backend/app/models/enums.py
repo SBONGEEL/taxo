@@ -59,6 +59,12 @@ class DocumentType(StrEnum):
     VEHICLE_SIDE_LEFT = "vehicle_side_left"
     VEHICLE_INTERIOR = "vehicle_interior"
     VEHICLE_PLATE = "vehicle_plate"
+    # **الصورةُ الشخصية** (البند ٥٢، SPEC `driver_documents`) — وهي وحدَها من
+    # هذه الأنواع **مستندٌ يُراجَع وصورةٌ تُنشر معاً**: المراجعةُ تمنع صورةَ
+    # شخصٍ آخر أو صورةً مسيئة، والنشرُ يجعل الراكبَ يعرف من سيركب معه.
+    # وشرطُها للاعتماد **يُقرأ لكل كبتنٍ على حدة** لا من جدولٍ ثابت — انظر
+    # `models/driver.py::required_document_types`
+    PROFILE_PHOTO = "profile_photo"
 
 
 class DeactivationStatus(StrEnum):

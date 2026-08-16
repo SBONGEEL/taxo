@@ -12,6 +12,7 @@ import { ApiError } from "@/api/client";
 import { getRide, getRidePayments, listRideRatings } from "@/api/endpoints";
 import type { Rating, Ride, RidePayments } from "@/api/types";
 import { PaymentsList } from "@/components/payment/PaymentsList";
+import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { Button } from "@/components/ui/Button";
 import { Badge, ErrorNote } from "@/components/ui/Feedback";
 import { MapView, type MapHandle } from "@/components/map/MapView";
@@ -174,9 +175,11 @@ export function RideDetailsScreen() {
             **واللوحةُ لاتينيةٌ بلا تحويل خانات**: تُطابَق حرفاً بحرف. */}
         {ride.driver ? (
           <div className="card flex items-center gap-12 p-14">
-            <div className="flex size-44 shrink-0 items-center justify-center rounded-full bg-brand-soft text-16 font-bold text-ink">
-              {ride.driver.name.slice(0, 1)}
-            </div>
+            <DriverAvatar
+              rideId={ride.id}
+              name={ride.driver.name}
+              className="size-44 text-16"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-ink">
                 {ride.driver.name}

@@ -803,7 +803,14 @@ REQUIRED_DOC_TYPES = (
     "vehicle_front",
     "vehicle_back",
     "vehicle_plate",
+    # **والصورةُ الشخصية سابعاً** (البند ٥٢) — لكلِّ كبتنٍ **إلا** من ثبَّتت
+    # الإدارةُ جنسَها أنثى. فهذه قائمةُ **غير المُعفى**، وهو حالُ كلِّ من في
+    # الاختبارات ما لم يُختم جنسُه
+    "profile_photo",
 )
+
+# وما تطلبه المُعفاة — يقابل `required_document_types(gender_verified_female=True)`
+REQUIRED_DOC_TYPES_EXEMPT = REQUIRED_DOC_TYPES[:-1]
 
 
 async def upload_document(

@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core.exceptions import Conflict, RateLimited
 from app.models.user import User
-from app.models.driver import REQUIRED_DOCUMENT_TYPES, DriverDocument
+from app.models.driver import DriverDocument
 from app.models.enums import DocumentType
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
@@ -213,7 +213,9 @@ async def list_my_documents(
         ],
         missing_required=await documents_service.missing_required(session, driver.id),
         awaiting_upload=await documents_service.awaiting_upload(session, driver.id),
-        required=list(REQUIRED_DOCUMENT_TYPES),
+        # **المطلوبُ لهذا الكبتن لا للجميع** (البند ٥٢): المُعفاةُ من
+        # الصورة الشخصية لا تُعرض لها في قائمة ما يلزمها
+        required=list(await documents_service.required_for(session, driver.id)),
     )
 
 

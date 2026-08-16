@@ -11,6 +11,7 @@
 import { motion } from "framer-motion";
 import { Car, Clock, Phone, Share2, ShieldCheck, Star, X } from "lucide-react";
 import { useState } from "react";
+import { DriverAvatar } from "@/components/ride/DriverAvatar";
 
 import { ApiError } from "@/api/client";
 import { cancelRide } from "@/api/endpoints";
@@ -213,9 +214,11 @@ export function TrackingSheet({
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-12 rounded-16 border border-line bg-bg p-12"
           >
-            <div className="flex size-48 shrink-0 items-center justify-center rounded-full bg-brand-soft text-18 font-bold text-ink">
-              {ride.driver.name.slice(0, 1)}
-            </div>
+            <DriverAvatar
+              rideId={ride.id}
+              name={ride.driver.name}
+              className="size-48 text-18"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-ink">{ride.driver.name}</p>
               <p className="flex items-center gap-4 text-14 text-muted">

@@ -44,11 +44,14 @@ const DOC_LABEL: Record<DocumentType, string> = {
   vehicle_side_left: "الجانب الأيسر",
   vehicle_interior: "من الداخل",
   vehicle_plate: "لوحة المركبة",
+  profile_photo: "الصورة الشخصية",
 };
 
 /** **ما يُقرأ تحت اسم كل صورة**: صورةٌ تُرفض لأنها من زاويةٍ خطأ تُعاد مرتين،
  *  وسطرٌ واحدٌ يقول ما المطلوب يوفّر الدورتين. */
 const DOC_HINT: Partial<Record<DocumentType, string>> = {
+  // **ويُقال إنها تُعرض** — فهذا ما يجعله يختار صورةً تليق من أول مرة
+  profile_photo: "وجهُك واضحاً — يراها الراكب قبل الرحلة",
   vehicle_front: "الواجهة كاملةً واللوحة ظاهرة",
   vehicle_back: "الخلف كاملاً واللوحة ظاهرة",
   vehicle_side_right: "الجانب الأيمن كاملاً",
@@ -69,6 +72,10 @@ const CATEGORY_LABEL: Record<VehicleCategory, string> = {
  * الشاشة**: «اختياري» مكتوبةٌ بجانبه — فمن يراه مطلوباً يظنّ نفسَه ممنوعاً.
  */
 const PAPERS: DocumentType[] = [
+  // **الصورةُ الشخصية أولاً** (البند ٥٢): هي الوحيدةُ التي **يراها الراكب**،
+  // فوضعُها بين أوراق المركبة يجعلها تُقرأ ورقةً إداريةً أخرى. ومن يعرف أنها
+  // تُعرض يختار صورةً تليق — ومن لا يعرف يرفع أوّلَ ما في هاتفه ثم تُرفض.
+  "profile_photo",
   "driving_license",
   "national_id",
   "vehicle_registration",

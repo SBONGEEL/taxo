@@ -13,6 +13,7 @@ from app.models.enums import DriverStatus
 from app.models.user import User
 from tests.helpers import (
     REQUIRED_DOC_TYPES,
+    REQUIRED_DOC_TYPES_EXEMPT,
     DRIVER,
     RIDER,
     JPEG_BYTES,
@@ -414,8 +415,13 @@ async def test_a_driver_is_not_approved_before_his_documents_are(
         client, admin_headers, driver_id=driver.id, document_id=rejected["id"]
     )
 
-    # **وثلاثُ صورٍ للمركبة صارت شرطاً كذلك** (البند ١١): الأمام والخلف واللوحة
-    for doc_type in ("vehicle_front", "vehicle_back", "vehicle_plate"):
+    # **وثلاثُ صورٍ للمركبة والصورةُ الشخصية شرطٌ كذلك** (البند ١١ و٥٢)
+    for doc_type in (
+        "vehicle_front",
+        "vehicle_back",
+        "vehicle_plate",
+        "profile_photo",
+    ):
         photo = await upload_document(client, headers, doc_type=doc_type)
         await review_document(
             client, admin_headers, driver_id=driver.id, document_id=photo["id"]
@@ -451,10 +457,22 @@ async def test_the_optional_vehicle_photos_are_not_required(
 
 
 async def test_the_helper_list_matches_the_backend() -> None:
-    """نسخةُ الاختبارات من قائمة المطلوب تُقاس بالأصل، فلا تفترق صامتةً."""
-    from app.models.driver import REQUIRED_DOCUMENT_TYPES
+    """نسخةُ الاختبارات من قائمة المطلوب تُقاس بالأصل، فلا تفترق صامتةً.
 
-    assert tuple(item.value for item in REQUIRED_DOCUMENT_TYPES) == REQUIRED_DOC_TYPES
+    **وتُقاس بالحالين معاً** منذ البند ٥٢: المطلوبُ لم يعد جدولاً واحداً بل
+    دالةً تقرأ ختمَ الجنس — فقياسُ أحدِ الحالين وحدَه يترك الآخرَ يفترق صامتاً،
+    وهو بالضبط ما وُجدت هذه المقارنةُ لتمنعه.
+    """
+    from app.models.driver import required_document_types
+
+    assert (
+        tuple(item.value for item in required_document_types(gender_verified_female=False))
+        == REQUIRED_DOC_TYPES
+    )
+    assert (
+        tuple(item.value for item in required_document_types(gender_verified_female=True))
+        == REQUIRED_DOC_TYPES_EXEMPT
+    )
 
 
 # ------------------------------------------- سياسة استبدال مستند معتمَد

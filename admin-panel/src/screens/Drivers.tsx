@@ -87,6 +87,7 @@ const DOC_LABEL: Record<DocumentType, string> = {
   vehicle_side_left: "الجانب الأيسر",
   vehicle_interior: "من الداخل",
   vehicle_plate: "لوحة المركبة",
+  profile_photo: "الصورة الشخصية",
 };
 
 const GENDER_LABEL: Record<Gender, string> = {

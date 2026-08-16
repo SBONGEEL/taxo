@@ -26,7 +26,7 @@ from sqlalchemy import func, or_, select
 from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.deactivation import DeactivationRequest
-from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
+from app.models.driver import Driver, DriverDocument, required_document_types
 from app.models.advance import DriverAdvance
 from app.models.enums import (
     AdvanceStatus,
@@ -254,10 +254,17 @@ async def list_drivers(
             gender_preference=driver.gender_preference,
             documents_pending=pending_count,
             documents_rejected=rejected_count,
-            # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد
+            # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد.
+            # **والمطلوبُ لكل كبتنٍ على حدة** (البند ٥٢)، ويُحسب هنا **بلا
+            # استعلامٍ إضافي**: جنسُ صاحبه وختمُه في الصفِّ المقروء أصلاً
             missing_required=[
                 doc_type
-                for doc_type in REQUIRED_DOCUMENT_TYPES
+                for doc_type in required_document_types(
+                    gender_verified_female=(
+                        user.gender is Gender.FEMALE
+                        and user.gender_verified_at is not None
+                    )
+                )
                 if doc_type.value not in (approved or [])
             ],
             created_at=driver.created_at,
@@ -405,7 +412,9 @@ async def list_driver_documents(
         # اللوحةُ تقرأ سؤالَ الحارس، وهذا يُملأ لأن المخطّط واحد — والمشرفُ
         # يرى بعينه ما ينتظر رفعاً وما ينتظر قراره
         awaiting_upload=await documents_service.awaiting_upload(session, driver_id),
-        required=list(REQUIRED_DOCUMENT_TYPES),
+        # **المطلوبُ لهذا الكبتن لا للجميع** (البند ٥٢): المُعفاةُ من
+        # الصورة الشخصية لا تُعرض لها في قائمة ما يلزمها
+        required=list(await documents_service.required_for(session, driver_id)),
     )
 
 

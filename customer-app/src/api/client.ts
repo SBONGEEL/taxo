@@ -108,6 +108,8 @@ interface RequestOptions {
   anonymous?: boolean;
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
+  /** يُعيد `Blob` بدل JSON — للصور (البند ٥٢). */
+  raw?: boolean;
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
@@ -164,6 +166,10 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
 
   if (!response.ok) throw await toError(response);
   if (response.status === 204) return undefined as T;
+  // **بايتاتٌ لا JSON حين تُطلب** (البند ٥٢): صورةُ الكبتن تمرّ بنفس المسار —
+  // فتأخذ تجديدَ التوكن ومعالجةَ الخطأ وعنوانَ الخادم من مكانٍ واحد. ومسارٌ
+  // ثانٍ لها كان سيعيد كتابة الأربعة، ويفترق عنها أوّلَ تعديل
+  if (options.raw) return (await response.blob()) as T;
   return (await response.json()) as T;
 }
 
@@ -182,4 +188,7 @@ export const api = {
     request<T>(path, { ...options, method: "PATCH", body }),
   del: <T>(path: string, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "DELETE" }),
+  /** بايتاتٌ خام — للصور التي تمرّ بحارسِ الجلسة (صورةُ الكبتن، البند ٥٢). */
+  blob: (path: string, options: Omit<RequestOptions, "method" | "body"> = {}) =>
+    request<Blob>(path, { ...options, method: "GET", raw: true }),
 };

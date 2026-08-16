@@ -326,9 +326,41 @@ archive is **gpg-encrypted before it leaves the server**, its passphrase kept wh
 
 | # | Item | Spec |
 |---|---|---|
-| 1 | **The driver's profile photo** — required, except for a verified female driver | `FUTURE-FEATURES` 52 |
+| 1 | ✅ **The driver's profile photo** — **built 2026-08-16**, see below | `FUTURE-FEATURES` 52 |
 | 2 | **Generalising referrals** — rider→rider and driver→driver on 12-ح's machinery | `design/REFERRALS-GENERALIZATION.md`, `FUTURE-FEATURES` 51 |
 | 3 | **Missions, levels and badges** — with the owner's cap: the level's effect is a **distance discount, at most 100 m** | `design/MISSIONS-LEVELS.md`, `FUTURE-FEATURES` 53 |
+
+##### The profile photo (item 1) is built — and its two hard edges are the interesting part
+
+`profile_photo` is a fifth document type on 9-ب's machinery, and everything about it follows from one
+fact: **it is a reviewed document and a published image at once**, and no existing path is both.
+`document_response` checks ownership and answers `private, no-store`, which is right for an identity
+paper and wrong for a face the rider must see. So there is a **second, narrower** door —
+`GET /rides/{ride_id}/driver/photo` — whose key is **the ride, not the driver**: the rejected shape is a
+route taking `driver_id`, which shows every captain's face to whoever counts identifiers.
+
+**The requirement is per-driver, not a table.** `REQUIRED_DOCUMENT_TYPES` became
+`required_document_types(gender_verified_female=…)`, because a single list would block the approval of
+the very person the exemption exists for. And the exemption reads **the stamp, never the declaration**
+(`gender_verified_at IS NOT NULL`) — reading `users.gender` would drop an identification requirement on
+**a word anyone can type about themselves**. Same reading as 10-ج's matching and 12-ح's referral, same
+reason: what constrains only you may be written; what lifts a rule needs a stamp.
+
+**It does not apply retroactively** (owner's decision, 2026-08-16): it binds whoever is approved *after*
+it, and everyone approved before becomes a backlog chased one by one from the drivers screen, where
+`missing_required` now lists it. That falls out for free because `approve` only runs on a new approval —
+**but it exposed a rule that had been silently safe until now**. "Replacing a required document sends an
+approved driver back to review" was written when every approved driver necessarily held every required
+document; with a requirement added later that stops being true, and the rule would have unapproved a
+backlog captain **for doing exactly what we asked**. It now also requires that a row already existed —
+i.e. that it is genuinely a replacement — which is what the rule always meant.
+
+**And the rider sees a face or a letter, with nothing distinguishing the two reasons.** An exempt woman
+and a captain whose photo is still under review both render the first letter of the name, and no text
+separates them — because a label that did would make the *absence of a photo announce that she is a
+woman*, which is the thing the exemption exists to prevent. There is deliberately **no `has_photo`
+field**: the image request is its own answer (bytes or 404), and a second field claiming "she has one"
+is a second home for a truth the file already holds.
 
 #### 4. «افتح في خرائط قوقل» — one hour, and it solves the real problem
 
