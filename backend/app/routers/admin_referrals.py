@@ -1,4 +1,4 @@
-"""إحالاتُ السائقات في اللوحة — `admin` حصراً (القسم 9.1/13، المرحلة 12-ح).
+"""حوافزُ الإحالة في اللوحة — `admin` حصراً (§9.1/13، 12-ح ثم تعميمُها).
 
 **ولا `StaffUser`**: مبلغُ الحافز قرارٌ ماليٌّ لا إجراءُ دعمٍ فني — كمفتاح
 العمولة وسقف الكوبون بالضبط (القسم 13/8).
@@ -17,9 +17,9 @@ from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
 from app.core.deps import AdminUser, DbSession, StaffUser
-from app.models.driver import Driver
-from app.models.enums import AuditAction, CountryCode
-from app.models.referral import DriverReferral
+from app.core.exceptions import InvalidInput
+from app.models.enums import AuditAction, CountryCode, UserRole
+from app.models.referral import REFERRAL_TYPES, Referral
 from app.models.user import User
 from app.schemas.referral import (
     AdminReferralRow,
@@ -32,11 +32,34 @@ from app.services import audit, referrals as referrals_service
 router = APIRouter(prefix="/admin/referrals", tags=["admin"])
 
 
+def _valid_type(referral_type: str) -> None:
+    """نوعٌ مجهولٌ يُرفض لا يُهمَل: صفُّ إعداداتٍ بنوعٍ لا يقرؤه أحدٌ مالٌ
+    يُحدَّد ولا يُدفع — وهو بعينه شكلُ «قاعدةٍ بلا باب»."""
+    if referral_type not in REFERRAL_TYPES:
+        raise InvalidInput("نوع برنامج الإحالة غير معروف")
+
+
+def _settings_out(
+    country_code: CountryCode, row
+) -> ReferralSettingsOut:
+    return ReferralSettingsOut(
+        country_code=country_code,
+        referral_type=row.referral_type,
+        reward_amount=row.reward_amount,
+        required_rides=row.required_rides,
+        female_bonus_amount=row.female_bonus_amount,
+        monthly_cap=row.monthly_cap,
+    )
+
+
 @router.get("", response_model=list[AdminReferralRow])
 async def list_referrals(
     _staff: StaffUser,
     session: DbSession,
     country_code: CountryCode | None = None,
+    referral_type: str | None = Query(
+        default=None, description="برنامجٌ واحد: rider أو driver"
+    ),
     rewarded: bool | None = Query(
         default=None, description="المدفوعُ وحده أو غيرُ المدفوع وحده"
     ),
@@ -48,59 +71,59 @@ async def list_referrals(
     """
     referrer = User.__table__.alias("referrer_user")
     referred = User.__table__.alias("referred_user")
-    referrer_driver = Driver.__table__.alias("referrer_driver")
-    referred_driver = Driver.__table__.alias("referred_driver")
 
+    # **والضمُّ صار حساباً بحساب** بعد التعميم: كان يمرّ بـ`drivers` مرتين،
+    # وصفُّ الراكب لا يوجد هناك أصلاً — فالضمُّ القديم كان سيُسقط كل إحالةِ راكب
     stmt = (
         select(
-            DriverReferral,
+            Referral,
             referrer.c.name,
             referrer.c.phone,
             referrer.c.country_code,
             referred.c.name,
             referred.c.phone,
         )
-        .join(
-            referrer_driver,
-            referrer_driver.c.id == DriverReferral.referrer_driver_id,
-        )
-        .join(referrer, referrer.c.id == referrer_driver.c.user_id)
-        .join(
-            referred_driver,
-            referred_driver.c.id == DriverReferral.referred_driver_id,
-        )
-        .join(referred, referred.c.id == referred_driver.c.user_id)
-        .order_by(DriverReferral.created_at.desc())
+        .join(referrer, referrer.c.id == Referral.referrer_user_id)
+        .join(referred, referred.c.id == Referral.referred_user_id)
+        .order_by(Referral.created_at.desc())
         .limit(limit)
         .offset(offset)
     )
     if country_code is not None:
-        # **دولةُ المُحيلة هي المقياس**: المكافأةُ تدخل محفظتَها وبعملةِ بلدها،
-        # فالفرزُ بدولةِ المُحالة يعرض صفوفاً لا تُدفع من ميزانية هذا السوق
+        # **دولةُ المُحيل هي المقياس**: المكافأةُ تدخل محفظتَه وبعملةِ بلده،
+        # فالفرزُ بدولةِ المُحال يعرض صفوفاً لا تُدفع من ميزانية هذا السوق
         stmt = stmt.where(referrer.c.country_code == country_code)
+    if referral_type is not None:
+        # النوعُ مشتقٌّ من دور المُحال، فالفرزُ به فرزٌ على الدور نفسِه
+        wanted = (
+            UserRole.DRIVER
+            if referral_type == "driver"
+            else UserRole.RIDER
+        )
+        stmt = stmt.where(referred.c.role == wanted)
     if rewarded is True:
-        stmt = stmt.where(DriverReferral.rewarded_at.is_not(None))
+        stmt = stmt.where(Referral.rewarded_at.is_not(None))
     elif rewarded is False:
-        stmt = stmt.where(DriverReferral.rewarded_at.is_(None))
+        stmt = stmt.where(Referral.rewarded_at.is_(None))
 
     rows = (await session.execute(stmt)).all()
 
     # **سياسةٌ واحدةٌ لكل دولةٍ لا لكل صف**: الدولتان اثنتان وصفحةُ الجدول
     # خمسون صفاً، فقراءةُ السياسة لكل صفٍّ خمسون استعلاماً لجوابين
-    policies: dict[CountryCode, referrals_service.Policy] = {}
+    policies: dict[CountryCode, dict[str, referrals_service.Policy]] = {}
     for _referral, _n, _p, rer_country, _n2, _p2 in rows:
         if rer_country not in policies:
-            policies[rer_country] = await referrals_service.policy_for(
+            policies[rer_country] = await referrals_service.policies_for(
                 session, rer_country
             )
 
-    # **وحالُ الصفحة باستعلامين** لا ثلاثةٍ لكل صف (نفسُ شكل `payment_summaries`).
-    # والحدُّ يختلف بين سوقين، فتُقاس كلُّ مجموعةٍ بحدِّها
+    # **وحالُ الصفحة بعددٍ ثابتٍ من الاستعلامات** لا أربعةٍ لكل صف (نفسُ شكل
+    # `payment_summaries`). والحدُّ يختلف بين سوقين، فتُقاس كلُّ مجموعةٍ بحدِّها
     progress_by_id: dict = {}
-    for country, policy in policies.items():
+    for country, market in policies.items():
         subset = [row[0] for row in rows if row[3] == country]
         progress_by_id |= await referrals_service.progress_many(
-            session, subset, required_rides=policy.required_rides
+            session, subset, policies=market
         )
 
     out: list[AdminReferralRow] = []
@@ -115,8 +138,10 @@ async def list_referrals(
                 referred_name=red_name,
                 referred_phone=red_phone,
                 code_used=referral.code_used,
+                referral_type=progress.referral_type,
                 driver_approved=progress.driver_approved,
-                gender_ready=progress.gender_ready,
+                has_subscription=progress.has_subscription,
+                female_verified=progress.female_verified,
                 rides_done=progress.rides_done,
                 rides_required=progress.rides_required,
                 qualifies=progress.qualifies,
@@ -139,14 +164,9 @@ async def summary(
     «المجموع» — نفسُ سببِ وجود `services/stats.py`.
     """
     referrer = User.__table__.alias("summary_referrer")
-    referrer_driver = Driver.__table__.alias("summary_referrer_driver")
     scoped = (
-        select(DriverReferral)
-        .join(
-            referrer_driver,
-            referrer_driver.c.id == DriverReferral.referrer_driver_id,
-        )
-        .join(referrer, referrer.c.id == referrer_driver.c.user_id)
+        select(Referral)
+        .join(referrer, referrer.c.id == Referral.referrer_user_id)
         .where(referrer.c.country_code == country_code)
         .subquery()
     )
@@ -169,15 +189,15 @@ async def summary(
 
 @router.get("/settings", response_model=ReferralSettingsOut)
 async def get_settings(
-    _staff: StaffUser, session: DbSession, country_code: CountryCode
+    _staff: StaffUser,
+    session: DbSession,
+    country_code: CountryCode,
+    referral_type: str = Query(default="driver"),
 ) -> ReferralSettingsOut:
-    row = await referrals_service.ensure_settings(session, country_code)
+    _valid_type(referral_type)
+    row = await referrals_service.ensure_settings(session, country_code, referral_type)
     await session.commit()
-    return ReferralSettingsOut(
-        country_code=country_code,
-        reward_amount=row.reward_amount,
-        required_rides=row.required_rides,
-    )
+    return _settings_out(country_code, row)
 
 
 @router.put("/settings", response_model=ReferralSettingsOut)
@@ -186,15 +206,21 @@ async def update_settings(
     admin: AdminUser,
     session: DbSession,
     country_code: CountryCode,
+    referral_type: str = Query(default="driver"),
 ) -> ReferralSettingsOut:
-    """مبلغُ الحافز وحدُّ الرحلات. **والتغييرُ يحكم ما يأتي لا ما دُفع**: المدفوعُ
+    """مبلغُ الحافز وحدُّ الرحلات والعلاوةُ والسقف. **والتغييرُ يحكم ما يأتي لا ما دُفع**: المدفوعُ
     مجمَّدٌ على صفِّه، وحدُّ الرحلاتِ الجديد يعيد تقييمَ غيرِ المدفوع كلِّه.
     """
+    _valid_type(referral_type)
     row = await referrals_service.update_settings(
         session,
         country=country_code,
+        referral_type=referral_type,
         reward_amount=payload.reward_amount,
         required_rides=payload.required_rides,
+        female_bonus_amount=payload.female_bonus_amount,
+        monthly_cap=payload.monthly_cap,
+        clear_monthly_cap=payload.clear_monthly_cap,
     )
     await audit.record(
         session,
@@ -204,19 +230,23 @@ async def update_settings(
         entity_id=row.id,
         details={
             "country": country_code.value,
+            "referral_type": referral_type,
             "fields": [
                 name
                 for name, value in (
                     ("reward_amount", payload.reward_amount),
                     ("required_rides", payload.required_rides),
+                    ("female_bonus_amount", payload.female_bonus_amount),
+                    (
+                        "monthly_cap",
+                        payload.monthly_cap
+                        if not payload.clear_monthly_cap
+                        else True,
+                    ),
                 )
                 if value is not None
             ],
         },
     )
     await session.commit()
-    return ReferralSettingsOut(
-        country_code=country_code,
-        reward_amount=row.reward_amount,
-        required_rides=row.required_rides,
-    )
+    return _settings_out(country_code, row)

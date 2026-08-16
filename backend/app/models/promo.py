@@ -91,6 +91,13 @@ class PromoCode(UUIDMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("true"), default=True
     )
+    # **رمزٌ يُمنح ولا يُكتب** (كوبونُ ترحيب المُحال): `false` يستثنيه من
+    # `promo.find` — بابِ الكتابة اليدوية — فلا يُطبع في مجموعةٍ ويستعمله من لم
+    # يُحَل أحدٌ إليه. **عمودٌ واحدٌ بدل نظامِ منحٍ مستقل**، وبقيةُ حرّاسه
+    # (الميزانيةُ وحدُّ المستخدم والتجميد) تسري عليه كما تسري على غيره.
+    is_public: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true"), default=True
+    )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

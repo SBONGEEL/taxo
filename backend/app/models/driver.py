@@ -104,9 +104,6 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     cancellation_carry_blocked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
-    referral_code: Mapped[str | None] = mapped_column(
-        String(16), nullable=True, unique=True, index=True
-    )
 
     user: Mapped["User"] = relationship(back_populates="driver")
     vehicles: Mapped[list["Vehicle"]] = relationship(

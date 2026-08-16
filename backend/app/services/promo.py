@@ -159,8 +159,16 @@ async def find(
     country: CountryCode,
     *,
     for_update: bool = False,
+    include_private: bool = False,
 ) -> PromoCode | None:
-    """رمزٌ صالحُ المدّة ومفعَّل — أو `None`."""
+    """رمزٌ صالحُ المدّة ومفعَّل — أو `None`.
+
+    **والخاصُّ محجوبٌ عن هذا الباب** (تعميمُ الإحالة 2026-08-16): كوبونُ ترحيبِ
+    المُحال تكتبه المنصّةُ باسمه وحدَه، ورمزٌ يُطبَع من شاشةٍ أو يُنقل بين
+    الناس **يجعل مالاً خُصّص لواحدٍ متاحاً لكل من عرفه** — وميزانيتُه تُستهلك
+    بمن لم يُحِله أحد. و`include_private` بابُ المنصّة نفسِها لا بابُ الطلب،
+    فمن يمرّره سطرٌ في الخلفية لا حقلٌ يرسله تطبيق.
+    """
     now = _now()
     stmt = select(PromoCode).where(
         PromoCode.country_code == country,
@@ -169,6 +177,8 @@ async def find(
         or_(PromoCode.valid_from.is_(None), PromoCode.valid_from <= now),
         or_(PromoCode.valid_until.is_(None), PromoCode.valid_until >= now),
     )
+    if not include_private:
+        stmt = stmt.where(PromoCode.is_public.is_(True))
     if for_update:
         stmt = stmt.with_for_update().execution_options(populate_existing=True)
     return await session.scalar(stmt)

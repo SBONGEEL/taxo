@@ -33,7 +33,7 @@ from sqlalchemy import func, select
 
 from app.models.driver import Driver
 from app.models.enums import Gender, WalletTransactionType
-from app.models.referral import DriverReferral
+from app.models.referral import Referral
 from app.models.user import User
 from app.models.wallet import WalletTransaction
 from app.services import referrals as referrals_service
@@ -57,14 +57,14 @@ async def _ready(
         session_factory, "driver_referrals_enabled", "wallet_enabled"
     )
     policy = await client.put(
-        "/admin/referrals/settings?country_code=JO",
+        "/admin/referrals/settings?country_code=JO&referral_type=driver",
         json={"reward_amount": "5.000", "required_rides": 0},
         headers=admin_headers,
     )
     assert policy.status_code == 200, policy.text
 
     referrer = await register(client, DRIVER)
-    mine = await client.get("/drivers/me/referrals", headers=auth(referrer))
+    mine = await client.get("/me/referrals", headers=auth(referrer))
     code = mine.json()["code"]
 
     referred = await approved_driver(
@@ -82,9 +82,7 @@ async def _ready(
 
     async with session_factory() as session:
         referral = await session.scalar(
-            select(DriverReferral).where(
-                DriverReferral.referred_driver_id == referred["driver_id"]
-            )
+            select(Referral).where(Referral.referred_user_id == driver.user_id)
         )
         return referral.id, uuid.UUID(referrer["user"]["id"])
 
@@ -137,7 +135,7 @@ async def test_two_sweeps_at_once_pay_one_reward(
         assert entries[0].amount == Decimal("5.000")
         assert entries[0].balance_after >= 0
 
-        row = await session.get(DriverReferral, referral_id)
+        row = await session.get(Referral, referral_id)
         assert row.rewarded_at is not None
         assert row.reward_amount == Decimal("5.000")
         assert row.transaction_id == entries[0].id
@@ -148,7 +146,7 @@ async def test_two_signups_with_two_codes_leave_one_referral(
 ):
     """**والفرادةُ في القاعدة تملك ثابتَها**: حسابٌ واحدٌ يُحال مرةً واحدة.
 
-    وهذا الاختبارُ **يمرّ بحذف كلِّ قفل** — يملكه `UNIQUE (referred_driver_id)`
+    وهذا الاختبارُ **يمرّ بحذف كلِّ قفل** — يملكه `UNIQUE (referred_user_id)`
     وحدَه، وهو مكتوبٌ هنا صريحاً كي لا يُقرأ نجاحُه دليلاً على قفلٍ لا يحرسه
     (نفسُ ما وُثِّق عن حدِّ المستخدم في الكوبونات).
     """
@@ -163,12 +161,15 @@ async def test_two_signups_with_two_codes_leave_one_referral(
         two = await session.scalar(
             select(Driver).where(Driver.user_id == uuid.UUID(second["user"]["id"]))
         )
-        codes = (one.referral_code, two.referral_code)
-        target = two.id
+        one_user = await session.get(User, one.user_id)
+        two_user = await session.get(User, two.user_id)
+        codes = (one_user.referral_code, two_user.referral_code)
+        # **والهدفُ صار حسابَ المُحال** لا صفَّ كبتنه: طرفا الإحالة حسابان
+        target = two_user.id
 
     async def attach(code: str) -> str:
         async with session_factory() as session:
-            referred = await session.get(Driver, target)
+            referred = await session.get(User, target)
             try:
                 await referrals_service.attach(session, referred=referred, code=code)
                 await session.commit()
@@ -184,8 +185,8 @@ async def test_two_signups_with_two_codes_leave_one_referral(
     async with session_factory() as session:
         count = await session.scalar(
             select(func.count())
-            .select_from(DriverReferral)
-            .where(DriverReferral.referred_driver_id == target)
+            .select_from(Referral)
+            .where(Referral.referred_user_id == target)
         )
     assert count == 1
     assert codes[1]  # رمزُ الثاني موجودٌ ولم يُستعمل

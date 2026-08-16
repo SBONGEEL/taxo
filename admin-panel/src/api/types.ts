@@ -285,6 +285,8 @@ export type FeatureKey =
   | "tips_enabled"
   | "promo_codes_enabled"
   | "driver_referrals_enabled"
+  | "rider_referrals_enabled"
+  | "referred_reward_enabled"
   | "scheduled_rides_enabled"
   | "ride_sharing_enabled"
   | "driver_advances_enabled";

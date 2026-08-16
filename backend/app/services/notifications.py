@@ -1122,3 +1122,37 @@ async def publish_advance_event(
             },
         ),
     )
+
+
+async def publish_referral_rewarded(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    referrer_id: uuid.UUID,
+    referral,
+) -> None:
+    """«وصلتك مكافأةُ إحالة» — للمُحيل وحدَه.
+
+    **والمهمةُ الدورية هي ما يدفع**، فلا أحدَ ينظر إلى شاشةٍ لحظةَ الدفع: بلا
+    إشعارٍ يرى المُحيلُ رصيدَه ارتفع بلا سبب مكتوب، فيقرؤه خطأً أو يسأل الدعم.
+    وهو عكسُ قاعدةِ «من فعل شيئاً لا يُخبَر به» تماماً — إذ لم يفعل هو شيئاً
+    الآن، بل وقع له.
+
+    **والحمولةُ خام**: مبلغٌ وعملةٌ ورمز، والجملةُ تُبنى في التطبيق.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=referrer_id,
+        message=PushMessage(
+            title="وصلتك مكافأة إحالة",
+            body="أُضيفت مكافأةُ إحالتك إلى محفظتك.",
+            data={
+                "type": "referral_rewarded",
+                "referral_id": str(referral.id),
+                "amount": str(referral.reward_amount),
+                "currency": referral.reward_currency,
+                "code_used": referral.code_used,
+            },
+        ),
+    )

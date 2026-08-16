@@ -62,7 +62,7 @@ from app.models.promo import PromoCode
 from app.models.provider_credential import ProviderCredential
 from app.models.provider_order import ProviderOrder
 from app.models.rating import Rating
-from app.models.referral import DriverReferral, ReferralSetting
+from app.models.referral import Referral, ReferralSetting
 from app.models.place import SavedPlace
 from app.models.security_setting import SecuritySetting
 from app.models.totp import UserRecoveryCode, UserTotp
@@ -107,7 +107,7 @@ __all__ = [
     "DeactivationRequest",
     "Driver",
     "DriverDocument",
-    "DriverReferral",
+    "Referral",
     "DriverStatus",
     "DriverSubscription",
     "FeatureFlag",

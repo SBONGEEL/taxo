@@ -37,10 +37,11 @@ async def create_account(
     if data.gender is not None and UserRole(data.role) is UserRole.DRIVER:
         raise InvalidInput("جنس الكبتن يثبّته المشرف من الهوية، لا يُكتب عند التسجيل")
 
-    # ورمزُ الإحالة على مسار الراكب يُرفض لا يُهمَل (المرحلة 12-ح): الحافزُ
-    # لجذب السائقات، ورمزٌ يُقبل ثم لا يُسند شيئاً يبدو أنه عمل
-    if data.referral_code and UserRole(data.role) is not UserRole.DRIVER:
-        raise InvalidInput("رمز الإحالة لحسابات الكباتن")
+    # **ورمزُ الإحالة صار مقبولاً على المسارين** (تعميمُ 2026-08-16): كان
+    # يُرفض على مسار الراكب لأن الحافزَ كان لجذب السائقات وحدَهن، ورمزٌ يُقبل
+    # ثم لا يُسند شيئاً يبدو أنه عمل. **والبرنامجُ يُختار من دور المُسجِّل**،
+    # فرمزٌ واحدٌ يعمل في البرنامجين بلا التباس ولا رفضٍ يفهمه صاحبُه خطأً
+    # («الرمز غير صحيح» عن رمزٍ صحيح هو ما كان يُقرأ قبله).
 
     # **وعدّادُ رموز التسجيل يُصفَّر هنا** (`otp_limits`، قرارُ المالك
     # 2026-08-16): السقفُ الثالث يقيس «كم رمزاً طُلب على رقمٍ **بلا أن يُسجَّل
@@ -58,21 +59,22 @@ async def create_account(
         phone_verified_at=phone_verified_at,
         # إعلانُ الراكبة عن نفسها. **بلا ختم**: يقيّد رحلتَها هي لا أمانَ غيرها
         gender=data.gender,
+        # **ورمزُ الإحالة لكل حساب** (تعميمُ 2026-08-16)، وموضعُه `users` لا
+        # `drivers` لأن الراكبَ لا صفَّ له هناك. وتوليدٌ متأخرٌ عند أول قراءةٍ
+        # يحتاج قفلاً على صفٍّ لا يُكتب فيه شيءٌ آخر، وبغيره تُنتج ضغطتان رمزين
+        referral_code=referrals.generate_code(),
     )
     session.add(user)
     await session.flush()
 
     if user.role is UserRole.DRIVER:
-        # ملف الكبتن يُنشأ فوراً بحالة pending بانتظار مراجعة المستندات.
-        # **ورمزُ الإحالة معه** (المرحلة 12-ح): توليدٌ متأخرٌ عند أول قراءةٍ
-        # يحتاج قفلاً على صفٍّ لا يُكتب فيه شيءٌ آخر، وبغيره تُنتج ضغطتان رمزين
-        driver = Driver(user_id=user.id, referral_code=referrals.generate_code())
-        session.add(driver)
+        # ملف الكبتن يُنشأ فوراً بحالة pending بانتظار مراجعة المستندات
+        session.add(Driver(user_id=user.id))
         await session.flush()
 
-        # الرمزُ الذي جاء به — إن جاء. **والإسنادُ لا يُفحص استحقاقُه هنا**:
-        # هذا سجلُّ ما وقع، والاستحقاقُ سؤالٌ يُطرح لاحقاً (SPEC القسم 9.1)
-        if data.referral_code:
-            await referrals.attach(session, referred=driver, code=data.referral_code)
+    # الرمزُ الذي جاء به — إن جاء. **والإسنادُ لا يُفحص استحقاقُه هنا**:
+    # هذا سجلُّ ما وقع، والاستحقاقُ سؤالٌ يُطرح لاحقاً (SPEC القسم 9.1)
+    if data.referral_code:
+        await referrals.attach(session, referred=user, code=data.referral_code)
 
     return user

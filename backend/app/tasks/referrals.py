@@ -18,7 +18,9 @@ from __future__ import annotations
 import logging
 
 from app.core.db import SessionLocal
-from app.services import referrals
+from app.core.redis_client import get_redis_client
+from app.models.referral import Referral
+from app.services import notifications, referrals
 from app.tasks.celery_app import celery_app, run_async
 
 logger = logging.getLogger(__name__)
@@ -28,7 +30,21 @@ async def _sweep() -> int:
     async with SessionLocal() as session:
         # `pay_due` تُنهي معاملةَ كلِّ صفٍّ بنفسها: قفلُ صفِّ الإحالة يبقى إلى
         # نهاية المعاملة، وحملُه على مئتي صفٍّ إلى آخر الدورة يمنع كلَّ ما يمسّها
-        return await referrals.pay_due(session)
+        paid = await referrals.pay_due(session)
+
+        # **والإشعارُ بعد الالتزام** كبقية المشروع: مالٌ يُعلَن قبل أن يُثبَّت
+        # قد يُلغى بتراجعٍ فيقرأ صاحبُه مكافأةً لا وجودَ لها. **ولا يُفشل
+        # الدورة**: `_safe_notify` يبتلع فشلَه، والمالُ وصل على كل حال
+        redis = get_redis_client()
+        for referral_id in paid:
+            row = await session.get(Referral, referral_id)
+            if row is None:  # pragma: no cover
+                continue
+            await notifications.publish_referral_rewarded(
+                session, redis, referrer_id=row.referrer_user_id, referral=row
+            )
+        await session.commit()
+        return len(paid)
 
 
 @celery_app.task(name="app.tasks.referrals.pay_referral_rewards")
