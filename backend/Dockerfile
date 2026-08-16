@@ -7,8 +7,29 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# `postgresql-client` للنسخ الاحتياطي، و`gnupg` لتشفير الأرشيف قبل أن يغادر
+# الخادم (قرارُ المالك ٤).
+#
+# **والنسخةُ تُطابق الخادمَ بالضبط: ١٦** — لا أحدثَ ولا أقدم.
+#
+# أقدمُ من الخادم يرفض العملَ أصلاً («server version mismatch») فتكون النتيجةُ
+# **نسخةً لم تُؤخذ**. وأحدثُ يُنتج دمباً سليماً — **لكنّ `pg_restore` منه يُصدر
+# `SET transaction_timeout`، وهو إعدادٌ لا يعرفه خادمُ ١٦**، فترتدّ كلُّ استعادةٍ
+# بخطأٍ ورقمِ خروجٍ غيرِ صفر وهي ناجحة. وذلك يُعلّم المالكَ تجاهلَ الخطأ، ثم
+# يتجاهله يومَ يصدق — وهو ما تمنعه الخطةُ بنصِّها: **لا فشلَ صامتاً ولا نجاحَ
+# يُقرأ فشلاً**. وقد وقع الاثنان هنا فعلاً قبل التثبيت.
+#
+# **والاسمُ الرمزيُّ يُقرأ من الصورة لا يُكتب بيد**: أوّلُ محاولةٍ ثبّتت
+# `bookworm` على صورةِ `trixie` فانهار حلُّ الاعتماديات (`libpq5` مكسور).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+         -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release; echo "$VERSION_CODENAME")-pgdg main" \
+         > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client-16 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

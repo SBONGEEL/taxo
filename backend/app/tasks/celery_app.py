@@ -79,6 +79,7 @@ celery_app = Celery(
         "app.tasks.maintenance",
         "app.tasks.payments",
         "app.tasks.advances",
+        "app.tasks.backups",
         "app.tasks.cancellation",
         "app.tasks.levels",
         "app.tasks.referrals",
@@ -124,6 +125,13 @@ celery_app.conf.update(
         "pay-referral-rewards": {
             "task": "app.tasks.referrals.pay_referral_rewards",
             "schedule": REFERRAL_INTERVAL_SECONDS,
+        },
+        # **كلَّ ربع ساعةٍ تسأل عن الموعد** (خطةُ النسخ §٣): الموعدُ بيانٌ في
+        # القاعدة والدورةُ ثابتةٌ في الكود — و`cron` النظام مرفوضٌ لأنه مصدرُ
+        # حقيقةٍ ثانٍ للموعد يفترق عن اللوحة أوّلَ تعديل
+        "run-due-backup": {
+            "task": "app.tasks.backups.run_due_backup",
+            "schedule": 900.0,
         },
         # **كلَّ ساعة** (قرارُ المالك ٥): المستوى حكمٌ على أداء شهرٍ كامل، ودورةٌ
         # أسرعُ تُعيد حسابَ ألفِ صفٍّ لتغيّرٍ لا يراه أحد

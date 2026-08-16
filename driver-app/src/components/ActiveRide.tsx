@@ -15,8 +15,10 @@
  */
 
 import { useEffect, useState } from "react";
+import { Navigation } from "lucide-react";
 
 import type { GenderPreference, Ride } from "@/api/types";
+import { openIn, targetFor } from "@/lib/external-maps";
 import { arabicDigits, cn } from "@/lib/utils";
 
 export interface CancelReason {
@@ -83,6 +85,8 @@ export function ActiveRide({
     (option) => option.code !== "gender_mismatch" || genderPreference !== "any",
   );
 
+  const mapTarget = targetFor(ride);
+
   return (
     <>
       {/* شريطُ الطور أعلى الخريطة */}
@@ -142,6 +146,24 @@ export function ActiveRide({
             {ride.dropoff_address ?? "الوجهة"}
           </div>
         </div>
+
+        {/* **«افتح في الخرائط» فوق زرِّ الحالة لا مكانَه** (البند ١٦): الوجهةُ
+            **واحدةٌ صحيحةٌ بحسب حال الرحلة** — نقطةُ الالتقاء، ثم المحطةُ
+            التالية، ثم الوجهة — لا قائمةٌ يقرؤها الكبتنُ ويقرّر عند إشارةٍ
+            خضراء. ويختفي حيث لا وجهة (`arrived`: هو واقفٌ عندها).
+            **وتطبيقُ قوقل يعرف الزحامَ والطرقَ المغلقةَ أفضلَ مما سنعرف، ويعرفها
+            الآن** — ومن لا يعرف طريقَه سيفتحه على أيّ حال، فإمّا أن يكتب
+            العنوانَ بيده وهو يقود أو نسلّمه بضغطة */}
+        {mapTarget ? (
+          <button
+            type="button"
+            onClick={() => openIn(mapTarget)}
+            className="pressable mb-11 flex w-full items-center justify-center gap-8 rounded-15 border border-line p-13 text-13.5 font-bold text-ink"
+          >
+            <Navigation size={16} />
+            {mapTarget.cta}
+          </button>
+        ) : null}
 
         {stopAction ? (
           <button

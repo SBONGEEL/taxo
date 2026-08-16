@@ -969,3 +969,37 @@ export interface Badge {
   icon: string | null;
   is_active: boolean;
 }
+
+// ------------------------------------------- النسخُ الاحتياطي (خطةُ النسخ)
+
+export interface BackupSettings {
+  enabled: boolean;
+  frequency: string;
+  weekday: number | null;
+  hour_local: number;
+  keep_count: number;
+  alert_after_hours: number;
+  alert_unpulled_count: number;
+  max_bytes: number | null;
+}
+
+/** صفٌّ في الجدول — **ومصدرُه القرصُ لا جدولُ القاعدة**. */
+export interface BackupRow {
+  name: string;
+  taken_at: string | null;
+  alembic_revision: string | null;
+  encrypted: boolean;
+  size_bytes: number;
+  /** يكتبها سكربتُ السحب على القرص — والسحبُ لا يمرّ بالتطبيق أصلاً. */
+  pulled: boolean;
+}
+
+export interface BackupState {
+  settings: BackupSettings;
+  backups: BackupRow[];
+  last_success_at: string | null;
+  stale_hours: number | null;
+  unpulled: number | null;
+  disk_percent: number | null;
+  total_bytes: number;
+}

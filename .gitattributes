@@ -30,3 +30,9 @@ Dockerfile  text eol=lf
 package-lock.json  -diff linguist-generated
 pnpm-lock.yaml     -diff linguist-generated
 yarn.lock          -diff linguist-generated
+
+# **سكربتاتُ الصدفة بنهاياتٍ يونكسية دائماً.** هذه آلةُ ويندوز، و`core.autocrlf`
+# يحوّلها عند السحب فيقرأ `bash` داخل الحاوية `` أمراً: «$'': command not
+# found» ثم «set: pipefail: invalid option name». والعطبُ يقع **يومَ تُشغَّل
+# النسخةُ الاحتياطية**، أي يومَ لا يُقبل أن يفشل شيء.
+*.sh text eol=lf

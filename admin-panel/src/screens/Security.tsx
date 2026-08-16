@@ -35,6 +35,7 @@ import {
 import type { SecurityPolicy, TotpEnrollment, TotpStatus } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
 import { Shell } from "@/components/Shell";
+import { Backups } from "@/components/Backups";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
@@ -566,6 +567,14 @@ export function SecurityScreen() {
           ) : null}
         </div>
       )}
+      {/* **النسخُ الاحتياطي هنا لا في «الإعدادات»**: ذاك مكانُ ما يحكم سلوكَ
+          السوق، وهذا — كالعامل الثاني — **ما يحمي النظامَ من فقدٍ لا رجعةَ فيه**.
+          و`admin` حصراً: ملفٌ فيه كلُّ أرقام المستخدمين ودفترُ المحافظ */}
+      {isAdmin ? (
+        <div className="mt-24">
+          <Backups onError={setError} onDone={setDone} />
+        </div>
+      ) : null}
     </Shell>
   );
 }

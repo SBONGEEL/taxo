@@ -35,6 +35,9 @@ import type {
   PaymentMethod,
   PaymentSetting,
   Badge,
+  BackupRow,
+  BackupSettings,
+  BackupState,
   LevelOverview,
   LevelSetting,
   Mission,
@@ -796,3 +799,23 @@ export const createBadge = (payload: {
   label: string;
   description?: string | null;
 }) => api.post<Badge>("/admin/badges", payload);
+
+// ------------------------------------------- النسخُ الاحتياطي (خطةُ النسخ)
+
+export const getBackupState = () => api.get<BackupState>("/admin/backups");
+
+export const runBackupNow = () => api.post<BackupRow>("/admin/backups/run", {});
+
+export const updateBackupSettings = (payload: Partial<BackupSettings>) =>
+  api.put<BackupSettings>("/admin/backups/settings", payload);
+
+/** **كلمةُ المرور تُعاد قبل توليد الرابط** — ملفٌ واحدٌ فيه كلُّ شيء. */
+export const backupDownloadToken = (
+  name: string,
+  password: string,
+  file: string,
+) =>
+  api.post<{ token: string; expires_in: number }>(
+    `/admin/backups/${name}/download-token`,
+    { password, file },
+  );
