@@ -347,6 +347,11 @@ async def request_ride(
         stop_free_minutes_at_ride=rule.stop_free_minutes,
         stop_price_per_min_at_ride=rule.stop_price_per_min,
         stop_max_wait_minutes_at_ride=rule.stop_max_wait_minutes,
+        # **معاملاتُ الوقفة تُجمَّد كغيرها** (§5.10-ب): تعديلُ اللوحة يحكم ما
+        # يأتي لا وقفةً يقف فيها كبتنٌ الآن
+        pause_price_per_min_at_ride=rule.pause_price_per_min,
+        arrival_free_minutes_at_ride=rule.arrival_free_minutes,
+        pause_max_minutes_at_ride=rule.pause_max_minutes,
         # تُجمَّد كالعمولة: تعديلُ النسبة في اللوحة يحكم ما يأتي لا رحلةً سائرة
         share_discount_percent_at_ride=share_percent,
         # **ما سيراه الكبتنُ على بطاقة العرض قبل أن يقبل** (§6-أ): دَينُ إلغاءٍ
@@ -454,17 +459,71 @@ async def accept_ride(
 
 
 async def mark_arrived(session: AsyncSession, ride: Ride) -> Ride:
+    """«وصلتُ إلى الراكب» — **وتبدأ معها مهلةُ الانتظار** (§5.10-ب).
+
+    **والعدّادُ لا يبدأ خارج نطاق الالتقاء** (قرارُ المالك في الفرع هـ، بتعليله:
+    «وإلا صار «وصلت» الكاذبُ باباً للكسب»). والضغطةُ هي ما يبدؤه (الفرع د)،
+    والنطاقُ **شرطُ صحّتها**.
+
+    **ولا تُرفض الحالةُ خارج النطاق**: الرحلةُ تمضي والكبتنُ يُعلن وصولَه —
+    الذي لا يقع هو **المال**. ورفضُ «وصلت» كان سيوقف رحلةً بسبب دقّةِ GPS.
+    """
     _require_transition(ride, RideStatus.ARRIVED)
     ride.status = RideStatus.ARRIVED
     ride.arrived_at = _now()
+
+    from app.services import pauses
+
+    await pauses.begin_arrival_wait(
+        session, ride, within_radius=await _driver_at_pickup(session, ride)
+    )
     return await _flush_and_reload(session, ride)
+
+
+async def _driver_at_pickup(session: AsyncSession, ride: Ride) -> bool:
+    """هل الكبتنُ داخل نطاق الالتقاء الآن؟
+
+    **ويُقرأ من آخرِ بثٍّ حيٍّ** (`geo.last_position`) — الفهرسُ للإحداثيات
+    ومفتاحُ الحضور للحياة، كما في إعفاء رسم الإلغاء. **وصمتٌ يعني «لا عدّاد»**:
+    الشكُّ لمن سيُحاسَب، وهو الراكب.
+    """
+    from app.core.redis_client import get_redis_client
+    from app.services import geo, pauses
+    from app.services.cancellation import _metres_between
+
+    if ride.driver_id is None:  # pragma: no cover
+        return False
+    position = await geo.last_position(
+        get_redis_client(), driver_id=ride.driver_id, country_code=ride.country_code
+    )
+    if position is None:
+        return False
+    # **ودالةُ المسافة مستعارةٌ من إعفاء رسم الإلغاء لا مكتوبةٌ ثانيةً**: صيغتان
+    # لمسافةٍ واحدةٍ تفترقان، وإحداهما تقرّر مالاً
+    metres = _metres_between(position, ride.pickup_lat, ride.pickup_lng)
+    return metres <= pauses.ARRIVAL_RADIUS_METERS
 
 
 async def start_ride(session: AsyncSession, ride: Ride) -> Ride:
+    """بدءُ الرحلة — **ويُغلق معها عدّادُ انتظار الوصول**.
+
+    ووقفةٌ تبقى مفتوحةً تُقاس **حتى الآن**، فتكبر فاتورتُها كلَّما فُتحت الشاشة.
+    """
     _require_transition(ride, RideStatus.IN_PROGRESS)
     ride.status = RideStatus.IN_PROGRESS
     ride.started_at = _now()
+
+    from app.services import pauses
+
+    await pauses.end_open(session, ride.id)
     return await _flush_and_reload(session, ride)
+
+
+async def _close_open_pause(session: AsyncSession, ride: Ride) -> None:
+    """**وقفةٌ مفتوحةٌ عند الإنهاء تُغلق قبل الحساب** — وإلا كبرت إلى الأبد."""
+    from app.services import pauses
+
+    await pauses.end_open(session, ride.id)
 
 
 async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ride:
@@ -484,6 +543,8 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
 
     actual_km = await route.actual_distance_km(session, ride.id)
     ride.actual_distance_km = actual_km
+    # **قبل الحساب لا بعده**: `minutes_of` تقيس المفتوحةَ حتى الآن
+    await _close_open_pause(session, ride)
     ride.final_fare = await _final_fare(session, ride, actual_km)
 
     # **خصمُ الكوبون دفعةٌ تُنشأ هنا وتؤكَّد** (12-ز، القسم 6.6): الأجرةُ صارت
@@ -533,7 +594,22 @@ async def _final_fare(
             ride.stops_count,
         )
 
-    return pricing.round_money(base + await waiting_charge_for(session, ride))
+    # **ورسمُ الوقفات داخلٌ في `final_fare`** (قرارُ المالك في الفرع و):
+    # المجموعُ واحدٌ والسببُ ظاهرٌ في التفصيل — لا مبلغان يُجمعان بيد
+    return pricing.round_money(
+        base
+        + await waiting_charge_for(session, ride)
+        + await pause_charge_for(session, ride)
+    )
+
+
+async def pause_charge_for(
+    session: AsyncSession, ride: Ride, now: datetime | None = None
+) -> Decimal:
+    """رسمُ الوقفات غير المخطَّطة — **بابٌ واحدٌ يقرؤه الحسابُ والشاشة**."""
+    from app.services import pauses
+
+    return await pauses.charge_for(session, ride, now)
 
 
 async def waiting_charge_for(

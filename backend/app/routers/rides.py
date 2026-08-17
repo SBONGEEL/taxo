@@ -38,6 +38,7 @@ from app.services import (
     ride_log,
     rides as rides_service,
     route,
+    pauses,
     route_line,
     sharing,
     tips as tips_service,
@@ -612,3 +613,47 @@ async def reroute_ride(
     points, left = await route_line.reroute(session, ride_id)
     await session.commit()
     return RouteLineOut(points=points or [], reroutes_left=left)
+
+
+@router.post("/{ride_id}/pause", response_model=RideOut)
+async def begin_pause(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
+) -> RideOut:
+    """«نقطة توقف» — **بيد الكبتن وحدَه** (§5.10-ب، الفرع ب).
+
+    وعدّادٌ توقفه الحركةُ يخطئ في الزحام، **وعدّادٌ لا يُصدَّق لا يُحتجّ به**.
+
+    **والراكبُ يُخبَر أن العدّاد يعمل ولماذا** — سطرٌ صريحٌ لا رقمٌ يظهر في
+    الفاتورة آخرَ الرحلة: **مبلغٌ لم يُعلَن حين نشأ يُقرأ خطأً في الحساب**.
+    """
+    ride = await _driver_ride(session, ride_id, driver)
+    await pauses.begin_pause(session, ride)
+    ride = await rides_service.get_ride(session, ride_id)
+    await session.commit()
+
+    await notifications.publish_ride_paused(session, redis, ride=ride, paused=True)
+    return RideOut.from_ride(ride)
+
+
+@router.post("/{ride_id}/resume", response_model=RideOut)
+async def resume_pause(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
+) -> RideOut:
+    """«استئناف» — يُغلق الوقفةَ ويوقف العدّاد."""
+    ride = await _driver_ride(session, ride_id, driver)
+    await pauses.resume(session, ride)
+    ride = await rides_service.get_ride(session, ride_id)
+    await session.commit()
+
+    await notifications.publish_ride_paused(session, redis, ride=ride, paused=False)
+    return RideOut.from_ride(ride)
+
+
+async def _driver_ride(
+    session: DbSession, ride_id: uuid.UUID, driver: Driver
+) -> Ride:
+    """رحلةٌ يقودها هذا الكبتن — **٤٠٤ لا ٤٠٣**: وجودُ الرحلة ليس معلومةً لغيره."""
+    ride = await rides_service.get_ride(session, ride_id)
+    if ride.driver_id != driver.id:
+        raise NotFound("الرحلة غير موجودة")
+    return ride

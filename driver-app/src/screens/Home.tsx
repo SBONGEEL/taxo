@@ -33,8 +33,10 @@ import {
   getEarnings,
   getMySubscription,
   getRouteLine,
+  beginPause,
   getUnreadCount,
   rerouteRide,
+  resumePause,
   startRide,
 } from "@/api/endpoints";
 import type {
@@ -433,6 +435,8 @@ export function HomeScreen() {
           currencyLabel={currency}
           busy={busy}
           onAdvance={() => void advance()}
+          onPause={() => void run(async () => setRide(await beginPause(ride.id)))}
+          onResume={() => void run(async () => setRide(await resumePause(ride.id)))}
           onArriveStop={(stopId) =>
             void run(async () => setRide(await arriveAtStop(ride.id, stopId)))
           }

@@ -80,6 +80,7 @@ celery_app = Celery(
         "app.tasks.payments",
         "app.tasks.advances",
         "app.tasks.backups",
+        "app.tasks.pauses",
         "app.tasks.cancellation",
         "app.tasks.levels",
         "app.tasks.referrals",
@@ -129,6 +130,11 @@ celery_app.conf.update(
         # **كلَّ ربع ساعةٍ تسأل عن الموعد** (خطةُ النسخ §٣): الموعدُ بيانٌ في
         # القاعدة والدورةُ ثابتةٌ في الكود — و`cron` النظام مرفوضٌ لأنه مصدرُ
         # حقيقةٍ ثانٍ للموعد يفترق عن اللوحة أوّلَ تعديل
+        # **كلَّ دقيقة كسقف المحطات** — والتنبيهُ يُنبِّه ولا يُنهي رحلة
+        "sweep-pause-limits": {
+            "task": "app.tasks.pauses.sweep_pause_limits",
+            "schedule": 60.0,
+        },
         "run-due-backup": {
             "task": "app.tasks.backups.run_due_backup",
             "schedule": 900.0,

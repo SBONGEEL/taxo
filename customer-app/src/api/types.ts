@@ -221,6 +221,24 @@ export interface RideDriver {
   vehicle: RideVehicle | null;
 }
 
+/** وقفةٌ مفتوحةٌ كما يراها الطرفان (SPEC §5.10-ب).
+ *
+ * **والوقتُ يرسمه التطبيقُ محلياً والمبلغُ يأتي من الخلفية** (§14): الوقتُ حسابُ
+ * وقتٍ والمالُ حسابُ مال. و`started_at` هي **نقطةُ البدء المقيسة** التي يعدّ
+ * منها العدّادُ المحليّ — لا رقمٌ يصل مع كلِّ إطار.
+ */
+export interface RidePause {
+  id: string;
+  /** `pause` وقفةٌ في منتصف الرحلة · `arrival` انتظارٌ عند الوصول. */
+  kind: string;
+  started_at: string;
+  waited_minutes: string;
+  charge: string;
+  free_minutes: number;
+  /** تجاوزَ السقف — **يُنبَّه عنده ولا تُنهى الرحلة**. */
+  over_max: boolean;
+}
+
 export interface Ride {
   id: string;
   rider_id: string;
@@ -262,6 +280,13 @@ export interface Ride {
 
   // --- تعدد الوجهات (المرحلة 12-ب) ---
   stops: RideStop[];
+  /** الوقفةُ المفتوحةُ الآن — و`null` تعني لا وقفة (§5.10-ب). */
+  open_pause: RidePause | null;
+  /** رسمُ الوقفات **حتى اللحظة** — يُقرأ أثناءها كما يُقرأ بعدها. */
+  pause_charge: string;
+  pause_price_per_min: string;
+  pause_max_minutes: number;
+
   current_leg: number;
   /** رسمُ الانتظار **حتى اللحظة** — يصل محسوباً ويتجدد مع كل قراءة. */
   waiting_charge: string;

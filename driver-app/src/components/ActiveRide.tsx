@@ -52,6 +52,8 @@ interface Props {
   onCancel: (reason: CancelReason) => void;
   /** تفضيلُ الكبتن الدائم — به وحده يظهر سببُ «عدم التطابق». */
   genderPreference: GenderPreference;
+  onPause: () => void;
+  onResume: () => void;
   onArriveStop: (stopId: string) => void;
   onResumeStop: (stopId: string) => void;
 }
@@ -63,6 +65,8 @@ export function ActiveRide({
   onAdvance,
   onCancel,
   genderPreference,
+  onPause,
+  onResume,
   onArriveStop,
   onResumeStop,
 }: Props) {
@@ -123,6 +127,7 @@ export function ActiveRide({
         </div>
 
         <StopStrip ride={ride} currencyLabel={currencyLabel} />
+        <PauseStrip ride={ride} currencyLabel={currencyLabel} />
 
         <div className="mb-15 grid grid-cols-[12px_1fr] gap-x-10 gap-y-4">
           <span
@@ -162,6 +167,25 @@ export function ActiveRide({
           >
             <Navigation size={16} />
             {mapTarget.cta}
+          </button>
+        ) : null}
+
+        {/* **«نقطة توقف» بعد بدء الرحلة وحدَها** (§5.10-ب): وقفةٌ قبل أن يركب
+            الراكبُ هي انتظارُ الوصول، وله عدّادُه الذي يبدأ بـ«وصلت». وزرٌّ
+            يظهر حيث لا يعمل يُعلّم الضغطَ ثم الارتداد */}
+        {ride.status === "in_progress" || ride.status === "at_stop" ? (
+          <button
+            type="button"
+            onClick={() => (ride.open_pause ? onResume() : onPause())}
+            disabled={busy}
+            className={cn(
+              "pressable mb-11 w-full rounded-15 border p-13 text-center text-13.5 font-bold disabled:opacity-50",
+              ride.open_pause
+                ? "border-ok text-ok"
+                : "border-line text-ink",
+            )}
+          >
+            {ride.open_pause ? "استئناف" : "نقطة توقف"}
           </button>
         ) : null}
 
@@ -324,6 +348,61 @@ function useElapsedMinutes(since: string | null): number {
   if (Number.isNaN(started)) return 0;
   return Math.max(0, Math.floor((now - started) / 60_000));
 }
+
+/** شريطُ الوقفة غير المخطَّطة (SPEC §5.10-ب).
+ *
+ * **والعدّادُ يمشي محلياً والمبلغُ يأتي من الخلفية** (§14) — وهو الدرسُ الذي
+ * دفعته دفعةُ الإصلاحات: كبتنٌ كان يقرأ «٠ دقيقة» طوال وقوفه **فيظن أن وصولَه
+ * لم يُسجَّل**، بينما يرى الراكبُ عقارباً تمشي.
+ *
+ * **والنصُّ يفرّق بين النوعين**: «بانتظار الراكب» عند الوصول، و«وقفة» في منتصف
+ * الرحلة — والحالان مختلفان عند من يقرأ وإن تشابه الحساب.
+ */
+function PauseStrip({
+  ride,
+  currencyLabel,
+}: {
+  ride: Ride;
+  currencyLabel: string;
+}) {
+  const pause = ride.open_pause;
+  const minutes = useElapsedMinutes(pause?.started_at ?? null);
+  if (!pause) return null;
+
+  const free = pause.free_minutes;
+  const billing = minutes >= free;
+
+  return (
+    <div
+      className={cn(
+        "mb-13 rounded-13 border px-13 py-11",
+        pause.over_max ? "border-warn bg-warn-soft" : "border-line bg-surface-2",
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-6">
+        <span className="text-12.5 font-bold text-ink">
+          {pause.kind === "arrival" ? "بانتظار الراكب" : "وقفة"}
+        </span>
+        <span className="text-12.5 text-muted">
+          {arabicDigits(String(minutes))} دقيقة
+        </span>
+        {/* **والمبلغُ من الخلفية لا محسوباً هنا** — والمهلةُ تُقال قبل أن تنتهي
+            لا بعدها: كبتنٌ يرى «٠٫٠٠٠» ولا يعرف لماذا يظنّ العدّادَ معطوباً */}
+        <span className="ms-auto text-12.5 font-bold text-ink">
+          {billing
+            ? `${arabicDigits(ride.pause_charge)} ${currencyLabel}`
+            : `مهلة ${arabicDigits(String(free))} دقائق`}
+        </span>
+      </div>
+      {pause.over_max ? (
+        <p className="mt-6 text-11 text-warn">
+          تجاوز الانتظارُ حدَّه — لك أن تستأنف أو تُنهي، والقرارُ قرارك.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 
 function StopStrip({
   ride,

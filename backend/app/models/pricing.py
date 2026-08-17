@@ -28,6 +28,11 @@ class PricingRule(UUIDMixin, TimestampMixin, Base):
             "AND stop_free_minutes >= 0 AND stop_max_wait_minutes >= 0",
             name="pricing_stop_amounts_non_negative",
         ),
+        CheckConstraint(
+            "pause_price_per_min >= 0 AND arrival_free_minutes >= 0 "
+            "AND pause_max_minutes >= 0",
+            name="pricing_pause_amounts_non_negative",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -59,6 +64,30 @@ class PricingRule(UUIDMixin, TimestampMixin, Base):
     # التحويل «لم يُضبط» (SPEC القسم 7). وسقفٌ مقداره صفرٌ كان سينبّه الطرفين
     # لحظةَ الوصول
     stop_max_wait_minutes: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+
+    # --- الوقفةُ غير المخطَّطة وانتظارُ الوصول (SPEC §5.10-ب) ---
+    # **صفرٌ افتراضاً** كسابقاتها: لا تُفتح كلفةٌ على راكبٍ بالسكوت.
+    #
+    # **وقيمةُ الدقيقة واحدةٌ للحالتين** — وقفةٍ في منتصف الرحلة وانتظارٍ عند
+    # الوصول: دقيقةُ الكبتن الواقف تساوي دقيقتَه الواقفة، سواءٌ نزل الراكبُ إلى
+    # محلٍّ أم لم ينزل بعد. ورقمان لمفهومٍ واحدٍ يفترقان أوّلَ تعديلٍ لأحدهما،
+    # ثم يُسأل «لماذا اختلفا؟» فلا جواب.
+    #
+    # **ومستقلةٌ عن `stop_price_per_min`** وإن تشابه الحساب: تلك محطةٌ **دخلت
+    # التقدير** فالراكبُ رآها قبل أن يطلب، وهذه لم تُقدَّر أصلاً
+    pause_price_per_min: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
+    )
+    # **مهلةُ الوصول المجانية وحدَها** — ولا مهلةَ لوقفةِ منتصف الرحلة: تلك
+    # يطلبها الراكبُ صراحةً بعد أن قُدِّرت أجرتُه، فالعدّادُ يبدأ بالضغطة
+    arrival_free_minutes: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+    # **صفرٌ = لا سقف** (قرارُ المالك في الفرع أ): يُنبَّه الطرفان عنده **ولا
+    # تُنهى الرحلة** — الإنهاءُ فعلُ الكبتن
+    pause_max_minutes: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=0, server_default="0"
     )
 

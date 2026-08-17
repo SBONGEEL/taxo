@@ -709,6 +709,11 @@ export interface PricingRule {
   stop_free_minutes: number;
   stop_price_per_min: string;
   stop_max_wait_minutes: number;
+  /** الوقفةُ غير المخطَّطة وانتظارُ الوصول (§5.10-ب) — **قيمةُ الدقيقة واحدةٌ
+   *  للحالتين**: دقيقةُ الكبتن الواقف تساوي دقيقتَه الواقفة. */
+  pause_price_per_min: string;
+  arrival_free_minutes: number;
+  pause_max_minutes: number;
   updated_at: string;
 }
 

@@ -1156,3 +1156,42 @@ async def publish_referral_rewarded(
             },
         ),
     )
+
+
+async def publish_ride_paused(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    ride,
+    paused: bool,
+) -> None:
+    """«العدّادُ يعمل ولماذا» — **للراكب وحدَه** (§5.10-ب).
+
+    **وسطرٌ صريحٌ لا رقمٌ يظهر في الفاتورة آخرَ الرحلة**: مبلغٌ لم يُعلَن حين
+    نشأ يُقرأ خطأً في الحساب — والراكبُ الذي يرى الرسمَ أولَ مرةٍ في شاشة الدفع
+    يفتح نزاعاً على مالٍ استحقّه الكبتن.
+
+    **وللراكب وحدَه**: الكبتنُ هو من ضغط، ومن فعل شيئاً بيده لا يُخبَر به
+    (قاعدةُ `DRIVER_RIDE_EVENT_TEXT`).
+
+    **والحمولةُ خام**: قيمةُ الدقيقة والمهلةُ والنوع، والجملةُ تُبنى في التطبيق.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=ride.rider_id,
+        message=PushMessage(
+            title="توقّف مؤقّت" if paused else "استؤنفت الرحلة",
+            body=(
+                "بدأ احتساب وقت الانتظار."
+                if paused
+                else "توقّف احتساب وقت الانتظار."
+            ),
+            data={
+                "type": "ride_paused" if paused else "ride_resumed",
+                "ride_id": str(ride.id),
+                "price_per_min": str(ride.pause_price_per_min_at_ride),
+                "currency": ride.currency,
+            },
+        ),
+    )

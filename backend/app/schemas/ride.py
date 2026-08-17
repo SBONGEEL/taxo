@@ -172,6 +172,26 @@ class RideDriverOut(BaseModel):
         )
 
 
+class RidePauseOut(BaseModel):
+    """وقفةٌ مفتوحةٌ كما يراها الطرفان — **حقائقُ لا جملةُ حالة**.
+
+    **والدقائقُ والمبلغُ معاً** (§14): الوقتُ يرسمه التطبيقُ محلياً بين
+    الإطارات، والمبلغُ يأتي من هنا — فالوقتُ حسابُ وقتٍ والمالُ حسابُ مال.
+    ويُرسل الوقتُ كذلك ليكون للتطبيق **نقطةُ بدءٍ مقيسة** لا تخمين.
+    """
+
+    id: uuid.UUID
+    # `pause` وقفةٌ في منتصف الرحلة، و`arrival` انتظارٌ عند الوصول — والنصُّ
+    # يختلف بينهما في الشاشتين، فالنوعُ يُنشر
+    kind: str
+    started_at: datetime
+    waited_minutes: Decimal
+    charge: Decimal
+    free_minutes: int
+    # تجاوزَ السقف — **يُنبَّه عنده الطرفان ولا تُنهى الرحلة** (الفرع أ)
+    over_max: bool = False
+
+
 class RideOut(BaseModel):
     id: uuid.UUID
     rider_id: uuid.UUID
@@ -220,6 +240,17 @@ class RideOut(BaseModel):
     stop_free_minutes: int = 0
     stop_price_per_min: Decimal = Decimal("0.000")
     stop_max_wait_minutes: int = 0
+
+    # --- الوقفةُ غير المخطَّطة وانتظارُ الوصول (§5.10-ب) ---
+    # **الوقفةُ المفتوحةُ وحدَها تُنشر** لا قائمتُها كلُّها: ما يرسمه التطبيقان
+    # عدّادٌ يمشي **الآن**، وقائمةُ وقفاتٍ مضت لا يقرؤها أحدٌ في شاشة رحلةٍ جارية.
+    # والمجموعُ يُقرأ من `pause_charge`
+    open_pause: RidePauseOut | None = None
+    # **رسمُ الوقفات حتى اللحظة** — يُقرأ أثناءها كما يُقرأ بعدها، فلا مفاجأةَ
+    # في شاشة الدفع: **مبلغٌ لم يُعلَن حين نشأ يُقرأ خطأً في الحساب**
+    pause_charge: Decimal = Decimal("0.000")
+    pause_price_per_min: Decimal = Decimal("0.000")
+    pause_max_minutes: int = 0
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -279,6 +310,35 @@ class RideOut(BaseModel):
             )
             for stop in ride.stops
         ]
+        # **الوقفةُ تُحسب من الصفوف المحمَّلة لا باستعلام**: `from_ride` يُنادى
+        # في بثِّ المقبس حيث لا جلسة
+        from app.services import pauses as pauses_service
+
+        current = next((row for row in ride.pauses if row.ended_at is None), None)
+        open_pause = (
+            RidePauseOut(
+                id=current.id,
+                kind=current.kind,
+                started_at=current.started_at,
+                waited_minutes=pauses_service.minutes_of(current, moment),
+                charge=pauses_service.charge_of(current, moment),
+                free_minutes=current.free_minutes_at_pause,
+                over_max=(
+                    current.max_minutes_at_pause > 0
+                    and pauses_service.minutes_of(current, moment)
+                    > current.max_minutes_at_pause
+                ),
+            )
+            if current is not None
+            else None
+        )
+        pause_charge = pricing.round_money(
+            sum(
+                (pauses_service.charge_of(row, moment) for row in ride.pauses),
+                Decimal("0.000"),
+            )
+        )
+
         return cls(
             stops=stops,
             current_leg=ride.current_leg,
@@ -294,6 +354,10 @@ class RideOut(BaseModel):
             stop_free_minutes=ride.stop_free_minutes_at_ride,
             stop_price_per_min=ride.stop_price_per_min_at_ride,
             stop_max_wait_minutes=ride.stop_max_wait_minutes_at_ride,
+            open_pause=open_pause,
+            pause_charge=pause_charge,
+            pause_price_per_min=ride.pause_price_per_min_at_ride,
+            pause_max_minutes=ride.pause_max_minutes_at_ride,
             id=ride.id,
             rider_id=ride.rider_id,
             status=ride.status,

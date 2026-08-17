@@ -367,6 +367,22 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         SmallInteger, nullable=False, default=0, server_default="0"
     )
 
+    # --- الوقفةُ غير المخطَّطة (SPEC §5.10-ب) ---
+    # **تُجمَّد على الرحلة كما تُجمَّد نسبةُ العمولة**، ثم تُنسخ منها إلى صفِّ كل
+    # وقفةٍ لحظةَ الضغط. **ونسختان لا واحدة، والسببُ في الفرق**: الرحلةُ تحفظ ما
+    # عُرض على الطرفين حين قُبلت، وصفُّ الوقفة يحفظ ما حُوسب به **تلك الوقفة** —
+    # فلو بقيت الرحلةُ وحدَها مصدراً لَكفى تعديلٌ واحدٌ على صفِّها ليعيد تسعير
+    # وقفةٍ وقعت ومضت
+    pause_price_per_min_at_ride: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default="0"
+    )
+    arrival_free_minutes_at_ride: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+    pause_max_minutes_at_ride: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
+
     cancelled_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # سببٌ مصنَّف بجانب النص الحر (`CancelReasonCode`). نصٌّ محروسٌ في طبقة
     # Pydantic لا `ENUM` في القاعدة، كـ`feature_flags.feature_key`
@@ -403,6 +419,16 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     stops: Mapped[list["RideStop"]] = relationship(
         "RideStop",
         order_by="RideStop.sequence",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    # **الوقفاتُ تصل مع الرحلة** كالمحطات (§5.10-ب): `RideOut` يُبنى في بثِّ
+    # المقبس أيضاً، حيث لا جلسةَ تُحمِّل كسولاً — ونداءٌ كسولٌ هناك يرفع
+    # `MissingGreenlet`، وهو الفخُّ الذي كلّف هذا المشروع مرتين
+    pauses: Mapped[list["RidePause"]] = relationship(
+        "RidePause",
+        order_by="RidePause.started_at",
         cascade="all, delete-orphan",
         lazy="selectin",
     )

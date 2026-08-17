@@ -388,3 +388,11 @@ export const rerouteRide = (rideId: string) =>
     `/rides/${rideId}/reroute`,
     {},
   );
+
+/** «نقطة توقف» و«استئناف» — **بيد الكبتن وحدَه** (§5.10-ب، الفرع ب).
+ *  وعدّادٌ توقفه الحركةُ يخطئ في الزحام، وعدّادٌ لا يُصدَّق لا يُحتجّ به. */
+export const beginPause = (rideId: string) =>
+  api.post<Ride>(`/rides/${rideId}/pause`, {});
+
+export const resumePause = (rideId: string) =>
+  api.post<Ride>(`/rides/${rideId}/resume`, {});

@@ -63,9 +63,30 @@ const STOP_FIELDS = [
   { key: "stop_max_wait_minutes", label: "سقف الانتظار للمحطة", kind: "minutes" },
 ] as const;
 
+/** حقولُ الوقفة غير المخطَّطة (§5.10-ب) — **مجموعةٌ ثالثةٌ على حدة**.
+ *
+ * وهي ليست المحطات: تلك يطلبها **الراكبُ قبل الطلب** فتدخل التقدير، وهذه
+ * يضغطها **الكبتنُ أثناء الرحلة** بعد أن قُدِّرت الأجرة. وخلطُ المجموعتين يجعل
+ * المشرفَ يضبط رقماً ويظنّ أنه ضبط الآخر.
+ *
+ * **وقيمةُ الدقيقة واحدةٌ للحالتين** — وقفةٍ في منتصف الرحلة وانتظارٍ عند
+ * الوصول: دقيقةُ الكبتن الواقف تساوي دقيقتَه الواقفة، ورقمان لمفهومٍ واحدٍ
+ * يفترقان. **والمهلةُ المجانيةُ للوصول وحدَه**: الوقفةَ يطلبها الراكبُ صراحةً.
+ */
+const PAUSE_FIELDS = [
+  { key: "pause_price_per_min", label: "لكل دقيقة وقوف", kind: "money" },
+  {
+    key: "arrival_free_minutes",
+    label: "دقائق مجانية عند الوصول",
+    kind: "minutes",
+  },
+  { key: "pause_max_minutes", label: "سقف الوقفة الواحدة", kind: "minutes" },
+] as const;
+
 type FieldKey =
   | (typeof FIELDS)[number]["key"]
-  | (typeof STOP_FIELDS)[number]["key"];
+  | (typeof STOP_FIELDS)[number]["key"]
+  | (typeof PAUSE_FIELDS)[number]["key"];
 
 const EMPTY: Record<FieldKey, string> = {
   base_fare: "",
@@ -77,6 +98,9 @@ const EMPTY: Record<FieldKey, string> = {
   stop_free_minutes: "0",
   stop_price_per_min: "0",
   stop_max_wait_minutes: "0",
+  pause_price_per_min: "0",
+  arrival_free_minutes: "0",
+  pause_max_minutes: "0",
 };
 
 export function PricingScreen() {
@@ -171,6 +195,9 @@ function CategoryCard({
             stop_free_minutes: String(rule.stop_free_minutes),
             stop_price_per_min: rule.stop_price_per_min,
             stop_max_wait_minutes: String(rule.stop_max_wait_minutes),
+            pause_price_per_min: rule.pause_price_per_min,
+            arrival_free_minutes: String(rule.arrival_free_minutes),
+            pause_max_minutes: String(rule.pause_max_minutes),
           }
         : EMPTY,
     );
@@ -191,6 +218,11 @@ function CategoryCard({
       stop_price_per_min: values.stop_price_per_min || "0",
       stop_free_minutes: Number(values.stop_free_minutes || 0),
       stop_max_wait_minutes: Number(values.stop_max_wait_minutes || 0),
+      // **والوقفةُ تُرسل مع الحفظ** — حقلٌ يُعرض ولا يُرسل هو حقلٌ يُكتب فيه
+      // ثم يعود كما كان، وهو أسوأُ من غيابه
+      pause_price_per_min: values.pause_price_per_min || "0",
+      arrival_free_minutes: Number(values.arrival_free_minutes || 0),
+      pause_max_minutes: Number(values.pause_max_minutes || 0),
     };
   }
 
@@ -272,6 +304,34 @@ function CategoryCard({
         صفرٌ في الرسمين يعني «بلا رسم»، وصفرٌ في السقف يعني لا سقف لا سقفاً
         مقداره صفر. والأربعةُ تُجمَّد على الرحلة لحظة الطلب، فتعديلُها يحكم ما
         يأتي لا رحلةً واقفةً الآن.
+      </p>
+
+      <h3 className="mb-10 mt-18 text-13 font-bold text-muted">
+        الوقوف غير المخطَّط
+      </h3>
+      <div className="grid gap-12 md:grid-cols-2">
+        {PAUSE_FIELDS.map(({ key, label, kind }) => (
+          <Field
+            key={key}
+            label={`${label} (${kind === "money" ? currency : "دقيقة"})`}
+            inputMode="decimal"
+            dir="ltr"
+            disabled={!canEdit}
+            value={values[key]}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, [key]: event.target.value }))
+            }
+          />
+        ))}
+      </div>
+      <p className="mt-8 text-11 leading-note text-muted">
+        وقفةٌ يضغطها <b className="text-ink">الكبتنُ أثناء الرحلة</b> — غيرُ
+        المحطات التي يطلبها الراكبُ قبلها. <b className="text-ink">وقيمةُ
+        الدقيقة واحدةٌ لوقفةِ الطريق ولانتظار الوصول</b>، والمهلةُ المجانيةُ
+        للوصول وحدَه: الوقفةَ يطلبها الراكبُ صراحةً بعد أن قُدِّرت أجرتُه.
+        وعدّادُ الوصول <b className="text-ink">لا يبدأ إن كان الكبتنُ خارج نطاق
+        الالتقاء</b> — وإلا صار «وصلت» الكاذبُ باباً للكسب. والسقفُ يُنبِّه
+        الطرفين <b className="text-ink">ولا يُنهي رحلة</b>؛ الإنهاءُ فعلُ الكبتن.
       </p>
 
       {canEdit ? (

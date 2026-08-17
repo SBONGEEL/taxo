@@ -44,6 +44,13 @@ class PricingRuleCreate(BaseModel):
     )
     stop_max_wait_minutes: int = StopMinutes
 
+    # --- الوقفةُ غير المخطَّطة (§5.10-ب) ---
+    pause_price_per_min: Decimal = Field(
+        default=Decimal("0"), ge=0, max_digits=12, decimal_places=3
+    )
+    arrival_free_minutes: int = StopMinutes
+    pause_max_minutes: int = StopMinutes
+
 
 class PricingRuleUpdate(BaseModel):
     base_fare: Decimal | None = OptionalMoney
@@ -56,6 +63,10 @@ class PricingRuleUpdate(BaseModel):
     stop_free_minutes: int | None = Field(default=None, ge=0, le=240)
     stop_price_per_min: Decimal | None = OptionalMoney
     stop_max_wait_minutes: int | None = Field(default=None, ge=0, le=240)
+
+    pause_price_per_min: Decimal | None = OptionalMoney
+    arrival_free_minutes: int | None = Field(default=None, ge=0, le=240)
+    pause_max_minutes: int | None = Field(default=None, ge=0, le=240)
 
 
 class PricingRuleOut(BaseModel):
@@ -74,6 +85,10 @@ class PricingRuleOut(BaseModel):
     stop_free_minutes: int
     stop_price_per_min: Decimal
     stop_max_wait_minutes: int
+
+    pause_price_per_min: Decimal
+    arrival_free_minutes: int
+    pause_max_minutes: int
 
     updated_at: datetime
 
