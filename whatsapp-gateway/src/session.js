@@ -61,6 +61,10 @@ const RECONNECT_MAX_MS = 60_000;
 
 // عمرُ رمز الربط عند واتساب — بعده يولّد Baileys غيرَه من نفسه، وهذا الرقم
 // لعرضِ «يبقى كذا» في اللوحة لا لحساب شيء
+// **مهلةُ إقرار الخادم** — عشرُ ثوانٍ. والإقرارُ عادةً دون الثانية على مقبسٍ
+// سليم، فالعشرةُ تسعُ تعثّراً ولا تسعُ انقطاعاً.
+const ACK_TIMEOUT_MS = 10_000;
+
 const QR_TTL_SECONDS = 60;
 
 // **زمنُ استئنافِ دورةِ الرمز** حين تنتهي ولم يمسحها أحد. ثانيتان: الفجوةُ
@@ -136,6 +140,25 @@ class Session {
 
       sock.ev.on("creds.update", saveCreds);
       sock.ev.on("connection.update", (update) => this._onUpdate(update));
+      // **إقرارُ التسليم** — وهو الحكمُ الوحيد الذي يُصدَّق (قرارُ المالك
+      // 2026-08-17). `sendMessage` يعيد مرجعاً بمجرد **قبولِ** الرسالة في
+      // مخزن Baileys، ومقبسٌ يسقط بعدها يبتلعها بلا خطأ: نظامُنا يقرأ
+      // «أُرسلت» والهاتفُ صامت. وهو ما وقع فعلاً على ثلاثة أرقام.
+      sock.ev.on("messages.update", (updates) => {
+        for (const item of updates || []) {
+          const id = item?.key?.id;
+          const status = item?.update?.status;
+          if (!id || status === undefined) continue;
+          const waiter = this._acks.get(id);
+          // 2 = SERVER_ACK فما فوق (3 تسليم، 4 قراءة). **والخادمُ يكفي**:
+          // هو ما يقول إن الرسالةَ غادرت سلكَنا فعلاً؛ وانتظارُ تسليمِ الهاتف
+          // يعلّق الرمزَ خلف هاتفٍ مطفأ، وذلك شأنُ صاحبه لا شأنُ قناتنا
+          if (waiter && Number(status) >= 2) {
+            this._acks.delete(id);
+            waiter(Number(status));
+          }
+        }
+      });
       this._sock = sock;
     } catch (error) {
       this._lastError = String(error?.message || error);
@@ -234,6 +257,11 @@ class Session {
    * إلى القناة التالية، ونداءٌ يعلّق حتى المهلة يترك المستخدمَ أمام شاشةٍ
    * تدور — وهو ما وُجد الارتدادُ ليمنعه.
    */
+  /** منتظرو الإقرار: مُعرِّفُ الرسالة ← دالةُ إيقاظ. **خريطةٌ في الذاكرة لا
+   *  حالةٌ تُحفظ**: عمرُها ثوانٍ، وبوابةٌ تُعاد تشغيلُها تُسقط ما فيها — وهو
+   *  الصحيح: من انتظر إقراراً ومات الانتظارُ يُعامَل فشلاً فيرتدّ. */
+  _acks = new Map();
+
   async sendCode(to, code, ttlMinutes) {
     if (!this.linked || !this._sock) {
       const why = this._fatal
@@ -249,9 +277,30 @@ class Session {
 
     // **يُسأل واتساب أوّلاً: هل هذا الرقم عليه أصلاً؟** رسالةٌ إلى رقمٍ ليس
     // على واتساب لا تصل ولا تفشل بوضوح — فتُقرأ «أُرسلت» ويبقى صاحبُها ينتظر.
-    // والسؤالُ رخيصٌ ويجعل الارتدادَ إلى الرسائل القصيرة يقع في ثانيته الأولى
-    const [known] = (await this._sock.onWhatsApp(digits)) || [];
-    if (!known?.exists) {
+    //
+    // **ولا يمرّ إلا بإقرارٍ صريح `exists === true`** (قرارُ المالك
+    // 2026-08-17): «لم يُنفَ» ليس «أُثبت». وقيمةٌ ملتبسة — `1` أو `"true"` أو
+    // حقلٌ غائبٌ في نسخةٍ لاحقة من المكتبة — كانت ستمرّ بفحصٍ يقبل كلَّ ما
+    // ليس كاذباً، فتُرسل رسالةٌ إلى رقمٍ لا يستقبلها.
+    //
+    // **والصمتُ يُفرَّق عن النفي**، وهذا هو الأهمّ: مقبسٌ متعثّرٌ يعيد قائمةً
+    // فارغةً لا لأن الرقمَ غيرُ مسجَّل بل لأن السؤالَ لم يُجَب. ولو خُلطا
+    // لقلنا لصاحب رقمٍ صحيح **«رقمُك ليس على واتساب»** — وهي جملةٌ كاذبةٌ
+    // يصدّقها فيذهب يبحث عن عطبٍ في هاتفه، والعطبُ عندنا.
+    let answer;
+    try {
+      answer = await this._sock.onWhatsApp(digits);
+    } catch (cause) {
+      const error = new Error("تعذّر سؤالُ واتساب عن الرقم — القناةُ لا تُجيب");
+      error.cause = cause;
+      throw error; // ٥٠٣: عطبُ قناةٍ فترتدّ الخلفيةُ إلى التالية
+    }
+    if (!Array.isArray(answer) || answer.length === 0) {
+      // **لا جوابَ ≠ جوابٌ بالنفي** — عطبُ قناةٍ لا خبرٌ عن الرقم
+      throw new Error("لم يُجب واتساب عن حالة الرقم — القناةُ لا تُجيب");
+    }
+    const [known] = answer;
+    if (known?.exists !== true) {
       const error = new Error("هذا الرقم ليس على واتساب");
       error.notOnWhatsApp = true;
       throw error;
@@ -260,7 +309,36 @@ class Session {
     const sent = await this._sock.sendMessage(known.jid || jid, {
       text: MESSAGE(code, ttlMinutes),
     });
-    return sent?.key?.id || "sent";
+    const id = sent?.key?.id;
+    if (!id) {
+      const error = new Error("لم يُعد واتساب مُعرِّفَ رسالة");
+      error.noAck = true;
+      throw error;
+    }
+
+    // **ولا يُقال «أُرسلت» قبل إقرار الخادم.** انتظارٌ محدودٌ بعشر ثوانٍ:
+    // أطولُ منه يترك المستخدمَ أمام شاشةٍ تدور، وأقصرُ يرتدّ عن رسالةٍ في
+    // طريقها. **والمهلةُ فشلٌ لا نجاح** — فالشكُّ في قناةٍ صمتت يُفسَّر
+    // لمصلحة من ينتظر الرمز، وثمنُه رسالةٌ مكرّرةٌ لا تسجيلٌ متوقّف.
+    const acked = await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this._acks.delete(id);
+        resolve(null);
+      }, ACK_TIMEOUT_MS);
+      this._acks.set(id, (status) => {
+        clearTimeout(timer);
+        resolve(status);
+      });
+    });
+
+    if (acked === null) {
+      const error = new Error(
+        "لم يُقرّ واتساب باستلام الرسالة — القناةُ لا تنقل الآن",
+      );
+      error.noAck = true;
+      throw error;
+    }
+    return id;
   }
 
   /** يفصل الجلسةَ ويمحو حالتَها — البابُ الوحيد لإعادة الربط برقمٍ آخر.

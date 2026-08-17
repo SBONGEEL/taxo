@@ -242,10 +242,23 @@ async def challenge(
                 session, redis, phone, country=market, sender=provider
             )
         except WhatsAppError as exc:
+            fallback = _next_code_channel(methods, WHATSAPP_OTP)
+            # **ولا يُقال «جرّب قناةً أخرى» حيث لا قناةَ أخرى.** رسائلُ المزوّد
+            # مكتوبةٌ على فرض وجود مخرج («هذا الرقم ليس على واتساب — جرّب
+            # الرسائل القصيرة»)، وحين يُطفأ عقدُ SMS يصير ذلك **إحالةً إلى بابٍ
+            # غيرِ موجود**: زرٌّ لا يُرسم ونصٌّ يطلب الضغطَ عليه.
+            #
+            # وهي «رفضٌ بلا مخرج» بعينها — القاعدةُ التي أصلحت التفضيلَ المجنَّس
+            # في 10-ج. فالنصُّ يُقصّ عند الشرطة ويُستبدل بما يملكه صاحبُ الرقم
+            # فعلاً: أن يجرّب رقماً آخرَ عليه واتساب.
+            detail = exc.message
+            if fallback is None and "—" in detail:
+                detail = detail.split("—")[0].strip()
+                detail = f"{detail} — جرّب رقماً آخر عليه واتساب"
             raise VerificationSendFailed(
                 channel=WHATSAPP_OTP,
-                fallback=_next_code_channel(methods, WHATSAPP_OTP),
-                detail=exc.message,
+                fallback=fallback,
+                detail=detail,
             ) from exc
         return otp.Challenge(
             sent=sent.sent,
