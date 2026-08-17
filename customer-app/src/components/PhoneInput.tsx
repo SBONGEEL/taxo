@@ -69,15 +69,25 @@ export function PhoneInput({
         dir="ltr"
         className="text-start"
         value={phone}
-        disabled={disabled}
         error={error}
-        prefix={<span dir="ltr">+{dialCode}</span>}
+        prefix={<span dir="ltr">+{dialCode ?? "؟"}</span>}
         maxLength={nationalLength}
         placeholder={"7".padEnd(nationalLength, "X")}
+        // **حقلٌ معطَّلٌ خيرٌ من رقمٍ بمفتاحٍ خاطئ**: بلا مفتاحٍ منشورٍ لهذه
+        // الدولة لا يُبنى رقمٌ أصلاً — فالبديلُ أن يُبنى بمفتاح سوقٍ آخر
+        // فيذهب الرمزُ إلى صاحبٍ ليس صاحبَه
+        disabled={disabled || dialCode === null}
         onChange={(event) =>
-          onPhoneChange(toNational(event.target.value, dialCode))
+          dialCode === null
+            ? undefined
+            : onPhoneChange(toNational(event.target.value, dialCode))
         }
       />
+      {dialCode === null ? (
+        <p className="text-12 text-warn">
+          مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة.
+        </p>
+      ) : null}
     </div>
   );
 }

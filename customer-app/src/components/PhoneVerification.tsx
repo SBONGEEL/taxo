@@ -59,7 +59,8 @@ const FALLBACK_LABEL: Record<string, string> = {
 interface Props {
   phone: string;
   /** بادئةُ الدولة من `GET /config` — بها تُبنى E.164 لتدفّق Firebase. */
-  dialCode: string;
+  /** `null` حين لا تُنشر الدولةُ في `GET /config` — **ولا يُبنى رقمٌ حينها**. */
+  dialCode: string | null;
   method: VerificationMethod;
   otpLength: number | null;
   /** يبدأ التحدي عند قناةٍ نرسل منها — مسارُ التسجيل غير مسار الاستعادة. */
@@ -96,7 +97,10 @@ export function PhoneVerification({
   const [fallback, setFallback] = useState<OtpChannel | null>(null);
   const challenge = useRef<PhoneChallenge | null>(null);
 
-  const e164 = toE164(phone, dialCode);
+  // **ولا رقمَ بلا مفتاحٍ منشور**: `toE164` بمفتاحٍ فارغٍ تُنتج رقماً بلا
+  // دولة، وبمفتاح سوقٍ آخرَ تُنتج رقمَ إنسانٍ آخر. والفراغُ هنا يُعطّل الإرسال
+  // ويُقال سببُه — فعطبٌ ظاهرٌ يُصلَح، ونجاحٌ كاذبٌ يبقى
+  const e164 = dialCode === null ? "" : toE164(phone, dialCode);
   const digits = otpLength ?? 6;
 
   const send = useCallback(async (pick?: OtpChannel) => {

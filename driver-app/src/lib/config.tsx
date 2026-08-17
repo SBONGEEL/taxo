@@ -218,15 +218,25 @@ export function useAuthCountry(): {
 
 export function usePhoneCountry(override?: CountryCode): {
   country: CountryCode;
-  dialCode: string;
+  /** `null` حين لا تُنشر الدولةُ في `GET /config` — **ولا افتراضَ ثابت**. */
+  dialCode: string | null;
   nationalLength: number;
 } {
   const { config } = useConfig();
   const country = override ?? config?.default_country_code ?? "JO";
   const entry = config?.countries.find((item) => item.country_code === country);
+
+  // **ولا مفتاحَ دولةٍ احتياطيٌّ ثابت.** كان `dial_code ?? "962"`، فلو غابت
+  // دولةٌ من `GET /config` — عقدٌ يُطفأ، أو سوقٌ يُضاف ولا يُنشر — لَبقي
+  // **المفتاحُ المعروضُ ليبيّاً والرقمُ يُبنى بمفتاح الأردن**: رقمٌ يذهب إلى
+  // صاحبٍ آخرَ أو إلى لا أحد، ورمزٌ يُقال إنه أُرسل ولا يصل.
+  //
+  // **والافتراضُ هنا أخطرُ من الغياب**: رقمٌ بلا مفتاحٍ يفشل ظاهراً فيُصلَح،
+  // ورقمٌ بمفتاحٍ خاطئٍ ينجح ظاهراً فيبقى. فـ`null` تُجبر من يقرأ على أن
+  // يقرّر — والحقلُ يُعطَّل ولا يبني رقماً بمفتاحٍ لا يخصّ الدولةَ المختارة.
   return {
     country,
-    dialCode: entry?.dial_code ?? "962",
+    dialCode: entry?.dial_code ?? null,
     nationalLength: entry?.national_number_length ?? 9,
   };
 }

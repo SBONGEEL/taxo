@@ -61,7 +61,9 @@ export function PhoneField({
           placeholder={"7".padEnd(nationalLength, "X")}
           value={value}
           onChange={(event) =>
-            onChange(toNational(event.target.value, dialCode))
+            dialCode === null
+              ? undefined
+              : onChange(toNational(event.target.value, dialCode))
           }
           className="w-full bg-transparent px-15 py-13 text-14.5 text-ink outline-none placeholder:text-muted disabled:opacity-60"
         />

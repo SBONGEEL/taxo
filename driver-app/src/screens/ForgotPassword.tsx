@@ -53,7 +53,10 @@ export function ForgotPasswordScreen() {
     config?.auth.verification ??
     "none";
 
-  const e164 = toE164(phone, dialCode);
+  // **ولا رقمَ بلا مفتاحٍ منشور** (`usePhoneCountry`): بمفتاحٍ فارغٍ يُبنى
+  // رقمٌ بلا دولة، وبمفتاح سوقٍ آخرَ يُبنى رقمُ إنسانٍ آخر — فيُقال إن الرمز
+  // أُرسل ولا يصل أحداً. والفراغُ هنا يُعطّل الإرسالَ ويُقال سببُه
+  const e164 = dialCode === null ? "" : toE164(phone, dialCode);
   // القناةُ تُمرَّر لا تُهمَل — انظر `Register.tsx`
   const requestChallenge = useCallback(
     (channel?: OtpChannel) => startPasswordResetChallenge(e164, country, channel),
