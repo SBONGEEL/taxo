@@ -628,8 +628,17 @@ async def begin_pause(
     """
     ride = await _driver_ride(session, ride_id, driver)
     await pauses.begin_pause(session, ride)
-    ride = await rides_service.get_ride(session, ride_id)
     await session.commit()
+    # **وتُفرَّغ الجلسةُ قبل إعادة القراءة.** `Ride.pauses` علاقةٌ محمَّلةٌ مع
+    # الصفّ، وكائنُ الرحلة في **هوية الجلسة** منذ قراءته أولَ السطر — فـ
+    # `get_ride` يعيد **الكائنَ نفسَه بعلاقته البائتة**، ويُسلسَل الجوابُ بلا
+    # الوقفة التي أُنشئت للتوّ.
+    #
+    # ووجدَه فتحُ الشاشة لا اختبار: اختباراتُ الوقفة تقرأ الصفوفَ من جلسةٍ
+    # جديدة، فترى ما لا يراه التطبيق. **والصفُّ يُكتب صحيحاً والجوابُ يكذب** —
+    # وهو بعينه شكلُ «حقلٌ بلا مُرسِل» الذي شحنه هذا المشروع مراراً.
+    session.expire_all()
+    ride = await rides_service.get_ride(session, ride_id)
 
     await notifications.publish_ride_paused(session, redis, ride=ride, paused=True)
     return RideOut.from_ride(ride)
@@ -642,8 +651,9 @@ async def resume_pause(
     """«استئناف» — يُغلق الوقفةَ ويوقف العدّاد."""
     ride = await _driver_ride(session, ride_id, driver)
     await pauses.resume(session, ride)
-    ride = await rides_service.get_ride(session, ride_id)
     await session.commit()
+    session.expire_all()  # انظر `begin_pause` — العلاقةُ بائتةٌ بلا تفريغ
+    ride = await rides_service.get_ride(session, ride_id)
 
     await notifications.publish_ride_paused(session, redis, ride=ride, paused=False)
     return RideOut.from_ride(ride)

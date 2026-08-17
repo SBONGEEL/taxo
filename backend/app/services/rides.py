@@ -477,6 +477,10 @@ async def mark_arrived(session: AsyncSession, ride: Ride) -> Ride:
     await pauses.begin_arrival_wait(
         session, ride, within_radius=await _driver_at_pickup(session, ride)
     )
+    # **وتُفرَّغ العلاقةُ بعد إنشاء الوقفة** — انظر `routers/rides.begin_pause`:
+    # `ride.pauses` محمَّلةٌ مع الصفّ، وصفٌّ يُضاف بعدها لا يظهر فيها
+    await session.flush()
+    session.expire(ride, ["pauses"])
     return await _flush_and_reload(session, ride)
 
 
