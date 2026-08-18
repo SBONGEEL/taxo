@@ -310,6 +310,7 @@ function PayoutModal({
 
         <Field
           label="مرجع التحويل"
+          name="reference"
           dir="ltr"
           placeholder="CLIQ-…"
           value={reference}

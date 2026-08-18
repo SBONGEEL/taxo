@@ -515,6 +515,7 @@ function DriverDrawer({
           <div className="mt-14">
             <Field
               label="سبب الرفض أو الإيقاف"
+            name="reason"
               placeholder="يصل نصُّه إلى السائق"
               value={reason}
               maxLength={255}

@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
 
@@ -108,7 +109,10 @@ export function PricingScreen() {
   const { isAdmin } = useSession();
 
   const [rules, setRules] = useState<PricingRule[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // خطأُ النموذج: نصٌّ عامٌّ في الشريط، ووسمٌ على الحقل الذي سمّته الخلفية
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -125,10 +129,11 @@ export function PricingScreen() {
   }, [load]);
 
   return (
-    <Shell
-      title="التسعيرة"
-      subtitle="السعرُ يُحسب في الخلفية وحدها — وهذه الحقول ما تُحسب منه"
-    >
+    <FormErrors value={form.field}>
+      <Shell
+        title="التسعيرة"
+        subtitle="السعرُ يُحسب في الخلفية وحدها — وهذه الحقول ما تُحسب منه"
+      >
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
@@ -148,7 +153,7 @@ export function PricingScreen() {
                 setError(null);
                 void load();
               }}
-              onError={setError}
+              onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
             />
           ))}
         </div>
@@ -160,6 +165,7 @@ export function PricingScreen() {
         تنشأ حالتان ماليّتان قابلتان للاختلاف.
       </p>
     </Shell>
+    </FormErrors>
   );
 }
 
@@ -176,7 +182,7 @@ function CategoryCard({
   rule: PricingRule | undefined;
   canEdit: boolean;
   onDone: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [values, setValues] = useState<Record<FieldKey, string>>(EMPTY);
   const [busy, setBusy] = useState(false);
@@ -241,7 +247,7 @@ function CategoryCard({
         onDone(`ضُبطت تسعيرة ${CATEGORY_LABEL[category]}`);
       }
     } catch (caught) {
-      onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      onError(caught);
     }
     setBusy(false);
   }
@@ -270,6 +276,7 @@ function CategoryCard({
         {FIELDS.map(({ key, label }) => (
           <Field
             key={key}
+            name={key}
             label={`${label} (${currency})`}
             inputMode="decimal"
             dir="ltr"
@@ -289,6 +296,7 @@ function CategoryCard({
         {STOP_FIELDS.map(({ key, label, kind }) => (
           <Field
             key={key}
+            name={key}
             label={`${label} (${kind === "money" ? currency : "دقيقة"})`}
             inputMode="decimal"
             dir="ltr"
@@ -313,6 +321,7 @@ function CategoryCard({
         {PAUSE_FIELDS.map(({ key, label, kind }) => (
           <Field
             key={key}
+            name={key}
             label={`${label} (${kind === "money" ? currency : "دقيقة"})`}
             inputMode="decimal"
             dir="ltr"

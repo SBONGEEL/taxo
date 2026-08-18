@@ -1,20 +1,32 @@
 /** حقلٌ بتسميته — `design/DESIGN.md` §2.3.
  *
  * التسمية **فوق** الحقل دائماً (12px، `--mut`، مسافة 6px تحتها)، والحقل
- * نفسه `.fld` في `index.css`. ولا حالةَ خطأ مرسومةً على الحقل في التصميم:
- * نصُّ الخطأ يظهر تحت النموذج بلون `--dng` (انظر `Feedback`).
+ * نفسه `.fld` في `index.css`.
+ *
+ * **وللحقل حالةُ خطأٍ منذ عقد الأخطاء** (SPEC ١٧.٧). وكان التصميمُ يضع نصَّ
+ * الخطأ تحت النموذج كلِّه — وهو صحيحٌ لخطأٍ يخصّ الطلبَ كلَّه («تعذّر
+ * الاتصال»)، وخاطئٌ لخطأٍ يخصّ **حقلاً بعينه**: من رُفض حقلٌ من أربعين حقلاً في
+ * شاشة الإعدادات يقرأ سطراً أحمرَ ولا يعرف أيَّها. وهو نفسُ التغيير الذي وقع في
+ * التطبيقين بعد تجربةٍ على هاتف، فهذا **لحاقٌ بأخويه** لا انحرافٌ عن التصميم.
+ *
+ * **والوسمُ يقع بالاسم لا بالترتيب**: الحقلُ يعلن `name` مطابقاً لاسم الحقل في
+ * مخطط الخلفية، فيجد الخطأُ حقلَه بلا خريطةٍ تُكتب في كل شاشة وتفترق عن الشاشة
+ * أوّلَ تعديل.
  */
 
 import { useId } from "react";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 
+import { useFieldError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  /** سببُ الرفض — و`null` يعني لا خطأ. يُمرَّر أو يُلتقط من `FormErrors`. */
+  error?: string | null;
 }
 
-export function Field({ label, className, id, ...rest }: Props) {
+export function Field({ label, className, id, error, ...rest }: Props) {
   // **مُعرّفٌ مولَّدٌ حين لا يُمرَّر**: بغيره يصير `htmlFor={undefined}` فلا
   // تُربَط التسميةُ بحقلها — نقرُ التسمية لا يركّز الحقل، وقارئُ الشاشة يقرأ
   // حقلاً بلا اسم. وكانت خمسةٌ وعشرون من تسعةٍ وعشرين حقلاً في اللوحة كذلك،
@@ -22,6 +34,10 @@ export function Field({ label, className, id, ...rest }: Props) {
   // لهذا بعينه، فالإصلاحُ في المكوّن يصلح كلَّ مستدعٍ بلا لمسه
   const generated = useId();
   const inputId = id ?? rest.name ?? generated;
+  // **يُقرأ من السياق حين لا يُمرَّر**: فالشاشةُ لا تكتب خريطةً، والحقلُ الذي
+  // يعلن اسمَه يجد خطأه وحدَه
+  const fromContext = useFieldError(rest.name);
+  const reason = error ?? fromContext;
   return (
     <div>
       {label ? (
@@ -29,7 +45,20 @@ export function Field({ label, className, id, ...rest }: Props) {
           {label}
         </label>
       ) : null}
-      <input id={inputId} className={cn("fld", className)} {...rest} />
+      <input
+        id={inputId}
+        // الحدُّ الأحمر يقول «هنا»، والنصُّ يقول «لماذا» — وأحدهما بلا الآخر
+        // إمّا لونٌ بلا سبب أو سببٌ لا يُعرف موضعه
+        className={cn("fld", reason && "border-danger", className)}
+        aria-invalid={reason ? true : undefined}
+        aria-describedby={reason ? `${inputId}-error` : undefined}
+        {...rest}
+      />
+      {reason ? (
+        <p id={`${inputId}-error`} className="mt-6 text-12 text-danger">
+          {reason}
+        </p>
+      ) : null}
     </div>
   );
 }

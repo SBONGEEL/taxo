@@ -314,6 +314,7 @@ function Composer({
     <Modal onClose={onClose} title="حملة جديدة">
       <Field
         label="العنوان"
+        name="title"
         value={title}
         maxLength={120}
         onChange={(event) => setTitle(event.target.value)}
@@ -324,6 +325,7 @@ function Composer({
         </label>
         <textarea
           id="body"
+          name="body"
           rows={3}
           maxLength={500}
           className="fld"

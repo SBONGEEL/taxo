@@ -195,6 +195,7 @@ function ResolveModal({
 
         <Field
           label="ملاحظة الفصل"
+          name="note"
           placeholder="تُحفظ مع القرار في السجل"
           value={note}
           maxLength={255}
