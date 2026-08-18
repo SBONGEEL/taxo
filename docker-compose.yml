@@ -93,6 +93,9 @@ services:
     environment:
       WA_PORT: "8080"
       WA_AUTH_DIR: /data/auth
+      # مستوى سجلّ Baileys نفسِها — `warn` افتراضاً في `session.js`،
+      # و`trace` يطبع كلَّ إطارٍ داخلٍ وخارجٍ (للتشخيص وحدَه، صاخبٌ جداً)
+      WA_BAILEYS_LOG_LEVEL: warn
     # **مُحلِّلا أسماءٍ ثابتان** — والسببُ مقيسٌ لا احترازيّ: مُحلِّلُ دوكر
     # الداخليّ كان يفشل متقطّعاً على `web.whatsapp.com`
     # (`getaddrinfo ENOTFOUND`)، فيسقط مقبسُ Baileys ويعود، **والرسالةُ التي

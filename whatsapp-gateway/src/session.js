@@ -38,6 +38,7 @@ const {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
+  generateMessageIDV2,
   Browsers,
 } = require("@whiskeysockets/baileys");
 const qrTerminal = require("qrcode-terminal");
@@ -59,17 +60,29 @@ const MESSAGE = (code, ttlMinutes) =>
 const RECONNECT_MIN_MS = 2_000;
 const RECONNECT_MAX_MS = 60_000;
 
+// **مهلةُ إقرار الخادم** — عشرُ ثوانٍ، **وصارت تقيس ما تسمّيه**: الإقرارُ
+// المنتظَر الآن عقدةُ `<ack class="message">` من خادم واتساب، وقد قِيست على
+// هذا التركيب عند **١٢٢ مللي ثانية** (2026-08-18، رسالةٌ إلى 218916166400).
+// فالعشرةُ تسعُ تعثّرَ شبكةٍ بثمانين ضعفاً ولا تسعُ مقبساً ساقطاً.
+//
+// وكانت هذه المهلةُ قبل اليوم تنتظر **إيصالَ تسليمٍ من هاتف المستقبِل**، وهو
+// حدثٌ لا يملك أحدٌ عندنا سببَ وقوعه في عشر ثوانٍ: هاتفٌ نائمٌ يؤخّره دقائق.
+const ACK_TIMEOUT_MS = 10_000;
+
 // عمرُ رمز الربط عند واتساب — بعده يولّد Baileys غيرَه من نفسه، وهذا الرقم
 // لعرضِ «يبقى كذا» في اللوحة لا لحساب شيء
-// **مهلةُ إقرار الخادم** — عشرُ ثوانٍ. والإقرارُ عادةً دون الثانية على مقبسٍ
-// سليم، فالعشرةُ تسعُ تعثّراً ولا تسعُ انقطاعاً.
-const ACK_TIMEOUT_MS = 10_000;
 
 const QR_TTL_SECONDS = 60;
 
 // **زمنُ استئنافِ دورةِ الرمز** حين تنتهي ولم يمسحها أحد. ثانيتان: الفجوةُ
 // التي يراها من يقف أمام هاتفه، ولا داعيَ لأن تطول — فما ينتظره إنسانٌ لا شبكة
 const QR_CYCLE_RESTART_MS = 2_000;
+
+// **مستوى سجلّ Baileys — ولم يعد `silent`.** كان إخراسُها كاملاً يبتلع السطرَ
+// الوحيد الذي يقول إن واتساب **رفض** رسالةً بعينها
+// (`'received error in ack'`)، فيصير رفضُ الخادم ومهلةُ الإقرار حادثةً واحدةً
+// في السجل. `warn` افتراضاً: يبقي الضجيجَ صامتاً ويُبقي الرفضَ مرئياً.
+const BAILEYS_LOG_LEVEL = process.env.WA_BAILEYS_LOG_LEVEL || "warn";
 
 const logger = pino({
   level: process.env.WA_LOG_LEVEL || "info",
@@ -135,7 +148,36 @@ class Session {
         // لا نقرأ رسائلَ أحد ولا نعلن حضوراً: هذه قناةُ إرسالٍ باتجاه واحد
         markOnlineOnConnect: false,
         syncFullHistory: false,
-        logger: pino({ level: "silent" }),
+        // **ولا استعلاماتِ تهيئة** — والقرارُ مقيسٌ لا احترازيّ (2026-08-18).
+        //
+        // تُطلق Baileys عند كل اتصالٍ ثلاثةَ استعلامات «مجاراةً لواتساب وِب»:
+        // `props` و`blocklist` و`privacy`. وقُرئ السلكُ الخام كلُّه عند
+        // `trace` فكان الجواب:
+        //
+        // | الاستعلام | جوابُ واتساب |
+        // |---|---|
+        // | `<props protocol='2'>` | **لا جوابَ أبداً** — ثم ٤٠٨ بعد ٦٠ث |
+        // | `blocklist` | `<list addressing_mode='lid'/>` |
+        // | `privacy` | قائمةُ الفئات كاملةً |
+        // | `w:p ping` كلَّ ٣٠ث | مُجابٌ دائماً |
+        //
+        // **فالمقبسُ سليمٌ تماماً، والمعلّقُ استعلامٌ واحدٌ لا نقرأ جوابَه.**
+        // وهذا ينفي صراحةً أن يكون هذا الـ٤٠٨ هو ما «يبتلع الرسائل»: على
+        // المقبس نفسِه والـ`props` معلّقةٌ، جاء إقرارُ رسالةٍ في ١٢٢ مللي.
+        // ابتلاعُ الرسائل كان سقوطَ المقبس على فشل DNS، وقد أُغلق بتثبيت
+        // المُحلِّلَين في compose.
+        //
+        // **وما يُصلحه الإطفاء إذن ليس تسليماً بل صدقَ السجل**: استعلامٌ
+        // يعلّق منتظِراً ستين ثانيةً في كل اتصال، ورفضُه داخل `Promise.all`
+        // يبتلع نجاحَ الاثنين الآخرين، ويطبع `logger.error` يقرؤه من بعدنا
+        // عطباً في القناة فيطارد ما ليس بعطب — وهو ثمنٌ دفعناه فعلاً.
+        //
+        // **وأمانُه مقيسٌ من حالتنا نفسِها**: `creds.json` لا يحمل
+        // `lastPropHash` أصلاً، أي أن هذا الرقم رُبط بمسح رمزٍ و`props` لم
+        // تُجَب قطُّ — فتحذيرُ Baileys («قد تُصلح فشلَ مسح الرمز») لا ينطبق
+        // على تركيبٍ عاش عمرَه كلَّه بلا جوابها.
+        fireInitQueries: false,
+        logger: pino({ level: BAILEYS_LOG_LEVEL }),
       });
 
       sock.ev.on("creds.update", saveCreds);
@@ -144,21 +186,90 @@ class Session {
       // 2026-08-17). `sendMessage` يعيد مرجعاً بمجرد **قبولِ** الرسالة في
       // مخزن Baileys، ومقبسٌ يسقط بعدها يبتلعها بلا خطأ: نظامُنا يقرأ
       // «أُرسلت» والهاتفُ صامت. وهو ما وقع فعلاً على ثلاثة أرقام.
+      // **`messages.update` تُسجَّل ولا يُحكَم بها** — وهذا انقلابٌ عن السابق.
+      //
+      // Baileys **لا تُصدِر هذا الحدث عن إقرار الخادم إطلاقاً**: حالتُه لا
+      // تأتي إلا من عقدة `<receipt>` (`Socket/messages-recv.js:525`)، وخريطتُها
+      // (`Utils/generics.js:249`) ثلاثةُ مدخلاتٍ ليس فيها إقرارُ الخادم؛ أما
+      // `<ack>` الناجحة فيبتلعها `handleBadAck` بلا حدث. فشرطُ `>= 2` الذي كان
+      // هنا كان — بحكم المصدر — انتظاراً **لهاتف المستقبِل**.
+      //
+      // **وقِيس ذلك حيّاً** (2026-08-18): الذي أرضى الشرطَ كان `status=3` عند
+      // ٢٥١٤ مللي، أي إيصالَ تسليمٍ من S21 مستيقظٍ في يد صاحبه؛ ولو كان نائماً
+      // لتأخّر دقائق ولسقط الرمزُ الذي سُلِّم فعلاً.
+      //
+      // **و`0` تُطبع مع البقية**: هي `WAMessageStatus.ERROR` — رفضُ واتساب
+      // مكتوباً. وترشيحُها خارجاً بشرطٍ `>= 2` كان يجعل الرفضَ والصمتَ سطراً
+      // واحداً في السجل: كلاهما «لم يصل إقرار».
       sock.ev.on("messages.update", (updates) => {
         for (const item of updates || []) {
           const id = item?.key?.id;
           const status = item?.update?.status;
           if (!id || status === undefined) continue;
-          const waiter = this._acks.get(id);
-          // 2 = SERVER_ACK فما فوق (3 تسليم، 4 قراءة). **والخادمُ يكفي**:
-          // هو ما يقول إن الرسالةَ غادرت سلكَنا فعلاً؛ وانتظارُ تسليمِ الهاتف
-          // يعلّق الرمزَ خلف هاتفٍ مطفأ، وذلك شأنُ صاحبه لا شأنُ قناتنا
-          if (waiter && Number(status) >= 2) {
-            this._acks.delete(id);
-            waiter(Number(status));
-          }
+          logger.info(
+            {
+              id,
+              status,
+              since_send_ms: this._sinceSend(id),
+              awaited: this._acks.has(id),
+            },
+            "messages.update",
+          );
         }
       });
+
+      // **الحكمُ هنا وحدَه: `<ack class="message">` من خادم واتساب.**
+      //
+      // هي جوابُ **الخادم** على رسالةٍ أرسلناها، وهي المعنى الحرفيُّ لـ«غادرت
+      // الرسالةُ سلكَنا ووصلت واتساب» — وهو بالضبط ما تعِد به هذه القناة ولا
+      // تعِد بأكثرَ منه. ونقرؤها **من العقدة الخام لا من `messages.update`**
+      // لأن نجاحَها لا يُصدِر حدثاً أصلاً، وفشلَها يُصدِره مشتقّاً؛ فقراءةُ
+      // المنبع تُغني عن مصدرين لحقيقةٍ واحدةٍ يختلفان يوماً.
+      //
+      // **و`attrs.error` حاضراً رفضٌ صريحٌ يرتدّ في حينه** — لا بعد عشر ثوانٍ
+      // من صمتٍ لم يقع. والشرطُ `if (attrs.error)` هو نفسُه شرطُ `handleBadAck`
+      // حرفياً، فلا يمكن أن نقرأ العقدةَ على غير ما تقرؤها المكتبة.
+      sock.ws.on("CB:ack", (node) => {
+        const attrs = node?.attrs || {};
+        if (attrs.class !== "message") return;
+        const id = attrs.id;
+        logger.info(
+          {
+            id,
+            from: attrs.from,
+            error: attrs.error ?? null,
+            since_send_ms: this._sinceSend(id),
+            awaited: this._acks.has(id),
+          },
+          "CB:ack",
+        );
+        const waiter = this._acks.get(id);
+        if (!waiter) return;
+        this._acks.delete(id);
+        if (attrs.error) waiter.reject(String(attrs.error));
+        else waiter.resolve();
+      });
+
+      // **`<receipt>` تُقاس ولا يُنتظَر عليها.** هي جوابُ **جهاز المستقبِل** لا
+      // الخادم: `type` غائباً ⇐ تسليم (٣)، و`read` ⇐ قراءة (٤). وانتظارُها هو
+      // بعينه ما يمنعه تعليقُ هذا الملف — «انتظارُ تسليمِ الهاتف يعلّق الرمزَ
+      // خلف هاتفٍ مطفأ، وذلك شأنُ صاحبه لا شأنُ قناتنا» — وكان الكودُ يفعله.
+      //
+      // **وتبقى مسجَّلةً لأنها الشيءُ الوحيد الذي يثبت وصولاً فعلياً**: يومَ
+      // يُشكى من رمزٍ لم يصل، هذا السطرُ هو الفرق بين «سلّمناه» و«ظنناه».
+      sock.ws.on("CB:receipt", (node) => {
+        const attrs = node?.attrs || {};
+        logger.info(
+          {
+            id: attrs.id,
+            type: attrs.type ?? "(غائب ⇐ تسليم)",
+            from: attrs.from,
+            since_send_ms: this._sinceSend(attrs.id),
+          },
+          "CB:receipt",
+        );
+      });
+
       this._sock = sock;
     } catch (error) {
       this._lastError = String(error?.message || error);
@@ -262,6 +373,17 @@ class Session {
    *  الصحيح: من انتظر إقراراً ومات الانتظارُ يُعامَل فشلاً فيرتدّ. */
   _acks = new Map();
 
+  /** لحظةُ خروجِ كلِّ رسالةٍ على السلك — **للقياس وحدَه**: بها يُقرأ كلُّ سطرٍ
+   *  لاحقٍ بفارقه عن الإرسال، فيُفصل «صمتٌ تامّ» عن «وصل بعد ثلاثين ثانية».
+   *  خريطةٌ في الذاكرة تُقلَّم بعد دقيقتين — أطولَ من كل ما يُنتظر. */
+  _sentAt = new Map();
+
+  /** عمرُ الرسالة على السلك بالمللي — `null` لما لا نعرفه. للسجل وحدَه. */
+  _sinceSend(id) {
+    const at = this._sentAt.get(id);
+    return at === undefined ? null : Date.now() - at;
+  }
+
   async sendCode(to, code, ttlMinutes) {
     if (!this.linked || !this._sock) {
       const why = this._fatal
@@ -306,38 +428,70 @@ class Session {
       throw error;
     }
 
-    const sent = await this._sock.sendMessage(known.jid || jid, {
-      text: MESSAGE(code, ttlMinutes),
-    });
-    const id = sent?.key?.id;
-    if (!id) {
-      const error = new Error("لم يُعد واتساب مُعرِّفَ رسالة");
-      error.noAck = true;
-      throw error;
-    }
+    // **المُعرِّفُ يُولَّد هنا قبل الإرسال، ولا يُنتظَر أن تعيده المكتبة.**
+    // وليس تنظيماً: الإقرارُ قِيس عند ١٢٢ مللي ثانية، و`sendMessage` لا تعود
+    // إلا بعد كتابة البايتات — فبين عودتها وتسجيلِ المنتظِر فجوةٌ يستطيع
+    // الإقرارُ أن يسبقها، فيُقرأ إقرارٌ وصل «إقراراً لم يصل». وهو بالضبط شكلُ
+    // العطب الذي نُصلحه اليوم، فلا يُستبدل بشكلٍ منه أضيق.
+    const id = generateMessageIDV2(this._sock.user?.id);
 
-    // **ولا يُقال «أُرسلت» قبل إقرار الخادم.** انتظارٌ محدودٌ بعشر ثوانٍ:
-    // أطولُ منه يترك المستخدمَ أمام شاشةٍ تدور، وأقصرُ يرتدّ عن رسالةٍ في
-    // طريقها. **والمهلةُ فشلٌ لا نجاح** — فالشكُّ في قناةٍ صمتت يُفسَّر
-    // لمصلحة من ينتظر الرمز، وثمنُه رسالةٌ مكرّرةٌ لا تسجيلٌ متوقّف.
-    const acked = await new Promise((resolve) => {
+    // والمنتظِرُ **قبل أن يخرج بايتٌ واحد**
+    const settled = new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this._acks.delete(id);
-        resolve(null);
+        const error = new Error(
+          "لم يُقرّ خادمُ واتساب باستلام الرسالة — القناةُ لا تنقل الآن",
+        );
+        error.noAck = true;
+        reject(error);
       }, ACK_TIMEOUT_MS);
-      this._acks.set(id, (status) => {
-        clearTimeout(timer);
-        resolve(status);
+      this._acks.set(id, {
+        resolve: () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        // **رفضُ الخادم يرتدّ في حينه** — لا بعد عشر ثوانٍ من صمتٍ لم يقع.
+        // ونصُّه يحمل رمزَ الخطأ كما كتبه واتساب: «٤٠١» و«٤٠٣» ليسا واحداً
+        // لمن يقرأ السجل بعد شهر، وأحدُهما وحدَه يعني أن الرقمَ حُظر.
+        reject: (why) => {
+          clearTimeout(timer);
+          const error = new Error(`رفض واتساب الرسالة (${why})`);
+          error.rejectedByServer = why;
+          reject(error);
+        },
       });
     });
 
-    if (acked === null) {
-      const error = new Error(
-        "لم يُقرّ واتساب باستلام الرسالة — القناةُ لا تنقل الآن",
+    // **حارسُ الرفض المبكّر**: الإقرارُ قد يسبق عودةَ `sendMessage` نفسِها،
+    // ورفضٌ لا مستمعَ له في تلك اللحظة **يُسقط العملية كلَّها** على Node 22
+    // (`unhandled rejection` = خروج). فيُعلَّق مستمعٌ فارغٌ الآن، و`await`
+    // اللاحقةُ تأخذ النتيجةَ نفسَها — تعليقٌ لا يبتلع شيئاً.
+    settled.catch(() => {});
+
+    this._sentAt.set(id, Date.now());
+    setTimeout(() => this._sentAt.delete(id), 120_000).unref?.();
+
+    try {
+      await this._sock.sendMessage(
+        known.jid || jid,
+        { text: MESSAGE(code, ttlMinutes) },
+        { messageId: id },
       );
-      error.noAck = true;
-      throw error;
+    } catch (cause) {
+      this._acks.delete(id);
+      throw cause;
     }
+    logger.info(
+      { id, to: digits.slice(-4) },
+      "خرجت الرسالةُ على السلك — بانتظار إقرار الخادم",
+    );
+
+    // **ولا يُقال «أُرسلت» قبل إقرار الخادم** — والإقرارُ الآن هو إقرارُ
+    // الخادم فعلاً، لا إيصالُ تسليمٍ من هاتفٍ لا نملك إيقاظه.
+    //
+    // **والمهلةُ فشلٌ لا نجاح**: قناةٌ صمتت عشرَ ثوانٍ عن إقرارٍ يقع في أعشار
+    // الثانية قناةٌ لا تنقل، والشكُّ يُفسَّر لمصلحة من ينتظر الرمز.
+    await settled;
     return id;
   }
 

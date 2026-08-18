@@ -273,23 +273,29 @@ Proven end to end afterwards: a captain went online → `geo:drivers:JO` + his p
 
 **Nothing here is guesswork: every line has a written spec or an owner decision behind it.**
 
-> **🔴 READ THIS FIRST — registration is locked today, and it is the only thing that is.**
+> **✅ RESOLVED 2026-08-18 — registration is unlocked, and the cause was ours, not WhatsApp's.**
 >
-> **There is no working OTP channel.** The self-hosted WhatsApp number (`218930385734`) **links, answers
-> `onWhatsApp`, accepts `sendMessage` — and WhatsApp's server never acknowledges the message.** Measured
-> on three of the owner's numbers: `503` after 10–16s, `session: linked`, `not_on_whatsapp: false`. And
-> the owner confirmed by opening WhatsApp on the receiving phone: **not in Chats, not in Archived — the
-> messages do not arrive at all.** That is what a restricted sending number looks like.
+> **This box used to say the sending number was restricted. That was wrong, and how it got written is
+> the lesson** — see "The sixth shape" below. The self-hosted number (`218930385734`) was never
+> restricted: WhatsApp acknowledged every message, measured at **122 ms** and again at **481 ms** after
+> the fix. What failed was our verdict — the gateway judged success on an event Baileys does not emit
+> for a server ack, so it was really waiting on the recipient's handset, and a phone that took longer
+> than ten seconds to confirm produced a 503 **and made `otp.issue` delete the code WhatsApp had already
+> delivered**.
 >
-> **And the SMS contract is switched off** (by the owner, to prove the chain picks WhatsApp — it does:
-> `['whatsapp_otp', 'firebase']`). So `fallback_channel` is `null`: Firebase generates its code on the
-> user's device and is not a channel we send through. **Net effect: nobody can register.** Signing in with
-> an existing account works normally.
+> **Fixed in `whatsapp-gateway/src/session.js`** (three points): the verdict is the raw
+> `<ack class="message">` node, `attrs.error` bounces immediately with the code WhatsApp wrote, and the
+> delivery receipt is logged but never awaited. Verified live to `218916166400`: **HTTP 200 in 0.89 s**,
+> ack at 481 ms, receipt at 2362 ms marked `awaited: false`. The owner confirmed the code on the S21.
 >
-> **The fix is a field in the contracts page, not code** (`design`/`CLAUDE.md` emergency plan): set
-> `transport` to `cloud` if the Meta contract has arrived, **or re-activate the SMS contract** and the
-> chain falls to it automatically. **Both are ~2 minutes and need no deploy.** Do not "fix" this in code —
-> everything on our side is measured healthy, and there is a written diagnosis below.
+> **Two things that were hidden are now visible**: Baileys' logger is no longer `silent` (it was
+> swallowing `'received error in ack'` — the one line that would have said "WhatsApp refused this"), and
+> the 60 s init-query timeout is gone (`fireInitQueries: false`; `<props protocol='2'>` is never answered
+> while blocklist, privacy and the pings all are, so the socket was healthy and one unread query hung).
+>
+> **What still stands**: the SMS contract is off by the owner's choice, so `fallback_channel` is `null`
+> and WhatsApp has no second channel behind it. That is now a resilience question, not a blocker — but a
+> single-channel registration path with no fallback is worth a decision.
 
 #### 0. The cancellation fee is finished — one sub-item waits on an owner decision
 
@@ -301,33 +307,28 @@ machinery without a decision — see above and `design/CANCELLATION-FEE.md` §6-
 
 #### 1. Blocking, and not code
 
-- 🔴 **The WhatsApp channel is built, correct, and not delivering** (2026-08-18). Everything on our side
-  measured healthy; the failure is at WhatsApp's end. **Do not re-diagnose from scratch — this is what was
-  already measured, in order:**
+- ✅ **The WhatsApp channel delivers, and the blocker was our verdict** (closed 2026-08-18). The table
+  below is kept **because it is the record of a wrong diagnosis**, not because it is current. Read the
+  right-hand column as "what our instrumentation reported", never as "what WhatsApp did":
 
-  | Checked | Result |
-  |---|---|
-  | Session state | `linked`, phone `218930385734`, `last_error: null`, `queue_depth: 0` |
-  | Recipient numbers reaching the gateway | all correct `+218…` — **none mangled to +962** |
-  | Priority chain | picks `whatsapp_otp` (chain `whatsapp → firebase` with SMS off) |
-  | The three per-user caps | never the blocker (3–4 of 5 window, 7 of 10 daily) |
-  | `onWhatsApp` | answers **exists** for the owner's numbers |
-  | `sendMessage` | returns a message id |
-  | **WhatsApp server ack** | **never arrives** — 10s timeout, on every number |
-  | Owner's phone (opened by hand) | **nothing in Chats, nothing in Archived** |
+  | Checked | What was reported | What it actually was |
+  |---|---|---|
+  | Session state | `linked`, `last_error: null`, `queue_depth: 0` | true, and still true |
+  | Recipient numbers | all correct `+218…` | true |
+  | Priority chain | picks `whatsapp_otp` | true |
+  | The three per-user caps | never the blocker | true |
+  | `onWhatsApp` | answers **exists** | true |
+  | `sendMessage` | returns a message id | true, and it proves **only a websocket write** |
+  | **«WhatsApp server ack never arrives»** | 10 s timeout on every number | **the server ack arrived in 122 ms.** The wait was on the *recipient's handset*, an event Baileys reports and our filter mistook for the server's |
+  | Owner's phone: nothing in Chats | read as "restricted number" | not reproducible; the code arrives and was confirmed on the S21 |
 
-  **Two real defects were found and fixed on the way, and neither was the cause**: the gateway container's
-  DNS resolver was failing intermittently on `web.whatsapp.com` (now pinned to `1.1.1.1`/`8.8.8.8` —
-  disconnects went from constant to zero and `since` stopped moving), and `usePhoneCountry` fell back to
-  dial code `"962"` when a country was missing from `GET /config` (now `string | null`; the compiler then
-  named **six** call sites across both apps, two of which — `customer-app/ForgotPassword` and
-  `driver-app/Login` — were not in the hand audit at all).
+  **Two real defects were found on the way and both were genuine fixes**: the gateway container's DNS
+  resolver failing intermittently on `web.whatsapp.com` (now pinned to `1.1.1.1`/`8.8.8.8` — this is what
+  actually swallowed messages, and it is closed), and `usePhoneCountry` falling back to dial code `"962"`.
 
-  **What the ack work bought**: before it, a send that never left reported `sent=True` and the user waited
-  in silence. Now it returns `503` with a reason, and the app draws the next-channel button when one
-  exists. **Three outcomes are now distinct**: `422` "this number is not on WhatsApp" (the user's problem),
-  `503` "WhatsApp did not answer about the number" (**our** problem, never a false denial), and `503`
-  "WhatsApp did not acknowledge the message" (the channel is not carrying).
+  **What the ack work bought, corrected**: the three outcomes are still distinct and still right — `422`
+  "not on WhatsApp", `503` "WhatsApp did not answer about the number", `503` "the channel is not carrying".
+  What was wrong was only **which event decides the third**, and it now decides on the server's own ack.
 
 - **The dedicated number's guards must not be relaxed while this channel is live**: it is never used for
   ordinary WhatsApp, and the message is **one fixed link-free text composed inside the gateway** — the
@@ -976,6 +977,84 @@ stack — a boundary that hides the cause is worse than the crash), it **promise
 rides list a row with `ride: null` — measured: message rendered, error logged, bottom bar intact, and the
 screen healthy again after the cause was removed.
 
+### The sixth shape — a success criterion measuring an event the system never emits (2026-08-18)
+
+**This is the fifth family member's successor and the most expensive one so far.** The family is
+"what the build cannot see": a class silently dropped by tailwind-merge, a key missing from the pixel
+scale, a value missing from an *array* rather than a union, and `Slot` throwing on two children. All
+four are about code that compiles and then does not do what it says. **The sixth is worse, because it
+does not merely fail — it produces a confident, wrong diagnosis and points it at someone else.**
+
+**The shape: a success criterion that waits on an event the system does not emit, in a channel whose
+log is muted so the real failure signal cannot be seen either.**
+
+The WhatsApp gateway judged "the message was sent" on `messages.update` with `status >= 2`, named in
+its own comment «إقرارُ الخادم». Baileys **never emits that event for a server ack**: the status comes
+only from a `<receipt>` node (`Socket/messages-recv.js:525`), whose map (`Utils/generics.js:249`) has
+three entries and none of them is the server's ack; a successful `<ack>` is swallowed by `handleBadAck`
+with no event at all. So — by the source, not by guesswork — the gateway was waiting for **a delivery
+receipt from the recipient's handset**, which is exactly what the same file's comment forbids waiting
+for. The real success equation was:
+
+> **sending an OTP succeeds if the recipient's phone is awake within ten seconds.**
+
+A phone in Doze returns 503, and `otp.issue` deletes the digest on any send failure — so the code
+WhatsApp delivered was **invalidated on our side before its owner could read it**. That, not a banned
+number, is what stopped registration.
+
+**And the one signal that does mean "WhatsApp refused this message" was filtered out**: `handleBadAck`
+emits `status = ERROR = 0`, and `>= 2` drops it. With `logger: pino({ level: "silent" })` on the socket,
+Baileys' own `'received error in ack'` never reached `docker compose logs` either. **A channel blind to
+the defect it is accused of produces a confident wrong verdict** — "the sending number is restricted"
+was written into this file, and there was no path in the system capable of establishing it.
+
+**Measured, end to end, on the owner's S21** (2026-08-18, ride to `218916166400`):
+
+| event | when | what it is |
+|---|---|---|
+| bytes on the wire | 0 ms | `sendMessage` resolving = a websocket write, nothing more |
+| `<ack class="message">` `error=null` | **+122 ms** | **WhatsApp accepted it.** No refusal, ever |
+| `<receipt>` type absent ⇒ delivery | +2514 ms | the *handset*, and the only thing that satisfied `>= 2` |
+| `messages.update status=3` | +2515 ms | derived from the receipt above |
+
+The phone was in the owner's hand, so it returned 200 in 3.5 s. Asleep, the same healthy send is a 503.
+
+**And a later send showed the old criterion was non-deterministic on top of being wrong.** A third
+event can satisfy `>= 2`: a `<receipt type="sender">` from **our own linked phone** syncing the sent
+message — status 2, arriving at 717 ms, from our own `@lid`. So the old verdict was decided by whichever
+of three unrelated things happened first — our phone's sync receipt, the recipient's delivery receipt, or
+nothing at all — and never once by the server's ack at 417 ms. `STATUS_MAP`'s `sender` entry *is*
+SERVER_ACK by name, which is exactly how the misreading survived review: the name was right and the
+sender of the event was not.
+
+**The fix is three lines of judgement, and each is a rule worth keeping.** The verdict is now the raw
+`<ack class="message">` node — read at its source rather than through the derived event, so the two
+cannot disagree; `attrs.error` present is an immediate 503 carrying the code WhatsApp wrote (401 and
+403 are not the same fact a month later, and one of them *is* a ban); and the delivery receipt is
+**logged and never awaited** — it is the only proof of real arrival, so it stays in the log for the day
+someone reports a code that never came, but it decides nothing. After the fix the same send returned
+**200 in 0.89 s** with `CB:ack` at 481 ms and the receipt landing at 2362 ms marked `awaited: false`.
+
+**The message id is generated before the send** (`generateMessageIDV2`) and the waiter registered before
+a single byte leaves, because an ack that arrives in 122 ms can beat `sendMessage`'s own return — an ack
+that *did* arrive read as "no ack", which is this very defect in a narrower window. And the early-reject
+guard (`settled.catch(() => {})`) exists because an unhandled rejection **exits the process** on Node 22.
+
+**Two more things this turned up, both previously invisible behind the mute.** Baileys' init queries were
+timing out at 60 s on every connect; reading the raw wire at `trace` showed `<props protocol='2'>` is
+**never answered** while `blocklist`, `privacy` and the 30 s pings are all answered — so the socket was
+healthy and one unread query was hanging. `fireInitQueries: false` now, and its safety is measured from
+our own state: `creds.json` carries no `lastPropHash`, so this number was QR-linked with props unanswered
+its whole life. **And it explicitly was not what swallowed messages** — on the same socket with props
+hanging, a message was acked in 122 ms. That swallowing was the DNS drop, already closed by pinning the
+resolvers.
+
+**The rule to carry forward: before trusting a success criterion, verify the system emits that event at
+all.** Every downstream conclusion here — including a written claim about a third party — rested on one
+unverified assumption about which event means what, and no test, build or type could see it. The verdict
+came from the recorded evidence line "WhatsApp server ack: never arrives — on every number", which was
+never a measurement of WhatsApp; it was a measurement of our own detector, which could not fire.
+
 ### Stage 13 — the full manual run on two phones (2026-08-15)
 
 **A fresh driver was created from the app's own screens and taken all the way to a paid withdrawal**:
@@ -1615,10 +1694,11 @@ and per-category pricing. Do not build them; he decides after launch.
 
 **What waits on the owner as of 2026-08-18 — the first one blocks launch outright:**
 
-0. 🔴 **Which OTP channel goes live.** WhatsApp links but does not deliver (diagnosis above), and the SMS
-   contract is off — **so nobody can register**. Two exits, both a field in the contracts page and neither
-   needing a deploy: switch `transport` to `cloud` if the Meta contract arrived, or re-activate SMS. **This
-   is not a code task; do not treat it as one.**
+0. ✅ **Closed 2026-08-18 — WhatsApp delivers.** The channel was never the blocker; our success criterion
+   was. What remains is a smaller question the owner should still answer: **whether registration ships with
+   one channel and no fallback.** SMS is off by his choice, so `fallback_channel` is `null` — the day the
+   number is genuinely banned or the session drops, registration stops with no automatic exit. Re-activating
+   the SMS contract is a field in the contracts page and no deploy.
 1. **The six branches of subscription offers** (`design/SUBSCRIPTION-OFFERS.md` §8) — and the first,
    money-or-time, decides the tables, so nothing is buildable before it.
 2. **Whether the per-minute pause rate should be two numbers, not one** — built as one; see item 6 above
