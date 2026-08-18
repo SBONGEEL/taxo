@@ -16,6 +16,7 @@ import {
 import type { ReactNode } from "react";
 
 import { getConfig } from "@/api/endpoints";
+import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 import { onSplashRetry, setSplashStatus } from "@/lib/splash";
 import type { FirebaseWebConfig } from "@/lib/firebase";
@@ -72,6 +73,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       .then((value) => {
         if (cancelled) return;
         setConfig(value);
+        // آخرُ نسخةٍ من القواعد تُخزَّن لحظةَ وصولها (SPEC ١٧.٣)
+        cacheRules(value.validation);
         setError(null);
         setSplashStatus(null);
         setAttempt(0);

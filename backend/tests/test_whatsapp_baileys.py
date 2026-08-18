@@ -22,7 +22,11 @@ from app.services.whatsapp import (
     WhatsAppError,
     build_provider,
 )
-from app.services.whatsapp.baileys import HOUR_SECONDS
+from app.services.whatsapp.baileys import (
+    DEFAULT_HOURLY,
+    DEFAULT_PER_PHONE_HOURLY,
+    HOUR_SECONDS,
+)
 
 CONTRACT = {
     "transport": TRANSPORT_BAILEYS,
@@ -142,9 +146,14 @@ async def test_a_written_zero_means_no_cap_but_an_empty_field_means_the_default(
         await unlimited.send_code("+962790000041", str(1000 + index), ttl_minutes=5)
     assert len(gateway.calls) == 6
 
+    # **يُقارَن بالثابت نفسِه لا برقمٍ منسوخ.** كان الرقمُ ٣ مكتوباً هنا، فرفعه
+    # المالكُ إلى ٢٠ في `0525bdb` وبقي الاختبارُ على القديم — **فظلَّت المجموعةُ
+    # حمراءَ على master** بينما `CLAUDE.md` يقول «صفرُ إخفاقات». وقيمةٌ واحدةٌ
+    # في بيتين تفترقان عند أوّل تعديل؛ والمقصودُ هنا «الفارغُ يعني الافتراضي»
+    # لا «الافتراضيُّ رقمٌ بعينه».
     default = _provider(per_phone_hourly="", hourly_limit="")
-    assert default._per_phone_hourly == 3
-    assert default._hourly == 100
+    assert default._per_phone_hourly == DEFAULT_PER_PHONE_HOURLY
+    assert default._hourly == DEFAULT_HOURLY
 
 
 # ------------------------------------------------------------ الأسلاك

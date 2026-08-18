@@ -30,7 +30,26 @@ import {
 import { COUNTRY_LABEL, looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { confirmError, passwordError, passwordsReady } from "@/lib/password";
+import { confirmError, passwordError, passwordRule, passwordsReady } from "@/lib/password";
+import { FieldConditions } from "@/components/FieldConditions";
+
+/** يوجّه خطأَ حقلٍ من الخلفية إلى حقله في الشاشة (SPEC ١٧.٧).
+ *
+ * **والخريطةُ لأن اسمَ الحقل في الشاشة ليس دائماً اسمَه في المخطط**: حقلُ
+ * كلمة المرور هنا `new-password` (لدلالة الإكمال التلقائي)، والخلفيةُ تسمّيه
+ * `password`. وبغير التوجيه يُعلَّم لا شيء وينتقل التركيزُ إلى لا مكان.
+ */
+const FIELD_INPUT: Record<string, string> = {
+  password: "new-password",
+  name: "name",
+  phone: "phone",
+};
+
+function focusField(field: string): void {
+  document
+    .querySelector<HTMLInputElement>(`[name="${FIELD_INPUT[field] ?? field}"]`)
+    ?.focus();
+}
 
 export function RegisterScreen() {
   const { config } = useConfig();
@@ -89,9 +108,13 @@ export function RegisterScreen() {
       );
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إنشاء الحساب",
-      );
+      if (caught instanceof ApiError) {
+        const field = caught.field("field");
+        setError(caught.message);
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر الاتصال بالخادم — أعد المحاولة");
+      }
       setStep("details");
     } finally {
       setBusy(false);
@@ -219,6 +242,7 @@ export function RegisterScreen() {
               hint="ثمانية أحرف على الأقل"
               error={passwordError(password) ?? undefined}
             />
+          <FieldConditions rule={passwordRule()} value={password} />
 
             <Field
               label="تأكيد كلمة المرور"

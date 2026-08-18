@@ -23,9 +23,11 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
+import { focusField } from "@/lib/validation";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { passwordError } from "@/lib/password";
+import { passwordError, passwordRule } from "@/lib/password";
+import { FieldConditions } from "@/components/FieldConditions";
 
 type Step = "phone" | "verify" | "password";
 
@@ -85,9 +87,13 @@ export function ForgotPasswordScreen() {
         }),
       );
     } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تغيير كلمة المرور",
-      );
+      if (caught instanceof ApiError) {
+        setError(caught.message);
+        const field = caught.field("field");
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر تغيير كلمة المرور — أعد المحاولة");
+      }
       // إثباتٌ استُهلك لا يُعاد استعماله — يعود المستخدم لبدايةٍ نظيفة
       if (caught instanceof ApiError && caught.status === 401) {
         setProof(null);
@@ -142,6 +148,7 @@ export function ForgotPasswordScreen() {
             onChange={(event) => setPassword(event.target.value)}
             error={passwordError(password) ?? undefined}
           />
+            <FieldConditions rule={passwordRule()} value={password} />
           <Field
             label="تأكيد كلمة المرور"
             name="confirm-password"

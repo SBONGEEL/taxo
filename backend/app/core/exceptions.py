@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
+
+from app.core import validation_errors
+
+logger = logging.getLogger(__name__)
 
 
 # **الرسالةُ تُكتب لمن يقرؤها** (2026-08-14، بعد أن قرأ راكبٌ على هاتفه «راجع
@@ -343,15 +351,130 @@ class TotpRecoveryProofRequired(Conflict):
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    """المعالجاتُ الثلاثةُ التي تغطّي كلَّ مخارج الخلفية (SPEC القسم ١٧.١).
+
+    **ثلاثةٌ لا واحد، لأن للخطأ ثلاثةَ منابع**: أخطاءُ الأعمال التي نرفعها
+    (`AppError`)، وأخطاءُ التحقق التي يرفعها Pydantic قبل أن يصل الطلبُ إلى
+    سطرٍ من كودنا (`RequestValidationError`)، وما ترفعه FastAPI نفسُها
+    (`HTTPException`: مسارٌ غيرُ موجود، طريقةٌ غيرُ مسموحة). وتغطيةُ الأول
+    وحدَه — وهو ما كان — تترك المنبعين الآخرين يخرجان بشكل FastAPI، وهو **شكلٌ
+    ثانٍ** يقرؤه العميلُ خطأً.
+    """
+
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:
-        body: dict[str, object] = {"code": exc.code, "detail": exc.message}
+        # **الحقلُ `message` لا `detail`** (عقدُ الأخطاء، 2026-08-18): كان
+        # `detail`، وهو اسمُ FastAPI نفسِه في الـ422 حيث تكون قيمتُه **مصفوفةً
+        # لا نصّاً** — فيقرأ العميلُ كائناً ويعرض `[object Object]`. اسمٌ واحدٌ
+        # لمعنيين هو العطبُ نفسُه لا تسميتُه.
+        body: dict[str, object] = {"code": exc.code, "message": exc.message}
         if exc.extra:
             body |= exc.extra
         headers = {}
         if isinstance(exc, RateLimited) and "retry_after" in exc.extra:
             headers["Retry-After"] = str(exc.extra["retry_after"])
         return JSONResponse(status_code=exc.status_code, content=body, headers=headers)
+
+    @app.exception_handler(RequestValidationError)
+    async def _handle_validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        """٤٢٢ بشكل العقد — **ومعالجٌ دائمٌ لا مؤقت**.
+
+        **ولولاه لا يُشخَّص شيء**: بغيره يخرج جسمُ FastAPI الافتراضي
+        (`{"detail": [ … ]}`) فلا يجد العميلُ نصّاً يعرضه، **ولا يُكتب سطرٌ في
+        السجل أصلاً** — فيقرأ من يُشخِّص «422» بلا حقلٍ ولا سبب. وهو ما وقع
+        فعلاً في `POST /drivers/me/vehicles`.
+
+        **ويُسجَّل الجسمُ الوارد محجوبَ الأسرار** (القسم ١٧.٤): الحقلُ المرفوض
+        وحدَه لا يكفي للتشخيص — «سنةُ الصنع يجب أن تكون رقماً» تحتاج أن نرى
+        **ما أُرسل** لنعرف أهي فارغةٌ أم `null` أم نصٌّ بأرقامٍ عربية، وهي
+        ثلاثةُ عيوبٍ مختلفةٍ في ثلاثة مواضع.
+        """
+        errors = exc.errors()
+        try:
+            raw_body = await request.json()
+        except Exception:  # جسمٌ غيرُ JSON أو مقروءٌ سلفاً — ليس خطأً هنا
+            raw_body = None
+
+        logger.warning(
+            "فشلُ تحقّقٍ في %s %s — %s | الجسم: %s",
+            request.method,
+            request.url.path,
+            [
+                {
+                    "loc": error.get("loc"),
+                    "type": error.get("type"),
+                    "msg": error.get("msg"),
+                }
+                for error in errors
+            ],
+            validation_errors.redact(raw_body),
+        )
+
+        # **أوّلُ خطأٍ هو المعروض، وبقيتُها في `errors`**: الشاشةُ تنقل التركيزَ
+        # إلى أوّل حقلٍ مرفوض (القسم ١٧.٧)، فالأولُ هو ما يقف عنده المستخدم؛
+        # والبقيةُ تُرسل ليُعلَّم كلُّ حقلٍ بلونه في الدفعة نفسِها بدل أن
+        # يُصلَح واحدٌ فيُرفض التالي.
+        first = errors[0] if errors else {}
+        body: dict[str, object] = {
+            "code": "validation_error",
+            "message": validation_errors.message_for(first),
+        }
+        field = validation_errors.field_of(first)
+        if field:
+            body["field"] = field
+        if len(errors) > 1:
+            body["errors"] = [
+                {
+                    "field": validation_errors.field_of(error),
+                    "message": validation_errors.message_for(error),
+                }
+                for error in errors
+            ]
+        return JSONResponse(status_code=422, content=body)
+
+    @app.exception_handler(HTTPException)
+    async def _handle_http_exception(
+        _: Request, exc: HTTPException
+    ) -> JSONResponse:
+        """ما ترفعه FastAPI/Starlette نفسُها — بشكل العقد أيضاً.
+
+        **والتسجيلُ على `starlette.exceptions.HTTPException` لا على وارثتها في
+        FastAPI**، وهذا فرقٌ قِيس لا نُظِّر: «مسارٌ غير موجود» يرفعه راوترُ
+        Starlette بالصنف الأمّ، فمعالجٌ على صنف FastAPI **لا يلتقطه** ويخرج
+        `{"detail": "Not Found"}` بالإنجليزية وبالاسم القديم معاً. جُرِّب فخرج
+        كذلك، ثم صُحِّح.
+
+        **ولا يُعرض `exc.detail` كما هو**: نصُّه إنجليزيٌّ من المكتبة
+        (`Not Found`)، وعرضُه يخالف القسمَ ١٧.٤. والحالةُ وحدَها كافيةٌ لاختيار
+        نصٍّ عربيٍّ صادق، والنصُّ الأصليُّ يذهب إلى السجل.
+        """
+        code, message = _HTTP_STATUS_TEXT.get(
+            exc.status_code, ("http_error", "تعذّر تنفيذ الطلب")
+        )
+        if exc.status_code >= 500:
+            logger.warning("HTTPException %s: %s", exc.status_code, exc.detail)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"code": code, "message": message},
+            headers=getattr(exc, "headers", None),
+        )
+
+
+# **نصوصُ حالاتِ HTTP** — سجلٌّ مركزيٌّ كبقية النصوص، لا نصٌّ في معالج.
+_HTTP_STATUS_TEXT: dict[int, tuple[str, str]] = {
+    401: ("unauthorized", "جلسة غير صالحة أو منتهية"),
+    403: ("forbidden", "لا تملك صلاحية هذا الإجراء"),
+    404: ("not_found", "غير موجود"),
+    405: ("method_not_allowed", "طلبٌ غير مدعوم"),
+    413: ("payload_too_large", "حجم الطلب أكبر من المسموح"),
+    429: ("rate_limited", "طلباتٌ كثيرة — انتظر قليلاً ثم أعد المحاولة"),
+    500: ("server_error", "خطأٌ في الخادم — أعد المحاولة"),
+    502: ("upstream_error", "الخدمة غير متاحة الآن — أعد المحاولة"),
+    503: ("service_unavailable", "الخدمة غير متاحة الآن — أعد المحاولة"),
+    504: ("upstream_timeout", "الخادم لا يستجيب — أعد المحاولة"),
+}
 
 
 class CancellationDebtBlocked(AppError):

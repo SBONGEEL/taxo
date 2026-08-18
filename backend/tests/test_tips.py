@@ -236,7 +236,7 @@ async def test_the_cap_is_enforced(
         headers=ready["rider"]["headers"],
     )
     assert refused.status_code == 422
-    assert "5.000" in refused.json()["detail"]
+    assert "5.000" in refused.json()["message"]
 
 
 # --------------------------------------------------------- من ومتى

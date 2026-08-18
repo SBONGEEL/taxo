@@ -42,3 +42,20 @@ const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 export function arabicDigits(value: string): string {
   return value.replace(/[0-9]/g, (digit) => ARABIC_DIGITS[Number(digit)]);
 }
+
+/** العكسُ: يقبل ما يكتبه المستخدم بأيِّ الخانتين ويعيد `[0-9]` وحدها.
+ *
+ * **وهو حاجةٌ لا زينة**: لوحةُ مفاتيحَ عربيةٌ تُخرج `٢٠٢٠`، و`Number("٢٠٢٠")`
+ * هي `NaN` — فحقلٌ يمرّرها كما هي يُرسل `null` إلى الخلفية، وحقلٌ ينظّفها بـ
+ * `\D` يمحوها كلَّها فيبقى فارغاً وزرُّه معطَّلاً **بلا سببٍ مكتوب**. وكلا
+ * الشكلين وقع في هذا المشروع.
+ *
+ * ويشمل الخانات الفارسية (`۰-۹`) أيضاً: لوحاتُ المفاتيح تُخرجها في بعض
+ * الأجهزة، وهي تُقرأ عربيةً لمن يكتبها.
+ */
+export function toLatinDigits(value: string): string {
+  return value
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[^0-9]/g, "");
+}

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
+import { focusField } from "@/lib/validation";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import { Brand } from "@/components/Brand";
@@ -53,7 +54,13 @@ export function LoginScreen() {
       signIn({ user: response.user, tokens: response.tokens });
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الدخول");
+      if (caught instanceof ApiError) {
+        setError(caught.message);
+        const field = caught.field("field");
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر الدخول — أعد المحاولة");
+      }
     } finally {
       setBusy(false);
     }

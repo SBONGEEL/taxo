@@ -99,6 +99,85 @@ function refreshOnce(): Promise<boolean> {
   return refreshing;
 }
 
+// ------------------------------------------------- أخطاء الشبكة الأربعة
+
+/** **مهلةٌ لكل صنفِ مسار، لا مهلةٌ واحدةٌ من أبطئها.**
+ *
+ * مهلةٌ موحّدةٌ على أبطأ مسار تترك شاشةَ «اقبل الطلب» تدور دقيقةً على شبكةٍ
+ * ساقطة — والكبتنُ ينتظر عدّاداً مدّتُه عشرون ثانية. فالتصنيفُ ليس تنظيماً:
+ * قيمةُ المهلة هي **كم يصبر المستخدمُ قبل أن يُقال له ماذا يفعل**.
+ *
+ * **وكلُّ رقمٍ مشتقٌّ من سقف الخادم لمساره** — لا من تقدير. والقاعدة: مهلةُ
+ * العميل **تتجاوز** سقفَ الخادم؛ وإلا قطعنا طلباً سيُجيب عنه الخادمُ فعلاً،
+ * فيعيد صاحبُه الإرسال على عمليةٍ تمّت.
+ *
+ * | الصنف | ما قِيس (محلياً) | سقفُ الخادم | المهلة |
+ * |---|---|---|---|
+ * | تفاعلٌ لحظيّ (قاعدةُ بيانات فقط) | ٦–٥١ مللي | لا نداءَ خارجيّ | **١٥ث** |
+ * | مسارٌ بنداء مزوّد (تقدير/إعادة توجيه) | ١٩٩–٨٤٩ مللي | ١٠ث (`directions`) | **٢٠ث** |
+ * | إرسالُ رمز | ٠٫٧٤–٣٫٥ث | ٤٥ث (`15 + 30`) | **٥٠ث** |
+ *
+ * والرفعُ **بلا مهلة** — ومعه زرُّ إلغاءٍ ومؤشرُ تقدّم: ملفٌّ كبيرٌ على شبكةٍ
+ * بطيئة يتجاوز أيَّ رقمٍ وهو ناجح، فالمخرجُ بيد صاحبه لا بيد عدّاد.
+ */
+const TIMEOUT_INTERACTIVE_MS = 15_000;
+const TIMEOUT_PROVIDER_MS = 20_000;
+const TIMEOUT_OTP_MS = 50_000;
+
+/** المساراتُ التي تخرج عن صنف التفاعل اللحظي — وما عداها لحظيّ. */
+function timeoutFor(path: string): number {
+  if (path === "/auth/challenge" || path === "/auth/password-reset/challenge") {
+    return TIMEOUT_OTP_MS;
+  }
+  if (path === "/rides/estimate" || path.endsWith("/reroute")) {
+    return TIMEOUT_PROVIDER_MS;
+  }
+  return TIMEOUT_INTERACTIVE_MS;
+}
+
+/** **أربعةُ أخطاءٍ لا «خطأٌ مجهول»** (SPEC ١٧.٦).
+ *
+ * والفرقُ بينها فرقٌ في **ما يفعله القارئ**: «لا اتصال» يجعله يفحص شبكته،
+ * و«الخادم لا يستجيب» يجعله ينتظر — ورسالةٌ واحدةٌ لهما تُرسل نصفَ الناس
+ * يفحصون ما ليس معطوباً.
+ */
+function networkError(error: unknown): ApiError {
+  if ((error as Error)?.name === "TimeoutError" || (error as Error)?.name === "AbortError") {
+    return new ApiError(
+      0,
+      "network_timeout",
+      "الخادم لا يستجيب — انتهت المهلة. أعد المحاولة",
+    );
+  }
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return new ApiError(
+      0,
+      "network_offline",
+      "لا اتصال بالإنترنت — تحقّق من شبكتك ثم أعد المحاولة",
+    );
+  }
+  return new ApiError(
+    0,
+    "network_unreachable",
+    "تعذّر الوصول إلى الخادم — أعد المحاولة بعد قليل",
+  );
+}
+
+/** ردٌّ وصل ولم يُقرأ: حالةٌ رابعةٌ غيرُ الثلاث — الخادمُ حيٌّ وجوابُه ليس ما نتوقع. */
+function unexpectedResponse(): ApiError {
+  return new ApiError(
+    0,
+    "network_unexpected",
+    "ردٌّ غير متوقَّع من الخادم — أعد المحاولة",
+  );
+}
+
+/** يجمع مهلةَ المسار مع إلغاءِ المستدعي إن وُجد. */
+function withTimeout(path: string, signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutFor(path));
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 // ------------------------------------------------------------ الطلب
 
 interface RequestOptions {
@@ -126,12 +205,16 @@ async function toError(response: Response): Promise<ApiError> {
   try {
     const body = await response.json();
     code = body.code ?? code;
-    // **الحقلُ `detail` لا `message`**: هذا ما يكتبه معالجُ الأخطاء في
-    // `core/exceptions.py` (`{"code": …, "detail": …}`). وقراءةُ `message`
-    // وحدها كانت تُسقط كلَّ نصٍّ عربيٍّ كتبته الخلفية فتحلّ محلَّه رسالةٌ عامة
-    // — أي أن قاعدةَ «لا تخترع الواجهةُ نصّاً لخطأٍ سمّته الخلفية» كانت
-    // مكتوبةً ولا تعمل. و`message` تبقى مقروءةً احتياطاً لا أكثر
-    message = body.detail ?? body.message ?? message;
+    // **`message` وحدَه** — عقدُ الأخطاء (SPEC القسم ١٥): كلُّ خطأٍ من الخلفية
+    // يحمل `code` و`message` عربيةً جاهزةً للعرض، و`field` حين يخصّ حقلاً.
+    //
+    // وكان الاسمُ `detail`، فصادم اسمَ FastAPI نفسِه في الـ422 حيث تكون قيمتُه
+    // **مصفوفةَ أخطاءٍ** لا نصّاً — فيُمرَّر كائنٌ إلى `Error` ويقرأ المستخدمُ
+    // `[object Object]`. اسمٌ واحدٌ لمعنيين هو العطبُ نفسُه، لا تسميتُه.
+    //
+    // **ولا احتياطَ على `detail`**: احتياطٌ كهذا يُبقي الشكلَ القديم يعمل، فلا
+    // يُكتشف مسارٌ نُسي — وقاعدةُ «لا شكلَ ثانٍ ولا استثناء» تُحرَس بالكسر.
+    message = body.message ?? message;
     return new ApiError(response.status, code, message, body.retry_after, body);
   } catch {
     return new ApiError(response.status, code, message);
@@ -151,11 +234,14 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
       method: options.method ?? "GET",
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: options.signal,
+      signal: withTimeout(path, options.signal),
     });
   } catch (error) {
-    if ((error as Error).name === "AbortError") throw error;
-    throw new ApiError(0, "network_error", "لا اتصال بالإنترنت — حاول مجدداً");
+    // إلغاءٌ من المستدعي (تبديلُ شاشة) ليس خطأً يُعرض
+    if ((error as Error).name === "AbortError" && options.signal?.aborted) {
+      throw error;
+    }
+    throw networkError(error);
   }
 
   if (response.status === 401 && retry && !options.anonymous) {
@@ -170,7 +256,11 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
   // فتأخذ تجديدَ التوكن ومعالجةَ الخطأ وعنوانَ الخادم من مكانٍ واحد. ومسارٌ
   // ثانٍ لها كان سيعيد كتابة الأربعة، ويفترق عنها أوّلَ تعديل
   if (options.raw) return (await response.blob()) as T;
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw unexpectedResponse();
+  }
 }
 
 export function request<T>(path: string, options: RequestOptions = {}): Promise<T> {

@@ -57,7 +57,7 @@ async def test_the_cap_is_enforced(client: AsyncClient, jordan_settings: None) -
         "/me/places", json=HOME | {"label": "زائد"}, headers=rider["headers"]
     )
     assert extra.status_code == 409, extra.text
-    assert str(MAX_SAVED_PLACES) in extra.json()["detail"]
+    assert str(MAX_SAVED_PLACES) in extra.json()["message"]
 
 
 async def test_another_rider_cannot_read_edit_or_delete_it(

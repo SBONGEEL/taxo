@@ -392,7 +392,7 @@ async def test_a_driver_is_not_approved_before_his_documents_are(
         f"/admin/drivers/{driver.id}/approve", headers=admin_headers
     )
     assert partial.status_code == 409
-    assert "رخصة المركبة والتأمين" in partial.json()["detail"]
+    assert "رخصة المركبة والتأمين" in partial.json()["message"]
 
     # ومستندٌ مرفوض لا يُحسب مقبولاً
     rejected = await upload_document(
@@ -572,7 +572,7 @@ async def test_replacement_waits_for_the_ride_to_end(
         headers=driver["headers"],
     )
     assert refused.status_code == 409
-    assert "رحلتك الجارية" in refused.json()["detail"]
+    assert "رحلتك الجارية" in refused.json()["message"]
 
     # ...والمستند الاختياري يمر: لا يمسّ الاعتماد فلا يمسّ الرحلة
     allowed = await client.put(

@@ -4,6 +4,7 @@
  * يستدعيها أحد تُصدّق نفسها ثم تُكتشف خاطئةً حين تُستعمل أول مرة.
  */
 
+import type { UploadOptions } from "@/api/client";
 import { api, upload } from "@/api/client";
 import type {
   MyProgress,
@@ -340,8 +341,11 @@ export const listDocuments = () =>
   api.get<DriverDocuments>("/drivers/me/documents");
 
 /** رفعُ مستند — `multipart` لا JSON، فيمر خارج `api.*` بعميلٍ يعرف الملفات. */
-export const uploadDocument = (docType: DocumentType, file: File) =>
-  upload<DocumentUpload>(`/drivers/me/documents/${docType}`, file);
+export const uploadDocument = (
+  docType: DocumentType,
+  file: File,
+  options?: UploadOptions,
+) => upload<DocumentUpload>(`/drivers/me/documents/${docType}`, file, options);
 
 // ------------------------------------------------- إحالةُ السائقات (12-ح)
 

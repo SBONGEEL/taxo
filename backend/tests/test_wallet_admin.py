@@ -367,4 +367,4 @@ async def test_transfer_blocked_while_limits_are_unset(
     )
     assert response.status_code == 409
     assert response.json()["code"] == "wallet_limit_exceeded"
-    assert "غير مضبوطة" in response.json()["detail"]
+    assert "غير مضبوطة" in response.json()["message"]

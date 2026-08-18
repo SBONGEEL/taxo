@@ -28,7 +28,26 @@ import { Field } from "@/components/ui/Field";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { confirmError, passwordError, passwordsReady } from "@/lib/password";
+import { confirmError, passwordError, passwordRule, passwordsReady } from "@/lib/password";
+import { FieldConditions } from "@/components/FieldConditions";
+
+/** يوجّه خطأَ حقلٍ من الخلفية إلى حقله في الشاشة (SPEC ١٧.٧).
+ *
+ * **والخريطةُ لأن اسمَ الحقل في الشاشة ليس دائماً اسمَه في المخطط**: حقلُ
+ * كلمة المرور هنا `new-password` (لدلالة الإكمال التلقائي)، والخلفيةُ تسمّيه
+ * `password`. وبغير التوجيه يُعلَّم لا شيء وينتقل التركيزُ إلى لا مكان.
+ */
+const FIELD_INPUT: Record<string, string> = {
+  password: "new-password",
+  name: "name",
+  phone: "phone",
+};
+
+function focusField(field: string): void {
+  document
+    .querySelector<HTMLInputElement>(`[name="${FIELD_INPUT[field] ?? field}"]`)
+    ?.focus();
+}
 
 export function RegisterScreen() {
   const navigate = useNavigate();
@@ -101,9 +120,14 @@ export function RegisterScreen() {
       );
       navigate("/register/documents", { replace: true });
     } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إنشاء الحساب",
-      );
+      if (caught instanceof ApiError) {
+        const field = caught.field("field");
+        setError(caught.message);
+        // الحقلُ المرفوض يُعلَّم ويُنتقل إليه — لا شريطٌ وحدَه يترك صاحبَه يبحث
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر الاتصال بالخادم — أعد المحاولة");
+      }
       // إثباتٌ استُهلك لا يُعاد استعماله
       if (caught instanceof ApiError && caught.status === 401)
         setStep("details");
@@ -172,6 +196,7 @@ export function RegisterScreen() {
           onChange={(event) => setPassword(event.target.value)}
           error={passwordError(password) ?? undefined}
         />
+          <FieldConditions rule={passwordRule()} value={password} />
         <Field
           label="تأكيد كلمة المرور"
           name="confirm-password"

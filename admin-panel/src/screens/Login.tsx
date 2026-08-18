@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useConfig } from "@/lib/config";
+import { focusField } from "@/lib/validation";
 import { useSession } from "@/lib/session";
 
 /** الرقم الوطني كما يُكتب أمام بادئةٍ ثابتة — بلا صفرٍ بادئ. */
@@ -84,7 +85,13 @@ export function LoginScreen() {
       signIn({ user: response.user, tokens: response.tokens });
       done();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الدخول");
+      if (caught instanceof ApiError) {
+        setError(caught.message);
+        const field = caught.field("field");
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر الدخول — أعد المحاولة");
+      }
     } finally {
       setBusy(false);
     }

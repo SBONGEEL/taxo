@@ -220,7 +220,7 @@ async def test_disabling_the_flag_needs_a_written_reason(
         headers=admin_headers,
     )
     assert response.status_code == 422
-    assert "سبب" in response.json()["detail"]
+    assert "سبب" in response.json()["message"]
 
 
 async def test_the_reason_is_recorded_in_the_audit_log(

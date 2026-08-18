@@ -24,9 +24,11 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
+import { focusField } from "@/lib/validation";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { MIN_PASSWORD, passwordError } from "@/lib/password";
+import { passwordError, passwordRule } from "@/lib/password";
+import { FieldConditions } from "@/components/FieldConditions";
 
 export function ForgotPasswordScreen() {
   const { config } = useConfig();
@@ -52,7 +54,12 @@ export function ForgotPasswordScreen() {
   const [busy, setBusy] = useState(false);
 
   const ready = useMemo(
-    () => looksComplete(phone, nationalLength) && password.length >= MIN_PASSWORD,
+    // **الشرطُ من القاعدة المنشورة لا من رقمٍ منسوخ** (SPEC ١٧.٣): وحيث لا
+    // قاعدةَ وصلت بعد، تكفي كلمةٌ غيرُ فارغة وتفصل الخلفيةُ.
+    () =>
+      looksComplete(phone, nationalLength) &&
+      password.length > 0 &&
+      passwordError(password) === null,
     [phone, country, password],
   );
 
@@ -70,9 +77,13 @@ export function ForgotPasswordScreen() {
       );
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تغيير كلمة المرور",
-      );
+      if (caught instanceof ApiError) {
+        setError(caught.message);
+        const field = caught.field("field");
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر تغيير كلمة المرور — أعد المحاولة");
+      }
       setStep("details");
     } finally {
       setBusy(false);
@@ -116,6 +127,7 @@ export function ForgotPasswordScreen() {
               error={passwordError(password) ?? undefined}
               hint="ثمانية أحرف على الأقل — وستُغلق كل الجلسات المفتوحة على حسابك"
             />
+              <FieldConditions rule={passwordRule()} value={password} />
 
             <ErrorNote message={error} />
 

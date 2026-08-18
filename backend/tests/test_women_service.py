@@ -382,7 +382,7 @@ async def test_a_stamp_that_contradicts_her_declaration_needs_a_reason(
         json={"gender": "male"},
     )
     assert refused.status_code == 422, refused.text
-    assert "سبب" in refused.json()["detail"]
+    assert "سبب" in refused.json()["message"]
 
     # والإقرارُ لم يُلمس بالمحاولة الفاشلة
     async with session_factory() as session:

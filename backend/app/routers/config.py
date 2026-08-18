@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.core import validation_rules
 from app.core.config import settings
 from app.core.currency import currency_for_country
 from app.core.phone import dial_code_for, national_length_for
@@ -73,6 +74,8 @@ async def get_public_config(
     return ConfigOut(
         app=settings.app_name,
         default_country_code=settings.default_country_code,
+        # مُشتقّةٌ من المخططات عند كل نداء — لا جدولَ حدودٍ يُكتب بجانبها ويبرد
+        validation=validation_rules.published_rules(),
         auth=await _auth_method(session, country_code or settings.default_country_code),
         countries=[
             await _country_config(session, country)

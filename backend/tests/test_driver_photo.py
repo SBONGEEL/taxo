@@ -91,7 +91,7 @@ async def test_a_driver_is_not_approved_without_a_profile_photo(
         f"/admin/drivers/{driver.id}/approve", headers=admin_headers
     )
     assert refused.status_code == 409
-    assert "الصورة الشخصية" in refused.json()["detail"]
+    assert "الصورة الشخصية" in refused.json()["message"]
 
     photo = await upload_document(client, headers, doc_type="profile_photo")
     await review_document(
@@ -172,7 +172,7 @@ async def test_a_declaration_alone_never_lifts_the_requirement(
         f"/admin/drivers/{driver.id}/approve", headers=admin_headers
     )
     assert refused.status_code == 409
-    assert "الصورة الشخصية" in refused.json()["detail"]
+    assert "الصورة الشخصية" in refused.json()["message"]
 
 
 # ------------------------------------------------------------ المتراكمون

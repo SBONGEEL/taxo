@@ -102,6 +102,85 @@ function refreshOnce(): Promise<boolean> {
   return refreshing;
 }
 
+// ------------------------------------------------- أخطاء الشبكة الأربعة
+
+/** **مهلةٌ لكل صنفِ مسار، لا مهلةٌ واحدةٌ من أبطئها.**
+ *
+ * مهلةٌ موحّدةٌ على أبطأ مسار تترك شاشةَ «اقبل الطلب» تدور دقيقةً على شبكةٍ
+ * ساقطة — والكبتنُ ينتظر عدّاداً مدّتُه عشرون ثانية. فالتصنيفُ ليس تنظيماً:
+ * قيمةُ المهلة هي **كم يصبر المستخدمُ قبل أن يُقال له ماذا يفعل**.
+ *
+ * **وكلُّ رقمٍ مشتقٌّ من سقف الخادم لمساره** — لا من تقدير. والقاعدة: مهلةُ
+ * العميل **تتجاوز** سقفَ الخادم؛ وإلا قطعنا طلباً سيُجيب عنه الخادمُ فعلاً،
+ * فيعيد صاحبُه الإرسال على عمليةٍ تمّت.
+ *
+ * | الصنف | ما قِيس (محلياً) | سقفُ الخادم | المهلة |
+ * |---|---|---|---|
+ * | تفاعلٌ لحظيّ (قاعدةُ بيانات فقط) | ٦–٥١ مللي | لا نداءَ خارجيّ | **١٥ث** |
+ * | مسارٌ بنداء مزوّد (تقدير/إعادة توجيه) | ١٩٩–٨٤٩ مللي | ١٠ث (`directions`) | **٢٠ث** |
+ * | إرسالُ رمز | ٠٫٧٤–٣٫٥ث | ٤٥ث (`15 + 30`) | **٥٠ث** |
+ *
+ * والرفعُ **بلا مهلة** — ومعه زرُّ إلغاءٍ ومؤشرُ تقدّم: ملفٌّ كبيرٌ على شبكةٍ
+ * بطيئة يتجاوز أيَّ رقمٍ وهو ناجح، فالمخرجُ بيد صاحبه لا بيد عدّاد.
+ */
+const TIMEOUT_INTERACTIVE_MS = 15_000;
+const TIMEOUT_PROVIDER_MS = 20_000;
+const TIMEOUT_OTP_MS = 50_000;
+
+/** المساراتُ التي تخرج عن صنف التفاعل اللحظي — وما عداها لحظيّ. */
+function timeoutFor(path: string): number {
+  if (path === "/auth/challenge" || path === "/auth/password-reset/challenge") {
+    return TIMEOUT_OTP_MS;
+  }
+  if (path === "/rides/estimate" || path.endsWith("/reroute")) {
+    return TIMEOUT_PROVIDER_MS;
+  }
+  return TIMEOUT_INTERACTIVE_MS;
+}
+
+/** **أربعةُ أخطاءٍ لا «خطأٌ مجهول»** (SPEC ١٧.٦).
+ *
+ * والفرقُ بينها فرقٌ في **ما يفعله القارئ**: «لا اتصال» يجعله يفحص شبكته،
+ * و«الخادم لا يستجيب» يجعله ينتظر — ورسالةٌ واحدةٌ لهما تُرسل نصفَ الناس
+ * يفحصون ما ليس معطوباً.
+ */
+function networkError(error: unknown): ApiError {
+  if ((error as Error)?.name === "TimeoutError" || (error as Error)?.name === "AbortError") {
+    return new ApiError(
+      0,
+      "network_timeout",
+      "الخادم لا يستجيب — انتهت المهلة. أعد المحاولة",
+    );
+  }
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return new ApiError(
+      0,
+      "network_offline",
+      "لا اتصال بالإنترنت — تحقّق من شبكتك ثم أعد المحاولة",
+    );
+  }
+  return new ApiError(
+    0,
+    "network_unreachable",
+    "تعذّر الوصول إلى الخادم — أعد المحاولة بعد قليل",
+  );
+}
+
+/** ردٌّ وصل ولم يُقرأ: حالةٌ رابعةٌ غيرُ الثلاث — الخادمُ حيٌّ وجوابُه ليس ما نتوقع. */
+function unexpectedResponse(): ApiError {
+  return new ApiError(
+    0,
+    "network_unexpected",
+    "ردٌّ غير متوقَّع من الخادم — أعد المحاولة",
+  );
+}
+
+/** يجمع مهلةَ المسار مع إلغاءِ المستدعي إن وُجد. */
+function withTimeout(path: string, signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutFor(path));
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 // ------------------------------------------------------------ الطلب
 
 interface RequestOptions {
@@ -128,12 +207,16 @@ async function toError(response: Response): Promise<ApiError> {
   try {
     const body = await response.json();
     code = body.code ?? code;
-    // **الحقلُ `detail` لا `message`**: هذا ما يكتبه معالجُ الأخطاء في
-    // `core/exceptions.py` (`{"code": …, "detail": …}`). وقراءةُ `message`
-    // وحدها كانت تُسقط كلَّ نصٍّ عربيٍّ كتبته الخلفية فتحلّ محلَّه رسالةٌ عامة
-    // — أي أن قاعدةَ «لا تخترع الواجهةُ نصّاً لخطأٍ سمّته الخلفية» كانت
-    // مكتوبةً ولا تعمل. و`message` تبقى مقروءةً احتياطاً لا أكثر
-    message = body.detail ?? body.message ?? message;
+    // **`message` وحدَه** — عقدُ الأخطاء (SPEC القسم ١٥): كلُّ خطأٍ من الخلفية
+    // يحمل `code` و`message` عربيةً جاهزةً للعرض، و`field` حين يخصّ حقلاً.
+    //
+    // وكان الاسمُ `detail`، فصادم اسمَ FastAPI نفسِه في الـ422 حيث تكون قيمتُه
+    // **مصفوفةَ أخطاءٍ** لا نصّاً — فيُمرَّر كائنٌ إلى `Error` ويقرأ المستخدمُ
+    // `[object Object]`. اسمٌ واحدٌ لمعنيين هو العطبُ نفسُه، لا تسميتُه.
+    //
+    // **ولا احتياطَ على `detail`**: احتياطٌ كهذا يُبقي الشكلَ القديم يعمل، فلا
+    // يُكتشف مسارٌ نُسي — وقاعدةُ «لا شكلَ ثانٍ ولا استثناء» تُحرَس بالكسر.
+    message = body.message ?? message;
     return new ApiError(response.status, code, message, body.retry_after, body);
   } catch {
     return new ApiError(response.status, code, message);
@@ -158,11 +241,14 @@ async function send<T>(
       headers,
       body:
         options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: options.signal,
+      signal: withTimeout(path, options.signal),
     });
   } catch (error) {
-    if ((error as Error).name === "AbortError") throw error;
-    throw new ApiError(0, "network_error", "لا اتصال بالإنترنت — حاول مجدداً");
+    // إلغاءٌ من المستدعي (تبديلُ شاشة) ليس خطأً يُعرض
+    if ((error as Error).name === "AbortError" && options.signal?.aborted) {
+      throw error;
+    }
+    throw networkError(error);
   }
 
   if (response.status === 401 && retry && !options.anonymous) {
@@ -173,7 +259,11 @@ async function send<T>(
 
   if (!response.ok) throw await toError(response);
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw unexpectedResponse();
+  }
 }
 
 export function request<T>(
@@ -190,24 +280,136 @@ export function request<T>(
  * يجوز أن نكتبه نحن. ولا يشارك التجديد التلقائي لأن الملف لا يُقرأ مرتين:
  * توكنٌ منتهٍ هنا يعني إعادةَ الرفع لا إعادةَ الطلب صامتةً.
  */
-export async function upload<T>(path: string, file: File): Promise<T> {
+export interface UploadOptions {
+  /** نسبةُ ما رُفع (٠–١٠٠) — تُستدعى مراراً أثناء الرفع. */
+  onProgress?: (percent: number) => void;
+  /** إلغاءٌ بيد المستخدم. */
+  signal?: AbortSignal;
+}
+
+export async function upload<T>(
+  path: string,
+  file: File,
+  options: UploadOptions = {},
+): Promise<T> {
   const form = new FormData();
   form.append("file", file);
-
   const access = tokens.access();
-  let response: Response;
-  try {
-    response = await fetch(`${API_URL}${path}`, {
-      method: "PUT",
-      headers: access ? { Authorization: `Bearer ${access}` } : {},
-      body: form,
-    });
-  } catch {
-    throw new ApiError(0, "network_error", "لا اتصال بالإنترنت — حاول مجدداً");
-  }
 
-  if (!response.ok) throw await toError(response);
-  return (await response.json()) as T;
+  // **`XMLHttpRequest` لا `fetch`، ولسببٍ واحدٍ لا بديلَ عنه**: `fetch` **لا
+  // يبلّغ عن تقدّم الرفع** إطلاقاً (لا حدثَ ولا تيّار)، فمن يرفع صورةً على
+  // شبكةٍ بطيئة يرى شاشةً واقفةً لا يدري أتتقدّم أم ماتت. و`XHR` وحدَه يملك
+  // `upload.onprogress`.
+  //
+  // **ولا مهلةَ عليه** — ومعه مخرجان بدلَها: نسبةٌ تُطمئن، وزرُّ إلغاءٍ يقطع.
+  // ملفٌّ كبيرٌ على شبكةٍ بطيئة يتجاوز أيَّ مهلةٍ معقولة **وهو ناجح**، وقطعُه
+  // بعدّادٍ يعيد الرفعَ من أوّله بلا سبب. **وشاشةٌ بلا مخرجٍ هي العطبُ نفسُه
+  // الذي يُصلحه عقدُ الأخطاء**، فالمخرجُ بيد صاحبها لا بيد عدّاد.
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", `${API_URL}${path}`);
+    if (access) request.setRequestHeader("Authorization", `Bearer ${access}`);
+
+    // **كاشفُ الركود** — والإلغاءُ وحدَه لا يغني عنه: الإلغاءُ يعالج من قرّر
+    // التوقّف، والركودُ يعالج **وصلةً ماتت صامتة**. مقبسٌ يسقط أثناء الرفع لا
+    // يُطلق `onerror` بالضرورة: الـTCP يعيد الإرسالَ في صمتٍ دقائقَ قبل أن
+    // يستسلم، فيقف الشريطُ عند ٤٧٪ بلا حدثٍ ولا رسالة — وهي الشاشةُ بلا مخرجٍ
+    // التي يوجد هذا العقدُ لإزالتها.
+    //
+    // **والمدّةُ مقيسةٌ لا مقدَّرة** (2026-08-18، Edge حقيقي عبر CDP على نفس
+    // المسار): أكبرُ فجوةٍ بين حدثين كانت **١٢٢ مللي** على localhost،
+    // و**٤٣٣ مللي** على ٥٠ك.ب/ث، و**١٤٤٠ مللي** على ١٢ك.ب/ث — أي على وصلةٍ
+    // بالكاد صالحةٍ للاستعمال (٥٠٦ك.ب في ٤٣ ثانية). فعشرون ثانيةً نحوُ
+    // **أربعةَ عشرَ ضعفَ** أسوأِ فجوةٍ مقيسة: لا تشتعل على رفعٍ بطيءٍ حيّ،
+    // وتسبق استسلامَ الـTCP (دقائق) بكثير.
+    const STALL_MS = 20_000;
+    let stalled = false;
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const armStall = () => {
+      clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        stalled = true;
+        request.abort();
+      }, STALL_MS);
+    };
+
+    request.upload.onprogress = (event) => {
+      armStall();
+      if (!event.lengthComputable) return;
+      options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+
+    const abort = () => request.abort();
+    options.signal?.addEventListener("abort", abort, { once: true });
+    const done = () => {
+      clearTimeout(stallTimer);
+      options.signal?.removeEventListener("abort", abort);
+    };
+
+    // **الإلغاءُ ليس خطأً يُعرض**: صاحبُه يعرف أنه ألغى، ورسالةٌ حمراءُ بعده
+    // تجعله يظنّ أن شيئاً انكسر. فيُرمى `AbortError` كما يرميه `fetch`،
+    // فتعرفه الشاشاتُ بالاسم نفسِه ولا تعرض له شيئاً.
+    request.onabort = () => {
+      done();
+      // **يُفرَّق القطعان**: قطعُ الركود عطبٌ يُعرض ومعه إعادةُ المحاولة، وقطعُ
+      // المستخدم قرارُه هو فلا يُعرض له شيء. وهما يمرّان بنفس الحدث.
+      if (stalled) {
+        reject(
+          new ApiError(
+            0,
+            "network_timeout",
+            "توقّف الرفع — انقطع الاتصال. أعد المحاولة",
+          ),
+        );
+        return;
+      }
+      reject(new DOMException("أُلغي الرفع", "AbortError"));
+    };
+    request.onerror = () => {
+      done();
+      reject(networkError(new Error("upload failed")));
+    };
+    // **`ontimeout` صريحةٌ ولو لم نضبط `xhr.timeout`**: قيمتُها الافتراضية صفرٌ
+    // (بلا مهلة)، لكنّ معالجاً غائباً يعني أن ضبطَ المهلة يوماً يُسقط الوعدَ
+    // بلا رفضٍ ولا حلّ — فيبقى المستخدمُ أمام شريطٍ لا ينتهي.
+    request.ontimeout = () => {
+      done();
+      reject(
+        new ApiError(0, "network_timeout", "انتهت مهلة الرفع — أعد المحاولة"),
+      );
+    };
+    request.onload = () => {
+      done();
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          resolve(JSON.parse(request.responseText) as T);
+        } catch {
+          reject(unexpectedResponse());
+        }
+        return;
+      }
+      // نفسُ عقد الأخطاء: `code` و`message` عربيةً — لا نصَّ خامٍ من الخادم
+      let body: Record<string, unknown> = {};
+      try {
+        body = JSON.parse(request.responseText) as Record<string, unknown>;
+      } catch {
+        /* ردٌّ غيرُ مقروء — تُستعمل الحالةُ وحدَها */
+      }
+      reject(
+        new ApiError(
+          request.status,
+          String(body.code ?? "http_error"),
+          String(body.message ?? "تعذّر رفع الملف — أعد المحاولة"),
+          undefined,
+          body,
+        ),
+      );
+    };
+
+    armStall();
+    request.send(form);
+  });
 }
 
 export const api = {

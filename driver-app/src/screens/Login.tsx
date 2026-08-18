@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
+import { focusField } from "@/lib/validation";
 import { looksComplete, toE164 } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 
@@ -58,9 +59,13 @@ export function LoginScreen() {
       }
       signIn({ user: response.user, tokens: response.tokens });
     } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر تسجيل الدخول",
-      );
+      if (caught instanceof ApiError) {
+        setError(caught.message);
+        const field = caught.field("field");
+        if (field) focusField(field);
+      } else {
+        setError("تعذّر تسجيل الدخول — أعد المحاولة");
+      }
     } finally {
       setBusy(false);
     }

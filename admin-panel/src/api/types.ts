@@ -97,12 +97,29 @@ export interface CountryConfig {
   otp_length: number | null;
 }
 
+/** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
+export interface FieldRule {
+  type: "text" | "number" | "choice" | "boolean";
+  required: boolean;
+  label?: string;
+  min_length?: number;
+  max_length?: number;
+  min?: number;
+  max?: number;
+  choices?: string[];
+  /** الشروطُ قائمةً تُعلَّم لحظةَ الكتابة — نصُّها من الخلفية لا يُصاغ هنا. */
+  conditions?: { key: string; label: string }[];
+  messages: Record<string, string>;
+}
+
 export interface AppConfig {
   app: string;
   auth: { verification: string; otp_length: number | null };
   countries: CountryConfig[];
   providers: Record<string, Record<string, string | undefined>>;
   default_country_code: CountryCode;
+  /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣) — لا نسخةَ منها هنا. */
+  validation: Record<string, Record<string, FieldRule>>;
 }
 
 // ------------------------------------------------------------ الحملات

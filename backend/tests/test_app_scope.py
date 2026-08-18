@@ -61,7 +61,7 @@ async def test_every_app_and_self_signup_role_pair_is_decided(
         assert status == 403, body
         assert body["code"] == "wrong_app_for_role"
         # النصُّ يقول **أين يذهب**: «ممنوع» وحدَها تجعله يسجّل حساباً ثانياً
-        assert "ادخل من" in body["detail"]
+        assert "ادخل من" in body["message"]
 
 
 @pytest.mark.parametrize("app", PWA_APPS)

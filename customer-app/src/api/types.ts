@@ -156,6 +156,22 @@ export interface CountryConfig {
   otp_length: number | null;
 }
 
+/** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
+export interface FieldRule {
+  type: "text" | "number" | "choice" | "boolean";
+  required: boolean;
+  label?: string;
+  min_length?: number;
+  max_length?: number;
+  min?: number;
+  max?: number;
+  choices?: string[];
+  /** الشروطُ قائمةً تُعلَّم لحظةَ الكتابة — نصُّها من الخلفية لا يُصاغ هنا. */
+  conditions?: { key: string; label: string }[];
+  /** نصُّ كل شرطٍ بالعربية — مفاتيحُها: required · type · min_length · max_length · min · max · choices */
+  messages: Record<string, string>;
+}
+
 export interface AppConfig {
   app: string;
   auth: AuthMethod;
@@ -182,6 +198,13 @@ export interface AppConfig {
   };
   /** الدولة التي تفترضها شاشاتُ ما قبل الدخول (لا منتقيَ دولٍ فيها). */
   default_country_code: CountryCode;
+  /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣).
+   *
+   * **ولا نسخةَ منها مكتوبةً هنا**: حدٌّ يُكتب في التطبيق يفترق عن حدِّ المخطط
+   * أوّلَ تعديل، فيمنع التطبيقُ ما تقبله الخلفيةُ أو يقبل ما ترفضه. ونصوصُها
+   * من السجل المركزي نفسِه، فلا تختلف رسالةُ الشاشة عن رسالة الخادم.
+   */
+  validation: Record<string, Record<string, FieldRule>>;
 }
 
 export interface Coordinates {

@@ -128,7 +128,7 @@ async def test_a_booking_too_soon_is_refused_with_a_reason(
     rider = await rider_session(client)
     status, body = await _book(client, rider["headers"], minutes=5)
     assert status == 422, body
-    assert "دقيقة" in body["detail"]
+    assert "دقيقة" in body["message"]
 
 
 async def test_a_booking_beyond_the_horizon_is_refused(

@@ -52,3 +52,4 @@ tools/fcm-token/config.local.js
 google-services.json
 google-services*.json
 backend/.suite.out
+backend/.contract.out

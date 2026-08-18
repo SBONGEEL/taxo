@@ -30,7 +30,8 @@ import { Field } from "@/components/ui/Field";
 import { useConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { cn, toLatinDigits } from "@/lib/utils";
+import { checkForm, rulesFor } from "@/lib/validation";
 
 const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
@@ -117,7 +118,28 @@ export function RegisterDocumentsScreen() {
   // المرفوع — والناقصُ لا يفرّق بينهما
   const [requiredAll, setRequiredAll] = useState<DocumentType[]>([]);
   const [uploading, setUploading] = useState<DocumentType | null>(null);
+  // **نسبةُ الرفع وبابُ إلغائه** — ورفعٌ بلا مهلةٍ يلزمه الاثنان معاً: النسبةُ
+  // تقول «يتقدّم»، والزرُّ يقول «تستطيع الخروج». وشاشةٌ بلا مخرجٍ هي العطبُ
+  // الذي يصلحه هذا العقد.
+  const [progress, setProgress] = useState(0);
+  const uploadAbort = useRef<AbortController | null>(null);
+  // **آخرُ محاولةٍ فاشلة تبقى محفوظةً** ليكون للخطأ زرٌّ لا نصٌّ وحدَه: من
+  // انقطع رفعُه لا يجد `input[type=file]` مفتوحاً، وإعادةُ اختيار الملف من
+  // معرض الصور خطواتٌ يفقد بينها الغرض. **ورفضٌ بلا مخرجٍ ليس رفضاً.**
+  const [retry, setRetry] = useState<{ doc: DocumentType; file: File } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
+  // **خطأُ حقلٍ بعينه كما سمّته الخلفية** (عقدُ الأخطاء، SPEC ١٧.٧): الجسمُ
+  // يحمل `field` و`message`، فيُعلَّم الحقلُ ويُنقل إليه التركيز — بدل شريطٍ
+  // أعلى النموذج يقول «تعذّر الإرسال» ويترك صاحبَه يبحث عن الحقل بين ستة.
+  //
+  // **والنصُّ من الخلفية لا من هنا**: قاعدةُ «لا تخترع الواجهةُ نصّاً لخطأٍ
+  // سمّته الخلفية» — ونصٌّ نكتبه هنا يخالف نصَّها أوّلَ تعديلٍ في المخطط.
+  const [fieldError, setFieldError] = useState<{
+    field: string;
+    message: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const pickers = useRef<
     Partial<Record<DocumentType, HTMLInputElement | null>>
@@ -140,15 +162,27 @@ export function RegisterDocumentsScreen() {
   async function pick(docType: DocumentType, file: File | undefined) {
     if (!file) return;
     setUploading(docType);
+    setProgress(0);
     setError(null);
+    setRetry(null);
+    const controller = new AbortController();
+    uploadAbort.current = controller;
     try {
-      await uploadDocument(docType, file);
+      await uploadDocument(docType, file, {
+        onProgress: setProgress,
+        signal: controller.signal,
+      });
       setUploaded((current) => new Set(current).add(docType));
       setRequired((current) => current.filter((item) => item !== docType));
     } catch (caught) {
+      // من ألغى يعرف أنه ألغى — ورسالةٌ حمراءُ بعده تجعله يظنّ شيئاً انكسر
+      if ((caught as Error)?.name === "AbortError") return;
       setError(caught instanceof ApiError ? caught.message : "تعذّر رفع الملف");
+      setRetry({ doc: docType, file });
     } finally {
+      uploadAbort.current = null;
       setUploading(null);
+      setProgress(0);
     }
   }
 
@@ -159,8 +193,28 @@ export function RegisterDocumentsScreen() {
     make.trim() && model.trim() && year.trim() && color.trim() && plate.trim();
 
   async function submit() {
+    // **تحقّقٌ فوريٌّ بالقواعد المنشورة قبل رحلة الشبكة** (SPEC ١٧.٣).
+    // ونصُّه نصُّ الخلفية بعينه، فلا يقرأ المستخدمُ رسالتين لشرطٍ واحد.
+    const rejected = checkForm(rulesFor(config?.validation, "vehicle_create"), {
+      make,
+      model,
+      year,
+      color,
+      plate_number: plate,
+      category,
+    });
+    if (rejected) {
+      setFieldError(rejected);
+      setError(null);
+      document
+        .querySelector<HTMLInputElement>(`[name="${rejected.field}"]`)
+        ?.focus();
+      return;
+    }
+
     setBusy(true);
     setError(null);
+    setFieldError(null);
     try {
       await addVehicle({
         make: make.trim(),
@@ -174,13 +228,32 @@ export function RegisterDocumentsScreen() {
       await refresh();
       navigate("/", { replace: true });
     } catch (caught) {
-      setError(
-        caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب",
-      );
+      if (caught instanceof ApiError) {
+        const field = caught.field("field");
+        if (field) {
+          setFieldError({ field, message: caught.message });
+          // التركيزُ إلى أوّل حقلٍ مرفوض — والشريطُ يبقى فارغاً كي لا يُقرأ
+          // الخطأُ مرتين في موضعين
+          setError(null);
+          document
+            .querySelector<HTMLInputElement>(`[name="${field}"]`)
+            ?.focus();
+        } else {
+          setFieldError(null);
+          setError(caught.message);
+        }
+      } else {
+        setFieldError(null);
+        setError("تعذّر الاتصال بالخادم — تحقّق من شبكتك ثم أعد المحاولة");
+      }
     } finally {
       setBusy(false);
     }
   }
+
+  /** رسالةُ الحقل إن كان هو المرفوض — تُمسح بأوّل تعديلٍ عليه. */
+  const errorFor = (field: string) =>
+    fieldError?.field === field ? fieldError.message : null;
 
   return (
     <AuthScreen className="px-26">
@@ -195,12 +268,14 @@ export function RegisterDocumentsScreen() {
         <div className="mb-8 flex gap-8">
           <Field
             name="make"
+            error={errorFor("make")}
             placeholder="الشركة"
             value={make}
             onChange={(event) => setMake(event.target.value)}
           />
           <Field
             name="model"
+            error={errorFor("model")}
             placeholder="الطراز"
             value={model}
             onChange={(event) => setModel(event.target.value)}
@@ -209,20 +284,26 @@ export function RegisterDocumentsScreen() {
         <div className="mb-8 flex gap-8">
           <Field
             name="year"
+            error={errorFor("year")}
             inputMode="numeric"
             placeholder="سنة الصنع"
             value={year}
-            onChange={(event) => setYear(event.target.value.replace(/\D/g, ""))}
+            // **يقبل ٠١٢٣ كما يقبل 0123.** كان `\D` يمحو الأرقامَ العربية
+            // كلَّها لأنها ليست `[0-9]` — فيبقى الحقلُ فارغاً وزرُّ الإرسال
+            // معطَّلاً **بلا سبب مكتوب**، في تطبيقٍ كلُّ أرقامه عربية.
+            onChange={(event) => setYear(toLatinDigits(event.target.value))}
           />
           <Field
             name="color"
+            error={errorFor("color")}
             placeholder="اللون"
             value={color}
             onChange={(event) => setColor(event.target.value)}
           />
         </div>
         <Field
-          name="plate"
+          name="plate_number"
+          error={errorFor("plate_number")}
           dir="ltr"
           className="mb-8"
           placeholder="رقم اللوحة"
@@ -250,6 +331,33 @@ export function RegisterDocumentsScreen() {
 
       <section className="card p-15">
         <h2 className="mb-12 text-13.5 font-bold text-ink">المستندات</h2>
+        {retry && !uploading ? (
+          <button
+            type="button"
+            className="mb-12 text-11.5 font-bold text-accent-ink"
+            onClick={() => void pick(retry.doc, retry.file)}
+          >
+            أعد رفع «{DOC_LABEL[retry.doc]}»
+          </button>
+        ) : null}
+        {uploading ? (
+          <div className="mb-12 flex items-center gap-10">
+            {/* شريطُ تقدّمٍ يقول «يتقدّم»، لا دوّامةٌ تقول «انتظر» */}
+            <div className="h-6 flex-1 overflow-hidden rounded-13 bg-sur2">
+              <div
+                className="h-full bg-ok transition-[width] duration-200"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <button
+              type="button"
+              className="text-11.5 font-bold text-danger"
+              onClick={() => uploadAbort.current?.abort()}
+            >
+              إلغاء
+            </button>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-10">
           {ORDER.map((doc) => {
             const done = uploaded.has(doc);
@@ -288,7 +396,7 @@ export function RegisterDocumentsScreen() {
                     )}
                   >
                     {uploading === doc
-                      ? "…"
+                      ? `${progress}٪`
                       : done
                         ? "تم الرفع ✓"
                         : "ارفع صورة"}

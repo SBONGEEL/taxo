@@ -230,7 +230,7 @@ async def test_a_failed_send_carries_the_next_channel(
     assert body["channel"] == "whatsapp_otp"
     assert body["fallback_channel"] == "sms_otp"
     # ونصُّ المزود يصل كما هو: «القالب غير معتمد» يوفّر على المشرف ساعةَ تخمين
-    assert "القالب" in body["detail"]
+    assert "القالب" in body["message"]
 
     # والمخرجُ يعمل فعلاً: القناةُ التالية تُرسل، والرمزُ يُقبل بلا سؤالٍ عن قناته
     await fast_forward_otp_cooldown(E164)
