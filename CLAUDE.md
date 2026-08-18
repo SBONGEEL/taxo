@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**872 backend tests pass** across 78 test files — measured, not estimated, on 2026-08-16. **Zero failures on 2026-08-16** — including the two that used to be flaky under full-suite load
+**903 backend tests pass** across 81 test files — measured, not estimated, on 2026-08-17. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -77,6 +77,13 @@ Fixed in the same session. The guard works; what failed was running it.
 five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per session, and **all five are delivered** —
 see "Rider design-matching" below for what each settled. **Sharing (12-ي) followed them and is
 done**, so nothing is queued before stage 13.
+
+> **Session boundary, 2026-08-18.** Since stage 13 the following shipped and are committed: the
+> **cancellation fee** in full, the **self-hosted WhatsApp channel** with OTP request caps, the **driver
+> profile photo**, **generalised referrals**, **missions/levels/badges**, **backups end to end**, the
+> **Google-Maps hand-off**, **map items 1–4**, and the **unplanned stop point**. Written but not built:
+> **subscription offers** (six branches unanswered). **Blocked, and only this:** no OTP channel delivers,
+> so registration is locked — see the red box below.
 
 **Stage 13 is complete** (2026-08-15) — `tests/test_stage13_scenario.py` **and six manual scenarios driven
 on two real phones** (rider on an S21, captain on a Note 20, both Capacitor shells over the live tunnel):
@@ -262,9 +269,27 @@ Proven end to end afterwards: a captain went online → `geo:drivers:JO` + his p
 `/drivers/nearby` returned `{"ref":"2681554d…","heading":124.9}` → the rider's map drew
 `["موقعي","دبوس","سيارة"]`.
 
-### What stands between here and launch — the whole list, in order (2026-08-15)
+### What stands between here and launch — the whole list, in order (2026-08-18)
 
 **Nothing here is guesswork: every line has a written spec or an owner decision behind it.**
+
+> **🔴 READ THIS FIRST — registration is locked today, and it is the only thing that is.**
+>
+> **There is no working OTP channel.** The self-hosted WhatsApp number (`218930385734`) **links, answers
+> `onWhatsApp`, accepts `sendMessage` — and WhatsApp's server never acknowledges the message.** Measured
+> on three of the owner's numbers: `503` after 10–16s, `session: linked`, `not_on_whatsapp: false`. And
+> the owner confirmed by opening WhatsApp on the receiving phone: **not in Chats, not in Archived — the
+> messages do not arrive at all.** That is what a restricted sending number looks like.
+>
+> **And the SMS contract is switched off** (by the owner, to prove the chain picks WhatsApp — it does:
+> `['whatsapp_otp', 'firebase']`). So `fallback_channel` is `null`: Firebase generates its code on the
+> user's device and is not a channel we send through. **Net effect: nobody can register.** Signing in with
+> an existing account works normally.
+>
+> **The fix is a field in the contracts page, not code** (`design`/`CLAUDE.md` emergency plan): set
+> `transport` to `cloud` if the Meta contract has arrived, **or re-activate the SMS contract** and the
+> chain falls to it automatically. **Both are ~2 minutes and need no deploy.** Do not "fix" this in code —
+> everything on our side is measured healthy, and there is a written diagnosis below.
 
 #### 0. The cancellation fee is finished — one sub-item waits on an owner decision
 
@@ -276,56 +301,81 @@ machinery without a decision — see above and `design/CANCELLATION-FEE.md` §6-
 
 #### 1. Blocking, and not code
 
-- ✅ **Phone verification now has a working channel — the self-hosted WhatsApp gateway** (owner's
-  decision, 2026-08-16). Firebase answers `auth/billing-not-enabled` and the owner declined Blaze; the
-  official Meta route needs a business contract and an approved template that had not arrived, and until
-  one of them did **nobody could register at all**. So Baileys runs in a sidecar container behind the same
-  `WhatsAppOtpProvider` built in 12-هـ, chosen by one contract field. **The official Cloud API path stays
-  live in the same interface** — switching back is editing `transport` from `baileys` to `cloud` in the
-  contracts page, no code and no deploy. An **active SMS contract silently outranks both** in the chain, so
-  it must not be left enabled in production by accident; a mock SMS contract is active **on the dev stack
-  only** and the code refuses mock in production.
+- 🔴 **The WhatsApp channel is built, correct, and not delivering** (2026-08-18). Everything on our side
+  measured healthy; the failure is at WhatsApp's end. **Do not re-diagnose from scratch — this is what was
+  already measured, in order:**
+
+  | Checked | Result |
+  |---|---|
+  | Session state | `linked`, phone `218930385734`, `last_error: null`, `queue_depth: 0` |
+  | Recipient numbers reaching the gateway | all correct `+218…` — **none mangled to +962** |
+  | Priority chain | picks `whatsapp_otp` (chain `whatsapp → firebase` with SMS off) |
+  | The three per-user caps | never the blocker (3–4 of 5 window, 7 of 10 daily) |
+  | `onWhatsApp` | answers **exists** for the owner's numbers |
+  | `sendMessage` | returns a message id |
+  | **WhatsApp server ack** | **never arrives** — 10s timeout, on every number |
+  | Owner's phone (opened by hand) | **nothing in Chats, nothing in Archived** |
+
+  **Two real defects were found and fixed on the way, and neither was the cause**: the gateway container's
+  DNS resolver was failing intermittently on `web.whatsapp.com` (now pinned to `1.1.1.1`/`8.8.8.8` —
+  disconnects went from constant to zero and `since` stopped moving), and `usePhoneCountry` fell back to
+  dial code `"962"` when a country was missing from `GET /config` (now `string | null`; the compiler then
+  named **six** call sites across both apps, two of which — `customer-app/ForgotPassword` and
+  `driver-app/Login` — were not in the hand audit at all).
+
+  **What the ack work bought**: before it, a send that never left reported `sent=True` and the user waited
+  in silence. Now it returns `503` with a reason, and the app draws the next-channel button when one
+  exists. **Three outcomes are now distinct**: `422` "this number is not on WhatsApp" (the user's problem),
+  `503` "WhatsApp did not answer about the number" (**our** problem, never a false denial), and `503`
+  "WhatsApp did not acknowledge the message" (the channel is not carrying).
+
+- **The dedicated number's guards must not be relaxed while this channel is live**: it is never used for
+  ordinary WhatsApp, and the message is **one fixed link-free text composed inside the gateway** — the
+  backend physically cannot inject text.
+
+- **The per-recipient hourly cap is 20** (raised from 3 by the owner, 2026-08-17, "raise it gradually with
+  volume"). **It caps the recipient, not our sending number** — ours is guarded by the global 100/hour.
+  Three was strangling because with SMS off there is no second channel, so it was a **cap with no exit**.
+
+- **There is a fourth OTP cap nobody planned**, and it is what actually bit the owner twice:
+  `routers/auth.py` has `OTP_PHONE_LIMIT = 5` and `OTP_IP_LIMIT = 20` per hour, **duplicating**
+  `otp_limits`' own window cap (also 5/hour, per-country, admin-editable). Two caps for one concept, with
+  **different messages**, so whoever is refused cannot tell which one refused them. Worth collapsing.
+
 - **Provider wire formats** (Telr, SMS, CliQ, payout) are best-reading, never verified against real
   credentials — debt item 3 below.
 
-##### The WhatsApp emergency plan — what to do when, and how long it takes
+#### 2. ✅ Backups — **built end to end** (2026-08-16)
 
-**Read this before touching the gateway.** The channel is deliberately the *first* in the chain
-(`whatsapp_otp ← sms_otp ← firebase`), which means its failure is the one that stops signup — and its
-recovery time is a business number, not a technical one.
+All four steps in the plan's own order: the server (`backend/scripts/backup.sh` + `restore.sh`, a beat job
+every 15 min, `backup_settings`/`backup_runs`, retention and alerts), the pull (`scripts/pull-backup.ps1`
+over SSH+rsync, documented in `README`), the panel (button, table, schedule, guarded download under
+«الأمان»), **and a real restore test that actually ran** — an encrypted backup decrypted, fingerprints
+verified, restored into `taxo_restore_test`, ledger reconciling.
 
-| What happened | How you know | What you do | How long until signup works again |
-|---|---|---|---|
-| **Session dropped (transient)** | Panel says «منقطعة — تحاول العودة»; no alert for the first minute | Nothing. It reconnects with backoff | Seconds. **Codes fall back to SMS meanwhile** if an SMS contract is active |
-| **Session logged out** (phone unlinked the device, or WhatsApp expired it) | Panel says «بانتظار مسح الرمز» **and every admin gets a push** | Scan the QR from the panel with the dedicated phone | **~1 minute** — the time to open the panel and scan |
-| **Gateway container down** | Panel says «البوابة لا تُجيب» + push | `docker compose up -d whatsapp-gateway` | ~30s. The auth state is on a volume, so it relinks itself |
-| **The number is banned** | Sends fail with a Baileys error and the session will not stay linked | **Switch the contract**: `transport` → `cloud` if the Meta contract has arrived, otherwise deactivate the WhatsApp contract entirely so the chain falls to SMS | **~2 minutes**, and it is a field edit in the contracts page — no deploy |
-| **Nothing else works** | — | Turn off `otp_verification_enabled` for the country (admin-only, written reason, lands in the audit log) | Immediate — **and it lets accounts be created with an unproven number**, so it is an emergency measure with a cost, not a fix |
+**The owner's seven decisions are implemented literally**, including the one that loses money if wrong:
+**nothing unpulled is ever deleted, however many pile up** — the cap applies to pulled backups only, and
+the rest raise an alert. `test_backups.py` fails when the `is_pulled` condition is deleted.
 
-**The number is banned is the scenario the design is arranged around.** Nothing in the platform depends
-on that number beyond OTP: no rider or captain ever sees it, no ride references it, and the *only* thing
-lost is the channel. That is why the fallback is a contract field and not a migration — and why the
-official Cloud API path was kept alive rather than deleted.
+**Four defects came out of running it, not out of review**, and each is worth carrying:
 
-**Two rules that must not be relaxed while this channel is live**, because they are what keeps the ban
-from happening: the number is **dedicated** and never used for ordinary WhatsApp (a human chatting from
-it is what makes automation look like automation), and the message is **one fixed text with no links**,
-composed *in the gateway* — the backend physically cannot inject text, so the guarantee survives whoever
-adds the next caller.
+1. **Two backups in the same minute nested inside each other** — the name was minute-stamped and `mv` over
+   an existing directory **moves into it** rather than failing. The result reads as a valid backup until
+   restore day. Now second-stamped **plus an explicit guard**.
+2. **`pg_dump` newer than the server breaks every restore** — Debian's package is 17, the server is 16, and
+   `pg_restore` emits `SET transaction_timeout` which 16 rejects: a **successful restore that reads as
+   failed**, which teaches the reader to ignore the error. Pinned to client 16 from PGDG, **with the
+   codename read from the image** (the first attempt installed `bookworm` on a `trixie` image).
+3. **A shell script with Windows line endings does not run in the container**, and the breakage lands the
+   day the backup runs. `.gitattributes` pins `*.sh` to LF — and it came back twice, the second time
+   because `pathlib.write_text` itself translates newlines on Windows.
+4. **The ledger check reported a healthy wallet as broken.** Two entries written in one transaction share
+   `created_at` exactly (a topup that collects a cancellation debt), and tie-breaking by `id` is random.
+   **A false alarm here is worse than none** — it teaches its reader that "1" is normal. The check now
+   measures what does not depend on order: **the sum equals one of the recorded balances**.
 
-- **Provider wire formats** (Telr, SMS, CliQ, payout) are best-reading, never verified against real
-  credentials — debt item 3 below.
-
-#### 2. Backups — `design/BACKUP-AND-RESTORE.md`, plan complete, nothing built
-
-The owner's seven decisions are answered in §9 of that file. Build order inside it: **the server side
-first** (`scripts/backup.sh` + a beat job + `backup_settings`/`backup_runs` + retention and alerts), **then
-the pull to his machine** (`pull-backup.ps1` over SSH, no API — the moment you need a backup is the moment
-the app is down; plus Windows Task Scheduler), **then the panel** (button, table, schedule, guarded
-download), **then a real restore test** whose verdict is the ledger, not the absence of errors. Two rules
-carry: the **Fernet key never enters the archive** (and `backup.sh` must not read `.env.local`), and the
-archive is **gpg-encrypted before it leaves the server**, its passphrase kept where the key is kept.
-**A launch without this is a launch with no way back.**
+**And "last success" reads the disk before the table**: `backup_runs` records attempts that went through
+the app; the disk records what exists — and the owner also runs `backup.sh` over SSH.
 
 #### 3. The three registered specs, in the owner's order
 
@@ -467,32 +517,123 @@ woman*, which is the thing the exemption exists to prevent. There is deliberatel
 field**: the image request is its own answer (bytes or 404), and a second field claiming "she has one"
 is a second home for a truth the file already holds.
 
-#### 4. «افتح في خرائط قوقل» — one hour, and it solves the real problem
+#### 4. ✅ «افتح في خرائط قوقل» — **built** (2026-08-16)
 
-`FUTURE-FEATURES` 16. Hands the right destination (pickup → dropoff → next stop, by ride state) to whatever
-maps app is installed, with a web fallback so the button is never dead. Google knows the traffic and the
-closed roads better than we will, and knows them today. **Measure it inside the Capacitor shell before
-promising it works** — leaving a WebView for an external intent behaves differently there.
+`driver-app/src/lib/external-maps.ts` + a button on the active-ride card. **One correct destination at a
+time, never a list**: pickup → next unvisited stop → dropoff, and **hidden at `arrived`** because he is
+standing there. `geo:` on Android so any installed maps app opens, with a web fallback so the button is
+never dead. **Not claimed to work until tried on the device inside the Capacitor shell** — the item's own
+warning, still outstanding.
 
-#### 5. The map work — the owner's cut and his order (`FUTURE-FEATURES` 17)
+#### 5. The map work — **1–4 built, 5–6 remain** (2026-08-16)
 
-**The item is halved: the captain's half is what gets built**; the rider's map reassures him and most of it
-exists. Then, in order:
+**The item is halved: the captain's half is what gets built.** The owner's six, with what happened:
 
-| # | What | Size | Note |
-|---|---|---|---|
-| 1 | **Full gestures** (rotate, pitch, double-tap) | ~1h | **Absent in all three apps** — measured; a defect, not a gap |
-| 2 | **Three-state locate button** (follow · follow-with-heading · free) | 2–3h | |
-| 3 | **Live ETA, computed locally** | 4–6h | Remaining distance on the stored line ÷ measured speed. **No polling** — the owner's words: seven times the bill for a number that changes by the minute is a price not paid |
-| 4 | **Capped reroute** | ~1d | The **only** thing that calls Directions again |
-| 5 | **Next instruction** (store `steps`) | 6–8h | Needs a schema change: today only the geometry is stored |
-| 6 | **Navigation camera** (pitch ~60°, bearing, zoom ~17) | ~1d | Heaviest on battery, so last — and **measure frames on the device**, stop everything in the background |
+| # | What | State |
+|---|---|---|
+| 1 | **Full gestures** | ✅ written explicitly (`dragRotate`, `pitchWithRotate`, `touchZoomRotate`, `touchPitch`, `doubleClickZoom`, `maxPitch: 60`) in both PWAs |
+| 2 | **Three-state locate button** | ✅ `driver-app/src/lib/follow.ts` — `free · follow · heading` |
+| 3 | **Live ETA, computed locally** | ✅ `driver-app/src/lib/eta.ts` — no polling |
+| 4 | **Capped reroute** | ✅ 3 per ride, **counted in a column**, `POST /rides/{id}/reroute` |
+| 5 | **Next instruction** (store `steps`) | ❌ needs a schema change |
+| 6 | **Navigation camera** | ❌ **and must not be built until frames are measured on a real device** — the item's own condition |
+
+**On item 1, the plan's premise was wrong and it was measured, not assumed.** The plan called gestures
+"absent in all three apps — a defect". They were not: `mapbox-gl 3.9` enables them by default, nothing in
+the project disabled them, and `touch-action: none` on the canvas is Mapbox's own. **Then it was proved on
+the owner's Note 20** inside the Capacitor shell — a real two-finger rotate dispatched over CDP flipped
+the camera mode, i.e. `rotatestart` fired. So what was actually built is **writing the values down**: a
+library upgrade that changes a default would otherwise drop a gesture with no line changing here and no
+test failing.
+
+**Item 2's rule worth keeping**: the exit to `free` happens **by his hand, not by a button** — dragging is
+the command. A camera that drags him back after a second makes looking ahead impossible, which is the
+commonest complaint about navigation apps. And **from `free` the button returns to `follow`, not
+`heading`**: someone who panned away wants to find himself, not to have the map spin under him.
+
+**Item 3's number is the owner's**: at 1,000 rides/day a polled ETA takes Directions from 120k to **870k**
+calls a month for a figure that changes by the minute. So distance comes from the line already frozen on
+the ride and speed from the captain's own movement over an 18-second window. **And no figure is shown
+before a real speed is measured** — a number built on an assumed speed reads as a promise and is then
+broken.
+
+**Item 4's rule is the money one**: the reroute is **the only thing that calls Directions again**, so the
+cap is a **column** (`rides.reroute_count`), not a counter in memory that the first deploy resets, and it
+is enforced **in the backend** — a client that counts for itself is a client that directs spending, the
+same reasoning as `card_gateway.return_url_for`. Failure keeps the old line and **consumes no quota**: a
+call that never landed cost nothing, and charging it makes the outage a punishment. In the app, **three
+consecutive readings over 80 m** before declaring drift — one GPS jump would otherwise buy a paid call.
+
+**One thing the suite caught that was real**: the ordering read the per-country discount on *every* offer
+attempt — an extra query inside the dispatch window, exactly what §5-ج forbids. It now reads it only when
+there is more than one candidate to reorder, and that removed a long-standing "flaky under load" failure
+in `test_driver_earnings`. **"Flaky under load" is a hypothesis, not a diagnosis.**
 
 **Deferred by decision**: traffic overlays (a day+ for an uncertain return) and the tap-a-point info card.
 
 **The cost arithmetic that produced this order** (at 1,000 rides/day): today ≈ 4 Directions calls per ride
 → 120k/month; navigation with a capped reroute → 270k; **a polled live ETA → 870k**. Navigation is not what
 raises the bill — polling is.
+
+#### 6. ✅ The unplanned stop point — **built end to end** (2026-08-16, SPEC §5.10-ب)
+
+All six owner branches, backend + both apps + panel. `ride_pauses` (migration `0043`),
+`services/pauses.py`, `tasks/pauses.py` every minute.
+
+**A table of its own, not a column on `ride_stops`**: a planned stop is decided by **the rider before the
+request** so it enters the estimate, the distance and the fee; a pause is pressed by **the captain during
+the ride**, after the fare was quoted. A pause slipped in among stop rows would change `stops_count`, the
+stop cap, the offer card and pricing — four things nobody asked for.
+
+**The branch that guards money is (هـ)**: the arrival counter **does not start outside the pickup radius**,
+in the owner's words — «وإلا صار «وصلت» الكاذبُ باباً للكسب». And **silence means no counter**: the doubt
+belongs to whoever would be charged. The distance function is **borrowed from the cancellation-fee
+exemption, not written again** — two formulas for one distance drift, and one of them decides money.
+
+**And its money guard is a partial index** (`uq_ride_pauses_open`): two simultaneous presses would open two
+pauses and **bill one wait twice**. Verified by deletion — and deleting it from the *model* is not enough,
+because the migration is what creates it.
+
+**Parameters are frozen twice, not once**: on the ride at creation (what was shown to both parties) and
+onto each pause row at press time (what **that pause** was billed at). Without the second, one edit to the
+ride row would re-price a pause that already happened.
+
+**And opening it in a browser found what fourteen tests did not.** `POST /rides/{id}/pause` returned `200`
+with **`open_pause: null`** — the row was written and the response denied it, so the strip never drew and
+the whole feature was invisible. Cause: `Ride.pauses` is loaded with the row, and the ride object has been
+in the session's identity map since the top of the function, so re-reading returns **the same object with
+its stale collection**. `session.expire_all()` before the re-read is the fix. **The tests missed it because
+they read rows from a fresh session — they see what the app cannot.**
+
+**Both strips were then opened and measured**: captain «وقفة · ٢ دقيقة · ٠٫٦٠٥ د.أ» with a resume button,
+rider «رسم الانتظار حتى الآن · ٣٫٤٥٠ د.أ» with a live seconds counter — and the cap notice appeared in the
+rider's screen on its own («تجاوز الانتظارُ الحدَّ المسموح») while the ride stayed `in_progress`, which is
+branch (أ) proving itself in the UI.
+
+**A reading the owner should confirm**: the per-minute rate is **one number for both cases** (mid-ride
+pause and arrival wait). His text said "likewise set by admin", read here as one concept — a captain's
+waiting minute is worth the same either way, and two numbers for one concept drift. The free grace applies
+to **arrival only**.
+
+#### 7. Subscription offers — **spec written, nothing built** (`design/SUBSCRIPTION-OFFERS.md`, `FUTURE-FEATURES` 54)
+
+**Six branches are raised and unanswered, and the first decides the tables** — do not write a migration
+before it is answered: **is the discount money or time?** «10% off» lowers `amount_paid` and never touches
+the period; «a free week» extends `expires_at` and never touches money — in which case there is no
+`discount_amount`, no `list_price` and **no giveaway report at all**. Combining both in the first cut makes
+"how much did we give away?" a question with two units.
+
+**And `promo_codes` is not reused, for a reason that is not naming**: that is a **ride** payment channel the
+company bears **on the rider's behalf**, measured by summing `promo` rows. A subscription discount is
+**revenue not collected** — there is no ride, no payment row, and nothing to sum. An expense and an
+uncollected revenue do not belong in one report.
+
+**This is also what was blocking the cancellation carrier's reward** (`CANCELLATION-FEE.md` §6-أ): "a
+subscription coupon" had no home in the project. Building item 54 gives it one.
+
+The other five: early renewal stacks (buy three months in one day and take the discount three times), cash
+and CliQ are collected **by a human, not a screen**, stacking two offers, whether an offer touches
+commission, and what a non-eligible driver is shown.
 
 ### The dev stack has been mutated by the scenarios — do not read it as the intended state
 
@@ -502,7 +643,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**872 backend tests pass** across 78 test files, measured on 2026-08-16; all three frontends build with
+**903 backend tests pass** across 81 test files, measured on 2026-08-17; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1472,8 +1613,21 @@ and per-category pricing. Do not build them; he decides after launch.
 
 ### Open debt and decisions waiting on the owner
 
-**Two decisions are waiting on the owner as of 2026-08-15**, and both were raised by finishing the
-cancellation fee rather than by anyone guessing:
+**What waits on the owner as of 2026-08-18 — the first one blocks launch outright:**
+
+0. 🔴 **Which OTP channel goes live.** WhatsApp links but does not deliver (diagnosis above), and the SMS
+   contract is off — **so nobody can register**. Two exits, both a field in the contracts page and neither
+   needing a deploy: switch `transport` to `cloud` if the Meta contract arrived, or re-activate SMS. **This
+   is not a code task; do not treat it as one.**
+1. **The six branches of subscription offers** (`design/SUBSCRIPTION-OFFERS.md` §8) — and the first,
+   money-or-time, decides the tables, so nothing is buildable before it.
+2. **Whether the per-minute pause rate should be two numbers, not one** — built as one; see item 6 above
+   for the reading and its reason.
+3. **Whether to collapse the duplicated OTP cap** — `routers/auth.py` keeps its own per-phone 5/hour beside
+   `otp_limits`' window cap, with a different message. It is what actually refused the owner twice.
+
+**And these two were already waiting**, both raised by finishing the cancellation fee rather than by
+anyone guessing:
 
 1. **The carrier's reward** (`design/CANCELLATION-FEE.md` §6-أ) — a rating boost and a subscription
    coupon, neither of which exists as machinery. The rating is recomputed from the whole ratings table,
@@ -1918,11 +2072,12 @@ There is no frontend test runner: stage 9 added no business logic to test — pr
 state transitions all stay in the backend, and the app displays what the API returns. `npm run
 build` is the check that runs, and it type-checks every file.
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **twelve** periodic jobs:
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **fourteen** periodic jobs:
 the subscription sweep and the CliQ-confirmation sweep every five minutes; the stage-8 campaign
 dispatch, the multi-stop wait cap and **due bookings** (12-ط) every minute; the referral-bonus payout
 (12-ح), the advance sweep (item 15) and the **cancellation-charge sweep** every ten;
-**the driver-level re-evaluation hourly** (item 53); and the two
+**the driver-level re-evaluation hourly** (item 53), **the pause-cap notice every minute**
+(§5.10-ب) and **the backup schedule check every quarter hour**; and the two
 stage-12 maintenance jobs — the stale-provider-order sweep and the inbox trim. **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
