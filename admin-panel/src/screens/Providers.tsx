@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -307,13 +308,16 @@ function CredentialModal({
     ),
   );
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
 
   const missing = spec.fields.filter(
     (field) => field.required && !String(values[field.key] ?? "").trim(),
   );
 
   return (
+    <FormErrors value={form.field}>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
       onClick={onClose}
@@ -344,6 +348,7 @@ function CredentialModal({
             ) : (
               <Field
                 key={field.key}
+                name={field.key}
                 label={`${field.label}${field.required ? "" : " (اختياري)"}`}
                 dir="ltr"
                 value={String(values[field.key] ?? "")}
@@ -376,11 +381,7 @@ function CredentialModal({
                 .then(() =>
                   onSaved("حُفظ العقد — فعّله ليعمل، واختبره قبل أن تفعّله"),
                 )
-                .catch((caught) =>
-                  setError(
-                    caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
-                  ),
-                )
+                .catch((caught) => form.capture(caught, "تعذّر الحفظ"))
                 .finally(() => setBusy(false));
             }}
           >
@@ -403,5 +404,6 @@ function CredentialModal({
         ) : null}
       </div>
     </div>
+    </FormErrors>
   );
 }

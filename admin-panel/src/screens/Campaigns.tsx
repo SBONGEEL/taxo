@@ -41,6 +41,7 @@ import type {
 import { PromoCodes } from "@/components/PromoCodes";
 import { MissionsLevels } from "@/components/MissionsLevels";
 import { useSession } from "@/lib/session";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { Referrals } from "@/components/Referrals";
 import { Modal } from "@/components/ui/Modal";
 import { Shell } from "@/components/Shell";
@@ -286,7 +287,9 @@ function Composer({
   const [audience, setAudience] = useState<CampaignAudience>("all_drivers");
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
 
   async function submit() {
     setBusy(true);
@@ -304,13 +307,14 @@ function Composer({
         scheduledAt ? "جُدولت الحملة" : "حُفظت مسودّة — تُرسل حين تُجدول",
       );
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      form.capture(caught, "تعذّر الحفظ");
     } finally {
       setBusy(false);
     }
   }
 
   return (
+    <FormErrors value={form.field}>
     <Modal onClose={onClose} title="حملة جديدة">
       <Field
         label="العنوان"
@@ -395,6 +399,7 @@ function Composer({
         </Button>
       </div>
     </Modal>
+    </FormErrors>
   );
 }
 

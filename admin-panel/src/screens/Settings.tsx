@@ -70,6 +70,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, currencyOf, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
@@ -181,7 +182,12 @@ export function SettingsScreen() {
   const [otp, setOtp] = useState<OtpSetting[]>([]);
   const [burned, setBurned] = useState<OtpExhausted | null>(null);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // خطأُ النموذج: نصٌّ عامٌّ في الشريط، ووسمٌ على الحقل الذي سمّته الخلفية.
+  // وشاشةُ الإعدادات أحوجُ الشاشات إليه: ستةٌ وثلاثون حقلاً، وسطرٌ أحمرُ
+  // وحدَه يترك المشرفَ يبحث عن أيِّها رُفض.
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [riderReferral, setRiderReferral] = useState<ReferralSetting | null>(
     null,
   );
@@ -250,6 +256,7 @@ export function SettingsScreen() {
   }
 
   return (
+    <FormErrors value={form.field}>
     <Shell
       title="الإعدادات العامة"
       subtitle="إعداداتٌ تسري على تطبيقَي الراكب والسائق فور الحفظ"
@@ -325,7 +332,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">
@@ -350,7 +357,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">
@@ -383,7 +390,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">لا إعداد دفعٍ لهذه الدولة.</p>
@@ -415,7 +422,7 @@ export function SettingsScreen() {
                       setDone(message);
                       void load();
                     }}
-                    onError={setError}
+                    onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
                   />
                 ))}
               </div>
@@ -446,7 +453,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">لا سياسةَ سلفٍ لهذه الدولة.</p>
@@ -477,7 +484,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">
@@ -538,7 +545,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">
@@ -570,7 +577,7 @@ export function SettingsScreen() {
                   setDone(message);
                   void load();
                 }}
-                onError={setError}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
               />
             ) : (
               <p className="text-12.5 text-muted">لا إعداد مشاركةٍ لهذه الدولة.</p>
@@ -589,6 +596,7 @@ export function SettingsScreen() {
         />
       ) : null}
     </Shell>
+    </FormErrors>
   );
 }
 
@@ -601,7 +609,7 @@ function CommissionForm({
   row: CommissionSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [percent, setPercent] = useState(row.commission_percent);
   const [enabled, setEnabled] = useState(row.commission_enabled);
@@ -612,6 +620,7 @@ function CommissionForm({
     <>
       <Field
         label="النسبة ٪"
+        name="commission_percent"
         dir="ltr"
         inputMode="decimal"
         value={percent}
@@ -688,9 +697,7 @@ function CommissionForm({
           })
             .then(() => onSaved("حُفظت العمولة"))
             .catch((caught) =>
-              onError(
-                caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
-              ),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}
@@ -710,7 +717,7 @@ function WalletForm({
   row: WalletSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [daily, setDaily] = useState(row.transfer_daily_limit);
   const [monthly, setMonthly] = useState(row.transfer_monthly_limit);
@@ -723,6 +730,7 @@ function WalletForm({
   return (
     <>
       <Field
+        name="transfer_daily_limit"
         label="حد التحويل اليومي"
         dir="ltr"
         inputMode="decimal"
@@ -732,6 +740,7 @@ function WalletForm({
       />
       <div className="mt-12">
         <Field
+          name="transfer_monthly_limit"
           label="حد التحويل الشهري"
           dir="ltr"
           inputMode="decimal"
@@ -742,6 +751,7 @@ function WalletForm({
       </div>
       <div className="mt-12">
         <Field
+          name="min_withdrawal_amount"
           label="الحد الأدنى للسحب"
           dir="ltr"
           inputMode="decimal"
@@ -752,6 +762,7 @@ function WalletForm({
       </div>
       <div className="mt-12">
         <Field
+          name="withdrawal_reserve_amount"
           label="الرصيد المحتجَز (لا يُسحب)"
           dir="ltr"
           inputMode="decimal"
@@ -780,9 +791,7 @@ function WalletForm({
           })
             .then(() => onSaved("حُفظت الحدود"))
             .catch((caught) =>
-              onError(
-                caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
-              ),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}
@@ -811,7 +820,7 @@ function ReferralForm({
   row: ReferralSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [amount, setAmount] = useState(row.reward_amount);
   const [rides, setRides] = useState(String(row.required_rides));
@@ -832,6 +841,7 @@ function ReferralForm({
       </h3>
       <div className="grid grid-cols-2 gap-10">
         <Field
+          name="reward_amount"
           label={`مبلغ المكافأة (${currencyLabel(currency)})`}
           dir="ltr"
           inputMode="decimal"
@@ -842,6 +852,7 @@ function ReferralForm({
           }
         />
         <Field
+          name="required_rides"
           label={isDriver ? "رحلات المُحال المطلوبة" : "رحلات المُحال المطلوبة"}
           dir="ltr"
           inputMode="numeric"
@@ -851,6 +862,7 @@ function ReferralForm({
         />
         {isDriver ? (
           <Field
+            name="female_bonus_amount"
             label={`علاوة إحالة سائقة (${currencyLabel(currency)})`}
             dir="ltr"
             inputMode="decimal"
@@ -862,6 +874,7 @@ function ReferralForm({
           />
         ) : null}
         <Field
+          name="monthly_cap"
           label="سقف شهري لكل مُحيل"
           dir="ltr"
           inputMode="numeric"
@@ -911,7 +924,7 @@ function ReferralForm({
               onSaved("حُفظ الحافز — يُقيَّم ما لم يُدفع بالحدّ الجديد"),
             )
             .catch((caught) =>
-              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}
@@ -932,7 +945,7 @@ function PaymentForm({
   row: PaymentSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [hours, setHours] = useState(String(row.cliq_confirmation_hours));
   const [small, setSmall] = useState(row.tip_preset_small);
@@ -951,7 +964,7 @@ function PaymentForm({
     updatePaymentSettings(row.country_code, payload)
       .then(() => onSaved(message))
       .catch((caught) =>
-        onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+        onError(caught),
       )
       .finally(() => setBusy(false));
   }
@@ -959,6 +972,7 @@ function PaymentForm({
   return (
     <>
       <Field
+        name="cliq_confirmation_hours"
         label="عدد الساعات"
         dir="ltr"
         inputMode="numeric"
@@ -999,6 +1013,7 @@ function PaymentForm({
         </p>
         <div className="grid grid-cols-3 gap-10">
           <Field
+            name="tip_preset_small"
             label="الزر الأول"
             dir="ltr"
             inputMode="decimal"
@@ -1007,6 +1022,7 @@ function PaymentForm({
             onChange={(event) => setSmall(money(event.target.value))}
           />
           <Field
+            name="tip_preset_medium"
             label="الزر الثاني"
             dir="ltr"
             inputMode="decimal"
@@ -1015,6 +1031,7 @@ function PaymentForm({
             onChange={(event) => setMedium(money(event.target.value))}
           />
           <Field
+            name="tip_max"
             label="السقف"
             dir="ltr"
             inputMode="decimal"
@@ -1080,6 +1097,7 @@ function GuardModal({
         </p>
 
         <Field
+          name="reason"
           label="سبب الإطفاء (يدخل سجل التدقيق)"
           placeholder="ثمانية أحرف على الأقل"
           value={reason}
@@ -1121,7 +1139,7 @@ function SharingForm({
   row: RideSharingSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [percent, setPercent] = useState(row.discount_percent);
   const [corridor, setCorridor] = useState(row.corridor_km);
@@ -1132,6 +1150,7 @@ function SharingForm({
   return (
     <>
       <Field
+        name="discount_percent"
         label="نسبة الخصم ٪"
         dir="ltr"
         inputMode="decimal"
@@ -1149,6 +1168,7 @@ function SharingForm({
 
       <div className="mt-14 grid grid-cols-3 gap-10">
         <Field
+          name="corridor_km"
           label="عرض الممر (كم)"
           dir="ltr"
           inputMode="decimal"
@@ -1159,6 +1179,7 @@ function SharingForm({
           }
         />
         <Field
+          name="max_detour_minutes"
           label="أقصى التفاف (دقيقة)"
           dir="ltr"
           inputMode="numeric"
@@ -1167,6 +1188,7 @@ function SharingForm({
           onChange={(event) => setDetour(event.target.value.replace(/[^0-9]/g, ""))}
         />
         <Field
+          name="partner_wait_seconds"
           label="انتظار الشريك (ثانية)"
           dir="ltr"
           inputMode="numeric"
@@ -1199,7 +1221,7 @@ function SharingForm({
               onSaved("حُفظت المشاركة — تسري على الطلب التالي، ولا تمسّ رحلةً قائمة"),
             )
             .catch((caught) =>
-              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}
@@ -1220,7 +1242,7 @@ function AdvanceForm({
   row: AdvanceSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [percent, setPercent] = useState(String(row.deduction_percent));
   const [kept, setKept] = useState(row.min_kept_amount);
@@ -1238,6 +1260,7 @@ function AdvanceForm({
     <>
       <div className="grid grid-cols-2 gap-10">
         <Field
+          name="deduction_percent"
           label="نسبة الاقتطاع من الرحلة (٪)"
           dir="ltr"
           inputMode="numeric"
@@ -1246,6 +1269,7 @@ function AdvanceForm({
           onChange={(event) => setPercent(digits(event.target.value))}
         />
         <Field
+          name="min_kept_amount"
           label={`أقل ما يبقى له من الرحلة (${currencyLabel(currencyOf(row.country_code))})`}
           dir="ltr"
           inputMode="decimal"
@@ -1254,6 +1278,7 @@ function AdvanceForm({
           onChange={(event) => setKept(decimal(event.target.value))}
         />
         <Field
+          name="term_days"
           label="مهلة التحصيل (يوماً)"
           dir="ltr"
           inputMode="numeric"
@@ -1262,6 +1287,7 @@ function AdvanceForm({
           onChange={(event) => setTerm(digits(event.target.value))}
         />
         <Field
+          name="min_completed_rides"
           label="رحلات مكتملة مطلوبة"
           dir="ltr"
           inputMode="numeric"
@@ -1270,6 +1296,7 @@ function AdvanceForm({
           onChange={(event) => setRides(digits(event.target.value))}
         />
         <Field
+          name="min_rating"
           label="أدنى تقييم مطلوب"
           dir="ltr"
           inputMode="decimal"
@@ -1278,6 +1305,7 @@ function AdvanceForm({
           onChange={(event) => setRating(decimal(event.target.value))}
         />
         <Field
+          name="growth_percent_per_repaid"
           label="نمو السقف عن كل سلفة سُدِّدت (٪)"
           dir="ltr"
           inputMode="numeric"
@@ -1286,6 +1314,7 @@ function AdvanceForm({
           onChange={(event) => setGrowth(digits(event.target.value))}
         />
         <Field
+          name="max_multiplier_percent"
           label="السقف الأقصى (٪ من اليومي)"
           dir="ltr"
           inputMode="numeric"
@@ -1319,7 +1348,7 @@ function AdvanceForm({
               onSaved("حُفظت السياسة — تسري على ما يُصرف بعدها لا على سلفةٍ قائمة"),
             )
             .catch((caught) =>
-              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}
@@ -1345,7 +1374,7 @@ function CancellationForm({
   row: CancellationSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [metres, setMetres] = useState(String(row.exempt_within_meters));
   const [silent, setSilent] = useState(row.exempt_when_location_unknown);
@@ -1363,6 +1392,7 @@ function CancellationForm({
     <>
       <div className="grid grid-cols-2 gap-10">
         <Field
+          name="exempt_within_meters"
           label="مسافة الإعفاء (متراً)"
           dir="ltr"
           inputMode="numeric"
@@ -1371,6 +1401,7 @@ function CancellationForm({
           onChange={(event) => setMetres(digits(event.target.value))}
         />
         <Field
+          name="block_after_unpaid"
           label="عدد الرسوم قبل إيقاف الطلب"
           dir="ltr"
           inputMode="numeric"
@@ -1379,6 +1410,7 @@ function CancellationForm({
           onChange={(event) => setBlock(digits(event.target.value))}
         />
         <Field
+          name="carrier_grace_hours"
           label="مهلة الكبتن الحامل (ساعة)"
           dir="ltr"
           inputMode="numeric"
@@ -1387,6 +1419,7 @@ function CancellationForm({
           onChange={(event) => setGrace(digits(event.target.value))}
         />
         <Field
+          name="unpaid_after_days"
           label="مدة الدَّين قبل الإجراء (يوماً)"
           dir="ltr"
           inputMode="numeric"
@@ -1447,7 +1480,7 @@ function CancellationForm({
               onSaved("حُفظت السياسة — تسري على ما يقع بعدها لا على رسمٍ قائم"),
             )
             .catch((caught) =>
-              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}
@@ -1473,7 +1506,7 @@ function OtpForm({
   row: OtpSetting;
   disabled: boolean;
   onSaved: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [windowMinutes, setWindowMinutes] = useState(String(row.window_minutes));
   const [perWindow, setPerWindow] = useState(String(row.max_per_window));
@@ -1490,6 +1523,7 @@ function OtpForm({
     <>
       <div className="grid grid-cols-2 gap-10">
         <Field
+          name="window_minutes"
           label="طول النافذة (دقيقة)"
           dir="ltr"
           inputMode="numeric"
@@ -1498,6 +1532,7 @@ function OtpForm({
           onChange={(event) => setWindowMinutes(digits(event.target.value))}
         />
         <Field
+          name="max_per_window"
           label="أقصى طلبات في النافذة"
           dir="ltr"
           inputMode="numeric"
@@ -1506,6 +1541,7 @@ function OtpForm({
           onChange={(event) => setPerWindow(digits(event.target.value))}
         />
         <Field
+          name="max_per_day"
           label="أقصى طلبات في اليوم"
           dir="ltr"
           inputMode="numeric"
@@ -1514,6 +1550,7 @@ function OtpForm({
           onChange={(event) => setPerDay(digits(event.target.value))}
         />
         <Field
+          name="max_per_registration"
           label="أقصى طلبات لتسجيلٍ واحد"
           dir="ltr"
           inputMode="numeric"
@@ -1522,6 +1559,7 @@ function OtpForm({
           onChange={(event) => setPerSignup(digits(event.target.value))}
         />
         <Field
+          name="lockout_minutes"
           label="الانتظار بعد الاستنفاد (دقيقة)"
           dir="ltr"
           inputMode="numeric"
@@ -1530,6 +1568,7 @@ function OtpForm({
           onChange={(event) => setLockout(digits(event.target.value))}
         />
         <Field
+          name="resend_base_seconds"
           label="مهلة الإعادة الأولى (ثانية)"
           dir="ltr"
           inputMode="numeric"
@@ -1538,6 +1577,7 @@ function OtpForm({
           onChange={(event) => setResendBase(digits(event.target.value))}
         />
         <Field
+          name="resend_max_seconds"
           label="سقف مهلة الإعادة (ثانية)"
           dir="ltr"
           inputMode="numeric"
@@ -1570,7 +1610,7 @@ function OtpForm({
           })
             .then(() => onSaved("حُفظت السقوف — تسري على الطلب التالي في الحال"))
             .catch((caught) =>
-              onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ"),
+              onError(caught),
             )
             .finally(() => setBusy(false));
         }}

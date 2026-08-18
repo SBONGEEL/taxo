@@ -59,6 +59,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
 
@@ -293,7 +294,9 @@ function DriverDrawer({
 }) {
   const [docs, setDocs] = useState<DriverDocuments | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [reason, setReason] = useState("");
 
   const load = useCallback(async () => {
@@ -315,7 +318,7 @@ function DriverDrawer({
       await action();
       onChanged(message);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      form.capture(caught, "تعذّر التنفيذ");
       setBusy(false);
     }
   }
@@ -329,6 +332,7 @@ function DriverDrawer({
   ].filter(Boolean) as string[];
 
   return (
+    <FormErrors value={form.field}>
     <div className="fixed inset-0 z-50 bg-dim" onClick={onClose}>
       <div
         className="scr absolute bottom-0 start-0 top-0 w-drawer max-w-full animate-slidein border-e border-line bg-surface p-22"
@@ -587,5 +591,6 @@ function DriverDrawer({
         )}
       </div>
     </div>
+    </FormErrors>
   );
 }

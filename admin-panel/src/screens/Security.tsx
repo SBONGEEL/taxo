@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
 
@@ -146,7 +147,7 @@ function MyFactorCard({
 }: {
   status: TotpStatus;
   onChanged: () => void;
-  onError: (message: string | null) => void;
+  onError: (caught: unknown) => void;
   onDone: (message: string | null) => void;
 }) {
   const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null);
@@ -164,7 +165,7 @@ function MyFactorCard({
     try {
       await action();
     } catch (caught) {
-      onError(caught instanceof ApiError ? caught.message : "تعذّر الإجراء");
+      onError(caught);
     } finally {
       setBusy(false);
     }
@@ -387,7 +388,7 @@ function PolicyCard({
 }: {
   policy: SecurityPolicy;
   onSaved: (next: SecurityPolicy, message: string) => void;
-  onError: (message: string | null) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [minutes, setMinutes] = useState(
     String(policy.admin_idle_timeout_minutes),
@@ -407,7 +408,7 @@ function PolicyCard({
     try {
       onSaved(await updateSecurityPolicy(body), message);
     } catch (caught) {
-      onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+      onError(caught);
     } finally {
       setBusy(false);
     }
@@ -472,6 +473,7 @@ function PolicyCard({
             String(policy.min_idle_timeout_minutes),
           )} و${arabicDigits(String(policy.max_idle_timeout_minutes))})`}
           id="idle"
+          name="admin_idle_timeout_minutes"
           dir="ltr"
           inputMode="numeric"
           value={minutes}
@@ -513,7 +515,9 @@ export function SecurityScreen() {
   const { isAdmin, refreshFactor } = useSession();
   const [status, setStatus] = useState<TotpStatus | null>(null);
   const [policy, setPolicy] = useState<SecurityPolicy | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [done, setDone] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -537,6 +541,7 @@ export function SecurityScreen() {
   }, [load]);
 
   return (
+    <FormErrors value={form.field}>
     <Shell
       title="الأمان"
       subtitle="التحقق الثنائي لحسابك، وسياسةُ دخول اللوحة"
@@ -551,7 +556,7 @@ export function SecurityScreen() {
           <MyFactorCard
             status={status}
             onChanged={() => void load()}
-            onError={setError}
+            onError={(caught) => form.capture(caught, "تعذّر الإجراء")}
             onDone={setDone}
           />
           {isAdmin && policy ? (
@@ -562,7 +567,7 @@ export function SecurityScreen() {
                 setDone(message);
                 void refreshFactor();
               }}
-              onError={setError}
+              onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
             />
           ) : null}
         </div>
@@ -576,5 +581,6 @@ export function SecurityScreen() {
         </div>
       ) : null}
     </Shell>
+    </FormErrors>
   );
 }

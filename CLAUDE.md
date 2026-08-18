@@ -1078,6 +1078,33 @@ than being "tidied" into one. And **the cache write fails silently by design**: 
 `localStorage` must not break a screen, since the rules are an optimisation over a check the backend
 performs anyway.
 
+### The password policy, and a guard that hit the wrong target (2026-08-18)
+
+**Composition rules were asked for and declined; a blocklist was built instead, and the owner accepted
+the reasoning.** `NIST SP 800-63B` forbids verifiers from requiring a digit or an uppercase letter — the
+rules produce predictable shapes (`Taxi2024`) and raise friction without raising entropy — and recommends
+a length minimum plus a blocklist. The existing 8–128 rule already matched that guidance, so tightening
+would have moved *away* from it, on the most fragile funnel this platform has. **Nothing existing would
+have broken either way**: the check runs where a password is *set*, never at login, so no account can be
+locked out by it.
+
+**Three block kinds, in `core/password_policy.py`, checked in `validate_password`** — the one door both
+registration and reset pass through. Common list (every entry ≥8 chars, since shorter ones die on length
+anyway — a shorter entry is a line that cannot fire), the phone itself, and pure repetition.
+
+**And the phone check shipped wrong in its first cut, which the suite caught: 27 failures.** It compared
+by plain substring, so `SuperSecret123` was rejected because its digits — `123` — appear inside
+`962791234567`. That is the whole lesson: **"the password is their phone number" is not "the password
+shares digits with their phone number."** The rule is now two conditions together — the text must be
+digits only (after separators), and it must equal the number or be a ≥7-digit tail of it — which catches
+`0791234567`, `+962791234567` and `791234567` and nothing else. A guard that fires on innocents is worse
+than no guard: it gets disabled, and this one would have blocked most valid registrations.
+
+**The list is never published and neither is its size.** `GET /config` publishes the limits and not this
+— a published blocklist reads as a *sorted guessing guide*, since it is exactly what an attacker tries
+first. And the refusal names its reason without naming the list: one code (`weak_password`) with three
+messages, because the admin counts one category while the person choosing needs to know which one they hit.
+
 ### The sixth shape — a success criterion measuring an event the system never emits (2026-08-18)
 
 **This is the fifth family member's successor and the most expensive one so far.** The family is

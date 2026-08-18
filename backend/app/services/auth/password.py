@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AccountBlocked, InvalidCredentials, InvalidInput
+from app.core import password_policy
 from app.core.security import hash_password, verify_password
 from app.models.user import User
 from app.schemas.auth import AuthMethodResponse, RegisterRequest
@@ -29,12 +30,20 @@ MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 
 
-def validate_password(password: str) -> str:
-    """سياسة كلمة المرور في مكان واحد — يستدعيها التسجيل والاستعادة معاً."""
+def validate_password(password: str, *, phone: str | None = None) -> str:
+    """سياسة كلمة المرور في مكان واحد — يستدعيها التسجيل والاستعادة معاً.
+
+    **والطولُ ثم القائمة**: كلمةٌ قصيرةٌ تُرفض بطولها لا بشيوعها — ورسالةُ
+    «هذه شائعة» على كلمةٍ من أربع خاناتٍ تُخفي السببَ الحقيقي.
+
+    و`phone` اختياريٌّ في التوقيع لا في المعنى: كلا البابين يملكه ويمرّره،
+    والافتراضُ لمن لا يملكه في اختبارٍ لا لمسارٍ حقيقيّ.
+    """
     if len(password) < MIN_PASSWORD_LENGTH:
         raise InvalidInput(f"كلمة المرور يجب ألا تقل عن {MIN_PASSWORD_LENGTH} خانات")
     if len(password) > MAX_PASSWORD_LENGTH:
         raise InvalidInput(f"كلمة المرور يجب ألا تزيد عن {MAX_PASSWORD_LENGTH} خانة")
+    password_policy.check(password, phone=phone)
     return password
 
 
@@ -58,7 +67,9 @@ class PasswordAuthStrategy:
             session,
             phone=phone,
             data=data,
-            password_hash=hash_password(validate_password(data.password)),
+            password_hash=hash_password(
+                validate_password(data.password, phone=phone)
+            ),
             phone_verified_at=verified_at,
         )
 
@@ -94,6 +105,8 @@ async def set_password(
 
     الـ commit مسؤولية الراوتر.
     """
-    user.password_hash = hash_password(validate_password(new_password))
+    user.password_hash = hash_password(
+        validate_password(new_password, phone=user.phone)
+    )
     await token_service.revoke_all_for_user(redis, user.id)
     return user

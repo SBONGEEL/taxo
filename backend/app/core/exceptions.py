@@ -56,6 +56,36 @@ class InvalidOtpCode(InvalidCredentials):
     message = "رمز التحقق غير صحيح أو انتهت صلاحيته"
 
 
+class WeakPassword(AppError):
+    """كلمةُ مرورٍ مرفوضةٌ بالسياسة لا بالطول (`core/password_policy.py`).
+
+    **رمزٌ واحدٌ ورسائلُ ثلاث**: المشرفُ يبحث في السجل عن «كلمة مرور ضعيفة»
+    كصنفٍ واحد، وصاحبُ الكلمة يحتاج أن يعرف **أيَّها** ليختار غيرها. وثلاثةُ
+    رموزٍ تجزّئ عدّاً لا يُسأل مجزّأً.
+
+    **ولا تكشف الرسالةُ القائمة**: «من الأكثر شيوعاً» تكفي لاختيار غيرها، ولا
+    تخبر أحداً بما فيها — وقائمةٌ معروفةٌ دليلُ تخمينٍ مرتَّب.
+    """
+
+    # `422` رقماً كـ`InvalidInput` أدناه: اسمُ Starlette للثابت مهجورٌ ويطبع
+    # تحذيراً عند كل استيراد، والرقمُ لا يهجُر
+    status_code = 422
+    code = "weak_password"
+    message = "كلمة المرور ضعيفة — اختر غيرها"
+
+
+class PasswordTooCommon(WeakPassword):
+    message = "كلمة المرور هذه من الأكثر شيوعاً — اختر غيرها"
+
+
+class PasswordIsPhone(WeakPassword):
+    message = "لا تجعل كلمة المرور رقمَ هاتفك — من يعرف رقمك يعرفها"
+
+
+class PasswordTooRepetitive(WeakPassword):
+    message = "كلمة المرور تكرارٌ لحرفٍ أو نمطٍ قصير — اختر غيرها"
+
+
 class AccountNotRegistered(AppError):
     """رمزٌ صحيح لرقمٍ لا حساب له — الدخول بـ OTP لا يُنشئ حساباً ضمناً.
 

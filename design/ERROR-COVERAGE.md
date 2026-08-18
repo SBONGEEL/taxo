@@ -33,7 +33,7 @@
 | `network_unreachable` | — | تعذّر الوصول إلى الخادم — أعد المحاولة بعد قليل | الشبكةُ قائمةٌ والخادمُ لا يُبلَغ | **رسالةٌ واحدةٌ للأربع** |
 | `network_unexpected` | — | ردٌّ غير متوقَّع من الخادم — أعد المحاولة | ردٌّ وصل ولم يُقرأ | **لم تكن موجودة** |
 
-## أصنافُ الخطأ في السجل المركزي (89)
+## أصنافُ الخطأ في السجل المركزي (93)
 
 | الرمز | الحالة | الرسالة العربية |
 |---|---|---|
@@ -122,6 +122,7 @@
 | `verification_unavailable` | 503 | التحقق من رقم هاتفك غير متاح حالياً. حاول بعد قليل. |
 | `wallet_frozen` | 403 | المحفظة مجمّدة — راجع الدعم |
 | `wallet_limit_exceeded` | 409 | تجاوزت الحد المسموح |
+| `weak_password` | 422 | كلمة المرور ضعيفة — اختر غيرها |
 | `whatsapp_send_failed` | 502 | تعذّر إرسال رمز واتساب |
 | `whatsapp_unavailable` | 503 | تعذّر إرسال الرمز عبر واتساب الآن. جرّب طريقة أخرى. |
 | `women_service_unavailable` | 409 | خدمة التوصيل النسائي غير مفعّلة في هذه الدولة |
@@ -341,10 +342,10 @@
 | `/auth/me/totp/recovery/verify` | POST | `invalid_totp` 401 · `totp_not_enrolled` 409 |
 | `/auth/me/verify-phone` | POST | `firebase_auth_unavailable` 503 · `invalid_id_token` 401 · `invalid_otp` 401 · `rate_limited` 429 · `verification_unavailable` 503 |
 | `/auth/method` | GET | — |
-| `/auth/password-reset` | POST | `firebase_auth_unavailable` 503 · `invalid_id_token` 401 · `invalid_input` 422 · `invalid_otp` 401 · `not_found` 404 · `rate_limited` 429 · `verification_unavailable` 503 |
+| `/auth/password-reset` | POST | `firebase_auth_unavailable` 503 · `invalid_id_token` 401 · `invalid_input` 422 · `invalid_otp` 401 · `not_found` 404 · `weak_password` 422 · `weak_password` 422 · `weak_password` 422 · `rate_limited` 429 · `verification_unavailable` 503 |
 | `/auth/password-reset/challenge` | POST | `verification_channel_unavailable` 400 · `invalid_input` 422 · `rate_limited` 429 · `sms_unavailable` 503 · `verification_send_failed` 502 · `whatsapp_unavailable` 503 |
 | `/auth/refresh` | POST | `invalid_token` 401 |
-| `/auth/register` | POST | `firebase_auth_unavailable` 503 · `invalid_id_token` 401 · `invalid_input` 422 · `invalid_otp` 401 · `phone_already_registered` 409 · `rate_limited` 429 · `referral_code_unknown` 404 · `referral_not_allowed` 409 · `verification_unavailable` 503 · `wrong_app_for_role` 403 |
+| `/auth/register` | POST | `firebase_auth_unavailable` 503 · `invalid_id_token` 401 · `invalid_input` 422 · `invalid_otp` 401 · `weak_password` 422 · `weak_password` 422 · `weak_password` 422 · `phone_already_registered` 409 · `rate_limited` 429 · `referral_code_unknown` 404 · `referral_not_allowed` 409 · `verification_unavailable` 503 · `wrong_app_for_role` 403 |
 
 ### `bookings`
 
@@ -358,7 +359,7 @@
 
 | المسار | الطريقة | الأخطاء الخاصة (الرمز — الحالة) |
 |---|---|---|
-| `/payments/card/mock/{cart_id}` | POST | `card_gateway_unavailable` 503 · `credentials_encryption_unavailable` 500 · `feature_not_available` 501 · `not_found` 404 · `permission_denied` 403 |
+| `/payments/card/mock/{cart_id}` | POST | `card_gateway_unavailable` 503 · `feature_not_available` 501 · `not_found` 404 · `permission_denied` 403 |
 | `/payments/card/orders/{cart_id}` | GET | `card_gateway_unavailable` 503 · `not_found` 404 |
 | `/payments/card/webhook` | POST | `card_gateway_unavailable` 503 · `credentials_encryption_unavailable` 500 · `invalid_webhook_signature` 400 · `not_found` 404 · `rate_limited` 429 |
 | `/payments/cards` | GET | — |
@@ -571,20 +572,20 @@
 | الشاشة | نداءات API | رسالةُ الخلفية | وسمُ الحقل | تحقّقٌ فوري |
 |---|---|---|---|---|
 | `Audit` | `listAuditLogs` | ✅ | — | — |
-| `Campaigns` | `cancelCampaign`, `createCampaign`, `listDeliveries` | ✅ | ❌ | ❌ |
-| `Disputes` | `listPayments`, `resolveDispute` | ✅ | ❌ | ❌ |
-| `Drivers` | `activateDriver`, `approveDriver`, `getDriverDocuments`, `listDrivers` +4 | ✅ | ❌ | ❌ |
-| `Finance` | `approveWithdrawal`, `confirmTopup`, `listTopups`, `markWithdrawalPaid` +2 | ✅ | ❌ | ❌ |
+| `Campaigns` | `cancelCampaign`, `createCampaign`, `listDeliveries` | ✅ | ✅ | ❌ |
+| `Disputes` | `listPayments`, `resolveDispute` | ✅ | ✅ | ❌ |
+| `Drivers` | `activateDriver`, `approveDriver`, `getDriverDocuments`, `listDrivers` +4 | ✅ | ✅ | ❌ |
+| `Finance` | `approveWithdrawal`, `confirmTopup`, `listTopups`, `markWithdrawalPaid` +2 | ✅ | ✅ | ❌ |
 | `LiveMap` | `getLiveMap` | ✅ | — | — |
 | `Login` | `login`, `loginWithTotp` | ✅ | ✅ | ❌ |
 | `Overview` | `getOverview` | ✅ | — | — |
 | `Pricing` | `createPricing`, `deletePricing`, `listPricing`, `updatePricing` | ✅ | ✅ | ❌ |
-| `Providers` | `saveProviderCredential`, `testProviderCredential` | ✅ | ❌ | ❌ |
+| `Providers` | `saveProviderCredential`, `testProviderCredential` | ✅ | ✅ | ❌ |
 | `Reports` | `getReports` | ✅ | — | — |
-| `Riders` | `blockUser`, `freezeWallet`, `getWallet`, `listUsers` +3 | ✅ | ❌ | ❌ |
+| `Riders` | `blockUser`, `freezeWallet`, `getWallet`, `listUsers` +3 | ✅ | ✅ | ❌ |
 | `Rides` | `getRide`, `listRides` | ✅ | — | — |
-| `Security` | `confirmTotp`, `disableTotp`, `updateSecurityPolicy`, `verifyRecoveryCode` | ✅ | ❌ | ❌ |
-| `Settings` | `getReferralSettings`, `getSharingSettings`, `setFeatureFlag`, `updateAdvanceSettings` +7 | ✅ | ❌ | ❌ |
-| `Subscriptions` | `createPlan`, `deletePlan`, `listDrivers`, `listSubscriptions` +2 | ✅ | ❌ | ❌ |
+| `Security` | `confirmTotp`, `disableTotp`, `updateSecurityPolicy`, `verifyRecoveryCode` | ✅ | ✅ | ❌ |
+| `Settings` | `getReferralSettings`, `getSharingSettings`, `setFeatureFlag`, `updateAdvanceSettings` +7 | ✅ | ✅ | ❌ |
+| `Subscriptions` | `createPlan`, `deletePlan`, `listDrivers`, `listSubscriptions` +2 | ✅ | ✅ | ❌ |
 | `Users` | `listUsers` | ✅ | — | — |
 

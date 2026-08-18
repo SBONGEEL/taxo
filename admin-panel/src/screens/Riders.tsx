@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { moment, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { arabicDigits, cn } from "@/lib/utils";
@@ -232,7 +233,9 @@ function RiderDrawer({
   const [ledger, setLedger] = useState<WalletTransaction[] | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [note, setNote] = useState<string | null>(null);
 
   const loadWallet = useCallback(async () => {
@@ -255,7 +258,7 @@ function RiderDrawer({
       await action();
       onChanged(message);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      form.capture(caught, "تعذّر التنفيذ");
       setBusy(false);
     }
   }
@@ -274,12 +277,13 @@ function RiderDrawer({
       );
       setNote(wallet.frozen ? "رُفع تجميد المحفظة" : "جُمّدت المحفظة");
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      form.capture(caught, "تعذّر التنفيذ");
     }
     setBusy(false);
   }
 
   return (
+    <FormErrors value={form.field}>
     <div className="fixed inset-0 z-50 bg-dim" onClick={onClose}>
       <div
         className="scr absolute bottom-0 start-0 top-0 w-drawer max-w-full animate-slidein border-e border-line bg-surface p-22"
@@ -387,6 +391,7 @@ function RiderDrawer({
           <div className="mt-16">
             <Field
               label="السبب"
+              name="reason"
               placeholder="يدخل سجل التدقيق ولا يصل صاحب الحساب — ويصحب الحظر والتجميد معاً"
               value={reason}
               maxLength={255}
@@ -437,5 +442,6 @@ function RiderDrawer({
         )}
       </div>
     </div>
+    </FormErrors>
   );
 }

@@ -46,6 +46,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { arabicDigits } from "@/lib/utils";
@@ -99,7 +100,9 @@ export function SubscriptionsScreen() {
   const [rows, setRows] = useState<Subscription[] | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[] | null>(null);
   const [recording, setRecording] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -142,6 +145,7 @@ export function SubscriptionsScreen() {
   ).length;
 
   return (
+    <FormErrors value={form.field}>
     <Shell
       title="الاشتراكات والباقات"
       subtitle="لا اشتراك ساري = لا رحلات — والفحصُ في التوزيع بالساعة لا بعمود الحالة"
@@ -232,7 +236,7 @@ export function SubscriptionsScreen() {
             setDone(message);
             void loadPlans();
           }}
-          onError={setError}
+          onError={(caught) => form.capture(caught, "تعذّر التنفيذ")}
         />
       </section>
 
@@ -249,6 +253,7 @@ export function SubscriptionsScreen() {
         />
       ) : null}
     </Shell>
+    </FormErrors>
   );
 }
 
@@ -263,7 +268,7 @@ function PlansPanel({
   plans: SubscriptionPlan[] | null;
   canEdit: boolean;
   onChanged: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [adding, setAdding] = useState(false);
 
@@ -272,7 +277,7 @@ function PlansPanel({
       await action();
       onChanged(message);
     } catch (caught) {
-      onError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      onError(caught);
     }
   }
 
@@ -377,7 +382,7 @@ function PlanForm({
   country: CountryCode;
   onClose: () => void;
   onDone: (message: string) => void;
-  onError: (message: string) => void;
+  onError: (caught: unknown) => void;
 }) {
   const [name, setName] = useState("");
   const [duration, setDuration] = useState<SubscriptionDurationType>("monthly");
@@ -390,12 +395,14 @@ function PlanForm({
       <div className="grid gap-12 md:grid-cols-3">
         <Field
           label="الاسم"
+          name="name"
           value={name}
           maxLength={120}
           onChange={(event) => setName(event.target.value)}
         />
         <Select
           label="المدة"
+          name="duration_type"
           value={duration}
           onChange={(event) =>
             setDuration(event.target.value as SubscriptionDurationType)
@@ -411,6 +418,7 @@ function PlanForm({
         </Select>
         <Field
           label={`السعر (${currencyLabel(country === "JO" ? "JOD" : "LYD")})`}
+          name="price"
           inputMode="decimal"
           dir="ltr"
           value={price}
@@ -444,9 +452,7 @@ function PlanForm({
             })
               .then(() => onDone("أُضيفت الباقة"))
               .catch((caught) => {
-                onError(
-                  caught instanceof ApiError ? caught.message : "تعذّر الحفظ",
-                );
+                onError(caught);
                 setBusy(false);
               });
           }}

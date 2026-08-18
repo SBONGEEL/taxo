@@ -25,6 +25,7 @@ import { listPayments, resolveDispute } from "@/api/endpoints";
 import type { DisputeResolution, Payment } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { useCountry } from "@/lib/country";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -141,7 +142,9 @@ function ResolveModal({
 }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<DisputeResolution | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
 
   function decide(resolution: DisputeResolution) {
     setBusy(resolution);
@@ -154,13 +157,12 @@ function ResolveModal({
             : "فُصل بأن المال لم يصل — الدفعة فاشلة",
         ),
       )
-      .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر الفصل"),
-      )
+      .catch((caught) => form.capture(caught, "تعذّر الفصل"))
       .finally(() => setBusy(null));
   }
 
   return (
+    <FormErrors value={form.field}>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
       onClick={onClose}
@@ -227,6 +229,7 @@ function ResolveModal({
         </div>
       </div>
     </div>
+    </FormErrors>
   );
 }
 

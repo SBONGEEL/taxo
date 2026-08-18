@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useSession } from "@/lib/session";
+import { FormErrors, useFormError } from "@/lib/form-errors";
 import { arabicDigits, cn } from "@/lib/utils";
 
 const WITHDRAWAL_LABEL: Record<WithdrawalStatus, string> = {
@@ -69,7 +70,9 @@ export function FinanceScreen() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[] | null>(null);
   const [topups, setTopups] = useState<TopupRequest[] | null>(null);
   const [paying, setPaying] = useState<Withdrawal | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const form = useFormError();
+  const error = form.message;
+  const setError = form.setMessage;
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -95,11 +98,12 @@ export function FinanceScreen() {
       await load();
       setDone(message);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+      form.capture(caught, "تعذّر التنفيذ");
     }
   }
 
   return (
+    <FormErrors value={form.field}>
     <Shell
       title="المحافظ وطلبات السحب"
       subtitle="الموافقة قرارٌ إداري، والقيد في الدفتر يقع عند الدفع وحده"
@@ -269,6 +273,7 @@ export function FinanceScreen() {
         />
       ) : null}
     </Shell>
+    </FormErrors>
   );
 }
 
