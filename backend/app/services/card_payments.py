@@ -100,7 +100,7 @@ def _new_cart_id(prefix: str) -> str:
 # --------------------------------------------------------------- بوابة القناة
 
 
-def _paying_side(payer: User) -> UserRole:
+def _paying_side(payer: User) -> str:
     """بصفةِ أيِّ دورٍ يدفع — **وهي تعيّن التطبيقَ الذي يعود إليه**.
 
     وعودةٌ إلى تطبيقٍ ليس بيده تترك الدافعَ أمام صفحةٍ لا تُكمل، وقد دُفع ماله.
@@ -110,9 +110,9 @@ def _paying_side(payer: User) -> UserRole:
     if rider and driver:
         raise AmbiguousRole(
             "card_return_app_undecided",
-            "لم يُقرَّر بعدُ إلى أيِّ تطبيقٍ يعود دافعٌ يحمل الدورين",
+            "لم يُعلَن التطبيقُ الذي بدأ الدفع، والحسابُ يحمل الدورين",
         )
-    return UserRole.DRIVER if driver else UserRole.RIDER
+    return (UserRole.DRIVER if driver else UserRole.RIDER).value
 
 
 
@@ -193,6 +193,7 @@ def _order_request(
     currency: Currency,
     description: str,
     save_card: bool,
+    opened_from: str,
 ) -> OrderRequest:
     return OrderRequest(
         cart_id=cart_id,
@@ -200,7 +201,7 @@ def _order_request(
         currency=currency,
         # وصفٌ بحروف لاتينية: يعبر نماذج HTTP لدى المزودين بلا لبس ترميز
         description=description,
-        return_url=return_url_for(cart_id, payer_role=_paying_side(payer)),
+        return_url=return_url_for(cart_id, opened_from=opened_from),
         customer_name=payer.name,
         customer_phone=payer.phone,
         # مُعرّفٌ ثابت للدافع لدى المزود — به تُربط بطاقاته المحفوظة
@@ -231,6 +232,9 @@ async def _start(
         currency=order.currency,
         description=description,
         save_card=order.save_card,
+        # **من الصفِّ لا من الدور** (SPEC §22): الطلبُ يحمل تطبيقَه منذ فتحه،
+        # فالعودةُ تتبع من بدأ. والاشتقاقُ احتياطٌ للصفوف الأقدم من العمود.
+        opened_from=order.opened_from_app or _paying_side(payer),
     )
 
     if saved_card_id is not None:
@@ -289,6 +293,7 @@ async def start_ride_payment(
         ride_id=ride.id,
         payment_id=payment.id,
         save_card=save_card,
+        opened_from_app=_paying_side(rider),
     )
     session.add(order)
     await session.flush()
@@ -332,6 +337,7 @@ async def start_wallet_topup(
         amount=amount,
         currency=currency_for_country(owner.country_code),
         save_card=save_card,
+        opened_from_app=_paying_side(owner),
     )
     session.add(order)
     await session.flush()
@@ -384,6 +390,7 @@ async def start_subscription(
         currency=plan.currency,
         plan_id=plan.id,
         save_card=save_card,
+        opened_from_app=_paying_side(owner),
     )
     session.add(order)
     await session.flush()

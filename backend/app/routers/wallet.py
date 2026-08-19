@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 from sqlalchemy import select
@@ -50,8 +51,20 @@ CARD_TOPUP_LIMIT = 10
 CARD_TOPUP_WINDOW_SECONDS = 300
 
 
-async def _wallet_out(session, user: User) -> WalletOut:
-    owner_type = wallet_service.owner_type_for(user)
+# **إعلانُ المحفظة** (SPEC §22): هذه المساراتُ يخدمها التطبيقان معاً
+# (`CurrentUser`)، فمن حمل الدورين لا يقول الدورُ أيَّ محفظةٍ يعني. والإعلانُ
+# اختياريٌّ عمداً: صاحبُ دورٍ واحدٍ لا يُطالَب بشيء، ولا يُخرج هذا أحداً من
+# جلسةٍ قائمة — نفسُ منطق `app` في `app_scope`.
+WalletChoice = Annotated[
+    WalletOwnerType | None,
+    Query(alias="wallet", description="أيُّ محفظةٍ تعني — لمن يحمل الدورين"),
+]
+
+
+async def _wallet_out(
+    session, user: User, declared: WalletOwnerType | None = None
+) -> WalletOut:
+    owner_type = wallet_service.owner_type_for(user, declared=declared)
     return WalletOut(
         owner_id=user.id,
         owner_type=owner_type,
@@ -83,19 +96,22 @@ async def _pending_compensation(session: AsyncSession, user: User) -> Decimal:
 
 
 @router.get("/me", response_model=WalletOut)
-async def get_my_wallet(user: CurrentUser, session: DbSession) -> WalletOut:
+async def get_my_wallet(
+    user: CurrentUser, session: DbSession, wallet: WalletChoice = None
+) -> WalletOut:
     """رصيد المحفظة وحالتها — للراكب والكبتن معاً.
 
     القراءة لا تمر بمفتاح `wallet_enabled`: رصيدٌ سابقٌ لإطفاء المفتاح يبقى
     مرئياً لصاحبه وإن تعذّر إنفاقه.
     """
-    return await _wallet_out(session, user)
+    return await _wallet_out(session, user, wallet)
 
 
 @router.get("/me/transactions", response_model=list[WalletTransactionOut])
 async def list_my_transactions(
     user: CurrentUser,
     session: DbSession,
+    wallet: WalletChoice = None,
     tx_type: WalletTransactionType | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -103,7 +119,7 @@ async def list_my_transactions(
     entries = await wallet_service.history(
         session,
         user.id,
-        wallet_service.owner_type_for(user),
+        wallet_service.owner_type_for(user, declared=wallet),
         limit=limit,
         offset=offset,
         tx_type=tx_type,
@@ -191,7 +207,10 @@ async def list_my_topups(
     "/me/topups", response_model=TopupRequestOut, status_code=status.HTTP_201_CREATED
 )
 async def create_topup_request(
-    payload: TopupRequestCreate, user: CurrentUser, session: DbSession
+    payload: TopupRequestCreate,
+    user: CurrentUser,
+    session: DbSession,
+    wallet: WalletChoice = None,
 ) -> TopupRequestOut:
     """طلب شحن كليك ينتظر تأكيد الإدارة — لا رصيد يتغيّر قبله."""
     request = await topups.create_request(
@@ -200,6 +219,7 @@ async def create_topup_request(
         method=payload.method,
         amount=payload.amount,
         reference=payload.reference,
+        declared=wallet,
     )
     await session.commit()
     return TopupRequestOut.model_validate(request)

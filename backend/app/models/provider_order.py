@@ -120,6 +120,11 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
+
+    # **التطبيقُ الذي فتح الدفع** (SPEC §22): العودةُ تتبع من بدأ لا دورَ من
+    # يدفع — وحسابٌ بدورين لا يقول دورُه إلى أين يعود. فارغٌ في الصفوف الأقدم،
+    # ومُلئت في `0049` لأنها كانت معلومةً يقيناً وقتَها
+    opened_from_app: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # دولة العقد الذي فُتح به الطلب. عقود المزودين per-country (SPEC القسم 4)،
     # فبغير تثبيتها هنا يُستعلم طلبُ الأمس بعقد اليوم إن انتقل صاحبه دولة
     country_code: Mapped[CountryCode] = mapped_column(

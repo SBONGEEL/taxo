@@ -61,6 +61,7 @@ from app.models.ride import Ride
 from app.models.subscription import DriverSubscription
 from app.models.user import User
 from app.services import settings_service, wallet
+from app.core.app_scope import ClientApp
 from app.core.exceptions import AmbiguousRole
 
 # أبجديةٌ بلا `0/O/1/I/L`: الرمزُ يُقرأ من شاشةٍ ويُنطق في مكالمةٍ ويُكتب في
@@ -104,19 +105,25 @@ def normalize(code: str) -> str:
     return code.strip().upper()
 
 
-def programme_for(user: User) -> str:
-    """برنامجُ الإحالة لهذا الحساب **الآن** — ويصيح إن حمل الدورين.
+def programme_for(user: User, *, app: ClientApp | None = None) -> str:
+    """برنامجُ الإحالة — **من التطبيق الذي صدرت منه**، لا من دور صاحبها (§22).
 
-    يُستعمل عند **الختم** وعند قراءة صفٍّ أقدمَ من العمود. وحسابٌ بالدورين بلا
-    ختمٍ لا برنامجَ له معلوماً: المبلغُ يختلف بين البرنامجين، فالتخمينُ يدفع
-    رقماً لا يقرّره أحد.
+    فمن سجّل من تطبيق الكبتن أُحيل ببرنامج الكباتن، ومن تطبيق الراكب ببرنامجه —
+    أياً كانت أدوارُه بعدها. و`app` غائباً يُشتقّ من الدور كما كان: عملاءُ أقدمُ
+    من هذا الحقل، وصفوفٌ سابقةٌ تُقرأ. وحسابٌ بالدورين بلا إعلانٍ لا برنامجَ له
+    معلوماً — والمبلغُ يختلف بينهما، فالتخمينُ يدفع رقماً لا يقرّره أحد.
     """
+    if app is ClientApp.DRIVER:
+        return REFERRAL_TYPE_DRIVER
+    if app is ClientApp.RIDER:
+        return REFERRAL_TYPE_RIDER
+
     rider = user.has_role(UserRole.RIDER)
     driver = user.has_role(UserRole.DRIVER)
     if rider and driver:
         raise AmbiguousRole(
             "referral_programme_undecided",
-            "لم يُقرَّر بعدُ أيُّ برنامجِ إحالةٍ لحسابٍ يحمل الدورين",
+            "لم يُعلَن تطبيقُ الإحالة، والحسابُ يحمل الدورين",
         )
     return REFERRAL_TYPE_DRIVER if driver else REFERRAL_TYPE_RIDER
 
@@ -221,7 +228,13 @@ async def by_code(session: AsyncSession, code: str) -> User | None:
     )
 
 
-async def attach(session: AsyncSession, *, referred: User, code: str) -> Referral:
+async def attach(
+    session: AsyncSession,
+    *,
+    referred: User,
+    code: str,
+    app: ClientApp | None = None,
+) -> Referral:
     """يُسند إحالةً للحساب المُسجَّل الآن. تُستدعى من مسار التسجيل وحده.
 
     **ولا تُفحص شروطُ الاستحقاق هنا**: الإسنادُ سجلٌّ لما وقع (سجّلت برمز
@@ -244,7 +257,7 @@ async def attach(session: AsyncSession, *, referred: User, code: str) -> Referra
         referred_user_id=referred.id,
         code_used=normalize(code),
         # **يُختم الآن** — البرنامجُ واقعةُ هذه اللحظة، ولو تبدّلت أدوارُه بعدها
-        referral_type=programme_for(referred),
+        referral_type=programme_for(referred, app=app),
     )
     session.add(referral)
     try:

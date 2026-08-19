@@ -62,7 +62,7 @@ def _mock_allowed(values: Mapping[str, Any]) -> bool:
     return credentials_service.is_mock(values) and not settings.is_production
 
 
-def return_url_for(cart_id: str, *, payer_role: UserRole) -> str:
+def return_url_for(cart_id: str, *, opened_from: str) -> str:
     """الصفحة التي يعود إليها المتصفح من صفحة المزود.
 
     عنوانُ واجهةٍ لا سرُّ مزود، فمكانه إعدادات البنية التحتية. الواجهة تقرأ
@@ -80,7 +80,7 @@ def return_url_for(cart_id: str, *, payer_role: UserRole) -> str:
     """
     base = (
         settings.card_return_url_driver
-        if payer_role is UserRole.DRIVER
+        if opened_from == UserRole.DRIVER.value
         else settings.card_return_url
     )
     return f"{base}?cart_id={cart_id}"

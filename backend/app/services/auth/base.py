@@ -86,6 +86,9 @@ async def create_account(
     # الرمزُ الذي جاء به — إن جاء. **والإسنادُ لا يُفحص استحقاقُه هنا**:
     # هذا سجلُّ ما وقع، والاستحقاقُ سؤالٌ يُطرح لاحقاً (SPEC القسم 9.1)
     if data.referral_code:
-        await referrals.attach(session, referred=user, code=data.referral_code)
+        # **برنامجُ التطبيق الذي صدرت منه الإحالة** (§22)، يُختم الآن
+        await referrals.attach(
+            session, referred=user, code=data.referral_code, app=data.app
+        )
 
     return user

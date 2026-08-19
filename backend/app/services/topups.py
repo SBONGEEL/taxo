@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvalidInput, InvalidStatusTransition, NotFound
 from app.models.enums import (
+    WalletOwnerType,
     AuditAction,
     TopupMethod,
     TopupRequestStatus,
@@ -94,6 +95,7 @@ async def create_request(
     method: TopupMethod,
     amount: Decimal,
     reference: str | None,
+    declared: WalletOwnerType | None = None,
 ) -> WalletTopupRequest:
     """طلب شحن يفتحه الراكب بنفسه بعد أن يحوّل على alias الشركة."""
     if method not in RIDER_METHODS:
@@ -104,12 +106,14 @@ async def create_request(
 
     await wallet.require_wallet_enabled(session, owner.country_code)
     wallet.require_not_frozen(owner)
-    # يفحص أن للحساب محفظة أصلاً (راكب أو كبتن لا مشرف)
-    wallet.owner_type_for(owner)
+    # **يُعلَن ويُختم**: المحفظةُ تُقرَّر هنا وتُقرأ عند التأكيد، فلا تُشتقّ
+    # من دورٍ قد يكون دورين يومَها (SPEC §22)
+    owner_type = wallet.owner_type_for(owner, declared=declared)
 
     amount = _validated_amount(amount)
     request = WalletTopupRequest(
         owner_id=owner.id,
+        owner_type=owner_type,
         method=method,
         amount=amount,
         reference=reference.strip(),
@@ -143,6 +147,8 @@ async def confirm(
     entry = await wallet.record(
         session,
         owner=owner,
+        # **من الصفِّ لا من الدور**: الطلبُ يحمل محفظتَه منذ إنشائه
+        owner_type=request.owner_type,
         tx_type=WalletTransactionType.TOPUP,
         amount=request.amount,
         reference=request.reference,
@@ -206,6 +212,7 @@ async def create_confirmed(
     method: TopupMethod,
     amount: Decimal,
     reference: str | None,
+    declared: WalletOwnerType | None = None,
 ) -> WalletTopupRequest:
     """شحن يُنشئه الموظف مؤكداً — نقطة الكاش المعتمدة (SPEC القسم 7).
 
@@ -216,9 +223,10 @@ async def create_confirmed(
         raise InvalidInput("قناة الشحن هذه لا تُنشأ من اللوحة")
 
     await wallet.require_wallet_enabled(session, owner.country_code)
-    wallet.owner_type_for(owner)
+    owner_type = wallet.owner_type_for(owner, declared=declared)
     request = WalletTopupRequest(
         owner_id=owner.id,
+        owner_type=owner_type,
         method=method,
         amount=_validated_amount(amount),
         reference=(reference or "").strip() or None,

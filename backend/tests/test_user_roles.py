@@ -378,3 +378,137 @@ async def test_an_account_with_no_grant_row_is_still_found(session_factory) -> N
         )
         assert found == legacy.id
         assert legacy.has_role(UserRole.SUPPORT)
+
+
+# --------------------------------------------------------------- الجسرُ المؤقت
+
+
+async def test_no_path_writes_users_role() -> None:
+    """**العمودُ يُقرأ للرجوع ولا يُكتب** (SPEC §22.5) — وهو جسرٌ لا حالةٌ نهائية.
+
+    بيتا الحقيقة (`users.role` والجدول) متطابقان اليومَ لأن الترحيلةَ جعلتهما
+    كذلك، وكلَّ إنشاءٍ يكتبهما معاً. وكتابةٌ **في العمود وحدَه** بعد اليوم تفكّ
+    التطابقَ بلا أن يفشل شيء: التخويلُ يقرأ المجموعةَ، والمرشِّحاتُ تضمّ
+    العمودَ — فيصير الحسابُ شيئاً في باب وشيئاً آخر في آخر.
+
+    والإنشاءُ مستثنىً بموضعه: `services/auth/base.py` يبني العمودَ والصفَّ معاً
+    في مُنشئٍ واحد، وهو البابُ الوحيد.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "app"
+    # إسنادٌ إلى العمود: `x.role = …` أو `role=…` داخل بناء `User(`
+    assignment = re.compile(r"^\s*\w+\.role\s*=(?!=)", re.M)
+
+    writers = []
+    for path in root.rglob("*.py"):
+        rel = str(path.relative_to(root)).replace("\\", "/")
+        text = path.read_text(encoding="utf-8")
+        if assignment.search(text):
+            writers.append(rel)
+
+    assert writers == [], (
+        "مسارٌ يكتب في users.role — والعمودُ يُقرأ للرجوع ولا يُكتب: " + str(writers)
+    )
+
+
+# --------------------------------------------------------------- سياقُ الفعل
+
+
+async def test_the_declared_wallet_decides_and_is_still_checked(
+    client, session_factory
+) -> None:
+    """**الإعلانُ يقرّر ولا يمنح**: يُفحص أن صاحبَه يملك دورَ تلك المحفظة."""
+    from app.core.exceptions import PermissionDenied
+    from app.models.enums import WalletOwnerType
+    from app.services import wallet
+    from tests.helpers import rider_session
+
+    rider = await rider_session(client)
+    user = await _user(session_factory, rider["user"]["id"])
+
+    assert (
+        wallet.owner_type_for(user, declared=WalletOwnerType.RIDER)
+        is WalletOwnerType.RIDER
+    )
+    # ويدّعي محفظةَ كبتنٍ لا يملك دورَه
+    with pytest.raises(PermissionDenied):
+        wallet.owner_type_for(user, declared=WalletOwnerType.DRIVER)
+
+
+async def test_a_dual_role_account_picks_its_wallet_by_declaring(
+    client, session_factory
+) -> None:
+    from app.models.enums import WalletOwnerType
+    from app.services import wallet
+    from tests.helpers import rider_session
+
+    rider = await rider_session(client)
+    await _grant(session_factory, uuid.UUID(rider["user"]["id"]), UserRole.DRIVER)
+    user = await _user(session_factory, rider["user"]["id"])
+
+    # بلا إعلانٍ يرتدّ، ومع الإعلانِ يمضي — وكلا المحفظتين متاحةٌ له
+    with pytest.raises(AmbiguousRole):
+        wallet.owner_type_for(user)
+    for choice in (WalletOwnerType.RIDER, WalletOwnerType.DRIVER):
+        assert wallet.owner_type_for(user, declared=choice) is choice
+
+
+async def test_the_topup_row_carries_the_wallet_it_was_created_for(
+    client, session_factory, jordan_wallet
+) -> None:
+    """**يُختم عند الإنشاء ويُقرأ عند التأكيد** — لا يُشتقّ من دورٍ صار دورين."""
+    from sqlalchemy import select
+
+    from app.models.wallet import WalletTopupRequest
+    from tests.helpers import rider_session
+
+    rider = await rider_session(client)
+    created = await client.post(
+        "/wallet/me/topups",
+        json={"method": "cliq", "amount": "5.000", "reference": "REF-1"},
+        headers=rider["headers"],
+    )
+    assert created.status_code in (200, 201), created.text
+
+    async with session_factory() as session:
+        row = await session.scalar(
+            select(WalletTopupRequest).where(
+                WalletTopupRequest.owner_id == uuid.UUID(rider["user"]["id"])
+            )
+        )
+    assert row is not None and row.owner_type is not None
+
+
+async def test_the_card_order_carries_the_app_that_opened_it() -> None:
+    """والعودةُ تقرأ الصفَّ لا الدور — يُقاس على الشيفرة، فالمسارُ يحتاج مزوّداً."""
+    import inspect as _inspect
+
+    from app.services import card_payments
+
+    source = _inspect.getsource(card_payments)
+    assert "opened_from=order.opened_from_app" in source
+    assert "payer_role=" not in source
+
+
+async def test_the_referral_programme_follows_the_app_not_the_role(
+    client, session_factory
+) -> None:
+    from app.core.app_scope import ClientApp
+    from app.services import referrals
+    from tests.helpers import rider_session
+
+    rider = await rider_session(client)
+    await _grant(session_factory, uuid.UUID(rider["user"]["id"]), UserRole.DRIVER)
+    user = await _user(session_factory, rider["user"]["id"])
+
+    # بلا إعلانٍ يرتدّ، ومع التطبيقِ يقرّر — ولا ينظر إلى الأدوار أصلاً
+    with pytest.raises(AmbiguousRole):
+        referrals.programme_for(user)
+    assert referrals.programme_for(user, app=ClientApp.DRIVER) == (
+        referrals.REFERRAL_TYPE_DRIVER
+    )
+    assert referrals.programme_for(user, app=ClientApp.RIDER) == (
+        referrals.REFERRAL_TYPE_RIDER
+    )

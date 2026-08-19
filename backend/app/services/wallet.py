@@ -58,20 +58,36 @@ def _now() -> datetime:
 # ------------------------------------------------------------------ المالك
 
 
-def owner_type_for(user: User) -> WalletOwnerType:
-    """أي المحفظتين هي — للركاب والكباتن وحدهم.
+def owner_type_for(
+    user: User, *, declared: WalletOwnerType | None = None
+) -> WalletOwnerType:
+    """أيُّ المحفظتين — **والعمليةُ تعلنها، لا دورُ صاحبها** (SPEC §22).
 
-    لا محفظة لحساب admin أو support: هؤلاء يحرّكون محافظ غيرهم من اللوحة
-    ولا محفظة لهم تُشحن أو يُسحب منها.
+    **محفظتان لا واحدة** (قرارُ المالك 2026-08-19): محفظةُ الكبتن تحمل الأرباحَ
+    وتخضع للسلَف والاقتطاع والاشتراك، ومحفظةُ الراكب تحمل ما يشحنه لرحلاته.
+    **ودمجُهما يعني اقتطاعَ السلفة من مالٍ شحنه بنفسه** — ولذلك لا دمج.
+
+    فمن حمل الدورين تُقرَّر محفظتُه بسياق الفعل: نداءٌ من تطبيق الكبتن يعلن
+    محفظةَ الكبتن، ومن تطبيق الراكب محفظةَ الراكب. **ومن لم يعلن يرتدّ بالخطأ
+    المسمّى** — لا بتخمين.
+
+    والإعلانُ لا يمنح شيئاً: يُفحص أن صاحبَه يملك دورَ تلك المحفظة، وإلا رُفض.
     """
     rider = user.has_role(UserRole.RIDER)
     driver = user.has_role(UserRole.DRIVER)
+
+    if declared is not None:
+        needed = UserRole.RIDER if declared is WalletOwnerType.RIDER else UserRole.DRIVER
+        if not user.has_role(needed):
+            raise PermissionDenied("لا محفظة لهذا الحساب من هذا النوع")
+        return declared
+
     if rider and driver:
         # **قرارُ مالٍ غائب**: النموذج يسمح بمحفظتين لشخصٍ واحد
         # (`owner_id` يشير إلى `users.id` و`owner_type` وحدَه يفرّق)
         raise AmbiguousRole(
             "wallet_owner_undecided",
-            "لم يُقرَّر بعدُ أيُّ محفظةٍ لحسابٍ يحمل دورَي الراكب والكبتن",
+            "لم تُعلَن محفظةُ هذه العملية، والحسابُ يحمل الدورين",
         )
     if rider:
         return WalletOwnerType.RIDER
@@ -157,8 +173,10 @@ async def balance(
     return round_money(Decimal(total))
 
 
-async def balance_of(session: AsyncSession, user: User) -> Decimal:
-    return await balance(session, user.id, owner_type_for(user))
+async def balance_of(
+    session: AsyncSession, user: User, *, declared: WalletOwnerType | None = None
+) -> Decimal:
+    return await balance(session, user.id, owner_type_for(user, declared=declared))
 
 
 async def history(
@@ -213,6 +231,7 @@ async def record(
     session: AsyncSession,
     *,
     owner: User,
+    owner_type: WalletOwnerType | None = None,
     tx_type: WalletTransactionType,
     amount: Decimal,
     ride_id: uuid.UUID | None = None,
@@ -225,7 +244,7 @@ async def record(
 
     `amount` موقّعة: موجبة للإضافة وسالبة للخصم، ويُفحص توافقها مع النوع.
     """
-    owner_type = owner_type_for(owner)
+    owner_type = owner_type_for(owner, declared=owner_type)
     amount = round_money(amount)
     _validate_sign(tx_type, amount)
 

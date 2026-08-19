@@ -183,6 +183,14 @@ class WalletTopupRequest(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
+
+    # **المحفظةُ تُعلَن عند الإنشاء وتُقرأ عند التأكيد** (SPEC §22): اشتقاقُها
+    # من الدور لحظةَ التأكيد يجعل طلباً أُنشئ من تطبيق الراكب يُشحن في محفظة
+    # الكبتن يومَ يكسب صاحبُه الدورَ الثاني. فارغٌ في الصفوف الأقدم — وقد
+    # مُلئت في `0048` لأنها كانت معلومةً يقيناً وقتَها
+    owner_type: Mapped[WalletOwnerType | None] = mapped_column(
+        pg_enum(WalletOwnerType, "wallet_owner_type"), nullable=True
+    )
     method: Mapped[TopupMethod] = mapped_column(
         pg_enum(TopupMethod, "topup_method"), nullable=False
     )

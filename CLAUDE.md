@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**1010 backend tests pass** across 91 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
+**1016 backend tests pass** across 91 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -667,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**1010 backend tests pass** across 91 test files, measured on 2026-08-19; all three frontends build with
+**1016 backend tests pass** across 91 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1271,6 +1271,38 @@ no display text.
 
 **Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
 eye is load-bearing, and weakening it is not a style decision.
+
+### The rule that dissolves the ambiguities: context of the act, not role of the actor (2026-08-19)
+
+**`SPEC.md` §22 is the rule; the owner set it as general so a fourth site finds its answer written.**
+Where a role decides **meaning** rather than **permission**, the reference is the *act's* context — the
+app that started it, the declaration carried with it, or the fact stamped at its moment — **never the
+roles its actor holds today**. A role became a set and stopped naming one thing; a context is always
+singular, because an operation is begun from one app and happens once.
+
+Three consequences follow, and they are what makes it implementable: **declare or stamp at creation,
+never derive at use**; **a declaration grants nothing** (it is checked against what the account holds,
+exactly like `app_scope`); and **whoever does not declare gets the named error** — except where a
+decisive safe value exists, which is written as a declared precedence instead (§21.3).
+
+**Two wallets, not one, and the reason is the sharpest thing here**: the captain's wallet carries
+earnings and is subject to advances, deductions and the subscription; the rider's carries what he tops
+up for rides. **Merging them means deducting an advance from money he loaded himself.**
+
+**And a rule fell out of the migration that is worth more than the three sites**: two columns were
+backfilled and one was not. `wallet_topup_requests.owner_type` and `provider_orders.opened_from_app`
+were — because at migration time every account holds exactly one role, so each old row's wallet and app
+are **known with certainty**, and filling them moves a fact. `referrals.referral_type` was not — because
+its question is *which app the referral came from*, and that was never recorded, so filling it writes an
+**inference** into a column of facts. **Backfill what is recorded elsewhere; never backfill what needs
+inferring.**
+
+**The two homes of truth are a bridge, not a destination.** `users.role` and the table agree because the
+migration made them agree and every creation writes both. A write to the column alone would break that
+**with nothing failing** — authorisation reads the set, filters union the column — so an account would be
+one thing at one door and another at the next. A test now fails if any path assigns `users.role`
+(verified by adding one). Its drop condition is written down: after the switch-button stage settles and
+no downgrade is needed, and once no read still unions the column.
 
 ### The roles model became a set — and the dangerous half was never authorisation (2026-08-19)
 
