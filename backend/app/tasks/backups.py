@@ -17,6 +17,7 @@ from app.core.redis_client import get_redis_client
 from app.models.enums import UserRole
 from app.services import backups
 from app.tasks.celery_app import celery_app, run_async
+from app.models.user_role_grant import has_role_clause
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ async def _notify_admins(session, redis, *, title: str, body: str, data: dict) -
     admins = (
         await session.scalars(
             select(User.id).where(
-                User.role == UserRole.ADMIN, User.is_blocked.is_(False)
+                has_role_clause(UserRole.ADMIN),
+                User.is_blocked.is_(False),
             )
         )
     ).all()

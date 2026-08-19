@@ -52,6 +52,7 @@ from app.models.notification import (
     NotificationSetting,
 )
 from app.models.user import User
+from app.models.user_role_grant import has_role_clause
 from app.services import audit, devices, inbox
 from app.services.push import PushMessage, PushProvider, get_push_provider_or_none
 
@@ -355,13 +356,15 @@ def _audience_filters(campaign: NotificationCampaign) -> list:
     """
     filters = [User.is_blocked.is_(False)]
 
+    # **الجمهورُ من يملك الدور** — ومن يحمل الدورين يدخل الحملتين معاً، وهو
+    # الصواب: الحملةُ تخاطب صفةً لا تصنّف أشخاصاً
     if campaign.audience is CampaignAudience.ALL_RIDERS:
-        filters.append(User.role == UserRole.RIDER)
+        filters.append(has_role_clause(UserRole.RIDER))
     elif campaign.audience is CampaignAudience.ALL_DRIVERS:
-        filters.append(User.role == UserRole.DRIVER)
+        filters.append(has_role_clause(UserRole.DRIVER))
     else:
         # مستخدمو دولة: الركاب والكباتن دون حسابات الموظفين
-        filters.append(User.role.in_((UserRole.RIDER, UserRole.DRIVER)))
+        filters.append(has_role_clause(UserRole.RIDER, UserRole.DRIVER))
 
     if campaign.country_code is not None:
         filters.append(User.country_code == campaign.country_code)

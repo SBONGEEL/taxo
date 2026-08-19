@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**989 backend tests pass** across 90 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
+**1010 backend tests pass** across 91 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -667,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**989 backend tests pass** across 90 test files, measured on 2026-08-19; all three frontends build with
+**1010 backend tests pass** across 91 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1271,6 +1271,57 @@ no display text.
 
 **Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
 eye is load-bearing, and weakening it is not a style decision.
+
+### The roles model became a set — and the dangerous half was never authorisation (2026-08-19)
+
+**`SPEC.md` §21 holds the design.** `users.role` was one scalar column, never written after signup, so
+"one account, two apps" was impossible **structurally, not cosmetically**. It is now a set
+(`user_roles`), and every guard asks "does he hold the role?" instead of "is that his role?".
+
+**The count that mattered: `require_roles` has six call sites and all six are in `core/deps.py`** —
+every route reaches them through four aliases. The "sweep across the project" was one function. What
+actually needed care was the **41 direct reads of `.role`**, and splitting them was the whole job:
+**15 decide permission** (mechanical) and **9 decide meaning** — *what a thing is*, not *who may*.
+
+**Four of the nine are money and one is safety**, and three were invisible until the sweep:
+
+- `by_role=user.role` at cancellation → `cancelled_by_rider|driver` → **the cancellation fee and the
+  supervisor's count**. Guessing loads the fee onto the wrong party.
+- `active_ride_for_user` / `rides_for_user` → `if driver: … else: rider`. A dual-role account falls in
+  one branch **with no trace**: its other active ride vanishes from its own screen and half its history
+  never renders. No exception, no log line, no complaint.
+- self-declaring gender → whether the admin's stamp can be bypassed.
+
+Each of the six money/meaning sites now raises **its own named code** (`wallet_owner_undecided`,
+`cancelling_side_undecided`, `card_return_app_undecided`, `referral_programme_undecided`,
+`ride_side_undecided`) — *a code per place, not one generic error*, because whoever reads the log needs
+to know **which decision is missing**, not that an account had two roles.
+
+**The gender site is the one deliberate exception, and it is a declared precedence, not a default**
+(the owner's call): the admin's stamp wins whenever it exists. Shouting there would stop a woman using
+the women's service, while silence opens the worse hole — a captain declaring against his stamp to
+reach what is not his. **The safe value exists and is decisive, so there is nothing to guess.** And the
+first cut of it *weakened an existing rule*: reading only the stamp let an unstamped driver
+self-declare, which 10-ج forbids. It is two conditions now — holds the driver role, **or** carries a
+stamp — so the set opened no door that was closed.
+
+**Two things the build taught, both about the same seam:**
+
+- **`User.roles` must never do IO.** `role_grants` is `selectin`, so any account from a query has it —
+  but an account *constructed in Python* and committed does not, and the first read then lazy-loads
+  outside the greenlet. It reads `inspect(self).unloaded` and falls back to the column. The same trap
+  hit `create_account`, fixed by building the grant **in the constructor** rather than adding it after
+  the flush.
+- **The SQL clause and the Python property must union the column identically.** Accounts created
+  outside `create_account` (the seed, test fixtures) carry the column and no grant row — so a filter
+  reading only the table **hides them**, and an account becomes present in authorisation and absent
+  from every list. `has_role_clause` is the one place that rule lives, and it is the same rule as
+  `User.roles`. Found by `/admin/users?role=support` returning an empty list.
+
+**The migration is measured, not asserted**: 37 accounts → 37 rows, `{user_id: role}` identical before
+and after, **zero accounts with two roles** — and the down/up cycle was *run*, with the `users`
+fingerprint (`md5` over id+role) identical on both sides. The column stays; dropping it would make the
+downgrade a loss.
 
 ### The tenth shape — a green build guard says nothing about what the user is running (2026-08-19)
 

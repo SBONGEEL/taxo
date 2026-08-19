@@ -9,6 +9,7 @@ from app.core.exceptions import InvalidInput, PhoneAlreadyRegistered
 from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
+from app.models.user_role_grant import UserRoleGrant
 from app.schemas.auth import RegisterRequest
 from app.core.redis_client import get_redis_client
 from app.services import otp_limits, referrals
@@ -64,6 +65,16 @@ async def create_account(
         # يحتاج قفلاً على صفٍّ لا يُكتب فيه شيءٌ آخر، وبغيره تُنتج ضغطتان رمزين
         referral_code=referrals.generate_code(),
     )
+    # **الدورُ يُبنى مع الحساب لا يُضاف بعد الدفع** (نموذجُ الأدوار 2026-08-19):
+    # العمودُ باقٍ، والمجموعةُ هي ما يقرؤه التخويل — وكتابتُهما معاً في معاملةٍ
+    # واحدةٍ تمنع حساباً بلا دورٍ في المجموعة، وهو حسابٌ لا يدخل أيَّ تطبيق.
+    #
+    # **وبناؤُه في المُنشئ لا بـ`session.add` بعد `flush`**: الثاني يترك
+    # `role_grants` غيرَ محمَّلةٍ على صفٍّ صار persistent، فأولُ قراءةٍ لها
+    # (`programme_for` في `attach` أدناه) تحاول IO خارج السياق — وهو
+    # `MissingGreenlet` بعينه، الفخُّ الذي يعرفه هذا المشروع.
+    user.role_grants.append(UserRoleGrant(role=user.role))
+
     session.add(user)
     await session.flush()
 

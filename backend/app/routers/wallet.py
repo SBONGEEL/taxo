@@ -166,7 +166,7 @@ async def _resolve_rider(session, phone: str, sender: User) -> User:
         raise NotFound("لا يوجد حساب بهذا الرقم") from exc
 
     recipient = await session.scalar(select(User).where(User.phone == normalized))
-    if recipient is None or recipient.role != UserRole.RIDER:
+    if recipient is None or not recipient.has_role(UserRole.RIDER):
         raise NotFound("لا يوجد حساب بهذا الرقم")
     return recipient
 

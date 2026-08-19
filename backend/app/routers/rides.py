@@ -46,6 +46,7 @@ from app.services import (
 )
 from app.services.directions import Coordinates
 from app.ws import events
+from app.core.exceptions import AmbiguousRole
 
 router = APIRouter(prefix="/rides", tags=["rides"])
 
@@ -388,6 +389,24 @@ async def complete_ride(
     return _to_out(ride)
 
 
+
+def _cancelling_role(user: User) -> UserRole:
+    """بأيِّ صفةٍ ألغى — **وهي تقرّر مالاً**.
+
+    الحالةُ تصير `cancelled_by_rider` أو `cancelled_by_driver`، وعليها يقوم
+    رسمُ الإلغاء وعدُّ المشرف. فتخمينُ أحد الدورين هنا يحمّل الرسمَ على الطرف
+    الخطأ بصمت.
+    """
+    rider = user.has_role(UserRole.RIDER)
+    driver = user.has_role(UserRole.DRIVER)
+    if rider and driver:
+        raise AmbiguousRole(
+            "cancelling_side_undecided",
+            "لم يُقرَّر بعدُ بأيِّ صفةٍ يُسجَّل إلغاءُ حسابٍ يحمل الدورين",
+        )
+    return UserRole.DRIVER if driver else UserRole.RIDER
+
+
 @router.post("/{ride_id}/cancel", response_model=RideOut)
 async def cancel_ride(
     ride_id: uuid.UUID,
@@ -401,7 +420,7 @@ async def cancel_ride(
     الإدارة تقرأ الرحلات لكنها لا تلغيها من هنا؛ الملكية نفسها يفحصها
     `get_ride_for_user`.
     """
-    if user.role not in (UserRole.RIDER, UserRole.DRIVER):
+    if not user.has_role(UserRole.RIDER, UserRole.DRIVER):
         raise PermissionDenied()
 
     ride = await rides_service.get_ride_for_user(session, ride_id, user)
@@ -410,7 +429,7 @@ async def cancel_ride(
     ride = await rides_service.cancel_ride(
         session,
         ride,
-        by_role=user.role,
+        by_role=_cancelling_role(user),
         reason=payload.reason,
         reason_code=payload.reason_code,
     )

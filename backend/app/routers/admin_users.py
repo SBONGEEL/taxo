@@ -57,6 +57,7 @@ from app.schemas.driver import (
     DriverOut,
     DriverStatusUpdate,
 )
+from app.models.user_role_grant import has_role_clause
 from app.services import deactivation
 from app.services import (
     advances as advances_service,
@@ -87,7 +88,8 @@ async def list_users(
     """قائمة الحسابات بوسم التحقق — و`UserOut.phone_verified` هو الوسم."""
     stmt = select(User).order_by(User.created_at.desc())
     if role is not None:
-        stmt = stmt.where(User.role == role)
+        # **مَن يملك الدور** لا مَن دورُه الأساسيُّ هو (نموذجُ الأدوار)
+        stmt = stmt.where(has_role_clause(role))
     if country_code is not None:
         stmt = stmt.where(User.country_code == country_code)
     if phone_verified is True:
@@ -164,7 +166,7 @@ async def _set_blocked(
     user = await session.get(User, user_id, with_for_update=True)
     if user is None:
         raise NotFound("الحساب غير موجود")
-    if user.role in (UserRole.ADMIN, UserRole.SUPPORT):
+    if user.has_role(UserRole.ADMIN, UserRole.SUPPORT):
         # حظرُ حسابٍ إداريٍّ من اللوحة بابٌ يُغلق به مشرفٌ على زملائه — وإدارةُ
         # حسابات الموظفين ليست في القسم 13/3 أصلاً (هو عن الركاب)
         raise InvalidInput("لا يُحظر حسابٌ إداريٌّ من هذه الشاشة")

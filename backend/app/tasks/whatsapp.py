@@ -27,6 +27,7 @@ from app.models.user import User
 from app.services import notifications
 from app.services.whatsapp import session as whatsapp_session
 from app.tasks.celery_app import celery_app, run_async
+from app.models.user_role_grant import has_role_clause
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,9 @@ _TTL_SECONDS = 3600
 
 async def _admins(session) -> list[User]:
     rows = await session.scalars(
-        select(User).where(User.role == UserRole.ADMIN, User.is_blocked.is_(False))
+        select(User).where(
+            has_role_clause(UserRole.ADMIN), User.is_blocked.is_(False)
+        )
     )
     return list(rows)
 

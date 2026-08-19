@@ -39,6 +39,7 @@ from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
+from app.models.user_role_grant import UserRoleGrant
 from app.services import campaigns
 from app.models.payment_setting import (
     DEFAULT_CLIQ_CONFIRMATION_HOURS,
@@ -693,6 +694,9 @@ async def seed_bootstrap_admin(session: AsyncSession) -> None:
         _log(f"حساب المشرف موجود: {phone}")
         return
 
+    # **والدورُ يُكتب في المجموعة معه** (نموذجُ الأدوار): البذرةُ بابُ إنشاءٍ
+    # ثانٍ لا يمرّ بـ`create_account`، وحسابٌ بلا صفِّ دورٍ يعتمد على ضمِّ
+    # العمود في `has_role_clause` — وهو حارسُ فقدٍ لا مكانٌ يُقصد
     session.add(
         User(
             phone=phone,
@@ -700,6 +704,7 @@ async def seed_bootstrap_admin(session: AsyncSession) -> None:
             role=UserRole.ADMIN,
             country_code=country,
             password_hash=hash_password(password),
+            role_grants=[UserRoleGrant(role=UserRole.ADMIN)],
         )
     )
     _log(f"حساب المشرف: {phone}")

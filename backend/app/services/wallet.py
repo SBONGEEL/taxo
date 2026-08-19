@@ -43,6 +43,7 @@ from app.models.user import User
 from app.models.wallet import CREDIT_TYPES, DEBIT_TYPES, WalletTransaction
 from app.services import settings_service
 from app.services.pricing import round_money
+from app.core.exceptions import AmbiguousRole
 
 # نوافذ منزلقة لا تقويمية: لا مِنطقة زمنية لكل دولة في النظام، ومنتصفُ ليلٍ
 # بتوقيت UTC ليس منتصف ليل أحد. المنزلقة تحمي نفس المبلغ بلا هذا الالتباس.
@@ -63,9 +64,18 @@ def owner_type_for(user: User) -> WalletOwnerType:
     لا محفظة لحساب admin أو support: هؤلاء يحرّكون محافظ غيرهم من اللوحة
     ولا محفظة لهم تُشحن أو يُسحب منها.
     """
-    if user.role == UserRole.RIDER:
+    rider = user.has_role(UserRole.RIDER)
+    driver = user.has_role(UserRole.DRIVER)
+    if rider and driver:
+        # **قرارُ مالٍ غائب**: النموذج يسمح بمحفظتين لشخصٍ واحد
+        # (`owner_id` يشير إلى `users.id` و`owner_type` وحدَه يفرّق)
+        raise AmbiguousRole(
+            "wallet_owner_undecided",
+            "لم يُقرَّر بعدُ أيُّ محفظةٍ لحسابٍ يحمل دورَي الراكب والكبتن",
+        )
+    if rider:
         return WalletOwnerType.RIDER
-    if user.role == UserRole.DRIVER:
+    if driver:
         return WalletOwnerType.DRIVER
     raise PermissionDenied("لا محفظة لهذا النوع من الحسابات")
 
@@ -315,7 +325,7 @@ async def transfer(
         raise InvalidInput("مبلغ التحويل يجب أن يكون أكبر من صفر")
     if sender.id == recipient.id:
         raise InvalidInput("لا يمكن التحويل إلى نفسك")
-    if sender.role != UserRole.RIDER or recipient.role != UserRole.RIDER:
+    if not sender.has_role(UserRole.RIDER) or not recipient.has_role(UserRole.RIDER):
         raise PermissionDenied("التحويل متاح بين محافظ الركاب فقط")
     if sender.country_code != recipient.country_code:
         # عملة كل دولة مختلفة، ولا سعر صرف في النظام

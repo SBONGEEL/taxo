@@ -4,8 +4,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.models.user_role_grant import UserRoleGrant  # noqa: F401
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import CountryCode, Gender, GenderPreference, UserRole
 
@@ -98,6 +100,40 @@ class User(UUIDMixin, TimestampMixin, Base):
     gender_mismatch_reports: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+
+    # **الأدوارُ تُحمَّل مع الحساب** (`selectin`): `deps` يقرؤها في كل طلب،
+    # وتحميلٌ كسولٌ هناك يعني استعلاماً في كل نداءٍ أو `MissingGreenlet` خارج
+    # السياق. و`role` العمودُ باقٍ للتوافق ويُقرأ منه **الدورُ الأساسي** وحدَه.
+    role_grants: Mapped[list["UserRoleGrant"]] = relationship(
+        "UserRoleGrant",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    @property
+    def roles(self) -> frozenset[UserRole]:
+        """كلُّ ما يملكه من أدوار — **والعمودُ يُضمَّن حتى تُنقل كلُّ القراءات**.
+
+        الترحيلةُ تنقل كلَّ حسابٍ بدوره، فالمجموعةُ والعمودُ متطابقان يومَها.
+        وتضمينُ العمود يجعل صفّاً كُتب قبل الترحيلة أو في اختبارٍ قديم يظلّ
+        مفهوماً بدل أن يصير بلا دورٍ أصلاً — وهو حارسٌ ضد الفقد لا مصدرٌ ثانٍ.
+        """
+        # **ولا IO هنا أبداً.** `role_grants` محمَّلةٌ مع كل استعلام
+        # (`lazy="selectin"`)، فأيُّ حسابٍ جاء من القاعدة يحملها. والحالةُ
+        # الوحيدةُ غيرُ المحمَّلة هي صفٌّ بُني في بايثون للتوّ — وهو لا يملك
+        # منحاً غيرَ ما أُعطي في مُنشئه. وقراءةٌ كسولةٌ هنا تعني `MissingGreenlet`
+        # في أيِّ مسارٍ يُنشئ حساباً ثم يسأل عن أدواره.
+        state = inspect(self)
+        granted = (
+            ()
+            if "role_grants" in state.unloaded
+            else {grant.role for grant in self.role_grants}
+        )
+        return frozenset({self.role, *granted})
+
+    def has_role(self, *roles: UserRole) -> bool:
+        return bool(self.roles & frozenset(roles))
 
     driver: Mapped["Driver | None"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"

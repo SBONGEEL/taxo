@@ -75,9 +75,12 @@ def require_roles(*roles: UserRole, enforce_two_factor: bool = True):
     """
 
     async def _dependency(user: CurrentUser, session: DbSession) -> User:
-        if user.role not in roles:
+        # **«يملك الدور» لا «دورُه هو»** (نموذجُ الأدوار، 2026-08-19). والقراءةُ
+        # تبقى من قاعدة البيانات في كل طلب — لا من مطالبةٍ في التوكن: مطالبةٌ
+        # تُوقّع مرةً تبقى صادقةً بعد سحب الدور حتى تنتهي صلاحيتُها.
+        if not user.has_role(*roles):
             raise PermissionDenied()
-        if enforce_two_factor and user.role in _STAFF_ROLES:
+        if enforce_two_factor and user.has_role(*_STAFF_ROLES):
             from app.services import security_settings
 
             await security_settings.ensure_factor_ready(session, user)

@@ -44,11 +44,10 @@ def rater_type_for(ride: Ride, user: User) -> RatingRaterType:
     """
     if ride.rider_id == user.id:
         return RatingRaterType.RIDER
-    if (
-        user.role == UserRole.DRIVER
-        and ride.driver is not None
-        and ride.driver.user_id == user.id
-    ):
+    # **الملكيةُ تحسمه وحدَها**: من كان كبتنَ هذه الرحلة فهو كبتنُها، واختبارُ
+    # الدور بجانب `ride.driver.user_id == user.id` كان زائداً — ومع مجموعة
+    # الأدوار يصير زائداً **ومضلِّلاً** (يوحي بأن الدورَ جزءٌ من الحكم)
+    if ride.driver is not None and ride.driver.user_id == user.id:
         return RatingRaterType.DRIVER
     raise RatingNotAllowed("لست طرفاً في هذه الرحلة")
 

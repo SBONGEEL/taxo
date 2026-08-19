@@ -74,7 +74,7 @@ async def _authenticate(
     if user is None or user.is_blocked:
         await websocket.close(code=WS_UNAUTHORIZED, reason="جلسة غير صالحة")
         return None
-    if user.role != role:
+    if not user.has_role(role):
         await websocket.close(code=WS_FORBIDDEN, reason="لا تملك صلاحية هذه القناة")
         return None
     return user

@@ -262,7 +262,7 @@ async def login(
     # **بعد كلمة المرور لا قبلها**: «هذا حسابُ كبتن» جوابٌ عن الحساب، فلا
     # يُقال إلا لمن أثبت أنه صاحبُه — نفسُ ترتيبِ العامل الثاني فوق. وقبل
     # التحدي أيضاً: تحدٍّ يُفتح لبابٍ سيُغلق عملٌ لا ينتهي إلى شيء
-    app_scope.guard(user.role, payload.app)
+    app_scope.guard(user.roles, payload.app)
 
     await rate_limit.reset(redis, f"login:phone:{phone}")
 
@@ -299,7 +299,7 @@ async def login_with_totp(
         await totp.drop_challenge(redis, payload.challenge_token)
         raise InvalidToken()
 
-    app_scope.guard(user.role, payload.app)
+    app_scope.guard(user.roles, payload.app)
 
     used_recovery = bool(payload.recovery_code)
     if used_recovery:
@@ -589,7 +589,14 @@ async def update_me(
     `PATCH /drivers/me` — تفضيلٌ دائم لا اختيارُ رحلة.
     """
     if payload.gender is not None:
-        if user.role is UserRole.DRIVER:
+        # **أسبقيةٌ معلَنة، لا خطأٌ مسمّى** (قرارُ المالك 2026-08-19، SPEC §21.3):
+        # ختمُ المشرف يغلب دائماً حين يوجد، أياً كانت أدوارُ الحساب الأخرى.
+        # وهذا مسارُ **أمان** لا مسارُ مال: الصياحُ هنا يوقف امرأةً عن استعمال
+        # الخدمة النسائية، والغيابُ يفتح ما هو أخطر — كبتنٌ يعلن عن نفسه خلافَ
+        # ما ثبّته المشرف ليصل إلى ما ليس له. والقيمةُ الآمنةُ موجودةٌ وقاطعة،
+        # فلا تخمينَ أصلاً. ويُقرأ **الختم** لا الدور: من يحمل دورَ الكبتن بلا
+        # ختمٍ لم يُثبَّت جنسُه بعد، فإعلانُه عن نفسه يقيّد رحلتَه هو وحدَها.
+        if user.has_role(UserRole.DRIVER) or user.gender_verified_at is not None:
             raise InvalidInput("جنس الكبتن يثبّته المشرف من الهوية")
         # إعلانُ الراكبة بلا ختم — والختمُ شرطُ جانب الكبتن وحده
         user.gender = payload.gender

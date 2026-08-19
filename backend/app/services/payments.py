@@ -118,7 +118,7 @@ def _now() -> datetime:
 
 def is_staff(user: User) -> bool:
     """من يقرأ سجلات غيره بحكم دوره (SPEC القسم 13.8)."""
-    return user.role in STAFF_ROLES
+    return user.has_role(*STAFF_ROLES)
 
 
 # ------------------------------------------------------------------ القراءة

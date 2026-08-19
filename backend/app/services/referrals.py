@@ -61,6 +61,7 @@ from app.models.ride import Ride
 from app.models.subscription import DriverSubscription
 from app.models.user import User
 from app.services import settings_service, wallet
+from app.core.exceptions import AmbiguousRole
 
 # أبجديةٌ بلا `0/O/1/I/L`: الرمزُ يُقرأ من شاشةٍ ويُنطق في مكالمةٍ ويُكتب في
 # أخرى، وحرفان متشابهان يجعلان رمزاً صحيحاً يُرفض.
@@ -101,6 +102,28 @@ def generate_code() -> str:
 def normalize(code: str) -> str:
     """الرمزُ يُطبَّع كما يُطبَّع رمزُ الكوبون: يُقرأ من ملصقٍ ويُكتب بأي حالة."""
     return code.strip().upper()
+
+
+def programme_for(user: User) -> str:
+    """برنامجُ الإحالة لهذا الحساب **الآن** — ويصيح إن حمل الدورين.
+
+    يُستعمل عند **الختم** وعند قراءة صفٍّ أقدمَ من العمود. وحسابٌ بالدورين بلا
+    ختمٍ لا برنامجَ له معلوماً: المبلغُ يختلف بين البرنامجين، فالتخمينُ يدفع
+    رقماً لا يقرّره أحد.
+    """
+    rider = user.has_role(UserRole.RIDER)
+    driver = user.has_role(UserRole.DRIVER)
+    if rider and driver:
+        raise AmbiguousRole(
+            "referral_programme_undecided",
+            "لم يُقرَّر بعدُ أيُّ برنامجِ إحالةٍ لحسابٍ يحمل الدورين",
+        )
+    return REFERRAL_TYPE_DRIVER if driver else REFERRAL_TYPE_RIDER
+
+
+def programme_of(referral: Referral, referred: User) -> str:
+    """المختومُ إن وُجد، وإلا اشتقاقٌ من الدور — **للصفوف الأقدم وحدَها**."""
+    return referral.referral_type or programme_for(referred)
 
 
 def type_for_role(role: UserRole) -> str:
@@ -220,6 +243,8 @@ async def attach(session: AsyncSession, *, referred: User, code: str) -> Referra
         referrer_user_id=referrer.id,
         referred_user_id=referred.id,
         code_used=normalize(code),
+        # **يُختم الآن** — البرنامجُ واقعةُ هذه اللحظة، ولو تبدّلت أدوارُه بعدها
+        referral_type=programme_for(referred),
     )
     session.add(referral)
     try:
@@ -424,7 +449,8 @@ async def progress_many(
         role, gender, verified, driver_id, status = people.get(
             row.referred_user_id, (UserRole.RIDER, None, None, None, None)
         )
-        referral_type = type_for_role(role)
+        # الصفُّ يحمل ختمَه، وما قبل العمود يُشتقّ من دوره كما كان
+        referral_type = row.referral_type or type_for_role(role)
         policy = policies[referral_type]
         out[row.id] = Progress(
             referral=row,
@@ -565,7 +591,7 @@ async def pay(session: AsyncSession, referral_id: uuid.UUID) -> Referral | None:
     # **دولةُ المُحيل هي الحاكمة**: المالُ يدخل محفظتَه، وعملتُه عملةُ بلده.
     # ولو حُكمت بدولة المُحال لدُفع بعملةٍ لا تُنفق في محفظةٍ أخرى
     country = referrer.country_code
-    policy = await policy_for(session, country, type_for_role(referred.role))
+    policy = await policy_for(session, country, programme_of(referral, referred))
     if not policy.pays:
         return None
 
@@ -735,7 +761,7 @@ async def apply_welcome_promo(
         return False
 
     # **برنامجُ المُحال هو دورُه هو** — وهو راكبٌ بالضرورة هنا (`RiderUser`)
-    policy = await policy_for(session, country, type_for_role(rider.role))
+    policy = await policy_for(session, country, programme_of(referral, rider))
     if policy.referred_promo_code_id is None:
         return False
 

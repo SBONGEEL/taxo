@@ -52,6 +52,7 @@ from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service
 from app.services.directions import Coordinates, Route
+from app.core.exceptions import AmbiguousRole
 
 @dataclass(frozen=True, slots=True)
 class StopRequest:
@@ -155,7 +156,7 @@ async def get_ride_for_user(
     """الرحلة بعد التحقق من الملكية — لا IDOR (SPEC القسم 14)."""
     ride = await get_ride(session, ride_id)
 
-    if user.role in (UserRole.ADMIN, UserRole.SUPPORT):
+    if user.has_role(UserRole.ADMIN, UserRole.SUPPORT):
         return ride
     if ride.rider_id == user.id:
         return ride
@@ -166,11 +167,29 @@ async def get_ride_for_user(
     raise NotFound("الرحلة غير موجودة")
 
 
+
+def _side_of(user: User) -> UserRole:
+    """أيَّ جانبٍ من الرحلة يقف صاحبُ الحساب — **ولا `else` يختار عنه**.
+
+    كان السطرُ `if role == DRIVER: … else: …`، فحسابٌ بدورين يقع في فرعٍ واحدٍ
+    **بلا أثر**: تختفي رحلتُه الجارية من الجانب الآخر، ويُعرض نصفُ سجلِّه
+    وكأنه كلُّه. وهو أخبثُ من خطأ: لا استثناءَ ولا سطرَ سجلّ ولا شكوى.
+    """
+    rider = user.has_role(UserRole.RIDER)
+    driver = user.has_role(UserRole.DRIVER)
+    if rider and driver:
+        raise AmbiguousRole(
+            "ride_side_undecided",
+            "لم يُقرَّر بعدُ أيَّ جانبٍ من الرحلات يُعرض لحسابٍ يحمل الدورين",
+        )
+    return UserRole.DRIVER if driver else UserRole.RIDER
+
+
 async def active_ride_for_user(session: AsyncSession, user: User) -> Ride | None:
     """الرحلة الجارية للمستخدم — عليها يعتمد استرجاع الحالة بعد انقطاع (SPEC القسم 10)."""
     stmt = select(Ride).options(*_LOAD_DRIVER_CARD)
 
-    if user.role == UserRole.DRIVER:
+    if _side_of(user) is UserRole.DRIVER:
         driver_id = await session.scalar(select(Driver.id).where(Driver.user_id == user.id))
         stmt = stmt.where(
             Ride.driver_id == driver_id, Ride.status.in_(ACTIVE_DRIVER_STATUSES)
@@ -209,7 +228,7 @@ async def list_rides_for_user(
     """رحلات المستخدم بدوره: الراكب رحلاته، والكبتن ما أُسند إليه."""
     stmt = select(Ride).options(*_LOAD_DRIVER_CARD)
 
-    if user.role == UserRole.DRIVER:
+    if _side_of(user) is UserRole.DRIVER:
         driver_id = await session.scalar(select(Driver.id).where(Driver.user_id == user.id))
         stmt = stmt.where(Ride.driver_id == driver_id)
     else:

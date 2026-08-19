@@ -49,7 +49,7 @@ async def totp_required_for(session: AsyncSession, user: User) -> bool:
     وحينَ يُسجّل `support` عاملاً فهو يعمل عليه: العاملُ المؤكَّد يسري على صاحبه
     أيّاً كان دورُه، والمفتاحُ يقرّر مَن **يُلزَم** لا مَن يُسأل.
     """
-    if user.role is not UserRole.ADMIN:
+    if not user.has_role(UserRole.ADMIN):
         return False
     row = await get(session)
     return bool(row and row.admin_totp_required)
@@ -69,7 +69,7 @@ async def refresh_ttl_for(session: AsyncSession, user: User) -> int | None:
     **توكنَ تجديدٍ مسروقاً يبطل بعد نصف ساعة**؛ أما التبويبُ المتروك على مكتبٍ
     فتملكه اللوحةُ وحدها (القسم 14.1).
     """
-    if user.role not in STAFF_ROLES:
+    if not user.has_role(*STAFF_ROLES):
         return None
     return await idle_timeout_minutes(session) * 60
 

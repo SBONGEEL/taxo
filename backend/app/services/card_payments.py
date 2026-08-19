@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
+    AmbiguousRole,
     FeatureDisabled,
     InvalidInput,
     NotFound,
@@ -56,6 +57,7 @@ from app.models.enums import (
     ProviderOrderPurpose,
     ProviderOrderStatus,
     WalletTransactionType,
+    UserRole,
 )
 from app.models.driver import Driver
 from app.models.payment import Payment, SavedCard
@@ -96,6 +98,22 @@ def _new_cart_id(prefix: str) -> str:
 
 
 # --------------------------------------------------------------- بوابة القناة
+
+
+def _paying_side(payer: User) -> UserRole:
+    """بصفةِ أيِّ دورٍ يدفع — **وهي تعيّن التطبيقَ الذي يعود إليه**.
+
+    وعودةٌ إلى تطبيقٍ ليس بيده تترك الدافعَ أمام صفحةٍ لا تُكمل، وقد دُفع ماله.
+    """
+    rider = payer.has_role(UserRole.RIDER)
+    driver = payer.has_role(UserRole.DRIVER)
+    if rider and driver:
+        raise AmbiguousRole(
+            "card_return_app_undecided",
+            "لم يُقرَّر بعدُ إلى أيِّ تطبيقٍ يعود دافعٌ يحمل الدورين",
+        )
+    return UserRole.DRIVER if driver else UserRole.RIDER
+
 
 
 async def require_card_enabled(
@@ -182,7 +200,7 @@ def _order_request(
         currency=currency,
         # وصفٌ بحروف لاتينية: يعبر نماذج HTTP لدى المزودين بلا لبس ترميز
         description=description,
-        return_url=return_url_for(cart_id, payer_role=payer.role),
+        return_url=return_url_for(cart_id, payer_role=_paying_side(payer)),
         customer_name=payer.name,
         customer_phone=payer.phone,
         # مُعرّفٌ ثابت للدافع لدى المزود — به تُربط بطاقاته المحفوظة

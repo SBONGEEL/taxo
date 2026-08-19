@@ -65,8 +65,22 @@ class WrongAppForRole(AppError):
     code = "wrong_app_for_role"
 
 
-def guard(role: UserRole, app: ClientApp | None) -> None:
-    """يرفض دوراً لا ينتمي إلى التطبيق الطالب.
+# ترتيبُ اختيار النصّ عند الرفض — الأوضحُ للقارئ أولاً
+_ROLES_ORDER: tuple[UserRole, ...] = (
+    UserRole.DRIVER,
+    UserRole.RIDER,
+    UserRole.ADMIN,
+    UserRole.SUPPORT,
+)
+
+
+def guard(roles: UserRole | frozenset[UserRole], app: ClientApp | None) -> None:
+    """يرفض من لا يملك دوراً ينتمي إلى التطبيق الطالب.
+
+    **وتوسيعُ الأدوار لا يوسّع نطاقَ التطبيقات** (شرطُ المالك 2026-08-19):
+    كلُّ تطبيقٍ ما زال يخدم دورَه وحدَه، وما تغيّر أن السؤالَ صار «أيملك دوراً
+    يدخل هنا؟» بدل «أدورُه هو؟». فمن يملك الدورين يدخل التطبيقين — وهذا هو
+    المقصود؛ ومن لا يملك دورَ تطبيقٍ يُرفض كما اليوم بلا فرق.
 
     `app=None` يعني عميلاً لم يُعلن — أدوات الفحص و`curl` والعملاء الأقدم من
     هذا الحارس — **فيمرّ**: هذا يمنع لبسَ الأدوار في تطبيقاتنا الثلاثة، وليس
@@ -75,6 +89,13 @@ def guard(role: UserRole, app: ClientApp | None) -> None:
     """
     if app is None:
         return
-    if role in _ROLES[app]:
+    owned = frozenset({roles}) if isinstance(roles, UserRole) else frozenset(roles)
+    if owned & _ROLES[app]:
         return
-    raise WrongAppForRole(_WHERE.get(role, "هذا الحساب لا يدخل من هنا"))
+    # **النصُّ يقول أين يذهب**، ويُختار من دورٍ واحدٍ يملكه — وأيُّها كان فالوجهةُ
+    # صحيحة، لأن من يملك دورَ هذا التطبيق لا يصل هذا السطر أصلاً
+    shown = next((role for role in _ROLES_ORDER if role in owned), None)
+    raise WrongAppForRole(
+        _WHERE.get(shown, "هذا الحساب لا يدخل من هنا") if shown else
+        "هذا الحساب لا يدخل من هنا"
+    )
