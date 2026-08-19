@@ -22,6 +22,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- **بابُ استقبال الجلسة المنقولة** (SPEC §23).
+
+                 ومخططٌ خاصٌّ لا رابطُ تطبيق (App Link): الأخيرُ يحتاج ملفَّ
+                 `assetlinks.json` على النطاق وتوقيعَ إصدارٍ مستقرّاً، وكلاهما
+                 بندُ ما قبل الإطلاق (§18.1). والمرسِلُ يثبّت الحزمةَ في نيّته
+                 (`package=`)، فلا يلتقط الرمزَ تطبيقٌ سجّل المخططَ نفسَه.
+
+                 و`android:launchMode="singleTask"` أعلاه هو ما يجعل النيّةَ
+                 تصل نشاطاً قائماً بدل أن تُنشئ ثانياً فوقه. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="taxo-driver" android:host="handoff" />
+            </intent-filter>
+
         </activity>
 
         <provider

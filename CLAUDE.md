@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**1016 backend tests pass** across 91 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
+**1027 backend tests pass** across 92 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -667,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**1016 backend tests pass** across 91 test files, measured on 2026-08-19; all three frontends build with
+**1027 backend tests pass** across 92 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1271,6 +1271,34 @@ no display text.
 
 **Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
 eye is load-bearing, and weakening it is not a style decision.
+
+### The app switch — a handoff token, and the busy check that could not ask its own question (2026-08-19)
+
+**`SPEC.md` §23 holds it.** `POST /auth/handoff` issues a random value in Redis — **30 s, single-use,
+bound to the user *and* the target app** — and `/handoff/exchange` spends it for a session in the
+receiving app, with no password and no OTP. **The pattern is the TOTP challenge verbatim**, not a new
+mechanism, and its argument was already written there. The refresh token is deliberately *not* moved:
+its rotation is single-use, so two holders invalidate each other and log their owner out at random.
+
+**The exchange re-runs every check** — account from the database, block flag, `app_scope` again — so a
+role withdrawn between issue and exchange kills the token. It is a session transfer, never a frozen
+permission.
+
+**And the busy guard hit a circularity worth remembering.** "No switching mid-ride" naturally reaches
+for `active_ride_for_user` — which calls `_side_of`, which **refuses dual-role accounts by design**. So
+the check that exists for switchers was the one thing switchers could not run. `has_any_active_ride`
+asks **both sides at once** and never asks which side you are, which is also the more correct rule: you
+cannot switch away from an active ride on *either* side.
+
+**Opening the other app is `intent://`, not a bare scheme, and all three reasons are about determinism**:
+`package=` pins the receiver so no app that registered the same scheme can catch the token;
+`S.browser_fallback_url` makes "not installed" **an answer from the OS** instead of a timeout after
+which we guess — and the guess is wrong on a slow phone; and the token rides a custom scheme that
+reaches no server at all.
+
+**And the listener is a condition, not a nicety**: the shell opens the scheme URL and it does not become
+a web route by itself, so without `appUrlOpen` the intent arrives and *nothing happens* — this project's
+"a door with no button", wearing a platform's clothes.
 
 ### The rule that dissolves the ambiguities: context of the act, not role of the actor (2026-08-19)
 

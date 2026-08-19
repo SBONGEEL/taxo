@@ -400,3 +400,20 @@ export const beginPause = (rideId: string) =>
 
 export const resumePause = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/resume`, {});
+
+/** رمزُ تسليمٍ إلى التطبيق الآخر — **قصيرُ العمر، أحاديُّ الاستعمال** (§23).
+ *
+ * ولا ينقل رمزَ التجديد: تدويرُه أحاديٌّ فحاملان يُبطل أحدُهما الآخر.
+ */
+export const startHandoff = () =>
+  api.post<{ token: string; expires_in: number }>("/auth/handoff", {
+    target: "rider",
+  });
+
+/** يبادل الرمزَ بجلسةٍ في هذا التطبيق — بلا كلمةِ مرورٍ ولا رمزِ تحقق. */
+export const exchangeHandoff = (token: string) =>
+  api.post<AuthResponse>(
+    "/auth/handoff/exchange",
+    { token, app: CLIENT_APP },
+    { anonymous: true },
+  );

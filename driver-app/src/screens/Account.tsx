@@ -19,6 +19,11 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { forDisplay } from "@/lib/phone";
+import {
+  blockedReason,
+  switchState,
+  switchToRider,
+} from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
 import { digits, cn,
   DISPLAY_LOCALE,
@@ -237,6 +242,10 @@ export function AccountScreen() {
           />
         </div>
 
+        {/* **في «حسابي» لا في شريطٍ سفليٍّ ولا على الرئيسية** (§23): تبديلٌ
+            لا يُضغط يومياً، وموضعُه بين ما يُفتح عن قصد */}
+        <SwitchRow />
+
         <button
           type="button"
           onClick={() => void signOut()}
@@ -276,5 +285,53 @@ function Row({
       </span>
       <ChevronLeft size={16} className="shrink-0 text-muted" />
     </button>
+  );
+}
+
+
+/** صفُّ التبديل إلى تطبيق الراكب — **يقول سببَه إن مُنع**. */
+function SwitchRow() {
+  const { user } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
+  const state = switchState(user);
+
+  if (state.kind !== "available") return null;
+
+  async function press() {
+    setBusy(true);
+    setBlocked(null);
+    try {
+      await switchToRider();
+    } catch (caught) {
+      setBlocked(blockedReason(caught) ?? "تعذّر التبديل الآن");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-14 overflow-hidden rounded-16 border border-line bg-surface">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void press()}
+        className="pressable flex w-full items-center gap-12 px-15 py-14 text-start transition"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-13.5 font-semibold text-ink">
+            تبديل إلى تطبيق الراكب
+          </span>
+          <span className="block truncate text-11 text-muted">
+            نفس الحساب — تنتقل جلستك بلا تسجيل دخول
+          </span>
+        </span>
+      </button>
+      {blocked ? (
+        <p className="border-t border-line px-15 py-10 text-11.5 leading-note text-warn">
+          {blocked}
+        </p>
+      ) : null}
+    </div>
   );
 }

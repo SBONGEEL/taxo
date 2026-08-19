@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import App from "@/App";
 import "@/index.css";
+import { listenForHandoff } from "@/lib/handoff-listener";
 
 // **يوقف نبضَ الخريطة حين يغيب التطبيق** (`index.css`: `html.is-hidden`).
 // `requestAnimationFrame` تتوقف وحدها في الخلفية، أمّا حركاتُ CSS فتستمر في
@@ -26,3 +27,6 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
     navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   });
 }
+
+// **يُسجَّل مرةً عند الإقلاع** — قبل أي شاشة، فالنيّةُ قد تسبق الرسم
+listenForHandoff();

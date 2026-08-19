@@ -1,3 +1,4 @@
+import { useState } from "react";
 /** «حسابي» — التبويبُ الرابع وحاويةُ ما تحته (`tabAccount`، القراران 22 و23).
  *
  * **حاويةٌ لا شاشةُ تحرير**: الرأسُ يعرض ما يُقرأ ولا يُحرَّر (الاسم والرقم)،
@@ -19,6 +20,11 @@ import { useNavigate } from "react-router-dom";
 
 import { Screen } from "@/components/ui/Screen";
 import { useScheduledRides } from "@/lib/bookings";
+import {
+  blockedReason,
+  switchState,
+  switchToDriver,
+} from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +35,8 @@ interface Row {
   /** مفتاحُ الميزة الذي يحكم ظهورَ الصف — والصفُّ يُخفى لا يُعطَّل. */
   scheduled?: boolean;
 }
+
+const DRIVER_SIGNUP_URL = "https://driver.tajora.ly/register";
 
 const ROWS: Row[] = [
   { to: "/account/profile", label: "بياناتي", sub: "الاسم والجنس وتفضيل الكبتن" },
@@ -96,6 +104,11 @@ export function AccountScreen() {
         ))}
       </div>
 
+      {/* **التبديلُ في «حسابي» لا في شريطٍ سفليٍّ ولا على الرئيسية** (§23):
+          تبديلٌ لا يُضغط يومياً، وموضعُه بين ما يُفتح عن قصد. وهو **آخرُ صفٍّ
+          قبل الخروج** لأنه أقربُ ما يكون إليه معنىً: مغادرةُ هذا التطبيق */}
+      <SwitchRow />
+
       <button
         type="button"
         onClick={() => void signOut()}
@@ -104,5 +117,63 @@ export function AccountScreen() {
         تسجيل الخروج
       </button>
     </Screen>
+  );
+}
+
+
+/** صفُّ التبديل — **يرسم ما يقدر عليه، ويقول سببَه إن مُنع**. */
+function SwitchRow() {
+  const { user } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
+
+  const state = switchState(user);
+
+  async function press() {
+    if (state.kind === "needs_registration") {
+      // **يُقاد إلى التسجيل ككبتن، لا إلى التطبيق**: الزرُّ ينقل ولا يمنح دوراً
+      window.location.href = `${DRIVER_SIGNUP_URL}`;
+      return;
+    }
+    setBusy(true);
+    setBlocked(null);
+    try {
+      await switchToDriver();
+    } catch (caught) {
+      // نصُّ المنع من الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17)
+      setBlocked(blockedReason(caught) ?? "تعذّر التبديل الآن");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-14 overflow-hidden rounded-16 border border-line bg-surface">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void press()}
+        className="pressable flex w-full items-center gap-12 px-15 py-14 text-start transition hover:bg-surface-2"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-13.5 font-semibold text-ink">
+            {state.kind === "available"
+              ? "تبديل إلى تطبيق السائق"
+              : "سجّل كسائق"}
+          </span>
+          <span className="block truncate text-11 text-muted">
+            {state.kind === "available"
+              ? "نفس الحساب — تنتقل جلستك بلا تسجيل دخول"
+              : "حسابك واحد، ويبقى كما هو"}
+          </span>
+        </span>
+        <ChevronLeft className="size-16 shrink-0 text-muted" />
+      </button>
+      {blocked ? (
+        <p className="border-t border-line px-15 py-10 text-11.5 leading-note text-warn">
+          {blocked}
+        </p>
+      ) : null}
+    </div>
   );
 }

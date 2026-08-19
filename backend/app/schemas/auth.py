@@ -133,6 +133,10 @@ class UserOut(BaseModel):
     phone: str
     name: str
     role: UserRole
+    # **كلُّ ما يملكه من أدوار** (نموذجُ الأدوار §21): به يعرف التطبيقُ الآخرَ
+    # أيرسم «تبديلاً» أم «سجّل ككبتن» — وسؤالُ الخلفية عند كل ضغطةٍ يجعل الزرَّ
+    # ينتظر شبكةً ليقول ما يمكن قولُه من الجلسة نفسِها
+    roles: list[UserRole] = Field(default_factory=list, validation_alias='roles_list')
     country_code: CountryCode
     is_blocked: bool
     # يقرؤه التطبيق فيطالب صاحبه بالتحقق، وتفلتر به اللوحة (SPEC القسم 13)
@@ -212,3 +216,24 @@ class AuthMethodResponse(BaseModel):
     # وما بعدها مخرجٌ ترسمه الواجهة عند الفشل — قائمةٌ بلا بابٍ تعني زرَّ ارتدادٍ
     # لا يظهر حين يلزم
     channels: list[str] = []
+
+
+class HandoffStart(BaseModel):
+    """طلبُ تسليمٍ إلى تطبيقٍ آخر — **الهدفُ يُصرَّح ولا يُستنتج**."""
+
+    target: ClientApp
+
+
+class HandoffToken(BaseModel):
+    token: str
+    expires_in: int
+
+
+class HandoffExchange(BaseModel):
+    """مبادلةُ الرمز — و`app` هنا هو التطبيقُ المستقبِل نفسُه.
+
+    ويُقارَن بالهدف المختوم في الرمز: رمزٌ صدر لتطبيقٍ لا يُقبل في غيره.
+    """
+
+    token: str
+    app: ClientApp

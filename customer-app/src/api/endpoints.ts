@@ -376,3 +376,20 @@ export const getRouteLine = (rideId: string) =>
 /** رمزُ الإحالة ومن سجّل به — **منفذٌ واحدٌ للتطبيقين** (`/me/` لا `/drivers/me/`):
  *  الرمزُ صار لكل حساب، ومسارٌ تحت `/drivers` بابٌ لا يفتح للراكب أصلاً. */
 export const getMyReferrals = () => api.get<MyReferrals>("/me/referrals");
+
+/** رمزُ تسليمٍ إلى التطبيق الآخر — **قصيرُ العمر، أحاديُّ الاستعمال** (§23).
+ *
+ * ولا ينقل رمزَ التجديد: تدويرُه أحاديٌّ فحاملان يُبطل أحدُهما الآخر.
+ */
+export const startHandoff = () =>
+  api.post<{ token: string; expires_in: number }>("/auth/handoff", {
+    target: "driver",
+  });
+
+/** يبادل الرمزَ بجلسةٍ في هذا التطبيق — بلا كلمةِ مرورٍ ولا رمزِ تحقق. */
+export const exchangeHandoff = (token: string) =>
+  api.post<AuthResponse>(
+    "/auth/handoff/exchange",
+    { token, app: CLIENT_APP },
+    { anonymous: true },
+  );

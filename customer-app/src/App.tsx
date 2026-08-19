@@ -35,6 +35,12 @@ import { LoginScreen } from "@/screens/Login";
 // شاشة الدخول وحدها تُحمَّل مباشرةً؛ وما عداها كسولٌ. والرئيسية أهمُّها:
 // تجرّ `mapbox-gl` (نحو 1.8 ميغابايت) وهو أكبر من التطبيق كله، فتحميلُها
 // مع الحزمة الأولى يعني محرّك خرائطٍ ينتظره من جاء ليسجّل دخوله فقط.
+const DriverNotInstalledScreen = lazy(() =>
+  import("@/screens/SwitchApp").then((m) => ({ default: m.DriverNotInstalledScreen })),
+);
+const HandoffLandingScreen = lazy(() =>
+  import("@/screens/SwitchApp").then((m) => ({ default: m.HandoffLandingScreen })),
+);
 const HomeScreen = lazy(() =>
   import("@/screens/Home").then((m) => ({ default: m.HomeScreen })),
 );
@@ -236,6 +242,11 @@ export default function App() {
                   <RouteTransition>
                     {(animated) => (
                     <Routes location={animated}>
+                      <Route path="/account/switch/driver-not-installed" element={<DriverNotInstalledScreen />} />
+                      {/* **خارج حارس الجلسة**: الرمزُ هو ما يُنشئ الجلسةَ، فحارسٌ قبله يردّ
+                          القادمَ إلى تسجيلِ دخولٍ لا يحتاجه */}
+                      <Route path="/handoff" element={<HandoffLandingScreen />} />
+
                       <Route
                         path="/login"
                         element={

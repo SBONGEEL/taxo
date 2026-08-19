@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from redis.asyncio import Redis
-from sqlalchemy import select, text
+from sqlalchemy import and_, false, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -183,6 +183,35 @@ def _side_of(user: User) -> UserRole:
             "لم يُقرَّر بعدُ أيَّ جانبٍ من الرحلات يُعرض لحسابٍ يحمل الدورين",
         )
     return UserRole.DRIVER if driver else UserRole.RIDER
+
+
+async def has_any_active_ride(session: AsyncSession, user: User) -> bool:
+    """أفي رحلةٍ جاريةٍ **على أيِّ جانب** — بلا سؤالٍ عن جانبه.
+
+    **ولا تمرّ بـ`_side_of`**، وذلك مقصود: من يحمل الدورين هو بالضبط من يُسأل
+    هذا السؤال (عند التبديل)، فسؤالٌ يرتدّ عليه لا يجيب. والدلالةُ هي المطلوبةُ
+    نفسُها: لا يُبدَّل ومن جانبيه واحدٌ مشغول.
+    """
+    driver_id = await session.scalar(
+        select(Driver.id).where(Driver.user_id == user.id)
+    )
+    found = await session.scalar(
+        select(Ride.id).where(
+            or_(
+                and_(
+                    Ride.rider_id == user.id,
+                    Ride.status.in_(ACTIVE_RIDER_STATUSES),
+                ),
+                and_(
+                    Ride.driver_id == driver_id,
+                    Ride.status.in_(ACTIVE_DRIVER_STATUSES),
+                )
+                if driver_id is not None
+                else false(),
+            )
+        )
+    )
+    return found is not None
 
 
 async def active_ride_for_user(session: AsyncSession, user: User) -> Ride | None:

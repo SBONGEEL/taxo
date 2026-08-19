@@ -132,6 +132,12 @@ class User(UUIDMixin, TimestampMixin, Base):
         )
         return frozenset({self.role, *granted})
 
+    @property
+    def roles_list(self) -> list[UserRole]:
+        """للتسلسل — **بترتيبٍ ثابت**: مجموعةٌ تُسلسَل بترتيبٍ يتبدّل بين طلبين
+        تجعل كلَّ جوابٍ يبدو متغيّراً لمن يقارن."""
+        return [role for role in UserRole if role in self.roles]
+
     def has_role(self, *roles: UserRole) -> bool:
         return bool(self.roles & frozenset(roles))
 

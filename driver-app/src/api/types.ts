@@ -49,6 +49,8 @@ export interface User {
   phone: string;
   name: string;
   role: UserRole;
+  /** كلُّ ما يملكه من أدوار — به يُقرَّر شكلُ زرِّ التبديل (SPEC §21). */
+  roles: UserRole[];
   country_code: CountryCode;
   is_blocked: boolean;
   phone_verified: boolean;

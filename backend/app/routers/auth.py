@@ -26,6 +26,7 @@ from app.core.deps import (
     SecuritySelfUser,
 )
 from app.core.exceptions import (
+    HandoffBlockedByActiveWork,
     InvalidInput,
     InvalidToken,
     NotFound,
@@ -36,6 +37,9 @@ from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
 from app.models.enums import CountryCode, UserRole
 from app.models.user import User
 from app.schemas.auth import (
+    HandoffExchange,
+    HandoffStart,
+    HandoffToken,
     AuthMethodResponse,
     AuthResponse,
     ChallengeRequest,
@@ -60,6 +64,8 @@ from app.schemas.security import (
     TotpStatusOut,
 )
 from app.services import (
+    handoff,
+    rides as rides_service,
     notifications,
     otp,
     security_settings,
@@ -606,3 +612,52 @@ async def update_me(
     await session.commit()
     await session.refresh(user)
     return UserOut.model_validate(user)
+
+
+# ------------------------------------------------------- التبديل بين التطبيقين
+
+
+@router.post("/handoff", response_model=HandoffToken)
+async def start_handoff(
+    payload: HandoffStart,
+    user: CurrentUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> HandoffToken:
+    """يفتح تسليمَ جلسةٍ إلى التطبيق الآخر — **لمن يملك دورَه وحدَه**.
+
+    والحارسُ هنا هو `app_scope` نفسُه لا حارسٌ ثانٍ: من لا يملك دورَ الهدف
+    يُرفض بنفس الرسالة التي تقول **أين يذهب**. ولا يمنح الرمزُ دوراً — يُفحص
+    قبل إصداره ويُفحص ثانيةً عند المبادلة، فسحبُ الدور بينهما يُبطله.
+    """
+    app_scope.guard(user.roles, payload.target)
+
+    # **ولا تبديلَ أثناء عملٍ قائم** — والفحصُ هنا لا في الشاشة: شرطٌ في
+    # الواجهة يزول بتعديل ملفٍ في المتصفح، وثمنُه راكبٌ ينتظر كبتناً بدّل تطبيقَه
+    if await rides_service.has_any_active_ride(session, user):
+        raise HandoffBlockedByActiveWork()
+
+    token = await handoff.issue(redis, user_id=user.id, target=payload.target)
+    return HandoffToken(token=token, expires_in=handoff.TOKEN_TTL_SECONDS)
+
+
+@router.post("/handoff/exchange", response_model=AuthResponse)
+async def exchange_handoff(
+    payload: HandoffExchange, session: DbSession, redis: RedisDep
+) -> AuthResponse:
+    """يبادل رمزَ التسليم بجلسةٍ في التطبيق المستقبِل.
+
+    **ولا كلمةَ مرورٍ ولا رمزَ تحقق**: صاحبُ الرمز أثبت هويّتَه في التطبيق الذي
+    أصدره قبل ثوانٍ. **والفحصُ يُعاد كاملاً** — الحسابُ يُقرأ من القاعدة،
+    والحظرُ يُقرأ، و`app_scope` يُسأل ثانيةً: رمزٌ صدر ثم سُحب دورُ صاحبه لا
+    يفتح شيئاً.
+    """
+    user_id = await handoff.consume(redis, token=payload.token, target=payload.app)
+
+    user = await session.get(User, user_id)
+    if user is None or user.is_blocked:
+        raise InvalidToken("تعذّر التبديل — أعد الدخول")
+
+    app_scope.guard(user.roles, payload.app)
+    tokens = await _issue(session, redis, user)
+    return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
