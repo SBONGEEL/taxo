@@ -37,9 +37,10 @@ export function WalletTransferScreen() {
   const { config } = useConfig();
   const country = useCountryConfig(user?.country_code);
 
-  const countries = config?.countries.map((entry) => entry.country_code) ?? [
-    "JO",
-  ];
+  // **ولا سوقٌ مكتوبٌ هنا** (SPEC §24): القائمةُ من `/config`، فالمخفيُّ لا
+  // يُعرض ولو كان لصاحب الحساب — والتحويلُ إليه بابٌ يفتحه إشعالُ المفتاح
+  const countries =
+    config?.countries.map((entry) => entry.country_code) ?? [];
   const [code, setCode] = useState<CountryCode>(user?.country_code ?? "JO");
   const { nationalLength } = usePhoneCountry(code);
   const [phone, setPhone] = useState("");

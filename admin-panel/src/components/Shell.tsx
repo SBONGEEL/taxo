@@ -19,7 +19,7 @@ import { LogOut, Moon, Sun } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 
-import type { CountryCode } from "@/api/types";
+import { useCountries } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -78,11 +78,6 @@ const GROUPS: {
   },
 ];
 
-const COUNTRY_LABEL: Record<CountryCode, string> = {
-  JO: "الأردن",
-  LY: "ليبيا",
-};
-
 const ROLE_LABEL: Record<string, string> = {
   admin: "مالك · صلاحيات كاملة",
   support: "دعم فني",
@@ -103,6 +98,12 @@ export function Shell({
   const { user, isAdmin, signOut } = useSession();
   const { dark, toggle } = useTheme();
   const { country, setCountry } = useCountry();
+  const { rows } = useCountries();
+  // **قبل وصول الجواب تُرسم الدولةُ المعروضةُ وحدها** — لا قائمةٌ محفوظة
+  // تومض ثم تُصحَّح، ولا شريطٌ فارغٌ يقفز عند وصولها
+  const countries = rows ?? [
+    { country_code: country, name: country, visible: true },
+  ];
 
   return (
     <div className="min-h-screen bg-bg">
@@ -114,18 +115,30 @@ export function Shell({
           <span className="text-12.5 text-muted">لوحة التحكم</span>
           <span className="block h-26 w-px bg-line" />
 
+          {/* **الأسواقُ من الخلفية لا من قائمةٍ مكتوبة** (SPEC §24): اللوحةُ
+              ترى المخفيَّ كما ترى الظاهر، وعليه نقطةٌ تقول إنه مطفأٌ في
+              التطبيقات — من يُجهّز سوقاً يحتاج أن يعرف أنه لم يُفتح بعد. */}
           <div className="flex items-center gap-3 rounded-full bg-surface-2 p-3">
-            {(["JO", "LY"] as CountryCode[]).map((code) => (
+            {countries.map((row) => (
               <button
-                key={code}
+                key={row.country_code}
                 type="button"
-                onClick={() => setCountry(code)}
+                onClick={() => setCountry(row.country_code)}
+                title={row.visible ? undefined : "مخفيّة في التطبيقات"}
                 className={cn(
-                  "rounded-full px-13 py-6 text-12 font-semibold",
-                  country === code ? "bg-surface text-ink" : "text-muted",
+                  "flex items-center gap-6 rounded-full px-13 py-6 text-12 font-semibold",
+                  country === row.country_code
+                    ? "bg-surface text-ink"
+                    : "text-muted",
                 )}
               >
-                {COUNTRY_LABEL[code]}
+                {!row.visible && (
+                  <span
+                    aria-label="مخفيّة في التطبيقات"
+                    className="size-6 rounded-full bg-muted"
+                  />
+                )}
+                {row.name}
               </button>
             ))}
           </div>

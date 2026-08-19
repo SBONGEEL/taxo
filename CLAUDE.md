@@ -659,6 +659,63 @@ Six rules from the build, each of which cost something to learn:
 - **`services/offers.py::exhausted_for` is read through `_plans_with_offers`, shared by `/plans` *and*
   `/me`** — the eighth shape below, found on the phone because the desktop probe called the API directly.
 
+### Country visibility — one flag per market, and Libya is its first use (2026-08-19)
+
+**`country_visible` is a per-country flag, and no app writes a country list any more** (`SPEC.md` §24).
+The point is not Libya; it is that a market can be built in full — pricing, contracts, settings — and
+**not appear**: not in the country picker, not in registration, nowhere.
+
+**Silence means visible, and it is the second member of `DEFAULT_ENABLED_FLAGS`.** The general rule is
+that an absent row disables, so a money feature is never switched on by silence. Here absence would
+switch off **the whole app**: an unseeded install would publish no country at all, so no login screen
+could be drawn. Hiding is therefore an explicit row a human writes.
+
+**And that forced a split that had been latent since stage 8**: the "write a reason before switching it
+off" condition was read from `DEFAULT_ENABLED_FLAGS` itself, so the new flag would have inherited a
+refusal whose message says «مفتاح التحقق» to whoever hid a market. The two sets are now named
+separately — `DEFAULT_ENABLED_FLAGS` says **how absence reads**, `GUARDED_FLAGS` says **what switching
+off costs** — and the second still holds `otp_verification_enabled` alone. **Hiding a market is a launch
+decision, not an emergency action.**
+
+**The filter is in the backend because that is the only place that satisfies the condition.** Everything
+the apps display about markets already derives from `GET /config`, and a list compiled into a bundle
+changes only with a new bundle on every device. Two consequences: `default_country_code` becomes the
+first visible country when the configured one is hidden (a name outside `countries` is a field with no
+mirror — it arrives and reads `undefined`), and **the panel cannot read `/config`**, because whoever
+prepares a market before opening it needs to see it while it is off.
+
+So the panel has `GET /admin/countries` (`StaffUser`), carrying every market with `visible`, its name,
+and its **full description** — currency, quiet hours, verification channels, all of which the pricing
+and campaign screens read while the market is still dark. **Both doors call one builder**
+(`services/country_config.build`): two doors publishing the same thing, each honest alone, is the eighth
+shape — and `test_the_two_doors_publish_the_same_description` is what compares them.
+
+**What was swept out of the apps**, with what was deliberately left:
+
+| where | was | now |
+|---|---|---|
+| `admin-panel/components/Shell.tsx` | `["JO","LY"]` + a `COUNTRY_LABEL` map | from `/admin/countries`; the name comes from the backend |
+| `admin-panel/lib/config.tsx::useCountryConfig` | `/config` only | the panel door first, `/config` as the pre-login exit |
+| `customer-app/lib/config.tsx::useAuthCountry` | `?? ["JO"]`, `?? "JO"` | `?? []`, default taken from the list |
+| `driver-app/lib/config.tsx::useAuthCountry` | same | same |
+| `customer-app/screens/WalletTransfer.tsx` | `?? ["JO"]` for the recipient dial codes | `?? []` — transferring into a hidden market is a door the flag opens |
+
+**Left on purpose**: `CountryCode = "JO" | "LY"` in all three `api/types.ts` — an **enum mirror, not a
+display list**, guarded by `check:enums`, and nothing rendered is derived from it; and
+`user?.country_code ?? "JO"` fallbacks, which are the **account holder's own** country rather than a
+market list, and show a hidden market to nobody.
+
+**The condition was "it must appear immediately with no rebuild and no redeploy", so it was measured on
+a bundle that predates the work** (`index---ktOf25.js`, Note 20, over the live tunnel): toggling from
+the panel door made `/config` drop `LY` in **206 ms**, the transfer screen's `select` measured
+`["JO=الأردن"]`, enabling it and reloading **the same bundle** measured `["LY=ليبيا","JO=الأردن"]`, and
+switching it back returned one option. The panel saw both markets throughout. Read from the DOM, never
+from a screenshot.
+
+**Enabling Libya is a launch item, not a toggle** — §24.5 lists the five things verified before it
+(pricing rows, a verification contract reaching `+218`, payment contracts behind every flag switched on
+there, a supervisor account, and quiet hours with its timezone).
+
 ### The dev stack has been mutated by the scenarios — do not read it as the intended state
 
 The scenarios needed real values, so the local database now has: **JO commission 10% `all_rides`**,

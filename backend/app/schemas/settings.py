@@ -14,6 +14,7 @@ from app.models.enums import (
     SubscriptionDurationType,
     VehicleCategory,
 )
+from app.schemas.config import CountryConfigOut
 
 # كل مبلغ NUMERIC(12,3) — نفس قيد القاعدة معبَّراً عنه في طبقة الإدخال
 Money = Field(ge=0, max_digits=12, decimal_places=3)
@@ -248,3 +249,21 @@ class OtpExhaustedOut(BaseModel):
 
     day: str
     phones: list[str]
+
+
+class CountryRow(BaseModel):
+    """دولةٌ كما تراها اللوحة — **بحالها لا مصفاةً** (SPEC §24).
+
+    اللوحةُ ترى الدولَ كلَّها دائماً، مطفأةً كانت أو ظاهرة: من يشعل سوقاً يحتاج
+    أن يراه مطفأً أولاً. و`GET /config` مصفّىً للتطبيقات، فلو قرأت اللوحةُ منه
+    لاختفى عنها ما جاءت لتشعله.
+    """
+
+    country_code: CountryCode
+    name: str
+    visible: bool
+    config: CountryConfigOut
+
+
+class CountriesOut(BaseModel):
+    countries: list[CountryRow]

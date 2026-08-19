@@ -11,3 +11,12 @@ COUNTRY_CURRENCY: dict[CountryCode, Currency] = {
 
 def currency_for_country(country_code: CountryCode) -> Currency:
     return COUNTRY_CURRENCY[CountryCode(country_code)]
+
+
+# **اسمُ الدولة بيتُه هنا** (SPEC §24): كان مكتوباً في ترويسة اللوحة وحدَها،
+# فصار يُنشر مع الدول — وواجهةٌ تكتب أسماءَها تُصبح بيتاً ثانياً يفترق عند
+# إضافة سوقٍ ثالث.
+COUNTRY_NAME: dict[CountryCode, str] = {
+    CountryCode.JO: "الأردن",
+    CountryCode.LY: "ليبيا",
+}

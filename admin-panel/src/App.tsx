@@ -21,6 +21,7 @@ import type { ReactNode } from "react";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { ConfigProvider, useConfig } from "@/lib/config";
+import { CountriesProvider } from "@/lib/countries";
 import { CountryProvider } from "@/lib/country";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider } from "@/lib/theme";
@@ -95,7 +96,7 @@ function Centered({ children }: { children: ReactNode }) {
 
 function Boot({ children }: { children: ReactNode }) {
   const { config, error, reload } = useConfig();
-  const { loading } = useSession();
+  const { loading, user } = useSession();
 
   if (!config && error) {
     return (
@@ -123,9 +124,13 @@ function Boot({ children }: { children: ReactNode }) {
   }
 
   return (
-    <CountryProvider fallback={config.default_country_code}>
-      {children}
-    </CountryProvider>
+    // **الأسواقُ تُسأل بعد الدخول وحده**: البابُ `StaffUser`، وشاشةُ الدخول
+    // تقرأ بادئةَ الهاتف من `/config` كما كانت
+    <CountriesProvider enabled={Boolean(user)}>
+      <CountryProvider fallback={config.default_country_code}>
+        {children}
+      </CountryProvider>
+    </CountriesProvider>
   );
 }
 

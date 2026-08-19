@@ -77,8 +77,22 @@ from app.services.providers import credentials as credentials_service
 # ليبيا مرحلة تجريب: كاش فقط. الأردن: كليك وبطاقة ومحفظة، بلا تحويل P2P ولا عمولة.
 FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
     CountryCode.LY: {key: False for key in FeatureKey}
-    | {FeatureKey.OTP_VERIFICATION_ENABLED: True},
+    | {
+        FeatureKey.OTP_VERIFICATION_ENABLED: True,
+        # **مطفأةٌ صراحةً حتى إطلاقها** (بند الإطلاق، SPEC §24): السوقُ يُبنى
+        # بياناتُه وإعداداتُه كما هي، ولا يظهر في التطبيقات — لا في قائمةِ
+        # اختيارٍ ولا في تسجيل. وإشعالُ هذا الصفِّ وحدَه يُظهره في اللحظة
+        # نفسِها بلا بناءٍ ولا نشر.
+        #
+        # **وهو مكتوبٌ صريحاً وإن كان صفُّ ليبيا كلُّه `False`**: الغيابُ هنا
+        # يُقرأ **ظهوراً** لا إخفاءً (`DEFAULT_ENABLED_FLAGS`)، فصفٌّ ضمنيٌّ
+        # في تعبيرٍ عامٍّ ليس قراراً — والقرارُ يُكتب.
+        FeatureKey.COUNTRY_VISIBLE: False,
+    },
     CountryCode.JO: {
+        # **ظاهرةٌ صراحةً**: السكوتُ ظهورٌ أصلاً، لكن صفّاً في اللوحة يُطفأ
+        # ويُشعل أوضحُ من افتراضٍ في الكود لا زرَّ له
+        FeatureKey.COUNTRY_VISIBLE: True,
         FeatureKey.CLIQ_ENABLED: True,
         FeatureKey.CARD_ENABLED: True,
         FeatureKey.WALLET_ENABLED: True,

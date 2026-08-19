@@ -200,9 +200,14 @@ async def upsert_feature_flag(
     `otp_verification_enabled` ليس ميزةً تُجرَّب: إطفاؤه يسمح بإنشاء حساباتٍ
     بأرقامٍ لم يملكها أصحابُها. فهو إجراءُ طوارئٍ يُسأل عنه، وسجلُّ تدقيقٍ
     يقول «أُطفئ» بلا «لماذا» نصفُ سجل (SPEC القسم 13/6).
+
+    **والشرطُ على `GUARDED_FLAGS` لا على `DEFAULT_ENABLED_FLAGS`**: الثانيةُ
+    تقول كيف يُقرأ الغياب، والأولى تقول ما ثمنُ الإطفاء — ومنذ دخول
+    `country_visible` لم تعودا واحدة. وكلُّ تبديلٍ يُسجَّل في التدقيق سبباً
+    كان أو لا (`settings_service.set_flag`).
     """
     if (
-        payload.feature_key in settings_service.DEFAULT_ENABLED_FLAGS
+        payload.feature_key in settings_service.GUARDED_FLAGS
         and not payload.enabled
         and not (payload.reason or "").strip()
     ):

@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.routers import (
     admin_campaigns,
+    admin_countries,
     admin_cancellations,
     admin_live_map,
     admin_payments,
@@ -66,6 +67,7 @@ api_router.include_router(admin_live_map.router)
 api_router.include_router(admin_stats.router)
 api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_campaigns.router)
+api_router.include_router(admin_countries.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(admin_rides.router)
 api_router.include_router(admin_otp_templates.router)

@@ -203,8 +203,13 @@ export function useAuthCountry(): {
   setCountry: (value: CountryCode) => void;
 } {
   const { config } = useConfig();
-  const countries = config?.countries.map((entry) => entry.country_code) ?? ["JO"];
-  const fallback = config?.default_country_code ?? "JO";
+  // **ولا رمزَ دولةٍ مكتوبٌ هنا** (SPEC §24): كان `?? ["JO"]`، وهو سوقٌ
+  // مكتوبٌ في التطبيق يظهر في القائمة ولو أطفأته الخلفية. القائمةُ من
+  // `/config` وحدها، والافتراضيةُ منها كذلك — وقبل وصولها لا قائمةَ ولا
+  // اختيار، وهي حالٌ لا تُرسم أصلاً (`Boot` ينتظر `/config`).
+  const countries =
+    config?.countries.map((entry) => entry.country_code) ?? [];
+  const fallback = config?.default_country_code ?? countries[0];
 
   const [chosen, setChosen] = useState<CountryCode | null>(() => {
     const held = localStorage.getItem(COUNTRY_KEY);

@@ -308,7 +308,20 @@ export type FeatureKey =
   | "scheduled_rides_enabled"
   | "ride_sharing_enabled"
   | "subscription_offers_enabled"
-  | "driver_advances_enabled";
+  | "driver_advances_enabled"
+  | "country_visible";
+
+/** دولةٌ كما تراها اللوحةُ وحدَها — **بحالها لا مصفاةً** (SPEC §24).
+ *
+ * `GET /config` يحذف منه ما أُطفئ ظهورُه، فاللوحةُ تقرأ من `GET /admin/countries`
+ * وترى الأسواقَ كلَّها: من يُجهّز سوقاً قبل فتحه يحتاج أن يراه مطفأً.
+ */
+export interface CountryRow {
+  country_code: CountryCode;
+  name: string;
+  visible: boolean;
+  config: CountryConfig;
+}
 
 export interface CountryFeatureFlags {
   country_code: CountryCode;

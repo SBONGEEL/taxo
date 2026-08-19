@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from httpx import AsyncClient
 
+from app.services import settings_service
+
 
 async def _register(client: AsyncClient, payload: dict) -> dict:
     response = await client.post("/auth/register", json=payload)
@@ -124,14 +126,20 @@ async def test_feature_flags_default_to_disabled(
     by_country = {row["country_code"]: row["flags"] for row in response.json()}
     assert set(by_country) == {"LY", "JO"}
 
-    # غياب الصف = معطّل — لا يُفترض التفعيل أبداً... إلا للمفاتيح **الحارسة**:
-    # `otp_verification_enabled` إطفاؤه يفتح باباً، فغيابُ صفّه يعني مفعّلاً
-    # (المرحلة 8-ب، `settings_service.DEFAULT_ENABLED_FLAGS`)
-    guards = {"otp_verification_enabled"}
+    # غياب الصف = معطّل — لا يُفترض التفعيل أبداً... إلا لما استُثني بعلّةٍ
+    # مكتوبة: حارسٌ إطفاؤه يفتح باباً (`otp_verification_enabled`)، أو صفةُ
+    # سوقٍ إخفاؤها يُخفي التطبيقَ كلَّه (`country_visible`، SPEC §24).
+    #
+    # **والمجموعةُ تُقرأ من الخدمة لا تُنسخ هنا**: قائمةٌ مكتوبةٌ في اختبار
+    # تفترق عن مصدرها عند أول إضافة — وقد وقع ذلك في سقف واتساب.
+    exempt = settings_service.DEFAULT_ENABLED_FLAGS
     assert not any(
-        enabled for key, enabled in by_country["LY"].items() if key not in guards
+        enabled for key, enabled in by_country["LY"].items() if key not in exempt
     )
     assert by_country["LY"]["otp_verification_enabled"] is True
+    # وليبيا مطفأةُ الظهور صراحةً في البذرة — والاختبارُ يبني قاعدتَه من
+    # الهجرات لا من البذرة، فالصفُّ غائبٌ هنا ويُقرأ ظهوراً
+    assert by_country["LY"]["country_visible"] is True
     assert by_country["JO"]["cliq_enabled"] is False
 
 

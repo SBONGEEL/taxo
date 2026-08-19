@@ -10,6 +10,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { getConfig } from "@/api/endpoints";
+import { useCountries } from "@/lib/countries";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 
 interface ConfigState {
@@ -53,12 +54,24 @@ export function useConfig() {
   return useContext(ConfigContext);
 }
 
+/** وصفُ الدولة المعروضة — **من باب اللوحة أولاً** (SPEC §24).
+ *
+ * `/config` مصفّىً بمفتاح الظهور، فسوقٌ يُجهَّز قبل فتحه يغيب عنه ومعه عملتُه
+ * وساعاتُ هدوئه — وهما ما تقرؤه شاشتا النظرة العامة والحملات. فيُقرأ من
+ * `/admin/countries` حين يكون حاضراً، ويبقى `/config` مخرجاً قبل الدخول.
+ *
+ * **والوصفُ واحدٌ في البابين** (`services/country_config.build`)، فلا يفترق
+ * حقلٌ بين قراءتين — وهو الشكلُ الثامن بعينه.
+ */
 export function useCountryConfig(
   country: CountryCode | undefined,
 ): CountryConfig | null {
   const { config } = useConfig();
-  if (!config || !country) return null;
+  const { rows } = useCountries();
+  if (!country) return null;
+  const admin = rows?.find((row) => row.country_code === country);
+  if (admin) return admin.config;
   return (
-    config.countries.find((entry) => entry.country_code === country) ?? null
+    config?.countries.find((entry) => entry.country_code === country) ?? null
   );
 }
