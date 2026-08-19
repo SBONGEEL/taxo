@@ -9,52 +9,33 @@
  * | في رحلةٍ جارية | يُقال له **لماذا** لا يعمل الآن — والنصُّ من الخلفية |
  * | التطبيقُ غير مثبَّت | صفحةٌ تشرح وتعطي مدخلَ التثبيت — لا خطأ ولا صمت |
  *
- * **وفتحُ التطبيق الآخر بـ`intent://` لا بمخططٍ عاري**، وثلاثةُ أسباب:
+ * **والفتحُ بـ`AppLauncher` لا بـ`intent://`** — وهذا قِيس لا افتُرض: عنوانُ
+ * `intent://` سلوكٌ خاصٌّ بمتصفح كروم، **ولا يفعل شيئاً داخل WebView**؛ قِيس
+ * على S21 فبقي تطبيقُ الراكب في المقدمة ولم يُفتح شيء.
  *
- * ١. `package=` يثبّت المستقبِل، فلا يلتقط الرمزَ تطبيقٌ سجّل المخططَ نفسَه.
- * ٢. `S.browser_fallback_url` يعطي «غير مثبَّت» جواباً **حتمياً** من النظام،
- *    بدل مهلةٍ نخمّن بعدها أن التطبيق لم يُفتح — والتخمينُ يخطئ على جهازٍ بطيء.
- * ٣. الرمزُ يسافر في **مخططٍ خاصٍّ لا يبلغ خادماً**: لا نداءَ شبكةٍ يحمله ولا
- *    سجلَّ وسيطٍ يقيّده. وعمرُه ثلاثون ثانيةً واستعمالُه واحد، فما بقي منه في
- *    سجلِّ نشاطٍ على الجهاز لا يفتح شيئاً بعد ثوانٍ.
+ * و`canOpenUrl` يعطي «غير مثبَّت» جواباً **حتمياً من النظام** — أفضلَ مما كان
+ * يشتريه `S.browser_fallback_url`: يُسأل **قبل** المحاولة، فلا يرمش شيءٌ على
+ * الشاشة ولا يُخمَّن بعد مهلة.
+ *
+ * **والرمزُ يسافر في مخططٍ خاصٍّ لا يبلغ خادماً**: لا نداءَ شبكةٍ يحمله ولا
+ * سجلَّ وسيطٍ يقيّده. وعمرُه ثلاثون ثانيةً واستعمالُه واحد.
  */
+
+import { AppLauncher } from "@capacitor/app-launcher";
 
 import { startHandoff } from "@/api/endpoints";
 import { ApiError } from "@/api/client";
-import type { User } from "@/api/types";
 
-/** حزمةُ تطبيق الكبتن ومخططُه — قيمتان تُكتبان هنا لا تُخمَّنان. */
-const DRIVER_PACKAGE = "ly.tajora.driver";
-const DRIVER_SCHEME = "taxo-driver";
 
 /** صفحةُ «غير مثبَّت» — يفتحها النظامُ نفسُه حين لا يجد الحزمة. */
 export const NOT_INSTALLED_PATH = "/account/switch/driver-not-installed";
 
-export type SwitchState =
-  | { kind: "available" }
-  | { kind: "needs_registration" }
-  | { kind: "blocked"; reason: string };
-
-/** أيَّ حالٍ نحن فيها **قبل** الضغط — فالزرُّ يُرسم بما يقدر عليه. */
-export function switchState(user: User | null): SwitchState {
-  if (!user) return { kind: "needs_registration" };
-  return user.roles?.includes("driver")
-    ? { kind: "available" }
-    : { kind: "needs_registration" };
-}
-
-function fallbackUrl(): string {
-  return `${window.location.origin}${NOT_INSTALLED_PATH}`;
-}
-
-/** يبني نيّةَ أندرويد — والرمزُ في استعلامِ مخططٍ خاصٍّ لا يبلغ خادماً. */
-export function intentUrl(token: string): string {
-  const fallback = encodeURIComponent(fallbackUrl());
-  return (
-    `intent://handoff?t=${encodeURIComponent(token)}#Intent;scheme=${DRIVER_SCHEME};package=${DRIVER_PACKAGE};` +
-    `S.browser_fallback_url=${fallback};end`
-  );
-}
+/** **وظيفةُ الزرِّ فتحُ التطبيق الآخر، لا أكثر** (تصحيحُ المالك 2026-08-19).
+ *
+ * وليس مساراً للتسجيل بدورٍ آخر: من لا يملك الدورَ يتولّاه التطبيقُ المفتوحُ
+ * بشاشته، ومن لا يملك **التطبيق** يصله رابطُ تنزيله — والنظامُ نفسُه يفرّق
+ * بين الحالتين (`S.browser_fallback_url`)، فلا نخمّن نحن أيَّهما وقعت.
+ */
 
 /**
  * يفتح تطبيقَ الكبتن بجلسةٍ منقولة.
@@ -62,9 +43,31 @@ export function intentUrl(token: string): string {
  * **ولا يُطلب الرمزُ إلا عند الضغط**: عمرُه ثلاثون ثانية، فطلبُه عند رسم الشاشة
  * يجعله ميتاً قبل أن يُضغط.
  */
-export async function switchToDriver(): Promise<void> {
-  const { token } = await startHandoff();
-  window.location.href = intentUrl(token);
+export async function switchToDriver(): Promise<boolean> {
+  // **مُشغِّلٌ لا مُسجِّل** (قرارُ المالك 2026-08-19): وظيفتُه فتحُ التطبيق
+  // الآخر، فيفتحه **دائماً**. والدورُ شرطٌ على **الجلسة** لا على الفتح.
+  //
+  // فإن تعذّر الرمزُ — لأن الحساب لا يملك دورَ الهدف مثلاً — يُفتح التطبيقُ
+  // **بلا مبادلة**، فيتولّاه بشاشته. و**بصمت**: لا رسالةَ خطأٍ على زرٍّ نجح
+  // فعلُه، ولا يُعرض نصُّ «ادخل من تطبيق كذا» — وهو عبثيٌّ لمن يقف فيه.
+  let token = "";
+  try {
+    token = (await startHandoff()).token;
+  } catch (error) {
+    // **إلا المنعَ المعلن**: «أنهِ رحلتك أولاً» رفضٌ مقصودٌ له سببٌ يُقال
+    if (blockedReason(error)) throw error;
+  }
+
+  // **`canOpenUrl` على أندرويد يأخذ اسمَ الحزمة لا عنواناً** — قِيس على S21:
+  // بتمرير العنوان يسجّل المكوّنُ «Package name 'taxo-…://handoff' not found».
+  // و`openUrl` يأخذ العنوانَ نفسَه. مُعامِلان بنفس الاسم ومعنيان مختلفان.
+  const { value } = await AppLauncher.canOpenUrl({ url: "ly.tajora.driver" });
+  if (!value) return false; // غيرُ مثبَّت — والصفحةُ تتولّاه
+
+  await AppLauncher.openUrl({
+    url: `taxo-driver://handoff?t=${encodeURIComponent(token)}`,
+  });
+  return true;
 }
 
 /** رسالةُ المنع كما كتبتها الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17). */

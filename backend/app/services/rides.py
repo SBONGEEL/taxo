@@ -168,8 +168,8 @@ async def get_ride_for_user(
 
 
 
-def _side_of(user: User) -> UserRole:
-    """أيَّ جانبٍ من الرحلة يقف صاحبُ الحساب — **ولا `else` يختار عنه**.
+def _side_of(user: User, declared: UserRole | None = None) -> UserRole:
+    """أيَّ جانبٍ من الرحلة يقف صاحبُ الحساب — **والعمليةُ تعلنه** (§22).
 
     كان السطرُ `if role == DRIVER: … else: …`، فحسابٌ بدورين يقع في فرعٍ واحدٍ
     **بلا أثر**: تختفي رحلتُه الجارية من الجانب الآخر، ويُعرض نصفُ سجلِّه
@@ -177,10 +177,17 @@ def _side_of(user: User) -> UserRole:
     """
     rider = user.has_role(UserRole.RIDER)
     driver = user.has_role(UserRole.DRIVER)
+
+    if declared is not None:
+        # الإعلانُ يقرّر ولا يمنح: يُفحص أن صاحبَه يملك ذلك الدور
+        if not user.has_role(declared):
+            raise PermissionDenied("لا رحلاتِ لهذا الحساب من هذا الجانب")
+        return declared
+
     if rider and driver:
         raise AmbiguousRole(
             "ride_side_undecided",
-            "لم يُقرَّر بعدُ أيَّ جانبٍ من الرحلات يُعرض لحسابٍ يحمل الدورين",
+            "لم يُعلَن جانبُ الرحلات، والحسابُ يحمل الدورين",
         )
     return UserRole.DRIVER if driver else UserRole.RIDER
 
@@ -214,11 +221,13 @@ async def has_any_active_ride(session: AsyncSession, user: User) -> bool:
     return found is not None
 
 
-async def active_ride_for_user(session: AsyncSession, user: User) -> Ride | None:
+async def active_ride_for_user(
+    session: AsyncSession, user: User, *, declared: UserRole | None = None
+) -> Ride | None:
     """الرحلة الجارية للمستخدم — عليها يعتمد استرجاع الحالة بعد انقطاع (SPEC القسم 10)."""
     stmt = select(Ride).options(*_LOAD_DRIVER_CARD)
 
-    if _side_of(user) is UserRole.DRIVER:
+    if _side_of(user, declared) is UserRole.DRIVER:
         driver_id = await session.scalar(select(Driver.id).where(Driver.user_id == user.id))
         stmt = stmt.where(
             Ride.driver_id == driver_id, Ride.status.in_(ACTIVE_DRIVER_STATUSES)
@@ -252,12 +261,17 @@ async def _driver_has_active_ride(session: AsyncSession, driver_id: uuid.UUID) -
 
 
 async def list_rides_for_user(
-    session: AsyncSession, user: User, *, limit: int, offset: int
+    session: AsyncSession,
+    user: User,
+    *,
+    limit: int,
+    offset: int,
+    declared: UserRole | None = None,
 ) -> Sequence[Ride]:
     """رحلات المستخدم بدوره: الراكب رحلاته، والكبتن ما أُسند إليه."""
     stmt = select(Ride).options(*_LOAD_DRIVER_CARD)
 
-    if _side_of(user) is UserRole.DRIVER:
+    if _side_of(user, declared) is UserRole.DRIVER:
         driver_id = await session.scalar(select(Driver.id).where(Driver.user_id == user.id))
         stmt = stmt.where(Ride.driver_id == driver_id)
     else:

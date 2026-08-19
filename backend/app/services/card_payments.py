@@ -47,6 +47,7 @@ from app.core.exceptions import (
     PermissionDenied,
 )
 from app.models.enums import (
+    WalletOwnerType,
     CountryCode,
     Currency,
     FeatureKey,
@@ -100,11 +101,16 @@ def _new_cart_id(prefix: str) -> str:
 # --------------------------------------------------------------- بوابة القناة
 
 
-def _paying_side(payer: User) -> str:
+def _paying_side(payer: User, declared: str | None = None) -> str:
     """بصفةِ أيِّ دورٍ يدفع — **وهي تعيّن التطبيقَ الذي يعود إليه**.
 
     وعودةٌ إلى تطبيقٍ ليس بيده تترك الدافعَ أمام صفحةٍ لا تُكمل، وقد دُفع ماله.
     """
+    if declared is not None:
+        if not payer.has_role(UserRole(declared)):
+            raise PermissionDenied("لا يبدأ هذا الحسابُ دفعاً من هذا التطبيق")
+        return declared
+
     rider = payer.has_role(UserRole.RIDER)
     driver = payer.has_role(UserRole.DRIVER)
     if rider and driver:
@@ -293,7 +299,8 @@ async def start_ride_payment(
         ride_id=ride.id,
         payment_id=payment.id,
         save_card=save_card,
-        opened_from_app=_paying_side(rider),
+        # **الرحلةُ تقول**: الدافعُ راكبُها بالبناء، فالتطبيقُ تطبيقُ الراكب
+        opened_from_app=_paying_side(rider, UserRole.RIDER.value),
     )
     session.add(order)
     await session.flush()
@@ -315,6 +322,7 @@ async def start_wallet_topup(
     amount: Decimal,
     save_card: bool = False,
     saved_card_id: uuid.UUID | None = None,
+    declared: WalletOwnerType | None = None,
 ) -> ProviderOrder:
     """شحن محفظة بالبطاقة — فوريٌّ آلي بلا طلبٍ ينتظر إنساناً (SPEC القسم 7).
 
@@ -324,8 +332,9 @@ async def start_wallet_topup(
     await wallet.require_wallet_enabled(session, owner.country_code)
     await require_card_enabled(session, owner.country_code)
     wallet.require_not_frozen(owner)
-    # يفحص أن للحساب محفظة أصلاً (راكب أو كبتن لا مشرف)
-    wallet.owner_type_for(owner)
+    # **المحفظةُ المعلَنةُ تقول التطبيق**: شحنُ محفظةِ راكبٍ يبدأ من تطبيقه،
+    # فلا يُسأل العميلُ سؤالاً ثانياً عن شيءٍ أعلنه
+    owner_type = wallet.owner_type_for(owner, declared=declared)
 
     order = ProviderOrder(
         provider=PaymentProvider.TELR,
@@ -337,7 +346,7 @@ async def start_wallet_topup(
         amount=amount,
         currency=currency_for_country(owner.country_code),
         save_card=save_card,
-        opened_from_app=_paying_side(owner),
+        opened_from_app=owner_type.value,
     )
     session.add(order)
     await session.flush()
@@ -390,7 +399,8 @@ async def start_subscription(
         currency=plan.currency,
         plan_id=plan.id,
         save_card=save_card,
-        opened_from_app=_paying_side(owner),
+        # **الاشتراكُ شأنُ كبتنٍ بتعريفه**، فتطبيقُه هو المُبتدئ
+        opened_from_app=_paying_side(owner, UserRole.DRIVER.value),
     )
     session.add(order)
     await session.flush()

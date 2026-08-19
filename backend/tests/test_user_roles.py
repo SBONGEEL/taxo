@@ -160,7 +160,7 @@ async def test_the_wallet_owner_is_not_guessed(client, session_factory) -> None:
     assert raised.value.code == "wallet_owner_undecided"
 
 
-async def test_the_ride_side_is_not_guessed(client, session_factory) -> None:
+async def test_the_ride_side_is_declared_or_refused(client, session_factory) -> None:
     from app.services import rides as rides_service
     from tests.helpers import rider_session
 
@@ -172,8 +172,21 @@ async def test_the_ride_side_is_not_guessed(client, session_factory) -> None:
         rides_service._side_of(user)
     assert raised.value.code == "ride_side_undecided"
 
+    # **ولكلِّ خطأٍ مسمّى إعلانٌ يُسكته** — وإلا صار الصياحُ بلا مخرج
+    for side in (UserRole.RIDER, UserRole.DRIVER):
+        assert rides_service._side_of(user, side) is side
 
-async def test_the_cancelling_side_is_not_guessed(client, session_factory) -> None:
+
+async def test_the_cancelling_side_comes_from_the_ride_not_the_roles(
+    client, session_factory
+) -> None:
+    """**الرحلةُ تقوله، فلا إعلانَ يُطلب** (§22) — وهي أنقى صورةٍ للقاعدة.
+
+    وحسابٌ بدورين ألغى رحلةً هو راكبُها **راكبٌ فيها** مهما ملك؛ والارتدادُ
+    المسمّى يبقى لمن ليس طرفاً فيها أصلاً.
+    """
+    from types import SimpleNamespace
+
     from app.routers.rides import _cancelling_role
     from tests.helpers import rider_session
 
@@ -181,8 +194,17 @@ async def test_the_cancelling_side_is_not_guessed(client, session_factory) -> No
     await _grant(session_factory, uuid.UUID(rider["user"]["id"]), UserRole.DRIVER)
     user = await _user(session_factory, rider["user"]["id"])
 
+    as_rider = SimpleNamespace(rider_id=user.id, driver=None)
+    assert _cancelling_role(user, as_rider) is UserRole.RIDER
+
+    as_driver = SimpleNamespace(
+        rider_id=uuid.uuid4(), driver=SimpleNamespace(user_id=user.id)
+    )
+    assert _cancelling_role(user, as_driver) is UserRole.DRIVER
+
+    stranger = SimpleNamespace(rider_id=uuid.uuid4(), driver=None)
     with pytest.raises(AmbiguousRole) as raised:
-        _cancelling_role(user)
+        _cancelling_role(user, stranger)
     assert raised.value.code == "cancelling_side_undecided"
 
 

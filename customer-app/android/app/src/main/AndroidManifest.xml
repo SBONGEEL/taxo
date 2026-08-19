@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+
+    <!-- **رؤيةُ الحزم على أندرويد ١١ فما فوق** (قِيس على S21، أندرويد ١٥):
+         بلا هذا يعيد `canOpenUrl` **false لتطبيقٍ مثبَّتٍ فعلاً** — النظامُ
+         يُخفي الحزمَ الأخرى عن التطبيق ما لم يعلن أنه يسألها. وهو عطبٌ صامت:
+         لا استثناءَ ولا سطرَ سجلّ، فيُقرأ «غير مثبَّت» عن مثبَّت.
+
+         والإعلانُ **بالحزمة وبالمخطط معاً**: الأولُ يكفي وهو الأضيق، والثاني
+         يبقي الفحصَ عاملاً لو تبدّل اسمُ الحزمة يوماً. -->
+    <queries>
+        <package android:name="ly.tajora.driver" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="taxo-driver" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

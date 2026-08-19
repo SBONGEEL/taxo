@@ -38,9 +38,6 @@ import { LoginScreen } from "@/screens/Login";
 const DriverNotInstalledScreen = lazy(() =>
   import("@/screens/SwitchApp").then((m) => ({ default: m.DriverNotInstalledScreen })),
 );
-const HandoffLandingScreen = lazy(() =>
-  import("@/screens/SwitchApp").then((m) => ({ default: m.HandoffLandingScreen })),
-);
 const HomeScreen = lazy(() =>
   import("@/screens/Home").then((m) => ({ default: m.HomeScreen })),
 );
@@ -243,9 +240,6 @@ export default function App() {
                     {(animated) => (
                     <Routes location={animated}>
                       <Route path="/account/switch/driver-not-installed" element={<DriverNotInstalledScreen />} />
-                      {/* **خارج حارس الجلسة**: الرمزُ هو ما يُنشئ الجلسةَ، فحارسٌ قبله يردّ
-                          القادمَ إلى تسجيلِ دخولٍ لا يحتاجه */}
-                      <Route path="/handoff" element={<HandoffLandingScreen />} />
 
                       <Route
                         path="/login"

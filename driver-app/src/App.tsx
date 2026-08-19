@@ -45,9 +45,6 @@ import { LoginScreen } from "@/screens/Login";
 const RiderNotInstalledScreen = lazy(() =>
   import("@/screens/SwitchApp").then((m) => ({ default: m.RiderNotInstalledScreen })),
 );
-const HandoffLandingScreen = lazy(() =>
-  import("@/screens/SwitchApp").then((m) => ({ default: m.HandoffLandingScreen })),
-);
 const ForgotPasswordScreen = lazy(() =>
   import("@/screens/ForgotPassword").then((m) => ({
     default: m.ForgotPasswordScreen,
@@ -294,9 +291,6 @@ export default function App() {
                       {(animated) => (
                       <Routes location={animated}>
                         <Route path="/account/switch/rider-not-installed" element={<RiderNotInstalledScreen />} />
-                        {/* **خارج حارس الجلسة**: الرمزُ هو ما يُنشئ الجلسةَ، فحارسٌ قبله يردّ
-                            القادمَ إلى تسجيلِ دخولٍ لا يحتاجه */}
-                        <Route path="/handoff" element={<HandoffLandingScreen />} />
 
                         <Route
                           path="/login"

@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**1027 backend tests pass** across 92 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
+**1028 backend tests pass** across 92 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -667,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**1027 backend tests pass** across 92 test files, measured on 2026-08-19; all three frontends build with
+**1028 backend tests pass** across 92 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1271,6 +1271,40 @@ no display text.
 
 **Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
 eye is load-bearing, and weakening it is not a style decision.
+
+### The eleventh shape — an obstacle that exists only on a device (2026-08-19)
+
+**Four in one feature, and none of them is visible from a browser, a test, or a build.** The switch
+button was type-correct, unit-tested, and green in every guard — and did nothing on a phone:
+
+| what appeared | what it was |
+|---|---|
+| the button did nothing at all | **`intent://` is a Chrome behaviour**; inside a WebView it is a no-op |
+| "not installed" for an app **that was installed** | **Android 11+ package visibility** — without `<queries>` the OS hides other packages |
+| `canOpenUrl` logged `Package name 'taxo-driver://…' not found` | on Android it takes a **package name**, not a URL; `openUrl` takes the URL. One parameter name, two meanings |
+| the app opened and **sat on its login screen with the token in hand** | a cold start delivers the URL through `getLaunchUrl()`; **`appUrlOpen` never fires** |
+
+**The most dangerous is the second, and its danger is its silence.** No exception, no log line, no failed
+build — a correct call returns `false`, and the app then tells the user, in good Arabic, that an app on
+his own phone is not installed. Every layer reported success.
+
+**The rule: anything that touches the operating system — intents, package visibility, cold start, the
+launcher — is not believable from a browser or a test.** A WebView is not Chrome, an emulator is not a
+phone, and a green suite says nothing about whether the OS will hand your app the URL. These are
+measured on the device or they are unknown.
+
+**And a fifth, of the same family but about time**: the handoff window was 30 s "because opening an app
+takes seconds". Measured cold start on the S21: **3.4 s and 15.1 s** — the worse one eats half the
+window before the exchange call begins, and a perfectly valid handoff came back `invalid_token`. It is
+120 s now, ≈8× the worst measured start, with the reasoning written where the constant lives: what
+carries the security is single use, target binding, and re-checking at exchange — not brevity.
+
+**A sixth was mine and it is the project's own recurring shape.** The landing route was placed *outside*
+the session guard — and still *inside* `Boot`, which withholds rendering until config **and session**
+resolve. So the route whose whole job is to create a session was waiting for one. Measured: token in
+`location.hash`, `/config` answering 200, splash still up, exchange never attempted. The cure was not to
+move the route but to delete it: **the exchange is not a screen**, so it now runs in the startup listener
+before React mounts, and the splash — which exists to be the visible wait — is the wait.
 
 ### The app switch — a handoff token, and the busy check that could not ask its own question (2026-08-19)
 

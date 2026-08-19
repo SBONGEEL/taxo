@@ -178,12 +178,12 @@ export const updatePlace = (
 
 export const deletePlace = (id: string) => api.del<void>(`/me/places/${id}`);
 
-export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
+export const getActiveRide = () => api.get<Ride | null>("/rides/me/active?side=rider");
 
 export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
 
 export const listMyRides = (limit = 20, offset = 0) =>
-  api.get<RideListItem[]>("/rides/me", { query: { limit, offset } });
+  api.get<RideListItem[]>("/rides/me", { query: { limit, offset, side: "rider" } });
 
 /** `reason_code` سببٌ **مصنَّف** بجانب النص: `gender_mismatch` وحدها تُسقط
  *  رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر (المرحلة 10-ج). */
@@ -270,10 +270,12 @@ export const confirmPayment = (paymentId: string) =>
 
 // ------------------------------------------------------------ المحفظة
 
-export const getWallet = () => api.get<Wallet>("/wallet/me");
+export const getWallet = () => api.get<Wallet>("/wallet/me?wallet=rider");
 
 export const listTransactions = (limit = 20, offset = 0) =>
-  api.get<WalletTransaction[]>("/wallet/me/transactions", { query: { limit, offset } });
+  api.get<WalletTransaction[]>("/wallet/me/transactions?wallet=rider", {
+    query: { limit, offset, wallet: "rider" },
+  });
 
 export const listTopups = (limit = 20, offset = 0) =>
   api.get<TopupRequest[]>("/wallet/me/topups", { query: { limit, offset } });

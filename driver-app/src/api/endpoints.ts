@@ -168,7 +168,7 @@ export const addVehicle = (payload: {
 
 // ------------------------------------------------------------ الرحلة
 
-export const getActiveRide = () => api.get<Ride | null>("/rides/me/active");
+export const getActiveRide = () => api.get<Ride | null>("/rides/me/active?side=driver");
 
 /** تعديلُ بيانات المركبة (`FUTURE-FEATURES` بند 43).
  *
@@ -197,7 +197,7 @@ export const getEarnings = (period: "today" | "week" | "month") =>
 
 /** سجل الرحلات — «للكبتن ما أُسند إليه»، ومعه ملخّصُ دفع كل صف (البند 19). */
 export const listMyRides = (limit = 20, offset = 0) =>
-  api.get<RideListItem[]>("/rides/me", { query: { limit, offset } });
+  api.get<RideListItem[]>("/rides/me", { query: { limit, offset, side: "driver" } });
 
 export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
 
@@ -265,7 +265,7 @@ export const getDriverWallet = () => api.get<DriverWallet>("/wallet/me/driver");
 
 /** دفتر المحفظة — قيودٌ لا تُعدَّل، فالتصحيح قيدٌ مضاد لا تحرير. */
 export const listWalletTransactions = (limit = 20, offset = 0) =>
-  api.get<WalletTransaction[]>("/wallet/me/transactions", {
+  api.get<WalletTransaction[]>("/wallet/me/transactions?wallet=driver", {
     query: { limit, offset },
   });
 

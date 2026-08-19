@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 import uuid
 from decimal import Decimal
 
@@ -144,12 +146,23 @@ async def request_ride(
 # ------------------------------------------------------------------ القراءة
 
 
+
+# **إعلانُ الجانب** (SPEC §22): هذان المساران يخدمهما التطبيقان معاً
+# (`CurrentUser`)، فمن حمل الدورين لا يقول دورُه أيَّ رحلاتٍ يعني. واختياريٌّ
+# عمداً: صاحبُ دورٍ واحدٍ لا يُطالَب بشيء، ولا يُخرج هذا عميلاً قائماً.
+RideSide = Annotated[
+    UserRole | None,
+    Query(alias="side", description="أيُّ جانبٍ من الرحلات — لمن يحمل الدورين"),
+]
+
+
 @router.get("/me", response_model=list[RideListItem])
 async def list_my_rides(
     user: CurrentUser,
     session: DbSession,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    side: RideSide = None,
 ) -> list[RideListItem]:
     """سجل الرحلات: للراكب رحلاته، وللكبتن ما أُسند إليه.
 
@@ -157,7 +170,7 @@ async def list_my_rides(
     صفحةٌ من عشرين رحلة لا تصير عشرين نداءً — نفس ما يفعله سجلُّ اللوحة.
     """
     rides = await rides_service.list_rides_for_user(
-        session, user, limit=limit, offset=offset
+        session, user, limit=limit, offset=offset, declared=side
     )
     summaries = await ride_log.payment_summaries(session, [ride.id for ride in rides])
     return [
@@ -175,9 +188,11 @@ async def list_my_rides(
 
 
 @router.get("/me/active", response_model=RideOut | None)
-async def get_my_active_ride(user: CurrentUser, session: DbSession) -> RideOut | None:
+async def get_my_active_ride(
+    user: CurrentUser, session: DbSession, side: RideSide = None
+) -> RideOut | None:
     """آخر حالة للرحلة الجارية — عليها يعتمد الاسترجاع بعد انقطاع الاتصال."""
-    ride = await rides_service.active_ride_for_user(session, user)
+    ride = await rides_service.active_ride_for_user(session, user, declared=side)
     return _to_out(ride) if ride is not None else None
 
 
@@ -390,21 +405,29 @@ async def complete_ride(
 
 
 
-def _cancelling_role(user: User) -> UserRole:
-    """بأيِّ صفةٍ ألغى — **وهي تقرّر مالاً**.
+def _cancelling_role(user: User, ride: Ride) -> UserRole:
+    """بأيِّ صفةٍ ألغى — **والرحلةُ نفسُها تقوله، فلا إعلانَ يُطلب** (§22).
 
-    الحالةُ تصير `cancelled_by_rider` أو `cancelled_by_driver`، وعليها يقوم
-    رسمُ الإلغاء وعدُّ المشرف. فتخمينُ أحد الدورين هنا يحمّل الرسمَ على الطرف
-    الخطأ بصمت.
+    وهي تقرّر مالاً: الحالةُ تصير `cancelled_by_rider` أو `cancelled_by_driver`،
+    وعليها يقوم رسمُ الإلغاء وعدُّ المشرف.
+
+    **وهذا أنقى صورةٍ لقاعدة «سياقُ الفعل»**: الصفُّ يحمل راكبَه وكبتنَه بالاسم،
+    فالسؤالُ «أيُّهما هذا المستخدم؟» جوابُه في الرحلة لا في أدواره — ولا يُسأل
+    عنه عميلٌ أصلاً. وحسابٌ بدورين ألغى رحلةً هو راكبُها **راكبٌ فيها** مهما
+    ملك، ولو كان كبتناً في رحلةٍ أخرى.
+
+    ويبقى الارتدادُ المسمّى لما لا تجيب عنه الرحلة: من ليس طرفاً فيها أصلاً —
+    وهو ما لا يبلغ هذا السطرَ لأن `get_ride_for_user` يردّه قبله، والحارسُ هنا
+    لئلا يصير ذلك اعتماداً على ترتيبِ سطرين.
     """
-    rider = user.has_role(UserRole.RIDER)
-    driver = user.has_role(UserRole.DRIVER)
-    if rider and driver:
-        raise AmbiguousRole(
-            "cancelling_side_undecided",
-            "لم يُقرَّر بعدُ بأيِّ صفةٍ يُسجَّل إلغاءُ حسابٍ يحمل الدورين",
-        )
-    return UserRole.DRIVER if driver else UserRole.RIDER
+    if ride.rider_id == user.id:
+        return UserRole.RIDER
+    if ride.driver is not None and ride.driver.user_id == user.id:
+        return UserRole.DRIVER
+    raise AmbiguousRole(
+        "cancelling_side_undecided",
+        "لم يتبيّن بأيِّ صفةٍ يُسجَّل هذا الإلغاء",
+    )
 
 
 @router.post("/{ride_id}/cancel", response_model=RideOut)
@@ -429,7 +452,7 @@ async def cancel_ride(
     ride = await rides_service.cancel_ride(
         session,
         ride,
-        by_role=_cancelling_role(user),
+        by_role=_cancelling_role(user, ride),
         reason=payload.reason,
         reason_code=payload.reason_code,
     )

@@ -4,13 +4,7 @@
  * «تعذّر» يتركه بلا خطوةٍ تالية. فتُشرح الحالُ ويُعطى مدخلُ التثبيت.
  */
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { ApiError } from "@/api/client";
-import { exchangeHandoff } from "@/api/endpoints";
 import { Button } from "@/components/ui/Button";
-import { ErrorNote } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 
 const RIDER_STORE_URL = "https://app.tajora.ly";
@@ -48,48 +42,6 @@ export function RiderNotInstalledScreen() {
           احصل على تطبيق الراكب
         </Button>
       </section>
-    </div>
-  );
-}
-
-/** يستقبل رمزَ التسليم ويبادله بجلسة — **ثم يمحو الرمزَ من العنوان**. */
-export function HandoffLandingScreen() {
-  const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // الرمزُ يصل في الجزء (`#`) لا في الاستعلام: الجزءُ لا يُرسل إلى خادمٍ
-    // ولا يدخل سجلَّ وسيط
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const token = params.get("token");
-    if (!token) {
-      setError("رابط التبديل غير مكتمل");
-      return;
-    }
-    exchangeHandoff(token)
-      .then(() => {
-        // **يُمحى من العنوان فوراً**: رمزٌ مستهلَكٌ يبقى في شريط العنوان يُعاد
-        // إرساله بمشاركةِ رابطٍ أو لقطةِ شاشة
-        window.history.replaceState({}, "", "/");
-        window.location.replace("/");
-      })
-      .catch((caught) =>
-        setError(caught instanceof ApiError ? caught.message : "تعذّر التبديل"),
-      );
-  }, [navigate]);
-
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-12 bg-bg px-16">
-      {error ? (
-        <>
-          <ErrorNote message={error} />
-          <Button variant="secondary" onClick={() => navigate("/login")}>
-            سجّل الدخول
-          </Button>
-        </>
-      ) : (
-        <p className="text-13 text-muted">جارٍ نقل جلستك…</p>
-      )}
     </div>
   );
 }

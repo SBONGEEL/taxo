@@ -20,11 +20,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Screen } from "@/components/ui/Screen";
 import { useScheduledRides } from "@/lib/bookings";
-import {
-  blockedReason,
-  switchState,
-  switchToDriver,
-} from "@/lib/switch-app";
+import { blockedReason, switchToDriver } from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +31,6 @@ interface Row {
   /** مفتاحُ الميزة الذي يحكم ظهورَ الصف — والصفُّ يُخفى لا يُعطَّل. */
   scheduled?: boolean;
 }
-
-const DRIVER_SIGNUP_URL = "https://driver.tajora.ly/register";
 
 const ROWS: Row[] = [
   { to: "/account/profile", label: "بياناتي", sub: "الاسم والجنس وتفضيل الكبتن" },
@@ -123,25 +117,19 @@ export function AccountScreen() {
 
 /** صفُّ التبديل — **يرسم ما يقدر عليه، ويقول سببَه إن مُنع**. */
 function SwitchRow() {
-  const { user } = useSession();
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
 
-  const state = switchState(user);
-
   async function press() {
-    if (state.kind === "needs_registration") {
-      // **يُقاد إلى التسجيل ككبتن، لا إلى التطبيق**: الزرُّ ينقل ولا يمنح دوراً
-      window.location.href = `${DRIVER_SIGNUP_URL}`;
-      return;
-    }
     setBusy(true);
     setBlocked(null);
     try {
-      await switchToDriver();
+      // `false` تعني **غير مثبَّت** — والصفحةُ تشرح وتعطي رابطَ التنزيل
+      if (!(await switchToDriver())) window.location.href = "/account/switch/driver-not-installed";
     } catch (caught) {
       // نصُّ المنع من الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17)
-      setBlocked(blockedReason(caught) ?? "تعذّر التبديل الآن");
+      // **لا رسالةَ إلا للمنع المعلن** — والفتحُ نفسُه لا يفشل
+      setBlocked(blockedReason(caught));
     } finally {
       setBusy(false);
     }
@@ -157,14 +145,10 @@ function SwitchRow() {
       >
         <span className="min-w-0 flex-1">
           <span className="block text-13.5 font-semibold text-ink">
-            {state.kind === "available"
-              ? "تبديل إلى تطبيق السائق"
-              : "سجّل كسائق"}
+            تبديل إلى تطبيق السائق
           </span>
           <span className="block truncate text-11 text-muted">
-            {state.kind === "available"
-              ? "نفس الحساب — تنتقل جلستك بلا تسجيل دخول"
-              : "حسابك واحد، ويبقى كما هو"}
+            نفس الحساب — تنتقل جلستك بلا تسجيل دخول
           </span>
         </span>
         <ChevronLeft className="size-16 shrink-0 text-muted" />

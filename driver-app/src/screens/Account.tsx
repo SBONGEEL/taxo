@@ -19,11 +19,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { forDisplay } from "@/lib/phone";
-import {
-  blockedReason,
-  switchState,
-  switchToRider,
-} from "@/lib/switch-app";
+import { blockedReason, switchToRider } from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
 import { digits, cn,
   DISPLAY_LOCALE,
@@ -291,20 +287,18 @@ function Row({
 
 /** صفُّ التبديل إلى تطبيق الراكب — **يقول سببَه إن مُنع**. */
 function SwitchRow() {
-  const { user } = useSession();
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
-  const state = switchState(user);
-
-  if (state.kind !== "available") return null;
 
   async function press() {
     setBusy(true);
     setBlocked(null);
     try {
-      await switchToRider();
+      // `false` تعني **غير مثبَّت** — والصفحةُ تشرح وتعطي رابطَ التنزيل
+      if (!(await switchToRider())) window.location.href = "/account/switch/rider-not-installed";
     } catch (caught) {
-      setBlocked(blockedReason(caught) ?? "تعذّر التبديل الآن");
+      // **لا رسالةَ إلا للمنع المعلن** — والفتحُ نفسُه لا يفشل
+      setBlocked(blockedReason(caught));
     } finally {
       setBusy(false);
     }

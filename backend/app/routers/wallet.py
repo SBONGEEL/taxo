@@ -235,6 +235,7 @@ async def create_card_topup(
     user: CurrentUser,
     session: DbSession,
     redis: RedisDep,
+    wallet: WalletChoice = None,
 ) -> CardOrderOut:
     """شحن بالبطاقة — فوريٌّ آلي فلا يمر بطلبٍ ينتظر إنساناً (SPEC القسم 7).
 
@@ -260,6 +261,7 @@ async def create_card_topup(
         amount=payload.amount,
         save_card=payload.save_card,
         saved_card_id=payload.saved_card_id,
+        declared=wallet,
     )
     await session.commit()
     return CardOrderOut.model_validate(order)

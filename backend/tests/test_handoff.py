@@ -186,7 +186,9 @@ async def test_the_window_is_short_and_published(client, session_factory) -> Non
         )
     ).json()
     assert body["expires_in"] == handoff.TOKEN_TTL_SECONDS
-    assert handoff.TOKEN_TTL_SECONDS <= 60
+    # **تسع النافذةُ إقلاعاً بارداً وتبقى قصيرة**: أسوأُ ما قِيس ١٥٫١ ثانية،
+    # فحدٌّ أدنى يمنع عودةَ الثلاثين، وحدٌّ أعلى يمنع أن تصير جلسةً ثانية
+    assert 60 <= handoff.TOKEN_TTL_SECONDS <= 300
 
 
 async def test_the_panel_is_not_a_handoff_target(client, session_factory) -> None:
@@ -230,3 +232,34 @@ async def test_the_account_publishes_its_roles_in_a_stable_order(client) -> None
     me = await client.get("/auth/me", headers=rider["headers"])
     assert me.status_code == 200, me.text
     assert me.json()["roles"] == ["rider"]
+
+
+async def test_a_wrong_target_attempt_burns_the_token(client, session_factory) -> None:
+    """**محاولةٌ في تطبيقٍ غير الهدف تستهلك الرمز** — وهذا مقصود.
+
+    `consume` تحذف قبل أن تفحص (`GETDEL`)، فلا تبقى نافذةٌ يُبادَل فيها الرمزُ
+    مرتين من طلبين متزامنين — ولا يبقى **مِسبارٌ** يُجرَّب به الرمزُ على
+    التطبيقين حتى يُصيب. وثمنُه ضغطةٌ ثانية، وهو أرخص من الاثنين.
+
+    قِيس على السلك (2026-08-19): محاولةٌ خاطئةٌ ثم صحيحةٌ ⇒ كلتاهما `401`.
+    """
+    from tests.helpers import rider_session
+
+    rider = await rider_session(client)
+    await _grant(session_factory, rider["user"]["id"], UserRole.DRIVER)
+    token = (
+        await client.post(
+            "/auth/handoff", json={"target": "driver"}, headers=rider["headers"]
+        )
+    ).json()["token"]
+
+    wrong = await client.post(
+        "/auth/handoff/exchange", json={"token": token, "app": "rider"}
+    )
+    assert wrong.status_code == 401
+
+    # والصحيحةُ بعدها لا تجد شيئاً
+    right = await client.post(
+        "/auth/handoff/exchange", json={"token": token, "app": "driver"}
+    )
+    assert right.status_code == 401
