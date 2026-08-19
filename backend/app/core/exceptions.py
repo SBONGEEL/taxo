@@ -56,6 +56,24 @@ class InvalidOtpCode(InvalidCredentials):
     message = "رمز التحقق غير صحيح أو انتهت صلاحيته"
 
 
+
+class InvalidOtpTemplate(AppError):
+    """قالبُ رسالةِ رمزٍ يخالف شروطَ القناة.
+
+    **الرسالةُ تسمّي القالبَ والشرط معاً**: «ينقص متغيّر» وحدَها تترك المشرفَ
+    يخمّن أيَّ حقلٍ من الحقلين يعني، وهما على شاشةٍ واحدة.
+
+    و`status_code` 422 لأنه ردٌّ على قيمةٍ أرسلها، لا على صلاحيةٍ ينقصها.
+    """
+
+    status_code = 422
+    code = "invalid_otp_template"
+
+    def __init__(self, message: str, *, field: str | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.field = field
+
 class WeakPassword(AppError):
     """كلمةُ مرورٍ مرفوضةٌ بالسياسة لا بالطول (`core/password_policy.py`).
 

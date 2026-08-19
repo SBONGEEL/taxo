@@ -216,7 +216,7 @@ async def test_a_failed_send_carries_the_next_channel(
     await enable_sms_provider(session_factory)
     await _flip_whatsapp(client, admin_headers, True)
 
-    async def _boom(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def _boom(self, to: str, code: str, **_: object) -> str:
         raise WhatsAppError("واتساب: القالب «taxo_otp» غير معتمد بعد")
 
     monkeypatch.setattr(MockWhatsAppProvider, "send_code", _boom)
@@ -258,7 +258,7 @@ async def test_a_failed_send_with_no_other_channel_says_so(
     await enable_whatsapp_provider(session_factory)
     await _flip_whatsapp(client, admin_headers, True)
 
-    async def _boom(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def _boom(self, to: str, code: str, **_: object) -> str:
         raise WhatsAppError()
 
     monkeypatch.setattr(MockWhatsAppProvider, "send_code", _boom)
@@ -283,7 +283,7 @@ async def test_a_failed_send_leaves_no_live_code(
     await enable_whatsapp_provider(session_factory)
     await _flip_whatsapp(client, admin_headers, True)
 
-    async def _boom(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def _boom(self, to: str, code: str, **_: object) -> str:
         raise WhatsAppError()
 
     monkeypatch.setattr(MockWhatsAppProvider, "send_code", _boom)

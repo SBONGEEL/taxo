@@ -27,6 +27,7 @@
 const http = require("node:http");
 
 const { Session, logger } = require("./session");
+const { chooseText } = require("./template");
 const { SendQueue } = require("./queue");
 
 const PORT = Number(process.env.WA_PORT || 8080);
@@ -92,8 +93,26 @@ async function handleSend(req, res) {
     return send(res, 400, { error: "رقمٌ أو رمزٌ غير صالح" });
   }
 
+  // **الفحصُ ثم السقوطُ إلى النصّ المدمج — ولا سقوطَ صامت.** قالبٌ معطوبٌ يعمل
+  // شهراً ولا أحد يعلم هو أسوأُ من قالبٍ يُرفض بصوت، فكلُّ سقوطٍ يُسجَّل
+  // بمستوى `warn` باسم القالب وبالشرط الذي خالفه.
+  const decision = chooseText(
+    typeof body.body === "string" ? body.body : "",
+    String(body.purpose || "registration"),
+  );
+  if (decision.fellBack && !decision.silent) {
+    logger.warn(
+      {
+        purpose: decision.purpose,
+        violations: decision.violations,
+        at: new Date().toISOString(),
+      },
+      "قالبٌ مرفوضٌ عند الإرسال — يُستعمل النصُّ المدمج",
+    );
+  }
+
   try {
-    const reference = await queue.run(() => session.sendCode(to, code, ttl));
+    const reference = await queue.run(() => session.sendCode(to, code, ttl, decision.text));
     return send(res, 200, { reference, provider: "baileys" });
   } catch (error) {
     // **حالُ الجلسة تُعاد مع الخطأ**: الخلفيةُ ترتدّ إلى القناة التالية في

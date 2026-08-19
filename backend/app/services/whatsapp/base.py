@@ -53,8 +53,23 @@ class WhatsAppOtpProvider(Protocol):
 
     provider_name: str
 
-    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str:
-        """يرسل رمزاً إلى رقم E.164 ويعيد مرجعَه لدى المزود."""
+    async def send_code(
+        self,
+        to: str,
+        code: str,
+        *,
+        ttl_minutes: int,
+        purpose: str,
+        body: str,
+    ) -> str:
+        """يرسل رمزاً إلى رقم E.164 ويعيد مرجعَه لدى المزود.
+
+        `purpose` و`body` مضافان في قوالب الرمز (2026-08-19). و`body` **مصاغٌ
+        سلفاً** في `otp.issue`: القالبُ يُقرأ من قاعدة البيانات، وقارئُه هو من
+        يملك الجلسة — والمزودُ لا يملكها. و`purpose` يسافر معه لا لأنه يُستعمل
+        في الصياغة، بل ليُسجَّل عند السقوط: «أيُّ قالبٍ خالف» سؤالٌ بلا جواب
+        إن وصل النصُّ مجرَّداً من هويّته.
+        """
         ...
 
     async def test_connection(self, test_phone: str | None = None) -> str:

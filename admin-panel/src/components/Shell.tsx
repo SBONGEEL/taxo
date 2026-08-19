@@ -71,6 +71,8 @@ const GROUPS: {
       // بلا `adminOnly`: بطاقةُ «عاملي» لكل من يدخل اللوحة، وبطاقةُ السياسة
       // وحدها للـ`admin` — والشاشةُ تُخفيها بنفسها (SPEC §14.1)
       { label: "الأمان", to: "/security" },
+      // عالميٌّ لا يتبع مبدّلَ الدولة — الرقمُ والعقدُ عالميان
+      { label: "قوالب رسائل الرمز", to: "/otp-templates", adminOnly: true },
       { label: "عقود مزوّدي API", to: "/providers", adminOnly: true },
     ],
   },

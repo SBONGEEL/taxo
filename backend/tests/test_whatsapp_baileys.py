@@ -159,21 +159,38 @@ async def test_a_written_zero_means_no_cap_but_an_empty_field_means_the_default(
 # ------------------------------------------------------------ الأسلاك
 
 
-async def test_the_gateway_is_never_handed_a_message_body(monkeypatch) -> None:
-    """**تأخذ رمزاً ورقماً، والنصُّ عندها** — فوعدُ «بلا روابط» يحرسه صاحبُ السلك.
+async def test_the_gateway_is_handed_the_text_and_the_purpose(monkeypatch) -> None:
+    """**الحارسُ انتقل ولم يُحذف** (قرارُ المالك 2026-08-19، SPEC §19.1).
 
-    وواجهةٌ تقبل نصّاً تجعله وعداً يحرسه المستدعي، أي وعداً يُنقض أوّلَ مسارٍ
-    جديدٍ يمرّ من هنا.
+    كان هذا الاختبار يحرس «لا نصَّ يُسلَّم أبداً»، وكانت صياغةُ البوابة هي ما
+    يحمل وعدَ «بلا روابط». والوعدُ المقصودُ لم يكن «البوابةُ تصوغ» بل **«لا يخرج
+    على السلك ما يخالف الشروط»** — وهو الآن محروسٌ عندها **بالفحص**
+    (`whatsapp-gateway/src/template.js::chooseText`) وعند الحفظ في اللوحة، من
+    ملفِّ شروطٍ واحدٍ يقرؤه الاثنان.
+
+    فما يُحرس هنا صار: أنّ النصَّ يصل **ومعه هويّةُ قالبه** — بغيرها يصير سؤالُ
+    «أيُّ قالبٍ خالف؟» بلا جوابٍ في سجلّ البوابة.
     """
     provider = _provider()
     gateway = _Gateway()
     monkeypatch.setattr(provider, "_call", gateway)
 
-    await provider.send_code("+962790000051", "9182", ttl_minutes=7)
+    await provider.send_code(
+        "+962790000051",
+        "9182",
+        ttl_minutes=7,
+        purpose="password_reset",
+        body="رمزك 9182",
+    )
     method, path, body = gateway.calls[0]
     assert (method, path) == ("POST", "/send")
-    assert body == {"to": "+962790000051", "code": "9182", "ttl_minutes": 7}
-    assert not any(key in body for key in ("text", "body", "message", "template"))
+    assert body == {
+        "to": "+962790000051",
+        "code": "9182",
+        "ttl_minutes": 7,
+        "purpose": "password_reset",
+        "body": "رمزك 9182",
+    }
 
 
 async def test_a_dead_session_raises_so_the_chain_can_fall_back(monkeypatch) -> None:

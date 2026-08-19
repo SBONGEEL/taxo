@@ -44,6 +44,11 @@ const FinanceScreen = lazy(() =>
 const DisputesScreen = lazy(() =>
   import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
 );
+const OtpTemplatesScreen = lazy(() =>
+  import("@/screens/OtpTemplatesScreen").then((m) => ({
+    default: m.OtpTemplatesScreen,
+  })),
+);
 const SettingsScreen = lazy(() =>
   import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
 );
@@ -215,6 +220,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <DisputesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/otp-templates"
+                    element={
+                      <Guarded>
+                        <OtpTemplatesScreen />
                       </Guarded>
                     }
                   />

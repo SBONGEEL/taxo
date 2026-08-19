@@ -48,6 +48,7 @@ from app.core.phone import country_for_phone
 from app.models.enums import CountryCode, FeatureKey, ProviderKey
 from app.models.user import User
 from app.services import otp, settings_service
+from app.models.otp_template import OtpTemplatePurpose
 
 # ما تراه الواجهة فتعرف أيَّ تدفّقٍ ترسم
 VerificationMethod = Literal["firebase", "sms_otp", "whatsapp_otp", "none"]
@@ -207,6 +208,7 @@ async def challenge(
     phone: str,
     *,
     channel: str | None = None,
+    purpose: str = OtpTemplatePurpose.REGISTRATION,
 ) -> otp.Challenge:
     """يبدأ التحدي إن كان المُحقِّق يحتاج ذلك.
 
@@ -239,7 +241,12 @@ async def challenge(
             )
         try:
             sent = await otp.issue(
-                session, redis, phone, country=market, sender=provider
+                session,
+                redis,
+                phone,
+                country=market,
+                sender=provider,
+                purpose=purpose,
             )
         except WhatsAppError as exc:
             fallback = _next_code_channel(methods, WHATSAPP_OTP)
@@ -268,7 +275,9 @@ async def challenge(
         )
 
     if chosen == SMS_OTP:
-        sent = await otp.issue(session, redis, phone, country=market)
+        sent = await otp.issue(
+            session, redis, phone, country=market, purpose=purpose
+        )
         return otp.Challenge(
             sent=sent.sent,
             expires_in=sent.expires_in,

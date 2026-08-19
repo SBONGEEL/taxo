@@ -22,10 +22,20 @@ class MockWhatsAppProvider:
     def __init__(self, redis: Redis) -> None:
         self._redis = redis
 
-    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def send_code(
+        self,
+        to: str,
+        code: str,
+        *,
+        ttl_minutes: int,
+        purpose: str = "registration",
+        body: str = "",
+    ) -> str:
+        # **يحفظ ما صيغ فعلاً**: محاكٍ يخترع نصّاً من عنده يجعل الاختبارَ يوافق
+        # نفسَه — وهو بعينه ما مرّر `awaiting_confirmation` في مراجعةٍ كاملة
         await self._redis.set(
             LAST_MESSAGE_KEY.format(phone=to),
-            f"TAXO WhatsApp: {code} ({ttl_minutes}m)",
+            body or f"TAXO WhatsApp: {code} ({ttl_minutes}m)",
             ex=_TTL_SECONDS,
         )
         return f"mock-whatsapp-{to}"

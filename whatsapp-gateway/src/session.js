@@ -384,7 +384,7 @@ class Session {
     return at === undefined ? null : Date.now() - at;
   }
 
-  async sendCode(to, code, ttlMinutes) {
+  async sendCode(to, code, ttlMinutes, text = null) {
     if (!this.linked || !this._sock) {
       const why = this._fatal
         ? "الجلسةُ انتهت — يلزم ربطٌ جديد"
@@ -474,7 +474,10 @@ class Session {
     try {
       await this._sock.sendMessage(
         known.jid || jid,
-        { text: MESSAGE(code, ttlMinutes) },
+        // **`text` مفحوصٌ سلفاً في `index.js`**، و`null` يعني أنه خالف أو لم
+        // يُرسل أصلاً — فيصوغ هذا السطرُ نصَّ البوابةِ المدمج، وهو آخرُ ما
+        // يُعتمد عليه كي لا تسقط قناةُ التسجيل بنصٍّ محرَّرٍ خطأً
+        { text: text || MESSAGE(code, ttlMinutes) },
         { messageId: id },
       );
     } catch (cause) {

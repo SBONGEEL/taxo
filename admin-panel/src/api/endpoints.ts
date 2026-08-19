@@ -83,6 +83,8 @@ import type {
   WithdrawalStatus,
   SubscriptionOffer,
   OfferGrant,
+  OtpTemplate,
+  OtpTemplates,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -875,3 +877,10 @@ export const backupDownloadToken = (
     `/admin/backups/${name}/download-token`,
     { password, file },
   );
+
+/** قوالبُ رسالة الرمز — **بابٌ لكل غرض، فحفظُ أحدهما لا يمسّ الآخر**. */
+export const listOtpTemplates = () =>
+  api.get<OtpTemplates>("/admin/otp-templates");
+
+export const saveOtpTemplate = (purpose: string, body: string) =>
+  api.put<OtpTemplate>(`/admin/otp-templates/${purpose}`, { body });

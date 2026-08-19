@@ -69,6 +69,7 @@ from app.services import (
 )
 from app.services.auth import password_strategy
 from app.services.auth.password import set_password
+from app.models.otp_template import OtpTemplatePurpose
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -155,8 +156,16 @@ async def start_challenge(
         (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
     )
 
+    # **الغرضُ يُصرَّح عند البابِ لا يُستنتج** (قوالبُ الرمز، 2026-08-19):
+    # هذا بابُ التسجيل، فقالبُه قالبُ التسجيل. ولو تُرك افتراضاً في العمق
+    # لصار خلطُ القالبين خطأً **صامتاً** — كلاهما يحمل رمزاً صحيحاً، فلا شيءَ
+    # يفشل ولا أحدَ يشتكي، ويقرأ صاحبُ الرقم «استعادةُ كلمة المرور» وهو يسجّل.
     challenge = await verification.challenge(
-        session, redis, phone, channel=payload.channel
+        session,
+        redis,
+        phone,
+        channel=payload.channel,
+        purpose=OtpTemplatePurpose.REGISTRATION,
     )
     return ChallengeResponse(
         sent=challenge.sent,
@@ -377,8 +386,13 @@ async def start_password_reset(
         (f"otp:ip:{ip}", OTP_IP_LIMIT, OTP_WINDOW_SECONDS),
     )
 
+    # بابُ الاستعادة — وقالبُه قالبُها وحدَه (انظر التعليق في `/challenge`)
     challenge = await verification.challenge(
-        session, redis, phone, channel=payload.channel
+        session,
+        redis,
+        phone,
+        channel=payload.channel,
+        purpose=OtpTemplatePurpose.PASSWORD_RESET,
     )
     return ChallengeResponse(
         sent=challenge.sent,

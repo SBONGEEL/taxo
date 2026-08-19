@@ -14,6 +14,7 @@ from app.routers import (
     admin_sharing,
     admin_providers,
     admin_rides,
+    admin_otp_templates,
     admin_security,
     admin_settings,
     admin_stats,
@@ -67,6 +68,7 @@ api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(admin_rides.router)
+api_router.include_router(admin_otp_templates.router)
 api_router.include_router(admin_security.router)
 api_router.include_router(admin_cancellations.router)
 # مقابس التتبع تحت نفس بادئة الإصدار: /api/v1/ws/...

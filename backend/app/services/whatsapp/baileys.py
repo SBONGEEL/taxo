@@ -135,27 +135,50 @@ class BaileysGatewayProvider:
 
     # ------------------------------------------------------------ العقد
 
-    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def send_code(
+        self,
+        to: str,
+        code: str,
+        *,
+        ttl_minutes: int,
+        # **الافتراضُ هنا تسامحٌ في النقل لا رخصةٌ في السياسة**: موضعُ التصريح
+        # بالغرض هو البابُ (`routers/auth.py`)، وحارسُه اختبارٌ يقرأ الشجرة.
+        # و`body` فارغاً يعني «تصوغ البوابةُ نصَّها» — مسارٌ مشروعٌ لا مخالفة،
+        # ولذلك لا يُسجَّل سقوطاً (`chooseText(...).silent`).
+        purpose: str = "registration",
+        body: str = "",
+    ) -> str:
         """يرسل الرمز عبر البوابة ويعيد مرجعَ الرسالة.
 
-        **والنصُّ لا يُرسل من هنا**: البوابةُ تصوغه. ووعدُ «نصٌّ واحدٌ ثابتٌ بلا
-        روابط» يحرسه من يملك السلك — وواجهةٌ تقبل نصّاً تجعله وعداً يحرسه
-        المستدعي، أي وعداً يُنقض أوّلَ مسارٍ جديد.
+        **والنصُّ يُرسل من هنا منذ 2026-08-19، والحارسُ انتقل ولم يُحذف.** كان
+        الوعدُ محروساً بأن البوابة تصوغ النصَّ؛ وهو الآن محروسٌ بأنها **تفحصه**
+        قبل السلك وتسقط إلى نصّها المدمج إن خالف. والوعدُ المقصودُ لم يكن يوماً
+        «البوابةُ تصوغ» بل «لا يخرج على السلك ما يخالف الشروط» — ومن يملك
+        السلكَ ما زال هو الحارس.
+
+        والشروطُ نفسُها تُفحص هنا أيضاً قبل الحفظ (`services/otp_templates.py`)
+        من **ملفٍ واحدٍ يقرؤه الاثنان**، فلا يقبل المشرفُ نصّاً ترفضه البوابة.
         """
         await self._guard_limits(to)
 
-        status, body = await self._call(
+        status, response = await self._call(
             "POST",
             "/send",
-            json={"to": to, "code": code, "ttl_minutes": ttl_minutes},
+            json={
+                "to": to,
+                "code": code,
+                "ttl_minutes": ttl_minutes,
+                "purpose": purpose,
+                "body": body,
+            },
         )
         if status == 200:
-            return str(body.get("reference") or f"{self.provider_name}-accepted")
+            return str(response.get("reference") or f"{self.provider_name}-accepted")
 
-        detail = str(body.get("error") or f"HTTP {status}")
+        detail = str(response.get("error") or f"HTTP {status}")
         # **«ليس على واتساب» خطأٌ يخصّ صاحبَ الرقم لا القناة**، ونصُّه يقوله له
         # صراحةً: من ينتظر رمزاً على رقمٍ بلا واتساب ينتظر ما لا يجيء
-        if body.get("not_on_whatsapp"):
+        if response.get("not_on_whatsapp"):
             raise WhatsAppError("هذا الرقم ليس على واتساب — جرّب الرسائل القصيرة")
         raise WhatsAppError(f"بوابة واتساب: {detail}")
 

@@ -1061,3 +1061,25 @@ export interface BackupState {
   disk_percent: number | null;
   total_bytes: number;
 }
+
+/** قوالبُ رسالة رمز التحقق (2026-08-19) — عالميةٌ لأن الرقمَ عالمي. */
+export type OtpTemplateViolation = { code: string; message: string };
+
+export type OtpTemplate = {
+  purpose: "registration" | "password_reset";
+  label: string;
+  body: string;
+  is_default: boolean;
+  preview: string;
+  violations: OtpTemplateViolation[];
+  rejected_at_send: boolean;
+  updated_at: string | null;
+};
+
+export type OtpTemplates = {
+  templates: OtpTemplate[];
+  max_body_bytes: number;
+  required_variables: string[];
+  optional_variables: string[];
+  applies_to_transport: string;
+};

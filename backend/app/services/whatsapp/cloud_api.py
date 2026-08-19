@@ -148,12 +148,25 @@ class WhatsAppCloudProvider:
 
     # ------------------------------------------------------------ العقد
 
-    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def send_code(
+        self,
+        to: str,
+        code: str,
+        *,
+        ttl_minutes: int,
+        purpose: str = "registration",
+        body: str = "",
+    ) -> str:
         """يرسل الرمز في قالب المصادقة ويعيد `wamid` الرسالة.
 
         و`ttl_minutes` لا يُرسل: مدةُ صلاحية الرمز في قوالب المصادقة تُضبط
         **في القالب عند ميتا**، لا في كل رسالة. وهو في الواجهة لأن العقد واحدٌ
         لكل القنوات — ومزودُ الرسائل يكتبها في نصّه.
+
+        **و`body` لا يُرسل هنا ولا يمكن أن يُرسل**: قوالبُ المصادقة عند ميتا
+        **لا تقبل نصّاً حرّاً** — تُعتمد هناك ونمرّر إليها معاملاً واحداً هو
+        الرمز. فقالبُ اللوحة يحكم سلكَ `baileys` وحدَه، وهذا مكتوبٌ في الشاشة
+        نفسِها كي لا يحرّر المشرفُ حقلاً لا أثرَ له على هذا الناقل.
         """
         body = await self._call(
             "POST", f"{self._phone_number_id}/messages", json=self._template_payload(to, code)

@@ -83,8 +83,11 @@ from app.models.wallet import (
     WithdrawalRequest,
 )
 from app.models.wallet_setting import WalletSetting
+from app.models.otp_template import OtpMessageTemplate, OtpTemplatePurpose
 
 __all__ = [
+    "OtpMessageTemplate",
+    "OtpTemplatePurpose",
     "AdminAuditLog",
     "AdvanceSetting",
     "AdvanceStatus",

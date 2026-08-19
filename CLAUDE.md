@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**964 backend tests pass** across 87 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
+**989 backend tests pass** across 89 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -667,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**964 backend tests pass** across 87 test files, measured on 2026-08-19; all three frontends build with
+**989 backend tests pass** across 89 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1167,6 +1167,50 @@ granted twice.
 `/subscriptions/plans` and not on `/subscriptions/me`, which is the door the captain's screen actually
 reads. Both now go through `_plans_with_offers`. That is **the eighth shape**, written up on its own
 below, because it is not about offers.
+
+### OTP message templates — the guard that moved rather than being deleted (2026-08-19)
+
+**`SPEC.md` §19 holds the design; this is what building it found.** Two admin-editable templates
+(registration and password reset), each with its own field, live preview and independent save.
+
+**The gateway's rule used to be "no door accepts text"** — `/send` took a number and a code, and the
+one link-free text was composed inside `session.js`, so "the promise is kept by whoever owns the wire,
+not by whoever calls it". Editable templates require the backend to hand the gateway text, which is
+exactly what that rule forbade. **The owner decided the guard moves rather than disappears**, and the
+distinction is the whole point: the promise was never "the gateway composes" but **"nothing violating
+the conditions reaches the wire"**. It is now kept by *validation* instead of *composition* —
+`template.js::chooseText` checks every incoming text and **falls back to the built-in default** on any
+violation. Read it as a relocation, not a concession.
+
+Five rules from the build:
+
+- **The conditions are one file read by two languages** (`whatsapp-gateway/otp-template-rules.json`,
+  bind-mounted read-only into the backend). Two copies diverge at the first edit, and then the panel
+  accepts what the gateway silently refuses — which is precisely "a broken template that works for a
+  month and nobody knows". The file lives with the gateway because **the condition is a property of the
+  wire**.
+- **Checking at the gateway does not replace checking at save.** Whoever learns of the refusal in the
+  panel fixes it; whoever learns of it from a message that never arrived does not know anything
+  happened at all. Three doors say it: a 422 at save naming the template *and* the condition, a line on
+  the template's own card («هذا القالب مرفوضٌ عند الإرسال»), and a `warn` in the gateway log — **no
+  silent fallback**.
+- **The cap is measured, not estimated: 3989 bytes.** `POST /send` caps the body at 4096 (measured on
+  the live container: 4095 accepted, 4097 refused) and the worst-case JSON envelope is 106 — so the text
+  gets 3989, ≈1994 Arabic characters. WhatsApp's own text limit is far higher and never binds first.
+- **Global, because the number is global.** One contract and one number serve both markets, so the
+  template is a property of the *number*, not the market — a global table like `security_settings`, and
+  a screen that does not follow the country switch. The invalidating condition is written down: if each
+  market gets its own number or contract, revisit it. **No "just in case" country column.**
+- **The Cloud API transport cannot carry it at all** — Meta's authentication templates take no free text,
+  only the code parameter. So the panel says on the screen that this governs the self-hosted wire alone,
+  rather than letting an admin edit a field that does nothing on the other transport.
+
+**And the isolation test passed with the two templates swapped.** Mixing them is the one failure that
+produces no symptom: both carry a valid code, nothing raises, nobody complains — and someone registering
+reads "password reset". The first guard counted occurrences (one of each), which stays true after a
+swap. Rewritten to read the **AST** — which purpose sits inside which endpoint function — it now fails
+two tests on a swap and passes eight on correct code, verified by doing the swap. **The question is
+never "how many?" but "which is in which?"**
 
 ### The ninth shape — an intermediate step no human has ever pressed (2026-08-19)
 

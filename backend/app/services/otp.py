@@ -27,6 +27,8 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.otp_template import OtpTemplatePurpose
+from app.services import otp_templates
 from app.core.exceptions import InvalidOtpCode, RateLimited
 from app.models.enums import CountryCode
 from app.services import otp_limits
@@ -84,7 +86,15 @@ class OtpSender(Protocol):
 
     provider_name: str
 
-    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str: ...
+    async def send_code(
+        self,
+        to: str,
+        code: str,
+        *,
+        ttl_minutes: int,
+        purpose: str = "registration",
+        body: str = "",
+    ) -> str: ...
 
 
 class SmsCodeSender:
@@ -98,7 +108,18 @@ class SmsCodeSender:
         self._provider = provider
         self.provider_name = getattr(provider, "provider_name", "sms")
 
-    async def send_code(self, to: str, code: str, *, ttl_minutes: int) -> str:
+    async def send_code(
+        self,
+        to: str,
+        code: str,
+        *,
+        ttl_minutes: int,
+        purpose: str = "registration",
+        body: str = "",
+    ) -> str:
+        # **قالبُ اللوحة لقناة واتساب وحدَها** (قرارُ المالك 2026-08-19): مسارُ
+        # الرسائل القصيرة نصُّه هنا كما كان، ولم يُطلب تحريرُه — و`body` يصله
+        # مصاغاً فيُهمَل عمداً بدل أن يُخلط نصّان في قناةٍ واحدة.
         return await self._provider.send(
             to, MESSAGE_TEMPLATE.format(code=code, minutes=ttl_minutes)
         )
@@ -111,6 +132,7 @@ async def issue(
     *,
     country: CountryCode | None = None,
     sender: OtpSender | None = None,
+    purpose: str = OtpTemplatePurpose.REGISTRATION,
 ) -> Challenge:
     """يولّد رمزاً ويوصله عبر القناة المعطاة — أو عبر مزود الرسائل افتراضاً.
 
@@ -141,9 +163,22 @@ async def issue(
     )
     await redis.delete(_ATTEMPTS_KEY.format(phone=phone))
 
+    ttl_minutes = CODE_TTL_SECONDS // 60
+    # **الصياغةُ هنا لأن القالبَ في قاعدة البيانات ومن يملك الجلسةَ هو من يقرأ.**
+    # والمزودُ لا جلسةَ له، فلو قرأ كلُّ مزودٍ قالبَه لصار للقالب قارئان.
+    rendered = otp_templates.render(
+        await otp_templates.body_for(session, purpose),
+        code=code,
+        minutes=ttl_minutes,
+    )
+
     try:
         await channel.send_code(
-            phone, code, ttl_minutes=CODE_TTL_SECONDS // 60
+            phone,
+            code,
+            ttl_minutes=ttl_minutes,
+            purpose=purpose,
+            body=rendered,
         )
     except Exception:
         await redis.delete(_CODE_KEY.format(phone=phone))
