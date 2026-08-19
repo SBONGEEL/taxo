@@ -156,13 +156,13 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             # وصفرٌ مكتوبٌ صراحةً يعني «لا سقف» (درسُ أصفار `wallet_settings`)
             ProviderField(
                 key="per_phone_hourly",
-                label="سقف الرسائل لكل رقم في الساعة (فارغ = ٣)",
+                label="سقف الرسائل لكل رقم في الساعة (فارغ = 3)",
                 secret=False,
                 required=False,
             ),
             ProviderField(
                 key="hourly_limit",
-                label="سقف الرسائل الكلي في الساعة (فارغ = ١٠٠)",
+                label="سقف الرسائل الكلي في الساعة (فارغ = 100)",
                 secret=False,
                 required=False,
             ),

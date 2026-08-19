@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:scale && npm run check:enums && npm run check:slot && npm run check:config && npm run check:target && tsc -b && vite build && npm run check:dist",
+    "build": "npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:config && npm run check:target && tsc -b && vite build && npm run check:dist",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -13,7 +13,8 @@
     "check:slot": "node scripts/check-slot.mjs",
     "check:config": "node scripts/check-config.mjs",
     "check:target": "node scripts/check-dist-target.mjs --intent",
-    "check:dist": "node scripts/check-dist-target.mjs --dist"
+    "check:dist": "node scripts/check-dist-target.mjs --dist",
+    "check:digits": "node scripts/check-digits.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",

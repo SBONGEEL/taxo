@@ -43,7 +43,10 @@ import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { cn,
+  DISPLAY_LOCALE,
+  digits,
+} from "@/lib/utils";
 
 /** المزودُ الذي يقبل رقماً للاختبار — إرسالٌ مدفوع لا يقع بالصدفة. */
 const TESTS_WITH_PHONE = "sms";
@@ -51,7 +54,7 @@ const TESTS_WITH_PHONE = "sms";
 function when(iso: string | null): string {
   if (!iso) return "لم يُختبر بعد";
   const at = new Date(iso);
-  return `آخر اختبار: ${at.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} ${at.toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}`;
+  return `آخر اختبار: ${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
 }
 
 export function ProvidersScreen() {

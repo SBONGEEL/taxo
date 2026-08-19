@@ -27,7 +27,7 @@ import { Table } from "@/components/Table";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { money, shortDay } from "@/lib/format";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const PERIOD_LABEL: Record<StatsPeriod, string> = {
   today: "اليوم",
@@ -91,18 +91,18 @@ export function ReportsScreen() {
             />
             <Kpi
               label="معدّل الإلغاء"
-              value={`${arabicDigits(data.cancellation_rate)}٪`}
+              value={`${digits(data.cancellation_rate)}٪`}
               hint="الملغاة ÷ (المكتملة + الملغاة)"
             />
             <Kpi
               label="سائقون نشطون"
-              value={arabicDigits(String(data.active_drivers))}
+              value={digits(String(data.active_drivers))}
               hint="من أنهى رحلةً في الفترة — لا من كان متصلاً"
             />
             <Kpi
               label="إيراد الاشتراكات"
               value={money(data.subscription_revenue, data.currency)}
-              hint={`${arabicDigits(String(data.subscriptions_sold))} اشتراكاً بيع في الفترة`}
+              hint={`${digits(String(data.subscriptions_sold))} اشتراكاً بيع في الفترة`}
             />
           </div>
 
@@ -131,7 +131,7 @@ export function ReportsScreen() {
                       {row.name}
                     </span>
                     <span className="text-muted">
-                      {arabicDigits(String(row.completed_rides))}
+                      {digits(String(row.completed_rides))}
                     </span>
                     <span className="text-ink">
                       {money(row.revenue, data.currency)}
@@ -139,7 +139,7 @@ export function ReportsScreen() {
                     <span className="text-ink">
                       {row.rating_avg === "0.00"
                         ? "—"
-                        : `★ ${arabicDigits(row.rating_avg)}`}
+                        : `★ ${digits(row.rating_avg)}`}
                     </span>
                   </>
                 )}
@@ -165,7 +165,7 @@ export function ReportsScreen() {
                       {row.plan_name}
                     </span>
                     <span className="text-muted">
-                      {arabicDigits(String(row.sold))}
+                      {digits(String(row.sold))}
                     </span>
                     <span className="text-ink">
                       {money(row.revenue, data.currency)}
@@ -232,7 +232,7 @@ function RevenueBars({ data }: { data: Reports }) {
               وكتابةُ «٠.٠٠٠» فوق تسعةٍ وعشرين منها ضجيجٌ يخفي الرقم الوحيد
               الذي يُقرأ. والعمودُ الصفري نفسه يبقى — الفجوةُ معلومة */}
           <span className="text-9 text-muted">
-            {Number(row.revenue) > 0 ? arabicDigits(row.revenue) : ""}
+            {Number(row.revenue) > 0 ? digits(row.revenue) : ""}
           </span>
           <span
             className={cn(

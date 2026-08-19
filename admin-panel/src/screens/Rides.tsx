@@ -43,7 +43,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { moment, money } from "@/lib/format";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<RideStatus, string> = {
   requested: "مطلوبة",
@@ -86,7 +86,7 @@ const COLUMNS = "0.7fr 1fr 1.1fr 1.1fr 1.6fr 0.9fr 0.9fr 1fr";
 
 /** معرّفُ الرحلة كما يُقرأ في القائمة — **بلا تعريب خانات**.
  *
- * `arabicDigits` للكمّيات لا للمعرّفات (`CLAUDE.md`): هذا رقمٌ يُنسخ ويُبحث
+ * `digits` للكمّيات لا للمعرّفات (`CLAUDE.md`): هذا رقمٌ يُنسخ ويُبحث
  * به ويُقارَن حرفاً بحرف، وتعريبُه يجعل المشرف يطابق نصّاً بنصٍّ آخر الشكل.
  */
 function shortId(id: string) {
@@ -345,14 +345,14 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
         <Row label="إلى" value={ride.dropoff_address ?? "نقطة على الخريطة"} />
         <Row
           label="المسافة المقدَّرة"
-          value={`${arabicDigits(ride.distance_km)} كم`}
+          value={`${digits(ride.distance_km)} كم`}
         />
         {/* فارغةٌ لا صفر حين لا تكفي النقاط — صفرٌ يُقرأ «سار صفر كيلومتر» */}
         <Row
           label="المسافة الفعلية"
           value={
             ride.actual_distance_km
-              ? `${arabicDigits(ride.actual_distance_km)} كم`
+              ? `${digits(ride.actual_distance_km)} كم`
               : "لم تُسجَّل"
           }
           hint={
@@ -366,7 +366,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
           value={
             ride.route.length === 0
               ? "لا نقاط"
-              : `${arabicDigits(String(ride.route.length))} نقطة`
+              : `${digits(String(ride.route.length))} نقطة`
           }
           hint={
             ride.route_truncated
@@ -391,7 +391,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
         />
         <Row
           label="عمولة المنصة"
-          value={`${arabicDigits(ride.commission_percent_at_ride)}٪`}
+          value={`${digits(ride.commission_percent_at_ride)}٪`}
           hint="مجمَّدةٌ لحظة الطلب — لا يعيد تعديلُ الإعداد حسابَها"
         />
         {ride.cancellation_fee ? (
@@ -460,7 +460,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
             <Row
               key={rating.rater_type}
               label={rating.rater_type === "rider" ? "من الراكب" : "من السائق"}
-              value={`★ ${arabicDigits(String(rating.stars))}`}
+              value={`★ ${digits(String(rating.stars))}`}
               hint={rating.comment ?? undefined}
             />
           ))}

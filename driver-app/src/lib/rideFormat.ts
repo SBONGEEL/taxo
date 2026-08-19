@@ -11,7 +11,9 @@ import type {
   RideStatus,
   VehicleCategory,
 } from "@/api/types";
-import { arabicDigits } from "@/lib/utils";
+import { digits,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 export const CURRENCY_LABEL: Record<Currency, string> = {
   JOD: "د.أ",
@@ -79,15 +81,15 @@ export function formatWhen(iso: string): string {
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  const time = at.toLocaleTimeString("ar-EG", {
+  const time = digits(at.toLocaleTimeString(DISPLAY_LOCALE, {
     hour: "numeric",
     minute: "2-digit",
-  });
+  }));
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
   if (sameDay(at, today)) return `اليوم ${time}`;
   if (sameDay(at, yesterday)) return `أمس ${time}`;
-  return `${at.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} ${time}`;
+  return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${time}`;
 }
 
 /** المسافة بمنزلةٍ واحدة: `5.700` تُقرأ مبلغاً و`5.7` تُقرأ مسافة.
@@ -96,7 +98,7 @@ export function formatWhen(iso: string): string {
 export function trimDistance(value: string): string {
   const [whole, fraction = ""] = value.split(".");
   const first = fraction.slice(0, 1);
-  return arabicDigits(first && first !== "0" ? `${whole}.${first}` : whole);
+  return digits(first && first !== "0" ? `${whole}.${first}` : whole);
 }
 
 
@@ -107,12 +109,12 @@ export function trimDistance(value: string): string {
  */
 export function bookedTime(iso: string): string {
   const date = new Date(iso);
-  const time = date.toLocaleTimeString("ar", {
+  const time = digits(date.toLocaleTimeString(DISPLAY_LOCALE, {
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }));
   const sameDay = new Date().toDateString() === date.toDateString();
   if (sameDay) return time;
-  const day = date.toLocaleDateString("ar", { weekday: "long" });
+  const day = digits(date.toLocaleDateString(DISPLAY_LOCALE, { weekday: "long" }));
   return `${day} ${time}`;
 }

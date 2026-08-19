@@ -42,7 +42,7 @@ import {
   setSoundsEnabled,
   soundsEnabled,
 } from "@/lib/sound";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 export function SettingsScreen() {
@@ -58,7 +58,7 @@ export function SettingsScreen() {
   // «٢٢:٠٠ – ٠٨:٠٠» بخاناتٍ عربية، و`null` تبقى فراغاً لا صفراً
   const quietHours =
     country?.quiet_hours_start && country.quiet_hours_end
-      ? `${arabicDigits(country.quiet_hours_start)} – ${arabicDigits(country.quiet_hours_end)}`
+      ? `${digits(country.quiet_hours_start)} – ${digits(country.quiet_hours_end)}`
       : null;
 
   const [marketing, setMarketing] = useState<boolean | null>(null);

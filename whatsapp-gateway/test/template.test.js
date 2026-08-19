@@ -68,3 +68,36 @@ test("السقفُ مقروءٌ من الملف المشترك لا مكتوبٌ
   assert.equal(RULES.max_body_bytes, 3989);
   assert.deepEqual(RULES.required_variables, ["code"]);
 });
+
+// ------------------------------- الافتراضُ ألّا يخرج شيءٌ على السلك
+
+const { plan, maskCode } = require("../src/template");
+
+test("بلا deliver: تجربةٌ جافة — والافتراضُ هو هذا", () => {
+  const d = plan({ body: GOOD, purpose: "registration" });
+  assert.equal(d.deliver, false);
+  assert.equal(d.text, GOOD); // يُفحص ويُقال ما كان سيخرج
+});
+
+test("deliver غيرُ الصريح لا يكفي: 'true' نصّاً أو 1 ليسا تصريحاً", () => {
+  for (const value of ["true", 1, "1", {}, [], null, undefined]) {
+    assert.equal(plan({ body: GOOD, deliver: value }).deliver, false, String(value));
+  }
+});
+
+test("deliver: true وحدَه يفتح السلك", () => {
+  assert.equal(plan({ body: GOOD, deliver: true }).deliver, true);
+});
+
+test("والتجربةُ الجافة تفحص كما يفحص الإرسال — لا تتساهل", () => {
+  const d = plan({ body: "رمزك 1 https://x.com" });
+  assert.equal(d.deliver, false);
+  assert.ok(d.violations.some((v) => v.startsWith("link:")));
+  assert.equal(d.text, null);
+});
+
+test("الرمزُ يُخفى في السجل — يُقال ماذا خرج لا ما هو الرمز", () => {
+  const masked = maskCode("رمز تأكيد رقمك في تاكسو: 481902", "481902");
+  assert.ok(!masked.includes("481902"));
+  assert.ok(masked.includes("•".repeat(6)));
+});

@@ -42,7 +42,7 @@ import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 /** حقلُ الرمز بقيم `DESIGN.md` §2.3 — تباعدُ `.42em` ومقاسُ 26. */
 function CodeInput({
@@ -200,7 +200,7 @@ function MyFactorCard({
             </dd>
             <dt className="text-muted">رموزُ استرداد متبقّية</dt>
             <dd className="text-ink">
-              {arabicDigits(String(status.recovery_codes_remaining))}
+              {digits(String(status.recovery_codes_remaining))}
             </dd>
             <dt className="text-muted">إثباتُ الاسترداد</dt>
             <dd
@@ -469,9 +469,9 @@ function PolicyCard({
 
       <div className="mt-16 border-t border-line pt-14">
         <Field
-          label={`مهلة الخمول (دقائق — بين ${arabicDigits(
+          label={`مهلة الخمول (دقائق — بين ${digits(
             String(policy.min_idle_timeout_minutes),
-          )} و${arabicDigits(String(policy.max_idle_timeout_minutes))})`}
+          )} و${digits(String(policy.max_idle_timeout_minutes))})`}
           id="idle"
           name="admin_idle_timeout_minutes"
           dir="ltr"

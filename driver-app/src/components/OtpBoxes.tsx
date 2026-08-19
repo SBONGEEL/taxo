@@ -12,7 +12,7 @@
 
 import { useId, useRef } from "react";
 
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 interface Props {
   value: string;
@@ -34,7 +34,7 @@ export function OtpBoxes({ value, onChange, length, disabled }: Props) {
             aria-hidden
             className="flex h-64 w-58 items-center justify-center rounded-14 border border-line bg-surface text-24 font-bold text-ink"
           >
-            {value[index] ? arabicDigits(value[index]) : ""}
+            {value[index] ? digits(value[index]) : ""}
           </div>
         ))}
       </div>

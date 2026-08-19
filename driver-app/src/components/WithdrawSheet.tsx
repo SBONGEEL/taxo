@@ -22,7 +22,7 @@ import type { DriverWallet } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 interface Props {
   wallet: DriverWallet;
@@ -101,11 +101,11 @@ export function WithdrawSheet({
         {blocked ? (
           <p className="mb-14 rounded-12 border border-warn bg-surface-2 px-14 py-11 text-11.5 leading-note text-warn">
             لا يمكن السحب الآن: الحدُّ الأدنى{" "}
-            {arabicDigits(wallet.min_withdrawal_amount)} {currencyLabel}،
-            والمتاح لديك {arabicDigits(wallet.available_for_withdrawal)}{" "}
+            {digits(wallet.min_withdrawal_amount)} {currencyLabel}،
+            والمتاح لديك {digits(wallet.available_for_withdrawal)}{" "}
             {currencyLabel}
             {Number(wallet.withdrawal_reserve_amount) > 0
-              ? ` — ومنها ${arabicDigits(wallet.withdrawal_reserve_amount)} محتجَزةٌ لا تُسحب`
+              ? ` — ومنها ${digits(wallet.withdrawal_reserve_amount)} محتجَزةٌ لا تُسحب`
               : ""}
             .
           </p>
@@ -202,7 +202,7 @@ function Quick({
     >
       <span className="block text-11 text-muted">{label}</span>
       <span className="block text-14 font-bold">
-        {arabicDigits(value)} {currencyLabel}
+        {digits(value)} {currencyLabel}
       </span>
     </button>
   );

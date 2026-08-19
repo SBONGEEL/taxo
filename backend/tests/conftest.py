@@ -144,6 +144,7 @@ async def client() -> AsyncIterator[AsyncClient]:
     العميل يجعله يمرّ على **ما تنتجه المجموعةُ كلُّها** بلا أن يُعلَّم حقلٌ
     جديدٌ بشيء.
     """
+    from tests.digit_format import offences
     from tests.money_format import offenders
 
     async def _check(response) -> None:
@@ -158,6 +159,14 @@ async def client() -> AsyncIterator[AsyncClient]:
         assert not bad, (
             "مبالغُ خرجت بغير ثلاث خانات — "
             f"{response.request.method} {response.request.url.path}: {bad}"
+        )
+        # **والخاناتُ لاتينيةٌ في كل نصٍّ منشور** (قرارُ المالك 2026-08-19):
+        # نصٌّ يحمل «٢٤» يظهر على الشاشة كما هو ولا يمرّ بمصفى `digits` —
+        # لأنه نصٌّ لا رقم. وحارسُ الواجهة يقرأ الشيفرة، وهذا يقرأ ما خرج.
+        arabic = offences(payload)
+        assert not arabic, (
+            "خاناتٌ عربية-هندية في نصٍّ منشور — "
+            f"{response.request.method} {response.request.url.path}: {arabic}"
         )
 
     transport = ASGITransport(app=app)

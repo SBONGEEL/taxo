@@ -41,7 +41,7 @@ import { listNotifications, markNotificationsRead } from "@/api/endpoints";
 import type { Currency, UserNotification } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 const PAGE_SIZE = 30;
@@ -68,7 +68,7 @@ function composeBody(entry: UserNotification): string | null {
 
   const money =
     data.amount && data.currency
-      ? `${arabicDigits(data.amount)} ${CURRENCY_LABEL[data.currency as Currency] ?? ""}`
+      ? `${digits(data.amount)} ${CURRENCY_LABEL[data.currency as Currency] ?? ""}`
       : null;
 
   switch (entry.kind) {

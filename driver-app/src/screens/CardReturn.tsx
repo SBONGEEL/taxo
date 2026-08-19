@@ -22,7 +22,7 @@ import type { CardOrder } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 const SETTLED = {
   paid: {
@@ -109,7 +109,7 @@ export function CardReturnScreen() {
 
           {order ? (
             <p className="mt-14 text-15 font-bold text-ink">
-              {arabicDigits(order.amount)} {CURRENCY_LABEL[order.currency]}
+              {digits(order.amount)} {CURRENCY_LABEL[order.currency]}
             </p>
           ) : null}
 

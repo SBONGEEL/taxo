@@ -26,8 +26,8 @@
 
 const http = require("node:http");
 
-const { Session, logger } = require("./session");
-const { chooseText } = require("./template");
+const { Session, logger, MESSAGE } = require("./session");
+const { plan, maskCode } = require("./template");
 const { SendQueue } = require("./queue");
 
 const PORT = Number(process.env.WA_PORT || 8080);
@@ -96,10 +96,7 @@ async function handleSend(req, res) {
   // **الفحصُ ثم السقوطُ إلى النصّ المدمج — ولا سقوطَ صامت.** قالبٌ معطوبٌ يعمل
   // شهراً ولا أحد يعلم هو أسوأُ من قالبٍ يُرفض بصوت، فكلُّ سقوطٍ يُسجَّل
   // بمستوى `warn` باسم القالب وبالشرط الذي خالفه.
-  const decision = chooseText(
-    typeof body.body === "string" ? body.body : "",
-    String(body.purpose || "registration"),
-  );
+  const decision = plan(body);
   if (decision.fellBack && !decision.silent) {
     logger.warn(
       {
@@ -109,6 +106,35 @@ async function handleSend(req, res) {
       },
       "قالبٌ مرفوضٌ عند الإرسال — يُستعمل النصُّ المدمج",
     );
+  }
+
+  // **ما وصل الباب** — بالرمز مُخفىً: السجلُّ يقول ماذا خرج لا ما هو الرمز
+  const wire = decision.text || MESSAGE(code, ttl);
+  logger.info(
+    {
+      to: `…${to.slice(-4)}`,
+      purpose: decision.purpose,
+      deliver: decision.deliver,
+      from_backend: maskCode(
+        typeof body.body === "string" ? body.body : "(بلا نصّ — تصوغ البوابة)",
+        code,
+      ),
+      on_wire: maskCode(wire, code),
+      bytes: Buffer.byteLength(wire, "utf8"),
+    },
+    decision.deliver ? "إرسالٌ حقيقي" : "تجربةٌ جافة — لا شيء يخرج على السلك",
+  );
+
+  // **والافتراضُ ألّا يخرج شيء.** بابٌ بابُه الافتراضيُّ الإرسال يُخرج رسائلَ
+  // حقيقيةً لمن يقيس سقفَ جسمٍ أو يستكشف الواجهة — وقد وقع ذلك فعلاً.
+  if (!decision.deliver) {
+    return send(res, 200, {
+      dry_run: true,
+      would_send: wire,
+      violations: decision.violations,
+      fell_back: decision.fellBack,
+      provider: "baileys",
+    });
   }
 
   try {

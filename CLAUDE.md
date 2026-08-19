@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**989 backend tests pass** across 89 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
+**989 backend tests pass** across 90 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -667,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**989 backend tests pass** across 89 test files, measured on 2026-08-19; all three frontends build with
+**989 backend tests pass** across 90 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1212,6 +1212,53 @@ swap. Rewritten to read the **AST** — which purpose sits inside which endpoint
 two tests on a swap and passes eight on correct code, verified by doing the swap. **The question is
 never "how many?" but "which is in which?"**
 
+### Latin digits everywhere — the display format was inverted (2026-08-19)
+
+**`SPEC.md` §20 is the policy.** Every number the user sees is now Latin, in all three apps and the
+panel — the reverse of what the project was built on (`DESIGN.md` §4). Three things about how it was
+done are worth keeping.
+
+**The funnel was flipped, not deleted.** `arabicDigits` became `digits` in place: it used to replace
+Latin digits with Arabic-Indic, and now **normalises** Arabic-Indic and Persian digits to `[0-9]`. That
+is deliberately stronger than removing the call: a string arriving from `toLocaleString` with Arabic
+numerals still comes out Latin, so the funnel *guarantees* rather than *assumes*. 184 call sites kept
+working with one edit to the body plus a rename — and the rename mattered, because a function called
+`arabicDigits` returning Latin is a lie someone will believe.
+
+**The locale is written down, and that is the `check:target` lesson applied to text.** `"ar"` yields
+Latin numerals in today's ICU and `"ar-EG"` yields Arabic-Indic — so the old code was half relying on a
+library default that no line here controls. `DISPLAY_LOCALE = "ar-u-nu-latn"` pins it: Arabic month
+names, Latin numerals, and a library upgrade can no longer change what a date looks like without a line
+changing here.
+
+**Two guards, and neither replaces the other.** `check:digits` parses each file with TypeScript's own
+parser and rejects an Arabic-Indic digit inside a string or JSX text, *and* an unpinned locale in a
+formatter call — the second catches a defect with **no Arabic character anywhere in the source**, which
+no text search could find. `tests/digit_format.py` sweeps every response the suite produces, because an
+error message or a published limit carrying «٢٤» reaches the screen as text and **never passes through
+the funnel** — it is a string, not a number. One reads what was written; the other reads what came out.
+
+**The guard caught the author twice within a minute of being written**: two `الخطوة ١ من ٣` literals
+survived my own edit pass because `str.replace(..., 1)` had hit the docstring above them instead of the
+JSX below. Verified by reintroducing both shapes and watching it fail.
+
+**And the sweep found two live ones plus a flaky test that was never flaky.** The two are provider
+field labels published to the panel — «سقف الرسائل لكل رقم في الساعة (فارغ = ٣)» — Arabic-Indic digits
+reaching a screen through a *string*, exactly the class the source guard cannot see.
+
+The third is worth more. `test_the_list_is_not_published_anywhere` asserted `entry not in body` over
+`list(COMMON_PASSWORDS)[:10]` — a **frozenset**, so the ten sampled entries differ between runs, and
+`"password"` is both a blocklist entry and the published *field name* in `GET /config`'s validation
+rules. So the test failed roughly one run in five, for a reason that has nothing to do with the
+blocklist being published. It is the "flaky under load is a hypothesis, not a diagnosis" rule again:
+this was a **wrong assertion**, not flakiness. Now it walks the payload's values, subtracts its keys
+(a field's own name explains itself), and checks **all 53** rather than a random ten.
+
+**And the failure mode is now benign, which is the real prize.** Before, a number that skipped the
+funnel came out Latin in an Arabic-Indic app — visibly wrong. Now a number that skips the funnel comes
+out Latin in a Latin app, i.e. correct. The conversion is no longer load-bearing for correctness, only
+for normalising input that arrives the other way.
+
 ### The tenth shape — a green build guard says nothing about what the user is running (2026-08-19)
 
 **Both guards were green and the phone was running code from before the change.** `check:target`
@@ -1244,8 +1291,12 @@ bundle hash against the one just built, not by trusting that a build happened.
 
 1. **Rebuild both PWAs with their declared target** (`VITE_API_BASE_URL=… npm run build`), so
    `check:target`/`check:dist` run and `dist` is current.
-2. **Restart the containers that serve them**, then read the served bundle name
-   (`curl https://app.tajora.ly | grep assets/index-…`) and confirm the hash **changed** from before.
+2. **Restart the containers that serve them — with every compose file they need.** On this machine
+   that is `docker compose -f docker-compose.yml -f docker-compose.tunnel.yml`; a plain
+   `docker compose up -d backend` recreates it **without** the tunnel's `CORS_ORIGINS`, and both phones
+   then sit on «الشبكة ضعيفة» while the backend answers curl perfectly. Measured on 2026-08-19. Then read
+   the served bundle name (`curl https://app.tajora.ly | grep assets/index-…`) and confirm the hash
+   **changed** from before.
 3. **Reinstall the APKs** and record `firstInstallTime`/`lastUpdateTime` from `dumpsys package`.
 4. **Prove it on the device**: the WebView's page URL is the declared host, and the loaded bundle hash
    matches the one built in step 1.

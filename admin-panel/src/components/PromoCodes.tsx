@@ -36,7 +36,7 @@ import { Modal } from "@/components/ui/Modal";
 import { currencyLabel, currencyOf, day, money } from "@/lib/format";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const TYPE_LABEL: Record<PromoCode["discount_type"], string> = {
   percent: "نسبة",
@@ -61,7 +61,7 @@ function describe(row: PromoCode, country: CountryCode): string {
     // **بلا أصفار النقدية**: النسبةُ تأتي `NUMERIC(12,3)` أي «50.000»، وطبعُها
     // كما هي يقرأ «٥٠.٠٠٠٪». وهي نسبةٌ لا مبلغ، فتُقصّ أصفارُها الزائدة
     const percent = row.discount_value.replace(/\.?0+$/, "");
-    return `${arabicDigits(percent)}٪${cap}`;
+    return `${digits(percent)}٪${cap}`;
   }
   return money(row.discount_value, currencyOf(country));
 }
@@ -168,10 +168,10 @@ export function PromoCodes({ onError }: { onError: (message: string) => void }) 
                       </span>
                     </td>
                     <td className="p-8 text-ink">
-                      {arabicDigits(String(row.used_count))}
+                      {digits(String(row.used_count))}
                       <span className="text-muted">
                         {" · لكل راكب "}
-                        {arabicDigits(String(row.per_user_limit))}
+                        {digits(String(row.per_user_limit))}
                       </span>
                     </td>
                     <td className="p-8 text-muted">
@@ -306,8 +306,8 @@ function NewPromoModal({
             onChange={(event) => setCap(money(event.target.value))}
           />
           <p className="mt-6 text-11 leading-snug text-muted">
-            بلا سقفٍ يبتلع كوبونُ ٥٠٪ رحلةً طويلة. واتركه فارغاً عن قصدٍ وحده —
-            «الرحلة الأولى مجاناً» نسبةُ ١٠٠٪ بلا سقف.
+            بلا سقفٍ يبتلع كوبونُ 50٪ رحلةً طويلة. واتركه فارغاً عن قصدٍ وحده —
+            «الرحلة الأولى مجاناً» نسبةُ 100٪ بلا سقف.
           </p>
         </div>
       ) : null}

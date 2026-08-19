@@ -28,7 +28,7 @@ import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 /** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن.
@@ -48,7 +48,7 @@ function stageOf(row: ReferralStage): { text: string; tone: string } {
   }
   if (row.rides_done < row.rides_required) {
     return {
-      text: `أكمل ${arabicDigits(String(row.rides_done))} من ${arabicDigits(
+      text: `أكمل ${digits(String(row.rides_done))} من ${digits(
         String(row.rides_required),
       )} رحلات`,
       tone: "text-muted",
@@ -123,7 +123,7 @@ export function ReferralsScreen() {
   }
 
   function amountOf(program: ReferralProgram) {
-    return `${arabicDigits(program.reward_amount)} ${currency}`;
+    return `${digits(program.reward_amount)} ${currency}`;
   }
 
   return (
@@ -197,10 +197,10 @@ export function ReferralsScreen() {
                         </p>
                         <p className="mt-4 text-11.5 text-muted">
                           {isDriver
-                            ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${arabicDigits(
+                            ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${digits(
                                 String(program.required_rides),
                               )} رحلات`
-                            : `يُكمل ${arabicDigits(
+                            : `يُكمل ${digits(
                                 String(program.required_rides),
                               )} رحلات`}
                         </p>
@@ -209,7 +209,7 @@ export function ReferralsScreen() {
                         {isDriver && Number(program.female_bonus_amount) > 0 ? (
                           <p className="mt-4 text-11.5 text-ok">
                             وإن كانت سائقةً موثَّقة:{" "}
-                            {arabicDigits(program.female_total_amount)} {currency}{" "}
+                            {digits(program.female_total_amount)} {currency}{" "}
                             — الأساسُ وعلاوتُه معاً
                           </p>
                         ) : null}
@@ -236,13 +236,13 @@ export function ReferralsScreen() {
                   )}
                 >
                   {left === 0
-                    ? `بلغتَ سقفَ هذا الشهر (${arabicDigits(String(cap))}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
-                    : `سقفُ هذا الشهر ${arabicDigits(String(cap))} إحالات — بقي لك ${arabicDigits(String(left))}.`}
+                    ? `بلغتَ سقفَ هذا الشهر (${digits(String(cap))}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
+                    : `سقفُ هذا الشهر ${digits(String(cap))} إحالات — بقي لك ${digits(String(left))}.`}
                 </p>
               ) : null}
 
               <p className="mt-8 text-11.5 text-muted">
-                مجموع ما وصلك: {arabicDigits(data.total_rewarded)} {currency}
+                مجموع ما وصلك: {digits(data.total_rewarded)} {currency}
               </p>
             </section>
           ) : (
@@ -282,7 +282,7 @@ export function ReferralsScreen() {
                       </span>
                       <span className="text-11.5 text-muted">
                         {row.rewarded && row.reward_amount
-                          ? `${arabicDigits(row.reward_amount)} ${
+                          ? `${digits(row.reward_amount)} ${
                               row.reward_currency
                                 ? CURRENCY_LABEL[
                                     row.reward_currency as "JOD" | "LYD"

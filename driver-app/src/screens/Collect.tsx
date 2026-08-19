@@ -33,7 +33,7 @@ import type { Payment, PaymentMethod, Ride, RidePayments } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { METHOD_LABEL, trimDistance } from "@/lib/rideFormat";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 /** ما لا يمر بالمنصة فيبقى في يد الكبتن (`DIRECTLY_COLLECTED_METHODS`).
  *
@@ -124,7 +124,7 @@ export function CollectScreen({
       <div className="mb-22 text-center">
         <div className="mb-6 text-13 text-muted">{headline.caption}</div>
         <div className="text-44 font-bold leading-hero text-ink">
-          {arabicDigits(headline.amount)}
+          {digits(headline.amount)}
         </div>
         <div className="mt-4 text-13 text-muted">
           {currencyFull}
@@ -133,7 +133,7 @@ export function CollectScreen({
       </div>
 
       <div className="mb-18 card px-16 py-14">
-        <Row label="السعر المقدّر" value={arabicDigits(ride.estimated_fare)} />
+        <Row label="السعر المقدّر" value={digits(ride.estimated_fare)} />
         {ride.actual_distance_km ? (
           <Row
             label="المسافة الفعلية"
@@ -142,7 +142,7 @@ export function CollectScreen({
         ) : null}
         <Row
           label="السعر النهائي"
-          value={`${arabicDigits(state.final_fare ?? ride.estimated_fare)} ${currencyLabel}`}
+          value={`${digits(state.final_fare ?? ride.estimated_fare)} ${currencyLabel}`}
           strong
         />
 
@@ -152,7 +152,7 @@ export function CollectScreen({
         {mixed ? (
           <Row
             label="تقبضه بيدك"
-            value={`${arabicDigits(pending?.amount ?? kept[0]?.amount ?? "0")} ${currencyLabel}`}
+            value={`${digits(pending?.amount ?? kept[0]?.amount ?? "0")} ${currencyLabel}`}
             tone="text-ink"
             strong
           />
@@ -160,7 +160,7 @@ export function CollectScreen({
         {credited.length > 0 ? (
           <Row
             label="قُيّد في محفظتك"
-            value={`${arabicDigits(credited[0].amount)} ${currencyLabel}`}
+            value={`${digits(credited[0].amount)} ${currencyLabel}`}
             tone="text-ok"
             strong
           />
@@ -170,8 +170,8 @@ export function CollectScreen({
           label="العمولة"
           value={
             commission === 0
-              ? "٠٪ حالياً"
-              : `${arabicDigits(String(commission))}٪`
+              ? "0٪ حالياً"
+              : `${digits(String(commission))}٪`
           }
           tone="text-ok"
           last

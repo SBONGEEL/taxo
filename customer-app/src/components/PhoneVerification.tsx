@@ -222,7 +222,7 @@ export function PhoneVerification({
         maxLength={digits}
         value={code}
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-        placeholder={"٠".repeat(digits)}
+        placeholder={"0".repeat(digits)}
         className="text-center text-24 tracking-[0.5em]"
         dir="ltr"
       />

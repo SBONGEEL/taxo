@@ -73,7 +73,7 @@ import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, currencyOf, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
   cliq_enabled: {
@@ -130,7 +130,7 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
   },
   driver_levels_enabled: {
     title: "المهام والمستويات",
-    hint: "مهامٌّ شهريةٌ للكباتن ومستوىً يُحسب منها كلَّ ساعة. وأثرُ المستوى خصمٌ بالأمتار على مسافة البحث — بحدٍّ أقصى ١٠٠م، فالأقربُ يبقى الأول والمستوى يفصل بين المتقاربين وحدهم. واضبط الأثرَ أدناه، فصفرُه يعني «بلا أثر» فيبقى الترتيبُ كما هو. ومطفأً: لا ترجيحَ ولا شاشةَ ولا مهمّةَ تُحسب.",
+    hint: "مهامٌّ شهريةٌ للكباتن ومستوىً يُحسب منها كلَّ ساعة. وأثرُ المستوى خصمٌ بالأمتار على مسافة البحث — بحدٍّ أقصى 100م، فالأقربُ يبقى الأول والمستوى يفصل بين المتقاربين وحدهم. واضبط الأثرَ أدناه، فصفرُه يعني «بلا أثر» فيبقى الترتيبُ كما هو. ومطفأً: لا ترجيحَ ولا شاشةَ ولا مهمّةَ تُحسب.",
   },
   ride_sharing_enabled: {
     title: "مشاركة الرحلة بين ركاب",
@@ -503,7 +503,7 @@ export function SettingsScreen() {
               <p className="text-12 font-bold text-ink">
                 أرقامٌ استنفدت محاولاتها اليوم
                 {burned && burned.phones.length > 0
-                  ? ` (${arabicDigits(String(burned.phones.length))})`
+                  ? ` (${digits(String(burned.phones.length))})`
                   : ""}
               </p>
               {burned && burned.phones.length > 0 ? (
@@ -902,11 +902,11 @@ function ReferralForm({
 
       <p className="mt-6 text-11 text-muted">
         {Number(row.reward_amount) > 0
-          ? `الحالي: ${money(row.reward_amount, currency)} بعد ${arabicDigits(String(row.required_rides))} رحلات`
-          : `لم يُحدَّد مبلغٌ بعد — والشرطُ ${arabicDigits(String(row.required_rides))} رحلات`}
+          ? `الحالي: ${money(row.reward_amount, currency)} بعد ${digits(String(row.required_rides))} رحلات`
+          : `لم يُحدَّد مبلغٌ بعد — والشرطُ ${digits(String(row.required_rides))} رحلات`}
         {row.monthly_cap === null
           ? " · بلا سقفٍ شهري"
-          : ` · سقفُ ${arabicDigits(String(row.monthly_cap))} إحالاتٍ في الشهر لكل مُحيل`}
+          : ` · سقفُ ${digits(String(row.monthly_cap))} إحالاتٍ في الشهر لكل مُحيل`}
       </p>
       {/* **والحقلُ الفارغ يعني «بلا سقف» صراحةً** لا «لا تلمسه»: حالتان لا
           يحملهما رقمٌ واحد، فيُرسل `clear_monthly_cap` بدل صفرٍ يُقرأ خطأً */}
@@ -988,7 +988,7 @@ function PaymentForm({
         }
       />
       <p className="mt-6 text-11 text-muted">
-        الحالي: {arabicDigits(String(row.cliq_confirmation_hours))} ساعة
+        الحالي: {digits(String(row.cliq_confirmation_hours))} ساعة
       </p>
 
       <Button
@@ -1167,7 +1167,7 @@ function SharingForm({
       />
       <p className="mt-6 text-11 text-muted">
         {Number(row.discount_percent) > 0
-          ? `الحالي: خصمٌ ${arabicDigits(row.discount_percent)}٪ لكلِّ راكبٍ في المجموعة`
+          ? `الحالي: خصمٌ ${digits(row.discount_percent)}٪ لكلِّ راكبٍ في المجموعة`
           : "لم تُحدَّد نسبةٌ بعد — والمشاركةُ لا تُعرض على أحد"}
       </p>
 

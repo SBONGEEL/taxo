@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 
 import type { Offer } from "@/lib/ride";
 import { bookedTime } from "@/lib/rideFormat";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 const DASH = 163;
 
@@ -81,7 +81,7 @@ export function OfferSheet({
               />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center text-17 font-bold text-ink">
-              {arabicDigits(String(left))}
+              {digits(String(left))}
             </span>
           </div>
 
@@ -126,7 +126,7 @@ export function OfferSheet({
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-ink">
                 {offer.ride.stops.length === 1
                   ? "محطة وسيطة واحدة"
-                  : `${arabicDigits(String(offer.ride.stops.length))} محطات وسيطة`}
+                  : `${digits(String(offer.ride.stops.length))} محطات وسيطة`}
               </span>
             ) : null}
             {/* مبلغٌ مستوفى لكبتنٍ آخر (`CANCELLATION-FEE.md` §6-أ) —
@@ -138,12 +138,12 @@ export function OfferSheet({
                 يقرّر. ومكانُها فوق السعر لأن السعرَ وحده لا يقول كم سيقبض */}
             {Number(offer.ride.carried_cancellation_fee ?? 0) > 0 ? (
               <span className="mb-4 me-4 inline-block rounded-full border border-line bg-surface-2 px-9 py-3 text-10 font-bold text-warn">
-                تحمل {arabicDigits(offer.ride.carried_cancellation_fee ?? "0")}{" "}
+                تحمل {digits(offer.ride.carried_cancellation_fee ?? "0")}{" "}
                 {currencyLabel} لكبتنٍ آخر
               </span>
             ) : null}
             <div className="text-23 font-bold text-ink">
-              {arabicDigits(offer.ride.estimated_fare)}{" "}
+              {digits(offer.ride.estimated_fare)}{" "}
               <span className="text-12 font-medium text-muted">
                 {currencyLabel}
               </span>
@@ -153,7 +153,7 @@ export function OfferSheet({
 
           <div className="text-end">
             <div className="text-15 font-bold text-ink">
-              {arabicDigits(offer.distanceKm.toFixed(1))} كم
+              {digits(offer.distanceKm.toFixed(1))} كم
             </div>
             <div className="text-10.5 text-muted">حتى الراكب</div>
           </div>

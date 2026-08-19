@@ -44,7 +44,7 @@ import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { moment, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 /** فلترةُ عرضٍ خالصة لا مرآةَ تعدادٍ في الخلفية — ولا قيمةَ فيها تساوي قيمةَ
  * عمود. القيم مسبوقةٌ بـ`only_` عمداً كي لا تتصادم أسماؤها مع `active` في
@@ -376,7 +376,7 @@ function RiderDrawer({
                       entry.amount.startsWith("-") ? "text-danger" : "text-ok",
                     )}
                   >
-                    {arabicDigits(entry.amount)}
+                    {digits(entry.amount)}
                   </span>
                 </li>
               ))}

@@ -19,7 +19,10 @@ import { Screen } from "@/components/ui/Screen";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney,
+  DISPLAY_LOCALE,
+  digits,
+} from "@/lib/utils";
 
 /** أوّلُ حقيقةٍ تحكم: الحجزُ ثم رحلتُه — لا سردٌ للاثنين. */
 function stateOf(booking: Booking): { text: string; tone: string } {
@@ -51,13 +54,13 @@ function stateOf(booking: Booking): { text: string; tone: string } {
 
 function when(iso: string): string {
   const date = new Date(iso);
-  return date.toLocaleString("ar", {
+  return digits(date.toLocaleString(DISPLAY_LOCALE, {
     weekday: "long",
     day: "numeric",
     month: "long",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }));
 }
 
 export function BookingsScreen() {

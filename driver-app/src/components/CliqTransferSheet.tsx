@@ -25,7 +25,7 @@ import { ApiError } from "@/api/client";
 import { confirmPayment } from "@/api/endpoints";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 export interface CliqTransfer {
   rideId: string;
@@ -48,8 +48,8 @@ interface Props {
 /** ما بقي من المهلة نصّاً — «٦ ساعات» أو «٤٠ دقيقة»، ولا ثوانيَ في الأخير. */
 function remainingLabel(minutes: number): string {
   if (minutes <= 0) return "انقضت المهلة";
-  if (minutes < 60) return `${arabicDigits(String(minutes))} دقيقة`;
-  return `${arabicDigits(String(Math.floor(minutes / 60)))} ساعة`;
+  if (minutes < 60) return `${digits(String(minutes))} دقيقة`;
+  return `${digits(String(Math.floor(minutes / 60)))} ساعة`;
 }
 
 export function CliqTransferSheet({
@@ -98,7 +98,7 @@ export function CliqTransferSheet({
         <div className="mb-6 text-13 text-muted">حوالة كليك بانتظار تأكيدك</div>
         <div className="mb-15 flex items-baseline justify-between">
           <div className="text-30 font-bold leading-hero text-ink">
-            {arabicDigits(transfer.amount)}{" "}
+            {digits(transfer.amount)}{" "}
             <span className="text-13 font-medium text-muted">
               {currencyLabel}
             </span>

@@ -30,7 +30,9 @@ import { Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
-import { arabicDigits } from "@/lib/utils";
+import { digits,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 /** نصُّ السبب الذي تكتبه المهمة الدورية — مطابقٌ لـ`AUTO_DISPUTE_REASON`. */
 const AUTO_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ الكبتن";
@@ -38,7 +40,7 @@ const AUTO_REASON = "انقضت مهلة تأكيد الحوالة دون ردّ
 function when(iso: string | null): string {
   if (!iso) return "—";
   const at = new Date(iso);
-  return `${at.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} ${at.toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}`;
+  return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
 }
 
 export function DisputesScreen() {
@@ -84,7 +86,7 @@ export function DisputesScreen() {
           render={(row) => (
             <>
               <span className="font-semibold text-ink">
-                {arabicDigits(row.amount)}
+                {digits(row.amount)}
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-ink">
@@ -178,7 +180,7 @@ function ResolveModal({
         </p>
 
         <dl className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12 text-12.5">
-          <Row label="المبلغ" value={arabicDigits(payment.amount)} />
+          <Row label="المبلغ" value={digits(payment.amount)} />
           <Row label="alias الكبتن" value={payment.cliq_alias ?? "—"} ltr />
           <Row label="مرجع TAXO" value={payment.cliq_reference ?? "—"} ltr />
           <Row

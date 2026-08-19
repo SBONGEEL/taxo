@@ -135,13 +135,24 @@ def validate(body: str, *, purpose: str) -> list[Violation]:
     for pattern in r["forbidden_patterns"]:
         flags = re.IGNORECASE if "i" in pattern.get("flags", "") else 0
         if re.search(pattern["pattern"], body, flags):
-            out.append(
-                Violation(
-                    "template_has_link",
-                    f"«{label}» يحمل رابطاً ({pattern['why']}) — "
-                    "ورسائلُ هذا الرقم بلا روابط، وهو شرطُ بقائه",
+            # **الرسالةُ تسمّي نوعَ المخالفة لا تجمعها**: «يحمل رابطاً» عن
+            # خانةٍ عربيةٍ تُربك من يقرؤها ويبحث عن رابطٍ لا وجودَ له.
+            if pattern.get("kind") == "digits":
+                out.append(
+                    Violation(
+                        "template_has_arabic_digits",
+                        f"«{label}» يحمل خاناتٍ عربية-هندية — وصيغةُ العرض في "
+                        "المنصّة كلِّها لاتينية، والرمزُ يخرج لاتينياً",
+                    )
                 )
-            )
+            else:
+                out.append(
+                    Violation(
+                        "template_has_link",
+                        f"«{label}» يحمل رابطاً ({pattern['why']}) — "
+                        "ورسائلُ هذا الرقم بلا روابط، وهو شرطُ بقائه",
+                    )
+                )
 
     return out
 

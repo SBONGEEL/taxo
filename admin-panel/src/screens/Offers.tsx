@@ -31,7 +31,7 @@ import { Field, Select } from "@/components/ui/Field";
 import { Shell } from "@/components/Shell";
 import { useCountry } from "@/lib/country";
 import { currencyLabel, day, money } from "@/lib/format";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
 
@@ -242,7 +242,7 @@ export function OffersScreen() {
                     {/* عرفُ اللوحة: أرقامٌ عربيةٌ وعلامةُ ٪ عربية — كما في
                         `Rides` و`Reports`، لا `%` لاتينية */}
                     <td className="p-12">
-                      {arabicDigits(offer.discount_value)}٪
+                      {digits(offer.discount_value)}٪
                     </td>
                     <td className="p-12">{offer.subscriptions_sold}</td>
                     {/* **العملةُ تُمرَّر خاماً**: `money` تحلّ التسميةَ بنفسها،

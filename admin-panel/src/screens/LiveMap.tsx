@@ -29,7 +29,9 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 import type { CountryCode } from "@/api/types";
 
 /** مركزُ البداية قبل أن يظهر أحد — العاصمة، كما في تطبيق الراكب. */
@@ -105,12 +107,12 @@ export function LiveMapScreen() {
         </span>
         <span className="ms-auto">
           {freshAt
-            ? `آخر تحديث ${arabicDigits(
-                freshAt.toLocaleTimeString("ar", {
+            ? `آخر تحديث ${digits(
+                digits(freshAt.toLocaleTimeString(DISPLAY_LOCALE, {
                   hour: "2-digit",
                   minute: "2-digit",
                   second: "2-digit",
-                }),
+                })),
               )}`
             : "…"}
         </span>
@@ -189,7 +191,7 @@ function Tally({
   return (
     <div className="rounded-13 border border-line bg-surface p-12 text-center">
       <div className={cn("text-20 font-bold", tone)}>
-        {arabicDigits(String(value))}
+        {digits(String(value))}
       </div>
       <div className="mt-3 text-10.5 text-muted">{label}</div>
     </div>
@@ -272,6 +274,6 @@ function PendingRow({ ride }: { ride: LivePendingRide }) {
 /** «منذ كم» بالدقائق — والرقمُ من فرقٍ زمنيّ لا مالٍ، فتعريبُه عرضٌ لا حساب. */
 function sinceLabel(iso: string): string {
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return `منذ ${arabicDigits(String(Math.floor(seconds)))} ث`;
-  return `منذ ${arabicDigits(String(Math.floor(seconds / 60)))} د`;
+  if (seconds < 60) return `منذ ${digits(String(Math.floor(seconds)))} ث`;
+  return `منذ ${digits(String(Math.floor(seconds / 60)))} د`;
 }

@@ -19,7 +19,7 @@ import { Badge, type Tone } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { currencyOf, day, money } from "@/lib/format";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 /** أينَ وصلت — أوّلُ شرطٍ ناقصٍ هو الجواب، فسردُ الثلاثة يخفي المطلوب الآن.
  *
@@ -40,7 +40,7 @@ function stage(row: AdminReferralRow): { text: string; tone: Tone } {
   }
   if (row.rides_done < row.rides_required) {
     return {
-      text: `${arabicDigits(String(row.rides_done))} من ${arabicDigits(String(row.rides_required))} رحلات`,
+      text: `${digits(String(row.rides_done))} من ${digits(String(row.rides_required))} رحلات`,
       tone: "muted",
     };
   }
@@ -93,8 +93,8 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
               المدفوع كلُّه:{" "}
               <b>{money(summary.total_rewarded, currencyOf(country))}</b>{" "}
               <span className="text-muted">
-                ({arabicDigits(String(summary.rewarded_count))} مكافأة ·{" "}
-                {arabicDigits(String(summary.pending_count))} تنتظر)
+                ({digits(String(summary.rewarded_count))} مكافأة ·{" "}
+                {digits(String(summary.pending_count))} تنتظر)
               </span>
             </p>
           ) : null}

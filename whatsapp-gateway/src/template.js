@@ -54,7 +54,7 @@ function violations(text) {
 
   for (const rule of RULES.forbidden_patterns || []) {
     const re = new RegExp(rule.pattern, rule.flags || "");
-    if (re.test(text)) out.push(`link:${rule.name}`);
+    if (re.test(text)) out.push(`${rule.kind || "link"}:${rule.name}`);
   }
   return out;
 }
@@ -79,4 +79,30 @@ function chooseText(proposed, purpose) {
   return { text: null, violations: bad, purpose, fellBack: true, silent: false };
 }
 
-module.exports = { violations, chooseText, RULES, RULES_PATH };
+
+/** يُخفي الرمزَ في نصٍّ يُسجَّل — السجلُّ يقول ماذا خرج، لا ما هو الرمز. */
+function maskCode(text, code) {
+  if (typeof text !== "string" || !code) return text;
+  return text.split(code).join("•".repeat(String(code).length));
+}
+
+/**
+ * خطةُ الطلب: أيخرج شيءٌ على السلك أصلاً، وبأيِّ نصّ؟
+ *
+ * **والافتراضُ ألّا يخرج** (قرارُ المالك 2026-08-19). كان `/send` يرسل بمجرّد
+ * أن يُنادى، فقياسُ سقفِ الجسم — وهو قياسٌ لا علاقةَ له بالإرسال — أخرج أربعَ
+ * رسائلَ حقيقيةً إلى هاتفِ إنسان. والعطبُ ليس في من نسي، بل في بابٍ **بابُه
+ * الافتراضيُّ الإرسال**: من يستكشفه يرسل، ومن يختبره يرسل، ومن يخطئ يرسل.
+ *
+ * فالآن: `deliver: true` صراحةً وإلا فهو **تجربةٌ جافة** — تُفحص وتُجاب بما
+ * كان سيخرج، ولا يُمسّ السلك. والباب لا يُقفل بالتذكّر بل بانقلاب الافتراض.
+ */
+function plan(payload) {
+  const decision = chooseText(
+    typeof payload.body === "string" ? payload.body : "",
+    String(payload.purpose || "registration"),
+  );
+  return { ...decision, deliver: payload.deliver === true };
+}
+
+module.exports = { violations, chooseText, plan, maskCode, RULES, RULES_PATH };

@@ -25,7 +25,7 @@ import { Pills } from "@/components/Table";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
 
@@ -91,24 +91,24 @@ export function OverviewScreen() {
           <div className="grid gap-12 sm:grid-cols-2 xl:grid-cols-5">
             <Kpi
               label="الرحلات المكتملة"
-              value={arabicDigits(String(data.completed_rides))}
+              value={digits(String(data.completed_rides))}
             />
             <Kpi
               label="إجمالي الإيراد"
-              value={`${arabicDigits(data.revenue)} ${currency}`}
+              value={`${digits(data.revenue)} ${currency}`}
             />
             <Kpi
               label="سائقون متصلون الآن"
-              value={arabicDigits(String(data.online_drivers))}
+              value={digits(String(data.online_drivers))}
               hint="من له حضورٌ حيّ — لا من رفع المفتاح ثم اختفى"
             />
             <Kpi
               label="اشتراكات فعّالة"
-              value={arabicDigits(String(data.active_subscriptions))}
+              value={digits(String(data.active_subscriptions))}
             />
             <Kpi
               label="نزاعات مفتوحة"
-              value={arabicDigits(String(data.open_disputes))}
+              value={digits(String(data.open_disputes))}
               tone={data.open_disputes > 0 ? "text-danger" : undefined}
             />
           </div>
@@ -155,8 +155,8 @@ export function OverviewScreen() {
           </div>
 
           <p className="mt-14 text-11 text-muted">
-            رحلاتٌ جارية الآن: {arabicDigits(String(data.active_rides))} ·
-            ملغاةٌ في هذه الفترة: {arabicDigits(String(data.cancelled_rides))}
+            رحلاتٌ جارية الآن: {digits(String(data.active_rides))} ·
+            ملغاةٌ في هذه الفترة: {digits(String(data.cancelled_rides))}
           </p>
         </>
       )}
@@ -206,7 +206,7 @@ function HourChart({ buckets }: { buckets: number[] }) {
           />
           {hour % 3 === 0 ? (
             <span className="text-8.5 text-muted">
-              {arabicDigits(String(hour))}
+              {digits(String(hour))}
             </span>
           ) : (
             <span className="text-8.5 text-transparent">.</span>
@@ -228,7 +228,7 @@ function MethodBars({ mix }: { mix: Record<string, number> }) {
           <div className="mb-4 flex items-baseline justify-between text-11">
             <span className="text-muted">{METHOD_LABEL[method] ?? method}</span>
             <span className="font-semibold text-ink">
-              {arabicDigits(String(count))}
+              {digits(String(count))}
             </span>
           </div>
           <div className="h-6 overflow-hidden rounded-full bg-surface-2">
@@ -266,7 +266,7 @@ function ActionCard({
           count > 0 ? "text-warn" : "text-muted",
         )}
       >
-        {arabicDigits(String(count))}
+        {digits(String(count))}
       </span>
       <span className="flex-1">
         <span className="block text-13 font-semibold text-ink">{title}</span>

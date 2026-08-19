@@ -1,4 +1,4 @@
-/** التسجيل — الخطوة ٣ من ٣: المركبة والمستندات (SPEC القسم 12/1).
+/** التسجيل — الخطوة 3 من 3: المركبة والمستندات (SPEC القسم 12/1).
  *
  * الخطوة الوحيدة التي تقع **بعد** فتح الحساب: رفعُ المستندات يحتاج جلسة،
  * ولذلك تُنشأ الجلسة في الخطوة السابقة ثم تُرفع الوثائق تحتها. والكبتن هنا
@@ -257,7 +257,7 @@ export function RegisterDocumentsScreen() {
 
   return (
     <AuthScreen className="px-26">
-      <div className="text-12 text-muted">الخطوة ٣ من ٣</div>
+      <div className="text-12 text-muted">الخطوة 3 من 3</div>
       <h1 className="mb-4 text-22 font-bold text-ink">المركبة والمستندات</h1>
       <p className="mb-18 text-12.5 leading-snug text-muted">
         لا يُعتمد الكبتن قبل مراجعة الإدارة للمستندات.

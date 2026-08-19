@@ -19,7 +19,7 @@ import { Navigation } from "lucide-react";
 
 import type { GenderPreference, Ride } from "@/api/types";
 import { openIn, targetFor } from "@/lib/external-maps";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 export interface CancelReason {
   label: string;
@@ -81,7 +81,7 @@ export function ActiveRide({
   // فالإنهاءُ ليس الفعلَ التالي — والزرُّ الأول هو ما يقع تسعاً من عشر
   const stopAction =
     ride.status === "in_progress" && nextStop !== undefined
-      ? { label: `وصلتُ المحطة ${arabicDigits(String(nextStop.sequence))}`, stop: nextStop }
+      ? { label: `وصلتُ المحطة ${digits(String(nextStop.sequence))}`, stop: nextStop }
       : null;
   const [picking, setPicking] = useState(false);
   const [reason, setReason] = useState<CancelReason | null>(null);
@@ -108,7 +108,7 @@ export function ActiveRide({
           <div className="flex-1">
             <div className="text-14 font-bold text-ink">راكب TAXO</div>
             <div className="text-11 text-muted">
-              {arabicDigits(ride.estimated_fare)} {currencyLabel}
+              {digits(ride.estimated_fare)} {currencyLabel}
             </div>
             {/* حالُ المشاركة (12-ي) — **حالتان لا واحدة**: «مجموعةٌ تكوّنت»
                 غيرُ «قد ينضم أحد». والفرقُ عمليٌّ لا لفظي: الأولى تعني راكباً
@@ -384,14 +384,14 @@ function PauseStrip({
           {pause.kind === "arrival" ? "بانتظار الراكب" : "وقفة"}
         </span>
         <span className="text-12.5 text-muted">
-          {arabicDigits(String(minutes))} دقيقة
+          {digits(String(minutes))} دقيقة
         </span>
         {/* **والمبلغُ من الخلفية لا محسوباً هنا** — والمهلةُ تُقال قبل أن تنتهي
             لا بعدها: كبتنٌ يرى «٠٫٠٠٠» ولا يعرف لماذا يظنّ العدّادَ معطوباً */}
         <span className="ms-auto text-12.5 font-bold text-ink">
           {billing
-            ? `${arabicDigits(ride.pause_charge)} ${currencyLabel}`
-            : `مهلة ${arabicDigits(String(free))} دقائق`}
+            ? `${digits(ride.pause_charge)} ${currencyLabel}`
+            : `مهلة ${digits(String(free))} دقائق`}
         </span>
       </div>
       {pause.over_max ? (
@@ -437,7 +437,7 @@ function StopStrip({
                     : "text-muted",
               )}
             >
-              محطة {arabicDigits(String(stop.sequence))}
+              محطة {digits(String(stop.sequence))}
             </span>
           );
         })}
@@ -452,10 +452,10 @@ function StopStrip({
               والكبتنُ يريد «كم وقفتُ» لا كسرَ الدقيقة. **والعدّادُ محليٌّ
               يتقدّم** (`useElapsedMinutes`) لا رقماً واصلاً مع الرحلة */}
           <span className="text-muted">
-            انتظارٌ {arabicDigits(String(waitedMinutes))} دقيقة
+            انتظارٌ {digits(String(waitedMinutes))} دقيقة
           </span>
           <span className="font-semibold text-ink">
-            {arabicDigits(ride.waiting_charge)} {currencyLabel}
+            {digits(ride.waiting_charge)} {currencyLabel}
           </span>
         </div>
       ) : null}

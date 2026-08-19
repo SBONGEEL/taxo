@@ -27,7 +27,7 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useGoBack } from "@/lib/back";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import type { Currency } from "@/api/types";
 
 /** **نصُّ المانع من الواجهة والرمزُ من الخلفية** — نفسُ قاعدةِ بناء نصِّ
@@ -134,7 +134,7 @@ export function DeactivationScreen() {
         <section className="mb-12 card p-15">
           <p className="text-13.5 font-semibold text-ink">الرصيد المحتجَز</p>
           <p className="mt-4 text-18 font-bold text-ink">
-            {arabicDigits(state.reserve_amount)}{" "}
+            {digits(state.reserve_amount)}{" "}
             <span className="text-12 font-medium text-muted">{currency}</span>
           </p>
           <p className="mt-6 text-11.5 leading-snug text-muted">

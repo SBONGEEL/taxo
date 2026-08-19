@@ -190,6 +190,8 @@ async def test_the_gateway_is_handed_the_text_and_the_purpose(monkeypatch) -> No
         "ttl_minutes": 7,
         "purpose": "password_reset",
         "body": "رمزك 9182",
+        # **التصريحُ بالإرسال** — بابُ البوابة افتراضُه ألّا يخرج شيءٌ على السلك
+        "deliver": True,
     }
 
 

@@ -52,13 +52,15 @@ import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 const DURATION_LABEL: Record<SubscriptionDuration, string> = {
-  daily: "٢٤ ساعة من لحظة الشراء",
-  weekly: "٧ أيام · الأوفر للدوام الجزئي",
-  monthly: "٣٠ يوماً · الأوفر للمتفرغ",
+  daily: "24 ساعة من لحظة الشراء",
+  weekly: "7 أيام · الأوفر للدوام الجزئي",
+  monthly: "30 يوماً · الأوفر للمتفرغ",
 };
 
 type State = "active" | "expiring" | "expired" | "none";
@@ -285,7 +287,7 @@ export function SubscriptionScreen() {
             <p className="mt-6 text-12.5 font-semibold text-ink">
               {subscription.days_remaining <= 1
                 ? "ينتهي خلال أقل من يوم"
-                : `باقٍ ${arabicDigits(String(subscription.days_remaining))} يوماً`}
+                : `باقٍ ${digits(String(subscription.days_remaining))} يوماً`}
             </p>
           ) : null}
         </section>
@@ -344,9 +346,8 @@ export function SubscriptionScreen() {
                   <span className="mt-4 block text-10.5 font-semibold text-ok">
                     {plan.offer_name}
                     {plan.offer_ends_at
-                      ? ` — حتى ${arabicDigits(
-                          new Date(plan.offer_ends_at).toLocaleDateString(
-                            "ar-EG",
+                      ? ` — حتى ${digits(
+                          new Date(plan.offer_ends_at).toLocaleDateString(DISPLAY_LOCALE,
                             { day: "numeric", month: "numeric" },
                           ),
                         )}`
@@ -363,12 +364,12 @@ export function SubscriptionScreen() {
                 ) : plan.price_after_discount ? (
                   <>
                     <span className="me-6 text-12 font-medium text-muted line-through">
-                      {arabicDigits(plan.price)}
+                      {digits(plan.price)}
                     </span>
-                    {arabicDigits(plan.price_after_discount)}
+                    {digits(plan.price_after_discount)}
                   </>
                 ) : (
-                  arabicDigits(plan.price)
+                  digits(plan.price)
                 )}{" "}
                 <span className="text-11 font-medium text-muted">
                   {CURRENCY_LABEL[plan.currency]}
@@ -408,14 +409,14 @@ export function SubscriptionScreen() {
                         لم يَنَله. ولا طرحَ هنا — الرقمُ يصل محسوباً */}
                     {Number(item.discount_amount) > 0 ? (
                       <span className="mt-3 block text-10.5 font-semibold text-ok">
-                        وفّرتَ {arabicDigits(item.discount_amount)}{" "}
+                        وفّرتَ {digits(item.discount_amount)}{" "}
                         {CURRENCY_LABEL[item.currency]}
                       </span>
                     ) : null}
                   </span>
                   <span className="text-end">
                     <span className="block text-13 font-bold text-ink">
-                      {arabicDigits(item.amount_paid)}{" "}
+                      {digits(item.amount_paid)}{" "}
                       {CURRENCY_LABEL[item.currency]}
                     </span>
                     <span
@@ -460,7 +461,7 @@ export function SubscriptionScreen() {
               <div className="flex items-baseline justify-between">
                 <span className="text-12.5 text-muted">المبلغ</span>
                 <span className="text-17 font-bold text-ink">
-                  {arabicDigits(
+                  {digits(
                     confirming.price_after_discount ?? confirming.price,
                   )}{" "}
                   <span className="text-11 font-medium text-muted">
@@ -474,7 +475,7 @@ export function SubscriptionScreen() {
                 <div className="mt-8 flex items-baseline justify-between">
                   <span className="text-11 text-ok">{confirming.offer_name}</span>
                   <span className="text-11.5 text-muted line-through">
-                    {arabicDigits(confirming.price)}{" "}
+                    {digits(confirming.price)}{" "}
                     {CURRENCY_LABEL[confirming.currency]}
                   </span>
                 </div>
@@ -524,7 +525,7 @@ export function SubscriptionScreen() {
 
 function formatRange(from: string, to: string): string {
   const format = (value: string) =>
-    new Date(value).toLocaleDateString("ar-EG", {
+    new Date(value).toLocaleDateString(DISPLAY_LOCALE, {
       day: "numeric",
       month: "long",
     });

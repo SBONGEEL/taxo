@@ -196,7 +196,7 @@ export function RideDetailsScreen() {
             {Number(ride.driver.rating_avg) > 0 ? (
               <span className="shrink-0 text-13 font-semibold text-ink">
                 {/* **خاناتٌ لاتينيةٌ لأنها عُرفُ هذا التطبيق**: لا وجودَ
-                    لـ`arabicDigits` في `customer-app` أصلاً، وكلُّ سطرِ مالٍ
+                    لـ`digits` في `customer-app` أصلاً، وكلُّ سطرِ مالٍ
                     ومسافةٍ فيه لاتينيّ — فتعريبُ رقمٍ واحدٍ يجعله الشاذَّ */}
                 {Number(ride.driver.rating_avg).toFixed(1)} ★
               </span>

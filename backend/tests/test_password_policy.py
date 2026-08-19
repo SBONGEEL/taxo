@@ -94,10 +94,43 @@ async def test_no_entry_is_shorter_than_the_length_rule() -> None:
 
 async def test_the_list_is_not_published_anywhere(client: AsyncClient) -> None:
     """**لا تُنشر ولا يُكشف عددُها** (شرطُ المالك): قائمةٌ معروفةٌ دليلُ تخمين."""
-    body = (await client.get("/config")).text
-    for entry in list(COMMON_PASSWORDS)[:10]:
-        assert entry not in body
-    assert "weak_password" not in body
+    # **يُفحص كلُّ ما نُشر كـ«قيمة» لا نصُّ الجواب الخام.** والفرقُ ليس تدقيقاً:
+    # `password` مدخلٌ في القائمة **واسمُ حقلٍ منشور** في قواعد التحقق معاً،
+    # فمقارنةُ النصِّ الخام تفشل كلَّما صادف ترتيبُ المجموعة العشوائيُّ ذلك
+    # المدخلَ في العشرة الأولى — إخفاقٌ يقرأ «القائمةُ تُنشر» وليس كذلك.
+    # واسمُ الحقل لا يكشف شيئاً؛ الكاشفُ أن تظهر كلمةٌ **قيمةً**.
+    payload = (await client.get("/config")).json()
+
+    def values(node):
+        if isinstance(node, dict):
+            for item in node.values():
+                yield from values(item)
+        elif isinstance(node, list):
+            for item in node:
+                yield from values(item)
+        elif isinstance(node, str):
+            yield node
+
+    def keys(node):
+        if isinstance(node, dict):
+            for key, item in node.items():
+                yield key
+                yield from keys(item)
+        elif isinstance(node, list):
+            for item in node:
+                yield from keys(item)
+
+    published = set(values(payload))
+    # **واسمُ الحقل ليس تسريباً.** `password` مدخلٌ في القائمة واسمُ حقلٍ في
+    # قواعد التحقق المنشورة (§17.3) معاً — ويظهر قيمةً لأن القواعدَ تسمّي حقلَها.
+    # ومن قرأ «اسمُ الحقل: password» لم يتعلّم شيئاً عن القائمة؛ الكاشفُ أن تظهر
+    # كلمةٌ **لا تفسّرها بنيةُ الجواب**.
+    published -= set(keys(payload))
+    # **والقائمةُ كلُّها لا عيّنةٌ منها**: `list(frozenset)[:10]` عيّنةٌ تتبدّل
+    # بين تشغيلٍ وآخر، فحارسٌ يفحص عشرةً عشوائيةً يمرّ على ثلاثةٍ وأربعين.
+    leaked = sorted(COMMON_PASSWORDS & published)
+    assert not leaked, f"قائمةُ المنع نُشرت: {leaked}"
+    assert "weak_password" not in (await client.get("/config")).text
 
 
 async def test_every_refusal_names_its_reason_without_naming_the_list() -> None:

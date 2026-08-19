@@ -28,7 +28,7 @@ import type { Coordinates } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
 import { trimRoute } from "@/lib/route-line";
 import { useTheme } from "@/lib/theme";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
 const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
@@ -346,7 +346,7 @@ export function MapView({
       {/* **الوصولُ المتوقَّع** — يظهر حين يُقاس ويختفي حين لا يُقاس */}
       {etaMinutes !== null ? (
         <div className="pointer-events-none absolute start-14 top-64 z-10 rounded-full border border-line bg-surface px-12 py-7 text-12 font-bold text-ink shadow-md">
-          {arabicDigits(String(etaMinutes))} دقيقة
+          {digits(String(etaMinutes))} دقيقة
         </div>
       ) : null}
 

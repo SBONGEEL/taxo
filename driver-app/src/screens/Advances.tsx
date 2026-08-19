@@ -25,7 +25,9 @@ import { Field } from "@/components/ui/Field";
 import { useGoBack } from "@/lib/back";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import type { Currency } from "@/api/types";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 /** **النصُّ هنا والرمزُ من الخلفية** — كموانع إلغاء التفعيل تماماً. */
 const REQUIREMENT_TEXT: Record<string, string> = {
@@ -63,7 +65,7 @@ function Requirement({ item }: { item: AdvanceRequirement }) {
             item.met ? "text-muted" : "text-warn",
           )}
         >
-          {arabicDigits(item.value!)} / {arabicDigits(item.needed!)}
+          {digits(item.value!)} / {digits(item.needed!)}
         </span>
       ) : null}
     </li>
@@ -152,14 +154,14 @@ export function AdvancesScreen() {
             {debt.overdue ? "سلفةٌ تجاوزت مهلتها" : "سلفتُك القائمة"}
           </p>
           <p className="mt-4 text-18 font-bold text-ink">
-            {arabicDigits(debt.remaining)}{" "}
+            {digits(debt.remaining)}{" "}
             <span className="text-12 font-medium text-muted">{currency}</span>
           </p>
           <p className="mt-6 text-11.5 leading-snug text-muted">
             {debt.overdue
               ? "أُوقفت الطلبات ولا يمكنك شراء اشتراكٍ يوميّ حتى تسدّد. ورحلتُك الجارية إن وُجدت تكمل."
-              : `تُقتطع تلقائياً من أرباح رحلاتك، ومهلتُها ${arabicDigits(
-                  new Date(debt.advance.due_at).toLocaleDateString("ar"),
+              : `تُقتطع تلقائياً من أرباح رحلاتك، ومهلتُها ${digits(
+                  new Date(debt.advance.due_at).toLocaleDateString(DISPLAY_LOCALE),
                 )}.`}
           </p>
           <Button
@@ -187,7 +189,7 @@ export function AdvancesScreen() {
           <section className="card p-15">
             <p className="text-13.5 font-semibold text-ink">سقفُك الحالي</p>
             <p className="mt-4 text-18 font-bold text-ink">
-              {arabicDigits(state.cap)}{" "}
+              {digits(state.cap)}{" "}
               <span className="text-12 font-medium text-muted">{currency}</span>
             </p>
             <p className="mb-12 mt-6 text-11.5 leading-snug text-muted">
@@ -238,7 +240,7 @@ export function AdvancesScreen() {
               <div className="flex items-baseline justify-between">
                 <span className="text-12.5 text-muted">المبلغ</span>
                 <span className="text-17 font-bold text-ink">
-                  {arabicDigits(amount)}{" "}
+                  {digits(amount)}{" "}
                   <span className="text-11 font-medium text-muted">
                     {currency}
                   </span>
@@ -251,15 +253,15 @@ export function AdvancesScreen() {
                     مطلوب. وهنا أسوأ: «ويبقى لك ٠٫٠٠٠ على الأقل» جملةٌ تَعِد
                     بشيءٍ وتعطي لا شيء، فيقرؤها صاحبُها ضماناً لا وجودَ له */}
                 <p className="mt-4 text-11.5 leading-note text-muted">
-                  يُقتطع {arabicDigits(String(state.deduction_percent))}٪ من كل
+                  يُقتطع {digits(String(state.deduction_percent))}٪ من كل
                   رحلةٍ يدخل مالُها محفظتَك
                   {Number(state.min_kept_amount) > 0
-                    ? `، ويبقى لك منها ${arabicDigits(
+                    ? `، ويبقى لك منها ${digits(
                         state.min_kept_amount,
                       )} ${currency} على الأقل.`
                     : "."}
                   {state.term_days
-                    ? ` والمهلةُ ${arabicDigits(String(state.term_days))} يوماً.`
+                    ? ` والمهلةُ ${digits(String(state.term_days))} يوماً.`
                     : ""}
                 </p>
               </div>

@@ -36,7 +36,7 @@ import {
   isDebit,
   unsigned,
 } from "@/lib/walletFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
@@ -131,7 +131,7 @@ export function WalletScreen() {
         <section className="mb-12 rounded-20 border border-line bg-surface p-20">
           <div className="text-12 text-muted">الرصيد المتاح</div>
           <div className="mb-4 mt-2 text-34 font-bold leading-hero text-ink">
-            {arabicDigits(wallet.available_for_withdrawal)}{" "}
+            {digits(wallet.available_for_withdrawal)}{" "}
             <span className="text-14 font-medium text-muted">{currency}</span>
           </div>
 
@@ -140,12 +140,12 @@ export function WalletScreen() {
               أن شيئاً ضاع، والرقمان كلاهما من الخلفية */}
           {holds.length === 1 ? (
             <p className="text-11.5 text-warn">
-              محجوز لطلب سحب معلّق: {arabicDigits(holds[0].amount)} {currency} —
-              من أصل {arabicDigits(wallet.balance)} {currency}
+              محجوز لطلب سحب معلّق: {digits(holds[0].amount)} {currency} —
+              من أصل {digits(wallet.balance)} {currency}
             </p>
           ) : holds.length > 1 ? (
             <p className="text-11.5 text-warn">
-              لديك {arabicDigits(String(holds.length))} طلبات سحب قائمة تحجز من
+              لديك {digits(String(holds.length))} طلبات سحب قائمة تحجز من
               رصيدك — تفصيلُها في «طلبات السحب».
             </p>
           ) : null}
@@ -157,7 +157,7 @@ export function WalletScreen() {
               معلّقاً بلا سبب يظن العطبَ في المنصّة فيسأل الدعم */}
           {Number(wallet.pending_compensation) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              مستحقاتٌ معلّقة: {arabicDigits(wallet.pending_compensation)} {currency}
+              مستحقاتٌ معلّقة: {digits(wallet.pending_compensation)} {currency}
               {" "}— تعويضُ رحلاتٍ أُلغيت بعد قبولك، تصلك حين يسدّدها أصحابُها.
             </p>
           ) : null}
@@ -169,7 +169,7 @@ export function WalletScreen() {
               «اشحن» فعلٌ يفعله، و«معلّق» خبرٌ يقرؤه ولا يفعل به شيئاً */}
           {Number(wallet.carrier_dues) > 0 ? (
             <p className="mt-8 text-11.5 leading-note text-warn">
-              مبلغٌ مستوفى لكبتنٍ آخر: {arabicDigits(wallet.carrier_dues)}{" "}
+              مبلغٌ مستوفى لكبتنٍ آخر: {digits(wallet.carrier_dues)}{" "}
               {currency} — استلمتَه نقداً مع الأجرة، ويُحوَّل من محفظتك حالما
               يكفي رصيدُها. اشحن المحفظة ليصله.
             </p>
@@ -245,10 +245,10 @@ export function WalletScreen() {
                     )}
                   >
                     {debit ? "−" : "+"}
-                    {arabicDigits(unsigned(entry.amount))}
+                    {digits(unsigned(entry.amount))}
                   </div>
                   <div className="text-10 text-muted">
-                    الرصيد {arabicDigits(entry.balance_after)}
+                    الرصيد {digits(entry.balance_after)}
                   </div>
                 </div>
               </StaggerItem>

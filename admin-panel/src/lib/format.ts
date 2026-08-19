@@ -13,7 +13,9 @@
 
 import type { CountryCode, Currency } from "@/api/types";
 
-import { arabicDigits } from "@/lib/utils";
+import { digits,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 /** العملةُ **بعد** الرقم وبمقاسٍ أصغر ولونٍ `--mut` (DESIGN.md §4). */
 export const CURRENCY_LABEL: Record<Currency, string> = {
@@ -38,21 +40,21 @@ export function currencyLabel(currency: Currency | string | null | undefined) {
 /** مبلغٌ بخاناتٍ عربية-هندية ورمزِ عملته — والقيمةُ تبقى نصّاً كما وصلت. */
 export function money(value: string, currency?: Currency | string) {
   const label = currency ? ` ${currencyLabel(currency)}` : "";
-  return `${arabicDigits(value)}${label}`;
+  return `${digits(value)}${label}`;
 }
 
 /** يومٌ وشهرٌ ووقت — ما يُقرأ في صفوف الجداول. */
 export function moment(iso: string) {
   const at = new Date(iso);
-  return `${at.toLocaleDateString("ar-EG", {
+  return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, {
     day: "numeric",
     month: "long",
-  })} ${at.toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}`;
+  }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
 }
 
 /** يومٌ وشهرٌ بلا وقت — لتسميات الرسوم وصفوف الاشتراكات. */
 export function day(iso: string) {
-  return new Date(iso).toLocaleDateString("ar-EG", {
+  return new Date(iso).toLocaleDateString(DISPLAY_LOCALE, {
     day: "numeric",
     month: "long",
   });
@@ -61,7 +63,7 @@ export function day(iso: string) {
 /** يومٌ قصير (٥/٨) — تسميةٌ تحت عمودٍ في رسمٍ لا تتسع لأكثر. */
 export function shortDay(iso: string) {
   const at = new Date(iso);
-  return arabicDigits(`${at.getDate()}/${at.getMonth() + 1}`);
+  return digits(`${at.getDate()}/${at.getMonth() + 1}`);
 }
 
 /** فرقُ الأيام حتى تاريخٍ في المستقبل — سالبٌ لما مضى. */
@@ -78,9 +80,9 @@ export function daysUntil(iso: string, now: number = Date.now()) {
  */
 export function days(count: number): string {
   const n = Math.abs(count);
-  const digits = arabicDigits(String(n));
+  const shown = digits(String(n));
   if (n === 1) return "يوم واحد";
   if (n === 2) return "يومان";
-  if (n >= 3 && n <= 10) return `${digits} أيام`;
-  return `${digits} يوماً`;
+  if (n >= 3 && n <= 10) return `${shown} أيام`;
+  return `${shown} يوماً`;
 }

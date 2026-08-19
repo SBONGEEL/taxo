@@ -20,7 +20,9 @@ import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { forDisplay } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 /** والنوعُ `DriverStatus` لا `string`: حالٌ جديدةٌ في الخلفية تكسر البناء
  * هنا بدل أن تخرج على الشاشة سطراً فارغاً. */
@@ -82,7 +84,7 @@ export function AccountScreen() {
   const subLine = !subscription
     ? "…"
     : subscription.is_active
-      ? `ساري · باقٍ ${arabicDigits(String(subscription.days_remaining))} يوماً`
+      ? `ساري · باقٍ ${digits(String(subscription.days_remaining))} يوماً`
       : subscription.coverage_until
         ? "منتهٍ — جدّد للعودة للتوزيع"
         : "لا اشتراك — اشترك للبدء";
@@ -103,9 +105,9 @@ export function AccountScreen() {
   ).length;
   const docsNote =
     rejectedDocs > 0
-      ? `${arabicDigits(String(rejectedDocs))} مستند مرفوض — يحتاج رفعاً جديداً`
+      ? `${digits(String(rejectedDocs))} مستند مرفوض — يحتاج رفعاً جديداً`
       : pendingDocs > 0
-        ? `${arabicDigits(String(pendingDocs))} مستند قيد المراجعة`
+        ? `${digits(String(pendingDocs))} مستند قيد المراجعة`
         : "كل المستندات مقبولة";
 
   return (
@@ -127,7 +129,7 @@ export function AccountScreen() {
                   ? forDisplay(user.phone, country.dial_code)
                   : user.phone}
               </span>{" "}
-              · ★ {arabicDigits(driver.rating_avg)}
+              · ★ {digits(driver.rating_avg)}
             </div>
           </div>
         </div>
@@ -159,7 +161,7 @@ export function AccountScreen() {
               {user.gender_verified_at
                 ? `موثّق من الهوية بواسطة الإدارة · ${new Date(
                     user.gender_verified_at,
-                  ).toLocaleDateString("ar-EG", {
+                  ).toLocaleDateString(DISPLAY_LOCALE, {
                     day: "numeric",
                     month: "long",
                     year: "numeric",

@@ -55,7 +55,9 @@ import {
 } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 const AUDIENCE_LABEL: Record<CampaignAudience, string> = {
   all_riders: "كل الركّاب",
@@ -88,7 +90,7 @@ const DELIVERY_LABEL: Record<Delivery["status"], string> = {
 function when(iso: string | null): string {
   if (!iso) return "—";
   const at = new Date(iso);
-  return `${at.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} ${at.toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}`;
+  return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
 }
 
 export function CampaignsScreen() {
@@ -139,7 +141,7 @@ export function CampaignsScreen() {
 
   const quiet =
     countryConfig?.quiet_hours_start && countryConfig.quiet_hours_end
-      ? `${arabicDigits(countryConfig.quiet_hours_start)} – ${arabicDigits(countryConfig.quiet_hours_end)}`
+      ? `${digits(countryConfig.quiet_hours_start)} – ${digits(countryConfig.quiet_hours_end)}`
       : null;
 
   return (
@@ -215,7 +217,7 @@ export function CampaignsScreen() {
               {STATUS_LABEL[campaign.status]}
             </span>
             <span className="font-semibold text-ink">
-              {arabicDigits(String(campaign.sent_count))}
+              {digits(String(campaign.sent_count))}
             </span>
             <span className="flex justify-end gap-10">
               <button

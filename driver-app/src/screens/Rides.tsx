@@ -24,7 +24,7 @@ import {
   statusTone,
   trimDistance,
 } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 /** حدُّ الخلفية 100، وصفحةٌ من عشرين تكفي شاشةً وتترك «المزيد» صادقاً. */
 const PAGE_SIZE = 20;
@@ -90,7 +90,7 @@ export function RidesScreen() {
                   </span>
                   <span className="text-15 font-bold text-ink">
                     {ride.final_fare
-                      ? `${arabicDigits(ride.final_fare)} ${CURRENCY_LABEL[ride.currency]}`
+                      ? `${digits(ride.final_fare)} ${CURRENCY_LABEL[ride.currency]}`
                       : "—"}
                   </span>
                 </div>

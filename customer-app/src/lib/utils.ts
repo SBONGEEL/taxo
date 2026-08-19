@@ -40,6 +40,36 @@ export function currencyName(currency: string | null | undefined): string {
   return currency ? (CURRENCY_NAME[currency] ?? currency) : "";
 }
 
+/** **المصفى الوحيد لكل رقمٍ يُعرض** (قرارُ المالك 2026-08-19).
+ *
+ * كان المشروعُ يعرض الأرقامَ عربيةً-هنديةً (`digits`)، فانقلب الاتجاه:
+ * كلُّ رقمٍ يراه المستخدم **لاتينيٌّ**، والدالةُ نفسُها بقيت مكانَها وانقلب
+ * عملُها — فلا تحويلَ مكتوبٌ في شاشة، ولا موضعان يقرّران شكلَ الرقم.
+ *
+ * **وهي تطبيعٌ لا تجريد**: تقبل ما وصلها بأيِّ خانةٍ (عربية-هندية أو فارسية)
+ * وتُخرج `[0-9]`، فتصلح لنصٍّ آتٍ من `toLocaleString` كما تصلح لرقمٍ من
+ * الخلفية. ولا تحذف غيرَ الخانات — الفواصلُ والرموزُ والنصُّ يبقى.
+ *
+ * **ولا تمرّ القيمةُ عبر `Number`** أبداً: المالُ يصل نصّاً بثلاث خانات
+ * (`NUMERIC(12,3)`)، وتمريرُه عبر float يفقد دقّتَه حيث لا يُلاحظ (SPEC §14).
+ * فالتبديلُ على الخانات لا على القيمة، ويصلح للمال ولغيره سواءً.
+ */
+export function digits(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+}
+
+/** **لغةُ العرض مكتوبةٌ لا مفترَضة.**
+ *
+ * `"ar"` يعطي خاناتٍ لاتينيةً في ICU اليوم و`"ar-EG"` يعطي عربيةً-هندية —
+ * والأولُ افتراضٌ قد يتبدّل بترقية مكتبة، وهو بعينه ما علّمه `check:target`:
+ * القيمةُ التي يعتمد عليها العرضُ تُكتب صراحةً. و`-u-nu-latn` يثبّت الخانات
+ * لاتينيةً ويُبقي أسماءَ الشهور عربية.
+ */
+export const DISPLAY_LOCALE = "ar-u-nu-latn";
+
 /** المبالغ نصوصٌ من الخلفية ولا تُحوَّل إلى `number` (SPEC القسم 4).
  *
  * `Intl.NumberFormat` يأخذ رقماً فيمرّ المال بالفاصلة العائمة ولو للعرض —
@@ -75,7 +105,7 @@ export function formatDuration(minutes: string | number | null | undefined) {
   return rest ? `${hours} س ${rest} د` : `${hours} ساعة`;
 }
 
-const DATE_FORMAT = new Intl.DateTimeFormat("ar", {
+const DATE_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   dateStyle: "medium",
   timeStyle: "short",
 });
@@ -87,7 +117,7 @@ export function formatDateTime(iso: string | null | undefined) {
 
 export function formatTime(iso: string | null | undefined) {
   if (!iso) return "—";
-  return new Intl.DateTimeFormat("ar", { timeStyle: "short" }).format(new Date(iso));
+  return digits(new Intl.DateTimeFormat(DISPLAY_LOCALE, { timeStyle: "short" }).format(new Date(iso)));
 }
 
 /** مفتاح عدم تكرار للدفع والتحويل (SPEC القسم 14) — يُولَّد مرةً ويُعاد

@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 const REASONS = [
@@ -116,7 +116,7 @@ export function DisputeScreen() {
         <div className="flex justify-between text-12.5">
           <span className="text-muted">{formatWhen(ride.created_at)}</span>
           <span className="font-bold text-ink">
-            {arabicDigits(
+            {digits(
               payment?.amount ?? ride.final_fare ?? ride.estimated_fare,
             )}{" "}
             {currency}

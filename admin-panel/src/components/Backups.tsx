@@ -26,12 +26,12 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { Spinner } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 function size(bytes: number): string {
-  if (bytes >= 1024 ** 3) return `${arabicDigits((bytes / 1024 ** 3).toFixed(1))} غ.ب`;
-  if (bytes >= 1024 ** 2) return `${arabicDigits((bytes / 1024 ** 2).toFixed(1))} م.ب`;
-  return `${arabicDigits(Math.max(1, Math.round(bytes / 1024)).toString())} ك.ب`;
+  if (bytes >= 1024 ** 3) return `${digits((bytes / 1024 ** 3).toFixed(1))} غ.ب`;
+  if (bytes >= 1024 ** 2) return `${digits((bytes / 1024 ** 2).toFixed(1))} م.ب`;
+  return `${digits(Math.max(1, Math.round(bytes / 1024)).toString())} ك.ب`;
 }
 
 export function Backups({
@@ -63,20 +63,20 @@ export function Backups({
         <div className="rounded-13 border border-warn-brd bg-warn-soft p-14 text-12.5 text-ink">
           {state.stale_hours !== null ? (
             <p>
-              ⚠️ مضى <b>{arabicDigits(String(state.stale_hours))} ساعةً</b> بلا نسخةٍ
+              ⚠️ مضى <b>{digits(String(state.stale_hours))} ساعةً</b> بلا نسخةٍ
               ناجحة.
             </p>
           ) : null}
           {state.unpulled !== null ? (
             <p>
-              ⚠️ تراكمت <b>{arabicDigits(String(state.unpulled))} نسخٍ لم تُسحب</b> إلى
+              ⚠️ تراكمت <b>{digits(String(state.unpulled))} نسخٍ لم تُسحب</b> إلى
               جهازك — ونسخةٌ على الخادم وحدَه ليست نسخةً احتياطية.
             </p>
           ) : null}
           {state.disk_percent !== null ? (
             <p>
               ⚠️ بلغت مساحةُ النسخ{" "}
-              <b>{arabicDigits(String(state.disk_percent))}٪</b> من سقفها —{" "}
+              <b>{digits(String(state.disk_percent))}٪</b> من سقفها —{" "}
               <b>ولا يُحذف شيءٌ بموجبها</b>.
             </p>
           ) : null}

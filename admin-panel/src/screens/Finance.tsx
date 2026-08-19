@@ -37,7 +37,9 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useSession } from "@/lib/session";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 
 const WITHDRAWAL_LABEL: Record<WithdrawalStatus, string> = {
   pending: "معلّق",
@@ -55,7 +57,7 @@ const WITHDRAWAL_TONE: Record<WithdrawalStatus, string> = {
 
 function when(iso: string): string {
   const at = new Date(iso);
-  return `${at.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} ${at.toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}`;
+  return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
 }
 
 /** **ورسومُ الإلغاء ثالثةٌ هنا لا في شاشةٍ مستقلة**: مالٌ ينتظر قراراً
@@ -137,7 +139,7 @@ export function FinanceScreen() {
             render={(row) => (
               <>
                 <span className="font-semibold text-ink">
-                  {arabicDigits(row.amount)}
+                  {digits(row.amount)}
                 </span>
                 <span className="text-muted">
                   {row.method === "cliq" ? "كليك" : "حوالة بنكية"}
@@ -208,7 +210,7 @@ export function FinanceScreen() {
             render={(row) => (
               <>
                 <span className="font-semibold text-ink">
-                  {arabicDigits(row.amount)}
+                  {digits(row.amount)}
                 </span>
                 <span className="text-muted">
                   {row.method === "cliq" ? "كليك" : "كاش"}
@@ -309,7 +311,7 @@ function PayoutModal({
         <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
           <span className="text-12.5 text-muted">المبلغ</span>
           <span className="text-17 font-bold text-ink">
-            {arabicDigits(request.amount)}
+            {digits(request.amount)}
           </span>
         </div>
 

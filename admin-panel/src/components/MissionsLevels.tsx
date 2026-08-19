@@ -27,7 +27,7 @@ import { Field, Select } from "@/components/ui/Field";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { day } from "@/lib/format";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 const LEVEL_LABEL = ["مبتدئ", "فضّي", "ذهبي", "ماسيّ"];
 
@@ -83,7 +83,7 @@ export function MissionsLevels({
           المستوى يُحسب كلَّ ساعة من مهامِّ الشهر — <b className="text-ink">لا يُمنح
           بيد</b>. وأثرُه <b className="text-ink">خصمٌ بالأمتار على مسافة البحث</b>:
           الأقربُ يبقى الأوّلَ، والمستوى يفصل بين المتقاربين وحدهم. والحدُّ الأقصى
-          ١٠٠م، وصفرٌ يعني «بلا أثر».
+          100م، وصفرٌ يعني «بلا أثر».
           {levels.last_computed_at ? (
             <> آخرُ حساب: {day(levels.last_computed_at)}.</>
           ) : (
@@ -158,7 +158,7 @@ export function MissionsLevels({
                       {METRICS.find((m) => m.value === row.metric)?.label ??
                         row.metric}
                     </td>
-                    <td className="p-8 text-ink">{arabicDigits(row.target)}</td>
+                    <td className="p-8 text-ink">{digits(row.target)}</td>
                     <td className="p-8">
                       <Badge tone={row.is_active ? "ok" : "muted"}>
                         {row.is_active ? "مفعّلة" : "موقوفة"}
@@ -253,7 +253,7 @@ function LevelCard({
     <div className="rounded-13 border border-line p-12">
       <p className="text-13 font-bold text-ink">{LEVEL_LABEL[level]}</p>
       <p className="mt-2 text-11 text-muted">
-        {arabicDigits(String(count))} كبتناً
+        {digits(String(count))} كبتناً
       </p>
       <Field
         className="mt-8"

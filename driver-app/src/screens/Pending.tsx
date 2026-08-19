@@ -76,7 +76,7 @@ export function PendingScreen() {
       <p className="mt-10 text-13 leading-note text-muted">
         {rejected
           ? "راجع أسباب رفض مستنداتك أدناه، ثم أعد رفعها."
-          : "تراجع الإدارة مستنداتك عادةً خلال ٢٤ ساعة."}
+          : "تراجع الإدارة مستنداتك عادةً خلال 24 ساعة."}
       </p>
 
       <div className="mt-22 rounded-14 border border-line bg-surface p-15 text-start text-12 leading-note text-muted">

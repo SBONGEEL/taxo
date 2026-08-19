@@ -49,7 +49,7 @@ import {
   statusTone,
   trimDistance,
 } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 /** نصُّ فصل الإدارة — `paid` تصف الواقعة لا الحالة الناتجة. */
@@ -166,7 +166,7 @@ export function RideDetailsScreen() {
               {formatWhen(ride.created_at)}
             </div>
             <div className="whitespace-nowrap text-26 font-bold text-ink">
-              {arabicDigits(ride.final_fare ?? ride.estimated_fare)} {currency}
+              {digits(ride.final_fare ?? ride.estimated_fare)} {currency}
             </div>
           </div>
           <span
@@ -196,7 +196,7 @@ export function RideDetailsScreen() {
           <h2 className="mb-11 text-13 font-bold text-ink">تفصيل السعر</h2>
           <Row
             label="السعر المقدّر"
-            value={`${arabicDigits(ride.estimated_fare)} ${currency}`}
+            value={`${digits(ride.estimated_fare)} ${currency}`}
           />
           {/* الفعليةُ تُسمّى فعلية: جدولٌ يخلط المقدَّر بالمحقَّق بلا اسمٍ
               يجعل الكبتن يحسب على رقمٍ لا يعرف مصدره */}
@@ -214,14 +214,14 @@ export function RideDetailsScreen() {
             label="العمولة"
             value={
               commission === 0
-                ? "٠٪ حالياً"
-                : `${arabicDigits(String(commission))}٪`
+                ? "0٪ حالياً"
+                : `${digits(String(commission))}٪`
             }
             tone="text-ok"
           />
           <Row
             label="السعر النهائي"
-            value={`${arabicDigits(ride.final_fare ?? ride.estimated_fare)} ${currency}`}
+            value={`${digits(ride.final_fare ?? ride.estimated_fare)} ${currency}`}
             strong
             last
           />
@@ -233,14 +233,14 @@ export function RideDetailsScreen() {
               <Row
                 key={payment.id}
                 label={`${METHOD_LABEL[payment.method]} · ${paymentStatusLabel(payment)}`}
-                value={`${arabicDigits(payment.amount)} ${currency}`}
+                value={`${digits(payment.amount)} ${currency}`}
                 tone={payment.status === "confirmed" ? "text-ink" : "text-warn"}
               />
             ))}
             {mine ? (
               <Row
                 label="تقييمك للراكب"
-                value={`★ ${arabicDigits(String(mine.stars))}`}
+                value={`★ ${digits(String(mine.stars))}`}
                 tone="text-warn"
                 last
               />

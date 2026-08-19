@@ -33,7 +33,9 @@ import type { UserNotification } from "@/api/types";
 import { Screen } from "@/components/ui/Screen";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney,
+  DISPLAY_LOCALE,
+} from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 /** الأيقونةُ واللونُ بحسب النوع — والافتراضُ جرسٌ محايد لنوعٍ لا نعرفه. */
@@ -88,7 +90,7 @@ function destinationOf(entry: UserNotification): string | null {
 }
 
 function when(iso: string): string {
-  return new Date(iso).toLocaleString("ar", {
+  return new Date(iso).toLocaleString(DISPLAY_LOCALE, {
     day: "numeric",
     month: "long",
     hour: "2-digit",

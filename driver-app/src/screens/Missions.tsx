@@ -24,7 +24,7 @@ import type { MissionProgress, MyProgress } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { useGoBack } from "@/lib/back";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const LEVEL_LABEL = ["مبتدئ", "فضّي", "ذهبي", "ماسيّ"];
 
@@ -33,10 +33,10 @@ function nextStep(items: MissionProgress[]): string | null {
   const pending = items.find((item) => !item.done);
   if (!pending) return null;
   if (pending.mission.metric === "min_rating") {
-    return `ارفع تقييمك إلى ${arabicDigits(pending.target)}`;
+    return `ارفع تقييمك إلى ${digits(pending.target)}`;
   }
   const left = Number(pending.target) - Number(pending.value);
-  return `أكمل ${arabicDigits(String(left))} رحلات أخرى`;
+  return `أكمل ${digits(String(left))} رحلات أخرى`;
 }
 
 export function MissionsScreen() {
@@ -76,13 +76,13 @@ export function MissionsScreen() {
               <p className="text-12 text-muted">مستواك الحالي</p>
               <p className="mt-6 text-22 font-bold text-ink">
                 {LEVEL_LABEL[data.level] ??
-                  `المستوى ${arabicDigits(String(data.level))}`}
+                  `المستوى ${digits(String(data.level))}`}
               </p>
               {/* **الأثرُ بالأمتار — جملةٌ مقيسة لا وعد** */}
               {data.level_effect_meters > 0 ? (
                 <p className="mt-8 text-11.5 text-ok">
                   يقرّبك من الطلبات القريبة{" "}
-                  {arabicDigits(String(data.level_effect_meters))} متراً — والأقربُ
+                  {digits(String(data.level_effect_meters))} متراً — والأقربُ
                   إليك يبقى الأوّلَ دائماً.
                 </p>
               ) : (
@@ -98,8 +98,8 @@ export function MissionsScreen() {
               ) : data.missions_total > 0 ? (
                 <p className="mt-10 text-12 text-ok">
                   أنجزتَ مهامَّ الشهر كلَّها —{" "}
-                  {arabicDigits(String(data.missions_done))} من{" "}
-                  {arabicDigits(String(data.missions_total))}.
+                  {digits(String(data.missions_done))} من{" "}
+                  {digits(String(data.missions_total))}.
                 </p>
               ) : null}
             </section>
@@ -137,7 +137,7 @@ export function MissionsScreen() {
                               item.done ? "text-ok" : "text-muted",
                             )}
                           >
-                            {arabicDigits(item.value)} / {arabicDigits(item.target)}
+                            {digits(item.value)} / {digits(item.target)}
                           </span>
                         </div>
                         {item.mission.description ? (
@@ -191,7 +191,7 @@ export function MissionsScreen() {
                       ) : null}
                     </span>
                     <span className="shrink-0 text-11 text-muted" dir="ltr">
-                      {arabicDigits(row.granted_at.slice(0, 10))}
+                      {digits(row.granted_at.slice(0, 10))}
                     </span>
                   </StaggerItem>
                 ))}

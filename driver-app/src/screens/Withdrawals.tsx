@@ -28,7 +28,7 @@ import {
   WITHDRAWAL_STATUS_LABEL,
   withdrawalTone,
 } from "@/lib/walletFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 const PAGE_SIZE = 20;
@@ -113,7 +113,7 @@ export function WithdrawalsScreen() {
             />
             <div className="min-w-0 flex-1">
               <div className="text-14 font-bold text-ink">
-                {arabicDigits(request.amount)} {currency}
+                {digits(request.amount)} {currency}
               </div>
               <div className="text-11 text-muted">
                 {formatWhen(request.created_at)} ·{" "}

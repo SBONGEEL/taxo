@@ -61,7 +61,7 @@ import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<DriverStatus, string> = {
   pending: "بانتظار الاعتماد",
@@ -216,12 +216,12 @@ export function DriversScreen() {
               <span className="text-muted">
                 {row.documents_pending > 0 ? (
                   <span className="text-warn">
-                    {arabicDigits(String(row.documents_pending))} بانتظار
+                    {digits(String(row.documents_pending))} بانتظار
                     المراجعة
                   </span>
                 ) : row.missing_required.length > 0 ? (
                   <span className="text-danger">
-                    ينقص {arabicDigits(String(row.missing_required.length))}
+                    ينقص {digits(String(row.missing_required.length))}
                   </span>
                 ) : (
                   <span className="text-ok">مكتملة</span>
@@ -241,7 +241,7 @@ export function DriversScreen() {
               <span className="text-ink">
                 {row.rating_avg === "0.00"
                   ? "—"
-                  : `★ ${arabicDigits(row.rating_avg)}`}
+                  : `★ ${digits(row.rating_avg)}`}
               </span>
 
               <span className="flex justify-end">

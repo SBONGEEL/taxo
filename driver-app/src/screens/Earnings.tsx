@@ -19,7 +19,7 @@ import { getEarnings } from "@/api/endpoints";
 import type { Earnings } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 type Period = Earnings["period"];
@@ -96,15 +96,15 @@ export function EarningsScreen() {
                 negative ? "text-danger" : "text-ink",
               )}
             >
-              {arabicDigits(data.net)}{" "}
+              {digits(data.net)}{" "}
               <span className="text-15 text-muted">{currency}</span>
             </div>
             <div className="mt-8 flex items-center justify-between text-11.5">
               <span className="text-muted">
-                أرباح الرحلات {arabicDigits(data.wallet_earnings)}
+                أرباح الرحلات {digits(data.wallet_earnings)}
               </span>
               <span className="text-muted">
-                عمولة {arabicDigits(data.commission)}
+                عمولة {digits(data.commission)}
               </span>
             </div>
             {/* **سطرٌ ثالثٌ مستقل** (12-و): البقشيشُ دخلَ المحفظة **بلا عمولةٍ
@@ -113,7 +113,7 @@ export function EarningsScreen() {
                 سوقٍ لا بقشيشَ فيه سطرٌ يشغل الشاشة بلا معنى */}
             {Number(data.tips) > 0 ? (
               <div className="mt-4 text-11.5 text-ok">
-                بقشيش {arabicDigits(data.tips)} — كاملاً بلا عمولة
+                بقشيش {digits(data.tips)} — كاملاً بلا عمولة
               </div>
             ) : null}
             {/* **وسطرٌ خامسٌ منذ البند ١٥**: ما اقتُطع سداداً للسلفة —
@@ -121,7 +121,7 @@ export function EarningsScreen() {
                 الدعمُ مرةً لكلِّ كبتن. ولا يظهر لمن لا سلفةَ له */}
             {Number(data.advance_repaid) > 0 ? (
               <div className="mt-4 text-11.5 text-muted">
-                سدادُ سلفة {arabicDigits(data.advance_repaid)}
+                سدادُ سلفة {digits(data.advance_repaid)}
               </div>
             ) : null}
             {negative ? (
@@ -136,7 +136,7 @@ export function EarningsScreen() {
             <div className="flex items-baseline justify-between">
               <span className="text-11.5 text-muted">مُحصَّل مباشرة</span>
               <span className="text-15 font-bold text-ink">
-                {arabicDigits(data.directly_collected)}{" "}
+                {digits(data.directly_collected)}{" "}
                 <span className="text-11.5 text-muted">{currency}</span>
               </span>
             </div>
@@ -150,7 +150,7 @@ export function EarningsScreen() {
             <div className="flex items-baseline justify-between">
               <span className="text-11.5 text-muted">رحلات مكتملة</span>
               <span className="text-15 font-bold text-ink">
-                {arabicDigits(String(data.completed_rides))}
+                {digits(String(data.completed_rides))}
               </span>
             </div>
           </div>

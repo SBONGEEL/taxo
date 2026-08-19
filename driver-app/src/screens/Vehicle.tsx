@@ -22,7 +22,7 @@ import type { DocumentType, DriverDocuments, Vehicle } from "@/api/types";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useDriver } from "@/lib/driver";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 const DOC_LABEL: Record<DocumentType, string> = {
@@ -142,7 +142,7 @@ export function VehicleScreen() {
               <>
                 <Pair
                   label="سنة الصنع"
-                  value={arabicDigits(String(vehicle.year))}
+                  value={digits(String(vehicle.year))}
                 />
                 <Pair label="اللون" value={vehicle.color} />
                 {/* اللوحةُ معرّفٌ مطبوعٌ على المركبة — تُعرض كما هي */}

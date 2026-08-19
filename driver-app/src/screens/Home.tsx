@@ -66,7 +66,7 @@ import { CATEGORY_LABEL, CURRENCY_FULL, CURRENCY_LABEL, PREFERENCE_LABEL } from 
 import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
-import { arabicDigits, cn } from "@/lib/utils";
+import { digits, cn } from "@/lib/utils";
 
 export function HomeScreen() {
   const navigate = useNavigate();
@@ -359,18 +359,18 @@ export function HomeScreen() {
               {[
                 {
                   label: "المحفظة",
-                  value: wallet ? arabicDigits(wallet.balance) : "—",
+                  value: wallet ? digits(wallet.balance) : "—",
                 },
                 {
                   label: "رحلات اليوم",
                   value: earnings
-                    ? arabicDigits(String(earnings.completed_rides))
+                    ? digits(String(earnings.completed_rides))
                     : "—",
                 },
                 {
                   label: "التقييم",
                   value: profile
-                    ? arabicDigits(Number(profile.driver.rating_avg).toFixed(1))
+                    ? digits(Number(profile.driver.rating_avg).toFixed(1))
                     : "—",
                 },
               ].map((stat) => (

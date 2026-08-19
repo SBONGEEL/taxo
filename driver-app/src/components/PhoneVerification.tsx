@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { startPhoneVerification, type PhoneChallenge } from "@/lib/firebase";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 const RECAPTCHA_CONTAINER = "taxo-recaptcha";
 
@@ -88,7 +88,7 @@ export function PhoneVerification({
   const challenge = useRef<PhoneChallenge | null>(null);
 
   const e164 = phone;
-  const digits = otpLength ?? 6;
+  const codeLength = otpLength ?? 6;
 
   const send = useCallback(async (pick?: OtpChannel) => {
     setSending(true);
@@ -180,7 +180,7 @@ export function PhoneVerification({
       <OtpBoxes
         value={code}
         onChange={setCode}
-        length={digits}
+        length={codeLength}
         disabled={sending}
       />
 
@@ -195,7 +195,7 @@ export function PhoneVerification({
         <Button
           onClick={submit}
           loading={submitting}
-          disabled={code.length < digits || sending}
+          disabled={code.length < codeLength || sending}
         >
           تحقق
         </Button>
@@ -219,7 +219,7 @@ export function PhoneVerification({
         className="pressable mt-16 w-full text-center text-12.5 text-muted disabled:opacity-100"
       >
         {cooldown > 0
-          ? `إعادة الإرسال خلال ٠:${arabicDigits(String(cooldown).padStart(2, "0"))}`
+          ? `إعادة الإرسال خلال 0:${digits(String(cooldown).padStart(2, "0"))}`
           : "إعادة إرسال الرمز"}
       </button>
     </>

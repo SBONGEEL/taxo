@@ -1,4 +1,4 @@
-/** التسجيل — الخطوة ١ من ٣ ثم إثباتُ الرقم (SPEC القسم 12/1).
+/** التسجيل — الخطوة 1 من 3 ثم إثباتُ الرقم (SPEC القسم 12/1).
  *
  * ترتيبُ التصميم مطابقٌ للمواصفات حرفياً وليس صدفة: **الرقم يُثبت قبل أن
  * ينتظر المراجعة** — رقمُ الكبتن هو ما تصل عليه حوالات كليك (القسم 6/9)،
@@ -156,7 +156,7 @@ export function RegisterScreen() {
 
   return (
     <AuthScreen onBack={() => navigate("/login")} className="px-26">
-      <div className="mt-20 text-12 text-muted">الخطوة ١ من ٣</div>
+      <div className="mt-20 text-12 text-muted">الخطوة 1 من 3</div>
       <h1 className="mb-4 text-22 font-bold text-ink">إنشاء حساب كبتن</h1>
       <p className="mb-20 text-12.5 leading-snug text-muted">
         الرقم هو مُعرّف دخولك، ويُخزَّن بصيغة دولية.

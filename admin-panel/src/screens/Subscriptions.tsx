@@ -49,7 +49,7 @@ import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
-import { arabicDigits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 const DURATION_LABEL: Record<SubscriptionDurationType, string> = {
   daily: "يومية",
@@ -168,7 +168,7 @@ export function SubscriptionsScreen() {
         <div className="mb-12 flex items-end justify-between gap-16">
           <h2 className="text-16 font-bold text-ink">المشتركون</h2>
           <span className="text-12 text-muted">
-            سارٍ الآن في هذه الصفحة: {arabicDigits(String(activeNow))}
+            سارٍ الآن في هذه الصفحة: {digits(String(activeNow))}
           </span>
         </div>
 
