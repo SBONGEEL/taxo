@@ -1105,6 +1105,117 @@ than no guard: it gets disabled, and this one would have blocked most valid regi
 first. And the refusal names its reason without naming the list: one code (`weak_password`) with three
 messages, because the admin counts one category while the person choosing needs to know which one they hit.
 
+### Subscription offers (item 54) — built end to end (2026-08-19)
+
+**All six branches of `design/SUBSCRIPTION-OFFERS.md` §8 were answered by the owner before the first
+migration**, as that file required. The discount is **money, and a percentage** — `discount_type` is an
+explicit column from day one (`money_percent`), and it is `VARCHAR(16)` **not** a Postgres enum, so a
+time-based type later is code with no migration: the `feature_flags.feature_key` exception, for the
+same reason.
+
+**Four columns on `driver_subscriptions`, not three, and the fourth is the interesting one.**
+`list_price` (frozen), `discount_amount` (**what we actually gave up** = `list_price − amount_paid`),
+`offer_id`, and `offer_discount_amount` (**what the offer decided**). The last exists because the owner's
+"manual adjustment" mark is only truthful with it: recomputing from the offer's percentage drifts the
+first time the offer is edited, so the mark is a **live comparison of two frozen numbers** — and no
+`manual_adjustment` column is stored, per the "flagged is measured, never stamped" rule.
+
+**One rule for the discount across all four channels**: `discount_amount = list_price − amount_paid`.
+Wallet and card make them equal by construction; cash and CliQ diverge when the admin collects something
+else — and "how much did we give up?" keeps one answer with no branch. The panel **pre-fills and does
+not force**, because `record_manual` already accepted a different amount ("خصمٌ أو تسويةُ فرقٍ يقرّرها
+المشرف") and removing that would change existing behaviour.
+
+**The design's §4 said to compute inside `_create`; that would have created money from nothing.**
+`purchase_with_wallet` debits the wallet **before** the row is written, so a calculation inside the
+writer debits 30 and records 27. The offer is now resolved *before* the money moves, and `_create`
+stays the only writer of the four columns. The card path applies it to the **order amount at open**, for
+the same reason: an order opened at full price with a discounted row after it collects what was never
+deducted.
+
+**Two locks own the per-driver cap, and either suffices** — see `SPEC.md` §8.1 for the measured detail,
+including the fact that **the wallet advisory lock does not guard it** (resolve runs before record, and a
+lock taken after the read serialises nothing). Both concurrency tests passed at first *with the lock
+deleted*, because `asyncio.gather` over HTTP let the first commit before the second began; rewritten with
+an explicit interleave, deleting both locks yields `['3.000', '3.000']` — an offer capped at one use
+granted twice.
+
+**And opening it in a browser found what 16 passing tests did not** — the discount was computed on
+`/subscriptions/plans` and not on `/subscriptions/me`, which is the door the captain's screen actually
+reads. Both now go through `_plans_with_offers`. That is **the eighth shape**, written up on its own
+below, because it is not about offers.
+
+### The eighth shape — two doors publishing the same thing, each honest alone (2026-08-19)
+
+**Whatever is published from two doors goes through one builder — or the difference is measured, never
+assumed.**
+
+Subscription plans are published from **two** endpoints: `GET /subscriptions/plans`, and
+`GET /subscriptions/me`, which carries them in its own response **on purpose** — the screen would
+otherwise make two calls every morning (the reason is written in that route's docstring). The
+per-driver discount was computed in the first and forgotten in the second. **The captain's screen reads
+the second**, so it drew no discount at all while the API — asked directly — returned one correctly.
+
+**Every test passed, and none of them could have caught it.** Each endpoint has its own test, each test
+asks its own door, and **each door was honest about itself**: `/plans` really did carry the discount,
+`/me` really did carry plans. Nothing compared them, because nothing knew they were the same thing.
+Sixteen tests over the feature were green.
+
+**Nor could any existing guard**: the payload shapes are identical (both `SubscriptionPlanOut`), so
+`check:config` sees one mirrored type and is satisfied; `tsc` sees the fields present; the enum and
+scale guards are unrelated. The types agreed **because they were the same type** — which is exactly why
+the divergence was invisible: the difference was not in the shape but in **which values got filled**.
+
+**Only opening the screen showed it**, which is the family's defining property.
+
+**The rule, in order of preference:**
+
+1. **One builder, called by both doors** — what was done here (`_plans_with_offers`). A second door
+   cannot then forget, because there is nothing to remember.
+2. **If they must stay separate, a test compares the two responses field by field** — not two tests
+   each asserting its own door is fine.
+
+**And the smell that precedes it**: a route that carries someone else's payload "so the screen needs one
+call". That convenience is correct and worth keeping — it is the reason `/me` carries plans at all — but
+it silently creates a second publisher of a value the first one owns. **Whenever a response embeds
+another endpoint's payload, ask which of them computes it.**
+
+### The seventh shape — a money amount that serialises as `"0"` instead of `"0.000"` (2026-08-19)
+
+**It happened three times, so it is a class, not a slip.** `rewarded_total` when referrals were
+generalised, `total_given_up` in subscription offers, and — caught by the guard within an hour of being
+written — `discount_amount` on the subscription row itself.
+
+**The mechanism**: a `MONEY` column read from Postgres arrives as `Decimal('0.000')` and serialises to
+`"0.000"`; a value **constructed in Python** — a schema default, a `SUM` that returned nothing, or
+`max(Decimal("0"), x)` — carries exponent 0 and serialises to `"0"`. The apps print money as text by
+rule (§14 forbids passing it through `Number`), so a captain reads `٠` in a column of `٠٫٠٠٠`.
+
+**Nothing existing can see it**: the type is `Decimal` and correct, the field exists, the number is
+numerically right. Only its *text* differs — so `tsc`, `check:enums`, `check:config` and the build are
+all green, and the two earlier instances were **covered by passing tests** that simply never asserted
+the format.
+
+**The third instance is the sharpest**: `max(Decimal("0"), Decimal("0.000"))` returns **the first
+argument** — Python's `max` keeps the earlier of two equal values — so the unquantized zero wins even
+though the subtraction produced a quantized one.
+
+**The guard is a sweep over every response the suite produces**, not a per-field annotation
+(`tests/money_format.py`, hooked into the `client` fixture). Two options were weighed:
+
+- **Quantize at the serialization boundary** removes the possibility — but only if money is
+  *distinguishable*. Of 187 `Decimal` fields in the schemas, 51 are **not** money (a discount
+  percentage, a rating, a distance), and printing `15.000%` or a `4.500` rating is a display change
+  nobody asked for. So it needs a `Money` type on 136 fields — and *"did you remember the type on the
+  new field?"* **is the same class of oversight we are curing**, so the guard would itself need a guard.
+- **The sweep needs no per-field discipline at all**: nothing is added when a new money column appears,
+  and one test touching the endpoint is enough for it to be checked. Both earlier instances would have
+  been caught the day they shipped.
+
+Its limit is stated rather than hidden: **what the suite never touches is never checked** — it guards
+what is exercised and claims nothing more. And the field vocabulary matches whole names and suffixes,
+never substrings, with named exclusions (`discount_value` is a percentage, not an amount).
+
 ### The sixth shape — a success criterion measuring an event the system never emits (2026-08-18)
 
 **This is the fifth family member's successor and the most expensive one so far.** The family is

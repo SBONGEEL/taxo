@@ -5,6 +5,7 @@ from app.routers import (
     admin_cancellations,
     admin_live_map,
     admin_payments,
+    admin_offers,
     admin_promo,
     bookings,
     admin_backups,
@@ -52,6 +53,7 @@ api_router.include_router(wallet.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(admin_settings.router)
 api_router.include_router(admin_providers.router)
+api_router.include_router(admin_offers.router)
 api_router.include_router(admin_promo.router)
 api_router.include_router(admin_backups.router)
 api_router.include_router(admin_missions.router)

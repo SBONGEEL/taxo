@@ -307,6 +307,7 @@ export type FeatureKey =
   | "driver_levels_enabled"
   | "scheduled_rides_enabled"
   | "ride_sharing_enabled"
+  | "subscription_offers_enabled"
   | "driver_advances_enabled";
 
 export interface CountryFeatureFlags {
@@ -406,6 +407,41 @@ export interface PaymentSetting {
 }
 
 /** رمزُ خصمٍ كما تراه اللوحة (12-ز) — وثلاثةُ أرقامٍ **محسوبة** لا مراكمة. */
+/** عرضُ اشتراكٍ — البند ٥٤. **والنوعُ نصٌّ لا اتحادٌ مغلق**: إضافةُ نوعٍ زمنيٍّ
+ *  لاحقاً كودٌ بلا ترحيلة، فاتحادٌ هنا يجعل الواجهةَ ترفض ما تقبله الخلفية. */
+export interface SubscriptionOffer {
+  id: string;
+  country_code: CountryCode;
+  name: string;
+  discount_type: string;
+  discount_value: string;
+  max_discount: string | null;
+  plan_id: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  audience: "all" | "new_driver" | "lapsed" | "manual";
+  lapsed_days: number | null;
+  max_uses_per_driver: number;
+  total_budget: string | null;
+  created_at: string;
+  /** جدولُ التنازل — محسوبٌ في الخلفية (§14) لا مجموعاً في المتصفح. */
+  subscriptions_sold: number;
+  total_list_price: string;
+  total_given_up: string;
+  /** كم مرةً خالف المشرفُ المبلغَ المعبَّأ — مقارنةٌ حيّة لا عمودٌ مخزَّن. */
+  manual_adjustments: number;
+}
+
+export interface OfferGrant {
+  id: string;
+  offer_id: string;
+  driver_id: string;
+  driver_name: string | null;
+  note: string | null;
+  created_at: string;
+}
+
 export interface PromoCode {
   id: string;
   code: string;

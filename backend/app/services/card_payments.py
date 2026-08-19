@@ -65,6 +65,7 @@ from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.services import (
     cancellation,
+    offers,
     payments as payments_service,
     settings_service,
     subscriptions as subscriptions_service,
@@ -347,6 +348,13 @@ async def start_subscription(
     await require_card_enabled(session, owner.country_code)
     subscriptions_service.require_purchasable(driver)
 
+    # **الخصمُ يقع على مبلغ الطلب لا على صفّ الاشتراك** (البند ٥٤): الطلبُ هو
+    # ما يُدفع، فمبلغٌ كاملٌ يُفتح به ثم صفٌّ مخفَّضٌ يُكتب بعده يحصّل من الكبتن
+    # ما لم يُخصم. ولا `for_update` هنا: لا صفَّ يُكتب بعدُ فلا ميزانيةَ تُستهلك،
+    # والحجزُ يقع لحظةَ التفعيل.
+    offer = await offers.resolve(session, driver=driver, plan=plan)
+    payable = plan.price - (offer.amount if offer is not None else Decimal("0"))
+
     order = ProviderOrder(
         provider=PaymentProvider.TELR,
         purpose=ProviderOrderPurpose.SUBSCRIPTION,
@@ -354,7 +362,7 @@ async def start_subscription(
         cart_id=_new_cart_id("s"),
         user_id=owner.id,
         country_code=owner.country_code,
-        amount=plan.price,
+        amount=payable,
         currency=plan.currency,
         plan_id=plan.id,
         save_card=save_card,

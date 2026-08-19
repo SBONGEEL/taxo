@@ -484,6 +484,16 @@ export interface SubscriptionPlan {
   price: string;
   currency: Currency;
   is_active: boolean;
+  /** عرضُ **هذا الكبتن** محسوباً — لا قائمةُ العروض القائمة (البند ٥٤).
+   *
+   * `null` يعني لا عرضَ ينطبق عليه، **ولا يُقال له إن ثمّة عرضاً لغيره**:
+   * عرضٌ يُرى ولا يُطبَّق عند الضغط أسوأُ من عرضٍ لا يُرى.
+   */
+  offer_name: string | null;
+  offer_discount: string | null;
+  /** يُحسب في الخلفية كبقية المال (§14) — لا يُطرح في المتصفح. */
+  price_after_discount: string | null;
+  offer_ends_at: string | null;
 }
 
 export interface MySubscription {
@@ -571,6 +581,9 @@ export interface DriverSubscription {
   starts_at: string;
   expires_at: string;
   amount_paid: string;
+  /** ما سُجّل فعلاً لا ما حسبه العرض — فلا يُعرض خصمٌ لم يُنَل. */
+  list_price: string;
+  discount_amount: string;
   currency: Currency;
   payment_method: PaymentMethod;
   status: "active" | "expired" | "cancelled";

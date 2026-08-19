@@ -559,7 +559,8 @@ async def tip_options(
             if offered and row
             else []
         ),
-        max_amount=row.tip_max if offered and row else Decimal("0"),
+        # مُكمَّمٌ كبقية المال — `"0"` بين `"0.000"` عطبُ عرضٍ لا حساب
+        max_amount=row.tip_max if offered and row else Decimal("0.000"),
         given=TipOut.model_validate(given) if given else None,
     )
 

@@ -81,9 +81,65 @@ import type {
   WalletTransaction,
   Withdrawal,
   WithdrawalStatus,
+  SubscriptionOffer,
+  OfferGrant,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
+
+// ------------------------------------------- عروضُ الاشتراكات (البند ٥٤)
+
+export const listSubscriptionOffers = (country: CountryCode) =>
+  api.get<SubscriptionOffer[]>("/admin/subscription-offers", {
+    query: { country_code: country },
+  });
+
+export const createSubscriptionOffer = (
+  country: CountryCode,
+  payload: {
+    name: string;
+    discount_value: string;
+    max_discount?: string | null;
+    audience: SubscriptionOffer["audience"];
+    lapsed_days?: number | null;
+    max_uses_per_driver: number;
+    total_budget?: string | null;
+    ends_at?: string | null;
+  },
+) =>
+  api.post<SubscriptionOffer>("/admin/subscription-offers", payload, {
+    query: { country_code: country },
+  });
+
+/** تعديلٌ جزئي — **والإطفاءُ منه** (`is_active: false`) لا حذف. */
+export const updateSubscriptionOffer = (
+  offerId: string,
+  payload: Partial<{
+    name: string;
+    discount_value: string;
+    max_discount: string | null;
+    max_uses_per_driver: number;
+    total_budget: string | null;
+    ends_at: string | null;
+    is_active: boolean;
+  }>,
+) =>
+  api.patch<SubscriptionOffer>(
+    `/admin/subscription-offers/${offerId}`,
+    payload,
+  );
+
+export const listOfferGrants = (offerId: string) =>
+  api.get<OfferGrant[]>(`/admin/subscription-offers/${offerId}/grants`);
+
+export const grantSubscriptionOffer = (
+  offerId: string,
+  payload: { driver_id: string; note?: string | null },
+) =>
+  api.post<OfferGrant>(
+    `/admin/subscription-offers/${offerId}/grants`,
+    payload,
+  );
 
 export const listPromoCodes = (country?: CountryCode) =>
   api.get<PromoCode[]>("/admin/promo-codes", { query: { country_code: country } });

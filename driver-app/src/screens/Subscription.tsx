@@ -329,10 +329,39 @@ export function SubscriptionScreen() {
                 <span className="block text-11.5 text-muted">
                   {DURATION_LABEL[plan.duration_type]}
                 </span>
+                {/* **اسمُ العرض وموعدُ انتهائه** — والاسمُ وحدَه بلا موعدٍ يجعل
+                    الكبتنَ يؤجّل ظانّاً أن الخصمَ باقٍ (البند ٥٤). ولا يُرسم
+                    شيءٌ لمن لا يستحقّ: الخلفيةُ لا ترسل له عرضاً أصلاً */}
+                {plan.offer_name ? (
+                  <span className="mt-4 block text-10.5 font-semibold text-ok">
+                    {plan.offer_name}
+                    {plan.offer_ends_at
+                      ? ` — حتى ${arabicDigits(
+                          new Date(plan.offer_ends_at).toLocaleDateString(
+                            "ar-EG",
+                            { day: "numeric", month: "numeric" },
+                          ),
+                        )}`
+                      : ""}
+                  </span>
+                ) : null}
               </span>
               {/* العملةُ بجانب الرقم كما في كل شاشةٍ مالية، لا سطراً تحته */}
               <span className="whitespace-nowrap text-17 font-bold text-ink">
-                {buying === plan.id ? "…" : arabicDigits(plan.price)}{" "}
+                {/* **السعرُ المشطوب بجانب المخفَّض** — والمخفَّضُ محسوبٌ في
+                    الخلفية، فلا طرحَ هنا: المالُ لا يُحسب في المتصفح (§14) */}
+                {buying === plan.id ? (
+                  "…"
+                ) : plan.price_after_discount ? (
+                  <>
+                    <span className="me-6 text-12 font-medium text-muted line-through">
+                      {arabicDigits(plan.price)}
+                    </span>
+                    {arabicDigits(plan.price_after_discount)}
+                  </>
+                ) : (
+                  arabicDigits(plan.price)
+                )}{" "}
                 <span className="text-11 font-medium text-muted">
                   {CURRENCY_LABEL[plan.currency]}
                 </span>
@@ -365,6 +394,16 @@ export function SubscriptionScreen() {
                     <span className="block text-11 text-muted">
                       {formatRange(item.starts_at, item.expires_at)}
                     </span>
+                    {/* **ما وُفِّر فعلاً لا ما قرّره العرض** (شرطُ المالك):
+                        `discount_amount` هو الفرقُ بين السعر المجمَّد وما دُفع،
+                        فلو حصّل المشرفُ السعرَ كاملاً بالخطأ لم يُعرض خصمٌ
+                        لم يَنَله. ولا طرحَ هنا — الرقمُ يصل محسوباً */}
+                    {Number(item.discount_amount) > 0 ? (
+                      <span className="mt-3 block text-10.5 font-semibold text-ok">
+                        وفّرتَ {arabicDigits(item.discount_amount)}{" "}
+                        {CURRENCY_LABEL[item.currency]}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="text-end">
                     <span className="block text-13 font-bold text-ink">

@@ -137,8 +137,35 @@ async def phone_verification(_clean_state) -> None:
 
 @pytest.fixture
 async def client() -> AsyncIterator[AsyncClient]:
+    """عميلُ الاختبارات — **ويفحص صيغةَ المال في كل استجابةٍ يمرّ بها**.
+
+    الحارسُ هنا لا في اختبارٍ بعينه (`tests/money_format.py`): مبلغٌ يخرج
+    `"0"` بدل `"0.000"` عطبٌ لا يراه نوعٌ ولا بناء، ووقع مرتين. ووضعُه في
+    العميل يجعله يمرّ على **ما تنتجه المجموعةُ كلُّها** بلا أن يُعلَّم حقلٌ
+    جديدٌ بشيء.
+    """
+    from tests.money_format import offenders
+
+    async def _check(response) -> None:
+        if "application/json" not in response.headers.get("content-type", ""):
+            return
+        await response.aread()
+        try:
+            payload = response.json()
+        except ValueError:  # ردٌّ غيرُ مقروء ليس شأنَ هذا الحارس
+            return
+        bad = offenders(payload)
+        assert not bad, (
+            "مبالغُ خرجت بغير ثلاث خانات — "
+            f"{response.request.method} {response.request.url.path}: {bad}"
+        )
+
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as ac:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test/api/v1",
+        event_hooks={"response": [_check]},
+    ) as ac:
         yield ac
 
 

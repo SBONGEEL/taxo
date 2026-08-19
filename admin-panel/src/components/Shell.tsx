@@ -51,6 +51,7 @@ const GROUPS: {
     items: [
       { label: "المحافظ والسحب", to: "/finance" },
       { label: "الاشتراكات والباقات", to: "/subscriptions" },
+      { label: "عروض الاشتراكات", to: "/offers", adminOnly: true },
       { label: "التسعيرة", to: "/pricing" },
     ],
   },

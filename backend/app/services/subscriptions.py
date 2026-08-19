@@ -37,6 +37,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+# وحدةُ التكميم للمال — `NUMERIC(12,3)`
+_MONEY_UNIT = Decimal("0.001")
+
 import logging
 
 from redis.asyncio import Redis
@@ -67,7 +70,7 @@ from app.models.enums import (
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
-from app.services import advances, audit, geo, notifications, wallet
+from app.services import advances, audit, geo, notifications, offers, wallet
 from app.ws import events
 
 # مدة كل نوع خطة. أرقامٌ لا إعدادات: أسماء الخطط الثلاثة في SPEC القسم 4 هي
@@ -335,6 +338,7 @@ async def _create(
     reference: str | None = None,
     idempotency_key: str | None = None,
     transaction_id: uuid.UUID | None = None,
+    offer: "offers.ResolvedOffer | None" = None,
 ) -> DriverSubscription:
     """يكتب صف الاشتراك — **يُستدعى وصفُّ الكبتن مقفول**.
 
@@ -353,6 +357,22 @@ async def _create(
             )
 
     starts_at = await coverage_until(session, driver.id) or _now()
+
+    # **قاعدةٌ واحدةٌ للخصم في القنوات الأربع** (البند ٥٤، الفرع ج): ما تنازلنا
+    # عنه هو **الفرقُ بين سعر الخطة وما دُفع فعلاً** — لا ما حسبه العرض. ففي
+    # المحفظة والبطاقة يتساويان بحكم البناء، وفي الكاش وكليك يفترقان حين يحصّل
+    # المشرفُ مبلغاً آخر، فيبقى «كم تنازلنا؟» جواباً واحداً في الحالتين.
+    #
+    # **ولا ينزل تحت الصفر**: تسويةُ فرقٍ تجعل المدفوعَ أكبرَ من السعر، وذاك
+    # ليس تنازلاً سالباً.
+    list_price = plan.price
+    # **يُكمَّم صراحةً إلى ثلاث خانات**: `max(Decimal("0"), Decimal("0.000"))`
+    # يعيد **الأول** لأنهما متساويان — فيخرج `"0"` حيث تخرج بقيةُ المال
+    # `"0.000"`. وهو الشكلُ السابع في عائلة «ما لا يراه البناء»، وقد أمسكه
+    # حارسُ `tests/money_format.py` في هذا السطر بعينه ساعةَ كُتب.
+    list_price = list_price.quantize(_MONEY_UNIT)
+    given_up = max(Decimal("0"), list_price - amount_paid).quantize(_MONEY_UNIT)
+
     subscription = DriverSubscription(
         driver_id=driver.id,
         # العلاقة لا المُعرّف: الردّ يعرض اسم الخطة ومدتها، وتحميلٌ كسول بعد
@@ -366,6 +386,13 @@ async def _create(
         reference=reference,
         idempotency_key=idempotency_key,
         transaction_id=transaction_id,
+        offer_id=offer.offer.id if offer is not None else None,
+        list_price=list_price,
+        discount_amount=given_up,
+        # ما قرّره العرضُ لحظتَها — به وحدَه يصدق وسمُ «تسويةٍ يدوية»
+        offer_discount_amount=(
+            offer.amount if offer is not None else Decimal("0")
+        ).quantize(_MONEY_UNIT),
     )
     session.add(subscription)
     try:
@@ -402,6 +429,14 @@ async def purchase_with_wallet(
 
     plan = await get_plan(session, plan_id, user.country_code)
 
+    # **العرضُ يُحلّ قبل الخصم من الرصيد لا بعده**: حسابٌ يقع بعد القيد يخصم
+    # السعرَ كاملاً ويكتب صفّاً مخفَّضاً — مالٌ من عدم. و`for_update` يقفل صفَّ
+    # العرض فلا يتجاوز ثلاثةُ مشترين متزامنين ميزانيةً تكفي واحداً.
+    offer = await offers.resolve(
+        session, driver=locked, plan=plan, for_update=True
+    )
+    payable = plan.price - (offer.amount if offer is not None else Decimal("0"))
+
     # خطةٌ بلا ثمن (القسم 4 يجيز `price >= 0`) لا قيد لها: الدفتر يرفض قيداً
     # بصفر عن حق — لم يتحرك مال. والاشتراك يُفتح كما لو دُفع لأنه دُفع بثمنه
     entry = (
@@ -409,12 +444,12 @@ async def purchase_with_wallet(
             session,
             owner=user,
             tx_type=WalletTransactionType.SUBSCRIPTION_PAYMENT,
-            amount=-plan.price,
+            amount=-payable,
             reference=plan.name,
             created_by=user.id,
             idempotency_key=idempotency_key,
         )
-        if plan.price > 0
+        if payable > 0
         else None
     )
     return await _create(
@@ -422,9 +457,10 @@ async def purchase_with_wallet(
         driver=locked,
         plan=plan,
         method=PaymentMethod.WALLET,
-        amount_paid=plan.price,
+        amount_paid=payable,
         idempotency_key=idempotency_key,
         transaction_id=entry.id if entry is not None else None,
+        offer=offer,
     )
 
 
@@ -453,13 +489,23 @@ async def record_manual(
     require_purchasable(locked)
     plan = await get_plan(session, plan_id, user.country_code)
 
+    # **اللوحةُ تحسب وتعبّئ ولا تفرض** (الفرع ج): العرضُ يُختم على الصفّ ليقول
+    # التقريرُ **أيُّ عرضٍ** كان، و`amount_paid` يبقى ما قاله المشرفُ أنه قبض —
+    # وحريةُ تسوية الفرق القائمة لا تُصادَر. والفرقُ بين الرقمين يُقرأ «تسويةً
+    # يدوية» بمقارنةٍ حيّة، بلا عمودٍ يُخزَّن وبلا سببٍ يُطلب.
+    offer = await offers.resolve(
+        session, driver=locked, plan=plan, for_update=True
+    )
+    suggested = plan.price - (offer.amount if offer is not None else Decimal("0"))
+
     subscription = await _create(
         session,
         driver=locked,
         plan=plan,
         method=method,
-        amount_paid=plan.price if amount_paid is None else amount_paid,
+        amount_paid=suggested if amount_paid is None else amount_paid,
         reference=(reference or "").strip() or None,
+        offer=offer,
     )
     await audit.record(
         session,
@@ -504,6 +550,12 @@ async def activate_paid_order(
     if plan is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
         raise NotFound("خطة الاشتراك غير موجودة")
 
+    # **العرضُ يُحلّ ثانيةً عند التفعيل ليُختم على الصفّ**، والمبلغُ يبقى ما
+    # دفعه المزوّدُ فعلاً: الطلبُ فُتح بالمبلغ المخصوم، وحسابٌ جديدٌ يحكم المبلغَ
+    # هنا يجعل صفّاً يخالف ما قُبض. والفرقُ — إن عُدِّل العرضُ بين الفتح والدفع —
+    # يظهر «تسويةً» في التقرير بدل أن يضيع صامتاً.
+    offer = await offers.resolve(session, driver=locked, plan=plan, for_update=True)
+
     return await _create(
         session,
         driver=locked,
@@ -512,6 +564,7 @@ async def activate_paid_order(
         amount_paid=amount,
         reference=reference,
         idempotency_key=idempotency_key,
+        offer=offer,
     )
 
 

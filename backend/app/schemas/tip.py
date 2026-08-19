@@ -44,7 +44,7 @@ class TipOptionsOut(BaseModel):
     offered: bool
     currency: str
     presets: list[Decimal] = []
-    max_amount: Decimal = Decimal("0")
+    max_amount: Decimal = Decimal("0.000")
     # البقشيشُ المُعطى على هذه الرحلة إن وُجد — فالشاشةُ تعرض «شكرتَ الكبتن»
     # بدل أزرارٍ تُرفض بـ409 عند الضغط
     given: TipOut | None = None

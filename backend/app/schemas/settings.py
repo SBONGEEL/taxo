@@ -163,6 +163,16 @@ class SubscriptionPlanOut(BaseModel):
     is_active: bool
     updated_at: datetime
 
+    # ------------------------------------------- عرضُ هذا الكبتن (البند ٥٤)
+    # **الخصمُ محسوبٌ لهذا الكبتن لا قائمةُ العروض القائمة**: عرضٌ يُرى ولا
+    # يُطبَّق عند الضغط أسوأُ من عرضٍ لا يُرى (الفرع و). ومن لا يستحقّ يرى
+    # السعرَ عارياً ولا يعلم أن ثمّة عرضاً.
+    offer_name: str | None = None
+    offer_discount: Decimal | None = None
+    # السعرُ بعد الخصم — **يُحسب في الخلفية** كبقية المال (§14)
+    price_after_discount: Decimal | None = None
+    offer_ends_at: datetime | None = None
+
 
 class PaymentSettingOut(BaseModel):
     """سياساتُ الدفع لدولة (SPEC القسم 6.2/13.6)."""

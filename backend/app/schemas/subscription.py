@@ -69,6 +69,11 @@ class SubscriptionOut(BaseModel):
     starts_at: datetime
     expires_at: datetime
     amount_paid: Decimal
+    # **ما سُجّل فعلاً لا ما حسبه العرض** (البند ٥٤، شرطُ المالك): لو حصّل
+    # المشرفُ السعرَ كاملاً بالخطأ فلا يرى الكبتنُ خصماً لم ينله — و
+    # `discount_amount` هو الفرقُ بين المجمَّد والمدفوع، لا قرارُ العرض.
+    list_price: Decimal
+    discount_amount: Decimal
     payment_method: PaymentMethod
     status: SubscriptionStatus
     transaction_id: uuid.UUID | None
@@ -90,6 +95,8 @@ class SubscriptionOut(BaseModel):
             starts_at=subscription.starts_at,
             expires_at=subscription.expires_at,
             amount_paid=subscription.amount_paid,
+            list_price=subscription.list_price,
+            discount_amount=subscription.discount_amount,
             payment_method=subscription.payment_method,
             status=subscription.status,
             transaction_id=subscription.transaction_id,

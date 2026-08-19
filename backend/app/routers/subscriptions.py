@@ -27,7 +27,7 @@ from app.schemas.subscription import (
     SubscriptionOut,
     SubscriptionPurchase,
 )
-from app.services import card_payments, subscriptions
+from app.services import card_payments, offers, subscriptions
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
@@ -36,13 +36,44 @@ CARD_PURCHASE_LIMIT = 10
 CARD_PURCHASE_WINDOW_SECONDS = 300
 
 
+async def _plans_with_offers(
+    session, *, driver, country
+) -> list[SubscriptionPlanOut]:
+    """الخططُ ومعها خصمُ **هذا الكبتن** محسوباً — وبابٌ واحدٌ لا بابان.
+
+    **وهذا الاستخراجُ ليس ترتيباً**: الخططُ تُنشر من مسارين — `/plans`
+    و`/me` (التي تحملها في ردّها كي لا تطلبها الشاشةُ مرتين). وحُسب الخصمُ
+    في الأول وحدَه أوّلَ مرة، **فقرأت شاشةُ الكبتن من الثاني ولم يظهر أيُّ
+    خصم** — وهو شكلُ «حقلٌ يُنشر من بابٍ وينسى في أخيه» الذي تكرّر في هذا
+    المشروع. ولم يكشفه اختبار: الاثنان يمرّان، وكلٌّ يسأل بابَه.
+
+    ولا `for_update` هنا: قراءةُ شاشةٍ لا شراء.
+    """
+    plans = await subscriptions.available_plans(session, country)
+    out: list[SubscriptionPlanOut] = []
+    for plan in plans:
+        row = SubscriptionPlanOut.model_validate(plan)
+        resolved = await offers.resolve(session, driver=driver, plan=plan)
+        if resolved is not None:
+            row.offer_name = resolved.offer.name
+            row.offer_discount = resolved.amount
+            row.price_after_discount = plan.price - resolved.amount
+            row.offer_ends_at = resolved.offer.ends_at
+        out.append(row)
+    return out
+
+
 @router.get("/plans", response_model=list[SubscriptionPlanOut])
 async def list_plans(
     _driver: CurrentDriver, user: CurrentUser, session: DbSession
 ) -> list[SubscriptionPlanOut]:
-    """الخطط المعروضة على الكبتن — المفعّلة في بلده وحدها (SPEC القسم 12.5)."""
-    plans = await subscriptions.available_plans(session, user.country_code)
-    return [SubscriptionPlanOut.model_validate(plan) for plan in plans]
+    """الخطط المعروضة على الكبتن — المفعّلة في بلده وحدها (SPEC القسم 12.5).
+
+    **ومعها خصمُ هذا الكبتن محسوباً** (البند ٥٤): لا قائمةَ العروض القائمة —
+    فما يُرى يجب أن يُطبَّق عند الضغط. ولا `for_update` هنا: هذه قراءةُ شاشة،
+    وقفلٌ فيها يُسلسِل كلَّ من يفتح صفحة الاشتراك بلا سبب.
+    """
+    return await _plans_with_offers(session, driver=_driver, country=user.country_code)
 
 
 @router.get("/me", response_model=MySubscriptionOut)
@@ -56,7 +87,9 @@ async def get_my_subscription(
     """
     current = await subscriptions.current_subscription(session, driver.id)
     until = await subscriptions.coverage_until(session, driver.id)
-    plans = await subscriptions.available_plans(session, user.country_code)
+    plans = await _plans_with_offers(
+        session, driver=driver, country=user.country_code
+    )
 
     return MySubscriptionOut(
         is_active=current is not None,
@@ -65,7 +98,8 @@ async def get_my_subscription(
         current=(
             SubscriptionOut.from_subscription(current) if current is not None else None
         ),
-        plans=[SubscriptionPlanOut.model_validate(plan) for plan in plans],
+        # **مبنيّةٌ سلفاً بخصمها** — ولا يُعاد تحويلُها هنا فيُمحى الخصم
+        plans=plans,
     )
 
 

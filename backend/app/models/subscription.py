@@ -87,6 +87,16 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("expires_at > starts_at", name="subscription_period_positive"),
         CheckConstraint("amount_paid >= 0", name="subscription_amount_non_negative"),
+        CheckConstraint(
+            "discount_amount >= 0", name="subscription_discount_non_negative"
+        ),
+        CheckConstraint(
+            "offer_discount_amount >= 0",
+            # **اسمٌ قصير**: الطويلُ يبلغ ٦٤ محرفاً مع بادئة الجدول، وPostgres يقتطع
+            # عند ٦٣ ويُلحق تجزئة — فيفترق اسمُه في القاعدة عن اسمِه في النموذج
+            # ويُبلّغ `test_migrations_match_models` انحرافاً في كل تشغيل
+            name="offer_discount_non_negative",
+        ),
         # مفتاح عدم التكرار الذي يفرضه القسم 14: ضغطتان على «تجديد» لا تشتريان
         # اشتراكين. فريدٌ على مستوى الجدول كما في `payments` — العميل يولّده
         # لعمليةٍ بعينها، وNULL لا يتعارض مع NULL فما لا مفتاح له لا يُقيَّد.
@@ -131,6 +141,40 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
         ForeignKey("wallet_transactions.id", ondelete="RESTRICT"),
         nullable=True,
     )
+    # ------------------------------------------------ العرضُ الذي خصم (البند ٥٤)
+
+    # **`RESTRICT` لا `SET NULL`**: عرضٌ يُحذف بعد أن اشترى به عشرون كبتناً يمحو
+    # **سببَ** خصومهم فيبقى `discount_amount` رقماً بلا اسم. والحذفُ إطفاءٌ
+    # (`is_active = false`) لا محو.
+    offer_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("subscription_offers.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    # **ما تنازلنا عنه فعلاً** — وفي مسار الكاش/كليك هو `list_price − amount_paid`
+    # لا ما حسبه العرض: فإن حصّل المشرفُ مبلغاً آخر بقي «كم تنازلنا؟» جواباً واحداً
+    discount_amount: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0"), server_default="0"
+    )
+    # **ما منحه العرضُ لحظتَها، مجمَّداً** — وهو غيرُ `discount_amount`:
+    # الأولُ ما قرّره العرض، والثاني ما وقع فعلاً. ويتساويان في المحفظة
+    # والبطاقة دائماً، ويفترقان في الكاش/كليك حين يحصّل المشرفُ مبلغاً آخر.
+    #
+    # **وبه وحدَه يصدق وسمُ «تسويةٍ يدوية»**: مقارنةٌ حيّةٌ بين رقمين مجمَّدين،
+    # فلا تنحرف حين يُعدَّل العرضُ بعد شهر — بخلاف إعادةِ الحساب من نسبة العرض
+    # اليوم. **ولا عمودَ «تسوية» يُخزَّن**: الوسمُ يُقاس ولا يُختم (قاعدةُ
+    # «flagged» في تقارير عدم التطابق).
+    offer_discount_amount: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0"), server_default="0"
+    )
+    # **سعرُ الخطة قبل الخصم، مجمَّداً** — وليس تكراراً لـ`amount_paid`: الأولُ ما
+    # كان يُدفع لولا العرض، والثاني ما دُفع. وبغيره يُقرأ سعرُ الخطة **اليوم**
+    # فيُعاد تسعيرُ تنازلٍ وقع قبل شهرين. قاعدةُ `commission_percent_at_ride`.
+    list_price: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0"), server_default="0"
+    )
+
     # مرجع خارجي: حوالة كليك أو إيصال الكاش أو مرجع الطلب لدى مزود البطاقة
     reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
