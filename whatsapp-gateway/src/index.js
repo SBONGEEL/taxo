@@ -27,7 +27,8 @@
 const http = require("node:http");
 
 const { Session, logger, MESSAGE } = require("./session");
-const { plan, maskCode } = require("./template");
+const template = require("./template");
+const { plan, maskCode } = template;
 const { SendQueue } = require("./queue");
 
 const PORT = Number(process.env.WA_PORT || 8080);
@@ -98,6 +99,14 @@ async function handleSend(req, res) {
   // بمستوى `warn` باسم القالب وبالشرط الذي خالفه.
   const decision = plan(body);
   if (decision.fellBack && !decision.silent) {
+    // **ويُحفظ ليُقرأ في اللوحة** (قرارُ المالك 2026-08-19): سطرٌ في سجلِّ
+    // حاويةٍ لا يقرؤه أحدٌ ليس أثراً مرئياً — وهو ما جعل هذا العطبَ نفسَه
+    // يعمل شهراً. من يحرّر قالباً يجب أن يرى في شاشته أنه لا يخرج
+    lastFallback = {
+      purpose: decision.purpose,
+      violations: decision.violations,
+      at: new Date().toISOString(),
+    };
     logger.warn(
       {
         purpose: decision.purpose,
@@ -159,6 +168,10 @@ async function handleSend(req, res) {
   }
 }
 
+/** آخرُ سقوطٍ إلى النصِّ المدمج — في الذاكرة عمداً: هذا **حالٌ** لا سجلّ،
+ *  والسجلُّ الدائمُ عند الخلفية التي ترفض الحفظَ بالشروط نفسِها. */
+let lastFallback = null;
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", "http://gateway");
   const route = `${req.method} ${url.pathname}`;
@@ -174,7 +187,13 @@ const server = http.createServer((req, res) => {
   if (route === "POST /send") return void handleSend(req, res);
 
   if (route === "GET /status") {
-    return send(res, 200, { ...session.snapshot(), queue_depth: queue.depth });
+    return send(res, 200, {
+      ...session.snapshot(),
+      queue_depth: queue.depth,
+      // **حالُ الشروط وآخرُ سقوطٍ إلى الاحتياط** — يقرؤهما المشرفُ في اللوحة
+      template_rules: template.rulesState(),
+      last_template_fallback: lastFallback,
+    });
   }
 
   if (route === "GET /qr") {
@@ -192,6 +211,19 @@ const server = http.createServer((req, res) => {
 
   return send(res, 404, { error: "لا مسار" });
 });
+
+// **والاحتياطُ يُعلَن عند الإقلاع لا عند أول رسالة** (2026-08-19): بوابةٌ بلا
+// ملفِّ شروطٍ ترفض كلَّ قالبٍ محرَّرٍ وتُرسل نصَّها المدمج — **ولا شيءَ يفشل**.
+// فسطرٌ صريحٌ هنا، والحالُ منشورةٌ في `/status` لتصل شاشةَ اللوحة.
+{
+  const rs = template.rulesState();
+  if (!rs.loaded) {
+    logger.error(
+      { path: rs.path, err: rs.error },
+      "شروطُ القالب غيرُ مقروءة — تُرفض كلُّ القوالب المحرَّرة ويُرسل النصُّ المدمج",
+    );
+  }
+}
 
 if (!KEY) {
   // **الرفضُ عند الإقلاع لا عند أول نداء**: بوابةٌ بلا مفتاحٍ ترفض كلَّ شيء

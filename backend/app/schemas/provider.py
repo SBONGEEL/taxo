@@ -99,3 +99,14 @@ class WhatsAppSessionOut(BaseModel):
     needs_human: bool = False
     queue_depth: int = 0
     qr: str | None = None
+
+    # **وسقوطُ القالب إلى النصّ المدمج يُنشر هنا** (قرارُ المالك 2026-08-19).
+    # كان أثرُه سطراً في سجلِّ حاويةٍ لا يقرؤه أحد، فعمل العطبُ شهراً: ملفُّ
+    # الشروط لم يكن في صورة البوابة أصلاً، فرُفض كلُّ قالبٍ بـ`too_long:…>0`
+    # وما خرج على السلك قالبٌ محرَّرٌ قط — **ولا شيءَ فشل**.
+    #
+    # `template_rules_loaded=false` يعني أن البوابة تعمل بشروطها المتشدّدة،
+    # أي أنها ترفض كلَّ قالب. و`last_template_fallback` آخرُ رسالةٍ سقطت.
+    template_rules_loaded: bool = True
+    template_rules_error: str | None = None
+    last_template_fallback: dict[str, Any] | None = None

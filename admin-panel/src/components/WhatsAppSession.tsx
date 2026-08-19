@@ -108,6 +108,27 @@ export function WhatsAppSession({ onError }: { onError: (m: string) => void }) {
         </p>
       ) : null}
 
+      {/* **الاحتياطُ يُرى، لا يُكتفى بتسجيله** (قرارُ المالك 2026-08-19):
+          هذا العطبُ نفسُه عمل شهراً لأن أثرَه كان سطراً في سجلِّ حاوية — شاشةُ
+          القوالب تحفظ وتعاين، والسلكُ يحمل النصَّ المدمج، ولا شيءَ يفشل. */}
+      {row.template_rules_loaded === false ? (
+        <p className="mb-10 text-11 leading-note text-danger">
+          البوابةُ لا تقرأ ملفَّ شروط القالب، فترفض <b>كلَّ</b> قالبٍ محرَّرٍ
+          وتُرسل نصَّها المدمج.
+          {row.template_rules_error ? ` (${row.template_rules_error})` : ""}
+        </p>
+      ) : row.last_template_fallback ? (
+        <p className="mb-10 text-11 leading-note text-warn">
+          آخرُ رسالةٍ خرجت بالنصِّ المدمج لا بقالبك
+          {row.last_template_fallback.purpose
+            ? ` (${row.last_template_fallback.purpose})`
+            : ""}
+          {row.last_template_fallback.violations?.length
+            ? ` — ${row.last_template_fallback.violations.join("، ")}`
+            : ""}
+        </p>
+      ) : null}
+
       {row.last_error && row.state !== "linked" ? (
         <p className="mb-10 text-11 text-danger">{row.last_error}</p>
       ) : null}

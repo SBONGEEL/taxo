@@ -977,6 +977,15 @@ export interface WhatsAppSession {
   queue_depth: number;
   /** نصٌّ خامٌّ ترسمه اللوحةُ مربّعاً في المتصفح — لا صورةٌ من خدمةٍ خارجية. */
   qr: string | null;
+  /** `false` يعني أن البوابة تعمل بشروطها المتشدّدة فترفض **كلَّ** قالبٍ محرَّر. */
+  template_rules_loaded: boolean;
+  template_rules_error: string | null;
+  /** آخرُ رسالةٍ سقطت إلى النصِّ المدمج — **الأثرُ المرئيُّ للاحتياط**. */
+  last_template_fallback: {
+    purpose?: string;
+    violations?: string[];
+    at?: string;
+  } | null;
 }
 
 /** سقوفُ طلب رمز التحقق لدولة (قرارُ المالك 2026-08-16).

@@ -15,6 +15,12 @@ RUN npm ci --omit=dev || npm install --omit=dev
 
 COPY --chown=node:node src ./src
 COPY --chown=node:node scripts ./scripts
+# **شروطُ القالب تُنسخ، ولا تُترك للربط** (2026-08-19). كانت مربوطةً بالخلفية
+# وحدَها ولا تُنسخ هنا، فسقطت البوابةُ إلى احتياطها المتشدّد `max_body_bytes: 0`
+# ورفضت **كلَّ** قالبٍ وارد — فما خرج على السلك قالبٌ محرَّرٌ قط. والنسخُ في
+# الصورة لا في الربط لأن الشرطَ صفةُ الوِيرِ نفسِه: صورةٌ تعمل وحدَها أصدقُ من
+# صورةٍ تحتاج ملفَّ تركيبٍ صحيحاً كي لا **تُطفئ ميزةً بصمت**
+COPY --chown=node:node otp-template-rules.json ./otp-template-rules.json
 
 USER node
 ENV NODE_ENV=production WA_AUTH_DIR=/data/auth WA_PORT=8080

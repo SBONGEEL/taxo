@@ -22,17 +22,30 @@ const path = require("node:path");
 const RULES_PATH = path.join(__dirname, "..", "otp-template-rules.json");
 
 let RULES;
+/** سببُ سقوط الشروط إلى المتشدّد — `null` يعني أنها قُرئت. */
+let RULES_ERROR = null;
 try {
   RULES = JSON.parse(fs.readFileSync(RULES_PATH, "utf-8"));
 } catch (error) {
   // الشروطُ غائبةٌ أو تالفة: تُشدَّد لا تُرخَّى — فيسقط كلُّ نصٍّ وارد إلى
-  // نصِّ البوابة المدمج، وهو أسلمُ من قبولِ ما لا نعرف أنه يوافق
+  // نصِّ البوابة المدمج، وهو أسلمُ من قبولِ ما لا نعرف أنه يوافق.
+  //
+  // **والسببُ يُحفظ ويُنشر** (2026-08-19): هذا الاحتياطُ عمل شهراً وحده —
+  // الملفُّ لم يكن في الصورة أصلاً، فرُفض **كلُّ** قالبٍ بـ`too_long:…>0` ولم
+  // يخرج قالبٌ محرَّرٌ قط. **واحتياطٌ ناجحٌ بلا أثرٍ مرئيٍّ يُعمي**: لا شيء
+  // يفشل، والشاشةُ تحفظ وتعاين، والميزةُ لا تعمل
+  RULES_ERROR = String(error && error.message ? error.message : error);
   RULES = {
     max_body_bytes: 0,
     required_variables: ["code"],
     optional_variables: [],
     forbidden_patterns: [],
   };
+}
+
+/** حالُ الشروط كما تُنشر — تقرؤها اللوحةُ فيرى الإنسانُ ما يراه السلك. */
+function rulesState() {
+  return { loaded: RULES_ERROR === null, error: RULES_ERROR, path: RULES_PATH };
 }
 
 /** يعيد أسماءَ الشروط المخالَفة — فارغاً يعني نصّاً يصلح للسلك. */
@@ -105,4 +118,12 @@ function plan(payload) {
   return { ...decision, deliver: payload.deliver === true };
 }
 
-module.exports = { violations, chooseText, plan, maskCode, RULES, RULES_PATH };
+module.exports = {
+  rulesState,
+  violations,
+  chooseText,
+  plan,
+  maskCode,
+  RULES,
+  RULES_PATH,
+};

@@ -85,6 +85,13 @@ async def read(session: AsyncSession) -> WhatsAppSessionOut:
         needs_human=bool(raw.get("needs_human")),
         queue_depth=int(raw.get("queue_depth") or 0),
         qr=qr,
+        # **حالُ الشروط تُمرَّر كما هي**: بوابةٌ لا تقرأ ملفَّ الشروط ترفض
+        # كلَّ قالبٍ محرَّرٍ صامتةً، ومن يحرّره في اللوحة يستحق أن يعرف
+        template_rules_loaded=bool(
+            (raw.get("template_rules") or {}).get("loaded", True)
+        ),
+        template_rules_error=(raw.get("template_rules") or {}).get("error"),
+        last_template_fallback=raw.get("last_template_fallback"),
     )
 
 

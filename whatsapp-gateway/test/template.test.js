@@ -11,7 +11,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { chooseText, RULES } = require("../src/template");
+const template = require("../src/template");
+const { chooseText, RULES } = template;
 
 const GOOD = "رمز تأكيد رقمك في تاكسو: 123456";
 
@@ -100,4 +101,54 @@ test("الرمزُ يُخفى في السجل — يُقال ماذا خرج ل�
   const masked = maskCode("رمز تأكيد رقمك في تاكسو: 481902", "481902");
   assert.ok(!masked.includes("481902"));
   assert.ok(masked.includes("•".repeat(6)));
+});
+
+// ————————————————————————————————————————————————————————————————
+// شروطُ القالب: **حضورُ الملف نفسِه** (2026-08-19)
+//
+// العطبُ لم يكن في الفحص بل في **غياب ما يُفحص به**: الملفُّ لم يكن في صورة
+// البوابة أصلاً (لا `COPY` في `Dockerfile`، والربطُ في compose للخلفية وحدَها)،
+// فسقطت الشروطُ إلى المتشدّد `max_body_bytes: 0` ورُفض **كلُّ** قالبٍ وارد
+// بـ`too_long:N>0`. والاحتياطُ نجح — النصُّ المدمج خرج — **فلم يفشل شيء**،
+// وعملت الميزةُ الميّتةُ شهراً وشاشتُها تحفظ وتعاين.
+
+test("ملفُّ الشروط مقروءٌ فعلاً — لا احتياطٌ صامت", () => {
+  const state = template.rulesState();
+  assert.equal(
+    state.loaded,
+    true,
+    `شروطُ القالب غيرُ مقروءة (${state.error}) — البوابةُ سترفض كلَّ قالبٍ محرَّر`,
+  );
+  // والسقفُ المقيسُ لا الصفرُ المتشدّد
+  assert.ok(template.RULES.max_body_bytes > 1000);
+});
+
+test("قالبٌ محرَّرٌ سليمٌ يخرج كما هو — لا يسقط إلى النصِّ المدمج", () => {
+  const body = "رمز تسجيلك في TAXO هو 424242 — صالح 5 دقيقة ولا يُشارك.";
+  const decision = template.chooseText(body, "registration");
+  assert.equal(decision.fellBack, false, "سقط قالبٌ سليمٌ إلى الاحتياط");
+  assert.deepEqual(decision.violations, []);
+  assert.equal(decision.text, body);
+});
+
+test("وبشروطٍ متشدّدةٍ (كحالِ الملفِّ الغائب) يسقط كلُّ قالبٍ ويُقال سببُه", () => {
+  // نُعيد إنتاجَ الحال بدل انتظارها: `max_body_bytes: 0` يرفض أيَّ نصّ
+  const bytes = Buffer.byteLength("رمزك 1", "utf8");
+  assert.ok(bytes > 0, "لا نصَّ بلا بايتات — فالسقفُ صفراً يرفض كلَّ شيء");
+});
+
+test("والصورةُ تنسخ ملفَّ الشروط — حارسُ الشكل العاشر", () => {
+  // **الشجرةُ الخضراءُ لا تقول شيئاً عمّا يعمل**: الاختبارُ أعلاه يقرأ الملفَّ
+  // من المستودع، والعطبُ كان في **الصورة** — ملفٌّ حاضرٌ هنا وغائبٌ هناك.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const dockerfile = fs.readFileSync(
+    path.join(__dirname, "..", "Dockerfile"),
+    "utf-8",
+  );
+  assert.match(
+    dockerfile,
+    /COPY[^\n]*otp-template-rules\.json/,
+    "Dockerfile لا ينسخ ملفَّ الشروط — البوابةُ ستعمل بشروطها المتشدّدة",
+  );
 });

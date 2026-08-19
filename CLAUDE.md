@@ -1329,6 +1329,44 @@ no display text.
 **Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
 eye is load-bearing, and weakening it is not a style decision.
 
+### The twelfth shape — a fallback that works, and hides the defect it was built for (2026-08-19)
+
+**The OTP template feature had never once reached the wire, and nothing failed.** The gateway reads
+`otp-template-rules.json` to decide whether an incoming template may go out. The file was **not in the
+gateway's image at all** — no `COPY` in its `Dockerfile`, and the compose bind mounts it into the
+**backend** only. So `template.js` took its deliberately-strict fallback (`max_body_bytes: 0`) and
+rejected **every** template with `too_long:3928>0`, then sent its own built-in text instead.
+
+**Every layer reported success.** The panel saved the template and previewed it. The backend validated
+it against the same rules (it *does* have the file) and returned 200. The gateway returned 200 with a
+real message id. WhatsApp delivered. The recipient read a correct OTP. The only trace was a `warn` line
+inside a container's log — which is where it sat for as long as the feature has existed.
+
+**The shape: a fallback whose success is indistinguishable from the feature working.** It is the
+opposite failure mode to the sixth shape (a criterion measuring an event the system never emits). There,
+a healthy channel reported failure. Here, a dead feature reported health — and that is worse, because
+failure gets investigated and health does not.
+
+**Three rules came out of fixing it, and the second is the general one.**
+
+- **The condition ships inside the artifact that enforces it.** The rules file is now `COPY`d into the
+  image, not left to a bind mount: a container that needs a correct compose file in order not to
+  silently disable a feature is a container that will silently disable it.
+- **A fallback is always logged *and* always visible where the decision is made.** `logger.warn` in a
+  sidecar is not a visible trace. The gateway now publishes `template_rules.loaded` and
+  `last_template_fallback` in `/status`, the backend carries both through `WhatsAppSessionOut`, and the
+  panel's session card says «البوابةُ لا تقرأ ملفَّ شروط القالب، فترفض كلَّ قالبٍ محرَّر» — read by the same
+  person who just edited the template. It also shouts once at startup, at `error`.
+- **Guard the artifact, not only the tree** (the tenth shape applied). `npm test` in the gateway now
+  asserts two separate things: that `rulesState().loaded` is true *and* that the `Dockerfile` carries the
+  `COPY`. The first passes in a repo where the image is broken; only the second catches the real defect.
+  Both verified by deletion — removing the file fails 9 tests, removing the `COPY` line fails 1.
+
+**And the proof of the fix is not that saving works.** It is a dry-run through the real chain — template
+saved through the panel's door, rendered by the backend's own `render`, posted to the gateway with
+`deliver:false` — returning `fell_back:false` and `would_send` equal to the edited text. Before the fix
+that same call returned `fell_back:true`.
+
 ### The eleventh shape — an obstacle that exists only on a device (2026-08-19)
 
 **Four in one feature, and none of them is visible from a browser, a test, or a build.** The switch
