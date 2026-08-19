@@ -25,6 +25,7 @@ import { usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import {
+  currencyLabel,
   formatMoney,
   newIdempotencyKey,
   subtractMoney,
@@ -144,7 +145,9 @@ export function WalletTransferScreen() {
             onChange={(event) =>
               setAmount(event.target.value.replace(/[^\d.]/g, ""))
             }
-            suffix={country?.currency}
+            // **الرمزُ لا الكود**: كلُّ سطحٍ ماليٍّ آخر يقول «د.أ»، وهذا وحدَه
+            // كان يقول «JOD» — نفسُ شكلِ حقلِ الشحن الذي أُصلح في 2026-08-13
+            suffix={currencyLabel(country?.currency)}
             hint="الحدّان اليومي والشهري يضبطهما فريق TAXO"
           />
         ) : null}

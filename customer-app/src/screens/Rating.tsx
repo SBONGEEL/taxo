@@ -157,6 +157,9 @@ export function RatingScreen() {
               {tip.presets.map((amount) => (
                 <Button
                   key={amount}
+                  // **التحديدُ يُقال لا يُلوَّن وحدَه**: قارئُ الشاشة لا يرى
+                  // اللون، فمن يعتمد عليه يضغط «أرسل» ولا يعرف أيَّ مبلغٍ اختار
+                  aria-pressed={chosenTip === amount}
                   variant={chosenTip === amount ? "primary" : "secondary"}
                   className="flex-1"
                   disabled={tipping !== null}

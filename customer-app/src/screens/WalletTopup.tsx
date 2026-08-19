@@ -259,6 +259,7 @@ function ChannelOption({
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={onSelect}
       className={cn(
         "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",

@@ -50,6 +50,7 @@ export function CardChoice({
             <li key={card.id}>
               <button
                 type="button"
+                aria-pressed={selected === card.id}
                 onClick={() => setSelected(card.id)}
                 className={cn(
                   "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",

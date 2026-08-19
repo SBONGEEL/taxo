@@ -193,6 +193,7 @@ function Quick({
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={() => onPick(value)}
       className={cn(
         "pressable flex-1 rounded-12 border p-12 text-center text-ink",

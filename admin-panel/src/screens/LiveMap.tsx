@@ -221,6 +221,7 @@ function DriverRow({
   return (
     <button
       type="button"
+      aria-pressed={selected}
       onClick={onPick}
       className={cn(
         "rounded-13 border p-11 text-start",

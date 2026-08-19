@@ -149,6 +149,7 @@ export function DisputeScreen() {
               <button
                 key={option}
                 type="button"
+                aria-pressed={reason === option}
                 onClick={() => setReason(option)}
                 className={cn(
                   "pressable flex items-center gap-11 rounded-14 border bg-surface px-14 py-13 text-start",

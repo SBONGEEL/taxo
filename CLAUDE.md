@@ -1212,6 +1212,47 @@ swap. Rewritten to read the **AST** — which purpose sits inside which endpoint
 two tests on a swap and passes eight on correct code, verified by doing the swap. **The question is
 never "how many?" but "which is in which?"**
 
+### The tenth shape — a green build guard says nothing about what the user is running (2026-08-19)
+
+**Both guards were green and the phone was running code from before the change.** `check:target`
+refused an undeclared target and `check:dist` confirmed the built bundle carried
+`https://api.tajora.ly` and no localhost. Both true. Both irrelevant: `dist` had been built *before* the
+three confirm-sheet changes, and nobody rebuilt it.
+
+**So the first press of the transfer confirm sent 4.500 د.أ on one tap** — the exact defect that had
+just been fixed, reproduced live, because the fix was in the tree and not in the bundle.
+
+**The shape: every guard in this project validates the source tree, and the user runs an artifact.**
+`tsc`, `check:scale`, `check:enums`, `check:config`, `check:flags`, `check:slot`, `check:target`,
+`check:dist` — all eight answer "is the code right?". **None answers "is this the code that is
+running?"** And `check:dist` is the closest and still does not: it verifies the bundle's *target*, never
+its *age*, so a stale `dist` from any earlier commit passes it perfectly.
+
+It is the same family as the three container traps already recorded here — a `restart` that keeps the
+old image, a bind mount inotify cannot cross, a `run` that inherits a restart policy. Each makes the
+system look like it did what you asked. **This one adds a phone, where the gap can be days rather than
+seconds**, and where the APK is a shell around a remote bundle so nothing about the installed app
+changes when the bundle goes stale.
+
+**The rule, and it is now step zero of every device round** (below): rebuild, redeploy, reinstall, and
+then **prove from the device itself** that what is running is the latest build — by comparing the served
+bundle hash against the one just built, not by trusting that a build happened.
+
+### Step zero for every phone round — prove the artifact before measuring anything
+
+**Do not begin a measurement on a bundle whose age you have not checked.** The order is fixed:
+
+1. **Rebuild both PWAs with their declared target** (`VITE_API_BASE_URL=… npm run build`), so
+   `check:target`/`check:dist` run and `dist` is current.
+2. **Restart the containers that serve them**, then read the served bundle name
+   (`curl https://app.tajora.ly | grep assets/index-…`) and confirm the hash **changed** from before.
+3. **Reinstall the APKs** and record `firstInstallTime`/`lastUpdateTime` from `dumpsys package`.
+4. **Prove it on the device**: the WebView's page URL is the declared host, and the loaded bundle hash
+   matches the one built in step 1.
+
+Only then does a measurement mean anything. A round that skips this measures an unknown version, and
+its findings — including "the fix did not work" — are about that unknown version.
+
 ### The ninth shape — an intermediate step no human has ever pressed (2026-08-19)
 
 **The ratio is the whole argument. Four money steps were pressed for the first time; three of them

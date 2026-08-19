@@ -246,10 +246,18 @@ export function AdvancesScreen() {
               </div>
               <div className="mt-10 border-t border-line pt-10">
                 <p className="text-12.5 font-semibold text-ink">شرطُ السداد</p>
+                {/* **وحدٌّ أدنى صفرُه لا يُنطق شرطاً** — نفسُ قاعدة قائمة
+                    الشروط أعلاه، حيث «٧ / ٠» تُخفى لأنها تخترع مقارنةً حيث لا
+                    مطلوب. وهنا أسوأ: «ويبقى لك ٠٫٠٠٠ على الأقل» جملةٌ تَعِد
+                    بشيءٍ وتعطي لا شيء، فيقرؤها صاحبُها ضماناً لا وجودَ له */}
                 <p className="mt-4 text-11.5 leading-note text-muted">
                   يُقتطع {arabicDigits(String(state.deduction_percent))}٪ من كل
-                  رحلةٍ يدخل مالُها محفظتَك، ويبقى لك منها{" "}
-                  {arabicDigits(state.min_kept_amount)} {currency} على الأقل.
+                  رحلةٍ يدخل مالُها محفظتَك
+                  {Number(state.min_kept_amount) > 0
+                    ? `، ويبقى لك منها ${arabicDigits(
+                        state.min_kept_amount,
+                      )} ${currency} على الأقل.`
+                    : "."}
                   {state.term_days
                     ? ` والمهلةُ ${arabicDigits(String(state.term_days))} يوماً.`
                     : ""}
