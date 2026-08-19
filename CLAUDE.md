@@ -1254,10 +1254,23 @@ blocklist being published. It is the "flaky under load is a hypothesis, not a di
 this was a **wrong assertion**, not flakiness. Now it walks the payload's values, subtracts its keys
 (a field's own name explains itself), and checks **all 53** rather than a random ten.
 
-**And the failure mode is now benign, which is the real prize.** Before, a number that skipped the
-funnel came out Latin in an Arabic-Indic app — visibly wrong. Now a number that skips the funnel comes
-out Latin in a Latin app, i.e. correct. The conversion is no longer load-bearing for correctness, only
-for normalising input that arrives the other way.
+**And the failure mode is now benign — which has a second face that matters more than the first.**
+Before, a number that skipped the funnel came out Latin in an Arabic-Indic app: **visibly wrong**, and
+anyone opening the screen saw it. Now a number that skips the funnel comes out Latin in a Latin app,
+i.e. correct-looking. The conversion stopped being load-bearing for correctness — **and stopped being
+observable at the same moment**.
+
+So a missing `digits()` call now leaves **no trace on any screen**. No visual pass will ever find one
+again, and the sight-check that caught this class for two years is retired. **`check:digits` is not a
+tidiness guard; it is the only remaining detector**, and the one shape it must never miss is the
+literal — an Arabic-Indic digit typed into a constant string, which is now the only way a stray digit
+can still reach a screen looking odd. Verified against eight literal shapes (object value, `Record`
+value, array element, template middle, function return, JSX attribute, JSX text, plain const) and all
+eight fail the guard. Its two exclusions were re-read to confirm they hold conversion ranges only and
+no display text.
+
+**Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
+eye is load-bearing, and weakening it is not a style decision.
 
 ### The tenth shape — a green build guard says nothing about what the user is running (2026-08-19)
 

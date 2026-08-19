@@ -126,7 +126,8 @@ function TemplateCard({
 
       <div className="mt-10 rounded-12 border border-line px-12 py-10">
         <p className="mb-4 text-11 font-semibold text-muted">
-          المعاينة — كما تخرج على السلك بالضبط
+          المعاينة — بالقيم الحقيقية، والرمز {template.preview_sample_code}{" "}
+          عيّنة
         </p>
         <p className="whitespace-pre-wrap text-12.5 leading-note text-ink">
           {template.preview}

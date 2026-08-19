@@ -20,12 +20,17 @@ from app.schemas.otp_template import (
     OtpTemplateUpdate,
     TemplateViolationOut,
 )
-from app.services import audit, otp_templates
+from app.services import audit, otp, otp_templates
 
 router = APIRouter(prefix="/admin/otp-templates", tags=["admin"])
 
+# **المعاينةُ بالقيم الحقيقية لحظتَها** (قرارُ المالك 2026-08-19، SPEC §19.8):
+# كانت تعرض «١٠ دقيقة» والمهلةُ الحقيقيةُ خمس، فيحرّر المشرفُ على أساسٍ كاذب —
+# وهو صنفُ «شاشةٌ تقول ما لا يقع» بعينه. والمهلةُ تُقرأ من مصدرها لا تُكتب هنا.
+#
+# **والرمزُ وحدَه عيّنةٌ ظاهرة**، ولا مفرَّ: لا رمزَ حقيقياً قبل الإرسال، وتوليدُ
+# واحدٍ للمعاينة يعني رمزاً حيّاً لم يطلبه أحد.
 _PREVIEW_CODE = "123456"
-_PREVIEW_MINUTES = 10
 
 
 def _to_out(purpose: str, row: OtpMessageTemplate | None) -> OtpTemplateOut:
@@ -37,8 +42,9 @@ def _to_out(purpose: str, row: OtpMessageTemplate | None) -> OtpTemplateOut:
         body=body,
         is_default=row is None,
         preview=otp_templates.render(
-            body, code=_PREVIEW_CODE, minutes=_PREVIEW_MINUTES
+            body, code=_PREVIEW_CODE, minutes=otp.CODE_TTL_SECONDS // 60
         ),
+        preview_sample_code=_PREVIEW_CODE,
         violations=[TemplateViolationOut(code=v.code, message=v.message) for v in bad],
         # **يُقال في الشاشة لا في السجل وحدَه**: من حرّر نصّاً مخالفاً يظنّه
         # يعمل، والسجلُّ لا يقرؤه إلا من يبحث عن عطبٍ يعرف بوجوده أصلاً

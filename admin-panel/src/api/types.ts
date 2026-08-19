@@ -1071,6 +1071,8 @@ export type OtpTemplate = {
   body: string;
   is_default: boolean;
   preview: string;
+  /** الرمزُ في المعاينة عيّنةٌ وحدَه — لا رمزَ حقيقياً قبل الإرسال. */
+  preview_sample_code: string;
   violations: OtpTemplateViolation[];
   rejected_at_send: boolean;
   updated_at: string | null;

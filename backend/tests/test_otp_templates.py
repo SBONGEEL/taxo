@@ -81,10 +81,13 @@ def test_a_correct_template_passes() -> None:
 
 
 def test_rendering_replaces_every_known_variable_and_leaves_nothing() -> None:
+    # **واسمُ التطبيق من إعداده** — لا ثابتاً هنا ولا في دالّة الصياغة
+    from app.core.config import settings
+
     out = otp_templates.render(
         "{app_name}: {code} — {minutes} دقيقة", code="4321", minutes=7
     )
-    assert out == "تاكسو: 4321 — 7 دقيقة"
+    assert out == f"{settings.app_name}: 4321 — 7 دقيقة"
     assert "{" not in out
 
 
@@ -161,7 +164,13 @@ async def test_the_preview_is_the_wire_text_not_an_approximation(
     )
     listed = (await client.get("/admin/otp-templates", headers=admin_headers)).json()
     row = next(t for t in listed["templates"] if t["purpose"] == "registration")
-    assert row["preview"] == otp_templates.render(row["body"], code="123456", minutes=10)
+    from app.services import otp
+
+    assert row["preview"] == otp_templates.render(
+        row["body"],
+        code=row["preview_sample_code"],
+        minutes=otp.CODE_TTL_SECONDS // 60,
+    )
     assert "{" not in row["preview"]
 
 
@@ -221,3 +230,78 @@ async def test_a_rejected_template_says_so_on_its_own_screen(
     row = next(t for t in listed["templates"] if t["purpose"] == "password_reset")
     assert row["rejected_at_send"] is True
     assert any(v["code"] == "template_missing_variable" for v in row["violations"])
+
+
+# ------------------------------------------- المعاينة بالقيم الحقيقية (§19.8)
+
+
+async def test_the_preview_uses_the_real_ttl_not_a_sample_number(
+    client, admin_headers
+) -> None:
+    """**المعاينةُ تقرأ المهلةَ من مصدرها** — لا رقماً مكتوباً كعيّنة.
+
+    كانت تعرض «10 دقيقة» والمهلةُ الحقيقيةُ خمس، فيحرّر المشرفُ على أساسٍ كاذب.
+    والاختبارُ يقارن بالثابت نفسِه لا برقمٍ منسوخ: تغييرُ `CODE_TTL_SECONDS`
+    يجب أن يحرّك المعاينةَ معه، لا أن يترك رقمين يفترقان.
+    """
+    from app.services import otp
+
+    await client.put(
+        "/admin/otp-templates/registration",
+        json={"body": "رمزك {code} صالح {minutes} دقيقة"},
+        headers=admin_headers,
+    )
+    listed = (await client.get("/admin/otp-templates", headers=admin_headers)).json()
+    row = next(t for t in listed["templates"] if t["purpose"] == "registration")
+    assert f"صالح {otp.CODE_TTL_SECONDS // 60} دقيقة" in row["preview"]
+
+
+async def test_the_preview_uses_the_configured_app_name(
+    client, admin_headers
+) -> None:
+    """واسمُ التطبيق من إعداده — لا ثابتاً في دالّة الصياغة."""
+    from app.core.config import settings
+
+    await client.put(
+        "/admin/otp-templates/password_reset",
+        json={"body": "{app_name}: {code}"},
+        headers=admin_headers,
+    )
+    listed = (await client.get("/admin/otp-templates", headers=admin_headers)).json()
+    row = next(t for t in listed["templates"] if t["purpose"] == "password_reset")
+    assert row["preview"].startswith(f"{settings.app_name}: ")
+
+
+async def test_only_the_code_is_a_sample_and_it_says_so(
+    client, admin_headers
+) -> None:
+    """**الرمزُ وحدَه عيّنة**، ويُنشر كذلك — فلا تُقرأ المعاينةُ رمزاً حقيقياً.
+
+    ولا مفرَّ منه: لا رمزَ قبل الإرسال، وتوليدُ واحدٍ للمعاينة رمزٌ حيٌّ لم
+    يطلبه أحد.
+    """
+    listed = (await client.get("/admin/otp-templates", headers=admin_headers)).json()
+    for row in listed["templates"]:
+        assert row["preview_sample_code"]
+        assert row["preview_sample_code"] in row["preview"]
+
+
+async def test_the_wire_and_the_preview_agree_on_everything_but_the_code(
+    session_factory, admin_headers, client
+) -> None:
+    """ما يُعرض وما يخرج **من دالّةٍ واحدة** — والفرقُ الرمزُ وحدَه."""
+    from app.services import otp
+
+    body = "{app_name} — {code} — {minutes}"
+    await client.put(
+        "/admin/otp-templates/registration",
+        json={"body": body},
+        headers=admin_headers,
+    )
+    listed = (await client.get("/admin/otp-templates", headers=admin_headers)).json()
+    row = next(t for t in listed["templates"] if t["purpose"] == "registration")
+
+    on_wire = otp_templates.render(
+        body, code="999111", minutes=otp.CODE_TTL_SECONDS // 60
+    )
+    assert row["preview"].replace(row["preview_sample_code"], "999111") == on_wire

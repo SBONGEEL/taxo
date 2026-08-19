@@ -21,6 +21,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.otp_template import OtpMessageTemplate, OtpTemplatePurpose
 
 # ------------------------------------------------------------ الشروط
@@ -166,13 +167,22 @@ PURPOSE_LABEL = {
 # ------------------------------------------------------------ الاستبدال
 
 
-def render(body: str, *, code: str, minutes: int, app_name: str = "تاكسو") -> str:
+def render(
+    body: str, *, code: str, minutes: int, app_name: str | None = None
+) -> str:
     """يستبدل المعروفَ ولا يترك مجهولاً.
 
     و`str.format` لا تصلح: قوسٌ مفردٌ في نصٍّ عربيٍّ يرفع `KeyError` وقتَ
     الإرسال — أي عطبٌ في مسارِ رمزٍ ينتظره إنسان. فالاستبدالُ صريحٌ بالمعروف.
     """
-    values = {"code": code, "minutes": str(minutes), "app_name": app_name}
+    # **اسمُ التطبيق من إعداده لا من ثابتٍ هنا** (قرارُ المالك 2026-08-19):
+    # كان `"تاكسو"` مكتوباً في هذا التوقيع بينما `settings.app_name` شيءٌ آخر —
+    # فقالبٌ يكتب فيه المشرفُ `{app_name}` كان يُخرج اسماً لا يقرّره أحد.
+    values = {
+        "code": code,
+        "minutes": str(minutes),
+        "app_name": app_name or settings.app_name,
+    }
     return _PLACEHOLDER.sub(
         lambda m: values.get(m.group(1).strip(), m.group(0)), body
     )

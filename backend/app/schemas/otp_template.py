@@ -27,6 +27,12 @@ class OtpTemplateOut(BaseModel):
         description="لم يُحرَّر بعد — والنصُّ المعروض هو المدمج",
     )
     preview: str
+    preview_sample_code: str = Field(
+        description=(
+            "الرمزُ المعروض في المعاينة — **عيّنةٌ وحدَها**، وكلُّ ما عداها في"
+            " المعاينة قيمةٌ حقيقيةٌ لحظتَها"
+        ),
+    )
     violations: list[TemplateViolationOut]
     rejected_at_send: bool = Field(
         description="مخالفٌ فيُستعمل النصُّ الافتراضيُّ عند الإرسال",
