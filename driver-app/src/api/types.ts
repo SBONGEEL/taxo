@@ -494,6 +494,9 @@ export interface SubscriptionPlan {
   /** يُحسب في الخلفية كبقية المال (§14) — لا يُطرح في المتصفح. */
   price_after_discount: string | null;
   offer_ends_at: string | null;
+  /** عرضٌ استفاد منه هذا الكبتنُ سلفاً فاستنفد حدَّه — يُذكر ولا يُطبَّق.
+   *  و`null` لمن لم يستحقّ قطُّ: فمن لم يُعرض عليه شيءٌ لا يُقال له شيء. */
+  exhausted_offer_name: string | null;
 }
 
 export interface MySubscription {
@@ -695,6 +698,10 @@ export interface AdvanceState {
   cap: string;
   currency: string;
   debt: AdvanceDebt | null;
+  /** شرطُ السداد — يُعرض **قبل** الموافقة: السلفةُ دَينٌ لا إنفاقُ رصيد. */
+  deduction_percent: number;
+  min_kept_amount: string;
+  term_days: number;
 }
 
 /** حالُ سدادِ رحلة — **محسوبةٌ في الخلفية، ومرآتُها هنا**

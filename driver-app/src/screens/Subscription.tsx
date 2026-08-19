@@ -332,6 +332,14 @@ export function SubscriptionScreen() {
                 {/* **اسمُ العرض وموعدُ انتهائه** — والاسمُ وحدَه بلا موعدٍ يجعل
                     الكبتنَ يؤجّل ظانّاً أن الخصمَ باقٍ (البند ٥٤). ولا يُرسم
                     شيءٌ لمن لا يستحقّ: الخلفيةُ لا ترسل له عرضاً أصلاً */}
+                {/* **«استفدتَ منه من قبل» يُقال، والصمتُ لمن لم يستحقّ قطُّ**:
+                    من رأى الخصمَ ثم اختفى يظنّ العرضَ انتهى أو التطبيقَ عطب،
+                    ومن لم يُعرض عليه شيءٌ لا يُقال له عن عرضٍ لغيره (الفرع و). */}
+                {!plan.offer_name && plan.exhausted_offer_name ? (
+                  <span className="mt-4 block text-10.5 text-muted">
+                    استفدتَ من «{plan.exhausted_offer_name}» من قبل
+                  </span>
+                ) : null}
                 {plan.offer_name ? (
                   <span className="mt-4 block text-10.5 font-semibold text-ok">
                     {plan.offer_name}
@@ -442,14 +450,35 @@ export function SubscriptionScreen() {
               يُخصم المبلغ من رصيد محفظتك فوراً، ويبدأ الاشتراك من انتهاء تغطيتك
               الحالية إن كانت سارية.
             </p>
-            <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
-              <span className="text-12.5 text-muted">المبلغ</span>
-              <span className="text-17 font-bold text-ink">
-                {arabicDigits(confirming.price)}{" "}
-                <span className="text-11 font-medium text-muted">
-                  {CURRENCY_LABEL[confirming.currency]}
+            {/* **المبلغُ هنا هو ما يُخصم فعلاً، لا سعرُ الخطة** (قِيس على
+                هاتفٍ حقيقي 2026-08-19): كانت الورقةُ تعرض ١٫٥٠٠ ويُخصم ١٫٢٧٥.
+                والفرقُ لصالح الكبتن، لكنها **آخرُ شاشةٍ يقرؤها قبل أن يتحرك
+                المال** — ورقمٌ فيها غيرُ المخصوم يجعلها تكذب في مبلغها.
+                ولم يكشفه شيء: الفحصُ على سطح المكتب نادى الـAPI مباشرةً فلم
+                يفتح الورقةَ أصلاً. */}
+            <div className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12">
+              <div className="flex items-baseline justify-between">
+                <span className="text-12.5 text-muted">المبلغ</span>
+                <span className="text-17 font-bold text-ink">
+                  {arabicDigits(
+                    confirming.price_after_discount ?? confirming.price,
+                  )}{" "}
+                  <span className="text-11 font-medium text-muted">
+                    {CURRENCY_LABEL[confirming.currency]}
+                  </span>
                 </span>
-              </span>
+              </div>
+              {/* والسعرُ الأصليُّ يبقى مرئياً مشطوباً: من رأى «١٫٥٠٠» في
+                  البطاقة ثم «١٫٢٧٥» وحدَها هنا يظنّها خطةً أخرى */}
+              {confirming.price_after_discount && confirming.offer_name ? (
+                <div className="mt-8 flex items-baseline justify-between">
+                  <span className="text-11 text-ok">{confirming.offer_name}</span>
+                  <span className="text-11.5 text-muted line-through">
+                    {arabicDigits(confirming.price)}{" "}
+                    {CURRENCY_LABEL[confirming.currency]}
+                  </span>
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-col gap-9">
               <Button

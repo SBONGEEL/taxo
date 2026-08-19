@@ -121,7 +121,9 @@ async def policy_for(session: AsyncSession, country: CountryCode) -> Policy:
             session, country, FeatureKey.DRIVER_ADVANCES_ENABLED
         ),
         deduction_percent=row.deduction_percent if row else DEFAULT_DEDUCTION_PERCENT,
-        min_kept_amount=row.min_kept_amount if row else Decimal("0"),
+        # **مُكمَّمٌ**: صفرٌ مُنشأٌ في بايثون يُسلسَل `"0"` حيث تُسلسَل بقيةُ
+        # المال `"0.000"` — الشكلُ السابع، وأمسكه الحارسُ في هذا السطر بعينه
+        min_kept_amount=row.min_kept_amount if row else Decimal("0.000"),
         term_days=row.term_days if row else DEFAULT_TERM_DAYS,
         min_completed_rides=(
             row.min_completed_rides if row else DEFAULT_MIN_COMPLETED_RIDES
@@ -299,6 +301,12 @@ class Eligibility:
     cap: Decimal
     currency: str
     debt: Debt | None
+    # **شرطُ السداد يُنشر مع العرض** (قرارُ المالك 2026-08-19): السلفةُ تُنشئ
+    # **ديناً** لا تُنفق رصيداً، فمن يوافق يجب أن يرى كيف يُسترجَع **قبل** لا
+    # بعد. وكانت الشاشةُ تطلب ولا تقول شيئاً عن الاقتطاع.
+    deduction_percent: int = 0
+    min_kept_amount: Decimal = Decimal("0.000")
+    term_days: int = 0
 
     @property
     def eligible(self) -> bool:
@@ -326,6 +334,9 @@ async def eligibility(
         return Eligibility(
             offered=False, requirements=[], cap=Decimal("0"),
             currency=currency, debt=debt,
+            deduction_percent=policy.deduction_percent,
+            min_kept_amount=policy.min_kept_amount,
+            term_days=policy.term_days,
         )
 
     rides = await _completed_rides(session, driver.id)
@@ -358,6 +369,9 @@ async def eligibility(
         requirements=requirements,
         cap=await cap_for(session, driver=driver, policy=policy, base=base),
         currency=currency,
+        deduction_percent=policy.deduction_percent,
+        min_kept_amount=policy.min_kept_amount,
+        term_days=policy.term_days,
         debt=debt,
     )
 

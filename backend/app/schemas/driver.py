@@ -10,7 +10,6 @@ from app.models.enums import (
     AdvanceStatus,
     CountryCode,
     DeactivationStatus,
-    CountryCode,
     DocumentReviewStatus,
     DocumentType,
     DriverStatus,
@@ -357,6 +356,10 @@ class AdvanceStateOut(BaseModel):
     cap: Decimal
     currency: str
     debt: AdvanceDebtOut | None
+    # شرطُ السداد — يُعرض قبل الموافقة لا بعدها
+    deduction_percent: int = 0
+    min_kept_amount: Decimal = Decimal("0.000")
+    term_days: int = 0
 
 
 class AdvanceRequestIn(BaseModel):

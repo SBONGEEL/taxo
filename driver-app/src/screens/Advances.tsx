@@ -74,6 +74,10 @@ export function AdvancesScreen() {
   const goBack = useGoBack();
   const [state, setState] = useState<AdvanceState | null>(null);
   const [amount, setAmount] = useState("");
+  // **ورقةُ تأكيدٍ لأنها تُنشئ ديناً لا تُنفق رصيداً** (قرارُ المالك
+  // 2026-08-19): من يوافق يجب أن يرى **كيف يُسترجَع** قبل الموافقة لا بعدها —
+  // وكانت الشاشةُ تطلب المبلغ ولا تقول شيئاً عن الاقتطاع.
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -200,8 +204,8 @@ export function AdvancesScreen() {
             <Button
               className="mt-12"
               loading={busy}
-              disabled={!state.eligible}
-              onClick={() => void run(() => requestAdvance(amount))}
+              disabled={!state.eligible || Number(amount) <= 0}
+              onClick={() => setConfirming(true)}
             >
               اطلب السلفة
             </Button>
@@ -212,6 +216,66 @@ export function AdvancesScreen() {
       {error ? (
         <div className="mt-12">
           <ErrorNote message={error} />
+        </div>
+      ) : null}
+
+      {confirming && state ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-dim"
+          onClick={() => setConfirming(false)}
+        >
+          <div
+            className="w-full rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="mb-4 text-16 font-bold text-ink">تأكيد طلب السلفة</h2>
+            {/* **الجملةُ تقول إنه دَين، لا «سيصلك مبلغ»** */}
+            <p className="mb-14 text-12 leading-note text-muted">
+              هذه سلفةٌ تُسترجَع من دخلك، لا رصيدٌ يُمنح.
+            </p>
+
+            <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+              <div className="flex items-baseline justify-between">
+                <span className="text-12.5 text-muted">المبلغ</span>
+                <span className="text-17 font-bold text-ink">
+                  {arabicDigits(amount)}{" "}
+                  <span className="text-11 font-medium text-muted">
+                    {currency}
+                  </span>
+                </span>
+              </div>
+              <div className="mt-10 border-t border-line pt-10">
+                <p className="text-12.5 font-semibold text-ink">شرطُ السداد</p>
+                <p className="mt-4 text-11.5 leading-note text-muted">
+                  يُقتطع {arabicDigits(String(state.deduction_percent))}٪ من كل
+                  رحلةٍ يدخل مالُها محفظتَك، ويبقى لك منها{" "}
+                  {arabicDigits(state.min_kept_amount)} {currency} على الأقل.
+                  {state.term_days
+                    ? ` والمهلةُ ${arabicDigits(String(state.term_days))} يوماً.`
+                    : ""}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-16 flex flex-col gap-9">
+              <Button
+                loading={busy}
+                onClick={() => {
+                  setConfirming(false);
+                  void run(() => requestAdvance(amount));
+                }}
+              >
+                أوافق — اطلب السلفة
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => setConfirming(false)}
+              >
+                رجوع
+              </Button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

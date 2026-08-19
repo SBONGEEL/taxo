@@ -59,6 +59,12 @@ async def _plans_with_offers(
             row.offer_discount = resolved.amount
             row.price_after_discount = plan.price - resolved.amount
             row.offer_ends_at = resolved.offer.ends_at
+        else:
+            # **يُسأل حين لا خصمَ فقط**: سطرٌ عن عرضٍ استُنفد فوق خصمٍ قائمٍ
+            # يربك، ولا يُسأل أصلاً لمن ينطبق عليه عرضٌ آخر
+            spent = await offers.exhausted_for(session, driver=driver, plan=plan)
+            if spent is not None:
+                row.exhausted_offer_name = spent.offer.name
         out.append(row)
     return out
 

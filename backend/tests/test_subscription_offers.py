@@ -656,3 +656,99 @@ async def test_the_giveaway_table_marks_a_manual_adjustment(
     # **ما تنازلنا عنه صفرٌ** لأن المقبوض كامل — والوسمُ يقول إن ذلك بقرار مشرف
     assert row["total_given_up"] == "0.000"
     assert row["manual_adjustments"] == 1
+
+
+# ------------------------------------------- «استفدتَ منه من قبل» (١٧.٧)
+
+
+async def test_an_exhausted_offer_is_named_but_never_applied(
+    client, session_factory, admin_headers, jordan_wallet
+) -> None:
+    """**يُذكر ولا يُطبَّق**: من رأى الخصمَ ثم اختفى يظنّ التطبيقَ عطب.
+
+    والتمييزُ هو المقصود: هذا **استفاد** فيُقال له، ومن لم يستحقّ قطُّ لا
+    يُقال له شيء (الفرع و) — واختبارُ الحالتين معاً في ملفٍ واحد.
+    """
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    plan_id = await ensure_plan(session_factory)
+    await make_offer(session_factory, percent="10", max_uses=1, name="عرضٌ مرةً")
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    await topup_wallet(client, admin_headers, driver["user_id"], "100.000")
+
+    first = (await client.get("/subscriptions/plans", headers=driver["headers"])).json()
+    row = next(p for p in first if p["id"] == str(plan_id))
+    assert row["offer_name"] == "عرضٌ مرةً"
+    assert row["exhausted_offer_name"] is None
+
+    await buy(client, driver, plan_id)
+
+    after = (await client.get("/subscriptions/plans", headers=driver["headers"])).json()
+    row = next(p for p in after if p["id"] == str(plan_id))
+    # لا خصمَ بعد الاستنفاد — **ويُقال سببُه**
+    assert row["offer_name"] is None
+    assert row["price_after_discount"] is None
+    assert row["exhausted_offer_name"] == "عرضٌ مرةً"
+
+
+async def test_a_driver_who_never_qualified_is_told_nothing(
+    client, session_factory, admin_headers, jordan_wallet
+) -> None:
+    """**الصمتُ لمن لم يستحقّ** — وإلا صار العرضُ إعلاناً عمّا ليس له."""
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    plan_id = await ensure_plan(session_factory)
+    await make_offer(
+        session_factory, percent="30", audience=AUDIENCE_MANUAL, max_uses=1
+    )
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    rows = (await client.get("/subscriptions/plans", headers=driver["headers"])).json()
+    row = next(p for p in rows if p["id"] == str(plan_id))
+    assert row["offer_name"] is None
+    assert row["exhausted_offer_name"] is None
+
+
+async def test_the_exhausted_line_never_shows_beside_a_live_discount(
+    client, session_factory, admin_headers, jordan_wallet
+) -> None:
+    """عرضٌ استُنفد **وآخرُ قائم** — يُعرض القائمُ وحدَه.
+
+    وسطرٌ عن عرضٍ منتهٍ فوق خصمٍ يعمل يربك قارئَه ويشكّكه في الرقم المعروض.
+    """
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    plan_id = await ensure_plan(session_factory)
+    await make_offer(session_factory, percent="10", max_uses=1, name="مرةً واحدة")
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    await topup_wallet(client, admin_headers, driver["user_id"], "100.000")
+    await buy(client, driver, plan_id)
+
+    # عرضٌ ثانٍ بلا حدّ — فيبقى منطبقاً
+    await make_offer(session_factory, percent="5", max_uses=0, name="بلا حدّ")
+
+    rows = (await client.get("/subscriptions/plans", headers=driver["headers"])).json()
+    row = next(p for p in rows if p["id"] == str(plan_id))
+    assert row["offer_name"] == "بلا حدّ"
+    assert row["exhausted_offer_name"] is None
+
+
+async def test_the_advance_terms_reach_the_driver_before_he_agrees(
+    client, session_factory, admin_headers, jordan_wallet
+) -> None:
+    """شرطُ السداد يُنشر مع الأهلية — **قبل الموافقة لا بعدها**.
+
+    وكان `GET /drivers/me/advances` لا يحمل الاقتطاعَ ولا الحدَّ الأدنى، فورقةُ
+    التأكيد لا تجد ما تعرضه — بابٌ يطلب موافقةً على شرطٍ لا يُرى.
+    """
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    response = await client.get("/drivers/me/advances", headers=driver["headers"])
+    assert response.status_code == 200, response.text
+    body = response.json()
+    for field in ("deduction_percent", "min_kept_amount", "term_days"):
+        assert field in body, field

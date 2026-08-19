@@ -172,6 +172,9 @@ class SubscriptionPlanOut(BaseModel):
     # السعرُ بعد الخصم — **يُحسب في الخلفية** كبقية المال (§14)
     price_after_discount: Decimal | None = None
     offer_ends_at: datetime | None = None
+    # **اسمُ عرضٍ استفاد منه هذا الكبتنُ سلفاً فاستنفد حدَّه** — يُذكر ولا
+    # يُطبَّق. و`None` لمن لم يستحقّ قطُّ: التمييزُ بينهما هو الغرض.
+    exhausted_offer_name: str | None = None
 
 
 class PaymentSettingOut(BaseModel):

@@ -53,6 +53,18 @@ class ResolvedOffer:
     amount: Decimal
 
 
+@dataclass(frozen=True)
+class ExhaustedOffer:
+    """عرضٌ **كان** ينطبق على هذا الكبتن واستنفد حدَّه.
+
+    **وهو غيرُ «لا عرضَ له»**، ولذلك صنفٌ مستقلٌّ لا `None`: من رأى الخصمَ ثم
+    اختفى يظنّ العرضَ انتهى أو أن التطبيق عطب — والصمتُ هنا يصنع سؤالاً للدعم.
+    ومن لم يستحقّ قطُّ لا يُقال له شيء (الفرع و)، فالتمييزُ بينهما هو المقصود.
+    """
+
+    offer: SubscriptionOffer
+
+
 def discount_on(offer: SubscriptionOffer, plan: SubscriptionPlan) -> Decimal:
     """مبلغُ الخصم — نسبةً من سعر الخطة، بسقفه إن وُجد.
 
@@ -186,6 +198,7 @@ async def resolve(
     ).scalars().all()
 
     best: ResolvedOffer | None = None
+    exhausted: list[SubscriptionOffer] = []
     for offer in rows:
         if offer.plan_id is not None and offer.plan_id != plan.id:
             continue
@@ -196,6 +209,9 @@ async def resolve(
                 session, offer_id=offer.id, driver_id=driver.id
             )
             if used >= offer.max_uses_per_driver:
+                # **يُذكر ولا يُطبَّق**: الكبتنُ استفاد منه فعلاً، فيُقال له
+                # ذلك بدل أن يختفي الخصمُ بلا كلمة
+                exhausted.append(offer)
                 continue
 
         amount = discount_on(offer, plan)
@@ -378,3 +394,41 @@ async def list_grants(
             )
         ).scalars().all()
     )
+
+
+async def exhausted_for(
+    session: AsyncSession, *, driver: Driver, plan: SubscriptionPlan
+) -> ExhaustedOffer | None:
+    """عرضٌ استنفد هذا الكبتنُ حدَّه فيه — أو `None`.
+
+    **ويُسأل بعد `resolve` لا بدلاً منها**: من ينطبق عليه عرضٌ آخرُ يرى خصمَه،
+    ولا يُقال له عن عرضٍ استنفده — فسطرٌ عن عرضٍ منتهٍ فوق خصمٍ قائمٍ يربك.
+
+    ولا يُفحص الجمهورُ ثانيةً هنا: من استُهلك له صفٌّ بهذا العرض كان مستحقاً
+    لحظتَها بحكم وجود الصفّ.
+    """
+    if not await settings_service.is_feature_enabled(
+        session, plan.country_code, FEATURE_KEY
+    ):
+        return None
+
+    now = _now()
+    rows = (
+        await session.execute(
+            select(SubscriptionOffer).where(
+                SubscriptionOffer.country_code == plan.country_code,
+                SubscriptionOffer.is_active.is_(True),
+                SubscriptionOffer.max_uses_per_driver > 0,
+                (SubscriptionOffer.ends_at.is_(None))
+                | (SubscriptionOffer.ends_at > now),
+            )
+        )
+    ).scalars().all()
+
+    for offer in rows:
+        if offer.plan_id is not None and offer.plan_id != plan.id:
+            continue
+        used = await _uses_by_driver(session, offer_id=offer.id, driver_id=driver.id)
+        if used >= offer.max_uses_per_driver:
+            return ExhaustedOffer(offer=offer)
+    return None

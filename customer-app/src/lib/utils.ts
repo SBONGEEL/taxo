@@ -102,3 +102,28 @@ export function newIdempotencyKey(prefix: string) {
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/** طرحُ مبلغٍ من مبلغ — **بحسابٍ صحيحٍ بلا عائم** (§14).
+ *
+ * `Number(a) - Number(b)` هو بعينه ما شحن «٨ د.أ» بجانب «٥٫٠٠٠ د.أ» في شاشة
+ * الإحالة: المالُ يصل الواجهةَ **نصّاً** لأن `NUMERIC(12,3)` يُسلسَل نصّاً،
+ * وتمريرُه عبر عائمٍ يفقد دقّتَه حيث لا يُلاحظ.
+ *
+ * فيُحسب على **الأجزاء من الألف كأعدادٍ صحيحة**، ويُعاد نصّاً بثلاث خانات —
+ * وهي صيغةُ المال في هذا المشروع كلِّه.
+ *
+ * **وهذا عرضٌ لا قرار**: الخلفيةُ تبقى من يقرّر الكفاية ويرفض ما يتجاوز
+ * الرصيد؛ وهذا سطرٌ يقرؤه صاحبُه قبل أن يضغط.
+ */
+export function subtractMoney(a: string, b: string): string {
+  const millis = (value: string): number => {
+    const [whole, fraction = ""] = String(value ?? "0").trim().split(".");
+    const padded = (fraction + "000").slice(0, 3);
+    const sign = whole.startsWith("-") ? -1 : 1;
+    return sign * (Math.abs(Number(whole || 0)) * 1000 + Number(padded || 0));
+  };
+  const result = millis(a) - millis(b);
+  const sign = result < 0 ? "-" : "";
+  const absolute = Math.abs(result);
+  return `${sign}${Math.floor(absolute / 1000)}.${String(absolute % 1000).padStart(3, "0")}`;
+}

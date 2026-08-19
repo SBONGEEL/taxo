@@ -444,6 +444,9 @@ def _state_out(state: advances_service.Eligibility) -> AdvanceStateOut:
         ],
         cap=state.cap,
         currency=state.currency,
+        deduction_percent=state.deduction_percent,
+        min_kept_amount=state.min_kept_amount,
+        term_days=state.term_days,
         debt=(
             AdvanceDebtOut(
                 advance=AdvanceOut.model_validate(state.debt.advance),

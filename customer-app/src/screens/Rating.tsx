@@ -42,6 +42,8 @@ export function RatingScreen() {
 
   const [tip, setTip] = useState<TipOptions | null>(null);
   const [tipping, setTipping] = useState<string | null>(null);
+  // المبلغُ المختار قبل الإرسال — و`null` يعني لم يُختر بعد
+  const [chosenTip, setChosenTip] = useState<string | null>(null);
 
   useEffect(() => {
     // **الخلفيةُ تقول إن كان يُعرض** — ونداءٌ يفشل لا يُظهر خطأً: البقشيشُ
@@ -146,15 +148,21 @@ export function RatingScreen() {
             <p className="mt-4 text-12 leading-snug text-muted">
               يُخصم من محفظتك ويصل الكبتن كاملاً — بلا أي خصم.
             </p>
+            {/* **يُختار المبلغُ ثم يُرسَل بزرٍّ واحد — ضغطةٌ زائدةٌ لا حوار**
+                (قرارُ المالك 2026-08-19). كان الضغطُ على مبلغٍ **يُخرج المال
+                فوراً**: شاشةٌ يُضغط فيها بسرعةٍ بعد الرحلة، وخطأُ إصبعٍ يرسل
+                مالاً بلا رجعة. **وورقةُ تأكيدٍ هنا تقتل البقشيش** — فالحلُّ
+                خطوةٌ واحدةٌ لا حوار: الاختيارُ يُرى، والإرسالُ فعلٌ مستقل. */}
             <div className="mt-14 flex gap-8">
               {tip.presets.map((amount) => (
                 <Button
                   key={amount}
-                  variant="secondary"
+                  variant={chosenTip === amount ? "primary" : "secondary"}
                   className="flex-1"
-                  loading={tipping === amount}
                   disabled={tipping !== null}
-                  onClick={() => void sendTip(amount)}
+                  onClick={() =>
+                    setChosenTip(chosenTip === amount ? null : amount)
+                  }
                 >
                   {formatMoney(amount, tip.currency)}
                 </Button>
@@ -168,6 +176,15 @@ export function RatingScreen() {
                 بدون
               </Button>
             </div>
+            {chosenTip ? (
+              <Button
+                className="mt-10 w-full"
+                loading={tipping !== null}
+                onClick={() => void sendTip(chosenTip)}
+              >
+                أرسل {formatMoney(chosenTip, tip.currency)}
+              </Button>
+            ) : null}
           </div>
         ) : null}
 

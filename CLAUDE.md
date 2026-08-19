@@ -30,7 +30,7 @@ real demand data it would be tuned wrong and turn riders away), so **stage 12 is
 is next**. One money question inside sharing stays open by his decision: whether the company bears the
 remaining rider's difference **before** departure.
 
-**903 backend tests pass** across 81 test files — measured, not estimated, on 2026-08-17. **Zero failures** — including the two that used to be flaky under full-suite load
+**964 backend tests pass** across 87 test files — measured, not estimated, on 2026-08-19. **Zero failures** — including the two that used to be flaky under full-suite load
 (`test_card_money_never_passes_through_the_riders_wallet` and `test_wallet_ride_credits_earnings`).
 The second one reappeared while building item 53 and was **not** flakiness: the level ordering read the
 per-country discount on every offer attempt, an extra query inside the dispatch window. Removing it
@@ -78,12 +78,16 @@ five packages the owner ordered هـ ← ج ← د ← ب ← أ, one per sessio
 see "Rider design-matching" below for what each settled. **Sharing (12-ي) followed them and is
 done**, so nothing is queued before stage 13.
 
-> **Session boundary, 2026-08-18.** Since stage 13 the following shipped and are committed: the
+> **Session boundary, 2026-08-19.** Since stage 13 the following shipped and are committed: the
 > **cancellation fee** in full, the **self-hosted WhatsApp channel** with OTP request caps, the **driver
 > profile photo**, **generalised referrals**, **missions/levels/badges**, **backups end to end**, the
-> **Google-Maps hand-off**, **map items 1–4**, and the **unplanned stop point**. Written but not built:
-> **subscription offers** (six branches unanswered). **Blocked, and only this:** no OTP channel delivers,
-> so registration is locked — see the red box below.
+> **Google-Maps hand-off**, **map items 1–4**, the **unplanned stop point**, the **unified error
+> contract** (§17, with the money-format sweep and the password blocklist), and **subscription offers**
+> (item 54 — all six branches answered, built, and pressed on two phones; **its flag ships off**).
+>
+> **The OTP blocker is closed, and it was ours.** The gateway judged "sent" on an event Baileys never
+> emits for a server ack, so a healthy channel reported failure and `otp.issue` deleted the digest of a
+> code WhatsApp had already delivered — the **sixth shape** below. Nothing was wrong with the number.
 
 **Stage 13 is complete** (2026-08-15) — `tests/test_stage13_scenario.py` **and six manual scenarios driven
 on two real phones** (rider on an S21, captain on a Note 20, both Capacitor shells over the live tunnel):
@@ -616,25 +620,44 @@ pause and arrival wait). His text said "likewise set by admin", read here as one
 waiting minute is worth the same either way, and two numbers for one concept drift. The free grace applies
 to **arrival only**.
 
-#### 7. Subscription offers — **spec written, nothing built** (`design/SUBSCRIPTION-OFFERS.md`, `FUTURE-FEATURES` 54)
+#### 7. ✅ Subscription offers — **built end to end** (2026-08-19, `design/SUBSCRIPTION-OFFERS.md`, `FUTURE-FEATURES` 54)
 
-**Six branches are raised and unanswered, and the first decides the tables** — do not write a migration
-before it is answered: **is the discount money or time?** «10% off» lowers `amount_paid` and never touches
-the period; «a free week» extends `expires_at` and never touches money — in which case there is no
-`discount_amount`, no `list_price` and **no giveaway report at all**. Combining both in the first cut makes
-"how much did we give away?" a question with two units.
+**All six branches answered by the owner, then built in §9's order** (tables → service → panel → captain
+screen → two phones). Migration `0044`, `models/subscription_offer.py`, `services/offers.py`, the panel's
+offers screen, and the captain's struck price. **The flag ships off**, per his instruction.
 
-**And `promo_codes` is not reused, for a reason that is not naming**: that is a **ride** payment channel the
-company bears **on the rider's behalf**, measured by summing `promo` rows. A subscription discount is
-**revenue not collected** — there is no ride, no payment row, and nothing to sum. An expense and an
-uncollected revenue do not belong in one report.
+The first branch decided the tables and is worth keeping in front of anyone extending it: **the discount is
+money, not time.** «10% off» lowers `amount_paid`; «a free week» would extend `expires_at` and touch no
+money — and combining both in one cut makes "how much did we give away?" a question with two units. His
+condition on top: **the row carries an explicit type column**, so adding time later is a new value rather
+than a reinterpretation of the money columns.
 
-**This is also what was blocking the cancellation carrier's reward** (`CANCELLATION-FEE.md` §6-أ): "a
-subscription coupon" had no home in the project. Building item 54 gives it one.
+Six rules from the build, each of which cost something to learn:
 
-The other five: early renewal stacks (buy three months in one day and take the discount three times), cash
-and CliQ are collected **by a human, not a screen**, stacking two offers, whether an offer touches
-commission, and what a non-eligible driver is shown.
+- **The discount is computed in `subscriptions._create` and nowhere else.** Every channel — wallet, cash,
+  CliQ, card, the admin's manual record — passes through it, so a second computation is a rule that two
+  channels can disagree about. `record_manual` stamps the offer and **keeps the admin's typed amount**,
+  flagging the row «تسويةٌ يدوية» when the two differ: a human collecting cash is the authority on what he
+  collected, and silently overwriting him would hide a real shortfall.
+- **`promo_codes` is not reused, and the reason is not naming.** That is a **ride** payment channel the
+  company bears on the rider's behalf, measured by summing `promo` rows. A subscription discount is
+  **revenue not collected** — no ride, no payment row, nothing to sum. An expense and an uncollected
+  revenue do not belong in one report. This is also what had been blocking the cancellation carrier's
+  reward (`CANCELLATION-FEE.md` §6-أ); item 54 gives it a home.
+- **The use cap is guarded by the offer row's own lock, and the wallet's advisory lock does not help.**
+  Measured, not assumed: the first concurrency test passed with the offer lock deleted, because `gather`
+  over HTTP did not interleave. Rewritten with two sessions and an explicit hold (400 ms / 100 ms
+  stagger), deleting `with_for_update` gives **two subscriptions on a one-use offer**. Three tests own
+  this and are named in `SPEC.md` §8.1.
+- **Four columns, not one**: `offer_id` (`RESTRICT` — an offer with purchases behind it may not be
+  deleted), `discount_amount`, `offer_discount_amount` and `list_price`. Frozen at purchase, like
+  `commission_percent_at_ride`, so editing an offer never moves a sale that already happened.
+- **The exhausted offer is named and never applied** — «استفدتَ من هذا العرض من قبل». Someone who saw a
+  discount and then finds it gone reads the app as broken. And the distinction is the point: whoever
+  **used** it is told, whoever never qualified is told **nothing** (branch و), and the line never shows
+  beside a live discount.
+- **`services/offers.py::exhausted_for` is read through `_plans_with_offers`, shared by `/plans` *and*
+  `/me`** — the eighth shape below, found on the phone because the desktop probe called the API directly.
 
 ### The dev stack has been mutated by the scenarios — do not read it as the intended state
 
@@ -644,7 +667,7 @@ and reserve 5.000**, an **active mock SMS contract**, **advances enabled for JO*
 `سالمُ المرحلة` (+962791300013) alongside the five documented accounts. `FEATURE_DEFAULTS` — not
 `SELECT * FROM feature_flags` — is still the answer to "what ships".
 
-**903 backend tests pass** across 81 test files, measured on 2026-08-17; all three frontends build with
+**964 backend tests pass** across 87 test files, measured on 2026-08-19; all three frontends build with
 their guards green (`check:scale`, `check:enums`, `check:slot`, `check:config`, `check:target`,
 `check:dist`, and `check:flags` in the panel).
 
@@ -1144,6 +1167,40 @@ granted twice.
 `/subscriptions/plans` and not on `/subscriptions/me`, which is the door the captain's screen actually
 reads. Both now go through `_plans_with_offers`. That is **the eighth shape**, written up on its own
 below, because it is not about offers.
+
+### The ninth shape — an intermediate step no human has ever pressed (2026-08-19)
+
+**The ratio is the whole argument. Four money steps were pressed for the first time; three of them
+revealed a defect on the first press.** Not "under load", not "on an edge case" — on the first press,
+by the first person who ever pressed them.
+
+| step pressed | what the first press revealed |
+|---|---|
+| the captain's subscription confirm sheet | it showed the **undiscounted** price while the card above it showed the discounted one |
+| the panel's manual-subscription amount field | its label named the list price, so an admin typing "the amount owed" typed the wrong number |
+| the rider's transfer confirm | **there was no confirm at all** — a typed phone number sent money on one tap |
+| the rider's tip | pressing an amount **sent it immediately**, on a screen built to be tapped fast |
+
+The one that held (the wallet topup sheet) was the one a visual pass had opened before.
+
+**So the rule is not "test more". It is a prior**: a step is *expected* to be broken until someone has
+pressed it, and the reason is structural rather than statistical. Three detectors exist in this project
+and **none of them reaches an intermediate step**: there is **no frontend test runner at all** (stage 9
+added no business logic to test, and that decision still stands), the backend suite calls the endpoint
+that the step eventually reaches and never the step, and `tsc` type-checks a sheet that renders a
+correct-looking wrong number. A screen that renders is a screen that compiles; **nothing in the toolchain
+distinguishes "shows the price" from "shows *this* price"**.
+
+**And two of the four were not wrong values but missing doors** — the transfer had no sheet and the tip
+had no send button. Those are invisible to every guard by construction: a guard compares what exists
+against a rule, and there was nothing to compare. This is the same family as "a rule with no door" and
+"a field with no mirror", arriving through the step rather than through the field.
+
+**What follows operationally**: when a money path is touched, press its *intermediate* steps on a real
+device, and treat an unpressed one as a finding rather than as unknown. That is why the three changes of
+2026-08-19 (`SPEC.md` §17.7-ب) were pressed on two phones before being called done, and why the
+money-format sweep — the seventh shape's guard — cannot substitute: it reads what the backend published,
+and every one of these four defects lived above it.
 
 ### The eighth shape — two doors publishing the same thing, each honest alone (2026-08-19)
 
@@ -1938,8 +1995,9 @@ and per-category pricing. Do not build them; he decides after launch.
    one channel and no fallback.** SMS is off by his choice, so `fallback_channel` is `null` — the day the
    number is genuinely banned or the session drops, registration stops with no automatic exit. Re-activating
    the SMS contract is a field in the contracts page and no deploy.
-1. **The six branches of subscription offers** (`design/SUBSCRIPTION-OFFERS.md` §8) — and the first,
-   money-or-time, decides the tables, so nothing is buildable before it.
+1. ✅ **Closed 2026-08-19**: the six branches of subscription offers were answered and item 54 is built.
+   **What it leaves behind is a «باب بلا زرّ» entry, not a decision** (`SPEC.md` §18.2): `ends_at` has no
+   field in the panel and the `manual` audience has no grant button, so both are built and unreachable.
 2. **Whether the per-minute pause rate should be two numbers, not one** — built as one; see item 6 above
    for the reading and its reason.
 3. **Whether to collapse the duplicated OTP cap** — `routers/auth.py` keeps its own per-phone 5/hour beside

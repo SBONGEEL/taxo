@@ -9,11 +9,11 @@
  */
 
 import { ArrowLeftRight, UserCheck } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { lookupRecipient, transfer } from "@/api/endpoints";
+import { getWallet, lookupRecipient, transfer } from "@/api/endpoints";
 import type { CountryCode, TransferRecipient } from "@/api/types";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Button } from "@/components/ui/Button";
@@ -24,7 +24,11 @@ import { useConfig, useCountryConfig } from "@/lib/config";
 import { usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { formatMoney, newIdempotencyKey } from "@/lib/utils";
+import {
+  formatMoney,
+  newIdempotencyKey,
+  subtractMoney,
+} from "@/lib/utils";
 
 export function WalletTransferScreen() {
   const navigate = useNavigate();
@@ -43,6 +47,20 @@ export function WalletTransferScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // **ورقةُ تأكيدٍ قبل تحويلٍ لا رجعةَ فيه** (قرارُ المالك 2026-08-19): المالُ
+  // يذهب إلى **شخصٍ آخر** ويُختار **برقمٍ يُكتب باليد** — ورقمٌ واحدٌ خاطئ
+  // يرسل المال إلى غريبٍ بلا استرداد. فالورقةُ تقول ثلاثة: **اسمَ** المستقبِل
+  // لا رقمَه وحدَه، والمبلغ، والرصيدَ بعده.
+  const [confirming, setConfirming] = useState(false);
+  const [balance, setBalance] = useState<string | null>(null);
+
+  // الرصيدُ يُقرأ ليُعرض «رصيدك بعده» — ولا يُحسب في المتصفح إلا للعرض:
+  // الخلفيةُ ترفض ما يتجاوز الرصيد على أي حال (§14)
+  useEffect(() => {
+    getWallet()
+      .then((wallet) => setBalance(wallet.balance))
+      .catch(() => setBalance(null));
+  }, [done]);
   // مفتاحٌ واحد لهذه العملية: إعادة المحاولة بعد انقطاعٍ لا تحوّل مرتين
   const key = useRef<string | null>(null);
 
@@ -139,7 +157,7 @@ export function WalletTransferScreen() {
             size="lg"
             loading={busy}
             disabled={Number(amount) <= 0}
-            onClick={send}
+            onClick={() => setConfirming(true)}
           >
             <ArrowLeftRight className="size-16" />
             تأكيد التحويل
@@ -165,6 +183,78 @@ export function WalletTransferScreen() {
           </Button>
         ) : null}
       </div>
+
+      {confirming ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-dim"
+          onClick={() => setConfirming(false)}
+        >
+          <div
+            className="w-full rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="mb-4 text-16 font-bold text-ink">تأكيد التحويل</h2>
+            <p className="mb-14 text-12 leading-snug text-muted">
+              لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.
+            </p>
+
+            <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+              {/* **الاسمُ أولاً وأكبر**: الرقمُ ما كُتب، والاسمُ ما يُتحقَّق به */}
+              <div className="flex items-baseline justify-between">
+                <span className="text-12.5 text-muted">إلى</span>
+                <span className="text-15 font-bold text-ink">
+                  {recipient?.name}
+                </span>
+              </div>
+              <div className="mt-6 flex items-baseline justify-between">
+                <span className="text-12.5 text-muted">رقمه</span>
+                <span dir="ltr" className="text-12.5 text-muted">
+                  {recipient?.phone}
+                </span>
+              </div>
+              <div className="mt-10 flex items-baseline justify-between border-t border-line pt-10">
+                <span className="text-12.5 text-muted">المبلغ</span>
+                <span className="text-17 font-bold text-ink">
+                  {formatMoney(amount, country?.currency ?? "JOD")}
+                </span>
+              </div>
+              {balance ? (
+                <div className="mt-6 flex items-baseline justify-between">
+                  <span className="text-12.5 text-muted">رصيدك بعده</span>
+                  <span className="text-13 text-ink">
+                    {formatMoney(
+                      subtractMoney(balance, amount),
+                      country?.currency ?? "JOD",
+                    )}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-16 flex flex-col gap-9">
+              <Button
+                size="lg"
+                loading={busy}
+                onClick={() => {
+                  setConfirming(false);
+                  void send();
+                }}
+              >
+                أرسل الآن
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => setConfirming(false)}
+              >
+                رجوع
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </Screen>
   );
 }
