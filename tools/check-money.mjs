@@ -41,6 +41,14 @@ if (APPS.length === 0) {
   exit(2);
 }
 
+/** جذرُ المستودع من موضع هذا الملف — **لا من مجلد العمل**.
+ *
+ * قِيس أثناء الإدراج في البناء: `npm run` يجعل مجلدَ العمل مجلدَ التطبيق،
+ * فمسارٌ نسبيٌّ يصير `driver-app/driver-app/src` ويسقط بـENOENT. و`check:served`
+ * سلم لأنه يشتقّ من `import.meta.url` منذ كُتب.
+ */
+const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+
 function walk(dir) {
   return readdirSync(dir).flatMap((entry) => {
     if (entry === "node_modules" || entry === "dist") return [];
@@ -65,7 +73,7 @@ function resolvesALabel(node) {
 
 const findings = [];
 for (const app of APPS) {
-  const root = `${app}/src`;
+  const root = `${ROOT}${app}/src`;
   for (const file of walk(root)) {
     const source = ts.createSourceFile(
       file,

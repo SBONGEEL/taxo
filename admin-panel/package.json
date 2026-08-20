@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:contract && npm run check:money && tsc -b && vite build && npm run check:served",
+    "build": "npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:contract && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -17,7 +17,8 @@
     "check:doors": "node scripts/check-doors.mjs",
     "check:contract": "node ../tools/check-contract.mjs --app admin-panel",
     "check:served": "node ../tools/check-served.mjs admin-panel",
-    "check:money": "node ../tools/check-money.mjs admin-panel"
+    "check:money": "node ../tools/check-money.mjs admin-panel",
+    "check:readers": "node ../tools/check-readers.mjs admin-panel"
   },
   "dependencies": {
     "clsx": "^2.1.1",

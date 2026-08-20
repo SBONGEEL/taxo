@@ -32,7 +32,7 @@ const SKIP_BELOW_BYTES = 120 * 1024;
  * **الشكلُ الثاني عشر يتربّص هنا** (`CLAUDE.md`): «ارتدادٌ نجاحُه لا يُميَّز عن
  * عمل الميزة». فبلا هذا الحقل يستوي على الشاشة **ثلاثةُ أشياءَ مختلفة**: صورةٌ
  * لم تكن تحتاج ضغطاً، وصورةٌ **فشل** ضغطُها، وملفٌّ ليس صورةً أصلاً — كلُّها
- * `changed: false`، وكلُّها تعرض لا شيء.
+ * بلا مآلٍ صريح، وكلُّها تعرض لا شيء.
  *
  * **وقِيس هذا على جهازٍ حقيقيّ (2026-08-20)**: رُفعت تسعُ وثائق، صُغِّرت ثلاثٌ
  * منها إلى ١٦٠٠ بكسل وبقيت ستٌّ كما هي لأنها كانت ١٦٠٠ سلفاً — **ولم تقل
@@ -59,7 +59,6 @@ export interface ShrinkResult {
   // لهذا المشروع سابقة. وما يجعله صامتاً أن الضغطَ **يعمل**: الملفُّ يصغر
   // ويُرفع، ولا شيءَ يفشل — والغائبُ هو الخبرُ وحدَه.
   after: number;
-  changed: boolean;
 }
 
 export async function shrinkImage(file: File): Promise<ShrinkResult> {
@@ -68,7 +67,6 @@ export async function shrinkImage(file: File): Promise<ShrinkResult> {
     file,
     before,
     after: before,
-    changed: false,
     outcome: "no_gain",
   };
 
@@ -104,7 +102,6 @@ export async function shrinkImage(file: File): Promise<ShrinkResult> {
       file: new File([blob], renamed, { type: "image/jpeg" }),
       before,
       after: blob.size,
-      changed: true,
       outcome: "shrunk",
     };
   } catch {
