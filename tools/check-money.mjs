@@ -72,9 +72,12 @@ function resolvesALabel(node) {
 }
 
 const findings = [];
+/** **كم ملفاً قُرئ** — وصفرٌ عطبٌ لا سلامة (قاعدةُ المِسبار ٥). */
+let scanned = 0;
 for (const app of APPS) {
   const root = `${ROOT}${app}/src`;
   for (const file of walk(root)) {
+    scanned += 1;
     const source = ts.createSourceFile(
       file,
       readFileSync(file, "utf8"),
@@ -123,4 +126,11 @@ if (findings.length > 0) {
   );
   exit(1);
 }
-console.log(`✓ كل مبلغٍ يُمرَّر برمز عملته لا بعلامتها (${APPS.join("، ")})`);
+if (scanned === 0) {
+  console.error("");
+  console.error("✗ لم يُقرأ ملفٌ واحد — وحارسٌ لا يقرأ شيئاً يمرّ أخضرَ أبداً.");
+  exit(1);
+}
+console.log(
+  `✓ كل مبلغٍ يُمرَّر برمز عملته لا بعلامتها — قُرئ ${scanned} ملفاً (${APPS.join("، ")})`,
+);

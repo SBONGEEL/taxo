@@ -76,6 +76,8 @@ function walk(dir) {
 }
 
 const findings = [];
+/** **كم ملفَّ `lib/` قُرئ** — وصفرٌ عطبٌ لا سلامة (قاعدةُ المِسبار ٥). */
+let scannedLib = 0;
 for (const app of APPS) {
   const files = walk(`${ROOT}${app}/src`);
   const parsed = new Map(
@@ -116,6 +118,7 @@ for (const app of APPS) {
 
   for (const [file, source] of parsed) {
     if (isLib(file)) {
+      scannedLib += 1;
     const visit = (node) => {
       if (
         ts.isInterfaceDeclaration(node) &&
@@ -165,4 +168,12 @@ if (findings.length > 0) {
   console.error("  ولا شيءَ يفشل، والغائبُ هو الخبرُ وحدَه.");
   exit(1);
 }
-console.log(`✓ كل حقلٍ مُصدَّرٍ في \`lib/\` لها قارئ (${APPS.join("، ")})`);
+if (scannedLib === 0) {
+  console.error("");
+  console.error("✗ لم يُقرأ ملفُّ `lib/` واحد — وحارسٌ لا يقرأ شيئاً يمرّ أخضرَ أبداً.");
+  console.error("  (وقع مقيساً 2026-08-20: فحصُ المسار افترض `/` فاصلاً فلم يطابق ويندوز.)");
+  exit(1);
+}
+console.log(
+  `✓ كل حقلٍ مُصدَّرٍ في \`lib/\` له قارئ — قُرئ ${scannedLib} ملفَّ \`lib/\` (${APPS.join("، ")})`,
+);
