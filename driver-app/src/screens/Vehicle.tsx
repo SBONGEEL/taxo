@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { listDocuments, updateVehicle, uploadDocument } from "@/api/endpoints";
+import { shrinkImage } from "@/lib/shrink";
 import type { DocumentType, DriverDocuments, Vehicle } from "@/api/types";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useDriver } from "@/lib/driver";
@@ -72,7 +73,9 @@ export function VehicleScreen() {
     setError(null);
     setDone(null);
     try {
-      const result = await uploadDocument(docType, file);
+      // نفسُ الضغط — والبيتُ واحدٌ فلا تفترق شاشتان في حجمِ ما ترفعان
+      const shrunk = await shrinkImage(file);
+      const result = await uploadDocument(docType, shrunk.file);
       await load();
       await refresh();
       setDone(

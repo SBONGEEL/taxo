@@ -49,3 +49,56 @@ def sweep_provider_orders() -> dict[str, int]:
     if any(count for key, count in tally.items() if key != "open"):
         logger.info("provider orders swept: %s", tally)
     return tally
+
+
+@celery_app.task(name="app.tasks.maintenance.sweep_orphan_documents")
+def sweep_orphan_documents() -> str:
+    """يمحو ملفاتِ الوثائق التي لا صفَّ لها — **قرصٌ لا مالكَ لما فيه**.
+
+    **ولمَ مهمّةٌ لا `CASCADE`؟** المفتاحُ الأجنبيُّ يمحو **الصفَّ** ولا يمسّ
+    القرص. ولا مسارَ حذفِ كبتنٍ في المشروع اليوم، لكنّ اليتيمَ يقع بغيره:
+    استبدالُ وثيقةٍ يحذف ملفَها **بعد** الإيداع، فانقطاعٌ بينهما يترك ملفاً بلا
+    مرجع. **ومشكلةُ قرصٍ يمتلئ تظهر بعد سنة**، حين لا أحدَ يذكر ما تركها.
+
+    **والاتجاهُ واحد**: يُمحى ملفٌّ لا صفَّ له، **ولا يُمحى صفٌّ لا ملفَ له** —
+    الثاني عطبٌ يجب أن يُرى لا أن يُنظَّف، وصفٌّ يَعِد بملفٍّ مفقود هو ما
+    يكتشفه المشرفُ يومَ المراجعة فيسأل.
+    """
+    return run_async(_sweep_orphan_documents())
+
+
+async def _sweep_orphan_documents() -> str:
+    from sqlalchemy import select
+
+    from app.core import storage
+    from app.models.driver import DriverDocument
+
+    root = storage.root()
+    if not root.exists():
+        return "0"
+
+    async with SessionLocal() as session:
+        known = {
+            row for row in (await session.scalars(select(DriverDocument.file_path)))
+        }
+
+    removed = 0
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        # **الملفُّ المؤقتُ يُترك لساعةٍ**: رفعٌ جارٍ الآن اسمُه `.part-…`،
+        # ومحوُه تحت يدِ صاحبه يجعل رفعاً سليماً يفشل بلا سبب
+        if path.name.startswith(".part-"):
+            continue
+        if relative in known:
+            continue
+        try:
+            path.unlink()
+            removed += 1
+        except OSError:  # pragma: no cover
+            logger.warning("تعذّر محوُ ملفٍ يتيم: %s", relative)
+
+    if removed:
+        logger.info("مُحيت %d ملفَ وثيقةٍ بلا صفّ", removed)
+    return str(removed)

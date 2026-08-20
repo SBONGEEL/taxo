@@ -1614,6 +1614,73 @@ changes when the bundle goes stale.
 then **prove from the device itself** that what is running is the latest build — by comparing the served
 bundle hash against the one just built, not by trusting that a build happened.
 
+### A guard that invents a defect costs more than one that misses it (2026-08-20)
+
+**`check:contract` was built to catch a class nothing else could see, and its first three versions each
+lied — the third one badly enough that the owner ordered a whole task on a defect that did not exist.**
+
+| version | what it did | cost |
+|---|---|---|
+| 1 | counted a query string as part of the path | 14 false reports on healthy calls |
+| 2 | read `method: "cash"` from a nearby payload literal | announced an HTTP verb named `CASH` |
+| 3 | read `uploadVerb` from the *calling* file, not `client.ts` | **reported `POST` on a route that has sent `PUT` for a month** |
+
+The third is the expensive one. I presented it as measured fact; the owner authorised a fix; and the
+`405` I had "measured" came from **my own probe sending POST by hand**, not from the app. The app was
+never broken. What was broken was the panel bundle — the tenth shape, third occurrence.
+
+**The asymmetry is the lesson.** A guard that *misses* something leaves you where you were: the defect
+survives, and you find it another way. A guard that *invents* something spends real work on nothing —
+and worse, it teaches you to distrust its true findings. `check:flags`, `check:doors` and `check:digits`
+all earn their keep because their reports are believed.
+
+**So: every new guard is measured in both directions before it is trusted, and its first report is not
+acted on until it is verified independently.**
+
+- **Does it catch a real defect?** Break something on purpose and watch it fail.
+- **Does it stay silent on a healthy tree?** Run it unmodified and watch it pass.
+- **Does it catch the *specific* shape it was built for?** For `check:contract` that is a wrong verb on
+  a correct path — the exact thing a path-only guard would wave through.
+
+All three were run before it went into the build: a fabricated path fails it, `POST` on
+`/drivers/me/earnings` fails it naming the accepted verb, and a clean tree passes with 257 calls.
+
+### The tenth shape, three times — and why step zero is now three-way
+
+**A green source tree says nothing about the artifact a person is running.** It has now cost this
+project three separate investigations:
+
+1. **The rider's transfer sheet** sent 4.500 on one tap — the fix was in the tree, the bundle predated it.
+2. **The panel's document viewer** appeared not to exist — it was built after the served `dist`.
+3. **The driver app's upload** appeared to send `POST` — the phone held an older bundle, and my guard
+   compounded it.
+
+Each time the reasoning was identical and each time it was reconstructed from scratch. **So step zero
+is no longer a habit; it is a table in every report after every build**, and it covers the panel too —
+not just the two phones, which is what let occurrence 2 through:
+
+| | built | served locally | served publicly |
+|---|---|---|---|
+| every app | hash | must match | must match |
+
+**Three columns, not two.** The local container can serve a fresh `dist` while the tunnel serves a
+stale one, and the phone can hold something older than both.
+
+### `save()` announces success only after it sees the file (2026-08-20)
+
+**The twelfth shape, third dress.** `core/storage.save` wrote to a temp file, `replace`d it into place,
+`chmod`ed it, and returned — **and the caller then wrote a database row pointing at it**. Nothing
+between those two steps ever asked whether the file was there.
+
+Finishing a transfer is not the same as writing bytes: a full disk, a refused permission, a read-only
+mount — each ends the loop with no exception and leaves a row that promises a file which is not there.
+**And a row promising a missing file is worse than a failed upload**: the first is discovered on review
+day by someone who cannot act on it, the second is retried in its own second.
+
+`save()` now `stat()`s the final path and compares the size against what it counted; a mismatch unlinks
+the file, logs both numbers, and raises. **The rule generalises: any path that writes a file
+acknowledges success after verifying the file exists at its size — never after the transfer ends.**
+
 ### The tenth shape has a sibling on the server — writing a setting is not the setting taking effect (2026-08-20)
 
 **The tenth shape says a green guard tells you nothing about the artifact that is running.** Its

@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
+import { shrinkImage } from "@/lib/shrink";
 import {
   addVehicle,
   listDocuments,
@@ -168,7 +169,11 @@ export function RegisterDocumentsScreen() {
     const controller = new AbortController();
     uploadAbort.current = controller;
     try {
-      await uploadDocument(docType, file, {
+      // **يُضغط قبل أن يخرج** (`lib/shrink.ts`): وثيقةٌ تُقرأ بالعين لا تحتاج
+      // اثنَي عشرَ ميجابكسل، والكبتنُ يرفع إحدى عشرةَ وثيقة — فالفرقُ بين
+      // الضغط وتركِه هو الفرقُ بين ٥٥ ميجا و١٨ للحساب الواحد
+      const shrunk = await shrinkImage(file);
+      await uploadDocument(docType, shrunk.file, {
         onProgress: setProgress,
         signal: controller.signal,
       });

@@ -51,6 +51,22 @@ async def totp_required_for(session: AsyncSession, user: User) -> bool:
     """
     if not user.has_role(UserRole.ADMIN):
         return False
+
+    # **وحسابُ الطوارئ لا يُلزَم مهما كان المفتاح** (قرارُ المالك 2026-08-20).
+    #
+    # وإلا صار العاملُ الثاني **هو ما يقفل بابَ الطوارئ**: الحسابُ الثاني موجودٌ
+    # ليُفتح حين يضيع جهازُ الأول، فاشتراطُ جهازٍ عليه يجعله يحتاج ما وُجد
+    # ليعوّضه. وهو نفسُ منطقِ `totp_reset` — بابٌ خارج القاعدة هو ما يجعل
+    # الإلزامَ ممكناً أصلاً.
+    #
+    # **وثمنُه معلوم**: الطوارئُ يبقى على كلمةٍ واحدة — ولذلك **كلُّ دخولٍ به
+    # يُكتب في التدقيق** (`admin_break_glass_login`)، فهو مكشوفٌ لا محميّ.
+    from app.services import admin_credentials
+
+    credential = await admin_credentials.for_user(session, user.id)
+    if credential is not None and credential.is_break_glass:
+        return False
+
     row = await get(session)
     return bool(row and row.admin_totp_required)
 

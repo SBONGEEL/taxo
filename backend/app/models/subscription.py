@@ -22,7 +22,9 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Numeric,
     String,
+    text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -125,6 +127,19 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
     # مجمّد لحظة الشراء ولا يُقرأ من الخطة بعدها: رفعُ سعر الخطة اليوم لا يغيّر
     # ما دفعه كبتنُ الأمس — نفس منطق `rides.commission_percent_at_ride`
     amount_paid: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    # **نسبةُ العمولة كما كانت لحظةَ الشراء** (قرارُ المالك 2026-08-20، §25.11).
+    #
+    # والوعدُ «صفر عمولة **ما دام اشتراكك سارياً**»، فإشعالُ العمولة يسري على
+    # الاشتراكات الجديدة وحدَها ومن اشترك قبله يُكمل مدّتَه بما اشترى عليه.
+    #
+    # **وعلّتُه أعمقُ من صدق الوعد**: بلا هذا التجميد **زرُّ تشغيل العمولة غيرُ
+    # قابلٍ للاستعمال أصلاً** — أولُ ضغطةٍ تمسّ كلَّ من اشترك أمس، فلا يُضغط
+    # أبداً ويبقى مبنيّاً لا يُستعمل.
+    #
+    # ويُجمَّد كـ`list_price`: تعديلُ الإعداد لا يحرّك بيعاً وقع.
+    commission_percent_at_purchase: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, server_default=text("0")
+    )
     payment_method: Mapped[PaymentMethod] = mapped_column(
         pg_enum(PaymentMethod, "payment_method"), nullable=False
     )

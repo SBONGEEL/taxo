@@ -395,7 +395,12 @@ async def request_ride(
         duration_min=quote.route.duration_min,
         estimated_fare=quote.fare,
         currency=currency_for_country(rider.country_code),
-        # تُجمَّد الآن ولا تُمس بعدها مهما تغيّر إعداد العمولة (SPEC القسم 4)
+        # **نسبةُ السوق مبدئياً — وتُحسم لحظةَ القبول** (§25.11).
+        #
+        # لا كبتنَ عند الإنشاء أصلاً (التوزيعُ يعرض على واحدٍ بعد واحد)، فنسبةُ
+        # **اشتراكه** لا تُعرف هنا. وهذه قيمةٌ مبدئيةٌ يستبدلها `accept_ride`
+        # بنسبة صاحبِ الرحلة الفعليّ — **قبل أن يتحرك أيُّ مال**، فالتجميدُ
+        # يبقى واحداً ولا يُعاد حسابُه بعد ذلك أبداً.
         commission_percent_at_ride=await settings_service.commission_percent_for(
             session, rider.country_code
         ),
@@ -511,6 +516,21 @@ async def accept_ride(
     ride.status = RideStatus.ACCEPTED
     ride.accepted_at = _now()
     driver.current_ride_id = ride.id
+
+    # **وهنا تُحسم نسبةُ العمولة** (§25.11، قرارُ المالك 2026-08-20).
+    #
+    # الوعدُ «صفر عمولة ما دام اشتراكك سارياً» يخصّ **الكبتن**، ولا كبتنَ يُعرف
+    # عند إنشاء الرحلة — فما جُمّد هناك نسبةُ السوق مبدئياً. وهنا صار صاحبُها
+    # معروفاً، فتُكتب نسبتُه **مرةً واحدةً وقبل أن يتحرك أيُّ مال** (`payments`
+    # لا تعمل قبل `completed`).
+    #
+    # **وقراءةُ عمودٍ لا استعلام**: `driver` مقروءٌ أصلاً في هذا المسار، فلا ضمَّ
+    # ولا استعلامَ ثانٍ (§٥-ج) — وهي سابقةُ `rating_avg` و`level` نفسُها.
+    #
+    # **و`None` تعني «لا اشتراكَ ساري»** فتبقى نسبةُ السوق، وصفرٌ يعني اشتراكاً
+    # اشتُري على صفر — وهما حالان لا يحملهما رقمٌ واحد.
+    if driver.commission_percent_from_subscription is not None:
+        ride.commission_percent_at_ride = driver.commission_percent_from_subscription
 
     try:
         return await _flush_and_reload(session, ride)

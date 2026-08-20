@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import storage
 from app.core.config import settings
 from app.core.exceptions import Conflict
 from app.models.backup import (
@@ -296,6 +297,9 @@ class Alerts:
     stale_hours: int | None
     unpulled: int | None
     disk_percent: int | None
+    # امتلاءُ **نظام الملفات** كلِّه — لا النسخُ وحدَها
+    filesystem_percent: int | None = None
+    documents_bytes: int = 0
 
     @property
     def any(self) -> bool:
@@ -303,6 +307,7 @@ class Alerts:
             self.stale_hours is not None
             or self.unpulled is not None
             or self.disk_percent is not None
+            or self.filesystem_percent is not None
         )
 
 
@@ -332,4 +337,39 @@ async def alerts(session: AsyncSession) -> Alerts:
         if percent >= 80:
             disk = percent
 
-    return Alerts(stale_hours=stale, unpulled=unpulled, disk_percent=disk)
+    # **والقرصُ نفسُه يُقاس، لا النسخُ وحدَها** (2026-08-20).
+    #
+    # كان التنبيهُ يقارن حجمَ النسخ بسقفٍ مضبوط، **فقرصٌ يمتلئ بالوثائق لا
+    # يُرى**: الكبتنُ يرفع إحدى عشرةَ وثيقة، وألفٌ وثمانمئة كبتنٍ يبلغون مئةَ
+    # جيجا. وحين يمتلئ يتوقف كلُّ شيء — القاعدةُ والنسخُ والسجلات معاً —
+    # **ويكون أولُ ما يفشل هو النسخةُ التي كانت ستنقذنا**.
+    #
+    # ولا سقفَ يُضبط هنا: القرصُ يقول سعتَه بنفسه.
+    filesystem = None
+    try:
+        usage = shutil.disk_usage(storage.root())
+        used = int((usage.total - usage.free) * 100 / usage.total)
+        if used >= 80:
+            filesystem = used
+    except OSError:  # pragma: no cover - مسارٌ غيرُ متاح
+        pass
+
+    return Alerts(
+        stale_hours=stale,
+        unpulled=unpulled,
+        disk_percent=disk,
+        filesystem_percent=filesystem,
+        documents_bytes=documents_bytes(),
+    )
+
+
+def documents_bytes() -> int:
+    """حجمُ وثائق الكباتن — يُقرأ ليُعرف **ما يملأ القرص**، لا لسقفٍ يُقارَن به."""
+    total = 0
+    try:
+        for path in storage.root().rglob("*"):
+            if path.is_file():
+                total += path.stat().st_size
+    except OSError:  # pragma: no cover
+        return 0
+    return total

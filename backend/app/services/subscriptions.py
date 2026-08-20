@@ -70,7 +70,15 @@ from app.models.enums import (
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
-from app.services import advances, audit, geo, notifications, offers, wallet
+from app.services import (
+    advances,
+    audit,
+    geo,
+    notifications,
+    offers,
+    settings_service,
+    wallet,
+)
 from app.ws import events
 
 # مدة كل نوع خطة. أرقامٌ لا إعدادات: أسماء الخطط الثلاثة في SPEC القسم 4 هي
@@ -358,6 +366,12 @@ async def _create(
 
     starts_at = await coverage_until(session, driver.id) or _now()
 
+    # **نسبةُ العمولة تُجمَّد هنا وحدَها** (§25.11): هذا البابُ الوحيد الذي يكتب
+    # صفَّ اشتراكٍ في القنوات الأربع، فتجميدٌ فوقه يُنسى في إحداها.
+    frozen_commission = await settings_service.commission_percent_for(
+        session, plan.country_code
+    )
+
     # **قاعدةٌ واحدةٌ للخصم في القنوات الأربع** (البند ٥٤، الفرع ج): ما تنازلنا
     # عنه هو **الفرقُ بين سعر الخطة وما دُفع فعلاً** — لا ما حسبه العرض. ففي
     # المحفظة والبطاقة يتساويان بحكم البناء، وفي الكاش وكليك يفترقان حين يحصّل
@@ -388,12 +402,16 @@ async def _create(
         transaction_id=transaction_id,
         offer_id=offer.offer.id if offer is not None else None,
         list_price=list_price,
+        commission_percent_at_purchase=frozen_commission,
         discount_amount=given_up,
         # ما قرّره العرضُ لحظتَها — به وحدَه يصدق وسمُ «تسويةٍ يدوية»
         offer_discount_amount=(
             offer.amount if offer is not None else Decimal("0")
         ).quantize(_MONEY_UNIT),
     )
+    # **والعمودُ المحضَّرُ يُكتب مع الصفّ** — فمسارُ طلب الرحلة يقرأ عموداً في
+    # صفٍّ يقرؤه أصلاً، بلا ضمٍّ ولا استعلامٍ ثانٍ (§٥-ج)
+    driver.commission_percent_from_subscription = frozen_commission
     session.add(subscription)
     try:
         await session.flush()
@@ -714,6 +732,15 @@ async def expire_due(session: AsyncSession) -> list[SubscriptionNotice]:
             continue
 
         driver = await session.get(Driver, subscription.driver_id)
+        if driver is not None:
+            # **وانتهاءُ التغطية يرفع النسبةَ المجمَّدة** (§25.11): الوعدُ «ما دام
+            # اشتراكك سارياً»، فمن انقضى اشتراكُه يخضع لنسبة سوقه في رحلاته
+            # التالية. و`None` تعني «اقرأ نسبةَ الدولة» لا «صفراً».
+            #
+            # **وهنا لا في مسار الرحلة**: قراءةُ «هل انقضى؟» على كلِّ طلبٍ
+            # استعلامٌ في المسار الذي يمنعه §٥-ج — والدورةُ تكتب مرةً ويقرأ
+            # الطلبُ عموداً.
+            driver.commission_percent_from_subscription = None
         went_offline = False
         if driver.is_online and not await _has_active_ride(
             session, subscription.driver_id

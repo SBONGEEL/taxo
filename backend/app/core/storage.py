@@ -78,7 +78,7 @@ class StoredFile:
     size_bytes: int
 
 
-def _root() -> Path:
+def root() -> Path:
     """يُقرأ عند كل نداء لا مرةً عند الاستيراد — فتستطيع الاختبارات تبديله."""
     return Path(settings.document_storage_root)
 
@@ -99,9 +99,9 @@ def resolve(relative_path: str) -> Path:
     الخروج عن الجذر لا يقع بمسارٍ كتبناه نحن؛ الفحص لما لو كُتب `file_path`
     يوماً من مدخلٍ خارجي: عندها يفشل هذا لا نظامُ الملفات.
     """
-    root = _root().resolve()
-    candidate = (root / relative_path).resolve()
-    if not candidate.is_relative_to(root):
+    base = root().resolve()
+    candidate = (base / relative_path).resolve()
+    if not candidate.is_relative_to(base):
         logger.error("مسار مستند خارج جذر التخزين: %s", relative_path)
         raise DocumentFileMissing()
     if not candidate.is_file():
@@ -118,8 +118,7 @@ async def save(reader: AsyncReader, *, folder: str) -> StoredFile:
     if not _SAFE_FOLDER.match(folder):  # pragma: no cover - حارس برمجي
         raise ValueError("مجلد التخزين يجب أن يكون UUID")
 
-    root = _root()
-    target_dir = root / folder
+    target_dir = root() / folder
     await anyio.to_thread.run_sync(lambda: target_dir.mkdir(parents=True, exist_ok=True))
 
     max_bytes = settings.document_max_bytes
@@ -154,9 +153,30 @@ async def save(reader: AsyncReader, *, folder: str) -> StoredFile:
         await anyio.to_thread.run_sync(handle.close)
 
     name = f"{uuid.uuid4().hex}{extension}"
-    await anyio.to_thread.run_sync(temp_path.replace, target_dir / name)
+    final = target_dir / name
+    await anyio.to_thread.run_sync(temp_path.replace, final)
     # 0o600: الملف يُقرأ عبر مسارٍ يتحقق من الملكية، لا بخادم ملفاتٍ ساكن
-    await anyio.to_thread.run_sync((target_dir / name).chmod, 0o600)
+    await anyio.to_thread.run_sync(final.chmod, 0o600)
+
+    # **ولا يُقَرّ بالنجاح إلا بعد أن يُرى الملفُّ بحجمه** (قاعدةُ المالك
+    # 2026-08-20، وهي الشكلُ الثاني عشر في ثوبه الثالث).
+    #
+    # انتهاءُ النقل ليس كتابةً: قرصٌ امتلأ، أو صلاحيةٌ مرفوضة، أو نظامُ ملفاتٍ
+    # للقراءة وحدَها — كلُّها تُنهي الحلقةَ بلا استثناءٍ يُرى، ثم يُكتب صفٌّ في
+    # القاعدة يشير إلى ملفٍّ لا وجودَ له. **وصفٌّ يعد بملفٍّ ليس هناك أسوأُ من
+    # رفعٍ فشل**: الأول يُكتشف يومَ المراجعة، والثاني يُعاد في ثانيته.
+    written = await anyio.to_thread.run_sync(
+        lambda: final.stat().st_size if final.is_file() else -1
+    )
+    if written != size:
+        await anyio.to_thread.run_sync(final.unlink, True)
+        logger.error(
+            "الملف كُتب ناقصاً: %s — المتوقَّع %d والمكتوب %d",
+            f"{folder}/{name}",
+            size,
+            written,
+        )
+        raise DocumentFileMissing()
 
     return StoredFile(
         relative_path=f"{folder}/{name}", content_type=content_type, size_bytes=size
@@ -170,9 +190,9 @@ async def delete(relative_path: str) -> None:
     المستخدم. فترتيبُ الاثنين ليس تفصيلاً، والفشلُ هنا يُبتلع ويُسجَّل.
     """
     try:
-        root = _root().resolve()
-        candidate = (root / relative_path).resolve()
-        if not candidate.is_relative_to(root):  # pragma: no cover - حارس
+        base = root().resolve()
+        candidate = (base / relative_path).resolve()
+        if not candidate.is_relative_to(base):  # pragma: no cover - حارس
             logger.error("رفض حذف مسار خارج جذر التخزين: %s", relative_path)
             return
         await anyio.to_thread.run_sync(candidate.unlink, True)

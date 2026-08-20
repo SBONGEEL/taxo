@@ -178,6 +178,12 @@ async def subscribe_driver(
                 status=SubscriptionStatus.ACTIVE,
             )
         )
+        # **والعمودُ المحضَّرُ يُكتب كما يكتبه `_create`** (§25.11): هذا المساعدُ
+        # يختصر مسارَ الشراء، فبغير هذا يبقى `None` — أي «لا اشتراكَ ساري» —
+        # فيدفع كبتنٌ مشتركٌ نسبةَ السوق في كل اختبار
+        driver_row = await session.get(Driver, driver_id)
+        if driver_row is not None:
+            driver_row.commission_percent_from_subscription = Decimal("0.00")
         await session.commit()
 
 

@@ -290,3 +290,58 @@ async def test_renaming_records_both_names_in_the_audit_log(
     assert row.username == "ism.jadid"
     assert rows[-1].details["from"] == "ism.qadim"
     assert rows[-1].details["to"] == "ism.jadid"
+
+
+async def test_totp_is_optional_until_the_flag_is_raised(
+    client, session_factory
+) -> None:
+    """**العاملُ الثاني اختياريٌّ بقرار المالك** (2026-08-20، SPEC §25.10).
+
+    والمفتاحُ `admin_totp_required` مطفأٌ افتراضاً في القاعدة نفسِها — فمشرفٌ
+    بلا عاملٍ يعمل، ومن أراده يفعّله من «الأمان» متى شاء.
+    """
+    from app.models.security_setting import SecuritySetting
+    from app.models.user import User as U
+    from app.services import security_settings
+
+    user_id = await _admin_with_username(session_factory, "bila.aamil")
+
+    async with session_factory() as session:
+        user = await session.get(U, user_id)
+        assert await security_settings.totp_required_for(session, user) is False
+
+
+async def test_the_break_glass_account_is_never_forced(
+    client, session_factory
+) -> None:
+    """**وإلا صار العاملُ الثاني هو ما يقفل بابَ الطوارئ.**
+
+    الحسابُ الثاني موجودٌ ليُفتح حين يضيع جهازُ الأول — فاشتراطُ جهازٍ عليه
+    يجعله يحتاج ما وُجد ليعوّضه.
+    """
+    from app.models.user import User as U
+    from app.services import security_settings
+
+    normal_id = await _admin_with_username(session_factory, "aadi.mulzam")
+    rescue_id = await _admin_with_username(
+        session_factory, "tawaari.mulzam", break_glass=True
+    )
+
+    # **يُشعَل الإلزامُ بكتابة الصفِّ مباشرةً لا عبر `update`**: تلك تشترط أن
+    # يكون الفاعلُ نفسُه قد سجّل عاملاً وأثبت رمزَ استرداد — حارسٌ صحيحٌ («لا
+    # تُلزم بما لم تفعله») لا علاقةَ له بما يُقاس هنا
+    from app.models.security_setting import SecuritySetting
+
+    async with session_factory() as session:
+        row = await session.scalar(select(SecuritySetting))
+        if row is None:
+            row = SecuritySetting()
+            session.add(row)
+        row.admin_totp_required = True
+        await session.commit()
+
+    async with session_factory() as session:
+        normal = await session.get(U, normal_id)
+        rescue = await session.get(U, rescue_id)
+        assert await security_settings.totp_required_for(session, normal) is True
+        assert await security_settings.totp_required_for(session, rescue) is False

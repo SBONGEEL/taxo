@@ -14,8 +14,8 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
-    UniqueConstraint,
     text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -104,6 +104,20 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # **ولا يُحدَّث في مسار إنهاء الرحلة ولا في مسار التقييم** — كاتبٌ واحدٌ كما
     # لـ`current_leg` في 12-ب. و`level_computed_at` تجعل «متى حُسب؟» له جوابٌ
     # واحدٌ بدل تخمين
+    # **نسبةُ العمولة السارية عليه الآن** — عمودٌ محضَّرٌ كـ`advance_blocked`
+    # و`level`، يكتبه **شراءُ الاشتراك وحدَه** ومعه المهمّةُ التي تُنهي المنتهية.
+    #
+    # **ولمَ عمودٌ لا استعلام؟** §٥-ج يمنع استعلاماً إضافياً في مسار طلب الرحلة،
+    # وقراءةُ «اشتراكِه السارِي» هناك ضمٌّ ثانٍ على كلِّ طلب. والسابقةُ قائمة:
+    # `rating_avg` يُبنى من مصدره ويُقرأ في التوزيع بلا استعلام.
+    #
+    # **و`NULL` تعني «لا اشتراكَ ساري»** — فتُقرأ نسبةُ الدولة، وهي الحالُ
+    # الطبيعيةُ لمن لم يشترِ بعد. وصفرٌ يعني **اشتراكاً اشتُري على صفر**، وهما
+    # حالان لا يحملهما رقمٌ واحد (درسُ أصفار `wallet_settings`).
+    commission_percent_from_subscription: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
+
     level: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=0, server_default=text("0")
     )

@@ -50,7 +50,11 @@ def _username() -> str:
 
 
 def _password() -> str:
-    alphabet = string.ascii_letters + string.digits + "!@#%^&*-_=+?"
+    """**بلا `=`** — والعلّةُ مقيسة: الملفُّ `key=value`، وقيمةٌ فيها `=` قطعها
+    `cut -d= -f2` فبدت كلمةٌ من ٢٨ حرفاً ثمانيةً، والدخولُ ردّ ٤٠١ بلا سبب
+    ظاهر. **قوّةُ الكلمة لا تنقص بحرفٍ واحد، وغموضُ الملفِّ ثمنٌ لا يُدفع.**
+    """
+    alphabet = string.ascii_letters + string.digits + "!@#%^&*-_+?"
     return "".join(secrets.choice(alphabet) for _ in range(28))
 
 

@@ -153,6 +153,13 @@ celery_app.conf.update(
             "task": "app.tasks.bookings.run_due_bookings",
             "schedule": BOOKING_INTERVAL_SECONDS,
         },
+        # **كنسُ ملفاتِ الوثائق اليتيمة** — أسبوعياً لا يومياً: لا مسارَ حذفٍ
+        # للكبتن اليوم، واليتيمُ يقع باستبدالٍ انقطع بين الملفِّ والصفّ. ومسحُ
+        # مجلدٍ فيه آلافُ الملفات عملٌ لا يُكرَّر بلا سبب
+        "sweep-orphan-documents": {
+            "task": "app.tasks.maintenance.sweep_orphan_documents",
+            "schedule": crontab(hour=4, minute=20, day_of_week=5),
+        },
         "trim-notifications": {
             "task": "app.tasks.maintenance.trim_notifications",
             "schedule": NOTIFICATION_TRIM_INTERVAL_SECONDS,
