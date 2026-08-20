@@ -8,7 +8,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-taxo}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taxo}
+      # **ولا احتياطَ صامتٌ لسرّ** (قرارُ المالك 2026-08-20): كانت
+      #     ${POSTGRES_PASSWORD:-taxo}
+      # فبيئةٌ ناقصةٌ في الإنتاج **تُقلع بكلمةِ مرورٍ معروفةٍ ولا يفشل شيء** — وهو
+      # أخطرُ من سرٍّ مكتوب، لأن المكتوبَ يُرى والاحتياطَ لا أثرَ له. والآن
+      # `${POSTGRES_PASSWORD:?...}`: **يرفض compose الإقلاعَ** ويقول أيُّ متغيّرٍ نقص.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}
       POSTGRES_DB: ${POSTGRES_DB:-taxo}
     ports:
       - "5432:5432"
@@ -44,7 +49,7 @@ services:
       - .env.local
     environment:
       # داخل الشبكة الداخلية أسماء المضيفين هي أسماء الخدمات
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:-taxo}@db:5432/${POSTGRES_DB:-taxo}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
       REDIS_URL: redis://redis:6379/0
     depends_on:
       db:
@@ -128,7 +133,7 @@ services:
     env_file:
       - .env.local
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:-taxo}@db:5432/${POSTGRES_DB:-taxo}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
       REDIS_URL: redis://redis:6379/0
     depends_on:
       db:
@@ -161,7 +166,7 @@ services:
     env_file:
       - .env.local
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:-taxo}@db:5432/${POSTGRES_DB:-taxo}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
       REDIS_URL: redis://redis:6379/0
     depends_on:
       redis:

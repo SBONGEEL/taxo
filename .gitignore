@@ -1,4 +1,13 @@
 # ==== أسرار — لا تدخل Git أبداً ====
+# ملفّا الاعتماد اللذان سلّمهما المالك (2026-08-20): كانا **غيرَ متعقَّبين
+# وغيرَ مستثنَيَين** — أي أن `git add -A` واحداً كان يبتلعهما. والاستثناءُ
+# أوّلاً، قبل أيِّ عملٍ آخر عليهما.
+servar.txt
+Token created successfully.txt
+*.token.txt
+taxo-contabo
+taxo-contabo.pub
+
 .env
 .env.*
 !.env.example

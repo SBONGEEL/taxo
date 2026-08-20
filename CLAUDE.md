@@ -1614,6 +1614,30 @@ changes when the bundle goes stale.
 then **prove from the device itself** that what is running is the latest build — by comparing the served
 bundle hash against the one just built, not by trusting that a build happened.
 
+### The tenth shape has a sibling on the server — writing a setting is not the setting taking effect (2026-08-20)
+
+**The tenth shape says a green guard tells you nothing about the artifact that is running.** Its
+server-side twin appeared on the first hardening pass: `PasswordAuthentication no` was **written
+correctly** into `/etc/ssh/sshd_config.d/50-taxo-hardening.conf`, `sshd -t` validated, `systemctl reload
+ssh` succeeded — and passwords were **still accepted**.
+
+**Cause, measured**: Contabo's image ships `/etc/ssh/sshd_config.d/50-cloud-init.conf` carrying
+`PasswordAuthentication yes`. Drop-ins load alphabetically and **the first declaration wins in sshd** —
+`c` sorts before `t`, so cloud-init's `yes` beat our `no` in a file with the same numeric prefix. The
+fix was the name (`00-taxo-hardening.conf`), not the content.
+
+**And the cloud-init file was deliberately not deleted**: the provider's tooling may rewrite it, so
+deleting reads as success and then silently returns. **It is left in place and outranked.**
+
+**The rule: measure the setting from the tool that consumes it, never from the file you wrote.**
+`sshd -T` prints the *effective* configuration after all includes and precedence. Reading it is what
+turned "I wrote the hardening" into "the hardening is in force" — and had I trusted the write, I would
+have announced a locked door that was open.
+
+It generalises past sshd. Anything with an include directory and first-or-last-wins precedence — nginx,
+sysctl, systemd drop-ins, PAM, `apt.conf.d` — has the same trap, and in every one of them the config
+file you edited is not the answer to "what is in force".
+
 ### Step zero for every phone round — prove the artifact before measuring anything
 
 **Do not begin a measurement on a bundle whose age you have not checked.** The order is fixed:
