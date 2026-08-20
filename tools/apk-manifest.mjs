@@ -84,6 +84,44 @@ for (const app of APPS) {
   });
 }
 
+// **بناءٌ جديدٌ بـ`versionCode` قديمٍ لا يعرفه أندرويد** (2026-08-21).
+//
+// `versionCode` هو ما يقارن به النظامُ نسختين. فحزمةٌ **تغيّرت بصمتُها ولم
+// يتغيّر رقمُها** تُقرأ عند أندرويد **النسخةَ نفسَها**: لا تحديثَ يُعرض،
+// و«التثبيت» فوقها قد يُرفض أو يمرّ بلا أثرٍ ظاهر — **ومن يحمّل يظنّ أنه
+// حدّث وهو لم يفعل**.
+//
+// **والبيانُ السابقُ هو الذاكرة**: لا عمودَ ولا ملفَّ حالةٍ ثانٍ. فإن وُجد
+// بيانٌ قديم، تُقارَن به كلُّ حزمة.
+//
+// **وكلاهما `1` اليوم** — وهو مقبولٌ ما دامتا لم تُنشرا بعد؛ والحارسُ يبدأ
+// عملَه من أول نشرةٍ ثانية.
+const previous = existsSync(join(OUT, "manifest.json"))
+  ? JSON.parse(readFileSync(join(OUT, "manifest.json"), "utf8"))
+  : null;
+const stale = [];
+for (const app of entries) {
+  const before = previous?.apps?.find((a) => a.key === app.key);
+  if (!before || before.sha256 === app.sha256) continue;
+  const wasCode = Number(before.version_code ?? 0);
+  const nowCode = Number(app.version_code ?? 0);
+  if (nowCode <= wasCode) {
+    stale.push(
+      `${app.label}: البصمةُ تغيّرت (${before.sha256.slice(0, 8)} ← ` +
+        `${app.sha256.slice(0, 8)}) و\`versionCode\` ما زال ${nowCode}`,
+    );
+  }
+}
+if (stale.length > 0) {
+  console.error("");
+  console.error("✗ بناءٌ جديدٌ برقمٍ قديم — وأندرويدُ لا يفرّق بينهما:");
+  for (const line of stale) console.error(`  ${line}`);
+  console.error("");
+  console.error("  ارفع `versionCode` في `android/app/build.gradle` قبل النشر.");
+  console.error("  ومن يحمّل برقمٍ لم يتغيّر يظنّ أنه حدّث وهو لم يفعل.");
+  exit(1);
+}
+
 // **`generated_at` ليس هويةَ الحزمة**: يقول متى وُلِّد البيان، والهويةُ
 // `sha256` و`built_at`. وخلطُهما يجعل إعادةَ توليدٍ تبدو بناءً جديداً
 const manifest = { generated_at: new Date().toISOString(), apps: entries };

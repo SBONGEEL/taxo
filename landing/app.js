@@ -63,12 +63,17 @@
           `${day(app.built_at)} · ${mb(app.size_bytes)} م.ب`;
       }
       // **شرحُ التثبيت يخصّ APK وحدَه**: يومَ يصير المصدرُ المتجرَ يختفي معه
-      if (cfg.source === "play") $("install-help")?.remove();
+      if (cfg.source === "play") {
+        $("install-help")?.remove();
+        // **وتنبيهُ ما قبل التوقيع يذهب معه**: يخصّ نسخةَ ما قبل المتجر
+        $("presign-note")?.remove();
+      }
     })
     .catch(() => {
       $("dl-rider")?.remove();
       $("dl-driver")?.remove();
       $("install-help")?.remove();
+      $("presign-note")?.remove();
     });
 
   // ــــ العرضُ القائم
