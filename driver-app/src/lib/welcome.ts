@@ -1,3 +1,5 @@
+import type { Currency } from "@/api/types";
+
 /** نصوصُ ورقة الترحيب — **بيتٌ واحد**، لا نصٌّ مبعثرٌ في مكوّن.
  *
  * **وهي نفسُ قاعدة §17.2** المطبَّقة على غير الأخطاء: نصٌّ يعيش في شاشةٍ يختلف
@@ -30,21 +32,23 @@ export interface WelcomePoint {
 export const WELCOME_TITLE = "أهلاً بك كبتناً في TAXO";
 
 export const WELCOME_LEAD =
-  "حسابك مُعتمد. هذه أربعةُ أشياءَ تختصر عليك البداية.";
+  "حسابك مُعتمد — وهذا ما يعنيك قبل أول رحلة.";
 
 export const WELCOME_POINTS: readonly WelcomePoint[] = [
+  {
+    // **المفاجآتُ ثانياً** — مبنيّةٌ منذ البند ٥٣ ولا يعرفها أحد. وسطرٌ واحدٌ
+    // يلمّح ولا يشرح: الشرحُ في شاشتها، والورقةُ بابٌ لا كتيّب
+    title: "مهامٌّ ومستوياتٌ تقرّبك من الطلبات",
+    body:
+      "أكمِل مهامَّ الشهر فترتفع مستواك، ويقرّبك المستوى من الطلبات القريبة "
+      + "منك. والأقربُ إليك يبقى أولاً دائماً. تجدها في «حسابي ← المهام».",
+  },
   {
     title: "صفر عمولة ما دام اشتراكك سارياً",
     // **الشرطُ في العنوان لا في الحاشية**: من يقرأ عنواناً مطلقاً لا يُكمل
     body:
       "ربحُنا من الاشتراك لا من رحلاتك. وما دام اشتراكك سارياً فأجرةُ الرحلة "
       + "لك كاملةً، وتجد «عمولة TAXO» في محفظتك بقيمتها على كلِّ رحلة.",
-  },
-  {
-    title: "الاشتراك قبل الطلبات",
-    body:
-      "لن تصلك طلباتٌ قبل اشتراكٍ ساري. اشترِ اشتراكك من «الاشتراك»، "
-      + "وتُحتسب المدّةُ من لحظة الشراء.",
   },
   {
     title: "الكاش والكليك يصلانك مباشرة",
@@ -60,5 +64,63 @@ export const WELCOME_POINTS: readonly WelcomePoint[] = [
   },
 ];
 
-export const WELCOME_CTA = "ابدأ";
+/** سطرُ العرض — **يُقرأ من العرض القائم ولا يُكتب نصّاً** (قرارُ المالك).
+ *
+ * **والعلّةُ أن ورقةً تعِد بما نفد أسوأُ من ورقةٍ صامتة**: عرضٌ أُطفئ، أو نفد
+ * سقفُه، أو استفاد منه هذا الكبتنُ سلفاً — كلُّها تجعل السطرَ كذباً يقرؤه في
+ * اللحظة التي يقرّر فيها. فيُشتقّ من `GET /subscriptions/me` نفسِه، **والخلفيةُ
+ * تحسبه لهذا الكبتن بعينه** (`offer_name` يكون `null` لمن لا ينطبق عليه) —
+ * فيختفي السطرُ من نفسه بلا سطرٍ يُحذف هنا.
+ *
+ * **ولا يُطرح شيءٌ في المتصفح** (§14): `price_after_discount` يأتي محسوباً.
+ *
+ * **ويُختار أكبرُ توفيرٍ لا أوّلُ خطّة**: الورقةُ تُقرأ في ثوانٍ، والرقمُ الذي
+ * يجذب هو الأكبر — واختيارُ أوّلِ ما يعود من القائمة يعرض «يوميّاً» بدل شهر.
+ */
+export interface WelcomeOffer {
+  name: string;
+  planName: string;
+  price: string;
+  priceAfter: string;
+  /** **من الخطة نفسِها** — لا من الملف الشخصي: المبلغُ وعملتُه يصلان معاً،
+   *  وفصلُهما هو ما طبع «٠٫٧٥٠ » عارياً في اللوحة مرتين. */
+  currency: Currency;
+  /** مجاناً تماماً — تُقال بكلمةٍ لا برقمٍ صفر. */
+  free: boolean;
+}
+
+interface PlanLike {
+  name: string;
+  price: string;
+  currency: Currency;
+  offer_name: string | null;
+  price_after_discount: string | null;
+}
+
+export function pickWelcomeOffer(plans: readonly PlanLike[]): WelcomeOffer | null {
+  let best: WelcomeOffer | null = null;
+  let bestSaving = -1;
+  for (const plan of plans) {
+    if (!plan.offer_name || plan.price_after_discount === null) continue;
+    // المقارنةُ وحدَها تمرّ بـ`Number` — **ولا يُعرض ناتجُها**: الأرقامُ
+    // المعروضةُ نصوصٌ كما جاءت من الخلفية (§14)
+    const saving = Number(plan.price) - Number(plan.price_after_discount);
+    if (saving > bestSaving) {
+      bestSaving = saving;
+      best = {
+        name: plan.offer_name,
+        planName: plan.name,
+        price: plan.price,
+        priceAfter: plan.price_after_discount,
+        currency: plan.currency,
+        free: Number(plan.price_after_discount) === 0,
+      };
+    }
+  }
+  return bestSaving > 0 ? best : null;
+}
+
+/** **زرٌّ يقود لا يودّع**: «ابدأ» تُغلق ورقةً، و«اشترك الآن» تفتح
+ * الشاشةَ التي بلا اشتراكها لا تصل الكبتنَ طلبات. */
+export const WELCOME_CTA = "اشترك الآن";
 
