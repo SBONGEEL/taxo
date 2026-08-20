@@ -1614,6 +1614,39 @@ changes when the bundle goes stale.
 then **prove from the device itself** that what is running is the latest build — by comparing the served
 bundle hash against the one just built, not by trusting that a build happened.
 
+### When to stop and ask — the owner's rule, restated (2026-08-20)
+
+**Stopping is expensive and it was being overused.** The rule the owner set, verbatim in effect:
+
+**Stop only for:**
+- a **model or architecture** decision;
+- a **conflict with SPEC**;
+- something touching **someone else's money or safety** that he has not settled;
+- **two options whose effect on the user genuinely differs**;
+- a **secret or account only he can supply**;
+- something that **needs his finger on a phone**.
+
+**Never stop:**
+- to present a table — put it in the report and carry on;
+- to get permission to fix a defect you found;
+- to confirm a condition he already recorded;
+- to announce that you are about to begin;
+- for a question that **measurement settles**: if you measured and one reasonable answer stands, do it
+  and write down why.
+
+**And two rules about the shape of stopping**, both of which cost this session real time:
+
+1. **When you stop, stop on the decision alone** — and keep going on everything that does not depend on
+   it. A blocked question is not a blocked session.
+2. **Batch the questions.** Never ask one, stop, then ask another next turn. Finish everything you can
+   and put every open question in **one** report — especially the phone-round items, which the owner
+   should be able to do in a single sitting.
+
+**And the boundary of "money" was corrected**: *"a money item is presented, not executed"* covers money
+that **enters or leaves someone's pocket** — pricing, commission, discounts, payouts, refunds. It does
+**not** cover the owner's own running costs. Disk, server bills, storage caps: **measure, decide,
+execute, and say so in the report.**
+
 ### A guard that invents a defect costs more than one that misses it (2026-08-20)
 
 **`check:contract` was built to catch a class nothing else could see, and its first three versions each

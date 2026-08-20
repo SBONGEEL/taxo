@@ -119,6 +119,19 @@ async def test_the_whole_journey_from_signup_to_withdrawal(
     assert activated.status_code == 200, activated.text
     assert activated.json()["status"] == "approved"
 
+    # **العمولةُ تُشعَل قبل الاشتراك لا قبل الرحلة** (§25.11، 2026-08-20).
+    #
+    # كانت تُشعَل بينهما، وكان ذلك صحيحاً حين كانت النسبةُ تتبع **الدولة**.
+    # ومنذ صارت تتبع **الاشتراك**، إشعالُها بعد الشراء لا يمسّ صاحبَه — وهو
+    # الوعدُ «صفر عمولة ما دام اشتراكك سارياً» يعمل. فترتيبُ الخطوتين هنا هو
+    # القاعدةُ الجديدةُ مرئيةً: **ما لم يُقرَّر قبل الشراء لا يُحاسَب عليه**.
+    commission = await client.patch(
+        "/admin/settings/commission/JO",
+        json={"commission_enabled": True, "commission_percent": "12.00"},
+        headers=admin_headers,
+    )
+    assert commission.status_code == 200, commission.text
+
     # ── ٣. الاشتراك: مالٌ يدخل محفظتَه ثم يخرج ثمناً لخطة ────────────────
     plan_id = await ensure_plan(session_factory)
     await topup_wallet(
@@ -131,16 +144,6 @@ async def test_the_whole_journey_from_signup_to_withdrawal(
     )
     assert bought.status_code == 201, bought.text
     assert bought.json()["status"] == "active"
-
-    # **العمولةُ تُشعَل قبل الرحلة**: نسبتُها تُجمَّد لحظةَ الإنشاء، فإشعالُها
-    # بعدها لا يمسّ رحلةً قائمة (SPEC §8) — وترتيبُ الخطوتين هنا هو القاعدةُ
-    # نفسُها مرئيةً: ما لم يُقرَّر قبل الطلب لا يُحاسَب عليه
-    commission = await client.patch(
-        "/admin/settings/commission/JO",
-        json={"commission_enabled": True, "commission_percent": "12.00"},
-        headers=admin_headers,
-    )
-    assert commission.status_code == 200, commission.text
 
     # ── ٤. أونلاين + أوّلُ بثِّ موقع = داخل دائرة التوزيع ────────────────
     online = await client.post("/drivers/me/online", headers=driver_headers)
