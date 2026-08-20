@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:contract && tsc -b && vite build",
+    "build": "npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:contract && tsc -b && vite build && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -15,7 +15,8 @@
     "check:config": "node scripts/check-config.mjs",
     "check:digits": "node scripts/check-digits.mjs",
     "check:doors": "node scripts/check-doors.mjs",
-    "check:contract": "node ../tools/check-contract.mjs --app admin-panel"
+    "check:contract": "node ../tools/check-contract.mjs --app admin-panel",
+    "check:served": "node ../tools/check-served.mjs admin-panel"
   },
   "dependencies": {
     "clsx": "^2.1.1",

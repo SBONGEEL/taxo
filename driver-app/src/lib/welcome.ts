@@ -61,3 +61,4 @@ export const WELCOME_POINTS: readonly WelcomePoint[] = [
 ];
 
 export const WELCOME_CTA = "ابدأ";
+
