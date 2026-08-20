@@ -22,6 +22,12 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 
+# **ملفُّ البيئة يختلف بين الجهازين**: `.env.local` هنا و`.env` على الخادم
+# (§25.1 — السرُّ خارج مجلد المشروع، موصولٌ إليه). وحارسٌ يعمل على واحدةٍ
+# منهما فقط هو حارسٌ لا يُقاس حيث يهمّ
+ENV_FILE="${TAXO_ENV_FILE:-.env.local}"
+[ -f "$ENV_FILE" ] || ENV_FILE=".env"
+
 problems=0
 note() { printf '  %s\n' "$1"; }
 
@@ -38,8 +44,8 @@ else
     note "نفسَها من الصورة نفسِها، فالحزمةُ الجديدةُ غائبةٌ ببساطة."
     note "والمجموعةُ **لن تكشفه**: \`docker compose run\` يبني من الصورة كلَّ مرة."
     note ""
-    note "  docker compose --env-file .env.local build backend"
-    note "  docker compose --env-file .env.local up -d backend worker beat"
+    note "  docker compose --env-file "$ENV_FILE" build backend"
+    note "  docker compose --env-file "$ENV_FILE" up -d backend worker beat"
     problems=$((problems + 1))
   else
     note "✓ صورةُ الخلفية أحدثُ من \`requirements.txt\`."
@@ -56,7 +62,7 @@ if docker ps --format '{{.Names}}' | grep -q '^taxo-backend$'; then
     note "رُفعت بلا \`docker-compose.tunnel.yml\`، فالهاتفان يقفان على «الشبكة"
     note "ضعيفة» **بينما \`curl\` من الجهاز يجيب ٢٠٠** — والشبكةُ سليمةٌ تماماً."
     note ""
-    note "  docker compose --env-file .env.local \\"
+    note "  docker compose --env-file "$ENV_FILE" \\"
     note "    -f docker-compose.yml -f docker-compose.tunnel.yml up -d backend"
     problems=$((problems + 1))
   fi
