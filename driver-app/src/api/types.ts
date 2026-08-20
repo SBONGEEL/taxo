@@ -46,7 +46,8 @@ export type OtpChannel = "whatsapp_otp" | "sms_otp";
 
 export interface User {
   id: string;
-  phone: string;
+  /** `null` نظرياً (المشرف) — والتطبيقان لا يريان إلا صاحبَهما. */
+  phone: string | null;
   name: string;
   role: UserRole;
   /** كلُّ ما يملكه من أدوار — به يُقرَّر شكلُ زرِّ التبديل (SPEC §21). */

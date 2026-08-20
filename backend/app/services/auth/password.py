@@ -77,6 +77,30 @@ class PasswordAuthStrategy:
         self, session: AsyncSession, phone: str, password: str
     ) -> User:
         user = await session.scalar(select(User).where(User.phone == phone))
+        return await self._check(password, user)
+
+    async def authenticate_by_username(
+        self, session: AsyncSession, username: str, password: str
+    ) -> User:
+        """دخولُ المشرف باسمِ مستخدم — **ونفسُ الفحص ونفسُ الجواب**.
+
+        و`_check` مشتركةٌ عمداً: مسارُ تحقّقٍ ثانٍ يفترق أوّلَ تعديلٍ، فيصير
+        أحدُهما يفرّق بين «لا وجود» و«كلمةٌ خاطئة» والآخرُ لا — وهو بابُ عدٍّ
+        للحسابات. **والزمنُ سواء**: `_check` تفحص تجزئةً وهميةً حين لا حساب.
+        """
+        from app.models.admin_credential import AdminCredential, normalize_username
+
+        row = await session.scalar(
+            select(AdminCredential).where(
+                AdminCredential.username == normalize_username(username)
+            )
+        )
+        user = None
+        if row is not None:
+            user = await session.get(User, row.user_id)
+        return await self._check(password, user)
+
+    async def _check(self, password: str, user: User | None) -> User:
 
         if user is None or user.password_hash is None:
             # حسابٌ بلا كلمة مرور (أُنشئ قبل المرحلة 8-ب بـ OTP وحده) يُعامل

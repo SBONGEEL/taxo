@@ -19,7 +19,14 @@ class User(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "users"
 
     # الهاتف هو مُعرّف الدخول — مخزّن بصيغة E.164
-    phone: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+    # **يقبل `NULL` منذ 2026-08-20** — والفريدُ باقٍ: Postgres يسمح بعدّة
+    # `NULL` في فهرسٍ فريد، فالرقمُ الحقيقيُّ ما زال لا يتكرر، والمشرفُ بلا
+    # رقمٍ لا يزاحم أحداً. **ولا يعني هذا أن رقماً اختياريٌّ لكلِّ حساب**:
+    # التسجيلُ الذاتيُّ يشترطه كما كان، والاستثناءُ حسابٌ إداريٌّ يُنشأ من
+    # الخادم (`admin_credentials`).
+    phone: Mapped[str | None] = mapped_column(
+        String(20), unique=True, index=True, nullable=True
+    )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     role: Mapped[UserRole] = mapped_column(
         pg_enum(UserRole, "user_role"), nullable=False, default=UserRole.RIDER
@@ -145,5 +152,10 @@ class User(UUIDMixin, TimestampMixin, Base):
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
+    # اعتمادُ دخولِ المشرف — `None` لكلِّ راكبٍ وكبتن (`models/admin_credential.py`)
+    admin_credential: Mapped["AdminCredential | None"] = relationship(  # noqa: F821
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
-        return f"<User {self.phone} ({self.role})>"
+        return f"<User {self.phone or self.id} ({self.role})>"

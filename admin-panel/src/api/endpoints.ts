@@ -6,6 +6,7 @@
 
 import { API_URL, api, tokens } from "@/api/client";
 import type {
+  AdminAccount,
   AdminDriverRow,
   AdminReferralRow,
   AdminRideDetail,
@@ -943,3 +944,19 @@ export async function driverDocumentBlob(
   if (!answer.ok) throw new Error("تعذّر فتح الوثيقة");
   return URL.createObjectURL(await answer.blob());
 }
+
+// ------------------------------------------- حسابُ المشرف نفسِه (SPEC §25.9)
+
+/** **بابُ صاحبِ الحساب لا بابُ إدارةٍ لغيره** — كلُّه يعمل على الجلسة الحالية. */
+export const getAdminAccount = () =>
+  api.get<AdminAccount>("/admin/account");
+
+/** تغييرُ الاسم — **يُسجَّل في التدقيق بالقديم والجديد**. */
+export const changeAdminUsername = (username: string) =>
+  api.put<AdminAccount>("/admin/account/username", { username });
+
+/** تغييرُ الكلمة — **بالحالية**، ويُبطل بقيةَ الجلسات لا هذه. */
+export const changeAdminPassword = (payload: {
+  current_password: string;
+  new_password: string;
+}) => api.put<void>("/admin/account/password", payload);

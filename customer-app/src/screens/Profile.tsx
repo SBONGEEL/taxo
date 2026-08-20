@@ -47,6 +47,8 @@ export function ProfileScreen() {
   const { dialCode } = usePhoneCountry(user?.country_code);
 
   const [verifying, setVerifying] = useState(false);
+  // يضيّق النوعَ مرةً واحدة — والمشرفُ لا يدخل هذا التطبيق أصلاً
+  const phone = user?.phone ?? null;
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -103,14 +105,18 @@ export function ProfileScreen() {
               أثبت ملكية رقمك لتأمين حسابك — يُطلب مرةً واحدة.
             </p>
 
-            {verifying ? (
+            {/* **`user.phone` صار يقبل `null` نظرياً** (المشرف يدخل باسمِ
+                مستخدم، SPEC §25.9) — ولا مشرفَ في هذا التطبيق بحكم
+                `app_scope`. فالشرطُ يُرضي المُصرِّفَ ويقول الحقيقة: لا تحققَ
+                من رقمٍ لا وجودَ له */}
+            {verifying && phone ? (
               <PhoneVerification
-                phone={user.phone}
+                phone={phone}
                 dialCode={dialCode}
                 method={config?.auth.verification ?? "none"}
                 otpLength={config?.auth.otp_length ?? null}
                 requestChallenge={(channel) =>
-                  startChallenge(user.phone, user.country_code, channel)
+                  startChallenge(phone, user.country_code, channel)
                 }
                 onProven={provePhone}
                 onBack={() => setVerifying(false)}

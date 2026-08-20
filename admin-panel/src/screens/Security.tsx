@@ -35,6 +35,7 @@ import {
 import type { SecurityPolicy, TotpEnrollment, TotpStatus } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
 import { Shell } from "@/components/Shell";
+import { AdminAccountCard } from "@/components/AdminAccountCard";
 import { Backups } from "@/components/Backups";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -577,6 +578,9 @@ export function SecurityScreen() {
           و`admin` حصراً: ملفٌ فيه كلُّ أرقام المستخدمين ودفترُ المحافظ */}
       {isAdmin ? (
         <div className="mt-24">
+          {/* **حسابُ الدخول قبل العامل الثاني**: «ما يخصّ دخولي» سؤالٌ واحد */}
+          <AdminAccountCard onError={setError} />
+
           <Backups onError={setError} onDone={setDone} />
         </div>
       ) : null}

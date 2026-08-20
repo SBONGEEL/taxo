@@ -126,9 +126,13 @@ export function AccountScreen() {
               {/* الرقم كما هو: معرّفٌ يُقارَن ويُملى، لا كمّيةٌ تُقرأ — نفس
                   قاعدة `Cards.tsx` و`Vehicle.tsx` (`CLAUDE.md`) */}
               <span dir="ltr">
-                {country
-                  ? forDisplay(user.phone, country.dial_code)
-                  : user.phone}
+                {/* `null` نظرياً (المشرف) ولا مشرفَ هنا — و«—» أصدقُ من
+                    فراغٍ يُقرأ عطباً في الرسم */}
+                {user.phone
+                  ? country
+                    ? forDisplay(user.phone, country.dial_code)
+                    : user.phone
+                  : "—"}
               </span>{" "}
               · ★ {digits(driver.rating_avg)}
             </div>

@@ -85,6 +85,7 @@ from app.models.wallet import (
 from app.models.wallet_setting import WalletSetting
 from app.models.otp_template import OtpMessageTemplate, OtpTemplatePurpose
 from app.models.user_role_grant import UserRoleGrant
+from app.models.admin_credential import AdminCredential
 
 __all__ = [
     "UserRoleGrant",

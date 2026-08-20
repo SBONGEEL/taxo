@@ -90,7 +90,11 @@ async def run_now(admin: AdminUser, session: DbSession, redis: RedisDep) -> Back
     if not got:
         raise backups.BackupAlreadyRunning()
     try:
-        run = await backups.take(session, requested_by=admin.phone)
+        # **ومشرفٌ بلا رقم** (2026-08-20): الاسمُ يبقى دائماً، والرقمُ قد يكون
+        # `None`. وهذا الموضعُ **الوحيد** في المشروع الذي يقرأ رقمَ مشرف
+        run = await backups.take(
+            session, requested_by=admin.phone or admin.name
+        )
     finally:
         await redis.delete(backups.LOCK_KEY)
 

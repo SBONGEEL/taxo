@@ -64,6 +64,7 @@ from app.schemas.security import (
     TotpStatusOut,
 )
 from app.services import (
+    admin_credentials,
     handoff,
     rides as rides_service,
     notifications,
@@ -255,13 +256,24 @@ async def login(
     ولا شيء في هذا الجواب يُعلن السياسة قبل ذلك، ولا ينشرها `GET /config`:
     «هل تكفي كلمةُ المرور هنا» سؤالٌ لا يفيد إلا من لا يملكها.
     """
-    phone = await _resolve(payload.phone, payload.country_code)
+    # **مُعرِّفٌ واحدٌ لا اثنان**: رقمٌ أو اسمُ مستخدم. وإرسالُهما معاً غموضٌ
+    # لا يُخمَّن — أيُّهما يُصدَّق لو تعارضا؟
+    if bool(payload.phone) == bool(payload.username):
+        raise InvalidInput("أرسل رقمَ الهاتف أو اسمَ المستخدم — لا كليهما")
 
-    # حدّان: على الرقم (منع تخمين كلمة مرور حساب بعينه) وعلى الـ IP
+    if payload.username:
+        # **والسقفُ على الاسم كما هو على الرقم**: حسابٌ يُخمَّن بالاسم يُخمَّن
+        # بالقدر نفسِه، فلا يُترك بلا حدّ لأن مُعرِّفَه تغيّر
+        identity = f"login:username:{payload.username.strip().lower()}"
+    else:
+        phone = await _resolve(payload.phone, payload.country_code)
+        identity = f"login:phone:{phone}"
+
+    # حدّان: على المُعرِّف (منع تخمين كلمة مرور حساب بعينه) وعلى الـ IP
     await _guard(
         redis,
         (
-            f"login:phone:{phone}",
+            identity,
             settings.login_rate_limit_attempts,
             settings.login_rate_limit_window_seconds,
         ),
@@ -272,14 +284,27 @@ async def login(
         ),
     )
 
-    user = await password_strategy.authenticate(session, phone, payload.password)
+    if payload.username:
+        user = await password_strategy.authenticate_by_username(
+            session, payload.username, payload.password
+        )
+    else:
+        user = await password_strategy.authenticate(session, phone, payload.password)
 
     # **بعد كلمة المرور لا قبلها**: «هذا حسابُ كبتن» جوابٌ عن الحساب، فلا
     # يُقال إلا لمن أثبت أنه صاحبُه — نفسُ ترتيبِ العامل الثاني فوق. وقبل
     # التحدي أيضاً: تحدٍّ يُفتح لبابٍ سيُغلق عملٌ لا ينتهي إلى شيء
     app_scope.guard(user.roles, payload.app)
 
-    await rate_limit.reset(redis, f"login:phone:{phone}")
+    await rate_limit.reset(redis, identity)
+
+    # **دخولُ حسابِ الطوارئ حدثٌ يُسجَّل ساعةَ وقوعه** — لا بعد شهرٍ من قراءة
+    # سجلٍّ لا يميّزه. وهو الغرضُ من الحساب الثاني: بابٌ نائمٌ يُعرف حين يُفتح.
+    # **ويُكتب قبل العامل الثاني**: من بلغ كلمةَ المرور بلغ الباب، وسقوطُه في
+    # التحدي لا يجعل المحاولةَ غيرَ جديرةٍ بالذكر.
+    if payload.username:
+        await admin_credentials.note_login(session, user, redis=redis)
+        await session.commit()
 
     if await totp.has_confirmed_factor(session, user.id):
         challenge = await totp.start_challenge(redis, user)

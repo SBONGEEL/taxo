@@ -55,9 +55,18 @@ class ProfileUpdate(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """الدخول بكلمة المرور — الطريقة الوحيدة (المرحلة 8-ب)."""
+    """الدخول بكلمة المرور — الطريقة الوحيدة (المرحلة 8-ب).
 
-    phone: str = Field(min_length=6, max_length=20)
+    **ومُعرِّفان لا واحد** (قرارُ المالك 2026-08-20): الراكبُ والكبتنُ برقمهما
+    كما كانا، **والمشرفُ باسمِ مستخدمٍ لا رقمَ له**. وأحدُهما يُرسل لا كلاهما.
+
+    **ولا يصير اسمُ المستخدم مدخلاً بديلاً للتطبيقين**: `app_scope.guard` يعمل
+    بعد كلمة المرور كما كان، ويرفض `admin` في تطبيقَي الراكب والكبتن — فالحارسُ
+    لم يُمسّ، وما أُضيف مُعرِّفٌ لا بابٌ ثانٍ.
+    """
+
+    phone: str | None = Field(default=None, min_length=6, max_length=20)
+    username: str | None = Field(default=None, min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=128)
     country_code: CountryCode | None = None
     # **أيُّ تطبيقٍ يطلب** (`core/app_scope.py`، قرارُ المالك 2026-08-15):
@@ -130,7 +139,9 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    phone: str
+    # **`None` للمشرف** (2026-08-20): يدخل باسمِ مستخدمٍ لا برقم. والتطبيقان
+    # يقرآنه لصاحبِهما وهو موجودٌ دائماً هناك — فالتغييرُ يمسّ اللوحةَ وحدَها
+    phone: str | None
     name: str
     role: UserRole
     # **كلُّ ما يملكه من أدوار** (نموذجُ الأدوار §21): به يعرف التطبيقُ الآخرَ

@@ -12,7 +12,8 @@ export type UserRole = "rider" | "driver" | "admin" | "support";
 
 export interface User {
   id: string;
-  phone: string;
+  /** `null` للمشرف — يدخل باسمِ مستخدمٍ لا برقم (SPEC §25.9). */
+  phone: string | null;
   name: string;
   role: UserRole;
   country_code: CountryCode;
@@ -1109,3 +1110,15 @@ export type OtpTemplates = {
   optional_variables: string[];
   applies_to_transport: string;
 };
+
+/** حسابُ المشرف نفسِه — اسمُ مستخدمٍ لا رقمَ هاتف (SPEC §25.9).
+ *
+ * `has_phone=false` يعني **لا استعادةَ ذاتية**: كلمةُ المرور تُعاد من الخادم
+ * وحدَه، ومن يفقد الوصولَ إلى الخادم يفقد اللوحة. خطرٌ مقبولٌ مكتوب.
+ */
+export interface AdminAccount {
+  username: string | null;
+  /** حسابُ طوارئ — لا يُستعمل يومياً، ودخولُه يُكتب في التدقيق. */
+  is_break_glass: boolean;
+  has_phone: boolean;
+}
