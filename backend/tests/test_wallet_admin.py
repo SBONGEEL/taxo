@@ -368,3 +368,104 @@ async def test_transfer_blocked_while_limits_are_unset(
     assert response.status_code == 409
     assert response.json()["code"] == "wallet_limit_exceeded"
     assert "غير مضبوطة" in response.json()["message"]
+
+
+async def test_a_staff_topup_needs_a_written_reference(
+    client, admin_headers, jordan_wallet
+) -> None:
+    """**مالٌ يدخل رصيداً بقرارِ موظف** — فما يُطابَق به الإيصالُ الورقيُّ إلزاميّ.
+
+    وحرسُه في المخطط لا في الشاشة: قاعدةٌ تعيش في زرٍّ وحدَه يلتفّ عليها أيُّ
+    نداءٍ آخر — وهو الشكلُ الذي أغلقناه في `detail` وفي قواعد التحقق.
+    """
+    rider = await _rider(client)
+
+    bare = await client.post(
+        f"/admin/wallets/{rider['user_id']}/topups",
+        json={"method": "cash", "amount": "5.000"},
+        headers=admin_headers,
+    )
+    assert bare.status_code == 422, bare.text
+
+    short = await client.post(
+        f"/admin/wallets/{rider['user_id']}/topups",
+        json={"method": "cash", "amount": "5.000", "reference": "أ"},
+        headers=admin_headers,
+    )
+    assert short.status_code == 422, short.text
+
+    ok = await client.post(
+        f"/admin/wallets/{rider['user_id']}/topups",
+        json={"method": "cash", "amount": "5.000", "reference": "إيصال 4471"},
+        headers=admin_headers,
+    )
+    assert ok.status_code == 200, ok.text
+
+
+async def test_a_staff_topup_lands_in_the_audit_log(
+    client, admin_headers, session_factory, jordan_wallet
+) -> None:
+    """قرارُ موظفٍ يحرّك مالاً يُسأل عنه بعد شهر — فله صفٌّ باسم فاعله."""
+    from sqlalchemy import select
+
+    from app.models.audit import AdminAuditLog
+    from tests.helpers import topup_wallet
+
+    rider = await _rider(client)
+    await topup_wallet(client, admin_headers, rider["user_id"], "7.000")
+
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AdminAuditLog).where(
+                    AdminAuditLog.entity_type == "wallet_topup_request"
+                )
+            )
+        ).all()
+    assert rows, "شحنٌ إداريٌّ بلا صفِّ تدقيق"
+    assert rows[-1].actor_id is not None
+
+
+async def test_an_adjustment_needs_a_written_reason_and_is_audited(
+    client, admin_headers, session_factory, jordan_wallet
+) -> None:
+    """**المخرجُ الوحيد لتصحيح دفترٍ لا يُعدَّل** — ولا يُفتح بلا «لماذا».
+
+    و`wallet_transactions` عليها مُطلِقٌ يرفض `UPDATE` و`DELETE` (هجرة `0006`)،
+    فهذا البابُ هو كلُّ ما يملكه المشرفُ لتصحيح خطأ. وزرٌّ يقيّد بلا سببٍ يجعل
+    الدفترَ صحيحاً حسابياً وغيرَ مقروءٍ بشرياً.
+    """
+    from sqlalchemy import select
+
+    from app.models.audit import AdminAuditLog
+    from tests.helpers import topup_wallet
+
+    rider = await _rider(client)
+    await topup_wallet(client, admin_headers, rider["user_id"], "10.000")
+
+    bare = await client.post(
+        f"/admin/wallets/{rider['user_id']}/adjustments",
+        json={"amount": "2.000"},
+        headers=admin_headers,
+    )
+    assert bare.status_code == 422, bare.text
+
+    ok = await client.post(
+        f"/admin/wallets/{rider['user_id']}/adjustments",
+        json={"amount": "2.000", "reason": "تصحيح خطأ إدخال"},
+        headers=admin_headers,
+    )
+    assert ok.status_code == 200, ok.text
+
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AdminAuditLog).where(
+                    AdminAuditLog.entity_type == "wallet_transaction"
+                )
+            )
+        ).all()
+    assert rows, "قيدُ تصحيحٍ بلا صفِّ تدقيق"
+    # **ولا قيمةَ في `details`** — أسماءُ الحقول وحدَها (SPEC القسم ١٤)
+    assert "amount" not in rows[-1].details
+    assert "2.000" not in str(rows[-1].details)

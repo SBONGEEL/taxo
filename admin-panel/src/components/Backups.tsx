@@ -34,6 +34,18 @@ function size(bytes: number): string {
   return `${digits(Math.max(1, Math.round(bytes / 1024)).toString())} ك.ب`;
 }
 
+/** **ترتيبُ `date.weekday()` في بايثون: الاثنينُ صفر** — لا الأحد. وقائمةٌ
+ *  ترتيبُها غيرُ ترتيبِ ما يقرؤه الخادم تأخذ النسخةَ في يومٍ غير المختار. */
+const WEEKDAYS = [
+  "الاثنين",
+  "الثلاثاء",
+  "الأربعاء",
+  "الخميس",
+  "الجمعة",
+  "السبت",
+  "الأحد",
+];
+
 export function Backups({
   onError,
   onDone,
@@ -257,10 +269,21 @@ function SettingsForm({
   const s = state.settings;
   const [enabled, setEnabled] = useState(s.enabled);
   const [frequency, setFrequency] = useState(s.frequency);
+  // **يومُ الأسبوع**: كان بلا خانةٍ منذ بُني، و«أسبوعياً» يُختار بلا يوم —
+  // فيُقرأ `weekday is None` في `backups.due` **فلا تُؤخذ نسخةٌ أبداً**. جدولةٌ
+  // تبدو مضبوطةً في الشاشة ولا تعمل، ولا شيءَ يفشل حتى يوم الاستعادة.
+  //
+  // والافتراضُ **السبت** لا صفرٌ صامت: من بدّل إلى «أسبوعياً» يجب أن يرى يوماً
+  // مختاراً يصحّحه، لا خانةً فارغةً يمرّ عليها
+  const [weekday, setWeekday] = useState(String(s.weekday ?? 6));
   const [hour, setHour] = useState(String(s.hour_local));
   const [keep, setKeep] = useState(String(s.keep_count));
   const [staleHours, setStaleHours] = useState(String(s.alert_after_hours));
   const [unpulled, setUnpulled] = useState(String(s.alert_unpulled_count));
+  // **فارغٌ يعني «لا سقف»** — كسائر السقوف في هذا المشروع، ويُكتب صراحةً
+  const [maxBytes, setMaxBytes] = useState(
+    s.max_bytes === null ? "" : String(s.max_bytes),
+  );
   const [busy, setBusy] = useState(false);
 
   return (
@@ -285,6 +308,19 @@ function SettingsForm({
           <option value="daily">يومياً</option>
           <option value="weekly">أسبوعياً</option>
         </Select>
+        {frequency === "weekly" ? (
+          <Select
+            label="يومُ الأسبوع"
+            value={weekday}
+            onChange={(event) => setWeekday(event.target.value)}
+          >
+            {WEEKDAYS.map((label, index) => (
+              <option key={label} value={String(index)}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        ) : null}
         <Field
           label="الساعة (بتوقيت الأردن)"
           dir="ltr"
@@ -309,6 +345,15 @@ function SettingsForm({
           }
         />
         <Field
+          label="تنبيه إن تجاوز حجمُ النسخة (بايت — فارغ = لا سقف)"
+          dir="ltr"
+          inputMode="numeric"
+          value={maxBytes}
+          onChange={(event) =>
+            setMaxBytes(event.target.value.replace(/[^0-9]/g, ""))
+          }
+        />
+        <Field
           label="تنبيه عند كم نسخةٍ لم تُسحب"
           dir="ltr"
           inputMode="numeric"
@@ -329,10 +374,14 @@ function SettingsForm({
           updateBackupSettings({
             enabled,
             frequency,
+            // **ويُرسل مع «أسبوعياً» وحدَها**: يومٌ على جدولةٍ يومية قيمةٌ لا
+            // تُقرأ، وحفظُها يجعل تبديلاً لاحقاً يرث اختياراً لم يره أحد
+            ...(frequency === "weekly" ? { weekday: Number(weekday) } : {}),
             hour_local: Number(hour),
             keep_count: Number(keep),
             alert_after_hours: Number(staleHours),
             alert_unpulled_count: Number(unpulled),
+            max_bytes: maxBytes === "" ? null : Number(maxBytes),
           })
             .then(() => onSaved("حُفظت جدولةُ النسخ"))
             .catch((caught) =>

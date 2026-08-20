@@ -44,6 +44,7 @@ import { useSession } from "@/lib/session";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { Referrals } from "@/components/Referrals";
 import { Modal } from "@/components/ui/Modal";
+import { QuietHours } from "@/components/QuietHours";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -53,7 +54,6 @@ import {
   Spinner,
   SuccessNote,
 } from "@/components/ui/Feedback";
-import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import { digits, cn,
   DISPLAY_LOCALE,
@@ -96,7 +96,6 @@ function when(iso: string | null): string {
 export function CampaignsScreen() {
   const { isAdmin } = useSession();
   const { country } = useCountry();
-  const countryConfig = useCountryConfig(country);
 
   const [rows, setRows] = useState<Campaign[] | null>(null);
   const [open, setOpen] = useState<Campaign | null>(null);
@@ -139,11 +138,6 @@ export function CampaignsScreen() {
     }
   }
 
-  const quiet =
-    countryConfig?.quiet_hours_start && countryConfig.quiet_hours_end
-      ? `${digits(countryConfig.quiet_hours_start)} – ${digits(countryConfig.quiet_hours_end)}`
-      : null;
-
   return (
     <Shell
       title="إشعارات جماعية"
@@ -154,24 +148,11 @@ export function CampaignsScreen() {
         </Button>
       }
     >
-      {/* ما يحكم متى تصل الحملة فعلاً — بجانبها لا في صفحةٍ أخرى */}
-      <div className="mb-14 flex flex-wrap items-center gap-12 rounded-14 border border-line bg-surface px-16 py-12 text-12 text-muted">
-        <span className="font-semibold text-ink">ساعات الهدوء</span>
-        {quiet ? (
-          <>
-            <span dir="ltr" className="font-bold text-ink">
-              {quiet}
-            </span>
-            <span>{countryConfig?.quiet_hours_timezone}</span>
-          </>
-        ) : (
-          <span>لم تُضبط بعد لهذه الدولة</span>
-        )}
-        <span className="leading-note">
-          — حملةٌ تقع داخلها تُؤجَّل إلى النافذة التالية، ولا تُلغى ولا تُرسل
-          ناقصة. والتقسيم بالدولة، فحملةٌ للسوقين تُرسل في كلٍّ منهما بنافذته.
-        </span>
-      </div>
+      {/* ما يحكم متى تصل الحملة فعلاً — بجانبها لا في صفحةٍ أخرى.
+          **وكانت تُعرض ولا تُحرَّر**: `PUT /admin/campaigns/settings/{country}`
+          مبنيٌّ ومصرَّحٌ به في `endpoints.ts` **ولا ينادِيه أحد** — ومنطقةُ
+          الزمن فيه هي التي يُحسب بها «يومُ الدولة» في كلِّ تقرير. */}
+      <QuietHours country={country} onError={setError} onSaved={setDone} />
 
       <ErrorNote message={error} />
       <SuccessNote message={done} />

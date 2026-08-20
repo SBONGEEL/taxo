@@ -417,3 +417,25 @@ export const exchangeHandoff = (token: string) =>
     { token, app: CLIENT_APP },
     { anonymous: true },
   );
+
+// ------------------------------------- بدائلُ REST حين يسقط المقبس (SPEC §10)
+
+/** **مسارُ الطوارئ حين لا مقبس** — يبقيه مرئياً للتوزيع.
+ *
+ * فتحُ المقبس هو مفتاحُ Online في الحال الطبيعية؛ وهذه الثلاثةُ لمن **فقد**
+ * مقبسَه: كبتنٌ غيرُ مرئيٍّ لا تصله رحلة، فيخسر دخلَه، والراكبُ يخسر سيارة.
+ * وكانت مبنيّةً في الخلفية ومختبَرةً **ولا ينادِيها أحد** — بابٌ بلا زرّ في
+ * أخطر موضع.
+ */
+export const goOnlineOverRest = () =>
+  api.post<Driver>("/drivers/me/online", {});
+
+export const goOfflineOverRest = () =>
+  api.post<Driver>("/drivers/me/offline", {});
+
+/** بثُّ الموقع بلا مقبس — نفسُ ما يحمله إطارُ `location` حرفاً بحرف. */
+export const reportLocationOverRest = (payload: {
+  lat: number;
+  lng: number;
+  heading: number | null;
+}) => api.post<void>("/drivers/me/location", payload);

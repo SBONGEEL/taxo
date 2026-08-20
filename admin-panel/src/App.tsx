@@ -42,6 +42,9 @@ const DriversScreen = lazy(() =>
 const FinanceScreen = lazy(() =>
   import("@/screens/Finance").then((m) => ({ default: m.FinanceScreen })),
 );
+const PaymentsScreen = lazy(() =>
+  import("@/screens/Payments").then((m) => ({ default: m.PaymentsScreen })),
+);
 const DisputesScreen = lazy(() =>
   import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
 );
@@ -217,6 +220,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <FinanceScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/payments"
+                    element={
+                      <Guarded>
+                        <PaymentsScreen />
                       </Guarded>
                     }
                   />

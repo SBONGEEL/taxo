@@ -36,6 +36,7 @@ import { ApiError } from "@/api/client";
 import {
   activateDriver,
   approveDriver,
+  driverDocumentBlob,
   getDriverDocuments,
   listDrivers,
   rejectDriver,
@@ -104,6 +105,78 @@ const PREFERENCE_LABEL: Record<GenderPreference, string> = {
 };
 
 const COLUMNS = "1.6fr 1.1fr 0.9fr 1fr 0.8fr 0.6fr 1.2fr";
+
+/** معاينةُ وثيقةٍ داخل الدرج — **تُجلب بالمفتاح ثم تُعرض من `blob:`**.
+ *
+ * و`<img src>` لا يحمل ترويسةَ `Authorization`، والمسارُ يتحقق من الدور —
+ * فالجلبُ يدويٌّ لا لأن الصورةَ خاصة فحسب، بل لأن البابَ لا يفتح بغير مفتاح.
+ *
+ * **ولا تُفتح إلا بطلب**: درجٌ فيه تسعُ وثائقَ يجلبها كلَّها عند الفتح يحمّل
+ * تسعَ صورٍ لا ينظر المشرفُ إلى أكثرها. **ومن فتح يغلق** — `revokeObjectURL`
+ * عند الإغلاق، وإلا بقيت الوثائقُ في ذاكرة التبويب حتى يُغلق.
+ */
+function DocumentPreview({
+  driverId,
+  documentId,
+}: {
+  driverId: string;
+  documentId: string;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [url]);
+
+  if (url) {
+    return (
+      <div className="mt-10">
+        <img
+          src={url}
+          alt="الوثيقة"
+          className="max-h-170 w-full rounded-12 border border-line object-contain"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            URL.revokeObjectURL(url);
+            setUrl(null);
+          }}
+          className="mt-6 text-11.5 font-semibold text-muted"
+        >
+          إخفاء
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-10">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setFailed(null);
+          driverDocumentBlob(driverId, documentId)
+            .then(setUrl)
+            .catch((caught: Error) => setFailed(caught.message))
+            .finally(() => setBusy(false));
+        }}
+        className="text-11.5 font-semibold text-ink underline disabled:opacity-60"
+      >
+        {busy ? "جارٍ الفتح…" : "اعرض الوثيقة"}
+      </button>
+      {failed ? (
+        <p className="mt-4 text-11 text-danger">{failed}</p>
+      ) : null}
+    </div>
+  );
+}
 
 export function DriversScreen() {
   const { country } = useCountry();
@@ -398,6 +471,14 @@ function DriverDrawer({
                     {document.review_note}
                   </p>
                 ) : null}
+
+                {/* **ولا يُعتمد ما لا يُرى**: كان القرارُ يُتَّخذ على نوعِ
+                    الوثيقة وحالها — رخصةٌ تُقبل ولا يراها أحد. والمسارُ مبنيٌّ
+                    منذ 9-ب ولم يصل إليه زرٌّ قط. */}
+                <DocumentPreview
+                  driverId={row.driver_id}
+                  documentId={document.id}
+                />
 
                 {/* **الأزرارُ للمنتظِر وحدَه**: `documents.review` يرفض ما بُتّ
                     فيه بـ409، فزرٌّ باقٍ على مستندٍ مقبولٍ زرٌّ يعمل ثم يرتدّ —

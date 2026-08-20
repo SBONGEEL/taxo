@@ -346,3 +346,66 @@ async def test_a_backup_taken_over_ssh_counts_even_with_no_run_row(
         assert await backups.last_success(session) is not None
         # **ولا تُؤخذ ثانيةٌ**: النسخةُ اليدويةُ تسدّ موعدَ اليوم
         assert await backups.is_due(session) is False
+
+
+async def test_a_weekly_schedule_takes_its_backup_on_the_chosen_day(
+    session_factory, backup_root, monkeypatch
+) -> None:
+    """**«أسبوعياً» بيومٍ مختارٍ تُؤخذ فيه، ولا تُؤخذ في غيره.**
+
+    وهذا ما كان مكسوراً من جهة الشاشة: `weekday` بلا خانةٍ في اللوحة، فمن
+    اختار «أسبوعياً» تركه `None` — و`is_due` تقرأ `weekday is None` فتعيد
+    `False` **في كلِّ يوم**. جدولةٌ تبدو مضبوطةً ولا تُؤخذ نسخةٌ أبداً، ولا شيءَ
+    يفشل حتى يوم الاستعادة.
+    """
+    from zoneinfo import ZoneInfo
+
+    amman = ZoneInfo("Asia/Amman")
+    # الاثنينُ صفرٌ في `date.weekday()` — والأربعاءُ اثنان
+    wednesday = 2
+
+    async with session_factory() as session:
+        setting = await backups.get_settings(session)
+        setting.enabled = True
+        setting.frequency = "weekly"
+        setting.weekday = wednesday
+        setting.hour_local = 3
+        await session.commit()
+
+        # نبني لحظةً بعد الساعة في يومٍ معلومٍ بدل انتظار الأسبوع
+        base = datetime(2026, 8, 19, 4, 0, tzinfo=amman)  # أربعاء
+        assert base.weekday() == wednesday
+
+        monkeypatch.setattr(backups, "_now", lambda: base.astimezone(UTC))
+        assert await backups.is_due(session) is True, "لم تُؤخذ في يومها"
+
+        # والخميسُ ليس يومَها
+        thursday = base + timedelta(days=1)
+        monkeypatch.setattr(backups, "_now", lambda: thursday.astimezone(UTC))
+        assert await backups.is_due(session) is False, "أُخذت في غير يومها"
+
+
+async def test_a_weekly_schedule_with_no_day_never_runs_and_that_is_the_defect(
+    session_factory, backup_root, monkeypatch
+) -> None:
+    """**والحالُ التي كانت تشحن**: «أسبوعياً» بلا يوم ⇒ لا نسخةَ في أيِّ يوم.
+
+    يُثبَّت هنا صراحةً لأنه ليس سلوكاً مرغوباً بل **نتيجةُ حقلٍ بلا خانة** —
+    فإن عاد أحدٌ فأزال الخانةَ من اللوحة، هذا الاختبارُ هو ما يقول ماذا يقع.
+    """
+    from zoneinfo import ZoneInfo
+
+    amman = ZoneInfo("Asia/Amman")
+
+    async with session_factory() as session:
+        setting = await backups.get_settings(session)
+        setting.enabled = True
+        setting.frequency = "weekly"
+        setting.weekday = None
+        setting.hour_local = 3
+        await session.commit()
+
+        for offset in range(7):
+            moment = datetime(2026, 8, 17, 4, 0, tzinfo=amman) + timedelta(days=offset)
+            monkeypatch.setattr(backups, "_now", lambda m=moment: m.astimezone(UTC))
+            assert await backups.is_due(session) is False

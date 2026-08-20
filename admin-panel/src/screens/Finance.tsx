@@ -30,6 +30,7 @@ import {
 } from "@/api/endpoints";
 import type { TopupRequest, Withdrawal, WithdrawalStatus } from "@/api/types";
 import { CancellationCharges } from "@/components/CancellationCharges";
+import { WalletDesk } from "@/components/WalletDesk";
 import { Shell } from "@/components/Shell";
 import { Pills, Table } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
@@ -63,7 +64,7 @@ function when(iso: string): string {
 /** **ورسومُ الإلغاء ثالثةٌ هنا لا في شاشةٍ مستقلة**: مالٌ ينتظر قراراً
  *  إدارياً، وهو بالضبط ما تعنيه هذه الشاشة — غير أن مالَه يمرّ بين
  *  **مستخدمَين** لا بين المنصّة وأحدهما، ولذلك لا زرَّ تحصيلٍ فيه. */
-type Tab = "withdrawals" | "topups" | "cancellations";
+type Tab = "withdrawals" | "topups" | "cancellations" | "desk";
 
 export function FinanceScreen() {
   const { isAdmin } = useSession();
@@ -117,6 +118,8 @@ export function FinanceScreen() {
           { key: "withdrawals", label: "طلبات السحب" },
           { key: "topups", label: "شحنات بانتظار التأكيد" },
           { key: "cancellations", label: "رسوم الإلغاء" },
+          // **مكتبُ الدفتر**: تصحيحٌ وشحنٌ إداريّ — بابان كانا بلا زرّ
+          { key: "desk", label: "تصحيحُ الدفتر وشحنٌ إداريّ" },
         ]}
       />
 
@@ -124,7 +127,9 @@ export function FinanceScreen() {
       <SuccessNote message={done} />
 
       <div className="mt-12">
-        {tab === "cancellations" ? (
+        {tab === "desk" ? (
+          <WalletDesk onError={setError} />
+        ) : tab === "cancellations" ? (
           <CancellationCharges onError={setError} />
         ) : tab === "withdrawals" ? (
           <Table

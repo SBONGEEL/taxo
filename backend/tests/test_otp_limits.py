@@ -306,3 +306,23 @@ async def test_a_zero_means_no_cap_and_is_written_not_assumed(
     assert default.max_per_window > 0
     assert default.max_per_day > 0
     assert default.max_per_registration > 0
+
+
+async def test_the_phone_cap_has_exactly_one_home(client, jordan_settings) -> None:
+    """**سقفٌ واحدٌ لمفهومٍ واحد** (توحيدُ 2026-08-19).
+
+    كان `routers/auth.OTP_PHONE_LIMIT = 5` بجانب `otp_settings.max_per_window`
+    (٥ كذلك) — بيتان لحقيقةٍ واحدة **بعدّين ورسالتين**: الأولُ يُحسب قبل
+    الإرسال والثاني بعد نجاحه، فمن رُفض لا يعرف أيُّهما رفضه، ومن حرّر السقفَ
+    في اللوحة لم يحرّك الآخر. قِيس الفرقُ حيّاً: ٢ مقابل ١ على رقمٍ واحد.
+
+    وما يحرسه هذا الاختبارُ ليس السلوك بل **الوحدة**: أن الرفضَ يأتي من
+    الإعدادات، ورسالتُه رسالتُها، و`retry_after` معه.
+    """
+    import app.routers.auth as auth_router
+
+    assert not hasattr(auth_router, "OTP_PHONE_LIMIT"), (
+        "عاد سقفُ الرقم إلى الراوتر — بيتٌ ثانٍ لسقفٍ بيتُه `otp_settings`"
+    )
+    # وسقفُ الـ IP يبقى: سؤالٌ آخر لا نسخةٌ من شيء
+    assert auth_router.OTP_IP_LIMIT > 0

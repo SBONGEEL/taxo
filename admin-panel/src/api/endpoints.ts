@@ -4,7 +4,7 @@
  * يستدعيها أحد تُصدّق نفسها ثم تُكتشف خاطئةً حين تُستعمل أول مرة.
  */
 
-import { api } from "@/api/client";
+import { API_URL, api, tokens } from "@/api/client";
 import type {
   AdminDriverRow,
   AdminReferralRow,
@@ -156,6 +156,7 @@ export const createPromoCode = (payload: {
   budget_total: string;
   per_user_limit?: number;
   total_usage_limit?: number | null;
+  valid_from?: string | null;
   valid_until?: string | null;
 }) => api.post<PromoCode>("/admin/promo-codes", payload);
 
@@ -893,3 +894,52 @@ export const saveOtpTemplate = (purpose: string, body: string) =>
  */
 export const getCountries = () =>
   api.get<{ countries: CountryRow[] }>("/admin/countries");
+
+/** **ردُّ دفعةٍ مرَّ مالُها بالمنصّة** — والكاشُ وكليك خارجَه: قبضهما الكبتنُ بيده.
+ *
+ * والسببُ إلزاميٌّ في الخلفية (٣ أحرف على الأقل) لأن الردَّ حركةُ مالٍ يقرّرها
+ * إنسان: صفُّ تدقيقٍ يقول «رُدَّت» بلا «لماذا» نصفُ صفّ.
+ */
+export const refundPayment = (paymentId: string, reason: string) =>
+  api.post<Payment>(`/admin/payments/${paymentId}/refund`, { reason });
+
+/** **قيدُ تصحيحٍ في دفترٍ لا يُعدَّل ولا يُحذف منه** — موجبٌ أو سالب.
+ *
+ * وهو المخرجُ الوحيد: `wallet_transactions` عليها مُطلِقٌ يرفض التعديلَ والحذف
+ * (هجرة `0006`)، فتصحيحُ خطأٍ سابقٍ **قيدٌ مضادٌّ لا محوٌ للتاريخ**.
+ */
+export const createWalletAdjustment = (
+  userId: string,
+  payload: { amount: string; reason: string },
+) => api.post<WalletTransaction>(`/admin/wallets/${userId}/adjustments`, payload);
+
+/** شحنٌ إداريٌّ من نقطةٍ معتمدة — يُنشأ ويُؤكَّد معاً، فالمالُ قُبض بيدٍ سلفاً. */
+export const createStaffTopup = (
+  userId: string,
+  payload: { amount: string; reference: string },
+) =>
+  api.post<TopupRequest>(`/admin/wallets/${userId}/topups`, {
+    method: "cash",
+    ...payload,
+  });
+
+/** **صورةُ الوثيقة** — والمشرفُ كان يعتمد رخصةً لا يراها (قرارُ المالك 2026-08-19).
+ *
+ * ولا تُوضع في `<img src>` مباشرةً: المسارُ يتحقق من الدور بترويسة `Authorization`،
+ * و`<img>` لا يحمل ترويسة. فتُجلب بالمفتاح ثم تُعرض من `blob:` — **ومن يفتحها
+ * يغلقها** (`URL.revokeObjectURL`)، وإلا بقيت الوثائقُ في ذاكرة التبويب.
+ *
+ * والخلفيةُ ترد `private, no-store` و`nosniff`، فلا تُخزَّن في وسيطٍ ولا تُفسَّر
+ * صفحةً — وهذا ما يجعل العرضَ مقبولاً أصلاً.
+ */
+export async function driverDocumentBlob(
+  driverId: string,
+  documentId: string,
+): Promise<string> {
+  const answer = await fetch(
+    `${API_URL}/admin/drivers/${driverId}/documents/${documentId}/file`,
+    { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } },
+  );
+  if (!answer.ok) throw new Error("تعذّر فتح الوثيقة");
+  return URL.createObjectURL(await answer.blob());
+}

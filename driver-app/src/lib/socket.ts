@@ -20,6 +20,7 @@
  */
 
 import { WS_URL, tokens } from "@/api/client";
+import { reportLocationOverRest } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { deviceId } from "@/lib/device";
 
@@ -76,6 +77,15 @@ const RETRY_MAX_MS = 15_000;
 // السقف نفسه الذي يفترضه القسم 10: الحضور في Redis عمره 60 ثانية
 export const LOCATION_INTERVAL_MS = 3_000;
 
+/** فترةُ بديل REST — **أوسعُ من فترة المقبس ولا تُقارَب مهلةَ الحضور**.
+ *
+ * إطارُ مقبسٍ كلَّ ثلاث ثوانٍ رخيص؛ وطلبُ HTTP كاملٌ بمثلها يستهلك بطاريةً
+ * وحزمةً على طريقٍ ضعيف. ومفتاحُ `geo:presence:{driver_id}` عمرُه **٦٠ ثانية**،
+ * فالعشرُ تُبقيه حيّاً بستّة أضعافِ هامش — ولو قاربناها لَاختفى الكبتنُ من
+ * الخريطة بين طلبين على شبكةٍ متعثّرة.
+ */
+export const REST_FALLBACK_INTERVAL_MS = 10_000;
+
 // رموز الإغلاق التي تعني «لا تُعِد المحاولة» — الخلفية ترفض لسببٍ لا يزول
 // بإعادة الاتصال (`ws/routes.py`: 4401 جلسة، 4403 صلاحية)
 const WS_UNAUTHORIZED = 4401;
@@ -89,6 +99,9 @@ export class DriverSocket {
   private closed = false;
   private last: GeolocationPosition | null = null;
   private watch: number | null = null;
+  /** مؤقّتُ بديل REST — يعمل **فقط** حين لا مقبس، ويتوقف حين يعود. */
+  private fallbackTicker: number | null = null;
+  private fallbackInFlight = false;
 
   constructor(private readonly options: Options) {}
 
@@ -103,6 +116,7 @@ export class DriverSocket {
     if (this.timer !== null) window.clearTimeout(this.timer);
     if (this.ticker !== null) window.clearInterval(this.ticker);
     if (this.watch !== null) navigator.geolocation?.clearWatch(this.watch);
+    this.stopFallback();
     this.timer = this.ticker = this.watch = null;
     this.socket?.close();
     this.socket = null;
@@ -146,6 +160,42 @@ export class DriverSocket {
     });
   }
 
+  /** يبدأ البثَّ عبر REST — ولا يُشغَّل مؤقّتان. */
+  private startFallback() {
+    if (this.fallbackTicker !== null || this.closed) return;
+    void this.pushOverRest();
+    this.fallbackTicker = window.setInterval(
+      () => void this.pushOverRest(),
+      REST_FALLBACK_INTERVAL_MS,
+    );
+  }
+
+  private stopFallback() {
+    if (this.fallbackTicker !== null) window.clearInterval(this.fallbackTicker);
+    this.fallbackTicker = null;
+  }
+
+  /** **ولا يتراكم**: طلبٌ بطيءٌ على شبكةٍ ضعيفةٍ لا يُتبَع بآخرَ فوقه. */
+  private async pushOverRest(): Promise<void> {
+    const position = this.last;
+    if (!position || this.fallbackInFlight || this.closed) return;
+    this.fallbackInFlight = true;
+    try {
+      await reportLocationOverRest({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        heading: Number.isFinite(position.coords.heading)
+          ? position.coords.heading
+          : null,
+      });
+    } catch {
+      // **وفشلُه صامت**: الشبكةُ هي التي سقطت أصلاً، ورسالةُ خطأٍ كلَّ عشر
+      // ثوانٍ على شاشة كبتنٍ يقود ضجيجٌ لا خبر
+    } finally {
+      this.fallbackInFlight = false;
+    }
+  }
+
   private connect() {
     const token = tokens.access();
     if (!token || this.closed) return;
@@ -159,6 +209,8 @@ export class DriverSocket {
 
     socket.onopen = () => {
       this.retries = 0;
+      // **والعودةُ تُطفئ البديل**: مقبسٌ وREST معاً بثٌّ مضاعفٌ لموقعٍ واحد
+      this.stopFallback();
       this.broadcast();
       if (this.ticker !== null) window.clearInterval(this.ticker);
       this.ticker = window.setInterval(
@@ -191,6 +243,16 @@ export class DriverSocket {
 
       this.options.onClose?.(this.closed);
       if (this.closed) return;
+
+      // **سقط المقبس ⇒ يُشتغَّل بديلُ REST فوراً** (SPEC §10). كبتنٌ غيرُ
+      // مرئيٍّ لا تصله رحلة: يخسر دخلَه ويخسر الراكبُ سيارة. والبديلُ كان
+      // مبنيّاً في الخلفية ومختبَراً **ولا ينادِيه أحد** — بابٌ بلا زرّ في
+      // أخطر موضع.
+      //
+      // **وفترتُه أوسع من فترة المقبس**: طلبٌ كاملٌ كلَّ ثلاث ثوانٍ يستهلك
+      // بطاريةً وحزمةً على طريقٍ ضعيف، ومفتاحُ الحضور في Redis عمرُه ٦٠ ثانية
+      // — فما دون ذلك يُبقيه حيّاً بأمانٍ كافٍ.
+      this.startFallback();
 
       const delay = Math.min(RETRY_BASE_MS * 2 ** this.retries, RETRY_MAX_MS);
       this.retries += 1;

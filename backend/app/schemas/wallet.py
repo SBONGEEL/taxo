@@ -85,11 +85,17 @@ class TopupRequestCreate(BaseModel):
 
 
 class AdminTopupCreate(BaseModel):
-    """شحن يُنشئه الموظف مؤكداً — نقطة الكاش المعتمدة."""
+    """شحن يُنشئه الموظف مؤكداً — نقطة الكاش المعتمدة.
+
+    **والمرجعُ إلزاميّ** (قرارُ المالك 2026-08-19): هذا الشحنُ مالٌ يدخل رصيدَ
+    إنسانٍ بقرارِ موظفٍ لا بحوالةٍ يشهد عليها مزوّد، فما يُطابَق به الإيصالُ
+    الورقيُّ بعد شهرٍ هو هذا الحقل وحدَه. وحرسُه في المخطط لا في الشاشة، وإلا
+    كان قاعدةً يلتفّ عليها أيُّ نداءٍ آخر.
+    """
 
     method: TopupMethod = TopupMethod.CASH
     amount: Decimal = Money
-    reference: str | None = Field(default=None, max_length=120)
+    reference: str = Field(min_length=3, max_length=120)
 
 
 class TopupRequestOut(BaseModel):

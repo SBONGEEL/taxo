@@ -305,3 +305,39 @@ async def test_the_wire_and_the_preview_agree_on_everything_but_the_code(
         body, code="999111", minutes=otp.CODE_TTL_SECONDS // 60
     )
     assert row["preview"].replace(row["preview_sample_code"], "999111") == on_wire
+
+
+def test_the_bare_code_is_a_valid_template() -> None:
+    """**قالبٌ لا يحمل غيرَ الرمز** (قرارُ المالك 2026-08-19).
+
+    ما يُحرَس هنا ثلاثةٌ معاً: أن `{code}` وحدَه يمرّ، وأن الحارسَ الإلزاميَّ
+    ما زال يعضّ من حذفه، وأن حدَّ الطول لم يتحرّك بحركة القالب.
+    """
+    from app.services import otp_templates
+
+    assert otp_templates.validate("{code}", purpose="registration") == []
+    assert otp_templates.validate("{code}", purpose="password_reset") == []
+
+    # **ولا رسالةَ رمزٍ بلا رمز**: الأرقامُ مكتوبةً ليست المتغيّر
+    missing = otp_templates.validate("123456", purpose="registration")
+    assert [v.code for v in missing] == ["template_missing_variable"]
+
+    # وحدُّ الطول مقيسٌ من ملفِّ الشروط لا من القالب
+    assert otp_templates.max_bytes() == 3989
+    too_long = "{code}" + "x" * 4000
+    assert [v.code for v in otp_templates.validate(too_long, purpose="registration")] == [
+        "template_too_long"
+    ]
+
+
+def test_the_preview_is_exactly_what_goes_on_the_wire() -> None:
+    """**المعاينةُ تُصاغ بنفس الدالة التي تصوغ المرسَل** — لا نسخةٌ ثانية.
+
+    وهذا شرطُ أن تكون المعاينةُ برهاناً: صياغتان تفترقان، فيرى المشرفُ شكلاً
+    ويستقبل صاحبُ الهاتف شكلاً آخر.
+    """
+    from app.services import otp_templates
+
+    rendered = otp_templates.render("{code}", code="424242", minutes=5)
+    assert rendered == "424242"
+    assert rendered.isdigit()

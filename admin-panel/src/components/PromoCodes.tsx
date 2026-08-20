@@ -256,6 +256,8 @@ function NewPromoModal({
   const [budget, setBudget] = useState("");
   const [perUser, setPerUser] = useState("1");
   const [until, setUntil] = useState("");
+  const [from, setFrom] = useState("");
+  const [uses, setUses] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -335,6 +337,20 @@ function NewPromoModal({
 
       <div className="mt-12">
         <Field
+          label="يبدأ في (اختياري — فارغ = فوراً)"
+          type="date"
+          dir="ltr"
+          value={from}
+          onChange={(event) => setFrom(event.target.value)}
+        />
+        <Field
+          label="سقفُ الاستعمال الكليّ (فارغ = بلا سقفِ عدد)"
+          dir="ltr"
+          inputMode="numeric"
+          value={uses}
+          onChange={(event) => setUses(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <Field
           label="ينتهي في (اختياري)"
           id="promo-until"
           type="date"
@@ -365,6 +381,12 @@ function NewPromoModal({
             per_user_limit: Number(perUser || "1"),
             // منتصفُ الليل بتوقيت الجهاز يكفي: الخلفيةُ تقارن لحظةً بلحظة
             valid_until: until ? `${until}T23:59:59` : null,
+            // **وسقفُ العدد يُمرَّر لا يُعرض**: `promo.find` يفحصه على مسار
+            // الطلب (`usage_count >= total_usage_limit`)، فكوبونٌ بلا سقفِ عددٍ
+            // ميزانيةٌ بلا سقف — وهو ما حرسناه في العروض
+            total_usage_limit: uses ? Number(uses) : null,
+            // ومنتصفُ الليل بتوقيت الجهاز يكفي هنا كما في «ينتهي»
+            valid_from: from ? `${from}T00:00:00` : null,
           })
             .then(onCreated)
             .catch((caught) => {

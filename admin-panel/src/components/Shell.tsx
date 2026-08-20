@@ -50,6 +50,7 @@ const GROUPS: {
     label: "المالية",
     items: [
       { label: "المحافظ والسحب", to: "/finance" },
+      { label: "الدفعات", to: "/payments" },
       { label: "الاشتراكات والباقات", to: "/subscriptions" },
       { label: "عروض الاشتراكات", to: "/offers", adminOnly: true },
       { label: "التسعيرة", to: "/pricing" },

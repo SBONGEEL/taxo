@@ -659,6 +659,47 @@ Six rules from the build, each of which cost something to learn:
 - **`services/offers.py::exhausted_for` is read through `_plans_with_offers`, shared by `/plans` *and*
   `/me`** — the eighth shape below, found on the phone because the desktop probe called the API directly.
 
+### The Jordan channel is the launch blocker, not Libya (2026-08-19)
+
+**A read-only audit inverted the assumption this project had carried for weeks.** `+218` is the market
+whose verification channel is proven — on the wire, in the database, and in the tests. **Jordan, the
+launch market, had no working channel at all.**
+
+Measured from the code that decides, not from a table: `method_for_phone('+962…')` returned
+`firebase` alone, and Firebase answers `auth/billing-not-enabled` (stage 13, owner declined Blaze). The
+SMS contract is inactive and mock-only. `otp_verification_enabled` is on — so verification was
+**required and impossible**. The 31 "verified" Jordanian accounts prove nothing: seeded directly, or
+verified through the mock SMS contract activated to get past Firebase.
+
+**The owner then authorised enabling `whatsapp_otp_enabled` for Jordan and exactly one message.** It
+needed no code and no new contract — the WhatsApp contract is **global** and the flag is **per-country**,
+so one row changed the market's channel. Measured end to end: backend handed the gateway
+`purpose=registration, deliver=True`, 88 bytes; the wire carried the same text; WhatsApp acked at
+**1026 ms** with `error: null`; the delivery receipt landed at **2350 ms**. `SPEC.md` §24.7.
+
+**Three things are now measured rather than assumed** (§24.8): the sending number is a **bare Libyan
+number with no display name and no verification** (`me.name = null`, `registered = false`) — a
+verification message from an unknown international number is shaped like fraud, and reports are what
+get unofficial numbers banned; the only emergency exit is switching verification off entirely, which
+means **accepting every number unproven** in a system with wallets and transfers; and "a session per
+market" **does not exist in the code** — one global contract, one socket, one auth directory, with the
+seven layers it would take written down and not built.
+
+**And the hole stopped being hypothetical one second after that message was delivered.** `Stream
+Errored (conflict)` — the account was opened elsewhere and evicted our session, so registration
+stopped **in both markets at once** and stayed stopped until a human scanned a QR. Detection worked
+(an inbox row and a push to every admin at **53 s**, since `awaiting_qr` is in `URGENT`); the repair is
+what is human.
+
+**One more thing the audit closed**: `OTP_PHONE_LIMIT` in the router duplicated
+`otp_settings.max_per_window` — two homes for one concept, with different messages and *different
+counts* (2 against 1 on one phone, because the router counted before sending and the settings after
+success). The router's per-phone cap is gone; the IP cap stays because it answers a different question
+(`otp_limits` counts the phone by design, so dozens behind one café network never throttle each other).
+And `CODE_TTL_SECONDS = 300` — the one number in this project with no reason written above it — now
+carries its measurement: delivery consumes **0.78%** of it, so what actually spends the window is a
+human round-trip, and it once expired 22 seconds short.
+
 ### Country visibility — one flag per market, and Libya is its first use (2026-08-19)
 
 **`country_visible` is a per-country flag, and no app writes a country list any more** (`SPEC.md` §24).
@@ -1328,6 +1369,41 @@ no display text.
 
 **Read the pairing as the rule**: when a wrong value stops being visible, the guard that replaces the
 eye is load-bearing, and weakening it is not a style decision.
+
+### `check:doors` — the door-with-no-button family became a build guard (2026-08-19)
+
+**This project's oldest recurring shape now stops the build.** A backend capability ships, is tested,
+and no UI ever reaches it: the seventh flag with no switch, the badge grant with no button, the payment
+refund tested in three files with no row to press, `/drivers/nearby` declared and called by nobody —
+which is what left the rider's map empty for weeks.
+
+`admin-panel/scripts/check-doors.mjs` compares **every admin route in the backend** (120 of them)
+against what the panel actually calls, and fails on anything with neither a caller nor a **written
+reason** in `DELIBERATE`.
+
+**Its two halves are what make it a guard rather than a nuisance, and both were learned by being
+wrong:**
+
+- **Comments are stripped before matching.** The first version counted a *mention of the path in a
+  comment* as a caller, and so hid `POST /drivers/me/online`. A guard that lies in one direction is a
+  guard you trust.
+- **A declaration is not a button.** The second version accepted the path appearing in
+  `api/endpoints.ts` — but that file only *declares*. Requiring the exported function's name to be used
+  **outside** `endpoints.ts` immediately surfaced six more doors, including the entire quiet-hours
+  editor (`GET`/`PUT /admin/campaigns/settings/{country}` — declared since stage 8, called by nobody),
+  which is where the timezone that computes "the country's day" in every report lives.
+- And it accepts a path built inline in a screen (`window.location.href = …` for the backup download),
+  because a guard that shouts at working code gets disabled.
+
+**Exemptions carry their reason as text, and a stale one fails the build too** — a list of excuses
+nobody prunes becomes a lie. Verified by deletion: removing the refund call fails it.
+
+**What the sweep that produced it found, by class rather than by case.** Two detectors: 227 backend
+routes against every frontend, and 50 admin input schemas against what the panel sends. Fifteen routes
+with no caller (three of them correctly so — a provider webhook, a deliberate second door, and the REST
+location fallbacks), plus fields with no input — of which the sharpest was `backup_settings.weekday`:
+the panel offers «أسبوعياً» and never sends a day, so `is_due` reads `weekday is None` and **no backup
+is ever taken**, on a schedule that looks configured. Nothing fails until restore day.
 
 ### The twelfth shape — a fallback that works, and hides the defect it was built for (2026-08-19)
 
