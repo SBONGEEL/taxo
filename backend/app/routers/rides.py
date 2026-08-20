@@ -218,7 +218,15 @@ async def get_route_line(
     ride = await rides_service.get_ride_for_user(session, ride_id, user)
     points = await route_line.ensure(session, ride.id)
     await session.commit()
-    return RouteLineOut(points=points or [])
+    # **من هو صاحبُ هذه القراءة؟** — يُقرأ من الرحلة نفسِها لا من دورِ الحساب
+    # (§22): الرحلةُ تسمّي كبتنَها، والحسابُ قد يحمل الدورين
+    is_driver = ride.driver is not None and ride.driver.user_id == user.id
+    # **الخطواتُ للكبتن وحدَه**: الراكبُ لا يقودها، وحمولتُها ثلاثةَ عشرَ ضعفَ
+    # الخط — فإرسالُها إليه حزمةٌ بلا قارئ في كلِّ فتحِ شاشة
+    return RouteLineOut(
+        points=points or [],
+        steps=route_line.decode_steps(ride.route_steps) if is_driver else [],
+    )
 
 
 # -------------------------------------------------------------- حالات الرحلة
@@ -655,7 +663,11 @@ async def reroute_ride(
 
     points, left = await route_line.reroute(session, ride_id)
     await session.commit()
-    return RouteLineOut(points=points or [], reroutes_left=left)
+    return RouteLineOut(
+        points=points or [],
+        reroutes_left=left,
+        steps=route_line.decode_steps(ride.route_steps),
+    )
 
 
 @router.post("/{ride_id}/pause", response_model=RideOut)

@@ -42,10 +42,19 @@ class Route:
     # فارغةٌ على مسار التسعير: التقديرُ يُنادى مع كل تحريكٍ للدبوس، وشكلُ المسار
     # حمولةٌ تُرسل لمن لم يطلب رحلةً بعد
     geometry: list[list[float]] | None = None
+    # **التعليماتُ بهندستها** (البند ٧): كلُّ خطوةٍ نصُّها وشكلُها ومسافتُها.
+    # **والشكلُ يلزم لا زينة**: الانحرافُ يُقاس عن هندسة الخطوة لا عن
+    # `overview` — قِيس أن الثانيةَ خطؤها **٨٣١ م** في أسوأ مسارٍ مخزَّنٍ
+    # عندنا، والأولى **٤٫٨ م**. فقياسٌ على `overview` يُخفي الشريطَ عن كبتنٍ
+    # يسير على الطريق تماماً
+    steps: list[dict] | None = None
 
 
 async def fetch_route(
-    token: str, *waypoints: Coordinates, with_geometry: bool = False
+    token: str,
+    *waypoints: Coordinates,
+    with_geometry: bool = False,
+    with_steps: bool = False,
 ) -> Route:
     """نداء HTTP واحد لـ Mapbox — نقطة الحقن الوحيدة في الاختبارات.
 
@@ -69,6 +78,19 @@ async def fetch_route(
         # كلِّ منعطفٍ بالمتر، ويكلّفه حجماً يمرّ في كل قراءة
         "overview": "simplified" if with_geometry else "false",
         **({"geometries": "geojson"} if with_geometry else {}),
+        # **الخطواتُ تُطلب لمن يعرضها وحدَه** (البند ٧): حمولتُها ليست صغيرة
+        # (٢٧٧ رأساً مقابل ٢١ في مسارٍ من ٨ كم — مقيس)، ومسارُ التسعير يُنادى
+        # مع كل تحريكِ دبوس.
+        #
+        # **و`language=ar` شرطٌ لا زينة**: بغيرها تعود التعليماتُ إنجليزيةً
+        # بأسماءِ شوارعَ عربية («Drive east on شارع زهران») — جملةٌ مكسورةٌ
+        # يقرؤها كبتنٌ وهو يقود. وقِيس أن `ar` تعيد «القيادة باتجاه الشرق في
+        # شارع زهران»
+        **(
+            {"steps": "true", "language": "ar"}
+            if with_steps
+            else {}
+        ),
     }
 
     try:
@@ -98,10 +120,29 @@ async def fetch_route(
         if isinstance(coordinates, list) and len(coordinates) >= 2:
             geometry = [[float(point[0]), float(point[1])] for point in coordinates]
 
+    steps: list[dict] | None = None
+    if with_steps:
+        collected: list[dict] = []
+        for leg in best.get("legs") or []:
+            for step in leg.get("steps") or []:
+                instruction = ((step.get("maneuver") or {}).get("instruction") or "").strip()
+                shape = (step.get("geometry") or {}).get("coordinates")
+                if not instruction or not isinstance(shape, list) or len(shape) < 2:
+                    continue
+                collected.append(
+                    {
+                        "text": instruction,
+                        "distance_m": int(float(step.get("distance") or 0)),
+                        "shape": [[float(p[0]), float(p[1])] for p in shape],
+                    }
+                )
+        steps = collected or None
+
     return Route(
         distance_km=(meters / 1000).quantize(_KM, rounding=ROUND_HALF_UP),
         duration_min=(seconds / 60).quantize(_MIN, rounding=ROUND_HALF_UP),
         geometry=geometry,
+        steps=steps,
     )
 
 
@@ -112,6 +153,7 @@ async def route_between(
     country_code: CountryCode | None = None,
     stops: Sequence[Coordinates] = (),
     with_geometry: bool = False,
+    with_steps: bool = False,
 ) -> Route:
     """المسار بتوكن Mapbox السري المحفوظ في عقود المزودين.
 
@@ -126,5 +168,10 @@ async def route_between(
         raise RoutingUnavailable()
 
     return await fetch_route(
-        token, pickup, *stops, dropoff, with_geometry=with_geometry
+        token,
+        pickup,
+        *stops,
+        dropoff,
+        with_geometry=with_geometry,
+        with_steps=with_steps,
     )

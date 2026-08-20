@@ -30,7 +30,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppError
 from app.core.redis_client import get_redis_client
 from app.models.ride import Ride, RideStop
-from app.services import directions
+from app.models.enums import FeatureKey
+from app.services import directions, settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,30 @@ def decode(stored: str | None) -> list[list[float]] | None:
     if not isinstance(points, list) or len(points) < 2:
         return None
     return points
+
+
+def decode_steps(stored: str | None) -> list[dict]:
+    """يقرأ عمودَ التعليمات — **وقائمةٌ فارغةٌ لكلِّ ما ليس خطواتٍ صالحة**.
+
+    ولا يرمي: صفٌّ تالفٌ أو مفتاحٌ كان مطفأً يعني **شريطاً لا يُرسم**، وهو
+    السلوكُ المطلوبُ نفسُه — «يختفي صامتاً» (قرارُ المالك 2026-08-20).
+    """
+    if not stored:
+        return []
+    try:
+        steps = json.loads(stored)
+    except json.JSONDecodeError:  # pragma: no cover - لا يُكتب من هنا
+        return []
+    if not isinstance(steps, list):
+        return []
+    return [
+        step
+        for step in steps
+        if isinstance(step, dict)
+        and step.get("text")
+        and isinstance(step.get("shape"), list)
+        and len(step["shape"]) >= 2
+    ]
 
 
 # **سقفُ إعادة التوجيه لكل رحلة** (البند ١٧-٤) — وهو **الشيءُ الوحيد الذي يعاود
@@ -101,6 +126,8 @@ async def reroute(
         # مضت، وهو أسوأُ من الخطِّ القائم
         return decode(ride.route_polyline), left
 
+    wants_steps = await _wants_steps(session, ride)
+
     stops = (
         await session.scalars(
             select(RideStop)
@@ -119,6 +146,7 @@ async def reroute(
                 directions.Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops
             ],
             with_geometry=True,
+            with_steps=wants_steps,
         )
     except AppError as exc:
         logger.warning("تعذّرت إعادة توجيه الرحلة %s: %s", ride_id, exc.code)
@@ -128,9 +156,25 @@ async def reroute(
         return decode(ride.route_polyline), left
 
     ride.route_polyline = json.dumps(route.geometry, separators=(",", ":"))
+    # **التعليماتُ تُكتب من النداء نفسِه أو لا تُكتب** — فلا يفترق سهمٌ عن خط.
+    # وإعادةُ التوجيه تجدّدهما معاً، وهو ما يعيد الشريطَ من نفسه بعد الانحراف
+    if route.steps:
+        ride.route_steps = json.dumps(route.steps, separators=(",", ":"))
     ride.reroute_count = (ride.reroute_count or 0) + 1
     await session.flush()
     return route.geometry, MAX_REROUTES - ride.reroute_count
+
+
+async def _wants_steps(session: AsyncSession, ride: Ride) -> bool:
+    """أيُطلب `steps` من Mapbox لهذه الرحلة؟ — **يُسأل قبل النداء لا بعده**.
+
+    `steps` حمولةٌ إضافيةٌ في الجواب (٢٧٧ رأساً مقابل ٢١ — مقيس)، وطلبُها ثم
+    رميُها إنفاقُ حزمةٍ بلا قارئ. **والنداءُ نفسُه واقعٌ على أيِّ حال**، فكلفةُ
+    المفتاح حمولةٌ لا نداء.
+    """
+    return await settings_service.is_feature_enabled(
+        session, ride.country_code, FeatureKey.NEXT_INSTRUCTION_ENABLED
+    )
 
 
 async def ensure(session: AsyncSession, ride_id: uuid.UUID) -> list[list[float]] | None:
@@ -148,6 +192,8 @@ async def ensure(session: AsyncSession, ride_id: uuid.UUID) -> list[list[float]]
         return stored
     if ride.status.value not in DRAWABLE_STATUSES:
         return None
+
+    wants_steps = await _wants_steps(session, ride)
 
     stops = (
         await session.scalars(
@@ -167,6 +213,7 @@ async def ensure(session: AsyncSession, ride_id: uuid.UUID) -> list[list[float]]
                 directions.Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops
             ],
             with_geometry=True,
+            with_steps=wants_steps,
         )
     except AppError as exc:
         # **يُبتلع خطأُ المزوّد وحدَه** لا كلُّ استثناء: `except Exception` هنا
@@ -178,5 +225,9 @@ async def ensure(session: AsyncSession, ride_id: uuid.UUID) -> list[list[float]]
         return None
 
     ride.route_polyline = json.dumps(route.geometry, separators=(",", ":"))
+    # **التعليماتُ تُكتب من النداء نفسِه أو لا تُكتب** — فلا يفترق سهمٌ عن خط.
+    # وإعادةُ التوجيه تجدّدهما معاً، وهو ما يعيد الشريطَ من نفسه بعد الانحراف
+    if route.steps:
+        ride.route_steps = json.dumps(route.steps, separators=(",", ":"))
     await session.flush()
     return route.geometry

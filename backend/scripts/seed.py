@@ -108,6 +108,7 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # المالكُ حملتَه الأولى — وصفٌّ ظاهرٌ بقيمة false أوضح من غيابٍ يعني
         # الشيء نفسه
         FeatureKey.SUBSCRIPTION_OFFERS_ENABLED: False,
+        FeatureKey.NEXT_INSTRUCTION_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ب): الميزةُ مبنيّةٌ كاملةً وتنتظر قرار
         # تشغيل — ورسمُ الانتظار صفرٌ حتى يضبطه المشرف، فتشغيلُ المفتاح وحده
         # يفتح المحطات بلا كلفة. وصفٌّ ظاهرٌ بقيمة false أوضح من غيابٍ يعني

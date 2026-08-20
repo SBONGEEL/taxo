@@ -299,7 +299,12 @@ def stub_mapbox(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.services.directions import Route
     from tests.helpers import MAPBOX_SECRET, STUB_ROUTE
 
-    async def _fetch_route(token: str, *waypoints, with_geometry: bool = False):
+    async def _fetch_route(
+        token: str,
+        *waypoints,
+        with_geometry: bool = False,
+        with_steps: bool = False,
+    ):
         assert token == MAPBOX_SECRET, "التوكن السري يجب أن يأتي من جدول العقود"
         # **المسافةُ تكبر بعدد السيقان** (المرحلة 12-ب): بغير ذلك تعطي رحلةٌ
         # بمحطتين نفسَ مسافة رحلةٍ مباشرة، فيمرّ تسعيرٌ لا يمرّ بالمحطات
@@ -313,6 +318,20 @@ def stub_mapbox(monkeypatch: pytest.MonkeyPatch) -> None:
             geometry=(
                 [[point.lng, point.lat] for point in waypoints]
                 if with_geometry
+                else None
+            ),
+            # **والخطواتُ كذلك تُعطى حين تُطلب وحدَها** (البند ٧): بديلٌ يعطيها
+            # دائماً يجعل اختبارَ «المفتاحُ مطفأٌ فلا خطوات» يمرّ وهو لا يحرس
+            # شيئاً — وهو الدرسُ نفسُه الذي كتبه `with_geometry` قبله
+            steps=(
+                [
+                    {
+                        "text": "تعليمةُ اختبار",
+                        "distance_m": 100,
+                        "shape": [[point.lng, point.lat] for point in waypoints],
+                    }
+                ]
+                if with_steps
                 else None
             ),
         )

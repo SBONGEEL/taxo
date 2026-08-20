@@ -32,8 +32,12 @@ def drawn(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
     """يسجّل كلَّ نداءٍ ويعيد مساراً بشكلٍ حين يُطلب الشكل."""
     calls: list[dict] = []
 
-    async def fake_fetch(token, *waypoints, with_geometry=False):
-        calls.append({"points": len(waypoints), "with_geometry": with_geometry})
+    async def fake_fetch(token, *waypoints, with_geometry=False, with_steps=False):
+        calls.append({
+            "points": len(waypoints),
+            "with_geometry": with_geometry,
+            "with_steps": with_steps,
+        })
         return directions.Route(
             distance_km=Decimal("5.000"),
             duration_min=Decimal("12.00"),
@@ -130,7 +134,7 @@ async def test_a_failed_provider_call_leaves_the_ride_alone(
     خريطةٌ بلا خطٍّ أهونُ من رحلةٍ لا تُقبل.
     """
 
-    async def failing(token, *waypoints, with_geometry=False):
+    async def failing(token, *waypoints, with_geometry=False, with_steps=False):
         if with_geometry:
             raise RoutingFailed()
         return directions.Route(
