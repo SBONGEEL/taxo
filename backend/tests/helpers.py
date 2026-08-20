@@ -183,7 +183,15 @@ async def subscribe_driver(
         # فيدفع كبتنٌ مشتركٌ نسبةَ السوق في كل اختبار
         driver_row = await session.get(Driver, driver_id)
         if driver_row is not None:
-            driver_row.commission_percent_from_subscription = Decimal("0.00")
+            # **يقرأ النسبةَ السارية كما يقرؤها `_create`** — لا صفراً ثابتاً.
+            # وصفرٌ ثابتٌ يجعل كلَّ اختبارِ عمولةٍ يفشل: الكبتنُ يحمل وعدَ صفرٍ
+            # مجمَّداً فلا تُطبَّق نسبةٌ أُشعلت قبله. والمساعدُ يختصر مسارَ
+            # الشراء، **فعليه أن يختصره صادقاً**.
+            from app.services import settings_service
+
+            driver_row.commission_percent_from_subscription = (
+                await settings_service.commission_percent_for(session, country)
+            )
         await session.commit()
 
 

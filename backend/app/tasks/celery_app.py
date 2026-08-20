@@ -19,6 +19,7 @@ from collections.abc import Coroutine
 from typing import Any
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.config import settings
 
