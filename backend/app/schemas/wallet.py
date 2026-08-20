@@ -56,6 +56,11 @@ class WalletTransactionOut(BaseModel):
     ride_id: uuid.UUID | None
     reference: str | None
     created_at: datetime
+    # **النسبةُ المجمَّدة لقيد العمولة وحدَه** (§25.11): الكبتنُ يرى «عمولة TAXO
+    # ١٠٪» لا مبلغاً بلا سبب. و`None` لكلِّ ما ليس عمولة — **وليست صفراً**:
+    # الصفرُ يعني «حوسب بصفر» والغيابُ يعني «لا نسبةَ لهذا القيد أصلاً»، ورقمٌ
+    # واحدٌ لا يحملهما (درسُ `NULL` في `commission_percent_from_subscription`)
+    commission_percent: Decimal | None = None
 
 
 # ------------------------------------------------------------------ التحويل
@@ -150,6 +155,9 @@ class DriverWalletOut(WalletOut):
     # **يُقال برقمه** (البند ١٣): من يرى رصيداً لا يستطيع سحبَه كلَّه يستحق أن
     # يعرف كم منه محتجَزٌ ولماذا — لا جملةً عامة عن «رصيدٍ غير متاح»
     withdrawal_reserve_amount: Decimal
+    # **مجموعُ عمولة الشهر الجاري** — تقويميّاً بمِنطقة الدولة، لا ثلاثين يوماً
+    # متدحرجة: من يقرأ «هذا الشهر» يعدّ من أوّله (`commission_view._month_start`)
+    commission_this_month: Decimal = Decimal("0.000")
 
 
 class EarningsOut(BaseModel):

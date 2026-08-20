@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
@@ -29,7 +30,7 @@ from app.schemas.wallet import (
     WithdrawalCreate,
     WithdrawalOut,
 )
-from app.services import cancellation
+from app.services import cancellation, commission_view
 from app.services import (
     card_payments,
     cliq_topups,
@@ -124,7 +125,17 @@ async def list_my_transactions(
         offset=offset,
         tx_type=tx_type,
     )
-    return [WalletTransactionOut.model_validate(entry) for entry in entries]
+    # **النسبةُ المجمَّدة تُلحَق باستعلامٍ ثانٍ على الصفحة** — لا ضمٍّ إلى الأول:
+    # الرحلةُ الواحدةُ تحمل أكثرَ من قيد (أجرةٌ وعمولةٌ وسدادُ سلفة)، فالضمُّ
+    # يضاعف الصفَّ ويُسقط قيوداً من صفحةٍ مسقوفة (قاعدةُ `services/ride_log.py`)
+    percents = await commission_view.percent_by_ride(session, list(entries))
+    out: list[WalletTransactionOut] = []
+    for entry in entries:
+        row = WalletTransactionOut.model_validate(entry)
+        if entry.ride_id is not None:
+            row.commission_percent = percents.get(entry.ride_id)
+        out.append(row)
+    return out
 
 
 # ------------------------------------------------------------------ التحويل
@@ -356,6 +367,12 @@ async def get_my_driver_wallet(
             limits.withdrawal_reserve_amount
             if limits is not None
             else Decimal("0.000")
+        ),
+        commission_this_month=await commission_view.this_month(
+            session,
+            user_id=user.id,
+            country=user.country_code,
+            now=datetime.now(UTC),
         ),
     )
 

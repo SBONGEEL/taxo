@@ -36,6 +36,7 @@ import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { RideProvider, useRide } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
+import { WelcomeSheet } from "@/components/WelcomeSheet";
 import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
@@ -219,7 +220,16 @@ function DriverHome() {
   const { profile, loading } = useDriver();
 
   if (loading || !profile) return <Loading />;
-  if (profile.driver.status === "approved") return <HomeScreen />;
+  // **الورقةُ عند نفس النقطة التي تقرّر «معتمد»** — لا شرطٌ ثانٍ في مكوّنٍ آخر
+  // يمكن أن يفترق عنه. ومن ليس معتمداً لا يراها أصلاً، وهو المقصود: تُعرض
+  // **بعد الاعتماد** لا عند التسجيل (قرارُ المالك)
+  if (profile.driver.status === "approved")
+    return (
+      <>
+        <HomeScreen />
+        <WelcomeSheet />
+      </>
+    );
   if (profile.vehicles.length === 0)
     return <Navigate to="/register/documents" replace />;
   return <PendingScreen />;

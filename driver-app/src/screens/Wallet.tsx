@@ -175,6 +175,23 @@ export function WalletScreen() {
             </p>
           ) : null}
 
+          {/* **«عمولة TAXO» في الرأس** (§25.11): مجموعُ الشهر الجاري تقويميّاً.
+              **والوعدُ مشروطٌ لا مطلق** — «صفر عمولة **ما دام اشتراكك سارياً**»:
+              وعدٌ مطلقٌ هنا يصير كذباً يومَ تُشعَل العمولة، ووعدٌ مشروطٌ يبقى
+              صادقاً في الحالتين. ولذلك يُقال الشرطُ **حين تكون صفراً** — فمن
+              يقرأ صفراً بلا شرطٍ يظنّه دائماً */}
+          {Number(wallet.commission_this_month) > 0 ? (
+            <p className="mt-8 text-11.5 leading-note text-muted">
+              عمولة TAXO هذا الشهر: {digits(wallet.commission_this_month)}{" "}
+              {currency}
+            </p>
+          ) : (
+            <p className="mt-8 text-11.5 leading-note text-muted">
+              عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — صفر عمولة ما
+              دام اشتراكك سارياً.
+            </p>
+          )}
+
           {wallet.frozen ? (
             <p className="mt-8 text-11.5 leading-note text-danger">
               محفظتك مجمّدة — راجع الدعم. الرصيد محفوظ ولا يُسحب حتى ترفع
@@ -230,10 +247,21 @@ export function WalletScreen() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-13 font-semibold text-ink">
-                    {TRANSACTION_LABEL[entry.type]}
+                    {/* **«عمولة TAXO» باسمها لا «عمولة المنصة»** — الاسمُ الذي
+                        وُعد به الكبتن هو الاسمُ الذي يقرؤه في كشفه */}
+                    {entry.type === "commission"
+                      ? "عمولة TAXO"
+                      : TRANSACTION_LABEL[entry.type]}
                   </div>
                   <div className="text-11 text-muted">
                     {formatWhen(entry.created_at)}
+                    {/* **النسبةُ المجمَّدة على تلك الرحلة** (§25.11) — لا نسبةُ
+                        اليوم: من حُوسب بعشرةٍ الشهرَ الماضي يقرأ عشرة، ولو
+                        صارت نسبةُ السوق عشرين. و`null` لا تُطبع صفراً */}
+                    {entry.commission_percent !== null &&
+                    entry.commission_percent !== undefined ? (
+                      <> · {digits(entry.commission_percent)}٪</>
+                    ) : null}
                   </div>
                 </div>
                 <div className="text-end">

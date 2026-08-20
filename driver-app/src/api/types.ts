@@ -395,6 +395,9 @@ export interface DriverWallet extends Wallet {
   min_withdrawal_amount: string;
   /** يبقى في المحفظة ولا يُسحب — يخرج عند إلغاء التفعيل (البند ١٣). */
   withdrawal_reserve_amount: string;
+  /** مجموعُ «عمولة TAXO» في الشهر الجاري — **تقويميّاً** بمِنطقة الدولة، لا
+   *  ثلاثين يوماً متدحرجة: من يقرأ «هذا الشهر» يعدّ من أوّله. */
+  commission_this_month: string;
 }
 
 export type WalletTransactionType =
@@ -419,6 +422,8 @@ export interface WalletTransaction {
   ride_id: string | null;
   reference: string | null;
   created_at: string;
+  /** النسبةُ المجمَّدة لقيدِ العمولة وحدَه — و`null` لكلِّ ما عداه (§25.11). */
+  commission_percent: string | null;
 }
 
 /** بطاقةٌ محفوظة كما تراها الواجهة — **لا رمزَ مزودٍ ولا رقمَ بطاقة**. */

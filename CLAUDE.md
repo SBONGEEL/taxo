@@ -994,15 +994,8 @@ whole time. So the rule is now a **build guard**, by the owner's decision ("a wr
 enough; a guard is"): `admin-panel/scripts/check-flags.mjs`, wired into `npm run build` as
 `check:flags`.
 
-It makes **two** comparisons, because the defect arrives through two doors and `tsc` sees neither.
-The union in `api/types.ts` must equal the backend's `FeatureKey` exactly — **a union that is merely
-*smaller* is valid TypeScript**, so nothing but this check notices a missing member, and while it is
-missing the button cannot even be written. And the `FLAGS` array in `screens/Settings.tsx` — the list
-that actually draws the switches — must contain every key: **an array missing an element is not a type
-error**, which is precisely the "value missing from an *array* rather than a union" failure this file
-already warned about. `FLAG_LABEL` needs no check; it is a `Record<FeatureKey, …>` and the compiler
-owns it. Both halves were verified by reproducing them (and the union half caught a real clobbering of
-`types.ts` minutes after being written).
+Its two comparisons and their reasons are in `admin-panel/scripts/check-flags.mjs` — read them there,
+not here.
 
 **Stage 12-ط — scheduled rides — is done in the backend and the rider app** (`SPEC.md` §5.11,
 `ride_bookings` in §4, migration `0025`, `services/bookings.py`, `tasks/bookings.py`, the rider's
@@ -1077,12 +1070,8 @@ component. That makes it **the fourth shape in this project's "what the build ca
 after a class silently dropped by tailwind-merge, a key missing from the pixel scale, and a value missing
 from an *array* rather than a union.
 
-**So it has a guard now, and the guard parses rather than greps.** `check:slot` walks every `.tsx` with
-**TypeScript's own parser**, finds any element carrying `asChild` (or a literal `<Slot>`), and requires
-**exactly one meaningful child** — whitespace text excluded, and a lone `{cond ? … : null}` child rejected
-too, because `Children.only(null)` throws just as two children do. A regex would have to decide where a
-JSX tag ends and would lie in both directions; a guard that lies is a guard that gets disabled. Verified by
-reproducing **both** shapes and watching it fail, then pass again.
+**So it has a guard now**: `check:slot`, which parses with TypeScript's own parser rather than grepping.
+Its rules and the reason it is not a regex are written in `scripts/check-slot.mjs`.
 
 **And the sweep found the rest of the family is empty**: two `asChild` call sites, both in the rider app,
 both single-child at the call site — the defect was in the shared `Button`, not the callers. The driver app
@@ -2681,6 +2670,61 @@ while the rider app's `CountryConfig` **type never mirrored them**, so the data 
 discarded: a new shape of this project's recurring failure — not a rule with no door, but **a field
 with no mirror**.
 
+
+## الحرّاس — وما لم يصر حارساً بعد (2026-08-20)
+
+**القاعدةُ التي أنشأت هذا القسم**: في جلسةٍ واحدة أوقفني `check:enums` عن اتحادٍ
+مختلط، **ووقعتُ في فخٍّ مكتوبٍ في هذا الملف حرفياً** — تشغيلُ اختباراتٍ شاردٌ
+يمسك قاعدةَ الاختبار. **فالمكتوبُ لا يُطبَّق، والحارسُ يُطبَّق** (قرارُ المالك
+2026-08-20). فما صار حارساً يُختصر هنا إلى إشارة، وما بقي نصّاً يُسمّى صراحةً
+**لأنه هو الذي سيتكرّر**.
+
+### أ) دروسٌ صارت حرّاساً — تُقرأ من الحارس لا من هنا
+
+| الدرس | الحارس |
+|---|---|
+| صنفٌ خارج سلّم البكسل يُصرَّف بلا أثر | `check:scale` |
+| اتحادُ سلاسلَ يخالف تعدادَ الخلفية، **أو يخلط قيمةً مخترعةً بحقيقية** | `check:enums` (وقائمةُ `UI_UNIONS` تُصرَّح بأسبابها) |
+| خانةٌ عربية-هندية في نصٍّ معروض، أو مُنسِّقٌ بلا لغةٍ مثبَّتة | `check:digits` + `tests/digit_format.py` |
+| `asChild` بأكثرَ من ابنٍ واحد — يُفرِّغ الشاشة | `check:slot` |
+| مفتاحُ ميزةٍ بلا زرّ | `check:flags` |
+| حقلٌ تنشره الخلفيةُ بلا مرآة، أو مرآةٌ بلا مُرسِل | `check:config` |
+| مسارٌ إداريٌّ بلا زرّ («بابٌ بلا زرّ») | `check:doors` |
+| نداءٌ من تطبيقٍ بلا **فعلٍ ومسارٍ** في الخلفية | `check:contract` |
+| حزمةٌ تخالف هدفَها أو فيها عنوانٌ محلّيّ | `check:target` + `check:dist` |
+| مبلغٌ يُسلسَل «0» لا «0.000» (الشكلُ السابع) | `tests/money_format.py` |
+| نموذجٌ يفترق عن ترحيلته | `tests/test_migrations.py` |
+| **تشغيلُ اختباراتٍ شاردٌ يمسك `taxo_test`** | **`scripts/suite.sh`** — بابٌ واحدٌ للمجموعة، يرفض قبل أن يبدأ ويسمّي الحاوية |
+
+### ب) دروسٌ **ما زالت نصّاً وحدَها** — وهذه التي ستتكرّر
+
+مرتَّبةٌ بما كلّفَ فعلاً، لا بما يبدو خطيراً:
+
+| # | الدرس | كلفتُه حتى الآن | أيُبنى له حارس؟ |
+|---|---|---|---|
+| ١ | **خطوةُ الصفر الثلاثية** — «شجرةٌ خضراء» لا تقول شيئاً عن القطعة التي يشغّلها إنسان | **ثلاثةُ تحقيقاتٍ منفصلة**، وواحدٌ منها أرسل مالاً بضغطة | **نعم، وهو الأوضح**: أمرٌ يقارن بصمةَ `dist` بما تخدمه الحاويةُ وبما يصل عبر النفق، ويفشل بذكر العمود المختلف. و`check:dist` **لا يغني**: يقيس الهدفَ لا **العمر** |
+| ٢ | **قفلٌ لا يُثبَت بحذفه لا يُصدَّق**، ومسارُ مالٍ بلا اختبار تزامن | ثلاثةُ أقفالٍ مرّت خضراءَ وهي لا تحرس شيئاً | **جزئياً**: يصعب إثباتُ «هذا اختبارٌ يفشل بحذف القفل» آلياً، **لكن يمكن** حارسٌ يرفض `with_for_update` جديداً في `services/` بلا ملفِّ تزامنٍ يذكره |
+| ٣ | **بابان ينشران الشيءَ نفسَه** (الشكلُ الثامن) | خصمُ الاشتراك ظهر في بابٍ وغاب عن الذي تقرؤه الشاشة، و**١٦ اختباراً أخضر** | **نعم**: حارسٌ يرصد حمولةً (`SubscriptionPlanOut` مثلاً) تُبنى في موضعين، ويطلب بانياً واحداً أو اختبارَ مقارنة |
+| ٤ | **حقلٌ يُحسب ولا يقرؤه أحد** | وقع اليومَ في `shrink`: ثلاثةُ حقولٍ تُحسب ويرميها المُنادِيان، وتوثيقُها يَعِد بعرضها | **نعم**: حارسٌ على الحقول المُصدَّرة من `lib/` التي لا يُقرأ لها اسمٌ خارج ملفِّها |
+| ٥ | **مبلغٌ يُمرَّر بعلامته المحلولة مرتين** (`money(v, currencyLabel(v))`) فيُطبع عارياً | عمودان في `Advances.tsx` منذ البند ١٥، ثم نُسخا | **نعم، وسهل**: `check:money` يرفض `money(` يحمل `currencyLabel(` في وسيطه |
+| ٦ | **خطوةٌ وسيطةٌ لم يضغطها إنسان** (الشكلُ التاسع) | أربعُ خطواتٍ مالية، **ثلاثٌ منها عاطبةٌ من أول ضغطة** | **لا آلياً** — لكن **قائمةُ خطواتٍ غيرِ مضغوطة** تُحدَّث مع كل مسارِ مال، وتُقرأ قبل «تمّ» |
+| ٧ | **عائقٌ لا يظهر إلا على جهاز** (الشكلُ الحادي عشر) | أربعةُ عوائقَ في ميزةٍ واحدة، ولا واحدَ منها يُرى من متصفح | **لا** — يبقى شرطاً: ما يمسّ نظامَ التشغيل يُقاس على الجهاز أو يبقى مجهولاً |
+| ٨ | **مساعدُ اختبارٍ يختصر مساراً حقيقياً** يصير مصدرَ حقيقةٍ ثانياً | مرّر `awaiting_confirmation` من مراجعةٍ كاملة؛ وتكرّر اليومَ في أول صياغةٍ لاختبار العمولة | **جزئياً**: حارسٌ يرصد بناءَ صفِّ `Ride`/`Payment` مباشرةً في `tests/` خارج `helpers.py` |
+| ٩ | **«الإعدادُ مكتوب» ليس «الإعدادُ سارٍ»** — يُقرأ من الأداة التي تستهلكه (`sshd -T`) | بابُ SSH بدا مقفلاً وهو مفتوح | **لا** (خارج الشجرة) — يبقى شرطاً في كل تصلّبٍ للخادم |
+| ١٠ | **حاويةٌ تبدو أنها فعلت ما طُلب** — `restart` يُبقي الصورةَ القديمة، ومِرآةٌ لا يعبرها inotify | تبعيةٌ ناقصةٌ شحنت، وتعديلاتٌ «لم تظهر» | **جزئياً**: `suite.sh` غطّى الشاردَ وحدَه؛ ويبقى الاثنان الآخران نصّاً |
+| ١١ | **إشعارٌ يحمل جملةً مؤلَّفةً في `data`** بدل قيمٍ خام | «4.100 JOD» بخاناتٍ لاتينية في تطبيقٍ عربيّ | **نعم**: حارسٌ يرفض `f"{...}"` داخل `data=` في `notifications.py` |
+| ١٢ | **تأنيثُ الوصف في رسائل الخطأ** — «كلمة المرور مطلوب» | نحوٌ مكسورٌ يُقرأ تطبيقاً مكسوراً | **جزئياً**: اختبارٌ يمرّ على `FEMININE_LABELS` ويطابقها بالحقول |
+
+**ولا يُبنى منها شيءٌ اليوم**: القائمةُ **قرارٌ للمالك بأيِّها يبدأ**، وترتيبُها
+أعلاه هو ترتيبُ الكلفة المقيسة لا التقدير. **والبند ١ هو الذي كلّف أكثرَ من
+غيره مجتمعةً.**
+
+**وقاعدةُ كلِّ حارسٍ جديدٍ تبقى**: يُقاس في الاتجاهين قبل أن يُصدَّق — يمسك عطباً
+مصنوعاً، **ويصمت على شجرةٍ سليمة**. وحارسٌ **يخترع** عطباً يُفقد الثقةَ بما يجده
+حقاً، وقد وقع ذلك في ٢٠٢٦-٠٨-٢٠.
+
+---
+
 ## Project rules that override defaults
 
 **`SPEC.md` is the single source of truth.** It is written in Arabic and defines every table, flow,
@@ -2844,14 +2888,18 @@ stage 9-ب added `python-multipart`, the suite went green, and the running backe
 request with `RuntimeError: Form data requires "python-multipart"` until the container was recreated.
 Same rule for `worker` and `beat`: they run the same image.
 
-**And `docker compose run` inherits `restart: unless-stopped` from the service, so a detached test run
-restarts itself forever.** `docker compose run -d --rm ... backend pytest -q` looks like a background job
-that ends with a verdict; what actually happens is that pytest exits, Docker restarts the container by
-policy, **pytest starts over, and `docker logs` is truncated to the new run** — so the summary line
-appears, vanishes, and the suite silently re-runs from zero. It cost two "the result disappeared" rounds
-in one session, and the symptom reads exactly like a killed job. Two ways out: run it in the foreground,
-or make the result outlive the container — `sh -c "pytest -q >> /app/.suite.out 2>&1"` writes into the
-bind-mounted tree, so the verdict is on the host whatever the container does afterwards.
+**Run the suite through `scripts/suite.sh` and nowhere else** — it is the guard for this class, and it
+exists because the written rule did not prevent the fault. It refuses to start while a previous run is
+still alive (naming the container), refuses while anything still holds `taxo_test`, names its own
+container so an interrupt can remove it, and writes the verdict into the bind-mounted tree so it
+outlives the container.
+
+**And one long-standing claim here was measured and is false**: a killed run does *not* restart itself
+by policy — `RestartPolicy=no` on the run container, measured 2026-08-20. What actually happens is
+simpler and worse: **killing the compose client does not kill the container it started**, so it keeps
+running and keeps holding the test database, and every later run dies at setup with one error repeated
+once per test (1076 of them), which reads as catastrophe and is dirt. The `-d` variant was never
+re-measured; do not assert it either way.
 
 **These three are one family, and it is worth reading them together**: a `restart` that keeps the old
 image (so a new dependency is missing), a bind mount that inotify cannot cross (so Vite serves the module
