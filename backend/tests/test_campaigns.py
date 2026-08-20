@@ -420,3 +420,53 @@ async def test_unknown_timezone_is_rejected(
         headers=admin_headers,
     )
     assert response.status_code == 422
+
+
+async def test_a_scheduled_campaign_can_be_edited_and_a_sent_one_cannot(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """**حملةٌ مجدولةٌ لا تُعدَّل تعني حذفاً وإعادةَ إنشاء** (قرارُ المالك 2026-08-19).
+
+    فيفقد المشرفُ نصَّه وجدولتَه ليصلح حرفاً. والبابُ مبنيٌّ منذ المرحلة ٨
+    ومصرَّحٌ به في `endpoints.ts` **ولم ينادِه أحد** حتى وُصل له زرّ.
+
+    **وما انطلق لا يُعدَّل**: نصٌّ وصل هواتفَ الناس لا يُغيَّر بعد وصوله، وتعديلُ
+    صفِّه يجعل السجلَّ يقول غيرَ ما قُرئ.
+    """
+    import uuid
+
+    from app.models.enums import CampaignStatus
+    from app.models.notification import NotificationCampaign
+
+    created = await client.post(
+        "/admin/campaigns",
+        json={
+            "title": "عرضُ الجمعة",
+            "body": "خصمٌ على رحلات اليوم",
+            "audience": "all_riders",
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    campaign_id = created.json()["id"]
+
+    edited = await client.patch(
+        f"/admin/campaigns/{campaign_id}",
+        json={"title": "عرضُ السبت", "body": "خصمٌ على رحلات الغد"},
+        headers=admin_headers,
+    )
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["title"] == "عرضُ السبت"
+
+    # وما انطلق يُرفض تعديلُه — والشاشةُ لا تعرض الزرَّ عليه أصلاً
+    async with session_factory() as session:
+        row = await session.get(NotificationCampaign, uuid.UUID(campaign_id))
+        row.status = CampaignStatus.SENT
+        await session.commit()
+
+    refused = await client.patch(
+        f"/admin/campaigns/{campaign_id}",
+        json={"title": "بعد الإرسال"},
+        headers=admin_headers,
+    )
+    assert refused.status_code == 409, refused.text

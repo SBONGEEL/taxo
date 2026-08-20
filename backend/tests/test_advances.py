@@ -692,3 +692,111 @@ async def test_writing_off_needs_a_reason_and_lifts_the_block(
         assert repaid == 0, "قيدُ تسويةٍ وهميٌّ يجعل الدفترَ يقول إنه سدَّد"
         row = await session.get(Driver, uuid.UUID(str(driver["driver_id"])))
         assert row is not None and row.advance_blocked is False
+
+
+async def test_the_per_driver_cap_lowers_and_never_raises(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**سقفُ كبتنٍ بعينه يخفض ولا يرفع** — وذلك **بالبناء** لا بفحصٍ عند الكتابة.
+
+    `cap_for` تعيد `min(computed, override)`، فتخصيصٌ أكبرُ من المحسوب لا يفعل
+    شيئاً. وفحصٌ عند الكتابة كان سيكون خاطئاً: المحسوبُ **ينمو** بما سدّده
+    الكبتن، فرقمٌ يتجاوزه اليومَ قد يقلّ عنه بعد شهر — فيُرفض تخصيصٌ صحيحٌ
+    لغدٍ لأنه لا يلزم اليوم.
+
+    و**ثلاثُ حالاتٍ لا اثنتان**: `None` لا تخصيص، وصفرٌ **منعٌ**، ورقمٌ سقفٌ
+    أضيق — ورقمٌ واحدٌ لا يحمل الأولَيَن (درسُ أصفار `wallet_settings`).
+    """
+    from app.services import advances as advances_service
+
+    policy = advances_service.Policy(
+        enabled=True,
+        deduction_percent=20,
+        min_kept_amount=Decimal("1.000"),
+        term_days=14,
+        min_completed_rides=0,
+        min_rating=Decimal("0"),
+        growth_percent_per_repaid=0,
+        max_multiplier_percent=100,
+    )
+    base = Decimal("30.000")
+
+    class _Driver:
+        id = uuid.uuid4()
+        advance_cap_override: Decimal | None = None
+
+    driver = _Driver()
+
+    async with session_factory() as session:
+        # لا تخصيص ⇒ المحسوبُ وحدَه
+        driver.advance_cap_override = None
+        computed = await advances_service.cap_for(
+            session, driver=driver, policy=policy, base=base
+        )
+        assert computed == Decimal("30.000")
+
+        # تخصيصٌ أعلى **لا يرفع**
+        driver.advance_cap_override = Decimal("500.000")
+        assert (
+            await advances_service.cap_for(
+                session, driver=driver, policy=policy, base=base
+            )
+            == computed
+        ), "التخصيصُ رفع السقفَ العام — وهو ما لا يجوز"
+
+        # وتخصيصٌ أدنى يحكم
+        driver.advance_cap_override = Decimal("12.000")
+        assert await advances_service.cap_for(
+            session, driver=driver, policy=policy, base=base
+        ) == Decimal("12.000")
+
+        # وصفرٌ منعٌ — لا «لا تخصيص»
+        driver.advance_cap_override = Decimal("0")
+        assert await advances_service.cap_for(
+            session, driver=driver, policy=policy, base=base
+        ) == Decimal("0")
+
+
+async def test_setting_the_cap_needs_a_written_reason_and_is_audited(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """مالٌ **يُقرَض**، فقرارُ تضييقه أو منعِه يُسأل عنه بعد شهرٍ باسم فاعله."""
+    from app.models.audit import AdminAuditLog
+    from tests.helpers import approved_driver
+
+    driver = await approved_driver(client, session_factory)
+
+    bare = await client.put(
+        f"/admin/drivers/{driver['driver_id']}/advance-cap",
+        json={"cap": "10.000"},
+        headers=admin_headers,
+    )
+    assert bare.status_code == 422, bare.text
+
+    ok = await client.put(
+        f"/admin/drivers/{driver['driver_id']}/advance-cap",
+        json={"cap": "10.000", "reason": "تكرار تأخر السداد"},
+        headers=admin_headers,
+    )
+    assert ok.status_code == 200, ok.text
+
+    # **والقيمةُ تُنشر في الصفِّ الذي تقرؤه اللوحة**: زرٌّ يعدّل بلا عرضِ ما هو
+    # قائمٌ يكتب فوق ما لا يراه صاحبُه. و`DriverOut` لا يحملها — الصفُّ يحملها،
+    # وهو ما تعيد الشاشةُ تحميلَه بعد الحفظ
+    listed = await client.get("/admin/drivers", headers=admin_headers)
+    assert listed.status_code == 200, listed.text
+    mine = [
+        r for r in listed.json() if r["driver_id"] == str(driver["driver_id"])
+    ]
+    assert mine and mine[0]["advance_cap_override"] == "10.000"
+
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AdminAuditLog).where(AdminAuditLog.entity_type == "driver")
+            )
+        ).all()
+    written = [r for r in rows if "advance_cap_override" in (r.details or {})]
+    assert written, "ضبطُ سقفٍ بلا صفِّ تدقيق"
+    assert written[-1].details["reason"] == "تكرار تأخر السداد"
+    assert written[-1].actor_id is not None

@@ -752,3 +752,98 @@ async def test_the_advance_terms_reach_the_driver_before_he_agrees(
     body = response.json()
     for field in ("deduction_percent", "min_kept_amount", "term_days"):
         assert field in body, field
+
+
+async def test_a_manual_grant_does_not_bypass_the_per_driver_cap(
+    client, session_factory, admin_headers, jordan_wallet
+) -> None:
+    """**المنحُ يجعل العرضَ منطبقاً، ولا يمنح خصماً بذاته** (قرارُ المالك 2026-08-19).
+
+    فالحدُّ لكلِّ كبتن وسقفُ الميزانية والقفلُ كلُّها تعمل عند **الشراء** كما
+    تعمل لأيِّ جمهورٍ آخر — والمنحُ لا يفتح باباً حولها. ولو منح خصماً بذاته
+    لصار طريقاً يلتفّ على كلِّ ما حُرس في البند ٥٤.
+    """
+    from sqlalchemy import func, select
+
+    from app.models.subscription import DriverSubscription
+    from tests.helpers import approved_driver
+
+    driver = await approved_driver(client, session_factory)
+
+    created = await client.post(
+        "/admin/subscription-offers",
+        params={"country_code": "JO"},
+        json={
+            "name": "منحةٌ يدوية",
+            "discount_value": "10",
+            "audience": "manual",
+            "max_uses_per_driver": 1,
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    offer_id = created.json()["id"]
+
+    granted = await client.post(
+        f"/admin/subscription-offers/{offer_id}/grants",
+        json={"driver_id": str(driver["driver_id"]), "note": "تعويضُ عطل"},
+        headers=admin_headers,
+    )
+    assert granted.status_code == 201, granted.text
+
+    # **والمنحُ لا يكتب اشتراكاً ولا خصماً** — صفٌّ في جدول المنح لا غير
+    listed = await client.get(
+        f"/admin/subscription-offers/{offer_id}/grants", headers=admin_headers
+    )
+    assert listed.status_code == 200, listed.text
+    assert len(listed.json()) == 1
+
+    # **ولا اشتراكَ ولا خصمَ بمجرد المنح** — يُقاس من الجدول لا من إحصاء
+    async with session_factory() as session:
+        used = await session.scalar(
+            select(func.count())
+            .select_from(DriverSubscription)
+            .where(DriverSubscription.offer_id == uuid.UUID(offer_id))
+        )
+    assert used == 0, "المنحُ وحدَه استهلك العرض"
+
+    # ولا يُمنح مرتين لنفس الكبتن
+    again = await client.post(
+        f"/admin/subscription-offers/{offer_id}/grants",
+        json={"driver_id": str(driver["driver_id"]), "note": "مكرر"},
+        headers=admin_headers,
+    )
+    assert again.status_code == 409, again.text
+
+
+async def test_granting_an_offer_whose_audience_is_computed_is_refused(
+    client, session_factory, admin_headers, jordan_wallet
+) -> None:
+    """**والمنحُ للجمهور اليدويِّ وحدَه** — وإلا صفُّ منحٍ لا أثرَ له.
+
+    فيظنّ المشرفُ أنه فعل شيئاً لم يقع، وهو الشكلُ الذي يُقرأ «الميزةُ لا تعمل».
+    ولذلك لا يُعرض زرُّ المنح في اللوحة إلا على `manual`.
+    """
+    from tests.helpers import approved_driver
+
+    driver = await approved_driver(client, session_factory)
+
+    created = await client.post(
+        "/admin/subscription-offers",
+        params={"country_code": "JO"},
+        json={
+            "name": "عرضٌ للجميع",
+            "discount_value": "10",
+            "audience": "all",
+            "max_uses_per_driver": 1,
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+
+    refused = await client.post(
+        f"/admin/subscription-offers/{created.json()['id']}/grants",
+        json={"driver_id": str(driver["driver_id"]), "note": "خطأ"},
+        headers=admin_headers,
+    )
+    assert refused.status_code == 422, refused.text

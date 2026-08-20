@@ -249,6 +249,10 @@ class AdminDriverRow(BaseModel):
     gender: Gender | None
     gender_verified: bool
     gender_preference: GenderPreference
+    # **سقفُ السلفة الخاصُّ به** (وُصل له زرٌّ 2026-08-19): `null` لا تخصيص،
+    # وصفرٌ منعٌ — وهما حالتان لا يحملهما رقمٌ واحد. ويُنشر لأن زرَّ التعديل
+    # بلا القيمة الحالية زرٌّ يكتب فوق ما لا يراه صاحبُه
+    advance_cap_override: Decimal | None
     created_at: datetime
 
 

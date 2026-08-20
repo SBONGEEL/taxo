@@ -41,6 +41,7 @@ import {
   listDrivers,
   rejectDriver,
   reviewDocument,
+  setAdvanceCap,
   setDriverGender,
   suspendDriver,
 } from "@/api/endpoints";
@@ -175,6 +176,112 @@ function DocumentPreview({
         <p className="mt-4 text-11 text-danger">{failed}</p>
       ) : null}
     </div>
+  );
+}
+
+/** سقفُ سلفةِ كبتنٍ بعينه — **بابٌ بلا زرّ حتى 2026-08-19** (قرارُ المالك).
+ *
+ * والعلّةُ أنه مال **يُقرَض**: سقفٌ عامٌّ بلا سقفٍ فرديٍّ يعني كبتناً واحداً
+ * يستنزف ما لم يُقصد له، ولا سبيلَ لتضييقه عليه وحدَه.
+ *
+ * **ولا يرفع السقفَ العام أبداً، وذلك بالبناء لا بفحصٍ عند الكتابة**:
+ * `advances.cap_for` تعيد `min(computed, override)` — فالتخصيصُ يخفض ولا يرفع.
+ * وفحصٌ عند الكتابة كان سيكون خاطئاً: المحسوبُ **ينمو** بما سدَّده الكبتن، فرقمٌ
+ * يتجاوزه اليومَ قد يقلّ عنه بعد شهر.
+ *
+ * **وثلاثُ حالاتٍ لا اثنتان**: فارغٌ = لا تخصيص (المحسوبُ وحدَه)، وصفرٌ = **منعٌ
+ * من السلف**، ورقمٌ = سقفٌ أضيق. ورقمٌ واحدٌ لا يحمل الأولَيَن — درسُ أصفار
+ * `wallet_settings`، فالشاشةُ تقولهما نصّاً.
+ */
+function AdvanceCap({
+  row,
+  canDecide,
+  onChanged,
+}: {
+  row: AdminDriverRow;
+  canDecide: boolean;
+  onChanged: (message: string) => void;
+}) {
+  const [cap, setCap] = useState(row.advance_cap_override ?? "");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  const current =
+    row.advance_cap_override === null
+      ? "لا تخصيص — يُطبَّق المحسوبُ وحدَه"
+      : Number(row.advance_cap_override) === 0
+        ? "ممنوعٌ من السلف"
+        : `سقفٌ خاصّ: ${digits(row.advance_cap_override)}`;
+
+  return (
+    <>
+      <h3 className="mb-10 mt-18 text-13 font-bold text-muted">سقف السلفة</h3>
+      <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+        <p className="text-13 font-semibold text-ink">{current}</p>
+        <p className="mt-6 text-11 leading-note text-muted">
+          <b className="text-ink">يخفض ولا يرفع</b>: السقفُ المطبَّق هو الأدنى بين
+          المحسوب (من قيمة الاشتراك اليوميّ، ينمو بما سُدّد) وهذا. فارغٌ = لا
+          تخصيص، و<b className="text-ink">صفرٌ = منعٌ من السلف</b>.
+        </p>
+
+        {canDecide ? (
+          <>
+            <div className="mt-10 grid gap-10">
+              <Field
+                label="السقف (فارغ = لا تخصيص)"
+                dir="ltr"
+                inputMode="decimal"
+                value={cap}
+                onChange={(event) =>
+                  setCap(event.target.value.replace(/[^0-9.]/g, ""))
+                }
+              />
+              <Field
+                label="السبب (إلزاميّ — يدخل سجلّ التدقيق)"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </div>
+            {failed ? (
+              <p className="mt-6 text-11 text-danger">{failed}</p>
+            ) : null}
+            <Button
+              className="mt-10"
+              size="sm"
+              loading={busy}
+              disabled={reason.trim().length < 3}
+              onClick={() => {
+                setBusy(true);
+                setFailed(null);
+                setAdvanceCap(row.driver_id, {
+                  cap: cap.trim() === "" ? null : cap.trim(),
+                  reason: reason.trim(),
+                })
+                  .then(() => {
+                    setReason("");
+                    onChanged("ضُبط سقفُ السلفة");
+                  })
+                  .catch((caught) =>
+                    setFailed(
+                      caught instanceof ApiError
+                        ? caught.message
+                        : "تعذّر الضبط",
+                    ),
+                  )
+                  .finally(() => setBusy(false));
+              }}
+            >
+              احفظ السقف
+            </Button>
+          </>
+        ) : (
+          <p className="mt-8 text-11 leading-note text-muted">
+            الضبطُ لـ admin وحده — هذا مالٌ يُقرَض.
+          </p>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -531,6 +638,8 @@ function DriverDrawer({
             ))}
           </ul>
         )}
+
+        <AdvanceCap row={row} canDecide={canDecide} onChanged={onChanged} />
 
         <h3 className="mb-10 mt-18 text-13 font-bold text-muted">
           توثيق الجنس

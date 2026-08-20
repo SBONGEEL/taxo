@@ -24,6 +24,7 @@ import {
   updateSubscriptionOffer,
 } from "@/api/endpoints";
 import type { SubscriptionOffer } from "@/api/types";
+import { OfferGrants } from "@/components/OfferGrants";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
@@ -47,6 +48,7 @@ export function OffersScreen() {
   const { isAdmin } = useSession();
   const form = useFormError();
   const [rows, setRows] = useState<SubscriptionOffer[] | null>(null);
+  const [granting, setGranting] = useState<SubscriptionOffer | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -274,6 +276,19 @@ export function OffersScreen() {
                             {offer.is_active ? "أطفئ" : "شغّل"}
                           </button>
                         ) : null}
+                        {/* **والمنحُ للجمهور اليدويِّ وحدَه**: زرٌّ على عرضٍ
+                            جمهورُه محسوبٌ يعمل ثم يرتدّ بـ٤٢٢، وهو ما يعلّم
+                            المشرفَ إعادةَ المحاولة بدل أن يقول له إن الباب
+                            ليس هنا */}
+                        {isAdmin && offer.audience === "manual" ? (
+                          <button
+                            type="button"
+                            className="text-11.5 font-bold text-accent-ink"
+                            onClick={() => setGranting(offer)}
+                          >
+                            امنح
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -294,6 +309,17 @@ export function OffersScreen() {
                 )}.`
               : ""}
           </p>
+        ) : null}
+
+        {granting ? (
+          <OfferGrants
+            offerId={granting.id}
+            offerName={granting.name}
+            country={country}
+            onClose={() => setGranting(null)}
+            onError={(message) => form.setMessage(message)}
+            onGranted={setDone}
+          />
         ) : null}
       </Shell>
     </FormErrors>

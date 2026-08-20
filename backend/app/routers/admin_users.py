@@ -254,6 +254,7 @@ async def list_drivers(
             gender=user.gender,
             gender_verified=user.gender_verified_at is not None,
             gender_preference=driver.gender_preference,
+            advance_cap_override=driver.advance_cap_override,
             documents_pending=pending_count,
             documents_rejected=rejected_count,
             # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد.

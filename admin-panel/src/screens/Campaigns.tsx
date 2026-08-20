@@ -29,6 +29,7 @@ import { ApiError } from "@/api/client";
 import {
   cancelCampaign,
   createCampaign,
+  updateCampaign,
   listCampaigns,
   listDeliveries,
 } from "@/api/endpoints";
@@ -100,7 +101,8 @@ export function CampaignsScreen() {
   const [rows, setRows] = useState<Campaign[] | null>(null);
   const [open, setOpen] = useState<Campaign | null>(null);
   const [deliveries, setDeliveries] = useState<Delivery[] | null>(null);
-  const [composing, setComposing] = useState(false);
+  // `true` إنشاءٌ جديد، وحملةٌ تعديلٌ لها، و`false` مغلق
+  const [composing, setComposing] = useState<Campaign | boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -208,15 +210,29 @@ export function CampaignsScreen() {
               >
                 سجل الإرسال
               </button>
+              {/* **والتعديلُ لما لم ينطلق وحدَه**: `campaigns.update` ترفض
+                  ما ليس `draft` أو `scheduled` بـ٤٠٩، وزرٌّ يعمل ثم يرتدّ
+                  يعلّم المشرفَ إعادةَ المحاولة بدل أن يقول له إن الباب أُغلق */}
               {campaign.status === "draft" ||
               campaign.status === "scheduled" ? (
-                <button
-                  type="button"
-                  onClick={() => void cancel(campaign)}
-                  className="text-11.5 font-semibold text-danger"
-                >
-                  إلغاء
-                </button>
+                <>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => setComposing(campaign)}
+                      className="text-11.5 font-semibold text-accent-ink"
+                    >
+                      تعديل
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void cancel(campaign)}
+                    className="text-11.5 font-semibold text-danger"
+                  >
+                    إلغاء
+                  </button>
+                </>
               ) : null}
             </span>
           </div>
@@ -225,6 +241,7 @@ export function CampaignsScreen() {
 
       {composing ? (
         <Composer
+          editing={typeof composing === "boolean" ? null : composing}
           onClose={() => setComposing(false)}
           onCreated={(message) => {
             setComposing(false);
@@ -257,18 +274,36 @@ export function CampaignsScreen() {
 }
 
 /** إنشاءُ حملة — بلا `segment`: ترفضها الخلفية اليوم برسالة صريحة. */
+/** مؤلِّفُ الحملة — **وهو المحرِّرُ نفسُه حين يُسلَّم حملةً قائمة**.
+ *
+ * وحملةٌ مجدولةٌ لا تُعدَّل تعني **حذفاً وإعادةَ إنشاء**: يفقد المشرفُ نصَّه
+ * وجدولتَه ليصلح حرفاً. والبابُ مبنيٌّ في الخلفية منذ المرحلة ٨ ومصرَّحٌ به في
+ * `endpoints.ts` **ولا ينادِيه أحد**.
+ *
+ * **وما انطلق لا يُعدَّل**: `campaigns.update` ترفض ما ليس `draft` أو
+ * `scheduled` — فالشاشةُ لا تعرض الزرَّ أصلاً على `sent` أو `cancelled`، لأن
+ * زرّاً يعمل ثم يرتدّ يعلّم المشرفَ إعادةَ المحاولة.
+ */
 function Composer({
+  editing,
   onClose,
   onCreated,
 }: {
+  /** حملةٌ قائمة ⇒ تحرير، و`null` ⇒ إنشاء. */
+  editing: Campaign | null;
   onClose: () => void;
   onCreated: (message: string) => void;
 }) {
   const { country } = useCountry();
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [audience, setAudience] = useState<CampaignAudience>("all_drivers");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [title, setTitle] = useState(editing?.title ?? "");
+  const [body, setBody] = useState(editing?.body ?? "");
+  const [audience, setAudience] = useState<CampaignAudience>(
+    editing?.audience ?? "all_drivers",
+  );
+  // **قيمةُ `datetime-local` بلا منطقة**: تُقتطع الثانيةُ والمنطقةُ من ISO
+  const [scheduledAt, setScheduledAt] = useState(
+    editing?.scheduled_at ? editing.scheduled_at.slice(0, 16) : "",
+  );
   const [busy, setBusy] = useState(false);
   const form = useFormError();
   const error = form.message;
@@ -277,17 +312,23 @@ function Composer({
   async function submit() {
     setBusy(true);
     setError(null);
+    const payload = {
+      title: title.trim(),
+      body: body.trim(),
+      audience,
+      country_code: audience === "by_country" ? country : null,
+      // بلا موعدٍ تبقى مسودّة، وبموعدٍ تصير مجدولة (الخلفية تقرر)
+      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    };
     try {
-      await createCampaign({
-        title: title.trim(),
-        body: body.trim(),
-        audience,
-        country_code: audience === "by_country" ? country : null,
-        // بلا موعدٍ تبقى مسودّة، وبموعدٍ تصير مجدولة (الخلفية تقرر)
-        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-      });
+      if (editing) await updateCampaign(editing.id, payload);
+      else await createCampaign(payload);
       onCreated(
-        scheduledAt ? "جُدولت الحملة" : "حُفظت مسودّة — تُرسل حين تُجدول",
+        editing
+          ? "حُفظ التعديل"
+          : scheduledAt
+            ? "جُدولت الحملة"
+            : "حُفظت مسودّة — تُرسل حين تُجدول",
       );
     } catch (caught) {
       form.capture(caught, "تعذّر الحفظ");
@@ -298,7 +339,7 @@ function Composer({
 
   return (
     <FormErrors value={form.field}>
-    <Modal onClose={onClose} title="حملة جديدة">
+    <Modal onClose={onClose} title={editing ? "تعديلُ حملة" : "حملة جديدة"}>
       <Field
         label="العنوان"
         name="title"

@@ -206,6 +206,8 @@ export interface AdminDriverRow {
   documents_pending: number;
   documents_rejected: number;
   missing_required: DocumentType[];
+  /** سقفُ السلفة الخاصُّ به — `null` لا تخصيص، و`"0.000"` منعٌ من السلف. */
+  advance_cap_override: string | null;
   created_at: string;
 }
 
