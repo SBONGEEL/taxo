@@ -2595,11 +2595,13 @@ and per-category pricing. Do not build them; he decides after launch.
 **And these two were already waiting**, both raised by finishing the cancellation fee rather than by
 anyone guessing:
 
-1. **The carrier's reward** (`design/CANCELLATION-FEE.md` §6-أ) — a rating boost and a subscription
-   coupon, neither of which exists as machinery. The rating is recomputed from the whole ratings table,
-   so a boost needs either a second column or a synthetic rating row; and `promo_codes` is a **ride**
-   payment channel, so a subscription discount is a new money path. Everything else in §6-أ ships and
-   works without it.
+1. ✅ **The carrier's reward is closed, not open** — the owner **dropped it on 2026-08-16**
+   (`design/CANCELLATION-FEE.md` §6-أ) for the reason recorded there: a rating boost needs either a
+   second column beside a recomputed value or a synthetic rating row with no rider behind it, and a
+   subscription coupon is a **new money path** wearing 12-ز's name (`promo_codes` is a *ride* channel).
+   **What replaced it is built and running**: an explicit thank-you by name at the head of
+   `publish_cancellation_carried` — the carrier loses nothing (net zero), so what falls on him is
+   thanks, not a price. This entry survived here as "open" after the decision; corrected 2026-08-20.
 2. **Whether the company bears the remaining rider's difference *before* departure** in ride sharing —
    his own earlier deferral (`SPEC.md` §5.12).
 
@@ -3038,13 +3040,18 @@ There is no frontend test runner: stage 9 added no business logic to test — pr
 state transitions all stay in the backend, and the app displays what the API returns. `npm run
 build` is the check that runs, and it type-checks every file.
 
-`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **fourteen** periodic jobs:
+`worker` and `beat` are the Celery pair from stage 7 (`app/tasks/`), running **fifteen** periodic jobs
+(counted from `beat_schedule` on 2026-08-20; this line said "fourteen" while the schedule held fifteen):
 the subscription sweep and the CliQ-confirmation sweep every five minutes; the stage-8 campaign
 dispatch, the multi-stop wait cap and **due bookings** (12-ط) every minute; the referral-bonus payout
 (12-ح), the advance sweep (item 15) and the **cancellation-charge sweep** every ten;
 **the driver-level re-evaluation hourly** (item 53), **the pause-cap notice every minute**
-(§5.10-ب) and **the backup schedule check every quarter hour**; and the two
-stage-12 maintenance jobs — the stale-provider-order sweep and the inbox trim. **Run exactly one `beat`** — a
+(§5.10-ب), **the WhatsApp session watch every minute** and **the backup schedule check every quarter
+hour**; and the three maintenance jobs — the stale-provider-order sweep, the inbox trim, and the
+**orphan-document-file sweep**, which is the one job on a `crontab` rather than an interval (Friday
+04:20, weekly): there is no driver-facing delete path, an orphan arises only from a replacement that
+broke between the file and its row, and sweeping a directory of thousands of files is not work to
+repeat daily. **Run exactly one `beat`** — a
 second scheduler fires every period twice. The worker process has no event loop of its own, so
 `celery_app.run_async` keeps one loop per process: a fresh loop per task would strand the asyncpg
 pool bound to the previous one. Tasks are thin wrappers over `services/`, and the tests call the
