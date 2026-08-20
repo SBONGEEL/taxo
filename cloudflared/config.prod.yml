@@ -1,0 +1,30 @@
+# **نفقُ الخادم — `taxo-prod`، ولا علاقةَ له بنفق جهاز المالك.**
+#
+# **ومُعرِّفان لا واحد، وهذا شرطٌ لا تنظيم**: نفقان بالمُعرِّف نفسِه **يتقاسمان
+# الطلبات** (محذورٌ مكتوبٌ في `config.docker.yml` منذ 2026-08-14)، فتُقرأ
+# النتيجةُ «يعمل أحياناً». ولذلك لهذا الخادم مُعرِّفُه واعتمادُه.
+#
+# **ونطاقاتُ الإنتاج الأربعة (`api` · `app` · `driver` · `admin`) ليست هنا
+# ولا تُذكر**: تبقى على نفق جهاز المالك بلا مساس (§25.7). وما هنا **تجريبيٌّ
+# للقياس** — `stg-*` وحدَها.
+tunnel: e9ad4a78-33ad-4e65-aa00-53ba926e92cd
+credentials-file: /creds/e9ad4a78-33ad-4e65-aa00-53ba926e92cd.json
+
+ingress:
+  # الخلفيةُ — وهي الوحيدةُ التي كانت مقصودةً حين أُنشئت السجلات
+  - hostname: stg-api.tajora.ly
+    service: http://backend:8000
+
+  # تطبيقُ الراكب — يُخدَم من حاوية `customer-app` نفسِها التي في `compose`،
+  # فلا `node` على المضيف ولا `dist` يُنقل (§25.4)
+  - hostname: stg-app.tajora.ly
+    service: http://customer-app:5173
+
+  - hostname: stg-driver.tajora.ly
+    service: http://driver-app:5174
+
+  # الصفحةُ التعريفيةُ العامة — **وهي وحدَها بلا `stg-`**: عنوانٌ يُعطى لناس
+  - hostname: taxo.tajora.ly
+    service: http://landing:80
+
+  - service: http_status:404

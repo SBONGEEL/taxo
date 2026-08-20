@@ -36,6 +36,7 @@ from app.routers import (
     rides,
     subscriptions,
     wallet,
+    public_site,
 )
 from app.ws.routes import ws_router
 
@@ -75,6 +76,8 @@ api_router.include_router(admin_rides.router)
 api_router.include_router(admin_otp_templates.router)
 api_router.include_router(admin_security.router)
 api_router.include_router(admin_cancellations.router)
+# **الصفحةُ التعريفيةُ العامة** — قراءةٌ محضةٌ بلا جلسة (2026-08-21)
+api_router.include_router(public_site.router)
 # مقابس التتبع تحت نفس بادئة الإصدار: /api/v1/ws/...
 api_router.include_router(ws_router)
 

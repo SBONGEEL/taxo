@@ -1,0 +1,74 @@
+# **طبقةُ الخادم — تُضاف فوق `docker-compose.yml`** ولا تحلّ محلَّه:
+#
+#   docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod-tunnel.yml up -d
+#
+# **وهي غيرُ `docker-compose.tunnel.yml`**: ذاك نفقُ جهاز المالك بنطاقات
+# الإنتاج، وهذا نفقُ الخادم بنطاقاتٍ تجريبية. **وخلطُهما يجعل نفقين بمُعرِّفٍ
+# واحدٍ يتقاسمان الطلبات.**
+
+services:
+  # **العلّةُ التي أنشأت هذا الملف** (قِيس 2026-08-20): الخلفيةُ كانت تعمل بلا
+  # `CORS_ORIGINS`، فتقع على افتراض الكود — **ثمانيةُ عناوينَ محلّية**. فأولُ
+  # متصفحٍ على `stg-app` يخاطب `stg-api` **يُردّ**، ويقف على «الشبكة ضعيفة»
+  # بينما `curl` يجيب ٢٠٠. وهو الفخُّ نفسُه الذي وقع محلياً مرتين في يومٍ واحد.
+  backend:
+    environment:
+      CORS_ORIGINS: >-
+        ["https://stg-app.tajora.ly","https://stg-driver.tajora.ly"]
+      PUBLIC_API_BASE_URL: https://stg-api.tajora.ly
+      CARD_RETURN_URL: https://stg-app.tajora.ly/payments/card/return
+      CARD_RETURN_URL_DRIVER: https://stg-driver.tajora.ly/payments/card/return
+
+  # **خادمُ التطوير لا البناءُ المحزَّم** — على خلاف طبقة جهاز المالك: هناك
+  # يُبنى `dist` على المضيف بـ`node` مثبَّت، **ولا `node` على هذا الخادم**
+  # (§25.4 تفترض بناءً هناك، ولم يُثبَّت). وخادمُ التطوير يقرأ `VITE_API_BASE_URL`
+  # عند الإقلاع فلا يحتاج بناءً — **وثمنُه بطءُ أوّل فتح** (وحداتٌ مفرَّقة)،
+  # وهو ثمنٌ مقبولٌ لقياسٍ لا لإطلاق.
+  customer-app:
+    environment:
+      VITE_API_BASE_URL: https://stg-api.tajora.ly
+    ports: !reset []
+
+  driver-app:
+    environment:
+      VITE_API_BASE_URL: https://stg-api.tajora.ly
+    ports: !reset []
+
+  # **الصفحةُ التعريفية — nginx ساكنٌ بلا بناءٍ ولا `node`** (2026-08-21).
+  #
+  # **وخدمةٌ مستقلةٌ لا مجلدٌ داخل تطبيق**: الصفحةُ **قراءةٌ محضةٌ بلا جلسة**،
+  # وتخدم ملفَّ APK بأحدَ عشرَ ميجابايت — وذاك عملُ خادمٍ ساكنٍ لا خادمِ تطوير.
+  # **والأهمّ**: `customer-app/public/taxo-rider.apk` كان يُخدَم من
+  # `app.tajora.ly` وهو بناءُ ١٤ آب بينما آخرُ بناءٍ ١٩ آب — **مصدرٌ ثانٍ
+  # للملفّ نفسِه**، وقد أُزيل. فالمصدرُ الآن **هنا وحدَه**.
+  landing:
+    image: nginx:1.27-alpine
+    container_name: taxo-landing
+    restart: unless-stopped
+    volumes:
+      - ./landing:/usr/share/nginx/html:ro
+    # **لا `ports`**: يصلها النفقُ عبر شبكة compose، ولا منفذَ يُفتح على العالم
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.8.2@sha256:0aa26e284f05e6c77ae375b8c9c11d9eb6a448fb7bcd8d40f31cb6176189eb38
+    container_name: taxo-prod-tunnel
+    restart: unless-stopped
+    # **يعمل بمستخدم مالك السرّ لا بمستخدم الصورة** (قِيس 2026-08-20): الصورةُ
+    # تعمل بـ65532، واعتمادُ النفق `600` يملكه `taxo` (1001) في مجلدٍ `700`
+    # (§25.1). فالمركَّبُ **موجودٌ ولا يُرى**، والحاويةُ تدور في حلقةِ
+    # «credentials file doesn't exist» — **وهو الفخُّ نفسُه المكتوب في
+    # `config.docker.yml` منذ 2026-08-14**، بوجهه الثاني.
+    #
+    # **والعلاجُ المستخدمُ لا الصلاحيات**: توسيعُ `600` على اعتمادِ نفقٍ يمنح
+    # حاملَه توجيهَ `api.tajora.ly` إلى خادمه (§25.3) — فيُحلّ بمن يقرأ لا
+    # بفتح ما يُقرأ.
+    user: "1001:1001"
+    command: tunnel --config /etc/cloudflared/config.prod.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+      - /home/taxo/secrets/cloudflared:/creds:ro

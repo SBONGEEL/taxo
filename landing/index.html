@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>TAXO — تاكسي في ثوانٍ</title>
+<meta name="description" content="TAXO — طلبُ تاكسي في الأردن وليبيا. تطبيقٌ للراكب وآخرُ للكبتن، وصفرُ عمولة ما دام اشتراكك سارياً." />
+<meta name="theme-color" content="#14181d" />
+<link rel="icon" href="data:," />
+<style>
+  /* **اللوحةُ من `DESIGN.md` §1.1 حرفاً** — لا ألوانَ تُخترع لصفحةٍ واحدة.
+     وهذه نسخةٌ ثانيةٌ لقيمٍ لها بيت، **وهي الاستثناءُ الثاني المسموح** بعد
+     الترحيبية: الصفحةُ لا تمرّ بـTailwind ولا ببناء، فلا سبيلَ لقراءة
+     الأصل. وثمنُه أن `check:scale` لا يراها — مكتوبٌ كي لا يُنسى. */
+  :root {
+    --bg: #14181d; --sur: #0d1014; --sur2: #1a2027;
+    --tx: #e6edf3; --mut: #8b949e; --line: #232a32;
+    --ok: #3fb970; --inv: #14181d;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f2f0eb; --sur: #ffffff; --sur2: #faf9f6;
+            --tx: #171b20; --mut: #6e7681; --line: #e2ded6; --ok: #1a7f4e; --inv: #ffffff; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--tx);
+    font-family: "Segoe UI", system-ui, -apple-system, "Noto Naskh Arabic", sans-serif;
+    line-height: 1.7; -webkit-text-size-adjust: 100%;
+  }
+  /* **للهاتف أولاً**: عمودٌ واحدٌ بعرضٍ مقيَّد، ولا شبكةَ تنهار على ٣٦٠ بكسل */
+  .wrap { max-width: 34rem; margin: 0 auto; padding: 1.5rem 1.15rem 3rem; }
+  header { padding-top: 2.2rem; text-align: center; }
+  .mark { font-size: 2.1rem; font-weight: 800; letter-spacing: .04em; }
+  .tag { color: var(--mut); font-size: 1rem; margin-top: .3rem; }
+  h2 { font-size: 1.08rem; margin: 2.2rem 0 .8rem; }
+  .card { background: var(--sur); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.05rem; margin-bottom: .7rem; }
+  .card h3 { margin: 0 0 .25rem; font-size: .98rem; }
+  .card p { margin: 0; color: var(--mut); font-size: .9rem; }
+  /* العرضُ القائم — يُحقن من الخلفية، **وغيابُه يعني غيابَ العنصر كلِّه** */
+  #offer { display: none; border-color: var(--ok); }
+  #offer .big { font-size: 1.22rem; font-weight: 800; }
+  #offer .sub { color: var(--mut); font-size: .88rem; margin-top: .2rem; }
+  .old { text-decoration: line-through; }
+  a.btn {
+    display: block; text-align: center; text-decoration: none;
+    background: var(--tx); color: var(--inv); font-weight: 700;
+    border-radius: 12px; padding: .85rem 1rem; margin-bottom: .55rem; font-size: 1rem;
+  }
+  a.btn.ghost { background: transparent; color: var(--tx); border: 1px solid var(--line); font-weight: 600; }
+  .meta { color: var(--mut); font-size: .76rem; text-align: center; margin: -.2rem 0 1rem; direction: ltr; }
+  .steps { counter-reset: s; padding: 0; margin: .4rem 0 0; list-style: none; }
+  .steps li { counter-increment: s; position: relative; padding-inline-start: 1.7rem; margin-bottom: .35rem; color: var(--mut); font-size: .87rem; }
+  .steps li::before { content: counter(s); position: absolute; inset-inline-start: 0; top: .1rem;
+    width: 1.15rem; height: 1.15rem; border-radius: 50%; background: var(--sur2);
+    color: var(--tx); font-size: .72rem; display: grid; place-items: center; font-weight: 700; }
+  footer { margin-top: 2.4rem; text-align: center; color: var(--mut); font-size: .82rem; }
+  footer a { color: var(--tx); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mark">TAXO</div>
+    <div class="tag">تاكسي في ثوانٍ — في الأردن وليبيا</div>
+  </header>
+
+  <h2>للراكب</h2>
+  <div class="card"><h3>تعرف السعر قبل أن تركب</h3><p>الأجرةُ تُحسب قبل الطلب، وتراها كاملةً قبل أن تؤكّد — بلا مفاجأةٍ في آخر الرحلة.</p></div>
+  <div class="card"><h3>تابع كبتنك على الخريطة</h3><p>من لحظة القبول حتى الوصول، وتشارك تفاصيل رحلتك مع من تشاء.</p></div>
+  <div class="card"><h3>ادفع كما يناسبك</h3><p>كاش، أو محفظةٌ داخل التطبيق، أو كليك — وإيصالٌ لكل رحلة.</p></div>
+  <div class="card"><h3>خدمةُ سيدات</h3><p>يمكنك طلبُ كبتنٍ من النساء، والتوفيقُ في الاتجاهين.</p></div>
+
+  <h2>للكبتن</h2>
+  <div class="card" id="offer">
+    <div class="big" id="offer-title"></div>
+    <div class="sub" id="offer-sub"></div>
+  </div>
+  <div class="card"><h3>صفر عمولة ما دام اشتراكك سارياً</h3><p>ربحُنا من الاشتراك لا من رحلاتك. وما دام اشتراكك سارياً فأجرةُ الرحلة لك كاملةً.</p></div>
+  <div class="card"><h3>الكاش والكليك يصلانك مباشرة</h3><p>ما تقبضه بيدك لا يمرّ بمحفظتنا. والمحفظةُ لِما يدفعه الراكبُ إلكترونياً، ومنها تسحب إلى حسابك.</p></div>
+  <div class="card"><h3>مهامٌّ ومستويات</h3><p>أكمِل مهامَّ الشهر فيقرّبك مستواك من الطلبات القريبة منك — والأقربُ إليك يبقى أولاً دائماً.</p></div>
+
+  <h2>حمّل التطبيق</h2>
+  <a class="btn" id="dl-rider" href="#">تحميل تطبيق الراكب</a>
+  <div class="meta" id="meta-rider"></div>
+  <a class="btn ghost" id="dl-driver" href="#">تحميل تطبيق الكبتن</a>
+  <div class="meta" id="meta-driver"></div>
+
+  <div class="card" id="install-help">
+    <h3>إن ظهر تحذيرُ «مصدر غير معروف»</h3>
+    <ol class="steps">
+      <li>اضغط «الإعدادات» في التحذير نفسِه.</li>
+      <li>فعّل «السماح من هذا المصدر».</li>
+      <li>ارجع واضغط «تثبيت».</li>
+    </ol>
+    <p style="margin-top:.5rem">خطوةٌ يطلبها أندرويد لكلِّ تطبيقٍ خارج المتجر، وتُطلب مرةً واحدة.</p>
+  </div>
+
+  <footer>
+    <p>للاستفسار والدعم</p>
+    <p><a id="call" href="#"></a> · <a id="wa" href="#" rel="noopener">واتساب</a></p>
+  </footer>
+
+</div>
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
