@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, time
 from decimal import Decimal
 
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.enums import CountryCode, WalletOwnerType, WalletTransactionType
 from app.models.ride import Ride
 from app.models.wallet import WalletTransaction
+from app.schemas.wallet import WalletTransactionOut
 from app.services import pricing
 from app.services.stats import _zone
 
@@ -97,3 +99,27 @@ async def this_month(
     # **ثلاثُ منازلَ دائماً** — الشكلُ السابع: `Decimal(0)` يُسلسَل «0» بينما
     # كلُّ مالٍ آخر «0.000»، فيقرأ الكبتنُ «0» في عمودٍ كلُّه بثلاث منازل
     return pricing.round_money(Decimal(total or 0))
+
+
+async def rows_with_percent(
+    session: AsyncSession, entries: Sequence[WalletTransaction]
+) -> list[WalletTransactionOut]:
+    """صفوفُ الكشف جاهزةً — **بانٍ واحدٌ يناديه البابان** (الشكلُ الثامن).
+
+    **والعلّةُ وقعت في هذا الحقل نفسِه يومَ وُلد** (2026-08-20): `commission_percent`
+    مُلئ في `GET /wallet/me/transactions` ونُسي في
+    `GET /admin/wallets/{id}/transactions` — فيقرأ الكبتنُ «عمولة TAXO ١٠٪»
+    ويقرأ المشرفُ في كشفِ الكبتن نفسِه مبلغاً بلا نسبة. **وكلُّ بابٍ صادقٌ
+    وحدَه**، ولا شيءَ يقارنهما.
+
+    **والعلاجُ الأول لا الثاني**: بانٍ واحدٌ لا اختبارُ مقارنة — فبابٌ ثالثٌ
+    يُضاف غداً لا يجد ما ينساه.
+    """
+    percents = await percent_by_ride(session, list(entries))
+    rows: list[WalletTransactionOut] = []
+    for entry in entries:
+        row = WalletTransactionOut.model_validate(entry)
+        if entry.ride_id is not None:
+            row.commission_percent = percents.get(entry.ride_id)
+        rows.append(row)
+    return rows

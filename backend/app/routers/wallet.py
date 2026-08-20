@@ -128,14 +128,7 @@ async def list_my_transactions(
     # **النسبةُ المجمَّدة تُلحَق باستعلامٍ ثانٍ على الصفحة** — لا ضمٍّ إلى الأول:
     # الرحلةُ الواحدةُ تحمل أكثرَ من قيد (أجرةٌ وعمولةٌ وسدادُ سلفة)، فالضمُّ
     # يضاعف الصفَّ ويُسقط قيوداً من صفحةٍ مسقوفة (قاعدةُ `services/ride_log.py`)
-    percents = await commission_view.percent_by_ride(session, list(entries))
-    out: list[WalletTransactionOut] = []
-    for entry in entries:
-        row = WalletTransactionOut.model_validate(entry)
-        if entry.ride_id is not None:
-            row.commission_percent = percents.get(entry.ride_id)
-        out.append(row)
-    return out
+    return await commission_view.rows_with_percent(session, entries)
 
 
 # ------------------------------------------------------------------ التحويل

@@ -35,6 +35,7 @@ from app.schemas.wallet import (
     WithdrawalOut,
     WithdrawalPayoutOut,
 )
+from app.services import commission_view
 from app.services import (
     audit,
     cancellation,
@@ -93,7 +94,10 @@ async def list_wallet_transactions(
         limit=limit,
         offset=offset,
     )
-    return [WalletTransactionOut.model_validate(entry) for entry in entries]
+    # **البانِي نفسُه الذي يخدم بابَ صاحب المحفظة** (الشكلُ الثامن): من يقرأ
+    # كشفَ كبتنٍ من اللوحة يجب أن يرى ما يراه صاحبُه — نسبةَ العمولة المجمَّدة
+    # وكلَّ ما يُحسب. وبانيان لحمولةٍ واحدةٍ يفترقان بحقلٍ يملؤه أحدُهما
+    return await commission_view.rows_with_percent(session, entries)
 
 
 @router.post("/wallets/{user_id}/freeze", response_model=WalletOut)
