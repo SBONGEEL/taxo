@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { shrinkImage } from "@/lib/shrink";
+import { describeShrink, shrinkImage } from "@/lib/shrink";
 import {
   addVehicle,
   listDocuments,
@@ -131,6 +131,10 @@ export function RegisterDocumentsScreen() {
     null,
   );
   const [error, setError] = useState<string | null>(null);
+  /** ما صُغِّر ولمن — سطرٌ تحت الوثيقة بعد رفعها. */
+  const [shrunkNote, setShrunkNote] = useState<Partial<Record<DocumentType, string>>>(
+    {},
+  );
   // **خطأُ حقلٍ بعينه كما سمّته الخلفية** (عقدُ الأخطاء، SPEC ١٧.٧): الجسمُ
   // يحمل `field` و`message`، فيُعلَّم الحقلُ ويُنقل إليه التركيز — بدل شريطٍ
   // أعلى النموذج يقول «تعذّر الإرسال» ويترك صاحبَه يبحث عن الحقل بين ستة.
@@ -177,6 +181,12 @@ export function RegisterDocumentsScreen() {
         onProgress: setProgress,
         signal: controller.signal,
       });
+      // **يُقال بعد نجاح الرفع لا قبله**: سطرٌ يعلن التصغير ثم يفشل الرفعُ
+      // يترك الكبتنَ يظنّ أن وثيقتَه ذهبت مصغَّرةً وهي لم تذهب أصلاً
+      setShrunkNote((current) => ({
+        ...current,
+        [docType]: describeShrink(shrunk) ?? undefined,
+      }));
       setUploaded((current) => new Set(current).add(docType));
       setRequired((current) => current.filter((item) => item !== docType));
     } catch (caught) {
@@ -391,6 +401,11 @@ export function RegisterDocumentsScreen() {
                     {DOC_HINT[doc] ? (
                       <span className="mt-2 block text-11 leading-snug text-muted">
                         {DOC_HINT[doc]}
+                      </span>
+                    ) : null}
+                    {shrunkNote[doc] ? (
+                      <span className="mt-2 block text-11 leading-snug text-ok">
+                        {shrunkNote[doc]}
                       </span>
                     ) : null}
                   </span>

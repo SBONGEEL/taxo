@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { listDocuments, updateVehicle, uploadDocument } from "@/api/endpoints";
-import { shrinkImage } from "@/lib/shrink";
+import { describeShrink, shrinkImage } from "@/lib/shrink";
 import type { DocumentType, DriverDocuments, Vehicle } from "@/api/types";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useDriver } from "@/lib/driver";
@@ -78,10 +78,15 @@ export function VehicleScreen() {
       const result = await uploadDocument(docType, shrunk.file);
       await load();
       await refresh();
+      // **يُلحق بالرسالة ولا يأخذ سطراً ثانياً**: الشاشةُ تعرض رسالةً واحدةً
+      // في مكانٍ واحد، وسطرٌ ثانٍ بجانبها يزاحم خبرَ «عاد قيد المراجعة» —
+      // وهو الأهمُّ للكبتن
+      const shrunkNote = describeShrink(shrunk);
       setDone(
-        result.approval_reverted
+        (result.approval_reverted
           ? "رُفع المستند — وحسابك عاد «قيد المراجعة» حتى تُراجَع الوثيقة"
-          : "رُفع المستند — بانتظار المراجعة",
+          : "رُفع المستند — بانتظار المراجعة") +
+          (shrunkNote ? ` · ${shrunkNote}` : ""),
       );
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر الرفع");

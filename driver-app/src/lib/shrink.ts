@@ -16,6 +16,8 @@
  * لم يدعم `toBlob` — والسقفُ في الخلفية يبقى الحارسَ الأخير.
  */
 
+import { digits } from "@/lib/utils";
+
 /** أقصى بُعدٍ بعد التصغير — بالبكسل. */
 export const MAX_EDGE = 1600;
 
@@ -29,6 +31,10 @@ export interface ShrinkResult {
   file: File;
   /** الحجمُ قبل — يُعرض للكبتن فيرى ما وقع، ويُقاس في التقارير. */
   before: number;
+  // **وكان هذا الوعدُ بلا قارئ حتى 2026-08-20**: الحقولُ الثلاثةُ تُحسب
+  // ويرميها المُنادِيان، فلا شاشةَ تعرض شيئاً — «حقلٌ بلا قارئ»، وشكلٌ
+  // لهذا المشروع سابقة. وما يجعله صامتاً أن الضغطَ **يعمل**: الملفُّ يصغر
+  // ويُرفع، ولا شيءَ يفشل — والغائبُ هو الخبرُ وحدَه.
   after: number;
   changed: boolean;
 }
@@ -75,4 +81,23 @@ export async function shrinkImage(file: File): Promise<ShrinkResult> {
     // متصفحٌ لا يدعم `createImageBitmap`/`toBlob`، أو صورةٌ تالفة — يُرفع الأصل
     return unchanged;
   }
+}
+
+/** يصف الضغطَ في سطرٍ واحدٍ للكبتن — **بيتٌ واحدٌ يقرؤه المُنادِيان**.
+ *
+ * **ولماذا يُقال أصلاً**: من رفع صورةً بثمانية ميجا ورآها تُرفع في ثانيتين
+ * يظنّ أن شيئاً نقص منها. والسطرُ يقول ما وقع، فيقطع السؤال قبل أن يُسأل.
+ *
+ * **والخاناتُ لاتينيةٌ بحكم §20**، والقيمةُ تمرّ بـ`digits` لا لأنها قد تأتي
+ * عربيةً بل ليبقى المصفى واحداً: `toFixed` يعطي لاتينيةً اليوم، و«اليوم»
+ * افتراضٌ لا يُبنى عليه — وهو درسُ `DISPLAY_LOCALE` بعينه.
+ */
+export function describeShrink(result: ShrinkResult): string | null {
+  if (!result.changed) return null;
+  return `صُغِّرت قبل الرفع: ${megabytes(result.before)} ← ${megabytes(result.after)}`;
+}
+
+/** ميجابايت بخانةٍ عشريةٍ واحدة — ودقّةٌ أعلى لا يقرؤها أحد. */
+function megabytes(bytes: number): string {
+  return `${digits((bytes / (1024 * 1024)).toFixed(1))} م.ب`;
 }
