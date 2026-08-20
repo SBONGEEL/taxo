@@ -29,13 +29,17 @@ dc() { docker compose --env-file "$ENV_FILE" "$@"; }
 fail() { printf '\n✗ %s\n' "$1" >&2; shift; for line in "$@"; do printf '  %s\n' "$line" >&2; done; exit 1; }
 
 # ── ١) حاوياتٌ شاردةٌ من تشغيلٍ سابق ───────────────────────────────────────
-strays=$(docker ps --filter "name=taxo-app-backend-run" --format '{{.Names}} ({{.Status}})')
+# **الاسمان معاً** — وهذا قِيس في استعمالٍ حقيقيّ (2026-08-20): قُتل تشغيلٌ
+# فبقيت حاويتُه، **واسمُها `taxo-suite-run-…`** (هذا الملفُّ يسمّيها) بينما كان
+# المُرشِّحُ يبحث عن `taxo-app-backend-run` وحدَه — فأمسكها فحصُ الجلسات لا فحصُ
+# الحاويات. **وحارسٌ بنصفين يمسك بنصفِه الثاني هو حارسٌ سقط نصفُه صامتاً.**
+strays=$(docker ps --filter "name=taxo-suite-run" --filter "name=taxo-app-backend-run"   --format '{{.Names}} ({{.Status}})')
 if [ -n "$strays" ]; then
   fail "تشغيلُ اختباراتٍ سابقٌ ما زال يعمل — ولن يُدرَج تشغيلٌ ثانٍ فوقه." \
        "$strays" \
        "" \
        "وهو ما يمسك \`taxo_test\` فيفشل هذا التشغيلُ كلُّه عند التهيئة." \
-       "أزِلْه ثم أعد:  docker rm -f \$(docker ps -q --filter name=taxo-app-backend-run)"
+       "أزِلْه ثم أعد:  docker rm -f \$(docker ps -q --filter name=taxo-suite-run --filter name=taxo-app-backend-run)"
 fi
 
 # ── ٢) جلساتٌ ما زالت على قاعدة الاختبار ──────────────────────────────────

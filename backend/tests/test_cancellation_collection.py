@@ -286,7 +286,14 @@ async def test_what_he_carries_leaves_his_available_balance(
     body = wallet.json()
     dues = Decimal(body["carrier_dues"])
     assert dues > 0
-    assert Decimal(body["available_for_withdrawal"]) == Decimal(balance) - dues
+    # **ما يحمله يُطرح من المتاح — ولا ينزل المتاحُ تحت الصفر** (2026-08-20).
+    # وكان هذا السطرُ يؤكّد الطرحَ الحسابيَّ عارياً (`0 - 0.750 = -0.750`)،
+    # فيثبّت سلوكاً يعرض على الكبتن «الرصيد المتاح −٠٫٧٥٠ د.أ» — **والسالبُ
+    # يُقرأ ديناً، والمحتجَزُ ليس ديناً**. فيُقاس **المعنى** لا العملية:
+    # يُطرح فعلاً، ويقف عند الصفر.
+    expected = max(Decimal("0.000"), Decimal(balance) - dues)
+    assert Decimal(body["available_for_withdrawal"]) == expected
+    assert Decimal(body["available_for_withdrawal"]) >= 0
 
 
 async def test_a_topup_transfers_what_the_carrier_holds(
