@@ -19,6 +19,7 @@ import { Navigation } from "lucide-react";
 
 import type { GenderPreference, Ride } from "@/api/types";
 import { openIn, targetFor } from "@/lib/external-maps";
+import type { NextInstruction } from "@/lib/next-instruction";
 import { digits, cn } from "@/lib/utils";
 
 export interface CancelReason {
@@ -56,12 +57,17 @@ interface Props {
   onResume: () => void;
   onArriveStop: (stopId: string) => void;
   onResumeStop: (stopId: string) => void;
+  /** «التعليمةُ التالية» — و`null` **تعني لا شريط**، وهي حالٌ صحيحةٌ لا عطب:
+   *  المفتاحُ مطفأٌ، أو الكبتنُ انحرف عن الخط. **ولا نصَّ يُكتب عن غيابها**
+   *  (قرارُ المالك 2026-08-20). */
+  instruction: NextInstruction | null;
 }
 
 export function ActiveRide({
   ride,
   currencyLabel,
   busy,
+  instruction,
   onAdvance,
   onCancel,
   genderPreference,
@@ -99,6 +105,29 @@ export function ActiveRide({
           {phase.title}
         </span>
       </div>
+
+      {/* **«التعليمةُ التالية»** (البند ٧) — **تحت شريط الطور لا فوقه**: الطورُ
+          يقول أين هو من الرحلة، وهذا يقول أين يتّجه. ومن يقرأ في ثانيةٍ وهو
+          يقود يقرأ الأعلى أولاً.
+
+          **وغيابُها لا يُعلَن**: لا «يُعاد الحساب…» ولا مكانٌ فارغٌ محجوز —
+          الشريطُ **ليس هنا** حين لا تعليمة (قرارُ المالك 2026-08-20). ومكانٌ
+          محجوزٌ فارغٌ يقول «شيءٌ انكسر»، وهو ما بُني هذا القرارُ لمنعه.
+
+          **ولا يلتقط اللمس** (`pointer-events-none`): يعلو الخريطةَ، ولمسةٌ
+          تذهب إليه بدل الخريطة تمنع الكبتنَ من تحريكها */}
+      {instruction ? (
+        <div className="pointer-events-none absolute inset-x-0 top-52 z-10 flex justify-center px-18">
+          <span className="flex max-w-full items-center gap-8 rounded-13 border border-line bg-surface px-14 py-9 shadow-card">
+            <span className="text-13 font-bold text-ink">
+              {digits(instruction.meters)} م
+            </span>
+            <span className="truncate text-12.5 text-muted">
+              {instruction.text}
+            </span>
+          </span>
+        </div>
+      ) : null}
 
       <div className="absolute inset-x-0 bottom-0 z-10 rounded-t-22 border-t border-line bg-surface px-18 pb-22 pt-16">
         <div className="mb-13 flex items-center gap-12">

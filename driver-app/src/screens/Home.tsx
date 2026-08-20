@@ -54,6 +54,12 @@ import {
   type Sample,
 } from "@/lib/eta";
 import { ActiveRide } from "@/components/ActiveRide";
+import {
+  BACK_ON_ROUTE_STREAK,
+  nextInstruction,
+  type NextInstruction,
+  type RouteStep,
+} from "@/lib/next-instruction";
 import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
 import { MapView } from "@/components/map/MapView";
@@ -141,6 +147,11 @@ export function HomeScreen() {
   // **خطُّ المسار على الطرق** (البند ٨): يُقرأ مرةً لكل رحلةٍ مُسنَدة — الخلفيةُ
   // جمّدته لحظةَ القبول، فما يراه الكبتن هو ما يراه راكبُه. ويُصفَّر بانتهائها
   const [routeLine, setRouteLine] = useState<number[][] | null>(null);
+  // **خطواتُ الملاحة وعتبتُها** (البند ٧) — تصلان مع الخط من النداء نفسِه،
+  // **والعتبةُ من الخلفية لا ثابتٌ هنا** (§17.3): رقمٌ في التطبيق يفترق عن
+  // الخلفية أوّلَ تعديل. وفارغةٌ حالٌ صحيحة: المفتاحُ مطفأٌ فلا شريط
+  const [steps, setSteps] = useState<RouteStep[]>([]);
+  const [thresholdM, setThresholdM] = useState(OFF_ROUTE_METERS);
 
   // **الوصولُ المتوقَّع يُحسب هنا ولا يُطلب** (البند ١٧-٣): المسافةُ من الخطّ
   // المجمَّد على الرحلة، والسرعةُ من حركة الكبتن نفسِه. واستفتاءُ الخادم عنه
@@ -156,6 +167,26 @@ export function HomeScreen() {
   // متتالية** لا واحدة: قفزةُ GPS تُنتج نداءً مدفوعاً بلا أن ينحرف أحد.
   // **والسقفُ في الخلفية**، وهذا العدّادُ راحةٌ لا حراسة: يكفّ عن الطلب حين
   // ينفد فلا يُرسل نداءً يُرَدّ
+  // **الشريطُ يختفي فوراً ويعود متأنياً** — عدمُ تماثلٍ مقصود: الإخفاءُ يغيب
+  // تلميحاً، والإظهارُ الخاطئ **يكذب**. فقفزةُ GPS تُخفيه، وثلاثُ قراءاتٍ على
+  // الخط هي ما يعيده — وبغيرها يرفّ في يد من يقود
+  const backOn = useRef(0);
+  const [instruction, setInstruction] = useState<NextInstruction | null>(null);
+  useEffect(() => {
+    if (!position || steps.length === 0) {
+      setInstruction(null);
+      return;
+    }
+    const found = nextInstruction(steps, position, thresholdM);
+    if (found === null) {
+      backOn.current = 0;
+      setInstruction(null);
+      return;
+    }
+    backOn.current += 1;
+    if (backOn.current >= BACK_ON_ROUTE_STREAK) setInstruction(found);
+  }, [position, steps, thresholdM]);
+
   const drift = useRef(0);
   const [reroutesLeft, setReroutesLeft] = useState<number | null>(null);
   useEffect(() => {
@@ -187,13 +218,18 @@ export function HomeScreen() {
     const id = tracking ? ride.id : null;
     if (!id) {
       setRouteLine(null);
+      setSteps([]);
       return;
     }
     let cancelled = false;
     getRouteLine(id)
       .then((line) => {
         // فارغٌ جوابٌ صحيح: تُرسم الدبابيسُ وحدها بلا خطأ يُعرض للكبتن
-        if (!cancelled) setRouteLine(line.points.length >= 2 ? line.points : null);
+        if (cancelled) return;
+        setRouteLine(line.points.length >= 2 ? line.points : null);
+        // **والخطواتُ كذلك**: فارغةٌ تعني لا شريط، وهو سلوكٌ لا فرعُ خطأ
+        setSteps(line.steps ?? []);
+        if (line.deviation_threshold_m) setThresholdM(line.deviation_threshold_m);
       })
       .catch(() => undefined);
     return () => {
@@ -443,6 +479,7 @@ export function HomeScreen() {
           onResumeStop={(stopId) =>
             void run(async () => setRide(await resumeFromStop(ride.id, stopId)))
           }
+          instruction={instruction}
           genderPreference={profile?.driver.gender_preference ?? "any"}
           onCancel={(reason) =>
             void run(async () =>

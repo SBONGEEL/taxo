@@ -4,6 +4,7 @@
  * يستدعيها أحد تُصدّق نفسها ثم تُكتشف خاطئةً حين تُستعمل أول مرة.
  */
 
+import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
 import { api, upload } from "@/api/client";
 import type {
@@ -360,7 +361,13 @@ export const getMyReferrals = () =>
  * يُطلب مسارٌ جديدٌ لحركة الكبتن: التقدّمُ قصٌّ في التطبيق لا نداءٌ لكل بثّة.
  */
 export const getRouteLine = (rideId: string) =>
-  api.get<{ points: number[][] }>(`/rides/${rideId}/route-line`);
+  api.get<{
+    points: number[][];
+    /** خطواتُ الملاحة — للكبتن وحدَه، وفارغةٌ حين المفتاحُ مطفأ (البند ٧). */
+    steps: RouteStep[];
+    /** عتبةُ الانحراف بالأمتار — **تأتي من الخلفية** ولا تُكتب هنا (§17.3). */
+    deviation_threshold_m: number;
+  }>(`/rides/${rideId}/route-line`);
 
 /** حالُ إلغاء التفعيل: طلبُه إن وُجد، وموانعُه، والمحتجَزُ برقمه (البند ١٣). */
 export const getDeactivationState = () =>
