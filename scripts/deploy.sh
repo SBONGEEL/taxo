@@ -71,13 +71,21 @@ check() { # اسمُ الملف · وصفٌ · أمرُ فحصِ المحتوى
   say "  ✓ $label — يُفتح ومحتواه صحيح ($(wc -c < "$file" | tr -d " ") بايت)"
 }
 
+# **ولا `grep -q` في أنبوبٍ تحت `pipefail`** — وهذا وقع مقيساً 2026-08-21:
+# `grep -q` يخرج عند أول تطابق، فيتلقّى `gzip` إشارةَ SIGPIPE ويعود بـ141،
+# و`pipefail` يجعل الأنبوبَ كلَّه فاشلاً — **فرُفضت نسخةٌ سليمةٌ فيها ٥٧ جدولاً**.
+# وأخطرُ ما فيه أنه **سباق**: مع مخرجٍ صغيرٍ ينتهي المُنتِجُ قبل أن يخرج `grep`
+# فيمرّ، ومع مخرجٍ كبيرٍ يسقط. فحارسٌ حكمُه يتبدّل بحجم ما يقرأ ليس حارساً.
+# و`grep -c` يقرأ حتى النهاية، فلا إشارةَ ولا سباق.
 sql_is_a_dump() {
-  gzip -dc "$LOCAL/taxo.sql.gz" | grep -q "PostgreSQL database dump" || return 1
-  local n; n=$(gzip -dc "$LOCAL/taxo.sql.gz" | grep -c "^CREATE TABLE" || true)
-  say "    (جداولُ التفريغ: $n)"
-  [ "$n" -ge 20 ]
+  local header tables
+  header=$(gzip -dc "$LOCAL/taxo.sql.gz" | grep -c "PostgreSQL database dump" || true)
+  tables=$(gzip -dc "$LOCAL/taxo.sql.gz" | grep -c "^CREATE TABLE" || true)
+  say "    (ترويسة: ${header:-0} · جداول: ${tables:-0})"
+  [ "${header:-0}" -ge 1 ] && [ "${tables:-0}" -ge 20 ]
 }
-tar_holds() { tar -tzf "$1" 2>/dev/null | grep -q "$2"; }
+
+tar_holds() { [ "$(tar -tzf "$1" 2>/dev/null | grep -c "$2" || true)" -ge 1 ]; }
 
 check taxo.sql.gz "القاعدة" sql_is_a_dump
 check env.tar.gz  "الأسرار" tar_holds "$LOCAL/env.tar.gz" '^\(\./\)\?\.env$'

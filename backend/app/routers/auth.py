@@ -27,6 +27,7 @@ from app.core.deps import (
 )
 from app.core.exceptions import (
     HandoffBlockedByActiveWork,
+    InvalidCredentials,
     InvalidInput,
     InvalidToken,
     NotFound,
@@ -75,6 +76,7 @@ from app.services import (
     verification,
 )
 from app.services.auth import password_strategy
+from app.core.security import verify_password
 from app.services.auth.password import set_password
 from app.models.otp_template import OtpTemplatePurpose
 
@@ -598,9 +600,19 @@ async def totp_disable(
     session: DbSession,
     redis: RedisDep,
 ) -> None:
-    """يُطفئ العامل بعاملٍ حاضر — ويُرفض وقتَ الإلزام على دور صاحبه."""
+    """يُطفئ العامل **بكلمةِ المرور وعاملٍ حاضرٍ معاً** — ويُرفض وقتَ الإلزام.
+
+    **وكلمةُ المرور تُفحص أولاً وبرسالةٍ لا تفرّق**: «كلمةُ المرور أو الرمز غيرُ
+    صحيح» — فمن يجرّب لا يعرف أيَّهما أصاب، وهي قاعدةُ الدخول نفسُها مطبَّقةً
+    على بابٍ يُنقص الحماية.
+    """
     if await security_settings.totp_required_for(session, user):
         raise TotpEnforcementActive()
+
+    # **ما يعرفه قبل ما يملكه**: جلسةٌ مسروقةٌ على شاشةٍ مفتوحةٍ تملك الثانيَ
+    # ولا تملك الأول، وهي الحالُ التي يوجد هذا الشرطُ لأجلها.
+    if not user.password_hash or not verify_password(payload.password, user.password_hash):
+        raise InvalidCredentials()
 
     await totp.disable(
         session, user, code=payload.code, recovery_code=payload.recovery_code

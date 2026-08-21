@@ -80,8 +80,19 @@ function CodeInput({
  * و`Vehicle.tsx` في تطبيق الكبتن: الأرقامُ العربية للكميات والتواريخ، واللاتينية
  * لما يُطابق حرفاً بحرف.
  */
-function RecoveryCodes({ codes }: { codes: string[] }) {
+/** **ويُطلب إقرارُ الحفظ قبل أن تُخفى** (شرطُ المالك 2026-08-21).
+ *
+ * الرموزُ تُعرض مرةً واحدةً ولا مسارَ يعيدها، ومن أغلق الشاشةَ بلا نسخٍ يظنّ
+ * أنه محميٌّ حتى **يومَ يضيع هاتفُه** — فيكتشف حينها أن البابَ لا يفتحه إلا
+ * الخادم. فالإقرارُ ليس طقساً بل **تأخيرٌ مقصودٌ لحظةً واحدة** بين العرض
+ * والإخفاء، يجعل من لم ينسخ يرى أنه لم ينسخ.
+ *
+ * **ولا يُقفل بالنسخ أو التنزيل وحدَهما**: الحافظةُ تُمحى بأول نسخةٍ بعدها،
+ * والتنزيلُ قد يهبط في مجلدٍ مؤقّت. فاليدُ هي التي تُقرّ.
+ */
+function RecoveryCodes({ codes, onAcknowledge }: { codes: string[]; onAcknowledge: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const text = codes.join("\n");
 
   return (
@@ -136,6 +147,21 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
           نزّلها ملفاً
         </Button>
       </div>
+
+      <label className="mt-14 flex items-start gap-9 text-11.5 leading-snug text-ink">
+        <input
+          type="checkbox"
+          checked={saved}
+          onChange={(event) => setSaved(event.target.checked)}
+          className="mt-2 size-14 accent-brand"
+        />
+        <span>
+          حفظتُ الرموز في مكانٍ أصل إليه بلا هاتفي — وأعلم أنها لن تُعرض ثانيةً.
+        </span>
+      </label>
+      <Button size="sm" className="mt-10" disabled={!saved} onClick={onAcknowledge}>
+        تمّ — أخفِ الرموز
+      </Button>
     </div>
   );
 }
@@ -157,6 +183,7 @@ function MyFactorCard({
   const [recovery, setRecovery] = useState("");
   const [disabling, setDisabling] = useState(false);
   const [disableCode, setDisableCode] = useState("");
+  const [disablePassword, setDisablePassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function run(action: () => Promise<void>) {
@@ -190,7 +217,7 @@ function MyFactorCard({
       {/* **قبل كل شيء آخر**: لا يُثبت أحدٌ رمزاً لم يره بعد، ولا يُقرأ «جرّب رمزاً
           من ورقتك» قبل أن تظهر الورقة. وهي معروضةٌ مرةً واحدةً في عمر الحساب،
           فمكانُها أعلى ما في البطاقة لا أسفلَه */}
-      {codes ? <RecoveryCodes codes={codes} /> : null}
+      {codes ? <RecoveryCodes codes={codes} onAcknowledge={() => setCodes(null)} /> : null}
 
       {status.confirmed ? (
         <>
@@ -258,9 +285,21 @@ function MyFactorCard({
                 إطفاء التحقق الثنائي
               </div>
               <p className="mb-10 text-11 leading-snug text-muted">
-                يلزم رمزٌ حاضرٌ من تطبيقك — لا جلسةٌ مفتوحة: جلسةٌ مسروقة تُسقط
+                يلزم <b className="text-ink">كلمةُ مرورك</b> و<b className="text-ink">رمزٌ
+                حاضرٌ من تطبيقك</b> معاً — لا جلسةٌ مفتوحة: جلسةٌ مسروقة تُسقط
                 العاملَ الذي وُضع لأجلها إن كفى وجودُها.
               </p>
+              <label htmlFor="disable-password" className="mb-6 block text-11 text-muted">
+                كلمة المرور الحالية
+              </label>
+              <input
+                id="disable-password"
+                type="password"
+                autoComplete="current-password"
+                value={disablePassword}
+                onChange={(event) => setDisablePassword(event.target.value)}
+                className="mb-12 w-full rounded-11 border border-line bg-surface px-12 py-10 text-13 text-ink outline-none focus:border-brand"
+              />
               <CodeInput
                 id="disable-code"
                 value={disableCode}
@@ -272,11 +311,12 @@ function MyFactorCard({
                   size="sm"
                   variant="danger"
                   loading={busy}
-                  disabled={disableCode.length < 6}
+                  disabled={disableCode.length < 6 || disablePassword.length < 1}
                   onClick={() =>
                     void run(async () => {
-                      await disableTotp({ code: disableCode });
+                      await disableTotp({ password: disablePassword, code: disableCode });
                       setDisableCode("");
+                      setDisablePassword("");
                       setDisabling(false);
                       onDone("أُطفئ التحقق الثنائي، وأُبطلت جلساتك الأخرى");
                       onChanged();

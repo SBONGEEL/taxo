@@ -14,7 +14,7 @@ services:
   backend:
     environment:
       CORS_ORIGINS: >-
-        ["https://stg-app.tajora.ly","https://stg-driver.tajora.ly"]
+        ["https://stg-app.tajora.ly","https://stg-driver.tajora.ly","https://stg-admin.tajora.ly"]
       PUBLIC_API_BASE_URL: https://stg-api.tajora.ly
       CARD_RETURN_URL: https://stg-app.tajora.ly/payments/card/return
       CARD_RETURN_URL_DRIVER: https://stg-driver.tajora.ly/payments/card/return
@@ -31,6 +31,26 @@ services:
   #
   # **ورؤوسُ التخزين نفسُها التي للصفحة**: الحافةُ خدمت نسخةَ أمس مرةً، وحزمةٌ
   # مخزَّنةٌ على الحافة تعني تطبيقاً قديماً في يد إنسان (العمودُ الخامس).
+  # **ولوحةُ الإدارة معها منذ 2026-08-21** (قرارُ المالك): كانت محليةً وحدَها،
+  # وحمايتُها **نفقَ SSH**. ونشرُها ينقل الحمايةَ من الشبكة إلى **الحساب** —
+  # فلا يُقرأ هذا توسيعَ خدمةٍ بل تغييرَ نموذجِ تهديد: من كان يحتاج مفتاحَ خادمٍ
+  # صار يحتاج كلمةَ مرورٍ وعاملاً ثانياً. ولذلك شُحن معها تفعيلُ TOTP من داخلها
+  # وسطرُ التذكير الدائم.
+  admin-panel:
+    image: nginx:1.27-alpine
+    container_name: taxo-admin-panel
+    restart: unless-stopped
+    command: ["nginx", "-g", "daemon off;"]
+    volumes:
+      - ./admin-panel/dist:/usr/share/nginx/html:ro
+      - ./landing/spa.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: !reset []
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   customer-app:
     image: nginx:1.27-alpine
     container_name: taxo-customer-app

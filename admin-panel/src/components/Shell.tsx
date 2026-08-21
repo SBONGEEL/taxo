@@ -15,12 +15,14 @@
  * على كل مسار (القسم 13/8) — إخفاءُ زرٍّ ليس منعاً.
  */
 
-import { LogOut, Moon, Sun } from "lucide-react";
+import { AlertTriangle, LogOut, Moon, Sun } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { useCountries } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
+import { getMyTotp } from "@/api/endpoints";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -83,6 +85,60 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "مالك · صلاحيات كاملة",
   support: "دعم فني",
 };
+
+
+/** **سطرٌ دائمٌ لمشرفٍ بلا عاملٍ ثانٍ** (شرطُ المالك 2026-08-21).
+ *
+ * **ولماذا سطرٌ لا نافذة**: النافذةُ تُغلق فتُنسى، وتُغلق أسرعَ كلَّما تكرّرت —
+ * فتصير التكرارُ نفسُه هو ما يعلّم تجاهلَها. والسطرُ لا يُغلق: يبقى ما بقي
+ * السبب، **ويختفي وحدَه لحظةَ تأكيد العامل** — فزوالُه خبرٌ لا زرّ.
+ *
+ * **ولا يُعرض لغير `admin`**: `support` تسجيلُه اختياريٌّ اليوم
+ * (`security_settings.totp_required_for`)، وتذكيرُ من لا يُلزَم ضجيجٌ يُطفأ.
+ *
+ * **ولا يُعرض على حساب الطوارئ**: هو مُعفىً بقرارٍ مكتوب، فتذكيرُه يدعوه إلى
+ * ما يُبطل وجودَه. والخلفيةُ هي التي تقرّر — `required` تصل من `/auth/me/totp`
+ * محسوبةً هناك، ولا تُحسب هنا ثانيةً: قاعدةٌ في مكانين تفترق.
+ *
+ * **والصمتُ عند فشل النداء مقصود**: القشرةُ تُرسم فوق كلِّ شاشة، وشريطُ خطأٍ
+ * لأن نداءً تعثّر يزاحم عملاً حقيقياً بخبرٍ لا يفيد.
+ */
+function FactorReminder() {
+  const { isAdmin } = useSession();
+  const [due, setDue] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let alive = true;
+    getMyTotp()
+      .then((status) => {
+        if (alive) setDue(!status.confirmed);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [isAdmin]);
+
+  if (!due) return null;
+  return (
+    <div className="border-b border-warn bg-surface-2 px-20 py-9">
+      <div className="mx-auto flex max-w-screen-2xl items-center gap-9 text-12 text-ink">
+        <AlertTriangle size={15} className="shrink-0 text-warn" />
+        <span className="min-w-0 flex-1">
+          حسابك بلا تحقّقٍ بخطوتين — كلمةُ المرور وحدَها تفتح لوحةً تُدير مالَ
+          الكباتن والركّاب.
+        </span>
+        <NavLink
+          to="/security"
+          className="shrink-0 rounded-10 border border-line bg-surface px-10 py-5 text-11.5 font-semibold text-ink"
+        >
+          فعّله الآن
+        </NavLink>
+      </div>
+    </div>
+  );
+}
 
 export function Shell({
   title,
@@ -220,6 +276,8 @@ export function Shell({
           ))}
         </nav>
       </header>
+
+      <FactorReminder />
 
       <main className="px-20 py-18">
         <div className="mb-16 flex items-start justify-between gap-16">

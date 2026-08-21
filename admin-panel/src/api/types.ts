@@ -312,6 +312,7 @@ export type FeatureKey =
   | "ride_sharing_enabled"
   | "subscription_offers_enabled"
   | "driver_advances_enabled"
+  | "next_instruction_enabled"
   | "country_visible";
 
 /** دولةٌ كما تراها اللوحةُ وحدَها — **بحالها لا مصفاةً** (SPEC §24).

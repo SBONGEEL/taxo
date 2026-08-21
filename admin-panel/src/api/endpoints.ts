@@ -228,7 +228,7 @@ export const confirmTotp = (code: string) =>
 export const verifyRecoveryCode = (recovery_code: string) =>
   api.post<TotpStatus>("/auth/me/totp/recovery/verify", { recovery_code });
 
-export const disableTotp = (proof: { code?: string; recovery_code?: string }) =>
+export const disableTotp = (proof: { password: string; code?: string; recovery_code?: string }) =>
   api.del<void>("/auth/me/totp", { body: proof });
 
 export const getSecurityPolicy = () => api.get<SecurityPolicy>("/admin/security");

@@ -319,14 +319,17 @@ async def test_disabling_needs_a_present_factor(
     assert naked.status_code == 422
 
     wrong = await client.request(
-        "DELETE", "/auth/me/totp", json={"code": "000000"}, headers=admin_headers
+        "DELETE",
+        "/auth/me/totp",
+        json={"password": ADMIN_PASSWORD, "code": "000000"},
+        headers=admin_headers,
     )
     assert wrong.status_code == 401
 
     ok = await client.request(
         "DELETE",
         "/auth/me/totp",
-        json={"code": _next_code(secret)},
+        json={"password": ADMIN_PASSWORD, "code": _next_code(secret)},
         headers=admin_headers,
     )
     assert ok.status_code == 204
@@ -418,7 +421,7 @@ async def test_an_enforced_admin_without_a_factor_can_only_enroll(
     escape = await client.request(
         "DELETE",
         "/auth/me/totp",
-        json={"code": _next_code(secret)},
+        json={"password": ADMIN_PASSWORD, "code": _next_code(secret)},
         headers=other,
     )
     assert escape.status_code == 409
@@ -566,3 +569,38 @@ async def test_the_policy_write_leaves_an_audit_entry(
             .where(AdminAuditLog.entity_type == "security_settings")
         )
         assert rows == 1
+
+
+async def test_disabling_needs_the_password_too(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """**الإطفاءُ يشترط ما يعرفه وما يملكه معاً** (قرارُ المالك 2026-08-21).
+
+    والحالُ التي يوجد لأجلها هذا الشرط: **جلسةٌ مفتوحةٌ على شاشةٍ غيرِ مقفلة**
+    — تملك الرمزَ الحاضرَ لأن الهاتفَ بجانبها، ولا تملك كلمةَ المرور. فالرمزُ
+    وحدَه كان يكفي لإسقاط العامل الذي وُضع لأجل هذه الحال بعينها.
+
+    ويُقاس **الاتجاهان**: رمزٌ صحيحٌ بكلمةٍ خاطئةٍ يُرفض، ثم الصحيحان يمرّان —
+    فلا يُقرأ الرفضُ من عطبٍ في المسار كلِّه.
+    """
+    secret, _codes = await _enroll_and_confirm(client, admin_headers)
+
+    refused = await client.request(
+        "DELETE",
+        "/auth/me/totp",
+        json={"password": "NotMyPassword9", "code": _next_code(secret)},
+        headers=admin_headers,
+    )
+    assert refused.status_code == 401
+
+    # **والعاملُ باقٍ بعد الرفض** — رفضٌ يترك البابَ نصفَ مفتوحٍ أسوأُ من قبول
+    still = await client.get("/auth/me/totp", headers=admin_headers)
+    assert still.json()["confirmed"] is True
+
+    ok = await client.request(
+        "DELETE",
+        "/auth/me/totp",
+        json={"password": ADMIN_PASSWORD, "code": _next_code(secret)},
+        headers=admin_headers,
+    )
+    assert ok.status_code == 204

@@ -24,6 +24,10 @@ ingress:
     service: http://driver-app:80
 
   # الصفحةُ التعريفيةُ العامة — **وهي وحدَها بلا `stg-`**: عنوانٌ يُعطى لناس
+  # **اللوحةُ منشورةٌ باسمٍ مستقلٍّ لا مسارٍ تحت اسمٍ قائم**: مسارٌ يشارك أصلاً
+  # واحداً يشارك ملفاتِ الخدمة وسياسةَ التخزين، وخطأٌ في أحدهما يمسّ الآخر.
+  - hostname: stg-admin.tajora.ly
+    service: http://admin-panel:80
   - hostname: taxo.tajora.ly
     service: http://landing:80
 
