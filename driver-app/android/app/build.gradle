@@ -7,8 +7,13 @@ android {
         applicationId "ly.tajora.driver"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // **يُرفع مع كلِّ حزمةٍ تُنشر** (2026-08-21): أندرويدُ يفرّق البناءَين
+        // بـ`versionCode` لا بالبصمة، **ومن يحمّل برقمٍ لم يتغيّر يظنّ أنه
+        // حدّث وهو لم يفعل**. و`tools/apk-manifest.mjs` يرفض النشرَ بلا رفعه.
+        //
+        // ٢ = أولُ حزمةٍ تحمل خدمةَ الاستقبال الأمامية وإضافةَ الإشعارات.
+        versionCode 2
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

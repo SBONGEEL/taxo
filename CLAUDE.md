@@ -1845,6 +1845,28 @@ acted on until it is verified independently.**
 All three were run before it went into the build: a fabricated path fails it, `POST` on
 `/drivers/me/earnings` fails it naming the accepted verb, and a clean tree passes with 257 calls.
 
+### The tenth shape's newest face — two columns for one product, and one lags in silence (2026-08-21)
+
+**What a person downloads and what we measure by cable are two different artefacts**, and nothing
+makes the gap visible. Measured this session: the driver APK installed over USB carries the
+foreground service and the push plugin; **the download page still serves the 19 Aug build with
+neither**. So a device round run against the published package would have measured *a different
+product*, and a human installing from the page **would have wiped what we were measuring**.
+
+**It is the same principle one layer further out** — tree ≠ `dist` ≠ container ≠ tunnel ≠ edge ≠
+**what is in a human's hand** — but with a twist the earlier faces did not have: **the two artefacts
+can be produced by the same command and still diverge**, because publishing is a separate act from
+building. Nothing fails; both are "the app".
+
+**So step zero grew a sixth column**: «ما تخدمه صفحةُ التنزيل» beside «المثبَّتُ على الهاتف», for
+both APKs. And the rule: **every package measured by cable is either published or explicitly
+declared unpublished** — the page is never left behind while something else is measured.
+
+**And `versionCode` is what makes the divergence visible to Android itself**: two builds under the
+same code are the same package to the OS, so the second does not install as an update.
+`tools/apk-manifest.mjs` refuses to publish a changed fingerprint under an unchanged code — it fired
+on this very build, which is why the driver package is now `versionCode 2` / `1.1`.
+
 ### The tenth shape, three times — and why step zero is now three-way
 
 **A green source tree says nothing about the artifact a person is running.** It has now cost this
