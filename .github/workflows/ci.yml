@@ -1,0 +1,104 @@
+# **البوّابةُ الثانية من الرفع** (`CLAUDE.md`, قرارُ المالك 2026-08-21):
+# استنساخٌ نظيفٌ يشغّل المجموعةَ الكاملة والحرّاسَ وبناءَ الثلاثة.
+#
+# **ولا يخاطب الإنتاجَ إطلاقاً**: لا سرَّ إنتاجٍ في بيئته، ولا نداءَ إلى
+# `stg-*`، ولا مفتاحَ خادم. وقيمُ البيئة هنا **مولَّدةٌ للتشغيل ويُرمى بها**،
+# فليست أسراراً ولا تُقرأ كذلك — ولذلك تُكتب في الملفّ صراحةً بلا `secrets`.
+#
+# **ولا سرَّ في السجل**: لا `env` يُطبع، ولا `set -x` على أمرٍ يحمل قيمة.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# **إلغاءُ ما سبق على الفرع نفسِه**: أخضرُ لإيداعٍ تجاوزَته دفعةٌ أحدثُ لا يعني
+# شيئاً، وانتظارُه ينفق دقائقَ على ما لن يُرفع.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: المجموعةُ الكاملة
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # **قيمٌ للتشغيل وحدَه** — ولا احتياطَ صامتٌ لسرّ: الملفُّ يُكتب كاملاً
+      # فيقف الإقلاعُ إن نقص مفتاحٌ بدل أن يقع على افتراض.
+      - name: بيئةُ التشغيل
+        run: |
+          python3 - <<'PY' > .env
+          import secrets, base64
+          fernet = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
+          print(f"""POSTGRES_USER=taxo
+          POSTGRES_PASSWORD={secrets.token_urlsafe(24)}
+          POSTGRES_DB=taxo
+          DATABASE_URL=postgresql+asyncpg://taxo:x@db:5432/taxo
+          REDIS_URL=redis://redis:6379/0
+          JWT_SECRET={secrets.token_urlsafe(48)}
+          CREDENTIALS_ENCRYPTION_KEY={fernet}
+          ENVIRONMENT=test
+          ACCESS_TOKEN_EXPIRE_MINUTES=15
+          REFRESH_TOKEN_EXPIRE_DAYS=30
+          CUSTOMER_APP_PORT=5176
+          TELR_USE_MOCK=1
+          WA_GATEWAY_KEY={secrets.token_urlsafe(24)}
+          """.replace("          ", ""))
+          PY
+          # القيمةُ الحقيقيةُ لكلمة القاعدة تدخل عنوانَ الاتصال أيضاً
+          pw=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
+          sed -i "s|postgresql+asyncpg://taxo:x@|postgresql+asyncpg://taxo:$pw@|" .env
+
+      - name: بناءُ صورة الخلفية
+        run: docker compose --env-file .env build backend
+
+      # **البابُ الوحيدُ للمجموعة** — هو نفسُه محلياً وهنا، فلا تفترق بيئتان
+      - name: المجموعةُ الكاملة
+        run: TAXO_ENV_FILE=.env bash scripts/suite.sh
+
+      - name: النتيجةُ كاملةً عند السقوط
+        if: failure()
+        run: tail -120 backend/.suite.out || true
+
+  frontends:
+    name: الحرّاسُ وبناءُ الثلاثة
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer-app
+            target: https://api.tajora.ly
+          - app: driver-app
+            target: https://api.tajora.ly
+          - app: admin-panel
+            target: https://stg-api.tajora.ly
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+
+      # **بهدفٍ مُصرَّحٍ به**: `check:target` يرفض بناءً بلا هدف، وهو المقصود —
+      # حزمةٌ بلا هدفٍ هي التي تقف على «الشبكة ضعيفة» في يدِ إنسان.
+      #
+      # و`check:served` يمرّ هنا بلا خادم: يسقط على **الاختلاف** لا على الغياب،
+      # ويقول «لم يُقس» صراحةً بدل أن يسكت.
+      - run: npm run build
+        working-directory: ${{ matrix.app }}
+        env:
+          VITE_API_BASE_URL: ${{ matrix.target }}

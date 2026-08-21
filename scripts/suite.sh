@@ -19,7 +19,9 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 2
 
-ENV_FILE=".env.local"
+# **وملفُّ البيئة يُصرَّح ولا يُثبَّت**: محلياً `.env.local`، وفي CI ملفٌّ
+# مولَّدٌ للتشغيل — فالبابُ واحدٌ في البيئتين، ولا تفترق مجموعتان.
+ENV_FILE="${TAXO_ENV_FILE:-.env.local}"
 OUT="backend/.suite.out"
 DB_URL="postgresql+asyncpg://taxo:taxo@db:5432/taxo"
 REDIS_URL="redis://redis:6379/0"
