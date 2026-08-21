@@ -4,10 +4,13 @@
  * «تعذّر» يتركه بلا خطوةٍ تالية. فتُشرح الحالُ ويُعطى مدخلُ التثبيت.
  */
 
+import { AppLauncher } from "@capacitor/app-launcher";
+
 import { Button } from "@/components/ui/Button";
 import { useGoBack } from "@/lib/back";
 
-const RIDER_STORE_URL = "https://app.tajora.ly";
+/** صفحةُ التنزيل — **مصدرٌ واحدٌ** يقرّر بنفسه أحزمةٌ أم متجر. */
+const INSTALL_PAGE = "https://taxo.tajora.ly";
 
 export function RiderNotInstalledScreen() {
   const goBack = useGoBack();
@@ -36,7 +39,7 @@ export function RiderNotInstalledScreen() {
         <Button
           className="mt-14"
           onClick={() => {
-            window.location.href = RIDER_STORE_URL;
+            void AppLauncher.openUrl({ url: INSTALL_PAGE });
           }}
         >
           احصل على تطبيق الراكب
