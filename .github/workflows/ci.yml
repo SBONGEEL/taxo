@@ -148,7 +148,12 @@ jobs:
             ( cd "$app" && npm ci --silent )
             ( cd "$app" && VITE_API_BASE_URL=https://api.tajora.ly npm run build )
             ( cd "$app" && npx cap sync android )
-            ( cd "$app/android" && ./gradlew assembleDebug --no-daemon -q )
+            # **`sh gradlew` لا `./gradlew`** — وهذا وقع مقيساً (خروج ١٢٦):
+            # صلاحيةُ التنفيذ لا يحفظها ويندوز، فالملفُّ يُدفع بلا `+x`.
+            # وقد صُحّح الوضعُ في git (`--chmod=+x`)، **وهذا السطرُ يبقى**:
+            # استنساخٌ على ويندوزَ يعيد إسقاطَ الصلاحية، ورقمُ الخروج ١٢٦ لا
+            # يقول «غيرُ قابلٍ للتنفيذ» لمن يقرأه أولَ مرة.
+            ( cd "$app/android" && sh gradlew assembleDebug --no-daemon -q )
           done
 
       - name: البيانُ ومعه الإيداع
