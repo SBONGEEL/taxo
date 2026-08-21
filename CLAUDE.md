@@ -714,10 +714,26 @@ in `test_driver_earnings`. **"Flaky under load" is a hypothesis, not a diagnosis
 → 120k/month; navigation with a capped reroute → 270k; **a polled live ETA → 870k**. Navigation is not what
 raises the bill — polling is.
 
-#### 6. ✅ The unplanned stop point — **built end to end** (2026-08-16, SPEC §5.10-ب)
+#### 6. The unplanned stop point — built, **except half of branch (و)** (2026-08-16, SPEC §5.10-ب)
 
-All six owner branches, backend + both apps + panel. `ride_pauses` (migration `0043`),
-`services/pauses.py`, `tasks/pauses.py` every minute.
+Backend + both apps + panel. `ride_pauses` (migration `0043`), `services/pauses.py`,
+`tasks/pauses.py` every minute.
+
+> **Corrected 2026-08-21 — this line used to claim all six branches were built, and a
+> measurement disproved it.** Branch (و) is two halves: *"inside `final_fare`"* (built and
+> measured) and *"a separate line in the breakdown"* (**built nowhere**). Read from the DOM
+> on a two-stop ride carrying a `0.042` waiting charge: the rider's ride details, **the
+> rider's payment screen**, the captain's screen — which is *titled* «تفصيل السعر» — and the
+> panel's ride log all show a final fare with no waiting line, and the word «محطة» appears on
+> none of them. `AdminRideDetail` does not carry the field at all.
+>
+> **The shape is the interesting part, and it is a new one**: the field *is* published on
+> every `RideOut` and *is* rendered by both apps **while the money accrues** (`StopProgress`,
+> `PauseNotice`, `ActiveRide`) — and disappears at the moment it becomes an amount someone
+> pays. A reader that exists for the counter and not for the charge. **No guard sees it**:
+> all eight rider-app guards are green on this tree, `check:config` asks whether a published
+> field has a *mirror* (it does), never whether it has a *reader*, and `check:readers` sweeps
+> `lib/` only. See `SPEC.md` §5.10-ب/و for the measured table.
 
 **A table of its own, not a column on `ride_stops`**: a planned stop is decided by **the rider before the
 request** so it enters the estimate, the distance and the fee; a pause is pressed by **the captain during
