@@ -160,6 +160,27 @@ export function RideDetailsScreen() {
               strong
             />
           ) : null}
+          {/* **تفصيلُ ما دخل الأجرةَ ولا تراه المسافة** (§5.10 و§5.10-ب/و).
+              **قيمٌ تُقرأ لا تُحسب**: المجموعُ والضربُ في الخلفية (§14).
+              **وصفرٌ لا يُرسم** — سطرٌ فارغٌ يعلّم قارئَه ألّا يقرأ */}
+          {Number(ride.stops_charge) > 0 ? (
+            <Row
+              label={`رسم المحطات (${ride.stops.length})`}
+              value={formatMoney(ride.stops_charge, ride.currency)}
+            />
+          ) : null}
+          {Number(ride.waiting_charge) > 0 ? (
+            <Row
+              label="رسم الانتظار عند المحطات"
+              value={formatMoney(ride.waiting_charge, ride.currency)}
+            />
+          ) : null}
+          {Number(ride.pause_charge) > 0 ? (
+            <Row
+              label="رسم الوقفات أثناء الرحلة"
+              value={formatMoney(ride.pause_charge, ride.currency)}
+            />
+          ) : null}
           {ride.cancellation_fee ? (
             <Row
               label="رسوم الإلغاء"

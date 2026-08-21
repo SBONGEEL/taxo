@@ -30,7 +30,7 @@ from app.schemas.admin_ride import (
     RidePointOut,
     RideRatingOut,
 )
-from app.services import ride_log
+from app.services import pricing, ride_log, rides as rides_service
 
 router = APIRouter(prefix="/admin/rides", tags=["admin"])
 
@@ -136,6 +136,16 @@ async def get_ride(
         accepted_at=ride.accepted_at,
         arrived_at=ride.arrived_at,
         started_at=ride.started_at,
+        # **من بابِ الخدمة لا بحسبةٍ هنا**: `waiting_charge_for` هو نفسُه ما
+        # يقرؤه `_final_fare` وما ينشره `RideOut` للطرفين — فما يراه المشرف
+        # هو **الرقم الذي حُصِّل**، لا رقمٌ ثانٍ يشبهه (الشكلُ الثامن)
+        stops_count=ride.stops_count,
+        stop_fee=ride.stop_fee_at_ride,
+        stops_charge=pricing.round_money(
+            ride.stop_fee_at_ride * ride.stops_count
+        ),
+        waiting_charge=await rides_service.waiting_charge_for(session, ride),
+        pause_charge=await rides_service.pause_charge_for(session, ride),
         payments=[
             RidePaymentOut(
                 id=payment.id,

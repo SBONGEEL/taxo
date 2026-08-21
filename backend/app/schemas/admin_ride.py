@@ -125,6 +125,16 @@ class AdminRideDetail(AdminRideRow):
     arrived_at: datetime | None
     started_at: datetime | None
 
+    # **ما يفسّر الفرقَ بين المقدَّر والنهائيّ ولا تراه المسافة** (§5.10 و
+    # §5.10-ب): عددُ المحطات ورسمُها ورسمُ الانتظار والوقفات. **وبغيرها كان
+    # المشرفُ يعيد الحسبةَ بيده** — وهو ما نفاه توثيقُ الشاشة نفسُه، فكان
+    # وعداً لا يقع كلما وقف كبتنٌ عند محطة
+    stops_count: int
+    stop_fee: Decimal
+    stops_charge: Decimal
+    waiting_charge: Decimal
+    pause_charge: Decimal
+
     payments: list[RidePaymentOut]
     ratings: list[RideRatingOut]
     # دليلُ «أين سار ومتى» (القسم 5.7/13.4) — مسقوفٌ كي لا تصير رحلةٌ طويلة

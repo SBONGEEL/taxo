@@ -210,6 +210,27 @@ export function RideDetailsScreen() {
             label="المدّة المقدّرة"
             value={`${trimDistance(ride.duration_min)} دقيقة`}
           />
+          {/* **ما وقف لأجله يُسمّى في تفصيله** (§5.10 و§5.10-ب/و): الكبتنُ
+              يقرأ هنا لماذا صار النهائيُّ غيرَ المقدَّر، فلا يظنّ نقصاً ولا
+              يسأل الدعم. **قيمٌ تُقرأ لا تُحسب** (§14)، **وصفرٌ لا يُرسم** */}
+          {Number(ride.stops_charge) > 0 ? (
+            <Row
+              label={`رسم المحطات (${digits(String(ride.stops.length))})`}
+              value={`${digits(ride.stops_charge)} ${currency}`}
+            />
+          ) : null}
+          {Number(ride.waiting_charge) > 0 ? (
+            <Row
+              label="رسم الانتظار عند المحطات"
+              value={`${digits(ride.waiting_charge)} ${currency}`}
+            />
+          ) : null}
+          {Number(ride.pause_charge) > 0 ? (
+            <Row
+              label="رسم الوقفات أثناء الرحلة"
+              value={`${digits(ride.pause_charge)} ${currency}`}
+            />
+          ) : null}
           <Row
             label="العمولة"
             value={

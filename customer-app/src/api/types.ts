@@ -319,6 +319,10 @@ export interface Ride {
   stop_free_minutes: number;
   stop_price_per_min: string;
   stop_max_wait_minutes: number;
+  /** رسمُ المحطة الواحدة **مجمَّداً**، و`stops_charge` حاصلُه في عددها.
+   *  المجموعُ يأتي من الخلفية: الشاشةُ لا تضرب مالاً (§14). */
+  stop_fee: string;
+  stops_charge: string;
 
   created_at: string;
   accepted_at: string | null;

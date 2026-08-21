@@ -508,3 +508,77 @@ async def test_route_points_are_attributed_to_their_leg(
             )
         ).all()
     assert legs == [0, 1], legs
+
+# ------------------------------------------------- تفصيلُ ما وُقف لأجله
+
+
+async def test_the_stops_charge_is_published_summed_and_quantized(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**المجموعُ يُنشر لا الوحدةُ وحدَها** — فالشاشةُ لا تضرب مالاً (§14).
+
+    وبحذف `stops_charge` من `RideOut` يسقط هذا الاختبار: يبقى `stop_fee`
+    وحدَه، فتضطرّ الشاشةُ إلى ضربه في العدد — وهو ما يجعلها طرفاً في تحديد
+    ما يُدفع.
+
+    **والشكلُ يُقاس كما تُقاس القيمة** (الشكلُ السابع): مبلغٌ يُسلسَل `"1"`
+    بدل `"1.000"` يُقرأ على شاشةٍ كلُّ أرقامها بثلاث خانات.
+    """
+    await enable_features(session_factory, FeatureKey.MULTI_STOP_ENABLED.value)
+    await set_stop_pricing(session_factory, fee="0.500")
+
+    rider = await rider_session(client)
+    created = await request_with_stops(client, rider["headers"], [STOP_A, STOP_B])
+    assert created.status_code == 201, created.text
+    body = created.json()
+
+    assert body["stop_fee"] == "0.500"
+    assert body["stops_charge"] == "1.000"
+    assert body["waiting_charge"] == "0.000"
+    assert body["pause_charge"] == "0.000"
+
+
+async def test_a_ride_with_no_stops_publishes_zeroes_for_the_screen_to_hide(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**صفرٌ يُنشر ولا يُخفى في الخلفية**: الإخفاءُ قرارُ شاشة.
+
+    ولو ردّت الخلفيةُ `null` لاضطرّت كلُّ شاشةٍ إلى تمييز «لا محطات» عن «لم
+    يصل الحقل» — وهو تمييزٌ لا معنى له، ومن ينساه يرسم `undefined`.
+    """
+    rider = await rider_session(client)
+    created = await request_with_stops(client, rider["headers"], [])
+    assert created.status_code == 201, created.text
+    body = created.json()
+
+    assert body["stops_charge"] == "0.000"
+    assert body["waiting_charge"] == "0.000"
+    assert body["pause_charge"] == "0.000"
+
+
+async def test_the_panel_reads_the_same_numbers_the_two_apps_read(
+    client: AsyncClient,
+    jordan_settings: None,
+    session_factory,
+    admin_headers: dict[str, str],
+) -> None:
+    """**بابان ينشران الشيءَ نفسَه** (الشكلُ الثامن) — فيُقارَنان لا يُفترضان.
+
+    وقعت الحاجةُ إليه لأن المشرفَ يقرأ رقماً ليفصل في نزاع: رقمٌ في اللوحة
+    يخالف ما رآه الراكبُ على شاشة الدفع **يجعل الفصلَ نفسَه خطأً**.
+    """
+    rider, driver, ride = await _ride_with_stop(
+        client, session_factory, stops=(STOP_A, STOP_B)
+    )
+    seen = await client.get(f"/rides/{ride['id']}", headers=rider["headers"])
+    app_view = seen.json()
+
+    panel = await client.get(f"/admin/rides/{ride['id']}", headers=admin_headers)
+    assert panel.status_code == 200, panel.text
+    panel_view = panel.json()
+
+    # **`assert` قبل المقارنة**: قائمتان فارغتان تتطابقان ولا تحرسان شيئاً
+    assert app_view["stops_charge"] != "0.000"
+    for field in ("stop_fee", "stops_charge", "waiting_charge", "pause_charge"):
+        assert panel_view[field] == app_view[field], field
+    assert panel_view["stops_count"] == len(app_view["stops"])

@@ -78,6 +78,41 @@ const CTA: Record<PayableMethod, { label: string; note: string }> = {
   },
 };
 
+/** سطورُ ما وقف الكبتنُ لأجله — **تُقرأ ولا تُحسب، وتصمت عند الصفر**.
+ *
+ * **القيمُ كما وصلت**: `stops_charge` مضروبٌ في الخلفية و`waiting_charge`
+ * مجموعٌ فيها (§14) — فلا ضربَ هنا ولا جمع، والشاشةُ تعرض ما حُصِّل لا ما
+ * تحسبه هي.
+ *
+ * **وصفرٌ لا يُرسم**: سطرٌ يقول «رسم الانتظار 0.000» يعلّم قارئَه أن يمرّ
+ * على السطور بلا قراءة، فيمرّ على غير الصفر يومَ يقع.
+ */
+function stopBreakdown(
+  ride: Ride | null,
+): { label: string; value: string; strong: boolean }[] {
+  if (!ride) return [];
+  const rows: { label: string; value: string; strong: boolean }[] = [];
+  if (Number(ride.stops_charge) > 0)
+    rows.push({
+      label: `رسم المحطات (${ride.stops.length})`,
+      value: formatMoney(ride.stops_charge, ride.currency),
+      strong: false,
+    });
+  if (Number(ride.waiting_charge) > 0)
+    rows.push({
+      label: "رسم الانتظار عند المحطات",
+      value: formatMoney(ride.waiting_charge, ride.currency),
+      strong: false,
+    });
+  if (Number(ride.pause_charge) > 0)
+    rows.push({
+      label: "رسم الوقفات أثناء الرحلة",
+      value: formatMoney(ride.pause_charge, ride.currency),
+      strong: false,
+    });
+  return rows;
+}
+
 export function PaymentScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
@@ -202,6 +237,13 @@ export function PaymentScreen() {
               strong: false,
             }
           : null,
+        // **ما يفسّر الأجرةَ من داخلها** (§5.10 و§5.10-ب/و): رسمُ المحطات
+        // ورسمُ الانتظار والوقفات **داخلةٌ في `final_fare`** — فهذه السطور
+        // **تفصيلٌ لا إضافة**، ولذلك تلي الأجرةَ ولا تُجمع عليها.
+        //
+        // **ومكانُها هنا بنصِّ المواصفة**: «ولا مفاجأةَ في شاشة الدفع» — وهي
+        // الشاشةُ التي كانت تعرض رقماً يخالف المقدَّر بلا سببٍ ظاهر.
+        ...stopBreakdown(ride),
       ].filter((row): row is { label: string; value: string; strong: boolean } =>
         row !== null,
       ),

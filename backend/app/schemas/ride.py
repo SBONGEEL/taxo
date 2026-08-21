@@ -240,6 +240,13 @@ class RideOut(BaseModel):
     stop_free_minutes: int = 0
     stop_price_per_min: Decimal = Decimal("0.000")
     stop_max_wait_minutes: int = 0
+    # **رسمُ المحطات مجمَّدٌ ومجموعٌ في الخلفية** (القسم 14): `stop_fee` وحدةٌ
+    # و`stops_charge` حاصلُها في عددها. **والمجموعُ يُنشر لأن الشاشة لا تضرب**
+    # — واجهةٌ تحسب `رسم × عدد` تصير طرفاً في تحديد ما يُدفع، وهو بعينه ما
+    # منعه §14 حين منع تمرير المال بـ`Number`. والوحدةُ تُنشر معه ليصحّ
+    # **اسمُ** السطر لا حسابُه («محطتان × 0.500») بلا أن يُشتقّ منه مبلغ
+    stop_fee: Decimal = Decimal("0.000")
+    stops_charge: Decimal = Decimal("0.000")
 
     # --- الوقفةُ غير المخطَّطة وانتظارُ الوصول (§5.10-ب) ---
     # **الوقفةُ المفتوحةُ وحدَها تُنشر** لا قائمتُها كلُّها: ما يرسمه التطبيقان
@@ -354,6 +361,10 @@ class RideOut(BaseModel):
             stop_free_minutes=ride.stop_free_minutes_at_ride,
             stop_price_per_min=ride.stop_price_per_min_at_ride,
             stop_max_wait_minutes=ride.stop_max_wait_minutes_at_ride,
+            stop_fee=ride.stop_fee_at_ride,
+            stops_charge=pricing.round_money(
+                ride.stop_fee_at_ride * ride.stops_count
+            ),
             open_pause=open_pause,
             pause_charge=pause_charge,
             pause_price_per_min=ride.pause_price_per_min_at_ride,

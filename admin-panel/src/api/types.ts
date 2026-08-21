@@ -678,6 +678,12 @@ export interface AdminRideDetail extends AdminRideRow {
   dropoff_lng: number;
   duration_min: string;
   commission_percent_at_ride: string;
+  /** ما وقف الكبتنُ لأجله — ثالثُ ما يفسّر الفرقَ بين المقدَّر والنهائيّ. */
+  stops_count: number;
+  stop_fee: string;
+  stops_charge: string;
+  waiting_charge: string;
+  pause_charge: string;
   gender_preference: GenderPreference;
   cancelled_reason: string | null;
   cancel_reason_code: CancelReasonCode | null;
