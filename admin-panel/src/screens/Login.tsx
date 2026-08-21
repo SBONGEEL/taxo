@@ -62,6 +62,9 @@ export function LoginScreen() {
   const [recovery, setRecovery] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
 
+  // **رقمٌ إن كان أرقاماً بحتة** (مع فواصلَ شائعة) — وما عداه اسمُ مستخدم
+  const looksLikePhone = /^[\d\s+()-]+$/.test(phone.trim()) && phone.trim() !== "";
+
   function done() {
     navigate("/overview", { replace: true });
   }
@@ -70,8 +73,14 @@ export function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
+      // **يُميَّز بالمحتوى لا بمفتاحٍ يختاره الداخل**: زرُّ «رقم/اسم» خطوةٌ
+      // زائدةٌ على شاشةٍ تُفتح مرةً في اليوم، ومن يخطئ اختيارَه يُردّ بلا سبب
+      // مفهوم. وأسماءُ المستخدمين يولّدها `bootstrap_admins` بحروفٍ لاتينيةٍ
+      // وشرطاتٍ سفلية، فلا تلتبس برقمٍ أبداً.
       const response = await login(
-        `+${dialCode}${toNational(phone, dialCode)}`,
+        looksLikePhone
+          ? { phone: `+${dialCode}${toNational(phone, dialCode)}` }
+          : { username: phone.trim() },
         password,
         config?.default_country_code,
       );
@@ -241,23 +250,27 @@ export function LoginScreen() {
               void submitPassword();
             }}
           >
-            <label className="label" htmlFor="phone">
-              رقم الهاتف
+            {/* **حقلٌ واحدٌ يقبل الاثنين، ورمزُ الدولة يظهر للرقم وحدَه.**
+                وحسابا الإنتاج يُنشآن بـ`phone=None` (`bootstrap_admins`)، فحقلُ
+                رقمٍ وحدَه يعني أن من يُدير النظامَ لا مكانَ يكتب فيه اسمَه. */}
+            <label className="label" htmlFor="identity">
+              اسم المستخدم أو رقم الهاتف
             </label>
             <div className="mb-16 flex items-stretch gap-8">
-              <span
-                dir="ltr"
-                className="flex items-center rounded-13 border border-line bg-surface-2 px-14 text-14.5 text-muted"
-              >
-                +{dialCode || "…"}
-              </span>
+              {looksLikePhone ? (
+                <span
+                  dir="ltr"
+                  className="flex items-center rounded-13 border border-line bg-surface-2 px-14 text-14.5 text-muted"
+                >
+                  +{dialCode || "…"}
+                </span>
+              ) : null}
               <input
-                id="phone"
+                id="identity"
                 dir="ltr"
-                inputMode="tel"
                 autoComplete="username"
                 className="fld"
-                placeholder="7XXXXXXXX"
+                placeholder="admin_name  أو  7XXXXXXXX"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
               />

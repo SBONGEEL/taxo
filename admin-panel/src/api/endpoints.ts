@@ -192,10 +192,22 @@ export const getConfig = () =>
  */
 export const CLIENT_APP = "panel";
 
-export const login = (phone: string, password: string, country?: CountryCode) =>
+/** دخولُ اللوحة — **باسمِ مستخدمٍ أو برقم**، وأحدُهما لا كلاهما.
+ *
+ * **والخلفيةُ تقبل الاثنين منذ `e2cbd7b`** (`bool(phone) == bool(username)` —
+ * أحدُهما مطلوب)، **واللوحةُ كانت ترسل الرقمَ وحدَه**. وثمنُ ذلك مقيسٌ لا
+ * مفترض: `scripts/bootstrap_admins.py` يُنشئ حسابَي الإنتاج بـ`phone=None`،
+ * فالحسابان اللذان يُدار بهما النظامُ **لم يكن لهما حقلٌ يُكتبان فيه**.
+ * بابٌ في الخلفية بلا زرٍّ في الشاشة — وهو شكلُ هذا المشروع المتكرّر، مقلوباً.
+ */
+export const login = (
+  identity: { username: string } | { phone: string },
+  password: string,
+  country?: CountryCode,
+) =>
   api.post<LoginResponse>(
     "/auth/login",
-    { phone, password, country_code: country, app: CLIENT_APP },
+    { ...identity, password, country_code: country, app: CLIENT_APP },
     { anonymous: true },
   );
 
