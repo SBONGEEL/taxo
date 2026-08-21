@@ -44,6 +44,11 @@ MONEY_SUFFIXES = (
     "_budget",
     "_bonus",
     "_reward",
+    # **`_charge` أُضيفت 2026-08-21 بعد قياس**: `waiting_charge` و`pause_charge`
+    # و`stops_charge` مبالغُ تُحصَّل من راكبٍ منذ 12-ب، **ولم تكن هذه المفردات
+    # تعدّها مالاً** — فلا هذا الحارسُ ولا `check:money-visible` كان يراها.
+    # وقياسُ الحارس في الاتجاه الثاني هو ما أظهر الثغرة، لا مراجعةُ القائمة.
+    "_charge",
 )
 MONEY_NAMES = frozenset(
     {

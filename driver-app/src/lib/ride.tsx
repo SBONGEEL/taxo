@@ -25,6 +25,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { onlineService } from "@/lib/online-service";
 
 import { getActiveRide } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
@@ -149,6 +150,9 @@ export function RideProvider({ children }: { children: ReactNode }) {
       onOpen: () => {
         setConnecting(false);
         setOnline(true);
+        // **الخدمةُ تبدأ مع الاستقبال لا مع فتح التطبيق** (شرطُ المالك): لا
+        // إشعارَ دائمٌ لكبتنٍ غيرِ عامل
+        onlineService.start();
         // الاسترجاع عبر REST عند كل اتصال (القسم 10) — ورسالةُ `connected`
         // تحمل نفس اللقطة، فأيّهما وصل أولاً يصحّح الآخر
         getActiveRide()
@@ -157,9 +161,15 @@ export function RideProvider({ children }: { children: ReactNode }) {
       },
       onClose: (permanent) => {
         setOnline(false);
+        // **والإشعارُ يقول أيَّ الحالين**: انقطاعٌ يُعاد وصلُه، أو انتهاءٌ.
+        // **وصمتٌ هنا يترك كبتناً يظنّ نفسه مستقبِلاً وليس كذلك** — وهو
+        // أخطرُ من ألّا يتصل أصلاً، لأنه يعدّ الصمتَ «لا طلبات اليوم»
         if (permanent) {
           setConnecting(false);
           socket.current = null;
+          onlineService.stop();
+        } else {
+          onlineService.degraded();
         }
       },
       onRejected: (reason) => {
@@ -174,6 +184,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
   const goOffline = useCallback(() => {
     socket.current?.close();
     socket.current = null;
+    onlineService.stop();
     setOnline(false);
     setConnecting(false);
     setOffer(null);

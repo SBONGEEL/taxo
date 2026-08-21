@@ -21,6 +21,7 @@
 
 import { WS_URL, tokens } from "@/api/client";
 import { reportLocationOverRest } from "@/api/endpoints";
+import { onlineService } from "@/lib/online-service";
 import type { Ride } from "@/api/types";
 import { deviceId } from "@/lib/device";
 
@@ -149,6 +150,11 @@ export class DriverSocket {
   private broadcast() {
     const position = this.last;
     if (!position) return;
+    // **نبضةٌ للخدمة الأمامية مع كلِّ بثٍّ حقيقيّ** — لا مؤقتٌ ثانٍ يقول
+    // «أنا حيّ» بينما البثُّ واقف. **فالصمتُ نفسُه هو الإشارة**: إن خنق
+    // النظامُ مؤقتاتِ الـWebView وقف البثُّ ووقفت النبضة، فيقلب الإشعارُ
+    // نصَّه إلى «انقطع الاتصال» بدل أن يَعِد باستقبالٍ لا يقع
+    onlineService.start();
     this.send({
       type: "location",
       lat: position.coords.latitude,

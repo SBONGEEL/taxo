@@ -56,6 +56,17 @@
 
         </activity>
 
+        <!-- **خدمةُ الاستقبال** (2026-08-21): تبقي العمليةَ حيّةً ما دام
+             الكبتنُ مستقبِلاً، فلا يسقط مقبسُه بعد ثوانٍ من إرسال التطبيق إلى
+             الخلفية — وهو مقيسٌ على S21: أقلُّ من ٣٠ ثانية ثم `is_online=false`.
+             و`stopWithTask=false` كي يبلغَها `onTaskRemoved` فتوقف نفسَها
+             **وتزيل إشعارَها**، فلا يبقى سطرٌ يقول «تستقبل» ولا مقبسَ خلفه. -->
+        <service
+            android:name=".OnlineService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="location" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -86,6 +97,13 @@
          ٣. وبثُّ الموقع اليوم يقع والتطبيقُ مفتوح؛ البثُّ والشاشةُ مطفأةٌ يحتاج
             **خدمةً أماميةً** (foreground service) بإشعارٍ دائم، وهي بندٌ مستقلّ. -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- **إذنا الخدمة الأمامية**: الأولُ عامٌّ منذ أندرويد 9، والثاني
+         **يشترطه أندرويد 14 لكلِّ نوعٍ على حدة** — وبغيره يرمي النظامُ
+         استثناءً لحظةَ `startForeground` لا عند التثبيت، أي **على جهاز
+         الكبتن لا في البناء**. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <!-- الإشعارات: إذنٌ صريحٌ منذ أندرويد 13 — ويُطلب عند أول حدثٍ يستحقّه
          لا عند الإقلاع: طلبٌ على شاشةٍ فارغةٍ يُرفض ثم لا يُسأل ثانية. -->
