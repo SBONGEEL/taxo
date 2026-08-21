@@ -35,6 +35,21 @@
       year: "numeric", month: "long", day: "numeric",
     });
 
+  // **مصدرٌ غائب ⇒ لا زرَّ ولا مكانَ محجوز** (شرطُ المالك 2026-08-21).
+  // ويُخرَج العنوانُ معه: عنوانٌ فوق فراغٍ أسوأُ من زرٍّ معطَّل — يُقرأ عطباً.
+  // **ولا يُطلب البيانُ أصلاً**: نداءٌ لا يقرؤه أحدٌ عملٌ على لا شيء.
+  // **ولا يُخرَج من الدالة هنا**: تحتَها سطرُ العرضِ القائم، والصفحةُ تبقى
+  // حيّةً بمحتواها — فالإخفاءُ للتحميل وحدَه.
+  const DOWNLOAD_SOURCES = ["apk", "play"];
+  const downloadsHidden = !DOWNLOAD_SOURCES.includes(cfg.source);
+  if (downloadsHidden) {
+    for (const id of ["dl-heading", "dl-rider", "meta-rider", "dl-driver",
+                      "meta-driver", "install-help", "presign-note"]) {
+      $(id)?.remove();
+    }
+  }
+
+  if (!downloadsHidden)
   fetch("./downloads/manifest.json", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : null))
     .then((manifest) => {
