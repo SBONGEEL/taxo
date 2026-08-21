@@ -16,6 +16,7 @@ from fastapi import APIRouter, status
 from sqlalchemy import select
 
 from app.core import rate_limit
+from app.core.app_scope import ClientApp
 from app.core.config import settings
 from app.core import app_scope
 from app.core.deps import (
@@ -271,20 +272,34 @@ async def login(
         phone = await _resolve(payload.phone, payload.country_code)
         identity = f"login:phone:{phone}"
 
-    # حدّان: على المُعرِّف (منع تخمين كلمة مرور حساب بعينه) وعلى الـ IP
-    await _guard(
-        redis,
-        (
-            identity,
-            settings.login_rate_limit_attempts,
-            settings.login_rate_limit_window_seconds,
-        ),
-        (
-            f"login:ip:{ip}",
-            settings.login_rate_limit_attempts,
-            settings.login_rate_limit_window_seconds,
-        ),
-    )
+    # **ولا سقفَ على دخول اللوحة** (قرارُ المالك 2026-08-21).
+    #
+    # الخمسةُ في خمس دقائق سقفٌ مقاسٌ على **الراكب والكبتن**: هاتفٌ في يدِ صاحبه،
+    # وكلمةٌ يكتبها بإبهامه، وخطؤه المتكرّر عَرَضٌ لا هجوم. والمشرفُ حالٌ أخرى:
+    # كلمتُه **مولَّدةٌ طويلة** تُلصَق لا تُكتب، ولصقةٌ واحدةٌ خاطئةٌ تحبسه خمسَ
+    # دقائقَ عن نظامٍ قد يكون واقفاً ينتظره.
+    #
+    # **وثمنُه يُقال ولا يُخفى**: هذا يفتح بابَ اللوحة للتخمين الآليّ، واللوحةُ
+    # منشورةٌ على الإنترنت منذ اليوم (§27.6). فما يحمل الحمايةَ بعدها:
+    # **العاملُ الثاني** — ولهذا صار إشعالُه أهمَّ مما كان قبل هذا السطر، لا
+    # أقلّ — وطولُ الكلمةِ المولَّدة، وسجلُّ التدقيق، وحظرُ الحساب.
+    #
+    # **وإعادتُه سطرٌ واحد**: احذف الشرطَ فيعود السقفان كما كانا.
+    if payload.app != ClientApp.PANEL:
+        # حدّان: على المُعرِّف (منع تخمين كلمة مرور حساب بعينه) وعلى الـ IP
+        await _guard(
+            redis,
+            (
+                identity,
+                settings.login_rate_limit_attempts,
+                settings.login_rate_limit_window_seconds,
+            ),
+            (
+                f"login:ip:{ip}",
+                settings.login_rate_limit_attempts,
+                settings.login_rate_limit_window_seconds,
+            ),
+        )
 
     if payload.username:
         user = await password_strategy.authenticate_by_username(
