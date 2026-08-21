@@ -122,12 +122,47 @@ if (stale.length > 0) {
   exit(1);
 }
 
+/** **الإيداعُ الذي بُنيت منه الحزمة — يُنشر معها** (شرطُ المالك 2026-08-21).
+ *
+ * **فمن حمّل يعرف ما حمّل، ونحن نعرف من أيِّ شجرة.** وبغيره تكون البصمةُ
+ * هويةً بلا نسب: تفرّق حزمتين ولا تقول من أين جاءت أيٌّ منهما — فشكوى «هذه
+ * تفعل كذا» لا يمكن ردُّها إلى سطر.
+ *
+ * **ويُقرأ من البيئة قبل `git`**: في CI الإيداعُ معلومٌ يقيناً
+ * (`GITHUB_SHA`)، وعلى جهازٍ يُشتقّ. **والشجرةُ المتّسخةُ تُقال**: حزمةٌ
+ * بُنيت من شجرةٍ فيها تعديلٌ غيرُ مودَع **لا تُنسب إلى إيداعٍ بحقّ**.
+ */
+function provenance() {
+  const sha = env.GITHUB_SHA || run(["git", "rev-parse", "HEAD"]);
+  // **`2>/dev/null` عبر `stdio`**: بلا وسمٍ يطبع git سطرَ خطأٍ يُقرأ عطباً
+  // وليس عطباً — والغيابُ هنا الحالُ الطبيعيةُ على جهازٍ بين إصدارين
+  const tag = env.GITHUB_REF_NAME || run(["git", "describe", "--tags", "--exact-match"], true);
+  const dirty = env.GITHUB_SHA ? false : run(["git", "status", "--porcelain"]) !== "";
+  return { commit: sha || null, tag: tag || null, dirty };
+}
+
+function run(cmd, quiet = false) {
+  try {
+    return execFileSync(cmd[0], cmd.slice(1), {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: quiet ? ["ignore", "pipe", "ignore"] : undefined,
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
 // **`generated_at` ليس هويةَ الحزمة**: يقول متى وُلِّد البيان، والهويةُ
 // `sha256` و`built_at`. وخلطُهما يجعل إعادةَ توليدٍ تبدو بناءً جديداً
-const manifest = { generated_at: new Date().toISOString(), apps: entries };
+const manifest = {
+  generated_at: new Date().toISOString(),
+  ...provenance(),
+  apps: entries,
+};
 writeFileSync(join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n", "utf8");
 
-console.log(`✓ بيانُ الحزم — ${entries.length} حزمة`);
+console.log(`✓ بيانُ الحزم — ${entries.length} حزمة · إيداع ${(manifest.commit ?? "?").slice(0, 8)}${manifest.dirty ? " (شجرةٌ متّسخة)" : ""}${manifest.tag ? " · " + manifest.tag : ""}`);
 for (const e of entries) {
   console.log(`  ${e.label.padEnd(16)} ${(e.size_bytes / 1048576).toFixed(1)} م.ب  ${e.sha256.slice(0, 12)}  ${e.built_at.slice(0, 16).replace("T", " ")}  ${e.version_name ?? "?"}`);
 }

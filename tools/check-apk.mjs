@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { argv, exit } from "node:process";
+import { argv, env, exit } from "node:process";
 
 const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const MANIFEST = join(ROOT, "landing", "downloads", "manifest.json");
@@ -100,6 +100,76 @@ for (const app of manifest.apps) {
     console.log(`    ${ok ? "✓" : "✗"} ما يُحمَّل من ${new URL(url).host}: ${served.slice(0, 10)}`);
   } catch (error) {
     console.log(`    · لم يُقس (${String(error).slice(0, 40)}) — **ولا يُقرأ سكوتُه ضماناً**`);
+  }
+}
+
+// ═══ ٣) والعمودُ السادس مقيسٌ لا مكتوب (شرطُ المالك 2026-08-21) ═══
+//
+// **ثلاثةٌ تُقارَن لا اثنان**: ما تخدمه صفحةُ التنزيل = ما بناه CI = وسمُه.
+// وبغير الثالث تبقى الصفحةُ متّسقةً مع نفسِها **وقد بُنيت على جهاز أحد** —
+// وهو بالضبط ما نقضته البوّابةُ الرابعة حين قالت «الخادمُ يسحب نفسَ ما
+// خضّره CI».
+//
+// **وما لا يُقاس يُعلَن**: بلا رمزٍ أو بلا وسمٍ **يقال «لم يُقس»**، ولا
+// يُقرأ السكوتُ سلامة — وهي القاعدةُ الخامسة في فهرس الحرّاس.
+if (base) {
+  const url = `${base.replace(/\/$/, "")}/downloads/manifest.json`;
+  console.log("");
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const served = await response.json();
+    const commit = served.commit ? String(served.commit).slice(0, 8) : null;
+    console.log(`  نسبُ ما تخدمه الصفحة: إيداع ${commit ?? "—"} · وسم ${served.tag ?? "—"}`);
+    if (served.dirty) {
+      bad += 1;
+      console.log("    ✗ بُنيت من **شجرةٍ متّسخة** — لا تُنسب إلى إيداعٍ بحقّ");
+    }
+
+    const token = env.GITHUB_TAXO_TOKEN;
+    if (!token || !served.tag) {
+      console.log(
+        `    · «= ما بناه CI» **لم يُقس** (${!token ? "لا رمز" : "لا وسم"}) — ولا يُقرأ سكوتُه ضماناً`,
+      );
+    } else {
+      const repo = env.TAXO_GITHUB_REPO ?? "SBONGEEL/taxo";
+      const release = await fetch(
+        `https://api.github.com/repos/${repo}/releases/tags/${served.tag}`,
+        { headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" } },
+      );
+      if (!release.ok) {
+        bad += 1;
+        console.log(`    ✗ لا إصدارَ بالوسم ${served.tag} — فما تخدمه الصفحةُ لم يبنِه CI`);
+      } else {
+        const body = await release.json();
+        const assets = new Map((body.assets ?? []).map((a) => [a.name, a]));
+        for (const app of manifest.apps) {
+          const asset = assets.get(app.file);
+          if (!asset) {
+            bad += 1;
+            console.log(`    ✗ ${app.label}: لا أثرَ لها في إصدار ${served.tag}`);
+            continue;
+          }
+          // **الحجمُ وكيلٌ ضعيفٌ والبصمةُ هي الحكم** — و`digest` تصل من
+          // GitHub حين يوفّرها، وإلا يُقال إن المقارنةَ بالحجم وحدَه
+          const digest = String(asset.digest ?? "").replace(/^sha256:/, "");
+          const pageSha = served.apps?.find((a) => a.key === app.key)?.sha256;
+          if (digest && pageSha) {
+            const ok = digest === pageSha;
+            if (!ok) bad += 1;
+            console.log(`    ${ok ? "✓" : "✗"} ${app.label}: أثرُ الإصدار ${digest.slice(0, 10)}`);
+          } else {
+            console.log(
+              `    · ${app.label}: بصمةُ الأثر غيرُ منشورة — **قِيس الحجمُ وحدَه** ` +
+                `(${asset.size === app.size_bytes ? "متطابق" : "مختلف"})`,
+            );
+            if (asset.size !== app.size_bytes) bad += 1;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.log(`  · نسبُ الصفحة **لم يُقس** (${String(error).slice(0, 40)})`);
   }
 }
 

@@ -102,3 +102,61 @@ jobs:
         working-directory: ${{ matrix.app }}
         env:
           VITE_API_BASE_URL: ${{ matrix.target }}
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # **الحزمُ تُبنى هنا وتُنشر أثراً — لا من جهاز أحد** (قرارُ المالك 2026-08-21)
+  #
+  # **والعلّةُ أن البوّابةَ الرابعة تقول «الخادمُ يسحب نفسَ ما خضّره CI»** —
+  # وكانت الحزمةُ تُبنى على جهاز المالك **ولا شيءَ يربطها بCI**، فالجملةُ
+  # صادقةٌ في الكود وكاذبةٌ في الحزمة. والبديلُ المرفوض إدخالُ الثنائيات في
+  # git: **يثقل التاريخَ أبداً بما لا يخزّنه git أصلاً**.
+  #
+  # **وعلى الأوسمة وحدَها**: بناءُ أندرويد بطيء، وإصدارٌ لكلِّ دفعةٍ إنفاقٌ بلا
+  # قارئ. **والوسمُ هو ما يسحبه الخادم**، فيصير ما تخدمه الصفحةُ = ما بناه CI
+  # = وسمُه — **ثلاثةٌ مقيسةٌ لا مكتوبة**.
+  #
+  # **والتوقيعُ تنقيحيٌّ حتى يصل مفتاحُ النشر** (المواصفة §18.1) — يُقال ولا
+  # يُسكت عنه: أولُ حزمةٍ بمفتاح الإصدار **لا تُحدِّث المثبَّت**.
+  packages:
+    name: الحزمُ وإصدارُها
+    needs: [backend, frontends]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # **التاريخُ كاملاً**: `versionCode` يُشتقّ من عدد الإيداعات،
+          # **واستنساخٌ ضحلٌ يجعله رقماً كاذباً** — والبناءُ يقف عمداً بلا تاريخ
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: بناءُ الحزمتين
+        run: |
+          set -euo pipefail
+          for app in customer-app driver-app; do
+            ( cd "$app" && npm ci --silent )
+            ( cd "$app" && VITE_API_BASE_URL=https://api.tajora.ly npm run build )
+            ( cd "$app" && npx cap sync android )
+            ( cd "$app/android" && ./gradlew assembleDebug --no-daemon -q )
+          done
+
+      - name: البيانُ ومعه الإيداع
+        run: node tools/apk-manifest.mjs
+
+      - name: الإصدارُ وأثرُه
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ github.ref_name }}"             landing/downloads/taxo-rider.apk             landing/downloads/taxo-driver.apk             landing/downloads/manifest.json             --title "${{ github.ref_name }}"             --notes "حزمتان مبنيّتان من ${{ github.sha }} — توقيعُ تنقيحٍ حتى يصل مفتاحُ النشر (§18.1)."
