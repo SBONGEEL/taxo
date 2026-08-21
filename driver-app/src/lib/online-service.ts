@@ -19,8 +19,12 @@
 
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
+import { API_URL, tokens } from "@/api/client";
+
 interface OnlineServicePlugin {
-  start(): Promise<void>;
+  /** `endpoint` و`token` يُمرَّران مع كلِّ نبضة — فالخدمةُ تبثّ بنفسها حين
+   *  يخنق النظامُ مؤقتاتِ الـWebView، **بالبابِ نفسِه** الذي ينادي الويب. */
+  start(options: { endpoint: string; token: string | null }): Promise<void>;
   /** المقبسُ سقط والكبتنُ ما زال «مستقبِلاً» — فيقول الإشعارُ الحقيقة. */
   degraded(): Promise<void>;
   stop(): Promise<void>;
@@ -30,7 +34,7 @@ const plugin = registerPlugin<OnlineServicePlugin>("OnlineService");
 
 /** **الفشلُ يُبتلع ويُسجَّل**: خدمةٌ لم تبدأ أهونُ من شاشةٍ لا تعمل — والكبتنُ
  *  يبقى مستقبِلاً ما دام تطبيقُه مفتوحاً، وهو الحالُ قبل هذه الخدمة كلِّها. */
-function call(name: keyof OnlineServicePlugin): void {
+function call(name: "degraded" | "stop"): void {
   if (!Capacitor.isNativePlatform()) return;
   void plugin[name]().catch((error) =>
     console.warn(`تعذّر ${name} لخدمة الاستقبال`, error),
@@ -38,7 +42,15 @@ function call(name: keyof OnlineServicePlugin): void {
 }
 
 export const onlineService = {
-  start: () => call("start"),
+  /** **العنوانُ من `api/client` لا من ثابتٍ هنا**: حزمةٌ تُبنى لهدفٍ وتبثّ
+   *  إلى غيره هي الشكلُ العاشر بعينه — وحارساه `check:target`/`check:dist`
+   *  يقرآن الحزمةَ لا هذا الملف. */
+  start: () => {
+    if (!Capacitor.isNativePlatform()) return;
+    void plugin
+      .start({ endpoint: `${API_URL}/drivers/me/location`, token: tokens.access() })
+      .catch((error) => console.warn("تعذّر بدءُ خدمة الاستقبال", error));
+  },
   degraded: () => call("degraded"),
   stop: () => call("stop"),
 };

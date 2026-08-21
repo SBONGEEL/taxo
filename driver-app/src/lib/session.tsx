@@ -22,6 +22,8 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+import { Capacitor } from "@capacitor/core";
+
 import { setSessionLostHandler, tokens } from "@/api/client";
 import {
   getMe,
@@ -33,6 +35,7 @@ import type { AuthResponse, User } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
+import { registerNativePush, type PushState } from "@/lib/push";
 
 interface SessionState {
   user: User | null;
@@ -40,6 +43,10 @@ interface SessionState {
   signIn: (response: AuthResponse) => void;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** حالُ إذن الإشعارات — **تُنشر ليقولها `Home` للكبتن** (شرطُ المالك):
+   *  من رفض الإذن لا تصله طلباتٌ وهو خارج التطبيق، فلا يظنّ نفسه عاملاً.
+   *  و`null` تعني «لم يُسأل بعد» — فلا سطرَ قبل أن يُعرف الجواب. */
+  pushState: PushState | null;
 }
 
 const SessionContext = createContext<SessionState>({
@@ -48,6 +55,7 @@ const SessionContext = createContext<SessionState>({
   signIn: () => undefined,
   signOut: async () => undefined,
   refreshUser: async () => undefined,
+  pushState: null,
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -55,6 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { config } = useConfig();
   const registered = useRef(false);
+  const [pushState, setPushState] = useState<PushState | null>(null);
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»
   useEffect(() => {
@@ -73,25 +82,49 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /** تسجيل الجهاز بعد الدخول — يُبتلع فشلُه: إشعاراتٌ لا تصل أهون من دخولٍ
-   * لا يكتمل (SPEC القسم 10: «الفشل يُبتلع ويُسجَّل»). */
+   * لا يكتمل (SPEC القسم 10: «الفشل يُبتلع ويُسجَّل»).
+   *
+   * **ومسارانِ لا مسار** (2026-08-21): على الجهاز **المسارُ الأصليّ**، وفي
+   * المتصفح مسارُ الويب كما كان. **والسببُ مقيسٌ لا مُفضَّل**: `Notification`
+   * و`PushManager` **غائبان في WebView أندرويد**، فمسارُ الويب هناك يردّ
+   * `null` قبل أن يبدأ — **وهو ما جعل `device_tokens` صفراً منذ نشأتها**.
+   *
+   * **ورفضُ الإذن حالٌ تُحفظ لا تُبتلع**: منها يرسم `Home` سطرَه للكبتن.
+   */
   useEffect(() => {
     if (!user || registered.current) return;
-    const fcm = firebaseConfigOf(config?.providers.fcm);
-    const vapid = config?.providers.fcm?.vapid_key;
-    if (!fcm || !vapid) return;
-
     registered.current = true;
-    requestPushToken(fcm, vapid)
-      .then((token) =>
-        token
-          ? registerDevice({
+
+    void (async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const outcome = await registerNativePush();
+          setPushState(outcome.state);
+          if (outcome.token) {
+            await registerDevice({
               device_id: deviceId(),
-              token,
+              token: outcome.token,
               platform: platform(),
-            })
-          : null,
-      )
-      .catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
+            });
+          }
+          return;
+        }
+
+        const fcm = firebaseConfigOf(config?.providers.fcm);
+        const vapid = config?.providers.fcm?.vapid_key;
+        if (!fcm || !vapid) return;
+        const token = await requestPushToken(fcm, vapid);
+        if (token) {
+          await registerDevice({
+            device_id: deviceId(),
+            token,
+            platform: platform(),
+          });
+        }
+      } catch (error) {
+        console.warn("تعذّر تسجيل الجهاز للإشعارات", error);
+      }
+    })();
   }, [user, config]);
 
   const signIn = useCallback((response: AuthResponse) => {
@@ -106,6 +139,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (refresh) await logoutRequest(refresh).catch(() => undefined);
     tokens.clear();
     registered.current = false;
+    setPushState(null);
     setUser(null);
   }, []);
 
@@ -114,8 +148,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ user, loading, signIn, signOut, refreshUser }),
-    [user, loading, signIn, signOut, refreshUser],
+    () => ({ user, loading, signIn, signOut, refreshUser, pushState }),
+    [user, loading, signIn, signOut, refreshUser, pushState],
   );
 
   return (

@@ -76,7 +76,7 @@ import { digits, cn } from "@/lib/utils";
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { user, pushState } = useSession();
   const womenService = useFeature(user?.country_code, "women_service_enabled");
   const { config } = useConfig();
   const { profile } = useDriver();
@@ -434,6 +434,33 @@ export function HomeScreen() {
                 </span>
                 <span className="text-11.5 text-muted underline">تغيير</span>
               </button>
+            ) : null}
+
+            {/* **الإذنُ مرفوضٌ فيُقال** (شرطُ المالك 2026-08-21): من رفض إذنَ
+                الإشعارات **لا تصله طلباتٌ وهو خارج التطبيق**، فلا يظنّ نفسه
+                عاملاً ويعدّ الصمتَ «لا طلبات اليوم».
+
+                **والجملةُ بحدّها لا أوسع**: الطلبُ يصل عبر المقبس والتطبيقُ
+                مفتوحٌ ولو رُفض الإذن — فجملةٌ تقول «لن تصلك طلبات» مطلقةً
+                **تُكذَّب أولَ مرةٍ يصل فيها طلب، فيُهمل ما بعدها**.
+
+                **ومكانُه فوق زرِّ الاستقبال**: هناك يقرؤه وهو يقرّر أن يعمل،
+                لا في شاشةٍ يفتحها باحثاً عن عطل. */}
+            {pushState === "denied" ? (
+              <div className="mb-10 rounded-14 border border-line bg-surface-2 px-14 py-12">
+                {/* **`warn` وحدَها في السلّم** — ولا `warn-soft` ولا
+                    `warn-brd`: صنفٌ بمفتاحٍ غيرِ موجودٍ **يُصرَّف بلا أثرٍ
+                    ولا خطأ**، وهو الفخُّ الذي بُني له `check:scale` — غير
+                    أنه يقرأ السلالمَ الرقمية لا الألوان، فمرّ أخضرَ عليه */}
+                <p className="text-12.5 font-semibold text-warn">
+                  إشعارات هذا الجهاز مغلقة
+                </p>
+                <p className="mt-4 text-11.5 leading-6 text-muted">
+                  الطلبات تصلك ما دام التطبيق مفتوحاً أمامك. وحين يكون في
+                  الخلفية أو مغلقاً لن يصلك تنبيه — افتح إعدادات الهاتف وفعّل
+                  إشعارات TAXO.
+                </p>
+              </div>
             ) : null}
 
             {error || actionError ? (

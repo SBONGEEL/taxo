@@ -18,9 +18,20 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "OnlineService")
 public class OnlinePlugin extends Plugin {
 
+    /**
+     * يبدأ الاستقبال — <b>ومعه ما تحتاجه الخدمةُ لتبثّ بنفسها</b>.
+     *
+     * <p><b>ورمزُ الوصولِ يُمرَّر مع كلِّ نبضة</b> لا مرةً عند البدء: الويبُ
+     * يجدّده وهو حيّ، فيبقى ما تحمله الخدمةُ أحدثَ ما صدر. <b>ولا يُمرَّر
+     * رمزُ التجديد</b> — مُدوَّرٌ ذو استعمالٍ واحد (§23)، وحاملان له يخرجان
+     * صاحبَه من حسابه.
+     */
     @PluginMethod
     public void start(PluginCall call) {
-        send(null);
+        Intent intent = new Intent(getContext(), OnlineService.class);
+        intent.putExtra("endpoint", call.getString("endpoint"));
+        intent.putExtra("token", call.getString("token"));
+        dispatch(intent);
         call.resolve();
     }
 
@@ -40,6 +51,10 @@ public class OnlinePlugin extends Plugin {
     private void send(String action) {
         Intent intent = new Intent(getContext(), OnlineService.class);
         if (action != null) intent.setAction(action);
+        dispatch(intent);
+    }
+
+    private void dispatch(Intent intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getContext().startForegroundService(intent);
         } else {

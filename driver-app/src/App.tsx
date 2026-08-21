@@ -22,6 +22,7 @@ import {
   BrowserRouter as Router,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -41,6 +42,8 @@ import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { bindHardwareBack } from "@/lib/hardware-back";
+import { destinationFor } from "@/lib/notification-route";
+import { listenToPush } from "@/lib/push";
 import { LoginScreen } from "@/screens/Login";
 
 const RiderNotInstalledScreen = lazy(() =>
@@ -243,6 +246,35 @@ function DriverHome() {
  *  فلا معنى لها خارج `Router`. */
 function HardwareBack() {
   useEffect(() => bindHardwareBack(), []);
+  return null;
+}
+
+/** نقرةُ إشعارِ النظام تفتح شاشتَه — **من نفس البيت الذي يفتحه صفُّ الوارد**.
+ *
+ * **ومحلُّه داخل `Router` لا في `main.tsx`**: هو يلاحُ لا يُصغي فحسب.
+ *
+ * **والإقلاعُ البارد يسلّم النقرةَ بعد تعليق المستمعين** — فالمكوّنُ يُركَّب
+ * مع الشجرة، والإضافةُ تحتفظ بالحدث حتى يوجد من يستقبله. وهذا بعينه ما وقع
+ * مقيساً في زرِّ التبديل (§23): `appUrlOpen` لا يقع في الإقلاع البارد،
+ * فيُقرأ غيابُ الحدث «لم يُنقر» وهو نُقر.
+ */
+function PushRouter() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    let dispose: (() => void) | null = null;
+    void listenToPush({
+      // **والتطبيقُ مفتوح: النظامُ لا يرسم شيئاً** — وما يصل هنا يصله
+      // المقبسُ أصلاً، فلا يُرسم فوقه شيءٌ ثانٍ يُقرأ حدثين لحدثٍ واحد
+      received: () => undefined,
+      tapped: (data) => {
+        const to = destinationFor(data.type, data);
+        if (to) navigate(to);
+      },
+    }).then((off) => {
+      dispose = off;
+    });
+    return () => dispose?.();
+  }, [navigate]);
   return null;
 }
 
@@ -487,6 +519,7 @@ export default function App() {
                     </RouteTransition>
                     </BoundaryByRoute>
                     <HardwareBack />
+                    <PushRouter />
                   <NavBar />
                   </Router>
                 </RideProvider>

@@ -23,6 +23,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { destinationFor } from "@/lib/notification-route";
 import {
   Bell,
   BadgeCheck,
@@ -92,16 +94,14 @@ function composeBody(entry: UserNotification): string | null {
   }
 }
 
-/** أين يذهب الصفُّ حين يُنقر — من `data` نفسها لا من نصّ العنوان. */
+/** أين يذهب الصفُّ حين يُنقر — **من `lib/notification-route` لا من هنا**.
+ *
+ * نُقل الحسابُ إلى بيتٍ واحدٍ حين وُلد مسارُ إشعارات النظام (2026-08-21):
+ * النقرُ على الصفِّ والنقرُ على الإشعار **حدثٌ واحد**، وبيتان له يفتحان
+ * شاشتين لنفس الخبر.
+ */
 function destinationOf(entry: UserNotification): string | null {
-  const rideId = entry.data?.ride_id;
-  if (entry.kind === "cliq_transfer_submitted" && rideId) {
-    return `/rides/${rideId}`;
-  }
-  if (rideId) return `/rides/${rideId}`;
-  if (entry.kind.startsWith("subscription_")) return "/subscription";
-  if (entry.kind.startsWith("document_")) return "/account/vehicle";
-  return null;
+  return destinationFor(entry.kind, entry.data);
 }
 
 export function NotificationsScreen() {
