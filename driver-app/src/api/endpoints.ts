@@ -441,6 +441,17 @@ export const goOfflineOverRest = () =>
   api.post<Driver>("/drivers/me/offline", {});
 
 /** بثُّ الموقع بلا مقبس — نفسُ ما يحمله إطارُ `location` حرفاً بحرف. */
+/** رمزُ حضورٍ للخدمة الأمامية — **بابٌ واحدٌ لا جلسة** (§23.4).
+ *
+ * **ولا يُخزَّن في `localStorage`**: عمرُه عمرُ الاتصال، وتخزينُه يجعله يعيش
+ * بعد فصلٍ أُلغي فيه — **قيمةٌ ميتةٌ تُقرأ حيّةً**.
+ */
+export const issuePresenceToken = () =>
+  api.post<{ token: string; expires_in: number }>(
+    "/drivers/me/presence-token",
+    {},
+  );
+
 export const reportLocationOverRest = (payload: {
   lat: number;
   lng: number;

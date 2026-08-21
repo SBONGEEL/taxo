@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 
 import pytest
 from httpx import AsyncClient
@@ -16,13 +17,16 @@ from app.core.redis_client import get_redis_client
 from app.services import geo
 from tests.conftest import ws_client
 from tests.helpers import (
+    DRIVER,
     NEAR_PICKUP,
     PICKUP,
     RIDER,
     approved_driver,
     auth,
+    bring_online,
     register,
     request_ride,
+    rider_session,
     token_of,
     wait_for_offer,
     wait_until,
@@ -291,3 +295,62 @@ async def test_connected_frame_carries_the_active_ride(
         ) as rider_ws:
             connected = await _receive(rider_ws, of_type="connected")
             assert connected["active_ride"]["id"] == ride["id"]
+
+
+async def test_a_pending_offer_is_redelivered_on_connect(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**العرضُ الحيُّ يُستعاد مع الاتصال** — ولا يُترك الكبتنُ أمام شاشةٍ فارغة.
+
+    **العلّةُ**: من نقر إشعارَ الطلب — أو عاد من انقطاعٍ لحظيّ — كان يفتح
+    التطبيقَ فلا يجد شيئاً، **وعرضُه حيٌّ في Redis بضع ثوانٍ**، ثم تنتهي
+    المهلةُ فيُقرأ ذلك عطباً في التطبيق لا مهلةً انقضت.
+
+    **والمهلةُ المُعادةُ من `TTL` نفسِه**: بطاقةٌ تُرسم بعشرين ثانيةً وقد بقي
+    منها ثلاثٌ تَعِد بوقتٍ لا وجودَ له.
+    """
+    from app.core.redis_client import get_redis_client
+    from app.services import dispatch
+
+    rider = await rider_session(client)
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+
+    # `request_ride` يعيد جسمَ الرحلة نفسَه — والتحققُ من الحالة داخلها
+    created = await request_ride(client, rider["headers"])
+    ride_id = created["id"]
+
+    # **ويُنتظر أن تصير `searching`**: التوزيعُ يقلبها في مهمّةٍ مستقلّة،
+    # وقياسٌ قبلها يقيس لحظةً لا يوجد فيها عرضٌ أصلاً — **ونتيجةٌ لا يُعرف
+    # سببُها ليست نتيجة**
+    async def _searching() -> bool:
+        row = await client.get(f"/rides/{ride_id}", headers=rider["headers"])
+        return row.json()["status"] in ("searching", "accepted")
+
+    await wait_until(_searching)
+
+    # **والعرضُ يحجزه الموزِّعُ نفسُه** — ولا يُكتب مفتاحٌ بيد: مِسبارٌ يحجز
+    # بنفسه يقيس عالماً صنعه، وقد ردَّ الحجزُ `False` أولَ محاولةٍ **لأن
+    # الموزِّعَ كان قد سبقه** — وهو الدليلُ أن المسار الحقيقيَّ يعمل
+    redis = get_redis_client()
+
+    async def _offered() -> bool:
+        return await redis.exists(dispatch.driver_offer_key(driver["driver_id"])) == 1
+
+    await wait_until(_offered)
+
+    async with session_factory() as session:
+        from app.models.driver import Driver
+        from sqlalchemy import select as sa_select
+
+        row = await session.scalar(
+            sa_select(Driver).where(Driver.id == driver["driver_id"])
+        )
+        frame = await dispatch.pending_offer_frame(session, redis, driver=row)
+
+    assert frame is not None, "لا إطارَ — الاختبارُ يقيس فراغاً"
+    assert frame["type"] == "ride_offer"
+    assert frame["ride"]["id"] == ride_id
+    # **المسافةُ هي التي عُرضت لا حسبةٌ ثانية** — تُخزَّن مع العرض
+    assert frame["distance_to_pickup_km"] >= 0
+    assert 0 < frame["expires_in_seconds"] <= dispatch.OFFER_TIMEOUT_SECONDS

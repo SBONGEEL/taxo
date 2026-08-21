@@ -429,3 +429,14 @@ class AdvanceSettingUpdate(BaseModel):
     min_rating: Decimal | None = Field(default=None, ge=0, le=5, max_digits=3, decimal_places=2)
     growth_percent_per_repaid: int | None = Field(default=None, ge=0, le=500)
     max_multiplier_percent: int | None = Field(default=None, ge=100, le=1000)
+
+class PresenceTokenOut(BaseModel):
+    """رمزُ الحضور — **قيمةٌ لبابٍ واحد، لا جلسة** (§23.4).
+
+    **ولا يُسجَّل ولا يُطبع**: هو ما تحمله الخدمةُ الأمامية في ترويسة
+    `X-Presence-Token`. و`expires_in` تُنشر ليعرف العميلُ متى يطلب غيرَه،
+    **لا ليحسب انتهاءَه بنفسه**: كلُّ استعمالٍ صحيحٍ يمدّده.
+    """
+
+    token: str
+    expires_in: int

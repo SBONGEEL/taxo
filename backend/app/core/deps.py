@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -14,6 +14,7 @@ from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
+from app.services import presence_token as presence_service
 from app.services.token_service import access_token_subject
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -116,3 +117,54 @@ async def get_current_driver(
 
 
 CurrentDriver = Annotated[Driver, Depends(get_current_driver)]
+
+
+async def broadcasting_driver(
+    session: DbSession,
+    redis: RedisDep,
+    presence_token: Annotated[str | None, Header(alias="X-Presence-Token")] = None,
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
+    ] = None,
+) -> Driver:
+    """كبتنٌ يبثّ موقعَه — **بجلسته أو برمزِ حضوره، ولهذا البابِ وحدَه**.
+
+    **ولا تُستعمل هذه التبعيةُ في مسارٍ ثانٍ أبداً.** رمزُ الحضور يفتح ما
+    تفتحه هي، فوضعُها على مسارٍ آخر **يوسّع الرمزَ بلا أن يتغيّر سطرٌ في
+    `services/presence_token.py`** — وهو أخطرُ ما يقع لبابٍ ضيّق: يتّسع
+    بالسهو لا بالقرار. و`test_presence_token.py` يحرس ذلك بالمسح لا بالثقة.
+
+    **والترويسةُ مستقلّةٌ عن `Authorization` عمداً**: بهذا لا يمرّ رمزُ الحضور
+    بـ`get_current_user` البتّة، فلا يُقرأ جلسةً بالخطأ يوماً.
+    """
+    if presence_token:
+        user_id = await presence_service.resolve(redis, presence_token)
+        if user_id is None:
+            raise InvalidToken()
+        user = await session.get(User, user_id)
+        # **الحظرُ يُقرأ عند كلِّ استعمال** كما في `get_current_user`: رمزٌ
+        # صالحٌ لحسابٍ محظورٍ لا يبثّ
+        if user is None:
+            raise InvalidToken()
+        if user.is_blocked:
+            raise AccountBlocked()
+        # **والدورُ يُقرأ أيضاً**: من سُحب منه دورُ الكبتن لا يبقى على الخريطة
+        if not user.has_role(UserRole.DRIVER):
+            raise PermissionDenied()
+        driver = await session.scalar(
+            select(Driver).where(Driver.user_id == user_id)
+        )
+        if driver is None:
+            raise NotFound("ملف الكبتن غير موجود")
+        return driver
+
+    user = await get_current_user(session, credentials)
+    if not user.has_role(UserRole.DRIVER):
+        raise PermissionDenied()
+    driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
+    if driver is None:
+        raise NotFound("ملف الكبتن غير موجود")
+    return driver
+
+
+BroadcastingDriver = Annotated[Driver, Depends(broadcasting_driver)]

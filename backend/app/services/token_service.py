@@ -76,12 +76,20 @@ async def rotate_refresh_token(redis: Redis, refresh_token: str) -> tuple[uuid.U
 
 
 async def revoke_refresh_token(redis: Redis, refresh_token: str) -> None:
-    """تسجيل الخروج: إبطال refresh token الخاص بهذا الجهاز فقط."""
+    """تسجيل الخروج: إبطال refresh token الخاص بهذا الجهاز فقط.
+
+    **ومعه رمزُ الحضور** (§23.4): من سجّل خروجَه لا يبقى جهازُه يبثّ موقعَه.
+    **ومحلُّه هنا لا في الراوتر**: هذا هو بابُ الخروج الوحيد، وحارسٌ في
+    الراوتر يُنسى في أول بابٍ ثانٍ يُفتح.
+    """
     try:
         payload = decode_token(refresh_token, "refresh")
     except TokenError:
         return  # الخروج عملية idempotent — توكن تالف يُعامل كأنه أُبطل
     await redis.delete(_refresh_key(payload["sub"], payload["jti"]))
+    from app.services import presence_token
+
+    await presence_token.revoke(redis, user_id=payload["sub"])
 
 
 async def revoke_all_for_user(redis: Redis, user_id: uuid.UUID | str) -> int:

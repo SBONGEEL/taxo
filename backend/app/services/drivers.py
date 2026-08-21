@@ -20,6 +20,7 @@ from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.services import geo, route
+from app.services import presence_token
 from app.ws import events
 
 
@@ -73,12 +74,19 @@ async def go_online(
 
 
 async def go_offline(session: AsyncSession, redis: Redis, driver: Driver) -> None:
-    """خروج صريح: يسقط من الفهرس فوراً بلا انتظار انقضاء الحضور."""
+    """خروج صريح: يسقط من الفهرس فوراً بلا انتظار انقضاء الحضور.
+
+    **ويُلغى رمزُ الحضور هنا لا في الراوتر** (§23.4): هذا هو البابُ الذي تمرّ
+    به كلُّ طرق إنهاء الاستقبال — ضغطةُ الكبتن، وإغلاقُ المقبس، ومسحُ
+    الاشتراك. **وحارسٌ في الراوتر بابٌ يُنسى في الباب الثاني**، وهي القاعدةُ
+    نفسُها التي وضعت `blocks_new_ride` في `rides.request_ride`.
+    """
     country_code = await session.scalar(
         select(User.country_code).where(User.id == driver.user_id)
     )
     driver.is_online = False
     await geo.go_offline(redis, driver_id=driver.id, country_code=country_code)
+    await presence_token.revoke(redis, user_id=driver.user_id)
 
 
 async def report_location(

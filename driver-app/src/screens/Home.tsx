@@ -18,7 +18,7 @@
 
 import { Bell, Moon, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
@@ -76,6 +76,7 @@ import { digits, cn } from "@/lib/utils";
 
 export function HomeScreen() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const { user, pushState } = useSession();
   const womenService = useFeature(user?.country_code, "women_service_enabled");
   const { config } = useConfig();
@@ -98,6 +99,29 @@ export function HomeScreen() {
     dismissTransfer,
     clearError,
   } = useRide();
+
+  /** **طلبٌ نُقر إشعارُه ولمّا يصل بعد** (§27.12).
+   *
+   * النقرةُ تحمل `?offer={ride_id}`، والعرضُ المعلَّق يصل مع أول اتصالٍ
+   * بالمقبس. **فتنتظره الشاشةُ بدل أن تقول «بانتظار الطلبات…»** — وهي جملةٌ
+   * يقرؤها من نقر طلباً بعينه على أن طلبَه ضاع.
+   *
+   * **ويُمسح المعرّفُ متى وصل العرضُ أو انتهى الانتظار**: معرّفٌ يبقى في
+   * العنوان يجعل الشاشةَ تنتظر أبداً طلباً انقضت مهلتُه.
+   */
+  const awaited = params.get("offer");
+  const awaitedOffer = Boolean(awaited) && offer === null;
+  useEffect(() => {
+    if (!awaited) return;
+    if (offer !== null) {
+      setParams({}, { replace: true });
+      return;
+    }
+    // **مهلةٌ من عمر العرض نفسِه**: بعدها لم يعد هناك ما يُنتظر
+    const timer = window.setTimeout(() => setParams({}, { replace: true }), 25_000);
+    return () => window.clearTimeout(timer);
+  }, [awaited, offer, setParams]);
+
 
   // ما بعد الإنهاء: التحصيل ثم التقييم — رحلةٌ واحدة لا شاشتان مستقلتان،
   // فالخروجُ منهما بيد الكبتن لا بحدثٍ من الخلفية
@@ -385,7 +409,16 @@ export function HomeScreen() {
             <div className="absolute inset-x-0 top-62 flex justify-center">
               <span className="flex animate-pulse items-center gap-9 rounded-full border border-line bg-surface px-18 py-9 text-12.5 font-semibold text-ink">
                 <span className="block size-8 rounded-full bg-ok" />
-                {position ? "بانتظار الطلبات…" : "بانتظار إشارة الموقع…"}
+                {/* **النقرةُ حملت معرّفاً، فالشاشةُ تنتظره** (تصحيحُ المالك):
+                    العرضُ المعلَّق يصل مع أول اتصالٍ بالمقبس
+                    (`dispatch.pending_offer_frame`) — **فالانتظارُ انتظارُ
+                    حدثٍ قادمٍ لا سؤالٌ مرةً ويأس**. وبغير هذا السطر يقرأ من
+                    نقر إشعارَ طلبٍ «بانتظار الطلبات…» فيظنّ طلبَه ضاع. */}
+                {awaitedOffer
+                  ? "نفتح الطلب…"
+                  : position
+                    ? "بانتظار الطلبات…"
+                    : "بانتظار إشارة الموقع…"}
               </span>
             </div>
           ) : null}
@@ -440,9 +473,11 @@ export function HomeScreen() {
                 الإشعارات **لا تصله طلباتٌ وهو خارج التطبيق**، فلا يظنّ نفسه
                 عاملاً ويعدّ الصمتَ «لا طلبات اليوم».
 
-                **والجملةُ بحدّها لا أوسع**: الطلبُ يصل عبر المقبس والتطبيقُ
-                مفتوحٌ ولو رُفض الإذن — فجملةٌ تقول «لن تصلك طلبات» مطلقةً
-                **تُكذَّب أولَ مرةٍ يصل فيها طلب، فيُهمل ما بعدها**.
+                **والجملةُ تصف ما يقع لا ما تعتقده** (تصحيحُ المالك): أولُ
+                صياغةٍ قالت «الطلبات تصلك **ما دام** التطبيق مفتوحاً أمامك» —
+                وهي **مطلقةٌ يكذّبها أولُ طلبٍ يصل**، وجملةٌ تُكذَّب مرةً
+                يُهمَل ما بعدها. فصارت تسمّي **الأثرَ**: لا صوتَ ولا شاشةَ
+                مقفلة، والطلبُ يظهر داخل التطبيق وهو مفتوح.
 
                 **ومكانُه فوق زرِّ الاستقبال**: هناك يقرؤه وهو يقرّر أن يعمل،
                 لا في شاشةٍ يفتحها باحثاً عن عطل. */}
@@ -456,8 +491,8 @@ export function HomeScreen() {
                   إشعارات هذا الجهاز مغلقة
                 </p>
                 <p className="mt-4 text-11.5 leading-6 text-muted">
-                  الطلبات تصلك ما دام التطبيق مفتوحاً أمامك. وحين يكون في
-                  الخلفية أو مغلقاً لن يصلك تنبيه — افتح إعدادات الهاتف وفعّل
+                  لن يصلك تنبيهٌ بصوتٍ ولا على الشاشة المقفلة. والطلبات تظهر
+                  داخل التطبيق وهو مفتوحٌ أمامك — افتح إعدادات الهاتف وفعّل
                   إشعارات TAXO.
                 </p>
               </div>

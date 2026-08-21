@@ -240,6 +240,8 @@ async def approved_driver(
     return {
         "headers": headers,
         "token": token_of(body),
+        # رمزُ التجديد كما ردّته الخلفيةُ نفسُها — يحتاجه من يختبر بابَ الخروج
+        "refresh": body["tokens"]["refresh_token"],
         "driver_id": driver_id,
         # محفظة الكبتن مفتاحها `users.id` لا `drivers.id`
         "user_id": body["user"]["id"],

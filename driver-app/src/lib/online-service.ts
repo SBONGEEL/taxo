@@ -19,7 +19,8 @@
 
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
-import { API_URL, tokens } from "@/api/client";
+import { API_URL } from "@/api/client";
+import { issuePresenceToken } from "@/api/endpoints";
 
 interface OnlineServicePlugin {
   /** `endpoint` و`token` يُمرَّران مع كلِّ نبضة — فالخدمةُ تبثّ بنفسها حين
@@ -41,16 +42,39 @@ function call(name: "degraded" | "stop"): void {
   );
 }
 
+/** **رمزُ الحضور يُطلب مرةً لكلِّ اتصال** — ويُنسى مع الفصل. */
+let cached: string | null = null;
+
 export const onlineService = {
   /** **العنوانُ من `api/client` لا من ثابتٍ هنا**: حزمةٌ تُبنى لهدفٍ وتبثّ
    *  إلى غيره هي الشكلُ العاشر بعينه — وحارساه `check:target`/`check:dist`
    *  يقرآن الحزمةَ لا هذا الملف. */
+  /** **يبدأ برمز الحضور لا برمز الجلسة** (§23.4).
+   *
+   * **والعلّةُ عمرٌ لا ذوق**: رمزُ الوصول ثلاثون دقيقةً ووردياتُ الكبتن
+   * أطول، **ورمزُ التجديد أحاديُّ الاستعمال** فحاملان له يخرجانه من حسابه.
+   * فرمزُ الحضور **بابٌ واحدٌ** يُلغى لحظةَ الفصل وعند الخروج.
+   *
+   * **ويُطلب مرةً عند أول نبضة ويُخبَّأ**: طلبُه مع كلِّ بثٍّ يبطل السابقَ
+   * كلَّ عشرين ثانية، **فيصير الإلغاءُ ضجيجاً لا حدثاً**.
+   */
   start: () => {
     if (!Capacitor.isNativePlatform()) return;
-    void plugin
-      .start({ endpoint: `${API_URL}/drivers/me/location`, token: tokens.access() })
-      .catch((error) => console.warn("تعذّر بدءُ خدمة الاستقبال", error));
+    void (async () => {
+      try {
+        if (!cached) cached = (await issuePresenceToken()).token;
+        await plugin.start({
+          endpoint: `${API_URL}/drivers/me/location`,
+          token: cached,
+        });
+      } catch (error) {
+        console.warn("تعذّر بدءُ خدمة الاستقبال", error);
+      }
+    })();
   },
   degraded: () => call("degraded"),
-  stop: () => call("stop"),
+  stop: () => {
+    cached = null;
+    call("stop");
+  },
 };

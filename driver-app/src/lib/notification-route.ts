@@ -6,11 +6,16 @@
  * بيتٍ يطبّقها**، لأن مسارَ النظام لم يكن موجوداً أصلاً.
  */
 
-/** **عرضُ الرحلة يفتح الرئيسيةَ لا صفحةَ الرحلة**، وهذا ليس تبسيطاً:
+/** **عرضُ الرحلة يفتح الرئيسيةَ ومعه معرِّفُه** — لا الرئيسيةَ وحدَها.
  *
  * البطاقةُ تُرسم في `Home` وحدَها، **والرحلةُ ليست له بعد** — فـ
- * `GET /rides/{id}` يردّ منعاً لا بطاقة. ونقرةٌ تفتح شاشةَ خطأٍ بينما مهلةُ
- * العرض عشرون ثانية **تُضيّع الرحلةَ وتُقرأ عطباً**.
+ * `GET /rides/{id}` يردّ منعاً لا بطاقة.
+ *
+ * **وأولُ صياغةٍ فتحت الرئيسيةَ عاريةً، وكان ذلك نصفَ إصلاح** (تصحيحُ
+ * المالك): الشاشةُ تفتح فارغةً ثم تنقضي المهلةُ فيُقرأ ذلك عطباً. **فالنقرةُ
+ * تحمل المعرّف**، والشاشةُ **تنتظر أن تصير الرحلةُ له** — والعرضُ المعلَّق
+ * يصل مع أول اتصالٍ بالمقبس (`dispatch.pending_offer_frame`)، فالانتظارُ
+ * انتظارُ حدثٍ قادمٍ لا سؤالٌ مرةً ويأس.
  */
 const HOME = "/";
 
@@ -19,7 +24,9 @@ export function destinationFor(
   data: Record<string, string> | null | undefined,
 ): string | null {
   if (!kind) return null;
-  if (kind === "ride_offer") return HOME;
+  if (kind === "ride_offer") {
+    return data?.ride_id ? `${HOME}?offer=${data.ride_id}` : HOME;
+  }
   const rideId = data?.ride_id;
   if (rideId) return `/rides/${rideId}`;
   if (kind.startsWith("subscription_")) return "/subscription";

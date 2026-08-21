@@ -54,6 +54,7 @@ from app.services import (
     settings_service,
     subscriptions,
 )
+from app.schemas.ride import RideOut
 from app.ws import events
 
 logger = logging.getLogger(__name__)
@@ -87,6 +88,17 @@ def offer_key(ride_id: uuid.UUID | str) -> str:
 
 def driver_offer_key(driver_id: uuid.UUID | str) -> str:
     return f"dispatch:driver_offer:{driver_id}"
+
+
+def driver_offer_km_key(driver_id: uuid.UUID | str) -> str:
+    """المسافةُ التي عُرضت مع الطلب — **تُخزَّن ولا تُعاد حسابها**.
+
+    استعادةُ العرض بعد انقطاعٍ تحتاج الرقمَ نفسَه الذي رآه الكبتن، **وحسابُه
+    ثانيةً صيغةٌ ثانيةٌ لقيمةٍ واحدة** تفترقان أولَ تعديل. ومفتاحٌ مستقلٌّ لا
+    تغييرُ صيغة القيمة الأولى: `accept_ride` يقرأ تلك، وتغييرُ شكلها يمسّ
+    مسارَ قبولٍ يعمل.
+    """
+    return f"dispatch:driver_offer_km:{driver_id}"
 
 
 def signal_key(ride_id: uuid.UUID | str) -> str:
@@ -145,7 +157,11 @@ async def withdraw_offer(
 
 
 async def _reserve_offer(
-    redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID, ttl: int
+    redis: Redis,
+    ride_id: uuid.UUID,
+    driver_id: uuid.UUID,
+    ttl: int,
+    distance_km: float | None = None,
 ) -> bool:
     """يحجز الكبتن لهذه الرحلة. False إن كان معروضاً عليه طلب آخر."""
     reserved = await redis.set(
@@ -154,6 +170,8 @@ async def _reserve_offer(
     if not reserved:
         return False
     await redis.set(offer_key(ride_id), str(driver_id), ex=ttl)
+    if distance_km is not None:
+        await redis.set(driver_offer_km_key(driver_id), str(distance_km), ex=ttl)
     return True
 
 
@@ -495,6 +513,44 @@ async def _try_sharing(ride_id: uuid.UUID) -> bool:
         return False
 
 
+async def pending_offer_frame(
+    session: AsyncSession, redis: Redis, *, driver: Driver
+) -> dict | None:
+    """إطارُ العرض المعلَّق على هذا الكبتن — **أو `None` إن لم يبقَ عرض**.
+
+    **العلّةُ**: العرضُ يعيش في Redis بمهلته (`dispatch:driver_offer:{id}`)،
+    **وكان المقبسُ يصمت عنه عند الاتصال** — فكبتنٌ نقر إشعارَ الطلب، أو عاد
+    من انقطاعٍ لحظيّ، يفتح شاشةً فارغةً بينما عرضُه حيٌّ بضع ثوانٍ. ثم تنتهي
+    المهلةُ فيُقرأ ذلك **عطباً في التطبيق** لا مهلةً انقضت.
+
+    **والمهلةُ المتبقّيةُ تُقرأ من `TTL` نفسِه لا تُقدَّر**: بطاقةٌ تُرسم
+    بعشرين ثانيةً وقد بقي منها ثلاثٌ **تَعِد بوقتٍ لا وجودَ له**، ومن يعتمد
+    عليها يضغط «قبول» على عرضٍ انتهى.
+    """
+    key = driver_offer_key(driver.id)
+    raw = await redis.get(key)
+    if raw is None:
+        return None
+    remaining = await redis.ttl(key)
+    if remaining is None or remaining <= 0:
+        return None
+
+    ride_id = raw.decode() if isinstance(raw, bytes) else str(raw)
+    ride = await session.get(Ride, uuid.UUID(ride_id))
+    # **حالتُه تُقرأ من القاعدة**: عرضٌ قُبل أو أُلغي في الأثناء لا يُرسم
+    if ride is None or ride.status is not RideStatus.SEARCHING:
+        return None
+
+    stored = await redis.get(driver_offer_km_key(driver.id))
+    distance = float(stored) if stored is not None else 0.0
+    return {
+        "type": events.RideEvent.RIDE_OFFER.value,
+        "ride": RideOut.from_ride(ride).model_dump(mode="json"),
+        "distance_to_pickup_km": distance,
+        "expires_in_seconds": int(remaining),
+    }
+
+
 async def _run(ride_id: uuid.UUID) -> None:
     from app.services import rides as rides_service
 
@@ -551,7 +607,11 @@ async def _run(ride_id: uuid.UUID) -> None:
             continue
 
         if not await _reserve_offer(
-            redis, ride_id, candidate.driver_id, OFFER_TIMEOUT_SECONDS
+            redis,
+            ride_id,
+            candidate.driver_id,
+            OFFER_TIMEOUT_SECONDS,
+            distance_km=candidate.distance_km,
         ):
             # معروض عليه طلب آخر في هذه اللحظة — نتخطاه بلا احتساب محاولة
             tried.add(candidate.driver_id)

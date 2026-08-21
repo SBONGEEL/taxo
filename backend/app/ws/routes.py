@@ -39,6 +39,7 @@ from app.models.user import User
 from app.schemas.driver import DriverLocationIn, NearbyDriverOut
 from app.schemas.ride import RideOut
 from app.services import (
+    dispatch,
     drivers as drivers_service,
     presence as socket_presence,
     rides as rides_service,
@@ -173,12 +174,22 @@ async def driver_socket(
 
         active = await rides_service.active_ride_for_user(session, user)
         snapshot = RideOut.from_ride(active).model_dump(mode="json") if active else None
+        # **والعرضُ المعلَّق يُستعاد كما تُستعاد الرحلة** (2026-08-21):
+        # `dispatch:driver_offer:{id}` قائمٌ في Redis بمهلته، **وكان المقبسُ
+        # يصمت عنه** — فكبتنٌ نقر إشعارَ الطلب يفتح شاشةً فارغةً بينما عرضُه
+        # حيٌّ بضع ثوانٍ، ثم يقرأ ذلك عطباً في التطبيق.
+        #
+        # **ومصدرُه Redis لا القاعدة**: هناك يعيش العرضُ وهناك ينتهي، فلا
+        # بيتَ ثانٍ يمكن أن يقول غيرَ ما يقوله الموزِّع.
+        pending = await dispatch.pending_offer_frame(session, redis, driver=driver)
 
     try:
         async with Subscription(redis) as subscription:
             await subscription.subscribe(events.user_channel(user.id))
             # آخر حالة معروفة مع أول رسالة — عليها يعتمد الاسترجاع بعد انقطاع
             await websocket.send_json({"type": "connected", "active_ride": snapshot})
+            if pending is not None:
+                await websocket.send_json(pending)
             await _serve(
                 websocket,
                 _pump(websocket, subscription),

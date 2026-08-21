@@ -210,7 +210,9 @@ public class OnlineService extends Service {
                 connection.setConnectTimeout(10_000);
                 connection.setReadTimeout(10_000);
                 connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("Authorization", "Bearer " + bearer);
+                // **ترويسةٌ مستقلّةٌ لا `Authorization`** (§23.4): بهذا لا
+                // يمرّ رمزُ الحضور بحارس الجلسة أصلاً، فلا يُقرأ جلسةً يوماً
+                connection.setRequestProperty("X-Presence-Token", bearer);
                 connection.setDoOutput(true);
                 try (OutputStream out = connection.getOutputStream()) {
                     out.write(body.getBytes("UTF-8"));

@@ -13,7 +13,14 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core import rate_limit, storage
 from app.core.config import settings
-from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
+from app.core.deps import (
+    BroadcastingDriver,
+    CurrentDriver,
+    CurrentUser,
+    DbSession,
+    RedisDep,
+    RiderUser,
+)
 from app.core.exceptions import Conflict, RateLimited
 from app.models.user import User
 from app.models.driver import DriverDocument
@@ -22,6 +29,7 @@ from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
     AdvanceDebtOut,
+    PresenceTokenOut,
     AdvanceOut,
     AdvanceRequestIn,
     AdvanceRequirementOut,
@@ -45,6 +53,7 @@ from app.schemas.driver import (
 )
 from app.schemas.wallet import EarningsOut
 from app.core.currency import currency_for_country
+from app.services import presence_token
 from app.services import (
     advances as advances_service,
     notifications,
@@ -313,6 +322,23 @@ async def go_online(driver: CurrentDriver, session: DbSession) -> DriverOut:
     return DriverOut.model_validate(driver)
 
 
+@router.post("/me/presence-token", response_model=PresenceTokenOut)
+async def issue_presence_token(
+    driver: CurrentDriver, redis: RedisDep
+) -> PresenceTokenOut:
+    """رمزُ حضورٍ للخدمة الأمامية — **بابٌ واحدٌ لا غير** (§23.4).
+
+    **ولماذا بابٌ مستقلٌّ لا حقلٌ في ردِّ `me/online`؟** ذاك الردُّ يقرؤه كلُّ
+    عميل، فحقلُ سرٍّ فيه يصل من لا يحتاجه — والرمزُ لا يلزم إلا غلافاً أصليّاً
+    فيه خدمةٌ تبثّ. **ومن يطلبه يطلبه صراحةً.**
+
+    **ولا يُصدَر إلا لكبتن**، ويُبطل ما قبله: جهازٌ أُخذ من صاحبه لا يبقى
+    يبثّ بعد أن يدخل من جهازٍ آخر.
+    """
+    token = await presence_token.issue(redis, user_id=driver.user_id)
+    return PresenceTokenOut(token=token, expires_in=presence_token.TTL_SECONDS)
+
+
 @router.post("/me/offline", response_model=DriverOut)
 async def go_offline(
     driver: CurrentDriver, session: DbSession, redis: RedisDep
@@ -325,7 +351,7 @@ async def go_offline(
 @router.post("/me/location", status_code=status.HTTP_204_NO_CONTENT)
 async def report_location(
     payload: DriverLocationIn,
-    driver: CurrentDriver,
+    driver: BroadcastingDriver,
     session: DbSession,
     redis: RedisDep,
 ) -> Response:
