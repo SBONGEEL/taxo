@@ -36,10 +36,18 @@ const APPS = [
 function badging(file) {
   // **قراءةُ المجلد بـ`readdirSync` لا بـ`cmd /c dir`**: الثانيةُ تكسر على
   // مسارٍ فيه مسافة (`AppData\Local`) وتطبع سطرَ خطأٍ لا يُقرأ. قِيس 2026-08-21
-  const base = env.LOCALAPPDATA
-    ? join(env.LOCALAPPDATA, "Android", "Sdk", "build-tools")
-    : "/usr/lib/android-sdk/build-tools";
-  if (!existsSync(base)) return {};
+  // **جذورٌ ثلاثةٌ لا واحد**: متغيّرا SDK أولاً (وهما ما يضبطه عاملُ
+  // GitHub)، ثم مسارُ ويندوز، ثم مسارُ دبيان. **وكان الأولان غائبَين**
+  // فخرج البيانُ من CI بلا `versionCode` — و**الحارسُ الذي يمنع بناءً برقمٍ
+  // قديمٍ يقرأ ذلك الحقلَ نفسَه**، فسكت حيث صار أهمَّ ما يكون.
+  const roots = [
+    env.ANDROID_SDK_ROOT && join(env.ANDROID_SDK_ROOT, "build-tools"),
+    env.ANDROID_HOME && join(env.ANDROID_HOME, "build-tools"),
+    env.LOCALAPPDATA && join(env.LOCALAPPDATA, "Android", "Sdk", "build-tools"),
+    "/usr/lib/android-sdk/build-tools",
+  ].filter(Boolean);
+  const base = roots.find((dir) => existsSync(dir));
+  if (!base) return {};
   try {
     const dirs = readdirSync(base).sort();
     for (const dir of dirs.reverse()) {
@@ -100,11 +108,19 @@ const previous = existsSync(join(OUT, "manifest.json"))
   ? JSON.parse(readFileSync(join(OUT, "manifest.json"), "utf8"))
   : null;
 const stale = [];
+const unread = [];
 for (const app of entries) {
   const before = previous?.apps?.find((a) => a.key === app.key);
   if (!before || before.sha256 === app.sha256) continue;
-  const wasCode = Number(before.version_code ?? 0);
-  const nowCode = Number(app.version_code ?? 0);
+  // **ولا يُقرأ غيابُ الرقم سلامة** (قاعدةُ الحارس الخامسة): بلا `aapt2`
+  // يخرج `version_code` فارغاً، و`Number(undefined)` هو `NaN` — وكلُّ مقارنةٍ
+  // به تُرجع `false`، **فيمرّ الحارسُ صامتاً حيث بُني ليصيح**.
+  if (app.version_code == null || before.version_code == null) {
+    unread.push(app.label);
+    continue;
+  }
+  const wasCode = Number(before.version_code);
+  const nowCode = Number(app.version_code);
   if (nowCode <= wasCode) {
     stale.push(
       `${app.label}: البصمةُ تغيّرت (${before.sha256.slice(0, 8)} ← ` +
@@ -112,6 +128,17 @@ for (const app of entries) {
     );
   }
 }
+if (unread.length > 0) {
+  console.error("");
+  console.error("✗ تغيّرت البصمةُ ولم يُقرأ `versionCode` — **لم تُقس القاعدة**:");
+  for (const label of unread) console.error(`  ${label}`);
+  console.error("");
+  console.error("  `aapt2` غيرُ موجود، فلا يُعرف أزاد الرقمُ أم لا.");
+  console.error("  **وسكوتُ حارسٍ لم يقرأ شيئاً ليس سلامة** — ثبّت أدوات");
+  console.error("  البناء، أو صرّح `ANDROID_SDK_ROOT`.");
+  exit(1);
+}
+
 if (stale.length > 0) {
   console.error("");
   console.error("✗ بناءٌ جديدٌ برقمٍ قديم — وأندرويدُ لا يفرّق بينهما:");

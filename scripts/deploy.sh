@@ -203,6 +203,24 @@ fi
 say "  ⇒ النسخةُ المحقَّقة: $LOCAL"
 
 say "══ ٣) الرفع"
+
+# **والحزمُ يسحبها الخادمُ من أثر الإصدار — لا تُرسل من هنا** (قرارُ المالك
+# 2026-08-21). البوّابةُ الرابعةُ تقول «الخادمُ يسحب نفسَ ما خضّره CI»،
+# **وإرسالُ حزمةٍ من جهازٍ ينقض ذلك من داخل الباب**: تمرّ بالبوّابات وهي لم
+# تُبنَ فيما خضّرته.
+#
+# **وبلا وسمٍ لا حزمَ في هذه الدفعة، ويُقال صراحةً**: رفعُ كودٍ بلا إصدارٍ
+# لا يُقرأ نشرةً للحزم.
+TAG="$(git describe --tags --exact-match 2>/dev/null || true)"
+if [ -n "$TAG" ]; then
+  [ -n "${GITHUB_TAXO_TOKEN:-}" ] || die "لا رمزَ لسحب أثر الإصدار — والحزمُ لا تُرسل من هنا."
+  say "  الحزم   : الخادمُ يسحب أثرَ $TAG"
+  tar -cf - scripts/pull-release.sh | ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -"
+  ssh "${SSH_OPTS[@]}" "$HOST"     "cd $REMOTE && bash scripts/pull-release.sh '$TAG' '${TAXO_GITHUB_REPO:-SBONGEEL/taxo}' '$GITHUB_TAXO_TOKEN'"     || die "تعذّر سحبُ أثر $TAG على الخادم — والنسخةُ في $LOCAL"
+else
+  say "  الحزم   : لا وسمَ لهذه الدفعة — **لم تُنشر حزمة**"
+fi
+
 tar -cf - "$@" | ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -" \
   || die "فشل الرفعُ — والنسخةُ في $LOCAL"
 for p in "$@"; do say "  ✓ $p"; done
