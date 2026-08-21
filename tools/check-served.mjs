@@ -37,6 +37,15 @@ if (!app || !APPS[app]) {
   console.error(`استعمال: node tools/check-served.mjs <${Object.keys(APPS).join("|")}>`);
   exit(2);
 }
+// **CI تبني ولا تنشر** — فلا شيءَ تُقارَن به، والإعلانُ صريحٌ لا صامت.
+if (env.CI) {
+  console.log("");
+  console.log(`  ${app} — عمرُ الحزمة **لم يُقس**: بيئةُ CI تبني ولا تنشر،`);
+  console.log("  فالمقارنةُ تسأل عن خدمةٍ لم يصلها هذا البناء. محلُّه البوّابةُ الخامسة.");
+  console.log("");
+  exit(0);
+}
+
 const { port, host } = APPS[app];
 const root = new URL(`../${app}/`, import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 

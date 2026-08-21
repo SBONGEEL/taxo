@@ -46,7 +46,12 @@ services:
     container_name: taxo-backend
     restart: unless-stopped
     env_file:
-      - .env.local
+      # **اسمُ ملفِّ البيئة يُصرَّح ولا يُثبَّت** (2026-08-21): `suite.sh` كان
+      # يمرّر `--env-file` وحدَه، **وهذه السطورُ تُثبِّت `.env.local` رغمه** —
+      # فيقف compose على استنساخٍ نظيفٍ لا ملفَّ فيه، وهو ما أحمرَّ به CI.
+      # **وتصريحٌ نصفُه ليس تصريحاً**: ما لم يحكم الاسمُ الموضعين معاً بقي
+      # الأولُ يَعِد بما ينقضه الثاني.
+      - ${TAXO_ENV_FILE:-.env.local}
     environment:
       # داخل الشبكة الداخلية أسماء المضيفين هي أسماء الخدمات
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
@@ -99,7 +104,12 @@ services:
     # **ولا `:?` في التفسير**: تلك تجعل كلَّ أمر compose يرفض — حتى
     # `run backend` لاختبارٍ لا علاقةَ له بواتساب. والحارسُ في الخدمة نفسِها
     env_file:
-      - .env.local
+      # **اسمُ ملفِّ البيئة يُصرَّح ولا يُثبَّت** (2026-08-21): `suite.sh` كان
+      # يمرّر `--env-file` وحدَه، **وهذه السطورُ تُثبِّت `.env.local` رغمه** —
+      # فيقف compose على استنساخٍ نظيفٍ لا ملفَّ فيه، وهو ما أحمرَّ به CI.
+      # **وتصريحٌ نصفُه ليس تصريحاً**: ما لم يحكم الاسمُ الموضعين معاً بقي
+      # الأولُ يَعِد بما ينقضه الثاني.
+      - ${TAXO_ENV_FILE:-.env.local}
     environment:
       WA_PORT: "8080"
       WA_AUTH_DIR: /data/auth
@@ -131,7 +141,12 @@ services:
     container_name: taxo-worker
     restart: unless-stopped
     env_file:
-      - .env.local
+      # **اسمُ ملفِّ البيئة يُصرَّح ولا يُثبَّت** (2026-08-21): `suite.sh` كان
+      # يمرّر `--env-file` وحدَه، **وهذه السطورُ تُثبِّت `.env.local` رغمه** —
+      # فيقف compose على استنساخٍ نظيفٍ لا ملفَّ فيه، وهو ما أحمرَّ به CI.
+      # **وتصريحٌ نصفُه ليس تصريحاً**: ما لم يحكم الاسمُ الموضعين معاً بقي
+      # الأولُ يَعِد بما ينقضه الثاني.
+      - ${TAXO_ENV_FILE:-.env.local}
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
       REDIS_URL: redis://redis:6379/0
@@ -164,7 +179,12 @@ services:
     container_name: taxo-beat
     restart: unless-stopped
     env_file:
-      - .env.local
+      # **اسمُ ملفِّ البيئة يُصرَّح ولا يُثبَّت** (2026-08-21): `suite.sh` كان
+      # يمرّر `--env-file` وحدَه، **وهذه السطورُ تُثبِّت `.env.local` رغمه** —
+      # فيقف compose على استنساخٍ نظيفٍ لا ملفَّ فيه، وهو ما أحمرَّ به CI.
+      # **وتصريحٌ نصفُه ليس تصريحاً**: ما لم يحكم الاسمُ الموضعين معاً بقي
+      # الأولُ يَعِد بما ينقضه الثاني.
+      - ${TAXO_ENV_FILE:-.env.local}
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
       REDIS_URL: redis://redis:6379/0
