@@ -1,3 +1,40 @@
+/** **رقمُ النسخة يُشتقّ ولا يُكتب بيد** (قرارُ المالك 2026-08-21).
+ *
+ * **العلّةُ مقيسة**: بناءان بـ`versionCode` واحدٍ **حزمةٌ واحدةٌ عند أندرويد**،
+ * فلا يُثبَّت الثاني تحديثاً — **ومن يحمّل برقمٍ لم يتغيّر يظنّ أنه حدّث وهو
+ * لم يفعل**. ورفعُه بيدٍ شرطٌ يُتذكَّر، وقد نُسي فعلاً: بناءٌ جديدٌ برقمٍ قديم
+ * أوقفه `tools/apk-manifest.mjs` عند النشر لا عند البناء.
+ *
+ * **وعددُ الإيداعات هو المشتقّ**: يزيد أبداً، ويُعاد إنتاجُه من الإيداع نفسِه،
+ * **ولا يحتاج ملفَّ عدّادٍ يتعارض بين فرعين**.
+ *
+ * **والغيابُ يُوقف ولا يُسكت عنه**: بلا `git` — أو في استنساخٍ ضحلٍ لا تاريخَ
+ * له — **يفشل البناءُ ويقول لماذا**، ولا يعود إلى `1` صامتاً. فقيمةٌ احتياطيةٌ
+ * صامتةٌ هنا **تُنتج بالضبط العطبَ الذي بُني هذا لأجله**، وهي «الشكلُ الثاني
+ * عشر»: احتياطٌ ينجح فيخفي ما وُضع له.
+ *
+ * **ويُتجاوَز بتصريحٍ لا بالسكوت**: `TAXO_VERSION_CODE` لبيئةٍ لا `git` فيها.
+ */
+static int taxoVersionCode(File root) {
+    def declared = System.getenv("TAXO_VERSION_CODE")
+    if (declared != null && !declared.trim().isEmpty()) return declared.trim() as int
+    try {
+        def out = new ByteArrayOutputStream()
+        def proc = ["git", "rev-list", "--count", "HEAD"].execute(null, root)
+        proc.consumeProcessOutput(out, new ByteArrayOutputStream())
+        proc.waitForOrKill(15000)
+        def count = out.toString().trim()
+        if (proc.exitValue() == 0 && count ==~ /\d+/ && (count as int) > 0) return count as int
+    } catch (ignored) {
+        // يسقط أدناه برسالةٍ تسمّي السبب — ولا يُبتلع صامتاً
+    }
+    throw new GradleException(
+        "تعذّر اشتقاقُ versionCode من عدد الإيداعات. " +
+        "بلا رقمٍ يزيد لا يُقرأ البناءُ تحديثاً على الهاتف. " +
+        "مرّر TAXO_VERSION_CODE=<رقم> إن كنت تبني بلا تاريخ git."
+    )
+}
+
 apply plugin: 'com.android.application'
 
 android {
@@ -7,7 +44,8 @@ android {
         applicationId "ly.tajora.rider"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // **مشتقٌّ من عدد الإيداعات لا مكتوبٌ بيد** — التفصيلُ فوق الملف.
+        versionCode taxoVersionCode(rootProject.projectDir)
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
