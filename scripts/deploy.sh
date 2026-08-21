@@ -26,7 +26,13 @@ set -euo pipefail
 HOST="${TAXO_DEPLOY_HOST:-taxo@169.58.207.123}"
 REMOTE="${TAXO_REMOTE_PROJECT:-~/taxo}"
 DEST="${TAXO_BACKUP_DEST:-/d/taxo-backups}"
-SSH_OPTS=(-o StrictHostKeyChecking=yes -i "$HOME/.ssh/taxo-contabo")
+# **عميلُ ssh يُصرَّح ولا يُثبَّت** (قرارُ المالك 2026-08-21): على هذا الجهاز
+# عميلان — `/usr/bin/ssh` في Git Bash (مقبسُ يونكس) و`ssh.exe` لويندوز (أنبوبٌ
+# مسمّى) — **ولا يتفاهمان مع وكيلٍ واحد**. فمن فعّل خدمةَ ويندوز يوجّه هنا:
+#
+#   TAXO_SSH=/c/Windows/System32/OpenSSH/ssh.exe bash scripts/deploy.sh …
+SSH="${TAXO_SSH:-ssh}"
+SSH_OPTS=(-o StrictHostKeyChecking=yes -i "${TAXO_SSH_KEY:-$HOME/.ssh/taxo-contabo}")
 
 say() { printf '%s\n' "$*"; }
 die() { printf '\n✗ %s\n' "$*" >&2; exit 1; }
@@ -42,7 +48,7 @@ say "══ ١) الإعلان"
 HEAD_SHA="$(git rev-parse HEAD)"
 [ -z "$(git status --porcelain)" ] || die "شجرةٌ غيرُ نظيفة — يُودَع قبل الرفع (البوّابة ٢)."
 
-REMOTE_SHA="$(ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git rev-parse HEAD 2>/dev/null" || true)"
+REMOTE_SHA="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git rev-parse HEAD 2>/dev/null" || true)"
 if [ -n "$REMOTE_SHA" ] && git cat-file -e "$REMOTE_SHA^{commit}" 2>/dev/null; then
   COUNT="$(git rev-list --count "$REMOTE_SHA..$HEAD_SHA")"
   CHANGED="$(git diff --name-only "$REMOTE_SHA..$HEAD_SHA")"
@@ -145,16 +151,16 @@ say "══ ١) النسخةُ قبل الرفع — $STAMP"
 # القاعدة: تفريغٌ مضغوطٌ يُكتب إلى المخرج القياسي فيصل هنا مباشرةً، فلا يبقى
 # على الخادم نسخةٌ ثانيةٌ تُنسى ولا يُملأ قرصُه.
 say "  · القاعدة…"
-ssh "${SSH_OPTS[@]}" "$HOST" \
+"$SSH" "${SSH_OPTS[@]}" "$HOST" \
   "cd $REMOTE && docker compose exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9" \
   > "$LOCAL/taxo.sql.gz" || die "تعذّر تفريغُ القاعدة — لا رفع."
 
 say "  · الأسرار ومجلد الوثائق…"
-ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -czf - .env" \
+"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -czf - .env" \
   > "$LOCAL/env.tar.gz" || die "تعذّرت نسخةُ .env — لا رفع."
 # **الوثائقُ قد لا تكون موجودةً بعدُ على إنتاجٍ جديد**، والغيابُ يُقال ولا يُسكت
-if ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && test -d backend/var/documents"; then
-  ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -czf - backend/var/documents" \
+if "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && test -d backend/var/documents"; then
+  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -czf - backend/var/documents" \
     > "$LOCAL/documents.tar.gz" || die "تعذّرت نسخةُ الوثائق — لا رفع."
 else
   say "    (لا مجلدَ وثائقَ على الخادم بعد — يُسجَّل ولا يُسكت عنه)"
@@ -215,13 +221,13 @@ TAG="$(git describe --tags --exact-match 2>/dev/null || true)"
 if [ -n "$TAG" ]; then
   [ -n "${GITHUB_TAXO_TOKEN:-}" ] || die "لا رمزَ لسحب أثر الإصدار — والحزمُ لا تُرسل من هنا."
   say "  الحزم   : الخادمُ يسحب أثرَ $TAG"
-  tar -cf - scripts/pull-release.sh | ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -"
-  ssh "${SSH_OPTS[@]}" "$HOST"     "cd $REMOTE && bash scripts/pull-release.sh '$TAG' '${TAXO_GITHUB_REPO:-SBONGEEL/taxo}' '$GITHUB_TAXO_TOKEN'"     || die "تعذّر سحبُ أثر $TAG على الخادم — والنسخةُ في $LOCAL"
+  tar -cf - scripts/pull-release.sh | "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -"
+  "$SSH" "${SSH_OPTS[@]}" "$HOST"     "cd $REMOTE && bash scripts/pull-release.sh '$TAG' '${TAXO_GITHUB_REPO:-SBONGEEL/taxo}' '$GITHUB_TAXO_TOKEN'"     || die "تعذّر سحبُ أثر $TAG على الخادم — والنسخةُ في $LOCAL"
 else
   say "  الحزم   : لا وسمَ لهذه الدفعة — **لم تُنشر حزمة**"
 fi
 
-tar -cf - "$@" | ssh "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -" \
+tar -cf - "$@" | "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -" \
   || die "فشل الرفعُ — والنسخةُ في $LOCAL"
 for p in "$@"; do say "  ✓ $p"; done
 
