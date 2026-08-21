@@ -94,7 +94,51 @@ say "  السرّ   : لا شيءَ في ما يُدفع"
 git push origin HEAD || die "تعذّر الدفع."
 git push origin --tags || true
 say "  الدفع   : تمّ"
-die "CI لم يُقس بعد — هذا الحدُّ يُكمَل حين يوجد المستودعُ وأسرارُه (انظر التقرير)."
+
+# **CI على استنساخٍ نظيف — ويُنتظر، ولا يُقرأ آخرُ تشغيلٍ عابر.**
+#
+# **وكان هنا سطرٌ يموت** بحجّة «حتى يوجد المستودعُ وأسرارُه»، **وقد وُجدا** —
+# فبقي يمنع البابَ الذي كُتب ليحرسه، **ويدفع من يجده إلى طريقٍ حوله**. وهو
+# الصنفُ المسجَّل في `CLAUDE.md`: شرطٌ زالت علّتُه ولم يُنزَع.
+#
+# **والتشغيلُ يُطابَق بالإيداع لا بالأحدثية**: `head_sha` هو الشرط — فتشغيلٌ
+# أخضرُ لإيداعٍ آخرَ لا يقول شيئاً عمّا نرفعه، **وهو بالضبط ما تحرسه البوّابةُ
+# الخامسة حين تقارن إيداعَ الخادم بإيداع CI**.
+say "  CI      : يُنتظر التشغيلُ لإيداع ${HEAD_SHA:0:8}…"
+
+# **بالرمز الدقيق لا بـ`gh`** (المواصفة §27.9): `gh` يستعمل ما دخل به صاحبُه —
+# وقد يكون رمزَ حسابٍ واسعاً، وهو بعينه ما ابتعد عنه قرارُ المالك. وهنا نداءٌ
+# قرائيٌّ واحدٌ بالرمز المحصور في هذا المستودع.
+#
+# **وغيابُ الرمز يوقف ولا يُسكت عنه**: بلا قراءةِ CI **لا تُقطع البوّابة**،
+# وتخطّيها بحجّة «تعذّرت القراءة» هو الطريقُ حول الباب.
+[ -n "${GITHUB_TAXO_TOKEN:-}" ] || die "لا رمزَ لقراءة CI (\$GITHUB_TAXO_TOKEN) — البوّابةُ الثانيةُ لا تُقطع."
+REPO="${TAXO_GITHUB_REPO:-SBONGEEL/taxo}"
+
+ci_state() { # يطبع: <الحال> <الرابط> لتشغيل هذا الإيداع وحدَه
+  curl -sS -H "Authorization: Bearer $GITHUB_TAXO_TOKEN"        -H "Accept: application/vnd.github+json"        "https://api.github.com/repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=10"   | python3 -c "
+import json,sys
+try: runs = json.load(sys.stdin).get('workflow_runs', [])
+except Exception: runs = []
+# **التشغيلُ يُطابَق بالإيداع لا بالأحدثية**: أخضرُ لإيداعٍ آخرَ لا يقول شيئاً
+# عمّا نرفعه — وهو ما تحرسه البوّابةُ الخامسة حين تقارن إيداعَ الخادم بـCI.
+runs = [r for r in runs if r.get('name') == 'CI'] or runs
+print('' if not runs else f\"{runs[0].get('conclusion') or runs[0].get('status')} {runs[0].get('html_url','')}\")
+" 2>/dev/null
+}
+
+CI_STATE=""; CI_URL=""
+for _ in $(seq 1 120); do   # ٤٠ دقيقةً بحدٍّ أقصى — مهلةُ الوظيفتين ٣٠+٢٠
+  read -r CI_STATE CI_URL <<<"$(ci_state)"
+  case "$CI_STATE" in
+    success) break ;;
+    failure|cancelled|timed_out|action_required|startup_failure)
+      die "CI أحمرُ ($CI_STATE) — **يقف كلُّ شيءٍ هنا**. التشغيل: ${CI_URL:-<لا رابط>}" ;;
+  esac
+  sleep 20
+done
+[ "$CI_STATE" = "success" ] || die "CI لم يخضرَّ في المهلة (آخرُ حالٍ: ${CI_STATE:-<لا تشغيلَ لهذا الإيداع>}). التشغيل: ${CI_URL:-—}"
+say "  CI      : أخضر — ${CI_URL:-}"
 
 say "══ ١) النسخةُ قبل الرفع — $STAMP"
 

@@ -25,10 +25,47 @@ import { join } from "node:path";
 import { argv, exit } from "node:process";
 import { createRequire } from "node:module";
 
+/** **`typescript` يُحلّ من التطبيق المفحوص لا من `admin-panel` ثابتاً.**
+ *
+ * **العلّةُ مقيسةٌ من CI (2026-08-21)**: على هذا الجهاز تعمل الثلاثةُ لأن
+ * `node_modules` موجودةٌ في كلٍّ منها، **وفي استنساخٍ نظيفٍ تُثبَّت حزمةُ
+ * التطبيق المفحوص وحدَها** — فيسقط `require("typescript")` من مجلدٍ لم
+ * يُثبَّت، والرسالةُ `Cannot find module 'typescript'` لا تسمّي السبب.
+ *
+ * **وهو الشكلُ العاشر في ثوب أداة**: شجرةٌ خضراءُ عندي وحمراءُ على استنساخٍ
+ * نظيف — **وهو بعينه ما تحرسه البوّابةُ الثانية**.
+ *
+ * **والغيابُ يُسمّى ولا يُبتلع**: بلا `typescript` في أيٍّ منها يقف الحارسُ
+ * ويقول أين بحث.
+ */
+function loadTypeScript(root, apps) {
+  const tried = [];
+  for (const app of apps) {
+    try {
+      return createRequire(new URL(`../${app}/package.json`, import.meta.url))(
+        "typescript",
+      );
+    } catch {
+      tried.push(app);
+    }
+  }
+  console.error(
+    `✗ لم يوجد \`typescript\` في أيٍّ من: ${tried.join(" · ")}
+` +
+      "  الحارسُ يحتاج مُحلِّلَ TypeScript — ثبّت حزمةَ التطبيق المفحوص.",
+  );
+  exit(2);
+}
+
+
+/** المفحوصُ أولاً — فما ثُبِّت في استنساخٍ نظيفٍ هو حزمتُه. */
+const APPS_FOR_TS = [
+  ...new Set([...process.argv.slice(2), "admin-panel", "customer-app", "driver-app"]),
+];
+
 // **من `node_modules` التطبيق لا من الجذر** — كما يفعل `check-slot`: الجذرُ لا
 // `node_modules` له، والمُحلِّلُ نسخةُ التطبيق نفسِها التي يُبنى بها
-const require = createRequire(new URL("../admin-panel/package.json", import.meta.url));
-const ts = require("typescript");
+const ts = loadTypeScript(import.meta.url, [...APPS_FOR_TS]);
 
 /** مُنسِّقاتُ المال في التطبيقات الثلاثة — كلُّها تحلّ العلامةَ بنفسها. */
 const FORMATTERS = new Set(["money", "formatMoney"]);
