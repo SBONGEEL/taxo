@@ -18,10 +18,10 @@ ingress:
   # تطبيقُ الراكب — يُخدَم من حاوية `customer-app` نفسِها التي في `compose`،
   # فلا `node` على المضيف ولا `dist` يُنقل (§25.4)
   - hostname: stg-app.tajora.ly
-    service: http://customer-app:5173
+    service: http://customer-app:80
 
   - hostname: stg-driver.tajora.ly
-    service: http://driver-app:5174
+    service: http://driver-app:80
 
   # الصفحةُ التعريفيةُ العامة — **وهي وحدَها بلا `stg-`**: عنوانٌ يُعطى لناس
   - hostname: taxo.tajora.ly

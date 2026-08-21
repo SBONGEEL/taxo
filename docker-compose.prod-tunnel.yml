@@ -19,20 +19,47 @@ services:
       CARD_RETURN_URL: https://stg-app.tajora.ly/payments/card/return
       CARD_RETURN_URL_DRIVER: https://stg-driver.tajora.ly/payments/card/return
 
-  # **خادمُ التطوير لا البناءُ المحزَّم** — على خلاف طبقة جهاز المالك: هناك
-  # يُبنى `dist` على المضيف بـ`node` مثبَّت، **ولا `node` على هذا الخادم**
-  # (§25.4 تفترض بناءً هناك، ولم يُثبَّت). وخادمُ التطوير يقرأ `VITE_API_BASE_URL`
-  # عند الإقلاع فلا يحتاج بناءً — **وثمنُه بطءُ أوّل فتح** (وحداتٌ مفرَّقة)،
-  # وهو ثمنٌ مقبولٌ لقياسٍ لا لإطلاق.
+  # **البناءُ المحزَّم يخدمه `nginx`، لا خادمُ التطوير** (2026-08-21).
+  #
+  # **والعلّةُ مقيسةٌ على النفق منذ 2026-08-14**: خادمُ Vite يرسل الوحداتِ
+  # مفرَّقةً — **٦٧ طلباً لشاشةٍ واحدة**، وكلُّ واحدٍ رحلةٌ عبر Cloudflare —
+  # فتكتمل في ٥٫٥٩ ثانية. والبناءُ يجمعها في ملفاتٍ معدودة.
+  #
+  # **و`dist` يُبنى هنا ويُنقل**: §25.4 تفترض بناءً على الخادم، **ولا `node`
+  # عليه** (قِيس 2026-08-20). فالبناءُ على الجهاز بهدفٍ مُصرَّحٍ به
+  # (`check:target` يرفض غيرَه)، والنقلُ بعده.
+  #
+  # **ورؤوسُ التخزين نفسُها التي للصفحة**: الحافةُ خدمت نسخةَ أمس مرةً، وحزمةٌ
+  # مخزَّنةٌ على الحافة تعني تطبيقاً قديماً في يد إنسان (العمودُ الخامس).
   customer-app:
-    environment:
-      VITE_API_BASE_URL: https://stg-api.tajora.ly
+    image: nginx:1.27-alpine
+    container_name: taxo-customer-app
+    restart: unless-stopped
+    command: ["nginx", "-g", "daemon off;"]
+    volumes:
+      - ./customer-app/dist:/usr/share/nginx/html:ro
+      - ./landing/spa.conf:/etc/nginx/conf.d/default.conf:ro
     ports: !reset []
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   driver-app:
-    environment:
-      VITE_API_BASE_URL: https://stg-api.tajora.ly
+    image: nginx:1.27-alpine
+    container_name: taxo-driver-app
+    restart: unless-stopped
+    command: ["nginx", "-g", "daemon off;"]
+    volumes:
+      - ./driver-app/dist:/usr/share/nginx/html:ro
+      - ./landing/spa.conf:/etc/nginx/conf.d/default.conf:ro
     ports: !reset []
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # **الصفحةُ التعريفية — nginx ساكنٌ بلا بناءٍ ولا `node`** (2026-08-21).
   #
