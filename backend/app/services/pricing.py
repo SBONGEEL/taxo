@@ -42,6 +42,18 @@ class FareEstimate:
     route: Route
     fare: Decimal
     minimum_fare_applied: bool
+    # **شروطُ الوقوف كما ستُجمَّد على الرحلة لو طُلبت الآن** (§5.10).
+    #
+    # **ومحلُّها التقديرُ لا `GET /config`، والسببُ قياسٌ لا ذوق**: الأربعةُ
+    # على `pricing_rules` أي **لكلِّ (دولة × فئة)**، و`/config` ينشر
+    # `vehicle_categories` قائمةَ رموزٍ بلا بنيةٍ تُعلَّق عليها — فنشرُها هناك
+    # إمّا كذبٌ (تُؤخذ فئةٌ وتُسمّى الدولة) أو خريطةٌ متداخلةٌ تُمرَّر إلى ثلاث
+    # مرايا. **والتقديرُ يعرف الفئةَ المختارة**، وهو الموضعُ الذي يُقرأ فيه
+    # السعرُ قبل القبول — فمن قَبِل يعرف ما يدفعه لو انتظر.
+    stop_fee: Decimal
+    stop_free_minutes: int
+    stop_price_per_min: Decimal
+    stop_max_wait_minutes: int
 
 
 def round_money(amount: Decimal) -> Decimal:
@@ -115,6 +127,17 @@ async def estimate(
         route=route,
         fare=fare,
         minimum_fare_applied=minimum_applied,
+        # **`round_money` على الصفر أيضاً — وهذا ليس تزيّداً** (الشكلُ السابع):
+        # `Decimal(0)` المبنيُّ في بايثون يُسلسَل `"0"` لا `"0.000"`، فيقرأ
+        # الراكبُ `0` في عمودٍ كلُّه ثلاثُ خانات. **وأمسكه `money_format`
+        # فعلاً** عند أول تشغيلٍ بعد كتابة هذه الدالة، لا مراجعةٌ ولا `tsc`.
+        #
+        # و`or 0`: الأعمدةُ `server_default="0"` فكلُّ صفٍّ يحملها، والحارسُ
+        # هنا لصفٍّ قديمٍ في قاعدةٍ رُقّيت ولم تُملأ حقولُه بعد
+        stop_fee=round_money(rule.stop_fee or Decimal(0)),
+        stop_free_minutes=rule.stop_free_minutes or 0,
+        stop_price_per_min=round_money(rule.stop_price_per_min or Decimal(0)),
+        stop_max_wait_minutes=rule.stop_max_wait_minutes or 0,
     )
 
 

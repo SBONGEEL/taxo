@@ -63,6 +63,17 @@ class RideEstimateOut(BaseModel):
     # ولا يخترع صفراً يقرأ «مجاناً»
     share_discount: Decimal | None = None
     share_fare: Decimal | None = None
+    # **شروطُ الوقوف تُقال قبل الطلب** (§5.10: «والشاشةُ تقول سعرَه قبل الطلب،
+    # فيكون معلوماً ولو لم يكن مقدَّراً»). **ورسمُ الانتظار خارج التقدير عمداً**
+    # — لا يُعرف قبل أن يقع — فما يُنشر هنا **شروطُه** لا مبلغُه.
+    #
+    # ومحلُّها التقديرُ لا `/config`: الأربعةُ لكلِّ (دولة × فئة)، والتقديرُ هو
+    # الموضعُ الوحيد الذي عُرفت فيه الفئةُ المختارة. والتفصيلُ في
+    # `services/pricing.FareEstimate`.
+    stop_fee: Decimal
+    stop_free_minutes: int
+    stop_price_per_min: Decimal
+    stop_max_wait_minutes: int
 
 
 class RideCreateRequest(RideEstimateRequest):

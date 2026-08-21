@@ -100,6 +100,10 @@ async def estimate_ride(
         duration_min=quote.route.duration_min,
         estimated_fare=quote.fare,
         minimum_fare_applied=quote.minimum_fare_applied,
+        stop_fee=quote.stop_fee,
+        stop_free_minutes=quote.stop_free_minutes,
+        stop_price_per_min=quote.stop_price_per_min,
+        stop_max_wait_minutes=quote.stop_max_wait_minutes,
     )
 
 

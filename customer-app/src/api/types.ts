@@ -230,6 +230,15 @@ export interface RideEstimate {
    *  ليصل إليهما (القسم 14). */
   share_discount: string | null;
   share_fare: string | null;
+  /** شروطُ الوقوف كما ستُجمَّد لو طُلبت الرحلةُ الآن (§5.10).
+   *
+   *  **ومحلُّها التقديرُ لا `/config`**: الأربعةُ لكلِّ (دولة × فئة)، والتقديرُ
+   *  هو الموضعُ الذي عُرفت فيه الفئة. ومنها تُصاغ الجملةُ التي يقرؤها الراكب
+   *  **قبل** أن يقبل السعر — لا من ثابتٍ في التطبيق (القسم 14). */
+  stop_fee: string;
+  stop_free_minutes: number;
+  stop_price_per_min: string;
+  stop_max_wait_minutes: number;
 }
 
 export interface RideVehicle {

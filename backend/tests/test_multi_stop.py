@@ -582,3 +582,42 @@ async def test_the_panel_reads_the_same_numbers_the_two_apps_read(
     for field in ("stop_fee", "stops_charge", "waiting_charge", "pause_charge"):
         assert panel_view[field] == app_view[field], field
     assert panel_view["stops_count"] == len(app_view["stops"])
+
+
+async def test_the_estimate_carries_the_waiting_terms_before_the_ride_exists(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**«الشاشةُ تقول سعرَه قبل الطلب»** (§5.10) — ولا شاشةَ تقوله بلا رقم.
+
+    ومحلُّه التقديرُ لا `GET /config`: الأربعةُ لكلِّ (دولة × فئة)، والتقديرُ
+    هو الطلبُ الوحيد الذي عُرفت فيه الفئةُ المختارة قبل إنشاء الرحلة.
+
+    وبحذف الحقول من `RideEstimateOut` يسقط: يعود التطبيقُ إلى جملةٍ تقول إن
+    للانتظار سعراً ولا تقوله.
+    """
+    await enable_features(session_factory, FeatureKey.MULTI_STOP_ENABLED.value)
+    await set_stop_pricing(
+        session_factory, fee="0.500", free_minutes=2, price_per_min="0.100"
+    )
+    rider = await rider_session(client)
+
+    quoted = await client.post(
+        "/rides/estimate",
+        headers=rider["headers"],
+        json={"pickup": PICKUP, "dropoff": DROPOFF, "vehicle_category": "economy"},
+    )
+    assert quoted.status_code == 200, quoted.text
+    body = quoted.json()
+
+    assert body["stop_fee"] == "0.500"
+    assert body["stop_free_minutes"] == 2
+    assert body["stop_price_per_min"] == "0.100"
+
+    # **وما يُقال قبل الطلب هو ما يُجمَّد عليه** — ولولا هذا لكان الوعدُ
+    # صادقاً في شاشةٍ وكاذباً في فاتورة
+    created = await request_with_stops(client, rider["headers"], [STOP_A])
+    assert created.status_code == 201, created.text
+    ride = created.json()
+    assert ride["stop_fee"] == body["stop_fee"]
+    assert ride["stop_free_minutes"] == body["stop_free_minutes"]
+    assert ride["stop_price_per_min"] == body["stop_price_per_min"]
