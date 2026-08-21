@@ -1656,6 +1656,17 @@ bundle hash against the one just built, not by trusting that a build happened.
 - a **secret or account only he can supply**;
 - something that **needs his finger on a phone**.
 
+**And probing a live auth door spends the human's budget, not yours** (measured 2026-08-21).
+Proving the production admin credentials worked cost two of the owner's five attempts in a
+five-minute window — and he hit «محاولات كثيرة» on his own next try. The probe was correct and
+the finding was true; what was missing was **counting the cost of the measurement itself**.
+
+Before driving a rate-limited path on a system a person is using: know the cap and the window
+first, and prefer a probe that does not consume the same bucket — a different identity, a read
+that answers the same question, or asking the person to try once while you watch. **`login:ip:`
+is a separate bucket from `login:username:`**, so where the answer only needs "does this
+credential authenticate", one attempt is the budget, not two.
+
 **And a notice is not an order** (the owner's rule, 2026-08-21). What he tells you — a fact,
 a constraint, a piece of context — is **information he is planning with**, not an instruction to
 act on. The judgement on it is **his**. So when something you learned (or reported) implies an
