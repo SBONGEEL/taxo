@@ -9,6 +9,8 @@
  * جديداً في كل جلسة، فتتراكم رموزٌ ميتة على حسابٍ واحد.
  */
 
+import { Capacitor } from "@capacitor/core";
+
 const KEY = "taxo.driver.device_id";
 
 export function deviceId(): string {
@@ -22,8 +24,18 @@ export function deviceId(): string {
   return value;
 }
 
-/** المنصة كما تفهمها الخلفية. التطبيق ويبٌ اليوم، وتغليفُ Capacitor لاحقاً
- * (SPEC القسم 15/ج) يجعله `ios`/`android` بلا تغييرٍ في العقد. */
+/** المنصة كما تفهمها الخلفية — **تُقرأ من المنصّة لا تُكتب ثابتة**.
+ *
+ * **كانت `"web"` ثابتةً** بتعليقٍ يقول «وتغليفُ Capacitor لاحقاً يجعله
+ * `ios`/`android`» — **وجاء اللاحقُ ولم يتغيّر السطر**، فصار كلُّ جهازٍ
+ * يُسجَّل «ويب» وهو أندرويد.
+ *
+ * **وأثرُه سجلٌّ لا تسليم، وهذا قِيس لا يُفترض**: `push/fcm.py::_payload`
+ * يرسل الكتلَ الثلاث (`android`/`apns`/`webpush`) في كلِّ رسالة وFCM يختار
+ * بحسب الرمز — فلا أولويةَ ضاعت. **لكنه عمودٌ يقول غيرَ ما هو**، وأولُ منطقٍ
+ * يتفرّع عليه غداً يتفرّع على كذب.
+ */
 export function platform(): "ios" | "android" | "web" {
-  return "web";
+  const name = Capacitor.getPlatform();
+  return name === "android" || name === "ios" ? name : "web";
 }
