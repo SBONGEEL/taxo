@@ -1615,6 +1615,23 @@ bundle hash against the one just built, not by trusting that a build happened.
 - a **secret or account only he can supply**;
 - something that **needs his finger on a phone**.
 
+**And a notice is not an order** (the owner's rule, 2026-08-21). What he tells you — a fact,
+a constraint, a piece of context — is **information he is planning with**, not an instruction to
+act on. The judgement on it is **his**. So when something you learned (or reported) implies an
+action that **disables a feature, hides a surface, or narrows what a user can do**, *ask before
+doing it* — even when the action looks obviously protective, and even when you are the one who
+found the problem.
+
+**It happened measured**: the packages on the public page point at a developer tunnel and carry a
+debug signature. That is a true finding and it was right to report it. Turning it into "so the
+download buttons come down" was **a decision presented as a consequence** — and the owner's actual
+call was the opposite: keep the buttons, **say the cost in one sentence, and let whoever downloads
+decide knowing it**.
+
+**Read the asymmetry**: withholding a working feature to avoid a risk the owner has not weighed is
+not the safe side of the choice — it is *making* the choice while appearing not to. Reporting costs
+one paragraph; disabling costs the feature, and it is invisible to whoever expected it to be there.
+
 **Never stop:**
 - to present a table — put it in the report and carry on;
 - to get permission to fix a defect you found;
