@@ -4,8 +4,13 @@
  * يستدعيها أحد تُصدّق نفسها ثم تُكتشف خاطئةً حين تُستعمل أول مرة.
  */
 
-import { API_URL, api, tokens } from "@/api/client";
+import { API_URL, api, tokens, upload } from "@/api/client";
+import type { UploadOptions } from "@/api/client";
 import type {
+  AdminSkin,
+  BundledSkinAsset,
+  SkinArtworkPreview,
+  SkinStats,
   MapSetting,
   PhotoReport,
   AdminAccount,
@@ -996,3 +1001,64 @@ export const updateMapSettings = (
   country: CountryCode,
   payload: { nearby_radius_km?: number; nearby_max_count?: number },
 ) => api.patch<MapSetting>(`/admin/settings/map/${country}`, payload);
+
+
+// ───────────────────────────────── مركباتُ الكراج والمتجر (2026-08-22)
+
+export const listVehicleSkins = () =>
+  api.get<AdminSkin[]>("/admin/vehicle-skins");
+
+/** الرسوماتُ المشحونةُ مع الخلفية — **منتقٍ بدل رفعٍ يدويّ**. */
+export const listSkinAssets = () =>
+  api.get<BundledSkinAsset[]>("/admin/vehicle-skins/assets");
+
+/** **مجموعٌ في الخلفية** (§14): جمعُ صفحةٍ مقصوصةٍ في المتصفح يُخرج رقماً
+ *  عنوانُه «الإيرادُ الكلي» وقيمتُه «إيرادُ ما ظهر». */
+export const getSkinStats = () =>
+  api.get<SkinStats>("/admin/vehicle-skins/stats");
+
+export const createVehicleSkin = (payload: Record<string, unknown>) =>
+  api.post<AdminSkin>("/admin/vehicle-skins", payload);
+
+export const updateVehicleSkin = (
+  skinId: string,
+  payload: Record<string, unknown>,
+) => api.patch<AdminSkin>(`/admin/vehicle-skins/${skinId}`, payload);
+
+/** **تجربةٌ جافّةٌ بنفس السلسلة** — تُعالَج الرسمةُ ولا يُكتب صفٌّ ولا ملفّ.
+ *
+ * ولا تحتاج مُعرَّفَ مركبة، فتُعاين **قبل** أن تُنشأ.
+ */
+export const previewSkinArtwork = (file: File, options?: UploadOptions) =>
+  upload<SkinArtworkPreview>(
+    "/admin/vehicle-skins/artwork/preview",
+    file,
+    options,
+  );
+
+/** `PUT` لأن العمليةَ **إحلال**: للمركبة رسمةٌ واحدة لا رسمتان. */
+export const uploadSkinArtwork = (
+  skinId: string,
+  file: File,
+  options?: UploadOptions,
+) => upload<AdminSkin>(`/admin/vehicle-skins/${skinId}/artwork`, file, options);
+
+export const attachSkinAsset = (skinId: string, assetKey: string) =>
+  api.put<AdminSkin>(`/admin/vehicle-skins/${skinId}/asset/${assetKey}`);
+
+/** رسمةُ المركبة — **بمفتاح الجلسة ثم `blob:`**، كصورةِ الوثيقة بالضبط.
+ *
+ * و`<img src>` لا يحمل ترويسةَ `Authorization`، والبابُ إداريٌّ يتحقّق من
+ * الدور. **ومن يفتحها يغلقها** (`URL.revokeObjectURL`).
+ */
+export async function skinArtworkBlob(
+  skinId: string,
+  slot: "store" | "map",
+): Promise<string> {
+  const answer = await fetch(
+    `${API_URL}/admin/vehicle-skins/${skinId}/artwork/${slot}`,
+    { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } },
+  );
+  if (!answer.ok) throw new Error("تعذّر فتح رسمة المركبة");
+  return URL.createObjectURL(await answer.blob());
+}

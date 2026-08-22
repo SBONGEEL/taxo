@@ -1,0 +1,116 @@
+[
+  {
+    "key": "sedan-ash",
+    "name": "الرماديُّ الأمين",
+    "rarity": "common",
+    "shell": "sedan",
+    "body": "#8b949e",
+    "note": "مركبةُ الهدية والبديلِ المنشور — أوّلُ ما يراه كبتنٌ لم يشترِ شيئاً"
+  },
+  {
+    "key": "sedan-pearl",
+    "name": "لؤلؤةُ الصباح",
+    "rarity": "common",
+    "shell": "sedan",
+    "body": "#e8e6df"
+  },
+  {
+    "key": "sedan-graphite",
+    "name": "فحمُ الليل",
+    "rarity": "common",
+    "shell": "sedan",
+    "body": "#3a4149"
+  },
+  {
+    "key": "hatch-olive",
+    "name": "زيتونةُ الشمال",
+    "rarity": "common",
+    "shell": "hatch",
+    "body": "#6b7a4a"
+  },
+  {
+    "key": "hatch-cobalt",
+    "name": "زُرقةُ العقبة",
+    "rarity": "common",
+    "shell": "hatch",
+    "body": "#2f5f9e"
+  },
+  {
+    "key": "sedan-sand",
+    "name": "رملُ البادية",
+    "rarity": "common",
+    "shell": "sedan",
+    "body": "#c8a97a"
+  },
+  {
+    "key": "suv-clay",
+    "name": "طينُ البتراء",
+    "rarity": "common",
+    "shell": "suv",
+    "body": "#a8603f"
+  },
+  {
+    "key": "van-linen",
+    "name": "كتّانُ المدينة",
+    "rarity": "common",
+    "shell": "van",
+    "body": "#dcdad2"
+  },
+  {
+    "key": "coupe-gold",
+    "name": "النسرُ الذهبي",
+    "rarity": "premium",
+    "shell": "coupe",
+    "body": "#c9971f"
+  },
+  {
+    "key": "suv-crown",
+    "name": "تاجُ الصحراء",
+    "rarity": "premium",
+    "shell": "suv",
+    "body": "#8f6b2a"
+  },
+  {
+    "key": "coupe-crimson",
+    "name": "جمرةُ الغروب",
+    "rarity": "premium",
+    "shell": "coupe",
+    "body": "#a32b28"
+  },
+  {
+    "key": "suv-emerald",
+    "name": "زمرّدةُ الوادي",
+    "rarity": "premium",
+    "shell": "suv",
+    "body": "#1d6b52"
+  },
+  {
+    "key": "sedan-midnight",
+    "name": "سُهيلُ الليل",
+    "rarity": "premium",
+    "shell": "sedan",
+    "body": "#1e2a44"
+  },
+  {
+    "key": "pickup-copper",
+    "name": "نُحاسُ الجنوب",
+    "rarity": "premium",
+    "shell": "pickup",
+    "body": "#9b5a2b"
+  },
+  {
+    "key": "coupe-silver",
+    "name": "فضّةُ العاصمة",
+    "rarity": "premium",
+    "shell": "coupe",
+    "body": "#aeb7c0"
+  },
+  {
+    "key": "suv-rose",
+    "name": "وردةُ الشام",
+    "rarity": "premium",
+    "shell": "suv",
+    "body": "#b2517c",
+    "feminine": "1"
+  }
+]

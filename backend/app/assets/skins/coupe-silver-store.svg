@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 210" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+<title>فضّةُ العاصمة</title>
+<defs>
+<linearGradient id="body-coupe-silver" x1="0.18" y1="0" x2="0.62" y2="1">
+<stop offset="0" stop-color="#cacfd5"/>
+<stop offset="0.34" stop-color="#b9c1c9"/>
+<stop offset="0.62" stop-color="#7a8086"/>
+<stop offset="1" stop-color="#54585c"/>
+</linearGradient>
+<linearGradient id="glass-coupe-silver" x1="0.1" y1="0" x2="0.7" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="0.45" stop-color="#1b222b"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+<linearGradient id="tire-coupe-silver" x1="0.2" y1="0" x2="0.8" y2="1">
+<stop offset="0" stop-color="#3a4048"/>
+<stop offset="0.5" stop-color="#1b1f25"/>
+<stop offset="1" stop-color="#0a0c0f"/>
+</linearGradient>
+<linearGradient id="rim-coupe-silver" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#f7f8fa"/>
+<stop offset="0.45" stop-color="#eef1f5"/>
+<stop offset="1" stop-color="#6b6c6e"/>
+</linearGradient>
+<radialGradient id="shade-coupe-silver" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#000000" stop-opacity="0.55"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0.20"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="gloss-coupe-silver" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+<stop offset="0.28" stop-color="#ffffff" stop-opacity="0.52"/>
+<stop offset="0.72" stop-color="#ffffff" stop-opacity="0.30"/>
+<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="floor-coupe-silver" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.42"/>
+</linearGradient>
+<clipPath id="clip-coupe-silver"><path d="M 16 141 C 16 127 24 118 42 114 L 108 101 L 152 66 C 176 55 232 55 262 70 L 314 103 L 374 108 C 387 110 391 118 391 134 L 391 150 L 344 150 A 44 44 0 0 0 256 150 L 148 150 A 44 44 0 0 0 60 150 L 16 150 Z"/></clipPath>
+<clipPath id="glassclip-coupe-silver"><path d="M 122 99 L 160 71 C 180 62 226 62 250 74 L 294 99 Z"/></clipPath>
+</defs>
+
+<ellipse cx="204" cy="188" rx="182" ry="15" fill="url(#shade-coupe-silver)"/>
+
+<g><circle cx="104" cy="146" r="38" fill="url(#tire-coupe-silver)"/><circle cx="104" cy="146" r="31.2" fill="#0a0d11" opacity=".55"/><circle cx="104" cy="146" r="25.1" fill="url(#rim-coupe-silver)"/><circle cx="104" cy="146" r="22.0" fill="#11161c" opacity=".45"/><g stroke="url(#rim-coupe-silver)" stroke-width="4.9" stroke-linecap="round"><line x1="104" y1="146" x2="104.0" y2="127.0"/><line x1="104" y1="146" x2="122.1" y2="140.1"/><line x1="104" y1="146" x2="115.2" y2="161.4"/><line x1="104" y1="146" x2="92.8" y2="161.4"/><line x1="104" y1="146" x2="85.9" y2="140.1"/></g><circle cx="104" cy="146" r="6.5" fill="url(#rim-coupe-silver)"/><circle cx="104" cy="146" r="2.7" fill="#0b0e11"/></g>
+<g><circle cx="300" cy="146" r="38" fill="url(#tire-coupe-silver)"/><circle cx="300" cy="146" r="31.2" fill="#0a0d11" opacity=".55"/><circle cx="300" cy="146" r="25.1" fill="url(#rim-coupe-silver)"/><circle cx="300" cy="146" r="22.0" fill="#11161c" opacity=".45"/><g stroke="url(#rim-coupe-silver)" stroke-width="4.9" stroke-linecap="round"><line x1="300" y1="146" x2="300.0" y2="127.0"/><line x1="300" y1="146" x2="318.1" y2="140.1"/><line x1="300" y1="146" x2="311.2" y2="161.4"/><line x1="300" y1="146" x2="288.8" y2="161.4"/><line x1="300" y1="146" x2="281.9" y2="140.1"/></g><circle cx="300" cy="146" r="6.5" fill="url(#rim-coupe-silver)"/><circle cx="300" cy="146" r="2.7" fill="#0b0e11"/></g>
+
+<path d="M 16 141 C 16 127 24 118 42 114 L 108 101 L 152 66 C 176 55 232 55 262 70 L 314 103 L 374 108 C 387 110 391 118 391 134 L 391 150 L 344 150 A 44 44 0 0 0 256 150 L 148 150 A 44 44 0 0 0 60 150 L 16 150 Z" fill="url(#body-coupe-silver)"/>
+
+<!-- **كلُّ ما يُرسم على الهيكل يُقصّ به** — وبغير هذا القصِّ يطفو المصباحُ
+     خارجَ حرف الهيكل، ويقف عمودُ السقف فوقه عصاً معلَّقة. وقد وقع الاثنان
+     مقيسَين في أوّل تصيير، ولم يظهرا في المصدر بحال. -->
+<g clip-path="url(#clip-coupe-silver)">
+<path d="M 0 116 L 400 110 L 400 156 L 0 156 Z" fill="url(#floor-coupe-silver)"/>
+<ellipse cx="150" cy="84" rx="180" ry="30" fill="#ffffff" opacity="0.10"/>
+<path d="M 30 117 L 110 101 L 316 105 L 382 110" fill="none" stroke="url(#gloss-coupe-silver)" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M 18 119 L 42 114 L 43 126 L 19 130 Z" fill="#f4f7fb" opacity="0.95"/>
+<path d="M 389 121 L 368 119 L 367 131 L 388 133 Z" fill="#e5534b" opacity="0.95"/>
+<rect x="222" y="108" width="20" height="5" rx="2.5" fill="#54585c"/>
+<rect x="146" y="108" width="20" height="5" rx="2.5" fill="#54585c"/>
+</g>
+
+<path d="M 122 99 L 160 71 C 180 62 226 62 250 74 L 294 99 Z" fill="url(#glass-coupe-silver)"/>
+<g clip-path="url(#glassclip-coupe-silver)">
+<rect x="196" y="30" width="7" height="90" fill="#7a8086"/>
+<path d="M 96 40 L 150 40 L 250 130 L 196 130 Z" fill="#ffffff" opacity="0.09"/>
+</g>
+<path d="M 122 99 L 160 71 C 180 62 226 62 250 74 L 294 99 Z" fill="none" stroke="#3b3e41" stroke-width="2.4" stroke-linejoin="round" opacity="0.75"/>
+<path d="M 16 141 C 16 127 24 118 42 114 L 108 101 L 152 66 C 176 55 232 55 262 70 L 314 103 L 374 108 C 387 110 391 118 391 134 L 391 150 L 344 150 A 44 44 0 0 0 256 150 L 148 150 A 44 44 0 0 0 60 150 L 16 150 Z" fill="none" stroke="#3b3e41" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

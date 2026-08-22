@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 210" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+<title>رملُ البادية</title>
+<defs>
+<linearGradient id="body-sedan-sand" x1="0.18" y1="0" x2="0.62" y2="1">
+<stop offset="0" stop-color="#dbc6a7"/>
+<stop offset="0.34" stop-color="#d0b58d"/>
+<stop offset="0.62" stop-color="#8c7655"/>
+<stop offset="1" stop-color="#60513b"/>
+</linearGradient>
+<linearGradient id="glass-sedan-sand" x1="0.1" y1="0" x2="0.7" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="0.45" stop-color="#1b222b"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+<linearGradient id="tire-sedan-sand" x1="0.2" y1="0" x2="0.8" y2="1">
+<stop offset="0" stop-color="#3a4048"/>
+<stop offset="0.5" stop-color="#1b1f25"/>
+<stop offset="1" stop-color="#0a0c0f"/>
+</linearGradient>
+<linearGradient id="rim-sedan-sand" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#dadee2"/>
+<stop offset="0.45" stop-color="#b5bcc4"/>
+<stop offset="1" stop-color="#515558"/>
+</linearGradient>
+<radialGradient id="shade-sedan-sand" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#000000" stop-opacity="0.55"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0.20"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="gloss-sedan-sand" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+<stop offset="0.28" stop-color="#ffffff" stop-opacity="0.52"/>
+<stop offset="0.72" stop-color="#ffffff" stop-opacity="0.30"/>
+<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="floor-sedan-sand" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.42"/>
+</linearGradient>
+<clipPath id="clip-sedan-sand"><path d="M 16 140 C 16 126 24 117 42 113 L 114 99 L 160 60 L 248 60 L 298 100 L 372 106 C 386 108 391 117 391 133 L 391 150 L 344 150 A 44 44 0 0 0 256 150 L 148 150 A 44 44 0 0 0 60 150 L 16 150 Z"/></clipPath>
+<clipPath id="glassclip-sedan-sand"><path d="M 126 97 L 166 67 L 242 67 L 286 97 Z"/></clipPath>
+</defs>
+
+<ellipse cx="204" cy="188" rx="182" ry="15" fill="url(#shade-sedan-sand)"/>
+
+<g><circle cx="104" cy="146" r="38" fill="url(#tire-sedan-sand)"/><circle cx="104" cy="146" r="31.2" fill="#0a0d11" opacity=".55"/><circle cx="104" cy="146" r="25.1" fill="url(#rim-sedan-sand)"/><circle cx="104" cy="146" r="22.0" fill="#11161c" opacity=".45"/><g stroke="url(#rim-sedan-sand)" stroke-width="4.9" stroke-linecap="round"><line x1="104" y1="146" x2="104.0" y2="127.0"/><line x1="104" y1="146" x2="122.1" y2="140.1"/><line x1="104" y1="146" x2="115.2" y2="161.4"/><line x1="104" y1="146" x2="92.8" y2="161.4"/><line x1="104" y1="146" x2="85.9" y2="140.1"/></g><circle cx="104" cy="146" r="6.5" fill="url(#rim-sedan-sand)"/><circle cx="104" cy="146" r="2.7" fill="#0b0e11"/></g>
+<g><circle cx="300" cy="146" r="38" fill="url(#tire-sedan-sand)"/><circle cx="300" cy="146" r="31.2" fill="#0a0d11" opacity=".55"/><circle cx="300" cy="146" r="25.1" fill="url(#rim-sedan-sand)"/><circle cx="300" cy="146" r="22.0" fill="#11161c" opacity=".45"/><g stroke="url(#rim-sedan-sand)" stroke-width="4.9" stroke-linecap="round"><line x1="300" y1="146" x2="300.0" y2="127.0"/><line x1="300" y1="146" x2="318.1" y2="140.1"/><line x1="300" y1="146" x2="311.2" y2="161.4"/><line x1="300" y1="146" x2="288.8" y2="161.4"/><line x1="300" y1="146" x2="281.9" y2="140.1"/></g><circle cx="300" cy="146" r="6.5" fill="url(#rim-sedan-sand)"/><circle cx="300" cy="146" r="2.7" fill="#0b0e11"/></g>
+
+<path d="M 16 140 C 16 126 24 117 42 113 L 114 99 L 160 60 L 248 60 L 298 100 L 372 106 C 386 108 391 117 391 133 L 391 150 L 344 150 A 44 44 0 0 0 256 150 L 148 150 A 44 44 0 0 0 60 150 L 16 150 Z" fill="url(#body-sedan-sand)"/>
+
+<!-- **كلُّ ما يُرسم على الهيكل يُقصّ به** — وبغير هذا القصِّ يطفو المصباحُ
+     خارجَ حرف الهيكل، ويقف عمودُ السقف فوقه عصاً معلَّقة. وقد وقع الاثنان
+     مقيسَين في أوّل تصيير، ولم يظهرا في المصدر بحال. -->
+<g clip-path="url(#clip-sedan-sand)">
+<path d="M 0 116 L 400 110 L 400 156 L 0 156 Z" fill="url(#floor-sedan-sand)"/>
+<ellipse cx="150" cy="84" rx="180" ry="30" fill="#ffffff" opacity="0.10"/>
+<path d="M 30 116 L 116 100 L 300 102 L 380 108" fill="none" stroke="url(#gloss-sedan-sand)" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M 18 118 L 40 114 L 41 126 L 19 129 Z" fill="#f4f7fb" opacity="0.95"/>
+<path d="M 389 120 L 370 118 L 369 130 L 388 132 Z" fill="#e5534b" opacity="0.95"/>
+<rect x="228" y="108" width="20" height="5" rx="2.5" fill="#60513b"/>
+<rect x="152" y="108" width="20" height="5" rx="2.5" fill="#60513b"/>
+</g>
+
+<path d="M 126 97 L 166 67 L 242 67 L 286 97 Z" fill="url(#glass-sedan-sand)"/>
+<g clip-path="url(#glassclip-sedan-sand)">
+<rect x="202" y="30" width="7" height="90" fill="#8c7655"/>
+<path d="M 96 40 L 150 40 L 250 130 L 196 130 Z" fill="#ffffff" opacity="0.09"/>
+</g>
+<path d="M 126 97 L 166 67 L 242 67 L 286 97 Z" fill="none" stroke="#443929" stroke-width="2.4" stroke-linejoin="round" opacity="0.75"/>
+<path d="M 16 140 C 16 126 24 117 42 113 L 114 99 L 160 60 L 248 60 L 298 100 L 372 106 C 386 108 391 117 391 133 L 391 150 L 344 150 A 44 44 0 0 0 256 150 L 148 150 A 44 44 0 0 0 60 150 L 16 150 Z" fill="none" stroke="#443929" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

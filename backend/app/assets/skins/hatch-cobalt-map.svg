@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128" preserveAspectRatio="xMidYMid meet">
+<title>زُرقةُ العقبة</title>
+<defs>
+<linearGradient id="m-body-hatch-cobalt" x1="0" y1="0.1" x2="1" y2="0.9">
+<stop offset="0" stop-color="#7695bf"/>
+<stop offset="0.45" stop-color="#2f5f9e"/>
+<stop offset="1" stop-color="#21436f"/>
+</linearGradient>
+<linearGradient id="m-glass-hatch-cobalt" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+</defs>
+<path d="M 40.5 8 Q 50 4 59.5 8 L 69.5 26 L 69.5 74 L 64.5 92 Q 50 96 35.5 92 L 30.5 74 L 30.5 26 Z" fill="#000000" opacity="0.22" transform="translate(2.5,3)"/>
+<!-- **هالةٌ ثم حرفٌ داكن** — لا حرفٌ واحد: علامةٌ داكنةُ الهيكل بحرفٍ داكن
+     **تختفي على خريطةٍ داكنة**، وفاتحةٌ بحرفٍ فاتحٍ تختفي على فاتحة. والهالةُ
+     الفاتحةُ تحت الحرفِ الداكن تُقرأ على السمتين معاً — وهي ما تفعله تسمياتُ
+     الخرائط نفسُها. **ولا تتبع سمةَ التطبيق**: الخريطةُ ليست CSS. -->
+<path d="M 40.5 8 Q 50 4 59.5 8 L 69.5 26 L 69.5 74 L 64.5 92 Q 50 96 35.5 92 L 30.5 74 L 30.5 26 Z" fill="none" stroke="#f2f0eb" stroke-width="7" stroke-linejoin="round" opacity="0.62"/>
+<path d="M 40.5 8 Q 50 4 59.5 8 L 69.5 26 L 69.5 74 L 64.5 92 Q 50 96 35.5 92 L 30.5 74 L 30.5 26 Z" fill="url(#m-body-hatch-cobalt)" stroke="#0b0e11" stroke-width="2.6" stroke-linejoin="round"/>
+
+<path d="M 36.5 30 L 63.5 30 L 60.5 41 L 39.5 41 Z" fill="url(#m-glass-hatch-cobalt)"/>
+<rect x="36.5" y="43" width="27" height="18" rx="3" fill="#446fa8"/>
+<path d="M 39.5 62 L 60.5 62 L 63.5 70 L 36.5 70 Z" fill="url(#m-glass-hatch-cobalt)"/>
+<rect x="26" y="31" width="5" height="8" rx="2.5" fill="#1c395f"/>
+<rect x="69" y="31" width="5" height="8" rx="2.5" fill="#1c395f"/>
+<rect x="34.5" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="57.5" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="34.5" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+<rect x="57.5" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+</svg>

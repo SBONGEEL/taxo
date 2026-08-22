@@ -57,6 +57,9 @@ const GROUPS: {
       { label: "الاشتراكات والباقات", to: "/subscriptions" },
       { label: "عروض الاشتراكات", to: "/offers", adminOnly: true },
       { label: "التسعيرة", to: "/pricing" },
+      // **تحت «المالية» لا «النظام»**: المركبةُ منتَجٌ له سعرٌ وكميّةٌ وإيراد،
+      // ومن يبحث عن «كم بعنا منها» يبحث حيث تُقرأ الأرقام
+      { label: "مركبات المتجر", to: "/vehicle-skins", adminOnly: true },
     ],
   },
   {
