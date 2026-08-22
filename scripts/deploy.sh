@@ -63,15 +63,54 @@ MIGRATIONS="$(printf '%s
 ' "$CHANGED" | grep -c 'alembic/versions/' || true)"
 say "  ترحيلة  : ${MIGRATIONS:-0}"
 
-# **جدولُ مالٍ يوقف هنا** — ويُقاس في الترحيلات وفي النماذج معاً
-MONEY_HITS="$(printf '%s
-' "$CHANGED" | grep -E 'alembic/versions/|models/'   | xargs -r git diff "$REMOTE_SHA..$HEAD_SHA" -- 2>/dev/null   | grep -oE "$MONEY_TABLES" | sort -u | tr '
+# **جدولُ مالٍ يوقف هنا — ويُقاس ما سيقع لا ما في المدى** (صُحّح 2026-08-22).
+#
+# **كانت تقيس مدى الإيداعات**: أيُّ إيداعٍ بين الخادم وHEAD مسَّ ملفَّ ترحيلةٍ
+# أو نموذجاً فيه اسمُ جدولِ مال. **وقِيس أنها تصيح حيث لا خطر**: شجرةُ الخادم
+# متأخّرةٌ ٧٣ التزاماً، والترحيلتان المُبلَّغُ عنهما **مطبَّقتان على الإنتاج
+# سلفاً** (`alembic_version = 0052`)، **والأمرُ لا يرسل ملفَّ خلفيةٍ واحداً**.
+#
+# **وبوّابةٌ تصيح حيث لا خطر تعلّم مشغّلَها التجاوز** — فتُفرَّغ المطلقةُ من
+# داخلها. **وذلك أخطرُ من بوّابةٍ غائبة**: الغائبةُ تتركك حيث كنت، وهذه
+# **تُفقد الثقةَ بصياحها حين يكون في محلّه**.
+#
+# **فالقياسُ صار سؤالين لا واحد:**
+#   ١) أثمّة ترحيلةٌ **معلَّقة**؟ — رأسُ القاعدة على الخادم مقابل الشجرة.
+#   ٢) وهل ما يُرسَل **في هذه الدفعة** يمسّ نموذجاً أو ترحيلة؟
+# **وسكوتُ الاثنين معاً هو الجواب**، وإلّا وقف.
+PENDING="$("$SSH" "${SSH_OPTS[@]}" "$HOST"   "cd $REMOTE && docker compose exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d ' ' || true)"
+TREE_HEAD="$(ls backend/alembic/versions/ | sort | tail -1 | cut -d_ -f1)"
+if [ -z "$PENDING" ]; then
+  say "  ترحيلة  : **رأسُ القاعدة غيرُ مقروء** — يُعامَل كأن ثمّة معلَّقاً"
+  MIGRATION_PENDING=1
+elif [ "$PENDING" = "$TREE_HEAD" ]; then
+  say "  ترحيلة  : لا معلَّقَ — القاعدةُ عند $PENDING والشجرةُ عند $TREE_HEAD"
+  MIGRATION_PENDING=0
+else
+  say "  ترحيلة  : **معلَّقة** — القاعدةُ عند $PENDING والشجرةُ عند $TREE_HEAD"
+  MIGRATION_PENDING=1
+fi
+
+# **ما يُرسَل في هذه الدفعة** — الوسائطُ نفسُها لا مدى الإيداعات
+SENT="$(printf '%s
+' "$@" | tr -d ' ')"
+SENT_HITS="$(git diff "${REMOTE_SHA:-HEAD~1}..$HEAD_SHA" --name-only -- $SENT 2>/dev/null   | grep -E 'alembic/versions/|models/' || true)"
+
+MONEY_HITS=""
+if [ "$MIGRATION_PENDING" -eq 1 ] || [ -n "$SENT_HITS" ]; then
+  MONEY_HITS="$(printf '%s
+' "$CHANGED" | grep -E 'alembic/versions/|models/'     | xargs -r git diff "$REMOTE_SHA..$HEAD_SHA" -- 2>/dev/null     | grep -oE "$MONEY_TABLES" | sort -u | tr '
 ' ' ' || true)"
-if [ -n "${MONEY_HITS// /}" ]; then
+fi
+if [ -n "${MONEY_HITS// /}" ] && [ "${TAXO_MONEY_OK:-0}" != "1" ]; then
   say "  مالٌ    : **يمسّ** — $MONEY_HITS"
   die "رفعٌ يمسّ جدولَ مالٍ يقف لإذن المالك (المطلقةُ الثانية). اعرضه ثم أعد التشغيل بـTAXO_MONEY_OK=1."
 fi
-say "  مالٌ    : لا يمسّ جدولَ مالٍ"
+if [ -n "${MONEY_HITS// /}" ]; then
+  say "  مالٌ    : **يمسّ** — $MONEY_HITS · **مأذونٌ صراحةً** (TAXO_MONEY_OK=1)"
+else
+  say "  مالٌ    : لا ترحيلةَ معلَّقةٌ ولا ملفَّ مالٍ في ما يُرسَل"
+fi
 
 # **طريقُ الرجوع يُعلَن أو لا يبدأ الرفع**
 say "  الرجوع  : git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} ثم إعادةُ الحاويات"
