@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from dataclasses import dataclass
 
@@ -56,6 +57,13 @@ class LiveDriver:
     plate_number: str | None
     on_ride: bool
     ride_id: uuid.UUID | None
+    # **ثلاثُ حالاتٍ لا اثنتان** (قرارُ المالك 2026-08-22): «متاحٌ» و«في رحلة»
+    # كانتا كلَّ ما تقوله اللوحة، **و«يوشك أن يختفي» ليست إحداهما**. مفتاحُ
+    # الحضور عمرُه ستون ثانية، فكبتنٌ آخرُ بثٍّ له قبل خمسٍ وخمسين **يظهر
+    # كالحاضر تماماً ثم يختفي بلا أن يتحرك شيء** — فيُقرأ اختفاؤه عطباً في
+    # اللوحة، أو تُتّخذ عليه قرارٌ وهو غير موجود
+    state: str
+    seconds_since_update: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +75,23 @@ class PendingRide:
     lng: float
     status: RideStatus
     created_at: object
+
+
+# **حدُّ «الشحوب» مشتقٌّ من عمر المفتاح لا مختارٌ بالذوق**: ثلثا العمر. فما
+# جاوزه بقيت له ثلثٌ من حياته، **وهو الوقتُ الذي يصلح للتنبيه** — وأيُّ رقمٍ
+# ثابتٍ هنا يفترق عن `PRESENCE_TTL_SECONDS` يومَ يتغيّر، فيصير الشحوبُ إمّا
+# دائماً وإمّا مستحيلاً
+STALE_AFTER_SECONDS = (geo.PRESENCE_TTL_SECONDS * 2) // 3
+
+
+def _state_of(*, on_ride: bool, age: int | None) -> str:
+    """**«في رحلة» يسبق «شاحب»**: الأولى واقعةٌ في القاعدة، والثاني ظنٌّ من
+    صمتٍ قصير — وكبتنٌ في رحلةٍ صمت دقيقةً في نفقٍ لا يُقرأ «مفقوداً»."""
+    if on_ride:
+        return "on_ride"
+    if age is None or age >= STALE_AFTER_SECONDS:
+        return "stale"
+    return "available"
 
 
 async def drivers_now(
@@ -101,6 +126,7 @@ async def drivers_now(
             float(position[0]),
             data.get("heading") or None,
             data.get("vehicle_category"),
+            int(data["at"]) if (data.get("at") or "").isdigit() else None,
         )
 
     if not live:
@@ -117,7 +143,8 @@ async def drivers_now(
 
     result: list[LiveDriver] = []
     for driver in rows:
-        lat, lng, heading, category = live[driver.id]
+        lat, lng, heading, category, at = live[driver.id]
+        age = None if at is None else max(0, int(time.time()) - at)
         vehicle = driver.vehicles[0] if driver.vehicles else None
         result.append(
             LiveDriver(
@@ -135,6 +162,10 @@ async def drivers_now(
                 plate_number=vehicle.plate_number if vehicle else None,
                 on_ride=driver.current_ride_id is not None,
                 ride_id=driver.current_ride_id,
+                state=_state_of(
+                    on_ride=driver.current_ride_id is not None, age=age
+                ),
+                seconds_since_update=age,
             )
         )
     return result

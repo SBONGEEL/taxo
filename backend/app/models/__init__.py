@@ -5,6 +5,12 @@ from app.models.booking import RideBooking
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting, RideCancellationCharge
+from app.models.map_setting import MapSetting
+from app.models.vehicle_skin import (
+    DriverVehicleSkin,
+    VehicleSkin,
+    VehicleSkinPrice,
+)
 from app.models.otp_setting import OtpSetting
 from app.models.base import Base
 from app.models.commission import CommissionSetting
@@ -99,6 +105,10 @@ __all__ = [
     "AuditAction",
     "CancellationChargeStatus",
     "CancellationSetting",
+    "MapSetting",
+    "VehicleSkin",
+    "VehicleSkinPrice",
+    "DriverVehicleSkin",
     "OtpSetting",
     "RideCancellationCharge",
     "UnpaidCancellationOutcome",

@@ -6,6 +6,8 @@ from app.routers import (
     admin_countries,
     admin_cancellations,
     admin_photo_reports,
+    admin_vehicle_skins,
+    vehicle_skins,
     admin_live_map,
     admin_payments,
     admin_offers,
@@ -78,6 +80,9 @@ api_router.include_router(admin_otp_templates.router)
 api_router.include_router(admin_security.router)
 api_router.include_router(admin_cancellations.router)
 api_router.include_router(admin_photo_reports.router)
+# **المركباتُ بابان**: بابُ الكبتن وبابُ اللوحة — ولا ثالثَ يكتب مِلكيّة
+api_router.include_router(vehicle_skins.router)
+api_router.include_router(admin_vehicle_skins.router)
 # **الصفحةُ التعريفيةُ العامة** — قراءةٌ محضةٌ بلا جلسة (2026-08-21)
 api_router.include_router(public_site.router)
 # مقابس التتبع تحت نفس بادئة الإصدار: /api/v1/ws/...

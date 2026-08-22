@@ -46,6 +46,7 @@ const GROUPS: {
       { label: "السائقون والوثائق", to: "/drivers" },
       { label: "الركّاب", to: "/riders" },
       { label: "النزاعات والدعم", to: "/disputes" },
+      { label: "بلاغات الصور", to: "/photo-reports", adminOnly: true },
     ],
   },
   {

@@ -57,14 +57,22 @@ function paintDriver(shell: HTMLElement, driver: LiveDriver, selected: boolean) 
     "border-2 text-11 font-bold",
     // تُقرأ على خريطةٍ داكنةٍ وفاتحة معاً: قرصٌ ممتلئ بلونٍ نقيض لا قرصٌ
     // بلون السطح — علامةٌ رماديةٌ على أسفلت رمادي ليست علامة
-    driver.on_ride
+    // **ثلاثُ حالاتٍ لا اثنتان**: «شاحبٌ» ليس «متفرّغاً» — بثُّه توقّف
+    // ومفتاحُ حضوره على وشك الانقضاء، فيختفي من الخريطة بلا أن يتحرك شيء.
+    // ومن يقرؤه متفرّغاً يبني عليه قراراً وهو غيرُ موجود
+    driver.state === "on_ride"
       ? "border-ok bg-ok text-accent-ink"
-      : "border-bg bg-ink text-bg",
+      : driver.state === "stale"
+        ? "border-warn bg-bg text-warn opacity-60"
+        : "border-bg bg-ink text-bg",
     selected ? "outline outline-2 outline-accent" : "",
   ].join(" ");
   face.textContent = driver.name.trim().charAt(0) || "؟";
   // الاسمُ كاملاً في التلميح، وفي القائمة الجانبية معه الرقم واللوحة
-  face.title = driver.name;
+  face.title =
+    driver.state === "stale" && driver.seconds_since_update !== null
+      ? `${driver.name} — آخر بثّ منذ ${driver.seconds_since_update} ثانية`
+      : driver.name;
 }
 
 function pendingElement(): HTMLElement {

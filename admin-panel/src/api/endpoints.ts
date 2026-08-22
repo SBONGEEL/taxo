@@ -6,6 +6,8 @@
 
 import { API_URL, api, tokens } from "@/api/client";
 import type {
+  MapSetting,
+  PhotoReport,
   AdminAccount,
   AdminDriverRow,
   AdminReferralRow,
@@ -972,3 +974,25 @@ export const changeAdminPassword = (payload: {
   current_password: string;
   new_password: string;
 }) => api.put<void>("/admin/account/password", payload);
+
+
+// ---------------------------------------------- بلاغاتُ صور الركاب (2026-08-22)
+
+export const listPhotoReports = () =>
+  api.get<PhotoReport[]>("/admin/photo-reports");
+
+export const resolvePhotoReport = (reportId: string, remove: boolean) =>
+  api.post<void>(`/admin/photo-reports/${reportId}/resolve`, undefined, {
+    query: { remove },
+  });
+
+
+// ---------------------------------------------- حدودُ خريطة الراكب (2026-08-22)
+
+export const listMapSettings = () =>
+  api.get<MapSetting[]>("/admin/settings/map");
+
+export const updateMapSettings = (
+  country: CountryCode,
+  payload: { nearby_radius_km?: number; nearby_max_count?: number },
+) => api.patch<MapSetting>(`/admin/settings/map/${country}`, payload);

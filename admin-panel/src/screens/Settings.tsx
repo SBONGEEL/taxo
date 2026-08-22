@@ -50,11 +50,14 @@ import {
   updateReferralSettings,
   updateSharingSettings,
   updateWalletSettings,
+  listMapSettings,
+  updateMapSettings,
 } from "@/api/endpoints";
 import type {
   AdvanceSetting,
   CancellationSetting,
   OtpExhausted,
+  MapSetting,
   OtpSetting,
   UnpaidCancellationOutcome,
   CommissionSetting,
@@ -148,6 +151,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "التعليمة التالية",
     hint: "شريطٌ فوق خريطة الكبتن يقول المسافةَ إلى المنعطف القادم ونصَّه («39 م · الاتجاه نحو اليمين»)، مقروءاً من الخطِّ المجمَّد على الرحلة لا بنداءٍ جديدٍ لكلِّ حركة. **ويختفي عند الانحراف ولا يتجمّد**: تعليمةٌ قديمةٌ تبقى معلَّقةً تقود الكبتنَ إلى منعطفٍ تجاوزه. وإشعالُه يجعل الخلفيةَ تطلب خطواتِ المسار من المزوّد وتخزّنها مع الرحلة.",
   },
+  driver_map_nearby_enabled: {
+    title: "الكباتن على خريطة الكبتن",
+    hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
+  },
   scheduled_rides_enabled: {
     title: "الرحلات المجدولة",
     hint: "يظهر «حدّد موعداً» في ورقة تأكيد الرحلة، ويبدأ البحثُ عن كبتنٍ قبل الموعد بعشر دقائق. والسعرُ يُحسب عند التنفيذ لا عند الحجز. وإطفاؤه يمنع حجوزاً جديدة ويُنفّذ القائمةَ منها: موعدٌ رتّب صاحبُه صباحَه عليه لا يُلغى بمفتاح.",
@@ -178,6 +185,7 @@ const FLAGS: FeatureKey[] = [
   "subscription_offers_enabled",
   "driver_advances_enabled",
   "next_instruction_enabled",
+  "driver_map_nearby_enabled",
   // **آخرُ اثنين**: مفتاحُ سوقٍ ومفتاحُ حارس — وكلاهما ليس ميزةً تُجرَّب
   "country_visible",
   "otp_verification_enabled",
@@ -196,6 +204,7 @@ export function SettingsScreen() {
   const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
   const [cancel, setCancel] = useState<CancellationSetting[]>([]);
   const [otp, setOtp] = useState<OtpSetting[]>([]);
+  const [mapRows, setMapRows] = useState<MapSetting[]>([]);
   const [burned, setBurned] = useState<OtpExhausted | null>(null);
   const [guard, setGuard] = useState<{ key: FeatureKey } | null>(null);
   // خطأُ النموذج: نصٌّ عامٌّ في الشريط، ووسمٌ على الحقل الذي سمّته الخلفية.
@@ -210,7 +219,7 @@ export function SettingsScreen() {
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, rr, sh, adv, cxl, otpRows, spent] = await Promise.all([
+    const [f, c, w, p, r, rr, sh, adv, cxl, otpRows, mapRows, spent] = await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
@@ -223,6 +232,7 @@ export function SettingsScreen() {
       listAdvanceSettings(),
       listCancellationSettings(),
       listOtpSettings(),
+      listMapSettings(),
       listOtpExhausted(),
     ]);
     setFlags(f);
@@ -235,6 +245,7 @@ export function SettingsScreen() {
     setAdvance(adv);
     setCancel(cxl);
     setOtp(otpRows);
+    setMapRows(mapRows);
     setBurned(spent);
   }, [country]);
 
@@ -253,6 +264,7 @@ export function SettingsScreen() {
   const advanceRow = advance.find((row) => row.country_code === country);
   const cancellationRow = cancel.find((row) => row.country_code === country);
   const otpRow = otp.find((row) => row.country_code === country);
+  const mapRow = mapRows.find((row) => row.country_code === country);
 
   async function flip(key: FeatureKey, enabled: boolean, reason?: string) {
     setError(null);
@@ -479,6 +491,36 @@ export function SettingsScreen() {
           {/* سقوفُ طلب رمز التحقق — **سياسةُ حسابٍ لا خاصيةُ قناة**:
               تُقاس على الرقم فتسري على واتساب والرسائل معاً، ومن استنفد
               محاولاته لا يلتفّ عليها بتبديل القناة */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">خريطة الراكب</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              <b className="text-ink">حدُّ العرض لا حدُّ التوزيع</b>: هذان
+              الرقمان يحكمان كم سيارةً يرى الراكبُ وإلى أيِّ بُعد،{" "}
+              <b className="text-ink">ولا يمسّان من يصله الطلب</b> — مدى البحث
+              في التوزيع قاعدةُ مواصفةٍ في الكود لا حقلٌ هنا. سوقٌ كثيفٌ
+              يضيّق (خمسون سيارةً على شاشةِ هاتفٍ زحمةٌ لا معلومة)، ومتفرّقٌ
+              يوسّع وإلا بدت الخريطةُ خاليةً وفيها كباتن.{" "}
+              <b className="text-ink">والصفرُ مرفوض</b>: يُطفأ العرضُ بمفتاحه
+              لا بتصفير رقمِه.
+            </p>
+            {mapRow ? (
+              <MapForm
+                key={mapRow.country_code}
+                row={mapRow}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">
+                لا حدودَ محفوظةٌ لهذه الدولة — تُكتب بأول حفظ.
+              </p>
+            )}
+          </section>
+
           <section className="rounded-16 border border-line bg-surface p-18">
             <h2 className="mb-4 text-14 font-bold text-ink">سقوف رمز التحقق</h2>
             <p className="mb-12 text-11 leading-snug text-muted">
@@ -1513,6 +1555,67 @@ function CancellationForm({
  * وتضييقُها يسري على الطلب التالي — كحدِّ إيقاف رسوم الإلغاء. **ولا يمسّ
  * التعديلُ حجزاً قائماً**: من قيل له «بعد ساعة» لا تُقصَّر تحته ولا تُطال.
  */
+/** حدّا خريطة الراكب — **رقمان لا أكثر**، وكلاهما فوق الصفر بقيدٍ في القاعدة. */
+function MapForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: MapSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [radius, setRadius] = useState(String(Number(row.nearby_radius_km)));
+  const [count, setCount] = useState(String(row.nearby_max_count));
+  const [busy, setBusy] = useState(false);
+  const numeric = (value: string) => value.replace(/[^0-9.]/g, "");
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          name="nearby_radius_km"
+          label="مدى العرض (كم)"
+          dir="ltr"
+          inputMode="decimal"
+          value={radius}
+          disabled={disabled}
+          onChange={(event) => setRadius(numeric(event.target.value))}
+        />
+        <Field
+          name="nearby_max_count"
+          label="أقصى عدد سيارات"
+          dir="ltr"
+          inputMode="numeric"
+          value={count}
+          disabled={disabled}
+          onChange={(event) => setCount(numeric(event.target.value))}
+        />
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || radius === "" || count === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateMapSettings(row.country_code, {
+            nearby_radius_km: Number(radius),
+            nearby_max_count: Number(count),
+          })
+            .then(() => onSaved("حُفظت حدودُ الخريطة — تظهر في أول تحديث"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
 function OtpForm({
   row,
   disabled,

@@ -14,6 +14,7 @@ from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting
 from app.models.commission import CommissionSetting
+from app.models.map_setting import MapSetting
 from app.models.otp_setting import OtpSetting
 from app.models.enums import AuditAction, CountryCode
 from app.models.pricing import PricingRule
@@ -29,6 +30,8 @@ from app.schemas.cancellation import (
 from app.schemas.settings import (
     CommissionSettingOut,
     OtpExhaustedOut,
+    MapSettingOut,
+    MapSettingUpdate,
     OtpSettingOut,
     OtpSettingUpdate,
     CommissionSettingUpdate,
@@ -548,6 +551,51 @@ async def update_payment_settings(
 
 
 # ----------------------------------------------- سقوف طلب رمز التحقق
+
+
+@router.get("/map", response_model=list[MapSettingOut])
+async def list_map_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[MapSettingOut]:
+    """حدودُ خريطةِ الراكب لكلِّ سوق — **لا حدودُ التوزيع**."""
+    rows = (
+        await session.scalars(select(MapSetting).order_by(MapSetting.country_code))
+    ).all()
+    return [MapSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/map/{country_code}", response_model=MapSettingOut)
+async def update_map_settings(
+    country_code: CountryCode,
+    payload: MapSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> MapSettingOut:
+    """كم سيارةً يرى الراكبُ وإلى أيِّ بُعد (قرارُ المالك 2026-08-22).
+
+    **ولا تمسّ التوزيعَ بحال**: `dispatch` يقرأ ثوابتَ §5.3 من
+    `services/geo.py`، فمشرفٌ يوسّع هنا يغيّر **ما يُرسم** لا **من يصله
+    الطلب**. وخلطُ الاثنين يجعل حقلَ عرضٍ يحرّك سوقاً.
+
+    **وتُقرأ حيّةً**: التوسيعُ يظهر في أول تحديثٍ للخريطة بلا نشرٍ ولا بناء.
+    """
+    setting = await session.get(MapSetting, country_code)
+    if setting is None:
+        setting = MapSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="map_setting",
+        entity_id=None,
+        details={"country_code": country_code.value, "changed_fields": changed},
+    )
+    await _commit(session, setting)
+    return MapSettingOut.model_validate(setting)
 
 
 @router.get("/otp", response_model=list[OtpSettingOut])

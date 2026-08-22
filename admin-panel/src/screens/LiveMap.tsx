@@ -235,10 +235,18 @@ function DriverRow({
         <span
           className={cn(
             "text-10.5 font-semibold",
-            driver.on_ride ? "text-ok" : "text-muted",
+            driver.state === "on_ride"
+              ? "text-ok"
+              : driver.state === "stale"
+                ? "text-warn"
+                : "text-muted",
           )}
         >
-          {driver.on_ride ? "في رحلة" : "متفرّغ"}
+          {driver.state === "on_ride"
+            ? "في رحلة"
+            : driver.state === "stale"
+              ? "بثُّه توقّف"
+              : "متفرّغ"}
         </span>
       </div>
       {/* الرقمُ كما هو: المشرف يطلبه أو يقارنه بما يقوله الكبتن، وتعريبُ
@@ -246,6 +254,13 @@ function DriverRow({
           للمعرّفات، كما في `Cards.tsx` و`Vehicle.tsx` عند الكبتن */}
       <div className="mt-3 text-11 text-muted" dir="ltr">
         {driver.phone}
+      </div>
+      {/* **«منذ كم» لا «متى»**: اللوحةُ تُستفتى كلَّ خمس ثوانٍ، والمشرفُ
+          يسأل عن الطزاجة لا عن التوقيت. و`null` تُقرأ «غيرُ معلوم» */}
+      <div className="mt-3 text-10.5 text-muted">
+        {driver.seconds_since_update === null
+          ? "آخر بثّ: غير معلوم"
+          : `آخر بثّ منذ ${digits(String(driver.seconds_since_update))} ثانية`}
       </div>
       <div className="mt-3 text-10.5 text-muted">
         {CATEGORY_LABEL[driver.vehicle_category] ?? driver.vehicle_category}

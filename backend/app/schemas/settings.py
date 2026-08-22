@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -267,3 +268,23 @@ class CountryRow(BaseModel):
 
 class CountriesOut(BaseModel):
     countries: list[CountryRow]
+
+
+class MapSettingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    country_code: CountryCode
+    nearby_radius_km: Decimal
+    nearby_max_count: int
+    updated_at: datetime
+
+
+class MapSettingUpdate(BaseModel):
+    """**حدُّ خريطةِ الراكب لا حدُّ التوزيع** — التفصيل في `models/map_setting.py`.
+
+    **والحدُّ الأدنى فوق الصفر لا عنده**: صفرٌ هنا يُخفي السياراتِ كلَّها، فيصير
+    رقمٌ في حقلِ عرضٍ **مفتاحَ إطفاءٍ خفيّاً** بجوار مفتاحِ إطفاءٍ معلن.
+    """
+
+    nearby_radius_km: Annotated[Decimal, Field(gt=0, le=50)] | None = None
+    nearby_max_count: Annotated[int, Field(gt=0, le=200)] | None = None

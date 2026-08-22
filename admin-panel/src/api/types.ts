@@ -313,6 +313,7 @@ export type FeatureKey =
   | "subscription_offers_enabled"
   | "driver_advances_enabled"
   | "next_instruction_enabled"
+  | "driver_map_nearby_enabled"
   | "country_visible";
 
 /** دولةٌ كما تراها اللوحةُ وحدَها — **بحالها لا مصفاةً** (SPEC §24).
@@ -586,6 +587,13 @@ export interface LiveDriver {
   plate_number: string | null;
   on_ride: boolean;
   ride_id: string | null;
+  /** **ثلاثُ حالاتٍ لا اثنتان** — و«شاحبٌ» يعني بثّاً توقّف ولمّا ينقضِ
+   * مفتاحُ حضوره. تُحسب في الخلفية لا هنا: لوحةٌ تحسبها بنفسها تفترق عن
+   * الخلفية أولَ ما يتغيّر عمرُ الحضور، ولا شيءَ يفشل. */
+  state: "available" | "on_ride" | "stale";
+  /** ثوانٍ منذ آخر بثّ — و`null` تعني أن الختمَ غيرُ موجود (بثٌّ قديمٌ قبل
+   * إضافة الختم)، فتُقرأ «غيرُ معلوم» لا «الآن». */
+  seconds_since_update: number | null;
 }
 
 export interface LivePendingRide {
@@ -1129,3 +1137,26 @@ export interface AdminAccount {
   is_break_glass: boolean;
   has_phone: boolean;
 }
+
+
+/** بلاغُ صورةِ راكبٍ — **الصورةُ محجوبةٌ الآن**، والقرارُ يُعيد أو يحذف. */
+export type PhotoReport = {
+  id: string;
+  subject_id: string;
+  subject_name: string | null;
+  subject_phone: string | null;
+  reported_by: string;
+  reporter_name: string | null;
+  ride_id: string;
+  created_at: string;
+  resolution: string | null;
+};
+
+
+/** حدُّ خريطةِ الراكب لسوقٍ واحد — **لا حدُّ التوزيع** (`models/map_setting.py`). */
+export type MapSetting = {
+  country_code: CountryCode;
+  nearby_radius_km: string;
+  nearby_max_count: number;
+  updated_at: string;
+};

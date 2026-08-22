@@ -11,6 +11,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 from app.models.enums import RideStatus, VehicleCategory
@@ -29,6 +31,11 @@ class LiveDriverOut(BaseModel):
     plate_number: str | None
     on_ride: bool
     ride_id: uuid.UUID | None
+    # **حالةٌ محسوبةٌ في الخلفية لا في اللوحة** — قاعدةُ §14 مطبَّقةً على حكمٍ
+    # لا على مبلغ: لوحةٌ تحسب «شاحب» بنفسها تفترق عن الخلفية أولَ ما يتغيّر
+    # `PRESENCE_TTL_SECONDS`، ولا شيءَ يفشل
+    state: Literal["available", "on_ride", "stale"]
+    seconds_since_update: int | None
 
 
 class PendingRideOut(BaseModel):

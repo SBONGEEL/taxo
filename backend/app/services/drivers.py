@@ -130,7 +130,8 @@ async def nearby_available(
     country_code: CountryCode,
     lat: float,
     lng: float,
-    radius_km: float = geo.SEARCH_RADIUS_KM,
+    radius_km: float | None = None,
+    max_count: int | None = None,
     rider: User | None = None,
 ) -> list[geo.DriverPresence]:
     """الكباتن المتاحون حول الراكب لعرضهم على خريطته (SPEC القسم 10).
@@ -142,10 +143,19 @@ async def nearby_available(
     الافتراضي — لا تفضيلِ رحلةٍ لم تُطلب بعد. فخريطةٌ ترسم سيارةً لن تأتيَ
     أسوأُ من خريطةٍ فارغة: الأولى تُقرأ وعداً، والثانية تُقرأ واقعاً.
     """
-    from app.services import dispatch
+    from app.services import dispatch, map_settings
 
+    # **حدُّ الخريطةِ من إعداداتها لا من ثوابت التوزيع** (قرارُ المالك
+    # 2026-08-22): `geo.SEARCH_RADIUS_KM` قاعدةُ مواصفةٍ للتوزيع، وهذه تفضيلُ
+    # عرضٍ لسوق. وخلطُهما يجعل حقلَ عرضٍ في اللوحة يغيّر **من يصله الطلب**.
+    limits = await map_settings.limits_for(session, country_code)
     presences = await geo.nearby(
-        redis, country_code=country_code, lat=lat, lng=lng, radius_km=radius_km
+        redis,
+        country_code=country_code,
+        lat=lat,
+        lng=lng,
+        radius_km=limits.radius_km if radius_km is None else radius_km,
+        limit=limits.max_count if max_count is None else max_count,
     )
     if not presences:
         return []
@@ -170,7 +180,11 @@ async def nearby_available(
         available.extend(p for p in of_category if p.driver_id in eligible)
 
     available.sort(key=lambda presence: presence.distance_km)
-    return available
+    # **والسقفُ يُطبَّق بعد الترشيح لا قبله**: قصُّ الخمسين قبل استبعاد غير
+    # المؤهّلين يعطي خريطةً بثلاث سياراتٍ في سوقٍ فيه ثلاثون متاحاً — يُقصّ
+    # الحاضرون فيبقى المؤهّلون قلّةً بلا سبب
+    ceiling = limits.max_count if max_count is None else max_count
+    return available[:ceiling]
 
 
 def anonymous_ref(driver_id: uuid.UUID, salt: str) -> str:

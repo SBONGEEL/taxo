@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import uuid
+import time
 from dataclasses import dataclass
 
 from redis.asyncio import Redis
@@ -87,6 +88,10 @@ async def update_location(
         mapping={
             "heading": "" if heading is None else str(heading),
             "vehicle_category": VehicleCategory(vehicle_category).value,
+            # **ختمُ لحظةِ البثّ** — تقرؤه لوحةُ الإشراف لتقول «منذ كم».
+            # ولا يُشتقّ من عمرِ المفتاح (`TTL`): العمرُ يُجدَّد بكلِّ كتابةٍ
+            # فيقول «ستون» أبداً، **ويصير رقماً يبدو معلومةً وليس فيه شيء**
+            "at": str(int(time.time())),
         },
     )
     pipe.expire(key, PRESENCE_TTL_SECONDS)

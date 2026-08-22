@@ -35,6 +35,7 @@ from app.models.enums import (
     UserRole,
     VehicleCategory,
 )
+from app.models.map_setting import MapSetting
 from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
@@ -243,6 +244,24 @@ def _resolve_path(raw_path: str) -> Path:
 
 
 async def seed_feature_flags(session: AsyncSession) -> None:
+    # **صفُّ خريطةٍ لكلِّ سوق** — بالقيم التي كانت ثوابتَ قبل الجدول، فلا
+    # يتغيّر سلوكٌ قائمٌ بإدخال جدول. **ولا يُنشأ كسولاً عند القراءة**: ذاك
+    # يحتاج قفلاً، وبلا قفلٍ يكتب طلبان صفّين (درسُ `0039`).
+    for country in CountryCode:
+        exists = await session.scalar(
+            select(MapSetting.country_code).where(
+                MapSetting.country_code == country
+            )
+        )
+        if exists is None:
+            # **عشرةُ كيلومتراتٍ قرارُ المالك (2026-08-22)، والافتراضُ في
+            # النموذج ٣ عمداً**: غيابُ الصفِّ يعني «ما كان قبل الجدول»، فلا
+            # يغيّر **جدولٌ جديدٌ سلوكاً قائماً** بمجرّد إنشائه؛ والعشرةُ
+            # **قرارٌ يُكتب صفّاً** لا افتراضٌ يقع بالسكوت.
+            session.add(
+                MapSetting(country_code=country, nearby_radius_km=Decimal("10"))
+            )
+
     for country, defaults in FEATURE_DEFAULTS.items():
         for key, enabled in defaults.items():
             exists = await session.scalar(

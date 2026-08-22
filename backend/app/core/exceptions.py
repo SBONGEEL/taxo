@@ -587,3 +587,42 @@ class CancellationDebtBlocked(AppError):
     status_code = 402
     code = "cancellation_debt_blocked"
     message = "عليك رسومُ إلغاءٍ غيرُ مسدَّدة — اشحن محفظتك ليُخصم المستحق ثم أعد الطلب"
+
+
+# ------------------------------------------- مركباتُ الكراج والمتجر (2026-08-22)
+#
+# **أخطاءٌ مسمّاةٌ لا رسالةٌ عامة** (§17): من يُرفض شراؤه يحتاج أن يعرف **أيَّ
+# شرطٍ لم يتحقق** — والرصيدُ والنفادُ والمِلكيةُ والمستوى أربعةُ أفعالٍ مختلفة
+# لمن رُفض، فرسالةٌ واحدةٌ تجعله يعيد المحاولةَ بلا سبب.
+
+
+class SkinSoldOut(Conflict):
+    code = "skin_sold_out"
+    message = "نفدت الكمية — لم تعد هذه المركبة متاحة"
+
+
+class SkinAlreadyOwned(Conflict):
+    code = "skin_already_owned"
+    message = "هذه المركبة في كراجك بالفعل"
+
+
+class SkinLevelLocked(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "skin_level_locked"
+    message = "هذه المركبة تُفتح عند مستوى أعلى"
+
+
+class SkinNotOwned(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "skin_not_owned"
+    message = "لا تملك هذه المركبة"
+
+
+class SkinUnavailable(Conflict):
+    code = "skin_unavailable"
+    message = "هذه المركبة غير متاحة الآن"
+
+
+class InvalidSkinArtwork(InvalidInput):
+    code = "invalid_skin_artwork"
+    message = "الملف ليس صورةً صالحة"

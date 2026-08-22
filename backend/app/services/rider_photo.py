@@ -95,6 +95,14 @@ async def report(
     return row
 
 
+async def get_report(session: AsyncSession, report_id: uuid.UUID) -> UserPhotoReport:
+    """بلاغٌ بعينه — و`404` أصدقُ من `None` يمرّ فيُرسم حرفٌ لبلاغٍ لا وجودَ له."""
+    row = await session.get(UserPhotoReport, report_id)
+    if row is None:
+        raise NotFound("لا بلاغَ بهذا المعرّف")
+    return row
+
+
 async def resolve(
     session: AsyncSession,
     *,

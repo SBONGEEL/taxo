@@ -118,6 +118,18 @@ class Driver(UUIDMixin, TimestampMixin, Base):
         Numeric(5, 2), nullable=True
     )
 
+    # **المركبةُ النشطةُ للحساب لا للسيارة** (قرارُ المالك 2026-08-22): كبتنٌ
+    # يملك سيارتين يملك شكلاً واحداً يظهر مهما قاد اليوم. **و`SET NULL` لا
+    # `RESTRICT`**: إخفاءُ مركبةٍ من المتجر لا يحذف صفَّها أصلاً، وحذفُها
+    # ممنوعٌ بـ`RESTRICT` على المِلكيّة — فهذا المسارُ لا يقع إلا في تنظيفٍ
+    # إداريٍّ لمركبةٍ لا مالكَ لها، وحينها **العلامةُ تعود إلى الباهتة**
+    # لا يبقى الكبتنُ بإشارةٍ إلى صفٍّ غير موجود
+    active_skin_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("vehicle_skins.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     level: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=0, server_default=text("0")
     )

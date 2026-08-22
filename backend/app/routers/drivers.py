@@ -21,10 +21,10 @@ from app.core.deps import (
     RedisDep,
     RiderUser,
 )
-from app.core.exceptions import Conflict, RateLimited
+from app.core.exceptions import Conflict, PermissionDenied, RateLimited
 from app.models.user import User
 from app.models.driver import DriverDocument
-from app.models.enums import DocumentType
+from app.models.enums import DocumentType, FeatureKey
 from app.models.vehicle import Vehicle
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
@@ -396,6 +396,49 @@ async def list_nearby_drivers(
     salt = secrets.token_hex(16)
     presences = await drivers_service.nearby_available(
         redis, session, country_code=rider.country_code, lat=lat, lng=lng, rider=rider
+    )
+    return [
+        NearbyDriverOut(
+            ref=drivers_service.anonymous_ref(presence.driver_id, salt),
+            lat=presence.lat,
+            lng=presence.lng,
+            heading=presence.heading,
+            vehicle_category=presence.vehicle_category,
+        )
+        for presence in presences
+    ]
+
+
+@router.get("/me/nearby", response_model=list[NearbyDriverOut])
+async def list_nearby_for_driver(
+    driver: CurrentDriver,
+    session: DbSession,
+    redis: RedisDep,
+    lat: float = Query(ge=-90, le=90),
+    lng: float = Query(ge=-180, le=180),
+) -> list[NearbyDriverOut]:
+    """زملاءُ الكبتن حوله — **مجهَّلين كما يراهم الراكبُ سواءً بسواء**.
+
+    **ومفتاحُه `driver_map_nearby_enabled` ويُشحن مطفأً** (قرارُ المالك):
+    أن يرى الكبتنُ زملاءَه سؤالُ سوقٍ لا سؤالُ عرض.
+
+    **ومطفأً يردّ ٤٠٣ لا قائمةً فارغة**: الفارغةُ تُقرأ «لا أحدَ حولك» — وهو
+    خبرٌ كاذبٌ عن السوق يبني عليه الكبتنُ موضعَه؛ والصريحُ يقول إن البابَ
+    مغلقٌ لا إن الشارعَ خالٍ. وهو تمييزُ «لم يتحرك» عن «لا نعرف» نفسُه.
+
+    **ولا يستثني نفسَه من القائمة**: الاستثناءُ **يُظهر موضعَه هو** لمن يقارن
+    ردَّين — ولأنّ كلَّ سيارةٍ مجهَّلةٌ بمِلحٍ جديدٍ لكلِّ طلب، فسيارتُه بينها
+    لا تُميَّز أصلاً. وهو **مبدأُ عطب الإعفاء**: ما يُحذف يُعرَف بحذفه.
+    """
+    user = await session.get(User, driver.user_id)
+    assert user is not None  # كبتنٌ بلا حسابٍ لا يمرّ من `CurrentDriver`
+    if not await settings_service.is_feature_enabled(
+        session, user.country_code, FeatureKey.DRIVER_MAP_NEARBY_ENABLED
+    ):
+        raise PermissionDenied("عرضُ الكباتن حولك غيرُ مفعّلٍ في سوقك")
+    salt = secrets.token_hex(16)
+    presences = await drivers_service.nearby_available(
+        redis, session, country_code=user.country_code, lat=lat, lng=lng
     )
     return [
         NearbyDriverOut(
