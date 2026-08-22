@@ -117,10 +117,28 @@ SSH_OPTS=(-o StrictHostKeyChecking=yes -o ConnectTimeout=20
 # فيصير فعلين.
 ssh_try() {
   local n=0
-  until "$SSH" "${SSH_OPTS[@]}" "$HOST" "$@"; do
+  until _ssh "$@"; do
     n=$((n+1)); [ "$n" -ge 3 ] && return 1
-    say "    (انقطاعٌ — إعادةٌ $n/3 بعد ٥ ثوانٍ)"; sleep 5
+    # **والإعادةُ بعد الحدِّ لا قبله**: `ufw` يحجب ستّاً في ثلاثين ثانية،
+    # فإعادةٌ سريعةٌ **تُطيل الحجبَ الذي تحاول تجاوزه**.
+    say "    (انقطاعٌ — إعادةٌ $n/3 بعد ٣٥ ثانية)"; sleep 35
   done
+}
+
+# **كلُّ اتصالٍ يُباعَد عمّا قبله — والحدُّ مقروءٌ من الخادم لا مُقدَّر**
+# (2026-08-22): `ufw` يحمل `22/tcp LIMIT IN`، **وقاعدتُه ستُّ محاولاتٍ في
+# ثلاثين ثانية**. وهذا الملفُّ يفتح أكثرَ من عشرة، **فيحجبه الجدارُ في منتصف
+# رفعٍ ويُقرأ الحجبُ عطباً في الشبكة**.
+#
+# **ولا يُمسّ الحدّ** (المطلقةُ الثالثة): يُطرق أقلَّ، وما بقي **يُباعَد**.
+# وستُّ ثوانٍ بين اتصالين تُبقي المعدَّلَ تحت الحدِّ مهما طال السكربت.
+_LAST_SSH=0
+_ssh() {
+  local now gap
+  now=$(date +%s); gap=$(( now - _LAST_SSH ))
+  [ "$gap" -lt 6 ] && sleep $(( 6 - gap ))
+  _LAST_SSH=$(date +%s)
+  "$SSH" "${SSH_OPTS[@]}" "$HOST" "$@"
 }
 
 say() { printf '%s\n' "$*"; }
@@ -137,7 +155,7 @@ say "══ ١) الإعلان"
 HEAD_SHA="$(git rev-parse HEAD)"
 [ -z "$(git status --porcelain)" ] || die "شجرةٌ غيرُ نظيفة — يُودَع قبل الرفع (البوّابة ٢)."
 
-REMOTE_SHA="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git rev-parse HEAD 2>/dev/null" || true)"
+REMOTE_SHA="$(_ssh "cd $REMOTE && git rev-parse HEAD 2>/dev/null" || true)"
 if [ -n "$REMOTE_SHA" ] && git cat-file -e "$REMOTE_SHA^{commit}" 2>/dev/null; then
   COUNT="$(git rev-list --count "$REMOTE_SHA..$HEAD_SHA")"
   CHANGED="$(git diff --name-only "$REMOTE_SHA..$HEAD_SHA")"
@@ -167,7 +185,7 @@ say "  ترحيلة  : ${MIGRATIONS:-0}"
 #   ١) أثمّة ترحيلةٌ **معلَّقة**؟ — رأسُ القاعدة على الخادم مقابل الشجرة.
 #   ٢) وهل ما يُرسَل **في هذه الدفعة** يمسّ نموذجاً أو ترحيلة؟
 # **وسكوتُ الاثنين معاً هو الجواب**، وإلّا وقف.
-PENDING="$("$SSH" "${SSH_OPTS[@]}" "$HOST"   "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d '
+PENDING="$(_ssh   "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d '
  ' || true)"
 TREE_HEAD="$(ls backend/alembic/versions/ | sort | tail -1 | cut -d_ -f1)"
 if [ -z "$PENDING" ]; then
@@ -314,9 +332,12 @@ ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&  
 
 tar -xf "$LOCAL/bundle.tar" -C "$LOCAL" && rm -f "$LOCAL/bundle.tar"   || die "النسخةُ وصلت ولا تُفتح — لا رفع."
 
-RAW_N="$(tr -d ' ' < "$LOCAL/raw.count" 2>/dev/null || echo 0)"
-UNTRACKED_N="$(tr -d ' ' < "$LOCAL/untracked.count" 2>/dev/null || echo 0)"
-say "    ما خارج الشجرة: $(tr -d '' < "$LOCAL/outside.list" 2>/dev/null)"
+RAW_N="$(tr -d ' 
+' < "$LOCAL/raw.count" 2>/dev/null || echo 0)"
+UNTRACKED_N="$(tr -d ' 
+' < "$LOCAL/untracked.count" 2>/dev/null || echo 0)"
+say "    ما خارج الشجرة: $(tr -d '
+' < "$LOCAL/outside.list" 2>/dev/null)"
 # **وتُعلَن التصفيةُ بأثرها لا بوقوعها**: `--exclude-from` على ملفٍّ فارغٍ
 # **ينجح ولا يستبعد شيئاً** — وقعت مقيسةً، ولم يكشفها إلا رقمٌ مطبوع.
 if [ "${RAW_N:-0}" = "${UNTRACKED_N:-0}" ]; then
@@ -399,8 +420,8 @@ TAG="$(git describe --tags --exact-match 2>/dev/null || true)"
 if [ -n "$TAG" ]; then
   [ -n "${GITHUB_TAXO_TOKEN:-}" ] || die "لا رمزَ لسحب أثر الإصدار — والحزمُ لا تُرسل من هنا."
   say "  الحزم   : الخادمُ يسحب أثرَ $TAG"
-  tar -cf - scripts/pull-release.sh | "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -"
-  "$SSH" "${SSH_OPTS[@]}" "$HOST"     "cd $REMOTE && bash scripts/pull-release.sh '$TAG' '${TAXO_GITHUB_REPO:-SBONGEEL/taxo}' '$GITHUB_TAXO_TOKEN'"     || die "تعذّر سحبُ أثر $TAG على الخادم — والنسخةُ في $LOCAL"
+  tar -cf - scripts/pull-release.sh | _ssh "cd $REMOTE && tar -xf -"
+  _ssh     "cd $REMOTE && bash scripts/pull-release.sh '$TAG' '${TAXO_GITHUB_REPO:-SBONGEEL/taxo}' '$GITHUB_TAXO_TOKEN'"     || die "تعذّر سحبُ أثر $TAG على الخادم — والنسخةُ في $LOCAL"
 else
   say "  الحزم   : لا وسمَ لهذه الدفعة — **لم تُنشر حزمة**"
 fi
@@ -437,12 +458,12 @@ say "  الكود   : الخادمُ يسحب ${HEAD_SHA:0:8} من GitHub"
 #
 # **و`mv` لا `rm`**: من يحذف الدليلَ يمحو الخبرَ لا الخطر.
 ASIDE="\$HOME/taxo-aside-$STAMP"
-"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
+_ssh "cd $REMOTE && \
   git remote get-url taxo >/dev/null 2>&1 || git remote add taxo git@github-taxo:${TAXO_GITHUB_REPO:-SBONGEEL/taxo}.git; \
   GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git fetch --quiet taxo" \
   || die "تعذّر جلبُ الإيداعات — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
 
-MOVED="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
+MOVED="$(_ssh "cd $REMOTE && \
   n=0; git status --porcelain | grep '^??' | sed 's/^...//' | while IFS= read -r f; do \
     if git cat-file -e '$HEAD_SHA:'\"\$f\" 2>/dev/null; then \
       mkdir -p \"$ASIDE/\$(dirname \"\$f\")\" && mv \"\$f\" \"$ASIDE/\$f\" && echo \"\$f\"; \
@@ -450,10 +471,10 @@ MOVED="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
   done | wc -l" | tr -d '\r ')"
 [ "${MOVED:-0}" = "0" ] || say "  ✓ أُزيح $MOVED ملفاً متصادماً إلى ~/taxo-aside-$STAMP (لم يُحذف شيء)"
 
-"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git checkout --quiet --detach $HEAD_SHA" \
+_ssh "cd $REMOTE && git checkout --quiet --detach $HEAD_SHA" \
   || die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
 
-SERVER_NOW="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
+SERVER_NOW="$(_ssh "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
 [ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند $SERVER_NOW لا $HEAD_SHA — يُوقَف. والنسخةُ في $LOCAL"
 say "  ✓ إيداعُ الخادم = إيداعُ CI"
 
@@ -461,7 +482,7 @@ say "  ✓ إيداعُ الخادم = إيداعُ CI"
 # **لا على الإنتاج**: نسخةُ الإنتاج تُستعاد فيها ثم يُنزَل ويُصعَد.
 if [ "${PENDING:-}" != "${TREE_HEAD:-}" ]; then
   say "  الترحيلة: ${PENDING:-?} ← ${TREE_HEAD:-?}"
-  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES run --rm --no-deps -T backend alembic upgrade head" \
+  _ssh "cd $REMOTE && docker compose $COMPOSE_FILES run --rm --no-deps -T backend alembic upgrade head" \
     || die "سقطت الترحيلةُ — **لا يُصلَح على الإنتاج**. الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
   say "  ✓ الترحيلةُ طُبِّقت"
 else
@@ -471,17 +492,17 @@ fi
 # **ولا حاويةَ تُعاد وحدَها، وكلُّ أمرِ compose يذكر ملفاتِه كلَّها صراحةً**
 # — فخٌّ وقع مقيساً: إعادةٌ بملفٍّ ناقصٍ أسقطت `CORS_ORIGINS` فوقف الهاتفان.
 say "  الحاويات: تُعاد بكلِّ ملفّات compose"
-"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES up -d --build" \
+_ssh "cd $REMOTE && docker compose $COMPOSE_FILES up -d --build" \
   || die "تعذّرت إعادةُ الحاويات — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
 
 # ═══════════════════ ٦) التحقّق ═══════════════════
 # **الرفعُ لم يتمّ حتى تخضرَّ كلُّها.**
 say "══ ٦) التحقّق"
-DB_HEAD="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;'" | tr -d '\r ')"
+DB_HEAD="$(_ssh "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;'" | tr -d '\r ')"
 [ "$DB_HEAD" = "${TREE_HEAD:-$DB_HEAD}" ] || die "رقمُ الترحيلة على القاعدة ($DB_HEAD) ≠ رأسُ الشجرة (${TREE_HEAD:-?}) — يُوقَف."
 say "  ✓ الترحيلةُ على القاعدة = رأسُ الشجرة ($DB_HEAD)"
 
-BAD="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' || true" | tr -d '\r')"
+BAD="$(_ssh "cd $REMOTE && docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' || true" | tr -d '\r')"
 [ -z "$BAD" ] && say "  ✓ كلُّ الحاويات تعمل" || die "حاوياتٌ ليست تعمل: $BAD"
 
 for _ in $(seq 1 30); do
@@ -496,10 +517,10 @@ say "  ✓ الصحّةُ عبر النفق: $HEALTH"
 # **ومراقبةُ السجلِّ دقائق: صفرُ أخطاءٍ أو ما ظهر** — ويُطبع ما ظهر ولا يُبتلع
 say "  · السجلّ (٩٠ ثانية)…"
 sleep 90
-ERRS="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -icE 'traceback|ERROR|CRITICAL' || true" | tr -d '\r ')"
+ERRS="$(_ssh "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -icE 'traceback|ERROR|CRITICAL' || true" | tr -d '\r ')"
 if [ "${ERRS:-0}" != "0" ]; then
   say "  ⚠ السجلُّ فيه $ERRS سطرَ خطأ — تُقرأ قبل أن يُعلَن التمام:"
-  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -iE 'traceback|ERROR|CRITICAL' | head -10"
+  _ssh "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -iE 'traceback|ERROR|CRITICAL' | head -10"
   die "لا يُعلَن تمامٌ وفي السجلِّ أخطاء — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
 fi
 say "  ✓ السجلّ: صفرُ أخطاءٍ في ثلاث دقائق"
