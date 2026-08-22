@@ -22,6 +22,7 @@ import { PauseNotice } from "@/components/ride/PauseNotice";
 import { StopProgress } from "@/components/ride/StopProgress";
 import { Sheet } from "@/components/ui/Sheet";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
+import { skinImageUrl } from "@/lib/skin";
 import { cn, formatDistance, formatMoney } from "@/lib/utils";
 
 const CANCELLABLE = new Set(["requested", "searching", "accepted", "arrived"]);
@@ -87,6 +88,10 @@ export function TrackingSheet({
   const [copied, setCopied] = useState(false);
   const [shareHintClosed, setShareHintClosed] = useState(false);
   const [reason, setReason] = useState<CancelReason | null>(null);
+  /** حالُ رسمة المركبة — **والسطرُ لا يُرسم حتى تصل**: صندوقُ صورةٍ مكسورةٍ
+   *  بجانب اسم الكبتن يُقرأ عطباً في التطبيق، وسطرٌ يختفي كأن لا مركبةَ له
+   *  هو **نفسُ ما تراه بطاقةُ من لا مركبةَ له** — فلا فرقَ يُرى. */
+  const [skinArt, setSkinArt] = useState<"loading" | "ready" | "broken">("loading");
 
   const searching = ride.status === "requested" || ride.status === "searching";
   // «رحلةٌ نسائية» = ما طُلب فيها جنسٌ بعينه — وصفٌ للطلب لا لصاحبته
@@ -250,6 +255,42 @@ export function TrackingSheet({
               <Car className="size-24 text-muted" />
             )}
           </motion.div>
+        ) : null}
+
+        {/* **مركبةُ الكبتن — الموضعُ الثاني، ومعناه واحد** (2026-08-22): ما
+            يُرسم على الخريطة هو ما يُرسم هنا — **نفسُ الرسمة بعينها** لا
+            صورةٌ أخرى لها، **والسطرُ يقول ذلك صراحةً**. وبغيره تصير رسمةٌ في
+            بطاقةٍ زينةً لا يعرف الراكبُ ما يفعل بها، بينما فائدتُها كلُّها
+            أن يعرف **ما يبحث عنه بعينه** في الشارع.
+
+            **ولا اسمَ ولا ندرةَ ولا سعر**: العقدُ أربعةُ حقولٍ لا أكثر
+            (`RideDriverSkin`) — وما يُرى ويندر يصير معرّفاً.
+
+            **وغيابُها لا يُرسم له بديل**: البطاقةُ تبقى كما كانت بلا سطرٍ
+            يقول «لا مركبةَ له» — فلا تُقرأ الفئةُ من الغياب. */}
+        {ride.driver?.skin && skinArt !== "broken" ? (
+          <div
+            className={cn(
+              "flex items-center gap-12 rounded-12 border border-line bg-surface-2 px-12 py-10",
+              // **لا يُحجز مكانٌ لرسمةٍ لم تصل**: صندوقٌ فارغٌ ينتظر صورةً
+              // يُقرأ عطباً، **ورسمةٌ تسقط تعيد البطاقةَ إلى ما كانت عليه
+              // بلا فرقٍ مرئيّ** — كما تفعل الخريطةُ بالضبط
+              skinArt === "loading" ? "hidden" : null,
+            )}
+          >
+            <img
+              src={skinImageUrl(ride.driver.skin.image_url)}
+              alt=""
+              width={44}
+              height={44}
+              className="size-44 shrink-0 object-contain"
+              onLoad={() => setSkinArt("ready")}
+              onError={() => setSkinArt("broken")}
+            />
+            <p className="min-w-0 flex-1 text-12.5 leading-relaxed text-muted">
+              هذه المركبة التي تتحرّك على خريطتك — ابحث عنها في الشارع.
+            </p>
+          </div>
         ) : null}
 
         <ErrorNote message={error} />

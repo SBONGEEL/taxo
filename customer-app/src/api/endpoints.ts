@@ -4,7 +4,8 @@
  * خمس شاشات. وما ليس للراكب ليس هنا (لا سحب، ولا اشتراكات، ولا لوحة إدارة).
  */
 
-import { api } from "@/api/client";
+import { api, upload } from "@/api/client";
+import type { UploadOptions } from "@/api/client";
 import type {
   AppConfig,
   MyReferrals,
@@ -121,6 +122,19 @@ export const updateMe = (payload: {
   gender?: "male" | "female";
   ride_gender_preference?: GenderPreference;
 }) => api.patch<User>("/auth/me", payload);
+
+/** صورةُ صاحب الحساب — **تُنشر فور رفعها بلا مراجعة** (قرارُ المالك
+ *  2026-08-22)، فليس فيها انتظارٌ يُعلَن ولا حالٌ تُتابَع.
+ *
+ *  **و`upload` لا `api.put`**: نسبةُ التقدّم تحتاج `XMLHttpRequest` (SPEC
+ *  ١٧.٦)، ومعها زرُّ الإلغاء وكاشفُ الركود — ثلاثتُها شرطُ رفعٍ بلا مهلة.
+ *
+ *  **والردُّ `User` كاملاً** لا حقلاً: الجلسةُ تُحدَّث من نفس الجسم الذي
+ *  يردّه كلُّ بابٍ يمسّ الحساب، فلا شكلَ ثانٍ يفترق عنه. */
+export const setMyPhoto = (file: File, options: UploadOptions = {}) =>
+  upload<User>("/auth/me/photo", file, options);
+
+export const clearMyPhoto = () => api.del<User>("/auth/me/photo");
 
 export const logout = (refreshToken: string) =>
   api.post<void>("/auth/logout", { refresh_token: refreshToken });

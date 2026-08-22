@@ -282,3 +282,135 @@ export const api = {
   blob: (path: string, options: Omit<RequestOptions, "method" | "body"> = {}) =>
     request<Blob>(path, { ...options, method: "GET", raw: true }),
 };
+
+// ------------------------------------------------------------ الرفع
+
+/** خياراتُ رفعِ ملفٍ واحد — **النسبةُ والإلغاءُ معاً لا أحدُهما**. */
+export interface UploadOptions {
+  /** نسبةُ ما رُفع (٠–١٠٠) — تُستدعى مراراً أثناء الرفع. */
+  onProgress?: (percent: number) => void;
+  /** إلغاءٌ بيد صاحبه. */
+  signal?: AbortSignal;
+}
+
+/** رفعُ ملفٍ واحد بـ`multipart` — **خارج `request` عمداً**.
+ *
+ * `request` يضع `Content-Type: application/json` ويُسلسِل الجسم، وكلاهما
+ * يفسد الرفع: حدُّ الأجزاء (boundary) يكتبه المتصفح ولا يجوز أن نكتبه نحن.
+ * ولا يشارك التجديدَ التلقائي لأن الملف لا يُقرأ مرتين — توكنٌ منتهٍ هنا
+ * يعني إعادةَ الرفع لا إعادةَ الطلب صامتةً.
+ *
+ * **و`XMLHttpRequest` لا `fetch`، ولسببٍ واحدٍ لا بديلَ عنه**: `fetch` **لا
+ * يبلّغ عن تقدّم الرفع** إطلاقاً — لا حدثَ ولا تيّار. فمن يرفع صورةً على
+ * شبكةٍ بطيئة يرى شاشةً واقفةً لا يدري أتتقدّم أم ماتت، و`XHR` وحدَه يملك
+ * `upload.onprogress` (SPEC ١٧.٦).
+ *
+ * **ولا مهلةَ عليه** — ومعه ثلاثةٌ بدلَها: نسبةٌ تُطمئن، وزرُّ إلغاءٍ يقطع،
+ * وكاشفُ ركود. ملفٌّ كبيرٌ على شبكةٍ بطيئة يتجاوز أيَّ مهلةٍ معقولة **وهو
+ * ناجح**، وقطعُه بعدّادٍ يعيد الرفعَ من أوّله بلا سبب.
+ */
+export function upload<T>(
+  path: string,
+  file: File,
+  options: UploadOptions = {},
+): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  const access = tokens.access();
+
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", `${API_URL}${path}`);
+    if (access) request.setRequestHeader("Authorization", `Bearer ${access}`);
+
+    // **كاشفُ الركود** — والإلغاءُ وحدَه لا يغني عنه: الإلغاءُ يعالج **من
+    // قرّر التوقّف**، والركودُ يعالج **وصلةً ماتت صامتة**. مقبسٌ يسقط أثناء
+    // الرفع لا يُطلق `onerror` بالضرورة: الـTCP يعيد الإرسالَ في صمتٍ دقائقَ
+    // قبل أن يستسلم، فيقف الشريطُ عند ٤٧٪ بلا حدثٍ ولا رسالة — وهي الشاشةُ
+    // بلا مخرجٍ التي يوجد هذا العقدُ لإزالتها.
+    //
+    // **والمدّةُ مقيسةٌ لا مقدَّرة** (SPEC ١٧.٦، قِيست على Edge حقيقي): أكبرُ
+    // فجوةٍ بين حدثين ١٢٢ مللي على localhost، و٤٣٣ على ٥٠ك.ب/ث، و**١٤٤٠ على
+    // ١٢ك.ب/ث** — وصلةٌ بالكاد صالحة. فعشرون ثانيةً نحوُ أربعةَ عشرَ ضعفَ
+    // أسوأِ فجوةٍ مقيسة: لا تشتعل على رفعٍ بطيءٍ حيّ، وتسبق استسلامَ الـTCP.
+    const STALL_MS = 20_000;
+    let stalled = false;
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const armStall = () => {
+      clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        stalled = true;
+        request.abort();
+      }, STALL_MS);
+    };
+
+    request.upload.onprogress = (event) => {
+      armStall();
+      if (!event.lengthComputable) return;
+      options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+
+    const abort = () => request.abort();
+    options.signal?.addEventListener("abort", abort, { once: true });
+    const done = () => {
+      clearTimeout(stallTimer);
+      options.signal?.removeEventListener("abort", abort);
+    };
+
+    request.onabort = () => {
+      done();
+      // **يُفرَّق القطعان**: قطعُ الركود عطبٌ يُعرض ومعه إعادةُ المحاولة،
+      // وقطعُ صاحبه قرارُه هو فلا يُعرض له شيء — وهما يمرّان بنفس الحدث.
+      if (stalled) {
+        reject(
+          new ApiError(0, "network_timeout", "توقّف الرفع — انقطع الاتصال. أعد المحاولة"),
+        );
+        return;
+      }
+      // **يُرمى `AbortError` كما يرميه `fetch`** فتعرفه الشاشاتُ بالاسم نفسِه
+      reject(new DOMException("أُلغي الرفع", "AbortError"));
+    };
+    request.onerror = () => {
+      done();
+      reject(networkError(new Error("upload failed")));
+    };
+    // **`ontimeout` صريحةٌ ولو لم نضبط `xhr.timeout`**: قيمتُها الافتراضية صفرٌ
+    // (بلا مهلة)، لكنّ معالجاً غائباً يعني أن ضبطَ المهلة يوماً يُسقط الوعدَ
+    // بلا رفضٍ ولا حلّ — فيبقى صاحبُه أمام شريطٍ لا ينتهي.
+    request.ontimeout = () => {
+      done();
+      reject(new ApiError(0, "network_timeout", "انتهت مهلة الرفع — أعد المحاولة"));
+    };
+    request.onload = () => {
+      done();
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          resolve(JSON.parse(request.responseText) as T);
+        } catch {
+          reject(unexpectedResponse());
+        }
+        return;
+      }
+      // نفسُ عقد الأخطاء: `code` و`message` عربيةً — لا نصَّ خامٍ من الخادم
+      let body: Record<string, unknown> = {};
+      try {
+        body = JSON.parse(request.responseText) as Record<string, unknown>;
+      } catch {
+        /* ردٌّ غيرُ مقروء — تُستعمل الحالةُ وحدَها */
+      }
+      reject(
+        new ApiError(
+          request.status,
+          String(body.code ?? "http_error"),
+          String(body.message ?? "تعذّر رفع الملف — أعد المحاولة"),
+          undefined,
+          body,
+        ),
+      );
+    };
+
+    armStall();
+    request.send(form);
+  });
+}
