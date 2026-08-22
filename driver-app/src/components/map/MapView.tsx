@@ -36,10 +36,9 @@ import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
 import {
   applyMarkerHeading,
-  carElement,
+  nearbyMarkerElement,
   selfMarkerElement,
 } from "@/lib/skin-marker";
-import { markerPx } from "@/lib/skins";
 import { trimRoute } from "@/lib/route-line";
 import { useTheme } from "@/lib/theme";
 import { digits, cn } from "@/lib/utils";
@@ -94,6 +93,9 @@ interface Tween {
   headingFrom: number;
   headingTo: number;
   startedAt: number;
+  /** **مصرَّحٌ لا مستنتَج**: الرندرُ الواقعيُّ يُعرض ثابتاً، فلا تُدار علامةٌ
+   *  صُرِّح ألّا تدور — ولا يُقاس ذلك من الندرة. */
+  rotates: boolean;
 }
 
 /** **قيمةُ رمزٍ من §1.1 كما يحسبها المتصفح** — لا نسخةً مكتوبةً بيد.
@@ -324,8 +326,9 @@ export function MapView({
         existing.startedAt = performance.now();
         continue;
       }
-      const element = carElement(markerPx(100));
-      applyMarkerHeading(element, driver.heading, true);
+      // **الدورانُ من صفِّ المركبة لا من الندرة** — والعامّةُ تدور دائماً
+      const element = nearbyMarkerElement(driver.skin);
+      applyMarkerHeading(element, driver.heading, driver.skin?.rotates ?? true);
       const marker = new mapboxgl.Marker({ element, rotationAlignment: "map" })
         .setLngLat([point.lng, point.lat])
         .addTo(instance);
@@ -337,6 +340,7 @@ export function MapView({
         headingFrom: driver.heading ?? 0,
         headingTo: driver.heading ?? 0,
         startedAt: performance.now(),
+        rotates: driver.skin?.rotates ?? true,
       });
     }
     for (const [ref, entry] of cars.current) {
@@ -356,9 +360,11 @@ export function MapView({
           entry.from.lng + (entry.to.lng - entry.from.lng) * progress,
           entry.from.lat + (entry.to.lat - entry.from.lat) * progress,
         ]);
-        entry.element.style.rotate = `${
-          entry.headingFrom + (entry.headingTo - entry.headingFrom) * progress
-        }deg`;
+        if (entry.rotates) {
+          entry.element.style.rotate = `${
+            entry.headingFrom + (entry.headingTo - entry.headingFrom) * progress
+          }deg`;
+        }
       }
       carLoop.current = cars.current.size > 0 ? requestAnimationFrame(step) : null;
     };

@@ -13,6 +13,7 @@
  */
 
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { buySkin, getSkinStore } from "@/api/endpoints";
@@ -29,7 +30,7 @@ import { digits, cn } from "@/lib/utils";
 
 export function SkinStoreScreen() {
   const goBack = useGoBack();
-  const { refresh: refreshGarage } = useGarage();
+  const { enabled, refresh: refreshGarage } = useGarage();
   const [store, setStore] = useState<SkinStorePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
@@ -80,6 +81,9 @@ export function SkinStoreScreen() {
       setBusy(false);
     }
   }
+
+  // **مطفأً: رجوعٌ لا رسالةُ خطأ** — كالكراج سواءً
+  if (!enabled) return <Navigate to="/account" replace />;
 
   if (loading) {
     return (

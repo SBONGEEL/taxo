@@ -18,6 +18,7 @@ import type { DriverStatus, MySubscription } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import { useGarage } from "@/lib/garage";
 import { forDisplay } from "@/lib/phone";
 import { blockedReason, switchToRider } from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
@@ -61,6 +62,9 @@ export function AccountScreen() {
     profile?.user.country_code,
     "driver_advances_enabled",
   );
+  // **من الكراج لا من `useFeature` هنا**: بيتٌ واحدٌ للسؤال، فلا يفتح صفٌّ
+  // باباً يغلقه المزوّدُ نفسُه
+  const { enabled: skinsOn } = useGarage();
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
 
   useEffect(() => {
@@ -215,12 +219,16 @@ export function AccountScreen() {
             />
           ) : null}
           {/* **مركباتي قبل المهام**: كلاهما يُفتح عن قصد، وهذه يُفتح بابُها
-              في كلِّ فتحةٍ للتطبيق (المفعَّلةُ على الخريطة أمام عينه) */}
-          <Row
-            label="مركباتي"
-            sub="مركبتك على الخريطة والمتجر"
-            onClick={() => navigate("/account/garage")}
-          />
+              في كلِّ فتحةٍ للتطبيق (المفعَّلةُ على الخريطة أمام عينه).
+              **وخلف مفتاحها**: صفٌّ يَعِد بمتجرٍ في سوقٍ لا متجرَ فيه أسوأُ
+              من غيابه — والخلفيةُ ترفض على كلِّ حال */}
+          {skinsOn ? (
+            <Row
+              label="مركباتي"
+              sub="مركبتك على الخريطة والمتجر"
+              onClick={() => navigate("/account/garage")}
+            />
+          ) : null}
           {levelsOn ? (
             <Row
               label="مهامّي ومستواي"

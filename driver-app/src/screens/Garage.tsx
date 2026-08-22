@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Store } from "lucide-react";
 
 import { ApiError } from "@/api/client";
@@ -28,7 +28,7 @@ import { RARITY_LABEL } from "@/lib/skins";
 export function GarageScreen() {
   const goBack = useGoBack();
   const navigate = useNavigate();
-  const { garage, loading, refresh, activate } = useGarage();
+  const { enabled, garage, loading, refresh, activate } = useGarage();
   const [open, setOpen] = useState<VehicleSkin | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +57,11 @@ export function GarageScreen() {
     },
     [activate],
   );
+
+  // **مطفأً: رجوعٌ لا رسالةُ خطأ.** الصفُّ محجوبٌ في «حسابي» أصلاً، وهذا
+  // لمن وصل برابطٍ مباشر (إشعارٌ قديم، أو مسارٌ محفوظ) — وشاشةُ خطأٍ عن
+  // ميزةٍ لم تُفتح في سوقه تُقرأ عطباً
+  if (!enabled) return <Navigate to="/account" replace />;
 
   if (loading && !garage) {
     return (

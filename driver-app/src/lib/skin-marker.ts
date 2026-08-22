@@ -11,7 +11,7 @@
  */
 
 import { markerPx, skinAssetUrl } from "@/lib/skins";
-import type { VehicleSkin } from "@/api/types";
+import type { MapSkin, VehicleSkin } from "@/api/types";
 
 /** ظلٌّ واحدٌ لكلِّ علامةٍ على الخريطة — فلا تختلف رسمةٌ عن أختها بارتفاعها. */
 const SHADOW = "drop-shadow(0 1px 3px rgb(0 0 0 / 0.45))";
@@ -48,6 +48,20 @@ export function carElement(px: number, muted = false): HTMLElement {
   return element;
 }
 
+/** **علامةُ زميلٍ قريب** — تُرسم **بمركبته المنشورة** كما يراها الراكبُ
+ * سواءً بسواء، لا بالسيارة العامّة: خريطتان ترسمان الشيءَ نفسَه شكلين هما
+ * الشكلُ الثامن، والكبتنُ يقارن ما يراه بما يراه راكبُه.
+ *
+ * **و`null` لا تميّز أحداً**: النادرةُ والأسطوريةُ لا تُنشر أصلاً، وغيابُ
+ * البديل المنشور يقع للجميع سواءً — فالسيارةُ العامّةُ هنا حالُ كتالوجٍ لا
+ * علامةٌ على صاحبها.
+ */
+export function nearbyMarkerElement(skin: MapSkin | null): HTMLElement {
+  if (skin === null) return carElement(markerPx(100));
+  const px = markerPx(skin.scale_percent);
+  return imageMarker(skinAssetUrl(skin.image_url), px);
+}
+
 /** ما تُرسم به سيارةُ الكبتن على خريطته هو. */
 export interface SelfMarker {
   /** المركبةُ النشطة — و`null` تعني «لا مركبةَ مفعَّلة»، فتُرسم العامّة. */
@@ -72,10 +86,14 @@ export function selfMarkerElement({ skin, subscribed }: SelfMarker): HTMLElement
     // الاشتراك على الشاشة، لا شكلٌ ثانٍ يُخمَّن معناه
     return carElement(markerPx(100), !subscribed);
   }
-  const px = markerPx(skin.map_scale_percent);
+  return imageMarker(skinAssetUrl(skin.map_image_url), markerPx(skin.map_scale_percent));
+}
+
+/** عنصرُ صورةٍ بمقاسٍ ثابت — بيتٌ واحدٌ لعلامةِ الكبتن وعلامةِ زميله. */
+function imageMarker(src: string, px: number): HTMLElement {
   const element = document.createElement("div");
   const image = document.createElement("img");
-  image.src = skinAssetUrl(skin.map_image_url);
+  image.src = src;
   image.alt = "";
   image.width = px;
   image.height = px;

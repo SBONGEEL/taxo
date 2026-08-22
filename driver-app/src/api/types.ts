@@ -859,10 +859,25 @@ export interface BuySkinResult {
   currency: Currency;
 }
 
+/** مركبةٌ **كما تُرسم على خريطة** — `MapSkinOut`: رسمٌ لا هوية.
+ *
+ * **ولا اسمَ ولا ندرةَ فيها بقصد**: على الخريطة الحرّة تكفي الرسمةُ للرسم،
+ * و«أسطورية» كلمةٌ تجعل من يعدّ السياراتِ يعرف من في أيّها.
+ */
+export interface MapSkin {
+  skin_id: string;
+  /** مسارٌ نسبيٌّ **بسابقة الـAPI** — يُبنى على أصل الخلفية لا أصل الصفحة. */
+  image_url: string;
+  scale_percent: number;
+  rotates: boolean;
+}
+
 /** كبتنٌ قريبٌ **مجهَّلٌ كما يراه الراكب** — `NearbyDriverOut` نفسُها.
  *
- * **ولا حقلَ مركبةٍ فيها بقصد**: ما يُرى ويندر يصير معرّفاً ينقض تجهيلَ §10،
- * فزملاءُ الكبتن يُرسمون بالسيارة العامّة لا بمركبة أحد.
+ * **ومركبتُه المنشورةُ معه**: النادرةُ والأسطوريةُ لا تصلان هنا أبداً
+ * (`publishable_skin_for`) — فما يُرى ويندر يصير معرّفاً ينقض تجهيلَ §10.
+ * **و`null` لا تميّز أحداً**: لا تقع إلا حين لا بديلَ منشورٌ في الكتالوج
+ * كلِّه، فتغيب عن الجميع سواءً.
  */
 export interface NearbyDriver {
   ref: string;
@@ -870,4 +885,5 @@ export interface NearbyDriver {
   lng: number;
   heading: number | null;
   vehicle_category: VehicleCategory;
+  skin: MapSkin | null;
 }

@@ -24,9 +24,12 @@ import type { ReactNode } from "react";
 
 import { getGarage, markSkinSeen, setActiveSkin } from "@/api/endpoints";
 import type { Garage, VehicleSkin } from "@/api/types";
+import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
 
 interface GarageState {
+  /** **مفتاحُ السوق** — يقرؤه «حسابي» فلا يرسم صفّاً إلى بابٍ مغلق. */
+  enabled: boolean;
   garage: Garage | null;
   loading: boolean;
   /** المركبةُ المفعَّلة — **مشتقّةٌ من الكراج لا محفوظةٌ ثانيةً**. */
@@ -38,6 +41,7 @@ interface GarageState {
 }
 
 const GarageContext = createContext<GarageState>({
+  enabled: false,
   garage: null,
   loading: true,
   activeSkin: null,
@@ -48,10 +52,17 @@ const GarageContext = createContext<GarageState>({
 
 export function GarageProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
+  /** **خلف مفتاحه ويُشحن مطفأً** (`vehicle_skins_enabled`): مطفأً ترفض
+   *  الخلفيةُ الأبوابَ الثلاثة بخطأٍ مسمّى — **فلا يُطرق بابٌ أصلاً**، ولا
+   *  يبتلع التطبيقُ ٤٠٣ في كلِّ فتحة. ومطفأً لا كراجَ ولا مركبةَ على
+   *  الخريطة ولا صفَّ في «حسابي»: قاعدةُ `women_service_enabled` نفسُها —
+   *  المفتاحُ يحجب **ما تحته** لا الشاشةَ وحدَها. */
+  const enabled = useFeature(user?.country_code, "vehicle_skins_enabled");
   const [garage, setGarage] = useState<Garage | null>(null);
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     try {
       setGarage(await getGarage());
     } catch {
@@ -59,12 +70,12 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       // واحدٌ يفشل كان يترك الكبتنَ أمام شاشةٍ لا تنتهي
       /* يبقى ما كان */
     }
-  }, []);
+  }, [enabled]);
 
   // **بالمُعرِّف لا بالكائن**: `user` كائنٌ جديدٌ مع كلِّ تحديثِ جلسة
   const userId = user?.id ?? null;
   useEffect(() => {
-    if (!userId) {
+    if (!userId || !enabled) {
       setGarage(null);
       return;
     }
@@ -73,7 +84,7 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       .then(setGarage)
       .catch(() => undefined)
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, enabled]);
 
   const activate = useCallback(
     async (skinId: string) => {
@@ -117,8 +128,8 @@ export function GarageProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<GarageState>(
-    () => ({ garage, loading, activeSkin, refresh, activate, celebrated }),
-    [garage, loading, activeSkin, refresh, activate, celebrated],
+    () => ({ enabled, garage, loading, activeSkin, refresh, activate, celebrated }),
+    [enabled, garage, loading, activeSkin, refresh, activate, celebrated],
   );
 
   return (
