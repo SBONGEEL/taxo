@@ -471,7 +471,23 @@ MOVED="$(_ssh "cd $REMOTE && \
   done | wc -l" | tr -d '\r ')"
 [ "${MOVED:-0}" = "0" ] || say "  ✓ أُزيح $MOVED ملفاً متصادماً إلى ~/taxo-aside-$STAMP (لم يُحذف شيء)"
 
-_ssh "cd $REMOTE && git checkout --quiet --detach $HEAD_SHA" \
+# **والمعدَّلُ المتتبَّعُ يُحفظ رقعةً ثم يُستعاد إلى الحالِ المعروفة.**
+#
+# `git checkout` يرفض الملفَّ المتتبَّعَ المعدَّلَ كما يرفض غيرَ المتتبَّع
+# المتصادم — **والإزاحةُ كانت تعالج الثاني وحدَه**، فسقط السحبُ على خمسين
+# ملفاً معدَّلاً بعد أن نجحت النسخة.
+#
+# **و`-f` هنا ليست دوساً أعمى**، وهو الفرقُ الذي يجعلها مقبولةً بعد أن كانت
+# مرفوضة: **قِيس قبلها أن كلَّ محتوىً على الخادم موجودٌ ككائنٍ في git وأن صفرَ
+# مسارٍ يختفي بالسحب** (٨٣ ملفاً، واحداً واحداً)، **وحُفظت الرقعةُ**، **وسُحبت
+# نسخةٌ كاملةٌ خارج الخادم**. فالمعنى: **استعادةٌ إلى حالٍ معروفةٍ بعد حفظ
+# ما كان**، لا محوٌ لِما لا يُعرف.
+_ssh "cd $REMOTE && mkdir -p $ASIDE && git diff --binary > $ASIDE/tracked.patch && \
+  wc -l < $ASIDE/tracked.patch" > /tmp/taxo-patch-lines 2>/dev/null || true
+PATCH_N="$(tr -d ' \r' < /tmp/taxo-patch-lines 2>/dev/null || echo 0)"
+[ "${PATCH_N:-0}" = "0" ] || say "  ✓ حُفظت رقعةُ المعدَّل المتتبَّع ($PATCH_N سطراً) في ~/taxo-aside-$STAMP/tracked.patch"
+
+_ssh "cd $REMOTE && git checkout --quiet --force --detach $HEAD_SHA" \
   || die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
 
 SERVER_NOW="$(_ssh "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
