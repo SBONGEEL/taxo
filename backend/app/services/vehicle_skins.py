@@ -52,7 +52,8 @@ from app.models.vehicle_skin import (
 )
 from app.schemas.driver import ART_MAP, ART_STORE, skin_art_url as art_url
 from app.schemas.vehicle_skin import BuySkinOut, GarageOut, SkinOut, StoreOut
-from app.services import geo, wallet
+from app.services import geo, skin_artwork, wallet
+from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,12 @@ def _to_out(
         visible_before_accept=skin.visible_before_accept,
         price=price,
         currency=currency,
+        # **الطرحُ هنا لا في الشاشة** (§14): `Number(balance) − Number(price)`
+        # مالٌ عبر عائم. و`quantize` لأن `Decimal` مبنيّاً في بايثون يُسلسَل
+        # `"0"` لا `"0.000"` — **الشكلُ السابع**، وقد وقع في هذا الملفّ نفسِه.
+        balance_after=(
+            None if price is None else round_money(balance - price)
+        ),
         remaining=remaining,
         owners_count=owners,
         level_required=skin.level_required,
@@ -176,11 +183,53 @@ def _to_out(
     )
 
 
+def has_artwork(skin: VehicleSkin) -> bool:
+    """**أله رسمةٌ يخدمها بابُ الرسم؟** — يُقرأ من الصفّ لا من ندرته.
+
+    `art_url` يبني مساراً لكلِّ صفٍّ سواءٌ أحمل رسمةً أم لا، **والفرقُ يظهر
+    ٤٠٤ في يد كبتن**: بطاقةٌ برسمةٍ مكسورة. وهي إحدى صورتين، وكلتاهما تقع:
+    مركبةٌ أُنشئت في اللوحة ولم تُرفع رسمتُها بعد، وفئةٌ لم يغطِّها المولّد
+    (`rare`/`legendary`، 2026-08-22).
+
+    **والشرطُ على الصفّ لا على الندرة** (§28.4): «أين تُرى مكتوبٌ في الصفّ لا
+    مستنتَجٌ من الندرة» — والقاعدةُ نفسُها هنا. فشرطٌ بالندرة يُخفي أسطوريةً
+    رُفعت رسمتُها فعلاً، **ويُظهر عاديةً أُنشئت فارغة** — أي يخطئ في الاتجاهين.
+
+    **ويُقاس وجودُ الملفِّ لا وجودُ المفتاح** — وهذا ليس تشدّداً: قِيس في
+    قاعدة التطوير (2026-08-22) أن `asset_key = "city-taxi"` **ولا ملفَّ بهذا
+    الاسم في الحزمة**، فبابُ الرسم يردّ ٤٠٤ والبطاقةُ مكسورة. **وصفٌّ يَعِد
+    بملفٍّ ليس هناك** هو بعينه ما تحرسه قاعدةُ «لا نجاحَ يُعلَن قبل التحقق
+    ممّا كُتب» — والمفتاحُ المكتوبُ **تصريحٌ**، والملفُّ **واقعة**.
+    """
+    if skin.asset_key is not None:
+        # `bundled_path` تتحقّق من الاسم **ومن أن الملفَّ موجودٌ فعلاً**،
+        # وترفع `DocumentFileMissing` فيما عدا ذلك — فلا فحصَ ثانٍ هنا
+        # يفترق عنها أوّلَ تغييرٍ في اصطلاح التسمية.
+        for slot in ("store", "map"):
+            try:
+                skin_artwork.bundled_path(skin.asset_key, slot)  # type: ignore[arg-type]
+            except Exception:
+                return False
+        return True
+    return skin.store_image_path is not None and skin.map_image_path is not None
+
+
 async def _catalogue(session: AsyncSession) -> list[VehicleSkin]:
+    """**والمركبةُ بلا رسمةٍ لا تدخل الكتالوج** (قرارُ المالك 2026-08-22).
+
+    **ووعدٌ لا يُنجَز أسوأُ من غيابه** — قاعدتُه في §28.3/٤ نفسُها التي تُخفي
+    المقفولةَ بالمستوى حيث المستوياتُ مطفأة. و«أسطوريةٌ» تُرسم كالعادية
+    **ندرةٌ لا يفهمها من دفع**، وبطاقةٌ برسمةٍ مكسورةٍ أسوأُ من الاثنتين.
+
+    **ونداءُ هذا البابِ واحدٌ — المتجرُ وحدَه** (قِيس، لا افتُرض): `garage_for`
+    يقرأ المملوكةَ بمعرّفاتها مباشرةً ولا يمرّ من هنا. **وهذا هو الصواب**:
+    **ما يملكه كبتنٌ لا يُنتزع من كراجه** لأن الإدارةَ لم ترفع رسمةً بعد،
+    والمخفيُّ هو **ما يُعرض للبيع** لا ما مُلِك.
+    """
     rows = await session.scalars(
         select(VehicleSkin).where(VehicleSkin.is_active.is_(True))
     )
-    return list(rows)
+    return [skin for skin in rows if has_artwork(skin)]
 
 
 async def store_for(session: AsyncSession, driver: Driver, user: User) -> StoreOut:

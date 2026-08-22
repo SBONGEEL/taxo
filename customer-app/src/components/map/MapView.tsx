@@ -397,9 +397,23 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         continue;
       }
 
-      const element = carElement();
-      element.style.rotate = `${driver.heading ?? 0}deg`;
-      const marker = new mapboxgl.Marker({ element, rotationAlignment: "map" })
+      // **مركبتُه المنشورةُ تُرسم هنا كما تُرسم بعد القبول** (قرارُ المالك
+      // 2026-08-22): **البانِي واحدٌ للموضعين** — فلا يفترق شكلُ سيارةٍ قبل
+      // القبول عن شكلها بعده، ولا يُبنى سقوطٌ إلى العامّة مرتين.
+      //
+      // **والنادرةُ لا تصل هنا أصلاً**: الخلفيةُ ترسل البديلَ المنشورَ لمن
+      // لا مركبةَ ظاهرةً له، فكلُّ من على الخريطة يحمل شيئاً — والغيابُ لا
+      // يُميَّز عن الحضور.
+      const element = driverElement(driver.skin);
+      // **والدورانُ من الصفّ لا يُخمَّن** — `map_rotates`: العلويّةُ
+      // المرسومةُ تدور، والرندرُ الواقعيُّ ثابت. وهو نفسُ سطر العلامة
+      // المُسنَدة، فلا قاعدتان لشيءٍ واحد.
+      const rotates = driver.skin ? driver.skin.rotates : true;
+      if (rotates) element.style.rotate = `${driver.heading ?? 0}deg`;
+      const marker = new mapboxgl.Marker({
+        element,
+        rotationAlignment: rotates ? "map" : "viewport",
+      })
         .setLngLat([point.lng, point.lat])
         .addTo(instance);
       carMarkers.current.set(driver.ref, {
@@ -411,7 +425,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         headingTo: driver.heading ?? 0,
         startedAt: performance.now(),
         duration: NEARBY_TWEEN_MS,
-        rotates: true,
+        rotates,
       });
     }
 

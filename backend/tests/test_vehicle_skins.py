@@ -22,6 +22,7 @@ from app.models.vehicle_skin import (
     RARITY_COMMON,
     RARITY_LEGENDARY,
     RARITY_PREMIUM,
+    SOURCE_GIFT,
     DriverVehicleSkin,
     VehicleSkin,
     VehicleSkinPrice,
@@ -55,9 +56,21 @@ async def make_skin(
 
     ولا يخالف قاعدةَ «لا مساعدَ يختصر مساراً حقيقياً»: مسارُ الإنشاء بابُ
     مشرفٍ يبنيه وكيلٌ آخر، وما يُقاس هنا **قراءةُ الكتالوج وشراؤه** لا كتابتُه.
+
+    **والمفتاحُ رسمةٌ موجودةٌ في الحزمة، لا اسمُ المركبة** (2026-08-22): كان
+    `asset_key=name` فيكتب اسماً عربياً **لا ملفَّ له**، وهو ما لم يظهر ما دام
+    أحدٌ لا يسأل عن الملفّ. **وصار يظهر** لأن الكتالوج يُخفي ما لا رسمةَ له،
+    وهو الفرقُ بين «مفتاحٌ مكتوب» و«ملفٌّ موجود». **وقِيس في قاعدة التطوير أن
+    الأربعةَ كلَّها كانت بمفاتيحَ مخترعة** — أي أن المتجرَ كلَّه كان يُرسم
+    مكسوراً، ولم يمنع ذلك شيءٌ لأنه لم يُفتح قط.
     """
     async with session_factory() as session:
-        skin = VehicleSkin(name=name, rarity=rarity, asset_key=name, **fields)
+        skin = VehicleSkin(
+            name=name,
+            rarity=rarity,
+            asset_key=fields.pop("asset_key", "sedan-ash"),
+            **fields,
+        )
         session.add(skin)
         await session.flush()
         if price is not None:
@@ -98,6 +111,90 @@ async def test_the_store_lists_only_what_this_market_prices(
     assert [row["id"] for row in body["skins"]] == [str(priced)]
     assert body["balance"] == "20.000"
     assert body["currency"] == "JOD"
+
+
+async def test_a_vehicle_with_no_drawing_is_not_offered_for_sale(
+    client: AsyncClient, session_factory, ready
+):
+    """**وعدٌ لا يُنجَز أسوأُ من غيابه** (قرارُ المالك 2026-08-22).
+
+    والشرطُ **على الصفّ لا على الندرة**، وهذا الاختبارُ يقيس الاتجاهين معاً:
+    **أسطوريةٌ لها رسمةٌ تُعرض**، **وعاديةٌ بلا رسمةٍ تُخفى** — فشرطٌ بالندرة
+    كان سيخطئ في كليهما. وهي قاعدةُ §28.4 نفسُها: «أين تُرى مكتوبٌ في الصفّ لا
+    مستنتَجٌ من الندرة».
+    """
+    drawn = await make_skin(session_factory, name="أسطوريةٌ-مرسومة", rarity=RARITY_LEGENDARY)
+    blank = await make_skin(session_factory, name="عاديةٌ-بلا-رسمة", rarity=RARITY_COMMON)
+    async with session_factory() as session:
+        row = await session.get(VehicleSkin, blank)
+        row.asset_key = None
+        await session.commit()
+
+    body = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
+    names = [row["name"] for row in body["skins"]]
+    assert names == ["أسطوريةٌ-مرسومة"], names
+    assert str(drawn) in [row["id"] for row in body["skins"]]
+
+
+async def test_what_a_captain_already_owns_is_never_pulled_from_his_garage(
+    client: AsyncClient, session_factory, ready
+):
+    """**التصفيةُ تخفي ما يُعرض للبيع لا ما مُلِك.**
+
+    ومركبةٌ اشتُريت ثم حُذفت رسمتُها من اللوحة تختفي من المتجر — **وسحبُها من
+    كراج صاحبها عقوبةٌ لم يقرّرها أحد** على شيءٍ دفع ثمنَه، وهي قاعدةُ الهدية
+    نفسُها (§28.3/٥: «وقعت على حدثٍ وقع»).
+    """
+    skin = await make_skin(session_factory, name="مشتراة", price="5.000")
+    bought = await client.post(f"{SKINS}/{skin}/buy", headers=ready["headers"])
+    assert bought.status_code == 200, bought.text
+
+    async with session_factory() as session:
+        row = await session.get(VehicleSkin, skin)
+        row.asset_key = None
+        await session.commit()
+
+    store = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
+    assert str(skin) not in [row["id"] for row in store["skins"]]
+
+    garage = (await client.get(f"{SKINS}/garage", headers=ready["headers"])).json()
+    assert str(skin) in [row["id"] for row in garage["skins"]]
+
+
+async def test_the_balance_after_is_subtracted_in_the_backend_and_quantized(
+    client: AsyncClient, session_factory, ready
+):
+    """**§14: الشاشةُ لا تطرح مالاً** — والرصيدُ ٢٠٫٠٠٠ والسعرُ ٥٫٠٠٠.
+
+    وثلاثةُ شروطٍ في سطرٍ واحد: **ثلاثُ خاناتٍ دائماً** (الشكلُ السابع —
+    `Decimal` مبنيٌّ في بايثون يُسلسَل `"0"`)، **و`null` حيث لا سعرَ** لا صفراً
+    (صفرٌ يُقرأ «لن يبقى لك شيء» عن مركبةٍ لا تُباع)، **وسالبٌ لا يُقصّ** لأن
+    رقماً مقصوصاً يُصدَّق ويكذب.
+    """
+    await make_skin(session_factory, name="مسعّرة", price="5.000")
+    await make_skin(session_factory, name="غالية", price="25.000")
+
+    body = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
+    after = {row["name"]: row["balance_after"] for row in body["skins"]}
+
+    assert after["مسعّرة"] == "15.000"
+    assert after["غالية"] == "-5.000", "الرصيدُ السالبُ لا يُقصّ عند الصفر"
+
+    # **و`null` تُقاس في الكراج لا في المتجر**: المركبةُ بلا سعرٍ لا تدخل
+    # المتجرَ أصلاً (بطاقةٌ بلا سعرٍ زرُّها لا يفعل شيئاً)، **فموضعُها الوحيدُ
+    # كراجُ من وُهبها** — وقياسُها في المتجر كان سيقيس غيابَ صفٍّ لا قيمةَ حقل.
+    gift = await make_skin(session_factory, name="هدية", price=None)
+    async with session_factory() as session:
+        session.add(
+            DriverVehicleSkin(
+                driver_id=ready["driver_id"], skin_id=gift, source=SOURCE_GIFT
+            )
+        )
+        await session.commit()
+
+    garage = (await client.get(f"{SKINS}/garage", headers=ready["headers"])).json()
+    rows = {row["name"]: row["balance_after"] for row in garage["skins"]}
+    assert rows["هدية"] is None, "لا سعرَ ⇒ لا «رصيدٌ بعده» — والصفرُ يكذب"
 
 
 async def test_the_store_is_ordered_by_rarity_then_name(
@@ -664,10 +761,21 @@ async def test_the_artwork_door_needs_no_session(
 ):
     """رسمةُ الكتالوج **ليست وثيقةَ هوية** — وحارسُ الجلسة يفرّغ خريطةَ الراكب.
 
-    والمقيسُ هنا أن البابَ يصل بلا ترويسةِ إذنٍ ويردّ ٤٠٤ لأن الرسمةَ غيرُ
-    مولَّدةٍ بعد — **لا ٤٠١**. والفرقُ بينهما هو الميزة.
+    **والمقيسُ في الحالتين أنه ليس ٤٠١**: من له رسمةٌ تُخدَم بلا ترويسةِ إذن،
+    ومن لا رسمةَ له يردّ ٤٠٤. **والفرقُ بين ٤٠٤ و٤٠١ هو الميزةُ نفسُها** —
+    الأولُ يقول «لا شيءَ هنا» فيسقط التطبيقُ إلى السيارة العامّة، والثاني
+    يقول «من أنت» على صورةٍ يراها كلُّ من على الخريطة.
+
+    **وكان يقيس نصفَه** (صُحّح 2026-08-22): استفاد من أن `make_skin` يكتب اسمَ
+    المركبة مفتاحاً — وهو اسمٌ عربيٌّ لا ملفَّ له — فقاس ٤٠٤ **بالمصادفة لا
+    بالقصد**، ولم يقس البابَ وهو يخدم شيئاً قطّ.
     """
-    skin = await make_skin(session_factory, name="بلا-رسمة")
-    response = await client.get(f"{SKINS}/{skin}/art/map")
-    assert response.status_code == 404, response.status_code
-    assert response.json()["code"] == "not_found"
+    drawn = await make_skin(session_factory, name="لها-رسمة")
+    served = await client.get(f"{SKINS}/{drawn}/art/map")
+    assert served.status_code == 200, served.status_code
+    assert served.headers["content-type"].startswith("image/")
+
+    blank = await make_skin(session_factory, name="بلا-رسمة", asset_key="لا-ملفَّ-لهذا")
+    missing = await client.get(f"{SKINS}/{blank}/art/map")
+    assert missing.status_code == 404, missing.status_code
+    assert missing.json()["code"] == "not_found"
