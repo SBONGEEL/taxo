@@ -355,10 +355,20 @@ fi
 
 # **وما لا يعيده السحبُ داخل الشجرة**: غيرُ متتبَّعٍ وغيرُ مُتجاهَل. وبعد رفعٍ
 # سليمٍ يكون فارغاً — **وفراغُه يُسجَّل ولا يُفترض**.
-UNTRACKED_N="$(ssh_try "cd $REMOTE && git ls-files --others --exclude-standard | wc -l" | tr -d '\r ')"
+# **ويُصفّى بتجاهُلِ الإيداع الهدف لا بتجاهُلِ إيداع الخادم** (صُحّح بالقياس
+# 2026-08-22): شجرةُ الخادم عند إيداعٍ قديمٍ **لا يتجاهل `landing/downloads`**،
+# فدخلت حزمتا APK في «ما لا يعيده السحب» — **٤٢ ملفاً تزن ١٦٫٥ م.ب**، وسقط
+# النقلُ ثلاثَ مرّاتٍ على قناةٍ تتقطّع.
+#
+# **والحزمُ مخرجُ بناءٍ يُعاد بناؤه، لا حالةٌ تُفقد** — فنسخُها ليس حرصاً بل
+# ثِقَلٌ يُسقط النسخةَ كلَّها. **والمعيارُ الصحيحُ تجاهُلُ ما نذهب إليه** لا ما
+# نحن فيه: هو الذي يعرف ما صار مخرجَ بناءٍ منذ ذلك الإيداع.
+UNTRACKED_FILTER="cd $REMOTE && git cat-file blob $HEAD_SHA:.gitignore > /tmp/taxo-target-ignore 2>/dev/null; \
+  git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore"
+UNTRACKED_N="$(ssh_try "$UNTRACKED_FILTER | wc -l" | tr -d '\r ')"
 if [ "${UNTRACKED_N:-0}" != "0" ]; then
   say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ داخل الشجرة…"
-  ssh_try "cd $REMOTE && git ls-files --others --exclude-standard | tar -czhf - -T -" \
+  ssh_try "$UNTRACKED_FILTER | tar -czhf - -T -" \
     > "$LOCAL/untracked.tar.gz" || die "تعذّرت نسخةُ غير المتتبَّع — لا رفع."
 else
   say "  · لا ملفَّ غيرَ متتبَّعٍ داخل الشجرة"
