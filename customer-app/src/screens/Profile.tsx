@@ -20,6 +20,7 @@ import {
   updateMe,
   verifyMyPhone,
 } from "@/api/endpoints";
+import { PhotoCard } from "@/components/account/PhotoCard";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
@@ -94,6 +95,10 @@ export function ProfileScreen() {
             {user.phone}
           </p>
         </div>
+
+        {/* **الصورةُ بجوار بياناته** (قرارُ المالك 2026-08-22): اختياريةٌ،
+            بلا مراجعة، ويراها كبتنُ رحلته بعد القبول وحدَه */}
+        <PhotoCard />
 
         {!user.phone_verified ? (
           <section className="card space-y-12 border-brand-brd p-16">

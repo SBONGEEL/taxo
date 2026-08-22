@@ -28,8 +28,9 @@ import {
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import type { Coordinates, NearbyDriver } from "@/api/types";
+import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
 import { trimRoute } from "@/lib/route-line";
+import { skinImageUrl, skinSizePx } from "@/lib/skin";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,12 @@ interface MapViewProps {
   pickup?: Coordinates | null;
   dropoff?: Coordinates | null;
   driverLocation?: { lat: number; lng: number; heading: number | null } | null;
+  /** **مركبةُ الكبتن المُسنَد** — تصل بعد القبول وحدَه (`RideDriverSkin`).
+   *
+   *  **ولا تمسّ سياراتِ الكباتن القريبين**: تلك تبقى كما هي قبل القبول، فلا
+   *  حقلَ ولا شكلَ يُستدلّ منه على مركبة أحد على الخريطة الحرّة (§10).
+   *  و`null`/غيابٌ يرسم السيارةَ العامّة **بلا أيِّ فرقٍ مرئيّ**. */
+  driverSkin?: RideDriverSkin | null;
   interactive?: boolean;
   /** خطُّ الوصل بين النقطتين. **يُطفأ في شريط التفاصيل** (القرار 38): هناك
    *  المسارُ الفعليُّ مسجَّلٌ في `ride_route_points` ولا منفذَ يقرؤه، فخطٌّ
@@ -89,6 +96,9 @@ interface TweenedMarker {
   startedAt: number;
   duration: number;
   element: HTMLElement;
+  /** **أتدور العلامةُ مع الاتجاه؟** — العلويّةُ المرسومةُ تدور، والرندرُ
+   *  الواقعيُّ ثابت (`map_rotates` في الصفّ، لا استنتاجاً من الندرة). */
+  rotates: boolean;
 }
 
 /** **سيارةٌ من فوق، بألوان النظام** (قرارُ المالك 2026-08-22).
@@ -126,6 +136,42 @@ function carElement(): HTMLElement {
                s-2.7.2-3.9.7Z" fill="var(--inv)" opacity="0.85"/>
     </svg>`;
   element.style.willChange = "transform";
+  return element;
+}
+
+/** علامةُ الكبتن المُسنَد — **السيارةُ العامّة، أو مركبتُه إن كانت له**.
+ *
+ * **والسيارةُ العامّةُ تُرسم أولاً دائماً**، والرسمةُ تحلّ محلَّها **عند
+ * وصولها لا قبله**: علامةٌ فارغةٌ تنتظر صورةً على شبكةٍ بطيئة **تُرى فرقاً
+ * بين كبتنٍ وكبتن** — وصورةٌ لا تصل أبداً (٤٠٤، عقدٌ محذوف، شبكةٌ ساقطة)
+ * تترك الراكبَ بلا سيارةٍ على الخريطة. **فالسقوطُ إلى العامّة لا يُرى**،
+ * وهو الشكلُ الثالثَ عشر مطبَّقاً: الغيابُ لا يُميَّز عن الحضور.
+ */
+function driverElement(skin: RideDriverSkin | null | undefined): HTMLElement {
+  const element = carElement();
+  if (!skin) return element;
+
+  const generic = element.querySelector("svg");
+  const size = skinSizePx(skin);
+  const image = document.createElement("img");
+  // **وصفٌ فارغٌ بقصد**: اسمُ المركبة مكتوبٌ في بطاقة الكبتن، وقارئُ الشاشة
+  // لا يحتاج أن يسمعه مرةً ثانيةً من علامةٍ على خريطة
+  image.alt = "";
+  image.width = size;
+  image.height = size;
+  image.style.display = "none";
+  image.style.objectFit = "contain";
+  image.style.filter = "drop-shadow(0 1px 3px rgb(0 0 0 / 0.45))";
+  image.addEventListener(
+    "load",
+    () => {
+      image.style.display = "block";
+      if (generic instanceof SVGElement) generic.style.display = "none";
+    },
+    { once: true },
+  );
+  image.src = skinImageUrl(skin.image_url);
+  element.appendChild(image);
   return element;
 }
 
@@ -195,6 +241,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     showMyLocation = null,
     searching = false,
     driverLocation,
+    driverSkin = null,
     interactive = true,
     onMoveEnd,
     className,
@@ -209,6 +256,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   const [styleVersion, setStyleVersion] = useState(0);
   const carMarkers = useRef(new Map<string, TweenedMarker>());
   const driverMarker = useRef<TweenedMarker | null>(null);
+  /** معرّفُ المركبة المرسومة الآن — تبدُّلُه يعيد بناءَ العلامة. */
+  const drawnSkin = useRef<string | null>(null);
   const pickupMarker = useRef<mapboxgl.Marker | null>(null);
   const myLocationMarker = useRef<mapboxgl.Marker | null>(null);
   const searchPulse = useRef<mapboxgl.Marker | null>(null);
@@ -296,11 +345,16 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
           lerp(entry.from.lng, entry.to.lng, eased),
           lerp(entry.from.lat, entry.to.lat, eased),
         ]);
-        entry.element.style.rotate = `${lerpAngle(
-          entry.headingFrom,
-          entry.headingTo,
-          eased,
-        )}deg`;
+        // **ما لا يدور لا يُكتب له تحويل**: كتابةُ صفرِ درجةٍ على رندرٍ
+        // واقعيٍّ لا تضرّ اليوم، لكنّها تجعل «لا يدور» شرطاً في مكانٍ واحدٍ
+        // ينساه الموضعُ الثاني — والشرطُ هنا حيث تُكتب الزاوية
+        if (entry.rotates) {
+          entry.element.style.rotate = `${lerpAngle(
+            entry.headingFrom,
+            entry.headingTo,
+            eased,
+          )}deg`;
+        }
       };
 
       for (const entry of carMarkers.current.values()) advance(entry);
@@ -357,6 +411,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         headingTo: driver.heading ?? 0,
         startedAt: performance.now(),
         duration: NEARBY_TWEEN_MS,
+        rotates: true,
       });
     }
 
@@ -376,8 +431,20 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     if (!driverLocation) {
       driverMarker.current?.marker.remove();
       driverMarker.current = null;
+      drawnSkin.current = null;
       return;
     }
+
+    // **تبدُّلُ المركبة يعيد بناءَ العلامة لا يعدّلها**: الرسمةُ والدوران
+    // وطريقةُ المحاذاة تُقرَّر لحظةَ الإنشاء، **فمركبةٌ تصل بعد أن رُسمت
+    // السيارةُ العامّة تبقى غيرَ ظاهرةٍ إلى نهاية الرحلة** — وهي الحالُ
+    // العاديّة: الموقعُ يصل قبل تفاصيل الرحلة أو معها
+    const skinId = driverSkin?.skin_id ?? null;
+    if (driverMarker.current && drawnSkin.current !== skinId) {
+      driverMarker.current.marker.remove();
+      driverMarker.current = null;
+    }
+    drawnSkin.current = skinId;
 
     const point = { lat: driverLocation.lat, lng: driverLocation.lng };
     if (driverMarker.current) {
@@ -392,10 +459,18 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       return;
     }
 
-    const element = carElement();
-    element.style.rotate = `${driverLocation.heading ?? 0}deg`;
+    // **الدورانُ يُقرأ من الصفّ لا يُخمَّن**: `map_rotates` يقول أعلويّةٌ
+    // مرسومةٌ هي أم رندرٌ واقعيّ. والعلويّةُ تدور مع الخريطة
+    // (`rotationAlignment: "map"`)، والواقعيُّ **يبقى قائماً أمام القارئ**
+    // (`"viewport"`) — فلا يستلقي على جنبه حين يلفّ الراكبُ الخريطة
+    const rotates = driverSkin ? driverSkin.rotates : true;
+    const element = driverElement(driverSkin);
+    if (rotates) element.style.rotate = `${driverLocation.heading ?? 0}deg`;
     driverMarker.current = {
-      marker: new mapboxgl.Marker({ element, rotationAlignment: "map" })
+      marker: new mapboxgl.Marker({
+        element,
+        rotationAlignment: rotates ? "map" : "viewport",
+      })
         .setLngLat([point.lng, point.lat])
         .addTo(instance),
       element,
@@ -405,8 +480,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       headingTo: driverLocation.heading ?? 0,
       startedAt: performance.now(),
       duration: DRIVER_TWEEN_MS,
+      rotates,
     };
-  }, [driverLocation, ensureLoop]);
+  }, [driverLocation, driverSkin, ensureLoop]);
 
   // ------------------------------------------------ نبضةُ الموقع والبحث
   useEffect(() => {

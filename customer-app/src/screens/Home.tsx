@@ -376,6 +376,9 @@ export function HomeScreen() {
         pickup={tracking ? ride!.pickup : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
         driverLocation={driverPing}
+        // **مركبةُ الكبتن بعد القبول وحدَه** — وقبله لا تتغيّر الخريطةُ في
+        // شيء: `ride` نفسُه لا يوجد، والكباتنُ القريبون يظلّون كما هم
+        driverSkin={ride?.driver?.skin ?? null}
         // **مسارُ الرحلة على الطرق بعد القبول** (البند ٨) — ويتقلّص خلف الكبتن
         routePoints={routeLine}
         trimAt={driverPing}
