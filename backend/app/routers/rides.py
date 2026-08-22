@@ -10,10 +10,13 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
+from sqlalchemy import select
+
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core import storage
 from app.core.exceptions import NotFound, PermissionDenied
 from app.models.driver import Driver
+from app.models.user import User
 from app.models.enums import CancellationChargeStatus, RideStatus, UserRole
 from app.models.ride import Ride
 from app.schemas.rating import RatingCreate, RatingOut
@@ -29,7 +32,7 @@ from app.schemas.ride import (
     RideOut,
     RouteLineOut,
 )
-from app.services import cancellation
+from app.services import avatar, cancellation
 from app.services import (
     dispatch,
     documents as documents_service,
@@ -239,44 +242,52 @@ async def get_route_line(
 @router.get("/{ride_id}/driver/photo")
 async def get_driver_photo(
     ride_id: uuid.UUID, user: CurrentUser, session: DbSession
-) -> FileResponse:
-    """صورةُ كبتن هذه الرحلة — **لطرفَيها وحدهما** (البند ٥٢).
+) -> Response:
+    """صورةُ كبتن هذه الرحلة — **لطرفَيها وحدهما، وبشكلٍ واحدٍ للجميع**.
 
     **ومنفذٌ ثانٍ أضيقُ من منفذ المستندات لا توسيعٌ له**: `document_response`
-    يفحص ملكيةَ الكبتن لمستنده ويردّ `private, no-store` — وهو الصواب لوثيقة
-    هوية، ولا يصلح لصورةٍ **يراها الراكب**. والبديلُ المرفوض مسارٌ يأخذ
-    `driver_id` فيعرض وجوهَ الكباتن لمن يعدّ المعرّفات؛ فالمفتاحُ هنا
-    **الرحلةُ** لا الكبتن، و`get_ride_for_user` هو الحارسُ القائم الذي يقول
-    «أنت طرفٌ فيها».
+    يفحص ملكيةَ الكبتن لمستنده ويردّ `private, no-store` — صوابٌ لوثيقة هوية،
+    ولا يصلح لصورةٍ **يراها الراكب**. والبديلُ المرفوض مسارٌ يأخذ `driver_id`
+    فيعرض وجوهَ الكباتن لمن يعدّ المعرّفات؛ **فالمفتاحُ هنا الرحلةُ لا الكبتن**.
 
-    **ولا تُردّ إلا مقبولةً**: صورةٌ تنتظر المراجعة قد تكون صورةَ شخصٍ آخر أو
-    صورةً مسيئة — وعرضُها قبل أن يراها مشرفٌ يُبطل المراجعةَ نفسَها. و404
-    حينها هو الجواب الصحيح: التطبيقُ يرسم الحرفَ الأول، وهو ما يرسمه للمُعفاة
-    أيضاً — **والحالان متشابهان في الشاشة بقصد**، فغيابُ الصورة لا يُعلن أنها
-    امرأة.
+    **ولا ٤٠٤ بعد اليوم** (عطبُ الإعفاء 2026-08-22): كان يردّ ٤٠٤ لمن لا صورةَ
+    مقبولةً له. **والردّان كانا متطابقين فعلاً** — لكنّ الوشايةَ في **الحالة
+    المستقرّة**: كلُّ كبتنٍ غيرِ مُعفى يرفع صورتَه ليُعتمد فتُراجَع وتظهر،
+    **فمن لا تظهر صورتُه أبداً مُعفاةٌ، أي امرأة**. فصار يردّ **٢٠٠ بصورةٍ
+    دائماً** — الحقيقيةَ لمن رُوجعت، وحرفَ اسمه لمن سواه — **بطولٍ ثابتٍ ونوعٍ
+    واحد** (`services/avatar.py`)، فلا رمزَ حالةٍ ولا طولَ يُستدلّ منه.
 
-    **و`no-store` تبقى**: الصورةُ لطرفِ رحلةٍ لا لأيِّ قارئ، وتخزينُها في
-    وسيطٍ مشترك يجعلها تُقرأ من غير مسارها.
+    **وما ينتظر المراجعةَ لا يُنشر** كما كان — **والفرقُ أنه يُستبدل بحرفٍ لا
+    بخطأ**.
     """
     ride = await rides_service.get_ride_for_user(session, ride_id, user)
     if ride.driver_id is None:
         raise NotFound("لا كبتن لهذه الرحلة بعد")
 
     photo = await documents_service.approved_photo(session, ride.driver_id)
-    if photo is None:
-        raise NotFound("لا صورة لهذا الكبتن")
+    raw: bytes | None = None
+    if photo is not None:
+        try:
+            raw = storage.resolve(photo.file_path).read_bytes()
+        except OSError:
+            # **ملفٌّ مفقودٌ يُعامَل كغيابه**: صفٌّ يَعِد بملفٍّ ليس هناك عطبٌ
+            # يُصلَح في موضعه، **ولا يجوز أن يصير خطؤه قناةً** تُقرأ منها حال
+            raw = None
 
-    path = storage.resolve(photo.file_path)
-    return FileResponse(
-        path,
-        media_type=photo.content_type,
+    name = await session.scalar(
+        select(User.name)
+        .join(Driver, Driver.user_id == User.id)
+        .where(Driver.id == ride.driver_id)
+    )
+    return Response(
+        content=avatar.render(raw, name=name or ""),
+        media_type="image/jpeg",
         headers={
-            "Content-Disposition": f'inline; filename="driver{path.suffix}"',
+            "Content-Disposition": 'inline; filename="driver.jpg"',
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )
-
 
 @router.post("/{ride_id}/accept", response_model=RideOut)
 async def accept_ride(

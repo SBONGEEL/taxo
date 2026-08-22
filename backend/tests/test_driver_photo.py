@@ -276,9 +276,13 @@ async def test_an_unreviewed_photo_is_never_published(
 ) -> None:
     """ما ينتظر المراجعةَ قد يكون وجهَ شخصٍ آخر — وعرضُه يُبطل المراجعة.
 
-    **و404 هي الجواب الصحيح**: التطبيقُ يرسم الحرفَ الأول، وهو ما يرسمه
-    للمُعفاة أيضاً — فالحالان متشابهان في الشاشة بقصد، وغيابُ الصورة لا يُعلن
-    أن صاحبَها امرأة.
+    **والجوابُ صار صورةً لا ٤٠٤** (عطبُ الإعفاء 2026-08-22): كان ٤٠٤ لمن لا
+    صورةَ مقبولةً له، **والحالان متطابقين في اللحظة** — لكنّ الوشايةَ في
+    **الحالة المستقرّة**: من لا تظهر صورتُه أبداً مُعفاةٌ، أي امرأة. فصار
+    البابُ يردّ **حرفاً مرسوماً في الخادم** بطولٍ ثابت.
+
+    **والمعنى لم يتغيّر**: ما ينتظر المراجعةَ **لا يصل الراكبَ** — والمقيسُ
+    هنا أن بايتاتِ الملفِّ المرفوع **ليست في الردّ**.
     """
     driver = await approved_driver(client, session_factory, DRIVER)
     await upload_document(
@@ -289,8 +293,10 @@ async def test_an_unreviewed_photo_is_never_published(
     rider = await rider_session(client)
     ride = await accepted_ride(client, rider["headers"], driver)
 
-    assert (
-        await client.get(
-            f"/rides/{ride['id']}/driver/photo", headers=rider["headers"]
-        )
-    ).status_code == 404
+    seen = await client.get(
+        f"/rides/{ride['id']}/driver/photo", headers=rider["headers"]
+    )
+    assert seen.status_code == 200
+    assert seen.headers["content-type"] == "image/jpeg"
+    # **الملفُّ المرفوع لم يُنشر** — وهو المعنى الذي وُجد له هذا الاختبار
+    assert JPEG_BYTES not in seen.content
