@@ -33,7 +33,7 @@ def upgrade() -> None:
     sa.Column('nearby_max_count', sa.Integer(), server_default=sa.text('50'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint('nearby_radius_km > 0 AND nearby_max_count > 0', name=op.f('ck_map_settings_positive')),
+    sa.CheckConstraint('nearby_radius_km > 0 AND nearby_max_count > 0', name=op.f('ck_map_settings_map_settings_positive')),
     sa.PrimaryKeyConstraint('country_code', name=op.f('pk_map_settings'))
     )
     # **ولا يركب معها ما ليس منها**: أسقط التوليدُ الآليُّ تعديلاً على
