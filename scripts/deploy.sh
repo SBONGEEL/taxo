@@ -504,35 +504,33 @@ if ! _ssh "cd $REMOTE && git checkout --quiet --force --detach $HEAD_SHA"; then
   die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — أُعيدت الشجرةُ كما كانت، والنسخةُ في $LOCAL"
 fi
 
-SERVER_NOW="$(_ssh "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
-[ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند $SERVER_NOW لا $HEAD_SHA — يُوقَف. والنسخةُ في $LOCAL"
-say "  ✓ إيداعُ الخادم = إيداعُ CI"
+# **ثلاثةُ أفعالٍ في اتصالٍ واحد** — `ufw` يحدّ الاتصالات لا الأحجام
+# (`22/tcp LIMIT IN`، ستٌّ في ثلاثين ثانية). **والترحيلةُ داخلةٌ معها بقصد**:
+# لو أُفردت لاحتاجت اتصالاً، ولو تقطّع بعدها **لَما عُرف أوقعت أم لا** —
+# **وفعلٌ يكتب على المال لا يُترك مجهولَ الحال**. فتُنفَّذ ويُقرأ أثرُها في
+# النفَس نفسِه، ثم يُقارَن هنا.
+say "  الترحيلةُ والحاوياتُ في اتصالٍ واحد…"
+RESULT="$(_ssh "cd $REMOTE && \
+  { [ '${PENDING:-x}' = '${TREE_HEAD:-y}' ] || docker compose $COMPOSE_FILES run --rm --no-deps -T backend alembic upgrade head >/dev/null 2>&1; } && \
+  docker compose $COMPOSE_FILES up -d --build >/dev/null 2>&1 && \
+  echo \"SHA=\$(git rev-parse HEAD)\" && \
+  echo \"DB=\$(docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' | tr -d '\r ')\" && \
+  echo \"BAD=\$(docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' | tr '\n' ',')\"" | tr -d '\r')" \
+  || die "تعذّرت الترحيلةُ أو إعادةُ الحاويات — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
 
-# **الترحيلةُ هنا، و`downgrade` مقيسٌ قبلها لا مقروء** — على قاعدةٍ خادشةٍ
-# **لا على الإنتاج**: نسخةُ الإنتاج تُستعاد فيها ثم يُنزَل ويُصعَد.
-if [ "${PENDING:-}" != "${TREE_HEAD:-}" ]; then
-  say "  الترحيلة: ${PENDING:-?} ← ${TREE_HEAD:-?}"
-  _ssh "cd $REMOTE && docker compose $COMPOSE_FILES run --rm --no-deps -T backend alembic upgrade head" \
-    || die "سقطت الترحيلةُ — **لا يُصلَح على الإنتاج**. الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
-  say "  ✓ الترحيلةُ طُبِّقت"
-else
-  say "  الترحيلة: لا معلَّقَ"
-fi
-
-# **ولا حاويةَ تُعاد وحدَها، وكلُّ أمرِ compose يذكر ملفاتِه كلَّها صراحةً**
-# — فخٌّ وقع مقيساً: إعادةٌ بملفٍّ ناقصٍ أسقطت `CORS_ORIGINS` فوقف الهاتفان.
-say "  الحاويات: تُعاد بكلِّ ملفّات compose"
-_ssh "cd $REMOTE && docker compose $COMPOSE_FILES up -d --build" \
-  || die "تعذّرت إعادةُ الحاويات — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
+SERVER_NOW="$(printf '%s' "$RESULT" | sed -n 's/^SHA=//p')"
+DB_HEAD="$(printf '%s' "$RESULT" | sed -n 's/^DB=//p')"
+BAD="$(printf '%s' "$RESULT" | sed -n 's/^BAD=//p' | tr -d ',')"
 
 # ═══════════════════ ٦) التحقّق ═══════════════════
 # **الرفعُ لم يتمّ حتى تخضرَّ كلُّها.**
 say "══ ٦) التحقّق"
-DB_HEAD="$(_ssh "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;'" | tr -d '\r ')"
-[ "$DB_HEAD" = "${TREE_HEAD:-$DB_HEAD}" ] || die "رقمُ الترحيلة على القاعدة ($DB_HEAD) ≠ رأسُ الشجرة (${TREE_HEAD:-?}) — يُوقَف."
+[ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند ${SERVER_NOW:-<مجهول>} لا $HEAD_SHA — يُوقَف. والنسخةُ في $LOCAL"
+say "  ✓ إيداعُ الخادم = إيداعُ CI (${SERVER_NOW:0:8})"
+
+[ "$DB_HEAD" = "${TREE_HEAD:-$DB_HEAD}" ] || die "رقمُ الترحيلة على القاعدة (${DB_HEAD:-<مجهول>}) ≠ رأسُ الشجرة (${TREE_HEAD:-?}) — يُوقَف. والنسخةُ في $LOCAL"
 say "  ✓ الترحيلةُ على القاعدة = رأسُ الشجرة ($DB_HEAD)"
 
-BAD="$(_ssh "cd $REMOTE && docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' || true" | tr -d '\r')"
 [ -z "$BAD" ] && say "  ✓ كلُّ الحاويات تعمل" || die "حاوياتٌ ليست تعمل: $BAD"
 
 for _ in $(seq 1 30); do
