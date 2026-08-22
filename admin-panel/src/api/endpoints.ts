@@ -1062,3 +1062,29 @@ export async function skinArtworkBlob(
   if (!answer.ok) throw new Error("تعذّر فتح رسمة المركبة");
   return URL.createObjectURL(await answer.blob());
 }
+
+/** صورةُ بلاغٍ عن راكب — **بابٌ مُعلَنٌ لا مسارٌ تكتبه شاشة** (2026-08-23).
+ *
+ * كان `PhotoReports.tsx` يبني `${API_URL}/admin/photo-reports/…` بيده ويطرقه
+ * بـ`fetch` — **فيقفز فوق `check:contract`**: الحارسُ يقرأ `api.*` و`upload`،
+ * ومن كتب مسارَه بيده لا يراه. **والحارسُ يحرس البابَ ولا يرى من قفز السور.**
+ *
+ * و`<img src>` لا يحمل `Authorization` والبابُ إداريّ، فالجلبُ إلى `blob`
+ * ضرورةٌ لا اختيار — **وموضعُها هنا لا في شاشة**. **ومن يفتحها يغلقها.**
+ */
+export async function photoReportBlob(reportId: string): Promise<string> {
+  const answer = await fetch(`${API_URL}/admin/photo-reports/${reportId}/photo`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) throw new Error("تعذّر فتح الصورة المُبلَّغ عنها");
+  return URL.createObjectURL(await answer.blob());
+}
+
+/** عنوانُ تنزيل نسخةٍ احتياطية — **يُبنى هنا ويُفتح هناك**.
+ *
+ * التنزيلُ ملاحةُ متصفّحٍ لا نداءُ `api` (المتصفّحُ هو من يحفظ الملفّ)، فلا
+ * سبيلَ إلى `api.get`. **لكنّ المسارَ يبقى مُعلَناً في هذه الطبقة** كي يراه
+ * `check:contract` — فالفرقُ بين «لا يمرّ بـ`api`» و«لا يُعرَف أنه موجود».
+ */
+export const backupDownloadUrl = (token: string) =>
+  `${API_URL}/admin/backups/download/${token}`;

@@ -124,6 +124,7 @@ function appCalls(dir) {
           file: rel,
           line: lineOf(src, m.index),
           note: "عنوانٌ مبنيّ",
+          outsideLayer: !/\/api\/(endpoints|client)\.ts$/.test(rel),
         });
       }
     }
@@ -182,6 +183,7 @@ const routes = backendRoutes();
 const patterns = routes.map((r) => ({ ...r, re: routePattern(r.path) }));
 
 let broken = [];
+const jumpers = [];
 let unresolved = 0;
 let checked = 0;
 
@@ -192,6 +194,7 @@ const target = process.argv.includes("--app")
 for (const [name, dir] of Object.entries(APPS)) {
   if (target && target !== name) continue;
   for (const call of appCalls(dir)) {
+    if (call.outsideLayer) jumpers.push({ ...call, app: name });
     const path = normalize(call.raw);
     if (!path.startsWith("/")) {
       // عنوانٌ خارجيٌّ أو جزءٌ لا يُحكم عليه
@@ -226,6 +229,21 @@ if (broken.length > 0) {
     console.error(`      ${b.file}:${b.line} — ${b.why}`);
   }
   console.error("");
+  process.exit(1);
+}
+
+// **وطبقةُ الأبواب شرطٌ ثانٍ غيرُ صحّة المسار** (2026-08-23): مسارٌ يُبنى في
+// شاشةٍ **صحيحاً** يمرّ من الفحص أعلاه — **ويقفز فوق الطبقة**. فيبقى حيّاً بعد
+// أن يتغيّر في الخلفية، ولا يراه من يقرأ `endpoints.ts` ليعرف ما يطرقه التطبيق.
+//
+// **والحارسُ يحرس البابَ ولا يرى من قفز السور** — وقِيست ثلاثةُ قافزين
+// 2026-08-23: صورةُ بلاغٍ في شاشة، وتنزيلُ نسخةٍ في مكوّن، **وعنوانُ بثِّ
+// الموقع في الخدمة الأمامية** — وهذا أخطرُها: الشاشةُ تُفتح فيُرى عطبُها،
+// **والخدمةُ تعمل والشاشةُ مقفلة** فيُقرأ صمتُها «لا طلبات اليوم».
+if (jumpers.length > 0) {
+  console.error(`\n✗ ${jumpers.length} عنواناً يُبنى خارج طبقة الأبواب:\n`);
+  for (const j of jumpers) console.error(`   ${j.file}:${j.line} — \${API_URL}${j.raw}`);
+  console.error("\n  يُعلَن في `api/endpoints.ts` ويُستدعى من هناك — ولو لم يمرّ بـ`api.*`.");
   process.exit(1);
 }
 

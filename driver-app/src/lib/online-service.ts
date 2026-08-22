@@ -19,8 +19,8 @@
 
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
-import { API_URL } from "@/api/client";
-import { issuePresenceToken } from "@/api/endpoints";
+
+import { locationBroadcastUrl, issuePresenceToken } from "@/api/endpoints";
 
 interface OnlineServicePlugin {
   /** `endpoint` و`token` يُمرَّران مع كلِّ نبضة — فالخدمةُ تبثّ بنفسها حين
@@ -64,7 +64,7 @@ export const onlineService = {
       try {
         if (!cached) cached = (await issuePresenceToken()).token;
         await plugin.start({
-          endpoint: `${API_URL}/drivers/me/location`,
+          endpoint: locationBroadcastUrl(),
           token: cached,
         });
       } catch (error) {

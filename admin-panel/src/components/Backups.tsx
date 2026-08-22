@@ -13,13 +13,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, API_URL } from "@/api/client";
+import { ApiError } from "@/api/client";
 import {
   backupDownloadToken,
   getBackupState,
   runBackupNow,
   updateBackupSettings,
-} from "@/api/endpoints";
+, backupDownloadUrl } from "@/api/endpoints";
 import type { BackupRow, BackupState } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -232,7 +232,7 @@ function Row({
                 backupDownloadToken(row.name, password, file)
                   .then(({ token }) => {
                     // **رابطٌ لمرةٍ واحدةٍ ينتهي بعد خمس دقائق** — يُفتح فوراً
-                    window.location.href = `${API_URL}/admin/backups/download/${token}`;
+                    window.location.href = backupDownloadUrl(token);
                     setAsking(false);
                     setPassword("");
                   })

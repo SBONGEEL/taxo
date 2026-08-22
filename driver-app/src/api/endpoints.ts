@@ -506,3 +506,15 @@ export const listNearbyColleagues = (lat: number, lng: number) =>
  */
 export const reportRiderPhoto = (rideId: string) =>
   api.post<void>(`/rides/${rideId}/rider/photo/report`, {});
+
+/** عنوانُ بثِّ الموقع كما تطرقه **الخدمةُ الأمامية** — لا هذا التطبيق.
+ *
+ * الخدمةُ الأصليةُ تفتح الطلبَ بنفسها (خارج جافاسكربت)، فلا تمرّ بـ`api`.
+ * **لكنّ المسارَ يبقى مُعلَناً هنا** كي يراه `check:contract`: كان يُبنى في
+ * `lib/online-service.ts` بيده، **فيقفز فوق الحارس** — ولو تغيّر المسارُ في
+ * الخلفية لَظلّت الخدمةُ تطرق عنواناً ميتاً **وكلُّ حارسٍ أخضر**.
+ *
+ * **وهو أخطرُ من مسارٍ في شاشة**: الشاشةُ تُفتح فيُرى عطبُها، **والخدمةُ تعمل
+ * والشاشةُ مقفلة** — فيُقرأ صمتُها «لا طلبات اليوم».
+ */
+export const locationBroadcastUrl = () => `${API_URL}/drivers/me/location`;

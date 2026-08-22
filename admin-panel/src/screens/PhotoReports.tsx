@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { API_URL, tokens } from "@/api/client";
+import { photoReportBlob } from "@/api/endpoints";
 import { listPhotoReports, resolvePhotoReport } from "@/api/endpoints";
 import type { PhotoReport } from "@/api/types";
 import { Button } from "@/components/ui/Button";
@@ -33,14 +33,15 @@ function ReportedPhoto({ reportId }: { reportId: string }) {
     let url: string | null = null;
     let alive = true;
     (async () => {
-      const response = await fetch(
-        `${API_URL}/admin/photo-reports/${reportId}/photo`,
-        { headers: { authorization: `Bearer ${tokens.access()}` } },
-      );
-      if (!response.ok || !alive) return;
-      url = URL.createObjectURL(await response.blob());
+      // **البابُ مُعلَنٌ في `endpoints.ts`** — ومسارٌ تكتبه شاشةٌ بيدها يقفز
+      // فوق `check:contract`، فيبقى حيّاً بعد أن يتغيّر في الخلفية.
+      try {
+        url = await photoReportBlob(reportId);
+      } catch {
+        return;
+      }
       if (alive) setSrc(url);
-      else URL.revokeObjectURL(url);
+      else { URL.revokeObjectURL(url); url = null; }
     })();
     return () => {
       alive = false;
