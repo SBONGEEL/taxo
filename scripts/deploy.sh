@@ -398,8 +398,23 @@ env_carries_secrets() {
 
 check taxo.sql.gz "القاعدة" sql_is_a_dump
 check env.tar.gz  "الأسرار" env_carries_secrets
+# **وما خارج الشجرة يُقاس بما لا يُعاد بناؤه، لا بأنه غيرُ فارغ** (قرارُ
+# المالك 2026-08-22): القائمةُ محسوبةٌ (`docker compose config` + هدفُ كلِّ
+# وصلة) **ولا مسارَ فيها مكتوبٌ بيد** — لكنّ حسابَها قد يضيق يوماً بتغيُّرِ
+# تثبيتٍ في compose، **فيمرّ أرشيفٌ غيرُ فارغٍ وقد سقط منه ما يهمّ**.
+#
+# **وأخطرُ ما فيه بيانُ اعتماد النفق ومعرِّفُه**: ضياعُهما بلا نسخةٍ يعني
+# **إعادةَ بناء النفق يدوياً** — وأربعةُ نطاقاتٍ تسقط حتى يفعل إنسانٌ ذلك.
+# **فيُسمَّيان في الفحص لا في الجمع**: القائمةُ تُحسب، **والحدُّ الأدنى
+# يُشترط**.
+outside_carries_the_tunnel() {
+  local names
+  names=$(tar -tzf "$LOCAL/outside.tar.gz" 2>/dev/null | grep -cE 'cloudflared/.*\.json$|tunnel-id$' || true)
+  say "    (بيانُ النفق ومعرِّفُه: ${names:-0} من ٢)"
+  [ "${names:-0}" -ge 2 ]
+}
 if [ -f "$LOCAL/outside.tar.gz" ]; then
-  check outside.tar.gz "ما خارج الشجرة" tar_holds "$LOCAL/outside.tar.gz" "."
+  check outside.tar.gz "ما خارج الشجرة" outside_carries_the_tunnel
 fi
 if [ -f "$LOCAL/untracked.tar.gz" ]; then
   check untracked.tar.gz "غيرُ المتتبَّع" tar_holds "$LOCAL/untracked.tar.gz" "."
