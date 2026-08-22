@@ -299,107 +299,30 @@ mkdir -p "$LOCAL" || die "تعذّر إنشاءُ مجلد النسخة: $LOCAL"
 
 say "══ ٣) النسخةُ قبل الرفع — $STAMP"
 
-# القاعدة: تفريغٌ مضغوطٌ يُكتب إلى المخرج القياسي فيصل هنا مباشرةً، فلا يبقى
-# على الخادم نسخةٌ ثانيةٌ تُنسى ولا يُملأ قرصُه.
-say "  · القاعدة…"
-"$SSH" "${SSH_OPTS[@]}" "$HOST" \
-  "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9" \
-  > "$LOCAL/taxo.sql.gz" || die "تعذّر تفريغُ القاعدة — لا رفع."
+# **النسخةُ كلُّها في اتصالٍ واحد — لأن الاتصالَ نفسَه محدود** (قرارُ القياس
+# 2026-08-22). `ufw` على الخادم يحمل `22/tcp LIMIT IN`، **وحدُّه ستُّ محاولاتٍ
+# في ثلاثين ثانية**؛ وهذا السكربتُ كان يفتح أكثرَ من عشرين، **و`ssh_try`
+# يضاعفها بإعاداته** — فيحجب الجدارُ الناريُّ من يرفع، ويُقرأ الحجبُ
+# «شبكةٌ رديئة». **وقد كُتب ذلك مرتين في تقرير، وكان تشخيصاً بلا قياس.**
+#
+# **ولا يُمسّ الحدّ**: المطلقةُ الثالثة تمنع إلغاءَ حدٍّ أمنيٍّ أثناء رفعٍ مهما
+# أعاق — **والحلُّ أن نطرق أقلَّ لا أن نفتح البابَ أوسع**. و`ControlMaster`
+# غيرُ مدعومٍ في ssh ويندوز (قِيس: `getsockname failed: Not a socket`)، فالسبيلُ
+# **أمرٌ واحدٌ يُنتج أرشيفاً واحداً** يحمل الأربعةَ.
+say "  · الأربعةُ في اتصالٍ واحد…"
+ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list &&   { [ -d backend/var/documents ] && tar -czf \$W/documents.tar.gz backend/var/documents || : > \$W/documents.absent; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
 
-say "  · الأسرار ومجلد الوثائق…"
-# **`-h` تتبع الوصلة — وبغيرها النسخةُ مؤشِّرٌ لا سرّ** (عطبٌ مقيسٌ 2026-08-22).
-#
-# `~/taxo/.env` **وصلةٌ رمزيةٌ** إلى `/home/taxo/secrets/taxo.env`، و`tar` بلا
-# `-h` يحفظ **الوصلةَ نفسَها**: مدخلٌ بصفر بايت. فكان `env.tar.gz` ١٣٠ بايتاً
-# **لا سرَّ فيه**، **والبوّابةُ الرابعةُ تُخضِّره** لأن فحصَها يسأل «أفي الأرشيف
-# مدخلٌ اسمُه `.env`؟» — والوصلةُ مدخلٌ اسمُه `.env`.
-#
-# **وهو أخطرُ من نسخةٍ غائبة**: الغائبةُ تُعرف يومَ تُطلب، وهذه **تُعلَن
-# محقَّقةً**. ولو سقط الخادمُ لَعادت القاعدةُ و`.env` **وصلةً معلَّقة** — بلا
-# مفتاح JWT ولا مفتاح Fernet، **فـ`provider_credentials` المشفَّرةُ لا تُفكّ**.
-ssh_try "cd $REMOTE && tar -czhf - .env" \
-  > "$LOCAL/env.tar.gz" || die "تعذّرت نسخةُ .env — لا رفع."
+tar -xf "$LOCAL/bundle.tar" -C "$LOCAL" && rm -f "$LOCAL/bundle.tar"   || die "النسخةُ وصلت ولا تُفتح — لا رفع."
 
-# **والنسخةُ أربعةٌ لا ثلاثة** (قرارُ المالك 2026-08-22): القاعدةُ و`.env`
-# والوثائقُ **وما لا يعيده السحبُ من قرص الإنتاج**.
-#
-# **والقائمةُ تُحسب ولا تُكتب بيد** — فما يُكتب بيدٍ يُنسى أوّلَ مسارٍ يُضاف.
-# ومصدرُها **ما تعتمد عليه الحاويات فعلاً**: `docker compose config` يطبع كلَّ
-# مسارِ مضيفٍ مثبَّت، ويُؤخذ منه **ما هو خارج شجرة المشروع** — فذاك ما لا
-# يمسّه `git checkout` ولا تحمله أيُّ نسخةٍ أخرى. وقِيس أنه يشمل
-# `/home/taxo/secrets` كلَّه: بيانَ اعتماد النفق، و`taxo.env`، و`tunnel-id`،
-# **ومسؤولي اللوحة** — وضياعُ أيِّها يعني نفقاً لا يُعاد بناؤه.
-say "  · ما خارج الشجرة — محسوبٌ من compose…"
-# **ويُؤخذ المجلَّدُ الحاوي لا المسارُ المذكور** (صُحّح بالقياس 2026-08-22):
-# أوّلُ صياغةٍ أخذت ما تذكره compose حرفياً فالتقطت `secrets/cloudflared`
-# **وحدَه** — وتركت `taxo.env` و`tunnel-id` و`panel-admins.txt` في المجلَّد
-# الأب. **والأسرارُ تسكن معاً**، ومن ينسخ بعضَها يعيد نفقاً بلا معرِّفه.
-#
-# **ومعها هدفُ كلِّ وصلةٍ من الشجرة إلى خارجها** — فـ`.env` وصلةٌ، ومجلَّدُ
-# هدفِها هو بيتُ الأسرار الحقيقيّ. **وهذا ما يجعل القائمةَ محسوبةً بحقّ**:
-# لا تعتمد على أن يذكر compose كلَّ شيءٍ، بل تتبع ما تشير إليه الشجرةُ فعلاً.
-OUTSIDE="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && ROOT=\$(pwd) && { \
-  docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; \
-  find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; \
-  } | grep '^/' | grep -v \"^\$ROOT\" \
-  | while read -r p; do [ -d \"\$p\" ] && echo \"\$p\" || dirname \"\$p\"; done \
-  | sort -u | tr '\n' ' '" | tr -d '\r')"
-if [ -n "${OUTSIDE// /}" ]; then
-  say "    $OUTSIDE"
-  ssh_try "tar -czhf - $OUTSIDE 2>/dev/null" \
-    > "$LOCAL/outside.tar.gz" || die "تعذّرت نسخةُ ما خارج الشجرة — لا رفع."
+RAW_N="$(tr -d ' ' < "$LOCAL/raw.count" 2>/dev/null || echo 0)"
+UNTRACKED_N="$(tr -d ' ' < "$LOCAL/untracked.count" 2>/dev/null || echo 0)"
+say "    ما خارج الشجرة: $(tr -d '' < "$LOCAL/outside.list" 2>/dev/null)"
+# **وتُعلَن التصفيةُ بأثرها لا بوقوعها**: `--exclude-from` على ملفٍّ فارغٍ
+# **ينجح ولا يستبعد شيئاً** — وقعت مقيسةً، ولم يكشفها إلا رقمٌ مطبوع.
+if [ "${RAW_N:-0}" = "${UNTRACKED_N:-0}" ]; then
+  say "    غيرُ المتتبَّع: $UNTRACKED_N — **لم تستبعد التصفيةُ شيئاً** (أوصلت قواعدُ التجاهُل؟)"
 else
-  say "    (لا مسارَ خارج الشجرة — يُسجَّل ولا يُسكت عنه)"
-  : > "$LOCAL/outside.absent"
-fi
-
-# **وما لا يعيده السحبُ داخل الشجرة**: غيرُ متتبَّعٍ وغيرُ مُتجاهَل. وبعد رفعٍ
-# سليمٍ يكون فارغاً — **وفراغُه يُسجَّل ولا يُفترض**.
-# **ويُصفّى بتجاهُلِ الإيداع الهدف لا بتجاهُلِ إيداع الخادم** (صُحّح بالقياس
-# 2026-08-22): شجرةُ الخادم عند إيداعٍ قديمٍ **لا يتجاهل `landing/downloads`**،
-# فدخلت حزمتا APK في «ما لا يعيده السحب» — **٤٢ ملفاً تزن ١٦٫٥ م.ب**، وسقط
-# النقلُ ثلاثَ مرّاتٍ على قناةٍ تتقطّع.
-#
-# **والحزمُ مخرجُ بناءٍ يُعاد بناؤه، لا حالةٌ تُفقد** — فنسخُها ليس حرصاً بل
-# ثِقَلٌ يُسقط النسخةَ كلَّها. **والمعيارُ الصحيحُ تجاهُلُ ما نذهب إليه** لا ما
-# نحن فيه: هو الذي يعرف ما صار مخرجَ بناءٍ منذ ذلك الإيداع.
-# **ويُرسَل من هنا لا يُقرأ هناك** (صُحّح 2026-08-22، ثالثُ وقوعٍ لقاعدة
-# الاعتماد): أوّلُ صياغةٍ قرأت `git cat-file blob <هدف>:.gitignore` **على
-# الخادم** — **والإيداعُ لم يُجلَب بعد**، لأن الجلبَ في البوّابة الرابعة
-# والنسخةُ في الثالثة. فخرج الملفُّ فارغاً و`--exclude-from` لم يستبعد شيئاً،
-# **وبقي العددُ ٤٢ والحجمُ ١٦٫٥ م.ب** — أي أن التصفيةَ مرّت خضراءَ ولم تصفِّ.
-#
-# **والعلاجُ ألّا تعتمد الثالثةُ على الرابعة أصلاً**: الملفُّ عندنا (HEAD هو
-# الهدف)، فيُرسَل بمدخل الأمر. **ولا يُقرأ ما لم يصل بعد.**
-ssh_try "cat > /tmp/taxo-target-ignore" < .gitignore \
-  || die "تعذّر إرسالُ قواعد التجاهُل — لا رفع."
-UNTRACKED_FILTER="cd $REMOTE && \
-  git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore"
-UNTRACKED_N="$(ssh_try "$UNTRACKED_FILTER | wc -l" | tr -d '\r ')"
-if [ "${UNTRACKED_N:-0}" != "0" ]; then
-  # **وتُعلَن التصفيةُ بأثرها لا بوقوعها** (2026-08-22): `--exclude-from` على
-  # ملفٍّ فارغٍ **ينجح ولا يستبعد شيئاً**، فتمرّ تصفيةٌ لا تصفّي — وقعت مقيسةً.
-  # **والرقمُ المطبوعُ هو ما كشفها**: «صمتُ الحارس يحتاج إثباتاً كما يحتاجه
-  # صياحُه». فإن تساوى ما قبلَ التصفية وما بعدَها **يُقال ذلك صراحةً**.
-  RAW_N="$(ssh_try "cd $REMOTE && git ls-files --others --exclude-standard | wc -l" | tr -d '\r ')"
-  if [ "${RAW_N:-0}" = "${UNTRACKED_N:-0}" ]; then
-    say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ — **لم تستبعد التصفيةُ شيئاً** (تحقَّق أن قواعدَ التجاهُل وصلت)"
-  else
-    say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ داخل الشجرة (استُبعد $((RAW_N - UNTRACKED_N)) مخرجَ بناء)"
-  fi
-  ssh_try "$UNTRACKED_FILTER | tar -czhf - -T -" \
-    > "$LOCAL/untracked.tar.gz" || die "تعذّرت نسخةُ غير المتتبَّع — لا رفع."
-else
-  say "  · لا ملفَّ غيرَ متتبَّعٍ داخل الشجرة"
-  : > "$LOCAL/untracked.absent"
-fi
-# **الوثائقُ قد لا تكون موجودةً بعدُ على إنتاجٍ جديد**، والغيابُ يُقال ولا يُسكت
-if "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && test -d backend/var/documents"; then
-  ssh_try "cd $REMOTE && tar -czf - backend/var/documents" \
-    > "$LOCAL/documents.tar.gz" || die "تعذّرت نسخةُ الوثائق — لا رفع."
-else
-  say "    (لا مجلدَ وثائقَ على الخادم بعد — يُسجَّل ولا يُسكت عنه)"
-  : > "$LOCAL/documents.absent"
+  say "    غيرُ المتتبَّع: $UNTRACKED_N (استُبعد $((RAW_N - UNTRACKED_N)) مخرجَ بناء)"
 fi
 
 say "══ ٤) التحقّق — نسخةٌ لم تُفتح ليست نسخة"
