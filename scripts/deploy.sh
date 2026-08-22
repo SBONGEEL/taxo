@@ -350,10 +350,36 @@ fi
 # في 2026-08-22 (٨٣ ملفاً، صفرٌ منها يختفي بالسحب) — **والقياسُ قبل الدوس
 # شرطٌ لا تفصيل**، فما يُداس لا يُعرف أنه كان.
 say "  الكود   : الخادمُ يسحب ${HEAD_SHA:0:8} من GitHub"
+
+# **وما يتصادم يُزاح ولا يُداس — وهنا لا قبل النسخة** (2026-08-22).
+#
+# `git checkout` **يرفض** أن يدوس ملفاً غيرَ متتبَّعٍ يحمل الهدفُ مساراً مثلَه،
+# **وذلك صوابُه لا عيبُه**. وشجرةُ الإنتاج حملت ٣٣ ملفاً كهذا — دُفعت بـtar
+# قبل أن تُودَع، فصار للمسار الواحد نسختان: واحدةٌ على القرص وأخرى في git.
+#
+# **والإزاحةُ موضعُها هنا، بعد أن تخضرَّ النسخة**: أُزيحت مرةً **قبل** البوّابة
+# الثالثة (2026-08-22) فذهب معها `docker-compose.prod-tunnel.yml` نفسُه —
+# **فسقطت بوّابةُ النسخة لأن أمرَ compose بلا ملفّه**. والحاوياتُ لم تتأثر
+# (العاملُ لا يقرأ الملفَّ ثانيةً)، **لكن البابَ صار بلا مقبض**.
+#
+# **ولا يُزاح إلا ما يتصادم**: ما لا وجودَ لمساره في الهدف **يُترك في مكانه** —
+# فهو ملفُّ خادمٍ بحقّ لا نسخةٌ قديمة. **و`mv` لا `rm`**: من يحذف الدليلَ
+# يمحو الخبرَ لا الخطر.
+ASIDE="\$HOME/taxo-aside-$STAMP"
 "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
   git remote get-url taxo >/dev/null 2>&1 || git remote add taxo git@github-taxo:${TAXO_GITHUB_REPO:-SBONGEEL/taxo}.git; \
-  GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git fetch --quiet taxo && \
-  git checkout --quiet --detach $HEAD_SHA" \
+  GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git fetch --quiet taxo" \
+  || die "تعذّر جلبُ الإيداعات — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
+
+MOVED="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
+  n=0; git status --porcelain | grep '^??' | sed 's/^...//' | while IFS= read -r f; do \
+    if git cat-file -e '$HEAD_SHA:'\"\$f\" 2>/dev/null; then \
+      mkdir -p \"$ASIDE/\$(dirname \"\$f\")\" && mv \"\$f\" \"$ASIDE/\$f\" && echo \"\$f\"; \
+    fi; \
+  done | wc -l" | tr -d '\r ')"
+[ "${MOVED:-0}" = "0" ] || say "  ✓ أُزيح $MOVED ملفاً متصادماً إلى ~/taxo-aside-$STAMP (لم يُحذف شيء)"
+
+"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git checkout --quiet --detach $HEAD_SHA" \
   || die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
 
 SERVER_NOW="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
