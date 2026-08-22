@@ -101,7 +101,27 @@ SSH="$(_pick_ssh)"
 # `landing` **و**`cloudflared` معاً، وهو المطابقُ للحاويات العاملة على الخادم.
 # و`docker-compose.tunnel.yml` نفقُ **جهاز المالك** لا الإنتاج.
 COMPOSE_FILES="${TAXO_COMPOSE_FILES:--f docker-compose.yml -f docker-compose.prod-tunnel.yml}"
-SSH_OPTS=(-o StrictHostKeyChecking=yes -i "${TAXO_SSH_KEY:-$HOME/.ssh/taxo-contabo}")
+# **واتصالٌ يصمد** (أُضيف بالقياس 2026-08-22): سقطت بوّابةُ النسخة مرتين بـ
+# `Connection timed out` **بعد أن نجح ما قبلها بثوانٍ** — أي أن الخادمَ حيٌّ
+# والقناةَ تتقطّع. **وتعذُّرُ القياس ليس نتيجةَ قياس**، فبوّابةٌ تُسقط رفعاً
+# لأن حزمةً ضاعت في الطريق تعلّم مشغّلَها أن يعيد بلا قراءة.
+#
+# `ServerAliveInterval` يمنع قتلَ جلسةٍ صامتةٍ أثناء `pg_dump` طويل،
+# و`ConnectTimeout` يجعل الفشلَ سريعاً بدل تعليقٍ لا ينتهي.
+SSH_OPTS=(-o StrictHostKeyChecking=yes -o ConnectTimeout=20
+          -o ServerAliveInterval=15 -o ServerAliveCountMax=8
+          -i "${TAXO_SSH_KEY:-$HOME/.ssh/taxo-contabo}")
+
+# **وما يتقطّع يُعاد ثلاثاً قبل أن يُقرأ فشلاً** — والإعادةُ للقراءات ونقلِ
+# النسخة وحدَها، **لا لِما يكتب على الإنتاج**: أمرٌ يكتب يُعاد مرةً واحدةً
+# فيصير فعلين.
+ssh_try() {
+  local n=0
+  until "$SSH" "${SSH_OPTS[@]}" "$HOST" "$@"; do
+    n=$((n+1)); [ "$n" -ge 3 ] && return 1
+    say "    (انقطاعٌ — إعادةٌ $n/3 بعد ٥ ثوانٍ)"; sleep 5
+  done
+}
 
 say() { printf '%s\n' "$*"; }
 die() { printf '\n✗ %s\n' "$*" >&2; exit 1; }
@@ -297,7 +317,7 @@ say "  · الأسرار ومجلد الوثائق…"
 # **وهو أخطرُ من نسخةٍ غائبة**: الغائبةُ تُعرف يومَ تُطلب، وهذه **تُعلَن
 # محقَّقةً**. ولو سقط الخادمُ لَعادت القاعدةُ و`.env` **وصلةً معلَّقة** — بلا
 # مفتاح JWT ولا مفتاح Fernet، **فـ`provider_credentials` المشفَّرةُ لا تُفكّ**.
-"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -czhf - .env" \
+ssh_try "cd $REMOTE && tar -czhf - .env" \
   > "$LOCAL/env.tar.gz" || die "تعذّرت نسخةُ .env — لا رفع."
 
 # **والنسخةُ أربعةٌ لا ثلاثة** (قرارُ المالك 2026-08-22): القاعدةُ و`.env`
@@ -310,13 +330,23 @@ say "  · الأسرار ومجلد الوثائق…"
 # `/home/taxo/secrets` كلَّه: بيانَ اعتماد النفق، و`taxo.env`، و`tunnel-id`،
 # **ومسؤولي اللوحة** — وضياعُ أيِّها يعني نفقاً لا يُعاد بناؤه.
 say "  · ما خارج الشجرة — محسوبٌ من compose…"
-OUTSIDE="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
-  docker compose $COMPOSE_FILES config 2>/dev/null \
-  | sed -n 's/^ *source: \(\/.*\)/\1/p' \
-  | grep -v \"^\$(cd $REMOTE && pwd)\" | sort -u | tr '\n' ' '" | tr -d '\r')"
+# **ويُؤخذ المجلَّدُ الحاوي لا المسارُ المذكور** (صُحّح بالقياس 2026-08-22):
+# أوّلُ صياغةٍ أخذت ما تذكره compose حرفياً فالتقطت `secrets/cloudflared`
+# **وحدَه** — وتركت `taxo.env` و`tunnel-id` و`panel-admins.txt` في المجلَّد
+# الأب. **والأسرارُ تسكن معاً**، ومن ينسخ بعضَها يعيد نفقاً بلا معرِّفه.
+#
+# **ومعها هدفُ كلِّ وصلةٍ من الشجرة إلى خارجها** — فـ`.env` وصلةٌ، ومجلَّدُ
+# هدفِها هو بيتُ الأسرار الحقيقيّ. **وهذا ما يجعل القائمةَ محسوبةً بحقّ**:
+# لا تعتمد على أن يذكر compose كلَّ شيءٍ، بل تتبع ما تشير إليه الشجرةُ فعلاً.
+OUTSIDE="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && ROOT=\$(pwd) && { \
+  docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; \
+  find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; \
+  } | grep '^/' | grep -v \"^\$ROOT\" \
+  | while read -r p; do [ -d \"\$p\" ] && echo \"\$p\" || dirname \"\$p\"; done \
+  | sort -u | tr '\n' ' '" | tr -d '\r')"
 if [ -n "${OUTSIDE// /}" ]; then
   say "    $OUTSIDE"
-  "$SSH" "${SSH_OPTS[@]}" "$HOST" "tar -czhf - $OUTSIDE 2>/dev/null" \
+  ssh_try "tar -czhf - $OUTSIDE 2>/dev/null" \
     > "$LOCAL/outside.tar.gz" || die "تعذّرت نسخةُ ما خارج الشجرة — لا رفع."
 else
   say "    (لا مسارَ خارج الشجرة — يُسجَّل ولا يُسكت عنه)"
@@ -325,10 +355,10 @@ fi
 
 # **وما لا يعيده السحبُ داخل الشجرة**: غيرُ متتبَّعٍ وغيرُ مُتجاهَل. وبعد رفعٍ
 # سليمٍ يكون فارغاً — **وفراغُه يُسجَّل ولا يُفترض**.
-UNTRACKED_N="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git ls-files --others --exclude-standard | wc -l" | tr -d '\r ')"
+UNTRACKED_N="$(ssh_try "cd $REMOTE && git ls-files --others --exclude-standard | wc -l" | tr -d '\r ')"
 if [ "${UNTRACKED_N:-0}" != "0" ]; then
   say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ داخل الشجرة…"
-  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git ls-files --others --exclude-standard | tar -czhf - -T -" \
+  ssh_try "cd $REMOTE && git ls-files --others --exclude-standard | tar -czhf - -T -" \
     > "$LOCAL/untracked.tar.gz" || die "تعذّرت نسخةُ غير المتتبَّع — لا رفع."
 else
   say "  · لا ملفَّ غيرَ متتبَّعٍ داخل الشجرة"
@@ -336,7 +366,7 @@ else
 fi
 # **الوثائقُ قد لا تكون موجودةً بعدُ على إنتاجٍ جديد**، والغيابُ يُقال ولا يُسكت
 if "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && test -d backend/var/documents"; then
-  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -czf - backend/var/documents" \
+  ssh_try "cd $REMOTE && tar -czf - backend/var/documents" \
     > "$LOCAL/documents.tar.gz" || die "تعذّرت نسخةُ الوثائق — لا رفع."
 else
   say "    (لا مجلدَ وثائقَ على الخادم بعد — يُسجَّل ولا يُسكت عنه)"
