@@ -91,14 +91,39 @@ interface TweenedMarker {
   element: HTMLElement;
 }
 
-function carElement(color: string): HTMLElement {
+/** **سيارةٌ من فوق، بألوان النظام** (قرارُ المالك 2026-08-22).
+ *
+ * **العلّة**: كان المرسومُ سهماً مثلثاً بـ`#facc15` — قيمةٌ نجت من كنس 12-أ،
+ * حين حُذف الأصفرُ من اللوحة (§1.1 لا لونَ علامةٍ فيها). فبقيت في ملفٍّ واحدٍ
+ * قيمةٌ لا يعرفها أحد، **ولا حارسَ يراها**: صنفٌ مكتوبٌ بيد لا يمرّ بالسلّم.
+ *
+ * **واللونُ `--tx`** لأنه **ينقلب مع السمة**: داكنٌ على خريطةٍ فاتحة، فاتحٌ على
+ * داكنة — فلا يذوب في البلاط في إحداهما. ولون ثابتٌ مهما كان جميلاً يختفي في
+ * سمةٍ واحدةٍ من اثنتين.
+ *
+ * **وبلا اتجاهٍ تُرسم كما تُرسم بالاتجاه** — نفسُ الشكل عند صفر، **ولا شكلَ
+ * ثانٍ**: شكلٌ يخصّ من لا اتجاهَ له يجعل **الغيابَ مرئياً**، فيصير علامةً على
+ * كبتنٍ لا يبثّ اتجاهه. وهو **مبدأُ عطب الإعفاء نفسُه** (`test_photo_leak.py`):
+ * **التمييزُ المرئيُّ وشايةٌ حتى حين يبدو تحسيناً.**
+ */
+function carElement(): HTMLElement {
   const element = document.createElement("div");
   element.className = "taxo-car";
+  // **القياسُ لا التقدير**: 30×30 مقيسٌ على عرض 390 بكسل — التفصيل في التقرير.
   element.innerHTML = `
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
-         style="filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35))">
-      <path d="M12 2.5 19 20.5 12 16.8 5 20.5Z" fill="${color}"
-            stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-linejoin="round"/>
+    <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"
+         style="filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.45))">
+      <g fill="var(--tx)" stroke="var(--inv)" stroke-width="0.7">
+        <rect x="4.2" y="1.6" width="2.1" height="4.4" rx="0.9"/>
+        <rect x="17.7" y="1.6" width="2.1" height="4.4" rx="0.9"/>
+        <rect x="4.2" y="18" width="2.1" height="4.4" rx="0.9"/>
+        <rect x="17.7" y="18" width="2.1" height="4.4" rx="0.9"/>
+        <path d="M12 1.2c-2.4 0-4.1 1.1-4.6 3.2l-.7 3.3c-.3 1.5-.4 3-.4 4.3
+                 0 2.5.2 5 .6 7.4.2 1.4 2.1 2.4 5.1 2.4s4.9-1 5.1-2.4c.4-2.4
+                 .6-4.9.6-7.4 0-1.3-.1-2.8-.4-4.3l-.7-3.3C16.1 2.3 14.4 1.2 12 1.2Z"/>
+      </g>
+      <path d="M8.6 6.6c.5-1.1 1.7-1.7 3.4-1.7s2.9.6 3.4 1.7l.5 1.6c-1.2-.5-2.5-.7-3.9-.7
+               s-2.7.2-3.9.7Z" fill="var(--inv)" opacity="0.85"/>
     </svg>`;
   element.style.willChange = "transform";
   return element;
@@ -116,6 +141,21 @@ function pulseElement(label: string): HTMLElement {
   core.className = "taxo-pulse-core";
   element.appendChild(core);
   return element;
+}
+
+/** **قيمةُ رمزٍ من §1.1 كما يحسبها المتصفح** — لا نسخةً مكتوبةً بيد.
+ *
+ * **ولمَ لا `var(--tx)` مباشرةً**: `paint` في mapbox **ليس CSS** — تُمرَّر
+ * القيمةُ إلى محرّك الرسم، فـ`var(...)` تصل نصّاً لا يُفهم. فكانت تُنسخ
+ * القيمةُ الستّ عشريّةُ بيدٍ في التطبيقين، **ونسخةٌ لا يراها حارسٌ تفترق عن
+ * أصلها عند أول تعديلٍ للوحة** — وهو ما وقع للأصفر في كنس 12-أ.
+ */
+function cssColor(token: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(token)
+    .trim();
+  return value || fallback;
 }
 
 function pinElement(color: string, label: string): HTMLElement {
@@ -303,7 +343,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         continue;
       }
 
-      const element = carElement(driver.vehicle_category === "comfort" ? "#38bdf8" : "#facc15");
+      const element = carElement();
       element.style.rotate = `${driver.heading ?? 0}deg`;
       const marker = new mapboxgl.Marker({ element, rotationAlignment: "map" })
         .setLngLat([point.lng, point.lat])
@@ -352,7 +392,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       return;
     }
 
-    const element = carElement("#facc15");
+    const element = carElement();
     element.style.rotate = `${driverLocation.heading ?? 0}deg`;
     driverMarker.current = {
       marker: new mapboxgl.Marker({ element, rotationAlignment: "map" })
@@ -439,8 +479,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         .addTo(instance);
     };
 
-    place(pickupMarker, pickup, "#16a34a", "نقطة الانطلاق");
-    place(dropoffMarker, dropoff, "#dc2626", "الوجهة");
+    place(pickupMarker, pickup, "var(--ok)", "نقطة الانطلاق");
+    place(dropoffMarker, dropoff, "var(--dng)", "الوجهة");
   }, [pickup, dropoff]);
 
   useEffect(() => {
@@ -490,7 +530,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         // **من لوحة §1.1 لا من اللوحة المحذوفة**: كان `#facc15` — أصفرُ اللوحة
         // التي أُسقطت في 12-أ. و`paint` في mapbox لا يقرأ متغيّرات CSS، فالقيمةُ
         // تُختار من الوضع كما يُختار ستايلُ الخريطة نفسُه أعلاه
-        "line-color": dark ? "#e6edf3" : "#171b20",
+        "line-color": cssColor("--tx", dark ? "#e6edf3" : "#171b20"),
         "line-width": 4,
         "line-opacity": 0.85,
       },

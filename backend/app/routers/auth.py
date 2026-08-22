@@ -12,7 +12,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, File, UploadFile, status
 from sqlalchemy import select
 
 from app.core import rate_limit
@@ -65,6 +67,7 @@ from app.schemas.security import (
     TotpRecoveryVerifyRequest,
     TotpStatusOut,
 )
+from app.services import rider_photo
 from app.services import (
     admin_credentials,
     handoff,
@@ -643,6 +646,37 @@ async def totp_disable(
         title="أُطفئ التحقق الثنائي",
         body="أُطفئ التحقق الثنائي على حسابك. إن لم تكن أنت من فعل، راجع الإدارة فوراً.",
     )
+
+
+@router.put("/me/photo", response_model=UserOut)
+async def set_my_photo(
+    file: Annotated[UploadFile, File(description="صورةٌ شخصية")],
+    user: CurrentUser,
+    session: DbSession,
+) -> UserOut:
+    """صورةُ صاحب الحساب — **اختياريةٌ وتُنشر فور رفعها** (قرارُ المالك 2026-08-22).
+
+    **ولا مراجعةَ عليها**: الكبتنُ يبحث عن راكبه في مكانٍ مزدحم، **والانتظارُ
+    يُفرغ الميزةَ من غرضها**؛ وهي ليست وثيقةَ هوية لا تفتح باباً ولا تثبت
+    شيئاً. **والثمنُ المقبول** أن تُنشر مسيئةٌ أحياناً، **وعلاجُه بلاغٌ يحجب
+    في الحال** (`POST /rides/{id}/rider/photo/report`).
+
+    **ورفعُ صورةٍ جديدةٍ يرفع حجبَ القديمة**: الحجبُ وقع على صورةٍ بعينها،
+    وإبقاؤه على غيرها عقوبةٌ على الشخص لا على الصورة.
+    """
+    await rider_photo.set_photo(session, user=user, reader=file)
+    await session.commit()
+    await session.refresh(user)
+    return UserOut.model_validate(user)
+
+
+@router.delete("/me/photo", response_model=UserOut)
+async def clear_my_photo(user: CurrentUser, session: DbSession) -> UserOut:
+    """يحذفها صاحبُها — **ملفّاً وصفّاً**، ولا يبقى أثرٌ يُعرض."""
+    await rider_photo.clear_photo(session, user=user)
+    await session.commit()
+    await session.refresh(user)
+    return UserOut.model_validate(user)
 
 
 @router.patch("/me", response_model=UserOut)

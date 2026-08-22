@@ -805,6 +805,23 @@ PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 48
 JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 48
 PDF_BYTES = b"%PDF-1.7\n" + b"0" * 48
 WEBP_BYTES = b"RIFF" + b"\x00\x00\x00\x20" + b"WEBP" + b"\x00" * 32
+
+# **وهذه بايتاتٌ سحريةٌ لا صورة**: تكفي `core/storage` الذي يقرأ النوعَ من
+# أوّلها، **ولا تُفكّ**. فمن يمرّرها إلى ما **يرسم** الصورة يقع في الشكل
+# الثاني عشر — `avatar.render` يبتلع فشلَ الفكّ ويرسم الحرف، **فيتساوى «رفع»
+# و«لم يرفع» ويمرّ الاختبارُ أخضرَ وهو يقارن حرفاً بحرف** (مقيسٌ 2026-08-22).
+
+
+def real_jpeg(colour: tuple[int, int, int] = (200, 40, 40)) -> bytes:
+    """صورةٌ تُفكّ فعلاً — لكلِّ اختبارٍ **يرسم** لا يخزّن وحسب."""
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 64), colour).save(buffer, format="JPEG")
+    return buffer.getvalue()
+
 NOT_A_DOCUMENT = b"<?php echo 1; ?>"
 
 # المستندات التي لا يُعتمد كبتنٌ قبل قبولها (`models/driver.py`) — **وثلاثٌ من

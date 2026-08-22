@@ -1,5 +1,6 @@
 """نماذج SQLAlchemy — كل النماذج تُستورد هنا ليراها Alembic autogenerate."""
 
+from app.models.photo_report import UserPhotoReport  # noqa: F401
 from app.models.booking import RideBooking
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.audit import AdminAuditLog

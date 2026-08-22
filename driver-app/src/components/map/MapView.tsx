@@ -69,8 +69,23 @@ function arrowElement(): HTMLElement {
             stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-linejoin="round"/>
     </svg>`;
   element.style.willChange = "transform";
-  element.style.color = "#3fb970";
+  element.style.color = "var(--ok)";
   return element;
+}
+
+/** **قيمةُ رمزٍ من §1.1 كما يحسبها المتصفح** — لا نسخةً مكتوبةً بيد.
+ *
+ * **ولمَ لا `var(--tx)` مباشرةً**: `paint` في mapbox **ليس CSS** — تُمرَّر
+ * القيمةُ إلى محرّك الرسم، فـ`var(...)` تصل نصّاً لا يُفهم. فكانت تُنسخ
+ * القيمةُ الستّ عشريّةُ بيدٍ في التطبيقين، **ونسخةٌ لا يراها حارسٌ تفترق عن
+ * أصلها عند أول تعديلٍ للوحة** — وهو ما وقع للأصفر في كنس 12-أ.
+ */
+function cssColor(token: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(token)
+    .trim();
+  return value || fallback;
 }
 
 function pinElement(color: string, label: string): HTMLElement {
@@ -236,8 +251,8 @@ export function MapView({
     if (!instance) return;
 
     for (const [key, point, color, label] of [
-      ["pickup", pickup, "#3fb970", "نقطة الانطلاق"],
-      ["dropoff", dropoff, "#e5534b", "الوجهة"],
+      ["pickup", pickup, "var(--ok)", "نقطة الانطلاق"],
+      ["dropoff", dropoff, "var(--dng)", "الوجهة"],
     ] as const) {
       const existing = pins.current[key];
       if (!point) {
@@ -292,7 +307,7 @@ export function MapView({
         paint: {
           // `paint` في mapbox لا يقرأ متغيّرات CSS — فالقيمةُ تُختار من الوضع
           // كما يُختار ستايلُ الخريطة نفسُه
-          "line-color": dark ? "#e6edf3" : "#171b20",
+          "line-color": cssColor("--tx", dark ? "#e6edf3" : "#171b20"),
           "line-width": 5,
           "line-opacity": 0.9,
         },

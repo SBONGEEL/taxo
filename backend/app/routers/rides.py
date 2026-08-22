@@ -32,7 +32,7 @@ from app.schemas.ride import (
     RideOut,
     RouteLineOut,
 )
-from app.services import avatar, cancellation
+from app.services import avatar, cancellation, rider_photo
 from app.services import (
     dispatch,
     documents as documents_service,
@@ -288,6 +288,69 @@ async def get_driver_photo(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+@router.get("/{ride_id}/rider/photo")
+async def get_rider_photo(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> Response:
+    """صورةُ راكبِ هذه الرحلة — **لطرفَيها وحدهما** (قرارُ المالك 2026-08-22).
+
+    **بالشكل نفسِه الذي يرى به الراكبُ كبتنَه**: مفتاحُه **الرحلةُ لا
+    المستخدم**، فلا يستعرض أحدٌ وجوهَ الركاب بعدّ المعرّفات؛ و٢٠٠ بصورةٍ
+    دائماً بطولٍ ثابت — **فلا يُستدلّ من الحالة ولا من الطول** على من رفع
+    ومن لم يرفع ومن حُجبت صورتُه.
+
+    **والمحجوبةُ كالمعدومة**: بلاغٌ واحدٌ من كبتنٍ يحجبها في الحال، فيُرسم
+    الحرفُ حتى يفصل المشرف.
+    """
+    ride = await rides_service.get_ride_for_user(session, ride_id, user)
+    rider = await session.get(User, ride.rider_id)
+    raw: bytes | None = None
+    path = rider_photo.visible_path(rider) if rider is not None else None
+    if path:
+        try:
+            raw = storage.resolve(path).read_bytes()
+        except OSError:
+            raw = None
+    return Response(
+        content=avatar.render(raw, name=(rider.name if rider else "")),
+        media_type="image/jpeg",
+        headers={
+            "Content-Disposition": 'inline; filename="rider.jpg"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.post(
+    "/{ride_id}/rider/photo/report", status_code=status.HTTP_204_NO_CONTENT
+)
+async def report_rider_photo(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession
+) -> Response:
+    """بلاغُ الكبتن عن صورةٍ مسيئة — **تُحجب فوراً وتُعرض على المشرف**.
+
+    **والحجبُ قبل القرار لا بعده**: الضررُ يقع في الدقائق، ومن رأى صورةً
+    مسيئةً لا يُطلب منه أن ينتظر مشرفاً. **وبلاغٌ واحدٌ يكفي**: عتبةٌ عددية
+    تعني أن أوّلَ مُبلِّغَين رأياها ولم يقع شيء — **وهي صورةٌ لا تصويت**.
+
+    **ولا يبلّغ إلا كبتنُ الرحلة**: الرحلةُ هي التي أعطته حقَّ رؤيتها،
+    فهي التي تعطيه حقَّ البلاغ عنها.
+    """
+    ride = await session.get(Ride, ride_id)
+    if ride is None or ride.driver_id != driver.id:
+        raise NotFound("الرحلة غير موجودة")
+    rider = await session.get(User, ride.rider_id)
+    if rider is None:  # pragma: no cover - رحلةٌ بلا راكب لا تُنشأ
+        raise NotFound("الرحلة غير موجودة")
+
+    await rider_photo.report(
+        session, subject=rider, reporter_id=driver.user_id, ride_id=ride_id
+    )
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 @router.post("/{ride_id}/accept", response_model=RideOut)
 async def accept_ride(
