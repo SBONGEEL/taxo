@@ -487,8 +487,22 @@ _ssh "cd $REMOTE && mkdir -p $ASIDE && git diff --binary > $ASIDE/tracked.patch 
 PATCH_N="$(tr -d ' \r' < /tmp/taxo-patch-lines 2>/dev/null || echo 0)"
 [ "${PATCH_N:-0}" = "0" ] || say "  ✓ حُفظت رقعةُ المعدَّل المتتبَّع ($PATCH_N سطراً) في ~/taxo-aside-$STAMP/tracked.patch"
 
-_ssh "cd $REMOTE && git checkout --quiet --force --detach $HEAD_SHA" \
-  || die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
+# **والإزاحةُ والسحبُ فعلٌ واحدٌ لا فعلان** (2026-08-22، وقع مرتين): إن سقط
+# السحبُ بعد الإزاحة **بقيت الشجرةُ منقوصةً** — وذهب معها
+# `docker-compose.prod-tunnel.yml`، **فصار كلُّ أمرِ compose يفشل**: لا نسخةَ
+# ولا قراءةَ ترحيلةٍ ولا إعادةَ حاويات. **والحاوياتُ العاملةُ لا تشكو** (لا
+# تقرأ الملفَّ ثانيةً) فيبدو كلُّ شيءٍ سليماً **والبابُ معطَّلٌ تماماً**.
+#
+# **فما يُزاح يُعاد إن لم يكتمل ما أُزيح لأجله.** وهي قاعدةُ المعاملة: خطوةٌ
+# تُهيّئ لأخرى **تُنقض بنقضها**، وإلّا صار نصفُ الفعل حالاً دائمة.
+if ! _ssh "cd $REMOTE && git checkout --quiet --force --detach $HEAD_SHA"; then
+  say "  ↩ السحبُ سقط — تُعاد الملفاتُ المُزاحة"
+  _ssh "cd $REMOTE && ASIDE=$ASIDE; [ -d \"\$ASIDE\" ] || exit 0; cd \"\$ASIDE\" && \
+    find . -type f ! -name tracked.patch | sed 's|^\./||' | while IFS= read -r f; do \
+      mkdir -p \"$REMOTE/\$(dirname \"\$f\")\"; [ -e \"$REMOTE/\$f\" ] || cp -p \"\$f\" \"$REMOTE/\$f\"; \
+    done" || say "  ⚠ تعذّرت الإعادةُ — الملفاتُ في ~/taxo-aside-$STAMP"
+  die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — أُعيدت الشجرةُ كما كانت، والنسخةُ في $LOCAL"
+fi
 
 SERVER_NOW="$(_ssh "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
 [ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند $SERVER_NOW لا $HEAD_SHA — يُوقَف. والنسخةُ في $LOCAL"
