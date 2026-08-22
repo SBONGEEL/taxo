@@ -43,9 +43,12 @@ import type {
   Currency,
   Earnings,
   MySubscription,
+  NearbyDriver,
   Ride,
   Wallet,
 } from "@/api/types";
+import { listNearbyColleagues } from "@/api/endpoints";
+import { useGarage } from "@/lib/garage";
 import {
   etaMinutes,
   offRouteMeters,
@@ -81,6 +84,14 @@ export function HomeScreen() {
   const womenService = useFeature(user?.country_code, "women_service_enabled");
   const { config } = useConfig();
   const { profile } = useDriver();
+  const { activeSkin } = useGarage();
+  // **زملاؤه حوله خلف مفتاحه** (قرارُ المالك، ويُشحن مطفأً): أن يرى الكبتنُ
+  // زملاءَه سؤالُ سوقٍ لا سؤالُ عرض. **ومطفأً لا تُرسم الميزةُ أصلاً** — ولا
+  // يُنادى البابُ فيردَّ ٤٠٣ فيُعرض للكبتن خطأٌ عن بابٍ لم يطرقه
+  const colleaguesOn = useFeature(
+    user?.country_code,
+    "driver_map_nearby_enabled",
+  );
   const preference = profile?.driver.gender_preference ?? "any";
   const { dark, toggle } = useTheme();
   const token = useMapboxToken();
@@ -167,6 +178,42 @@ export function HomeScreen() {
   }, [transfer, ride]);
 
   const tracking = isActive(ride);
+  const located = position !== null;
+
+  /** **زملاؤه على خريطته** — قراءةٌ كلَّ ثماني ثوانٍ ما دام المفتاحُ مفتوحاً
+   *  وله موقعٌ مبثوث. **ولا تُقرأ أثناء رحلةٍ جارية**: الخريطةُ حينها لمساره
+   *  هو، وسياراتٌ تتحرك حوله تشوّش على من يقود.
+   *
+   *  **والفشلُ صامتٌ تماماً**: مطفأً يردّ البابُ ٤٠٣ باسمه، ورسالةُ خطأٍ عن
+   *  ميزةٍ لم يطلبها الكبتنُ تُقرأ عطباً في التطبيق. */
+  const [colleagues, setColleagues] = useState<NearbyDriver[] | null>(null);
+  // **`ref` بجانب الحالة**: `position` كائنٌ جديدٌ مع كلِّ بثّة (ثلاثُ ثوانٍ)،
+  // فربطُ المؤقّت به يعيد فتحَه قبل أن يبلغ الثماني أبداً — وقراءتُه من
+  // الإغلاق تُجمّد أوّلَ موضعٍ فيُسأل عن جيرانِ نقطةٍ غادرها منذ ساعة
+  const positionRef = useRef(position);
+  positionRef.current = position;
+  useEffect(() => {
+    if (!colleaguesOn || tracking || !located) {
+      setColleagues(null);
+      return;
+    }
+    let alive = true;
+    const read = () => {
+      const at = positionRef.current;
+      if (!at) return;
+      listNearbyColleagues(at.lat, at.lng)
+        .then((list) => {
+          if (alive) setColleagues(list);
+        })
+        .catch(() => undefined);
+    };
+    read();
+    const timer = window.setInterval(read, 8_000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [colleaguesOn, tracking, located]);
 
   // **خطُّ المسار على الطرق** (البند ٨): يُقرأ مرةً لكل رحلةٍ مُسنَدة — الخلفيةُ
   // جمّدته لحظةَ القبول، فما يراه الكبتن هو ما يراه راكبُه. ويُصفَّر بانتهائها
@@ -327,6 +374,12 @@ export function HomeScreen() {
       <MapView
         token={token}
         center={position}
+        // **مركبتُه المفعَّلة، وحالُ اشتراكه من الباب الذي تقرؤه هذه الشاشةُ
+        //   أصلاً** — `covered` هي نفسُها التي ترسم اللافتةَ وتقرّر زرَّ
+        //   الاستقبال، فلا يقول موضعان على شاشةٍ واحدةٍ شيئين (الشكلُ الثامن)
+        selfSkin={activeSkin}
+        subscribed={covered}
+        colleagues={colleagues}
         pickup={tracking ? ride.pickup : null}
         dropoff={tracking ? ride.dropoff : null}
         fit={tracking}
@@ -395,8 +448,12 @@ export function HomeScreen() {
                 <span className="block text-12.5 font-bold text-ink">
                   لا اشتراك ساري
                 </span>
-                <span className="block text-11 text-muted">
-                  اشترك لتبدأ استقبال الطلبات.
+                {/* **وتفسيرُ ما يراه على الخريطة معه** (2026-08-22): سيارتُه
+                    باهتةٌ رماديةٌ بلا اشتراك — ولونٌ يتبدّل بلا كلمةٍ تقول
+                    لماذا يُقرأ عطباً في الرسم لا حالاً في الحساب */}
+                <span className="block text-11 leading-snug text-muted">
+                  اشترك لتستقبل الطلبات — وسيارتك على الخريطة باهتةٌ حتى
+                  تشترك.
                 </span>
               </span>
               <span className="shrink-0 rounded-9 bg-brand px-12 py-7 text-11.5 font-bold text-brand-ink">

@@ -32,11 +32,15 @@ import type {
   LoginResponse,
   MyReferrals,
   MySubscription,
+  NearbyDriver,
   NotificationPreferences,
   OtpChannel,
   Payment,
   Rating,
   Ride,
+  Garage,
+  SkinStore,
+  BuySkinResult,
   RideListItem,
   RidePayments,
   SavedCard,
@@ -457,3 +461,48 @@ export const reportLocationOverRest = (payload: {
   lng: number;
   heading: number | null;
 }) => api.post<void>("/drivers/me/location", payload);
+
+// ------------------------------------- مركباتُ الكراج والمتجر (2026-08-22)
+
+/** المتجر — **مع الرصيد والعملة والمستوى في نداءٍ واحد**، فالبطاقةُ تعرف
+ *  «رصيدك لا يكفي» بلا نداءٍ ثانٍ يفترق عنه. **والترتيبُ من الخلفية** ولا
+ *  يُعاد ترتيبُه هنا. */
+export const getSkinStore = () => api.get<SkinStore>("/vehicle-skins/store");
+
+/** الكراج — ومعه المفعَّلةُ والهديّةُ التي لم تُعرض بعدُ وحالُ الاشتراك. */
+export const getGarage = () => api.get<Garage>("/vehicle-skins/garage");
+
+/** الشراء — **والرصيدُ بعده يأتي من الدفتر** لا مطروحاً في الشاشة (§14). */
+export const buySkin = (skinId: string) =>
+  api.post<BuySkinResult>(`/vehicle-skins/${skinId}/buy`, {});
+
+/** تبديلُ المركبة النشطة.
+ *
+ * **ولا يُقرأ ردُّه**: العقدُ يعلن مدخلَه (`ActivateSkinIn`) ولا يعلن مخرجَه،
+ * فبناءُ الشاشة على شكلٍ لم يُجمَّد هو **الشكلُ الثامن قبل أن يُكتب سطر**.
+ * فالكراجُ يُعاد قراءتُه بعده من بابه الواحد، والتبديلُ يظهر في الحال بتحديثٍ
+ * متفائلٍ يعود عند الرفض.
+ */
+export const setActiveSkin = (skinId: string) =>
+  api.put<void>("/vehicle-skins/active", { skin_id: skinId });
+
+/** خَتْمُ ورقة الاحتفال — **مرةً واحدة**، فلا تُعرض الهديّةُ في كل فتحة. */
+export const markSkinSeen = (skinId: string) =>
+  api.post<void>(`/vehicle-skins/${skinId}/seen`, {});
+
+/** زملاءُ الكبتن حوله — **مجهَّلين كما يراهم الراكب**.
+ *
+ * **ومطفأً يردّ ٤٠٣ بخطأٍ مسمّى لا قائمةً فارغة** (الخلفيةُ تفرّق: «البابُ
+ * مغلق» ليست «الشارعُ خالٍ»). **والشاشةُ تصمت في الحالتين**: الميزةُ خلف
+ * مفتاحها فلا تُرسم أصلاً، ولا يُعرض للكبتن خطأٌ عن بابٍ لم يطرقه.
+ */
+export const listNearbyColleagues = (lat: number, lng: number) =>
+  api.get<NearbyDriver[]>("/drivers/me/nearby", { query: { lat, lng } });
+
+/** بلاغُ الكبتن عن صورةِ راكبِ رحلته — **تُحجب فوراً وتُعرض على المشرف**.
+ *
+ * **ولا يبلّغ إلا كبتنُ الرحلة**: الرحلةُ هي التي أعطته حقَّ رؤيتها، فهي
+ * التي تعطيه حقَّ البلاغ عنها — والخلفيةُ هي من يتحقّق.
+ */
+export const reportRiderPhoto = (rideId: string) =>
+  api.post<void>(`/rides/${rideId}/rider/photo/report`, {});

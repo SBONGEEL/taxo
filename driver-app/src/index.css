@@ -70,6 +70,50 @@
     --brand-brd: #f2b7d1;
   }
 
+  /* ------------------------------------------ هويّةُ ندرة المركبات (2026-08-22)
+   *
+   * **بيتٌ واحدٌ لألوان الفئات**، وهذه هي علّتُه: §1.1 **لا لونَ علامةٍ فيها**
+   * إلا `--brand` الوردي، وذاك يَعِد بالخدمة النسائية — فاستعمالُه للندرة
+   * يجعل «مركبةً مميزة» تُقرأ «نسائية». والذهبُ وحدَه موجودٌ في اللوحة
+   * (`--warn`)، فالنادرةُ تأخذه بحرفه ولا تُخترع له قيمة.
+   *
+   * **وما لزم اختراعُه اثنان لا أربعة**: الأزرقُ-البنفسجيُّ للمميزة،
+   * والبنفسجيُّ للأسطورية. **والعاديةُ بلا هويّةٍ أصلاً** — تأخذ `--mut`
+   * و`--sur2` و`--brd`، لأن «عادية» تعني ألّا تُميَّز.
+   *
+   * **ويُكتب هنا لا في الشاشات**: قيمةٌ ستّ عشريّةٌ مبعثرةٌ في `tsx` **لا
+   * يراها `check:scale`** (يقرأ السلالمَ الرقمية) ولا أيُّ حارسٍ آخر — وهو
+   * بعينه ما نجا به `#facc15` في `MapView` بعد كنس 12-أ.
+   *
+   * **ولمَ لا في `tailwind.config.js`**: ذاك **نسخةٌ حرفيّةٌ من `DESIGN.md`
+   * §6** في التطبيقات الثلاثة، و«متطابقٌ إلا سطرين» ليس متطابقاً. فالأصنافُ
+   * هنا في طبقة `components`، والأدواتُ تعلوها فلا تُهزم قيمةٌ من السلّم.
+   *
+   * **والتباينُ محسوبٌ لا مختار**: كلُّ لونٍ فوق سطحه الخافت أعلى من ٤٫٥:١
+   * في الوضعين (٦٫٠ للمميزة الليلية، ٧٫٤ النهارية). */
+  :root,
+  .dark {
+    --rar-prem: #7f9cff;
+    --rar-prem-soft: #1a2140;
+    --rar-prem-brd: #33407a;
+    --rar-lgnd: #c58bff;
+    --rar-lgnd-soft: #241a33;
+    --rar-lgnd-brd: #4a3070;
+    --rar-rare-soft: #2a2110;
+    --rar-rare-brd: #5c4718;
+  }
+
+  .light {
+    --rar-prem: #3a4fb8;
+    --rar-prem-soft: #eef1fd;
+    --rar-prem-brd: #c3ccf5;
+    --rar-lgnd: #7c3aed;
+    --rar-lgnd-soft: #f5edff;
+    --rar-lgnd-brd: #d8c2f7;
+    --rar-rare-soft: #fdf3dd;
+    --rar-rare-brd: #e6cf95;
+  }
+
   html,
   body,
   #root {
@@ -154,6 +198,38 @@
 
   .label {
     @apply mb-6 block text-12 text-muted;
+  }
+
+  /* **أصنافُ الندرة الأربعة** — تُنادى من `lib/skins.ts` وحدَه.
+   *
+   * **ولا `border-line` بجانبها**: `border` هنا للعرض وحدَه واللونُ من الصنف،
+   * وأداةُ لونٍ من السلّم كانت ستعلو طبقةَ المكوّنات فتمحو الهويّة بصمت. */
+  .rar-common {
+    color: var(--mut);
+    background: var(--sur2);
+    border-color: var(--brd);
+  }
+  .rar-premium {
+    color: var(--rar-prem);
+    background: var(--rar-prem-soft);
+    border-color: var(--rar-prem-brd);
+  }
+  .rar-rare {
+    color: var(--warn);
+    background: var(--rar-rare-soft);
+    border-color: var(--rar-rare-brd);
+  }
+  /* **والأسطوريةُ وحدَها لها تدرّج** — شارتُها الخاصة: بنفسجيٌّ يمرّ بالذهب،
+   * فتُعرف من طرف العين في شبكةٍ من البطاقات بلا أن تُقرأ كلمتُها. */
+  .rar-legendary {
+    color: var(--rar-lgnd);
+    background: linear-gradient(
+      135deg,
+      var(--rar-lgnd-soft) 0%,
+      var(--rar-lgnd-soft) 55%,
+      var(--rar-rare-soft) 100%
+    );
+    border-color: var(--rar-lgnd-brd);
   }
 
   /* شريطُ التمرير مخفيٌّ في المحمول (DESIGN.md §2.11) */

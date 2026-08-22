@@ -15,7 +15,11 @@
  * المضيف في التطوير، وجلسةٌ تدهس جلسةً تُخرج أحدهما من حسابه بلا سبب ظاهر.
  */
 
-const BASE_URL = (
+/** **أصلُ الخلفية** — يُصدَّر لأن رسمات المركبات ملفاتٌ تخدمها الخلفيةُ لا
+ *  الحزمة: في الإنتاج التطبيقُ على `driver.tajora.ly` والخلفيةُ على
+ *  `api.tajora.ly`، فمسارٌ نسبيٌّ يُبنى على أصل الصفحة يقع على موقعٍ لا صورةَ
+ *  فيه. والبناءُ في مكانٍ واحد (`lib/skins.ts::skinAssetUrl`) لا في كل بطاقة. */
+export const BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8001"
 ).replace(/\/$/, "");
 
@@ -190,6 +194,10 @@ interface RequestOptions {
   anonymous?: boolean;
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
+  /** **بايتاتٌ لا JSON**: صورةُ الراكب (البند ٥٢) تمرّ بنفس المسار فتأخذ
+   *  تجديدَ التوكن ومعالجةَ الخطأ وعنوانَ الخادم من مكانٍ واحد. ومسارٌ ثانٍ
+   *  لها كان سيعيد كتابة الأربعة ثم يفترق عنها أوّلَ تعديل. */
+  raw?: boolean;
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
@@ -259,6 +267,7 @@ async function send<T>(
 
   if (!response.ok) throw await toError(response);
   if (response.status === 204) return undefined as T;
+  if (options.raw) return (await response.blob()) as T;
   try {
     return (await response.json()) as T;
   } catch {
@@ -425,4 +434,7 @@ export const api = {
     request<T>(path, { ...options, method: "PATCH", body }),
   del: <T>(path: string, options: RequestOptions = {}) =>
     request<T>(path, { ...options, method: "DELETE" }),
+  /** بايتاتٌ خام — للصور التي تمرّ بحارسِ الجلسة (صورةُ الراكب، البند ٥٢). */
+  blob: (path: string, options: Omit<RequestOptions, "method" | "body"> = {}) =>
+    request<Blob>(path, { ...options, method: "GET", raw: true }),
 };

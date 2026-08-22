@@ -35,9 +35,11 @@ import { ConfigProvider, useConfig } from "@/lib/config";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
+import { GarageProvider } from "@/lib/garage";
 import { RideProvider, useRide } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
 import { WelcomeSheet } from "@/components/WelcomeSheet";
+import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
 import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
@@ -132,6 +134,12 @@ const SubscriptionScreen = lazy(() =>
   import("@/screens/Subscription").then((m) => ({
     default: m.SubscriptionScreen,
   })),
+);
+const GarageScreen = lazy(() =>
+  import("@/screens/Garage").then((m) => ({ default: m.GarageScreen })),
+);
+const SkinStoreScreen = lazy(() =>
+  import("@/screens/SkinStore").then((m) => ({ default: m.SkinStoreScreen })),
 );
 
 function Loading() {
@@ -231,6 +239,10 @@ function DriverHome() {
       <>
         <HomeScreen />
         <WelcomeSheet />
+        {/* **بعد ورقة الترحيب في ترتيب الرسم**: الاثنتان `z-50`، والأخيرةُ
+            تعلو — وهديّةُ أول اشتراكٍ تقع **بعد** أن يقرأ الترحيب ويشترك،
+            فالتزاحمُ نظريٌّ والترتيبُ يحسمه على كلِّ حال */}
+        <CelebrationSheet />
       </>
     );
   if (profile.vehicles.length === 0)
@@ -319,6 +331,10 @@ export default function App() {
           <BrandProvider>
             <Boot>
               <DriverProvider>
+                {/* **تحت الجلسة والكبتن**: الكراجُ نداءُ كبتنٍ مسجَّل، وفوق
+                    `Router` لأن الخريطةَ والورقةَ والشاشةَ ثلاثةُ قرّاءٍ
+                    لجوابٍ واحد — وثلاثةُ نداءاتٍ له تفترق */}
+                <GarageProvider>
                 <RideProvider>
                   <Router>
                     {/* **الحركةُ فوق `Suspense` لا تحته**، و`Routes` مُثبَّتةٌ على
@@ -497,6 +513,24 @@ export default function App() {
                             </Guarded>
                           }
                         />
+                        {/* **مركباتي تحت «حسابي»**: زينةٌ تُفتح عن قصدٍ لا
+                            تبويبٌ يُضغط في كلِّ رحلة (نفسُ موضع «المهام») */}
+                        <Route
+                          path="/account/garage"
+                          element={
+                            <Guarded>
+                              <GarageScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/garage/store"
+                          element={
+                            <Guarded>
+                              <SkinStoreScreen />
+                            </Guarded>
+                          }
+                        />
                         <Route
                           path="/account/missions"
                           element={
@@ -523,6 +557,7 @@ export default function App() {
                   <NavBar />
                   </Router>
                 </RideProvider>
+                </GarageProvider>
               </DriverProvider>
             </Boot>
           </BrandProvider>

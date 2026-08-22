@@ -2,8 +2,16 @@
  *
  * ثلاث مسؤوليات في تطبيق الكبتن:
  *
- * 1. **موقعُ الكبتن نفسه** — سهمٌ يدور مع الاتجاه، وحركتُه منعَّمة بين
- *    البثّات (كل ثلاث ثوانٍ) فلا تقفز الأيقونة قفزةً كل دورة.
+ * 1. **موقعُ الكبتن نفسه** — **مركبتُه المفعَّلة** تدور مع الاتجاه (أو تُعرض
+ *    ثابتةً إن صُرِّح `map_rotates: false`)، وحركتُها منعَّمة بين البثّات (كل
+ *    ثلاث ثوانٍ) فلا تقفز الأيقونة قفزةً كل دورة. **ويراها هو وحدَه**: لا
+ *    تُنشر لأحد، ولا تغيّر شرطَ الأهلية، ولا تمسّ ما يصل الراكب. ومن لا
+ *    اشتراكَ له يرى الرماديةَ الباهتةَ مكانَها — **حالُ حسابٍ على شاشته لا
+ *    وشايةٌ بفئة**.
+ *
+ * 1-ب. **زملاؤه حوله** (اختياريّ، خلف مفتاحٍ مطفأ) — **مجهَّلين بالسيارة
+ *    العامّة كما يراهم الراكبُ سواءً بسواء**، لا بمركبةِ أحد: ما يُرى ويندر
+ *    يصير معرّفاً ينقض تجهيلَ §10.
  * 2. **دبوسا الانطلاق والوصول** أثناء الرحلة.
  * 3. **الخلفيةُ النائبة** حين لا توكن (عقد Mapbox غير مفعّل): شريطٌ مائل
  *    بلونَي `--sa`/`--sb` كما في التصميم، لا شاشةٌ بيضاء — بقيةُ التطبيق
@@ -24,8 +32,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import type { Coordinates } from "@/api/types";
+import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
+import {
+  applyMarkerHeading,
+  nearbyMarkerElement,
+  selfMarkerElement,
+} from "@/lib/skin-marker";
 import { trimRoute } from "@/lib/route-line";
 import { useTheme } from "@/lib/theme";
 import { digits, cn } from "@/lib/utils";
@@ -55,22 +68,34 @@ interface Props {
   /** دقائقُ الوصول — **محسوبةٌ في الجهاز** (البند ١٧-٣)، و`null` فلا يُعرض شيء:
    *  رقمٌ مبنيٌّ على سرعةٍ لم تُقَس يُقرأ وعداً ثم يُخلَف. */
   etaMinutes?: number | null;
+  /** **مركبتُه المفعَّلة** — و`null` تُرسم السيارةَ العامّة. */
+  selfSkin?: VehicleSkin | null;
+  /** **لا اشتراكَ له**: تُرسم رماديةً باهتة. ويأتي من الشاشة نفسِها التي
+   *  ترسم لافتةَ الاشتراك وزرَّ الاستقبال، فلا يقول الموضعان شيئين. */
+  subscribed?: boolean;
+  /** **زملاؤه حوله — مجهَّلين كما يراهم الراكب**، و`null` تعني «الميزةُ غيرُ
+   *  مفتوحةٍ في سوقه» فلا يُرسم شيءٌ ولا يُقال شيء. */
+  colleagues?: NearbyDriver[] | null;
   className?: string;
 }
 
 const DEFAULT_CENTER: Coordinates = { lat: 31.9539, lng: 35.9106 };
 
-function arrowElement(): HTMLElement {
-  const element = document.createElement("div");
-  element.innerHTML = `
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
-         style="filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35))">
-      <path d="M12 2.5 19 20.5 12 16.8 5 20.5Z" fill="currentColor"
-            stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-linejoin="round"/>
-    </svg>`;
-  element.style.willChange = "transform";
-  element.style.color = "var(--ok)";
-  return element;
+/** مدّةُ تنعيمِ حركة الزملاء — أقصرُ قليلاً من دورة القراءة فتصل السيارةُ
+ *  موضعَها قبيل وصول التالية، كما في خريطة الراكب. */
+const NEARBY_TWEEN_MS = 7_000;
+
+interface Tween {
+  marker: mapboxgl.Marker;
+  element: HTMLElement;
+  from: Coordinates;
+  to: Coordinates;
+  headingFrom: number;
+  headingTo: number;
+  startedAt: number;
+  /** **مصرَّحٌ لا مستنتَج**: الرندرُ الواقعيُّ يُعرض ثابتاً، فلا تُدار علامةٌ
+   *  صُرِّح ألّا تدور — ولا يُقاس ذلك من الندرة. */
+  rotates: boolean;
 }
 
 /** **قيمةُ رمزٍ من §1.1 كما يحسبها المتصفح** — لا نسخةً مكتوبةً بيد.
@@ -110,6 +135,9 @@ export function MapView({
   routePoints = null,
   trimAt = null,
   etaMinutes = null,
+  selfSkin = null,
+  subscribed = true,
+  colleagues = null,
   className,
 }: Props) {
   const { dark } = useTheme();
@@ -120,6 +148,8 @@ export function MapView({
     {},
   );
   const animation = useRef<number | null>(null);
+  const cars = useRef<Map<string, Tween>>(new Map());
+  const carLoop = useRef<number | null>(null);
 
   // **طورُ المتابعة** (البند ١٧-٢) — و`ref` بجانب الحالة لأن مُعالِج السحب
   // يُسجَّل مرةً واحدةً عند بناء الخريطة، فقراءتُه للحالة تُجمّد أوّلَ قيمة
@@ -186,7 +216,12 @@ export function MapView({
     if (!instance || !center) return;
 
     if (!self.current) {
-      self.current = new mapboxgl.Marker({ element: arrowElement() })
+      const element = selfMarkerElement({ skin: selfSkin, subscribed });
+      applyMarkerHeading(element, heading, selfSkin?.map_rotates ?? true);
+      // **`rotationAlignment: "map"`** — العلامةُ تُعاكس دورانَ الكاميرا فتبقى
+      // مقدّمتُها في اتجاه السير الحقيقيّ. وبالافتراض (`viewport`) كانت تدور
+      // **مع** الخريطة في طور «الاتجاه»، فتشير إلى غير ما يسير إليه
+      self.current = new mapboxgl.Marker({ element, rotationAlignment: "map" })
         .setLngLat([center.lng, center.lat])
         .addTo(instance);
       instance.easeTo({ center: [center.lng, center.lat], duration: 400 });
@@ -238,12 +273,110 @@ export function MapView({
     });
   }, [center, heading]);
 
+  // **تبديلُ المركبة أو حالِ الاشتراك يُعيد بناءَ العلامة**، ولا يُنتظر بثٌّ
+  // جديدٌ للموقع: من فعّل مركبةً في كراجه يعود فيجدها على خريطته في الحال —
+  // وعلامةٌ لا تتبدّل إلا بعد ثلاث ثوانٍ تُقرأ «لم يُحفظ الاختيار»
+  useEffect(() => {
+    const marker = self.current;
+    const instance = map.current;
+    if (!marker || !instance) return;
+    const element = selfMarkerElement({ skin: selfSkin, subscribed });
+    applyMarkerHeading(element, heading, selfSkin?.map_rotates ?? true);
+    const at = marker.getLngLat();
+    marker.remove();
+    self.current = new mapboxgl.Marker({ element, rotationAlignment: "map" })
+      .setLngLat(at)
+      .addTo(instance);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selfSkin?.id ?? null, subscribed]);
+
+  // **الاتجاه** — و`null` يُرسم كالصفر: الشكلُ نفسُه والمقاسُ نفسُه، فلا
+  // يُعرَف من الخارج من لا يبثّ اتجاهه (الشكلُ الثالثَ عشر)
   useEffect(() => {
     const element = self.current?.getElement();
     if (element) {
-      element.style.transform = `${element.style.transform.replace(/ rotate\([^)]*\)/, "")} rotate(${heading ?? 0}deg)`;
+      applyMarkerHeading(element, heading, selfSkin?.map_rotates ?? true);
     }
-  }, [heading, center]);
+  }, [heading, center, selfSkin?.map_rotates]);
+
+  // **زملاؤه حوله** — و`null` تعني «الميزةُ غيرُ مفتوحة»: لا علاماتٌ تُرسم
+  // ولا رسالةٌ تُقال. **وتُرسم بالسيارة العامّة** لا بمركبةِ أحد: ما يُرى
+  // ويندر يصير معرّفاً ينقض تجهيلَ §10
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+
+    if (colleagues === null) {
+      for (const entry of cars.current.values()) entry.marker.remove();
+      cars.current.clear();
+      return;
+    }
+
+    const seen = new Set<string>();
+    for (const driver of colleagues) {
+      seen.add(driver.ref);
+      const point = { lat: driver.lat, lng: driver.lng };
+      const existing = cars.current.get(driver.ref);
+      if (existing) {
+        const at = existing.marker.getLngLat();
+        existing.from = { lat: at.lat, lng: at.lng };
+        existing.to = point;
+        existing.headingFrom = existing.headingTo;
+        existing.headingTo = driver.heading ?? existing.headingTo;
+        existing.startedAt = performance.now();
+        continue;
+      }
+      // **الدورانُ من صفِّ المركبة لا من الندرة** — والعامّةُ تدور دائماً
+      const element = nearbyMarkerElement(driver.skin);
+      applyMarkerHeading(element, driver.heading, driver.skin?.rotates ?? true);
+      const marker = new mapboxgl.Marker({ element, rotationAlignment: "map" })
+        .setLngLat([point.lng, point.lat])
+        .addTo(instance);
+      cars.current.set(driver.ref, {
+        marker,
+        element,
+        from: point,
+        to: point,
+        headingFrom: driver.heading ?? 0,
+        headingTo: driver.heading ?? 0,
+        startedAt: performance.now(),
+        rotates: driver.skin?.rotates ?? true,
+      });
+    }
+    for (const [ref, entry] of cars.current) {
+      if (seen.has(ref)) continue;
+      entry.marker.remove();
+      cars.current.delete(ref);
+    }
+
+    if (carLoop.current !== null) return;
+    const step = (now: number) => {
+      for (const entry of cars.current.values()) {
+        const progress = Math.min(
+          (now - entry.startedAt) / NEARBY_TWEEN_MS,
+          1,
+        );
+        entry.marker.setLngLat([
+          entry.from.lng + (entry.to.lng - entry.from.lng) * progress,
+          entry.from.lat + (entry.to.lat - entry.from.lat) * progress,
+        ]);
+        if (entry.rotates) {
+          entry.element.style.rotate = `${
+            entry.headingFrom + (entry.headingTo - entry.headingFrom) * progress
+          }deg`;
+        }
+      }
+      carLoop.current = cars.current.size > 0 ? requestAnimationFrame(step) : null;
+    };
+    carLoop.current = requestAnimationFrame(step);
+  }, [colleagues]);
+
+  useEffect(
+    () => () => {
+      if (carLoop.current !== null) cancelAnimationFrame(carLoop.current);
+    },
+    [],
+  );
 
   // دبوسا الرحلة
   useEffect(() => {
