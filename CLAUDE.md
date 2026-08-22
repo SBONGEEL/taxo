@@ -714,26 +714,29 @@ in `test_driver_earnings`. **"Flaky under load" is a hypothesis, not a diagnosis
 → 120k/month; navigation with a capped reroute → 270k; **a polled live ETA → 870k**. Navigation is not what
 raises the bill — polling is.
 
-#### 6. The unplanned stop point — built, **except half of branch (و)** (2026-08-16, SPEC §5.10-ب)
+#### 6. The unplanned stop point — built, all six branches (2026-08-16, SPEC §5.10-ب)
 
 Backend + both apps + panel. `ride_pauses` (migration `0043`), `services/pauses.py`,
 `tasks/pauses.py` every minute.
 
-> **Corrected 2026-08-21 — this line used to claim all six branches were built, and a
-> measurement disproved it.** Branch (و) is two halves: *"inside `final_fare`"* (built and
-> measured) and *"a separate line in the breakdown"* (**built nowhere**). Read from the DOM
-> on a two-stop ride carrying a `0.042` waiting charge: the rider's ride details, **the
-> rider's payment screen**, the captain's screen — which is *titled* «تفصيل السعر» — and the
-> panel's ride log all show a final fare with no waiting line, and the word «محطة» appears on
-> none of them. `AdminRideDetail` does not carry the field at all.
+> **Branch (و) is two halves and both are built** — *"inside `final_fare`"* and *"a separate
+> line in the breakdown"*, the second landing 2026-08-21 and measured from the DOM on all four
+> screens (the rider's ride details, the rider's payment screen, the captain's «تفصيل السعر»,
+> and the panel). `RideOut` publishes `stop_fee` and `stops_charge` — **multiplied in the
+> backend, because a screen does not multiply money** (§14) — and `AdminRideDetail` publishes
+> all five from **the same service door that computed `final_fare`**, so there is no second
+> number resembling the first (the eighth shape). Its guard is
+> `test_the_panel_reads_the_same_numbers_the_two_apps_read`, which compares the two responses
+> field by field and `assert`s the measured value is non-zero first, so it cannot guard an
+> empty ledger — verified in both directions.
 >
-> **The shape is the interesting part, and it is a new one**: the field *is* published on
-> every `RideOut` and *is* rendered by both apps **while the money accrues** (`StopProgress`,
-> `PauseNotice`, `ActiveRide`) — and disappears at the moment it becomes an amount someone
-> pays. A reader that exists for the counter and not for the charge. **No guard sees it**:
-> all eight rider-app guards are green on this tree, `check:config` asks whether a published
-> field has a *mirror* (it does), never whether it has a *reader*, and `check:readers` sweeps
-> `lib/` only. See `SPEC.md` §5.10-ب/و for the measured table.
+> **The line it corrects used to say the second half was built nowhere, and that line outlived
+> the defect by a day** (deleted 2026-08-22 along with SPEC's stale subsection): the fix landed
+> the same day the measurement did, and the description stayed. **The lesson is kept below
+> under "the thirteenth shape", where it belongs** — a money amount rendered while it accrues
+> and silent when it is charged, which no guard could see: `check:config` asks whether a
+> published field has a *mirror*, never whether it has a *reader*, and `check:readers` sweeps
+> `lib/` only.
 
 **A table of its own, not a column on `ride_stops`**: a planned stop is decided by **the rider before the
 request** so it enters the estimate, the distance and the fee; a pause is pressed by **the captain during
@@ -3069,6 +3072,35 @@ with no mirror**.
 > فيه العطب. **فكلُّ جملةٍ توثيقٍ تصف سلوكاً تُقرأ دعوى تحتاج قياساً**، وما
 > لم يُقس منها يُكتب «كذا هو المقصود» لا «كذا يقع».
 >
+> ### وقبل أن تحذف نصّاً كذب: أخبرٌ هو أم درس؟ (قرارُ المالك 2026-08-22)
+>
+> **هذا هو المعيارُ الذي يمنع حذفَ ما يجب أن يبقى وإبقاءَ ما يجب أن يُحذف** —
+> وبغيره يقع الخطأُ في الاتجاهين، وكلاهما غالٍ.
+>
+> | الصنف | ما هو | الحكم |
+> |---|---|---|
+> | **خبرٌ عن حالٍ قائمة** | «الحقلُ لا يظهر في أيِّ شاشة» · «الخادمُ متأخّرٌ ستَّ عشرةَ التزاماً» | **يُحذف إن كذب** — ولا يُترك سجلاً |
+> | **درسٌ عن صنفٍ يتكرر** | «مبلغٌ يُعرَض وهو يتراكم ويصمت وهو يُحصَّل» | **يبقى**، ويُفصَل عن الحال **بسطرٍ فوقه** يقول إن هذه الحالةَ بعينها أُصلحت |
+>
+> **ولمَ لا يُترك الخبرُ سجلاً**: هو **صحيحُ الشكل** — مقيسٌ، مؤرَّخ، بجدولٍ
+> وأرقام — فلا شيءَ فيه يشي بأنه متأخّر. ومن يقرؤه يبني عليه؛ **وهذا وقع
+> مقيساً**: `HANDOFF.md` §٤ أوقف جلسةً كاملةً على «قرارِ المالك» في عطبٍ كان
+> قد أُصلح في اليوم نفسِه. **وإبقاؤه «للتاريخ» يعيد الفخَّ لا يوثّقه.**
+>
+> **ولمَ يبقى الدرس**: قيمتُه ليست في الحقل الذي صمت بل في **أن الصنفَ يتكرر
+> بحقلٍ آخر** — وحذفُه يُسقط حارساً بشرياً ويجعل الوقوعَ الثاني اكتشافاً من
+> الصفر. **وأخطرُ من الحذف إبقاؤه بلا سطرِ الفصل**: يُقرأ حينها خبراً، فيعود
+> الصنفُ الأول من باب الثاني.
+>
+> **والسؤالُ الفاصل**: **هل يُبطل الإصلاحُ هذا النصَّ أم يكمله؟** ما يُبطله
+> خبر، وما يكمله درس. والثالثُ الذي لا يُخلط بهما: **تعليقٌ يَعِد بما سيأتي** —
+> فذاك لا يُحذف ولا يُفصَل، بل **يُنقل بنداً في `HANDOFF.md`** (القاعدةُ فوقه).
+>
+> **ويُطبَّق على الملفات الثلاثة بحدوده**: `SPEC.md` و`HANDOFF.md` يحملان
+> **الخبرَ والقرار** فالكذبُ فيهما يُحذف؛ و`CLAUDE.md` يحمل **الدرس** فالأصلُ
+> فيه البقاءُ مع سطر الفصل. **ومن كتب خبراً في `CLAUDE.md` فقد أخطأ موضعَه**
+> قبل أن يكذب.
+>
 > ### وشرطٌ زالت علّتُه ولم يُنزَع يمنع ما وُضع ليحرسه (قرارُ المالك 2026-08-21)
 >
 > **وهو الوجهُ الثاني لـ«قائمةُ أعذارٍ لا تُنظَّف تصير كذباً»**: تلك تسمح بما
@@ -3307,6 +3339,12 @@ with no mirror**.
 ساعةٍ لم يُلتزَم.
 
 ### الشكلُ الثالثَ عشر — رسمُ مالٍ يُحصَّل من جيبِ راكبٍ ولا يظهر على أيِّ شاشة (2026-08-21)
+
+> **وهذا درسٌ لا وصفُ حال: العطبُ نفسُه أُصلح في اليوم نفسِه** (SPEC §٥٫١٠-ب/و)
+> — السطورُ ترتسم اليومَ في الشاشات الأربع، ولها حارسان (`check:money-visible`
+> واختبارُ البابين). **ويبقى القسمُ لأن الشكلَ يتكرر بحقلٍ آخر**، لا لأن هذا
+> الحقلَ ما زال صامتاً. **والفرقُ بينهما هو ما حُذف من `SPEC.md` و`HANDOFF.md`
+> في ٢٠٢٦-٠٨-٢٢**: درسٌ يُحفظ، وخبرٌ متأخّرٌ يُمحى.
 
 **كلفتُه ليست في المبلغ بل في أنه غيرُ قابلٍ للمراجعة.** رحلةٌ بمحطتين على
 تسعيرة الأردن تحمل **1.000 د.أ رسمَ محطات** (14٪ من عرضٍ قدرُه 7.212) ورسمَ

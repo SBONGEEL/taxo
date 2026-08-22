@@ -6,10 +6,17 @@ set -euo pipefail
 BASE="${1:-}"
 [ -z "$BASE" ] && { echo "الاستعمال: bash scripts/check-markets.sh <أساسُ البيئة>"; exit 2; }
 
+# **ملفُّ البيئة يُصرَّح في السكربت لا يُتذكَّر عند كلِّ نداء** — كـ`suite.sh`
+# و`check-stack.sh`. وبدونه يقف `docker compose` عند `POSTGRES_PASSWORD`
+# **قبل أن يقيس شيئاً**، فيُقرأ الوقوفُ عطباً في البيئة المقيسة وهو عطبٌ في
+# نداءِ الحارس نفسِه. والاسمُ واحدٌ في الثلاثة فلا يفترق بابٌ عن باب.
+ENV_FILE="${TAXO_ENV_FILE:-.env.local}"
+[ -f "$ENV_FILE" ] || ENV_FILE=".env"
+
 TMP="$(mktemp -t taxo-shipped-XXXXXX.json)"
 trap 'rm -f "$TMP"' EXIT
 
-docker compose run --rm --no-deps -T backend python -c "
+docker compose --env-file "$ENV_FILE" run --rm --no-deps -T backend python -c "
 import json
 from scripts.seed import FEATURE_DEFAULTS
 print(json.dumps({c.value: {k.value: v for k, v in d.items()} for c, d in FEATURE_DEFAULTS.items()}))
