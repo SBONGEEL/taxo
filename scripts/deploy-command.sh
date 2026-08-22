@@ -40,7 +40,16 @@ read -r verb tag extra <<<"$REQUEST"
 [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || deny "وسمٌ غيرُ مقبولٍ الشكل: $tag"
 
 : "${TAXO_GITHUB_REPO:=SBONGEEL/taxo}"
-: "${TAXO_RELEASE_TOKEN:?لا رمزَ قراءةٍ على الخادم — يُضبط في بيئة الخدمة}"
+
+# **الرمزُ من ملفٍّ لا من البيئة** — و`sshd` لا يمرّر بيئةً إلى أمرٍ مفروض،
+# فاشتراطُ متغيّرٍ هنا شرطٌ لا يتحقّق أبداً. **وملفُّه ٦٠٠ ولمالكه وحدَه**،
+# ولا يُطبع ولا يدخل git.
+TOKEN_FILE="${TAXO_RELEASE_TOKEN_FILE:-$HOME/.taxo/release-token}"
+if [ -z "${TAXO_RELEASE_TOKEN:-}" ] && [ -r "$TOKEN_FILE" ]; then
+  TAXO_RELEASE_TOKEN="$(tr -d '
+' < "$TOKEN_FILE")"
+fi
+[ -n "${TAXO_RELEASE_TOKEN:-}" ] || deny "لا رمزَ قراءةٍ على الخادم ($TOKEN_FILE)."
 
 cd "$(dirname "$0")/.."
 exec bash scripts/pull-release.sh "$tag" "$TAXO_GITHUB_REPO" "$TAXO_RELEASE_TOKEN"
