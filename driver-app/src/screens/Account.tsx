@@ -214,6 +214,13 @@ export function AccountScreen() {
               onClick={() => navigate("/account/advances")}
             />
           ) : null}
+          {/* **مركباتي قبل المهام**: كلاهما يُفتح عن قصد، وهذه يُفتح بابُها
+              في كلِّ فتحةٍ للتطبيق (المفعَّلةُ على الخريطة أمام عينه) */}
+          <Row
+            label="مركباتي"
+            sub="مركبتك على الخريطة والمتجر"
+            onClick={() => navigate("/account/garage")}
+          />
           {levelsOn ? (
             <Row
               label="مهامّي ومستواي"

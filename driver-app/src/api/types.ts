@@ -780,3 +780,94 @@ export interface MyProgress {
   missions: MissionProgress[];
   badges: GrantedBadge[];
 }
+
+// ------------------------------------------- مركباتُ الكراج والمتجر (2026-08-22)
+
+/** درجاتُ الندرة — **مرآةُ `schemas/vehicle_skin.py::Rarity` بحرفها**.
+ *
+ * وهي في الخلفية **نصٌّ لا تعداد Postgres** (`models/vehicle_skin.py`)، فدرجةٌ
+ * خامسةٌ غداً كودٌ بلا ترحيلة — **وهنا كسرُ بناءٍ**، وهو المطلوب: قيمةٌ لا
+ * تعرفها الشاشةُ تخرج شارةً بلا لونٍ ولا اسم.
+ */
+export type Rarity = "common" | "premium" | "rare" | "legendary";
+
+/** كيف تملّكها — يُقرأ في الكراج: هديةٌ أم شراءٌ أم منحةُ إدارة. */
+export type AcquireSource = "gift" | "purchase" | "grant";
+
+/** **سببُ عدم إمكان الشراء — واحدٌ لا أكثر**، وترتيبُ أسبقيته في العقد.
+ *
+ * **وهو حالٌ لا رسالةُ خطأ**: الشاشةُ تسمّيه بكلمةٍ على البطاقة كما تسمّي
+ * `RIDE_STATUS_LABEL` حالَ الرحلة، **والرفضُ نفسُه** حين تُضغط ورقةُ الشراء
+ * يأتي نصُّه من الخلفية (§17) ولا يُصاغ هنا.
+ */
+export type SkinBlockedReason =
+  | "owned"
+  | "sold_out"
+  | "level_locked"
+  | "out_of_season"
+  | "insufficient_balance";
+
+/** مركبةٌ كما يراها الكبتنُ في المتجر أو الكراج — مرآةُ `SkinOut`. */
+export interface VehicleSkin {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  /** مسارٌ **نسبيّ** يُبنى على أصل الخلفية — `lib/skins.ts::skinAssetUrl`. */
+  store_image_url: string;
+  map_image_url: string;
+  /** ٨٠–١٢٠٪ — يُضرب في مقاسٍ **ثابتٍ في الكود**، لا في مقاس الملف. */
+  map_scale_percent: number;
+  /** **يُقرأ ولا يُستنتج من الندرة**: الرندرُ الواقعيُّ لا يدور. */
+  map_rotates: boolean;
+  /** **أين تُراها** — يُكتب في بطاقة المتجر نصّاً: من يدفع يعرف ما يشتري. */
+  visible_before_accept: boolean;
+  /** `null` غيرُ معروضةٍ للبيع (العاديةُ تُوهب ولا تُباع). **ونصٌّ لا رقم.** */
+  price: string | null;
+  currency: Currency | null;
+  /** `null` بلا حدّ — و`0` نفدت. */
+  remaining: number | null;
+  owners_count: number;
+  level_required: number | null;
+  valid_until: string | null;
+  owned: boolean;
+  active: boolean;
+  blocked_reason: SkinBlockedReason | null;
+}
+
+/** كراجُ الكبتن — **ومعه ما يحتاجه الكراجُ نفسُه** بنداءٍ واحد (`GarageOut`). */
+export interface Garage {
+  skins: VehicleSkin[];
+  active_skin_id: string | null;
+  /** **مركبةٌ وُهبت ولم تُعرض ورقتُها بعد** — تُعرض مرةً ثم تُختم. */
+  celebrate: VehicleSkin | null;
+  /** **لا اشتراكَ له**: الكراجُ يقوله ليُرسم البديلُ الباهتُ ويظهر الزرّ. */
+  has_subscription: boolean;
+}
+
+/** المتجرُ — **والترتيبُ عقدٌ لا ذوق**، فلا يُعاد ترتيبُه في الشاشة. */
+export interface SkinStore {
+  skins: VehicleSkin[];
+  balance: string;
+  currency: Currency;
+  driver_level: number | null;
+}
+
+/** ما يُعرض بعد الشراء — **الرصيدُ الجديدُ من الدفتر لا محسوباً في الشاشة**. */
+export interface BuySkinResult {
+  skin: VehicleSkin;
+  balance_after: string;
+  currency: Currency;
+}
+
+/** كبتنٌ قريبٌ **مجهَّلٌ كما يراه الراكب** — `NearbyDriverOut` نفسُها.
+ *
+ * **ولا حقلَ مركبةٍ فيها بقصد**: ما يُرى ويندر يصير معرّفاً ينقض تجهيلَ §10،
+ * فزملاءُ الكبتن يُرسمون بالسيارة العامّة لا بمركبة أحد.
+ */
+export interface NearbyDriver {
+  ref: string;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  vehicle_category: VehicleCategory;
+}

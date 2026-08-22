@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { Navigation } from "lucide-react";
 
 import type { GenderPreference, Ride } from "@/api/types";
+import { RiderAvatar } from "@/components/ride/RiderAvatar";
 import { openIn, targetFor } from "@/lib/external-maps";
 import type { NextInstruction } from "@/lib/next-instruction";
 import { digits, cn } from "@/lib/utils";
@@ -131,9 +132,10 @@ export function ActiveRide({
 
       <div className="absolute inset-x-0 bottom-0 z-10 rounded-t-22 border-t border-line bg-surface px-18 pb-22 pt-16">
         <div className="mb-13 flex items-center gap-12">
-          <div className="flex size-44 items-center justify-center rounded-full border border-line bg-surface-2 text-14 font-bold text-ink">
-            ر
-          </div>
+          {/* **صورةُ الراكب بعد القبول** (البند ٥٢): كان هنا حرفُ «ر» ثابتاً —
+              حرفٌ لا يعرّف بأحد. والبابُ يردّ صورةً دائماً، فلا شرطَ هنا ولا
+              حالةَ ثانية. **وضغطُها يفتح ورقتَها وفيها البلاغ** */}
+          <RiderAvatar rideId={ride.id} className="size-44" />
           <div className="flex-1">
             <div className="text-14 font-bold text-ink">راكب TAXO</div>
             <div className="text-11 text-muted">
