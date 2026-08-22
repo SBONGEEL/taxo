@@ -377,7 +377,16 @@ UNTRACKED_FILTER="cd $REMOTE && \
   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore"
 UNTRACKED_N="$(ssh_try "$UNTRACKED_FILTER | wc -l" | tr -d '\r ')"
 if [ "${UNTRACKED_N:-0}" != "0" ]; then
-  say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ داخل الشجرة…"
+  # **وتُعلَن التصفيةُ بأثرها لا بوقوعها** (2026-08-22): `--exclude-from` على
+  # ملفٍّ فارغٍ **ينجح ولا يستبعد شيئاً**، فتمرّ تصفيةٌ لا تصفّي — وقعت مقيسةً.
+  # **والرقمُ المطبوعُ هو ما كشفها**: «صمتُ الحارس يحتاج إثباتاً كما يحتاجه
+  # صياحُه». فإن تساوى ما قبلَ التصفية وما بعدَها **يُقال ذلك صراحةً**.
+  RAW_N="$(ssh_try "cd $REMOTE && git ls-files --others --exclude-standard | wc -l" | tr -d '\r ')"
+  if [ "${RAW_N:-0}" = "${UNTRACKED_N:-0}" ]; then
+    say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ — **لم تستبعد التصفيةُ شيئاً** (تحقَّق أن قواعدَ التجاهُل وصلت)"
+  else
+    say "  · $UNTRACKED_N ملفاً غيرَ متتبَّعٍ داخل الشجرة (استُبعد $((RAW_N - UNTRACKED_N)) مخرجَ بناء)"
+  fi
   ssh_try "$UNTRACKED_FILTER | tar -czhf - -T -" \
     > "$LOCAL/untracked.tar.gz" || die "تعذّرت نسخةُ غير المتتبَّع — لا رفع."
 else
