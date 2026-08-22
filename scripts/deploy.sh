@@ -78,7 +78,8 @@ say "  ترحيلة  : ${MIGRATIONS:-0}"
 #   ١) أثمّة ترحيلةٌ **معلَّقة**؟ — رأسُ القاعدة على الخادم مقابل الشجرة.
 #   ٢) وهل ما يُرسَل **في هذه الدفعة** يمسّ نموذجاً أو ترحيلة؟
 # **وسكوتُ الاثنين معاً هو الجواب**، وإلّا وقف.
-PENDING="$("$SSH" "${SSH_OPTS[@]}" "$HOST"   "cd $REMOTE && docker compose exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d ' ' || true)"
+PENDING="$("$SSH" "${SSH_OPTS[@]}" "$HOST"   "cd $REMOTE && docker compose exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d '
+ ' || true)"
 TREE_HEAD="$(ls backend/alembic/versions/ | sort | tail -1 | cut -d_ -f1)"
 if [ -z "$PENDING" ]; then
   say "  ترحيلة  : **رأسُ القاعدة غيرُ مقروء** — يُعامَل كأن ثمّة معلَّقاً"
@@ -127,7 +128,16 @@ git remote get-url origin >/dev/null 2>&1 || die "لا مستودعَ بعيد �
 # هناك، والتاريخُ يبقى حاملاً له.
 # النمطُ في متغيّرٍ مستقلٍّ لا في سطرٍ مُقتبَسٍ مرتين — الاقتباسُ المُعشَّشُ هو
 # ما كسر هذا السطرَ أولَ مرة.
-SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|api[_-]?key[[:space:]]*[:=]|secret[[:space:]]*[:=]|Bearer [A-Za-z0-9._-]{20,}'
+# **السرُّ قيمةٌ لا اسمُ حقل** (صُحّح 2026-08-22): كان النمطُ يمسك
+# `secret[[:space:]]*[:=]` مجرَّداً، **فأوقف الرفعَ على سطرِ توثيقٍ يقول
+# `secret=True`** — وهو اسمُ خاصيّةٍ لا سرّ. **وبوّابةٌ تصيح حيث لا خطر تعلّم
+# مشغّلَها التجاوز** (الدرسُ المسجَّل في الفهرس قبل ساعة، ووقع ثانيةً في
+# البوّابة التالية).
+#
+# **فصار يشترط قيمةً تشبه اعتماداً**: ستةَ عشرَ محرفاً فأكثر من أبجدية
+# الرموز. **ولا يُضعِف الحارس**: رمزٌ حقيقيٌّ لا يكون `True` ولا `bool`، ومفتاحٌ
+# خاصٌّ و`Bearer` يبقيان كما هما.
+SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*"?'"'"'?[A-Za-z0-9_/+.-]{16,}|Bearer [A-Za-z0-9._-]{20,}'
 BENIGN_RE='example|placeholder|getenv|environ|process\.env'
 LEAKS="$(git diff "${REMOTE_SHA:-HEAD~1}..$HEAD_SHA" 2>/dev/null | grep -E "^\+" | grep -nE "$SECRET_RE" | grep -vE "$BENIGN_RE" | head -5 || true)"
 if [ -n "$LEAKS" ]; then
