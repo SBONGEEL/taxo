@@ -27,7 +27,7 @@ import {
 import type { ReactNode } from "react";
 import { onlineService } from "@/lib/online-service";
 
-import { getActiveRide } from "@/api/endpoints";
+import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
 import type { CliqTransfer } from "@/components/CliqTransferSheet";
 import { DriverSocket, type DriverSocketEvent } from "@/lib/socket";
@@ -168,8 +168,22 @@ export function RideProvider({ children }: { children: ReactNode }) {
           setConnecting(false);
           socket.current = null;
           onlineService.stop();
+          // **وانتهاءٌ يُنهي الحضورَ صراحةً** — فمقبسٌ أُغلق يترك
+          // `drivers.is_online = true` وقد قِيس ذلك على الإنتاج: صفوفٌ تقول
+          // «متصل» ولا مفتاحَ حضورٍ في Redis. **والعمودُ الذي يقول ما ليس
+          // كذلك يُضلّل تقريراً يوماً ما.**
+          void goOfflineOverRest().catch(() => undefined);
         } else {
           onlineService.degraded();
+          // **بديلُ REST في اللحظة التي وُجد لها** (SPEC §10): المقبسُ سقط
+          // وسيُعاد وصلُه، **والكبتنُ في هذه الأثناء غيرُ مرئيٍّ للتوزيع** —
+          // فلا تصله رحلةٌ ويحسب الصمتَ «لا طلبات».
+          //
+          // **وكان مبنيّاً في الخلفية ومختبَراً ولا ينادِيه أحد** — بابٌ بلا
+          // زرٍّ في أخطر موضع، ووصلُه هنا هو ما كان ناقصاً. **ولا يُفشِل
+          // شيئاً**: فشلُه يعني أن الشبكةَ ساقطةٌ أصلاً، وإعادةُ الوصل هي
+          // المخرجُ لا رسالةُ خطأٍ لمن لا يستطيع فعل شيء.
+          void goOnlineOverRest().catch(() => undefined);
         }
       },
       onRejected: (reason) => {

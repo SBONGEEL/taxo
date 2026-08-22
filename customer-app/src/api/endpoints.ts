@@ -22,7 +22,6 @@ import type {
   NearbyDriver,
   NotificationPreferences,
   OtpChannel,
-  Payment,
   PaymentMethod,
   PlaceIcon,
   PromoPreview,
@@ -279,8 +278,13 @@ export const setDefaultCard = (cardId: string) =>
 export const deleteSavedCard = (cardId: string) =>
   api.del<void>(`/payments/cards/${cardId}`);
 
-export const confirmPayment = (paymentId: string) =>
-  api.post<Payment>(`/payments/${paymentId}/confirm`);
+// **وحُذف `confirmPayment` من تطبيق الراكب** (2026-08-23): البابُ في الخلفية
+// `CurrentDriver` — **فراكبٌ يطرقه يُردّ ٤٠٣ دائماً**، ولا شاشةَ تطرقه.
+// وتأكيدُ الكاش فعلُ من قبض المال، والراكبُ يقرأ حالَ الدفع ولا يقرّرها.
+//
+// **وبقاؤه مُصرَّحاً كان دعوةً** لمن يبني شاشةَ الدفع غداً أن يصله بزرّ،
+// فيبني زرّاً يردّ ٤٠٣ — وهو أسوأُ من غيابه: **زرٌّ لا يعمل يُقرأ عطباً في
+// الحساب لا في الصلاحية**.
 
 // ------------------------------------------------------------ المحفظة
 
