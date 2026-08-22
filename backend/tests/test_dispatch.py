@@ -352,7 +352,19 @@ async def test_nearby_drivers_are_anonymous(
     assert car["heading"] == 90
     # لا هوية ولا لوحة (SPEC القسم 10)
     assert str(driver["driver_id"]) not in str(car)
-    assert set(car) == {"ref", "lat", "lng", "heading", "vehicle_category"}
+    # **و`skin` أُضيف بقرار المالك** (§28.3/١، 2026-08-22): النادرةُ لا تصل
+    # هنا أبداً، والمنشورُ هو البديلُ الذي يملكه الجميع — فلا يفرّق من يعدّ
+    # السيارات. **وما يحرس ذلك المعنى** هو
+    # `test_vehicle_skins::test_a_rare_skin_is_not_published_on_the_free_map`،
+    # يقارن حمولةَ صاحبِ النادرة بحمولة صاحبِ العادية **شكلاً وقيمة**.
+    # وهذا السطرُ يحرس شيئاً آخرَ لا يحرسه ذاك: **ألّا يتسلّل حقلٌ جديدٌ
+    # إلى الحمولة المجهَّلة بلا أن يمرّ أحدٌ من هنا** — وهو ما أمسك `skin`
+    # نفسَه يومَ دُمج.
+    assert set(car) == {"ref", "lat", "lng", "heading", "vehicle_category", "skin"}
+    # **والرسمةُ رسمٌ لا هوية**: أربعةُ حقولٍ لا اسمَ فيها ولا ندرة —
+    # و«أسطورية» كلمةٌ تكفي وحدَها لنقض التجهيل.
+    if car["skin"] is not None:
+        assert set(car["skin"]) == {"skin_id", "image_url", "scale_percent", "rotates"}
 
 
 async def test_nearby_hides_drivers_who_are_on_a_ride(

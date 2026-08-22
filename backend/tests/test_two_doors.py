@@ -155,6 +155,11 @@ CLASSIFIED: dict[str, str] = {
     # ✅ بانٍ واحد
     "SubscriptionPlanOut": "بانٍ واحد: `subscriptions._plans_with_offers` يخدم /plans و/me",
     "WalletTransactionOut": "بانٍ واحد: `commission_view.rows_with_percent` يخدم بابَي الكشف",
+    "NearbyDriverOut": (
+        "بانٍ واحد: `NearbyDriverOut.of` يخدم بابَي REST ومقبسَ `nearby_drivers` — "
+        "و`skin` هو الحقلُ الذي أوجب التصنيف، وغيابُه ليس نسياناً بل حالةٌ واحدةٌ "
+        "مسمّاة (لا بديلَ منشورٌ في الكتالوج) تقع على الجميع سواءً، فلا يُقاس فرق"
+    ),
     # ✅ يقارنه اختبار
     "RideOut": "تقارنه `test_ws.py` و`test_rides.py` عبر أبوابه، و`from_ride` بانيه الوحيد",
     # ✅ مصدرٌ واحد: كلُّ حقوله من الصفِّ نفسِه، فلا شيءَ «يُملأ» ليُنسى
