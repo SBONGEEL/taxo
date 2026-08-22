@@ -26,12 +26,32 @@ set -euo pipefail
 HOST="${TAXO_DEPLOY_HOST:-taxo@169.58.207.123}"
 REMOTE="${TAXO_REMOTE_PROJECT:-~/taxo}"
 DEST="${TAXO_BACKUP_DEST:-/d/taxo-backups}"
-# **عميلُ ssh يُصرَّح ولا يُثبَّت** (قرارُ المالك 2026-08-21): على هذا الجهاز
-# عميلان — `/usr/bin/ssh` في Git Bash (مقبسُ يونكس) و`ssh.exe` لويندوز (أنبوبٌ
-# مسمّى) — **ولا يتفاهمان مع وكيلٍ واحد**. فمن فعّل خدمةَ ويندوز يوجّه هنا:
+# **عميلُ ssh يُقاس ولا يُوصف** (قرارُ المالك 2026-08-22).
 #
-#   TAXO_SSH=/c/Windows/System32/OpenSSH/ssh.exe bash scripts/deploy.sh …
-SSH="${TAXO_SSH:-ssh}"
+# على هذا الجهاز عميلان — `/usr/bin/ssh` في Git Bash (مقبسُ يونكس) و`ssh.exe`
+# لويندوز (أنبوبٌ مسمّى) — **ولا يتفاهمان مع وكيلٍ واحد**. فمفتاحٌ مضافٌ إلى
+# وكيل ويندوز **لا يراه عميلُ Git Bash**، والنتيجةُ `Permission denied
+# (publickey)` عند البوّابة الأولى.
+#
+# **وكان هذا سطرَ تعليقٍ يقول «وجِّه `TAXO_SSH` بيدك» — فوقع خلافُه**
+# (2026-08-22): كاتبُ السطر نفسُه شغّل السكربتَ بلا توجيهٍ فسقط، **وهو
+# الدرسُ الذي أنشأ فهرسَ الحرّاس**: المكتوبُ لا يُطبَّق، والحارسُ يُطبَّق.
+#
+# **فصار يُختار بالقياس**: إن كان لوكيل ويندوز مفاتيحُ حيّة، فعميلُه هو الذي
+# يفتح الباب. **ويُقاس الوكيلُ لا وجودُ الملفّ** — `ssh.exe` موجودٌ على كلِّ
+# ويندوز، ووجودُه لا يقول إن فيه مفتاحاً؛ **و`ssh-add -l` هو الذي يقول**.
+# والتصريحُ يبقى فوق القياس لمن يريد غيرَه.
+_pick_ssh() {
+  [ -n "${TAXO_SSH:-}" ] && { printf '%s' "$TAXO_SSH"; return; }
+  local win=/c/Windows/System32/OpenSSH/ssh.exe
+  local agent=/c/Windows/System32/OpenSSH/ssh-add.exe
+  if [ -x "$win" ] && [ -x "$agent" ] && "$agent" -l >/dev/null 2>&1; then
+    printf '%s' "$win"
+    return
+  fi
+  printf 'ssh'
+}
+SSH="$(_pick_ssh)"
 SSH_OPTS=(-o StrictHostKeyChecking=yes -i "${TAXO_SSH_KEY:-$HOME/.ssh/taxo-contabo}")
 
 say() { printf '%s\n' "$*"; }

@@ -76,6 +76,17 @@ for (const app of APPS) {
   if (!existsSync(src)) {
     console.error(`✗ لا مخرجَ بناءٍ لـ${app.label}: ${app.src}`);
     console.error("  ابنِ الحزمةَ أولاً — ولا تُنشر صفحةٌ بزرٍّ يشير إلى لا شيء.");
+    // **وشرطُ البناء يُقال هنا لأن هنا يُقرأ** (2026-08-22): `gradlew` يطلب
+    // **Java 21**، ورسالتُه عند غيابها (`languageVersion=21 … No locally
+    // installed toolchains match`) صحيحةٌ ولا تقول **أين تُوجد** — وعلى هذا
+    // الجهاز المثبَّتُ ١٧ و**النسخةُ ٢١ داخل Android Studio**. فبناءُ الحزم
+    // كان موقوفاً على شيءٍ لا يُكتشف إلا عند الفشل، وهو ما وقع 2026-08-22.
+    console.error("");
+    console.error("  ومقيسٌ على هذا الجهاز — والبناءُ يحتاج Java 21 لا 17:");
+    console.error('    export ANDROID_SDK_ROOT="$LOCALAPPDATA/Android/Sdk"');
+    console.error('    export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"');
+    console.error(`    ( cd ${app.src.split("/android/")[0]}/android && ./gradlew assembleDebug )`);
+    console.error("  ويسبقه `npx cap sync android` وإلا حملت الحزمةُ حزمةَ ويبٍ قديمة.");
     exit(1);
   }
   const bytes = readFileSync(src);
