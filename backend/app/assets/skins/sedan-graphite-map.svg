@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128" preserveAspectRatio="xMidYMid meet">
+<title>فحمُ الليل</title>
+<defs>
+<linearGradient id="m-body-sedan-graphite" x1="0" y1="0.1" x2="1" y2="0.9">
+<stop offset="0" stop-color="#7d8287"/>
+<stop offset="0.45" stop-color="#3a4149"/>
+<stop offset="1" stop-color="#292e33"/>
+</linearGradient>
+<linearGradient id="m-glass-sedan-graphite" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+</defs>
+<path d="M 40 8 Q 50 4 60 8 L 70 26 L 70 74 L 62 92 Q 50 96 38 92 L 30 74 L 30 26 Z" fill="#000000" opacity="0.22" transform="translate(2.5,3)"/>
+<!-- **هالةٌ ثم حرفٌ داكن** — لا حرفٌ واحد: علامةٌ داكنةُ الهيكل بحرفٍ داكن
+     **تختفي على خريطةٍ داكنة**، وفاتحةٌ بحرفٍ فاتحٍ تختفي على فاتحة. والهالةُ
+     الفاتحةُ تحت الحرفِ الداكن تُقرأ على السمتين معاً — وهي ما تفعله تسمياتُ
+     الخرائط نفسُها. **ولا تتبع سمةَ التطبيق**: الخريطةُ ليست CSS. -->
+<path d="M 40 8 Q 50 4 60 8 L 70 26 L 70 74 L 62 92 Q 50 96 38 92 L 30 74 L 30 26 Z" fill="none" stroke="#f2f0eb" stroke-width="7" stroke-linejoin="round" opacity="0.62"/>
+<path d="M 40 8 Q 50 4 60 8 L 70 26 L 70 74 L 62 92 Q 50 96 38 92 L 30 74 L 30 26 Z" fill="url(#m-body-sedan-graphite)" stroke="#0b0e11" stroke-width="2.6" stroke-linejoin="round"/>
+
+<path d="M 36 30 L 64 30 L 61 41 L 39 41 Z" fill="url(#m-glass-sedan-graphite)"/>
+<rect x="36" y="43" width="28" height="16" rx="3" fill="#4e545b"/>
+<path d="M 39 60 L 61 60 L 64 68 L 36 68 Z" fill="url(#m-glass-sedan-graphite)"/>
+<rect x="25.5" y="31" width="5" height="8" rx="2.5" fill="#23272c"/>
+<rect x="69.5" y="31" width="5" height="8" rx="2.5" fill="#23272c"/>
+<rect x="34" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="58" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="34" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+<rect x="58" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+</svg>

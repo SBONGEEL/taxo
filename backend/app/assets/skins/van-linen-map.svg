@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128" preserveAspectRatio="xMidYMid meet">
+<title>كتّانُ المدينة</title>
+<defs>
+<linearGradient id="m-body-van-linen" x1="0" y1="0.1" x2="1" y2="0.9">
+<stop offset="0" stop-color="#e8e7e1"/>
+<stop offset="0.45" stop-color="#dcdad2"/>
+<stop offset="1" stop-color="#9a9993"/>
+</linearGradient>
+<linearGradient id="m-glass-van-linen" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+</defs>
+<path d="M 33.5 8 Q 50 4 66.5 8 L 72.5 26 L 72.5 74 L 68.5 92 Q 50 96 31.5 92 L 27.5 74 L 27.5 26 Z" fill="#000000" opacity="0.22" transform="translate(2.5,3)"/>
+<!-- **هالةٌ ثم حرفٌ داكن** — لا حرفٌ واحد: علامةٌ داكنةُ الهيكل بحرفٍ داكن
+     **تختفي على خريطةٍ داكنة**، وفاتحةٌ بحرفٍ فاتحٍ تختفي على فاتحة. والهالةُ
+     الفاتحةُ تحت الحرفِ الداكن تُقرأ على السمتين معاً — وهي ما تفعله تسمياتُ
+     الخرائط نفسُها. **ولا تتبع سمةَ التطبيق**: الخريطةُ ليست CSS. -->
+<path d="M 33.5 8 Q 50 4 66.5 8 L 72.5 26 L 72.5 74 L 68.5 92 Q 50 96 31.5 92 L 27.5 74 L 27.5 26 Z" fill="none" stroke="#f2f0eb" stroke-width="7" stroke-linejoin="round" opacity="0.62"/>
+<path d="M 33.5 8 Q 50 4 66.5 8 L 72.5 26 L 72.5 74 L 68.5 92 Q 50 96 31.5 92 L 27.5 74 L 27.5 26 Z" fill="url(#m-body-van-linen)" stroke="#0b0e11" stroke-width="2.6" stroke-linejoin="round"/>
+
+<path d="M 33.5 24 L 66.5 24 L 63.5 35 L 36.5 35 Z" fill="url(#m-glass-van-linen)"/>
+<rect x="33.5" y="37" width="33" height="32" rx="3" fill="#e0ded7"/>
+<path d="M 36.5 70 L 63.5 70 L 66.5 78 L 33.5 78 Z" fill="url(#m-glass-van-linen)"/>
+<rect x="23" y="25" width="5" height="8" rx="2.5" fill="#84837e"/>
+<rect x="72" y="25" width="5" height="8" rx="2.5" fill="#84837e"/>
+<rect x="31.5" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="60.5" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="31.5" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+<rect x="60.5" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+</svg>

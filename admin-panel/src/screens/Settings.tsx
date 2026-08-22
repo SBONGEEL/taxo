@@ -91,6 +91,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "المحفظة",
     hint: "الشحنُ والدفعُ منها. وإطفاؤه لا يخفي رصيداً قائماً عن صاحبه.",
   },
+  vehicle_skins_enabled: {
+    title: "مركبات الكراج والمتجر",
+    hint: "كراجُ الكبتن ومتجرُ المركبات، والشكلُ الذي يراه الراكبُ على الخريطة. وإطفاؤه يُخفي المتجرَ ويُبقي ما اقتناه الكباتن — فمركبةٌ دُفع ثمنُها لا تُسحب بمفتاح، ويعود الجميعُ إلى البديل المنشور. واضبط الكتالوجَ في «مركبات المتجر».",
+  },
   wallet_transfer_enabled: {
     title: "التحويل بين الركّاب",
     hint: "يحتاج حدّي تحويلٍ غير صفريّين أدناه، وإلا رُفض التحويل.",
@@ -183,6 +187,7 @@ const FLAGS: FeatureKey[] = [
   "scheduled_rides_enabled",
   "ride_sharing_enabled",
   "subscription_offers_enabled",
+  "vehicle_skins_enabled",
   "driver_advances_enabled",
   "next_instruction_enabled",
   "driver_map_nearby_enabled",

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128" preserveAspectRatio="xMidYMid meet">
+<title>زمرّدةُ الوادي</title>
+<defs>
+<linearGradient id="m-body-suv-emerald" x1="0" y1="0.1" x2="1" y2="0.9">
+<stop offset="0" stop-color="#6a9d8d"/>
+<stop offset="0.45" stop-color="#1d6b52"/>
+<stop offset="1" stop-color="#144b39"/>
+</linearGradient>
+<linearGradient id="m-glass-suv-emerald" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+</defs>
+<path d="M 35.5 8 Q 50 4 64.5 8 L 72.5 26 L 72.5 74 L 66.5 92 Q 50 96 33.5 92 L 27.5 74 L 27.5 26 Z" fill="#000000" opacity="0.22" transform="translate(2.5,3)"/>
+<!-- **هالةٌ ثم حرفٌ داكن** — لا حرفٌ واحد: علامةٌ داكنةُ الهيكل بحرفٍ داكن
+     **تختفي على خريطةٍ داكنة**، وفاتحةٌ بحرفٍ فاتحٍ تختفي على فاتحة. والهالةُ
+     الفاتحةُ تحت الحرفِ الداكن تُقرأ على السمتين معاً — وهي ما تفعله تسمياتُ
+     الخرائط نفسُها. **ولا تتبع سمةَ التطبيق**: الخريطةُ ليست CSS. -->
+<path d="M 35.5 8 Q 50 4 64.5 8 L 72.5 26 L 72.5 74 L 66.5 92 Q 50 96 33.5 92 L 27.5 74 L 27.5 26 Z" fill="none" stroke="#f2f0eb" stroke-width="7" stroke-linejoin="round" opacity="0.62"/>
+<path d="M 35.5 8 Q 50 4 64.5 8 L 72.5 26 L 72.5 74 L 66.5 92 Q 50 96 33.5 92 L 27.5 74 L 27.5 26 Z" fill="url(#m-body-suv-emerald)" stroke="#0b0e11" stroke-width="2.6" stroke-linejoin="round"/>
+
+<path d="M 33.5 28 L 66.5 28 L 63.5 39 L 36.5 39 Z" fill="url(#m-glass-suv-emerald)"/>
+<rect x="33.5" y="41" width="33" height="22" rx="3" fill="#347a63"/>
+<path d="M 36.5 64 L 63.5 64 L 66.5 72 L 33.5 72 Z" fill="url(#m-glass-suv-emerald)"/>
+<rect x="23" y="29" width="5" height="8" rx="2.5" fill="#114031"/>
+<rect x="72" y="29" width="5" height="8" rx="2.5" fill="#114031"/>
+<rect x="31.5" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="60.5" y="9" width="8" height="4.5" rx="2" fill="#f4f7fb" opacity="0.95"/>
+<rect x="31.5" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+<rect x="60.5" y="87" width="8" height="4" rx="2" fill="#e5534b" opacity="0.95"/>
+</svg>

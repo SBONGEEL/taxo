@@ -311,6 +311,7 @@ export type FeatureKey =
   | "scheduled_rides_enabled"
   | "ride_sharing_enabled"
   | "subscription_offers_enabled"
+  | "vehicle_skins_enabled"
   | "driver_advances_enabled"
   | "next_instruction_enabled"
   | "driver_map_nearby_enabled"
@@ -1159,4 +1160,78 @@ export type MapSetting = {
   nearby_radius_km: string;
   nearby_max_count: number;
   updated_at: string;
+};
+
+
+// ───────────────────────────────── مركباتُ الكراج والمتجر (2026-08-22)
+
+/** درجاتُ الندرة — **نصٌّ في الخلفية لا تعدادُ Postgres**، فدرجةٌ خامسةٌ
+ *  غداً كودٌ بلا ترحيلة (`models/vehicle_skin.py`). */
+export type SkinRarity = "common" | "premium" | "rare" | "legendary";
+
+/** سعرُ مركبةٍ في سوق — **والعملةُ تُشتقّ من الدولة ولا تُرسَل**. */
+export type SkinPrice = {
+  country_code: CountryCode;
+  /** نصٌّ لا رقم: `NUMERIC(12,3)` يُسلسَل نصّاً، و§14 تمنع `Number`. */
+  price: string;
+};
+
+/** صفُّ الكتالوج كما تراه اللوحة — **بحاله لا مصفّىً بسوق**. */
+export type AdminSkin = {
+  id: string;
+  name: string;
+  rarity: SkinRarity;
+  /** مسارٌ نسبيٌّ يبنيه العميلُ على أصله — و`""` تعني «لا رسمةَ بعد». */
+  store_image_url: string;
+  map_image_url: string;
+  map_scale_percent: number;
+  map_rotates: boolean;
+  visible_before_accept: boolean;
+  max_supply: number | null;
+  level_required: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  is_gift: boolean;
+  is_public_default: boolean;
+  is_feminine: boolean;
+  feminine_drivers_only: boolean;
+  is_active: boolean;
+  prices: SkinPrice[];
+  owners_count: number;
+  sold_count: number;
+  /** **مجموعٌ في الخلفية** (§14) — عملةٌ ← مبلغٌ نصّاً بثلاث خانات. */
+  revenue: Record<string, string>;
+};
+
+export type SkinStats = {
+  top_selling: AdminSkin[];
+  revenue_by_currency: Record<string, string>;
+  total_owned: number;
+};
+
+/** رسمةٌ **مشحونةٌ مع الخلفية** — تُربط بمفتاحها بلا رفعِ ملفّ. */
+export type BundledSkinAsset = {
+  key: string;
+  name: string;
+  rarity: string;
+  shell?: string;
+  body?: string;
+  note?: string;
+  feminine?: string;
+};
+
+/** ناتجُ **التجربة الجافّة**: الرسمةُ بعد القصِّ والتصغير، بلا كتابةِ شيء.
+ *
+ * وهي ما تعرضه المعاينةُ — **لا الملفَّ الخام**: الهوامشُ الشفافةُ تُقصّ عند
+ * الحفظ، فمعاينةُ الخام تُري المشرفَ حجماً غيرَ الذي سيُرسم، فيضبط النسبةَ
+ * على ما لن يقع.
+ */
+export type SkinArtworkPreview = {
+  store_image: string;
+  map_image: string;
+  media_type: string;
+  source_size: number[] | null;
+  trimmed: number[] | null;
+  store_bytes: number;
+  map_bytes: number;
 };

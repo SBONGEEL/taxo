@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 210" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+<title>نُحاسُ الجنوب</title>
+<defs>
+<linearGradient id="body-pickup-copper" x1="0.18" y1="0" x2="0.62" y2="1">
+<stop offset="0" stop-color="#bd9273"/>
+<stop offset="0.34" stop-color="#a97149"/>
+<stop offset="0.62" stop-color="#6d3f1e"/>
+<stop offset="1" stop-color="#4a2b15"/>
+</linearGradient>
+<linearGradient id="glass-pickup-copper" x1="0.1" y1="0" x2="0.7" y2="1">
+<stop offset="0" stop-color="#39424e"/>
+<stop offset="0.45" stop-color="#1b222b"/>
+<stop offset="1" stop-color="#0d1116"/>
+</linearGradient>
+<linearGradient id="tire-pickup-copper" x1="0.2" y1="0" x2="0.8" y2="1">
+<stop offset="0" stop-color="#3a4048"/>
+<stop offset="0.5" stop-color="#1b1f25"/>
+<stop offset="1" stop-color="#0a0c0f"/>
+</linearGradient>
+<linearGradient id="rim-pickup-copper" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#e4e7ec"/>
+<stop offset="0.45" stop-color="#c8cfd8"/>
+<stop offset="1" stop-color="#5a5d61"/>
+</linearGradient>
+<radialGradient id="shade-pickup-copper" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#000000" stop-opacity="0.55"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0.20"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="gloss-pickup-copper" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+<stop offset="0.28" stop-color="#ffffff" stop-opacity="0.52"/>
+<stop offset="0.72" stop-color="#ffffff" stop-opacity="0.30"/>
+<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="floor-pickup-copper" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.42"/>
+</linearGradient>
+<clipPath id="clip-pickup-copper"><path d="M 14 132 C 14 118 22 109 40 105 L 104 92 L 144 50 L 244 50 L 252 96 L 258 96 L 258 78 L 388 78 C 393 78 394 84 394 92 L 394 150 L 350 150 A 50 50 0 0 0 250 150 L 154 150 A 50 50 0 0 0 54 150 L 16 150 Z"/></clipPath>
+<clipPath id="glassclip-pickup-copper"><path d="M 116 90 L 150 57 L 238 57 L 244 90 Z"/></clipPath>
+</defs>
+
+<ellipse cx="204" cy="188" rx="182" ry="15" fill="url(#shade-pickup-copper)"/>
+
+<g><circle cx="104" cy="140" r="44" fill="url(#tire-pickup-copper)"/><circle cx="104" cy="140" r="36.1" fill="#0a0d11" opacity=".55"/><circle cx="104" cy="140" r="29.0" fill="url(#rim-pickup-copper)"/><circle cx="104" cy="140" r="25.5" fill="#11161c" opacity=".45"/><g stroke="url(#rim-pickup-copper)" stroke-width="5.7" stroke-linecap="round"><line x1="104" y1="140" x2="104.0" y2="118.0"/><line x1="104" y1="140" x2="124.9" y2="133.2"/><line x1="104" y1="140" x2="116.9" y2="157.8"/><line x1="104" y1="140" x2="91.1" y2="157.8"/><line x1="104" y1="140" x2="83.1" y2="133.2"/></g><circle cx="104" cy="140" r="7.5" fill="url(#rim-pickup-copper)"/><circle cx="104" cy="140" r="3.1" fill="#0b0e11"/></g>
+<g><circle cx="300" cy="140" r="44" fill="url(#tire-pickup-copper)"/><circle cx="300" cy="140" r="36.1" fill="#0a0d11" opacity=".55"/><circle cx="300" cy="140" r="29.0" fill="url(#rim-pickup-copper)"/><circle cx="300" cy="140" r="25.5" fill="#11161c" opacity=".45"/><g stroke="url(#rim-pickup-copper)" stroke-width="5.7" stroke-linecap="round"><line x1="300" y1="140" x2="300.0" y2="118.0"/><line x1="300" y1="140" x2="320.9" y2="133.2"/><line x1="300" y1="140" x2="312.9" y2="157.8"/><line x1="300" y1="140" x2="287.1" y2="157.8"/><line x1="300" y1="140" x2="279.1" y2="133.2"/></g><circle cx="300" cy="140" r="7.5" fill="url(#rim-pickup-copper)"/><circle cx="300" cy="140" r="3.1" fill="#0b0e11"/></g>
+
+<path d="M 14 132 C 14 118 22 109 40 105 L 104 92 L 144 50 L 244 50 L 252 96 L 258 96 L 258 78 L 388 78 C 393 78 394 84 394 92 L 394 150 L 350 150 A 50 50 0 0 0 250 150 L 154 150 A 50 50 0 0 0 54 150 L 16 150 Z" fill="url(#body-pickup-copper)"/>
+
+<!-- **كلُّ ما يُرسم على الهيكل يُقصّ به** — وبغير هذا القصِّ يطفو المصباحُ
+     خارجَ حرف الهيكل، ويقف عمودُ السقف فوقه عصاً معلَّقة. وقد وقع الاثنان
+     مقيسَين في أوّل تصيير، ولم يظهرا في المصدر بحال. -->
+<g clip-path="url(#clip-pickup-copper)">
+<path d="M 0 116 L 400 110 L 400 156 L 0 156 Z" fill="url(#floor-pickup-copper)"/>
+<ellipse cx="150" cy="84" rx="180" ry="30" fill="#ffffff" opacity="0.10"/>
+<path d="M 28 108 L 106 93 L 250 96" fill="none" stroke="url(#gloss-pickup-copper)" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M 16 110 L 42 106 L 43 119 L 17 122 Z" fill="#f4f7fb" opacity="0.95"/>
+<path d="M 392 92 L 374 92 L 374 106 L 392 106 Z" fill="#e5534b" opacity="0.95"/>
+<rect x="220" y="108" width="20" height="5" rx="2.5" fill="#4a2b15"/>
+<rect x="144" y="108" width="20" height="5" rx="2.5" fill="#4a2b15"/>
+</g>
+
+<path d="M 116 90 L 150 57 L 238 57 L 244 90 Z" fill="url(#glass-pickup-copper)"/>
+<g clip-path="url(#glassclip-pickup-copper)">
+<rect x="194" y="30" width="7" height="90" fill="#6d3f1e"/>
+<path d="M 96 40 L 150 40 L 250 130 L 196 130 Z" fill="#ffffff" opacity="0.09"/>
+</g>
+<path d="M 116 90 L 150 57 L 238 57 L 244 90 Z" fill="none" stroke="#351f0f" stroke-width="2.4" stroke-linejoin="round" opacity="0.75"/>
+<path d="M 14 132 C 14 118 22 109 40 105 L 104 92 L 144 50 L 244 50 L 252 96 L 258 96 L 258 78 L 388 78 C 393 78 394 84 394 92 L 394 150 L 350 150 A 50 50 0 0 0 250 150 L 154 150 A 50 50 0 0 0 54 150 L 16 150 Z" fill="none" stroke="#351f0f" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>
