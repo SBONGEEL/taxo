@@ -349,8 +349,21 @@ def _trim_and_fit(rgba: Image.Image, size: int) -> bytes:
     cropped = rgba.crop(box) if box is not None else rgba
     if cropped.width == 0 or cropped.height == 0:  # pragma: no cover
         raise UnsupportedDocument("الرسمة فارغة")
-    fitted = cropped.copy()
-    fitted.thumbnail((size, size), Image.LANCZOS)
+    # **يُملأ المربّعُ صعوداً ونزولاً — و`thumbnail` يُصغّر ولا يُكبّر.**
+    #
+    # وهذا هو العطبُ الذي أمسكه `test_two_drawings_with_different_margins…`
+    # أوّلَ تشغيلٍ لهذا الملفّ: مربّعان متطابقان بهامشين مختلفين خرجا بحجمين،
+    # لأن الضيّقَ (٣٦٠ بكسلاً) صُغِّر إلى ١٢٨ والواسعَ (١٠٠) بقي ١٠٠ فوُسّط
+    # بفراغِ ١٤ بكسلاً من كلِّ جهة — **وهو بعينه ما وُجد القصُّ ليمنعه**:
+    # سيارتان متجاورتان على الخريطة إحداهما أصغرُ من الأخرى بلا سبب، والفرقُ
+    # ليس في الرسم بل في الفراغ الذي تركه من صدّرها.
+    #
+    # **والنسبةُ محفوظة** فلا تُمطّ الرسمة: يُؤخذ أصغرُ المعاملين.
+    ratio = min(size / cropped.width, size / cropped.height)
+    fitted = cropped.resize(
+        (max(1, round(cropped.width * ratio)), max(1, round(cropped.height * ratio))),
+        Image.LANCZOS,
+    )
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     canvas.paste(fitted, ((size - fitted.width) // 2, (size - fitted.height) // 2))
     buffer = io.BytesIO()

@@ -30,7 +30,12 @@ from app.core.exceptions import DocumentTooLarge, UnsupportedDocument
 from app.services import skin_artwork
 from app.services.skin_artwork import UnsafeArtwork
 
-pytestmark = pytest.mark.anyio
+# **ولا `pytestmark` هنا**: المشروعُ على `pytest-asyncio` بـ`asyncio_mode = auto`
+# (`pytest.ini`)، فالدوالُّ غيرُ المتزامنة تُجمَع وحدَها. وكان هذا السطرُ
+# `pytest.mark.anyio` فيوجّه الملفَّ إلى مُلحق anyio، و`anyio_backend` عنده
+# **مداه الوحدة** بينما `client` في `conftest` **مداه الجلسة** — فسقطت تهيئةُ
+# **تسعةٍ وعشرين** اختباراً بـ`ScopeMismatch` قبل أن يُنفَّذ سطرٌ واحدٌ منها.
+# **وهو ملفٌّ لم يُشغَّل قطّ حتى اليوم**، وهذا ما يخفيه «مكتوبٌ» عن «مقيس».
 
 
 # ═══════════════════════════════════════════════════════ أدواتُ القياس
@@ -70,14 +75,26 @@ def png_header_claiming(width: int, height: int) -> bytes:
     ويمرّ من كلِّ فحصٍ يقيس الحجم، ويطلب من الخادم أن يحجز مساحةَ ٩٠٠ مليون
     بكسل.
     """
+    def block(kind: bytes, body: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(body))
+            + kind
+            + body
+            + struct.pack(">I", zlib.crc32(kind + body) & 0xFFFFFFFF)
+        )
+
     ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    chunk = (
-        struct.pack(">I", len(ihdr))
-        + b"IHDR"
-        + ihdr
-        + struct.pack(">I", zlib.crc32(b"IHDR" + ihdr) & 0xFFFFFFFF)
+    # **و`IDAT` لازمةٌ ولو كانت خردة**: `Image.open` يقرأ الكتلَ حتى يبلغ
+    # أوّلَ `IDAT` ثم يقف، **فترويسةٌ وحدَها لا يعرفها PIL أصلاً** ويرفعُ
+    # `UnidentifiedImageError`. وبغيرها يقيس هذا الاختبارُ **بابَ «صورةٌ
+    # تالفة»** ويظنّ نفسَه يقيس بابَ الأبعاد — أي يمرّ أخضرَ على حارسٍ لم
+    # يبلغه قطّ. (وقع مقيساً في أوّل تشغيلٍ لهذا الملف، 2026-08-22.)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + block(b"IHDR", ihdr)
+        + block(b"IDAT", zlib.compress(b"\x00" * 8))
+        + block(b"IEND", b"")
     )
-    return b"\x89PNG\r\n\x1a\n" + chunk
 
 
 SVG_WITH_SCRIPT = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -337,7 +354,7 @@ async def test_the_serving_headers_are_hardened_for_every_kind() -> None:
 
 async def _create(client: AsyncClient, admin_headers: dict[str, str]) -> str:
     answer = await client.post(
-        "/api/v1/admin/vehicle-skins",
+        "/admin/vehicle-skins",
         headers=admin_headers,
         json={"name": "مركبةُ القياس", "rarity": "premium", "prices": []},
     )
@@ -354,7 +371,7 @@ async def test_the_preview_door_writes_nothing_and_returns_the_processed_drawing
     نسبةَ العرض على ما لن يقع.
     """
     answer = await client.put(
-        "/api/v1/admin/vehicle-skins/artwork/preview",
+        "/admin/vehicle-skins/artwork/preview",
         headers=admin_headers,
         files={"file": ("car.png", png(500, 300, margin=100), "image/png")},
     )
@@ -372,7 +389,7 @@ async def test_a_lying_content_type_does_not_get_through_the_real_door(
 ) -> None:
     """**الترويسةُ تقول `image/png` والبايتاتُ تقول سكربتَ صدفة.**"""
     answer = await client.put(
-        "/api/v1/admin/vehicle-skins/artwork/preview",
+        "/admin/vehicle-skins/artwork/preview",
         headers=admin_headers,
         files={"file": ("car.png", b"#!/bin/sh\necho hi\n", "image/png")},
     )
@@ -386,7 +403,7 @@ async def test_an_svg_with_a_script_is_refused_at_the_real_door(
     """**البابُ الحقيقيُّ لا الدالّةُ وحدَها** — ورمزُ الخطأ يسمّي السبب."""
     skin_id = await _create(client, admin_headers)
     answer = await client.put(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/artwork",
+        f"/admin/vehicle-skins/{skin_id}/artwork",
         headers=admin_headers,
         files={"file": ("evil.svg", SVG_WITH_SCRIPT, "image/svg+xml")},
     )
@@ -401,7 +418,7 @@ async def test_uploaded_artwork_is_served_with_the_hardened_headers(
     skin_id = await _create(client, admin_headers)
 
     uploaded = await client.put(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/artwork",
+        f"/admin/vehicle-skins/{skin_id}/artwork",
         headers=admin_headers,
         files={"file": ("car.png", png(420, 260, margin=60), "image/png")},
     )
@@ -412,7 +429,7 @@ async def test_uploaded_artwork_is_served_with_the_hardened_headers(
 
     for slot in ("store", "map"):
         served = await client.get(
-            f"/api/v1/admin/vehicle-skins/{skin_id}/artwork/{slot}",
+            f"/admin/vehicle-skins/{skin_id}/artwork/{slot}",
             headers=admin_headers,
         )
         assert served.status_code == 200
@@ -429,20 +446,20 @@ async def test_a_bundled_drawing_can_be_attached_without_any_upload(
     skin_id = await _create(client, admin_headers)
 
     listed = await client.get(
-        "/api/v1/admin/vehicle-skins/assets", headers=admin_headers
+        "/admin/vehicle-skins/assets", headers=admin_headers
     )
     assert listed.status_code == 200
     keys = [row["key"] for row in listed.json()]
     assert "sedan-ash" in keys, "مركبةُ الهدية/البديلِ المنشور غائبةٌ عن المنظومة"
 
     attached = await client.put(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/asset/sedan-ash",
+        f"/admin/vehicle-skins/{skin_id}/asset/sedan-ash",
         headers=admin_headers,
     )
     assert attached.status_code == 200, attached.text
 
     served = await client.get(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/artwork/map", headers=admin_headers
+        f"/admin/vehicle-skins/{skin_id}/artwork/map", headers=admin_headers
     )
     assert served.status_code == 200
     assert served.headers["content-type"] == "image/svg+xml"
@@ -451,7 +468,7 @@ async def test_a_bundled_drawing_can_be_attached_without_any_upload(
     # **مفتاحٌ لا وجودَ له لا يفتح ملفاً** — ولا يخرج من الجذر
     for bad in ("../../../etc/passwd", "sedan-ash/../../secrets"):
         refused = await client.put(
-            f"/api/v1/admin/vehicle-skins/{skin_id}/asset/{bad}",
+            f"/admin/vehicle-skins/{skin_id}/asset/{bad}",
             headers=admin_headers,
         )
         assert refused.status_code in (404, 422), refused.text
@@ -468,16 +485,16 @@ async def test_uploading_over_a_bundled_asset_clears_the_other_column(
     """
     skin_id = await _create(client, admin_headers)
     await client.put(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/asset/sedan-ash",
+        f"/admin/vehicle-skins/{skin_id}/asset/sedan-ash",
         headers=admin_headers,
     )
     await client.put(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/artwork",
+        f"/admin/vehicle-skins/{skin_id}/artwork",
         headers=admin_headers,
         files={"file": ("car.png", png(300, 300, margin=30), "image/png")},
     )
     served = await client.get(
-        f"/api/v1/admin/vehicle-skins/{skin_id}/artwork/store", headers=admin_headers
+        f"/admin/vehicle-skins/{skin_id}/artwork/store", headers=admin_headers
     )
     assert served.headers["content-type"] == "image/webp", (
         "بقيت الرسمةُ المشحونةُ تُخدَم بعد رفعِ بديلها"
@@ -494,7 +511,7 @@ async def test_the_catalogue_sums_in_the_database_and_quantizes_its_money(
     """
     skin_id = await _create(client, admin_headers)
     priced = await client.patch(
-        f"/api/v1/admin/vehicle-skins/{skin_id}",
+        f"/admin/vehicle-skins/{skin_id}",
         headers=admin_headers,
         json={"prices": [{"country_code": "JO", "price": "12.500"}]},
     )
@@ -502,7 +519,7 @@ async def test_the_catalogue_sums_in_the_database_and_quantizes_its_money(
     assert priced.json()["prices"][0]["price"] == "12.500"
 
     stats = await client.get(
-        "/api/v1/admin/vehicle-skins/stats", headers=admin_headers
+        "/admin/vehicle-skins/stats", headers=admin_headers
     )
     assert stats.status_code == 200, stats.text
     body = stats.json()
@@ -517,7 +534,7 @@ async def test_a_duplicate_market_in_one_price_list_is_named_not_crashed(
     """خطأُ قاعدةٍ خامٌّ بالإنجليزية ليس رسالةً — والمشرفُ لا يعرف ما يُصلح."""
     skin_id = await _create(client, admin_headers)
     answer = await client.patch(
-        f"/api/v1/admin/vehicle-skins/{skin_id}",
+        f"/admin/vehicle-skins/{skin_id}",
         headers=admin_headers,
         json={
             "prices": [
@@ -535,6 +552,6 @@ async def test_support_cannot_price_a_vehicle(
 ) -> None:
     """**سعرٌ وكميّةٌ قرارٌ ماليّ لا إجراءُ دعم** (القسم ١٣/٨)."""
     answer = await client.get(
-        "/api/v1/admin/vehicle-skins", headers=support_headers
+        "/admin/vehicle-skins", headers=support_headers
     )
     assert answer.status_code == 403
