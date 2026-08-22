@@ -137,8 +137,13 @@ git remote get-url origin >/dev/null 2>&1 || die "لا مستودعَ بعيد �
 # **فصار يشترط قيمةً تشبه اعتماداً**: ستةَ عشرَ محرفاً فأكثر من أبجدية
 # الرموز. **ولا يُضعِف الحارس**: رمزٌ حقيقيٌّ لا يكون `True` ولا `bool`، ومفتاحٌ
 # خاصٌّ و`Bearer` يبقيان كما هما.
-SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*"?'"'"'?[A-Za-z0-9_/+.-]{16,}|Bearer [A-Za-z0-9._-]{20,}'
-BENIGN_RE='example|placeholder|getenv|environ|process\.env'
+SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*"?'"'"'?[A-Za-z0-9_/+.-]{16,}|(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*"[^"]{12,}"|Bearer [A-Za-z0-9._-]{20,}'
+# **وما يُنتج سرّاً أو يقرؤه ليس سرّاً** (وُسِّع 2026-08-22): وقعت ثلاثةُ
+# بلاغاتٍ كاذبةٍ متتالية — `secret=True` في توثيق، و`token = secrets.token_urlsafe(32)`
+# **وهو مولِّدٌ لا قيمة**، و`const token = env.GITHUB_TAXO_TOKEN` **وهو قراءةٌ
+# من بيئة**. **وكلُّ بلاغٍ كاذبٍ يدفع نحو التجاوز** — والدرسُ مسجَّلٌ مرتين
+# في الفهرس، فلا يُترك يتكرر ثالثةً.
+BENIGN_RE='example|placeholder|getenv|environ|process\.env|secrets\.|token_urlsafe|randbytes|uuid|env\.[A-Za-z_]|ENV\[|import\.meta|<[a-z]|\$\{'
 LEAKS="$(git diff "${REMOTE_SHA:-HEAD~1}..$HEAD_SHA" 2>/dev/null | grep -E "^\+" | grep -nE "$SECRET_RE" | grep -vE "$BENIGN_RE" | head -5 || true)"
 if [ -n "$LEAKS" ]; then
   say "$LEAKS"
