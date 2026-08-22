@@ -463,6 +463,9 @@ fi
 # انقطاعُ شبكةٍ قادراً على ترك الشجرة منقوصة. **وقع مرتين قبل الدمج**: ذهب
 # `docker-compose.prod-tunnel.yml` فصار كلُّ أمرِ compose يفشل، **والحاوياتُ
 # العاملةُ لا تشكو** — فيبدو كلُّ شيءٍ سليماً والبابُ معطَّل.
+# **ومجلَّدُ الإزاحةِ يحمل ختمَ النسخة** — فما أُزيح في رفعةٍ يُعرف بأيِّ نسخةٍ
+# يُقرأ. و`\$HOME` تُهرَّب ليحلّها الخادمُ لا هذا الصَّدَف.
+ASIDE="\$HOME/taxo-aside-$STAMP"
 say "  الكود   : الخادمُ يسحب ${HEAD_SHA:0:8} من GitHub"
 PULL="$(_ssh "cd $REMOTE && \
   { git remote get-url taxo >/dev/null 2>&1 || git remote add taxo git@github-taxo:${TAXO_GITHUB_REPO:-SBONGEEL/taxo}.git; } && \
