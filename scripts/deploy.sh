@@ -328,7 +328,7 @@ say "══ ٣) النسخةُ قبل الرفع — $STAMP"
 # غيرُ مدعومٍ في ssh ويندوز (قِيس: `getsockname failed: Not a socket`)، فالسبيلُ
 # **أمرٌ واحدٌ يُنتج أرشيفاً واحداً** يحمل الأربعةَ.
 say "  · الأربعةُ في اتصالٍ واحد…"
-ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list &&   { [ -d backend/var/documents ] && tar -czf \$W/documents.tar.gz backend/var/documents || : > \$W/documents.absent; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
+ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   { [ -s \$W/untracked.list ] && tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list || : > \$W/untracked.absent; } &&   { [ -d backend/var/documents ] && tar -czf \$W/documents.tar.gz backend/var/documents || : > \$W/documents.absent; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
 
 tar -xf "$LOCAL/bundle.tar" -C "$LOCAL" && rm -f "$LOCAL/bundle.tar"   || die "النسخةُ وصلت ولا تُفتح — لا رفع."
 
@@ -340,7 +340,12 @@ say "    ما خارج الشجرة: $(tr -d '
 ' < "$LOCAL/outside.list" 2>/dev/null)"
 # **وتُعلَن التصفيةُ بأثرها لا بوقوعها**: `--exclude-from` على ملفٍّ فارغٍ
 # **ينجح ولا يستبعد شيئاً** — وقعت مقيسةً، ولم يكشفها إلا رقمٌ مطبوع.
-if [ "${RAW_N:-0}" = "${UNTRACKED_N:-0}" ]; then
+if [ "${RAW_N:-0}" = "0" ]; then
+  # **وصفرٌ هنا هو الحالُ المقصودةُ لا عطب**: شجرةٌ لا ملفَّ فيها خارجَ git
+  # **مشتقّةٌ من الإيداع بالكامل** — وهو ما وُجدت البوّابةُ الرابعةُ لأجله.
+  # **وحارسٌ يقرأ بلوغَ الهدف فشلاً** أسوأُ من غيابه: يوقف رفعاً لأن ما قبله نجح.
+  say "    غيرُ المتتبَّع: **لا شيء** — الشجرةُ مشتقّةٌ من git بالكامل"
+elif [ "${RAW_N:-0}" = "${UNTRACKED_N:-0}" ]; then
   say "    غيرُ المتتبَّع: $UNTRACKED_N — **لم تستبعد التصفيةُ شيئاً** (أوصلت قواعدُ التجاهُل؟)"
 else
   say "    غيرُ المتتبَّع: $UNTRACKED_N (استُبعد $((RAW_N - UNTRACKED_N)) مخرجَ بناء)"
