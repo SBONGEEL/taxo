@@ -91,7 +91,12 @@ export function SkinDetailSheet({
               }
             />
           ) : null}
-          <Line term="اقتنوها" value={digits(String(skin.owners_count))} />
+          {/* **«عددُ من اقتنوها»** لا «اقتنوها»: الثانيةُ فعلٌ يُقرأ مع
+              رقمه «اقتنوها 0» — جملةٌ لا معنى لها. قِيس في المتصفح */}
+          <Line
+            term="عددُ من اقتنوها"
+            value={digits(String(skin.owners_count))}
+          />
           {skin.level_required !== null ? (
             <Line
               term="المستوى المطلوب"

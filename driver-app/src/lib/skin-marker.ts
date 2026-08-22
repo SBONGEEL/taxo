@@ -104,6 +104,12 @@ function imageMarker(src: string, px: number): HTMLElement {
   image.style.objectFit = "contain";
   image.style.display = "block";
   image.style.filter = SHADOW;
+  // **رسمةٌ تعذّرت تُستبدل بالعامّة لا تُترك مكسورة**: أيقونةُ صورةٍ مكسورةٍ
+  // فوق خريطةٍ تُقرأ عطباً في التطبيق. **والبديلُ واحدٌ للجميع** فلا يميّز
+  // ملفٌّ مفقودٌ صاحبَه عن غيره (الشكلُ الثالثَ عشر)
+  image.onerror = () => {
+    element.replaceChildren(carElement(px).firstElementChild ?? image);
+  };
   element.appendChild(image);
   element.style.willChange = "transform";
   return element;
