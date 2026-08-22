@@ -50,6 +50,25 @@ def presence_key(driver_id: uuid.UUID | str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class MapSkin:
+    """ما يلزم لرسم مركبة الكبتن على خريطة — **لا أكثر** (2026-08-22).
+
+    **ورسمُها في هاش الحضور لا استعلامٌ عند كلِّ خريطة**: `vehicle_category`
+    مكتوبٌ هناك منذ المرحلة ٤ للسبب نفسِه — خريطةُ الراكب تُحدَّث كلَّ خمس
+    ثوانٍ، فاستعلامُ كتالوجٍ معها استعلامٌ في مسارٍ ساخن.
+
+    **والثمنُ معلَنٌ لا مخفيّ**: تعديلُ المشرف نسبةَ العرض لا يبلغ كبتناً
+    مقبسُه مفتوحٌ حتى يعيد الاتصال — **وهو فرقُ رسمٍ لا فرقُ مال**.
+    """
+
+    skin_id: uuid.UUID
+    #: مسارٌ نسبيٌّ يبنيه التطبيقُ على أصله (`vehicle_skins.art_url`)
+    image_url: str
+    scale_percent: int
+    rotates: bool
+
+
+@dataclass(frozen=True, slots=True)
 class DriverPresence:
     """كبتن حاضر الآن كما تراه خوارزمية التوزيع وخريطة الراكب."""
 
@@ -59,6 +78,10 @@ class DriverPresence:
     heading: float | None
     vehicle_category: VehicleCategory
     distance_km: float
+    # **مركبةٌ لكلِّ من على الخريطة** — و`None` لا تقع إلا حين لا بديلَ منشورٌ
+    # في الكتالوج أصلاً، فتغيب عن الجميع سواءً
+    # (`vehicle_skins.publishable_skin_for`)
+    skin: MapSkin | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +101,7 @@ async def update_location(
     lng: float,
     heading: float | None,
     vehicle_category: VehicleCategory,
+    skin: MapSkin | None = None,
 ) -> None:
     """بث موقع واحد: يحدّث الفهرس الجغرافي ويجدّد عمر الحضور."""
     key = presence_key(driver_id)
@@ -88,6 +112,13 @@ async def update_location(
         mapping={
             "heading": "" if heading is None else str(heading),
             "vehicle_category": VehicleCategory(vehicle_category).value,
+            # **المركبةُ المنشورة** (2026-08-22) — أربعةُ حقولٍ لا مُعرّفٌ
+            # وحدَه: الخريطةُ ترسم بها فوراً، ومُعرّفٌ عارٍ يحوجها إلى بابٍ
+            # ثانٍ يترجمه في كلِّ إطار
+            "skin": "" if skin is None else str(skin.skin_id),
+            "skin_img": "" if skin is None else skin.image_url,
+            "skin_scale": "" if skin is None else str(skin.scale_percent),
+            "skin_rot": "" if skin is None else ("1" if skin.rotates else "0"),
             # **ختمُ لحظةِ البثّ** — تقرؤه لوحةُ الإشراف لتقول «منذ كم».
             # ولا يُشتقّ من عمرِ المفتاح (`TTL`): العمرُ يُجدَّد بكلِّ كتابةٍ
             # فيقول «ستون» أبداً، **ويصير رقماً يبدو معلومةً وليس فيه شيء**
@@ -128,6 +159,29 @@ async def last_position(
         return None
     lng, lat = positions[0]
     return Position(lat=float(lat), lng=float(lng))
+
+
+def _skin_of(data: dict[str, str]) -> MapSkin | None:
+    """يقرأ المركبةَ من هاش الحضور — **وحضورٌ قديمٌ بلا حقولها ليس عطباً**.
+
+    مفتاحُ حضورٍ كُتب قبل هذه الميزة (أو بواسطة نسخةٍ أقدم في نشرٍ متدرّج)
+    لا يحمل الحقول، فيُقرأ `None` ويرسم التطبيقُ ما يرسمه لمن لا مركبةَ
+    له — **ولا يسقط بحثُ الخريطة كلُّه بمفتاحٍ ناقص**.
+    """
+    raw_id = data.get("skin") or ""
+    if not raw_id:
+        return None
+    try:
+        skin_id = uuid.UUID(raw_id)
+        scale = int(data.get("skin_scale") or 100)
+    except ValueError:
+        return None
+    return MapSkin(
+        skin_id=skin_id,
+        image_url=data.get("skin_img") or "",
+        scale_percent=scale,
+        rotates=(data.get("skin_rot") or "1") != "0",
+    )
 
 
 async def nearby(
@@ -187,6 +241,7 @@ async def nearby(
                 heading=float(raw_heading) if raw_heading else None,
                 vehicle_category=category,
                 distance_km=round(float(distance), 3),
+                skin=_skin_of(data),
             )
         )
 

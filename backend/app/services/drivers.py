@@ -35,6 +35,10 @@ class PresenceContext:
     driver_id: uuid.UUID
     country_code: CountryCode
     vehicle_category: VehicleCategory
+    # **المركبةُ المنشورةُ قبل القبول** (2026-08-22) — تُقرأ مرةً مع بقية
+    # الثوابت لا مع كلِّ بثّ، ويكتبها الحضورُ في هاشه
+    # (`vehicle_skins.publishable_skin_for`)
+    skin: geo.MapSkin | None = None
 
 
 async def presence_context(session: AsyncSession, driver: Driver) -> PresenceContext:
@@ -55,8 +59,16 @@ async def presence_context(session: AsyncSession, driver: Driver) -> PresenceCon
         # الراكب يختار الفئة عند الطلب، فكبتن بلا مركبة مسجّلة لا يقابل أي طلب
         raise Conflict("سجّل مركبتك قبل الاتصال")
 
+    # **الاستيرادُ هنا لا في الرأس**: `vehicle_skins` يستورد `wallet` الذي
+    # يستورد `settings_service` — وهذا الملفُّ يُستورد من `ws/` مبكّراً،
+    # فحلقةٌ في الاستيراد تسقط الإقلاعَ كلَّه
+    from app.services import vehicle_skins
+
     return PresenceContext(
-        driver_id=driver.id, country_code=country_code, vehicle_category=category
+        driver_id=driver.id,
+        country_code=country_code,
+        vehicle_category=category,
+        skin=await vehicle_skins.publishable_skin_for(session, driver),
     )
 
 
@@ -114,6 +126,7 @@ async def report_location(
         lng=lng,
         heading=heading,
         vehicle_category=context.vehicle_category,
+        skin=context.skin,
     )
     await route.capture(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading

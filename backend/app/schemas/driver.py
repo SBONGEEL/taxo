@@ -3,9 +3,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.core.config import settings
 from app.models.enums import (
     AdvanceStatus,
     CountryCode,
@@ -18,6 +20,10 @@ from app.models.enums import (
     VehicleCategory,
 )
 from app.schemas.auth import UserOut
+
+if TYPE_CHECKING:  # حضورُ الكبتن نوعُ خدمةٍ لا نوعُ مخطَّط — يُستورد للتلميح وحده
+    from app.models.vehicle_skin import VehicleSkin
+    from app.services.geo import DriverPresence, MapSkin
 
 
 class VehicleCreate(BaseModel):
@@ -205,6 +211,69 @@ class DriverLocationIn(BaseModel):
     heading: float | None = Field(default=None, ge=0, lt=360)
 
 
+#: **بيتُ رابط الرسمة الواحد** — تقرؤه الخدمةُ (`vehicle_skins.art_url`)
+#: ويقرؤه بانِي بطاقةِ الكبتن في `schemas/ride.py`. **وقالبٌ في موضعين
+#: يفترق أوّلَ إعادةِ تسميةٍ للمسار**، فيرسم أحدُ البابين رابطاً ميّتاً.
+#:
+#: **والمفتاحُ مُعرّفُ المركبة لا `asset_key`**: العميلُ لا يعرف أيَّ
+#: المصدرين وراءها — مولَّدةٌ في `app/assets/skins/` أو مرفوعةٌ إلى التخزين —
+#: ورابطٌ يفصح عن ذلك يتغيّر يومَ تُستبدل إحداهما بالأخرى.
+ART_STORE = "store"
+ART_MAP = "map"
+
+
+def skin_art_url(skin_id: uuid.UUID, kind: str) -> str:
+    """**مع سابقة الـAPI** — لا بدونها.
+
+    الرسمةُ تُحمَّل بوسم صورةٍ في المتصفّح، و`<img src="/…">` يُبنى على
+    **أصلِ الصفحة** لا على أصل الـAPI — وهما مضيفان مختلفان في هذا المشروع
+    (`app.tajora.ly` و`api.tajora.ly`). فمسارٌ بلا سابقةٍ يجعل التطبيقَ إمّا
+    يطرق مضيفَه هو، وإمّا يلصق السابقةَ بيده — **وبيتٌ ثانٍ للسابقة يفترق
+    عن `settings.api_v1_prefix` أوّلَ تغييرٍ فيها**.
+    """
+    return f"{settings.api_v1_prefix}/vehicle-skins/{skin_id}/art/{kind}"
+
+
+class MapSkinOut(BaseModel):
+    """مركبةُ الكبتن كما تُرسم على خريطة — **رسمٌ لا هوية** (2026-08-22).
+
+    أربعةُ حقولٍ لا أكثر: مسارُ الرسمة ونسبةُ عرضها وهل تدور مع الاتجاه،
+    ومُعرّفُها ليُميّز التطبيقُ بين رسمتين بلا أن يقارن نصوصَ مسارات.
+
+    **ولا اسمَ ولا ندرةَ هنا**: على الخريطة الحرّة تكفي الرسمةُ للرسم،
+    و«أسطورية» كلمةٌ تجعل من يعدّ السياراتِ يعرف من في أيّها.
+    """
+
+    skin_id: uuid.UUID
+    image_url: str
+    scale_percent: int
+    rotates: bool
+
+    @classmethod
+    def of(cls, skin: "MapSkin | None") -> "MapSkinOut | None":
+        """من حمولة الحضور (Redis) — مقروءةً لا مستعلَمة."""
+        if skin is None:
+            return None
+        return cls(
+            skin_id=skin.skin_id,
+            image_url=skin.image_url,
+            scale_percent=skin.scale_percent,
+            rotates=skin.rotates,
+        )
+
+    @classmethod
+    def for_skin(cls, skin: "VehicleSkin | None") -> "MapSkinOut | None":
+        """من صفِّ الكتالوج — يستعمله بانِي بطاقة الكبتن بعد القبول."""
+        if skin is None or not skin.is_active:
+            return None
+        return cls(
+            skin_id=skin.id,
+            image_url=skin_art_url(skin.id, ART_MAP),
+            scale_percent=skin.map_scale_percent,
+            rotates=skin.map_rotates,
+        )
+
+
 class NearbyDriverOut(BaseModel):
     """سيارة على خريطة الراكب قبل الطلب — مجهّلة بالكامل (SPEC القسم 10).
 
@@ -217,6 +286,27 @@ class NearbyDriverOut(BaseModel):
     lng: float
     heading: float | None
     vehicle_category: VehicleCategory
+    #: **مركبتُه المنشورة** — النادرةُ لا تصل هنا أبداً
+    #: (`vehicle_skins.publishable_skin_for`)، وغيابُها لا يقع إلا حين لا
+    #: بديلَ منشورٌ في الكتالوج فتغيب عن الجميع سواءً
+    skin: MapSkinOut | None = None
+
+    @classmethod
+    def of(cls, presence: "DriverPresence", *, ref: str) -> "NearbyDriverOut":
+        """**بانٍ واحدٌ لثلاثة أبواب** — REST مرتين والمقبس مرة.
+
+        وهي القاعدةُ لا الترتيب: ثلاثةُ مواضعَ تبني الحمولةَ نفسَها بيدها
+        تفترق أوّلَ حقلٍ يُضاف — وهو الشكلُ الثامن، وقد وقع في هذا المشروع
+        (`commission_percent` مُلئ في بابٍ ونُسي في أخيه).
+        """
+        return cls(
+            ref=ref,
+            lat=presence.lat,
+            lng=presence.lng,
+            heading=presence.heading,
+            vehicle_category=presence.vehicle_category,
+            skin=MapSkinOut.of(presence.skin),
+        )
 
 
 class AdminDriverRow(BaseModel):

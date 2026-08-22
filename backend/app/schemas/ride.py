@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.settlement import SettlementState
+from app.schemas.driver import MapSkinOut
 from app.models.enums import (
     CancelReasonCode,
     CountryCode,
@@ -168,18 +169,29 @@ class RideDriverOut(BaseModel):
     name: str
     rating_avg: Decimal
     vehicle: RideVehicleOut | None = None
+    #: **مركبتُه الحقيقيةُ أياً كانت ندرتُها** (2026-08-22): قبل القبول تُخفى
+    #: النادرةُ لأن ما يُرى ويندر يصير معرّفاً ينقض تجهيل §10، **وبعده** يعرف
+    #: الراكبُ اسمَه ولوحتَه أصلاً فلا شيءَ يُخفى. و`None` لمن لا مركبةَ نشطةً
+    #: له — ولا بديلَ يُدسّ هنا: بعد القبول لا فئةَ تُميَّز بغيابٍ
+    skin: MapSkinOut | None = None
 
     @classmethod
     def from_ride(cls, ride: "Ride") -> "RideDriverOut | None":
-        """تتطلب تحميل `driver.user` و`driver.vehicles` مسبقاً (selectinload)."""
+        """تتطلب تحميل `driver.user` و`driver.vehicles` مسبقاً (selectinload).
+
+        **و`driver.active_skin` تصل بالضمّ** (`lazy="joined"` على النموذج)،
+        فهذا البانِي متزامنٌ ولا يستطيع استعلاماً — والضمُّ لا ذهابَ ثانٍ له.
+        """
         if ride.driver is None:
             return None
         vehicles = ride.driver.vehicles
+        skin = ride.driver.active_skin
         return cls(
             id=ride.driver.id,
             name=ride.driver.user.name,
             rating_avg=ride.driver.rating_avg,
             vehicle=RideVehicleOut.model_validate(vehicles[0]) if vehicles else None,
+            skin=MapSkinOut.for_skin(skin),
         )
 
 
