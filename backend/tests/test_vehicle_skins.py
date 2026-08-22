@@ -779,3 +779,33 @@ async def test_the_artwork_door_needs_no_session(
     missing = await client.get(f"{SKINS}/{blank}/art/map")
     assert missing.status_code == 404, missing.status_code
     assert missing.json()["code"] == "not_found"
+
+
+async def test_a_vehicle_missing_one_of_its_two_forms_is_not_offered(
+    client: AsyncClient, session_factory, ready
+):
+    """**شكلان لا أحدُهما** (قرارُ المالك 2026-08-23): المجسّمُ للمتجر والكراج،
+    **والعلويّةُ للخريطة** — ولنفس السيارة، والفرقُ زاويةُ النظر لا المركبة.
+
+    **ولا يمسكه اختبارُ البابين**: البابُ واحدٌ والحقولُ متطابقة — فالشكلُ ليس
+    «بابين يفترقان» بل **شكلين لشيءٍ واحد**، وأحدُهما ناقص. **ولا حارسَ آخرُ
+    يراه**: لا حقلَ ناقصاً ولا باباً بلا زرّ، **والملفُّ يُخدَم ٢٠٠**.
+
+    **والنقصُ يُخفي ولا يُستبدل**: نادرةٌ تُرسم بسيارةٍ عامّةٍ على الخريطة
+    **شكلٌ ثانٍ لمركبةٍ واحدة**، وهو ما وُجد هذا الشرطُ ليمنعه.
+    """
+    full = await make_skin(session_factory, name="كاملةُ الشكلين", price="5.000")
+    half = await make_skin(session_factory, name="ناقصةُ العلويّة", price="5.000")
+    async with session_factory() as session:
+        row = await session.get(VehicleSkin, half)
+        # مرفوعةٌ بمجسَّمها وحدَه — ولا علويّةَ لها
+        row.asset_key = None
+        row.store_image_path = "skins/probe/store.webp"
+        row.map_image_path = None
+        await session.commit()
+
+    body = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
+    names = [r["name"] for r in body["skins"]]
+    assert "كاملةُ الشكلين" in names, names
+    assert "ناقصةُ العلويّة" not in names, names
+    assert str(full) in [r["id"] for r in body["skins"]]

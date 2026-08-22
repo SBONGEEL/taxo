@@ -346,30 +346,45 @@ async def preview_artwork(
     }
 
 
-@router.put("/{skin_id}/artwork", response_model=AdminSkinOut)
+@router.put("/{skin_id}/artwork/{slot}", response_model=AdminSkinOut)
 async def upload_artwork(
     skin_id: uuid.UUID,
+    slot: skin_artwork.Slot,
     admin: AdminUser,
     session: DbSession,
     file: Annotated[UploadFile, File(description="صورةٌ أو SVG")],
 ) -> AdminSkinOut:
-    """يرفع رسمةً ويربطها بالمركبة — **وينسخ `asset_key` إن كان**.
+    """يرفع **شكلاً واحداً** ويربطه بالمركبة — **وينسخ `asset_key` إن كان**.
 
-    `PUT` لا `POST` لأنها **إحلال**: للمركبة رسمةٌ واحدة، فرفعُ ثانيةٍ
-    استبدالٌ للأولى لا رسمتان. وهو سببُ `PUT` في رفع المستندات نفسُه.
+    `PUT` لا `POST` لأنها **إحلال**: لكلِّ خانةٍ رسمةٌ واحدة، فرفعُ ثانيةٍ
+    استبدالٌ لها. وهو سببُ `PUT` في رفع المستندات نفسُه.
 
-    **والعمودان لا يجتمعان** (`models/vehicle_skin.py`): مرفوعةٌ **أو**
-    مشحونة، فرفعُ رسمةٍ يمحو `asset_key` — وبغيره تحمل المركبةُ مصدرين
-    ويقرّر ترتيبُ الشرط في `artwork_response` أيَّهما يُرى.
+    **والخانةُ في المسار لا مشتقّةٌ من ملفٍّ واحد** (قرارُ المالك 2026-08-23):
+    كان الرفعُ ملفاً واحداً يملأ الخانتين بمقاسين — **والمقاسُ ليس منظوراً**.
+    فالمجسّمُ الواقعيُّ للنادرة يُصغَّر إلى ١٢٨ ويوضع على خريطةٍ تُرى من فوق،
+    **فتصير السيارةُ على الخريطة غيرَ التي اشتراها** وهي «من مصدرٍ واحد».
+    **ولا حارسَ يراه**: لا حقلَ ناقصاً ولا باباً بلا زرٍّ ولا ردَّين يفترقان.
+
+    **فصار لكلِّ شكلٍ رفعتُه**: `store` للمجسّم، و`map` للعلويّة — **ولنفس
+    السيارة**: نفسُ اللون ونفسُ التفاصيل، والفرقُ زاويةُ النظر لا المركبة.
+
+    **والعمودان لا يجتمعان مع `asset_key`** (`models/vehicle_skin.py`):
+    مرفوعةٌ **أو** مشحونة، فرفعُ رسمةٍ يمحو المفتاح — وبغيره تحمل المركبةُ
+    مصدرين ويقرّر ترتيبُ الشرط أيَّهما يُرى.
     """
     skin = await _get(session, skin_id)
     stored = await skin_artwork.ingest(file, folder=str(skin.id))
-    superseded = [
-        path for path in (skin.store_image_path, skin.map_image_path) if path
-    ]
+
+    # **ورفعُ خانةٍ لا يمحو أختَها** — إلا حين تكون المركبةُ على `asset_key`،
+    # فحينها لا ملفَ مرفوعاً أصلاً والخانتان فارغتان.
+    current = skin.store_image_path if slot == "store" else skin.map_image_path
+    superseded = [current] if current else []
     skin.asset_key = None
-    skin.store_image_path = stored.store_path
-    skin.map_image_path = stored.map_path
+    chosen = stored.store_path if slot == "store" else stored.map_path
+    if slot == "store":
+        skin.store_image_path = chosen
+    else:
+        skin.map_image_path = chosen
 
     await audit.record(
         session,
@@ -377,7 +392,7 @@ async def upload_artwork(
         action=AuditAction.UPDATE,
         entity_type="vehicle_skin",
         entity_id=skin.id,
-        details={"fields": ["store_image_path", "map_image_path"]},
+        details={"fields": [f"{slot}_image_path"]},
     )
     await session.commit()
 
