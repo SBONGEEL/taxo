@@ -254,12 +254,9 @@ async def _send_nearby(
         {
             "type": "nearby_drivers",
             "drivers": [
-                NearbyDriverOut(
+                NearbyDriverOut.of(
+                    presence,
                     ref=drivers_service.anonymous_ref(presence.driver_id, state.salt),
-                    lat=presence.lat,
-                    lng=presence.lng,
-                    heading=presence.heading,
-                    vehicle_category=presence.vehicle_category,
                 ).model_dump(mode="json")
                 for presence in presences
             ],

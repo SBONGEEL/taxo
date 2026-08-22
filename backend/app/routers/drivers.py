@@ -398,12 +398,8 @@ async def list_nearby_drivers(
         redis, session, country_code=rider.country_code, lat=lat, lng=lng, rider=rider
     )
     return [
-        NearbyDriverOut(
-            ref=drivers_service.anonymous_ref(presence.driver_id, salt),
-            lat=presence.lat,
-            lng=presence.lng,
-            heading=presence.heading,
-            vehicle_category=presence.vehicle_category,
+        NearbyDriverOut.of(
+            presence, ref=drivers_service.anonymous_ref(presence.driver_id, salt)
         )
         for presence in presences
     ]
@@ -441,12 +437,8 @@ async def list_nearby_for_driver(
         redis, session, country_code=user.country_code, lat=lat, lng=lng
     )
     return [
-        NearbyDriverOut(
-            ref=drivers_service.anonymous_ref(presence.driver_id, salt),
-            lat=presence.lat,
-            lng=presence.lng,
-            heading=presence.heading,
-            vehicle_category=presence.vehicle_category,
+        NearbyDriverOut.of(
+            presence, ref=drivers_service.anonymous_ref(presence.driver_id, salt)
         )
         for presence in presences
     ]

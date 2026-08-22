@@ -41,6 +41,7 @@ from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.models.user_role_grant import UserRoleGrant
+from app.models.vehicle_skin import RARITY_COMMON, VehicleSkin
 from app.services import campaigns
 from app.models.payment_setting import (
     DEFAULT_CLIQ_CONFIRMATION_HOURS,
@@ -89,6 +90,11 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # يُقرأ **ظهوراً** لا إخفاءً (`DEFAULT_ENABLED_FLAGS`)، فصفٌّ ضمنيٌّ
         # في تعبيرٍ عامٍّ ليس قراراً — والقرارُ يُكتب.
         FeatureKey.COUNTRY_VISIBLE: False,
+        # **مطفأٌ صراحةً في السوقين** (مركباتُ الكراج، 2026-08-22): الكتالوجُ
+        # يُبنى من اللوحة ورسمُه يُولَّد، والإشعالُ قرارُ تشغيلٍ يقع بعد أن
+        # توجد مركباتٌ تُشترى. **وصفُّ ليبيا كلُّه `False` أصلاً** — ويُكتب
+        # صريحاً لأن ما يُقرَّر يُكتب، ولأن المشرفَ يرى المفتاح فيعرف أنه قرار
+        FeatureKey.VEHICLE_SKINS_ENABLED: False,
     },
     CountryCode.JO: {
         # **ظاهرةٌ صراحةً**: السكوتُ ظهورٌ أصلاً، لكن صفّاً في اللوحة يُطفأ
@@ -156,6 +162,8 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # فعلٌ يقع في اللوحة حين يُقرَّر — وسلفةٌ تُصرف في التطوير بلا قرارٍ
         # تشغيليٍّ هي **مالٌ يخرج**، لا ميزةٌ تُجرَّب
         FeatureKey.DRIVER_ADVANCES_ENABLED: False,
+        # **مطفأٌ صراحةً** (مركباتُ الكراج، 2026-08-22) — انظر تعليقَ ليبيا
+        FeatureKey.VEHICLE_SKINS_ENABLED: False,
     },
 }
 
@@ -511,6 +519,50 @@ async def seed_plans(session: AsyncSession) -> None:
                 _log(f"خطة اشتراك: {country.value}/{name}")
 
 
+# **مركبةٌ واحدةٌ تحمل الصفتين معاً — هديةً وبديلاً منشوراً** (2026-08-22).
+#
+# **وهذا ليس اختصاراً، بل شرطُ ألّا تصير المركبةُ وشاية** (الشكلُ الثالثَ عشر):
+# البديلُ المنشورُ يُرسم لحالين — من لا مركبةَ نشطةً له، **ومن مركبتُه نادرة**.
+# فلو كان رسماً لا يملكه أحد لصار ظهورُه نفسُه إعلاناً بأن صاحبه أحدُ هذين،
+# **وهو التمييزُ الذي وُجد الحقلُ ليمنعه**. وحين يكون البديلُ **أشيعَ ما
+# يُملَك** — هديةَ أوّلِ اشتراكٍ التي يأخذها كلُّ كبتن — لا يفرّق من يعدّ
+# السياراتِ بين من يملكها ومن يُرسم له بديلاً.
+#
+# **ولا تُباع**: لا صفَّ سعرٍ لها في أيِّ سوق، فلا تظهر في المتجر أصلاً
+# (`store_for` لا يعرض ما لا سعرَ له)، وتُقرأ في الكراج «مملوكة».
+#
+# **والمفتاحُ متّفقٌ عليه**: `sedan-ash` — يولّد رسمتَه `services/skin_artwork.py`
+# باصطلاح `{asset_key}-store.svg` و`{asset_key}-map.svg`.
+GIFT_SKIN_ASSET = "sedan-ash"
+GIFT_SKIN_NAME = "الرماديةُ الرصينة"
+
+
+async def seed_vehicle_skins(session: AsyncSession) -> None:
+    """يبذر المركبةَ الأساسية وحدَها — **وما يُباع يُنشئه المشرفُ من اللوحة**.
+
+    الكتالوجُ قرارُ تشغيلٍ لا ثابتُ كود: سعرٌ وندرةٌ وكميّةٌ وموسمٌ كلُّها
+    حقولٌ في شاشة، وبذرُ مركبةٍ **مسعَّرة** يجعلها تظهر في الإنتاج بلا أن
+    يقرّرها أحد — وهي علّةُ «لا كوبونَ يُبذَر» نفسُها.
+    """
+    exists = await session.scalar(
+        select(VehicleSkin.id).where(VehicleSkin.asset_key == GIFT_SKIN_ASSET)
+    )
+    if exists is not None:
+        return
+    session.add(
+        VehicleSkin(
+            name=GIFT_SKIN_NAME,
+            rarity=RARITY_COMMON,
+            asset_key=GIFT_SKIN_ASSET,
+            is_gift=True,
+            is_public_default=True,
+            # **تُنشر قبل القبول** — وهي المقصودةُ بالنشر أصلاً
+            visible_before_accept=True,
+        )
+    )
+    _log(f"مركبة: {GIFT_SKIN_NAME} (هدية + بديلٌ منشور)")
+
+
 async def seed_providers(session: AsyncSession) -> None:
     """يكتب عقود Mapbox وTelr من البيئة — مشفّرة — إن لم تكن محفوظة."""
     public_token = os.environ.get("MAPBOX_PUBLIC_TOKEN", "").strip()
@@ -758,6 +810,7 @@ async def main() -> None:
         await seed_sharing_settings(session)
         await seed_notification_settings(session)
         await seed_plans(session)
+        await seed_vehicle_skins(session)
         await seed_providers(session)
         await seed_fcm(session)
         await seed_firebase_auth(session)

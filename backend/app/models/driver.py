@@ -31,6 +31,7 @@ from app.models.enums import (
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.vehicle import Vehicle
+    from app.models.vehicle_skin import VehicleSkin
 
 
 class Driver(UUIDMixin, TimestampMixin, Base):
@@ -155,6 +156,20 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     documents: Mapped[list["DriverDocument"]] = relationship(
         back_populates="driver", cascade="all, delete-orphan"
     )
+    # **`selectin` لا `joined`، وهذا قِيس لا رُئي** (2026-08-22): بطاقةُ الكبتن
+    # التي يراها الراكب بعد القبول ترسم مركبتَه، و`RideOut.from_ride` بانٍ
+    # **متزامن** فلا يستطيع استعلاماً — فلا بدّ من تحميلٍ مسبق.
+    #
+    # **و`joined` أسقط كلَّ قفلٍ على صفِّ الكبتن**: الضمُّ الخارجيُّ يجعل
+    # `SELECT … FOR UPDATE` يفشل بـ«FOR UPDATE cannot be applied to the
+    # nullable side of an outer join» — أي أن شراءَ الاشتراك ورفعَ المستند
+    # وتعديلَ المركبة تسقط كلُّها. وقعت مقيسةً في أول تشغيل، ولا يراها بناءٌ
+    # ولا نوع.
+    #
+    # **وثمنُ `selectin` ليس في مسار التوزيع**: `dispatch` لا يحمّل كائنَ
+    # كبتنٍ داخل نافذة العرض — يقرأ أعمدةً (`Driver.id`, `Driver.level`) —
+    # فلا استعلامَ زائدٌ حيث يمنعه §٥-ج.
+    active_skin: Mapped["VehicleSkin | None"] = relationship(lazy="selectin")
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<Driver {self.id} ({self.status})>"
