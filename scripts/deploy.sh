@@ -21,6 +21,28 @@
 #   bash scripts/deploy.sh                 # يرفع HEAD بعد المرور بالخمس
 #   bash scripts/deploy.sh --announce      # البوّابةُ الأولى وحدَها (إعلانٌ بلا رفع)
 #
+# ─────────────────────────────────────────────────────────────────────────────
+# **تصحيحٌ يُقرأ قبل ما تحته** (2026-08-22): **هذا الرأسُ كان يعدّ خمساً
+# ويطبّق ثلاثاً ونصفاً** — وهو الجدولُ الأحمرُ في أخطر ملفٍّ في المستودع.
+#
+# **ما كان**: ترقيمُه ١ إعلان · ٢ دفعٌ وCI · ٣ نسخة · ٤ **تحقّقُ النسخة** ·
+# ٥ `tar -cf - "$@" | ssh … tar -xf -`. أي:
+#
+#   - **البوّابةُ الرابعةُ لم تكن مبنيّةً البتّة**: لا سحبَ من GitHub، ولا
+#     `alembic upgrade`، ولا إعادةَ حاويات. **بل كانت تفعل ما تمنعه نصّاً** —
+#     «لا من جهاز أحد» — فتدفع ملفاتٍ من قرص المطوّر.
+#   - **والبوّابةُ الخامسةُ لم يكن لها وجودٌ أصلاً**، واسمُها أُعطي لتحقّق
+#     النسخة (وهو جزءٌ من الثالثة).
+#   - **والسطرُ أعلاه كان يكذب**: `bash scripts/deploy.sh` بلا وسائطَ يبني
+#     أرشيفاً فارغاً ويموت، لأن ما يُرسَل هو `"$@"` لا HEAD.
+#
+# **وثمنُه مقيسٌ لا مُقدَّر**: شجرةُ الإنتاج حملت **٨٣ ملفاً خارج الإيداع**
+# (منها الترحيلتان `0051` و`0052` **غيرُ متتبَّعتين**)، والقاعدةُ عند ترحيلةٍ
+# لا وجودَ لها إلا كملفٍّ على القرص — **فحالُ الإنتاج لم تكن مشتقّةً من git
+# يوماً**، وهو بعينه ما وُجدت البوّابةُ الرابعةُ لتمنعه.
+#
+# **والبوّابتان مبنيّتان الآن كما هما مكتوبتان**، والسحبُ بمفتاح نشرٍ
+# **مقصورٍ على هذا المستودع وللقراءة وحدَها** — لا رمزٍ واسع.
 set -euo pipefail
 
 HOST="${TAXO_DEPLOY_HOST:-taxo@169.58.207.123}"
@@ -52,6 +74,15 @@ _pick_ssh() {
   printf 'ssh'
 }
 SSH="$(_pick_ssh)"
+
+# **ملفّاتُ compose تُصرَّح كلُّها في كلِّ أمر** (البوّابةُ الرابعة، وفخٌّ وقع
+# مقيساً مرتين): أمرٌ بملفٍّ ناقصٍ يعيد الحاويةَ **بلا `CORS_ORIGINS`** فيقف
+# الهاتفان على «الشبكة ضعيفة» بينما `curl` يجيب ٢٠٠ من الجهاز.
+#
+# **والمجموعةُ مقيسةٌ لا مفترَضة** (2026-08-22): `prod-tunnel` وحدَه يعرّف
+# `landing` **و**`cloudflared` معاً، وهو المطابقُ للحاويات العاملة على الخادم.
+# و`docker-compose.tunnel.yml` نفقُ **جهاز المالك** لا الإنتاج.
+COMPOSE_FILES="${TAXO_COMPOSE_FILES:--f docker-compose.yml -f docker-compose.prod-tunnel.yml}"
 SSH_OPTS=(-o StrictHostKeyChecking=yes -i "${TAXO_SSH_KEY:-$HOME/.ssh/taxo-contabo}")
 
 say() { printf '%s\n' "$*"; }
@@ -98,7 +129,7 @@ say "  ترحيلة  : ${MIGRATIONS:-0}"
 #   ١) أثمّة ترحيلةٌ **معلَّقة**؟ — رأسُ القاعدة على الخادم مقابل الشجرة.
 #   ٢) وهل ما يُرسَل **في هذه الدفعة** يمسّ نموذجاً أو ترحيلة؟
 # **وسكوتُ الاثنين معاً هو الجواب**، وإلّا وقف.
-PENDING="$("$SSH" "${SSH_OPTS[@]}" "$HOST"   "cd $REMOTE && docker compose exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d '
+PENDING="$("$SSH" "${SSH_OPTS[@]}" "$HOST"   "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d '
  ' || true)"
 TREE_HEAD="$(ls backend/alembic/versions/ | sort | tail -1 | cut -d_ -f1)"
 if [ -z "$PENDING" ]; then
@@ -234,7 +265,7 @@ say "══ ٣) النسخةُ قبل الرفع — $STAMP"
 # على الخادم نسخةٌ ثانيةٌ تُنسى ولا يُملأ قرصُه.
 say "  · القاعدة…"
 "$SSH" "${SSH_OPTS[@]}" "$HOST" \
-  "cd $REMOTE && docker compose exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9" \
+  "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9" \
   > "$LOCAL/taxo.sql.gz" || die "تعذّر تفريغُ القاعدة — لا رفع."
 
 say "  · الأسرار ومجلد الوثائق…"
@@ -309,14 +340,81 @@ else
   say "  الحزم   : لا وسمَ لهذه الدفعة — **لم تُنشر حزمة**"
 fi
 
-tar -cf - "$@" | "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && tar -xf -" \
-  || die "فشل الرفعُ — والنسخةُ في $LOCAL"
-for p in "$@"; do say "  ✓ $p"; done
+# **الكودُ يُسحب بالإيداع — أمرٌ واحدٌ يفعل كلَّ شيء** (البوّابةُ الرابعة).
+#
+# **و`fetch` ثم `checkout <sha>` لا `pull`**: `pull` يدمج ما على الفرع
+# **وقتَ التنفيذ**، فيمكن أن ينزل غيرُ الذي خضّره CI إن دُفع شيءٌ في الأثناء.
+# **والإيداعُ بعينه هو العقد.**
+#
+# **ولا `--force` ولا `clean`**: شجرةٌ متّسخةٌ **تُعرض ولا تُداس**. وقد قِيست
+# في 2026-08-22 (٨٣ ملفاً، صفرٌ منها يختفي بالسحب) — **والقياسُ قبل الدوس
+# شرطٌ لا تفصيل**، فما يُداس لا يُعرف أنه كان.
+say "  الكود   : الخادمُ يسحب ${HEAD_SHA:0:8} من GitHub"
+"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && \
+  git remote get-url taxo >/dev/null 2>&1 || git remote add taxo git@github-taxo:${TAXO_GITHUB_REPO:-SBONGEEL/taxo}.git; \
+  GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git fetch --quiet taxo && \
+  git checkout --quiet --detach $HEAD_SHA" \
+  || die "تعذّر سحبُ ${HEAD_SHA:0:8} على الخادم — لا شيءَ تغيّر، والنسخةُ في $LOCAL"
+
+SERVER_NOW="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && git rev-parse HEAD" | tr -d '\r')"
+[ "$SERVER_NOW" = "$HEAD_SHA" ] || die "الخادمُ عند $SERVER_NOW لا $HEAD_SHA — يُوقَف. والنسخةُ في $LOCAL"
+say "  ✓ إيداعُ الخادم = إيداعُ CI"
+
+# **الترحيلةُ هنا، و`downgrade` مقيسٌ قبلها لا مقروء** — على قاعدةٍ خادشةٍ
+# **لا على الإنتاج**: نسخةُ الإنتاج تُستعاد فيها ثم يُنزَل ويُصعَد.
+if [ "${PENDING:-}" != "${TREE_HEAD:-}" ]; then
+  say "  الترحيلة: ${PENDING:-?} ← ${TREE_HEAD:-?}"
+  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES run --rm --no-deps -T backend alembic upgrade head" \
+    || die "سقطت الترحيلةُ — **لا يُصلَح على الإنتاج**. الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
+  say "  ✓ الترحيلةُ طُبِّقت"
+else
+  say "  الترحيلة: لا معلَّقَ"
+fi
+
+# **ولا حاويةَ تُعاد وحدَها، وكلُّ أمرِ compose يذكر ملفاتِه كلَّها صراحةً**
+# — فخٌّ وقع مقيساً: إعادةٌ بملفٍّ ناقصٍ أسقطت `CORS_ORIGINS` فوقف الهاتفان.
+say "  الحاويات: تُعاد بكلِّ ملفّات compose"
+"$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES up -d --build" \
+  || die "تعذّرت إعادةُ الحاويات — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
+
+# ═══════════════════ ٦) التحقّق ═══════════════════
+# **الرفعُ لم يتمّ حتى تخضرَّ كلُّها.**
+say "══ ٦) التحقّق"
+DB_HEAD="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;'" | tr -d '\r ')"
+[ "$DB_HEAD" = "${TREE_HEAD:-$DB_HEAD}" ] || die "رقمُ الترحيلة على القاعدة ($DB_HEAD) ≠ رأسُ الشجرة (${TREE_HEAD:-?}) — يُوقَف."
+say "  ✓ الترحيلةُ على القاعدة = رأسُ الشجرة ($DB_HEAD)"
+
+BAD="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' || true" | tr -d '\r')"
+[ -z "$BAD" ] && say "  ✓ كلُّ الحاويات تعمل" || die "حاوياتٌ ليست تعمل: $BAD"
+
+for _ in $(seq 1 30); do
+  HEALTH="$(curl -sS --max-time 10 "${TAXO_HEALTH_URL:-https://api.tajora.ly/health}" 2>/dev/null || true)"
+  printf '%s' "$HEALTH" | grep -q '"ok"' && break
+  sleep 5
+done
+printf '%s' "$HEALTH" | grep -q '"ok"' \
+  || die "الصحّةُ لا تجيب بـok عبر النفق — يُوقَف. الردّ: ${HEALTH:-<لا شيء>}"
+say "  ✓ الصحّةُ عبر النفق: $HEALTH"
+
+# **ومراقبةُ السجلِّ دقائق: صفرُ أخطاءٍ أو ما ظهر** — ويُطبع ما ظهر ولا يُبتلع
+say "  · السجلّ (٩٠ ثانية)…"
+sleep 90
+ERRS="$("$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -icE 'traceback|ERROR|CRITICAL' || true" | tr -d '\r ')"
+if [ "${ERRS:-0}" != "0" ]; then
+  say "  ⚠ السجلُّ فيه $ERRS سطرَ خطأ — تُقرأ قبل أن يُعلَن التمام:"
+  "$SSH" "${SSH_OPTS[@]}" "$HOST" "cd $REMOTE && docker compose $COMPOSE_FILES logs --since 3m backend 2>&1 | grep -iE 'traceback|ERROR|CRITICAL' | head -10"
+  die "لا يُعلَن تمامٌ وفي السجلِّ أخطاء — الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} والنسخةُ في $LOCAL"
+fi
+say "  ✓ السجلّ: صفرُ أخطاءٍ في ثلاث دقائق"
 
 say ""
-say "✓ رُفع بعد نسخةٍ محقَّقة."
+say "✓ رُفع بعد نسخةٍ محقَّقة، وخضّرت البوّاباتُ الستُّ كلُّها."
 say "  النسخة : $LOCAL"
 say "  وقتُها : $STAMP (UTC)"
 say "  حجمُها : $(du -sh "$LOCAL" | cut -f1)"
 say ""
 say "  **يُذكر هذا الثلاثيُّ في تقرير الرفع** (قاعدةُ CLAUDE.md الأولى)."
+say ""
+say "  **وما لا يقيسه هذا الباب** — يُقال ولا يُقرأ سكوتُه ضماناً:"
+say "  · **مسارٌ حيٌّ من متصفحٍ** لا \`curl\` — شرطٌ بشريٌّ في البوّابة الخامسة"
+say "  · **الأعمدةُ الأربعةُ للثلاثة** — تُقاس بـ\`check:served\` و\`check-apk\` محلياً"
