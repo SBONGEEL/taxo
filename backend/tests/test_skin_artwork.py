@@ -403,7 +403,7 @@ async def test_an_svg_with_a_script_is_refused_at_the_real_door(
     """**البابُ الحقيقيُّ لا الدالّةُ وحدَها** — ورمزُ الخطأ يسمّي السبب."""
     skin_id = await _create(client, admin_headers)
     answer = await client.put(
-        f"/admin/vehicle-skins/{skin_id}/artwork",
+        f"/admin/vehicle-skins/{skin_id}/artwork/store",
         headers=admin_headers,
         files={"file": ("evil.svg", SVG_WITH_SCRIPT, "image/svg+xml")},
     )
@@ -417,12 +417,17 @@ async def test_uploaded_artwork_is_served_with_the_hardened_headers(
     """السلسلةُ كاملةً: إنشاءٌ ← رفعٌ ← عَرضٌ — **وتُقرأ الترويساتُ من الردّ**."""
     skin_id = await _create(client, admin_headers)
 
-    uploaded = await client.put(
-        f"/admin/vehicle-skins/{skin_id}/artwork",
-        headers=admin_headers,
-        files={"file": ("car.png", png(420, 260, margin=60), "image/png")},
-    )
-    assert uploaded.status_code == 200, uploaded.text
+    # **رفعتان لا رفعة** (قرارُ المالك 2026-08-23): لكلِّ مركبةٍ شكلان —
+    # مجسّمٌ للمتجر وعلويّةٌ للخريطة — **ولا يُشتقّ أحدُهما من الآخر بتصغير**،
+    # فالمقاسُ ليس منظوراً. وقبلَه كان الاختبارُ يرفع مرةً ويتوقّع امتلاءَ
+    # الخانتين، وهو النموذجُ الذي نقضته الخلفيةُ في `f91c281`.
+    for slot in ("store", "map"):
+        uploaded = await client.put(
+            f"/admin/vehicle-skins/{skin_id}/artwork/{slot}",
+            headers=admin_headers,
+            files={"file": ("car.png", png(420, 260, margin=60), "image/png")},
+        )
+        assert uploaded.status_code == 200, uploaded.text
     row = uploaded.json()
     assert row["store_image_url"].endswith("/artwork/store")
     assert row["map_image_url"].endswith("/artwork/map")
@@ -489,7 +494,7 @@ async def test_uploading_over_a_bundled_asset_clears_the_other_column(
         headers=admin_headers,
     )
     await client.put(
-        f"/admin/vehicle-skins/{skin_id}/artwork",
+        f"/admin/vehicle-skins/{skin_id}/artwork/store",
         headers=admin_headers,
         files={"file": ("car.png", png(300, 300, margin=30), "image/png")},
     )

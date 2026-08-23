@@ -82,6 +82,9 @@ async def estimate_ride(
     payload: RideEstimateRequest, rider: RiderUser, session: DbSession
 ) -> RideEstimateOut:
     """سعر مقدّر قبل تأكيد الطلب — بلا أي كتابة في القاعدة."""
+    # **الحارسُ نفسُه الذي يمنع عند الطلب** (`rides.reject_stop_at_dropoff`):
+    # قبولٌ هنا ورفضٌ عند التأكيد يجعل الراكبَ يبني على رقمٍ ثم يُردّ
+    rides_service.reject_stop_at_dropoff(payload.stops, _coords(payload.dropoff))
     quote = await pricing.estimate(
         session,
         country_code=rider.country_code,
