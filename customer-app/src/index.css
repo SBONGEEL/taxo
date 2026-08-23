@@ -99,6 +99,19 @@
     padding-bottom: max(14px, env(safe-area-inset-bottom));
   }
 
+  /** **ارتفاعُ المرئيِّ فعلاً** — يكتبه `lib/viewport.ts` من
+   *  `visualViewport`، **واحتياطُه `100dvh`** لمتصفّحٍ لا يدعمه.
+   *
+   *  ولا وحدةَ CSS تتبع لوحةَ المفاتيح في WebView أندرويد: قِيس أن
+   *  `dvh` و`vh` و`svh` تبقى ٨٠٠ بينما المرئيُّ ٤٥٨. */
+  .h-visual {
+    height: var(--vvh, 100dvh);
+  }
+
+  .max-h-visual {
+    max-height: var(--vvh, 100dvh);
+  }
+
   .pb-safe {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }

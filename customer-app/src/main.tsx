@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "@/App";
 import "@/index.css";
 import { listenForHandoff } from "@/lib/handoff-listener";
+import { trackVisualViewport } from "@/lib/viewport";
 
 // **يوقف نبضَ الخريطة حين يغيب التطبيق** (`index.css`: `html.is-hidden`).
 // `requestAnimationFrame` تتوقف وحدها في الخلفية، أمّا حركاتُ CSS فتستمر في
@@ -12,6 +13,10 @@ import { listenForHandoff } from "@/lib/handoff-listener";
 document.addEventListener("visibilitychange", () => {
   document.documentElement.classList.toggle("is-hidden", document.hidden);
 });
+
+// **قبل أن تُرسم أيُّ ورقة**: تسقيفُ الأوراق يقرأ `--vvh`، ولوحةُ المفاتيح
+// لا تُقلّص إطارَ التخطيط في WebView أندرويد (`lib/viewport.ts`)
+trackVisualViewport();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -200,7 +200,7 @@ export function WalletTransferScreen() {
               يتقلّص معها (قِيس في هذا المشروع ٨٢٠ ⇐ ٤٦٢). فالمبلغُ و«رصيدك
               بعده» في **قدمٍ لا تُمرَّر**، والعنوانُ وحدَه يُمرَّر. */}
           <div
-            className="flex max-h-[calc(100dvh-76px)] w-full flex-col rounded-t-24 border-t border-line bg-surface pt-20"
+            className="flex max-h-[calc(var(--vvh,100dvh)-76px)] mb-[var(--vv-bottom,0px)] w-full flex-col rounded-t-24 border-t border-line bg-surface pt-20"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="scr min-h-0 flex-1 px-18">
