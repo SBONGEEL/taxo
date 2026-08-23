@@ -6,7 +6,7 @@
 
 import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
-import { api, upload } from "@/api/client";
+import { API_URL, api, upload } from "@/api/client";
 import type {
   MyProgress,
   Advance,

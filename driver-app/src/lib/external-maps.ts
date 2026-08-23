@@ -38,8 +38,32 @@ export function targetFor(ride: Ride): MapTarget | null {
   if (ride.status === "arrived") return null; // واقفٌ عندها — لا وجهةَ بعد
 
   if (ride.status === "at_stop" || ride.status === "in_progress") {
-    // **المحطةُ التالية غيرُ المزارة** إن وُجدت، وإلا الوجهة
-    const next = (ride.stops ?? []).find((stop) => stop.arrived_at == null);
+    // **المحطةُ التاليةُ غيرُ المنجَزة** — و«المنجَزة» أن يكون قد وصلها،
+    // لا أن يكون قد استأنف منها.
+    //
+    // **عطبٌ مقيسٌ على الجهاز (2026-08-23)**: كان الشرطُ `arrived_at == null`
+    // وحدَه، **والخلفيةُ تقبل الوصولَ خارج الترتيب** (لا شرطَ تسلسلٍ في
+    // `arrive_at_stop`). فكبتنٌ وصل المحطةَ ٢ قبل الأولى يبقى للأولى
+    // `arrived_at == null`، **فيفتح الزرُّ إحداثياتِها وهي خلفه** — قِيس
+    // بالتقاط الرابط: `geo:32.876,13.31` والكبتنُ عند `32.882,13.24`.
+    // والشريطُ كان صادقاً («٢ هنا») **والزرُّ وحدَه يكذب**.
+    //
+    // **فالمحطةُ التي هو واقفٌ عندها أولى بالبقاء**: من وصلها ولم يستأنف
+    // منها **ليس محتاجاً إلى وجهة** — والزرُّ يُخفى كما يُخفى عند `arrived`.
+    // ثم التاليةُ هي أوّلُ ما لم يصله **بعد أعلى تسلسلٍ بلغه**، فلا يُرجَع
+    // إلى الوراء.
+    const stops = ride.stops ?? [];
+    const standing = stops.find(
+      (stop) => stop.arrived_at != null && stop.resumed_at == null,
+    );
+    if (standing) return null; // واقفٌ عند محطة — لا وجهةَ بعد
+    const reached = stops.reduce(
+      (top, stop) => (stop.arrived_at != null ? Math.max(top, stop.sequence) : top),
+      0,
+    );
+    const next = stops.find(
+      (stop) => stop.arrived_at == null && stop.sequence > reached,
+    );
     if (next) {
       return {
         lat: next.lat,

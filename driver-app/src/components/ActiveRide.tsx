@@ -14,7 +14,7 @@
  * فالزرُّ الأخير ينهي الرحلة ويعود بالكبتن إلى الرئيسية حتى تُبنى.
  */
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Navigation } from "lucide-react";
 
 import type { GenderPreference, Ride } from "@/api/types";
@@ -172,6 +172,42 @@ export function ActiveRide({
           </div>
           <span className="mx-auto block h-12 w-2 bg-line" />
           <span />
+          {/* **المحطاتُ بعناوينها في الخطِّ نفسِه** (عطبٌ مقيسٌ على الجهاز
+              2026-08-23): `RideStop.address` كان **منشوراً من الخلفية،
+              ومرآتُه في `api/types.ts` قائمة، ولا سطرَ في تطبيق الكبتن
+              يقرؤه** — قِيس بمسحِ التطبيقين: القارئُ الوحيدُ محرِّرُ المحطات
+              في تطبيق الراكب. فكان الكبتنُ يرى «محطة ١ / محطة ٢» في شريط
+              التقدّم وعنوانَي الالتقاء والوجهة وحدَهما، **فيقود إلى محطةٍ لا
+              يعرف أين هي** إلا أن يفتح تطبيقَ خرائطَ خارجيّاً.
+              **وهو «حقلٌ بمرآةٍ بلا قارئ»** — لا `tsc` يراه ولا `check:config`
+              (يسأل عن مرآة لا عن قارئ) ولا `check:readers` (يمسح `lib/`).
+              وموضعُه هذا الخطُّ لا شريطُ التقدّم: ذاك يقول **أين وصل**، وهذا
+              يقول **إلى أين يذهب** — وهو ترتيبُ `external-maps` نفسُه. */}
+          {ride.stops.map((stop) => {
+            const passed = stop.resumed_at !== null;
+            return (
+              <Fragment key={stop.id}>
+                <span
+                  className={cn(
+                    "mx-auto mt-2 block size-8 rounded-2",
+                    passed ? "bg-ok" : "bg-muted",
+                  )}
+                />
+                <div
+                  className={cn(
+                    "text-12.5",
+                    passed ? "text-muted" : riding ? "text-ink" : "text-muted",
+                  )}
+                >
+                  {/* **ولا سطرَ فارغ**: عنوانٌ غائبٌ يعود إلى رقم المحطة، فلا
+                      تُرسم نقطةٌ بلا اسمٍ تُقرأ عطباً في الرسم */}
+                  {stop.address ?? `محطة ${digits(String(stop.sequence))}`}
+                </div>
+                <span className="mx-auto block h-12 w-2 bg-line" />
+                <span />
+              </Fragment>
+            );
+          })}
           <span
             className={cn(
               "mx-auto mt-2 block size-8 rounded-2",
