@@ -50,7 +50,7 @@ from app.models.advance import AdvanceSetting
 from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
-from app.services import audit, otp_limits, settings_service
+from app.services import audit, money_guards, otp_limits, settings_service
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
 
@@ -113,6 +113,9 @@ async def list_pricing_rules(
 async def create_pricing_rule(
     payload: PricingRuleCreate, admin: AdminUser, session: DbSession
 ) -> PricingRuleOut:
+    await money_guards.require_pricing_writes(
+        session, actor=admin, country_code=payload.country_code
+    )
     rule = PricingRule(**payload.model_dump())
     session.add(rule)
     await _flush(session, conflict_message="توجد تسعيرة لهذه الدولة والفئة مسبقاً")
@@ -142,6 +145,9 @@ async def update_pricing_rule(
     if rule is None:
         raise NotFound("التسعيرة غير موجودة")
 
+    await money_guards.require_pricing_writes(
+        session, actor=admin, country_code=rule.country_code, entity_id=rule.id
+    )
     changed = _apply_updates(rule, payload.model_dump(exclude_unset=True))
     await audit.record(
         session,
@@ -163,6 +169,9 @@ async def delete_pricing_rule(
     if rule is None:
         raise NotFound("التسعيرة غير موجودة")
 
+    await money_guards.require_pricing_writes(
+        session, actor=admin, country_code=rule.country_code, entity_id=rule.id
+    )
     await audit.record(
         session,
         actor=admin,

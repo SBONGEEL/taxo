@@ -36,7 +36,7 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import PENDING_WITHDRAWAL_STATUSES, WithdrawalRequest
-from app.services import audit, cancellation, settings_service, wallet
+from app.services import audit, cancellation, money_guards, settings_service, wallet
 from app.services.payout import (
     PayoutError,
     PayoutRequest,
@@ -287,6 +287,14 @@ async def pay_via_provider(
     `approved` بلا قيدٍ في الدفتر — ورصيدُ الكبتن ما زال محجوزاً بطلبه، فلا
     يُصرف مرتين ولا يضيع.
     """
+    # **الحارسُ عند الباب لا في الوسط**: يُقرأ قبل القفل وقبل نداء المزوّد،
+    # فنداءٌ غادر يُكمَل ولا يُقطع (`money_guards`).
+    await money_guards.require_withdrawal_payout(
+        session,
+        actor=actor,
+        country_code=owner.country_code,
+        withdrawal_id=request.id,
+    )
     _require_transition(request, WithdrawalStatus.PAID)
 
     if request.method is not WithdrawalMethod.CLIQ:
@@ -338,6 +346,12 @@ async def mark_paid(
     reference: str,
 ) -> WithdrawalRequest:
     """المحاسب حوّل وسجّل المرجع → قيد `withdrawal` (SPEC القسم 9)."""
+    await money_guards.require_withdrawal_payout(
+        session,
+        actor=actor,
+        country_code=owner.country_code,
+        withdrawal_id=request.id,
+    )
     _require_transition(request, WithdrawalStatus.PAID)
     if not reference.strip():
         raise InvalidInput("مرجع التحويل مطلوب لتعليم الطلب مدفوعاً")

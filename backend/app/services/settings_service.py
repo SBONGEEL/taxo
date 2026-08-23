@@ -26,6 +26,11 @@ DEFAULT_ENABLED_FLAGS: frozenset[str] = frozenset(
         # الغيابُ إخفاءً لاختفت كلُّ دولةٍ على تثبيتٍ لم يُبذر — تطبيقٌ بلا
         # دولةٍ واحدة، ولا شاشةَ دخولٍ تُرسم. فالإخفاءُ صفٌّ صريحٌ يكتبه إنسان.
         FeatureKey.COUNTRY_VISIBLE.value,
+        # **وحارسا المال** (2026-08-23): صفٌّ غائبٌ يجب أن يُقرأ «يعمل»، وإلا
+        # أوقف أوّلُ تنصيبٍ غيرِ مبذورٍ التسعيرَ والصرفَ معاً — وهو بعينه ما
+        # تمنعه علّةُ هذه القائمة: السكوتُ لا يُسقط حارساً ولا يُوقف نظاماً.
+        FeatureKey.PRICING_WRITES_ENABLED.value,
+        FeatureKey.WITHDRAWAL_PAYOUT_ENABLED.value,
     }
 )
 
@@ -37,7 +42,14 @@ DEFAULT_ENABLED_FLAGS: frozenset[str] = frozenset(
 # **قرارُ إطلاقٍ لا إجراءُ طوارئ** — ولو ورث الشرطَ لطالب المالكَ بسببٍ مكتوبٍ
 # ورسالتُه تقول «مفتاح التحقق»، وهي جملةٌ لا علاقةَ لها بما ضغط.
 GUARDED_FLAGS: frozenset[str] = frozenset(
-    {FeatureKey.OTP_VERIFICATION_ENABLED.value}
+    {
+        FeatureKey.OTP_VERIFICATION_ENABLED.value,
+        # **وإطفاءُ حارسِ مالٍ قرارٌ يُسأل عنه بعد شهر**: «من جمّد التسعير
+        # ولماذا؟» سؤالٌ يُطرح، والسببُ المكتوب هو جوابُه الوحيد — وهو
+        # الاستثناءُ المصرَّحُ به من «التدقيقُ يحمل أسماءَ الحقول لا قيمَها».
+        FeatureKey.PRICING_WRITES_ENABLED.value,
+        FeatureKey.WITHDRAWAL_PAYOUT_ENABLED.value,
+    }
 )
 
 
