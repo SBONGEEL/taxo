@@ -33,6 +33,8 @@ const STATUS_LINE: Record<DriverStatus, { text: string; dot: string }> = {
   pending: { text: "قيد المراجعة — لا تصلك طلبات بعد", dot: "bg-warn" },
   rejected: { text: "طلبك مرفوض — راجع الدعم", dot: "bg-danger" },
   suspended: { text: "حسابك موقوف — راجع الدعم", dot: "bg-danger" },
+  // **الإلغاءُ نهايةٌ لا إيقاف** — فنصُّه يقول ذلك ولا يَعِد بمراجعة
+  deactivated: { text: "حسابك مُلغى", dot: "bg-danger" },
 };
 
 export function AccountScreen() {

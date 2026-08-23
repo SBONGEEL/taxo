@@ -40,6 +40,12 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // الراكب — لكن الاتحادَ مرآةُ التعداد فيُسمّى، فلا تظهر سلسلةٌ خامٌ يوماً
   tip: "بقشيش",
   tip_payment: "بقشيش مدفوع",
+  advance: "سلفة",
+  advance_repayment: "اقتطاع سداد سلفة",
+  cancellation_fee: "رسم إلغاء",
+  cancellation_compensation: "تعويض إلغاء",
+  referral_bonus: "مكافأة إحالة",
+  skin_purchase: "شراء مركبة",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -59,6 +65,14 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   adjustment: Scale,
   tip: Gift,
   tip_payment: Gift,
+  // **والأيقونةُ تصف مصدرَ القيد لا اتجاهَه** (القاعدةُ أعلاه): السلفةُ
+  // ومَردُّها من بابٍ واحد، والإلغاءُ ورسمُه كذلك.
+  advance: Banknote,
+  advance_repayment: Banknote,
+  cancellation_fee: Scale,
+  cancellation_compensation: Scale,
+  referral_bonus: Gift,
+  skin_purchase: Car,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

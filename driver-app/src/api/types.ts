@@ -9,7 +9,16 @@ export type Currency = "JOD" | "LYD";
 export type UserRole = "rider" | "driver" | "admin" | "support";
 export type VehicleCategory = "economy" | "comfort";
 
-export type DriverStatus = "pending" | "approved" | "rejected" | "suspended";
+export type DriverStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "suspended"
+  // **حالٌ تُكتب فعلاً ولم تكن في المرآة** (2026-08-23): `deactivation.py`
+  // يكتبها على صفِّ الكبتن، و`withdrawals` يقرؤها. **وكان الاتحادُ أربعةً
+  // والخلفيةُ خمسة**، فحسابٌ مُلغىً يصل الشاشةَ **بسطرِ حالٍ فارغ** —
+  // و`tsc` لا يراه لأن اتحاداً أصغرَ صحيحٌ في نفسه.
+  | "deactivated";
 
 /** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
 export type GenderPreference = "male" | "female" | "any";
@@ -416,7 +425,18 @@ export type WalletTransactionType =
   | "subscription_payment"
   | "adjustment"
   | "tip"
-  | "tip_payment";
+  | "tip_payment"
+  // **الستةُ التي كانت ناقصة** (2026-08-23): الاتحادُ كان اثني عشرَ والخلفيةُ
+  // ثمانيةَ عشر، **و`check:enums` يمسك المخترَعَ لا الناقص** — فاتحادٌ أصغرُ
+  // صحيحٌ في نفسه. والأثرُ أن `TRANSACTION_LABEL[type]` ترجع `undefined`
+  // **فتُرسم حركةُ مالٍ بلا اسم** في كشف الكبتن: اقتطاعُ سلفة، ورسمُ إلغاء،
+  // وشراءُ مركبة — **كلُّها مبالغُ تخرج من جيبه بلا سطرٍ يسمّيها**.
+  | "advance"
+  | "advance_repayment"
+  | "cancellation_fee"
+  | "cancellation_compensation"
+  | "referral_bonus"
+  | "skin_purchase";
 
 export interface WalletTransaction {
   id: string;

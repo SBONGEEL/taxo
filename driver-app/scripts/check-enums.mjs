@@ -62,10 +62,20 @@ function walk(dir, test) {
 
 // ------------------------------------------------------------- الخلفية
 const enumValues = new Set();
+const enumsByName = new Map();
 for (const file of walk(BACKEND, (p) => p.endsWith(".py"))) {
   const text = readFileSync(file, "utf8");
   for (const member of text.matchAll(/^\s{4}[A-Z_0-9]+\s*=\s*"([^"]+)"/gm)) {
     enumValues.add(member[1]);
+  }
+  let current = null;
+  for (const line of text.split(/\r?\n/)) {
+    const cls = line.match(/^class\s+(\w+)\s*\(.*Enum.*\):/);
+    if (cls) { current = cls[1]; enumsByName.set(current, new Set()); continue; }
+    if (current === null) continue;
+    const mem = line.match(/^\s{4}[A-Z_0-9]+\s*=\s*"([^"]+)"/);
+    if (mem) enumsByName.get(current).add(mem[1]);
+    else if (line.trim() !== "" && !line.startsWith(" ")) current = null;
   }
   // أسماءُ الأحداث المبثوثة عقدٌ كذلك وإن لم تكن تعداداً في كل موضع
   for (const event of text.matchAll(/"type":\s*"([a-z_]+)"/g)) {
@@ -96,6 +106,25 @@ for (const file of walk(SRC, (p) => /\.tsx?$/.test(p))) {
       problems.push(
         `${file.replace(process.cwd(), ".")}: ${name} — ${strays.join(", ")}`,
       );
+    }
+
+    // **والناقصُ لا يقلّ خطراً عن المخترَع** (2026-08-23): الحارسُ كان يمسك
+    // القيمةَ المخترعةَ وحدَها — **واتحادٌ أصغرُ صحيحٌ في نفسه** فلا يراه
+    // `tsc` ولا هذا. وقِيس أن `WalletTransactionType` كان اثني عشرَ عضواً
+    // والخلفيةُ ثمانيةَ عشر، **فستةُ أنواعِ مالٍ تصل كشفَ الكبتن بلا اسم**:
+    // اقتطاعُ سلفة، ورسمُ إلغاء، وشراءُ مركبة — و`Record[type]` ترجع
+    // `undefined` فتُرسم **حركةُ مالٍ بلا سطرٍ يسمّيها**.
+    //
+    // **ويُقاس حيث يكون الاتحادُ مرآةَ تعدادٍ باسمه** لا حيث يكون تضييقاً
+    // مقصوداً — فاسمُ الاتحاد هو الذي يقول أيُّهما هو.
+    const mirrored = enumsByName.get(name);
+    if (mirrored) {
+      const missing = [...mirrored].filter((v) => !members.includes(v));
+      if (missing.length > 0) {
+        problems.push(
+          `${file.replace(process.cwd(), ".")}: ${name} — ناقصٌ عن تعداد الخلفية: ${missing.join(", ")}`,
+        );
+      }
     }
   }
 }
