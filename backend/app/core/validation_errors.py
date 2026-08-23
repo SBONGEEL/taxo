@@ -23,6 +23,7 @@ FIELD_LABELS: dict[str, str] = {
     "year": "سنة الصنع",
     "color": "اللون",
     "plate_number": "رقم اللوحة",
+    "stops": "المحطات",
     "category": "فئة المركبة",
     "phone": "رقم الهاتف",
     "password": "كلمة المرور",
@@ -168,6 +169,21 @@ def chars(count: int) -> str:
     return f"{count} محرفاً"
 
 
+def items(count: int, one: str, two: str, few: str, many: str) -> str:
+    """عددٌ بصيغة العربية الأربع — أختُ `chars` لأيِّ معدودٍ آخر.
+
+    و«٢ محطات» مكسورةٌ كما «1 محارف» مكسورة، **والكسرُ في شاشة خطأٍ يُقرأ
+    عطباً في التطبيق لا خطأً في الإدخال**.
+    """
+    if count == 1:
+        return one
+    if count == 2:
+        return two
+    if 3 <= count <= 10:
+        return f"{count} {few}"
+    return f"{count} {many}"
+
+
 def condition_label(kind: str, value: int) -> str:
     """وصفُ شرطٍ **مُحقَّقٍ أو غيرِ محقَّق** — لا رسالةَ رفض.
 
@@ -227,6 +243,15 @@ def message_for(error: dict) -> str:
     if kind == "string_too_long":
         long = "طويلةٌ جداً" if _fem(subject) else "طويلٌ جداً"
         return f"{subject} {long} — {chars(int(ctx.get('max_length') or 0))} على الأكثر"
+    # **قائمةٌ تتجاوز سقفَها** (عقدُ الأخطاء §17): كان `too_long` بلا معالجٍ
+    # فيسقط إلى «هذه القيمة غير صالحة» — **رسالةٌ لا تقول الحدَّ ولا تقول ما
+    # يُفعل**. قِيس على `stops` بثلاث محطات (2026-08-23).
+    if kind == "too_long":
+        cap = int(ctx.get("max_length") or 0)
+        return f"{subject} {items(cap, 'واحدةٌ على الأكثر', 'اثنتان على الأكثر', 'على الأكثر', 'على الأكثر')}"
+    if kind == "too_short":
+        floor = int(ctx.get("min_length") or 0)
+        return f"{subject} {items(floor, 'واحدةٌ على الأقل', 'اثنتان على الأقل', 'على الأقل', 'على الأقل')}"
     if kind == "string_pattern_mismatch":
         return f"{subject} بصيغةٍ غير صحيحة"
     if kind == "enum":

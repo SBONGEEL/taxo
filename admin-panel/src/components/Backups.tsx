@@ -19,7 +19,8 @@ import {
   getBackupState,
   runBackupNow,
   updateBackupSettings,
-, backupDownloadUrl } from "@/api/endpoints";
+  backupDownloadUrl,
+} from "@/api/endpoints";
 import type { BackupRow, BackupState } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";

@@ -131,6 +131,48 @@ class RideListItem(BaseModel):
     settlement: SettlementState
 
 
+def stops_of(ride: "Ride", moment: datetime) -> list["RideStopOut"]:
+    """محطاتُ الرحلة كما تُنشر — **بانٍ واحدٌ يناديه بابان**.
+
+    يناديه `RideOut.from_ride` لشاشتَي الراكب والكبتن، **ويناديه بابُ اللوحة**
+    (`GET /admin/rides/{id}`). وقبلَه كانت اللوحةُ تُنشر بلا محطاتٍ البتّة —
+    فالمشرفُ يرى مجموعَ رسم الوقوف ولا يرى **عند أيِّ محطةٍ ولا كم** (قِيس
+    2026-08-23). **وحلُّه بانٍ ثانٍ يشبه الأول هو الشكلُ الثامن بعينه**: بابان
+    ينشران الشيءَ نفسَه ويفترقان أوّلَ تعديل — فالاشتقاقُ من موضعٍ واحد.
+
+    و`moment` نقطةُ قياس الانتظار: تُمرَّر في الاختبارات وتُترك للحظة في
+    التشغيل. **ويحتاج `ride.stops` محمّلةً** — وهي `lazy="selectin"`.
+    """
+    from app.services import pricing
+
+    return [
+        RideStopOut(
+            id=stop.id,
+            sequence=stop.sequence,
+            lat=stop.lat,
+            lng=stop.lng,
+            address=stop.address,
+            arrived_at=stop.arrived_at,
+            resumed_at=stop.resumed_at,
+            waited_minutes=pricing.round_money(pricing.waiting_minutes(stop, moment)),
+            waiting_charge=pricing.waiting_charge(
+                [stop],
+                free_minutes=ride.stop_free_minutes_at_ride,
+                price_per_min=ride.stop_price_per_min_at_ride,
+                now=moment,
+            ),
+            over_max_wait=(
+                ride.stop_max_wait_minutes_at_ride > 0
+                and stop.arrived_at is not None
+                and stop.resumed_at is None
+                and pricing.waiting_minutes(stop, moment)
+                > ride.stop_max_wait_minutes_at_ride
+            ),
+        )
+        for stop in ride.stops
+    ]
+
+
 class RideStopOut(BaseModel):
     """محطةٌ وسيطة كما يراها الطرفان — ومعها **ما استحقّ عندها**.
 
@@ -309,37 +351,13 @@ class RideOut(BaseModel):
         التشغيل. **يحتاج `ride.stops` محمّلةً** — وهي `lazy="selectin"` فتصل
         مع الرحلة بلا نداءٍ ثانٍ.
         """
+        # **`pricing` يبقى هنا** رغم انتقال بناء المحطات إلى `stops_of`:
+        # `pause_charge` أدناه يستعمله. وحذفُه مع النقل كسر `from_ride` كلَّها
+        # بـ`NameError` — ظهر ٥٠٠ على **إلغاء رحلة** لأن البثَّ يمرّ من هنا.
         from app.services import pricing
 
         moment = now or datetime.now(UTC)
-        stops = [
-            RideStopOut(
-                id=stop.id,
-                sequence=stop.sequence,
-                lat=stop.lat,
-                lng=stop.lng,
-                address=stop.address,
-                arrived_at=stop.arrived_at,
-                resumed_at=stop.resumed_at,
-                waited_minutes=pricing.round_money(
-                    pricing.waiting_minutes(stop, moment)
-                ),
-                waiting_charge=pricing.waiting_charge(
-                    [stop],
-                    free_minutes=ride.stop_free_minutes_at_ride,
-                    price_per_min=ride.stop_price_per_min_at_ride,
-                    now=moment,
-                ),
-                over_max_wait=(
-                    ride.stop_max_wait_minutes_at_ride > 0
-                    and stop.arrived_at is not None
-                    and stop.resumed_at is None
-                    and pricing.waiting_minutes(stop, moment)
-                    > ride.stop_max_wait_minutes_at_ride
-                ),
-            )
-            for stop in ride.stops
-        ]
+        stops = stops_of(ride, moment)
         # **الوقفةُ تُحسب من الصفوف المحمَّلة لا باستعلام**: `from_ride` يُنادى
         # في بثِّ المقبس حيث لا جلسة
         from app.services import pauses as pauses_service

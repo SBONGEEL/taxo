@@ -238,7 +238,7 @@ export function VehicleSkinsScreen() {
       const created = await createVehicleSkin(payloadOf(draft));
       // **الرسمةُ خطوةٌ ثانيةٌ بحكم العقد** (`multipart` لا JSON) — وتقع فوراً
       // فلا تبقى مركبةٌ بلا رسمةٍ في الكتالوج
-      if (file) await uploadSkinArtwork(created.id, file);
+      if (file) await uploadSkinArtwork(created.id, "store", file);
       else if (assetKey) await attachSkinAsset(created.id, assetKey);
       setDraft(EMPTY);
       setFile(null);
@@ -762,7 +762,7 @@ function ReplaceArtwork({
   async function save() {
     setBusy(true);
     try {
-      if (file) await uploadSkinArtwork(row.id, file);
+      if (file) await uploadSkinArtwork(row.id, "store", file);
       else if (assetKey) await attachSkinAsset(row.id, assetKey);
       if (scale !== row.map_scale_percent) {
         await updateVehicleSkin(row.id, { map_scale_percent: scale });

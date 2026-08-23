@@ -680,6 +680,21 @@ export interface RidePoint {
 
 export type CancelReasonCode = "gender_mismatch" | "other";
 
+/** محطةٌ وسيطة كما ينشرها بابُ اللوحة — **مرآةُ `RideStopOut` بحرفها**،
+ *  ومصدرُها البانِي نفسُه الذي يقرؤه التطبيقان (`schemas/ride.stops_of`). */
+export interface AdminRideStop {
+  id: string;
+  sequence: number;
+  lat: number;
+  lng: number;
+  address: string | null;
+  arrived_at: string | null;
+  resumed_at: string | null;
+  waited_minutes: string;
+  waiting_charge: string;
+  over_max_wait: boolean;
+}
+
 export interface AdminRideDetail extends AdminRideRow {
   pickup_lat: number;
   pickup_lng: number;
@@ -693,6 +708,9 @@ export interface AdminRideDetail extends AdminRideRow {
   stops_charge: string;
   waiting_charge: string;
   pause_charge: string;
+  /** صفوفُ المحطات — **لا عددُها وحدَه**. بغيرها يفصل المشرفُ في نزاع
+   *  انتظارٍ وهو يرى المجموع ولا يرى عند أيِّ محطةٍ وقف ولا كم. */
+  stops: AdminRideStop[];
   gender_preference: GenderPreference;
   cancelled_reason: string | null;
   cancel_reason_code: CancelReasonCode | null;

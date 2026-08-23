@@ -23,6 +23,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.ride import RideStopOut
 from app.services.settlement import SettlementState
 from app.models.enums import (
     CountryCode,
@@ -134,6 +135,11 @@ class AdminRideDetail(AdminRideRow):
     stops_charge: Decimal
     waiting_charge: Decimal
     pause_charge: Decimal
+    # **والمحطاتُ بصفوفها لا بعددها** (عطبٌ مقيسٌ 2026-08-23): كانت اللوحةُ
+    # تنشر `stops_count` والمالَ وحدَه، **فيفصل المشرفُ في نزاع انتظارٍ وهو
+    # لا يرى عند أيِّ محطةٍ وقف ولا كم** — يرى المجموع. وهي `RideStopOut`
+    # نفسُها التي يقرؤها التطبيقان، **بانٍ واحدٌ لا شكلٌ ثانٍ يشبهه**.
+    stops: list[RideStopOut]
 
     payments: list[RidePaymentOut]
     ratings: list[RideRatingOut]

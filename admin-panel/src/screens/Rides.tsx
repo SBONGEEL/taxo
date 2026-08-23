@@ -50,6 +50,10 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { moment, money } from "@/lib/format";
+
+/** دورةُ الاستطلاع — **رقمُ `LiveMap` نفسُه** (`REFRESH_MS`)، فلا رقمان
+ *  لدورةٍ واحدة في لوحةٍ واحدة. */
+const RIDES_REFRESH_MS = 5_000;
 import { digits, cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<RideStatus, string> = {
@@ -110,23 +114,38 @@ export function RidesScreen() {
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setRows(null);
-    setRows(
-      await listRides({
-        country_code: country,
-        ride_status: filter === "all" ? undefined : filter,
-        q: query || undefined,
-      }),
-    );
-  }, [country, filter, query]);
+  // **يستطلع كما تفعل الخريطةُ الحيّة** (عطبٌ مقيسٌ 2026-08-23): كانت الشاشةُ
+  // لقطةً تُقرأ متابعةً — الرحلةُ `in_progress` في القاعدة **والسجلُّ يعرضها
+  // «مقبولة»** بعد `arrive` وبعد `start`. ولا حارسَ يمسك هذا: البابُ له زرّ،
+  // والفعلُ والمسارُ صحيحان — **والسؤالُ سؤالُ زمنٍ لا سؤالُ بنية** (الشكلُ
+  // الرابعَ عشر). و٥ ثوانٍ هو رقمُ `LiveMap` نفسُه، فلا رقمان لدورةٍ واحدة.
+  const load = useCallback(
+    async (silent = false) => {
+      // **الصامتُ لا يُفرِّغ الجدول**: `setRows(null)` كلَّ خمسِ ثوانٍ يومض
+      // الشاشةَ ويُفقد موضعَ التمرير — فالتفريغُ للتبديل اليدويّ وحدَه
+      if (!silent) setRows(null);
+      setRows(
+        await listRides({
+          country_code: country,
+          ride_status: filter === "all" ? undefined : filter,
+          q: query || undefined,
+        }),
+      );
+    },
+    [country, filter, query],
+  );
 
   useEffect(() => {
-    load().catch((caught) =>
+    const fail = (caught: unknown) =>
       setError(
         caught instanceof ApiError ? caught.message : "تعذّر قراءة السجل",
-      ),
+      );
+    load().catch(fail);
+    const timer = window.setInterval(
+      () => void load(true).catch(fail),
+      RIDES_REFRESH_MS,
     );
+    return () => window.clearInterval(timer);
   }, [load]);
 
   return (
@@ -420,6 +439,45 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
             value={money(ride.pause_charge, ride.currency)}
             hint="وقفاتٌ ضغطها الكبتن بعد الانطلاق (§5.10-ب)"
           />
+        ) : null}
+        {/* **المحطاتُ بصفوفها** (عطبٌ مقيسٌ 2026-08-23): كان المشرفُ يرى
+            «رسم المحطات ١٫٠٠٠ · ٢ محطة» **ولا يرى عند أيِّ محطةٍ وقف ولا كم**
+            — فلا يفصل في نزاع انتظارٍ بدليل. وكلُّ رقمٍ هنا **يصل محسوباً**
+            من البانِي نفسِه الذي يقرؤه التطبيقان (§14). */}
+        {ride.stops.length > 0 ? (
+          <div className="mt-10 rounded-12 border border-line bg-bg p-12">
+            <p className="mb-8 text-12 font-semibold text-ink">
+              المحطات ({digits(String(ride.stops.length))})
+            </p>
+            <ol className="space-y-8">
+              {ride.stops.map((stop) => (
+                <li key={stop.id} className="flex items-start justify-between gap-10">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-12 text-ink">
+                      {digits(String(stop.sequence))}.{" "}
+                      {stop.address ?? "نقطة على الخريطة"}
+                    </span>
+                    <span className="block text-11 text-muted">
+                      {stop.arrived_at
+                        ? `وصل ${moment(stop.arrived_at)}${
+                            stop.resumed_at ? ` · استأنف ${moment(stop.resumed_at)}` : " · لم يستأنف بعد"
+                          }`
+                        : "لم يصلها بعد"}
+                      {stop.over_max_wait ? " · تجاوز السقف" : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-end">
+                    <span className="block text-12 text-ink">
+                      {money(stop.waiting_charge, ride.currency)}
+                    </span>
+                    <span className="block text-11 text-muted">
+                      {digits(stop.waited_minutes)} دقيقة
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
         ) : null}
         <Row
           label="عمولة المنصة"

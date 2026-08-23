@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query
 
@@ -30,6 +30,7 @@ from app.schemas.admin_ride import (
     RidePointOut,
     RideRatingOut,
 )
+from app.schemas.ride import stops_of
 from app.services import pricing, ride_log, rides as rides_service
 
 router = APIRouter(prefix="/admin/rides", tags=["admin"])
@@ -146,6 +147,10 @@ async def get_ride(
         ),
         waiting_charge=await rides_service.waiting_charge_for(session, ride),
         pause_charge=await rides_service.pause_charge_for(session, ride),
+        # **من البانِي نفسِه الذي يقرؤه التطبيقان** (`schemas/ride.stops_of`):
+        # فما يراه المشرفُ عند كلِّ محطةٍ هو ما رآه الراكبُ والكبتن — لا رقمٌ
+        # ثانٍ يشبهه
+        stops=stops_of(ride, datetime.now(UTC)),
         payments=[
             RidePaymentOut(
                 id=payment.id,

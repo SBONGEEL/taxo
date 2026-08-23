@@ -1036,12 +1036,28 @@ export const previewSkinArtwork = (file: File, options?: UploadOptions) =>
     options,
   );
 
-/** `PUT` لأن العمليةَ **إحلال**: للمركبة رسمةٌ واحدة لا رسمتان. */
+/** `PUT` لأن العمليةَ **إحلال** — والخانةُ صريحةٌ لأن للمركبة **شكلين**.
+ *
+ * **وهذا السطرُ كان يقول عكسَ ما يقول اليوم** (صُحّح 2026-08-23): كان مكتوباً
+ * «للمركبة رسمةٌ واحدة لا رسمتان»، **وكان صحيحاً ثم صار خطأً** — قرارُ §28
+ * جعل لكلِّ مركبةٍ مجسّماً للمتجر وعلويّةً للخريطة، والخلفيةُ نقلت البابَ إلى
+ * `…/artwork/{slot}`. **وظلَّ النداءُ على المسار القديم فكان يردّ ٤٠٤** —
+ * أمسكه `check:contract` وأوقف بناءَ اللوحة.
+ *
+ * **ونصفُ قرار المالك (أ) وحدَه هو المبنيُّ هنا**: النداءُ صار صحيحاً.
+ * **ولم تُبنَ حالةُ «خانةٌ فارغة» صريحةً** — فمن رفع للمتجر تبقى علويّتُه
+ * فارغةً بلا سطرٍ يقولها، وهو بندٌ مسجَّلٌ لا منجَز. */
 export const uploadSkinArtwork = (
   skinId: string,
+  slot: "store" | "map",
   file: File,
   options?: UploadOptions,
-) => upload<AdminSkin>(`/admin/vehicle-skins/${skinId}/artwork`, file, options);
+) =>
+  upload<AdminSkin>(
+    `/admin/vehicle-skins/${skinId}/artwork/${slot}`,
+    file,
+    options,
+  );
 
 export const attachSkinAsset = (skinId: string, assetKey: string) =>
   api.put<AdminSkin>(`/admin/vehicle-skins/${skinId}/asset/${assetKey}`);
