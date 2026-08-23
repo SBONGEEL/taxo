@@ -497,6 +497,18 @@ def deduction_for(
     return max(Decimal("0"), min(by_percent, remaining, room))
 
 
+#: **نصُّ الاقتطاع — في سجلٍّ لا في موضع النداء.** جملةٌ تُكتب حيث تُستعمل
+#: تُنسخ عند ثاني مُستعمِل، فتفترق النسختان أوّلَ تعديل.
+_REPAYMENT_NOTE = "اقتطاع سداد سلفة — المتبقّي {remaining}"
+#: **وحين يكون البابُ مغلقاً يُقال ذلك صراحةً**: السدادُ مستمرٌّ لأن الدَّينَ
+#: قائم، **وطلبُ سلفةٍ جديدة موقوف** — والجملتان معاً تمنعان قراءةَ النقص
+#: عطباً أو ظلماً.
+_REPAYMENT_NOTE_WHILE_CLOSED = (
+    "اقتطاع سداد سلفة — المتبقّي {remaining}. "
+    "السداد مستمرّ، وطلبُ سلفةٍ جديدة موقوفٌ في سوقك حالياً"
+)
+
+
 async def deduct_from_earning(
     session: AsyncSession,
     *,
@@ -524,6 +536,18 @@ async def deduct_from_earning(
     if amount <= 0:
         return Decimal("0")
 
+    # **والإطفاءُ يمنع الجديدَ ولا يمحو القائم** (SPEC §4، قرارُ المالك
+    # 2026-08-23): الدَّينُ حقٌّ نشأ **قبل** الإطفاء، وإيقافُ سداده يجعل
+    # المفتاحَ **باباً للتهرّب** — من عليه دَينٌ يستفيد من إطفاءٍ لم يُقرَّر
+    # لأجله. **فالاقتطاعُ يمضي.**
+    #
+    # **والعطبُ ليس الاقتطاع بل صمتُه**: كبتنٌ يُقتطع منه وبابُ السلف مغلقٌ
+    # **لا يجد ما يفسّر النقص** — ولا شاشةَ يسأل منها لأن قسمَ السلف مخفيّ.
+    # **فالسببُ يسافر مع القيد** ولا تخترعه الشاشة: `reference` يُقرأ في
+    # المحفظة **وفي تفصيل الرحلة** (القيدُ يحمل `ride_id`)، ومن يسأل «لماذا
+    # نقص هذا المبلغ؟» يسأل عن **رحلةٍ بعينها**.
+    note = _REPAYMENT_NOTE if policy.enabled else _REPAYMENT_NOTE_WHILE_CLOSED
+
     try:
         await wallet.record(
             session,
@@ -532,6 +556,7 @@ async def deduct_from_earning(
             amount=-amount,
             ride_id=ride_id,
             advance_id=advance.id,
+            reference=note.format(remaining=round_money(remaining - amount)),
             idempotency_key=f"advance_repay:{payment_id}",
         )
     except InsufficientBalance:

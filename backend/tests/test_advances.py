@@ -26,6 +26,7 @@ from app.models.enums import (
     WalletTransactionType,
 )
 from app.models.subscription import DriverSubscription, SubscriptionPlan
+from app.models.user import User
 from app.models.wallet import WalletTransaction
 from app.services import advances as advances_service
 
@@ -800,3 +801,88 @@ async def test_setting_the_cap_needs_a_written_reason_and_is_audited(
     assert written, "ضبطُ سقفٍ بلا صفِّ تدقيق"
     assert written[-1].details["reason"] == "تكرار تأخر السداد"
     assert written[-1].actor_id is not None
+
+
+async def test_a_deduction_while_the_door_is_shut_leaves_a_visible_line(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**الإطفاءُ يمنع الجديدَ ولا يمحو القائم** — والاقتطاعُ يمضي **بسطرٍ يُرى**.
+
+    وهي قاعدةُ SPEC §4 بوجهها الثاني: الدَّينُ حقٌّ نشأ **قبل** الإطفاء،
+    وإيقافُ سداده يجعل المفتاحَ **باباً للتهرّب**.
+
+    **والعطبُ الذي يحرسه هذا الاختبارُ ليس الاقتطاع بل صمتُه**: كبتنٌ يُقتطع
+    منه وقسمُ السلف مخفيٌّ من شاشته **لا يجد ما يفسّر النقص**. **فالسببُ
+    يسافر مع القيد** (`reference`) ولا تخترعه الشاشة، والقيدُ يحمل `ride_id`
+    **فيُقرأ في تفصيل الرحلة كما يُقرأ في المحفظة**.
+
+    **ويمرّ بالمسار الحقيقيّ**: رحلةٌ تُنهى ودفعةٌ تُسوَّى، فالاقتطاعُ يقع من
+    `payments.settle` لا بنداءٍ مباشر — **ونداءٌ مباشرٌ يقيس دالّةً لا ميزة**.
+    """
+    from tests.helpers import (
+        NEAR_PICKUP,
+        bring_online,
+        completed_ride,
+        rider_session,
+        topup_wallet,
+    )
+    from app.models.feature_flag import FeatureFlag
+
+    await _enable(session_factory, min_kept_amount=Decimal("0"))
+    driver = await approved_driver(
+        client,
+        session_factory,
+        DRIVER | {"phone": "0796661508", "name": "كبتنُ البابِ المغلق"},
+        plate_number="AMM-1508",
+    )
+    await _qualify(session_factory, driver["driver_id"])
+    granted = await client.post(
+        "/drivers/me/advances", json={"amount": "2.000"}, headers=driver["headers"]
+    )
+    assert granted.status_code == 201, granted.text
+
+    # **ثم يُغلق الباب** — والسلفةُ قائمةٌ من قبله
+    async with session_factory() as session:
+        await session.execute(
+            update(FeatureFlag)
+            .where(
+                FeatureFlag.country_code == CountryCode.JO,
+                FeatureFlag.feature_key == FeatureKey.DRIVER_ADVANCES_ENABLED.value,
+            )
+            .values(enabled=False)
+        )
+        await session.commit()
+
+    rider = await rider_session(
+        client,
+        {**DRIVER, "phone": "0791115080", "name": "راكبُ البابِ المغلق", "role": "rider"},
+    )
+    await topup_wallet(client, admin_headers, rider["user"]["id"], "50.000")
+    await bring_online(client, driver, NEAR_PICKUP)
+    ride = await completed_ride(client, rider["headers"], driver)
+    paid = await client.post(
+        f"/rides/{ride['id']}/payments",
+        json={"method": "wallet", "idempotency_key": "advance-shut-pay"},
+        headers=rider["headers"],
+    )
+    assert paid.status_code == 201, paid.text
+
+    async with session_factory() as session:
+        entry = await session.scalar(
+            select(WalletTransaction)
+            .where(
+                WalletTransaction.owner_id == uuid.UUID(str(driver["user_id"])),
+                WalletTransaction.type == WalletTransactionType.ADVANCE_REPAYMENT,
+            )
+            .order_by(WalletTransaction.created_at.desc())
+        )
+
+    # **الاقتطاعُ وقع** — فالدَّينُ لا يُسقطه إطفاءُ مفتاح
+    assert entry is not None, "الإطفاءُ أوقف السداد — والدَّينُ حقٌّ نشأ قبله"
+    assert entry.amount < 0
+    # **وله سطرٌ يُرى**، وفيه أن الطلبَ موقوفٌ والسدادَ مستمرّ
+    assert entry.reference, "قيدٌ بلا سبب — فمن يقرأ النقصَ لا يجد تفسيره"
+    assert "موقوف" in entry.reference, entry.reference
+    assert "مستمرّ" in entry.reference, entry.reference
+    # **ومربوطٌ برحلةٍ بعينها**: من يسأل «لماذا نقص هذا المبلغ؟» يسأل عنها
+    assert entry.ride_id is not None
