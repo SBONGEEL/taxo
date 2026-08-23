@@ -25,6 +25,7 @@ import { usePhoneCountry } from "@/lib/config";
 import { looksComplete } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import {
+  cn,
   currencyLabel,
   formatMoney,
   newIdempotencyKey,
@@ -55,6 +56,11 @@ export function WalletTransferScreen() {
   // لا رقمَه وحدَه، والمبلغ، والرصيدَ بعده.
   const [confirming, setConfirming] = useState(false);
   const [balance, setBalance] = useState<string | null>(null);
+  /** **أقصرُ من المبلغ؟** — يُحسب مرةً ويُقرأ في موضعين: الرقمِ والزرّ. وهو
+   *  **عرضٌ لا قرار**: الخلفيةُ تبقى هي التي ترفض (§14)، وهذا يمنع الوصولَ
+   *  إلى الرفض لا يستبدله. */
+  const short =
+    balance !== null && Number(amount) > 0 && Number(amount) > Number(balance);
 
   // الرصيدُ يُقرأ ليُعرض «رصيدك بعده» — ولا يُحسب في المتصفح إلا للعرض:
   // الخلفيةُ ترفض ما يتجاوز الرصيد على أي حال (§14)
@@ -153,6 +159,20 @@ export function WalletTransferScreen() {
           />
         ) : null}
 
+        {/* **والعلّةُ مع الزرِّ لا داخلَ ورقةٍ لا تُفتح** (قرارُ المالك
+            2026-08-23): إطفاءُ الزرِّ وحدَه يترك صاحبَه أمام زرٍّ ميّتٍ بلا
+            سبب — **وهو أسوأُ من زرٍّ يعمل ثم يرتدّ**، لأن الثاني يقول شيئاً.
+            وتقول الرقمَ الذي يملكه كي لا يخمّن. */}
+        {short ? (
+          <p className="rounded-12 border border-warn bg-surface-2 px-13 py-10 text-12 leading-relaxed text-muted">
+            رصيدك لا يكفي — المتاح{" "}
+            <b className="text-ink">
+              {formatMoney(balance ?? "0", country?.currency)}
+            </b>
+            . اشحن محفظتك أو أنقص المبلغ.
+          </p>
+        ) : null}
+
         <ErrorNote message={error} />
         <SuccessNote message={done} />
 
@@ -160,7 +180,11 @@ export function WalletTransferScreen() {
           <Button
             size="lg"
             loading={busy}
-            disabled={Number(amount) <= 0}
+            // **ولا زرَّ حيٌّ على عمليةٍ سترتدّ** — الخلفيةُ ترفض ما يتجاوز
+            // الرصيد، **وزرٌّ يعمل ثم يردّ ٤٠٩ يعلّم صاحبَه أن يعيد الضغط**.
+            // وهو شكلُ ورقة السحب التي أُصلحت في المرحلة ١٣: «زرٌّ معطّلٌ يقول
+            // لماذا خيرٌ من زرٍّ يعمل ثم يرتدّ».
+            disabled={Number(amount) <= 0 || short}
             onClick={() => setConfirming(true)}
           >
             <ArrowLeftRight className="size-16" />
@@ -234,11 +258,23 @@ export function WalletTransferScreen() {
               {balance ? (
                 <div className="mt-6 flex items-baseline justify-between">
                   <span className="text-12.5 text-muted">رصيدك بعده</span>
-                  <span className="text-13 text-ink">
-                    {formatMoney(
-                      subtractMoney(balance, amount),
-                      country?.currency ?? "JOD",
-                    )}
+                  {/* **ولا يُعرض سالباً** (عطبٌ مقيسٌ على الجهاز 2026-08-23:
+                      رصيدٌ صفرٌ ومبلغُ 12.500 أعطى «رصيدك بعده −12.500 د.أ»).
+                      **و«رصيدك بعده» لا يكون سالباً بالتعريف**: التحويلُ لا
+                      يقع أصلاً، فالرقمُ يصف حالاً لن تكون. والسالبُ يُقرأ
+                      **ديناً**، ولا دَينَ هنا.
+                      **وهو الشكلُ الذي أُصلح مرةً في `withdrawals.available_balance`**
+                      — ولم يمسكه ذاك الحدُّ لأنه **موضعٌ آخر تماماً**: ذاك
+                      خلفيٌّ في مسار سحب الكبتن، وهذا **طرحٌ في المتصفّح** على
+                      شاشة تحويل الراكب. **حدٌّ في موضعٍ لا يحرس موضعاً ثانياً
+                      يحسب الشيءَ نفسَه.** */}
+                  <span className={cn("text-13", short ? "text-danger" : "text-ink")}>
+                    {short
+                      ? "لا يكفي رصيدك"
+                      : formatMoney(
+                          subtractMoney(balance, amount),
+                          country?.currency ?? "JOD",
+                        )}
                   </span>
                 </div>
               ) : null}

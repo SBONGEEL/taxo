@@ -15,6 +15,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { certify } from "../../tools/certify.mjs";
 
 const config = (await import(pathToFileURL(join(process.cwd(), "tailwind.config.js")))).default;
 const theme = config.theme;
@@ -98,4 +99,4 @@ if (problems.length > 0) {
   );
   process.exit(1);
 }
-console.log("✓ كل الأصناف الرقمية داخل سلّم DESIGN.md");
+certify("check:scale", "✓ كل الأصناف الرقمية داخل سلّم DESIGN.md");

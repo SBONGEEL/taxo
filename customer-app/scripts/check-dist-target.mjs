@@ -28,6 +28,7 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { certify } from "../../tools/certify.mjs";
 
 const DIST = new URL("../dist/", import.meta.url).pathname.replace(
   /^\/([A-Za-z]:)/,
@@ -107,4 +108,4 @@ if (offenders.length) {
   process.exit(1);
 }
 
-console.log(`✓ dist يوافق هدفَه (${target}) ولا عنوانَ محليّاً فيه`);
+certify("check:dist-target", `✓ dist يوافق هدفَه (${target}) ولا عنوانَ محليّاً فيه`);

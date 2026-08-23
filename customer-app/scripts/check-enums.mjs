@@ -15,6 +15,7 @@
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { certify } from "../../tools/certify.mjs";
 
 const BACKEND = join(process.cwd(), "..", "backend", "app");
 const SRC = join(process.cwd(), "src");
@@ -118,4 +119,4 @@ if (problems.length > 0) {
   );
   process.exit(1);
 }
-console.log("✓ كل اتحادات السلاسل تطابق تعدادات الخلفية");
+certify("check:enums", "✓ كل اتحادات السلاسل تطابق تعدادات الخلفية");

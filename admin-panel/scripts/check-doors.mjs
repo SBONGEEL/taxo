@@ -21,6 +21,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { certify } from "../../tools/certify.mjs";
 
 const ROOT = new URL("../..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const ROUTERS = join(ROOT, "backend", "app", "routers");
@@ -167,6 +168,6 @@ if (staleExemptions.length > 0) {
   process.exit(1);
 }
 
-console.log(
+certify("check:doors", 
   `✓ كل المسارات الإدارية (${routes.length}) لها زرٌّ أو علّةٌ مكتوبة (${DELIBERATE.size})`,
 );

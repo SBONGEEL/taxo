@@ -17,6 +17,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { certify } from "./certify.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const ROUTERS = join(ROOT, "backend", "app", "routers");
@@ -247,7 +248,7 @@ if (jumpers.length > 0) {
   process.exit(1);
 }
 
-console.log(
+certify("check:contract", 
   `✓ كل نداءات الواجهة (${checked}) تقابل فعلاً ومساراً في الخلفية` +
     (unresolved ? ` · وتعذّر الحكمُ على ${unresolved} (عنوانٌ من متغيّر)` : ""),
 );

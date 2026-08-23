@@ -23,6 +23,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import { argv, exit } from "node:process";
 import { createRequire } from "node:module";
+import { certify } from "./certify.mjs";
 
 /** **`typescript` يُحلّ من التطبيق المفحوص لا من `admin-panel` ثابتاً.**
  *
@@ -211,6 +212,6 @@ if (scannedLib === 0) {
   console.error("  (وقع مقيساً 2026-08-20: فحصُ المسار افترض `/` فاصلاً فلم يطابق ويندوز.)");
   exit(1);
 }
-console.log(
+certify("check:readers", 
   `✓ كل حقلٍ مُصدَّرٍ في \`lib/\` له قارئ — قُرئ ${scannedLib} ملفَّ \`lib/\` (${APPS.join("، ")})`,
 );

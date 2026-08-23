@@ -33,6 +33,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { certify } from "../../tools/certify.mjs";
 
 const SCHEMAS = join(process.cwd(), "..", "backend", "app", "schemas");
 const TYPES = join(process.cwd(), "src", "api", "types.ts");
@@ -165,4 +166,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(`✓ كل حقول الحمولات المرصودة (${checked}) لها مرآة في api/types.ts`);
+certify("check:config", `✓ كل حقول الحمولات المرصودة (${checked}) لها مرآة في api/types.ts`);

@@ -18,6 +18,7 @@
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { argv, exit } from "node:process";
+import { certify } from "./certify.mjs";
 
 const app = argv[2];
 if (!app) {
@@ -93,4 +94,4 @@ if (staleExemptions.length) {
 }
 if (bad) exit(1);
 
-console.log(`✓ كلُّ مسارٍ مُصرَّحٍ له زرٌّ — و${Object.keys(DELIBERATE).length} استثناءاتٍ بعللها`);
+certify("check:client-doors", `✓ كلُّ مسارٍ مُصرَّحٍ له زرٌّ — و${Object.keys(DELIBERATE).length} استثناءاتٍ بعللها`);

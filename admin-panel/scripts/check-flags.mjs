@@ -23,6 +23,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { certify } from "../../tools/certify.mjs";
 
 const BACKEND_ENUMS = join(
   process.cwd(),
@@ -112,6 +113,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(
+certify("check:flags", 
   `✓ كل مفاتيح الميزات (${expected.length}) لها زرٌّ في شاشة الإعدادات`,
 );

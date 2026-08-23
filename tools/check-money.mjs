@@ -24,6 +24,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { argv, exit } from "node:process";
 import { createRequire } from "node:module";
+import { certify } from "./certify.mjs";
 
 /** **`typescript` يُحلّ من التطبيق المفحوص لا من `admin-panel` ثابتاً.**
  *
@@ -168,6 +169,6 @@ if (scanned === 0) {
   console.error("✗ لم يُقرأ ملفٌ واحد — وحارسٌ لا يقرأ شيئاً يمرّ أخضرَ أبداً.");
   exit(1);
 }
-console.log(
+certify("check:money", 
   `✓ كل مبلغٍ يُمرَّر برمز عملته لا بعلامتها — قُرئ ${scanned} ملفاً (${APPS.join("، ")})`,
 );

@@ -24,6 +24,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { certify } from "./certify.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -42,7 +43,9 @@ const DELIBERATE = {
   // وقت، والمبلغُ وحدَه يأتي محسوباً (§14 و`StopProgress.tsx`). **فالحقلُ
   // يخدم من يقرأ الـAPI لا شاشةَ الراكب.** وهو مقروءٌ في الكبتن واللوحة.
   "customer-app:RideStopOut.waited_minutes":
-    "العدّادُ يُرسم محلياً من `arrived_at` — عرضُ الوقت حسابُ وقت (§14)",
+    "العدّادُ يُرسم محلياً بالثواني من `arrived_at` — وقراءةُ رقم الخلفية " +
+    "**تُجمّده بين استطلاعين**، وهو عطبُ عدّاد الكبتن المُصلَح في دفعة الستّة " +
+    "(طُبع `waited_minutes` فتجمّد عند «٠ دقيقة»). فالغيابُ هنا **شرطٌ لا فجوة**.",
 };
 
 function files(dir, out = []) {
@@ -134,6 +137,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(
+certify("check:published-readers", 
   `✓ كلُّ حقلٍ منشورٍ له مرآةٌ له قارئ (فُحص ${checked}، وفجواتٌ مكتوبةٌ ${Object.keys(DELIBERATE).length})`,
 );

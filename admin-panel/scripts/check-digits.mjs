@@ -24,6 +24,7 @@ import { join, relative } from "node:path";
 import process from "node:process";
 
 import ts from "typescript";
+import { certify } from "../../tools/certify.mjs";
 
 const ROOT = process.cwd();
 const ARABIC_INDIC = /[٠-٩۰-۹]/;
@@ -116,4 +117,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("✓ كل الأرقام المعروضة لاتينية");
+certify("check:digits", "✓ كل الأرقام المعروضة لاتينية");

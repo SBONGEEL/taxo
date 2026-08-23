@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { argv, env, exit } from "node:process";
+import { certify } from "./certify.mjs";
 
 const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const MANIFEST = join(ROOT, "landing", "downloads", "manifest.json");
@@ -189,4 +190,4 @@ if (bad > 0) {
   }
   exit(1);
 }
-console.log("\n✓ البصمةُ واحدةٌ في كل موضعٍ قِيس.");
+certify("check:apk", "\n✓ البصمةُ واحدةٌ في كل موضعٍ قِيس.");

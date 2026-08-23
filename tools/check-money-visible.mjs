@@ -39,6 +39,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import { exit } from "node:process";
+import { certify } from "./certify.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const APPS = ["customer-app", "driver-app", "admin-panel"];
@@ -159,6 +160,6 @@ if (unread.length || stale.length) {
   exit(1);
 }
 
-console.log(
+certify("check:money-visible", 
   `✓ كلُّ مبلغٍ في المخططات (${fields.size}) يقرؤه تطبيقٌ — قُرئ ${files} ملفَّ واجهة.`,
 );

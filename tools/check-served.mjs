@@ -25,6 +25,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { argv, env, exit } from "node:process";
+import { certify } from "./certify.mjs";
 
 const APPS = {
   "admin-panel": { port: 5175, host: "admin.tajora.ly" },
@@ -130,7 +131,7 @@ if (unmeasured.length > 0) {
       "    الحارسُ أصلاً: يبقى شرطاً بشرياً (`HANDOFF.md` §٦).",
   );
 } else {
-  console.log(
+  certify("check:served", 
     "\n✓ الثلاثةُ متطابقة. **وما على الهاتف خارج هذا القياس** — يبقى شرطاً بشرياً.",
   );
 }

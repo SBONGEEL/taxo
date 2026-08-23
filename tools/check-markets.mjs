@@ -31,6 +31,7 @@
 
 import { readFileSync } from "node:fs";
 import { argv, exit } from "node:process";
+import { certify } from "./certify.mjs";
 
 /** اختلافاتٌ **مقصودةٌ بقرار**، ولكلٍّ نصُّ سببه — لا قائمةَ أعذارٍ صامتة.
  *  ويُقاس طولُ السبب: عذرٌ بلا سبب يسقط الفحصَ أيضاً. */
@@ -151,4 +152,4 @@ if (problems.length) {
   console.error("\n  إمّا يُنقل الصفُّ، أو يُكتب سببُه في `DELIBERATE`.");
   exit(1);
 }
-console.log("\n✓ السوقُ الحيُّ يوافق ما يُشحن، أو يفترق بقرارٍ مكتوب.");
+certify("check:markets", "\n✓ السوقُ الحيُّ يوافق ما يُشحن، أو يفترق بقرارٍ مكتوب.");

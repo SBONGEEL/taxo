@@ -33,6 +33,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
+import { certify } from "../../tools/certify.mjs";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
@@ -168,4 +169,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(`✓ ${sheets} ورقةً بسقفٍ وتمرير (قُرئ ${scanned} ملفّاً)`);
+certify("check:sheet", `✓ ${sheets} ورقةً بسقفٍ وتمرير (قُرئ ${scanned} ملفّاً)`);
