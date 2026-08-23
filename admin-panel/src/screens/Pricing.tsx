@@ -19,6 +19,8 @@
  * يقع الآن.
  */
 
+import { GuardBanner } from "@/components/GuardBanner";
+import { useCountryConfig } from "@/lib/config";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -106,6 +108,8 @@ const EMPTY: Record<FieldKey, string> = {
 
 export function PricingScreen() {
   const { country } = useCountry();
+  // **تجميدُ التسعير**: يوقف الكتابةَ لا التسعير — والأزرارُ تُعطَّل بعلّتها
+  const frozen = useCountryConfig(country)?.features.pricing_writes_enabled === false;
   const { isAdmin } = useSession();
 
   const [rules, setRules] = useState<PricingRule[] | null>(null);
@@ -134,6 +138,11 @@ export function PricingScreen() {
         title="التسعيرة"
         subtitle="السعرُ يُحسب في الخلفية وحدها — وهذه الحقول ما تُحسب منه"
       >
+      <GuardBanner on={frozen} title="التسعيرُ مجمَّد">
+        لا يُنشأ صفٌّ ولا يُعدَّل ولا يُحذف حتى يُرفع التجميد من «الإعدادات».
+        <b className="text-ink"> والرحلاتُ تُسعَّر بالصفوف القائمة كما هي</b> —
+        فلا شيءَ توقّف على الراكب. ورفعُ التجميد لا يستردّ ما كُتب قبله.
+      </GuardBanner>
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
@@ -147,7 +156,7 @@ export function PricingScreen() {
               country={country}
               category={category}
               rule={rules.find((rule) => rule.vehicle_category === category)}
-              canEdit={isAdmin}
+              canEdit={isAdmin && !frozen}
               onDone={(message) => {
                 setDone(message);
                 setError(null);

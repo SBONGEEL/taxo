@@ -16,6 +16,9 @@
  * عقدٍ يرتدّ بخطأ. يظهر مع صفحة العقود.
  */
 
+import { GuardBanner } from "@/components/GuardBanner";
+import { useCountry } from "@/lib/country";
+import { useCountryConfig } from "@/lib/config";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
@@ -68,6 +71,10 @@ type Tab = "withdrawals" | "topups" | "cancellations" | "desk";
 
 export function FinanceScreen() {
   const { isAdmin } = useSession();
+  // **إيقافُ الصرف**: يمنع مغادرةَ المال — والطلباتُ والاعتمادُ يعملان
+  const { country } = useCountry();
+  const payoutStopped =
+    useCountryConfig(country)?.features.withdrawal_payout_enabled === false;
   const [tab, setTab] = useState<Tab>("withdrawals");
 
   const [withdrawals, setWithdrawals] = useState<Withdrawal[] | null>(null);
@@ -111,6 +118,11 @@ export function FinanceScreen() {
       title="المحافظ وطلبات السحب"
       subtitle="الموافقة قرارٌ إداري، والقيد في الدفتر يقع عند الدفع وحده"
     >
+      <GuardBanner on={payoutStopped} title="صرفُ السحوبات موقوف">
+        <b className="text-ink">المالُ لا يغادر</b> حتى يُستأنف من «الإعدادات».
+        والطلباتُ تُقبل والاعتمادُ يمرّ كما كان، والطلبُ يبقى «معتمَداً» في
+        مكانه — والكبتنُ يقرأ ذلك على طلبه فلا يظنّه ضاع.
+      </GuardBanner>
       <Pills
         value={tab}
         onPick={(key) => setTab(key as Tab)}
@@ -190,10 +202,14 @@ export function FinanceScreen() {
                     </>
                   ) : null}
                   {isAdmin && row.status === "approved" ? (
+                    // **يُعطَّل ولا يُخفى**: زرٌّ يعمل ثم يردّ ٤٠٣ يعلّم صاحبَه
+                    // أن يعيد الضغط، وزرٌّ يختفي يُقرأ عطباً في اللوحة
                     <button
                       type="button"
+                      disabled={payoutStopped}
+                      title={payoutStopped ? "صرفُ السحوبات موقوف" : undefined}
                       onClick={() => setPaying(row)}
-                      className="text-11.5 font-semibold text-ok"
+                      className="text-11.5 font-semibold text-ok disabled:text-muted"
                     >
                       سجّل التحويل
                     </button>

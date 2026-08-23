@@ -315,7 +315,11 @@ export type FeatureKey =
   | "driver_advances_enabled"
   | "next_instruction_enabled"
   | "driver_map_nearby_enabled"
-  | "country_visible";
+  | "country_visible"
+  // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
+  // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
+  | "pricing_writes_enabled"
+  | "withdrawal_payout_enabled";
 
 /** دولةٌ كما تراها اللوحةُ وحدَها — **بحالها لا مصفاةً** (SPEC §24).
  *

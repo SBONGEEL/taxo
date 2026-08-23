@@ -14,6 +14,7 @@
  * هنا سجلٌّ لا قائمةَ أشياءَ تُحرَّر — والتصحيح قيدُ `adjustment` مضاد.
  */
 
+import { useCountryConfig } from "@/lib/config";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -49,6 +50,13 @@ const HOLDING: ReadonlySet<Withdrawal["status"]> = new Set([
 export function WalletScreen() {
   const navigate = useNavigate();
   const { profile, refresh: refreshDriver } = useDriver();
+  // **الصرفُ موقوف** — يُقال لصاحب الطلب المعتمَد، وهو مالُ إنسانٍ ينتظره.
+  // **ولا `useFeature` هنا**: تلك تقرأ «مفعَّلة؟» فتردّ `false` على غيابِ
+  // إعدادٍ لم يصل بعد — فيُعلَن الإيقافُ على شبكةٍ بطيئة. وهذا **حارسٌ غيابُه
+  // يعمل**، فيُسأل عن `=== false` صراحةً.
+  const payoutStopped =
+    useCountryConfig(profile?.user?.country_code)?.features
+      .withdrawal_payout_enabled === false;
 
   const [wallet, setWallet] = useState<DriverWallet | null>(null);
   const [entries, setEntries] = useState<WalletTransaction[]>([]);
@@ -147,6 +155,17 @@ export function WalletScreen() {
             <p className="text-11.5 text-warn">
               لديك {digits(String(holds.length))} طلبات سحب قائمة تحجز من
               رصيدك — تفصيلُها في «طلبات السحب».
+            </p>
+          ) : null}
+
+          {/* **الصرفُ موقوفٌ مؤقتاً**: يُقال لمن طلبُه معتمَدٌ وحدَه — من
+              طلبُه `pending` ينتظر قراراً بشرياً لا صرفاً، وإخبارُه يخلط
+              انتظارين. **وصمتُنا هنا يجعله يظنّ طلبَه ضاع**، وهو الفرقُ عن
+              مفتاح التسعير: ذاك لا يراه أحدٌ خارج اللوحة، وهذا مالُ إنسان. */}
+          {payoutStopped && holds.some((hold) => hold.status === "approved") ? (
+            <p className="mt-8 text-11.5 leading-note text-warn">
+              اعتُمد طلبُك، والصرفُ متوقّفٌ مؤقّتاً — يبقى طلبُك في مكانه ويصلك
+              حين يُستأنف. ولا شيءَ نقص من رصيدك.
             </p>
           ) : null}
 
