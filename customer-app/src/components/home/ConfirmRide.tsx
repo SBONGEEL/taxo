@@ -326,7 +326,106 @@ export function ConfirmRide({
           : null;
 
   return (
-    <Sheet>
+    <Sheet
+      footer={
+        // **قدمٌ ثابتةٌ: المبلغُ والزرّ** (إذنُ المالك 2026-08-23). نُقلت كتلةُ
+        // السعر من موضعها فوق صفِّ الدفع إلى هنا — **وهو التغييرُ الشكليُّ
+        // الوحيدُ المأذونُ به في هذه الدفعة**. وعلّتُه أن السقفَ والتمريرَ
+        // يجعلان كلَّ سطرٍ **قابلاً للبلوغ** ولا يجعلانه **مرئياً**، ومن يضغط
+        // «اطلب» وقد مرّر الرقمَ خارج نظره يلتزم بمبلغٍ لا يقرؤه.
+        <div className="space-y-12">
+        <div className="rounded-12 border border-line bg-bg px-16 py-12">
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-8 text-14 text-muted"
+              >
+                <RefreshCw className="size-16 animate-spin" />
+                نحسب السعر المقدّر…
+              </motion.div>
+            ) : estimate ? (
+              <motion.div
+                key="estimate"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-end justify-between"
+              >
+                <div>
+                  <p className="text-12 text-muted">السعر المقدّر</p>
+                  {applied ? (
+                    // **الأصلُ مشطوبٌ والمخصومُ بارز**: رقمٌ واحدٌ بعد الخصم
+                    // يخفي أن هناك خصماً، ورقمان بلا شطبٍ يُقرآن مبلغين
+                    <p className="flex items-baseline gap-8">
+                      <span className="text-24 font-bold text-ok">
+                        {formatMoney(applied.fare_after, estimate.currency)}
+                      </span>
+                      <span className="text-14 text-muted line-through">
+                        {formatMoney(estimate.estimated_fare, estimate.currency)}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-24 font-bold text-ink">
+                      {formatMoney(estimate.estimated_fare, estimate.currency)}
+                    </p>
+                  )}
+                  {estimate.minimum_fare_applied ? (
+                    <p className="mt-2 text-12 text-muted">طُبِّق الحد الأدنى للأجرة</p>
+                  ) : null}
+                </div>
+                <div className="text-end text-14 text-muted">
+                  <p>{formatDistance(estimate.distance_km)}</p>
+                  <p>{formatDuration(estimate.duration_min)}</p>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+        {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — لا في المنطقة الممرَّرة: من
+            يضغط ويُرفَض يجب أن يقرأ السببَ في المكان الذي ضغط فيه. والشرطُ
+            هو الشرطُ الأول نفسُه معكوساً، فالسلوكُ لم يتغيّر: اللوحةُ
+            والسطرُ لا يجتمعان كما كانا في `if/else`. */}
+        {blockedByPreference ? null : (
+          <ErrorNote message={error ?? requestError} />
+        )}
+        {/* **السعرُ على الزرّ** (تصميمُ `requestLabel`): آخرُ ما تقع عليه العينُ
+            قبل الضغط هو الرقم — ويختفي وحدَه ما دام يُحسب، فرقمٌ قديمٌ على زرِّ
+            التزامٍ أسوأ من لا رقم. و«رجوع» بجانبه بثلثِ عرضه: مخرجٌ لا ندٌّ */}
+        <div className="flex gap-8">
+          <Button
+            size="lg"
+            className="w-auto flex-[3]"
+            loading={requesting}
+            disabled={!estimate || loading}
+            onClick={() =>
+              onRequest(category, preference, applied?.code, {
+                share: shareReady,
+                shareGenderConfirmed: shareReady && shareGuarded,
+              })
+            }
+          >
+            اطلب الرحلة
+            {shownFare && !loading ? (
+              <span className="font-medium">
+                · {formatMoney(shownFare, estimate?.currency)}
+              </span>
+            ) : null}
+          </Button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="pressable flex-1 rounded-12 border border-line py-15 text-13 font-semibold text-muted transition hover:bg-surface-2"
+          >
+            رجوع
+          </button>
+        </div>
+        </div>
+      }
+    >
       <div className="space-y-16 pb-16">
         {/* المسار: نقطتان وخطٌّ بينهما — أوضح من سطرين نصّيين */}
         <div className="flex gap-12">
@@ -420,57 +519,6 @@ export function ConfirmRide({
           </div>
         ) : null}
 
-        <div className="rounded-12 border border-line bg-bg px-16 py-12">
-          <AnimatePresence mode="wait">
-            {loading ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-8 text-14 text-muted"
-              >
-                <RefreshCw className="size-16 animate-spin" />
-                نحسب السعر المقدّر…
-              </motion.div>
-            ) : estimate ? (
-              <motion.div
-                key="estimate"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-end justify-between"
-              >
-                <div>
-                  <p className="text-12 text-muted">السعر المقدّر</p>
-                  {applied ? (
-                    // **الأصلُ مشطوبٌ والمخصومُ بارز**: رقمٌ واحدٌ بعد الخصم
-                    // يخفي أن هناك خصماً، ورقمان بلا شطبٍ يُقرآن مبلغين
-                    <p className="flex items-baseline gap-8">
-                      <span className="text-24 font-bold text-ok">
-                        {formatMoney(applied.fare_after, estimate.currency)}
-                      </span>
-                      <span className="text-14 text-muted line-through">
-                        {formatMoney(estimate.estimated_fare, estimate.currency)}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-24 font-bold text-ink">
-                      {formatMoney(estimate.estimated_fare, estimate.currency)}
-                    </p>
-                  )}
-                  {estimate.minimum_fare_applied ? (
-                    <p className="mt-2 text-12 text-muted">طُبِّق الحد الأدنى للأجرة</p>
-                  ) : null}
-                </div>
-                <div className="text-end text-14 text-muted">
-                  <p>{formatDistance(estimate.distance_km)}</p>
-                  <p>{formatDuration(estimate.duration_min)}</p>
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
 
         {/* **صفُّ طريقة الدفع** (تصميمُ الراكب، القراران 3 و26): يُعرض قبل
             الطلب لأن معرفةَ ما ستدفع به معلومةٌ صحيحةٌ ومفيدة، **ولا يُرسل مع
@@ -622,9 +670,12 @@ export function ConfirmRide({
               اقبل أي كبتن
             </button>
           </div>
-        ) : (
-          <ErrorNote message={error ?? requestError} />
-        )}
+        ) : null}
+        {/* **وسطرُ الخطأ انتقل إلى القدم فوق الزرّ** (قرارُ المالك 2026-08-23):
+            خطأٌ عن زرٍّ يجب أن يُرى مع الزرّ — ومن يضغط «اطلب» وسببُ الرفض
+            ممرَّرٌ خارج نظره يعيد الضغطَ على ما لن ينجح. **ولوحةُ
+            `blockedByPreference` بقيت هنا**: هي شرحٌ وزرُّ علاجٍ لا سطرَ خطأ
+            عن هذا الزرّ، ونقلُها إلى القدم يبتلع القدمَ كلَّها. */}
 
         {/* ملاحظةُ الدفع المختلط (`fareNote` في التصميم) — تحت الزرّ لا فوقه
             لأنها تصف ما سيقع بعد الضغط، وتظهر بشرطها وحده: صندوقٌ رماديٌّ دائم
@@ -635,37 +686,6 @@ export function ConfirmRide({
           </p>
         ) : null}
 
-        {/* **السعرُ على الزرّ** (تصميمُ `requestLabel`): آخرُ ما تقع عليه العينُ
-            قبل الضغط هو الرقم — ويختفي وحدَه ما دام يُحسب، فرقمٌ قديمٌ على زرِّ
-            التزامٍ أسوأ من لا رقم. و«رجوع» بجانبه بثلثِ عرضه: مخرجٌ لا ندٌّ */}
-        <div className="flex gap-8">
-          <Button
-            size="lg"
-            className="w-auto flex-[3]"
-            loading={requesting}
-            disabled={!estimate || loading}
-            onClick={() =>
-              onRequest(category, preference, applied?.code, {
-                share: shareReady,
-                shareGenderConfirmed: shareReady && shareGuarded,
-              })
-            }
-          >
-            اطلب الرحلة
-            {shownFare && !loading ? (
-              <span className="font-medium">
-                · {formatMoney(shownFare, estimate?.currency)}
-              </span>
-            ) : null}
-          </Button>
-          <button
-            type="button"
-            onClick={onBack}
-            className="pressable flex-1 rounded-12 border border-line py-15 text-13 font-semibold text-muted transition hover:bg-surface-2"
-          >
-            رجوع
-          </button>
-        </div>
 
         {/* **حدّد موعداً** (12-ط) — وتُخفى كلُّها حيث المفتاح مطفأ. وهي زرٌّ
             ثانويٌّ لا مساوٍ للأول: الطلبُ الفوريُّ هو الغالب، وزرّان متساويان

@@ -193,15 +193,24 @@ export function WalletTransferScreen() {
           className="fixed inset-0 z-50 flex items-end bg-dim"
           onClick={() => setConfirming(false)}
         >
+          {/* **سقفٌ وتمريرٌ وقدمٌ ثابتة** (عطبٌ مقيسٌ 2026-08-23): كانت الورقةُ
+              مثبَّتةً من الأسفل (`items-end`) بلا `max-height` وبلا تمرير، فتنمو
+              صعوداً ويقصّها الإطار. **وهذه الشاشةُ أخطرُ ما يقع فيه**: لوحةُ
+              المفاتيح مفتوحةٌ بالضرورة — المستخدمُ لتوّه كتب المبلغ — والإطارُ
+              يتقلّص معها (قِيس في هذا المشروع ٨٢٠ ⇐ ٤٦٢). فالمبلغُ و«رصيدك
+              بعده» في **قدمٍ لا تُمرَّر**، والعنوانُ وحدَه يُمرَّر. */}
           <div
-            className="w-full rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+            className="flex max-h-[calc(100dvh-76px)] w-full flex-col rounded-t-24 border-t border-line bg-surface pt-20"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 className="mb-4 text-16 font-bold text-ink">تأكيد التحويل</h2>
-            <p className="mb-14 text-12 leading-snug text-muted">
-              لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.
-            </p>
+            <div className="scr min-h-0 flex-1 px-18">
+              <h2 className="mb-4 text-16 font-bold text-ink">تأكيد التحويل</h2>
+              <p className="mb-14 text-12 leading-snug text-muted">
+                لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.
+              </p>
+            </div>
 
+            <div className="shrink-0 px-18 pb-24">
             <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
               {/* **الاسمُ أولاً وأكبر**: الرقمُ ما كُتب، والاسمُ ما يُتحقَّق به */}
               <div className="flex items-baseline justify-between">
@@ -254,6 +263,7 @@ export function WalletTransferScreen() {
               >
                 رجوع
               </Button>
+            </div>
             </div>
           </div>
         </div>

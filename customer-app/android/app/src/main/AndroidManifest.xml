@@ -25,7 +25,18 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- **رأسيٌّ وحدَه** (قرارُ المالك 2026-08-23، تطبيقُ الراكب دون غيره).
+             والعلّةُ مقيسةٌ لا مذهبٌ في التصميم: على إطارٍ ٨٠٠×٣٦٠ يصير سقفُ
+             الورقة ١٩٢ بكسلاً، **والقدمُ الثابتةُ وحدَها ١٨٠** — فمنطقةُ
+             التمرير ارتفاعُها **صفر**. أي أن المبلغَ والزرَّ يُرَيان (الشرطُ
+             الصلبُ مستوفىً) **بينما المسارُ والمحطاتُ والفئةُ والكوبونُ بلا
+             مساحةٍ تُرى فيها**. ولا يُنقذه تصغيرُ الحجز: ٣٦٠ ناقصَ قدمٍ ١٨٠
+             لا يترك شاشةً صالحة.
+             **ولا يُنسخ هذا إلى تطبيق الكبتن**: هاتفُه يُثبَّت أفقياً في
+             السيارة، وكاميرا الملاحة قادمة — فالأفقيُّ هناك **يُقاس قبل أن
+             يُقرَّر** (بندٌ مستقلٌّ في `HANDOFF.md`). -->
         <activity
+            android:screenOrientation="portrait"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
