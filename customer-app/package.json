@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:sheet && npm run check:config && npm run check:target && npm run check:contract && npm run check:client-doors && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
+    "build": "npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:sheet && npm run check:config && npm run check:target && npm run check:contract && npm run check:client-doors && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -20,7 +20,8 @@
     "check:served": "node ../tools/check-served.mjs customer-app",
     "check:money": "node ../tools/check-money.mjs customer-app",
     "check:readers": "node ../tools/check-readers.mjs customer-app",
-    "check:client-doors": "node ../tools/check-client-doors.mjs customer-app"
+    "check:client-doors": "node ../tools/check-client-doors.mjs customer-app",
+    "check:money-math": "node ../tools/check-money-math.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
