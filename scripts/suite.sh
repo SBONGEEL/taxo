@@ -30,6 +30,9 @@ cd "$(dirname "$0")/.." || exit 2
 # كذلك يصرف القارئَ عن موضع العطب** — من عائلة الجدول الأحمر.
 ENV_FILE="${TAXO_ENV_FILE:-.env.local}"
 OUT="backend/.suite.out"
+#: اسمُ الحاوية الحيّة — يُكتب عند البدء ويُمحى عند الانتهاء الطبيعيّ.
+#: **وبقاؤه هو الدليل** على أن التشغيلَ قُتل من خارجه.
+MARK="backend/.suite.container"
 DB_URL="postgresql+asyncpg://taxo:taxo@db:5432/taxo"
 REDIS_URL="redis://redis:6379/0"
 
@@ -42,6 +45,19 @@ fail() { printf '\n✗ %s\n' "$1" >&2; shift; for line in "$@"; do printf '  %s\
 # فبقيت حاويتُه، **واسمُها `taxo-suite-run-…`** (هذا الملفُّ يسمّيها) بينما كان
 # المُرشِّحُ يبحث عن `taxo-app-backend-run` وحدَه — فأمسكها فحصُ الجلسات لا فحصُ
 # الحاويات. **وحارسٌ بنصفين يمسك بنصفِه الثاني هو حارسٌ سقط نصفُه صامتاً.**
+# **وملفُّ الاسم يُقرأ قبل `docker ps`** (قرارُ المالك 2026-08-23): المرشِّحُ
+# يعتمد على اصطلاح تسميةٍ قد يتغيّر، **والملفُّ يحمل الاسمَ الذي كُتب فعلاً**.
+# وقِيس أن الحاويةَ تعيش بعد قتل عميلها من خارجه — فلا `trap` يُنفَّذ، لا في
+# أوّل العملية ولا في آخرها.
+if [ -f "$MARK" ]; then
+  prev=$(cat "$MARK" 2>/dev/null)
+  if [ -n "$prev" ] && docker ps --format '{{.Names}}' | grep -qx "$prev"; then
+    held=$(dc exec -T db psql -U taxo -d postgres -tAc       "SELECT count(*) FROM pg_stat_activity WHERE datname='taxo_test';" 2>/dev/null | tr -d ' ')
+    fail "تشغيلٌ سابقٌ ما زال يعمل — واسمُه مكتوبٌ في \`$MARK\`."          "  الحاوية: $prev"          "  وتمسك \`taxo_test\` بـ${held:-؟} جلسة."          ""          "**ولا تُقرأ رسالتُه كارثةً في الكود**: ما سيأتي خطأُ تهيئةٍ واحدٌ"          "يتكرر بعدد الاختبارات، لا ألفُ عطبٍ في المشروع."          "أزِلْه ثم أعد:  docker rm -f $prev"
+  fi
+  rm -f "$MARK"
+fi
+
 strays=$(docker ps --filter "name=taxo-suite-run" --filter "name=taxo-app-backend-run"   --format '{{.Names}} ({{.Status}})')
 if [ -n "$strays" ]; then
   fail "تشغيلُ اختباراتٍ سابقٌ ما زال يعمل — ولن يُدرَج تشغيلٌ ثانٍ فوقه." \
@@ -66,7 +82,9 @@ fi
 # اسمٌ معلومٌ سلفاً، فمقاطعةٌ بـCtrl-C أو مهلةٌ تنتهي تجد ما تحذفه. وبغيره
 # تبقى الحاويةُ تعمل بعد أن يذهب من بدأها — وهي الحالُ التي أنشأت هذا الملف
 NAME="taxo-suite-run-$$"
-cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
+printf '%s
+' "$NAME" > "$MARK"
+cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -f "$MARK"; }
 trap cleanup EXIT INT TERM
 
 printf '→ المجموعةُ تعمل… (النتيجةُ تُكتب في %s فتبقى بعد الحاوية)\n' "$OUT"
