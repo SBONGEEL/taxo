@@ -31,9 +31,21 @@ def _swap_redis_db(url: str, index: int) -> str:
     return urlunsplit(parts._replace(path=f"/{index}"))
 
 
-_base_db_url = os.environ.get(
-    "DATABASE_URL", "postgresql+asyncpg://taxo:taxo@localhost:5432/taxo"
-)
+# **بلا افتراضٍ يحمل بيانَ اعتماد** (2026-08-24): كان الافتراضُ
+# `postgresql+asyncpg://taxo:taxo@localhost:5432/taxo` — **فوافق جهازَ المطوّر
+# صدفةً**، ومن شغّل المجموعةَ بلا `DATABASE_URL` وقع عليه بدل أن يقف.
+#
+# **وما وافق صدفةً لا يُقاس بموافقته بل بما يجعله يخالف**: وافق هنا سنةً،
+# وخالف في CI بـ`InvalidPasswordError` على ألفٍ ومئةٍ وستةٍ وسبعين اختباراً.
+#
+# **ويقف ويسمّي** — ولا يُطبع شيءٌ من القيمة.
+_base_db_url = os.environ.get("DATABASE_URL", "")
+if not _base_db_url:
+    raise RuntimeError(
+        "لا `DATABASE_URL` في البيئة — ولا افتراضَ يحمل بيانَ اعتماد.\n"
+        "  المجموعةُ تُشغَّل من بابها: `bash scripts/suite.sh`، وهو يقرأ\n"
+        "  العنوانَ من ملفِّ البيئة المُصرَّح ويمرّره."
+    )
 _base_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 os.environ["DATABASE_URL"] = _swap_db_name(_base_db_url, _TEST_DB_NAME)

@@ -160,6 +160,93 @@ async def test_a_recent_success_does_not_alert(session_factory, backup_root) -> 
     assert alerts.any is False
 
 
+def _disk(monkeypatch, *, used_percent: int) -> None:
+    """يثبّت امتلاءَ نظام الملفات عند نسبةٍ مطلوبة — **مُدخلٌ مملوك**."""
+    total = 100_000
+    used = total * used_percent // 100
+    monkeypatch.setattr(
+        backups.shutil,
+        "disk_usage",
+        lambda _p: SimpleNamespace(total=total, used=used, free=total - used),
+    )
+
+
+async def _fresh_backup(session_factory) -> None:
+    """نسخةٌ ناجحةٌ حديثة — كي لا يختلط تنبيهُ القِدَم بتنبيه القرص."""
+    async with session_factory() as session:
+        setting = await backups.get_settings(session)
+        setting.enabled = True
+        session.add(
+            BackupRun(
+                name="taxo-20260816-0300",
+                status=BackupStatus.SUCCEEDED,
+                finished_at=datetime.now(UTC) - timedelta(hours=2),
+            )
+        )
+        await session.commit()
+
+
+# ------------------------------------------------- امتلاءُ نظام الملفات
+#
+# **حقلٌ يوقظ إنساناً ولم يحرسه شيء** حتى 2026-08-24 — وهو الذي أسقط التشغيلَ
+# ٤٥ في CI (`filesystem_percent=82`، قرصُ العامل). **فبُني حارسُه بأمر
+# المالك.**
+#
+# **وما يحرسه ليس الرقمَ بل العتبة**: أن يصيح عند الامتلاء **وأن يصمت دونه** —
+# فحارسٌ يصيح دائماً يُطفأ، وحارسٌ لا يصيح أبداً زينةٌ في ملفّ.
+
+
+async def test_a_full_filesystem_alerts_even_with_a_fresh_backup(
+    session_factory, backup_root, monkeypatch
+) -> None:
+    """**القرصُ يُقاس وحدَه** — ونسخةٌ حديثةٌ لا تُسكته.
+
+    والعلّةُ مكتوبةٌ في `alerts()`: قرصٌ يمتلئ بالوثائق يوقف كلَّ شيء،
+    **وأولُ ما يفشل هو النسخةُ التي كانت ستنقذنا**.
+    """
+    await _fresh_backup(session_factory)
+    _disk(monkeypatch, used_percent=91)
+
+    async with session_factory() as session:
+        alerts = await backups.alerts(session)
+
+    assert alerts.stale_hours is None, "القِدَمُ ليس هو ما يُقاس هنا"
+    assert alerts.filesystem_percent == 91
+    assert alerts.any is True
+
+
+async def test_a_roomy_filesystem_stays_silent(
+    session_factory, backup_root, monkeypatch
+) -> None:
+    """**والصمتُ نصفُ القياس**: دون العتبة لا ينطق — وإلا صار الإنذارُ يومياً.
+
+    وقِيس عند **٧٩٪**، أي على حافّة العتبة تماماً، لا في مكانٍ مريحٍ منها:
+    حدٌّ يُختبر بعيداً عنه لا يُختبر.
+    """
+    await _fresh_backup(session_factory)
+    _disk(monkeypatch, used_percent=79)
+
+    async with session_factory() as session:
+        alerts = await backups.alerts(session)
+
+    assert alerts.filesystem_percent is None
+    assert alerts.any is False
+
+
+async def test_the_filesystem_threshold_is_inclusive(
+    session_factory, backup_root, monkeypatch
+) -> None:
+    """**وعند العتبة نفسِها ينطق** — `>=` لا `>`، فثمانون امتلاءٌ لا سلامة."""
+    await _fresh_backup(session_factory)
+    _disk(monkeypatch, used_percent=80)
+
+    async with session_factory() as session:
+        alerts = await backups.alerts(session)
+
+    assert alerts.filesystem_percent == 80
+    assert alerts.any is True
+
+
 async def test_a_failed_run_does_not_count_as_a_backup(
     session_factory, backup_root
 ) -> None:

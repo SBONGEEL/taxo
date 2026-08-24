@@ -34,7 +34,11 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
 
-    database_url: str = "postgresql+asyncpg://taxo:taxo@localhost:5432/taxo"
+    # **بلا افتراضٍ يحمل بيانَ اعتماد** (2026-08-24): كان
+    # `postgresql+asyncpg://taxo:taxo@localhost:5432/taxo` — **فوافق جهازَ
+    # المطوّر صدفةً**، وبيئةٌ ناقصةٌ تقع عليه بدل أن تقف. وهو نفسُ ما أسقط
+    # `suite.sh` في CI طوال عمره. **والقاعدة: لا احتياطَ صامتٌ لسرّ.**
+    database_url: str = ""
     redis_url: str = "redis://localhost:6379/0"
     sql_echo: bool = False
 
@@ -111,9 +115,38 @@ class Settings(BaseSettings):
         return self.environment.lower() in {"production", "prod"}
 
 
+#: **أسرارٌ لا افتراضَ لها** — يقف الإقلاعُ إن نقص أحدُها ويُسمّيه.
+#:
+#: **والقاعدةُ قاعدةُ المشروع** (`SPEC.md` §25.5، `CLAUDE.md`): «بيئةٌ ناقصةٌ
+#: تُوقف الإقلاعَ وتسمّي الناقص» — **ولا احتياطَ صامتٌ لسرّ**. وكانت مخالَفةً
+#: هنا: عنوانُ القاعدة يحمل `taxo:taxo` فيقع عليه من نسي ضبطَه، **فيعمل على
+#: جهازٍ ويصمت على آخر**.
+#:
+#: **و`jwt_secret` ليس فيها اليومَ بقرارٍ معلَن**: افتراضُه `change-me` من
+#: الصنف نفسِه **وأخطرُ**، **ولم يُدرَج لأن إدراجَه يوقف كلَّ بيئةٍ لا تضبطه
+#: — والإنتاجُ لا يُقاس من هنا**. معروضٌ على المالك (HANDOFF).
+REQUIRED_SECRETS: tuple[tuple[str, str], ...] = (
+    ("database_url", "DATABASE_URL"),
+)
+
+
+def _require_secrets(values: Settings) -> Settings:
+    """يقف ويسمّي — **ولا يطبع قيمةً**، فالرسالةُ تُقرأ في سجلٍّ لا يُنظَّف."""
+    missing = [env for attr, env in REQUIRED_SECRETS if not getattr(values, attr, "")]
+    if missing:
+        raise RuntimeError(
+            "بيئةٌ ناقصة — لا إقلاعَ بلا: "
+            + "، ".join(missing)
+            + ". اضبطها في ملفِّ البيئة (`.env.local` محلياً، `.env` على الخادم)."
+            + " **ولا احتياطَ صامتٌ لسرّ**: عنوانٌ افتراضيٌّ يوافق جهازاً"
+            + " ويخالف آخر، وهو ما يجعل العطبَ يظهر بعد النشر لا قبله."
+        )
+    return values
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return _require_secrets(Settings())
 
 
 settings = get_settings()
