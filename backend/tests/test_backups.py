@@ -14,6 +14,7 @@ import pytest
 
 from app.models.backup import BackupRun, BackupStatus
 from app.services import backups
+from types import SimpleNamespace
 
 
 @pytest.fixture
@@ -21,6 +22,30 @@ def backup_root(tmp_path, monkeypatch):
     root = tmp_path / "backups"
     root.mkdir()
     monkeypatch.setattr(backups, "BACKUP_ROOT", root)
+
+    # **قرصُ المضيف ليس مُدخلاً لهذه الاختبارات — فيُثبَّت** (2026-08-24).
+    #
+    # `alerts()` يقيس امتلاءَ **نظام الملفات كلِّه** (`shutil.disk_usage`)
+    # ويُنبّه عند ٨٠٪، **و`any` يجمعه مع تنبيهات النسخ**. فاختبارٌ يؤكّد
+    # `any is False` كان يقرأ قرصَ الجهاز الذي يُشغّله — **ويمرّ أو يسقط بحسبه**.
+    #
+    # **ووقع مقيساً**: التشغيلُ ٤٥ في CI سقط بـ
+    # `Alerts(stale_hours=None, unpulled=None, disk_percent=None,
+    # filesystem_percent=82)` — **قرصُ العامل ٨٢٪**، ولا علاقةَ له بالنسخ.
+    # وهو الشكلُ نفسُه الذي أسقط رسمَ الوقفة و`taxo:taxo`: **قيمةٌ من العالم
+    # الحقيقيِّ يقرؤها اختبارٌ لا يملكها، فيوافق جهازاً ويخالف آخر.**
+    #
+    # **ولا يُضعَّف التأكيد**: `any is False` يبقى كما هو — **الذي تغيّر أن
+    # المُدخلَ صار مملوكاً**. وتثبيتُه هنا يجعل ما تقيسه هذه الملفّاتُ
+    # **تنبيهاتِ النسخ وحدَها**، وهو ما وُجدت له.
+    #
+    # **وتنبيهُ نظام الملفات لا يقيسه اختبارٌ واحد** — لا قبل هذا التثبيت ولا
+    # بعده. **يُقال ولا يُسكت عنه**: حقلٌ يوقظ إنساناً ولا يحرسه شيء.
+    monkeypatch.setattr(
+        backups.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(total=100_000, used=10_000, free=90_000),
+    )
     return root
 
 
