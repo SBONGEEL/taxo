@@ -66,6 +66,54 @@ async def _age_pause(session_factory, ride_id: str, minutes: float) -> None:
         await session.commit()
 
 
+def _assert_billed(
+    charge: Decimal,
+    *,
+    minutes: str,
+    rate: str,
+    not_rate: str | None = None,
+) -> None:
+    """**حدٌّ لا مساواة — ولماذا، كي لا يُقرأ تراخياً.**
+
+    `_age_pause` يكتب `started_at = now − دقائق`، **والرسمُ يُحسب في نداءٍ
+    لاحقٍ بـ`now` الخاصِّ به**، والانتظارُ يُحتسب بالثانية (§5.10-ب). فكلُّ
+    تأخّرٍ بين النداءين يدخل الحسابَ حقاً: عند ٠٫٢٠٠/دقيقة **٠٫٣ ثانيةٍ
+    تساوي جزءاً من الألف بالضبط**. وهو ما أحمرَّ به
+    `test_the_rate_is_frozen_against_a_later_settings_change` تحت حمل
+    المجموعة (٢٠٢٦-٠٨-٢٤، ٢٫٠٠١ بدل ٢٫٠٠٠) **ومرّ منفرداً مرتين**.
+
+    **وليست المساواةُ التامّةُ هي المحروس**: ما تحرسه هذه الاختباراتُ أن
+    الرسمَ **بالمعدَّل المجمَّد ومن الوقت المجمَّد** — لا أن الثواني صفر.
+    فكانت أضيقَ من معناها، تسقط على تأخّرِ شبكةٍ ولا تسقط على شيءٍ يخصُّ
+    المال. **واختبارٌ يصيح على السليم يُضعَّف أو يُحذف**، وكلاهما يُسقط ما
+    يحرسه حقاً.
+
+    **فشرطان لا واحد، ولا يُستبدل المحروسُ بأضعفَ منه:**
+
+    ١. **بالمعدَّل المجمَّد ومن وقته**: `دقائق × معدَّل` حدّاً أدنى، وفوقه
+       **نصفُ دقيقةٍ** حدّاً أعلى. **والحدُّ الأعلى هو نصفُ الشرط الثاني**:
+       هو ما يقول إن الحسابَ من `started_at` المجمَّد لا من زمنٍ آخر — فلو
+       قُرئ زمنٌ لاحقٌ أو صفِّرت البدايةُ لَخرج المبلغُ عن المدى.
+    ٢. **وليس بالمعدَّل الجديد**: يُسمَّى صراحةً حيث يوجد —
+       `charge < not_rate` أي **أقلُّ من دقيقةٍ واحدةٍ بالسعر الجديد**،
+       وهو الفرقُ الذي وُجد الاختبارُ لأجله (٢ لا ٥٠).
+
+    **والهامشُ مقيسٌ لا مُقدَّر**: أسوأُ انحرافٍ رُصد ٠٫٠٠١ (≈٠٫٣ث)،
+    والهامشُ نصفُ دقيقة — ≈١٠٠× ذلك، **ويبقى دون أصغرِ خطأِ معدَّلٍ بمراتب**.
+    """
+    lower = (Decimal(minutes) * Decimal(rate)).quantize(Decimal("0.001"))
+    upper = lower + (Decimal(rate) / 2)
+    assert lower <= charge < upper, (
+        f"{charge} خارج [{lower}, {upper}) — فليس بالمعدَّل المجمَّد "
+        f"({rate}/دقيقة) أو ليس محسوباً من وقت الوقفة المجمَّد"
+    )
+    if not_rate is not None:
+        assert charge < Decimal(not_rate), (
+            f"{charge} يبلغ دقيقةً بالمعدَّل الجديد ({not_rate}) — "
+            "فالتجميدُ لم يصمد"
+        )
+
+
 # ------------------------------------------- الفرعُ (هـ): النطاقُ شرطُ العدّاد
 
 
@@ -177,7 +225,8 @@ async def test_the_free_grace_is_not_billed_and_what_is_over_it_is(
     body = (
         await client.get(f"/rides/{ride['id']}", headers=rider["headers"])
     ).json()
-    assert Decimal(body["pause_charge"]) == Decimal("0.600")
+    # ٥ دقائقَ − مهلةُ ٢ = ٣ × ٠٫٢٠٠ — **حدّاً لا مساواةً** (`_assert_billed`)
+    _assert_billed(Decimal(body["pause_charge"]), minutes="3", rate="0.200")
     # **والعدّادُ يُنشر للراكب وهو يمشي** — فلا مفاجأةَ في شاشة الدفع
     assert body["open_pause"] is not None
     assert Decimal(body["open_pause"]["waited_minutes"]) >= Decimal("5")
@@ -203,7 +252,8 @@ async def test_a_mid_ride_pause_has_no_free_grace(
 
     body = (await client.get(f"/rides/{ride['id']}", headers=rider["headers"])).json()
     assert body["open_pause"]["free_minutes"] == 0
-    assert Decimal(body["pause_charge"]) == Decimal("0.600")
+    # ٣ دقائقَ بلا مهلة × ٠٫٢٠٠ — **حدّاً لا مساواةً** (`_assert_billed`)
+    _assert_billed(Decimal(body["pause_charge"]), minutes="3", rate="0.200")
 
 
 async def test_the_pause_charge_is_inside_the_final_fare(
@@ -295,7 +345,15 @@ async def test_the_rate_is_frozen_against_a_later_settings_change(
     await _set_pause_pricing(session_factory, per_min="5.000", arrival_free=0)
 
     body = (await client.get(f"/rides/{ride['id']}", headers=rider["headers"])).json()
-    assert Decimal(body["pause_charge"]) == Decimal("2.000")
+    # **الشرطان معاً**: بالمعدَّل المجمَّد ومن وقته (١٠ × ٠٫٢٠٠)، **وليس
+    # بالجديد** — فلو قُرئ ٥٫٠٠٠ لَبلغ الرسمُ ٥٠٫٠٠٠. و«حدٌّ لا مساواة»
+    # علّتُه في `_assert_billed`، وليست تراخياً.
+    _assert_billed(
+        Decimal(body["pause_charge"]),
+        minutes="10",
+        rate="0.200",
+        not_rate="5.000",
+    )
 
 
 async def test_there_is_no_limit_on_the_number_of_pauses(
