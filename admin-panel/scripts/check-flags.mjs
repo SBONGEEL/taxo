@@ -33,6 +33,14 @@ const BACKEND_ENUMS = join(
   "models",
   "enums.py",
 );
+const BACKEND_SETTINGS = join(
+  process.cwd(),
+  "..",
+  "backend",
+  "app",
+  "services",
+  "settings_service.py",
+);
 const TYPES = join(process.cwd(), "src", "api", "types.ts");
 const SETTINGS = join(process.cwd(), "src", "screens", "Settings.tsx");
 
@@ -57,10 +65,19 @@ function unionMembers(source, typeName) {
   return [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 }
 
+/** أعضاءُ `frozenset` في الخلفية — يُقرأ من `FeatureKey.X.value` لا من نصّ. */
+function backendFrozenset(source, name) {
+  const match = source.match(
+    new RegExp(`${name}\\s*:\\s*frozenset\\[str\\]\\s*=\\s*frozenset\\(([\\s\\S]*?)\\n\\)`, "m"),
+  );
+  if (!match) throw new Error(`لا مجموعة ${name} في الخلفية`);
+  return [...match[1].matchAll(/FeatureKey\.([A-Z_0-9]+)\.value/g)].map((m) => m[1]);
+}
+
 /** أعضاءُ مصفوفةٍ معلَنةٍ باسمها — وهي ما يُرسم فعلاً في الشاشة. */
 function arrayMembers(source, declaration) {
   const match = source.match(
-    new RegExp(`${declaration}\\s*=\\s*\\[([\\s\\S]*?)\\];`, "m"),
+    new RegExp(`${declaration}\\s*=\\s*\\[([\\s\\S]*?)\\]`, "m"),
   );
   if (!match) throw new Error(`لا مصفوفة ${declaration} في ${SETTINGS}`);
   return [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
@@ -100,6 +117,49 @@ if (missingFromScreen.length > 0) {
   );
 }
 
+// ── المرآةُ الثالثة: مجموعةُ الحرّاس ────────────────────────────────────
+// **والسؤالُ الثاني لا الأول**: المقارناتُ فوق تسأل «أللمفتاح زرّ؟»، وهذه
+// تسأل «**أيعرف الزرُّ أنّ مفتاحَه حارس؟**» — فحارسٌ بلا وسمٍ ولا ورقةِ سببٍ
+// **لا يُطفأ من اللوحة إطلاقاً**، والضغطةُ ترتدّ ٤٢٢. وقع مقيساً 2026-08-24
+// على `pricing_writes_enabled` و`withdrawal_payout_enabled`: أُضيفا إلى
+// `GUARDED_FLAGS` في الخلفية، **والشرطُ في الشاشة كان مفتاحاً واحداً مكتوباً
+// بيده**، فما ورثا شيئاً.
+const NAME_TO_VALUE = new Map(
+  [...enums.matchAll(/^\s{4}([A-Z_0-9]+)\s*=\s*"([^"]+)"/gm)].map((m) => [
+    m[1],
+    m[2],
+  ]),
+);
+const guardedBackend = backendFrozenset(
+  readFileSync(BACKEND_SETTINGS, "utf8"),
+  "GUARDED_FLAGS",
+).map((name) => NAME_TO_VALUE.get(name) ?? name);
+const guardedPanel = arrayMembers(
+  readFileSync(SETTINGS, "utf8"),
+  "const GUARDED_FLAGS",
+);
+
+// **إثباتُ الصمت**: مجموعةٌ فارغةٌ تعني قارئاً أعمى لا خلفيةً بلا حرّاس
+if (guardedBackend.length === 0) {
+  problems.push("قُرئت `GUARDED_FLAGS` من الخلفية فارغةً — القارئُ أعمى");
+}
+
+const guardMissing = guardedBackend.filter((k) => !guardedPanel.includes(k));
+if (guardMissing.length > 0) {
+  problems.push(
+    `مصفوفةُ \`GUARDED_FLAGS\` في src/screens/Settings.tsx ينقصها: ` +
+      `${guardMissing.join(", ")} — حارسٌ بلا ورقةِ سبب، فلا يُطفأ من اللوحة`,
+  );
+}
+
+const guardStray = guardedPanel.filter((k) => !guardedBackend.includes(k));
+if (guardStray.length > 0) {
+  problems.push(
+    `مصفوفةُ \`GUARDED_FLAGS\` في اللوحة تحرس ما لا تحرسه الخلفية: ` +
+      `${guardStray.join(", ")} — ورقةُ سببٍ تُطلب ولا يشترطها أحد`,
+  );
+}
+
 if (problems.length > 0) {
   console.error("مفاتيحُ ميزاتٍ لا يملك المشرفُ إشعالها من اللوحة:\n");
   for (const problem of problems) console.error("  " + problem);
@@ -113,6 +173,8 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-certify("check:flags", 
-  `✓ كل مفاتيح الميزات (${expected.length}) لها زرٌّ في شاشة الإعدادات`,
+certify(
+  "check:flags",
+  `✓ كل مفاتيح الميزات (${expected.length}) لها زرٌّ في شاشة الإعدادات، ` +
+    `و(${guardedBackend.length}) حرّاسٍ لها ورقةُ سبب`,
 );

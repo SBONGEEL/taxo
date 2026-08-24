@@ -28,6 +28,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
 import {
@@ -206,6 +207,67 @@ const FLAGS: FeatureKey[] = [
   "withdrawal_payout_enabled",
 ];
 
+/** المفاتيحُ التي **إطفاؤها يُسقط حماية**، فتشترط سبباً مكتوباً في التدقيق.
+ *
+ * **مرآةٌ لـ`settings_service.GUARDED_FLAGS`** في الخلفية، ويقارنهما
+ * `check:flags` في الاتجاهين — فلا يُضاف حارسٌ هناك ويبقى زرُّه هنا بلا
+ * ورقةِ سبب.
+ *
+ * **وكان هذا شرطاً على مفتاحٍ واحدٍ مكتوبٍ بيده** (`key ===
+ * "otp_verification_enabled"`)، فلمّا أُضيف حارسا المال في 2026-08-23 لم
+ * يرثا شيئاً: لا وسمَ «حارس»، ولا ورقةَ سبب، **والضغطةُ تُرسل طلباً بلا سببٍ
+ * فيرتدّ ٤٢٢** — أي أن المفتاحين **لا يمكن إطفاؤهما من اللوحة أصلاً**.
+ * وهو «بابٌ بلا زرّ» في اتجاهٍ واحد: يُشعَل ولا يُطفأ. (قِيس من المتصفح
+ * 2026-08-24.)
+ */
+const GUARDED_FLAGS = [
+  "otp_verification_enabled",
+  "pricing_writes_enabled",
+  "withdrawal_payout_enabled",
+] as const satisfies readonly FeatureKey[];
+
+/** **والاتحادُ من المصفوفة لا مكتوباً بجانبها**: `Record<GuardedFlag, …>`
+ * أدناه يجعل **المصرّفَ** يرفض حارساً بلا نصِّ أثر — فلا يُضاف اسمٌ هنا
+ * ويُنسى أثرُه هناك. وهو ما يفعله `FLAG_LABEL` نفسُه (`check-flags.mjs`). */
+type GuardedFlag = (typeof GUARDED_FLAGS)[number];
+
+/** أثرُ الإطفاء بكلماتِ كلِّ حارسٍ على حدة.
+ *
+ * **ولا يُوحَّد النصّ**: من يجمّد التسعيرَ لا يعنيه كلامٌ عن أرقامٍ غيرِ
+ * مُثبتة، **وجملةٌ لا علاقةَ لها بما ضُغط تُقرأ خطأً في اللوحة لا تحذيراً**
+ * — وهي العلّةُ التي فُصلت لأجلها `GUARDED_FLAGS` عن `DEFAULT_ENABLED_FLAGS`
+ * أصلاً (`settings_service`).
+ */
+const GUARD_NOTE: Record<GuardedFlag, ReactNode> = {
+  otp_verification_enabled: (
+    <>
+      بعد الإطفاء تُنشأ حساباتٌ برقمٍ غير مُثبت، وتبقى موسومةً وقابلةً للفلترة
+      في صفحة الركّاب.{" "}
+      <b className="text-ink">
+        ولا يُعتمد كبتنٌ غير مُثبت الرقم مهما كان هذا المفتاح
+      </b>{" "}
+      — رقمُه هو ما تصله عليه حوالاتُ السحب. ولا يمس هذا استعادةَ كلمة المرور
+      إطلاقاً.
+    </>
+  ),
+  pricing_writes_enabled: (
+    <>
+      بعد الإطفاء <b className="text-ink">لا يُنشأ صفُّ تسعيرٍ ولا يُعدَّل ولا
+      يُحذف</b> في هذا السوق — والرحلاتُ تُسعَّر بالصفوف القائمة، فلا طلبَ
+      يُرفض ولا تقديرَ يتوقف. <b className="text-ink">ولا يستردّ ما كُتب
+      قبله</b>: التصحيحُ بالرقم بعد رفع التجميد.
+    </>
+  ),
+  withdrawal_payout_enabled: (
+    <>
+      بعد الإطفاء <b className="text-ink">لا يغادر المالُ إلى أيِّ كبتن</b> —
+      والطلباتُ تُقدَّم وتُعتمد كما هي، ويبقى الطلبُ «معتمَداً» حتى تستأنف.
+      والكبتنُ يقرأ على طلبه أن الصرفَ متوقّفٌ مؤقّتاً فلا يظنُّ طلبَه ضاع.
+      <b className="text-ink"> وتحويلٌ غادر إلى المزوّد يُكمَل</b> ولا يُقطع.
+    </>
+  ),
+};
+
 export function SettingsScreen() {
   const { country } = useCountry();
   const { isAdmin } = useSession();
@@ -316,7 +378,7 @@ export function SettingsScreen() {
             <ul className="flex flex-col gap-12">
               {FLAGS.map((key) => {
                 const on = current?.flags[key] === true;
-                const isGuard = key === "otp_verification_enabled";
+                const isGuard = (GUARDED_FLAGS as readonly FeatureKey[]).includes(key);
                 return (
                   <li key={key} className="flex items-start gap-12">
                     <span className="flex-1">
@@ -661,6 +723,7 @@ export function SettingsScreen() {
 
       {guard ? (
         <GuardModal
+          flagKey={guard.key}
           onClose={() => setGuard(null)}
           onConfirm={(reason) => {
             setGuard(null);
@@ -1139,9 +1202,11 @@ function PaymentForm({
 
 /** إطفاءُ الحارس — بتحذيرٍ صريح وسببٍ إلزامي يدخل سجل التدقيق. */
 function GuardModal({
+  flagKey,
   onClose,
   onConfirm,
 }: {
+  flagKey: FeatureKey;
   onClose: () => void;
   onConfirm: (reason: string) => void;
 }) {
@@ -1157,16 +1222,10 @@ function GuardModal({
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="mb-4 text-16 font-bold text-danger">
-          إطفاء التحقق من الرقم — للطوارئ فقط
+          إطفاء «{FLAG_LABEL[flagKey].title}» — للطوارئ فقط
         </h2>
         <p className="mb-16 text-12 leading-note text-muted">
-          بعد الإطفاء تُنشأ حساباتٌ برقمٍ غير مُثبت، وتبقى موسومةً وقابلةً
-          للفلترة في صفحة الركّاب.{" "}
-          <b className="text-ink">
-            ولا يُعتمد كبتنٌ غير مُثبت الرقم مهما كان هذا المفتاح
-          </b>{" "}
-          — رقمُه هو ما تصله عليه حوالاتُ السحب. ولا يمس هذا استعادةَ كلمة
-          المرور إطلاقاً.
+          {GUARD_NOTE[flagKey as GuardedFlag]}
         </p>
 
         <Field

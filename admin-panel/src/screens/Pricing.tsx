@@ -156,7 +156,8 @@ export function PricingScreen() {
               country={country}
               category={category}
               rule={rules.find((rule) => rule.vehicle_category === category)}
-              canEdit={isAdmin && !frozen}
+              isAdmin={isAdmin}
+              frozen={frozen}
               onDone={(message) => {
                 setDone(message);
                 setError(null);
@@ -182,17 +183,26 @@ function CategoryCard({
   country,
   category,
   rule,
-  canEdit,
+  isAdmin,
+  frozen,
   onDone,
   onError,
 }: {
   country: CountryCode;
   category: VehicleCategory;
   rule: PricingRule | undefined;
-  canEdit: boolean;
+  /** صلاحيةٌ — ومن لا يملكها لا يرى أزرارَ التعديل أصلاً (القسم 13/8). */
+  isAdmin: boolean;
+  /** حارسٌ مطفأ — **والزرُّ يُعطَّل ولا يُخفى** (`GuardBanner`). */
+  frozen: boolean;
   onDone: (message: string) => void;
   onError: (caught: unknown) => void;
 }) {
+  // **السببان مفصولان عمداً**: غيابُ الصلاحية يُخفي الأزرار (اصطلاحُ اللوحة
+  // مع `support`)، **والتجميدُ يُعطّلها ولا يُخفيها** — فزرٌّ يختفي يُقرأ
+  // عطباً في اللوحة، وهي قاعدةٌ مكتوبةٌ في `GuardBanner` وكانت هذه الشاشةُ
+  // وحدَها تخالفها بينما `Finance.tsx` تتبعها (قِيس من المتصفح 2026-08-24).
+  const canEdit = isAdmin && !frozen;
   const [values, setValues] = useState<Record<FieldKey, string>>(EMPTY);
   const [busy, setBusy] = useState(false);
 
@@ -352,16 +362,20 @@ function CategoryCard({
         الطرفين <b className="text-ink">ولا يُنهي رحلة</b>؛ الإنهاءُ فعلُ الكبتن.
       </p>
 
-      {canEdit ? (
+      {isAdmin ? (
         <div className="mt-16 flex gap-10">
-          <Button size="md" disabled={busy || !filled} onClick={() => void save()}>
+          <Button
+            size="md"
+            disabled={frozen || busy || !filled}
+            onClick={() => void save()}
+          >
             حفظ التغييرات
           </Button>
           {rule ? (
             <Button
               size="md"
               variant="ghost"
-              disabled={busy}
+              disabled={frozen || busy}
               onClick={() => {
                 setBusy(true);
                 deletePricing(rule.id)

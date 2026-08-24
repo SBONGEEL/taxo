@@ -223,8 +223,11 @@ async def upsert_feature_flag(
         and not payload.enabled
         and not (payload.reason or "").strip()
     ):
+        # **ولا يُسمّى مفتاحٌ بعينه**: الشرطُ على `GUARDED_FLAGS` كلِّها، وكان
+        # النصُّ يقول «مفتاح التحقق» فيقرؤه من جمّد التسعيرَ جملةً لا علاقةَ
+        # لها بما ضغط — وهي بعينها العلّةُ المكتوبةُ فوق `GUARDED_FLAGS`.
         raise InvalidInput(
-            "إطفاء مفتاح التحقق إجراء طوارئ — اكتب سببه (8 أحرف على الأقل)"
+            "إطفاء مفتاحٍ حارس إجراء طوارئ — اكتب سببه (8 أحرف على الأقل)"
         )
 
     await settings_service.set_flag(
