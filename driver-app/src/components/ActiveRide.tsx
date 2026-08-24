@@ -498,7 +498,7 @@ function StopStrip({
               className={cn(
                 "rounded-full px-10 py-4 text-11 font-semibold",
                 done
-                  ? "bg-ok text-inv"
+                  ? "bg-ok text-accent-ink"
                   : here
                     ? "border border-ink text-ink"
                     : "text-muted",

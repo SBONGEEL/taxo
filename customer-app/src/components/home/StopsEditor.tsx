@@ -79,7 +79,7 @@ export function StopsEditor({
             >
               {/* المحطةُ مربّعٌ برقمها — الشكلُ يميّزها عن الطرفين والرقمُ
                   يقول ترتيبَها (DESIGN.md §2.8-ب) */}
-              <span className="flex size-20 flex-none items-center justify-center rounded-2 bg-warn text-10 font-bold text-inv">
+              <span className="flex size-20 flex-none items-center justify-center rounded-2 bg-warn text-10 font-bold text-accent-ink">
                 {index + 1}
               </span>
               <span className="min-w-0 flex-1 truncate text-14 text-ink">

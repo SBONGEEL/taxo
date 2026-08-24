@@ -52,9 +52,9 @@ export function StopProgress({ ride }: { ride: Ride }) {
                 className={cn(
                   "flex size-20 flex-none items-center justify-center rounded-2 text-10 font-bold",
                   done
-                    ? "bg-ok text-inv"
+                    ? "bg-ok text-accent-ink"
                     : here
-                      ? "bg-warn text-inv"
+                      ? "bg-warn text-accent-ink"
                       : "border border-line text-muted",
                 )}
               >

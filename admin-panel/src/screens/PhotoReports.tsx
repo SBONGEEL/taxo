@@ -49,7 +49,7 @@ function ReportedPhoto({ reportId }: { reportId: string }) {
     };
   }, [reportId]);
   return (
-    <div className="size-82 overflow-hidden rounded-13 bg-sa">
+    <div className="size-82 overflow-hidden rounded-13 bg-stripe-a">
       {src ? (
         <img src={src} alt="الصورةُ المبلَّغ عنها" className="size-full object-cover" />
       ) : null}
@@ -96,19 +96,19 @@ export function PhotoReports() {
       {done ? <SuccessNote message={done} /> : null}
       {rows === null ? <Spinner /> : null}
       {rows !== null && rows.length === 0 ? (
-        <p className="text-14 text-mut">لا بلاغاتٍ معلّقة.</p>
+        <p className="text-14 text-muted">لا بلاغاتٍ معلّقة.</p>
       ) : null}
       <div className="flex flex-col gap-12">
         {(rows ?? []).map((row) => (
           <div
             key={row.id}
-            className="flex items-start gap-16 rounded-13 border border-brd bg-sur p-16"
+            className="flex items-start gap-16 rounded-13 border border-line bg-surface p-16"
           >
             <ReportedPhoto reportId={row.id} />
             <div className="flex flex-1 flex-col gap-6">
-              <p className="text-15 text-tx">{row.subject_name ?? "—"}</p>
-              <p className="text-13 text-mut">{row.subject_phone ?? "—"}</p>
-              <p className="text-13 text-mut">
+              <p className="text-15 text-ink">{row.subject_name ?? "—"}</p>
+              <p className="text-13 text-muted">{row.subject_phone ?? "—"}</p>
+              <p className="text-13 text-muted">
                 بلّغ: {row.reporter_name ?? "—"} · {moment(row.created_at)}
               </p>
               <div className="mt-8 flex gap-8">

@@ -35,23 +35,23 @@ function stageOf(row: ReferralStage): { text: string; tone: string } {
   if (row.rewarded) return { text: "وصلت المكافأة", tone: "text-ok" };
   if (row.referral_type === "driver") {
     if (!row.driver_approved) {
-      return { text: "حسابه قيد المراجعة", tone: "text-mut" };
+      return { text: "حسابه قيد المراجعة", tone: "text-muted" };
     }
     if (!row.has_subscription) {
-      return { text: "لم يشترِ اشتراكاً بعد", tone: "text-mut" };
+      return { text: "لم يشترِ اشتراكاً بعد", tone: "text-muted" };
     }
   }
   if (row.rides_done < row.rides_required) {
     return {
       text: `أكمل ${row.rides_done} من ${row.rides_required} رحلات`,
-      tone: "text-mut",
+      tone: "text-muted",
     };
   }
   // **فوق السقف يُقال، لا يُصمت عنه**: «مستحقّة ولن تُدفع» حقيقةٌ يملكها صاحبُها
   if (row.over_monthly_cap) {
     return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "text-warn" };
   }
-  return { text: "استحقّت — المكافأة في الطريق", tone: "text-tx" };
+  return { text: "استحقّت — المكافأة في الطريق", tone: "text-ink" };
 }
 
 export function ReferralsScreen() {
@@ -120,16 +120,16 @@ export function ReferralsScreen() {
       <ErrorNote message={error} />
       {data === null ? null : (
         <div className="space-y-14">
-          <section className="rounded-16 border border-line bg-sur p-16 text-center">
-            <p className="text-12 text-mut">رمز الدعوة الخاص بك</p>
-            <p dir="ltr" className="mt-8 text-26 font-bold tracking-code text-tx">
+          <section className="rounded-16 border border-line bg-surface p-16 text-center">
+            <p className="text-12 text-muted">رمز الدعوة الخاص بك</p>
+            <p dir="ltr" className="mt-8 text-26 font-bold tracking-code text-ink">
               {data.code}
             </p>
             <div className="mt-14 flex gap-10">
               <button
                 type="button"
                 onClick={() => void copy()}
-                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-sur2 py-12 text-13 font-semibold text-tx"
+                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? "نُسخ" : "انسخ"}
@@ -137,7 +137,7 @@ export function ReferralsScreen() {
               <button
                 type="button"
                 onClick={() => void share()}
-                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-sur2 py-12 text-13 font-semibold text-tx"
+                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
               >
                 <Share2 size={16} />
                 شارك
@@ -146,8 +146,8 @@ export function ReferralsScreen() {
           </section>
 
           {pays ? (
-            <section className="rounded-16 border border-line bg-sur p-16">
-              <h2 className="text-13.5 font-bold text-tx">
+            <section className="rounded-16 border border-line bg-surface p-16">
+              <h2 className="text-13.5 font-bold text-ink">
                 رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به
               </h2>
               <div className="mt-10 space-y-8">
@@ -158,13 +158,13 @@ export function ReferralsScreen() {
                   return (
                     <div
                       key={program.referral_type}
-                      className="flex items-start justify-between gap-10 rounded-13 border border-line bg-sur2 p-12"
+                      className="flex items-start justify-between gap-10 rounded-13 border border-line bg-surface-2 p-12"
                     >
                       <div>
-                        <p className="text-12.5 font-semibold text-tx">
+                        <p className="text-12.5 font-semibold text-ink">
                           {isDriver ? "سجّل كبتناً" : "سجّل راكباً"}
                         </p>
-                        <p className="mt-4 text-11.5 text-mut">
+                        <p className="mt-4 text-11.5 text-muted">
                           {isDriver
                             ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${program.required_rides} رحلات`
                             : `يُكمل ${program.required_rides} رحلات`}
@@ -181,7 +181,7 @@ export function ReferralsScreen() {
                       <span
                         className={cn(
                           "shrink-0 text-13 font-bold",
-                          active ? "text-tx" : "text-mut",
+                          active ? "text-ink" : "text-muted",
                         )}
                       >
                         {active ? amountOf(program) : "—"}
@@ -196,7 +196,7 @@ export function ReferralsScreen() {
                 <p
                   className={cn(
                     "mt-10 text-11.5",
-                    left === 0 ? "text-warn" : "text-mut",
+                    left === 0 ? "text-warn" : "text-muted",
                   )}
                 >
                   {left === 0
@@ -205,14 +205,14 @@ export function ReferralsScreen() {
                 </p>
               ) : null}
 
-              <p className="mt-8 text-11.5 text-mut">
+              <p className="mt-8 text-11.5 text-muted">
                 مجموع ما وصلك: {formatMoney(data.total_rewarded, currency)}
               </p>
             </section>
           ) : (
-            <section className="rounded-16 border border-line bg-sur p-16">
-              <h2 className="text-13.5 font-bold text-tx">كيف تعمل</h2>
-              <p className="mt-8 text-12.5 leading-relaxed text-mut">
+            <section className="rounded-16 border border-line bg-surface p-16">
+              <h2 className="text-13.5 font-bold text-ink">كيف تعمل</h2>
+              <p className="mt-8 text-12.5 leading-relaxed text-muted">
                 شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الدعوةُ في
                 حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.
               </p>
@@ -220,7 +220,7 @@ export function ReferralsScreen() {
           )}
 
           <section>
-            <h2 className="mb-8 text-13.5 font-bold text-tx">من سجّل برمزك</h2>
+            <h2 className="mb-8 text-13.5 font-bold text-ink">من سجّل برمزك</h2>
             {data.referrals.length === 0 ? (
               <EmptyState title="لم يسجّل أحدٌ برمزك بعد" />
             ) : (
@@ -230,7 +230,7 @@ export function ReferralsScreen() {
                   return (
                     <StaggerItem
                       key={row.id}
-                      className="flex items-center justify-between gap-10 rounded-13 border border-line bg-sur p-12"
+                      className="flex items-center justify-between gap-10 rounded-13 border border-line bg-surface p-12"
                     >
                       <span>
                         <span
@@ -238,11 +238,11 @@ export function ReferralsScreen() {
                         >
                           {where.text}
                         </span>
-                        <span className="mt-2 block text-11 text-mut">
+                        <span className="mt-2 block text-11 text-muted">
                           {row.referral_type === "driver" ? "كبتن" : "راكب"}
                         </span>
                       </span>
-                      <span className="text-11.5 text-mut">
+                      <span className="text-11.5 text-muted">
                         {row.rewarded && row.reward_amount
                           ? formatMoney(
                               row.reward_amount,

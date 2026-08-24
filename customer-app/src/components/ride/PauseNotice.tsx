@@ -49,23 +49,23 @@ export function PauseNotice({ ride }: { ride: Ride }) {
     >
       <div className="flex items-end justify-between gap-10">
         <div>
-          <p className="text-12 text-mut">
+          <p className="text-12 text-muted">
             {pause.kind === "arrival"
               ? "الكبتن ينتظرك عند نقطة الانطلاق"
               : "الكبتن واقفٌ بطلبك"}
           </p>
           {/* الوقتُ يُحسب هنا — والمالُ لا */}
-          <p className="text-20 font-bold tabular-nums text-tx">
+          <p className="text-20 font-bold tabular-nums text-ink">
             {elapsed(pause.started_at, now)}
           </p>
         </div>
         <div className="text-end">
           {/* **والمهلةُ تُقال قبل أن تنتهي لا بعدها**: راكبٌ يرى صفراً ولا يعرف
               لماذا يظنّ العدّادَ معطوباً، ثم يفاجئه رقمٌ بعد دقيقة */}
-          <p className="text-12 text-mut">
+          <p className="text-12 text-muted">
             {billing ? "رسم الانتظار حتى الآن" : `أول ${free} دقائق مجاناً`}
           </p>
-          <p className="font-bold text-tx">
+          <p className="font-bold text-ink">
             {formatMoney(ride.pause_charge, ride.currency)}
           </p>
         </div>

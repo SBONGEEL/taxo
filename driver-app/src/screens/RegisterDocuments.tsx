@@ -358,7 +358,7 @@ export function RegisterDocumentsScreen() {
         {uploading ? (
           <div className="mb-12 flex items-center gap-10">
             {/* شريطُ تقدّمٍ يقول «يتقدّم»، لا دوّامةٌ تقول «انتظر» */}
-            <div className="h-6 flex-1 overflow-hidden rounded-13 bg-sur2">
+            <div className="h-6 flex-1 overflow-hidden rounded-13 bg-surface-2">
               <div
                 className="h-full bg-ok transition-[width] duration-200"
                 style={{ width: `${progress}%` }}
