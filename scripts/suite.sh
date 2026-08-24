@@ -138,7 +138,10 @@ printf '→ المجموعةُ تعمل… (النتيجةُ تُكتب في %s 
 dc run --rm --no-deps --name "$NAME" \
   -e COLUMNS=200 \
   -e DATABASE_URL="$DB_URL" -e REDIS_URL="$REDIS_URL" \
-  backend sh -c "pytest -q ${*:-} > /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
+  # **`python -u` لا `pytest` مباشرةً**: المخرَجُ المُعادُ توجيهُه إلى ملفٍّ
+#   يُخزَّن كتلاً، **فمهلةٌ تنتهي تترك ملفاً فارغاً** ولا يُعرف أين وقف.
+#   وقع مقيساً في التشغيل ٤٨: ثلاثون دقيقةً ثم قطعٌ **بلا سطرٍ واحد**.
+  backend sh -c "python -u -m pytest -q ${*:-} > /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
 code=$?
 
 tail -n 3 "$OUT" 2>/dev/null
