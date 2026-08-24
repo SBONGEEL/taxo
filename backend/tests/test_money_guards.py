@@ -3,6 +3,20 @@
 **والاتجاهُ الثاني هو المهمّ هنا**: حارسٌ يمنع الأذى وحدَه سهل، والصعبُ أن
 يمنع الأذى **ولا يمنع ما بُني ليبقى عاملاً** — فالتجميدُ يوقف الكتابةَ ولا
 يوقف تسعيرَ رحلة، والإيقافُ يمنع مغادرةَ المال ولا يمنع طلباً ولا اعتماداً.
+
+**وثلاثةٌ من الثمانية لا تسقط بحذف الحارس — مقيسٌ لا مُقدَّر** (2026-08-24،
+بتعطيل الدالّتين في `money_guards` وتشغيل الملفّ: **٥ تسقط و٣ تبقى**):
+
+| يبقى أخضرَ بحذف الحارس | وما يملكه فعلاً |
+|---|---|
+| `test_the_absent_row_reads_as_working` | افتراضُ الغياب في `default_for` |
+| `test_switching_a_money_guard_off_needs_a_written_reason` | العضويةُ في `GUARDED_FLAGS` |
+| `test_a_ride_is_still_priced_while_pricing_is_frozen` | **ضيقُ** الحارس لا وجودُه |
+
+**وتبقى الثلاثةُ ولا تُحذف** — كلٌّ منها يملك ثابتاً حقيقياً يسقط بحذف
+**ذلك** الثابت. **وإنما تُسمّى** لئلّا يقرأها لاحقٌ حرّاساً للمفتاحين
+فيظنَّ التغطيةَ ثمانيةً وهي خمسة. **وحارسٌ يوحي بتغطيةٍ لا يملكها أسوأُ من
+غيابه** — وهي قاعدةُ `test_locks_have_tests` نفسُها مطبَّقةً على هذا الملفّ.
 """
 
 from __future__ import annotations
@@ -33,7 +47,15 @@ async def _set(session_factory, key: FeatureKey, enabled: bool) -> None:
 
 
 async def test_the_absent_row_reads_as_working(session_factory) -> None:
-    """**الغيابُ يعمل** — وإلا أوقف أوّلُ تنصيبٍ غيرِ مبذورٍ التسعيرَ كلَّه."""
+    """**الغيابُ يعمل** — وإلا أوقف أوّلُ تنصيبٍ غيرِ مبذورٍ التسعيرَ كلَّه.
+
+    > **ولا يسقط بحذف الحارس** (مقيسٌ 2026-08-24): يبقى أخضرَ وكلتا الدالّتين
+    > في `money_guards` تعودان فوراً. **فلا يُقرأ حارساً لهما.**
+    >
+    > **وما يملكه**: `settings_service.default_for` وحدَه — أنّ مفتاحَي المال
+    > في `DEFAULT_ENABLED_FLAGS`، فصفٌّ غائبٌ يُقرأ **مشتعلاً**. ويسقط بقلب
+    > ذلك الافتراض، لا بحذف الحارس.
+    """
     for key in (
         FeatureKey.PRICING_WRITES_ENABLED,
         FeatureKey.WITHDRAWAL_PAYOUT_ENABLED,
@@ -46,7 +68,21 @@ async def test_the_absent_row_reads_as_working(session_factory) -> None:
 
 
 async def test_switching_a_money_guard_off_needs_a_written_reason() -> None:
-    """كلاهما في `GUARDED_FLAGS` — والإطفاءُ بلا سببٍ لا يُقبل."""
+    """كلاهما في `GUARDED_FLAGS` — والإطفاءُ بلا سببٍ لا يُقبل.
+
+    > **ولا يسقط بحذف الحارس** (مقيسٌ 2026-08-24). **فلا يُقرأ حارساً له.**
+    >
+    > **وما يملكه**: **العضويةُ في `GUARDED_FLAGS`** لا غير — ويسقط بحذف
+    > أحد الاسمين منها. **ولا يمسّ مسارَ الرفض إطلاقاً**: لا يُنادي راوتراً
+    > ولا يمرّ بدالّةٍ من `money_guards`، وإنما يقرأ مجموعةً ويقارن.
+    >
+    > **وهو قراءةُ مجموعةٍ لا قياسُ سلوك**: أنّ الإطفاءَ بلا سببٍ **يُرفض
+    > فعلاً** يملكه `test_phone_verification.py::`
+    > `test_disabling_the_flag_needs_a_written_reason` — **وعلى
+    > `otp_verification_enabled` وحدَه**. فالرفضُ لمفتاحَي المال **غيرُ
+    > مقيسٍ سلوكاً**، وإنما يُستدلّ عليه بأن الشرطَ في الراوتر على المجموعة
+    > لا على مفتاحٍ بعينه. **وهذا استدلالٌ لا قياس، ويُقال كذلك.**
+    """
     guarded = settings_service.GUARDED_FLAGS
     assert FeatureKey.PRICING_WRITES_ENABLED.value in guarded
     assert FeatureKey.WITHDRAWAL_PAYOUT_ENABLED.value in guarded
@@ -129,6 +165,18 @@ async def test_a_ride_is_still_priced_while_pricing_is_frozen(
 
     والصفوفُ تُبذر **قبل** التجميد — فالمقيسُ أن رحلةً تُسعَّر بصفٍّ قائمٍ
     والكتابةُ مغلقة، لا أن التسعيرَ يعمل بلا صفوف.
+
+    > **ولا يسقط بحذف الحارس** (مقيسٌ 2026-08-24) — **وهذا لازمٌ عن معناه لا
+    > نقصٌ فيه**: هو يقيس أن الحارسَ **لا يتعدّى**، وحارسٌ محذوفٌ لا يتعدّى
+    > بالتأكيد. **فلا يُقرأ حارساً للتجميد.**
+    >
+    > **وما يملكه**: **ضيقُ الحارس** — أنّ `require_pricing_writes` عند
+    > كتابةِ `pricing` وحدَها ولم تتسرّب إلى `POST /rides/estimate`. ويسقط
+    > يومَ يُنادى من مسار التسعير، **وذلك هو العطبُ الذي وُجد له**.
+    >
+    > **ولا يستطيع التمييزَ بين «الحارسُ ضيّق» و«لا حارسَ أصلاً»** — والذي
+    > يميّزهما هو `test_frozen_pricing_refuses_the_three_writes`، وهو يسقط
+    > بحذف الحارس. **فالاثنان نصفا قياسٍ واحد، ولا يُقرأ أحدُهما وحدَه.**
     """
     await _set(session_factory, FeatureKey.PRICING_WRITES_ENABLED, False)
     rider = await rider_session(client)
