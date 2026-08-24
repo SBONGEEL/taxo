@@ -443,7 +443,7 @@ function PauseStrip({
     <div
       className={cn(
         "mb-13 rounded-13 border px-13 py-11",
-        pause.over_max ? "border-warn bg-warn-soft" : "border-line bg-surface-2",
+        pause.over_max ? "border-warn bg-surface-2" : "border-line bg-surface-2",
       )}
     >
       <div className="flex flex-wrap items-center gap-6">

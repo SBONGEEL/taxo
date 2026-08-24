@@ -172,7 +172,7 @@ export function NotificationsScreen() {
                   to ? "transition hover:bg-surface-2" : "cursor-default",
                   // **غيرُ المقروء يُعلَم بحدٍّ لا بخلفيةٍ ملوّنة**: الخلفيةُ
                   // الملوّنة على صفوفٍ كثيرةٍ تصير هي الصفحةَ لا التمييز
-                  entry.read_at === null && "border-accent-line",
+                  entry.read_at === null && "border-accent",
                 )}
               >
                 <Icon className={cn("mt-2 size-18 shrink-0", style.tone)} />

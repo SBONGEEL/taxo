@@ -104,7 +104,7 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
           onClick={() => setOnlyPending((value) => !value)}
           className={
             onlyPending
-              ? "shrink-0 rounded-full border border-accent-line bg-accent px-12 py-6 text-11.5 font-semibold text-accent-ink"
+              ? "shrink-0 rounded-full border border-accent bg-accent px-12 py-6 text-11.5 font-semibold text-accent-ink"
               : "shrink-0 rounded-full border border-line bg-surface-2 px-12 py-6 text-11.5 font-semibold text-muted"
           }
         >

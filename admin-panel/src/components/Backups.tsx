@@ -73,7 +73,7 @@ export function Backups({
       {state.stale_hours !== null ||
       state.unpulled !== null ||
       state.disk_percent !== null ? (
-        <div className="rounded-13 border border-warn-brd bg-warn-soft p-14 text-12.5 text-ink">
+        <div className="rounded-13 border border-warn bg-surface-2 p-14 text-12.5 text-ink">
           {state.stale_hours !== null ? (
             <p>
               ⚠️ مضى <b>{digits(String(state.stale_hours))} ساعةً</b> بلا نسخةٍ

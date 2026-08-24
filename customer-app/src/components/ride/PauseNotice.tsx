@@ -44,7 +44,7 @@ export function PauseNotice({ ride }: { ride: Ride }) {
     <div
       className={cn(
         "mt-10 rounded-13 border p-12",
-        pause.over_max ? "border-warn bg-warn-soft" : "border-line bg-sur2",
+        pause.over_max ? "border-warn bg-surface-2" : "border-line bg-surface-2",
       )}
     >
       <div className="flex items-end justify-between gap-10">
