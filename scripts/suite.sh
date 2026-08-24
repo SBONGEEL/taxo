@@ -153,13 +153,33 @@ printf '→ المجموعةُ تعمل… (النتيجةُ تُكتب في %s 
 #
 # **ولا تعليقَ بين أسطر الاستمرار**: التعليقُ بعد `\` يبتلع بقيّةَ الأمر،
 # **و`bash -n` يمرّ** لأنه سليمُ التركيب — فحصُ تركيبٍ ليس قياسَ سلوك.
+# **وبصمةُ التشغيل تُكتب أوّلَ سطرٍ في المخرَج** — والقارئُ يرفضه إن لم
+# تطابق. **فالمسحُ يمنع والبصمةُ تكشف إن سقط المسح**: ملفٌّ من تشغيلٍ مضى
+# يحمل بصمةً أخرى، وملفٌّ لم يُكتب أصلاً لا يحمل بصمةً البتّة.
+STAMP="$NAME@$(git rev-parse --short HEAD 2>/dev/null || echo 'لا-git')"
+
 dc run --rm --no-deps --name "$NAME" \
   -e COLUMNS=200 \
+  -e SUITE_STAMP="$STAMP" \
   -e DATABASE_URL="$DB_URL" -e REDIS_URL="$REDIS_URL" \
-  backend sh -c "python -u -m pytest -q ${*:-} > /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
+  backend sh -c "echo \"SUITE_STAMP=\$SUITE_STAMP\" > /app/.suite.out; python -u -m pytest -q ${*:-} >> /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
 code=$?
 
 tail -n 3 "$OUT" 2>/dev/null
+
+# **لا حكمَ من مخرَجٍ ليس لهذا التشغيل** (2026-08-24). وقع مقيساً: كُسر أمرُ
+# الحاوية فلم يعمل شيء، **وأعلن البابُ خضرةً** لأن الملفَّ يحمل `EXIT=0` من
+# تشغيلٍ سابق — **على جهاز المطوّر، وهو موضعُ قرار الدفع**.
+if ! grep -qxF "SUITE_STAMP=$STAMP" "$OUT" 2>/dev/null; then
+  found=$(sed -n 's/^SUITE_STAMP=//p' "$OUT" 2>/dev/null | head -n 1)
+  fail "المخرَجُ ليس لهذا التشغيل — ولا يُقرأ منه حكم." \
+       "  المنتظَر: $STAMP" \
+       "  الموجود: ${found:-<لا بصمة — لم يكتب التشغيلُ شيئاً>}" \
+       "" \
+       "**فالمجموعةُ لم تعمل**، ولا يُقرأ سكوتُها خضرة: الحاويةُ لم تبدأ" \
+       "أو ماتت قبل أن تكتب. اقرأ ما فوق هذا السطر."
+fi
+
 verdict=$(grep -c '^EXIT=0$' "$OUT" 2>/dev/null || true)
 if [ "$verdict" != "1" ]; then
   printf '\n✗ المجموعةُ لم تنتهِ بنجاح — اقرأ %s كاملاً.\n' "$OUT" >&2
