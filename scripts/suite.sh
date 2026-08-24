@@ -33,12 +33,34 @@ OUT="backend/.suite.out"
 #: اسمُ الحاوية الحيّة — يُكتب عند البدء ويُمحى عند الانتهاء الطبيعيّ.
 #: **وبقاؤه هو الدليل** على أن التشغيلَ قُتل من خارجه.
 MARK="backend/.suite.container"
-DB_URL="postgresql+asyncpg://taxo:taxo@db:5432/taxo"
 REDIS_URL="redis://redis:6379/0"
 
 dc() { docker compose --env-file "$ENV_FILE" "$@"; }
 
 fail() { printf '\n✗ %s\n' "$1" >&2; shift; for line in "$@"; do printf '  %s\n' "$line" >&2; done; exit 1; }
+
+# ── ٠) عنوانُ القاعدة **يُقرأ ولا يُكتب** ─────────────────────────────────
+# **كان السطرُ `taxo:taxo` مكتوباً هنا** (منذ 2026-08-20)، فوافق `.env.local`
+# **صدفةً** وعمل محلياً أبداً — **وCI يولّد كلمةً عشوائيةً لكلِّ تشغيل**، فكان
+# كلُّ اختبارٍ يسقط بـ`InvalidPasswordError`. **ولم يُرَ ذلك سنةً** لأن عطبين
+# فوقه كانا يستُرانه: المجموعةُ لم تكن تبلغ القاعدةَ أصلاً، والبابُ كان يخرج
+# بصفرٍ حين يسقط. (مقيسٌ 2026-08-24، التشغيلان ٤١ و٤٣.)
+#
+# **ولا سرَّ في الكود**، **ولا احتياطَ صامتٌ لسرّ**: ما نقص يوقف ويُسمّى.
+env_value() { sed -n "s/^$1=//p" "$ENV_FILE" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+
+for key in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB; do
+  # **لا تُطبع القيمةُ ولا بديلُها** — يُسأل عن الوجود بشرطٍ صريح
+  if [ -z "$(env_value "$key")" ]; then
+    fail "\`$key\` غيرُ موجودٍ في \`$ENV_FILE\` — ولا عنوانَ قاعدةٍ بلا بيانه." \
+         "" \
+         "**ولا يُكتب بيانُ اعتمادٍ في الكود**: وافق المكتوبُ جهازَ المطوّر" \
+         "صدفةً وسقط في CI بـ\`InvalidPasswordError\` على كل اختبار." \
+         "أضِف المفتاحَ إلى ملفِّ البيئة ثم أعد."
+  fi
+done
+
+DB_URL="postgresql+asyncpg://$(env_value POSTGRES_USER):$(env_value POSTGRES_PASSWORD)@db:5432/$(env_value POSTGRES_DB)"
 
 # ── ١) حاوياتٌ شاردةٌ من تشغيلٍ سابق ───────────────────────────────────────
 # **الاسمان معاً** — وهذا قِيس في استعمالٍ حقيقيّ (2026-08-20): قُتل تشغيلٌ
@@ -109,7 +131,12 @@ for dep in db redis; do
 done
 
 printf '→ المجموعةُ تعمل… (النتيجةُ تُكتب في %s فتبقى بعد الحاوية)\n' "$OUT"
+# **و`COLUMNS` عريضٌ عمداً**: ملخّصُ pytest يُقصّ على عرض الطرفية، وفي CI
+# ثمانون — فوصل الاسمُ `asyncpg.exceptions.Inv...` **مقطوعاً**، واحتاج
+# قارئُه أن يعيد إنتاج العطب في حاويةٍ معزولةٍ ليعرفه (2026-08-24).
+# **وأثرٌ مقطوعٌ يُنفق وقتَ من يأتي بعدك.**
 dc run --rm --no-deps --name "$NAME" \
+  -e COLUMNS=200 \
   -e DATABASE_URL="$DB_URL" -e REDIS_URL="$REDIS_URL" \
   backend sh -c "pytest -q ${*:-} > /app/.suite.out 2>&1; echo EXIT=\$? >> /app/.suite.out"
 code=$?
