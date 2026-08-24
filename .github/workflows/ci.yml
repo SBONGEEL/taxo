@@ -60,6 +60,26 @@ jobs:
       - name: بناءُ صورة الخلفية
         run: docker compose --env-file .env build backend
 
+      # **القاعدةُ وRedis تُقامان هنا** — و`suite.sh` يمرّ بـ`--no-deps` عمداً
+      # فلا يُقيمهما (لئلّا يُعيد تشغيلَ خدمةٍ صحيحةٍ على جهاز المطوّر).
+      # **ولم تكن هذه الخطوةُ موجودةً قطّ**، فكانت المجموعةُ تعمل هنا **بلا
+      # قاعدة**: ١١٧٦ خطأَ تهيئةٍ في التشغيل ٤١ — **ولم يُرَ ذلك لأن
+      # `suite.sh` كان يخرج بصفرٍ حين يسقط** (أُصلح في الإيداع نفسِه).
+      - name: القاعدةُ وRedis
+        run: |
+          docker compose --env-file .env up -d db redis
+          for i in $(seq 1 60); do
+            ok=0
+            for svc in db redis; do
+              cid=$(docker compose --env-file .env ps -q "$svc")
+              [ -n "$cid" ] || continue
+              [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] && ok=$((ok+1))
+            done
+            [ "$ok" = 2 ] && { echo "✓ القاعدةُ وRedis سليمتان بعد ${i}ث"; break; }
+            [ "$i" = 60 ] && { echo "✗ لم تصحّا في ٦٠ث"; docker compose --env-file .env ps; exit 1; }
+            sleep 1
+          done
+
       # **البابُ الوحيدُ للمجموعة** — هو نفسُه محلياً وهنا، فلا تفترق بيئتان
       - name: المجموعةُ الكاملة
         run: TAXO_ENV_FILE=.env bash scripts/suite.sh

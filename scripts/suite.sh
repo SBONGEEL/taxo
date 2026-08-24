@@ -52,7 +52,8 @@ fail() { printf '\n✗ %s\n' "$1" >&2; shift; for line in "$@"; do printf '  %s\
 if [ -f "$MARK" ]; then
   prev=$(cat "$MARK" 2>/dev/null)
   if [ -n "$prev" ] && docker ps --format '{{.Names}}' | grep -qx "$prev"; then
-    held=$(dc exec -T db psql -U taxo -d postgres -tAc       "SELECT count(*) FROM pg_stat_activity WHERE datname='taxo_test';" 2>/dev/null | tr -d ' ')
+    held=$(dc exec -T db psql -U taxo -d postgres -tAc       "SELECT count(*) FROM pg_stat_activity WHERE datname='taxo_test';" 2>/dev/null | tr -d '
+ ')
     fail "تشغيلٌ سابقٌ ما زال يعمل — واسمُه مكتوبٌ في \`$MARK\`."          "  الحاوية: $prev"          "  وتمسك \`taxo_test\` بـ${held:-؟} جلسة."          ""          "**ولا تُقرأ رسالتُه كارثةً في الكود**: ما سيأتي خطأُ تهيئةٍ واحدٌ"          "يتكرر بعدد الاختبارات، لا ألفُ عطبٍ في المشروع."          "أزِلْه ثم أعد:  docker rm -f $prev"
   fi
   rm -f "$MARK"
@@ -87,6 +88,26 @@ printf '%s
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -f "$MARK"; }
 trap cleanup EXIT INT TERM
 
+# ── ٣) القاعدةُ وRedis حيّتان قبل أن يبدأ شيء ────────────────────────────
+# **`--no-deps` أدناه مقصودٌ** — لا يُعاد تشغيلُ خدمةٍ صحيحةٍ لأجل مجموعة.
+# **وثمنُه أنه لا يُقيمها إن كانت غائبة**، فتُخرج المجموعةُ خطأَ تهيئةٍ واحداً
+# **مكرَّراً بعدد الاختبارات** — وهو ما وقع في CI: **١١٧٦ خطأً** لأن الوظيفةَ
+# لم تُقِم `db` ولا `redis` قطّ (مقيسٌ 2026-08-24، التشغيل ٤١).
+#
+# **فيُسأل عنهما هنا بالاسم**: رسالةٌ تقول «القاعدةُ غائبة» أنفعُ من ألفِ
+# خطأٍ يُقرأ كارثةً في الكود. وهي علّةُ هذا الملفِّ نفسِها — **يمنع الحالةَ،
+# ويسمّيها حين تقع**.
+for dep in db redis; do
+  state=$(dc ps --status running --format '{{.Service}}' 2>/dev/null | grep -cx "$dep" || true)
+  if [ "${state:-0}" = "0" ]; then
+    fail "الخدمةُ \`$dep\` ليست قائمة — والمجموعةُ لا تُقيمها (\`--no-deps\`)." \
+         "" \
+         "**ولا تُقرأ نتيجةُ تشغيلٍ بلا قاعدة**: ستكون خطأَ تهيئةٍ واحداً" \
+         "يتكرر بعدد الاختبارات، لا عطباً في الكود." \
+         "أقِمها ثم أعد:  docker compose --env-file $ENV_FILE up -d db redis"
+  fi
+done
+
 printf '→ المجموعةُ تعمل… (النتيجةُ تُكتب في %s فتبقى بعد الحاوية)\n' "$OUT"
 dc run --rm --no-deps --name "$NAME" \
   -e DATABASE_URL="$DB_URL" -e REDIS_URL="$REDIS_URL" \
@@ -98,6 +119,21 @@ verdict=$(grep -c '^EXIT=0$' "$OUT" 2>/dev/null || true)
 if [ "$verdict" != "1" ]; then
   printf '\n✗ المجموعةُ لم تنتهِ بنجاح — اقرأ %s كاملاً.\n' "$OUT" >&2
   printf '  وإن كان الخطأُ واحداً يتكرر عند التهيئة فالسببُ بيئةٌ لا كود.\n' >&2
-  exit "${code:-1}"
+  # ── **بابٌ يصيح ثم يخرج بصفرٍ ليس باباً** (عطبٌ مقيسٌ 2026-08-24) ──────
+  # `${code:-1}` يستبدل حين يكون المتغيّرُ **فارغاً أو غيرَ مضبوط**، **لا حين
+  # يكون صفراً**. و`code` صفرٌ دائماً هنا: أمرُ الحاوية ينتهي بـ`echo` وهو
+  # ينجح مهما فعل pytest — فكان هذا السطرُ `exit 0` **على مجموعةٍ حمراء**.
+  #
+  # **وثمنُه أن بوّابة CI لم تكن تحرس شيئاً**: قِيس على التشغيل ٤١ أن
+  # المجموعةَ أخرجت **١١٧٦ خطأً** و`EXIT=1`، **والوظيفةُ والتشغيلُ كلاهما
+  # «success»**. فكلُّ خضرةٍ سابقةٍ لهذه الوظيفة **غيرُ مُثبَتة**.
+  #
+  # **والرمزُ يُقرأ من الملفّ لا من الأمر**: `EXIT=` هو رمزُ pytest نفسِه،
+  # وهو ما يهمّ. وإن غاب فرمزُ الأمر، **وصفرٌ يصير واحداً** — فلا مخرجَ
+  # للخروج بصفرٍ من هذا الفرع البتّة.
+  inner=$(sed -n 's/^EXIT=\([0-9]\{1,\}\)$/\1/p' "$OUT" 2>/dev/null | tail -n 1)
+  status=${inner:-$code}
+  [ -z "$status" ] || [ "$status" = "0" ] && status=1
+  exit "$status"
 fi
 printf '\n✓ المجموعةُ خضراء.\n'
