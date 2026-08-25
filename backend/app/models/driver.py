@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     SmallInteger,
@@ -194,6 +196,14 @@ class DriverDocument(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint(
             "driver_id", "doc_type", name="uq_driver_documents_driver_doc_type"
         ),
+        # **يُصرَّح في النموذج كما هو في الترحيلة** — وإلا رآه `autogenerate`
+        # فهرساً زائداً واقترح حذفَه، **و`test_migrations_match_models` يمسك
+        # ذلك بالضبط** (وقد أمسكه اليوم).
+        Index(
+            "ix_driver_documents_expires_on",
+            "expires_on",
+            postgresql_where=text("expires_on IS NOT NULL"),
+        ),
     )
 
     driver_id: Mapped[uuid.UUID] = mapped_column(
@@ -218,6 +228,19 @@ class DriverDocument(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         default=DocumentReviewStatus.PENDING,
     )
+    # **تاريخُ انتهاء الصلاحية — يومٌ لا لحظة** (البند ب).
+    #
+    # `Date` لا `DateTime` لأن الصلاحيةَ مطبوعةٌ على البطاقة بيومٍ لا بساعة،
+    # وتخزينُها لحظةً يجعل «أانتهت اليوم؟» جواباً يختلف بين عمّان وطرابلس على
+    # الصفِّ نفسِه.
+    #
+    # **والفراغُ يعني «لا تاريخَ لهذا النوع»** — صورةُ المركبة لا تنتهي —
+    # **لا «تاريخٌ نُسي»**. وكلُّ ما يقرؤه يتجاهل الفارغَ صراحةً، فلا يُعلَّق
+    # حسابٌ لأن حقلاً لم يُملأ.
+    expires_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # **من كتبه آخِراً**: `driver` أو `admin`. فتصحيحُ المشرف لا يُقرأ إقراراً
+    # من الكبتن، ولا إقرارُ الكبتن يُقرأ تحقّقاً من المشرف.
+    expiry_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True

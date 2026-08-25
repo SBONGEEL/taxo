@@ -94,6 +94,18 @@ const VEHICLE_PHOTOS: DocumentType[] = [
 
 const ORDER: DocumentType[] = [...PAPERS, ...VEHICLE_PHOTOS];
 
+/** ما **له تاريخُ انتهاء** — والباقي لا خانةَ له (البند ب).
+ *
+ * **وليست «كلَّ مستند»**: صورةُ المركبة من الأمام لا تنتهي، والصورةُ الشخصيةُ
+ * لا تنتهي — وخانةُ تاريخٍ تحتهما تسأل عمّا لا جواب له، **فتُملأ بأيِّ شيءٍ
+ * ليمرّ النموذج**. والثلاثةُ هنا تحمل تاريخاً مطبوعاً على الورقة نفسِها.
+ */
+const EXPIRING: DocumentType[] = [
+  "driving_license",
+  "national_id",
+  "vehicle_registration",
+];
+
 
 export function RegisterDocumentsScreen() {
   const navigate = useNavigate();
@@ -164,6 +176,9 @@ export function RegisterDocumentsScreen() {
       .catch(() => undefined);
   }, []);
 
+  // تاريخُ الانتهاء لكلِّ نوعٍ يحمله — يُقرأ عند الرفع ويُرسَل معه
+  const [expiry, setExpiry] = useState<Partial<Record<DocumentType, string>>>({});
+
   async function pick(docType: DocumentType, file: File | undefined) {
     if (!file) return;
     setUploading(docType);
@@ -180,6 +195,7 @@ export function RegisterDocumentsScreen() {
       await uploadDocument(docType, shrunk.file, {
         onProgress: setProgress,
         signal: controller.signal,
+        expiresOn: expiry[docType],
       });
       // **يُقال بعد نجاح الرفع لا قبله**: سطرٌ يعلن التصغير ثم يفشل الرفعُ
       // يترك الكبتنَ يظنّ أن وثيقتَه ذهبت مصغَّرةً وهي لم تذهب أصلاً
@@ -422,6 +438,26 @@ export function RegisterDocumentsScreen() {
                         : "ارفع صورة"}
                   </span>
                 </button>
+                {/* **تحت المستند لا داخلَ زرّه**: الزرُّ يفتح منتقيَ الملفات،
+                    وخانةٌ داخلَه تُفتح المنتقيَ عند كلِّ لمسة. والتاريخُ
+                    يُملأ **قبل** الرفع فيذهب معه في الطلب نفسِه — ولو مُلئ
+                    بعده لاحتاج نداءً ثانياً وبابين لشيءٍ واحد. */}
+                {EXPIRING.includes(doc) ? (
+                  <label className="mt-6 flex items-center gap-8 ps-13 text-11.5 text-muted">
+                    <span className="shrink-0">تنتهي في</span>
+                    <input
+                      type="date"
+                      value={expiry[doc] ?? ""}
+                      onChange={(event) =>
+                        setExpiry((current) => ({
+                          ...current,
+                          [doc]: event.target.value || undefined,
+                        }))
+                      }
+                      className="fld flex-1 py-6 text-12"
+                    />
+                  </label>
+                ) : null}
                 <input
                   ref={(element) => {
                     pickers.current[doc] = element;

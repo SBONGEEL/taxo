@@ -294,6 +294,8 @@ export interface UploadOptions {
   onProgress?: (percent: number) => void;
   /** إلغاءٌ بيد المستخدم. */
   signal?: AbortSignal;
+  /** تاريخُ انتهاء صلاحية المستند — `YYYY-MM-DD`، ويُترك فارغاً لما لا ينتهي. */
+  expiresOn?: string;
 }
 
 export async function upload<T>(
@@ -303,6 +305,10 @@ export async function upload<T>(
 ): Promise<T> {
   const form = new FormData();
   form.append("file", file);
+  // **حقلٌ يُرسَل حين يُملأ وحدَه** (البند ب): خانةٌ فارغةٌ تُرسَل نصّاً فارغاً
+  // فتصير `date` غيرَ صالحةٍ ويرتدّ الرفعُ كلُّه بـ422 — والوثيقةُ التي لا
+  // تنتهي (صورةُ المركبة) خانتُها فارغةٌ بحقّ.
+  if (options.expiresOn) form.append("expires_on", options.expiresOn);
   const access = tokens.access();
 
   // **`XMLHttpRequest` لا `fetch`، ولسببٍ واحدٍ لا بديلَ عنه**: `fetch` **لا

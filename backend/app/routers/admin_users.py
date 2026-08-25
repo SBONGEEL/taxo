@@ -461,6 +461,7 @@ async def review_driver_document(
         actor=admin,
         approved=payload.approved,
         note=payload.note,
+        expires_on=payload.expires_on,
     )
     await session.commit()
     await session.refresh(document)

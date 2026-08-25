@@ -331,10 +331,17 @@ export const reviewDocument = (
   documentId: string,
   approved: boolean,
   note?: string,
+  /** تصحيحُ تاريخ الانتهاء — **يُرسَل حين يُعطى وحدَه** (البند ب): غيابُ الحقل
+   *  يعني «لا تُغيّره»، وإرسالُه فارغاً يعني «امْحُه». */
+  expiresOn?: string,
 ) =>
   api.post<DriverDocument>(
     `/admin/drivers/${driverId}/documents/${documentId}/review`,
-    { approved, note: note ?? null },
+    {
+      approved,
+      note: note ?? null,
+      ...(expiresOn === undefined ? {} : { expires_on: expiresOn || null }),
+    },
   );
 
 export const approveDriver = (driverId: string) =>

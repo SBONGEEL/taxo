@@ -116,12 +116,23 @@ const COLUMNS = "1.6fr 1.1fr 0.9fr 1fr 0.8fr 0.6fr 1.2fr";
  * تسعَ صورٍ لا ينظر المشرفُ إلى أكثرها. **ومن فتح يغلق** — `revokeObjectURL`
  * عند الإغلاق، وإلا بقيت الوثائقُ في ذاكرة التبويب حتى يُغلق.
  */
+/** معاينةُ الوثيقة، **ومعها حقلُ التاريخ عائماً فوقها** (البند ب).
+ *
+ * **وموضعُه فوق الصورة لا تحتها**: المشرفُ يقارن رقماً مكتوباً على الورقة برقمٍ
+ * في خانة، **وعينُه تنتقل بينهما**. وخانةٌ تحت صورةٍ بارتفاع ١٧٠ تعني أن أحدَهما
+ * خارج مجال النظر حين يُقرأ الآخر — فيُحفظ الرقمُ في الذاكرة ويُكتب، وهو بعينه
+ * ما يُخطئ فيه الإنسان.
+ */
 function DocumentPreview({
   driverId,
   documentId,
+  expiry,
+  onExpiryChange,
 }: {
   driverId: string;
   documentId: string;
+  expiry: string;
+  onExpiryChange: (value: string) => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -136,11 +147,25 @@ function DocumentPreview({
   if (url) {
     return (
       <div className="mt-10">
-        <img
-          src={url}
-          alt="الوثيقة"
-          className="max-h-170 w-full rounded-12 border border-line object-contain"
-        />
+        <div className="relative">
+          <img
+            src={url}
+            alt="الوثيقة"
+            className="max-h-170 w-full rounded-12 border border-line object-contain"
+          />
+          {/* عائمٌ على الحافة العليا — يُقرأ مع الورقة في نظرةٍ واحدة */}
+          <label className="absolute inset-x-8 top-8 flex items-center gap-8 rounded-10 bg-dim px-10 py-6 backdrop-blur">
+            <span className="shrink-0 text-11 font-semibold text-inv">
+              تنتهي في
+            </span>
+            <input
+              type="date"
+              value={expiry}
+              onChange={(event) => onExpiryChange(event.target.value)}
+              className="fld flex-1 py-4 text-11.5"
+            />
+          </label>
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -490,6 +515,9 @@ function DriverDrawer({
   const error = form.message;
   const setError = form.setMessage;
   const [reason, setReason] = useState("");
+  // **تاريخُ كلِّ مستندٍ على حدة** (البند ب) — يُبتدأ ممّا أقرّه الكبتن ويُرسَل
+  // مع البتّة. ومفتاحُه معرّفُ المستند لا نوعُه: الدرجُ يعرض المستنداتِ كلَّها.
+  const [expiry, setExpiry] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setDocs(await getDriverDocuments(row.driver_id));
@@ -611,6 +639,10 @@ function DriverDrawer({
                 <DocumentPreview
                   driverId={row.driver_id}
                   documentId={document.id}
+                  expiry={expiry[document.id] ?? document.expires_on ?? ""}
+                  onExpiryChange={(value) =>
+                    setExpiry((current) => ({ ...current, [document.id]: value }))
+                  }
                 />
 
                 {/* **الأزرارُ للمنتظِر وحدَه**: `documents.review` يرفض ما بُتّ
@@ -631,6 +663,8 @@ function DriverDrawer({
                               row.driver_id,
                               document.id,
                               true,
+                              undefined,
+                              expiry[document.id] ?? document.expires_on ?? undefined,
                             ).then(load),
                           "اعتُمدت الوثيقة ✓",
                         )
@@ -650,6 +684,7 @@ function DriverDrawer({
                               document.id,
                               false,
                               reason.trim(),
+                              expiry[document.id] ?? document.expires_on ?? undefined,
                             ).then(load),
                           "رُفضت الوثيقة — أُبلغ السائق",
                         )

@@ -3,10 +3,10 @@ from __future__ import annotations
 import secrets
 import uuid
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, Query, Response, UploadFile, status
+from fastapi import APIRouter, File, Form, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -239,6 +239,10 @@ async def upload_my_document(
     session: DbSession,
     redis: RedisDep,
     file: Annotated[UploadFile, File(description="صورة أو PDF")],
+    expires_on: Annotated[
+        date | None,
+        Form(description="تاريخُ انتهاء الصلاحية — يومٌ لا لحظة (البند ب)"),
+    ] = None,
 ) -> DocumentUploadOut:
     """رفع مستندٍ أو استبدالُ سابقه — والاستبدال يعيده «قيد المراجعة».
 
@@ -260,7 +264,11 @@ async def upload_my_document(
         raise RateLimited(retry_after=limit.retry_after)
 
     result = await documents_service.upload(
-        session, driver=driver, doc_type=doc_type, reader=file
+        session,
+        driver=driver,
+        doc_type=doc_type,
+        reader=file,
+        expires_on=expires_on,
     )
     await session.commit()
     await session.refresh(result.document)

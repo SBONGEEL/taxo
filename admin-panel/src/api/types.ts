@@ -219,6 +219,10 @@ export interface DriverDocument {
   size_bytes: number;
   review_status: DocumentReviewStatus;
   review_note: string | null;
+  /** تاريخُ انتهاء الصلاحية — `null` يعني «لا تاريخَ لهذا النوع» (البند ب). */
+  expires_on: string | null;
+  /** `driver` أو `admin` — **من كتبه آخِراً**، فلا يُقرأ تصحيحُ المشرف إقراراً. */
+  expiry_source: string | null;
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;

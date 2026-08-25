@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -90,6 +90,9 @@ class DriverDocumentOut(BaseModel):
     size_bytes: int
     review_status: DocumentReviewStatus
     review_note: str | None
+    # **تاريخُ الانتهاء ومصدرُه** (البند ب) — `None` يعني «لا تاريخَ لهذا النوع»
+    expires_on: date | None
+    expiry_source: str | None
     reviewed_at: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -104,6 +107,10 @@ class DocumentReviewIn(BaseModel):
 
     approved: bool
     note: str | None = Field(default=None, max_length=500)
+    # **تصحيحُ المشرف للتاريخ — يُرسَل أو لا يُرسَل** (البند ب): غيابُ الحقل
+    # يعني «لا تُغيّره»، وإرسالُه فارغاً يعني «امْحُه». والتمييزُ بينهما لازم،
+    # وإلا مَحَت كلُّ مراجعةٍ لا تذكر التاريخَ ما أقرّه الكبتن.
+    expires_on: date | None = None
 
     @model_validator(mode="after")
     def _note_required_on_reject(self) -> "DocumentReviewIn":

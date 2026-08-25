@@ -30,7 +30,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -273,6 +273,7 @@ async def upload(
     driver: Driver,
     doc_type: DocumentType,
     reader: storage.AsyncReader,
+    expires_on: date | None = None,
 ) -> UploadResult:
     """يحفظ الملف ويكتب صفَّه، ويعيد ما يحتاجه المستدعي بعده.
 
@@ -338,6 +339,11 @@ async def upload(
             # مراجعةٌ سابقة لملفٍ لم يعد موجوداً حكمٌ على غائب
             existing.review_status = DocumentReviewStatus.PENDING
             existing.review_note = None
+            # **الاستبدالُ يعيد التاريخَ إلى إقرار الكبتن** (البند ب): الصورةُ
+            # الجديدةُ رخصةٌ أخرى، وتاريخُ القديمة — ولو صحّحه مشرف — شهادةٌ على
+            # ورقةٍ لم تعد موجودة. **وفارغٌ هنا يمحو**، كما يمحو `reviewed_by`.
+            existing.expires_on = expires_on
+            existing.expiry_source = "driver" if expires_on is not None else None
             existing.reviewed_by = None
             existing.reviewed_at = None
             document = existing
@@ -349,6 +355,8 @@ async def upload(
                 content_type=stored.content_type,
                 size_bytes=stored.size_bytes,
                 review_status=DocumentReviewStatus.PENDING,
+                expires_on=expires_on,
+                expiry_source="driver" if expires_on is not None else None,
             )
             session.add(document)
 
@@ -396,6 +404,7 @@ async def review(
     actor: User,
     approved: bool,
     note: str | None = None,
+    expires_on: date | None = None,
 ) -> DriverDocument:
     """يعتمد مستنداً أو يرفضه — **يقرأ الصفَّ بقفلٍ ثم يفحص ثم يكتب**.
 
@@ -422,6 +431,12 @@ async def review(
 
     document.review_status = target
     document.review_note = (note or "").strip() or None
+    # **تصحيحُ المشرف يُكتب حين يُرسَل وحدَه** (البند ب): `None` يعني «لم يُرسِل
+    # حقلاً» لا «امْحُ التاريخ» — فمراجعةٌ لا تذكر التاريخَ لا تمحو ما أقرّه
+    # الكبتن. **ومحوُه بابُه إرسالُه فارغاً صراحةً**، وذاك ما تفعله الشاشة.
+    if expires_on is not None:
+        document.expires_on = expires_on
+        document.expiry_source = "admin"
     document.reviewed_by = actor.id
     document.reviewed_at = datetime.now(UTC)
 
