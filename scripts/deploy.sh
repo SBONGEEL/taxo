@@ -540,14 +540,30 @@ esac
 # الخادم. و`npm ci` يحترم القفلَ فلا يحلّ التبعياتِ حلاًّ يخالف الشجرة.
 FRONT_API="${TAXO_FRONT_API_BASE:-https://stg-api.tajora.ly}"
 say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_API)…"
-BUILT="$(_ssh "cd $REMOTE && ok=0 && for a in customer-app driver-app admin-panel; do \
-  docker run --rm -v \"\$PWD/\$a\":/app -w /app -e VITE_API_BASE_URL='$FRONT_API' \
-    node:22-alpine sh -c 'npm ci --silent && npm run build' >/dev/null 2>&1 \
-    && ok=\$((ok+1)) || echo \"FAIL \$a\"; \
+# **الجذرُ يُربط لا مجلّدُ التطبيق** (صُحّح 2026-08-25 بعد سقوطٍ مقيس):
+# `npm run build` أوّلُ ما يفعل `node ../tools/check-money-math.mjs`،
+# **والحرّاسُ في جذر المستودع** وهم يقرأون `backend/` أيضاً. فربطُ
+# `./<app>` وحدَه يحلّ المسارَ إلى `/tools/…` خارج الربط، **فتسقط الثلاثُ
+# للسبب الواحد**: `Cannot find module '/tools/check-money-math.mjs'`.
+#
+# **والمخرَجُ يُحفظ ويُطبع عند السقوط** (صُحّح معه): كان `>/dev/null 2>&1`،
+# **فسقط البابُ بلا أثرٍ يُقرأ** واضطُرّ القياسُ إلى إعادة تشغيلٍ يدويٍّ على
+# الخادم ليعرف السببَ أصلاً. **وبابٌ يسقط بلا أثرٍ ليس باباً** — وهو الدرسُ
+# المسجَّلُ في CI نفسِه («الأثرُ يصل كاملاً»)، لم يكن مطبَّقاً هنا.
+# فيُكتب المخرَجُ إلى ملفٍّ لكلِّ تطبيق، **ويُشحن ذيلُه في النفَس نفسِه**.
+BUILT="$(_ssh "cd $REMOTE && ok=0 && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
+  for a in customer-app driver-app admin-panel; do \
+    if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL='$FRONT_API' \
+         node:22-alpine sh -c 'npm ci --silent && npm run build' > /tmp/taxo-build/\$a.log 2>&1; then \
+      ok=\$((ok+1)); \
+    else \
+      echo \"FAIL \$a\"; echo \"──── \$a ────\"; tail -25 /tmp/taxo-build/\$a.log; \
+    fi; \
   done; echo \"BUILT=\$ok\"" | tr -d '\r')"
 case "$BUILT" in
   *BUILT=3*) say "  ✓ الثلاثُ بُنيت على الخادم" ;;
-  *) die "تعذّر بناءُ واجهةٍ على الخادم — يُوقَف قبل إعادة الحاويات. الجواب: ${BUILT:-<لا شيء>} · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
+  *) say "$BUILT"
+     die "تعذّر بناءُ واجهةٍ على الخادم — يُوقَف قبل إعادة الحاويات. **والأثرُ أعلاه** · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
 esac
 
 
