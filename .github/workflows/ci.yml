@@ -130,6 +130,23 @@ jobs:
           grep -oE '[A-Za-z_.]+(Error|Exception)' backend/.suite.out |
             sort | uniq -c | sort -rn | head -15
 
+  # ════════════════════════════════════════════════════════════════════════
+  # **الملفّاتُ الخمسة** (قرارُ المالك 2026-08-25): نُقل من `CLAUDE.md`
+  # ما لا يحكم كلَّ قرار إلى أربعة ملفّاتٍ **مربوطةٍ بشروطٍ صريحة**.
+  #
+  # **وخطرُه واحد**: منقولٌ لا طريقَ إليه — وهو «بابٌ بلا زرّ» في ثوب
+  # توثيق، **ولا يفشل به شيءٌ أبداً**. فالحارسُ يقيس الاتجاهين ويطبع الرقمين.
+  docs:
+    name: الملفّاتُ الخمسة
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node tools/check-docs.mjs
+
   frontends:
     name: الحرّاسُ وبناءُ الثلاثة
     runs-on: ubuntu-latest

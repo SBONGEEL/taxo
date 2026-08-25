@@ -1,0 +1,157 @@
+#!/usr/bin/env node
+// حارسُ الملفّات الخمسة — «نقلٌ لا تحرير»، وستُّ مقايسَ بالاتجاهين.
+//
+// الشكلُ الذي وُجد له: `CLAUDE.md` بلغ ٣٨٦ ألفَ حرف، فصار حملُه في كلِّ جلسةٍ
+// أكبرَ ممّا يُحتمل. فنُقل ٨٩٪ منه إلى أربعة ملفّاتٍ **مربوطةٍ بشروطٍ صريحة**،
+// لا «مراجعَ اختيارية». وخطرُ ذلك واحد: **منقولٌ لا طريقَ إليه** — وهو «بابٌ
+// بلا زرّ» في ثوب توثيق، ولا يفشل به شيءٌ أبداً.
+//
+// ولا يُصدَّق حارسٌ حتى يُقاس في الاتجاهين: يمسك عطباً **مصنوعاً**، ويصمت على
+// شجرةٍ **سليمة**. وصمتُه يحتاج إثباتاً كما يحتاجه صياحُه — **فيُعلن كم عنواناً
+// قرأ، وصفرٌ مقروءٌ يُقرأ عطباً لا سلامة**.
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+// حروفُ `CLAUDE.md` قبل النقل، مقيسةً لا مقدَّرة. وهو الرقمُ الذي تُطابَق به
+// الملفّاتُ الخمسة: `sum(5) − المكتوبُ الجديد` يجب أن يساويَه بالحرف.
+const ORIGIN = 386023;
+const ORIGIN_LINES = 5422;
+
+// والعددُ وحدَه لا يكفي: **تبادلُ نصَّين متساويَي الطول بين ملفّين يمرّ منه**.
+// فهذه بصمةُ أسطر الأصل مرتَّبةً — تُثبت أن **مجموعةَ الأسطر هي هي**، لا أن
+// مجموعَها هو هو. والاثنان معاً هما «لا حرفَ تغيّر».
+const ORIGIN_DIGEST = "fa818bd263c0a5e8ddb07a917034bbeda028a6ea2f245c9844288121e8726390";
+
+// سقفُ `CLAUDE.md` — بهامشٍ لا عند حافّة. وتضييقُه يدفع إلى نقل قواعدَ عاملة،
+// وذاك خسارةٌ لا ربح (قرارُ المالك 2026-08-25).
+const CEILING = 60000;
+
+const MAIN = "CLAUDE.md";
+const MOVED = ["ARCHITECTURE.md", "PATTERNS.md", "GUARDS.md", "STATE.md"];
+const ALL = [MAIN, ...MOVED];
+
+// النصُّ المكتوبُ حديثاً — لا المنقول — محصورٌ بين هاتين العلامتين. وهو الوحيدُ
+// الذي يُطرح من المجموع، فيُقاس النقلُ وحدَه.
+const MARK_O = "<!--جديد-->";
+const MARK_C = "<!--/جديد-->";
+const NEW_RE = new RegExp(`${MARK_O}[\\s\\S]*?${MARK_C}\\n*`, "g");
+
+const ARROW = " → `";
+
+const read = (f) => readFileSync(join(ROOT, f), "utf8");
+const fail = [];
+const say = (s) => process.stdout.write(s + "\n");
+
+// ── العناوينُ المنقولة: `##`..`####`، وما كان منها داخل اقتباس (`> ###`) ──
+const headingOf = (line) => {
+  const m = /^(?:>\s*)?#{2,4}\s+(.*\S)\s*$/.exec(line);
+  return m ? m[1] : null;
+};
+
+const headings = new Map(); // file -> Set(text)
+let headingCount = 0;
+for (const f of MOVED) {
+  const body = read(f).replace(NEW_RE, "");
+  const set = new Set();
+  for (const line of body.split("\n")) {
+    const h = headingOf(line);
+    if (h) set.add(h);
+  }
+  headings.set(f, set);
+  headingCount += set.size;
+}
+
+// ── سطورُ الفهرس في CLAUDE.md ──
+const mainText = read(MAIN);
+const indexRows = [];
+for (const line of mainText.split("\n")) {
+  if (!line.startsWith("- ") || !line.endsWith("`")) continue;
+  const i = line.lastIndexOf(ARROW);
+  if (i < 0) continue;
+  indexRows.push({
+    text: line.slice(2, i),
+    file: line.slice(i + ARROW.length, -1),
+  });
+}
+
+// ١ — لا شكلَ بلا موضع: كلُّ عنوانٍ منقولٍ يذكره الفهرس.
+const indexed = new Map(MOVED.map((f) => [f, new Set()]));
+for (const r of indexRows) if (indexed.has(r.file)) indexed.get(r.file).add(r.text);
+for (const f of MOVED)
+  for (const h of headings.get(f))
+    if (!indexed.get(f).has(h)) fail.push(`شكلٌ بلا موضع: «${h}» في ${f} لا يذكره الفهرس`);
+
+// ٢ — لا موضعَ بلا شكل: كلُّ سطرِ فهرسٍ يشير إلى ملفٍّ وعنوانٍ موجودَين حرفياً.
+for (const r of indexRows) {
+  if (!headings.has(r.file)) fail.push(`موضعٌ بلا ملفّ: سطرُ فهرسٍ يشير إلى «${r.file}»`);
+  else if (!headings.get(r.file).has(r.text))
+    fail.push(`موضعٌ بلا شكل: «${r.text}» ليس عنواناً في ${r.file}`);
+}
+
+// ٣ — الرقمان، ثمّ البصمة.
+let sum = 0;
+let authored = 0;
+const sizes = {};
+let movedText = "";
+for (const f of ALL) {
+  const t = read(f);
+  sizes[f] = t.length;
+  sum += t.length;
+  for (const m of t.matchAll(NEW_RE)) authored += m[0].length;
+  movedText += t.replace(NEW_RE, ""); // وصلٌ بلا فاصلٍ: كلُّ قطعةٍ تنتهي بسطرٍ جديد
+}
+const movedChars = sum - authored;
+if (movedChars !== ORIGIN)
+  fail.push(`الرقمان لا يتطابقان: المنقولُ ${movedChars} والأصلُ ${ORIGIN} (فرقٌ ${movedChars - ORIGIN})`);
+
+const movedLines = movedText.split("\n");
+const digest = createHash("sha256").update(movedLines.slice().sort().join("\n"), "utf8").digest("hex");
+if (movedLines.length !== ORIGIN_LINES)
+  fail.push(`أسطرُ المنقول ${movedLines.length} والأصلُ ${ORIGIN_LINES}`);
+if (digest !== ORIGIN_DIGEST)
+  fail.push(`بصمةُ الأسطر تخالف الأصل — سطرٌ تغيّر أو انتقل نصُّه: ${digest.slice(0, 16)}…`);
+
+// ٤ — سقفُ CLAUDE.md.
+if (sizes[MAIN] > CEILING)
+  fail.push(`CLAUDE.md ${sizes[MAIN]} حرفاً — فوق السقف ${CEILING}`);
+
+// ٥ — صمتُ الحارس يحتاج إثباتاً: صفرٌ مقروءٌ عطبٌ لا سلامة.
+if (headingCount === 0) fail.push("صفرُ عناوينَ مقروءة — الحارسُ لا يقرأ شيئاً");
+if (indexRows.length === 0) fail.push("صفرُ سطورِ فهرسٍ مقروءة — الحارسُ لا يقرأ شيئاً");
+
+// ٦ — لا منقولَ بلا طريقٍ إليه: لكلِّ ملفٍّ **شرطٌ** يوجب فتحه، مكتوبٌ في
+//     CLAUDE.md بصيغة «قبل أن … | `FILE` |». والفهرسُ وحدَه لا يكفي لملفٍّ
+//     أكثرُه نثرٌ بلا عناوين — ولا الشرطُ وحدَه يكفي لعنوانٍ بعينه.
+for (const f of MOVED) {
+  const row = mainText
+    .split("\n")
+    .find((l) => l.startsWith("| **قبل أن") && l.includes(`\`${f}\``));
+  if (!row) fail.push(`منقولٌ بلا طريق: ${f} لا شرطَ يوجب فتحه في CLAUDE.md`);
+}
+
+// ── التقرير ──
+say("");
+say(`  الأصلُ قبل النقل   ${ORIGIN.toLocaleString("en")}`);
+say(`  مجموعُ الخمسة      ${sum.toLocaleString("en")}`);
+say(`  المكتوبُ الجديد    ${authored.toLocaleString("en")}`);
+say(`  المنقول            ${movedChars.toLocaleString("en")}  ${movedChars === ORIGIN ? "= الأصل ✓" : "✗"}`);
+say(`  بصمةُ الأسطر       ${digest.slice(0, 16)}…  ${digest === ORIGIN_DIGEST ? "= الأصل ✓" : "✗"}`);
+say("");
+for (const f of ALL)
+  say(`  ${f.padEnd(18)} ${String(sizes[f].toLocaleString("en")).padStart(9)}${f === MAIN ? `   (السقف ${CEILING.toLocaleString("en")})` : ""}`);
+say("");
+say(`  قُرئ: ${headingCount} عنواناً منقولاً · ${indexRows.length} سطرَ فهرس · ${MOVED.length} شروطٍ`);
+
+if (fail.length) {
+  say("");
+  for (const m of fail) say(`  ✗ ${m}`);
+  say("");
+  say(`  ✗ ${fail.length} عطباً.`);
+  process.exit(1);
+}
+say("");
+say("  ✓ لا شكلَ بلا موضع، ولا موضعَ بلا شكل، ولا منقولَ بلا طريق — ولا حرفَ تغيّر.");
