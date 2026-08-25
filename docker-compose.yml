@@ -236,7 +236,11 @@ services:
       # لا يعمل داخل alpine، وبغير هذا الحجم يحجب المجلدُ المضيفُ ما ثبّتته
       # الحاوية
       - taxo_customer_modules:/app/node_modules
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    # **نسخةُ npm مثبَّتةٌ على نسخة المضيف** — العلّةُ والحجّةُ كاملتان عند
+    # `driver-app` أعلاه: الصورةُ تحمل npm 10.9.8 والمضيفُ 11.6.2، وهما
+    # يكتبان `package-lock.json` كتابتين مختلفتين. **وشجرةٌ تهدأ من بابٍ
+    # وتضجّ من بابين ليست هادئة** (قرارُ المالك 2026-08-25).
+    command: sh -c "npm i -g npm@11.6.2 && npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "${CUSTOMER_APP_PORT:-5173}:5173"
 
@@ -282,7 +286,11 @@ services:
       - ./admin-panel:/app
       # `node_modules` المبنيّ على Windows لا يعمل داخل alpine
       - taxo_admin_modules:/app/node_modules
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    # **نسخةُ npm مثبَّتةٌ على نسخة المضيف** — العلّةُ والحجّةُ كاملتان عند
+    # `driver-app` أعلاه: الصورةُ تحمل npm 10.9.8 والمضيفُ 11.6.2، وهما
+    # يكتبان `package-lock.json` كتابتين مختلفتين. **وشجرةٌ تهدأ من بابٍ
+    # وتضجّ من بابين ليست هادئة** (قرارُ المالك 2026-08-25).
+    command: sh -c "npm i -g npm@11.6.2 && npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "5175:5175"
 
