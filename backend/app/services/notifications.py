@@ -47,7 +47,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.driver import Driver, DriverDocument
-from app.models.enums import Currency, DocumentReviewStatus
+from app.models.enums import Currency, DocumentReviewStatus, DocumentType
 from app.models.payment import Payment
 from app.models.ride import Ride, RideStop
 from app.services import devices, documents, inbox, presence
@@ -517,6 +517,77 @@ async def publish_document_review(
                 "doc_type": document.doc_type.value,
                 "review_status": document.review_status.value,
                 "review_note": document.review_note or "",
+            },
+        ),
+    )
+
+
+async def publish_document_expiring(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    document_id: uuid.UUID,
+    doc_type: DocumentType,
+    expires_on,
+    days_left: int,
+) -> None:
+    """تنبيهٌ قبل الانتهاء — **ويقول إن الحساب ما زال يعمل** (البند ج).
+
+    **وجملتُه تذكر الأثر لا التاريخَ وحدَه**: «تنتهي بعد ٧ أيام» تُقرأ خبراً،
+    و«ويُعلَّق حسابُك يومَها» تُقرأ أمراً. ومن قرأ الأولى وحدَها يؤجّل.
+
+    **و`data` خامٌ بلا جملة** كبقية الإشعارات: الرقمُ رقمٌ والتاريخُ تاريخ،
+    والشاشةُ تؤلّف — فإرسالُ «٧ أيام» مؤلَّفةً يضع لغةً في طبقةٍ لا تعرف
+    قارئَها، ويمرّ المالُ والأرقامُ على مُنسِّقٍ لأسبابِ عرض.
+    """
+    label = documents.label_for(doc_type)
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="مستندك يقترب من الانتهاء",
+            body=f"{label}: تنتهي بعد {days_left} يوماً — ويُعلَّق حسابك يومها",
+            data={
+                "type": DocumentEvent.DOCUMENT_EXPIRING.value,
+                "document_id": str(document_id),
+                "doc_type": doc_type.value,
+                "expires_on": expires_on.isoformat(),
+                "days_left": str(days_left),
+            },
+        ),
+    )
+
+
+async def publish_document_expired(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    driver_user_id: uuid.UUID,
+    document_id: uuid.UUID,
+    doc_type: DocumentType,
+    expires_on,
+) -> None:
+    """التعليقُ وقع — **ومعه طريقُ الخروج في الجملة نفسِها** (البند ج).
+
+    من قرأ «عُلِّق حسابك» بلا ما يفعله يتّصل بالدعم؛ ومن قرأ «ارفع الجديدة»
+    يفعلها. **وطريقُ الرجوع جزءٌ من الخبر لا صفحةُ مساعدةٍ بعده** — وهي قاعدةُ
+    «رفضٌ بلا مخرجٍ ليس رفضاً» بعينها.
+    """
+    label = documents.label_for(doc_type)
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="عُلِّق حسابك",
+            body=f"انتهت صلاحية {label} — ارفع الوثيقة الجديدة لتعود للمراجعة",
+            data={
+                "type": DocumentEvent.DOCUMENT_EXPIRED.value,
+                "document_id": str(document_id),
+                "doc_type": doc_type.value,
+                "expires_on": expires_on.isoformat(),
             },
         ),
     )

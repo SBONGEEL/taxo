@@ -87,6 +87,7 @@ celery_app = Celery(
         "app.tasks.referrals",
         "app.tasks.stops",
         "app.tasks.subscriptions",
+        "app.tasks.document_expiry",
         "app.tasks.whatsapp",
     ],
 )
@@ -157,6 +158,14 @@ celery_app.conf.update(
         # **كنسُ ملفاتِ الوثائق اليتيمة** — أسبوعياً لا يومياً: لا مسارَ حذفٍ
         # للكبتن اليوم، واليتيمُ يقع باستبدالٍ انقطع بين الملفِّ والصفّ. ومسحُ
         # مجلدٍ فيه آلافُ الملفات عملٌ لا يُكرَّر بلا سبب
+        # **مرّةً في اليوم لا كلَّ دقيقة** (البند ج): العتبةُ يومٌ لا لحظة،
+        # ودورةٌ كلَّ دقيقةٍ تسأل القاعدةَ ١٤٤٠ مرّةً عن سؤالٍ جوابُه يتغيّر
+        # مرّةً. **والساعةُ 02:30 UTC = 05:30 بعمّان** — بعد منتصف ليل السوقين
+        # بساعاتٍ، فيقع التعليقُ في يومه لا قبله.
+        "sweep-document-expiry": {
+            "task": "app.tasks.document_expiry.sweep_document_expiry",
+            "schedule": crontab(hour=2, minute=30),
+        },
         "sweep-orphan-documents": {
             "task": "app.tasks.maintenance.sweep_orphan_documents",
             "schedule": crontab(hour=4, minute=20, day_of_week=5),

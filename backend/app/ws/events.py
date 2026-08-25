@@ -77,6 +77,11 @@ class DocumentEvent(StrEnum):
 
     DOCUMENT_APPROVED = "document_approved"
     DOCUMENT_REJECTED = "document_rejected"
+    # **انتهاءُ الصلاحية حدثان لا واحد** (البند ج): تنبيهٌ قبله، وتعليقٌ عنده.
+    # وفصلُهما لازم — من قرأ «ستنتهي» يعرف أن حسابَه يعمل، ومن قرأ «عُلِّق»
+    # يعرف أنه توقّف. **وجملةٌ واحدةٌ لهما تجعل الأولَ يُقرأ إيقافاً.**
+    DOCUMENT_EXPIRING = "document_expiring"
+    DOCUMENT_EXPIRED = "document_expired"
 
 
 class SubscriptionEvent(StrEnum):

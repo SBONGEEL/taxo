@@ -136,6 +136,17 @@ async def _zone(session: AsyncSession, country: CountryCode) -> ZoneInfo:
         return ZoneInfo(DEFAULT_TIMEZONE)
 
 
+async def country_today(session: AsyncSession, country: CountryCode) -> date:
+    """**يومُ البلد لا يومُ الخادم** — بابٌ عامٌّ على المِنطقة نفسِها.
+
+    خادمٌ على UTC يقرأ منتصفَ ليل عمّان بعد ثلاث ساعات: فمن انتهت رخصتُه اليومَ
+    بتوقيت عمّان يبقى عاملاً ثلاثَ ساعاتٍ إضافية، ومن تنتهي غداً يُعلَّق الليلة.
+    **وهي القاعدةُ التي تحكم «اليوم» في هذا الملفّ أصلاً** — أُخرجت باباً كي لا
+    تُعاد كتابتُها في كلِّ من يحتاج يوماً.
+    """
+    return datetime.now(await _zone(session, country)).date()
+
+
 def _window(zone: ZoneInfo, period: str, now: datetime) -> tuple[datetime, datetime]:
     """بداية النافذة ونهايتها **بمِنطقة الدولة**، مُعادةً بـUTC للاستعلام."""
     days = PERIOD_DAYS.get(period, 1)
