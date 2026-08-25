@@ -454,6 +454,16 @@ export function DriversScreen() {
             setOpen(null);
             void load();
           }}
+          // **بتّةُ مستندٍ لا تُغلق الدرج** (عطبٌ مقيس 2026-08-25): للكبتن
+          // ثلاثةُ مستنداتٍ مطلوبةٍ فأكثر، وإغلاقُ الدرج بعد كلِّ اعتمادٍ
+          // يُجبر المشرفَ على فتحه ثلاثَ مرّاتٍ لكبتنٍ واحد. **وهو شكلُ سجلِّ
+          // الرحلات نفسُه**: فعلٌ داخل سطحٍ يهدم السطحَ الذي يقف عليه فاعلُه.
+          // والدرجُ يحمل تحميلَه الخاصّ (`getDriverDocuments`) فيُحدِّث نفسَه،
+          // **والقائمةُ خلفَه تُحدَّث أيضاً** لأن حالَ الكبتن قد تتغيّر ببتّة.
+          onDone={(message) => {
+            setDone(message);
+            void load();
+          }}
         />
       ) : null}
     </Shell>
@@ -466,11 +476,13 @@ function DriverDrawer({
   canDecide,
   onClose,
   onChanged,
+  onDone,
 }: {
   row: AdminDriverRow;
   canDecide: boolean;
   onClose: () => void;
   onChanged: (message: string) => void;
+  onDone: (message: string) => void;
 }) {
   const [docs, setDocs] = useState<DriverDocuments | null>(null);
   const [busy, setBusy] = useState(false);
@@ -499,6 +511,20 @@ function DriverDrawer({
       onChanged(message);
     } catch (caught) {
       form.capture(caught, "تعذّر التنفيذ");
+      setBusy(false);
+    }
+  }
+
+  /** كـ`run` **ولا يُغلق الدرج** — لبتّةِ مستندٍ من عدّة مستندات. */
+  async function runStay(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      onDone(message);
+    } catch (caught) {
+      form.capture(caught, "تعذّر التنفيذ");
+    } finally {
       setBusy(false);
     }
   }
@@ -599,7 +625,7 @@ function DriverDrawer({
                       type="button"
                       disabled={busy}
                       onClick={() =>
-                        void run(
+                        void runStay(
                           () =>
                             reviewDocument(
                               row.driver_id,
@@ -617,7 +643,7 @@ function DriverDrawer({
                       type="button"
                       disabled={busy || reason.trim().length < 3}
                       onClick={() =>
-                        void run(
+                        void runStay(
                           () =>
                             reviewDocument(
                               row.driver_id,
