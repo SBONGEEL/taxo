@@ -21,10 +21,36 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ORIGIN = 386023;
 const ORIGIN_LINES = 5422;
 
+// **وما حُذف من الأصل بعد النقل يُعلَن هنا بعلّته، ولا يُطرح صامتاً.**
+// النقلُ نفسُه لم يحذف حرفاً؛ وما بعده قد يحذف بقرارٍ صريح — **فيُكتب**، كي
+// يُقرأ في الفرق ويُسأل عنه. وطرحُ العددِ من الأصل بلا سطرٍ يقول لماذا هو
+// «تعديلُ الحارس ليمرّ» — وهو الطريقُ الذي تُفرَّغ به المطلقاتُ بلا أن يقرّر
+// أحدٌ إفراغَها.
+const REMOVED = [
+  {
+    chars: 148,
+    lines: 5,
+    what: "«### وفي بداية كلِّ جلسة» — نصُّه السابق: «تُقرأ الثلاثة قبل أيِّ شيء»",
+    why:
+      "قرارُ المالك 2026-08-25: استبدالٌ لا إضافة. قِيس النصُّ السابق في اليوم " +
+      "نفسِه فسقط — وكيلٌ فتح HANDOFF.md ٥٣٩ سطراً من ١٠١٢ وقال إنها «لم تغيّر " +
+      "الجوابَ بحرف»، ولم يفتح SPEC.md البتّة. وتركُه إلى جانب الشروط الأربعة " +
+      "يترك بابين يقولان أمرين.",
+  },
+];
+const REMOVED_CHARS = REMOVED.reduce((n, r) => n + r.chars, 0);
+const REMOVED_LINES = REMOVED.reduce((n, r) => n + r.lines, 0);
+const EXPECT_CHARS = ORIGIN - REMOVED_CHARS;
+const EXPECT_LINES = ORIGIN_LINES - REMOVED_LINES;
+
 // والعددُ وحدَه لا يكفي: **تبادلُ نصَّين متساويَي الطول بين ملفّين يمرّ منه**.
-// فهذه بصمةُ أسطر الأصل مرتَّبةً — تُثبت أن **مجموعةَ الأسطر هي هي**، لا أن
+// فهذه بصمةُ الأسطر مرتَّبةً — تُثبت أن **مجموعةَ الأسطر هي هي**، لا أن
 // مجموعَها هو هو. والاثنان معاً هما «لا حرفَ تغيّر».
-const ORIGIN_DIGEST = "fa818bd263c0a5e8ddb07a917034bbeda028a6ea2f245c9844288121e8726390";
+//
+// **وهي تُعاد كتابتُها كلَّما تغيّر `REMOVED`** — ولا تُشتقّ من شيء. فحارستُها
+// أن تغييرَها يظهر في الفرق سطراً واحداً بجانب علّةٍ مكتوبة؛ **ومن غيّرها بلا
+// إضافةِ سببٍ في `REMOVED` فقد كتب العلّةَ في لا مكان**.
+const ORIGIN_DIGEST = "0af01cbf160ba7f2b68dda39eef70d431a4bf690bad338c8989f05dd1051a9aa";
 
 // سقفُ `CLAUDE.md` — بهامشٍ لا عند حافّة. وتضييقُه يدفع إلى نقل قواعدَ عاملة،
 // وذاك خسارةٌ لا ربح (قرارُ المالك 2026-08-25).
@@ -105,13 +131,13 @@ for (const f of ALL) {
   movedText += t.replace(NEW_RE, ""); // وصلٌ بلا فاصلٍ: كلُّ قطعةٍ تنتهي بسطرٍ جديد
 }
 const movedChars = sum - authored;
-if (movedChars !== ORIGIN)
-  fail.push(`الرقمان لا يتطابقان: المنقولُ ${movedChars} والأصلُ ${ORIGIN} (فرقٌ ${movedChars - ORIGIN})`);
+if (movedChars !== EXPECT_CHARS)
+  fail.push(`الرقمان لا يتطابقان: المنقولُ ${movedChars} والمنتظَرُ ${EXPECT_CHARS} (الأصلُ ${ORIGIN} ناقصَ ${REMOVED_CHARS} معلَنةً) — فرقٌ ${movedChars - EXPECT_CHARS}`);
 
 const movedLines = movedText.split("\n");
 const digest = createHash("sha256").update(movedLines.slice().sort().join("\n"), "utf8").digest("hex");
-if (movedLines.length !== ORIGIN_LINES)
-  fail.push(`أسطرُ المنقول ${movedLines.length} والأصلُ ${ORIGIN_LINES}`);
+if (movedLines.length !== EXPECT_LINES)
+  fail.push(`أسطرُ المنقول ${movedLines.length} والمنتظَرُ ${EXPECT_LINES}`);
 if (digest !== ORIGIN_DIGEST)
   fail.push(`بصمةُ الأسطر تخالف الأصل — سطرٌ تغيّر أو انتقل نصُّه: ${digest.slice(0, 16)}…`);
 
@@ -138,7 +164,8 @@ say("");
 say(`  الأصلُ قبل النقل   ${ORIGIN.toLocaleString("en")}`);
 say(`  مجموعُ الخمسة      ${sum.toLocaleString("en")}`);
 say(`  المكتوبُ الجديد    ${authored.toLocaleString("en")}`);
-say(`  المنقول            ${movedChars.toLocaleString("en")}  ${movedChars === ORIGIN ? "= الأصل ✓" : "✗"}`);
+say(`  المحذوفُ معلَناً    ${REMOVED_CHARS.toLocaleString("en")}  (${REMOVED.length} بنداً بعلّته)`);
+say(`  المنقول            ${movedChars.toLocaleString("en")}  ${movedChars === EXPECT_CHARS ? "= الأصل ناقصَ المعلَن ✓" : "✗"}`);
 say(`  بصمةُ الأسطر       ${digest.slice(0, 16)}…  ${digest === ORIGIN_DIGEST ? "= الأصل ✓" : "✗"}`);
 say("");
 for (const f of ALL)
