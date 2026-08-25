@@ -538,7 +538,7 @@ esac
 # **وفي اتصالٍ واحدٍ كبقية الخطوات** (`ufw`: ستُّ وصلاتٍ في ثلاثين ثانية)،
 # **وبحاويةِ node لا بأدواتِ المضيف** — فلا نسخةَ ثانيةً من node تُدار على
 # الخادم. و`npm ci` يحترم القفلَ فلا يحلّ التبعياتِ حلاًّ يخالف الشجرة.
-FRONT_API="${TAXO_FRONT_API_BASE:-https://stg-api.tajora.ly}"
+FRONT_API="${TAXO_FRONT_API_BASE:-https://api.tajora.ly}"
 say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_API)…"
 # **الجذرُ يُربط لا مجلّدُ التطبيق** (صُحّح 2026-08-25 بعد سقوطٍ مقيس):
 # `npm run build` أوّلُ ما يفعل `node ../tools/check-money-math.mjs`،
@@ -581,10 +581,19 @@ esac
 # لو أُفردت لاحتاجت اتصالاً، ولو تقطّع بعدها **لَما عُرف أوقعت أم لا** —
 # **وفعلٌ يكتب على المال لا يُترك مجهولَ الحال**. فتُنفَّذ ويُقرأ أثرُها في
 # النفَس نفسِه، ثم يُقارَن هنا.
+# **والنفقُ يُعاد تشغيلُه صراحةً** (قلبُ النطاقات، 2026-08-25): ملفُّ التوجيه
+# `cloudflared/config.prod.yml` **مربوطٌ من القرص**، و`up -d` لا يعيد حاويةً لم
+# يتغيّر **تعريفُها** — فيبقى التوجيهُ القديمُ حيّاً في الذاكرة والملفُّ الجديدُ
+# على القرص، **ولا يشكو شيء**. وهو عينُ عائلة «الحاويةُ تبدو أنها فعلت ما
+# طُلب»: لا رسالةَ خطأ، ولا فرقَ يُرى إلا حين يُطلب مضيفٌ جديدٌ فيُردّ ٤٠٤.
+#
+# **وثمنُه ثوانٍ من انقطاع النفق في كلِّ رفعة** — وهو أرخصُ من توجيهٍ بائتٍ
+# لا يعرف أحدٌ أنه بائت. و`|| true` لأن الخدمةَ غيرُ معرَّفةٍ في التشغيل
+# المحلّيّ، **وغيابُها ليس عطباً هناك**.
 say "  الترحيلةُ والحاوياتُ في اتصالٍ واحد…"
 RESULT="$(_ssh "cd $REMOTE && \
   { [ '${PENDING:-x}' = '${TREE_HEAD:-y}' ] || docker compose $COMPOSE_FILES run --rm --no-deps -T backend alembic upgrade head >/dev/null 2>&1; } && \
-  docker compose $COMPOSE_FILES up -d --build >/dev/null 2>&1 && \
+  docker compose $COMPOSE_FILES up -d --build >/dev/null 2>&1 &&   { docker compose $COMPOSE_FILES restart cloudflared >/dev/null 2>&1 || true; } && \
   echo \"SHA=\$(git rev-parse HEAD)\" && \
   echo \"DB=\$(docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' | tr -d '\r ')\" && \
   echo \"BAD=\$(docker compose $COMPOSE_FILES ps --format '{{.Service}} {{.State}}' | grep -v ' running' | tr '\n' ',')\"" | tr -d '\r')" \

@@ -11,6 +11,24 @@ tunnel: e9ad4a78-33ad-4e65-aa00-53ba926e92cd
 credentials-file: /creds/e9ad4a78-33ad-4e65-aa00-53ba926e92cd.json
 
 ingress:
+  # ══════════════════════════════════════════════════════════════════════
+  # **الأسماءُ العاريةُ أولاً — والقديمةُ تحتها** (قلبُ النطاقات، قرارُ المالك
+  # 2026-08-25). الخادمُ يصير `api`/`app`/`driver`/`admin`، **وتبقى `stg-*`
+  # حتى لا تكون لحظةٌ لا يعمل فيها شيء**: تحويلُ سجلِّ DNS آخرُ الخطوات،
+  # وحتى يقع يبقى `stg-*` هو الطريقَ الوحيدَ إلى الخادم.
+  #
+  # **والترتيبُ هنا لا معنى له في المطابقة** (كلُّ قاعدةٍ باسمٍ صريح)، لكنه
+  # يقول للقارئ أيُّها الهدفُ وأيُّها الباقي للانتقال.
+  # ══════════════════════════════════════════════════════════════════════
+  - hostname: api.tajora.ly
+    service: http://backend:8000
+  - hostname: app.tajora.ly
+    service: http://customer-app:80
+  - hostname: driver.tajora.ly
+    service: http://driver-app:80
+  - hostname: admin.tajora.ly
+    service: http://admin-panel:80
+
   # الخلفيةُ — وهي الوحيدةُ التي كانت مقصودةً حين أُنشئت السجلات
   - hostname: stg-api.tajora.ly
     service: http://backend:8000
