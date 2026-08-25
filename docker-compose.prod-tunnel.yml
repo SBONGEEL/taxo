@@ -13,11 +13,23 @@ services:
   # بينما `curl` يجيب ٢٠٠. وهو الفخُّ نفسُه الذي وقع محلياً مرتين في يومٍ واحد.
   backend:
     environment:
+      # **الأسماءُ العاريةُ والقديمةُ معاً — والجمعُ مقصود** (قلبُ النطاقات،
+      # قرارُ المالك 2026-08-25). الخادمُ يصير الاسمَ العاريَ لأن **ما لا
+      # يُطفأ حين يُطفأ حاسوبُ المالك هو الذي يستحقّ اسمَه الحقيقيّ**؛
+      # و`stg-*` تبقى **حتى لا تكون لحظةٌ لا يعمل فيها شيء**: سجلُّ DNS
+      # يُحوَّل آخِراً، وحتى يُحوَّل يبقى `stg-*` هو الطريقَ إلى الخادم.
+      #
+      # **وحذفُها بعد استقرار القلب فعلٌ ثانٍ في يومٍ آخر** — لا معه.
       CORS_ORIGINS: >-
-        ["https://stg-app.tajora.ly","https://stg-driver.tajora.ly","https://stg-admin.tajora.ly"]
-      PUBLIC_API_BASE_URL: https://stg-api.tajora.ly
-      CARD_RETURN_URL: https://stg-app.tajora.ly/payments/card/return
-      CARD_RETURN_URL_DRIVER: https://stg-driver.tajora.ly/payments/card/return
+        ["https://app.tajora.ly","https://driver.tajora.ly","https://admin.tajora.ly",
+         "https://stg-app.tajora.ly","https://stg-driver.tajora.ly","https://stg-admin.tajora.ly"]
+      # **وهذه الثلاثةُ تُكتب بالاسم الهدف لا بالقديم**: قيمةٌ واحدةٌ لا تحتمل
+      # اسمين، والهدفُ هو ما يصير صحيحاً لحظةَ تحويل السجلّ. **وثمنُ النافذة
+      # بينهما مقيسٌ لا مقدَّر**: على قاعدة الخادم اليومَ `rides=0` و
+      # `payments=0` — فلا عودةَ بطاقةٍ ولا صفحةَ مزوّدٍ تنتظر أحداً.
+      PUBLIC_API_BASE_URL: https://api.tajora.ly
+      CARD_RETURN_URL: https://app.tajora.ly/payments/card/return
+      CARD_RETURN_URL_DRIVER: https://driver.tajora.ly/payments/card/return
 
   # **البناءُ المحزَّم يخدمه `nginx`، لا خادمُ التطوير** (2026-08-21).
   #
