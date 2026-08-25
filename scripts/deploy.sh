@@ -551,10 +551,19 @@ say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_A
 # الخادم ليعرف السببَ أصلاً. **وبابٌ يسقط بلا أثرٍ ليس باباً** — وهو الدرسُ
 # المسجَّلُ في CI نفسِه («الأثرُ يصل كاملاً»)، لم يكن مطبَّقاً هنا.
 # فيُكتب المخرَجُ إلى ملفٍّ لكلِّ تطبيق، **ويُشحن ذيلُه في النفَس نفسِه**.
+#
+# **و`git` تُثبَّت في الحاوية** (صُحّح 2026-08-25 بعد سقوطٍ ثانٍ مقيس):
+# `check:client-doors` يقيس الاستعمالَ بـ`git grep`، **و`node:22-alpine` بلا
+# git**. وشرطُه `catch { return false }` **يجعل غيابَ الأداة وغيابَ القارئ
+# جواباً واحداً** — فأعلن **٥٨ باباً بلا زرّ** في تطبيقين، والشجرةُ سليمةٌ
+# والحارسُ أخضرُ على جهاز المطوّر.
+#
+# **و`safe.directory` ليست زينة**: ملفّاتُ الربط مملوكةٌ لمستخدم الخادم
+# والحاويةُ تعمل جذراً، فـ`git` يرفض «ملكيةً مريبة» ويعود بالجواب الكاذب نفسِه.
 BUILT="$(_ssh "cd $REMOTE && ok=0 && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
   for a in customer-app driver-app admin-panel; do \
     if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL='$FRONT_API' \
-         node:22-alpine sh -c 'npm ci --silent && npm run build' > /tmp/taxo-build/\$a.log 2>&1; then \
+         node:22-alpine sh -c 'apk add --no-cache git >/dev/null && git config --global --add safe.directory /repo && npm ci --silent && npm run build' > /tmp/taxo-build/\$a.log 2>&1; then \
       ok=\$((ok+1)); \
     else \
       echo \"FAIL \$a\"; echo \"──── \$a ────\"; tail -25 /tmp/taxo-build/\$a.log; \
