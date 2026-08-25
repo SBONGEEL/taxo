@@ -270,6 +270,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### `PATTERNS.md` — الأشكال
 
+- متغيّرٌ واحدٌ في كلِّ مرّة — لا فعلان يمسّان سطحاً واحداً في يوم (2026-08-25) → `PATTERNS.md`
 - الشكلُ السادسَ عشر — **اسمٌ يُبحث عنه نصّاً، ونداءٌ بمفتاحٍ متغيّر** (2026-08-25) → `PATTERNS.md`
 - «An empty map is not a defect» — the three points, in order (2026-08-15) → `PATTERNS.md`
 - The twelfth shape — a fallback that works, and hides the defect it was built for (2026-08-19) → `PATTERNS.md`
