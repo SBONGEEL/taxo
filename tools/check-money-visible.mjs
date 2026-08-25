@@ -37,14 +37,32 @@
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, sep } from "node:path";
+import { join } from "node:path";
 import { exit } from "node:process";
+import { createRequire } from "node:module";
 import { certify } from "./certify.mjs";
+
+/** **مُحلِّلٌ من حزمة تطبيقٍ لا من الجذر** — لا `node_modules` في جذر
+ *  المستودع، وهي قاعدةُ `check:money-math` نفسُها. **وغيابُه وقوفٌ لا سلامة.** */
+function loadTypeScript() {
+  for (const app of APPS) {
+    try {
+      return createRequire(new URL(`../${app}/package.json`, import.meta.url))(
+        "typescript",
+      );
+    } catch {
+      /* جرّبْ التالي */
+    }
+  }
+  console.error("✗ لم يوجد `typescript` في أيٍّ من التطبيقات — الحارسُ لا يقيس.");
+  exit(1);
+}
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const APPS = ["customer-app", "driver-app", "admin-panel"];
 const SCHEMAS = join(ROOT, "backend", "app", "schemas");
 const VOCAB = join(ROOT, "backend", "tests", "money_format.py");
+const ts = loadTypeScript();
 
 /** استثناءاتٌ تحمل عللَها نصّاً — وقائمةٌ بلا عللٍ تصير قائمةَ أعذار. */
 const DELIBERATE = {
@@ -103,20 +121,53 @@ function schemaFields() {
   return found;
 }
 
-// ── ما تقرؤه التطبيقاتُ فعلاً — **خارج مرايا الأنواع** ──────────────────
+// ── ما تقرؤه التطبيقاتُ فعلاً — **خارج مرايا الأنواع وخارج التعليقات** ───
 // ذكرُ الاسم في `api/types.ts` **تصريحٌ لا قراءة**، وهي قاعدةُ `check:doors`
-// نفسُها: بيانٌ لا يكفي دليلاً على زرّ.
+// نفسُها: بيانٌ لا يكفي دليلاً على زرّ. **وذكرُه في تعليقٍ أضعفُ من التصريح
+// نفسِه** — شرحٌ عن الحقل لا قراءةٌ له.
+//
+// **وقد خدع هذا الحارسَ مقيساً (2026-08-25)**: `stop_fee` لا أثرَ له في
+// `customer-app` خارج `types.ts` إلا **تعليقٌ برأس `ConfirmRide.tsx`**،
+// و`outstanding` لا أثرَ له في `driver-app` إلا **تعليقٌ برأس `Collect.tsx`**.
+// فكان المسحُ نصّياً أعمى — `matchAll(/[A-Za-z_]\w*/g)` لا يفرّق بين قارئٍ
+// وشرحٍ عنه — **وهو درسُ `check:doors` الأول لم يُطبَّق هنا**.
+//
+// **فالمُحلِّلُ هو الأداة** كما في `check:money-math`: التعليقاتُ ليست عُقَداً
+// في الشجرة، فتسقط بلا قائمةٍ استثناءاتٍ تُكتب بيد وتُنسى.
+//
+// **وتبقى السلاسلُ محسوبةً قراءةً عمداً**: `row["stop_fee"]` قراءةٌ بحقّ،
+// والشكُّ يُفسَّر لصالح السكوت كما في رأس هذا الملفّ — حارسٌ يصيح على سليمٍ
+// يُطفأ، فيسقط معه ما يمسكه حقاً. **ونصُّ JSX ليس عقدةَ اسمٍ ولا سلسلة**،
+// فاسمُ حقلٍ مطبوعٌ للقارئ على الشاشة لا يُحسب قارئاً — وهو الصواب.
 function readIdentifiers() {
   const seen = new Set();
   let files = 0;
+  const collect = (node) => {
+    if (
+      ts.isIdentifier(node) ||
+      ts.isStringLiteral(node) ||
+      ts.isNoSubstitutionTemplateLiteral(node)
+    ) {
+      seen.add(node.text);
+    }
+    ts.forEachChild(node, collect);
+  };
   const walk = (dir) => {
     for (const entry of readdirSync(dir)) {
       const path = join(dir, entry);
       if (statSync(path).isDirectory()) walk(path);
       else if (/\.tsx?$/.test(entry) && !entry.endsWith("types.ts")) {
         files += 1;
-        for (const m of readFileSync(path, "utf8").matchAll(/[A-Za-z_][A-Za-z0-9_]*/g))
-          seen.add(m[0]);
+        ts.forEachChild(
+          ts.createSourceFile(
+            path,
+            readFileSync(path, "utf8"),
+            ts.ScriptTarget.Latest,
+            false,
+            entry.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+          ),
+          collect,
+        );
       }
     }
   };
