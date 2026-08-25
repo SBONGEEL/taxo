@@ -78,17 +78,42 @@ const headingOf = (line) => {
   return m ? m[1] : null;
 };
 
-const headings = new Map(); // file -> Set(text)
+// **عناوينُ الملفّات صنفان، والقاعدتان تُفرّقان بينهما** (قرارُ المالك 2026-08-25):
+//
+//   `headings`  — **المنقول**: ما خارج علامتَي «جديد». عليه القاعدةُ الأولى،
+//                 فكلُّ منقولٍ يجب أن يذكره الفهرس.
+//   `authored`  — **المكتوبُ جديداً**: ما داخلَهما. **يُبلَغ بالفهرس ولا
+//                 يُلزَم به** — إلزامُه يجعل كلَّ عنوانِ خبرٍ يومِيٍّ سطرَ فهرس،
+//                 والفهرسُ الذي يطول بكلِّ يومٍ يصير قائمةً يُمرّ عليها.
+//
+// **والعلّةُ مقيسةٌ لا محتاطة**: كُتب «الشكلُ السادسَ عشر» في `PATTERNS.md`
+// داخل العلامتين، **فلم يكن يُبلَغ إليه بفهرسٍ البتّة** — وسطرُ فهرسٍ يشير
+// إليه كان يسقط «موضعٌ بلا شكل» لأن العنوانَ يُطرح قبل الجمع. **وذاك يُفرِّغ
+// النقلَ من معناه**: نُقل ليُبلَغ إلى ما نُقل، فصار الجديدُ وحدَه بلا طريق.
+//
+// **والقياسُ السادسُ نفسُه كان يجب أن يمسكه فلم يمسكه** — لأنه يسأل عن
+// **المنقول** لا عن **المكتوب**؛ وهو «حارسٌ صادقٌ في نطاقه، وسؤالُه أضيقُ
+// ممّا يُقرأ منه».
+const headings = new Map(); // منقول → Set(text)
+const authoredHeadings = new Map(); // مكتوبٌ جديداً → Set(text)
 let headingCount = 0;
-for (const f of MOVED) {
-  const body = read(f).replace(NEW_RE, "");
+let authoredHeadingCount = 0;
+const collectHeadings = (s) => {
   const set = new Set();
-  for (const line of body.split("\n")) {
+  for (const line of s.split("\n")) {
     const h = headingOf(line);
     if (h) set.add(h);
   }
-  headings.set(f, set);
-  headingCount += set.size;
+  return set;
+};
+for (const f of MOVED) {
+  const text = read(f);
+  const moved = collectHeadings(text.replace(NEW_RE, ""));
+  const fresh = new Set([...collectHeadings(text)].filter((h) => !moved.has(h)));
+  headings.set(f, moved);
+  authoredHeadings.set(f, fresh);
+  headingCount += moved.size;
+  authoredHeadingCount += fresh.size;
 }
 
 // ── سطورُ الفهرس في CLAUDE.md ──
@@ -112,9 +137,12 @@ for (const f of MOVED)
     if (!indexed.get(f).has(h)) fail.push(`شكلٌ بلا موضع: «${h}» في ${f} لا يذكره الفهرس`);
 
 // ٢ — لا موضعَ بلا شكل: كلُّ سطرِ فهرسٍ يشير إلى ملفٍّ وعنوانٍ موجودَين حرفياً.
+//     **والعنوانُ يُطلب في الصنفين** — منقولاً كان أو مكتوباً جديداً: السؤالُ
+//     «أثمّة عنوانٌ بهذا النصّ؟» لا «أهو منقول؟». وسطرٌ يشير إلى ما لا وجودَ
+//     له يبقى ساقطاً كما كان.
 for (const r of indexRows) {
   if (!headings.has(r.file)) fail.push(`موضعٌ بلا ملفّ: سطرُ فهرسٍ يشير إلى «${r.file}»`);
-  else if (!headings.get(r.file).has(r.text))
+  else if (!headings.get(r.file).has(r.text) && !authoredHeadings.get(r.file).has(r.text))
     fail.push(`موضعٌ بلا شكل: «${r.text}» ليس عنواناً في ${r.file}`);
 }
 
@@ -171,7 +199,10 @@ say("");
 for (const f of ALL)
   say(`  ${f.padEnd(18)} ${String(sizes[f].toLocaleString("en")).padStart(9)}${f === MAIN ? `   (السقف ${CEILING.toLocaleString("en")})` : ""}`);
 say("");
-say(`  قُرئ: ${headingCount} عنواناً منقولاً · ${indexRows.length} سطرَ فهرس · ${MOVED.length} شروطٍ`);
+say(
+  `  قُرئ: ${headingCount} عنواناً منقولاً · ${authoredHeadingCount} مكتوباً جديداً` +
+    ` · ${indexRows.length} سطرَ فهرس · ${MOVED.length} شروطٍ`,
+);
 
 if (fail.length) {
   say("");
