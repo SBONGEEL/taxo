@@ -1810,3 +1810,70 @@ with no mirror**.
 — قد يكون الحقلُ لا محلَّ له في تلك الشاشة أصلاً. **وتقريرُ أيِّها عطبٌ وأيِّها
 مرآةٌ زائدةٌ يُطلب معه فتحُ الشاشات**، ولم يُفعل اليوم.
 <!--/جديد-->
+<!--جديد-->
+
+## القياسُ الحيُّ لمفاتيح الميزات — 2026-08-25
+
+**العددُ ٢٤ لا ٢٢** (`HANDOFF.md` §أ يقول اثنين وعشرين، وهو الرقمُ الشاردُ
+الذي خلّفه `--reload`): الخادمُ الحيُّ ينشر **٢٤** لـJO، وبابُ اللوحة
+`GET /admin/settings/feature-flags` يعطي ٢٤ للسوقين.
+
+### الضابط — **٢٤ من ٢٤، مقيسةً بالنقر**
+
+فُتحت شاشةُ الإعدادات في متصفحٍ حقيقيّ، ونُقر كلُّ زرٍّ وقُرئ أثرُه من
+الخلفية: **٢١ مفتاحاً انقلبت بالنقر وعادت**، و**ثلاثةُ حرّاسٍ**
+(`otp_verification_enabled` · `pricing_writes_enabled` ·
+`withdrawal_payout_enabled`) فتحت نافذةَ «أطفئ الحارس» وطلبت سبباً مكتوباً،
+**ثمّ أطفأت فعلاً حين أُعطي السبب وعادت**. ولا مفتاحَ بلا ضابط.
+
+### الباب — **١٧ من ٢٤ مقيسةً حيّة**
+
+بإطفاء المفتاح ومناداة المسار الحيّ ومقارنة الجواب كلِّه:
+
+| المفتاح | المسار | مُشعَلاً ← مُطفأً |
+|---|---|---|
+| `country_visible` | `GET /config` | `JO` موجود ← غائب |
+| `whatsapp_otp_enabled` | `GET /config` | `["whatsapp_otp","firebase"]` ← `["firebase"]` |
+| `otp_verification_enabled` | `POST /auth/register` بلا إثبات | 422 ← **201 حسابٌ أُنشئ** |
+| `driver_map_nearby_enabled` | `GET /drivers/me/nearby` | 200 ← 403 |
+| `vehicle_skins_enabled` | `GET /vehicle-skins/store` | 200 ← 403 `feature_disabled` |
+| `driver_levels_enabled` | `GET /drivers/me/progress` | `enabled: true ← false` |
+| `driver_advances_enabled` | `GET /drivers/me/advances` | `offered: true ← false` |
+| `subscription_offers_enabled` | `GET /public/landing` | عرضٌ ← `null` |
+| `promo_codes_enabled` | `POST /rides/promo/validate` | 404 ← 403 |
+| `cliq_enabled` | `POST /wallet/me/topups/cliq` | 409 ← 403 |
+| `card_enabled` | `POST /wallet/me/topups/card` | 409 ← 403 |
+| `wallet_enabled` | `POST /wallet/me/topups/cliq` | 409 ← 403 `المحفظة غير مفعّلة` |
+| `wallet_transfer_enabled` | `POST /wallet/me/transfers` | 409 ← 403 |
+| `driver_referrals_enabled` | `GET /me/referrals` (كبتن) | `programs[1].enabled: true ← false` |
+| `rider_referrals_enabled` | `GET /me/referrals` (راكب) | `programs[0].enabled: true ← false` |
+| `scheduled_rides_enabled` | `POST /me/bookings` | 422 ← 403 |
+| `pricing_writes_enabled` | `PATCH /admin/settings/pricing/{id}` | 200 ← 403 |
+
+**وسبعةٌ لم تُقَس بعدُ، وتُسمّى ولا تُدَّعى**: `tips_enabled` ·
+`multi_stop_enabled` · `women_service_enabled` · `next_instruction_enabled` ·
+`ride_sharing_enabled` · `referred_reward_enabled` ·
+`withdrawal_payout_enabled`. **وعلّةُ بقائها واحدة**: بابُ كلٍّ منها لا يُفتح
+إلا داخل مسارٍ يُنشئ حالاً — رحلةٌ حيّة، أو سلسلةُ إحالةٍ تكتمل، أو طلبُ سحبٍ
+`approved`. **وحالُ الحال بعد القياس: لا انحراف** — كلُّ مفتاحٍ أُعيد، والحسابُ
+الذي أنشأه قياسُ `otp_verification_enabled` حُذف.
+
+### وثلاثةٌ جانبيةٌ ظهرت في الطريق
+
+1. **المسحُ النصّيُّ يكذب على ستّةِ مفاتيحَ من ٢٤** — لا على ثلاثٍ. مطابقةُ
+   الاسم في الشجرة تعطي «صفرَ قارئ» لـ`tips_enabled` و`next_instruction_enabled`
+   و`pricing_writes_enabled` و`withdrawal_payout_enabled`
+   و`driver_referrals_enabled` و`rider_referrals_enabled`، **ولكلٍّ قارئٌ
+   حقيقيّ**: الخلفيةُ تسأل `settings_service.is_feature_enabled(session,
+   country, KEY)` **والمفتاحُ عضوُ تعدادٍ أو متغيّرٌ من خريطة** — فلا يقع عليه
+   بحثُ نصّ. **فأيُّ حكمٍ على مفتاحٍ بلا قياسٍ حيٍّ يُقرأ ظنّاً.**
+2. **أزرارُ المفاتيح في اللوحة `<button>` عارية** — بلا `role="switch"` وبلا
+   `aria-checked`. الحالُ مرسومٌ باللون وحدَه (`bg-ok` / `bg-line`)، **فقارئُ
+   الشاشة لا يعرف أمفتوحٌ هو أم مغلق**، وأداةُ قياسٍ لا تجد الحالَ إلا
+   بالنقر ومراقبة الخلفية — وهو ما اضطُرّ إليه هذا القياس.
+3. **مفتاحان على مسارٍ واحدٍ يستر أحدُهما الآخر**: أثرُ `wallet_enabled` على
+   `POST /wallet/me/transfers` **غيرُ مرئيٍّ البتّة** لأن
+   `wallet_transfer_enabled` مطفأٌ في الحال القائمة فيرفض قبله بالرمز نفسِه
+   (`feature_disabled`). فقياسُه هناك يعطي «لا فرق» **وهو كاذب** — وقِيس من
+   مسارٍ آخر فظهر البابُ حالاً. وهي «عطبان يستر أحدهما الآخر» في ثوب مفاتيح.
+<!--/جديد-->
