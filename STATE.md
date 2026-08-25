@@ -1985,7 +1985,7 @@ with no mirror**.
 
 | الملفّ | الحكم |
 |---|---|
-| `release-key.pem` (`BEGIN PRIVATE KEY`) | ✓ يمسك |
+| `release-key.pem` (بادئةُ مفتاحٍ خاصٍّ بصيغة PEM) | ✓ يمسك |
 | `keystore.properties` (`storePassword=…`) | **✗ يفوت** |
 | `taxo-release.jks` (ثنائيّ) | **✗ يفوت** |
 | `.env` بأسماءٍ كبيرة (`TAXO_KEYSTORE_PASSWORD=…`) | **✗ يفوت** |
