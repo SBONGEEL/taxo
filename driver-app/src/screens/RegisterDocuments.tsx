@@ -28,6 +28,13 @@ import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { Field } from "@/components/ui/Field";
+import { Combo } from "@/components/ui/Combo";
+import {
+  VEHICLE_COLORS,
+  VEHICLE_MAKES,
+  VEHICLE_MODELS,
+  vehicleYears,
+} from "@/lib/vehicle-options";
 import { useConfig } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
@@ -179,6 +186,14 @@ export function RegisterDocumentsScreen() {
   // تاريخُ الانتهاء لكلِّ نوعٍ يحمله — يُقرأ عند الرفع ويُرسَل معه
   const [expiry, setExpiry] = useState<Partial<Record<DocumentType, string>>>({});
 
+  // **حدُّ السنة من القاعدة المنشورة لا من هنا** (§17.3): رقمان في موضعين
+  // يفترقان أوّلَ تعديل — وقد وقع في هذا المشروع مرّةً (سقفُ واتساب ٣ ثمّ ٢٠).
+  const yearRule = rulesFor(config?.validation, "vehicle_create").year;
+  const yearOptions = vehicleYears(
+    typeof yearRule?.min === "number" ? yearRule.min : 1990,
+    typeof yearRule?.max === "number" ? yearRule.max : 2100,
+  );
+
   async function pick(docType: DocumentType, file: File | undefined) {
     if (!file) return;
     setUploading(docType);
@@ -297,15 +312,19 @@ export function RegisterDocumentsScreen() {
       <section className="mb-12 card p-15">
         <h2 className="mb-12 text-13.5 font-bold text-ink">المركبة</h2>
         <div className="mb-8 flex gap-8">
-          <Field
+          <Combo
             name="make"
+            options={VEHICLE_MAKES}
             error={errorFor("make")}
             placeholder="الشركة"
             value={make}
             onChange={(event) => setMake(event.target.value)}
           />
-          <Field
+          {/* **طُرزُ الشركة المختارة وحدَها** — ومن كتب شركةً ليست في القائمة
+              يجد حقلَ الطراز بلا اقتراحات، **وهو يكتب فيه كما يكتب اليوم**. */}
+          <Combo
             name="model"
+            options={VEHICLE_MODELS[make.trim()] ?? []}
             error={errorFor("model")}
             placeholder="الطراز"
             value={model}
@@ -313,8 +332,9 @@ export function RegisterDocumentsScreen() {
           />
         </div>
         <div className="mb-8 flex gap-8">
-          <Field
+          <Combo
             name="year"
+            options={yearOptions}
             error={errorFor("year")}
             inputMode="numeric"
             placeholder="سنة الصنع"
@@ -324,8 +344,9 @@ export function RegisterDocumentsScreen() {
             // معطَّلاً **بلا سبب مكتوب**، في تطبيقٍ كلُّ أرقامه عربية.
             onChange={(event) => setYear(toLatinDigits(event.target.value))}
           />
-          <Field
+          <Combo
             name="color"
+            options={VEHICLE_COLORS}
             error={errorFor("color")}
             placeholder="اللون"
             value={color}

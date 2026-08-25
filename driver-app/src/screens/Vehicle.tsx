@@ -25,6 +25,14 @@ import { useDriver } from "@/lib/driver";
 import { CATEGORY_LABEL } from "@/lib/rideFormat";
 import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { useConfig } from "@/lib/config";
+import { rulesFor } from "@/lib/validation";
+import {
+  VEHICLE_COLORS,
+  VEHICLE_MAKES,
+  VEHICLE_MODELS,
+  vehicleYears,
+} from "@/lib/vehicle-options";
 
 const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
@@ -333,18 +341,49 @@ function VehicleForm({
     form.year !== String(vehicle.year) ||
     form.plate_number !== vehicle.plate_number;
 
+  /** الاقتراحاتُ نفسُها التي في شاشة التسجيل (البند د).
+   *
+   * **ولمَ هنا أيضاً؟** لأن التسجيلَ والتعديلَ **بابان ينشران الشيءَ نفسَه**:
+   * قائمةٌ في أحدهما وحقلٌ عارٍ في الآخر تجعل الكبتنَ يكتب «Toyota» هنا و
+   * «تويوتا» هناك، **فيصير للمركبة الواحدة اسمان**. وهو الشكلُ الثامن بعينه.
+   */
+  const { config } = useConfig();
+  const yearRule = rulesFor(config?.validation, "vehicle_create").year;
+  const yearOptions = vehicleYears(
+    typeof yearRule?.min === "number" ? yearRule.min : 1990,
+    typeof yearRule?.max === "number" ? yearRule.max : 2100,
+  );
+
+  function optionsFor(key: keyof typeof form): readonly string[] {
+    if (key === "make") return VEHICLE_MAKES;
+    if (key === "model") return VEHICLE_MODELS[form.make.trim()] ?? [];
+    if (key === "color") return VEHICLE_COLORS;
+    if (key === "year") return yearOptions;
+    return [];
+  }
+
   function field(key: keyof typeof form, label: string, ltr = false) {
+    const options = optionsFor(key);
+    const listId = options.length > 0 ? `veh-${key}-options` : undefined;
     return (
       <label className="mb-9 block">
         <span className="mb-4 block text-11 text-muted">{label}</span>
         <input
           dir={ltr ? "ltr" : undefined}
+          list={listId}
           value={form[key]}
           onChange={(event) =>
             setForm((current) => ({ ...current, [key]: event.target.value }))
           }
           className="w-full rounded-12 border border-line bg-bg px-12 py-10 text-13 text-ink"
         />
+        {listId ? (
+          <datalist id={listId}>
+            {options.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        ) : null}
       </label>
     );
   }
