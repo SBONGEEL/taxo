@@ -560,10 +560,23 @@ say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_A
 #
 # **و`safe.directory` ليست زينة**: ملفّاتُ الربط مملوكةٌ لمستخدم الخادم
 # والحاويةُ تعمل جذراً، فـ`git` يرفض «ملكيةً مريبة» ويعود بالجواب الكاذب نفسِه.
+#
+# **و`SKIP_TUNNEL=1` — العمودُ الثالثُ لا يقيس الخادمَ من الخادم** (قِيس
+# 2026-08-25): آخرُ حرّاس البناء `check:served` يقارن ما بُني بما يصل عبر
+# `app.tajora.ly`. **وذاك اسمٌ لا يملكه الخادمُ بعد** — يشير إلى جهاز المطوّر
+# حتى تُقلب سجلّاتُ DNS، فيقارن الحارسُ بناءَ الخادم بحزمةِ حاسوبٍ آخر.
+#
+# **وأخطرُ ما وقع أنه مرّ لاثنين وسقط لواحد**: تطابقت بصمتان بالمصادفة —
+# مصدرٌ واحدٌ وهدفٌ واحدٌ يعطيان الاسمَ نفسَه — **فقرأهما الحارسُ سلامةً وهو
+# لم يقِس شيئاً**. وخُضرةٌ بالمصادفة أسوأُ من حمرةٍ صادقة.
+#
+# **والحارسُ نفسُه يقول «لم يُقس» ولا يسكت** — وهو الصواب هنا: العمودُ
+# **يُقاس في البوّابة السادسة** من الأسماء التي يملكها الخادمُ فعلاً
+# (`stg-*` اليوم، والعاريةُ بعد القلب)، لا من اسمٍ لم يصل إليه بعد.
 BUILT="$(_ssh "cd $REMOTE && ok=0 && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
   for a in customer-app driver-app admin-panel; do \
     if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL='$FRONT_API' \
-         node:22-alpine sh -c 'apk add --no-cache git >/dev/null && git config --global --add safe.directory /repo && npm ci --silent && npm run build' > /tmp/taxo-build/\$a.log 2>&1; then \
+         -e SKIP_TUNNEL=1          node:22-alpine sh -c 'apk add --no-cache git >/dev/null && git config --global --add safe.directory /repo && npm ci --silent && npm run build' > /tmp/taxo-build/\$a.log 2>&1; then \
       ok=\$((ok+1)); \
     else \
       echo \"FAIL \$a\"; echo \"──── \$a ────\"; tail -25 /tmp/taxo-build/\$a.log; \
