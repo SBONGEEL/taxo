@@ -28,6 +28,10 @@ import {
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
+// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
+import "@/lib/map-rtl";
+
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
 import { trimRoute } from "@/lib/route-line";
 import { skinImageUrl, skinSizePx } from "@/lib/skin";

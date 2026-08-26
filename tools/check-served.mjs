@@ -27,10 +27,22 @@ import { existsSync, readFileSync } from "node:fs";
 import { argv, env, exit } from "node:process";
 import { certify } from "./certify.mjs";
 
+/** **العمودُ الثالث يقيس نفقَ هذا الجهاز — `dev-*` لا الأسماءَ العارية.**
+ *
+ * كانت هنا `app` و`driver` و`admin` عاريةً، وكانت صحيحةً يومَ كانت تشير إلى
+ * جهاز المطوّر. **وقُلبت النطاقاتُ 2026-08-26** فصارت العاريةُ تشير إلى
+ * **الخادم**، و`dev-*` إلى هذا الجهاز.
+ *
+ * **فصار الحارسُ يقارن ما بنيتَه قبل ثوانٍ بما يخدمه الخادم** — وهما لا
+ * يتساويان إلا صدفةً. وأثرُه أسوأُ من حمرةٍ كاذبة: **لو تصادف التساوي
+ * لَأخضرَّ وهو لم يقس نفقَك أصلاً**، وهو «حارسٌ يُشغَّل حيث لا يملك ما يقيسه»
+ * بعينه. وقِيس الفرقُ في اليوم نفسِه: `dev-app` تخدم البناءَ الجديد
+ * و`app` تخدم `b6f6868` من الخادم.
+ */
 const APPS = {
-  "admin-panel": { port: 5175, host: "admin.tajora.ly" },
-  "customer-app": { port: 5176, host: "app.tajora.ly" },
-  "driver-app": { port: 5174, host: "driver.tajora.ly" },
+  "admin-panel": { port: 5175, host: "dev-admin.tajora.ly" },
+  "customer-app": { port: 5176, host: "dev-app.tajora.ly" },
+  "driver-app": { port: 5174, host: "dev-driver.tajora.ly" },
 };
 
 const app = argv[2];

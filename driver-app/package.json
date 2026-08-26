@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:config && npm run check:target && npm run check:contract && npm run check:client-doors && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
+    "build": "npm run check:rtl && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:config && npm run check:target && npm run check:contract && npm run check:client-doors && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -20,7 +20,8 @@
     "check:money": "node ../tools/check-money.mjs driver-app",
     "check:readers": "node ../tools/check-readers.mjs driver-app",
     "check:client-doors": "node ../tools/check-client-doors.mjs driver-app",
-    "check:money-math": "node ../tools/check-money-math.mjs"
+    "check:money-math": "node ../tools/check-money-math.mjs",
+    "check:rtl": "node scripts/check-rtl-plugin.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
@@ -29,6 +30,7 @@
     "@capacitor/core": "^7.6.8",
     "@capacitor/geolocation": "^7.1.8",
     "@capacitor/push-notifications": "^7.0.7",
+    "@mapbox/mapbox-gl-rtl-text": "^0.4.0",
     "clsx": "^2.1.1",
     "firebase": "^11.1.0",
     "framer-motion": "^11.15.0",

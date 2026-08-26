@@ -32,6 +32,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
+// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
+import "@/lib/map-rtl";
+
 import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
 import {

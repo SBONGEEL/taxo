@@ -30,6 +30,10 @@ import { useEffect, useMemo, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
+// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
+import "@/lib/map-rtl";
+
 import { useTheme } from "@/lib/theme";
 
 const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";

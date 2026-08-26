@@ -16,6 +16,10 @@
  */
 
 import mapboxgl from "mapbox-gl";
+
+// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
+// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
+import "@/lib/map-rtl";
 import { useEffect, useRef } from "react";
 
 import type { VehicleSkin } from "@/api/types";

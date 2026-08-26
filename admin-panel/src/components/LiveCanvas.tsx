@@ -22,6 +22,10 @@ import { useEffect, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
+// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
+// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
+import "@/lib/map-rtl";
+
 import type { LiveDriver, LivePendingRide } from "@/api/types";
 import { useTheme } from "@/lib/theme";
 
