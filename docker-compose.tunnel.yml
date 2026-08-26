@@ -54,20 +54,27 @@ services:
   #     VITE_API_BASE_URL=https://dev-api.tajora.ly npm run build   # في الثلاثة
   #
   # وللعودة إلى التطوير المحليّ يُبنى بلا المتغيّر.
+  # **ونسخةُ npm مثبَّتةٌ هنا أيضاً** (صُحّح 2026-08-26 بعد قياس): هذه الطبقةُ
+  # **تستبدل `command:` كاملاً**، فيسقط التثبيتُ الذي في `docker-compose.yml`
+  # وتعمل الحاوياتُ على npm 10.9.8. **وقِيس أثرُه**: القفولُ الثلاثةُ فقدت
+  # علاماتِ `"peer": true` (١٦/١٥/١٠ → صفر) عند أوّل إقلاعٍ في هذا الوضع.
+  #
+  # **والوضعُ هذا هو الذي يُعمل فيه**، فالضجيجُ هنا أكثرُ ضرراً: شجرةٌ لا تهدأ
+  # تبتلعها عادةُ `git add -A` — وقد وقع.
   customer-app:
     environment:
       VITE_API_BASE_URL: https://dev-api.tajora.ly
-    command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5173"
+    command: sh -c "npm i -g npm@11.6.2 && npm install && npx vite preview --host 0.0.0.0 --port 5173"
 
   driver-app:
     environment:
       VITE_API_BASE_URL: https://dev-api.tajora.ly
-    command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5174"
+    command: sh -c "npm i -g npm@11.6.2 && npm install && npx vite preview --host 0.0.0.0 --port 5174"
 
   admin-panel:
     environment:
       VITE_API_BASE_URL: https://dev-api.tajora.ly
-    command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5175"
+    command: sh -c "npm i -g npm@11.6.2 && npm install && npx vite preview --host 0.0.0.0 --port 5175"
 
   # النفقُ نفسُه — **اتصالٌ صادرٌ من الجهاز**، فلا منفذَ يُفتح عليه ولا يحتاج
   # `ports`. ويخاطب الخدماتِ عبر `host.docker.internal` لأن `localhost` داخل
