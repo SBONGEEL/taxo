@@ -12,9 +12,22 @@
  * 3. **العنوان**: مسارٌ واحد `/api/v1` في مكانٍ واحد.
  */
 
-const BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8001"
-).replace(/\/$/, "");
+// **ولا احتياطَ صامتٌ لعنوان** (أربعُ نسخ، 2026-08-26): كان هنا
+// `?? "http://127.0.0.1:8001"` — **فبناءٌ نُسي فيه المتغيّرُ ينجح ويُشحن**،
+// ويفتح صاحبُ الهاتف تطبيقاً يخاطب **هاتفَه نفسَه**. وهي بعينها العلّةُ التي
+// أوقفت `POSTGRES_PASSWORD:?` عن الاحتياط: **قيمةٌ افتراضيةٌ لشيءٍ يقرّر إلى
+// أين تذهب البيانات ليست تسهيلاً، بل عطبٌ مؤجَّل.**
+//
+// **والوقوفُ صريحٌ عند أوّل نداء** لا عند البناء وحدَه: `check:target` يمنع
+// البناءَ بلا هدف، وهذا يمنع حزمةً أفلتت منه من أن تعمل صامتةً.
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL;
+if (!RAW_BASE) {
+  throw new Error(
+    "VITE_API_BASE_URL غيرُ مضبوط — بُنيت هذه الحزمةُ بلا عنوانِ خلفية. " +
+      "تُبنى بـ: TAXO_CHANNEL=<public|test> node tools/build-channel.mjs <app>",
+  );
+}
+const BASE_URL = RAW_BASE.replace(/\/$/, "");
 
 export const API_PREFIX = "/api/v1";
 export const API_URL = `${BASE_URL}${API_PREFIX}`;

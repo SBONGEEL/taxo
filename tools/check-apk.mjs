@@ -15,6 +15,7 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { allPairs } from "./channels.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { argv, env, exit } from "node:process";
@@ -24,12 +25,22 @@ const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, 
 const MANIFEST = join(ROOT, "landing", "downloads", "manifest.json");
 const base = argv[2] ?? "";
 
-/** الهدفُ المعلَنُ لكلِّ غلاف. **يُصرَّح ولا يُخمَّن**: غلافٌ بلا هدفٍ مكتوبٍ هنا
- *  يُسقط الفحص، فلا يمرّ تطبيقٌ ثالثٌ بالسكوت. */
-const SHELL_TARGET = {
-  rider: "app.tajora.ly",
-  driver: "driver.tajora.ly",
-};
+/** الأزواجُ الأربعةُ (قناة × تطبيق) — **من `channels.json` لا من هنا**.
+ *
+ * **ولمَ الزوجُ لا الهدفُ وحدَه** (أربعُ نسخ، 2026-08-26): صار للتطبيق الواحد
+ * نسختان تتعايشان — عامّةٌ تخاطب الخادم وتجريبيّةٌ تخاطب جهاز المطوّر.
+ * **فهدفٌ صحيحٌ وحدَه لا يكفي**: حزمةٌ معرّفُها `…rider` وغلافُها
+ * `dev-app.tajora.ly` **متّسقةُ الطرفين منفردَين ومكسورةُ الزوج** — تُثبَّت
+ * مكانَ العامّة وتخاطب حاسوباً في بيت.
+ *
+ * **فالسؤالُ: أهذان الطرفان من قناةٍ واحدة؟** — ويُقرأ الطرفان من **داخل
+ * الحزمة** لا من الشجرة: `applicationId` من بيانها، و`server.url` من
+ * `capacitor.config.json` المضمَّن.
+ */
+const PAIRS = allPairs();
+
+/** مفتاحُ البيان (`rider`/`driver`) → اسمُ التطبيق في الجدول. */
+const APP_OF_KEY = { rider: "customer-app", driver: "driver-app" };
 
 /** يقرأ `server.url` **من داخل ملفِّ الحزمة**، لا من الشجرة. */
 function shellTarget(path) {
@@ -72,18 +83,37 @@ for (const app of manifest.apps) {
   if (onDisk !== app.sha256) bad += 1;
   console.log(`  ${mark} ${app.label.padEnd(16)} البيان ${app.sha256.slice(0, 10)} · على القرص ${onDisk?.slice(0, 10) ?? "غائب"}`);
 
-  // ١-ب) **وإلى أين تشير** — يُقرأ من داخل الملف لا من الشجرة
-  const want = SHELL_TARGET[app.key];
-  if (!want) {
+  // ١-ب) **الزوجُ من داخل الحزمة**: معرّفُها وغلافُها — أمِن قناةٍ واحدة؟
+  const appName = APP_OF_KEY[app.key];
+  if (!appName) {
     bad += 1;
-    console.log(`    ✗ غلافٌ بلا هدفٍ مُصرَّحٍ في \`SHELL_TARGET\`: ${app.key}`);
+    console.log(`    ✗ غلافٌ لا يعرفه الجدول: ${app.key} — يُصرَّح في \`channels.json\` أو يُسقط الفحص`);
   } else if (onDisk) {
-    const got = shellTarget(local);
-    if (got === want) console.log(`    ✓ يشير إلى ${got}`);
-    else {
+    const host = shellTarget(local);
+    // **المعرّفُ من بيان الحزمة لا من اسم الملفّ** — واسمُ الملفِّ يكتبه من يبني
+    const appId = app.package ?? null;
+    const match = PAIRS.find(
+      (x) => x.app === appName && x.appId === appId && new URL(x.shellUrl).host === host,
+    );
+    if (match) {
+      console.log(`    ✓ زوجٌ متّسق — قناة ${match.channel}: ${appId} ← ${host}`);
+      if (match.channel !== "public") {
+        // **٣) ولا حزمةَ تجريبيةٌ على الصفحة العامّة** — وهذا هو الموضع:
+        // البيانُ يُبنى ممّا في `landing/downloads`، فوجودُها هنا يعني أنها
+        // **تُعرض للناس**. وتثبيتُ نسخةٍ تخاطب حاسوبَ مطوّرٍ على هاتفِ راكبٍ
+        // ليس عطباً في شاشة — هو رحلةٌ لا تصل.
+        bad += 1;
+        wrongTarget += 1;
+        console.log(`    ✗ **حزمةُ قناةِ «${match.channel}» في \`landing/downloads\`** — الصفحةُ للعامّ وحدَه`);
+      }
+    } else {
       bad += 1;
       wrongTarget += 1;
-      console.log(`    ✗ يشير إلى ${got ?? "(تعذّرت القراءة)"} والمُصرَّحُ ${want}`);
+      const known = PAIRS.filter((x) => x.app === appName)
+        .map((x) => `${x.channel}: ${x.appId} ← ${new URL(x.shellUrl).host}`)
+        .join("  |  ");
+      console.log(`    ✗ زوجٌ غيرُ متّسق: ${appId ?? "(بلا معرّف)"} ← ${host ?? "(تعذّرت القراءة)"}`);
+      console.log(`      والمعروفُ: ${known}`);
     }
   }
 

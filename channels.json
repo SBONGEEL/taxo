@@ -1,0 +1,61 @@
+{
+  "_": [
+    "جدولُ القنوات — **مصدرٌ واحدٌ لأربع نسخ** (قرارُ المالك 2026-08-26).",
+    "",
+    "الأربعُ نسخٌ من الشيفرة نفسِها لا أربعةُ مشاريع: عامٌّ يخاطب الخادم،",
+    "وتجريبيٌّ يخاطب جهاز المطوّر — ويتعايشان على الهاتف الواحد.",
+    "",
+    "**ولمَ جدولٌ لا تحريرٌ يدويّ**: العنوانُ يُخبز في البناء، وتحريرُه بيدٍ",
+    "يعني ليلةً تُبنى فيها النسخةُ العامّةُ على عنوان جهازِ مطوّر — فتتوقّف",
+    "على الناس حين يُطفأ الحاسوب. **والمفتاحُ واحدٌ**: TAXO_CHANNEL.",
+    "",
+    "**ويقرأه ثلاثة**: capacitor.config.ts (المعرّف والاسم وعنوان الغلاف)،",
+    "وtools/build-channel.mjs (يشتقّ VITE_API_BASE_URL)، وtools/check-apk.mjs",
+    "(يقيس الحزمة الناتجة). **فلا نسخةَ ثانيةً من هذه القيم في أيِّ ملفّ.**",
+    "",
+    "**وapiBase هنا هو ما تناديه الحزمة**، وshellUrl هو ما تُحمَّل منه",
+    "الشاشات — والاثنان مختلفان بقصد (`server.url` في capacitor).",
+    "",
+    "**واسمُ نكهةِ gradle مذكورٌ هنا لأنه لا يساوي اسمَ القناة دائماً**:",
+    "`test` محجوزٌ في AGP (مجموعةُ اختبارات الوحدة `src/test/`)، فنكهةُ",
+    "القناة التجريبية اسمُها `trial`. **والذكرُ هنا يمنع أن يفترق الاسمان**."
+  ],
+  "channels": {
+    "public": {
+      "label": "عامّ",
+      "apiBase": "https://api.tajora.ly",
+      "appIdSuffix": "",
+      "apps": {
+        "customer-app": {
+          "shellUrl": "https://app.tajora.ly",
+          "appName": "TAXO"
+        },
+        "driver-app": {
+          "shellUrl": "https://driver.tajora.ly",
+          "appName": "TAXO Driver"
+        }
+      },
+      "gradleFlavor": "public"
+    },
+    "test": {
+      "label": "تجريبيّ",
+      "apiBase": "https://dev-api.tajora.ly",
+      "appIdSuffix": ".test",
+      "apps": {
+        "customer-app": {
+          "shellUrl": "https://dev-app.tajora.ly",
+          "appName": "TAXO تجريبي"
+        },
+        "driver-app": {
+          "shellUrl": "https://dev-driver.tajora.ly",
+          "appName": "TAXO كبتن تجريبي"
+        }
+      },
+      "gradleFlavor": "trial"
+    }
+  },
+  "baseAppId": {
+    "customer-app": "ly.tajora.rider",
+    "driver-app": "ly.tajora.driver"
+  }
+}
