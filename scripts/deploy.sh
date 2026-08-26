@@ -539,7 +539,6 @@ esac
 # **وبحاويةِ node لا بأدواتِ المضيف** — فلا نسخةَ ثانيةً من node تُدار على
 # الخادم. و`npm ci` يحترم القفلَ فلا يحلّ التبعياتِ حلاًّ يخالف الشجرة.
 FRONT_API="${TAXO_FRONT_API_BASE:-https://api.tajora.ly}"
-say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_API)…"
 # **الجذرُ يُربط لا مجلّدُ التطبيق** (صُحّح 2026-08-25 بعد سقوطٍ مقيس):
 # `npm run build` أوّلُ ما يفعل `node ../tools/check-money-math.mjs`،
 # **والحرّاسُ في جذر المستودع** وهم يقرأون `backend/` أيضاً. فربطُ
@@ -573,19 +572,52 @@ say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_A
 # **والحارسُ نفسُه يقول «لم يُقس» ولا يسكت** — وهو الصواب هنا: العمودُ
 # **يُقاس في البوّابة السادسة** من الأسماء التي يملكها الخادمُ فعلاً
 # (`stg-*` اليوم، والعاريةُ بعد القلب)، لا من اسمٍ لم يصل إليه بعد.
-BUILT="$(_ssh "cd $REMOTE && ok=0 && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
-  for a in customer-app driver-app admin-panel; do \
-    if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL='$FRONT_API' \
-         -e SKIP_TUNNEL=1          node:22-alpine sh -c 'apk add --no-cache git >/dev/null && git config --global --add safe.directory /repo && npm ci --silent && npm run build' > /tmp/taxo-build/\$a.log 2>&1; then \
-      ok=\$((ok+1)); \
-    else \
-      echo \"FAIL \$a\"; echo \"──── \$a ────\"; tail -25 /tmp/taxo-build/\$a.log; \
-    fi; \
-  done; echo \"BUILT=\$ok\"" | tr -d '\r')"
+# ══════════════════════════════════════════════════════════════════════════
+# **البناءُ منفصلٌ عن القناة** (صُحّح 2026-08-26 بعد سقوطين مقيسين عند النقطة
+# نفسِها). كان يُشغَّل في اتصالٍ واحدٍ يبقى مفتوحاً أربعَ دقائق **صامتاً** —
+# لأن المخرَجَ يذهب إلى ملفٍّ لا إلى القناة — **فتُقطع بـ`Connection reset`
+# بعد أن تنجح الأبنيةُ الثلاثة**، فيُقرأ سقوطاً وهو ليس سقوطاً.
+#
+# **والفرقُ مقيسٌ لا مُخمَّن**: التشغيلُ اليدويُّ للأمر نفسِه نجح مرّتين —
+# وفيه كان المخرَجُ يتدفّق. **وليس ذاكرةً**: ٤٫٧ غ.ب حرّة، صفرُ أثرٍ لقاتل
+# الذاكرة، ولا حاويةَ عالقة. **ولا خطأً في `_ssh`**: يمرّر `ServerAlive*`.
+#
+# **فيُشغَّل بـ`setsid` منفصلاً عن الجلسة، ويُكتب حكمُه في ملفِّ حال** — ثمّ
+# **اتصالٌ ثانٍ يقرأ الحكم**. فانقطاعُ القناة لا يقتل البناءَ ولا يكذب عليه.
+#
+# **والصمتُ وحدَه ليس حكماً** (قرارُ المالك 2026-08-26): إن لم يصل جوابٌ فالحالُ
+# **«لا يُعرف» لا «سقط»** — فتُقرأ من الخادم قراءةً ثانيةً قبل أن يُحكم.
+# ══════════════════════════════════════════════════════════════════════════
+say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_API)…"
+BUILD_STATE="/tmp/taxo-build/state"
+_ssh "cd $REMOTE && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
+  setsid nohup sh -c 'ok=0; for a in customer-app driver-app admin-panel; do \
+    if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL=\"$FRONT_API\" \
+         -e SKIP_TUNNEL=1 node:22-alpine \
+         sh -c \"apk add --no-cache git >/dev/null && git config --global --add safe.directory /repo && npm ci --silent && npm run build\" \
+         > /tmp/taxo-build/\$a.log 2>&1; then ok=\$((ok+1)); else echo \"FAIL \$a\" >> /tmp/taxo-build/fails; fi; \
+  done; echo \"BUILT=\$ok\" > $BUILD_STATE' > /dev/null 2>&1 < /dev/null &" \
+  || die "تعذّر إطلاقُ البناء على الخادم — والنسخةُ في $LOCAL"
+
+# **الانتظارُ بقراءاتٍ قصيرةٍ متتابعة** لا باتصالٍ واحدٍ طويل: كلُّ قراءةٍ
+# ثوانٍ، فلا تصمت قناةٌ ولا تُقطع. و`ssh_try` يعيد القراءةَ ثلاثاً إن تقطّعت
+# — **وهي قراءةٌ لا كتابة**، فالإعادةُ فيها مأمونة.
+BUILT=""
+for _ in $(seq 1 60); do        # حتى ٣٠ دقيقةً — والبناءُ المقيسُ ثلاثُ دقائق
+  sleep 30
+  BUILT="$(ssh_try "cat $BUILD_STATE 2>/dev/null || true" | tr -d '\r ')"
+  [ -n "$BUILT" ] && break
+done
+
 case "$BUILT" in
-  *BUILT=3*) say "  ✓ الثلاثُ بُنيت على الخادم" ;;
-  *) say "$BUILT"
-     die "تعذّر بناءُ واجهةٍ على الخادم — يُوقَف قبل إعادة الحاويات. **والأثرُ أعلاه** · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
+  BUILT=3) say "  ✓ الثلاثُ بُنيت على الخادم" ;;
+  "")  # **لا حكمَ على صمت** — تُقرأ الحالُ من الخادم نفسِه
+       say "  · لم يصل حكمُ البناء — تُقرأ الحالُ من الخادم لا تُفترض:"
+       ssh_try "ls -1 /tmp/taxo-build/ 2>/dev/null; echo '── آخرُ سطرٍ في كلِّ سجلّ ──'; for f in /tmp/taxo-build/*.log; do echo \"\$f: \$(tail -1 \"\$f\")\"; done" || true
+       die "انقطع جوابُ البناء ولم يُعرف حكمُه — **يُوقَف ولا يُفترض**. الأثرُ أعلاه · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
+  *)   say "  ✗ $BUILT"
+       ssh_try "cat /tmp/taxo-build/fails 2>/dev/null; for f in /tmp/taxo-build/*.log; do echo \"──── \$f ────\"; tail -25 \"\$f\"; done" || true
+       die "تعذّر بناءُ واجهةٍ على الخادم — يُوقَف قبل إعادة الحاويات. **والأثرُ أعلاه** · الرجوع: git -C $REMOTE checkout ${REMOTE_SHA:-<مجهول>} · والنسخةُ في $LOCAL" ;;
 esac
 
 
