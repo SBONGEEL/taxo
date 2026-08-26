@@ -112,12 +112,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **يُقرأ `CLAUDE.md` كاملاً** — وهو **٥٤ ألف حرفٍ لا ٣٨٦**، فقراءتُه كاملةً
 صارت ممكنةً بعد أن كانت دعوى.
 
-> **والرقمُ يُقرأ من `tools/check-docs.mjs` لا من أداةٍ أخرى**: **54,235 حرفاً**
+> **والرقمُ يُقرأ من `tools/check-docs.mjs` لا من أداةٍ أخرى**: **54,450 حرفاً**
 > في ٢٠٢٦-٠٨-٢٦، والسقفُ ٦٠ ألفاً — **والحارسُ يطبعهما في كلِّ تشغيل**، فمن
 > أراد الرقمَ شغّله ولم يقدّره.
 >
 > **و`wc -m` في صدفة ويندوز يعدّ البايتات لا الحروف** (فخٌّ وقع مقيساً
-> ٢٠٢٦-٠٨-٢٦): أجاب **67,745** لهذا الملف، والحروفُ **54,235** — والعربيةُ
+> ٢٠٢٦-٠٨-٢٦): أجاب **68,081** لهذا الملف، والحروفُ **54,450** — والعربيةُ
 > بايتان للحرف، **فالرقمُ مضخَّمٌ بالثلث**. ولو كُتب لَقيل «الملفُّ فوق سقفه
 > بسبعة آلاف» وهو تحته بستّة، **ولَقِيست هجرةُ قواعدَ عاملةٍ لا موجبَ لها**.
 > **فوحدةُ القياس جزءٌ من الرقم، ومن نقله بلا وحدته نقل عدداً لا خبراً.**
@@ -228,6 +228,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### `GUARDS.md` — الحرّاس وقواعدُهم
 
 - `check:slot` and the error boundaries — the fourth family member, and the guard that was missing (2026-08-15) → `GUARDS.md`
+- وحارسٌ صحيحٌ يصير كاذباً حين يتغيّر ما تحته — **عمودُ النفق بعد قلب النطاقات** (قِيس 2026-08-26) → `GUARDS.md`
 - The password policy, and a guard that hit the wrong target (2026-08-18) → `GUARDS.md`
 - OTP message templates — the guard that moved rather than being deleted (2026-08-19) → `GUARDS.md`
 - Latin digits everywhere — the display format was inverted (2026-08-19) → `GUARDS.md`
@@ -281,6 +282,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### `PATTERNS.md` — الأشكال
 
 - القياسُ الصادقُ لا يأذن بفعلٍ خارج نطاقه (2026-08-25) → `PATTERNS.md`
+- وللعائلة وجهٌ خامس — **حاويةٌ تخدم `dist` والمصدرُ يتغيّر تحتها** (قِيس 2026-08-26) → `PATTERNS.md`
 - متغيّرٌ واحدٌ في كلِّ مرّة — لا فعلان يمسّان سطحاً واحداً في يوم (2026-08-25) → `PATTERNS.md`
 - الشكلُ السادسَ عشر — **اسمٌ يُبحث عنه نصّاً، ونداءٌ بمفتاحٍ متغيّر** (2026-08-25) → `PATTERNS.md`
 - «An empty map is not a defect» — the three points, in order (2026-08-15) → `PATTERNS.md`
