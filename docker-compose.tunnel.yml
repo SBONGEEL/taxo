@@ -18,18 +18,24 @@ services:
   # `127.0.0.1:5176` عاملاً بينما النفقُ قائم.
   backend:
     environment:
+      # **`dev-*` أسماءُ جهاز المطوّر بعد قلب النطاقات** (2026-08-26):
+      # الاسمُ العاري صار للخادم. **والعاريةُ تبقى هنا ولا تُنزع** — نزعُها
+      # يكسر أيَّ حزمةٍ أو صفحةٍ ما زالت تشير إليها قبل أن تُعاد، **وقبولُ
+      # أصلٍ لا يصله أحدٌ لا يفتح باباً**: CORS يقول «من يُسمح له أن يقرأ
+      # جوابي»، لا «من يصلني». فبقاؤها كلفتُه صفر، ونزعُها كلفتُه انقطاع.
       CORS_ORIGINS: >-
-        ["https://app.tajora.ly","https://driver.tajora.ly","https://admin.tajora.ly",
+        ["https://dev-app.tajora.ly","https://dev-driver.tajora.ly","https://dev-admin.tajora.ly",
+         "https://app.tajora.ly","https://driver.tajora.ly","https://admin.tajora.ly",
          "http://localhost:5173","http://localhost:5174","http://localhost:5175",
          "http://localhost:5176","http://127.0.0.1:5173","http://127.0.0.1:5174",
          "http://127.0.0.1:5175","http://127.0.0.1:5176"]
       # **عودةُ صفحة البطاقة تتبع التطبيقَ الذي فتحها** (`card_gateway.return_url_for`):
       # عنوانٌ محليٌّ في جلسةٍ على هاتفٍ يعيد الراكبَ إلى جهازٍ ليس بيده
-      CARD_RETURN_URL: https://app.tajora.ly/payments/card/return
-      CARD_RETURN_URL_DRIVER: https://driver.tajora.ly/payments/card/return
+      CARD_RETURN_URL: https://dev-app.tajora.ly/payments/card/return
+      CARD_RETURN_URL_DRIVER: https://dev-driver.tajora.ly/payments/card/return
       # عنوانُ الخلفية كما يراه العالم — تُبنى عليه صفحةُ المزوّد الوهمي
       # (`card_gateway/__init__.py`)، فعنوانٌ محليٌّ فيها يفتح صفحةً لا يبلغها هاتف
-      PUBLIC_API_BASE_URL: https://api.tajora.ly
+      PUBLIC_API_BASE_URL: https://dev-api.tajora.ly
 
 
   # **يُخدَم البناءُ المحزَّم لا خادمُ التطوير** (2026-08-14، بعد قياسٍ على النفق):
@@ -45,22 +51,22 @@ services:
   # بلا المتغيّر يخبز `http://localhost:8001`، ويفتح الهاتفُ التطبيقَ على «الشبكة
   # ضعيفة» بينما الخلفيةُ والنفقُ سليمان تماماً. فالبناءُ للتجربة على الهاتف:
   #
-  #     VITE_API_BASE_URL=https://api.tajora.ly npm run build     # في كلا التطبيقين
+  #     VITE_API_BASE_URL=https://dev-api.tajora.ly npm run build   # في الثلاثة
   #
   # وللعودة إلى التطوير المحليّ يُبنى بلا المتغيّر.
   customer-app:
     environment:
-      VITE_API_BASE_URL: https://api.tajora.ly
+      VITE_API_BASE_URL: https://dev-api.tajora.ly
     command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5173"
 
   driver-app:
     environment:
-      VITE_API_BASE_URL: https://api.tajora.ly
+      VITE_API_BASE_URL: https://dev-api.tajora.ly
     command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5174"
 
   admin-panel:
     environment:
-      VITE_API_BASE_URL: https://api.tajora.ly
+      VITE_API_BASE_URL: https://dev-api.tajora.ly
     command: sh -c "npm install && npx vite preview --host 0.0.0.0 --port 5175"
 
   # النفقُ نفسُه — **اتصالٌ صادرٌ من الجهاز**، فلا منفذَ يُفتح عليه ولا يحتاج

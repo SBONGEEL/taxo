@@ -19,6 +19,21 @@ tunnel: e0ef1dd8-3d62-4af9-81d0-514056d41dc7
 credentials-file: /creds/e0ef1dd8-3d62-4af9-81d0-514056d41dc7.json
 
 ingress:
+  # ══════════════════════════════════════════════════════════════════════
+  # **`dev-*` أسماءُ جهاز المطوّر بعد قلب النطاقات** (قرارُ المالك 2026-08-25):
+  # الاسمُ العاري صار للخادم — **لأن ما لا يُطفأ حين يُطفأ الحاسوبُ هو الذي
+  # يستحقّ اسمَه الحقيقيّ**. والعاريةُ تبقى هنا **حتى تُقلب السجلّات**، فلا
+  # تنقطع بيئةُ التجريب في اللحظة نفسِها التي يُنقل فيها الإنتاج.
+  # ══════════════════════════════════════════════════════════════════════
+  - hostname: dev-api.tajora.ly
+    service: http://host.docker.internal:8001
+  - hostname: dev-app.tajora.ly
+    service: http://host.docker.internal:5176
+  - hostname: dev-driver.tajora.ly
+    service: http://host.docker.internal:5174
+  - hostname: dev-admin.tajora.ly
+    service: http://host.docker.internal:5175
+
   - hostname: api.tajora.ly
     service: http://host.docker.internal:8001
 
