@@ -54,10 +54,35 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // **توقيعُ الإصدار — من البيئة لا من ملفٍّ في الشجرة** (§18.1، مفتاحُ
+    // النشر أُنشئ 2026-08-26).
+    //
+    // **ولا قيمةَ افتراضيةَ لسرّ**: `System.getenv` يعود `null` حين لا يُصدَّر،
+    // **فيبقى `signingConfig` غيرَ مضبوطٍ ويسقط البناءُ باسمِ ما نقص** — لا
+    // يقع على مفتاحِ تصحيحٍ صامتاً. وهي قاعدةُ `POSTGRES_PASSWORD:?` نفسُها:
+    // **بناءٌ ينجح بمفتاحٍ غيرِ المقصود أخطرُ من بناءٍ يسقط.**
+    //
+    // **والملفُّ يُفكّ في مجرى العمل ولا يدخل git**: `scripts/pre-commit` يرفض
+    // `*.jks` حتى مع `git add -f` (قِيس)، والسرُّ في GitHub مُرمَّزٌ بـbase64.
+    signingConfigs {
+        release {
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ksPath != null) {
+                storeFile file(ksPath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // **يُسند صراحةً** — وبلا المتغيّرات يبقى `storeFile` فارغاً
+            // فيسقط `assembleRelease` ويسمّي ما نقص.
+            signingConfig signingConfigs.release
         }
     }
 }

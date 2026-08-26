@@ -220,9 +220,32 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: بناءُ الحزمتين
+      # **المفتاحُ يُفكُّ إلى ملفٍّ مؤقّتٍ خارج الشجرة** — لا في المستودع ولا
+      # في مجلَّدٍ يُرفع أثراً. ويعيش عمرَ المجرى وحدَه.
+      - name: مفتاحُ التوقيع
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
           set -euo pipefail
+          # **وغيابُ السرِّ يوقف باسمه** — لا يقع على مفتاح تصحيحٍ صامتاً
+          [ -n "${KS_B64:-}" ] || { echo "✗ السرُّ ANDROID_KEYSTORE_B64 غيرُ مضبوط — لا توقيعَ ولا حزمة."; exit 1; }
+          printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/taxo-release.jks"
+          # **يُقاس أنه مخزنٌ لا نصٌّ فارغ** — و`base64` لا يشكو من مدخلٍ خاطئ
+          [ -s "$RUNNER_TEMP/taxo-release.jks" ] || { echo "✗ المخزنُ فارغٌ بعد فكِّ الترميز."; exit 1; }
+          echo "  ✓ المخزنُ فُكَّ ($(stat -c%s "$RUNNER_TEMP/taxo-release.jks") بايت)"
+
+      - name: بناءُ الحزمتين
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/taxo-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          for v in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD ANDROID_KEY_ALIAS; do
+            # **يُسمّى الناقصُ ولا تُطبع قيمةُ الموجود**
+            [ -n "$(eval echo \"\$$v\")" ] || { echo "✗ السرُّ $v غيرُ مضبوط — يُوقَف قبل البناء."; exit 1; }
+          done
           for app in customer-app driver-app; do
             ( cd "$app" && npm ci --silent )
             ( cd "$app" && VITE_API_BASE_URL=https://api.tajora.ly npm run build )
@@ -232,7 +255,19 @@ jobs:
             # وقد صُحّح الوضعُ في git (`--chmod=+x`)، **وهذا السطرُ يبقى**:
             # استنساخٌ على ويندوزَ يعيد إسقاطَ الصلاحية، ورقمُ الخروج ١٢٦ لا
             # يقول «غيرُ قابلٍ للتنفيذ» لمن يقرأه أولَ مرة.
-            ( cd "$app/android" && sh gradlew assembleDebug --no-daemon -q )
+            ( cd "$app/android" && sh gradlew assembleRelease --no-daemon -q )
+          done
+
+      # **التوقيعُ يُقرأ من الحزمة لا من سجلِّ البناء** (خطوةُ الصفر): سطرٌ
+      # يقول «وقّعتُ» ليس توقيعاً — و`apksigner` يقرأ الشهادةَ من داخل الملفّ.
+      - name: التوقيعُ مقروءاً من الحزمة
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -1)"
+          for app in customer-app driver-app; do
+            f="$app/android/app/build/outputs/apk/release/app-release.apk"
+            echo "──── $f ────"
+            "$APKSIGNER" verify --print-certs "$f" | grep -Ei 'SHA-256 digest|Signer #1 certificate DN' || true
           done
 
       - name: البيانُ ومعه الإيداع
@@ -243,4 +278,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "${{ github.ref_name }}"             landing/downloads/taxo-rider.apk             landing/downloads/taxo-driver.apk             landing/downloads/manifest.json             --title "${{ github.ref_name }}"             --notes "حزمتان مبنيّتان من ${{ github.sha }} — توقيعُ تنقيحٍ حتى يصل مفتاحُ النشر (§18.1)."
+          gh release create "${{ github.ref_name }}"             landing/downloads/taxo-rider.apk             landing/downloads/taxo-driver.apk             landing/downloads/manifest.json             --title "${{ github.ref_name }}"             --notes "حزمتان مبنيّتان من ${{ github.sha }} — **موقَّعتان بمفتاح الإصدار** (§18.1)."

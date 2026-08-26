@@ -40,8 +40,8 @@ const OUT = join(ROOT, "landing", "downloads");
  * `dist` مع كل بناءٍ فتُخدَم إلى الأبد. فالمصدرُ هنا **مخرجُ Gradle** وحدَه.
  */
 const APPS = [
-  { key: "rider", label: "تطبيق الراكب", src: "customer-app/android/app/build/outputs/apk/debug/app-debug.apk", name: "taxo-rider.apk" },
-  { key: "driver", label: "تطبيق الكبتن", src: "driver-app/android/app/build/outputs/apk/debug/app-debug.apk", name: "taxo-driver.apk" },
+  { key: "rider", label: "تطبيق الراكب", src: "customer-app/android/app/build/outputs/apk/release/app-release.apk", name: "taxo-rider.apk" },
+  { key: "driver", label: "تطبيق الكبتن", src: "driver-app/android/app/build/outputs/apk/release/app-release.apk", name: "taxo-driver.apk" },
 ];
 
 function badging(file) {
