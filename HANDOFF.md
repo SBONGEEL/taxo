@@ -32,7 +32,7 @@
 3. **ضبطُ سرَّي التوقيع**: `gh secret set ANDROID_KEYSTORE_PASSWORD` و
    `ANDROID_KEY_PASSWORD`. **والقائمُ منها اثنان** (`ANDROID_KEYSTORE_B64` ·
    `ANDROID_KEY_ALIAS`)، **والكلمةُ لم تُطلب ولن تُكتب في مكانٍ يبقى**.
-4. **وبصمةُ المفتاح**: `keytool -list -v -keystore D:	axo-keys	axo-release.jks
+4. **وبصمةُ المفتاح**: `keytool -list -v -keystore D:\taxo-keys\taxo-release.jks
    -alias taxo` — تُلصق ليُطابَق بها توقيعُ أوّل حزمة.
 
 ### ما ينتظر إذنَه
