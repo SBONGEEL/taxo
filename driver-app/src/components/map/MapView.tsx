@@ -41,6 +41,7 @@ import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
 import {
   applyMarkerHeading,
+  headingTarget,
   nearbyMarkerElement,
   selfMarkerElement,
 } from "@/lib/skin-marker";
@@ -367,7 +368,9 @@ export function MapView({
           entry.from.lat + (entry.to.lat - entry.from.lat) * progress,
         ]);
         if (entry.rotates) {
-          entry.element.style.rotate = `${
+          // **الابنُ الداخليُّ لا القشرة** — القشرةُ لـmapbox وإدارتُها تُدير
+          // إزاحتَها (`lib/skin-marker.ts::rotatable`)
+          headingTarget(entry.element).style.rotate = `${
             entry.headingFrom + (entry.headingTo - entry.headingFrom) * progress
           }deg`;
         }

@@ -197,17 +197,34 @@ async def test_the_balance_after_is_subtracted_in_the_backend_and_quantized(
     assert rows["هدية"] is None, "لا سعرَ ⇒ لا «رصيدٌ بعده» — والصفرُ يكذب"
 
 
-async def test_the_store_is_ordered_by_rarity_then_name(
+async def test_the_store_is_grouped_by_rarity_and_stable_within_it(
     client: AsyncClient, session_factory, ready
 ):
-    """**الترتيبُ عقدٌ لا ذوق**: شاشتان ترتّبانه اختلافاً تعنيان بـ«الثالثة»
-    مركبتين."""
+    """**الترتيبُ عقدٌ لا ذوق** — والعقدُ **الندرةُ ثمّ ثباتٌ**، لا الأبجديّة.
+
+    كان المفتاحُ الثاني الاسمَ، **وأسماءُ الكتالوج تبدأ بعائلة اللون**
+    («البرتقالية …») — فالأبجديّةُ كانت تكدّس لوناً واحداً في صدر الصفحة
+    (قرارُ المالك 2026-08-27). فصار تلبيداً ثابتاً من المُعرّف.
+
+    **وما يُقاس هو ما يحرسه العقدُ فعلاً**، لا الترتيبُ بعينه: أن الندرةَ
+    تجمع، وأن نداءين يعطيان الترتيبَ نفسَه — فـ«الثالثةُ من اليسار» لا تعني
+    مركبتين. **والأبجديّةُ ليست شرطاً وتُنفى صراحةً** كي لا تعود بالسهو.
+    """
     await make_skin(session_factory, name="ياء", rarity=RARITY_COMMON)
     await make_skin(session_factory, name="ألف", rarity=RARITY_LEGENDARY)
     await make_skin(session_factory, name="باء", rarity=RARITY_COMMON)
 
-    body = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
-    assert [row["name"] for row in body["skins"]] == ["باء", "ياء", "ألف"]
+    first = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
+    names = [row["name"] for row in first["skins"]]
+    rarities = [row["rarity"] for row in first["skins"]]
+
+    # الندرةُ تجمع: العاديّتان قبل الأسطورية، ولا تتخلّلهما
+    assert rarities == [RARITY_COMMON, RARITY_COMMON, RARITY_LEGENDARY]
+    assert set(names[:2]) == {"باء", "ياء"}
+
+    # **والثباتُ هو الشرط**: نداءٌ ثانٍ يعطي الترتيبَ نفسَه بالحرف
+    second = (await client.get(f"{SKINS}/store", headers=ready["headers"])).json()
+    assert [row["name"] for row in second["skins"]] == names
 
 
 async def test_remaining_is_counted_not_stored(

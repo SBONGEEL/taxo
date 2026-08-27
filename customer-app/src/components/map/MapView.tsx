@@ -140,8 +140,27 @@ function carElement(): HTMLElement {
       <path d="M8.6 6.6c.5-1.1 1.7-1.7 3.4-1.7s2.9.6 3.4 1.7l.5 1.6c-1.2-.5-2.5-.7-3.9-.7
                s-2.7.2-3.9.7Z" fill="var(--inv)" opacity="0.85"/>
     </svg>`;
+  // **الدورانُ يعيش على ابنٍ داخليّ** (وقع مقيساً في تطبيق الكبتن 2026-08-27):
+  // mapbox تكتب `transform: translate(...)` على العنصر الذي تُسلَّمه، وترتيبُ
+  // CSS هو `translate → rotate → scale → transform` — أي أن `transform` يُطبَّق
+  // أوّلاً **ثم يُدار ناتجُه**. فدورانُ الرأس يُدير إزاحةَ mapbox نفسَها
+  // فتهبط السيارةُ في غير موضعها. **وهي قاعدةُ `pulseElement` أدناه بعينها.**
+  const inner = document.createElement("div");
+  inner.className = "taxo-car-rot";
+  // **مقاسُ المحتوى**: mapbox تزيح بـ`translate(-50%,-50%)` من مقاس العنصر،
+  // فغلافٌ يمتدّ إلى عرض الخريطة يقذف العلامةَ بنصف ذلك العرض
+  inner.style.display = "block";
+  inner.style.width = "max-content";
+  inner.replaceChildren(...element.childNodes);
+  element.appendChild(inner);
+  element.style.width = "max-content";
   element.style.willChange = "transform";
   return element;
+}
+
+/** **الطبقةُ التي تدور** — ولا تُدار القشرةُ التي تملكها mapbox. */
+function headingLayer(element: HTMLElement): HTMLElement {
+  return element.querySelector<HTMLElement>(".taxo-car-rot") ?? element;
 }
 
 /** علامةُ الكبتن المُسنَد — **السيارةُ العامّة، أو مركبتُه إن كانت له**.
@@ -176,7 +195,7 @@ function driverElement(skin: RideDriverSkin | null | undefined): HTMLElement {
     { once: true },
   );
   image.src = skinImageUrl(skin.image_url);
-  element.appendChild(image);
+  headingLayer(element).appendChild(image);
   return element;
 }
 
@@ -355,7 +374,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         // واقعيٍّ لا تضرّ اليوم، لكنّها تجعل «لا يدور» شرطاً في مكانٍ واحدٍ
         // ينساه الموضعُ الثاني — والشرطُ هنا حيث تُكتب الزاوية
         if (entry.rotates) {
-          entry.element.style.rotate = `${lerpAngle(
+          headingLayer(entry.element).style.rotate = `${lerpAngle(
             entry.headingFrom,
             entry.headingTo,
             eased,

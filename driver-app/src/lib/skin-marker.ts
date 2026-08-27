@@ -25,6 +25,37 @@ const SHADOW = "drop-shadow(0 1px 3px rgb(0 0 0 / 0.45))";
  * **وألوانُها رموزُ اللوحة** (`--tx`/`--inv`) لا قيمٌ ستّ عشريّة: لونٌ ثابتٌ
  * يذوب في إحدى السمتين مهما حُسن اختيارُه.
  */
+/** **الغلافُ الذي يدور** — عنصرٌ داخليٌّ لا تلمسه mapbox.
+ *
+ * **ولمَ لا يُدار العنصرُ الخارجيّ** (وقع مقيساً 2026-08-27): mapbox تكتب
+ * `transform: translate(...)` على العنصر الذي تُسلَّمه، وخاصيّةُ `rotate`
+ * **مستقلّةٌ عنه في الكتابة ومركَّبةٌ معه في الحساب** — والترتيبُ في CSS
+ * `translate → rotate → scale → transform`، أي أن `transform` يُطبَّق أوّلاً
+ * **ثم يُدار ناتجُه**. فدورانُ الرأس يُدير معه **إزاحةَ mapbox نفسَها**،
+ * فتهبط العلامةُ في غير موضعها.
+ *
+ * **وقِيس بالبكسل**: خريطةُ المعاينة `y 357–505`، والعلامةُ سقطت عند `y 649`
+ * — **١٤٤ بكسلاً تحتها**، وحاويتُها `overflow:hidden` فاختفت تماماً. والصورةُ
+ * سليمةٌ تصل `200`، **فبدا العطبُ عطبَ تحميلٍ وهو عطبُ موضع**.
+ *
+ * **وهي قاعدةُ `ARCHITECTURE.md` نفسُها**: «العنصرُ الذي تُسلِّمه لعلامةٍ
+ * يملكه mapbox — فالتنسيقُ يعيش على ابنٍ داخليٍّ ولا تُمسّ القشرة».
+ */
+function rotatable(child: Element): HTMLElement {
+  const inner = document.createElement("div");
+  inner.dataset.heading = "";
+  // **مقاسُ المحتوى لا مقاسُ الأب** (وقع مقيساً في الإصلاح نفسِه): mapbox
+  // تزيح العلامةَ بـ`translate(-50%, -50%)` **من مقاس العنصر**، فغلافٌ يمتدّ
+  // إلى عرض الخريطة (٣٥٥ بكسلاً) يجعل نصفَه ١٧٧ بكسلاً بدل ١٧ — فتُقذف
+  // العلامةُ من جديد. `max-content` يبقيها بمقاس الرسمة.
+  inner.style.display = "block";
+  inner.style.width = "max-content";
+  inner.style.willChange = "rotate";
+  inner.appendChild(child);
+  return inner;
+}
+
+
 export function carElement(px: number, muted = false): HTMLElement {
   const element = document.createElement("div");
   const fill = muted ? "var(--mut)" : "var(--tx)";
@@ -43,6 +74,8 @@ export function carElement(px: number, muted = false): HTMLElement {
       <path d="M8.6 6.6c.5-1.1 1.7-1.7 3.4-1.7s2.9.6 3.4 1.7l.5 1.6c-1.2-.5-2.5-.7-3.9-.7
                s-2.7.2-3.9.7Z" fill="var(--inv)" opacity="0.85"/>
     </svg>`;
+  element.replaceChildren(rotatable(element.firstElementChild!));
+  element.style.width = "max-content";
   element.style.willChange = "transform";
   if (muted) element.style.opacity = "0.55";
   return element;
@@ -107,10 +140,16 @@ function imageMarker(src: string, px: number): HTMLElement {
   // **رسمةٌ تعذّرت تُستبدل بالعامّة لا تُترك مكسورة**: أيقونةُ صورةٍ مكسورةٍ
   // فوق خريطةٍ تُقرأ عطباً في التطبيق. **والبديلُ واحدٌ للجميع** فلا يميّز
   // ملفٌّ مفقودٌ صاحبَه عن غيره (الشكلُ الثالثَ عشر)
+  const inner = rotatable(image);
+  // **البديلُ يحلّ داخلَ الغلاف لا محلَّه**: استبدالُ الغلاف يمحو دورانَه،
+  // فتظهر السيارةُ البديلةُ ثابتةً بينما جارتُها تدور
   image.onerror = () => {
-    element.replaceChildren(carElement(px).firstElementChild ?? image);
+    inner.replaceChildren(
+      carElement(px).querySelector("[data-heading]")?.firstElementChild ?? image,
+    );
   };
-  element.appendChild(image);
+  element.appendChild(inner);
+  element.style.width = "max-content";
   element.style.willChange = "transform";
   return element;
 }
@@ -120,14 +159,21 @@ function imageMarker(src: string, px: number): HTMLElement {
  * **و`rotate` لا `transform`**: mapbox يكتب `transform` على العنصر في كل
  * إطار، فالكتابةُ فيه سباقٌ يُمحى — وخاصيّةُ `rotate` مستقلّةٌ عنه.
  *
+ * **وتُكتب على الابن الداخليِّ لا على القشرة** (`rotatable` أعلاه): الاستقلالُ
+ * في الكتابة لا يعني الاستقلالَ في الحساب — والعلّةُ مقيسةٌ هناك.
+ *
  * **ولا يدور ما صُرِّح ألّا يدور** (`map_rotates`): الرندرُ الواقعيُّ يُعرض
  * ثابتاً، **وذلك يُقرأ من العقد لا من الندرة** — استنتاجُه من الندرة يجعل
  * أوّلَ استثناءٍ يقرّره المشرفُ سيارةً تدور وهي مرسومةٌ بمنظورٍ ثابت.
  */
+export function headingTarget(element: HTMLElement): HTMLElement {
+  return element.querySelector<HTMLElement>("[data-heading]") ?? element;
+}
+
 export function applyMarkerHeading(
   element: HTMLElement,
   heading: number | null | undefined,
   rotates: boolean,
 ): void {
-  element.style.rotate = rotates ? `${heading ?? 0}deg` : "0deg";
+  headingTarget(element).style.rotate = rotates ? `${heading ?? 0}deg` : "0deg";
 }

@@ -65,6 +65,7 @@ from app.models.enums import (
     PaymentMethod,
     SubscriptionDurationType,
     SubscriptionStatus,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
@@ -473,6 +474,12 @@ async def purchase_with_wallet(
         await wallet.record(
             session,
             owner=user,
+            # **اشتراكُ الكبتن يُخصم من محفظة الكبتن مهما حمل الحسابُ من أدوار**
+            # (SPEC §22: سياقُ الفعل لا دورُ الفاعل). ومحفظةُ الراكب تحمل ما
+            # شحنه لرحلاته، **فخصمُ اشتراكٍ منها اقتطاعٌ من مالٍ شحنه لغيره** —
+            # وهي علّةُ فصل المحفظتين نفسُها. وبلا إعلانٍ يرتدّ حاملُ الدورين
+            # بـ`wallet_owner_undecided` وهو محقّ: البابُ لم يقل أيَّهما.
+            owner_type=WalletOwnerType.DRIVER,
             tx_type=WalletTransactionType.SUBSCRIPTION_PAYMENT,
             amount=-payable,
             reference=plan.name,
