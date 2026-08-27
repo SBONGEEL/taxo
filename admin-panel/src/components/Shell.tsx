@@ -60,6 +60,7 @@ const GROUPS: {
       // **تحت «المالية» لا «النظام»**: المركبةُ منتَجٌ له سعرٌ وكميّةٌ وإيراد،
       // ومن يبحث عن «كم بعنا منها» يبحث حيث تُقرأ الأرقام
       { label: "مركبات المتجر", to: "/vehicle-skins", adminOnly: true },
+      { label: "مشتريات المركبات", to: "/vehicle-skins/purchases", adminOnly: true },
     ],
   },
   {

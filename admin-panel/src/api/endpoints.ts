@@ -10,6 +10,7 @@ import type {
   AdminSkin,
   BundledSkinAsset,
   SkinArtworkPreview,
+  SkinPurchases,
   SkinStats,
   MapSetting,
   PhotoReport,
@@ -1023,6 +1024,20 @@ export const listSkinAssets = () =>
  *  عنوانُه «الإيرادُ الكلي» وقيمتُه «إيرادُ ما ظهر». */
 export const getSkinStats = () =>
   api.get<SkinStats>("/admin/vehicle-skins/stats");
+
+/** سجلُّ مشتريات المركبات — **مجاميعُه محسوبةٌ في الخلفية** ولا تُجمع هنا. */
+export const listSkinPurchases = (params: {
+  limit?: number;
+  offset?: number;
+  skin_id?: string;
+}) =>
+  api.get<SkinPurchases>(
+    `/admin/vehicle-skins/purchases?${new URLSearchParams(
+      Object.entries(params).flatMap(([key, value]) =>
+        value === undefined ? [] : [[key, String(value)]],
+      ),
+    ).toString()}`,
+  );
 
 export const createVehicleSkin = (payload: Record<string, unknown>) =>
   api.post<AdminSkin>("/admin/vehicle-skins", payload);

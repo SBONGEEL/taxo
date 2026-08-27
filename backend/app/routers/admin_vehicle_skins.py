@@ -34,52 +34,30 @@ import uuid
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, File, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import Select, delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.deps import AdminUser, DbSession
 from app.core.exceptions import InvalidInput, NotFound
-from app.models.enums import AuditAction, CountryCode
-from app.models.vehicle_skin import (
-    DriverVehicleSkin,
-    VehicleSkin,
-    VehicleSkinPrice,
-)
+from app.models.enums import AuditAction
+from app.models.vehicle_skin import VehicleSkin, VehicleSkinPrice
 from app.schemas.vehicle_skin import (
     AdminSkinOut,
     SkinCreateIn,
     SkinPriceIn,
+    SkinPurchasesOut,
     SkinStatsOut,
     SkinUpdateIn,
 )
-from app.services import audit, skin_artwork
+from app.services import audit, skin_artwork, vehicle_skins
 
 router = APIRouter(prefix="/admin/vehicle-skins", tags=["admin"])
 
 
 # ─────────────────────────────────────────────── قراءةُ الكتالوج ومجاميعُه
-
-
-def _owned_counts() -> Select:
-    """عددُ المالكين وعددُ **المشترين** والإيرادُ بعملته — **مجموعةً في القاعدة**.
-
-    §14: اللوحةُ لا تجمع صفوفاً. وجمعُ صفحةٍ مقصوصةٍ في المتصفح يُخرج رقماً
-    عنوانُه «الإيرادُ الكلي» وقيمتُه «إيرادُ ما ظهر»، **والفرقُ لا يُرى**.
-    """
-    return (
-        select(
-            DriverVehicleSkin.skin_id.label("skin_id"),
-            func.count().label("owners"),
-            func.count(DriverVehicleSkin.price_paid).label("sold"),
-            DriverVehicleSkin.currency.label("currency"),
-            func.coalesce(func.sum(DriverVehicleSkin.price_paid), 0).label("revenue"),
-        )
-        .group_by(DriverVehicleSkin.skin_id, DriverVehicleSkin.currency)
-        .subquery()
-    )
 
 
 async def _rows(session: AsyncSession) -> list[AdminSkinOut]:
@@ -102,18 +80,9 @@ async def _rows(session: AsyncSession) -> list[AdminSkinOut]:
     for price in price_rows:
         by_skin.setdefault(price.skin_id, []).append(price)
 
-    counts = _owned_counts()
-    aggregates = (await session.execute(select(counts))).all()
-
-    owners: dict[uuid.UUID, int] = {}
-    sold: dict[uuid.UUID, int] = {}
-    revenue: dict[uuid.UUID, dict[str, Decimal]] = {}
-    for row in aggregates:
-        owners[row.skin_id] = owners.get(row.skin_id, 0) + row.owners
-        sold[row.skin_id] = sold.get(row.skin_id, 0) + row.sold
-        if row.currency and row.revenue:
-            bucket = revenue.setdefault(row.skin_id, {})
-            bucket[row.currency] = bucket.get(row.currency, Decimal("0")) + row.revenue
+    # **المجاميعُ من بيتها الواحد في الخدمة** — كان لها هنا نسخةٌ ثانيةٌ
+    # تتّفق معها اليوم وتفترق أوّلَ شرطٍ يُضاف إلى إحداهما (`SPEC §28.7`)
+    totals = await vehicle_skins.aggregates(session)
 
     out: list[AdminSkinOut] = []
     for skin in skins:
@@ -137,14 +106,16 @@ async def _rows(session: AsyncSession) -> list[AdminSkinOut]:
                         key=lambda p: p.country_code.value,
                     )
                 ],
-                owners_count=owners.get(skin.id, 0),
-                sold_count=sold.get(skin.id, 0),
+                owners_count=totals[skin.id].owners if skin.id in totals else 0,
+                sold_count=totals[skin.id].sold if skin.id in totals else 0,
                 # **المال مُكمَّمٌ ولو كان صفراً** — الشكلُ السابع: قيمةٌ تُكوَّن
                 # في بايثون تُسلسَل `"0"` لا `"0.000"`، فيقرأ المشرفُ صفراً
                 # عارياً في عمودٍ كلُّه ثلاثُ خانات
                 revenue={
                     code: amount.quantize(Decimal("0.001"))
-                    for code, amount in sorted(revenue.get(skin.id, {}).items())
+                    for code, amount in sorted(
+                        (totals[skin.id].revenue if skin.id in totals else {}).items()
+                    )
                 },
             )
         )
@@ -466,3 +437,24 @@ async def get_artwork(
         slot=slot,
     )
 
+
+
+@router.get("/purchases", response_model=SkinPurchasesOut)
+async def skin_purchases(
+    _: AdminUser,
+    session: DbSession,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    skin_id: uuid.UUID | None = None,
+) -> SkinPurchasesOut:
+    """سجلُّ مشتريات المركبات — **شاشةٌ مستقلّةٌ لا بطاقةٌ في الكتالوج**.
+
+    قرارُ المالك: «**مالٌ يخرج من محافظ الكباتن له شاشتُه**». والكتالوجُ يجيب
+    «كم بيعت» لكلِّ مركبة، وهذا يجيب «**من** اشترى، و**متى**، و**بكم**» —
+    وسؤالان مختلفان لا يُخدمان ببطاقةٍ واحدة.
+
+    **والموجّهُ رقيقٌ بحقّ**: لا حساب هنا، والجمعُ كلُّه في `vehicle_skins`.
+    """
+    return await vehicle_skins.purchase_log(
+        session, limit=limit, offset=offset, skin_id=skin_id
+    )

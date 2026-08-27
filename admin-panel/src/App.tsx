@@ -93,6 +93,11 @@ const VehicleSkinsScreen = lazy(() =>
     default: m.VehicleSkinsScreen,
   })),
 );
+const SkinPurchasesScreen = lazy(() =>
+  import("@/screens/SkinPurchases").then((m) => ({
+    default: m.SkinPurchasesScreen,
+  })),
+);
 const SecurityScreen = lazy(() =>
   import("@/screens/Security").then((m) => ({ default: m.SecurityScreen })),
 );
@@ -316,6 +321,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <VehicleSkinsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/vehicle-skins/purchases"
+                    element={
+                      <Guarded>
+                        <SkinPurchasesScreen />
                       </Guarded>
                     }
                   />

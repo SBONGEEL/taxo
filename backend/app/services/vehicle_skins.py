@@ -22,10 +22,11 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,7 +52,14 @@ from app.models.vehicle_skin import (
     VehicleSkinPrice,
 )
 from app.schemas.driver import ART_MAP, ART_STORE, skin_art_url as art_url
-from app.schemas.vehicle_skin import BuySkinOut, GarageOut, SkinOut, StoreOut
+from app.schemas.vehicle_skin import (
+    BuySkinOut,
+    GarageOut,
+    SkinOut,
+    SkinPurchaseRow,
+    SkinPurchasesOut,
+    StoreOut,
+)
 from app.services import geo, skin_artwork, wallet
 from app.services.pricing import round_money
 
@@ -74,21 +82,177 @@ async def _owned_rows(
     return {row.skin_id: row for row in rows}
 
 
+@dataclass(frozen=True, slots=True)
+class SkinAggregate:
+    """مجاميعُ مركبةٍ واحدة — **بيتٌ واحدٌ لِما كان في بيتين**.
+
+    كان «كم يملكها» يُحسب مرّتين: مرّةً هنا للمتجر والكراج، ومرّةً في
+    `routers/admin_vehicle_skins._owned_counts` للوحة. **وهما يتّفقان اليوم**،
+    وهذا بعينه ما يجعله الشكلَ الثامن: بابان ينشران الرقمَ نفسَه، **كلٌّ
+    صادقٌ وحدَه**، ويفترقان أوّلَ شرطٍ يُضاف إلى أحدهما — منحةٌ لا تُعدّ
+    مبيعاً، أو مِلكيّةٌ مسترجَعة. **فصار الحسابُ هنا وحدَه** (`SPEC §28.7`،
+    البندُ المفتوحُ الوحيدُ فيه).
+
+    **والثلاثةُ تُفرَّق لأنها ثلاثةُ أسئلة**: `owners` من يملكها كيفما ملكها
+    (وهو ما يُنقَص من `max_supply`)، و`sold` من **دفع** ثمنَها — فالهديةُ
+    تُقتنى ولا تُباع، وخلطُهما يضع مركبةً لم تُبَع قطُّ على رأس قائمة
+    المبيعات. و`revenue` **بعملته** لا مجموعاً: جمعُ دينارٍ أردنيٍّ على ليبيٍّ
+    رقمٌ لا معنى له.
+    """
+
+    owners: int
+    sold: int
+    revenue: dict[str, Decimal]
+
+
+async def aggregates(
+    session: AsyncSession, skin_ids: list[uuid.UUID] | None = None
+) -> dict[uuid.UUID, SkinAggregate]:
+    """مجاميعُ المِلكيّة — **استعلامٌ واحدٌ لا واحدٌ لكلِّ بطاقة**، ومجموعةٌ في
+    القاعدة لا في بايثون (§14: اللوحةُ لا تجمع صفوفاً، وجمعُ صفحةٍ مقصوصةٍ
+    يُخرج رقماً عنوانُه «الكلّي» وقيمتُه «ما ظهر»).
+
+    و`skin_ids=None` تعني **الكتالوجَ كلَّه** — تحتاجه اللوحة، ولا تحتاجه
+    بطاقاتُ المتجر.
+    """
+    if skin_ids is not None and not skin_ids:
+        return {}
+    query = select(
+        DriverVehicleSkin.skin_id,
+        func.count().label("owners"),
+        func.count(DriverVehicleSkin.price_paid).label("sold"),
+        DriverVehicleSkin.currency,
+        func.coalesce(func.sum(DriverVehicleSkin.price_paid), 0).label("revenue"),
+    ).group_by(DriverVehicleSkin.skin_id, DriverVehicleSkin.currency)
+    if skin_ids is not None:
+        query = query.where(DriverVehicleSkin.skin_id.in_(skin_ids))
+
+    out: dict[uuid.UUID, SkinAggregate] = {}
+    for row in await session.execute(query):
+        current = out.get(row.skin_id)
+        revenue = dict(current.revenue) if current else {}
+        if row.currency and row.revenue:
+            revenue[row.currency] = revenue.get(row.currency, Decimal("0")) + row.revenue
+        out[row.skin_id] = SkinAggregate(
+            owners=(current.owners if current else 0) + int(row.owners),
+            sold=(current.sold if current else 0) + int(row.sold),
+            revenue=revenue,
+        )
+    return out
+
+
 async def _owners_counts(
     session: AsyncSession, skin_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, int]:
-    """عددُ المالكين لكلِّ مركبة — **استعلامٌ واحدٌ لا واحدٌ لكلِّ بطاقة**.
+    """عددُ المالكين وحدَه — قراءةٌ ضيّقةٌ فوق `aggregates`.
 
     و«المتبقّي» و«عدّادُ الاقتناء» يُقرآن منه معاً، فلا رقمان لمصدرٍ واحد.
     """
-    if not skin_ids:
-        return {}
-    rows = await session.execute(
-        select(DriverVehicleSkin.skin_id, func.count())
-        .where(DriverVehicleSkin.skin_id.in_(skin_ids))
-        .group_by(DriverVehicleSkin.skin_id)
+    return {
+        skin_id: item.owners
+        for skin_id, item in (await aggregates(session, skin_ids)).items()
+    }
+
+
+async def purchase_log(
+    session: AsyncSession,
+    *,
+    limit: int = 100,
+    offset: int = 0,
+    skin_id: uuid.UUID | None = None,
+) -> SkinPurchasesOut:
+    """سجلُّ مشتريات المركبات — **شاشتُه مستقلّةٌ لأن المال يخرج من محافظ**.
+
+    **وموضعُه الخدمةُ لا الموجّه** (`SPEC §28.7`): اللوحةُ تعرض ولا تحسب،
+    والمجاميعُ تُجمع في القاعدة على الجدول كلِّه — **لا على الصفحة**. صفحةٌ
+    محدودةٌ بخمسين تُجمع في المتصفّح تُخرج رقماً عنوانُه «الإيرادُ الكلي»
+    وقيمتُه «إيرادُ ما ظهر»، **والفرقُ لا يُرى** (§14).
+
+    **والمِلكيّةُ الفعّالةُ تُقرأ من `drivers.active_skin_id` لا تُستنتج**:
+    آخرُ ما اشتراه ليس ما فعّله — يشتري ثلاثاً ويُبقي الأولى.
+    """
+    base = (
+        select(DriverVehicleSkin)
+        .join(Driver, Driver.id == DriverVehicleSkin.driver_id)
+        .join(User, User.id == Driver.user_id)
+        .join(VehicleSkin, VehicleSkin.id == DriverVehicleSkin.skin_id)
     )
-    return {skin_id: int(count) for skin_id, count in rows}
+    if skin_id is not None:
+        base = base.where(DriverVehicleSkin.skin_id == skin_id)
+
+    rows = (
+        await session.execute(
+            base.add_columns(
+                User.name.label("driver_name"),
+                User.phone.label("driver_phone"),
+                VehicleSkin.name.label("skin_name"),
+                VehicleSkin.rarity.label("rarity"),
+                Driver.active_skin_id.label("active_skin_id"),
+            )
+            .order_by(DriverVehicleSkin.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+
+    # **العدُّ والمجاميعُ على الجدول كلِّه** — استعلامٌ مستقلٌّ عن الصفحة
+    totals_query = select(
+        func.count().label("total"),
+        func.count(DriverVehicleSkin.price_paid).label("sold"),
+        func.sum(
+            case((DriverVehicleSkin.source == SOURCE_GIFT, 1), else_=0)
+        ).label("gifted"),
+        func.sum(
+            case((DriverVehicleSkin.source == SOURCE_GRANT, 1), else_=0)
+        ).label("granted"),
+    )
+    if skin_id is not None:
+        totals_query = totals_query.where(DriverVehicleSkin.skin_id == skin_id)
+    totals = (await session.execute(totals_query)).one()
+
+    revenue_query = select(
+        DriverVehicleSkin.currency,
+        func.coalesce(func.sum(DriverVehicleSkin.price_paid), 0),
+    ).where(DriverVehicleSkin.currency.is_not(None)).group_by(
+        DriverVehicleSkin.currency
+    )
+    if skin_id is not None:
+        revenue_query = revenue_query.where(DriverVehicleSkin.skin_id == skin_id)
+    revenue = {
+        code: round_money(amount)
+        for code, amount in (await session.execute(revenue_query))
+        if amount
+    }
+
+    return SkinPurchasesOut(
+        rows=[
+            SkinPurchaseRow(
+                id=row.DriverVehicleSkin.id,
+                driver_id=row.DriverVehicleSkin.driver_id,
+                driver_name=row.driver_name,
+                driver_phone=row.driver_phone,
+                skin_id=row.DriverVehicleSkin.skin_id,
+                skin_name=row.skin_name,
+                rarity=row.rarity,
+                source=row.DriverVehicleSkin.source,
+                price_paid=row.DriverVehicleSkin.price_paid,
+                currency=row.DriverVehicleSkin.currency,
+                is_active_for_driver=(
+                    row.active_skin_id == row.DriverVehicleSkin.skin_id
+                ),
+                created_at=row.DriverVehicleSkin.created_at,
+            )
+            for row in rows
+        ],
+        total=int(totals.total or 0),
+        revenue_by_currency=revenue,
+        gifted_count=int(totals.gifted or 0),
+        granted_count=int(totals.granted or 0),
+        # **ميزانيّةُ الشهر المجاني = عددُ الهدايا**: الهديةُ تُمنح على حدث
+        # تفعيلِ أوّلِ اشتراكٍ لا على مبلغه، وكلُّ هديةٍ صفٌّ واحدٌ لا يتكرّر
+        # (`uq_driver_skin` + مقارنةٌ حيّةٌ على `source='gift'`)
+        free_month_grants=int(totals.gifted or 0),
+    )
 
 
 async def _prices(

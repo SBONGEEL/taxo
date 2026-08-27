@@ -112,12 +112,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **يُقرأ `CLAUDE.md` كاملاً** — وهو **٥٤ ألف حرفٍ لا ٣٨٦**، فقراءتُه كاملةً
 صارت ممكنةً بعد أن كانت دعوى.
 
-> **والرقمُ يُقرأ من `tools/check-docs.mjs` لا من أداةٍ أخرى**: **54,450 حرفاً**
+> **والرقمُ يُقرأ من `tools/check-docs.mjs` لا من أداةٍ أخرى**: **54,516 حرفاً**
 > في ٢٠٢٦-٠٨-٢٦، والسقفُ ٦٠ ألفاً — **والحارسُ يطبعهما في كلِّ تشغيل**، فمن
 > أراد الرقمَ شغّله ولم يقدّره.
 >
 > **و`wc -m` في صدفة ويندوز يعدّ البايتات لا الحروف** (فخٌّ وقع مقيساً
-> ٢٠٢٦-٠٨-٢٦): أجاب **68,081** لهذا الملف، والحروفُ **54,450** — والعربيةُ
+> ٢٠٢٦-٠٨-٢٦): أجاب **68,182** لهذا الملف، والحروفُ **54,516** — والعربيةُ
 > بايتان للحرف، **فالرقمُ مضخَّمٌ بالثلث**. ولو كُتب لَقيل «الملفُّ فوق سقفه
 > بسبعة آلاف» وهو تحته بستّة، **ولَقِيست هجرةُ قواعدَ عاملةٍ لا موجبَ لها**.
 > **فوحدةُ القياس جزءٌ من الرقم، ومن نقله بلا وحدته نقل عدداً لا خبراً.**
@@ -333,6 +333,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - The floating bottom bar, and three defects the browser found (2026-08-13) → `STATE.md`
 - Rider design-matching: five packages, all delivered → `STATE.md`
 - Open debt and decisions waiting on the owner → `STATE.md`
+- متجرُ المركبات — أيقظت السلسلةُ الخمس (2026-08-27) → `STATE.md`
 
 ### `ARCHITECTURE.md` — المعمار
 

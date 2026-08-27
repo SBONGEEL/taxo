@@ -1229,6 +1229,34 @@ export type AdminSkin = {
   revenue: Record<string, string>;
 };
 
+/** صفٌّ في سجلِّ مشتريات المركبات — **مالٌ خرج من محفظة كبتن**. */
+export type SkinPurchaseRow = {
+  id: string;
+  driver_id: string;
+  driver_name: string;
+  driver_phone: string;
+  skin_id: string;
+  skin_name: string;
+  rarity: SkinRarity;
+  /** `purchase` · `gift` · `grant` — **يُقرأ ولا يُستنتج من غياب المبلغ**. */
+  source: string;
+  /** `null` للهديّة والمنحة — **ولا يُرسم صفراً**: صفرٌ يعني «دُفع لا شيء». */
+  price_paid: string | null;
+  currency: string | null;
+  is_active_for_driver: boolean;
+  created_at: string;
+};
+
+/** **المجاميعُ على الجدول كلِّه لا على الصفحة** (§14) — تصل مجموعةً. */
+export type SkinPurchases = {
+  rows: SkinPurchaseRow[];
+  total: number;
+  revenue_by_currency: Record<string, string>;
+  gifted_count: number;
+  granted_count: number;
+  free_month_grants: number;
+};
+
 export type SkinStats = {
   top_selling: AdminSkin[];
   revenue_by_currency: Record<string, string>;

@@ -187,3 +187,48 @@ class SkinStatsOut(BaseModel):
     top_selling: list[AdminSkinOut]
     revenue_by_currency: dict[str, Decimal]
     total_owned: int
+
+
+class SkinPurchaseRow(BaseModel):
+    """صفٌّ في سجلِّ مشتريات المركبات — **مالٌ خرج من محفظة كبتن**.
+
+    **والمصدرُ حقلٌ لا يُستنتج من السعر**: منحةٌ إداريةٌ وهديةٌ كلتاهما بلا
+    سعر، **وهما ليستا شيئاً واحداً** في تقريرٍ يقرؤه من يسأل «كم وهبنا وكم
+    منحنا». فيُقرأ `source` ولا يُقاس بغياب المبلغ.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    driver_id: uuid.UUID
+    driver_name: str
+    driver_phone: str
+    skin_id: uuid.UUID
+    skin_name: str
+    rarity: Rarity
+    source: str
+    #: `None` للهديّة والمنحة — **ولا يُقرأ صفراً**: صفرٌ يعني «دُفع لا شيء»
+    price_paid: Decimal | None
+    currency: str | None
+    is_active_for_driver: bool
+    created_at: datetime
+
+
+class SkinPurchasesOut(BaseModel):
+    """سجلُّ المشتريات وميزانيّتُه — **مجموعٌ في القاعدة على الجدول كلِّه**.
+
+    **والمجاميعُ ليست مجاميعَ الصفحة**: الصفحةُ مقصوصةٌ بحدٍّ، فجمعُها في
+    المتصفّح يُخرج رقماً عنوانُه «الكلّي» وقيمتُه «ما ظهر» — وهي قاعدةُ §14
+    نفسُها مطبَّقةً على عدٍّ لا على مبلغ.
+    """
+
+    rows: list[SkinPurchaseRow]
+    total: int
+    #: إيرادُ المبيعات **بعملته** — ولا يُجمع دينارٌ أردنيٌّ على ليبيّ
+    revenue_by_currency: dict[str, Decimal]
+    #: **الموهوبُ والممنوح** — عددان لا مبلغ، لأن كليهما بلا سعر
+    gifted_count: int
+    granted_count: int
+    #: **ما استهلكته الهدايا من ميزانية الشهر المجاني** — عددُ الهدايا الممنوحة،
+    #: وكلُّ واحدةٍ منها حدثُ تفعيلِ اشتراكٍ أوّل (`grant_gift_on_first_subscription`)
+    free_month_grants: int
