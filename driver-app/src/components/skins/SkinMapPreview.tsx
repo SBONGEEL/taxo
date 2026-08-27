@@ -17,9 +17,10 @@
 
 import mapboxgl from "mapbox-gl";
 
-// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
-// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
-import "@/lib/map-rtl";
+// **تشكيلُ العربية قبل إنشاء الخريطة** — للوحدة أثرٌ جانبيٌّ (تسجيلُ الملحق)
+// **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
+// عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
+import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import { useEffect, useRef } from "react";
 
 import type { VehicleSkin } from "@/api/types";
@@ -58,6 +59,7 @@ export function SkinMapPreview({
     map.current = new mapboxgl.Map({
       container: host.current,
       style: dark ? STYLE_DARK : STYLE_LIGHT,
+      language: MAP_LANGUAGE,
       center: PREVIEW_CENTER,
       zoom: 16,
       interactive: false,

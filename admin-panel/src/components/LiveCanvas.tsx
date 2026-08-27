@@ -22,9 +22,10 @@ import { useEffect, useRef } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
-// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
-import "@/lib/map-rtl";
+// **تشكيلُ العربية قبل إنشاء الخريطة** — للوحدة أثرٌ جانبيٌّ (تسجيلُ الملحق)
+// **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
+// عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
+import { MAP_LANGUAGE } from "@/lib/map-rtl";
 
 import type { LiveDriver, LivePendingRide } from "@/api/types";
 import { useTheme } from "@/lib/theme";
@@ -107,6 +108,7 @@ export function LiveCanvas({
     map.current = new mapboxgl.Map({
       container: holder.current,
       style: dark ? STYLE_DARK : STYLE_LIGHT,
+      language: MAP_LANGUAGE,
       center: [center.lng, center.lat],
       zoom: 11,
       attributionControl: false,

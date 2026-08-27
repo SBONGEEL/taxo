@@ -32,9 +32,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// **تشكيلُ العربية قبل إنشاء الخريطة** — وحدةٌ ذاتُ أثرٍ جانبيٍّ تُقيَّم
-// عند الاستيراد، فتسبق كلَّ `new mapboxgl.Map` في هذا الملف.
-import "@/lib/map-rtl";
+// **تشكيلُ العربية قبل إنشاء الخريطة** — للوحدة أثرٌ جانبيٌّ (تسجيلُ الملحق)
+// **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
+// عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
+import { MAP_LANGUAGE } from "@/lib/map-rtl";
 
 import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
@@ -172,6 +173,7 @@ export function MapView({
     map.current = new mapboxgl.Map({
       container: host.current,
       style: dark ? STYLE_DARK : STYLE_LIGHT,
+      language: MAP_LANGUAGE,
       center: [
         center?.lng ?? DEFAULT_CENTER.lng,
         center?.lat ?? DEFAULT_CENTER.lat,
