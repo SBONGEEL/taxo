@@ -18,7 +18,9 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, Query, status
 from fastapi.responses import FileResponse
 
 from app.core import storage
@@ -49,11 +51,22 @@ async def _require_enabled(session: DbSession, user: User) -> None:
 
 @router.get("/store", response_model=StoreOut)
 async def store(
-    driver: CurrentDriver, user: CurrentUser, session: DbSession
+    driver: CurrentDriver,
+    user: CurrentUser,
+    session: DbSession,
+    limit: Annotated[int, Query(ge=1, le=120)] = 48,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> StoreOut:
-    """المتجرُ ورصيدُ الكبتن ومستواه — **بنداءٍ واحد**."""
+    """المتجرُ ورصيدُ الكبتن ومستواه — **بنداءٍ واحد، وصفحةً صفحة**.
+
+    **والحدُّ افتراضيٌّ لا اختياريّ**: الكتالوجُ ثلاثُ مئةٍ وزيادة، وطلبٌ بلا
+    حدٍّ يرسل ٣٧٣ بطاقةً إلى شاشةِ هاتف — ٣٧٣ صورةً وعقدةَ DOM لكلِّ واحدة.
+    فمن نسي `limit` يأخذ صفحةً لا الكتالوجَ كلَّه.
+    """
     await _require_enabled(session, user)
-    return await vehicle_skins.store_for(session, driver, user)
+    return await vehicle_skins.store_for(
+        session, driver, user, limit=limit, offset=offset
+    )
 
 
 @router.get("/garage", response_model=GarageOut)

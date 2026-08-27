@@ -12,7 +12,7 @@
  * يُرجَع عنهما، والثالثةُ وحدَها تدفع (`design/MONEY-STEPS-CHECKLIST.md`).
  */
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -28,10 +28,17 @@ import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { RARITY_CHIP, RARITY_LABEL, RARITY_NOTE } from "@/lib/skins";
 import { digits, cn } from "@/lib/utils";
 
+const PAGE = 48;
+
 export function SkinStoreScreen() {
   const goBack = useGoBack();
   const { enabled, refresh: refreshGarage } = useGarage();
   const [store, setStore] = useState<SkinStorePayload | null>(null);
+  /** **الصفحاتُ متراكمةٌ خارج `store`**: الأخيرُ يحمل الرصيدَ والمجموع، وهذه
+   *  تحمل ما عُرض حتى الآن — وخلطُهما يجعل كلَّ صفحةٍ تمحو ما قبلها. */
+  const [skins, setSkins] = useState<VehicleSkin[]>([]);
+  const [paging, setPaging] = useState(false);
+  const sentinel = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
 
@@ -41,9 +48,29 @@ export function SkinStoreScreen() {
   const [buyError, setBuyError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  /** **يُعاد من الصفر** — بعد شراءٍ مثلاً: الصفحاتُ المتراكمةُ تُستبدل ولا
+   *  تُلحَق، وإلا ظهرت المركبةُ مرّتين (المشتراةُ ومكانُها القديم). */
   const load = useCallback(async () => {
-    setStore(await getSkinStore());
+    const first = await getSkinStore(PAGE, 0);
+    setStore(first);
+    setSkins(first.skins);
   }, []);
+
+  /** **الصفحةُ التالية عند بلوغ القاع** — ولا تُطلب وهي جاريةٌ ولا بعد
+   *  النهاية: `total` من الخلفية يقول متى نتوقّف بلا صفحةٍ فارغةٍ تُكتشف بها. */
+  const more = useCallback(async () => {
+    if (paging || !store || skins.length >= store.total) return;
+    setPaging(true);
+    try {
+      const next = await getSkinStore(PAGE, skins.length);
+      setSkins((current) => [...current, ...next.skins]);
+    } catch {
+      // **صمتٌ مقصود**: الصفحةُ الأولى معروضةٌ وتعمل، وشريطُ خطأٍ على تمريرةٍ
+      // فاشلةٍ يُفزع بلا أن يمنع شيئاً. والمحاولةُ تتكرّر عند التمرير التالي.
+    } finally {
+      setPaging(false);
+    }
+  }, [paging, store, skins.length]);
 
   useEffect(() => {
     load()
@@ -54,6 +81,21 @@ export function SkinStoreScreen() {
       )
       .finally(() => setLoading(false));
   }, [load]);
+
+  // **مراقبُ القاع** — بديلُ زرِّ «المزيد»: التمريرُ هو الإيماءةُ الطبيعيةُ في
+  // شبكةٍ طويلة، وزرٌّ في آخر ٤٨ بطاقةً يُضغط مرّةً كلَّ صفحة.
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node) return;
+    const watcher = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void more();
+      },
+      { rootMargin: "600px" },
+    );
+    watcher.observe(node);
+    return () => watcher.disconnect();
+  }, [more]);
 
   async function confirm() {
     const skin = confirming;
@@ -93,7 +135,6 @@ export function SkinStoreScreen() {
     );
   }
 
-  const skins = store?.skins ?? [];
 
   return (
     <div className="relative h-full bg-bg">
@@ -167,6 +208,11 @@ export function SkinStoreScreen() {
             </Fragment>
           );
         })}
+
+        {/* **حارسُ القاع** — بلوغُه يطلب الصفحةَ التالية (`rootMargin` يسبقه
+            بستّ مئةِ بكسل، فتصل الصفحةُ قبل أن يرى الكبتنُ فراغاً) */}
+        <div ref={sentinel} aria-hidden className="h-px" />
+        {paging ? <Spinner className="mx-auto my-14" /> : null}
 
         <p className="mt-16 text-11 leading-note text-muted">
           المركبةُ زينةٌ على الخريطة — لا تغيّر أجرتك ولا فئةَ سيارتك ولا

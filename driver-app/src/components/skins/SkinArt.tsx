@@ -37,6 +37,11 @@ export function SkinArt({
           src={skinAssetUrl(skin.store_image_url)}
           alt={skin.name}
           onError={() => setFailed(true)}
+          // **كسولٌ ولا متزامن**: شبكةُ المتجر عشراتُ البطاقات، وتحميلُ ما تحت
+          // الطيّة يزاحم ما فوقها على شبكةِ هاتف. والإطارُ محجوزٌ بمقاسه فوق
+          // هذا الوسم، فلا قفزةَ تخطيطٍ حين تصل الصورة.
+          loading="lazy"
+          decoding="async"
           className="size-full object-contain"
         />
       )}

@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import uuid
 from dataclasses import dataclass
@@ -266,6 +267,17 @@ async def _prices(
     return {skin_id: price for skin_id, price in rows}
 
 
+def _shuffle_key(skin_id: uuid.UUID) -> str:
+    """**مفتاحُ خلطٍ ثابتٌ من المُعرّف** — لا عشوائيَّ ولا أبجديّ.
+
+    الأبجديّةُ تكدّس عائلةَ اللون (الأسماءُ تبدأ بها)، **والعشوائيُّ الحقيقيُّ
+    يكسر العقد**: ترتيبان مختلفان لنداءين يجعلان «الثالثةَ من اليسار» تعني
+    مركبتين، وهو ما يحرسه شرطُ «الترتيبُ عقدٌ لا ذوق». **والتلبيدُ (hash) صافٍ**:
+    الترتيبُ هو هو في كلِّ نداءٍ ولكلِّ قارئ، ولا يتبدّل إلا بتبدّل المُعرّف.
+    """
+    return hashlib.blake2s(skin_id.bytes, digest_size=8).hexdigest()
+
+
 def _rarity_rank(skin: VehicleSkin) -> int:
     try:
         return RARITIES.index(skin.rarity)
@@ -406,11 +418,30 @@ async def _catalogue(session: AsyncSession) -> list[VehicleSkin]:
     return [skin for skin in rows if has_artwork(skin)]
 
 
-async def store_for(session: AsyncSession, driver: Driver, user: User) -> StoreOut:
+async def store_for(
+    session: AsyncSession,
+    driver: Driver,
+    user: User,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> StoreOut:
     """المتجرُ كما يراه هذا الكبتن — **ورصيدُه معه بنداءٍ واحد**.
 
-    **والترتيبُ عقدٌ لا ذوق**: بالندرة صعوداً ثم بالاسم — شاشتان ترتّبان
-    الشيءَ نفسَه اختلافاً تجعلان «الثالثةَ من اليسار» تعني مركبتين.
+    **والترتيبُ عقدٌ لا ذوق**: بالندرة صعوداً، **ثم بمفتاحِ خلطٍ ثابت** —
+    شاشتان ترتّبان الشيءَ نفسَه اختلافاً تجعلان «الثالثةَ من اليسار» تعني
+    مركبتين. **والثباتُ هو الشرط، لا الأبجديّة**: `_shuffle_key` دالّةٌ صافيةٌ
+    من مُعرّف المركبة، فترتيبُها هو هو في كلِّ نداءٍ ولكلِّ قارئ.
+
+    **ولمَ تُرك الاسمُ مفتاحاً**: أسماءُ الكتالوج تبدأ بعائلة اللون
+    («البرتقالية …»)، فالترتيبُ الأبجديُّ **يكدّس لوناً واحداً في أوّل
+    الصفحة** — قِيس: ٣٧٣ بطاقةً صدرُها جدارٌ برتقاليٌّ كامل. وهو عطبُ عرضٍ
+    لا ذوق: من يفتح متجراً فيرى عشرين نسخةً من لونٍ واحدٍ يظنّ المعروضَ
+    قليلاً ويخرج.
+
+    **والصفحةُ محدودةٌ بحقّ** (`limit`/`offset`): الكتالوجُ ثلاثُ مئةٍ وزيادة،
+    وبطاقةٌ لكلِّ واحدةٍ تعني ٣٧٣ صورةً في شاشةِ هاتف. **والمجموعُ يُنشر
+    (`total`)** فيعرف التطبيقُ متى يتوقّف بلا أن يجمع صفحاتِه.
 
     **ولا تُعرض مركبةٌ بلا سعرٍ في هذا السوق**: بطاقةٌ بلا سعرٍ زرُّها لا
     يفعل شيئاً، وهي «بابٌ بلا زرّ» مقلوباً. والهديةُ والبديلُ المنشورُ
@@ -429,8 +460,11 @@ async def store_for(session: AsyncSession, driver: Driver, user: User) -> StoreO
     balance = await wallet.balance(session, user.id, WalletOwnerType.DRIVER)
     currency = currency_for_country(country).value
 
-    catalogue.sort(key=lambda skin: (_rarity_rank(skin), skin.name))
+    catalogue.sort(key=lambda skin: (_rarity_rank(skin), _shuffle_key(skin.id)))
+    total = len(catalogue)
+    page = catalogue if limit is None else catalogue[offset : offset + limit]
     return StoreOut(
+        total=total,
         skins=[
             _to_out(
                 skin,
@@ -443,7 +477,7 @@ async def store_for(session: AsyncSession, driver: Driver, user: User) -> StoreO
                 balance=balance,
                 now=now,
             )
-            for skin in catalogue
+            for skin in page
         ],
         balance=balance,
         currency=currency,

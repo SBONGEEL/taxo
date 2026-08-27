@@ -94,6 +94,9 @@ class StoreOut(BaseModel):
     """المتجرُ مقسوماً بندرته — والترتيبُ عقدٌ لا ذوق."""
 
     skins: list[SkinOut]
+    #: **مجموعُ ما يُعرض لهذا الكبتن في سوقه** — لا طولُ الصفحة.
+    #: يُنشر كي يعرف التطبيقُ متى يتوقّف بلا أن يطلب صفحةً فارغةً ليكتشف النهاية.
+    total: int = 0
     balance: Decimal
     currency: str
     driver_level: int | None = None

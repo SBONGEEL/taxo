@@ -467,7 +467,10 @@ export const reportLocationOverRest = (payload: {
 /** المتجر — **مع الرصيد والعملة والمستوى في نداءٍ واحد**، فالبطاقةُ تعرف
  *  «رصيدك لا يكفي» بلا نداءٍ ثانٍ يفترق عنه. **والترتيبُ من الخلفية** ولا
  *  يُعاد ترتيبُه هنا. */
-export const getSkinStore = () => api.get<SkinStore>("/vehicle-skins/store");
+/** المتجرُ **صفحةً صفحة** — الكتالوجُ ثلاثُ مئةٍ وزيادة، وبطاقةٌ لكلٍّ تعني
+ *  مئاتِ الصور في شاشةِ هاتف. و`total` في الرد يقول متى تنتهي. */
+export const getSkinStore = (limit = 48, offset = 0) =>
+  api.get<SkinStore>(`/vehicle-skins/store?limit=${limit}&offset=${offset}`);
 
 /** الكراج — ومعه المفعَّلةُ والهديّةُ التي لم تُعرض بعدُ وحالُ الاشتراك. */
 export const getGarage = () => api.get<Garage>("/vehicle-skins/garage");
