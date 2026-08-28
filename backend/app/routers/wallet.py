@@ -281,6 +281,7 @@ async def create_cliq_topup(
     user: CurrentUser,
     session: DbSession,
     redis: RedisDep,
+    wallet: WalletChoice = None,
 ) -> CliqTopupOut:
     """شحن بكليك الآلي — رمز QR بالمبلغ ومرجعٍ يشهد عليه حساب التاجر.
 
@@ -297,7 +298,9 @@ async def create_cliq_topup(
     if not limit.allowed:
         raise RateLimited(retry_after=limit.retry_after)
 
-    order = await cliq_topups.start_topup(session, owner=user, amount=payload.amount)
+    order = await cliq_topups.start_topup(
+        session, owner=user, amount=payload.amount, declared=wallet
+    )
     await session.commit()
     return _cliq_out(order)
 

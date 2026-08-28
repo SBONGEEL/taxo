@@ -300,21 +300,25 @@ export const listTopups = (limit = 20, offset = 0) =>
 
 /** كليك اليدوي: طلبٌ ينتظر موظفاً (SPEC القسم 7). */
 export const createTopupRequest = (amount: string, reference: string) =>
-  api.post<TopupRequest>("/wallet/me/topups", {
+  api.post<TopupRequest>("/wallet/me/topups?wallet=rider", {
     method: "cliq",
     amount,
     reference,
   });
 
+/** **يُعلن محفظةَ الراكب** (SPEC §22): البابُ يخدمه التطبيقان، ومن حمل
+ *  الدورين لا يقول دورُه أيَّ محفظةٍ يعني — فيرتدّ بلا إعلانٍ ولا يشحن أصلاً.
+ *  وهذا التطبيقُ تطبيقُ الراكب، **فسياقُ الفعل معلومٌ هنا يقيناً** كما هو
+ *  معلومٌ في `getWallet` أعلاه (`?wallet=rider`). */
 export const createCardTopup = (amount: string, extras: { save_card?: boolean; saved_card_id?: string } = {}) =>
-  api.post<import("@/api/types").CardOrder>("/wallet/me/topups/card", {
+  api.post<import("@/api/types").CardOrder>("/wallet/me/topups/card?wallet=rider", {
     amount,
     ...extras,
   });
 
 /** كليك الآلي: رمزٌ يُمسح وحسابُ التاجر يشهد (SPEC القسم 7 — المرحلة 8). */
 export const createCliqTopup = (amount: string) =>
-  api.post<CliqTopup>("/wallet/me/topups/cliq", { amount });
+  api.post<CliqTopup>("/wallet/me/topups/cliq?wallet=rider", { amount });
 
 export const checkCliqTopup = (cartId: string) =>
   api.get<CliqTopup>(`/wallet/me/topups/cliq/${cartId}`);

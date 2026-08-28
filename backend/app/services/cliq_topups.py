@@ -31,6 +31,7 @@ from app.models.enums import (
     PaymentProvider,
     ProviderOrderPurpose,
     ProviderOrderStatus,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.provider_order import OPEN_ORDER_STATUSES, ProviderOrder
@@ -78,8 +79,17 @@ async def order_for_user(
     return order
 
 
+#: **قيمُ `opened_from_app` التي تعني محفظة** — مشتقّةٌ من التعداد نفسِه
+#: كما في `card_payments`، فلا تُكتب بيدٍ ولا تتخلّف عنه بقيمةٍ جديدة
+_WALLET_SIDES = frozenset(item.value for item in WalletOwnerType)
+
+
 async def start_topup(
-    session: AsyncSession, *, owner: User, amount: Decimal
+    session: AsyncSession,
+    *,
+    owner: User,
+    amount: Decimal,
+    declared: WalletOwnerType | None = None,
 ) -> ProviderOrder:
     """يفتح تحصيلاً عند الـ acquirer ويعيد الطلب بحاملِ رمزه.
 
@@ -92,8 +102,15 @@ async def start_topup(
     ):
         raise FeatureDisabled("كليك غير مفعّل في بلدك")
     wallet.require_not_frozen(owner)
-    # يفحص أن للحساب محفظة أصلاً (راكب أو كبتن لا مشرف)
-    wallet.owner_type_for(owner)
+    # **المحفظةُ المعلَنةُ تقول التطبيق** — نفسُ ختم البطاقة بحرفه
+    # (`card_payments.start_wallet_topup`): شحنُ محفظةِ راكبٍ يبدأ من تطبيقه،
+    # فلا يُسأل العميلُ سؤالاً ثانياً عن شيءٍ أعلنه. **ويفحص أن للحساب محفظةً
+    # من هذا النوع أصلاً** (راكبٌ أو كبتنٌ لا مشرف).
+    #
+    # **وكان هذا البابُ لا يختم شيئاً** بينما البطاقةُ تختم — بابان لغرضٍ
+    # واحدٍ بسلوكين، وهو الشكلُ الثامن. **وأثرُه مالٌ لا يدخل**: حاملُ الدورين
+    # كان يرتدّ هنا فلا يفتح شحنَ كليك أصلاً.
+    owner_type = wallet.owner_type_for(owner, declared=declared)
 
     amount = round_money(amount)
     if amount <= 0:
@@ -108,6 +125,9 @@ async def start_topup(
         user_id=owner.id,
         country_code=owner.country_code,
         amount=amount,
+        # **سياقُ الفعل مجمَّدٌ لحظةَ الفتح** (SPEC §22) — يقرؤه `apply_state`
+        # بعد ساعةٍ أو يوم، فلا يقرّره دورٌ يحمله الحسابُ يومَ التأكيد
+        opened_from_app=owner_type.value,
         currency=currency_for_country(owner.country_code),
     )
     session.add(order)
@@ -166,6 +186,14 @@ async def apply_state(
     entry = await wallet.record(
         session,
         owner=owner,
+        # **المحفظةُ من ختم الطلب لا من دور صاحبه** — نفسُ قراءة البطاقة
+        # (`card_payments._credit_wallet_topup`). و`None` للصفوف التي فُتحت
+        # قبل الختم: لا ختمَ فيها يُقرأ، **والتخمينُ يكتب مالاً في غير موضعه**
+        owner_type=(
+            WalletOwnerType(order.opened_from_app)
+            if order.opened_from_app in _WALLET_SIDES
+            else None
+        ),
         tx_type=WalletTransactionType.TOPUP,
         amount=order.amount,
         reference=order.provider_order_ref,
