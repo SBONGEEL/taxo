@@ -61,6 +61,7 @@ from app.models.enums import (
     PaymentStatus,
     RideStatus,
     UserRole,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.payment import (
@@ -512,6 +513,9 @@ async def settle(
         entry = await wallet.record(
             session,
             owner=rider,
+            # **الراكبُ يدفع أجرةَ رحلته من محفظته هو** — ومحفظةُ الكبتن
+            # تحمل أرباحاً تخضع للسلَف والعمولة، فالخلطُ يخصم أجرةً من أرباح
+            owner_type=WalletOwnerType.RIDER,
             tx_type=WalletTransactionType.RIDE_PAYMENT,
             amount=-payment.amount,
             ride_id=ride.id,
@@ -560,6 +564,8 @@ async def _distribute(
         await wallet.record(
             session,
             owner=driver_user,
+            # **أجرُ الرحلة يدخل محفظةَ الكبتن** — وهي التي يُسحب منها
+            owner_type=WalletOwnerType.DRIVER,
             tx_type=WalletTransactionType.RIDE_EARNING,
             amount=payment.amount,
             ride_id=ride.id,
@@ -593,6 +599,8 @@ async def _distribute(
         await wallet.record(
             session,
             owner=driver_user,
+            # **العمولةُ تُخصم من محفظة الكبتن** — من حيث دخل الأجر
+            owner_type=WalletOwnerType.DRIVER,
             tx_type=WalletTransactionType.COMMISSION,
             amount=-commission,
             ride_id=ride.id,
@@ -878,6 +886,8 @@ async def refund(
         await wallet.record(
             session,
             owner=rider,
+            # **الردُّ يعود إلى المحفظة التي دُفع منها** — محفظةُ الراكب
+            owner_type=WalletOwnerType.RIDER,
             tx_type=WalletTransactionType.REFUND,
             amount=payment.amount,
             ride_id=ride.id,
@@ -902,6 +912,8 @@ async def refund(
             await wallet.record(
                 session,
                 owner=driver_user,
+                # **عكسُ الأجر يُخصم من حيث قُيّد** — محفظةُ الكبتن
+                owner_type=WalletOwnerType.DRIVER,
                 tx_type=WalletTransactionType.ADJUSTMENT,
                 amount=-net,
                 ride_id=ride.id,

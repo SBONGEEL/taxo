@@ -154,11 +154,17 @@ async def create_adjustment(
     admin: AdminUser,
     session: DbSession,
 ) -> WalletTransactionOut:
-    """قيد تصحيح موجب أو سالب — المخرج الوحيد لتصحيح دفترٍ لا يُعدَّل."""
+    """قيد تصحيح موجب أو سالب — المخرج الوحيد لتصحيح دفترٍ لا يُعدَّل.
+
+    **والمحفظةُ تأتي من الطلب لا من دور صاحب الحساب** (SPEC §22): تصحيحُ
+    المشرف **قرارٌ ماليٌّ لا سياقَ يقرّره** — لا رحلةَ ولا تطبيقَ فتحه ولا
+    ختمَ على صفّ. فحاملُ الدورين يُسأل، **ولا يُخمَّن له**.
+    """
     user = await _get_user(session, user_id)
     entry = await wallet_service.record(
         session,
         owner=user,
+        owner_type=payload.wallet,
         tx_type=WalletTransactionType.ADJUSTMENT,
         amount=payload.amount,
         reference=payload.reason,

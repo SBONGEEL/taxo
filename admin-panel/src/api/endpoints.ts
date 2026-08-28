@@ -11,6 +11,7 @@ import type {
   BundledSkinAsset,
   SkinArtworkPreview,
   SkinPurchases,
+  WalletOwnerType,
   SkinStats,
   MapSetting,
   PhotoReport,
@@ -938,7 +939,7 @@ export const refundPayment = (paymentId: string, reason: string) =>
  */
 export const createWalletAdjustment = (
   userId: string,
-  payload: { amount: string; reason: string },
+  payload: { amount: string; reason: string; wallet?: WalletOwnerType },
 ) => api.post<WalletTransaction>(`/admin/wallets/${userId}/adjustments`, payload);
 
 /** شحنٌ إداريٌّ من نقطةٍ معتمدة — يُنشأ ويُؤكَّد معاً، فالمالُ قُبض بيدٍ سلفاً. */

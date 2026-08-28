@@ -46,6 +46,7 @@ from app.models.enums import (
     Gender,
     RideStatus,
     UserRole,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.referral import (
@@ -631,6 +632,15 @@ async def pay(session: AsyncSession, referral_id: uuid.UUID) -> Referral | None:
     entry = await wallet.record(
         session,
         owner=referrer,
+        # **البرنامجُ هو السياق، وهو مختومٌ على صفِّ الإحالة**
+        # (`referral_type`, SPEC §22): إحالةُ كبتنٍ تُكافَأ في محفظة الكبتن،
+        # وإحالةُ راكبٍ في محفظة الراكب. **ولا يُشتقّ من أدوار المُحيل** —
+        # حاملُ الدورين يُحيل في البرنامجين، والمكافأتان لا تجتمعان في محفظة.
+        owner_type=(
+            WalletOwnerType.DRIVER
+            if programme_of(referral, referred) == REFERRAL_TYPE_DRIVER
+            else WalletOwnerType.RIDER
+        ),
         tx_type=WalletTransactionType.REFERRAL_BONUS,
         amount=amount,
         reference=f"مكافأة إحالة: {referral.code_used}",

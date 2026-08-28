@@ -16,6 +16,10 @@ export interface User {
   phone: string | null;
   name: string;
   role: UserRole;
+  /** **كلُّ ما يملكه من أدوار** — تنشرها الخلفيةُ منذ نموذج الأدوار (§21).
+   *  وبها تعرف اللوحةُ أن الحسابَ **بمحفظتين** فتسأل عن أيِّهما، بدل أن
+   *  تُخمِّن أو تسأل عن كلِّ حساب. */
+  roles: UserRole[];
   country_code: CountryCode;
   is_blocked: boolean;
   phone_verified: boolean;

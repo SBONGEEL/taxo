@@ -27,8 +27,8 @@ from app.core.exceptions import (
 )
 from app.models.driver import Driver
 from app.models.enums import (
-    DriverStatus,
     AuditAction,
+    DriverStatus,
     WalletOwnerType,
     WalletTransactionType,
     WithdrawalMethod,
@@ -359,6 +359,8 @@ async def mark_paid(
     entry = await wallet.record(
         session,
         owner=owner,
+        # **السحبُ من محفظة الكبتن** — والراكبُ لا يسحب أصلاً (SPEC §7)
+        owner_type=WalletOwnerType.DRIVER,
         tx_type=WalletTransactionType.WITHDRAWAL,
         amount=-request.amount,
         reference=reference.strip(),

@@ -18,9 +18,9 @@ import {
   createWalletAdjustment,
   listUsers,
 } from "@/api/endpoints";
-import type { User } from "@/api/types";
+import type { User, WalletOwnerType } from "@/api/types";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
+import { Field, Select } from "@/components/ui/Field";
 import { EmptyNote, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { digits } from "@/lib/utils";
@@ -37,6 +37,15 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<User[] | null>(null);
   const [picked, setPicked] = useState<User | null>(null);
+  /** **أيَّ محفظةٍ يصحّح** — يُسأل عنها **فقط** لحاملِ الدورين. وصاحبُ دورٍ
+   *  واحدٍ لا محفظةَ ثانيةَ له، فالسؤالُ احتكاكٌ بلا قرار. */
+  const [adjustWallet, setAdjustWallet] = useState<WalletOwnerType | "">("");
+
+  /** **بمحفظتين أم بواحدة** — تُقرأ من الأدوار المنشورة لا من `role` وحدَه:
+   *  العمودُ القديمُ يقول دوراً واحداً حتى لمن يحمل اثنين (نموذجُ الأدوار §21). */
+  const dualWallet =
+    (picked?.roles ?? []).includes("rider") &&
+    (picked?.roles ?? []).includes("driver");
 
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
@@ -134,13 +143,33 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
                 value={adjustReason}
                 onChange={(event) => setAdjustReason(event.target.value)}
               />
+              {dualWallet ? (
+                <Select
+                  label="المحفظة (الحساب يحمل الدورين)"
+                  value={adjustWallet}
+                  onChange={(event) =>
+                    setAdjustWallet(event.target.value as WalletOwnerType | "")
+                  }
+                >
+                  <option value="">اختر المحفظة…</option>
+                  <option value="driver">محفظة الكبتن — أرباحٌ وسلَفٌ وعمولة</option>
+                  <option value="rider">محفظة الراكب — ما شحنه لرحلاته</option>
+                </Select>
+              ) : null}
+              {dualWallet ? (
+                <p className="text-11 leading-note text-muted">
+                  <b className="text-ink">لهذا الحساب محفظتان</b>، والقيدُ لا
+                  يُمحى — فاختيارُها قرارُك لا استنتاجُ النظام.
+                </p>
+              ) : null}
               <Button
                 size="sm"
                 loading={busy === "adjust"}
                 disabled={
                   adjustReason.trim().length < 3 ||
                   adjustAmount === "" ||
-                  adjustAmount === "-"
+                  adjustAmount === "-" ||
+                  (dualWallet && adjustWallet === "")
                 }
                 onClick={() => {
                   setBusy("adjust");
@@ -148,11 +177,17 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
                   createWalletAdjustment(picked.id, {
                     amount: adjustAmount,
                     reason: adjustReason.trim(),
+                    // **لا تُرسل لصاحب الدور الواحد**: الخلفيةُ تشتقّها،
+                    // وإرسالُ قيمةٍ لا يملكها الحسابُ يرتدّ بحقّ
+                    ...(dualWallet && adjustWallet
+                      ? { wallet: adjustWallet }
+                      : {}),
                   })
                     .then(() => {
                       setDone("كُتب قيدُ التصحيح");
                       setAdjustAmount("");
                       setAdjustReason("");
+                      setAdjustWallet("");
                     })
                     .catch((caught) => fail(caught, "تعذّر القيد"))
                     .finally(() => setBusy(null));

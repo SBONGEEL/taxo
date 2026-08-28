@@ -52,6 +52,7 @@ from app.models.enums import (
     CountryCode,
     PaymentMethod,
     UnpaidCancellationOutcome,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.payment import DIRECTLY_COLLECTED_METHODS, WALLET_FUNDED_METHODS
@@ -230,6 +231,10 @@ async def _move(
         await wallet.record(
             session,
             owner=beneficiary,
+            # **المتضرِّرُ كبتنٌ بالبناء**: `beneficiary_driver_id` عمودُ كبتن
+            # يُملأ من `ride.driver_id` ويُقرأ عبر `Driver` — فالتعويضُ يدخل
+            # محفظةَ الكبتن، وهي التي يُسحب منها
+            owner_type=WalletOwnerType.DRIVER,
             tx_type=WalletTransactionType.CANCELLATION_COMPENSATION,
             amount=charge.amount,
             ride_id=charge.ride_id,
@@ -240,6 +245,15 @@ async def _move(
         await wallet.record(
             session,
             owner=payer,
+            # **المدينُ يتبدّل، والصفُّ يختمه لا الدور**: بعد تسليمٍ نقديٍّ
+            # يصير المطلوبُ من **الحامل** (كبتن)، وقبله من الراكب — وهو ما
+            # يقرأه `_debtor_user` من `carrier_driver_id`. فالمحفظةُ تُشتقّ من
+            # الختم نفسِه، **فلا تفترق قراءتان لصفٍّ واحد**.
+            owner_type=(
+                WalletOwnerType.DRIVER
+                if charge.carrier_driver_id is not None
+                else WalletOwnerType.RIDER
+            ),
             tx_type=WalletTransactionType.CANCELLATION_FEE,
             amount=-charge.amount,
             ride_id=charge.ride_id,
@@ -798,6 +812,8 @@ async def bear_by_company(
     await wallet.record(
         session,
         owner=beneficiary,
+        # **دائنٌ بلا مدين** تتحمّله الشركة — والمتضرِّرُ كبتنٌ كما في `_move`
+        owner_type=WalletOwnerType.DRIVER,
         tx_type=WalletTransactionType.CANCELLATION_COMPENSATION,
         amount=charge.amount,
         ride_id=charge.ride_id,

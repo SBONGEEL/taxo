@@ -47,7 +47,6 @@ from app.core.exceptions import (
     PermissionDenied,
 )
 from app.models.enums import (
-    WalletOwnerType,
     CountryCode,
     Currency,
     FeatureKey,
@@ -57,8 +56,9 @@ from app.models.enums import (
     PaymentStatus,
     ProviderOrderPurpose,
     ProviderOrderStatus,
-    WalletTransactionType,
     UserRole,
+    WalletOwnerType,
+    WalletTransactionType,
 )
 from app.models.driver import Driver
 from app.models.payment import Payment, SavedCard
@@ -99,6 +99,11 @@ def _new_cart_id(prefix: str) -> str:
 
 
 # --------------------------------------------------------------- بوابة القناة
+
+
+#: **قيمُ `opened_from_app` التي تعني محفظةً** — والمجموعةُ تُشتقّ من التعداد
+#: نفسِه لا تُكتب بيد، فقيمةٌ جديدةٌ فيه لا تترك هذا الشرطَ خلفَها صامتاً
+_WALLET_SIDES = frozenset(item.value for item in WalletOwnerType)
 
 
 def _paying_side(payer: User, declared: str | None = None) -> str:
@@ -567,6 +572,19 @@ async def _credit_wallet_topup(
     entry = await wallet.record(
         session,
         owner=owner,
+        # **المحفظةُ من ختم الطلب لا من دور صاحبه**: `opened_from_app` كُتب
+        # لحظةَ فتح الشحن (`_start_wallet_topup` يضعه `owner_type.value`)،
+        # فهو **سياقُ الفعل مجمَّداً** — والقراءةُ منه تجعل شحنَ الأمس يُقيَّد
+        # في المحفظة التي طُلب لها، لا في محفظةٍ يقرّرها دورٌ اليوم.
+        #
+        # **و`None` للصفوف الأقدم** التي سبقت العمود: تُترك بلا إعلانٍ
+        # فيقرّرها الدورُ كما كان — وحاملُ الدورين يرتدّ بالخطأ المسمّى، وهو
+        # **الصوابُ**: لا ختمَ فيها يُقرأ، والتخمينُ يكتب مالاً في غير موضعه.
+        owner_type=(
+            WalletOwnerType(order.opened_from_app)
+            if order.opened_from_app in _WALLET_SIDES
+            else None
+        ),
         tx_type=WalletTransactionType.TOPUP,
         amount=order.amount,
         reference=order.provider_order_ref,

@@ -57,6 +57,7 @@ from app.models.enums import (
     PaymentStatus,
     RideStatus,
     SubscriptionDurationType,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.payment import Payment
@@ -451,6 +452,8 @@ async def disburse(
     await wallet.record(
         session,
         owner=user,
+        # **السلفةُ مالٌ تُقرضه المنصةُ كبتناً** — فمحفظتُه هي مستقرُّها
+        owner_type=WalletOwnerType.DRIVER,
         tx_type=WalletTransactionType.ADVANCE,
         amount=amount,
         advance_id=advance.id,
@@ -552,6 +555,8 @@ async def deduct_from_earning(
         await wallet.record(
             session,
             owner=user,
+            # **السدادُ يعود من حيث خرجت السلفة** — محفظةُ الكبتن
+            owner_type=WalletOwnerType.DRIVER,
             tx_type=WalletTransactionType.ADVANCE_REPAYMENT,
             amount=-amount,
             ride_id=ride_id,
@@ -596,6 +601,8 @@ async def repay_in_full(
     await wallet.record(
         session,
         owner=user,
+        # **سدادٌ يدويٌّ كامل** — من محفظة الكبتن كالاقتطاع سواءً
+        owner_type=WalletOwnerType.DRIVER,
         tx_type=WalletTransactionType.ADVANCE_REPAYMENT,
         amount=-remaining,
         advance_id=advance.id,

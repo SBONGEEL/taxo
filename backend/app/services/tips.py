@@ -35,6 +35,7 @@ from app.models.enums import (
     CountryCode,
     FeatureKey,
     RideStatus,
+    WalletOwnerType,
     WalletTransactionType,
 )
 from app.models.payment_setting import PaymentSetting
@@ -196,6 +197,8 @@ async def create(
     await wallet.record(
         session,
         owner=rider,
+        # **الإكراميةُ تخرج من محفظة الراكب** كما تخرج منها الأجرة
+        owner_type=WalletOwnerType.RIDER,
         tx_type=WalletTransactionType.TIP_PAYMENT,
         amount=-amount,
         ride_id=ride.id,
@@ -204,6 +207,8 @@ async def create(
     await wallet.record(
         session,
         owner=driver_user,
+        # **وتدخل محفظةَ الكبتن** كما يدخلها الأجر
+        owner_type=WalletOwnerType.DRIVER,
         tx_type=WalletTransactionType.TIP,
         amount=amount,
         ride_id=ride.id,
