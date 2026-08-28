@@ -118,6 +118,8 @@ export const createSubscriptionOffer = (
     max_uses_per_driver: number;
     total_budget?: string | null;
     ends_at?: string | null;
+    /** الخطّةُ التي يغطّيها — **وهي مدّةُ العرض**. و`null` تعني كلَّ الخطط. */
+    plan_id?: string | null;
   },
 ) =>
   api.post<SubscriptionOffer>("/admin/subscription-offers", payload, {
@@ -134,6 +136,8 @@ export const updateSubscriptionOffer = (
     max_uses_per_driver: number;
     total_budget: string | null;
     ends_at: string | null;
+    /** **مدّةُ العرض تُبدَّل** — كانت في الإنشاء وحدَها فلا تتغيّر أبداً. */
+    plan_id: string | null;
     is_active: boolean;
   }>,
 ) =>

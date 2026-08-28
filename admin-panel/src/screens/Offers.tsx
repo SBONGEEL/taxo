@@ -20,10 +20,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   createSubscriptionOffer,
+  listPlans,
   listSubscriptionOffers,
   updateSubscriptionOffer,
 } from "@/api/endpoints";
-import type { SubscriptionOffer } from "@/api/types";
+import type { SubscriptionOffer, SubscriptionPlan } from "@/api/types";
 import { OfferGrants } from "@/components/OfferGrants";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -59,12 +60,22 @@ export function OffersScreen() {
   const [lapsedDays, setLapsedDays] = useState("30");
   const [maxUses, setMaxUses] = useState("1");
   const [budget, setBudget] = useState("");
+  // **الخطّةُ هي المدّة**: عرضٌ على الأسبوعيِّ أسبوعٌ مجّاني، وعلى الشهريِّ شهر
+  const [planId, setPlanId] = useState("");
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
 
   const currency = currencyLabel(country === "JO" ? "JOD" : "LYD");
 
   const load = useCallback(async () => {
     setRows(null);
-    setRows(await listSubscriptionOffers(country));
+    // **الخطّةُ من سوقها**: الخلفيةُ ترفض خطّةً من سوقٍ آخر، والقائمةُ هنا
+    // تمنع أن يُعرض الخطأُ أصلاً — فلا يُختبر بالرفض
+    const [offers, allPlans] = await Promise.all([
+      listSubscriptionOffers(country),
+      listPlans(),
+    ]);
+    setPlans(allPlans.filter((plan) => plan.country_code === country));
+    setRows(offers);
   }, [country]);
 
   useEffect(() => {
@@ -84,6 +95,7 @@ export function OffersScreen() {
         lapsed_days: audience === "lapsed" ? Number(lapsedDays) : null,
         max_uses_per_driver: Number(maxUses),
         total_budget: budget.trim() || null,
+        plan_id: planId || null,
       });
       setName("");
       setPercent("");
@@ -94,6 +106,18 @@ export function OffersScreen() {
       form.capture(caught, "تعذّر إنشاء العرض");
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** **تبديلُ المدّة على عرضٍ قائم** — وهو ما لم يكن ممكناً بأيِّ باب:
+   *  `OfferUpdate` لم يكن فيه `plan_id`، فالمدّةُ تُختار مرّةً وتُقفل. */
+  async function setPlan(offer: SubscriptionOffer, value: string) {
+    try {
+      await updateSubscriptionOffer(offer.id, { plan_id: value || null });
+      setDone("بُدّلت مدّةُ العرض — ومن اشترى بخصمه احتفظ به");
+      await load();
+    } catch (caught) {
+      form.capture(caught, "تعذّر التعديل");
     }
   }
 
@@ -142,6 +166,23 @@ export function OffersScreen() {
                   setPercent(event.target.value.replace(/[^0-9.]/g, ""))
                 }
               />
+              {/* **الخطّةُ هي مدّةُ العرض** (قرارُ المالك 2026-08-29): «شهرٌ
+                  مجانيّ» و«أسبوعٌ مجانيّ» ليسا إعدادَين مختلفَين بل خصمٌ واحدٌ
+                  على خطّةٍ مختلفة. **وكان هذا الحقلُ غائباً عن الشاشة كلِّها**،
+                  فالمدّةُ تُختار مرّةً في الإنشاء ولا تُبدَّل — بابٌ بلا زرّ. */}
+              <Select
+                label="الخطّة (هي المدّة)"
+                name="plan_id"
+                value={planId}
+                onChange={(event) => setPlanId(event.target.value)}
+              >
+                <option value="">كل الخطط</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </Select>
               <Select
                 label="الجمهور"
                 name="audience"
@@ -225,6 +266,7 @@ export function OffersScreen() {
                   <th className="p-12 text-right">الجمهور</th>
                   <th className="p-12 text-right">الخصم</th>
                   <th className="p-12 text-right">بيع</th>
+                  <th className="p-12 text-right">المدّة</th>
                   <th className="p-12 text-right">قبل الخصم</th>
                   <th className="p-12 text-right">تنازلنا</th>
                   <th className="p-12 text-right">تسويات يدوية</th>
@@ -247,6 +289,30 @@ export function OffersScreen() {
                       {digits(offer.discount_value)}٪
                     </td>
                     <td className="p-12">{offer.subscriptions_sold}</td>
+                    <td className="p-12">
+                      {isAdmin ? (
+                        <Select
+                          label=""
+                          name={`plan_${offer.id}`}
+                          value={offer.plan_id ?? ""}
+                          onChange={(event) =>
+                            void setPlan(offer, event.target.value)
+                          }
+                        >
+                          <option value="">كل الخطط</option>
+                          {plans.map((plan) => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.name}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : (
+                        <span className="text-muted">
+                          {plans.find((plan) => plan.id === offer.plan_id)?.name ??
+                            "كل الخطط"}
+                        </span>
+                      )}
+                    </td>
                     {/* **العملةُ تُمرَّر خاماً**: `money` تحلّ التسميةَ بنفسها،
                         وتمريرُ تسميةٍ محلولةٍ يطبع الرقمَ عارياً */}
                     <td className="p-12">

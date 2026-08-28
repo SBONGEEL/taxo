@@ -329,9 +329,33 @@ async def get_offer(session: AsyncSession, offer_id: uuid.UUID) -> SubscriptionO
     return offer
 
 
+async def _check_plan_market(
+    session: AsyncSession, *, country: CountryCode, plan_id: uuid.UUID | None
+) -> None:
+    """الخطّةُ المرتبطةُ بعرضٍ **من سوقه** — وإلّا فخصمٌ لا يجد ما يخصمه.
+
+    **ولمَ هنا لا في المسارَين**: البابان (الإنشاء والتعديل) يمرّان من هذا
+    البيت، **وفحصٌ مكرَّرٌ في اثنين يُصلَح في أحدهما يوماً**.
+
+    **ولم يكن هذا الفحصُ موجوداً أصلاً** (2026-08-29): كان `plan_id` يُقبل في
+    الإنشاء بلا سؤالٍ عن سوقه — **وعرضٌ أردنيٌّ على خطّةٍ ليبية يُقرأ فعّالاً
+    في اللوحة ولا يُطبَّق على أحد**، فيبدو أن الميزةَ لا تعمل.
+    """
+    if plan_id is None:
+        return
+    plan_country = await session.scalar(
+        select(SubscriptionPlan.country_code).where(SubscriptionPlan.id == plan_id)
+    )
+    if plan_country is None:
+        raise NotFound("الخطة غير موجودة")
+    if plan_country != country:
+        raise InvalidInput("الخطةُ من سوقٍ آخر — العرضُ وخطّتُه في سوقٍ واحد")
+
+
 async def create_offer(
     session: AsyncSession, *, country: CountryCode, data: dict, actor_id: uuid.UUID
 ) -> SubscriptionOffer:
+    await _check_plan_market(session, country=country, plan_id=data.get("plan_id"))
     offer = SubscriptionOffer(country_code=country, created_by=actor_id, **data)
     session.add(offer)
     try:
@@ -347,6 +371,10 @@ async def update_offer(
 ) -> SubscriptionOffer:
     """تعديلٌ جزئي — **ولا يمسّ ما وقع**: الصفوفُ تحمل ما جُمِّد لحظةَ الشراء."""
     offer = await get_offer(session, offer_id)
+    if "plan_id" in data:
+        await _check_plan_market(
+            session, country=offer.country_code, plan_id=data["plan_id"]
+        )
     for key, value in data.items():
         setattr(offer, key, value)
     await session.flush()
