@@ -1093,6 +1093,58 @@ async def publish_whatsapp_session(
     )
 
 
+async def publish_backup_alert(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+    stale_hours: int | None,
+    unpulled: int | None,
+    disk_percent: int | None,
+) -> None:
+    """النسخُ الاحتياطي يحتاج انتباهاً — **إلى المشرفين، وعبر الصندوق**.
+
+    **ولمَ لا `notify_user` مباشرةً** (وقع مقيساً 2026-08-28): ذاك بابُ **دفعٍ
+    وحدَه** — يعود فوراً بلا عقد FCM، ويعود فوراً بلا أجهزةٍ مسجَّلة، **ولا
+    يكتب صفَّ صندوقٍ أبداً**. **واللوحةُ لا تسجّل أجهزةً بالتصميم** (مكتبٌ لا
+    يستقبل Push)، فالمشرفُ ليست له أجهزةُ دفعٍ أصلاً.
+    **فكان الإنذارُ ينادي من لا يسمع.**
+
+    **وقِيس أثرُه**: ٣٤٠ نسخةً فاشلةً في خمسة أيام، ومفتاحُ التكرار مضبوطٌ في
+    Redis (أي أن الفرعَ عمل)، **وصفرُ إشعارٍ في صندوق أيِّ مشرف**. والمهمّةُ
+    كانت تستهلك مهلةَ الستِّ ساعات ثمّ تصمت.
+
+    **و`_safe_notify` يكتب الصندوقَ أوّلاً ثم يدفع** — فالأثرُ يبقى ولو لم
+    يكن ثمّة عقدُ دفعٍ ولا جهاز. وهو بابُ `publish_whatsapp_session` نفسُه،
+    وهما إشعارا منصّةٍ لا إشعارَي مستخدم.
+
+    **والنصُّ يقول ما يُفعل لا ما وقع**: «افتح شاشةَ النسخ» فعلٌ يُقرأ.
+    """
+    lines: list[str] = []
+    if stale_hours is not None:
+        lines.append(f"مضى {stale_hours} ساعةً بلا نسخةٍ ناجحة")
+    if unpulled is not None:
+        lines.append(f"{unpulled} نسخٍ لم تُسحب بعد")
+    if disk_percent is not None:
+        lines.append(f"مساحةُ النسخ بلغت {disk_percent}٪ من سقفها")
+
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="النسخ الاحتياطي يحتاج انتباهك",
+            body=" · ".join(lines) + " — افتح شاشةَ النسخ الاحتياطي.",
+            data={
+                "type": "backup_alert",
+                "stale_hours": stale_hours,
+                "unpulled": unpulled,
+                "disk_percent": disk_percent,
+            },
+        ),
+    )
+
+
 async def publish_share_partner_joined(
     session: AsyncSession,
     redis: Redis,

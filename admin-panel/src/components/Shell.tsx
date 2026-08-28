@@ -180,11 +180,22 @@ export function Shell({
           {/* **الأسواقُ من الخلفية لا من قائمةٍ مكتوبة** (SPEC §24): اللوحةُ
               ترى المخفيَّ كما ترى الظاهر، وعليه نقطةٌ تقول إنه مطفأٌ في
               التطبيقات — من يُجهّز سوقاً يحتاج أن يعرف أنه لم يُفتح بعد. */}
-          <div className="flex items-center gap-3 rounded-full bg-surface-2 p-3">
+          {/* **الاختيارُ يُقرأ من سمةٍ لا من لون** (قرارُ المالك 2026-08-28):
+              كان السوقُ المختارُ يُميَّز بخلفيةٍ وحدَها، **فقارئُ الشاشة يقرأ
+              زرَّين بلا أن يعرف أيَّهما قائم**. وهي علّةُ المفاتيح نفسُها في
+              ثوبِ اختيارٍ من متعدّد — فيُوسَم `radiogroup`/`radio` لا
+              `switch`: **هذا اختيارٌ واحدٌ من اثنين لا حالُ تشغيل**. */}
+          <div
+            role="radiogroup"
+            aria-label="السوق"
+            className="flex items-center gap-3 rounded-full bg-surface-2 p-3"
+          >
             {countries.map((row) => (
               <button
                 key={row.country_code}
                 type="button"
+                role="radio"
+                aria-checked={country === row.country_code}
                 onClick={() => setCountry(row.country_code)}
                 title={row.visible ? undefined : "مخفيّة في التطبيقات"}
                 className={cn(

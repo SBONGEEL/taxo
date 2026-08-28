@@ -27,13 +27,16 @@ ALERT_KEY = "backup:alerted"
 ALERT_TTL_SECONDS = 6 * 3600
 
 
-async def _notify_admins(session, redis, *, title: str, body: str, data: dict) -> None:
-    """يصل صندوقَ كلِّ `admin` — **فلا يعتمد التنبيهُ على أن يفتح أحدٌ الشاشة**."""
+async def _notify_admins(session, redis, *, alerts) -> None:
+    """يصل صندوقَ كلِّ `admin` — **فلا يعتمد التنبيهُ على أن يفتح أحدٌ الشاشة**.
+
+    **وبابُه `publish_backup_alert` لا `notify_user`**: الثاني دفعٌ وحدَه،
+    والمشرفُ بلا أجهزةِ دفعٍ بالتصميم — فكان الإنذارُ ينادي من لا يسمع.
+    """
     from sqlalchemy import select
 
     from app.models.user import User
     from app.services import notifications
-    from app.services.push import PushMessage
 
     admins = (
         await session.scalars(
@@ -44,11 +47,13 @@ async def _notify_admins(session, redis, *, title: str, body: str, data: dict) -
         )
     ).all()
     for user_id in admins:
-        await notifications.notify_user(
+        await notifications.publish_backup_alert(
             session,
             redis,
             user_id=user_id,
-            message=PushMessage(title=title, body=body, data=data),
+            stale_hours=alerts.stale_hours,
+            unpulled=alerts.unpulled,
+            disk_percent=alerts.disk_percent,
         )
 
 
@@ -80,25 +85,7 @@ async def _sweep() -> str:
 
         # **يُقال مرةً كلَّ ستِّ ساعات لا كلَّ ربع ساعة**
         if await redis.set(ALERT_KEY, "1", nx=True, ex=ALERT_TTL_SECONDS):
-            lines = []
-            if alerts.stale_hours is not None:
-                lines.append(f"مضى {alerts.stale_hours} ساعةً بلا نسخةٍ ناجحة")
-            if alerts.unpulled is not None:
-                lines.append(f"{alerts.unpulled} نسخٍ لم تُسحب بعد")
-            if alerts.disk_percent is not None:
-                lines.append(f"مساحةُ النسخ بلغت {alerts.disk_percent}٪ من سقفها")
-            await _notify_admins(
-                session,
-                redis,
-                title="النسخ الاحتياطي يحتاج انتباهك",
-                body=" · ".join(lines),
-                data={
-                    "type": "backup_alert",
-                    "stale_hours": alerts.stale_hours,
-                    "unpulled": alerts.unpulled,
-                    "disk_percent": alerts.disk_percent,
-                },
-            )
+            await _notify_admins(session, redis, alerts=alerts)
             await session.commit()
         return "alerted"
 

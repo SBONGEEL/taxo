@@ -71,7 +71,7 @@ import type {
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
-import { Checkbox, Field, Select } from "@/components/ui/Field";
+import { Checkbox, Field, Select, Switch } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
@@ -394,27 +394,16 @@ export function SettingsScreen() {
                         {FLAG_LABEL[key].hint}
                       </span>
                     </span>
-                    <button
-                      type="button"
+                    <Switch
+                      checked={on}
                       disabled={!isAdmin}
-                      onClick={() => {
+                      label={FLAG_LABEL[key].title}
+                      onChange={() => {
                         // إطفاءُ الحارس وحده يطلب سبباً — والخلفية ترفض بدونه
                         if (isGuard && on) setGuard({ key });
                         else void flip(key, !on);
                       }}
-                      className={cn(
-                        "relative block h-27 w-46 flex-none rounded-full transition-colors disabled:opacity-60",
-                        on ? "bg-ok" : "bg-line",
-                      )}
-                      aria-label={FLAG_LABEL[key].title}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-3 block size-21 rounded-full bg-surface transition-all",
-                          on ? "start-22" : "start-3",
-                        )}
-                      />
-                    </button>
+                    />
                   </li>
                 );
               })}
@@ -797,23 +786,12 @@ function CommissionForm({
       {/* مفتاحٌ لا مربّعُ اختيار: الصفحةُ كلُّها مفاتيح، ومربّعٌ خامٌ بينها
           يقرأ كأنه من نموذجٍ آخر */}
       <div className="mt-14 flex items-center gap-10">
-        <button
-          type="button"
+        <Switch
+          checked={enabled}
           disabled={disabled}
-          onClick={() => setEnabled(!enabled)}
-          aria-label="تفعيل العمولة"
-          className={cn(
-            "relative block h-27 w-46 flex-none rounded-full transition-colors disabled:opacity-60",
-            enabled ? "bg-ok" : "bg-line",
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-3 block size-21 rounded-full bg-surface transition-all",
-              enabled ? "start-22" : "start-3",
-            )}
-          />
-        </button>
+          label="تفعيل العمولة"
+          onChange={setEnabled}
+        />
         <span className="text-12.5 text-ink">
           {enabled ? "مفعّلة" : "معطّلة"}
         </span>

@@ -94,6 +94,53 @@ export function Select({
  * وهو تعبئةُ الزرّ الأساسي، فـ`accent-ink` صنفٌ يشير إلى لونٍ آخر تماماً
  * (`accent-ink` = `--inv`) — تصادمُ أسماءٍ يُخرج مربّعاً بلون الخلفية.
  */
+/** **مفتاحٌ يقول حالَه في سمةٍ لا في لون** (قرارُ المالك 2026-08-28).
+ *
+ * كانت مفاتيحُ اللوحة `<button>` عاريةً بـ`aria-label` وحدَه: **الحالُ لونُ
+ * الخلفية**. فقارئُ الشاشة يقول «زرّ: تفعيل العمولة» ولا يقول **أمفعّلةٌ
+ * هي أم لا** — ومن لا يرى اللونَ لا يعرف ما سيفعله ضغطُه. **وقياسُها
+ * اضطُرّ إلى النقر ومراقبة الخلفية**، وهو قياسٌ يغيّر ما يقيسه.
+ *
+ * **و`role="switch"` لا `checkbox`**: كلاهما يحمل `aria-checked`، لكنّ
+ * الأولَ يُنطق «مفتاح» — وهو ما ترسمه الشاشةُ فعلاً. **وبيتٌ واحدٌ لا ثلاثة**
+ * كي لا يُكتب الرابعُ عارياً كما كُتبت الثلاثة.
+ */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  /** ما يُنطق قبل الحال — والحالُ يأتي من `aria-checked` لا منه. */
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative block h-27 w-46 flex-none rounded-full transition-colors disabled:opacity-60",
+        checked ? "bg-ok" : "bg-line",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-3 block size-21 rounded-full bg-surface transition-all",
+          checked ? "start-22" : "start-3",
+        )}
+      />
+    </button>
+  );
+}
+
 export function Checkbox({
   checked,
   onChange,

@@ -131,6 +131,12 @@
         font-size: 12.5px;
         color: var(--sp-mut);
       }
+      #splash .tx-code {
+        margin: 6px 0 0;
+        font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        opacity: 0.55;
+        direction: ltr;
+      }
       #splash .tx-retry {
         font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
         font-size: 13px;
@@ -179,6 +185,8 @@
       <div class="tx-loading">جارٍ التحميل…</div>
       <!-- حالُ الشبكة — تُملأ من `lib/splash.ts` وتبقى مخفيةً في الحال السويّة -->
       <p class="tx-note" hidden></p>
+      <!-- رمزٌ فنّيٌّ قصيرٌ يُقرأ عند الشكوى — لا يُترجَم ولا يُفسَّر -->
+      <p class="tx-code" hidden></p>
       <button class="tx-retry" type="button" hidden>إعادة المحاولة</button>
     </div>
 

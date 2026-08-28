@@ -38,7 +38,7 @@ import { Shell } from "@/components/Shell";
 import { AdminAccountCard } from "@/components/AdminAccountCard";
 import { Backups } from "@/components/Backups";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
+import { Field, Switch } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
 import { FormErrors, useFormError } from "@/lib/form-errors";
@@ -476,10 +476,11 @@ function PolicyCard({
             مروره ويجد كلَّ بابٍ إداريٍّ مغلقاً إلا بابَ التسجيل.
           </span>
         </span>
-        <button
-          type="button"
+        <Switch
+          checked={policy.admin_totp_required}
           disabled={busy || (!policy.admin_totp_required && blocked !== null)}
-          onClick={() =>
+          label="إلزام المشرفين بالتحقق الثنائي"
+          onChange={() =>
             void save(
               { admin_totp_required: !policy.admin_totp_required },
               policy.admin_totp_required
@@ -487,19 +488,7 @@ function PolicyCard({
                 : "أصبح التحقق الثنائي مُلزَماً على المشرفين",
             )
           }
-          className={cn(
-            "relative block h-27 w-46 flex-none rounded-full transition-colors disabled:opacity-60",
-            policy.admin_totp_required ? "bg-ok" : "bg-line",
-          )}
-          aria-label="إلزام المشرفين بالتحقق الثنائي"
-        >
-          <span
-            className={cn(
-              "absolute top-3 block size-21 rounded-full bg-surface transition-all",
-              policy.admin_totp_required ? "start-22" : "start-3",
-            )}
-          />
-        </button>
+        />
       </div>
 
       {blocked && !policy.admin_totp_required ? (

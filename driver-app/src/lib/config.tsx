@@ -15,6 +15,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+import { ApiError } from "@/api/client";
 import { getConfig } from "@/api/endpoints";
 import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
@@ -35,6 +36,21 @@ const ConfigContext = createContext<ConfigState>({
 
 /** بعدها يُقرأ الصمتُ بطءاً لا سكوناً — أطولُ من نداءٍ سويٍّ وأقصرُ من صبرِ أحد. */
 const SLOW_AFTER_MS = 4_000;
+
+/** **رمزٌ فنّيٌّ قصيرٌ ممّا يُعرف يقيناً — لا تشخيصٌ ولا تخمين.**
+ *
+ * يُقرأ عند الشكوى فيعرف من يسمعه **أين ينظر**: `HTTP 503` خادمٌ يردّ،
+ * و`NETWORK` طلبٌ لم يصل أصلاً (حجبٌ أو DNS أو انقطاعٌ لحظيّ)، و`TIMEOUT`
+ * انقضت المهلة. **ولا يُترجَم**: هو للمشرف لا للراكب.
+ */
+function reachCode(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.status > 0 ? `HTTP ${error.status}` : `ERR ${error.code}`;
+  }
+  const name = error instanceof Error ? error.name : "";
+  if (name === "AbortError" || name === "TimeoutError") return "TIMEOUT";
+  return "NETWORK";
+}
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -84,7 +100,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       .catch((err: Error) => {
         if (cancelled) return;
         setError(err.message);
-        setSplashStatus(navigator.onLine ? "slow" : "offline");
+        setSplashStatus(
+          navigator.onLine ? "unreachable" : "offline",
+          reachCode(err),
+        );
         setAttempt((n) => n + 1);
       })
       .finally(() => slowTimer !== null && window.clearTimeout(slowTimer));

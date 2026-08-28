@@ -16,7 +16,7 @@ const FADE_MS = 200;
  */
 const MIN_HOLD_MS = 1030;
 
-export type SplashStatus = "slow" | "offline" | null;
+export type SplashStatus = "slow" | "offline" | "unreachable" | null;
 
 let done = false;
 let retryHandler: (() => void) | null = null;
@@ -38,32 +38,57 @@ export function onSplashRetry(handler: () => void): void {
   button.addEventListener("click", () => retryHandler?.());
 }
 
-/** **يميّز الانقطاعَ من البطء فعلاً** (§7.8): نصّان مختلفان لحالين مختلفين.
+/** **ثلاثةُ نصوصٍ لثلاثةِ أشياءَ تُعرف — ولا رابعَ يُدَّعى** (قرارُ المالك
+ * 2026-08-28).
  *
- * «لا يوجد اتصال» يقول لصاحبه: افتح الشبكة. و«الشبكة ضعيفة — جارٍ المحاولة»
- * يقول: لا تفعل شيئاً، نحن نحاول. ونصٌّ واحدٌ للحالين يجعل أحدَ الجوابين خطأً
- * دائماً — والمستخدمُ يفتح إعداداتِ شبكةٍ تعمل، أو ينتظر شبكةً مقطوعة.
+ * `offline` **حقيقةٌ يملكها المتصفّح** (`navigator.onLine === false`): «افتح
+ * الشبكة» فعلٌ صحيح. و`slow` **حقيقةٌ عن الزمن لا عن السبب**: مضت المهلةُ
+ * ولم يصل جواب، فيُقال «لم يصل الجواب بعد» — لا «الشبكة ضعيفة».
+ *
+ * **و`unreachable` هو ما أُصلح**: كان أيُّ فشلٍ في `GET /config` يُرسم
+ * «الشبكة ضعيفة» — **فتُسمّى علّةٌ لا تُعرف**. والفشلُ قد يكون خادماً يردّ
+ * ٥٠٠، أو حجباً من الوسيط، أو عقداً منتهياً، أو DNS. **وقد كذبت على المالك
+ * ثلاثَ مرّاتٍ في أسبوعٍ وشبكتُه سليمةٌ في الثلاث** — وأسوأُ من الصمت أن
+ * يُوجَّه القارئُ إلى الاتجاه الخطأ فيفتش في شبكته.
+ *
+ * **فيقول ما يعرفه**: «تعذّر الوصول» — واقعةٌ لا تفسير. **ومعه رمزٌ فنّيٌّ
+ * قصير** يُقرأ عند الشكوى فيعرف من يسمعه أين ينظر، **ولا يُترجَم ولا
+ * يُفسَّر** للقارئ لأنه ليس له.
+ *
+ * **وقاعدةُ هذا الملفّ**: إعلانٌ لا يعرف الصفُّ جوابَه لا يُكتب.
  */
-export function setSplashStatus(status: SplashStatus): void {
+export function setSplashStatus(status: SplashStatus, code?: string): void {
   const note = part("tx-note");
   const retry = part("tx-retry");
   const loading = part("tx-loading");
+  const codeLine = part("tx-code");
   if (!note || !retry) return;
 
   if (status === null) {
     note.hidden = true;
     retry.hidden = true;
+    if (codeLine) codeLine.hidden = true;
     return;
   }
 
   note.textContent =
     status === "offline"
       ? "لا يوجد اتصال بالإنترنت"
-      : "الشبكة ضعيفة — جارٍ المحاولة";
+      : status === "unreachable"
+        ? "تعذّر الوصول إلى الخدمة"
+        : "لم يصل الجواب بعد — جارٍ المحاولة";
   note.hidden = false;
+
+  // **الرمزُ يظهر مع ما لا يُعرف سببُه وحدَه**: مع الانقطاع السببُ معروفٌ
+  // ومكتوب، ورمزٌ تحته ضجيجٌ يُخيف بلا أن يفيد
+  if (codeLine) {
+    codeLine.textContent = status === "unreachable" && code ? code : "";
+    codeLine.hidden = !codeLine.textContent;
+  }
   // زرُّ المحاولة مع الانقطاع وحده: مع البطء نحن نحاول أصلاً، وزرٌّ يقول
   // «أعد المحاولة» بينما المحاولةُ جارية يدعو إلى ضغطٍ لا يفعل شيئاً
-  retry.hidden = status !== "offline";
+  // زرُّ المحاولة مع ما لا يُعالج نفسَه: الانقطاعُ وتعذّرُ الوصول
+  retry.hidden = status === "slow";
   // سطرُ «جارٍ التحميل…» للحركة المخفَّضة وحدها، ويختفي حين يحلّ نصٌّ أدقّ منه
   if (loading) loading.style.display = "none";
 }
