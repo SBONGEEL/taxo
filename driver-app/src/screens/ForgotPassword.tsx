@@ -25,6 +25,7 @@ import { Field } from "@/components/ui/Field";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { focusField } from "@/lib/validation";
 import { looksComplete, toE164 } from "@/lib/phone";
+import { forgetToken } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { passwordError, passwordRule } from "@/lib/password";
 import { FieldConditions } from "@/components/FieldConditions";
@@ -78,14 +79,22 @@ export function ForgotPasswordScreen() {
     setBusy(true);
     setError(null);
     try {
-      signIn(
-        await resetPassword({
-          phone: e164,
-          country_code: country,
-          verification_token: proof ?? "",
-          new_password: password,
-        }),
-      );
+      const response = await resetPassword({
+        phone: e164,
+        country_code: country,
+        verification_token: proof ?? "",
+        new_password: password,
+      });
+      // **الثانيةُ من الأربع** (قرارُ المالك): تبديلُ كلمة المرور يمحو
+      // المخزَّنَ **قبل** أن تقوم الجلسةُ الجديدة.
+      //
+      // **وأثرُها الحقيقيُّ على الأجهزة الأخرى**: `set_password` في الخلفية
+      // **يُبطل كلَّ جلسات صاحبها** (مقيس) — فجهازٌ آخرُ يحمل رمزاً مخزَّناً
+      // يتلقّى ردَّ «لم تعد صالحة» فيمحوه بالثالثة. **وهنا يُمحى صراحةً**
+      // ولا يُتّكل على أن الجديد سيحلّ محلَّ القديم: اتّكالٌ كهذا يترك رمزاً
+      // ميتاً لو تعثّر الحفظُ الجديد.
+      await forgetToken();
+      signIn(response);
     } catch (caught) {
       if (caught instanceof ApiError) {
         setError(caught.message);

@@ -23,11 +23,13 @@ import { Field } from "@/components/ui/Field";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { focusField } from "@/lib/validation";
 import { looksComplete, toE164 } from "@/lib/phone";
+import { biometryLabel } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 
 export function LoginScreen() {
   const navigate = useNavigate();
-  const { signIn } = useSession();
+  const { signIn, biometry, signInWithBiometry } = useSession();
+  const [bioBusy, setBioBusy] = useState(false);
   // **منتقي الدولة في الثلاث لا في التسجيل وحدَه** (البند ١٠): من يحمل رقماً
   // ليبياً كان يرى مفتاحَ الأردن فيُرفض رقمُه بلا أن يفهم لماذا
   const { country, countries, setCountry } = useAuthCountry();
@@ -121,6 +123,38 @@ export function LoginScreen() {
           دخول
         </Button>
       </form>
+
+      {/* **الزرُّ لا يُرسم إلا بثلاثة مجتمعة** (قرارُ المالك): جهازٌ أصليّ ·
+          بصمةٌ متاحةٌ ومسجَّلة · **ورمزٌ محفوظٌ فعلاً**. و`armed` هو الثالث —
+          فمن خرج مُحي رمزُه ويبقى تفضيلُه، **وزرٌّ يُرسم على التفضيل وحدَه
+          زرٌّ يفشل عند الضغط**. وفي المتصفّح `available` كاذبةٌ دائماً بلا
+          نداءِ ملحقٍ أصلاً. */}
+      {biometry?.available && biometry.armed ? (
+        <div className="mt-16">
+          <Button
+            type="button"
+            variant="ghost"
+            loading={bioBusy}
+            onClick={() => {
+              setError(null);
+              setBioBusy(true);
+              void signInWithBiometry()
+                .catch((caught: unknown) => {
+                  // **يُقال ما وقع لا «تعذّر الدخول»**: بصمةٌ مرفوضةٌ غيرُ
+                  // جلسةٍ منتهية، والثاني يعني «اكتب كلمتك» والأول «أعد إصبعك»
+                  setError(
+                    caught instanceof Error
+                      ? caught.message
+                      : "تعذّر الدخول بالبصمة",
+                  );
+                })
+                .finally(() => setBioBusy(false));
+            }}
+          >
+            الدخول بـ{biometryLabel(biometry.kind)}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="mt-auto text-center text-13 text-muted">
         كبتن جديد؟{" "}

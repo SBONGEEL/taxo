@@ -24,7 +24,12 @@ import type { ReactNode } from "react";
 
 import { Capacitor } from "@capacitor/core";
 
-import { setSessionLostHandler, tokens } from "@/api/client";
+import {
+  refreshNow,
+  setRefreshPersister,
+  setSessionLostHandler,
+  tokens,
+} from "@/api/client";
 import {
   getMe,
   logout as logoutRequest,
@@ -32,6 +37,16 @@ import {
   unregisterDevice,
 } from "@/api/endpoints";
 import type { AuthResponse, User } from "@/api/types";
+import {
+  biometryStatus,
+  disableBiometric,
+  enableBiometric,
+  forgetToken,
+  proveBiometry,
+  rememberToken,
+  unlockToken,
+  type BiometryStatus,
+} from "@/lib/biometric";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
@@ -47,6 +62,14 @@ interface SessionState {
    *  من رفض الإذن لا تصله طلباتٌ وهو خارج التطبيق، فلا يظنّ نفسه عاملاً.
    *  و`null` تعني «لم يُسأل بعد» — فلا سطرَ قبل أن يُعرف الجواب. */
   pushState: PushState | null;
+  /** حالُ الدخول بالبصمة — **تُقاس ولا تُفترض**، و`null` تعني «لم تُقرأ بعد».
+   *  انظر `lib/biometric.ts` لعلّة البيت الواحد. */
+  biometry: BiometryStatus | null;
+  /** يُعيد قراءةَ الحال بعد إشعالٍ أو إطفاء. */
+  refreshBiometry: () => Promise<void>;
+  setBiometric: (on: boolean) => Promise<void>;
+  /** **الفتحُ ثم التجديد**: البصمةُ تفتح الرمزَ، والخلفيةُ تراه رمزاً كأيِّ رمز. */
+  signInWithBiometry: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionState>({
@@ -56,6 +79,10 @@ const SessionContext = createContext<SessionState>({
   signOut: async () => undefined,
   refreshUser: async () => undefined,
   pushState: null,
+  biometry: null,
+  refreshBiometry: async () => undefined,
+  setBiometric: async () => undefined,
+  signInWithBiometry: async () => undefined,
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -64,11 +91,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const { config } = useConfig();
   const registered = useRef(false);
   const [pushState, setPushState] = useState<PushState | null>(null);
+  const [biometry, setBiometry] = useState<BiometryStatus | null>(null);
+
+  const refreshBiometry = useCallback(async () => {
+    setBiometry(await biometryStatus());
+  }, []);
+
+  useEffect(() => {
+    void refreshBiometry();
+  }, [refreshBiometry]);
+
+  /** **الرمزُ المخزَّنُ يتبع التدوير** — يُكتب بعد كلِّ `tokens.save`.
+   *  ولولا هذا لَعمل الفتحُ مرّةً ثمّ ردَّ «جلسة منتهية» (الشكلُ الثامن). */
+  useEffect(() => {
+    setRefreshPersister((token) => {
+      void rememberToken(token);
+    });
+  }, []);
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»
+  //
+  // **والثالثةُ من الأربع هنا** (قرارُ المالك): ردُّ الخادم بأن الجلسة لم تعد
+  // صالحة **يمحو المخزَّن** — فرمزٌ أبطله الخادمُ لا يُفتح ببصمةٍ إلى الأبد،
+  // ولا يُترك ليُقرأ زرّاً يفشل عند الضغط.
   useEffect(() => {
-    setSessionLostHandler(() => setUser(null));
-  }, []);
+    setSessionLostHandler(() => {
+      setUser(null);
+      void forgetToken().then(refreshBiometry);
+    });
+  }, [refreshBiometry]);
 
   useEffect(() => {
     if (!tokens.access()) {
@@ -127,10 +178,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     })();
   }, [user, config]);
 
-  const signIn = useCallback((response: AuthResponse) => {
-    tokens.save(response.tokens);
-    setUser(response.user);
-  }, []);
+  const signIn = useCallback(
+    (response: AuthResponse) => {
+      // `tokens.save` يستدعي الحاقنَ، فيصل الرمزُ إلى المخزن الآمن إن أُشعلت
+      // الميزةُ سلفاً — **فمن خرج ثمّ دخل بكلمته يعود زرُّه بلا أن يُشعلها**
+      tokens.save(response.tokens);
+      setUser(response.user);
+      void refreshBiometry();
+    },
+    [refreshBiometry],
+  );
 
   const signOut = useCallback(async () => {
     const refresh = tokens.refresh();
@@ -138,18 +195,83 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await unregisterDevice(deviceId()).catch(() => undefined);
     if (refresh) await logoutRequest(refresh).catch(() => undefined);
     tokens.clear();
+    // **الأولى من الأربع**: الخروجُ يمحو المخزَّن — والتفضيلُ يبقى، فمن
+    // أشعلها لا يطفئها خروجُه
+    await forgetToken();
     registered.current = false;
     setPushState(null);
     setUser(null);
-  }, []);
+    await refreshBiometry();
+  }, [refreshBiometry]);
 
   const refreshUser = useCallback(async () => {
     setUser(await getMe());
   }, []);
 
+  /** **الرابعةُ من الأربع** — الإطفاءُ من إعدادات المستخدم يمحو ويطفئ معاً. */
+  const setBiometric = useCallback(
+    async (on: boolean) => {
+      if (on) {
+        // **البصمةُ تُطلب عند الإشعال لا عند أوّل استعمال**: من أشعلها بلا
+        // إصبعٍ يظنّها تعمل، ثمّ يكتشف يومَ يحتاجها أنها لا تفتح
+        await proveBiometry("لتفعيل الدخول بالبصمة");
+        await enableBiometric(tokens.refresh());
+        // **بيتٌ واحد**: يُنزع من `localStorage` بعد أن يستقرّ في المخزن الآمن
+        tokens.detachFromLocalStorage();
+      } else {
+        await disableBiometric();
+      }
+      await refreshBiometry();
+    },
+    [refreshBiometry],
+  );
+
+  /** **الفتحُ ثم التجديد** — والخلفيةُ لا ترى إلا رمزاً كأيِّ رمز.
+   *
+   *  **ولا يُعلَن نجاحٌ قبل أن يُرى المستخدم**: `getMe` بعد التجديد هو ما
+   *  يقول إن الجلسةَ قامت — و«فُتح المخزن» ليس «دخلتَ».
+   */
+  const signInWithBiometry = useCallback(async () => {
+    const token = await unlockToken("لتسجيل الدخول إلى TAXO");
+    tokens.adoptRefresh(token);
+    // التجديدُ يستهلك المفتوحَ ويُصدر زوجاً جديداً، و`tokens.save` داخله
+    // يعيد كتابةَ الجديد في المخزن الآمن
+    const ok = await refreshNow();
+    if (!ok) {
+      // **الرمزُ المخزَّنُ ميّت** — يُمحى ولا يُترك زرّاً يفشل كلَّ مرّة
+      await forgetToken();
+      await refreshBiometry();
+      throw new Error("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور");
+    }
+    setUser(await getMe());
+    await refreshBiometry();
+  }, [refreshBiometry]);
+
   const value = useMemo<SessionState>(
-    () => ({ user, loading, signIn, signOut, refreshUser, pushState }),
-    [user, loading, signIn, signOut, refreshUser, pushState],
+    () => ({
+      user,
+      loading,
+      signIn,
+      signOut,
+      refreshUser,
+      pushState,
+      biometry,
+      refreshBiometry,
+      setBiometric,
+      signInWithBiometry,
+    }),
+    [
+      user,
+      loading,
+      signIn,
+      signOut,
+      refreshUser,
+      pushState,
+      biometry,
+      refreshBiometry,
+      setBiometric,
+      signInWithBiometry,
+    ],
   );
 
   return (

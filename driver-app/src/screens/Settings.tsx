@@ -31,6 +31,7 @@ import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useBrand } from "@/lib/brand";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
+import { biometryLabel } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import {
@@ -50,7 +51,8 @@ export function SettingsScreen() {
   const { profile, refresh } = useDriver();
   const { choice, toggle } = useTheme();
   const { pink, available, setPink } = useBrand();
-  const { user } = useSession();
+  const { user, biometry, setBiometric } = useSession();
+  const [bioError, setBioError] = useState<string | null>(null);
   const country = useCountryConfig(user?.country_code);
   const womenService = useFeature(user?.country_code, "women_service_enabled");
   const preference = profile?.driver.gender_preference ?? "any";
@@ -140,6 +142,35 @@ export function SettingsScreen() {
         </button>
         <h1 className="text-20 font-bold text-ink">الإعدادات</h1>
       </div>
+
+      {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن
+          يملكه**: `available` كاذبةٌ في المتصفّح وعلى جهازٍ بلا بصمةٍ مسجَّلة،
+          **فلا مفتاحَ ولا سطرَ يشرح ما لا يستطيعه القارئ**. ولا بديلَ برقمٍ
+          سرّيّ — بابٌ ثانٍ يضعف الأول. */}
+      {biometry?.available ? (
+        <section className="mb-12 card p-15">
+          <SoundToggle
+            title={`الدخول بـ${biometryLabel(biometry.kind)}`}
+            hint="يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور."
+            on={biometry.enabled}
+            onToggle={() => {
+              setBioError(null);
+              void setBiometric(!biometry.enabled).catch((caught: unknown) => {
+                // **الرفضُ يُقال ولا يُقلب مفتاحاً**: مفتاحٌ يبدو مشتعلاً وهو
+                // مطفأٌ يجعل المستخدمَ يظنّ أن له باباً لا يُفتح
+                setBioError(
+                  caught instanceof Error
+                    ? caught.message
+                    : "تعذّر تفعيل الدخول بالبصمة",
+                );
+              });
+            }}
+          />
+          {bioError ? (
+            <p className="mt-10 text-11 leading-snug text-danger">{bioError}</p>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* **أصواتُ التطبيق** (`DESIGN.md` §9): ثلاثةُ مفاتيحَ لا اثنان — انظر
           الثالثَ أدناه. وكلُّها **على الجهاز لا الحساب** كالسِمة */}

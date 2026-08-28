@@ -18,11 +18,13 @@ import { Field } from "@/components/ui/Field";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { focusField } from "@/lib/validation";
 import { looksComplete } from "@/lib/phone";
+import { biometryLabel } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { Brand } from "@/components/Brand";
 
 export function LoginScreen() {
-  const { signIn } = useSession();
+  const { signIn, biometry, signInWithBiometry } = useSession();
+  const [bioBusy, setBioBusy] = useState(false);
   const navigate = useNavigate();
 
   // **مصدرٌ واحدٌ لدولة شاشات المصادقة** (`useAuthCountry`) — ولا منتقيَ هنا
@@ -122,6 +124,32 @@ export function LoginScreen() {
             دخول
           </Button>
         </form>
+
+        {/* **ثلاثةٌ مجتمعة**: جهازٌ أصليّ · بصمةٌ متاحة · **ورمزٌ محفوظٌ فعلاً**
+            (`armed`). وفي المتصفّح `available` كاذبةٌ بلا نداءِ ملحقٍ أصلاً. */}
+        {biometry?.available && biometry.armed ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            loading={bioBusy}
+            onClick={() => {
+              setError(null);
+              setBioBusy(true);
+              void signInWithBiometry()
+                .catch((caught: unknown) => {
+                  setError(
+                    caught instanceof Error
+                      ? caught.message
+                      : "تعذّر الدخول بالبصمة",
+                  );
+                })
+                .finally(() => setBioBusy(false));
+            }}
+          >
+            الدخول بـ{biometryLabel(biometry.kind)}
+          </Button>
+        ) : null}
 
         <div className="text-14">
           <Link to="/forgot-password" className="pressable text-muted hover:text-ink">

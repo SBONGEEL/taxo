@@ -26,6 +26,7 @@ import { Field } from "@/components/ui/Field";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
 import { focusField } from "@/lib/validation";
 import { looksComplete } from "@/lib/phone";
+import { forgetToken } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { passwordError, passwordRule } from "@/lib/password";
 import { FieldConditions } from "@/components/FieldConditions";
@@ -67,14 +68,17 @@ export function ForgotPasswordScreen() {
     setBusy(true);
     setError(null);
     try {
-      signIn(
-        await resetPassword({
-          phone,
-          country_code: country,
-          verification_token: verificationToken,
-          new_password: password,
-        }),
-      );
+      const response = await resetPassword({
+        phone,
+        country_code: country,
+        verification_token: verificationToken,
+        new_password: password,
+      });
+      // **الثانيةُ من الأربع**: تبديلُ كلمة المرور يمحو المخزَّن قبل أن تقوم
+      // الجلسةُ الجديدة. **وأثرُها الأكبرُ على الأجهزة الأخرى**: `set_password`
+      // في الخلفية يُبطل كلَّ الجلسات (مقيس)، فيمحوها ردُّ «لم تعد صالحة».
+      await forgetToken();
+      signIn(response);
       navigate("/", { replace: true });
     } catch (caught) {
       if (caught instanceof ApiError) {

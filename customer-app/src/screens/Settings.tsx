@@ -22,6 +22,7 @@ import { Screen } from "@/components/ui/Screen";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useBrand } from "@/lib/brand";
 import { useConfig } from "@/lib/config";
+import { biometryLabel } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import {
@@ -34,7 +35,8 @@ import {
 import { cn } from "@/lib/utils";
 
 export function SettingsScreen() {
-  const { user } = useSession();
+  const { user, biometry, setBiometric } = useSession();
+  const [bioError, setBioError] = useState<string | null>(null);
   const { config } = useConfig();
   const { choice, setChoice } = useTheme();
   // **إقرارُها وحده يكفي للسِمة** (البند 6): عرضٌ بصريٌّ لا يَعِد بخدمة
@@ -109,6 +111,43 @@ export function SettingsScreen() {
             اجتماعٍ لا يريد إسكاته على هاتفه في البيت. ومفعَّلان افتراضياً،
             فالصوتُ ميزةٌ يُطفئها صاحبُها لا ميزةٌ تنتظر إشعالاً */}
         <section className="card divide-y divide-line">
+          {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن
+              يملكه**: `available` كاذبةٌ في المتصفّح وعلى جهازٍ بلا بصمةٍ
+              مسجَّلة، فلا مفتاحَ ولا سطرَ يشرح ما لا يستطيعه القارئ. */}
+          {biometry?.available ? (
+            <div className="flex items-center justify-between gap-12 p-16">
+              <div className="min-w-0">
+                <p className="font-medium text-ink">
+                  الدخول بـ{biometryLabel(biometry.kind)}
+                </p>
+                <p className="mt-2 text-14 text-muted">
+                  يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك
+                  أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.
+                </p>
+                {bioError ? (
+                  <p className="mt-6 text-13 text-danger">{bioError}</p>
+                ) : null}
+              </div>
+              <Toggle
+                on={biometry.enabled}
+                label={`الدخول بـ${biometryLabel(biometry.kind)}`}
+                onToggle={() => {
+                  setBioError(null);
+                  void setBiometric(!biometry.enabled).catch(
+                    (caught: unknown) => {
+                      // **الرفضُ يُقال ولا يُقلب مفتاحاً**
+                      setBioError(
+                        caught instanceof Error
+                          ? caught.message
+                          : "تعذّر تفعيل الدخول بالبصمة",
+                      );
+                    },
+                  );
+                }}
+              />
+            </div>
+          ) : null}
+
           <div className="flex items-center justify-between gap-12 p-16">
             <div className="min-w-0">
               <p className="flex items-center gap-8 font-medium text-ink">

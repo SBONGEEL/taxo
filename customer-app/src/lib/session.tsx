@@ -20,7 +20,22 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { setSessionLostHandler, tokens } from "@/api/client";
+import {
+  refreshNow,
+  setRefreshPersister,
+  setSessionLostHandler,
+  tokens,
+} from "@/api/client";
+import {
+  biometryStatus,
+  disableBiometric,
+  enableBiometric,
+  forgetToken,
+  proveBiometry,
+  rememberToken,
+  unlockToken,
+  type BiometryStatus,
+} from "@/lib/biometric";
 import {
   getMe,
   logout as logoutRequest,
@@ -38,6 +53,11 @@ interface SessionState {
   signIn: (response: AuthResponse) => void;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** حالُ الدخول بالبصمة — **تُقاس ولا تُفترض**، و`null` «لم تُقرأ بعد». */
+  biometry: BiometryStatus | null;
+  refreshBiometry: () => Promise<void>;
+  setBiometric: (on: boolean) => Promise<void>;
+  signInWithBiometry: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionState>({
@@ -46,6 +66,10 @@ const SessionContext = createContext<SessionState>({
   signIn: () => undefined,
   signOut: async () => undefined,
   refreshUser: async () => undefined,
+  biometry: null,
+  refreshBiometry: async () => undefined,
+  setBiometric: async () => undefined,
+  signInWithBiometry: async () => undefined,
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -53,10 +77,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { config } = useConfig();
   const registered = useRef(false);
+  const [biometry, setBiometry] = useState<BiometryStatus | null>(null);
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»
   useEffect(() => {
-    setSessionLostHandler(() => setUser(null));
+    setSessionLostHandler(() => {
+      setUser(null);
+      // **الثالثةُ من الأربع**: ردُّ الخادم بأن الجلسة لم تعد صالحة يمحو المخزَّن
+      void forgetToken().then(() => biometryStatus().then(setBiometry));
+    });
   }, []);
 
   useEffect(() => {
@@ -88,10 +117,58 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
   }, [user, config]);
 
-  const signIn = useCallback((response: AuthResponse) => {
-    tokens.save(response.tokens);
-    setUser(response.user);
+  const refreshBiometry = useCallback(async () => {
+    setBiometry(await biometryStatus());
   }, []);
+
+  useEffect(() => {
+    void refreshBiometry();
+  }, [refreshBiometry]);
+
+  /** **الرمزُ المخزَّنُ يتبع التدوير** — يُكتب بعد كلِّ `tokens.save`. */
+  useEffect(() => {
+    setRefreshPersister((token) => {
+      void rememberToken(token);
+    });
+  }, []);
+
+  const signIn = useCallback(
+    (response: AuthResponse) => {
+      tokens.save(response.tokens);
+      setUser(response.user);
+      void refreshBiometry();
+    },
+    [refreshBiometry],
+  );
+
+  /** **الرابعةُ من الأربع** — الإطفاءُ من الإعدادات يمحو ويطفئ معاً. */
+  const setBiometric = useCallback(
+    async (on: boolean) => {
+      if (on) {
+        await proveBiometry("لتفعيل الدخول بالبصمة");
+        await enableBiometric(tokens.refresh());
+        tokens.detachFromLocalStorage();
+      } else {
+        await disableBiometric();
+      }
+      await refreshBiometry();
+    },
+    [refreshBiometry],
+  );
+
+  /** **الفتحُ ثم التجديد** — والخلفيةُ لا ترى إلا رمزاً كأيِّ رمز. */
+  const signInWithBiometry = useCallback(async () => {
+    const token = await unlockToken("لتسجيل الدخول إلى TAXO");
+    tokens.adoptRefresh(token);
+    const ok = await refreshNow();
+    if (!ok) {
+      await forgetToken();
+      await refreshBiometry();
+      throw new Error("انتهت الجلسة المحفوظة — سجّل الدخول بكلمة المرور");
+    }
+    setUser(await getMe());
+    await refreshBiometry();
+  }, [refreshBiometry]);
 
   const signOut = useCallback(async () => {
     const refresh = tokens.refresh();
@@ -99,17 +176,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await unregisterDevice(deviceId()).catch(() => undefined);
     if (refresh) await logoutRequest(refresh).catch(() => undefined);
     tokens.clear();
+    // **الأولى من الأربع**: الخروجُ يمحو المخزَّن، والتفضيلُ يبقى
+    await forgetToken();
     registered.current = false;
     setUser(null);
-  }, []);
+    await refreshBiometry();
+  }, [refreshBiometry]);
 
   const refreshUser = useCallback(async () => {
     setUser(await getMe());
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ user, loading, signIn, signOut, refreshUser }),
-    [user, loading, signIn, signOut, refreshUser],
+    () => ({
+      user,
+      loading,
+      signIn,
+      signOut,
+      refreshUser,
+      biometry,
+      refreshBiometry,
+      setBiometric,
+      signInWithBiometry,
+    }),
+    [
+      user,
+      loading,
+      signIn,
+      signOut,
+      refreshUser,
+      biometry,
+      refreshBiometry,
+      setBiometric,
+      signInWithBiometry,
+    ],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -63,14 +63,39 @@ export class ApiError extends Error {
 
 // ------------------------------------------------------------ التخزين
 
+/** **رمزُ التجديد في الذاكرة ما دام التطبيقُ حيّاً** — ومن ورائه بيتٌ واحدٌ
+ * على القرص: `localStorage` حين تكون البصمةُ مطفأة، **والمخزنُ الآمن وحدَه**
+ * حين تُشعَل. انظر `lib/biometric.ts` — الرمزُ يُدوَّر، **فنسخةٌ ثانيةٌ تموت
+ * عند أوّل تجديد**.
+ */
+let liveRefresh: string | null = null;
+
+/** يُملأ من `lib/biometric` — **حقنٌ لا استيراد**: `client` طبقةٌ تحته. */
+let persistRefresh: (token: string) => void = () => {};
+export function setRefreshPersister(fn: (token: string) => void) {
+  persistRefresh = fn;
+}
+
 export const tokens = {
   access: () => localStorage.getItem(ACCESS_KEY),
-  refresh: () => localStorage.getItem(REFRESH_KEY),
+  refresh: () => liveRefresh ?? localStorage.getItem(REFRESH_KEY),
+  /** **يُستدعى بعد كلِّ تدوير** — فيبقى المخزَّنُ هو الحيَّ لا نسخةً منه. */
   save(pair: { access_token: string; refresh_token: string }) {
     localStorage.setItem(ACCESS_KEY, pair.access_token);
+    liveRefresh = pair.refresh_token;
     localStorage.setItem(REFRESH_KEY, pair.refresh_token);
+    persistRefresh(pair.refresh_token);
+  },
+  /** **يُنزع من `localStorage` حين تُشعَل البصمة** — بيتٌ واحدٌ لا اثنان. */
+  detachFromLocalStorage() {
+    localStorage.removeItem(REFRESH_KEY);
+  },
+  /** يُسلَّم إلى مسار الفتح: يضع الرمزَ المفتوحَ في الذاكرة قبل التجديد. */
+  adoptRefresh(token: string) {
+    liveRefresh = token;
   },
   clear() {
+    liveRefresh = null;
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
   },
@@ -102,6 +127,13 @@ async function refreshSession(): Promise<boolean> {
   }
   tokens.save(await response.json());
   return true;
+}
+
+/** **بابُ التجديد نفسُه لمسار البصمة** — ولا نداءَ ثانٍ إلى `/auth/refresh`:
+ * نسخةٌ ثانيةٌ من منطق التجديد تعني موضعين يكتبان الرمزَ المُدوَّر.
+ */
+export function refreshNow(): Promise<boolean> {
+  return refreshOnce();
 }
 
 /** التجديد **مرةً واحدة مهما تزامنت الطلبات**: الرمز يُستهلك عند أول دورة. */
