@@ -22,7 +22,6 @@ from app.models.driver import Driver
 from app.models.pause import RidePause
 from app.models.ride import Ride
 from app.services import notifications, pauses
-from app.services.push import PushMessage
 from app.tasks.celery_app import celery_app, run_async
 
 logger = logging.getLogger(__name__)
@@ -67,35 +66,15 @@ async def _sweep() -> int:
             minutes = str(pauses.minutes_of(locked, now))
             await session.commit()
 
-            await notifications.notify_user(
+            driver = await session.get(Driver, ride.driver_id)
+            await notifications.publish_pause_limit_exceeded(
                 session,
                 redis,
-                user_id=ride.rider_id,
-                message=PushMessage(
-                    title="تجاوز الانتظار حدَّه",
-                    body="العدّادُ ما زال يعمل — أبلغ الكبتن حين تجهز.",
-                    data={
-                        "type": "pause_limit_exceeded",
-                        "ride_id": str(ride.id),
-                        "minutes": minutes,
-                    },
-                ),
+                rider_id=ride.rider_id,
+                driver_user_id=None if driver is None else driver.user_id,
+                ride_id=ride.id,
+                minutes=minutes,
             )
-            driver = await session.get(Driver, ride.driver_id)
-            if driver is not None:
-                await notifications.notify_user(
-                    session,
-                    redis,
-                    user_id=driver.user_id,
-                    message=PushMessage(
-                        title="تجاوز الانتظار حدَّه",
-                        body="لك أن تستأنف أو تُنهي — القرارُ قرارك.",
-                        data={
-                            "type": "pause_limit_exceeded",
-                            "ride_id": str(ride.id),
-                        },
-                    ),
-                )
             notified += 1
 
     return notified

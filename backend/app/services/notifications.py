@@ -1318,3 +1318,53 @@ async def publish_ride_paused(
             },
         ),
     )
+
+
+async def publish_pause_limit_exceeded(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    driver_user_id: uuid.UUID | None,
+    ride_id: uuid.UUID,
+    minutes: str,
+) -> None:
+    """تجاوزُ حدِّ الانتظار — **للطرفين، وعبر الصندوق لا بالدفع وحدَه**.
+
+    **ولمَ لا `notify_user`** (عُدَّ 2026-08-28 ثم أُصلح): ذاك بابُ **دفعٍ
+    وحدَه ولا يكتب صفَّ صندوقٍ أبداً**. **وقاعدةُ المشروع أن الدفعَ لا يُرسل
+    لجهازٍ مقبسُه مفتوح** — فمن كان التطبيقُ مفتوحاً عنده، وهو **حالُ الطرفين
+    في رحلةٍ جارية**، لا يرى شيئاً ولا يجد له أثراً بعدها.
+
+    **وهو أشدُّ من إنذار النسخ في وجه**: هناك لا أجهزةَ أصلاً فالصمتُ تامّ،
+    وهنا **الدفعُ يصل أحياناً ولا يصل أحياناً** — فيبدو البابُ عاملاً ويسقط
+    في الحال التي بُني لها بعينها.
+
+    **والعدّادُ يعمل وقتَها**: إشعارٌ يخصّ مالاً يتراكم لا يُترك بلا أثرٍ
+    يُراجَع.
+    """
+    message = PushMessage(
+        title="تجاوز الانتظار حدَّه",
+        body="العدّادُ ما زال يعمل — أبلغ الكبتن حين تجهز.",
+        data={
+            "type": "pause_limit_exceeded",
+            "ride_id": str(ride_id),
+            "minutes": minutes,
+        },
+    )
+    await _safe_notify(session, redis, user_id=rider_id, message=message)
+
+    if driver_user_id is None:
+        return
+    # **الحمولةُ نفسُها والجملةُ غيرُها** — كما في `publish_ride_event`:
+    # الراكبُ يُطلب منه أن يجهز، والكبتنُ يملك القرار
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="تجاوز الانتظار حدَّه",
+            body="لك أن تستأنف أو تُنهي — القرارُ قرارك.",
+            data=dict(message.data),
+        ),
+    )

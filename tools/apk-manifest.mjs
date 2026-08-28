@@ -34,14 +34,20 @@ import process from "node:process";
 const ROOT = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const OUT = join(ROOT, "landing", "downloads");
 
+/** **والمسارُ مسارُ نكهةٍ لا مسارُ نوعِ بناء** (صُحّح 2026-08-28): منذ صارت
+ * القنواتُ نكهتين (`channels.json`) لم يعد `apk/release/app-release.apk`
+ * موجوداً أصلاً — **والوسمُ كان سيبني أربعاً موقَّعةً ثم لا يجد ما ينشره**.
+ * **والصفحةُ العامّةُ تحمل العامّةَ وحدَها**: التجريبيّةُ تخاطب جهازَ مطوّرٍ،
+ * ونشرُها في صفحةِ تحميلٍ عامّةٍ يعطي الناسَ تطبيقاً يتوقّف حين يُطفأ حاسوب.
+ */
 /** الحزمتان ومصدرُ كلٍّ — **مخرجُ البناء لا نسخةُ `public/`**.
  *
  * **و`public/` هي المصدرُ الثاني الذي أنشأ العطب**: نسخةٌ قديمةٌ تُنسخ إلى
  * `dist` مع كل بناءٍ فتُخدَم إلى الأبد. فالمصدرُ هنا **مخرجُ Gradle** وحدَه.
  */
 const APPS = [
-  { key: "rider", label: "تطبيق الراكب", src: "customer-app/android/app/build/outputs/apk/release/app-release.apk", name: "taxo-rider.apk" },
-  { key: "driver", label: "تطبيق الكبتن", src: "driver-app/android/app/build/outputs/apk/release/app-release.apk", name: "taxo-driver.apk" },
+  { key: "rider", label: "تطبيق الراكب", src: "customer-app/android/app/build/outputs/apk/public/release/app-public-release.apk", name: "taxo-rider.apk" },
+  { key: "driver", label: "تطبيق الكبتن", src: "driver-app/android/app/build/outputs/apk/public/release/app-public-release.apk", name: "taxo-driver.apk" },
 ];
 
 function badging(file) {

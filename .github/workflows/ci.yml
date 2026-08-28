@@ -234,7 +234,14 @@ jobs:
           [ -s "$RUNNER_TEMP/taxo-release.jks" ] || { echo "✗ المخزنُ فارغٌ بعد فكِّ الترميز."; exit 1; }
           echo "  ✓ المخزنُ فُكَّ ($(stat -c%s "$RUNNER_TEMP/taxo-release.jks") بايت)"
 
-      - name: بناءُ الحزمتين
+      # **أربعُ حزمٍ لا حزمتان** (`channels.json`، قرارُ المالك 2026-08-26):
+      # قناتان × تطبيقان. **والقناةُ تُصرَّح ولا تُفترض** — `TAXO_CHANNEL` غيرُ
+      # مضبوطٍ **يوقف** `capacitor.config.ts` باسمه، وهو ما يجعل «نسخةً عامّةً
+      # بُنيت على عنوان جهاز مطوّر» مستحيلةً لا مستبعَدة.
+      #
+      # **ونكهةُ gradle تُقرأ من الجدول لا تُكتب هنا**: `test` محجوزٌ في AGP
+      # فنكهتُها `trial` — **واسمان يفترقان في ملفَّين هو ما يمنعه الجدول**.
+      - name: بناءُ الأربع
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/taxo-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -244,31 +251,43 @@ jobs:
           set -euo pipefail
           for v in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD ANDROID_KEY_ALIAS; do
             # **يُسمّى الناقصُ ولا تُطبع قيمةُ الموجود**
-            [ -n "$(eval echo \"\$$v\")" ] || { echo "✗ السرُّ $v غيرُ مضبوط — يُوقَف قبل البناء."; exit 1; }
+            [ -n "$(eval echo \"\$$v\")" ] || { echo "SECRET_MISSING $v"; exit 1; }
           done
           for app in customer-app driver-app; do
             ( cd "$app" && npm ci --silent )
-            ( cd "$app" && VITE_API_BASE_URL=https://api.tajora.ly npm run build )
-            ( cd "$app" && npx cap sync android )
-            # **`sh gradlew` لا `./gradlew`** — وهذا وقع مقيساً (خروج ١٢٦):
-            # صلاحيةُ التنفيذ لا يحفظها ويندوز، فالملفُّ يُدفع بلا `+x`.
-            # وقد صُحّح الوضعُ في git (`--chmod=+x`)، **وهذا السطرُ يبقى**:
-            # استنساخٌ على ويندوزَ يعيد إسقاطَ الصلاحية، ورقمُ الخروج ١٢٦ لا
-            # يقول «غيرُ قابلٍ للتنفيذ» لمن يقرأه أولَ مرة.
-            ( cd "$app/android" && sh gradlew assembleRelease --no-daemon -q )
+            for channel in public test; do
+              flavor="$(node -e "import('./tools/channels.mjs').then(m=>process.stdout.write(m.TABLE.channels['$channel'].gradleFlavor))")"
+              task="assemble$(printf '%s' "$flavor" | sed 's/^./\U&/')Release"
+              echo "---- $app | channel=$channel | flavor=$flavor | $task ----"
+              # **بابٌ واحدٌ يشتقّ العنوانَ من الجدول** — لا عنوانَ مكتوباً هنا
+              TAXO_CHANNEL="$channel" node tools/build-channel.mjs "$app"
+              ( cd "$app" && TAXO_CHANNEL="$channel" npx cap sync android )
+              # **`sh gradlew` لا `./gradlew`** — وقع مقيساً (خروج ١٢٦):
+              # صلاحيةُ التنفيذ لا يحفظها ويندوز، فالملفُّ يُدفع بلا `+x`.
+              ( cd "$app/android" && TAXO_CHANNEL="$channel" sh gradlew "$task" --no-daemon -q )
+            done
           done
 
       # **التوقيعُ يُقرأ من الحزمة لا من سجلِّ البناء** (خطوةُ الصفر): سطرٌ
       # يقول «وقّعتُ» ليس توقيعاً — و`apksigner` يقرأ الشهادةَ من داخل الملفّ.
-      - name: التوقيعُ مقروءاً من الحزمة
+      # **والأربعُ تُقاس لا واحدة**: `build.gradle` ملفّان منفصلان، وتطابقُ
+      # أحدهما لا يشهد للآخر (الشكلُ الثامن).
+      - name: التوقيعُ مقروءاً من الأربع
         run: |
           set -euo pipefail
           APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -1)"
+          seen=0
           for app in customer-app driver-app; do
-            f="$app/android/app/build/outputs/apk/release/app-release.apk"
-            echo "──── $f ────"
-            "$APKSIGNER" verify --print-certs "$f" | grep -Ei 'SHA-256 digest|Signer #1 certificate DN' || true
+            for flavor in public trial; do
+              f="$app/android/app/build/outputs/apk/$flavor/release/app-$flavor-release.apk"
+              [ -f "$f" ] || { echo "APK_MISSING $f"; exit 1; }
+              echo "---- $f ----"
+              "$APKSIGNER" verify --print-certs "$f" | grep -Ei 'SHA-256 digest|Signer #1 certificate DN'
+              seen=$((seen+1))
+            done
           done
+          # **العددُ يُقاس** — ثلاثةٌ من أربعٍ تمرّ صامتةً لولا هذا السطر
+          [ "$seen" -eq 4 ] || { echo "SIGNED_COUNT $seen of 4"; exit 1; }
 
       - name: البيانُ ومعه الإيداع
         run: node tools/apk-manifest.mjs
@@ -278,4 +297,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "${{ github.ref_name }}"             landing/downloads/taxo-rider.apk             landing/downloads/taxo-driver.apk             landing/downloads/manifest.json             --title "${{ github.ref_name }}"             --notes "حزمتان مبنيّتان من ${{ github.sha }} — **موقَّعتان بمفتاح الإصدار** (§18.1)."
+          # **الأربعُ تُرفَق، والعامّتان وحدَهما تنزلان الصفحة**: التجريبيّةُ
+          # تخاطب جهازَ مطوّر، فمكانُها الإصدارُ لمن يقصدها لا صفحةٌ عامّة.
+          cp customer-app/android/app/build/outputs/apk/trial/release/app-trial-release.apk taxo-rider-trial.apk
+          cp driver-app/android/app/build/outputs/apk/trial/release/app-trial-release.apk  taxo-driver-trial.apk
+          gh release create "${{ github.ref_name }}" \
+            landing/downloads/taxo-rider.apk \
+            landing/downloads/taxo-driver.apk \
+            landing/downloads/manifest.json \
+            taxo-rider-trial.apk \
+            taxo-driver-trial.apk \
+            --title "${{ github.ref_name }}" \
+            --notes "أربعُ حزمٍ من ${{ github.sha }} — **موقَّعةٌ بمفتاح الإصدار** (§18.1). العامّتان على صفحة التحميل، والتجريبيّتان هنا."

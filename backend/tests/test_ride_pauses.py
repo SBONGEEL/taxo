@@ -27,6 +27,7 @@ from tests.helpers import (
     bring_online,
     broadcast_location,
     completed_ride,
+    inbox_of,
     rider_session,
     started_ride,
 )
@@ -404,6 +405,24 @@ async def test_the_cap_notifies_and_never_ends_the_ride(
     async with session_factory() as session:
         row = await session.get(Ride, uuid.UUID(ride["id"]))
     assert row.status.value == "in_progress", "أُنهيت الرحلةُ بالسقف"
+
+    # **و«يُنبَّه الطرفان» تُقاس لا تُوصف** (أُضيف 2026-08-29): كان هذا
+    # الاختبارُ يعدّ ما أعادته الكنسةُ ولا يسأل **أوصل شيءٌ إلى أحد**.
+    # **وكان الجوابُ لا**: البابُ كان `notify_user` — دفعٌ وحدَه بلا صفِّ
+    # صندوق. **وقاعدةُ المشروع أن الدفعَ لا يُرسل لجهازٍ مقبسُه مفتوح**،
+    # وهما في رحلةٍ جارية فالتطبيقُ مفتوحٌ عندهما — **فلا يرى الطرفان شيئاً
+    # ولا يجدان له أثراً بعدها**، والعدّادُ يعمل.
+    rider_entries = await inbox_of(session_factory, rider["user"]["id"])
+    driver_entries = await inbox_of(session_factory, driver["user_id"])
+    rider_notice = [e for e in rider_entries if e.kind == "pause_limit_exceeded"]
+    driver_notice = [e for e in driver_entries if e.kind == "pause_limit_exceeded"]
+    assert len(rider_notice) == 1, [e.kind for e in rider_entries]
+    assert len(driver_notice) == 1, [e.kind for e in driver_entries]
+    # **والحمولةُ خامٌ في الطرفين، والجملةُ تفترق**: الراكبُ يُطلب منه أن
+    # يجهز، والكبتنُ يملك القرار — وجملةٌ واحدةٌ لطرفين تقول لأحدهما ما لا يعنيه
+    assert rider_notice[0].data["ride_id"] == ride["id"]
+    assert rider_notice[0].data["minutes"] == driver_notice[0].data["minutes"]
+    assert rider_notice[0].body != driver_notice[0].body
 
 
 # --------------------------------------------------------------- التزامن
