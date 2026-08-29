@@ -45,6 +45,19 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
             "tip_preset_small >= 0 AND tip_preset_medium >= 0 AND tip_max >= 0",
             name="payment_tip_amounts_not_negative",
         ),
+        # **قيدُ `0059` كان في الترحيلة ولم يكن في النموذج** (صُحِّح
+        # 2026-08-30): `test_migrations_match_models` يقرأ الفرقَ انحرافاً،
+        # **ولم تُشغَّل عليه المجموعةُ يومَ كُتب**.
+        CheckConstraint(
+            "cliq_review_min_minutes > 0 "
+            "AND cliq_review_max_minutes >= cliq_review_min_minutes",
+            name="payment_cliq_review_window",
+        ),
+        # **و`NULL` مسموحة**: «لا سقفَ» حالٌ لا رقمٌ — والقيدُ يحرس الموجبَ وحده
+        CheckConstraint(
+            "driver_debt_ceiling IS NULL OR driver_debt_ceiling > 0",
+            name="payment_debt_ceiling_positive",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -68,6 +81,15 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     )
     cliq_review_max_minutes: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("5")
+    )
+
+    #: **سقفُ دَينِ الكبتن** — فوقه يُمنع من استقبال الطلبات (الترحيلة `0061`).
+    #:
+    #: **و`None` تعني «لا سقف» لا «صفراً»** (قرارُ المالك 2026-08-30: «ولا
+    #: تضعه حتى أقرّه»). **والفرقُ ماليٌّ لا شكليّ**: صفرٌ يحجب كلَّ كبتنٍ
+    #: عليه فلسٌ واحد — فالمسارُ مبنيٌّ كاملاً و**معطَّلٌ حتى يُكتب الرقم**.
+    driver_debt_ceiling: Mapped[Decimal | None] = mapped_column(
+        MONEY, nullable=True
     )
 
     cliq_confirmation_hours: Mapped[int] = mapped_column(

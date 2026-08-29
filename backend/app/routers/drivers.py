@@ -26,6 +26,7 @@ from app.models.user import User
 from app.models.driver import DriverDocument
 from app.models.enums import DocumentType, FeatureKey
 from app.models.vehicle import Vehicle
+from app.core.currency import currency_for_country
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
     AdvanceDebtOut,
@@ -51,11 +52,19 @@ from app.schemas.driver import (
     VehicleUpdate,
     VehicleUpdateResultOut,
 )
+from app.schemas.debt import (
+    DebtClaimOut,
+    DebtPaymentIn,
+    DriverDebtRowOut,
+    DriverDebtStateOut,
+)
 from app.schemas.wallet import EarningsOut
 from app.core.currency import currency_for_country
 from app.services import presence_token
 from app.services import (
     advances as advances_service,
+    cliq_debts,
+    debts as debts_service,
     notifications,
     deactivation,
     documents as documents_service,
@@ -595,3 +604,81 @@ async def repay_advance(
         currency=advance.currency.value,
     )
     return AdvanceOut.model_validate(advance)
+
+
+# ══════════════════════ دَينُ الكبتن (الترحيلة `0061`) ══════════════════════
+#
+# **ثلاثةُ أبوابٍ لا أربعة**: يقرأ حالَه، ويفتح مطالبةَ سداد، ويقرأ مطالباته.
+# **ولا بابَ يكتب في الجدول من هنا** — الكتابةُ من التسوية (نشأةً) ومن تأكيد
+# المشرف (سداداً)، فلا يقرّر أحدٌ عن نفسه كم عليه.
+
+
+@router.get("/me/debt", response_model=DriverDebtStateOut)
+async def my_debt(
+    driver: CurrentDriver, user: CurrentUser, session: DbSession
+) -> DriverDebtStateOut:
+    """المستحقُّ ومنعُه وسبيلُ سداده — **نداءٌ واحدٌ لشاشةٍ واحدة**.
+
+    **وثلاثةُ ما يقوله النصُّ للمحجوب تأتي كلُّها من هنا** (قرارُ المالك
+    2026-08-30): `total` المبلغُ بالضبط، و`cliq_alias` سبيلُ السداد،
+    و`blocked` مع قاعدةِ «يُرفع عند الصفر» ما يجعل الوعدَ صادقاً.
+    """
+    rows = await debts_service.outstanding_rows(session, driver.id)
+    setting = await settings_service.get_payment_settings(session, user.country_code)
+    return DriverDebtStateOut(
+        total=await debts_service.outstanding_of(session, driver.id),
+        currency=currency_for_country(user.country_code),
+        blocked=driver.debt_blocked,
+        ceiling=setting.driver_debt_ceiling if setting else None,
+        # **`null` لا سلسلةٌ فارغة**: «لم يُضبط بعد» خبرٌ، والفارغةُ تُرسم حساباً
+        cliq_alias=(setting.cliq_alias if setting else None) or None,
+        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
+        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+        rows=[DriverDebtRowOut.model_validate(row) for row in rows],
+    )
+
+
+def _debt_claim_out(order, setting) -> DebtClaimOut:
+    return DebtClaimOut(
+        id=order.id,
+        cart_id=order.cart_id,
+        amount=order.amount,
+        currency=order.currency,
+        status=order.status,
+        failure_reason=order.failure_reason,
+        created_at=order.created_at,
+        # **رمزُ السوق نفسُه**: حسابُ كليك واحدٌ للسوق، والصورةُ واحدة — فلا
+        # مسارٌ ثانٍ يخدم الملفَّ نفسَه، وهو «بابان ينشران الشيءَ نفسه» بعينه
+        qr_url=("/subscriptions/cliq/qr" if setting and setting.cliq_qr_path else None),
+        alias=(setting.cliq_alias if setting else "") or "",
+        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
+        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+    )
+
+
+@router.post("/me/debt/cliq", response_model=DebtClaimOut, status_code=201)
+async def pay_debt_with_cliq(
+    payload: DebtPaymentIn,
+    driver: CurrentDriver,
+    user: CurrentUser,
+    session: DbSession,
+) -> DebtClaimOut:
+    """يفتح مطالبةَ سدادٍ بكليك — **والجزئيُّ مقبول**، ولا يتجاوز دَينَه."""
+    order = await cliq_debts.start_payment(
+        session, driver=driver, owner=user, amount=payload.amount
+    )
+    setting = await settings_service.get_payment_settings(session, user.country_code)
+    await session.commit()
+    return _debt_claim_out(order, setting)
+
+
+@router.get("/me/debt/cliq", response_model=list[DebtClaimOut])
+async def list_my_debt_claims(
+    _driver: CurrentDriver, user: CurrentUser, session: DbSession
+) -> list[DebtClaimOut]:
+    """مطالباتُه — ليقرأ حالَها بنفسه ولا يعيد التحويل."""
+    setting = await settings_service.get_payment_settings(session, user.country_code)
+    return [
+        _debt_claim_out(order, setting)
+        for order in await cliq_debts.list_mine(session, user_id=user.id)
+    ]

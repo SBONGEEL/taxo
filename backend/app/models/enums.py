@@ -164,6 +164,25 @@ class PromoDiscountType(StrEnum):
     FIXED = "fixed"
 
 
+class DriverDebtSource(StrEnum):
+    """من أين نشأ المستحقُّ على الكبتن.
+
+    **عضوٌ واحدٌ اليوم وعمودٌ مصرَّح**: «كلُّ ما يستحقّ من الرحلة» (قرارُ
+    المالك 2026-08-30) — واليومَ عمولةُ ما يُقبض مباشرةً وحدَها هي ما يستحقّ،
+    لأن ما تمرّ به المنصّةُ يُخصم من الدفتر لحظتَه ولا يصير دَيناً.
+    """
+
+    RIDE_COMMISSION = "ride_commission"
+
+
+class DriverDebtStatus(StrEnum):
+    """حالُ المستحقّ — **والجزئيُّ ليس حالاً** بل عمودُ `collected`."""
+
+    OUTSTANDING = "outstanding"
+    SETTLED = "settled"
+    WRITTEN_OFF = "written_off"
+
+
 class ProviderOrderPurpose(StrEnum):
     """لماذا فُتح طلبٌ لدى مزود الدفع (SPEC القسم 6.4/7/8).
 
@@ -177,6 +196,9 @@ class ProviderOrderPurpose(StrEnum):
     RIDE_PAYMENT = "ride_payment"
     WALLET_TOPUP = "wallet_topup"
     SUBSCRIPTION = "subscription"
+    #: **سدادُ دَينِ كبتنٍ بكليك** — يستقر في `driver_debts.collected` ولا
+    #: يكتب قيداً في الدفتر: مالُه خرج من يده لا من محفظته، كالاشتراك.
+    DEBT = "debt"
 
 
 class ProviderOrderSource(StrEnum):

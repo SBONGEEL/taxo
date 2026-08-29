@@ -77,6 +77,7 @@ from app.services import (
     audit,
     cancellation,
     cliq_qr,
+    debts,
     settings_service,
     wallet,
 )
@@ -573,6 +574,14 @@ async def _distribute(
             idempotency_key=f"earning:{payment.id}",
         )
 
+        # **الدَّينُ أوّلاً ثم السلفة** (قرارُ المالك 2026-08-30): «رصيدٌ يكبر
+        # ودَينٌ قائمٌ يريه مالاً لا يملكه». **والترتيبُ ليس ذوقاً**: السلفةُ
+        # مالٌ أعطيناه، والدَّينُ مالٌ **يحمله عنّا** — فمن يقبض أجرةً نقداً
+        # فيها عمولتُنا قابضٌ لا مَدين، وحقُّنا أسبقُ من قسط قرضٍ منحناه.
+        await debts.collect_from_balance(
+            session, driver=await _driver_row(session, ride), user=driver_user
+        )
+
         # **اقتطاعُ السلفة** (البند ١٥): خصمٌ من أرباحٍ **داخلة** — وموضعُه هنا
         # داخل الشرط لا خارجه، لأن الكاشَ وكليكاً لا يكتبان `ride_earning`
         # أصلاً (القسم 9): المالُ في يده لا في محفظته، فلا شيءَ يُقتطع منه.
@@ -595,22 +604,54 @@ async def _distribute(
     if commission <= 0:
         return
 
-    try:
-        await wallet.record(
-            session,
-            owner=driver_user,
-            # **العمولةُ تُخصم من محفظة الكبتن** — من حيث دخل الأجر
-            owner_type=WalletOwnerType.DRIVER,
-            tx_type=WalletTransactionType.COMMISSION,
-            amount=-commission,
-            ride_id=ride.id,
-            created_by=actor_id,
-            idempotency_key=f"commission:{payment.id}",
+    driver_row = await _driver_row(session, ride)
+
+    # ## **العمولةُ التي لا يغطّيها رصيدٌ تصير دَيناً، ولا تُسقط الرحلة**
+    #
+    # **العطبُ الذي أغلق هذا الباب** (قِيس 2026-08-30): كان هنا `raise
+    # InsufficientBalance("… اشحن المحفظة ثم أكّد")` — **وبابُ شحن محفظة
+    # الكبتن أُلغي** (قرارُ المالك 2026-08-29)، فصارت الجملةُ تدلّ على ما ليس
+    # هناك، **وكبتنٌ رصيدُه دون العمولة لا يُنهي رحلةَ كاشٍ أصلاً**.
+    #
+    # **والحارسُ لم يُرخَ**: `balance_after < 0` يبقى مرفوضاً في `wallet`.
+    # المستحقُّ يخرج من الدفتر إلى **جدولِه** — كالسلفةِ ورسمِ الإلغاء قبله.
+    #
+    # **وقناةُ اليدِ دَينٌ بطبعها لا استثناءً**: كاشٌ وكليك لا يكتبان
+    # `ride_earning` أصلاً، **فالأجرةُ كلُّها في جيبه ومنها عمولتُنا** — فهو
+    # يحملها عنّا من اللحظة الأولى، والقيدُ السالبُ كان يصفها وصفاً خاطئاً.
+    if payment.method in DIRECTLY_COLLECTED_METHODS:
+        await debts.record_from_ride(
+            session, driver=driver_row, ride=ride, payment=payment, amount=commission
         )
-    except InsufficientBalance as exc:
-        raise InsufficientBalance(
-            "رصيد محفظتك لا يغطي عمولة هذه الرحلة — اشحن المحفظة ثم أكّد"
-        ) from exc
+    else:
+        try:
+            await wallet.record(
+                session,
+                owner=driver_user,
+                # **العمولةُ تُخصم من محفظة الكبتن** — من حيث دخل الأجر
+                owner_type=WalletOwnerType.DRIVER,
+                tx_type=WalletTransactionType.COMMISSION,
+                amount=-commission,
+                ride_id=ride.id,
+                created_by=actor_id,
+                idempotency_key=f"commission:{payment.id}",
+            )
+        except InsufficientBalance:
+            # **وحتى القناةُ التي تمرّ بنا لا تُسقط رحلة**: اقتطاعُ السلفة
+            # يسبق العمولةَ في هذا المسار، فقد لا يُبقي ما يغطّيها — **وقاعدةٌ
+            # تعمل في نصف الحالات هي الشكلُ الذي نتجنّبه**.
+            await debts.record_from_ride(
+                session,
+                driver=driver_row,
+                ride=ride,
+                payment=payment,
+                amount=commission,
+            )
+
+    # **ويُحصَّل فوراً إن كان الرصيدُ يغطّيه** — فمن كان رصيدُه كافياً يُخصم
+    # منه في هذه المعاملة نفسِها كما كان يُخصم قبل اليوم، **ولا يرى فرقاً**.
+    # والدَّينُ يبقى لمن لا رصيدَ له، وهو وحدَه من كان يُمنع من إنهاء رحلته.
+    await debts.collect_from_balance(session, driver=driver_row, user=driver_user)
 
 
 # --------------------------------------------------------- قناة كليك اليدوية

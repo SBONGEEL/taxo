@@ -3,6 +3,7 @@
 from app.models.photo_report import UserPhotoReport  # noqa: F401
 from app.models.booking import RideBooking
 from app.models.advance import AdvanceSetting, DriverAdvance
+from app.models.debt import DriverDebt  # noqa: F401
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting, RideCancellationCharge
 from app.models.map_setting import MapSetting

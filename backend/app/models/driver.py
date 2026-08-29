@@ -150,6 +150,16 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     cancellation_carry_blocked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # **وعمودٌ ثالثٌ بنفس الشكل ولدَينٍ ثالث** (الترحيلة `0061`): «قبض أجرةً
+    # بيده ومنها عمولةُ المنصّة ولم تصلنا». **وثلاثةُ أعمدةٍ لا عمودٌ واحد**
+    # للسبب نفسِه المكتوب فوقه: سدادُ دَينٍ لا يرفع منعَ دَينٍ آخر.
+    #
+    # **ولا يرتفع بذاته**: يُشعل حين يتجاوز القائمُ سقفَ اللوحة، ويُطفأ حين
+    # يبلغ القائمُ **صفراً** — لا حين ينزل تحت السقف. فمن سدَّد نصفَه يبقى
+    # ممنوعاً، وهو نصُّ قرار المالك 2026-08-30.
+    debt_blocked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     user: Mapped["User"] = relationship(back_populates="driver")
     vehicles: Mapped[list["Vehicle"]] = relationship(

@@ -47,12 +47,10 @@ COUNTRY = postgresql.ENUM(name="country_code", create_type=False)
 def upgrade() -> None:
     op.create_table(
         "privacy_policies",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            primary_key=True,
-            server_default=sa.text("gen_random_uuid()"),
-        ),
+        # **بلا `server_default`** (صُحِّح 2026-08-30): `UUIDMixin` يولّد
+        # المفتاحَ في بايثون، وافتراضٌ في القاعدة بلا مقابلٍ في النموذج
+        # **يُقرأ انحرافاً** ويُسقط `test_migrations_match_models`.
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("country_code", COUNTRY, nullable=False),
         # **رقمٌ متصاعدٌ لكلِّ سوق** — يُقرأ في الشاشة مع تاريخه
         sa.Column("version", sa.Integer(), nullable=False),
@@ -101,12 +99,10 @@ def upgrade() -> None:
 
     op.create_table(
         "user_policy_consents",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            primary_key=True,
-            server_default=sa.text("gen_random_uuid()"),
-        ),
+        # **بلا `server_default`** (صُحِّح 2026-08-30): `UUIDMixin` يولّد
+        # المفتاحَ في بايثون، وافتراضٌ في القاعدة بلا مقابلٍ في النموذج
+        # **يُقرأ انحرافاً** ويُسقط `test_migrations_match_models`.
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             "user_id",
             postgresql.UUID(as_uuid=True),
@@ -143,12 +139,10 @@ def upgrade() -> None:
 
     op.create_table(
         "org_profile",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            primary_key=True,
-            server_default=sa.text("gen_random_uuid()"),
-        ),
+        # **بلا `server_default`** (صُحِّح 2026-08-30): `UUIDMixin` يولّد
+        # المفتاحَ في بايثون، وافتراضٌ في القاعدة بلا مقابلٍ في النموذج
+        # **يُقرأ انحرافاً** ويُسقط `test_migrations_match_models`.
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("legal_name", sa.String(length=160), nullable=True),
         sa.Column("address", sa.String(length=320), nullable=True),
         sa.Column("privacy_email", sa.String(length=160), nullable=True),

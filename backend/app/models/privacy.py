@@ -10,7 +10,17 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
@@ -52,6 +62,19 @@ class PrivacyPolicy(UUIDMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
+    # **كانت في الترحيلة `0060` ولم تكن هنا** (صُحِّح 2026-08-30) — والفرقُ
+    # يُقرأ انحرافاً في `test_migrations_match_models`.
+    __table_args__ = (
+        UniqueConstraint("country_code", "version", name="privacy_policy_version"),
+        # **المنشورةُ واحدةٌ لكلِّ سوق** — فهرسٌ جزئيٌّ لا شرطُ تطبيق
+        Index(
+            "privacy_policy_one_published",
+            "country_code",
+            unique=True,
+            postgresql_where=text("is_published"),
+        ),
+    )
+
 
 class UserPolicyConsent(UUIDMixin, TimestampMixin, Base):
     """**أيَّ نسخةٍ قبِل هذا المستخدم ومتى** — فلا يُسأل بلا جواب."""
@@ -66,6 +89,10 @@ class UserPolicyConsent(UUIDMixin, TimestampMixin, Base):
     )
     accepted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "policy_id", name="user_policy_consent_once"),
     )
 
 

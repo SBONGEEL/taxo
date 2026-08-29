@@ -150,6 +150,12 @@ async def confirm_payment(
     **ويُعاد الزوج**: الصفُّ، وهل فُعِّل — فالشاشةُ تقول ما جرى ولا تخمّنه.
     """
     order = await _locked(session, order_id)
+    # **والغرضُ يُسأل عنه صراحةً** (2026-08-30): لمّا صار للمطالبة اليدوية
+    # غرضان (اشتراكٌ ودَين)، صار «يدويٌّ ومعلَّق» **وصفاً لا يميّز** — وتأكيدُ
+    # مطالبةِ دَينٍ من هذا الباب كان سيمرّ إلى `activate_paid_order` بـ
+    # `plan_id = None`. **بابان يتشاركان القضيبَ يلزمهما سؤالٌ عن الغرض.**
+    if order.purpose is not ProviderOrderPurpose.SUBSCRIPTION:
+        raise InvalidInput("هذه المطالبةُ ليست اشتراكاً")
     if order.source is not ProviderOrderSource.MANUAL:
         raise InvalidInput("هذه المطالبةُ ليست يدويّةً — تأكيدُها من مزوّدها")
     if order.status is not ProviderOrderStatus.CREATED:
@@ -210,6 +216,8 @@ async def list_pending(session: AsyncSession, *, country=None) -> list[ProviderO
     """المعلّقةُ من المطالبات اليدوية — **ما ينتظر عينَ مشرف**."""
     query = select(ProviderOrder).where(
         ProviderOrder.source == ProviderOrderSource.MANUAL,
+        # **والغرضُ شرطٌ لا زينة** — بلاه تدخل مطالباتُ الدَّين قائمةَ الاشتراكات
+        ProviderOrder.purpose == ProviderOrderPurpose.SUBSCRIPTION,
         ProviderOrder.status == ProviderOrderStatus.CREATED,
     )
     if country is not None:
