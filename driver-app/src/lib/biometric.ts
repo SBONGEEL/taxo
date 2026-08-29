@@ -58,6 +58,9 @@ const PREF_KEY = "taxo.driver.biometric.enabled";
 export type BiometryKind = "fingerprint" | "face" | "generic";
 
 export interface BiometryStatus {
+  /** **أهو جهازٌ أصليّ؟** — يفصل «متصفّحٌ لا ميزةَ فيه أصلاً» عن «جهازٌ يملكها
+   *  ولم تُسجَّل بعد». **والفرقُ هو ما يقرّر: أيُكتب سطرُ الإرشاد أم لا شيء.** */
+  native: boolean;
   /** **الجهازُ يملكها ومسجَّلةٌ فيه** — وإلا فلا زرَّ ولا مفتاحَ في الإعدادات. */
   available: boolean;
   kind: BiometryKind;
@@ -65,9 +68,13 @@ export interface BiometryStatus {
   enabled: boolean;
   /** **ثمّة رمزٌ محفوظٌ فعلاً** — والزرُّ لا يُرسم بدونه ولو كان التفضيلُ مشتعلاً. */
   armed: boolean;
+  /** **رمزُ المنصّة حين تكون غيرَ متاحة** — يُسجَّل للتشخيص **ولا يُعرض**:
+   *  السطرُ المعروضُ يقول ما يفعله القارئ، لا ما ردَّته المنصّة. */
+  code?: string;
 }
 
 export const UNAVAILABLE: BiometryStatus = {
+  native: false,
   available: false,
   kind: "generic",
   enabled: false,
@@ -107,16 +114,38 @@ export async function biometryStatus(): Promise<BiometryStatus> {
   if (!Capacitor.isNativePlatform()) return UNAVAILABLE;
   try {
     const check = await BiometricAuth.checkBiometry();
-    if (!check.isAvailable) return UNAVAILABLE;
+    if (!check.isAvailable) {
+      // **يُسجَّل السببُ ولا يُعرض**: القارئُ يحتاج ما يفعله، والمشخِّصُ يحتاج
+      // ما ردَّته المنصّة — وخلطُهما يجعل الشاشةَ تنطق برمزٍ لا يعني أحداً
+      console.warn(
+        `الدخول السريع غيرُ متاح — ${check.code ?? "بلا رمز"}: ${check.reason ?? ""}` +
+          ` · قويّةٌ متاحة: ${String(check.strongBiometryIsAvailable)}` +
+          ` · الجهازُ مؤمَّن: ${String(check.deviceIsSecure)}` +
+          ` · الأنواع: ${JSON.stringify(check.biometryTypes)}`,
+      );
+      return { ...UNAVAILABLE, native: true, code: check.code };
+    }
     const enabled = prefEnabled();
     // **«أمشتعلٌ التفضيل؟» غيرُ «أثمّة رمز؟»** — والخروجُ يمحو الثاني ويترك
     // الأول، فمن رسم الزرَّ على التفضيل وحدَه رسم زرّاً يفشل عند الضغط
     const armed = enabled ? (await readToken()) !== null : false;
-    return { available: true, kind: kindOf(check.biometryType), enabled, armed };
-  } catch {
+    return {
+      native: true,
+      available: true,
+      kind: kindOf(check.biometryType),
+      enabled,
+      armed,
+    };
+  } catch (error) {
     // **ملحقٌ لا يجيب يُقرأ «غيرُ متاح» لا يُسقط الشاشة**: هذه شاشةُ دخول،
-    // وسقوطُها يمنع الدخولَ بالطريق العاديِّ أيضاً
-    return UNAVAILABLE;
+    // وسقوطُها يمنع الدخولَ بالطريق العاديِّ أيضاً.
+    //
+    // **لكنّه `native: true` لا `false`** (صُحّح 2026-08-29): كان يعود
+    // `UNAVAILABLE` كاملاً — **فيُقرأ «متصفّح» وهو جهازٌ سقط ملحقُه**،
+    // فيختفي سطرُ الإرشاد ولا يبقى للقارئ ولا للمشخِّص أثر. **وهو الغيابُ
+    // الصامتُ بعينه، في الشيفرة التي كُتبت لتمنعه.**
+    console.warn("تعذّر سؤالُ الملحق عن البصمة", error);
+    return { ...UNAVAILABLE, native: true, code: "plugin_error" };
   }
 }
 

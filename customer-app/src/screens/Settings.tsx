@@ -114,6 +114,16 @@ export function SettingsScreen() {
           {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن
               يملكه**: `available` كاذبةٌ في المتصفّح وعلى جهازٍ بلا بصمةٍ
               مسجَّلة، فلا مفتاحَ ولا سطرَ يشرح ما لا يستطيعه القارئ. */}
+          {/* **الغيابُ الصامتُ عائلةُ «الشبكة ضعيفة»** (تصحيحُ المالك
+              2026-08-29): سطرٌ يقول **ما يفعله القارئ** ولا يدّعي سبباً لا
+              يعرفه. وفي المتصفّح لا سطرَ ولا مفتاح — `native` كاذبة. */}
+          {biometry?.native && !biometry.available ? (
+            <div className="p-16">
+              <p className="font-medium text-ink">الدخول السريع</p>
+              <p className="mt-2 text-14 text-muted">فعّل قفل الشاشة وبصمةً في إعدادات جهازك لاستعمال الدخول السريع.</p>
+            </div>
+          ) : null}
+
           {biometry?.available ? (
             <div className="flex items-center justify-between gap-12 p-16">
               <div className="min-w-0">
