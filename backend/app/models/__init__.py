@@ -195,3 +195,8 @@ __all__ = [
     "WithdrawalRequest",
     "WithdrawalStatus",
 ]
+from app.models.privacy import (  # noqa: F401
+    OrgProfile,
+    PrivacyPolicy,
+    UserPolicyConsent,
+)

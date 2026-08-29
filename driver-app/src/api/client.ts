@@ -83,6 +83,14 @@ let liveRefresh: string | null = null;
 /** يُملأ من `lib/biometric` — **حقنٌ لا استيراد**: `client` طبقةٌ تحته، واستيرادُ
  *  الأعلى من الأسفل يصنع حلقةً ويجعل الملحقَ يُحمَّل في المتصفّح بلا داعٍ. */
 let persistRefresh: (token: string) => void = () => {};
+
+/** **أالبصمةُ مشتعلة؟** — يُحقن من `lib/biometric` كالحاقن الذي قبله، فتبقى
+ *  طبقةُ `client` جاهلةً بالملحقات. والافتراضُ `false`: **بلا حقنٍ يعمل
+ *  التطبيقُ كما كان قبل الميزة**، لا كما لو كانت مشتعلة. */
+let biometricArmed: () => boolean = () => false;
+export function setBiometricArmedReader(fn: () => boolean) {
+  biometricArmed = fn;
+}
 export function setRefreshPersister(fn: (token: string) => void) {
   persistRefresh = fn;
 }
@@ -90,11 +98,26 @@ export function setRefreshPersister(fn: (token: string) => void) {
 export const tokens = {
   access: () => localStorage.getItem(ACCESS_KEY),
   refresh: () => liveRefresh ?? localStorage.getItem(REFRESH_KEY),
-  /** **يُستدعى بعد كلِّ تدوير** — فيبقى المخزَّنُ هو الحيَّ لا نسخةً منه. */
+  /** **يُستدعى بعد كلِّ تدوير** — فيبقى المخزَّنُ هو الحيَّ لا نسخةً منه.
+   *
+   * **والبيتُ واحدٌ فعلاً لا في التوثيق وحدَه** (صُحّح 2026-08-29): كان يكتب
+   * في `localStorage` **وفي المخزن الآمن معاً**، والنزعُ يقع في موضعٍ واحدٍ —
+   * لحظةَ الإشعال. **فكلُّ دخولٍ بكلمة المرور بعده يعيد الرمزَ إلى
+   * `localStorage`**، فيجد الإقلاعُ الباردُ رمزاً فيجدّد صامتاً — **ولا شاشةَ
+   * دخولٍ ولا زرّ**. أي أن الميزةَ تعمل مرّةً بعد الإشعال ثمّ تنام أبداً.
+   *
+   * **فالوجهةُ تُقرَّر هنا**: مشتعلةٌ ⇒ المخزنُ الآمن وحدَه، ومطفأةٌ ⇒
+   * `localStorage` كما كان.
+   */
   save(pair: { access_token: string; refresh_token: string }) {
     localStorage.setItem(ACCESS_KEY, pair.access_token);
     liveRefresh = pair.refresh_token;
-    localStorage.setItem(REFRESH_KEY, pair.refresh_token);
+    if (biometricArmed()) {
+      // **بيتٌ واحد**: لا نسخةَ ثانيةً تُغني عن البصمة وتُبطل البوّابة
+      localStorage.removeItem(REFRESH_KEY);
+    } else {
+      localStorage.setItem(REFRESH_KEY, pair.refresh_token);
+    }
     persistRefresh(pair.refresh_token);
   },
   /** **يُنزع من `localStorage` حين تُشعَل البصمة** — بيتٌ واحدٌ لا اثنان. */

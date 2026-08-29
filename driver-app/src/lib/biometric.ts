@@ -182,6 +182,12 @@ export async function forgetToken(): Promise<void> {
   }
 }
 
+/** **قراءةٌ متزامنةٌ للتفضيل** — يحتاجها `tokens.save` لتقرير وجهة الرمز،
+ *  ولا تسأل الملحقَ ولا القرص: التفضيلُ في `localStorage` وقراءتُه فورية. */
+export function isBiometricPreferred(): boolean {
+  return prefEnabled();
+}
+
 export async function enableBiometric(refreshToken: string | null): Promise<void> {
   localStorage.setItem(PREF_KEY, "1");
   if (refreshToken) await rememberToken(refreshToken);

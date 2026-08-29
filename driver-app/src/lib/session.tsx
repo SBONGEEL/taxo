@@ -107,6 +107,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setRefreshPersister((token) => {
       void rememberToken(token);
     });
+    // **وجهةُ الرمز تُقرَّر بالتفضيل** — فلا نسخةَ في `localStorage` تُغني
+    // عن البصمة وتُبطل البوّابة (صُحّح 2026-08-29)
+    setBiometricArmedReader(isBiometricPreferred);
   }, []);
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»

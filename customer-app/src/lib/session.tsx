@@ -133,6 +133,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setRefreshPersister((token) => {
       void rememberToken(token);
     });
+    // **وجهةُ الرمز تُقرَّر بالتفضيل** — فلا نسخةَ في `localStorage` تُغني
+    // عن البصمة وتُبطل البوّابة (صُحّح 2026-08-29)
+    setBiometricArmedReader(isBiometricPreferred);
   }, []);
 
   const signIn = useCallback(
