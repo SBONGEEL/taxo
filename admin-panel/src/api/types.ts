@@ -97,6 +97,10 @@ export interface CountryConfig {
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   quiet_hours_timezone: string | null;
+  /** **حسابُ كليك المستقبِل لهذا السوق** — يُضبط من اللوحة، ويُقرأ هنا فلا
+   *  يكتب التطبيقُ رقماً من عنده. **و`null` تعني «لم يُضبط»**: تُخفى القناةُ
+   *  كلُّها حينها — شاشةٌ تطلب تحويلاً بلا رقمٍ تُنتج حوالةً ضائعة. */
+  cliq_alias: string | null;
   verification: string;
   verification_channels: string[];
   otp_length: number | null;

@@ -21,6 +21,8 @@ from app.services import campaigns, otp, settings_service, verification
 async def build(session, country: CountryCode) -> CountryConfigOut:
     """إعدادات دولةٍ كما تراها الواجهات — قراءةٌ خالصة بلا إنشاء صفوف."""
     quiet = await campaigns.get_settings(session, country)
+    # **يُقرأ من الإعداد لا من نصّ** — والقناةُ تُخفى حين لا يُضبط
+    pay = await settings_service.get_payment_settings(session, country)
     channels = await verification.available_methods(session, country)
     method = channels[0] if channels else verification.NONE
     return CountryConfigOut(
@@ -35,6 +37,7 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         ),
         quiet_hours_end=quiet.quiet_hours_end.strftime("%H:%M") if quiet else None,
         quiet_hours_timezone=quiet.timezone if quiet else None,
+        cliq_alias=(pay.cliq_alias or None) if pay else None,
         verification=method,
         verification_channels=list(channels),
         otp_length=(

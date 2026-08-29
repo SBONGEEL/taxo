@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Integer, text
+from sqlalchemy import CheckConstraint, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
@@ -50,6 +50,12 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False, unique=True, index=True
     )
+    #: **حسابُ كليك المستقبِل لهذا السوق** — يُضبط من اللوحة (قرارُ المالك
+    #: 2026-08-29). **و`None` تعني «لم يُضبط» فتُخفى القناةُ كلُّها**: شاشةٌ
+    #: تطلب تحويلاً ولا تقول إلى أين تُنتج حوالةً ضائعة، وذاك أسوأُ من غياب
+    #: القناة. **ولكلِّ سوقٍ حسابُه** — كليكُ أردنيّ، وليبيا شيءٌ آخرُ أو لا شيء.
+    cliq_alias: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
     cliq_confirmation_hours: Mapped[int] = mapped_column(
         Integer, nullable=False, default=DEFAULT_CLIQ_CONFIRMATION_HOURS
     )
