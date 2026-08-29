@@ -115,9 +115,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // صالحة **يمحو المخزَّن** — فرمزٌ أبطله الخادمُ لا يُفتح ببصمةٍ إلى الأبد،
   // ولا يُترك ليُقرأ زرّاً يفشل عند الضغط.
   useEffect(() => {
-    setSessionLostHandler(() => {
+    setSessionLostHandler((serverRejected: boolean) => {
       setUser(null);
-      void forgetToken().then(refreshBiometry);
+      // **الثالثةُ من الأربع — ومشروطةٌ بأن يكون الخادمُ قد قال شيئاً**
+      // (صُحّح 2026-08-29): بلا رمزٍ في الذاكرة **لم يُرفض شيءٌ أصلاً**،
+      // وكان المحوُ يقع هنا **فيهدم الرمزَ عند أوّل إقلاعٍ بارد** — أي أن
+      // الميزةَ لا تعمل مرّةً واحدة.
+      if (serverRejected) void forgetToken().then(refreshBiometry);
+      else void refreshBiometry();
     });
   }, [refreshBiometry]);
 

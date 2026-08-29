@@ -102,8 +102,8 @@ export const tokens = {
 };
 
 /** يُستدعى حين يسقط التجديد — تلتقطه طبقة الجلسة فتعيد المستخدم للدخول. */
-let onSessionLost: () => void = () => {};
-export function setSessionLostHandler(handler: () => void) {
+let onSessionLost: (serverRejected: boolean) => void = () => {};
+export function setSessionLostHandler(handler: (serverRejected: boolean) => void) {
   onSessionLost = handler;
 }
 
@@ -111,9 +111,26 @@ export function setSessionLostHandler(handler: () => void) {
 
 let refreshing: Promise<boolean> | null = null;
 
+/** **هل رفض الخادمُ رمزاً قدّمناه فعلاً؟** — أم لم يكن لدينا ما نقدّمه؟
+ *
+ * **والفرقُ هو كلُّ شيء** (صُحّح 2026-08-29): «لا رمزَ ⇒ انتهت الجلسة» كان
+ * **صادقاً ببيتٍ واحد** — يومَ كان الرمزُ في `localStorage` أو لا مكانَ له.
+ * **فلمّا صار له بيتان** (المخزنُ الآمن حين تُشعَل البصمة) صار غيابُه عن
+ * الذاكرة **لا يعني غيابَه**.
+ *
+ * **وأثرُه كان أن الميزةَ لا تعمل أبداً**: إقلاعٌ بارد ⇒ الذاكرةُ فارغة ⇒
+ * «انتهت الجلسة» ⇒ `forgetToken()` **يمحو الرمزَ قبل أن يُستعمل مرّةً**.
+ */
+let serverRejectedToken = false;
+
 async function refreshSession(): Promise<boolean> {
   const token = tokens.refresh();
-  if (!token) return false;
+  if (!token) {
+    // **لا رمزَ في الذاكرة ليس إبطالاً من الخادم** — فلا يُمحى المخزَّن،
+    // وتُعرض شاشةُ الدخول بزرِّ البصمة إن كان ثمّة رمزٌ محفوظ
+    serverRejectedToken = false;
+    return false;
+  }
 
   const response = await fetch(`${API_URL}/auth/refresh`, {
     method: "POST",
@@ -122,6 +139,8 @@ async function refreshSession(): Promise<boolean> {
   });
 
   if (!response.ok) {
+    // **هنا وحدَه قال الخادمُ «لم تعد صالحة»** — رمزٌ قُدِّم فرُفض
+    serverRejectedToken = true;
     tokens.clear();
     return false;
   }
@@ -292,7 +311,9 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
   if (response.status === 401 && retry && !options.anonymous) {
     if (await refreshOnce()) return send<T>(path, options, false);
     tokens.clear();
-    onSessionLost();
+    // **يُبلَّغ أَرفض الخادمُ رمزاً أم لم يكن لدينا رمز** — والمحوُ للأوّل
+    // وحدَه (القاعدةُ الثالثة من الأربع: «ردُّ الخادم بأن الجلسة لم تعد صالحة»)
+    onSessionLost(serverRejectedToken);
   }
 
   if (!response.ok) throw await toError(response);

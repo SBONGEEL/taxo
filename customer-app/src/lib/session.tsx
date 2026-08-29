@@ -81,10 +81,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»
   useEffect(() => {
-    setSessionLostHandler(() => {
+    setSessionLostHandler((serverRejected: boolean) => {
       setUser(null);
-      // **الثالثةُ من الأربع**: ردُّ الخادم بأن الجلسة لم تعد صالحة يمحو المخزَّن
-      void forgetToken().then(() => biometryStatus().then(setBiometry));
+      // **الثالثةُ من الأربع**: ردُّ الخادم بأن الجلسة لم تعد صالحة يمحو
+      // المخزَّن. **وبلا رمزٍ في الذاكرة لم يقل الخادمُ شيئاً** — والمحوُ
+      // حينها يهدم الميزةَ عند أوّل إقلاعٍ بارد (صُحّح 2026-08-29).
+      if (serverRejected) void forgetToken().then(() => biometryStatus().then(setBiometry));
+      else void biometryStatus().then(setBiometry);
     });
   }, []);
 
