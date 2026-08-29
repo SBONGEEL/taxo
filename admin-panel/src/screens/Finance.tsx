@@ -30,6 +30,8 @@ import {
   markWithdrawalPaid,
   rejectTopup,
   rejectWithdrawal,
+  listCliqClaims,
+  confirmCliqClaim,
 } from "@/api/endpoints";
 import type { TopupRequest, Withdrawal, WithdrawalStatus } from "@/api/types";
 import { CancellationCharges } from "@/components/CancellationCharges";
@@ -67,7 +69,7 @@ function when(iso: string): string {
 /** **ورسومُ الإلغاء ثالثةٌ هنا لا في شاشةٍ مستقلة**: مالٌ ينتظر قراراً
  *  إدارياً، وهو بالضبط ما تعنيه هذه الشاشة — غير أن مالَه يمرّ بين
  *  **مستخدمَين** لا بين المنصّة وأحدهما، ولذلك لا زرَّ تحصيلٍ فيه. */
-type Tab = "withdrawals" | "topups" | "cancellations" | "desk";
+type Tab = "withdrawals" | "topups" | "claims" | "cancellations" | "desk";
 
 export function FinanceScreen() {
   const { isAdmin } = useSession();
@@ -76,6 +78,9 @@ export function FinanceScreen() {
   const payoutStopped =
     useCountryConfig(country)?.features.withdrawal_payout_enabled === false;
   const [tab, setTab] = useState<Tab>("withdrawals");
+  const [claims, setClaims] = useState<CliqClaim[] | null>(null);
+  const [claiming, setClaiming] = useState<CliqClaim | null>(null);
+  const [claimAmount, setClaimAmount] = useState("");
 
   const [withdrawals, setWithdrawals] = useState<Withdrawal[] | null>(null);
   const [topups, setTopups] = useState<TopupRequest[] | null>(null);
@@ -88,12 +93,14 @@ export function FinanceScreen() {
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [w, t] = await Promise.all([
+    const [w, t, c] = await Promise.all([
       listWithdrawals(),
       listTopups("pending"),
+      listCliqClaims(),
     ]);
     setWithdrawals(w);
     setTopups(t);
+    setClaims(c);
   }, []);
 
   useEffect(() => {
@@ -131,6 +138,8 @@ export function FinanceScreen() {
         options={[
           { key: "withdrawals", label: "طلبات السحب" },
           { key: "topups", label: "شحنات بانتظار التأكيد" },
+          // **مطالباتُ كليك اليدوية** — اشتراكاتٌ تنتظر «تأكيد الدفع»
+          { key: "claims", label: "مطالبات كليك" },
           { key: "cancellations", label: "رسوم الإلغاء" },
           // **مكتبُ الدفتر**: تصحيحٌ وشحنٌ إداريّ — بابان كانا بلا زرّ
           { key: "desk", label: "تصحيحُ الدفتر وشحنٌ إداريّ" },
@@ -141,7 +150,44 @@ export function FinanceScreen() {
       <SuccessNote message={done} />
 
       <div className="mt-12">
-        {tab === "desk" ? (
+        {tab === "claims" ? (
+          /* **مطالباتُ كليك اليدوية** — «تأكيد الدفع» بمبلغ المشرف. */
+          <Table
+            columns="1fr 1.4fr 1fr 1fr"
+            headers={["المطلوب", "المرجع", "الطلب", ""]}
+            rows={claims ?? []}
+            keyOf={(row) => row.id}
+            empty={{
+              title: "لا مطالبات معلّقة",
+              hint: "مطالبةُ كبتنٍ دفع اشتراكه بكليك تنتظر تأكيدك بعد أن يصل المال.",
+            }}
+            render={(row) => (
+              <>
+                <span className="font-semibold text-ink">
+                  {digits(row.amount)}
+                </span>
+                <span dir="ltr" className="text-start text-muted">
+                  {row.cart_id}
+                </span>
+                <span className="text-muted">{when(row.created_at)}</span>
+                <span className="flex justify-end gap-10">
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClaiming(row);
+                        setClaimAmount(row.amount);
+                      }}
+                      className="text-11.5 font-semibold text-ok"
+                    >
+                      تأكيد الدفع
+                    </button>
+                  ) : null}
+                </span>
+              </>
+            )}
+          />
+        ) : tab === "desk" ? (
           <WalletDesk onError={setError} />
         ) : tab === "cancellations" ? (
           <CancellationCharges onError={setError} />
@@ -296,6 +342,20 @@ export function FinanceScreen() {
         />
       ) : null}
 
+      {claiming ? (
+        <ConfirmClaimModal
+          claim={claiming}
+          amount={claimAmount}
+          onAmount={setClaimAmount}
+          onClose={() => setClaiming(null)}
+          onDone={(message) => {
+            setClaiming(null);
+            setDone(message);
+            void load();
+          }}
+        />
+      ) : null}
+
       {confirming ? (
         <ConfirmTopupModal
           request={confirming}
@@ -314,6 +374,110 @@ export function FinanceScreen() {
   );
 }
 
+
+
+/** **تأكيدُ دفعِ مطالبةٍ يدوية** — والمبلغُ مبلغُك أنت.
+ *
+ * **ولا رجعةَ له**: التأكيدُ يفعّل اشتراكاً. **ودونَ الثمن لا تفعيل** —
+ * المطالبةُ تبقى معلّقةً بفرقها مكتوباً، فترفض أو تنتظر التكملة.
+ */
+function ConfirmClaimModal({
+  claim,
+  amount,
+  onAmount,
+  onClose,
+  onDone,
+}: {
+  claim: CliqClaim;
+  amount: string;
+  onAmount: (value: string) => void;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const short = amount.trim() !== "" && Number(amount) < Number(claim.amount);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
+      onClick={onClose}
+    >
+      <div
+        className="w-modal max-w-full rounded-20 border border-line bg-surface p-24"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 className="mb-4 text-16 font-bold text-ink">تأكيد الدفع</h2>
+        <p className="mb-16 rounded-14 border border-warn bg-surface-2 px-14 py-12 text-12 leading-note text-ink">
+          التأكيد يفعّل الاشتراك ولا يُلغى. والتصحيح بقيدٍ مقابلٍ من التسوية.
+        </p>
+
+        <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
+          <span className="text-12.5 text-muted">المطلوب</span>
+          <span className="text-17 font-bold text-ink">
+            {digits(claim.amount)}
+          </span>
+        </div>
+
+        <Field
+          label="المبلغ الذي وصل حسابك فعلاً"
+          name="claim_credited"
+          dir="ltr"
+          inputMode="decimal"
+          value={amount}
+          onChange={(event) =>
+            onAmount(event.target.value.replace(/[^0-9.]/g, ""))
+          }
+        />
+        {short ? (
+          <p className="mt-8 text-11 leading-note text-warn-ink">
+            أقلُّ من المطلوب — لن يُفعَّل الاشتراك، وتبقى المطالبة معلّقة
+            بفرقها مكتوباً.
+          </p>
+        ) : null}
+
+        <ErrorNote message={error} />
+
+        <div className="mt-18 flex gap-10">
+          <Button
+            className="flex-1"
+            size="md"
+            loading={busy}
+            disabled={Number(amount) <= 0}
+            onClick={() => {
+              setBusy(true);
+              setError(null);
+              confirmCliqClaim(claim.id, amount.trim())
+                .then((row) =>
+                  onDone(
+                    row.status === "paid"
+                      ? "أُكّد الدفع — فُعِّل الاشتراك"
+                      : "سُجّل المبلغ — لم يُفعَّل الاشتراك لنقصه",
+                  ),
+                )
+                .catch((caught) =>
+                  setError(
+                    caught instanceof ApiError ? caught.message : "تعذّر التأكيد",
+                  ),
+                )
+                .finally(() => setBusy(false));
+            }}
+          >
+            أكّد الدفع
+          </Button>
+          <Button
+            className="flex-1"
+            size="md"
+            variant="secondary"
+            onClick={onClose}
+          >
+            تراجع
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** **تأكيدُ شحنة — والمبلغُ مبلغُك أنت** (قرارُ المالك 2026-08-29).
  *

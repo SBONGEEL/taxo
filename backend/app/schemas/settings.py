@@ -186,6 +186,12 @@ class PaymentSettingOut(BaseModel):
 
     id: uuid.UUID
     country_code: CountryCode
+    #: **حسابُ كليك المستقبِل ومدّةُ المراجعة الموعودة** — سياسةُ دفعٍ لكلِّ
+    #: سوق، **تُعدَّل من اللوحة بلا نشر**. و`cliq_alias = null` تُخفي القناة.
+    cliq_alias: str | None = None
+    cliq_qr_path: str | None = None
+    cliq_review_min_minutes: int
+    cliq_review_max_minutes: int
     cliq_confirmation_hours: int
     # مبالغُ البقشيش (المرحلة 12-و) — صفرٌ يعني «لم يُضبط» فتُخفى الميزة
     tip_preset_small: Decimal
@@ -203,6 +209,12 @@ class PaymentSettingUpdate(BaseModel):
     """
 
     cliq_confirmation_hours: int | None = Field(default=None, ge=1, le=168)
+    #: **الحسابُ المستقبِل** — وسلسلةٌ فارغةٌ تعني «انزعه» فتُخفى القناة
+    cliq_alias: str | None = Field(default=None, max_length=64)
+    #: **المدّةُ الموعودة** — «خلال {min} إلى {max} دقائق». وحدُّها الأعلى ساعةٌ:
+    #: وعدٌ بأكثرَ من ذلك لا يُقرأ انتظاراً بل إهمالاً
+    cliq_review_min_minutes: int | None = Field(default=None, ge=1, le=60)
+    cliq_review_max_minutes: int | None = Field(default=None, ge=1, le=60)
     tip_preset_small: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_preset_medium: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_max: Decimal | None = Field(default=None, ge=0, le=1000)

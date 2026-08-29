@@ -89,6 +89,11 @@ const WalletScreen = lazy(() =>
 const EarningsScreen = lazy(() =>
   import("@/screens/Earnings").then((m) => ({ default: m.EarningsScreen })),
 );
+const CliqSubscriptionScreen = lazy(() =>
+  import("@/screens/CliqSubscription").then((m) => ({
+    default: m.CliqSubscriptionScreen,
+  })),
+);
 const WithdrawalsScreen = lazy(() =>
   import("@/screens/Withdrawals").then((m) => ({
     default: m.WithdrawalsScreen,
@@ -429,6 +434,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <WalletScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/subscription/cliq/:claimId"
+                          element={
+                            <Guarded>
+                              <CliqSubscriptionScreen />
                             </Guarded>
                           }
                         />

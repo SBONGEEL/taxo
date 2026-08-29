@@ -8,6 +8,7 @@ import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
 import { API_URL, api, upload } from "@/api/client";
 import type {
+  CliqSubscriptionClaim,
   MyProgress,
   Advance,
   AdvanceState,
@@ -521,3 +522,16 @@ export const reportRiderPhoto = (rideId: string) =>
  * والشاشةُ مقفلة** — فيُقرأ صمتُها «لا طلبات اليوم».
  */
 export const locationBroadcastUrl = () => `${API_URL}/drivers/me/location`;
+
+// ------------------------------------------- دفعُ الاشتراك بكليك (يدويّ)
+//
+// **ولا يمرّ بالمحفظة**: مالُ الاشتراك لو مرّ بها لحمل رصيدُه لحظةً مالاً ليس
+// أجراً فصار قابلاً للسحب. والبيتُ `provider_orders` بغرضٍ مُصرَّح.
+
+/** يفتح مطالبةً بسعر العرض — **ولا اشتراكَ قبل تأكيد الدفع**. */
+export const payySubscriptionWithCliq = (plan_id: string) =>
+  api.post<CliqSubscriptionClaim>("/subscriptions/cliq", { plan_id });
+
+/** مطالباتي وحالُها — **بانتظار التأكيد · مؤكَّد · مرفوض**. */
+export const listMyCliqClaims = () =>
+  api.get<CliqSubscriptionClaim[]>("/subscriptions/cliq");

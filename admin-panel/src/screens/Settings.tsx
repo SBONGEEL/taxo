@@ -53,6 +53,7 @@ import {
   updateWalletSettings,
   listMapSettings,
   updateMapSettings,
+  uploadCliqQr,
 } from "@/api/endpoints";
 import type {
   AdvanceSetting,
@@ -1062,6 +1063,10 @@ function PaymentForm({
   onError: (caught: unknown) => void;
 }) {
   const [hours, setHours] = useState(String(row.cliq_confirmation_hours));
+  const [alias, setAlias] = useState(row.cliq_alias ?? "");
+  const [reviewMin, setReviewMin] = useState(String(row.cliq_review_min_minutes));
+  const [reviewMax, setReviewMax] = useState(String(row.cliq_review_max_minutes));
+  const [qrBusy, setQrBusy] = useState(false);
   const [small, setSmall] = useState(row.tip_preset_small);
   const [medium, setMedium] = useState(row.tip_preset_medium);
   const [max, setMax] = useState(row.tip_max);
@@ -1114,6 +1119,106 @@ function PaymentForm({
       >
         حفظ
       </Button>
+
+      {/* **حسابُ كليك المستقبِل ومدّةُ المراجعة** (قرارُ المالك 2026-08-29)
+          — سياسةُ دفعٍ لكلِّ سوق، **فبيتُها `payment_settings`** مع مهلة كليك.
+          **وتعديلُ حسابٍ يستقبل مالَ الناس لا يكون نشراً.** */}
+      <div className="mt-18 border-t border-line pt-14">
+        <h3 className="mb-2 text-12.5 font-bold text-ink">استقبال كليك</h3>
+        <p className="mb-12 text-11 leading-snug text-muted">
+          الحساب الذي يحوّل إليه الكبتن ثمنَ اشتراكه — ويُعرض له كما هو.
+          وبلا حساب <strong>تُخفى طريقةُ كليك كلُّها</strong>: شاشةٌ تطلب
+          تحويلاً بلا رقمٍ تُنتج حوالةً ضائعة.
+        </p>
+        <Field
+          name="cliq_alias"
+          label="حساب كليك (alias)"
+          dir="ltr"
+          value={alias}
+          disabled={disabled}
+          maxLength={64}
+          onChange={(event) => setAlias(event.target.value)}
+        />
+
+        {/* **العددان وعدٌ لمن يدفع** — «خلال ٣ إلى ٥ دقائق» تصير كذباً يومَ
+            تكثر الطلباتُ ولا تلحق المراجعة، **فتُعدَّل بلا نشر** */}
+        <div className="mt-12 grid grid-cols-2 gap-10">
+          <Field
+            name="cliq_review_min_minutes"
+            label="أدنى دقائق المراجعة"
+            dir="ltr"
+            inputMode="numeric"
+            value={reviewMin}
+            disabled={disabled}
+            onChange={(event) =>
+              setReviewMin(event.target.value.replace(/[^0-9]/g, ""))
+            }
+          />
+          <Field
+            name="cliq_review_max_minutes"
+            label="أعلى دقائق المراجعة"
+            dir="ltr"
+            inputMode="numeric"
+            value={reviewMax}
+            disabled={disabled}
+            onChange={(event) =>
+              setReviewMax(event.target.value.replace(/[^0-9]/g, ""))
+            }
+          />
+        </div>
+        <p className="mt-6 text-11 leading-snug text-muted">
+          تظهر للكبتن هكذا: «ستتم المراجعة خلال {digits(reviewMin || "0")} إلى{" "}
+          {digits(reviewMax || "0")} دقائق».
+        </p>
+
+        <Button
+          className="mt-14"
+          size="sm"
+          disabled={disabled || !reviewMin || !reviewMax}
+          loading={busy}
+          onClick={() =>
+            save(
+              {
+                cliq_alias: alias.trim(),
+                cliq_review_min_minutes: Number(reviewMin),
+                cliq_review_max_minutes: Number(reviewMax),
+              },
+              "حُفظ استقبال كليك",
+            )
+          }
+        >
+          حفظ
+        </Button>
+
+        {/* **صورةُ الرمز تُرفع ولا تُولَّد**: رمزُ كليك يصدره القابضُ بحقوله
+            المعيارية، **وباركودٌ لا يعمل أسوأُ من غيابه**. والشاشةُ تعمل
+            بلا صورة — حسابٌ ومبلغٌ ومرجع. */}
+        <div className="mt-16 border-t border-line pt-12">
+          <h3 className="mb-2 text-12.5 font-bold text-ink">صورة الباركود</h3>
+          <p className="mb-10 text-11 leading-snug text-muted">
+            ارفع الرمزَ الذي يولّده تطبيقُ بنكك. ولا يُولَّد من الحساب:
+            معيارُه يحمل حقولاً لا تُشتقّ منه — وبلا صورةٍ تعمل الشاشةُ
+            بالحساب والمبلغ والمرجع.
+            {row.cliq_qr_path ? " — مرفوعةٌ الآن." : " — لم تُرفع بعد."}
+          </p>
+          <input
+            type="file"
+            accept="image/*"
+            disabled={disabled || qrBusy}
+            aria-label="صورة باركود كليك"
+            className="block w-full text-11 text-muted"
+            onChange={(event) => {
+              const picked = event.target.files?.[0];
+              if (!picked) return;
+              setQrBusy(true);
+              uploadCliqQr(row.country_code, picked)
+                .then(() => onSaved("رُفعت صورة الباركود"))
+                .catch((caught) => onError(caught))
+                .finally(() => setQrBusy(false));
+            }}
+          />
+        </div>
+      </div>
 
       {/* مبالغُ البقشيش (12-و) — في بطاقة **سياسات الدفع** لا في «التسعيرة»:
           الجدولُ هو `payment_settings`، وحقلٌ يسكن شاشةً غير جدوله يجعل

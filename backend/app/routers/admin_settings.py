@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, File, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,6 +50,7 @@ from app.models.advance import AdvanceSetting
 from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
+from app.core import storage
 from app.services import audit, money_guards, otp_limits, settings_service
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
@@ -715,3 +716,37 @@ async def list_audit_logs(
         AuditLogOut.model_validate(entry).model_copy(update={"actor_name": name})
         for entry, name in rows
     ]
+
+
+@router.put("/payments/{country_code}/cliq-qr", response_model=PaymentSettingOut)
+async def upload_cliq_qr(
+    country_code: CountryCode,
+    admin: AdminUser,
+    session: DbSession,
+    file: UploadFile = File(...),
+) -> PaymentSettingOut:
+    """**صورةُ رمز كليك لهذا السوق — تُرفع ولا تُولَّد** (قرارُ المالك 2026-08-29).
+
+    **ولمَ لا تُولَّد**: رمزُ كليك **يصدره القابض** بحقوله المعيارية —
+    `cliq/acquirer.py` يأخذه من جوابه ويرمي إن غاب، **والمحاكي يصنع صيغةً
+    مخترعةً للفحص**. فاشتقاقُه من alias يعطي رمزاً **قد لا يقبله أيُّ بنك**،
+    **وباركودٌ لا يعمل أسوأُ من غيابه**.
+
+    **وتمرّ بـ`storage.save`** كبقيّة ما يُرفع: يشمّ النوعَ من البايتات ويحدّ
+    الحجمَ — **ولا بابَ ثانياً لبايتاتٍ تصل من الشبكة**.
+    """
+    setting = await settings_service.get_or_create_payment_settings(
+        session, country_code
+    )
+    stored = await storage.save(file, folder=str(setting.id))
+    setting.cliq_qr_path = stored.path
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="payment_setting",
+        entity_id=setting.id,
+        details={"country_code": country_code.value, "changed_fields": ["cliq_qr_path"]},
+    )
+    await session.commit()
+    return PaymentSettingOut.model_validate(setting)

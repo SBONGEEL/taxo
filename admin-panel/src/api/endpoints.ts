@@ -484,11 +484,23 @@ export const updatePaymentSettings = (
   country: CountryCode,
   payload: {
     cliq_confirmation_hours?: number;
+    /** **الحساب المستقبِل** — وسلسلةٌ فارغةٌ تعني «انزعه» فتُخفى القناة. */
+    cliq_alias?: string;
+    /** **المدّة الموعودة** — تُحقن في جملة «خلال {min} إلى {max} دقائق». */
+    cliq_review_min_minutes?: number;
+    cliq_review_max_minutes?: number;
     tip_preset_small?: string;
     tip_preset_medium?: string;
     tip_max?: string;
   },
 ) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
+
+/** **صورةُ الباركود تُرفع ولا تُولَّد** — معيارُ كليك يحمل حقولاً لا تُشتقّ
+ *  من الحساب، **وباركودٌ لا يعمل أسوأُ من غيابه**. */
+export const uploadCliqQr = (country: CountryCode, file: File) =>
+  upload<PaymentSetting>(`/admin/settings/payments/${country}/cliq-qr`, file, {
+    method: "PUT",
+  });
 
 // ------------------------------------------------- إحالةُ السائقات (12-ح)
 
@@ -1135,3 +1147,15 @@ export async function photoReportBlob(reportId: string): Promise<string> {
  */
 export const backupDownloadUrl = (token: string) =>
   `${API_URL}/admin/backups/download/${token}`;
+
+// ------------------------------- مطالباتُ كليك اليدوية (اشتراكات الكباتن)
+//
+// **التحصيلُ خطوةٌ واحدةٌ يقرأها الاشتراك**: «تأكيد الدفع» يملؤها المشرفُ اليوم
+// بيده، ويملؤها القابضُ غداً بإشعاره — **وما بعدها لا يعرف مَن ملأها**.
+
+export const listCliqClaims = (country?: CountryCode) =>
+  api.get<CliqClaim[]>("/admin/cliq-claims", { query: { country } });
+
+/** **المبلغُ مبلغُ المشرف** — ودونَ الثمن **لا تفعيل**، والمطالبةُ تبقى بفرقها. */
+export const confirmCliqClaim = (id: string, amount: string) =>
+  api.post<CliqClaim>(`/admin/cliq-claims/${id}/confirm`, { amount });

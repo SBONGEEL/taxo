@@ -918,3 +918,25 @@ export interface NearbyDriver {
   vehicle_category: VehicleCategory;
   skin: MapSkin | null;
 }
+
+/** مطالبةُ دفعٍ يدويٍّ بكليك — مرآةُ `CliqSubscriptionOut`.
+ *
+ * **والعددان من اللوحة لا من الشيفرة**: «تتم المراجعة خلال {min} إلى {max}
+ * دقائق» **وعدٌ يُعدَّل بلا نشر** يومَ تكثر الطلباتُ ولا تلحق المراجعة.
+ *
+ * **و`qr_url` قد تكون `null`** — والشاشةُ تعمل بلا صورة: حسابٌ ومبلغٌ ومرجع،
+ * وسطرٌ يقول إن الرمزَ لم يُرفع. **فلا تسقط على حقلٍ فارغ.**
+ */
+export interface CliqSubscriptionClaim {
+  id: string;
+  cart_id: string;
+  amount: string;
+  currency: Currency;
+  status: "created" | "paid" | "failed" | "cancelled";
+  qr_url: string | null;
+  alias: string;
+  review_min_minutes: number;
+  review_max_minutes: number;
+  failure_reason: string | null;
+  created_at: string;
+}

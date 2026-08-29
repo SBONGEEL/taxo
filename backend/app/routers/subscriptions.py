@@ -16,9 +16,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, status
 
-from app.core import rate_limit
+from app.core import rate_limit, storage
+from fastapi.responses import FileResponse
+
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep
-from app.core.exceptions import RateLimited
+from app.core.exceptions import NotFound, RateLimited
 from app.schemas.payment import CardOrderOut
 from app.schemas.settings import SubscriptionPlanOut
 from app.schemas.subscription import (
@@ -241,3 +243,18 @@ async def list_my_cliq_claims(
         )
         for o in rows
     ]
+
+
+@router.get("/cliq/qr")
+async def serve_cliq_qr(
+    _driver: CurrentDriver, user: CurrentUser, session: DbSession
+) -> FileResponse:
+    """**صورةُ الرمز لسوق هذا الكبتن** — تُخدَم من التخزين لا من الشبكة.
+
+    **و404 حين لا صورة**: الشاشةُ تعمل بلا رمزٍ أصلاً (حسابٌ ومبلغٌ ومرجع)،
+    **فغيابُ الصورة ليس عطباً يُسقط شيئاً**.
+    """
+    setting = await settings_service.get_payment_settings(session, user.country_code)
+    if setting is None or not setting.cliq_qr_path:
+        raise NotFound("لم تُرفع صورةُ الرمز لهذا السوق")
+    return FileResponse(storage.resolve(setting.cliq_qr_path))

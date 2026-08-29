@@ -434,6 +434,12 @@ export interface PaymentSetting {
   id: string;
   country_code: CountryCode;
   cliq_confirmation_hours: number;
+  /** **حسابُ كليك المستقبِل** — و`null` تُخفي القناةَ كلَّها. */
+  cliq_alias: string | null;
+  /** **صورةُ الباركود** — `null` تعني «لم تُرفع»، والشاشةُ تعمل بدونها. */
+  cliq_qr_path: string | null;
+  cliq_review_min_minutes: number;
+  cliq_review_max_minutes: number;
   /** مبالغُ البقشيش (12-و) — **صفرٌ يعني «لم يُضبط»** فتُخفى الميزةُ في التطبيق. */
   tip_preset_small: string;
   tip_preset_medium: string;
@@ -1297,3 +1303,17 @@ export type SkinArtworkPreview = {
   store_bytes: number;
   map_bytes: number;
 };
+
+/** مطالبةُ دفعٍ يدويّة — **ومصدرُها معها** فيُقرأ في التدقيق ولا يُخمَّن. */
+export interface CliqClaim {
+  id: string;
+  cart_id: string;
+  user_id: string;
+  amount: string;
+  currency: Currency;
+  status: "created" | "paid" | "failed" | "cancelled";
+  source: "manual" | "acquirer";
+  purpose: "ride" | "wallet_topup" | "subscription";
+  failure_reason: string | null;
+  created_at: string;
+}

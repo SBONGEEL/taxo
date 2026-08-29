@@ -39,6 +39,7 @@ import {
   getMySubscription,
   getSubscriptionHistory,
   updateDriver,
+  payySubscriptionWithCliq,
 } from "@/api/endpoints";
 import type {
   DriverSubscription,
@@ -46,7 +47,9 @@ import type {
   SubscriptionDuration,
   SubscriptionPlan,
 } from "@/api/types";
-import { useFeature } from "@/lib/config";
+import { useNavigate } from "react-router-dom";
+
+import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
@@ -112,7 +115,10 @@ export function SubscriptionScreen() {
   const { user } = useSession();
   // القناةُ تظهر إن كان مفتاحُها مرفوعاً في دولة الكبتن — والغيابُ معطَّل
   // دائماً (القسم 4). ولا اسمَ ميزةٍ مكتوبٌ هنا إلا هذا الواحد
+  const navigate = useNavigate();
   const cardEnabled = useFeature(user?.country_code, "card_enabled");
+  // **حسابُ كليك لسوقه** — و`null` تعني «لم يُضبط»، فالطريقةُ تُعطَّل بعلّتها
+  const cliqAlias = useCountryConfig(user?.country_code)?.cliq_alias ?? null;
   // **المفتاحُ تفاؤليٌّ ويعود عند الرفض**: يجب أن يتحرك تحت الإصبع، ولا يجوز
   // أن يبقى مرفوعاً وقد رفضت الخلفيةُ — إذنٌ بمالٍ يُقرأ من الشاشة
   const { profile, refresh: refreshDriver } = useDriver();
@@ -176,6 +182,23 @@ export function SubscriptionScreen() {
     } catch (caught) {
       setError(
         caught instanceof ApiError ? caught.message : "تعذّر إتمام الشراء",
+      );
+    } finally {
+      setBuying(null);
+    }
+  }
+
+  /** **يفتح مطالبةً يدويّةً ثمّ ينتقل إلى شاشة الدفع** — ولا اشتراكَ قبل
+   *  تأكيد المشرف. */
+  async function payWithCliq(planId: string) {
+    setBuying(planId);
+    setError(null);
+    try {
+      const claim = await payySubscriptionWithCliq(planId);
+      navigate(`/subscription/cliq/${claim.id}`);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "تعذّر فتح صفحة الدفع",
       );
     } finally {
       setBuying(null);
@@ -493,19 +516,48 @@ export function SubscriptionScreen() {
               >
                 خصم من المحفظة
               </Button>
-              {cardEnabled ? (
-                <Button
-                  size="md"
-                  variant="secondary"
-                  disabled={buying !== null}
-                  onClick={() => {
-                    const plan = confirming;
-                    setConfirming(null);
-                    void buyWithCard(plan.id);
-                  }}
-                >
-                  الدفع ببطاقة
-                </Button>
+              {/* **ما لا عقدَ له يُعرض معطَّلاً بعلّته لا يُخفى** (قرارُ
+                  المالك 2026-08-29): الإخفاءُ يجعل الكبتنَ يظنّ الطريقةَ
+                  **غيرَ مدعومةٍ في التطبيق** فيسأل الدعمَ عن ميزةٍ يراها في
+                  غيره؛ **والمعطَّلُ بعلّته يقول «قادمة» لا «غيرُ موجودة»**.
+                  وهي قاعدةُ شاشة الإقلاع نفسُها: **يقول ما يعرفه.** */}
+              <Button
+                size="md"
+                variant="secondary"
+                disabled={!cardEnabled || buying !== null}
+                onClick={() => {
+                  const plan = confirming;
+                  setConfirming(null);
+                  void buyWithCard(plan.id);
+                }}
+              >
+                الدفع ببطاقة
+              </Button>
+              {!cardEnabled ? (
+                <p className="-mt-4 text-11 leading-note text-muted">
+                  الدفع بالبطاقة غير متاح بعد — لم يُفعَّل عقد المزوّد.
+                </p>
+              ) : null}
+
+              {/* **كليك اليدويّ** — يظهر حين يكون لسوقه حسابٌ مضبوط، ويُعطَّل
+                  بعلّته حين لا يكون. **ولا يُدّعى أنه بوّابةٌ آلية**: الشاشةُ
+                  التالية تقول إن التحصيل يدويّ. */}
+              <Button
+                size="md"
+                variant="secondary"
+                disabled={!cliqAlias || buying !== null}
+                onClick={() => {
+                  const plan = confirming;
+                  setConfirming(null);
+                  void payWithCliq(plan.id);
+                }}
+              >
+                الدفع بكليك
+              </Button>
+              {!cliqAlias ? (
+                <p className="-mt-4 text-11 leading-note text-muted">
+                  الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.
+                </p>
               ) : null}
               <button
                 type="button"

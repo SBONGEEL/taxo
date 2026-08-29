@@ -107,6 +107,8 @@ export default {
       width: { device: "390px", drawer: "440px", side: "340px", "side-sm": "290px" },
       maxWidth: {
         modal: "560px", doc: "720px", paper: "620px", panel: "1780px", prose: "70ch",
+        // **رمزُ كليك** — مربّعٌ يُمسح بالهاتف: أصغرُ منه يصعب مسحُه
+        qr: "240px",
       },
       minWidth: { menu: "236px" },
       boxShadow: {
