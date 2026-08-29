@@ -391,8 +391,12 @@ export const setDriverGender = (driverId: string, gender: Gender) =>
 export const listTopups = (status?: TopupStatus) =>
   api.get<TopupRequest[]>("/admin/topups", { query: { status } });
 
-export const confirmTopup = (id: string) =>
-  api.post<TopupRequest>(`/admin/topups/${id}/confirm`, {});
+/** **المبلغُ مبلغُ المشرف** — ما وصل الحسابَ فعلاً، لا ما ادّعاه المستخدم.
+ *  و`undefined` تعني «بمبلغه كما هو» لمن طابق ما وصل. */
+export const confirmTopup = (id: string, amount?: string) =>
+  api.post<TopupRequest>(`/admin/topups/${id}/confirm`, {
+    amount: amount ?? null,
+  });
 
 export const rejectTopup = (id: string, note?: string) =>
   api.post<TopupRequest>(`/admin/topups/${id}/reject`, { note: note ?? null });

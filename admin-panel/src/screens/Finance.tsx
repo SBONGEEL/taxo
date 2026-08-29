@@ -80,6 +80,8 @@ export function FinanceScreen() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[] | null>(null);
   const [topups, setTopups] = useState<TopupRequest[] | null>(null);
   const [paying, setPaying] = useState<Withdrawal | null>(null);
+  const [confirming, setConfirming] = useState<TopupRequest | null>(null);
+  const [credited, setCredited] = useState("");
   const form = useFormError();
   const error = form.message;
   const setError = form.setMessage;
@@ -245,12 +247,10 @@ export function FinanceScreen() {
                     <>
                       <button
                         type="button"
-                        onClick={() =>
-                          void run(
-                            () => confirmTopup(row.id),
-                            "أُكّدت الشحنة — قُيّد الرصيد",
-                          )
-                        }
+                        onClick={() => {
+                          setConfirming(row);
+                          setCredited(row.amount);
+                        }}
                         className="text-11.5 font-semibold text-ok"
                       >
                         تأكيد
@@ -295,8 +295,130 @@ export function FinanceScreen() {
           }}
         />
       ) : null}
+
+      {confirming ? (
+        <ConfirmTopupModal
+          request={confirming}
+          amount={credited}
+          onAmount={setCredited}
+          onClose={() => setConfirming(null)}
+          onDone={(message) => {
+            setConfirming(null);
+            setDone(message);
+            void load();
+          }}
+        />
+      ) : null}
     </Shell>
     </FormErrors>
+  );
+}
+
+
+/** **تأكيدُ شحنة — والمبلغُ مبلغُك أنت** (قرارُ المالك 2026-08-29).
+ *
+ * **ولمَ لوحةٌ لا نقرةٌ مباشرة**: التأكيدُ **يكتب قيداً في دفتر مالِ إنسان**،
+ * **ولا رجعةَ له من هذا الباب** — `reject` يشترط `PENDING` فيردّ 409 على
+ * المؤكَّد. **ونقرةٌ واحدةٌ تفعل ما لا يُلغى ليست زرّاً بل فخّ.**
+ *
+ * **والسطرُ يُقرأ قبل النقر لا بعده** (قرارُ المالك): من نقر ثمّ رأى 409
+ * **يبحث عن بابٍ لا وجودَ له** — ويسأل الدعمَ عن مالٍ تحرّك.
+ *
+ * **ودعوى المستخدم تُعرض ولا تُصرف**: تُقرأ لتُقارَن بما وصل، والمُدخَلُ هو
+ * ما قرأه المشرفُ في كشفه.
+ */
+function ConfirmTopupModal({
+  request,
+  amount,
+  onAmount,
+  onClose,
+  onDone,
+}: {
+  request: TopupRequest;
+  amount: string;
+  onAmount: (value: string) => void;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const differs = amount.trim() !== "" && amount.trim() !== request.amount;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
+      onClick={onClose}
+    >
+      <div
+        className="w-modal max-w-full rounded-20 border border-line bg-surface p-24"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 className="mb-4 text-16 font-bold text-ink">تأكيد الشحنة</h2>
+
+        {/* **السطرُ الذي يُقرأ قبل النقر** — لا رسالةَ خطأٍ بعده */}
+        <p className="mb-16 rounded-14 border border-warn bg-surface-2 px-14 py-12 text-12 leading-note text-ink">
+          التأكيد لا يُلغى. والتصحيح بقيدٍ مقابلٍ من التسوية، لا بإلغاء هذه
+          الشحنة.
+        </p>
+
+        <div className="mb-16 flex items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12">
+          <span className="text-12.5 text-muted">ما كتبه صاحبُ الطلب</span>
+          <span className="text-15 font-bold text-ink">
+            {digits(request.amount)}
+          </span>
+        </div>
+
+        <Field
+          label="المبلغ الذي وصل حسابك فعلاً"
+          name="credited"
+          dir="ltr"
+          inputMode="decimal"
+          value={amount}
+          onChange={(event) =>
+            onAmount(event.target.value.replace(/[^0-9.]/g, ""))
+          }
+        />
+        {differs ? (
+          <p className="mt-8 text-11 leading-note text-warn-ink">
+            يخالف ما كتبه — سيُقيَّد ما أدخلتَه أنت، ويبقى ما كتبه في سجلّ
+            الطلب.
+          </p>
+        ) : null}
+
+        <ErrorNote message={error} />
+
+        <div className="mt-18 flex gap-10">
+          <Button
+            className="flex-1"
+            size="md"
+            loading={busy}
+            disabled={Number(amount) <= 0}
+            onClick={() => {
+              setBusy(true);
+              setError(null);
+              confirmTopup(request.id, amount.trim())
+                .then(() => onDone("أُكّدت الشحنة — قُيّد الرصيد"))
+                .catch((caught) =>
+                  setError(
+                    caught instanceof ApiError ? caught.message : "تعذّر التأكيد",
+                  ),
+                )
+                .finally(() => setBusy(false));
+            }}
+          >
+            أكّد وقيّد
+          </Button>
+          <Button
+            className="flex-1"
+            size="md"
+            variant="secondary"
+            onClick={onClose}
+          >
+            تراجع
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -918,3 +918,19 @@ export interface NearbyDriver {
   vehicle_category: VehicleCategory;
   skin: MapSkin | null;
 }
+
+/** طلبُ شحنٍ يدويٌّ — مرآةُ `TopupRequestOut`. **والحالُ ثلاثةٌ يراها صاحبُه**:
+ *  `pending` بانتظار التأكيد · `confirmed` مؤكَّد · `rejected` مرفوض. */
+export interface TopupRequest {
+  id: string;
+  owner_id: string;
+  method: "cliq" | "cash" | "card";
+  amount: string;
+  currency: Currency;
+  reference: string | null;
+  note: string | null;
+  status: "pending" | "confirmed" | "rejected";
+  transaction_id: string | null;
+  created_at: string;
+  processed_at: string | null;
+}

@@ -8,6 +8,7 @@ import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
 import { API_URL, api, upload } from "@/api/client";
 import type {
+  TopupRequest,
   MyProgress,
   Advance,
   AdvanceState,
@@ -521,3 +522,21 @@ export const reportRiderPhoto = (rideId: string) =>
  * والشاشةُ مقفلة** — فيُقرأ صمتُها «لا طلبات اليوم».
  */
 export const locationBroadcastUrl = () => `${API_URL}/drivers/me/location`;
+
+// ------------------------------------------------------ شحنُ المحفظة (كليك)
+//
+// **ومحفظةُ الكبتن مُعلَنةٌ في المسار** (`?wallet=driver`) — **لا تُشتقّ من
+// دور**: حاملُ الدورين يعلن بسياق فعله، ومن لم يعلن يرتدّ بالخطأ المسمّى
+// (SPEC §22). **والباب هو بابُ الراكب نفسُه** — لا ثانيَ له.
+
+/** طلبُ شحنٍ يدويٍّ ينتظر تأكيدَ الإدارة — لا رصيدَ يتغيّر قبله. */
+export const createTopupRequest = (amount: string, reference: string) =>
+  api.post<TopupRequest>("/wallet/me/topups?wallet=driver", {
+    method: "cliq",
+    amount,
+    reference,
+  });
+
+/** طلباتُ الشحن وحالُها — «بانتظار التأكيد · مؤكَّد · مرفوض». */
+export const listMyTopups = (limit = 20, offset = 0) =>
+  api.get<TopupRequest[]>("/wallet/me/topups", { query: { limit, offset } });

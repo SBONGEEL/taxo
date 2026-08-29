@@ -58,6 +58,10 @@ export function WalletScreen() {
     useCountryConfig(profile?.user?.country_code)?.features
       .withdrawal_payout_enabled === false;
 
+  // **الحسابُ المستقبِلُ لسوقه** — و`null` تعني «لم يُضبط»، فلا زرَّ أصلاً
+  const cliqAlias =
+    useCountryConfig(profile?.user?.country_code)?.cliq_alias ?? null;
+
   const [wallet, setWallet] = useState<DriverWallet | null>(null);
   const [entries, setEntries] = useState<WalletTransaction[]>([]);
   const [holds, setHolds] = useState<Withdrawal[]>([]);
@@ -133,6 +137,19 @@ export function WalletScreen() {
             >
               طلبات السحب
             </button>
+            {/* **الشحنُ للكبتن** (قرارُ المالك 2026-08-29): محفظتُه كانت
+                مصرفاً لا صندوقاً — **والخلفيةُ تقبله منذ نشأتها**، والمانعُ
+                هذا الزرُّ الغائب. **ولا يظهر بلا حسابٍ مضبوطٍ لسوقه**:
+                شاشةٌ تطلب تحويلاً بلا رقمٍ تُنتج حوالةً ضائعة. */}
+            {cliqAlias ? (
+              <button
+                type="button"
+                onClick={() => navigate("/wallet/topup")}
+                className="pressable rounded-full border border-line px-12 py-6 text-12 font-semibold text-muted"
+              >
+                شحن المحفظة
+              </button>
+            ) : null}
           </div>
         </div>
 
