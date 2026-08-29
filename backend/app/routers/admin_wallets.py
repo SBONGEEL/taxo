@@ -14,10 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
-from app.core.exceptions import NotFound
+from app.core.exceptions import InvalidInput, NotFound
 from app.models.driver import Driver
 from app.models.enums import (
     AuditAction,
+    CountryCode,
     TopupRequestStatus,
     WalletTransactionType,
     WithdrawalStatus,
@@ -27,6 +28,7 @@ from app.schemas.wallet import (
     AdjustmentCreate,
     AdminTopupCreate,
     MarkPaidRequest,
+    CliqClaimOut,
     ConfirmTopup,
     RejectRequest,
     TopupRequestOut,
@@ -36,7 +38,7 @@ from app.schemas.wallet import (
     WithdrawalOut,
     WithdrawalPayoutOut,
 )
-from app.services import commission_view
+from app.services import cliq_subscriptions, commission_view
 from app.services import (
     audit,
     cancellation,
@@ -358,3 +360,36 @@ async def mark_withdrawal_paid(
     )
     await session.commit()
     return WithdrawalOut.model_validate(request)
+
+
+# ------------------------------------------- مطالباتُ كليك اليدوية (اشتراكات)
+
+
+@router.get("/cliq-claims", response_model=list[CliqClaimOut])
+async def list_cliq_claims(
+    _: AdminUser, session: DbSession, country: CountryCode | None = None
+) -> list[CliqClaimOut]:
+    """المطالباتُ اليدويةُ المعلّقة — **ما ينتظر عينَ مشرف**."""
+    rows = await cliq_subscriptions.list_pending(session, country=country)
+    return [CliqClaimOut.model_validate(row) for row in rows]
+
+
+@router.post("/cliq-claims/{order_id}/confirm", response_model=CliqClaimOut)
+async def confirm_cliq_claim(
+    order_id: uuid.UUID,
+    payload: ConfirmTopup,
+    admin: AdminUser,
+    session: DbSession,
+) -> CliqClaimOut:
+    """**تأكيدُ الدفع** — الخطوةُ الواحدةُ التي يقرأها الاشتراك.
+
+    **والمبلغُ مبلغُ المشرف**، **ولا تفعيلَ بأقلَّ من الثمن**: ناقصٌ يُبقي
+    المطالبةَ معلّقةً بفرقها مكتوباً، والمشرفُ يرفض أو ينتظر التكملة.
+    """
+    if payload.amount is None:
+        raise InvalidInput("المبلغ الذي وصل مطلوب")
+    order, _activated = await cliq_subscriptions.confirm_payment(
+        session, order_id=order_id, actor=admin, credited=payload.amount
+    )
+    await session.commit()
+    return CliqClaimOut.model_validate(order)

@@ -564,6 +564,7 @@ async def activate_paid_order(
     amount: Decimal,
     reference: str | None,
     idempotency_key: str,
+    method: PaymentMethod = PaymentMethod.CARD,
 ) -> DriverSubscription:
     """اشتراكٌ دفعه المزود بالبطاقة — يُستدعى من `card_payments.apply_state`.
 
@@ -597,7 +598,10 @@ async def activate_paid_order(
         session,
         driver=locked,
         plan=plan,
-        method=PaymentMethod.CARD,
+        # **الطريقةُ تُمرَّر ولا تُفترض** (صُحّح 2026-08-29): كان هذا المسارُ
+        # للبطاقة وحدَها، **فلمّا شاركه كليكُ اليدويُّ صار الختمُ يكذب** —
+        # واشتراكٌ دُفع بكليك يُقرأ «بطاقة» في كلِّ تقريرٍ بعده.
+        method=method,
         amount_paid=amount,
         reference=reference,
         idempotency_key=idempotency_key,

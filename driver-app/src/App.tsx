@@ -89,9 +89,6 @@ const WalletScreen = lazy(() =>
 const EarningsScreen = lazy(() =>
   import("@/screens/Earnings").then((m) => ({ default: m.EarningsScreen })),
 );
-const TopupScreen = lazy(() =>
-  import("@/screens/Topup").then((m) => ({ default: m.TopupScreen })),
-);
 const WithdrawalsScreen = lazy(() =>
   import("@/screens/Withdrawals").then((m) => ({
     default: m.WithdrawalsScreen,
@@ -432,14 +429,6 @@ export default function App() {
                           element={
                             <Guarded>
                               <WalletScreen />
-                            </Guarded>
-                          }
-                        />
-                        <Route
-                          path="/wallet/topup"
-                          element={
-                            <Guarded>
-                              <TopupScreen />
                             </Guarded>
                           }
                         />

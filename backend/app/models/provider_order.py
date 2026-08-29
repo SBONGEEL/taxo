@@ -44,6 +44,7 @@ from app.models.enums import (
     Currency,
     PaymentProvider,
     ProviderOrderPurpose,
+    ProviderOrderSource,
     ProviderOrderStatus,
 )
 
@@ -91,6 +92,14 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         default=PaymentProvider.TELR,
     )
+    #: **من حصّل**: يدويّاً بيد مشرف، أو من إشعار القابض. **يُختم على الصفّ**
+    #: فيُقرأ في التدقيق ولا يُخمَّن. انظر `ProviderOrderSource`.
+    source: Mapped[ProviderOrderSource] = mapped_column(
+        pg_enum(ProviderOrderSource, "provider_order_source"),
+        nullable=False,
+        server_default=ProviderOrderSource.ACQUIRER.value,
+    )
+
     purpose: Mapped[ProviderOrderPurpose] = mapped_column(
         pg_enum(ProviderOrderPurpose, "provider_order_purpose"), nullable=False
     )

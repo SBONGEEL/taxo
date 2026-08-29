@@ -10,6 +10,7 @@ from app.models.enums import (
     CountryCode,
     Currency,
     PaymentMethod,
+    ProviderOrderStatus,
     SubscriptionDurationType,
     SubscriptionStatus,
 )
@@ -118,3 +119,34 @@ class MySubscriptionOut(BaseModel):
     days_remaining: int
     current: SubscriptionOut | None
     plans: list[SubscriptionPlanOut]
+
+
+class SubscriptionCliqPurchase(BaseModel):
+    """**الخطّةُ وحدَها** — والمبلغُ يُشتقّ في الخلفية من سعرها بعد العرض."""
+
+    plan_id: uuid.UUID
+
+
+class CliqSubscriptionOut(BaseModel):
+    """**شاشةُ دفعٍ يدويّ** — ما تحتاجه لتقوم بلا أن تخترع شيئاً.
+
+    **والمبلغُ سعرُ العرض محسوباً في الخلفية** (§14): لا يكتبه الكبتنُ ولا
+    تحسبه الشاشة. **والعددان من اللوحة** — «تتم المراجعة خلال {min} إلى {max}
+    دقائق» **وعدٌ يُعدَّل بلا نشر**.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    cart_id: str
+    amount: Decimal
+    currency: Currency
+    status: ProviderOrderStatus
+    #: **صورةُ الرمز** — مسارٌ يُخدَم، و`null` تعني «لم تُرفع» فلا تُرسم صورةٌ فارغة
+    qr_url: str | None = None
+    alias: str
+    review_min_minutes: int
+    review_max_minutes: int
+    #: **لماذا لم يمضِ** — «وصل ٢٠ من ٣٠ — ينقص ١٠» حين يكون المبلغُ ناقصاً
+    failure_reason: str | None = None
+    created_at: datetime

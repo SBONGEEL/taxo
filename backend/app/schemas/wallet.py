@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import (
     CountryCode,
     Currency,
+    ProviderOrderPurpose,
+    ProviderOrderSource,
     ProviderOrderStatus,
     TopupMethod,
     TopupRequestStatus,
@@ -290,3 +292,20 @@ class WalletSettingOut(BaseModel):
     min_withdrawal_amount: Decimal
     withdrawal_reserve_amount: Decimal
     updated_at: datetime
+
+
+class CliqClaimOut(BaseModel):
+    """مطالبةٌ يدويةٌ كما تراها اللوحة — **ومصدرُها معها** فلا يُخمَّن."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    cart_id: str
+    user_id: uuid.UUID
+    amount: Decimal
+    currency: Currency
+    status: ProviderOrderStatus
+    source: ProviderOrderSource
+    purpose: ProviderOrderPurpose
+    failure_reason: str | None
+    created_at: datetime

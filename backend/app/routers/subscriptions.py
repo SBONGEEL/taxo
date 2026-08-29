@@ -22,12 +22,20 @@ from app.core.exceptions import RateLimited
 from app.schemas.payment import CardOrderOut
 from app.schemas.settings import SubscriptionPlanOut
 from app.schemas.subscription import (
+    CliqSubscriptionOut,
     MySubscriptionOut,
     SubscriptionCardPurchase,
+    SubscriptionCliqPurchase,
     SubscriptionOut,
     SubscriptionPurchase,
 )
-from app.services import card_payments, offers, subscriptions
+from app.services import (
+    card_payments,
+    cliq_subscriptions,
+    offers,
+    settings_service,
+    subscriptions,
+)
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
@@ -171,3 +179,65 @@ async def purchase_subscription_with_card(
     )
     await session.commit()
     return CardOrderOut.model_validate(order)
+
+
+@router.post(
+    "/cliq", response_model=CliqSubscriptionOut, status_code=status.HTTP_201_CREATED
+)
+async def purchase_subscription_with_cliq(
+    payload: SubscriptionCliqPurchase,
+    driver: CurrentDriver,
+    user: CurrentUser,
+    session: DbSession,
+) -> CliqSubscriptionOut:
+    """**دفعٌ يدويٌّ بكليك** — مطالبةٌ تُفتح بسعر العرض، ولا اشتراكَ قبل تأكيدها.
+
+    **ولا يمرّ بالمحفظة** (قرارُ المالك 2026-08-29): مالُ الاشتراك لو مرّ بها
+    لحمل رصيدُه لحظةً مالاً ليس أجراً **فصار قابلاً للسحب**.
+
+    **و503 حين لا alias لهذا السوق** — بنصِّه، لا رسالةً عامّة.
+    """
+    plan = await subscriptions.get_plan(session, payload.plan_id, user.country_code)
+    order = await cliq_subscriptions.start_subscription(
+        session, driver=driver, owner=user, plan=plan
+    )
+    setting = await settings_service.get_payment_settings(session, user.country_code)
+    await session.commit()
+    return CliqSubscriptionOut(
+        id=order.id,
+        cart_id=order.cart_id,
+        amount=order.amount,
+        currency=order.currency,
+        status=order.status,
+        qr_url=(f"/subscriptions/cliq/qr" if setting and setting.cliq_qr_path else None),
+        alias=(setting.cliq_alias if setting else "") or "",
+        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
+        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+        failure_reason=order.failure_reason,
+        created_at=order.created_at,
+    )
+
+
+@router.get("/cliq", response_model=list[CliqSubscriptionOut])
+async def list_my_cliq_claims(
+    _driver: CurrentDriver, user: CurrentUser, session: DbSession
+) -> list[CliqSubscriptionOut]:
+    """مطالباتي وحالُها — **بانتظار التأكيد · مؤكَّد · مرفوض**."""
+    setting = await settings_service.get_payment_settings(session, user.country_code)
+    rows = await cliq_subscriptions.list_mine(session, user_id=user.id)
+    return [
+        CliqSubscriptionOut(
+            id=o.id,
+            cart_id=o.cart_id,
+            amount=o.amount,
+            currency=o.currency,
+            status=o.status,
+            qr_url=None,
+            alias=(setting.cliq_alias if setting else "") or "",
+            review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
+            review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+            failure_reason=o.failure_reason,
+            created_at=o.created_at,
+        )
+        for o in rows
+    ]

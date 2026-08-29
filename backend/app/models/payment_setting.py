@@ -56,6 +56,20 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     #: القناة. **ولكلِّ سوقٍ حسابُه** — كليكُ أردنيّ، وليبيا شيءٌ آخرُ أو لا شيء.
     cliq_alias: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+    #: **صورةُ رمز كليك لهذا السوق** — يرفعها المالكُ من اللوحة.
+    #: **ولا تُولَّد من الـalias**: رمزُ كليك يصدره القابضُ بحقوله المعيارية
+    #: (قِيس 2026-08-29)، **وباركودٌ لا يعمل أسوأُ من غيابه**.
+    cliq_qr_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+    #: **مدّةُ المراجعة الموعودة** — «خلال ٣ إلى ٥ دقائق». **وعدٌ لمن يدفع**،
+    #: فيُعدَّل من اللوحة يومَ تكثر الطلباتُ ولا تلحق المراجعة — **بلا نشر**.
+    cliq_review_min_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("3")
+    )
+    cliq_review_max_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("5")
+    )
+
     cliq_confirmation_hours: Mapped[int] = mapped_column(
         Integer, nullable=False, default=DEFAULT_CLIQ_CONFIRMATION_HOURS
     )
