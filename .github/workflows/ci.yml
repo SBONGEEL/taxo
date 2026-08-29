@@ -241,6 +241,34 @@ jobs:
       #
       # **ونكهةُ gradle تُقرأ من الجدول لا تُكتب هنا**: `test` محجوزٌ في AGP
       # فنكهتُها `trial` — **واسمان يفترقان في ملفَّين هو ما يمنعه الجدول**.
+      # **إعدادُ Firebase يُفكُّ إلى مكانه في التطبيقين** — وهو مُتجاهَلٌ في
+      # git بحقّ (يحمل مفاتيحَ عميلٍ ومعرّفاتِ مشروع)، **فبيتُه سرُّ المستودع**.
+      #
+      # **ولمَ صار خطوةً**: بلا هذا كان `google-services.json` غائباً في CI
+      # **فتُبنى الحزمُ المنشورةُ بلا إشعاراتٍ وبناؤها أخضر** — قِيس في
+      # `v0.2.0`: لا `project_id` ولا رقمَ مشروعٍ داخل الحزمتين.
+      - name: إعدادُ Firebase للتطبيقين
+        env:
+          GS_B64: ${{ secrets.GOOGLE_SERVICES_B64 }}
+        run: |
+          set -euo pipefail
+          # **وغيابُ السرِّ يوقف باسمه** — لا يقع على بناءٍ بلا إشعاراتٍ صامتاً
+          [ -n "${GS_B64:-}" ] || { echo "SECRET_MISSING GOOGLE_SERVICES_B64"; exit 1; }
+          for app in customer-app driver-app; do
+            printf '%s' "$GS_B64" | base64 -d > "$app/android/app/google-services.json"
+            # **يُقاس أنه JSON بعملاءَ لا نصٌّ فارغ** — و`base64` لا يشكو من مدخلٍ خاطئ
+            python3 - "$app/android/app/google-services.json" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1], encoding="utf-8"))
+          clients = [c["client_info"]["android_client_info"]["package_name"] for c in d["client"]]
+          print(f"  ✓ {sys.argv[1]}: {d['project_info']['project_id']} · {len(clients)} عملاء")
+          need = {"ly.tajora.rider", "ly.tajora.driver", "ly.tajora.rider.test", "ly.tajora.driver.test"}
+          missing = need - set(clients)
+          if missing:
+              raise SystemExit(f"✗ عملاءُ ناقصون في السرّ: {sorted(missing)}")
+          PY
+          done
+
       - name: بناءُ الأربع
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/taxo-release.jks

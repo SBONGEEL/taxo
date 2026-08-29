@@ -28,11 +28,10 @@ static int taxoVersionCode(File root) {
     } catch (ignored) {
         // يسقط أدناه برسالةٍ تسمّي السبب — ولا يُبتلع صامتاً
     }
-    throw new GradleException(
-        "تعذّر اشتقاقُ versionCode من عدد الإيداعات. " +
-        "بلا رقمٍ يزيد لا يُقرأ البناءُ تحديثاً على الهاتف. " +
-        "مرّر TAXO_VERSION_CODE=<رقم> إن كنت تبني بلا تاريخ git."
-    )
+    throw new GradleException("""google-services.json مفقودٌ أو فارغ في app/ — والحزمةُ تُبنى بلا إشعارات.
+  في CI: يُفكّ من السرّ GOOGLE_SERVICES_B64.
+  محلياً: نزّله من Firebase وضعه في <app>/android/app/google-services.json
+  وبلا إشعاراتٍ بقصد: TAXO_ALLOW_NO_FIREBASE=1""")
 }
 
 apply plugin: 'com.android.application'
@@ -135,11 +134,29 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+// **`google-services.json` قيمةٌ تقرّر إلى أين تذهب البيانات — فلا تُترك
+// للسكوت** (قرارُ المالك 2026-08-29). وهي **خامسةُ العائلة** بعد
+// `POSTGRES_PASSWORD:?` و`ANDROID_KEYSTORE_PATH` و`TAXO_CHANNEL` و`DEV_BUILD`.
+//
+// **وما كان هنا أسوأُ من سطرِ سجلّ**: `try { servicesJSON.text } catch` يبتلع
+// **كلَّ** استثناء — غيابَ الملفّ، وتلفَه، وتعذّرَ قراءته — ثمّ يسجّل بمستوى
+// `info` (لا يُطبع افتراضاً) ويُكمل البناءَ ناجحاً.
+//
+// **ووقع مقيساً 2026-08-29**: `google-services.json` مُتجاهَلٌ في git ولا سرَّ
+// له في CI، **فبُنيت حزمُ `v0.2.0` المنشورةُ على صفحة التحميل بلا Firebase
+// أصلاً** — قُرئ من داخلها: لا `string/google_app_id` ولا `project_id` ولا
+// رقمُ المشروع. **والإشعاراتُ فيها لا تعمل، والبناءُ أخضرُ صامت.**
+//
+// **والإذنُ يُعلَن ولا يُفترض**: من أراد حزمةً بلا إشعاراتٍ يقولها
+// بـ`TAXO_ALLOW_NO_FIREBASE=1` — كما يقول `DEV_BUILD=1`.
+def servicesJSON = file('google-services.json')
+if (servicesJSON.exists() && servicesJSON.length() > 0) {
+    apply plugin: 'com.google.gms.google-services'
+} else if (System.getenv('TAXO_ALLOW_NO_FIREBASE') == '1') {
+    logger.lifecycle('⚠ بلا google-services.json — بإذنٍ صريح. لا إشعارات في هذه الحزمة.')
+} else {
+    throw new GradleException("""google-services.json مفقودٌ أو فارغ في app/ — والحزمةُ تُبنى بلا إشعارات.
+  في CI: يُفكّ من السرّ GOOGLE_SERVICES_B64.
+  محلياً: نزّله من Firebase وضعه في <app>/android/app/google-services.json
+  وبلا إشعاراتٍ بقصد: TAXO_ALLOW_NO_FIREBASE=1""")
 }
