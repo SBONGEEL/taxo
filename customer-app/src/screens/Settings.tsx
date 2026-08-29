@@ -120,7 +120,7 @@ export function SettingsScreen() {
           {biometry?.native && !biometry.available ? (
             <div className="p-16">
               <p className="font-medium text-ink">الدخول السريع</p>
-              <p className="mt-2 text-14 text-muted">فعّل قفل الشاشة وبصمةً في إعدادات جهازك لاستعمال الدخول السريع.</p>
+              <p className="mt-2 text-14 text-muted">فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.</p>
             </div>
           ) : null}
 
