@@ -18,8 +18,14 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import InvalidInput, InvalidStatusTransition, NotFound
+from app.core.exceptions import (
+    AppError,
+    InvalidInput,
+    InvalidStatusTransition,
+    NotFound,
+)
 from app.models.enums import (
+    CountryCode,
     WalletOwnerType,
     AuditAction,
     TopupMethod,
@@ -28,7 +34,7 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import WalletTopupRequest
-from app.services import audit, cancellation, wallet
+from app.services import audit, cancellation, settings_service, wallet
 from app.services.pricing import round_money
 
 # القنوات التي يفتح الراكب طلبها بنفسه: كليك وحدها. الكاش يُنشئه الموظف
@@ -88,6 +94,32 @@ async def list_all(
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 
 
+class CliqAliasNotConfigured(AppError):
+    """**لا حسابَ كليك مضبوطاً لهذا السوق** — والقناةُ تُخفى لا تُعرض عاريةً.
+
+    **503 لا 400**: الميزةُ مبنيّةٌ والإعدادُ غائب، **والمستخدمُ لا ذنبَ له**
+    — نفسُ منطق `CardGatewayUnavailable` و`RoutingUnavailable`.
+    """
+
+    status_code = 503
+    code = "cliq_alias_not_configured"
+    message = "الشحن بكليك غير متاح في هذا السوق الآن."
+
+
+async def require_cliq_alias(session: AsyncSession, country: CountryCode) -> str:
+    """**حسابُ كليك المستقبِل لهذا السوق — أو وقوفٌ باسمه.**
+
+    **ولمَ 503 لا 400**: القناةُ مبنيّةٌ والإعدادُ غائب — نفسُ منطق
+    `CardGatewayUnavailable`. **والرسالةُ تقول ما لا يُعرف عند المشغّل**، ولا
+    تلوم المستخدمَ على إعدادٍ ليس له.
+    """
+    setting = await settings_service.get_payment_settings(session, country)
+    alias = (setting.cliq_alias or "").strip() if setting else ""
+    if not alias:
+        raise CliqAliasNotConfigured()
+    return alias
+
+
 async def create_request(
     session: AsyncSession,
     *,
@@ -106,6 +138,11 @@ async def create_request(
 
     await wallet.require_wallet_enabled(session, owner.country_code)
     wallet.require_not_frozen(owner)
+    # **لا قناةَ بلا حسابٍ يستقبل** (قرارُ المالك 2026-08-29): سوقٌ لم يُضبط
+    # فيه `cliq_alias` **تُخفى عنه القناةُ كلُّها** — وشاشةٌ تطلب تحويلاً ولا
+    # تقول إلى أين **تُنتج حوالةً ضائعة**، وهي أسوأُ من غياب القناة.
+    # **ويُقاس هنا لا في الشاشة وحدَها**: الشاشةُ تُخفي، وهذا يمنع من التفَّ.
+    await require_cliq_alias(session, owner.country_code)
     # **يُعلَن ويُختم**: المحفظةُ تُقرَّر هنا وتُقرأ عند التأكيد، فلا تُشتقّ
     # من دورٍ قد يكون دورين يومَها (SPEC §22)
     owner_type = wallet.owner_type_for(owner, declared=declared)
@@ -137,12 +174,27 @@ async def confirm(
     request: WalletTopupRequest,
     owner: User,
     actor: User,
+    amount: Decimal | None = None,
 ) -> WalletTopupRequest:
-    """تأكيد الإدارة → قيد `topup` في نفس المعاملة (SPEC القسم 7/14)."""
+    """تأكيد الإدارة → قيد `topup` في نفس المعاملة (SPEC القسم 7/14).
+
+    **والمبلغُ مبلغُ المشرف لا دعوى المستخدم** (قرارُ المالك 2026-08-29):
+    ما يدخل المحفظةَ هو **ما وصل الحسابَ فعلاً** كما قرأه المشرفُ في كشفه،
+    **ودعوى المستخدم بيانٌ يُقرأ لا مصدرُ مال**. فمن كتب ٥٠ وحوّل ٥ لا يشحن
+    خمسين، ومن كتب ٥ وحوّل ٥٠ لا يضيع مالُه — **يُقرأ الفرقُ ويُسأل**.
+
+    **ودعواه تبقى في `amount` ولا تُمحى**: هي ما ادّعاه، والحقيقةُ في قيد
+    الدفتر الذي يشير إليه `transaction_id`. **فالصفُّ يحمل الاثنين**، ومن
+    راجعه بعد شهرٍ يرى ما قيل وما دخل.
+
+    **و`None` تعني «بمبلغه كما هو»** — للمسارات القديمة ولمن وصله ما ادّعى.
+    """
     if request.status != TopupRequestStatus.PENDING:
         raise InvalidStatusTransition()
 
     wallet.require_not_frozen(owner)
+
+    credited = _validated_amount(amount) if amount is not None else request.amount
 
     entry = await wallet.record(
         session,
@@ -150,7 +202,7 @@ async def confirm(
         # **من الصفِّ لا من الدور**: الطلبُ يحمل محفظتَه منذ إنشائه
         owner_type=request.owner_type,
         tx_type=WalletTransactionType.TOPUP,
-        amount=request.amount,
+        amount=credited,
         reference=request.reference,
         created_by=actor.id,
         # الطلب نفسه مفتاح عدم التكرار: تأكيدان متزامنان لا يشحنان مرتين
@@ -161,6 +213,25 @@ async def confirm(
     request.processed_by = actor.id
     request.processed_at = _now()
     request.transaction_id = entry.id
+
+    # **صفُّ تدقيقٍ لكلِّ تأكيد** (قرارُ المالك 2026-08-29): باسم المشرف
+    # والمبلغ والطلب. **ودعوى المستخدم معه** — فمن راجع بعد شهرٍ يرى الفرقَ
+    # إن كان، ولا يقرأ رقماً بلا نسب.
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.UPDATE,
+        entity_type="wallet_topup_request",
+        entity_id=request.id,
+        details={
+            "action": "confirm",
+            "credited": str(credited),
+            "claimed": str(request.amount),
+            "owner_id": str(owner.id),
+            "wallet": request.owner_type.value if request.owner_type else None,
+            "transaction_id": str(entry.id),
+        },
+    )
 
     # **ودَينُ إلغاءٍ يُسدَّد لحظةَ اكتمال الشحن** (`CANCELLATION-FEE.md` §7):
     # «فوريٌّ كلما دخل المالُ المنصّة» — بلا مراجعةٍ إداريةٍ وبلا دورةٍ مجدولة،

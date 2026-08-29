@@ -227,6 +227,16 @@ class WithdrawalPayoutOut(BaseModel):
     provider_status: str
 
 
+class ConfirmTopup(BaseModel):
+    """**مبلغُ المشرف — ما وصل الحسابَ فعلاً** (قرارُ المالك 2026-08-29).
+
+    **ودعوى المستخدم ليست هنا**: هي في الطلب، تُقرأ ولا تُصرف. و`None` تعني
+    «بمبلغه كما ادّعى» — لمن طابق ما وصل.
+    """
+
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=3)
+
+
 class RejectRequest(BaseModel):
     note: str | None = Field(default=None, max_length=255)
 

@@ -27,6 +27,7 @@ from app.schemas.wallet import (
     AdjustmentCreate,
     AdminTopupCreate,
     MarkPaidRequest,
+    ConfirmTopup,
     RejectRequest,
     TopupRequestOut,
     WalletFreezeRequest,
@@ -202,13 +203,21 @@ async def list_topup_requests(
 
 @router.post("/topups/{request_id}/confirm", response_model=TopupRequestOut)
 async def confirm_topup(
-    request_id: uuid.UUID, admin: AdminUser, session: DbSession, redis: RedisDep
+    request_id: uuid.UUID,
+    payload: ConfirmTopup,
+    admin: AdminUser,
+    session: DbSession,
+    redis: RedisDep,
 ) -> TopupRequestOut:
-    """تأكيد وصول حوالة كليك/الكاش → الرصيد يتحرك الآن (SPEC القسم 7)."""
+    """تأكيد وصول حوالة كليك/الكاش → الرصيد يتحرك الآن (SPEC القسم 7).
+
+    **والمبلغُ مبلغُ المشرف** (قرارُ المالك 2026-08-29): ما قرأه في كشف
+    الحساب، لا ما كتبه المستخدمُ في طلبه.
+    """
     request = await topups.get_request(session, request_id, for_update=True)
     owner = await _get_user(session, request.owner_id)
     request = await topups.confirm(
-        session, request=request, owner=owner, actor=admin
+        session, request=request, owner=owner, actor=admin, amount=payload.amount
     )
     await session.commit()
     # شحنٌ اكتمل قد يكون سدّد رسمَ إلغاءٍ معلّقاً (`CANCELLATION-FEE.md` §7)،
