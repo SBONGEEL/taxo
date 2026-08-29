@@ -22,12 +22,14 @@ import type { ReactNode } from "react";
 
 import {
   refreshNow,
+  setBiometricArmedReader,
   setRefreshPersister,
   setSessionLostHandler,
   tokens,
 } from "@/api/client";
 import {
   biometryStatus,
+  isBiometricPreferred,
   disableBiometric,
   enableBiometric,
   forgetToken,

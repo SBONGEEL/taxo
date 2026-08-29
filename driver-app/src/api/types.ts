@@ -940,3 +940,52 @@ export interface CliqSubscriptionClaim {
   failure_reason: string | null;
   created_at: string;
 }
+
+// ═══════════════ دَينُ الكبتن (الترحيلة `0061`) ═══════════════
+//
+// **بيتٌ ثالثٌ للدَّين لا رصيدٌ سالب**: عمولةُ رحلةٍ قبضها بيده تخرج من
+// الدفتر إلى جدولها، فلا يُمنع من إنهاء رحلةٍ لأن رصيدَه لا يغطّي عمولتَها
+// — وهو العطبُ الذي كان حيّاً قبل 2026-08-30.
+
+export type DriverDebtSource = "ride_commission";
+export type DriverDebtStatus = "outstanding" | "settled" | "written_off";
+
+export interface DriverDebtRow {
+  id: string;
+  source: DriverDebtSource;
+  amount: string;
+  collected: string;
+  currency: Currency;
+  status: DriverDebtStatus;
+  ride_id: string | null;
+  created_at: string;
+}
+
+export interface DriverDebtState {
+  total: string;
+  currency: Currency;
+  /** العَلَمُ الذي يقرؤه التوزيع — لا حسابٌ تعيده الشاشة. */
+  blocked: boolean;
+  /** `null` = لا سقفَ مضبوط، فلا يُعرض رقمٌ لا وجود له. */
+  ceiling: string | null;
+  /** سبيلُ السداد — و`null` تعني «لم يُضبط بعد» فلا يُرسم حسابٌ فارغ. */
+  cliq_alias: string | null;
+  review_min_minutes: number;
+  review_max_minutes: number;
+  rows: DriverDebtRow[];
+}
+
+export interface DebtClaim {
+  id: string;
+  cart_id: string;
+  amount: string;
+  currency: Currency;
+  /** **نفسُ اتحاد مطالبة الاشتراك حرفاً** — قضيبٌ واحدٌ فحالٌ واحدة. */
+  status: "created" | "paid" | "failed" | "cancelled";
+  failure_reason: string | null;
+  created_at: string;
+  qr_url: string | null;
+  alias: string;
+  review_min_minutes: number;
+  review_max_minutes: number;
+}

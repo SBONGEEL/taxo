@@ -52,6 +52,8 @@ import type {
   WalletTransaction,
   Withdrawal,
   WithdrawalMethod,
+  DebtClaim,
+  DriverDebtState,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -535,3 +537,12 @@ export const payySubscriptionWithCliq = (plan_id: string) =>
 /** مطالباتي وحالُها — **بانتظار التأكيد · مؤكَّد · مرفوض**. */
 export const listMyCliqClaims = () =>
   api.get<CliqSubscriptionClaim[]>("/subscriptions/cliq");
+
+// ── دَينُ الكبتن (الترحيلة `0061`) ──
+export const getDebtState = () => api.get<DriverDebtState>("/drivers/me/debt");
+
+export const payDebtWithCliq = (amount: string) =>
+  api.post<DebtClaim>("/drivers/me/debt/cliq", { amount });
+
+export const listMyDebtClaims = () =>
+  api.get<DebtClaim[]>("/drivers/me/debt/cliq");

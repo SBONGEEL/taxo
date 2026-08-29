@@ -1317,3 +1317,32 @@ export interface CliqClaim {
   failure_reason: string | null;
   created_at: string;
 }
+
+// ═══════════ مستحقّاتُ الكباتن (الترحيلة `0061`) ═══════════
+//
+// **بيتُ دَينٍ ثالثٌ لا رصيدٌ سالب**: عمولةُ رحلةٍ قبض الكبتنُ أجرتها بيده.
+
+export interface DriverDebtRow {
+  id: string;
+  driver_id: string;
+  driver_name: string;
+  driver_phone: string | null;
+  amount: string;
+  collected: string;
+  currency: string;
+  status: "outstanding" | "settled" | "written_off";
+  source: "ride_commission";
+  ride_id: string | null;
+  created_at: string;
+}
+
+/** مطالبةُ سدادٍ يدويّةٍ بكليك — نفسُ شكل مطالبة الاشتراك، وهو مقصود. */
+export interface DebtClaimRow {
+  id: string;
+  cart_id: string;
+  amount: string;
+  currency: string;
+  status: "created" | "paid" | "failed" | "cancelled";
+  failure_reason: string | null;
+  created_at: string;
+}

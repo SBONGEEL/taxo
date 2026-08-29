@@ -116,6 +116,12 @@ const DeactivationScreen = lazy(() =>
     default: m.DeactivationScreen,
   })),
 );
+const DebtScreen = lazy(() =>
+  import("@/screens/Debt").then((m) => ({ default: m.DebtScreen })),
+);
+const DebtCliqScreen = lazy(() =>
+  import("@/screens/DebtCliq").then((m) => ({ default: m.DebtCliqScreen })),
+);
 const AdvancesScreen = lazy(() =>
   import("@/screens/Advances").then((m) => ({
     default: m.AdvancesScreen,
@@ -507,6 +513,22 @@ export default function App() {
                           element={
                             <Guarded>
                               <CardsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/debt"
+                          element={
+                            <Guarded>
+                              <DebtScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/debt/cliq/:claimId"
+                          element={
+                            <Guarded>
+                              <DebtCliqScreen />
                             </Guarded>
                           }
                         />

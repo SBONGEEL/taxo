@@ -96,6 +96,9 @@ import type {
   WhatsAppSession,
   Withdrawal,
   WithdrawalStatus,
+  CliqClaim,
+  DebtClaimRow,
+  DriverDebtRow,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -498,9 +501,9 @@ export const updatePaymentSettings = (
 /** **صورةُ الباركود تُرفع ولا تُولَّد** — معيارُ كليك يحمل حقولاً لا تُشتقّ
  *  من الحساب، **وباركودٌ لا يعمل أسوأُ من غيابه**. */
 export const uploadCliqQr = (country: CountryCode, file: File) =>
-  upload<PaymentSetting>(`/admin/settings/payments/${country}/cliq-qr`, file, {
-    method: "PUT",
-  });
+  // **و`upload` تُرسل `PUT` دائماً** — لا خيارَ `method` فيها (صُحِّح
+  // 2026-08-30: كان مُمرَّراً ولا يقبله العقد، فسقط `tsc`)
+  upload<PaymentSetting>(`/admin/settings/payments/${country}/cliq-qr`, file);
 
 // ------------------------------------------------- إحالةُ السائقات (12-ح)
 
@@ -1159,3 +1162,23 @@ export const listCliqClaims = (country?: CountryCode) =>
 /** **المبلغُ مبلغُ المشرف** — ودونَ الثمن **لا تفعيل**، والمطالبةُ تبقى بفرقها. */
 export const confirmCliqClaim = (id: string, amount: string) =>
   api.post<CliqClaim>(`/admin/cliq-claims/${id}/confirm`, { amount });
+
+/** مستحقّاتُ الكباتن — **والمتبقّي `amount - collected` يُقرأ من العمودين**. */
+export const listDriverDebts = (status?: string) =>
+  api.get<DriverDebtRow[]>(
+    "/admin/drivers/debts" + (status ? `?status=${status}` : ""),
+  );
+
+/** مطالباتُ السداد المعلّقة — ما ينتظر عينَ مشرف. */
+export const listDebtClaims = () =>
+  api.get<DebtClaimRow[]>("/admin/drivers/debts/claims");
+
+/** **ما وصل فعلاً** لا ما فُتحت به المطالبة — والناقصُ يُقبل ويُنقص. */
+export const confirmDebtClaim = (id: string, credited: string) =>
+  api.post<DebtClaimRow>(`/admin/drivers/debts/claims/${id}/confirm`, {
+    credited,
+  });
+
+/** شطبُ مستحقٍّ بقرارٍ مسجَّل — والسببُ مطلوبٌ لا اختياري. */
+export const writeOffDebt = (id: string, reason: string) =>
+  api.post<DriverDebtRow>(`/admin/drivers/debts/${id}/writeoff`, { reason });

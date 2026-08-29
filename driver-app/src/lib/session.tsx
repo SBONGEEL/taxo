@@ -26,6 +26,7 @@ import { Capacitor } from "@capacitor/core";
 
 import {
   refreshNow,
+  setBiometricArmedReader,
   setRefreshPersister,
   setSessionLostHandler,
   tokens,
@@ -39,6 +40,7 @@ import {
 import type { AuthResponse, User } from "@/api/types";
 import {
   biometryStatus,
+  isBiometricPreferred,
   disableBiometric,
   enableBiometric,
   forgetToken,

@@ -33,7 +33,8 @@ import {
   listCliqClaims,
   confirmCliqClaim,
 } from "@/api/endpoints";
-import type { TopupRequest, Withdrawal, WithdrawalStatus } from "@/api/types";
+import type {
+  CliqClaim, TopupRequest, Withdrawal, WithdrawalStatus } from "@/api/types";
 import { CancellationCharges } from "@/components/CancellationCharges";
 import { WalletDesk } from "@/components/WalletDesk";
 import { Shell } from "@/components/Shell";

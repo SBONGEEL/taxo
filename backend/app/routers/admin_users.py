@@ -33,6 +33,7 @@ from app.models.enums import (
     DeactivationStatus,
     AuditAction,
     CountryCode,
+    DriverDebtStatus,
     DocumentReviewStatus,
     DriverStatus,
     Gender,
@@ -58,10 +59,19 @@ from app.schemas.driver import (
     DriverStatusUpdate,
 )
 from app.models.user_role_grant import has_role_clause
+from app.models.debt import DriverDebt
+from app.schemas.debt import (
+    AdminDebtOut,
+    DebtClaimOut,
+    DebtConfirmIn,
+    DebtWriteOffIn,
+)
 from app.services import deactivation
 from app.services import (
     advances as advances_service,
     audit,
+    cliq_debts,
+    debts as debts_service,
     documents as documents_service,
     drivers as drivers_service,
     notifications,
@@ -665,3 +675,133 @@ async def set_advance_cap(
     await session.commit()
     await session.refresh(driver)
     return DriverOut.model_validate(driver)
+
+
+# ------------------------------------- دَينُ الكبتن (الترحيلة `0061`)
+#
+# **ثلاثةُ أبوابٍ للوحة**: تقرأ المستحقّات، وتؤكّد سداداً وصل، وتشطب بسبب.
+# **ولا بابَ يكتب دَيناً بيد**: النشأةُ من التسوية وحدَها — ومن كتب دَيناً
+# بيده كتب رقماً لا رحلةَ خلفه.
+
+
+@router.get("/drivers/debts", response_model=list[AdminDebtOut])
+async def list_driver_debts(
+    _: AdminUser,
+    session: DbSession,
+    status: DriverDebtStatus | None = None,
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[AdminDebtOut]:
+    """المستحقّاتُ ومعها أصحابُها — صفحةٌ محدودةٌ لا جدولٌ كامل."""
+    stmt = (
+        select(DriverDebt, User)
+        .join(Driver, Driver.id == DriverDebt.driver_id)
+        .join(User, User.id == Driver.user_id)
+        .order_by(DriverDebt.created_at.desc())
+    )
+    if status is not None:
+        stmt = stmt.where(DriverDebt.status == status)
+    rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
+    return [
+        AdminDebtOut(
+            id=debt.id,
+            driver_id=debt.driver_id,
+            driver_name=owner.name,
+            driver_phone=owner.phone,
+            amount=debt.amount,
+            collected=debt.collected,
+            currency=debt.currency,
+            status=debt.status,
+            source=debt.source,
+            ride_id=debt.ride_id,
+            created_at=debt.created_at,
+        )
+        for debt, owner in rows
+    ]
+
+
+@router.get("/drivers/debts/claims", response_model=list[DebtClaimOut])
+async def list_debt_claims(
+    _: AdminUser, session: DbSession, country: CountryCode | None = None
+) -> list[DebtClaimOut]:
+    """مطالباتُ السداد المعلّقة — **ما ينتظر عينَ مشرف**."""
+    orders = await cliq_debts.list_pending(session, country=country)
+    return [
+        DebtClaimOut(
+            id=order.id,
+            cart_id=order.cart_id,
+            amount=order.amount,
+            currency=order.currency,
+            status=order.status,
+            failure_reason=order.failure_reason,
+            created_at=order.created_at,
+        )
+        for order in orders
+    ]
+
+
+@router.post("/drivers/debts/claims/{order_id}/confirm", response_model=DebtClaimOut)
+async def confirm_debt_claim(
+    order_id: uuid.UUID,
+    payload: DebtConfirmIn,
+    admin: AdminUser,
+    session: DbSession,
+) -> DebtClaimOut:
+    """**المشرفُ يكتب ما وصل فعلاً** — والناقصُ يُقبل ويُنقص الدَّين."""
+    order, _applied = await cliq_debts.confirm_payment(
+        session, order_id=order_id, actor=admin, credited=payload.credited
+    )
+    await session.commit()
+    return DebtClaimOut(
+        id=order.id,
+        cart_id=order.cart_id,
+        amount=order.amount,
+        currency=order.currency,
+        status=order.status,
+        failure_reason=order.failure_reason,
+        created_at=order.created_at,
+    )
+
+
+@router.post("/drivers/debts/{debt_id}/writeoff", response_model=AdminDebtOut)
+async def write_off_debt(
+    debt_id: uuid.UUID,
+    payload: DebtWriteOffIn,
+    admin: AdminUser,
+    session: DbSession,
+) -> AdminDebtOut:
+    """شطبٌ بقرارٍ إداريٍّ **بسببٍ مكتوب** — ويُرفع المنعُ إن صفا حسابه."""
+    debt = await session.get(DriverDebt, debt_id)
+    if debt is None:
+        raise NotFound("المستحقّ غير موجود")
+    driver = await session.get(Driver, debt.driver_id)
+    owner = await session.get(User, driver.user_id)
+    await debts_service.write_off(
+        session, debt=debt, actor=admin, reason=payload.reason
+    )
+    # **والشطبُ سدادٌ في أثره** — فمن صفا حسابُه يعود إلى العمل في المسار نفسِه
+    await debts_service.refresh_block(
+        session, driver=driver, country=owner.country_code
+    )
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="driver_debt",
+        entity_id=debt.id,
+        details={"action": "write_off", "reason": payload.reason},
+    )
+    await session.commit()
+    return AdminDebtOut(
+        id=debt.id,
+        driver_id=debt.driver_id,
+        driver_name=owner.name,
+        driver_phone=owner.phone,
+        amount=debt.amount,
+        collected=debt.collected,
+        currency=debt.currency,
+        status=debt.status,
+        source=debt.source,
+        ride_id=debt.ride_id,
+        created_at=debt.created_at,
+    )

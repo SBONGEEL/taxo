@@ -54,6 +54,7 @@ import type {
   GenderPreference,
 } from "@/api/types";
 import { Advances } from "@/components/Advances";
+import { DriverDebts } from "@/components/DriverDebts";
 import { Deactivations } from "@/components/Deactivations";
 import { Shell } from "@/components/Shell";
 import { Pills, Table } from "@/components/Table";
@@ -468,6 +469,7 @@ export function DriversScreen() {
           «المالية» رغم أنه يُطلق مالاً محتجَزاً */}
       <Deactivations onError={setError} />
       <Advances onError={setError} />
+      <DriverDebts onError={setError} />
 
       {open ? (
         <DriverDrawer
