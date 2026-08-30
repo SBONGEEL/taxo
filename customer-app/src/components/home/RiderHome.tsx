@@ -44,6 +44,7 @@ import type {
   ServiceTile,
   Wallet,
 } from "@/api/types";
+import { MapCard } from "@/components/home/MapCard";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { ServiceTiles } from "@/components/home/ServiceTiles";
 import { formatMoney } from "@/lib/utils";
@@ -175,28 +176,33 @@ export function RiderHome({
         </div>
       </div>
 
-      {/* ── الخريطةُ بطاقةً: شارةُ القريبين فوق، و«إلى أين؟» في القاع */}
-      <div className="relative mb-10 h-170 overflow-hidden rounded-16 border border-line">
+      {/* ── الخريطةُ بطاقةً تتوسّع: شارةُ القريبين فوق، و«إلى أين؟» في القاع */}
+      <MapCard
+        badge={
+          // **عددٌ بلا مهلة** — والمهلةُ لا تُقاس قبل نقطة الالتقاط
+          nearby > 0 ? (
+            <span className="rounded-full border border-line bg-surface px-10 py-4 text-10.5 font-semibold text-ink">
+              {nearby === 1
+                ? "كبتن قريب"
+                : nearby === 2
+                  ? "كبتنان قريبان"
+                  : `${nearby} كباتن قريبون`}
+            </span>
+          ) : null
+        }
+        action={
+          <button
+            type="button"
+            onClick={onAskDestination}
+            className="pressable flex w-full items-center justify-center gap-7 rounded-13 bg-brand p-13 text-14.5 font-bold text-brand-ink"
+          >
+            <MapPin className="size-17" />
+            إلى أين؟ اطلب رحلة
+          </button>
+        }
+      >
         {map}
-        {/* **عددٌ بلا مهلة** — والمهلةُ لا تُقاس قبل نقطة الالتقاط */}
-        {nearby > 0 ? (
-          <span className="pointer-events-none absolute end-10 top-10 rounded-full border border-line bg-surface px-10 py-4 text-10.5 font-semibold text-ink">
-            {nearby === 1
-              ? "كبتن قريب"
-              : nearby === 2
-                ? "كبتنان قريبان"
-                : `${nearby} كباتن قريبون`}
-          </span>
-        ) : null}
-        <button
-          type="button"
-          onClick={onAskDestination}
-          className="pressable absolute inset-x-10 bottom-10 flex items-center justify-center gap-7 rounded-13 bg-brand p-13 text-14.5 font-bold text-brand-ink"
-        >
-          <MapPin className="size-17" />
-          إلى أين؟ اطلب رحلة
-        </button>
-      </div>
+      </MapCard>
 
       {/* ── اختصاراتُ أماكنه المحفوظة — **ولا صفَّ بلا أماكن** */}
       {places.length > 0 ? (

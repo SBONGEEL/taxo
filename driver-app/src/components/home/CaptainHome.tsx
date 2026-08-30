@@ -31,6 +31,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Earnings, PromoBanner, ServiceTile } from "@/api/types";
+import { MapCard } from "@/components/home/MapCard";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { ServiceTiles } from "@/components/home/ServiceTiles";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
@@ -155,18 +156,32 @@ export function CaptainHome({
         </div>
       </div>
 
-      {/* ── الخريطةُ بطاقةً، وفي قاعها زرُّ الاستقبال */}
-      <div className="relative mb-10 h-170 overflow-hidden rounded-16 border border-line">
+      {/* ── الخريطةُ بطاقةً تتوسّع، وفي قاعها زرُّ الاستقبال في الحالين */}
+      <MapCard
+        action={
+          <button
+            type="button"
+            onClick={onToggleOnline}
+            disabled={goDisabled}
+            className="pressable w-full rounded-13 bg-brand p-13 text-center text-14.5 font-bold text-brand-ink disabled:opacity-50"
+          >
+            {goLabel}
+          </button>
+        }
+        // **حالُه مقروءةٌ وهي موسَّعة** — وفي البطاقة يقرؤها من مفتاح الرأس
+        expandedStatus={
+          <span className="flex items-center gap-7 rounded-full border border-line bg-surface px-12 py-7 text-12 font-semibold">
+            <span
+              className={`block size-8 rounded-full ${online ? "bg-ok" : "bg-muted"}`}
+            />
+            <span className={online ? "text-ink" : "text-muted"}>
+              {online ? "متصل — تستقبل الطلبات" : "غير متصل"}
+            </span>
+          </span>
+        }
+      >
         {map}
-        <button
-          type="button"
-          onClick={onToggleOnline}
-          disabled={goDisabled}
-          className="pressable absolute inset-x-10 bottom-10 rounded-13 bg-brand p-13 text-center text-14.5 font-bold text-brand-ink disabled:opacity-50"
-        >
-          {goLabel}
-        </button>
-      </div>
+      </MapCard>
 
       {statusPill}
 

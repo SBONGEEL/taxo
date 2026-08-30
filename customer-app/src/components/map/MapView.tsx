@@ -329,7 +329,16 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
     map.current = instance;
 
+    // **الحاويةُ تتبدّل فتتبدّل معها اللوحة** (2026-08-30): البطاقةُ تتوسّع
+    // إلى ملء الشاشة، **و`mapbox-gl` يقيس مقاسَه مرّةً عند البناء** — فبلا
+    // هذا المراقب تبقى اللوحةُ ١٧٠ بكسل داخل حاويةٍ ملءَ الشاشة.
+    //
+    // **وموضعُه هنا لا في البطاقة**: من يملك اللوحةَ هو من يعيد قياسَها.
+    const watcher = new ResizeObserver(() => instance.resize());
+    if (container.current) watcher.observe(container.current);
+
     return () => {
+      watcher.disconnect();
       instance.remove();
       map.current = null;
       carMarkers.current.clear();

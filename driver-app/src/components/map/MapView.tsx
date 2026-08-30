@@ -204,7 +204,18 @@ export function MapView({
     map.current.on("rotatestart", release);
     map.current.on("pitchstart", release);
 
+    // **الحاويةُ تتبدّل فتتبدّل معها اللوحة** (2026-08-30): البطاقةُ تتوسّع
+    // إلى ملء الشاشة، **و`mapbox-gl` يقيس مقاسَه مرّةً عند البناء** — فبلا
+    // هذا المراقب تبقى اللوحةُ ١٧٠ بكسل داخل حاويةٍ ملءَ الشاشة، **والخريطةُ
+    // تُرسم في زاويةٍ والباقي فراغ**.
+    //
+    // **وموضعُه هنا لا في البطاقة**: من يملك اللوحةَ هو من يعيد قياسَها —
+    // وأيُّ حاويةٍ تتبدّل غداً تجد الجوابَ مبنيّاً، ولا يُكتب الإصلاحُ مرّتين.
+    const watcher = new ResizeObserver(() => map.current?.resize());
+    if (host.current) watcher.observe(host.current);
+
     return () => {
+      watcher.disconnect();
       if (animation.current !== null) cancelAnimationFrame(animation.current);
       map.current?.remove();
       map.current = null;
