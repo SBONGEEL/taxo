@@ -237,6 +237,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `check:doors` — the door-with-no-button family became a build guard (2026-08-19) → `GUARDS.md`
 - `check:destinations` — حارسٌ مرجعُه قائمةٌ تُكتب بيدٍ يحرس الكتابةَ لا الواقع (2026-08-30) → `GUARDS.md`
 - بلاغٌ كاذبٌ رابعٌ أوقف رفعاً — والقياسُ بعد التوسيع كشف ثغرةً أقدمَ منه (2026-08-30) → `GUARDS.md`
+- ما يمرّ من ماسح الأسرار — بأصنافه لا بالظنّ (قِيس 2026-08-31) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
 - الحرّاس — وما لم يصر حارساً بعد (2026-08-20) → `GUARDS.md`
