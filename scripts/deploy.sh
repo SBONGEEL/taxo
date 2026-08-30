@@ -271,7 +271,7 @@ git remote get-url origin >/dev/null 2>&1 || die "لا مستودعَ بعيد �
 # **والملفُّ الثنائيُّ لا يمسكه نمطُ نصٍّ إطلاقاً** — يمنعه `scripts/pre-commit`
 # بالامتداد (`*.jks|*.keystore|*.pem|*.key|*.p12|*.pfx`)، **وقِيس أنه يرفض
 # حتى مع `git add -f`**. فالطبقتان تحرسان شيئين مختلفين، ولا تُغني إحداهما.
-SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*"?'"'"'?[A-Za-z0-9_/+.-]{16,}|(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*"[^"]{12,}"|Bearer [A-Za-z0-9._-]{20,}|(store|key)[Pp]ass(word)?[[:space:]]*[:=][[:space:]]*[^[:space:]]{8,}|[A-Z][A-Z0-9_]*(PASSWORD|PASSWD|SECRET|TOKEN|KEYSTORE|FERNET)[[:space:]]*=[[:space:]]*[^[:space:]]{8,}'
+SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*"?'"'"'?[A-Za-z0-9_/+.-]{16,}|(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*"[^"]{12,}"|Bearer [A-Za-z0-9._-]{20,}|(store|key)[Pp]ass(word)?[[:space:]]*[:=][[:space:]]*[^[:space:]]{8,}|[A-Z0-9_]*(PASSWORD|PASSWD|SECRET|TOKEN|KEYSTORE|FERNET)[A-Z0-9_]*[[:space:]]*=[[:space:]]*[^[:space:]]{8,}'
 # **وما يُنتج سرّاً أو يقرؤه ليس سرّاً** (وُسِّع 2026-08-22): وقعت ثلاثةُ
 # بلاغاتٍ كاذبةٍ متتالية — `secret=True` في توثيق، و`token = secrets.token_urlsafe(32)`
 # **وهو مولِّدٌ لا قيمة**، و`const token = env.GITHUB_TAXO_TOKEN` **وهو قراءةٌ
@@ -296,7 +296,21 @@ SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:
 #     صيغةٍ لا تقتبس (YAML مسطَّح) **يمرّ**. ولا `.yml` في هذا المستودع يحمل
 #     سرّاً — والسرّانُ يسكنان `.env` و`secrets/` خارج الشجرة. **ويُقال ولا
 #     يُسكت عنه**، فحارسٌ لا يُعرف حدُّه يُصدَّق فوق قدره.
-BENIGN_RE='example|placeholder|getenv|environ|process\.env|secrets\.|token_urlsafe|randbytes|uuid|env\.[A-Za-z_]|ENV\[|import\.meta|<[a-z]|\$\{|[:=][[:space:]]*[A-Za-z_$][A-Za-z0-9_]*[[:space:]]*[,;)]'
+# **وأُصلح الفرعُ الخامسُ 2026-08-30 بأمر المالك**: كان `[A-Z][A-Z0-9_]*(…)=`
+# **فيطلب حرفاً قبل الكلمة وأن تلامسَ الكلمةُ علامةَ التساوي**. فمرّ
+# `FERNET_KEY=` (الكلمةُ في أوّل الاسم) و`JWT_SECRET_KEY=` (لاحقةٌ بعدها)،
+# **وهما اسما سرَّي هذا المشروع بعينهما** — «حارسُ أسرارٍ يمرّ من فوق سرِّ
+# المشروع ليس حارساً». فصار `[A-Z0-9_]*(…)[A-Z0-9_]*=`.
+#
+# **والاستثناءُ الثاني في `BENIGN_RE`**: `[:=]` ثمّ مُعرِّفُ **حروفٍ محضةٍ**
+# إلى آخر السطر — ليمرّ `FERNET_KEY=someVariable` (شرطُ المالك).
+#
+# **⚠ وثمنُه معلَنٌ ومقيس**: سرٌّ **حروفٌ محضةٌ بلا رقمٍ ولا رمز** إلى آخر
+# السطر **يمرّ** — مثل `POSTGRES_PASSWORD=supersecretpassword`. **وكلُّ ما
+# فيه رقمٌ أو رمزٌ يُمسَك**: مفاتيحُ Fernet وJWT وghp_ كلُّها base64 أو hex،
+# **فتحمل أرقاماً دائماً**. فالثغرةُ في كلمةِ مرورٍ ضعيفةٍ يكتبها إنسان، لا في
+# مفتاحٍ يولّده نظام. **ويُقال ولا يُسكت عنه.**
+BENIGN_RE='example|placeholder|getenv|environ|process\.env|secrets\.|token_urlsafe|randbytes|uuid|env\.[A-Za-z_]|ENV\[|import\.meta|<[a-z]|\$\{|[:=][[:space:]]*[A-Za-z_$][A-Za-z0-9_]*[[:space:]]*[,;)]|[:=][[:space:]]*[A-Za-z_][A-Za-z]*$'
 LEAKS="$(git diff "${REMOTE_SHA:-HEAD~1}..$HEAD_SHA" 2>/dev/null | grep -E "^\+" | grep -nE "$SECRET_RE" | grep -vE "$BENIGN_RE" | head -5 || true)"
 if [ -n "$LEAKS" ]; then
   say "$LEAKS"
