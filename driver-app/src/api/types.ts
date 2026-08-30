@@ -233,6 +233,11 @@ export interface DriverProfile {
   user: User;
   vehicles: Vehicle[];
   documents: DriverDocument[];
+  /** **نسبتُه هو لا نسبةُ السوق** — ترسمها الرئيسيةُ في بلاطة «عمولة TAXO».
+   *
+   *  **ولا تُحسب هنا** (§14): من اشترى اشتراكاً بوعدِ صفرٍ يرى صفراً ولو رفع
+   *  السوقُ نسبتَه، **وهي حرفاً ما يجمّده `rides.accept`**. */
+  commission_percent: string;
 }
 
 export interface DriverDocuments {
@@ -988,4 +993,43 @@ export interface DebtClaim {
   alias: string;
   review_min_minutes: number;
   review_max_minutes: number;
+}
+
+// ═══════ بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) ═══════
+//
+// **تُدار من اللوحة لا تُخبز**: إضافةُ خدمةٍ أو لافتةٍ **بلا نشر**.
+// **والتصفيةُ في الخلفية**: الجمهورُ والسوقُ والنافذة — فثلاثةُ تطبيقاتٍ
+// تسأل السؤالَ نفسَه ولا تحسبه ثلاث مرّات.
+
+export type ServiceTileStatus = "soon" | "active" | "hidden";
+export type BannerLinkKind = "internal" | "external" | "none";
+
+export interface ServiceTile {
+  id: string;
+  key: string;
+  title: string;
+  subtitle: string | null;
+  /** اسمُ أيقونةِ lucide كما تكتبه اللوحة. */
+  icon: string;
+  status: ServiceTileStatus;
+  /** `null` مع «قريباً» — وهي **تُقرأ ولا تُنقر**. */
+  destination: string | null;
+  /** **محسوبةٌ في الخلفية**: ساعةُ الجهاز يملكها صاحبُه. */
+  is_new: boolean;
+}
+
+export interface PromoBanner {
+  id: string;
+  title: string;
+  body: string | null;
+  /** **أيقونةُ lucide لا صورةٌ مرفوعة** — لا بابَ يخدم رفعاً بعد،
+   *  **وعنوانٌ يُنشر لمسارٍ لا وجودَ له يرسم صورةً مكسورة**. */
+  icon: string | null;
+  link_kind: BannerLinkKind;
+  link: string | null;
+}
+
+export interface Storefront {
+  tiles: ServiceTile[];
+  banners: PromoBanner[];
 }

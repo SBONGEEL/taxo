@@ -133,6 +133,22 @@ async def set_flag(
     return flag
 
 
+async def commission_percent_of_driver(
+    session: AsyncSession, driver, country_code: CountryCode
+) -> Decimal:
+    """**النسبةُ السارية على هذا الكبتن** — لا نسبةُ السوق دائماً.
+
+    **وهي حرفاً ما يفعله `rides.accept`** (§25.11): عمودُ الوعد إن كان،
+    وإلا نسبةُ السوق. **ولا حسابَ ثالث** — والموضعان يقرآن هذه الدالّة.
+
+    **و`None` في العمود تعني «لا اشتراكَ ساري»** فتبقى نسبةُ السوق،
+    **وصفرٌ يعني اشتراكاً اشتُري على صفر** — وهما حالان لا يحملهما رقمٌ واحد.
+    """
+    if driver.commission_percent_from_subscription is not None:
+        return driver.commission_percent_from_subscription
+    return await commission_percent_for(session, country_code)
+
+
 async def commission_percent_for(
     session: AsyncSession, country_code: CountryCode
 ) -> Decimal:

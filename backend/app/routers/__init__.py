@@ -40,11 +40,13 @@ from app.routers import (
     subscriptions,
     wallet,
     public_site,
+    storefront,
 )
 from app.ws.routes import ws_router
 
 api_router = APIRouter()
 api_router.include_router(config.router)
+api_router.include_router(storefront.router)
 api_router.include_router(auth.router)
 api_router.include_router(devices.router)
 api_router.include_router(notifications.router)

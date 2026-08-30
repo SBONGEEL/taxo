@@ -28,6 +28,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
+import { play } from "@/lib/sound";
 import { confirmPayment, getRidePayments } from "@/api/endpoints";
 import type { Payment, PaymentMethod, Ride, RidePayments } from "@/api/types";
 import { Button } from "@/components/ui/Button";
@@ -191,7 +192,12 @@ export function CollectScreen({
           setBusy(true);
           setError(null);
           confirmPayment(pending.id)
-            .then(onDone)
+            .then(() => {
+              // **نغمةُ التحصيل عند وقوعه لا عند فتح الشاشة** — والجدولُ
+              // كان مبنيّاً بلا سلكٍ إليه (قِيس 2026-08-30)
+              play("collected");
+              onDone();
+            })
             .catch((caught) =>
               setError(
                 caught instanceof ApiError

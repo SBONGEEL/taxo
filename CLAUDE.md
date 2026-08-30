@@ -235,6 +235,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - قيمةٌ تنجو من كنسٍ لا يراها حارس — وأخواتُها معها (2026-08-22) → `GUARDS.md`
 - والصحيحُ بالصدفة يستر الخاطئَ بالبنية (قرارُ المالك 2026-08-24) → `GUARDS.md`
 - `check:doors` — the door-with-no-button family became a build guard (2026-08-19) → `GUARDS.md`
+- `check:destinations` — حارسٌ مرجعُه قائمةٌ تُكتب بيدٍ يحرس الكتابةَ لا الواقع (2026-08-30) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
 - الحرّاس — وما لم يصر حارساً بعد (2026-08-20) → `GUARDS.md`
@@ -657,6 +658,31 @@ simpler and worse: **killing the compose client does not kill the container it s
 running and keeps holding the test database, and every later run dies at setup with one error repeated
 once per test (1076 of them), which reads as catastrophe and is dirt. The `-d` variant was never
 re-measured; do not assert it either way.
+
+<!--جديد-->
+**ووجهٌ سادسٌ قِيس 2026-08-30، وهو أخفاها كلِّها**: **`restart` يعيد تشغيل
+الأمرِ الذي أُنشئت به الحاويةُ لا الأمرَ المكتوبَ في `docker-compose.yml`.**
+حاويةُ تطويرٍ أُقلعت مرّةً بـ`vite preview` ظلّت **تخدم `dist` شهراً** والملفُّ
+يقول `vite dev` — **وكلُّ شيءٍ أخضر**: الخدمةُ «تعمل»، والملفُّ في الحاوية
+صحيحٌ حرفاً، والصفحةُ تُرسم كاملةً — **صفحةَ ذلك اليوم**. **والسؤالُ ليس «أهي
+تعمل؟» بل «أيَّ أمرٍ تشغّل؟»**، وجوابُه `ps` **داخلها**، لا ملفُّ compose.
+**والعلاجُ `up -d --force-recreate`.**
+
+> **⚠ وقبل أن «تُصلِح» حاويةً تخدم `dist`: اسأل بأيِّ طبقةٍ أُقلعت.**
+> `docker-compose.tunnel.yml` **يستبدل `command:` قصداً** بـ`vite preview`،
+> لأن حارسَي الواجهة يقرآن `backend/app` والحاويةُ لا تحمله — **فتبني أنت على
+> المضيف وتخدم هي `dist`**. فـ`preview` في وضع النفق **هو الصحيح**، وإعادتُه
+> إلى `dev` تكسر جولةَ الهاتف.
+>
+> **فالخللُ ليس في `preview` بل في أن تُقلَع الطبقةُ ثم تُنسى**: أمرُ compose
+> **يذكر ملفاتِه كلَّها صراحةً** في الاتجاهين — من نسي `-f docker-compose.tunnel.yml`
+> عند الإقلاع أقلع وضعَ التطوير، ومن نسيه عند الإصلاح ظنّ وضعَ النفق عطباً.
+
+**ومعه على ويندوز**: `localhost` يُحلّ إلى `::1` أوّلاً. **فمنفذٌ يحمله Docker
+على IPv4 وعمليةُ مضيفٍ على IPv6 خادمان لا خادم** — وقياسٌ على `localhost`
+يذهب إلى الخطأ منهما صامتاً. **يُقاس على `127.0.0.1` صراحةً**، و`netstat -ano
+| grep :المنفذ` يُقرأ **قبل** أن يُتَّهم الكود.
+<!--/جديد-->
 
 **These three are one family, and it is worth reading them together**: a `restart` that keeps the old
 image (so a new dependency is missing), a bind mount that inotify cannot cross (so Vite serves the module

@@ -31,6 +31,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
+import { Storefront } from "@/components/Storefront";
 import {
   listCommission,
   listFeatureFlags,
@@ -566,6 +567,10 @@ export function SettingsScreen() {
               <p className="text-12.5 text-muted">لا سياسةَ سلفٍ لهذه الدولة.</p>
             )}
           </section>
+
+          {/* بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) — **صفوفٌ لا
+              شيفرة**: إضافةُ خدمةٍ أو لافتةٍ **بلا نشر** */}
+          <Storefront country={country} onError={setError} />
 
           {/* قواعدُ التوزيع (§5.3) — **صارت إعداداً بعد أن كانت ثوابتَ في
               الشيفرة** (قرارُ المالك 2026-08-30)، وعُدِّلت §5.3 معها */}

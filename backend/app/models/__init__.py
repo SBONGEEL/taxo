@@ -5,6 +5,7 @@ from app.models.booking import RideBooking
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.debt import DriverDebt  # noqa: F401
 from app.models.dispatch_setting import DispatchSetting  # noqa: F401
+from app.models.storefront import PromoBanner, ServiceTile  # noqa: F401
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting, RideCancellationCharge
 from app.models.map_setting import MapSetting

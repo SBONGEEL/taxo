@@ -796,6 +796,68 @@ async def seed_bootstrap_admin(session: AsyncSession) -> None:
     _log(f"حساب المشرف: {phone}")
 
 
+async def seed_service_tiles(session: AsyncSession) -> None:
+    """القائمةُ الحاليّةُ **صفوفاً لا شيفرة** (قرارُ المالك 2026-08-30).
+
+    **وهذا هو الفرق**: إضافةُ سادسةٍ من اللوحة **بلا نشر** — وبلاطةٌ مكتوبةٌ
+    في الشيفرة تعني بناءَ ثلاثة تطبيقاتٍ لأجل صفّ.
+
+    **والسوقُ الأردن وحدَه**: ليبيا مغلقةٌ بأمر المالك، **وسوقٌ مغلقٌ لا يرى
+    خدماته** — فلا تُبذر له صفوف.
+
+    **و«قريباً» بلا مقصدٍ عن قصد**: تُقرأ ولا تُنقر. **والفعّالةُ كلُّها بمقصدٍ
+    من `SERVICE_DESTINATIONS`** — وقيدُ القاعدة والبابُ يمنعان غير ذلك.
+    """
+    from app.models.enums import CampaignAudience, ServiceTileStatus
+    from app.models.storefront import ServiceTile
+
+    RIDER = CampaignAudience.ALL_RIDERS
+    DRIVER = CampaignAudience.ALL_DRIVERS
+    SOON = ServiceTileStatus.SOON
+    ACTIVE = ServiceTileStatus.ACTIVE
+
+    tiles = [
+        # ── الراكب
+        ("parcels", "توصيل طرود", None, "package", RIDER, 10, None, SOON),
+        ("airport", "توصيل مطار", "متاح الآن", "plane-takeoff", RIDER, 20, None, SOON),
+        ("orders", "طلبات", None, "shopping-bag", RIDER, 30, None, SOON),
+        ("scheduled", "رحلات مجدولة", "حجزٌ بموعد", "calendar-clock", RIDER, 40, "/account/bookings", ACTIVE),
+        ("my_items", "أغراضي", None, "boxes", RIDER, 50, None, SOON),
+        ("more_rider", "أخرى", "كل الخدمات", "layout-grid", RIDER, 60, "/account", ACTIVE),
+        # ── الكبتن
+        ("d_scheduled", "رحلات مجدولة", None, "calendar-clock", DRIVER, 10, None, SOON),
+        ("d_parcels", "توصيل طرود", None, "package", DRIVER, 20, None, SOON),
+        ("garage", "متجر المركبات", "سِمات جديدة", "store", DRIVER, 30, "/account/garage", ACTIVE),
+        ("missions", "التحديات", None, "trophy", DRIVER, 40, "/account/missions", ACTIVE),
+        ("advance", "سلفة", None, "banknote", DRIVER, 50, "/account/advances", ACTIVE),
+        ("more_driver", "أخرى", "كل الأدوات", "layout-grid", DRIVER, 60, "/account", ACTIVE),
+    ]
+
+    for key, title, subtitle, icon, audience, order, dest, status in tiles:
+        existing = await session.scalar(
+            select(ServiceTile).where(
+                ServiceTile.country_code == CountryCode.JO,
+                ServiceTile.key == key,
+            )
+        )
+        if existing is not None:
+            continue
+        session.add(
+            ServiceTile(
+                country_code=CountryCode.JO,
+                key=key,
+                title=title,
+                subtitle=subtitle,
+                icon=icon,
+                audience=audience,
+                sort_order=order,
+                destination=dest,
+                status=status,
+            )
+        )
+    _log("بلاطاتُ الخدمات: بُذرت لسوق الأردن")
+
+
 async def main() -> None:
     async with SessionLocal() as session:
         await seed_feature_flags(session)
@@ -811,6 +873,7 @@ async def main() -> None:
         await seed_notification_settings(session)
         await seed_plans(session)
         await seed_vehicle_skins(session)
+        await seed_service_tiles(session)
         await seed_providers(session)
         await seed_fcm(session)
         await seed_firebase_auth(session)

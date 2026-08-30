@@ -41,6 +41,7 @@ import type {
   VehicleCategory,
   Wallet,
   WalletTransaction,
+  Storefront,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -417,3 +418,15 @@ export const exchangeHandoff = (token: string) =>
     { token, app: CLIENT_APP },
     { anonymous: true },
   );
+
+
+/** بلاطاتُ الشاشة الرئيسة ولافتاتُها — **نداءٌ واحدٌ لشاشةٍ واحدة**.
+ *
+ * **وندءان يعنيان شاشةً تُرسم على مرحلتين**: البلاطاتُ تظهر ثم تقفز اللافتةُ
+ * فوقها، **وهو ارتجافٌ يراه المستخدمُ عطباً**.
+ *
+ * **و`surface` سياقُ الفعل لا دورُ الفاعل**: من يحمل الدورين يرى ما يخصّ
+ * التطبيقَ الذي هو فيه.
+ */
+export const getStorefront = () =>
+  api.get<Storefront>("/storefront", { query: { surface: "rider" } });

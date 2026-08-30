@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:rtl && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:sheet && npm run check:config && npm run check:target && npm run check:contract && npm run check:client-doors && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
+    "build": "npm run check:rtl && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:sheet && npm run check:config && npm run check:target && npm run check:contract && npm run check:destinations && npm run check:client-doors && npm run check:money && npm run check:readers && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -17,6 +17,7 @@
     "check:dist": "node scripts/check-dist-target.mjs --dist",
     "check:digits": "node scripts/check-digits.mjs",
     "check:contract": "node ../tools/check-contract.mjs --app customer-app",
+    "check:destinations": "node ../tools/check-destinations.mjs",
     "check:served": "node ../tools/check-served.mjs customer-app",
     "check:money": "node ../tools/check-money.mjs customer-app",
     "check:readers": "node ../tools/check-readers.mjs customer-app",

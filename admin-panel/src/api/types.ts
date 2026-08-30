@@ -1364,3 +1364,40 @@ export interface DispatchSetting {
   cooldown_seconds: number;
   broadcast_batch_size: number;
 }
+
+// ═══════ بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) ═══════
+
+export type ServiceTileStatus = "soon" | "active" | "hidden";
+export type BannerLinkKind = "internal" | "external" | "none";
+
+export interface ServiceTileRow {
+  id: string;
+  country_code: CountryCode;
+  key: string;
+  title: string;
+  subtitle: string | null;
+  icon: string;
+  audience: CampaignAudience;
+  sort_order: number;
+  /** **فعّالةٌ بلا مقصدٍ مبنيٍّ لا تُقبل** — يمنعها البابُ بعلّته. */
+  destination: string | null;
+  status: ServiceTileStatus;
+  /** **مدّةُ شارة «جديد»** — تختفي بانقضائها بلا نشر. */
+  new_until: string | null;
+}
+
+export interface PromoBannerRow {
+  id: string;
+  country_code: CountryCode;
+  title: string;
+  body: string | null;
+  icon: string | null;
+  audience: CampaignAudience;
+  sort_order: number;
+  starts_at: string;
+  /** **إلزاميّة**: لافتةٌ بلا مدّةِ انتهاءٍ لا تُقبل. */
+  ends_at: string;
+  link_kind: BannerLinkKind;
+  link: string | null;
+  is_active: boolean;
+}

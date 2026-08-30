@@ -54,6 +54,7 @@ import type {
   WithdrawalMethod,
   DebtClaim,
   DriverDebtState,
+  Storefront,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -546,3 +547,15 @@ export const payDebtWithCliq = (amount: string) =>
 
 export const listMyDebtClaims = () =>
   api.get<DebtClaim[]>("/drivers/me/debt/cliq");
+
+
+/** بلاطاتُ الشاشة الرئيسة ولافتاتُها — **نداءٌ واحدٌ لشاشةٍ واحدة**.
+ *
+ * **وندءان يعنيان شاشةً تُرسم على مرحلتين**: البلاطاتُ تظهر ثم تقفز اللافتةُ
+ * فوقها، **وهو ارتجافٌ يراه المستخدمُ عطباً**.
+ *
+ * **و`surface` سياقُ الفعل لا دورُ الفاعل**: من يحمل الدورين يرى ما يخصّ
+ * التطبيقَ الذي هو فيه.
+ */
+export const getStorefront = () =>
+  api.get<Storefront>("/storefront", { query: { surface: "driver" } });

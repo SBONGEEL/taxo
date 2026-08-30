@@ -100,6 +100,8 @@ import type {
   DebtClaimRow,
   DispatchSetting,
   DriverDebtRow,
+  PromoBannerRow,
+  ServiceTileRow,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -1194,3 +1196,31 @@ export const updateDispatchSettings = (
   country: CountryCode,
   payload: Partial<Omit<DispatchSetting, "country_code">>,
 ) => api.patch<DispatchSetting>(`/admin/settings/dispatch/${country}`, payload);
+
+// ── بلاطاتُ الخدمات واللافتات — **تُدار من هنا بلا نشر** (الترحيلة `0063`)
+
+export const listServiceTiles = (country?: CountryCode) =>
+  api.get<ServiceTileRow[]>("/admin/settings/service-tiles", {
+    query: { country },
+  });
+
+export const createServiceTile = (payload: Partial<ServiceTileRow>) =>
+  api.post<ServiceTileRow>("/admin/settings/service-tiles", payload);
+
+export const updateServiceTile = (
+  id: string,
+  payload: Partial<ServiceTileRow>,
+) => api.patch<ServiceTileRow>(`/admin/settings/service-tiles/${id}`, payload);
+
+export const listPromoBanners = (country?: CountryCode) =>
+  api.get<PromoBannerRow[]>("/admin/settings/promo-banners", {
+    query: { country },
+  });
+
+export const createPromoBanner = (payload: Partial<PromoBannerRow>) =>
+  api.post<PromoBannerRow>("/admin/settings/promo-banners", payload);
+
+export const updatePromoBanner = (
+  id: string,
+  payload: Partial<PromoBannerRow>,
+) => api.patch<PromoBannerRow>(`/admin/settings/promo-banners/${id}`, payload);

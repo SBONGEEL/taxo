@@ -22,7 +22,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import {
   createBooking,
+  getMyReferrals,
   getRouteLine,
+  getStorefront,
+  getWallet,
+  listMyRides,
   requestRide,
   unreadCount,
   updateMe,
@@ -30,10 +34,14 @@ import {
 import type {
   Coordinates,
   GenderPreference,
+  MyReferrals,
   Ride,
+  Storefront,
   VehicleCategory,
+  Wallet,
 } from "@/api/types";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
+import { RiderHome } from "@/components/home/RiderHome";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
@@ -98,11 +106,39 @@ export function HomeScreen() {
   // يصل على المقبس (`Toasts`)، وما فاتها يُقرأ حين تعود — فاستفتاءٌ كلَّ ثوانٍ
   // يسأل عن جوابٍ لا يتغيّر إلا بحدثٍ نراه أصلاً
   const [unreadNotifications, setUnreadNotifications] = useState(false);
+  // **أبوابُ الرئيسيةِ الجديدة** (تصميمُ `home Rider`): الرصيدُ، والبلاطاتُ
+  // واللافتاتُ معاً في نداءٍ واحد، وجائزةُ الإحالة، وآخرُ رحلاته.
+  //
+  // **وكلُّها `null` حتى تصل** — **ولا يُرسم صفرٌ مكانَ «لم يُعرف بعد»**، ولا
+  // عنوانٌ فوق قائمةٍ فارغة.
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [storefront, setStorefront] = useState<Storefront | null>(null);
+  const [referrals, setReferrals] = useState<MyReferrals | null>(null);
+  const [recent, setRecent] = useState<Ride[]>([]);
   useEffect(() => {
     let cancelled = false;
     unreadCount()
       .then((body) => !cancelled && setUnreadNotifications(body.unread > 0))
       .catch(() => undefined); // جرسٌ بلا نقطةٍ أهونُ من شاشةِ خطأ
+    getWallet()
+      .then((body) => !cancelled && setWallet(body))
+      .catch(() => undefined);
+    getStorefront()
+      .then((body) => !cancelled && setStorefront(body))
+      .catch(() => undefined);
+    getMyReferrals()
+      .then((body) => !cancelled && setReferrals(body))
+      .catch(() => undefined);
+    // **ثلاثٌ لا عشرون**: الشريطُ أفقيٌّ وثلاثُ بطاقاتٍ تملؤه، **وزرُّ «الكل»
+    // هو البابُ إلى الباقي** — فقراءةُ عشرين لعرض ثلاثٍ حملٌ بلا قارئ
+    listMyRides(3, 0)
+      .then(
+        (body) =>
+          !cancelled &&
+          // **الغلافُ لا الرحلة**: `RideListItem` يحمل معها النزاعَ والمدفوع
+          setRecent(body.map((row) => row.ride).filter((row) => !isActive(row))),
+      )
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -205,6 +241,25 @@ export function HomeScreen() {
     setDropoffAddress(place.address || place.name);
     setPhase("confirm");
     if (pickup) map.current?.fitBounds(pickup, place.coordinates);
+  }
+
+  /** **«أعِد الرحلة»** (تصميمُ `home Rider`) — **وجهةُ رحلةٍ ماضيةٍ في ورقة
+   *  التأكيد**، لا طلبٌ يُرسل بلمسة.
+   *
+   *  **وثلاثةٌ لا تُنسخ من الرحلة القديمة**:
+   *  1. **نقطةُ الانطلاق**: أين هو **الآن** لا أين كان — ونسخُها تضع كبتناً
+   *     على رصيفٍ غادره الراكبُ منذ يومين.
+   *  2. **الأجرة**: تُحسب في الخلفية لحظتَها (§14)، **والقديمةُ تعريفةُ يومها**.
+   *  3. **المحطاتُ الوسيطة**: مسارٌ يُعاد بمحطاتٍ لم يطلبها **أغلى بلا إذنه**.
+   *
+   *  **فالمنسوخُ الوجهةُ وحدَها** — ومنها إلى الورقة التي يراجعها ويضغط. */
+  function repeatRide(past: Ride) {
+    pickPlace({
+      id: `ride:${past.id}`,
+      name: past.dropoff_address ?? "الوجهة",
+      address: past.dropoff_address ?? "",
+      coordinates: past.dropoff,
+    });
   }
 
   function confirmPin() {
@@ -365,9 +420,16 @@ export function HomeScreen() {
   const picking =
     phase === "pick-pickup" || phase === "pick-dropoff" || phase === "pick-stop";
 
-  return (
-    <div className="relative h-full w-full overflow-hidden bg-bg">
-      <MapView
+  /** **الرئيسيةُ صفحةٌ لا خريطة** (تصميمُ `home Rider`) — **وطورُ الطلب لا
+   *  يتغيّر**: من ضغط «إلى أين؟» عاد إلى الخريطة ملءَ الشاشة كما كانت.
+   *
+   *  **والشرطُ يجمع الأطوارَ الأربعةَ صراحةً** — لا `phase === "idle"` وحدَه:
+   *  رحلةٌ جاريةٌ أو خاتمةٌ تُنتظر تسبقان الصفحةَ كلَّها، **وطورٌ رابعٌ
+   *  يُضاف غداً يقع في الفرع الصحيح لأن الشرطَ يسمّي ما يقبله لا ما يرفضه**. */
+  const browsing = !tracking && outcome === null && phase === "idle";
+
+  const mapNode = (
+    <MapView
         ref={map}
         token={token}
         center={center}
@@ -399,7 +461,45 @@ export function HomeScreen() {
             .catch(() => setPinAddress(null))
             .finally(() => setPinLoading(false));
         }}
-      />
+    />
+  );
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-bg">
+      {browsing ? (
+        <RiderHome
+          name={user?.name ?? "بك"}
+          // **عنوانُ موقعه حين يُعرف** — ولا مدينةَ تُخمَّن من إحداثيّة
+          place={pickupAddress}
+          unread={unreadNotifications}
+          wallet={wallet}
+          currency={countryConfig?.currency ?? "JOD"}
+          nearby={drivers.length}
+          onOpenNotifications={() => navigate("/account/notifications")}
+          onOpenWallet={() => navigate("/wallet")}
+          onOpenAccount={() => navigate("/account")}
+          onAskDestination={() => setSearchOpen(true)}
+          places={places}
+          onPickPlace={(saved) =>
+            pickPlace({
+              id: `place:${saved.id}`,
+              name: saved.label,
+              address: saved.address ?? "",
+              coordinates: { lat: saved.lat, lng: saved.lng },
+            })
+          }
+          tiles={storefront?.tiles ?? []}
+          banners={storefront?.banners ?? []}
+          referrals={referrals}
+          onOpenReferrals={() => navigate("/account/referrals")}
+          recent={recent}
+          onOpenRides={() => navigate("/rides")}
+          onRepeat={repeatRide}
+          map={mapNode}
+        />
+      ) : (
+        <>
+      {mapNode}
 
       {/* دبوسٌ ثابت في المركز: الخريطة تتحرك تحته لا هو فوقها */}
       {picking ? (
@@ -618,6 +718,9 @@ export function HomeScreen() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+        </>
+      )}
 
       <DestinationSearch
         open={searchOpen}

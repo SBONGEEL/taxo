@@ -16,7 +16,6 @@
  * الاتصال.
  */
 
-import { Bell, Moon, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -29,10 +28,11 @@ import {
   completeRide,
   resumeFromStop,
   declineRide,
-  getDriverWallet,
   getEarnings,
+  getMyProgress,
   getMySubscription,
   getRouteLine,
+  getStorefront,
   beginPause,
   getUnreadCount,
   rerouteRide,
@@ -43,9 +43,10 @@ import type {
   Currency,
   Earnings,
   MySubscription,
+  MyProgress,
   NearbyDriver,
   Ride,
-  Wallet,
+  Storefront,
 } from "@/api/types";
 import { listNearbyColleagues } from "@/api/endpoints";
 import { useGarage } from "@/lib/garage";
@@ -57,6 +58,7 @@ import {
   type Sample,
 } from "@/lib/eta";
 import { ActiveRide } from "@/components/ActiveRide";
+import { CaptainHome } from "@/components/home/CaptainHome";
 import {
   BACK_ON_ROUTE_STREAK,
   nextInstruction,
@@ -75,7 +77,7 @@ import { CATEGORY_LABEL, CURRENCY_FULL, CURRENCY_LABEL, PREFERENCE_LABEL } from 
 import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
-import { digits, cn } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 
 export function HomeScreen() {
   const navigate = useNavigate();
@@ -138,9 +140,10 @@ export function HomeScreen() {
   // فالخروجُ منهما بيد الكبتن لا بحدثٍ من الخلفية
   const [settling, setSettling] = useState<Ride | null>(null);
   const [rating, setRating] = useState<Ride | null>(null);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [subscription, setSubscription] = useState<MySubscription | null>(null);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
+  const [storefront, setStorefront] = useState<Storefront | null>(null);
+  const [progress, setProgress] = useState<MyProgress | null>(null);
   const [busy, setBusy] = useState(false);
   const [unread, setUnread] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -152,11 +155,17 @@ export function HomeScreen() {
   const currency = CURRENCY_LABEL[currencyCode];
 
   useEffect(() => {
-    getDriverWallet()
-      .then(setWallet)
-      .catch(() => undefined);
     getMySubscription()
       .then(setSubscription)
+      .catch(() => undefined);
+    // **نداءٌ واحدٌ للبلاطات واللافتات معاً** — فلا تُرسم الشاشةُ على مرحلتين
+    getStorefront()
+      .then(setStorefront)
+      .catch(() => undefined);
+    // **المستوى من بابه لا من حسابٍ هنا**: `enabled: false` تعني أن السوقَ
+    // لا يشغّل المهامَّ أصلاً — **فلا يُرسم «المستوى ٠»** وهو لا وجودَ له
+    getMyProgress()
+      .then(setProgress)
       .catch(() => undefined);
   }, []);
 
@@ -348,6 +357,31 @@ export function HomeScreen() {
         ? "إيقاف الاستقبال"
         : "ابدأ الاستقبال";
 
+  /** سطرُ الاشتراك — **يُقال بحاله لا بوجوده**: «سارٍ حتى…» و«لا اشتراك»
+   *  جملتان مختلفتان، **وبطاقةٌ صامتةٌ فوق زرٍّ لا يعمل تُقرأ عطباً**. */
+  const subscriptionLine = !subscription
+    ? null
+    : covered
+      ? `اشتراكك ساري${
+          subscription.days_remaining <= 5
+            ? ` — يتبقّى ${digits(String(subscription.days_remaining))} أيام`
+            : ""
+        }`
+      : "لا اشتراك ساري — اشترك لتستقبل الطلبات";
+
+  // **المركبةُ الأولى**: صفٌّ واحدٌ لكلِّ كبتنٍ في هذا السوق، ولو تعدّدت
+  // فالمفعَّلةُ سؤالُ شاشةِ المركبة لا سؤالُ الرئيسية
+  const vehicle = profile?.vehicles[0] ?? null;
+  const vehicleLine = vehicle
+    ? `${vehicle.make} ${vehicle.model} · ${digits(vehicle.plate_number)}`
+    : null;
+  const vehicleNote = vehicle
+    ? `${vehicle.color} · ${CATEGORY_LABEL[vehicle.category]}`
+    : null;
+
+  // **المستوى `null` لا صفر** حين لا تكون المهامُّ مشغَّلةً في السوق
+  const level = progress?.enabled ? progress.level : null;
+
   // تسبقان كلَّ شيء: من أنهى رحلةً يُحصّل ثم يُقيّم قبل أن يرى الخريطة
   if (settling) {
     return (
@@ -358,9 +392,6 @@ export function HomeScreen() {
         onDone={() => {
           setRating(settling);
           setSettling(null);
-          getDriverWallet()
-            .then(setWallet)
-            .catch(() => undefined);
         }}
       />
     );
@@ -369,9 +400,12 @@ export function HomeScreen() {
     return <RateRiderScreen ride={rating} onDone={() => setRating(null)} />;
   }
 
-  return (
-    <div className="relative h-full overflow-hidden bg-bg">
-      <MapView
+  /** **الخريطةُ عقدةٌ واحدة** — بطاقةً في الخمول، وملءَ الشاشة في التتبّع.
+   *
+   *  **ولا نسختان بخصائصَ متوازيةٍ**: نسختان تفترقان بحرفٍ يوماً، **وهو
+   *  الشكلُ الثامن بعينه** على شاشةٍ واحدة. */
+  const mapNode = (
+    <MapView
         token={token}
         center={position}
         // **مركبتُه المفعَّلة، وحالُ اشتراكه من الباب الذي تقرؤه هذه الشاشةُ
@@ -387,83 +421,43 @@ export function HomeScreen() {
         routePoints={routeLine}
         trimAt={position}
         etaMinutes={eta}
-      />
+    />
+  );
 
-      {/* تدرّجٌ علوي 60px يفصل الشريط عن الخريطة (§2.9) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-bg to-transparent" />
-
+  return (
+    <div className="relative h-full overflow-hidden bg-bg">
       {!tracking ? (
-        <>
-          <div className="absolute inset-x-16 top-12 flex items-center justify-between gap-8">
-            <div className="flex items-center gap-8 rounded-full border border-line bg-surface px-13 py-8">
-              <span
-                className={cn(
-                  "block size-8 rounded-full",
-                  online ? "bg-ok" : "bg-muted",
-                )}
-              />
-              <span className="text-12.5 font-semibold text-ink">
-                {online ? "متصل" : "غير متصل"}
-              </span>
-            </div>
-
-            <div className="flex gap-7">
-              <button
-                type="button"
-                onClick={() => navigate("/notifications")}
-                aria-label="الإشعارات"
-                className="ctl relative size-33"
-              >
-                <Bell className="size-16" />
-                {/* نقطةٌ لا عدد: العددُ الدقيق لا يغيّر ما سيفعله الكبتن،
-                    ورسمُه يطلب نداءً يتكرر مع كل تحديث */}
-                {unread > 0 ? (
-                  <span className="absolute end-6 top-6 block size-7 rounded-full bg-danger" />
-                ) : null}
-              </button>
-              <button
-                type="button"
-                onClick={toggle}
-                aria-label="تبديل المظهر"
-                className="ctl size-33"
-              >
-                {dark ? (
-                  <Sun className="size-16" />
-                ) : (
-                  <Moon className="size-16" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* لافتةُ الاشتراك — تظهر إلا حين يكون سارياً بلا قرب انتهاء */}
-          {subscription && !covered ? (
-            <button
-              type="button"
-              onClick={() => navigate("/subscription")}
-              className="pressable absolute inset-x-16 top-62 flex animate-slideup items-center gap-10 rounded-14 border border-danger bg-surface px-13 py-11 text-start"
-            >
-              <span className="block h-36 w-6 shrink-0 rounded-4 bg-danger" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-12.5 font-bold text-ink">
-                  لا اشتراك ساري
-                </span>
-                {/* **وتفسيرُ ما يراه على الخريطة معه** (2026-08-22): سيارتُه
-                    باهتةٌ رماديةٌ بلا اشتراك — ولونٌ يتبدّل بلا كلمةٍ تقول
-                    لماذا يُقرأ عطباً في الرسم لا حالاً في الحساب */}
-                <span className="block text-11 leading-snug text-muted">
-                  اشترك لتستقبل الطلبات — وسيارتك على الخريطة باهتةٌ حتى
-                  تشترك.
-                </span>
-              </span>
-              <span className="shrink-0 rounded-9 bg-brand px-12 py-7 text-11.5 font-bold text-brand-ink">
-                اشترك
-              </span>
-            </button>
-          ) : null}
-
-          {online && !offer ? (
-            <div className="absolute inset-x-0 top-62 flex justify-center">
+        <CaptainHome
+          name={user?.name ?? "كبتن"}
+          rating={
+            profile ? Number(profile.driver.rating_avg).toFixed(1) : null
+          }
+          level={level}
+          online={online}
+          unread={unread}
+          dark={dark}
+          onToggleTheme={toggle}
+          onToggleOnline={() => {
+            clearError();
+            if (!covered) navigate("/subscription");
+            else if (online) goOffline();
+            else goOnline();
+          }}
+          goLabel={goLabel}
+          goDisabled={connecting}
+          earnings={earnings}
+          // **نسبتُه هو مقروءةً من بابها** — ولا حسابَ في الجهاز (§14)
+          commissionPercent={
+            profile ? String(Number(profile.commission_percent)) : null
+          }
+          tiles={storefront?.tiles ?? []}
+          banners={storefront?.banners ?? []}
+          map={mapNode}
+          subscriptionLine={subscriptionLine}
+          vehicleLine={vehicleLine}
+          vehicleNote={vehicleNote}
+          statusPill={online && !offer ? (
+            <div className="mb-12 flex justify-center">
               <span className="flex animate-pulse items-center gap-9 rounded-full border border-line bg-surface px-18 py-9 text-12.5 font-semibold text-ink">
                 <span className="block size-8 rounded-full bg-ok" />
                 {/* **النقرةُ حملت معرّفاً، فالشاشةُ تنتظره** (تصحيحُ المالك):
@@ -479,37 +473,8 @@ export function HomeScreen() {
               </span>
             </div>
           ) : null}
-
-          <div className="absolute inset-x-0 bottom-nav bg-gradient-to-t from-bg from-55% to-transparent px-16 pb-12 pt-14">
-            <div className="mb-10 flex gap-8">
-              {[
-                {
-                  label: "المحفظة",
-                  value: wallet ? digits(wallet.balance) : "—",
-                },
-                {
-                  label: "رحلات اليوم",
-                  value: earnings
-                    ? digits(String(earnings.completed_rides))
-                    : "—",
-                },
-                {
-                  label: "التقييم",
-                  value: profile
-                    ? digits(Number(profile.driver.rating_avg).toFixed(1))
-                    : "—",
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex-1 rounded-14 border border-line bg-surface px-12 py-10"
-                >
-                  <div className="text-10 text-muted">{stat.label}</div>
-                  <div className="text-15 font-bold text-ink">{stat.value}</div>
-                </div>
-              ))}
-            </div>
-
+          extras={
+            <>
             {/* التفضيلُ النافذ ظاهرٌ في الرئيسية لا في الإعدادات وحدها
                 (المرحلة 10-ج): من ضيّق من يُقلّهم يرى طلباتٍ أقل، وسببُ القلة
                 يجب أن يكون أمام عينه لا في شاشةٍ يفتحها بحثاً عن عطل */}
@@ -560,32 +525,15 @@ export function HomeScreen() {
                 <ErrorNote message={error ?? actionError} />
               </div>
             ) : null}
-
-            <button
-              type="button"
-              disabled={connecting}
-              onClick={() => {
-                clearError();
-                if (!covered) navigate("/subscription");
-                else if (online) goOffline();
-                else goOnline();
-              }}
-              className={cn(
-                "pressable w-full rounded-16 border border-line p-16 text-center text-15 font-bold",
-                !covered
-                  ? "bg-surface-2 text-muted"
-                  : online
-                    ? "bg-surface text-ink"
-                    : "bg-brand text-brand-ink",
-              )}
-            >
-              {goLabel}
-            </button>
-          </div>
-
-        </>
+            </>
+          }
+        />
       ) : (
-        <ActiveRide
+        <>
+          {mapNode}
+          {/* تدرّجٌ علوي 60px يفصل الشريط عن الخريطة (§2.9) */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-bg to-transparent" />
+          <ActiveRide
           ride={ride}
           currencyLabel={currency}
           busy={busy}
@@ -605,7 +553,8 @@ export function HomeScreen() {
               setRide(await cancelRide(ride.id, reason.label, reason.code)),
             )
           }
-        />
+          />
+        </>
       )}
 
       {offer ? (

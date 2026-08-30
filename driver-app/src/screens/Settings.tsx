@@ -35,10 +35,10 @@ import { biometryLabel } from "@/lib/biometric";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import {
-  notificationSoundEnabled,
+  otherSoundsEnabled,
   offerSoundEnabled,
   play,
-  setNotificationSoundEnabled,
+  setOtherSoundsEnabled,
   setOfferSoundEnabled,
   setSoundsEnabled,
   soundsEnabled,
@@ -65,7 +65,7 @@ export function SettingsScreen() {
 
   const [marketing, setMarketing] = useState<boolean | null>(null);
   const [sounds, setSounds] = useState(soundsEnabled);
-  const [notifySound, setNotifySound] = useState(notificationSoundEnabled);
+  const [otherSounds, setOtherSounds] = useState(otherSoundsEnabled);
   const [offerSound, setOfferSound] = useState(offerSoundEnabled);
   const [alias, setAlias] = useState("");
   const [savingAlias, setSavingAlias] = useState(false);
@@ -199,7 +199,7 @@ export function SettingsScreen() {
       <section className="mb-12 card p-15">
         <SoundToggle
           title="أصوات التطبيق"
-          hint="نغماتٌ قصيرة عند التحصيل ودخول المال وتنبيهات الاشتراك."
+          hint="المفتاحُ الأعلى — إطفاؤه يُسكت كلَّ شيءٍ عدا نغمة الطلب."
           on={sounds}
           onToggle={() => {
             const next = !sounds;
@@ -209,15 +209,19 @@ export function SettingsScreen() {
           }}
         />
         <div className="mt-13 border-t border-line pt-13">
+          {/* **فئةٌ لا نغمة** (قرارُ المالك 2026-08-30): كان هذا المفتاحُ
+              يحكم `notify` **وحدَها** واسمُه يَعِد بفئة — فمن أطفأه ظنّ أنه
+              أسكت ما عدا الطلب، **وأسكت واحدةً من ثمان**. صار يحكم كلَّ ما
+              عدا الطلبَ وانقضاءَه */}
           <SoundToggle
-            title="صوت الإشعارات"
-            hint="نغمةُ الإشعارات وحدها — مستقلّةٌ عن بقية الأصوات."
-            on={notifySound}
+            title="أصوات الرحلة والإشعارات"
+            hint="بدءُ الرحلة والوصولُ والإنهاءُ والتحصيلُ ودخولُ المال والإشعارات — دون نغمة الطلب."
+            on={otherSounds}
             onToggle={() => {
-              const next = !notifySound;
-              setNotificationSoundEnabled(next);
-              setNotifySound(next);
-              if (next) play("notify");
+              const next = !otherSounds;
+              setOtherSoundsEnabled(next);
+              setOtherSounds(next);
+              if (next) play("rideCompleted");
             }}
           />
         </div>

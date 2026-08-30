@@ -20,7 +20,11 @@
 /** مفاتيحُ التخزين — **على الجهاز لا الحساب** كالسِمة: من يُسكت تطبيقه في
  *  اجتماعٍ لا يريد إسكاته على هاتفه في البيت. */
 const KEY = "taxo.driver.sound";
-const KEY_NOTIFICATIONS = "taxo.driver.sound.notifications";
+/** **مفتاحُ ما عدا الطلب** — واسمُ التخزين بقي `notifications` لأن تبديلَه
+ *  **يُطفئ الصوتَ عند من أشعله**: المفتاحُ محفوظٌ على جهازه، ومفتاحٌ جديدٌ
+ *  يُقرأ غيابُه «مفعّل» فيعود الصوتُ لمن أطفأه. **والاسمُ في الشيفرة يقول
+ *  الفئةَ، واسمُ التخزين يحفظ الاختيار.** */
+const KEY_OTHER = "taxo.driver.sound.notifications";
 /** **مفتاحُ الطلب الوارد وحدَه** — انظر `offerSoundEnabled`. */
 const KEY_OFFER = "taxo.driver.sound.offer";
 
@@ -45,6 +49,9 @@ interface Note {
 export type Cue =
   | "offer"
   | "offerExpired"
+  | "rideStarted"
+  | "driverArrived"
+  | "rideCompleted"
   | "collected"
   | "credited"
   | "subscriptionEnding"
@@ -72,6 +79,31 @@ const CUES: Record<Cue, Note[]> = {
     { hz: E5, at: 0, for: 0.18 },
     { hz: D5, at: 0.15, for: 0.18 },
     { hz: A4, at: 0.3, for: 0.2 },
+  ],
+  // **بدءُ الرحلة — الموتيف صاعداً وقد اكتمل**: `A4 → D5 → E5` بلا تكرار،
+  // فهو إعلانُ انطلاقٍ لا نداءٌ ينتظر جواباً.
+  rideStarted: [
+    { hz: A4, at: 0, for: 0.16 },
+    { hz: D5, at: 0.13, for: 0.16 },
+    { hz: E5, at: 0.26, for: 0.22 },
+  ],
+  // **وصولُ الكبتن — هادئ**: نغمتان من الموتيف بثلثَي الشدّة. **يقع والكبتنُ
+  // يقود**، فصوتٌ يفزعه أسوأُ من صمت.
+  driverArrived: [
+    { hz: D5, at: 0, for: 0.14, gain: 0.34 },
+    { hz: E5, at: 0.12, for: 0.18, gain: 0.34 },
+  ],
+  // **إنهاءُ الرحلة — الموتيف تامّاً ثم ينحلّ إلى الأوكتاف**: أطولُ ما في
+  // الجدول بعد الطلب، **لأنه خاتمةٌ لا خبرٌ عابر**.
+  //
+  // **وغيرُ `collected` عمداً** (قرارُ المالك 2026-08-30): تلك للتحصيل — أي
+  // **لوصول المال**؛ وهذه لانتهاء العمل. **ونغمةٌ واحدةٌ لحدثين تجعل الكبتنَ
+  // يظنّ أنه قبض وهو لم يقبض بعد.**
+  rideCompleted: [
+    { hz: A4, at: 0, for: 0.16 },
+    { hz: D5, at: 0.13, for: 0.16 },
+    { hz: E5, at: 0.26, for: 0.16 },
+    { hz: A5, at: 0.4, for: 0.28 },
   ],
   collected: [
     { hz: D5, at: 0, for: 0.16 },
@@ -101,8 +133,16 @@ const CUES: Record<Cue, Note[]> = {
   ],
 };
 
-/** النغماتُ التي يحكمها مفتاحُ الإشعارات لا المفتاحُ العام. */
-const NOTIFICATION_CUES: ReadonlySet<Cue> = new Set<Cue>(["notify"]);
+/** **فئاتٌ ثلاثٌ لا نغمةٌ واحدة** (قرارُ المالك 2026-08-30).
+ *
+ * **وكان `NOTIFICATION_CUES = {notify}`** — مفتاحٌ يحكم **نغمةً واحدة**
+ * واسمُه يَعِد بفئة. فمن أطفأ «أصوات الإشعارات» ظنّ أنه أسكت ما عدا الطلب،
+ * **وأسكت واحدةً من ثمان** — والباقياتُ تحت المفتاح العام معه.
+ *
+ * **والثلاثُ الآن**: الطلبُ وحدَه · وما عداه · والعامُّ فوقهما. **فسؤال
+ * «أيُطفئ كلٌّ ما يخصّه؟» صار له جوابٌ يُقاس.**
+ */
+const OFFER_CUES: ReadonlySet<Cue> = new Set<Cue>(["offer", "offerExpired"]);
 
 function enabled(key: string): boolean {
   try {
@@ -118,16 +158,16 @@ export function soundsEnabled(): boolean {
   return enabled(KEY);
 }
 
-export function notificationSoundEnabled(): boolean {
-  return enabled(KEY_NOTIFICATIONS);
+export function otherSoundsEnabled(): boolean {
+  return enabled(KEY_OTHER);
 }
 
 export function setSoundsEnabled(on: boolean): void {
   localStorage.setItem(KEY, on ? "on" : "off");
 }
 
-export function setNotificationSoundEnabled(on: boolean): void {
-  localStorage.setItem(KEY_NOTIFICATIONS, on ? "on" : "off");
+export function setOtherSoundsEnabled(on: boolean): void {
+  localStorage.setItem(KEY_OTHER, on ? "on" : "off");
 }
 
 /** **الطلبُ الوارد لا يحكمه المفتاحُ العام** (قرارُ المالك §9.2).
@@ -164,10 +204,12 @@ export function isUnlocked(): boolean {
 }
 
 function allowed(cue: Cue): boolean {
-  // **الاستثناءُ الوحيد**: الطلبُ الوارد يتخطّى المفتاحَ العام
-  if (cue === "offer") return offerSoundEnabled();
-  if (NOTIFICATION_CUES.has(cue)) return notificationSoundEnabled();
-  return soundsEnabled();
+  // **الطلبُ الوارد يتخطّى المفتاحَ العام** — ومعه نغمةُ انقضائه: من قصد
+  // إسكاتَ الطلب قصد إسكاتَ طرفَيه، **ونصفُ حدثٍ مسموعٌ أربكُ من صامتٍ كلِّه**
+  if (OFFER_CUES.has(cue)) return offerSoundEnabled();
+  // **وما عداه فئةٌ واحدةٌ تحت مفتاحها، وكلاهما تحت العام**: إطفاءُ العامِّ
+  // يُسكت الفئتين، وإطفاءُ فئةٍ لا يمسّ الأخرى
+  return soundsEnabled() && otherSoundsEnabled();
 }
 
 /** يعزف نغمةً واحدة على السياق المفتوح — بلا شرطٍ ولا فحصِ مفتاح. */
@@ -191,11 +233,38 @@ function voice(ctx: AudioContext, note: Note, from: number): void {
   osc.stop(start + note.for + 0.02);
 }
 
-/** يعزف نغمةً — ويصمت بلا خطأ إن كان الصوتُ مطفأً أو لم تقع إيماءةٌ بعد. */
+/** يعزف نغمةً — ويصمت بلا خطأ إن كان الصوتُ مطفأً أو لم تقع إيماءةٌ بعد.
+ *
+ * **والاهتزازُ معها لا في مسارٍ ثانٍ** (قرارُ المالك 2026-08-30): بابٌ واحدٌ
+ * يقرّر «أيُسمَع؟» — **ومناداةُ الاهتزاز من مواضعَ متفرّقةٍ تجعل نغمةً تُطفأ
+ * ويبقى جيبُه يهتزّ**، وهو ما لا يفسّره له شيء.
+ */
 export function play(cue: Cue): void {
   if (!unlocked || !context || !allowed(cue)) return;
   const now = context.currentTime;
   for (const note of CUES[cue]) voice(context, note, now);
+  buzz(cue);
+}
+
+/** نبضتان لا واحدة — **وطلبٌ يفوت أثقلُ من إشعارٍ يفوت** (قرارُ المالك).
+ *
+ * **والطويلةُ تطابق نبضةَ القناة الأصليّة** (`OfferAlert`: 350/200/350) — فمن
+ * سمعه في الخلفية وفي المقدّمة أحسّ الشيءَ نفسَه، **ونبضتان مختلفتان لحدثٍ
+ * واحدٍ تُقرآن حدثين**.
+ *
+ * **ولا يُدَّعى أنه يعمل حيث لا يعمل**: `navigator.vibrate` غائبةٌ في سفاري
+ * وأكثرِ أجهزة iOS، **وتُرجع `false` صامتةً في كروم بلا تفاعلٍ سابق** — فهو
+ * زيادةٌ على الصوت لا بديلٌ عنه.
+ */
+function buzz(cue: Cue): void {
+  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  try {
+    navigator.vibrate(
+      cue === "offer" ? [350, 200, 350] : [120],
+    );
+  } catch {
+    // جهازٌ يعلن الدالّةَ ويمنعها — ولا شيءَ يُفعل، والصوتُ قائم
+  }
 }
 
 /** طولُ النغمة بالثواني — يحتاجه المكرِّر ليصل الدورات بلا فاصلٍ مسموع. */
@@ -217,12 +286,12 @@ let loopTimer: number | null = null;
 export function startOfferLoop(): void {
   stopOfferLoop();
   if (!unlocked || !allowed("offer")) return;
+  // **والاهتزازُ يقع داخل `play`** — فلا نداءَ ثانٍ هنا
   play("offer");
-  buzz();
-  loopTimer = window.setInterval(() => {
-    play("offer");
-    buzz();
-  }, durationOf("offer") * 1000 + 120);
+  loopTimer = window.setInterval(
+    () => play("offer"),
+    durationOf("offer") * 1000 + 120,
+  );
 }
 
 export function stopOfferLoop(): void {
@@ -232,24 +301,3 @@ export function stopOfferLoop(): void {
   }
 }
 
-/** اهتزازُ الطلب — **نبضٌ مزدوجٌ يُميَّز بلا نظرٍ إلى الشاشة**.
- *
- * **وهو مربوطٌ بمفتاح صوت الطلب لا بمفتاحٍ ثالث** (قرارُ المالك 2026-08-30
- * قال «أصواتٌ واهتزازٌ لكلِّ حال» شيئاً واحداً): مفتاحان لشيءٍ واحدٍ يجعلان
- * كبتناً يُطفئ الصوتَ ظنّاً أنه أطفأ الإنذارَ **فيهتزّ جيبُه بلا أن يفهم**.
- *
- * **ويُطابق نبضةَ القناة الأصليّة** (`OfferAlert`: 350/200/350) — فمن سمعه في
- * الخلفية وفي المقدّمة سمع الشيءَ نفسَه، **ونبضتان مختلفتان تُقرآن حدثين**.
- *
- * **ولا يُدَّعى أنه يعمل حيث لا يعمل**: `navigator.vibrate` غيرُ موجودةٍ في
- * سفاري وأكثرِ أجهزة iOS، **وتُرجع `false` صامتةً في كروم بلا تفاعلٍ سابق** —
- * فلا يُبنى عليها وحدَها إنذار، وهي زيادةٌ على الصوت لا بديلٌ عنه.
- */
-function buzz(): void {
-  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
-  try {
-    navigator.vibrate([350, 200, 350]);
-  } catch {
-    // جهازٌ يعلن الدالّةَ ويمنعها — ولا شيءَ يُفعل، والصوتُ قائم
-  }
-}

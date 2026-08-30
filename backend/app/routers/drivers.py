@@ -99,6 +99,10 @@ async def get_my_driver_profile(
         user=UserOut.model_validate(user),
         vehicles=[VehicleOut.model_validate(v) for v in vehicles],
         documents=[DriverDocumentOut.model_validate(d) for d in documents],
+        # **نسبتُه هو** — ترسمها رئيسيّتُه، ولا تُحسب في الجهاز (§14)
+        commission_percent=await settings_service.commission_percent_of_driver(
+            session, driver, user.country_code
+        ),
     )
 
 

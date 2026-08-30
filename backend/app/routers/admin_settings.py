@@ -27,6 +27,15 @@ from app.schemas.cancellation import (
     CancellationSettingOut,
     CancellationSettingUpdate,
 )
+from app.schemas.storefront import (
+    AdminPromoBannerOut,
+    AdminServiceTileOut,
+    PromoBannerIn,
+    PromoBannerPatch,
+    ServiceTileIn,
+    ServiceTilePatch,
+)
+from app.services import storefront
 from app.schemas.settings import (
     DispatchSettingOut,
     DispatchSettingUpdate,
@@ -50,6 +59,7 @@ from app.schemas.settings import (
 )
 from app.models.advance import AdvanceSetting
 from app.models.dispatch_setting import DispatchSetting
+from app.models.storefront import PromoBanner, ServiceTile
 from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
@@ -806,3 +816,137 @@ async def update_dispatch_settings(
     )
     await session.commit()
     return DispatchSettingOut.model_validate(setting)
+
+
+# ─────────────────── بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) ───────────────
+#
+# **ستّةُ أبوابٍ لا أكثر**: قراءةٌ وإنشاءٌ وتعديلٌ لكلِّ جدول. **ولا حذفَ**:
+# البلاطةُ تُخفى واللافتةُ تُطفأ — **وحذفُ صفٍّ يمحو ما بُني عليه ترتيبٌ
+# وقياس**، وهي قاعدةُ «الإيقافُ تعليقٌ لا حذف» نفسُها.
+
+
+@router.get("/service-tiles", response_model=list[AdminServiceTileOut])
+async def list_service_tiles(
+    _staff: StaffUser, session: DbSession, country: CountryCode | None = None
+) -> list[AdminServiceTileOut]:
+    """كلُّها **بما فيها المخفيّة** — فالمشرفُ يرى ما أخفاه."""
+    return [
+        AdminServiceTileOut.model_validate(row)
+        for row in await storefront.list_tiles(session, country=country)
+    ]
+
+
+@router.post("/service-tiles", response_model=AdminServiceTileOut, status_code=201)
+async def create_service_tile(
+    payload: ServiceTileIn, admin: AdminUser, session: DbSession
+) -> AdminServiceTileOut:
+    """**والإشعالُ بلا مقصدٍ مبنيٍّ يُمنع هنا** لا عند ضغط المستخدم."""
+    storefront.require_destination(
+        payload.destination, status=payload.status, audience=payload.audience
+    )
+    tile = ServiceTile(**payload.model_dump())
+    session.add(tile)
+    await _flush(session, conflict_message="مفتاحُ البلاطة مستعملٌ في هذا السوق")
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="service_tile",
+        entity_id=tile.id,
+        details=payload.model_dump(mode="json"),
+    )
+    await session.commit()
+    return AdminServiceTileOut.model_validate(tile)
+
+
+@router.patch("/service-tiles/{tile_id}", response_model=AdminServiceTileOut)
+async def update_service_tile(
+    tile_id: uuid.UUID,
+    payload: ServiceTilePatch,
+    admin: AdminUser,
+    session: DbSession,
+) -> AdminServiceTileOut:
+    tile = await storefront.get_tile(session, tile_id)
+    changes = payload.model_dump(exclude_unset=True)
+    # **يُقاس على ما ستصير إليه لا على ما هي** — فتعديلُ الحال وحدَها إلى
+    # `active` بلا مقصدٍ يمرّ لو قِيس على القديم
+    storefront.require_destination(
+        changes.get("destination", tile.destination),
+        status=changes.get("status", tile.status),
+        # **والجمهورُ على ما سيصير إليه أيضاً**: تحويلُ بلاطةٍ فعّالةٍ من
+        # الراكب إلى الكبتن **يبدّل الجوابَ وحدَه بلا أن يمسّ المقصد**
+        audience=changes.get("audience", tile.audience),
+    )
+    changed = _apply_updates(tile, changes)
+    await session.flush()
+    if changed:
+        await audit.record(
+            session,
+            actor=admin,
+            action=AuditAction.UPDATE,
+            entity_type="service_tile",
+            entity_id=tile.id,
+            details={"changed": changed, **payload.model_dump(exclude_unset=True, mode="json")},
+        )
+    await session.commit()
+    return AdminServiceTileOut.model_validate(tile)
+
+
+@router.get("/promo-banners", response_model=list[AdminPromoBannerOut])
+async def list_promo_banners(
+    _staff: StaffUser, session: DbSession, country: CountryCode | None = None
+) -> list[AdminPromoBannerOut]:
+    """كلُّها **ومنها المنتهية** — فالمشرفُ يرى ما مضى ويعيد استعماله."""
+    return [
+        AdminPromoBannerOut.model_validate(row)
+        for row in await storefront.list_banners(session, country=country)
+    ]
+
+
+@router.post("/promo-banners", response_model=AdminPromoBannerOut, status_code=201)
+async def create_promo_banner(
+    payload: PromoBannerIn, admin: AdminUser, session: DbSession
+) -> AdminPromoBannerOut:
+    """**ولافتةٌ مقصدُها غير مبنيٍّ لا تُقبل** — والنافذةُ إلزاميّةٌ بالعقد."""
+    storefront.require_banner_link(payload.link_kind, payload.link)
+    banner = PromoBanner(**payload.model_dump())
+    session.add(banner)
+    await _flush(session, conflict_message="تعذّر حفظ اللافتة")
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="promo_banner",
+        entity_id=banner.id,
+        details=payload.model_dump(mode="json"),
+    )
+    await session.commit()
+    return AdminPromoBannerOut.model_validate(banner)
+
+
+@router.patch("/promo-banners/{banner_id}", response_model=AdminPromoBannerOut)
+async def update_promo_banner(
+    banner_id: uuid.UUID,
+    payload: PromoBannerPatch,
+    admin: AdminUser,
+    session: DbSession,
+) -> AdminPromoBannerOut:
+    banner = await storefront.get_banner(session, banner_id)
+    changes = payload.model_dump(exclude_unset=True)
+    storefront.require_banner_link(
+        changes.get("link_kind", banner.link_kind),
+        changes.get("link", banner.link),
+    )
+    changed = _apply_updates(banner, changes)
+    await session.flush()
+    if changed:
+        await audit.record(
+            session,
+            actor=admin,
+            action=AuditAction.UPDATE,
+            entity_type="promo_banner",
+            entity_id=banner.id,
+            details={"changed": changed},
+        )
+    await session.commit()
+    return AdminPromoBannerOut.model_validate(banner)

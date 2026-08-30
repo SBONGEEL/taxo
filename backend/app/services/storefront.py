@@ -1,0 +1,228 @@
+"""بلاطاتُ الخدمات ولافتاتُ المحتوى — قراءةً وكتابةً (الترحيلة `0063`).
+
+## ما يقرّره هذا الملفُّ وحدَه
+
+**من يرى ماذا**: الجمهورُ والسوقُ والحالُ والنافذة — **في موضعٍ واحد**.
+وتطبيقان يسألان السؤالَ نفسَه، **وحسابان له يفترقان أوّلَ تعديل**.
+
+## و«فعّالة بلا مقصدٍ مبنيّ» يمنعها البابُ بعلّته
+
+**طبقتان لا واحدة**: قيدُ القاعدة يمنع **الفارغ**، وهذا البابُ يمنع **ما ليس
+مبنيّاً**. **والقاعدةُ لا تعرف مساراتِ React** — فقائمةٌ مصرَّحةٌ هنا يقابلها
+مسارٌ في التطبيقين، **ولا تُقبل قيمةٌ خارجها**.
+
+**وبلا هذه الطبقة يصير الإشعالُ وعداً بشاشةٍ لا وجودَ لها** — والكبتنُ يضغط
+فلا يقع شيء، وهو الشكلُ «بابٌ بلا زرّ» مقلوباً: زرٌّ بلا باب.
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import date, datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import InvalidInput, NotFound
+from app.models.enums import (
+    BannerLinkKind,
+    CampaignAudience,
+    CountryCode,
+    ServiceTileStatus,
+    UserRole,
+)
+from app.models.storefront import PromoBanner, ServiceTile
+
+#: **المقاصدُ المبنيّةُ في التطبيقين** — والقائمةُ عقدٌ بين الخلفية والواجهة.
+#:
+#: **ولا تُقبل قيمةٌ خارجها**: مسارٌ يُكتب بيدٍ في اللوحة يفتح شاشةً لا وجودَ
+#: لها، **والكبتنُ يضغط فلا يقع شيء**. وإضافةُ مسارٍ هنا **تُلزم بناءه** —
+#: وهذا هو الاتجاهُ الصحيح: الشاشةُ أوّلاً ثم الإذنُ بالإشارة إليها.
+SERVICE_DESTINATIONS: dict[str, tuple[UserRole, ...]] = {
+    # ── مشتركةٌ بالمسار نفسِه في التطبيقين
+    "/rides": (UserRole.RIDER, UserRole.DRIVER),
+    "/wallet": (UserRole.RIDER, UserRole.DRIVER),
+    "/account": (UserRole.RIDER, UserRole.DRIVER),
+    "/account/cards": (UserRole.RIDER, UserRole.DRIVER),
+    "/account/settings": (UserRole.RIDER, UserRole.DRIVER),
+    "/account/referrals": (UserRole.RIDER, UserRole.DRIVER),
+    # ── الراكب وحدَه
+    "/account/bookings": (UserRole.RIDER,),
+    "/account/places": (UserRole.RIDER,),
+    "/account/profile": (UserRole.RIDER,),
+    "/account/notifications": (UserRole.RIDER,),
+    "/wallet/topup": (UserRole.RIDER,),
+    "/wallet/transfer": (UserRole.RIDER,),
+    # ── الكبتن وحدَه
+    "/notifications": (UserRole.DRIVER,),
+    "/subscription": (UserRole.DRIVER,),
+    "/account/missions": (UserRole.DRIVER,),
+    "/account/garage": (UserRole.DRIVER,),
+    "/account/garage/store": (UserRole.DRIVER,),
+    "/account/advances": (UserRole.DRIVER,),
+    "/account/debt": (UserRole.DRIVER,),
+    "/account/permissions": (UserRole.DRIVER,),
+    "/account/vehicle": (UserRole.DRIVER,),
+    "/wallet/withdrawals": (UserRole.DRIVER,),
+    "/wallet/earnings": (UserRole.DRIVER,),
+}
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _audience_matches(audience: CampaignAudience, role: UserRole) -> bool:
+    """**`by_country` تعني الاثنين** — مقروءةً من `campaigns.py` لا مخترَعة."""
+    if audience is CampaignAudience.BY_COUNTRY:
+        return role in (UserRole.RIDER, UserRole.DRIVER)
+    if audience is CampaignAudience.ALL_RIDERS:
+        return role is UserRole.RIDER
+    if audience is CampaignAudience.ALL_DRIVERS:
+        return role is UserRole.DRIVER
+    # **`segment` تُرفض هنا كما تُرفض في الحملات** — ولا يُخترع لها معنى
+    return False
+
+
+def require_destination(
+    destination: str | None,
+    *,
+    status: ServiceTileStatus,
+    audience: CampaignAudience,
+) -> None:
+    """**فعّالةٌ بلا مقصدٍ مبنيٍّ لا تُقبل** — ويُمنع عند الإنشاء لا عند الضغط.
+
+    **والجمهورُ جزءٌ من السؤال لا زينةٌ في الجدول** (عطبٌ قِيس 2026-08-30):
+    أوّلُ نسخةٍ سألت «أهذا المسارُ مبنيّ؟» وحدَها، **وأدوارُ القاموس مكتوبةٌ
+    لا يقرؤها أحد** — فمرّت بلاطةُ كبتنٍ تشير إلى `/account/bookings`،
+    **وهو مسارُ الراكب**. فكان الكبتنُ يضغط ويقع على `path="*"`.
+
+    **و«مبنيٌّ» ليست حالاً واحدةً بل حالان**: مبنيٌّ **عند من يراه**.
+    """
+    if status is not ServiceTileStatus.ACTIVE:
+        return
+    if not destination:
+        raise InvalidInput("خدمةٌ فعّالةٌ بلا مقصد — اختر شاشةً أو اجعلها «قريباً»")
+    roles = SERVICE_DESTINATIONS.get(destination)
+    if roles is None:
+        raise InvalidInput(
+            f"المقصد «{destination}» غير مبنيٍّ في التطبيق — "
+            "والإشعالُ عليه يَعِد بشاشةٍ لا وجودَ لها"
+        )
+    # **ويُسأل عن كلِّ من يراها**: `by_country` تعني الاثنين، فيلزم أن يكون
+    # المسارُ مبنيّاً في التطبيقين معاً
+    seen = [
+        role
+        for role in (UserRole.RIDER, UserRole.DRIVER)
+        if _audience_matches(audience, role)
+    ]
+    missing = [role for role in seen if role not in roles]
+    if missing:
+        who = "الكبتن" if UserRole.DRIVER in missing else "الراكب"
+        raise InvalidInput(
+            f"المقصد «{destination}» ليس مبنيّاً في تطبيق {who} — "
+            "وبلاطةٌ تُشعَل لمن لا شاشةَ له تقع على صفحةٍ مفقودة"
+        )
+
+
+def require_banner_link(kind: BannerLinkKind, link: str | None) -> None:
+    """**ولا تُعرض لافتةٌ مقصدُها غير مبنيّ** (قرارُ المالك)."""
+    if kind is BannerLinkKind.NONE:
+        return
+    if not link:
+        raise InvalidInput("اللافتةُ تفتح شيئاً ولم يُكتب عنوانُه")
+    if kind is BannerLinkKind.INTERNAL and link not in SERVICE_DESTINATIONS:
+        raise InvalidInput(
+            f"المقصد «{link}» غير مبنيٍّ في التطبيق — "
+            "ولافتةٌ تفتح شاشةً لا وجودَ لها أسوأُ من لافتةٍ لا تُنقر"
+        )
+
+
+# ─────────────────────────────────────────────────────────── بلاطاتُ الخدمات
+
+
+async def tiles_for(
+    session: AsyncSession, *, country: CountryCode, role: UserRole
+) -> list[ServiceTile]:
+    """**ما يراه صاحبُ هذا الدور في سوقه** — والمخفيّةُ لا تُرسل أصلاً.
+
+    **و«قريباً» تُرسل**: هي خبرٌ مقصودٌ يُقرأ ولا يُنقر — والتطبيقُ يعرف
+    ذلك من `status` فلا يفتح لها باباً.
+    """
+    rows = await session.scalars(
+        select(ServiceTile)
+        .where(
+            ServiceTile.country_code == country,
+            ServiceTile.status != ServiceTileStatus.HIDDEN,
+        )
+        .order_by(ServiceTile.sort_order, ServiceTile.created_at)
+    )
+    return [tile for tile in rows if _audience_matches(tile.audience, role)]
+
+
+async def get_tile(session: AsyncSession, tile_id: uuid.UUID) -> ServiceTile:
+    tile = await session.get(ServiceTile, tile_id)
+    if tile is None:
+        raise NotFound("البلاطة غير موجودة")
+    return tile
+
+
+async def list_tiles(
+    session: AsyncSession, *, country: CountryCode | None = None
+) -> list[ServiceTile]:
+    """كلُّها للوحة — **بما فيها المخفيّة**، فالمشرفُ يرى ما أخفاه."""
+    query = select(ServiceTile).order_by(
+        ServiceTile.country_code, ServiceTile.sort_order
+    )
+    if country is not None:
+        query = query.where(ServiceTile.country_code == country)
+    return list(await session.scalars(query))
+
+
+# ─────────────────────────────────────────────────────────────── اللافتات
+
+
+async def banners_for(
+    session: AsyncSession, *, country: CountryCode, role: UserRole
+) -> list[PromoBanner]:
+    """**الحيّةُ الآن في هذا السوق لهذا الدور** — والنافذةُ تُقاس هنا.
+
+    **ولا تُقاس في التطبيق**: ساعةُ الجهاز يملكها صاحبُه، **ولافتةٌ انتهت
+    تبقى ظاهرةً لمن أخّر ساعته**. والخلفيةُ هي الساعة.
+    """
+    now = _now()
+    rows = await session.scalars(
+        select(PromoBanner)
+        .where(
+            PromoBanner.country_code == country,
+            PromoBanner.is_active.is_(True),
+            PromoBanner.starts_at <= now,
+            PromoBanner.ends_at > now,
+        )
+        .order_by(PromoBanner.sort_order, PromoBanner.starts_at)
+    )
+    return [row for row in rows if _audience_matches(row.audience, role)]
+
+
+async def get_banner(session: AsyncSession, banner_id: uuid.UUID) -> PromoBanner:
+    banner = await session.get(PromoBanner, banner_id)
+    if banner is None:
+        raise NotFound("اللافتة غير موجودة")
+    return banner
+
+
+async def list_banners(
+    session: AsyncSession, *, country: CountryCode | None = None
+) -> list[PromoBanner]:
+    """كلُّها للوحة — **ومنها المنتهيةُ**، فالمشرفُ يرى ما مضى ويعيد استعماله."""
+    query = select(PromoBanner).order_by(
+        PromoBanner.country_code, PromoBanner.starts_at.desc()
+    )
+    if country is not None:
+        query = query.where(PromoBanner.country_code == country)
+    return list(await session.scalars(query))
+
+
+def is_new(tile: ServiceTile, *, today: date | None = None) -> bool:
+    """**شارةُ «جديد» تُحسب هنا لا في كلِّ قارئ**."""
+    return tile.is_new_on(today or _now().date())

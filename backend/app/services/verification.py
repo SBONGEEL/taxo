@@ -48,15 +48,19 @@ from app.core.phone import country_for_phone
 from app.models.enums import CountryCode, FeatureKey, ProviderKey
 from app.models.user import User
 from app.services import otp, settings_service
+from app.models.enums import VerificationMethod as VerificationMethodEnum
 from app.models.otp_template import OtpTemplatePurpose
 
 # ما تراه الواجهة فتعرف أيَّ تدفّقٍ ترسم
 VerificationMethod = Literal["firebase", "sms_otp", "whatsapp_otp", "none"]
 
-FIREBASE = "firebase"
-SMS_OTP = "sms_otp"
-WHATSAPP_OTP = "whatsapp_otp"
-NONE = "none"
+# **من التعداد لا من سلاسلَ هنا** (2026-08-30): القيمُ هي هي حرفاً، غير أنّ
+# `check:enums` لا يقرأ إلا `models/enums.py` — فثوابتُ وحدةٍ تجعله يقرأ مرآةَ
+# التطبيقين الصادقةَ قيماً مخترعة.
+FIREBASE = VerificationMethodEnum.FIREBASE.value
+SMS_OTP = VerificationMethodEnum.SMS_OTP.value
+WHATSAPP_OTP = VerificationMethodEnum.WHATSAPP_OTP.value
+NONE = VerificationMethodEnum.NONE.value
 
 # القنواتُ التي نولّد فيها الرمز ونرسله نحن — يخدمها `services/otp.py`.
 # وFirebase ليست منها: الرسالةُ تُرسل من جهاز المستخدم ولا رمزَ عندنا أصلاً

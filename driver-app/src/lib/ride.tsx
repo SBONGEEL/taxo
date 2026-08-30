@@ -33,6 +33,7 @@ import {
 import { onlineService } from "@/lib/online-service";
 import { digits } from "@/lib/utils";
 import { CATEGORY_LABEL, CURRENCY_LABEL } from "@/lib/rideFormat";
+import { play, startOfferLoop, stopOfferLoop } from "@/lib/sound";
 
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
@@ -118,6 +119,11 @@ export function RideProvider({ children }: { children: ReactNode }) {
           expiresAt: Date.now() + event.expires_in_seconds * 1_000,
           totalSeconds: event.expires_in_seconds,
         });
+        // **النغمةُ تُكرَّر حتى ينتهي العدّاد** (§9.1) — **ولم تكن تُنادى من
+        // أيِّ موضع** (قِيس 2026-08-30): الجدولُ مبنيٌّ منذ المرحلة ١٠
+        // **ولا سلكَ إليه**، فكانت البطاقةُ تصل صامتةً.
+        startOfferLoop();
+
         // **الأولويةُ كما رسمها التصميم**: بطاقةٌ داخل التطبيق ← ورقةٌ سفليّة
         // ← فقاعةٌ عائمة ← إشعارُ ملء الشاشة. **أوّلُ متاحٍ يُستعمل والبقيّةُ
         // تُلغى**، فلا يستقبل الكبتنُ البلاغَ نفسَه مرّتين.
@@ -145,18 +151,45 @@ export function RideProvider({ children }: { children: ReactNode }) {
         break;
       case "offer_expired":
         setOffer(null);
+        stopOfferLoop();
+        play("offerExpired");
         void hideOfferAlert();
         break;
       case "driver_assigned":
-      case "driver_arrived":
-      case "ride_started":
         setOffer(null);
+        stopOfferLoop();
         void hideOfferAlert();
         setRide(event.ride);
         break;
+      // **نغمةُ الوصول هادئةٌ عمداً**: تقع والكبتنُ يقود
+      case "driver_arrived":
+        setOffer(null);
+        stopOfferLoop();
+        play("driverArrived");
+        void hideOfferAlert();
+        setRide(event.ride);
+        break;
+      case "ride_started":
+        setOffer(null);
+        stopOfferLoop();
+        play("rideStarted");
+        void hideOfferAlert();
+        setRide(event.ride);
+        break;
+      // **الإنهاءُ غيرُ التحصيل**: هذه لانتهاء العمل، و`collected` لوصول
+      // المال — **ونغمةٌ واحدةٌ لحدثين تجعله يظنّ أنه قبض ولم يقبض**
       case "ride_completed":
+        setOffer(null);
+        stopOfferLoop();
+        play("rideCompleted");
+        void hideOfferAlert();
+        setRide(event.ride);
+        break;
+      // **والإلغاءُ بلا نغمةِ فرح**: `notify` خبرٌ محايد
       case "ride_cancelled":
         setOffer(null);
+        stopOfferLoop();
+        play("notify");
         void hideOfferAlert();
         setRide(event.ride);
         break;
