@@ -8,6 +8,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import (
+    DispatchMode,
     CommissionAppliesTo,
     CountryCode,
     Currency,
@@ -192,6 +193,9 @@ class PaymentSettingOut(BaseModel):
     cliq_qr_path: str | None = None
     cliq_review_min_minutes: int
     cliq_review_max_minutes: int
+    #: **سقفُ دَينِ الكبتن** — و`null` تعني «لا سقفَ» لا «صفراً» (الترحيلة
+    #: `0061`). **والفرقُ ماليٌّ لا شكليّ**: صفرٌ يحجب كلَّ كبتنٍ عليه فلسٌ واحد.
+    driver_debt_ceiling: Decimal | None = None
     cliq_confirmation_hours: int
     # مبالغُ البقشيش (المرحلة 12-و) — صفرٌ يعني «لم يُضبط» فتُخفى الميزة
     tip_preset_small: Decimal
@@ -215,6 +219,8 @@ class PaymentSettingUpdate(BaseModel):
     #: وعدٌ بأكثرَ من ذلك لا يُقرأ انتظاراً بل إهمالاً
     cliq_review_min_minutes: int | None = Field(default=None, ge=1, le=60)
     cliq_review_max_minutes: int | None = Field(default=None, ge=1, le=60)
+    #: **ويُمحى بإرسال `null` صراحةً** — لا بحقلٍ فارغٍ يُقرأ «لم يُذكر»
+    driver_debt_ceiling: Decimal | None = Field(default=None, gt=0)
     tip_preset_small: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_preset_medium: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_max: Decimal | None = Field(default=None, ge=0, le=1000)
@@ -300,3 +306,29 @@ class MapSettingUpdate(BaseModel):
 
     nearby_radius_km: Annotated[Decimal, Field(gt=0, le=50)] | None = None
     nearby_max_count: Annotated[int, Field(gt=0, le=200)] | None = None
+
+
+class DispatchSettingOut(BaseModel):
+    """قواعدُ التوزيع لسوق (§5.3) — **صارت إعداداً بعد أن كانت ثابتاً**."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    country_code: CountryCode
+    mode: DispatchMode
+    offer_timeout_seconds: int
+    max_attempts: int
+    total_timeout_seconds: int
+    cooldown_seconds: int
+    broadcast_batch_size: int
+
+
+class DispatchSettingUpdate(BaseModel):
+    """**والحدودُ هنا صورةٌ عن قيود القاعدة** لا حدٌّ ثانٍ يفترق عنها."""
+
+    mode: DispatchMode | None = None
+    offer_timeout_seconds: int | None = Field(default=None, ge=3, le=120)
+    max_attempts: int | None = Field(default=None, ge=1, le=50)
+    total_timeout_seconds: int | None = Field(default=None, ge=10, le=900)
+    #: **والصفرُ ممنوع**: تبريدُ صفرٍ يعرض على الرافض نفسِه فوراً
+    cooldown_seconds: int | None = Field(default=None, ge=1, le=600)
+    broadcast_batch_size: int | None = Field(default=None, ge=1, le=20)

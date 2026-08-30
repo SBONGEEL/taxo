@@ -25,8 +25,10 @@ import type { ReactNode } from "react";
 import { Capacitor } from "@capacitor/core";
 
 import {
+  API_URL,
   refreshNow,
   setBiometricArmedReader,
+  setNativeSessionWriter,
   setRefreshPersister,
   setSessionLostHandler,
   tokens,
@@ -50,6 +52,7 @@ import {
   type BiometryStatus,
 } from "@/lib/biometric";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
+import { setNativeSession } from "@/lib/offer-alert";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
 import { registerNativePush, type PushState } from "@/lib/push";
@@ -112,6 +115,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // **وجهةُ الرمز تُقرَّر بالتفضيل** — فلا نسخةَ في `localStorage` تُغني
     // عن البصمة وتُبطل البوّابة (صُحّح 2026-08-29)
     setBiometricArmedReader(isBiometricPreferred);
+    // **ورمزُ الوصول يُنسخ إلى الأصليّ مع كلِّ تجديد** — به تقبل شاشةُ ملء
+    // الشاشة والورقةُ والفقاعةُ بأنفسها، **والقبولُ يسبق فتحَ التطبيق**
+    // (قرارُ المالك 2026-08-30). ويُمحى بالخروج.
+    setNativeSessionWriter((accessToken) => {
+      void setNativeSession(accessToken === null ? null : API_URL, accessToken);
+    });
   }, []);
 
   // انتهاء الجلسة يقع في عمق عميل HTTP؛ هذا ما يترجمه إلى «عد لشاشة الدخول»

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.js"></script>
+<style>
+:root{--bg:#14181d;--sur:#0d1014;--sur2:#1a2027;--brd:#2a313a;--tx:#e6edf3;--mut:#8b949e;--inv:#0d1014;--acc:#e6edf3;--ok:#3fb970;--warn:#d9a62e;--dng:#e5534b;--sa:#1c2128;--sb:#20262e;--brand-soft:#1a2027;--brand-brd:#2a313a}
+.lt{--bg:#f2f0eb;--sur:#ffffff;--sur2:#faf9f6;--brd:#ddd8cf;--tx:#171b20;--mut:#6e7681;--inv:#f2f0eb;--acc:#171b20;--ok:#1a7f4e;--warn:#9a6b00;--dng:#c73e36;--sa:#e6e3db;--sb:#ece9e1;--brand-soft:#faf9f6;--brand-brd:#ddd8cf}
+body{margin:0;background:#e9e7e2;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+a{color:#e6edf3}a:hover{color:#8b949e}
+.scr{overflow-y:auto;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.ic{display:block;flex:none}.ic svg{width:100%;height:100%;display:block;stroke-width:1.75}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 12px">
+<div class="{{ themeClass }}" dir="rtl" data-screen-label="Captain Home" style="width:390px;height:844px;border-radius:38px;background:var(--bg);color:var(--tx);box-shadow:0 24px 70px rgba(0,0,0,.35),0 0 0 10px #24262a,0 0 0 12px #3a3d42;position:relative;overflow:hidden;font-size:14px;animation:fadein .25s">
+
+  <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;z-index:20">
+    <span style="font-size:12px;font-weight:600">9:41</span>
+    <div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div>
+  </div>
+
+  <div class="scr" style="position:absolute;inset:34px 0 84px;padding:2px 16px 18px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div style="width:38px;height:38px;border-radius:99px;background:var(--brand-soft);border:1px solid var(--brand-brd);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none">أ</div>
+        <div style="min-width:0">
+          <div style="font-size:14px;font-weight:600">الكبتن أحمد</div>
+          <div style="font-size:11.5px;color:var(--mut);display:flex;align-items:center;gap:5px"><span class="ic" style="width:12px;height:12px;color:var(--warn)"><i data-lucide="star"></i></span>4.9 · المستوى 3</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;flex:none">
+        <sc-if value="{{ online }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:8px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:6px 8px 6px 11px;font-size:12px;font-weight:600;cursor:pointer">
+            متصل<span style="width:28px;height:16px;border-radius:99px;background:var(--ok);position:relative;display:block"><span style="position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:99px;background:var(--sur);display:block"></span></span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:6px 8px 6px 11px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer">
+            غير متصل<span style="width:28px;height:16px;border-radius:99px;background:var(--brd);position:relative;display:block"><span style="position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:99px;background:var(--mut);display:block"></span></span>
+          </div>
+        </sc-if>
+        <div style="position:relative;background:var(--sur);border:1px solid var(--brd);border-radius:99px;width:33px;height:33px;display:flex;align-items:center;justify-content:center;color:var(--mut)">
+          <span class="ic" style="width:17px;height:17px"><i data-lucide="bell"></i></span>
+          <sc-if value="{{ unread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:5px;left:6px;width:7px;height:7px;border-radius:99px;background:var(--dng);display:block"></span></sc-if>
+        </div>
+      </div>
+    </div>
+
+    <div style="position:relative;height:170px;border-radius:16px;border:1px solid var(--brd);overflow:hidden;margin-bottom:10px;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)">
+      <span style="position:absolute;top:52px;right:50%;font:400 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--mut)">الخريطة</span>
+      <img src="assets/car-1.png" alt="" style="position:absolute;top:40px;right:64px;width:36px;transform:rotate(-24deg)">
+      <img src="assets/car-1.png" alt="" style="position:absolute;top:82px;right:238px;width:36px;transform:rotate(96deg)">
+      <div style="position:absolute;top:62px;right:150px;width:14px;height:14px;border-radius:99px;background:var(--acc);border:3px solid var(--sur);box-shadow:0 0 0 5px rgba(230,237,243,.10)"></div>
+      <div style="position:absolute;top:10px;right:10px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:4px 10px;font-size:10.5px;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:99px;background:var(--ok);display:block"></span>الطلب مرتفع في منطقتك</div>
+      <div style="position:absolute;bottom:10px;right:10px;left:10px;background:var(--acc);color:var(--inv);border-radius:13px;padding:13px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700;cursor:pointer">
+        <span class="ic" style="width:16px;height:16px"><i data-lucide="play"></i></span>{{ ctaLabel }}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:10px 8px;text-align:center">
+        <div style="font-size:18px;font-weight:700">7</div>
+        <div style="font-size:10.5px;color:var(--mut);margin-top:2px">رحلات اليوم</div>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:10px 8px;text-align:center">
+        <div style="font-size:18px;font-weight:700">58.500</div>
+        <div style="font-size:10.5px;color:var(--mut);margin-top:2px">صافي (د.ل)</div>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:10px 8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--ok)">0%</div>
+        <div style="font-size:10.5px;color:var(--mut);margin-top:2px">عمولة TAXO</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="calendar-clock"></i></span>
+        <span style="font-size:11.5px;font-weight:500">رحلات مجدولة</span>
+        <span style="font-size:9.5px;color:var(--mut)">3 قادمة</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="package"></i></span>
+        <span style="font-size:11.5px;font-weight:500">توصيل طرود</span>
+        <span style="font-size:9.5px;font-weight:600;color:var(--warn);background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:1px 6px">قريباً</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="store"></i></span>
+        <span style="font-size:11.5px;font-weight:500">متجر المركبات</span>
+        <span style="font-size:9.5px;color:var(--mut)">سِمات جديدة</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="trophy"></i></span>
+        <span style="font-size:11.5px;font-weight:500">التحديات</span>
+        <span style="font-size:9.5px;color:var(--mut)">2 نشطة</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="banknote"></i></span>
+        <span style="font-size:11.5px;font-weight:500">سلفة</span>
+        <span style="font-size:9.5px;color:var(--mut)">حتى 50 د.ل</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="layout-grid"></i></span>
+        <span style="font-size:11.5px;font-weight:500">أخرى</span>
+        <span style="font-size:9.5px;color:var(--mut)">كل الأدوات</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ showChallenge }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;overflow:hidden;background:var(--sur2);border:1px solid var(--brd);border-radius:16px;padding:14px;margin-bottom:8px;height:70px">
+        <div style="font-size:14px;font-weight:700;position:relative">تحدّي الأسبوع: 40 رحلة</div>
+        <div style="font-size:11.5px;color:var(--mut);margin-top:3px;position:relative">أكملتَ 23 · الجائزة سيارة مميزة</div>
+        <div style="position:absolute;bottom:14px;right:14px;left:86px;height:6px;border-radius:99px;background:var(--brd)"><div style="width:57%;height:6px;border-radius:99px;background:var(--acc)"></div></div>
+        <span class="ic" style="position:absolute;left:2px;top:-2px;width:56px;height:56px;color:var(--brd)"><i data-lucide="trophy"></i></span>
+      </div>
+      <div style="display:flex;justify-content:center;gap:5px;margin-bottom:12px">
+        <span style="width:14px;height:5px;border-radius:3px;background:var(--mut);display:block"></span>
+        <span style="width:5px;height:5px;border-radius:3px;background:var(--brd);display:block"></span>
+        <span style="width:5px;height:5px;border-radius:3px;background:var(--brd);display:block"></span>
+      </div>
+    </sc-if>
+
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 13px;display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer">
+      <span class="ic" style="width:19px;height:19px;color:var(--warn)"><i data-lucide="crown"></i></span>
+      <span style="flex:1;min-width:0;font-size:12.5px;font-weight:500">اشتراكك الشهري ساري حتى 12/09</span>
+      <span style="font-size:11.5px;font-weight:700">جدّد</span>
+    </div>
+
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 13px;display:flex;align-items:center;gap:12px;cursor:pointer">
+      <span class="ic" style="width:28px;height:28px;color:var(--mut)"><i data-lucide="car-front"></i></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">كيا سيراتو 2021 · أبيض</div>
+        <div style="font-size:11px;color:var(--mut);margin-top:2px">الوثائق سارية · الترخيص ينتهي بعد 40 يوماً</div>
+      </div>
+      <span class="ic" style="width:17px;height:17px;color:var(--mut)"><i data-lucide="chevron-left"></i></span>
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:0;right:0;left:0;height:84px;background:var(--sur);border-top:1px solid var(--brd);display:flex;padding-top:11px;z-index:20">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;font-weight:700;cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="house"></i></span>الرئيسية
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--mut);cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="route"></i></span>رحلاتي
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--mut);cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="wallet"></i></span>المحفظة
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--mut);cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="user"></i></span>حسابي
+    </div>
+  </div>
+  <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:120px;height:4px;border-radius:99px;background:var(--tx);opacity:.22;z-index:21"></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;light&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;السِمة&quot;},&quot;online&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;الحالة&quot;},&quot;showChallenge&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;المحتوى&quot;},&quot;unread&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;المحتوى&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.paintIcons(); }
+  componentDidUpdate() { this.paintIcons(); }
+  paintIcons() {
+    let tries = 0;
+    const tick = () => {
+      if (window.lucide && window.lucide.createIcons) { window.lucide.createIcons(); return; }
+      if (tries++ < 60) setTimeout(tick, 120);
+    };
+    tick();
+  }
+  renderVals() {
+    const online = this.props.online ?? true;
+    return {
+      themeClass: (this.props.light ?? false) ? "lt" : "",
+      online,
+      offline: !online,
+      ctaLabel: online ? "ابدأ العمل" : "اتصل لتصلك الطلبات",
+      unread: this.props.unread ?? true,
+      showChallenge: this.props.showChallenge ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

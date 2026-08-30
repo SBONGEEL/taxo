@@ -294,11 +294,26 @@ def fast_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
     **ومن يقيس انقضاءَ المهلة يضبطها بنفسه** (`test_silence_expires_the_offer_
     and_moves_on`): المهلةُ موضوعُ ذلك الاختبار لا ظرفُه — ويبقى كذلك وإن وافقت
     قيمتُه المشتركةَ اليوم، فلا يصمت إن مُسّت غداً.
-    """
-    from app.services import dispatch, tracking
 
-    monkeypatch.setattr(dispatch, "OFFER_TIMEOUT_SECONDS", 2)
-    monkeypatch.setattr(dispatch, "TOTAL_TIMEOUT_SECONDS", 5)
+    **ومنذ 2026-08-30 تُضبط من مصدرها الواحد**: صارت قواعدُ التوزيع إعداداً
+    (`dispatch_settings`)، **وسوقٌ بلا صفٍّ يقرأ `DEFAULTS`** — فضبطُ ثوابتَ
+    في `dispatch` صار يضبط أسماءً لا يقرؤها السلوك، **وهو بيتٌ ثانٍ لقيمةٍ
+    واحدة**. والتبريدُ يُضغط معها: ثلاثون ثانيةً في اختبارٍ مهلتُه خمسٌ تعني
+    استبعاداً دائماً، **وهو بعينه ما أُلغي**.
+    """
+    from app.services import dispatch, dispatch_settings, tracking
+    from dataclasses import replace
+
+    monkeypatch.setattr(
+        dispatch_settings,
+        "DEFAULTS",
+        replace(
+            dispatch_settings.DEFAULTS,
+            offer_timeout_seconds=2,
+            total_timeout_seconds=5,
+            cooldown_seconds=4,
+        ),
+    )
     monkeypatch.setattr(dispatch, "IDLE_POLL_SECONDS", 0.2)
     # المراقبة تسأل أسرع؛ حكمُها (اختفاء الحضور) يبقى كما هو
     monkeypatch.setattr(tracking, "CHECK_INTERVAL_SECONDS", 0.2)
@@ -394,8 +409,10 @@ async def jordan_wallet(session_factory) -> None:
 
     from app.models.enums import CountryCode, FeatureKey
     from app.models.feature_flag import FeatureFlag
+    from app.models.payment_setting import PaymentSetting
     from app.models.wallet_setting import WalletSetting
     from tests.helpers import (
+        CLIQ_ALIAS,
         TRANSFER_DAILY_LIMIT,
         TRANSFER_MONTHLY_LIMIT,
         MIN_WITHDRAWAL,
@@ -415,6 +432,18 @@ async def jordan_wallet(session_factory) -> None:
                 transfer_monthly_limit=Decimal(TRANSFER_MONTHLY_LIMIT),
                 min_withdrawal_amount=Decimal(MIN_WITHDRAWAL),
             )
+        )
+        # **وحسابُ كليك المستقبِل — نصفُ المحفظة الذي كان ناقصاً** (صُحِّح
+        # 2026-08-30): منذ 2026-08-29 لا تُفتح قناةُ الشحن بكليك في سوقٍ بلا
+        # `payment_settings.cliq_alias` — **«لا قناةَ بلا حسابٍ يستقبل»**.
+        # وهذا الفكسچر يَعِد بـ«محفظةٍ مفعّلةٍ بحدودٍ مضبوطة» **ولا يصف السوقَ
+        # الذي يقبض فيها**، فسقطت خمسةُ اختباراتٍ بـ`cliq_alias_not_configured`
+        # وثلاثةٌ منها بـ`KeyError: 'id'` — **جسدُ خطأٍ 503 لا صفَّ طلب**.
+        #
+        # **والعلاجُ في الفكسچر لا في الحارس**: القاعدةُ صحيحةٌ وتمنع حوالةً
+        # ضائعة، **والناقصُ وصفُ السوق**.
+        session.add(
+            PaymentSetting(country_code=CountryCode.JO, cliq_alias=CLIQ_ALIAS)
         )
         await session.commit()
 

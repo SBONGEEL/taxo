@@ -48,6 +48,7 @@ export default {
       "16": "16px", // البطاقات والزرّ الأساسي
       "18": "18px", "20": "20px",
       "22": "22px", // الورقة المدمجة
+      "26": "26px", // بطاقةُ الطلب العائمة (التصميم، الشاشة ٠١)
       "24": "24px", // الورقة المنبثقة
       "38": "38px",
       full: "99px",
@@ -116,6 +117,8 @@ export default {
         toast: "0 10px 30px rgba(0,0,0,.3)",
         paper: "0 6px 26px rgba(0,0,0,.18)",
         sheet: "0 -6px 24px rgba(0,0,0,.07)",
+        // ظلُّ بطاقة الطلب من التصميم: `0 -14px 40px rgba(0,0,0,.28)`
+        offer: "0 -14px 40px rgba(0,0,0,.28)",
       },
       backgroundImage: {
         // الخريطة النائبة — نفس الزاوية والعرض في التصميمات الثلاثة
@@ -143,6 +146,14 @@ export default {
           from: { transform: "translateY(10px)", opacity: "0" },
           to: { transform: "none", opacity: "1" },
         },
+        // اهتزازُ شارة النغمة — `shake` في التصميم حرفاً
+        shake: {
+          "0%,100%": { transform: "translateX(0)" },
+          "20%": { transform: "translateX(-2px)" },
+          "40%": { transform: "translateX(2px)" },
+          "60%": { transform: "translateX(-1.5px)" },
+          "80%": { transform: "translateX(1.5px)" },
+        },
       },
       animation: {
         pulse: "pulse 1.8s infinite",
@@ -158,6 +169,7 @@ export default {
         sweep: "sweep 2.2s ease-out infinite",
         "sweep-delayed": "sweep 2.2s ease-out infinite 1.1s",
         slidein: "slidein .22s",
+        shake: "shake .5s infinite",
         rise: "rise .22s",
         "rise-fast": "rise .14s",
       },

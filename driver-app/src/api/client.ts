@@ -91,6 +91,20 @@ let biometricArmed: () => boolean = () => false;
 export function setBiometricArmedReader(fn: () => boolean) {
   biometricArmed = fn;
 }
+/** **جسرٌ يُحقن من طبقة الجلسة** — و`client.ts` لا يعرف Capacitor ولا يستوردها.
+ *
+ * **والسببُ بنيويّ**: هذا الملفُّ يعمل في المتصفّح كما يعمل في الغلاف، **واستيرادُ
+ * جسرٍ أصليٍّ هنا يجعل كلَّ صفحةِ ويبٍ تحمله**. فالحقنُ من الخارج كما
+ * `setRefreshPersister` و`setBiometricArmedReader` قبله — بيتٌ واحدٌ للنمط.
+ */
+let nativeSession: (accessToken: string | null) => void = () => {};
+
+export function setNativeSessionWriter(
+  fn: (accessToken: string | null) => void,
+) {
+  nativeSession = fn;
+}
+
 export function setRefreshPersister(fn: (token: string) => void) {
   persistRefresh = fn;
 }
@@ -119,6 +133,10 @@ export const tokens = {
       localStorage.setItem(REFRESH_KEY, pair.refresh_token);
     }
     persistRefresh(pair.refresh_token);
+    // **والأسطحُ الأصليّةُ تحتاج رمزَ الوصول لتقبل بنفسها**: شاشةُ ملء
+    // الشاشة تقبل والتطبيقُ مقتولٌ والقفلُ مغلق — **ورمزٌ محفوظٌ منذ ساعةٍ
+    // يجعل «اقبل» يسقط بصمت**. فيُحدَّث مع كلِّ تجديد.
+    nativeSession(pair.access_token);
   },
   /** **يُنزع من `localStorage` حين تُشعَل البصمة** — بيتٌ واحدٌ لا اثنان. */
   detachFromLocalStorage() {
@@ -132,6 +150,8 @@ export const tokens = {
     liveRefresh = null;
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
+    // **ويُمحى ما عند الأصليّ معه** — رمزٌ باقٍ بعد الخروج بابٌ مفتوح
+    nativeSession(null);
   },
 };
 

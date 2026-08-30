@@ -613,6 +613,9 @@ export function HomeScreen() {
           offer={offer}
           currencyLabel={currency}
           categoryLabel={CATEGORY_LABEL[offer.ride.vehicle_category]}
+          // **`null` لا سلسلةٌ فارغة**: طريقةُ الدفع يختارها الراكبُ بعد
+          // الرحلة (§6) فلا تُعرف الآن — **و«لم تُعرف» خبرٌ، والفارغةُ تُرسم**
+          methodLabel={null}
           busy={busy}
           onAccept={() =>
             void run(async () => {

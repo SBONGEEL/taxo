@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.js"></script>
+<style>
+:root{--bg:#f2f0eb;--sur:#ffffff;--sur2:#faf9f6;--brd:#ddd8cf;--tx:#171b20;--mut:#6e7681;--inv:#f2f0eb;--acc:#171b20;--ok:#1a7f4e;--warn:#9a6b00;--dng:#c73e36;--sa:#e6e3db;--sb:#ece9e1;--brand-soft:#faf9f6;--brand-brd:#ddd8cf;--pk:#d81b73;--pk-soft:#fdeaf2;--pk-brd:#f2b7d1;--pk-ink:#ffffff}
+.dark{--bg:#14181d;--sur:#0d1014;--sur2:#1a2027;--brd:#2a313a;--tx:#e6edf3;--mut:#8b949e;--inv:#0d1014;--acc:#e6edf3;--ok:#3fb970;--warn:#d9a62e;--dng:#e5534b;--sa:#1c2128;--sb:#20262e;--brand-soft:#1a2027;--brand-brd:#2a313a;--pk:#ff6fae;--pk-soft:#2a1a22;--pk-brd:#4d2b39;--pk-ink:#14181d}
+body{margin:0;background:#e9e7e2;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+a{color:#171b20}a:hover{color:#6e7681}
+.scr{overflow-y:auto;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.hsc{overflow-x:auto;scrollbar-width:none}.hsc::-webkit-scrollbar{display:none}
+.ic{display:block;flex:none}.ic svg{width:100%;height:100%;display:block;stroke-width:1.75}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 12px">
+<div class="{{ themeClass }}" dir="rtl" data-screen-label="Rider Home" style="width:390px;height:844px;border-radius:38px;background:var(--bg);color:var(--tx);box-shadow:0 24px 70px rgba(0,0,0,.35),0 0 0 10px #24262a,0 0 0 12px #3a3d42;position:relative;overflow:hidden;font-size:14px;animation:fadein .25s">
+
+  <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;z-index:20">
+    <span style="font-size:12px;font-weight:600">9:41</span>
+    <div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:10px;border:1px solid var(--mut);border-radius:3px;display:block"></span><span style="width:12px;height:10px;background:var(--mut);border-radius:2px;display:block;opacity:.7"></span></div>
+  </div>
+
+  <div class="scr" style="position:absolute;inset:34px 0 84px;padding:2px 16px 18px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div style="width:38px;height:38px;border-radius:99px;background:var(--brand-soft);border:1px solid var(--brand-brd);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none">م</div>
+        <div style="min-width:0">
+          <div style="font-size:14px;font-weight:600">مساء الخير، محمد</div>
+          <div style="font-size:11.5px;color:var(--mut)">طرابلس</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;flex:none">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:7px 11px;font-size:12.5px;font-weight:600"><span class="ic" style="width:15px;height:15px;color:var(--mut)"><i data-lucide="wallet"></i></span>12.500 د.ل</div>
+        <div style="position:relative;background:var(--sur);border:1px solid var(--brd);border-radius:99px;width:33px;height:33px;display:flex;align-items:center;justify-content:center;color:var(--mut)">
+          <span class="ic" style="width:17px;height:17px"><i data-lucide="bell"></i></span>
+          <sc-if value="{{ unread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:5px;left:6px;width:7px;height:7px;border-radius:99px;background:var(--dng);display:block"></span></sc-if>
+        </div>
+      </div>
+    </div>
+
+    <div style="position:relative;height:170px;border-radius:16px;border:1px solid var(--brd);overflow:hidden;margin-bottom:10px;background:repeating-linear-gradient(45deg,var(--sa),var(--sa) 10px,var(--sb) 10px,var(--sb) 20px)">
+      <span style="position:absolute;top:52px;right:50%;font:400 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--mut)">الخريطة</span>
+      <img src="assets/car-1.png" alt="" style="position:absolute;top:36px;right:56px;width:36px;transform:rotate(-18deg)">
+      <img src="assets/car-1.png" alt="" style="position:absolute;top:78px;right:196px;width:36px;transform:rotate(104deg)">
+      <img src="assets/car-1.png" alt="" style="position:absolute;top:30px;right:268px;width:36px;transform:rotate(52deg)">
+      <div style="position:absolute;top:82px;right:132px;width:14px;height:14px;border-radius:99px;background:var(--acc);border:3px solid var(--sur);box-shadow:0 0 0 5px rgba(23,27,32,.10)"></div>
+      <div style="position:absolute;top:10px;right:10px;background:var(--sur);border:1px solid var(--brd);border-radius:99px;padding:4px 10px;font-size:10.5px;font-weight:600">5 كباتن قريبون · دقيقتان</div>
+      <div style="position:absolute;bottom:10px;right:10px;left:10px;background:var(--acc);color:var(--inv);border-radius:13px;padding:13px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700;cursor:pointer">
+        <span class="ic" style="width:17px;height:17px"><i data-lucide="map-pin"></i></span>إلى أين؟ اطلب رحلة
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:9px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;cursor:pointer"><span class="ic" style="width:15px;height:15px;color:var(--mut)"><i data-lucide="house"></i></span>المنزل</div>
+      <div style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:9px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;cursor:pointer"><span class="ic" style="width:15px;height:15px;color:var(--mut)"><i data-lucide="briefcase"></i></span>العمل</div>
+      <div style="flex:1;background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:9px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;cursor:pointer"><span class="ic" style="width:15px;height:15px;color:var(--mut)"><i data-lucide="plane"></i></span>المطار</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="package"></i></span>
+        <span style="font-size:11.5px;font-weight:500">توصيل طرود</span>
+        <span style="font-size:9.5px;font-weight:600;color:var(--warn);background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:1px 6px">قريباً</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="plane-takeoff"></i></span>
+        <span style="font-size:11.5px;font-weight:500">توصيل مطار</span>
+        <span style="font-size:9.5px;color:var(--mut)">متاح الآن</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="shopping-bag"></i></span>
+        <span style="font-size:11.5px;font-weight:500">طلبات</span>
+        <span style="font-size:9.5px;font-weight:600;color:var(--warn);background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:1px 6px">قريباً</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="calendar-clock"></i></span>
+        <span style="font-size:11.5px;font-weight:500">رحلات مجدولة</span>
+        <span style="font-size:9.5px;color:var(--mut)">حجزٌ بموعد</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="boxes"></i></span>
+        <span style="font-size:11.5px;font-weight:500">أغراضي</span>
+        <span style="font-size:9.5px;font-weight:600;color:var(--warn);background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:1px 6px">قريباً</span>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:11px 5px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+        <span class="ic" style="width:21px;height:21px"><i data-lucide="layout-grid"></i></span>
+        <span style="font-size:11.5px;font-weight:500">أخرى</span>
+        <span style="font-size:9.5px;color:var(--mut)">كل الخدمات</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;overflow:hidden;background:var(--pk-soft);border:1px solid var(--pk-brd);border-radius:16px;padding:14px;margin-bottom:8px;height:64px">
+        <div style="font-size:14px;font-weight:700;position:relative">خصم 20% على أول رحلة نسائية</div>
+        <div style="font-size:11.5px;color:var(--mut);margin-top:3px;position:relative">فعّلي السِمة الوردية من الإعدادات</div>
+        <span style="position:absolute;bottom:14px;left:14px;font-size:10.5px;font-weight:700;background:var(--pk);color:var(--pk-ink);border-radius:8px;padding:4px 10px;cursor:pointer">اعرفي المزيد</span>
+        <span class="ic" style="position:absolute;left:-4px;top:-6px;width:64px;height:64px;color:var(--pk-brd)"><i data-lucide="heart"></i></span>
+      </div>
+      <div style="display:flex;justify-content:center;gap:5px;margin-bottom:12px">
+        <span style="width:14px;height:5px;border-radius:3px;background:var(--mut);display:block"></span>
+        <span style="width:5px;height:5px;border-radius:3px;background:var(--brd);display:block"></span>
+        <span style="width:5px;height:5px;border-radius:3px;background:var(--brd);display:block"></span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showReferral }}" hint-placeholder-val="{{ true }}">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:12px 13px;display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer">
+        <span class="ic" style="width:19px;height:19px;color:var(--mut)"><i data-lucide="gift"></i></span>
+        <span style="flex:1;min-width:0;font-size:12.5px;font-weight:500">ادعُ صديقاً واربح 2 د.ل</span>
+        <span style="font-size:11.5px;font-weight:700">مشاركة</span>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font-size:13.5px;font-weight:700">آخر رحلاتك</span>
+      <span style="font-size:11.5px;color:var(--mut);cursor:pointer">الكل</span>
+    </div>
+    <div class="hsc" style="display:flex;gap:8px">
+      <div style="min-width:176px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:11px 12px;cursor:pointer">
+        <div style="font-size:11px;color:var(--mut)">الخميس · 9.000 د.ل</div>
+        <div style="font-size:12.5px;margin:5px 0 7px">حي الأندلس ← سوق الجمعة</div>
+        <div style="font-size:11.5px;font-weight:700">أعِد الرحلة</div>
+      </div>
+      <div style="min-width:176px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:11px 12px;cursor:pointer">
+        <div style="font-size:11px;color:var(--mut)">الثلاثاء · 15.000 د.ل</div>
+        <div style="font-size:12.5px;margin:5px 0 7px">المنزل ← المطار</div>
+        <div style="font-size:11.5px;font-weight:700">أعِد الرحلة</div>
+      </div>
+      <div style="min-width:176px;background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:11px 12px;cursor:pointer">
+        <div style="font-size:11px;color:var(--mut)">الأحد · 7.500 د.ل</div>
+        <div style="font-size:12.5px;margin:5px 0 7px">جامعة طرابلس ← وسط البلد</div>
+        <div style="font-size:11.5px;font-weight:700">أعِد الرحلة</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:0;right:0;left:0;height:84px;background:var(--sur);border-top:1px solid var(--brd);display:flex;padding-top:11px;z-index:20">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;font-weight:700;cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="house"></i></span>الرئيسية
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--mut);cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="route"></i></span>رحلاتي
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--mut);cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="wallet"></i></span>المحفظة
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--mut);cursor:pointer">
+      <span class="ic" style="width:21px;height:21px"><i data-lucide="user"></i></span>حسابي
+    </div>
+  </div>
+  <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:120px;height:4px;border-radius:99px;background:var(--tx);opacity:.22;z-index:21"></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;السِمة&quot;},&quot;showWomenPromo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;المحتوى&quot;},&quot;showReferral&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;المحتوى&quot;},&quot;unread&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;المحتوى&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.paintIcons(); }
+  componentDidUpdate() { this.paintIcons(); }
+  paintIcons() {
+    let tries = 0;
+    const tick = () => {
+      if (window.lucide && window.lucide.createIcons) { window.lucide.createIcons(); return; }
+      if (tries++ < 60) setTimeout(tick, 120);
+    };
+    tick();
+  }
+  renderVals() {
+    return {
+      themeClass: (this.props.dark ?? false) ? "dark" : "",
+      unread: this.props.unread ?? true,
+      showPromo: this.props.showWomenPromo ?? true,
+      showReferral: this.props.showReferral ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

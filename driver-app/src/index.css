@@ -294,3 +294,31 @@ html.is-hidden .taxo-pulse::after {
     transform: scale(1.6);
   }
 }
+
+
+/* **أعمدةُ شارة «نغمة + اهتزاز»** — من ملفّ التصميم حرفاً (`.eqb` و`@keyframes eq`).
+ *
+ * **وهي CSS خامٌ لا أصنافُ Tailwind**: الارتفاعاتُ الثلاثةُ (٦ · ١٢ · ٩) أرقامٌ
+ * تخصّ هذا الشكلَ وحدَه، **وإدخالُها سلّمَ المسافات يفتحه لأرقامٍ لا معنى لها
+ * في غيره** — وحارسُ `check:scale` يقرأ السلّمَ لا هذا الملفّ. */
+.eqb {
+  width: 2.5px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: eq 0.8s infinite;
+}
+.eqb-1 { height: 6px; }
+.eqb-2 { height: 12px; animation-delay: 0.15s; }
+.eqb-3 { height: 9px; animation-delay: 0.3s; }
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.3); }
+  50%      { transform: scaleY(1); }
+}
+
+/* **وتتوقّف حين يغيب التطبيق** كما تتوقّف نبضةُ الخريطة، ولنفس السبب. */
+html.is-hidden .eqb { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eqb { animation: none; }
+}

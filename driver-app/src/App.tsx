@@ -116,6 +116,9 @@ const DeactivationScreen = lazy(() =>
     default: m.DeactivationScreen,
   })),
 );
+const PermissionsScreen = lazy(() =>
+  import("@/screens/Permissions").then((m) => ({ default: m.PermissionsScreen })),
+);
 const DebtScreen = lazy(() =>
   import("@/screens/Debt").then((m) => ({ default: m.DebtScreen })),
 );
@@ -513,6 +516,14 @@ export default function App() {
                           element={
                             <Guarded>
                               <CardsScreen />
+                            </Guarded>
+                          }
+                        />
+                        <Route
+                          path="/account/permissions"
+                          element={
+                            <Guarded>
+                              <PermissionsScreen />
                             </Guarded>
                           }
                         />

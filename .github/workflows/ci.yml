@@ -136,6 +136,138 @@ jobs:
   #
   # **وخطرُه واحد**: منقولٌ لا طريقَ إليه — وهو «بابٌ بلا زرّ» في ثوب
   # توثيق، **ولا يفشل به شيءٌ أبداً**. فالحارسُ يقيس الاتجاهين ويطبع الرقمين.
+  # ══════════════════ الإيداعُ داخل الدفعة (قرارُ المالك 2026-08-30) ══════════
+  #
+  # **الثقبُ الذي سدّه هذا** (مقيسٌ 2026-08-30): Actions يُشغَّل على **رأس ما
+  # دُفع** — **فإيداعٌ داخل دفعةٍ لا يُختبر أبداً**. و`76827fc` كان رابعَ خمسةٍ
+  # في دفعة، **ولا تشغيلَ له قطّ**، فخلّف ستَّ حمرٍ عاشت يوماً كاملاً.
+  # **والقاعدةُ تقول «لا يُودَع على مجموعةٍ حمراء»، والمجموعةُ عليه لم تُشغَّل**:
+  # لم يقل البابُ «لا» — **لم يُسأل**.
+  #
+  # **وما يملكه وما لا يملكه، صراحةً**: يشغّل **المجموعةَ وحدَها** على كلِّ
+  # إيداعٍ **عدا الرأس** (الرأسُ تغطّيه `backend` أصلاً). **ولا يشغّل الحرّاسَ
+  # ولا بناءَ الثلاثة على الوسط** — تلك تُقاس على الرأس، **وثمنُها أربعةُ
+  # أضعافٍ لا يشتري قدرَه**. وحارسٌ يوحي بتغطيةٍ لا يملكها أسوأُ من غيابه.
+  #
+  # **ولا يمنع الدفع**: هو تقريرٌ بعد الدفع كبقيّة CI — **والبوّابةُ الحقيقيّةُ
+  # حمايةُ فرعٍ** تحتاج حساباً، وهي بندٌ مكتوبٌ في `STATE.md` بثمنه.
+  batch:
+    name: إيداعاتُ الدفعة
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      commits: ${{ steps.pick.outputs.commits }}
+      dropped: ${{ steps.pick.outputs.dropped }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: إيداعاتُ هذه الدفعة عدا رأسِها
+        id: pick
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          empty=0000000000000000000000000000000000000000
+          # **فرعٌ جديدٌ أو دفعةٌ قسرية**: `before` أصفارٌ أو ليس في الشجرة —
+          # **فلا نطاقَ يُحسب**، والرأسُ وحدَه يُقاس ولا يُدَّعى غيرُ ذلك.
+          if [ "$BEFORE" = "$empty" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "لا سلفَ معروفٌ لهذه الدفعة — الرأسُ وحدَه يُقاس"
+            echo 'commits=[]' >> "$GITHUB_OUTPUT"
+            echo 'dropped=0' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # **عدا الرأس**: `^$GITHUB_SHA^@` ليست حيلةً — الرأسُ له وظيفتُه
+          all=$(git rev-list --reverse "$BEFORE..$GITHUB_SHA" | grep -v "^$GITHUB_SHA$" || true)
+          total=$(printf '%s' "$all" | grep -c . || true)
+
+          # **سقفٌ يُعلن ولا يُسكت عنه**: دفعةٌ من مئةٍ تُشعل مئةَ وظيفة.
+          # **ولا سقفَ صامت** — ما سقط يُقال عدداً في السجلّ وفي الملخّص.
+          keep=$(printf '%s' "$all" | tail -n 12)
+          kept=$(printf '%s' "$keep" | grep -c . || true)
+          dropped=$((total - kept))
+
+          echo "في الدفعة $total إيداعاً عدا الرأس · يُقاس منها $kept · أُسقط $dropped"
+          if [ "$dropped" -gt 0 ]; then
+            echo "⚠ أُسقط $dropped إيداعاً أقدمَ من الاثني عشر الأخيرة — **ولم تُقَس**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          json=$(printf '%s' "$keep" | python3 -c 'import sys,json; print(json.dumps([l for l in sys.stdin.read().split() if l]))')
+          echo "commits=$json" >> "$GITHUB_OUTPUT"
+          echo "dropped=$dropped" >> "$GITHUB_OUTPUT"
+
+  batch-suite:
+    name: المجموعةُ عند ${{ matrix.commit }}
+    needs: batch
+    if: needs.batch.outputs.commits != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # **ولا `fail-fast`**: سقوطُ إيداعٍ لا يُخفي حالَ الذي بعده — والغرضُ
+      # أن يُعرف **أيُّها** أحمر، لا أن يُعرف أنّ فيها أحمر.
+      fail-fast: false
+      matrix:
+        commit: ${{ fromJSON(needs.batch.outputs.commits) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.commit }}
+          fetch-depth: 1
+
+      - name: بيئةُ التشغيل
+        run: |
+          python3 - <<'PY' > .env
+          import secrets, base64
+          fernet = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
+          print(f"""POSTGRES_USER=taxo
+          POSTGRES_PASSWORD={secrets.token_urlsafe(24)}
+          POSTGRES_DB=taxo
+          DATABASE_URL=postgresql+asyncpg://taxo:x@db:5432/taxo
+          REDIS_URL=redis://redis:6379/0
+          JWT_SECRET={secrets.token_urlsafe(48)}
+          CREDENTIALS_ENCRYPTION_KEY={fernet}
+          ENVIRONMENT=test
+          ACCESS_TOKEN_EXPIRE_MINUTES=15
+          REFRESH_TOKEN_EXPIRE_DAYS=30
+          CUSTOMER_APP_PORT=5176
+          TELR_USE_MOCK=1
+          WA_GATEWAY_KEY={secrets.token_urlsafe(24)}
+          """.replace("          ", ""))
+          PY
+          pw=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
+          sed -i "s|postgresql+asyncpg://taxo:x@|postgresql+asyncpg://taxo:$pw@|" .env
+
+      - name: بناءُ صورة الخلفية
+        run: docker compose --env-file .env build backend
+
+      - name: القاعدةُ وRedis
+        env:
+          TAXO_ENV_FILE: .env
+        run: |
+          docker compose --env-file .env up -d db redis
+          for i in $(seq 1 60); do
+            ok=0
+            for svc in db redis; do
+              cid=$(docker compose --env-file .env ps -q "$svc")
+              [ -n "$cid" ] || continue
+              [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid")" = healthy ] && ok=$((ok+1))
+            done
+            [ "$ok" = 2 ] && break
+            [ "$i" = 60 ] && { echo "✗ لم تصحّا في ٦٠ث"; exit 1; }
+            sleep 1
+          done
+
+      - name: المجموعةُ الكاملة
+        run: TAXO_ENV_FILE=.env bash scripts/suite.sh
+
+      - name: أثرُ السقوط
+        if: failure()
+        run: |
+          echo "### ✗ ${{ matrix.commit }}" >> "$GITHUB_STEP_SUMMARY"
+          grep -E '^(FAILED|ERROR)' backend/.suite.out | head -40 >> "$GITHUB_STEP_SUMMARY" || true
+
   docs:
     name: الملفّاتُ الخمسة
     runs-on: ubuntu-latest

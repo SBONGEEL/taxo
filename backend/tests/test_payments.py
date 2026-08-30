@@ -397,34 +397,78 @@ async def test_cashless_scope_spares_cash_rides(
     assert (await wallet_of(client, driver["headers"]))["balance"] == "0.000"
 
 
-async def test_commission_on_a_cash_ride_needs_a_funded_wallet(
+async def test_commission_on_a_cash_ride_is_taken_or_owed_never_blocking(
     client: AsyncClient,
     admin_headers: dict,
     jordan_settings: None,
     jordan_wallet: None,
     session_factory,
 ) -> None:
-    """نطاق `all_rides` يستحق عمولةً على الكاش — تُخصم من محفظة الكبتن.
+    """نطاق `all_rides` يستحق عمولةً على الكاش — **تُخصم أو تُستحقّ، ولا تمنع**.
 
-    ومحفظةٌ فارغة تعني رفضَ التأكيد لا خصماً على المكشوف (SPEC القسم 4):
-    المحفظة مسبقة الدفع. هذا قيدٌ تشغيلي على من يرفع النطاق إلى `all_rides`.
+    ## وهذا الاختبارُ عكسُ ما كان يؤكّده (بُدِّل 2026-08-30)
+
+    **كان يؤكّد أن محفظةً فارغةً تعني رفضَ التأكيد** (409 `insufficient_balance`)
+    — «المحفظةُ مسبقةُ الدفع». **وقد صار ذلك طريقاً مسدوداً حين أُلغي بابُ شحن
+    محفظة الكبتن** (قرارُ المالك 2026-08-29): الجملةُ كانت تقول «اشحن المحفظة»
+    **وبابُ الشحن ليس هناك**، فكبتنٌ رصيدُه دون العمولة **لا يُنهي رحلةَ كاشٍ
+    أصلاً**.
+
+    **والحارسُ لم يُرخَ**: `balance_after < 0` يبقى مرفوضاً. المستحقُّ يخرج إلى
+    `driver_debts` ويُحصَّل من أوّل أجرةٍ تدخل المحفظة (الترحيلة `0061`).
+
+    **ويُقاس الطرفان**: الفارغُ **يمضي ويستحقّ**، والممتلئُ **يُخصم لحظتَه كما
+    كان** — فالإصلاحُ لم يؤجّل تحصيلَ من يملك.
     """
+    from sqlalchemy import select
+
+    from app.models.debt import DriverDebt
+    from app.models.enums import DriverDebtStatus
+
     await set_commission(session_factory, "10")
     rider, driver, ride = await _ready_ride(client, session_factory)
     payment = _only((await pay_ride(client, rider["headers"], ride["id"], "cash")).json())
 
-    blocked = await client.post(
+    # **الطرفُ الأول**: رصيدٌ صفرٌ — يمضي، ولا رصيدَ سالب، والمستحقُّ في جدوله
+    settled = await client.post(
         f"/payments/{payment['id']}/confirm", headers=driver["headers"]
     )
-    assert blocked.status_code == 409
-    assert blocked.json()["code"] == "insufficient_balance"
+    assert settled.status_code == 200, settled.text
+    assert (await wallet_of(client, driver["headers"]))["balance"] == "0.000"
 
+    async with session_factory() as session:
+        rows = list(
+            (
+                await session.scalars(
+                    select(DriverDebt).where(
+                        DriverDebt.driver_id == driver["driver_id"]
+                    )
+                )
+            ).all()
+        )
+    assert len(rows) == 1, "العمولةُ لم تُكتب في جدول الدَّين"
+    assert rows[0].amount == Decimal("0.800")
+    assert rows[0].status is DriverDebtStatus.OUTSTANDING
+
+    # **والطرفُ الثاني**: من يملك يُخصم منه — ورحلةٌ ثانيةٌ بمفتاحٍ ثانٍ
     await topup_wallet(client, admin_headers, driver["user_id"], "5.000")
-    confirmed = await client.post(
-        f"/payments/{payment['id']}/confirm", headers=driver["headers"]
+    second = await completed_ride(client, rider["headers"], driver)
+    second_payment = _only(
+        (
+            await pay_ride(
+                client, rider["headers"], second["id"], "cash", key="second-cash-2"
+            )
+        ).json()
     )
-    assert confirmed.status_code == 200, confirmed.text
-    assert (await wallet_of(client, driver["headers"]))["balance"] == "4.200"
+    assert (
+        await client.post(
+            f"/payments/{second_payment['id']}/confirm", headers=driver["headers"]
+        )
+    ).status_code == 200
+
+    # **٥٫٠٠٠ ناقصَ عمولةِ الرحلة الثانية (٠٫٨٠٠) وناقصَ الدَّين القائم
+    # (٠٫٨٠٠)** — فالدَّينُ يُحصَّل لحظةَ أن يصير الرصيدُ كافياً
+    assert (await wallet_of(client, driver["headers"]))["balance"] == "3.400"
 
 
 async def test_commission_is_frozen_at_ride_creation(

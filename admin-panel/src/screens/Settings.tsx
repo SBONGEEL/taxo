@@ -38,6 +38,7 @@ import {
   getSharingSettings,
   listPaymentSettings,
   listAdvanceSettings,
+  listDispatchSettings,
   listCancellationSettings,
   listOtpExhausted,
   listOtpSettings,
@@ -45,6 +46,7 @@ import {
   updateCancellationSettings,
   listWalletSettings,
   updateAdvanceSettings,
+  updateDispatchSettings,
   setFeatureFlag,
   updateCommission,
   updatePaymentSettings,
@@ -57,6 +59,9 @@ import {
 } from "@/api/endpoints";
 import type {
   AdvanceSetting,
+  CountryCode,
+  DispatchMode,
+  DispatchSetting,
   CancellationSetting,
   OtpExhausted,
   MapSetting,
@@ -280,6 +285,7 @@ export function SettingsScreen() {
   const [referral, setReferral] = useState<ReferralSetting | null>(null);
   const [sharing, setSharing] = useState<RideSharingSetting | null>(null);
   const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
+  const [dispatchRows, setDispatchRows] = useState<DispatchSetting[]>([]);
   const [cancel, setCancel] = useState<CancellationSetting[]>([]);
   const [otp, setOtp] = useState<OtpSetting[]>([]);
   const [mapRows, setMapRows] = useState<MapSetting[]>([]);
@@ -297,7 +303,8 @@ export function SettingsScreen() {
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, rr, sh, adv, cxl, otpRows, mapRows, spent] = await Promise.all([
+    const [f, c, w, p, r, rr, sh, adv, dsp, cxl, otpRows, mapRows, spent] =
+      await Promise.all([
       listFeatureFlags(),
       listCommission(),
       listWalletSettings(),
@@ -308,6 +315,7 @@ export function SettingsScreen() {
       getReferralSettings(country, "rider"),
       getSharingSettings(country),
       listAdvanceSettings(),
+      listDispatchSettings(),
       listCancellationSettings(),
       listOtpSettings(),
       listMapSettings(),
@@ -321,6 +329,7 @@ export function SettingsScreen() {
     setRiderReferral(rr);
     setSharing(sh);
     setAdvance(adv);
+    setDispatchRows(dsp);
     setCancel(cxl);
     setOtp(otpRows);
     setMapRows(mapRows);
@@ -337,6 +346,9 @@ export function SettingsScreen() {
 
   const current = flags?.find((entry) => entry.country_code === country);
   const commissionRow = commission.find((row) => row.country_code === country);
+  // **`null` لا `undefined` مُمرَّرةً**: النموذجُ يعرض الافتراضيَّ للغائب
+  const dispatchRow =
+    dispatchRows.find((row) => row.country_code === country) ?? null;
   const walletRow = wallet.find((row) => row.country_code === country);
   const paymentRow = payment.find((row) => row.country_code === country);
   const advanceRow = advance.find((row) => row.country_code === country);
@@ -553,6 +565,32 @@ export function SettingsScreen() {
             ) : (
               <p className="text-12.5 text-muted">لا سياسةَ سلفٍ لهذه الدولة.</p>
             )}
+          </section>
+
+          {/* قواعدُ التوزيع (§5.3) — **صارت إعداداً بعد أن كانت ثوابتَ في
+              الشيفرة** (قرارُ المالك 2026-08-30)، وعُدِّلت §5.3 معها */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">قواعد التوزيع</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              <b className="text-ink">التسلسليّ</b> يعرض على واحدٍ في كل مرة
+              والدورُ محفوظ — أعدلُ للكبتن. <b className="text-ink">والبثّ</b>{" "}
+              يعرض على دفعةٍ معاً وأولُ من يقبل يأخذ — أسرعُ للراكب، وأقسى على
+              الكبتن لأن أربعةً يرون بطاقةً يفوز بها واحد. والترتيبُ في النمطين
+              واحد: الأقربُ أولاً والمستوى يفصل بين المتقاربين. <b className="text-ink">
+              وما يُحفظ هنا لا يمسّ بحثاً جارياً</b> — يُقرأ مرةً عند بدء توزيع
+              الرحلة، فتبديلُه في منتصف بحثٍ يترك حالاً نصفَ متغيّرة.
+            </p>
+            <DispatchForm
+              key={country}
+              row={dispatchRow}
+              country={country}
+              disabled={!isAdmin}
+              onSaved={(message) => {
+                setDone(message);
+                void load();
+              }}
+              onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+            />
           </section>
 
           {/* سقوفُ طلب رمز التحقق — **سياسةُ حسابٍ لا خاصيةُ قناة**:
@@ -1066,6 +1104,8 @@ function PaymentForm({
   const [alias, setAlias] = useState(row.cliq_alias ?? "");
   const [reviewMin, setReviewMin] = useState(String(row.cliq_review_min_minutes));
   const [reviewMax, setReviewMax] = useState(String(row.cliq_review_max_minutes));
+  // **فارغٌ يعني «لا سقفَ»** — والحقلُ لا يُملأ بصفرٍ ولا بافتراضٍ مخترَع
+  const [debtCeiling, setDebtCeiling] = useState(row.driver_debt_ceiling ?? "");
   const [qrBusy, setQrBusy] = useState(false);
   const [small, setSmall] = useState(row.tip_preset_small);
   const [medium, setMedium] = useState(row.tip_preset_medium);
@@ -1171,6 +1211,30 @@ function PaymentForm({
           {digits(reviewMax || "0")} دقائق».
         </p>
 
+        {/* **سقفُ الدَّين — فارغٌ عمداً حتى يقرّره المالك** (الترحيلة `0061`).
+            **وفارغٌ يعني «لا حجبَ»**، لا «احجب عند صفر». */}
+        <div className="mt-16 border-t border-line pt-12">
+          <h3 className="mb-2 text-12.5 font-bold text-ink">سقف دَين الكبتن</h3>
+          <Field
+            name="driver_debt_ceiling"
+            label={`فوقه يتوقف استقباله للطلبات (${currencyLabel(currencyOf(row.country_code))})`}
+            dir="ltr"
+            inputMode="decimal"
+            placeholder="اتركه فارغاً: لا سقف"
+            value={debtCeiling}
+            disabled={disabled}
+            onChange={(event) =>
+              setDebtCeiling(event.target.value.replace(/[^0-9.]/g, ""))
+            }
+          />
+          <p className="mt-6 text-11 leading-snug text-muted">
+            الدَّين هو عمولة الرحلات التي قبض الكبتن أجرتها بيده. الحقل فارغاً
+            يعني أنه لا يُحجب أحد مهما بلغ — والدَّين يُسجَّل ويُحصَّل على كل
+            حال. وحين يُكتب رقم، يُرفع الحجب عند بلوغ الدَّين صفراً لا عند
+            نزوله تحت السقف.
+          </p>
+        </div>
+
         <Button
           className="mt-14"
           size="sm"
@@ -1182,6 +1246,9 @@ function PaymentForm({
                 cliq_alias: alias.trim(),
                 cliq_review_min_minutes: Number(reviewMin),
                 cliq_review_max_minutes: Number(reviewMax),
+                // **الفارغُ يُرسَل `null` صراحةً** لا يُحذف من الحمولة:
+                // حقلٌ محذوفٌ يُقرأ «لم يُمسّ» فلا يُمحى سقفٌ قائم
+                driver_debt_ceiling: debtCeiling.trim() || null,
               },
               "حُفظ استقبال كليك",
             )
@@ -1888,6 +1955,125 @@ function OtpForm({
             .catch((caught) =>
               onError(caught),
             )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+function DispatchForm({
+  row,
+  country,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: DispatchSetting | null;
+  country: CountryCode;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  // **الغائبُ يُعرض بالافتراضيّ لا فارغاً**: سوقٌ بلا صفٍّ **يوزّع فعلاً**
+  // بهذه القيم، فحقلٌ فارغٌ كان سيُقرأ «معطَّل» وهو يعمل.
+  const [mode, setMode] = useState<DispatchMode>(row?.mode ?? "sequential");
+  const [offer, setOffer] = useState(String(row?.offer_timeout_seconds ?? 7));
+  const [attempts, setAttempts] = useState(String(row?.max_attempts ?? 5));
+  const [total, setTotal] = useState(String(row?.total_timeout_seconds ?? 120));
+  const [cooldown, setCooldown] = useState(String(row?.cooldown_seconds ?? 30));
+  const [batch, setBatch] = useState(String(row?.broadcast_batch_size ?? 4));
+  const [busy, setBusy] = useState(false);
+
+  const digits = (value: string) => value.replace(/[^0-9]/g, "");
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <Select
+          name="mode"
+          label="نمط العرض"
+          value={mode}
+          disabled={disabled}
+          onChange={(event) => setMode(event.target.value as DispatchMode)}
+        >
+          <option value="sequential">تسلسليّ — واحد في كل مرة</option>
+          <option value="broadcast">بثّ — دفعة معاً، وأول من يقبل</option>
+        </Select>
+        <Field
+          name="offer_timeout_seconds"
+          label="مهلة قبول العرض (ثانية)"
+          dir="ltr"
+          inputMode="numeric"
+          value={offer}
+          disabled={disabled}
+          onChange={(event) => setOffer(digits(event.target.value))}
+        />
+        <Field
+          name="cooldown_seconds"
+          label="تبريد من صمت أو رفض (ثانية)"
+          dir="ltr"
+          inputMode="numeric"
+          value={cooldown}
+          disabled={disabled}
+          onChange={(event) => setCooldown(digits(event.target.value))}
+        />
+        <Field
+          name="broadcast_batch_size"
+          label="كم كبتناً في دفعة البثّ"
+          dir="ltr"
+          inputMode="numeric"
+          value={batch}
+          disabled={disabled || mode !== "broadcast"}
+          onChange={(event) => setBatch(digits(event.target.value))}
+        />
+        <Field
+          name="max_attempts"
+          label="عدد المحاولات"
+          dir="ltr"
+          inputMode="numeric"
+          value={attempts}
+          disabled={disabled}
+          onChange={(event) => setAttempts(digits(event.target.value))}
+        />
+        <Field
+          name="total_timeout_seconds"
+          label="مهلة البحث كلّه (ثانية)"
+          dir="ltr"
+          inputMode="numeric"
+          value={total}
+          disabled={disabled}
+          onChange={(event) => setTotal(digits(event.target.value))}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        التبريدُ ليس استبعاداً: من صمت أو رفض يعود مرشَّحاً في الطلب نفسه بعد
+        انقضائه. واجعله أقصرَ من مهلة البحث كلّها بوضوح — تبريدٌ يساويها يعني
+        أنه لن يعود أبداً، وهو الاستبعادُ الدائم بعينه.
+      </p>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || offer === "" || cooldown === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateDispatchSettings(country, {
+            mode,
+            offer_timeout_seconds: Number(offer),
+            max_attempts: Number(attempts),
+            total_timeout_seconds: Number(total),
+            cooldown_seconds: Number(cooldown),
+            broadcast_batch_size: Number(batch),
+          })
+            .then(() =>
+              onSaved(
+                "حُفظت قواعد التوزيع — تسري على الرحلة التالية لا على بحثٍ جارٍ",
+              ),
+            )
+            .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}
       >

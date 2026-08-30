@@ -155,7 +155,17 @@ async def test_silence_expires_the_offer_and_moves_on(
     فعلاً مرةً: رُفعت المشتركةُ إلى عشرٍ مقابل كلّيةٍ خمسٍ فلم يعد العرضُ يدور
     على كبتنٍ ثانٍ أصلاً — واختبارٌ يقرأ ظرفَه من ملفٍ آخر يصمت حين يتغيّر.
     """
-    monkeypatch.setattr(dispatch, "OFFER_TIMEOUT_SECONDS", 1)
+    # **ومصدرُها الواحدُ صار `dispatch_settings.DEFAULTS`** (2026-08-30): ضبطُ
+    # ثابتٍ في `dispatch` صار يضبط اسماً لا يقرؤه السلوك
+    from dataclasses import replace
+
+    from app.services import dispatch_settings
+
+    monkeypatch.setattr(
+        dispatch_settings,
+        "DEFAULTS",
+        replace(dispatch_settings.DEFAULTS, offer_timeout_seconds=1),
+    )
     near = await _driver(client, session_factory, plate_number="AMM-1")
     far = await _driver(
         client, session_factory, SECOND_DRIVER, plate_number="AMM-7", location=FAR_PICKUP

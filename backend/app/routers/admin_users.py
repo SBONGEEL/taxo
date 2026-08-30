@@ -725,18 +725,10 @@ async def list_debt_claims(
     _: AdminUser, session: DbSession, country: CountryCode | None = None
 ) -> list[DebtClaimOut]:
     """مطالباتُ السداد المعلّقة — **ما ينتظر عينَ مشرف**."""
-    orders = await cliq_debts.list_pending(session, country=country)
+    # **البانِي الواحد** — وبلاه كان المشرفُ يقرأ مطالبةً بلا حسابٍ ولا رمز
     return [
-        DebtClaimOut(
-            id=order.id,
-            cart_id=order.cart_id,
-            amount=order.amount,
-            currency=order.currency,
-            status=order.status,
-            failure_reason=order.failure_reason,
-            created_at=order.created_at,
-        )
-        for order in orders
+        await cliq_debts.claim_out(session, order)
+        for order in await cliq_debts.list_pending(session, country=country)
     ]
 
 
@@ -751,16 +743,9 @@ async def confirm_debt_claim(
     order, _applied = await cliq_debts.confirm_payment(
         session, order_id=order_id, actor=admin, credited=payload.credited
     )
+    out = await cliq_debts.claim_out(session, order)
     await session.commit()
-    return DebtClaimOut(
-        id=order.id,
-        cart_id=order.cart_id,
-        amount=order.amount,
-        currency=order.currency,
-        status=order.status,
-        failure_reason=order.failure_reason,
-        created_at=order.created_at,
-    )
+    return out
 
 
 @router.post("/drivers/debts/{debt_id}/writeoff", response_model=AdminDebtOut)

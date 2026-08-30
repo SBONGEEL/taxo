@@ -440,6 +440,9 @@ export interface PaymentSetting {
   cliq_qr_path: string | null;
   cliq_review_min_minutes: number;
   cliq_review_max_minutes: number;
+  /** **سقفُ دَينِ الكبتن** — و`null` تعني «لا سقفَ» لا «صفراً»: صفرٌ يحجب
+   *  كلَّ كبتنٍ عليه فلسٌ واحد. */
+  driver_debt_ceiling: string | null;
   /** مبالغُ البقشيش (12-و) — **صفرٌ يعني «لم يُضبط»** فتُخفى الميزةُ في التطبيق. */
   tip_preset_small: string;
   tip_preset_medium: string;
@@ -1345,4 +1348,19 @@ export interface DebtClaimRow {
   status: "created" | "paid" | "failed" | "cancelled";
   failure_reason: string | null;
   created_at: string;
+}
+
+/** نمطُ عرض الطلب (SPEC §5.3، قرارُ المالك 2026-08-30). */
+export type DispatchMode = "sequential" | "broadcast";
+
+/** قواعدُ التوزيع لسوق — **صارت إعداداً بعد أن كانت ثابتاً في الشيفرة**. */
+export interface DispatchSetting {
+  country_code: CountryCode;
+  mode: DispatchMode;
+  offer_timeout_seconds: number;
+  max_attempts: number;
+  total_timeout_seconds: number;
+  /** **تبريدٌ لا استبعادٌ دائم** — والصفرُ ممنوعٌ في القاعدة. */
+  cooldown_seconds: number;
+  broadcast_batch_size: number;
 }

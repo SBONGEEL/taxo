@@ -224,3 +224,34 @@ async def list_pending(session: AsyncSession, *, country=None) -> list[ProviderO
         query = query.where(ProviderOrder.country_code == country)
     rows = await session.scalars(query.order_by(ProviderOrder.created_at.desc()))
     return list(rows)
+
+
+async def claim_out(session: AsyncSession, order: ProviderOrder):
+    """**البانِي الواحدُ لمطالبة الاشتراك** — يخدم بابَي الفتح والقائمة.
+
+    **وعطبٌ مقيسٌ أوجبه** (2026-08-30، حارس `test_two_doors`): بابُ الفتح كان
+    يضع `qr_url` حين تكون الصورةُ مرفوعة، **وبابُ القائمة يكتب `None` نصّاً** —
+    فالكبتنُ يرى الباركودَ لحظةَ الفتح **ولا يراه أبداً إن عاد إليه من قائمته**،
+    وشاشتُه تقول «لم يُرفع رمز الاستجابة بعد» وهو مرفوع.
+
+    **ولا شيءَ يفشل**: البابان يجيبان ٢٠٠، والحقلُ حاضرٌ في العقد. وهو الشكلُ
+    الثامن بحرفه.
+    """
+    from app.schemas.subscription import CliqSubscriptionOut
+
+    setting = await settings_service.get_payment_settings(session, order.country_code)
+    return CliqSubscriptionOut(
+        id=order.id,
+        cart_id=order.cart_id,
+        amount=order.amount,
+        currency=order.currency,
+        status=order.status,
+        qr_url=(
+            "/subscriptions/cliq/qr" if setting and setting.cliq_qr_path else None
+        ),
+        alias=(setting.cliq_alias if setting else "") or "",
+        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
+        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+        failure_reason=order.failure_reason,
+        created_at=order.created_at,
+    )

@@ -265,7 +265,7 @@ async def test_concurrent_topup_confirmations_credit_once(
     responses = await asyncio.gather(
         *(
             client.post(
-                f"/admin/topups/{request_id}/confirm", headers=admin_headers
+                f"/admin/topups/{request_id}/confirm", json={}, headers=admin_headers
             )
             for _ in range(3)
         )

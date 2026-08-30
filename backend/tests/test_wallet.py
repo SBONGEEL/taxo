@@ -100,7 +100,10 @@ async def test_rider_topup_request_credits_nothing_until_confirmed(
     assert (await wallet_of(client, rider["headers"]))["balance"] == "0.000"
 
     confirmed = await client.post(
-        f"/admin/topups/{request_id}/confirm", headers=admin_headers
+        # **وجسدٌ فارغٌ لا غيابُ جسد** (صُحِّح 2026-08-30): صار للتأكيد حمولةٌ
+        # منذ 2026-08-29 — **مبلغُ المشرف، وهو اختياريّ**، لكن الجسدَ نفسَه
+        # مطلوب. و`{}` تعني «بمبلغه كما ادّعى»، وغيابُه يعني 422.
+        f"/admin/topups/{request_id}/confirm", json={}, headers=admin_headers
     )
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["status"] == "confirmed"
@@ -157,7 +160,7 @@ async def test_rejected_topup_leaves_balance_untouched(
 
     # ولا يُؤكَّد بعد رفضه
     again = await client.post(
-        f"/admin/topups/{request_id}/confirm", headers=admin_headers
+        f"/admin/topups/{request_id}/confirm", json={}, headers=admin_headers
     )
     assert again.status_code == 409
     assert again.json()["code"] == "invalid_status_transition"
@@ -175,10 +178,10 @@ async def test_topup_confirmation_is_not_repeatable(
     request_id = created.json()["id"]
 
     assert (
-        await client.post(f"/admin/topups/{request_id}/confirm", headers=admin_headers)
+        await client.post(f"/admin/topups/{request_id}/confirm", json={}, headers=admin_headers)
     ).status_code == 200
     repeat = await client.post(
-        f"/admin/topups/{request_id}/confirm", headers=admin_headers
+        f"/admin/topups/{request_id}/confirm", json={}, headers=admin_headers
     )
     assert repeat.status_code == 409
     assert (await wallet_of(client, rider["headers"]))["balance"] == "9.000"

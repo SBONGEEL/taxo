@@ -37,6 +37,7 @@ from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import (
     CountryCode,
+    DispatchMode,
     DriverStatus,
     FeatureKey,
     Gender,
@@ -47,6 +48,8 @@ from app.models.enums import (
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.services.dispatch_settings import DEFAULTS as _DEFAULTS
+from app.services.dispatch_settings import DispatchRules, rules_for
 from app.services import (
     geo,
     missions,
@@ -59,10 +62,16 @@ from app.ws import events
 
 logger = logging.getLogger(__name__)
 
-# ثوابت SPEC القسم 5.3 — لا إعدادات: هذه قواعد التوزيع نفسها
-OFFER_TIMEOUT_SECONDS = 20
-MAX_ATTEMPTS = 5
-TOTAL_TIMEOUT_SECONDS = 120
+# **صارت إعداداً، ولا نسخةَ لها هنا** (قرارُ المالك 2026-08-30، و§5.3 عُدِّلت
+# معه في الجلسة نفسِها): كان هنا ثلاثةُ ثوابتَ فوقها «ثوابت SPEC القسم 5.3 —
+# لا إعدادات». **والقيمُ الحيّةُ في `dispatch_settings`** وتُقرأ **مرّةً عند
+# بدء توزيع الرحلة** — فرحلةٌ جاريةٌ تُكمل بما بدأت به، والتبديلُ يسري على
+# التالية. **ونصفُ متغيّرٍ أسوأُ من أيِّ الحالين**.
+#
+# **ولم يُترك اسمٌ هنا يحمل الافتراضَ نسخةً ثانية**: كان أهونَ أن يبقى
+# `OFFER_TIMEOUT_SECONDS = _DEFAULTS.offer_timeout_seconds` ليعمل ما يقرؤه،
+# **لكنه بيتٌ ثانٍ لقيمةٍ واحدة** — ومن يضبط أحدَهما في اختبارٍ يظنّ أنه ضبط
+# السلوك، والسلوكُ يقرأ الآخر. وهو الشكلُ الذي كلّف هذا المشروعَ مراراً.
 
 # مهلة بين دورتي بحث حين لا يوجد أي كبتن قريب — لا تُحتسب محاولة
 IDLE_POLL_SECONDS = 3.0
@@ -105,6 +114,25 @@ def signal_key(ride_id: uuid.UUID | str) -> str:
     return f"dispatch:signal:{ride_id}"
 
 
+def cooldown_key(ride_id: uuid.UUID | str) -> str:
+    """**مجموعةٌ مرتَّبةٌ بلحظة انتهاء التبريد** — لا مفتاحٌ لكلِّ كبتن.
+
+    **ولمَ واحدةٌ لا مفاتيحُ متفرّقة**: الحلقةُ تسأل «من في تبريده الآن؟» قبل
+    كلِّ دورة — سؤالٌ واحدٌ عن مجموعةٍ أرخصُ من `n` سؤالاً عن مفاتيح، **ولا
+    يحتاج معرفةَ الأسماء مسبقاً** وهي المشكلةُ نفسُها التي تجعل `mget` لا يصلح.
+    """
+    return f"dispatch:cooled:{ride_id}"
+
+
+def broadcast_key(ride_id: uuid.UUID | str) -> str:
+    """المعروضُ عليهم دفعةً واحدة — **مجموعةٌ لا قيمةٌ مفردة**.
+
+    **ومفتاحٌ ثانٍ لا توسيعُ الأول**: `offer_key` قيمةٌ مفردةٌ يقرأها مسارُ
+    القبول ومسارُ الاستعادة منذ المرحلة ٤، **وقلبُ شكلها يمسّ مساراً يعمل**.
+    """
+    return f"dispatch:broadcast:{ride_id}"
+
+
 # ------------------------------------------------------------------- العروض
 
 
@@ -120,9 +148,61 @@ async def current_offer(redis: Redis, ride_id: uuid.UUID) -> uuid.UUID | None:
 
 
 async def require_offer(redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID) -> None:
-    """يمنع قبول رحلة لم تُعرض على هذا الكبتن — أو انتهت مهلته فيها."""
-    if await current_offer(redis, ride_id) != driver_id:
-        raise RideOfferExpired()
+    """يمنع قبول رحلة لم تُعرض على هذا الكبتن — أو انتهت مهلته فيها.
+
+    **وفي البثِّ يُسأل عن العضوية لا عن المساواة**: الدفعةُ كلُّها معروضٌ
+    عليها، **وأولُ من يقبل يأخذ** — والفصلُ بينهم ليس هنا بل في انتقال حال
+    الرحلة تحت قفل صفِّها (`searching → accepted`)، فالخاسرُ يُردّ بحالٍ
+    لا بمهلة.
+    """
+    if await current_offer(redis, ride_id) == driver_id:
+        return
+    if await redis.sismember(broadcast_key(ride_id), str(driver_id)):
+        return
+    raise RideOfferExpired()
+
+
+async def broadcast_members(redis: Redis, ride_id: uuid.UUID) -> set[uuid.UUID]:
+    """من تحمل شاشاتُهم بطاقةَ هذه الرحلة الآن (نمطُ البثّ)."""
+    raw = await redis.smembers(broadcast_key(ride_id))
+    members: set[uuid.UUID] = set()
+    for item in raw:
+        try:
+            members.add(uuid.UUID(item))
+        except ValueError:  # pragma: no cover - قيمة تالفة
+            continue
+    return members
+
+
+async def cool_down(
+    redis: Redis, ride_id: uuid.UUID, driver_id: uuid.UUID, rules: DispatchRules
+) -> None:
+    """**تبريدٌ لا استبعادٌ دائم** (قرارُ المالك 2026-08-30).
+
+    كان الرافضُ يُستبعد **بقيّةَ الرحلة** (`tried: set` في ذاكرة المهمّة).
+    **و١٢٠ ثانيةً كانت ستُبقيه استبعاداً دائماً** لأنها مهلةُ الرحلة كلِّها —
+    ولذلك ٣٠: تعيده حوالي المحاولة الرابعة، **فيراه ثانيةً في الطلب نفسِه
+    ولا يعود إليه فور رفضه**.
+    """
+    seconds = rules.cooldown_seconds
+    expiry = time.time() + seconds
+    pipe = redis.pipeline()
+    pipe.zadd(cooldown_key(ride_id), {str(driver_id): expiry})
+    # **عمرُ المفتاح أطولُ من أطول رحلةِ بحث** — فلا يبقى بعد انتهائها
+    pipe.expire(cooldown_key(ride_id), seconds + rules.total_timeout_seconds)
+    await pipe.execute()
+
+
+async def cooled_drivers(redis: Redis, ride_id: uuid.UUID) -> set[uuid.UUID]:
+    """من هم في تبريدهم **الآن** — والمنتهيةُ تُكنس في السؤال نفسِه."""
+    await redis.zremrangebyscore(cooldown_key(ride_id), "-inf", time.time())
+    cooled: set[uuid.UUID] = set()
+    for item in await redis.zrange(cooldown_key(ride_id), 0, -1):
+        try:
+            cooled.add(uuid.UUID(item))
+        except ValueError:  # pragma: no cover
+            continue
+    return cooled
 
 
 async def release_offer(
@@ -142,18 +222,26 @@ async def withdraw_offer(
     session: AsyncSession, redis: Redis, ride_id: uuid.UUID
 ) -> None:
     """يسحب العرض القائم ويطوي بطاقته من شاشة الكبتن (إلغاء أثناء البحث)."""
-    driver_id = await current_offer(redis, ride_id)
-    if driver_id is None:
+    # **الدفعةُ كلُّها تُطوى لا واحدٌ منها** (2026-08-30): في نمط البثِّ
+    # `current_offer` فارغةٌ والبطاقاتُ على أربع شاشات — فسحبٌ يقرأ المفردةَ
+    # وحدَها كان سيترك أربعةً ينظرون إلى رحلةٍ أُلغيت.
+    holders = await broadcast_members(redis, ride_id)
+    single = await current_offer(redis, ride_id)
+    if single is not None:
+        holders.add(single)
+    if not holders:
         return
 
-    await release_offer(redis, ride_id, driver_id)
-    driver_user_id = await session.scalar(
-        select(Driver.user_id).where(Driver.id == driver_id)
-    )
-    if driver_user_id is not None:
-        await events.publish_offer_expired(
-            redis, driver_user_id=driver_user_id, ride_id=ride_id
+    await redis.delete(broadcast_key(ride_id))
+    for driver_id in holders:
+        await release_offer(redis, ride_id, driver_id)
+        driver_user_id = await session.scalar(
+            select(Driver.user_id).where(Driver.id == driver_id)
         )
+        if driver_user_id is not None:
+            await events.publish_offer_expired(
+                redis, driver_user_id=driver_user_id, ride_id=ride_id
+            )
 
 
 async def _reserve_offer(
@@ -373,15 +461,19 @@ async def eligible_driver_ids(
     )
 
 
-async def _next_candidate(
+async def _ranked_candidates(
     session: AsyncSession,
     redis: Redis,
     *,
     ride: Ride,
     tried: set[uuid.UUID],
     gender: GenderMatch | None = None,
-) -> geo.DriverPresence | None:
-    """أقرب كبتن مؤهل لم يُعرض عليه هذا الطلب بعد.
+) -> list[geo.DriverPresence]:
+    """المؤهَّلون مرتَّبين من الأقرب — **قائمةٌ لا واحد**.
+
+    **ولمَ صارت قائمة**: نمطُ البثِّ يعرض على دفعةٍ معاً (قرارُ المالك
+    2026-08-30)، **والتسلسليُّ يأخذ أوّلَها** — فترتيبٌ واحدٌ للنمطين، ولا
+    دالّتان تُرتِّبان بطريقتين تفترقان أوّلَ تعديل.
 
     يبدأ البحث بثلاثة كيلومترات ويتوسع لسبعة إن خلت الدائرة (SPEC القسم 5.3)
     — **وإلى عشرة في الطلب المجنَّس** (المرحلة 10-ج)، لأن دائرة المرشَّحين فيه
@@ -447,10 +539,25 @@ async def _next_candidate(
                 )
             )
 
-        # `presences` مرتبة من الأقرب، فأول مؤهل فيها هو الأقرب المؤهل
-        return ranked[0]
+        # `presences` مرتبة من الأقرب، فأولُ مؤهلٍ فيها هو الأقربُ المؤهل
+        return ranked
 
-    return None
+    return []
+
+
+async def _next_candidate(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    ride: Ride,
+    tried: set[uuid.UUID],
+    gender: GenderMatch | None = None,
+) -> geo.DriverPresence | None:
+    """أقربُ مؤهَّلٍ واحد — **غلافٌ فوق الترتيب الواحد** لا ترتيبٌ ثانٍ."""
+    ranked = await _ranked_candidates(
+        session, redis, ride=ride, tried=tried, gender=gender
+    )
+    return ranked[0] if ranked else None
 
 
 # ----------------------------------------------------------- تشغيل التوزيع
@@ -555,13 +662,59 @@ async def pending_offer_frame(
     }
 
 
+async def _offer_to(
+    redis: Redis,
+    *,
+    ride: Ride,
+    candidate: geo.DriverPresence,
+    driver_user_id: uuid.UUID,
+    timeout: int,
+) -> None:
+    """يُظهر البطاقةَ على شاشةِ كبتنٍ بعينه — بابٌ واحدٌ للنمطين.
+
+    **وجلسةٌ قصيرةٌ للإشعار وحدَه**: البثُّ لا يحتاجها، لكن Push يقرأ أجهزةَ
+    الكبتن من القاعدة — ولا تُحجز جلسةٌ طوال انتظار المهلة من أجل ذلك.
+    """
+    async with SessionLocal() as session:
+        await notifications.publish_ride_offer(
+            session,
+            redis,
+            driver_user_id=driver_user_id,
+            ride=ride,
+            distance_to_pickup_km=candidate.distance_km,
+            expires_in_seconds=timeout,
+        )
+
+
+async def _fold(
+    redis: Redis,
+    ride_id: uuid.UUID,
+    held: dict[uuid.UUID, uuid.UUID],
+    rules: DispatchRules,
+) -> None:
+    """يطوي بطاقاتِ دورةٍ انتهت، ويضع أصحابَها في تبريدهم."""
+    if not held:
+        return
+    await redis.srem(broadcast_key(ride_id), *[str(d) for d in held])
+    for driver_id, driver_user_id in held.items():
+        await release_offer(redis, ride_id, driver_id)
+        await cool_down(redis, ride_id, driver_id, rules)
+        await events.publish_offer_expired(
+            redis, driver_user_id=driver_user_id, ride_id=ride_id
+        )
+
+
 async def _run(ride_id: uuid.UUID) -> None:
     from app.services import rides as rides_service
 
     redis = get_redis_client()
-    deadline = time.monotonic() + TOTAL_TIMEOUT_SECONDS
-    tried: set[uuid.UUID] = set()
     attempts = 0
+    # **ما تحمله الشاشاتُ الآن**: كبتن → مستخدمُه. **ويُطوى في `finally`**
+    # لأن إلغاءَ الراكب يُلغي هذه المهمّة **من داخل الانتظار**، فالسطورُ التي
+    # تليه لا تُنفَّذ أبداً — وكانت البطاقةُ تبقى على شاشة الكبتن حتى تنقضي
+    # مهلتُها (عطبٌ قِيس 2026-08-30).
+    held: dict[uuid.UUID, uuid.UUID] = {}
+    rules: DispatchRules = _DEFAULTS
 
     # `requested → searching`: من هنا فصاعداً الراكب يرى «نبحث عن كبتن»
     async with SessionLocal() as session:
@@ -569,7 +722,12 @@ async def _run(ride_id: uuid.UUID) -> None:
         if locked is None or locked.status != RideStatus.REQUESTED:
             return  # أُلغيت قبل أن يبدأ البحث
         await rides_service.mark_searching(session, locked)
+        # **تُقرأ القواعدُ مرّةً هنا** — والتبديلُ حيّاً يسري على الرحلة
+        # التالية لا على هذه (انظر `services/dispatch_settings.py`)
+        rules = await rules_for(session, locked.country_code)
         await session.commit()
+
+    deadline = time.monotonic() + rules.total_timeout_seconds
 
     # **المشاركةُ تُجرَّب قبل أوّل عرض** (12-ي): المقعدُ الثاني في سيارةٍ سائرةٍ
     # أصلاً أسرعُ للراكب وأربحُ للكبتن من إيقاظ سيارةٍ أخرى — وإن لم يوجد، تمضي
@@ -579,76 +737,154 @@ async def _run(ride_id: uuid.UUID) -> None:
     if await _try_sharing(ride_id):
         return
 
-    while attempts < MAX_ATTEMPTS and time.monotonic() < deadline:
-        async with SessionLocal() as session:
-            ride = await _load_ride(session, ride_id)
-            # أُلغيت أو قُبلت من مسار آخر — لا شأن للتوزيع بها بعد الآن
-            if ride is None or ride.status != RideStatus.SEARCHING:
-                return
-            # شرطُ المطابقة يُقرأ في كل دورة لا مرةً عند البدء: مفتاحُ الخدمة
-            # قد يُطفأ أثناء البحث، وجنسُ الكبتن قد يُختم في هذه الدقيقة —
-            # وقراءتُه هنا تكلّف استعلامين بجانب استعلام الأهلية نفسه
-            match = await gender_match_for(
-                session,
-                ride=ride,
-                gender=await rider_gender(session, ride.rider_id),
-            )
-            candidate = await _next_candidate(
-                session, redis, ride=ride, tried=tried, gender=match
-            )
-            driver_user_id = (
-                await session.scalar(
-                    select(Driver.user_id).where(Driver.id == candidate.driver_id)
+    try:
+        while attempts < rules.max_attempts and time.monotonic() < deadline:
+            async with SessionLocal() as session:
+                ride = await _load_ride(session, ride_id)
+                # أُلغيت أو قُبلت من مسار آخر — لا شأن للتوزيع بها بعد الآن
+                if ride is None or ride.status != RideStatus.SEARCHING:
+                    return
+                # شرطُ المطابقة يُقرأ في كل دورة لا مرةً عند البدء: مفتاحُ
+                # الخدمة قد يُطفأ أثناء البحث، وجنسُ الكبتن قد يُختم في هذه
+                # الدقيقة — وقراءتُه هنا تكلّف استعلامين بجانب استعلام الأهلية
+                match = await gender_match_for(
+                    session,
+                    ride=ride,
+                    gender=await rider_gender(session, ride.rider_id),
                 )
-                if candidate is not None
-                else None
-            )
+                # **التبريدُ يُقرأ في كلِّ دورة**، وهو الفرقُ كلُّه عن `tried`:
+                # مجموعةٌ **تنقص** بمرور الوقت لا مجموعةٌ تكبر أبداً
+                ranked = await _ranked_candidates(
+                    session,
+                    redis,
+                    ride=ride,
+                    tried=await cooled_drivers(redis, ride_id),
+                    gender=match,
+                )
+                wanted = (
+                    rules.broadcast_batch_size
+                    if rules.mode is DispatchMode.BROADCAST
+                    else 1
+                )
+                chosen = ranked[:wanted]
+                user_ids: dict[uuid.UUID, uuid.UUID] = {}
+                if chosen:
+                    user_ids = {
+                        driver_id: user_id
+                        for driver_id, user_id in (
+                            await session.execute(
+                                select(Driver.id, Driver.user_id).where(
+                                    Driver.id.in_([p.driver_id for p in chosen])
+                                )
+                            )
+                        ).all()
+                    }
 
-        # لا أحد قريب بعد — ننتظر ظهور كبتن، والانتظار خارج الجلسة حتى لا
-        # يُحجز اتصال بالقاعدة طوال المهلة. لا تُحتسب محاولة على غياب المرشحين.
-        if candidate is None:
-            await asyncio.sleep(IDLE_POLL_SECONDS)
-            continue
+            # لا أحد قريب بعد — ننتظر ظهور كبتن، والانتظار خارج الجلسة حتى لا
+            # يُحجز اتصال بالقاعدة طوال المهلة. ولا تُحتسب محاولةٌ على غيابهم.
+            if not chosen:
+                await asyncio.sleep(IDLE_POLL_SECONDS)
+                continue
 
-        if not await _reserve_offer(
-            redis,
-            ride_id,
-            candidate.driver_id,
-            OFFER_TIMEOUT_SECONDS,
-            distance_km=candidate.distance_km,
-        ):
-            # معروض عليه طلب آخر في هذه اللحظة — نتخطاه بلا احتساب محاولة
-            tried.add(candidate.driver_id)
-            continue
+            held = {}
+            for candidate in chosen:
+                driver_user_id = user_ids.get(candidate.driver_id)
+                if driver_user_id is None:  # pragma: no cover - صفٌّ اختفى
+                    continue
+                if not await _reserve_offer(
+                    redis,
+                    ride_id,
+                    candidate.driver_id,
+                    rules.offer_timeout_seconds,
+                    distance_km=candidate.distance_km,
+                ):
+                    # معروضٌ عليه طلبٌ آخر الآن — **يُبرَّد لا يُستبعد**، فقد
+                    # يفرغ قبل أن ينتهي بحثُنا
+                    await cool_down(redis, ride_id, candidate.driver_id, rules)
+                    continue
+                held[candidate.driver_id] = driver_user_id
 
-        attempts += 1
-        tried.add(candidate.driver_id)
-        # تُمسح إشارات المحاولة السابقة حتى لا يُقرأ رفضٌ قديم على أنه جواب الآن
-        await redis.delete(signal_key(ride_id))
-        # جلسةٌ قصيرة للإشعار وحده: البثُّ لا يحتاجها لكن Push يقرأ أجهزة
-        # الكبتن من القاعدة، ولا تُحجز جلسةٌ طوال انتظار المهلة من أجل ذلك
-        async with SessionLocal() as session:
-            await notifications.publish_ride_offer(
-                session,
-                redis,
-                driver_user_id=driver_user_id,
-                ride=ride,
-                distance_to_pickup_km=candidate.distance_km,
-                expires_in_seconds=OFFER_TIMEOUT_SECONDS,
-            )
+            if not held:
+                # كلُّ من وجدناه مشغولٌ الآن — ولا تُحتسب محاولة
+                await asyncio.sleep(IDLE_POLL_SECONDS)
+                continue
 
-        remaining = min(OFFER_TIMEOUT_SECONDS, deadline - time.monotonic())
-        signal = await _wait_for_signal(redis, ride_id, remaining)
-        if signal == _SIGNAL_ACCEPTED:
-            return
+            attempts += 1
+            if rules.mode is DispatchMode.BROADCAST:
+                pipe = redis.pipeline()
+                pipe.sadd(broadcast_key(ride_id), *[str(d) for d in held])
+                pipe.expire(broadcast_key(ride_id), rules.offer_timeout_seconds)
+                await pipe.execute()
 
-        # صمتَ أو رفض: تُطوى البطاقة من شاشته ويُحرَّر لطلب آخر
-        await release_offer(redis, ride_id, candidate.driver_id)
-        await events.publish_offer_expired(
-            redis, driver_user_id=driver_user_id, ride_id=ride_id
-        )
+            # تُمسح إشاراتُ المحاولة السابقة حتى لا يُقرأ رفضٌ قديمٌ جواباً الآن
+            await redis.delete(signal_key(ride_id))
+            for candidate in chosen:
+                if candidate.driver_id in held:
+                    await _offer_to(
+                        redis,
+                        ride=ride,
+                        candidate=candidate,
+                        driver_user_id=held[candidate.driver_id],
+                        timeout=rules.offer_timeout_seconds,
+                    )
 
-    await _mark_no_driver_found(redis, ride_id)
+            # **ورفضُ واحدٍ في البثِّ لا ينهي الدورة**: تُطوى بطاقتُه وحدَه
+            # ويبقى الباقون — وتنتهي الدورةُ بقبولٍ أو بخلوّ الدفعة أو بالمهلة.
+            round_end = time.monotonic() + rules.offer_timeout_seconds
+            accepted = False
+            while held and time.monotonic() < round_end:
+                remaining = min(round_end, deadline) - time.monotonic()
+                if remaining <= 0:
+                    break
+                signal = await _wait_for_signal(redis, ride_id, remaining)
+                if signal == _SIGNAL_ACCEPTED:
+                    accepted = True
+                    break
+                if signal is None:
+                    break
+                if signal.startswith(_SIGNAL_DECLINED):
+                    _, _, raw = signal.partition(":")
+                    try:
+                        refuser = uuid.UUID(raw)
+                    except ValueError:  # pragma: no cover - قيمة تالفة
+                        continue
+                    if refuser in held:
+                        await cool_down(redis, ride_id, refuser, rules)
+                        await redis.srem(broadcast_key(ride_id), str(refuser))
+                        held.pop(refuser, None)
+
+            if accepted:
+                # ## **من فاز تبقى بطاقتُه، ومن لم يفز تُطوى بطاقتُه فوراً**
+                #
+                # **عطبٌ وجدَته إعادةُ القراءة 2026-08-30**: كان `held = {}`
+                # وحدَه — فتبقى البطاقةُ على شاشات من لم يفوزوا حتى تنقضي
+                # مهلتُها، **فيضغط أحدُهم «اقبل» على رحلةٍ أُخذت**. ويُردّ
+                # بخطأٍ لا يفهمه، وقد ترك ما في يده لأجلها.
+                #
+                # **والفائزُ يُقرأ من صفِّ الرحلة لا من الإشارة**:
+                # `notify_accepted` لا تحمل هويّةً، **وقراءةُ الصفِّ بعد
+                # الالتزام تقول من كتبه فعلاً** — ولا يُخمَّن من سبق.
+                async with SessionLocal() as session:
+                    winner = await session.scalar(
+                        select(Ride.driver_id).where(Ride.id == ride_id)
+                    )
+                held.pop(winner, None)
+                await _fold(redis, ride_id, held, rules)
+                held = {}
+                return
+
+            # صمتوا أو رفضوا: تُطوى البطاقاتُ ويدخل أصحابُها التبريد
+            await _fold(redis, ride_id, held, rules)
+            held = {}
+
+        await _mark_no_driver_found(redis, ride_id)
+    finally:
+        # **الإلغاءُ يمرّ من هنا وحدَه**: `task.cancel()` يرفع `CancelledError`
+        # داخل الانتظار، **فما بعده لا يُنفَّذ** — وبلا هذا البند تبقى البطاقةُ
+        # على شاشة الكبتن حتى تنقضي مهلتُها، وقد يقبل رحلةً أُلغيت.
+        if held:
+            with contextlib.suppress(Exception):
+                await _fold(redis, ride_id, held, rules)
 
 
 async def _guarded(ride_id: uuid.UUID) -> None:

@@ -23,6 +23,8 @@ interface Props {
   offer: Offer;
   currencyLabel: string;
   categoryLabel: string;
+  /** **«كاش»** — و`null` تعني «لم تُعرف بعد» لا «لا توجد». */
+  methodLabel: string | null;
   busy: boolean;
   onAccept: () => void;
   onDecline: () => void;
@@ -32,6 +34,7 @@ export function OfferSheet({
   offer,
   currencyLabel,
   categoryLabel,
+  methodLabel,
   busy,
   onAccept,
   onDecline,
@@ -51,7 +54,25 @@ export function OfferSheet({
 
   return (
     <div className="absolute inset-0 z-50 animate-fadein bg-dim">
-      <div className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-22 pt-18">
+      {/* **بطاقةٌ عائمةٌ لا ورقةٌ من حافةٍ إلى حافة** — التصميمُ
+          (`mobile-app-design-request`، الشاشة ٠١) يعوّمها بهامشِ ١٢ ويستدير
+          بها ٢٦ من جوانبها الأربعة، **وحافّتان ملتصقتان بالشاشة تُقرآن ورقةَ
+          نظامٍ لا بطاقةً داخل التطبيق** — وهو الفرقُ الذي ترسمه الشاشةُ ٠٢ */}
+      <div className="absolute inset-x-0 bottom-0 animate-slideup px-12 pb-14">
+        {/* **شارةُ «نغمة + اهتزاز» فوق البطاقة** — والحركةُ جزءٌ من الرسم لا
+            زينة: هي ما يقول للكبتن إنّ صوتاً يعمل الآن، فمن رآها ولم يسمع
+            شيئاً عرف أنّ الصوتَ مطفأٌ في هاتفه لا أنّ الطلبَ صامت */}
+        <div className="mb-10 flex justify-center">
+          <div className="flex animate-shake items-center gap-8 rounded-full border border-line bg-surface px-14 py-7 text-ok">
+            <span className="flex items-center gap-2">
+              <span className="eqb eqb-1" />
+              <span className="eqb eqb-2" />
+              <span className="eqb eqb-3" />
+            </span>
+            <span className="text-11 font-bold">نغمة + اهتزاز</span>
+          </div>
+        </div>
+        <div className="rounded-26 border border-line bg-surface px-18 pb-20 pt-18 shadow-offer">
         <div className="mb-15 flex items-center gap-13">
           <div className="relative size-54 shrink-0">
             <svg
@@ -148,7 +169,12 @@ export function OfferSheet({
                 {currencyLabel}
               </span>
             </div>
-            <div className="text-11.5 text-muted">{categoryLabel}</div>
+            {/* **طريقةُ الدفع ثم الصنف** كما في التصميم — و`methodLabel`
+                فارغةٌ اليومَ لأن الراكبَ يختار القناةَ في شاشة الدفع بعد
+                الرحلة (§6)، **فلا تُعرف لحظةَ العرض ولا تُخترع** */}
+            <div className="text-11.5 text-muted">
+              {methodLabel ? `${methodLabel} · ${categoryLabel}` : categoryLabel}
+            </div>
           </div>
 
           <div className="text-end">
@@ -190,6 +216,7 @@ export function OfferSheet({
           >
             رفض
           </button>
+        </div>
         </div>
       </div>
     </div>

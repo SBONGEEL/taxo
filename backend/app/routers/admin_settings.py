@@ -28,6 +28,8 @@ from app.schemas.cancellation import (
     CancellationSettingUpdate,
 )
 from app.schemas.settings import (
+    DispatchSettingOut,
+    DispatchSettingUpdate,
     CommissionSettingOut,
     OtpExhaustedOut,
     MapSettingOut,
@@ -47,6 +49,7 @@ from app.schemas.settings import (
     SubscriptionPlanUpdate,
 )
 from app.models.advance import AdvanceSetting
+from app.models.dispatch_setting import DispatchSetting
 from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
@@ -750,3 +753,56 @@ async def upload_cliq_qr(
     )
     await session.commit()
     return PaymentSettingOut.model_validate(setting)
+
+
+# ------------------------------------------------- إعدادات التوزيع (§5.3)
+
+
+@router.get("/dispatch", response_model=list[DispatchSettingOut])
+async def list_dispatch_settings(
+    _staff: StaffUser, session: DbSession
+) -> list[DispatchSettingOut]:
+    """صفوفُ الأسواق المضبوطة — **والغائبُ يعمل بالافتراضيّ ولا يُخترع له صفّ**."""
+    rows = (
+        await session.scalars(
+            select(DispatchSetting).order_by(DispatchSetting.country_code)
+        )
+    ).all()
+    return [DispatchSettingOut.model_validate(row) for row in rows]
+
+
+@router.patch("/dispatch/{country_code}", response_model=DispatchSettingOut)
+async def update_dispatch_settings(
+    country_code: CountryCode,
+    payload: DispatchSettingUpdate,
+    admin: AdminUser,
+    session: DbSession,
+) -> DispatchSettingOut:
+    """نمطُ التوزيع ومهلتُه وتبريدُه (§5.3، قرارُ المالك 2026-08-30).
+
+    **وما يُعدَّل هنا لا يمسّ رحلةً جارية**: القواعدُ تُقرأ مرّةً عند بدء
+    توزيع الرحلة. **ونصفُ متغيّرٍ أسوأُ من أيِّ الحالين** — رحلةٌ بدأت بثّاً
+    فصارت تسلسليّةً في منتصفها تترك دفعةً تحمل بطاقةً لا يُقرأ قبولُها.
+    """
+    setting = await session.scalar(
+        select(DispatchSetting).where(DispatchSetting.country_code == country_code)
+    )
+    if setting is None:
+        setting = DispatchSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(setting, field, value)
+    await session.flush()
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="dispatch_settings",
+        entity_id=setting.id,
+        details=payload.model_dump(exclude_unset=True, mode="json"),
+    )
+    await session.commit()
+    return DispatchSettingOut.model_validate(setting)

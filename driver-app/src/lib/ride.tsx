@@ -25,7 +25,14 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import {
+  hideOfferAlert,
+  maybeAskForOverlay,
+  showOfferAlert,
+} from "@/lib/offer-alert";
 import { onlineService } from "@/lib/online-service";
+import { digits } from "@/lib/utils";
+import { CATEGORY_LABEL, CURRENCY_LABEL } from "@/lib/rideFormat";
 
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
@@ -111,19 +118,46 @@ export function RideProvider({ children }: { children: ReactNode }) {
           expiresAt: Date.now() + event.expires_in_seconds * 1_000,
           totalSeconds: event.expires_in_seconds,
         });
+        // **الأولويةُ كما رسمها التصميم**: بطاقةٌ داخل التطبيق ← ورقةٌ سفليّة
+        // ← فقاعةٌ عائمة ← إشعارُ ملء الشاشة. **أوّلُ متاحٍ يُستعمل والبقيّةُ
+        // تُلغى**، فلا يستقبل الكبتنُ البلاغَ نفسَه مرّتين.
+        //
+        // **وهذا الشرطُ يفصل الأولى عمّا بعدها وحدَه**: من ينظر إلى الشاشة
+        // يرى البطاقةَ فيها، **وورقةٌ فوقها تغطّي ما جاءت تعرضه**. والاختيارُ
+        // بين الثلاث الباقيات في `OfferAlert` — لأنه يقرأ القفلَ والإذن.
+        if (document.hidden) {
+          void showOfferAlert({
+            rideId: event.ride.id,
+            fare: digits(event.ride.estimated_fare),
+            currency: CURRENCY_LABEL[event.ride.currency],
+            // **فارغةٌ اليومَ عن قصد**: طريقةُ الدفع يختارها الراكبُ في شاشة
+            // الدفع بعد الرحلة (§6)، **فلا تُعرف لحظةَ العرض** — والتصميمُ
+            // يرسم «كاش» هنا. **ولا تُخترع**: كاشٌ يعني مالاً في يده وعمولةً
+            // عليه، وكتابتُها ظنّاً تغيّر ما يقرّر به.
+            method: "",
+            category: CATEGORY_LABEL[event.ride.vehicle_category],
+            distance: `${digits(String(event.distance_to_pickup_km))} كم`,
+            pickup: event.ride.pickup_address ?? "",
+            drop: event.ride.dropoff_address ?? "",
+            seconds: event.expires_in_seconds,
+          });
+        }
         break;
       case "offer_expired":
         setOffer(null);
+        void hideOfferAlert();
         break;
       case "driver_assigned":
       case "driver_arrived":
       case "ride_started":
         setOffer(null);
+        void hideOfferAlert();
         setRide(event.ride);
         break;
       case "ride_completed":
       case "ride_cancelled":
         setOffer(null);
+        void hideOfferAlert();
         setRide(event.ride);
         break;
       case "cliq_transfer_submitted":
@@ -153,6 +187,11 @@ export function RideProvider({ children }: { children: ReactNode }) {
         // **الخدمةُ تبدأ مع الاستقبال لا مع فتح التطبيق** (شرطُ المالك): لا
         // إشعارَ دائمٌ لكبتنٍ غيرِ عامل
         onlineService.start();
+        // **وإذنُ النافذة العائمة يُطلب هنا لا عند الباب** (قرارُ المالك
+        // 2026-08-30): «تُطلب عند أول استقبال طلبات، وبسطرٍ يقول ما تفعله».
+        // **ومرّةً واحدةً لا في كلِّ اتصال**: من رفضه لا يُساق إلى إعدادات
+        // النظام كلَّ صباح — وطلبٌ يتكرّر يُطفأ ومعه ما يحمله.
+        void maybeAskForOverlay();
         // الاسترجاع عبر REST عند كل اتصال (القسم 10) — ورسالةُ `connected`
         // تحمل نفس اللقطة، فأيّهما وصل أولاً يصحّح الآخر
         getActiveRide()

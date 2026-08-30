@@ -638,24 +638,6 @@ async def my_debt(
     )
 
 
-def _debt_claim_out(order, setting) -> DebtClaimOut:
-    return DebtClaimOut(
-        id=order.id,
-        cart_id=order.cart_id,
-        amount=order.amount,
-        currency=order.currency,
-        status=order.status,
-        failure_reason=order.failure_reason,
-        created_at=order.created_at,
-        # **رمزُ السوق نفسُه**: حسابُ كليك واحدٌ للسوق، والصورةُ واحدة — فلا
-        # مسارٌ ثانٍ يخدم الملفَّ نفسَه، وهو «بابان ينشران الشيءَ نفسه» بعينه
-        qr_url=("/subscriptions/cliq/qr" if setting and setting.cliq_qr_path else None),
-        alias=(setting.cliq_alias if setting else "") or "",
-        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
-        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
-    )
-
-
 @router.post("/me/debt/cliq", response_model=DebtClaimOut, status_code=201)
 async def pay_debt_with_cliq(
     payload: DebtPaymentIn,
@@ -667,9 +649,9 @@ async def pay_debt_with_cliq(
     order = await cliq_debts.start_payment(
         session, driver=driver, owner=user, amount=payload.amount
     )
-    setting = await settings_service.get_payment_settings(session, user.country_code)
+    out = await cliq_debts.claim_out(session, order)
     await session.commit()
-    return _debt_claim_out(order, setting)
+    return out
 
 
 @router.get("/me/debt/cliq", response_model=list[DebtClaimOut])
@@ -677,8 +659,8 @@ async def list_my_debt_claims(
     _driver: CurrentDriver, user: CurrentUser, session: DbSession
 ) -> list[DebtClaimOut]:
     """مطالباتُه — ليقرأ حالَها بنفسه ولا يعيد التحويل."""
-    setting = await settings_service.get_payment_settings(session, user.country_code)
+    # **البانِي الواحدُ لا صيغةٌ هنا** — وأبوابُ اللوحة تستعمله نفسَه
     return [
-        _debt_claim_out(order, setting)
+        await cliq_debts.claim_out(session, order)
         for order in await cliq_debts.list_mine(session, user_id=user.id)
     ]

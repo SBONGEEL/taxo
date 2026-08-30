@@ -218,15 +218,38 @@ export function startOfferLoop(): void {
   stopOfferLoop();
   if (!unlocked || !allowed("offer")) return;
   play("offer");
-  loopTimer = window.setInterval(
-    () => play("offer"),
-    durationOf("offer") * 1000 + 120,
-  );
+  buzz();
+  loopTimer = window.setInterval(() => {
+    play("offer");
+    buzz();
+  }, durationOf("offer") * 1000 + 120);
 }
 
 export function stopOfferLoop(): void {
   if (loopTimer !== null) {
     window.clearInterval(loopTimer);
     loopTimer = null;
+  }
+}
+
+/** اهتزازُ الطلب — **نبضٌ مزدوجٌ يُميَّز بلا نظرٍ إلى الشاشة**.
+ *
+ * **وهو مربوطٌ بمفتاح صوت الطلب لا بمفتاحٍ ثالث** (قرارُ المالك 2026-08-30
+ * قال «أصواتٌ واهتزازٌ لكلِّ حال» شيئاً واحداً): مفتاحان لشيءٍ واحدٍ يجعلان
+ * كبتناً يُطفئ الصوتَ ظنّاً أنه أطفأ الإنذارَ **فيهتزّ جيبُه بلا أن يفهم**.
+ *
+ * **ويُطابق نبضةَ القناة الأصليّة** (`OfferAlert`: 350/200/350) — فمن سمعه في
+ * الخلفية وفي المقدّمة سمع الشيءَ نفسَه، **ونبضتان مختلفتان تُقرآن حدثين**.
+ *
+ * **ولا يُدَّعى أنه يعمل حيث لا يعمل**: `navigator.vibrate` غيرُ موجودةٍ في
+ * سفاري وأكثرِ أجهزة iOS، **وتُرجع `false` صامتةً في كروم بلا تفاعلٍ سابق** —
+ * فلا يُبنى عليها وحدَها إنذار، وهي زيادةٌ على الصوت لا بديلٌ عنه.
+ */
+function buzz(): void {
+  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+  try {
+    navigator.vibrate([350, 200, 350]);
+  } catch {
+    // جهازٌ يعلن الدالّةَ ويمنعها — ولا شيءَ يُفعل، والصوتُ قائم
   }
 }

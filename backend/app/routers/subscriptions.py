@@ -203,21 +203,9 @@ async def purchase_subscription_with_cliq(
     order = await cliq_subscriptions.start_subscription(
         session, driver=driver, owner=user, plan=plan
     )
-    setting = await settings_service.get_payment_settings(session, user.country_code)
+    out = await cliq_subscriptions.claim_out(session, order)
     await session.commit()
-    return CliqSubscriptionOut(
-        id=order.id,
-        cart_id=order.cart_id,
-        amount=order.amount,
-        currency=order.currency,
-        status=order.status,
-        qr_url=(f"/subscriptions/cliq/qr" if setting and setting.cliq_qr_path else None),
-        alias=(setting.cliq_alias if setting else "") or "",
-        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
-        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
-        failure_reason=order.failure_reason,
-        created_at=order.created_at,
-    )
+    return out
 
 
 @router.get("/cliq", response_model=list[CliqSubscriptionOut])
@@ -225,23 +213,10 @@ async def list_my_cliq_claims(
     _driver: CurrentDriver, user: CurrentUser, session: DbSession
 ) -> list[CliqSubscriptionOut]:
     """مطالباتي وحالُها — **بانتظار التأكيد · مؤكَّد · مرفوض**."""
-    setting = await settings_service.get_payment_settings(session, user.country_code)
-    rows = await cliq_subscriptions.list_mine(session, user_id=user.id)
+    # **البانِي الواحد** — وبلاه كان هذا البابُ يكتب `qr_url=None` نصّاً
     return [
-        CliqSubscriptionOut(
-            id=o.id,
-            cart_id=o.cart_id,
-            amount=o.amount,
-            currency=o.currency,
-            status=o.status,
-            qr_url=None,
-            alias=(setting.cliq_alias if setting else "") or "",
-            review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
-            review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
-            failure_reason=o.failure_reason,
-            created_at=o.created_at,
-        )
-        for o in rows
+        await cliq_subscriptions.claim_out(session, order)
+        for order in await cliq_subscriptions.list_mine(session, user_id=user.id)
     ]
 
 

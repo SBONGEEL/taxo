@@ -43,7 +43,7 @@ from app.models.enums import (
 )
 from app.models.provider_order import ProviderOrder
 from app.models.user import User
-from app.services import audit, debts
+from app.services import audit, debts, settings_service
 from app.services.card_payments import _new_cart_id, _paying_side
 from app.services.cliq_subscriptions import require_cliq_manual_enabled
 from app.services.pricing import round_money
@@ -188,3 +188,36 @@ async def list_pending(session: AsyncSession, *, country=None) -> list[ProviderO
         query = query.where(ProviderOrder.country_code == country)
     rows = await session.scalars(query.order_by(ProviderOrder.created_at.desc()))
     return list(rows)
+
+
+async def claim_out(session: AsyncSession, order: ProviderOrder):
+    """**البانِي الواحدُ لمطالبة الدَّين** — تخدم أبوابَها الأربعة.
+
+    **ولمَ بانٍ لا أربعُ صيغ** (صُحِّح 2026-08-30 بحارس `test_two_doors`):
+    بابا الكبتن كانا يملآن `qr_url` و`alias` ومدّةَ المراجعة، **وبابا اللوحة
+    يتركانها فارغة** — فالمشرفُ يقرأ مطالبةً بلا حسابٍ ولا رمز، **ولا شيءَ
+    يفشل**. وهو الشكلُ الثامن بعينه: بابان ينشران الشيءَ نفسَه ويفترقان.
+
+    **والإعدادُ يُقرأ من سوق المطالبة لا من سوق القارئ**: مشرفٌ أردنيٌّ يقرأ
+    مطالبةً ليبيّةً يجب أن يرى حسابَها هي.
+    """
+    from app.schemas.debt import DebtClaimOut
+
+    setting = await settings_service.get_payment_settings(session, order.country_code)
+    return DebtClaimOut(
+        id=order.id,
+        cart_id=order.cart_id,
+        amount=order.amount,
+        currency=order.currency,
+        status=order.status,
+        failure_reason=order.failure_reason,
+        created_at=order.created_at,
+        # **رمزُ السوق نفسُه**: حسابُ كليك واحدٌ للسوق والصورةُ واحدة، فلا
+        # مسارٌ ثانٍ يخدم الملفَّ نفسَه
+        qr_url=(
+            "/subscriptions/cliq/qr" if setting and setting.cliq_qr_path else None
+        ),
+        alias=(setting.cliq_alias if setting else "") or "",
+        review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
+        review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+    )

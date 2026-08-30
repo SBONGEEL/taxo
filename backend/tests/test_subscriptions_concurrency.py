@@ -193,3 +193,57 @@ async def test_concurrent_wallet_renewals_do_not_deadlock(
 
     mine = await client.get("/subscriptions/me", headers=driver["headers"])
     assert mine.json()["days_remaining"] == 60
+
+
+async def test_two_confirmations_of_one_cliq_claim_activate_once(
+    client: AsyncClient,
+    admin_headers: dict,
+    jordan_settings: None,
+    jordan_wallet: None,
+    session_factory,
+) -> None:
+    """**`cliq_subscriptions` — تأكيدان متزامنان على مطالبةٍ واحدة**.
+
+    **وهذا القفلُ شُحن بلا حارسٍ في 2026-08-29** ووجدَه `test_locks_have_tests`
+    بعد يوم: `cliq_subscriptions._locked` يقفل صفَّ الطلب، **ولا اختبارَ تزامنٍ
+    يسمّيه**.
+
+    **وما يملكه**: `activate_paid_order` **لا يقيّد في الدفتر شيئاً** (مالُ
+    الكبتن خرج من يده لا من محفظته) — **فمجموعُ الدفتر لا يكشف التضاعف**.
+    وبلا القفل يقرأ تأكيدان `status == created` معاً، **فيُكتب اشتراكان
+    لدفعةٍ واحدة**: شهران بمال شهر.
+
+    **والمهلةُ حكمٌ على الجمود**: تقابلُ قفلين يعلّق ولا يرفع خطأً.
+    """
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    plan_id = await ensure_plan(session_factory)
+
+    claim = await client.post(
+        "/subscriptions/cliq",
+        json={"plan_id": str(plan_id)},
+        headers=driver["headers"],
+    )
+    assert claim.status_code == 201, claim.text
+    body = claim.json()
+    claim_id = body["id"]
+
+    responses = await asyncio.wait_for(
+        asyncio.gather(
+            *(
+                client.post(
+                    f"/admin/cliq-claims/{claim_id}/confirm",
+                    json={"amount": body["amount"]},
+                    headers=admin_headers,
+                )
+                for _ in range(2)
+            ),
+            return_exceptions=True,
+        ),
+        timeout=30.0,
+    )
+    ok = [r for r in responses if not isinstance(r, BaseException)]
+    codes = _statuses(ok)
+    assert codes[200] == 1, f"لم يمرّ تأكيدٌ واحدٌ بالضبط — {codes}"
+
+    rows = await _subscriptions(session_factory)
+    assert len(rows) == 1, "دفعةٌ واحدةٌ كتبت اشتراكين — شهران بمال شهر"

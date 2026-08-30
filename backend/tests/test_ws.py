@@ -310,7 +310,7 @@ async def test_a_pending_offer_is_redelivered_on_connect(
     منها ثلاثٌ تَعِد بوقتٍ لا وجودَ له.
     """
     from app.core.redis_client import get_redis_client
-    from app.services import dispatch
+    from app.services import dispatch, dispatch_settings
 
     rider = await rider_session(client)
     driver = await approved_driver(client, session_factory, DRIVER)
@@ -353,4 +353,8 @@ async def test_a_pending_offer_is_redelivered_on_connect(
     assert frame["ride"]["id"] == ride_id
     # **المسافةُ هي التي عُرضت لا حسبةٌ ثانية** — تُخزَّن مع العرض
     assert frame["distance_to_pickup_km"] >= 0
-    assert 0 < frame["expires_in_seconds"] <= dispatch.OFFER_TIMEOUT_SECONDS
+    assert (
+        0
+        < frame["expires_in_seconds"]
+        <= dispatch_settings.DEFAULTS.offer_timeout_seconds
+    )

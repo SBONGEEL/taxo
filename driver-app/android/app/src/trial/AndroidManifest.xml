@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **مسبارُ القياس، في النكهة التجريبيّة وحدَها** (2026-08-30).
+     **ومعزولٌ بالبناء لا بشرطٍ يُقرأ في زمن التشغيل**: هذا الملفُّ لا يُدمَج
+     في `public` أصلاً، فحزمةُ القناة العامّة **لا تحمل المستقبِلَ ولا اسمَه**.
+     ويُنزع بعد أن يُقرأ السبب. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".OfferProbe"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="ly.tajora.driver.test.SHOW_OFFER" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

@@ -130,7 +130,18 @@ class FcmPushProvider:
                 "token": token,
                 "notification": {"title": message.title, "body": message.body},
                 "data": {k: str(v) for k, v in message.data.items()},
-                "android": {"priority": priority},
+                "android": (
+                    {"priority": priority}
+                    if message.android_channel_id is None
+                    else {
+                        "priority": priority,
+                        # **القناةُ تُذكر في الحمولة لا في التطبيق**: الإشعارُ
+                        # الواصلُ والتطبيقُ في الخلفية يرسمه النظامُ لا شيفرتُنا
+                        "notification": {
+                            "channel_id": message.android_channel_id
+                        },
+                    }
+                ),
                 "apns": {
                     "headers": {
                         "apns-priority": "10" if message.high_priority else "5"

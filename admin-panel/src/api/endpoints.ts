@@ -98,6 +98,7 @@ import type {
   WithdrawalStatus,
   CliqClaim,
   DebtClaimRow,
+  DispatchSetting,
   DriverDebtRow,
 } from "@/api/types";
 
@@ -492,6 +493,7 @@ export const updatePaymentSettings = (
     /** **المدّة الموعودة** — تُحقن في جملة «خلال {min} إلى {max} دقائق». */
     cliq_review_min_minutes?: number;
     cliq_review_max_minutes?: number;
+    driver_debt_ceiling?: string | null;
     tip_preset_small?: string;
     tip_preset_medium?: string;
     tip_max?: string;
@@ -1182,3 +1184,13 @@ export const confirmDebtClaim = (id: string, credited: string) =>
 /** شطبُ مستحقٍّ بقرارٍ مسجَّل — والسببُ مطلوبٌ لا اختياري. */
 export const writeOffDebt = (id: string, reason: string) =>
   api.post<DriverDebtRow>(`/admin/drivers/debts/${id}/writeoff`, { reason });
+
+/** قواعدُ التوزيع لكل سوق — **والغائبُ يعمل بالافتراضيّ ولا صفَّ له**. */
+export const listDispatchSettings = () =>
+  api.get<DispatchSetting[]>("/admin/settings/dispatch");
+
+/** **ولا تمسّ رحلةً جارية**: القواعدُ تُقرأ مرّةً عند بدء توزيعها. */
+export const updateDispatchSettings = (
+  country: CountryCode,
+  payload: Partial<Omit<DispatchSetting, "country_code">>,
+) => api.patch<DispatchSetting>(`/admin/settings/dispatch/${country}`, payload);

@@ -25,6 +25,23 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- **الشاشة ٠٣ (شاشةٌ مقفلة) والشاشة ٠٤-البديل** من ملفّ التصميم
+             `mobile-app-design-request` — **نشاطٌ أصليٌّ لا مسارُ ويب** (قرارُ
+             المالك 2026-08-30): المقتولُ وبلا شبكةٍ لا يحمّل WebView، ومهلةُ
+             القبول سبعُ ثوانٍ لا تكفي إقلاعَه.
+             **و`showWhenLocked` مصرَّحٌ هنا** ليصل فوق القفل بلا فتحٍ يدويّ،
+             **و`excludeFromRecents`** فلا تبقى بطاقةٌ منتهيةٌ في قائمة الأخيرة. -->
+        <activity
+            android:name=".OfferActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:showWhenLocked="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:configChanges="orientation|keyboardHidden|screenSize|uiMode" />
+
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:name=".MainActivity"
@@ -108,4 +125,22 @@
     <!-- الإشعارات: إذنٌ صريحٌ منذ أندرويد 13 — ويُطلب عند أول حدثٍ يستحقّه
          لا عند الإقلاع: طلبٌ على شاشةٍ فارغةٍ يُرفض ثم لا يُسأل ثانية. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- **بطاقةُ طلبٍ تُقرأ والتطبيقُ مغلق** (قرارُ المالك 2026-08-30).
+         **وهي وظيفةٌ أساسيّةٌ معلَنة** لا زينة: كبتنٌ يقود ولا يجوز أن يُطلب
+         منه فتحُ تطبيقٍ ليعرف أنّ ثمّة عملاً — وهذا هو التعليلُ الذي يُقدَّم
+         لمراجعة Play، مكتوباً **قبل الرفع لا بعد الرفض**.
+         **ومن لم يمنحه لا يبقى بلا طريق**: `OfferAlert` ينتقل إلى إشعارٍ
+         يملأ الشاشة، ولا تظهر الاثنتان معاً. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- **وأندرويد ١٤ فما فوق ينزع منحَه تلقائياً عن غير المكالمات والمنبّهات**
+         (مقيسٌ من وثيقة أندرويد 2026-08-30) — فالتصريحُ لا يكفي، ويُسأل
+         `canUseFullScreenIntent` ويُرسَل المستخدمُ إلى موضع المنح بيده. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- **إعفاءُ التوفير ليس إذناً بل شرطُ بقاءٍ للخدمة**: بدونه يُوقف
+         النظامُ بثَّ الموقع بعد دقائق، **فيبدو الكبتنُ متصلاً وهو غائب** —
+         وذاك أخطرُ من انقطاعٍ ظاهر. ولا يُطلب إلا من شاشة الأذونات. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 </manifest>
