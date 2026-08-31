@@ -20,6 +20,7 @@ from app.services.whatsapp import (
     BaileysGatewayProvider,
     WhatsAppCloudProvider,
     WhatsAppError,
+    WhatsAppNumberUnknown,
     build_provider,
 )
 from app.services.whatsapp.baileys import (
@@ -49,8 +50,8 @@ class _Gateway:
         self.body = body if body is not None else {"reference": "wamid.TEST"}
         self.calls: list[tuple[str, str, dict | None]] = []
 
-    async def __call__(self, method, path, *, json=None):
-        self.calls.append((method, path, json))
+    async def __call__(self, method, path, *, json=None, params=None):
+        self.calls.append((method, path, json if json is not None else params))
         return self.status, self.body
 
 
@@ -250,3 +251,59 @@ async def test_test_connection_refuses_an_unlinked_session(monkeypatch) -> None:
     with pytest.raises(WhatsAppError) as caught:
         await provider.test_connection()
     assert "امسح رمزَ الربط" in caught.value.message
+
+
+
+# ═══════ منفذُ الفحص — سؤالٌ بلا إرسال (2026-08-31) ═══════
+
+
+async def test_the_check_asks_and_sends_nothing(monkeypatch) -> None:
+    """**يسأل `GET /check` ولا يمسّ `/send`** — وهذا هو الشرطُ كلُّه.
+
+    **ولا يكفي أن يجيب**: بابٌ يجيب صحيحاً **ويرسل في طريقه** يفعل ما وُجد
+    ليمنعه، ولا يظهر ذلك في قيمةِ العودة. **فيُقاس ما وصل البوّابة.**
+    """
+    provider = _provider()
+    gateway = _Gateway(status=200, body={"on_whatsapp": True})
+    monkeypatch.setattr(provider, "_call", gateway)
+
+    await provider.check_number("+962790000011")
+
+    assert [(m, p) for m, p, _ in gateway.calls] == [("GET", "/check")]
+    assert all(path != "/send" for _, path, _ in gateway.calls)
+
+
+async def test_a_number_not_on_whatsapp_is_its_own_error(monkeypatch) -> None:
+    """**٤٢٢ خبرٌ عن الرقم — ولا يُخلط بعطب القناة.**
+
+    **والفرقُ هو الغرض**: خلطُهما يقول لصاحب رقمٍ صحيحٍ «رقمُك ليس على واتساب»
+    فيذهب يبحث عن عطبٍ في هاتفه، والعطبُ عندنا.
+    """
+    provider = _provider()
+    monkeypatch.setattr(
+        provider,
+        "_call",
+        _Gateway(
+            status=422,
+            body={"error": "هذا الرقم ليس على واتساب", "not_on_whatsapp": True},
+        ),
+    )
+
+    with pytest.raises(WhatsAppNumberUnknown):
+        await provider.check_number("+962799999999")
+
+
+async def test_a_gateway_that_cannot_ask_is_a_channel_fault(monkeypatch) -> None:
+    """**٥٠٣ عطبُ قناةٍ لا خبرُ رقم** — فيرتدّ المسارُ إلى القناة التالية."""
+    provider = _provider()
+    monkeypatch.setattr(
+        provider,
+        "_call",
+        _Gateway(
+            status=503,
+            body={"error": "الجلسةُ مغلقة", "not_on_whatsapp": False},
+        ),
+    )
+
+    with pytest.raises(WhatsAppError):
+        await provider.check_number("+962790000011")

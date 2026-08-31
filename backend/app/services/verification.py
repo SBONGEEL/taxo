@@ -106,10 +106,22 @@ class VerificationSendFailed(AppError):
     message = "تعذّر إرسال رمز التحقق"
 
     def __init__(
-        self, *, channel: str, fallback: str | None, detail: str | None = None
+        self,
+        *,
+        channel: str,
+        fallback: str | None,
+        detail: str | None = None,
+        reason: str = "channel_down",
     ) -> None:
         super().__init__(detail or self.message)
-        self.extra = {"channel": channel, "fallback_channel": fallback}
+        # **`reason` يفرّق ما كان النصُّ وحدَه يفرّقه** (2026-08-31):
+        # `not_on_channel` خبرٌ عن الوجهة يخصّ صاحبَها، و`channel_down` عطبٌ
+        # عندنا. **ومطابقةُ نصٍّ عربيٍّ ليست عقداً** — تنكسر بأول تحرير.
+        self.extra = {
+            "channel": channel,
+            "fallback_channel": fallback,
+            "reason": reason,
+        }
 
 
 class PhoneNotVerified(AppError):
@@ -233,7 +245,11 @@ async def challenge(
         chosen = channel  # type: ignore[assignment]
 
     if chosen == WHATSAPP_OTP:
-        from app.services.whatsapp import WhatsAppError, get_provider_or_none
+        from app.services.whatsapp import (
+            WhatsAppError,
+            WhatsAppNumberUnknown,
+            get_provider_or_none,
+        )
 
         provider = await get_provider_or_none(session)
         if provider is None:
@@ -243,6 +259,29 @@ async def challenge(
                 channel=WHATSAPP_OTP,
                 fallback=_next_code_channel(methods, WHATSAPP_OTP),
             )
+        # **يُسأل قبل الإرسال لا داخله** (2026-08-31): «أهذا الرقم على
+        # واتساب؟» جوابٌ يخصّ صاحبَ الرقم، **ويُعرف قبل أن يُشرَع في إرسالٍ
+        # لا يصل**. وكان محبوساً داخل `send_code` فيسافر نصّاً تحت رمزٍ عامّ،
+        # **فلا تستطيع الشاشةُ أن تفرّق إلا بمطابقة عربيّة**.
+        #
+        # **ولا يُبتلع خطؤه**: تعذّرُ السؤال عطبُ قناةٍ يوجب الارتداد كما كان.
+        try:
+            await provider.check_number(phone)
+        except WhatsAppNumberUnknown:
+            # **رمزٌ يفرّق لا نصّ** — والواجهةُ تقرّر بلا قراءة عربية
+            raise VerificationSendFailed(
+                channel=WHATSAPP_OTP,
+                fallback=_next_code_channel(methods, WHATSAPP_OTP),
+                detail=(
+                    "هذا الرقم غير مسجَّل على واتساب — رمزُ التحقّق يُرسل عبر "
+                    "واتساب. تأكّد من الرقم أو استعمل رقماً عليه واتساب."
+                ),
+                reason="not_on_channel",
+            ) from None
+        except WhatsAppError:
+            # **عطبُ قناةٍ لا خبرُ رقم** — يمرّ إلى المعالج أدناه كما كان
+            pass
+
         try:
             sent = await otp.issue(
                 session,
@@ -270,6 +309,7 @@ async def challenge(
                 channel=WHATSAPP_OTP,
                 fallback=fallback,
                 detail=detail,
+                reason="channel_down",
             ) from exc
         return otp.Challenge(
             sent=sent.sent,

@@ -22,6 +22,14 @@ class MockWhatsAppProvider:
     def __init__(self, redis: Redis) -> None:
         self._redis = redis
 
+    async def check_number(self, to: str) -> None:
+        """**المزوّدُ الوهميُّ يقبل كلَّ رقم** — ولا يدّعي معرفةً لا يملكها.
+
+        **ولا يُخترع رفضٌ عشوائيّ**: مزوّدٌ وهميٌّ يرفض أحياناً يجعل اختباراً
+        يسقط مرّةً في كلِّ عشر، **ويُقرأ سقوطُه عطباً في الكود**.
+        """
+        return None
+
     async def send_code(
         self,
         to: str,

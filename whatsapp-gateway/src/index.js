@@ -186,6 +186,31 @@ const server = http.createServer((req, res) => {
 
   if (route === "POST /send") return void handleSend(req, res);
 
+  // **سؤالٌ بلا إرسال** (2026-08-31): «أهذا الرقم على واتساب؟» — **ولا بايتَ
+  // يخرج**. وكان الجوابُ محبوساً داخل `sendCode`: من أراد أن يعرف قبل أن
+  // يرسل **لم يجد إلا أن يرسل**، والتجربةُ الجافّة ترتدّ قبل السؤال فتقول
+  // ماذا كان سيخرج ولا تقول أيصل.
+  //
+  // **والرمزُ يفرّق كما يفرّق `/send`**: ٤٢٢ خبرٌ عن الرقم، و٥٠٣ عطبُ قناة.
+  // **فلا يُخلط «ليس عليه» بـ«لم نستطع السؤال»** — والأولُ يخصّ صاحبَ الرقم،
+  // والثاني يخصّنا.
+  if (route === "GET /check") {
+    const to = url.searchParams.get("to") || "";
+    if (!/^[0-9+\s-]{6,20}$/.test(to)) {
+      return send(res, 400, { error: "رقمٌ غيرُ صالح" });
+    }
+    return void session
+      .checkNumber(to)
+      .then(() => send(res, 200, { on_whatsapp: true, provider: "baileys" }))
+      .catch((error) =>
+        send(res, error.notOnWhatsApp ? 422 : 503, {
+          error: String(error.message || error),
+          session: session.snapshot().state,
+          not_on_whatsapp: Boolean(error.notOnWhatsApp),
+        }),
+      );
+  }
+
   if (route === "GET /status") {
     return send(res, 200, {
       ...session.snapshot(),

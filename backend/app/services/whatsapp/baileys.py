@@ -26,7 +26,11 @@ import httpx
 from redis.asyncio import Redis
 
 from app.core import rate_limit
-from app.services.whatsapp.base import REQUEST_TIMEOUT_SECONDS, WhatsAppError
+from app.services.whatsapp.base import (
+    REQUEST_TIMEOUT_SECONDS,
+    WhatsAppError,
+    WhatsAppNumberUnknown,
+)
 
 # مهلةُ البوابة أطولُ من مهلة ميتا: بينها وبين واتساب طابورُ تباعدٍ عشوائي
 # (ثانيتان إلى ستّ)، فمهلةٌ بطول مهلة Graph تقطع نداءً ينتظر دورَه لا نداءً عالقاً
@@ -74,7 +78,12 @@ class BaileysGatewayProvider:
     # ------------------------------------------------------------ الأسلاك
 
     async def _call(
-        self, method: str, path: str, *, json: dict | None = None
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict | None = None,
+        params: dict | None = None,
     ) -> tuple[int, dict]:
         """نداءٌ واحد للبوابة — نقطةُ الحقن الوحيدة في الاختبارات.
 
@@ -85,7 +94,11 @@ class BaileysGatewayProvider:
         try:
             async with httpx.AsyncClient(timeout=GATEWAY_TIMEOUT_SECONDS) as http:
                 response = await http.request(
-                    method, url, headers={"X-Gateway-Key": self._key}, json=json
+                    method,
+                    url,
+                    headers={"X-Gateway-Key": self._key},
+                    json=json,
+                    params=params,
                 )
                 body = response.json() if response.content else {}
         except httpx.HTTPError as exc:
@@ -185,6 +198,20 @@ class BaileysGatewayProvider:
         # صراحةً: من ينتظر رمزاً على رقمٍ بلا واتساب ينتظر ما لا يجيء
         if response.get("not_on_whatsapp"):
             raise WhatsAppError("هذا الرقم ليس على واتساب — جرّب الرسائل القصيرة")
+        raise WhatsAppError(f"بوابة واتساب: {detail}")
+
+    async def check_number(self, to: str) -> None:
+        """**سؤالُ البوّابة بلا إرسال** — `GET /check`.
+
+        **ولا منطقَ هنا**: البوّابةُ تملك المقبسَ وتسأل واتساب، **وهذا نقلُ
+        جوابٍ لا حكمٌ ثانٍ**. وحكمٌ ثانٍ يفترق عن الأوّل يوماً.
+        """
+        status, response = await self._call("GET", "/check", params={"to": to})
+        if status == 200:
+            return
+        detail = str(response.get("error") or f"HTTP {status}")
+        if response.get("not_on_whatsapp"):
+            raise WhatsAppNumberUnknown(detail)
         raise WhatsAppError(f"بوابة واتساب: {detail}")
 
     async def session_status(self) -> dict:
