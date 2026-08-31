@@ -25,6 +25,7 @@ from app.routers import (
     admin_stats,
     admin_subscriptions,
     admin_users,
+    admin_verification_campaigns,
     admin_wallets,
     auth,
     card_payments,
@@ -61,6 +62,7 @@ api_router.include_router(card_payments.router)
 api_router.include_router(wallet.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(admin_settings.router)
+api_router.include_router(admin_verification_campaigns.router)
 api_router.include_router(admin_providers.router)
 api_router.include_router(admin_offers.router)
 api_router.include_router(admin_promo.router)

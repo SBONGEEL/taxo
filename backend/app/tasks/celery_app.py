@@ -37,6 +37,7 @@ CAMPAIGN_INTERVAL_SECONDS = 60
 # نفسها بالساعات، فدقّةُ الدقيقة لا تشتري شيئاً — والتأخرُ خمس دقائق في فتح
 # نزاعٍ أهونُ من استعلامٍ كل دقيقة على جدول الدفعات.
 STOP_WAIT_INTERVAL_SECONDS = 60.0
+VERIFICATION_CAMPAIGN_INTERVAL_SECONDS = 900
 CLIQ_SWEEP_INTERVAL_SECONDS = 300
 
 # دورةُ مكافآت الإحالة (المرحلة 12-ح). عشرُ دقائق: الاستحقاقُ يقع بإكمال رحلةٍ
@@ -89,6 +90,7 @@ celery_app = Celery(
         "app.tasks.subscriptions",
         "app.tasks.document_expiry",
         "app.tasks.whatsapp",
+        "app.tasks.verification_campaign",
     ],
 )
 
@@ -107,6 +109,14 @@ celery_app.conf.update(
         "dispatch-campaigns": {
             "task": "app.tasks.notifications.dispatch_campaigns",
             "schedule": CAMPAIGN_INTERVAL_SECONDS,
+        },
+        # **حملةُ تأكيد الأرقام** (قرارُ المالك 2026-08-31): المهلُ أيامٌ
+        # والتذكيراتُ يوميّةٌ الحبّة، **فربعُ ساعةٍ سخيّ** — والدقّةُ التي
+        # تُطلب هنا دقّةُ يومٍ لا دقيقة. **وأثقلُ ما تفعله دفعةُ مئتين**،
+        # فدورةٌ كلَّ دقيقةٍ تكرّر مسحاً لا جديدَ فيه.
+        "sweep-verification-campaign": {
+            "task": "tasks.verification_campaign.sweep",
+            "schedule": VERIFICATION_CAMPAIGN_INTERVAL_SECONDS,
         },
         "sweep-cliq-confirmations": {
             "task": "app.tasks.payments.sweep_cliq_confirmations",

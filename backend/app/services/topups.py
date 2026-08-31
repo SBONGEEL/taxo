@@ -139,7 +139,7 @@ async def create_request(
     # **والحسابُ المحدود لا يشحن** (قرارُ المالك 2026-08-31): من سجّل ببريده
     # رقمُه **محجوزٌ لا مملوك**، **ومالٌ يدخل حساباً برقمٍ لا يملكه صاحبُه لا
     # يُعرف لمن يُردّ**. ومكانُه الخدمةُ لا الراوتر — كبقيّة حرّاس هذا الملفّ.
-    verification.require_owned_phone(owner)
+    verification.require_usable_account(owner)
     await wallet.require_wallet_enabled(session, owner.country_code)
     wallet.require_not_frozen(owner)
     # **لا قناةَ بلا حسابٍ يستقبل** (قرارُ المالك 2026-08-29): سوقٌ لم يُضبط

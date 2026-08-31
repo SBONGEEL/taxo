@@ -102,6 +102,7 @@ import type {
   DriverDebtRow,
   PromoBannerRow,
   ServiceTileRow,
+  VerificationCampaignRow,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -1280,3 +1281,28 @@ export async function bannerImageBlob(id: string): Promise<string> {
   if (!answer.ok) throw new Error("لا صورة");
   return URL.createObjectURL(await answer.blob());
 }
+
+
+// ── حملةُ تأكيد الأرقام — **تُبنى ولا تُطلق** (قرارُ المالك 2026-08-31)
+//
+// **ولا بابَ تجميدٍ ولا فكّ**: التجمّدُ والاستئنافُ آليّان حين تسقط قناةُ
+// السوق وتعود، **وفكُّ إيقافِ الحساب بتأكيد الرقم وحدَه** — وزرٌّ يفكّ بلا
+// تأكيدٍ يُفرِّغ الحملةَ من معناها.
+
+export const listVerificationCampaigns = () =>
+  api.get<VerificationCampaignRow[]>("/admin/verification-campaigns");
+
+export const createVerificationCampaign = (
+  payload: { country_code: CountryCode; deadline_days: number },
+) => api.post<VerificationCampaignRow>("/admin/verification-campaigns", payload);
+
+/** **الإطلاقُ ضغطةُ المالك** — ولا تُرسل رسالةٌ واحدةٌ قبلها. */
+export const startVerificationCampaign = (id: string) =>
+  api.post<VerificationCampaignRow>(
+    `/admin/verification-campaigns/${id}/start`,
+  );
+
+export const cancelVerificationCampaign = (id: string) =>
+  api.post<VerificationCampaignRow>(
+    `/admin/verification-campaigns/${id}/cancel`,
+  );

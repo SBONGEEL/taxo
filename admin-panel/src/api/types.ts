@@ -1421,3 +1421,28 @@ export interface PromoBannerRow {
   /** **أوّلُ إشعالٍ داخل نافذتها** — و`null` مسوّدةٌ تُحذف. */
   first_shown_at: string | null;
 }
+
+
+/** حملةُ تأكيد الأرقام (قرارُ المالك 2026-08-31). */
+export type VerificationCampaignStatus =
+  | "draft"
+  | "running"
+  | "paused"
+  | "done"
+  | "cancelled";
+
+export interface VerificationCampaignRow {
+  id: string;
+  country_code: CountryCode;
+  status: VerificationCampaignStatus;
+  deadline_days: number;
+  started_at: string | null;
+  /** **لحظةُ التجمّد الآليّ** — و`null` تعني «تعمل». */
+  paused_at: string | null;
+  finished_at: string | null;
+  /** **كم حساباً تشمله الآن** — يُقرأ **قبل** الضغط لا بعده. */
+  scope_size: number;
+  enrolled: number;
+  suspended: number;
+  resolved: number;
+}

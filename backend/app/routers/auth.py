@@ -70,6 +70,7 @@ from app.schemas.security import (
     TotpRecoveryVerifyRequest,
     TotpStatusOut,
 )
+from app.services import verification_campaign
 from app.services import rider_photo
 from app.services import (
     admin_credentials,
@@ -514,6 +515,13 @@ async def verify_my_phone(
     # **والحدُّ يُرفع هنا لا في مكانٍ آخر**: علامةٌ تُرفع في موضعٍ والإثباتُ
     # يقع في موضعٍ ثانٍ **حالتان تفترقان أوّلَ مسارٍ ينسى إحداهما**.
     user.phone_pending = False
+    # **والإيقافُ يُفكّ هنا أيضاً — فوراً وآلياً بلا مشرف** (قرارُ المالك
+    # 2026-08-31): شرطُ الفكِّ **تأكيدُ الرقم وحدَه ولا شرطَ آخر**، وهذا هو
+    # بابُ التأكيد. **ومعه تُمدَّد أيامُ الاشتراك التي ضاعت في الإيقاف** —
+    # أوقفناه عن العمل، فيومٌ لم يعمل فيه لا يُحسب عليه من شهرٍ دفع ثمنَه.
+    #
+    # **والمحفظةُ لا تُمسّ**: الإيقافُ منع العملَ ولم يأخذ مالاً.
+    await verification_campaign.release(session, user=user)
     await session.commit()
     await session.refresh(user)
     return UserOut.model_validate(user)

@@ -348,8 +348,8 @@ async def transfer(
     # وهذا الملفُّ في سلسلته، وحلقةٌ عند الاستيراد تُسقط التطبيقَ عند الإقلاع.
     from app.services import verification
 
-    verification.require_owned_phone(sender)
-    verification.require_owned_phone(recipient)
+    verification.require_usable_account(sender)
+    verification.require_usable_account(recipient)
 
     amount = round_money(amount)
     if amount <= 0:

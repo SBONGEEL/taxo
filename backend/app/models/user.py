@@ -92,6 +92,37 @@ class User(UUIDMixin, TimestampMixin, Base):
     def email_verified(self) -> bool:
         return self.email_verified_at is not None
 
+    # **إيقافٌ آليٌّ لرقمٍ غير مؤكَّد** (حملةُ التأكيد، قرارُ المالك 2026-08-31).
+    #
+    # **وحقلٌ مستقلٌّ عن `is_blocked` بقصد**: ذاك قرارُ مشرفٍ في شخصٍ بسببٍ
+    # مكتوب، **وهذا حالٌ آليّةٌ تشفي نفسَها** بتأكيد الرقم. وخلطُهما يجعل
+    # ضغطةَ تأكيدٍ **تفكّ حظراً قرّره مشرفٌ لسببٍ آخر**.
+    #
+    # **ويُفكّ فوراً وآلياً بلا مشرف** — من بابِ إثباتِ الرقم نفسِه.
+    verification_suspended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    @property
+    def verification_suspended(self) -> bool:
+        return self.verification_suspended_at is not None
+
+    @property
+    def suspension(self) -> dict[str, str] | None:
+        """**السببُ والطريقُ لمن أُوقف** — يقرؤه `UserOut` مباشرةً.
+
+        **ويُبنى في الخلفية لا في الشاشة**: «التطبيقُ لا يكتب عربيّةً لخطأٍ
+        سمّاه الخادم». **ومن بيته الواحد** في `models/verification_campaign`.
+        """
+        from app.models.verification_campaign import (
+            SUSPENSION_CODE,
+            SUSPENSION_MESSAGE,
+        )
+
+        if self.verification_suspended_at is None:
+            return None
+        return {"code": SUSPENSION_CODE, "message": SUSPENSION_MESSAGE}
+
     # إشعارات الحملات التسويقية وحدها (المرحلة 8). **لا أثر له على
     # المعاملاتي**: أحداث الرحلة وعرض الطلب وتنبيه الاشتراك جزءٌ من الخدمة
     # لا إعلان، فمن أطفأ الإعلانات لم يطفئ «وصل الكبتن». مفتوحٌ افتراضياً

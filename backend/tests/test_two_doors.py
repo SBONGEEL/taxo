@@ -153,6 +153,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
     # ✅ بانٍ واحد
+    "VerificationCampaignOut": (
+        "بانٍ واحد: `admin_verification_campaigns._out` يخدم الأبوابَ الأربعة "
+        "كلَّها — القراءةَ والإنشاءَ والإطلاقَ والإلغاء. و`scope_size` "
+        "والعدّاداتُ تُحسب فيه وحدَه، **فلا بابَ يملؤها وينساها آخر**"
+    ),
     "SubscriptionPlanOut": "بانٍ واحد: `subscriptions._plans_with_offers` يخدم /plans و/me",
     "WalletTransactionOut": "بانٍ واحد: `commission_view.rows_with_percent` يخدم بابَي الكشف",
     "NearbyDriverOut": (

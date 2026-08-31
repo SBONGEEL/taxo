@@ -347,7 +347,7 @@ async def request_ride(
     # **ومكانُه هنا لا في الراوتر** للعلّة المكتوبة تحته حرفاً: **الحجزُ
     # المجدول ينشئ رحلاتِه من هذا الباب نفسِه** (12-ط)، وحارسٌ في الراوتر
     # بابٌ يُنسى في الباب الثاني.
-    verification.require_owned_phone(rider)
+    verification.require_usable_account(rider)
 
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()

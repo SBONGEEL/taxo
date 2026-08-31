@@ -22,8 +22,36 @@ import { Link } from "react-router-dom";
 
 import { useSession } from "@/lib/session";
 
+/** **مسارُ التأكيد في هذا التطبيق** — بيتٌ واحدٌ يقرؤه الحالان. */
+const CONFIRM_PATH = "/account/settings";
+
 export function PhonePendingNotice() {
   const { user } = useSession();
+  // **حالان لا واحدة**: `suspension` حسابٌ **كان كاملاً فأُوقف** بانقضاء
+  // مهلة الحملة، و`phone_pending` حسابٌ **وُلد محدوداً** لأنه سجّل ببريده.
+  // **والموقوفُ أشدّ فيُقدَّم**، ونصُّه يأتي من الخلفية لا يُكتب هنا.
+  if (user?.suspension) {
+    return (
+      <div
+        role="status"
+        className="mb-10 flex items-start gap-10 rounded-14 border border-line bg-surface-2 px-12 py-10"
+      >
+        <ShieldAlert className="mt-2 size-16 shrink-0 text-danger" />
+        <div className="min-w-0 flex-1">
+          <div className="text-12 font-bold text-ink">حسابك موقوف</div>
+          <p className="mt-2 text-11 leading-note text-muted">
+            {user.suspension.message}
+          </p>
+          <Link
+            to={CONFIRM_PATH}
+            className="mt-6 inline-block text-11 font-semibold text-accent underline"
+          >
+            أكّده الآن
+          </Link>
+        </div>
+      </div>
+    );
+  }
   if (!user?.phone_pending) return null;
 
   return (
@@ -39,7 +67,7 @@ export function PhonePendingNotice() {
           ولا اعتمادَ لوثائقك.
         </p>
         <Link
-          to="/account/settings"
+          to={CONFIRM_PATH}
           className="mt-6 inline-block text-11 font-semibold text-accent underline"
         >
           أكّده الآن

@@ -47,6 +47,7 @@ from app.core.exceptions import AppError
 from app.core.phone import country_for_phone
 from app.models.enums import CountryCode, FeatureKey, ProviderKey
 from app.models.user import User
+from app.models.verification_campaign import SUSPENSION_CODE, SUSPENSION_MESSAGE
 from app.services import otp, settings_service
 from app.models.enums import VerificationMethod as VerificationMethodEnum
 from app.models.otp_template import OtpTemplatePurpose
@@ -495,6 +496,35 @@ class PhonePending(AppError):
     message = (
         "أكّد رقم هاتفك أولاً — سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد."
     )
+
+
+class AccountSuspended(AppError):
+    """حسابٌ أوقفته حملةُ التأكيد — **والسببُ والطريقُ في الرسالة**.
+
+    **ولا «حسابك مجمَّد» مجرّدة** (قرارُ المالك 2026-08-31): يقول السببَ
+    والطريقَ كما في الدَّين — **و«رفضٌ بلا مخرجٍ ليس رفضاً»**.
+    """
+
+    status_code = 403
+    # **من بيته الواحد** — ونصٌّ يُكتب هنا ثانيةً يفترق عن الإشعار والشاشة
+    code = SUSPENSION_CODE
+    message = SUSPENSION_MESSAGE
+
+
+def require_usable_account(user: User) -> None:
+    """**بابٌ واحدٌ لحالَي التقييد** — يُنادى من الرحلة والمحفظة.
+
+    **وحالان لا واحدة، ورسالتاهما مختلفتان**: `phone_pending` حسابٌ **وُلد
+    محدوداً** لأنه سجّل ببريده، و`verification_suspended_at` حسابٌ **كان
+    كاملاً فأُوقف** بانقضاء مهلة الحملة. **ومن خلطهما قال لمن لم تبدأ حملتُه
+    إن حسابَه موقوف.**
+
+    **وبابٌ واحدٌ لأن المستدعين ثلاثة**: الرحلةُ والشحنُ والتحويل — **وشرطان
+    في ثلاثة مواضعَ يصيران خمسةً يوماً**، وينسى أحدُها حالاً.
+    """
+    require_owned_phone(user)
+    if user.verification_suspended_at is not None:
+        raise AccountSuspended()
 
 
 def require_owned_phone(user: User) -> None:
