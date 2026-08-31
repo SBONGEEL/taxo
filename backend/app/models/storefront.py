@@ -62,6 +62,14 @@ class ServiceTile(UUIDMixin, TimestampMixin, Base):
     #: **شارةُ «جديد» بمدّتها** — تختفي بانقضائها **بلا نشر**
     new_until: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    #: **لحظةُ أوّلِ ظهورٍ لأحد** — و`None` تعني **مسوّدةً لم يرَها إنسان**،
+    #: وهي وحدَها ما يُحذف. **وما عُرض مرّةً يُخفى ولا يُحذف**: حذفُه يمحو
+    #: شاهداً على ما رآه الناس. **ولا يُشتقّ من الحال**: مخفيّةٌ اليومَ قد
+    #: تكون عُرضت أمس، والحالُ تقول أين هي لا ما مضى.
+    first_shown_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     __table_args__ = (
         UniqueConstraint("country_code", "key", name="service_tile_key_per_market"),
         CheckConstraint(
@@ -104,6 +112,17 @@ class PromoBanner(UUIDMixin, TimestampMixin, Base):
         server_default=text("'none'"),
     )
     link: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    #: **صورةُ اللافتة — مسارُ قرصٍ يخدمه باب**، لا عنوانٌ يُنشر بلا خادم.
+    #: (نُزعت 2026-08-30 لأنها كانت عموداً بلا رافعٍ ولا خادم، وعادت 08-31
+    #: بالأربعة معاً: العمودُ والرفعُ والخدمةُ والعرض.)
+    #: **أوّلُ إشعالٍ داخل نافذتها** — و`None` مسوّدةٌ تُحذف. **وما عُرض
+    #: يُخفى**: `is_active=false` يكفي، ولا عمودَ أرشفةٍ ثالث.
+    first_shown_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("true")
     )

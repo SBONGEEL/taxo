@@ -38,6 +38,49 @@ from app.models.storefront import PromoBanner, ServiceTile
 #: **ولا تُقبل قيمةٌ خارجها**: مسارٌ يُكتب بيدٍ في اللوحة يفتح شاشةً لا وجودَ
 #: لها، **والكبتنُ يضغط فلا يقع شيء**. وإضافةُ مسارٍ هنا **تُلزم بناءه** —
 #: وهذا هو الاتجاهُ الصحيح: الشاشةُ أوّلاً ثم الإذنُ بالإشارة إليها.
+# **أيقوناتٌ من قائمةٍ مقرَّرة لا حقلٍ حرّ** (قرارُ المالك 2026-08-31).
+#
+# **والحجّةُ قياسٌ لا ذوق**: اسمٌ خاطئٌ كان يرسم `LayoutGrid` **صامتاً** — لا
+# خطأَ ولا تحذير — **فلا يعلم المشرفُ أنه أخطأ حتى يفتح التطبيق**. وهو «بديلٌ
+# يعمل ويخفي العطبَ الذي بُني له» بعينه.
+#
+# **وموضعٌ واحدٌ يقرؤه من يحتاجه**: البابُ يرفض ما ليس فيها، **واللوحةُ تقرأها
+# من `GET /admin/settings/service-icons`** فترسم منتقياً. **ولا نسخةٌ ثانيةٌ
+# تُكتب في اللوحة** — نسختان تفترقان بحرفٍ يوماً، فيَعرض المنتقي ما يرفضه
+# الباب.
+#
+# **والأسماءُ بصيغة lucide** (kebab) كما تنطقها المكتبةُ في التطبيقين.
+SERVICE_ICONS: tuple[str, ...] = (
+    # ── تنقّلٌ ومركبات
+    "car", "car-taxi-front", "bus", "truck", "bike", "plane-takeoff",
+    "map-pin", "map", "route", "navigation", "calendar-clock",
+    # ── طرودٌ وتسوّق
+    "package", "boxes", "shopping-bag", "shopping-cart", "store", "gift",
+    # ── مالٌ ومحفظة
+    "wallet", "banknote", "credit-card", "coins", "receipt", "percent",
+    # ── حسابٌ وخدمة
+    "user", "users", "shield-check", "life-buoy", "headphones", "star",
+    "trophy", "badge-check", "bell", "settings", "file-text", "clock",
+    # ── عامّ
+    "layout-grid", "sparkles", "heart", "flame", "zap",
+)
+
+
+def require_icon(icon: str | None) -> None:
+    """**اسمٌ خارج القائمة لا يُقبل أصلاً** — ولا يُرسم افتراضاً.
+
+    **و`None` تمرّ**: اللافتةُ قد تكون بلا أيقونة، والبلاطةُ لا (عمودُها
+    إلزاميّ). **فالفراغُ خيارٌ، والاسمُ الخاطئُ ليس خياراً.**
+    """
+    if icon is None:
+        return
+    if icon not in SERVICE_ICONS:
+        raise InvalidInput(
+            f"الأيقونة «{icon}» ليست من القائمة المقرَّرة — "
+            "اخترها من المنتقي، ولا تُكتب باليد"
+        )
+
+
 SERVICE_DESTINATIONS: dict[str, tuple[UserRole, ...]] = {
     # ── مشتركةٌ بالمسار نفسِه في التطبيقين
     "/rides": (UserRole.RIDER, UserRole.DRIVER),
@@ -226,3 +269,38 @@ async def list_banners(
 def is_new(tile: ServiceTile, *, today: date | None = None) -> bool:
     """**شارةُ «جديد» تُحسب هنا لا في كلِّ قارئ**."""
     return tile.is_new_on(today or _now().date())
+
+
+# ═══════════════════════════════ العرضُ والحذف ═══════════════════════════════
+
+
+def stamp_if_shown(row, *, now: datetime | None = None) -> None:
+    """**يختم أوّلَ ظهورٍ لأحد** — ولا يُعاد ختمُه.
+
+    **والختمُ فعلُ الباب لا الشاشة**: من عرضها هو الخادمُ حين أجاب
+    `GET /storefront`، **لكنّ الختمَ هناك يكتب في كلِّ قراءة** — فيُختم عند
+    **الإشعال** لا عند القراءة: **الإشعالُ هو القرار**، والقراءةُ أثرُه.
+    """
+    if row.first_shown_at is not None:
+        return
+    live = (
+        row.status is ServiceTileStatus.ACTIVE
+        if isinstance(row, ServiceTile)
+        else bool(row.is_active)
+    )
+    if live:
+        row.first_shown_at = now or _now()
+
+
+def require_draft(row) -> None:
+    """**الحذفُ للمسوّدة وحدَها** (قرارُ المالك 2026-08-31).
+
+    **وما عُرض مرّةً يُخفى ولا يُحذف**: حذفُه **يمحو شاهداً على ما رآه
+    الناس** — ومن يقرأ بعد شهرٍ «لمَ ارتفعت الضغطاتُ ذلك الأسبوع» يجد فراغاً.
+    **ولافتةٌ أُخفيت خيرٌ من صفٍّ ذهب.**
+    """
+    if row.first_shown_at is not None:
+        raise InvalidInput(
+            "هذا الصفُّ عُرض على الناس ولا يُحذف — أخفِه بدل ذلك، "
+            "فحذفُه يمحو شاهداً على ما عُرض"
+        )
