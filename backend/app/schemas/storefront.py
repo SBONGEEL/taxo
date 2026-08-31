@@ -82,6 +82,13 @@ class ServiceTilePatch(BaseModel):
 
 
 class AdminServiceTileOut(BaseModel):
+    """**وفيها `first_shown_at`** — واللوحةُ تقرؤها لتعرف ما يُحذف وما يُخفى.
+
+    **وليست بيتاً ثانياً للحقيقة**: هي العمودُ نفسُه يُنشر، لا حقلٌ محسوبٌ
+    يقول ما يقوله غيرُه. **ولمَ تُنشر أصلاً**: زرٌّ يعمل ثم يرتدّ **يعلّم
+    المشرفَ أن يعيد المحاولة**، وزرٌّ معطَّلٌ يقول لمَ يعلّمه أن يُخفي بدلَه.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -95,6 +102,8 @@ class AdminServiceTileOut(BaseModel):
     destination: str | None = None
     status: ServiceTileStatus
     new_until: date | None = None
+    #: **فارغةٌ تعني مسوّدةً لم يرَها إنسان** — وهي وحدَها ما يُحذف
+    first_shown_at: datetime | None = None
 
 
 class PromoBannerIn(BaseModel):
@@ -132,6 +141,12 @@ class PromoBannerPatch(BaseModel):
 
 
 class AdminPromoBannerOut(BaseModel):
+    """**ولا حقلَ `has_image`** — الطلبُ نفسُه هو الجواب (بايتاتٌ أو ٤٠٤).
+
+    **وحقلٌ يقول «لها صورة» بيتٌ ثانٍ للحقيقة** يفترق عن الملفّ أوّلَ رفعٍ
+    أو نزع — وهي قاعدةُ `DriverAvatar` نفسُها.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -146,3 +161,5 @@ class AdminPromoBannerOut(BaseModel):
     link_kind: BannerLinkKind
     link: str | None = None
     is_active: bool
+    #: **أوّلُ إشعالٍ داخل نافذتها** — و`null` مسوّدةٌ تُحذف
+    first_shown_at: datetime | None = None

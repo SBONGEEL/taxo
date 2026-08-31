@@ -280,16 +280,29 @@ def stamp_if_shown(row, *, now: datetime | None = None) -> None:
     **والختمُ فعلُ الباب لا الشاشة**: من عرضها هو الخادمُ حين أجاب
     `GET /storefront`، **لكنّ الختمَ هناك يكتب في كلِّ قراءة** — فيُختم عند
     **الإشعال** لا عند القراءة: **الإشعالُ هو القرار**، والقراءةُ أثرُه.
+
+    ## واللافتةُ تُختم بنافذتها — **وميلُ الخطأ مقصود**
+
+    **السؤالُ لحظةَ الإشعال ليس «أتُعرض الآن؟» بل «أستُعرض بعدُ؟»**: لافتةٌ
+    تُشعَل قبل نافذتها **تُعرض حتماً حين تفتح**، ولو لم يُلمس صفُّها ثانيةً.
+    **فالختمُ على «حيّةٌ الآن» وحدَها يترك ثقباً**: تُشعَل اليومَ لنافذةِ
+    الأسبوع القادم فلا تُختم، **ثم تُعرض على الناس وهي ما تزال تُقرأ مسوّدةً
+    تُحذف** — وذلك بعينه محوُ الشاهد الذي بُني له العمود.
+
+    **فالشرطُ: مشتعلةٌ ونافذتُها لم تنتهِ.** وأثرُ الخطأ في الاتجاهين غيرُ
+    متساوٍ: **ختمٌ زائدٌ يمنع حذفاً** والإخفاءُ قائمٌ بديلاً، **وختمٌ ناقصٌ
+    يأذن بمحو صفٍّ رآه الناس** — الأولُ يُراجَع والثاني لا يُستدرك.
     """
     if row.first_shown_at is not None:
         return
-    live = (
-        row.status is ServiceTileStatus.ACTIVE
-        if isinstance(row, ServiceTile)
-        else bool(row.is_active)
-    )
+    moment = now or _now()
+    if isinstance(row, ServiceTile):
+        live = row.status is ServiceTileStatus.ACTIVE
+    else:
+        # **ولا يُسأل عن `starts_at`** — مشتعلةٌ قبل نافذتها ستُعرض حين تفتح
+        live = bool(row.is_active) and row.ends_at > moment
     if live:
-        row.first_shown_at = now or _now()
+        row.first_shown_at = moment
 
 
 def require_draft(row) -> None:

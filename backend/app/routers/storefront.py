@@ -10,9 +10,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+import uuid
 
+from fastapi import APIRouter, Query
+from fastapi.responses import FileResponse
+
+from app.core import storage
 from app.core.deps import CurrentUser, DbSession
+from app.core.exceptions import NotFound
 from app.models.enums import UserRole
 from app.schemas.storefront import PromoBannerOut, ServiceTileOut, StorefrontOut
 from app.services import storefront
@@ -72,4 +77,35 @@ async def my_storefront(
             )
             for banner in banners
         ],
+    )
+
+
+@router.get("/banners/{banner_id}/image")
+async def serve_banner_image(
+    banner_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> FileResponse:
+    """**صورةُ اللافتة — بايتاتٌ أو ٤٠٤**، ولا حقلَ يقول «لها صورة».
+
+    **والطلبُ نفسُه هو الجواب** — كما في `DriverAvatar`: حقلٌ ثانٍ يقول «لها
+    صورة» **بيتٌ ثانٍ للحقيقة** يفترق عن الملفّ أوّلَ رفعٍ أو نزع.
+
+    **ولا تُخدَم من مُثبَّتٍ ساكن**: كلُّ ملفٍّ في هذا المشروع يمرّ ببابٍ يسأل
+    سؤالَه أوّلاً — وسؤالُ هذا الباب **سوقُ صاحبِ الحساب**.
+
+    **ولمَ السوق شرطٌ وليست الصورةُ سرّاً**: سوقٌ يُبنى كاملاً **وهو مخفيّ**
+    (`country_visible`)، **ولافتتُه تُعلن خطّةَ إطلاقٍ لم تُعلن بعد** — فبابٌ
+    يخدمها لكلِّ من يحمل رمزَها يفتح ما أغلقه المفتاح.
+    """
+    banner = await storefront.get_banner(session, banner_id)
+    if banner.country_code != user.country_code or not banner.image_path:
+        raise NotFound("لا صورةَ لهذه اللافتة")
+    return FileResponse(
+        storage.resolve(banner.image_path),
+        headers={
+            # **`nosniff` و`no-store`** — كما يجيب بابُ المستندات، ولسببٍ
+            # ثانٍ هنا: الصورةُ تُستبدل تحت العنوان نفسِه، **فذاكرةٌ وسيطةٌ
+            # تعرض لافتةَ أمسٍ بعد أن بدّلها المشرف**
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+        },
     )

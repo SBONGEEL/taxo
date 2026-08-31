@@ -1224,3 +1224,59 @@ export const updatePromoBanner = (
   id: string,
   payload: Partial<PromoBannerRow>,
 ) => api.patch<PromoBannerRow>(`/admin/settings/promo-banners/${id}`, payload);
+
+/** **قائمةُ الأيقونات المقرَّرة — تُقرأ ولا تُنسخ** (قرارُ المالك 2026-08-31).
+ *
+ * **ولا نسخةٌ ثانيةٌ تُكتب هنا**: نسختان تفترقان بحرفٍ يوماً، **فيعرض
+ * المنتقي ما يرفضه الباب** — والمشرفُ يختار من قائمةٍ ثم يُمنع ولا يفهم لمَ.
+ */
+export const listServiceIcons = () =>
+  api.get<string[]>("/admin/settings/service-icons");
+
+/** **المقاصدُ المبنيّةُ ومن يراها** — والأدوارُ جزءُ الجواب لا زينة.
+ *
+ * `/account/bookings` مبنيٌّ **عند الراكب وحدَه**، **وبلاطةُ كبتنٍ تشير إليه
+ * تقع على `path="*"`** — فاللوحةُ تعرض لكلِّ جمهورٍ ما يصلح له، **ولا تكتب
+ * القائمةَ بيدها**.
+ */
+export const listServiceDestinations = () =>
+  api.get<Record<string, string[]>>("/admin/settings/service-destinations");
+
+/** **المسوّدةُ وحدَها تُحذف** — وما عُرض مرّةً يُخفى.
+ *
+ * **والزرُّ يُرسم معطَّلاً بعلّته** لا يُرسم ثم يرتدّ: زرٌّ يعمل ثم يرتدّ
+ * يعلّم المشرفَ أن يعيد المحاولة، ومعطَّلٌ يقول لمَ يعلّمه أن يُخفي بدلَه.
+ */
+export const deleteServiceTile = (id: string) =>
+  api.del<void>(`/admin/settings/service-tiles/${id}`);
+
+export const deletePromoBanner = (id: string) =>
+  api.del<void>(`/admin/settings/promo-banners/${id}`);
+
+/** **صورةُ اللافتة — تُرفع وتُخزَّن ويخدمها باب** (الترحيلة `0064`).
+ *
+ * **والأربعةُ تُبنى معاً**: العمودُ والرفعُ والبابُ والعرض — **وواحدٌ ناقصاً
+ * يعيد عطبَ الصورة المكسورة** الذي نُزع له العمودُ في 2026-08-30.
+ */
+export const uploadBannerImage = (id: string, file: File) =>
+  upload<PromoBannerRow>(`/admin/settings/promo-banners/${id}/image`, file);
+
+export const deleteBannerImage = (id: string) =>
+  api.del<PromoBannerRow>(`/admin/settings/promo-banners/${id}/image`);
+
+/** **بايتاتٌ أو ٤٠٤** — ولا حقلَ يقول «لها صورة».
+ *
+ * `<img>` لا يحمل ترويسةً، فتُجلب بالمفتاح وتُعرض من `blob:` — **ومن يفتحها
+ * يغلقها**. وهي نسخةُ `driverDocumentBlob` على بابٍ آخر.
+ *
+ * **وبابُ اللوحة لا بابُ التطبيق**: الثاني يشترط سوقَ صاحبِ الحساب،
+ * **والمشرفُ يهيّئ سوقاً قبل أن يُفتح** فيقرأ سوقاً ليس سوقَه.
+ */
+export async function bannerImageBlob(id: string): Promise<string> {
+  const answer = await fetch(
+    `${API_URL}/admin/settings/promo-banners/${id}/image`,
+    { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } },
+  );
+  if (!answer.ok) throw new Error("لا صورة");
+  return URL.createObjectURL(await answer.blob());
+}

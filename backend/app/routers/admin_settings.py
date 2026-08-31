@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -752,7 +753,11 @@ async def upload_cliq_qr(
         session, country_code
     )
     stored = await storage.save(file, folder=str(setting.id))
-    setting.cliq_qr_path = stored.path
+    # **`relative_path` لا `path`** — و`StoredFile` لا تحمل الثانيَ أصلاً،
+    # فكان هذا السطرُ يرمي `AttributeError` **بعد كتابة الملفّ على القرص**:
+    # ٥٠٠ للمشرف، وملفٌّ يتيمٌ لا صفَّ يشير إليه. (قِيس 2026-08-31؛ كلُّ
+    # مستدعٍ آخرَ في المشروع يكتب `relative_path`.)
+    setting.cliq_qr_path = stored.relative_path
     await audit.record(
         session,
         actor=admin,
@@ -761,7 +766,12 @@ async def upload_cliq_qr(
         entity_id=setting.id,
         details={"country_code": country_code.value, "changed_fields": ["cliq_qr_path"]},
     )
-    await session.commit()
+    # **و`_commit` لا `session.commit`** — عطبٌ ثانٍ كان الأولُ يستره: بعد
+    # تحديثٍ يبقى `updated_at` منتهياً (يُحسب في SQL بـ`onupdate`)، **فيقرؤه
+    # المخطَّطُ خارج السياق** بـ`MissingGreenlet`. ولم يظهر يوماً لأن السطرَ
+    # قبله كان يرمي قبل أن يبلغه. **وعطبان يستر أحدهما الآخر يعيشان أطولَ
+    # من عطبٍ مفرد.**
+    await _commit(session, setting)
     return PaymentSettingOut.model_validate(setting)
 
 
@@ -820,9 +830,13 @@ async def update_dispatch_settings(
 
 # ─────────────────── بلاطاتُ الخدمات واللافتات (الترحيلة `0063`) ───────────────
 #
-# **ستّةُ أبوابٍ لا أكثر**: قراءةٌ وإنشاءٌ وتعديلٌ لكلِّ جدول. **ولا حذفَ**:
-# البلاطةُ تُخفى واللافتةُ تُطفأ — **وحذفُ صفٍّ يمحو ما بُني عليه ترتيبٌ
-# وقياس**، وهي قاعدةُ «الإيقافُ تعليقٌ لا حذف» نفسُها.
+# **والحذفُ للمسوّدة وحدَها** (قرارُ المالك 2026-08-31، الترحيلة `0064`):
+# **ما عُرض مرّةً يُخفى ولا يُحذف** — حذفُه يمحو شاهداً على ما رآه الناس، ومن
+# يقرأ بعد شهرٍ «لمَ ارتفعت الضغطاتُ ذلك الأسبوع» يجد فراغاً.
+#
+# **وكان مكتوباً هنا «ولا حذفَ» مطلقاً** — وهو ما جعل كلَّ خطأِ كتابةٍ صفّاً
+# أبديّاً في جدولٍ يقرؤه المشرف. **والمسوّدةُ ليست شاهداً**: `first_shown_at`
+# فارغةٌ تعني أن إنساناً لم يرَها قطّ، **وذلك هو الإذنُ بالحذف**.
 
 
 @router.get("/service-tiles", response_model=list[AdminServiceTileOut])
@@ -840,11 +854,19 @@ async def list_service_tiles(
 async def create_service_tile(
     payload: ServiceTileIn, admin: AdminUser, session: DbSession
 ) -> AdminServiceTileOut:
-    """**والإشعالُ بلا مقصدٍ مبنيٍّ يُمنع هنا** لا عند ضغط المستخدم."""
+    """**والإشعالُ بلا مقصدٍ مبنيٍّ يُمنع هنا** لا عند ضغط المستخدم.
+
+    **والأيقونةُ من القائمة المقرَّرة**: اسمٌ خارجها كان يرسم `LayoutGrid`
+    **صامتاً** — لا خطأَ ولا تحذير — **فلا يعلم المشرفُ أنه أخطأ حتى يفتح
+    التطبيق**، وهو «بديلٌ يعمل ويخفي العطبَ الذي بُني له».
+    """
+    storefront.require_icon(payload.icon)
     storefront.require_destination(
         payload.destination, status=payload.status, audience=payload.audience
     )
     tile = ServiceTile(**payload.model_dump())
+    # **وتُختم إن وُلدت فعّالة** — والإنشاءُ إشعالٌ كالتعديل
+    storefront.stamp_if_shown(tile)
     session.add(tile)
     await _flush(session, conflict_message="مفتاحُ البلاطة مستعملٌ في هذا السوق")
     await audit.record(
@@ -868,6 +890,7 @@ async def update_service_tile(
 ) -> AdminServiceTileOut:
     tile = await storefront.get_tile(session, tile_id)
     changes = payload.model_dump(exclude_unset=True)
+    storefront.require_icon(changes.get("icon", tile.icon))
     # **يُقاس على ما ستصير إليه لا على ما هي** — فتعديلُ الحال وحدَها إلى
     # `active` بلا مقصدٍ يمرّ لو قِيس على القديم
     storefront.require_destination(
@@ -878,6 +901,8 @@ async def update_service_tile(
         audience=changes.get("audience", tile.audience),
     )
     changed = _apply_updates(tile, changes)
+    # **بعد التطبيق لا قبله** — الختمُ على ما صارت إليه، والإشعالُ هو القرار
+    storefront.stamp_if_shown(tile)
     await session.flush()
     if changed:
         await audit.record(
@@ -908,8 +933,10 @@ async def create_promo_banner(
     payload: PromoBannerIn, admin: AdminUser, session: DbSession
 ) -> AdminPromoBannerOut:
     """**ولافتةٌ مقصدُها غير مبنيٍّ لا تُقبل** — والنافذةُ إلزاميّةٌ بالعقد."""
+    storefront.require_icon(payload.icon)
     storefront.require_banner_link(payload.link_kind, payload.link)
     banner = PromoBanner(**payload.model_dump())
+    storefront.stamp_if_shown(banner)
     session.add(banner)
     await _flush(session, conflict_message="تعذّر حفظ اللافتة")
     await audit.record(
@@ -933,11 +960,14 @@ async def update_promo_banner(
 ) -> AdminPromoBannerOut:
     banner = await storefront.get_banner(session, banner_id)
     changes = payload.model_dump(exclude_unset=True)
+    storefront.require_icon(changes.get("icon", banner.icon))
     storefront.require_banner_link(
         changes.get("link_kind", banner.link_kind),
         changes.get("link", banner.link),
     )
     changed = _apply_updates(banner, changes)
+    # **بعد التطبيق** — فإشعالُ لافتةٍ داخل نافذتها هو ما يُختم
+    storefront.stamp_if_shown(banner)
     await session.flush()
     if changed:
         await audit.record(
@@ -950,3 +980,175 @@ async def update_promo_banner(
         )
     await session.commit()
     return AdminPromoBannerOut.model_validate(banner)
+
+
+@router.get("/service-icons", response_model=list[str])
+async def list_service_icons(_staff: StaffUser) -> list[str]:
+    """**قائمةُ الأيقونات المقرَّرة — بيتُها واحدٌ يقرؤه المنتقي**.
+
+    **ولا نسخةٌ ثانيةٌ تُكتب في اللوحة**: نسختان تفترقان بحرفٍ يوماً، **فيَعرض
+    المنتقي ما يرفضه الباب** — والمشرفُ يختار من قائمةٍ ثم يُمنع، ولا يفهم لمَ.
+
+    **ولا قاعدةَ تُسأل**: القائمةُ ثابتةُ شيفرةٍ يقابلها ما تعرفه lucide في
+    التطبيقين، **فسؤالُ القاعدة عنها يخترع بيتاً ثالثاً**.
+    """
+    return list(storefront.SERVICE_ICONS)
+
+
+@router.delete("/service-tiles/{tile_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_service_tile(
+    tile_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    """**المسوّدةُ وحدَها تُحذف** — وما عُرض مرّةً يُخفى (قرارُ المالك 2026-08-31).
+
+    **والرفضُ من الخدمة لا من هنا**: `require_draft` بيتُ القاعدة، **وشرطان
+    لقاعدةٍ واحدةٍ يفترقان** أوّلَ باب ثالث.
+    """
+    tile = await storefront.get_tile(session, tile_id)
+    storefront.require_draft(tile)
+    # **قيدُ التدقيق قبل الحذف** — فالصفُّ يحمل مفتاحَه، وقيدٌ بعد اختفائه
+    # لا يعرف ما اختفى
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="service_tile",
+        entity_id=tile.id,
+        details={"key": tile.key, "country_code": tile.country_code.value},
+    )
+    await session.delete(tile)
+    await session.commit()
+
+
+@router.delete("/promo-banners/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_promo_banner(
+    banner_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    """**المسوّدةُ وحدَها** — ومعها ملفُّ صورتها إن رُفع.
+
+    **والملفُّ يُحذف بعد الإيداع لا قبله**: ملفٌّ يتيمٌ نفايةٌ تُكنس، **وصفٌّ
+    يشير إلى ملفٍّ محذوفٍ عطلٌ يراه المستخدم** — وهي قاعدةُ `documents` نفسُها.
+    """
+    banner = await storefront.get_banner(session, banner_id)
+    storefront.require_draft(banner)
+    image_path = banner.image_path
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="promo_banner",
+        entity_id=banner.id,
+        details={"title": banner.title, "country_code": banner.country_code.value},
+    )
+    await session.delete(banner)
+    await session.commit()
+    if image_path:
+        await storage.delete(image_path)
+
+
+@router.put("/promo-banners/{banner_id}/image", response_model=AdminPromoBannerOut)
+async def upload_banner_image(
+    banner_id: uuid.UUID,
+    admin: AdminUser,
+    session: DbSession,
+    file: UploadFile = File(...),
+) -> AdminPromoBannerOut:
+    """**صورةُ اللافتة — تُرفع وتُخزَّن ويخدمها بابٌ** (قرارُ المالك 2026-08-31).
+
+    **والأربعةُ تُبنى معاً**: العمودُ · والرفعُ · والبابُ الذي يخدمها ·
+    والعرضُ في البطاقة. **وواحدٌ منها ناقصاً يعيد العطبَ الذي نُزع له العمودُ
+    في 2026-08-30**: عنوانٌ يُنشر لمسارٍ لا خادمَ له **يرسم صورةً مكسورة**،
+    وهي أسوأُ من لا صورة.
+
+    **وتمرّ بـ`storage.save`** كبقيّة ما يُرفع: يشمّ النوعَ من البايتات لا من
+    ترويسةٍ يكتبها العميل، ويحدّ الحجمَ بالقراءة لا بـ`Content-Length`.
+
+    **والقديمةُ تُحذف بعد الإيداع** — وترتيبُ الاثنين ليس تفصيلاً.
+    """
+    banner = await storefront.get_banner(session, banner_id)
+    previous = banner.image_path
+    stored = await storage.save(file, folder=str(banner.id))
+    banner.image_path = stored.relative_path
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="promo_banner",
+        entity_id=banner.id,
+        details={"changed": ["image_path"]},
+    )
+    await session.commit()
+    if previous and previous != stored.relative_path:
+        await storage.delete(previous)
+    return AdminPromoBannerOut.model_validate(banner)
+
+
+@router.delete("/promo-banners/{banner_id}/image", response_model=AdminPromoBannerOut)
+async def delete_banner_image(
+    banner_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> AdminPromoBannerOut:
+    """**نزعُ الصورة وحدَها** — واللافتةُ تبقى.
+
+    **وهي ليست حذفَ الصفّ**: لافتةٌ عُرضت لا تُحذف، **لكنّ صورتَها قد تكون
+    خطأً يُنزع** — ولافتةٌ بلا صورةٍ ترسمها الأيقونةُ كما كانت قبل العمود.
+    """
+    banner = await storefront.get_banner(session, banner_id)
+    previous = banner.image_path
+    if previous is None:
+        raise NotFound("لا صورةَ على هذه اللافتة")
+    banner.image_path = None
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="promo_banner",
+        entity_id=banner.id,
+        details={"changed": ["image_path"]},
+    )
+    await session.commit()
+    await storage.delete(previous)
+    return AdminPromoBannerOut.model_validate(banner)
+
+
+@router.get("/promo-banners/{banner_id}/image")
+async def read_banner_image(
+    banner_id: uuid.UUID, _staff: StaffUser, session: DbSession
+) -> FileResponse:
+    """**بابُ اللوحة إلى الصورة — ولا يسأل عن سوق القارئ**.
+
+    **ولمَ بابٌ ثانٍ**: بابُ التطبيق يشترط أن يكون السوقُ سوقَ صاحبِ الحساب،
+    **والمشرفُ يعدّ سوقاً قبل أن يُفتح** — فيبدّل السوقَ في ترويسة اللوحة
+    ويقرأ لافتاتِ سوقٍ ليس سوقَه. **وهي علّةُ `GET /admin/countries` نفسُها**:
+    من يهيّئ سوقاً مخفيّاً يحتاج أن يراه وهو مطفأ.
+
+    **ولا يُوسَّع بابُ التطبيق ليخدم الاثنين**: شرطُ السوق هناك هو ما يمنع
+    تسريبَ خطّةِ إطلاق، **ونزعُه لأجل اللوحة يفتحه لكلِّ حساب**.
+    """
+    banner = await storefront.get_banner(session, banner_id)
+    if not banner.image_path:
+        raise NotFound("لا صورةَ لهذه اللافتة")
+    return FileResponse(
+        storage.resolve(banner.image_path),
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@router.get("/service-destinations", response_model=dict[str, list[str]])
+async def list_service_destinations(_staff: StaffUser) -> dict[str, list[str]]:
+    """**المقاصدُ المبنيّةُ ومن يراها** — واللوحةُ تعرضها ولا تكتبها بيد.
+
+    **وهي أختُ `service-icons` بالعلّة نفسِها**: مسارٌ يُكتب بيدٍ في اللوحة
+    **يُرفض في الباب** — والمشرفُ كتب شيئاً معقولاً ولا يعرف لمَ مُنع. **وقد
+    كان الحقلُ نصّاً حرّاً** حتى اليوم.
+
+    **والأدوارُ جزءُ الجواب لا زينة** (عطبٌ قِيس 2026-08-30): `/account/bookings`
+    مبنيٌّ **عند الراكب وحدَه**، فبلاطةُ كبتنٍ تشير إليه تقع على `path="*"`.
+    **فتُنشر الأدوارُ معه**، واللوحةُ تعرض لكلِّ جمهورٍ ما يصلح له.
+    """
+    return {
+        destination: [role.value for role in roles]
+        for destination, roles in storefront.SERVICE_DESTINATIONS.items()
+    }

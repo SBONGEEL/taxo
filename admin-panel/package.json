@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:rtl && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:money-visible && npm run check:contract && npm run check:money && npm run check:readers && npm run check:published-readers && npm run check:target && tsc -b && vite build && npm run check:dist && npm run check:served",
+    "build": "npm run check:rtl && npm run check:fields && npm run check:storefront-card && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:money-visible && npm run check:contract && npm run check:money && npm run check:readers && npm run check:published-readers && npm run check:target && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -24,7 +24,9 @@
     "check:target": "node scripts/check-dist-target.mjs --intent",
     "check:dist": "node scripts/check-dist-target.mjs --dist",
     "check:money-math": "node ../tools/check-money-math.mjs",
-    "check:rtl": "node scripts/check-rtl-plugin.mjs"
+    "check:rtl": "node scripts/check-rtl-plugin.mjs",
+    "check:fields": "node ../tools/check-fields.mjs",
+    "check:storefront-card": "node ../tools/check-storefront-card.mjs"
   },
   "dependencies": {
     "@mapbox/mapbox-gl-rtl-text": "^0.4.0",

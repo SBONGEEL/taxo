@@ -1384,6 +1384,9 @@ export interface ServiceTileRow {
   status: ServiceTileStatus;
   /** **مدّةُ شارة «جديد»** — تختفي بانقضائها بلا نشر. */
   new_until: string | null;
+  /** **أوّلُ ظهورٍ لأحد** — و`null` مسوّدةٌ لم يرَها إنسان، **وهي وحدَها ما
+   *  يُحذف**. وما عُرض مرّةً يُخفى: حذفُه يمحو شاهداً على ما رآه الناس. */
+  first_shown_at: string | null;
 }
 
 export interface PromoBannerRow {
@@ -1400,4 +1403,6 @@ export interface PromoBannerRow {
   link_kind: BannerLinkKind;
   link: string | null;
   is_active: boolean;
+  /** **أوّلُ إشعالٍ داخل نافذتها** — و`null` مسوّدةٌ تُحذف. */
+  first_shown_at: string | null;
 }
