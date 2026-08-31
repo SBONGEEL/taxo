@@ -110,6 +110,38 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
             MOCK_FIELD,
         ),
     ),
+    ProviderKey.EMAIL: ProviderSpec(
+        key=ProviderKey.EMAIL,
+        label="مُرسِلُ البريد — التحقق بالبريد (OTP)",
+        # **ولا `feature_key` هنا عمداً** — بعلّة واتساب نفسِها: المزامنةُ
+        # التلقائية تُشعل مفتاحَ **دولةِ العقد**، **وهذا عقدٌ عامٌّ بلا دولة**.
+        # فالعقدُ يقول «نستطيع» والمفتاحُ `email_otp_enabled` يقول «نفعل هنا».
+        #
+        # **وشرطٌ في الاتجاه المقابل مكتوبٌ في `upsert_feature_flag`**:
+        # **المفتاحُ لا يُشعَل بلا عقدٍ فعّال** — فبابُ «سجّل ببريدك» لا
+        # يُرسم إلا وخلفه مُرسِل.
+        #
+        # **ولا مُرسِلَ حقيقيٌّ مبنيٌّ اليوم** (قرارُ المالك 2026-08-31):
+        # الوهميُّ وحدَه يعمل، **و`build_provider` يرفض غيرَه بنصّه** — فلا
+        # يُدخَل عقدُ Resend حتى إذنِه.
+        fields=(
+            ProviderField(
+                key="provider_name", label="اسم المُرسِل", secret=False, required=False
+            ),
+            ProviderField(key="api_key", label="مفتاح الـ API"),
+            # **عنوانُ المُرسِل ونطاقُه** — والنطاقُ يحتاج تحقّقاً عند المزوّد،
+            # **وبريدٌ من نطاقٍ غيرِ محقَّقٍ يقع في مجلَّد السخام** فيُقرأ
+            # «لم يصل الرمز» وهو أُرسل
+            ProviderField(
+                key="from_address", label="عنوان المُرسِل", secret=False
+            ),
+            ProviderField(
+                key="from_name", label="اسمُ المُرسِل الظاهر", secret=False,
+                required=False,
+            ),
+            MOCK_FIELD,
+        ),
+    ),
     ProviderKey.WHATSAPP: ProviderSpec(
         key=ProviderKey.WHATSAPP,
         label="WhatsApp — التحقق من الهاتف (OTP)",

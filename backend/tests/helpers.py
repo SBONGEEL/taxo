@@ -941,3 +941,53 @@ async def set_driver_approved(session_factory: Any, driver_id: Any) -> None:
         driver = await session.get(Driver, driver_id)
         driver.status = DriverStatus.APPROVED
         await session.commit()
+
+
+async def enable_email_provider(session_factory: Any, **overrides: Any) -> None:
+    """عقدُ بريدٍ وهميّ — **والعقدُ وحدَه لا يفتح القناة**.
+
+    المفتاحُ `email_otp_enabled` per-country شرطٌ ثانٍ: العقدُ يقول «نستطيع»
+    والمفتاحُ يقول «نفعل هنا» — ومن نسيه في اختباره يجد القناةَ مغلقةً، **وذاك
+    هو السلوكُ الصحيح لا عطبٌ في المساعد**.
+    """
+    await _enable_provider(
+        session_factory,
+        "email",
+        {
+            "provider_name": "mock",
+            "api_key": "email-secret",
+            "from_address": "no-reply@taxo.test",
+            "use_mock": True,
+        }
+        | overrides,
+    )
+
+
+async def fast_forward_email_cooldown(address: str) -> None:
+    """«مرّت المهلة» بلا انتظارها — **والمفتاحان معاً** كما في الهاتف.
+
+    `otp.COOLDOWN_KEY` صدىً، **والمهلةُ الحقيقيةُ في `otp_limits.RESEND_KEY`**
+    — ومسحُ أحدِهما وحدَه يترك الحارسَ يرفض ويبدو المساعدُ معطوباً.
+    """
+    from app.services import otp, otp_limits
+
+    redis = get_redis_client()
+    await redis.delete(otp.COOLDOWN_KEY.format(phone=address.lower()))
+    await redis.delete(otp_limits.RESEND_KEY.format(phone=address.lower()))
+
+
+async def email_code_of(address: str) -> str:
+    """الرمزُ من صندوق المُرسِل الوهميّ — **يُقرأ من حيث كُتب**.
+
+    و`sms/mock` نفسُه: عاملا uvicorn لا يتقاسمان ذاكرة، فالرسالةُ في Redis.
+    """
+    import re
+
+    from app.core.redis_client import get_redis_client
+    from app.services.email import last_message
+
+    body = await last_message(get_redis_client(), address)
+    assert body is not None, f"لا رسالةَ في صندوق {address}"
+    found = re.search(r"\d{6}", body)
+    assert found is not None, f"لا رمزَ في الرسالة: {body!r}"
+    return found.group(0)

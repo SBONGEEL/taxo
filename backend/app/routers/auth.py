@@ -37,6 +37,7 @@ from app.core.exceptions import (
     RateLimited,
     TotpEnforcementActive,
 )
+from app.core.email import normalize_email
 from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
 from app.models.enums import CountryCode, UserRole
 from app.models.user import User
@@ -47,6 +48,8 @@ from app.schemas.auth import (
     AuthMethodResponse,
     AuthResponse,
     ChallengeRequest,
+    EmailChallengeRequest,
+    EmailRegisterRequest,
     ChallengeResponse,
     LoginRequest,
     LoginResponse,
@@ -248,6 +251,95 @@ async def register(
     return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
 
 
+# ═══════════════ البريدُ قناةً بديلة (قرارُ المالك 2026-08-31) ═══════════════
+#
+# **بابان لا ثالث**: رمزٌ يُرسل، وتسجيلٌ يستهلكه. **ولا بابَ دخولٍ بالبريد** —
+# الدخولُ يبقى بالهاتف وكلمة المرور، **وطريقتان للدخول تعنيان جوابين
+# متناقضين لسؤال «كيف أدخل»** وحساباتٍ تعمل تحت أحدهما دون الآخر. وهي العلّةُ
+# التي حُذفت لأجلها `OtpAuthStrategy` — ولا تُعاد من باب.
+
+
+@router.post("/email/challenge", response_model=ChallengeResponse)
+async def start_email_challenge(
+    payload: EmailChallengeRequest,
+    session: DbSession,
+    redis: RedisDep,
+    ip: ClientIP,
+) -> ChallengeResponse:
+    """يرسل رمزاً إلى بريدٍ — **حين تسقط قناةُ الهاتف**.
+
+    **وحدُّ المعدّل على العنوان في `otp.issue`** كما في قناة الهاتف، **وحدٌّ
+    على المصدر هنا**: العنوانُ يملكه صاحبُه فيُحاسَب عليه، **والمصدرُ يمنع من
+    يجرّب ألفَ عنوانٍ لا يملك واحداً منها** — وهما بابان مختلفان لسائلين
+    مختلفين، `login:ip:` و`login:username:` بعينهما.
+    """
+    limit = await rate_limit.hit(
+        redis, f"email-challenge:{ip}", limit=20, window_seconds=3600
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
+    email = normalize_email(payload.email)
+    challenge = await verification.challenge_email(
+        session, redis, email, country_code=payload.country_code
+    )
+    return ChallengeResponse(
+        sent=challenge.sent,
+        expires_in=challenge.expires_in,
+        resend_after=challenge.resend_after,
+        channel=challenge.channel,
+    )
+
+
+@router.post(
+    "/register/email",
+    response_model=AuthResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_with_email(
+    payload: EmailRegisterRequest,
+    session: DbSession,
+    redis: RedisDep,
+    ip: ClientIP,
+) -> AuthResponse:
+    """حسابٌ **محدود**: بريدٌ مُثبَت، **ورقمٌ محجوزٌ لا مملوك**.
+
+    **والترتيبُ مقصودٌ كما في الباب الأخ**: يُتحقَّق من الرمز **قبل** إنشاء
+    الصفّ، فلا يبقى حسابٌ نصفُ مُنشأٍ لرمزٍ لم يُقبل.
+
+    **ولا يُقبل إن كانت القناةُ مطفأةً في هذا السوق** — ويُسأل عنها هنا ثانيةً
+    لا اكتفاءً بأن الرمزَ صدر: **مفتاحٌ يُطفأ بين الإرسال والتسجيل** يترك
+    رمزاً حيّاً يفتح باباً أُغلق.
+    """
+    limit = await rate_limit.hit(
+        redis, f"register:{ip}", limit=10, window_seconds=3600
+    )
+    if not limit.allowed:
+        raise RateLimited(retry_after=limit.retry_after)
+
+    try:
+        phone = normalize_phone(payload.phone, payload.country_code)
+    except InvalidPhoneNumber as exc:
+        raise InvalidInput(str(exc)) from exc
+
+    email = normalize_email(payload.email)
+    app_scope.guard(payload.role, payload.app)
+
+    if not await verification.email_signup_available(session, payload.country_code):
+        raise InvalidInput("التسجيل بالبريد غير مفعَّل في هذا السوق")
+
+    await verification.verify_email(redis, email=email, code=payload.email_code)
+
+    user = await password_strategy.register_with_email(
+        session, payload, phone=phone, email=email
+    )
+    await session.commit()
+    await session.refresh(user)
+
+    tokens = await _issue(session, redis, user)
+    return AuthResponse(user=UserOut.model_validate(user), tokens=tokens)
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(
     payload: LoginRequest,
@@ -415,6 +507,13 @@ async def verify_my_phone(
         session, redis, phone=user.phone, proof=payload.verification_token
     )
     verification.mark_verified(user)
+    # **وهنا يُملَك الرقمُ بعد أن كان محجوزاً** (قرارُ المالك 2026-08-31):
+    # من سجّل ببريده يعبر هذا البابَ بعينه — **ولا بابَ ثالثاً يُكتب له**،
+    # فسؤالُه هو سؤالُ هذا الباب حرفاً: «أثبتَّ ملكيةَ رقمك؟».
+    #
+    # **والحدُّ يُرفع هنا لا في مكانٍ آخر**: علامةٌ تُرفع في موضعٍ والإثباتُ
+    # يقع في موضعٍ ثانٍ **حالتان تفترقان أوّلَ مسارٍ ينسى إحداهما**.
+    user.phone_pending = False
     await session.commit()
     await session.refresh(user)
     return UserOut.model_validate(user)

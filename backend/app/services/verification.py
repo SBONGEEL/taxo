@@ -60,6 +60,7 @@ VerificationMethod = Literal["firebase", "sms_otp", "whatsapp_otp", "none"]
 FIREBASE = VerificationMethodEnum.FIREBASE.value
 SMS_OTP = VerificationMethodEnum.SMS_OTP.value
 WHATSAPP_OTP = VerificationMethodEnum.WHATSAPP_OTP.value
+EMAIL_OTP = VerificationMethodEnum.EMAIL_OTP.value
 NONE = VerificationMethodEnum.NONE.value
 
 # القنواتُ التي نولّد فيها الرمز ونرسله نحن — يخدمها `services/otp.py`.
@@ -374,3 +375,134 @@ def mark_verified(user: User) -> User:
 def require_verified(user: User) -> None:
     if user.phone_verified_at is None:
         raise PhoneNotVerified()
+
+
+# ═══════════════════════ البريدُ قناةً بديلة (قرارُ المالك 2026-08-31) ═══════════════════════
+#
+# ## والبريدُ يُثبت البريدَ لا الهاتف — **وهذا هو كلُّ التصميم**
+#
+# **لا يدخل `available_methods` ولا `challenge` ولا `verify`**: تلك ثلاثتُها
+# تجيب سؤالاً واحداً — «ما الذي يُثبت **ملكيةَ هذا الرقم**؟» — **ورمزٌ يصل
+# صندوقَ بريدٍ لا يثبت أن صاحبَه يملك الرقم**.
+#
+# **وإدخالُه هناك كان سيكون العطبَ بعينه**: بابٌ يُسمّى «إثباتَ رقم» ويقبل
+# إثباتاً من قناةٍ أخرى، **فيُنشأ حسابٌ كاملُ الصلاحية برقمٍ لم يملكه أحد** —
+# وهو ما بُني `otp_verification_enabled` ليمنعه، ولا يُلتفّ عليه بقناةٍ ثالثة.
+#
+# ## فماذا يفعل إذاً
+#
+# **يفتح حساباً محدوداً**: بريدٌ مُثبَتٌ · ورقمٌ **محجوزٌ لا مملوك**
+# (`phone_pending`) · **ولا رحلةَ ولا محفظة**. **وهو مخرجٌ لا التفاف**: حين
+# تسقط واتساب، من لا قناةَ له **لا يستطيع حتى أن يبدأ** — فيبدأ ببريده،
+# ويُكمل حين تعود القناة.
+
+
+async def email_signup_available(
+    session: AsyncSession, country_code: CountryCode | None = None
+) -> bool:
+    """أيُعرض بابُ «سجّل ببريدك» في هذا السوق؟ — **العقدُ والمفتاحُ معاً**.
+
+    **كواتساب حرفاً**: العقدُ عامٌّ يقول «نستطيع»، والمفتاحُ per-country يقول
+    «نفعل هنا». **وبلا دولةٍ معروفةٍ لا يُعرض** — مفتاحٌ per-country لا يُقرأ
+    بلا دولة، و«افترض الافتراضية» يفتح باباً في سوقٍ أُطفئ فيه.
+    """
+    from app.services.email import get_email_provider_or_none
+
+    if country_code is None:
+        return False
+    if not await settings_service.is_feature_enabled(
+        session, country_code, FeatureKey.EMAIL_OTP_ENABLED
+    ):
+        return False
+    return await get_email_provider_or_none(session) is not None
+
+
+async def challenge_email(
+    session: AsyncSession,
+    redis: Redis,
+    email: str,
+    *,
+    country_code: CountryCode,
+    purpose: str = OtpTemplatePurpose.REGISTRATION,
+) -> otp.Challenge:
+    """يرسل رمزاً إلى عنوانٍ بريديّ — **ويمرّ بسقوف `otp.issue` نفسِها**.
+
+    **ولا سقفَ ثانٍ يُخترع**: `otp.issue` هو البابُ الذي تعيش فيه السقوف،
+    **وقناةٌ تلتفّ عليه تفتح ما أُغلق** — من استنفد محاولاته على رقمه لا
+    يشتري محاولاتٍ جديدةً بتبديل القناة، **ومن أغرق عنواناً لا يفعلها مرّتين**.
+    وعدّاداتُ العنوان مستقلّةٌ عن عدّادات الرقم لأن المفتاحَ يُبنى على القيمة.
+    """
+    from app.services.email import EmailError, get_email_provider_or_none
+
+    if not await email_signup_available(session, country_code):
+        raise ChannelUnavailable(
+            "التحقّق بالبريد غير مفعَّل في هذا السوق"
+        )
+    provider = await get_email_provider_or_none(session)
+    if provider is None:  # pragma: no cover - سُئل قبل سطرين
+        raise VerificationSendFailed(channel=EMAIL_OTP, fallback=None)
+
+    try:
+        sent = await otp.issue(
+            session,
+            redis,
+            email,
+            country=country_code,
+            sender=otp.EmailCodeSender(provider),
+            purpose=purpose,
+        )
+    except EmailError as exc:
+        # **ولا ارتدادَ من البريد إلى غيره**: البريدُ نفسُه هو الارتداد — من
+        # جاء إليه جاء لأن ما قبله سقط. **و`fallback=None` جوابٌ صادق**،
+        # ومكانُ إصلاحه صفحةُ العقود لا هذه الشاشة.
+        raise VerificationSendFailed(
+            channel=EMAIL_OTP, fallback=None, detail=exc.message
+        ) from exc
+
+    return otp.Challenge(
+        sent=sent.sent,
+        expires_in=sent.expires_in,
+        resend_after=sent.resend_after,
+        channel=EMAIL_OTP,
+    )
+
+
+async def verify_email(redis: Redis, *, email: str, code: str) -> None:
+    """يتحقّق من رمز البريد — **بالبابِ نفسِه الذي يتحقّق من رموز الهاتف**.
+
+    البصمةُ محفوظةٌ بالموضوع (العنوان هنا، الرقمُ هناك)، **وعدّادُ المحاولات
+    وحرقُ الرمز واحدٌ للقناتين** — فلا ينشأ بابُ تحقّقٍ ثانٍ بسياسةٍ أضعف.
+    """
+    await otp.verify(redis, email, code)
+
+
+def mark_email_verified(user: User, *, email: str) -> User:
+    """يختم البريدَ بلحظته. الـ commit مسؤوليةُ المستدعي."""
+    user.email = email
+    user.email_verified_at = _now()
+    return user
+
+
+class PhonePending(AppError):
+    """إجراءٌ يشترط رقماً مملوكاً على حسابٍ رقمُه **محجوزٌ لا مملوك**.
+
+    **403 لا 402**: ليست حدوداً تُشترى بل خطوةٌ لم تُتمّ. **ورسالتُها تقول
+    ما يُفعل** — رفضٌ بلا مخرجٍ ليس رفضاً، وهي قاعدةُ التفضيل المجنَّس نفسُها.
+    """
+
+    status_code = 403
+    code = "phone_pending"
+    message = (
+        "أكّد رقم هاتفك أولاً — سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد."
+    )
+
+
+def require_owned_phone(user: User) -> None:
+    """**الحسابُ المحدود**: لا رحلةَ ولا محفظةَ حتى يُثبَت الرقم.
+
+    **ولمَ هذان بالذات** (قرارُ المالك): الرحلةُ تضع إنساناً في سيارةِ إنسان،
+    **والرقمُ هو ما يُتّصل به حين يقع شيء**. والمحفظةُ مال — **ومالٌ يدخل
+    حساباً برقمٍ لا يملكه صاحبُه لا يُعرف لمن يُردّ**.
+    """
+    if user.phone_pending:
+        raise PhonePending()

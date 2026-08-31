@@ -43,6 +43,9 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         otp_length=(
             otp.CODE_LENGTH if method in verification.CODE_CHANNELS else None
         ),
+        # **بانٍ واحدٌ لبابين** — فاللوحةُ ترى ما يراه التطبيق، ولا يُملأ حقلٌ
+        # في أحدهما ويُنسى في الآخر (الشكلُ الثامن)
+        email_signup=await verification.email_signup_available(session, country),
     )
 
 

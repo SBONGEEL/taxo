@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, func, text
 from sqlalchemy import inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,6 +56,41 @@ class User(UUIDMixin, TimestampMixin, Base):
     @property
     def phone_verified(self) -> bool:
         return self.phone_verified_at is not None
+
+    # --- البريدُ قناةً بديلة (قرارُ المالك 2026-08-31) ---
+    #
+    # **ثلاثةُ أعمدةٍ لا اثنان، والثالثُ هو الذي يجعل الأولين آمنَين.**
+    #
+    # `email` — **مُعرِّفُ تواصلٍ لا مُعرِّفُ دخول**: الدخولُ يبقى بالهاتف
+    # وكلمة المرور. **وهو الفرقُ الذي يمنع بابين للدخول** — وهو بعينه ما
+    # حُذفت لأجله `OtpAuthStrategy`: طريقتان تعنيان جوابين متناقضين لسؤال
+    # «كيف أدخل»، وحساباتٍ تعمل تحت أحدهما ولا تعمل تحت الآخر.
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+
+    # لحظةُ إثبات ملكية البريد — **فارغةٌ تعني بريداً كُتب ولم يُثبَت**.
+    # ولا يُقرأ البريدُ إثباتاً بغيرها: عنوانٌ يكتبه صاحبُ الحساب عن نفسه
+    # ليس إثباتاً، **تماماً كما أن `gender` المعلَنَ ليس وسماً**.
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # **الرقمُ محجوزٌ ولا يُملَك** (قرارُ المالك 2026-08-31).
+    #
+    # من سجّل ببريده كتب رقمَ هاتفه ولم يُثبته. **والرقمُ يُحجز**: لا يستطيع
+    # غيرُه أن يسجّل به (الفهرسُ الفريدُ قائمٌ كما هو)، **ولا يملكه هو**.
+    #
+    # **ولمَ عمودٌ ولا يُشتقّ من `phone_verified_at IS NULL`**: الفراغُ هناك
+    # له معنيان اليومَ لا معنى واحد — **حسابٌ أُنشئ والمفتاحُ مطفأٌ للطوارئ**
+    # (وهو حسابٌ كاملُ الصلاحية موسومٌ للمتابعة)، **وحسابٌ سجّل ببريده**
+    # (وهو محدودٌ عمداً). **وخلطُهما يفتح للثاني ما فُتح للأول**، أو يغلق على
+    # الأول ما أُغلق على الثاني — وكلاهما عطبٌ صامت.
+    phone_pending: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
+    @property
+    def email_verified(self) -> bool:
+        return self.email_verified_at is not None
 
     # إشعارات الحملات التسويقية وحدها (المرحلة 8). **لا أثر له على
     # المعاملاتي**: أحداث الرحلة وعرض الطلب وتنبيه الاشتراك جزءٌ من الخدمة
@@ -174,6 +209,22 @@ class User(UUIDMixin, TimestampMixin, Base):
     # اعتمادُ دخولِ المشرف — `None` لكلِّ راكبٍ وكبتن (`models/admin_credential.py`)
     admin_credential: Mapped["AdminCredential | None"] = relationship(  # noqa: F821
         back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+
+    # **فهرسٌ يُعلَن هنا لا في الترحيلة وحدَها** — وإلا اقترح `autogenerate`
+    # إسقاطَه في أوّل مقارنة، **و`test_migrations_match_models` يحمرّ**.
+    # وهو ما وقع مقيساً عند كتابة `0065`.
+    #
+    # **بلا حساسيةِ حالة** — `Ali@X.com` و`ali@x.com` صندوقٌ واحد؛
+    # **وللمُثبَت وحدَه** — عنوانٌ كُتب ولم يُثبَت لا يحجز شيئاً، وإلا حجب من
+    # كتب بريدَ غيره خطأً **صاحبَه الحقيقيَّ** عن التسجيل به.
+    __table_args__ = (
+        Index(
+            "uq_users_email_verified",
+            func.lower(email),
+            unique=True,
+            postgresql_where=text("email_verified_at IS NOT NULL"),
+        ),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي

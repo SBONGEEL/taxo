@@ -5,7 +5,12 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import InvalidInput, PhoneAlreadyRegistered
+from sqlalchemy import func
+from app.core.exceptions import (
+    EmailAlreadyRegistered,
+    InvalidInput,
+    PhoneAlreadyRegistered,
+)
 from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
@@ -21,6 +26,9 @@ async def create_account(
     data: RegisterRequest,
     password_hash: str | None,
     phone_verified_at: datetime | None = None,
+    email: str | None = None,
+    email_verified_at: datetime | None = None,
+    phone_pending: bool = False,
 ) -> User:
     """إنشاء الحساب — البابُ الوحيد، فلا يُكتب المنطق مرتين ليفترق مرتين.
 
@@ -31,6 +39,23 @@ async def create_account(
     existing = await session.scalar(select(User.id).where(User.phone == phone))
     if existing is not None:
         raise PhoneAlreadyRegistered()
+
+    # **والبريدُ المُثبَتُ كذلك** — بلا حساسيةِ حالة، **وللمُثبَت وحدَه**:
+    # عنوانٌ كُتب ولم يُثبَت لا يحجز شيئاً، وإلا حجب من كتب بريدَ غيره خطأً
+    # **صاحبَه الحقيقيَّ** عن التسجيل به.
+    #
+    # **والفحصُ هنا والفهرسُ في القاعدة طبقتان لا واحدة**: هذا يعطي الرسالةَ،
+    # وذاك يمسك السباقَ بين طلبين متزامنين — **ومن اكتفى بالفهرس أعطى ٥٠٠**،
+    # ومن اكتفى بالفحص فتح ثغرةَ تزامن.
+    if email is not None:
+        taken = await session.scalar(
+            select(User.id).where(
+                func.lower(User.email) == email.lower(),
+                User.email_verified_at.is_not(None),
+            )
+        )
+        if taken is not None:
+            raise EmailAlreadyRegistered()
 
     # جنسُ الكبتن لا يُكتب من مسار التسجيل مهما أُرسل — يضبطه المشرف من
     # الهوية ويُختم (`PUT /admin/drivers/{id}/gender`). ولا يُبتلع صامتاً:
@@ -58,6 +83,13 @@ async def create_account(
         country_code=data.country_code,
         password_hash=password_hash,
         phone_verified_at=phone_verified_at,
+        # **البريدُ قناةً بديلة** (قرارُ المالك 2026-08-31) — والثلاثةُ تُكتب
+        # هنا لا في مسارٍ ثانٍ: **بابُ الإنشاء واحدٌ فلا يُكتب المنطقُ مرتين
+        # ليفترق مرتين**، وحسابٌ يُنشأ من بابٍ ثانٍ يفوته تصفيرُ عدّاد الرموز
+        # وبناءُ الدور ورمزُ الإحالة — ثلاثةٌ لا يفشل غيابُها بصوت.
+        email=email,
+        email_verified_at=email_verified_at,
+        phone_pending=phone_pending,
         # إعلانُ الراكبة عن نفسها. **بلا ختم**: يقيّد رحلتَها هي لا أمانَ غيرها
         gender=data.gender,
         # **ورمزُ الإحالة لكل حساب** (تعميمُ 2026-08-16)، وموضعُه `users` لا

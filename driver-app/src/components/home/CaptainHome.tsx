@@ -32,6 +32,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { Earnings, PromoBanner, ServiceTile } from "@/api/types";
 import { MapCard } from "@/components/home/MapCard";
+import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { ServiceTiles } from "@/components/home/ServiceTiles";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
@@ -203,6 +204,9 @@ export function CaptainHome({
         />
       </div>
 
+      {/* **فوق البلاطات لا تحتها** — الحسابُ المحدود يُمنع من أوّلِ ما
+          تفتحه البلاطات، **فسطرٌ يقول لمَ قبل الضغطة** خيرٌ من رفضٍ بعدها */}
+      <PhonePendingNotice />
       <ServiceTiles tiles={tiles} />
       <PromoBanners banners={banners} />
 

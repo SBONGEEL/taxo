@@ -18,6 +18,7 @@ from app.models.user import User
 from app.schemas.auth import AuthMethodResponse, RegisterRequest
 from app.services import token_service
 from app.services.auth.base import create_account
+from app.services.verification import verified_now as verification_now
 
 # هاش وهمي لكلمة مرور عشوائية — يُستخدم لتثبيت زمن الاستجابة عند عدم وجود
 # المستخدم، فلا يكشف الفرق الزمني أي الأرقام مسجّلة (user enumeration).
@@ -71,6 +72,37 @@ class PasswordAuthStrategy:
                 validate_password(data.password, phone=phone)
             ),
             phone_verified_at=verified_at,
+        )
+
+    async def register_with_email(
+        self,
+        session: AsyncSession,
+        data,
+        *,
+        phone: str,
+        email: str,
+    ) -> User:
+        """تسجيلٌ بالبريد — **بابُ الإنشاء نفسُه بحالٍ مختلفة**.
+
+        **ولا `create_account` ثانية**: تصفيرُ عدّاد رموز التسجيل، وبناءُ
+        الدور في المُنشئ، ورمزُ الإحالة، ورفضُ جنسِ الكبتن — أربعةٌ تعيش هناك
+        **ولا يفشل غيابُها بصوت**. فمن كتب باباً ثانياً ورث حساباتٍ ينقصها
+        واحدٌ منها ولا يعرف.
+
+        **و`phone_verified_at=None` مع `phone_pending=True` معاً**: الأولى
+        تقول «لم يُثبَت»، **والثانية تقول لمَ** — وقد كان للأولى معنيان.
+        """
+        return await create_account(
+            session,
+            phone=phone,
+            data=data,
+            password_hash=hash_password(
+                validate_password(data.password, phone=phone)
+            ),
+            phone_verified_at=None,
+            email=email,
+            email_verified_at=verification_now(),
+            phone_pending=True,
         )
 
     async def authenticate(

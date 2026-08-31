@@ -17,7 +17,7 @@ from app.models.cancellation import CancellationSetting
 from app.models.commission import CommissionSetting
 from app.models.map_setting import MapSetting
 from app.models.otp_setting import OtpSetting
-from app.models.enums import AuditAction, CountryCode
+from app.models.enums import AuditAction, CountryCode, FeatureKey, ProviderKey
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
@@ -66,6 +66,7 @@ from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
 from app.services import audit, money_guards, otp_limits, settings_service
+from app.services.providers.credentials import provider_is_active
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
 
@@ -243,6 +244,27 @@ async def upsert_feature_flag(
         # لها بما ضغط — وهي بعينها العلّةُ المكتوبةُ فوق `GUARDED_FLAGS`.
         raise InvalidInput(
             "إطفاء مفتاحٍ حارس إجراء طوارئ — اكتب سببه (8 أحرف على الأقل)"
+        )
+
+    # **ومفتاحُ البريد لا يُشعَل بلا مُرسِلٍ فعّال** (قرارُ المالك 2026-08-31).
+    #
+    # **وهو شرطٌ في الاتجاه المعاكس للحرّاس**: أولئك يشترطون سبباً **للإطفاء**،
+    # وهذا يشترط عقداً **للإشعال**. **والعلّةُ أن المفتاحَ يرسم باباً**:
+    # التطبيقان يقرآن `email_signup` في `/config` فيرسمان «سجّل ببريدك»،
+    # **ومفتاحٌ مشتعلٌ بلا مُرسِلٍ يرسم باباً يسقط عند أول ضغطة** — وهو «زرٌّ
+    # بلا باب»، وهو أسوأُ من غياب الزرّ: من لا يراه يسجّل بالهاتف، ومن يراه
+    # يجرّب ويفشل ويظنّ العطبَ في بريده.
+    #
+    # **ولا يُقاس على وجود صفِّ عقدٍ بل على فعّاليّته** — `provider_is_active`:
+    # عقدٌ مُدخَلٌ ومطفأٌ لا يرسل شيئاً.
+    if (
+        payload.feature_key == FeatureKey.EMAIL_OTP_ENABLED
+        and payload.enabled
+        and not await provider_is_active(session, ProviderKey.EMAIL)
+    ):
+        raise InvalidInput(
+            "لا يُشعَل التحقّق بالبريد بلا عقدِ مُرسِلٍ فعّال — "
+            "أدخِل العقد من صفحة العقود وفعّله، ثم أشعِل المفتاح"
         )
 
     await settings_service.set_flag(

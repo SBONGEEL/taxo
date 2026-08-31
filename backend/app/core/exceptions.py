@@ -196,6 +196,18 @@ class PhoneAlreadyRegistered(Conflict):
     message = "رقم الهاتف مسجّل مسبقاً"
 
 
+class EmailAlreadyRegistered(Conflict):
+    """بريدٌ **مُثبَتٌ** على حسابٍ آخر (قرارُ المالك 2026-08-31).
+
+    **والفهرسُ الفريدُ وحدَه لا يكفي**: هو يمنع الازدواجَ ولا يقول شيئاً — من
+    اصطدم به قرأ **٥٠٠** بلا سطرٍ يفهمه، وهي بعينها «رفضٌ بلا مخرج».
+    **فالفحصُ قبله يعطي الرسالة، والفهرسُ يبقى حارساً للسباق.**
+    """
+
+    code = "email_already_registered"
+    message = "هذا البريد مسجَّل على حسابٍ آخر"
+
+
 class InvalidInput(AppError):
     status_code = 422  # Unprocessable Content — نفس ما يعيده FastAPI للتحقق
     code = "invalid_input"

@@ -43,6 +43,39 @@ class RegisterRequest(BaseModel):
     app: ClientApp | None = None
 
 
+class EmailChallengeRequest(BaseModel):
+    """«أرسل رمزاً إلى بريدي» — **والدولةُ إلزاميّةٌ لا مشتقّة**.
+
+    **ولا تُشتقّ من الرقم كما في قناة الهاتف**: هنا لا رقمَ بعد. والمفتاحُ
+    per-country، **وافتراضُ الدولة الافتراضية يفتح القناةَ في سوقٍ أُطفئت فيه**.
+    """
+
+    #: يُطبَّع في المسار بـ`core/email.normalize_email` — **بيتٌ واحد**
+    email: str = Field(min_length=3, max_length=320)
+    country_code: CountryCode
+
+
+class EmailRegisterRequest(BaseModel):
+    """تسجيلٌ بالبريد — **حسابٌ محدود، ورقمٌ محجوزٌ لا مملوك**.
+
+    **والرقمُ مطلوبٌ رغم أنه لا يُثبَت**: هو مُعرِّفُ الدخول في هذا النظام
+    (`ARCHITECTURE.md`: «Phone number is the login identity»)، **وحسابٌ بلا
+    رقمٍ لا يستطيع صاحبُه الدخولَ إليه غداً**. فيُحجز الآن ويُملَك لاحقاً.
+    """
+
+    phone: str = Field(min_length=6, max_length=20)
+    email: str = Field(min_length=3, max_length=320)
+    #: رمزُ البريد — **ست خانات كرموز القنوات الأخرى**، من الباب نفسِه
+    email_code: str = Field(min_length=4, max_length=8)
+    name: str = Field(min_length=2, max_length=120)
+    password: str = Password
+    country_code: CountryCode
+    role: Literal[UserRole.RIDER, UserRole.DRIVER] = UserRole.RIDER
+    gender: Gender | None = None
+    referral_code: str | None = Field(default=None, min_length=4, max_length=16)
+    app: ClientApp | None = None
+
+
 class ProfileUpdate(BaseModel):
     """ما يملك صاحبُ الحساب تغييره بنفسه (المرحلة 10-ج).
 
@@ -152,6 +185,16 @@ class UserOut(BaseModel):
     is_blocked: bool
     # يقرؤه التطبيق فيطالب صاحبه بالتحقق، وتفلتر به اللوحة (SPEC القسم 13)
     phone_verified: bool
+    # **الرقمُ محجوزٌ ولا يُملَك** (قرارُ المالك 2026-08-31) — من سجّل ببريده.
+    #
+    # **ولا يُشتقّ من `phone_verified == False`**: لتلك معنيان — حسابٌ أُنشئ
+    # والمفتاحُ مطفأٌ للطوارئ (**كاملُ الصلاحية**)، وحسابٌ سجّل ببريده
+    # (**محدودٌ عمداً**). **والتطبيقُ يرسم لهما سطرين مختلفين**: الأولُ
+    # «أكّد رقمك» دعوةً، والثاني «أكّد رقمك — لا رحلةَ ولا محفظةَ قبله».
+    phone_pending: bool = False
+    # **وبريدُه إن أثبته** — يقرؤه ليعرضه في ملفّه، و`null` تعني لا بريدَ
+    # مُثبَت. **ولا يُنشر بريدُ غيره من أيِّ مسار.**
+    email: str | None = None
     # حسابُ صاحبه يقرأ إعلانه وتفضيله ليرسمهما في ملفه (المرحلة 10-ج).
     # وجنسُ **غيره** لا يصل إليه من أي مسار: ليس في `RideDriverOut` ولا في
     # إطار `nearby_drivers` ولا في أي مخرَجٍ يراه الطرف الآخر

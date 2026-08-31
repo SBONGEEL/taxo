@@ -50,7 +50,7 @@ from app.models.ride import (
 )
 from app.models.user import User
 from app.services import cancellation
-from app.services import dispatch, pricing, route, settings_service
+from app.services import dispatch, pricing, route, settings_service, verification
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
 
@@ -340,6 +340,15 @@ async def request_ride(
     الراكبة تضبطه مرةً في حسابها فيسري على كل طلبٍ لا تختار فيه شيئاً — وهذا
     هو الفرق بين إعدادٍ يعمل وإعدادٍ يُنسى.
     """
+    # **الحسابُ المحدود لا يطلب رحلة** (قرارُ المالك 2026-08-31): من سجّل
+    # ببريده رقمُه **محجوزٌ لا مملوك** — **والرحلةُ تضع إنساناً في سيارةِ
+    # إنسان، والرقمُ هو ما يُتّصل به حين يقع شيء**.
+    #
+    # **ومكانُه هنا لا في الراوتر** للعلّة المكتوبة تحته حرفاً: **الحجزُ
+    # المجدول ينشئ رحلاتِه من هذا الباب نفسِه** (12-ط)، وحارسٌ في الراوتر
+    # بابٌ يُنسى في الباب الثاني.
+    verification.require_owned_phone(rider)
+
     if await _rider_has_active_ride(session, rider.id):
         raise RideAlreadyActive()
 

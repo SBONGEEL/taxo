@@ -34,7 +34,7 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import WalletTopupRequest
-from app.services import audit, cancellation, settings_service, wallet
+from app.services import audit, cancellation, settings_service, verification, wallet
 from app.services.pricing import round_money
 
 # القنوات التي يفتح الراكب طلبها بنفسه: كليك وحدها. الكاش يُنشئه الموظف
@@ -136,6 +136,10 @@ async def create_request(
     if not (reference or "").strip():
         raise InvalidInput("مرجع الحوالة مطلوب")
 
+    # **والحسابُ المحدود لا يشحن** (قرارُ المالك 2026-08-31): من سجّل ببريده
+    # رقمُه **محجوزٌ لا مملوك**، **ومالٌ يدخل حساباً برقمٍ لا يملكه صاحبُه لا
+    # يُعرف لمن يُردّ**. ومكانُه الخدمةُ لا الراوتر — كبقيّة حرّاس هذا الملفّ.
+    verification.require_owned_phone(owner)
     await wallet.require_wallet_enabled(session, owner.country_code)
     wallet.require_not_frozen(owner)
     # **لا قناةَ بلا حسابٍ يستقبل** (قرارُ المالك 2026-08-29): سوقٌ لم يُضبط

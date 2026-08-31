@@ -45,6 +45,7 @@ import type {
   Wallet,
 } from "@/api/types";
 import { MapCard } from "@/components/home/MapCard";
+import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { ServiceTiles } from "@/components/home/ServiceTiles";
 import { formatMoney } from "@/lib/utils";
@@ -224,6 +225,9 @@ export function RiderHome({
         </div>
       ) : null}
 
+      {/* **فوق البلاطات لا تحتها** — الحسابُ المحدود يُمنع من أوّلِ ما
+          تفتحه البلاطات، **فسطرٌ يقول لمَ قبل الضغطة** خيرٌ من رفضٍ بعدها */}
+      <PhonePendingNotice />
       <ServiceTiles tiles={tiles} />
       <PromoBanners banners={banners} />
 

@@ -23,6 +23,14 @@ export interface User {
   country_code: CountryCode;
   is_blocked: boolean;
   phone_verified: boolean;
+  /** **الرقمُ محجوزٌ ولا يُملَك** — من سجّل ببريده (قرارُ المالك 2026-08-31).
+   *
+   *  **ولا يُشتقّ من `phone_verified === false`**: لتلك معنيان — حسابٌ أُنشئ
+   *  والمفتاحُ مطفأٌ للطوارئ (**كاملُ الصلاحية**)، وحسابٌ سجّل ببريده
+   *  (**محدودٌ عمداً**) — والسطرُ المعروضُ لهما مختلف. */
+  phone_pending: boolean;
+  /** بريدُه إن أثبته — و`null` تعني لا بريدَ مُثبَت. */
+  email: string | null;
   marketing_push_enabled: boolean;
   created_at: string;
 }
@@ -104,6 +112,12 @@ export interface CountryConfig {
   verification: string;
   verification_channels: string[];
   otp_length: number | null;
+  /** **أيُعرض بابُ «سجّل ببريدك» في هذا السوق؟** — العقدُ والمفتاحُ معاً.
+   *
+   *  **وليس عضواً في `verification_channels`**: تلك تُثبت **ملكيةَ الرقم**،
+   *  والبريدُ يُثبت البريد — وخلطُهما يفتح حساباً كاملَ الصلاحية برقمٍ لم
+   *  يملكه أحد. */
+  email_signup: boolean;
 }
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
@@ -314,6 +328,7 @@ export type FeatureKey =
   | "women_service_enabled"
   | "multi_stop_enabled"
   | "whatsapp_otp_enabled"
+  | "email_otp_enabled"
   | "tips_enabled"
   | "promo_codes_enabled"
   | "driver_referrals_enabled"
