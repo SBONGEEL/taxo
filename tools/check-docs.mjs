@@ -206,8 +206,22 @@ say(`  المحذوفُ معلَناً    ${REMOVED_CHARS.toLocaleString("en")} 
 say(`  المنقول            ${movedChars.toLocaleString("en")}  ${movedChars === EXPECT_CHARS ? "= الأصل ناقصَ المعلَن ✓" : "✗"}`);
 say(`  بصمةُ الأسطر       ${digest.slice(0, 16)}…  ${digest === ORIGIN_DIGEST ? "= الأصل ✓" : "✗"}`);
 say("");
+// **وما تبقّى يُطبع، لا يُحسب في رأس أحد** (قرارُ المالك 2026-09-01).
+//
+// **العلّةُ مقيسةٌ لا محتاطة**: كان حجمُ `CLAUDE.md` مكتوباً في نثره، **فبلي
+// ثلاثَ مرّاتٍ في أسبوع** — ٥٤ ألفاً، ثم ٥٧,٨٤٤، ثم هبط بالنقل. وفي كلِّ
+// مرّةٍ كان النصُّ يقول عدداً لم يعد قائماً، **ويُنقل على أنه خبر**.
+//
+// **والسببُ أن القارئَ يريد جواباً لا رقماً**: «أفيه متّسع؟». فما دام
+// الحارسُ يطبع الحجمَ وحدَه بقي على القارئ أن يطرح — **ومن يطرح في رأسه
+// يكتب النتيجةَ في النثر**. فيُطبع الطرحُ نفسُه، **فلا يبقى ما يُكتب**.
 for (const f of ALL)
-  say(`  ${f.padEnd(18)} ${String(sizes[f].toLocaleString("en")).padStart(9)}${f === MAIN ? `   (السقف ${CEILING.toLocaleString("en")})` : ""}`);
+  say(
+    `  ${f.padEnd(18)} ${String(sizes[f].toLocaleString("en")).padStart(9)}` +
+      (f === MAIN
+        ? `   (السقف ${CEILING.toLocaleString("en")} — وتبقّى ${(CEILING - sizes[f]).toLocaleString("en")})`
+        : ""),
+  );
 say("");
 say(
   `  قُرئ: ${headingCount} عنواناً منقولاً · ${authoredHeadingCount} مكتوباً جديداً` +
