@@ -57,7 +57,17 @@ const ORIGIN_DIGEST = "0af01cbf160ba7f2b68dda39eef70d431a4bf690bad338c8989f05dd1
 const CEILING = 60000;
 
 const MAIN = "CLAUDE.md";
-const MOVED = ["ARCHITECTURE.md", "PATTERNS.md", "GUARDS.md", "STATE.md"];
+// **وخامسٌ منذ 2026-09-01**: `COMMANDS.md`. **ولا رقمَ في هذا الملفّ تغيّر
+// بنقله** — `ORIGIN` و`ORIGIN_LINES` و`ORIGIN_DIGEST` كما هي، **وهذا هو
+// البرهان**: النقلُ بين ملفّين لا يُنقص حرفاً ولا سطراً، **والبصمةُ مرتَّبةٌ
+// فلا يُغيّرها الموضع**. فمن نقل ولم تتغيّر البصمةُ نقل ولم يحرّر.
+const MOVED = [
+  "ARCHITECTURE.md",
+  "PATTERNS.md",
+  "GUARDS.md",
+  "STATE.md",
+  "COMMANDS.md",
+];
 const ALL = [MAIN, ...MOVED];
 
 // النصُّ المكتوبُ حديثاً — لا المنقول — محصورٌ بين هاتين العلامتين. وهو الوحيدُ
