@@ -37,11 +37,12 @@ async def list_campaigns(
     _admin: AdminUser,
     session: DbSession,
     status_filter: CampaignStatus | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=120, description="عنوانٌ أو نصّ"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[CampaignOut]:
     rows = await campaigns_service.list_campaigns(
-        session, status=status_filter, limit=limit, offset=offset
+        session, status=status_filter, limit=limit, offset=offset, q=q
     )
     return [CampaignOut.model_validate(row) for row in rows]
 
@@ -110,12 +111,13 @@ async def list_deliveries(
     campaign_id: uuid.UUID,
     _admin: AdminUser,
     session: DbSession,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ المستلم أو رقمُه"),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> list[DeliveryOut]:
     """من وصله الإشعار ومن تُخطّي ولماذا — سجلٌّ يُقرأ بعد كل حملة."""
     rows = await campaigns_service.list_deliveries(
-        session, campaign_id, limit=limit, offset=offset
+        session, campaign_id, limit=limit, offset=offset, q=q
     )
     return [DeliveryOut.model_validate(row) for row in rows]
 

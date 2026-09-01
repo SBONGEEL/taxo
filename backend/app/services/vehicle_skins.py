@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,7 +61,7 @@ from app.schemas.vehicle_skin import (
     SkinPurchasesOut,
     StoreOut,
 )
-from app.services import geo, skin_artwork, wallet
+from app.services import admin_search, geo, skin_artwork, wallet
 from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
@@ -161,6 +161,7 @@ async def purchase_log(
     limit: int = 100,
     offset: int = 0,
     skin_id: uuid.UUID | None = None,
+    q: str | None = None,
 ) -> SkinPurchasesOut:
     """سجلُّ مشتريات المركبات — **شاشتُه مستقلّةٌ لأن المال يخرج من محافظ**.
 
@@ -180,6 +181,18 @@ async def purchase_log(
     )
     if skin_id is not None:
         base = base.where(DriverVehicleSkin.skin_id == skin_id)
+    # **مرشِّحٌ فقط** (`services/admin_search.py`): المشتري باسمه أو رقمه، أو
+    # اسمُ المركبة. **و`User` و`VehicleSkin` مضمومان أصلاً واحداً لواحد**
+    term = admin_search.normalize(q)
+    if term is not None:
+        pattern = admin_search.like(term)
+        base = base.where(
+            or_(
+                User.name.ilike(pattern),
+                User.phone.ilike(pattern),
+                VehicleSkin.name.ilike(pattern),
+            )
+        )
 
     rows = (
         await session.execute(

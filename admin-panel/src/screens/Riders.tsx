@@ -35,7 +35,7 @@ import {
 } from "@/api/endpoints";
 import type { User, Wallet, WalletTransaction } from "@/api/types";
 import { Shell } from "@/components/Shell";
-import { Pills, Table } from "@/components/Table";
+import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -43,6 +43,7 @@ import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { moment, money } from "@/lib/format";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { digits, cn } from "@/lib/utils";
 
@@ -74,8 +75,7 @@ export function RidersScreen() {
   const { isAdmin } = useSession();
 
   const [filter, setFilter] = useState<RiderFilter | "all">("all");
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  const search = useSearch();
   const [rows, setRows] = useState<User[] | null>(null);
   const [open, setOpen] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -94,10 +94,10 @@ export function RidersScreen() {
               ? false
               : undefined,
         phone_verified: filter === "only_unverified" ? false : undefined,
-        q: query || undefined,
+        q: search.term,
       }),
     );
-  }, [country, filter, query]);
+  }, [country, filter, search.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -123,34 +123,20 @@ export function RidersScreen() {
         ]}
       />
 
-      <form
-        className="mb-14 flex max-w-modal items-end gap-9"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setQuery(search.trim());
-        }}
-      >
-        <div className="flex-1">
-          <Field
-            label="بحث"
-            placeholder="اسمٌ أو رقم هاتف"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-        <button
-          type="submit"
-          className="rounded-13 border border-line px-16 py-13 text-13 font-semibold text-ink"
-        >
-          ابحث
-        </button>
-      </form>
-
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
       <div className="mt-12">
         <Table
+          toolbar={
+            <TableSearch
+              value={search.text}
+              onChange={search.setText}
+              placeholder="ابحث باسم الراكب أو رقمه…"
+            />
+          }
+          searching={search.searching}
+          noResults={NO_RESULTS}
           columns={COLUMNS}
           headers={["الراكب", "الهاتف", "الحالة", "منذ", ""]}
           rows={rows}

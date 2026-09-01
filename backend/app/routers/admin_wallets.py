@@ -196,11 +196,12 @@ async def list_topup_requests(
     _staff: StaffUser,
     session: DbSession,
     status_filter: TopupRequestStatus | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ صاحبه أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[TopupRequestOut]:
     requests = await topups.list_all(
-        session, status=status_filter, limit=limit, offset=offset
+        session, status=status_filter, limit=limit, offset=offset, q=q
     )
     return [TopupRequestOut.model_validate(request) for request in requests]
 
@@ -276,11 +277,12 @@ async def list_withdrawal_requests(
     _staff: StaffUser,
     session: DbSession,
     status_filter: WithdrawalStatus | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ صاحبه أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[WithdrawalOut]:
     requests = await withdrawals.list_all(
-        session, status=status_filter, limit=limit, offset=offset
+        session, status=status_filter, limit=limit, offset=offset, q=q
     )
     return [WithdrawalOut.model_validate(request) for request in requests]
 

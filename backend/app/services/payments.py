@@ -73,6 +73,7 @@ from app.models.payment import (
 from app.models.ride import Ride
 from app.models.user import User
 from app.services import (
+    admin_search,
     advances,
     audit,
     cancellation,
@@ -165,6 +166,7 @@ async def list_all(
     country_code: CountryCode | None = None,
     limit: int,
     offset: int,
+    q: str | None = None,
 ) -> Sequence[Payment]:
     """قائمة اللوحة — الفلترة على `disputed` هي شاشة النزاعات (القسم 13.4).
 
@@ -177,6 +179,18 @@ async def list_all(
     if country_code is not None:
         stmt = stmt.join(Ride, Payment.ride_id == Ride.id).where(
             Ride.country_code == country_code
+        )
+    # **مرشِّحٌ فقط** (`services/admin_search.py`): من دفع — راكبُ الرحلة أو
+    # كبتنُها. **وبـ`EXISTS` لا بضمّ** كي لا يتغيّر ما تحويه الصفحةُ الواحدة
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(
+            select(Ride.id)
+            .where(
+                Ride.id == Payment.ride_id,
+                admin_search.any_user_clause(term, Ride.rider_id, Ride.driver_id),
+            )
+            .exists()
         )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 

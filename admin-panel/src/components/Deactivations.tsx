@@ -75,6 +75,7 @@ export function Deactivations({ onError }: { onError: (message: string) => void 
       </p>
 
       <Table
+        height="compact"
         columns="1fr 1.4fr 0.8fr 0.9fr 1.6fr"
         headers={["الكبتن", "السبب", "الحالة", "التاريخ", ""]}
         rows={rows}

@@ -34,7 +34,14 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import WalletTopupRequest
-from app.services import audit, cancellation, settings_service, verification, wallet
+from app.services import (
+    admin_search,
+    audit,
+    cancellation,
+    settings_service,
+    verification,
+    wallet,
+)
 from app.services.pricing import round_money
 
 # القنوات التي يفتح الراكب طلبها بنفسه: كليك وحدها. الكاش يُنشئه الموظف
@@ -87,10 +94,17 @@ async def list_all(
     status: TopupRequestStatus | None,
     limit: int,
     offset: int,
+    q: str | None = None,
 ) -> Sequence[WalletTopupRequest]:
     stmt = select(WalletTopupRequest).order_by(WalletTopupRequest.created_at.desc())
     if status is not None:
         stmt = stmt.where(WalletTopupRequest.status == status)
+    # **مرشِّحٌ فقط**: الترتيبُ والحدودُ كما هي، و`q` الفارغةُ لا تضيف شرطاً
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(
+            admin_search.user_clause(term, WalletTopupRequest.owner_id)
+        )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 
 

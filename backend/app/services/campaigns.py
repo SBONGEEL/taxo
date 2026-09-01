@@ -53,7 +53,7 @@ from app.models.notification import (
 )
 from app.models.user import User
 from app.models.user_role_grant import has_role_clause
-from app.services import audit, devices, inbox
+from app.services import admin_search, audit, devices, inbox
 from app.services.push import PushMessage, PushProvider, get_push_provider_or_none
 
 logger = logging.getLogger(__name__)
@@ -183,22 +183,44 @@ async def list_campaigns(
     status: CampaignStatus | None,
     limit: int,
     offset: int,
+    q: str | None = None,
 ) -> Sequence[NotificationCampaign]:
     stmt = select(NotificationCampaign).order_by(
         NotificationCampaign.created_at.desc()
     )
     if status is not None:
         stmt = stmt.where(NotificationCampaign.status == status)
+    # **مرشِّحٌ فقط** (`services/admin_search.py`): العنوانُ والنصّ — ولا صاحبَ
+    # لحملةٍ يُبحث باسمه
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(
+            admin_search.text_clause(
+                term, NotificationCampaign.title, NotificationCampaign.body
+            )
+        )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 
 
 async def list_deliveries(
-    session: AsyncSession, campaign_id: uuid.UUID, *, limit: int, offset: int
+    session: AsyncSession,
+    campaign_id: uuid.UUID,
+    *,
+    limit: int,
+    offset: int,
+    q: str | None = None,
 ) -> Sequence[NotificationDelivery]:
+    # **مرشِّحٌ فقط** (`services/admin_search.py`) — من وصله الإشعار باسمه أو رقمه
+    term = admin_search.normalize(q)
+    extra = (
+        [admin_search.user_clause(term, NotificationDelivery.user_id)]
+        if term is not None
+        else []
+    )
     return (
         await session.scalars(
             select(NotificationDelivery)
-            .where(NotificationDelivery.campaign_id == campaign_id)
+            .where(NotificationDelivery.campaign_id == campaign_id, *extra)
             .order_by(NotificationDelivery.created_at.desc())
             .limit(limit)
             .offset(offset)

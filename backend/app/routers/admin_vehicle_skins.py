@@ -446,6 +446,7 @@ async def skin_purchases(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     skin_id: uuid.UUID | None = None,
+    q: Annotated[str | None, Query(max_length=120)] = None,
 ) -> SkinPurchasesOut:
     """سجلُّ مشتريات المركبات — **شاشةٌ مستقلّةٌ لا بطاقةٌ في الكتالوج**.
 
@@ -456,5 +457,5 @@ async def skin_purchases(
     **والموجّهُ رقيقٌ بحقّ**: لا حساب هنا، والجمعُ كلُّه في `vehicle_skins`.
     """
     return await vehicle_skins.purchase_log(
-        session, limit=limit, offset=offset, skin_id=skin_id
+        session, limit=limit, offset=offset, skin_id=skin_id, q=q
     )

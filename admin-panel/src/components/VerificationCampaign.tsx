@@ -94,6 +94,7 @@ export function VerificationCampaign({
       </p>
 
       <Table
+        height="compact"
         columns="0.8fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr 1.4fr"
         headers={[
           "الحال",

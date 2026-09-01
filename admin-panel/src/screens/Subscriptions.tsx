@@ -284,6 +284,7 @@ function PlansPanel({
   return (
     <>
       <Table
+        height="auto"
         columns={PLAN_COLUMNS}
         headers={["الباقة", "المدة", "السعر", "الحالة", ""]}
         rows={plans}

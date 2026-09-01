@@ -29,6 +29,7 @@ async def list_payments(
     session: DbSession,
     status_filter: PaymentStatus | None = Query(default=None, alias="status"),
     country_code: CountryCode | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ طرفٍ أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[PaymentOut]:
@@ -44,6 +45,7 @@ async def list_payments(
         country_code=country_code,
         limit=limit,
         offset=offset,
+        q=q,
     )
     return [PaymentOut.model_validate(entry) for entry in entries]
 

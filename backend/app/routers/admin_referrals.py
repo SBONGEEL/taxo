@@ -14,7 +14,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.core.deps import AdminUser, DbSession, StaffUser
 from app.core.exceptions import InvalidInput
@@ -27,7 +27,7 @@ from app.schemas.referral import (
     ReferralSettingsIn,
     ReferralSettingsOut,
 )
-from app.services import audit, referrals as referrals_service
+from app.services import admin_search, audit, referrals as referrals_service
 
 router = APIRouter(prefix="/admin/referrals", tags=["admin"])
 
@@ -63,6 +63,7 @@ async def list_referrals(
     rewarded: bool | None = Query(
         default=None, description="المدفوعُ وحده أو غيرُ المدفوع وحده"
     ),
+    q: str | None = Query(default=None, max_length=120, description="اسمُ طرفٍ أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminReferralRow]:
@@ -105,6 +106,19 @@ async def list_referrals(
         stmt = stmt.where(Referral.rewarded_at.is_not(None))
     elif rewarded is False:
         stmt = stmt.where(Referral.rewarded_at.is_(None))
+    # **مرشِّحٌ فقط** (`services/admin_search.py`): أيُّ الطرفين — والضمّان
+    # قائمان أصلاً بأسماءٍ مستعارة، **وكلٌّ منهما واحدٌ لواحد** فلا يضاعف صفّاً
+    term = admin_search.normalize(q)
+    if term is not None:
+        pattern = admin_search.like(term)
+        stmt = stmt.where(
+            or_(
+                referrer.c.name.ilike(pattern),
+                referrer.c.phone.ilike(pattern),
+                referred.c.name.ilike(pattern),
+                referred.c.phone.ilike(pattern),
+            )
+        )
 
     rows = (await session.execute(stmt)).all()
 

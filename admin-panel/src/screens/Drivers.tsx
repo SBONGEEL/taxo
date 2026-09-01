@@ -57,12 +57,13 @@ import { Advances } from "@/components/Advances";
 import { DriverDebts } from "@/components/DriverDebts";
 import { Deactivations } from "@/components/Deactivations";
 import { Shell } from "@/components/Shell";
-import { Pills, Table } from "@/components/Table";
+import { Pills, Table, TableSearch } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { digits, cn } from "@/lib/utils";
 
@@ -320,6 +321,7 @@ export function DriversScreen() {
   // مثبت» سؤالان يُسألان معاً، وحبّةٌ واحدة تجعلهما بديلين
   const [unverifiedGender, setUnverifiedGender] = useState(false);
   const [rows, setRows] = useState<AdminDriverRow[] | null>(null);
+  const search = useSearch();
   const [open, setOpen] = useState<AdminDriverRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -331,9 +333,12 @@ export function DriversScreen() {
         country_code: country,
         status: filter === "all" ? undefined : filter,
         gender_verified: unverifiedGender ? false : undefined,
+        // **من الخادم لا في المتصفح**: القائمةُ مرقَّمةٌ بخمسين، وبحثٌ محلّيٌّ
+        // يقرأ الصفحةَ المعروضةَ وحدَها فيبدو معطوباً لمن يعرف أن الصفَّ موجود
+        q: search.term,
       }),
     );
-  }, [country, filter, unverifiedGender]);
+  }, [country, filter, unverifiedGender, search.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -377,6 +382,15 @@ export function DriversScreen() {
 
       <div className="mt-12">
         <Table
+          toolbar={
+            <TableSearch
+              value={search.text}
+              onChange={search.setText}
+              placeholder="ابحث باسم الكبتن أو رقمه…"
+            />
+          }
+          searching={search.searching}
+          noResults={NO_RESULTS}
           columns={COLUMNS}
           headers={[
             "السائق",

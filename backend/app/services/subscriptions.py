@@ -72,6 +72,7 @@ from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
 from app.services import (
+    admin_search,
     advances,
     audit,
     geo,
@@ -230,6 +231,7 @@ async def list_all(
     country_code: CountryCode | None = None,
     limit: int,
     offset: int,
+    q: str | None = None,
 ) -> Sequence[DriverSubscription]:
     """تقارير الاشتراكات في اللوحة (SPEC القسم 13.5)."""
     stmt = (
@@ -248,6 +250,18 @@ async def list_all(
                     SubscriptionPlan.country_code == country_code
                 )
             )
+        )
+    # **مرشِّحٌ فقط** (`services/admin_search.py`): الكبتنُ باسمه أو رقمه —
+    # و`drivers.user_id` هو الجسر، **وبـ`EXISTS` لا بضمّ**
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(
+            select(Driver.id)
+            .where(
+                Driver.id == DriverSubscription.driver_id,
+                admin_search.user_clause(term, Driver.user_id),
+            )
+            .exists()
         )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 

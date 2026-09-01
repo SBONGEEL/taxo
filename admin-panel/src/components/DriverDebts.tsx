@@ -111,6 +111,7 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
         مطالبات سداد بانتظار التأكيد
       </h3>
       <Table
+        height="compact"
         columns="1fr 0.9fr 1fr 1.4fr"
         headers={["المرجع", "المبلغ", "فُتحت", ""]}
         rows={claims}
@@ -148,6 +149,7 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
 
       <h3 className="mb-6 mt-20 text-13 font-bold text-ink">المستحقّات</h3>
       <Table
+        height="compact"
         columns="1.2fr 0.9fr 0.9fr 1fr 0.8fr 1.6fr"
         headers={["الكبتن", "المبلغ", "المحصَّل", "المصدر", "الحالة", ""]}
         rows={rows}

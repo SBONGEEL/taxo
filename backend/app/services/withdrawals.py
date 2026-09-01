@@ -36,7 +36,14 @@ from app.models.enums import (
 )
 from app.models.user import User
 from app.models.wallet import PENDING_WITHDRAWAL_STATUSES, WithdrawalRequest
-from app.services import audit, cancellation, money_guards, settings_service, wallet
+from app.services import (
+    admin_search,
+    audit,
+    cancellation,
+    money_guards,
+    settings_service,
+    wallet,
+)
 from app.services.payout import (
     PayoutError,
     PayoutRequest,
@@ -111,10 +118,15 @@ async def list_all(
     status: WithdrawalStatus | None,
     limit: int,
     offset: int,
+    q: str | None = None,
 ) -> Sequence[WithdrawalRequest]:
     stmt = select(WithdrawalRequest).order_by(WithdrawalRequest.created_at.desc())
     if status is not None:
         stmt = stmt.where(WithdrawalRequest.status == status)
+    # **مرشِّحٌ فقط** — انظر `services/admin_search.py`
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(admin_search.user_clause(term, WithdrawalRequest.driver_id))
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 
 

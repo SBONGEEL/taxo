@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,7 +65,7 @@ from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
-from app.services import audit, money_guards, otp_limits, settings_service
+from app.services import admin_search, audit, money_guards, otp_limits, settings_service
 from app.services.providers.credentials import provider_is_active
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
@@ -721,6 +721,9 @@ async def list_audit_logs(
     action: AuditAction | None = None,
     actor_id: uuid.UUID | None = None,
     entity_id: uuid.UUID | None = None,
+    q: str | None = Query(
+        default=None, max_length=120, description="اسمُ المشرف أو نوعُ العنصر"
+    ),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AuditLogOut]:
@@ -746,6 +749,16 @@ async def list_audit_logs(
         stmt = stmt.where(AdminAuditLog.actor_id == actor_id)
     if entity_id is not None:
         stmt = stmt.where(AdminAuditLog.entity_id == entity_id)
+    # **مرشِّحٌ فقط** (`services/admin_search.py`): `User` مضمومٌ هنا أصلاً
+    # بـ`outerjoin` واحدٍ لواحد، فالشرطُ عليه لا يضاعف صفّاً.
+    # **وقيدٌ بلا مشرفٍ لا يطابق اسماً** — وهو الصحيح: من يبحث باسمٍ يريد فعلَ
+    # إنسانٍ لا فعلَ النظام
+    term = admin_search.normalize(q)
+    if term is not None:
+        pattern = admin_search.like(term)
+        stmt = stmt.where(
+            or_(User.name.ilike(pattern), AdminAuditLog.entity_type.ilike(pattern))
+        )
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     return [

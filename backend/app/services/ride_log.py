@@ -36,7 +36,7 @@ from app.models.ride import Ride, RideRoutePoint
 from app.models.payment import OWING_PAYMENT_STATUSES
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import settlement
+from app.services import admin_search, settlement
 from app.services.settlement import SettlementState
 
 # سقفُ نقاط المسار في شاشة التفاصيل. رحلةٌ بنقطةٍ كل عشرين ثانية تكتب مئةً
@@ -128,7 +128,10 @@ async def list_rides(
         except ValueError:
             pass
 
-        pattern = f"%{text}%"
+        # **حروفُ `LIKE` تُهرَّب** (عطبٌ قِيس 2026-09-02، والبيتُ الواحد
+        # `services/admin_search.py`): كان النمطُ عارياً — **فمن كتب `%` رأى
+        # السجلَّ كلَّه وظنّه نتيجةَ بحثه**
+        pattern = admin_search.like(text)
         rider = select(User.id).where(
             or_(User.name.ilike(pattern), User.phone.ilike(pattern))
         )

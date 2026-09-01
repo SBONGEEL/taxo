@@ -204,6 +204,7 @@ export function Storefront({
       </p>
 
       <Table
+        height="compact"
         columns="0.7fr 1fr 0.5fr 0.7fr 0.5fr 1fr 1.5fr"
         headers={[
           "المفتاح",
@@ -364,6 +365,7 @@ export function Storefront({
         والنافذةُ تُقاس في الخادم لا في الجهاز.
       </p>
       <Table
+        height="compact"
         columns="1.2fr 0.7fr 0.9fr 0.9fr 1.6fr"
         headers={["العنوان", "الجمهور", "من", "إلى", ""]}
         rows={banners}

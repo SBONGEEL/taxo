@@ -117,6 +117,7 @@ export function ReportsScreen() {
             <section>
               <h2 className="mb-12 text-14 font-bold text-ink">أفضل السائقين</h2>
               <Table
+                height="compact"
                 columns="1.4fr 0.8fr 1fr 0.7fr"
                 headers={["السائق", "الرحلات", "الإيراد", "التقييم"]}
                 rows={data.top_drivers}
@@ -151,6 +152,7 @@ export function ReportsScreen() {
                 مبيعات الباقات
               </h2>
               <Table
+                height="compact"
                 columns="1.6fr 0.7fr 1fr"
                 headers={["الباقة", "بيعت", "الإيراد"]}
                 rows={data.sales_by_plan}

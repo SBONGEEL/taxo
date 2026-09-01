@@ -68,6 +68,7 @@ from app.schemas.debt import (
 )
 from app.services import deactivation
 from app.services import (
+    admin_search,
     advances as advances_service,
     audit,
     cliq_debts,
@@ -111,7 +112,11 @@ async def list_users(
     if (q or "").strip():
         # البحثُ على الاسم والرقم معاً — والرقمُ يُبحث كما هو مخزَّن (E.164)
         # وكما قد يكتبه المشرف محلياً، فـ`ilike` بالاحتواء لا بالبادئة
-        pattern = f"%{q.strip()}%"
+        # **حروفُ `LIKE` تُهرَّب** (عطبٌ قِيس 2026-09-02): كان النمطُ
+        # `f"%{q}%"` عارياً — **فمن كتب `%` رأى الجدولَ كلَّه وظنّه نتيجةَ
+        # بحثه**، ومن كتب `_` طابق أيَّ حرف. والبيتُ الواحد
+        # `services/admin_search.py`.
+        pattern = admin_search.like(q.strip())
         stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
 
     rows = (await session.scalars(stmt.limit(limit).offset(offset))).all()
@@ -246,7 +251,11 @@ async def list_drivers(
     elif gender_verified is False:
         stmt = stmt.where(User.gender_verified_at.is_(None))
     if (q or "").strip():
-        pattern = f"%{q.strip()}%"
+        # **حروفُ `LIKE` تُهرَّب** (عطبٌ قِيس 2026-09-02): كان النمطُ
+        # `f"%{q}%"` عارياً — **فمن كتب `%` رأى الجدولَ كلَّه وظنّه نتيجةَ
+        # بحثه**، ومن كتب `_` طابق أيَّ حرف. والبيتُ الواحد
+        # `services/admin_search.py`.
+        pattern = admin_search.like(q.strip())
         stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
@@ -570,6 +579,7 @@ async def list_advances(
     _: AdminUser,
     session: DbSession,
     status: AdvanceStatus | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminAdvanceOut]:
@@ -582,6 +592,17 @@ async def list_advances(
     stmt = select(DriverAdvance).order_by(DriverAdvance.created_at.desc())
     if status is not None:
         stmt = stmt.where(DriverAdvance.status == status)
+    # **مرشِّحٌ فقط** (`services/admin_search.py`) — الكبتنُ عبر `drivers.user_id`
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(
+            select(Driver.id)
+            .where(
+                Driver.id == DriverAdvance.driver_id,
+                admin_search.user_clause(term, Driver.user_id),
+            )
+            .exists()
+        )
     rows = list(await session.scalars(stmt.limit(limit).offset(offset)))
     out: list[AdminAdvanceOut] = []
     for row in rows:
@@ -689,6 +710,7 @@ async def list_driver_debts(
     _: AdminUser,
     session: DbSession,
     status: DriverDebtStatus | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminDebtOut]:
@@ -701,6 +723,12 @@ async def list_driver_debts(
     )
     if status is not None:
         stmt = stmt.where(DriverDebt.status == status)
+    # **مرشِّحٌ فقط**: `User` مضمومٌ في هذا الاستعلام أصلاً — **والضمُّ واحدٌ
+    # لواحد** (كبتنٌ واحدٌ لكلِّ دَين) فلا يضاعف صفّاً ولا يمسّ حدَّ الصفحة
+    term = admin_search.normalize(q)
+    if term is not None:
+        pattern = admin_search.like(term)
+        stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     return [
         AdminDebtOut(

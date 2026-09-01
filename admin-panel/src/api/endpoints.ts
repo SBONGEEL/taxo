@@ -248,6 +248,21 @@ export const loginWithTotp = (
 
 export const getMe = () => api.get<User>("/auth/me");
 
+// ------------------------------------------------------------ الأجهزة
+//
+// **بابان قائمان منذ المرحلة 9-ب** — لا جديدَ في الخلفية: `PUT /me/devices`
+// و`DELETE /me/devices/{id}` يخدمان أيَّ صاحبِ جلسة، والمشرفُ صاحبُ جلسة.
+// **وغلافُ المشرف هو ما كان ناقصاً** — والباب بلا زرٍّ منذ ذلك اليوم.
+
+export const registerDevice = (payload: {
+  device_id: string;
+  token: string;
+  platform: string;
+}) => api.put<void>("/me/devices", payload);
+
+export const unregisterDevice = (deviceId: string) =>
+  api.del<void>(`/me/devices/${encodeURIComponent(deviceId)}`);
+
 // ------------------------------------------- التحقق الثنائي (المرحلة 12-د)
 
 export const getMyTotp = () => api.get<TotpStatus>("/auth/me/totp");
@@ -275,8 +290,8 @@ export const logout = (refreshToken: string) =>
 
 // ------------------------------------------------------------ الحملات
 
-export const listCampaigns = (status?: string) =>
-  api.get<Campaign[]>("/admin/campaigns", { query: { status } });
+export const listCampaigns = (status?: string, q?: string) =>
+  api.get<Campaign[]>("/admin/campaigns", { query: { status, q } });
 
 export const createCampaign = (payload: {
   title: string;
@@ -395,8 +410,8 @@ export const setDriverGender = (driverId: string, gender: Gender) =>
 
 // ------------------------------------------------------------ المالية
 
-export const listTopups = (status?: TopupStatus) =>
-  api.get<TopupRequest[]>("/admin/topups", { query: { status } });
+export const listTopups = (status?: TopupStatus, q?: string) =>
+  api.get<TopupRequest[]>("/admin/topups", { query: { status, q } });
 
 /** **المبلغُ مبلغُ المشرف** — ما وصل الحسابَ فعلاً، لا ما ادّعاه المستخدم.
  *  و`undefined` تعني «بمبلغه كما هو» لمن طابق ما وصل. */
@@ -408,8 +423,8 @@ export const confirmTopup = (id: string, amount?: string) =>
 export const rejectTopup = (id: string, note?: string) =>
   api.post<TopupRequest>(`/admin/topups/${id}/reject`, { note: note ?? null });
 
-export const listWithdrawals = (status?: WithdrawalStatus) =>
-  api.get<Withdrawal[]>("/admin/withdrawals", { query: { status } });
+export const listWithdrawals = (status?: WithdrawalStatus, q?: string) =>
+  api.get<Withdrawal[]>("/admin/withdrawals", { query: { status, q } });
 
 export const approveWithdrawal = (id: string) =>
   api.post<Withdrawal>(`/admin/withdrawals/${id}/approve`, {});
@@ -425,9 +440,13 @@ export const markWithdrawalPaid = (id: string, reference: string) =>
 
 // ------------------------------------------------------------ النزاعات
 
-export const listPayments = (status?: PaymentStatus, country?: CountryCode) =>
+export const listPayments = (
+  status?: PaymentStatus,
+  country?: CountryCode,
+  q?: string,
+) =>
   api.get<Payment[]>("/admin/payments", {
-    query: { status, country_code: country },
+    query: { status, country_code: country, q },
   });
 
 /** فصلُ النزاع: `paid` وصل المال فتصير `confirmed`، و`unpaid` فتصير `failed`. */
@@ -557,11 +576,14 @@ export const getReferralSummary = (country: CountryCode) =>
 
 /** جدولُ الإحالات — و**دولةُ المُحيلة** هي مقياسُ الفرز: مالُ المكافأة يخرج
  *  من ميزانية سوقه ويدخل محفظته بعملته. */
-export const listReferrals = (country: CountryCode, rewarded?: boolean) =>
-  api.get<AdminReferralRow[]>(
-    `/admin/referrals?country_code=${country}` +
-      (rewarded === undefined ? "" : `&rewarded=${rewarded}`),
-  );
+export const listReferrals = (
+  country: CountryCode,
+  rewarded?: boolean,
+  q?: string,
+) =>
+  api.get<AdminReferralRow[]>("/admin/referrals", {
+    query: { country_code: country, rewarded, q },
+  });
 
 // ------------------------------------------------------------ العقود
 
@@ -680,6 +702,7 @@ export const listSubscriptions = (
     subscription_status?: SubscriptionStatus;
     driver_id?: string;
     country_code?: CountryCode;
+    q?: string;
     limit?: number;
     offset?: number;
   } = {},
@@ -770,6 +793,7 @@ export const listAuditLogs = (
     action?: AuditAction;
     actor_id?: string;
     entity_id?: string;
+    q?: string;
     limit?: number;
     offset?: number;
   } = {},
@@ -835,11 +859,11 @@ export const updateCancellationSettings = (
 export const listCancellationCharges = (
   country: CountryCode,
   status?: CancellationChargeStatus,
+  q?: string,
 ) =>
-  api.get<CancellationChargeRow[]>(
-    `/admin/cancellation-charges?country_code=${country}` +
-      (status ? `&status=${status}` : ""),
-  );
+  api.get<CancellationChargeRow[]>("/admin/cancellation-charges", {
+    query: { country_code: country, status, q },
+  });
 
 /** الإعفاء — **بابُ الاعتراض بعد الحدث**، وسببُه مطلوبٌ لا اختياري. */
 export const waiveCancellationCharge = (id: string, reason: string) =>
@@ -856,8 +880,8 @@ export const writeOffCancellationCharge = (id: string, reason: string) =>
   );
 
 /** السلفُ بمتبقّيها — **مطروحاً في الخلفية** لا في المتصفح. */
-export const listAdvances = (status?: string) =>
-  api.get<AdvanceRow[]>("/admin/drivers/advances" + (status ? `?status=${status}` : ""));
+export const listAdvances = (status?: string, q?: string) =>
+  api.get<AdvanceRow[]>("/admin/drivers/advances", { query: { status, q } });
 
 /** صرفٌ بموافقة مشرف — البابُ الوحيد لما يتجاوز سقفَ الكبتن. */
 export const disburseAdvance = (payload: { driver_id: string; amount: string }) =>
@@ -1059,6 +1083,7 @@ export const listSkinPurchases = (params: {
   limit?: number;
   offset?: number;
   skin_id?: string;
+  q?: string;
 }) =>
   api.get<SkinPurchases>(
     `/admin/vehicle-skins/purchases?${new URLSearchParams(
@@ -1181,10 +1206,8 @@ export const rejectCliqClaim = (id: string, reason: string) =>
   api.post<CliqClaim>(`/admin/cliq-claims/${id}/reject`, { reason });
 
 /** مستحقّاتُ الكباتن — **والمتبقّي `amount - collected` يُقرأ من العمودين**. */
-export const listDriverDebts = (status?: string) =>
-  api.get<DriverDebtRow[]>(
-    "/admin/drivers/debts" + (status ? `?status=${status}` : ""),
-  );
+export const listDriverDebts = (status?: string, q?: string) =>
+  api.get<DriverDebtRow[]>("/admin/drivers/debts", { query: { status, q } });
 
 /** مطالباتُ السداد المعلّقة — ما ينتظر عينَ مشرف. */
 export const listDebtClaims = () =>

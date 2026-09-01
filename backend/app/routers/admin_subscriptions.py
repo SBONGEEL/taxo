@@ -32,6 +32,7 @@ async def list_subscriptions(
     subscription_status: SubscriptionStatus | None = None,
     driver_id: uuid.UUID | None = None,
     country_code: CountryCode | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[SubscriptionOut]:
@@ -43,6 +44,7 @@ async def list_subscriptions(
         country_code=country_code,
         limit=limit,
         offset=offset,
+        q=q,
     )
     return [SubscriptionOut.from_subscription(row) for row in rows]
 

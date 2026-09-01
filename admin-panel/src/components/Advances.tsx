@@ -76,6 +76,7 @@ export function Advances({ onError }: { onError: (message: string) => void }) {
       </p>
 
       <Table
+        height="compact"
         columns="1fr 0.9fr 0.9fr 0.8fr 0.9fr 1.6fr"
         headers={["الكبتن", "المبلغ", "المتبقّي", "الحالة", "المهلة", ""]}
         rows={rows}

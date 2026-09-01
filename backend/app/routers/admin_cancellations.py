@@ -32,7 +32,7 @@ from app.models.enums import CancellationChargeStatus, CountryCode
 from app.models.ride import Ride
 from app.models.user import User
 from app.schemas.cancellation import CancellationChargeRow, ChargeReasonRequest
-from app.services import cancellation
+from app.services import admin_search, cancellation
 
 router = APIRouter(prefix="/admin/cancellation-charges", tags=["admin"])
 
@@ -105,6 +105,7 @@ async def list_charges(
     session: DbSession,
     country_code: CountryCode | None = None,
     status: CancellationChargeStatus | None = None,
+    q: str | None = Query(default=None, max_length=120, description="اسمُ طرفٍ أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[CancellationChargeRow]:
@@ -113,6 +114,12 @@ async def list_charges(
         stmt = stmt.where(Ride.country_code == country_code)
     if status is not None:
         stmt = stmt.where(RideCancellationCharge.status == status)
+    # **مرشِّحٌ فقط** (`services/admin_search.py`) — الراكبُ أو الكبتن
+    term = admin_search.normalize(q)
+    if term is not None:
+        stmt = stmt.where(
+            admin_search.any_user_clause(term, Ride.rider_id, Ride.driver_id)
+        )
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     return [_row(record) for record in rows]
