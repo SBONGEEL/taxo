@@ -309,3 +309,24 @@ class CliqClaimOut(BaseModel):
     purpose: ProviderOrderPurpose
     failure_reason: str | None
     created_at: datetime
+    # **من دفع — بالاسم والرقم** (قرارُ المالك 2026-09-01).
+    #
+    # **وكانت القائمةُ تعرض مبلغاً ومرجعاً ووقتاً ولا شيءَ يقول من**: الحمولةُ
+    # تحمل `user_id` (UUID) **والجدولُ لا يعرضه أصلاً**. فالمشرفُ يرى حوالةً
+    # ولا يعرف صاحبَها إلا بأن يبحث عن المرجع في مكانٍ آخر.
+    #
+    # **والرقمُ معه لا الاسمُ وحدَه**: أسماءٌ تتشابه، **والرقمُ هو المُعرِّف**
+    # — وهو ما يطابق به المشرفُ الحوالةَ في كشف حسابه.
+    payer_name: str | None = None
+    payer_phone: str | None = None
+    #: **لحظةُ قوله «حوّلتُ»** — و`null` تعني «فتح الشاشةَ ولم يقل شيئاً بعد»
+    declared_paid_at: datetime | None = None
+
+
+class RejectClaimIn(BaseModel):
+    """رفضُ مطالبةٍ يدويّة — **بسببٍ مكتوبٍ يقرؤه صاحبُها**."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: **ثمانيةُ أحرفٍ حدّاً أدنى** — كسبب إطفاء الحارس: «لا» و«خطأ» ليستا سبباً
+    reason: str = Field(min_length=8, max_length=255)

@@ -72,6 +72,9 @@ class DebtClaimOut(BaseModel):
     failure_reason: str | None = None
     created_at: datetime
     qr_url: str | None = None
+    #: **لحظةُ قوله «حوّلتُ»** — و`null` تعني «فتح الشاشةَ ولم يقل بعد».
+    #: **وعليها تُبنى حالُ الشاشة**: زرُّ «تمّ الدفع» أو نافذةُ المراجعة.
+    declared_paid_at: datetime | None = None
     alias: str = ""
     review_min_minutes: int = 3
     review_max_minutes: int = 5

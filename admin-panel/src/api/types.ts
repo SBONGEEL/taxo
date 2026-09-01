@@ -1324,6 +1324,13 @@ export type SkinArtworkPreview = {
 
 /** مطالبةُ دفعٍ يدويّة — **ومصدرُها معها** فيُقرأ في التدقيق ولا يُخمَّن. */
 export interface CliqClaim {
+  /** **من دفع — بالاسم والرقم** (قرارُ المالك 2026-09-01).
+   *
+   *  وكانت القائمةُ تعرض مبلغاً ومرجعاً ووقتاً **ولا شيءَ يقول من**. */
+  payer_name: string | null;
+  payer_phone: string | null;
+  /** **لحظةُ قوله «حوّلتُ»** — و`null` تعني «فتح الشاشةَ ولم يقل بعد». */
+  declared_paid_at: string | null;
   id: string;
   cart_id: string;
   user_id: string;

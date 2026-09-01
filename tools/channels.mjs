@@ -37,6 +37,11 @@ export function resolve(channelName, app) {
     appName: perApp.appName,
     appIdSuffix: channel.appIdSuffix,
     appId: `${base}${channel.appIdSuffix}`,
+    // **خاصٌّ: لا يُنشر على صفحة التحميل** (قرارُ المالك 2026-09-01) —
+    // تطبيقُ مشرفٍ يُثبَّت باليد، فلا يُنزّله أحدٌ ولا يُرى.
+    // **والقيمةُ من الجدول لا من اسم التطبيق**: شرطٌ مكتوبٌ في `channels.json`
+    // يُقرأ، **واستنتاجٌ من الاسم يسقط أوّلَ تطبيقٍ خاصٍّ ثانٍ**.
+    private: perApp.private === true,
   };
 }
 

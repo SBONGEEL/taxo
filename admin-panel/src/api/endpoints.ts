@@ -1168,6 +1168,18 @@ export const listCliqClaims = (country?: CountryCode) =>
 export const confirmCliqClaim = (id: string, amount: string) =>
   api.post<CliqClaim>(`/admin/cliq-claims/${id}/confirm`, { amount });
 
+/** **من ضغط «تمّ الدفع» وينتظر** — صفحةُ المدفوعات تقرأ هذا الباب.
+ *
+ * **وهي غيرُ `listCliqClaims`**: تلك تعرض **كلَّ من فتح الشاشة**، وهذه **من
+ * قال إنه حوّل**. ومن فتح ونسي لا ينتظر شيئاً.
+ */
+export const listDeclaredClaims = (country?: CountryCode) =>
+  api.get<CliqClaim[]>("/admin/cliq-claims/declared", { query: { country } });
+
+/** **رفضٌ بسببٍ مكتوبٍ يُعرض على صاحبه** — و«مرفوض» وحدَها تُنتج مكالمةَ دعم. */
+export const rejectCliqClaim = (id: string, reason: string) =>
+  api.post<CliqClaim>(`/admin/cliq-claims/${id}/reject`, { reason });
+
 /** مستحقّاتُ الكباتن — **والمتبقّي `amount - collected` يُقرأ من العمودين**. */
 export const listDriverDebts = (status?: string) =>
   api.get<DriverDebtRow[]>(

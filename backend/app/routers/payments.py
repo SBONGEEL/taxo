@@ -20,12 +20,15 @@ from app.models.ride import Ride
 from app.schemas.payment import (
     CardOrderOut,
     CliqChargeOut,
+    CliqDeclareOut,
     CliqReferenceRequest,
     PaymentCreate,
     PaymentDisputeRequest,
     PaymentOut,
     RidePaymentsOut,
 )
+from app.services import cliq_claims
+from app.services.push.base import PushMessage
 from app.services import settlement
 from app.services import (
     cancellation,
@@ -221,3 +224,52 @@ async def dispute_payment(
     )
     await session.commit()
     return PaymentOut.model_validate(payment)
+
+
+@router.post("/payments/cliq/{cart_id}/declare", response_model=CliqDeclareOut)
+async def declare_cliq_paid(
+    cart_id: str, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> CliqDeclareOut:
+    """**«حوّلتُ»** — بابٌ واحدٌ للمطالبات اليدويّة كلِّها (قرارُ المالك 2026-09-01).
+
+    **ولمَ بابٌ واحدٌ لا بابٌ لكلِّ غرض**: الأغراضُ اليومَ اثنان — اشتراكٌ
+    ودَين — وقد تصير ثلاثة. **وثلاثةُ أبوابٍ تفترق أوّلَ تعديل**، ومفتاحُها
+    كلِّها واحدٌ هو `cart_id`.
+
+    **والضغطةُ الثانيةُ تُعيد الصفَّ نفسَه ولا تصيح**: من ضغط ثانيةً لم يخطئ —
+    الشبكةُ بطيئةٌ أو الشاشةُ لم تتحدّث. **وخطأٌ هنا يعلّم صاحبَه أنه أفسد
+    شيئاً وهو لم يفعل.**
+    """
+    order = await cliq_claims.declare_paid(session, cart_id=cart_id, user=user)
+    await session.commit()
+
+    # **والإشعارُ بعد الإيداع** — قاعدةُ المشروع: حالٌ تُعلن ثم تتراجع
+    # معاملتُها **تصل صاحبَها ولا تقع**.
+    #
+    # **ويصل المشرفَ لحظةَ الضغط** (قرارُ المالك 2026-09-01): صاحبُ المال
+    # ينتظر، **وقائمةٌ لا يعلم بها أحدٌ حتى يفتحها تجعل الانتظارَ بطول عادةِ
+    # من يفتح**.
+    #
+    # **وصفُّ صندوق الوارد يُكتب ولو لم يكن ثمة عقدُ FCM ولا جهازٌ مسجَّل**
+    # (`_safe_notify`) — فالإشعارُ **قائمٌ اليوم**، والدفعُ إلى الهاتف يصل
+    # يومَ يسجّل غلافُ المشرف جهازَه. **ولا يُنتظر الغلافُ ليُبنى الإرسال.**
+    for admin in await cliq_claims.admins_of(session, order.country_code):
+        await notifications._safe_notify(
+            session,
+            redis,
+            user_id=admin.id,
+            message=PushMessage(
+                title="حوالةُ كليك بانتظار تأكيدك",
+                body=(
+                    f"{user.name} يقول إنه حوّل {order.amount} "
+                    f"{order.currency.value} — المرجع {order.cart_id}"
+                ),
+                data=cliq_claims.declared_notice(order),
+            ),
+        )
+
+    return CliqDeclareOut(
+        cart_id=order.cart_id,
+        declared_paid_at=order.declared_paid_at,
+        status=order.status,
+    )

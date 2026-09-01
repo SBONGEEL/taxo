@@ -192,3 +192,16 @@ class SavedCardOut(BaseModel):
     expiry_year: int
     is_default: bool
     created_at: datetime
+
+
+class CliqDeclareOut(BaseModel):
+    """جوابُ «حوّلتُ» — **وقتُ الختم هو ما تقرؤه الشاشة**.
+
+    **ولا يُعاد الصفُّ كلُّه**: الشاشةُ تملكه أصلاً، **وما لا تملكه هو أن
+    الختمَ وقع ومتى** — فتُبدّل حالَها وتعرض نافذةَ المراجعة.
+    """
+
+    cart_id: str
+    #: **لحظةُ قوله «حوّلتُ»** — و`null` لا تقع من هذا الباب أبداً
+    declared_paid_at: datetime | None = None
+    status: ProviderOrderStatus

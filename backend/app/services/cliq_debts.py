@@ -211,6 +211,7 @@ async def claim_out(session: AsyncSession, order: ProviderOrder):
         currency=order.currency,
         status=order.status,
         failure_reason=order.failure_reason,
+        declared_paid_at=order.declared_paid_at,
         created_at=order.created_at,
         # **رمزُ السوق نفسُه**: حسابُ كليك واحدٌ للسوق والصورةُ واحدة، فلا
         # مسارٌ ثانٍ يخدم الملفَّ نفسَه

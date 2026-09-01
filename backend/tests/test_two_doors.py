@@ -153,6 +153,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
     # ✅ بانٍ واحد
+    "CliqClaimOut": (
+        "بانٍ واحد: `cliq_claims.claim_row` يخدم الأربعة — القائمتين "
+        "والتأكيدَ والرفض. **ويجلب الدافعَ بنفسه** فلا يعتمد على ترتيب "
+        "المستدعي، وقد سقط مرّتين حين اعتمد عليه (`MissingGreenlet`)"
+    ),
     "VerificationCampaignOut": (
         "بانٍ واحد: `admin_verification_campaigns._out` يخدم الأبوابَ الأربعة "
         "كلَّها — القراءةَ والإنشاءَ والإطلاقَ والإلغاء. و`scope_size` "

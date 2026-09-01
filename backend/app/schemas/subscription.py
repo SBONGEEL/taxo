@@ -144,6 +144,9 @@ class CliqSubscriptionOut(BaseModel):
     status: ProviderOrderStatus
     #: **صورةُ الرمز** — مسارٌ يُخدَم، و`null` تعني «لم تُرفع» فلا تُرسم صورةٌ فارغة
     qr_url: str | None = None
+    #: **لحظةُ قوله «حوّلتُ»** — و`null` تعني «فتح الشاشةَ ولم يقل بعد».
+    #: **وعليها تُبنى حالُ الشاشة**: زرُّ «تمّ الدفع» أو نافذةُ المراجعة.
+    declared_paid_at: datetime | None = None
     alias: str
     review_min_minutes: int
     review_max_minutes: int

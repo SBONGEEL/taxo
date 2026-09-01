@@ -24,12 +24,14 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
     String,
@@ -178,6 +180,19 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
     # مرجع الردّ لدى المزود حين تُستردّ الدفعة عبره (SPEC القسم 6.4). الحالة
     # تبقى `paid` — الطلبُ دُفع فعلاً، والردُّ حركةٌ تالية له لا نقضٌ لتاريخه
     refund_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    # **لحظةُ قول صاحبِه «حوّلتُ»** (قرارُ المالك 2026-09-01) — للمطالبات
+    # اليدويّة وحدَها.
+    #
+    # **ولمَ عمودٌ ولا تكفي `status = created`**: تلك تعني **«فُتحت الشاشة»**
+    # لا **«حوّلتُ»**. فقائمةُ المشرف كانت تخلط من فتح ونسي بمن دفع فعلاً —
+    # **وهو ينتظر تأكيداً لمالٍ خرج من حسابه**، والأولُ لا ينتظر شيئاً.
+    #
+    # **وثانياً**: هو ما يجعل الضغطةَ الثانيةَ لا تُنشئ شيئاً — الحقلُ مختومٌ
+    # فيُعاد الصفُّ نفسُه بلا صياح. **وصفٌّ ثانٍ لتحويلٍ واحدٍ يُقرأ دفعتين.**
+    declared_paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
 

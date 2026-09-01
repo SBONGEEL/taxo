@@ -241,6 +241,8 @@ async def test_two_confirmations_of_one_cliq_claim_activate_once(
         ),
         timeout=30.0,
     )
+    bad = [r for r in responses if isinstance(r, BaseException)]
+    assert not bad, f"استثناء: {bad!r}"
     ok = [r for r in responses if not isinstance(r, BaseException)]
     codes = _statuses(ok)
     assert codes[200] == 1, f"لم يمرّ تأكيدٌ واحدٌ بالضبط — {codes}"

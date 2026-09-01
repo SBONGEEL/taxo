@@ -18,7 +18,14 @@
     "",
     "**واسمُ نكهةِ gradle مذكورٌ هنا لأنه لا يساوي اسمَ القناة دائماً**:",
     "`test` محجوزٌ في AGP (مجموعةُ اختبارات الوحدة `src/test/`)، فنكهةُ",
-    "القناة التجريبية اسمُها `trial`. **والذكرُ هنا يمنع أن يفترق الاسمان**."
+    "القناة التجريبية اسمُها `trial`. **والذكرُ هنا يمنع أن يفترق الاسمان**.",
+    "",
+    "**وخامسٌ منذ 2026-09-01: غلافُ المشرف** — تطبيقٌ حول اللوحة نفسِها",
+    "بمساراتٍ مخصَّصةٍ للهاتف (`/m/*`)، **لا مشروعٌ رابع**: ما ينسخه المشروعُ",
+    "الرابع (الجلسة والصلاحيات وعقد الأخطاء وسلّم التصميم) هو بعينه ما يفترق.",
+    "",
+    "**و`private: true` تعني: لا يُنشر على صفحة التحميل** — تطبيقُ مشرفٍ",
+    "يُثبَّت باليد، فلا يُنزّله أحدٌ ولا يُرى. ويحرسه `tools/check-apk.mjs`."
   ],
   "channels": {
     "public": {
@@ -33,6 +40,11 @@
         "driver-app": {
           "shellUrl": "https://driver.tajora.ly",
           "appName": "TAXO Driver"
+        },
+        "admin-panel": {
+          "shellUrl": "https://panel.tajora.ly",
+          "appName": "TAXO المشرف",
+          "private": true
         }
       },
       "gradleFlavor": "public"
@@ -49,6 +61,11 @@
         "driver-app": {
           "shellUrl": "https://dev-driver.tajora.ly",
           "appName": "TAXO كبتن تجريبي"
+        },
+        "admin-panel": {
+          "shellUrl": "https://dev-panel.tajora.ly",
+          "appName": "TAXO مشرف تجريبي",
+          "private": true
         }
       },
       "gradleFlavor": "trial"
@@ -56,6 +73,7 @@
   },
   "baseAppId": {
     "customer-app": "ly.tajora.rider",
-    "driver-app": "ly.tajora.driver"
+    "driver-app": "ly.tajora.driver",
+    "admin-panel": "ly.tajora.admin"
   }
 }

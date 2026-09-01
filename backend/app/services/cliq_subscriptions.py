@@ -29,6 +29,7 @@ from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import InvalidInput, InvalidStatusTransition, NotFound
 from app.models.driver import Driver
@@ -222,6 +223,10 @@ async def list_pending(session: AsyncSession, *, country=None) -> list[ProviderO
     )
     if country is not None:
         query = query.where(ProviderOrder.country_code == country)
+    # **وصاحبُها يُحمَّل معها** (2026-09-01): اللوحةُ صارت تعرض اسمَه ورقمَه،
+    # **وقراءةٌ كسولةٌ لكلِّ صفٍّ تعني استعلاماً لكلِّ سطرٍ في القائمة** —
+    # ومع صفٍّ واحدٍ لا يُرى، ومع خمسين يُرى.
+    query = query.options(selectinload(ProviderOrder.user))
     rows = await session.scalars(query.order_by(ProviderOrder.created_at.desc()))
     return list(rows)
 
@@ -253,5 +258,6 @@ async def claim_out(session: AsyncSession, order: ProviderOrder):
         review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
         review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
         failure_reason=order.failure_reason,
+        declared_paid_at=order.declared_paid_at,
         created_at=order.created_at,
     )

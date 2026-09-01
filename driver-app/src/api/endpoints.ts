@@ -8,6 +8,7 @@ import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
 import { API_URL, api, upload } from "@/api/client";
 import type {
+  CliqDeclare,
   CliqSubscriptionClaim,
   MyProgress,
   Advance,
@@ -559,3 +560,12 @@ export const listMyDebtClaims = () =>
  */
 export const getStorefront = () =>
   api.get<Storefront>("/storefront", { query: { surface: "driver" } });
+
+
+/** **«حوّلتُ»** — بابٌ واحدٌ للمطالبات اليدويّة كلِّها (قرارُ المالك 2026-09-01).
+ *
+ * **وضغطةٌ ثانيةٌ تُعيد الوقتَ الأوّل ولا تُنشئ طلباً ثانياً ولا تصيح**: من
+ * ضغط ثانيةً لم يخطئ — الشبكةُ بطيئةٌ أو الشاشةُ لم تتحدّث.
+ */
+export const declareCliqPaid = (cartId: string) =>
+  api.post<CliqDeclare>(`/payments/cliq/${cartId}/declare`);

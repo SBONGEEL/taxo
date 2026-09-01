@@ -29,6 +29,7 @@ from app.schemas.wallet import (
     AdminTopupCreate,
     MarkPaidRequest,
     CliqClaimOut,
+    RejectClaimIn,
     ConfirmTopup,
     RejectRequest,
     TopupRequestOut,
@@ -38,6 +39,7 @@ from app.schemas.wallet import (
     WithdrawalOut,
     WithdrawalPayoutOut,
 )
+from app.services import cliq_claims
 from app.services import cliq_subscriptions, commission_view
 from app.services import (
     audit,
@@ -371,7 +373,7 @@ async def list_cliq_claims(
 ) -> list[CliqClaimOut]:
     """المطالباتُ اليدويةُ المعلّقة — **ما ينتظر عينَ مشرف**."""
     rows = await cliq_subscriptions.list_pending(session, country=country)
-    return [CliqClaimOut.model_validate(row) for row in rows]
+    return [CliqClaimOut(**await cliq_claims.claim_row(session, row)) for row in rows]
 
 
 @router.post("/cliq-claims/{order_id}/confirm", response_model=CliqClaimOut)
@@ -391,5 +393,57 @@ async def confirm_cliq_claim(
     order, _activated = await cliq_subscriptions.confirm_payment(
         session, order_id=order_id, actor=admin, credited=payload.amount
     )
+    # **الحمولةُ تُبنى قبل الإيداع، والبانِي يجلب الدافعَ بنفسه** — فقراءةُ
+    # علاقةٍ بعد `commit` (أو بعد `flush` يفرّغ ما قبله) تُحمَّل كسولاً خارج
+    # السياق: `MissingGreenlet` بعينه. **وقِيس مرّتين في يومٍ واحد** —
+    # أمسكه `test_two_confirmations_of_one_cliq_claim_activate_once`.
+    row = await cliq_claims.claim_row(session, order)
     await session.commit()
-    return CliqClaimOut.model_validate(order)
+    return CliqClaimOut(**row)
+
+
+@router.get("/cliq-claims/declared", response_model=list[CliqClaimOut])
+async def list_declared_claims(
+    _: AdminUser, session: DbSession, country: CountryCode | None = None
+) -> list[CliqClaimOut]:
+    """**من ضغط «حوّلتُ» وينتظر** — صفحةُ المدفوعات تقرأ هذا الباب.
+
+    **وهي غيرُ `/cliq-claims`**: تلك تعرض **كلَّ من فتح الشاشة**، وهذه **من
+    قال إنه حوّل**. ومن فتح ونسي لا ينتظر شيئاً، **ومن حوّل ينتظر تأكيداً
+    لمالٍ خرج من حسابه**.
+
+    **والأغراضُ كلُّها فيها** — اشتراكاً كانت أو دَيناً: صاحبُ المال ينتظر
+    الجوابَ نفسَه، **وقائمتان لانتظارٍ واحدٍ تُنسى إحداهما**.
+    """
+    rows = await cliq_claims.declared_pending(session, country=country)
+    return [CliqClaimOut(**await cliq_claims.claim_row(session, row)) for row in rows]
+
+
+@router.post("/cliq-claims/{order_id}/reject", response_model=CliqClaimOut)
+async def reject_cliq_claim(
+    order_id: uuid.UUID,
+    payload: RejectClaimIn,
+    admin: AdminUser,
+    session: DbSession,
+) -> CliqClaimOut:
+    """**رفضٌ بسببٍ مكتوبٍ يُعرض على صاحبه** (قرارُ المالك 2026-09-01).
+
+    **ولا رفضَ صامت**: من حوّل مالاً ورُفض طلبُه يستحق أن يعرف لماذا —
+    و«مرفوض» وحدَها تُنتج مكالمةَ دعمٍ لا جواباً.
+    """
+    order = await cliq_claims.reject(
+        session, order_id=order_id, reason=payload.reason
+    )
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="provider_order",
+        entity_id=order.id,
+        # **والسببُ يُسجَّل نصّاً** — وهو من الاستثناء المكتوب: سببٌ يكتبه
+        # مشرفٌ **هو جوهرُ القيد**، لا قيمةَ حقلٍ تُخفى
+        details={"action": "reject", "reason": payload.reason},
+    )
+    row = await cliq_claims.claim_row(session, order)
+    await session.commit()
+    return CliqClaimOut(**row)

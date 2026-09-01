@@ -39,6 +39,11 @@ const CampaignsScreen = lazy(() =>
 const DriversScreen = lazy(() =>
   import("@/screens/Drivers").then((m) => ({ default: m.DriversScreen })),
 );
+const MobilePaymentsScreen = lazy(() =>
+  import("@/screens/MobilePayments").then((m) => ({
+    default: m.MobilePayments,
+  })),
+);
 const FinanceScreen = lazy(() =>
   import("@/screens/Finance").then((m) => ({ default: m.FinanceScreen })),
 );
@@ -225,6 +230,18 @@ export default function App() {
                     element={
                       <Guarded>
                         <DriversScreen />
+                      </Guarded>
+                    }
+                  />
+                  {/* **مساراتُ الهاتف** — بتخطيطٍ ثانٍ بلا غلاف اللوحة،
+                      وتقرأ المسارات نفسَها. **ولا مشروعٌ رابع**: ما ينسخه
+                      المشروعُ الرابع (الجلسة والصلاحيات وعقد الأخطاء
+                      والسلّم) هو بعينه ما يفترق. */}
+                  <Route
+                    path="/m/payments"
+                    element={
+                      <Guarded>
+                        <MobilePaymentsScreen />
                       </Guarded>
                     }
                   />

@@ -969,6 +969,9 @@ export interface CliqSubscriptionClaim {
   currency: Currency;
   status: "created" | "paid" | "failed" | "cancelled";
   qr_url: string | null;
+  /** **لحظةُ قوله «حوّلتُ»** — و`null` تعني «فتح الشاشةَ ولم يقل بعد».
+   *  **وعليها تُبنى حالُ الشاشة**: زرُّ «تمّ الدفع» أو نافذةُ المراجعة. */
+  declared_paid_at: string | null;
   alias: string;
   review_min_minutes: number;
   review_max_minutes: number;
@@ -1020,6 +1023,9 @@ export interface DebtClaim {
   failure_reason: string | null;
   created_at: string;
   qr_url: string | null;
+  /** **لحظةُ قوله «حوّلتُ»** — و`null` تعني «فتح الشاشةَ ولم يقل بعد».
+   *  **وعليها تُبنى حالُ الشاشة**: زرُّ «تمّ الدفع» أو نافذةُ المراجعة. */
+  declared_paid_at: string | null;
   alias: string;
   review_min_minutes: number;
   review_max_minutes: number;
@@ -1062,4 +1068,13 @@ export interface PromoBanner {
 export interface Storefront {
   tiles: ServiceTile[];
   banners: PromoBanner[];
+}
+
+
+/** جوابُ «حوّلتُ» — **وقتُ الختم هو ما تقرؤه الشاشة**. */
+export interface CliqDeclare {
+  cart_id: string;
+  /** **لحظةُ قوله «حوّلتُ»** — و`null` لا تقع من هذا الباب أبداً. */
+  declared_paid_at: string | null;
+  status: "created" | "paid" | "failed" | "cancelled";
 }
