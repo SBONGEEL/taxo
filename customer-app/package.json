@@ -28,11 +28,11 @@
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^9.1.2",
     "@aparajita/capacitor-secure-storage": "^7.1.6",
-    "@capacitor/android": "^7.6.8",
-    "@capacitor/app": "^7.1.2",
-    "@capacitor/app-launcher": "^7.0.4",
-    "@capacitor/core": "^7.6.8",
-    "@capacitor/geolocation": "^7.1.8",
+    "@capacitor/android": "7.6.8",
+    "@capacitor/app": "7.1.2",
+    "@capacitor/app-launcher": "7.0.4",
+    "@capacitor/core": "7.6.8",
+    "@capacitor/geolocation": "7.1.8",
     "@mapbox/mapbox-gl-rtl-text": "^0.4.0",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-slot": "^1.1.1",
@@ -51,7 +51,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.6.8",
+    "@capacitor/cli": "7.6.8",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^22.10.5",
     "@types/qrcode": "^1.5.5",

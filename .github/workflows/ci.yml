@@ -425,6 +425,67 @@ jobs:
           PY
           done
 
+      # === غلافُ المشرف — **خامسٌ خارج الأربع، ولا يمسّ منطقَها** (2026-09-01)
+      #
+      # **خطوةٌ مستقلّةٌ لا توسيعٌ للحلقة**: الأربعُ حزمٌ عامّةٌ تنزل صفحةَ
+      # التحميل، وهذه **خاصّةٌ تُثبَّت باليد** (`private: true` في الجدول،
+      # ويحرسه `tools/check-apk.mjs`). **وخلطُها بالحلقة يجعل عطبَها عطبَ
+      # الأربع** — وهو ما مُنع صراحةً.
+      #
+      # **والتخطّي معلَنٌ لا صامت**: السرُّ `GOOGLE_SERVICES_B64` يلزم أن يحمل
+      # ستّةَ عملاء، **وكان أربعةً** — فحتى يُحدَّث تُبنى الأربعُ ويُقال إن
+      # الخامسَ لم يُبنَ **وسببُه**. ولولا هذا لسقطت حزمُ الناس على سرٍّ ينقصه
+      # عميلٌ لتطبيقٍ لا ينزّله أحد.
+      #
+      # **ولا يستر التخطّي عطباً**: «حزمةُ مشرفٍ بلا Firebase» **مستحيلةٌ لا
+      # مستبعَدة** — `admin-panel/android/app/build.gradle` يرمي
+      # `GradleException` بلا الملفّ (قِيس بالنفي). فالمتخطَّى **بناءٌ لم يقع**،
+      # لا بناءٌ وقع ناقصاً.
+      - name: غلافُ المشرف — بحزمتيه، إن كان السرُّ يحملهما
+        env:
+          GS_B64: ${{ secrets.GOOGLE_SERVICES_B64 }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/taxo-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GS_B64" | base64 -d > admin-panel/android/app/google-services.json
+          if ! python3 - admin-panel/android/app/google-services.json <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1], encoding="utf-8"))
+          clients = {c["client_info"]["android_client_info"]["package_name"] for c in d["client"]}
+          need = {"ly.tajora.admin", "ly.tajora.admin.test"}
+          missing = need - clients
+          if missing:
+              print(f"ADMIN_CLIENTS_MISSING {sorted(missing)}")
+              raise SystemExit(1)
+          print(f"  ✓ عميلا المشرف في السرّ ({len(clients)} عملاء جملةً)")
+          PY
+          then
+            rm -f admin-panel/android/app/google-services.json
+            echo "ADMIN_APK_SKIPPED — السرُّ GOOGLE_SERVICES_B64 لا يحمل عميلَي المشرف."
+            echo "  والأربعُ العامّةُ غيرُ متأثّرة. لبنائه: حدِّث السرَّ بملفٍّ من Firebase فيه"
+            echo "  ly.tajora.admin و ly.tajora.admin.test، ثمّ أعِد الوسم."
+            exit 0
+          fi
+          ( cd admin-panel && npm ci --silent )
+          for channel in public test; do
+            flavor="$(node -e "import('./tools/channels.mjs').then(m=>process.stdout.write(m.TABLE.channels['$channel'].gradleFlavor))")"
+            task="assemble$(printf '%s' "$flavor" | sed 's/^./\U&/')Release"
+            echo "---- admin-panel | channel=$channel | flavor=$flavor | $task ----"
+            TAXO_CHANNEL="$channel" node tools/build-channel.mjs admin-panel
+            ( cd admin-panel && TAXO_CHANNEL="$channel" npx cap sync android )
+            ( cd admin-panel/android && TAXO_CHANNEL="$channel" sh gradlew "$task" --no-daemon -q )
+          done
+          # **والتوقيعُ يُقرأ من الحزمة لا من سجلِّ البناء** — كالأربع
+          APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -1)"
+          for flavor in public trial; do
+            f="admin-panel/android/app/build/outputs/apk/$flavor/release/app-$flavor-release.apk"
+            [ -f "$f" ] || { echo "APK_MISSING $f"; exit 1; }
+            "$APKSIGNER" verify --print-certs "$f" | grep -Ei 'SHA-256 digest|Signer #1 certificate DN'
+          done
+
       - name: بناءُ الأربع
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/taxo-release.jks

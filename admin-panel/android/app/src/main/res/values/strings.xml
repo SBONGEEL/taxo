@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TAXO المشرف</string>
+    <string name="title_activity_main">TAXO المشرف</string>
+    <string name="package_name">ly.tajora.admin</string>
+    <string name="custom_url_scheme">ly.tajora.admin</string>
+</resources>

@@ -9,12 +9,13 @@
  * والدولةُ الافتراضية من `/config` لا مكتوبةً هنا، فمزوّدُها تحت `Boot`.
  */
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import {
   Navigate,
   Route,
   BrowserRouter as Router,
   Routes,
+  useNavigate,
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -23,6 +24,7 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { CountriesProvider } from "@/lib/countries";
 import { CountryProvider } from "@/lib/country";
+import { listenToPushTaps } from "@/lib/push";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider } from "@/lib/theme";
 import { LoginScreen } from "@/screens/Login";
@@ -172,6 +174,32 @@ function SecurityGuarded({ children }: { children: ReactNode }) {
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+/** نقرةُ الإشعار تفتح وجهتَها — **داخل `Router` لأن `useNavigate` يحتاجه**.
+ *
+ * **ولا تُرسم شيئاً**: مستمعٌ يعيش ما عاش التطبيق، ويُفكّ عند التفكيك. وفي
+ * المتصفح `listenToPushTaps` يعيد دالّةً فارغةً بلا نداءٍ ولا خطأ.
+ *
+ * **ولمَ لا يُعلَّق داخل الجلسة؟** لأن `SessionProvider` **خارج** `Router`،
+ * ومستمعٌ يقود إلى مسارٍ لا يملك مُوجِّهاً يحتاج `window.location` — فيُعيد
+ * تحميلَ الصفحة كاملةً ويُسقط الجلسةَ من الذاكرة.
+ */
+function PushTaps() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    let dropped = false;
+    void listenToPushTaps((path) => navigate(path)).then((off) => {
+      if (dropped) off();
+      else unlisten = off;
+    });
+    return () => {
+      dropped = true;
+      unlisten?.();
+    };
+  }, [navigate]);
+  return null;
+}
+
 function Anonymous({ children }: { children: ReactNode }) {
   const { user } = useSession();
   return user ? <Navigate to="/campaigns" replace /> : <>{children}</>;
@@ -184,6 +212,7 @@ export default function App() {
         <SessionProvider>
           <Boot>
             <Router>
+              <PushTaps />
               <Suspense
                 fallback={
                   <Centered>

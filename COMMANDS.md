@@ -73,6 +73,23 @@ re-measured; do not assert it either way.
 على IPv4 وعمليةُ مضيفٍ على IPv6 خادمان لا خادم** — وقياسٌ على `localhost`
 يذهب إلى الخطأ منهما صامتاً. **يُقاس على `127.0.0.1` صراحةً**، و`netstat -ano
 | grep :المنفذ` يُقرأ **قبل** أن يُتَّهم الكود.
+
+---
+
+**وبناءُ أيِّ حزمةٍ أندرويد يحتاج JDK 21 لا 17** (قِيس 2026-09-01):
+`capacitor-android` يعلن `sourceCompatibility JavaVersion.VERSION_21`،
+و`JAVA_HOME` على جهاز التطوير 17 — **فالسقوطُ `error: invalid source
+release: 21` عند `:capacitor-android:compileDebugJavaWithJavac`**، ولا يقول
+اسمَ المتغيّر الذي يُصلحه.
+
+    JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"       TAXO_CHANNEL=public sh gradlew assemblePublicRelease --no-daemon -q
+
+**و`sh gradlew` لا `./gradlew`** — صلاحيةُ التنفيذ لا يحفظها ويندوز.
+**و`local.properties` غيرُ متعقَّبٍ بحقّ** (فيه مسارُ SDK لهذا الجهاز)،
+فمشروعٌ أندرويد جديدٌ يحتاج نسخَه من مشروعٍ قائم قبل أوّل بناء.
+
+**والقناةُ تُصرَّح ولا تُفترض** في الطرفين معاً — `build-channel.mjs` ثمّ
+`cap sync` ثمّ `gradlew`؛ ومن نسيها في الأخير بنى نكهةً بغلافِ غيرها.
 <!--/جديد-->
 
 **These three are one family, and it is worth reading them together**: a `restart` that keeps the old

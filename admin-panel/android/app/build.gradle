@@ -1,0 +1,162 @@
+/** **رقمُ النسخة يُشتقّ ولا يُكتب بيد** (قرارُ المالك 2026-08-21).
+ *
+ * **العلّةُ مقيسة**: بناءان بـ`versionCode` واحدٍ **حزمةٌ واحدةٌ عند أندرويد**،
+ * فلا يُثبَّت الثاني تحديثاً — **ومن يحمّل برقمٍ لم يتغيّر يظنّ أنه حدّث وهو
+ * لم يفعل**. ورفعُه بيدٍ شرطٌ يُتذكَّر، وقد نُسي فعلاً: بناءٌ جديدٌ برقمٍ قديم
+ * أوقفه `tools/apk-manifest.mjs` عند النشر لا عند البناء.
+ *
+ * **وعددُ الإيداعات هو المشتقّ**: يزيد أبداً، ويُعاد إنتاجُه من الإيداع نفسِه،
+ * **ولا يحتاج ملفَّ عدّادٍ يتعارض بين فرعين**.
+ *
+ * **والغيابُ يُوقف ولا يُسكت عنه**: بلا `git` — أو في استنساخٍ ضحلٍ لا تاريخَ
+ * له — **يفشل البناءُ ويقول لماذا**، ولا يعود إلى `1` صامتاً. فقيمةٌ احتياطيةٌ
+ * صامتةٌ هنا **تُنتج بالضبط العطبَ الذي بُني هذا لأجله**، وهي «الشكلُ الثاني
+ * عشر»: احتياطٌ ينجح فيخفي ما وُضع له.
+ *
+ * **ويُتجاوَز بتصريحٍ لا بالسكوت**: `TAXO_VERSION_CODE` لبيئةٍ لا `git` فيها.
+ */
+static int taxoVersionCode(File root) {
+    def declared = System.getenv("TAXO_VERSION_CODE")
+    if (declared != null && !declared.trim().isEmpty()) return declared.trim() as int
+    try {
+        def out = new ByteArrayOutputStream()
+        def proc = ["git", "rev-list", "--count", "HEAD"].execute(null, root)
+        proc.consumeProcessOutput(out, new ByteArrayOutputStream())
+        proc.waitForOrKill(15000)
+        def count = out.toString().trim()
+        if (proc.exitValue() == 0 && count ==~ /\d+/ && (count as int) > 0) return count as int
+    } catch (ignored) {
+        // يسقط أدناه برسالةٍ تسمّي السبب — ولا يُبتلع صامتاً
+    }
+    throw new GradleException("""تعذّر اشتقاقُ رقم النسخة: لا `git` أو لا تاريخَ في هذا الاستنساخ.
+  والرقمُ عددُ الإيداعات — فبناءان برقمٍ واحدٍ حزمةٌ واحدةٌ عند أندرويد،
+  ومن يحمّل برقمٍ لم يتغيّر يظنّ أنه حدّث وهو لم يفعل.
+  وفي بيئةٍ بلا git: TAXO_VERSION_CODE=<رقم>""")
+}
+
+apply plugin: 'com.android.application'
+
+android {
+    namespace "ly.tajora.admin"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "ly.tajora.admin"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        // **مشتقٌّ من عدد الإيداعات لا مكتوبٌ بيد** — التفصيلُ فوق الملف.
+        versionCode taxoVersionCode(rootProject.projectDir)
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // **توقيعُ الإصدار — من البيئة لا من ملفٍّ في الشجرة** (§18.1، مفتاحُ
+    // النشر أُنشئ 2026-08-26).
+    //
+    // **ولا قيمةَ افتراضيةَ لسرّ**: `System.getenv` يعود `null` حين لا يُصدَّر،
+    // **فيبقى `signingConfig` غيرَ مضبوطٍ ويسقط البناءُ باسمِ ما نقص** — لا
+    // يقع على مفتاحِ تصحيحٍ صامتاً. وهي قاعدةُ `POSTGRES_PASSWORD:?` نفسُها:
+    // **بناءٌ ينجح بمفتاحٍ غيرِ المقصود أخطرُ من بناءٍ يسقط.**
+    //
+    // **والملفُّ يُفكّ في مجرى العمل ولا يدخل git**: `scripts/pre-commit` يرفض
+    // `*.jks` حتى مع `git add -f` (قِيس)، والسرُّ في GitHub مُرمَّزٌ بـbase64.
+    signingConfigs {
+        release {
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ksPath != null) {
+                storeFile file(ksPath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    // **نكهتان لا مجلّدان** (أربعُ نسخ، قرارُ المالك 2026-08-26): النسختان
+    // العامّةُ والتجريبيّةُ من **الشيفرة نفسِها** — واللاحقةُ وحدَها تفصلهما،
+    // فيتعايشان على الهاتف الواحد.
+    //
+    // **ونسخُ مجلّدٍ أو فرعٌ ثانٍ كان يعني عطباً يُصلَح مرّتين ويُنسى مرّة** —
+    // وذاك الشكلُ الثامن يُصنع بيد.
+    //
+    // **والاسمُ والأيقونةُ يفترقان في `src/test/res` وحدَه** — لا شيفرةَ
+    // مكرَّرة: اسمٌ مختلفٌ ولونُ خلفيةِ أيقونةٍ مختلف. **والاسمُ وحدَه لا
+    // يكفي**: يُقصّ على الشاشة إلى «TAXO…» فيلتبس بعد شهر.
+    // **بالاسم الحرفيِّ لا بالكتلة العارية** (قِيس 2026-08-26): `public` كلمةٌ
+    // محجوزةٌ في Groovy فـ`public { … }` **لا يُحلَّل أصلاً**، والخطأُ يشير إلى
+    // سطرٍ بعده بكثير (`android {`) فلا يقود إلى نفسِه.
+    //
+    // **واسمُ النكهة التجريبية `trial` لا `test`**: AGP يحجز `test` لمجموعة
+    // اختبارات الوحدة (`src/test/`) — **واللاحقةُ تبقى `.test` كما أُريد**،
+    // فالمعرّفُ على الهاتف هو ما يهمّ لا اسمُ النكهة في gradle.
+    flavorDimensions "channel"
+    productFlavors {
+        create("public") {
+            dimension "channel"
+        }
+        create("trial") {
+            dimension "channel"
+            applicationIdSuffix ".test"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // **يُسند صراحةً** — وبلا المتغيّرات يبقى `storeFile` فارغاً
+            // فيسقط `assembleRelease` ويسمّي ما نقص.
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// **`google-services.json` قيمةٌ تقرّر إلى أين تذهب البيانات — فلا تُترك
+// للسكوت** (قرارُ المالك 2026-08-29). وهي **خامسةُ العائلة** بعد
+// `POSTGRES_PASSWORD:?` و`ANDROID_KEYSTORE_PATH` و`TAXO_CHANNEL` و`DEV_BUILD`.
+//
+// **وما كان هنا أسوأُ من سطرِ سجلّ**: `try { servicesJSON.text } catch` يبتلع
+// **كلَّ** استثناء — غيابَ الملفّ، وتلفَه، وتعذّرَ قراءته — ثمّ يسجّل بمستوى
+// `info` (لا يُطبع افتراضاً) ويُكمل البناءَ ناجحاً.
+//
+// **ووقع مقيساً 2026-08-29**: `google-services.json` مُتجاهَلٌ في git ولا سرَّ
+// له في CI، **فبُنيت حزمُ `v0.2.0` المنشورةُ على صفحة التحميل بلا Firebase
+// أصلاً** — قُرئ من داخلها: لا `string/google_app_id` ولا `project_id` ولا
+// رقمُ المشروع. **والإشعاراتُ فيها لا تعمل، والبناءُ أخضرُ صامت.**
+//
+// **والإذنُ يُعلَن ولا يُفترض**: من أراد حزمةً بلا إشعاراتٍ يقولها
+// بـ`TAXO_ALLOW_NO_FIREBASE=1` — كما يقول `DEV_BUILD=1`.
+def servicesJSON = file('google-services.json')
+if (servicesJSON.exists() && servicesJSON.length() > 0) {
+    apply plugin: 'com.google.gms.google-services'
+} else if (System.getenv('TAXO_ALLOW_NO_FIREBASE') == '1') {
+    logger.lifecycle('⚠ بلا google-services.json — بإذنٍ صريح. لا إشعارات في هذه الحزمة.')
+} else {
+    throw new GradleException("""google-services.json مفقودٌ أو فارغ في app/ — والحزمةُ تُبنى بلا إشعارات.
+  في CI: يُفكّ من السرّ GOOGLE_SERVICES_B64.
+  محلياً: نزّله من Firebase وضعه في <app>/android/app/google-services.json
+  وبلا إشعاراتٍ بقصد: TAXO_ALLOW_NO_FIREBASE=1""")
+}

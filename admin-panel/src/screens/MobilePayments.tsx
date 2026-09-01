@@ -50,6 +50,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { money, moment } from "@/lib/format";
+import { useSession } from "@/lib/session";
 
 /** **الغرضُ بالعربية** — والمشرفُ يقرأ «اشتراك» لا `subscription`. */
 const PURPOSE: Record<string, string> = {
@@ -61,6 +62,7 @@ const PURPOSE: Record<string, string> = {
 
 export function MobilePayments() {
   const { country } = useCountry();
+  const { pushState } = useSession();
   const [rows, setRows] = useState<CliqClaim[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -108,6 +110,17 @@ export function MobilePayments() {
       <p className="mt-4 text-12 leading-note text-muted">
         من ضغط «تمّ الدفع» في تطبيقه وينتظر تأكيدك — الأقدم أوّلاً.
       </p>
+
+      {/* **الحالُ الرابعة تُقال صراحةً** (من `driver-app/src/lib/push.ts`):
+          من رفض الإذن **لا يصله شيءٌ وهو خارج التطبيق** — والصمتُ عنده
+          يُقرأ «لا مدفوعات اليوم». **والجملةُ لا تتجاوز الحقيقة**: القائمةُ
+          تتحدّث حين تُفتح، فالنقصُ في الإيقاظ لا في الوصول. */}
+      {pushState === "denied" ? (
+        <p className="mt-10 rounded-12 border border-line bg-surface-2 px-12 py-10 text-11.5 leading-note text-muted">
+          إذن الإشعارات مرفوض — لن يوقظك شيء وأنت خارج التطبيق. افتح هذه
+          الصفحة بنفسك، أو امنح الإذن من إعدادات النظام.
+        </p>
+      ) : null}
 
       <ErrorNote message={error} />
       <SuccessNote message={done} />

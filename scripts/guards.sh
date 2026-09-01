@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# **بابٌ واحدٌ لكلِّ حارسٍ ساكن** — كـ`suite.sh` للمجموعة و`deploy.sh` للرفع.
+#
+# **العلّةُ مقيسةٌ لا مفترضة** (2026-09-01): `check:money-math` بقي **أحمرَ على
+# `master` عبر إيداعين** — مفتاحُه `ملف:سطر` أزاحته تعديلاتٌ في ملفٍّ آخر،
+# **والحارسُ فعل ما بُني له**، لكنّ أحداً لم يشغّله. وقيل في التقريرين
+# «الحرّاسُ خضر» — **عن حارسٍ لم يُشغَّل**.
+#
+# **ولمَ لا يكفي CI**: الحرّاسُ الثلاثةُ **مشغَّلون في CI فعلاً** ضمن
+# `npm run build` لكلِّ تطبيق. **لكنّ CI لا يعمل إلا على دفعٍ، وهذا المشروعُ
+# لا يدفع** (قرارُ المالك في كلِّ جولة) — **فبوّابةٌ خلف بابٍ لا يُفتح ليست
+# بوّابة**. فالمخرجُ بابٌ محلّيّ.
+#
+# **والسريعُ وحدَه هنا**: كلُّ حارسٍ ساكنٍ يقرأ الشجرة. **ولا `vite build` ولا
+# `tsc`** — دقائقُ في كلِّ إيداع تجعل الخطّافَ يُتجاوَز بـ`--no-verify`،
+# **وحارسٌ يُتجاوَز أسوأُ من حارسٍ غائبٍ لأنه يُقرأ قائماً**. والبناءُ يبقى في
+# CI وفي `build-channel.mjs`.
+#
+#     bash scripts/guards.sh            # الكلّ
+#     bash scripts/guards.sh --quiet    # الأسطرُ الحمراءُ وحدَها
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+QUIET=0
+[ "${1:-}" = "--quiet" ] && QUIET=1
+
+red=0
+run() { # run <اسم> <أمر...>
+  local name="$1"; shift
+  local out
+  if out="$("$@" 2>&1)"; then
+    [ "$QUIET" -eq 1 ] || printf '%s\n' "$out" | tail -1
+  else
+    red=$((red + 1))
+    printf '\n✗ %s\n' "$name" >&2
+    printf '%s\n' "$out" | tail -20 >&2
+  fi
+}
+
+# ── الجذر: الحرّاسُ الذين لا يخصّون تطبيقاً بعينه ──────────────────────────
+run "check:docs"            node tools/check-docs.mjs
+run "check:money-math"      node tools/check-money-math.mjs
+run "check:money-visible"   node tools/check-money-visible.mjs
+run "check:published-readers" node tools/check-published-readers.mjs
+run "check:destinations"    node tools/check-destinations.mjs
+run "check:fields"          node tools/check-fields.mjs
+run "check:storefront-card" node tools/check-storefront-card.mjs
+
+# ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
+for app in customer-app driver-app admin-panel; do
+  [ -d "$app" ] || continue
+  for g in check:scale check:enums check:digits check:slot check:flags \
+           check:config check:doors check:contract check:money check:readers; do
+    # **ولا يُخترع حارسٌ لتطبيقٍ لا يملكه** — تُقرأ سكربتاتُه من `package.json`
+    node -e "process.exit(require('./$app/package.json').scripts['$g']?0:1)" || continue
+    run "$app · $g" npm --prefix "$app" run --silent "$g"
+  done
+  node -e "process.exit(require('./$app/package.json').scripts['check:rtl']?0:1)" \
+    && run "$app · check:rtl" npm --prefix "$app" run --silent check:rtl
+  node -e "process.exit(require('./$app/package.json').scripts['check:client-doors']?0:1)" \
+    && run "$app · check:client-doors" npm --prefix "$app" run --silent check:client-doors
+done
+
+if [ "$red" -gt 0 ]; then
+  printf '\n✗ %d حارساً أحمر — ولا إيداعَ فوق أحمر.\n' "$red" >&2
+  exit 1
+fi
+printf '\n✓ كلُّ الحرّاس الساكنين خضر.\n'
+exit 0
