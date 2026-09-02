@@ -381,6 +381,38 @@ the marker out of the map into normal flow — no console error, just no marker.
 visual styling lives on an inner child and the outer shell is never touched. Neither shows up in
 `npm run build`; both were caught by opening the screen.
 
+<!--جديد-->
+### وصار بابان يقرنان هويةً بموقع لا باب — **وسطران فوق هذا بليا** (2026-09-03)
+
+**ما فوق هذا السطر منقولٌ ولا يُحرَّر، وفيه جملتان لم تعودا صحيحتين** — فتُقرأان
+معه لا بدلَه:
+
+١. **«`GET /admin/live/map` is the only route in the project that pairs an
+identity with a location»** — **صار معه `GET /admin/live/drivers/{driver_id}/ride`**
+(البند ٦، `SPEC.md` §42): الرحلةُ الجارية لكبتنٍ بعينه، ومسارُها من
+`ride_route_points`، وموضعُه من مفتاح الحضور. **وقيودُ الأول كلُّها تسري عليه**:
+`AdminUser` لا `StaffUser`، وخارجَ مصفوفة الصلاحيات، وقيدُ تدقيقٍ مخنوقٌ
+بالنافذة نفسِها — **لكن على `driver_live` بمعرّف الكبتن لا على `live_map`**،
+لأن قيداً يقول «قرأ خريطةَ الأردن» عمّن فتح ملفَّ كبتنٍ واحدٍ يصف فعلاً أوسعَ
+ممّا وقع. **ويُكتب حين يخرج موضعٌ فعلاً**: قراءةٌ لم تكشف موضعاً لا تُسجَّل.
+
+**والعلّةُ في أنه ليس للدعم ليست حجمَ الحمولة بل أثرَها**: من ملك تتبّعَ كبتنٍ
+واحدٍ بمعرِّفه ملك تتبّعَهم واحداً واحداً — **فبابٌ أضيقُ في الشكل ليس أضيقَ في
+الأثر**. **وبيتُهما واحد** (`routers/admin_live_map.py`)، ومن أضاف ثالثاً
+يضيفه هناك لا في موجّهِ الشاشة التي تعرضه.
+
+٢. **«`LiveCanvas.tsx` is the only file in the panel that imports `mapbox-gl`»**
+— **وقد بلي قبل البند ٦ لا به**: `SkinMapPreview.tsx` يستورده منذ دفعة المتجر،
+و`RouteCanvas.tsx` منذ اليوم، **فثلاثة**. **والفخّان المذكوران فوق يسريان على
+الثلاثة** ولذلك أُعيد ذكرُهما في رأس الجديد.
+
+**والذي يجب أن يبقى واحداً هو `lib/map-rtl.ts` وحدَه**: `setRTLTextPlugin`
+عامٌّ على الوحدة **ويرمي إن نُودي مرّتين**. **وفخٌّ ثالثٌ يخصّ الخطّ لا
+العلامة**: `Marker` ينجو من `setStyle` **والمصدرُ والطبقةُ لا ينجوان** —
+تبديلُ السمة يمسحهما **بلا خطأٍ يظهر**، فيختفي خطُّ المسار وتبقى الدبابيس.
+فيُعاد رسمُه على `style.load`.
+<!--/جديد-->
+
 **Vite in these containers does not see host edits.** The source tree is bind-mounted from Windows
 into alpine and inotify does not cross that boundary, so HMR never fires and the dev server keeps
 serving the module it read at startup — a fix can look like it did nothing for as long as you care

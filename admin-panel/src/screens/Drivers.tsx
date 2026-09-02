@@ -61,6 +61,7 @@ import {
   WalletSection,
 } from "@/components/profile/Sections";
 import {
+  ActiveRideSection,
   MoneyOwedSection,
   SubscriptionSection,
   VehiclesSection,
@@ -625,6 +626,10 @@ function DriverDrawer({
             القرار**: من هو، ثمّ بمَ يعمل، ثمّ ماذا عليه — والوثائقُ تحتها
             لأنها سببُ فتح هذا الدرج في أكثر الأحيان. */}
         <AccountSection userId={row.user_id} fallbackName={row.name} />
+        {/* **الرحلةُ الجارية ثانيةً** (البند ٦، §39٫٦): هي أسرعُ ما يبلى في
+            هذا الدرج — رصيدٌ ووثيقةٌ يبقيان إلى الغد، وموضعُه بعد دقيقةٍ خبرٌ
+            آخر. **ولـ`admin` وحدَه**، فالقسمُ يختفي عن الدعم بنفسه */}
+        <ActiveRideSection driverId={row.driver_id} />
         <VehiclesSection driverId={row.driver_id} />
         <SubscriptionSection driverId={row.driver_id} />
         <WalletSection userId={row.user_id} />

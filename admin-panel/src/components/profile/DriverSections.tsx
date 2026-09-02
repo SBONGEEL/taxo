@@ -6,12 +6,16 @@
  * الشجرة (`ARCHITECTURE.md`: «passing the latter silently returns zero»).
  */
 
+import { useEffect, useRef } from "react";
+
 import {
+  getDriverLiveRide,
   listAdvances,
   listDriverDebts,
   listDriverVehicles,
   listSubscriptions,
 } from "@/api/endpoints";
+import type { DriverLiveRide } from "@/api/types";
 import {
   CappedNote,
   Facts,
@@ -20,16 +24,21 @@ import {
   ProfileSection,
   useLoader,
 } from "@/components/Profile";
+import { RouteCanvas } from "@/components/RouteCanvas";
 import { Badge } from "@/components/ui/Badge";
-import { day, days, daysUntil, money } from "@/lib/format";
+import { useConfig } from "@/lib/config";
+import { day, days, daysUntil, moment, money } from "@/lib/format";
 import {
   ADVANCE_STATUS_LABEL,
   ADVANCE_STATUS_TONE,
   DEBT_STATUS_LABEL,
   DEBT_STATUS_TONE,
   PAYMENT_METHOD_LABEL,
+  RIDE_STATUS_LABEL,
+  RIDE_STATUS_TONE,
   SUBSCRIPTION_DURATION_LABEL,
 } from "@/lib/labels";
+import { useSession } from "@/lib/session";
 import { digits } from "@/lib/utils";
 
 const CAP = 5;
@@ -217,5 +226,147 @@ export function MoneyOwedSection({ driverId }: { driverId: string }) {
         </>
       )}
     </ProfileSection>
+  );
+}
+
+/** كم ثانيةً بين استطلاعين — **خمسٌ كالخريطة الحيّة**، والسؤالُ واحد. */
+const LIVE_REFRESH_MS = 5_000;
+
+/** قسمُ «الرحلة الجارية» — **البند ٦ (§39٫٦)**.
+ *
+ * **خريطةٌ داخل الملفّ تعرض الرحلةَ الجارية ومسارَها وموقعَه الحيّ، وتصمت بلا
+ * رحلةٍ نشطة** — لا خريطةً فارغة: خريطةٌ بلا شيءٍ عليها تُقرأ عطباً في اللوحة
+ * لا «لا رحلةَ الآن»، وهي «لا نتائج» التي ليست «لا بيانات» (§36).
+ *
+ * **وعلى البثِّ القائم لا على بنيةٍ ثانية**: المسارُ `ride_route_points` نفسُه
+ * الذي يُفصل به في النزاع، والموضعُ من مفتاح الحضور في Redis — **ولا عمودَ
+ * موقعٍ يُكتب لأجل هذه الشاشة**.
+ *
+ * **ولـ`admin` وحدَه**: بابُه يقرن هويةً بموقع كالخريطة الحيّة، **والدعمُ لا
+ * يفتحه**. وإخفاؤه هنا **راحةٌ لا حماية** — الخلفيةُ ترفض، كما في كلِّ اللوحة.
+ */
+export function ActiveRideSection({ driverId }: { driverId: string }) {
+  const { isAdmin } = useSession();
+  // **يُلفّ الجوابُ في كائن**: `ProfileSection` تقرأ `null` «لم يصل بعد»
+  // وتعرض دوّارة، **و`null` من هذا الباب تعني «لا رحلة»** — وخلطُ الحالتين
+  // هو بعينه ما تحذّر منه هي في رأسها
+  const load = useLoader(
+    async () => ({ ride: await getDriverLiveRide(driverId) }),
+    [driverId],
+  );
+
+  if (!isAdmin) return null;
+
+  return (
+    <ProfileSection
+      title="الرحلة الجارية"
+      hint="من بثِّ الموقع نفسِه الذي ترسمه الخريطة الحيّة — وفتحُها مُسجَّلٌ في سجل التدقيق باسمك."
+      load={load}
+    >
+      {({ ride }, reload) => <ActiveRide ride={ride} reload={reload} />}
+    </ProfileSection>
+  );
+}
+
+/** **الاستطلاعُ هنا لا في `ProfileSection`**: بقيةُ الأقسام تقرأ صفوفاً
+ *  تتغيّر بفعلِ مشرفٍ، وهذا يقرأ موضعاً يتحرّك بلا أن يفعل أحدٌ شيئاً.
+ *
+ *  **و`reload` في مرجعٍ لا في اعتمادية**: هي إغلاقٌ جديدٌ في كلِّ رسمة، فوضعُها
+ *  في `deps` يهدم المؤقّتَ ويبنيه عند كلِّ جوابٍ يصل — **فيصير الاستطلاعُ
+ *  متسارعاً بلا حدّ**.
+ */
+function ActiveRide({
+  ride,
+  reload,
+}: {
+  ride: DriverLiveRide | null;
+  reload: () => void;
+}) {
+  const { config } = useConfig();
+  const token = config?.providers.mapbox?.public_token ?? null;
+  const latest = useRef(reload);
+  latest.current = reload;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => latest.current(), LIVE_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  if (ride === null) {
+    return (
+      <p className="text-11.5 leading-note text-muted">
+        {/* **بلا ضميرٍ يذكر الجنس** (قاعدةُ العربية المجنَّسة): «له» تُقرأ
+            خطأً على سائقةٍ معتمدة، **وقِيس ذلك بالعين على درج «هناء
+            السائقة»** — والجملةُ تستقيم بلا الضمير أصلاً */}
+        لا رحلةَ جاريةً الآن — ولا خريطةَ بلا رحلة. وسجلُّ الرحلات تحت هذا
+        القسم.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-9 flex flex-wrap items-center gap-6">
+        <Badge tone={RIDE_STATUS_TONE[ride.status]}>
+          {RIDE_STATUS_LABEL[ride.status]}
+        </Badge>
+        {/* **«منذ كم» لا «متى»**: القسمُ يُستفتى كلَّ خمس ثوانٍ، والمشرفُ
+            يسأل عن الطزاجة. و«لا بثّ» ليست «عند الصفر» */}
+        {ride.position === null ? (
+          <Badge tone="warn">لا بثَّ الآن</Badge>
+        ) : ride.position.stale ? (
+          <Badge tone="warn">بثُّه توقّف</Badge>
+        ) : (
+          <Badge tone="ok">يبثّ الآن</Badge>
+        )}
+      </div>
+
+      <RouteCanvas
+        token={token}
+        pickup={{ lat: ride.pickup_lat, lng: ride.pickup_lng }}
+        dropoff={{ lat: ride.dropoff_lat, lng: ride.dropoff_lng }}
+        route={ride.route}
+        position={ride.position}
+      />
+
+      <div className="mt-9">
+        <Facts
+          rows={[
+            { label: "من", value: ride.pickup_address ?? "نقطة على الخريطة" },
+            { label: "إلى", value: ride.dropoff_address ?? "نقطة على الخريطة" },
+            {
+              label: "قَبِلها",
+              value: ride.accepted_at ? moment(ride.accepted_at) : null,
+            },
+            {
+              label: "انطلقت",
+              value: ride.started_at ? moment(ride.started_at) : "لم تنطلق بعد",
+            },
+            {
+              label: "نقاط المسار",
+              value:
+                ride.route.length === 0
+                  ? "لا نقاط بعد"
+                  : `${digits(String(ride.route.length))} نقطة`,
+            },
+            {
+              label: "آخر بثّ",
+              value:
+                ride.position === null
+                  ? "لا بثَّ الآن"
+                  : ride.position.seconds_since_update === null
+                    ? "غير معلوم"
+                    : `منذ ${digits(String(ride.position.seconds_since_update))} ثانية`,
+            },
+          ]}
+        />
+      </div>
+
+      {ride.route_truncated ? (
+        <p className="mt-7 text-10.5 leading-note text-muted">
+          المعروضُ أولُ ألف نقطة — المسارُ أطول، وما بعدها لا يُرسم.
+        </p>
+      ) : null}
+    </>
   );
 }

@@ -47,6 +47,7 @@ import type {
   DisputeResolution,
   DriverDocument,
   DriverDocuments,
+  DriverLiveRide,
   DriverStatus,
   FeatureKey,
   Gender,
@@ -640,6 +641,14 @@ export const getOverview = (country: CountryCode, period: StatsPeriod) =>
 /** لـ`admin` وحده، ويُسجَّل من فتحها (القسم 13/1) — والخلفية هي من يفرض ذلك. */
 export const getLiveMap = (country: CountryCode) =>
   api.get<LiveMap>("/admin/live/map", { query: { country_code: country } });
+
+/** رحلةُ الكبتن الجارية ومسارُها وموضعُه الحيّ — البند ٦ (§39٫٦).
+ *
+ * **`null` تعني لا رحلةَ جارية**، فيصمت القسمُ في ملفّه بدل خريطةٍ فارغة.
+ * **والبابُ لـ`admin` وحدَه** كالخريطة الحيّة: كلاهما يقرن هويةً بموقع.
+ */
+export const getDriverLiveRide = (driverId: string) =>
+  api.get<DriverLiveRide | null>(`/admin/live/drivers/${driverId}/ride`);
 
 /** تقاريرُ الفترة (القسم 13/5) — نِسَبٌ ومتوسطاتٌ محسوبةٌ في الخلفية. */
 export const getReports = (country: CountryCode, period: StatsPeriod) =>

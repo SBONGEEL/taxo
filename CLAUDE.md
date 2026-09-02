@@ -245,6 +245,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `check:destinations` — حارسٌ مرجعُه قائمةٌ تُكتب بيدٍ يحرس الكتابةَ لا الواقع (2026-08-30) → `GUARDS.md`
 - بلاغٌ كاذبٌ رابعٌ أوقف رفعاً — والقياسُ بعد التوسيع كشف ثغرةً أقدمَ منه (2026-08-30) → `GUARDS.md`
 - ما يمرّ من ماسح الأسرار — بأصنافه لا بالظنّ (قِيس 2026-08-31) → `GUARDS.md`
+- وكتابةٌ بلغةٍ على ويندوز تقلب نهاياتِ الأسطر — **وأمسكها `check:docs` وحدَه** (قِيس 2026-09-03) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
 - الحرّاس — وما لم يصر حارساً بعد (2026-08-20) → `GUARDS.md`
@@ -344,6 +345,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Rider design-matching: five packages, all delivered → `STATE.md`
 - Open debt and decisions waiting on the owner → `STATE.md`
 - متجرُ المركبات — أيقظت السلسلةُ الخمس (2026-08-27) → `STATE.md`
+- البند ٦ — مسارُ الرحلة النشطة في ملفِّ الكبتن، **مبنيٌّ ومقيس** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
 
 ### `ARCHITECTURE.md` — المعمار
 
@@ -352,6 +354,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - The app switch — a handoff token, and the busy check that could not ask its own question (2026-08-19) → `ARCHITECTURE.md`
 - The rule that dissolves the ambiguities: context of the act, not role of the actor (2026-08-19) → `ARCHITECTURE.md`
 - The roles model became a set — and the dangerous half was never authorisation (2026-08-19) → `ARCHITECTURE.md`
+- وصار بابان يقرنان هويةً بموقع لا باب — **وسطران فوق هذا بليا** (2026-09-03) → `ARCHITECTURE.md`
 - Architecture → `ARCHITECTURE.md`
 
 ### `COMMANDS.md` — الأوامر

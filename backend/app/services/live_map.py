@@ -38,6 +38,7 @@ from app.services import audit, geo
 # نافذةُ خنق قيد التدقيق: جلسةُ مراقبةٍ واحدة تكتب قيداً واحداً
 AUDIT_WINDOW_SECONDS = 900
 _AUDIT_KEY = "audit:live_map:{admin_id}:{country}"
+_AUDIT_DRIVER_KEY = "audit:live_map:driver:{admin_id}:{driver_id}"
 
 # ما تعرضه الخريطة من الطلبات المعلّقة — الرحلة قبل أن يقبلها أحد
 PENDING_STATUSES = (RideStatus.REQUESTED, RideStatus.SEARCHING)
@@ -194,6 +195,57 @@ async def pending_rides(
     ]
 
 
+@dataclass(frozen=True, slots=True)
+class DriverPosition:
+    """موضعُ كبتنٍ واحدٍ الآن — **ولا كائنَ يعني صمتاً لا موضعاً عند الصفر**.
+
+    **ولا `state` هنا خلافاً لـ`LiveDriver`**: تلك ثلاثيّةٌ تجيب «أمتفرّغٌ أم
+    في رحلةٍ أم شحُب بثُّه»، **وهذه لا تُقرأ إلا وصاحبُها في رحلة** — فتجيب
+    الثلاثيّةُ «في رحلة» دائماً وتبتلع السؤالَ الوحيد الذي يُسأل هنا: **أطازجٌ
+    هذا الدبّوس؟** فيُنشر `stale` عارياً ومعه عمرُه.
+
+    **ويُحسب في الخلفية لا في اللوحة** للعلّة المكتوبة على `LiveDriverOut`
+    نفسِه: لوحةٌ تقارن الثواني بعتبةٍ من عندها **تفترق عن الخلفية أوّلَ ما
+    يتغيّر `PRESENCE_TTL_SECONDS`، ولا شيءَ يفشل**.
+    """
+
+    lat: float
+    lng: float
+    seconds_since_update: int | None
+    stale: bool
+
+
+async def position_of(
+    redis: Redis, *, driver_id: uuid.UUID, country: CountryCode
+) -> DriverPosition | None:
+    """آخرُ موضعٍ بثّه كبتنٌ بعينه — **من البثِّ القائم لا من بنيةٍ ثانية**.
+
+    **والحياةُ من مفتاح الحضور والموضعُ من الفهرس**، كما في
+    `geo.last_position` بحرفه: الفهرسُ الجغرافيُّ لا يقبل عمراً لعضوٍ فيه،
+    **فعضوٌ باقٍ فيه بلا مفتاحِ حضورٍ موضعٌ قديمٌ يُقرأ حاضراً**.
+
+    **ولمَ لا يُنادى `geo.last_position` نفسُه**: تلك تجيب «أين» ولا تجيب
+    «منذ متى» — **ودبّوسٌ بلا عمره هو العطبُ الذي أنشأ الحالةَ الثالثة في هذه
+    الخدمة** (قرارُ المالك 2026-08-22): موضعٌ عمرُه خمسٌ وخمسون ثانية يُرسم
+    كموضعِ اللحظة، ثمّ يختفي بلا أن يتحرّك شيء.
+    """
+    data = await redis.hgetall(geo.presence_key(driver_id))
+    if not data:
+        return None
+    positions = await redis.geopos(geo.geo_key(country), str(driver_id))
+    if not positions or positions[0] is None:
+        return None
+    lng, lat = positions[0]
+    at = int(data["at"]) if (data.get("at") or "").isdigit() else None
+    age = None if at is None else max(0, int(time.time()) - at)
+    return DriverPosition(
+        lat=float(lat),
+        lng=float(lng),
+        seconds_since_update=age,
+        stale=age is None or age >= STALE_AFTER_SECONDS,
+    )
+
+
 async def record_access(
     session: AsyncSession,
     redis: Redis,
@@ -219,6 +271,42 @@ async def record_access(
         entity_type="live_map",
         entity_id=None,
         details={"country_code": country.value},
+    )
+    await session.commit()
+    return True
+
+
+async def record_driver_access(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    admin: User,
+    driver_id: uuid.UUID,
+) -> bool:
+    """قيدُ تدقيقٍ لقراءة موضعِ **كبتنٍ بعينه** — مرةً لكلِّ جلسة مراقبة.
+
+    **ولا يُعاد استعمالُ `record_access`**، ومفتاحُ الخنق غيرُ مفتاحها: قيدٌ
+    يقول «قرأ الخريطةَ الحيّة للأردن» عمّن فتح ملفَّ كبتنٍ واحد **يصف فعلاً
+    لم يقع** — وسجلُّ التدقيق يُقرأ بعد شهرٍ ليقال ماذا جرى، **فقيدٌ أوسعُ من
+    الفعل كقيدٍ أضيقَ منه: كلاهما يكذب**. ولو تشارك المفتاحان لَابتلع أحدُهما
+    الآخرَ في نافذته: من فتح الخريطةَ ثمّ ملفَّ كبتنٍ لم يُكتب لفتحِ الملفّ
+    قيدٌ أصلاً.
+
+    **والخنقُ بنافذة `AUDIT_WINDOW_SECONDS` نفسِها**: القسمُ يستعلم كلَّ خمس
+    ثوانٍ كالخريطة، **وسجلٌّ فيه مئتا صفٍّ لساعةِ مراقبةٍ يخفي القرارات
+    بينها**.
+    """
+    key = _AUDIT_DRIVER_KEY.format(admin_id=admin.id, driver_id=driver_id)
+    first = await redis.set(key, "1", ex=AUDIT_WINDOW_SECONDS, nx=True)
+    if not first:
+        return False
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.READ,
+        entity_type="driver_live",
+        entity_id=driver_id,
     )
     await session.commit()
     return True

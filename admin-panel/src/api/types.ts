@@ -669,6 +669,39 @@ export interface LiveMap {
   pending_rides: LivePendingRide[];
 }
 
+/** موضعُ كبتنٍ بعينه الآن — و**غيابُ الكائن صمتٌ لا موضعٌ عند الصفر**. */
+export interface DriverLivePosition {
+  lat: number;
+  lng: number;
+  /** ثوانٍ منذ آخر بثّ — و`null` ختمٌ غيرُ موجود، **لا «الآن»**. */
+  seconds_since_update: number | null;
+  /** **تُحسب في الخلفية** من عمر مفتاح الحضور — لا تُقارن هنا بعتبةٍ محلية. */
+  stale: boolean;
+}
+
+/** الرحلةُ الجارية للكبتن ومسارُها وموضعُه — البند ٦ (§39٫٦).
+ *
+ * **وأضيقُ من `AdminRideDetail` بقصد**: بابُها يقرن هويةً بموقع، فلا يحمل
+ * اسمَ راكبٍ ولا رقمَه ولا مالاً. **و`null` من الباب تعني لا رحلةَ جارية**،
+ * فيصمت القسم.
+ */
+export interface DriverLiveRide {
+  ride_id: string;
+  status: RideStatus;
+  pickup_lat: number;
+  pickup_lng: number;
+  pickup_address: string | null;
+  dropoff_lat: number;
+  dropoff_lng: number;
+  dropoff_address: string | null;
+  accepted_at: string | null;
+  started_at: string | null;
+  route: RidePoint[];
+  /** المسارُ الطويل يُقصّ — والقصُّ يُقال. */
+  route_truncated: boolean;
+  position: DriverLivePosition | null;
+}
+
 // ------------------------------------------------------------ سجل الرحلات
 
 export interface RideParty {
