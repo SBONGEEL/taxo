@@ -24,16 +24,21 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
-from app.models.enums import CountryCode
+from app.models.enums import CountryCode, PolicyApp, PolicyDocType
 
 
 class PrivacyPolicy(UUIDMixin, TimestampMixin, Base):
-    """نسخةٌ من السياسة لسوقٍ بعينه.
+    """نسخةٌ من **وثيقةٍ قانونية** لسوقٍ وتطبيقٍ بعينهما (§34، الترحيلة `0068`).
 
     **والنسخةُ صفٌّ جديدٌ لا تحريرٌ فوق القديم**: من وافق على نسخةِ أمس **لم
     يوافق على نسخة اليوم**، فلا يجوز أن يُمحى النصُّ الذي وافق عليه —
     و`user_policy_consents.policy_id` مقيَّدٌ بـ`RESTRICT` يمنع ذلك في القاعدة
     لا في التطبيق.
+
+    **والاسمُ `privacy_policies` أضيقُ ممّا صار يحمل** (`0068`): فيه الشروطُ
+    أيضاً. **والمعنى يحمله `doc_type` لا الاسم** — وتغييرُ الاسم يُعيد كتابةَ
+    §34 ونماذجَه ومفتاحَه الأجنبيَّ لِقارئٍ لا وجودَ له بعد، **ويبقى رخيصاً
+    ما دامت الجداولُ فارغة**.
     """
 
     __tablename__ = "privacy_policies"
@@ -41,8 +46,22 @@ class PrivacyPolicy(UUIDMixin, TimestampMixin, Base):
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False
     )
-    #: رقمٌ متصاعدٌ **لكلِّ سوقٍ على حدة** — يُعرض مع تاريخ النشر
+    #: **أيُّ وثيقة** — والمستخدمُ يوافق على زرّين لا زرٍّ واحد (§34)
+    doc_type: Mapped[PolicyDocType] = mapped_column(
+        pg_enum(PolicyDocType, "policy_doc_type"), nullable=False
+    )
+    #: **أيُّ تطبيق** — فما يخصّ الوثائقَ والمركبةَ لا يُعرض على راكب.
+    #: **ولا قيمةَ للمشرف** بقرارٍ مكتوبٍ في `0068`.
+    app: Mapped[PolicyApp] = mapped_column(
+        pg_enum(PolicyApp, "policy_app"), nullable=False
+    )
+    #: رقمٌ متصاعدٌ **داخل (سوق + نوع + تطبيق)** — يُعرض مع تاريخ النشر
     version: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: **أدنى نسخةٍ تُبرئ** — من وافق عليها أو على ما بعدها فقد وافق على ما
+    #: يكفي، **فلا يُمشى رجوعاً في النسخ** ليُعرف ذلك (§34، وقاعدةُ §5-ج في
+    #: العمود المحضَّر). **وكاتبُه واحدٌ مسمّى**: بابُ النشر عند كلِّ حفظ —
+    #: `requires_reconsent` ? نسخةُ الصفِّ نفسِه : قيمةُ المنشورةِ التي قبله.
+    min_accepted_version: Mapped[int] = mapped_column(Integer, nullable=False)
     body_ar: Mapped[str] = mapped_column(Text, nullable=False)
     #: **ولا تُترجم بحدس**: تبقى فارغةً حتى يُكتب نصٌّ إنجليزيّ بيد
     body_en: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -65,11 +84,21 @@ class PrivacyPolicy(UUIDMixin, TimestampMixin, Base):
     # **كانت في الترحيلة `0060` ولم تكن هنا** (صُحِّح 2026-08-30) — والفرقُ
     # يُقرأ انحرافاً في `test_migrations_match_models`.
     __table_args__ = (
-        UniqueConstraint("country_code", "version", name="privacy_policy_version"),
-        # **المنشورةُ واحدةٌ لكلِّ سوق** — فهرسٌ جزئيٌّ لا شرطُ تطبيق
+        # **الرقمُ يتصاعد داخل الثلاثيّة لا داخل السوق** (`0068`): بلا هذا
+        # تتصادم «خصوصيةُ الراكب v1» مع «شروطُ الكبتن v1» في السوق نفسِه
+        UniqueConstraint(
+            "country_code", "doc_type", "app", "version",
+            name="privacy_policy_version",
+        ),
+        # **منشورةٌ واحدةٌ لكلِّ (سوق + نوع + تطبيق)** — وهذا الفهرسُ **هو
+        # جوابُ «أيُّ نسخةٍ واجبةٌ الآن»** لا وسيلةٌ إليه: فلا يُحسب
+        # `MAX(version)` ولا يُفترض أن أحدثَ رقمٍ هو المنشور. وكان على السوق
+        # وحدَه، **فنشرُ الشروط كان يُطفئ الخصوصيةَ في السوق نفسِه صامتاً**.
         Index(
             "privacy_policy_one_published",
             "country_code",
+            "doc_type",
+            "app",
             unique=True,
             postgresql_where=text("is_published"),
         ),
@@ -91,6 +120,10 @@ class UserPolicyConsent(UUIDMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
+    # **وهو مفتاحُ «مستخدم + نوع + تطبيق + نسخة» نفسُه** (قرارُ المالك
+    # 2026-09-02): `policy_id` يحلّ إلى (سوق + نوع + تطبيق + نسخة) بقيد
+    # `privacy_policy_version` — **فمفتاحٌ أجنبيٌّ واحدٌ لا أربعةُ أعمدةٍ
+    # منسوخة**، وأربعةٌ منسوخةٌ تفترق عن أصلها أوّلَ تحرير.
     __table_args__ = (
         UniqueConstraint("user_id", "policy_id", name="user_policy_consent_once"),
     )

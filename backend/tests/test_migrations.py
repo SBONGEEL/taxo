@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import Connection, inspect
+from sqlalchemy import Connection, inspect, text
 
 from app.core.db import engine
 from app.core.migration_filters import include_object
@@ -101,3 +102,50 @@ async def test_downgrade_then_upgrade_is_clean() -> None:
     async with engine.connect() as conn:
         diffs = await conn.run_sync(_collect_diffs)
     assert not diffs
+
+
+async def test_0068_refuses_to_reshape_a_table_that_has_rows() -> None:
+    """**حارسُ `0068` يُقاس بالنفي** — وحارسٌ لم يصح قطُّ لم يُثبت أنه يصيح.
+
+    `0068` تُصلح شكلاً **قِيس فارغاً**: تضيف عمودَي «النوع» و«التطبيق»
+    `NOT NULL` **بلا افتراض**، فلا تملك ما تسم به صفّاً قائماً. **وقرارُ
+    المالك (2026-09-02) أن تقيس ساعةَ التشغيل لا أن تفترض**: «فتقيس على
+    الإنتاج ساعةَ الترقية بدل أن نقيس اليوم بمفتاحٍ لا يعمل».
+
+    **وهذا الاختبارُ يزرع صفّاً ثمّ يشترط الوقوف**: بلاه تبقى الدعوى
+    «ستقف إن وجدت» غيرَ مقيسة — وهي بعينها «خُضرةُ ما لم يُقَس».
+
+    **ويُعيد القاعدةَ إلى الرأس مهما وقع**، كدورة الصعود والنزول فوقه:
+    اختبارٌ يترك المخطَّطَ على `0067` يُسقط كلَّ ما بعده لأسبابٍ لا علاقةَ لها به.
+    """
+    config = alembic_config()
+    seeded = False
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0067")
+        await engine.dispose()
+
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO privacy_policies "
+                    "(id, country_code, version, body_ar, is_published, "
+                    " requires_reconsent) "
+                    "VALUES (gen_random_uuid(), 'JO', 1, 'نصٌّ كُتب بيد', "
+                    " false, false)"
+                )
+            )
+        seeded = True
+
+        with pytest.raises(RuntimeError) as raised:
+            await asyncio.to_thread(command.upgrade, config, "0068")
+
+        # **ويُشترط نصُّها لا مجرّدُ الوقوف**: أيُّ عطبٍ آخرَ يرمي `RuntimeError`
+        # أيضاً، **فوقوفٌ بلا اسمٍ يُقرأ حراسةً وهو صدفة**
+        assert "0068 توقّفت" in str(raised.value)
+        assert "privacy_policies=1" in str(raised.value)
+    finally:
+        if seeded:
+            async with engine.begin() as conn:
+                await conn.execute(text("DELETE FROM privacy_policies"))
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
