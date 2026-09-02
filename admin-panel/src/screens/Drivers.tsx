@@ -54,6 +54,17 @@ import type {
   GenderPreference,
 } from "@/api/types";
 import { Advances } from "@/components/Advances";
+import {
+  AccountSection,
+  ChargesSection,
+  RidesSection,
+  WalletSection,
+} from "@/components/profile/Sections";
+import {
+  MoneyOwedSection,
+  SubscriptionSection,
+  VehiclesSection,
+} from "@/components/profile/DriverSections";
 import { DriverDebts } from "@/components/DriverDebts";
 import { Deactivations } from "@/components/Deactivations";
 import { Shell } from "@/components/Shell";
@@ -608,7 +619,20 @@ function DriverDrawer({
           </button>
         </div>
 
-        <h3 className="mb-10 text-13 font-bold text-muted">الوثائق</h3>
+        {/* **الملفُّ الشخصيُّ الكامل** (§37، البند ١): أقسامٌ تُفتح بطلبٍ
+            وتقرأ **من بابِ كلِّ مفهوم** — لا بابٌ جامعٌ يصير مصدراً ثانياً
+            (§5-ج: «الصفحةُ تقرأ ولا تحسب من جديد»). **وترتيبُها ترتيبُ
+            القرار**: من هو، ثمّ بمَ يعمل، ثمّ ماذا عليه — والوثائقُ تحتها
+            لأنها سببُ فتح هذا الدرج في أكثر الأحيان. */}
+        <AccountSection userId={row.user_id} fallbackName={row.name} />
+        <VehiclesSection driverId={row.driver_id} />
+        <SubscriptionSection driverId={row.driver_id} />
+        <WalletSection userId={row.user_id} />
+        <MoneyOwedSection driverId={row.driver_id} />
+        <RidesSection side="driver" id={row.driver_id} />
+        <ChargesSection userId={row.user_id} country={row.country_code} />
+
+        <h3 className="mb-10 mt-18 text-13 font-bold text-muted">الوثائق</h3>
         {docs === null ? (
           <Spinner className="mx-auto" />
         ) : docs.documents.length === 0 ? (

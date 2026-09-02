@@ -123,10 +123,17 @@ async def list_all(
     stmt = select(WithdrawalRequest).order_by(WithdrawalRequest.created_at.desc())
     if status is not None:
         stmt = stmt.where(WithdrawalRequest.status == status)
-    # **مرشِّحٌ فقط** — انظر `services/admin_search.py`
+    # **مرشِّحٌ فقط** — انظر `services/admin_search.py`.
+    #
+    # **و`driver_clause` لا `user_clause`** (عطبٌ قِيس 2026-09-02):
+    # `withdrawal_requests.driver_id` يشير إلى **`drivers.id` قصداً** كما ينصّ
+    # القسم 4 و`ARCHITECTURE.md`، **فشرطُ `users.id = …` كان لا يطابق أبداً** —
+    # فبحثُ صرفٍ باسم كبتنٍ يعيد فراغاً يُقرأ «لا نتائج» وهو «لا يبحث»
     term = admin_search.normalize(q)
     if term is not None:
-        stmt = stmt.where(admin_search.user_clause(term, WithdrawalRequest.driver_id))
+        stmt = stmt.where(
+            admin_search.driver_clause(term, WithdrawalRequest.driver_id)
+        )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 
 

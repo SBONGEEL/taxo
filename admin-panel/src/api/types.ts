@@ -599,6 +599,25 @@ export interface Overview {
 /** منسوختان حرفياً من `app/models/enums.py` — و`check:enums` يحرسهما. */
 export type VehicleCategory = "economy" | "comfort";
 
+/** مركبةُ كبتن — يقرؤها **قسمُ المركبة في الملفِّ الشخصيّ** (§37).
+ *
+ * **ولا تُكتب من اللوحة**: هوّيةُ المركبة يكتبها صاحبُها من تطبيقه، وتحريرُها
+ * يُسقط اعتمادَه إلى `pending` بقفلٍ مكتوب — **وبابُ لوحةٍ يكتبها طريقٌ ثانٍ
+ * إلى ذلك السقوط لا يمرّ بالقفل**.
+ */
+export interface Vehicle {
+  id: string;
+  driver_id: string;
+  make: string;
+  model: string;
+  year: number;
+  color: string;
+  /** **لا تُحوَّل خاناتُه** (§20): يُقارَن حرفاً بحرفٍ بلوحةٍ معدنيةٍ في يد. */
+  plate_number: string;
+  category: VehicleCategory;
+  created_at: string;
+}
+
 export type RideStatus =
   | "requested"
   | "searching"
@@ -943,6 +962,12 @@ export interface DeactivationRequestRow {
 export interface AdvanceRow {
   id: string;
   driver_id: string;
+  /** **صاحبُها بالاسم والرقم لا بمعرِّفه** (أُضيفا 2026-09-02): كان العمودُ
+   *  المعنونُ «الكبتن» يعرض ثماني خاناتٍ من UUID، **ومشرفٌ يقرأ `3f2a91b8`
+   *  لا يعرف من هو** فيفتح قائمةً أخرى ليترجمه. وينشرهما `AdminDebtOut`
+   *  أصلاً — وبابان ينشران الشيءَ نفسَه ويفترقان هو الشكلُ الثامن. */
+  driver_name: string;
+  driver_phone: string | null;
   amount: string;
   currency: string;
   status: "outstanding" | "repaid" | "written_off";

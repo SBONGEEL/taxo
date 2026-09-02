@@ -181,14 +181,21 @@ async def list_all(
             Ride.country_code == country_code
         )
     # **مرشِّحٌ فقط** (`services/admin_search.py`): من دفع — راكبُ الرحلة أو
-    # كبتنُها. **وبـ`EXISTS` لا بضمّ** كي لا يتغيّر ما تحويه الصفحةُ الواحدة
+    # كبتنُها. **وبـ`EXISTS` لا بضمّ** كي لا يتغيّر ما تحويه الصفحةُ الواحدة.
+    #
+    # **و`ride_parties_clause` لا `any_user_clause`** (عطبٌ قِيس 2026-09-02):
+    # `rides.driver_id` عمودُ `drivers.id` لا `users.id`، **فالشرطُ الأولُ كان
+    # لا يطابق كبتناً أبداً** — من بحث عن دفعاتِ كبتنٍ باسمه قرأ «لا نتائج»
+    # وهو «لا يبحث»
     term = admin_search.normalize(q)
     if term is not None:
         stmt = stmt.where(
             select(Ride.id)
             .where(
                 Ride.id == Payment.ride_id,
-                admin_search.any_user_clause(term, Ride.rider_id, Ride.driver_id),
+                admin_search.ride_parties_clause(
+                    term, Ride.rider_id, Ride.driver_id
+                ),
             )
             .exists()
         )

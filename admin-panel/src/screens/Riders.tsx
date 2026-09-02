@@ -34,6 +34,11 @@ import {
   unfreezeWallet,
 } from "@/api/endpoints";
 import type { User, Wallet, WalletTransaction } from "@/api/types";
+import {
+  AccountSection,
+  ChargesSection,
+  RidesSection,
+} from "@/components/profile/Sections";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -299,7 +304,19 @@ function RiderDrawer({
           {wallet?.frozen ? <Badge tone="warn">محفظةٌ مجمّدة</Badge> : null}
         </div>
 
-        <h3 className="mb-10 text-13 font-bold text-muted">المحفظة</h3>
+        {/* **الملفُّ الشخصيُّ الكامل** (§37، البند ١) — **ومقابلُ درج الكبتن
+            لا نسخةٌ منه**: ما يخصّ الكيان (مركبةٌ واشتراكٌ وسلفة) لا وجودَ له
+            للراكب، وما يخصّ الشخصَ مشتركٌ في `profile/Sections.tsx`.
+            **والمحفظةُ تبقى مرسومةً هنا لا في القسم المشترك**: هي حاملةُ زرِّ
+            التجميد وسببِه، **وقسمٌ ثانٍ يعرض الرصيدَ نفسَه** يجعل الرقمَ
+            مكتوباً مرّتين في شاشةٍ واحدةٍ ويفترق أوّلَ ما يُحدَّث أحدُهما. */}
+        {/* **والصفُّ يُمرَّر لأن الشاشةَ تملكه**: `GET /admin/users` يردّ
+            `UserOut` نفسَه — فنداءٌ ثانٍ يعرض دوّارةً لِما هو مرسومٌ فوقه */}
+        <AccountSection userId={user.id} known={user} fallbackName={user.name} />
+        <RidesSection side="rider" id={user.id} />
+        <ChargesSection userId={user.id} country={user.country_code} />
+
+        <h3 className="mb-10 mt-18 text-13 font-bold text-muted">المحفظة</h3>
         {wallet === null ? (
           <Spinner className="mx-auto" />
         ) : (

@@ -40,6 +40,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.user import User
+from app.models.vehicle import Vehicle
 from app.routers.drivers import document_response
 from app.schemas.auth import UserBlockUpdate, UserOut
 from app.schemas.driver import (
@@ -57,6 +58,7 @@ from app.schemas.driver import (
     DriverGenderUpdate,
     DriverOut,
     DriverStatusUpdate,
+    VehicleOut,
 )
 from app.models.user_role_grant import has_role_clause
 from app.models.debt import DriverDebt
@@ -121,6 +123,29 @@ async def list_users(
 
     rows = (await session.scalars(stmt.limit(limit).offset(offset))).all()
     return [UserOut.model_validate(row) for row in rows]
+
+
+@router.get("/users/{user_id}", response_model=UserOut)
+async def get_user(
+    user_id: uuid.UUID, _staff: StaffUser, session: DbSession
+) -> UserOut:
+    """حسابٌ واحدٌ بحاله — **قسمُ «الحساب» في الملفِّ الشخصيّ** (§37).
+
+    **ولمَ بابٌ ولا قراءةٌ من صفِّ القائمة**: صفُّ الكبتن (`AdminDriverRow`)
+    يحمل ما يُفرز به «من أراجع الآن» — **ولا يحمل `is_blocked` ولا البريدَ
+    ولا الأدوارَ ولا «رقمٌ محجوز»**. فكان المشرفُ يفتح كبتناً موقوفَ الحساب
+    **ولا شيءَ في درجه يقول ذلك**: يقرأ «معتمد» ويسأل لماذا لا تصله رحلات.
+
+    **ولا تُوسَّع حمولةُ القائمة بدلاً منه**: صفحةٌ من خمسين تحمل ذلك لخمسين
+    لا يُقرأ منهم واحد — وهو ما يقوله §5-ج عن العمود المحضَّر بثمنه.
+
+    **ولا كتابةَ هنا**: الحظرُ بابُه `_set_blocked` وحدَه بسببٍ إلزاميٍّ
+    وقفلٍ، **وبابُ قراءةٍ لا يصير طريقاً ثانياً إليه**.
+    """
+    user = await session.get(User, user_id)
+    if user is None:
+        raise NotFound("الحساب غير موجود")
+    return UserOut.model_validate(user)
 
 
 @router.post("/users/{user_id}/block", response_model=UserOut)
@@ -419,6 +444,33 @@ async def set_driver_gender(
     return DriverOut.model_validate(driver)
 
 
+@router.get("/drivers/{driver_id}/vehicles", response_model=list[VehicleOut])
+async def list_driver_vehicles(
+    driver_id: uuid.UUID, _staff: StaffUser, session: DbSession
+) -> list[VehicleOut]:
+    """مركباتُ الكبتن — **قسمُ المركبة في الملفِّ الشخصيّ** (§37).
+
+    **ولمَ بابٌ ولا حقلٌ على صفِّ القائمة**: `AdminDriverRow` صفُّ فرزٍ يُقرأ
+    منه «من أراجع الآن»، **وصفحةٌ من خمسين تحمل مركباتِ خمسين** توسّع الصفَّ
+    لِما لا يُقرأ فيه. والملفُّ يُفتح لواحد.
+
+    **ولا كتابةَ هنا**: هوّيةُ المركبة يكتبها صاحبُها من تطبيقه، **وتحريرُها
+    يُسقط اعتمادَه إلى `pending`** بقفلٍ مكتوبٍ في `CLAUDE.md`. **وبابُ لوحةٍ
+    يكتبها يصير طريقاً ثانياً إلى ذلك السقوط لا يمرّ بالقفل** — فالمشرفُ يقرأ
+    ويقرّر على الوثيقة، لا يصحّح لوحةَ سيّارةٍ بيده.
+
+    **وقائمةٌ لا صفٌّ واحد**: العلاقةُ `drivers.vehicles` جمعٌ في النموذج،
+    **ورجوعُ الأولِ وحدَه يخفي الثانيةَ** عمّن يقرأ ملفّاً اسمُه «الكامل».
+    """
+    await _driver(session, driver_id)
+    rows = await session.scalars(
+        select(Vehicle)
+        .where(Vehicle.driver_id == driver_id)
+        .order_by(Vehicle.created_at.desc())
+    )
+    return [VehicleOut.model_validate(row) for row in rows]
+
+
 @router.get("/drivers/{driver_id}/documents", response_model=DriverDocumentsOut)
 async def list_driver_documents(
     driver_id: uuid.UUID, _staff: StaffUser, session: DbSession
@@ -579,6 +631,9 @@ async def list_advances(
     _: AdminUser,
     session: DbSession,
     status: AdvanceStatus | None = None,
+    driver_id: uuid.UUID | None = Query(
+        default=None, description="سلفُ كبتنٍ بعينه — للملفِّ الشخصيّ (§37)"
+    ),
     q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
@@ -588,28 +643,37 @@ async def list_advances(
     وهي صفحةٌ محدودةٌ لا جدولٌ كامل، فالجمعُ لكلٍّ منها استعلامٌ صغيرٌ على
     فهرسٍ — لا جمعٌ في المتصفح: مجموعُ صفحةٍ تحت عنوانٍ يقول «الكل» رقمٌ يكذب
     (قاعدةُ `services/stats.py`).
+
+    **و`driver_id` مرشِّحٌ كـ`q` لا منطقٌ ثانٍ** (§37): الملفُّ الشخصيُّ يقرأ
+    سلفَ صاحبه **من هذا الباب** لا من بابٍ يُبنى له — «الصفحةُ تقرأ ولا تحسب
+    من جديد» (§5-ج). **ولا يُرشَّح بالاسم بدلاً منه**: كبتنان يتشابه اسمُهما
+    يخلطان صفوفَهما في ملفٍّ يقول «سلفُ هذا الشخص».
     """
-    stmt = select(DriverAdvance).order_by(DriverAdvance.created_at.desc())
+    stmt = (
+        select(DriverAdvance, User)
+        .join(Driver, Driver.id == DriverAdvance.driver_id)
+        .join(User, User.id == Driver.user_id)
+        .order_by(DriverAdvance.created_at.desc())
+    )
     if status is not None:
         stmt = stmt.where(DriverAdvance.status == status)
-    # **مرشِّحٌ فقط** (`services/admin_search.py`) — الكبتنُ عبر `drivers.user_id`
+    if driver_id is not None:
+        stmt = stmt.where(DriverAdvance.driver_id == driver_id)
+    # **مرشِّحٌ فقط** (`services/admin_search.py`) — و`User` مضمومٌ هنا الآن
+    # **وواحدٌ لواحد** (كبتنٌ واحدٌ لكلِّ سلفة) فلا يضاعف صفّاً ولا يمسّ الصفحة
     term = admin_search.normalize(q)
     if term is not None:
-        stmt = stmt.where(
-            select(Driver.id)
-            .where(
-                Driver.id == DriverAdvance.driver_id,
-                admin_search.user_clause(term, Driver.user_id),
-            )
-            .exists()
-        )
-    rows = list(await session.scalars(stmt.limit(limit).offset(offset)))
+        pattern = admin_search.like(term)
+        stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
+    rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     out: list[AdminAdvanceOut] = []
-    for row in rows:
+    for row, owner in rows:
         paid = await advances_service.repaid_amount(session, row.id)
         out.append(
             AdminAdvanceOut(
                 **AdvanceOut.model_validate(row).model_dump(),
+                driver_name=owner.name,
+                driver_phone=owner.phone,
                 remaining=row.amount - paid,
                 overdue=(
                     row.status is AdvanceStatus.OUTSTANDING
@@ -710,11 +774,18 @@ async def list_driver_debts(
     _: AdminUser,
     session: DbSession,
     status: DriverDebtStatus | None = None,
+    driver_id: uuid.UUID | None = Query(
+        default=None, description="مستحقّاتُ كبتنٍ بعينه — للملفِّ الشخصيّ (§37)"
+    ),
     q: str | None = Query(default=None, max_length=120, description="اسمُ الكبتن أو رقمُه"),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[AdminDebtOut]:
-    """المستحقّاتُ ومعها أصحابُها — صفحةٌ محدودةٌ لا جدولٌ كامل."""
+    """المستحقّاتُ ومعها أصحابُها — صفحةٌ محدودةٌ لا جدولٌ كامل.
+
+    **و`driver_id` مرشِّحٌ كـ`q`** (§37): الملفُّ الشخصيُّ يقرأ من هذا الباب
+    ولا يُبنى له ثانٍ.
+    """
     stmt = (
         select(DriverDebt, User)
         .join(Driver, Driver.id == DriverDebt.driver_id)
@@ -723,6 +794,8 @@ async def list_driver_debts(
     )
     if status is not None:
         stmt = stmt.where(DriverDebt.status == status)
+    if driver_id is not None:
+        stmt = stmt.where(DriverDebt.driver_id == driver_id)
     # **مرشِّحٌ فقط**: `User` مضمومٌ في هذا الاستعلام أصلاً — **والضمُّ واحدٌ
     # لواحد** (كبتنٌ واحدٌ لكلِّ دَين) فلا يضاعف صفّاً ولا يمسّ حدَّ الصفحة
     term = admin_search.normalize(q)

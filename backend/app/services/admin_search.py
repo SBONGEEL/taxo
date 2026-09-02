@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from sqlalchemy import ColumnElement, or_, select
 
+from app.models.driver import Driver
 from app.models.user import User
 
 
@@ -59,6 +60,7 @@ def like(q: str) -> str:
 
 def user_clause(q: str, user_id_column) -> ColumnElement[bool]:
     """«صاحبُ هذا الصفِّ اسمُه أو رقمُه يطابق» — **بـ`EXISTS` لا بضمّ**."""
+    _must_point_at(user_id_column, "users")
     pattern = like(q)
     return (
         select(User.id)
@@ -70,12 +72,72 @@ def user_clause(q: str, user_id_column) -> ColumnElement[bool]:
     )
 
 
-def any_user_clause(q: str, *user_id_columns) -> ColumnElement[bool]:
-    """يطابق **أيَّ** طرفٍ من أطراف الصفّ — راكبٌ أو كبتن مثلاً."""
-    return or_(*(user_clause(q, column) for column in user_id_columns))
-
-
 def text_clause(q: str, *columns) -> ColumnElement[bool]:
     """يطابق أعمدةً نصّيةً على الصفِّ نفسِه — مرجعاً أو عنواناً أو سبباً."""
     pattern = like(q)
     return or_(*(column.ilike(pattern) for column in columns))
+
+
+def _fk_target(column) -> str | None:
+    """اسمُ الجدول الذي يشير إليه العمود — **مقروءٌ من المخطَّط لا مفترَضاً**."""
+    for key in column.foreign_keys:
+        return key.column.table.name
+    return None
+
+
+def _must_point_at(column, table: str) -> None:
+    """يصيح إن كان العمودُ يشير إلى جدولٍ غير الذي يفترضه الشرط.
+
+    **العلّةُ عطبٌ قِيس 2026-09-02**، وهو أخبثُ ما يقع لمرشِّح: `rides.driver_id`
+    يشير إلى **`drivers.id` لا `users.id`**، **و`withdrawal_requests.driver_id`
+    كذلك** — وهو مكتوبٌ في `ARCHITECTURE.md` بحرفه: «passing the latter silently
+    returns zero because it matches no row». فشرطُ `users.id = rides.driver_id`
+    **لا يطابق صفّاً أبداً**: لا يرمي، ولا يعيد خطأً، **بل يُسقط نصفَ البحث
+    صامتاً** — فمن بحث عن دفعاتِ كبتنٍ باسمه قرأ «لا نتائج» وهو «لا يبحث»،
+    وهي علّةُ §35 نفسُها بوجهٍ ثانٍ.
+
+    **ولمَ يُقاس الشكلُ عند بناء الشرط لا عند قراءة النتيجة**: «لا نتائج» جوابٌ
+    مشروعٌ لبحثٍ سليم، **فلا اختبارَ عامٌّ يفرّقه عن بحثٍ لا يبحث**. أمّا
+    العمودُ فيُقرأ من المخطَّط، **فيسقط الموضعُ الخاطئ في أوّل نداءٍ يحمل `q`**.
+    """
+    found = _fk_target(column)
+    if found is not None and found != table:
+        raise AssertionError(
+            f"{column} يشير إلى {found} لا إلى {table} — "
+            f"وشرطٌ على الجدول الخطأ لا يطابق شيئاً ويُقرأ «لا نتائج»"
+        )
+
+
+def driver_clause(q: str, driver_id_column) -> ColumnElement[bool]:
+    """«كبتنُ هذا الصفِّ اسمُه أو رقمُه يطابق» — **والعمودُ `drivers.id`**.
+
+    **وهي ليست `user_clause` بعمودٍ آخر**: بين الصفِّ والاسم قفزتان لا واحدة
+    (`drivers.id → drivers.user_id → users.id`)، **وقفزةٌ منسيّةٌ تُسقط البحثَ
+    بلا خطأ**. و`EXISTS` لا ضمٌّ، للسبب المكتوب في رأس الملفّ.
+    """
+    _must_point_at(driver_id_column, "drivers")
+    pattern = like(q)
+    return (
+        select(Driver.id)
+        .join(User, Driver.user_id == User.id)
+        .where(
+            Driver.id == driver_id_column,
+            or_(User.name.ilike(pattern), User.phone.ilike(pattern)),
+        )
+        .exists()
+    )
+
+
+def ride_parties_clause(
+    q: str, rider_id_column, driver_id_column
+) -> ColumnElement[bool]:
+    """طرفا الرحلة معاً — **الراكبُ عبر `users.id` والكبتنُ عبر `drivers.id`**.
+
+    **وسببُ وجودها بيتٌ واحدٌ لا ثلاثة**: ثلاثةُ مواضعَ كانت تكتب هذا الشرطَ
+    بيدها (الدفعاتُ · رسومُ الإلغاء · وما يأتي)، **واثنان منها أخطآ العمودَ
+    يومَ كُتبا** فسقط نصفُ بحثهما صامتاً.
+    """
+    return or_(
+        user_clause(q, rider_id_column),
+        driver_clause(q, driver_id_column),
+    )

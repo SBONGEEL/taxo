@@ -21,7 +21,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Query
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import aliased
 
 from app.core.deps import AdminUser, DbSession, StaffUser
@@ -105,6 +105,10 @@ async def list_charges(
     session: DbSession,
     country_code: CountryCode | None = None,
     status: CancellationChargeStatus | None = None,
+    user_id: uuid.UUID | None = Query(
+        default=None,
+        description="رسومُ شخصٍ بعينه — راكباً كان أو كبتناً (الملفُّ الشخصيّ §37)",
+    ),
     q: str | None = Query(default=None, max_length=120, description="اسمُ طرفٍ أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -114,11 +118,28 @@ async def list_charges(
         stmt = stmt.where(Ride.country_code == country_code)
     if status is not None:
         stmt = stmt.where(RideCancellationCharge.status == status)
-    # **مرشِّحٌ فقط** (`services/admin_search.py`) — الراكبُ أو الكبتن
+    # **مرشِّحٌ بمعرّفٍ لا باسم** (§37): الملفُّ الشخصيُّ يقرأ رسومَ صاحبه من
+    # هذا الباب. **والطرفان معاً بمعرّفِ مستخدمٍ واحد**: الراكبُ `users.id`
+    # مباشرةً، **والكبتنُ عبر `drivers.user_id`** — لا بمقارنته بـ`rides.driver_id`
+    # الذي هو `drivers.id` (العطبُ المقيس 2026-09-02 في هذا الملفّ نفسِه)
+    if user_id is not None:
+        stmt = stmt.where(
+            or_(
+                Ride.rider_id == user_id,
+                Ride.driver_id.in_(
+                    select(Driver.id).where(Driver.user_id == user_id)
+                ),
+            )
+        )
+    # **مرشِّحٌ فقط** (`services/admin_search.py`) — الراكبُ أو الكبتن.
+    #
+    # **و`ride_parties_clause` لا `any_user_clause`** (عطبٌ قِيس 2026-09-02):
+    # `rides.driver_id` عمودُ `drivers.id`، **فشرطُ `users.id = …` كان لا
+    # يطابق كبتناً أبداً** ويُقرأ «لا نتائج» وهو «لا يبحث»
     term = admin_search.normalize(q)
     if term is not None:
         stmt = stmt.where(
-            admin_search.any_user_clause(term, Ride.rider_id, Ride.driver_id)
+            admin_search.ride_parties_clause(term, Ride.rider_id, Ride.driver_id)
         )
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()

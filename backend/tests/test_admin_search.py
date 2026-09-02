@@ -19,6 +19,22 @@
 * **وأنه لا يجد ما ليس فيه**: نصٌّ لا يطابق أحداً يعيد فراغاً لا الكلَّ.
 * **وأن حروفَ `LIKE` تُهرَّب**: `%` تُقرأ محرفاً لا «أيَّ شيء» — **ومن كتب
   `%` بلا تهريبٍ رأى الجدولَ كلَّه وظنّه نتيجةَ بحثه**.
+
+## ⚠ وثغرةٌ في هذا الملفِّ نفسِه، قِيست 2026-09-02
+
+**«أن البحثَ يجد» كان مقيساً على قائمةٍ واحدةٍ من أربعَ عشرة** (`/admin/drivers`)
+بينما التطابقُ مقيسٌ على الأربعَ عشرة — **فمرَّت ثلاثُ قوائمَ لا يبحث فيها
+نصفُ الشرط**: الدفعاتُ وطلباتُ الصرف ورسومُ الإلغاء كانت تقارن **`users.id`
+بعمودٍ يشير إلى `drivers.id`**، فلا تطابق كبتناً أبداً.
+
+**ولم يصح منها شيءٌ خطأً**: النتيجةُ فراغٌ، **والفراغُ جوابٌ مشروعٌ لبحثٍ
+سليم** — فلا اختبارَ عامٌّ يفرّقه عن بحثٍ لا يبحث. **والذي أمسكه شرطُ شكلٍ
+لا شرطُ نتيجة**: `admin_search._must_point_at` يقرأ الجدولَ الذي يشير إليه
+العمود **من المخطَّط**، فصار الموضعُ الخاطئ يصيح في أوّل نداءٍ يحمل `q` —
+**ويمسكه `test_a_term_that_matches_nobody_returns_nothing` على القوائم كلِّها
+لأنه وحدَه يمرّر `q` غيرَ فارغة**.
+
+**وتحته اختباران يقيسان الوجدانَ لا الشكل** على القائمتين اللتين يمكن بذرُهما.
 """
 
 from __future__ import annotations
@@ -26,7 +42,17 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
-from tests.helpers import DRIVER, RIDER, approved_driver, rider_session
+from tests.helpers import (
+    DRIVER,
+    RIDER,
+    approved_driver,
+    bring_online,
+    completed_ride,
+    pay_ride,
+    rider_session,
+    set_cliq_alias,
+    topup_wallet,
+)
 
 # ═══════════════════════ القوائمُ المرقَّمةُ كلُّها — مسارٌ لكلٍّ
 #
@@ -143,3 +169,78 @@ async def test_search_does_not_widen_what_a_role_may_see(
     assert plain.status_code == searched.status_code
     if plain.status_code == 200:
         assert len(searched.json()) <= len(plain.json())
+
+
+# ═══════════════════════ الوجدانُ حيث كان الشرطُ على الجدول الخطأ
+#
+# **هذان يقيسان ما لا يقيسه شرطُ الشكل**: أن الصفَّ يُوجد فعلاً باسم كبتنه —
+# لا أن الشرطَ بُني على العمود الصحيح.
+
+
+async def test_a_payment_is_found_by_the_name_of_its_captain(
+    client: AsyncClient,
+    session_factory,
+    admin_headers: dict,
+    rider_payload: dict,
+    jordan_settings,
+    jordan_wallet,
+) -> None:
+    """**دفعةُ رحلةٍ تُوجد باسم كبتنها** — لا براكبها وحدَه.
+
+    **وكان هذا نصفَ البحث الساقط**: `rides.driver_id` عمودُ `drivers.id`،
+    وشرطُ `users.id = …` عليه لا يطابق أبداً — **فمن بحث عن دفعاتِ كبتنٍ
+    باسمه قرأ «لا نتائج» وهو «لا يبحث»**.
+    """
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+    rider = await rider_session(client, rider_payload)
+    ride = await completed_ride(client, rider["headers"], driver)
+    paid = await pay_ride(client, rider["headers"], ride["id"], "cash")
+    assert paid.status_code in (200, 201), paid.text
+
+    by_captain = await client.get(
+        "/admin/payments", params={"q": DRIVER["name"][:4]}, headers=admin_headers
+    )
+    assert by_captain.status_code == 200, by_captain.text
+    assert [row["ride_id"] for row in by_captain.json()] == [ride["id"]]
+
+    by_rider = await client.get(
+        "/admin/payments",
+        params={"q": rider_payload["name"][:4]},
+        headers=admin_headers,
+    )
+    assert by_rider.status_code == 200
+    assert [row["ride_id"] for row in by_rider.json()] == [ride["id"]]
+
+
+async def test_a_withdrawal_is_found_by_the_name_of_its_captain(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_wallet
+) -> None:
+    """**طلبُ صرفٍ يُوجد باسم صاحبه** — و`driver_id` هنا `drivers.id` قصداً.
+
+    وهو مكتوبٌ في `ARCHITECTURE.md` بحرفه: العمودُ يشير إلى `drivers` كما
+    ينصّ القسم 4، **وتمريرُه حيث يُنتظر `users.id` يعيد صفراً صامتاً**.
+    """
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await set_cliq_alias(session_factory, driver["driver_id"])
+    await topup_wallet(client, admin_headers, driver["user_id"], "80.000")
+
+    created = await client.post(
+        "/wallet/me/withdrawals",
+        json={"amount": "30.000", "method": "cliq"},
+        headers=driver["headers"],
+    )
+    assert created.status_code == 201, created.text
+
+    found = await client.get(
+        "/admin/withdrawals", params={"q": DRIVER["name"][:4]}, headers=admin_headers
+    )
+    assert found.status_code == 200, found.text
+    assert [row["id"] for row in found.json()] == [created.json()["id"]]
+
+    # **ونصٌّ لا يخصّ أحداً يعيد فراغاً** — كي لا يُقرأ النجاحُ من شرطٍ ملغيّ
+    none = await client.get(
+        "/admin/withdrawals", params={"q": "لا أحدَ بهذا الاسم"}, headers=admin_headers
+    )
+    assert none.status_code == 200
+    assert none.json() == []

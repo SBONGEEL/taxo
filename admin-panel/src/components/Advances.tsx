@@ -88,7 +88,21 @@ export function Advances({ onError }: { onError: (message: string) => void }) {
         empty={{ title: "لا سلف", hint: "لم تُصرف سلفةٌ بعد." }}
         render={(row) => (
           <>
-            <span className="font-mono text-11.5">{row.driver_id.slice(0, 8)}</span>
+            {/* **الاسمُ لا ثمانُ خاناتٍ من UUID** (2026-09-02): كان العمودُ
+                المعنونُ «الكبتن» يعرض `3f2a91b8` — **ومشرفٌ يقرؤه لا يعرف من
+                هو** فيفتح قائمةَ الكباتن ليترجمه. وجدولُ المستحقّات تحته
+                يعرض الاسمَ منذ يومه، **وهما صفّان عن الشخص نفسِه في الشاشة
+                نفسِها**: الشكلُ الثامن يُرى بالعين لا بحارس. */}
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-ink">
+                {row.driver_name}
+              </span>
+              {row.driver_phone ? (
+                <span dir="ltr" className="block truncate text-start text-10.5 text-muted">
+                  {row.driver_phone}
+                </span>
+              ) : null}
+            </span>
             <span className="text-12 text-ink">
               {money(row.amount, row.currency)}
             </span>

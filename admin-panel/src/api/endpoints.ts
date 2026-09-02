@@ -89,6 +89,7 @@ import type {
   TotpStatus,
   User,
   UserRole,
+  Vehicle,
   VehicleCategory,
   Wallet,
   WalletSetting,
@@ -349,6 +350,14 @@ export const listDrivers = (
     offset?: number;
   } = {},
 ) => api.get<AdminDriverRow[]>("/admin/drivers", { query: params });
+
+/** مركباتُ الكبتن — **قسمُ المركبة في الملفِّ الشخصيّ** (§37).
+ *
+ * **ولم يكن للوحة بابٌ يقرأ مركبةَ كبتنٍ قبل اليوم**: `AdminDriverRow` لا
+ * يحملها، **فكان المشرفُ يبتّ في «رخصة المركبة» ولا يرى لوحتَها ولا سنتَها**.
+ */
+export const listDriverVehicles = (driverId: string) =>
+  api.get<Vehicle[]>(`/admin/drivers/${driverId}/vehicles`);
 
 export const getDriverDocuments = (driverId: string) =>
   api.get<DriverDocuments>(`/admin/drivers/${driverId}/documents`);
@@ -663,6 +672,15 @@ export const listUsers = (
   } = {},
 ) => api.get<User[]>("/admin/users", { query: params });
 
+/** حسابٌ واحدٌ بحاله — **قسمُ «الحساب» في الملفِّ الشخصيّ** (§37).
+ *
+ * **وصفُّ الكبتن لا يحمله**: `AdminDriverRow` بلا `is_blocked` ولا بريدٍ ولا
+ * أدوار، **فكان درجُ كبتنٍ موقوفِ الحساب لا يقول ذلك** — يُقرأ «معتمد»
+ * ويُسأل لماذا لا تصله رحلات.
+ */
+export const getUser = (userId: string) =>
+  api.get<User>(`/admin/users/${userId}`);
+
 /** الحظرُ **بسببٍ إلزامي** يدخل سجل التدقيق ولا يصل صاحب الحساب. */
 export const blockUser = (userId: string, reason: string) =>
   api.post<User>(`/admin/users/${userId}/block`, { reason });
@@ -860,9 +878,13 @@ export const listCancellationCharges = (
   country: CountryCode,
   status?: CancellationChargeStatus,
   q?: string,
+  /** **رسومُ شخصٍ بعينه** — راكباً كان أو كبتناً (§37). والكبتنُ يُبلَغ عبر
+   *  `drivers.user_id` في الخلفية، **لا بمقارنة معرِّف مستخدمٍ بـ`rides.driver_id`**
+   *  الذي هو `drivers.id`. */
+  userId?: string,
 ) =>
   api.get<CancellationChargeRow[]>("/admin/cancellation-charges", {
-    query: { country_code: country, status, q },
+    query: { country_code: country, status, q, user_id: userId },
   });
 
 /** الإعفاء — **بابُ الاعتراض بعد الحدث**، وسببُه مطلوبٌ لا اختياري. */
@@ -879,9 +901,20 @@ export const writeOffCancellationCharge = (id: string, reason: string) =>
     { reason },
   );
 
-/** السلفُ بمتبقّيها — **مطروحاً في الخلفية** لا في المتصفح. */
-export const listAdvances = (status?: string, q?: string) =>
-  api.get<AdvanceRow[]>("/admin/drivers/advances", { query: { status, q } });
+/** السلفُ بمتبقّيها — **مطروحاً في الخلفية** لا في المتصفح.
+ *
+ * **و`driver_id` مرشِّحٌ يقرأ به الملفُّ الشخصيُّ سلفَ صاحبه** (§37) — من
+ * البابِ نفسِه لا من بابٍ يُبنى له، و**بمعرِّفٍ لا باسم** كي لا يخلط ملفٌّ
+ * صفوفَ متشابهَي الاسم.
+ */
+export const listAdvances = (
+  status?: string,
+  q?: string,
+  driverId?: string,
+) =>
+  api.get<AdvanceRow[]>("/admin/drivers/advances", {
+    query: { status, q, driver_id: driverId },
+  });
 
 /** صرفٌ بموافقة مشرف — البابُ الوحيد لما يتجاوز سقفَ الكبتن. */
 export const disburseAdvance = (payload: { driver_id: string; amount: string }) =>
@@ -1205,9 +1238,18 @@ export const listDeclaredClaims = (country?: CountryCode) =>
 export const rejectCliqClaim = (id: string, reason: string) =>
   api.post<CliqClaim>(`/admin/cliq-claims/${id}/reject`, { reason });
 
-/** مستحقّاتُ الكباتن — **والمتبقّي `amount - collected` يُقرأ من العمودين**. */
-export const listDriverDebts = (status?: string, q?: string) =>
-  api.get<DriverDebtRow[]>("/admin/drivers/debts", { query: { status, q } });
+/** مستحقّاتُ الكباتن — **والمتبقّي `amount - collected` يُقرأ من العمودين**.
+ *
+ * **و`driver_id` للملفِّ الشخصيّ** (§37) — كالسلف.
+ */
+export const listDriverDebts = (
+  status?: string,
+  q?: string,
+  driverId?: string,
+) =>
+  api.get<DriverDebtRow[]>("/admin/drivers/debts", {
+    query: { status, q, driver_id: driverId },
+  });
 
 /** مطالباتُ السداد المعلّقة — ما ينتظر عينَ مشرف. */
 export const listDebtClaims = () =>
