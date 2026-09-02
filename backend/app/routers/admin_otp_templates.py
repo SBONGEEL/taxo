@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import ProvidersManager, DbSession
 from app.core.exceptions import InvalidOtpTemplate, NotFound
 from app.models.enums import AuditAction
 from app.models.otp_template import OtpMessageTemplate, OtpTemplatePurpose
@@ -54,7 +54,7 @@ def _to_out(purpose: str, row: OtpMessageTemplate | None) -> OtpTemplateOut:
 
 
 @router.get("", response_model=OtpTemplatesOut)
-async def list_templates(session: DbSession, _: AdminUser) -> OtpTemplatesOut:
+async def list_templates(session: DbSession, _: ProvidersManager) -> OtpTemplatesOut:
     rows = await otp_templates.all_templates(session)
     rules = otp_templates.rules()
     return OtpTemplatesOut(
@@ -70,7 +70,7 @@ async def update_template(
     purpose: str,
     payload: OtpTemplateUpdate,
     session: DbSession,
-    user: AdminUser,
+    user: ProvidersManager,
 ) -> OtpTemplateOut:
     if purpose not in OtpTemplatePurpose.ALL:
         raise NotFound("لا قالبَ بهذا الاسم")

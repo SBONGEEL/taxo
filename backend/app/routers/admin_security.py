@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import SecurityManager, DbSession
 from app.models.enums import AuditAction
 from app.schemas.security import (
     SecuritySettingOut,
@@ -49,7 +49,7 @@ async def _read(session, user) -> SecuritySettingOut:
 
 @router.get("", response_model=SecuritySettingOut)
 async def read_security_settings(
-    user: AdminUser, session: DbSession
+    user: SecurityManager, session: DbSession
 ) -> SecuritySettingOut:
     """السياسةُ ومعها حالةُ عاملِ من يقرأ — فالشاشةُ تعرف **لماذا** يُعطَّل الزر."""
     return await _read(session, user)
@@ -57,7 +57,7 @@ async def read_security_settings(
 
 @router.put("", response_model=SecuritySettingOut)
 async def update_security_settings(
-    payload: SecuritySettingUpdate, user: AdminUser, session: DbSession
+    payload: SecuritySettingUpdate, user: SecurityManager, session: DbSession
 ) -> SecuritySettingOut:
     """يكتب السياسة — وإشعالُ الإلزام مشروطٌ بإثبات استردادِ الطالب نفسِه."""
     row, changed = await security_settings.update(

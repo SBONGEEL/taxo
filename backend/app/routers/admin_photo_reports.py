@@ -14,7 +14,7 @@ import uuid
 
 from fastapi import APIRouter, Response, status
 
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import FleetManager, DbSession
 from app.schemas.photo_report import PhotoReportOut
 from app.core import storage
 from app.models.user import User
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/admin/photo-reports", tags=["admin"])
 
 
 @router.get("", response_model=list[PhotoReportOut])
-async def list_reports(_admin: AdminUser, session: DbSession) -> list[PhotoReportOut]:
+async def list_reports(_admin: FleetManager, session: DbSession) -> list[PhotoReportOut]:
     """المعلَّقةُ وحدَها — **وصورةُ كلٍّ محجوبةٌ الآن** بانتظار هذا القرار."""
     rows = await rider_photo.open_reports(session)
     out: list[PhotoReportOut] = []
@@ -50,7 +50,7 @@ async def list_reports(_admin: AdminUser, session: DbSession) -> list[PhotoRepor
 
 @router.get("/{report_id}/photo")
 async def reported_photo(
-    report_id: uuid.UUID, _admin: AdminUser, session: DbSession
+    report_id: uuid.UUID, _admin: FleetManager, session: DbSession
 ) -> Response:
     """الصورةُ المبلَّغُ عنها — **البابُ الوحيدُ الذي يراها وهي محجوبة**.
 
@@ -84,7 +84,7 @@ async def reported_photo(
 async def resolve_report(
     report_id: uuid.UUID,
     remove: bool,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
 ) -> None:
     """قرارُ المشرف — **ويُقيَّد في التدقيق كغيره**: هذا حذفُ محتوى شخصٍ آخر."""

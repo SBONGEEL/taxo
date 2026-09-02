@@ -24,7 +24,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import or_, select
 from sqlalchemy.orm import aliased
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import FinanceManager, DbSession, StaffUser
 from app.core.exceptions import NotFound
 from app.models.cancellation import RideCancellationCharge
 from app.models.driver import Driver
@@ -150,7 +150,7 @@ async def list_charges(
 async def waive_charge(
     charge_id: uuid.UUID,
     payload: ChargeReasonRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> CancellationChargeRow:
     """يُعفي راكباً من رسمٍ لم يُحصَّل بعد — **بسببٍ مكتوبٍ يدخل التدقيق**."""
@@ -165,7 +165,7 @@ async def waive_charge(
 async def write_off_charge(
     charge_id: uuid.UUID,
     payload: ChargeReasonRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> CancellationChargeRow:
     """يشطب رسماً لم يعد صاحبُه (§10) — اعترافٌ بالخسارة باسم من قرّرها.

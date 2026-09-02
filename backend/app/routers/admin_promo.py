@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import GrowthManager, DbSession
 from app.core.exceptions import Conflict, NotFound
 from app.models.enums import AuditAction, CountryCode
 from app.models.promo import PromoCode
@@ -59,7 +59,7 @@ async def _out(session, row: PromoCode) -> PromoCodeOut:
 
 @router.get("", response_model=list[PromoCodeOut])
 async def list_promo_codes(
-    _admin: AdminUser,
+    _admin: GrowthManager,
     session: DbSession,
     country_code: CountryCode | None = Query(default=None),
 ) -> list[PromoCodeOut]:
@@ -72,7 +72,7 @@ async def list_promo_codes(
 
 @router.post("", response_model=PromoCodeOut, status_code=status.HTTP_201_CREATED)
 async def create_promo_code(
-    payload: PromoCodeCreate, admin: AdminUser, session: DbSession
+    payload: PromoCodeCreate, admin: GrowthManager, session: DbSession
 ) -> PromoCodeOut:
     row = PromoCode(
         **payload.model_dump(exclude={"code"}),
@@ -103,7 +103,7 @@ async def create_promo_code(
 async def update_promo_code(
     promo_id: uuid.UUID,
     payload: PromoCodeUpdate,
-    admin: AdminUser,
+    admin: GrowthManager,
     session: DbSession,
 ) -> PromoCodeOut:
     """يعدّل رمزاً — **ولا أثرَ رجعياً على رحلةٍ تحمله**.
@@ -139,7 +139,7 @@ async def update_promo_code(
 
 @router.delete("/{promo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_promo_code(
-    promo_id: uuid.UUID, admin: AdminUser, session: DbSession
+    promo_id: uuid.UUID, admin: GrowthManager, session: DbSession
 ) -> None:
     """يحذف رمزاً **لم يُستعمل قط** — وما استُعمل يُطفأ ولا يُحذف.
 

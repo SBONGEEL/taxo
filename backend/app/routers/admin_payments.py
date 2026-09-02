@@ -11,7 +11,7 @@ import uuid
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import DbSession, DisputeResolver, FinanceManager, StaffUser
 from app.models.enums import CountryCode, PaymentStatus
 from app.schemas.payment import (
     PaymentOut,
@@ -53,8 +53,10 @@ async def list_payments(
 @router.post("/payments/{payment_id}/resolve", response_model=PaymentOut)
 async def resolve_dispute(
     payment_id: uuid.UUID,
+    # **وفصلُ النزاع هو `payments.resolve` بعينها** — وهي في افتراض `support`،
+    # **فالجوابُ لم يتغيّر** وصار الحارسُ يقرأ المصفوفةَ لا الدورَ وحدَه
     payload: PaymentResolveRequest,
-    staff: StaffUser,
+    staff: DisputeResolver,
     session: DbSession,
 ) -> PaymentOut:
     """الفصل في نزاع كليك: وصل المال أو لم يصل (SPEC القسم 6.2)."""
@@ -70,11 +72,16 @@ async def resolve_dispute(
     return PaymentOut.model_validate(payment)
 
 
+# **والردُّ `finance.manage` لا `payments.resolve`** (قِيس 2026-09-02): هما
+# بابان في ملفٍّ واحدٍ **ونطاقاهما مختلفان** — فصلُ النزاع حكمٌ بين طرفين
+# (**وهو ما يملكه `support` اليوم**)، **والردُّ مالٌ يخرج من المنصّة**.
+# **وخريطةُ نطاقٍ بالملفّ أخطأت هنا**، وأمسكها `test_support_cannot_refund`
+# — وهو بعينه ما وُضع الشرطُ «لا تبدّل سلوكاً قائماً» ليمنعه.
 @router.post("/payments/{payment_id}/refund", response_model=PaymentOut)
 async def refund_payment(
     payment_id: uuid.UUID,
     payload: PaymentRefundRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> PaymentOut:
     """ردّ دفعةٍ مرّ مالها بالمنصة إلى محفظة الراكب — بقيدين متقابلين."""

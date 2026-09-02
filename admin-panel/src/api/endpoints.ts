@@ -17,6 +17,7 @@ import type {
   PhotoReport,
   AdminAccount,
   AdminDriverRow,
+  AdminPermissions,
   AdminReferralRow,
   AdminRideDetail,
   AdminRideRow,
@@ -686,6 +687,14 @@ export const listUsers = (
  */
 export const getUser = (userId: string) =>
   api.get<User>(`/admin/users/${userId}`);
+
+/** مصفوفةُ الصلاحيات — **تُقرأ من الحارس نفسِه** (§39٫٥). */
+export const listAdminPermissions = () =>
+  api.get<AdminPermissions[]>("/admin/permissions");
+
+/** **استبدالٌ لا إضافة** — فالنزعُ ممكن، وثلاثةُ حرّاسٍ في الخلفية. */
+export const setAdminPermissions = (userId: string, permissions: string[]) =>
+  api.put<AdminPermissions>(`/admin/permissions/${userId}`, { permissions });
 
 /** الحظرُ **بسببٍ إلزامي** يدخل سجل التدقيق ولا يصل صاحب الحساب. */
 export const blockUser = (userId: string, reason: string) =>

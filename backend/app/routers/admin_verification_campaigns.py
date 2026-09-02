@@ -17,7 +17,7 @@ import uuid
 
 from fastapi import APIRouter, status
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import GrowthManager, DbSession, StaffUser
 from app.models.enums import AuditAction, CountryCode
 from app.schemas.verification_campaign import (
     VerificationCampaignCreate,
@@ -63,7 +63,7 @@ async def list_campaigns(
 
 @router.post("", response_model=VerificationCampaignOut, status_code=201)
 async def create_campaign(
-    payload: VerificationCampaignCreate, admin: AdminUser, session: DbSession
+    payload: VerificationCampaignCreate, admin: GrowthManager, session: DbSession
 ) -> VerificationCampaignOut:
     """**تُنشأ مسوّدةً ولا تُطلق** — ولا تُرسل رسالةً واحدةً قبل الضغطة."""
     campaign = await verification_campaign.create_draft(
@@ -86,7 +86,7 @@ async def create_campaign(
 
 @router.post("/{campaign_id}/start", response_model=VerificationCampaignOut)
 async def start_campaign(
-    campaign_id: uuid.UUID, admin: AdminUser, session: DbSession
+    campaign_id: uuid.UUID, admin: GrowthManager, session: DbSession
 ) -> VerificationCampaignOut:
     """**الإطلاقُ ضغطةُ المالك** — ويُسجَّل باسمه وبعدد من شملهم يومَها."""
     size = await verification_campaign.scope_size(
@@ -111,7 +111,7 @@ async def start_campaign(
 
 @router.post("/{campaign_id}/cancel", response_model=VerificationCampaignOut)
 async def cancel_campaign(
-    campaign_id: uuid.UUID, admin: AdminUser, session: DbSession
+    campaign_id: uuid.UUID, admin: GrowthManager, session: DbSession
 ) -> VerificationCampaignOut:
     """**إلغاءٌ يفكّ ما أوقفته** — وإيقافٌ بلا حملةٍ تحكمه لا ينتهي أبداً."""
     campaign = await verification_campaign.cancel(session, campaign_id=campaign_id)

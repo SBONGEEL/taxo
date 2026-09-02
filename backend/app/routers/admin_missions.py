@@ -16,7 +16,7 @@ from datetime import date
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import FleetManager, DbSession, StaffUser
 from app.core.exceptions import NotFound
 from app.models.badge import Badge
 from app.models.driver import Driver
@@ -64,7 +64,7 @@ async def list_missions(
 @router.post("/missions", response_model=MissionOut, status_code=201)
 async def create_mission(
     payload: MissionIn,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
     country_code: CountryCode,
 ) -> MissionOut:
@@ -97,7 +97,7 @@ async def create_mission(
 async def update_mission(
     mission_id: uuid.UUID,
     payload: MissionPatch,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
 ) -> MissionOut:
     mission = await missions_service.update_mission(
@@ -134,7 +134,7 @@ async def update_mission(
 
 @router.delete("/missions/{mission_id}", status_code=204)
 async def delete_mission(
-    mission_id: uuid.UUID, admin: AdminUser, session: DbSession
+    mission_id: uuid.UUID, admin: FleetManager, session: DbSession
 ) -> None:
     """حذفُ مهمّةٍ **لم يبدأ شهرُها** (البند ٤، §39٫٤).
 
@@ -161,7 +161,7 @@ async def delete_mission(
 
 @router.delete("/badges/{badge_id}", status_code=204)
 async def delete_badge(
-    badge_id: uuid.UUID, admin: AdminUser, session: DbSession
+    badge_id: uuid.UUID, admin: FleetManager, session: DbSession
 ) -> None:
     """حذفُ شارةٍ **لم تُمنح لأحد** (البند ٤، §39٫٤).
 
@@ -231,7 +231,7 @@ async def level_overview(
 async def set_level_effect(
     level: int,
     payload: LevelSettingIn,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
     country_code: CountryCode,
 ) -> LevelSettingOut:
@@ -263,7 +263,7 @@ async def list_badges(_staff: StaffUser, session: DbSession) -> list[BadgeOut]:
 
 @router.post("/badges", response_model=BadgeOut, status_code=201)
 async def create_badge(
-    payload: BadgeIn, admin: AdminUser, session: DbSession
+    payload: BadgeIn, admin: FleetManager, session: DbSession
 ) -> BadgeOut:
     badge = await badges_service.create_badge(
         session,
@@ -301,7 +301,7 @@ async def driver_badges(
 async def grant_badge(
     driver_id: uuid.UUID,
     payload: BadgeGrantIn,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
 ) -> dict:
     await badges_service.grant(
@@ -320,7 +320,7 @@ async def revoke_badge(
     driver_id: uuid.UUID,
     badge_id: uuid.UUID,
     payload: BadgeRevokeIn,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
 ) -> dict:
     """**سحبٌ بـPOST لا DELETE**: السحبُ يحمل سبباً مكتوباً في جسمٍ، و`DELETE`

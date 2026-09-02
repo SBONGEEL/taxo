@@ -13,7 +13,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
-from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
+from app.core.deps import FinanceManager, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.driver import Driver
 from app.models.enums import (
@@ -109,7 +109,7 @@ async def list_wallet_transactions(
 async def freeze_wallet(
     user_id: uuid.UUID,
     payload: WalletFreezeRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> WalletOut:
     """تجميد المحفظة دون حظر الحساب (SPEC القسم 7/13.3)."""
@@ -120,7 +120,7 @@ async def freeze_wallet(
 async def unfreeze_wallet(
     user_id: uuid.UUID,
     payload: WalletFreezeRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> WalletOut:
     return await _set_frozen(session, user_id, admin, False, payload.reason)
@@ -156,7 +156,7 @@ async def _set_frozen(
 async def create_adjustment(
     user_id: uuid.UUID,
     payload: AdjustmentCreate,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> WalletTransactionOut:
     """قيد تصحيح موجب أو سالب — المخرج الوحيد لتصحيح دفترٍ لا يُعدَّل.
@@ -210,7 +210,7 @@ async def list_topup_requests(
 async def confirm_topup(
     request_id: uuid.UUID,
     payload: ConfirmTopup,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
     redis: RedisDep,
 ) -> TopupRequestOut:
@@ -235,7 +235,7 @@ async def confirm_topup(
 async def reject_topup(
     request_id: uuid.UUID,
     payload: RejectRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> TopupRequestOut:
     request = await topups.get_request(session, request_id, for_update=True)
@@ -250,7 +250,7 @@ async def reject_topup(
 async def create_staff_topup(
     user_id: uuid.UUID,
     payload: AdminTopupCreate,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
     redis: RedisDep,
 ) -> TopupRequestOut:
@@ -289,7 +289,7 @@ async def list_withdrawal_requests(
 
 @router.post("/withdrawals/{request_id}/approve", response_model=WithdrawalOut)
 async def approve_withdrawal(
-    request_id: uuid.UUID, admin: AdminUser, session: DbSession
+    request_id: uuid.UUID, admin: FinanceManager, session: DbSession
 ) -> WithdrawalOut:
     request = await withdrawals.get_request(session, request_id, for_update=True)
     request = await withdrawals.approve(session, request=request, actor=admin)
@@ -301,7 +301,7 @@ async def approve_withdrawal(
 async def reject_withdrawal(
     request_id: uuid.UUID,
     payload: RejectRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> WithdrawalOut:
     request = await withdrawals.get_request(session, request_id, for_update=True)
@@ -314,7 +314,7 @@ async def reject_withdrawal(
 
 @router.post("/withdrawals/{request_id}/payout", response_model=WithdrawalPayoutOut)
 async def payout_withdrawal(
-    request_id: uuid.UUID, admin: AdminUser, session: DbSession
+    request_id: uuid.UUID, admin: FinanceManager, session: DbSession
 ) -> WithdrawalPayoutOut:
     """تحويلٌ آلي عبر مزود payout بدل حوالةٍ يدوية (SPEC القسم 9/15-أ).
 
@@ -344,7 +344,7 @@ async def payout_withdrawal(
 async def mark_withdrawal_paid(
     request_id: uuid.UUID,
     payload: MarkPaidRequest,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> WithdrawalOut:
     """المحاسب حوّل وسجّل المرجع → قيد `withdrawal` يُكتب الآن."""
@@ -371,7 +371,7 @@ async def mark_withdrawal_paid(
 
 @router.get("/cliq-claims", response_model=list[CliqClaimOut])
 async def list_cliq_claims(
-    _: AdminUser, session: DbSession, country: CountryCode | None = None
+    _: FinanceManager, session: DbSession, country: CountryCode | None = None
 ) -> list[CliqClaimOut]:
     """المطالباتُ اليدويةُ المعلّقة — **ما ينتظر عينَ مشرف**."""
     rows = await cliq_subscriptions.list_pending(session, country=country)
@@ -382,7 +382,7 @@ async def list_cliq_claims(
 async def confirm_cliq_claim(
     order_id: uuid.UUID,
     payload: ConfirmTopup,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> CliqClaimOut:
     """**تأكيدُ الدفع** — الخطوةُ الواحدةُ التي يقرأها الاشتراك.
@@ -406,7 +406,7 @@ async def confirm_cliq_claim(
 
 @router.get("/cliq-claims/declared", response_model=list[CliqClaimOut])
 async def list_declared_claims(
-    _: AdminUser, session: DbSession, country: CountryCode | None = None
+    _: FinanceManager, session: DbSession, country: CountryCode | None = None
 ) -> list[CliqClaimOut]:
     """**من ضغط «حوّلتُ» وينتظر** — صفحةُ المدفوعات تقرأ هذا الباب.
 
@@ -425,7 +425,7 @@ async def list_declared_claims(
 async def reject_cliq_claim(
     order_id: uuid.UUID,
     payload: RejectClaimIn,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> CliqClaimOut:
     """**رفضٌ بسببٍ مكتوبٍ يُعرض على صاحبه** (قرارُ المالك 2026-09-01).

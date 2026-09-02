@@ -40,7 +40,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import FleetManager, DbSession
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.enums import AuditAction
 from app.models.vehicle_skin import VehicleSkin, VehicleSkinPrice
@@ -176,13 +176,13 @@ async def _write_prices(
 
 
 @router.get("", response_model=list[AdminSkinOut])
-async def list_skins(_: AdminUser, session: DbSession) -> list[AdminSkinOut]:
+async def list_skins(_: FleetManager, session: DbSession) -> list[AdminSkinOut]:
     """الكتالوجُ كلُّه ومعه عدّادُ الاقتناء والمبيعاتُ والإيراد."""
     return await _rows(session)
 
 
 @router.get("/assets", response_model=list[dict[str, str]])
-async def list_bundled_assets(_: AdminUser) -> list[dict[str, str]]:
+async def list_bundled_assets(_: FleetManager) -> list[dict[str, str]]:
     """الرسوماتُ المشحونةُ مع الخلفية — **منتقٍ بدل رفعٍ يدويّ**.
 
     و**تُقرأ من القرص** لا من قائمةٍ في الكود: قائمةٌ مكتوبةٌ تفترق عن
@@ -192,7 +192,7 @@ async def list_bundled_assets(_: AdminUser) -> list[dict[str, str]]:
 
 
 @router.get("/stats", response_model=SkinStatsOut)
-async def skin_stats(_: AdminUser, session: DbSession) -> SkinStatsOut:
+async def skin_stats(_: FleetManager, session: DbSession) -> SkinStatsOut:
     """الأكثرُ مبيعاً والإيرادُ الكلي — **مجموعَين في القاعدة** (§14)."""
     rows = await _rows(session)
     revenue: dict[str, Decimal] = {}
@@ -213,7 +213,7 @@ async def skin_stats(_: AdminUser, session: DbSession) -> SkinStatsOut:
 
 @router.post("", response_model=AdminSkinOut, status_code=status.HTTP_201_CREATED)
 async def create_skin(
-    payload: SkinCreateIn, admin: AdminUser, session: DbSession
+    payload: SkinCreateIn, admin: FleetManager, session: DbSession
 ) -> AdminSkinOut:
     """مركبةٌ جديدة — **بلا رسمةٍ بعد**، تُرفع في البابِ الذي يليه.
 
@@ -246,7 +246,7 @@ async def create_skin(
 async def update_skin(
     skin_id: uuid.UUID,
     payload: SkinUpdateIn,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
 ) -> AdminSkinOut:
     """تعديلٌ جزئيّ — **والإطفاءُ تعديلٌ لا حذف**.
@@ -287,7 +287,7 @@ async def update_skin(
 
 @router.delete("/{skin_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_skin(
-    skin_id: uuid.UUID, admin: AdminUser, session: DbSession
+    skin_id: uuid.UUID, admin: FleetManager, session: DbSession
 ) -> None:
     """حذفُ مركبةٍ **لا يملكها أحد** (البند ٤، §39٫٤).
 
@@ -313,7 +313,7 @@ async def delete_skin(
 
 @router.put("/artwork/preview")
 async def preview_artwork(
-    _: AdminUser,
+    _: FleetManager,
     file: Annotated[UploadFile, File(description="صورةٌ أو SVG")],
 ) -> dict[str, object]:
     """**تجربةٌ جافّةٌ بنفس السلسلة** — تُعالَج الرسمةُ ولا يُكتب شيء.
@@ -347,7 +347,7 @@ async def preview_artwork(
 async def upload_artwork(
     skin_id: uuid.UUID,
     slot: skin_artwork.Slot,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
     file: Annotated[UploadFile, File(description="صورةٌ أو SVG")],
 ) -> AdminSkinOut:
@@ -408,7 +408,7 @@ async def upload_artwork(
 async def attach_bundled_asset(
     skin_id: uuid.UUID,
     asset_key: str,
-    admin: AdminUser,
+    admin: FleetManager,
     session: DbSession,
 ) -> AdminSkinOut:
     """يربط المركبةَ برسمةٍ **مشحونةٍ مع الخلفية** — بلا رفعٍ ولا ملفّ.
@@ -447,7 +447,7 @@ async def attach_bundled_asset(
 
 @router.get("/{skin_id}/artwork/{slot}")
 async def get_artwork(
-    skin_id: uuid.UUID, slot: skin_artwork.Slot, _: AdminUser, session: DbSession
+    skin_id: uuid.UUID, slot: skin_artwork.Slot, _: FleetManager, session: DbSession
 ) -> FileResponse:
     """رسمةُ المركبة — **بترويسات `skin_artwork` لا بترويساتٍ تُكتب هنا**.
 
@@ -467,7 +467,7 @@ async def get_artwork(
 
 @router.get("/purchases", response_model=SkinPurchasesOut)
 async def skin_purchases(
-    _: AdminUser,
+    _: FleetManager,
     session: DbSession,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,

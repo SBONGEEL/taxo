@@ -1501,3 +1501,16 @@ export interface VerificationCampaignRow {
   suspended: number;
   resolved: number;
 }
+
+/** ما يملكه مشرفٌ — **ومن أين جاء** (البند ٥، §39٫٥).
+ *
+ * **و`explicit` ليس تفصيلاً**: مشرفٌ بلا صفوفٍ **ليس بلا صلاحيات** — يُقرأ
+ * بافتراض دوره، **وبغير هذا الحقل يظنّ القارئُ أن الجدولَ الفارغَ منعٌ**.
+ */
+export interface AdminPermissions {
+  user_id: string;
+  name: string;
+  roles: UserRole[];
+  permissions: string[];
+  explicit: boolean;
+}

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
+from app.models.enums import AdminPermission
 from app.core.exceptions import AccountBlocked, InvalidToken, NotFound, PermissionDenied
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
@@ -168,3 +169,31 @@ async def broadcasting_driver(
 
 
 BroadcastingDriver = Annotated[Driver, Depends(broadcasting_driver)]
+
+
+# ═══════════════════ مصفوفةُ الصلاحيات — أسماءٌ لكلِّ نطاق (البند ٥، §39٫٥)
+#
+# **وهذه بدائلُ `AdminUser` لا إضافةٌ فوقه**: كلُّ موجّهٍ يستعمل اسمَ نطاقه،
+# **فالمصفوفةُ تحكم أبواباً حقيقيةً لا جدولاً في شاشة**.
+#
+# **ويومَ نُشرت لم تغيّر جواباً واحداً**: `admin` يملك الإحدى عشرةَ كلَّها،
+# و`support` لا يملك إلا `read.only` و`payments.resolve` — **وهو ما كان
+# `AdminUser` يفعله بهما حرفاً**. والمجموعةُ الخضراء هي البرهان.
+
+
+def _perm(permission: "AdminPermission"):
+    from app.services.permissions import require_permission
+
+    return Depends(require_permission(permission))
+
+
+SettingsWriter = Annotated[User, _perm(AdminPermission.SETTINGS_WRITE)]
+UsersManager = Annotated[User, _perm(AdminPermission.USERS_MANAGE)]
+FinanceManager = Annotated[User, _perm(AdminPermission.FINANCE_MANAGE)]
+GrowthManager = Annotated[User, _perm(AdminPermission.GROWTH_MANAGE)]
+FleetManager = Annotated[User, _perm(AdminPermission.FLEET_MANAGE)]
+ProvidersManager = Annotated[User, _perm(AdminPermission.PROVIDERS_MANAGE)]
+BackupsManager = Annotated[User, _perm(AdminPermission.BACKUPS_MANAGE)]
+DisputeResolver = Annotated[User, _perm(AdminPermission.PAYMENTS_RESOLVE)]
+SecurityManager = Annotated[User, _perm(AdminPermission.SECURITY_MANAGE)]
+PermissionsManager = Annotated[User, _perm(AdminPermission.PERMISSIONS_MANAGE)]

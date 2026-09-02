@@ -16,7 +16,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Query
 from sqlalchemy import func, or_, select
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import GrowthManager, DbSession, StaffUser
 from app.core.exceptions import InvalidInput
 from app.models.enums import AuditAction, CountryCode, UserRole
 from app.models.referral import REFERRAL_TYPES, Referral
@@ -217,7 +217,7 @@ async def get_settings(
 @router.put("/settings", response_model=ReferralSettingsOut)
 async def update_settings(
     payload: ReferralSettingsIn,
-    admin: AdminUser,
+    admin: GrowthManager,
     session: DbSession,
     country_code: CountryCode,
     referral_type: str = Query(default="driver"),

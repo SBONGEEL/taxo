@@ -23,12 +23,19 @@ from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
 from sqlalchemy import func, or_, select
 
-from app.core.deps import AdminUser, DbSession, RedisDep, StaffUser
+from app.core.deps import (
+    DbSession,
+    PermissionsManager,
+    RedisDep,
+    StaffUser,
+    UsersManager,
+)
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.deactivation import DeactivationRequest
 from app.models.driver import Driver, DriverDocument, required_document_types
 from app.models.advance import DriverAdvance
 from app.models.enums import (
+    AdminPermission,
     AdvanceStatus,
     DeactivationStatus,
     AuditAction,
@@ -39,10 +46,16 @@ from app.models.enums import (
     Gender,
     UserRole,
 )
+from app.models.admin_permission import AdminPermissionGrant
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.routers.drivers import document_response
-from app.schemas.auth import UserBlockUpdate, UserOut
+from app.schemas.auth import (
+    AdminPermissionsIn,
+    AdminPermissionsOut,
+    UserBlockUpdate,
+    UserOut,
+)
 from app.schemas.driver import (
     AdminAdvanceIn,
     AdminAdvanceOut,
@@ -69,6 +82,7 @@ from app.schemas.debt import (
     DebtWriteOffIn,
 )
 from app.services import deactivation
+from app.services import permissions as permissions_service
 from app.services import (
     admin_search,
     advances as advances_service,
@@ -152,7 +166,7 @@ async def get_user(
 async def block_user(
     user_id: uuid.UUID,
     payload: UserBlockUpdate,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> UserOut:
     """حظرُ حساب (SPEC القسم 13/3) — **`admin` لا `support`**.
@@ -180,7 +194,7 @@ async def block_user(
 async def unblock_user(
     user_id: uuid.UUID,
     payload: UserBlockUpdate,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> UserOut:
     """رفعُ الحظر — بلا سببٍ إلزامي: القيدُ يُسأل عنه لا الإفراج."""
@@ -324,7 +338,7 @@ async def list_drivers(
 async def suspend_driver(
     driver_id: uuid.UUID,
     payload: DriverStatusUpdate,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> DriverOut:
     """إيقافُ كبتن (SPEC القسم 13/2) — **بسببٍ إلزامي يدخل التدقيق**.
@@ -353,7 +367,7 @@ async def suspend_driver(
 async def activate_driver(
     driver_id: uuid.UUID,
     payload: DriverStatusUpdate,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> DriverOut:
     """إعادةُ تفعيل موقوف — **بحارسَي الاعتماد نفسِهما**.
@@ -376,7 +390,7 @@ async def activate_driver(
 async def set_driver_gender(
     driver_id: uuid.UUID,
     payload: DriverGenderUpdate,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
     redis: RedisDep,
 ) -> DriverOut:
@@ -514,7 +528,7 @@ async def review_driver_document(
     driver_id: uuid.UUID,
     document_id: uuid.UUID,
     payload: DocumentReviewIn,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
     redis: RedisDep,
 ) -> DriverDocumentOut:
@@ -547,7 +561,7 @@ async def review_driver_document(
 
 @router.post("/drivers/{driver_id}/approve", response_model=DriverOut)
 async def approve_driver(
-    driver_id: uuid.UUID, admin: AdminUser, session: DbSession
+    driver_id: uuid.UUID, admin: UsersManager, session: DbSession
 ) -> DriverOut:
     """اعتماد الكبتن — بحارسَي `services/drivers.approve`.
 
@@ -563,7 +577,7 @@ async def approve_driver(
 
 @router.post("/drivers/{driver_id}/reject", response_model=DriverOut)
 async def reject_driver(
-    driver_id: uuid.UUID, admin: AdminUser, session: DbSession
+    driver_id: uuid.UUID, admin: UsersManager, session: DbSession
 ) -> DriverOut:
     driver = await _driver(session, driver_id)
     driver = await drivers_service.set_status(
@@ -585,7 +599,7 @@ async def _driver(session, driver_id: uuid.UUID) -> Driver:
     "/drivers/deactivations", response_model=list[DeactivationRequestOut]
 )
 async def list_deactivations(
-    _: AdminUser,
+    _: UsersManager,
     session: DbSession,
     status: DeactivationStatus | None = None,
     limit: int = Query(default=50, le=200),
@@ -607,7 +621,7 @@ async def list_deactivations(
 async def decide_deactivation(
     request_id: uuid.UUID,
     payload: DeactivationDecisionIn,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> DeactivationRequestOut:
     """قرارُ المشرف — والموافقةُ تُعيد قراءةَ الموانع لحظتَها لا لحظةَ الطلب."""
@@ -628,7 +642,7 @@ async def decide_deactivation(
 
 @router.get("/drivers/advances", response_model=list[AdminAdvanceOut])
 async def list_advances(
-    _: AdminUser,
+    _: UsersManager,
     session: DbSession,
     status: AdvanceStatus | None = None,
     driver_id: uuid.UUID | None = Query(
@@ -686,7 +700,7 @@ async def list_advances(
 
 @router.post("/drivers/advances", response_model=AdvanceOut, status_code=201)
 async def disburse_advance(
-    payload: AdminAdvanceIn, admin: AdminUser, session: DbSession
+    payload: AdminAdvanceIn, admin: UsersManager, session: DbSession
 ) -> AdvanceOut:
     """صرفٌ بموافقة مشرف — **البابُ الوحيد لما يتجاوز السقف** (القرار ٢)."""
     driver = await session.get(Driver, payload.driver_id)
@@ -720,7 +734,7 @@ async def disburse_advance(
 async def write_off_advance(
     advance_id: uuid.UUID,
     payload: AdvanceWriteOffIn,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> AdvanceOut:
     """شطبُ دَينٍ بقرارٍ إداريٍّ مسجَّل (القرار ٧).
@@ -741,7 +755,7 @@ async def write_off_advance(
 async def set_advance_cap(
     driver_id: uuid.UUID,
     payload: AdvanceCapIn,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> DriverOut:
     """سقفُ كبتنٍ بعينه — **`null` لا تخصيص، وصفرٌ منعٌ**، والسببُ في التدقيق."""
@@ -771,7 +785,7 @@ async def set_advance_cap(
 
 @router.get("/drivers/debts", response_model=list[AdminDebtOut])
 async def list_driver_debts(
-    _: AdminUser,
+    _: UsersManager,
     session: DbSession,
     status: DriverDebtStatus | None = None,
     driver_id: uuid.UUID | None = Query(
@@ -823,7 +837,7 @@ async def list_driver_debts(
 
 @router.get("/drivers/debts/claims", response_model=list[DebtClaimOut])
 async def list_debt_claims(
-    _: AdminUser, session: DbSession, country: CountryCode | None = None
+    _: UsersManager, session: DbSession, country: CountryCode | None = None
 ) -> list[DebtClaimOut]:
     """مطالباتُ السداد المعلّقة — **ما ينتظر عينَ مشرف**."""
     # **البانِي الواحد** — وبلاه كان المشرفُ يقرأ مطالبةً بلا حسابٍ ولا رمز
@@ -837,7 +851,7 @@ async def list_debt_claims(
 async def confirm_debt_claim(
     order_id: uuid.UUID,
     payload: DebtConfirmIn,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> DebtClaimOut:
     """**المشرفُ يكتب ما وصل فعلاً** — والناقصُ يُقبل ويُنقص الدَّين."""
@@ -853,7 +867,7 @@ async def confirm_debt_claim(
 async def write_off_debt(
     debt_id: uuid.UUID,
     payload: DebtWriteOffIn,
-    admin: AdminUser,
+    admin: UsersManager,
     session: DbSession,
 ) -> AdminDebtOut:
     """شطبٌ بقرارٍ إداريٍّ **بسببٍ مكتوب** — ويُرفع المنعُ إن صفا حسابه."""
@@ -890,4 +904,97 @@ async def write_off_debt(
         source=debt.source,
         ride_id=debt.ride_id,
         created_at=debt.created_at,
+    )
+
+
+# ═══════════════ مصفوفةُ الصلاحيات (البند ٥، §39٫٥)
+
+
+@router.get("/permissions", response_model=list[AdminPermissionsOut])
+async def list_admin_permissions(
+    _staff: StaffUser, session: DbSession
+) -> list[AdminPermissionsOut]:
+    """من يملك ماذا — **وما يُقرأ هو ما يحكم**، لا جدولٌ ثابتٌ في شاشة.
+
+    **وكانت الشاشةُ تعرض مصفوفةً مكتوبةً بيد** (`Users.tsx` للقراءة فقط):
+    **جدولٌ يصف نيّةً لا واقعاً**، ويفترق عن `core/deps` أوّلَ تعديل.
+
+    **والغيابُ يُقرأ افتراضَ الدور** لا «لا يملك شيئاً» — فالحقلُ `explicit`
+    يقول أيّهما، **وبغيره يظنّ القارئُ أن مشرفاً بلا صفوفٍ بلا صلاحيات**.
+    """
+    staff = list(
+        await session.scalars(
+            select(User)
+            .where(has_role_clause(UserRole.ADMIN) | has_role_clause(UserRole.SUPPORT))
+            .order_by(User.created_at)
+        )
+    )
+    rows: list[AdminPermissionsOut] = []
+    for member in staff:
+        explicit = set(
+            await session.scalars(
+                select(AdminPermissionGrant.permission).where(
+                    AdminPermissionGrant.user_id == member.id
+                )
+            )
+        )
+        rows.append(
+            AdminPermissionsOut(
+                user_id=member.id,
+                name=member.name,
+                roles=list(member.roles),
+                permissions=sorted(
+                    p.value for p in await permissions_service.for_user(session, member)
+                ),
+                explicit=bool(explicit),
+            )
+        )
+    return rows
+
+
+@router.put("/permissions/{user_id}", response_model=AdminPermissionsOut)
+async def set_admin_permissions(
+    user_id: uuid.UUID,
+    payload: AdminPermissionsIn,
+    admin: PermissionsManager,
+    session: DbSession,
+) -> AdminPermissionsOut:
+    """يكتب مجموعةَ مشرفٍ كاملةً — **استبدالٌ لا إضافة**، وبثلاثة حرّاس.
+
+    **والحرّاسُ في الخدمة لا هنا**: بابٌ ثانٍ يُضاف غداً يجدها مطبَّقةً،
+    **وشرطٌ في موجّهٍ يُنسى في ثاني موجّه**.
+    """
+    target = await session.get(User, user_id)
+    if target is None:
+        raise NotFound("الحساب غير موجود")
+
+    before = sorted(
+        p.value for p in await permissions_service.for_user(session, target)
+    )
+    after = await permissions_service.set_for_user(
+        session,
+        target=target,
+        actor=admin,
+        permissions={AdminPermission(value) for value in payload.permissions},
+    )
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="admin_permissions",
+        entity_id=target.id,
+        changes={
+            "permissions": {
+                "before": ", ".join(before),
+                "after": ", ".join(sorted(p.value for p in after)),
+            }
+        },
+    )
+    await session.commit()
+    return AdminPermissionsOut(
+        user_id=target.id,
+        name=target.name,
+        roles=list(target.roles),
+        permissions=sorted(p.value for p in after),
+        explicit=True,
     )

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import SettingsWriter, DbSession, StaffUser
 from app.models.enums import AuditAction, CountryCode
 from app.schemas.sharing import RideSharingSettingsIn, RideSharingSettingsOut
 from app.services import audit, sharing as sharing_service
@@ -46,7 +46,7 @@ async def get_settings(
 @router.put("/settings", response_model=RideSharingSettingsOut)
 async def update_settings(
     payload: RideSharingSettingsIn,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
     country_code: CountryCode,
 ) -> RideSharingSettingsOut:

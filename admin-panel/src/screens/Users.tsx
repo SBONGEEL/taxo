@@ -1,19 +1,15 @@
 /** المستخدمون والصلاحيات — SPEC القسم 13/8.
  *
- * **دوران لا أربعة، ومصفوفتُهما ثابتةٌ في الكود لا في جدول.** القسم 13/8 يعرّف
- * `admin` كاملَ الصلاحية و`support` قراءةً ومعالجةَ نزاعات، ويفرضهما
- * `core/deps.py` على كل مسار. فما تعرضه هذه الشاشة **قراءةٌ لما تفرضه الخلفية
- * فعلاً**، لا مفاتيحُ تُقلَّب.
+ * **وصارت المصفوفةُ جدولاً يُقرأ ويُكتب** (البند ٥، §39٫٥، قرارُ المالك
+ * 2026-09-02) — **وكان هذا الملفُّ يقول عكسَه**: «ثابتةٌ في الكود لا في جدول».
  *
- * والتصميم يرسم مصفوفةً «انقر لتفعيل أو تعطيل» بأربعة أدوار — ولم تُبنَ كذلك
- * عمداً، لسببين:
+ * **وعلّةُ المنعِ القديمة كانت صحيحةً وزالت**: «خليةٌ تُنقر تعني جدولَ صلاحيات
+ * يصير مصدرَ الحقيقة بدل الكود» — **والجدولُ اليومَ هو الحارسُ نفسُه**:
+ * `require_permission` يقرأ الصفوفَ في كلِّ طلب، **فلا حالتان تختلفان**.
+ * ومن أطفأ خليةً هنا أطفأ باباً حقيقياً.
  *
- * 1. **دورٌ ثالث لا يوجد في `UserRole`**، وإضافةُ «عمليات» و«مالية» إلى اللوحة
- *    وحدها تعني اسماً في شاشةٍ بلا حارسٍ خلفه — وهو أخطرُ من غيابه: مشرفٌ
- *    يظن أن ما أطفأه مُطفأ.
- * 2. **وخليةٌ تُنقر تعني جدولَ صلاحيات** يصير مصدرَ الحقيقة بدل الكود، فتنشأ
- *    حالتان قابلتان للاختلاف لأمرِ صلاحيات — نفس ما يمنعه القسم 4 في العمولة.
- *    وحين تُطلب أدوارٌ قابلةٌ للضبط تُبنى في الخلفية أولاً.
+ * **والإحدى عشرةَ مشتقّةٌ من الموجّهات لا مخترعة**، **والغيابُ يُقرأ «افتراضُ
+ * الدور»** لا «لا يملك شيئاً» — ولذلك يُعرض `explicit` صراحةً.
  *
  * **ولا زرَّ «دعوة مستخدم»**: الحساب يُنشأ بإثبات ملكية رقمٍ من التطبيق (القسم
  * 15/أ)، ولا مسارَ في المشروع يفتح حساباً بلا ذلك الإثبات. ورفعُ حسابٍ قائم
@@ -24,12 +20,16 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { listUsers } from "@/api/endpoints";
-import type { User, UserRole } from "@/api/types";
+import {
+  listAdminPermissions,
+  listUsers,
+  setAdminPermissions,
+} from "@/api/endpoints";
+import type { AdminPermissions, User, UserRole } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { Table } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
-import { ErrorNote } from "@/components/ui/Feedback";
+import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -41,81 +41,28 @@ const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 /** ما تفرضه الخلفية فعلاً — كلُّ سطرٍ يقابل حارساً في `core/deps.py`. */
-const MATRIX: { area: string; admin: boolean; support: boolean; note: string }[] =
-  [
-    {
-      area: "نظرة عامة والتقارير",
-      admin: true,
-      support: true,
-      note: "تقريرُ حالٍ لا إجراء — ومن يعالج نزاعاً يحتاج أن يرى كم منها مفتوح",
-    },
-    {
-      area: "سجل الرحلات والركّاب (قراءة)",
-      admin: true,
-      support: true,
-      note: "مادةُ الفصل في النزاع نفسها",
-    },
-    {
-      area: "النزاعات والدعم (فصلٌ وقرار)",
-      admin: true,
-      support: true,
-      note: "هذا هو نصفُ تعريف الدور في القسم 13/8",
-    },
-    {
-      area: "الخريطة الحيّة",
-      admin: true,
-      support: false,
-      note: "المنفذُ الوحيد الذي يقرن هويةً بموقع — وفتحُه يدخل سجل التدقيق",
-    },
-    {
-      area: "مراجعة وثائق السائقين واعتمادُهم",
-      admin: true,
-      support: false,
-      note: "قرارٌ يفتح باب العمل على المنصة، لا إجراءَ دعمٍ فني",
-    },
-    {
-      area: "توثيق جنس السائق",
-      admin: true,
-      support: false,
-      note: "إعلانُ جنس الكبتن يقيّد أمان غيره",
-    },
-    {
-      area: "حظرُ حساب وتجميدُ محفظة",
-      admin: true,
-      support: false,
-      note: "إغلاقُ حسابٍ أو حبسُ مالٍ ليس قراءةً ولا نزاعاً",
-    },
-    {
-      area: "المالية: تأكيدُ الشحنات ودفعُ السحوبات",
-      admin: true,
-      support: false,
-      note: "كلُّ حركةٍ منها قيدٌ في الدفتر",
-    },
-    {
-      area: "الإعدادات والتسعيرة والباقات",
-      admin: true,
-      support: false,
-      note: "تسري على التطبيقين فور الحفظ بلا نشر",
-    },
-    {
-      area: "عقود مزوّدي API",
-      admin: true,
-      support: false,
-      note: "الصفحةُ لـ admin حصراً (القسم 13/7)",
-    },
-    {
-      area: "الإشعارات الجماعية",
-      admin: true,
-      support: false,
-      note: "حملةٌ تصل عشرات الآلاف ليست إجراء دعمٍ فني",
-    },
-  ];
+/** أسماءُ الصلاحيات الإحدى عشرة كما يعرضها العربيُّ — **والمفاتيحُ من
+ *  الخلفية**: قائمةٌ تُكتب هنا بيدٍ تفترق عن التعداد أوّلَ عضوٍ يُضاف. */
+const PERMISSION_LABEL: Record<string, string> = {
+  "settings.write": "الإعدادات — التسعيرة والخطط والمفاتيح",
+  "users.manage": "الحسابات والكباتن — الاعتماد والإيقاف والوثائق",
+  "finance.manage": "المالية — الشحن والصرف والتسويات والاشتراكات",
+  "growth.manage": "النمو — الحملات والعروض والكوبونات والإحالات",
+  "fleet.manage": "الأسطول — المهامّ والشارات ومركبات المتجر",
+  "providers.manage": "العقود وقوالب الرسائل",
+  "backups.manage": "النسخ الاحتياطية",
+  "payments.resolve": "فصل النزاعات",
+  "read.only": "قراءة القوائم والتقارير",
+  "security.manage": "الأمان — سياسة الدخول والعامل الثاني",
+  "permissions.manage": "منح الصلاحيات ونزعها",
+};
 
 const COLUMNS = "1.6fr 1.2fr 1.2fr 1fr";
 
 export function UsersScreen() {
   const [rows, setRows] = useState<User[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setRows(null);
@@ -141,6 +88,7 @@ export function UsersScreen() {
       subtitle="دوران تفرضهما الخلفية على كل مسار — وما تخفيه الشاشة راحةٌ لا حماية"
     >
       <ErrorNote message={error} />
+      <SuccessNote message={done} />
 
       <Table
         columns={COLUMNS}
@@ -177,61 +125,121 @@ export function UsersScreen() {
         )}
       />
 
-      <section className="mt-22">
-        <h2 className="mb-4 text-16 font-bold text-ink">مصفوفة الصلاحيات</h2>
-        <p className="mb-12 max-w-prose text-11.5 leading-note text-muted">
-          مقروءةٌ لا قابلةٌ للنقر: هذه ليست إعداداً بل وصفاً لما تفرضه الخلفية
-          على كل مسار. خليةٌ تُنقر هنا كانت ستصير مصدرَ حقيقةٍ ثانياً يخالف
-          الحارس، ومشرفٌ يظن أن ما أطفأه مُطفأ أسوأُ ممن يعرف أنه لا يستطيع.
-        </p>
-
-        <div className="overflow-hidden rounded-16 border border-line bg-surface">
-          <div
-            className="grid gap-10 bg-surface-2 px-18 py-10 text-11 font-semibold text-muted"
-            style={{ gridTemplateColumns: "2fr 0.6fr 0.6fr" }}
-          >
-            <span>المجال</span>
-            <span className="text-center">مالك</span>
-            <span className="text-center">دعم فني</span>
-          </div>
-
-          {MATRIX.map((row) => (
-            <div
-              key={row.area}
-              className="grid items-center gap-10 border-t border-line px-18 py-12"
-              style={{ gridTemplateColumns: "2fr 0.6fr 0.6fr" }}
-            >
-              <span className="min-w-0">
-                <span className="block text-12.5 text-ink">{row.area}</span>
-                <span className="mt-2 block text-11 leading-note text-muted">
-                  {row.note}
-                </span>
-              </span>
-              <Cell allowed={row.admin} />
-              <Cell allowed={row.support} />
-            </div>
-          ))}
-        </div>
-      </section>
+      <PermissionsMatrix onError={setError} onDone={setDone} />
     </Shell>
   );
 }
 
-/** خليةُ الصلاحية — `DESIGN.md` §2.5: `28×28`، المفعّلة `--acc`/`--inv`. */
-function Cell({ allowed }: { allowed: boolean }) {
+
+
+/** مصفوفةُ الصلاحيات — **تُقرأ من الحارس نفسِه وتُكتب فيه** (§39٫٥).
+ *
+ * **ولا تُخفى الخلايا عمّن لا يملك المنح**: `permissions.manage` يحرسه الخادم،
+ * **وإخفاءُ الواجهة راحةٌ لا حماية** (§21) — فالجدولُ يُقرأ، والكتابةُ تُردّ
+ * بنصِّها إن لم تُملك.
+ *
+ * **و«افتراضُ الدور» يُقال صراحةً**: مشرفٌ بلا صفوفٍ ليس بلا صلاحيات — **وهو
+ * ما يجعل الجدولَ الفارغَ اليومَ مقروءاً على حقيقته**.
+ */
+function PermissionsMatrix({
+  onError,
+  onDone,
+}: {
+  onError: (message: string) => void;
+  onDone: (message: string) => void;
+}) {
+  const [rows, setRows] = useState<AdminPermissions[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setRows(await listAdminPermissions());
+    } catch (caught) {
+      onError(caught instanceof ApiError ? caught.message : "تعذّر قراءة المصفوفة");
+    }
+  }, [onError]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function toggle(row: AdminPermissions, permission: string) {
+    const next = row.permissions.includes(permission)
+      ? row.permissions.filter((p) => p !== permission)
+      : [...row.permissions, permission];
+    setBusy(row.user_id);
+    try {
+      await setAdminPermissions(row.user_id, next);
+      onDone(`حُدِّثت صلاحياتُ ${row.name}`);
+      await load();
+    } catch (caught) {
+      onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const keys = Object.keys(PERMISSION_LABEL);
+
   return (
-    <span className="flex justify-center">
-      <span
-        aria-label={allowed ? "مسموح" : "ممنوع"}
-        className={cn(
-          "flex size-28 items-center justify-center rounded-8 text-12 font-bold",
-          allowed
-            ? "bg-accent text-accent-ink"
-            : "border border-line text-muted",
-        )}
-      >
-        {allowed ? "✓" : "—"}
-      </span>
-    </span>
+    <section className="mt-22">
+      <h2 className="mb-4 text-16 font-bold text-ink">مصفوفة الصلاحيات</h2>
+      <p className="mb-12 max-w-prose text-11.5 leading-note text-muted">
+        خليةٌ تُنقر هنا تفتح باباً أو تغلقه فعلاً — <b className="text-ink">هذا
+        الجدولُ هو الحارسُ نفسُه</b>، يقرؤه الخادمُ في كلِّ طلب. ومشرفٌ بلا
+        صفوفٍ ليس بلا صلاحيات: يُقرأ بافتراض دوره، ويقول العمودُ ذلك.
+      </p>
+
+      {rows === null ? (
+        <Spinner className="mx-auto my-24" />
+      ) : (
+        <div className="overflow-x-auto rounded-16 border border-line bg-surface">
+          <table className="w-full min-w-[52rem] text-12.5">
+            <thead>
+              <tr className="bg-surface-2 text-11 text-muted">
+                <th className="p-12 text-start font-semibold">الصلاحية</th>
+                {rows.map((row) => (
+                  <th key={row.user_id} className="p-12 text-center font-semibold">
+                    <span className="block text-ink">{row.name}</span>
+                    <span className="block text-10.5">
+                      {row.explicit ? "صفوفٌ ممنوحة" : "افتراضُ الدور"}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((key) => (
+                <tr key={key} className="border-t border-line">
+                  <td className="p-12 text-ink">{PERMISSION_LABEL[key]}</td>
+                  {rows.map((row) => (
+                    <td key={row.user_id} className="p-12">
+                      <span className="flex justify-center">
+                        <button
+                          type="button"
+                          disabled={busy === row.user_id}
+                          aria-label={
+                            row.permissions.includes(key) ? "مسموح" : "ممنوع"
+                          }
+                          onClick={() => void toggle(row, key)}
+                          className={cn(
+                            "flex size-28 items-center justify-center rounded-8 text-12 font-bold disabled:opacity-60",
+                            row.permissions.includes(key)
+                              ? "bg-accent text-accent-ink"
+                              : "border border-line text-muted",
+                          )}
+                        >
+                          {row.permissions.includes(key) ? "✓" : "—"}
+                        </button>
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

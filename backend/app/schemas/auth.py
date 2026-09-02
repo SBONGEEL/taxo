@@ -300,3 +300,21 @@ class HandoffExchange(BaseModel):
 
     token: str
     app: ClientApp
+
+
+class AdminPermissionsOut(BaseModel):
+    """ما يملكه مشرفٌ — **ومن أين جاء** (البند ٥، §39٫٥)."""
+
+    user_id: uuid.UUID
+    name: str
+    roles: list[UserRole]
+    permissions: list[str]
+    #: **أصفوفٌ ممنوحةٌ أم افتراضُ الدور؟** — والغيابُ ليس «لا يملك شيئاً»،
+    #: **وبغير هذا الحقل يظنّ القارئُ أن مشرفاً بلا صفوفٍ بلا صلاحيات**.
+    explicit: bool
+
+
+class AdminPermissionsIn(BaseModel):
+    """المجموعةُ الكاملة — **استبدالٌ لا إضافة**، فالنزعُ ممكن."""
+
+    permissions: list[str]

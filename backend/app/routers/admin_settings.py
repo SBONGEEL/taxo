@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import SettingsWriter, DbSession, StaffUser
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.audit import AdminAuditLog
 from app.models.cancellation import CancellationSetting
@@ -128,7 +128,7 @@ async def list_pricing_rules(
     "/pricing", response_model=PricingRuleOut, status_code=status.HTTP_201_CREATED
 )
 async def create_pricing_rule(
-    payload: PricingRuleCreate, admin: AdminUser, session: DbSession
+    payload: PricingRuleCreate, admin: SettingsWriter, session: DbSession
 ) -> PricingRuleOut:
     await money_guards.require_pricing_writes(
         session, actor=admin, country_code=payload.country_code
@@ -155,7 +155,7 @@ async def create_pricing_rule(
 async def update_pricing_rule(
     rule_id: uuid.UUID,
     payload: PricingRuleUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> PricingRuleOut:
     rule = await session.get(PricingRule, rule_id)
@@ -180,7 +180,7 @@ async def update_pricing_rule(
 
 @router.delete("/pricing/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_pricing_rule(
-    rule_id: uuid.UUID, admin: AdminUser, session: DbSession
+    rule_id: uuid.UUID, admin: SettingsWriter, session: DbSession
 ) -> None:
     rule = await session.get(PricingRule, rule_id)
     if rule is None:
@@ -222,7 +222,7 @@ async def list_feature_flags(
 
 @router.put("/feature-flags", response_model=CountryFeatureFlagsOut)
 async def upsert_feature_flag(
-    payload: FeatureFlagUpsert, admin: AdminUser, session: DbSession
+    payload: FeatureFlagUpsert, admin: SettingsWriter, session: DbSession
 ) -> CountryFeatureFlagsOut:
     """`admin` وحده — و**إطفاءُ مفتاحٍ حارس يشترط سبباً مكتوباً**.
 
@@ -302,7 +302,7 @@ async def list_commission_settings(
 async def update_commission_setting(
     country_code: CountryCode,
     payload: CommissionSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> CommissionSettingOut:
     """تعديل العمولة — يسري على الرحلات الجديدة فقط.
@@ -348,7 +348,7 @@ async def list_subscription_plans(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_subscription_plan(
-    payload: SubscriptionPlanCreate, admin: AdminUser, session: DbSession
+    payload: SubscriptionPlanCreate, admin: SettingsWriter, session: DbSession
 ) -> SubscriptionPlanOut:
     plan = SubscriptionPlan(
         **payload.model_dump(),
@@ -372,7 +372,7 @@ async def create_subscription_plan(
 async def update_subscription_plan(
     plan_id: uuid.UUID,
     payload: SubscriptionPlanUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> SubscriptionPlanOut:
     plan = await session.get(SubscriptionPlan, plan_id)
@@ -396,7 +396,7 @@ async def update_subscription_plan(
     "/subscription-plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_subscription_plan(
-    plan_id: uuid.UUID, admin: AdminUser, session: DbSession
+    plan_id: uuid.UUID, admin: SettingsWriter, session: DbSession
 ) -> None:
     plan = await session.get(SubscriptionPlan, plan_id)
     if plan is None:
@@ -431,7 +431,7 @@ async def list_wallet_settings(
 async def update_wallet_settings(
     country_code: CountryCode,
     payload: WalletSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> WalletSettingOut:
     """حدود التحويل والسحب لكل دولة (SPEC القسم 7/9/13.6).
@@ -476,7 +476,7 @@ async def list_advance_settings(
 async def update_advance_settings(
     country_code: CountryCode,
     payload: AdvanceSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> AdvanceSettingOut:
     """سياسةُ السلف لكل دولة (البند ١٥).
@@ -526,7 +526,7 @@ async def list_cancellation_settings(
 async def update_cancellation_settings(
     country_code: CountryCode,
     payload: CancellationSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> CancellationSettingOut:
     """سياسةُ رسم الإلغاء لكل دولة (`design/CANCELLATION-FEE.md`).
@@ -578,7 +578,7 @@ async def list_payment_settings(
 async def update_payment_settings(
     country_code: CountryCode,
     payload: PaymentSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> PaymentSettingOut:
     """مهلةُ تأكيد حوالة كليك لكل دولة (SPEC القسم 6.2/13.6).
@@ -623,7 +623,7 @@ async def list_map_settings(
 async def update_map_settings(
     country_code: CountryCode,
     payload: MapSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> MapSettingOut:
     """كم سيارةً يرى الراكبُ وإلى أيِّ بُعد (قرارُ المالك 2026-08-22).
@@ -668,7 +668,7 @@ async def list_otp_settings(
 async def update_otp_settings(
     country_code: CountryCode,
     payload: OtpSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> OtpSettingOut:
     """سقوفُ طلب الرمز لكل دولة (قرارُ المالك 2026-08-16).
@@ -778,7 +778,7 @@ async def list_audit_logs(
 @router.put("/payments/{country_code}/cliq-qr", response_model=PaymentSettingOut)
 async def upload_cliq_qr(
     country_code: CountryCode,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
     file: UploadFile = File(...),
 ) -> PaymentSettingOut:
@@ -840,7 +840,7 @@ async def list_dispatch_settings(
 async def update_dispatch_settings(
     country_code: CountryCode,
     payload: DispatchSettingUpdate,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> DispatchSettingOut:
     """نمطُ التوزيع ومهلتُه وتبريدُه (§5.3، قرارُ المالك 2026-08-30).
@@ -897,7 +897,7 @@ async def list_service_tiles(
 
 @router.post("/service-tiles", response_model=AdminServiceTileOut, status_code=201)
 async def create_service_tile(
-    payload: ServiceTileIn, admin: AdminUser, session: DbSession
+    payload: ServiceTileIn, admin: SettingsWriter, session: DbSession
 ) -> AdminServiceTileOut:
     """**والإشعالُ بلا مقصدٍ مبنيٍّ يُمنع هنا** لا عند ضغط المستخدم.
 
@@ -930,7 +930,7 @@ async def create_service_tile(
 async def update_service_tile(
     tile_id: uuid.UUID,
     payload: ServiceTilePatch,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> AdminServiceTileOut:
     tile = await storefront.get_tile(session, tile_id)
@@ -975,7 +975,7 @@ async def list_promo_banners(
 
 @router.post("/promo-banners", response_model=AdminPromoBannerOut, status_code=201)
 async def create_promo_banner(
-    payload: PromoBannerIn, admin: AdminUser, session: DbSession
+    payload: PromoBannerIn, admin: SettingsWriter, session: DbSession
 ) -> AdminPromoBannerOut:
     """**ولافتةٌ مقصدُها غير مبنيٍّ لا تُقبل** — والنافذةُ إلزاميّةٌ بالعقد."""
     storefront.require_icon(payload.icon)
@@ -1000,7 +1000,7 @@ async def create_promo_banner(
 async def update_promo_banner(
     banner_id: uuid.UUID,
     payload: PromoBannerPatch,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
 ) -> AdminPromoBannerOut:
     banner = await storefront.get_banner(session, banner_id)
@@ -1042,7 +1042,7 @@ async def list_service_icons(_staff: StaffUser) -> list[str]:
 
 @router.delete("/service-tiles/{tile_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service_tile(
-    tile_id: uuid.UUID, admin: AdminUser, session: DbSession
+    tile_id: uuid.UUID, admin: SettingsWriter, session: DbSession
 ) -> None:
     """**المسوّدةُ وحدَها تُحذف** — وما عُرض مرّةً يُخفى (قرارُ المالك 2026-08-31).
 
@@ -1067,7 +1067,7 @@ async def delete_service_tile(
 
 @router.delete("/promo-banners/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_promo_banner(
-    banner_id: uuid.UUID, admin: AdminUser, session: DbSession
+    banner_id: uuid.UUID, admin: SettingsWriter, session: DbSession
 ) -> None:
     """**المسوّدةُ وحدَها** — ومعها ملفُّ صورتها إن رُفع.
 
@@ -1094,7 +1094,7 @@ async def delete_promo_banner(
 @router.put("/promo-banners/{banner_id}/image", response_model=AdminPromoBannerOut)
 async def upload_banner_image(
     banner_id: uuid.UUID,
-    admin: AdminUser,
+    admin: SettingsWriter,
     session: DbSession,
     file: UploadFile = File(...),
 ) -> AdminPromoBannerOut:
@@ -1130,7 +1130,7 @@ async def upload_banner_image(
 
 @router.delete("/promo-banners/{banner_id}/image", response_model=AdminPromoBannerOut)
 async def delete_banner_image(
-    banner_id: uuid.UUID, admin: AdminUser, session: DbSession
+    banner_id: uuid.UUID, admin: SettingsWriter, session: DbSession
 ) -> AdminPromoBannerOut:
     """**نزعُ الصورة وحدَها** — واللافتةُ تبقى.
 

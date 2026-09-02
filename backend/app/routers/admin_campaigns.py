@@ -13,7 +13,7 @@ from datetime import time
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import GrowthManager, DbSession
 from app.core.exceptions import InvalidInput
 from app.models.enums import AuditAction, CampaignStatus, CountryCode
 from app.schemas.notification import (
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/admin/campaigns", tags=["admin"])
 
 @router.get("", response_model=list[CampaignOut])
 async def list_campaigns(
-    _admin: AdminUser,
+    _admin: GrowthManager,
     session: DbSession,
     status_filter: CampaignStatus | None = Query(default=None, alias="status"),
     q: str | None = Query(default=None, max_length=120, description="عنوانٌ أو نصّ"),
@@ -49,7 +49,7 @@ async def list_campaigns(
 
 @router.post("", response_model=CampaignOut, status_code=201)
 async def create_campaign(
-    payload: CampaignCreate, admin: AdminUser, session: DbSession
+    payload: CampaignCreate, admin: GrowthManager, session: DbSession
 ) -> CampaignOut:
     campaign = await campaigns_service.create(
         session,
@@ -69,7 +69,7 @@ async def create_campaign(
 async def update_campaign(
     campaign_id: uuid.UUID,
     payload: CampaignUpdate,
-    admin: AdminUser,
+    admin: GrowthManager,
     session: DbSession,
 ) -> CampaignOut:
     """تعديلٌ أو جدولة — إرسالُ `scheduled_at` وحده يجدول الحملة."""
@@ -93,7 +93,7 @@ async def update_campaign(
 
 @router.post("/{campaign_id}/cancel", response_model=CampaignOut)
 async def cancel_campaign(
-    campaign_id: uuid.UUID, admin: AdminUser, session: DbSession
+    campaign_id: uuid.UUID, admin: GrowthManager, session: DbSession
 ) -> CampaignOut:
     campaign = await campaigns_service.get_campaign(
         session, campaign_id, for_update=True
@@ -109,7 +109,7 @@ async def cancel_campaign(
 @router.get("/{campaign_id}/deliveries", response_model=list[DeliveryOut])
 async def list_deliveries(
     campaign_id: uuid.UUID,
-    _admin: AdminUser,
+    _admin: GrowthManager,
     session: DbSession,
     q: str | None = Query(default=None, max_length=120, description="اسمُ المستلم أو رقمُه"),
     limit: int = Query(default=100, ge=1, le=500),
@@ -127,7 +127,7 @@ async def list_deliveries(
 
 @router.post("/test-push", response_model=TestPushResult)
 async def send_test_push(
-    payload: TestPushRequest, admin: AdminUser, session: DbSession
+    payload: TestPushRequest, admin: GrowthManager, session: DbSession
 ) -> TestPushResult:
     """يرسل إشعاراً إلى **رمز جهازٍ يكتبه المشرف** — تحقّقٌ من العقد الحقيقي.
 
@@ -182,7 +182,7 @@ async def send_test_push(
 
 @router.get("/settings/{country_code}", response_model=NotificationSettingOut)
 async def read_settings(
-    country_code: CountryCode, _admin: AdminUser, session: DbSession
+    country_code: CountryCode, _admin: GrowthManager, session: DbSession
 ) -> NotificationSettingOut:
     setting = await campaigns_service.get_or_create_settings(session, country_code)
     await session.commit()
@@ -193,7 +193,7 @@ async def read_settings(
 async def update_settings(
     country_code: CountryCode,
     payload: NotificationSettingUpdate,
-    _admin: AdminUser,
+    _admin: GrowthManager,
     session: DbSession,
 ) -> NotificationSettingOut:
     setting = await campaigns_service.get_or_create_settings(session, country_code)

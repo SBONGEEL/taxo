@@ -17,7 +17,7 @@ from pathlib import Path
 from fastapi import APIRouter, Response
 from fastapi.responses import FileResponse
 
-from app.core.deps import AdminUser, DbSession, RedisDep
+from app.core.deps import BackupsManager, DbSession, RedisDep
 from app.core.exceptions import InvalidInput, NotFound, PermissionDenied
 from app.core.security import verify_password
 from app.models.enums import AuditAction
@@ -62,7 +62,7 @@ def _row(path: Path) -> BackupRowOut:
 
 
 @router.get("", response_model=BackupStateOut)
-async def state(admin: AdminUser, session: DbSession) -> BackupStateOut:
+async def state(admin: BackupsManager, session: DbSession) -> BackupStateOut:
     setting = await backups.get_settings(session)
     await session.commit()
     alerts = await backups.alerts(session)
@@ -78,7 +78,7 @@ async def state(admin: AdminUser, session: DbSession) -> BackupStateOut:
 
 
 @router.post("/run", response_model=BackupRowOut, status_code=201)
-async def run_now(admin: AdminUser, session: DbSession, redis: RedisDep) -> BackupRowOut:
+async def run_now(admin: BackupsManager, session: DbSession, redis: RedisDep) -> BackupRowOut:
     """«نسخةٌ احتياطية الآن» — **وقفلٌ يمنع نسختين معاً**.
 
     دمبان متزامنان يملآن القرصَ ويتنازعان I/O في أسوأ لحظة؛ والقفلُ نفسُه الذي
@@ -116,7 +116,7 @@ async def run_now(admin: AdminUser, session: DbSession, redis: RedisDep) -> Back
 
 @router.put("/settings", response_model=BackupSettingsOut)
 async def update_settings(
-    payload: BackupSettingsIn, admin: AdminUser, session: DbSession
+    payload: BackupSettingsIn, admin: BackupsManager, session: DbSession
 ) -> BackupSettingsOut:
     setting = await backups.get_settings(session)
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -138,7 +138,7 @@ async def update_settings(
 async def download_token(
     name: str,
     payload: BackupDownloadIn,
-    admin: AdminUser,
+    admin: BackupsManager,
     session: DbSession,
     redis: RedisDep,
 ) -> BackupDownloadOut:
@@ -160,7 +160,7 @@ async def download_token(
         raise NotFound("لا يوجد ملفٌّ بهذا الاسم في النسخة")
 
     # **والمفتاحُ يحمل هويةَ من طلبه**: الرابطُ يُفتح بتنقّلِ متصفّحٍ لا يحمل
-    # ترويسةَ المصادقة، فلو حُرس المنفذُ بـ`AdminUser` لما فُتح أصلاً. والرمزُ
+    # ترويسةَ المصادقة، فلو حُرس المنفذُ بـ`BackupsManager` لما فُتح أصلاً. والرمزُ
     # **هو** الصلاحية (خمسُ دقائقَ، مرةٌ واحدة، ويُحذف عند أوّل استعمال) —
     # وحملُه للهوية هو ما يُبقي قيدَ التدقيق يقول **من** نزّل، لا «أحدٌ ما»
     token = secrets.token_urlsafe(32)

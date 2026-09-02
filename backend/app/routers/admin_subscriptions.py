@@ -14,7 +14,7 @@ import uuid
 from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
-from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.deps import FinanceManager, DbSession, StaffUser
 from app.core.exceptions import NotFound
 from app.models.driver import Driver
 from app.models.enums import CountryCode, SubscriptionStatus
@@ -58,7 +58,7 @@ async def list_subscriptions(
 
 @router.post("", response_model=SubscriptionOut, status_code=status.HTTP_201_CREATED)
 async def record_subscription(
-    payload: AdminSubscriptionCreate, admin: AdminUser, session: DbSession
+    payload: AdminSubscriptionCreate, admin: FinanceManager, session: DbSession
 ) -> SubscriptionOut:
     """يسجّل اشتراكاً قبضته الإدارة كاشاً أو كليكاً — بعد وصول المال لا قبله."""
     driver = await session.get(Driver, payload.driver_id)
@@ -105,7 +105,7 @@ def _plan_out(plan: subscriptions.CancellationPlan) -> CancellationPlanOut:
     "/{subscription_id}/cancellation-preview", response_model=CancellationPlanOut
 )
 async def preview_cancellation(
-    subscription_id: uuid.UUID, _admin: AdminUser, session: DbSession
+    subscription_id: uuid.UUID, _admin: FinanceManager, session: DbSession
 ) -> CancellationPlanOut:
     """**ما سيقع قبل أن يقع** — زرُّه ورقةُ التأكيد في اللوحة (شرطُ المالك).
 
@@ -126,7 +126,7 @@ async def preview_cancellation(
 async def cancel_subscription(
     subscription_id: uuid.UUID,
     payload: SubscriptionCancelIn,
-    admin: AdminUser,
+    admin: FinanceManager,
     session: DbSession,
 ) -> CancellationPlanOut:
     """يُلغي تغطيةَ صاحب هذا الاشتراك كلَّها ويردّ ما لم يُستعمل (§38).

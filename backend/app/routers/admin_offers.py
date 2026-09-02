@@ -14,7 +14,7 @@ import uuid
 
 from fastapi import APIRouter, status
 
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import GrowthManager, DbSession
 from app.core.exceptions import NotFound
 from app.models.enums import AuditAction, CountryCode
 from app.models.subscription_offer import SubscriptionOffer
@@ -32,7 +32,7 @@ router = APIRouter(prefix="/admin/subscription-offers", tags=["admin"])
 
 @router.get("", response_model=list[OfferOut])
 async def list_offers(
-    country_code: CountryCode, _: AdminUser, session: DbSession
+    country_code: CountryCode, _: GrowthManager, session: DbSession
 ) -> list[OfferOut]:
     """العروضُ ومعها جدولُ التنازل — والمجاميعُ من القاعدة لا من المتصفح."""
     rows = await offers_service.list_offers(session, country_code)
@@ -46,7 +46,7 @@ async def list_offers(
 async def create_offer(
     country_code: CountryCode,
     payload: OfferIn,
-    admin: AdminUser,
+    admin: GrowthManager,
     session: DbSession,
 ) -> OfferOut:
     offer = await offers_service.create_offer(
@@ -71,7 +71,7 @@ async def create_offer(
 async def update_offer(
     offer_id: uuid.UUID,
     payload: OfferUpdate,
-    admin: AdminUser,
+    admin: GrowthManager,
     session: DbSession,
 ) -> OfferOut:
     """تعديلٌ جزئي — **والإطفاءُ منه**: `is_active = false` لا حذف.
@@ -96,7 +96,7 @@ async def update_offer(
 
 @router.get("/{offer_id}/grants", response_model=list[GrantOut])
 async def list_grants(
-    offer_id: uuid.UUID, _: AdminUser, session: DbSession
+    offer_id: uuid.UUID, _: GrowthManager, session: DbSession
 ) -> list[GrantOut]:
     return [
         GrantOut.model_validate(row)
@@ -106,7 +106,7 @@ async def list_grants(
 
 @router.delete("/{offer_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_offer(
-    offer_id: uuid.UUID, admin: AdminUser, session: DbSession
+    offer_id: uuid.UUID, admin: GrowthManager, session: DbSession
 ) -> None:
     """حذفُ عرضٍ **لم يُستعمل** (البند ٤، §39٫٤).
 
@@ -140,7 +140,7 @@ async def delete_offer(
 async def grant_offer(
     offer_id: uuid.UUID,
     payload: GrantIn,
-    admin: AdminUser,
+    admin: GrowthManager,
     session: DbSession,
 ) -> GrantOut:
     """منحُ عرضٍ يدويٍّ لكبتن — **بسببٍ مكتوبٍ يدخل سجلَّ التدقيق**.

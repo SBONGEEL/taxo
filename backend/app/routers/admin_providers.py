@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import get_cipher
-from app.core.deps import AdminUser, DbSession
+from app.core.deps import ProvidersManager, DbSession
 from app.core.exceptions import Conflict, NotFound
 from app.models.enums import ProviderKey
 from app.models.provider_credential import ProviderCredential
@@ -45,7 +45,7 @@ def _to_out(credential: ProviderCredential) -> ProviderCredentialOut:
 
 
 @router.get("", response_model=ProviderCatalogOut)
-async def list_providers(_admin: AdminUser, session: DbSession) -> ProviderCatalogOut:
+async def list_providers(_admin: ProvidersManager, session: DbSession) -> ProviderCatalogOut:
     """بطاقات المزودين وحقولها + العقود المحفوظة بقيم مقنّعة."""
     stored = await credentials_service.list_credentials(session)
     return ProviderCatalogOut(
@@ -76,7 +76,7 @@ async def list_providers(_admin: AdminUser, session: DbSession) -> ProviderCatal
 async def upsert_provider_credential(
     provider_key: ProviderKey,
     payload: ProviderCredentialUpsert,
-    admin: AdminUser,
+    admin: ProvidersManager,
     session: DbSession,
 ) -> ProviderCredentialOut:
     """حفظ عقد مزود — يشفَّر at rest وتُقنّع قيمه في الرد.
@@ -123,7 +123,7 @@ async def _set_active(
 async def test_provider_credential(
     credential_id: uuid.UUID,
     payload: ProviderTestRequest,
-    admin: AdminUser,
+    admin: ProvidersManager,
     session: DbSession,
 ) -> ProviderTestResult:
     """زرّ «اختبار الاتصال» في بطاقة العقد (SPEC القسم 13/7).
@@ -147,21 +147,21 @@ async def test_provider_credential(
 
 @router.post("/{credential_id}/activate", response_model=ProviderCredentialOut)
 async def activate_provider_credential(
-    credential_id: uuid.UUID, admin: AdminUser, session: DbSession
+    credential_id: uuid.UUID, admin: ProvidersManager, session: DbSession
 ) -> ProviderCredentialOut:
     return await _set_active(credential_id, True, admin, session)
 
 
 @router.post("/{credential_id}/deactivate", response_model=ProviderCredentialOut)
 async def deactivate_provider_credential(
-    credential_id: uuid.UUID, admin: AdminUser, session: DbSession
+    credential_id: uuid.UUID, admin: ProvidersManager, session: DbSession
 ) -> ProviderCredentialOut:
     return await _set_active(credential_id, False, admin, session)
 
 
 @router.delete("/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_provider_credential(
-    credential_id: uuid.UUID, admin: AdminUser, session: DbSession
+    credential_id: uuid.UUID, admin: ProvidersManager, session: DbSession
 ) -> None:
     credential = await session.get(ProviderCredential, credential_id)
     if credential is None:
@@ -176,7 +176,7 @@ async def delete_provider_credential(
 
 @router.get("/whatsapp/session", response_model=WhatsAppSessionOut)
 async def read_whatsapp_session(
-    _admin: AdminUser, session: DbSession
+    _admin: ProvidersManager, session: DbSession
 ) -> WhatsAppSessionOut:
     """حالُ جلسة البوابة — **ورمزُ الربط معها في نداءٍ واحد**.
 
@@ -191,7 +191,7 @@ async def read_whatsapp_session(
 
 @router.post("/whatsapp/session/logout", response_model=WhatsAppSessionOut)
 async def logout_whatsapp_session(
-    admin: AdminUser, session: DbSession
+    admin: ProvidersManager, session: DbSession
 ) -> WhatsAppSessionOut:
     """يفصل الجلسةَ ويمحوها — البابُ الوحيد لربط رقمٍ آخر.
 
