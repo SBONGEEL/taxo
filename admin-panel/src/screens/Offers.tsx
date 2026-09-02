@@ -22,11 +22,13 @@ import {
   createSubscriptionOffer,
   listPlans,
   listSubscriptionOffers,
+  deleteOffer,
   updateSubscriptionOffer,
 } from "@/api/endpoints";
 import type { SubscriptionOffer, SubscriptionPlan } from "@/api/types";
 import { OfferGrants } from "@/components/OfferGrants";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Field, Select } from "@/components/ui/Field";
@@ -50,6 +52,7 @@ export function OffersScreen() {
   const form = useFormError();
   const [rows, setRows] = useState<SubscriptionOffer[] | null>(null);
   const [granting, setGranting] = useState<SubscriptionOffer | null>(null);
+  const [deleting, setDeleting] = useState<SubscriptionOffer | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -355,6 +358,18 @@ export function OffersScreen() {
                             امنح
                           </button>
                         ) : null}
+                        {/* **الحذفُ لِما لم يُستعمل** (§39٫٤): `RESTRICT` في
+                            القاعدة يمنع محوَ عرضٍ اشترى به أحد، **والخادمُ
+                            يجيب بالعربية ويقول العدد** بدل خطأ قيدٍ لا يُفهم */}
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            className="text-11.5 font-bold text-danger"
+                            onClick={() => setDeleting(offer)}
+                          >
+                            احذف
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -375,6 +390,26 @@ export function OffersScreen() {
                 )}.`
               : ""}
           </p>
+        ) : null}
+
+        {deleting ? (
+          <ConfirmDelete
+            what={`عرض «${deleting.name}»`}
+            count={deleting.subscriptions_sold}
+            note="ومن اشترى بخصمه لا يُمسّ — والبديلُ إطفاؤه، فيبقى سببُ خصومهم مقروءاً."
+            onClose={() => setDeleting(null)}
+            onConfirm={async () => {
+              try {
+                await deleteOffer(deleting.id);
+                setDeleting(null);
+                setDone("حُذف العرض — ولم يكن قد استُعمل");
+                await load();
+              } catch (caught) {
+                form.capture(caught, "تعذّر الحذف");
+                setDeleting(null);
+              }
+            }}
+          />
         ) : null}
 
         {granting ? (

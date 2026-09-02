@@ -71,14 +71,15 @@ from app.services.providers.credentials import provider_is_active
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
 
 
-def _apply_updates(instance: object, changes: dict[str, Any]) -> list[str]:
-    """يطبّق الحقول المرسلة فقط ويعيد أسماء ما تغيّر فعلاً."""
-    changed = []
-    for field, value in changes.items():
-        if getattr(instance, field) != value:
-            setattr(instance, field, value)
-            changed.append(field)
-    return changed
+def _apply_updates(instance: object, changes: dict[str, Any]) -> dict[str, dict]:
+    """يطبّق الحقول المرسلة فقط **ويعيد قبلَ وبعدَ لكلِّ ما تغيّر** (البند ٤).
+
+    **وبيتُه `services/audit.py` لا هنا**: كان يعيد **أسماءً بلا قيم**، وقرارُ
+    المالك 2026-09-02 أن يُختم «**من ومتى والقيمةُ قبل وبعد**». **ونقلُه إلى
+    الخدمة يجعل كلَّ موجّهٍ يعدّل يصله** — وبقاؤه هنا كان يعني نسخةً في ثاني
+    موجّه.
+    """
+    return audit.apply_changes(instance, changes)
 
 
 async def _flush(session: AsyncSession, *, conflict_message: str) -> None:
@@ -171,7 +172,7 @@ async def update_pricing_rule(
         action=AuditAction.UPDATE,
         entity_type="pricing_rule",
         entity_id=rule.id,
-        details={"changed_fields": changed},
+        changes=changed,
     )
     await _commit(session, rule)
     return PricingRuleOut.model_validate(rule)
@@ -318,7 +319,8 @@ async def update_commission_setting(
         action=AuditAction.UPDATE,
         entity_type="commission_setting",
         entity_id=setting.id,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return CommissionSettingOut.model_validate(setting)
@@ -384,7 +386,7 @@ async def update_subscription_plan(
         action=AuditAction.UPDATE,
         entity_type="subscription_plan",
         entity_id=plan.id,
-        details={"changed_fields": changed},
+        changes=changed,
     )
     await _commit(session, plan, conflict_message="توجد خطة بهذا الاسم في نفس الدولة")
     return SubscriptionPlanOut.model_validate(plan)
@@ -448,7 +450,8 @@ async def update_wallet_settings(
         action=AuditAction.UPDATE,
         entity_type="wallet_setting",
         entity_id=setting.id,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return WalletSettingOut.model_validate(setting)
@@ -497,7 +500,8 @@ async def update_advance_settings(
         action=AuditAction.UPDATE,
         entity_type="advance_setting",
         entity_id=setting.id,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return AdvanceSettingOut.model_validate(setting)
@@ -548,7 +552,8 @@ async def update_cancellation_settings(
         action=AuditAction.UPDATE,
         entity_type="cancellation_setting",
         entity_id=None,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return CancellationSettingOut.model_validate(setting)
@@ -593,7 +598,8 @@ async def update_payment_settings(
         action=AuditAction.UPDATE,
         entity_type="payment_setting",
         entity_id=setting.id,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return PaymentSettingOut.model_validate(setting)
@@ -641,7 +647,8 @@ async def update_map_settings(
         action=AuditAction.UPDATE,
         entity_type="map_setting",
         entity_id=None,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return MapSettingOut.model_validate(setting)
@@ -687,7 +694,8 @@ async def update_otp_settings(
         action=AuditAction.UPDATE,
         entity_type="otp_setting",
         entity_id=None,
-        details={"country_code": country_code.value, "changed_fields": changed},
+        details={"country_code": country_code.value},
+        changes=changed,
     )
     await _commit(session, setting)
     return OtpSettingOut.model_validate(setting)
@@ -799,7 +807,9 @@ async def upload_cliq_qr(
         action=AuditAction.UPDATE,
         entity_type="payment_setting",
         entity_id=setting.id,
-        details={"country_code": country_code.value, "changed_fields": ["cliq_qr_path"]},
+        # **ملفٌّ لا قيمة**: المسارُ تفصيلُ تخزينٍ لا يُكتب في السجلّ
+        details={"country_code": country_code.value},
+        changes={"cliq_qr_path": {"before": "ملفٌّ سابق", "after": "ملفٌّ جديد"}},
     )
     # **و`_commit` لا `session.commit`** — عطبٌ ثانٍ كان الأولُ يستره: بعد
     # تحديثٍ يبقى `updated_at` منتهياً (يُحسب في SQL بـ`onupdate`)، **فيقرؤه
@@ -946,7 +956,7 @@ async def update_service_tile(
             action=AuditAction.UPDATE,
             entity_type="service_tile",
             entity_id=tile.id,
-            details={"changed": changed, **payload.model_dump(exclude_unset=True, mode="json")},
+            changes=changed,
         )
     await session.commit()
     return AdminServiceTileOut.model_validate(tile)
@@ -1011,7 +1021,7 @@ async def update_promo_banner(
             action=AuditAction.UPDATE,
             entity_type="promo_banner",
             entity_id=banner.id,
-            details={"changed": changed},
+            changes=changed,
         )
     await session.commit()
     return AdminPromoBannerOut.model_validate(banner)
@@ -1110,7 +1120,7 @@ async def upload_banner_image(
         action=AuditAction.UPDATE,
         entity_type="promo_banner",
         entity_id=banner.id,
-        details={"changed": ["image_path"]},
+        changes={"image_path": {"before": "ملفٌّ سابق", "after": "ملفٌّ جديد"}},
     )
     await session.commit()
     if previous and previous != stored.relative_path:
@@ -1138,7 +1148,7 @@ async def delete_banner_image(
         action=AuditAction.UPDATE,
         entity_type="promo_banner",
         entity_id=banner.id,
-        details={"changed": ["image_path"]},
+        changes={"image_path": {"before": "ملفٌّ سابق", "after": "ملفٌّ جديد"}},
     )
     await session.commit()
     await storage.delete(previous)

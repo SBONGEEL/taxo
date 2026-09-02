@@ -4,11 +4,14 @@
  * فيه كتبته **معاملةُ التغيير نفسها** (`services/audit.py`): لا تغييرَ بلا
  * قيد، ولا قيدَ لتغييرٍ فشل — فالجدولان يتفقان أو يسقطان معاً.
  *
- * **و`details` أسماءُ الحقول المتغيّرة لا قيمُها**، وهي قاعدةٌ أمنية لا
- * اختصار: سجلُّ تدقيقٍ يخزّن قيم الحقول يصير نسخةً ثانيةً من الأسرار التي
- * حُفظت مشفَّرةً في مكانها. ولذلك تعرض الشاشة `details` كما هو ولا تدّعي
- * صياغةً له: حقلٌ جديدٌ في الخلفية يظهر هنا بلا تعديل، وصياغةٌ تعرف حقولاً
- * بعينها تصمت عمّا لا تعرفه.
+ * **و`details` صارت تحمل القيمةَ قبل وبعد** (البند ٤، §39٫٤، قرارُ المالك
+ * 2026-09-02) — **وكان هذا الملفُّ يقول عكسَه**: «أسماءُ الحقول لا قيمُها».
+ * **والقاعدةُ القديمة لم تُنقض بل ضُيّقت**: `audit.redact` يحجب ما أعلنه
+ * سجلُّ المزوّدين سرّاً فيصل `****`، **ويسمح بالقيمة حيث لا سرّ** — إذ «تغيّر
+ * السعر» بلا رقمين **لا يجيب من يسأل بعد شهرٍ كم كان**.
+ *
+ * **والحجبُ في الخلفية لا هنا**: ما يُخفيه المتصفحُ يبقى في القاعدة ويصل لمن
+ * يقرأ الـAPI.
  *
  * **والقراءةُ الوحيدة المسجَّلة في المشروع هي فتحُ الخريطة الحيّة**
  * (`read` على `live_map`، القسم 13/1) — ولذلك تُميَّز في القائمة: صلاحيةٌ
@@ -207,8 +210,11 @@ export function AuditScreen() {
                 {row.entity_id ? row.entity_id.slice(0, 8) : "—"}
               </span>
 
-              <span className="min-w-0 truncate text-muted" dir="ltr">
-                {row.details ? JSON.stringify(row.details) : "—"}
+              {/* **تُقرأ «من ماذا إلى ماذا» لا JSON خام** (البند ٤): سجلٌّ
+                  يُعرض `{"changes":{"price":{"before":…}}}` سجلٌّ مكتوبٌ ولا
+                  مقروء — **والمشرفُ يقرؤه بعد شهرٍ ليعرف كم كان**. */}
+              <span className="min-w-0 text-muted">
+                <AuditDetails details={row.details} />
               </span>
             </>
           )}
@@ -221,5 +227,51 @@ export function AuditScreen() {
         اعتمادِ سائقٍ استبدل وثيقةً بنفسه.
       </p>
     </Shell>
+  );
+}
+
+
+/** تفصيلُ القيد — **«الحقل: قبل ← بعد»** (البند ٤، §39٫٤).
+ *
+ * **وما ليس تغييراً يبقى كما هو**: قيودُ الإنشاء والقراءة تحمل سياقاً لا
+ * قيمتين، **وإجبارُها على شكل التغيير يُنتج سطراً كاذباً**.
+ *
+ * **والسرُّ يصل محجوباً من الخلفية** (`****`) — **والحجبُ هناك لا هنا**:
+ * ما يُخفيه المتصفحُ يبقى في القاعدة ويصل لمن يقرأ الـAPI.
+ */
+function AuditDetails({ details }: { details: Record<string, unknown> | null }) {
+  if (!details) return <>—</>;
+  const changes = details.changes as
+    | Record<string, { before?: unknown; after?: unknown }>
+    | undefined;
+  const deleted = details.deleted as Record<string, unknown> | undefined;
+
+  if (changes) {
+    return (
+      <span className="block truncate">
+        {Object.entries(changes).map(([field, pair], index) => (
+          <span key={field}>
+            {index > 0 ? " · " : ""}
+            <b className="text-ink">{field}</b>{" "}
+            <span dir="ltr">{String(pair.before ?? "—")}</span>
+            {" ← "}
+            <span dir="ltr">{String(pair.after ?? "—")}</span>
+          </span>
+        ))}
+      </span>
+    );
+  }
+  if (deleted) {
+    return (
+      <span className="block truncate">
+        <b className="text-ink">حُذف</b>{" "}
+        <span dir="ltr">{JSON.stringify(deleted)}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="block truncate" dir="ltr">
+      {JSON.stringify(details)}
+    </span>
   );
 }

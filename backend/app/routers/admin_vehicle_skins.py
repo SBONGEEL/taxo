@@ -52,7 +52,7 @@ from app.schemas.vehicle_skin import (
     SkinStatsOut,
     SkinUpdateIn,
 )
-from app.services import audit, skin_artwork, vehicle_skins
+from app.services import audit, deletion, skin_artwork, vehicle_skins
 
 router = APIRouter(prefix="/admin/vehicle-skins", tags=["admin"])
 
@@ -283,6 +283,32 @@ async def update_skin(
 
 
 # ──────────────────────────────────────────────────────────── الرسمة
+
+
+@router.delete("/{skin_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_skin(
+    skin_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    """حذفُ مركبةٍ **لا يملكها أحد** (البند ٤، §39٫٤).
+
+    **وما يملكه كبتنٌ يُخفى لا يُحذف**: منهم من **دفع ثمنَها من محفظته**،
+    ومحوُ الصفِّ يترك قيدَ شرائه يشير إلى لا شيء.
+    """
+    skin = await session.get(VehicleSkin, skin_id)
+    if skin is None:
+        raise NotFound("المركبة غير موجودة")
+    await deletion.skin_deletable(session, skin)
+    before = audit.snapshot(skin, ("key", "name", "category", "is_active"))
+    await session.delete(skin)
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="vehicle_skin",
+        entity_id=skin_id,
+        details={"deleted": before},
+    )
+    await session.commit()
 
 
 @router.put("/artwork/preview")

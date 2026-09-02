@@ -27,6 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   attachSkinAsset,
   createVehicleSkin,
+  deleteVehicleSkin,
   getSkinStats,
   listSkinAssets,
   listVehicleSkins,
@@ -46,6 +47,7 @@ import type {
 import { Shell } from "@/components/Shell";
 import { SkinMapPreview } from "@/components/SkinMapPreview";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
@@ -124,6 +126,7 @@ export function VehicleSkinsScreen() {
   const [preview, setPreview] = useState<SkinArtworkPreview | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [replacing, setReplacing] = useState<AdminSkin | null>(null);
+  const [deleting, setDeleting] = useState<AdminSkin | null>(null);
 
   /** رسوماتُ الصفوف — **`blob:` لأن البابَ إداريٌّ يقرأ ترويسةَ الجلسة**،
    *  و`<img src>` لا يحملها. **ومن يفتحها يغلقها**، وإلا بقيت في الذاكرة. */
@@ -696,6 +699,16 @@ export function VehicleSkinsScreen() {
                             >
                               بدّل الرسمة
                             </button>
+                            {/* **الحذفُ لما لا يملكه أحد** (§39٫٤): الخادمُ
+                                يرفض ويقول كم كبتناً يملكها، **وإخفاءُ الزرِّ
+                                راحةٌ لا حماية** — فالزرُّ يظهر والرفضُ يُقرأ */}
+                            <button
+                              type="button"
+                              className="text-11.5 font-bold text-danger underline"
+                              onClick={() => setDeleting(row)}
+                            >
+                              احذف
+                            </button>
                           </>
                         ) : null}
                       </div>
@@ -713,6 +726,26 @@ export function VehicleSkinsScreen() {
           المتجرُ ما ليس عنده أو يمنع ما عنده. ولا زرَّ حذفٍ هنا: مركبةٌ
           اشتراها كباتنُ يمحو حذفُها سببَ ما دفعوه.
         </p>
+
+        {deleting ? (
+          <ConfirmDelete
+            what={`مركبة «${deleting.name}»`}
+            count={deleting.owners_count}
+            note="ومن اقتناها لا تُحذف عنه — والبديلُ إطفاؤها، فتبقى عند مالكيها وتختفي من المتجر."
+            onClose={() => setDeleting(null)}
+            onConfirm={async () => {
+              try {
+                await deleteVehicleSkin(deleting.id);
+                setDeleting(null);
+                setDone("حُذفت المركبة — ولم يكن يملكها أحد");
+                await load();
+              } catch (caught) {
+                form.capture(caught, "تعذّر الحذف");
+                setDeleting(null);
+              }
+            }}
+          />
+        ) : null}
 
         {replacing ? (
           <ReplaceArtwork

@@ -158,6 +158,11 @@ export const updateSubscriptionOffer = (
 export const listOfferGrants = (offerId: string) =>
   api.get<OfferGrant[]>(`/admin/subscription-offers/${offerId}/grants`);
 
+/** حذفُ عرضٍ **لم يُستعمل** (§39٫٤) — و`RESTRICT` في القاعدة يمنعه أصلاً،
+ *  لكنّ الخادمَ يجيب بالعربية ويقول كم اشتراكاً استعمله. */
+export const deleteOffer = (offerId: string) =>
+  api.del<void>(`/admin/subscription-offers/${offerId}`);
+
 export const grantSubscriptionOffer = (
   offerId: string,
   payload: { driver_id: string; note?: string | null },
@@ -990,6 +995,14 @@ export const setLevelEffect = (
 
 export const listBadges = () => api.get<Badge[]>("/admin/badges");
 
+/** حذفُ شارةٍ **لم تُمنح لأحد** (§39٫٤) — والخادمُ يرفض ويقول العدد. */
+export const deleteBadge = (badgeId: string) =>
+  api.del<void>(`/admin/badges/${badgeId}`);
+
+/** حذفُ مهمّةٍ **لم يبدأ شهرُها** (§39٫٤). */
+export const deleteMission = (missionId: string) =>
+  api.del<void>(`/admin/missions/${missionId}`);
+
 export const createBadge = (payload: {
   key: string;
   label: string;
@@ -1120,6 +1133,10 @@ export const updateMapSettings = (
 
 
 // ───────────────────────────────── مركباتُ الكراج والمتجر (2026-08-22)
+
+/** حذفُ مركبةٍ **لا يملكها أحد** (§39٫٤) — ومنهم من دفع ثمنَها. */
+export const deleteVehicleSkin = (skinId: string) =>
+  api.del<void>(`/admin/vehicle-skins/${skinId}`);
 
 export const listVehicleSkins = () =>
   api.get<AdminSkin[]>("/admin/vehicle-skins");

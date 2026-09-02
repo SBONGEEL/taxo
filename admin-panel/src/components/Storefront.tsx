@@ -44,6 +44,7 @@ import type {
   ServiceTileRow,
 } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -168,6 +169,13 @@ export function Storefront({
     }
   }
 
+  // **ولم يكن للحذف استئذانٌ قطّ** (البند ٤): كان يقع بضغطةٍ واحدة على صفٍّ
+  // في جدول — **وضغطةٌ على الصفِّ الخطأ لا رجعةَ فيها**. والورقةُ واحدةٌ
+  // مشتركة (`ConfirmDelete`) لا نسخةٌ هنا.
+  const [deleting, setDeleting] = useState<
+    { kind: "tile" | "banner"; id: string; name: string; run: () => Promise<void> } | null
+  >(null);
+
   async function removeTile(row: ServiceTileRow) {
     setBusy(row.id);
     try {
@@ -263,7 +271,14 @@ export function Storefront({
                     ? "عُرضت على الناس — تُخفى ولا تُحذف"
                     : "مسوّدةٌ لم يرَها أحد"
                 }
-                onClick={() => void removeTile(row)}
+                onClick={() =>
+                  setDeleting({
+                    kind: "tile",
+                    id: row.id,
+                    name: row.title,
+                    run: () => removeTile(row),
+                  })
+                }
               >
                 احذف
               </Button>
@@ -410,7 +425,14 @@ export function Storefront({
                     ? "عُرضت على الناس — تُطفأ ولا تُحذف"
                     : "مسوّدةٌ لم يرَها أحد"
                 }
-                onClick={() => void removeBanner(row)}
+                onClick={() =>
+                  setDeleting({
+                    kind: "banner",
+                    id: row.id,
+                    name: row.title,
+                    run: () => removeBanner(row),
+                  })
+                }
               >
                 احذف
               </Button>
@@ -446,6 +468,23 @@ export function Storefront({
       >
         أضف لافتة
       </Button>
+
+      {deleting ? (
+        <ConfirmDelete
+          what={
+            deleting.kind === "tile"
+              ? `بلاطة «${deleting.name}»`
+              : `لافتة «${deleting.name}»`
+          }
+          note="ولا يُحذف ما عُرض على الناس — يُخفى بدل ذلك، فحذفُه يمحو شاهداً على ما رأوه."
+          onClose={() => setDeleting(null)}
+          onConfirm={async () => {
+            const run = deleting.run;
+            setDeleting(null);
+            await run();
+          }}
+        />
+      ) : null}
 
       {editingTile ? (
         <TileEditor

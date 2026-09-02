@@ -15,7 +15,9 @@ import uuid
 from fastapi import APIRouter, status
 
 from app.core.deps import AdminUser, DbSession
+from app.core.exceptions import NotFound
 from app.models.enums import AuditAction, CountryCode
+from app.models.subscription_offer import SubscriptionOffer
 from app.schemas.subscription_offer import (
     GrantIn,
     GrantOut,
@@ -23,7 +25,7 @@ from app.schemas.subscription_offer import (
     OfferOut,
     OfferUpdate,
 )
-from app.services import audit, offers as offers_service
+from app.services import audit, deletion, offers as offers_service
 
 router = APIRouter(prefix="/admin/subscription-offers", tags=["admin"])
 
@@ -100,6 +102,36 @@ async def list_grants(
         GrantOut.model_validate(row)
         for row in await offers_service.list_grants(session, offer_id)
     ]
+
+
+@router.delete("/{offer_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_offer(
+    offer_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    """حذفُ عرضٍ **لم يُستعمل** (البند ٤، §39٫٤).
+
+    **وعرضٌ اشترى به أحدٌ يُطفأ لا يُحذف**: `RESTRICT` في القاعدة يمنعه أصلاً،
+    **لكنّه يرمي خطأً لا يفهمه المشرف** — فالسؤالُ يُسأل قبله ليجيب بالعربية
+    ويقولَ العدد. وهو ما تقوله وثيقةُ العمود: «عرضٌ يُحذف بعد أن اشترى به
+    عشرون كبتناً يمحو **سببَ** خصومهم».
+    """
+    offer = await session.get(SubscriptionOffer, offer_id)
+    if offer is None:
+        raise NotFound("العرض غير موجود")
+    await deletion.offer_deletable(session, offer)
+    before = audit.snapshot(
+        offer, ("name", "discount_type", "discount_value", "audience", "is_active")
+    )
+    await session.delete(offer)
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="subscription_offer",
+        entity_id=offer_id,
+        details={"deleted": before},
+    )
+    await session.commit()
 
 
 @router.post(

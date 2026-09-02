@@ -17,7 +17,10 @@ from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
 from app.core.deps import AdminUser, DbSession, StaffUser
+from app.core.exceptions import NotFound
+from app.models.badge import Badge
 from app.models.driver import Driver
+from app.models.mission import Mission
 from app.models.enums import AuditAction, CountryCode, DriverStatus, FeatureKey
 from app.models.user import User
 from app.schemas.mission import (
@@ -34,6 +37,7 @@ from app.schemas.mission import (
     MissionPatch,
 )
 from app.services import audit
+from app.services import deletion
 from app.services import badges as badges_service
 from app.services import missions as missions_service
 from app.services import settings_service
@@ -126,6 +130,59 @@ async def update_mission(
     await missions_service.reevaluate(session, mission.country_code)
     await session.commit()
     return MissionOut.model_validate(mission, from_attributes=True)
+
+
+@router.delete("/missions/{mission_id}", status_code=204)
+async def delete_mission(
+    mission_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    """حذفُ مهمّةٍ **لم يبدأ شهرُها** (البند ٤، §39٫٤).
+
+    **وما بدأ شهرُه يُطفأ لا يُحذف**: كباتنُ يعملون عليه الآن، **ومحوُه يمحو
+    هدفاً سعَوا إليه**.
+    """
+    mission = await session.get(Mission, mission_id)
+    if mission is None:
+        raise NotFound("المهمّة غير موجودة")
+    await deletion.mission_deletable(session, mission)
+    # **لقطةٌ قبل الحذف** — فالمحذوفُ لا يُقرأ بعد حذفه
+    before = audit.snapshot(mission, ("country_code", "month", "metric", "target", "title"))
+    await session.delete(mission)
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="mission",
+        entity_id=mission_id,
+        details={"deleted": before},
+    )
+    await session.commit()
+
+
+@router.delete("/badges/{badge_id}", status_code=204)
+async def delete_badge(
+    badge_id: uuid.UUID, admin: AdminUser, session: DbSession
+) -> None:
+    """حذفُ شارةٍ **لم تُمنح لأحد** (البند ٤، §39٫٤).
+
+    **ولا يُترك للمفتاح الأجنبيّ**: `CASCADE` على المنح **يمحوها معها صامتاً**
+    — ومنحةٌ ممحوّةٌ تمحو خبراً عن إنسان.
+    """
+    badge = await session.get(Badge, badge_id)
+    if badge is None:
+        raise NotFound("الشارة غير موجودة")
+    await deletion.badge_deletable(session, badge)
+    before = audit.snapshot(badge, ("key", "label", "description", "icon"))
+    await session.delete(badge)
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.DELETE,
+        entity_type="badge",
+        entity_id=badge_id,
+        details={"deleted": before},
+    )
+    await session.commit()
 
 
 # ------------------------------------------------------------ المستويات

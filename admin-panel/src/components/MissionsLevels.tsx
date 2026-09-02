@@ -15,6 +15,8 @@ import {
   createBadge,
   createMission,
   getLevelOverview,
+  deleteBadge,
+  deleteMission,
   listBadges,
   listMissions,
   setLevelEffect,
@@ -22,6 +24,7 @@ import {
 } from "@/api/endpoints";
 import type { Badge as BadgeRow, LevelOverview, Mission } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Field";
 import { Spinner } from "@/components/ui/Feedback";
@@ -54,6 +57,10 @@ export function MissionsLevels({
   const [missions, setMissions] = useState<Mission[] | null>(null);
   const [levels, setLevels] = useState<LevelOverview | null>(null);
   const [badges, setBadges] = useState<BadgeRow[]>([]);
+  // **صفٌّ واحدٌ ينتظر التأكيد** — والنوعُ معه لأن الورقةَ واحدةٌ لكيانين
+  const [deleting, setDeleting] = useState<
+    { kind: "mission" | "badge"; id: string; name: string } | null
+  >(null);
 
   const load = useCallback(async () => {
     const [m, l, b] = await Promise.all([
@@ -184,6 +191,18 @@ export function MissionsLevels({
                           {row.is_active ? "أوقف" : "فعّل"}
                         </Button>
                       ) : null}
+                      {/* **الحذفُ لِما لم يبدأ شهرُه** (§39٫٤): ما بدأ يعمل
+                          عليه كباتنُ الآن — يُوقَف ولا يُمحى */}
+                      {isAdmin ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger"
+                          onClick={() => setDeleting({ kind: "mission", id: row.id, name: row.title })}
+                        >
+                          احذف
+                        </Button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -218,11 +237,54 @@ export function MissionsLevels({
                 <span className="ms-6 text-11 text-muted" dir="ltr">
                   {badge.key}
                 </span>
+                {/* **والحذفُ لِما لم يُمنح** (§39٫٤): `CASCADE` كان سيمحو
+                    المنحَ معها صامتاً — ومنحةٌ ممحوّةٌ تمحو خبراً عن إنسان */}
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    className="ms-8 text-11 font-bold text-danger"
+                    onClick={() => setDeleting({ kind: "badge", id: badge.id, name: badge.label })}
+                  >
+                    احذف
+                  </button>
+                ) : null}
               </span>
             ))}
           </div>
         )}
       </section>
+
+      {deleting ? (
+        <ConfirmDelete
+          what={
+            deleting.kind === "mission"
+              ? `مهمّة «${deleting.name}»`
+              : `شارة «${deleting.name}»`
+          }
+          note={
+            deleting.kind === "mission"
+              ? "ولا تُحذف مهمّةٌ بدأ شهرُها — يعمل عليها كباتنُ الآن، والبديلُ إيقافُها."
+              : "ولا تُحذف شارةٌ مُنحت لأحد — ومنحةٌ ممحوّةٌ تمحو خبراً عن إنسان."
+          }
+          onClose={() => setDeleting(null)}
+          onConfirm={async () => {
+            try {
+              if (deleting.kind === "mission") {
+                await deleteMission(deleting.id);
+              } else {
+                await deleteBadge(deleting.id);
+              }
+              setDeleting(null);
+              await load();
+            } catch (caught) {
+              onError(
+                caught instanceof ApiError ? caught.message : "تعذّر الحذف",
+              );
+              setDeleting(null);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
