@@ -19,33 +19,28 @@ import type { AdvanceRow } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
-import { Table } from "@/components/Table";
+import { Table, TableSearch } from "@/components/Table";
+import { ADVANCE_STATUS_LABEL, ADVANCE_STATUS_TONE } from "@/lib/labels";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { day, money } from "@/lib/format";
 
-const TONE: Record<AdvanceRow["status"], Parameters<typeof Badge>[0]["tone"]> = {
-  outstanding: "warn",
-  repaid: "ok",
-  written_off: "muted",
-};
-
-const LABEL: Record<AdvanceRow["status"], string> = {
-  outstanding: "قائمة",
-  repaid: "سُدِّدت",
-  written_off: "شُطبت",
-};
+// **من `lib/labels.ts`** — يقرؤهما الملفُّ الشخصيُّ أيضاً (§37)
+const TONE = ADVANCE_STATUS_TONE;
+const LABEL = ADVANCE_STATUS_LABEL;
 
 export function Advances({ onError }: { onError: (message: string) => void }) {
   const [rows, setRows] = useState<AdvanceRow[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const search = useSearch();
 
   const load = useCallback(() => {
-    listAdvances()
+    listAdvances(undefined, search.term)
       .then(setRows)
       .catch((caught) =>
         onError(caught instanceof ApiError ? caught.message : "تعذّر التحميل"),
       );
-  }, [onError]);
+  }, [search.term, onError]);
 
   useEffect(load, [load]);
 
@@ -76,6 +71,15 @@ export function Advances({ onError }: { onError: (message: string) => void }) {
       </p>
 
       <Table
+        toolbar={
+          <TableSearch
+            value={search.text}
+            onChange={search.setText}
+            placeholder="اسمُ الكبتن أو رقمُه…"
+          />
+        }
+        searching={search.searching}
+        noResults={NO_RESULTS}
         height="compact"
         columns="1fr 0.9fr 0.9fr 0.8fr 0.9fr 1.6fr"
         headers={["الكبتن", "المبلغ", "المتبقّي", "الحالة", "المهلة", ""]}

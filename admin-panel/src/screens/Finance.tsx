@@ -38,7 +38,8 @@ import type {
 import { CancellationCharges } from "@/components/CancellationCharges";
 import { WalletDesk } from "@/components/WalletDesk";
 import { Shell } from "@/components/Shell";
-import { Pills, Table } from "@/components/Table";
+import { Pills, Table, TableSearch } from "@/components/Table";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
@@ -93,16 +94,25 @@ export function FinanceScreen() {
   const setError = form.setMessage;
   const [done, setDone] = useState<string | null>(null);
 
+  // **بحثان لا واحد**: «طلبات السحب» و«شحناتٌ بانتظار التأكيد» جدولان
+  // مختلفان تحت لسانين، **وحالةٌ واحدةٌ تنقل ما كُتب في أحدهما إلى الآخر**
+  // فيقرأ المشرفُ جدولاً مرشَّحاً بنصٍّ لا يراه.
+  //
+  // **ومطالباتُ كليك بلا حقل**: بابُها `GET /admin/cliq-claims` **لا يقبل `q`**
+  // — وحقلٌ يزيّن ولا يرشِّح أسوأُ من غيابه.
+  const withdrawalSearch = useSearch();
+  const topupSearch = useSearch();
+
   const load = useCallback(async () => {
     const [w, t, c] = await Promise.all([
-      listWithdrawals(),
-      listTopups("pending"),
+      listWithdrawals(undefined, withdrawalSearch.term),
+      listTopups("pending", topupSearch.term),
       listCliqClaims(),
     ]);
     setWithdrawals(w);
     setTopups(t);
     setClaims(c);
-  }, []);
+  }, [withdrawalSearch.term, topupSearch.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -194,6 +204,15 @@ export function FinanceScreen() {
           <CancellationCharges onError={setError} />
         ) : tab === "withdrawals" ? (
           <Table
+            toolbar={
+              <TableSearch
+                value={withdrawalSearch.text}
+                onChange={withdrawalSearch.setText}
+                placeholder="اسمُ الكبتن أو رقمُه…"
+              />
+            }
+            searching={withdrawalSearch.searching}
+            noResults={NO_RESULTS}
             columns="1fr 0.8fr 1fr 1fr 1.4fr"
             headers={["المبلغ", "القناة", "الطلب", "الحالة", ""]}
             rows={withdrawals}
@@ -269,6 +288,15 @@ export function FinanceScreen() {
           />
         ) : (
           <Table
+            toolbar={
+              <TableSearch
+                value={topupSearch.text}
+                onChange={topupSearch.setText}
+                placeholder="اسمُ صاحب المحفظة أو رقمُه…"
+              />
+            }
+            searching={topupSearch.searching}
+            noResults={NO_RESULTS}
             columns="1fr 0.8fr 1.2fr 1fr 1fr"
             headers={["المبلغ", "القناة", "المرجع", "الطلب", ""]}
             rows={topups}

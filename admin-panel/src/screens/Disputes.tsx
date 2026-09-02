@@ -26,7 +26,8 @@ import type { DisputeResolution, Payment } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { Table } from "@/components/Table";
+import { Table, TableSearch } from "@/components/Table";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
@@ -52,10 +53,12 @@ export function DisputesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  const search = useSearch();
+
   const load = useCallback(async () => {
     setRows(null);
-    setRows(await listPayments("disputed", country));
-  }, [country]);
+    setRows(await listPayments("disputed", country, search.term));
+  }, [country, search.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -75,6 +78,15 @@ export function DisputesScreen() {
 
       <div className="mt-12">
         <Table
+          toolbar={
+            <TableSearch
+              value={search.text}
+              onChange={search.setText}
+              placeholder="اسمُ الراكب أو الكبتن، أو رقمُ أحدهما…"
+            />
+          }
+          searching={search.searching}
+          noResults={NO_RESULTS}
           columns="1fr 1.6fr 1.2fr 1fr 1fr"
           headers={["المبلغ", "السبب", "مرجع الحوالة", "فُتح", ""]}
           rows={rows}

@@ -40,7 +40,7 @@ import type {
   SubscriptionStatus,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
-import { Pills, Table } from "@/components/Table";
+import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
@@ -49,6 +49,8 @@ import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { digits } from "@/lib/utils";
 
 const DURATION_LABEL: Record<SubscriptionDurationType, string> = {
@@ -64,15 +66,9 @@ const DURATION_DAYS: Record<SubscriptionDurationType, number> = {
   monthly: 30,
 };
 
-const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "كاش",
-  cliq: "كليك",
-  card: "بطاقة",
-  wallet: "محفظة",
-  // لا تُشترى بها باقةٌ — لكن الخريطةَ شاملةٌ للتعداد فلا تظهر سلسلةٌ خام
-  promo: "خصم كوبون",
-  share: "خصم مشاركة",
-};
+// **من `lib/labels.ts`** — والخريطةُ شاملةٌ للتعداد ولو لم تُشترَ باقةٌ
+// بكوبون، فلا تظهر سلسلةٌ خام
+const METHOD_LABEL = PAYMENT_METHOD_LABEL;
 
 /** القناتان اليدويتان وحدهما تُسجَّلان من اللوحة (القسم 8). */
 const MANUAL_METHODS: PaymentMethod[] = ["cash", "cliq"];
@@ -99,6 +95,7 @@ export function SubscriptionsScreen() {
   const [filter, setFilter] = useState<SubscriptionStatus | "all">("all");
   const [rows, setRows] = useState<Subscription[] | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[] | null>(null);
+  const search = useSearch();
   const [recording, setRecording] = useState(false);
   const form = useFormError();
   const error = form.message;
@@ -111,9 +108,10 @@ export function SubscriptionsScreen() {
       await listSubscriptions({
         country_code: country,
         subscription_status: filter === "all" ? undefined : filter,
+        q: search.term,
       }),
     );
-  }, [country, filter]);
+  }, [country, filter, search.term]);
 
   const loadPlans = useCallback(async () => {
     setPlans(await listPlans());
@@ -183,6 +181,15 @@ export function SubscriptionsScreen() {
         />
 
         <Table
+          toolbar={
+            <TableSearch
+              value={search.text}
+              onChange={search.setText}
+              placeholder="اسمُ الكبتن أو رقمُه…"
+            />
+          }
+          searching={search.searching}
+          noResults={NO_RESULTS}
           columns={SUB_COLUMNS}
           headers={["الباقة", "البداية", "المدة", "الانتهاء", "المبلغ", "الحالة"]}
           rows={rows}

@@ -55,7 +55,9 @@ import {
   Spinner,
   SuccessNote,
 } from "@/components/ui/Feedback";
+import { TableSearch } from "@/components/Table";
 import { useCountry } from "@/lib/country";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { digits, cn,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
@@ -106,9 +108,11 @@ export function CampaignsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  const search = useSearch();
+
   const load = useCallback(async () => {
-    setRows(await listCampaigns());
-  }, []);
+    setRows(await listCampaigns(undefined, search.term));
+  }, [search.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -160,6 +164,18 @@ export function CampaignsScreen() {
       <SuccessNote message={done} />
 
       <div className="mt-12 overflow-hidden rounded-16 border border-line bg-surface">
+        {/* **حقلُ البحث في شريط الأدوات كبقيّة القوائم** — و`Table` **لم
+            تُستعمل هنا**: هذا الجدولُ مرسومٌ بيده منذ بنائه بستّة أعمدةٍ
+            وأزرارٍ في الأخير، **وتحويلُه إلى `Table` إعادةُ كتابةٍ لا وصلُ
+            حقل** — وهي جولةٌ أخرى بإذنها. **والمرشِّحُ من الخادم** (`q` على
+            العنوان والنصّ) لا في المتصفّح. */}
+        <div className="border-b border-line px-14 py-10">
+          <TableSearch
+            value={search.text}
+            onChange={search.setText}
+            placeholder="عنوانُ الحملة أو نصُّها…"
+          />
+        </div>
         <div className="grid grid-cols-[2fr_1fr_1fr_1fr_0.8fr_auto] gap-10 bg-surface-2 px-18 py-10 text-11 font-semibold text-muted">
           <span>العنوان</span>
           <span>الجمهور</span>
@@ -174,10 +190,17 @@ export function CampaignsScreen() {
             <Spinner className="mx-auto" />
           </div>
         ) : rows.length === 0 ? (
-          <EmptyNote
-            title="لا حملات بعد"
-            hint="أنشئ حملةً وجدولها — وسجلُّ من وصله يظهر هنا بعد الإرسال."
-          />
+          // **حالتان فارغتان لا واحدة** (§36): «لا نتائج لبحثك» تقول «غيّر
+          // بحثك»، و«لا حملات بعد» تقول «ابدأ بإنشاء» — وخلطُهما يُنتج مشرفاً
+          // يظنّ الجدولَ فارغاً وفيه حملاتٌ لأنه كتب حرفاً في البحث ونسيه
+          search.searching ? (
+            <EmptyNote title={NO_RESULTS.title} hint={NO_RESULTS.hint} />
+          ) : (
+            <EmptyNote
+              title="لا حملات بعد"
+              hint="أنشئ حملةً وجدولها — وسجلُّ من وصله يظهر هنا بعد الإرسال."
+            />
+          )
         ) : null}
 
         {(rows ?? []).map((campaign) => (

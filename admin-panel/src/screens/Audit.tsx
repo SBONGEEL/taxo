@@ -21,11 +21,12 @@ import { ApiError } from "@/api/client";
 import { listAuditLogs } from "@/api/endpoints";
 import type { AuditAction, AuditLog } from "@/api/types";
 import { Shell } from "@/components/Shell";
-import { Pills, Table } from "@/components/Table";
+import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 
 const ACTION_LABEL: Record<AuditAction, string> = {
   create: "إنشاء",
@@ -83,6 +84,11 @@ export function AuditScreen() {
   const [applied, setApplied] = useState("");
   const [rows, setRows] = useState<AuditLog[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // **يُضاف ولا يستبدل نموذجَ «نوع العنصر»**: ذاك يطابق النوعَ **تماماً**
+  // (`entity_type = 'wallet'`)، وهذا **يحتوي** ويقرأ اسمَ المشرف معه — فمن
+  // كتب `wallet` في الأول يريد ذاك النوعَ وحدَه، ومن كتبه هنا يريد عائلتَه.
+  // **واستبدالُ أحدهما بالآخر يغيّر جوابَ سؤالٍ قائم.**
+  const search = useSearch();
 
   const load = useCallback(async () => {
     setRows(null);
@@ -90,10 +96,11 @@ export function AuditScreen() {
       await listAuditLogs({
         action: action === "all" ? undefined : action,
         entity_type: applied || undefined,
+        q: search.term,
         limit: 200,
       }),
     );
-  }, [action, applied]);
+  }, [action, applied, search.term]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -148,6 +155,15 @@ export function AuditScreen() {
 
       <div className="mt-12">
         <Table
+          toolbar={
+            <TableSearch
+              value={search.text}
+              onChange={search.setText}
+              placeholder="اسمُ المشرف، أو جزءٌ من نوع العنصر…"
+            />
+          }
+          searching={search.searching}
+          noResults={NO_RESULTS}
           columns={COLUMNS}
           headers={[
             "الوقت",

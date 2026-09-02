@@ -25,7 +25,9 @@ import type { DebtClaimRow, DriverDebtRow } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
-import { Table } from "@/components/Table";
+import { Table, TableSearch } from "@/components/Table";
+import { DEBT_STATUS_LABEL } from "@/lib/labels";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { day, money } from "@/lib/format";
 
 const TONE: Record<
@@ -37,11 +39,8 @@ const TONE: Record<
   written_off: "muted",
 };
 
-const LABEL: Record<DriverDebtRow["status"], string> = {
-  outstanding: "قائم",
-  settled: "سُدِّد",
-  written_off: "شُطب",
-};
+// **من `lib/labels.ts`** — يقرؤها الملفُّ الشخصيُّ أيضاً (§37)
+const LABEL = DEBT_STATUS_LABEL;
 
 const SOURCE: Record<DriverDebtRow["source"], string> = {
   ride_commission: "عمولة رحلة نقدية",
@@ -53,9 +52,13 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [credited, setCredited] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  // **بحثٌ للمستحقّات وحدَها**: مطالباتُ السداد تُقرأ من
+  // `GET /admin/drivers/debts/claims` **ولا يقبل `q`** — وحقلٌ يزيّن ولا
+  // يرشِّح أسوأُ من غيابه
+  const search = useSearch();
 
   const load = useCallback(() => {
-    Promise.all([listDriverDebts(), listDebtClaims()])
+    Promise.all([listDriverDebts(undefined, search.term), listDebtClaims()])
       .then(([debts, pending]) => {
         setRows(debts);
         setClaims(pending);
@@ -63,7 +66,7 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
       .catch((caught) =>
         onError(caught instanceof ApiError ? caught.message : "تعذّر التحميل"),
       );
-  }, [onError]);
+  }, [search.term, onError]);
 
   useEffect(load, [load]);
 
@@ -149,6 +152,15 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
 
       <h3 className="mb-6 mt-20 text-13 font-bold text-ink">المستحقّات</h3>
       <Table
+        toolbar={
+          <TableSearch
+            value={search.text}
+            onChange={search.setText}
+            placeholder="اسمُ الكبتن أو رقمُه…"
+          />
+        }
+        searching={search.searching}
+        noResults={NO_RESULTS}
         height="compact"
         columns="1.2fr 0.9fr 0.9fr 1fr 0.8fr 1.6fr"
         headers={["الكبتن", "المبلغ", "المحصَّل", "المصدر", "الحالة", ""]}

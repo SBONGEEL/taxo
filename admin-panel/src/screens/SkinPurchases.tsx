@@ -28,11 +28,13 @@ import { useCallback, useEffect, useState } from "react";
 import { listSkinPurchases } from "@/api/endpoints";
 import type { SkinPurchaseRow, SkinPurchases } from "@/api/types";
 import { Shell } from "@/components/Shell";
+import { TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { currencyLabel, moment, money } from "@/lib/format";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { digits } from "@/lib/utils";
 
 const PAGE = 50;
@@ -56,18 +58,28 @@ export function SkinPurchasesScreen() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const search = useSearch();
 
-  const load = useCallback(async (offset: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await listSkinPurchases({ limit: PAGE, offset }));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذّر قراءة السجل");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (offset: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setData(await listSkinPurchases({ limit: PAGE, offset, q: search.term }));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "تعذّر قراءة السجل");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search.term],
+  );
+
+  // **والصفحةُ تعود إلى أوّلها عند تغيّر البحث**: من كان في الصفحة الرابعة
+  // ثمّ بحث يقرأ صفحةً رابعةً من نتيجةٍ فيها صفحةٌ واحدة — **فيراها فارغة**
+  useEffect(() => {
+    setPage(0);
+  }, [search.term]);
 
   useEffect(() => {
     void load(page * PAGE);
@@ -79,6 +91,14 @@ export function SkinPurchasesScreen() {
       subtitle="مالٌ خرج من محافظ الكباتن — من اشترى، ومتى، وبكم."
     >
       {error ? <ErrorNote message={error} /> : null}
+
+      <div className="mt-14 max-w-modal">
+        <TableSearch
+          value={search.text}
+          onChange={search.setText}
+          placeholder="اسمُ الكبتن أو رقمُه…"
+        />
+      </div>
 
       {data ? (
         <div className="mt-16 grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
@@ -105,10 +125,15 @@ export function SkinPurchasesScreen() {
       {loading && !data ? <Spinner className="mx-auto mt-24" /> : null}
 
       {data && data.rows.length === 0 ? (
-        <EmptyNote
-          title="لا مِلكيّةَ مسجَّلة"
-          hint="لم يشترِ كبتنٌ مركبةً بعد، ولم تُمنح هديةُ أوّلِ اشتراك."
-        />
+        // **حالتان فارغتان لا واحدة** (§36)
+        search.searching ? (
+          <EmptyNote title={NO_RESULTS.title} hint={NO_RESULTS.hint} />
+        ) : (
+          <EmptyNote
+            title="لا مِلكيّةَ مسجَّلة"
+            hint="لم يشترِ كبتنٌ مركبةً بعد، ولم تُمنح هديةُ أوّلِ اشتراك."
+          />
+        )
       ) : null}
 
       {data && data.rows.length > 0 ? (

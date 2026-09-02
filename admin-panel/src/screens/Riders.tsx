@@ -45,6 +45,7 @@ import { FormErrors, useFormError } from "@/lib/form-errors";
 import { moment, money } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
+import { WALLET_TX_LABEL } from "@/lib/labels";
 import { digits, cn } from "@/lib/utils";
 
 /** فلترةُ عرضٍ خالصة لا مرآةَ تعدادٍ في الخلفية — ولا قيمةَ فيها تساوي قيمةَ
@@ -55,18 +56,9 @@ import { digits, cn } from "@/lib/utils";
  */
 type RiderFilter = "only_active" | "only_blocked" | "only_unverified";
 
-const TX_LABEL: Record<string, string> = {
-  topup: "شحن",
-  ride_payment: "دفع رحلة",
-  ride_earning: "أرباح رحلة",
-  commission: "عمولة",
-  transfer_in: "تحويل وارد",
-  transfer_out: "تحويل صادر",
-  withdrawal: "سحب",
-  refund: "استرداد",
-  subscription_payment: "اشتراك",
-  adjustment: "تسوية",
-};
+// **من `lib/labels.ts`** — و**بمرآةِ التعداد لا `Record<string, string>`**:
+// الشكلُ الفضفاضُ كان يمرّر نوعاً جديداً بلا ترجمةٍ فيُعرض خاماً في كشفٍ ماليّ
+const TX_LABEL = WALLET_TX_LABEL;
 
 const COLUMNS = "1.6fr 1.2fr 1fr 1fr 1fr";
 

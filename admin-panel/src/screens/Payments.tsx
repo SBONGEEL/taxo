@@ -17,41 +17,29 @@ import { ApiError } from "@/api/client";
 import { listPayments, refundPayment } from "@/api/endpoints";
 import type { Payment, PaymentMethod, PaymentStatus } from "@/api/types";
 import { Shell } from "@/components/Shell";
-import { Table } from "@/components/Table";
+import { Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
 import { money, moment } from "@/lib/format";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useCountry } from "@/lib/country";
 import { useSession } from "@/lib/session";
+import {
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_TONE,
+} from "@/lib/labels";
 import { digits } from "@/lib/utils";
 
-const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "كاش",
-  cliq: "كليك",
-  wallet: "محفظة",
-  card: "بطاقة",
-  promo: "كوبون",
-  share: "خصم مشاركة",
-};
-
-const STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: "بانتظار التأكيد",
-  confirmed: "مؤكَّدة",
-  failed: "فاشلة",
-  disputed: "متنازَعٌ عليها",
-  refunded: "مردودة",
-};
-
-const STATUS_TONE: Record<PaymentStatus, "ok" | "warn" | "danger" | "muted"> = {
-  pending: "warn",
-  confirmed: "ok",
-  failed: "danger",
-  disputed: "danger",
-  refunded: "muted",
-};
+// **من `lib/labels.ts`** — وكانت هنا نسخةٌ ثالثةٌ لـ`METHOD_LABEL` تكتب
+// «كوبون» بينما تكتبها الرحلاتُ والاشتراكاتُ «خصم كوبون»: **الشيءُ نفسُه
+// باسمين في لوحةٍ واحدة**.
+const METHOD_LABEL = PAYMENT_METHOD_LABEL;
+const STATUS_LABEL = PAYMENT_STATUS_LABEL;
+const STATUS_TONE = PAYMENT_STATUS_TONE;
 
 /** ما تقبله الخلفيةُ للردّ — مرآةُ `payments.REFUNDABLE_METHODS` حرفياً. */
 const REFUNDABLE: PaymentMethod[] = ["wallet", "card"];
@@ -77,10 +65,14 @@ export function PaymentsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  const search = useSearch();
+
   const load = useCallback(async () => {
     setRows(null);
-    setRows(await listPayments(status || undefined, country));
-  }, [status, country]);
+    // **من الخادم لا في المتصفح**: القائمةُ مرقَّمة، وبحثٌ محلّيٌّ يقرأ
+    // الصفحةَ المعروضةَ وحدَها فيبدو معطوباً لمن يعرف أن الصفَّ موجود
+    setRows(await listPayments(status || undefined, country, search.term));
+  }, [status, country, search.term]);
 
   useEffect(() => {
     void load().catch((caught: Error) => setError(caught.message));
@@ -110,6 +102,15 @@ export function PaymentsScreen() {
       {done ? <SuccessNote message={done} /> : null}
 
       <Table
+        toolbar={
+          <TableSearch
+            value={search.text}
+            onChange={search.setText}
+            placeholder="اسمُ الراكب أو الكبتن، أو رقمُ أحدهما…"
+          />
+        }
+        searching={search.searching}
+        noResults={NO_RESULTS}
         columns="1.1fr .8fr .9fr 1fr 1.1fr auto"
         headers={["الرحلة", "القناة", "المبلغ", "الحال", "التاريخ", ""]}
         rows={rows}

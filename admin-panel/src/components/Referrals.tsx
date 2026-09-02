@@ -17,7 +17,9 @@ import { getReferralSummary, listReferrals } from "@/api/endpoints";
 import type { AdminReferralRow, ReferralSummary } from "@/api/types";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Feedback";
+import { TableSearch } from "@/components/Table";
 import { useCountry } from "@/lib/country";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { currencyOf, day, money } from "@/lib/format";
 import { digits } from "@/lib/utils";
 
@@ -54,6 +56,7 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
   const [rows, setRows] = useState<AdminReferralRow[] | null>(null);
   const [onlyPending, setOnlyPending] = useState(false);
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
+  const search = useSearch();
 
   const load = useCallback(async () => {
     setRows(null);
@@ -61,7 +64,7 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
       // **المجموعُ من الخلفية** لا من الصفحة المعروضة: الصفحةُ مقصوصةٌ بخمسين
       // صفاً، ومجموعُها تحت عنوان «المدفوع كلُّه» رقمٌ يكذب (نفس قاعدة §14)
       const [list, totals] = await Promise.all([
-        listReferrals(country, onlyPending ? false : undefined),
+        listReferrals(country, onlyPending ? false : undefined, search.term),
         getReferralSummary(country),
       ]);
       setSummary(totals);
@@ -71,7 +74,7 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
         caught instanceof ApiError ? caught.message : "تعذّر قراءة الإحالات",
       );
     }
-  }, [country, onlyPending, onError]);
+  }, [country, onlyPending, search.term, onError]);
 
   useEffect(() => {
     void load();
@@ -99,6 +102,16 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
             </p>
           ) : null}
         </div>
+        <div className="flex shrink-0 items-center gap-9">
+        <div className="w-[16rem] max-w-full">
+          {/* **حقلُ البحث من الخادم** (`q` يطابق أيَّ الطرفين): والقائمةُ
+              مرقَّمةٌ بخمسين، فترشيحٌ في المتصفح يقرأ الصفحةَ المعروضةَ وحدَها */}
+          <TableSearch
+            value={search.text}
+            onChange={search.setText}
+            placeholder="اسمُ المُحيل أو المُحال، أو رقمُه…"
+          />
+        </div>
         <button
           type="button"
           onClick={() => setOnlyPending((value) => !value)}
@@ -110,15 +123,21 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
         >
           غير المدفوعة
         </button>
+        </div>
       </div>
 
       {rows === null ? (
         <Spinner />
       ) : rows.length === 0 ? (
-        <p className="mt-14 text-12.5 text-muted">
-          {onlyPending
-            ? "لا إحالاتٍ غير مدفوعة في هذا السوق."
-            : "لا إحالاتٍ في هذا السوق بعد."}
+        <p className="mt-14 text-12.5 leading-note text-muted">
+          {/* **حالاتٌ فارغةٌ ثلاثٌ لا اثنتان** (§36): «لا نتائج لبحثك» تسبق
+              الفلترةَ والغياب — فمن كتب حرفاً ونسيه يقرأ «لا إحالات» ويظنّها
+              حقيقةَ السوق */}
+          {search.searching
+            ? NO_RESULTS.hint
+            : onlyPending
+              ? "لا إحالاتٍ غير مدفوعة في هذا السوق."
+              : "لا إحالاتٍ في هذا السوق بعد."}
         </p>
       ) : (
         <div className="mt-14 overflow-x-auto">

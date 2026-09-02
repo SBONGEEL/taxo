@@ -40,58 +40,34 @@ import { getRide, listRides } from "@/api/endpoints";
 import type {
   AdminRideDetail,
   AdminRideRow,
-  PaymentMethod,
   RideStatus,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
-import { Pills, Table } from "@/components/Table";
-import { Badge, type Tone } from "@/components/ui/Badge";
-import { Field } from "@/components/ui/Field";
+import { Pills, Table, TableSearch } from "@/components/Table";
+import { Badge } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { moment, money } from "@/lib/format";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 
 /** دورةُ الاستطلاع — **رقمُ `LiveMap` نفسُه** (`REFRESH_MS`)، فلا رقمان
  *  لدورةٍ واحدة في لوحةٍ واحدة. */
 const RIDES_REFRESH_MS = 5_000;
+import {
+  PAYMENT_METHOD_LABEL,
+  RIDE_STATUS_LABEL,
+  RIDE_STATUS_TONE,
+} from "@/lib/labels";
 import { digits, cn } from "@/lib/utils";
 
-const STATUS_LABEL: Record<RideStatus, string> = {
-  requested: "مطلوبة",
-  searching: "يُبحث عن سائق",
-  accepted: "مقبولة",
-  arrived: "وصل السائق",
-  at_stop: "وقوفٌ عند محطة",
-  in_progress: "جارية",
-  completed: "مكتملة",
-  cancelled_by_rider: "ألغاها الراكب",
-  cancelled_by_driver: "ألغاها السائق",
-  no_driver_found: "لم يُوجد سائق",
-};
+// **الأسماءُ والنغماتُ من `lib/labels.ts`** — بيتٌ واحدٌ منذ 2026-09-02:
+// كُتبت هنا وفي المدفوعات والاشتراكات، **وافترقت فعلاً** («كوبون» مقابل
+// «خصم كوبون»)، ثم صار الملفُّ الشخصيُّ يعرض الرحلاتِ والدفعاتِ معاً في درج.
+const STATUS_LABEL = RIDE_STATUS_LABEL;
+const STATUS_TONE = RIDE_STATUS_TONE;
 
-/** نغماتُ الحالات من `DESIGN.md` §2.6 — لا اجتهادَ في اللون. */
-const STATUS_TONE: Record<RideStatus, Tone> = {
-  requested: "warn",
-  searching: "warn",
-  accepted: "warn",
-  arrived: "warn",
-  at_stop: "warn",
-  in_progress: "warn",
-  completed: "ok",
-  cancelled_by_rider: "danger",
-  cancelled_by_driver: "danger",
-  no_driver_found: "muted",
-};
-
-const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "كاش",
-  cliq: "كليك",
-  card: "بطاقة",
-  wallet: "محفظة",
-  promo: "خصم كوبون",
-  // خصمُ المشاركة (12-ي) — تتحمّله الشركة كالكوبون، وقناةٌ مستقلةٌ عنه
-  share: "خصم مشاركة",
-};
+// وخصمُ المشاركة (12-ي) تتحمّله الشركة كالكوبون، وقناةٌ مستقلةٌ عنه
+const METHOD_LABEL = PAYMENT_METHOD_LABEL;
 
 const COLUMNS = "0.7fr 1fr 1.1fr 1.1fr 1.6fr 0.9fr 0.9fr 1fr";
 
@@ -108,8 +84,10 @@ export function RidesScreen() {
   const { country } = useCountry();
 
   const [filter, setFilter] = useState<RideStatus | "all">("all");
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  // **نموذجُ البحث بزرِّ «ابحث» استُبدل بحقل الشريط** (2026-09-02): زرٌّ
+  // يُضغط ليقع البحثُ يجعل من كتب ولم يضغط يقرأ الجدولَ القديمَ نتيجةً —
+  // **والمرشِّحُ نفسُه لم يتغيّر**، هو `q` على الباب كما كان.
+  const search = useSearch();
   const [rows, setRows] = useState<AdminRideRow[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,11 +106,11 @@ export function RidesScreen() {
         await listRides({
           country_code: country,
           ride_status: filter === "all" ? undefined : filter,
-          q: query || undefined,
+          q: search.term,
         }),
       );
     },
-    [country, filter, query],
+    [country, filter, search.term],
   );
 
   useEffect(() => {
@@ -167,33 +145,19 @@ export function RidesScreen() {
         ]}
       />
 
-      <form
-        className="mb-14 flex max-w-modal items-end gap-9"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setQuery(search.trim());
-        }}
-      >
-        <div className="flex-1">
-          <Field
-            label="بحث"
-            placeholder="اسم سائقٍ أو راكب، أو رقم هاتف، أو معرّف رحلة"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-        <button
-          type="submit"
-          className="rounded-13 border border-line px-16 py-13 text-13 font-semibold text-ink"
-        >
-          ابحث
-        </button>
-      </form>
-
       <ErrorNote message={error} />
 
       <div className="mt-12">
         <Table
+          toolbar={
+            <TableSearch
+              value={search.text}
+              onChange={search.setText}
+              placeholder="اسم سائقٍ أو راكب، أو رقم هاتف، أو معرّف رحلة…"
+            />
+          }
+          searching={search.searching}
+          noResults={NO_RESULTS}
           columns={COLUMNS}
           headers={[
             "الرقم",

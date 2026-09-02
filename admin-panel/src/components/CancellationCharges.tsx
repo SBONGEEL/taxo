@@ -28,30 +28,19 @@ import {
   waiveCancellationCharge,
   writeOffCancellationCharge,
 } from "@/api/endpoints";
-import type { CancellationChargeRow, CancellationChargeStatus } from "@/api/types";
+import type { CancellationChargeRow } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
-import { Table } from "@/components/Table";
+import { Table, TableSearch } from "@/components/Table";
 import { useCountry } from "@/lib/country";
+import { CHARGE_STATUS_LABEL, CHARGE_STATUS_TONE } from "@/lib/labels";
+import { NO_RESULTS, useSearch } from "@/lib/search";
 import { day, money } from "@/lib/format";
 
-const TONE: Record<
-  CancellationChargeStatus,
-  Parameters<typeof Badge>[0]["tone"]
-> = {
-  pending: "warn",
-  settled: "ok",
-  waived: "muted",
-  written_off: "muted",
-};
-
-const LABEL: Record<CancellationChargeStatus, string> = {
-  pending: "لم يُحصَّل",
-  settled: "وصل الكبتن",
-  waived: "أُعفي",
-  written_off: "شُطب",
-};
+// **من `lib/labels.ts`** — يقرؤهما الملفُّ الشخصيُّ أيضاً (§37)
+const TONE = CHARGE_STATUS_TONE;
+const LABEL = CHARGE_STATUS_LABEL;
 
 export function CancellationCharges({
   onError,
@@ -62,14 +51,15 @@ export function CancellationCharges({
   const [rows, setRows] = useState<CancellationChargeRow[] | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const search = useSearch();
 
   const load = useCallback(() => {
-    listCancellationCharges(country)
+    listCancellationCharges(country, undefined, search.term)
       .then(setRows)
       .catch((caught) =>
         onError(caught instanceof ApiError ? caught.message : "تعذّر التحميل"),
       );
-  }, [country, onError]);
+  }, [country, search.term, onError]);
 
   useEffect(load, [load]);
 
@@ -100,6 +90,15 @@ export function CancellationCharges({
       {/* عمودُ الإجراء يحمل حقلاً وزرَّين، فيأخذ ضعفَ غيره: حقلُ سببٍ بعرض
           ستين بكسلاً يُكتب فيه سطرٌ لا يُقرأ منه شيء */}
       <Table
+        toolbar={
+          <TableSearch
+            value={search.text}
+            onChange={search.setText}
+            placeholder="اسمُ أحد الطرفين أو رقمُه…"
+          />
+        }
+        searching={search.searching}
+        noResults={NO_RESULTS}
         columns="0.8fr 1.1fr 0.9fr 0.8fr 0.7fr 2.6fr"
         headers={["المبلغ", "على", "لصالح", "الحالة", "التاريخ", ""]}
         rows={rows}
