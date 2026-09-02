@@ -30,6 +30,7 @@ import type {
   BackupSettings,
   BackupState,
   Badge,
+  CancellationPlan,
   Campaign,
   CampaignAudience,
   CancellationChargeRow,
@@ -734,6 +735,27 @@ export const recordSubscription = (payload: {
   amount_paid?: string | null;
   reference?: string | null;
 }) => api.post<Subscription>("/admin/subscriptions", payload);
+
+/** **ما سيقع قبل أن يقع** (§38): عددُ ما سيُلغى وقيمةُ الردّ الكلّية.
+ *
+ * **يُقرأ قبل الضغط لا بعده** (شرطُ المالك) — والخلفيةُ تحسبه بالدالّة التي
+ * ينفّذ بها الإلغاءُ نفسُه، فلا رقمَ معروضٌ يخالف ما يقع.
+ */
+export const previewSubscriptionCancellation = (subscriptionId: string) =>
+  api.get<CancellationPlan>(
+    `/admin/subscriptions/${subscriptionId}/cancellation-preview`,
+  );
+
+/** إلغاءُ تغطية الكبتن كلِّها وردُّ ما لم يُستعمل — **بسببٍ إلزاميّ** (§38).
+ *
+ * **ويُلغى كلُّ ما لم ينقضِ لا الصفُّ المضغوط وحدَه**: التجديدُ المبكر يكدّس
+ * صفّاً يبدأ بعد الحالي، **وزرٌّ يُبقي اشتراكاً قادماً بعد الإلغاء يكذب**.
+ */
+export const cancelSubscription = (subscriptionId: string, reason: string) =>
+  api.post<CancellationPlan>(
+    `/admin/subscriptions/${subscriptionId}/cancel`,
+    { reason },
+  );
 
 export const listPlans = () =>
   api.get<SubscriptionPlan[]>("/admin/settings/subscription-plans");

@@ -359,6 +359,17 @@ class SubscriptionAlreadyPurchased(Conflict):
     message = "هذه العملية نُفّذت بالفعل"
 
 
+class NoSubscriptionToCancel(Conflict):
+    """لا تغطيةَ قائمةً تُلغى (§38).
+
+    **ولا يُقرأ «أُلغي» عن لا شيء**: زرٌّ يُجيب بنجاحٍ وهو لم يفعل شيئاً يعلّم
+    المشرفَ أن الإلغاء وقع — ثمّ يجد الكبتنَ يعمل.
+    """
+
+    code = "no_subscription_to_cancel"
+    message = "لا اشتراك ساري لهذا الكبتن"
+
+
 class RatingNotAllowed(Conflict):
     """تقييمٌ لرحلة لم تكتمل، أو من ليس طرفاً فيها (SPEC القسم 5.9)."""
 

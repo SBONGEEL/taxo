@@ -22,16 +22,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import {
+  cancelSubscription,
   createPlan,
   deletePlan,
   listDrivers,
   listPlans,
   listSubscriptions,
+  previewSubscriptionCancellation,
   recordSubscription,
   updatePlan,
 } from "@/api/endpoints";
 import type {
   AdminDriverRow,
+  CancellationPlan,
   CountryCode,
   PaymentMethod,
   Subscription,
@@ -40,11 +43,12 @@ import type {
   SubscriptionStatus,
 } from "@/api/types";
 import { Shell } from "@/components/Shell";
+import { Modal } from "@/components/ui/Modal";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
-import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
+import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
@@ -73,11 +77,17 @@ const METHOD_LABEL = PAYMENT_METHOD_LABEL;
 /** القناتان اليدويتان وحدهما تُسجَّلان من اللوحة (القسم 8). */
 const MANUAL_METHODS: PaymentMethod[] = ["cash", "cliq"];
 
-const SUB_COLUMNS = "1.3fr 1fr 0.9fr 1.1fr 0.9fr 0.9fr";
+const SUB_COLUMNS = "1.3fr 1fr 0.9fr 1.1fr 0.9fr 0.9fr 0.8fr";
 const PLAN_COLUMNS = "1.4fr 0.9fr 0.9fr 0.8fr 1fr";
 
 /** حالُ الصف كما تقوله **الساعة** — والعمود يُذكر حين يخالفها. */
 function coverage(row: Subscription): { label: string; tone: Tone } {
+  // **والملغى يُقال ملغى** (§38): «انقضى» و«أوقفناه ورددنا مالَه» خبران
+  // مختلفان، **وقراءةُ الساعة وحدَها تجعل الملغى يُعرض «منتهياً»** فيُظنّ أنه
+  // أكمل مدّته.
+  if (row.status === "cancelled") {
+    return { label: "أُلغي — ورُدّ ما لم يُستعمل", tone: "danger" };
+  }
   const left = daysUntil(row.expires_at);
   if (left <= 0) {
     return row.status === "active"
@@ -97,6 +107,7 @@ export function SubscriptionsScreen() {
   const [plans, setPlans] = useState<SubscriptionPlan[] | null>(null);
   const search = useSearch();
   const [recording, setRecording] = useState(false);
+  const [cancelling, setCancelling] = useState<Subscription | null>(null);
   const form = useFormError();
   const error = form.message;
   const setError = form.setMessage;
@@ -177,6 +188,7 @@ export function SubscriptionsScreen() {
             { key: "all", label: "الكل" },
             { key: "active", label: "نشطة" },
             { key: "expired", label: "منتهية" },
+            { key: "cancelled", label: "ملغاة" },
           ]}
         />
 
@@ -191,7 +203,15 @@ export function SubscriptionsScreen() {
           searching={search.searching}
           noResults={NO_RESULTS}
           columns={SUB_COLUMNS}
-          headers={["الباقة", "البداية", "المدة", "الانتهاء", "المبلغ", "الحالة"]}
+          headers={[
+            "الباقة",
+            "البداية",
+            "المدة",
+            "الانتهاء",
+            "المبلغ",
+            "الحالة",
+            "",
+          ]}
           rows={rows}
           keyOf={(row) => row.id}
           empty={{
@@ -227,6 +247,22 @@ export function SubscriptionsScreen() {
                 <span>
                   <Badge tone={state.tone}>{state.label}</Badge>
                 </span>
+
+                {/* **الزرُّ لِما لم ينقضِ وحدَه**: `cancel_for_driver` ترتدّ
+                    ٤٠٩ على من لا تغطيةَ له، **وزرٌّ يعمل ثم يرتدّ يعلّم
+                    المشرفَ إعادةَ المحاولة** بدل أن يقول له إن لا شيءَ هناك.
+                    **و`admin` وحدَه**: مالٌ يخرج لا إجراءُ دعم (13/8). */}
+                <span className="flex justify-end">
+                  {isAdmin && row.status === "active" ? (
+                    <button
+                      type="button"
+                      onClick={() => setCancelling(row)}
+                      className="text-11.5 font-semibold text-danger"
+                    >
+                      إلغاء
+                    </button>
+                  ) : null}
+                </span>
               </>
             );
           }}
@@ -257,6 +293,18 @@ export function SubscriptionsScreen() {
             setRecording(false);
             void load();
           }}
+        />
+      ) : null}
+      {cancelling ? (
+        <CancelModal
+          row={cancelling}
+          onClose={() => setCancelling(null)}
+          onDone={(message) => {
+            setDone(message);
+            setCancelling(null);
+            void load();
+          }}
+          onError={(caught) => form.capture(caught, "تعذّر الإلغاء")}
         />
       ) : null}
     </Shell>
@@ -676,5 +724,145 @@ function RecordModal({
         </div>
       </div>
     </div>
+  );
+}
+
+
+/** ورقةُ تأكيد الإلغاء — **تقرأ ما سيقع قبل أن يقع** (شرطُ المالك 2026-09-02).
+ *
+ * «اعرض عدد الاشتراكات التي ستُلغى وقيمة الردّ الكلّية **قبل** الضغط لا بعده».
+ *
+ * **والرقمُ من الخلفية لا من هنا**: `previewSubscriptionCancellation` ينادي
+ * الدالّةَ التي ينفّذ بها الإلغاءُ نفسُه — **فحسبةٌ في المتصفح كانت ستفترق عن
+ * الواقع أوّلَ تعديلٍ في قاعدة التقريب**، وهي §14 بعينها (المالُ يُحسب في
+ * الخلفية والواجهةُ تعرض).
+ *
+ * **ولا زرَّ قبل أن تصل المعاينة**: زرٌّ يُضغط قبل أن يُقرأ الرقمُ يجعل
+ * التأكيدَ توقيعاً على ورقةٍ بيضاء.
+ */
+function CancelModal({
+  row,
+  onClose,
+  onDone,
+  onError,
+}: {
+  row: Subscription;
+  onClose: () => void;
+  onDone: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [plan, setPlan] = useState<CancellationPlan | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    previewSubscriptionCancellation(row.id)
+      .then((found) => {
+        if (alive) setPlan(found);
+      })
+      .catch((caught) => {
+        if (alive) onError(caught);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [row.id, onError]);
+
+  return (
+    <Modal title="إلغاء الاشتراك وردُّ ما لم يُستعمل" onClose={onClose}>
+      {plan === null ? (
+        <Spinner className="mx-auto my-24" />
+      ) : (
+        <>
+          <p className="mb-14 text-12.5 leading-note text-muted">
+            الإلغاءُ فوريّ: يخرج الكبتنُ من التوزيع في اللحظة، وتسقط نسبةُ
+            عمولته المجمَّدة فيخضع لنسبة سوقه. <b className="text-ink">ولا
+            تُمسّ رحلةٌ جارية</b> — عمولتُها مجمَّدةٌ عليها منذ قبولها.
+          </p>
+
+          <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+            <div className="flex items-baseline justify-between gap-10">
+              <span className="text-12.5 text-muted">ما سيُلغى</span>
+              <span className="text-15 font-bold text-ink">
+                {digits(String(plan.cancelled_count))}
+              </span>
+            </div>
+            <div className="mt-8 flex items-baseline justify-between gap-10">
+              <span className="text-12.5 text-muted">ما سيُردّ إلى محفظته</span>
+              <span className="text-18 font-bold text-ink">
+                {money(plan.total_refund, plan.currency)}
+              </span>
+            </div>
+          </div>
+
+          {/* **ولمَ تُعرض الصفوفُ لا العددُ وحدَه**: التجديدُ المبكر يكدّس
+              اشتراكاً يبدأ لاحقاً، **ومشرفٌ يقرأ «٢» ولا يعرف أيَّهما** يضغط
+              وهو لا يدري أنه يلغي شهراً لم يبدأ بعد. */}
+          {plan.lines.length > 1 ? (
+            <ul className="mt-10 flex flex-col gap-7">
+              {plan.lines.map((line) => (
+                <li
+                  key={line.subscription_id}
+                  className="flex items-center gap-10 rounded-12 border border-line px-13 py-9 text-12"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-ink">
+                      {line.plan_name}
+                    </span>
+                    <span className="block text-10.5 text-muted">
+                      {line.started
+                        ? `جارٍ — يُردّ بالتناسب · ينتهي ${day(line.expires_at)}`
+                        : `لم يبدأ — يُردّ كاملاً · يبدأ ${day(line.starts_at)}`}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-ink">
+                    {money(line.refund, plan.currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="mt-14">
+            <Field
+              label="سبب الإلغاء"
+              name="reason"
+              placeholder="يدخل سجل التدقيق باسمك ومعه قيمة الردّ"
+              value={reason}
+              maxLength={300}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </div>
+
+          <div className="mt-14 flex gap-10">
+            <Button
+              size="md"
+              variant="secondary"
+              className="border-danger text-danger"
+              disabled={busy || reason.trim().length < 3}
+              onClick={() => {
+                setBusy(true);
+                cancelSubscription(row.id, reason.trim())
+                  .then((result) =>
+                    onDone(
+                      `أُلغي ${digits(String(result.cancelled_count))} — ورُدّ ${money(result.total_refund, result.currency)}`,
+                    ),
+                  )
+                  .catch((caught) => {
+                    onError(caught);
+                    setBusy(false);
+                  });
+              }}
+            >
+              ألغِ وردَّ المبلغ
+            </Button>
+            <Button size="md" variant="ghost" onClick={onClose}>
+              تراجع
+            </Button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }

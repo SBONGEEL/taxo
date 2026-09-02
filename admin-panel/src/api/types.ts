@@ -823,7 +823,30 @@ export interface WalletTransaction {
 export type SubscriptionDurationType = "daily" | "weekly" | "monthly";
 
 /** حالتان لا ثالثة: لا `pending` — الصفُّ لا يُنشأ قبل وصول ماله. */
-export type SubscriptionStatus = "active" | "expired";
+/** **و`cancelled` أُضيفت 2026-09-02** (البند ٢، §38) — ولا تُدمج في `expired`:
+ *  تلك «انقضى وقتُه»، وهذه «أوقفناه ورددنا مالَه». */
+export type SubscriptionStatus = "active" | "expired" | "cancelled";
+
+/** صفٌّ سيُلغى، وما يُردّ عنه — **يُقرأ قبل الضغط** (§38). */
+export interface CancellationLine {
+  subscription_id: string;
+  plan_name: string;
+  starts_at: string;
+  expires_at: string;
+  amount_paid: string;
+  refund: string;
+  /** **أبدأ بعد؟** — الجاري يُردّ بالتناسب، والقادمُ كاملاً بلا تناسب. */
+  started: boolean;
+}
+
+/** ما سيقع لو ضُغط زرُّ الإلغاء — **وبيتُ حسبته واحدٌ مع الفعل**، فلا رقمَ
+ *  في ورقة التأكيد يخالف ما يقع. */
+export interface CancellationPlan {
+  cancelled_count: number;
+  total_refund: string;
+  currency: string;
+  lines: CancellationLine[];
+}
 
 export interface SubscriptionPlan {
   id: string;

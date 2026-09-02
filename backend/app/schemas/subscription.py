@@ -153,3 +153,44 @@ class CliqSubscriptionOut(BaseModel):
     #: **لماذا لم يمضِ** — «وصل ٢٠ من ٣٠ — ينقص ١٠» حين يكون المبلغُ ناقصاً
     failure_reason: str | None = None
     created_at: datetime
+
+
+# ══════════════════════ إلغاءُ الاشتراك من اللوحة (البند ٢، §38)
+
+
+class SubscriptionCancelIn(BaseModel):
+    """**السببُ إلزاميّ** (قرارُ المالك 2026-09-02).
+
+    قرارٌ يُخرج كبتناً من العمل ويحرّك مالاً **لا يُتخذ بلا سطرٍ يقول لماذا** —
+    وهو ما يُقرأ في التدقيق بعد شهر، لا حالُ الصفّ.
+    """
+
+    reason: str = Field(min_length=3, max_length=300)
+
+
+class CancellationLineOut(BaseModel):
+    """صفٌّ سيُلغى، وما يُردّ عنه."""
+
+    subscription_id: uuid.UUID
+    plan_name: str
+    starts_at: datetime
+    expires_at: datetime
+    amount_paid: Decimal
+    refund: Decimal
+    #: **أبدأ بعد؟** — الجاري يُردّ بالتناسب، والقادمُ كاملاً بلا تناسب
+    started: bool
+
+
+class CancellationPlanOut(BaseModel):
+    """ما سيقع لو ضُغط الزرّ — **يُقرأ قبل الضغط** (شرطُ المالك).
+
+    **وبيتُ الحسبة واحد**: هذا الردُّ و**فعلُ الإلغاء** يستدعيان
+    `subscriptions.plan_cancellation` نفسَها — **فلا رقمَ في شاشة التأكيد
+    يخالف ما يقع**.
+    """
+
+    #: **عددُ ما سيُلغى** — والتجديدُ المبكر يجعله أكثرَ من واحد
+    cancelled_count: int
+    total_refund: Decimal
+    currency: str
+    lines: list[CancellationLineOut]

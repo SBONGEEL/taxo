@@ -190,6 +190,35 @@ class DriverSubscription(UUIDMixin, TimestampMixin, Base):
         MONEY, nullable=False, default=Decimal("0"), server_default="0"
     )
 
+    # ---------------------------------------------- الإلغاء (البند ٢، §38)
+    #
+    # **قرارُ إنسانٍ يُقرأ من صفّه**: من ألغى، ومتى، ولماذا. **والسببُ من صنف
+    # «الاستثناء الصريح» في قاعدة التدقيق** — نصٌّ هو **محتوى القرار** لا
+    # قيمةٌ مخزَّنة.
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    cancelled_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    cancel_reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # **مؤشِّرٌ إلى القيد لا نسخةٌ من مبلغه** — كـ`transaction_id` للشراء فوقَه.
+    # **ولا عمودَ `refund_amount`**: المبلغُ بيتُه الدفتر، ورقمٌ ثانٍ له يفترق
+    # عنه أوّلَ تسوية. **و`NULL` تعني «لا قيد» لا «لم يُردّ شيء»** — وهي حالُ
+    # الشهر المجاني حرفاً: المدفوعُ صفرٌ فلا قيدَ يُكتب.
+    refund_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        # **الاسمُ مصرَّحٌ لا مولَّد**: `NAMING_CONVENTION` يولّد
+        # `fk_driver_subscriptions_refund_transaction_id_wallet_transactions`
+        # وطولُه **٦٥ محرفاً** — و`Postgres` يقصّ عند **٦٣**، فيُنشئ اسماً
+        # مقصوصاً يخالف ما يتوقّعه `test_migrations_match_models`.
+        ForeignKey(
+            "wallet_transactions.id",
+            ondelete="RESTRICT",
+            name="fk_driver_subscriptions_refund_tx",
+        ),
+        nullable=True,
+    )
+
     # مرجع خارجي: حوالة كليك أو إيصال الكاش أو مرجع الطلب لدى مزود البطاقة
     reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)

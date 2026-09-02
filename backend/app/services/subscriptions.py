@@ -35,7 +35,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 
 # وحدةُ التكميم للمال — `NUMERIC(12,3)`
 _MONEY_UNIT = Decimal("0.001")
@@ -54,6 +54,7 @@ from app.core.exceptions import (
     Conflict,
     InvalidInput,
     NotFound,
+    NoSubscriptionToCancel,
     PermissionDenied,
     SubscriptionAlreadyPurchased,
 )
@@ -997,3 +998,188 @@ async def publish_sweep(
             expires_at=notice.expires_at,
             hours_left=int(within.total_seconds() // 3600),
         )
+
+
+# ═══════════════════════════ الإلغاءُ من اللوحة (البند ٢، §38)
+
+
+@dataclass(frozen=True)
+class CancellationLine:
+    """صفٌّ واحدٌ سيُلغى، وما يُردّ عنه."""
+
+    subscription_id: uuid.UUID
+    plan_name: str
+    starts_at: datetime
+    expires_at: datetime
+    amount_paid: Decimal
+    #: **صفرٌ للمستقبليّ؟ لا** — لم يبدأ فيُردّ كاملاً، والتناسبُ للجاري وحدَه
+    refund: Decimal
+    #: **أبدأ بعد؟** — يفرّق «تناسبٌ» من «كاملٌ بلا تناسب» في شاشة التأكيد
+    started: bool
+
+
+@dataclass(frozen=True)
+class CancellationPlan:
+    """ما سيقع لو ضُغط الزرّ — **يُقرأ قبل الضغط ويُنفَّذ به**.
+
+    **وبيتٌ واحدٌ لا اثنان** (شرطُ المالك): المعاينةُ والفعلُ يستدعيان
+    `plan_cancellation` نفسَها، **فلا رقمَ في شاشة التأكيد يخالف ما يقع**.
+    وحسبةٌ ثانيةٌ للعرض هي بعينها ما تفترق أوّلَ تعديل.
+    """
+
+    lines: tuple[CancellationLine, ...]
+    total_refund: Decimal
+    currency: str
+
+
+def _refund_for(row: DriverSubscription, now: datetime) -> tuple[Decimal, bool]:
+    """ما يُردّ عن صفٍّ واحد، وهل بدأ.
+
+    **والقاعدةُ بنصِّ المالك**: «الردّ بنسبة الأيام غير المستعملة **من المدفوع
+    فعلاً بعد أي خصم عرض**، والكسور تُقرَّب لصالح الكبتن».
+
+    * **لم يبدأ بعد** (`starts_at > now`) ⇒ **كاملُ ما دُفع بلا تناسب** — لم
+      يأخذ منه شيئاً.
+    * **جارٍ** ⇒ بنسبة ما تبقّى من مدّته.
+    * **والمدفوعُ فعلاً هو `amount_paid`** لا `list_price`: عرضُ الشهر المجاني
+      يجعله **صفراً**، فالردُّ صفرٌ ولا قيدَ يُكتب — **مقيسٌ لا مستنتَج**
+      (§27.5: `money_percent` بقيمة `100`).
+    """
+    if row.amount_paid <= 0:
+        return Decimal("0"), row.starts_at <= now
+    if row.starts_at > now:
+        return row.amount_paid.quantize(_MONEY_UNIT), False
+
+    span = (row.expires_at - row.starts_at).total_seconds()
+    if span <= 0:  # pragma: no cover - يمنعه بناءُ المدّة
+        return Decimal("0"), True
+    unused = max((row.expires_at - now).total_seconds(), 0.0)
+    share = Decimal(str(unused)) / Decimal(str(span))
+    # **التقريبُ لصالح الكبتن** (شرطُ المالك): `ROUND_CEILING` لا `HALF_UP` —
+    # والفرقُ مليمٌ في الصفّ الواحد، **وهو الفرقُ بين «أخذ حقَّه» و«نقص منه»**
+    return (row.amount_paid * share).quantize(
+        _MONEY_UNIT, rounding=ROUND_CEILING
+    ), True
+
+
+async def plan_cancellation(
+    session: AsyncSession, driver_id: uuid.UUID, *, now: datetime | None = None
+) -> CancellationPlan:
+    """كلُّ ما لم ينقضِ لهذا الكبتن، وما يُردّ عنه — **قراءةٌ بلا أثر**.
+
+    **ولمَ كلُّ الصفوف لا الصفَّ المضغوط** (قرارُ المالك 2026-09-02): التجديدُ
+    المبكر **يكدّس** صفّاً يبدأ بعد الحالي (`_create` يبدأ من `coverage_until`)،
+    **وزرٌّ يُبقي اشتراكاً قادماً بعد الإلغاء يكذب** — «ألغيتُه» تعني «أوقفتُه».
+    """
+    moment = now or _now()
+    rows = (
+        await session.scalars(
+            select(DriverSubscription)
+            .where(
+                DriverSubscription.driver_id == driver_id,
+                DriverSubscription.status == SubscriptionStatus.ACTIVE,
+                DriverSubscription.expires_at > moment,
+            )
+            .order_by(DriverSubscription.starts_at)
+            .options(selectinload(DriverSubscription.plan))
+        )
+    ).all()
+
+    lines: list[CancellationLine] = []
+    total = Decimal("0")
+    currency = ""
+    for row in rows:
+        refund, started = _refund_for(row, moment)
+        total += refund
+        # **العملةُ من الخطة لا من الصفّ**: `driver_subscriptions` بلا عمودِ
+        # عملة — الخطةُ تحملها، و`SubscriptionOut` يقرؤها منها منذ يومه
+        currency = currency or (row.plan.currency.value if row.plan else "")
+        lines.append(
+            CancellationLine(
+                subscription_id=row.id,
+                plan_name=row.plan.name if row.plan else "",
+                starts_at=row.starts_at,
+                expires_at=row.expires_at,
+                amount_paid=row.amount_paid,
+                refund=refund,
+                started=started,
+            )
+        )
+    return CancellationPlan(
+        lines=tuple(lines), total_refund=total.quantize(_MONEY_UNIT), currency=currency
+    )
+
+
+async def cancel_for_driver(
+    session: AsyncSession,
+    *,
+    driver_id: uuid.UUID,
+    admin: User,
+    reason: str,
+) -> CancellationPlan:
+    """يُلغي تغطيةَ الكبتن كلَّها ويردّ ما لم يُستعمل (§38).
+
+    **والترتيب**: قفلُ صفِّ الكبتن ← الصفوف ← القيد. وهو ترتيبُ الأقفال المكتوب
+    في `CLAUDE.md` (الكبتنُ قبل قفل المحفظة)، **وهو قفلُ الشراء نفسُه**
+    (`_locked_driver`) — فإلغاءٌ وشراءٌ متزامنان يتسلسلان ولا يتراكبان.
+
+    **والردُّ قيدٌ جديدٌ في الدفتر لا تعديلٌ على رصيد**: الدفترُ لا يُعدَّل،
+    ومفتاحُ التكرار `subscription_refund:{id}` يمنع ردّاً مرّتين تحت أيِّ سباق.
+
+    **والنسبةُ المجمَّدة تسقط بسقوط الاشتراك** (قرارُ المالك): **وهو ما تفعله
+    دورةُ الانتهاء حرفاً** (`expire_due`) — الوعدُ «ما دام اشتراكك سارياً»،
+    فمن لا اشتراكَ له يخضع لنسبة سوقه. **ولا يُبنى مخرجٌ ثانٍ بجانبه.**
+
+    **ولا تُمسّ رحلةٌ جارية**: `rides.commission_percent_at_ride` مجمَّدةٌ عند
+    القبول (§25.11) — فلا شيءَ هنا يبلغها.
+    """
+    driver = await _locked_driver(session, driver_id)
+    owner = await session.get(User, driver.user_id)
+    if owner is None:  # pragma: no cover - يمنعه المفتاح الأجنبي
+        raise NotFound("حساب الكبتن غير موجود")
+
+    moment = _now()
+    plan = await plan_cancellation(session, driver_id, now=moment)
+    if not plan.lines:
+        raise NoSubscriptionToCancel()
+
+    for line in plan.lines:
+        row = await session.get(DriverSubscription, line.subscription_id)
+        row.status = SubscriptionStatus.CANCELLED
+        row.cancelled_at = moment
+        row.cancelled_by = admin.id
+        row.cancel_reason = reason
+        if line.refund > 0:
+            entry = await wallet.record(
+                session,
+                owner=owner,
+                owner_type=WalletOwnerType.DRIVER,
+                tx_type=WalletTransactionType.REFUND,
+                amount=line.refund,
+                created_by=admin.id,
+                idempotency_key=f"subscription_refund:{row.id}",
+            )
+            row.refund_transaction_id = entry.id
+
+    # **مخرجُ الانتهاء نفسُه** — لا ثانٍ بجانبه
+    driver.commission_percent_from_subscription = None
+    if driver.is_online and not await _has_active_ride(session, driver_id):
+        driver.is_online = False
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="driver_subscription",
+        entity_id=plan.lines[0].subscription_id,
+        # **السببُ وقيمةُ الردّ في القيد** (شرطُ المالك): والسببُ استثناءُ
+        # «لا قيمَ في التدقيق» — هو محتوى القرار نفسِه
+        details={
+            "action": "cancel",
+            "reason": reason,
+            "cancelled_count": len(plan.lines),
+            "refund_total": str(plan.total_refund),
+            "currency": plan.currency,
+        },
+    )
+    return plan
