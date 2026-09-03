@@ -1629,6 +1629,26 @@ export interface PolicyVersion {
   created_at: string;
 }
 
+/** صنفُ إصابةِ البحث العامّ — **وجهةٌ لا حال** (§39٫١٢٫٤).
+ *
+ * **ومعرّفُ الكبتن `drivers.id` ومعرّفُ الحساب `users.id`** — وأربعتُها UUID
+ * لا تفترق بالنظر، **فالصنفُ هو ما يمنع فتحَ ملفِّ إنسانٍ آخر**.
+ */
+export type SearchKind = "user" | "driver" | "ride" | "claim";
+
+/** إصابةٌ واحدة — **شكلُ `PickerOption` نفسُه بزيادة `kind`**، فالدرجُ يُرسم
+ *  بمكوّن `Picker` القائم لا بمكوّنٍ ثانٍ بجانبه (§39٫١٢٫٨). */
+export interface SearchHit {
+  kind: SearchKind;
+  id: string;
+  label: string;
+  hint: string | null;
+}
+
+export interface SearchHits {
+  hits: SearchHit[];
+}
+
 /** بيانُ الجهة — **صفٌّ واحدٌ لا صفٌّ لكلِّ سوق**، وفراغُه حالٌ صحيحة. */
 export interface OrgProfile {
   legal_name: string | null;

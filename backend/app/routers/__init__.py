@@ -21,6 +21,7 @@ from app.routers import (
     admin_sharing,
     admin_providers,
     admin_rides,
+    admin_search,
     admin_otp_templates,
     admin_security,
     admin_settings,
@@ -77,6 +78,7 @@ api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 api_router.include_router(admin_payments.router)
 api_router.include_router(admin_live_map.router)
+api_router.include_router(admin_search.router)
 api_router.include_router(admin_stats.router)
 api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_account.router)

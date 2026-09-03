@@ -46,6 +46,18 @@ function thisMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+/** سلَّمُ مستويات الكبتن — **مرآةُ `MAX_LEVEL = 3` في `models/mission.py`**.
+ *
+ * **ثابتُ خلفيةٍ لا إعداد**: لا بابَ ينشره ولا شاشةَ تضبطه، **ومفتاحٌ في
+ * `/config` له كان سيَعِد بضبطٍ لا يقع**. ومكانُه هنا لا في `labels.ts` —
+ * **وذلك الملفُّ يقول بنفسه إن ثوابتَ الخلفية لا تسكنه**.
+ *
+ * **وبيتُه واحدٌ منذ اليومَ**: كان مكتوباً هنا `[0, 1, 2, 3]` **ويُكتب رقماً
+ * حرّاً في متجر المركبات** — فمن كتب `7` هناك صنع مركبةً لا يبلغها أحدٌ أبداً،
+ * **ولا يصيح شيء**: الخلفيةُ تقبل كلَّ `> 0`.
+ */
+export const DRIVER_LEVELS = [0, 1, 2, 3];
+
 export function MissionsLevels({
   onError,
   isAdmin,
@@ -102,7 +114,7 @@ export function MissionsLevels({
         </p>
 
         <div className="grid gap-10 md:grid-cols-4">
-          {[0, 1, 2, 3].map((level) => {
+          {DRIVER_LEVELS.map((level) => {
             const setting = levels.settings.find((row) => row.level === level);
             return (
               <LevelCard

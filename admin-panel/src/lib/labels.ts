@@ -22,6 +22,7 @@
 import type { Tone } from "@/components/ui/Badge";
 import type {
   CancellationChargeStatus,
+  SearchKind,
   PaymentMethod,
   PaymentStatus,
   RideStatus,
@@ -159,4 +160,20 @@ export const DEBT_STATUS_TONE: Record<DebtStatus, Tone> = {
   outstanding: "warn",
   settled: "ok",
   written_off: "muted",
+};
+
+// ─────────────────────────────────────── البحثُ العامُّ في الرأس (§39٫١٢٫٤)
+
+/** أصنافُ إصابة البحث العامّ — **وجهةٌ لا حال**.
+ *
+ * **ولمَ هي هنا وليست تعداداً**: لا جدولَ اسمُه «صنفُ إصابة» — الصنفُ يقول
+ * **إلى أيِّ شاشةٍ يقفز الدرج**، وهو معنًى في الواجهة لا في القاعدة. ومكانُه
+ * هذا الملفّ لأن **الاسمَ المعروضَ لا يُكتب في مكوّن**: من كتبه هناك كتب
+ * ثانياً حين تُضاف شاشةُ بحثٍ أخرى فافترقا.
+ */
+export const SEARCH_KIND_LABEL: Record<SearchKind, string> = {
+  user: "حساب",
+  driver: "كبتن",
+  ride: "رحلة",
+  claim: "مطالبة",
 };

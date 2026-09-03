@@ -44,6 +44,7 @@ import type {
   SkinRarity,
   SkinStats,
 } from "@/api/types";
+import { DRIVER_LEVELS } from "@/components/MissionsLevels";
 import { Shell } from "@/components/Shell";
 import { SkinMapPreview } from "@/components/SkinMapPreview";
 import { Badge } from "@/components/ui/Badge";
@@ -386,19 +387,26 @@ export function VehicleSkinsScreen() {
                     setDraft({ ...draft, max_supply: onlyDigits(e.target.value) })
                   }
                 />
-                <Field
-                  label="المستوى المطلوب (فارغٌ = بلا شرط)"
+                {/* **اختيارٌ لا كتابة** (§39٫١٢٫١): السلَّمُ أربعُ درجاتٍ
+                    تعرفها الخلفية، **ورقمٌ خارجَها تقبله** (`gt=0` وحدَه) —
+                    فمركبةٌ بمستوى `7` لا يبلغها أحدٌ أبداً ولا يصيح شيء.
+                    **والصفرُ ليس خياراً هنا**: «بلا شرط» هي `null`، وهي
+                    الفراغُ نفسُه. */}
+                <Select
+                  label="المستوى المطلوب"
                   name="level_required"
-                  dir="ltr"
-                  inputMode="numeric"
                   value={draft.level_required}
                   onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      level_required: onlyDigits(e.target.value),
-                    })
+                    setDraft({ ...draft, level_required: e.target.value })
                   }
-                />
+                >
+                  <option value="">بلا شرط — يبلغها كلُّ كبتن</option>
+                  {DRIVER_LEVELS.filter((level) => level > 0).map((level) => (
+                    <option key={level} value={String(level)}>
+                      المستوى {level} فما فوق
+                    </option>
+                  ))}
+                </Select>
                 <Field
                   label="بداية الموسم"
                   name="valid_from"

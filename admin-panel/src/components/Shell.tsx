@@ -17,6 +17,8 @@
 
 import { AlertTriangle, LogOut, Moon, Sun } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
+
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -221,6 +223,10 @@ export function Shell({
               </button>
             ))}
           </div>
+
+          {/* **البحثُ العامُّ قبل الفاصل لا بعده** (§39٫١٢٫٤): هو أداةُ
+              عملٍ لا زرَّ حساب، **ومكانُه حيث تقع العينُ أوّلاً**. */}
+          <GlobalSearch />
 
           <div className="ms-auto flex items-center gap-10">
             <div className="text-end">

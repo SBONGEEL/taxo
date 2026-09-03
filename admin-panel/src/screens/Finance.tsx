@@ -20,6 +20,7 @@ import { GuardBanner } from "@/components/GuardBanner";
 import { useCountry } from "@/lib/country";
 import { useCountryConfig } from "@/lib/config";
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
@@ -102,6 +103,17 @@ export function FinanceScreen() {
   // — وحقلٌ يزيّن ولا يرشِّح أسوأُ من غيابه.
   const withdrawalSearch = useSearch();
   const topupSearch = useSearch();
+
+  // **يفتح اللسانَ الذي يقوله العنوان ويزرع بحثَه** — وجهةُ البحث العامّ
+  // (§39٫١٢٫٤). **ولسانان لا واحد**، فالزرعُ يقع في بحث اللسان المقصود وحدَه.
+  const [params] = useSearchParams();
+  const wantedTab = params.get("tab");
+  const seeded = params.get("q");
+  useEffect(() => {
+    if (wantedTab === "topups") setTab("topups");
+    if (seeded) topupSearch.setText(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedTab, seeded]);
 
   const load = useCallback(async () => {
     const [w, t, c] = await Promise.all([

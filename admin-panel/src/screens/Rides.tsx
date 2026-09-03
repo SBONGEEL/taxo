@@ -34,6 +34,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getRide, listRides } from "@/api/endpoints";
@@ -90,6 +91,23 @@ export function RidesScreen() {
   const search = useSearch();
   const [rows, setRows] = useState<AdminRideRow[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+
+  // **يفتح ما يقوله العنوان** — وجهةُ البحث العامّ (§39٫١٢٫٤). و`open` هنا
+  // معرّفٌ نصّيٌّ لا صفّ، **فلا ينتظر وصولَ القائمة**.
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get("open");
+  const seeded = params.get("q");
+  useEffect(() => {
+    if (seeded) search.setText(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seeded]);
+
+  useEffect(() => {
+    if (wanted === null) return;
+    setOpen(wanted);
+    params.delete("open");
+    setParams(params, { replace: true });
+  }, [wanted, params, setParams]);
   const [error, setError] = useState<string | null>(null);
 
   // **يستطلع كما تفعل الخريطةُ الحيّة** (عطبٌ مقيسٌ 2026-08-23): كانت الشاشةُ

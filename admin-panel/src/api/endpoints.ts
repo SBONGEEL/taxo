@@ -85,6 +85,7 @@ import type {
   Reports,
   RideSharingSetting,
   RideStatus,
+  SearchHits,
   SecurityPolicy,
   StatsPeriod,
   Subscription,
@@ -351,6 +352,16 @@ export const setQuietHours = (
   },
 ) =>
   api.put<NotificationSetting>(`/admin/campaigns/settings/${country}`, payload);
+
+// -------------------------------------------------- البحثُ العامُّ في الرأس
+
+/** بحثٌ واحدٌ يجمع أربعةَ أصناف — **ويقفز، ولا يفتح صفحةَ نتائج** (§39٫١٢٫٤).
+ *
+ * **والحدُّ خمسةٌ لكلِّ صنفٍ في الخلفية لا هنا**: قصُّ القائمة في المتصفح
+ * يعني أنها حُمِّلت كلُّها أوّلاً.
+ */
+export const globalSearch = (q: string) =>
+  api.get<SearchHits>("/admin/search", { query: { q } });
 
 // ------------------------------------------------------------ الكباتن
 

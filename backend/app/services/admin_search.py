@@ -141,3 +141,17 @@ def ride_parties_clause(
         user_clause(q, rider_id_column),
         driver_clause(q, driver_id_column),
     )
+
+
+def person_clause(q: str) -> ColumnElement[bool]:
+    """«هذا **الحسابُ** اسمُه أو رقمُه يطابق» — **شرطٌ على `users` نفسِه**.
+
+    **وليست `user_clause` بعمودٍ آخر**: تلك تسأل عن **صاحب صفٍّ آخر** فتحتاج
+    `EXISTS`؛ **وهذه الصفُّ نفسُه**، فشرطٌ مباشرٌ بلا استعلامٍ متداخل.
+
+    **وعلّةُ وجودها بيتٌ واحدٌ لا ثلاثة**: كان هذا السطرُ مكتوباً بيده في
+    `/admin/users` و`/admin/drivers` — **ومنه فات التهريبُ مرّةً** (عطبُ
+    ٢٠٢٦-٠٩-٠٢)، **ونسخةٌ ثالثةٌ في البحث العامّ كانت ستفوته من جديد**.
+    """
+    pattern = like(q)
+    return or_(User.name.ilike(pattern), User.phone.ilike(pattern))

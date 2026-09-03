@@ -861,7 +861,14 @@ function CommissionForm({
             commission_percent: percent,
             applies_to: scope,
           })
-            .then(() => onSaved("حُفظت العمولة"))
+            .then(() =>
+              onSaved(
+                // **سندُها ثابتٌ مكتوب**: `rides.commission_percent_at_ride`
+                // تُجمَّد عند إنشاء الرحلة ولا تُحسب بأثرٍ رجعيّ
+                "حُفظت العمولة — تسري على الرحلة التالية، ولا تمسّ رحلةً"
+                  + " قائمةً جُمّدت نسبتُها عند إنشائها",
+              ),
+            )
             .catch((caught) =>
               onError(caught),
             )

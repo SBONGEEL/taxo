@@ -116,7 +116,11 @@ export function QuietHours({
                   quiet_hours_end: end,
                   timezone: zone.trim(),
                 })
-                  .then(() => onSaved("حُفظت ساعاتُ الهدوء"))
+                  .then(() =>
+                    onSaved(
+                      "حُفظت ساعاتُ الهدوء — ولا تُرسل حملةٌ داخلها بعد الآن",
+                    ),
+                  )
                   .catch((caught) =>
                     onError(
                       caught instanceof ApiError

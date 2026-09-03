@@ -32,9 +32,10 @@ import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Field, Select } from "@/components/ui/Field";
+import { DurationField, MoneyField } from "@/components/ui/Inputs";
 import { Shell } from "@/components/Shell";
 import { useCountry } from "@/lib/country";
-import { currencyLabel, day, money } from "@/lib/format";
+import { currencyOf, day, money } from "@/lib/format";
 import { digits } from "@/lib/utils";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
@@ -67,7 +68,10 @@ export function OffersScreen() {
   const [planId, setPlanId] = useState("");
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
 
-  const currency = currencyLabel(country === "JO" ? "JOD" : "LYD");
+  // **سقط `currency` حين صار الحقلُ `MoneyField`**: كان علامةً محلولةً تُقحَم
+  // في نصِّ التسمية، **والحقلُ يعرض عملتَه بنفسه** — ولا موضعَ آخرَ يقرؤها.
+  // **والسوقُ يُقرأ من `currencyOf` لا من شرطٍ مكتوبٍ بيد** (`JO ? JOD : LYD`
+  // كان سيكذب أوّلَ سوقٍ ثالث).
 
   const load = useCallback(async () => {
     setRows(null);
@@ -205,15 +209,12 @@ export function OffersScreen() {
                 ))}
               </Select>
               {audience === "lapsed" ? (
-                <Field
-                  label="انقطعت تغطيته منذ (يوماً)"
+                <DurationField
+                  label="انقطعت تغطيته منذ"
                   name="lapsed_days"
-                  dir="ltr"
-                  inputMode="numeric"
-                  value={lapsedDays}
-                  onChange={(event) =>
-                    setLapsedDays(event.target.value.replace(/\D/g, ""))
-                  }
+                  wire="day"
+                  value={Number(lapsedDays) || 0}
+                  onChange={(next) => setLapsedDays(String(next))}
                 />
               ) : (
                 <Field
@@ -227,15 +228,18 @@ export function OffersScreen() {
                   }
                 />
               )}
-              <Field
-                label={`سقف التنازل الكلي (${currency}) — فارغٌ = بلا سقف`}
+              {/* **العملةُ من الحقل لا من التسمية** (§39٫١٢٫٢): كانت
+                  مقحمةً في نصِّ التسمية، **فتُقرأ جزءاً من اسم الحقل لا وحدةً
+                  للرقم**. والمصفاةُ باقيةٌ — `MoneyField` لا يمنع حرفاً. */}
+              <MoneyField
+                label="سقف التنازل الكلي — فارغٌ = بلا سقف"
                 name="total_budget"
-                dir="ltr"
-                inputMode="decimal"
                 value={budget}
-                onChange={(event) =>
-                  setBudget(event.target.value.replace(/[^0-9.]/g, ""))
-                }
+                onChange={(next) => setBudget(next.replace(/[^0-9.]/g, ""))}
+                // **الرمزُ لا العلامة**: `currency` أعلاه **علامةٌ محلولة**
+                // (`currencyLabel`)، و`MoneyField` يحلّها بنفسه — **فتمريرُها
+                // يعطي فراغاً**، وهو عينُ ما يمنعه `check:money`
+                currency={currencyOf(country)}
               />
             </div>
             <p className="mt-10 text-11.5 leading-note text-muted">

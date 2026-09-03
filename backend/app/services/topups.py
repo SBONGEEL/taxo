@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
@@ -102,8 +102,18 @@ async def list_all(
     # **مرشِّحٌ فقط**: الترتيبُ والحدودُ كما هي، و`q` الفارغةُ لا تضيف شرطاً
     term = admin_search.normalize(q)
     if term is not None:
+        # **صاحبُها أو مرجعُها** — «بالرقم أو الاسم **أو المرجع**» (§39٫١٢٫٤).
+        # **ووُسّع هنا لا في البحث العامّ وحدَه**: بابان ينشران الشيءَ نفسَه
+        # ويفترقان هو الشكلُ الثامن — **من وجد مطالبةً في الدرج ثمّ لم يجدها
+        # في صفحتها بالمرجع نفسِه يقرأ ذلك عطباً في البيانات**.
+        #
+        # **ولا يمسّ هذا «مرشِّحٌ فقط»**: `q` الفارغةُ لا تضيف شرطاً كما كانت،
+        # والترتيبُ والحدودُ هي هي.
         stmt = stmt.where(
-            admin_search.user_clause(term, WalletTopupRequest.owner_id)
+            or_(
+                admin_search.user_clause(term, WalletTopupRequest.owner_id),
+                admin_search.text_clause(term, WalletTopupRequest.reference),
+            )
         )
     return (await session.scalars(stmt.limit(limit).offset(offset))).all()
 

@@ -135,8 +135,7 @@ async def list_users(
         # `f"%{q}%"` عارياً — **فمن كتب `%` رأى الجدولَ كلَّه وظنّه نتيجةَ
         # بحثه**، ومن كتب `_` طابق أيَّ حرف. والبيتُ الواحد
         # `services/admin_search.py`.
-        pattern = admin_search.like(q.strip())
-        stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
+        stmt = stmt.where(admin_search.person_clause(q.strip()))
 
     rows = (await session.scalars(stmt.limit(limit).offset(offset))).all()
     return [UserOut.model_validate(row) for row in rows]
@@ -413,8 +412,7 @@ async def list_drivers(
         # `f"%{q}%"` عارياً — **فمن كتب `%` رأى الجدولَ كلَّه وظنّه نتيجةَ
         # بحثه**، ومن كتب `_` طابق أيَّ حرف. والبيتُ الواحد
         # `services/admin_search.py`.
-        pattern = admin_search.like(q.strip())
-        stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
+        stmt = stmt.where(admin_search.person_clause(q.strip()))
 
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
     return [

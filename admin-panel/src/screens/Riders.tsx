@@ -22,11 +22,13 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
   blockUser,
   freezeWallet,
+  getUser,
   getWallet,
   listUsers,
   listWalletTransactions,
@@ -78,6 +80,37 @@ export function RidersScreen() {
   const [open, setOpen] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+
+  // **يفتح ما يقوله العنوان** — وجهةُ البحث العامّ (§39٫١٢٫٤).
+  //
+  // **ويُقرأ بمعرّفه لا من الصفحة المعروضة**: `GET /admin/users/{id}` بابٌ
+  // قائمٌ منذ §37، **وحسابٌ خارج الصفحة الأولى كان لا يُفتح أبداً** لو انتظرنا
+  // القائمة. **وصفرُ بابٍ جديدٍ بُني لهذا.**
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get("open");
+  useEffect(() => {
+    if (wanted === null) return;
+    let alive = true;
+    getUser(wanted)
+      .then((user) => {
+        if (alive) setOpen(user);
+      })
+      .catch((caught) =>
+        setError(
+          caught instanceof ApiError ? caught.message : "تعذّرت قراءةُ الحساب",
+        ),
+      )
+      // **ويُمحى المُعامل بعد فتحه**: عنوانٌ يبقى يقول «افتح» يعيد فتحَ الدرج
+      // كلَّما أُغلق — **فيصير الإغلاقُ لا يُغلق**
+      .finally(() => {
+        if (!alive) return;
+        params.delete("open");
+        setParams(params, { replace: true });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [wanted, params, setParams]);
 
   const load = useCallback(async () => {
     setRows(null);

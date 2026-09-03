@@ -31,6 +31,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
@@ -143,11 +144,15 @@ function DocumentPreview({
   documentId,
   expiry,
   onExpiryChange,
+  onSeen,
 }: {
   driverId: string;
   documentId: string;
   expiry: string;
   onExpiryChange: (value: string) => void;
+  /** **يقع حين تصل الورقةُ فعلاً لا حين يُضغط الزرّ** — والفرقُ هو المعنى:
+   *  نداءٌ فشل ليس معاينة. */
+  onSeen: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -209,7 +214,10 @@ function DocumentPreview({
           setBusy(true);
           setFailed(null);
           driverDocumentBlob(driverId, documentId)
-            .then(setUrl)
+            .then((blob) => {
+              setUrl(blob);
+              onSeen();
+            })
             .catch((caught: Error) => setFailed(caught.message))
             .finally(() => setBusy(false));
         }}
@@ -341,6 +349,31 @@ export function DriversScreen() {
   const [rows, setRows] = useState<AdminDriverRow[] | null>(null);
   const search = useSearch();
   const [open, setOpen] = useState<AdminDriverRow | null>(null);
+
+  // **يفتح ما يقوله العنوان** — وجهةُ البحث العامّ (§39٫١٢٫٤).
+  //
+  // **ولا بابَ يقرأ كبتناً واحداً**: `AdminDriverRow` يُبنى في القائمة بعدِّ
+  // مستنداتٍ ومطلوبٍ ناقص، **ونسخُ ذلك في بابٍ ثانٍ يجعل صفَّين لشيءٍ واحد**
+  // يفترقان أوّلَ تعديل (الشكلُ الثامن). **فيُضيَّق البحثُ برقمه** — يأتي به
+  // البحثُ العامُّ في `q` — **ثمّ يُفتح صفُّه بمعرّفه**.
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get("open");
+  const seeded = params.get("q");
+  useEffect(() => {
+    if (seeded) search.setText(seeded);
+    // **مرّةً واحدةً عند الوصول**: إعادةُ الزرع في كلِّ رسمٍ تمحو ما يكتبه
+    // المشرفُ بعدها تحت إصبعه
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seeded]);
+
+  useEffect(() => {
+    if (wanted === null || rows === null) return;
+    const row = rows.find((candidate) => candidate.driver_id === wanted);
+    if (row === undefined) return;
+    setOpen(row);
+    params.delete("open");
+    setParams(params, { replace: true });
+  }, [wanted, rows, params, setParams]);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -577,6 +610,18 @@ function DriverDrawer({
     }
   }
 
+  /** **ما فُتحت ورقتُه في هذه الجلسة** — ومنه وحدَه يُبنى الفعلُ الجماعيّ.
+   *
+   * **العلّةُ قاعدةٌ مكتوبةٌ في هذا الملفّ**: «**ولا يُعتمد ما لا يُرى**» —
+   * كان القرارُ يُتَّخذ على نوع الوثيقة وحالها، **فرخصةٌ تُقبل ولا يراها
+   * أحد**. **وزرُّ «اعتمِد الكلّ» يعيد ذلك العطبَ بضغطةٍ واحدة**، فيُقصر على
+   * ما رآه المشرفُ بعينه.
+   *
+   * **وهو تضييقٌ لنصِّ §39٫١٢٫٣ لا مخالفةٌ له**: «أفعالٌ جماعيةٌ **حيث تكون
+   * آمنة**» — والأمانُ هنا أن يكون القرارُ على ورقةٍ رُئيت.
+   */
+  const [seen, setSeen] = useState<Set<string>>(new Set());
+
   /** كـ`run` **ولا يُغلق الدرج** — لبتّةِ مستندٍ من عدّة مستندات. */
   async function runStay(action: () => Promise<unknown>, message: string) {
     setBusy(true);
@@ -654,6 +699,30 @@ function DriverDrawer({
         />
 
         <h3 className="mb-10 mt-18 text-13 font-bold text-muted">الوثائق</h3>
+        <BulkApprove
+          docs={docs}
+          seen={seen}
+          canDecide={canDecide}
+          busy={busy}
+          onApprove={(ids) =>
+            void runStay(async () => {
+              // **واحدةً بعد أخرى لا معاً**: `Promise.all` يرسل خمسةَ نداءاتٍ
+              // تتسابق على صفِّ الكبتن نفسِه — و`drivers_service.lock` يقفله،
+              // **فأربعةٌ منها تنتظر قفلاً ثمّ تُعيد حساب الحال من قراءةٍ
+              // قديمة**. والتسلسلُ يجعل كلَّ بتّةٍ ترى ما قبلها.
+              for (const id of ids) {
+                await reviewDocument(
+                  row.driver_id,
+                  id,
+                  true,
+                  undefined,
+                  expiry[id] ?? undefined,
+                );
+              }
+              await load();
+            }, approvedMessage(ids.length, pendingIds(docs).length))
+          }
+        />
         {docs === null ? (
           <Spinner className="mx-auto" />
         ) : docs.documents.length === 0 ? (
@@ -703,6 +772,9 @@ function DriverDrawer({
                   expiry={expiry[document.id] ?? document.expires_on ?? ""}
                   onExpiryChange={(value) =>
                     setExpiry((current) => ({ ...current, [document.id]: value }))
+                  }
+                  onSeen={() =>
+                    setSeen((current) => new Set(current).add(document.id))
                   }
                 />
 
@@ -905,4 +977,67 @@ function DriverDrawer({
     </div>
     </FormErrors>
   );
+}
+
+
+/** الفعلُ الجماعيُّ الوحيدُ في هذه الشاشة — **ولا يظهر إلا حين يفيد**.
+ *
+ * **زرٌّ لوثيقةٍ واحدةٍ ليس فعلاً جماعياً**: هو زرُّها نفسُه بمكانٍ ثانٍ،
+ * **وزرّان لفعلٍ واحدٍ يجعلان المشرفَ يسأل أيُّهما يفعل ماذا**. فالحدُّ اثنتان.
+ *
+ * **ولا فعلَ جماعيَّ على رفض**: الرفضُ يحتاج **سبباً لكلِّ ورقة** يصل صاحبَها
+ * في الإشعار، **وسببٌ واحدٌ لخمسِ أوراقٍ سببٌ لا يخصّ واحدةً منها** — ومن
+ * قرأه لم يعرف ما يصلح في ورقته. وهذا هو «حيث تكون آمنة» بحرفه.
+ */
+function BulkApprove({
+  docs,
+  seen,
+  canDecide,
+  busy,
+  onApprove,
+}: {
+  docs: DriverDocuments | null;
+  seen: Set<string>;
+  canDecide: boolean;
+  busy: boolean;
+  onApprove: (ids: string[]) => void;
+}) {
+  if (!canDecide || docs === null) return null;
+  const ready = pendingIds(docs).filter((id) => seen.has(id));
+  if (ready.length < 2) return null;
+
+  const rest = pendingIds(docs).length - ready.length;
+
+  return (
+    <div className="mb-10 rounded-12 border border-line bg-surface-2 px-13 py-10">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onApprove(ready)}
+        className="text-12 font-semibold text-ok disabled:opacity-60"
+      >
+        اعتمِد ما عاينتَه ({ready.length})
+      </button>
+      <p className="mt-4 text-11 leading-note text-muted">
+        {rest > 0
+          ? `ويبقى ${rest} لم تُفتح ورقتُها — ولا يُعتمد ما لا يُرى.`
+          : "وكلُّ ما ينتظر قد عُوين."}
+      </p>
+    </div>
+  );
+}
+
+/** الوثائقُ المنتظِرةُ بمعرّفاتها — **بيتٌ واحدٌ يقرؤه الزرُّ والرسالة**. */
+function pendingIds(docs: DriverDocuments | null): string[] {
+  return (docs?.documents ?? [])
+    .filter((document) => document.review_status === "pending")
+    .map((document) => document.id);
+}
+
+/** **يقول ماذا وقع بالضبط** (§39٫١٢٫٥) — والعددُ لاتينيٌّ بحكم `${}`. */
+function approvedMessage(done: number, before: number): string {
+  const rest = before - done;
+  return rest > 0
+    ? `اعتُمدت ${done} وثائق ممّا عاينتَه — ويبقى ${rest} لم تُفتح ورقتُها`
+    : `اعتُمدت ${done} وثائق — ولم يبقَ منتظِر`;
 }
