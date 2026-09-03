@@ -225,3 +225,37 @@ stay below that block. The test schema is built by `alembic upgrade head` (run v
 because `env.py` calls `asyncio.run`, which cannot nest inside the test event loop), never by
 `create_all`.
 
+<!--جديد-->
+---
+
+## ومن داخل WSL — أربعةُ فخاخٍ وقعت مقيسةً (٢٠٢٦-٠٩-٠٣)
+
+**١) نداءان لـ`wsl.exe` في لحظةٍ واحدةٍ يُسقطان التوزيعة.** أُطلق أمران على
+`Ubuntu-24.04` معاً فتسابقا على إقلاعها، والنتيجةُ
+`Wsl/Service/CreateInstance/HCS_E_CONNECTION_TIMEOUT` — **ثمّ لم تقلع بعدها
+أصلاً**، ولا `--terminate` أصلحها. **والعلاجُ الوحيدُ كان `wsl --shutdown`**،
+وهو يُنزل `docker-desktop` معها فتسقط الحاوياتُ كلُّها. **ففعلٌ واحدٌ يمسّ WSL
+في كلِّ مرّة** — وهي «لا فعلان يمسّان سطحاً واحداً» بعينها.
+
+**٢) و`Set-Content -Encoding utf8` في PowerShell 5.1 يكتب BOM.** كُتب مفتاحُ
+تكامل WSL في `settings-store.json` بهذه الطريقة، **فرفض Docker Desktop الملفَّ
+وأعاده إلى الافتراضات**: بقي **٤ مفاتيحَ من ١٣**، ومنها
+`UseContainerdSnapshotter` و`KubernetesEnabled`. **والكتابةُ الصحيحة**
+`[IO.File]::WriteAllText($p,$s,(New-Object Text.UTF8Encoding($false)))` —
+**وبها وقع التكاملُ من أوّل مرّة**. ونسخةٌ احتياطيةٌ قبل كلِّ كتابةٍ على إعدادِ
+أداةٍ ليست لنا.
+
+> **واسمُ المفتاح `IntegratedWslDistros`** — **قُرئ من ثنائيّات Docker Desktop
+> نفسِها** (`EnabledDistros` **لا وجودَ له**)، ولم يُخمَّن.
+
+**٣) وقياسٌ أطولُ من مهلة الأداة يُطلَق مفصولاً.** قُتلت المجموعةُ الكاملة
+مرّتين عند العشر دقائق — **والحاويةُ لم تمت**، وهو الفخُّ المكتوبُ أعلاه.
+**فالنمطُ**: `Start-Process … -RedirectStandardOutput` ثم مراقبٌ يسأل عن علامةِ
+إتمامٍ **وعن موت العملية معاً**، فلا يُقرأ الصمتُ نجاحاً. **والزمنُ يُؤخذ من
+`pytest` نفسِه** (`… in 2065.03s`) لا من ساعةِ حائطٍ تحمل إقلاعَ الحاوية.
+
+**٤) و`$?` بعد أنبوبٍ يعطي حالةَ آخرِ عنصرٍ فيه.** طُبع `build rc=0` عن بناءٍ
+سقط، لأن الحالةَ المقروءةَ كانت لـ`tail` لا للبناء — **ثمّ طُبع `ssh rc=0` عن
+`Permission denied`** للسبب نفسِه. **فالمخرَجُ يُوجَّه إلى ملفٍّ وتُقرأ الحالةُ
+من الأمر مباشرةً**، لا من ذيل أنبوب.
+<!--/جديد-->
