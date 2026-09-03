@@ -8,6 +8,7 @@ import { api, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
   AppConfig,
+  AppVersion,
   MyReferrals,
   AuthMethod,
   AuthResponse,

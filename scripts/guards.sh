@@ -50,7 +50,11 @@ run "check:update-gate"     node tools/check-update-gate.mjs
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do
   [ -d "$app" ] || continue
-  for g in check:scale check:enums check:digits check:slot check:flags \
+  # **و`check:sheet` أُضيف 2026-09-03 بعد أن عاش أحمرَ إيداعاً كاملاً**: كان
+  # في `npm run build` لتطبيق الراكب وحدَه **وليس في هذا الباب** — والمشروعُ
+  # لا يدفع فلا CI. فبقي `src/lib/update-gate.tsx` من البند ٨ أحمرَ ولم
+  # يشغّله أحد، **وهو عينُ درس `check:money-math`** المكتوبِ في رأس هذا الملفّ.
+  for g in check:scale check:enums check:digits check:slot check:sheet check:flags \
            check:config check:doors check:contract check:money check:readers; do
     # **ولا يُخترع حارسٌ لتطبيقٍ لا يملكه** — تُقرأ سكربتاتُه من `package.json`
     node -e "process.exit(require('./$app/package.json').scripts['$g']?0:1)" || continue

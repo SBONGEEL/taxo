@@ -16,6 +16,7 @@ import type {
   DeactivationRequest,
   DeactivationState,
   AppConfig,
+  AppVersion,
   AuthMethod,
   AuthResponse,
   CardOrder,

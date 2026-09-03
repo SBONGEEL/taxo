@@ -133,7 +133,12 @@ export function UpdateGate({
 function Blocking({ verdict }: { verdict: AppVersion }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg p-24">
-      <div className="w-full max-w-modal rounded-22 border border-line bg-surface p-24 text-center">
+      {/* **سقفٌ ومنطقةُ تمرير** — أمسكهما `check:sheet` وهو محقّ رغم أن هذه
+          بطاقةٌ وسطيةٌ لا ورقةٌ سفلية: `release_notes` نصٌّ يكتبه المشرفُ بلا
+          حدِّ طول، وبطاقةٌ بلا سقفٍ تنمو خارج الإطار **فيُقصّ زرُّ التحميل** —
+          وهذه شاشةٌ لا مخرجَ منها إلا هو. و`48px` هو `p-24` من الطرفين. */}
+      <div className="flex max-h-[calc(var(--vvh,100dvh)-48px)] w-full max-w-modal flex-col rounded-22 border border-line bg-surface p-24 text-center">
+        <div className="scr">
         <h1 className="text-20 font-bold text-ink">تحديثٌ مطلوبٌ للمتابعة</h1>
         <p className="mt-10 text-12.5 leading-note text-muted">
           هذه النسخةُ لم تعد مدعومة، ولا يمكن استعمالُ التطبيق قبل تحديثها.
@@ -156,6 +161,7 @@ function Blocking({ verdict }: { verdict: AppVersion }) {
         <p className="mt-10 text-10.5 text-muted" dir="ltr">
           build {verdict.min_supported_build} +
         </p>
+        </div>
       </div>
     </div>
   );
