@@ -95,69 +95,6 @@ export function MoneyField({
   );
 }
 
-/** حقلُ تاريخٍ — **من تقويمِ المتصفّح لا بكتابةٍ حرّة**.
- *
- * **العلّةُ**: «٢٠٢٦-٩-١» و«1/9/2026» و«٠١-٠٩-٢٠٢٦» ثلاثةُ نصوصٍ لتاريخٍ
- * واحد، **واثنان منها يُرفضان في الخلفية** فيقرأ المشرفُ خطأً لا يفهمه.
- * `type="date"` يعطي منتقياً أصلياً ويُرسل `YYYY-MM-DD` دائماً.
- *
- * **والخاناتُ لاتينيةٌ بحكم المتصفح** — وهو ما تريده القاعدةُ أصلاً.
- */
-export function DateField({
-  label,
-  value,
-  onChange,
-  name,
-  min,
-  max,
-  error,
-  disabled = false,
-  hint,
-}: {
-  label?: string;
-  /** `YYYY-MM-DD` أو فراغ. */
-  value: string;
-  onChange: (next: string) => void;
-  name?: string;
-  min?: string;
-  max?: string;
-  error?: string | null;
-  disabled?: boolean;
-  hint?: string;
-}) {
-  const generated = useId();
-  const id = name ?? generated;
-  const fromContext = useFieldError(name);
-  const reason = error ?? fromContext;
-
-  return (
-    <div>
-      {label ? (
-        <label className="label" htmlFor={id}>
-          {label}
-        </label>
-      ) : null}
-      <input
-        id={id}
-        name={name}
-        type="date"
-        dir="ltr"
-        value={value}
-        min={min}
-        max={max}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn("fld text-start", reason && "border-danger")}
-        aria-invalid={reason ? true : undefined}
-      />
-      {hint && !reason ? (
-        <p className="mt-6 text-11 leading-note text-muted">{hint}</p>
-      ) : null}
-      {reason ? <p className="mt-6 text-12 text-danger">{reason}</p> : null}
-    </div>
-  );
-}
-
 /** وحداتُ المدّة، مرتّبةً من الأصغر — **والثانيةُ منها لأن أكثرَ مدد هذا
  *  المشروع أقصرُ من دقيقة**: مهلةُ قبول العرض ٢٠ ثانية، وتبريدُ الرفض،
  *  وإعادةُ رمز التحقّق. **وبلا الثانية كان الحقلُ يقرّب ٩٠ إلى دقيقتين ويكتب

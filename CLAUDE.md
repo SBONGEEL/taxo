@@ -389,6 +389,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - البند ٨ — لوحةُ الإصدارات والتحديثُ الإلزاميّ، **مبنيٌّ ومقيس** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
 - البندان ٩ و١٠ — **الإعلانُ مبنيٌّ سلفاً، والسياساتُ سُلِّمت مسوّدة** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
 - البند ١١ — التحكّمُ بالمستخدمين والتواصلُ الفرديّ، **مبنيٌّ ومقيس** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
+- بندُ التسهيل — **الفروعُ السبعة، وثلاثةُ بنودٍ وُلدت منه** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
+- ما بُني وقِيس → `STATE.md`
+- وعطبان أمسكهما أوّلُ تشغيلٍ للاختبار الجديد — **ولم يكن ليُمسكهما قياسٌ يدويّ** → `STATE.md`
+- وثلاثةُ بنودٍ مستقلّةٍ وُلدت منه — **تُقرأ بنوداً لا نواقص** → `STATE.md`
+- ⚠ وما لم يُقَس — ولا يُقرأ سلامة → `STATE.md`
 
 - النقلُ إلى داخل WSL — ما قِيس قبل وبعد (٢٠٢٦-٠٩-٠٣) → `STATE.md`
 - اعتمادُ الشجرة الجديدة — الحاوياتُ والنفقُ تحوّلا، والأعمدةُ الثلاثة (٢٠٢٦-٠٩-٠٣) → `STATE.md`
@@ -407,6 +412,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Commands → `COMMANDS.md`
 - Five accounts exist on the dev stack, and the visual checks need them → `COMMANDS.md`
+- بعد كلِّ إقلاعٍ للآلة: النفقُ لا يعود وحدَه — **`docker start` لا `compose up`** (قرارُ المالك ٢٠٢٦-٠٩-٠٣) → `COMMANDS.md`
+- ⚠ و`docker start` لا `docker compose up` — **والعلّةُ مقيسة** → `COMMANDS.md`
+- والتحقّقُ ثلاثةُ أسطرٍ لا واحد → `COMMANDS.md`
 <!--/جديد-->
 <!--جديد-->
 - ومن داخل WSL — أربعةُ فخاخٍ وقعت مقيسةً (٢٠٢٦-٠٩-٠٣) → `COMMANDS.md`

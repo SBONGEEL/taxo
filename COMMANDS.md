@@ -280,3 +280,54 @@ compose به** — يحلّه فارغاً فيصير المسارُ `/.cloudfla
 المصدرَ لا `dist`**. **ويُقاس بأيِّ أمرٍ أُقلعت فعلاً**:
 `docker inspect <c> --format '{{join .Config.Cmd " "}}'` — لا بما يقوله الملفّ.
 <!--/جديد-->
+
+<!--جديد-->
+## بعد كلِّ إقلاعٍ للآلة: النفقُ لا يعود وحدَه — **`docker start` لا `compose up`** (قرارُ المالك ٢٠٢٦-٠٩-٠٣)
+
+```bash
+docker start taxo-tunnel
+```
+
+**السياسةُ تبقى كما هي، ولا تُبدَّل**: `restart: "no"` في
+`docker-compose.tunnel.yml` **مصرَّحةٌ بقصدٍ قائمٍ لم يزل سببُه** — النفقُ
+**بابٌ عامٌّ** يشير من أربعة مضيفين على الإنترنت إلى جهازٍ شخصيٍّ فيه قاعدةُ
+تطويرٍ وأسرار، **فبقاؤه مطفأً حتى يُطلب حالٌ آمنةٌ افتراضاً**. وإخوتُه
+`unless-stopped` فيعودون وحدَه لا يعود.
+
+**وكلفتُه مقيسةٌ لا مظنونة** (٢٠٢٦-٠٩-٠٣): خرج بـ`255` لحظةَ
+`wsl --shutdown`، فأجاب المضيفون الأربعة **530** ساعةً ونصفاً، **وقُرئ
+عطباً وليس به**. **وعلاجُ ذلك سطرٌ يُقرأ لا سياسةٌ تُبدَّل** — وهو هذا السطر.
+
+### ⚠ و`docker start` لا `docker compose up` — **والعلّةُ مقيسة**
+
+**الحاويةُ القائمةُ تحمل المتغيّرين محلولَين** كما حُلّا يومَ أُنشئت:
+
+    TAXO_CLOUDFLARED_DIR → /home/loly3/.cloudflared
+    TAXO_TUNNEL_USER     → 1000:1000
+
+**و`compose up` يعيد إنشاءها ويحلّهما من جديد** — فمن لم يصدّرهما في صدفته
+رجع إلى الاحتياطَين الويندوزيَّين: `${USERPROFILE}/.cloudflared` **وهو
+`/.cloudflared` في لينكس لأن المتغيّرَ غيرُ موجود**، و`65532:65532` **الذي لا
+يقرأ اعتماداً بصلاحية `600`**. **وهما بعينهما العطبان اللذان أُصلحا في
+`7bf961a`** — فإعادةُ الإنشاء تُعيدهما لمن نسي التصدير.
+
+**فإن لزم `compose up` حقّاً**، فبالمتغيّرين مصرَّحين وبالملفّين معاً:
+
+```bash
+TAXO_CLOUDFLARED_DIR=$HOME/.cloudflared TAXO_TUNNEL_USER="$(id -u):$(id -g)" \
+  docker compose -f docker-compose.yml -f docker-compose.tunnel.yml \
+  up -d --no-deps cloudflared
+```
+
+### والتحقّقُ ثلاثةُ أسطرٍ لا واحد
+
+```bash
+docker logs --since 1m taxo-tunnel 2>&1 | grep -c 'Registered tunnel connection'   # يجب أن يكون 4
+for h in dev-api dev-app dev-driver dev-admin; do
+  printf '%-12s ' "$h"; curl -s -o /dev/null -w '%{http_code}\n' "https://$h.tajora.ly/"
+done
+```
+
+**و`dev-api` يجيب `404` على `/` لا `200` — وهي خضرةٌ لا نقص**: لا جذرَ في
+FastAPI، و`localhost:8001/` يجيب `404` نفسَه. **فيُقاس `/health` منه لا `/`**.
+<!--/جديد-->
