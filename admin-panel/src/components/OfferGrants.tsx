@@ -14,7 +14,7 @@
  * يمنع منحاً صحيحاً لغد.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import {
@@ -22,12 +22,12 @@ import {
   listDrivers,
   listOfferGrants,
 } from "@/api/endpoints";
-import type { AdminDriverRow, CountryCode, OfferGrant } from "@/api/types";
+import type { CountryCode, OfferGrant } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { EmptyNote, Spinner } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
-import { digits } from "@/lib/utils";
+import { Picker, type PickerOption } from "@/components/ui/Picker";
 
 export function OfferGrants({
   offerId,
@@ -46,11 +46,23 @@ export function OfferGrants({
 }) {
   const [rows, setRows] = useState<OfferGrant[] | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [query, setQuery] = useState("");
-  const [found, setFound] = useState<AdminDriverRow[] | null>(null);
-  const [picked, setPicked] = useState<AdminDriverRow | null>(null);
+  const [picked, setPicked] = useState<PickerOption | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // **`useCallback` لأن `Picker` يضعها في تبعيّات `useEffect`** — دالّةٌ تُولد
+  // في كلِّ رسمٍ تُعيد البحثَ بلا نهاية.
+  const findDrivers = useCallback(
+    (query: string) =>
+      listDrivers({ q: query, country_code: country, limit: 10 }).then((found) =>
+        found.map((row) => ({
+          id: row.driver_id,
+          label: row.name,
+          hint: row.phone,
+        })),
+      ),
+    [country],
+  );
 
   if (!loaded) {
     setLoaded(true);
@@ -66,63 +78,13 @@ export function OfferGrants({
           <h4 className="mb-6 text-12.5 font-bold text-ink">
             ابحث عن الكبتن
           </h4>
-          <div className="flex items-end gap-10">
-            <Field
-              className="flex-1"
-              label="بالاسم أو الرقم"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setFound(null);
-                setPicked(null);
-                listDrivers({ q: query.trim(), country_code: country, limit: 10 })
-                  .then(setFound)
-                  .catch((caught) =>
-                    onError(
-                      caught instanceof ApiError
-                        ? caught.message
-                        : "تعذّر البحث",
-                    ),
-                  );
-              }}
-            >
-              ابحث
-            </Button>
-          </div>
-
-          {found?.length === 0 ? (
-            <EmptyNote
-              title="لا نتائج"
-              hint="لا كبتنَ بهذا الاسم أو الرقم في هذا السوق."
-            />
-          ) : null}
-          {found && found.length > 0 ? (
-            <ul className="mt-10 grid gap-6">
-              {found.map((row) => (
-                <li key={row.driver_id}>
-                  <button
-                    type="button"
-                    onClick={() => setPicked(row)}
-                    className={
-                      "flex w-full items-center justify-between rounded-12 border px-12 py-8 text-start " +
-                      (picked?.driver_id === row.driver_id
-                        ? "border-ink bg-surface-2"
-                        : "border-line")
-                    }
-                  >
-                    <span className="text-12.5 text-ink">{row.name}</span>
-                    <span className="text-11.5 text-muted" dir="ltr">
-                      {digits(row.phone)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <Picker
+            label="بالاسم أو الرقم"
+            value={picked}
+            onPick={setPicked}
+            search={findDrivers}
+            emptyText="لا كبتنَ بهذا الاسم أو الرقم في هذا السوق."
+          />
         </section>
 
         {picked ? (
@@ -139,13 +101,15 @@ export function OfferGrants({
               onClick={() => {
                 setBusy(true);
                 grantSubscriptionOffer(offerId, {
-                  driver_id: picked.driver_id,
+                  driver_id: picked.id,
                   note: note.trim(),
                 })
                   .then(() => {
                     setNote("");
                     setPicked(null);
-                    onGranted(`مُنح العرضُ لـ${picked.name}`);
+                    onGranted(
+                      `مُنح «${offerName}» لـ${picked.label} — ويُحسب خصمُه عند أوّل شراء`,
+                    );
                     return listOfferGrants(offerId).then(setRows);
                   })
                   .catch((caught) =>

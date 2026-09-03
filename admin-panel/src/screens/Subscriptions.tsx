@@ -33,7 +33,6 @@ import {
   updatePlan,
 } from "@/api/endpoints";
 import type {
-  AdminDriverRow,
   CancellationPlan,
   CountryCode,
   PaymentMethod,
@@ -49,6 +48,8 @@ import { Badge, type Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, Field, Select } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
+import { MoneyField } from "@/components/ui/Inputs";
+import { Picker, type PickerOption } from "@/components/ui/Picker";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
@@ -535,9 +536,7 @@ function RecordModal({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
-  const [search, setSearch] = useState("");
-  const [matches, setMatches] = useState<AdminDriverRow[] | null>(null);
-  const [driver, setDriver] = useState<AdminDriverRow | null>(null);
+  const [driver, setDriver] = useState<PickerOption | null>(null);
   const [planId, setPlanId] = useState(plans[0]?.id ?? "");
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [amount, setAmount] = useState("");
@@ -545,23 +544,30 @@ function RecordModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function find() {
-    setError(null);
-    try {
-      // المعتمدون وحدهم: عدُّ الأيام يبدأ فوراً، فبيعُه لمن ينتظر الموافقة
-      // يحرق أيامه في الانتظار (القسم 8)
-      setMatches(
-        await listDrivers({
-          country_code: country,
-          status: "approved",
-          q: search.trim(),
-          limit: 10,
-        }),
-      );
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر البحث");
-    }
-  }
+  const plan = plans.find((row) => row.id === planId) ?? null;
+
+  // **المعتمدون وحدهم**: عدُّ الأيام يبدأ فوراً، فبيعُه لمن ينتظر الموافقة
+  // يحرق أيامه في الانتظار (القسم 8). **والمرشِّحُ في النداء لا بعده** — قائمةٌ
+  // تُصفّى في المتصفح تكون قد حمّلت من لا يجوز بيعُه أصلاً.
+  //
+  // **و`useCallback` ليست تجميلاً**: `Picker` يضع `search` في تبعيّات
+  // `useEffect`، **فدالّةٌ تُولد في كلِّ رسمٍ تُعيد البحثَ بلا نهاية**.
+  const findDrivers = useCallback(
+    (query: string) =>
+      listDrivers({
+        country_code: country,
+        status: "approved",
+        q: query,
+        limit: 10,
+      }).then((rows) =>
+        rows.map((row) => ({
+          id: row.driver_id,
+          label: row.name,
+          hint: row.phone,
+        })),
+      ),
+    [country],
+  );
 
   return (
     <div
@@ -593,53 +599,16 @@ function RecordModal({
 
         <ErrorNote message={error} />
 
-        <div className="mt-12 flex items-end gap-9">
-          <div className="flex-1">
-            <Field
-              label="السائق"
-              placeholder="اسمٌ أو رقم هاتف"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => void find()}
-            className="rounded-13 border border-line px-16 py-13 text-13 font-semibold text-ink"
-          >
-            ابحث
-          </button>
+        <div className="mt-12">
+          <Picker
+            label="السائق"
+            placeholder="اسمٌ أو رقم هاتف"
+            value={driver}
+            onPick={setDriver}
+            search={findDrivers}
+            emptyText="لا سائق معتمَدٌ بهذا الاسم — ولا يُباع اشتراكٌ لغير معتمَد: عدُّ أيامه يبدأ فوراً فيحترق في الانتظار."
+          />
         </div>
-
-        {matches !== null ? (
-          matches.length === 0 ? (
-            <p className="mt-10 text-11.5 leading-note text-muted">
-              لا سائق معتمَدٌ بهذا الاسم — ولا يُباع اشتراكٌ لغير معتمَد: عدُّ
-              أيامه يبدأ فوراً فيحترق في الانتظار.
-            </p>
-          ) : (
-            <ul className="mt-10 flex flex-col gap-7">
-              {matches.map((row) => (
-                <li key={row.driver_id}>
-                  <button
-                    type="button"
-                    onClick={() => setDriver(row)}
-                    className={
-                      driver?.driver_id === row.driver_id
-                        ? "flex w-full items-center gap-10 rounded-12 border border-ink px-13 py-9 text-start"
-                        : "flex w-full items-center gap-10 rounded-12 border border-line px-13 py-9 text-start"
-                    }
-                  >
-                    <span className="flex-1 text-12.5 text-ink">{row.name}</span>
-                    <span dir="ltr" className="text-11 text-muted">
-                      {row.phone}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : null}
 
         <div className="mt-14 grid gap-12 md:grid-cols-2">
           <Select
@@ -669,16 +638,18 @@ function RecordModal({
             ))}
           </Select>
 
-          <Field
+          <MoneyField
             // **النصُّ صار كاذباً بعد البند ٥٤**: تركُه فارغاً لم يعد يعني
             // «سعر الباقة» بل **المبلغَ بعد خصم العرض** إن انطبق عرضٌ على هذا
             // الكبتن (قِيس: فارغاً أعطى ١٫٢٠٠ لا ١٫٥٠٠). ونصٌّ يصف سلوكاً
             // انتهى يجعل المشرفَ يحصّل رقماً ويسجّل غيرَه.
             label="المبلغ (اتركه فارغاً بالمبلغ المستحق بعد الخصم)"
-            inputMode="decimal"
-            dir="ltr"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={setAmount}
+            // **عملةُ الباقة المختارة لا عملةُ الشاشة**: الباقةُ تحمل عملتَها،
+            // **ولا تُخمَّن هنا** — واحتياطُها أوّلُ باقةٍ في السوق لأن الحقلَ
+            // يُرسم قبل أن تُختار باقة.
+            currency={plan?.currency ?? plans[0]?.currency ?? "JOD"}
           />
 
           <Field
@@ -701,14 +672,20 @@ function RecordModal({
             onClick={() => {
               if (driver === null) return;
               setBusy(true);
+              const who = driver.label;
+              const which = plan?.name ?? "";
               recordSubscription({
-                driver_id: driver.driver_id,
+                driver_id: driver.id,
                 plan_id: planId,
                 method,
                 amount_paid: amount.trim() || null,
                 reference: reference.trim() || null,
               })
-                .then(() => onDone("سُجّل الاشتراك — بدأ سريانه"))
+                // **يقول ماذا وقع بالضبط لا «تمّ بنجاح»** (§39٫١٢٫٥): من،
+                // وأيُّ باقة، وأنّ السريانَ بدأ الآن لا عند تفعيلٍ لاحق.
+                .then(() =>
+                  onDone(`سُجّل اشتراكُ ${which} لـ${who} — بدأ سريانه الآن`),
+                )
                 .catch((caught) => {
                   setError(
                     caught instanceof ApiError

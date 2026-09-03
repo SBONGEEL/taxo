@@ -10,7 +10,7 @@
  * وحدَها (SPEC القسم ١٤)، والمبلغُ في القيد نفسِه.
  */
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import {
@@ -21,8 +21,11 @@ import {
 import type { User, WalletOwnerType } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Field, Select } from "@/components/ui/Field";
-import { EmptyNote, SuccessNote } from "@/components/ui/Feedback";
+import { SuccessNote } from "@/components/ui/Feedback";
+import { MoneyField } from "@/components/ui/Inputs";
+import { Picker, type PickerOption } from "@/components/ui/Picker";
 import { useCountry } from "@/lib/country";
+import { currencyOf } from "@/lib/format";
 import { digits } from "@/lib/utils";
 
 /** مبلغٌ نصّاً: المالُ لا يمرّ بـ`Number` (SPEC §14). والسالبُ مسموحٌ هنا وحدَه. */
@@ -34,12 +37,38 @@ function amountText(raw: string): string {
 
 export function WalletDesk({ onError }: { onError: (m: string) => void }) {
   const { country } = useCountry();
-  const [query, setQuery] = useState("");
-  const [found, setFound] = useState<User[] | null>(null);
   const [picked, setPicked] = useState<User | null>(null);
+
+  /** **صفوفُ آخر بحثٍ بمعرّفها** — `Picker` يردّ سطرَ عرضٍ (معرّفٌ واسمٌ
+   *  وتمييز)، **وهذه الشاشةُ تحتاج الصفَّ كلَّه**: `roles` هي ما يقرّر
+   *  أبمحفظتين هو أم بواحدة، **ونداءٌ ثانٍ يقرأ الحسابَ بمعرّفه كان يضيف
+   *  رحلةً على السلك بلا خبرٍ جديد**. */
+  const rowsById = useRef(new Map<string, User>());
+
+  // **`useCallback` لأن `Picker` يضعها في تبعيّات `useEffect`.**
+  const findUsers = useCallback(
+    (query: string) =>
+      listUsers({ q: query, country_code: country, limit: 10 }).then((rows) => {
+        rowsById.current = new Map(rows.map((row) => [row.id, row]));
+        return rows.map((row) => ({
+          id: row.id,
+          label: row.name,
+          hint: digits(row.phone),
+        }));
+      }),
+    [country],
+  );
+
   /** **أيَّ محفظةٍ يصحّح** — يُسأل عنها **فقط** لحاملِ الدورين. وصاحبُ دورٍ
    *  واحدٍ لا محفظةَ ثانيةَ له، فالسؤالُ احتكاكٌ بلا قرار. */
   const [adjustWallet, setAdjustWallet] = useState<WalletOwnerType | "">("");
+
+  function pick(option: PickerOption | null) {
+    setPicked(option ? (rowsById.current.get(option.id) ?? null) : null);
+    // **وحالُ المحفظة تُصفَّر مع كلِّ تبديلِ حساب**: اختيارٌ بقي من حسابٍ سابقٍ
+    // يكتب قيداً على محفظةٍ لم يقصدها المشرف
+    setAdjustWallet("");
+  }
 
   /** **بمحفظتين أم بواحدة** — تُقرأ من الأدوار المنشورة لا من `role` وحدَه:
    *  العمودُ القديمُ يقول دوراً واحداً حتى لمن يحمل اثنين (نموذجُ الأدوار §21). */
@@ -65,57 +94,17 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
         <p className="mb-10 text-11.5 leading-note text-muted">
           بالاسم أو الرقم، وداخل السوق المعروض وحدَه.
         </p>
-        <div className="flex items-end gap-10">
-          <Field
-            className="flex-1"
-            label="بحث"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              setFound(null);
-              setPicked(null);
-              listUsers({ q: query.trim(), country_code: country, limit: 10 })
-                .then(setFound)
-                .catch((caught) => fail(caught, "تعذّر البحث"));
-            }}
-          >
-            ابحث
-          </Button>
-        </div>
-
-        {found?.length === 0 ? (
-          <EmptyNote
-            title="لا نتائج"
-            hint="لا حسابَ بهذا الاسم أو الرقم في هذا السوق."
-          />
-        ) : null}
-        {found && found.length > 0 ? (
-          <ul className="mt-12 grid gap-6">
-            {found.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  onClick={() => setPicked(row)}
-                  className={
-                    "flex w-full items-center justify-between rounded-12 border px-12 py-8 text-start " +
-                    (picked?.id === row.id
-                      ? "border-ink bg-surface-2"
-                      : "border-line")
-                  }
-                >
-                  <span className="text-12.5 text-ink">{row.name}</span>
-                  <span className="text-11.5 text-muted" dir="ltr">
-                    {digits(row.phone)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <Picker
+          label="بحث"
+          value={
+            picked
+              ? { id: picked.id, label: picked.name, hint: digits(picked.phone) }
+              : null
+          }
+          onPick={pick}
+          search={findUsers}
+          emptyText="لا حسابَ بهذا الاسم أو الرقم في هذا السوق."
+        />
       </section>
 
       {done ? <SuccessNote message={done} /> : null}
@@ -130,13 +119,14 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
               الرصيدُ لا يقلّ عن صفرٍ بقيدٍ في القاعدة نفسِها.
             </p>
             <div className="grid gap-10">
-              <Field
+              <MoneyField
                 label="المبلغ (بالسالب للخصم)"
-                dir="ltr"
                 value={adjustAmount}
-                onChange={(event) =>
-                  setAdjustAmount(amountText(event.target.value))
-                }
+                // **والمصفاةُ باقيةٌ كما كانت**: `MoneyField` يعرض العملةَ
+                // ويصوغ الصفرَ، **ولا يمنع حرفاً** — ونزعُ `amountText` كان
+                // يفتح باباً لنصٍّ يصل الخلفيةَ رقماً مالياً
+                onChange={(next) => setAdjustAmount(amountText(next))}
+                currency={currencyOf(country)}
               />
               <Field
                 label="السبب (إلزاميّ — يدخل سجلّ التدقيق)"
@@ -184,7 +174,11 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
                       : {}),
                   })
                     .then(() => {
-                      setDone("كُتب قيدُ التصحيح");
+                      // **يقول ماذا وقع بالضبط** (§39٫١٢٫٥): قيدٌ مضادٌّ لمن،
+                      // **ولا محوَ لما سبق** — وهو ما يخطئ فيه من يقرأ «تمّ»
+                      setDone(
+                        `كُتب قيدُ تصحيحٍ على حساب ${picked.name} — قيدٌ مضادٌّ لا محوٌ لما سبق`,
+                      );
                       setAdjustAmount("");
                       setAdjustReason("");
                       setAdjustWallet("");
@@ -206,13 +200,12 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
               والمرجعُ إلزاميٌّ لأنه ما يُطابَق به الإيصالُ الورقيُّ بعد شهر.
             </p>
             <div className="grid gap-10">
-              <Field
+              <MoneyField
                 label="المبلغ"
-                dir="ltr"
                 value={topupAmount}
-                onChange={(event) =>
-                  setTopupAmount(event.target.value.replace(/[^0-9.]/g, ""))
-                }
+                // **موجبٌ وحدَه هنا** — الشحنُ لا يخصم، والمصفاةُ كما كانت
+                onChange={(next) => setTopupAmount(next.replace(/[^0-9.]/g, ""))}
+                currency={currencyOf(country)}
               />
               <Field
                 label="مرجعُ الإيصال (إلزاميّ)"
@@ -231,7 +224,9 @@ export function WalletDesk({ onError }: { onError: (m: string) => void }) {
                     reference: topupReference.trim(),
                   })
                     .then(() => {
-                      setDone("سُجّل الشحنُ وأُكِّد");
+                      setDone(
+                        `شُحنت محفظةُ ${picked.name} وأُكِّدت — الرصيدُ تحرّك الآن`,
+                      );
                       setTopupAmount("");
                       setTopupReference("");
                     })
