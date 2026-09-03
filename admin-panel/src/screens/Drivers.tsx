@@ -57,6 +57,7 @@ import { Advances } from "@/components/Advances";
 import {
   AccountSection,
   ChargesSection,
+  ControlsSection,
   RidesSection,
   WalletSection,
 } from "@/components/profile/Sections";
@@ -636,6 +637,16 @@ function DriverDrawer({
         <MoneyOwedSection driverId={row.driver_id} />
         <RidesSection side="driver" id={row.driver_id} />
         <ChargesSection userId={row.user_id} country={row.country_code} />
+        {/* **البند ١١** (§39٫١١، §46): تصحيحُ البيانات ورسالةٌ فرديّة —
+            **ومعها الحظرُ هنا وحدَه**: `POST /admin/users/{id}/block` بابٌ لم
+            يكن يبلغه أحدٌ من درج الكبتن، فحسابُ كبتنٍ لا يُحظر من اللوحة
+            البتّة (شاشةُ الركّاب تفرز `role=rider`، والمستخدمون يفرزون
+            الموظّفين). ودرجُ الراكب يحمل زرَّه سلفاً فلا يُرسم له ثانٍ */}
+        <ControlsSection
+          userId={row.user_id}
+          showBlock
+          onChanged={(message) => onDone(message)}
+        />
 
         <h3 className="mb-10 mt-18 text-13 font-bold text-muted">الوثائق</h3>
         {docs === null ? (

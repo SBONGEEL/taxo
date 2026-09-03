@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 from fastapi.responses import FileResponse
 from sqlalchemy import func, or_, select
 
@@ -30,6 +30,7 @@ from app.core.deps import (
     StaffUser,
     UsersManager,
 )
+from app.core.email import normalize_email
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.deactivation import DeactivationRequest
 from app.models.driver import Driver, DriverDocument, required_document_types
@@ -54,7 +55,9 @@ from app.schemas.auth import (
     AdminPermissionsIn,
     AdminPermissionsOut,
     UserBlockUpdate,
+    UserMessageIn,
     UserOut,
+    UserProfileUpdate,
 )
 from app.schemas.driver import (
     AdminAdvanceIn,
@@ -160,6 +163,122 @@ async def get_user(
     if user is None:
         raise NotFound("الحساب غير موجود")
     return UserOut.model_validate(user)
+
+
+@router.patch("/users/{user_id}", response_model=UserOut)
+async def update_user_profile(
+    user_id: uuid.UUID,
+    payload: UserProfileUpdate,
+    admin: UsersManager,
+    session: DbSession,
+) -> UserOut:
+    """تعديلُ اسمِ حسابٍ وبريدِه من ملفّه — **البند ١١ (§39٫١١، §46)**.
+
+    **وحقلان لا أكثر، وكلُّ غائبٍ غائبٌ بعلّته المكتوبة في `UserProfileUpdate`**:
+    الهاتفُ مُعرِّفُ دخولٍ لا حقلُ اتصال، والسوقُ يُختم على كلِّ رحلةٍ ودفعة،
+    والأدوارُ والحظرُ والجنسُ لكلٍّ بابُه وحارسُه.
+
+    **وكتابةُ بريدٍ تُسقط إثباتَه دائماً**: المُثبَتُ وحدَه يحجز العنوان
+    (الفهرسُ الجزئيُّ) ويصلح قناةَ استرجاع (§31) — **فبريدٌ يكتبه مشرفٌ ويبقى
+    مُثبَتاً بابُ استيلاءٍ على حساب**. فيبقى بياناً يُراسَل به **حتى يُثبته
+    صاحبُه**.
+
+    **والقيمةُ قبل وبعد في التدقيق** (§40٫١): «عُدِّل الاسم» لا تقول شيئاً بعد
+    شهر.
+    """
+    user = await session.get(User, user_id)
+    if user is None:
+        raise NotFound("الحساب غير موجود")
+
+    fields = payload.model_dump(exclude_unset=True)
+    changes: dict[str, dict[str, object]] = {}
+
+    if "name" in fields and fields["name"] is not None:
+        after = fields["name"].strip()
+        if not after:
+            raise InvalidInput("الاسم مطلوب — ولا يُمحى اسمُ حساب.")
+        if after != user.name:
+            changes["name"] = {"before": user.name, "after": after}
+            user.name = after
+
+    if "email" in fields:
+        raw_email = (fields["email"] or "").strip()
+        after_email = normalize_email(raw_email) if raw_email else None
+        if after_email != user.email:
+            changes["email"] = {"before": user.email, "after": after_email}
+            user.email = after_email
+            # **الإثباتُ يسقط مع كلِّ كتابةٍ من اللوحة** — ولو أُعيد العنوانُ
+            # نفسُه لاحقاً فصاحبُه هو من يُثبته
+            if user.email_verified_at is not None:
+                changes["email_verified_at"] = {
+                    "before": user.email_verified_at.isoformat(),
+                    "after": None,
+                }
+                user.email_verified_at = None
+
+    if not changes:
+        return UserOut.model_validate(user)
+
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="user",
+        entity_id=user.id,
+        changes=changes,
+    )
+    await session.commit()
+    await session.refresh(user)
+    return UserOut.model_validate(user)
+
+
+@router.post("/users/{user_id}/notify", status_code=status.HTTP_204_NO_CONTENT)
+async def notify_one_user(
+    user_id: uuid.UUID,
+    payload: UserMessageIn,
+    admin: UsersManager,
+    session: DbSession,
+    redis: RedisDep,
+) -> None:
+    """رسالةٌ فرديةٌ إلى صاحب حساب — **بمسار FCM القائم لا بمسارٍ جديد**.
+
+    **شرطُ المالك بنصِّه** (§39٫١١): «وإرسالُ إشعارٍ فرديٍّ له يمرّ بمسار FCM
+    القائم لا بمسارٍ جديد، نصُّه بالعربية ومختومٌ في التدقيق».
+
+    **فالصندوقُ ثمّ Push** من `notifications.publish_admin_message` — ومنه
+    تأتي كلُّ خصائص المسار: صفٌّ يبقى ولو لم يكن ثمّة عقدُ FCM، وتعطيلُ
+    الرموز الميتة، وابتلاعُ عطبِ المزوّد فلا يسقط الطلب.
+
+    **والنصُّ يدخل التدقيق كاملاً**: «أُرسلت رسالة» لا تقول شيئاً بعد شهر،
+    **ومن يُسأل عمّا كُتب لحسابٍ يحتاج ما كُتب**. وهو نفسُ سببِ حفظ سببِ الحظر.
+
+    **ولا يُرسل إلى موظّف**: اللوحةُ ليست صندوقَ بريدٍ داخلياً، **ورسالةٌ إلى
+    مشرفٍ من مشرفٍ تخلط قناةَ العملاء بقناة العمل**.
+    """
+    user = await session.get(User, user_id)
+    if user is None:
+        raise NotFound("الحساب غير موجود")
+    if user.role in (UserRole.ADMIN, UserRole.SUPPORT):
+        raise InvalidInput(
+            "لا تُرسل رسالةُ عملاءَ إلى حساب موظّف — القناةُ لصاحب التطبيق."
+        )
+
+    title = payload.title.strip()
+    body = payload.body.strip()
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.CREATE,
+        entity_type="user_message",
+        entity_id=user.id,
+        details={"title": title, "body": body},
+    )
+    await session.commit()
+
+    # **البثُّ بعد الـcommit** كبقية النواشر: حدثٌ يُعلَن قبل أن يثبت قد يُلغى
+    await notifications.publish_admin_message(
+        session, redis, user_id=user.id, title=title, body=body
+    )
 
 
 @router.post("/users/{user_id}/block", response_model=UserOut)

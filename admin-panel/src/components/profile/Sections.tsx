@@ -6,12 +6,19 @@
  * الأسماء قبل أن تُجمع في `lib/labels.ts`.
  */
 
+import { useState } from "react";
+
+import { ApiError } from "@/api/client";
 import {
+  blockUser,
   getUser,
   getWallet,
   listCancellationCharges,
   listRides,
   listWalletTransactions,
+  notifyUser,
+  unblockUser,
+  updateUserProfile,
 } from "@/api/endpoints";
 import type { CountryCode, User } from "@/api/types";
 import {
@@ -23,6 +30,9 @@ import {
   useLoader,
 } from "@/components/Profile";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { day, moment, money } from "@/lib/format";
 import {
   CHARGE_STATUS_LABEL,
@@ -98,6 +108,13 @@ export function AccountSection({
             ) : user.phone_verified ? null : (
               <Badge tone="warn">رقمٌ غير مُثبت</Badge>
             )}
+            {/* **حالٌ ثالثةٌ لا تُخلط بالحظر** (§32٫٤): الحظرُ قرارُ مشرفٍ
+                بسببٍ مكتوب، **وهذا إيقافٌ آليٌّ يشفي نفسَه بتأكيد الرقم**.
+                **وكان الموقوفُ بالحملة يُقرأ هنا «نشطاً»** — والحقلُ تنشره
+                الخلفيةُ منذ §32 ولم يقرأه أحد */}
+            {user.suspension ? (
+              <Badge tone="warn">موقوفٌ بحملة تأكيد الأرقام</Badge>
+            ) : null}
             {user.roles.map((role) => (
               <Badge key={role} tone="ink">
                 {ROLE_LABEL[role] ?? role}
@@ -298,5 +315,251 @@ export function ChargesSection({
         />
       )}
     </ProfileSection>
+  );
+}
+
+
+/** قسمُ «التحكّم والتواصل» — **البند ١١ (§39٫١١، §46)**.
+ *
+ * **ثلاثةُ أفعالٍ في مكانٍ واحدٍ هو الملفُّ نفسُه**: تصحيحُ بياناته، وإيقافُه
+ * ورفعُه بسببٍ مكتوب، ورسالةٌ إليه. **ومن أراد واحداً منها كان يبحث عن شاشةٍ
+ * أخرى** — أو لا يجد باباً أصلاً.
+ *
+ * ## وثلاثةُ حدودٍ مكتوبة
+ *
+ * **١) الحقلان لا أكثر**: الهاتفُ مُعرِّفُ الدخول، والسوقُ يُختم على كلِّ
+ * رحلةٍ ودفعة، **والأدوارُ والحظرُ وجنسُ الكبتن لكلٍّ بابُه وحارسُه** —
+ * وحقلٌ رابعٌ هنا يقفز فوق واحدٍ منها.
+ *
+ * **٢) وكتابةُ البريد تُسقط إثباتَه**: المُثبَتُ وحدَه يحجز العنوان ويصلح
+ * قناةَ استرجاع (§31)، **فبريدٌ يكتبه مشرفٌ ويبقى مُثبَتاً بابُ استيلاءٍ على
+ * حساب**. **والخلفيةُ هي من تُسقطه، والشاشةُ تقول ذلك ولا تفعله.**
+ *
+ * **٣) والرسالةُ ليست حملة**: تمرّ بمسار FCM القائم — صندوقُ الوارد ثمّ Push
+ * لمن كان تطبيقُه مغلقاً — **ونصُّها يدخل سجلَّ التدقيق كاملاً**.
+ */
+export function ControlsSection({
+  userId,
+  known,
+  onChanged,
+  showBlock = false,
+}: {
+  userId: string;
+  /** الصفُّ نفسُه حين تملكه الشاشةُ — **فلا يُنادى بابٌ لِما بين اليد**. */
+  known?: User;
+  onChanged: (message: string) => void;
+  /** **الإيقافُ يُرسم حيث لا زرَّ له سلفاً**: درجُ الراكب يحمل زرَّه ومعه
+   *  حقلُ سببٍ يشترك فيه مع تجميد المحفظة — **وزرٌّ ثانٍ للفعل نفسِه في
+   *  الدرج نفسِه يجعل نصفَ الحظور بلا سبب**. **ودرجُ الكبتن لا زرَّ فيه
+   *  أصلاً**: `POST /admin/users/{id}/block` بابٌ لم يكن يبلغه أحدٌ من هناك،
+   *  فحسابُ كبتنٍ لا يُحظر من اللوحة البتّة. */
+  showBlock?: boolean;
+}) {
+  const load = useLoader(
+    () => (known ? Promise.resolve(known) : getUser(userId)),
+    [userId, known],
+  );
+  return (
+    <ProfileSection<User>
+      title="التحكّم والتواصل"
+      hint="تصحيحُ بياناته، ورسالةٌ إليه — والهاتفُ والسوقُ لا يُحرَّران من هنا."
+      load={load}
+    >
+      {(user, reload) => (
+        <Controls
+          user={user}
+          showBlock={showBlock}
+          onChanged={(message) => {
+            reload();
+            onChanged(message);
+          }}
+        />
+      )}
+    </ProfileSection>
+  );
+}
+
+/** جسدُ القسم — **مفصولٌ لأن الحالةَ تُبتدأ من صفٍّ وصل**، ومكوّنٌ يبتدئ
+ *  حالتَه من خاصيّةٍ تصل متأخّرةً يبقى على القيمة الأولى. */
+function Controls({
+  user,
+  onChanged,
+  showBlock,
+}: {
+  user: User;
+  onChanged: (message: string) => void;
+  showBlock: boolean;
+}) {
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email ?? "");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  async function run(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError(null);
+    setNote(null);
+    try {
+      await action();
+      setNote(message);
+      onChanged(message);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر التنفيذ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const edited =
+    name.trim() !== user.name || email.trim() !== (user.email ?? "");
+
+  return (
+    <section className="mt-14 rounded-14 border border-line bg-surface-2 p-14">
+      <h3 className="mb-10 text-13 font-bold text-ink">التحكّم والتواصل</h3>
+      <ErrorNote message={error} />
+      <SuccessNote message={note} />
+
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          label="الاسم"
+          name="profile_name"
+          value={name}
+          maxLength={120}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <Field
+          label="البريد"
+          name="profile_email"
+          dir="ltr"
+          value={email}
+          maxLength={320}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </div>
+      <p className="mt-6 text-10.5 leading-note text-muted">
+        وكتابةُ بريدٍ من هنا تُسقط إثباتَه — يبقى بياناً يُراسَل به حتى يُثبته
+        صاحبُه. والهاتفُ والسوقُ لا يُحرَّران: أوّلُهما مُعرّفُ الدخول،
+        والثاني مختومٌ على كلِّ رحلةٍ ودفعة.
+      </p>
+      <Button
+        className="mt-10"
+        size="sm"
+        variant="secondary"
+        disabled={busy || !edited || name.trim().length < 2}
+        onClick={() =>
+          void run(
+            () =>
+              updateUserProfile(user.id, {
+                name: name.trim(),
+                email: email.trim() || null,
+              }),
+            "حُفظ التعديل — والقيمةُ قبل وبعد في سجل التدقيق.",
+          )
+        }
+      >
+        احفظ البيانات
+      </Button>
+
+      <h4 className="mb-8 mt-16 text-11.5 font-bold text-muted">
+        رسالةٌ إلى صاحب الحساب
+      </h4>
+      <Field
+        label="العنوان"
+        name="message_title"
+        value={title}
+        maxLength={80}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <div className="mt-8">
+        <label className="mb-6 block text-11.5 text-muted">النص</label>
+        <textarea
+          name="message_body"
+          rows={3}
+          value={body}
+          maxLength={600}
+          onChange={(event) => setBody(event.target.value)}
+          className="w-full rounded-12 border border-line bg-surface px-12 py-10 text-12 leading-note text-ink"
+        />
+      </div>
+      <p className="mt-6 text-10.5 leading-note text-muted">
+        تصل صندوقَ الوارد في تطبيقه، وتُدفع إلى جهازه إن كان مغلقاً — ونصُّها
+        يُحفظ في سجل التدقيق كما كُتب.
+      </p>
+      <Button
+        className="mt-10"
+        size="sm"
+        variant="secondary"
+        disabled={busy || title.trim().length < 2 || body.trim().length < 2}
+        onClick={() =>
+          void run(async () => {
+            await notifyUser(user.id, {
+              title: title.trim(),
+              body: body.trim(),
+            });
+            setTitle("");
+            setBody("");
+          }, "أُرسلت الرسالة إلى صندوق وارده.")
+        }
+      >
+        أرسِل
+      </Button>
+
+      {showBlock ? (
+        <>
+          <h4 className="mb-8 mt-16 text-11.5 font-bold text-muted">
+            حالُ الحساب
+          </h4>
+          <Field
+            label="السبب"
+            name="block_reason"
+            placeholder="يدخل سجل التدقيق ولا يصل صاحب الحساب"
+            value={reason}
+            maxLength={255}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <div className="mt-10">
+            {user.is_blocked ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() =>
+                  void run(
+                    () => unblockUser(user.id, reason.trim() || undefined),
+                    "رُفع الحظر عن الحساب.",
+                  )
+                }
+              >
+                رفع الحظر
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="border-danger text-danger"
+                disabled={busy || reason.trim().length < 3}
+                onClick={() =>
+                  void run(
+                    () => blockUser(user.id, reason.trim()),
+                    "حُظر الحساب — لا يدخل ولا يطلب رحلة.",
+                  )
+                }
+              >
+                احظر الحساب
+              </Button>
+            )}
+          </div>
+          <p className="mt-8 text-10.5 leading-note text-muted">
+            الحظرُ يسري على الجلسة القائمة فوراً — العمودُ يُقرأ في كلِّ طلب.
+            **وهو غيرُ إيقاف حملة تأكيد الأرقام**: ذاك يُفكّ بتأكيد الرقم
+            وحدَه، بلا مشرف.
+          </p>
+        </>
+      ) : null}
+    </section>
   );
 }

@@ -37,6 +37,7 @@ import type { User, Wallet, WalletTransaction } from "@/api/types";
 import {
   AccountSection,
   ChargesSection,
+  ControlsSection,
   RidesSection,
 } from "@/components/profile/Sections";
 import { Shell } from "@/components/Shell";
@@ -315,6 +316,14 @@ function RiderDrawer({
         <AccountSection userId={user.id} known={user} fallbackName={user.name} />
         <RidesSection side="rider" id={user.id} />
         <ChargesSection userId={user.id} country={user.country_code} />
+        {/* **البند ١١** (§39٫١١، §46) — **وبلا زرِّ حظرٍ هنا**: الدرجُ يحمله
+            أسفلَه ومعه حقلُ سببٍ يشترك فيه مع تجميد المحفظة، **وزرٌّ ثانٍ
+            للفعل نفسِه في الدرج نفسِه يجعل نصفَ الحظور بلا سبب** */}
+        <ControlsSection
+          userId={user.id}
+          known={user}
+          onChanged={(message) => setNote(message)}
+        />
 
         <h3 className="mb-10 mt-18 text-13 font-bold text-muted">المحفظة</h3>
         {wallet === null ? (

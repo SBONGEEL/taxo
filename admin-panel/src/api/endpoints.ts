@@ -713,6 +713,23 @@ export const setAdminPermissions = (userId: string, permissions: string[]) =>
   api.put<AdminPermissions>(`/admin/permissions/${userId}`, { permissions });
 
 /** الحظرُ **بسببٍ إلزامي** يدخل سجل التدقيق ولا يصل صاحب الحساب. */
+/** تعديلُ اسمِ حسابٍ وبريدِه من ملفّه — **البند ١١**.
+ *
+ * **وحقلان لا أكثر**: الهاتفُ مُعرِّفُ دخول، والسوقُ يُختم على كلِّ رحلة،
+ * والأدوارُ والحظرُ والجنسُ لكلٍّ بابُه. **وكتابةُ بريدٍ تُسقط إثباتَه** —
+ * فبريدٌ يكتبه مشرفٌ ويبقى مُثبَتاً بابُ استيلاءٍ على حساب.
+ */
+export const updateUserProfile = (
+  userId: string,
+  body: { name?: string; email?: string | null },
+) => api.patch<User>(`/admin/users/${userId}`, body);
+
+/** رسالةٌ فرديةٌ إلى صاحب حساب — **بمسار FCM القائم**، ونصُّها في التدقيق. */
+export const notifyUser = (
+  userId: string,
+  body: { title: string; body: string },
+) => api.post<void>(`/admin/users/${userId}/notify`, body);
+
 export const blockUser = (userId: string, reason: string) =>
   api.post<User>(`/admin/users/${userId}/block`, { reason });
 
