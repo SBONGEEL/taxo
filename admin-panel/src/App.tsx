@@ -70,6 +70,9 @@ const ProvidersScreen = lazy(() =>
 const ReleasesScreen = lazy(() =>
   import("@/screens/Releases").then((m) => ({ default: m.ReleasesScreen })),
 );
+const PoliciesScreen = lazy(() =>
+  import("@/screens/Policies").then((m) => ({ default: m.PoliciesScreen })),
+);
 const RidesScreen = lazy(() =>
   import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
 );
@@ -319,6 +322,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <ReleasesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/policies"
+                    element={
+                      <Guarded>
+                        <PoliciesScreen />
                       </Guarded>
                     }
                   />

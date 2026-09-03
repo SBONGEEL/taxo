@@ -25,7 +25,12 @@ import type {
   AdvanceSetting,
   AppConfig,
   AppRelease,
+  AppVersion,
   ClientApp,
+  OrgProfile,
+  PolicyApp,
+  PolicyDocType,
+  PolicyVersion,
   AuditAction,
   AuditLog,
   AuthResponse,
@@ -1496,3 +1501,38 @@ export const getAppVersion = (
     anonymous: true,
     query: build === null ? { app } : { app, build },
   });
+
+// ------------------------------------------------ السياساتُ والشروط (البند ١٠)
+
+export const listPolicies = (params: {
+  country_code?: CountryCode;
+  doc_type?: PolicyDocType;
+  app?: PolicyApp;
+}) => api.get<PolicyVersion[]>("/admin/policies", { query: params });
+
+/** **نسخةٌ جديدةٌ تولد مسوّدة** — والنشرُ فعلٌ ثانٍ، فحفظٌ ينشر يجعل كلَّ
+ *  تصحيحٍ إعلاناً. ولا بابَ تعديلٍ: من أراد تصحيحَ حرفٍ كتب نسخة. */
+export const createPolicyVersion = (body: {
+  country_code: CountryCode;
+  doc_type: PolicyDocType;
+  app: PolicyApp;
+  body_ar: string;
+  body_en?: string | null;
+  requires_reconsent: boolean;
+}) => api.post<PolicyVersion>("/admin/policies", body);
+
+export const publishPolicy = (policyId: string) =>
+  api.post<PolicyVersion>(`/admin/policies/${policyId}/publish`);
+
+/** **سحبُ النشر** — فيعود السوقُ بلا وثيقةٍ قائمة، **ولا يُمحى شيء**.
+ *  وحالٌ تُدخَل ولا يُخرج منها «بابٌ بلا زرّ في اتجاهٍ واحد». */
+export const withdrawPolicy = (policyId: string) =>
+  api.post<PolicyVersion>(`/admin/policies/${policyId}/withdraw`);
+
+export const deletePolicyDraft = (policyId: string) =>
+  api.del<void>(`/admin/policies/${policyId}`);
+
+export const getOrgProfile = () => api.get<OrgProfile>("/admin/policies/org");
+
+export const saveOrgProfile = (body: OrgProfile) =>
+  api.put<OrgProfile>("/admin/policies/org", body);

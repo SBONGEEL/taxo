@@ -1592,3 +1592,37 @@ export interface AppVersion {
   /** كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **من اللوحة لا من التطبيق**. */
   reminder_hours: number | null;
 }
+
+// ------------------------------------------------ السياساتُ والشروط (البند ١٠)
+
+/** أيُّ وثيقة — **وثيقتان مستقلّتان لا واحدة** (§34). */
+export type PolicyDocType = "privacy_policy" | "terms_of_use";
+
+/** أيُّ تطبيقٍ تخصّه — **ولا عضوَ للمشرف** بقرارٍ مكتوب (§34). */
+export type PolicyApp = "rider" | "driver";
+
+/** نسخةٌ من وثيقة — **وكلُّ حفظٍ نسخةٌ جديدة، ولا تحريرَ فوق نفسه**. */
+export interface PolicyVersion {
+  id: string;
+  country_code: CountryCode;
+  doc_type: PolicyDocType;
+  app: PolicyApp;
+  version: number;
+  /** **أدنى نسخةٍ تُبرئ** — يكتبها بابُ الحفظ وحدَه. */
+  min_accepted_version: number;
+  body_ar: string;
+  body_en: string | null;
+  requires_reconsent: boolean;
+  is_published: boolean;
+  published_at: string | null;
+  /** **عددُ من وافق** — محسوبٌ في الخلفية، ومنه يُرسم زرُّ الحذف معطَّلاً. */
+  consents: number;
+  created_at: string;
+}
+
+/** بيانُ الجهة — **صفٌّ واحدٌ لا صفٌّ لكلِّ سوق**، وفراغُه حالٌ صحيحة. */
+export interface OrgProfile {
+  legal_name: string | null;
+  address: string | null;
+  privacy_email: string | null;
+}
