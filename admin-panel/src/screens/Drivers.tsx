@@ -173,8 +173,13 @@ function DocumentPreview({
             <span className="shrink-0 text-11 font-semibold text-inv">
               تنتهي في
             </span>
+            {/* **حقلٌ خامٌ لا `Field` بقصد**: هذا عائمٌ على حافة صورة الوثيقة
+                داخل `<label>` واحدة، **و`Field` يلفّ نفسَه في `div` بتسميةٍ
+                فوقه** فيكسر الطبقة. **والاتّجاهُ يُكتب بيدٍ هنا وحدَه** —
+                والخمسةُ الباقيةُ تأخذه من `Field` نفسِه (§39٫١٢٫٢). */}
             <input
               type="date"
+              dir="ltr"
               value={expiry}
               onChange={(event) => onExpiryChange(event.target.value)}
               className="fld flex-1 py-4 text-11.5"

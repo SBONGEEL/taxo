@@ -31,6 +31,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
+import { DurationField } from "@/components/ui/Inputs";
 import { Storefront } from "@/components/Storefront";
 import { VerificationCampaign } from "@/components/VerificationCampaign";
 import {
@@ -1112,10 +1113,10 @@ function PaymentForm({
   onSaved: (message: string) => void;
   onError: (caught: unknown) => void;
 }) {
-  const [hours, setHours] = useState(String(row.cliq_confirmation_hours));
+  const [hours, setHours] = useState(row.cliq_confirmation_hours);
   const [alias, setAlias] = useState(row.cliq_alias ?? "");
-  const [reviewMin, setReviewMin] = useState(String(row.cliq_review_min_minutes));
-  const [reviewMax, setReviewMax] = useState(String(row.cliq_review_max_minutes));
+  const [reviewMin, setReviewMin] = useState(row.cliq_review_min_minutes);
+  const [reviewMax, setReviewMax] = useState(row.cliq_review_max_minutes);
   // **فارغٌ يعني «لا سقفَ»** — والحقلُ لا يُملأ بصفرٍ ولا بافتراضٍ مخترَع
   const [debtCeiling, setDebtCeiling] = useState(row.driver_debt_ceiling ?? "");
   const [qrBusy, setQrBusy] = useState(false);
@@ -1142,16 +1143,13 @@ function PaymentForm({
 
   return (
     <>
-      <Field
+      <DurationField
         name="cliq_confirmation_hours"
-        label="عدد الساعات"
-        dir="ltr"
-        inputMode="numeric"
+        label="مهلة تأكيد الحوالة"
+        wire="hour"
         value={hours}
         disabled={disabled}
-        onChange={(event) =>
-          setHours(event.target.value.replace(/[^0-9]/g, ""))
-        }
+        onChange={setHours}
       />
       <p className="mt-6 text-11 text-muted">
         الحالي: {digits(String(row.cliq_confirmation_hours))} ساعة
@@ -1164,7 +1162,7 @@ function PaymentForm({
         loading={busy}
         onClick={() =>
           save(
-            { cliq_confirmation_hours: Number(hours) },
+            { cliq_confirmation_hours: hours },
             "حُفظت المهلة — تسري على ما يأتي بعدها",
           )
         }
@@ -1195,27 +1193,21 @@ function PaymentForm({
         {/* **العددان وعدٌ لمن يدفع** — «خلال ٣ إلى ٥ دقائق» تصير كذباً يومَ
             تكثر الطلباتُ ولا تلحق المراجعة، **فتُعدَّل بلا نشر** */}
         <div className="mt-12 grid grid-cols-2 gap-10">
-          <Field
+          <DurationField
             name="cliq_review_min_minutes"
-            label="أدنى دقائق المراجعة"
-            dir="ltr"
-            inputMode="numeric"
+            label="أدنى مدّة المراجعة"
+            wire="minute"
             value={reviewMin}
             disabled={disabled}
-            onChange={(event) =>
-              setReviewMin(event.target.value.replace(/[^0-9]/g, ""))
-            }
+            onChange={setReviewMin}
           />
-          <Field
+          <DurationField
             name="cliq_review_max_minutes"
-            label="أعلى دقائق المراجعة"
-            dir="ltr"
-            inputMode="numeric"
+            label="أعلى مدّة المراجعة"
+            wire="minute"
             value={reviewMax}
             disabled={disabled}
-            onChange={(event) =>
-              setReviewMax(event.target.value.replace(/[^0-9]/g, ""))
-            }
+            onChange={setReviewMax}
           />
         </div>
         <p className="mt-6 text-11 leading-snug text-muted">
@@ -1256,8 +1248,8 @@ function PaymentForm({
             save(
               {
                 cliq_alias: alias.trim(),
-                cliq_review_min_minutes: Number(reviewMin),
-                cliq_review_max_minutes: Number(reviewMax),
+                cliq_review_min_minutes: reviewMin,
+                cliq_review_max_minutes: reviewMax,
                 // **الفارغُ يُرسَل `null` صراحةً** لا يُحذف من الحمولة:
                 // حقلٌ محذوفٌ يُقرأ «لم يُمسّ» فلا يُمحى سقفٌ قائم
                 driver_debt_ceiling: debtCeiling.trim() || null,
@@ -1437,8 +1429,8 @@ function SharingForm({
 }) {
   const [percent, setPercent] = useState(row.discount_percent);
   const [corridor, setCorridor] = useState(row.corridor_km);
-  const [detour, setDetour] = useState(String(row.max_detour_minutes));
-  const [wait, setWait] = useState(String(row.partner_wait_seconds));
+  const [detour, setDetour] = useState(row.max_detour_minutes);
+  const [wait, setWait] = useState(row.partner_wait_seconds);
   const [busy, setBusy] = useState(false);
 
   return (
@@ -1472,23 +1464,20 @@ function SharingForm({
             setCorridor(event.target.value.replace(/[^0-9.]/g, ""))
           }
         />
-        <Field
+        <DurationField
           name="max_detour_minutes"
-          label="أقصى التفاف (دقيقة)"
-          dir="ltr"
-          inputMode="numeric"
+          label="أقصى التفاف"
+          wire="minute"
           value={detour}
           disabled={disabled}
-          onChange={(event) => setDetour(event.target.value.replace(/[^0-9]/g, ""))}
+          onChange={setDetour}
         />
-        <Field
+        <DurationField
           name="partner_wait_seconds"
-          label="انتظار الشريك (ثانية)"
-          dir="ltr"
-          inputMode="numeric"
+          label="انتظار الشريك"
           value={wait}
           disabled={disabled}
-          onChange={(event) => setWait(event.target.value.replace(/[^0-9]/g, ""))}
+          onChange={setWait}
         />
       </div>
       <p className="mt-6 text-11 leading-snug text-muted">
@@ -1501,15 +1490,20 @@ function SharingForm({
       <Button
         className="mt-14"
         size="sm"
-        disabled={disabled || percent === "" || corridor === "" || detour === "" || wait === ""}
+        // **والمدّتان خرجتا من الشرط ولم تصيرا `=== 0`** (قِيس في
+        // `schemas/sharing.py`): `max_detour_minutes` و`partner_wait_seconds`
+        // كلتاهما `ge=0` — **فالصفرُ إعدادٌ صحيح** («لا التفافَ» و«لا انتظار»)،
+        // وحقلُ المدّة لا يُترك فارغاً أصلاً. **ومنعُه كان سيمنع ضبطاً تقبله
+        // الخلفية.**
+        disabled={disabled || percent === "" || corridor === ""}
         loading={busy}
         onClick={() => {
           setBusy(true);
           updateSharingSettings(row.country_code, {
             discount_percent: percent,
             corridor_km: corridor,
-            max_detour_minutes: Number(detour),
-            partner_wait_seconds: Number(wait),
+            max_detour_minutes: detour,
+            partner_wait_seconds: wait,
           })
             .then(() =>
               onSaved("حُفظت المشاركة — تسري على الطلب التالي، ولا تمسّ رحلةً قائمة"),
@@ -1540,7 +1534,7 @@ function AdvanceForm({
 }) {
   const [percent, setPercent] = useState(String(row.deduction_percent));
   const [kept, setKept] = useState(row.min_kept_amount);
-  const [term, setTerm] = useState(String(row.term_days));
+  const [term, setTerm] = useState(row.term_days);
   const [rides, setRides] = useState(String(row.min_completed_rides));
   const [rating, setRating] = useState(row.min_rating);
   const [growth, setGrowth] = useState(String(row.growth_percent_per_repaid));
@@ -1571,14 +1565,13 @@ function AdvanceForm({
           disabled={disabled}
           onChange={(event) => setKept(decimal(event.target.value))}
         />
-        <Field
+        <DurationField
           name="term_days"
-          label="مهلة التحصيل (يوماً)"
-          dir="ltr"
-          inputMode="numeric"
+          label="مهلة التحصيل"
+          wire="day"
           value={term}
           disabled={disabled}
-          onChange={(event) => setTerm(digits(event.target.value))}
+          onChange={setTerm}
         />
         <Field
           name="min_completed_rides"
@@ -1625,14 +1618,16 @@ function AdvanceForm({
       <Button
         className="mt-14"
         size="sm"
-        disabled={disabled || percent === "" || term === ""}
+        // **`term_days` صفراً ترفضه الخلفية** (`gt=0` في `schemas/driver.py`)،
+        // فالشرطُ يقول ما كانت تقوله الفراغيّةُ نفسَه — **ويقوله قبل النداء**
+        disabled={disabled || percent === "" || term === 0}
         loading={busy}
         onClick={() => {
           setBusy(true);
           updateAdvanceSettings(row.country_code, {
             deduction_percent: Number(percent),
             min_kept_amount: kept,
-            term_days: Number(term),
+            term_days: term,
             min_completed_rides: Number(rides),
             min_rating: rating,
             growth_percent_per_repaid: Number(growth),
@@ -1673,8 +1668,8 @@ function CancellationForm({
   const [metres, setMetres] = useState(String(row.exempt_within_meters));
   const [silent, setSilent] = useState(row.exempt_when_location_unknown);
   const [block, setBlock] = useState(String(row.block_after_unpaid));
-  const [grace, setGrace] = useState(String(row.carrier_grace_hours));
-  const [days, setDays] = useState(String(row.unpaid_after_days));
+  const [grace, setGrace] = useState(row.carrier_grace_hours);
+  const [days, setDays] = useState(row.unpaid_after_days);
   const [outcome, setOutcome] = useState<UnpaidCancellationOutcome>(
     row.unpaid_outcome,
   );
@@ -1703,23 +1698,21 @@ function CancellationForm({
           disabled={disabled}
           onChange={(event) => setBlock(digits(event.target.value))}
         />
-        <Field
+        <DurationField
           name="carrier_grace_hours"
-          label="مهلة الكبتن الحامل (ساعة)"
-          dir="ltr"
-          inputMode="numeric"
+          label="مهلة الكبتن الحامل"
+          wire="hour"
           value={grace}
           disabled={disabled}
-          onChange={(event) => setGrace(digits(event.target.value))}
+          onChange={setGrace}
         />
-        <Field
+        <DurationField
           name="unpaid_after_days"
-          label="مدة الدَّين قبل الإجراء (يوماً)"
-          dir="ltr"
-          inputMode="numeric"
+          label="مدة الدَّين قبل الإجراء"
+          wire="day"
           value={days}
           disabled={disabled}
-          onChange={(event) => setDays(digits(event.target.value))}
+          onChange={setDays}
         />
       </div>
 
@@ -1766,8 +1759,8 @@ function CancellationForm({
             exempt_within_meters: Number(metres),
             exempt_when_location_unknown: silent,
             block_after_unpaid: Number(block),
-            carrier_grace_hours: Number(grace),
-            unpaid_after_days: Number(days),
+            carrier_grace_hours: grace,
+            unpaid_after_days: days,
             unpaid_outcome: outcome,
           })
             .then(() =>
@@ -1863,13 +1856,15 @@ function OtpForm({
   onSaved: (message: string) => void;
   onError: (caught: unknown) => void;
 }) {
-  const [windowMinutes, setWindowMinutes] = useState(String(row.window_minutes));
+  // **المددُ أعدادٌ لا نصوص**: `DurationField` يحمل العددَ ووحدتَه، **والنصُّ
+  // كان يلزم لأن الحقلَ الخامَ يعطي نصّاً** (§39٫١٢٫٢).
+  const [windowMinutes, setWindowMinutes] = useState(row.window_minutes);
   const [perWindow, setPerWindow] = useState(String(row.max_per_window));
   const [perDay, setPerDay] = useState(String(row.max_per_day));
   const [perSignup, setPerSignup] = useState(String(row.max_per_registration));
-  const [lockout, setLockout] = useState(String(row.lockout_minutes));
-  const [resendBase, setResendBase] = useState(String(row.resend_base_seconds));
-  const [resendMax, setResendMax] = useState(String(row.resend_max_seconds));
+  const [lockout, setLockout] = useState(row.lockout_minutes);
+  const [resendBase, setResendBase] = useState(row.resend_base_seconds);
+  const [resendMax, setResendMax] = useState(row.resend_max_seconds);
   const [busy, setBusy] = useState(false);
 
   const digits = (value: string) => value.replace(/[^0-9]/g, "");
@@ -1877,14 +1872,13 @@ function OtpForm({
   return (
     <>
       <div className="grid grid-cols-2 gap-10">
-        <Field
+        <DurationField
           name="window_minutes"
-          label="طول النافذة (دقيقة)"
-          dir="ltr"
-          inputMode="numeric"
+          label="طول النافذة"
+          wire="minute"
           value={windowMinutes}
           disabled={disabled}
-          onChange={(event) => setWindowMinutes(digits(event.target.value))}
+          onChange={setWindowMinutes}
         />
         <Field
           name="max_per_window"
@@ -1913,32 +1907,27 @@ function OtpForm({
           disabled={disabled}
           onChange={(event) => setPerSignup(digits(event.target.value))}
         />
-        <Field
+        <DurationField
           name="lockout_minutes"
-          label="الانتظار بعد الاستنفاد (دقيقة)"
-          dir="ltr"
-          inputMode="numeric"
+          label="الانتظار بعد الاستنفاد"
+          wire="minute"
           value={lockout}
           disabled={disabled}
-          onChange={(event) => setLockout(digits(event.target.value))}
+          onChange={setLockout}
         />
-        <Field
+        <DurationField
           name="resend_base_seconds"
-          label="مهلة الإعادة الأولى (ثانية)"
-          dir="ltr"
-          inputMode="numeric"
+          label="مهلة الإعادة الأولى"
           value={resendBase}
           disabled={disabled}
-          onChange={(event) => setResendBase(digits(event.target.value))}
+          onChange={setResendBase}
         />
-        <Field
+        <DurationField
           name="resend_max_seconds"
-          label="سقف مهلة الإعادة (ثانية)"
-          dir="ltr"
-          inputMode="numeric"
+          label="سقف مهلة الإعادة"
           value={resendMax}
           disabled={disabled}
-          onChange={(event) => setResendMax(digits(event.target.value))}
+          onChange={setResendMax}
         />
       </div>
       <p className="mt-6 text-11 leading-note text-muted">
@@ -1950,18 +1939,20 @@ function OtpForm({
       <Button
         className="mt-14"
         size="sm"
-        disabled={disabled || windowMinutes === "" || resendBase === ""}
+        // `window_minutes` ge=1 و`resend_base_seconds` ge=5 — والصفرُ مرفوضٌ
+        // في الطرفين (`schemas/settings.py`)
+        disabled={disabled || windowMinutes === 0 || resendBase === 0}
         loading={busy}
         onClick={() => {
           setBusy(true);
           updateOtpSettings(row.country_code, {
-            window_minutes: Number(windowMinutes),
+            window_minutes: windowMinutes,
             max_per_window: Number(perWindow),
             max_per_day: Number(perDay),
             max_per_registration: Number(perSignup),
-            lockout_minutes: Number(lockout),
-            resend_base_seconds: Number(resendBase),
-            resend_max_seconds: Number(resendMax),
+            lockout_minutes: lockout,
+            resend_base_seconds: resendBase,
+            resend_max_seconds: resendMax,
           })
             .then(() => onSaved("حُفظت السقوف — تسري على الطلب التالي في الحال"))
             .catch((caught) =>
@@ -1992,10 +1983,10 @@ function DispatchForm({
   // **الغائبُ يُعرض بالافتراضيّ لا فارغاً**: سوقٌ بلا صفٍّ **يوزّع فعلاً**
   // بهذه القيم، فحقلٌ فارغٌ كان سيُقرأ «معطَّل» وهو يعمل.
   const [mode, setMode] = useState<DispatchMode>(row?.mode ?? "sequential");
-  const [offer, setOffer] = useState(String(row?.offer_timeout_seconds ?? 7));
+  const [offer, setOffer] = useState(row?.offer_timeout_seconds ?? 7);
   const [attempts, setAttempts] = useState(String(row?.max_attempts ?? 5));
-  const [total, setTotal] = useState(String(row?.total_timeout_seconds ?? 120));
-  const [cooldown, setCooldown] = useState(String(row?.cooldown_seconds ?? 30));
+  const [total, setTotal] = useState(row?.total_timeout_seconds ?? 120);
+  const [cooldown, setCooldown] = useState(row?.cooldown_seconds ?? 30);
   const [batch, setBatch] = useState(String(row?.broadcast_batch_size ?? 4));
   const [busy, setBusy] = useState(false);
 
@@ -2014,23 +2005,19 @@ function DispatchForm({
           <option value="sequential">تسلسليّ — واحد في كل مرة</option>
           <option value="broadcast">بثّ — دفعة معاً، وأول من يقبل</option>
         </Select>
-        <Field
+        <DurationField
           name="offer_timeout_seconds"
-          label="مهلة قبول العرض (ثانية)"
-          dir="ltr"
-          inputMode="numeric"
+          label="مهلة قبول العرض"
           value={offer}
           disabled={disabled}
-          onChange={(event) => setOffer(digits(event.target.value))}
+          onChange={setOffer}
         />
-        <Field
+        <DurationField
           name="cooldown_seconds"
-          label="تبريد من صمت أو رفض (ثانية)"
-          dir="ltr"
-          inputMode="numeric"
+          label="تبريد من صمت أو رفض"
           value={cooldown}
           disabled={disabled}
-          onChange={(event) => setCooldown(digits(event.target.value))}
+          onChange={setCooldown}
         />
         <Field
           name="broadcast_batch_size"
@@ -2050,14 +2037,12 @@ function DispatchForm({
           disabled={disabled}
           onChange={(event) => setAttempts(digits(event.target.value))}
         />
-        <Field
+        <DurationField
           name="total_timeout_seconds"
-          label="مهلة البحث كلّه (ثانية)"
-          dir="ltr"
-          inputMode="numeric"
+          label="مهلة البحث كلّه"
           value={total}
           disabled={disabled}
-          onChange={(event) => setTotal(digits(event.target.value))}
+          onChange={setTotal}
         />
       </div>
       <p className="mt-6 text-11 leading-note text-muted">
@@ -2068,16 +2053,18 @@ function DispatchForm({
       <Button
         className="mt-14"
         size="sm"
-        disabled={disabled || offer === "" || cooldown === ""}
+        // `offer_timeout_seconds` ge=3 و`cooldown_seconds` ge=1 — والصفرُ
+        // مرفوضٌ في الطرفين (`schemas/settings.py`)
+        disabled={disabled || offer === 0 || cooldown === 0}
         loading={busy}
         onClick={() => {
           setBusy(true);
           updateDispatchSettings(country, {
             mode,
-            offer_timeout_seconds: Number(offer),
+            offer_timeout_seconds: offer,
             max_attempts: Number(attempts),
-            total_timeout_seconds: Number(total),
-            cooldown_seconds: Number(cooldown),
+            total_timeout_seconds: total,
+            cooldown_seconds: cooldown,
             broadcast_batch_size: Number(batch),
           })
             .then(() =>

@@ -27,6 +27,13 @@ interface Props extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Field({ label, className, id, error, ...rest }: Props) {
+  // **والتاريخُ من اليسار دائماً** (§39٫١٢٫٢، قِيس 2026-09-03): `type="date"`
+  // يرسم منتقيَ المتصفّح بخاناتٍ لاتينية، **وثلاثُ شاشاتٍ كانت تكتب `dir`
+  // وثلاثٌ تنساه** — `PromoCodes` يمرّرها و`VehicleSkins` و`Storefront`
+  // و`Drivers` لا. **فافترق شكلُ الشيء الواحد**، وهو الشكلُ الثامن يُصنع بيد.
+  // **والبيتُ يعرف الجواب فلا يكتبه كلُّ مستدعٍ**، ومن مرّر `dir` صراحةً يبقى
+  // له ما مرّر.
+  const dir = rest.type === "date" ? (rest.dir ?? "ltr") : rest.dir;
   // **مُعرّفٌ مولَّدٌ حين لا يُمرَّر**: بغيره يصير `htmlFor={undefined}` فلا
   // تُربَط التسميةُ بحقلها — نقرُ التسمية لا يركّز الحقل، وقارئُ الشاشة يقرأ
   // حقلاً بلا اسم. وكانت خمسةٌ وعشرون من تسعةٍ وعشرين حقلاً في اللوحة كذلك،
@@ -53,6 +60,7 @@ export function Field({ label, className, id, error, ...rest }: Props) {
         aria-invalid={reason ? true : undefined}
         aria-describedby={reason ? `${inputId}-error` : undefined}
         {...rest}
+        dir={dir}
       />
       {reason ? (
         <p id={`${inputId}-error`} className="mt-6 text-12 text-danger">

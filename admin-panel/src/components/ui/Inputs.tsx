@@ -5,7 +5,7 @@
  * **فتفترق الشاشاتُ في صياغة الشيء نفسِه** — وهو الشكلُ الثامن يُصنع بيد.
  */
 
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import { useFieldError } from "@/lib/form-errors";
 import { currencyLabel } from "@/lib/format";
@@ -158,55 +158,127 @@ export function DateField({
   );
 }
 
-/** وحداتُ المدّة — **والقيمةُ المرسَلةُ ثوانٍ كما تفهمها الخلفية**. */
-const UNITS: { key: string; label: string; seconds: number }[] = [
+/** وحداتُ المدّة، مرتّبةً من الأصغر — **والثانيةُ منها لأن أكثرَ مدد هذا
+ *  المشروع أقصرُ من دقيقة**: مهلةُ قبول العرض ٢٠ ثانية، وتبريدُ الرفض،
+ *  وإعادةُ رمز التحقّق. **وبلا الثانية كان الحقلُ يقرّب ٩٠ إلى دقيقتين ويكتب
+ *  ١٢٠ فوق ٩٠** — وهو يغيّر قيمةً قائمةً بلا أن يقول.
+ *
+ * **ولا «شهر» هنا بقصد**: الشهرُ ليس عدداً ثابتاً من الثواني، **وإدخالُه
+ * وحدةً يجعل المكوّنَ يدّعي دقّةً لا يملكها**. ومن أراد شهراً كتب «٣٠ يوماً»
+ * — وهو ما تعنيه `DURATION_DAYS.monthly` في الاشتراكات حرفاً.
+ */
+const UNITS: { key: WireUnit | "week"; label: string; seconds: number }[] = [
+  { key: "second", label: "ثانية", seconds: 1 },
   { key: "minute", label: "دقيقة", seconds: 60 },
   { key: "hour", label: "ساعة", seconds: 3600 },
   { key: "day", label: "يوم", seconds: 86_400 },
   { key: "week", label: "أسبوع", seconds: 604_800 },
 ];
 
-/** يختار أكبرَ وحدةٍ تقسم العددَ بلا كسر — **فـ`604800` تُعرض «أسبوع ١»**
- *  لا «٦٠٤٨٠٠ ثانية**. */
-function split(seconds: number): { count: string; unit: string } {
-  for (const unit of [...UNITS].reverse()) {
+/** **وحدةُ القيمة على السلك** — لا وحدةُ ما يُعرض.
+ *
+ * **العلّةُ مقيسةٌ في هذه الشجرة**: حقولُ المدّة في اللوحة **ليست كلُّها
+ * ثوانيَ**. `cliq_confirmation_hours` ساعات، و`term_days` أيام،
+ * و`offer_timeout_seconds` ثوانٍ — **وكلٌّ يعلن وحدتَه في اسمه**. فمكوّنٌ
+ * يفترض الثانيةَ كان يرسل ٨٦٤٠٠ حيث تُنتظر ٢٤، **ويكسر العقدَ بصمت**.
+ */
+export type WireUnit = "second" | "minute" | "hour" | "day";
+
+const WIRE_SECONDS: Record<WireUnit, number> = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+  day: 86_400,
+};
+
+/** يختار أكبرَ وحدةٍ تقسم العددَ بلا كسر — **فـ`604800` ثانيةً تُعرض «١
+ *  أسبوع»** لا «٦٠٤٨٠٠ ثانية».
+ *
+ * **ولا يهبط تحت وحدة السلك**: قيمةٌ بالأيام لا تُعرض بالساعات، **وإلا خرج
+ * منها كسرٌ يُقرَّب فيكتب غيرَ ما اختار المشرف**.
+ */
+function split(
+  seconds: number,
+  floor: number,
+): { count: string; unit: string } {
+  const usable = UNITS.filter((unit) => unit.seconds >= floor);
+  for (const unit of [...usable].reverse()) {
     if (seconds > 0 && seconds % unit.seconds === 0) {
       return { count: String(seconds / unit.seconds), unit: unit.key };
     }
   }
-  return { count: seconds ? String(Math.round(seconds / 60)) : "", unit: "minute" };
+  const base = usable[0];
+  // **والصفرُ يُعرض `0` لا فراغاً**: `max_detour_minutes` و`partner_wait_seconds`
+  // كلتاهما `ge=0` في الخلفية — **فالصفرُ ضبطٌ قائمٌ لا حقلٌ لم يُملأ**، وحقلٌ
+  // فارغٌ يُقرأ «غيرُ مضبوط» فيُملأ من جديد بما لم يقصده أحد.
+  return {
+    count: seconds ? String(Math.round(seconds / base.seconds)) : "0",
+    unit: base.key,
+  };
 }
 
-/** حقلُ مدّة — **عددٌ ووحدة، لا رقمُ ثوانٍ يُحسب بالرأس**.
+/** حقلُ مدّة — **عددٌ ووحدة، لا رقمٌ تُحسب وحدتُه بالرأس**.
  *
  * **العلّةُ مقيسةٌ في هذا المشروع**: `86400` تُقرأ «يوم» بعد حسبة، و`604800`
  * تُقرأ خطأً «أسبوعين» عند التعب. **والخطأُ هنا يظهر بعد أسبوعٍ لا فوراً.**
  *
- * **والقيمةُ على السلك ثوانٍ كما هي** — لا يُغيَّر عقدُ الخلفية.
+ * **والقيمةُ على السلك تخرج بوحدتها كما دخلت** (`wire`) — **لا يُغيَّر عقدُ
+ * الخلفية**، والاسمُ في المخطط هو من يقول الوحدة (`…_seconds` · `…_hours` ·
+ * `…_days`).
+ *
+ * **والخطأُ يُقرأ من السياق كما في `Field`**: حقلٌ يعلن `name` يجد سببَ رفضه
+ * بلا خريطةٍ تُكتب في كلِّ شاشة.
  */
 export function DurationField({
   label,
-  seconds,
+  value,
   onChange,
+  wire = "second",
+  name,
   error,
   disabled = false,
   hint,
 }: {
   label?: string;
-  seconds: number;
+  /** العددُ بوحدة `wire` — لا بالثواني دائماً. */
+  value: number;
   onChange: (next: number) => void;
+  /** ما تعنيه `value` على السلك. الافتراضُ الثانية. */
+  wire?: WireUnit;
+  name?: string;
   error?: string | null;
   disabled?: boolean;
   hint?: string;
 }) {
-  const id = useId();
-  const current = split(seconds);
-  const unit = UNITS.find((u) => u.key === current.unit) ?? UNITS[0];
+  const generated = useId();
+  const id = name ?? generated;
+  const fromContext = useFieldError(name);
+  const reason = error ?? fromContext;
+
+  const floor = WIRE_SECONDS[wire];
+  const current = split(value * floor, floor);
+  const unit =
+    UNITS.find((u) => u.key === current.unit) ??
+    UNITS.find((u) => u.seconds === floor) ??
+    UNITS[0];
+
+  /** **ما تحت الإصبع يغلب المصوغ ما دام يُكتب** — و`null` يعني «لا كتابةَ
+   *  جارية، فاعرض المصوغ».
+   *
+   * **العلّةُ مقيسة**: بلا هذا، من يمسح الحقلَ ليكتب رقماً آخرَ يجده يعود `0`
+   * تحت إصبعه فيصير ما يكتبه `05`. **وهو عينُ ما يحرسه `MoneyField` بالصياغة
+   * عند الخروج وحدَها** — قاعدةٌ واحدةٌ في بيتٍ واحد. */
+  const [typed, setTyped] = useState<string | null>(null);
 
   function emit(count: string, unitKey: string) {
-    const factor = UNITS.find((u) => u.key === unitKey)?.seconds ?? 60;
+    const factor = UNITS.find((u) => u.key === unitKey)?.seconds ?? floor;
     const parsed = Number(count);
-    onChange(Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * factor) : 0);
+    // **والقسمةُ على وحدة السلك في الخروج** — فما يصل الخلفيةَ بوحدتها هي
+    onChange(
+      Number.isFinite(parsed) && parsed > 0
+        ? Math.round((parsed * factor) / floor)
+        : 0,
+    );
   }
 
   return (
@@ -219,32 +291,46 @@ export function DurationField({
       <div className="flex gap-8">
         <input
           id={id}
+          name={name}
           type="number"
           min={0}
           dir="ltr"
           disabled={disabled}
-          value={current.count}
-          onChange={(event) => emit(event.target.value, unit.key)}
-          className={cn("fld w-full text-start", error && "border-danger")}
+          value={typed ?? current.count}
+          onChange={(event) => {
+            setTyped(event.target.value);
+            emit(event.target.value, unit.key);
+          }}
+          onBlur={() => setTyped(null)}
+          className={cn("fld w-full text-start", reason && "border-danger")}
+          aria-invalid={reason ? true : undefined}
+          aria-describedby={reason ? `${id}-error` : undefined}
         />
         <select
           disabled={disabled}
           value={unit.key}
-          onChange={(event) => emit(current.count || "1", event.target.value)}
+          onChange={(event) => {
+            setTyped(null);
+            emit(current.count || "1", event.target.value);
+          }}
           className="fld w-auto shrink-0"
           aria-label="وحدة المدّة"
         >
-          {UNITS.map((option) => (
+          {UNITS.filter((option) => option.seconds >= floor).map((option) => (
             <option key={option.key} value={option.key}>
               {option.label}
             </option>
           ))}
         </select>
       </div>
-      {hint && !error ? (
+      {hint && !reason ? (
         <p className="mt-6 text-11 leading-note text-muted">{hint}</p>
       ) : null}
-      {error ? <p className="mt-6 text-12 text-danger">{error}</p> : null}
+      {reason ? (
+        <p id={`${id}-error`} className="mt-6 text-12 text-danger">
+          {reason}
+        </p>
+      ) : null}
     </div>
   );
 }
