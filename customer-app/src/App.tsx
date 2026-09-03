@@ -29,6 +29,7 @@ import { showsNav } from "@/lib/tabs";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { ThemeProvider } from "@/lib/theme";
+import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
 
@@ -217,6 +218,10 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <ThemeProvider>
+      {/* **بوّابةُ التحديث فوق كلِّ شيءٍ إلا السِمة** (البند ٨، §43): من
+          حزمتُه دون الحدِّ **لا يصل شاشةَ الدخول أصلاً**، فلا معنى لوضعها
+          تحت الجلسة. وتحت السِمة لأنها ترسم شاشةً بألوان النظام */}
+      <UpdateGate app="rider">
       <ConfigProvider>
         <SessionProvider>
           {/* تحت الجلسة والإعدادات: السِمة تُقرأ من إعلان صاحبة الحساب ومن
@@ -420,6 +425,7 @@ export default function App() {
           </BrandProvider>
         </SessionProvider>
       </ConfigProvider>
+      </UpdateGate>
       </ThemeProvider>
     </MotionConfig>
   );

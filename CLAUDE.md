@@ -246,6 +246,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - بلاغٌ كاذبٌ رابعٌ أوقف رفعاً — والقياسُ بعد التوسيع كشف ثغرةً أقدمَ منه (2026-08-30) → `GUARDS.md`
 - ما يمرّ من ماسح الأسرار — بأصنافه لا بالظنّ (قِيس 2026-08-31) → `GUARDS.md`
 - وكتابةٌ بلغةٍ على ويندوز تقلب نهاياتِ الأسطر — **وأمسكها `check:docs` وحدَه** (قِيس 2026-09-03) → `GUARDS.md`
+- `check:update-gate` — **بوّابةُ قفلٍ منسوخةٌ ثلاثاً، فتُقاس بايتاً** (2026-09-03) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
 - الحرّاس — وما لم يصر حارساً بعد (2026-08-20) → `GUARDS.md`
@@ -346,6 +347,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Open debt and decisions waiting on the owner → `STATE.md`
 - متجرُ المركبات — أيقظت السلسلةُ الخمس (2026-08-27) → `STATE.md`
 - البند ٦ — مسارُ الرحلة النشطة في ملفِّ الكبتن، **مبنيٌّ ومقيس** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
+- البند ٨ — لوحةُ الإصدارات والتحديثُ الإلزاميّ، **مبنيٌّ ومقيس** (٢٠٢٦-٠٩-٠٣) → `STATE.md`
 
 ### `ARCHITECTURE.md` — المعمار
 

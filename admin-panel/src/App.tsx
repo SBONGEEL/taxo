@@ -27,6 +27,7 @@ import { CountryProvider } from "@/lib/country";
 import { listenToPushTaps } from "@/lib/push";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider } from "@/lib/theme";
+import { UpdateGate } from "@/lib/update-gate";
 import { LoginScreen } from "@/screens/Login";
 
 const OverviewScreen = lazy(() =>
@@ -65,6 +66,9 @@ const SettingsScreen = lazy(() =>
 );
 const ProvidersScreen = lazy(() =>
   import("@/screens/Providers").then((m) => ({ default: m.ProvidersScreen })),
+);
+const ReleasesScreen = lazy(() =>
+  import("@/screens/Releases").then((m) => ({ default: m.ReleasesScreen })),
 );
 const RidesScreen = lazy(() =>
   import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
@@ -208,6 +212,10 @@ function Anonymous({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <ThemeProvider>
+      {/* **بوّابةُ التحديث فوق كلِّ شيءٍ إلا السِمة** (البند ٨، §43). **ولا
+          تعمل في متصفّح**: لا حزمةَ في متصفّحٍ لتُحدَّث — فهي لغلاف المشرف
+          على الهاتف وحدَه */}
+      <UpdateGate app="panel">
       <ConfigProvider>
         <SessionProvider>
           <Boot>
@@ -303,6 +311,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <OtpTemplatesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/releases"
+                    element={
+                      <Guarded>
+                        <ReleasesScreen />
                       </Guarded>
                     }
                   />
@@ -429,6 +445,7 @@ export default function App() {
           </Boot>
         </SessionProvider>
       </ConfigProvider>
+      </UpdateGate>
     </ThemeProvider>
   );
 }

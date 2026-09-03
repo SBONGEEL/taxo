@@ -20,6 +20,24 @@ class UserRole(StrEnum):
     SUPPORT = "support"
 
 
+class ClientApp(StrEnum):
+    """التطبيقُ الطالبُ للجلسة — ثلاثةٌ لا أكثر، وهي التي نبنيها.
+
+    **وبيتُه هنا منذ البند ٨** (2026-09-03، §43): كان في `core/app_scope.py`
+    وحدَه — **وهو صحيحٌ ما دام يُقرأ في الحراسة وحدَها**. ولمّا صار **عموداً
+    في `app_releases`** لزم أن يسكن حيث تسكن التعدادات: **نموذجٌ يستورد من
+    `core/` يقلب الطبقات** (`core` يستورد من `models` أصلاً)، **ونسخةٌ ثانيةٌ
+    بالأعضاء نفسِها هي «شكلان لشيءٍ واحد»** بحرفها.
+
+    **و`core.app_scope` يعيد تصديرَه**، فكلُّ `from app.core.app_scope import
+    ClientApp` قائمٌ كما كان — **نقلُ بيتٍ لا تغييرُ اسم**.
+    """
+
+    RIDER = "rider"
+    DRIVER = "driver"
+    PANEL = "panel"
+
+
 class DriverStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"

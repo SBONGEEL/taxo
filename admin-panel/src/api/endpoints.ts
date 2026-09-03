@@ -24,6 +24,8 @@ import type {
   AdvanceRow,
   AdvanceSetting,
   AppConfig,
+  AppRelease,
+  ClientApp,
   AuditAction,
   AuditLog,
   AuthResponse,
@@ -1440,3 +1442,57 @@ export const cancelVerificationCampaign = (id: string) =>
   api.post<VerificationCampaignRow>(
     `/admin/verification-campaigns/${id}/cancel`,
   );
+
+// ------------------------------------------------------- سجلُّ الإصدارات
+
+/** سجلُّ الإصدارات — **والحاكمُ منها مُعلَّمٌ من الخلفية** (البند ٨، §43). */
+export const listReleases = (app?: ClientApp) =>
+  api.get<AppRelease[]>("/admin/releases", {
+    query: app ? { app } : undefined,
+  });
+
+/** **و`confirm_min_supported_build` هو الإذنُ الثاني** — يُرسل حين يرتفع
+ *  الحدُّ، والخلفيةُ ترفض بدونه. وورقةُ الشاشة هي الأولى. */
+export const createRelease = (body: {
+  app: ClientApp;
+  build: number;
+  min_supported_build: number;
+  download_url: string;
+  release_notes: string;
+  reminder_hours: number;
+  confirm_min_supported_build?: number;
+}) => api.post<AppRelease>("/admin/releases", body);
+
+export const updateRelease = (
+  releaseId: string,
+  body: {
+    app: ClientApp;
+    build: number;
+    min_supported_build: number;
+    download_url: string;
+    release_notes: string;
+    reminder_hours: number;
+    confirm_min_supported_build?: number;
+  },
+) => api.put<AppRelease>(`/admin/releases/${releaseId}`, body);
+
+export const deleteRelease = (releaseId: string) =>
+  api.del<void>(`/admin/releases/${releaseId}`);
+
+// ------------------------------------------------- بوّابةُ التحديث (البند ٨)
+
+/** ماذا يفعل التطبيقُ عند الإقلاع — **بابٌ عامٌّ بلا جلسة** (§43).
+ *
+ * **و`anonymous`ٌ بقصد**: يُسأل **قبل الدخول**، ومن حزمتُه دون الحدِّ لا يصل
+ * شاشةَ الدخول أصلاً. **ولا يقرأ شيئاً عن شخص**: تطبيقٌ ورقمُ حزمة.
+ *
+ * **و`build` تُحذف حين لا تُعرف** — ولا يُقفل من لا نعرف نسختَه.
+ */
+export const getAppVersion = (
+  app: "rider" | "driver" | "panel",
+  build: number | null,
+) =>
+  api.get<AppVersion>("/public/app-version", {
+    anonymous: true,
+    query: build === null ? { app } : { app, build },
+  });

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:rtl && npm run check:fields && npm run check:storefront-card && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:money-visible && npm run check:contract && npm run check:money && npm run check:readers && npm run check:published-readers && npm run check:target && tsc -b && vite build && npm run check:dist && npm run check:served",
+    "build": "npm run check:rtl && npm run check:fields && npm run check:storefront-card && npm run check:money-math && npm run check:scale && npm run check:enums && npm run check:update-gate && npm run check:digits && npm run check:slot && npm run check:flags && npm run check:config && npm run check:doors && npm run check:money-visible && npm run check:contract && npm run check:money && npm run check:readers && npm run check:published-readers && npm run check:target && tsc -b && vite build && npm run check:dist && npm run check:served",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit",
     "check:scale": "node scripts/check-scale.mjs",
@@ -13,6 +13,7 @@
     "check:slot": "node scripts/check-slot.mjs",
     "check:flags": "node scripts/check-flags.mjs",
     "check:config": "node scripts/check-config.mjs",
+    "check:update-gate": "node ../tools/check-update-gate.mjs",
     "check:digits": "node scripts/check-digits.mjs",
     "check:doors": "node scripts/check-doors.mjs",
     "check:contract": "node ../tools/check-contract.mjs --app admin-panel",

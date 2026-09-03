@@ -1,7 +1,13 @@
 """ما تقرؤه الصفحةُ التعريفيةُ العامة — **قراءةٌ محضة، بلا جلسةٍ وبلا كتابة**.
 
 **ولا مسارَ هنا يكتب حرفاً** (شرطُ المالك 2026-08-21): لا تسجيل، ولا جمعَ
-بيانات، ولا أثرَ في القاعدة. وهذا الملفُّ كلُّه `GET` واحد.
+بيانات، ولا أثرَ في القاعدة. **وصارا `GET`ين اثنين منذ البند ٨** — والشرطُ هو
+هو: قراءتان محضتان.
+
+**والثاني `app-version`، وموضعُه هنا بعلّته**: يُسأل **قبل الدخول** — ومن
+حزمتُه أقدمُ من الحدِّ **لا يُفتح له بابٌ يسجّل به دخولاً أصلاً**، فبابٌ
+يحرسه `CurrentUser` كان يجعل شاشةَ التحديث الإلزاميّ مستحيلةً على من تخصّه.
+**ولا يقرأ شيئاً عن شخص**: تطبيقٌ ورقمُ حزمة.
 
 **ولماذا بابٌ عامٌّ للعرض أصلاً**: الصفحةُ تعِد الكبتنَ بـ«الشهر الأول مجاناً»،
 **والوعدُ يُقرأ من العرض القائم لا يُكتب نصّاً** — فعرضٌ أُطفئ أو نفد سقفُه
@@ -26,15 +32,16 @@ from fastapi import APIRouter
 from sqlalchemy import select
 
 from app.core.deps import DbSession
-from app.models.enums import CountryCode, FeatureKey
+from app.models.enums import ClientApp, CountryCode, FeatureKey
 from app.models.subscription_offer import (
     AUDIENCE_ALL,
     AUDIENCE_NEW_DRIVER,
     SubscriptionOffer,
 )
 from app.models.subscription import SubscriptionPlan
+from app.schemas.app_release import AppVersionOut
 from app.schemas.public_site import LandingOfferOut, LandingOut
-from app.services import pricing, settings_service
+from app.services import pricing, releases as releases_service, settings_service
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -105,3 +112,32 @@ async def landing(
                     free=after == 0,
                 )
     return LandingOut(offer=best if best_saving > 0 else None)
+
+
+@router.get("/app-version", response_model=AppVersionOut)
+async def app_version(
+    session: DbSession,
+    app: ClientApp,
+    build: int | None = None,
+) -> AppVersionOut:
+    """ماذا يفعل التطبيقُ عند الإقلاع — **البند ٨ (§39٫٨، §43)**.
+
+    **والحكمُ يخرج محسوباً لا رقمين يقارنهما العميل**: ثلاثةُ تطبيقاتٍ تكتب
+    المقارنةَ بأنفسها **ثلاثُ نسخٍ من قاعدةٍ واحدة**، تفترق أوّلَ ما تتغيّر
+    ولا شيءَ يفشل. وهي §14 مطبَّقةً على حكمٍ لا على مبلغ.
+
+    **و`build` اختياريةٌ بقصد**: من لا يعرف رقمَ حزمته — متصفّحٌ، أو غلافٌ لا
+    يجيب ملحقُه — **لا يُقفل بالظنّ**. والقفلُ عقوبةٌ على قِدَمٍ مثبَت.
+
+    **وبلا سجلٍّ لهذا التطبيق: `ok` بحقولٍ فارغة** — لا «كلُّ النسخ مرفوضة».
+    **فغيابُ السجلِّ يعطّل الحجبَ لا التطبيق.**
+    """
+    verdict = await releases_service.verdict_for(session, app=app, build=build)
+    return AppVersionOut(
+        state=verdict.state,
+        latest_build=verdict.latest_build,
+        min_supported_build=verdict.min_supported_build,
+        download_url=verdict.download_url,
+        release_notes=verdict.release_notes,
+        reminder_hours=verdict.reminder_hours,
+    )

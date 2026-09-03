@@ -1078,3 +1078,24 @@ export interface CliqDeclare {
   declared_paid_at: string | null;
   status: "created" | "paid" | "failed" | "cancelled";
 }
+
+// ------------------------------------------------- بوّابةُ التحديث (البند ٨)
+
+/** حكمُ الإقلاع — **محسوبٌ في الخلفية لا هنا** (§43).
+ *
+ * ثلاثةُ تطبيقاتٍ تقارن رقمين بأنفسها ثلاثُ نسخٍ من قاعدةٍ واحدة، تفترق
+ * أوّلَ ما تتغيّر ولا شيءَ يفشل — وهي §14 مطبَّقةً على حكمٍ لا على مبلغ.
+ *
+ * **و`ok` بحقولٍ فارغةٍ تعني «لا سجلَّ لهذا التطبيق»**: غيابُ السجلِّ يعطّل
+ * الحجبَ لا التطبيق.
+ */
+export interface AppVersion {
+  state: "ok" | "optional" | "forced";
+  /** `versionCode` آخرِ حزمةٍ مسجَّلة — لا اسمُ نسخة. */
+  latest_build: number | null;
+  min_supported_build: number | null;
+  download_url: string | null;
+  release_notes: string | null;
+  /** كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **من اللوحة لا من التطبيق**. */
+  reminder_hours: number | null;
+}

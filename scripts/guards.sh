@@ -45,6 +45,7 @@ run "check:published-readers" node tools/check-published-readers.mjs
 run "check:destinations"    node tools/check-destinations.mjs
 run "check:fields"          node tools/check-fields.mjs
 run "check:storefront-card" node tools/check-storefront-card.mjs
+run "check:update-gate"     node tools/check-update-gate.mjs
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do

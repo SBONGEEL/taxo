@@ -24,18 +24,13 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
-
 from app.core.exceptions import AppError
-from app.models.enums import UserRole
+from app.models.enums import ClientApp, UserRole
 
-
-class ClientApp(StrEnum):
-    """التطبيقُ الطالبُ للجلسة — ثلاثةٌ لا أكثر، وهي التي نبنيها."""
-
-    RIDER = "rider"
-    DRIVER = "driver"
-    PANEL = "panel"
+# **`ClientApp` انتقل إلى `models/enums.py` ويُعاد تصديرُه من هنا** (البند ٨،
+# §43): صار **عموداً في `app_releases`**، **ونموذجٌ يستورد من `core/` يقلب
+# الطبقات**. والاسمُ هنا كما كان، فلا مستوردَ تغيّر.
+__all__ = ["ClientApp", "guard"]
 
 
 # **قرارُ المالك حرفياً**: لكلِّ تطبيقٍ دورُه وحدَه، و`admin`/`support` في

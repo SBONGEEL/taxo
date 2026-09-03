@@ -16,6 +16,7 @@ from app.routers import (
     admin_backups,
     admin_missions,
     admin_referrals,
+    admin_releases,
     admin_sharing,
     admin_providers,
     admin_rides,
@@ -69,6 +70,7 @@ api_router.include_router(admin_promo.router)
 api_router.include_router(admin_backups.router)
 api_router.include_router(admin_missions.router)
 api_router.include_router(admin_referrals.router)
+api_router.include_router(admin_releases.router)
 api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 api_router.include_router(admin_payments.router)

@@ -430,3 +430,21 @@ export const exchangeHandoff = (token: string) =>
  */
 export const getStorefront = () =>
   api.get<Storefront>("/storefront", { query: { surface: "rider" } });
+
+// ------------------------------------------------- بوّابةُ التحديث (البند ٨)
+
+/** ماذا يفعل التطبيقُ عند الإقلاع — **بابٌ عامٌّ بلا جلسة** (§43).
+ *
+ * **و`anonymous`ٌ بقصد**: يُسأل **قبل الدخول**، ومن حزمتُه دون الحدِّ لا يصل
+ * شاشةَ الدخول أصلاً. **ولا يقرأ شيئاً عن شخص**: تطبيقٌ ورقمُ حزمة.
+ *
+ * **و`build` تُحذف حين لا تُعرف** — ولا يُقفل من لا نعرف نسختَه.
+ */
+export const getAppVersion = (
+  app: "rider" | "driver" | "panel",
+  build: number | null,
+) =>
+  api.get<AppVersion>("/public/app-version", {
+    anonymous: true,
+    query: build === null ? { app } : { app, build },
+  });

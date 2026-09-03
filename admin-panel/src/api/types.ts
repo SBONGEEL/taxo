@@ -1547,3 +1547,48 @@ export interface AdminPermissions {
   permissions: string[];
   explicit: boolean;
 }
+
+// ------------------------------------------------------- سجلُّ الإصدارات
+
+/** التطبيقاتُ الثلاثة — **مرآةُ `ClientApp`**، ويحرسها `check:enums`. */
+export type ClientApp = "rider" | "driver" | "panel";
+
+/** إصدارٌ مسجَّل — **والرقمُ `versionCode` لا اسمُ نسخة**.
+ *
+ * `versionName` ثابتٌ في هذه الشجرة (قِيست حزمتان بـ`1.0` و`1.1` ورقمُهما
+ * `392`)، **و`versionCode` هو ما يفرّق بناءً عن بناءٍ عند أندرويد نفسِه**.
+ */
+export interface AppRelease {
+  id: string;
+  app: ClientApp;
+  build: number;
+  min_supported_build: number;
+  download_url: string;
+  release_notes: string;
+  reminder_hours: number;
+  /** **أهذا هو الصفُّ الحاكم؟** — محسوبٌ في الخلفية لا بفرزِ صفحةٍ مقصوصة. */
+  is_current: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ------------------------------------------------- بوّابةُ التحديث (البند ٨)
+
+/** حكمُ الإقلاع — **محسوبٌ في الخلفية لا هنا** (§43).
+ *
+ * ثلاثةُ تطبيقاتٍ تقارن رقمين بأنفسها ثلاثُ نسخٍ من قاعدةٍ واحدة، تفترق
+ * أوّلَ ما تتغيّر ولا شيءَ يفشل — وهي §14 مطبَّقةً على حكمٍ لا على مبلغ.
+ *
+ * **و`ok` بحقولٍ فارغةٍ تعني «لا سجلَّ لهذا التطبيق»**: غيابُ السجلِّ يعطّل
+ * الحجبَ لا التطبيق.
+ */
+export interface AppVersion {
+  state: "ok" | "optional" | "forced";
+  /** `versionCode` آخرِ حزمةٍ مسجَّلة — لا اسمُ نسخة. */
+  latest_build: number | null;
+  min_supported_build: number | null;
+  download_url: string | null;
+  release_notes: string | null;
+  /** كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **من اللوحة لا من التطبيق**. */
+  reminder_hours: number | null;
+}
