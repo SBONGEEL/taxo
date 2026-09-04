@@ -43,6 +43,7 @@ import type {
 } from "@/api/types";
 import { CancellationCharges } from "@/components/CancellationCharges";
 import { WalletDesk } from "@/components/WalletDesk";
+import { OpenProfile } from "@/components/profile/OpenProfile";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import {
@@ -243,8 +244,8 @@ export function FinanceScreen() {
             }
             searching={withdrawalSearch.searching}
             noResults={NO_RESULTS}
-            columns="1fr 0.8fr 1fr 1fr 1.4fr"
-            headers={["المبلغ", "القناة", "الطلب", "الحالة", ""]}
+            columns="1.2fr 1fr 0.8fr 1fr 1fr 1.4fr"
+            headers={["الكبتن", "المبلغ", "القناة", "الطلب", "الحالة", ""]}
             rows={withdrawals}
             keyOf={(row) => row.id}
             empty={{
@@ -253,6 +254,19 @@ export function FinanceScreen() {
             }}
             render={(row) => (
               <>
+                {/* **الكبتنُ عمودٌ أوّل** — وكان الجدولُ لا يعرض إنساناً
+                    البتّة: المبلغُ والقناةُ والحالُ والتاريخ. **فالمشرفُ
+                    يوافق على صرفِ مالٍ ولا يرى لمن** (§٤٧٫١٩) */}
+                <span className="flex min-w-0 items-center gap-6">
+                  <span className="min-w-0 truncate text-11.5 text-ink">
+                    {row.driver.name}
+                  </span>
+                  <OpenProfile
+                    kind="driver"
+                    id={row.driver.driver_id}
+                    search={row.driver.phone || row.driver.name}
+                  />
+                </span>
                 <span className="font-semibold text-ink">
                   {digits(row.amount)}
                 </span>

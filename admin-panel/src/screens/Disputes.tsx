@@ -23,6 +23,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { listPayments, resolveDispute } from "@/api/endpoints";
 import type { DisputeResolution, Payment } from "@/api/types";
+import { PaymentParties } from "@/components/profile/PaymentParties";
 import { Shell } from "@/components/Shell";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
@@ -87,8 +88,8 @@ export function DisputesScreen() {
           }
           searching={search.searching}
           noResults={NO_RESULTS}
-          columns="1fr 1.6fr 1.2fr 1fr 1fr"
-          headers={["المبلغ", "السبب", "مرجع الحوالة", "فُتح", ""]}
+          columns="1fr 1.2fr 1.6fr 1.2fr 1fr 1fr"
+          headers={["المبلغ", "الطرفان", "السبب", "مرجع الحوالة", "فُتح", ""]}
           rows={rows}
           keyOf={(row) => row.id}
           empty={{
@@ -100,6 +101,9 @@ export function DisputesScreen() {
               <span className="font-semibold text-ink">
                 {digits(row.amount)}
               </span>
+              {/* **ومن يفصل نزاعاً يحتاج الطرفين لا أحدَهما** — §39٫١٢٫٤،
+                  والبيتُ واحدٌ مع شاشة المدفوعات لأن البابَ واحد */}
+              <PaymentParties payment={row} />
               <span className="min-w-0">
                 <span className="block truncate text-ink">
                   {row.dispute_reason ?? "—"}

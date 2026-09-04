@@ -36,10 +36,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 import { EmptyNote, Spinner } from "@/components/ui/Feedback";
-import { cn } from "@/lib/utils";
+import { cn, digits } from "@/lib/utils";
 
 /** ما يبقى تحت الجدول من هامش الصفحة — **مسافةٌ من السلّم لا رقمٌ حرّ**. */
 const BOTTOM_GUTTER = 24;
@@ -85,6 +85,59 @@ export interface TableEmpty {
   hint: string;
 }
 
+/** عمودُ الاختيار — **الفرع ٣ من §39٫١٢، وبندٌ بحجمه لا فرعٌ يُقحم** (§50).
+ *
+ * ## ولمَ في `Table` لا في شاشةٍ واحدة
+ *
+ * **نصُّ §٤٧٫١١**: «يقتضي **عمودَ اختيارٍ في `Table.tsx`** يستعمله ٢٢ جدولاً
+ * — **سطحٌ مشتركٌ يُلمس لأجل فعلٍ واحد**». فهو هنا مرّةً واحدة، **ولا شاشةَ
+ * تخترع مربّعَ اختيارٍ لنفسها** فتفترق الأشكالُ أوّلَ تعديل.
+ *
+ * ## و**اختياريٌّ بالكامل**: الجداولُ الاثنان والعشرون لا يتغيّر فيها حرف
+ *
+ * **من لا يمرّر `selection` يبقى كما كان بايتاً**: لا عمودَ يُضاف إلى
+ * `grid-template-columns`، ولا خليّةَ تُرسم، ولا شريطَ يظهر. **وهذا شرطُ
+ * المالك: «لا تغيّر منطق عمل قائماً».**
+ *
+ * ## والعمودُ يُحقن في الشبكة ولا يُطلب من المستدعي
+ *
+ * **`columns` نصٌّ واحدٌ للرأس والصفوف معاً** — وهو الدرسُ المكتوب في رأس هذا
+ * الملفّ. **فلو طُلب من كلِّ شاشةٍ أن تضيف `auto ` بيدها** لَنسيتها واحدةٌ
+ * فانزاح رأسُها عن صفوفها، **وهو الخطأُ الذي وُجد `columns` ليمنعه**.
+ *
+ * ## و«الكلّ» تعني **المعروضَ الآن** — ولا تكذب
+ *
+ * **القوائمُ مرقَّمةُ الصفحات ومسقوفةٌ بخمسين**، فمربّعُ رأسٍ اسمُه «الكلّ»
+ * يختار ما وصل لا ما في القاعدة. **ولذلك يقول الشريطُ العددَ صراحةً** —
+ * «اختِرتَ N من M المعروضة» — **فلا يظنّ المشرفُ أنه لمس ألفَ صفٍّ وهو لمس
+ * خمسين**. وهو درسُ «حارسٌ صادقٌ تُوسَّع دعواه فوق نطاقه» في ثوبِ زرّ.
+ */
+export interface TableSelection<T> {
+  /** مفاتيحُ ما اختير — **من `keyOf` نفسِها** فلا مفتاحان لشيءٍ واحد. */
+  selected: ReadonlySet<string>;
+  /** **دالّةُ تحديثٍ لا قيمةٌ جاهزة** — `Dispatch<SetStateAction<…>>`.
+   *
+   * **والعلّةُ قِيست ٢٠٢٦-٠٩-٠٤ بالنقر لا بالقراءة**: ضغطتان في دفعةِ React
+   * واحدةٍ كانتا تُسقطان إحداهما — `اختِرتَ 2 من 18` بعد ثلاث ضغطات.
+   * **لأن الحسابَ كان يقرأ `selected` من الخاصّيّة**، وهي في مُعالِج الضغطة
+   * الثانية **قيمةُ ما قبل الأولى**. فالثانيةُ تبني مجموعةً من قيمةٍ بائدةٍ
+   * وتمحو ما أضافته الأولى.
+   *
+   * **ولا يقع هذا بإصبعِ إنسان** — بينهما إعادةُ رسم — **لكنه يقع بضغطةٍ
+   * مزدوجةٍ أو نقرٍ سريعٍ على لمس**، **ولا يصيح شيء**: يبقى صفٌّ غيرُ مختارٍ
+   * وقد ظنّ المشرفُ أنه اختاره. **والعلاجُ أن يُحسب من السابق لا من
+   * الخاصّيّة.**
+   */
+  onChange: Dispatch<SetStateAction<ReadonlySet<string>>>;
+  /** **صفٌّ لا يصلح للفعل** — يُعطَّل مربّعُه ولا يُخفى.
+   *
+   * **ولا يُخفى بقصد**: «زرٌّ يختفي يُقرأ عطباً في اللوحة» — قاعدةٌ مكتوبةٌ
+   * في `Finance.tsx` منذ بُني. ومربّعٌ معطَّلٌ يقول «هذا الصفُّ ليس منه». */
+  disabled?: (row: T) => boolean;
+  /** الأفعالُ التي تظهر حين يُختار شيء — **ولا يظهر الشريطُ بلا فعل**. */
+  actions?: (selected: ReadonlySet<string>, clear: () => void) => ReactNode;
+}
+
 export function Table<T>({
   columns,
   headers,
@@ -95,6 +148,7 @@ export function Table<T>({
   noResults,
   searching = false,
   toolbar,
+  selection,
   height: mode = "viewport",
 }: {
   /** قيمةُ `grid-template-columns` — واحدةٌ للرأس والصفوف معاً. */
@@ -111,6 +165,8 @@ export function Table<T>({
   searching?: boolean;
   /** شريطُ الأدوات — يثبت فوق الرأس ولا ينزلق مع الصفوف. */
   toolbar?: ReactNode;
+  /** **عمودُ الاختيار — وغيابُه يبقي الجدولَ كما كان بايتاً** (§50). */
+  selection?: TableSelection<T>;
   /** **ثلاثةُ أوضاع، والفرقُ بينها مَن يملك الصفحة**:
    *
    * - `viewport` (الافتراض) — **جدولُ الصفحة الرئيس**: يأخذ ما تبقّى من
@@ -123,11 +179,62 @@ export function Table<T>({
 }) {
   const { ref, height } = useViewportHeight<HTMLDivElement>();
 
+  // **العمودُ يُحقن هنا** — فلا يُطلب من اثنين وعشرين مستدعياً أن يتذكّروه،
+  // ولا ينزاح رأسٌ عن صفوفه لأن أحدَهم نسيه
+  const grid = selection ? `auto ${columns}` : columns;
+
+  /** **ما يقبل الاختيارَ من المعروض الآن** — لا ما في القاعدة. */
+  const selectable = selection
+    ? (rows ?? []).filter((row) => !selection.disabled?.(row))
+    : [];
+  const selectableKeys = selectable.map(keyOf);
+  const chosen = selection
+    ? selectableKeys.filter((key) => selection.selected.has(key)).length
+    : 0;
+  // **ثلاثُ حالاتٍ لا اثنتان**: لا شيء · بعضٌ · الكلّ. **و«بعضٌ» تُرسم
+  // بشَرطةٍ لا بعلامة** — مربّعٌ مؤشَّرٌ بالكامل وفيه صفٌّ غيرُ مختارٍ يكذب
+  const allChosen = chosen > 0 && chosen === selectableKeys.length;
+  const someChosen = chosen > 0 && !allChosen;
+
+  // **يُحسب من السابق لا من الخاصّيّة** — انظر علّةَ `onChange` أعلاه
+  function setAll(next: boolean) {
+    selection?.onChange((prev) => {
+      const value = new Set(prev);
+      for (const key of selectableKeys) {
+        if (next) value.add(key);
+        else value.delete(key);
+      }
+      return value;
+    });
+  }
+
+  function toggle(key: string) {
+    selection?.onChange((prev) => {
+      const value = new Set(prev);
+      if (value.has(key)) value.delete(key);
+      else value.add(key);
+      return value;
+    });
+  }
+
   const head = (
     <div
       className="grid gap-10 bg-surface-2 px-18 py-10 text-11 font-semibold text-muted"
-      style={{ gridTemplateColumns: columns }}
+      style={{ gridTemplateColumns: grid }}
     >
+      {selection ? (
+        <span className="flex items-center">
+          <SelectBox
+            checked={allChosen}
+            partial={someChosen}
+            disabled={selectableKeys.length === 0}
+            onChange={setAll}
+            label={
+              allChosen ? "ألغِ اختيارَ المعروض" : "اختَرِ المعروضَ في هذه الصفحة"
+            }
+          />
+        </span>
+      ) : null}
       {headers.map((header, index) => (
         <span key={index}>{header}</span>
       ))}
@@ -157,17 +264,31 @@ export function Table<T>({
         <EmptyNote title={empty.title} hint={empty.hint} />
       )
     ) : (
-      rows.map((row) => (
-        <div
-          key={keyOf(row)}
-          // **صفوفٌ متساويةُ الارتفاع**: `min-h-44` هدفُ لمسٍ كامل، وصفٌّ
-          // يقصر بمحتواه يجعل المسافاتِ غيرَ منتظمةٍ فتتعب العين
-          className="grid min-h-44 items-center gap-10 border-t border-line px-18 py-12 text-12.5"
-          style={{ gridTemplateColumns: columns }}
-        >
-          {render(row)}
-        </div>
-      ))
+      rows.map((row) => {
+        const key = keyOf(row);
+        const off = selection?.disabled?.(row) ?? false;
+        return (
+          <div
+            key={key}
+            // **صفوفٌ متساويةُ الارتفاع**: `min-h-44` هدفُ لمسٍ كامل، وصفٌّ
+            // يقصر بمحتواه يجعل المسافاتِ غيرَ منتظمةٍ فتتعب العين
+            className="grid min-h-44 items-center gap-10 border-t border-line px-18 py-12 text-12.5"
+            style={{ gridTemplateColumns: grid }}
+          >
+            {selection ? (
+              <span className="flex items-center">
+                <SelectBox
+                  checked={selection.selected.has(key)}
+                  disabled={off}
+                  onChange={() => toggle(key)}
+                  label="اختَرْ هذا الصفّ"
+                />
+              </span>
+            ) : null}
+            {render(row)}
+          </div>
+        );
+      })
     );
 
   return (
@@ -178,6 +299,29 @@ export function Table<T>({
     >
       {toolbar ? (
         <div className="shrink-0 border-b border-line px-14 py-10">{toolbar}</div>
+      ) : null}
+      {/* **شريطُ الاختيار فوق الرأس وثابتٌ معه** — لا ينزلق مع الصفوف:
+          من اختار خمسةً ثمّ نزل يقرأ السادسَ يفقد زرَّ الفعل من الشاشة */}
+      {selection && chosen > 0 ? (
+        <div className="shrink-0 border-b border-line bg-surface-2 px-18 py-10">
+          <div className="flex flex-wrap items-center gap-12">
+            <span className="text-11.5 font-semibold text-ink">
+              {/* **العددان معاً ولا يكذب أحدُهما**: «الكلّ» تعني المعروضَ في
+                  هذه الصفحة لا ما في القاعدة — والقائمةُ مسقوفةٌ بخمسين */}
+              اختِرتَ {digits(chosen)} من {digits(selectableKeys.length)} المعروضة
+            </span>
+            <button
+              type="button"
+              onClick={() => setAll(false)}
+              className="text-11.5 font-semibold text-muted underline"
+            >
+              ألغِ الاختيار
+            </button>
+            <span className="flex flex-wrap items-center gap-10">
+              {selection.actions?.(selection.selected, () => setAll(false))}
+            </span>
+          </div>
+        </div>
       ) : null}
       <div className="shrink-0">{head}</div>
       {/* **الصفوفُ وحدَها تنزلق** — بشريطها لا بشريط الصفحة */}
@@ -191,6 +335,58 @@ export function Table<T>({
         {body}
       </div>
     </div>
+  );
+}
+
+/** مربّعُ اختيارٍ في خليّةِ جدول — **صغيرٌ بلا نصٍّ بجانبه**.
+ *
+ * **ولمَ لا `Checkbox` من `ui/Field`**: ذاك يفرض ابناً نصّياً بجانبه
+ * (`children` مطلوب) و`w-full`، **وهو صحيحٌ في نموذجٍ وخاطئٌ في خليّةِ
+ * جدول** — يمطّ العمودَ ويترك فراغاً لا نصَّ فيه.
+ *
+ * **ويبقى `role="checkbox"` لا `<input>`** للسبب المكتوب في `ARCHITECTURE.md`:
+ * `accent-ink` يُحلّ إلى لون اللوحة فيطلي المربّعَ بلون الخلفية.
+ *
+ * **و«بعضٌ» تُرسم بشَرطة**: `aria-checked="mixed"` هو ما يقوله المعيار،
+ * **ومربّعٌ مؤشَّرٌ بالكامل وتحته صفٌّ غيرُ مختارٍ يكذب على من يقرؤه.**
+ */
+function SelectBox({
+  checked,
+  partial = false,
+  disabled = false,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  partial?: boolean;
+  disabled?: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={partial ? "mixed" : checked}
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={(event) => {
+        // **الصفُّ نفسُه قد يكون زرّاً** (سجلُّ الرحلات يفتح الرحلةَ بالنقر)،
+        // **فبلا هذا يفتح النقرُ الاثنين معاً** — وهي قاعدةُ `OpenProfile`
+        event.stopPropagation();
+        onChange(!checked);
+      }}
+      className={cn(
+        "flex size-18 flex-none items-center justify-center rounded-5 border text-11 font-bold",
+        disabled && "cursor-not-allowed opacity-40",
+        checked || partial
+          ? "border-accent bg-accent text-accent-ink"
+          : "border-line text-transparent",
+      )}
+    >
+      {partial ? "–" : "✓"}
+    </button>
   );
 }
 

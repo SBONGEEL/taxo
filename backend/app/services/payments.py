@@ -35,6 +35,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.currency import currency_for_country
 from app.core.exceptions import (
@@ -172,8 +173,23 @@ async def list_all(
 
     والدولةُ تُقرأ من الرحلة: لا عمودَ دولةٍ على `payments` لأن الدفعة تتبع
     رحلتها، فالضمُّ هنا لا عمودٌ مكرَّر هناك.
+
+    **وطرفا الرحلة يُحمَّلان معها** (§٤٧٫١٩، 2026-09-04): صفُّ اللوحة صار
+    يحمل الراكبَ والكبتنَ ليُفتح ملفُّهما، **وقراءةٌ كسولةٌ بعد خروج الجلسة
+    تقع خارج السياق** — `MissingGreenlet` بعينه، وهو فخُّ هذا المشروع
+    المعروف. **و`selectinload` لا `join`** كي لا تتكرّر الصفوف فتصير صفحةُ
+    الخمسين أقلَّ من خمسين — وهو قرارُ `ride_log` نفسُه.
     """
-    stmt = select(Payment).order_by(Payment.created_at.desc())
+    stmt = (
+        select(Payment)
+        .options(
+            selectinload(Payment.ride).selectinload(Ride.rider),
+            selectinload(Payment.ride)
+            .selectinload(Ride.driver)
+            .selectinload(Driver.user),
+        )
+        .order_by(Payment.created_at.desc())
+    )
     if status is not None:
         stmt = stmt.where(Payment.status == status)
     if country_code is not None:

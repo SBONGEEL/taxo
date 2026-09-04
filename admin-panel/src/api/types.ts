@@ -288,6 +288,16 @@ export type WithdrawalStatus = "pending" | "approved" | "paid" | "rejected";
 export interface Withdrawal {
   id: string;
   driver_id: string;
+  /** **صاحبُ الطلب** — مرآةُ `AdminWithdrawalRow.driver` (§٤٧٫١٩).
+   *
+   * **وكان الجدولُ لا يعرض إنساناً البتّة**: المبلغُ والقناةُ والحالُ
+   * والتاريخ. **فالمشرفُ يوافق على صرفِ مالٍ ولا يرى لمن.**
+   *
+   * **و`driver_id` وحدَه لا يفتح ملفّاً**: لا بابَ يقرأ صفَّ كبتنٍ واحد،
+   * فالدرجُ يُفتح بمطابقةٍ **داخل القائمة المرشَّحة** — والاسمُ هو ما
+   * يُضيَّق به.
+   */
+  driver: DriverParty;
   amount: string;
   method: WithdrawalMethod;
   status: WithdrawalStatus;
@@ -309,6 +319,12 @@ export type DisputeResolution = "paid" | "unpaid";
 export interface Payment {
   id: string;
   ride_id: string;
+  /** **راكبُ الرحلة، لا الدافعُ بالضرورة** (§٤٧٫١٩): الدفعُ المختلط صفّان،
+   *  والبطاقةُ قد تكون بطاقةَ غيره. **فالحقلُ يُسمّى بما هو.** */
+  rider: Party | null;
+  /** **كبتنُ الرحلة** — و`null` واقعةٌ حقيقية: رحلةٌ أُلغيت قبل القبول لا
+   *  كبتنَ لها، **ورسمُ إلغائها دفعةٌ بلا كبتن**. */
+  driver: DriverParty | null;
   method: PaymentMethod;
   amount: string;
   currency: Currency;
@@ -711,15 +727,26 @@ export interface DriverLiveRide {
   position: DriverLivePosition | null;
 }
 
-// ------------------------------------------------------------ سجل الرحلات
+// ------------------------------------------------------------ طرفٌ إنسانٌ في صفّ
 
-export interface RideParty {
+/** مرآةُ `schemas/party.py::PartyOut` — **وليست خاصّةً بالرحلات**.
+ *
+ * **كان اسمُها `RideParty`** حتى ٢٠٢٦-٠٩-٠٤: صار يستعملها صفُّ الدفعة وصفُّ
+ * طلب الصرف، **واسمٌ يبدأ بـ`Ride` على صفِّ طلبِ صرفٍ يُقرأ خطأً**. وهي
+ * تسميةٌ واحدةٌ في الطرفين، لا اسمٌ هنا وآخرُ هناك.
+ */
+export interface Party {
   user_id: string;
   name: string;
   phone: string;
 }
 
-export interface RideDriverParty extends RideParty {
+/** كبتنٌ — **ومعه `drivers.id`**، وهو ما يفتح به الدرجُ ملفَّه.
+ *
+ * **و`plate_number` اختياريٌّ بقصد**: صفُّ الرحلة يحمل اللوحةَ، وصفُّ الصرف
+ * وصفُّ الدفعة لا يعرضانها — **ولا تُحسب قيمةٌ لا يقرؤها أحد**.
+ */
+export interface DriverParty extends Party {
   driver_id: string;
   plate_number: string | null;
 }
@@ -735,8 +762,8 @@ export interface AdminRideRow {
   country_code: CountryCode;
   vehicle_category: VehicleCategory;
   currency: Currency;
-  rider: RideParty;
-  driver: RideDriverParty | null;
+  rider: Party;
+  driver: DriverParty | null;
   pickup_address: string | null;
   dropoff_address: string | null;
   distance_km: string;

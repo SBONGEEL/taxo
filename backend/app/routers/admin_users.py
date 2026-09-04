@@ -25,6 +25,7 @@ from sqlalchemy import func, or_, select
 
 from app.core.deps import (
     DbSession,
+    ListReader,
     PermissionsManager,
     RedisDep,
     StaffUser,
@@ -102,7 +103,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/users", response_model=list[UserOut])
 async def list_users(
-    _staff: StaffUser,
+    # **`read.only` لا `StaffUser`** (§٤٧٫١٠): الدورانِ يملكانها اليومَ حرفاً،
+    # **فلا جوابَ يتبدّل** — والذي يتبدّل أنها صارت **تُنزع بالاسم**
+    _reader: ListReader,
     session: DbSession,
     role: UserRole | None = None,
     country_code: CountryCode | None = None,
@@ -365,7 +368,8 @@ async def _set_blocked(
 
 @router.get("/drivers", response_model=list[AdminDriverRow])
 async def list_drivers(
-    _staff: StaffUser,
+    # **`read.only` كأختِها** (§٤٧٫١٠) — والقوائمُ الأربعُ بحارسٍ واحد
+    _reader: ListReader,
     session: DbSession,
     status: DriverStatus | None = None,
     country_code: CountryCode | None = None,

@@ -42,6 +42,7 @@ import {
   ControlsSection,
   RidesSection,
 } from "@/components/profile/Sections";
+import { BulkNotify } from "@/components/BulkNotify";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -80,6 +81,10 @@ export function RidersScreen() {
   const [open, setOpen] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  // **الاختيارُ يُمسح كلَّما تغيّرت القائمة** (تحت، في `load`): من اختار
+  // خمسةً ثمّ بدّل المرشِّح **لا يرى ما اختار**، وزرُّ فعلٍ يعمل على غائبٍ
+  // عن الشاشة هو «لا يُعتمد ما لا يُرى» بعينه
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
 
   // **يفتح ما يقوله العنوان** — وجهةُ البحث العامّ (§39٫١٢٫٤).
   //
@@ -114,6 +119,8 @@ export function RidersScreen() {
 
   const load = useCallback(async () => {
     setRows(null);
+    // **ولا يبقى اختيارٌ لصفوفٍ لم تعد معروضة** — لا فعلَ على ما لا يُرى
+    setPicked(new Set());
     setRows(
       await listUsers({
         role: "rider",
@@ -172,6 +179,24 @@ export function RidersScreen() {
           headers={["الراكب", "الهاتف", "الحالة", "منذ", ""]}
           rows={rows}
           keyOf={(row) => row.id}
+          // **الاختيارُ للمشرف وحدَه**: الإرسالُ يحتاج `users.manage`،
+          // **وعمودٌ يُرى ثمّ يرتدّ ٤٠٣ يعلّم إعادةَ المحاولة** بدل أن يقول
+          // إن القرارَ ليس له (قاعدةُ `Drivers.tsx`)
+          selection={
+            isAdmin
+              ? {
+                  selected: picked,
+                  onChange: setPicked,
+                  actions: (selected, clear) => (
+                    <BulkNotify
+                      userIds={[...selected]}
+                      onClear={clear}
+                      onDone={setDone}
+                    />
+                  ),
+                }
+              : undefined
+          }
           empty={{
             title: "لا ركّاب في هذه الحال",
             hint: "بدّل الفلترة أو الدولة، أو امسح نصّ البحث.",

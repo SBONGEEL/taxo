@@ -13,17 +13,22 @@
 تُهرَّب هناك مرّةً واحدة** — ونسخةٌ رابعةٌ من النمط هنا كانت ستفوت التهريبَ
 كما فاتته ثلاث مرّاتٍ قبلها (عطبُ ٢٠٢٦-٠٩-٠٢).
 
-## والحراسةُ `StaffUser` **لأن القوائمَ الأربعَ كذلك — مقيساً لا مفترَضاً**
+## والحراسةُ `read.only` **لأن القوائمَ الأربعَ كذلك — مقيساً لا مفترَضاً**
 
 `/admin/users` · `/admin/drivers` · `/admin/rides` · `/admin/topups`
-**أربعتُها `_staff: StaffUser` بلا `require_permission`** (قُرئ من توقيعاتها
-٢٠٢٦-٠٩-٠٣). **فهذا البابُ يعطي ما تعطيه هي بحرفه، ولا يفتح شيئاً جديداً** —
-وهو شرطُ §39٫١٢٫٧: «لا اقتراحَ يعرض ما لا يملك المشرفُ صلاحيتَه».
+**أربعتُها `_reader: ListReader` منذ ٢٠٢٦-٠٩-٠٤** (§٤٧٫١٠) — وكانت
+`_staff: StaffUser` بلا صلاحيةٍ مسمّاة. **فهذا البابُ يعطي ما تعطيه هي
+بحرفه، ولا يفتح شيئاً جديداً** — وهو شرطُ §39٫١٢٫٧: «لا اقتراحَ يعرض ما لا
+يملك المشرفُ صلاحيتَه».
 
-> **⚠ ومن أضاف `require_permission` إلى إحدى تلك القوائم بعد اليوم يضيفها
-> هنا** — وإلا صار هذا البابُ يعرض ما تمنعه هي، **وهو التفافٌ على حارسٍ من
-> حيث لا يُرى**. ويقيسه `test_admin_global_search.py::
-> test_every_bucket_matches_its_list_guard`.
+**ولو بقي `StaffUser` يومَ حُرست الأربعُ لصار التفافاً عليها من حيث لا
+يُرى**: من نُزعت عنه `read.only` كان يُردّ عن القوائم **ويقرأ صفوفَها في
+درج البحث**.
+
+> **⚠ ومن ضيّق حراسةَ إحدى تلك القوائم بعد اليوم يضيّق هذا البابَ معها** —
+> وإلا عاد الالتفاف. ويقيسه
+> `test_admin_global_search.py::test_the_global_search_never_outreaches_the_lists_it_summarises`
+> **ومعه `tests/test_admin_list_guard.py` بالنقض**.
 
 ## والحدُّ خمسةٌ لكلِّ صنف
 
@@ -37,7 +42,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import or_, select
 from sqlalchemy.orm import aliased
 
-from app.core.deps import DbSession, StaffUser
+from app.core.deps import DbSession, ListReader
 from app.models.driver import Driver
 from app.models.user import User
 from app.models.wallet import WalletTopupRequest
@@ -52,7 +57,8 @@ PER_KIND = 5
 
 @router.get("", response_model=SearchHits)
 async def global_search(
-    _staff: StaffUser,
+    # **حارسُ القوائم نفسُه** — لا أوسعَ منه، وإلا صار البابُ التفافاً عليها
+    _reader: ListReader,
     session: DbSession,
     q: str = Query(max_length=120, description="اسمٌ أو رقمٌ أو مرجعٌ أو معرّف"),
 ) -> SearchHits:

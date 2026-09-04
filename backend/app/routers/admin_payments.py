@@ -13,6 +13,8 @@ from fastapi import APIRouter, Query
 
 from app.core.deps import DbSession, DisputeResolver, FinanceManager, StaffUser
 from app.models.enums import CountryCode, PaymentStatus
+from app.schemas.admin_payment import AdminPaymentRow
+from app.schemas.party import DriverPartyOut, PartyOut
 from app.schemas.payment import (
     PaymentOut,
     PaymentRefundRequest,
@@ -23,7 +25,26 @@ from app.services import payments as payments_service
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-@router.get("/payments", response_model=list[PaymentOut])
+def _row(entry) -> AdminPaymentRow:
+    """الدفعةُ ومعها طرفا رحلتها — **بانٍ واحدٌ لا حقلٌ يُملأ في موضعين**.
+
+    **ودرسُ البند ٣ بنصِّه**: «المعالجةُ بالبانِي الواحد لا بالحقل» — شاشتا
+    المدفوعات والنزاعات تقرآن هذا البابَ نفسَه، **فمن أضاف حقلاً هنا وصلهما
+    معاً** ولا تبقى إحداهما بنصف الصفّ.
+    """
+    row = AdminPaymentRow.model_validate(entry)
+    ride = entry.ride
+    if ride is not None:
+        row.rider = PartyOut.of(ride.rider) if ride.rider is not None else None
+        # **ولا لوحةَ هنا**: صفُّ الدفعة لا يعرض مركبة، **وحقلٌ لا يقرؤه أحد
+        # هو ما يمسكه `check:readers`** — فيُترك `plate_number` غائباً
+        row.driver = (
+            DriverPartyOut.of_driver(ride.driver) if ride.driver is not None else None
+        )
+    return row
+
+
+@router.get("/payments", response_model=list[AdminPaymentRow])
 async def list_payments(
     _staff: StaffUser,
     session: DbSession,
@@ -32,7 +53,7 @@ async def list_payments(
     q: str | None = Query(default=None, max_length=120, description="اسمُ طرفٍ أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-) -> list[PaymentOut]:
+) -> list[AdminPaymentRow]:
     """قائمة الدفعات؛ الفلترة على `disputed` هي شاشة النزاعات.
 
     **والدولة تُفلتر من الرحلة لا من الدفعة**: لا عمودَ دولةٍ على `payments`،
@@ -47,7 +68,7 @@ async def list_payments(
         offset=offset,
         q=q,
     )
-    return [PaymentOut.model_validate(entry) for entry in entries]
+    return [_row(entry) for entry in entries]
 
 
 @router.post("/payments/{payment_id}/resolve", response_model=PaymentOut)

@@ -23,6 +23,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.party import DriverPartyOut, PartyOut
 from app.schemas.ride import RideStopOut
 from app.services.settlement import SettlementState
 from app.models.enums import (
@@ -37,17 +38,14 @@ from app.models.enums import (
 )
 
 
-class RidePartyOut(BaseModel):
-    """طرفٌ في الرحلة باسمه ورقمه — للوحة وحدها."""
-
-    user_id: uuid.UUID
-    name: str
-    phone: str
-
-
-class RideDriverPartyOut(RidePartyOut):
-    driver_id: uuid.UUID
-    plate_number: str | None = None
+# **الطرفانِ نُقلا إلى `schemas/party.py`** (٢٠٢٦-٠٩-٠٤، §٤٧٫١٩) باسمَي
+# `PartyOut` و`DriverPartyOut`: صار يستعملهما صفُّ الدفعة وصفُّ طلب الصرف
+# معاً، **واسمٌ يبدأ بـ`Ride` على صفِّ طلبِ صرفٍ يُقرأ خطأً**.
+#
+# **ونُقلا ولم يُترك لهما اسمٌ مستعارٌ هنا**: `RidePartyOut = PartyOut` كانت
+# ستُبقي اسمين لشيءٍ واحد — **وهو بعينه ما يمنعه درسُ «ثلاثُ تسمياتٍ لشيءٍ
+# واحد»**، فيُكتب الجديدُ بأحدهما والقديمُ بالآخر ويفترقان في القراءة لا في
+# السلوك. **فالمستدعيان عُدّلا، وصفرُ اسمٍ ثانٍ بقي.**
 
 
 class AdminRideRow(BaseModel):
@@ -57,8 +55,8 @@ class AdminRideRow(BaseModel):
     vehicle_category: VehicleCategory
     currency: Currency
 
-    rider: RidePartyOut
-    driver: RideDriverPartyOut | None
+    rider: PartyOut
+    driver: DriverPartyOut | None
 
     pickup_address: str | None
     dropoff_address: str | None

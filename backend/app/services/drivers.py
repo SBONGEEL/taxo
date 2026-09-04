@@ -8,11 +8,17 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+if TYPE_CHECKING:  # pragma: no cover - للتلميح فقط
+    from app.schemas.party import DriverPartyOut
 
 from app.core.exceptions import Conflict, DocumentsIncomplete, PermissionDenied
 from app.models.driver import Driver
@@ -296,3 +302,30 @@ async def approve(session: AsyncSession, *, driver: Driver, actor: User) -> Driv
     return await set_status(
         session, driver=driver, status=DriverStatus.APPROVED, actor=actor
     )
+
+
+async def parties_of(
+    session: AsyncSession, driver_ids: "Sequence[uuid.UUID]"
+) -> "dict[uuid.UUID, DriverPartyOut]":
+    """كباتنُ صفحةٍ باسمهم ورقمهم — **استعلامٌ ثانٍ لا ضمٌّ** (§٤٧٫١٩).
+
+    **والعلّةُ هي علّةُ `ride_log.payment_summaries` بحرفها**: ضمٌّ يضاعف صفَّ
+    الطلب بعدد ما يعلّق به، **فتصير صفحةُ الخمسين أقلَّ من خمسين صامتةً**.
+    واستعلامٌ واحدٌ على مجموعة المعرّفات يجيب الصفحةَ كلَّها.
+
+    **ولا لوحةَ هنا**: لا صفَّ من الصفوف التي تستعمله يعرض مركبة، **وحقلٌ
+    يُحسب ولا يقرؤه أحدٌ هو ما يمسكه `check:readers`**.
+    """
+    from app.schemas.party import DriverPartyOut
+
+    wanted = {driver_id for driver_id in driver_ids}
+    if not wanted:
+        return {}
+    rows = (
+        await session.scalars(
+            select(Driver)
+            .where(Driver.id.in_(wanted))
+            .options(selectinload(Driver.user))
+        )
+    ).all()
+    return {row.id: DriverPartyOut.of_driver(row) for row in rows}

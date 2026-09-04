@@ -13,7 +13,13 @@ from fastapi import APIRouter, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
-from app.core.deps import FinanceManager, DbSession, RedisDep, StaffUser
+from app.core.deps import (
+    FinanceManager,
+    DbSession,
+    ListReader,
+    RedisDep,
+    StaffUser,
+)
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.driver import Driver
 from app.models.enums import (
@@ -40,7 +46,9 @@ from app.schemas.wallet import (
     WithdrawalOut,
     WithdrawalPayoutOut,
 )
+from app.schemas.admin_payment import AdminWithdrawalRow
 from app.services import cliq_claims
+from app.services import drivers as drivers_service
 from app.services import cliq_subscriptions, commission_view
 from app.services import (
     audit,
@@ -225,7 +233,9 @@ async def create_adjustment(
 
 @router.get("/topups", response_model=list[TopupRequestOut])
 async def list_topup_requests(
-    _staff: StaffUser,
+    # **`read.only`** (§٤٧٫١٠) — **والبتُّ تحتها `FinanceManager` كما كان**:
+    # القراءةُ تُحرس باسمها، **ولا يتحرّك مالٌ بصلاحية قراءة**
+    _reader: ListReader,
     session: DbSession,
     status_filter: TopupRequestStatus | None = Query(default=None, alias="status"),
     q: str | None = Query(default=None, max_length=120, description="اسمُ صاحبه أو رقمُه"),
@@ -304,7 +314,7 @@ async def create_staff_topup(
 # ------------------------------------------------------------ طلبات السحب
 
 
-@router.get("/withdrawals", response_model=list[WithdrawalOut])
+@router.get("/withdrawals", response_model=list[AdminWithdrawalRow])
 async def list_withdrawal_requests(
     _staff: StaffUser,
     session: DbSession,
@@ -312,11 +322,30 @@ async def list_withdrawal_requests(
     q: str | None = Query(default=None, max_length=120, description="اسمُ صاحبه أو رقمُه"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-) -> list[WithdrawalOut]:
+) -> list[AdminWithdrawalRow]:
+    """طلباتُ الصرف **ومعها أصحابُها** (§٤٧٫١٩، 2026-09-04).
+
+    **وكان الجدولُ لا يعرض إنساناً البتّة**: المبلغُ والقناةُ والحالُ
+    والتاريخ. **فالمشرفُ يوافق على صرفِ مالٍ ولا يرى لمن** — والبحثُ بالاسم
+    كان يعمل (`driver_clause`) **والنتيجةُ لا تقول أيَّ اسمٍ طابقت**.
+
+    **والأسماءُ تُقرأ باستعلامٍ ثانٍ لا بضمّ** — قرارُ `ride_log.payment_
+    summaries` نفسُه: ضمٌّ على `drivers`+`users` يضاعف الصفوفَ إن تعدّدت
+    المركبات، **فتصير صفحةُ الخمسين أقلَّ من خمسين صامتةً**.
+    """
     requests = await withdrawals.list_all(
         session, status=status_filter, limit=limit, offset=offset, q=q
     )
-    return [WithdrawalOut.model_validate(request) for request in requests]
+    parties = await drivers_service.parties_of(
+        session, [request.driver_id for request in requests]
+    )
+    return [
+        AdminWithdrawalRow(
+            **WithdrawalOut.model_validate(request).model_dump(),
+            driver=parties[request.driver_id],
+        )
+        for request in requests
+    ]
 
 
 @router.post("/withdrawals/{request_id}/approve", response_model=WithdrawalOut)

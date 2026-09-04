@@ -17,19 +17,18 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import DbSession, StaffUser
+from app.core.deps import DbSession, ListReader, StaffUser
 from app.core.exceptions import NotFound
 from app.models.enums import CountryCode, RideStatus
 from app.models.ride import Ride
 from app.schemas.admin_ride import (
     AdminRideDetail,
     AdminRideRow,
-    RideDriverPartyOut,
-    RidePartyOut,
     RidePaymentOut,
     RidePointOut,
     RideRatingOut,
 )
+from app.schemas.party import DriverPartyOut, PartyOut
 from app.schemas.ride import stops_of
 from app.services import pricing, ride_log, rides as rides_service
 
@@ -43,13 +42,13 @@ def _row(ride: Ride, summary: ride_log.PaymentSummary) -> AdminRideRow:
         country_code=ride.country_code,
         vehicle_category=ride.vehicle_category,
         currency=ride.currency,
-        rider=RidePartyOut(
+        rider=PartyOut(
             user_id=ride.rider.id, name=ride.rider.name, phone=ride.rider.phone
         ),
         driver=(
             None
             if ride.driver is None
-            else RideDriverPartyOut(
+            else DriverPartyOut(
                 user_id=ride.driver.user.id,
                 name=ride.driver.user.name,
                 phone=ride.driver.user.phone,
@@ -76,7 +75,9 @@ def _row(ride: Ride, summary: ride_log.PaymentSummary) -> AdminRideRow:
 
 @router.get("", response_model=list[AdminRideRow])
 async def list_rides(
-    _staff: StaffUser,
+    # **`read.only`** (§٤٧٫١٠) — **والتفصيلُ تحتها يبقى `StaffUser`**: الدعمُ
+    # يفصل نزاعاً، **ولا يُفصل نزاعٌ على رحلةٍ لا تُقرأ**
+    _reader: ListReader,
     session: DbSession,
     country_code: CountryCode | None = None,
     ride_status: RideStatus | None = None,

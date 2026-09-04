@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { listPayments, refundPayment } from "@/api/endpoints";
 import type { Payment, PaymentMethod, PaymentStatus } from "@/api/types";
+import { PaymentParties } from "@/components/profile/PaymentParties";
 import { Shell } from "@/components/Shell";
 import { Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -111,8 +112,8 @@ export function PaymentsScreen() {
         }
         searching={search.searching}
         noResults={NO_RESULTS}
-        columns="1.1fr .8fr .9fr 1fr 1.1fr auto"
-        headers={["الرحلة", "القناة", "المبلغ", "الحال", "التاريخ", ""]}
+        columns="1.1fr 1.2fr .8fr .9fr 1fr 1.1fr auto"
+        headers={["الرحلة", "الطرفان", "القناة", "المبلغ", "الحال", "التاريخ", ""]}
         rows={rows}
         keyOf={(row) => row.id}
         empty={{
@@ -126,6 +127,11 @@ export function PaymentsScreen() {
               <span className="truncate text-12 text-muted" dir="ltr">
                 {row.ride_id.slice(0, 8)}
               </span>
+              {/* **الطرفان بزرِّ ملفٍّ لكلٍّ** — §39٫١٢٫٤: «ومن أيِّ صفٍّ يخصّ
+                  مستخدماً زرٌّ يفتح ملفَّه مباشرة». **وكان صفُّ الدفعة لا
+                  يحمل إنساناً البتّة** فبقي غيرَ موصولٍ بعلّةٍ مكتوبة (§٤٧٫١٧)،
+                  **والعلّةُ زالت بحقلٍ في العقد** لا بزرٍّ يبحث بالاسم */}
+              <PaymentParties payment={row} />
               <span className="text-12.5 text-ink">
                 {METHOD_LABEL[row.method] ?? row.method}
               </span>

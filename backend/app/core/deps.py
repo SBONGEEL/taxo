@@ -197,3 +197,15 @@ BackupsManager = Annotated[User, _perm(AdminPermission.BACKUPS_MANAGE)]
 DisputeResolver = Annotated[User, _perm(AdminPermission.PAYMENTS_RESOLVE)]
 SecurityManager = Annotated[User, _perm(AdminPermission.SECURITY_MANAGE)]
 PermissionsManager = Annotated[User, _perm(AdminPermission.PERMISSIONS_MANAGE)]
+
+# ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
+#
+# **ولمَ `read.only` لا `users.manage`**: القوائمُ الأربعُ التي يلخّصها البحثُ
+# العامّ كانت `StaffUser` **بلا صلاحيةٍ مسمّاة**، **و`support` يقرؤها اليومَ
+# حرفاً** — فحراستُها بما لا يملكه **تبديلُ سلوكٍ قائمٍ لا تسميةُ حارس**.
+# **والمقيسُ ما يقع لا ما نتمنّاه**، وهو شرطُ المصفوفة في يومها الأول نفسُه.
+#
+# **وما يتغيّر بها**: صارت **تُنزع بالاسم**. من مُنح صفوفاً لا `read.only`
+# فيها كان يقرأ الأربعَ رغم ذلك — **لأن لا حارسَ يسأل** — فكانت المصفوفةُ
+# زينةً في هذا الركن وحدَه. **ويقيسه بالنقض `tests/test_admin_list_guard.py`.**
+ListReader = Annotated[User, _perm(AdminPermission.READ_ONLY)]
