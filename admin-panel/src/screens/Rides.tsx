@@ -43,6 +43,7 @@ import type {
   AdminRideRow,
   RideStatus,
 } from "@/api/types";
+import { OpenProfile } from "@/components/profile/OpenProfile";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -206,10 +207,32 @@ export function RidesScreen() {
 
               <span className="text-muted">{moment(row.created_at)}</span>
 
-              <span className="min-w-0 truncate text-ink">{row.rider.name}</span>
+              {/* **واسمُ الطرف يحمل بابَه** (§39٫١٢٫٤): كان الصفُّ يعرض
+                  اسمَ الراكب واسمَ الكبتن **ولا سبيلَ منه إلى ملفِّ أحدهما** —
+                  فمن قرأ نزاعاً على رحلةٍ خرج إلى «الأشخاص» وبحث بالاسم من
+                  جديد. */}
+              <span className="flex min-w-0 items-baseline gap-6">
+                <span className="min-w-0 truncate text-ink">
+                  {row.rider.name}
+                </span>
+                <OpenProfile kind="rider" id={row.rider.user_id} />
+              </span>
 
-              <span className="min-w-0 truncate text-ink">
-                {row.driver ? row.driver.name : <span className="text-muted">—</span>}
+              <span className="flex min-w-0 items-baseline gap-6">
+                {row.driver ? (
+                  <>
+                    <span className="min-w-0 truncate text-ink">
+                      {row.driver.name}
+                    </span>
+                    <OpenProfile
+                      kind="driver"
+                      id={row.driver.driver_id}
+                      search={row.driver.phone}
+                    />
+                  </>
+                ) : (
+                  <span className="text-muted">—</span>
+                )}
               </span>
 
               <span className="min-w-0 truncate text-muted">

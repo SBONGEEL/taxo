@@ -29,6 +29,7 @@ import { listSkinPurchases } from "@/api/endpoints";
 import type { SkinPurchaseRow, SkinPurchases } from "@/api/types";
 import { Shell } from "@/components/Shell";
 import { TableSearch } from "@/components/Table";
+import { OpenProfile } from "@/components/profile/OpenProfile";
 import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -212,7 +213,14 @@ function Row({ row }: { row: SkinPurchaseRow }) {
   return (
     <tr className="border-t border-line">
       <td className="p-12">
-        <p className="text-ink">{row.driver_name}</p>
+        <p className="flex items-baseline gap-6 text-ink">
+          <span className="min-w-0 truncate">{row.driver_name}</span>
+          <OpenProfile
+            kind="driver"
+            id={row.driver_id}
+            search={row.driver_phone ?? row.driver_name}
+          />
+        </p>
         {/* **الهاتفُ معرِّفٌ لا كمّية** — فلا تُحوَّل خاناتُه */}
         <p className="mt-2 text-11 text-muted" dir="ltr">
           {row.driver_phone}

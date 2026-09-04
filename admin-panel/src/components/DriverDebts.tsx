@@ -23,6 +23,7 @@ import {
 } from "@/api/endpoints";
 import type { DebtClaimRow, DriverDebtRow } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
+import { OpenProfile } from "@/components/profile/OpenProfile";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Table, TableSearch } from "@/components/Table";
@@ -169,7 +170,14 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
         empty={{ title: "لا مستحقّات", hint: "لم ينشأ مستحقٌّ بعد." }}
         render={(row) => (
           <>
-            <span className="text-12 text-ink">{row.driver_name}</span>
+            <span className="flex items-baseline gap-6 text-12 text-ink">
+              <span className="min-w-0 truncate">{row.driver_name}</span>
+              <OpenProfile
+                kind="driver"
+                id={row.driver_id}
+                search={row.driver_name}
+              />
+            </span>
             <span className="text-12 text-ink">
               {money(row.amount, row.currency)}
             </span>

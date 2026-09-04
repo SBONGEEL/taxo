@@ -36,6 +36,7 @@ import { Table, TableSearch } from "@/components/Table";
 import { useCountry } from "@/lib/country";
 import { CHARGE_STATUS_LABEL, CHARGE_STATUS_TONE } from "@/lib/labels";
 import { NO_RESULTS, useSearch } from "@/lib/search";
+import { OpenProfile } from "@/components/profile/OpenProfile";
 import { day, money } from "@/lib/format";
 
 // **من `lib/labels.ts`** — يقرؤهما الملفُّ الشخصيُّ أيضاً (§37)
@@ -118,7 +119,20 @@ export function CancellationCharges({
                   مطالبةً إلى من دفع */}
               {row.carrier_driver_id ? (
                 <>
-                  {row.carrier_name ?? "كبتن"}
+                  <span className="flex items-baseline gap-6">
+                    <span className="min-w-0 truncate">
+                      {row.carrier_name ?? "كبتن"}
+                    </span>
+                    {/* **والدافعُ بلا زرّ بقصد** (§39٫١٢٫٤): الصفُّ يحمل
+                        `payer_name` و`payer_phone` **ولا يحمل معرّفَه** —
+                        وزرٌّ يبحث بالاسم وحدَه يفتح ملفَّ متشابهٍ في الاسم،
+                        **وهو أسوأُ من غياب الزرّ**. */}
+                    <OpenProfile
+                      kind="driver"
+                      id={row.carrier_driver_id}
+                      search={row.carrier_name}
+                    />
+                  </span>
                   <span className="block text-10.5 text-muted">
                     قبضه نقداً مع أجرة رحلة
                   </span>

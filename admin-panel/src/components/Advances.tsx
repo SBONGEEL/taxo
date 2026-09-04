@@ -17,6 +17,7 @@ import { ApiError } from "@/api/client";
 import { listAdvances, writeOffAdvance } from "@/api/endpoints";
 import type { AdvanceRow } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
+import { OpenProfile } from "@/components/profile/OpenProfile";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Table, TableSearch } from "@/components/Table";
@@ -94,8 +95,15 @@ export function Advances({ onError }: { onError: (message: string) => void }) {
                 يعرض الاسمَ منذ يومه، **وهما صفّان عن الشخص نفسِه في الشاشة
                 نفسِها**: الشكلُ الثامن يُرى بالعين لا بحارس. */}
             <span className="min-w-0">
-              <span className="block truncate font-semibold text-ink">
-                {row.driver_name}
+              <span className="flex items-baseline gap-6">
+                <span className="min-w-0 truncate font-semibold text-ink">
+                  {row.driver_name}
+                </span>
+                <OpenProfile
+                  kind="driver"
+                  id={row.driver_id}
+                  search={row.driver_phone ?? row.driver_name}
+                />
               </span>
               {row.driver_phone ? (
                 <span dir="ltr" className="block truncate text-start text-10.5 text-muted">
