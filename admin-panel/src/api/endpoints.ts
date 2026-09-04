@@ -749,12 +749,19 @@ export const unblockUser = (userId: string, reason?: string) =>
 
 // ---------------------------------------------------- محفظةُ حسابٍ بعينه
 
-export const getWallet = (userId: string) =>
-  api.get<Wallet>(`/admin/wallets/${userId}`);
+/** **والجانبُ يُعلَن** (§46٫٦): حسابٌ يحمل الدورين يرتدّ
+ *  `409 wallet_owner_undecided` بلا إعلان، **وتبقى البطاقةُ على دوّارةٍ
+ *  أبداً**. و`undefined` تعني «لا إعلان» — وهو النداءُ القديمُ حرفاً. */
+export const getWallet = (userId: string, wallet?: WalletOwnerType) =>
+  api.get<Wallet>(`/admin/wallets/${userId}`, { query: { wallet } });
 
-export const listWalletTransactions = (userId: string, limit = 20) =>
+export const listWalletTransactions = (
+  userId: string,
+  limit = 20,
+  wallet?: WalletOwnerType,
+) =>
   api.get<WalletTransaction[]>(`/admin/wallets/${userId}/transactions`, {
-    query: { limit },
+    query: { limit, wallet },
   });
 
 /** تجميدٌ يوقف حركة المحفظة **ويبقي صاحبها راكباً يدفع نقداً** (القسم 13/3).

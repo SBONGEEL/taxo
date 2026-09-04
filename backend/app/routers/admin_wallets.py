@@ -20,6 +20,7 @@ from app.models.enums import (
     AuditAction,
     CountryCode,
     TopupRequestStatus,
+    WalletOwnerType,
     WalletTransactionType,
     WithdrawalStatus,
 )
@@ -59,8 +60,10 @@ async def _get_user(session: AsyncSession, user_id: uuid.UUID) -> User:
     return user
 
 
-async def _wallet_out(session: AsyncSession, user: User) -> WalletOut:
-    owner_type = wallet_service.owner_type_for(user)
+async def _wallet_out(
+    session: AsyncSession, user: User, declared: WalletOwnerType | None = None
+) -> WalletOut:
+    owner_type = wallet_service.owner_type_for(user, declared=declared)
     return WalletOut(
         owner_id=user.id,
         owner_type=owner_type,
@@ -75,9 +78,29 @@ async def _wallet_out(session: AsyncSession, user: User) -> WalletOut:
 
 @router.get("/wallets/{user_id}", response_model=WalletOut)
 async def get_wallet(
-    user_id: uuid.UUID, _staff: StaffUser, session: DbSession
+    user_id: uuid.UUID,
+    _staff: StaffUser,
+    session: DbSession,
+    wallet: WalletOwnerType | None = Query(
+        default=None,
+        description="أيُّ المحفظتين — يلزم لحاملِ الدورين وحدَه",
+    ),
 ) -> WalletOut:
-    return await _wallet_out(session, await _get_user(session, user_id))
+    """محفظةُ حسابٍ — **والعمليةُ تعلن أيَّهما، لا دورُ صاحبها** (§22).
+
+    **وكان هذا البابُ لا يعلن شيئاً** (عطبٌ قِيس 2026-09-02، §46٫٦): فحسابٌ
+    يحمل الدورين يرتدّ `409 wallet_owner_undecided` **وتبقى بطاقةُ المحفظة على
+    دوّارةٍ أبداً في درج الملفّ**. **والخلفيةُ كانت مُحقّة** — والناقصُ
+    الإعلان.
+
+    **والمُعامِلُ اختياريٌّ بقصد**: نداءٌ بلا `wallet` يسلك ما كان يسلكه حرفاً،
+    **فصاحبُ الدور الواحد لا يُطالَب بما لا معنى له**، **وحاملُ الدورين يرتدّ
+    بالخطأ المسمّى** لا بتخمين. **ولا يُمنح الإعلانُ شيئاً**: `owner_type_for`
+    تفحص أن صاحبَه يملك دورَ تلك المحفظة وإلا رفضت.
+    """
+    return await _wallet_out(
+        session, await _get_user(session, user_id), wallet
+    )
 
 
 @router.get(
@@ -89,13 +112,22 @@ async def list_wallet_transactions(
     session: DbSession,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    wallet: WalletOwnerType | None = Query(
+        default=None,
+        description="أيُّ المحفظتين — يلزم لحاملِ الدورين وحدَه",
+    ),
 ) -> list[WalletTransactionOut]:
-    """كشف حساب المحفظة كاملاً — أساس الفصل في النزاعات (SPEC القسم 13.4)."""
+    """كشف حساب المحفظة كاملاً — أساس الفصل في النزاعات (SPEC القسم 13.4).
+
+    **ويعلن جانبَه كما يعلنه `get_wallet`**: بطاقةُ الرصيد ودفترُها **سطحان
+    لشيءٍ واحد**، **وإعلانُ أحدهما دون الآخر يعرض رصيدَ محفظةٍ فوق دفترِ
+    الأخرى** — وهو أسوأُ من ٤٠٩.
+    """
     user = await _get_user(session, user_id)
     entries = await wallet_service.history(
         session,
         user.id,
-        wallet_service.owner_type_for(user),
+        wallet_service.owner_type_for(user, declared=wallet),
         limit=limit,
         offset=offset,
     )

@@ -256,8 +256,11 @@ function RiderDrawer({
   const [note, setNote] = useState<string | null>(null);
 
   const loadWallet = useCallback(async () => {
-    setWallet(await getWallet(user.id));
-    setLedger(await listWalletTransactions(user.id, 10));
+    // **ويُعلَن الجانب** (§46٫٦): درجُ الراكب يعرض محفظتَه، **وحسابٌ يحمل
+    // الدورين كان يرتدّ `409 wallet_owner_undecided` فتبقى البطاقةُ على
+    // دوّارةٍ أبداً**. **والخلفيةُ كانت مُحقّة** — والناقصُ الإعلان.
+    setWallet(await getWallet(user.id, "rider"));
+    setLedger(await listWalletTransactions(user.id, 10, "rider"));
   }, [user.id]);
 
   useEffect(() => {

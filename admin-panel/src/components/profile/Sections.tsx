@@ -20,7 +20,7 @@ import {
   unblockUser,
   updateUserProfile,
 } from "@/api/endpoints";
-import type { CountryCode, User } from "@/api/types";
+import type { CountryCode, User, WalletOwnerType } from "@/api/types";
 import {
   CappedNote,
   Facts,
@@ -145,13 +145,22 @@ export function AccountSection({
  * **ولا زرَّ تجميدٍ هنا**: للتجميد بابُه في درج الراكب حيث يُكتب سببُه —
  * **وزرٌّ ثانٍ للفعل نفسِه** يجعل نصفَ التجميدات بلا سبب.
  */
-export function WalletSection({ userId }: { userId: string }) {
+export function WalletSection({
+  userId,
+  side,
+}: {
+  userId: string;
+  /** **أيُّ محفظةٍ يعرض هذا الدرج** — درجُ الكبتن محفظتَه، ودرجُ الراكب
+   *  محفظتَه. **وحسابٌ يحمل الدورين بلا إعلانٍ يرتدّ ٤٠٩** فتبقى البطاقةُ
+   *  على دوّارةٍ أبداً (§46٫٦). */
+  side: WalletOwnerType;
+}) {
   const load = useLoader(
     async () => ({
-      wallet: await getWallet(userId),
-      ledger: await listWalletTransactions(userId, LEDGER_CAP),
+      wallet: await getWallet(userId, side),
+      ledger: await listWalletTransactions(userId, LEDGER_CAP, side),
     }),
-    [userId],
+    [userId, side],
   );
   return (
     <ProfileSection

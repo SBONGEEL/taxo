@@ -689,7 +689,7 @@ function DriverDrawer({
         <ActiveRideSection driverId={row.driver_id} />
         <VehiclesSection driverId={row.driver_id} />
         <SubscriptionSection driverId={row.driver_id} />
-        <WalletSection userId={row.user_id} />
+        <WalletSection userId={row.user_id} side="driver" />
         <MoneyOwedSection driverId={row.driver_id} />
         <RidesSection side="driver" id={row.driver_id} />
         <ChargesSection userId={row.user_id} country={row.country_code} />
