@@ -360,11 +360,17 @@ export function DriversScreen() {
   const wanted = params.get("open");
   const seeded = params.get("q");
   useEffect(() => {
+    // **واللسانُ يُفتح على «الكلّ» حين تأتي وجهة** (عطبٌ أمسكته جولةُ متصفّح
+    // ٢٠٢٦-٠٩-٠٤): الشاشةُ تفتح على «بانتظار الاعتماد»، **فكبتنٌ معتمَدٌ
+    // يُقفز إليه لا يظهر في القائمة ولا يُفتح درجُه** — والعنوانُ يقول «افتح»
+    // والشاشةُ تقول «لا نتائج لبحثك». **ولا يُقاس هذا من الشيفرة**: كلُّ سطرٍ
+    // فيها صحيحٌ منفرداً.
+    if (wanted !== null) setFilter("all");
     if (seeded) search.setText(seeded);
     // **مرّةً واحدةً عند الوصول**: إعادةُ الزرع في كلِّ رسمٍ تمحو ما يكتبه
     // المشرفُ بعدها تحت إصبعه
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seeded]);
+  }, [seeded, wanted]);
 
   useEffect(() => {
     if (wanted === null || rows === null) return;

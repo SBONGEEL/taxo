@@ -23,9 +23,27 @@ import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { globalSearch } from "@/api/endpoints";
-import type { SearchHit } from "@/api/types";
+import type { RideStatus, SearchHit } from "@/api/types";
 import { Picker, type PickerOption } from "@/components/ui/Picker";
-import { SEARCH_KIND_LABEL } from "@/lib/labels";
+import { RIDE_STATUS_LABEL, SEARCH_KIND_LABEL } from "@/lib/labels";
+
+/** السطرُ الثاني لكلِّ إصابة — **وكلُّ اسمٍ من السجلّ المركزيّ**.
+ *
+ * **العطبُ الذي أوجب هذه الدالّة أمسكته جولةُ متصفّحٍ لا عدٌّ من الشيفرة**
+ * (٢٠٢٦-٠٩-٠٤): الرحلةُ كانت تُعرض «رحلة · completed» — **حالٌ خامٌ
+ * بالإنجليزية على شاشةٍ عربية**، لأن الخلفيةَ ترسل `status.value` والواجهةُ
+ * كانت تمرّره كما هو. و`RIDE_STATUS_LABEL` مبنيٌّ منذ زمنٍ في `labels.ts`،
+ * **فلم ينقص إلا وصلُه**.
+ */
+function describe(hit: SearchHit): string {
+  const kind = SEARCH_KIND_LABEL[hit.kind];
+  if (hit.hint === null) return kind;
+  const hint =
+    hit.kind === "ride"
+      ? (RIDE_STATUS_LABEL[hit.hint as RideStatus] ?? hit.hint)
+      : hit.hint;
+  return `${kind} · ${hint}`;
+}
 
 export function GlobalSearch() {
   const navigate = useNavigate();
@@ -37,12 +55,13 @@ export function GlobalSearch() {
     hitsById.current = new Map(hits.map((hit) => [hit.id, hit]));
     return hits.map((hit) => ({
       id: hit.id,
-      label: hit.label,
+      // **معرّفُ الرحلة مقصوصٌ كما في سجلّها** (`Rides.tsx::shortId`): درجٌ
+      // فيه خمسةُ معرّفاتٍ من ٣٦ خانةً لا يُقرأ، **والكاملُ يبقى في `id`**
+      // فالقفزةُ تحمله سليماً.
+      label: hit.kind === "ride" ? hit.id.slice(0, 8) : hit.label,
       // **الصنفُ في السطر الثاني لا في أيقونة**: «كبتن · 07…» يُقرأ بلا
       // مفتاحِ ألوانٍ يحفظه أحد، **والأسماءُ من السجلّ المركزيّ**
-      hint: hit.hint
-        ? `${SEARCH_KIND_LABEL[hit.kind]} · ${hit.hint}`
-        : SEARCH_KIND_LABEL[hit.kind],
+      hint: describe(hit),
     }));
   }, []);
 
