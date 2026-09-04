@@ -23,6 +23,7 @@ import type { Tone } from "@/components/ui/Badge";
 import type {
   CancellationChargeStatus,
   SearchKind,
+  TopupStatus,
   PaymentMethod,
   PaymentStatus,
   RideStatus,
@@ -160,6 +161,28 @@ export const DEBT_STATUS_TONE: Record<DebtStatus, Tone> = {
   outstanding: "warn",
   settled: "ok",
   written_off: "muted",
+};
+
+// ────────────────────────────────────────────────── شحناتُ المحفظة
+
+/** حالُ شحنةِ محفظة — **وكانت تُقرأ من خريطة السحوبات** حتى ٢٠٢٦-٠٩-٠٤.
+ *
+ * **والعطبُ كان مستوراً بمرشِّح**: جدولُ الشحنات ينادي `listTopups("pending")`
+ * **فلا يعرض غيرَ المعلّق أبداً**، و`WITHDRAWAL_LABEL` ليس فيه `confirmed` —
+ * **فصفٌّ مؤكَّدٌ كان سيُرسم باسمٍ فارغ**. **وأوّلُ مرشِّحٍ يُضاف يكشفه.**
+ *
+ * **وهو الشكلُ الثاني عشر**: احتياطٌ يعمل ويستر العطبَ الذي بُني له.
+ */
+export const TOPUP_STATUS_LABEL: Record<TopupStatus, string> = {
+  pending: "بانتظار التأكيد",
+  confirmed: "مؤكَّدة",
+  rejected: "مرفوضة",
+};
+
+export const TOPUP_STATUS_TONE: Record<TopupStatus, string> = {
+  pending: "text-warn",
+  confirmed: "text-ok",
+  rejected: "text-danger",
 };
 
 // ─────────────────────────────────────── البحثُ العامُّ في الرأس (§39٫١٢٫٤)

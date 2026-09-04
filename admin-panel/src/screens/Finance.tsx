@@ -35,11 +35,20 @@ import {
   confirmCliqClaim,
 } from "@/api/endpoints";
 import type {
-  CliqClaim, TopupRequest, Withdrawal, WithdrawalStatus } from "@/api/types";
+  CliqClaim,
+  TopupRequest,
+  TopupStatus,
+  Withdrawal,
+  WithdrawalStatus,
+} from "@/api/types";
 import { CancellationCharges } from "@/components/CancellationCharges";
 import { WalletDesk } from "@/components/WalletDesk";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
+import {
+  TOPUP_STATUS_LABEL,
+  TOPUP_STATUS_TONE,
+} from "@/lib/labels";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -103,6 +112,15 @@ export function FinanceScreen() {
   // — وحقلٌ يزيّن ولا يرشِّح أسوأُ من غيابه.
   const withdrawalSearch = useSearch();
   const topupSearch = useSearch();
+  /** **مرشِّحُ حالٍ في اللسان نفسِه** (قرارُ المالك ٢٠٢٦-٠٩-٠٣، ٢٠٢٦-٠٩-٠٤):
+   *  «لسانٌ اسمُه يصف ما يعرضه، فتوسيعُه يجعله يكذب باسمه» — **فتغيّر الاسمُ
+   *  مع المرشِّح**: صار «شحناتُ المحفظة» لا «شحنات بانتظار التأكيد».
+   *
+   *  **والافتراضُ `pending` كما كان**: من يفتح اللسانَ يجد ما ينتظره حرفاً،
+   *  **ولا يتبدّل عملُ أحدٍ بلا أن يطلبه**. */
+  const [topupStatus, setTopupStatus] = useState<TopupStatus | "all">(
+    "pending",
+  );
 
   // **يفتح اللسانَ الذي يقوله العنوان ويزرع بحثَه** — وجهةُ البحث العامّ
   // (§39٫١٢٫٤). **ولسانان لا واحد**، فالزرعُ يقع في بحث اللسان المقصود وحدَه.
@@ -118,13 +136,13 @@ export function FinanceScreen() {
   const load = useCallback(async () => {
     const [w, t, c] = await Promise.all([
       listWithdrawals(undefined, withdrawalSearch.term),
-      listTopups("pending", topupSearch.term),
+      listTopups(topupStatus === "all" ? undefined : topupStatus, topupSearch.term),
       listCliqClaims(),
     ]);
     setWithdrawals(w);
     setTopups(t);
     setClaims(c);
-  }, [withdrawalSearch.term, topupSearch.term]);
+  }, [withdrawalSearch.term, topupSearch.term, topupStatus]);
 
   useEffect(() => {
     load().catch((caught) =>
@@ -160,7 +178,7 @@ export function FinanceScreen() {
         onPick={(key) => setTab(key as Tab)}
         options={[
           { key: "withdrawals", label: "طلبات السحب" },
-          { key: "topups", label: "شحنات بانتظار التأكيد" },
+          { key: "topups", label: "شحناتُ المحفظة" },
           // **مطالباتُ كليك اليدوية** — اشتراكاتٌ تنتظر «تأكيد الدفع»
           { key: "claims", label: "مطالبات كليك" },
           { key: "cancellations", label: "رسوم الإلغاء" },
@@ -301,21 +319,39 @@ export function FinanceScreen() {
         ) : (
           <Table
             toolbar={
-              <TableSearch
-                value={topupSearch.text}
-                onChange={topupSearch.setText}
-                placeholder="اسمُ صاحب المحفظة أو رقمُه…"
-              />
+              <div className="flex flex-wrap items-center gap-10">
+                <Pills
+                  value={topupStatus}
+                  onPick={(key) => setTopupStatus(key as TopupStatus | "all")}
+                  options={[
+                    { key: "pending", label: TOPUP_STATUS_LABEL.pending },
+                    { key: "confirmed", label: TOPUP_STATUS_LABEL.confirmed },
+                    { key: "rejected", label: TOPUP_STATUS_LABEL.rejected },
+                    { key: "all", label: "الكل" },
+                  ]}
+                />
+                <TableSearch
+                  value={topupSearch.text}
+                  onChange={topupSearch.setText}
+                  placeholder="اسمُ صاحب المحفظة أو رقمُه…"
+                />
+              </div>
             }
             searching={topupSearch.searching}
             noResults={NO_RESULTS}
             columns="1fr 0.8fr 1.2fr 1fr 1fr"
-            headers={["المبلغ", "القناة", "المرجع", "الطلب", ""]}
+            headers={["المبلغ", "القناة", "المرجع", "الحال", ""]}
             rows={topups}
             keyOf={(row) => row.id}
             empty={{
-              title: "لا شحنات معلّقة",
-              hint: "شحنةُ كليك أو كاش تنتظر تأكيدك بعد أن يصل المال.",
+              title:
+                topupStatus === "pending"
+                  ? "لا شحنات معلّقة"
+                  : "لا شحنات بهذه الحال",
+              hint:
+                topupStatus === "pending"
+                  ? "شحنةُ كليك أو كاش تنتظر تأكيدك بعد أن يصل المال."
+                  : "بدّل الحبّةَ لترى غيرَها.",
             }}
             render={(row) => (
               <>
@@ -328,7 +364,21 @@ export function FinanceScreen() {
                 <span dir="ltr" className="text-start text-muted">
                   {row.reference ?? "—"}
                 </span>
-                <span className="text-muted">{when(row.created_at)}</span>
+                {/* **حالُها من سجلِّها لا من سجلِّ السحوبات** (عطبٌ قِيس
+                    ٢٠٢٦-٠٩-٠٤): كانت `WITHDRAWAL_LABEL[row.status]`
+                    **و`confirmed` ليست فيه** — فصفٌّ مؤكَّدٌ يُرسم باسمٍ فارغ.
+                    **ولم يظهر لأن المرشِّحَ كان يمنع غيرَ المعلّق.** */}
+                <span
+                  className={cn(
+                    "font-semibold",
+                    TOPUP_STATUS_TONE[row.status],
+                  )}
+                >
+                  {TOPUP_STATUS_LABEL[row.status]}
+                  <span className="block text-10.5 text-muted">
+                    {when(row.created_at)}
+                  </span>
+                </span>
                 <span className="flex justify-end gap-10">
                   {isAdmin ? (
                     <>
