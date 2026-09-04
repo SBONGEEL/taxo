@@ -13,6 +13,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { fromEnv } from "./channels.mjs";
+import { reportTable } from "./check-hosts.mjs";
 
 const app = process.argv[2];
 if (!app) {
@@ -35,6 +36,12 @@ console.log(
     `    الغلاف  : ${ch.shellUrl}\n` +
     `    الـAPI  : ${ch.apiBase}`,
 );
+
+// **ونطاقاتُ الجدول تُسأل هنا لأن هذا هو البابُ الواحد** (2026-09-04): كلُّ
+// بناءِ قناةٍ يمرّ من هذا الملفّ، **و`check-apk` يقع بعد البناء** — فحارسٌ
+// هناك وحدَه يترك البناءَ يتمّ ثمّ يقول إنه لا يصلح. **والوقوفُ قبل البناء
+// أرخصُ من الوقوف بعده**، وهي علّةُ وجود هذا الغلاف أصلاً.
+if ((await reportTable("    ")) > 0) process.exit(1);
 
 const result = spawnSync("npm", ["run", "build"], {
   cwd: `${ROOT}/${app}`,

@@ -42,7 +42,7 @@
           "appName": "TAXO Driver"
         },
         "admin-panel": {
-          "shellUrl": "https://panel.tajora.ly",
+          "shellUrl": "https://admin.tajora.ly",
           "appName": "TAXO المشرف",
           "private": true
         }
@@ -63,7 +63,7 @@
           "appName": "TAXO كبتن تجريبي"
         },
         "admin-panel": {
-          "shellUrl": "https://dev-panel.tajora.ly",
+          "shellUrl": "https://dev-admin.tajora.ly",
           "appName": "TAXO مشرف تجريبي",
           "private": true
         }

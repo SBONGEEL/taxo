@@ -16,6 +16,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { allPairs } from "./channels.mjs";
+import { reportTable } from "./check-hosts.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { argv, env, exit } from "node:process";
@@ -59,6 +60,19 @@ function shellTarget(path) {
     return null;
   }
 }
+
+// ═══ ٠) **أللنطاق سجلٌّ أصلاً؟** — يُسأل قبل البيان لا بعده (2026-09-04)
+//
+// **وقبل البيان بقصد**: هذا الفحصُ يقرأ `channels.json` وحدَه، **فيقع حتى
+// حين لا حزمةَ مبنيّة** — وغلافُ المشرف **لا يدخل البيان أصلاً** (`private`)،
+// فلو وُضع تحته لَما نظر إلى النطاق الذي كُسر فعلاً.
+//
+// **والعطبُ الذي أنشأه**: `panel.tajora.ly` و`dev-panel.tajora.ly` بلا سجلِّ
+// DNS، **والزوجُ متّسقٌ مع الجدول تماماً** — فالحارسُ كان أخضرَ والحزمةُ
+// تفتح صفحةً غيرَ موجودة.
+console.log(`\n  نطاقاتُ الجدول — أللاسمِ سجلّ؟`);
+const deadHosts = await reportTable("  ");
+if (deadHosts > 0) exit(1);
 
 if (!existsSync(MANIFEST)) {
   console.error("✗ لا بيانَ حزم — شغّل `node tools/apk-manifest.mjs` أولاً.");
