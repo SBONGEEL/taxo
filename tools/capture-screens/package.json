@@ -1,0 +1,7 @@
+{
+  "name": "taxo-capture-screens",
+  "private": true,
+  "type": "module",
+  "description": "لقطاتُ الشاشة من التطبيقين على بيئة التطوير — جزيرةٌ لا يبنيها الخادم",
+  "dependencies": { "playwright": "1.56" }
+}

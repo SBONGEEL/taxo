@@ -102,21 +102,36 @@ for (const name of ["car.svg", "logo.svg"]) {
 
 /* ── ٢-ب) اللقطات ─────────────────────────────────────────────────────── */
 //
-// **مُلتقَطةٌ من التطبيقين وهما يعملان** (`scripts/capture.mjs` في مجلَّد
-// الجلسة) — **ولا واجهةَ تُرسم**. وتُحوَّل إلى WebP كبقيّة الصور.
+// **مُلتقَطةٌ من التطبيقين وهما يعملان** (`tools/capture-screens/capture.mjs`،
+// بشروطه الثلاثة) — **ولا واجهةَ تُرسم**. وتُحوَّل إلى WebP كبقيّة الصور.
+//
+// **ولا تُشحن إلا لقطةٌ تطلبها الصفحة**: الأداةُ تلتقط ما تستطيع، **والصفحةُ
+// لها خاناتٌ بأسمائها** — فلقطةٌ بلا خانةٍ **حمولةٌ لا يراها أحد**، وهي
+// «حقلٌ يُحسب ولا يقرؤه أحد» في ثوب صورة. **وتُذكر بالاسم لا تُبتلع صمتاً**،
+// وإلا صار الفائضُ عُرفاً.
+const SITE = join(SRC, "..");
 const SS = join(SRC, "screens");
 const PS = join(PUB, "screens");
 if (existsSync(SS)) {
   mkdirSync(PS, { recursive: true });
+  const page = readFileSync(join(SITE, "index.html"), "utf8");
+  const wanted = new Set([...page.matchAll(/data-shot="([a-z-]+)"/g)].map((m) => m[1]));
+  const unused = [];
   for (const file of readdirSync(SS).filter((f) => f.endsWith(".png"))) {
+    const name = file.replace(/\.png$/, "");
+    if (!wanted.has(name)) {
+      unused.push(name);
+      continue;
+    }
     const from = join(SS, file);
-    const to = join(PS, file.replace(/\.png$/, ".webp"));
+    const to = join(PS, `${name}.webp`);
     const before = readFileSync(from).length;
     await sharp(from).webp({ quality: 82, effort: 6 }).toFile(to);
-    console.log(
-      `  لقطة ${file.replace(/\.png$/, "")}: ${before} → ${readFileSync(to).length} بايت`,
-    );
+    console.log(`  لقطة ${name}: ${before} → ${readFileSync(to).length} بايت`);
     made++;
+  }
+  if (unused.length) {
+    console.log(`  … مُلتقَطةٌ بلا خانةٍ في الصفحة (لا تُشحن): ${unused.join(" · ")}`);
   }
 }
 

@@ -130,6 +130,7 @@ landing/downloads
 /landing/*.html
 /landing/assets/
 /landing/fonts/
+/landing/screens/
 /landing/manifest.webmanifest
 /landing/robots.txt
 /landing/sitemap.xml
