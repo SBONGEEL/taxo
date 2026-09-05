@@ -7,6 +7,7 @@ from app.routers import (
     admin_cancellations,
     admin_photo_reports,
     admin_policies,
+    admin_site,
     admin_vehicle_skins,
     vehicle_skins,
     admin_live_map,
@@ -72,6 +73,7 @@ api_router.include_router(admin_promo.router)
 api_router.include_router(admin_backups.router)
 api_router.include_router(admin_missions.router)
 api_router.include_router(admin_policies.router)
+api_router.include_router(admin_site.router)
 api_router.include_router(admin_referrals.router)
 api_router.include_router(admin_releases.router)
 api_router.include_router(admin_sharing.router)

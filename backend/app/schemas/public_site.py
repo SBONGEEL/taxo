@@ -2,21 +2,35 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
+from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
-from app.models.enums import Currency
-
 
 class LandingOfferOut(BaseModel):
-    """عرضٌ عامٌّ قائم — بمبلغه محسوباً في الخلفية (§14)."""
+    """عرضٌ عامٌّ قائم — **بلا رقمٍ البتّة** (قرارُ المالك ٢٠٢٦-٠٩-٠٥).
 
+    **وكانت تحمل `price` و`price_after` و`currency`، فنُزعت الثلاثة**: نصُّ
+    المالك «لا أرقام أسعار اشتراك ولا مبالغ عروض ولا مكافآت في أي موضع؛ الرقم
+    الوحيد المسموح نسبة العمولة»، و«لا يخرج سعرٌ ولا سعرٌ مشطوبٌ من أيِّ بابٍ
+    تقرأه الصفحة».
+
+    **والنزعُ من الباب لا من الصفحة**: صفحةٌ لا ترسم رقماً يصلها **تبقى تحمله
+    في حمولتها**، ويقرؤه من يفتح أدوات المطوّر — **والشرطُ «لا يخرج» لا «لا
+    يُرسم»**.
+
+    **والاختيارُ يبقى بالحساب**: الخلفيةُ ما زالت تقارن الأسعارَ لتنتقيَ أكبرَ
+    توفير — **الحسابُ داخلٌ والرقمُ لا يخرج**، وهي §14 بحرفها.
+
+    **وثغرةٌ معلَنة**: `name` نصٌّ يكتبه المشرف، **فمن كتب فيه رقماً نشره** —
+    ولا حارسَ يمنع ذلك، ويُقال ولا يُسكت عنه.
+    """
+
+    #: اسمُ العرض كما كتبه المشرف — «الشهر الأول مجاناً».
     name: str
+    #: اسمُ الخطة — «شهري» — لا سعرُها.
     plan_name: str
-    price: Decimal
-    price_after: Decimal
-    currency: Currency
     #: مجاناً تماماً — تُقال بكلمةٍ لا برقمٍ صفر.
     free: bool
 
@@ -25,3 +39,75 @@ class LandingOut(BaseModel):
     """**و`None` تعني لا سطرَ عرضٍ على الصفحة** — حالٌ صحيحةٌ لا خطأ."""
 
     offer: LandingOfferOut | None = None
+
+
+class SiteOut(BaseModel):
+    """ما يقرؤه موقعُ `taxo.tajora.ly` — **قائمةُ سماحٍ صريحة**.
+
+    **ولا سرَّ هنا ولا مسارَ إلى سرّ**: بابٌ بلا جلسةٍ يقرؤه أيُّ زائر.
+    والحقولُ محصورةٌ في `services/site.PUBLIC_FIELDS`، **وحقلٌ يُضاف إلى
+    الجدول لا يظهر هنا حتى يُضاف إلى القائمة صراحةً**.
+    """
+
+    # ── نصوصٌ يكتبها المشرف ────────────────────────────────────────────────
+    hero_title: str
+    hero_subtitle: str
+    hero_note: str
+    announce_enabled: bool
+    announce_text: str
+    announce_url: str
+
+    # ── تواصل ──────────────────────────────────────────────────────────────
+    support_email: str
+    privacy_email: str
+    social_facebook: str
+    social_instagram: str
+    social_tiktok: str
+    social_x: str
+    social_whatsapp: str
+
+    # ── إظهارٌ وإخفاء ──────────────────────────────────────────────────────
+    hidden_sections: list[str]
+    hidden_cards: list[str]
+    faq: list[dict[str, Any]]
+
+    # ── التحميل ────────────────────────────────────────────────────────────
+    distribution_mode: str
+    play_url_rider: str
+    play_url_driver: str
+    ios_url: str
+    apk_page_enabled: bool
+
+    # ── السياسات ───────────────────────────────────────────────────────────
+    policies_public: bool
+
+    # ── SEO ────────────────────────────────────────────────────────────────
+    seo_description: str
+
+    # ── ما يُقرأ من مصدره ولا يُنسخ ────────────────────────────────────────
+    #
+    #: نسبةُ العمولة السارية — **من `commission_settings` عبر `settings_service`**،
+    #: وهي **الرقمُ الوحيد** المسموح خروجُه. ونصٌّ لا عائم.
+    commission_percent: str
+    #: مفاتيحُ الميزات — **من المصدر الذي يقرؤه `GET /config`**، لا نسخةً ثانية.
+    features: dict[str, bool]
+
+
+class PublicPolicyOut(BaseModel):
+    """نصُّ وثيقةٍ على الويب — **خلف مفتاحين لا واحد**.
+
+    **الأول `site_settings.policies_public`**: قرارُ المالك المكتوب «لا تنشر
+    سياسةً ولا تعرضها على مستخدمٍ قبل مراجعتي» — والنصوصُ الثمانِ مسوّداتُ
+    وكيلٍ لم يقرأها إنسانٌ بعد.
+
+    **والثاني `privacy_policies.is_published`**: الوثيقةُ نفسُها منشورةٌ أو لا.
+
+    **ولا يُغني أحدُهما عن الآخر**: النشرُ في الجدول يخصّ التطبيقات، والمفتاحُ
+    يخصّ **الويب** — **ومفتاحٌ واحدٌ لمعنيين يفتح أحدَهما بالآخر من حيث لا
+    يُرى**. والصفحةُ تعرض «لم تُنشر بعد» حتى يخضرّا معاً.
+    """
+
+    doc_type: str
+    version: int
+    body_ar: str
+    published_at: datetime | None = None

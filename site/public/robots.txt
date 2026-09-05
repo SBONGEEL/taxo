@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /apk
+Disallow: /downloads/
+
+Sitemap: https://taxo.tajora.ly/sitemap.xml

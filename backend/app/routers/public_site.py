@@ -32,7 +32,13 @@ from fastapi import APIRouter
 from sqlalchemy import select
 
 from app.core.deps import DbSession
-from app.models.enums import ClientApp, CountryCode, FeatureKey
+from app.models.enums import (
+    ClientApp,
+    CountryCode,
+    FeatureKey,
+    PolicyApp,
+    PolicyDocType,
+)
 from app.models.subscription_offer import (
     AUDIENCE_ALL,
     AUDIENCE_NEW_DRIVER,
@@ -40,8 +46,19 @@ from app.models.subscription_offer import (
 )
 from app.models.subscription import SubscriptionPlan
 from app.schemas.app_release import AppVersionOut
-from app.schemas.public_site import LandingOfferOut, LandingOut
-from app.services import pricing, releases as releases_service, settings_service
+from app.schemas.public_site import (
+    LandingOfferOut,
+    LandingOut,
+    PublicPolicyOut,
+    SiteOut,
+)
+from app.services import (
+    policies as policies_service,
+    pricing,
+    releases as releases_service,
+    settings_service,
+    site as site_service,
+)
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -103,12 +120,13 @@ async def landing(
             saving = plan.price - after
             if saving > best_saving:
                 best_saving = saving
+                # **الحسابُ داخلٌ والرقمُ لا يخرج** (قرارُ المالك ٢٠٢٦-٠٩-٠٥):
+                # `after` و`plan.price` يقرّران **أيَّ عرضٍ يُنشر**، ثمّ يبقيان
+                # هنا. **ولا سعرَ ولا سعرَ مشطوبٍ يغادر هذا الباب** — والصفحةُ
+                # تكتب اسمَ العرض كما كتبه المشرف.
                 best = LandingOfferOut(
                     name=offer.name,
                     plan_name=plan.name,
-                    price=plan.price,
-                    price_after=after,
-                    currency=plan.currency,
                     free=after == 0,
                 )
     return LandingOut(offer=best if best_saving > 0 else None)
@@ -140,4 +158,56 @@ async def app_version(
         download_url=verdict.download_url,
         release_notes=verdict.release_notes,
         reminder_hours=verdict.reminder_hours,
+    )
+
+
+@router.get("/site", response_model=SiteOut)
+async def site(session: DbSession) -> SiteOut:
+    """ما تعرضه الصفحةُ التعريفية — **قراءةٌ محضةٌ بقائمة سماح** (§52).
+
+    **وثالثُ `GET` في هذا الملفّ، والشرطُ هو هو**: بلا جلسة، وبلا كتابة، وبلا
+    حقلٍ يخصّ شخصاً. **ولا يُنشئ صفّاً**: مسارٌ يفتحه زائرٌ لا يكتب في القاعدة
+    — وهي قاعدةُ `commission_percent_for` بحرفها.
+
+    **والحقولُ من `services/site.PUBLIC_FIELDS` لا من تسلسلِ النموذج**: عمودٌ
+    يُضاف إلى الجدول **لا يظهر هنا حتى يُذكر في القائمة**. والاستبعادُ الضمنيُّ
+    هو ما يُنسى، والسماحُ الصريحُ يُكتب مرّة.
+
+    **ومعه ما يُقرأ من مصدره**: نسبةُ العمولة من `commission_settings`،
+    والمفاتيحُ من مصدر `GET /config` — **قراءةٌ لا نسخة**.
+    """
+    payload = await site_service.public_payload(session)
+    return SiteOut(**payload)
+
+
+@router.get("/policy", response_model=PublicPolicyOut | None)
+async def policy(
+    session: DbSession, doc_type: PolicyDocType
+) -> PublicPolicyOut | None:
+    """وثيقةٌ للويب — **أو `None`، وهي حالٌ صحيحةٌ لا خطأ**.
+
+    **والمنعُ هنا لا في الصفحة**: حارسٌ في الواجهة وحدَها يُتجاوَز بـ`curl`،
+    **فالنصُّ لا يغادر الخلفيةَ ما لم يخضرَّ المفتاحان**.
+
+    **وأيُّ تطبيقٍ نصُّه؟** `PolicyApp.RIDER` — الموقعُ يخاطب الجمهورَ العامّ،
+    ونسخةُ الراكب هي التي تصف الخدمةَ لمن لا حسابَ له. **ولا نسخةَ ثالثةٌ
+    تُخترع للويب**: ثلاثُ نسخٍ لنصٍّ قانونيٍّ واحدٍ تفترق أوّلَ تصحيح.
+    """
+    row = await site_service.read(session)
+    if row is None or not row.policies_public:
+        return None
+
+    doc = await policies_service.published(
+        session,
+        country=site_service.SITE_COUNTRY,
+        doc_type=doc_type,
+        app=PolicyApp.RIDER,
+    )
+    if doc is None:
+        return None
+    return PublicPolicyOut(
+        doc_type=doc.doc_type.value,
+        version=doc.version,
+        body_ar=doc.body_ar,
+        published_at=doc.published_at,
     )

@@ -115,6 +115,8 @@ import type {
   PromoBannerRow,
   ServiceTileRow,
   VerificationCampaignRow,
+  SiteSettings,
+  SiteUpdate,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -1571,3 +1573,14 @@ export const getOrgProfile = () => api.get<OrgProfile>("/admin/policies/org");
 
 export const saveOrgProfile = (body: OrgProfile) =>
   api.put<OrgProfile>("/admin/policies/org", body);
+
+// ------------------------------------------------------------ الموقع (§49)
+//
+// **بابُ كتابةٍ واحدٌ لكلِّ الحقول**: حقولُ الصفحة تُقرأ معاً وتُكتب معاً،
+// **وبابٌ لكلِّ مجموعةٍ يجعل «ما الذي تغيّر؟» جواباً يُجمع من ثلاثة سجلّات**.
+
+export const readSite = () => api.get<SiteSettings>("/admin/site");
+
+/** **ما لم يُرسَل لا يُمسّ** — والخلفيةُ تقرأ `exclude_unset`. */
+export const updateSite = (body: SiteUpdate) =>
+  api.patch<SiteSettings>("/admin/site", body);

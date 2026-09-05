@@ -1682,3 +1682,40 @@ export interface OrgProfile {
   address: string | null;
   privacy_email: string | null;
 }
+
+/** ما ينشره `GET /admin/site` — **الحقولُ نفسُها التي ينشرها البابُ العام**.
+ *
+ * **ولا حقلَ إداريٌّ زائد**: كلُّ ما في هذا الجدول عامٌّ بحكم بنائه، **فشاشةٌ
+ * ترى أكثرَ ممّا يرى الزائرُ كانت ستوهم أن ثمّة سرّاً هنا** — وليس.
+ */
+export interface SiteSettings {
+  hero_title: string;
+  hero_subtitle: string;
+  hero_note: string;
+  announce_enabled: boolean;
+  announce_text: string;
+  announce_url: string;
+  support_email: string;
+  privacy_email: string;
+  social_facebook: string;
+  social_instagram: string;
+  social_tiktok: string;
+  social_x: string;
+  social_whatsapp: string;
+  hidden_sections: string[];
+  hidden_cards: string[];
+  faq: { q?: string; a?: string; order?: number }[];
+  distribution_mode: string;
+  play_url_rider: string;
+  play_url_driver: string;
+  ios_url: string;
+  apk_page_enabled: boolean;
+  policies_public: boolean;
+  seo_description: string;
+  /** **يُعرض ولا يُكتب من هذه الشاشة** — بيتُه `commission_settings`. */
+  commission_percent: string;
+  updated_at: string;
+}
+
+/** ما يُرسل — **وكلُّ حقلٍ اختياريّ**، و«لم يُرسَل» ليست «أُرسل فارغاً». */
+export type SiteUpdate = Partial<Omit<SiteSettings, "commission_percent" | "updated_at">>;

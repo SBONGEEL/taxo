@@ -73,6 +73,9 @@ const ReleasesScreen = lazy(() =>
 const PoliciesScreen = lazy(() =>
   import("@/screens/Policies").then((m) => ({ default: m.PoliciesScreen })),
 );
+const SiteScreen = lazy(() =>
+  import("@/screens/Site").then((m) => ({ default: m.SiteScreen })),
+);
 const RidesScreen = lazy(() =>
   import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
 );
@@ -330,6 +333,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <PoliciesScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/site"
+                    element={
+                      <Guarded>
+                        <SiteScreen />
                       </Guarded>
                     }
                   />

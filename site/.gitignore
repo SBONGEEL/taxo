@@ -1,0 +1,5 @@
+# **المولَّدُ لا يُودَع** — يعيده `npm run assets` من `assets-src/`.
+# والأصولُ هناك مودَعةٌ، **فلا شيءَ يضيع بحذف هذا**.
+public/assets/
+public/fonts/
+node_modules/

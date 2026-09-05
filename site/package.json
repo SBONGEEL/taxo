@@ -1,0 +1,19 @@
+{
+  "name": "taxo-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "صفحة taxo.tajora.ly — ناتجها ملفات ثابتة تُخدَم من landing/",
+  "scripts": {
+    "assets": "node scripts/assets.mjs",
+    "check:site": "node scripts/check-site.mjs",
+    "build": "npm run assets && npm run check:site && vite build",
+    "dev": "vite --host 0.0.0.0 --port 5177",
+    "preview": "vite preview --host 0.0.0.0 --port 5177"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.2",
+    "ttf2woff2": "^8.0.0",
+    "vite": "^7.1.7"
+  }
+}
