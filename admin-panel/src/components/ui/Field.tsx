@@ -167,7 +167,7 @@ export function Checkbox({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-start gap-9 text-start disabled:opacity-60"
+      className="flex min-h-44 w-full items-start gap-9 py-11 text-start disabled:opacity-60 sm:min-h-0 sm:py-0"
     >
       <span
         aria-hidden

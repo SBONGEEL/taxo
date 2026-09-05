@@ -2,7 +2,11 @@
 <html lang="ar" dir="rtl" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- **بلا `viewport-fit=cover` تعود `env(safe-area-inset-*)` صفراً
+         دائماً** — فصنفُ القصاصة يُكتب ويُقرأ حراسةً **وهو لا يفعل
+         شيئاً**. ولا `user-scalable=no` هنا: اللوحةُ تُقرأ لا تُقاد،
+         **ومنعُ التكبير على شاشةٍ فيها جداولُ أرقامٍ منعُ إتاحة**. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="TAXO — لوحة التحكم" />
     <meta name="theme-color" content="#14181d" />
     <link rel="icon" type="image/svg+xml" href="/icons/taxo.svg" />

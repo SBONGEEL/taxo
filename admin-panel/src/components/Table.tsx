@@ -217,9 +217,17 @@ export function Table<T>({
     });
   }
 
+  // **حدٌّ أدنى للعرض وتمريرٌ أفقيّ** (قِيس ٢٠٢٦-٠٩-٠٥): ثمانيةُ أعمدةٍ
+  // كسريّةٍ في ٣٦٠px — ناقصاً حشوةً ٣٦ وفواصلَ ٧٠ — **تعطي كلَّ عمودٍ نحوَ
+  // ٣٠px، وزرُّ «الملفّ» وحدَه ٢٧**. فالخليةُ لا تسع محتواها **ولو قُصَّ
+  // الاسمُ إلى صفر**، فتفيض على جارتها — وقِيس تقاطعٌ ٨×١٧ في `/rides`.
+  //
+  // **والرأسُ والصفوفُ يأخذان الحدَّ نفسَه** ويتمرّران في حاويةٍ واحدة:
+  // **حاويتان منفصلتان تُزيح الرأسَ عن صفوفه**، وهو الخطأُ الذي وُجد
+  // `columns` ليمنعه. **وفوق ٧٠٤px لا يتغيّر شيء** — الحدُّ لا يُلمس.
   const head = (
     <div
-      className="grid gap-10 bg-surface-2 px-18 py-10 text-11 font-semibold text-muted"
+      className="grid min-w-[44rem] gap-10 bg-surface-2 px-18 py-10 text-11 font-semibold text-muted"
       style={{ gridTemplateColumns: grid }}
     >
       {selection ? (
@@ -272,7 +280,7 @@ export function Table<T>({
             key={key}
             // **صفوفٌ متساويةُ الارتفاع**: `min-h-44` هدفُ لمسٍ كامل، وصفٌّ
             // يقصر بمحتواه يجعل المسافاتِ غيرَ منتظمةٍ فتتعب العين
-            className="grid min-h-44 items-center gap-10 border-t border-line px-18 py-12 text-12.5"
+            className="grid min-h-44 min-w-[44rem] items-center gap-10 border-t border-line px-18 py-12 text-12.5"
             style={{ gridTemplateColumns: grid }}
           >
             {selection ? (
@@ -294,7 +302,11 @@ export function Table<T>({
   return (
     <div
       ref={ref}
-      className="flex flex-col overflow-hidden rounded-16 border border-line bg-surface"
+      // **min-w-0 على البطاقة نفسِها**: صارت لها ابنةٌ حدُّها الأدنى ٧٠٤px،
+      // **فنمت البطاقةُ إلى محتواها** حين كان أبوها شبكةً أو صفَّاً مرناً —
+      // ودفعت الصفحةَ إلى ٧٥٨ في شاشةٍ عرضُها ٤١٢. **والتمريرُ الأفقيُّ لا
+      // يعمل ما لم يُؤذَن للحاوية أن تضيق دون محتواها.**
+      className="flex min-w-0 flex-col overflow-hidden rounded-16 border border-line bg-surface"
       style={mode === "viewport" && height ? { height } : undefined}
     >
       {toolbar ? (
@@ -323,16 +335,20 @@ export function Table<T>({
           </div>
         </div>
       ) : null}
-      <div className="shrink-0">{head}</div>
-      {/* **الصفوفُ وحدَها تنزلق** — بشريطها لا بشريط الصفحة */}
-      <div
-        className={cn(
-          "min-h-0",
-          mode === "viewport" && "flex-1 overflow-y-auto",
-          mode === "compact" && "max-h-list overflow-y-auto",
-        )}
-      >
-        {body}
+      {/* **حاويةٌ واحدةٌ للأفق تضمّ الرأسَ والصفوف** — فلا ينزاح أحدُهما
+          عن الآخر. **والرأسيُّ يبقى داخلها للصفوف وحدَها** كما كان. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
+        <div className="shrink-0">{head}</div>
+        {/* **الصفوفُ وحدَها تنزلق رأسياً** — بشريطها لا بشريط الصفحة */}
+        <div
+          className={cn(
+            "min-h-0",
+            mode === "viewport" && "flex-1 overflow-y-auto",
+            mode === "compact" && "max-h-list overflow-y-auto",
+          )}
+        >
+          {body}
+        </div>
       </div>
     </div>
   );
@@ -412,7 +428,7 @@ export function TableSearch({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-10 border border-line bg-surface-2 px-12 py-8 text-12.5 text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+        className="min-h-44 w-full rounded-10 border border-line bg-surface-2 px-12 py-8 text-12.5 text-ink placeholder:text-muted focus:border-ink focus:outline-none sm:min-h-0"
       />
     </div>
   );
@@ -436,7 +452,7 @@ export function Pills<T extends string>({
           type="button"
           onClick={() => onPick(option.key)}
           className={cn(
-            "rounded-full border px-14 py-7 text-12 font-semibold",
+            "flex min-h-44 items-center rounded-full border px-14 py-7 text-12 font-semibold sm:min-h-0",
             value === option.key
               ? "border-ink text-ink"
               : "border-line text-muted",

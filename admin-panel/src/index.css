@@ -92,6 +92,17 @@
     @apply border-ink;
   }
 
+  /* **قصاصةُ الشاشة** (`env(safe-area-inset-*)`): الترويسةُ لاصقةٌ في
+     `top-0` **فيقع سطرُها الأوّل تحت الحزّ** على هاتفٍ محزوز، والمحتوى
+     يلامس حافّةَ الإيماء أسفل. **والقيمُ نسخةٌ من `driver-app/src/index.css`
+     لا اجتهادٌ ثانٍ** — قاعدةٌ في مكانين تفترق. */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
   .label {
     @apply mb-6 block text-12 text-muted;
   }

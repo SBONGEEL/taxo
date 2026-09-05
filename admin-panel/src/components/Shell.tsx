@@ -147,7 +147,7 @@ function FactorReminder() {
         </span>
         <NavLink
           to="/security"
-          className="shrink-0 rounded-10 border border-line bg-surface px-10 py-5 text-11.5 font-semibold text-ink"
+          className="flex min-h-44 shrink-0 items-center rounded-10 border border-line bg-surface px-10 py-5 text-11.5 font-semibold text-ink sm:min-h-0"
         >
           فعّله الآن
         </NavLink>
@@ -180,13 +180,22 @@ export function Shell({
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-30 border-b border-line bg-surface">
-        <div className="flex h-header items-center gap-14 px-20">
-          <span className="text-21 font-bold tracking-wordmark text-ink">
+      {/* `safe-top` — **قصاصةُ أعلى الشاشة**: الترويسةُ لاصقةٌ في `top-0`،
+          **وبلا الحشوة يقع سطرُها الأوّل تحت الحزّ**. والصنفُ في
+          `index.css` كما في تطبيق الكبتن، **بيتٌ واحدٌ للقاعدة**. */}
+      <header className="safe-top sticky top-0 z-30 border-b border-line bg-surface">
+        {/* **يلتفّ تحت `sm` ولا يفيض** (قِيس ٢٠٢٦-٠٩-٠٥): كان صفّاً واحداً
+            بلا التفافٍ وبارتفاعٍ ثابت، **فبلغ عرضُه ٤٦٣ في شاشةٍ عرضُها ٣٦٠**
+            — **والفائضُ يخرج يساراً في RTL** فلا يبلغه تمريرٌ ولا عين.
+            **والزرّان لم يخرجا وحدَهما بل انضغطا إلى ٢٢×٣٤**، وهو ما يجعل
+            مساحةَ اللمس دون الحدّ بينما الصنفُ يقول `size-34`. */}
+        <div className="flex flex-wrap items-center gap-x-14 gap-y-8 px-20 py-8 sm:h-header sm:flex-nowrap sm:py-0">
+          <span className="shrink-0 text-21 font-bold tracking-wordmark text-ink">
             TAXO
           </span>
-          <span className="text-12.5 text-muted">لوحة التحكم</span>
-          <span className="block h-26 w-px bg-line" />
+          {/* **الوصفُ والفاصلُ زينةٌ لا أداة** — أوّلُ ما يُطوى حين يضيق */}
+          <span className="hidden text-12.5 text-muted sm:block">لوحة التحكم</span>
+          <span className="hidden h-26 w-px bg-line sm:block" />
 
           {/* **الأسواقُ من الخلفية لا من قائمةٍ مكتوبة** (SPEC §24): اللوحةُ
               ترى المخفيَّ كما ترى الظاهر، وعليه نقطةٌ تقول إنه مطفأٌ في
@@ -199,7 +208,7 @@ export function Shell({
           <div
             role="radiogroup"
             aria-label="السوق"
-            className="flex items-center gap-3 rounded-full bg-surface-2 p-3"
+            className="flex shrink-0 items-center gap-3 rounded-full bg-surface-2 p-3"
           >
             {countries.map((row) => (
               <button
@@ -210,7 +219,7 @@ export function Shell({
                 onClick={() => setCountry(row.country_code)}
                 title={row.visible ? undefined : "مخفيّة في التطبيقات"}
                 className={cn(
-                  "flex items-center gap-6 rounded-full px-13 py-6 text-12 font-semibold",
+                  "flex min-h-44 min-w-44 items-center justify-center gap-6 rounded-full px-13 py-6 text-12 font-semibold sm:min-h-0 sm:min-w-0",
                   country === row.country_code
                     ? "bg-surface text-ink"
                     : "text-muted",
@@ -231,8 +240,9 @@ export function Shell({
               عملٍ لا زرَّ حساب، **ومكانُه حيث تقع العينُ أوّلاً**. */}
           <GlobalSearch />
 
-          <div className="ms-auto flex items-center gap-10">
-            <div className="text-end">
+          <div className="ms-auto flex shrink-0 items-center gap-10">
+            {/* **الاسمُ والدورُ خبرٌ لا زرّ** — يُطوى قبل أن يُسحق زرّ */}
+            <div className="hidden text-end sm:block">
               <div className="text-12.5 font-semibold text-ink">
                 {user?.name}
               </div>
@@ -244,7 +254,7 @@ export function Shell({
               type="button"
               onClick={toggle}
               aria-label="تبديل المظهر"
-              className="flex size-34 items-center justify-center rounded-10 border border-line text-ink"
+              className="flex size-44 shrink-0 items-center justify-center rounded-10 border border-line text-ink sm:size-34"
             >
               {dark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -252,7 +262,7 @@ export function Shell({
               type="button"
               onClick={() => void signOut().then(() => navigate("/login"))}
               aria-label="خروج"
-              className="flex size-34 items-center justify-center rounded-10 border border-line text-ink"
+              className="flex size-44 shrink-0 items-center justify-center rounded-10 border border-line text-ink sm:size-34"
             >
               <LogOut size={15} />
             </button>
@@ -270,10 +280,18 @@ export function Shell({
         <nav className="flex flex-wrap items-end gap-2 px-20">
           {GROUPS.map((group) => (
             <div key={group.label} className="group relative">
-              <span className="block cursor-default px-14 pb-10 pt-12 text-13 font-semibold text-muted">
+              {/* **`group-hover` وحدَه بابٌ بلا زرٍّ على اللمس**: إصبعٌ لا
+                  تُحوِّم، **فالمجموعاتُ الخمسُ لا تُفتح من هاتف البتّة**.
+                  و`focus-within` يفتحها بلمسةٍ وبلوحةِ مفاتيح معاً،
+                  **والعنوانُ يصير زرّاً ليقبل التركيز** — وسمٌ لا منطق:
+                  لا `onClick` ولا حالةَ ولا نداء. */}
+              <button
+                type="button"
+                className="flex min-h-44 w-full cursor-default items-center px-14 pb-10 pt-12 text-13 font-semibold text-muted sm:min-h-0"
+              >
                 {group.label}
-              </span>
-              <div className="absolute start-0 top-full z-40 hidden min-w-menu rounded-14 border border-line bg-surface p-6 shadow-menu group-hover:block">
+              </button>
+              <div className="absolute start-0 top-full z-40 hidden min-w-menu rounded-14 border border-line bg-surface p-6 shadow-menu group-focus-within:block group-hover:block">
                 {group.items
                   .filter((item) => !item.adminOnly || isAdmin)
                   .map((item) =>
@@ -283,7 +301,7 @@ export function Shell({
                         to={item.to}
                         className={({ isActive }) =>
                           cn(
-                            "block rounded-10 px-12 py-10 text-12.5",
+                            "flex min-h-44 items-center rounded-10 px-12 py-10 text-12.5 sm:min-h-0",
                             isActive
                               ? "bg-stripe-a font-bold text-ink"
                               : "text-ink",
@@ -295,7 +313,7 @@ export function Shell({
                     ) : (
                       <span
                         key={item.label}
-                        className="flex items-center justify-between rounded-10 px-12 py-10 text-12.5 text-muted"
+                        className="flex min-h-44 items-center justify-between rounded-10 px-12 py-10 text-12.5 text-muted sm:min-h-0"
                       >
                         {item.label}
                         <span className="text-9.5">قريباً</span>
@@ -310,7 +328,7 @@ export function Shell({
 
       <FactorReminder />
 
-      <main className="px-20 py-18">
+      <main className="safe-bottom px-20 py-18">
         <div className="mb-16 flex items-start justify-between gap-16">
           <div>
             <h1 className="text-21 font-bold text-ink">{title}</h1>

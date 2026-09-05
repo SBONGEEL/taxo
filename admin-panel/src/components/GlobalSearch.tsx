@@ -97,7 +97,10 @@ export function GlobalSearch() {
   return (
     // **`side` من سلّم العرض القائم لا مقاسٌ جديد** (`check:scale`): ٣٤٠px
     // تسع «اسمٌ وتحته الصنفُ والرقم» بلا قصّ، ولا تزاحم شريطَ الأسواق
-    <div className="w-side max-w-full">
+    // **٣٤٠px في صفٍّ لا يلتفّ تُكسر**: `max-w-full` تقيسها إلى الحاوية
+    // لا إلى الشاشة، **فانضغط الحقلُ إلى ٣٢px عرضاً** — حقلُ بحثٍ لا
+    // يُكتب فيه. **فسطرٌ كاملٌ تحت `sm`**، و٣٤٠ فوقها كما كان.
+    <div className="order-last w-full sm:order-none sm:w-side sm:max-w-full">
       <Picker
         value={null}
         onPick={jump}
