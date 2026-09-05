@@ -7,7 +7,13 @@
  *      بنصِّ التصميم نفسِه. **ولا شعارَ يُولَّد ولا واجهةَ تُرسم.**
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -42,22 +48,76 @@ for (const weight of ["400", "500", "700"]) {
 }
 
 /* ── ٢) الصور ──────────────────────────────────────────────────────────── */
-for (const name of [
-  "logo", "logo-ink", "logo-pink", "favicon", "icon-192",
-  // **مركباتُ الشريط**: خارجَ الشاشة وتُحمَّل كسولاً، **وحجمُها هو الذي يُقاس**
-  "cars-stock/A-00", "cars-stock/A-12", "cars-stock/A-24",
-  "cars-stock/B-00", "cars-stock/C-00", "cars-stock/D-00", "cars-stock/E-00",
-]) {
+// **والعرضُ يُصغَّر إلى ما يُعرض فعلاً** (قِيس ٢٠٢٦-٠٩-٠٥): كان الشعارُ
+// يُشحن بعرض ١٢٣٣ بكسلاً **ويُرسم بـ١٠٤** — ٤٤ ك.ب، **وصار أكبرَ عنصرٍ مرسومٍ
+// في الصفحة (LCP)**. **وصورةٌ أكبرُ من موضعها ليست جودةً، هي انتظار.**
+// والعرضُ ثلاثةُ أضعاف الرسم ليبقى حادّاً على شاشةٍ بـDPR 3.
+const WIDTH = {
+  logo: 360,
+  "logo-ink": 360,
+  "logo-pink": 360,
+  "icon-192": 192,
+  "cars-stock/A-00": 300, "cars-stock/A-12": 300, "cars-stock/A-24": 300,
+  "cars-stock/B-00": 300, "cars-stock/C-00": 300, "cars-stock/D-00": 300,
+  "cars-stock/E-00": 300,
+};
+
+for (const name of Object.keys(WIDTH)) {
   const png = join(SA, `${name}.png`);
   if (!existsSync(png)) continue;
   const webp = join(A, `${name}.webp`);
   const before = readFileSync(png).length;
-  await sharp(png).webp({ quality: 90, effort: 6 }).toFile(webp);
+  await sharp(png).resize({ width: WIDTH[name], withoutEnlargement: true })
+    .webp({ quality: 88, effort: 6 }).toFile(webp);
   const after = readFileSync(webp).length;
   console.log(
     `  ${name}: ${before} → ${after} بايت (−${Math.round((1 - after / before) * 100)}٪)`,
   );
   made++;
+}
+
+// **والأيقونةُ تبقى PNG لكن بحجمٍ معقول**: كانت ١٤٠ ك.ب لأنها الأصلُ ٥١٢
+// بلا ضغط — **وأثقلُ موردٍ في الصفحة كان أيقونةَ تبويب**.
+{
+  const src = join(SA, "favicon.png");
+  const out = join(A, "favicon.png");
+  if (existsSync(src)) {
+    const before = readFileSync(src).length;
+    await sharp(src).resize({ width: 180 }).png({ compressionLevel: 9, palette: true }).toFile(out);
+    const after = readFileSync(out).length;
+    console.log(`  favicon: ${before} → ${after} بايت (−${Math.round((1 - after / before) * 100)}٪)`);
+    made++;
+  }
+}
+
+// **وما لا يُحوَّل يُنسخ كما هو** — `car.svg` و`logo.svg` أصولٌ متجهةٌ لا
+// صور، **ونسخُها لازمٌ لأن `public/` مخرَجٌ لا يُودَع**.
+for (const name of ["car.svg", "logo.svg"]) {
+  const src = join(SA, name);
+  if (!existsSync(src)) continue;
+  writeFileSync(join(A, name), readFileSync(src));
+  console.log(`  ${name}: نُسخ كما هو (${readFileSync(src).length} بايت)`);
+  made++;
+}
+
+/* ── ٢-ب) اللقطات ─────────────────────────────────────────────────────── */
+//
+// **مُلتقَطةٌ من التطبيقين وهما يعملان** (`scripts/capture.mjs` في مجلَّد
+// الجلسة) — **ولا واجهةَ تُرسم**. وتُحوَّل إلى WebP كبقيّة الصور.
+const SS = join(SRC, "screens");
+const PS = join(PUB, "screens");
+if (existsSync(SS)) {
+  mkdirSync(PS, { recursive: true });
+  for (const file of readdirSync(SS).filter((f) => f.endsWith(".png"))) {
+    const from = join(SS, file);
+    const to = join(PS, file.replace(/\.png$/, ".webp"));
+    const before = readFileSync(from).length;
+    await sharp(from).webp({ quality: 82, effort: 6 }).toFile(to);
+    console.log(
+      `  لقطة ${file.replace(/\.png$/, "")}: ${before} → ${readFileSync(to).length} بايت`,
+    );
+    made++;
+  }
 }
 
 /* ── ٣) بطاقةُ المشاركة ────────────────────────────────────────────────── */
@@ -90,8 +150,22 @@ if (existsSync(logo)) {
   made++;
 }
 
-/* ── ٤) شارةُ Google Play — **لا تُرسم، وتُطلب** ────────────────────────── */
+/* ── ٤) شارةُ Google Play — **الملفُّ الرسميُّ كما هو** ─────────────────── */
+//
+// **ولا يُمسّ ولا يُقصّ ولا يُعاد تلوينُه** (شرطُ المالك ١٠، وشروطُ علامة
+// Google): يُنسخ بحجمه ومساحته الآمنة، **ولا زرَّ مرسومٌ يحاكيه**.
+//
+// **ولا يُحوَّل إلى WebP**: تحويلُ ملفِّ علامةٍ تجاريةٍ **مسٌّ له**، وحجمُه
+// ١٥٫٨ ك.ب لا يستحقّ ذلك. **والقاعدةُ أوضحُ من المكسب.**
+const badgeSrc = join(SA, "google-play-badge.png");
 const badge = join(A, "google-play-badge.png");
+if (existsSync(badgeSrc)) {
+  writeFileSync(badge, readFileSync(badgeSrc));
+  console.log(
+    `  google-play-badge: ${readFileSync(badge).length} بايت — الملفُّ الرسميُّ كما هو`,
+  );
+  made++;
+}
 if (!existsSync(badge)) {
   console.log(
     "\n  ⚠ ناقص: assets/google-play-badge.png — **الشارةُ الرسميةُ من ملفّ Google**.\n" +

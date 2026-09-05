@@ -633,6 +633,21 @@ esac
 # **وفي اتصالٍ واحدٍ كبقية الخطوات** (`ufw`: ستُّ وصلاتٍ في ثلاثين ثانية)،
 # **وبحاويةِ node لا بأدواتِ المضيف** — فلا نسخةَ ثانيةً من node تُدار على
 # الخادم. و`npm ci` يحترم القفلَ فلا يحلّ التبعياتِ حلاًّ يخالف الشجرة.
+# **والرابعُ `site` — موقعُ `taxo.tajora.ly`** (قرارُ المالك ٢٠٢٦-٠٩-٠٥):
+# **يبنيه الخادمُ كما يبني الثلاثة، ولا يُودَع مخرَجُ بناءٍ في الشجرة.**
+#
+# **والعلّةُ أن مخرَجَه هو `landing/` نفسُه** — الجذرُ الذي يخدمه نجينكس.
+# فإيداعُه كان يعني **نسختين من كلِّ أصلٍ في git** (مصدرٌ ومخرَج)، **وشجرةً
+# تتقادم كلَّما بُني الموقعُ ولم يُودَع**. والبناءُ على الخادم يجعل المخدومَ
+# **مشتقّاً من الإيداع** كما هي البوّابةُ الرابعة.
+#
+# **ولا يحتاج `VITE_API_BASE_URL`**: الصفحةُ تنادي `/api/` من أصلها،
+# ونجينكس يوكّلها إلى الخلفية. **فلا هدفَ يُخبز فيها أصلاً.**
+#
+# **ومقيسٌ في `node:22-alpine` قبل أن يُكتب هذا السطر** (٢٠٢٦-٠٩-٠٥):
+# `npm ci` ثمّ `npm run build` — و`sharp` و`ttf2woff2` بُنيا على musl،
+# والمخرَجُ أربعةُ ملفّاتِ HTML وأصولُها. **وسطرٌ لم يُقَس في هذا الباب
+# يسقط على الإنتاج وحدَه.**
 FRONT_API="${TAXO_FRONT_API_BASE:-https://api.tajora.ly}"
 # **الجذرُ يُربط لا مجلّدُ التطبيق** (صُحّح 2026-08-25 بعد سقوطٍ مقيس):
 # `npm run build` أوّلُ ما يفعل `node ../tools/check-money-math.mjs`،
@@ -693,10 +708,10 @@ FRONT_API="${TAXO_FRONT_API_BASE:-https://api.tajora.ly}"
 # في ثلاثين ثانية، **وحلقةٌ أكثفُ تخنق نفسَها بنفسها** — وقد وقع مقيساً حين
 # استهلك التشخيصُ ميزانيةَ النافذة فصارت وصلاتُ النشر تُرفض بـ`Connection reset`.
 # ══════════════════════════════════════════════════════════════════════════
-say "  الواجهات: تُبنى الثلاثُ على الخادم ($FRONT_API)…"
+say "  الواجهات: تُبنى الأربعُ على الخادم — الثلاثةُ والموقع ($FRONT_API)…"
 BUILD_STATE="/tmp/taxo-build/state"
 _ssh "cd $REMOTE && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
-  setsid nohup sh -c 'ok=0; for a in customer-app driver-app admin-panel; do \
+  setsid nohup sh -c 'ok=0; for a in customer-app driver-app admin-panel site; do \
     if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL=\"$FRONT_API\" \
          -e SKIP_TUNNEL=1 node:22-alpine \
          sh -c \"apk add --no-cache git >/dev/null && git config --global --add safe.directory /repo && npm ci --silent && npm run build\" \
@@ -715,7 +730,7 @@ for _ in $(seq 1 30); do        # حتى ٣٠ دقيقةً — والبناءُ 
 done
 
 case "$BUILT" in
-  BUILT=3) say "  ✓ الثلاثُ بُنيت على الخادم" ;;
+  BUILT=4) say "  ✓ الأربعُ بُنيت على الخادم (الثلاثةُ والموقع)" ;;
   "")  # **لا حكمَ على صمت** — تُقرأ الحالُ من الخادم نفسِه
        say "  · لم يصل حكمُ البناء — تُقرأ الحالُ من الخادم لا تُفترض:"
        ssh_try "ls -1 /tmp/taxo-build/ 2>/dev/null; echo '── آخرُ سطرٍ في كلِّ سجلّ ──'; for f in /tmp/taxo-build/*.log; do echo \"\$f: \$(tail -1 \"\$f\")\"; done" || true
