@@ -2,5 +2,9 @@ User-agent: *
 Allow: /
 Disallow: /apk
 Disallow: /downloads/
+# **بيتُ الحزم الخاصّة** — رابطٌ مباشرٌ غيرُ مدرَج،
+# **وغيرُ مدرَجٍ لا يعني مفهرَساً**. **وداخلَ المجموعة لا بعد سطرٍ فارغ**:
+# توجيهٌ بعد فراغٍ لا يتبع أيَّ عميل، **فيُكتب ويُقرأ حراسةً وهو مهمَل**.
+Disallow: /private/
 
 Sitemap: https://taxo.tajora.ly/sitemap.xml

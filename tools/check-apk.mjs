@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { allPairs } from "./channels.mjs";
 import { reportTable } from "./check-hosts.mjs";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { argv, env, exit } from "node:process";
 import { certify } from "./certify.mjs";
@@ -87,6 +87,53 @@ if (!manifest.apps?.length) {
 console.log(`\n  الحزم — البصمةُ والهدف`);
 let bad = 0;
 let wrongTarget = 0;
+
+// ═══ ٠-ب) **بيتُ الحزم الخاصّة — يُفحص ولا يُترك** (قرارُ المالك ٢٠٢٦-٠٩-٠٥)
+//
+// **العلّةُ**: هذا الفحصُ كان يمسح `landing/downloads` وحدَه، **فحزمةٌ خاصّةٌ
+// في مجلَّدٍ آخر تنجو بلا فحصٍ البتّة**. ولمّا اختار المالكُ «رابطاً غيرَ
+// مدرَج» صار لها مجلَّدٌ ثانٍ — **وبيتٌ لا يفحصه أحدٌ يصير ثغرةً بمرور
+// الوقت**، وهو حارسٌ يُلتفّ عليه بمجلَّد.
+//
+// **ولكلِّ صنفٍ بيتُه**: الخاصّةُ في `private/` وحدَها، والعامّةُ في
+// `downloads/` وحدَها — **ويُقاس الاتجاهان**، فلا تُرضى القاعدةُ بالنقل.
+{
+  const priv = join(ROOT, "landing", "private");
+  const files = existsSync(priv)
+    ? readdirSync(priv).filter((f) => f.endsWith(".apk"))
+    : [];
+  console.log(`\n  بيتُ الخاصّة \`landing/private\` — ${files.length} حزمة`);
+  for (const file of files) {
+    const full = join(priv, file);
+    const host = shellTarget(full);
+    if (!host) {
+      // **«لا أداةَ» ليست «هدفٌ خاطئ»**: قراءةُ الهدف تحتاج أداةَ SDK،
+      // **وغيابُها لا يُقرأ عطباً ولا سلامة**. وCI يملكها فيُقاس هناك.
+      console.log(`    · ${file} — **لم يُقس** (تعذّرت قراءةُ الهدف من الحزمة)`);
+      continue;
+    }
+    const pair = PAIRS.find((x) => new URL(x.shellUrl).host === host);
+    if (!pair) {
+      bad += 1;
+      console.log(`    ✗ ${file}: غلافُه ${host} لا يعرفه الجدول`);
+      continue;
+    }
+    if (!pair.private) {
+      bad += 1;
+      console.log(
+        `    ✗ **حزمةٌ عامّةٌ في بيت الخاصّة**: ${file} (${pair.appId}) —` +
+          " العامّةُ تُدرَج في `downloads` لا تُخبَّأ هنا",
+      );
+      continue;
+    }
+    if (pair.channel !== "public") {
+      bad += 1;
+      console.log(`    ✗ **حزمةُ قناةِ «${pair.channel}» في \`landing/private\`** — التجريبيةُ لا تُنشر`);
+      continue;
+    }
+    console.log(`    ✓ ${file} — ${pair.appId} ← ${host} (خاصّةٌ في بيتها)`);
+  }
+}
 for (const app of manifest.apps) {
   // ١) المبنيُّ (مصدرُ البيان)
   const local = join(ROOT, "landing", "downloads", app.file);
