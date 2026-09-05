@@ -33,7 +33,7 @@ import { notifyUser } from "@/api/endpoints";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { digits } from "@/lib/utils";
+import { ACCOUNT_FORMS, counted, digits, INBOX_FORMS } from "@/lib/utils";
 
 /** أدنى ما يقبله `UserMessageIn` في الخلفية — **مرآةٌ لا رقمٌ مخترع**. */
 const MIN_TITLE = 2;
@@ -93,7 +93,7 @@ export function BulkNotify({
     onClear();
     onDone(
       failed === 0
-        ? `أُرسلت إلى ${digits(ok)} صندوقَ وارد.`
+        ? `أُرسلت إلى ${counted(ok, INBOX_FORMS)}.`
         : // **العددان معاً** — و«تمّ» وحدَها تكذب على من أخفق عنده ثلاثة
           `أُرسلت إلى ${digits(ok)} — وأخفقت ${digits(failed)}: ${firstFailure ?? ""}`,
     );
@@ -107,7 +107,7 @@ export function BulkNotify({
 
       {open ? (
         <Modal
-          title={`رسالةٌ إلى ${digits(userIds.length)} حساباً`}
+          title={`رسالةٌ إلى ${counted(userIds.length, ACCOUNT_FORMS)}`}
           onClose={() => (busy ? undefined : setOpen(false))}
         >
           <Field

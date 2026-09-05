@@ -414,7 +414,7 @@ say "══ ٣) النسخةُ قبل الرفع — $STAMP"
 # غيرُ مدعومٍ في ssh ويندوز (قِيس: `getsockname failed: Not a socket`)، فالسبيلُ
 # **أمرٌ واحدٌ يُنتج أرشيفاً واحداً** يحمل الأربعةَ.
 say "  · الأربعةُ في اتصالٍ واحد…"
-ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   { [ -s \$W/untracked.list ] && tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list || : > \$W/untracked.absent; } &&   { [ -d backend/var/documents ] && tar -czf \$W/documents.tar.gz backend/var/documents || : > \$W/documents.absent; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
+ssh_try "cd $REMOTE &&   cat > /tmp/taxo-target-ignore &&   W=\$(mktemp -d) &&   docker compose $COMPOSE_FILES exec -T db pg_dump -U taxo -d taxo --no-owner | gzip -9 > \$W/taxo.sql.gz &&   tar -czhf \$W/env.tar.gz .env &&   ROOT=\$(pwd) && OUT=\$({ docker compose $COMPOSE_FILES config 2>/dev/null | sed -n 's/^ *source: \(\/.*\)/\1/p'; find . -maxdepth 2 -type l -exec readlink -f {} \; 2>/dev/null; } | grep '^/' | grep -v \"^\$ROOT\" | while read -r q; do [ -d \"\$q\" ] && echo \"\$q\" || dirname \"\$q\"; done | sort -u | tr '\n' ' ') &&   { [ -n \"\${OUT// /}\" ] && tar -czhf \$W/outside.tar.gz \$OUT 2>/dev/null || : > \$W/outside.absent; } &&   echo \"\$OUT\" > \$W/outside.list &&   git ls-files --others --exclude-standard | wc -l > \$W/raw.count &&   git ls-files --others --exclude-standard --exclude-from=/tmp/taxo-target-ignore > \$W/untracked.list &&   wc -l < \$W/untracked.list > \$W/untracked.count &&   { [ -s \$W/untracked.list ] && tar -czhf \$W/untracked.tar.gz -T \$W/untracked.list || : > \$W/untracked.absent; } &&   docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT count(*) FROM driver_documents;' 2>/dev/null | tr -d ' \r\n' > \$W/docs.rows; { docker compose $COMPOSE_FILES run --rm --no-deps -T --entrypoint tar backend -czf - -C /app/var/documents . 2>/dev/null > \$W/documents.tar.gz || : > \$W/documents.absent; } &&   tar -cf - -C \$W . && rm -rf \$W" < .gitignore > "$LOCAL/bundle.tar"   || die "تعذّرت النسخةُ — لا رفع."
 
 tar -xf "$LOCAL/bundle.tar" -C "$LOCAL" && rm -f "$LOCAL/bundle.tar"   || die "النسخةُ وصلت ولا تُفتح — لا رفع."
 
@@ -505,8 +505,37 @@ fi
 if [ -f "$LOCAL/untracked.tar.gz" ]; then
   check untracked.tar.gz "غيرُ المتتبَّع" tar_holds "$LOCAL/untracked.tar.gz" "."
 fi
+# **ووثائقُ الكباتن كانت تُنسخ من مسارِ مضيفٍ فارغ — والفحصُ يُخضِّره**
+# (عطبٌ قِيس ٢٠٢٦-٠٩-٠٥، وعاش منذ بُنيت هذه البوّابة).
+#
+# **المقيس**: `driver_documents` في قاعدة الإنتاج **٣٧ صفّاً**، و
+# `backend/var/documents` على قرص المضيف **صفرُ ملفّ** — لأن الوثائق تسكن
+# **مجلَّداً مسمّى** (`taxo_documents` مُثبَّتاً على `/app/var/documents`)،
+# لا مسارَ مضيفٍ مربوطاً. **فكان الأرشيفُ يحمل المجلَّدَ وحدَه، ١٢٤ بايت.**
+#
+# **وكان الفحصُ يقول «محتواه صحيح»** لأنه `tar_holds … "documents"` —
+# **يطابق اسمَ المدخل**. وهو بحرفه الدرسُ المكتوبُ فوقه لأجل `.env`:
+# «الاسمُ يقول إن الشيءَ مذكور، والمحتوى يقول إنه هناك». **كُتب للأسرار ولم
+# يُطبَّق على الوثائق** — فعاش سبعةَ عشرَ يوماً يُعلِن خُضرةً وهو أعمى،
+# **ووثائقُ هويةِ كباتنَ حقيقيّين بلا نسخةٍ طوالها**.
+#
+# **والفحصُ الآن يعدّ الملفّات ويقابلها بصفوف الجدول**: أرشيفٌ بلا ملفٍّ
+# وجدولٌ فيه صفوفٌ **يُسقط الرفع**. **وصفرٌ في الطرفين حالٌ صحيحة** — تركيبٌ
+# جديدٌ لا وثيقةَ فيه، **وحارسٌ يقرأ بلوغَ الحالِ الصحيحةِ فشلاً أسوأُ من
+# غيابه**.
+documents_carry_files() {
+  local files rows
+  files=$(tar -tzf "$LOCAL/documents.tar.gz" 2>/dev/null | grep -vc '/$' || true)
+  rows=$(tr -d ' \r\n' < "$LOCAL/docs.rows" 2>/dev/null || echo "")
+  say "    (ملفّاتٌ في الأرشيف: ${files:-0} · وصفوفُ driver_documents: ${rows:-<لم يُقرأ>})"
+  # **رأسُ الجدولِ غيرُ مقروءٍ ⇒ لا يُقاس ⇒ لا يُخضَّر** — «غيابُ أداة القياس
+  # يوقف ولا يُقرأ سلامة».
+  [ -n "$rows" ] || return 1
+  [ "$rows" -eq 0 ] && return 0
+  [ "${files:-0}" -ge 1 ]
+}
 if [ -f "$LOCAL/documents.tar.gz" ]; then
-  check documents.tar.gz "الوثائق" tar_holds "$LOCAL/documents.tar.gz" "documents"
+  check documents.tar.gz "الوثائق" documents_carry_files
 fi
 
 [ "$FAIL" -eq 0 ] || die "النسخةُ لم تُحقَّق — **لا رفع**. قف واسأل المالك."
