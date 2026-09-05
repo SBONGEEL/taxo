@@ -39,7 +39,7 @@ from app.core.exceptions import (
 )
 from app.core.email import normalize_email
 from app.core.phone import InvalidPhoneNumber, normalize_phone, resolve_phone
-from app.models.enums import CountryCode, UserRole
+from app.models.enums import CountryCode, PolicyApp, PolicyDocType, UserRole
 from app.models.user import User
 from app.schemas.auth import (
     HandoffExchange,
@@ -75,6 +75,7 @@ from app.services import rider_photo
 from app.services import (
     admin_credentials,
     handoff,
+    policies as policies_service,
     rides as rides_service,
     notifications,
     otp,
@@ -204,6 +205,40 @@ async def start_challenge(
 # ------------------------------------------------------- التسجيل والدخول
 
 
+# ═══════════════ بوّابةُ القبول (البند ١٠، §34) ═══════════════
+#
+# **المواصفةُ جدولت هذا اليومَ بنصِّها**: «لا شاشةَ قبولٍ في تطبيقٍ… **ويُبنى
+# يومَ يعتمد المالكُ النصوص**». **واعتُمدت ٢٠٢٦-٠٩-٠٥ فبُني.**
+#
+# **ولا حسابَ يولد بلا موافقة**: الفحصُ **قبل** إنشاء الصفّ كما يُتحقَّق من
+# الرقم قبله — **فلا يبقى حسابٌ نصفُ منشأٍ لموافقةٍ لم تُعطَ**.
+#
+# **وقائمةٌ فارغةٌ تمرّ بحقّ**: سوقٌ لم تُنشر فيه وثيقةٌ **لا يُسأل مستخدموه
+# عن شيء** — وهي الحالُ التي كانت قائمةً حتى يوم النشر. **والبوّابةُ تُشتقّ
+# من المنشور لا من ثابتٍ مكتوب**، فيومَ يُنشر نصٌّ في سوقٍ جديدٍ تعمل وحدَها.
+async def _consented(session, payload, *, role: UserRole) -> list:
+    """يعيد الوثائقَ الواجبةَ بعد التحقّق — **أو يرفض التسجيل بنصٍّ يسمّي الناقص**."""
+    policy_app = PolicyApp.DRIVER if role == UserRole.DRIVER else PolicyApp.RIDER
+    required = await policies_service.required_for(
+        session, country=payload.country_code, app=policy_app
+    )
+    if not required:
+        return []
+    given = set(payload.accepted_policy_ids)
+    missing = [doc for doc in required if doc.id not in given]
+    if missing:
+        # **ويُسمّى الناقصُ لا يُقال «ناقص»**: من أرسل واحدةً من اثنتين يحتاج
+        # أن يعرف أيَّهما، **ورسالةٌ عامّةٌ تجعل التطبيقَ يخمّن**.
+        names = "، ".join(
+            "سياسة الخصوصية"
+            if doc.doc_type == PolicyDocType.PRIVACY_POLICY
+            else "شروط الاستخدام"
+            for doc in missing
+        )
+        raise InvalidInput(f"لا يُنشأ حساب قبل الموافقة على: {names}.")
+    return required
+
+
 @router.post(
     "/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED
 )
@@ -233,6 +268,9 @@ async def register(
     # يستطيع صاحبُه الدخولَ إليه من التطبيق الذي أنشأه — حسابٌ يولد مقفلاً
     app_scope.guard(payload.role, payload.app)
 
+    # **قبل الرمز وقبل الصفّ** — كما الرقمُ تماماً
+    accepted = await _consented(session, payload, role=payload.role)
+
     verified_at = None
     if await verification.required_for_signup(session, payload.country_code):
         if not payload.verification_token:
@@ -245,6 +283,9 @@ async def register(
     user = await password_strategy.register(
         session, payload, phone=phone, verified_at=verified_at
     )
+    # **في المعاملة نفسِها**: حسابٌ يولد وموافقتُه معه، **أو لا يولد** —
+    # وصفٌّ بلا موافقةٍ لا يُعرف بعد شهرٍ أوافق صاحبُه أم أفلت من البوّابة.
+    await policies_service.record_consent(session, user=user, policies=accepted)
     await session.commit()
     await session.refresh(user)
 

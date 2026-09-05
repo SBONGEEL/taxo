@@ -41,6 +41,11 @@ class RegisterRequest(BaseModel):
     # **أيُّ تطبيقٍ يطلب** (`core/app_scope.py`، قرارُ المالك 2026-08-15):
     # كلُّ تطبيقٍ لدوره وحدَه. وغيابُه يمرّ — دعوى تضييقٍ لا توسيع
     app: ClientApp | None = None
+    # **ما وافق عليه بعينه** (البند ١٠، §34 — بُني ٢٠٢٦-٠٩-٠٥ يومَ اعتُمدت
+    # النصوص). **ومعرّفاتٌ لا `true`**: علامةٌ منطقيةٌ تقول «وافق» ولا تقول
+    # **على ماذا**، **فتستنتج الخلفيةُ «المنشورَ الآن»** — ونشرةٌ تقع بين
+    # عرض النصِّ وإرساله تكتب موافقةً على نصٍّ لم يقرأه أحد.
+    accepted_policy_ids: list[uuid.UUID] = Field(default_factory=list, max_length=8)
 
 
 class EmailChallengeRequest(BaseModel):

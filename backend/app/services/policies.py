@@ -36,6 +36,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import uuid
 from datetime import UTC, datetime
 
@@ -301,3 +303,58 @@ async def save_org(
             setattr(row, field, after)
     await session.flush()
     return row, changes
+
+
+async def required_for(
+    session: AsyncSession, *, country: CountryCode, app: PolicyApp
+) -> list[PrivacyPolicy]:
+    """**ما يلزم قبولُه الآن** لهذا التطبيق في هذا السوق.
+
+    **والصفُّ الواجبُ = أحدثُ منشورٍ لكلِّ (نوع + تطبيق + سوق)** بنصِّ المالك
+    (§34-٣)، **ويحرسه الفهرسُ الجزئيُّ نفسُه**: منشورةٌ واحدةٌ لا أكثر.
+    **فلا يُحسب `MAX(version)` ولا يُفترض أن أحدثَ رقمٍ هو المنشور** —
+    ونسخةٌ أحدثُ مسوّدةٌ لا تُطلب موافقتُها.
+
+    **وقائمةٌ فارغةٌ حالٌ صحيحة**: سوقٌ لم تُنشر فيه وثيقةٌ بعد **لا يُسأل
+    مستخدموه عن شيء** — وهو ما كان قائماً حتى ٢٠٢٦-٠٩-٠٥.
+    """
+    rows = []
+    for doc_type in PolicyDocType:
+        doc = await published(session, country=country, doc_type=doc_type, app=app)
+        if doc is not None:
+            rows.append(doc)
+    return rows
+
+
+async def record_consent(
+    session: AsyncSession, *, user: User, policies: Sequence[PrivacyPolicy]
+) -> int:
+    """يكتب موافقةَ المستخدم على النسخ المعطاة — **ولا يكرّرها**.
+
+    **والتكرارُ يمنعه القيدُ في القاعدة** (`user_policy_consent_once`)،
+    **ويُسأل هنا قبله** فلا تُرمى `IntegrityError` في وجه مستخدمٍ يعيد المحاولة.
+
+    **ولا يُحدَّث صفٌّ قائم**: «وافق يومَ كذا» خبرٌ، **وتحديثُ تاريخِه يمحو
+    متى وافق فعلاً** — وهو من عائلة «الدفترُ لا يُعدَّل».
+    """
+    if not policies:
+        return 0
+    ids = [p.id for p in policies]
+    already = set(
+        (
+            await session.scalars(
+                select(UserPolicyConsent.policy_id).where(
+                    UserPolicyConsent.user_id == user.id,
+                    UserPolicyConsent.policy_id.in_(ids),
+                )
+            )
+        ).all()
+    )
+    written = 0
+    for policy in policies:
+        if policy.id in already:
+            continue
+        session.add(UserPolicyConsent(user_id=user.id, policy_id=policy.id))
+        written += 1
+    await session.flush()
+    return written

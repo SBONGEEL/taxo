@@ -26,6 +26,35 @@ const js = readFileSync(join(SITE, "src", "site.js"), "utf8");
 
 const bad = [];
 
+/* ٠ — قيمُ `doc_type` تُقرأ من التعداد لا تُكتب باليد
+ *
+ * **وقع مقيساً على الإنتاج ٢٠٢٦-٠٩-٠٥**: `terms.html` كان يرسل
+ * `terms_of_service` **والتعدادُ `terms_of_use`** — فالباب يردّ ٤٢٢،
+ * **و`catch` في الصفحة يبتلعه صامتاً**، فتبقى الصفحةُ تقول «لم تُنشر بعد»
+ * **والوثيقةُ منشورة**.
+ *
+ * **وما ستره أن الميزةَ كانت مطفأة**: `policies_public=false` يجعل الصفحتين
+ * تقولان الشيءَ نفسَه، **فالخاطئةُ تبدو كالصحيحة** — ولم يظهر الفرقُ إلا
+ * لحظةَ الإشعال. **وعطبٌ يستتر خلف مفتاحٍ مطفأ يعيش حتى يُشعَل.**
+ *
+ * **والمرجعُ `models/enums.py` نفسُه** — لا قائمةٌ ثانيةٌ تُكتب هنا وتفترق. */
+{
+  const enums = readFileSync(join(SITE, "..", "backend", "app", "models", "enums.py"), "utf8");
+  const block = enums.slice(enums.indexOf("class PolicyDocType"), enums.indexOf("class PolicyApp"));
+  const allowed = new Set([...block.matchAll(/=\s*"([a-z_]+)"/g)].map((m) => m[1]));
+  if (allowed.size === 0) bad.push("تعذّر قراءةُ `PolicyDocType` من الخلفية — **لا يُقاس بالظنّ**");
+
+  for (const file of ["privacy.html", "terms.html"]) {
+    const page = readFileSync(join(SITE, file), "utf8");
+    for (const m of page.matchAll(/data-doc="([^"]*)"/g)) {
+      if (!allowed.has(m[1])) {
+        bad.push(`${file}: data-doc="${m[1]}" ليست في PolicyDocType (${[...allowed].join(" · ")})`);
+      }
+    }
+  }
+}
+
+
 /* ١ — قوالبُ المُشغِّل */
 const templates = html.match(/\{\{[^}]*\}\}/g) ?? [];
 const scTags = html.match(/<sc-[a-z]+/g) ?? [];

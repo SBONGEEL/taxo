@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from datetime import datetime
 from typing import Any
 
@@ -111,3 +113,20 @@ class PublicPolicyOut(BaseModel):
     version: int
     body_ar: str
     published_at: datetime | None = None
+
+
+class RequiredPolicyOut(BaseModel):
+    """وثيقةٌ يلزم قبولُها — **بمعرّفها ونصِّها معاً**.
+
+    **والمعرّفُ يعود مع النصّ بقصد**: التطبيقُ يعرض النصَّ ثمّ يرسل **ما وافق
+    عليه بعينه**، **فلا يُستنتج في الخلفية «الذي كان منشوراً حين سجّل»** —
+    ونشرةٌ تقع بين العرض والإرسال تجعل الاستنتاجَ يكتب موافقةً على نصٍّ لم
+    يُقرأ. **فالمعرّفُ عقدٌ بين ما رآه وما وُقّع عليه.**
+    """
+
+    id: uuid.UUID
+    doc_type: str
+    app: str
+    version: int
+    body_ar: str
+    published_at: datetime | None

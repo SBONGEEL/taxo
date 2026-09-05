@@ -17,6 +17,7 @@ import { ApiError } from "@/api/client";
 import { register, startChallenge } from "@/api/endpoints";
 import { Brand } from "@/components/Brand";
 import { PhoneInput } from "@/components/PhoneInput";
+import { PolicyConsent } from "@/components/PolicyConsent";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
@@ -84,12 +85,21 @@ export function RegisterScreen() {
   // **والتأكيدُ شرطٌ في الواجهة وحدها** (التصميم): الخلفيةُ تأخذ كلمةً واحدة،
   // وما يحرسه الحقلُ الثاني خطأُ طباعةٍ في كلمةٍ **لا تُعرض** — ومن أخطأ فيها
   // لا يكتشف ذلك إلا حين يعجز عن الدخول، ثم يمرّ بمسار استعادةٍ كامل
+  // **الموافقةُ شرطٌ في الزرِّ لا في الرسالة** (البند ١٠): زرٌّ يُضغط ثمّ
+  // تُردّ الخلفيةُ برفضٍ يعلّم أن الرفضَ عقبةٌ تُحاوَل، **ومربّعٌ غيرُ مؤشَّرٍ
+  // يقول قبل الضغط ما ينقص**. والخلفيةُ ترفض أيضاً — **حارسان لا واحد**،
+  // والواجهةُ راحةٌ لا حماية (§21).
+  const [policyIds, setPolicyIds] = useState<string[]>([]);
+  const [agreed, setAgreed] = useState(false);
+  const consentOk = policyIds.length === 0 || agreed;
+
   const ready = useMemo(
     () =>
       looksComplete(phone, nationalLength) &&
       name.trim().length >= 2 &&
-      passwordsReady(password, confirm),
-    [phone, nationalLength, name, password, confirm],
+      passwordsReady(password, confirm) &&
+      consentOk,
+    [phone, nationalLength, name, password, confirm, consentOk],
   );
 
   async function create(verificationToken?: string) {
@@ -104,6 +114,8 @@ export function RegisterScreen() {
           country_code: country,
           verification_token: verificationToken,
           gender: gender ?? undefined,
+          // **ما وافق عليه بعينه** — لا `true` تستنتج منها الخلفيةُ شيئاً
+          accepted_policy_ids: agreed ? policyIds : [],
         }),
       );
       navigate("/", { replace: true });
@@ -259,11 +271,19 @@ export function RegisterScreen() {
               {verification === "none" ? "إنشاء الحساب" : "متابعة"}
             </Button>
 
-            {/* **تحت الزرِّ لا فوقه** كما في التصميم: تُقرأ عند لحظة الالتزام،
-                وسطرٌ فوق الزرِّ يُقرأ قبل أن يُملأ النموذج فيُنسى */}
+            {/* **مربّعٌ يُضغط لا جملةٌ تفترض** (البند ١٠، ٢٠٢٦-٠٩-٠٥): كان
+                هنا سطرٌ يقول «بالمتابعة أنت توافق على شروط الاستخدام» **بلا
+                رابطٍ ولا نصٍّ ولا صفٍّ يُكتب** — موافقةٌ مفترَضةٌ لا معطاة،
+                **ويومَ يُسأل «أوافق هذا على النسخة الأولى؟» لا جواب**. */}
+            <PolicyConsent
+              country={country}
+              checked={agreed}
+              onChange={setAgreed}
+              onLoaded={setPolicyIds}
+            />
+
             <p className="text-center text-11.5 leading-note text-muted">
-              بالمتابعة أنت توافق على شروط الاستخدام. الرقم يُثبت بالتحقق مرة
-              واحدة.
+              الرقم يُثبت بالتحقق مرة واحدة.
             </p>
           </form>
         ) : (

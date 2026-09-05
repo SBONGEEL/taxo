@@ -57,6 +57,7 @@ import type {
   DebtClaim,
   DriverDebtState,
   Storefront,
+  RequiredPolicy,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -108,12 +109,24 @@ export const startSignupChallenge = (
 
 /** التسجيل: الإثبات وكلمةُ المرور في **طلبٍ واحد** — فلا حساب بلا كلمة مرور
  * ولا إثباتٌ يفتح جلسةً وحده (SPEC القسم 11/1). */
+/** **ما يلزم قبولُه** لهذا التطبيق وهذا السوق (البند ١٠، §34).
+ *
+ * **و`app=driver` لا `rider`**: «نصُّ الكبتن يذكر رفعَ رخصةٍ وبياناتِ مركبةٍ
+ * وحسابَ صرف» (§34-٢) — **ووثيقةٌ واحدةٌ للاثنين تَعِد الراكبَ بما لا يخصّه**. */
+export const requiredPolicies = (country_code: CountryCode) =>
+  api.get<RequiredPolicy[]>(
+    `/public/policies/required?country_code=${country_code}&app=driver`,
+    { anonymous: true },
+  );
+
 export const registerAccount = (payload: {
   phone: string;
   name: string;
   password: string;
   country_code: CountryCode;
   verification_token?: string;
+  /** **ما وافق عليه بعينه** — والخلفيةُ ترفض التسجيل إن نقص منها واحدة. */
+  accepted_policy_ids?: string[];
 }) =>
   api.post<AuthResponse>(
     "/auth/register",

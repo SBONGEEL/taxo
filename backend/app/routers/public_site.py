@@ -47,6 +47,7 @@ from app.models.subscription_offer import (
 from app.models.subscription import SubscriptionPlan
 from app.schemas.app_release import AppVersionOut
 from app.schemas.public_site import (
+    RequiredPolicyOut,
     LandingOfferOut,
     LandingOut,
     PublicPolicyOut,
@@ -211,3 +212,34 @@ async def policy(
         body_ar=doc.body_ar,
         published_at=doc.published_at,
     )
+
+
+@router.get("/policies/required", response_model=list[RequiredPolicyOut])
+async def required_policies(
+    session: DbSession, country_code: CountryCode, app: PolicyApp
+) -> list[RequiredPolicyOut]:
+    """**ما يلزم قبولُه قبل إنشاء حساب** في هذا التطبيق وهذا السوق.
+
+    **وبلا مصادقة بقصد**: يُقرأ **قبل** أن يوجد حساب. والنصُّ منشورٌ للناس
+    أصلاً، **فلا سرَّ فيه يُحرَس بتوكن**.
+
+    **ولا يمرّ بمفتاح `policies_public`** خلافاً لـ`GET /public/policy`:
+    **ذاك مفتاحُ الموقع** — «أتُعرض الوثيقةُ على `taxo.tajora.ly`؟» —
+    **وهذا سؤالُ التطبيق**: «ما الذي يوافق عليه من يسجّل؟». **وربطُهما بمفتاحٍ
+    واحدٍ يجعل إخفاءَ صفحةٍ على الويب يُسقط بوّابةَ القبول في التطبيقين**،
+    وهو أثرٌ لا يقصده من يطفئ مفتاحَ موقع.
+
+    **وقائمةٌ فارغةٌ حالٌ صحيحة** — سوقٌ بلا وثيقةٍ منشورة.
+    """
+    docs = await policies_service.required_for(session, country=country_code, app=app)
+    return [
+        RequiredPolicyOut(
+            id=doc.id,
+            doc_type=doc.doc_type.value,
+            app=doc.app.value,
+            version=doc.version,
+            body_ar=doc.body_ar,
+            published_at=doc.published_at,
+        )
+        for doc in docs
+    ]

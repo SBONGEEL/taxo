@@ -1099,3 +1099,18 @@ export interface AppVersion {
   /** كم يسكت التنبيهُ الاختياريُّ بعد إغلاقه — **من اللوحة لا من التطبيق**. */
   reminder_hours: number | null;
 }
+
+/** وثيقةٌ يلزم قبولُها قبل إنشاء حساب — **بمعرّفها ونصِّها معاً**.
+ *
+ * **والمعرّفُ يُرسَل لا `true`**: علامةٌ منطقيةٌ تقول «وافق» ولا تقول **على
+ * ماذا**، فتستنتج الخلفيةُ «المنشورَ الآن» — **ونشرةٌ تقع بين القراءة
+ * والإرسال تكتب موافقةً على نصٍّ لم يُقرأ**.
+ */
+export interface RequiredPolicy {
+  id: string;
+  doc_type: "privacy_policy" | "terms_of_use";
+  app: string;
+  version: number;
+  body_ar: string;
+  published_at: string | null;
+}

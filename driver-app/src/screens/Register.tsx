@@ -21,6 +21,7 @@ import type { OtpChannel } from "@/api/types";
 import { CountryPicker } from "@/components/CountryPicker";
 import { PhoneField } from "@/components/PhoneField";
 import { PhoneVerification } from "@/components/PhoneVerification";
+import { PolicyConsent } from "@/components/PolicyConsent";
 import { AuthScreen } from "@/components/ui/AuthScreen";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
@@ -85,10 +86,18 @@ export function RegisterScreen() {
     [e164, country],
   );
 
+  // **الموافقةُ شرطٌ في الزرِّ لا في الرسالة** (البند ١٠): مربّعٌ غيرُ
+  // مؤشَّرٍ يقول **قبل** الضغط ما ينقص، وزرٌّ يُضغط ثمّ يُردّ يعلّم أن الرفضَ
+  // عقبةٌ تُحاوَل. **والخلفيةُ ترفض أيضاً** — حارسان لا واحد (§21).
+  const [policyIds, setPolicyIds] = useState<string[]>([]);
+  const [agreed, setAgreed] = useState(false);
+  const consentOk = policyIds.length === 0 || agreed;
+
   const complete =
     name.trim().length >= 2 &&
     looksComplete(phone, nationalLength) &&
-    passwordsReady(password, confirmation);
+    passwordsReady(password, confirmation) &&
+    consentOk;
 
   function next() {
     setError(null);
@@ -116,6 +125,8 @@ export function RegisterScreen() {
           password,
           country_code: country,
           verification_token: verificationToken,
+          // **ما وافق عليه بعينه** — لا `true` تستنتج منها الخلفيةُ شيئاً
+          accepted_policy_ids: agreed ? policyIds : [],
         }),
       );
       navigate("/register/documents", { replace: true });
@@ -221,8 +232,21 @@ export function RegisterScreen() {
         </Button>
       </form>
 
+      {/* **مربّعٌ يُضغط لا جملةٌ تفترض** (البند ١٠، ٢٠٢٦-٠٩-٠٥): كان هنا
+          سطرٌ يقول «بالمتابعة أنت توافق على شروط الاستخدام» **بلا رابطٍ ولا
+          نصٍّ ولا صفٍّ يُكتب**. **ونصُّ الكبتن غيرُ نصِّ الراكب** (§34-٢):
+          فيه رفعُ رخصةٍ وبياناتُ مركبةٍ وحسابُ صرف. */}
+      <div className="mt-14">
+        <PolicyConsent
+          country={country}
+          checked={agreed}
+          onChange={setAgreed}
+          onLoaded={setPolicyIds}
+        />
+      </div>
+
       <p className="mt-14 text-center text-11.5 leading-note text-muted">
-        بالمتابعة أنت توافق على شروط الاستخدام. الرقم يُثبت بالتحقق مرة واحدة.
+        الرقم يُثبت بالتحقق مرة واحدة.
       </p>
     </AuthScreen>
   );

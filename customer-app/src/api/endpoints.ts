@@ -43,6 +43,7 @@ import type {
   Wallet,
   WalletTransaction,
   Storefront,
+  RequiredPolicy,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -69,6 +70,17 @@ export const startChallenge = (
     { anonymous: true },
   );
 
+/** **ما يلزم قبولُه** لهذا التطبيق وهذا السوق (البند ١٠، §34).
+ *
+ * **وبلا مصادقة**: يُقرأ قبل أن يوجد حساب. **ولا يمرّ بمفتاح الموقع**
+ * `policies_public` — ذاك «أتُعرض على الويب؟»، وهذا «ما الذي يوافق عليه
+ * من يسجّل؟». */
+export const requiredPolicies = (country_code: CountryCode) =>
+  api.get<RequiredPolicy[]>(
+    `/public/policies/required?country_code=${country_code}&app=rider`,
+    { anonymous: true },
+  );
+
 export const register = (payload: {
   phone: string;
   name: string;
@@ -77,6 +89,8 @@ export const register = (payload: {
   verification_token?: string;
   /** إقرارٌ ذاتيّ اختياري (المرحلة 10-ج) — ولا يُخمَّن عمّن تركه. */
   gender?: "male" | "female";
+  /** **ما وافق عليه بعينه** — والخلفيةُ ترفض التسجيل إن نقص منها واحدة. */
+  accepted_policy_ids?: string[];
 }) => api.post<AuthResponse>("/auth/register", { ...payload, role: "rider", app: CLIENT_APP }, { anonymous: true });
 
 /** **التطبيقُ يُعلن نفسَه في كل بابٍ يُصدر جلسة** (`core/app_scope.py`).

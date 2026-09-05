@@ -145,10 +145,18 @@ summary{list-style:none}
   <h1>سياسة الخصوصية</h1>
   <p class="lede">ما نجمعه ولماذا، ومدّة الاحتفاظ، ومن يصله، وحقوقك وحذف حسابك.</p>
   <div class="note" data-policy-state>
-    <p><strong>هذه الصفحة لم تُنشر بعد.</strong></p>
-    <p style="margin:8px 0 0;color:#6e7681">النصُّ قيدُ المراجعة، ولا يُعرض قبل اعتماده. وحتى ذلك، راسلنا على
+    <p><strong>جارٍ تحميل النصّ…</strong></p>
+    <p style="margin:8px 0 0;color:#6e7681">إن لم يظهر خلال ثوانٍ، راسلنا على
       <a href="mailto:privacy@tajora.ly" dir="ltr" style="unicode-bidi:isolate">privacy@tajora.ly</a>.</p>
   </div>
+  <noscript>
+    <div class="note">
+      <p><strong>هذه الصفحة تحتاج JavaScript لعرض النصّ.</strong></p>
+      <p style="margin:8px 0 0;color:#6e7681">النصُّ محفوظٌ في خوادمنا لا في الصفحة، ليصل تصحيحُه فوراً بلا بناءٍ ولا رفع.
+        ولمن لا يستطيع تشغيلَه: اطلبه على
+        <a href="mailto:privacy@tajora.ly" dir="ltr" style="unicode-bidi:isolate">privacy@tajora.ly</a>.</p>
+    </div>
+  </noscript>
   <article data-policy-body hidden></article>
   <p data-policy-updated hidden style="margin-top:20px;color:#6e7681;font-size:13.5px"></p>
   <footer>
@@ -162,31 +170,56 @@ summary{list-style:none}
  * **والحارسُ في الخلفية لا هنا**: البابُ لا يُخرج نصّاً و`policies_public`
  * مطفأ، **فمن عطّل JavaScript لا يرى شيئاً أيضاً**. وحارسٌ في الواجهة وحدَها
  * يُتجاوَز بـ`curl`.
+ *
+ * **ولا تُدّعى حالٌ قبل أن يُسأل الباب** (صُحّح ٢٠٢٦-٠٩-٠٥ بعد قياسٍ على
+ * الإنتاج): كان النصُّ الثابتُ يقول «لم تُنشر بعد» **قبل النداء**، فلمّا
+ * نُشرت الوثيقةُ **بقيت الصفحةُ تكذب على من لا JavaScript عنده** — والحكمُ
+ * الآن يُقال **بعد** الجواب، ولكلِّ جوابٍ نصُّه: نصٌّ · لم تُنشر · تعذّر.
  */
 const doc = document.body.dataset.doc;
+const box = document.querySelector("[data-policy-state]");
+
+function say(title, note) {
+  if (!box) return;
+  box.innerHTML =
+    "<p><strong></strong></p>" +
+    '<p style="margin:8px 0 0;color:#6e7681"></p>';
+  box.querySelector("strong").textContent = title;
+  box.querySelectorAll("p")[1].textContent = note;
+}
+
+function render(data) {
+  const article = document.querySelector("[data-policy-body]");
+  article.innerHTML = "";
+  for (const para of data.body_ar.split(/\n{2,}/)) {
+    const p = document.createElement("p");
+    p.textContent = para.trim();
+    if (p.textContent) article.appendChild(p);
+  }
+  article.hidden = false;
+  if (box) box.remove();
+  const stamp = document.querySelector("[data-policy-updated]");
+  if (data.published_at) {
+    stamp.textContent = "آخر تحديث: " + new Date(data.published_at)
+      .toLocaleDateString("ar-u-nu-latn", { year: "numeric", month: "long", day: "numeric" });
+    stamp.hidden = false;
+  }
+}
+
 try {
   const res = await fetch(`/api/policy?doc_type=${doc}`, { cache: "no-store" });
-  if (res.ok) {
-    const data = await res.json();
-    if (data && data.body_ar) {
-      const article = document.querySelector("[data-policy-body]");
-      article.innerHTML = "";
-      for (const para of data.body_ar.split(/\n{2,}/)) {
-        const p = document.createElement("p");
-        p.textContent = para.trim();
-        if (p.textContent) article.appendChild(p);
-      }
-      article.hidden = false;
-      document.querySelector("[data-policy-state]").remove();
-      const stamp = document.querySelector("[data-policy-updated]");
-      if (data.published_at) {
-        stamp.textContent = "آخر تحديث: " + new Date(data.published_at)
-          .toLocaleDateString("ar-u-nu-latn", { year: "numeric", month: "long", day: "numeric" });
-        stamp.hidden = false;
-      }
-    }
+  const data = res.ok ? await res.json() : null;
+  if (data && data.body_ar) {
+    render(data);
+  } else {
+    // **`null` جوابٌ صحيحٌ يعني «لم تُنشر»** — ويُقال بعد أن يُسمع.
+    say("هذه الصفحة لم تُنشر بعد.",
+        "النصُّ قيدُ المراجعة، ولا يُعرض قبل اعتماده. وحتى ذلك، راسلنا على privacy@tajora.ly.");
   }
-} catch { /* الفشلُ صامتٌ — وتبقى حالُ «لم تُنشر» */ }
+} catch {
+  // **ولا يُدّعى «لم تُنشر» عند انقطاع الشبكة** — ذاك خبرٌ آخر.
+  say("تعذّر تحميلُ النصّ.", "أعد المحاولة، أو راسلنا على privacy@tajora.ly.");
+}
 </script>
 </body>
 </html>
