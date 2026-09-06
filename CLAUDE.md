@@ -283,6 +283,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `check:update-gate` — **بوّابةُ قفلٍ منسوخةٌ ثلاثاً، فتُقاس بايتاً** (2026-09-03) → `GUARDS.md`
 - وحارسان عاشا خارج باب الحرّاس — **والسطرُ الختاميُّ يَعِد بما لم يفحص** (2026-09-06) → `GUARDS.md`
 - `check:ci-timeouts` — **مهلةٌ تقتل مجموعةً خضراءَ تُقرأ حمرةً** (قِيس 2026-09-06) → `GUARDS.md`
+- ثلاثةٌ في `deploy.sh` بعد الانتقال إلى WSL — **واثنان منها يصمتان** (قِيس 2026-09-06) → `GUARDS.md`
 - وتصحيحُ قيمةٍ افتراضيةٍ لا يبلغ صفّاً قائماً — **الشكلُ العاشر في جدول** (قِيس 2026-09-06) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
