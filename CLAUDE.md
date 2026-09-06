@@ -281,6 +281,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ما يمرّ من ماسح الأسرار — بأصنافه لا بالظنّ (قِيس 2026-08-31) → `GUARDS.md`
 - وكتابةٌ بلغةٍ على ويندوز تقلب نهاياتِ الأسطر — **وأمسكها `check:docs` وحدَه** (قِيس 2026-09-03) → `GUARDS.md`
 - `check:update-gate` — **بوّابةُ قفلٍ منسوخةٌ ثلاثاً، فتُقاس بايتاً** (2026-09-03) → `GUARDS.md`
+- وحارسان عاشا خارج باب الحرّاس — **والسطرُ الختاميُّ يَعِد بما لم يفحص** (2026-09-06) → `GUARDS.md`
+- وتصحيحُ قيمةٍ افتراضيةٍ لا يبلغ صفّاً قائماً — **الشكلُ العاشر في جدول** (قِيس 2026-09-06) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
 - الحرّاس — وما لم يصر حارساً بعد (2026-08-20) → `GUARDS.md`
@@ -336,6 +338,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - وللعائلة وجهٌ خامس — **حاويةٌ تخدم `dist` والمصدرُ يتغيّر تحتها** (قِيس 2026-08-26) → `PATTERNS.md`
 - متغيّرٌ واحدٌ في كلِّ مرّة — لا فعلان يمسّان سطحاً واحداً في يوم (2026-08-25) → `PATTERNS.md`
 - الشكلُ السادسَ عشر — **اسمٌ يُبحث عنه نصّاً، ونداءٌ بمفتاحٍ متغيّر** (2026-08-25) → `PATTERNS.md`
+- والشكلُ السابع بثوبٍ مقلوب — **`normalize()` يقلب المئةَ أُسّاً** (قِيس 2026-09-06) → `PATTERNS.md`
 - «An empty map is not a defect» — the three points, in order (2026-08-15) → `PATTERNS.md`
 - The twelfth shape — a fallback that works, and hides the defect it was built for (2026-08-19) → `PATTERNS.md`
 - الشكلُ الثامنُ في ثوبٍ ثالث — **موضعان يحسبان قيمةَ مالٍ واحدة، وحدٌّ في أحدهما** (2026-08-23) → `PATTERNS.md`

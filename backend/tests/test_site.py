@@ -120,6 +120,48 @@ async def test_commission_is_read_from_its_own_source(
     assert after != before
 
 
+async def test_the_kept_amount_is_a_plain_number_at_every_commission(
+    client: AsyncClient, session_factory
+) -> None:
+    """**المتبقّي يُقرأ رقماً لا أُسّاً** — ومقيسٌ عند الصفر أوّلاً.
+
+    **والصفرُ هو الحالةُ التي كسرت** (٢٠٢٦-٠٩-٠٦): `Decimal("100.00")
+    .normalize()` = `Decimal("1E+2")`، **و`str()` عليه `"1E+2"`** — فالصفحةُ
+    كانت تقول «يبقى لك 1E+2». **وهو الشكلُ السابع** بثوبٍ مقلوب.
+
+    **ولم يمسكه اختبارُ قائمة السماح**: ذاك يسأل «أخرج الحقل؟»، **وهذا يسأل
+    «ماذا فيه؟»** — **وسؤالان لا يجيب أحدُهما عن الآخر**.
+
+    **والحدُّ الأعلى هو الفخّ**: كلُّ نسبةٍ تترك متبقّياً غيرَ مضاعفٍ للمئة
+    تُطبع سليمةً، **فاختبارٌ بنسبةٍ واحدةٍ غيرِ صفرٍ يخضرّ فوق العطب**.
+    """
+    cases = (
+        # النسبة      المتبقّي المنتظَر
+        (Decimal("0.00"), "100"),  # ← **هي التي كسرت**
+        (Decimal("2.00"), "98"),
+        (Decimal("12.50"), "87.5"),
+    )
+    for percent, expected in cases:
+        async with session_factory() as session:
+            setting = await settings_service.get_or_create_commission(
+                session, CountryCode.JO
+            )
+            setting.commission_enabled = True
+            setting.commission_percent = percent
+            await session.commit()
+
+        body = (await client.get("/public/site")).json()
+        kept = body["driver_keeps_per_100"]
+
+        assert kept == expected, f"النسبة {percent}: المتبقّي {kept!r}"
+        # **ولا أُسَّ ولا حرفَ في رقمٍ يُعرض** — والشرطُ أعمُّ من القيمة
+        # المنتظَرة، فيمسك أشكالاً أخرى للأُسّ لم تخطر.
+        assert kept.replace(".", "").isdigit(), f"ليس رقماً عارياً: {kept!r}"
+        # **والرقمان من مصدرٍ واحد فلا يفترقان** — وهي العلّةُ التي حُسب
+        # المتبقّي في الخلفية من أجلها.
+        assert Decimal(kept) + Decimal(body["commission_percent"]) == Decimal("100")
+
+
 async def test_feature_flags_are_read_from_the_config_source(
     client: AsyncClient, session_factory
 ) -> None:

@@ -66,6 +66,22 @@ for app in customer-app driver-app admin-panel; do
     && run "$app · check:client-doors" npm --prefix "$app" run --silent check:client-doors
 done
 
+# ── وحرّاسُ الموقع — **كانا خارج هذا الباب** (أُضيفا ٢٠٢٦-٠٩-٠٦) ───────────
+#
+# **`site` ليس في حلقة التطبيقات** لأنه ليس React، **فسقط حارساه من الكنس**:
+# `check:site` و`check:commission-text` يعملان في `npm run build` وحدَه.
+# **وسطرُ «كلُّ الحرّاس الساكنين خضر» كان يَعِد بأكثر ممّا فحص** — وهو عينُ
+# درس `check:sheet` المكتوبِ فوق، **مكرَّراً بعد ثلاثة أيام**.
+#
+# **وحلقةٌ ثانيةٌ لا شرطٌ في الأولى**: أسماءُ حرّاس الموقع ليست أسماءَ حرّاس
+# التطبيقات، **ودمجُهما يجعل كلَّ اسمٍ يُجرَّب على كلِّ حزمة**.
+if [ -d site ]; then
+  for g in check:site check:commission-text; do
+    node -e "process.exit(require('./site/package.json').scripts['$g']?0:1)" || continue
+    run "site · $g" npm --prefix site run --silent "$g"
+  done
+fi
+
 if [ "$red" -gt 0 ]; then
   printf '\n✗ %d حارساً أحمر — ولا إيداعَ فوق أحمر.\n' "$red" >&2
   exit 1
