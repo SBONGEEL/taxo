@@ -17,8 +17,14 @@
 import { defineConfig } from "vite";
 import { resolve } from "node:path";
 
+import { inlinePolicyPlugin } from "./scripts/inline-policy.mjs";
+
 export default defineConfig({
   root: __dirname,
+  // **يخبز نصَّ الوثيقة في HTML وقت البناء** (قرارُ المالك ٢٠٢٦-٠٩-٠٧):
+  // رابطُ Google Play يجب أن **يحمل** السياسة لا أن يجلبها بجافاسكربت.
+  // **وغيابُ النصّ يُسقط البناء** ولا يكتب صفحةً فارغة.
+  plugins: [inlinePolicyPlugin()],
   // **جذرٌ مطلق**: الصفحاتُ على مساراتٍ (`/privacy`) لا في مجلَّدٍ فرعيّ.
   base: "/",
   // **الوكالةُ نفسُها التي يفعلها نجينكس في الإنتاج** — فالمعاينةُ المحلّيةُ
@@ -37,6 +43,10 @@ export default defineConfig({
         index: resolve(__dirname, "index.html"),
         privacy: resolve(__dirname, "privacy.html"),
         terms: resolve(__dirname, "terms.html"),
+        // **ولكلِّ تطبيقٍ رابطُه** (قرارُ المالك ٢٠٢٦-٠٩-٠٧): Google Play
+        // **يقرن رابطَ السياسة بالتطبيق**، **ووثيقةٌ أوسعُ ليست وثيقتَه**.
+        "driver-privacy": resolve(__dirname, "driver-privacy.html"),
+        "driver-terms": resolve(__dirname, "driver-terms.html"),
         404: resolve(__dirname, "404.html"),
       },
     },

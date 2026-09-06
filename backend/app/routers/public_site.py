@@ -183,16 +183,26 @@ async def site(session: DbSession) -> SiteOut:
 
 @router.get("/policy", response_model=PublicPolicyOut | None)
 async def policy(
-    session: DbSession, doc_type: PolicyDocType
+    session: DbSession,
+    doc_type: PolicyDocType,
+    app: PolicyApp = PolicyApp.RIDER,
 ) -> PublicPolicyOut | None:
     """وثيقةٌ للويب — **أو `None`، وهي حالٌ صحيحةٌ لا خطأ**.
 
     **والمنعُ هنا لا في الصفحة**: حارسٌ في الواجهة وحدَها يُتجاوَز بـ`curl`،
     **فالنصُّ لا يغادر الخلفيةَ ما لم يخضرَّ المفتاحان**.
 
-    **وأيُّ تطبيقٍ نصُّه؟** `PolicyApp.RIDER` — الموقعُ يخاطب الجمهورَ العامّ،
-    ونسخةُ الراكب هي التي تصف الخدمةَ لمن لا حسابَ له. **ولا نسخةَ ثالثةٌ
-    تُخترع للويب**: ثلاثُ نسخٍ لنصٍّ قانونيٍّ واحدٍ تفترق أوّلَ تصحيح.
+    **وأيُّ تطبيقٍ نصُّه؟ يُسأل، وافتراضُه الراكب** (وُسّع ٢٠٢٦-٠٩-٠٧ بأمر
+    المالك): كان يخدم `RIDER` **دائماً** بعلّةٍ صحيحةٍ في موضعها — «الموقعُ
+    يخاطب الجمهورَ العامّ». **والعلّةُ سقطت حين صار الرابطُ رابطَ متجر**:
+    Google Play **يقرن رابطَ السياسة بالتطبيق**، فرابطُ تطبيق الكبتن يجب أن
+    يعرض نصَّ الكبتن — **ووثيقةٌ أوسعُ ليست وثيقتَه**.
+
+    **ولا نسخةَ ثالثةٌ تُخترع**: النصّان قائمان في الجدول أصلاً، **وهذا اختيارٌ
+    بينهما لا تأليفُ ثالث**. والافتراضُ يبقى الراكبَ **فلا يتغيّر نداءٌ قائم**.
+
+    **والمُعامِلُ لا يمنح شيئاً**: المفتاحان اللذان يحرسان النصَّ يُقرآن قبله
+    كما كانا — `policies_public` ثمّ `is_published`.
     """
     row = await site_service.read(session)
     if row is None or not row.policies_public:
@@ -202,12 +212,14 @@ async def policy(
         session,
         country=site_service.SITE_COUNTRY,
         doc_type=doc_type,
-        app=PolicyApp.RIDER,
+        app=app,
     )
     if doc is None:
         return None
     return PublicPolicyOut(
         doc_type=doc.doc_type.value,
+        # **من الصفِّ لا من الطلب**: لو رُدَّ ما سُئل عنه لَشهد الحقلُ لنفسه.
+        app=doc.app.value,
         version=doc.version,
         body_ar=doc.body_ar,
         published_at=doc.published_at,

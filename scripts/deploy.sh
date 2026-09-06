@@ -926,12 +926,35 @@ say "  ✓ الصحّةُ عبر النفق ($HEALTH_URL · $EXPECT_ENV): $HEALT
 # **ويُقاس الطولُ لا الرمزُ وحدَه**: صفحةُ ٤٠٤ تردّ ٢٠٠ حين تُوجَّه، **والرمزُ
 # يقول «وصل شيء» لا «وصل الصحيح»**.
 EDGE="${TAXO_SITE_URL:-https://taxo.tajora.ly}"
-for _p in privacy terms; do
+for _p in privacy terms driver-privacy driver-terms; do
   _len="$(curl -sS --max-time 15 "$EDGE/$_p" 2>/dev/null | wc -c | tr -d ' ')"
   [ "${_len:-0}" -gt 4000 ] \
     || die "الحافّةُ تردّ ${_len:-0} بايت على $EDGE/$_p — **المسارُ لا يبلغ ملفَّه**. والنسخةُ في $LOCAL"
 done
-say "  ✓ الحافّة: /privacy و/terms يبلغان ملفَّيهما"
+say "  ✓ الحافّة: صفحاتُ السياسة الأربعُ تبلغ ملفّاتِها"
+
+# **والنصُّ مخبوزٌ فقد يبلى — فتُقاس النسخةُ لا الطول** (أُضيف ٢٠٢٦-٠٩-٠٧).
+#
+# **قرارُ المالك**: يُخبز النصُّ في HTML وقت البناء **ليرى الزاحفُ ما يراه
+# الإنسان**، **وثمنُه أن تعديلَ الوثيقة من اللوحة لا يبلغ الصفحةَ حتى تُبنى**.
+# **وشرطُه أن يكون سطراً في مسار النشر لا خطوةً تُنسى** — وهذا هو السطر.
+#
+# **ويُقاس الرقمُ لا الحضور**: صفحةٌ تحمل نصّاً **بلياً** طولُها كطول الصحيح،
+# **والطولُ يقول «وصل شيء» لا «وصل الأحدث»** — وهي علّةُ السطر الذي فوقه
+# بحرفها، مطبَّقةً على المحتوى بدل المسار.
+for _pair in "privacy:privacy_policy:rider" "terms:terms_of_use:rider" \
+             "driver-privacy:privacy_policy:driver" "driver-terms:terms_of_use:driver"; do
+  _page="${_pair%%:*}"; _rest="${_pair#*:}"; _doc="${_rest%%:*}"; _app="${_rest##*:}"
+  _baked="$(curl -sS --max-time 15 "$EDGE/$_page" 2>/dev/null \
+            | grep -o 'data-policy-version="[0-9]*"' | head -1 | tr -cd '0-9')"
+  _live="$(curl -sS --max-time 15 "$EDGE/api/policy?doc_type=$_doc&app=$_app" 2>/dev/null \
+           | grep -o '"version":[0-9]*' | head -1 | tr -cd '0-9')"
+  [ -n "$_baked" ] && [ -n "$_live" ] \
+    || die "تعذّر قياسُ نسخةِ $_page (مخبوز='${_baked:-—}' حيّ='${_live:-—}') — **ولا يُقرأ صمتُه سلامة**. والنسخةُ في $LOCAL"
+  [ "$_baked" = "$_live" ] \
+    || die "$_page مخبوزةٌ على v$_baked والمنشورُ v$_live — **صفحةٌ قانونيةٌ بلِيت**. أعِد بناءَ الموقع. والنسخةُ في $LOCAL"
+done
+say "  ✓ الحافّة: نسخةُ كلِّ صفحةِ سياسةٍ = المنشورُ في القاعدة"
 
 _API="$(curl -sS --max-time 15 "$EDGE/api/landing?country_code=JO" 2>/dev/null || true)"
 printf '%s' "$_API" | grep -q '"offer"\|"commission_percent"\|"apps"' \

@@ -137,3 +137,8 @@ landing/downloads
 /landing/manifest.webmanifest
 /landing/robots.txt
 /landing/sitemap.xml
+
+# **الرسمُ المميّزُ للمتجر مُولَّدٌ لا مصدر** (2026-09-07): يُصنع من الشعار
+# بـ`site/scripts/feature-graphic.mjs`، **ومخرَجُ بناءٍ لا يُودَع في الشجرة**
+# — فالشعارُ يتغيّر فيتغيّر معه، **وصورةٌ مُودَعةٌ تبلى بصمت**.
+/site/assets-src/store/

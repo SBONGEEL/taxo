@@ -155,8 +155,14 @@ if (servicesJSON.exists() && servicesJSON.length() > 0) {
 } else if (System.getenv('TAXO_ALLOW_NO_FIREBASE') == '1') {
     logger.lifecycle('⚠ بلا google-services.json — بإذنٍ صريح. لا إشعارات في هذه الحزمة.')
 } else {
-    throw new GradleException("""google-services.json مفقودٌ أو فارغ في app/ — والحزمةُ تُبنى بلا إشعارات.
-  في CI: يُفكّ من السرّ GOOGLE_SERVICES_B64.
-  محلياً: نزّله من Firebase وضعه في <app>/android/app/google-services.json
-  وبلا إشعاراتٍ بقصد: TAXO_ALLOW_NO_FIREBASE=1""")
+    // **الرسالةُ تسمّي سببَها** (صُحّحت ٢٠٢٦-٠٩-٠٧): كانت تقول
+    // «google-services.json مفقود» — **وهي رسالةُ حارسٍ آخرَ نُسخت هنا**،
+    // فمن يبني بلا تاريخِ `git` يُرسَل يبحث عن ملفِّ Firebase.
+    // **وخطأٌ يسمّي غيرَ سببه أغلى من خطأٍ صامت**: الصامتُ يُبحث عنه،
+    // وهذا **يُوجَّه إلى الباب الخطأ فيُصلَح ما ليس معطوباً**.
+    throw new GradleException("""versionCode لا يُشتقّ — لا تاريخَ `git` في ${root}.
+  والرقمُ عددُ الإيداعات (`git rev-list --count HEAD`)، **ولا قيمةَ احتياطيةَ صامتة**:
+  رقمٌ يعود إلى 1 يجعل بناءَين حزمةً واحدةً عند أندرويد فلا يُثبَّت الثاني تحديثاً.
+  · استنساخٌ ضحل؟  git fetch --unshallow
+  · بلا git بقصد؟  TAXO_VERSION_CODE=<رقم> — **ويجب أن يزيد عن آخر ما رُفع**""")
 }
