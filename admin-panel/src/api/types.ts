@@ -507,6 +507,8 @@ export interface SubscriptionOffer {
   audience: "all" | "new_driver" | "lapsed" | "manual";
   lapsed_days: number | null;
   max_uses_per_driver: number;
+  /** نسبةُ العمولة التي يمنحها العرض — **`null` لا يمسّها، وصفرٌ يمنح صفراً**. */
+  commission_percent: string | null;
   total_budget: string | null;
   created_at: string;
   /** جدولُ التنازل — محسوبٌ في الخلفية (§14) لا مجموعاً في المتصفح. */

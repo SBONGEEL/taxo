@@ -63,6 +63,9 @@ export function OffersScreen() {
     useState<SubscriptionOffer["audience"]>("all");
   const [lapsedDays, setLapsedDays] = useState("30");
   const [maxUses, setMaxUses] = useState("1");
+  // **فارغٌ = لا يمسّ النسبة**، وصفرٌ = يمنح صفراً — **حالان لا يحملهما
+  // رقمٌ واحد**، ولذلك نصٌّ لا عدد: `""` تُرسل `null` و`"0"` تُرسل صفراً.
+  const [offerCommission, setOfferCommission] = useState("");
   const [budget, setBudget] = useState("");
   // **الخطّةُ هي المدّة**: عرضٌ على الأسبوعيِّ أسبوعٌ مجّاني، وعلى الشهريِّ شهر
   const [planId, setPlanId] = useState("");
@@ -101,6 +104,9 @@ export function OffersScreen() {
         audience,
         lapsed_days: audience === "lapsed" ? Number(lapsedDays) : null,
         max_uses_per_driver: Number(maxUses),
+        // **الفراغُ `null` لا صفر** — وإلا صار كلُّ عرضٍ يمنح صفراً بسهو
+        commission_percent:
+          offerCommission.trim() === "" ? null : offerCommission.trim(),
         total_budget: budget.trim() || null,
         plan_id: planId || null,
       });
@@ -228,6 +234,20 @@ export function OffersScreen() {
                   }
                 />
               )}
+              {/* **نسبةُ العمولة التي يمنحها العرض** (البند ٥٥): تُختم على
+                  الاشتراك المشترى تحته كما تُختم النسبةُ العادية — **فمن
+                  اشترى بصفرٍ يبقى عليه حتى ينتهي اشتراكه**. */}
+              <Field
+                label="نسبة العمولة التي يمنحها (فارغ = لا يمسّها)"
+                name="commission_percent"
+                dir="ltr"
+                inputMode="decimal"
+                value={offerCommission}
+                onChange={(event) =>
+                  setOfferCommission(event.target.value.replace(/[^\d.]/g, ""))
+                }
+              />
+
               {/* **العملةُ من الحقل لا من التسمية** (§39٫١٢٫٢): كانت
                   مقحمةً في نصِّ التسمية، **فتُقرأ جزءاً من اسم الحقل لا وحدةً
                   للرقم**. والمصفاةُ باقيةٌ — `MoneyField` لا يمنع حرفاً. */}

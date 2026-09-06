@@ -33,6 +33,8 @@ class OfferIn(BaseModel):
     lapsed_days: int | None = Field(default=None, gt=0, le=3650)
     # **صفرٌ يعني بلا حدّ، ويُكتب صراحةً** — كأصفار `wallet_settings`
     max_uses_per_driver: int = Field(default=1, ge=0, le=100)
+    #: **نسبةُ العمولة التي يمنحها** — `None` لا يمسّها، وصفرٌ يمنح صفراً
+    commission_percent: Decimal | None = Field(default=None, ge=0, le=100)
     total_budget: Decimal | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
@@ -68,6 +70,7 @@ class OfferUpdate(BaseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     max_uses_per_driver: int | None = Field(default=None, ge=0, le=100)
+    commission_percent: Decimal | None = Field(default=None, ge=0, le=100)
     total_budget: Decimal | None = Field(default=None, ge=0)
     is_active: bool | None = None
 
@@ -88,6 +91,7 @@ class OfferOut(BaseModel):
     audience: str
     lapsed_days: int | None
     max_uses_per_driver: int
+    commission_percent: Decimal | None
     total_budget: Decimal | None
     created_at: datetime
 

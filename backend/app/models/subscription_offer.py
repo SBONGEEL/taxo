@@ -20,6 +20,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -51,6 +52,17 @@ class SubscriptionOffer(UUIDMixin, TimestampMixin, Base):
 
     __tablename__ = "subscription_offers"
     __table_args__ = (
+        # **والحدُّ في القاعدة لا في المخطَّط وحدَه**: مخطَّطٌ يحرس بابَه،
+        # **وصفٌّ يُكتب من سكربتٍ أو يدٍ يمرّ من تحته** — والنسبةُ مال.
+        # **ويُعلَن هنا لا في الترحيلة وحدَها**: قيدٌ لا يعرفه الموديلُ يجعل
+        # `autogenerate` يقترح حذفَه أبداً، **ويُسقط رحلةَ الذهاب والإياب**.
+        CheckConstraint(
+            "commission_percent IS NULL"
+            " OR (commission_percent >= 0 AND commission_percent <= 100)",
+            # **بلا بادئة `ck_<table>_`**: الاصطلاح يضيفها بنفسه، وكتابتُها
+            # هنا تُنتج `ck_subscription_offers_ck_subscription_offers_…` مبتوراً.
+            name="commission_percent_range",
+        ),
         UniqueConstraint("country_code", "name", name="uq_subscription_offers_name"),
         # نسبةٌ بين صفرٍ ومئة — والحدُّ في القاعدة لا في الخدمة وحدَها: قيمةٌ
         # فوق المئة تجعل `amount_paid` سالباً، وهو مالٌ من عدم
@@ -113,6 +125,19 @@ class SubscriptionOffer(UUIDMixin, TimestampMixin, Base):
     max_uses_per_driver: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=1
     )
+    # **ونسبةُ العمولة التي يمنحها العرض** (البند ٥٥، ٢٠٢٦-٠٩-٠٦):
+    # **`NULL` = لا يمسّ النسبة** فتبقى نسبةُ السوق تُجمَّد كما اليوم،
+    # **وصفرٌ = يمنح صفراً** — **وحالان لا يحملهما رقمٌ واحد**، وهي قاعدةُ
+    # `commission_percent_from_subscription` نفسُها بحرفها.
+    #
+    # **وتُختم على الاشتراك المشترى تحته** كما تُختم النسبةُ العادية — فمن
+    # اشترى بصفرٍ **يبقى على صفرٍ حتى ينتهي اشتراكه**، ومن جدّد بعده يُختم
+    # عليه ما يقع حينها. **بلا نقضِ وعدٍ ولا كبتنين بشرطين على شاشة واحدة.**
+    commission_percent: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 2),
+        nullable=True,
+    )
+
     # سقفُ التنازل الكلّي — و`NULL` = بلا سقف
     total_budget: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
 

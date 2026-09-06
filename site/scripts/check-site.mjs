@@ -77,10 +77,15 @@ for (const token of ["د.أ", "د.ل", "JOD", "LYD", "دينار"]) {
 
 /* ٤ — المفاتيحُ في الاتجاهين */
 const readKeys = new Set(
-  [...js.matchAll(/data-(?:site|section|social)=["'`]?\$?\{?([a-z_]+)/g)].map((m) => m[1]),
+  // **والرقمُ من الاسم**: `[a-z_]+` يبتر `driver_keeps_per_100` إلى
+  // `driver_keeps_per_` **ثمّ يشكو أن لا موضعَ له** — بلاغٌ كاذبٌ سببه
+  // النمطُ لا الصفحة. **وحارسٌ يبتر ما يقرأ يتّهم السليم.**
+  [...js.matchAll(/data-(?:site|section|social)=["'`]?\$?\{?([a-z0-9_]+)/g)].map((m) => m[1]),
 );
 const pageKeys = new Set(
-  [...html.matchAll(/data-(?:site|section|social)="([a-z_]+)"/g)].map((m) => m[1]),
+  // **والرقمُ من الاسم هنا أيضاً** — الطرفان يُقرآن بنمطٍ واحد، وإلا
+  // قرأ أحدُهما مفتاحاً كاملاً والآخرُ مبتوراً **فاختلفا على السليم**.
+  [...html.matchAll(/data-(?:site|section|social)="([a-z0-9_]+)"/g)].map((m) => m[1]),
 );
 // **ما يقرؤه السكربتُ بقائمةٍ ثابتة** — تُقرأ من مصفوفته لا تُخمَّن
 for (const m of js.matchAll(/for \(const net of \[([^\]]+)\]\)/g)) {

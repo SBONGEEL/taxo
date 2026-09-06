@@ -99,7 +99,7 @@ def play_url(package: str) -> str:
 DEFAULTS: dict[str, Any] = {
     "hero_title": "TAXO — تاكسي بالتطبيق للراكب والكبتن",
     "hero_subtitle": (
-        "اطلب رحلتك أو اقبل الطلبات من التطبيق نفسه — بلا عمولة على الكبتن المشترِك."
+        "اطلب رحلتك أو اقبل الطلبات من التطبيق نفسه — وعمولةٌ منخفضةٌ تُجمَّد لحظةَ اشتراكك."
     ),
     "hero_note": "في الأردن الآن",
     "support_email": "support@tajora.ly",
@@ -190,5 +190,13 @@ async def public_payload(session: AsyncSession) -> dict[str, Any]:
     # **النسبةُ نصٌّ لا عائم** — قاعدةُ `NUMERIC(12,3)` في هذا المستودع:
     # **الرقمُ لا يمرّ بعائمٍ في أيِّ طريق**، ولو كان نسبةً لا مبلغاً.
     payload["commission_percent"] = str(commission)
+    # **الأثرُ قبل النسبة** (قرارُ المالك ٢٠٢٦-٠٩-٠٦): «بِع الفرقَ لا الرقم».
+    #
+    # **ويُحسب هنا لا في الصفحة**: `100 − النسبة` حسابُ مالٍ، **و§14 يحصره في
+    # الخلفية** — ويمنعه `check:money-math` في الواجهة أصلاً. **ومن المصدر
+    # نفسِه الذي تخرج منه النسبة**، فلا يفترق الرقمان أبداً مهما بُدّلت.
+    payload["driver_keeps_per_100"] = str(
+        (Decimal("100") - commission).quantize(Decimal("0.01")).normalize()
+    )
     payload["features"] = flags
     return payload

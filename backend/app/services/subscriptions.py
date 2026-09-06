@@ -387,6 +387,14 @@ async def _create(
     frozen_commission = await settings_service.commission_percent_for(
         session, plan.country_code
     )
+    # **ونسبةُ العرض تُجمَّد مكانَها إن حملها** (البند ٥٥، ٢٠٢٦-٠٩-٠٦):
+    # **`None` تعني «لا يمسّ النسبة»** فتبقى نسبةُ السوق — **وصفرٌ يعني
+    # صفراً**، وهما حالان لا يحملهما رقمٌ واحد.
+    #
+    # **وهنا وحدَه**: هذا البابُ يكتب صفَّ الاشتراك في القنوات الأربع، فما
+    # يُجمَّد فوقه يقع عليها كلِّها — **وشرطٌ في راوترٍ يُنسى في ثلاثة**.
+    if offer is not None and offer.offer.commission_percent is not None:
+        frozen_commission = offer.offer.commission_percent
 
     # **قاعدةٌ واحدةٌ للخصم في القنوات الأربع** (البند ٥٤، الفرع ج): ما تنازلنا
     # عنه هو **الفرقُ بين سعر الخطة وما دُفع فعلاً** — لا ما حسبه العرض. ففي

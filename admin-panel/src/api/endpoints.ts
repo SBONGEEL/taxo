@@ -137,6 +137,7 @@ export const createSubscriptionOffer = (
     audience: SubscriptionOffer["audience"];
     lapsed_days?: number | null;
     max_uses_per_driver: number;
+    commission_percent?: string | null;
     total_budget?: string | null;
     ends_at?: string | null;
     /** الخطّةُ التي يغطّيها — **وهي مدّةُ العرض**. و`null` تعني كلَّ الخطط. */
@@ -155,6 +156,7 @@ export const updateSubscriptionOffer = (
     discount_value: string;
     max_discount: string | null;
     max_uses_per_driver: number;
+    commission_percent?: string | null;
     total_budget: string | null;
     ends_at: string | null;
     /** **مدّةُ العرض تُبدَّل** — كانت في الإنشاء وحدَها فلا تتغيّر أبداً. */

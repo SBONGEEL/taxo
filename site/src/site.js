@@ -567,6 +567,18 @@ class Motion {
       if (site.features && site.features[key] === false) markSoon(el);
     });
 
+    // **نسبةُ المشترِك من الباب** — وهي نسبةُ السوق نفسُها تُجمَّد لحظةَ
+    // الشراء (§25.11). **ولا رقمَ مخبوزٌ في الصفحة**: بُدّلت من اللوحة
+    // فتبعتها البطاقتان والعدّادُ والسطرُ معاً.
+    if (site.commission_percent !== undefined) {
+      setText("[data-site='subscriber_commission']", `${site.commission_percent}٪`);
+    }
+    // **وما يبقى للكبتن يأتي محسوباً** — `100 − النسبة` حسابُ مالٍ، **و§14
+    // يحصره في الخلفية**، فلا يُحسب هنا ولو كان طرحاً واحداً.
+    if (site.driver_keeps_per_100 !== undefined) {
+      setText("[data-site='driver_keeps_per_100']", String(site.driver_keeps_per_100));
+    }
+
     // **العمولةُ من الباب** — والعدّادُ يهبط إليها لا إلى رقمٍ مكتوب.
     const com = $("#taxo-commission");
     if (com && site.commission_percent !== undefined) {

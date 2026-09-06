@@ -47,7 +47,15 @@ async def test_public_door_publishes_the_allowlist_and_nothing_else(
     assert response.status_code == 200
     body = response.json()
 
-    published = set(body) - {"commission_percent", "features"}
+    # **والمحسوبُ يُستثنى لا يُصرَّح**: `commission_percent` و`features`
+    # و`driver_keeps_per_100` **تُقرأ من مصادرها لا من أعمدة الجدول**،
+    # فقائمةُ السماح تحرس الأعمدةَ وحدَها. **والثالثُ مشتقٌّ من الأول**
+    # (`100 − النسبة`) فلا يمكن أن يفترق عنه ولا أن يُنشر وحدَه.
+    published = set(body) - {
+        "commission_percent",
+        "driver_keeps_per_100",
+        "features",
+    }
     allowed = set(site_service.PUBLIC_FIELDS)
 
     assert published - allowed == set(), "خرج حقلٌ خارج قائمة السماح"
