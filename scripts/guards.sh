@@ -46,6 +46,7 @@ run "check:destinations"    node tools/check-destinations.mjs
 run "check:fields"          node tools/check-fields.mjs
 run "check:storefront-card" node tools/check-storefront-card.mjs
 run "check:update-gate"     node tools/check-update-gate.mjs
+run "check:ci-timeouts"     node tools/check-ci-timeouts.mjs
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do
