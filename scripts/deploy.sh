@@ -65,7 +65,25 @@ set -euo pipefail
 
 HOST="${TAXO_DEPLOY_HOST:-taxo@169.58.207.123}"
 REMOTE="${TAXO_REMOTE_PROJECT:-~/taxo}"
-DEST="${TAXO_BACKUP_DEST:-/d/taxo-backups}"
+# **وموضعُ النسخة يُقاس لا يُفترض** (أُصلح ٢٠٢٦-٠٩-٠٦): كان `/d/taxo-backups`
+# — **شكلُ Git Bash**، و`D:\` في WSL هو `/mnt/d`. **فسقط بـ`mkdir: cannot
+# create directory '/d'`** بعد أن خضّرت بوّابتان.
+#
+# **وهذا الصائحُ من الثلاثة، وصياحُه نعمة**: عُرف في دقيقة. **وأخواه صامتان.**
+#
+# **ولا يُخترع موضعٌ جديد**: يُؤخذ أوّلُ جذرٍ **موجودٍ فعلاً**، والنسخُ السابقة
+# في `/mnt/d/taxo-backups` — قِيس: `20260905T160729Z` قائمةٌ هناك.
+_backup_dest() {
+  [ -n "${TAXO_BACKUP_DEST:-}" ] && { printf '%s' "$TAXO_BACKUP_DEST"; return; }
+  local root
+  for root in /mnt/d /d; do
+    [ -d "$root" ] && { printf '%s/taxo-backups' "$root"; return; }
+  done
+  # **ولا افتراضَ صامتٌ حين لا يُوجد أيٌّ منهما**: يُطبع ما جُرّب،
+  # **والبوّابةُ الثالثةُ تسقط بنصٍّ لا بمسارٍ مخترَع**.
+  printf '/mnt/d/taxo-backups'
+}
+DEST="$(_backup_dest)"
 # **عميلُ ssh يُقاس ولا يُوصف** (قرارُ المالك 2026-08-22).
 #
 # على هذا الجهاز عميلان — `/usr/bin/ssh` في Git Bash (مقبسُ يونكس) و`ssh.exe`
@@ -81,17 +99,53 @@ DEST="${TAXO_BACKUP_DEST:-/d/taxo-backups}"
 # يفتح الباب. **ويُقاس الوكيلُ لا وجودُ الملفّ** — `ssh.exe` موجودٌ على كلِّ
 # ويندوز، ووجودُه لا يقول إن فيه مفتاحاً؛ **و`ssh-add -l` هو الذي يقول**.
 # والتصريحُ يبقى فوق القياس لمن يريد غيرَه.
+# **والجذرُ بيئتان لا واحدة** (أُضيف ٢٠٢٦-٠٩-٠٦ بعد سقوطٍ مقيس): كُتب هذا
+# على Git Bash حيث `C:\` هو `/c`، **وانتقل المستودعُ إلى WSL حيث هو `/mnt/c`**
+# — **فبقي الشرطُ صحيحَ الشكل باطلَ المعنى**: لا يتحقّق أبداً، فيرتدّ إلى
+# `ssh` الخاصِّ بـWSL **ووكيلُه فارغٌ والمفتاحان بعبارةِ مرور** ⇒
+# `Permission denied (publickey)` عند البوّابة الأولى.
+#
+# **والمفتاحُ كان حيّاً طوال الوقت**: بصمتُه في وكيل ويندوز هي بصمةُ
+# `~/.ssh/taxo-contabo` نفسُها. **فالمفقودُ الطريقُ إليه لا المفتاح.**
+_win_openssh_root() {
+  local root
+  for root in /c/Windows/System32/OpenSSH /mnt/c/Windows/System32/OpenSSH; do
+    [ -x "$root/ssh.exe" ] && [ -x "$root/ssh-add.exe" ] && { printf '%s' "$root"; return; }
+  done
+  return 1
+}
+
 _pick_ssh() {
   [ -n "${TAXO_SSH:-}" ] && { printf '%s' "$TAXO_SSH"; return; }
-  local win=/c/Windows/System32/OpenSSH/ssh.exe
-  local agent=/c/Windows/System32/OpenSSH/ssh-add.exe
-  if [ -x "$win" ] && [ -x "$agent" ] && "$agent" -l >/dev/null 2>&1; then
-    printf '%s' "$win"
+  local root
+  if root="$(_win_openssh_root)" && "$root/ssh-add.exe" -l >/dev/null 2>&1; then
+    printf '%s' "$root/ssh.exe"
     return
   fi
   printf 'ssh'
 }
 SSH="$(_pick_ssh)"
+
+# **والارتدادُ الصامتُ يصير ناطقاً** — وهو الإصلاحُ الحقيقيُّ لا توسيعُ المسار.
+#
+# **العلّةُ أن `Permission denied (publickey)` يُقرأ «المفتاحُ مرفوض»**، فيذهب
+# من يشخّص إلى `authorized_keys` على الخادم — **والسببُ عندنا أن الطريق خطأ**.
+# **وساعةٌ من التشخيص ضاعت في ذلك مقيسةً.**
+#
+# **فيُقال أيُّهما وقع قبل أن يُطرق الباب**: أوُجد وكيلُ ويندوز بمفاتيحَ حيّة؟
+# فإن لا، **أفي وكيل WSL مفتاح؟** فإن لا، **أثمّة مفتاحٌ بلا عبارةِ مرور؟**
+# — **وثلاثةُ لاءاتٍ تعني أن أيَّ طَرقٍ سيُرفض، والسببُ الطريقُ لا المفتاح.**
+if [ -z "${TAXO_SSH:-}" ] && [ "$SSH" = "ssh" ]; then
+  _KEY="${TAXO_SSH_KEY:-$HOME/.ssh/taxo-contabo}"
+  if ! ssh-add -l >/dev/null 2>&1 && ! ssh-keygen -y -P "" -f "$_KEY" >/dev/null 2>&1; then
+    say "  ⚠ **الطريقُ إلى المفتاح خطأ — لا المفتاحُ مرفوض**:"
+    say "     · وكيلُ ويندوز: $(_win_openssh_root >/dev/null 2>&1 && echo 'موجودٌ بلا مفاتيحَ حيّة' || echo '**لم يُوجد** — أفي WSL؟ جذرُه /mnt/c لا /c')"
+    say "     · وكيلُ هذه البيئة: فارغ"
+    say "     · و$_KEY **بعبارةِ مرور** فلا يُفتح بلا وكيل"
+    say "     أيُّ طَرقٍ بعد هذا سيُجيب Permission denied (publickey) — **والسببُ أعلاه**."
+    say "     العلاج: TAXO_SSH=/mnt/c/Windows/System32/OpenSSH/ssh.exe  ·  أو ssh-add في هذه البيئة."
+  fi
+fi
 
 # **ملفّاتُ compose تُصرَّح كلُّها في كلِّ أمر** (البوّابةُ الرابعة، وفخٌّ وقع
 # مقيساً مرتين): أمرٌ بملفٍّ ناقصٍ يعيد الحاويةَ **بلا `CORS_ORIGINS`** فيقف
@@ -710,7 +764,44 @@ FRONT_API="${TAXO_FRONT_API_BASE:-https://api.tajora.ly}"
 # ══════════════════════════════════════════════════════════════════════════
 say "  الواجهات: تُبنى الأربعُ على الخادم — الثلاثةُ والموقع ($FRONT_API)…"
 BUILD_STATE="/tmp/taxo-build/state"
-_ssh "cd $REMOTE && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
+
+# **وأمرُ الإطلاق بمهلة** (أُضيف ٢٠٢٦-٠٩-٠٦ بعد تعليقٍ مقيسٍ ٤٢ دقيقة).
+#
+# **العلّةُ أن الأمرَ يُطلق ويعود — ومع عميل ويندوز لا يعود.** الأمرُ ينتهي
+# بـ`setsid nohup … > /dev/null 2>&1 < /dev/null &` **ومع ذلك بقيت القناةُ
+# مفتوحة**، فلم يبلغ السكربتُ حلقةَ انتظاره **بينما `BUILT=4` مكتوبٌ على
+# الخادم منذ الدقيقة العاشرة**.
+#
+# **والحالُ التي يتركها أسوأُ من سقوط**: الشجرةُ على الخادم عند الإيداع الجديد
+# **والواجهاتُ مبنيّةٌ ومخدومة، والترحيلةُ لم تُشغَّل** — **وقِيس `500` على
+# `/public/landing` في تلك النافذة**، لأن الشيفرةَ تطلب عموداً لم يصل.
+#
+# **والمعالجةُ القائمةُ كانت للانقطاع لا للتعليق**: `|| say "انقطعت قناةُ
+# الإطلاق"` يمسك خروجاً غيرَ صفريّ، **والتعليقُ لا يخرج أصلاً**.
+# **فالناقصُ مهلةٌ لا معالجةُ خطأ** — وهو الفرقُ بين «فشل» و«لم يُجب».
+#
+# **والمهلةُ لا تُسقط الرفع**: الإطلاقُ إمّا وقع فالبناءُ يجري على الخادم،
+# وإمّا لم يقع فالحلقةُ لن تجد `state` وتقول ذلك. **وكلتاهما تُقرأ من
+# الخادم لا من حال هذا الأمر** — وهو ما يقوله السطرُ التالي أصلاً.
+_LAUNCH_TIMEOUT="${TAXO_LAUNCH_TIMEOUT:-120}"
+_launch_ssh() {
+  _ssh "$1" &
+  local pid=$! waited=0
+  while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt "$_LAUNCH_TIMEOUT" ]; do
+    sleep 3; waited=$((waited + 3))
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    say "  · **أمرُ الإطلاق لم يعد خلال ${_LAUNCH_TIMEOUT}ث فقُطع** — وهو سلوكُ عميل"
+    say "    ويندوز مع أمرٍ مُطلَقٍ في الخلفية. **ولا يُحكم به**: البناءُ إمّا"
+    say "    يجري على الخادم وإمّا لم يبدأ، **وتُقرأ الحالُ من الخادم أدناه**."
+    return 0
+  fi
+  wait "$pid"
+}
+
+_launch_ssh "cd $REMOTE && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build && \
   setsid nohup sh -c 'ok=0; for a in customer-app driver-app admin-panel site; do \
     if docker run --rm -v \"\$PWD\":/repo -w \"/repo/\$a\" -e VITE_API_BASE_URL=\"$FRONT_API\" \
          -e SKIP_TUNNEL=1 node:22-alpine \
