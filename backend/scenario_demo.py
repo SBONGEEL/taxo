@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -230,8 +231,19 @@ async def main() -> None:
         rider2 = await login(client, RIDER2[0])
         dm = await login(client, DRIVER_M[0])
         df = await login(client, DRIVER_F[0])
-        # المشرفُ حسابٌ قائمٌ بكلمته من `.env.local` — لا يمسّه هذا السكربت
-        admin = await login(client, "0790000000", "AdminLocal123")
+        # المشرفُ حسابٌ قائمٌ بكلمته من `.env.local` — لا يمسّه هذا السكربت.
+        #
+        # **وتُقرأ من البيئة لا تُنسخ هنا** (صُحّح ٢٠٢٦-٠٩-٠٧ بحارس
+        # `check:env-leak`): كانت مكتوبةً حرفاً **والتعليقُ فوقها يقول إنها
+        # من `.env.local`** — **فنسختان لشيءٍ واحد، والملفُّ متتبَّعٌ في git**.
+        # **وسرٌّ في ملفٍّ متتبَّعٍ يبقى في التاريخ بعد نزعه** — فلا يكفي المحو.
+        admin_pw = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD")
+        if not admin_pw:
+            raise SystemExit(
+                "BOOTSTRAP_ADMIN_PASSWORD غيرُ مضبوطة — والسكربتُ لا يخترع كلمة.\n"
+                "  صدّرها من `.env.local`:  export $(grep ^BOOTSTRAP_ADMIN_PASSWORD .env.local)"
+            )
+        admin = await login(client, os.environ.get("BOOTSTRAP_ADMIN_PHONE", "0790000000"), admin_pw)
 
         await ensure_vehicle(client, dm, "AMM-1010")
         await ensure_vehicle(client, df, "AMM-2020")

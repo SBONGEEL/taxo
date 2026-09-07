@@ -285,6 +285,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `check:ci-timeouts` — **مهلةٌ تقتل مجموعةً خضراءَ تُقرأ حمرةً** (قِيس 2026-09-06) → `GUARDS.md`
 - ثلاثةٌ في `deploy.sh` بعد الانتقال إلى WSL — **واثنان منها يصمتان** (قِيس 2026-09-06) → `GUARDS.md`
 - وتصحيحُ قيمةٍ افتراضيةٍ لا يبلغ صفّاً قائماً — **الشكلُ العاشر في جدول** (قِيس 2026-09-06) → `GUARDS.md`
+- قسمةُ الأسرار بالاستعمال لا بالثقة — **`.env` محميٌّ من الشجرة مكشوفٌ في التشغيل** (قرارُ المالك 2026-09-07) → `GUARDS.md`
 - A guard that invents a defect costs more than one that misses it (2026-08-20) → `GUARDS.md`
 - `check:target` / `check:dist` — the build guard for "which backend is this bundle talking to" (2026-08-15) → `GUARDS.md`
 - الحرّاس — وما لم يصر حارساً بعد (2026-08-20) → `GUARDS.md`
