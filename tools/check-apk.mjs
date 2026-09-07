@@ -43,18 +43,51 @@ const PAIRS = allPairs();
 /** مفتاحُ البيان (`rider`/`driver`) → اسمُ التطبيق في الجدول. */
 const APP_OF_KEY = { rider: "customer-app", driver: "driver-app", admin: "admin-panel" };
 
-/** يقرأ `server.url` **من داخل ملفِّ الحزمة**، لا من الشجرة. */
+const READER =
+  "import zipfile,sys,json;z=zipfile.ZipFile(sys.argv[1]);" +
+  "n=[x for x in z.namelist() if x.endswith('capacitor.config.json')];" +
+  "print(json.loads(z.read(n[0])).get('server',{}).get('url','') if n else '')";
+
+/** **أيُّ مُفسِّرٍ بايثون موجودٌ هنا** — أو `null`، وهو خبرٌ لا اتّهام.
+ *
+ * **العلّةُ مقيسةٌ 2026-09-07**: كان يُنادى `python` وحدَه، **وليس في هذه
+ * البيئة إلا `python3`** — فكانت كلُّ قراءةٍ ترتدّ فارغةً، **وتُقرأ في
+ * الشقّ الثاني «زوجٌ غيرُ متّسق»**: حزمتان هدفُهما صحيحٌ حرفاً
+ * (`app.tajora.ly` و`driver.tajora.ly` مقروءتان بـ`unzip -p`) **اتُّهمتا
+ * بأنهما تخاطبان غيرَ هدفهما**، وسقط الحارسُ أحمرَ يوقف رفعاً.
+ *
+ * **وهو «حارسٌ يخترع عطباً»**، وثمنُه أغلى من واحدٍ يفوت: من رآه أحمرَ
+ * مرّتين أطفأه، فسقط معه ما يمسكه حقاً.
+ */
+let cachedPython;
+function python() {
+  if (cachedPython !== undefined) return cachedPython;
+  for (const candidate of ["python3", "python"]) {
+    try {
+      execFileSync(candidate, ["-c", "0"], { stdio: "ignore" });
+      cachedPython = candidate;
+      return cachedPython;
+    } catch {
+      /* التالي */
+    }
+  }
+  cachedPython = null;
+  return cachedPython;
+}
+
+/** يقرأ `server.url` **من داخل ملفِّ الحزمة**، لا من الشجرة.
+ *
+ * **ويُفرَّق «لا أداة» عن «لا هدف»**: الأولى `undefined` — **لم يُقس**،
+ * والثانيةُ `null` — قُرئت الحزمةُ ولا عنوانَ فيها. **وخلطُهما هو العطبُ
+ * نفسُه** الذي جعل الحارسَ يتّهم حزمةً سليمة.
+ */
 function shellTarget(path) {
+  const runner = python();
+  if (runner === null) return undefined;
   try {
-    const json = execFileSync(
-      "python",
-      ["-c",
-       "import zipfile,sys,json;z=zipfile.ZipFile(sys.argv[1]);" +
-       "n=[x for x in z.namelist() if x.endswith('capacitor.config.json')];" +
-       "print(json.loads(z.read(n[0])).get('server',{}).get('url','') if n else '')",
-       path],
-      { encoding: "utf8" },
-    ).trim();
+    const json = execFileSync(runner, ["-c", READER, path], {
+      encoding: "utf8",
+    }).trim();
     return json ? new URL(json).host : null;
   } catch {
     return null;
@@ -87,6 +120,9 @@ if (!manifest.apps?.length) {
 console.log(`\n  الحزم — البصمةُ والهدف`);
 let bad = 0;
 let wrongTarget = 0;
+//: **ما لم يُقَس يُعدّ ولا يُخلط بما سقط** — ويُطبع في السطر الأخير، فلا
+//: تُقرأ خضرةٌ ناقصةٌ خضرةً تامّة.
+let unmeasured = 0;
 
 // ═══ ٠-ب) **بيتُ الحزم الخاصّة — يُفحص ولا يُترك** (قرارُ المالك ٢٠٢٦-٠٩-٠٥)
 //
@@ -151,6 +187,17 @@ for (const app of manifest.apps) {
     console.log(`    ✗ غلافٌ لا يعرفه الجدول: ${app.key} — يُصرَّح في \`channels.json\` أو يُسقط الفحص`);
   } else if (onDisk) {
     const host = shellTarget(local);
+    // **ولا يُتَّهم ما لم يُقرأ** (2026-09-07): غيابُ المُفسِّر يعيد
+    // `undefined`، **وهو «لم يُقس» لا «هدفٌ خاطئ»** — والفرقُ أن الأولَ
+    // يُصلَح بأداةٍ تُثبَّت، والثاني يُقرأ حزمةً تخاطب خادماً غيرَ الذي
+    // يظنّه من يحمّلها. **وخلطُهما أسقط رفعاً على حزمتين هدفُهما صحيح.**
+    if (host === undefined) {
+      unmeasured += 1;
+      console.log(
+        `    · ${app.file} — **لم يُقس**: لا مُفسِّرَ بايثون هنا (جُرِّب python3 ثم python)`,
+      );
+      continue;
+    }
     // **المعرّفُ من بيان الحزمة لا من اسم الملفّ** — واسمُ الملفِّ يكتبه من يبني
     const appId = app.package ?? null;
     const match = PAIRS.find(
