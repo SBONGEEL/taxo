@@ -489,7 +489,7 @@ async def login_with_totp(
     await totp.guard_attempt(redis, payload.challenge_token, user_id)
 
     user = await session.get(User, user_id)
-    if user is None or user.is_blocked:
+    if user is None or user.is_blocked or user.deactivated_at is not None:
         await totp.drop_challenge(redis, payload.challenge_token)
         raise InvalidToken()
 
@@ -667,7 +667,7 @@ async def refresh(
     user_id, _ = await token_service.rotate_refresh_token(redis, payload.refresh_token)
 
     user = await session.get(User, user_id)
-    if user is None or user.is_blocked:
+    if user is None or user.is_blocked or user.deactivated_at is not None:
         # حساب محذوف أو محظور: أبطل بقية جلساته أيضاً
         await token_service.revoke_all_for_user(redis, user_id)
         raise InvalidToken()
@@ -898,7 +898,7 @@ async def exchange_handoff(
     user_id = await handoff.consume(redis, token=payload.token, target=payload.app)
 
     user = await session.get(User, user_id)
-    if user is None or user.is_blocked:
+    if user is None or user.is_blocked or user.deactivated_at is not None:
         raise InvalidToken("تعذّر التبديل — أعد الدخول")
 
     app_scope.guard(user.roles, payload.app)

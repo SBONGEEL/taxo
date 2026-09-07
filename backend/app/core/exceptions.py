@@ -173,6 +173,18 @@ class AccountBlocked(AppError):
     message = "هذا الحساب محظور"
 
 
+class AccountClosed(AppError):
+    """**أغلقه صاحبُه** — وهو غيرُ المحظور، ورمزٌ ثانٍ لأن الجملةَ ثانية.
+
+    **ورمزٌ واحدٌ لهما يقول لمن أغلق حسابَه إنه «محظور»** — تهمةٌ لا حال،
+    **ويقرؤها الدعمُ فيبحث عن قرارِ حظرٍ لا وجودَ له**.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "account_closed"
+    message = "هذا الحساب مُغلقٌ بطلب صاحبه"
+
+
 class PermissionDenied(AppError):
     status_code = status.HTTP_403_FORBIDDEN
     code = "permission_denied"

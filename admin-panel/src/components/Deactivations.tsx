@@ -77,13 +77,13 @@ export function Deactivations({ onError }: { onError: (message: string) => void 
       <Table
         height="compact"
         columns="1fr 1.4fr 0.8fr 0.9fr 1.6fr"
-        headers={["الكبتن", "السبب", "الحالة", "التاريخ", ""]}
+        headers={["الحساب", "السبب", "الحالة", "التاريخ", ""]}
         rows={rows}
         keyOf={(row) => row.id}
         empty={{ title: "لا طلبات", hint: "لم يطلب أحدٌ إغلاق حسابه بعد." }}
         render={(row) => (
           <>
-            <span className="font-mono text-11.5">{row.driver_id.slice(0, 8)}</span>
+            <span className="font-mono text-11.5">{row.user_id.slice(0, 8)}</span>
             <span className="text-12 text-muted">{row.reason ?? "—"}</span>
             <span className="flex items-center gap-6">
               <Badge tone={TONE[row.status]}>{LABEL[row.status]}</Badge>

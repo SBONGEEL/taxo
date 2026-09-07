@@ -641,12 +641,12 @@ async def test_a_debt_blocks_closing_the_account(
     )
 
     state = (
-        await client.get("/drivers/me/deactivation", headers=driver["headers"])
+        await client.get("/account/deactivation", headers=driver["headers"])
     ).json()
     assert "unpaid_advance" in state["blockers"]
 
     refused = await client.post(
-        "/drivers/me/deactivation", json={}, headers=driver["headers"]
+        "/account/deactivation", json={}, headers=driver["headers"]
     )
     assert refused.status_code == 409
 

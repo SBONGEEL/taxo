@@ -397,7 +397,8 @@ class DeactivationRequestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    driver_id: uuid.UUID
+    #: **صاحبُ الحساب لا الكبتن** (الترحيلة `0075`) — والمسارُ واحدٌ للدورين.
+    user_id: uuid.UUID
     status: DeactivationStatus
     reason: str | None
     review_note: str | None

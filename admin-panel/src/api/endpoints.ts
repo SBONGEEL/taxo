@@ -911,13 +911,13 @@ export const listAuditLogs = (
 /** طلباتُ إلغاء التفعيل — والمعلّقةُ أولاً بحكم ترتيب الخلفية (البند ١٣). */
 export const listDeactivations = (status?: string) =>
   api.get<DeactivationRequestRow[]>(
-    "/admin/drivers/deactivations" + (status ? `?status=${status}` : ""),
+    "/admin/deactivations" + (status ? `?status=${status}` : ""),
   );
 
 export const decideDeactivation = (
   id: string,
   payload: { approved: boolean; note?: string },
-) => api.patch<DeactivationRequestRow>(`/admin/drivers/deactivations/${id}`, payload);
+) => api.patch<DeactivationRequestRow>(`/admin/deactivations/${id}`, payload);
 
 // ------------------------------------------------------ السلف (البند ١٥)
 

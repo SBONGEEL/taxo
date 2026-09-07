@@ -10,7 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.models.enums import AdminPermission
-from app.core.exceptions import AccountBlocked, InvalidToken, NotFound, PermissionDenied
+from app.core.exceptions import (
+    AccountBlocked,
+    AccountClosed,
+    InvalidToken,
+    NotFound,
+    PermissionDenied,
+)
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import UserRole
@@ -56,6 +62,11 @@ async def get_current_user(
         raise InvalidToken()
     if user.is_blocked:
         raise AccountBlocked()
+    # **والمُغلقُ بطلب صاحبه يُردّ برمزه هو** (الترحيلة `0075`): توكنٌ صالحٌ
+    # في يد من أغلق حسابَه **يبقى صالحاً حتى ينتهي** — فالفحصُ هنا لا في
+    # الدخول وحدَه، **وإلا بقي مسارُه مفتوحاً ساعاتٍ بعد الإغلاق**.
+    if user.deactivated_at is not None:
+        raise AccountClosed()
     return user
 
 
@@ -149,6 +160,8 @@ async def broadcasting_driver(
             raise InvalidToken()
         if user.is_blocked:
             raise AccountBlocked()
+        if user.deactivated_at is not None:
+            raise AccountClosed()
         # **والدورُ يُقرأ أيضاً**: من سُحب منه دورُ الكبتن لا يبقى على الخريطة
         if not user.has_role(UserRole.DRIVER):
             raise PermissionDenied()

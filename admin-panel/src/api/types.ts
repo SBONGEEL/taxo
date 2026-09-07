@@ -1069,7 +1069,10 @@ export interface AuditLog {
 /** طلبُ إلغاء تفعيل حساب كبتن (البند ١٣). */
 export interface DeactivationRequestRow {
   id: string;
-  driver_id: string;
+  /** **صاحبُ الحساب لا الكبتن** (الترحيلة `0075`): صار البابُ واحداً للدورين،
+   *  **فالقائمةُ تشمل الركّابَ أيضاً** — ومسارٌ يقول «drivers» كان يُقرأ
+   *  قائمةً لا تشملهم، فيُبتّ في نصفها ويُنسى نصفُها. */
+  user_id: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   reason: string | null;
   review_note: string | null;

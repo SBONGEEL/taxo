@@ -80,6 +80,11 @@ const WalletTransferScreen = lazy(() =>
     default: m.WalletTransferScreen,
   })),
 );
+const CloseAccountScreen = lazy(() =>
+  import("@/screens/CloseAccount").then((m) => ({
+    default: m.CloseAccountScreen,
+  })),
+);
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
@@ -399,6 +404,16 @@ export default function App() {
                         element={
                           <Guarded>
                             <CardsScreen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **إغلاقُ الحساب** — شرطُ المتجر (٢٠٢٦-٠٩-٠٧)، والبابُ
+                          بابُ الكبتن نفسُه `‎/account/deactivation` */}
+                      <Route
+                        path="/account/close"
+                        element={
+                          <Guarded>
+                            <CloseAccountScreen />
                           </Guarded>
                         }
                       />

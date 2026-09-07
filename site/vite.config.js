@@ -47,6 +47,9 @@ export default defineConfig({
         // **يقرن رابطَ السياسة بالتطبيق**، **ووثيقةٌ أوسعُ ليست وثيقتَه**.
         "driver-privacy": resolve(__dirname, "driver-privacy.html"),
         "driver-terms": resolve(__dirname, "driver-terms.html"),
+        // **صفحةُ طلب الحذف** (٢٠٢٦-٠٩-٠٧): يشترطها المتجرُ رابطاً في نموذج
+        // أمان البيانات — **وصفحةٌ لا تدخل البناءَ رابطٌ يقود إلى ٤٠٤**.
+        "delete-account": resolve(__dirname, "delete-account.html"),
         404: resolve(__dirname, "404.html"),
       },
     },

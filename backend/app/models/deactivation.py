@@ -34,14 +34,23 @@ class DeactivationRequest(UUIDMixin, TimestampMixin, Base):
         # ضغطتان متزامنتان لا تنتجان طلبين ينظر فيهما مشرفان
         Index(
             "uq_deactivation_pending",
-            "driver_id",
+            "user_id",
             unique=True,
             postgresql_where="status = 'pending'",
         ),
     )
 
-    driver_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("drivers.id", ondelete="CASCADE"), nullable=False, index=True
+    #: **موضوعُ الطلب حسابٌ لا كبتن** (الترحيلة `0075`، ٢٠٢٦-٠٩-٠٧).
+    #:
+    #: **وكان `driver_id`**، فلمّا أوجب المتجرُ مسارَ حذفٍ للراكب **لم يوسَّع
+    #: الجدولُ ببابٍ ثانٍ بل بموضوعٍ أعمّ**: السؤالُ واحدٌ — «هذا الحسابُ يريد
+    #: الخروج» — **وجدولان له يفترقان أوّلَ تعديل**.
+    #:
+    #: **والموانعُ هي التي تعرف الدور** لا الجدول: من له صفٌّ في `drivers`
+    #: تُقرأ موانعُ الكبتن معها، **ومن يحمل الدورين تُجمع الموانعُ كلُّها** —
+    #: فحسابٌ واحدٌ يُغلق مرّةً واحدة.
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     status: Mapped[DeactivationStatus] = mapped_column(
         pg_enum(DeactivationStatus, "deactivation_status"),
@@ -61,4 +70,4 @@ class DeactivationRequest(UUIDMixin, TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
-        return f"<DeactivationRequest {self.driver_id} ({self.status})>"
+        return f"<DeactivationRequest {self.user_id} ({self.status})>"

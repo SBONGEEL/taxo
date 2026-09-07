@@ -35,6 +35,19 @@ class User(UUIDMixin, TimestampMixin, Base):
         pg_enum(CountryCode, "country_code"), nullable=False
     )
     is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # **إغلاقُ صاحبِ الحساب لحسابه** (الترحيلة `0075`) — **وليس `is_blocked`**.
+    #
+    # **والفرقُ ليس تسميةً**: ذاك **قرارُ مشرفٍ في شخصٍ بسبب**، وهذا **قرارُ
+    # الشخص في نفسه**. **وعمودٌ واحدٌ لهما يجعل من أغلق حسابَه يُقرأ محظوراً**
+    # في كلِّ شاشةٍ وتقريرٍ وتدقيق — **وهي تهمةٌ لا حال**، ولا يستطيع من قرأها
+    # بعد شهرٍ أن يعرف أيَّهما كان.
+    #
+    # **ولا يُمحى صفّ**: القاعدةُ تمنع محوَ الدفتر وشواهد الرحلات، **فالحذفُ
+    # تعطيلٌ وإخفاء** — وهو ما يقوله نصُّ التأكيد للمستخدم حرفاً، فلا يَعِد
+    # النصُّ بما لا يقع.
+    deactivated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # تجميد المحفظة وحدها دون حظر الحساب (SPEC القسم 7/13.3): محفظة مشبوهة
     # تُوقَف حركتها بينما يبقى صاحبها قادراً على الركوب والدفع نقداً
     wallet_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

@@ -24,7 +24,13 @@ from app.models.wallet import WalletTransaction
 from app.models.wallet_setting import WalletSetting
 from app.services import wallet as wallet_service
 
-from tests.helpers import DRIVER, approved_driver, auth
+from tests.helpers import (
+    DRIVER,
+    approved_driver,
+    auth,
+    rider_session,
+    topup_wallet,
+)
 
 pytestmark = pytest.mark.usefixtures("jordan_settings", "jordan_wallet")
 
@@ -107,14 +113,14 @@ async def test_a_ride_in_progress_blocks_the_request(
     await accepted_ride(client, rider, driver)
 
     blocked = await client.post(
-        "/drivers/me/deactivation", json={"reason": "أنهيتُ العمل"},
+        "/account/deactivation", json={"reason": "أنهيتُ العمل"},
         headers=driver["headers"],
     )
     assert blocked.status_code == 409
     assert blocked.json()["code"] == "deactivation_blocked"
 
     state = (
-        await client.get("/drivers/me/deactivation", headers=driver["headers"])
+        await client.get("/account/deactivation", headers=driver["headers"])
     ).json()
     assert "active_ride" in state["blockers"]
     assert state["request"] is None
@@ -130,24 +136,24 @@ async def test_the_request_is_reviewed_and_releases_the_reserve(
     await _set_alias(client, driver["headers"])
 
     opened = await client.post(
-        "/drivers/me/deactivation", json={"reason": "سافرتُ"},
+        "/account/deactivation", json={"reason": "سافرتُ"},
         headers=driver["headers"],
     )
     assert opened.status_code == 201, opened.text
 
     # طلبٌ ثانٍ يُرفض — الفهرسُ الجزئي في القاعدة هو الحارس
     again = await client.post(
-        "/drivers/me/deactivation", json={}, headers=driver["headers"]
+        "/account/deactivation", json={}, headers=driver["headers"]
     )
     assert again.status_code == 409
 
     listed = (
-        await client.get("/admin/drivers/deactivations", headers=admin_headers)
+        await client.get("/admin/deactivations", headers=admin_headers)
     ).json()
     assert listed and listed[0]["status"] == "pending"
 
     decided = await client.patch(
-        f"/admin/drivers/deactivations/{listed[0]['id']}",
+        f"/admin/deactivations/{listed[0]['id']}",
         json={"approved": True},
         headers=admin_headers,
     )
@@ -178,19 +184,19 @@ async def test_rejecting_needs_a_written_reason(
     )
     opened = (
         await client.post(
-            "/drivers/me/deactivation", json={}, headers=driver["headers"]
+            "/account/deactivation", json={}, headers=driver["headers"]
         )
     ).json()
 
     bare = await client.patch(
-        f"/admin/drivers/deactivations/{opened['id']}",
+        f"/admin/deactivations/{opened['id']}",
         json={"approved": False},
         headers=admin_headers,
     )
     assert bare.status_code in (400, 422)
 
     with_note = await client.patch(
-        f"/admin/drivers/deactivations/{opened['id']}",
+        f"/admin/deactivations/{opened['id']}",
         json={"approved": False, "note": "عليه مستحقاتٌ لم تُسوَّ"},
         headers=admin_headers,
     )
@@ -212,9 +218,9 @@ async def test_the_driver_can_change_his_mind(
         plate_number="AMM-1616",
         subscribed=False,
     )
-    await client.post("/drivers/me/deactivation", json={}, headers=driver["headers"])
+    await client.post("/account/deactivation", json={}, headers=driver["headers"])
     cancelled = await client.delete(
-        "/drivers/me/deactivation", headers=driver["headers"]
+        "/account/deactivation", headers=driver["headers"]
     )
     assert cancelled.status_code == 200
     assert cancelled.json()["status"] == DeactivationStatus.CANCELLED.value
@@ -222,13 +228,146 @@ async def test_the_driver_can_change_his_mind(
     async with session_factory() as session:
         rows = await session.scalars(
             select(DeactivationRequest).where(
-                DeactivationRequest.driver_id == uuid.UUID(str(driver["driver_id"]))
+                DeactivationRequest.user_id == uuid.UUID(str(driver["user_id"]))
             )
         )
         assert len(list(rows)) == 1
 
     # وبعد العدول يستطيع أن يطلب من جديد — الفهرسُ يمنع القائمَ لا المنتهي
     again = await client.post(
-        "/drivers/me/deactivation", json={}, headers=driver["headers"]
+        "/account/deactivation", json={}, headers=driver["headers"]
     )
     assert again.status_code == 201
+
+
+# ═══════════════════ إغلاقُ حساب الراكب — البابُ نفسُه (٢٠٢٦-٠٩-٠٧)
+#
+# **شرطُ المتجر**: «an in-app path to delete their app accounts». **ولم يكن
+# للراكب مسار**، ووُسِّع موضوعُ الجدول من الكبتن إلى الحساب (الترحيلة `0075`)
+# **ولم يُبنَ بابٌ ثانٍ**.
+
+
+async def test_a_rider_closes_his_account_and_is_locked_out(
+    client, session_factory, admin_headers
+) -> None:
+    """الطلبُ ← الموافقةُ ← البابُ يُردّ **برمزه هو** لا برمز الحظر.
+
+    **و`account_closed` غيرُ `account_blocked`**: الأولُ قرارُ صاحبه، والثاني
+    قرارُ مشرفٍ فيه — **ورمزٌ واحدٌ لهما يقول لمن أغلق حسابَه إنه محظور**.
+    """
+    from app.models.user import User
+
+    rider = await rider_session(client)
+
+    opened = await client.post(
+        "/account/deactivation", json={"reason": "لم أعد أحتاجه"},
+        headers=rider["headers"],
+    )
+    assert opened.status_code == 201, opened.text
+
+    listed = (
+        await client.get("/admin/deactivations", headers=admin_headers)
+    ).json()
+    mine = [row for row in listed if row["user_id"] == rider["user"]["id"]]
+    assert len(mine) == 1, listed
+
+    decided = await client.patch(
+        f"/admin/deactivations/{mine[0]['id']}",
+        json={"approved": True},
+        headers=admin_headers,
+    )
+    assert decided.status_code == 200, decided.text
+
+    async with session_factory() as session:
+        row = await session.get(User, uuid.UUID(rider["user"]["id"]))
+        assert row is not None and row.deactivated_at is not None
+
+    # **والتوكنُ الذي بيده يبطل من الطلب التالي** — لا حين ينتهي أجلُه
+    after = await client.get("/wallet/me", headers=rider["headers"])
+    assert after.status_code == 403, after.text
+    assert after.json()["code"] == "account_closed"
+
+
+async def test_closing_a_rider_account_erases_his_saved_places(
+    client, session_factory, admin_headers
+) -> None:
+    """**«حذفٌ» كلمةٌ تكذب إن بقي كلُّ شيء** — فما يجوز محوُه يُمحى فعلاً.
+
+    **ويبقى الدفترُ وشواهدُ الرحلات**: القاعدةُ تمنع محوَهما، **وفيهما حقُّ
+    طرفٍ آخر شارك الرحلة**.
+    """
+    from app.models.place import SavedPlace
+
+    rider = await rider_session(client)
+    saved = await client.post(
+        "/me/places",
+        json={"label": "المنزل", "address": "عمّان", "lat": 31.95, "lng": 35.91},
+        headers=rider["headers"],
+    )
+    assert saved.status_code == 201, saved.text
+
+    opened = await client.post(
+        "/account/deactivation", json={}, headers=rider["headers"]
+    )
+    assert opened.status_code == 201, opened.text
+    await client.patch(
+        f"/admin/deactivations/{opened.json()['id']}",
+        json={"approved": True},
+        headers=admin_headers,
+    )
+
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(SavedPlace).where(
+                    SavedPlace.user_id == uuid.UUID(rider["user"]["id"])
+                )
+            )
+        ).all()
+        assert rows == [], rows
+
+
+async def test_a_rider_with_money_is_stopped_and_told_what_to_do(
+    client, admin_headers
+) -> None:
+    """**الراكبُ لا يسحب** (§7) — وإغلاقُ حسابٍ فيه رصيدٌ مصادرةٌ لا خدمة.
+
+    **والمانعُ قابلٌ للإزالة بيده**: ينفقه أو يحوّله.
+    """
+    rider = await rider_session(client)
+    await topup_wallet(client, admin_headers, rider["user"]["id"], "5.000")
+
+    state = await client.get("/account/deactivation", headers=rider["headers"])
+    assert state.status_code == 200, state.text
+    assert "wallet_balance" in state.json()["blockers"]
+
+    refused = await client.post(
+        "/account/deactivation", json={}, headers=rider["headers"]
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "deactivation_blocked"
+
+
+async def test_a_driver_with_money_is_not_stopped_by_it(
+    client, session_factory, admin_headers
+) -> None:
+    """**نقضُ العطب الذي وقع في البناء** (§56٫1).
+
+    مانعُ الرصيد **للراكب وحدَه**: الكبتنُ له مسارُ سحب، **وهذا البابُ نفسُه
+    هو ما يُطلق محتجَزَه** — فمنعُه برصيدٍ موجبٍ **يُبطل البابَ الذي بُني له**،
+    ويقول له «أفرغ رصيدَك» وهو لا يستطيع حتى يُغلق حسابَه.
+
+    **واحذف الشرطَ `driver is None` من `blockers` فيسقط هذا الاختبارُ وحدَه**
+    — وهو ما يجعله حارساً لا زينة.
+    """
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    await topup_wallet(client, admin_headers, driver["user_id"], "40.000")
+
+    state = await client.get("/account/deactivation", headers=driver["headers"])
+    assert state.status_code == 200, state.text
+    assert "wallet_balance" not in state.json()["blockers"], state.json()
+
+    opened = await client.post(
+        "/account/deactivation", json={}, headers=driver["headers"]
+    )
+    assert opened.status_code == 201, opened.text

@@ -716,9 +716,10 @@ async def _driver(session, driver_id: uuid.UUID) -> Driver:
     return driver
 
 
-@router.get(
-    "/drivers/deactivations", response_model=list[DeactivationRequestOut]
-)
+# **`‎/deactivations` لا `‎/drivers/deactivations`** (٢٠٢٦-٠٩-٠٧): الموضوعُ
+# صار الحسابَ لا الكبتن، **ومسارٌ يقول «drivers» يُقرأ قائمةً لا تشمل الركّاب**
+# — فيُبتّ في طلباتٍ ويُنسى نصفُها.
+@router.get("/deactivations", response_model=list[DeactivationRequestOut])
 async def list_deactivations(
     _: UsersManager,
     session: DbSession,
@@ -736,9 +737,7 @@ async def list_deactivations(
     return [DeactivationRequestOut.model_validate(row) for row in rows]
 
 
-@router.patch(
-    "/drivers/deactivations/{request_id}", response_model=DeactivationRequestOut
-)
+@router.patch("/deactivations/{request_id}", response_model=DeactivationRequestOut)
 async def decide_deactivation(
     request_id: uuid.UUID,
     payload: DeactivationDecisionIn,

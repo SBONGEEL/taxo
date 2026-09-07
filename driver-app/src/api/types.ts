@@ -718,7 +718,9 @@ export interface MyReferrals {
 /** حالُ طلب إلغاء التفعيل وموانعُه (البند ١٣). */
 export interface DeactivationRequest {
   id: string;
-  driver_id: string;
+  /** **صاحبُ الحساب لا الكبتن** (الترحيلة `0075`): صار البابُ واحداً للدورين
+   *  — `‎/account/deactivation` — **فالراكبُ يُغلق حسابَه من المسار نفسِه**. */
+  user_id: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   reason: string | null;
   review_note: string | null;

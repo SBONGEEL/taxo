@@ -848,3 +848,31 @@ export interface RequiredPolicy {
   body_ar: string;
   published_at: string | null;
 }
+
+/** طلبُ إغلاق الحساب (٢٠٢٦-٠٩-٠٧) — **البابُ نفسُه الذي يستعمله الكبتن**.
+ *
+ * **ولا نوعَ ثانٍ لشكلٍ واحد**: `‎/account/deactivation` واحدٌ للدورين، فما
+ * يصل هنا هو ما يصل هناك حرفاً — **ونسختان تفترقان أوّلَ حقلٍ يُضاف**.
+ */
+export interface DeactivationRequest {
+  id: string;
+  user_id: string;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  reason: string | null;
+  review_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface DeactivationState {
+  request: DeactivationRequest | null;
+  /** **قائمةٌ لا أوّلُ سبب**: من أزال مانعاً ثم صُدم بثانٍ يقرأ الرفضَ مماطلة. */
+  blockers: string[];
+  // **ولا `reserve_amount` هنا وإن أرسلته الخلفية** (٢٠٢٦-٠٩-٠٧): المحتجَزُ
+  // **شرطٌ على سحب الكبتن**، والراكبُ لا يسحب البتّة (§7) — **فلا شاشةَ
+  // تعرضه عنده**.
+  //
+  // **وأمسكها `check:money-visible`**: كُتبت المرآةُ أوّلاً بحجّة «شكلٌ واحدٌ
+  // لبابٍ واحد»، **فصاح الحارسُ: مبلغٌ تحسبه الخلفيةُ ولا يقرؤه من أعلنه**.
+  // **وهو محقّ**: مرآةٌ لمالٍ لا يعرضه أحدٌ تُقرأ ميزةً قائمةً وهي فراغ.
+}

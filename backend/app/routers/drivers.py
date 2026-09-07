@@ -466,49 +466,15 @@ async def list_nearby_for_driver(
 
 
 # ------------------------------------------------- إلغاءُ تفعيل الحساب (البند ١٣)
-
-
-@router.get("/me/deactivation", response_model=DeactivationStateOut)
-async def my_deactivation_state(
-    driver: CurrentDriver, session: DbSession
-) -> DeactivationStateOut:
-    """حالُ طلبه وموانعُه والمحتجَزُ برقمه — سؤالٌ واحدٌ بجوابٍ واحد."""
-    user = await session.get(User, driver.user_id)
-    assert user is not None  # كبتنٌ بلا حسابٍ لا يمرّ من `CurrentDriver`
-    limits = await settings_service.get_or_create_wallet_settings(
-        session, user.country_code
-    )
-    pending = await deactivation.pending_for(session, driver.id)
-    return DeactivationStateOut(
-        request=(
-            DeactivationRequestOut.model_validate(pending) if pending else None
-        ),
-        blockers=await deactivation.blockers(session, driver),
-        reserve_amount=limits.withdrawal_reserve_amount,
-        currency=currency_for_country(user.country_code).value,
-    )
-
-
-@router.post("/me/deactivation", response_model=DeactivationRequestOut, status_code=201)
-async def request_deactivation(
-    payload: DeactivationRequestIn, driver: CurrentDriver, session: DbSession
-) -> DeactivationRequestOut:
-    """يفتح طلبَ إغلاق — يُرفض إن كان عليه ما لا يُترك خلفه (SPEC القسم 7)."""
-    row = await deactivation.request(session, driver=driver, reason=payload.reason)
-    await session.commit()
-    await session.refresh(row)
-    return DeactivationRequestOut.model_validate(row)
-
-
-@router.delete("/me/deactivation", response_model=DeactivationRequestOut)
-async def cancel_deactivation(
-    driver: CurrentDriver, session: DbSession
-) -> DeactivationRequestOut:
-    """يعدل عن طلبه ما دام معلّقاً — والقفلُ يمنع سباقَه مع قرار المشرف."""
-    row = await deactivation.cancel(session, driver=driver)
-    await session.commit()
-    await session.refresh(row)
-    return DeactivationRequestOut.model_validate(row)
+#
+# **انتقلت الثلاثةُ إلى `routers/account.py` في ٢٠٢٦-٠٩-٠٧** — ولم تُنسخ.
+#
+# **العلّة**: أوجب المتجرُ مسارَ حذفٍ للراكب أيضاً، **والموضوعُ صار الحسابَ
+# لا الكبتن** (`deactivation_requests.user_id`, الترحيلة `0075`). **وبابان
+# يفعلان الشيءَ نفسَه يفترقان أوّلَ تعديل** — فيُصلَح مانعٌ في أحدهما ويُنسى
+# في أخيه.
+#
+# **والمسارُ الجديد `‎/account/deactivation`**، ويناديه التطبيقان معاً.
 
 
 # ------------------------------------------------------- السلف (البند ١٥)

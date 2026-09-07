@@ -394,13 +394,13 @@ export const getRouteLine = (rideId: string) =>
 
 /** حالُ إلغاء التفعيل: طلبُه إن وُجد، وموانعُه، والمحتجَزُ برقمه (البند ١٣). */
 export const getDeactivationState = () =>
-  api.get<DeactivationState>("/drivers/me/deactivation");
+  api.get<DeactivationState>("/account/deactivation");
 
 export const requestDeactivation = (reason?: string) =>
-  api.post<DeactivationRequest>("/drivers/me/deactivation", { reason });
+  api.post<DeactivationRequest>("/account/deactivation", { reason });
 
 export const cancelDeactivation = () =>
-  api.del<DeactivationRequest>("/drivers/me/deactivation");
+  api.del<DeactivationRequest>("/account/deactivation");
 
 /** حالُ السلف: الأهليةُ بشروطها والسقفُ والدَّين (البند ١٥). */
 export const getAdvanceState = () => api.get<AdvanceState>("/drivers/me/advances");

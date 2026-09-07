@@ -31,6 +31,7 @@ from app.routers import (
     admin_users,
     admin_verification_campaigns,
     admin_wallets,
+    account,
     auth,
     card_payments,
     config,
@@ -55,6 +56,7 @@ api_router.include_router(storefront.router)
 api_router.include_router(auth.router)
 api_router.include_router(devices.router)
 api_router.include_router(notifications.router)
+api_router.include_router(account.router)
 api_router.include_router(drivers.router)
 api_router.include_router(bookings.router)
 api_router.include_router(places.router)

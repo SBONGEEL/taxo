@@ -11,7 +11,12 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AccountBlocked, InvalidCredentials, InvalidInput
+from app.core.exceptions import (
+    AccountBlocked,
+    AccountClosed,
+    InvalidCredentials,
+    InvalidInput,
+)
 from app.core import password_policy
 from app.core.security import hash_password, verify_password
 from app.models.user import User
@@ -146,6 +151,12 @@ class PasswordAuthStrategy:
 
         if user.is_blocked:
             raise AccountBlocked()
+
+        # **والمُغلقُ بطلب صاحبه يُردّ برمزه هو** (الترحيلة `0075`) — **بعد
+        # كلمة المرور لا قبلها**، كالحظر: «هذا الحساب مُغلق» جوابٌ عن الحساب
+        # فلا يُقال إلا لمن أثبت أنه صاحبُه.
+        if user.deactivated_at is not None:
+            raise AccountClosed()
 
         return user
 

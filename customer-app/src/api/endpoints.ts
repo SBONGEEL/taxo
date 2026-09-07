@@ -16,6 +16,8 @@ import type {
   ChallengeResponse,
   CliqTopup,
   Coordinates,
+  DeactivationRequest,
+  DeactivationState,
   CountryCode,
   Device,
   GenderPreference,
@@ -463,3 +465,21 @@ export const getAppVersion = (
     anonymous: true,
     query: build === null ? { app } : { app, build },
   });
+
+// ------------------------------------------- إغلاقُ الحساب (٢٠٢٦-٠٩-٠٧)
+//
+// **بابُ الكبتن نفسُه** — `‎/account/deactivation` — ولم يُبنَ ثانٍ بجانبه:
+// **بابان يفعلان الشيءَ نفسَه يفترقان أوّلَ تعديل**، فيُصلَح مانعٌ في أحدهما
+// ويُنسى في أخيه، **ويخرج راكبٌ من بابٍ لا يسأل ما يسأله بابُ الكبتن**.
+
+/** حالُ الطلب وموانعُه — سؤالٌ واحدٌ بجوابٍ واحد. */
+export const getDeactivationState = () =>
+  api.get<DeactivationState>("/account/deactivation");
+
+/** يفتح طلبَ الإغلاق — **والسببُ اختياريّ**: من يترك يقول لماذا إن شاء. */
+export const requestDeactivation = (reason?: string) =>
+  api.post<DeactivationRequest>("/account/deactivation", { reason });
+
+/** يسحب طلبَه ما دام قيد المراجعة. */
+export const cancelDeactivation = () =>
+  api.del<DeactivationRequest>("/account/deactivation");
