@@ -37,7 +37,14 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-block rounded-full border bg-surface-2 px-10 py-4 text-11 font-semibold",
+        // **`w-fit` لا `inline-block` وحدَه** (أُضيف 2026-09-07 بقياسٍ على
+        // الشاشة): ابنٌ مباشرٌ لشبكةٍ **يُمَطّ إلى عرض العمود**، فتصير
+        // الشارةُ شريطاً ونصُّها في طرفه. رُئي في شاشة الدفعات — والشارةُ
+        // نفسُها في سجلّ الرحلات منكمشةٌ لأنها هناك داخل حاوية `flex`.
+        //
+        // **والعلاجُ في بيت الشارة لا في كلِّ موضع**: ٦٢ استعمالاً في اثني
+        // عشر ملفّاً، **وإصلاحُ موضعٍ يترك أحدَ عشرَ يجدها غداً**.
+        "inline-block w-fit rounded-full border bg-surface-2 px-10 py-4 text-11 font-semibold",
         TONES[tone],
         className,
       )}

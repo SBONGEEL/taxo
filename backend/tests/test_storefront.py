@@ -24,7 +24,13 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.models.storefront import PromoBanner, ServiceTile
-from tests.helpers import PNG_BYTES, rider_session
+from tests.helpers import (
+    PNG_BYTES,
+    approved_driver,
+    enable_features,
+    ensure_plan,
+    rider_session,
+)
 
 # ─────────────────────────────────────────────────────────────── مُعينات
 
@@ -59,6 +65,43 @@ async def _create_tile(client: AsyncClient, headers: dict, **overrides) -> dict:
     )
     assert response.status_code == 201, response.text
     return response.json()
+
+
+async def _offer(
+    session_factory,
+    *,
+    percent: str = "10",
+    name: str | None = None,
+    audience: str | None = None,
+) -> None:
+    """صفُّ عرضٍ حيّ — **مكتوبٌ في القاعدة لا عبر بابٍ إداريّ**.
+
+    **ولا يُستورد من `test_subscription_offers`**: استيرادُ اختبارٍ من اختبارٍ
+    يجعل سقوطَ أحدهما يُسقط الآخرَ بلا علاقة.
+    """
+    import uuid as _uuid
+    from decimal import Decimal
+
+    from app.models.enums import CountryCode
+    from app.models.subscription_offer import (
+        AUDIENCE_ALL,
+        DISCOUNT_MONEY_PERCENT,
+        SubscriptionOffer,
+    )
+
+    async with session_factory() as session:
+        session.add(
+            SubscriptionOffer(
+                country_code=CountryCode.JO,
+                name=name or f"عرض {_uuid.uuid4().hex[:6]}",
+                discount_type=DISCOUNT_MONEY_PERCENT,
+                discount_value=Decimal(percent),
+                audience=audience or AUDIENCE_ALL,
+                max_uses_per_driver=1,
+                is_active=True,
+            )
+        )
+        await session.commit()
 
 
 async def _create_banner(client: AsyncClient, headers: dict, **overrides) -> dict:
@@ -474,3 +517,128 @@ async def test_cliq_qr_upload_writes_the_stored_path(
             )
         ).one()
         assert setting.cliq_qr_path and setting.cliq_qr_path.endswith(".png")
+
+
+# ═══════════════════════ عرضُ الاشتراك في صندوق اللافتات (2026-09-07)
+#
+# **مصدرانِ لصندوقٍ واحدٍ لا كيانان** (قرارُ المالك): صفوفُ `promo_banners`
+# التي يكتبها المشرف، **وعرضُ الاشتراك محسوباً لهذا الكبتن**.
+#
+# **وما يُقاس هنا ليس «أيظهر العرض؟»** — بل **أنّ ما يظهر هو ما يُخصم**:
+# رقمٌ في الصندوق يخالف رقمَ شاشة الاشتراك **وعدٌ كاذبٌ بمال**، وهو أسوأُ من
+# صندوقٍ صامت.
+
+
+async def _driver_home(client, headers: dict) -> dict:
+    response = await client.get("/storefront?surface=driver", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_a_live_offer_reaches_the_captain_box_with_the_price_it_will_charge(
+    client, session_factory
+) -> None:
+    """**الرقمُ المعروضُ هو الرقمُ المخصوم** — يُقرأ من البابين ويُقابَل."""
+    from app.models.enums import FeatureKey
+
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    plan_id = await ensure_plan(session_factory)
+    await _offer(session_factory, percent="10", name="عرض الافتتاح")
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    body = await _driver_home(client, driver["headers"])
+
+    offer = body["offer"]
+    assert offer is not None, "عرضٌ حيٌّ ولم يصل الصندوق"
+    assert offer["name"] == "عرض الافتتاح"
+    assert offer["price"] == "30.000"
+    assert offer["price_after"] == "27.000"
+    assert offer["free"] is False
+
+    # **والبابُ الثاني يقول الرقمَ نفسَه** — فالحسابُ بيتٌ واحد
+    plans = await client.get("/subscriptions/plans", headers=driver["headers"])
+    assert plans.status_code == 200, plans.text
+    row = next(item for item in plans.json() if item["id"] == str(plan_id))
+    assert row["price_after_discount"] == offer["price_after"]
+
+
+async def test_a_full_discount_says_the_word_not_a_zero(
+    client, session_factory
+) -> None:
+    """**«مجاناً» كلمةٌ لا رقمُ صفر** — و«0.000 د.أ» تُقرأ عطباً لا هديّة."""
+    from app.models.enums import FeatureKey
+
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    await ensure_plan(session_factory)
+    await _offer(session_factory, percent="100", name="الشهر الأول")
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    offer = (await _driver_home(client, driver["headers"]))["offer"]
+    assert offer is not None
+    assert offer["free"] is True
+    assert offer["price_after"] == "0.000"
+
+
+async def test_the_box_carries_no_offer_when_none_is_live(
+    client, session_factory
+) -> None:
+    """**النقضُ في الاتجاه الآخر**: لا عرضَ ⇐ لا بطاقة — والصندوقُ يختفي."""
+    await ensure_plan(session_factory)
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    body = await _driver_home(client, driver["headers"])
+    assert body["offer"] is None
+    assert body["banners"] == []
+
+
+async def test_the_flag_off_hides_the_card_though_the_row_is_active(
+    client, session_factory
+) -> None:
+    """**مفتاحٌ مطفأٌ يعني لا خصمَ ولا وعدَ به** — فلا تُعرض بطاقةٌ لا تُطبَّق."""
+    await ensure_plan(session_factory)
+    await _offer(session_factory, percent="50")
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    assert (await _driver_home(client, driver["headers"]))["offer"] is None
+
+
+async def test_the_rider_never_sees_a_subscription_offer(
+    client, session_factory
+) -> None:
+    """**الاشتراكُ للكبتن وحدَه** — والحقلُ مُصرَّحٌ في التطبيقين لا مملوءٌ فيهما."""
+    from app.models.enums import FeatureKey
+
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    await ensure_plan(session_factory)
+    await _offer(session_factory, percent="50")
+
+    rider = await rider_session(client)
+    response = await client.get("/storefront?surface=rider", headers=rider["headers"])
+    assert response.status_code == 200, response.text
+    assert response.json()["offer"] is None
+
+
+async def test_an_offer_the_driver_cannot_use_is_not_promised_to_him(
+    client, session_factory
+) -> None:
+    """**ولا يُعرض ما لا يُنال**: جمهورُ `manual` بلا منحةٍ لهذا الكبتن.
+
+    **والنقضُ هنا هو المقصود**: عرضٌ حيٌّ في الجدول، **ولا يستحقّه** — فلو
+    قرأ الصندوقُ «العروضَ الفعّالة» بدل «ما يُحسب لهذا الكبتن» لظهر، **ثم لم
+    يُخصم عند الضغط**.
+    """
+    from app.models.enums import FeatureKey
+    from app.models.subscription_offer import AUDIENCE_MANUAL
+
+    await enable_features(
+        session_factory, FeatureKey.SUBSCRIPTION_OFFERS_ENABLED.value
+    )
+    await ensure_plan(session_factory)
+    await _offer(session_factory, percent="50", audience=AUDIENCE_MANUAL)
+
+    driver = await approved_driver(client, session_factory, subscribed=False)
+    assert (await _driver_home(client, driver["headers"]))["offer"] is None

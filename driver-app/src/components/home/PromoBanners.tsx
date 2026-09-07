@@ -1,12 +1,24 @@
-/** لافتاتُ المحتوى — من ملفّ التصميم (خانةُ `showWomenPromo` / `showChallenge`).
+/** صندوقُ الإعلانات — **لافتاتُ اللوحة وعرضُ الاشتراك في صندوقٍ واحد**.
  *
  * **والخانةُ نفسُها صارت بيتَ اللافتة** (قرارُ المالك 2026-08-30): يملؤها
  * المشرفُ من اللوحة **بدل أن يُخبز نصُّها** — فعرضُ الخصم النسائيِّ المرسوم
  * **نموذجٌ لا نصٌّ مخبوز**، ونزل صفّاً في الجدول.
  *
+ * **ومصدرانِ لصندوقٍ واحدٍ لا كيانان** (قرارُ المالك 2026-09-07): صفوفُ
+ * `promo_banners` التي يكتبها المشرف، **وعرضُ الاشتراك الحيُّ محسوباً لهذا
+ * الكبتن**. **ولمَ لا يُصنع للعرض صفُّ لافتةٍ آليّاً**: جدولٌ نصفُه بيدٍ
+ * ونصفُه بآلةٍ يراه المشرفُ فيحرّره **فيُمحى في الدورة التالية** — وهو
+ * «بيتان لحقيقةٍ واحدة» بعينه. **والعرضُ يصل الصندوقَ بلا تعديل شيفرة**:
+ * ما يُطلق من اللوحة يُحسب في الخلفية ويظهر.
+ *
  * **والنافذةُ قيست في الخلفية**: ما يصل هنا حيٌّ الآن. **ولا تُقاس في
  * التطبيق** — ساعةُ الجهاز يملكها صاحبُه، **ولافتةٌ انتهت تبقى ظاهرةً لمن
  * أخّر ساعتَه**.
+ *
+ * **وحين يفرغ الصندوقُ يختفي كلُّه** — لا فراغٌ ولا هيكلٌ أبديّ: **المكانُ
+ * الفارغُ يُقرأ عطباً في التحميل**، والهيكلُ الذي لا ينتهي يُقرأ شبكةً
+ * منقطعة، **ولا سطرَ يُكتب مكانَه** لأن «لا إعلانَ اليوم» ليست خبراً يستحقّ
+ * مساحةً في أوّل شاشةٍ يفتحها المستخدم. والبلاطاتُ تصعد مكانَه.
  *
  * **والنقاطُ تحتها من التصميم**: تظهر حين تتعدّد اللافتاتُ لا حين تكون
  * واحدة — **ونقطةٌ واحدةٌ تحت لافتةٍ واحدةٍ تَعِد بثانيةٍ لا وجودَ لها**.
@@ -16,7 +28,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "@/api/client";
-import type { PromoBanner } from "@/api/types";
+import type { PromoBanner, StorefrontOffer } from "@/api/types";
+import { currencyLabel, digits } from "@/lib/utils";
 import * as icons from "lucide-react";
 
 /** **أيقونةٌ زخرفيّةٌ كبيرةٌ في الطرف** — كما يرسمها التصميم (`heart` خلف
@@ -78,22 +91,90 @@ function BannerImage({ bannerId }: { bannerId: string }) {
   return <img src={src} alt="" className="block w-full object-cover" />;
 }
 
-export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
+/** بطاقةُ عرض الاشتراك — **السعرُ المشطوب بجانب المخفَّض** كما في شاشة
+ *  الاشتراك حرفاً، فيعرف الكبتنُ ما يراه من أوّل نظرة.
+ *
+ *  **ولا طرحَ هنا**: الرقمان يصلان محسوبين من الخلفية (§14). **و«مجاناً»
+ *  كلمةٌ لا رقمُ صفر** — «0.000 د.أ» تُقرأ عطباً في السعر لا هديّة.
+ *
+ *  **والعنوانُ اسمُ العرض كما كتبه المشرف**، لا جملةً مؤلَّفةً في الشيفرة:
+ *  ما يُطلق من اللوحة يظهر بنصّه. */
+function OfferCard({ offer }: { offer: StorefrontOffer }) {
+  return (
+    <div className="p-14">
+      <div className="flex items-start gap-10">
+        <Glyph name="percent" className="size-44 shrink-0 text-line" />
+        <div className="min-w-0 flex-1">
+          <div className="text-14 font-bold text-ink">{offer.name}</div>
+          <div className="mt-3 flex flex-wrap items-baseline gap-6 text-11.5 leading-note text-muted">
+            <span>اشتراك «{offer.plan_name}»</span>
+            <span className="whitespace-nowrap font-bold text-ink">
+              <span className="me-6 font-medium text-muted line-through">
+                {digits(offer.price)}
+              </span>
+              {offer.free ? (
+                "مجاناً"
+              ) : (
+                <>
+                  {digits(offer.price_after)}{" "}
+                  <span className="text-11 font-medium text-muted">
+                    {currencyLabel(offer.currency)}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PromoBanners({
+  banners,
+  offer = null,
+}: {
+  banners: PromoBanner[];
+  offer?: StorefrontOffer | null;
+}) {
   const navigate = useNavigate();
   const [at, setAt] = useState(0);
-  if (banners.length === 0) return null;
 
-  const banner = banners[Math.min(at, banners.length - 1)];
-  const openable = banner.link_kind !== "none" && banner.link !== null;
+  // **العرضُ أوّلاً**: نافذتُه أقصرُ من نافذة اللافتة وأثرُه مالٌ في جيب
+  // الكبتن — **ولافتةٌ تعلوه تدفعه إلى نقطةٍ لا تُنقر**
+  const slides: ({ key: string } & (
+    | { kind: "offer"; offer: StorefrontOffer }
+    | { kind: "banner"; banner: PromoBanner }
+  ))[] = [
+    ...(offer ? [{ key: "offer", kind: "offer" as const, offer }] : []),
+    ...banners.map((banner) => ({
+      key: banner.id,
+      kind: "banner" as const,
+      banner,
+    })),
+  ];
+  // **الصندوقُ كلُّه يختفي حين يفرغ** — لا إطارٌ فارغٌ ولا هيكلٌ ينتظر
+  if (slides.length === 0) return null;
+
+  const slide = slides[Math.min(at, slides.length - 1)];
+  const openable =
+    slide.kind === "offer" ||
+    (slide.banner.link_kind !== "none" && slide.banner.link !== null);
 
   const open = () => {
     if (!openable) return;
-    if (banner.link_kind === "internal") {
-      navigate(banner.link!);
+    if (slide.kind === "offer") {
+      // **مقصدُ العرضِ شاشةُ الاشتراك** — حيث الخصمُ نفسُه محسوبٌ على كلِّ
+      // خطة، فلا يقع الكبتنُ على رقمٍ يخالف ما رآه
+      navigate("/subscription");
+      return;
+    }
+    if (slide.banner.link_kind === "internal") {
+      navigate(slide.banner.link!);
       return;
     }
     // **الخارجيُّ يفتح في لسانٍ جديد** — ولا يُخرج الكبتنَ من شاشته
-    window.open(banner.link!, "_blank", "noopener,noreferrer");
+    window.open(slide.banner.link!, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -104,31 +185,42 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
           openable ? "pressable cursor-pointer" : ""
         }`}
       >
-        {/* **الصورةُ من حافةٍ إلى حافة** — والحشوةُ نزلت إلى الداخل لأجلها،
-            فبطاقةٌ بلا صورةٍ تبقى كما كانت حرفاً */}
-        <BannerImage bannerId={banner.id} />
-        <div className="p-14">
-          <div className="flex items-start gap-10">
-            {banner.icon ? (
-              <Glyph name={banner.icon} className="size-44 shrink-0 text-line" />
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <div className="text-14 font-bold text-ink">{banner.title}</div>
-              {banner.body ? (
-                <div className="mt-3 text-11.5 leading-note text-muted">
-                  {banner.body}
+        {slide.kind === "offer" ? (
+          <OfferCard offer={slide.offer} />
+        ) : (
+          <>
+            {/* **الصورةُ من حافةٍ إلى حافة** — والحشوةُ نزلت إلى الداخل لأجلها،
+                فبطاقةٌ بلا صورةٍ تبقى كما كانت حرفاً */}
+            <BannerImage bannerId={slide.banner.id} />
+            <div className="p-14">
+              <div className="flex items-start gap-10">
+                {slide.banner.icon ? (
+                  <Glyph
+                    name={slide.banner.icon}
+                    className="size-44 shrink-0 text-line"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="text-14 font-bold text-ink">
+                    {slide.banner.title}
+                  </div>
+                  {slide.banner.body ? (
+                    <div className="mt-3 text-11.5 leading-note text-muted">
+                      {slide.banner.body}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
-      {banners.length > 1 ? (
+      {slides.length > 1 ? (
         <div className="mb-12 flex justify-center gap-5">
-          {banners.map((item, index) => (
+          {slides.map((item, index) => (
             <button
-              key={item.id}
+              key={item.key}
               type="button"
               aria-label={`لافتة ${index + 1}`}
               onClick={() => setAt(index)}

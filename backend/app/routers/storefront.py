@@ -1,4 +1,4 @@
-"""بابُ الشاشة الرئيسة — **نداءٌ واحدٌ يعطي البلاطاتِ واللافتات**.
+"""بابُ الشاشة الرئيسة — **نداءٌ واحدٌ يعطي البلاطاتِ واللافتاتِ والعرض**.
 
 **ولمَ بابٌ واحدٌ لا بابان**: ندءان يعنيان شاشةً تُرسم على مرحلتين —
 البلاطاتُ تظهر ثم تقفز اللافتةُ فوقها، **وهو ارتجافٌ يراه المستخدمُ عطباً**.
@@ -14,15 +14,58 @@ import uuid
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
+from sqlalchemy import select
 
 from app.core import storage
 from app.core.deps import CurrentUser, DbSession
 from app.core.exceptions import NotFound
+from app.models.driver import Driver
 from app.models.enums import UserRole
-from app.schemas.storefront import PromoBannerOut, ServiceTileOut, StorefrontOut
-from app.services import storefront
+from app.schemas.storefront import (
+    PromoBannerOut,
+    ServiceTileOut,
+    StorefrontOfferOut,
+    StorefrontOut,
+)
+from app.services import offers as offers_service, storefront
 
 router = APIRouter(prefix="/storefront", tags=["storefront"])
+
+
+async def _offer_card(
+    session, *, user, surface: UserRole
+) -> StorefrontOfferOut | None:
+    """عرضُ اشتراكِ هذا الكبتن للصندوق — **أو `None`، وهي الحالُ الغالبة**.
+
+    **ولا يُسأل عنه للراكب أصلاً**: الاشتراكُ للكبتن وحدَه، **واستعلامٌ يُطلق
+    لكلِّ راكبٍ يفتح رئيسيّته** يقرأ الخططَ والعروضَ ليجيب «لا» دائماً.
+
+    **ومن حسابُه ليس كبتناً يمرّ بلا خطأ**: `surface=driver` تأتي من التطبيق
+    لا من الحساب — **وحاملُ الدورين يفتح تطبيقَ الكبتن قبل أن يُعتمد صفُّه**،
+    فخطأٌ هنا يُسقط الرئيسيّةَ كلَّها على من ينتظر الاعتماد.
+
+    **والمالُ محسوبٌ هنا لا في الشاشة** (§14): الشاشةُ تعرض رقمين ولا تطرح.
+    """
+    if surface is not UserRole.DRIVER:
+        return None
+    driver = await session.scalar(select(Driver).where(Driver.user_id == user.id))
+    if driver is None:
+        return None
+    best = await offers_service.best_for_driver(
+        session, driver=driver, country=user.country_code
+    )
+    if best is None:
+        return None
+    after = best.plan.price - best.amount
+    return StorefrontOfferOut(
+        name=best.offer.name,
+        plan_name=best.plan.name,
+        price=best.plan.price,
+        price_after=after,
+        currency=best.plan.currency,
+        # **«مجاناً» كلمةٌ لا رقمٌ صفر** — و«0.000» تُقرأ عطباً لا هديّة
+        free=after == 0,
+    )
 
 
 @router.get("", response_model=StorefrontOut)
@@ -53,6 +96,7 @@ async def my_storefront(
         session, country=user.country_code, role=surface
     )
     return StorefrontOut(
+        offer=await _offer_card(session, user=user, surface=surface),
         tiles=[
             ServiceTileOut(
                 id=tile.id,

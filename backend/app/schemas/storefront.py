@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import BannerLinkKind, CampaignAudience, CountryCode, ServiceTileStatus
+from app.models.enums import (
+    BannerLinkKind,
+    CampaignAudience,
+    CountryCode,
+    Currency,
+    ServiceTileStatus,
+)
 
 
 class ServiceTileOut(BaseModel):
@@ -39,8 +46,40 @@ class PromoBannerOut(BaseModel):
     link: str | None = None
 
 
+class StorefrontOfferOut(BaseModel):
+    """عرضُ اشتراكٍ لبطاقة الرئيسة — **بالرقم، وهو الفرقُ عن الصفحة**.
+
+    ## ولمَ ليست `LandingOfferOut` وسؤالُهما واحد
+
+    **الشكلان يجيبان «أيُّ عرضٍ قائم» ويفترقان في من يسأل**، و§52٫3 حسمت
+    الصفحة: **«لا يخرج سعرٌ ولا سعرٌ مشطوبٌ من أيِّ بابٍ تقرأه الصفحة»** —
+    فنُزعت `price` و`price_after` و`currency` من حمولة الصفحة **نزعاً من
+    الباب لا من الرسم**.
+
+    **وهذا بابٌ آخرُ لسائلٍ آخر**: كبتنٌ داخلٌ بجلسته يسأل عن **اشتراكه هو**،
+    **وشاشةُ `/subscription` تعرض له الرقمَ نفسَه والسعرَ المشطوبَ منذ البند
+    ٥٤** — فبطاقةٌ تقول «عرض» بلا رقمٍ **تدفعه ليضغط ليعرف**، وهي إعلانٌ لا
+    خبر.
+
+    **فتوحيدُ الشكلين يُسقط أحدَ الشرطين حتماً**: إمّا يخرج السعرُ إلى الصفحة
+    العامة، أو يُحجب عن صاحبه. **وشكلان بعلّتين ليسا نسختين** — والنسخةُ ما
+    كان لها سببٌ واحد.
+    """
+
+    #: **اسمُ العرض كما كتبه المشرف** — لا جملةٌ مؤلَّفةٌ في الشيفرة.
+    name: str
+    plan_name: str
+    price: Decimal
+    #: **بعد الخصم — محسوباً في الخلفية** (§14)، والشاشةُ تعرض ولا تطرح.
+    price_after: Decimal
+    currency: Currency
+    #: **مجاناً تماماً — تُقال بكلمةٍ لا برقمٍ صفر**: «0.000» تُقرأ عطباً في
+    #: السعر لا هديّة.
+    free: bool
+
+
 class StorefrontOut(BaseModel):
-    """**نداءٌ واحدٌ لشاشةٍ واحدة** — البلاطاتُ واللافتاتُ معاً.
+    """**نداءٌ واحدٌ لشاشةٍ واحدة** — البلاطاتُ واللافتاتُ والعرضُ معاً.
 
     **وندءان يعنيان شاشةً تُرسم على مرحلتين**: البلاطاتُ تظهر ثم تقفز
     اللافتةُ فوقها، **وهو ارتجافٌ يراه المستخدمُ عطباً**.
@@ -48,6 +87,19 @@ class StorefrontOut(BaseModel):
 
     tiles: list[ServiceTileOut]
     banners: list[PromoBannerOut]
+    #: **عرضُ اشتراكِ هذا الكبتن — في الصندوق نفسِه لا في كيانٍ ثانٍ**
+    #: (قرارُ المالك 2026-09-07).
+    #:
+    #: **ولمَ حقلٌ مستقلٌّ لا صفُّ لافتةٍ مصنوع**: اللافتةُ صفٌّ يملكه المشرف
+    #: — يُنشئه ويُطفئه ويكتب نصَّه؛ **والعرضُ يُحسب لكلِّ كبتنٍ على حدة**
+    #: بجمهوره وحدِّه وميزانيته. **وصفٌّ مصنوعٌ آلياً في `promo_banners`**
+    #: يعني جدولاً نصفُه بيدٍ ونصفُه بآلة، **يراه المشرفُ فيحرّره فيُمحى في
+    #: الدورة التالية** — وهو «بيتان لحقيقةٍ واحدة» بعينه.
+    #:
+    #: **و`null` للراكب دائماً**: الاشتراكُ للكبتن وحدَه — والحقلُ مُصرَّحٌ في
+    #: التطبيقين لأن الصندوقَ مكوّنٌ واحدٌ متطابقٌ بايتاً، **ونسختان تفترقان
+    #: أوّلَ تعديل**.
+    offer: StorefrontOfferOut | None = None
 
 
 class ServiceTileIn(BaseModel):

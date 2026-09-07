@@ -49,6 +49,7 @@ run "check:update-gate"     node tools/check-update-gate.mjs
 run "check:ci-timeouts"     node tools/check-ci-timeouts.mjs
 run "check:env-leak"        node tools/check-env-leak.mjs
 run "check:exec-bit"        node tools/check-exec-bit.mjs
+run "check:enum-coverage"   node tools/check-enum-coverage.mjs
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do

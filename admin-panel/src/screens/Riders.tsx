@@ -55,6 +55,7 @@ import { moment, money } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { WALLET_TX_LABEL } from "@/lib/labels";
+import { OPEN_PROFILE_LABEL } from "@/components/profile/OpenProfile";
 import { digits, cn } from "@/lib/utils";
 
 /** فلترةُ عرضٍ خالصة لا مرآةَ تعدادٍ في الخلفية — ولا قيمةَ فيها تساوي قيمةَ
@@ -235,7 +236,7 @@ export function RidersScreen() {
                   onClick={() => setOpen(row)}
                   className="text-11.5 font-semibold text-ink underline"
                 >
-                  الملف والمحفظة
+                  {OPEN_PROFILE_LABEL}
                 </button>
               </span>
             </>

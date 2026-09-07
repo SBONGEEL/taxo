@@ -86,6 +86,10 @@ const STATUS_LABEL: Record<DriverStatus, string> = {
   approved: "معتمد",
   rejected: "مرفوض",
   suspended: "موقوف",
+  // **و«ألغى تفعيله» لا «موقوف»**: الإيقافُ قرارُ إدارةٍ، وإلغاءُ التفعيل
+  // **طلبُ الكبتن نفسِه** (`deactivation_requests`، البند ١٣) — واسمٌ واحدٌ
+  // لهما يجعل المشرفَ يقرأ عقوبةً حيث لا عقوبة.
+  deactivated: "ألغى تفعيله",
 };
 
 const STATUS_TONE: Record<DriverStatus, string> = {
@@ -93,6 +97,8 @@ const STATUS_TONE: Record<DriverStatus, string> = {
   approved: "text-ok",
   rejected: "text-danger",
   suspended: "text-danger",
+  // **ولونُه محايدٌ لا خطر**: خروجٌ بطلبه لا عقوبةٌ عليه.
+  deactivated: "text-muted",
 };
 
 const DOC_LABEL: Record<DocumentType, string> = {

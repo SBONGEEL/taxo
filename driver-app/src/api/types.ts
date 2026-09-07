@@ -1058,16 +1058,40 @@ export interface PromoBanner {
   id: string;
   title: string;
   body: string | null;
-  /** **أيقونةُ lucide لا صورةٌ مرفوعة** — لا بابَ يخدم رفعاً بعد،
-   *  **وعنوانٌ يُنشر لمسارٍ لا وجودَ له يرسم صورةً مكسورة**. */
+  /** **أيقونةُ lucide** — زخرفيّةٌ بجانب النصّ، وهي غيرُ صورة اللافتة:
+   *  الصورةُ بايتاتٌ تُجلب من `/storefront/banners/{id}/image` (منذ 08-31)،
+   *  **ولا حقلَ يقول «لها صورة»** — الطلبُ نفسُه هو الجواب. */
   icon: string | null;
   link_kind: BannerLinkKind;
   link: string | null;
 }
 
+/** عرضُ اشتراكٍ حيٌّ **لهذا الكبتن بعينه** — يُعرض في صندوق اللافتات نفسِه.
+ *
+ * **ولا كيانَ ثانياً بجانب `promo_banners`** (قرارُ المالك 2026-09-07):
+ * الصندوقُ واحدٌ، ومصدراه اثنان — **صفوفٌ يكتبها المشرف**، **وعرضٌ يُحسب
+ * لكلِّ كبتنٍ على حدة** بجمهوره وحدِّه وميزانيته.
+ *
+ * **والأرقامُ تصل محسوبةً ولا تُطرح هنا** (§14): `price` و`price_after`
+ * عمودان، **و«مجاناً» كلمةٌ في `free` لا رقمٌ صفر يُقرأ خطأً**.
+ *
+ * **و`null` للراكب دائماً**: الاشتراكُ للكبتن وحدَه — والحقلُ مُصرَّحٌ في
+ * التطبيقين لأن الصندوقَ مكوّنٌ واحدٌ **متطابقٌ بايتاً**، ونسختان تفترقان
+ * أوّلَ تعديل. */
+export interface StorefrontOffer {
+  /** **اسمُ العرض كما كتبه المشرفُ في اللوحة** — لا نصٌّ مؤلَّفٌ في الشيفرة. */
+  name: string;
+  plan_name: string;
+  price: string;
+  price_after: string;
+  currency: Currency;
+  free: boolean;
+}
+
 export interface Storefront {
   tiles: ServiceTile[];
   banners: PromoBanner[];
+  offer: StorefrontOffer | null;
 }
 
 

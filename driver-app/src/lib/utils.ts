@@ -59,6 +59,23 @@ export function digits(value: string | number | null | undefined): string {
  */
 export const DISPLAY_LOCALE = "ar-u-nu-latn";
 
+const CURRENCY_LABEL_MAP: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
+
+/** تسميةُ العملة للعرض — **بيتٌ واحدٌ يقرؤه الجميع**.
+ *
+ * **ونزل هنا من `rideFormat` في 2026-09-07 ولم يُنسخ**: `CURRENCY_LABEL`
+ * ما زال يُصدَّر من هناك لثلاثين قارئاً، **لكنّه صار قراءةً لهذا الجدول لا
+ * جدولاً ثانياً** — وجدولان بقيمتين متساويتين اليومَ يفترقان يومَ يُضاف
+ * سوقٌ ثالث.
+ *
+ * **والعلّةُ التي أنزلته**: صندوقُ اللافتات مكوّنٌ **متطابقٌ بايتاً** في
+ * التطبيقين (`check:storefront-card`)، **فسطرُ استيرادٍ مختلفُ المسار يوقف
+ * الحارس** — وتطبيقُ الراكب يقرؤها من `@/lib/utils` منذ البداية.
+ */
+export function currencyLabel(currency: string | null | undefined): string {
+  return currency ? (CURRENCY_LABEL_MAP[currency] ?? currency) : "";
+}
+
 /** العكسُ: يقبل ما يكتبه المستخدم بأيِّ الخانتين ويعيد `[0-9]` وحدها.
  *
  * **وهو حاجةٌ لا زينة**: لوحةُ مفاتيحَ عربيةٌ تُخرج `٢٠٢٠`، و`Number("٢٠٢٠")`

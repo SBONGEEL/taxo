@@ -452,6 +452,10 @@ export function HomeScreen() {
           }
           tiles={storefront?.tiles ?? []}
           banners={storefront?.banners ?? []}
+          // **غيرُ `offer` المحلّيّ**: ذاك عرضُ رحلةٍ يصل بالمقبس، وهذا
+          // عرضُ اشتراكٍ يصل مع الواجهة — واسمان متشابهان في ملفٍّ واحد
+          // كافيان ليُقرأ أحدُهما مكانَ الآخر
+          storefrontOffer={storefront?.offer ?? null}
           map={mapNode}
           subscriptionLine={subscriptionLine}
           vehicleLine={vehicleLine}

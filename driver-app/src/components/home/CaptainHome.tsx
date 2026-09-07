@@ -30,7 +30,12 @@ import { Bell, ChevronLeft, Crown, Moon, Star, Sun } from "lucide-react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type { Earnings, PromoBanner, ServiceTile } from "@/api/types";
+import type {
+  Earnings,
+  PromoBanner,
+  ServiceTile,
+  StorefrontOffer,
+} from "@/api/types";
 import { MapCard } from "@/components/home/MapCard";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
@@ -55,6 +60,11 @@ interface Props {
   commissionPercent: string | null;
   tiles: ServiceTile[];
   banners: PromoBanner[];
+  /** **عرضُ اشتراكِ هذا الكبتن — في صندوق اللافتات نفسِه** (2026-09-07).
+   *
+   *  **و`null` هي الحالُ الغالبة**: لا عرضَ قائماً، أو قائمٌ لا يستحقّه —
+   *  **والصندوقُ يختفي إن لم تكن معه لافتة**. */
+  storefrontOffer: StorefrontOffer | null;
   /** الخريطةُ بطاقةً — تُمرَّر كما هي فلا تُبنى مرّتين. */
   map: ReactNode;
   /** **شارةُ «بانتظار الطلبات…» تحت البطاقة مباشرةً** — لا في ذيل الصفحة.
@@ -84,6 +94,7 @@ export function CaptainHome({
   commissionPercent,
   tiles,
   banners,
+  storefrontOffer,
   map,
   statusPill,
   extras,
@@ -208,7 +219,7 @@ export function CaptainHome({
           تفتحه البلاطات، **فسطرٌ يقول لمَ قبل الضغطة** خيرٌ من رفضٍ بعدها */}
       <PhonePendingNotice />
       <ServiceTiles tiles={tiles} />
-      <PromoBanners banners={banners} />
+      <PromoBanners banners={banners} offer={storefrontOffer} />
 
       {/* ── ما يبقى رغم أن التصميم لا يرسمه */}
       {extras}

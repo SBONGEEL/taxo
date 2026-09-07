@@ -253,6 +253,45 @@ async def resolve(
     return ResolvedOffer(offer=locked, amount=amount)
 
 
+@dataclass(frozen=True)
+class VisibleOffer:
+    """أفضلُ عرضٍ **يستحقّه هذا الكبتنُ الآن** — لصندوق الشاشة الرئيسة."""
+
+    offer: SubscriptionOffer
+    plan: SubscriptionPlan
+    amount: Decimal
+
+
+async def best_for_driver(
+    session: AsyncSession, *, driver: Driver, country: CountryCode
+) -> VisibleOffer | None:
+    """العرضُ الذي يُعرض على الرئيسة — **أو `None`، وهي حالٌ صحيحةٌ لا خطأ**.
+
+    **ولا بيتَ ثانياً للحساب**: يمرّ على `resolve` نفسِها التي يمرّ بها
+    الشراءُ وشاشةُ الاشتراك — فما يُعرض في الصندوق **هو ما يُخصم عند الضغط**
+    حرفاً. **وحسابٌ ثانٍ هنا يفترق عن الأول أوّلَ تعديل**، ويُقرأ العطبُ
+    وعداً كاذباً بمال.
+
+    **وواحدٌ لا واحدٌ لكلِّ خطة**: بطاقتان لعرضٍ واحدٍ بخطّتين تملآن الصندوقَ
+    بتكرار، **والتفصيلُ كلُّه في `/subscription`** التي يفتحها الضغط. فيُختار
+    **الأكبرُ توفيراً** — وهي قاعدةُ الصفحة التعريفية نفسُها.
+
+    **ولا يُعرض ما لا يُنال**: `resolve` تقيس الجمهورَ والحدَّ والميزانيةَ
+    والنافذة، **فمن استنفد حدَّه لا يرى بطاقةً** — وعرضٌ يُرى ولا يُطبَّق عند
+    الضغط أسوأُ من عرضٍ لا يُرى (الفرع و من البند ٥٤).
+    """
+    from app.services.subscriptions import available_plans
+
+    best: VisibleOffer | None = None
+    for plan in await available_plans(session, country):
+        resolved = await resolve(session, driver=driver, plan=plan)
+        if resolved is None:
+            continue
+        if best is None or resolved.amount > best.amount:
+            best = VisibleOffer(offer=resolved.offer, plan=plan, amount=resolved.amount)
+    return best
+
+
 # ------------------------------------------------------------- الإدارة
 
 

@@ -22,6 +22,14 @@
 
 import { useNavigate } from "react-router-dom";
 
+/** **نصُّ الزرّ — بيتٌ واحدٌ** (وُحِّد 2026-09-07).
+ *
+ * **كان نصّان لبابٍ واحد**: `/rides` تقول «الملفّ» و`/riders` تقول
+ * «الملف والمحفظة» — **والشدّةُ نفسُها تفترق**. ومن يقرأ الشاشتين يظنّهما
+ * فعلين. **وقِيس على الشاشة قبل أن يُكتب هذا.**
+ */
+export const OPEN_PROFILE_LABEL = "الملفّ";
+
 export function OpenProfile({
   kind,
   id,
@@ -60,7 +68,7 @@ export function OpenProfile({
       }}
       className={className ?? "text-11 font-semibold text-muted underline"}
     >
-      الملفّ
+      {OPEN_PROFILE_LABEL}
     </button>
   );
 }

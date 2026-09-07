@@ -194,7 +194,14 @@ export interface NotificationSetting {
 
 // ------------------------------------------------------------ الكباتن
 
-export type DriverStatus = "pending" | "approved" | "rejected" | "suspended";
+// **و`deactivated` أُضيفت 2026-09-07**: كانت في الخلفية ولا يعرفها هذا
+// الاتحاد، **فكبتنٌ أُلغي تفعيلُه يُرسم `deactivated` على شاشة المشرف**.
+export type DriverStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "suspended"
+  | "deactivated";
 
 export type DocumentType =
   
@@ -266,7 +273,8 @@ export interface DriverDocuments {
 
 // ------------------------------------------------------------ المالية
 
-export type TopupMethod = "cliq" | "cash";
+// **و`card` ثالثتُها في الخلفية** (أُضيفت هنا 2026-09-07).
+export type TopupMethod = "cliq" | "cash" | "card";
 export type TopupStatus = "pending" | "confirmed" | "rejected";
 
 export interface TopupRequest {
@@ -559,7 +567,10 @@ export type ProviderKey =
   | "fcm"
   | "firebase_auth"
   | "cliq_acquirer"
-  | "payout";
+  | "payout"
+  // **و`email` في الخلفية ولا يعرفها هذا الاتحاد** (أُضيفت 2026-09-07):
+  // صفحةُ العقود تعرض المزوّدين، **ومزوّدٌ لا يعرفه الاتحادُ لا يُرسم**.
+  | "email";
 
 export interface ProviderField {
   key: string;
@@ -868,7 +879,21 @@ export type WalletTransactionType =
   | "withdrawal"
   | "refund"
   | "subscription_payment"
-  | "adjustment";
+  | "adjustment"
+  // **الثمانيةُ أُضيفت 2026-09-07** بعد أن قِيس أن **٢٣ صفّاً من ١١٥ (٢٠٪)
+  // في دفتر التطوير تُرسم بمفتاحها الإنجليزيّ** على شاشة المشرف.
+  //
+  // **ولم يمسكها `check:enums`**: كان يسأل «أثمّة قيمةٌ مخترعة؟» — والعشرةُ
+  // كلُّها في تعداد الخلفية — **ولا يسأل «أينقص عضو؟»**. وهو حدٌّ مكتوبٌ في
+  // `GUARDS.md`، **وثمنُه ظهر على شاشةٍ يقرؤها إنسان**.
+  | "tip"
+  | "tip_payment"
+  | "skin_purchase"
+  | "referral_bonus"
+  | "advance"
+  | "advance_repayment"
+  | "cancellation_fee"
+  | "cancellation_compensation";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {

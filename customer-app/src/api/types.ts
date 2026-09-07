@@ -531,7 +531,16 @@ export type WalletTransactionType =
   | "subscription_payment"
   | "adjustment"
   | "tip"
-  | "tip_payment";
+  | "tip_payment"
+  // **الستّةُ أُضيفت 2026-09-07**: كانت في الخلفية ولا يعرفها الراكب،
+  // **فتُرسم بمفتاحها الإنجليزيّ في دفتر محفظته** — وهو أسوأُ من اللوحة:
+  // المشرفُ يعرف المفاتيح، **والراكبُ لا يعرف شيئاً**.
+  | "skin_purchase"
+  | "referral_bonus"
+  | "advance"
+  | "advance_repayment"
+  | "cancellation_fee"
+  | "cancellation_compensation";
 
 export interface WalletTransaction {
   id: string;
@@ -763,15 +772,45 @@ export interface PromoBanner {
   id: string;
   title: string;
   body: string | null;
-  image_url: string | null;
+  /** **أيقونةُ lucide** — زخرفيّةٌ بجانب النصّ، وهي غيرُ صورة اللافتة:
+   *  الصورةُ بايتاتٌ تُجلب من `/storefront/banners/{id}/image` (منذ 08-31)،
+   *  **ولا حقلَ يقول «لها صورة»** — الطلبُ نفسُه هو الجواب.
+   *
+   *  **وكان هنا `image_url: string | null`** ونُزع في 2026-09-07: **الخلفيةُ
+   *  لا تنشره ولا قارئَ له في هذا التطبيق**، وأخوه في تطبيق الكبتن لا يحمله.
+   *  **ومرآةٌ بلا مُرسِلٍ تُقرأ ميزةً قائمة** — من يفتح النوعَ يظنّ العنوانَ
+   *  يصل فيبني عليه `<img src>`، **فيرسم صورةً مكسورة**. */
   icon: string | null;
   link_kind: BannerLinkKind;
   link: string | null;
 }
 
+/** عرضُ اشتراكٍ حيٌّ **لهذا الكبتن بعينه** — يُعرض في صندوق اللافتات نفسِه.
+ *
+ * **ولا كيانَ ثانياً بجانب `promo_banners`** (قرارُ المالك 2026-09-07):
+ * الصندوقُ واحدٌ، ومصدراه اثنان — **صفوفٌ يكتبها المشرف**، **وعرضٌ يُحسب
+ * لكلِّ كبتنٍ على حدة** بجمهوره وحدِّه وميزانيته.
+ *
+ * **والأرقامُ تصل محسوبةً ولا تُطرح هنا** (§14): `price` و`price_after`
+ * عمودان، **و«مجاناً» كلمةٌ في `free` لا رقمٌ صفر يُقرأ خطأً**.
+ *
+ * **و`null` للراكب دائماً**: الاشتراكُ للكبتن وحدَه — والحقلُ مُصرَّحٌ في
+ * التطبيقين لأن الصندوقَ مكوّنٌ واحدٌ **متطابقٌ بايتاً**، ونسختان تفترقان
+ * أوّلَ تعديل. */
+export interface StorefrontOffer {
+  /** **اسمُ العرض كما كتبه المشرفُ في اللوحة** — لا نصٌّ مؤلَّفٌ في الشيفرة. */
+  name: string;
+  plan_name: string;
+  price: string;
+  price_after: string;
+  currency: Currency;
+  free: boolean;
+}
+
 export interface Storefront {
   tiles: ServiceTile[];
   banners: PromoBanner[];
+  offer: StorefrontOffer | null;
 }
 
 // ------------------------------------------------- بوّابةُ التحديث (البند ٨)

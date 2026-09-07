@@ -812,6 +812,26 @@ async def seed_service_tiles(session: AsyncSession) -> None:
 
     **و«قريباً» بلا مقصدٍ عن قصد**: تُقرأ ولا تُنقر. **والفعّالةُ كلُّها بمقصدٍ
     من `SERVICE_DESTINATIONS`** — وقيدُ القاعدة والبابُ يمنعان غير ذلك.
+
+    ## والخدمةُ تُقابَل في الشاشتين — **أو تُسمّى علّتُها** (قرارُ المالك 2026-09-07)
+
+    **الظهورُ بلا وظيفةٍ أصدقُ من غيابٍ يُنسي الخدمة**: خدمةٌ عند طرفٍ ولا
+    شيءَ يقابلها عند الآخر **تُقرأ نقصاً في التطبيق لا تأجيلاً في الخدمة** —
+    فالكبتنُ الذي يرى «توصيل طرود» عند الراكب ولا يراه عنده يظنّ أن الطرودَ
+    ليست عملَه، **ولا شيءَ يقول له إنها قادمة**.
+
+    **فالمقابلُ يُبذر «قريباً» بأيقونة أخيه نفسِها** — والأيقونةُ هي ما يربط
+    الشاشتين في العين. وأربعةٌ بُذرت لهذا: `d_airport` · `d_orders` ·
+    `d_shipments` عند الكبتن، و`r_missions` عند الراكب.
+
+    **واثنتان تخصّان الكبتنَ بحقٍّ فلا مقابلَ لهما، والعلّةُ مكتوبةٌ لا مسكوتٌ
+    عنها**:
+
+    - **`garage` (متجر المركبات)** — سِماتٌ تُلبَس على أيقونة المركبة على
+      الخريطة، **والراكبُ لا مركبةَ له تُزيَّن**. ومتجرٌ عنده يبيع ماذا؟
+    - **`advance` (سلفة)** — دَينٌ يُسدَّد **باقتطاعٍ من دخلٍ يمرّ بالمنصّة**،
+      والراكبُ لا دخلَ له فيها: هو يشحن ويحوّل **ولا يسحب** (§7). فسلفةٌ له
+      **قرضٌ بلا مصدرِ سداد**، وهو مالُ الناس لا شاشة.
     """
     from app.models.enums import CampaignAudience, ServiceTileStatus
     from app.models.storefront import ServiceTile
@@ -828,12 +848,16 @@ async def seed_service_tiles(session: AsyncSession) -> None:
         ("orders", "طلبات", None, "shopping-bag", RIDER, 30, None, SOON),
         ("scheduled", "رحلات مجدولة", "حجزٌ بموعد", "calendar-clock", RIDER, 40, "/account/bookings", ACTIVE),
         ("my_items", "أغراضي", None, "boxes", RIDER, 50, None, SOON),
+        ("r_missions", "التحديات", None, "trophy", RIDER, 55, None, SOON),
         ("more_rider", "أخرى", "كل الخدمات", "layout-grid", RIDER, 60, "/account", ACTIVE),
         # ── الكبتن
         ("d_scheduled", "رحلات مجدولة", None, "calendar-clock", DRIVER, 10, None, SOON),
         ("d_parcels", "توصيل طرود", None, "package", DRIVER, 20, None, SOON),
+        ("d_airport", "رحلات المطار", None, "plane-takeoff", DRIVER, 25, None, SOON),
         ("garage", "متجر المركبات", "سِمات جديدة", "store", DRIVER, 30, "/account/garage", ACTIVE),
+        ("d_orders", "توصيل الطلبات", None, "shopping-bag", DRIVER, 35, None, SOON),
         ("missions", "التحديات", None, "trophy", DRIVER, 40, "/account/missions", ACTIVE),
+        ("d_shipments", "شحناتي", None, "boxes", DRIVER, 45, None, SOON),
         ("advance", "سلفة", None, "banknote", DRIVER, 50, "/account/advances", ACTIVE),
         ("more_driver", "أخرى", "كل الأدوات", "layout-grid", DRIVER, 60, "/account", ACTIVE),
     ]

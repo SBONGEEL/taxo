@@ -11,13 +11,16 @@ import type {
   RideStatus,
   VehicleCategory,
 } from "@/api/types";
-import { digits,
+import { currencyLabel, digits,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
 
+/** **يُقرأ من `currencyLabel` ولا يُكتب هنا** (2026-09-07): البيتُ نزل إلى
+ *  `@/lib/utils` كي يقرأه صندوقُ اللافتات المتطابقُ بايتاً في التطبيقين،
+ *  **وهذا الاسمُ باقٍ لأن ثلاثين قارئاً يستوردونه**. */
 export const CURRENCY_LABEL: Record<Currency, string> = {
-  JOD: "د.أ",
-  LYD: "د.ل",
+  JOD: currencyLabel("JOD"),
+  LYD: currencyLabel("LYD"),
 };
 
 /** الاسمُ الكامل — تحت الرقم الكبير حيث يتسع المكان لكلمة. */

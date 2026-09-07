@@ -83,6 +83,15 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   // لكنه في التعداد فيُسمّى، فلا تظهر سلسلةٌ خامٌ في كشفٍ يوماً
   tip: "بقشيش وارد",
   tip_payment: "بقشيش للكبتن",
+  // **والستّةُ الباقيةُ تُسمّى وإن لم تقع للراكب** — للعلّة نفسِها
+  // المكتوبة فوق: **لا تظهر سلسلةٌ خامٌ في كشفٍ يوماً**. وثلاثٌ منها
+  // تخصّ الكبتن وحدَه، **وتُسمّى بلغة الراكب لا بلغة الدفتر**.
+  cancellation_fee: "رسم إلغاء",
+  cancellation_compensation: "تعويض إلغاء",
+  advance: "سلفة",
+  advance_repayment: "سداد سلفة",
+  skin_purchase: "شراء زينة مركبة",
+  referral_bonus: "حافز دعوة صديق",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {
