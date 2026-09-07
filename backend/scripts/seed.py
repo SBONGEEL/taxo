@@ -832,6 +832,33 @@ async def seed_service_tiles(session: AsyncSession) -> None:
     - **`advance` (سلفة)** — دَينٌ يُسدَّد **باقتطاعٍ من دخلٍ يمرّ بالمنصّة**،
       والراكبُ لا دخلَ له فيها: هو يشحن ويحوّل **ولا يسحب** (§7). فسلفةٌ له
       **قرضٌ بلا مصدرِ سداد**، وهو مالُ الناس لا شاشة.
+
+    ## ولا حالَ تُكتب في العنوان الفرعيّ (٢٠٢٦-٠٩-٠٧)
+
+    **حملت `airport` فرعيّاً «متاح الآن» وحالُها `soon`**، ونُزع.
+
+    **ولم يكن سببُ النزع أنها تُعرض كاذبة** — وهو ما ظُنَّ أوّلاً ثم قِيس
+    فسقط: ترتيبُ الشارة **«قريباً» ← «جديد» ← الفرعيّ**، فالفرعيُّ **مخفيٌّ
+    ما دامت «قريباً»**، ويظهر يومَ تُشعَل **وهو صادقٌ حينها**.
+
+    **بل أن الحالَ لها عمودُها**: `status` يقولها، وسطرُ نثرٍ يكرّرها **بيتٌ
+    ثانٍ لحقيقةٍ واحدة** — ومن أطفأها بعد إشعالها ترك النثرَ يقول غيرَ ما
+    يقول العمود. **والعنوانُ الفرعيُّ لما لا يقوله عمودٌ**: «حجزٌ بموعد» ·
+    «كل الأدوات» — وصفُ خدمةٍ لا حالُها.
+
+    **وصُحِّح معه نصّان يَعِدان بما لا يفعله الحال، وهما يُعرضان اليومَ فعلاً**
+    (بخلاف الأول الذي كان مخفيّاً):
+
+    - **«كل الخدمات»** تحت «أخرى» عند الراكب ← **«حسابك وإعداداتك»**.
+      وجهتُها `/account`، وفيها **بياناتٌ وأماكنُ وحجوزٌ وإحالةٌ وبطاقاتٌ
+      وإشعاراتٌ وإعدادات** — حسابٌ لا خدمات. **و«الخدمات» اسمٌ مشغولٌ في هذا
+      المشروع**: هي البلاطاتُ نفسُها، **فالبلاطةُ تَعِد بفهرسها وتفتح غيرَه**.
+      **وأخوها عند الكبتن «كل الأدوات» صادقةٌ فبقيت** — شاشتُه تحمل الاشتراكَ
+      والمركبةَ والمستنداتِ والسلفةَ والمهامّ، وهي أدواتٌ بحقّ.
+    - **«سِمات جديدة»** تحت «متجر المركبات» ← **«مركبتك على الخريطة»**.
+      **وعدُ جِدَّةٍ لا يشيخ**: نصٌّ ثابتٌ يقول «جديدة» إلى الأبد.
+      **وللجِدَّة عمودُها** `new_until` الذي يرفع شارةَ «جديد» **ثم يسقط
+      بانقضائه بلا نشر** — ونصٌّ يزاحمه يقول ما لا يقيسه أحد.
     """
     from app.models.enums import CampaignAudience, ServiceTileStatus
     from app.models.storefront import ServiceTile
@@ -844,17 +871,17 @@ async def seed_service_tiles(session: AsyncSession) -> None:
     tiles = [
         # ── الراكب
         ("parcels", "توصيل طرود", None, "package", RIDER, 10, None, SOON),
-        ("airport", "توصيل مطار", "متاح الآن", "plane-takeoff", RIDER, 20, None, SOON),
+        ("airport", "توصيل مطار", None, "plane-takeoff", RIDER, 20, None, SOON),
         ("orders", "طلبات", None, "shopping-bag", RIDER, 30, None, SOON),
         ("scheduled", "رحلات مجدولة", "حجزٌ بموعد", "calendar-clock", RIDER, 40, "/account/bookings", ACTIVE),
         ("my_items", "أغراضي", None, "boxes", RIDER, 50, None, SOON),
         ("r_missions", "التحديات", None, "trophy", RIDER, 55, None, SOON),
-        ("more_rider", "أخرى", "كل الخدمات", "layout-grid", RIDER, 60, "/account", ACTIVE),
+        ("more_rider", "أخرى", "حسابك وإعداداتك", "layout-grid", RIDER, 60, "/account", ACTIVE),
         # ── الكبتن
         ("d_scheduled", "رحلات مجدولة", None, "calendar-clock", DRIVER, 10, None, SOON),
         ("d_parcels", "توصيل طرود", None, "package", DRIVER, 20, None, SOON),
         ("d_airport", "رحلات المطار", None, "plane-takeoff", DRIVER, 25, None, SOON),
-        ("garage", "متجر المركبات", "سِمات جديدة", "store", DRIVER, 30, "/account/garage", ACTIVE),
+        ("garage", "متجر المركبات", "مركبتك على الخريطة", "store", DRIVER, 30, "/account/garage", ACTIVE),
         ("d_orders", "توصيل الطلبات", None, "shopping-bag", DRIVER, 35, None, SOON),
         ("missions", "التحديات", None, "trophy", DRIVER, 40, "/account/missions", ACTIVE),
         ("d_shipments", "شحناتي", None, "boxes", DRIVER, 45, None, SOON),
