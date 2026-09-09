@@ -119,6 +119,12 @@ class VerificationSendFailed(AppError):
         # **`reason` يفرّق ما كان النصُّ وحدَه يفرّقه** (2026-08-31):
         # `not_on_channel` خبرٌ عن الوجهة يخصّ صاحبَها، و`channel_down` عطبٌ
         # عندنا. **ومطابقةُ نصٍّ عربيٍّ ليست عقداً** — تنكسر بأول تحرير.
+        #
+        # **وثالثٌ منذ ٢٠٢٦-٠٩-٠٩: `number_unanswered`** — سُئل واتساب عن
+        # الرقم فلم يُجب عنه. **وكان يُحسب `channel_down`**، فيقرأ صاحبُ
+        # الرقم أن خدمتَنا ساقطة **وهي تسلّم رسائلَ في الثانية نفسِها**؛
+        # وينظر المشرفُ في قناةٍ لا عطبَ فيها. **ثلاثةٌ لأن الحالاتِ ثلاث،
+        # لا لأن الأسماءَ تُجمَّل.**
         self.extra = {
             "channel": channel,
             "fallback_channel": fallback,
@@ -249,6 +255,7 @@ async def challenge(
     if chosen == WHATSAPP_OTP:
         from app.services.whatsapp import (
             WhatsAppError,
+            WhatsAppNumberUnanswered,
             WhatsAppNumberUnknown,
             get_provider_or_none,
         )
@@ -280,6 +287,20 @@ async def challenge(
                 ),
                 reason="not_on_channel",
             ) from None
+        except WhatsAppNumberUnanswered as exc:
+            # **الحالُ الثالثةُ تقف هنا ولا تنزلق إلى «سقوطِ قناة»**
+            # (قِيس ٢٠٢٦-٠٩-٠٩): المضيُّ إلى الإرسال يجعل الرقمَ يفشل ثانيةً
+            # **ويُسمّى الفشلُ `channel_down`** — وهي دعوى تكذّبها جلسةٌ
+            # مرتبطةٌ سلّمت رسالةً في الثانية نفسِها.
+            raise VerificationSendFailed(
+                channel=WHATSAPP_OTP,
+                fallback=_next_code_channel(methods, WHATSAPP_OTP),
+                detail=(
+                    "لم يُجب واتساب عن حالة هذا الرقم — تأكّد من الرقم "
+                    "أو جرّب رقماً آخر عليه واتساب."
+                ),
+                reason="number_unanswered",
+            ) from exc
         except WhatsAppError:
             # **عطبُ قناةٍ لا خبرُ رقم** — يمرّ إلى المعالج أدناه كما كان
             pass
@@ -293,6 +314,16 @@ async def challenge(
                 sender=provider,
                 purpose=purpose,
             )
+        except WhatsAppNumberUnanswered as exc:
+            raise VerificationSendFailed(
+                channel=WHATSAPP_OTP,
+                fallback=_next_code_channel(methods, WHATSAPP_OTP),
+                detail=(
+                    "لم يُجب واتساب عن حالة هذا الرقم — تأكّد من الرقم "
+                    "أو جرّب رقماً آخر عليه واتساب."
+                ),
+                reason="number_unanswered",
+            ) from exc
         except WhatsAppError as exc:
             fallback = _next_code_channel(methods, WHATSAPP_OTP)
             # **ولا يُقال «جرّب قناةً أخرى» حيث لا قناةَ أخرى.** رسائلُ المزوّد

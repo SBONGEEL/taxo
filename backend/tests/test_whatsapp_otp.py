@@ -328,3 +328,68 @@ async def test_the_connection_test_leaves_no_trace_and_checks_the_template(
     )
     assert tested.status_code == 200, tested.text
     assert tested.json()["ok"] is True
+
+
+async def test_an_unanswered_number_is_not_called_a_dead_channel(
+    client: AsyncClient, admin_headers: dict, session_factory, monkeypatch
+) -> None:
+    """**الحالُ الثالثة**: سُئل واتساب عن الرقم فلم يُجب — والقناةُ تعمل.
+
+    قِيس ٢٠٢٦-٠٩-٠٩ على جهاز التطوير: الجلسةُ مرتبطة، **ورسالةٌ خرجت
+    وسُلِّمت (`CB:receipt` تسليم) في الثانية نفسِها**، ثمّ عاد سؤالُ الوجود
+    عن رقمٍ آخرَ بقائمةٍ فارغة — فقيل لصاحب الرقم **«القناةُ لا تُجيب»**.
+    وهي دعوى **تكذّبها السطورُ المجاورةُ في السجلّ نفسِه**، وتُرسل المشرفَ
+    ينظر في قناةٍ لا عطبَ فيها.
+
+    **وهذا الاختبار يفشل بحذف الالتقاطِ في `verification.py`**: يمرّ
+    الاستثناءُ إلى معالج `WhatsAppError` فيصير `reason == "channel_down"`
+    ويحمل النصُّ «القناة».
+    """
+    from app.services.whatsapp import MockWhatsAppProvider
+    from app.services.whatsapp.base import WhatsAppNumberUnanswered
+
+    await enable_whatsapp_provider(session_factory)
+    await _flip_whatsapp(client, admin_headers, True)
+
+    async def _silent(self, to: str) -> None:
+        raise WhatsAppNumberUnanswered("لم يُجب واتساب عن هذا الرقم")
+
+    monkeypatch.setattr(MockWhatsAppProvider, "check_number", _silent)
+
+    failed = await client.post(
+        "/auth/challenge", json={"phone": PHONE, "country_code": "JO"}
+    )
+    assert failed.status_code == 502, failed.text
+    body = failed.json()
+    assert body["code"] == "verification_send_failed"
+    # **الاسمُ يفرّق**: ليست قناةً ساقطةً ولا رقماً منفيّاً
+    assert body["reason"] == "number_unanswered", body
+    # **ولا يُقال في النصِّ إن القناةَ ساقطة** — وهي دعوى القياسِ يكذّبها
+    assert "القناة" not in body["message"], body["message"]
+    # **ويحمل مخرجاً يفعله صاحبُ الرقم بنفسه**
+    assert "رقم" in body["message"]
+
+
+async def test_an_unanswered_number_during_send_says_the_same_thing(
+    client: AsyncClient, admin_headers: dict, session_factory, monkeypatch
+) -> None:
+    """ونفسُ التفريق في مسار الإرسال — **لا في مسار السؤال وحدَه**.
+
+    وبابان يقولان أمرين عن حالٍ واحدةٍ أسوأُ من بابٍ واحدٍ يقول الخطأ.
+    """
+    from app.services.whatsapp import MockWhatsAppProvider
+    from app.services.whatsapp.base import WhatsAppNumberUnanswered
+
+    await enable_whatsapp_provider(session_factory)
+    await _flip_whatsapp(client, admin_headers, True)
+
+    async def _silent(self, to: str, code: str, **_: object) -> str:
+        raise WhatsAppNumberUnanswered("لم يُجب واتساب عن هذا الرقم")
+
+    monkeypatch.setattr(MockWhatsAppProvider, "send_code", _silent)
+
+    failed = await client.post(
+        "/auth/challenge", json={"phone": PHONE, "country_code": "JO"}
+    )
+    assert failed.status_code == 502, failed.text
+    assert failed.json()["reason"] == "number_unanswered", failed.text

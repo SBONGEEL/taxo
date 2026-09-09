@@ -164,6 +164,8 @@ async function handleSend(req, res) {
       error: String(error.message || error),
       session: session.snapshot().state,
       not_on_whatsapp: Boolean(error.notOnWhatsApp),
+      // **الثالثة**: لم يُجب واتساب عن هذا الرقم — لا هو نفيٌ ولا سقوطُ قناة
+      number_unanswered: Boolean(error.numberUnanswered),
     });
   }
 }
@@ -207,6 +209,7 @@ const server = http.createServer((req, res) => {
           error: String(error.message || error),
           session: session.snapshot().state,
           not_on_whatsapp: Boolean(error.notOnWhatsApp),
+          number_unanswered: Boolean(error.numberUnanswered),
         }),
       );
   }

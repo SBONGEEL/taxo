@@ -29,6 +29,7 @@ from app.core import rate_limit
 from app.services.whatsapp.base import (
     REQUEST_TIMEOUT_SECONDS,
     WhatsAppError,
+    WhatsAppNumberUnanswered,
     WhatsAppNumberUnknown,
 )
 
@@ -198,6 +199,8 @@ class BaileysGatewayProvider:
         # صراحةً: من ينتظر رمزاً على رقمٍ بلا واتساب ينتظر ما لا يجيء
         if response.get("not_on_whatsapp"):
             raise WhatsAppError("هذا الرقم ليس على واتساب — جرّب الرسائل القصيرة")
+        if response.get("number_unanswered"):
+            raise WhatsAppNumberUnanswered(detail)
         raise WhatsAppError(f"بوابة واتساب: {detail}")
 
     async def check_number(self, to: str) -> None:
@@ -212,6 +215,8 @@ class BaileysGatewayProvider:
         detail = str(response.get("error") or f"HTTP {status}")
         if response.get("not_on_whatsapp"):
             raise WhatsAppNumberUnknown(detail)
+        if response.get("number_unanswered"):
+            raise WhatsAppNumberUnanswered(detail)
         raise WhatsAppError(f"بوابة واتساب: {detail}")
 
     async def session_status(self) -> dict:

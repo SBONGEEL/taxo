@@ -29,6 +29,7 @@ from app.services.providers import credentials as credentials_service
 from app.services.whatsapp.base import (
     REQUEST_TIMEOUT_SECONDS,
     WhatsAppError,
+    WhatsAppNumberUnanswered,
     WhatsAppNumberUnknown,
     WhatsAppOtpProvider,
     WhatsAppUnavailable,
@@ -46,6 +47,7 @@ TRANSPORT_CLOUD = "cloud"
 TRANSPORT_BAILEYS = "baileys"
 
 __all__ = [
+    "WhatsAppNumberUnanswered",
     "WhatsAppNumberUnknown",
     "DEFAULT_HOURLY",
     "DEFAULT_PER_PHONE_HOURLY",
