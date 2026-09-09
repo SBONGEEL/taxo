@@ -22,10 +22,14 @@
 
 from __future__ import annotations
 
+import logging
+import typing
+
 import httpx
 from redis.asyncio import Redis
 
 from app.core import rate_limit
+from app.core.exceptions import AppError
 from app.services.whatsapp.base import (
     REQUEST_TIMEOUT_SECONDS,
     WhatsAppError,
@@ -54,6 +58,34 @@ DEFAULT_PER_PHONE_HOURLY = 20
 DEFAULT_HOURLY = 100
 
 HOUR_SECONDS = 3600
+
+
+logger = logging.getLogger(__name__)
+
+
+def _raise_gateway(
+    exc_type: type[AppError], detail: str, *, where: str
+) -> "typing.NoReturn":
+    """**النصُّ الخام يُسجَّل، والمرميُّ رسالتُه العربيةُ المسمّاة.**
+
+    ## العلّةُ مقيسةٌ لا مفترضة (٢٠٢٦-٠٩-٠٩)
+
+    قرأ المالكُ على شاشةٍ عربيةٍ: **«بوابة واتساب: known is not defined»** —
+    نصُّ `ReferenceError` خامٌّ بالإنجليزية. **ومسارُه كان مفتوحاً بالكامل**:
+    البوّابةُ تعيد `{"error": "..."}`، وهذا الملفُّ كان يحقنه في رسالةٍ
+    (`f"بوابة واتساب: {detail}"`)، و`verification.py` يمرّره `detail`،
+    والتطبيقُ يعرض `caught.message`. **أربعُ طبقاتٍ ولا واحدةٌ تسأل: أهذا نصٌّ
+    كُتب لإنسان؟**
+
+    **والقاعدةُ التي تُطبَّق هنا**: نصُّ المزوّد **تشخيصٌ لا خطاب**. يُسجَّل
+    كاملاً حيث يقرؤه المشرف، **ويُرمى صنفٌ رسالتُه من `base.py`** — وهو سجلُّ
+    نصوص هذا المجال. **فلا يخرج إلى الشاشة إلا ما كُتب لها.**
+
+    **ولمَ دالّةٌ لا سطران في كلِّ موضع**: موضعٌ يُنسى يعيد الثقبَ كما كان،
+    **وبابٌ واحدٌ يُحرَس بـ`test_gateway_text_never_reaches_the_screen`.**
+    """
+    logger.warning("بوابة واتساب ردّت خطأً في %s: %s", where, detail)
+    raise exc_type()
 
 
 class BaileysGatewayProvider:
@@ -198,10 +230,11 @@ class BaileysGatewayProvider:
         # **«ليس على واتساب» خطأٌ يخصّ صاحبَ الرقم لا القناة**، ونصُّه يقوله له
         # صراحةً: من ينتظر رمزاً على رقمٍ بلا واتساب ينتظر ما لا يجيء
         if response.get("not_on_whatsapp"):
+            logger.warning("بوابة واتساب: الرقم ليس على واتساب — %s", detail)
             raise WhatsAppError("هذا الرقم ليس على واتساب — جرّب الرسائل القصيرة")
         if response.get("number_unanswered"):
-            raise WhatsAppNumberUnanswered(detail)
-        raise WhatsAppError(f"بوابة واتساب: {detail}")
+            _raise_gateway(WhatsAppNumberUnanswered, detail, where="send")
+        _raise_gateway(WhatsAppError, detail, where="send")
 
     async def check_number(self, to: str) -> None:
         """**سؤالُ البوّابة بلا إرسال** — `GET /check`.
@@ -214,10 +247,10 @@ class BaileysGatewayProvider:
             return
         detail = str(response.get("error") or f"HTTP {status}")
         if response.get("not_on_whatsapp"):
-            raise WhatsAppNumberUnknown(detail)
+            _raise_gateway(WhatsAppNumberUnknown, detail, where="check")
         if response.get("number_unanswered"):
-            raise WhatsAppNumberUnanswered(detail)
-        raise WhatsAppError(f"بوابة واتساب: {detail}")
+            _raise_gateway(WhatsAppNumberUnanswered, detail, where="check")
+        _raise_gateway(WhatsAppError, detail, where="check")
 
     async def session_status(self) -> dict:
         """حالُ الجلسة كما تقرؤها اللوحة والمهمّةُ الدورية.

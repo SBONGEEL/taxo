@@ -349,6 +349,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - الشكلُ التاسعَ عشر — **وسمٌ واحدٌ لعنصرين، والمضغوطُ منهما ميّت** (قِيس ٢٠٢٦-٠٩-٠٩) → `PATTERNS.md`
 - الشكلُ العشرون — **أوصل الطلبُ أصلاً؟ سؤالٌ يسبق كلَّ قراءةِ شيفرة** (قِيس ٢٠٢٦-٠٩-٠٩) → `PATTERNS.md`
 - الشكلُ الحادي والعشرون — **ضغطةٌ تصيب غيرَ هدفها فتُشعل دعوى كاذبةً في نموذجٍ قانونيّ** (قِيس ٢٠٢٦-٠٩-٠٩) → `PATTERNS.md`
+- الشكلُ العاشرُ مقلوباً — **خادمٌ متأخّرٌ يستر عطباً ساكناً، وأوّلُ بناءٍ يشحنه** (قِيس ٢٠٢٦-٠٩-٠٩) → `PATTERNS.md`
 - والشكلُ السابع بثوبٍ مقلوب — **`normalize()` يقلب المئةَ أُسّاً** (قِيس 2026-09-06) → `PATTERNS.md`
 - الشكلُ السابعَ عشر — **خطأٌ يسمّي غيرَ سببه** (ثلاثةٌ في يومين، 2026-09-07) → `PATTERNS.md`
 - «An empty map is not a defect» — the three points, in order (2026-08-15) → `PATTERNS.md`
@@ -372,6 +373,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### `STATE.md` — حالُ البناء
 
+- التسجيلُ ميّتٌ على الإنتاج تسعةَ أيام — **والشاهدُ عدُّ الصفوف** (٢٠٢٦-٠٩-٠٩) → `STATE.md`
 - عطبُ التسجيل ٢٠٢٦-٠٩-٠٩ — **نفقٌ ميّتٌ منذ ٤٨ ساعة، ورسالةٌ تسمّي غيرَ سببها** → `STATE.md`
 - Where the project stands → `STATE.md`
 - The batch of six is built and committed (`eac926e`, 2026-08-15) — and four things remain → `STATE.md`
