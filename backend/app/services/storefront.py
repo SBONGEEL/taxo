@@ -244,7 +244,48 @@ async def banners_for(
         )
         .order_by(PromoBanner.sort_order, PromoBanner.starts_at)
     )
-    return [row for row in rows if _audience_matches(row.audience, role)]
+    return [
+        row
+        for row in rows
+        if _audience_matches(row.audience, role) and banner_is_ready(row)
+    ]
+
+
+#: العنوانُ الذي تكتبه اللوحةُ عند «لافتة جديدة» — **مصدرُه واحد**
+#: (`admin-panel/src/components/Storefront.tsx`)، ويُقرأ هنا لأن الخلفيةَ
+#: هي التي تقرّر ما يبلغ الناس.
+DEFAULT_BANNER_TITLE = "لافتة جديدة"
+
+
+def banner_is_ready(row: PromoBanner) -> bool:
+    """**أفيها ما يُقرأ؟** — وإلا فلا تبلغ أحداً.
+
+    ## العلّةُ مقيسةٌ لا مفترضة (٢٠٢٦-٠٩-٠٩)
+
+    على رئيسية الراكب بطاقةٌ فيها **جرسٌ وكلمة «لافتة جديدة» ولا شيءَ غيرها**
+    — صفٌّ أُنشئ من اللوحة ولم يُملأ، **ومشتعلٌ**. فرآها الناسُ **ورآها
+    المتجرُ في لقطةِ الشاشة المنشورة**.
+
+    **وبطاقةٌ فارغةٌ ليست نقصَ تصميم**: هي **وعدٌ بمحتوىً لا وجودَ له** —
+    من يراها يظنّ عرضاً لم يُحمَّل، فيضغط، فلا شيء.
+
+    ## ولمَ تُصفّى هنا لا تُحذف
+
+    **الصفُّ يبقى** (قرارُ المالك): حذفُه يمحو شاهداً، **وتحريرُه من اللوحة
+    بيد المالك وحدَه**. فالحارسُ يمنع **العرض**، والصفُّ ينتظر نصَّه.
+
+    **وتُقاس في الخلفية لا في التطبيق**: ثلاثةُ تطبيقاتٍ ترسم اللافتات،
+    **وشرطٌ في واحدٍ منها يترك بابين مفتوحين** — وهي «بابان يقولان أمرين».
+
+    **والشرطُ نصٌّ يُقرأ**: عنوانٌ غيرُ فارغٍ **وغيرُ العنوان الافتراضيّ**،
+    أو جسمٌ غيرُ فارغ. فلافتةٌ عنوانُها «لافتة جديدة» وجسمُها فارغ **لم
+    يكتبها أحدٌ بعد**.
+    """
+    title = (row.title or "").strip()
+    body = (row.body or "").strip()
+    if title and title != DEFAULT_BANNER_TITLE:
+        return True
+    return bool(body)
 
 
 async def get_banner(session: AsyncSession, banner_id: uuid.UUID) -> PromoBanner:

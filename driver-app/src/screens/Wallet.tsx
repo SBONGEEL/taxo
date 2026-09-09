@@ -204,10 +204,21 @@ export function WalletScreen() {
               عمولة TAXO هذا الشهر: {digits(wallet.commission_this_month)}{" "}
               {currency}
             </p>
-          ) : (
+          ) : Number(profile?.commission_percent ?? 0) === 0 ? (
             <p className="mt-8 text-11.5 leading-note text-muted">
               عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — صفر عمولة ما
               دام اشتراكك سارياً.
+            </p>
+          ) : (
+            /* **وصفرُ الشهر ليس صفرَ النسبة** (عطبٌ مقيسٌ ٢٠٢٦-٠٩-٠٩): مجموعُ
+               الشهر يبدأ صفراً في أوّله ويبقى صفراً حتى أوّلِ حسابٍ — فوعدُ
+               «صفر عمولة» عليه يَعِد بما لا يقع، ونسبتُه مشتعلةٌ على الشاشة
+               الأخرى من التطبيق نفسِه. **فالوعدُ يُشرط بالنسبة لا بالمجموع**،
+               والنسبةُ تُقرأ من بابها لا تُكتب هنا. */
+            <p className="mt-8 text-11.5 leading-note text-muted">
+              عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — ونسبتُك{" "}
+              {digits(String(Number(profile?.commission_percent)))}٪ على ما
+              تقبضه.
             </p>
           )}
 

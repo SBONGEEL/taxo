@@ -125,7 +125,21 @@ for (const rootDir of ROOTS) {
     const text = readFileSync(file, "utf8");
     scanned += 1;
     const lines = text.split("\n");
+    // **وتعليقُ الكتلة أسطرٌ لا سطر** (ثغرةٌ مقيسةٌ ٢٠٢٦-٠٩-٠٩): `visible`
+    // تُسقط السطرَ الذي **يبدأ** بعلامة تعليق، وسطورُ الكتلة التاليةُ تبدأ
+    // بنصٍّ عاديّ — **فشرحٌ يشرح هذه القاعدةَ نفسَها اتُّهم بها**. فتُتتبَّع
+    // الكتلةُ من `/*` إلى `*/` ويُسقَط ما بينهما.
+    let inBlock = false;
     lines.forEach((raw, i) => {
+      const opens = raw.lastIndexOf("/*");
+      const closes = raw.lastIndexOf("*/");
+      const wasInBlock = inBlock;
+      if (inBlock) {
+        if (closes !== -1) inBlock = false;
+      } else if (opens !== -1 && (closes === -1 || closes < opens)) {
+        inBlock = true;
+      }
+      if (wasInBlock) return;
       const s = visible(rel, raw);
       if (!s || !ARABIC.test(s)) return;
       const exempt = DELIBERATE.find((d) => rel === d.file && raw.includes(d.text));

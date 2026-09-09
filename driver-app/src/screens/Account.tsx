@@ -9,6 +9,7 @@
  * ولا مبدّلَ لغةٍ في الرأس: التطبيق عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
  */
 
+import { REQUIRED_DOCUMENTS } from "@/lib/documents";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
@@ -110,12 +111,26 @@ export function AccountScreen() {
   const pendingDocs = documents.filter(
     (document) => document.review_status === "pending",
   ).length;
+  // **وصفرٌ مقروءٌ عطبٌ لا سلامة** (عطبٌ مقيسٌ ٢٠٢٦-٠٩-٠٩): العدّان أعلاه
+  // صفران حين **لا مستندَ أصلاً**، فكانت الجملةُ تسقط إلى «كل المستندات
+  // مقبولة» وشاشةُ المستندات تقول «لم يُرفع» في كلِّ سطر. **فالمطلوبُ يُسأل
+  // لا المرفوعُ وحدَه** — والقائمةُ من بيتها الواحد لا مكتوبةً هنا ثانيةً.
+  const missingDocs = REQUIRED_DOCUMENTS.filter(
+    (docType) =>
+      !documents.some(
+        (document) =>
+          document.doc_type === docType &&
+          document.review_status !== "rejected",
+      ),
+  ).length;
   const docsNote =
     rejectedDocs > 0
       ? `${digits(String(rejectedDocs))} مستند مرفوض — يحتاج رفعاً جديداً`
-      : pendingDocs > 0
-        ? `${digits(String(pendingDocs))} مستند قيد المراجعة`
-        : "كل المستندات مقبولة";
+      : missingDocs > 0
+        ? `${digits(String(missingDocs))} مستند لم يُرفع بعد`
+        : pendingDocs > 0
+          ? `${digits(String(pendingDocs))} مستند قيد المراجعة`
+          : "كل المستندات مقبولة";
 
   return (
     <div className="relative h-full bg-bg">

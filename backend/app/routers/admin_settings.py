@@ -966,11 +966,21 @@ async def update_service_tile(
 async def list_promo_banners(
     _staff: StaffUser, session: DbSession, country: CountryCode | None = None
 ) -> list[AdminPromoBannerOut]:
-    """كلُّها **ومنها المنتهية** — فالمشرفُ يرى ما مضى ويعيد استعماله."""
-    return [
-        AdminPromoBannerOut.model_validate(row)
-        for row in await storefront.list_banners(session, country=country)
-    ]
+    """كلُّها **ومنها المنتهية** — فالمشرفُ يرى ما مضى ويعيد استعماله.
+
+    **ومعها سببُ الحجب** (٢٠٢٦-٠٩-٠٩): لافتةٌ بلا نصٍّ لا تبلغ أحداً،
+    **والمشرفُ يرى `is_active = true` فيظنّها تعمل**. فيُقال السببُ في
+    الصفّ، **ومصدرُه `banner_is_ready` نفسُها** — لا شرطٌ ثانٍ يفترق عنها.
+    """
+    out: list[AdminPromoBannerOut] = []
+    for row in await storefront.list_banners(session, country=country):
+        item = AdminPromoBannerOut.model_validate(row)
+        if not storefront.banner_is_ready(row):
+            item.blocked_reason = (
+                "لا تُعرض لأحد — لا عنوانَ ولا نصّ. اكتب لها عنواناً أو نصّاً."
+            )
+        out.append(item)
+    return out
 
 
 @router.post("/promo-banners", response_model=AdminPromoBannerOut, status_code=201)

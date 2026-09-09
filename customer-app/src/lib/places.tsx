@@ -92,6 +92,13 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         const seen = new Set<string>();
         const found: RecentDestination[] = [];
         for (const { ride } of rides.value) {
+          // **بابُ البحث محدودٌ بالبلد و«الأخيرة» كانت تقفز فوق حدِّه**
+          // (عطبٌ مقيسٌ ٢٠٢٦-٠٩-٠٩): بحثُ العناوين يمرّ بـ`country=` فلا
+          // يُخرج وجهةً خارج سوق المستخدم، بينما هذه القائمةُ تُشتقّ من سجلّ
+          // الرحلات بلا حدّ — فوجهةٌ في سوقٍ آخر تُعرض قابلةً للطلب وهي
+          // غيرُ قابلة. والحدُّ حقلٌ واحدٌ دقيق لا هندسةٌ تُقدَّر.
+          if (user.country_code && ride.country_code !== user.country_code)
+            continue;
           const key = pointKey(ride.dropoff);
           if (seen.has(key) || saved.has(key)) continue;
           seen.add(key);

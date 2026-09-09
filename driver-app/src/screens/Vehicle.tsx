@@ -27,6 +27,7 @@ import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { useConfig } from "@/lib/config";
 import { rulesFor } from "@/lib/validation";
+import { REQUIRED_DOCUMENTS } from "@/lib/documents";
 import {
   VEHICLE_COLORS,
   VEHICLE_MAKES,
@@ -106,17 +107,7 @@ export function VehicleScreen() {
   const vehicle = profile?.vehicles[0];
   // **الوثائقُ ثم صورُ المركبة الستّ** (البند ١١) — نفسُ ترتيب شاشة التسجيل،
   // فمن رفع هناك يجد الترتيبَ نفسَه هنا حين يستبدل
-  const types: DocumentType[] = [
-    "driving_license",
-    "national_id",
-    "vehicle_registration",
-    "vehicle_front",
-    "vehicle_back",
-    "vehicle_plate",
-    "vehicle_side_right",
-    "vehicle_side_left",
-    "vehicle_interior",
-  ];
+  const types: DocumentType[] = REQUIRED_DOCUMENTS;
 
   return (
     <div className="scr h-full bg-bg px-16 pb-12 pt-safe">

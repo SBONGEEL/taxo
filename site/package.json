@@ -8,7 +8,8 @@
     "assets": "node scripts/assets.mjs",
     "check:site": "node scripts/check-site.mjs",
     "check:commission-text": "node ../tools/check-commission-text.mjs",
-    "build": "npm run assets && npm run check:site && npm run check:commission-text && vite build",
+    "check:shots": "node ../tools/check-shots.mjs",
+    "build": "npm run assets && npm run check:site && npm run check:commission-text && npm run check:shots && vite build",
     "dev": "vite --host 0.0.0.0 --port 5177",
     "preview": "vite preview --host 0.0.0.0 --port 5177"
   },
