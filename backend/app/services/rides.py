@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.currency import currency_for_country
+from app.core import service_area
 from app.core.exceptions import (
     CancelReasonNotApplicable,
     CancellationDebtBlocked,
@@ -387,6 +388,15 @@ async def request_ride(
     # ويصحّح، ومن قُبلت محطتُه ثم اختفى رسمُها **لا يفهم لماذا** — والكبتنُ
     # يقف عندها فعلاً فيُقرأ الإسقاطُ ظلماً له.
     reject_stop_at_dropoff(stops, dropoff)
+
+    # **نطاقُ الخدمة — حدٌّ بالبلد لا بالمسافة** (قرارُ المالك ٢٠٢٦-٠٩-١٠).
+    # **ومكانُه هنا لا في الراوتر** لعلّة السطور فوقه نفسِها: الحجزُ
+    # المجدول ينشئ رحلاتِه من هذا الباب، وحارسٌ في الراوتر بابٌ يُنسى
+    # في الباب الثاني.
+    service_area.require_inside_market(
+        rider.country_code,
+        [pickup, dropoff, *stops],
+    )
 
     preference = (
         rider.ride_gender_preference if gender_preference is None else gender_preference

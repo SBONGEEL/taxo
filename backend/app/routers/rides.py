@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core import storage
+from app.core import service_area
 from app.core.exceptions import NotFound, PermissionDenied
 from app.models.driver import Driver
 from app.models.user import User
@@ -85,6 +86,16 @@ async def estimate_ride(
     # **الحارسُ نفسُه الذي يمنع عند الطلب** (`rides.reject_stop_at_dropoff`):
     # قبولٌ هنا ورفضٌ عند التأكيد يجعل الراكبَ يبني على رقمٍ ثم يُردّ
     rides_service.reject_stop_at_dropoff(payload.stops, _coords(payload.dropoff))
+    # **ونفسُ حدِّ الطلب هنا** — فمن قُبل تقديرُه ورُدَّ طلبُه بنى على
+    # رقمٍ ثم رُدّ، وهو أسوأُ من ألّا يُمنع.
+    service_area.require_inside_market(
+        rider.country_code,
+        [
+            _coords(payload.pickup),
+            _coords(payload.dropoff),
+            *[_coords(stop) for stop in payload.stops],
+        ],
+    )
     quote = await pricing.estimate(
         session,
         country_code=rider.country_code,

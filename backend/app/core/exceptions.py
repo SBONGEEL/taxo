@@ -226,6 +226,51 @@ class InvalidInput(AppError):
     message = "بيانات غير صالحة"
 
 
+class OutsideServiceArea(InvalidInput):
+    """نقطةٌ خارج نطاق خدمة السوق — **حدٌّ بالبلد لا بالمسافة**.
+
+    **واسمُ الدولة من بيته لا مخبوزاً هنا** (`core/currency.COUNTRY_NAME`):
+    نصٌّ يكتب «الأردن» حرفاً يكذب في السوق الثاني يومَ يُفتح.
+    """
+
+    code = "outside_service_area"
+    message = "هذه الوجهة خارج نطاق خدمتنا"
+
+    def __init__(self, country_code: object | None = None) -> None:
+        name = _country_name(country_code)
+        super().__init__(
+            f"هذه الوجهة خارج نطاق خدمتنا — اختر مكاناً داخل {name}."
+            if name
+            else self.message
+        )
+
+
+class ServiceAreaUndeclared(AppError):
+    """سوقٌ بلا صندوقٍ مصرَّح — **يقف ولا يُقرأ سلامة**.
+
+    غيرُ بالغةٍ عملياً: اختبارُ الاكتمال يمنع شحنَ سوقٍ بلا صندوق. وبقاؤها
+    هو الفرقُ بين «لا حدَّ لهذا السوق» و«الحدُّ لم يُصرَّح» — **وهما حالان
+    لا يحملهما صمتٌ واحد**.
+    """
+
+    status_code = 503
+    code = "service_area_undeclared"
+    message = "نطاقُ الخدمة لهذا السوق غيرُ مضبوط — راجع الدعم"
+
+
+def _country_name(country_code: object | None) -> str | None:
+    """يُقرأ متأخّراً كسراً لدورةِ استيراد: `currency` يستورد `enums` وحدَه."""
+    if country_code is None:
+        return None
+    from app.core.currency import COUNTRY_NAME
+    from app.models.enums import CountryCode
+
+    try:
+        return COUNTRY_NAME[CountryCode(country_code)]
+    except (KeyError, ValueError):
+        return None
+
+
 class RateLimited(AppError):
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     code = "rate_limited"
