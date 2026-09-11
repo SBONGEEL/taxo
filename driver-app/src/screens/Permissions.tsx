@@ -22,87 +22,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   alertsAvailable,
-  openAppSettings,
-  openFullScreenSettings,
-  openOverlaySettings,
   permissionStatus,
   type PermissionStatus,
 } from "@/lib/offer-alert";
+import { ROWS } from "@/lib/permission-rows";
 import { useGoBack } from "@/lib/back";
 
-type Severity = "blocking" | "advisory";
-
-interface Row {
-  key: string;
-  /** **قراءةٌ بالاسم الصريح لا بمفتاحٍ متغيّر** — فحقلٌ يُحذف من العقد
-   *  يُسقط `tsc` هنا، **ودليلٌ يقرأ بالفهرسة يمرّ عليه صامتاً**. وهو
-   *  الشكلُ السادسَ عشر المسجَّل في `PATTERNS.md` بعينه. */
-  read: (status: PermissionStatus) => boolean;
-  label: string;
-  /** **ما ينكسر بغيابه بعينه** — لا «التطبيق يحتاج هذا». */
-  why: string;
-  severity: Severity;
-  open?: () => Promise<void>;
-}
-
-const ROWS: Row[] = [
-  {
-    key: "location",
-    read: (status) => status.location,
-    label: "الموقع",
-    why: "بغيره لا تصلك طلبات: التوزيع يبحث عن أقرب كبتن إلى نقطة الانطلاق.",
-    severity: "blocking",
-    open: openAppSettings,
-  },
-  {
-    key: "notifications",
-    read: (status) => status.notifications,
-    label: "الإشعارات",
-    why: "بغيرها لا تصلك بطاقة الطلب وأنت خارج التطبيق.",
-    severity: "blocking",
-    open: openAppSettings,
-  },
-  {
-    key: "offerChannel",
-    read: (status) => status.offerChannel,
-    label: "قناة «طلبات الرحلات»",
-    why: "قناة الطلبات وحدها قد تكون مطفأة والإشعارات مفتوحة — فيصمت الطلب بلا سبب ظاهر.",
-    severity: "blocking",
-    open: openAppSettings,
-  },
-  {
-    key: "backgroundLocation",
-    read: (status) => status.backgroundLocation,
-    label: "الموقع في الخلفية",
-    why: "بغيره يتوقف بثّ موقعك حين تغلق التطبيق، فتخرج من التوزيع وأنت تعمل.",
-    severity: "blocking",
-    open: openAppSettings,
-  },
-  {
-    key: "batteryUnrestricted",
-    read: (status) => status.batteryUnrestricted,
-    label: "استثناء من توفير الطاقة",
-    why: "بغيره يوقف النظام خدمة الموقع بعد دقائق من إطفاء الشاشة — فتبدو متصلاً وأنت غائب.",
-    severity: "blocking",
-    open: openAppSettings,
-  },
-  {
-    key: "overlay",
-    read: (status) => status.overlay,
-    label: "الرسم فوق التطبيقات",
-    why: "به تظهر بطاقة الطلب فوق أي شاشة وأنت تقود. وبدونه يظهر إشعار يملأ الشاشة بدلاً منها.",
-    severity: "advisory",
-    open: openOverlaySettings,
-  },
-  {
-    key: "fullScreenIntent",
-    read: (status) => status.fullScreenIntent,
-    label: "إشعار يملأ الشاشة",
-    why: "هو الطريق البديل حين لا تُمنح النافذة العائمة. وأندرويد الحديث ينزعه تلقائياً عن غير تطبيقات المكالمات، فيُمنح باليد.",
-    severity: "advisory",
-    open: openFullScreenSettings,
-  },
-];
 
 export function PermissionsScreen() {
   const goBack = useGoBack("/account");

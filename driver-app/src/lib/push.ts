@@ -98,3 +98,19 @@ export async function listenToPush(handlers: {
     void tapped.remove();
   };
 }
+
+/** يطلب إذنَ الإشعارات وحدَه — **بلا تسجيلِ جهاز** (جولةُ أوّل فتح).
+ *
+ * **ولمَ بابٌ ثانٍ في البيت نفسِه لا ملفٌّ جديد**: `registerNativePush` يطلب
+ * الإذنَ **ثمّ يسجّل الرمزَ في الخلفية** — وهو الصواب بعد الدخول. والجولةُ
+ * تحتاج الطلبَ وحدَه، **وتسجيلُ جهازٍ من داخل شاشةِ ترحيبٍ فعلٌ ثانٍ في سطحٍ
+ * واحد**. فالطلبُ هنا، والتسجيلُ يبقى حيث كان.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  let status = await PushNotifications.checkPermissions();
+  if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
+    status = await PushNotifications.requestPermissions();
+  }
+  return status.receive === "granted";
+}

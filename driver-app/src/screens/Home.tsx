@@ -77,12 +77,13 @@ import { CATEGORY_LABEL, CURRENCY_FULL, CURRENCY_LABEL, PREFERENCE_LABEL } from 
 import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
+import { PermissionNotice } from "@/components/PermissionNotice";
 import { digits } from "@/lib/utils";
 
 export function HomeScreen() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { user, pushState } = useSession();
+  const { user } = useSession();
   const womenService = useFeature(user?.country_code, "women_service_enabled");
   const { config } = useConfig();
   const { profile } = useDriver();
@@ -495,34 +496,15 @@ export function HomeScreen() {
               </button>
             ) : null}
 
-            {/* **الإذنُ مرفوضٌ فيُقال** (شرطُ المالك 2026-08-21): من رفض إذنَ
-                الإشعارات **لا تصله طلباتٌ وهو خارج التطبيق**، فلا يظنّ نفسه
-                عاملاً ويعدّ الصمتَ «لا طلبات اليوم».
+            {/* **تحذيرُ الأذونات — بيتُه `components/PermissionNotice`**.
+                كان هنا سطرٌ واحدٌ لرفض الإشعارات وحدَه (شرطُ المالك
+                2026-08-21)، **وانطفاءُ قناة «طلبات الرحلات» لا يظهر** — وهي
+                الحالُ التي يفوت فيها الكبتنُ رحلةً بلا سببٍ ظاهر. فصار
+                التحذيرُ يقرأ السجلَّ كلَّه، **ويفرّق المانعَ من الناصح**.
 
-                **والجملةُ تصف ما يقع لا ما تعتقده** (تصحيحُ المالك): أولُ
-                صياغةٍ قالت «الطلبات تصلك **ما دام** التطبيق مفتوحاً أمامك» —
-                وهي **مطلقةٌ يكذّبها أولُ طلبٍ يصل**، وجملةٌ تُكذَّب مرةً
-                يُهمَل ما بعدها. فصارت تسمّي **الأثرَ**: لا صوتَ ولا شاشةَ
-                مقفلة، والطلبُ يظهر داخل التطبيق وهو مفتوح.
-
-                **ومكانُه فوق زرِّ الاستقبال**: هناك يقرؤه وهو يقرّر أن يعمل،
-                لا في شاشةٍ يفتحها باحثاً عن عطل. */}
-            {pushState === "denied" ? (
-              <div className="mb-10 rounded-14 border border-line bg-surface-2 px-14 py-12">
-                {/* **`warn` وحدَها في السلّم** — ولا `warn-soft` ولا
-                    `warn-brd`: صنفٌ بمفتاحٍ غيرِ موجودٍ **يُصرَّف بلا أثرٍ
-                    ولا خطأ**، وهو الفخُّ الذي بُني له `check:scale` — غير
-                    أنه يقرأ السلالمَ الرقمية لا الألوان، فمرّ أخضرَ عليه */}
-                <p className="text-12.5 font-semibold text-warn">
-                  إشعارات هذا الجهاز مغلقة
-                </p>
-                <p className="mt-4 text-11.5 leading-6 text-muted">
-                  لن يصلك تنبيهٌ بصوتٍ ولا على الشاشة المقفلة. والطلبات تظهر
-                  داخل التطبيق وهو مفتوحٌ أمامك — افتح إعدادات الهاتف وفعّل
-                  إشعارات TAXO.
-                </p>
-              </div>
-            ) : null}
+                **ومكانُه فوق زرِّ الاستقبال كما كان**: هناك يقرؤه وهو يقرّر
+                أن يعمل، لا في شاشةٍ يفتحها باحثاً عن عطل. */}
+            <PermissionNotice />
 
             {error || actionError ? (
               <div className="mb-10">

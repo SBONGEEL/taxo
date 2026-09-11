@@ -45,6 +45,8 @@ import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
+import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
+import { walkDone } from "@/lib/permission-walk";
 import { destinationFor } from "@/lib/notification-route";
 import { listenToPush } from "@/lib/push";
 import { LoginScreen } from "@/screens/Login";
@@ -249,6 +251,11 @@ function DriverHome() {
   // **الورقةُ عند نفس النقطة التي تقرّر «معتمد»** — لا شرطٌ ثانٍ في مكوّنٍ آخر
   // يمكن أن يفترق عنه. ومن ليس معتمداً لا يراها أصلاً، وهو المقصود: تُعرض
   // **بعد الاعتماد** لا عند التسجيل (قرارُ المالك)
+  // **جولةُ أوّل فتحٍ تسبق الرئيسية** (قرارُ المالك 2026-09-11): تُعرض مرّةً
+  // واحدةً بعد التثبيت، **ولمن اكتملت أذونُه لا تُعرض أصلاً** — الشاشةُ نفسُها
+  // تقفز إذا لم ينقص شيء، فلا شرطَ ثانٍ هنا يمكن أن يفترق عنها.
+  if (profile.driver.status === "approved" && !walkDone())
+    return <PermissionsIntroScreen />;
   if (profile.driver.status === "approved")
     return (
       <>
