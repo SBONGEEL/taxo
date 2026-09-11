@@ -230,13 +230,31 @@ async def _staff_headers(role: str, phone: str, name: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {tokens.access_token}"}
 
 
+# **ورمزُ الموظَّف يُسكّ بعد الكنس لا قبله** (قِيس 2026-09-11).
+#
+# **العطبُ**: `_staff_headers` يكتب جلسةَ الرمز في Redis، و`_clean_state`
+# **يُفرغ Redis لكلِّ اختبار**. وترتيبُ المُثبِّتات بينهما **لم يكن مضموناً**:
+# هذان لا يعتمدان على الكانس، فمدارُهما يتغيّر بتغيّر مجموعة المُثبِّتات في
+# الاختبار — **فيُسكّ الرمزُ ثم يُمحى، فيردّ الخادمُ `invalid_token`**.
+#
+# **وأثرُه أخطرُ من سقوطٍ صريح**: الاختبارُ **يمرّ وحدَه ويسقط في مجموعة** —
+# قِيس في اليوم نفسِه: `test_admin_list_guard.py` و`test_admin_search.py`
+# **36 passed** منفردَين، و**2 failed** داخل دفعةٍ من خمسةَ عشرَ ملفاً،
+# بنصٍّ واحد: «جلسة غير صالحة أو منتهية».
+#
+# **فخضرتُه كانت صدفةَ ترتيبٍ لا قياسَ شيء** — وهو من عائلة «قيمةٌ من العالم
+# الحقيقيِّ يقرؤها اختبارٌ لا يملكها»: المملوكُ هنا **ترتيبُ التنفيذ**.
+#
+# **ولا يُضعَّف تأكيدٌ ولا يُعاد سكُّ رمزٍ عند الفشل**: الذي تغيّر أن
+# **المُدخلَ صار مملوكاً** — الاعتمادُ على `_clean_state` يجعل الكنسَ يسبق
+# السكَّ دائماً.
 @pytest.fixture
-async def admin_headers() -> dict[str, str]:
+async def admin_headers(_clean_state: None) -> dict[str, str]:
     return await _staff_headers("admin", "+962790000001", "مشرف الاختبار")
 
 
 @pytest.fixture
-async def support_headers() -> dict[str, str]:
+async def support_headers(_clean_state: None) -> dict[str, str]:
     return await _staff_headers("support", "+962790000002", "دعم الاختبار")
 
 
