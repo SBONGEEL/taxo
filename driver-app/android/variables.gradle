@@ -1,7 +1,18 @@
 ext {
     minSdkVersion = 23
-    compileSdkVersion = 35
-    targetSdkVersion = 35
+    // **المستوى 36 شرطُ رفعٍ لا اختيار** — ونصُّ Play للكبتن حرفاً
+    // (٢٠٢٦-٠٩-١١): «يستهدف تطبيقك حاليًا المستوى 35 … ويجب أن يستهدف
+    // المستوى 36 من واجهة API على الأقل». **والإصدارُ لا يُحفظ دونه.**
+    //
+    // **وهذا الدرسُ كان مكتوباً في `customer-app` منذ ٢٠٢٦-٠٩-٠٧ ولم
+    // يُعمَّم** — أُصلح بابٌ وتُرك أخوه، وهو «بابان ينشران الشيءَ نفسَه
+    // ويفترقان» بعينه. **و`admin-panel` ما زال عند 35** ولم يُمسّ هنا
+    // (متغيّرٌ واحدٌ في المرّة)، وبندُه مكتوب.
+    //
+    // **و`compileSdk` يرتفع معه بالضرورة**: أندرويد يشترط
+    // `compileSdk >= targetSdk`، **فرفعُ الهدف وحدَه لا يُبنى أصلاً**.
+    compileSdkVersion = 36
+    targetSdkVersion = 36
     androidxActivityVersion = '1.9.2'
     androidxAppCompatVersion = '1.7.0'
     androidxCoordinatorLayoutVersion = '1.2.0'
