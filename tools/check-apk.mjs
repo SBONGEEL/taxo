@@ -124,6 +124,41 @@ let wrongTarget = 0;
 //: تُقرأ خضرةٌ ناقصةٌ خضرةً تامّة.
 let unmeasured = 0;
 
+// ═══ ٠-ج) **مرجعُ الحافّة هو بيانُ الحافّة** (قِيس 2026-09-11) ═══
+//
+// **العطبُ الذي أوجبه**: كان ما تخدمه الصفحةُ يُقارَن ببيانِ **هذا الجهاز**.
+// و`landing/downloads` مُهمَلٌ في git، **فنسخةُ المطوّر تبلى وحدَها**: قِيس
+// بيانٌ محلّيٌّ من `v0.2.0` (2026-08-28، رمز 392) بينما تخدم الصفحةُ
+// `v0.2.4` (2026-09-10، رمز 514) — **فصاح الحارسُ «ما يُحمَّل ليس ما بُني»
+// على إنتاجٍ سليم**، والصفحةُ مطابقةٌ لبيانها بايتاً (7,641,837 و7,864,877).
+//
+// **وأخطرُ من الحمرة الكاذبة ما تحتها**: لو تصادف تطابقُ النسختين لَأخضرَّ
+// **بلا أن يقرأ بيانَ الصفحة أصلاً** — وهو «حارسٌ يُشغَّل حيث لا يملك ما
+// يقيسه» بعينه، وخضرتُه صدفةٌ لا قياس.
+//
+// **فالسؤالان يفترقان ولا يُخلطان**: «أالصفحةُ متّسقةٌ مع نفسِها؟» مرجعُه
+// **بيانُها**، و«أهذا الجهازُ هو من نشرها؟» يُجاب **بمقارنة الإيداعين**.
+let edgeManifest = null;
+/** أإيداعُ بيانِ الصفحة هو إيداعُ البيان المحلّيّ؟ — `null` يعني لم يُقس. */
+let edgeSame = null;
+if (base) {
+  const manifestUrl = `${base.replace(/\/$/, "")}/downloads/manifest.json`;
+  try {
+    const response = await fetch(manifestUrl, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    edgeManifest = await response.json();
+    edgeSame = String(edgeManifest.commit ?? "") === String(manifest.commit ?? "");
+  } catch (error) {
+    console.log(
+      `  · بيانُ الصفحة **لم يُقرأ** (${String(error).slice(0, 40)}) — ولا يُقرأ سكوتُه ضماناً`,
+    );
+  }
+}
+
+/** بصمةُ ملفٍّ كما يُصرِّح بها **بيانُ الصفحة** — لا البيانُ المحلّيّ. */
+const edgeShaOf = (file) =>
+  (edgeManifest?.apps ?? []).find((row) => row.file === file)?.sha256 ?? null;
+
 // ═══ ٠-ب) **بيتُ الحزم الخاصّة — يُفحص ولا يُترك** (قرارُ المالك ٢٠٢٦-٠٩-٠٥)
 //
 // **العلّةُ**: هذا الفحصُ كان يمسح `landing/downloads` وحدَه، **فحزمةٌ خاصّةٌ
@@ -248,9 +283,31 @@ for (const app of manifest.apps) {
     const served = createHash("sha256")
       .update(Buffer.from(await response.arrayBuffer()))
       .digest("hex");
-    const ok = served === app.sha256;
-    if (!ok) bad += 1;
-    console.log(`    ${ok ? "✓" : "✗"} ما يُحمَّل من ${new URL(url).host}: ${served.slice(0, 10)}`);
+    const host = new URL(url).host;
+    const want = edgeShaOf(app.file);
+    if (want === null) {
+      //: **لا مرجعَ فلا حكم** — ويُعدّ في «لم يُقس» لا في «سقط».
+      unmeasured += 1;
+      console.log(
+        `    · ما يُحمَّل من ${host}: ${served.slice(0, 10)} — **لم يُقس**: لا بيانَ للصفحة يُقارَن به`,
+      );
+    } else if (served !== want) {
+      //: **العطبُ الحقيقيّ**: الصفحةُ تخالف بيانَها — بايتاتٌ لا ينسبها أحد.
+      bad += 1;
+      console.log(
+        `    ✗ ما تخدمه ${host} يخالف بيانَ الصفحة نفسِه: ${served.slice(0, 10)} ≠ ${want.slice(0, 10)}`,
+      );
+    } else if (edgeSame) {
+      console.log(
+        `    ✓ ما يُحمَّل من ${host}: ${served.slice(0, 10)} — **= بيانُ الصفحة = المبنيُّ هنا**`,
+      );
+    } else {
+      //: **خبرٌ لا سقوط**: الصفحةُ سليمةٌ ونشرَها إيداعٌ غيرُ إيداع هذا الجهاز.
+      console.log(
+        `    ✓ ما يُحمَّل من ${host}: ${served.slice(0, 10)} — **= بيانُ الصفحة**، ` +
+          `ونشرَها إيداعٌ غيرُ إيداعِ هذا الجهاز`,
+      );
+    }
   } catch (error) {
     console.log(`    · لم يُقس (${String(error).slice(0, 40)}) — **ولا يُقرأ سكوتُه ضماناً**`);
   }
@@ -274,6 +331,15 @@ if (base) {
     const served = await response.json();
     const commit = served.commit ? String(served.commit).slice(0, 8) : null;
     console.log(`  نسبُ ما تخدمه الصفحة: إيداع ${commit ?? "—"} · وسم ${served.tag ?? "—"}`);
+    //: **ولا يُقرأ اختلافُ الإيداعين عطباً** — هذا الجهازُ ليس بالضرورة
+    //: ناشرَ الصفحة، و`landing/downloads` مُهمَلٌ فيبلى وحدَه.
+    if (edgeSame === false) {
+      const mine = manifest.commit ? String(manifest.commit).slice(0, 8) : "—";
+      console.log(
+        `    · وبيانُ هذا الجهاز إيداعُه ${mine} · وسم ${manifest.tag ?? "—"} — ` +
+          `**نسختان لشيءٍ واحد، والحكمُ لبيان الصفحة**`,
+      );
+    }
     if (served.dirty) {
       bad += 1;
       console.log("    ✗ بُنيت من **شجرةٍ متّسخة** — لا تُنسب إلى إيداعٍ بحقّ");
@@ -337,7 +403,7 @@ if (bad > 0) {
   }
   if (bad > wrongTarget) {
     console.error("");
-    console.error("✗ ما يُحمَّل ليس ما بُني — وهذا لا يظهر في أيِّ فحصٍ آخر.");
+    console.error("✗ ما تخدمه الصفحةُ يخالف بيانَها — وهذا لا يظهر في أيِّ فحصٍ آخر.");
     console.error("  أعد توليدَ البيان ثم انشر:  node tools/apk-manifest.mjs");
   }
   exit(1);
