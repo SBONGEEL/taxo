@@ -33,6 +33,8 @@
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
+import { noteRefusal } from "@/lib/permission-walk";
+
 export type PushState = "granted" | "denied" | "unsupported";
 
 export interface PushRegistration {
@@ -111,6 +113,14 @@ export async function requestNotificationPermission(): Promise<boolean> {
   let status = await PushNotifications.checkPermissions();
   if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
     status = await PushNotifications.requestPermissions();
+    // **ويُعدّ الرفضُ هنا لا في الشاشة** (عطبٌ قِيس على الجهاز 2026-09-12):
+    // **أندرويد يقفل الحوارَ بعد رفضين مهما كان من طلبه**، وكان العدُّ في
+    // شاشة الجولة وحدَها — **فرفضتان وقعتا على حوار الدخول** (يطلبه
+    // `registerNativePush` بعد الدخول) **لم تُعدّا**، وبقي الزرُّ يقول
+    // «اسمح بالإشعارات» **وقد صار الإذنُ `USER_FIXED` فلا نافذةَ تُفتح**.
+    //
+    // **فالعدُّ في البيت الذي يمرّ به كلُّ طالب** — وهو هذا.
+    if (status.receive !== "granted") noteRefusal("notifications");
   }
   return status.receive === "granted";
 }

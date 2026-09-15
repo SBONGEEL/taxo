@@ -32,7 +32,8 @@ export function PermissionsIntroScreen() {
   const [status, setStatus] = useState<PermissionStatus | null>(null);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [blocked, setBlocked] = useState(false);
+  /** مفتاحُ الخطوة التي نفد حوارُها — **لا `boolean` للشاشة كلِّها**. */
+  const [blocked, setBlocked] = useState<string | null>(null);
 
   const read = useCallback(async () => {
     const next = await permissionStatus();
@@ -72,13 +73,23 @@ export function PermissionsIntroScreen() {
   if (!status || steps.length === 0) return null;
 
   const step = steps[Math.min(index, steps.length - 1)];
+
+  // **وحالُ المنع تُنسب إلى خطوتها لا إلى الشاشة** (عطبٌ قِيس على الجهاز
+  // 2026-09-12): كان `blocked` حالَ المكوّن، **فيبقى بعد أن تنصرف خطوتُه** —
+  // ورُئي بالعين على Note 20: نصُّ «رفضتَ هذا الإذن مرّتين» وزرُّ «فتح
+  // الإعدادات» **على خطوة «استثناء من توفير الطاقة»** وهي لم تُرفض قطّ.
+  //
+  // **وهو من عائلة «شرطٌ داخل الغلاف لا حوله»**: قائمةُ الخطوات تُعاد حسابتُها
+  // من الحال، **فتنصرف الخطوةُ ويبقى ما عُلّق عليها**. ولا يمسكه `tsc` ولا
+  // اختبارُ وحدة: الحالُ صحيحةُ النوع، **والعطبُ في عمرها لا في قيمتها**.
+  const blockedStep = blocked === step.key;
   const refusals = refusalsOf(step.key);
   // **بعد رفضين لا حوارَ يفتحه النظام** — فالزرُّ يقول الحقيقةَ ويفتح الإعداد.
   const exhausted = step.kind === "dialog" && refusals >= REFUSAL_LIMIT;
 
   const act = async () => {
     setBusy(true);
-    setBlocked(false);
+    setBlocked(null);
     try {
       // **الزرُّ يفعل ما يقوله لا ما يجاوره** (عطبٌ قِيس قبل أن يُشحن
       // 2026-09-11): كان يستدعي `BACKGROUND_STEP.request` حين ينفد الحوار —
@@ -89,7 +100,7 @@ export function PermissionsIntroScreen() {
       const after = await read();
       if (after && !step.read(after) && step.kind === "dialog") {
         const count = noteRefusal(step.key);
-        if (count >= REFUSAL_LIMIT) setBlocked(true);
+        if (count >= REFUSAL_LIMIT) setBlocked(step.key);
       }
     } catch {
       /* رفضٌ أو إغلاقٌ — يُعدّ رفضاً ولا يكسر الشاشة */
@@ -113,7 +124,7 @@ export function PermissionsIntroScreen() {
         <h1 className="mt-10 text-20 font-bold text-ink">{step.title}</h1>
         <p className="mt-10 text-12.5 leading-note text-muted">{step.body}</p>
 
-        {blocked || exhausted ? (
+        {blockedStep || exhausted ? (
           <p className="mt-14 rounded-14 border border-line bg-surface-2 px-14 py-12 text-11.5 leading-6 text-warn">
             رفضتَ هذا الإذن مرّتين، فلا يعرض النظام نافذته مرّةً أخرى. امنحه من
             إعدادات التطبيق متى شئت.
@@ -128,7 +139,7 @@ export function PermissionsIntroScreen() {
           onClick={() => void act()}
           className="pressable w-full rounded-14 bg-accent py-14 text-13 font-semibold text-on-accent disabled:opacity-60"
         >
-          {exhausted || blocked ? "فتح الإعدادات" : step.cta}
+          {exhausted || blockedStep ? "فتح الإعدادات" : step.cta}
         </button>
         <button
           type="button"
