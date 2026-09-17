@@ -137,7 +137,7 @@ export function PermissionsIntroScreen() {
           type="button"
           disabled={busy}
           onClick={() => void act()}
-          className="pressable w-full rounded-14 bg-accent py-14 text-13 font-semibold text-on-accent disabled:opacity-60"
+          className="pressable w-full rounded-14 bg-accent py-14 text-13 font-semibold text-accent-ink disabled:opacity-60"
         >
           {exhausted || blockedStep ? "فتح الإعدادات" : step.cta}
         </button>
