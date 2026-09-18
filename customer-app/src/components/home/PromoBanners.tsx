@@ -20,11 +20,24 @@
  * منقطعة، **ولا سطرَ يُكتب مكانَه** لأن «لا إعلانَ اليوم» ليست خبراً يستحقّ
  * مساحةً في أوّل شاشةٍ يفتحها المستخدم. والبلاطاتُ تصعد مكانَه.
  *
+ * **ويُسحب ويدور وحدَه** (قرارُ المالك ٢٠٢٦-٠٩-١٩ — كانت النقاطُ وحدَها تقلبه):
+ * سحبٌ أفقيٌّ يقلب الشريحة، والعموديُّ يُترك لتمرير الرئيسية، **ولمسةٌ تحرّكت
+ * لا تفتح رابطاً**. ويدور كلَّ خمس ثوانٍ ويعود إلى الأولى، **ويقف تحت الإصبع**
+ * وفي تبويبٍ مخفيّ، **ولا يدور لمن طلب تقليلَ الحركة**. **وشريحةٌ واحدةٌ بطاقةٌ
+ * ساكنة** — لا نقاطَ ولا دورانَ ولا سحب.
+ *
  * **والنقاطُ تحتها من التصميم**: تظهر حين تتعدّد اللافتاتُ لا حين تكون
  * واحدة — **ونقطةٌ واحدةٌ تحت لافتةٍ واحدةٍ تَعِد بثانيةٍ لا وجودَ لها**.
  */
 
-import { useEffect, useState } from "react";
+import {
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "@/api/client";
@@ -130,6 +143,61 @@ function OfferCard({ offer }: { offer: StorefrontOffer }) {
   );
 }
 
+/** **ثوانٍ بين شريحةٍ وأخرى** — تكفي لقراءة العنوان، ولا تطول حتى يُظنّ
+ *  الصندوقُ ساكناً. */
+const ADVANCE_MS = 5000;
+
+/** **ما دون هذا نقرةٌ لا سحب** — إصبعٌ يرتجف على الزجاج يتحرّك بكسلاتٍ ولا
+ *  يقصد شيئاً، **ونقرةٌ تُقرأ سحباً تبتلع الرابط**. */
+const SLOP_PX = 8;
+
+/** **سحبٌ يتجاوز هذا الجزءَ من العرض يقلب الشريحة** — وما دونه يرتدّ. */
+const PAGE_RATIO = 0.18;
+
+type Slide = { key: string } & (
+  | { kind: "offer"; offer: StorefrontOffer }
+  | { kind: "banner"; banner: PromoBanner }
+);
+
+/** **وجهُ الشريحة وحدَه** — الحركةُ والنقرُ في الصندوق لا هنا.
+ *
+ *  **و`loadImage` يؤجّل الصورة**: الشريحةُ الحاليّةُ والتي تليها تُجلبان،
+ *  **والباقي حين يقترب دوره** — ثلاثُ لافتاتٍ بصورها قرابةُ خمسة ميغابايت،
+ *  **وراكبٌ فتح التطبيقَ ليطلب رحلةً لا يدفعها كلَّها في أوّل ثانية**. */
+function SlideFace({ slide, loadImage }: { slide: Slide; loadImage: boolean }) {
+  if (slide.kind === "offer") return <OfferCard offer={slide.offer} />;
+  return (
+    <>
+      {/* **الصورةُ من حافةٍ إلى حافة** — والحشوةُ نزلت إلى الداخل لأجلها،
+          فبطاقةٌ بلا صورةٍ تبقى كما كانت حرفاً */}
+      {loadImage ? <BannerImage bannerId={slide.banner.id} /> : null}
+      <div className="p-14">
+        <div className="flex items-start gap-10">
+          {slide.banner.icon ? (
+            <Glyph name={slide.banner.icon} className="size-44 shrink-0 text-line" />
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <div className="text-14 font-bold text-ink">{slide.banner.title}</div>
+            {slide.banner.body ? (
+              <div className="mt-3 text-11.5 leading-note text-muted">
+                {slide.banner.body}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** **أتُنقر هذه الشريحة؟** — والعرضُ ينقر دائماً إلى شاشة الاشتراك. */
+function isOpenable(slide: Slide): boolean {
+  return (
+    slide.kind === "offer" ||
+    (slide.banner.link_kind !== "none" && slide.banner.link !== null)
+  );
+}
+
 export function PromoBanners({
   banners,
   offer = null,
@@ -138,14 +206,33 @@ export function PromoBanners({
   offer?: StorefrontOffer | null;
 }) {
   const navigate = useNavigate();
+  // **`prefers-reduced-motion` من مصدرِ Framer نفسِه** (§8) — ومن طلبه لا
+  // تدور له الشرائحُ وحدَها، ولا تنزلق: تُقلب فوراً
+  const reduceMotion = useReducedMotion() ?? false;
+
   const [at, setAt] = useState(0);
+  // **أبعدُ شريحةٍ جُلبت صورتُها** — لا تنقص، فما جُلب لا يُعاد
+  const [reach, setReach] = useState(1);
+  // **إزاحةُ الإصبع بالبكسل** — و`null` تعني «لا سحب»، وبها يقف المؤقّت
+  const [dragPx, setDragPx] = useState<number | null>(null);
+  const [hidden, setHidden] = useState(() => document.hidden);
+  // **اتجاهُ الصفحة يُقرأ لا يُفترض**: في RTL تقع الشريحةُ التاليةُ يساراً،
+  // **فالإشارةُ تنقلب** — ومكوّنٌ يفترض LTR يسحب الراكبَ إلى الخلف
+  const [dirSign, setDirSign] = useState(1);
+
+  const viewport = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{
+    id: number;
+    x: number;
+    y: number;
+    axis: "x" | "y" | null;
+  } | null>(null);
+  // **سحبٌ جرى في هذه اللمسة** — فالنقرةُ التي تليها لا تفتح شيئاً
+  const moved = useRef(false);
 
   // **العرضُ أوّلاً**: نافذتُه أقصرُ من نافذة اللافتة وأثرُه مالٌ في جيب
   // الكبتن — **ولافتةٌ تعلوه تدفعه إلى نقطةٍ لا تُنقر**
-  const slides: ({ key: string } & (
-    | { kind: "offer"; offer: StorefrontOffer }
-    | { kind: "banner"; banner: PromoBanner }
-  ))[] = [
+  const slides: Slide[] = [
     ...(offer ? [{ key: "offer", kind: "offer" as const, offer }] : []),
     ...banners.map((banner) => ({
       key: banner.id,
@@ -153,16 +240,45 @@ export function PromoBanners({
       banner,
     })),
   ];
+  const count = slides.length;
+  const current = Math.min(at, Math.max(count - 1, 0));
+  // **شريحةٌ واحدةٌ ليست دوّاراً**: لا نقاط، ولا دوران، ولا سحب
+  const carousel = count > 1;
+  const dragging = dragPx !== null;
+
+  useLayoutEffect(() => {
+    if (viewport.current) {
+      setDirSign(getComputedStyle(viewport.current).direction === "rtl" ? 1 : -1);
+    }
+  }, [carousel]);
+
+  useEffect(() => {
+    setReach((far) => Math.max(far, current + 1));
+  }, [current]);
+
+  // **تبويبٌ مخفيٌّ لا يدور** — وإلا عاد صاحبُه إلى شريحةٍ لم يختَرها
+  useEffect(() => {
+    const sync = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+
+  // **الدورانُ مؤقّتٌ واحدٌ يُعاد مع كلِّ قلب** — فشريحةٌ اختارها صاحبُها
+  // بنقطةٍ أو سحبٍ تنال مهلتَها كاملة، **والسحبُ يوقفه حتى يُرفع الإصبع**
+  useEffect(() => {
+    if (!carousel || reduceMotion || dragging || hidden) return;
+    const timer = window.setTimeout(
+      () => setAt((index) => (index + 1) % count),
+      ADVANCE_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [carousel, reduceMotion, dragging, hidden, current, count]);
+
   // **الصندوقُ كلُّه يختفي حين يفرغ** — لا إطارٌ فارغٌ ولا هيكلٌ ينتظر
-  if (slides.length === 0) return null;
+  if (count === 0) return null;
 
-  const slide = slides[Math.min(at, slides.length - 1)];
-  const openable =
-    slide.kind === "offer" ||
-    (slide.banner.link_kind !== "none" && slide.banner.link !== null);
-
-  const open = () => {
-    if (!openable) return;
+  const open = (slide: Slide) => {
+    if (!isOpenable(slide)) return;
     if (slide.kind === "offer") {
       // **مقصدُ العرضِ شاشةُ الاشتراك** — حيث الخصمُ نفسُه محسوبٌ على كلِّ
       // خطة، فلا يقع الكبتنُ على رقمٍ يخالف ما رآه
@@ -177,62 +293,148 @@ export function PromoBanners({
     window.open(slide.banner.link!, "_blank", "noopener,noreferrer");
   };
 
+  const frame = "mb-8 overflow-hidden rounded-16 border border-line bg-surface-2";
+
+  if (!carousel) {
+    const only = slides[0];
+    const openable = isOpenable(only);
+    return (
+      <div
+        onClick={openable ? () => open(only) : undefined}
+        className={`${frame} ${openable ? "pressable cursor-pointer" : ""}`}
+      >
+        <SlideFace slide={only} loadImage />
+      </div>
+    );
+  }
+
+  // ── السحب ──────────────────────────────────────────────────────────────
+  //
+  // **`touch-action: pan-y` يترك العموديَّ للمتصفح**: التمريرُ في الرئيسية
+  // لا يمرّ بهذا الكود أصلاً. **والمحورُ يُحسم بعد `SLOP_PX`**: إن غلب
+  // العموديُّ تُترك اللمسةُ كلُّها للتمرير، وإن غلب الأفقيُّ أُمسك المؤشّر.
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    gesture.current = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      axis: null,
+    };
+    moved.current = false;
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const touch = gesture.current;
+    if (!touch || touch.id !== event.pointerId) return;
+    let dx = event.clientX - touch.x;
+    const dy = event.clientY - touch.y;
+    if (touch.axis === null) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < SLOP_PX) return;
+      // **لمسةٌ تحرّكت ليست نقرةً في أيِّ محور** (قِيس ٢٠٢٦-٠٩-١٩): سحبٌ
+      // عموديٌّ بالفأرة ينتهي بـ`click` فيفتح الرابط — واللمسُ يُلغيه
+      // المتصفحُ عند التمرير، **والفأرةُ لا**
+      moved.current = true;
+      if (Math.abs(dx) <= Math.abs(dy)) {
+        touch.axis = "y";
+        gesture.current = null;
+        return;
+      }
+      touch.axis = "x";
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // **مؤشّرٌ لم يعد نشطاً** — السحبُ يكمل بلا إمساك، ولا يسقط
+      }
+    }
+    // **الطرفان يقاومان ولا يُقلبان** — سحبٌ خلف الأولى أو بعد الأخيرة
+    // يتحرّك ثلثَ الإصبع ويرتدّ، فيُفهم أن لا شيءَ هناك
+    const forward = dx * dirSign > 0;
+    if ((forward && current === count - 1) || (!forward && current === 0)) {
+      dx /= 3;
+    }
+    setDragPx(dx);
+  };
+
+  const endGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const touch = gesture.current;
+    gesture.current = null;
+    if (!touch || touch.id !== event.pointerId || touch.axis !== "x") {
+      setDragPx(null);
+      return;
+    }
+    const dx = event.clientX - touch.x;
+    const width = viewport.current?.clientWidth ?? 1;
+    if (event.type === "pointerup" && Math.abs(dx) > width * PAGE_RATIO) {
+      const step = dx * dirSign > 0 ? 1 : -1;
+      setAt(Math.min(count - 1, Math.max(0, current + step)));
+    }
+    setDragPx(null);
+  };
+
+  const transition =
+    dragging || reduceMotion
+      ? "none"
+      : "transform 450ms cubic-bezier(0.22, 0.61, 0.36, 1)";
+
   return (
     <>
       <div
-        onClick={openable ? open : undefined}
-        className={`mb-8 overflow-hidden rounded-16 border border-line bg-surface-2 ${
-          openable ? "pressable cursor-pointer" : ""
-        }`}
+        ref={viewport}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endGesture}
+        onPointerCancel={endGesture}
+        // **نقرةٌ تلي سحباً لا تفتح شيئاً** — تُمسك قبل أن تبلغ الشريحة
+        onClickCapture={(event) => {
+          if (!moved.current) return;
+          moved.current = false;
+          event.stopPropagation();
+          event.preventDefault();
+        }}
+        // **والصورةُ لا تُسحب كملفّ** بالفأرة على سطح المكتب
+        onDragStart={(event) => event.preventDefault()}
+        className={`${frame} touch-pan-y select-none`}
       >
-        {slide.kind === "offer" ? (
-          <OfferCard offer={slide.offer} />
-        ) : (
-          <>
-            {/* **الصورةُ من حافةٍ إلى حافة** — والحشوةُ نزلت إلى الداخل لأجلها،
-                فبطاقةٌ بلا صورةٍ تبقى كما كانت حرفاً */}
-            <BannerImage bannerId={slide.banner.id} />
-            <div className="p-14">
-              <div className="flex items-start gap-10">
-                {slide.banner.icon ? (
-                  <Glyph
-                    name={slide.banner.icon}
-                    className="size-44 shrink-0 text-line"
-                  />
-                ) : null}
-                <div className="min-w-0 flex-1">
-                  <div className="text-14 font-bold text-ink">
-                    {slide.banner.title}
-                  </div>
-                  {slide.banner.body ? (
-                    <div className="mt-3 text-11.5 leading-note text-muted">
-                      {slide.banner.body}
-                    </div>
-                  ) : null}
-                </div>
+        <div
+          className="flex items-start"
+          style={{
+            transform: `translateX(calc(${dirSign * current * 100}% + ${dragPx ?? 0}px))`,
+            transition,
+          }}
+        >
+          {slides.map((slide, index) => {
+            const openable = isOpenable(slide);
+            return (
+              <div
+                key={slide.key}
+                aria-hidden={index !== current}
+                onClick={openable ? () => open(slide) : undefined}
+                className={`w-full shrink-0 ${openable ? "pressable cursor-pointer" : ""}`}
+              >
+                <SlideFace slide={slide} loadImage={index <= reach} />
               </div>
-            </div>
-          </>
-        )}
+            );
+          })}
+        </div>
       </div>
 
-      {slides.length > 1 ? (
-        <div className="mb-12 flex justify-center gap-5">
-          {slides.map((item, index) => (
-            <button
-              key={item.key}
-              type="button"
-              aria-label={`لافتة ${index + 1}`}
-              onClick={() => setAt(index)}
-              className={
-                index === at
-                  ? "block h-5 w-14 rounded-3 bg-muted"
-                  : "block size-5 rounded-3 bg-line"
-              }
-            />
-          ))}
-        </div>
-      ) : null}
+      <div className="mb-12 flex justify-center gap-5">
+        {slides.map((item, index) => (
+          <button
+            key={item.key}
+            type="button"
+            aria-label={`لافتة ${index + 1}`}
+            onClick={() => setAt(index)}
+            className={
+              index === current
+                ? "block h-5 w-14 rounded-3 bg-muted"
+                : "block size-5 rounded-3 bg-line"
+            }
+          />
+        ))}
+      </div>
     </>
   );
 }
