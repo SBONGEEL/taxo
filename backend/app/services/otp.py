@@ -30,7 +30,7 @@ from app.core.config import settings
 from app.models.otp_template import OtpTemplatePurpose
 from app.services import otp_templates
 from app.core.exceptions import InvalidOtpCode, RateLimited
-from app.models.enums import CountryCode
+from app.models.enums import AccountKind, CountryCode
 from app.services import otp_limits
 from app.services.sms import get_sms_provider
 
@@ -59,6 +59,24 @@ _CODE_KEY = "otp:code:{phone}"
 _ATTEMPTS_KEY = "otp:attempts:{phone}"
 # عام لا خاص: الاختبار يقدّم الساعة دقيقةً بمحوه بدل أن ينتظرها
 COOLDOWN_KEY = "otp:cooldown:{phone}"
+
+
+def _subject(phone: str, account_kind: AccountKind) -> str:
+    """موضوعُ مفاتيح الرمز الثلاثة: الرقمُ — **ونوعُ الحساب** (§D7، 1-أ/5).
+
+    **الثغرة**: كان الموضوعُ الرقمَ وحده، فرمزٌ طُلب لحساب الزبون يصلح لاستعادة
+    حساب الراكب بالرقم نفسِه. فالرمزُ يُحفظ ويُتحقّق منه بالرقم والنوع معاً.
+
+    **و`taxo` بلا لاحقة** — المفتاحُ لكلِّ حسابٍ قائمٍ هو هو حرفاً، فلا يسقط
+    رمزٌ في الطريق ساعةَ الرفع، ولا يتغيّر مفتاحٌ يقرؤه اختبارٌ قائم. والأنواعُ
+    الأخرى تأخذ لاحقتَها، فلا يلتقي مفتاحان من نوعين أبداً.
+
+    **وسقوفُ الطلب لا تمرّ من هنا**: `otp_limits` يعدّ على الرقم وحده — الشريحةُ
+    واحدةٌ والكلفةُ واحدة (قرارُ المالك 2026-09-19).
+    """
+    if account_kind is AccountKind.TAXO:
+        return phone
+    return f"{phone}:{account_kind.value}"
 
 # نصٌّ لاتيني الأرقام عمداً: يعبر بوابات الرسائل بلا لبس ترميز، ويُقرأ في كل
 # لوحة مفاتيح
@@ -190,6 +208,7 @@ async def issue(
     country: CountryCode | None = None,
     sender: OtpSender | None = None,
     purpose: str = OtpTemplatePurpose.REGISTRATION,
+    account_kind: AccountKind = AccountKind.TAXO,
 ) -> Challenge:
     """يولّد رمزاً ويوصله عبر القناة المعطاة — أو عبر مزود الرسائل افتراضاً.
 
@@ -230,11 +249,12 @@ async def issue(
 
     channel = sender or SmsCodeSender(await get_sms_provider(session))
     code = generate_code()
+    subject = _subject(phone, account_kind)
 
     await redis.set(
-        _CODE_KEY.format(phone=phone), _digest(code), ex=CODE_TTL_SECONDS
+        _CODE_KEY.format(phone=subject), _digest(code), ex=CODE_TTL_SECONDS
     )
-    await redis.delete(_ATTEMPTS_KEY.format(phone=phone))
+    await redis.delete(_ATTEMPTS_KEY.format(phone=subject))
 
     ttl_minutes = CODE_TTL_SECONDS // 60
     # **الصياغةُ هنا لأن القالبَ في قاعدة البيانات ومن يملك الجلسةَ هو من يقرأ.**
@@ -254,14 +274,14 @@ async def issue(
             body=rendered,
         )
     except Exception:
-        await redis.delete(_CODE_KEY.format(phone=phone))
+        await redis.delete(_CODE_KEY.format(phone=subject))
         raise
 
     resend_after = await otp_limits.record(session, redis, phone, market)
     # **والمفتاحُ القديم يبقى مكتوباً**: اختباراتٌ قائمةٌ تمحوه لتتخطّى المهلة،
     # وهو أيضاً ما يقرؤه أيُّ مسارٍ لم يُنقل بعد. والمهلةُ الحقيقيةُ في
     # `otp_limits` — وهذا صدىً لها بعمرها نفسِه لا مصدرٌ ثانٍ يخالفها
-    await redis.set(COOLDOWN_KEY.format(phone=phone), "1", ex=resend_after)
+    await redis.set(COOLDOWN_KEY.format(phone=subject), "1", ex=resend_after)
     return Challenge(
         sent=True,
         expires_in=CODE_TTL_SECONDS,
@@ -269,22 +289,29 @@ async def issue(
     )
 
 
-async def verify(redis: Redis, phone: str, code: str) -> None:
+async def verify(
+    redis: Redis,
+    phone: str,
+    code: str,
+    *,
+    account_kind: AccountKind = AccountKind.TAXO,
+) -> None:
     """يتحقق من الرمز ويستهلكه — يرفع `InvalidOtpCode` وإلا لا يعيد شيئاً.
 
     الرمز يُمحى عند النجاح: رمزٌ يُقبل مرتين رمزٌ يُعاد استعماله بعد أن رآه من
     لا يملك الهاتف.
     """
-    stored = await redis.get(_CODE_KEY.format(phone=phone))
+    subject = _subject(phone, account_kind)
+    stored = await redis.get(_CODE_KEY.format(phone=subject))
     if stored is None:
         raise InvalidOtpCode()
 
-    attempts = await redis.incr(_ATTEMPTS_KEY.format(phone=phone))
+    attempts = await redis.incr(_ATTEMPTS_KEY.format(phone=subject))
     if attempts == 1:
-        await redis.expire(_ATTEMPTS_KEY.format(phone=phone), CODE_TTL_SECONDS)
+        await redis.expire(_ATTEMPTS_KEY.format(phone=subject), CODE_TTL_SECONDS)
     if attempts > MAX_ATTEMPTS:
         # يُحرق الرمز لا المحاولة وحدها: بغير ذلك يبقى الرمز حياً لمن يعيد الطلب
-        await redis.delete(_CODE_KEY.format(phone=phone))
+        await redis.delete(_CODE_KEY.format(phone=subject))
         raise RateLimited("محاولات كثيرة — اطلب رمزاً جديداً")
 
     expected = stored.decode() if isinstance(stored, bytes) else str(stored)
@@ -292,5 +319,5 @@ async def verify(redis: Redis, phone: str, code: str) -> None:
         raise InvalidOtpCode()
 
     await redis.delete(
-        _CODE_KEY.format(phone=phone), _ATTEMPTS_KEY.format(phone=phone)
+        _CODE_KEY.format(phone=subject), _ATTEMPTS_KEY.format(phone=subject)
     )

@@ -193,6 +193,7 @@ async def start_challenge(
         phone,
         channel=payload.channel,
         purpose=OtpTemplatePurpose.REGISTRATION,
+        account_kind=app_scope.account_kind_for(payload.app),
     )
     return ChallengeResponse(
         sent=challenge.sent,
@@ -276,7 +277,11 @@ async def register(
         if not payload.verification_token:
             raise InvalidInput("إثبات ملكية الرقم مطلوب للتسجيل")
         await verification.verify(
-            session, redis, phone=phone, proof=payload.verification_token
+            session,
+            redis,
+            phone=phone,
+            proof=payload.verification_token,
+            account_kind=app_scope.account_kind_for(payload.app),
         )
         verified_at = verification.verified_now()
 
@@ -323,7 +328,11 @@ async def start_email_challenge(
 
     email = normalize_email(payload.email)
     challenge = await verification.challenge_email(
-        session, redis, email, country_code=payload.country_code
+        session,
+        redis,
+        email,
+        country_code=payload.country_code,
+        account_kind=app_scope.account_kind_for(payload.app),
     )
     return ChallengeResponse(
         sent=challenge.sent,
@@ -370,7 +379,12 @@ async def register_with_email(
     if not await verification.email_signup_available(session, payload.country_code):
         raise InvalidInput("التسجيل بالبريد غير مفعَّل في هذا السوق")
 
-    await verification.verify_email(redis, email=email, code=payload.email_code)
+    await verification.verify_email(
+        redis,
+        email=email,
+        code=payload.email_code,
+        account_kind=app_scope.account_kind_for(payload.app),
+    )
 
     user = await password_strategy.register_with_email(
         session, payload, phone=phone, email=email
@@ -551,7 +565,11 @@ async def verify_my_phone(
         return UserOut.model_validate(user)
 
     await verification.verify(
-        session, redis, phone=user.phone, proof=payload.verification_token
+        session,
+        redis,
+        phone=user.phone,
+        proof=payload.verification_token,
+        account_kind=user.account_kind,
     )
     verification.mark_verified(user)
     # **وهنا يُملَك الرقمُ بعد أن كان محجوزاً** (قرارُ المالك 2026-08-31):
@@ -606,6 +624,7 @@ async def start_password_reset(
         phone,
         channel=payload.channel,
         purpose=OtpTemplatePurpose.PASSWORD_RESET,
+        account_kind=app_scope.account_kind_for(payload.app),
     )
     return ChallengeResponse(
         sent=challenge.sent,
@@ -642,7 +661,11 @@ async def reset_password(
     )
 
     await verification.verify(
-        session, redis, phone=phone, proof=payload.verification_token
+        session,
+        redis,
+        phone=phone,
+        proof=payload.verification_token,
+        account_kind=app_scope.account_kind_for(payload.app),
     )
 
     # **الحسابُ بالرقم ونوعِه** (§D9.1، 1-أ/4): الاستعادةُ من تطبيقٍ تمسّ حسابَ

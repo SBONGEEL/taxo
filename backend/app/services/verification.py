@@ -45,7 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.phone import country_for_phone
-from app.models.enums import CountryCode, FeatureKey, ProviderKey
+from app.models.enums import AccountKind, CountryCode, FeatureKey, ProviderKey
 from app.models.user import User
 from app.models.verification_campaign import SUSPENSION_CODE, SUSPENSION_MESSAGE
 from app.services import otp, settings_service
@@ -233,6 +233,7 @@ async def challenge(
     *,
     channel: str | None = None,
     purpose: str = OtpTemplatePurpose.REGISTRATION,
+    account_kind: AccountKind = AccountKind.TAXO,
 ) -> otp.Challenge:
     """يبدأ التحدي إن كان المُحقِّق يحتاج ذلك.
 
@@ -313,6 +314,7 @@ async def challenge(
                 country=market,
                 sender=provider,
                 purpose=purpose,
+                account_kind=account_kind,
             )
         except WhatsAppNumberUnanswered as exc:
             raise VerificationSendFailed(
@@ -353,7 +355,12 @@ async def challenge(
 
     if chosen == SMS_OTP:
         sent = await otp.issue(
-            session, redis, phone, country=market, purpose=purpose
+            session,
+            redis,
+            phone,
+            country=market,
+            purpose=purpose,
+            account_kind=account_kind,
         )
         return otp.Challenge(
             sent=sent.sent,
@@ -366,7 +373,12 @@ async def challenge(
 
 
 async def verify(
-    session: AsyncSession, redis: Redis, *, phone: str, proof: str
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    phone: str,
+    proof: str,
+    account_kind: AccountKind = AccountKind.TAXO,
 ) -> None:
     """يتحقق من إثبات ملكية الرقم، أو يرفع خطأً. لا يعيد شيئاً عند النجاح.
 
@@ -387,7 +399,9 @@ async def verify(
     # كان التحققُ مرتبطاً بالقناة لبطل الرمزُ بمجرد الارتداد، وذاك هو الفخُّ
     # الذي يجعل «الارتداد الآمن» غيرَ آمن
     if method in CODE_CHANNELS:
-        await otp.verify(redis, phone, proof)
+        # **والرمزُ بنوعِ الحساب** (§D7): رمزُ الزبون لا يُثبت ملكيةَ حساب الراكب.
+        # وإثباتُ Firebase أعلاه يُثبت الرقمَ وحده — حدٌّ مكتوبٌ (Q43) لا مُغلَق
+        await otp.verify(redis, phone, proof, account_kind=account_kind)
         return
 
     raise VerificationUnavailable()
@@ -456,6 +470,7 @@ async def challenge_email(
     *,
     country_code: CountryCode,
     purpose: str = OtpTemplatePurpose.REGISTRATION,
+    account_kind: AccountKind = AccountKind.TAXO,
 ) -> otp.Challenge:
     """يرسل رمزاً إلى عنوانٍ بريديّ — **ويمرّ بسقوف `otp.issue` نفسِها**.
 
@@ -482,6 +497,7 @@ async def challenge_email(
             country=country_code,
             sender=otp.EmailCodeSender(provider),
             purpose=purpose,
+            account_kind=account_kind,
         )
     except EmailError as exc:
         # **ولا ارتدادَ من البريد إلى غيره**: البريدُ نفسُه هو الارتداد — من
@@ -499,13 +515,19 @@ async def challenge_email(
     )
 
 
-async def verify_email(redis: Redis, *, email: str, code: str) -> None:
+async def verify_email(
+    redis: Redis,
+    *,
+    email: str,
+    code: str,
+    account_kind: AccountKind = AccountKind.TAXO,
+) -> None:
     """يتحقّق من رمز البريد — **بالبابِ نفسِه الذي يتحقّق من رموز الهاتف**.
 
     البصمةُ محفوظةٌ بالموضوع (العنوان هنا، الرقمُ هناك)، **وعدّادُ المحاولات
     وحرقُ الرمز واحدٌ للقناتين** — فلا ينشأ بابُ تحقّقٍ ثانٍ بسياسةٍ أضعف.
     """
-    await otp.verify(redis, email, code)
+    await otp.verify(redis, email, code, account_kind=account_kind)
 
 
 def mark_email_verified(user: User, *, email: str) -> User:

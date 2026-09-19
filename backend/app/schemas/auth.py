@@ -58,6 +58,8 @@ class EmailChallengeRequest(BaseModel):
     #: يُطبَّع في المسار بـ`core/email.normalize_email` — **بيتٌ واحد**
     email: str = Field(min_length=3, max_length=320)
     country_code: CountryCode
+    # **لأيِّ نوعِ حسابٍ هذا الرمز** (§D7، 1-أ/5) — والسكوتُ `taxo`
+    app: ClientApp | None = None
 
 
 class EmailRegisterRequest(BaseModel):
@@ -123,6 +125,9 @@ class ChallengeRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
     country_code: CountryCode | None = None
     channel: Literal["whatsapp_otp", "sms_otp"] | None = None
+    # **لأيِّ نوعِ حسابٍ هذا الرمز** (§D7، 1-أ/5): الرمزُ يُحفظ بالرقم والنوع،
+    # فلا يُثبت ملكيةَ حسابٍ من نوعٍ آخر بالرقم نفسِه. والسكوتُ `taxo`
+    app: ClientApp | None = None
 
 
 class ChallengeResponse(BaseModel):
