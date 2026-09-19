@@ -748,3 +748,66 @@ async def test_amount_mismatch_opens_a_dispute_instead_of_crediting(
     # المبلغ يبقى محجوزاً: لا يُدفع مرتين ولا يُقيَّد بلا حكم
     assert state["outstanding"] == "0.000"
     assert (await wallet_of(client, driver["headers"]))["balance"] == "0.000"
+
+
+# ------------------------------------------------ الغرضُ الذي لا يعرفه الفرع
+
+
+async def test_a_paid_order_with_a_purpose_the_card_channel_does_not_settle_moves_nothing(
+    client: AsyncClient, jordan_settings: None, jordan_wallet: None, session_factory
+) -> None:
+    """**كان كلُّ غرضٍ غيرِ الرحلة والاشتراك يُقيَّد شحناً للمحفظة** (`else:`).
+
+    العطبُ مسمّى في `SPEC-DELIVERY.md` §D7: غرضٌ يُضاف بعده — اشتراكُ تاجر أولُها
+    — كان سيصير مالاً في محفظة صاحب الطلب بلا خطأ. فالفرعُ صار تعداداً صريحاً،
+    **والمجهولُ يُرفض ولا يُقيَّد**. و`debt` هنا غرضٌ قائمٌ لا تسوّيه قناةُ البطاقة
+    (سدادُ الدَّين بكليك وحدَه)، فهو أقربُ مثالٍ حيٍّ على «غرضٍ لا يعرفه الفرع».
+    """
+    from app.core.exceptions import UnsupportedOrderPurpose
+    from app.models.enums import CountryCode, Currency, ProviderOrderPurpose
+    from app.services import card_payments
+    from app.services.card_gateway.base import OrderState
+
+    rider = await _rider(client)
+    cart_id = f"t{uuid.uuid4().hex[:20]}"
+    async with session_factory() as session:
+        session.add(
+            ProviderOrder(
+                purpose=ProviderOrderPurpose.DEBT,
+                cart_id=cart_id,
+                user_id=uuid.UUID(rider["user_id"]),
+                country_code=CountryCode.JO,
+                amount=Decimal("25.000"),
+                currency=Currency.JOD,
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        try:
+            await card_payments.apply_state(
+                session,
+                cart_id=cart_id,
+                state=OrderState(
+                    provider_order_ref="ref-unknown-purpose",
+                    settled=True,
+                    paid=True,
+                    status_text="paid",
+                    amount=Decimal("25.000"),
+                ),
+            )
+        except UnsupportedOrderPurpose as error:
+            assert error.code == "unsupported_order_purpose"
+            await session.rollback()
+        else:  # pragma: no cover - هو العطبُ نفسُه
+            await session.commit()
+            raise AssertionError("قُيِّد غرضٌ لا تعرفه قناةُ البطاقة")
+
+    # لا قيدَ في المحفظة، والطلبُ لم يُعلَّم مدفوعاً
+    assert (await wallet_of(client, rider["headers"]))["balance"] == "0.000"
+    async with session_factory() as session:
+        order = await session.scalar(
+            select(ProviderOrder).where(ProviderOrder.cart_id == cart_id)
+        )
+        assert order is not None
+        assert order.status.value == "created"

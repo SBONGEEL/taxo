@@ -395,6 +395,18 @@ class InvalidPaymentTransition(Conflict):
     message = "لا يمكن تنفيذ هذا الإجراء على حالة الدفعة الحالية"
 
 
+class UnsupportedOrderPurpose(Conflict):
+    """طلبُ دفعٍ مدفوعٌ بغرضٍ لا تسوّيه هذه القناة — **يُرفض ولا يُقيَّد**.
+
+    كان فرعُ التسوية في `card_payments.apply_state` ينتهي بـ`else:` يشحن المحفظة،
+    فكلُّ غرضٍ لا يعرفه يصير مالاً في محفظة صاحب الطلب بلا خطأ (`SPEC-DELIVERY.md`
+    §D7). والرسالةُ بلغة المشرف: لا يبلغها راكبٌ إلا بعطبٍ في الخلفية نفسِها.
+    """
+
+    code = "unsupported_order_purpose"
+    message = "غرضُ طلب الدفع لا تسوّيه هذه القناة — لم يُقيَّد شيء"
+
+
 class RideNotPayable(Conflict):
     """لا تُدفع رحلةٌ لم تكتمل — شاشة الدفع تلي `completed` (SPEC القسم 5)."""
 

@@ -45,6 +45,7 @@ from app.core.exceptions import (
     InvalidInput,
     NotFound,
     PermissionDenied,
+    UnsupportedOrderPurpose,
 )
 from app.models.enums import (
     CountryCode,
@@ -88,6 +89,17 @@ logger = logging.getLogger(__name__)
 # سقف Telr على `ivp_cart` قصير، فالمُعرّف قصيرٌ عمداً: بادئة الغرض + 18 خانة
 # ست عشرية (72 بت). لا تصادم عملياً، والقيد الفريد في القاعدة هو الحكم الأخير.
 _CART_RANDOM_BYTES = 9
+
+#: **الأغراضُ التي تسوّيها قناةُ البطاقة — بأسمائها.** وما ليس هنا يُرفض في
+#: `apply_state` ولا يُقيَّد (§D7 في `SPEC-DELIVERY.md`). ومن أضاف غرضاً يدفعه
+#: الناسُ بالبطاقة أضافه هنا **ومعه فرعُه** — وإلا رُفض طلبُه لا شُحن.
+_CARD_SETTLED_PURPOSES = frozenset(
+    {
+        ProviderOrderPurpose.RIDE_PAYMENT,
+        ProviderOrderPurpose.SUBSCRIPTION,
+        ProviderOrderPurpose.WALLET_TOPUP,
+    }
+)
 
 
 def _now() -> datetime:
@@ -460,12 +472,22 @@ async def apply_state(
     if state.amount is not None and state.amount != order.amount:
         return await _mark_amount_mismatch(session, order, payment, state.amount)
 
+    # **تعدادٌ صريحٌ لا `else`** (`SPEC-DELIVERY.md` §D7): كان كلُّ غرضٍ غيرِ
+    # الرحلة والاشتراك يُقيَّد شحناً للمحفظة، فغرضٌ يُضاف بعده يصير مالاً في
+    # محفظة صاحب الطلب بلا خطأ. **ويُرفض قبل أن يُعلَّم الطلبُ مدفوعاً** — فيبقى
+    # `created` ويُعاد الإشعارُ عليه بعد أن يُعلَّم الغرضُ هنا، ولا يُقيَّد شيء.
+    if order.purpose not in _CARD_SETTLED_PURPOSES:
+        logger.error(
+            "طلب بطاقة مدفوع بغرض لا تسوّيه القناة: %s (%s)", order.purpose, cart_id
+        )
+        raise UnsupportedOrderPurpose()
+
     order.status = ProviderOrderStatus.PAID
     if order.purpose == ProviderOrderPurpose.RIDE_PAYMENT:
         await _settle_ride_payment(session, order, payment)
     elif order.purpose == ProviderOrderPurpose.SUBSCRIPTION:
         await _activate_subscription(session, order)
-    else:
+    elif order.purpose == ProviderOrderPurpose.WALLET_TOPUP:
         await _credit_wallet_topup(session, order)
 
     if order.save_card and state.card is not None:
