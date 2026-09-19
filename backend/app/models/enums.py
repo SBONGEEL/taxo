@@ -13,6 +13,19 @@ class Currency(StrEnum):
     JOD = "JOD"
 
 
+class AccountKind(StrEnum):
+    """نوعُ الحساب — **نصفُ مفتاحه** مع الرقم (`SPEC-DELIVERY.md` §D1.4، 1-أ).
+
+    الراكبُ والكبتنُ حسابٌ واحدٌ عبر تطبيقين (`taxo`)، والزبونُ حسابٌ منفصلٌ
+    تماماً (`market`)، والتاجرُ ثالث (`merchant`، Q40). **والفصلُ بالنوع لا
+    بالتطبيق**: مفتاحٌ بالتطبيق كان سيشقّ الراكبَ عن كبتنه.
+    """
+
+    TAXO = "taxo"
+    MARKET = "market"
+    MERCHANT = "merchant"
+
+
 class UserRole(StrEnum):
     RIDER = "rider"
     DRIVER = "driver"

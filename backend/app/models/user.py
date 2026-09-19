@@ -3,13 +3,28 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, func, text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy import inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.user_role_grant import UserRoleGrant  # noqa: F401
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
-from app.models.enums import CountryCode, Gender, GenderPreference, UserRole
+from app.models.enums import (
+    AccountKind,
+    CountryCode,
+    Gender,
+    GenderPreference,
+    UserRole,
+)
 
 if TYPE_CHECKING:
     from app.models.driver import Driver
@@ -24,8 +39,18 @@ class User(UUIDMixin, TimestampMixin, Base):
     # رقمٍ لا يزاحم أحداً. **ولا يعني هذا أن رقماً اختياريٌّ لكلِّ حساب**:
     # التسجيلُ الذاتيُّ يشترطه كما كان، والاستثناءُ حسابٌ إداريٌّ يُنشأ من
     # الخادم (`admin_credentials`).
-    phone: Mapped[str | None] = mapped_column(
-        String(20), unique=True, index=True, nullable=True
+    #
+    # **والفريدُ صار مركّباً مع `account_kind`** (الترحيلة `0076`، 1-أ): الرقمُ
+    # نفسُه يحمل حساباً من كلِّ نوع، ولا يحمل حسابين من نوعٍ واحد
+    # (`uq_users_phone_account_kind` أدناه). والفهرسُ على الرقم وحده باقٍ للبحث.
+    phone: Mapped[str | None] = mapped_column(String(20), index=True, nullable=True)
+    #: **نصفُ مفتاح الحساب** — `taxo` لكلِّ حسابٍ قائمٍ وكلِّ ما تُنشئه الأبوابُ
+    #: القائمة، بالافتراض في القاعدة لا بالتخمين في الشيفرة.
+    account_kind: Mapped[AccountKind] = mapped_column(
+        pg_enum(AccountKind, "account_kind"),
+        nullable=False,
+        default=AccountKind.TAXO,
+        server_default=text("'taxo'"),
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     role: Mapped[UserRole] = mapped_column(
@@ -262,13 +287,18 @@ class User(UUIDMixin, TimestampMixin, Base):
     # **بلا حساسيةِ حالة** — `Ali@X.com` و`ali@x.com` صندوقٌ واحد؛
     # **وللمُثبَت وحدَه** — عنوانٌ كُتب ولم يُثبَت لا يحجز شيئاً، وإلا حجب من
     # كتب بريدَ غيره خطأً **صاحبَه الحقيقيَّ** عن التسجيل به.
+    #
+    # **والبريدُ المُثبَتُ فريدٌ لكلِّ نوعِ حساب** (`0076`) لا عالمياً: حسابُ
+    # الزبون حسابٌ منفصلٌ تماماً، وله أن يُثبت البريدَ الذي أثبته راكبُه.
     __table_args__ = (
         Index(
             "uq_users_email_verified",
             func.lower(email),
+            account_kind,
             unique=True,
             postgresql_where=text("email_verified_at IS NOT NULL"),
         ),
+        UniqueConstraint("phone", "account_kind", name="uq_users_phone_account_kind"),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
