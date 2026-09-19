@@ -12,7 +12,7 @@ from app.core.exceptions import (
     PhoneAlreadyRegistered,
 )
 from app.models.driver import Driver
-from app.models.enums import UserRole
+from app.models.enums import AccountKind, UserRole
 from app.models.user import User
 from app.models.user_role_grant import UserRoleGrant
 from app.schemas.auth import RegisterRequest
@@ -29,6 +29,7 @@ async def create_account(
     email: str | None = None,
     email_verified_at: datetime | None = None,
     phone_pending: bool = False,
+    account_kind: AccountKind = AccountKind.TAXO,
 ) -> User:
     """إنشاء الحساب — البابُ الوحيد، فلا يُكتب المنطق مرتين ليفترق مرتين.
 
@@ -36,7 +37,11 @@ async def create_account(
     المشرف مفتاح `otp_verification_enabled` للطوارئ (SPEC القسم 4)، ويبقى
     الحساب موسوماً في اللوحة حتى يُثبِت صاحبُه رقمه.
     """
-    existing = await session.scalar(select(User.id).where(User.phone == phone))
+    # **الرقمُ مع نوعِ الحساب** (الترحيلة `0076`، §D9.1): الرقمُ نفسُه يحمل
+    # حساباً من كلِّ نوع، والرفضُ لحسابٍ ثانٍ **من النوع نفسِه** وحدَه
+    existing = await session.scalar(
+        select(User.id).where(User.phone == phone, User.account_kind == account_kind)
+    )
     if existing is not None:
         raise PhoneAlreadyRegistered()
 
@@ -52,6 +57,7 @@ async def create_account(
             select(User.id).where(
                 func.lower(User.email) == email.lower(),
                 User.email_verified_at.is_not(None),
+                User.account_kind == account_kind,
             )
         )
         if taken is not None:
@@ -78,6 +84,7 @@ async def create_account(
 
     user = User(
         phone=phone,
+        account_kind=account_kind,
         name=data.name.strip(),
         role=UserRole(data.role),
         country_code=data.country_code,

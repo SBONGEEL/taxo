@@ -16,6 +16,7 @@ from app.core.phone import InvalidPhoneNumber, resolve_phone
 from app.models.enums import UserRole, WalletOwnerType, WalletTransactionType
 from app.models.driver import Driver
 from app.models.user import User
+from app.models.enums import AccountKind
 from app.schemas.payment import CardOrderOut, CardTopupCreate
 from app.schemas.wallet import (
     CliqTopupCreate,
@@ -185,7 +186,13 @@ async def _resolve_rider(session, phone: str, sender: User) -> User:
     except InvalidPhoneNumber as exc:
         raise NotFound("لا يوجد حساب بهذا الرقم") from exc
 
-    recipient = await session.scalar(select(User).where(User.phone == normalized))
+    # **حسابُ `taxo` وحدَه** (§D9.1، 1-أ/4): التحويلُ بين راكبين، والرقمُ قد
+    # يحمل حسابَ زبونٍ أو تاجرٍ لا صلةَ له بالمحفظة المحوَّل إليها
+    recipient = await session.scalar(
+        select(User).where(
+            User.phone == normalized, User.account_kind == AccountKind.TAXO
+        )
+    )
     if recipient is None or not recipient.has_role(UserRole.RIDER):
         raise NotFound("لا يوجد حساب بهذا الرقم")
     return recipient

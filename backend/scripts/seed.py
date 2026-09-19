@@ -40,6 +40,7 @@ from app.models.feature_flag import FeatureFlag
 from app.models.pricing import PricingRule
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
+from app.models.enums import AccountKind
 from app.models.user_role_grant import UserRoleGrant
 from app.models.vehicle_skin import RARITY_COMMON, VehicleSkin
 from app.services import campaigns
@@ -780,7 +781,7 @@ async def seed_bootstrap_admin(session: AsyncSession) -> None:
     country = CountryCode(os.environ.get("BOOTSTRAP_ADMIN_COUNTRY", "JO"))
     phone = normalize_phone(phone_raw, country)
 
-    exists = await session.scalar(select(User.id).where(User.phone == phone))
+    exists = await session.scalar(select(User.id).where(User.phone == phone, User.account_kind == AccountKind.TAXO))
     if exists is not None:
         _log(f"حساب المشرف موجود: {phone}")
         return

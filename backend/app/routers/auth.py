@@ -407,7 +407,10 @@ async def login(
         identity = f"login:username:{payload.username.strip().lower()}"
     else:
         phone = await _resolve(payload.phone, payload.country_code)
-        identity = f"login:phone:{phone}"
+        # **والسقفُ لكلِّ حساب: الرقمُ ونوعُه** (قرارُ المالك 2026-09-19، Q42) —
+        # فللرقم الواحد نافذةُ محاولاتٍ لكلِّ نوع، والحدُّ يحمي حساباً بكلمته
+        kind = app_scope.account_kind_for(payload.app)
+        identity = f"login:phone:{kind.value}:{phone}"
 
     # **ولا سقفَ على دخول اللوحة** (قرارُ المالك 2026-08-21).
     #
@@ -443,7 +446,9 @@ async def login(
             session, payload.username, payload.password
         )
     else:
-        user = await password_strategy.authenticate(session, phone, payload.password)
+        user = await password_strategy.authenticate(
+            session, phone, payload.password, account_kind=kind
+        )
 
     # **بعد كلمة المرور لا قبلها**: «هذا حسابُ كبتن» جوابٌ عن الحساب، فلا
     # يُقال إلا لمن أثبت أنه صاحبُه — نفسُ ترتيبِ العامل الثاني فوق. وقبل
@@ -640,7 +645,14 @@ async def reset_password(
         session, redis, phone=phone, proof=payload.verification_token
     )
 
-    user = await session.scalar(select(User).where(User.phone == phone))
+    # **الحسابُ بالرقم ونوعِه** (§D9.1، 1-أ/4): الاستعادةُ من تطبيقٍ تمسّ حسابَ
+    # ذلك التطبيق وحدَه، ولا تبلغ حساباً آخر بالرقم نفسِه
+    user = await session.scalar(
+        select(User).where(
+            User.phone == phone,
+            User.account_kind == app_scope.account_kind_for(payload.app),
+        )
+    )
     if user is None:
         # بعد إثبات ملكية الرقم لم يعد الكشف تعداداً للحسابات: صاحب الطلب
         # يملك الرقم فعلاً، وإخفاءُ الحقيقة عنه إرباكٌ بلا فائدة

@@ -20,6 +20,8 @@ from app.core.exceptions import (
 from app.core import password_policy
 from app.core.security import hash_password, verify_password
 from app.models.user import User
+from app.core.app_scope import account_kind_for
+from app.models.enums import AccountKind
 from app.schemas.auth import AuthMethodResponse, RegisterRequest
 from app.services import token_service
 from app.services.auth.base import create_account
@@ -77,6 +79,7 @@ class PasswordAuthStrategy:
                 validate_password(data.password, phone=phone)
             ),
             phone_verified_at=verified_at,
+            account_kind=account_kind_for(data.app),
         )
 
     async def register_with_email(
@@ -108,12 +111,23 @@ class PasswordAuthStrategy:
             email=email,
             email_verified_at=verification_now(),
             phone_pending=True,
+            account_kind=account_kind_for(data.app),
         )
 
     async def authenticate(
-        self, session: AsyncSession, phone: str, password: str
+        self,
+        session: AsyncSession,
+        phone: str,
+        password: str,
+        *,
+        account_kind: AccountKind = AccountKind.TAXO,
     ) -> User:
-        user = await session.scalar(select(User).where(User.phone == phone))
+        """**بالرقم ونوعِ الحساب** (§D9.1، 1-أ/4) — والجوابُ لغير الموجود هو
+        جوابُ الكلمة الخاطئة نفسُه (`_check`)، فلا يكشف دخولٌ إلى نوعٍ أن للرقم
+        حساباً من نوعٍ آخر."""
+        user = await session.scalar(
+            select(User).where(User.phone == phone, User.account_kind == account_kind)
+        )
         return await self._check(password, user)
 
     async def authenticate_by_username(

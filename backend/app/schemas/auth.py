@@ -160,6 +160,10 @@ class PasswordResetRequest(BaseModel):
     country_code: CountryCode | None = None
     verification_token: str = VerificationToken
     new_password: str = Password
+    # **أيُّ حسابٍ يُستعاد** (§D9.1، 1-أ/4): الرقمُ قد يحمل حساباً من كلِّ نوع،
+    # والتطبيقُ المُعلَن يقول أيَّها. **والسكوتُ `taxo`** — كلُّ تطبيقٍ قائمٍ
+    # ينادي بلا هذا الحقل ويبقى على حسابه كما كان
+    app: ClientApp | None = None
 
 
 class RefreshRequest(BaseModel):

@@ -34,12 +34,13 @@ from app.models.enums import AuditAction, CountryCode
 from app.models.security_setting import SecuritySetting
 from app.models.totp import UserRecoveryCode, UserTotp
 from app.models.user import User
+from app.models.enums import AccountKind
 from app.services import audit, inbox, token_service
 
 
 async def _reset(phone: str, *, release_enforcement: bool) -> int:
     async with SessionLocal() as session:
-        user = await session.scalar(select(User).where(User.phone == phone))
+        user = await session.scalar(select(User).where(User.phone == phone, User.account_kind == AccountKind.TAXO))
         if user is None:
             print(f"لا حساب بالرقم {phone}")
             return 1

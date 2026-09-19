@@ -49,6 +49,7 @@ from app.models.enums import (  # noqa: E402
     WalletTransactionType,
 )
 from app.models.user import User  # noqa: E402
+from app.models.enums import AccountKind  # noqa: E402
 from app.models.vehicle import Vehicle  # noqa: E402
 from app.schemas.auth import RegisterRequest  # noqa: E402
 from app.services import wallet  # noqa: E402
@@ -65,7 +66,7 @@ FALLBACK_TOPUP = Decimal("35.000")
 
 async def main() -> None:
     async with SessionLocal() as session:
-        existing = await session.scalar(select(User).where(User.phone == PHONE))
+        existing = await session.scalar(select(User).where(User.phone == PHONE, User.account_kind == AccountKind.TAXO))
         if existing is not None:
             print(f"الحسابُ موجودٌ سلفاً: {PHONE} — لا يُنشأ ثانيةً")
             return

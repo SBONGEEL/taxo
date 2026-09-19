@@ -25,12 +25,12 @@
 from __future__ import annotations
 
 from app.core.exceptions import AppError
-from app.models.enums import ClientApp, UserRole
+from app.models.enums import AccountKind, ClientApp, UserRole
 
 # **`ClientApp` انتقل إلى `models/enums.py` ويُعاد تصديرُه من هنا** (البند ٨،
 # §43): صار **عموداً في `app_releases`**، **ونموذجٌ يستورد من `core/` يقلب
 # الطبقات**. والاسمُ هنا كما كان، فلا مستوردَ تغيّر.
-__all__ = ["ClientApp", "guard"]
+__all__ = ["ClientApp", "account_kind_for", "guard"]
 
 
 # **قرارُ المالك حرفياً**: لكلِّ تطبيقٍ دورُه وحدَه، و`admin`/`support` في
@@ -94,3 +94,26 @@ def guard(roles: UserRole | frozenset[UserRole], app: ClientApp | None) -> None:
         _WHERE.get(shown, "هذا الحساب لا يدخل من هنا") if shown else
         "هذا الحساب لا يدخل من هنا"
     )
+
+
+#: **أيُّ نوعِ حسابٍ يدخله كلُّ تطبيق** (`SPEC-DELIVERY.md` §D1.4 و§D9.1، 1-أ/4).
+#: **خريطةٌ كاملةٌ على `ClientApp`** يحرسها اختبار: تطبيقٌ يُضاف بلا نوعٍ هنا
+#: يُحمِّر المجموعة ولا يقع على `taxo` صامتاً. واليومَ التطبيقاتُ الثلاثةُ كلُّها
+#: `taxo` — والسوقُ والتاجرُ يُضافان مع قيمتَيهما في `ClientApp` (المرحلة 7).
+_ACCOUNT_KIND: dict[ClientApp, AccountKind] = {
+    ClientApp.RIDER: AccountKind.TAXO,
+    ClientApp.DRIVER: AccountKind.TAXO,
+    ClientApp.PANEL: AccountKind.TAXO,
+}
+
+
+def account_kind_for(app: ClientApp | None) -> AccountKind:
+    """نوعُ الحساب الذي يعنيه طلبٌ من هذا التطبيق.
+
+    **و`None` ⇒ `taxo`** — عميلٌ لم يُعلن (أدواتُ الفحص والحِزمُ الأقدم) يبقى
+    يدخل كما كان يدخل، بالقاعدة نفسِها التي تجعل `guard` يمرّره. **وهي أسبقيةٌ
+    معلَنةٌ لا تخمين** (§22): كلُّ حسابٍ قائمٍ `taxo`، ولا تطبيقَ اليومَ لغيره.
+    """
+    if app is None:
+        return AccountKind.TAXO
+    return _ACCOUNT_KIND[app]
