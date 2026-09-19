@@ -72,28 +72,41 @@ def owner_type_for(
     المسمّى** — لا بتخمين.
 
     والإعلانُ لا يمنح شيئاً: يُفحص أن صاحبَه يملك دورَ تلك المحفظة، وإلا رُفض.
-    """
-    rider = user.has_role(UserRole.RIDER)
-    driver = user.has_role(UserRole.DRIVER)
 
+    **والخريطةُ `WALLET_ROLE` هي السؤال كلُّه** (`SPEC-DELIVERY.md` §D6، 2026-09-19):
+    كان الفحصُ `RIDER if declared is RIDER else DRIVER` — فكلُّ غرضٍ ثالثٍ يُضاف
+    كان سيُفحص بدور الكبتن صامتاً. وبلا إعلانٍ لا يُخمَّن: أكثرُ من محفظةٍ يرتدّ.
+    """
     if declared is not None:
-        needed = UserRole.RIDER if declared is WalletOwnerType.RIDER else UserRole.DRIVER
-        if not user.has_role(needed):
+        if not user.has_role(WALLET_ROLE[declared]):
             raise PermissionDenied("لا محفظة لهذا الحساب من هذا النوع")
         return declared
 
-    if rider and driver:
+    owned = owned_wallets(user)
+    if len(owned) > 1:
         # **قرارُ مالٍ غائب**: النموذج يسمح بمحفظتين لشخصٍ واحد
         # (`owner_id` يشير إلى `users.id` و`owner_type` وحدَه يفرّق)
         raise AmbiguousRole(
             "wallet_owner_undecided",
             "لم تُعلَن محفظةُ هذه العملية، والحسابُ يحمل الدورين",
         )
-    if rider:
-        return WalletOwnerType.RIDER
-    if driver:
-        return WalletOwnerType.DRIVER
+    if owned:
+        return owned[0]
     raise PermissionDenied("لا محفظة لهذا النوع من الحسابات")
+
+
+#: **من يملك أيَّ محفظة — خريطةٌ كاملةٌ على `WalletOwnerType`** (§D6 في
+#: `SPEC-DELIVERY.md`). ويحرسها `test_every_wallet_type_names_the_role_that_owns_it`:
+#: غرضٌ يُضاف إلى التعداد بلا دورٍ هنا يُحمِّر المجموعة، ولا يُفحص بدورٍ آخر.
+WALLET_ROLE: dict[WalletOwnerType, UserRole] = {
+    WalletOwnerType.RIDER: UserRole.RIDER,
+    WalletOwnerType.DRIVER: UserRole.DRIVER,
+}
+
+
+def owned_wallets(user: User) -> list[WalletOwnerType]:
+    """المحافظُ التي يملكها الحساب بأدواره — **بترتيب التعداد**، لا بأولويةٍ."""
+    return [wallet for wallet, role in WALLET_ROLE.items() if user.has_role(role)]
 
 
 def require_not_frozen(user: User) -> None:

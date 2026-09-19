@@ -151,9 +151,13 @@ async def freeze_wallet(
     payload: WalletFreezeRequest,
     admin: FinanceManager,
     session: DbSession,
+    wallet: WalletOwnerType | None = Query(
+        default=None,
+        description="أيُّ المحفظتين — يلزم لحاملِ الدورين وحدَه",
+    ),
 ) -> WalletOut:
     """تجميد المحفظة دون حظر الحساب (SPEC القسم 7/13.3)."""
-    return await _set_frozen(session, user_id, admin, True, payload.reason)
+    return await _set_frozen(session, user_id, admin, True, payload.reason, wallet)
 
 
 @router.post("/wallets/{user_id}/unfreeze", response_model=WalletOut)
@@ -162,8 +166,12 @@ async def unfreeze_wallet(
     payload: WalletFreezeRequest,
     admin: FinanceManager,
     session: DbSession,
+    wallet: WalletOwnerType | None = Query(
+        default=None,
+        description="أيُّ المحفظتين — يلزم لحاملِ الدورين وحدَه",
+    ),
 ) -> WalletOut:
-    return await _set_frozen(session, user_id, admin, False, payload.reason)
+    return await _set_frozen(session, user_id, admin, False, payload.reason, wallet)
 
 
 async def _set_frozen(
@@ -172,9 +180,16 @@ async def _set_frozen(
     admin: User,
     frozen: bool,
     reason: str | None,
+    declared: WalletOwnerType | None = None,
 ) -> WalletOut:
+    """**وإعلانُ المحفظة هنا كإعلانها في `get_wallet`** (§D6، 1-أ/2).
+
+    والتجميدُ **على الحساب** حتى الخطوة 6 (§D9.1 في `SPEC-DELIVERY.md`): فالإعلانُ
+    يختار **المحفظةَ التي يعرضها الجواب** ويُثبت أن للحساب محفظةً من ذلك النوع —
+    ولا يوحي بأن التجميدَ صار لمحفظةٍ بعينها. والسكوتُ كما كان.
+    """
     user = await _get_user(session, user_id)
-    wallet_service.owner_type_for(user)
+    wallet_service.owner_type_for(user, declared=declared)
     user.wallet_frozen = frozen
 
     details: dict[str, object] = {"wallet_frozen": frozen}
@@ -189,7 +204,7 @@ async def _set_frozen(
         details=details,
     )
     await session.commit()
-    return await _wallet_out(session, user)
+    return await _wallet_out(session, user, declared)
 
 
 @router.post("/wallets/{user_id}/adjustments", response_model=WalletTransactionOut)
