@@ -683,24 +683,32 @@ else:                               _credit_wallet_topup
 
 #### كل موضع يفترض "رقم واحد = مستخدم واحد" — وما يصير إليه
 
-| # | الموضع | اليوم | يصير |
+**مقيسٌ على شجرة WSL (`/home/loly3/prj/TAXO`، الرأس `5ccd009`، 2026-09-19)** — لا على نسخة ويندوز التي قِيس عليها الجدولُ أوّلَ مرّة (الشكلُ الثامنَ عشر، `PATTERNS.md`). والفرقُ عن قياس ويندوز في آخر القسم.
+
+| # | الموضع (WSL) | اليوم | يصير |
 |---|---|---|---|
-| 1 | `models/user.py:26-28` | `phone` بـ`unique=True` | `unique` يُنزع؛ و`UniqueConstraint("phone", "account_kind")` في `__table_args__` |
-| 2 | `models/user.py:253` | `uq_users_email_verified` على `lower(email)` | على `(lower(email), account_kind)` بالشرط نفسه |
-| 3 | `alembic/versions/0002_users_drivers_vehicles.py:35` | `ix_users_phone` فريد | ترحيلة جديدة تُسقطه وتنشئ المركّب (لا تُعدَّل `0002`) |
-| 4 | `services/auth/base.py:39` (`create_account`) | وجود الرقم ⇒ `phone_already_registered` | وجود `(phone, kind)` ⇒ الخطأ نفسه؛ ورقمٌ له حساب من النوع الآخر يُسجَّل |
-| 5 | `services/auth/password.py:111` (الدخول) | `where(User.phone == phone)` | `where(phone, account_kind = kind_of(app))` |
-| 6 | `routers/auth.py:602` (`POST /auth/password-reset`) | بالرقم | بالمفتاح المركّب، والنوع من `app` |
-| 7 | `routers/auth.py:168,207,533` (`/challenge` · `/register` · `/password-reset/challenge`) و`:492` (`/me/verify-phone`) | يطلبون الرمز بالرقم | يمرّرون النوع إلى `otp.issue/verify` (الأخير من حساب الجلسة نفسه) |
-| 8 | `services/otp.py:58-61` | مفاتيح الرمز الثلاثة بالرقم | **بالرقم والنوع** — إغلاق الثغرة (§D7) |
-| 9 | `services/otp_limits.py:48-53` | ستّ عائلات بالرقم | **بلا تغيير** — الحدود على الشريحة |
-| 10 | `routers/auth.py:369` (`login:phone:{phone}`) | سقف محاولات الدخول بالرقم | **بالرقم ونوع الحساب** (قرار المالك 2026-09-19، Q42). **وأثره المعلوم**: رقم واحد صار له ثلاث نوافذ محاولات بدل واحدة — مقبول لأن الحدّ يحمي حساباً بعينه بكلمة مروره. **ورموز OTP وسقوفها الستّ تبقى على الرقم وحده** لأن الشريحة واحدة والكلفة واحدة |
-| 11 | `services/auth/firebase_identity.verify_phone_ownership` | يعيد رقماً | بلا تغيير — مستدعوه يربطون النوع |
-| 12 | `routers/wallet.py:188` (مستقبِل التحويل) | بالرقم | `account_kind = taxo` (التحويل بين راكبين) |
-| 13 | `core/app_scope.py` (`_ROLES`) | ثلاثة تطبيقات | + خريطة `ClientApp ⇒ account_kind`؛ وتطبيق السوق ⇒ `{customer}` (يُكتب في 1-أ؟ **لا** — قيمة `ClientApp` للسوق من المرحلة 7؛ في 1-أ تُبنى الخريطة و`None ⇒ taxo` وحدهما) |
+| 1 | `models/user.py:27` | `phone` بـ`unique=True` | `unique` يُنزع؛ و`UniqueConstraint("phone", "account_kind")` في `__table_args__` |
+| 2 | `models/user.py:267` | `uq_users_email_verified` على `lower(email)` | على `(lower(email), account_kind)` بالشرط نفسه |
+| 3 | `alembic/versions/0002_users_drivers_vehicles.py:35` | `ix_users_phone` فريد | ترحيلة جديدة **`0076`** (آخرُ رقمٍ فعليٍّ في WSL `0075_account_deactivation`) تُسقطه وتنشئ المركّب |
+| 4 | `services/auth/base.py:39` (`create_account`) | وجود الرقم ⇒ `phone_already_registered` | وجود `(phone, kind)` ⇒ الخطأ نفسه |
+| 5 | `services/auth/password.py:116` (الدخول) | `where(User.phone == phone)` | `where(phone, account_kind = kind_of(app))` |
+| 6 | `routers/auth.py:643` (`POST /auth/password-reset`، الباب `:613`) | بالرقم | بالمفتاح المركّب، والنوع من `app` |
+| 7 | `routers/auth.py:169` (`/challenge`) · `:243` (`/register`) · `:574` (`/password-reset/challenge`) · `:533` (`/me/verify-phone`)؛ ونداءات `verification.verify` في `:278` · `:548` · `:639` | يطلبون الرمز ويتحقّقون بالرقم | يمرّرون النوع إلى `verification` ← `otp.issue/verify` (`services/verification.py:309,355,390,478,508`) |
+| 8 | `services/otp.py:58,59,61` | مفاتيح الرمز الثلاثة بالرقم | **بالرقم والنوع** — إغلاق الثغرة (§D7) |
+| 9 | `services/otp_limits.py:48-53` | ستّ عائلات بالرقم | **بلا تغيير** |
+| 10 | `routers/auth.py:410` (`login:phone:{phone}`) | سقف محاولات الدخول بالرقم | **بالرقم ونوع الحساب** (Q42) |
+| 11 | `services/auth/firebase_identity.py:23` (`verify_phone_ownership`) | يعيد رقماً | بلا تغيير — **ولا يُربط بالنوع ولا يُستهلك** (حدٌّ للخطوة 5، يُكتب في §D7) |
+| 12 | `routers/wallet.py:188` (مستقبِل التحويل) | بالرقم | `account_kind = taxo` |
+| 13 | `core/app_scope.py:39` (`_ROLES`) | ثلاثة تطبيقات | + خريطة `ClientApp ⇒ account_kind`، و`None ⇒ taxo` |
 | 14 | `scripts/seed.py:783` · `scripts/provision_round_captain.py:68` · `scripts/totp_reset.py:42` | بالرقم | `account_kind = taxo` صراحةً |
-| 15 | البحث الإداري بالرقم (`ilike`) — تسعة مواضع (§D6.1) | قوائم | بلا تغيير في المنطق؛ ويُعرض النوع بجانب الرقم |
-| 16 | `/auth/handoff` و`/handoff/exchange` (`routers/auth.py:822,846`) | الحساب نفسه بين تطبيقين | بلا تغيير — لا يعبر بين نوعين، ويُختبر أنه لا يعبر |
+| 15 | البحث بالرقم (`ilike`) — **ثمانية مواضع**: `services/admin_search.py:69,125,157` · `routers/admin_users.py:801,938` · `services/ride_log.py:136,142` · `services/vehicle_skins.py:192` | قوائم | بلا تغيير في المنطق؛ ويُعرض النوع بجانب الرقم |
+| 16 | `/auth/handoff` و`/handoff/exchange` (`routers/auth.py:863,887`) | الحساب نفسه بين تطبيقين | بلا تغيير — ويُختبر أنه لا يعبر بين نوعين |
+
+**الفرقُ عن قياس نسخة ويندوز** (`D:\prj\TAXO` عند `5eadb43`):
+- **لم يتغيّر موضعُه (7 صفوف)**: 3 · 4 · 8 · 9 · 11 · 12 · 14.
+- **تغيّر سطرُه والمعنى واحد (8 صفوف)**: 1 (`26→27`) · 2 (`253→267`) · 5 (`111→116`) · 6 (`602→643`) · 7 (`168→169`، `207→243`، `533→574`، `492→533`، ونداءات `verification` كلُّها) · 10 (`369→410`) · 13 (`_ROLES` مسمّى بسطره `39`) · 16 (`822,846→863,887`).
+- **تغيّر شكلُه (صفٌّ واحد، 15)**: كانت تسعة مواضع ⇒ **ثمانية**: **اختفى** `admin_users.py:139,417` (صارا يمرّان بالمساعد) و**ظهر** `admin_search.py:157` (المساعد نفسُه).
+- **ولم يظهر موضعٌ جديدٌ يفترض التفرّد** في الإيداعات الـ99 بعد `5eadb43` (بحثٌ في الفرق عن `User.phone` و`phone ==` و`:{phone}`: سطرٌ واحد، هو مساعد البحث).
 
 #### ترتيب العمل — خطوة خطوة، وما يُقاس بعد كلٍّ
 
