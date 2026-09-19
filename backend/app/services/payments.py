@@ -422,7 +422,11 @@ async def _pay_from_wallet(
 
     # القفل قبل قراءة الرصيد: رصيدٌ يُقرأ ثم يُخصم منه لاحقاً رصيدٌ قديم
     await wallet.lock_wallet(session, rider.id)
-    balance = await wallet.balance_of(session, rider)
+    # **تُعلَن كما يعلنها القيدُ الذي يليها** (`confirm`: `owner_type=RIDER`) —
+    # كانت بلا إعلان فأصابت ذا الدور الواحد بالصدفة، وردّت حاملَ الدورين ٤٠٩
+    # `wallet_owner_undecided` والسياقُ يعرف الجواب: أجرةُ رحلته يدفعها راكباً
+    # (عطبُ رحلاتٍ قائمٌ منذ `7bea224`، `SPEC-DELIVERY.md` §D6)
+    balance = await wallet.balance_of(session, rider, declared=WalletOwnerType.RIDER)
     if balance <= 0:
         raise InsufficientBalance("لا رصيد في محفظتك — اختر قناة أخرى")
 

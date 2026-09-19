@@ -222,7 +222,19 @@ async def _move(
     # يُسلِّم أو سلّم بلا أن يقبض. **والترتيبُ يُعكس وحدَه**: الدائنُ أولاً كي
     # لا يرفض `balance_after >= 0` خصماً يغطّيه الدائنُ الذي لم يُكتب بعد
     same_wallet = payer.id == beneficiary.id
-    if not same_wallet and await wallet.balance_of(session, payer) < charge.amount:
+    # **المحفظةُ التي يُقرأ رصيدُها هي التي يُكتب عليها القيد** (`debit` أدناه) —
+    # كانت القراءةُ بلا إعلان، فمدينٌ بدورين أسقط الإلغاءَ كلَّه ٤٠٩ (عطبُ رحلاتٍ
+    # قائمٌ منذ `7bea224`، `SPEC-DELIVERY.md` §D6). ومتغيّرٌ واحدٌ للقراءة والكتابة
+    payer_wallet = (
+        WalletOwnerType.DRIVER
+        if charge.carrier_driver_id is not None
+        else WalletOwnerType.RIDER
+    )
+    if (
+        not same_wallet
+        and await wallet.balance_of(session, payer, declared=payer_wallet)
+        < charge.amount
+    ):
         return False
 
     key = f"cancellation:{charge.id}"
@@ -248,12 +260,9 @@ async def _move(
             # **المدينُ يتبدّل، والصفُّ يختمه لا الدور**: بعد تسليمٍ نقديٍّ
             # يصير المطلوبُ من **الحامل** (كبتن)، وقبله من الراكب — وهو ما
             # يقرأه `_debtor_user` من `carrier_driver_id`. فالمحفظةُ تُشتقّ من
-            # الختم نفسِه، **فلا تفترق قراءتان لصفٍّ واحد**.
-            owner_type=(
-                WalletOwnerType.DRIVER
-                if charge.carrier_driver_id is not None
-                else WalletOwnerType.RIDER
-            ),
+            # الختم نفسِه، **فلا تفترق قراءتان لصفٍّ واحد** — ولا القراءةُ
+            # والكتابة: المتغيّرُ نفسُه الذي قرأ الرصيدَ أعلاه
+            owner_type=payer_wallet,
             tx_type=WalletTransactionType.CANCELLATION_FEE,
             amount=-charge.amount,
             ride_id=charge.ride_id,
