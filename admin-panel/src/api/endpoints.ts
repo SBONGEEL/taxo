@@ -772,16 +772,33 @@ export const listWalletTransactions = (
  *
  * والسببُ اختياريٌّ في الخلفية، ويُرسل حين يكتبه المشرف: قيدُ تدقيقٍ يقول
  * «جُمّدت» بلا «لماذا» نصفُ قيد.
+ *
+ * **و`wallet` يقول أيَّ محفظةٍ تُجمَّد** (1-أ/6): التجميدُ صار صفةَ محفظةٍ لا
+ * صفةَ حساب، فحاملُ الدورين تُجمَّد محفظتُه المشبوهةُ وحدَها. **وبلا هذا
+ * المُعامِل يرتدّ البابُ ٤٠٩ لحاملِ الدورين** — فلا يستطيع مشرفُ المال تجميدَ
+ * شيءٍ أصلاً، وهو بابٌ بلا زرّ. والسكوتُ كما كان لصاحب الدور الواحد.
  */
-export const freezeWallet = (userId: string, reason?: string) =>
-  api.post<Wallet>(`/admin/wallets/${userId}/freeze`, {
-    reason: reason ?? null,
-  });
+export const freezeWallet = (
+  userId: string,
+  reason?: string,
+  wallet?: WalletOwnerType,
+) =>
+  api.post<Wallet>(
+    `/admin/wallets/${userId}/freeze`,
+    { reason: reason ?? null },
+    { query: { wallet } },
+  );
 
-export const unfreezeWallet = (userId: string, reason?: string) =>
-  api.post<Wallet>(`/admin/wallets/${userId}/unfreeze`, {
-    reason: reason ?? null,
-  });
+export const unfreezeWallet = (
+  userId: string,
+  reason?: string,
+  wallet?: WalletOwnerType,
+) =>
+  api.post<Wallet>(
+    `/admin/wallets/${userId}/unfreeze`,
+    { reason: reason ?? null },
+    { query: { wallet } },
+  );
 
 // ------------------------------------------------------ الاشتراكات والباقات
 

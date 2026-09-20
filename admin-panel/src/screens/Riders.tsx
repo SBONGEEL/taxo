@@ -316,12 +316,17 @@ function RiderDrawer({
     setError(null);
     try {
       const written = reason.trim() || undefined;
+      // **ومحفظةُ الراكب باسمها** (1-أ/6): هذا درجُ الراكب، والتجميدُ صار
+      // صفةَ محفظةٍ — فمحفظةُ كبتنه (إن كان كبتناً) لا تتأثّر، **ولها زرُّها
+      // في درجه**. وبلا الإعلان يرتدّ البابُ ٤٠٩ لحاملِ الدورين
       setWallet(
         wallet.frozen
-          ? await unfreezeWallet(user.id, written)
-          : await freezeWallet(user.id, written),
+          ? await unfreezeWallet(user.id, written, "rider")
+          : await freezeWallet(user.id, written, "rider"),
       );
-      setNote(wallet.frozen ? "رُفع تجميد المحفظة" : "جُمّدت المحفظة");
+      setNote(
+        wallet.frozen ? "رُفع تجميد محفظة الراكب" : "جُمّدت محفظة الراكب",
+      );
     } catch (caught) {
       form.capture(caught, "تعذّر التنفيذ");
     }
@@ -364,7 +369,9 @@ function RiderDrawer({
           {user.phone_verified ? null : (
             <Badge tone="warn">رقمٌ غير مُثبت</Badge>
           )}
-          {wallet?.frozen ? <Badge tone="warn">محفظةٌ مجمّدة</Badge> : null}
+          {wallet?.frozen ? (
+            <Badge tone="warn">محفظةُ الراكب مجمّدة</Badge>
+          ) : null}
         </div>
 
         {/* **الملفُّ الشخصيُّ الكامل** (§37، البند ١) — **ومقابلُ درج الكبتن
@@ -411,7 +418,7 @@ function RiderDrawer({
                     : "border-warn text-warn",
                 )}
               >
-                {wallet.frozen ? "رفع التجميد" : "تجميد المحفظة"}
+                {wallet.frozen ? "رفع التجميد" : "تجميد محفظة الراكب"}
               </button>
             ) : null}
           </div>

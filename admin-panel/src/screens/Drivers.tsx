@@ -695,7 +695,14 @@ function DriverDrawer({
         <ActiveRideSection driverId={row.driver_id} />
         <VehiclesSection driverId={row.driver_id} />
         <SubscriptionSection driverId={row.driver_id} />
-        <WalletSection userId={row.user_id} side="driver" />
+        {/* **وزرُّ التجميد هنا** (1-أ/6): التجميدُ صار صفةَ محفظةٍ، وزرُّ
+            درج الراكب يجمّد محفظةَ الراكب وحدَها — فبغير هذا لا طريقَ في
+            اللوحة إلى محفظة الكبتن. **ولـ`admin` وحدَه** كبقيّة قرارات المال */}
+        <WalletSection
+          userId={row.user_id}
+          side="driver"
+          canDecide={canDecide}
+        />
         <MoneyOwedSection driverId={row.driver_id} />
         <RidesSection side="driver" id={row.driver_id} />
         <ChargesSection userId={row.user_id} country={row.country_code} />

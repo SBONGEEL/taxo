@@ -11,6 +11,7 @@ import { useState } from "react";
 import { ApiError } from "@/api/client";
 import {
   blockUser,
+  freezeWallet,
   getUser,
   getWallet,
   listCancellationCharges,
@@ -18,6 +19,7 @@ import {
   listWalletTransactions,
   notifyUser,
   unblockUser,
+  unfreezeWallet,
   updateUserProfile,
 } from "@/api/endpoints";
 import type { CountryCode, User, WalletOwnerType } from "@/api/types";
@@ -142,19 +144,30 @@ export function AccountSection({
 
 /** قسمُ «المحفظة والدفتر» — **الرصيدُ مجموعُ الدفتر لا عمود**.
  *
- * **ولا زرَّ تجميدٍ هنا**: للتجميد بابُه في درج الراكب حيث يُكتب سببُه —
- * **وزرٌّ ثانٍ للفعل نفسِه** يجعل نصفَ التجميدات بلا سبب.
+ * **وصار فيه زرُّ التجميد** (1-أ/6) — وكان مكتوباً هنا أنه لا زرَّ فيه لأن
+ * البابَ في درج الراكب **وكان يجمّد الحساب كلَّه، فيقع على محفظة الكبتن
+ * ضمناً**. وبعد أن صار التجميدُ صفةَ محفظةٍ، **زرُّ درج الراكب يجمّد محفظةَ
+ * الراكب وحدَها** — فلو بقي وحدَه لَما بقي في اللوحة طريقٌ إلى محفظة الكبتن
+ * أصلاً: **بابٌ بلا زرّ**، ومحفظةٌ مشبوهةٌ لا يملك مشرفُ المال إيقافَها.
+ *
+ * **وسببُه معه لا بعده**: تجميدٌ بلا سببٍ في سجلّ التدقيق نصفُ قيد.
  */
 export function WalletSection({
   userId,
   side,
+  canDecide = false,
 }: {
   userId: string;
+  /** **أيملك الناظرُ قرارَ المال؟** — والزرُّ يختفي عمّن لا يملكه. */
+  canDecide?: boolean;
   /** **أيُّ محفظةٍ يعرض هذا الدرج** — درجُ الكبتن محفظتَه، ودرجُ الراكب
    *  محفظتَه. **وحسابٌ يحمل الدورين بلا إعلانٍ يرتدّ ٤٠٩** فتبقى البطاقةُ
    *  على دوّارةٍ أبداً (§46٫٦). */
   side: WalletOwnerType;
 }) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [frozen, setFrozen] = useState<boolean | null>(null);
   const load = useLoader(
     async () => ({
       wallet: await getWallet(userId, side),
@@ -168,16 +181,55 @@ export function WalletSection({
       hint="رصيدٌ محسوبٌ من الدفتر لا عمودٌ مخزَّن — ولا يُعدَّل قيدٌ بل يُكتب قيدٌ مضاد."
       load={load}
     >
-      {({ wallet, ledger }) => (
+      {({ wallet, ledger }) => {
+        const isFrozen = frozen ?? wallet.frozen;
+        return (
         <>
           <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
             <div className="text-22 font-bold text-ink">
               {money(wallet.balance, wallet.currency)}
             </div>
-            {wallet.frozen ? (
+            {isFrozen ? (
               <p className="mt-6">
-                <Badge tone="warn">محفظةٌ مجمّدة</Badge>
+                <Badge tone="warn">
+                  {side === "driver" ? "محفظةُ الكبتن مجمّدة" : "محفظةٌ مجمّدة"}
+                </Badge>
               </p>
+            ) : null}
+            {canDecide ? (
+              <>
+                <div className="mt-10">
+                  <Field
+                    label="السبب"
+                    name="freeze-reason"
+                    placeholder="يدخل سجل التدقيق ولا يصل صاحب الحساب"
+                    value={reason}
+                    maxLength={255}
+                    onChange={(event) => setReason(event.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    const written = reason.trim() || undefined;
+                    void (
+                      isFrozen
+                        ? unfreezeWallet(userId, written, side)
+                        : freezeWallet(userId, written, side)
+                    )
+                      .then((next) => setFrozen(next.frozen))
+                      .finally(() => setBusy(false));
+                  }}
+                  className={cn(
+                    "mt-10 w-full rounded-10 border py-8 text-11.5 font-semibold disabled:opacity-60",
+                    isFrozen ? "border-line text-ink" : "border-warn text-warn",
+                  )}
+                >
+                  {isFrozen ? "رفع التجميد" : "تجميد محفظة الكبتن"}
+                </button>
+              </>
             ) : null}
           </div>
           <div className="mt-9">
@@ -209,7 +261,8 @@ export function WalletSection({
             <CappedNote shown={ledger.length} cap={LEDGER_CAP} />
           </div>
         </>
-      )}
+        );
+      }}
     </ProfileSection>
   );
 }
