@@ -25,7 +25,10 @@ from app.models.commission import CommissionSetting
 from app.models.device import DeviceToken
 from app.models.deactivation import DeactivationRequest
 from app.models.driver import REQUIRED_DOCUMENT_TYPES, Driver, DriverDocument
-from app.models.enums import (
+from app.models.enums import (  # noqa: F401
+    ErrorKind,
+    ErrorPlatform,
+    ErrorStatus,
     AdvanceStatus,
     AuditAction,
     CancellationChargeStatus,
@@ -194,6 +197,12 @@ __all__ = [
     "User",
     "UserNotification",
     "UserRecoveryCode",
+    "ErrorEvent",
+    "ErrorGroup",
+    "ErrorGroupDevice",
+    "ErrorKind",
+    "ErrorPlatform",
+    "ErrorStatus",
     "UserRole",
     "UserTotp",
     "Vehicle",
@@ -213,4 +222,9 @@ from app.models.privacy import (  # noqa: F401
     OrgProfile,
     PrivacyPolicy,
     UserPolicyConsent,
+)
+from app.models.error_report import (  # noqa: F401
+    ErrorEvent,
+    ErrorGroup,
+    ErrorGroupDevice,
 )
