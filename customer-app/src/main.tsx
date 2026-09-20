@@ -5,6 +5,7 @@ import App from "@/App";
 import "@/index.css";
 import { listenForHandoff } from "@/lib/handoff-listener";
 import { trackVisualViewport } from "@/lib/viewport";
+import { installCrashReports } from "@/lib/crash-reports";
 
 // **يوقف نبضَ الخريطة حين يغيب التطبيق** (`index.css`: `html.is-hidden`).
 // `requestAnimationFrame` تتوقف وحدها في الخلفية، أمّا حركاتُ CSS فتستمر في
@@ -35,3 +36,7 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
 
 // **يُسجَّل مرةً عند الإقلاع** — قبل أي شاشة، فالنيّةُ قد تسبق الرسم
 listenForHandoff();
+
+// **قبل أيِّ شاشة**: عطبٌ في الإقلاع نفسِه يقع قبل أن تُرسم أولُ ورقة،
+// وتركيبٌ داخل مكوّنٍ يفوته ما سقط قبله.
+installCrashReports("rider");

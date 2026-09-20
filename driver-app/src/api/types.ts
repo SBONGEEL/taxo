@@ -1140,3 +1140,29 @@ export interface RequiredPolicy {
   body_ar: string;
   published_at: string | null;
 }
+
+/** حمولةُ تقرير العطب — **تعريفٌ واحدٌ يقرؤه البابُ والمُرسِل**.
+ *
+ * ونسختان تفترقان أوّلَ حقلٍ يُضاف، **فيُرسل العميلُ ما لا يقبله الباب**.
+ * والخلفيةُ تُسقط ما ليس هنا أصلاً (`schemas/error_report.py`) — فهذا
+ * التعريفُ **مرآةُ قائمةٍ بيضاءَ لا مصدرُها**.
+ */
+export type ErrorReportBody = {
+  app: "rider" | "driver" | "panel";
+  kind: "error" | "rejection" | "boundary" | "user_report";
+  platform: "android" | "ios" | "web";
+  release?: string;
+  channel?: string;
+  os_version?: string;
+  device_hash: string;
+  route?: string;
+  name: string;
+  message: string;
+  stack?: string;
+  component_stack?: string;
+  occurred_at: string;
+  online: boolean;
+  repeat: number;
+  request_id?: string;
+  note?: string;
+};

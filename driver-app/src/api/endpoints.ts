@@ -8,6 +8,7 @@ import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
 import { API_URL, api, upload } from "@/api/client";
 import type {
+  ErrorReportBody,
   CliqDeclare,
   CliqSubscriptionClaim,
   MyProgress,
@@ -600,4 +601,12 @@ export const getAppVersion = (
   api.get<AppVersion>("/public/app-version", {
     anonymous: true,
     query: build === null ? { app } : { app, build },
+  });
+
+// ------------------------------------------------- تقاريرُ الأعطال (§D10)
+
+/** **بلا جلسة بقصد**: الشاشةُ التي تسقط أكثرَ من غيرها هي شاشةُ الدخول. */
+export const postErrorReport = (body: ErrorReportBody) =>
+  api.post<{ accepted: boolean }>("/telemetry/errors", body, {
+    anonymous: true,
   });

@@ -15,6 +15,8 @@
  * المضيف في التطوير، وجلسةٌ تدهس جلسةً تُخرج أحدها من حسابه بلا سبب ظاهر.
  */
 
+import { captureRequestId } from "@/lib/request-id";
+
 // **ولا احتياطَ صامتٌ لعنوان** (أربعُ نسخ، 2026-08-26): كان هنا
 // `?? "http://127.0.0.1:8001"` — **فبناءٌ نُسي فيه المتغيّرُ ينجح ويُشحن**،
 // ويفتح صاحبُ الهاتف تطبيقاً يخاطب **هاتفَه نفسَه**. وهي بعينها العلّةُ التي
@@ -274,6 +276,10 @@ async function send<T>(
     }
     throw networkError(error);
   }
+
+  // **الخيطُ إلى سطر الخلفية** (المرحلة صفر): يُلتقط من كلِّ ردّ،
+  // فحين يسقط شيءٌ بعده يحمل التقريرُ رقماً يُبحث به في السجل.
+  captureRequestId(response.headers.get("x-request-id"));
 
   if (response.status === 401 && retry && !options.anonymous) {
     if (await refreshOnce()) return send<T>(path, options, false);

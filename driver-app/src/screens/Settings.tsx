@@ -45,11 +45,13 @@ import {
 } from "@/lib/sound";
 import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
 
 export function SettingsScreen() {
   const goBack = useGoBack();
   const { profile, refresh } = useDriver();
   const { choice, toggle } = useTheme();
+  const [crashReports, setCrashReports] = useState(crashReportsEnabled);
   const { pink, available, setPink } = useBrand();
   const { user, biometry, setBiometric } = useSession();
   const [bioError, setBioError] = useState<string | null>(null);
@@ -243,6 +245,19 @@ export function SettingsScreen() {
             }}
           />
         </div>
+      </section>
+
+      <section className="mb-12 card p-15">
+        <SoundToggle
+          title="إرسال تقارير الأعطال"
+          hint="تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يقول أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته."
+          on={crashReports}
+          onToggle={() => {
+            const next = !crashReports;
+            setCrashReportsEnabled(next);
+            setCrashReports(next);
+          }}
+        />
       </section>
 
       <section className="mb-12 card p-15">

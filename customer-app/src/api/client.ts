@@ -12,6 +12,8 @@
  * 3. **العنوان**: مسارٌ واحد `/api/v1` في مكانٍ واحد.
  */
 
+import { captureRequestId } from "@/lib/request-id";
+
 // **ولا احتياطَ صامتٌ لعنوان** (أربعُ نسخ، 2026-08-26): كان هنا
 // `?? "http://127.0.0.1:8001"` — **فبناءٌ نُسي فيه المتغيّرُ ينجح ويُشحن**،
 // ويفتح صاحبُ الهاتف تطبيقاً يخاطب **هاتفَه نفسَه**. وهي بعينها العلّةُ التي
@@ -330,6 +332,10 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
     }
     throw networkError(error);
   }
+
+  // **الخيطُ إلى سطر الخلفية** (المرحلة صفر): يُلتقط من كلِّ ردّ،
+  // فحين يسقط شيءٌ بعده يحمل التقريرُ رقماً يُبحث به في السجل.
+  captureRequestId(response.headers.get("x-request-id"));
 
   if (response.status === 401 && retry && !options.anonymous) {
     if (await refreshOnce()) return send<T>(path, options, false);

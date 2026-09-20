@@ -7,6 +7,7 @@
 import { api, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  ErrorReportBody,
   AppConfig,
   AppVersion,
   MyReferrals,
@@ -483,3 +484,12 @@ export const requestDeactivation = (reason?: string) =>
 /** يسحب طلبَه ما دام قيد المراجعة. */
 export const cancelDeactivation = () =>
   api.del<DeactivationRequest>("/account/deactivation");
+
+
+// ------------------------------------------------- تقاريرُ الأعطال (§D10)
+
+/** **بلا جلسة بقصد**: الشاشةُ التي تسقط أكثرَ من غيرها هي شاشةُ الدخول. */
+export const postErrorReport = (body: ErrorReportBody) =>
+  api.post<{ accepted: boolean }>("/telemetry/errors", body, {
+    anonymous: true,
+  });

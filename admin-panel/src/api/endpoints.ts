@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  ErrorReportBody,
   AdminSkin,
   BundledSkinAsset,
   SkinArtworkPreview,
@@ -1603,3 +1604,11 @@ export const readSite = () => api.get<SiteSettings>("/admin/site");
 /** **ما لم يُرسَل لا يُمسّ** — والخلفيةُ تقرأ `exclude_unset`. */
 export const updateSite = (body: SiteUpdate) =>
   api.patch<SiteSettings>("/admin/site", body);
+
+// ------------------------------------------------- تقاريرُ الأعطال (§D10)
+
+/** **بلا جلسة بقصد**: الشاشةُ التي تسقط أكثرَ من غيرها هي شاشةُ الدخول. */
+export const postErrorReport = (body: ErrorReportBody) =>
+  api.post<{ accepted: boolean }>("/telemetry/errors", body, {
+    anonymous: true,
+  });

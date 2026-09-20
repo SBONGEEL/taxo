@@ -15,6 +15,8 @@
  * المضيف في التطوير، وجلسةٌ تدهس جلسةً تُخرج أحدهما من حسابه بلا سبب ظاهر.
  */
 
+import { captureRequestId } from "@/lib/request-id";
+
 /** **أصلُ الخلفية** — يُصدَّر لأن رسمات المركبات ملفاتٌ تخدمها الخلفيةُ لا
  *  الحزمة: في الإنتاج التطبيقُ على `driver.tajora.ly` والخلفيةُ على
  *  `api.tajora.ly`، فمسارٌ نسبيٌّ يُبنى على أصل الصفحة يقع على موقعٍ لا صورةَ
@@ -372,6 +374,10 @@ async function send<T>(
     }
     throw networkError(error);
   }
+
+  // **الخيطُ إلى سطر الخلفية** (المرحلة صفر): يُلتقط من كلِّ ردّ،
+  // فحين يسقط شيءٌ بعده يحمل التقريرُ رقماً يُبحث به في السجل.
+  captureRequestId(response.headers.get("x-request-id"));
 
   if (response.status === 401 && retry && !options.anonymous) {
     if (await refreshOnce()) return send<T>(path, options, false);

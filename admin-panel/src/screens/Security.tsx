@@ -44,6 +44,7 @@ import { moment } from "@/lib/format";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { useSession } from "@/lib/session";
 import { digits, cn } from "@/lib/utils";
+import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
 
 /** حقلُ الرمز بقيم `DESIGN.md` §2.3 — تباعدُ `.42em` ومقاسُ 26. */
 function CodeInput({
@@ -542,6 +543,7 @@ function PolicyCard({
 }
 
 export function SecurityScreen() {
+  const [crashReports, setCrashReports] = useState(crashReportsEnabled);
   const { isAdmin, refreshFactor } = useSession();
   const [status, setStatus] = useState<TotpStatus | null>(null);
   const [policy, setPolicy] = useState<SecurityPolicy | null>(null);
@@ -605,6 +607,29 @@ export function SecurityScreen() {
       {/* **النسخُ الاحتياطي هنا لا في «الإعدادات»**: ذاك مكانُ ما يحكم سلوكَ
           السوق، وهذا — كالعامل الثاني — **ما يحمي النظامَ من فقدٍ لا رجعةَ فيه**.
           و`admin` حصراً: ملفٌ فيه كلُّ أرقام المستخدمين ودفترُ المحافظ */}
+      {/* **تقاريرُ الأعطال — لكلِّ من يدخل اللوحة لا للمالك وحدَه**:
+          الشاشةُ تسقط عند من يستعملها، والمفتاحُ من يملكه هو من يقع عليه.
+          وموضعُه هنا لأن «ما يخصّ جهازي» أختُ «ما يخصّ دخولي» */}
+      <section className="mt-24 rounded-16 border border-line bg-surface p-16">
+        <div className="flex items-center justify-between gap-12">
+          <div className="min-w-0">
+            <h2 className="text-15 font-bold text-ink">إرسال تقارير الأعطال</h2>
+            <p className="mt-4 text-12.5 leading-note text-muted">
+              تقريرٌ تقنيٌّ بلا رقمٍ ولا موقعٍ ولا مبلغ — يقول أين توقّفت
+              الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته.
+            </p>
+          </div>
+          <Switch
+            checked={crashReports}
+            label="إرسال تقارير الأعطال"
+            onChange={(next) => {
+              setCrashReportsEnabled(next);
+              setCrashReports(next);
+            }}
+          />
+        </div>
+      </section>
+
       {isAdmin ? (
         <div className="mt-24">
           {/* **حسابُ الدخول قبل العامل الثاني**: «ما يخصّ دخولي» سؤالٌ واحد */}

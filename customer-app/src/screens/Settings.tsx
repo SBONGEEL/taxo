@@ -33,6 +33,7 @@ import {
   soundsEnabled,
 } from "@/lib/sound";
 import { cn } from "@/lib/utils";
+import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
 
 export function SettingsScreen() {
   const { user, biometry, setBiometric } = useSession();
@@ -43,6 +44,7 @@ export function SettingsScreen() {
   const { pink, available: themeAvailable, setPink } = useBrand();
   const [marketing, setMarketing] = useState<boolean | null>(null);
   const [sounds, setSounds] = useState(soundsEnabled);
+  const [crashReports, setCrashReports] = useState(crashReportsEnabled);
   const [notifySound, setNotifySound] = useState(notificationSoundEnabled);
   const [error, setError] = useState<string | null>(null);
 
@@ -196,6 +198,22 @@ export function SettingsScreen() {
                 setNotificationSoundEnabled(next);
                 setNotifySound(next);
                 if (next) play("notify");
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-12 p-16">
+            <div className="min-w-0">
+              <p className="font-medium text-ink">إرسال تقارير الأعطال</p>
+              <p className="mt-2 text-14 text-muted">تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يساعدنا نعرف أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته.</p>
+            </div>
+            <Toggle
+              on={crashReports}
+              label="إرسال تقارير الأعطال"
+              onToggle={() => {
+                const next = !crashReports;
+                setCrashReportsEnabled(next);
+                setCrashReports(next);
               }}
             />
           </div>
