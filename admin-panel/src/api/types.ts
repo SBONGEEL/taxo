@@ -1775,3 +1775,53 @@ export type ErrorReportBody = {
   request_id?: string;
   note?: string;
 };
+
+
+// ------------------------------------------------ شاشةُ الأعطال (§D10)
+
+export type ErrorKind = "error" | "rejection" | "boundary" | "user_report";
+export type ErrorStatus = "open" | "resolved" | "ignored";
+export type ErrorPlatform = "android" | "ios" | "web";
+/** **الافتراضُ «المتأثّرون»** — وهو الفرقُ الذي يجعل القائمةَ تُقرأ. */
+export type ErrorSort = "users" | "last_seen" | "events";
+
+export type ErrorGroupRow = {
+  id: string;
+  app: ClientApp;
+  kind: ErrorKind;
+  name: string;
+  title: string;
+  status: ErrorStatus;
+  event_count: number;
+  user_count: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  first_seen_release: string | null;
+  last_seen_release: string | null;
+};
+
+export type ErrorEventRow = {
+  id: string;
+  platform: ErrorPlatform;
+  os_version: string | null;
+  release: string | null;
+  channel: string | null;
+  route: string | null;
+  name: string;
+  message: string;
+  stack: string | null;
+  component_stack: string | null;
+  breadcrumbs: Record<string, unknown>[] | null;
+  device_hash: string;
+  online: boolean;
+  repeat: number;
+  request_id: string | null;
+  user_reported: boolean;
+  note: string | null;
+  occurred_at: string;
+  received_at: string;
+};
+
+export type ErrorGroupDetail = ErrorGroupRow & {
+  latest: ErrorEventRow | null;
+};

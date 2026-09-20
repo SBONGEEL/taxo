@@ -30,6 +30,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import scrub
+from app.models.enums import ErrorStatus
 from app.models.error_report import ErrorEvent, ErrorGroup, ErrorGroupDevice
 from app.schemas.error_report import ErrorReportIn
 
@@ -174,3 +175,54 @@ async def record(session: AsyncSession, payload: ErrorReportIn) -> ErrorEvent:
     session.add(event)
     await session.commit()
     return event
+
+
+# ------------------------------------------------------------- الاحتفاظ
+
+#: **الأحداثُ تُكنَس والمجموعاتُ تبقى** — العدّادُ تاريخٌ، والحدثُ تفصيلٌ يبلى
+EVENT_RETENTION_DAYS = 30
+#: **وما كتبه إنسانٌ يبقى أطول**: أندرُ ما يصلنا، ويُقرأ بعد شهرين
+REPORTED_RETENTION_DAYS = 90
+#: مجموعةٌ محسومةٌ بلا حدثٍ باقٍ — لا يبقى منها إلا سطرٌ لا يُقرأ
+GROUP_RETENTION_DAYS = 90
+
+
+async def sweep_retention(session: AsyncSession) -> tuple[int, int]:
+    """يحذف ما مضى وقتُه — ويعيد (أحداثٌ، مجموعاتٌ).
+
+    **ولا يُحذف شيءٌ يُقرأ**: المجموعةُ تبقى ما دام فيها حدثٌ واحد، **وعدّاداتُها
+    لا تُنقص** — «وقع ٤٠ مرّةً لـ١٢ جهازاً» خبرٌ عن الماضي لا يبطل بكنس تفاصيله.
+    """
+    from datetime import timedelta
+
+    from sqlalchemy import and_, delete, exists, or_
+
+    now = datetime.now(UTC)
+
+    events = await session.execute(
+        delete(ErrorEvent).where(
+            or_(
+                and_(
+                    ErrorEvent.user_reported.is_(False),
+                    ErrorEvent.received_at
+                    < now - timedelta(days=EVENT_RETENTION_DAYS),
+                ),
+                and_(
+                    ErrorEvent.user_reported.is_(True),
+                    ErrorEvent.received_at
+                    < now - timedelta(days=REPORTED_RETENTION_DAYS),
+                ),
+            )
+        )
+    )
+
+    groups = await session.execute(
+        delete(ErrorGroup).where(
+            ErrorGroup.status != ErrorStatus.OPEN,
+            ErrorGroup.last_seen_at < now - timedelta(days=GROUP_RETENTION_DAYS),
+            ~exists().where(ErrorEvent.group_id == ErrorGroup.id),
+        )
+    )
+
+    await session.commit()
+    return events.rowcount or 0, groups.rowcount or 0

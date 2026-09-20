@@ -189,7 +189,7 @@ BroadcastingDriver = Annotated[Driver, Depends(broadcasting_driver)]
 # **وهذه بدائلُ `AdminUser` لا إضافةٌ فوقه**: كلُّ موجّهٍ يستعمل اسمَ نطاقه،
 # **فالمصفوفةُ تحكم أبواباً حقيقيةً لا جدولاً في شاشة**.
 #
-# **ويومَ نُشرت لم تغيّر جواباً واحداً**: `admin` يملك الإحدى عشرةَ كلَّها،
+# **ويومَ نُشرت لم تغيّر جواباً واحداً**: `admin` يملك الاثنتي عشرةَ كلَّها،
 # و`support` لا يملك إلا `read.only` و`payments.resolve` — **وهو ما كان
 # `AdminUser` يفعله بهما حرفاً**. والمجموعةُ الخضراء هي البرهان.
 
@@ -210,6 +210,7 @@ BackupsManager = Annotated[User, _perm(AdminPermission.BACKUPS_MANAGE)]
 DisputeResolver = Annotated[User, _perm(AdminPermission.PAYMENTS_RESOLVE)]
 SecurityManager = Annotated[User, _perm(AdminPermission.SECURITY_MANAGE)]
 PermissionsManager = Annotated[User, _perm(AdminPermission.PERMISSIONS_MANAGE)]
+ErrorsReader = Annotated[User, _perm(AdminPermission.ERRORS_READ)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #

@@ -11,12 +11,13 @@ Pydantic يُسقط الزائدَ قبل أن يراه سطرٌ من كودنا
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import ClientApp, ErrorKind, ErrorPlatform
+from app.models.enums import ClientApp, ErrorKind, ErrorPlatform, ErrorStatus
 
 
 class ErrorReportIn(BaseModel):
@@ -70,3 +71,57 @@ class ErrorReportAccepted(BaseModel):
     """
 
     accepted: bool = True
+
+
+# ------------------------------------------------ ما يُقرأ في اللوحة (§D10)
+
+
+class ErrorGroupOut(BaseModel):
+    """صفٌّ في القائمة — **ولا حدثَ فيه**: القائمةُ تُجيب «ما هو وكم»."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    app: ClientApp
+    kind: ErrorKind
+    name: str
+    title: str
+    status: ErrorStatus
+    event_count: int
+    user_count: int
+    first_seen_at: datetime
+    last_seen_at: datetime
+    first_seen_release: str | None
+    last_seen_release: str | None
+
+
+class ErrorEventOut(BaseModel):
+    """حدثٌ بعينه — **وما فيه مرّ بالمِصفاة قبل أن يُخزَّن**."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    platform: ErrorPlatform
+    os_version: str | None
+    release: str | None
+    channel: str | None
+    route: str | None
+    name: str
+    message: str
+    stack: str | None
+    component_stack: str | None
+    breadcrumbs: list[dict[str, Any]] | None
+    device_hash: str
+    online: bool
+    repeat: int
+    request_id: str | None
+    user_reported: bool
+    note: str | None
+    occurred_at: datetime
+    received_at: datetime
+
+
+class ErrorGroupDetailOut(ErrorGroupOut):
+    """المجموعةُ ومعها آخرُ حدثٍ — **وهو ما يُقرأ فعلاً عند التشخيص**."""
+
+    latest: ErrorEventOut | None = None

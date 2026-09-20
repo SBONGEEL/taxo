@@ -91,6 +91,7 @@ celery_app = Celery(
         "app.tasks.document_expiry",
         "app.tasks.whatsapp",
         "app.tasks.verification_campaign",
+        "app.tasks.error_reports",
     ],
 )
 
@@ -146,6 +147,11 @@ celery_app.conf.update(
         "sweep-pause-limits": {
             "task": "app.tasks.pauses.sweep_pause_limits",
             "schedule": 60.0,
+        },
+        # **يوميّاً**: العتبةُ ثلاثون يوماً (§D10)، ودورةٌ أسرعُ لا تجد ما تحذف
+        "sweep-error-reports": {
+            "task": "app.tasks.error_reports.sweep_error_reports",
+            "schedule": 86_400.0,
         },
         "run-due-backup": {
             "task": "app.tasks.backups.run_due_backup",

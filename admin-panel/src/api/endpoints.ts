@@ -7,6 +7,11 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  ErrorGroupRow,
+  ErrorGroupDetail,
+  ErrorEventRow,
+  ErrorStatus,
+  ErrorSort,
   ErrorReportBody,
   AdminSkin,
   BundledSkinAsset,
@@ -1612,3 +1617,37 @@ export const postErrorReport = (body: ErrorReportBody) =>
   api.post<{ accepted: boolean }>("/telemetry/errors", body, {
     anonymous: true,
   });
+
+
+// ------------------------------------------------ شاشةُ الأعطال (§D10)
+
+export const listErrorGroups = (
+  params: {
+    app?: ClientApp;
+    status?: ErrorStatus;
+    release?: string;
+    q?: string;
+    sort?: ErrorSort;
+    limit?: number;
+    offset?: number;
+  } = {},
+) => api.get<ErrorGroupRow[]>("/admin/errors", { query: params });
+
+export const getErrorGroup = (id: string) =>
+  api.get<ErrorGroupDetail>(`/admin/errors/${id}`);
+
+/** `reported_only` تُظهر ما كتبه الناسُ وحدَه — وهي القراءةُ التي تستحقّ وقتاً. */
+export const listErrorEvents = (id: string, reportedOnly = false) =>
+  api.get<ErrorEventRow[]>(`/admin/errors/${id}/events`, {
+    query: { reported_only: reportedOnly },
+  });
+
+export const resolveErrorGroup = (id: string) =>
+  api.post<ErrorGroupRow>(`/admin/errors/${id}/resolve`);
+
+export const ignoreErrorGroup = (id: string) =>
+  api.post<ErrorGroupRow>(`/admin/errors/${id}/ignore`);
+
+/** **البابُ في اتجاهه الثاني** — ولولاه لكان حسمٌ بالخطأ نهائيّاً. */
+export const reopenErrorGroup = (id: string) =>
+  api.post<ErrorGroupRow>(`/admin/errors/${id}/reopen`);

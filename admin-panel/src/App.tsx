@@ -105,6 +105,9 @@ const UsersScreen = lazy(() =>
 const AuditScreen = lazy(() =>
   import("@/screens/Audit").then((m) => ({ default: m.AuditScreen })),
 );
+const ErrorsScreen = lazy(() =>
+  import("@/screens/Errors").then((m) => ({ default: m.ErrorsScreen })),
+);
 const VehicleSkinsScreen = lazy(() =>
   import("@/screens/VehicleSkins").then((m) => ({
     default: m.VehicleSkinsScreen,
@@ -445,6 +448,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <AuditScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/errors"
+                    element={
+                      <Guarded>
+                        <ErrorsScreen />
                       </Guarded>
                     }
                   />
