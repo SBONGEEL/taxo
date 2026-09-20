@@ -10,6 +10,8 @@ from app.core.config import settings
 from app.core.db import engine
 from app.core.exceptions import register_exception_handlers
 from app.core.redis_client import close_redis_client, get_redis_client
+from app.core.request_id import HEADER as REQUEST_ID_HEADER
+from app.core.request_id import RequestIdMiddleware
 from app.routers import api_router
 from app.services import dispatch, tracking
 
@@ -38,7 +40,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # **ورأسٌ لا يُصرَّح هنا لا يقرؤه متصفّحٌ أصلاً** — وهو فخٌّ صامت: الرأسُ
+    # يصل، وأدواتُ المطوّر تعرضه، **و`response.headers.get` تُرجع `null`**
+    # لأن CORS يحجب ما لم يُذكر. فبغير هذا السطر يخرج الرقمُ المرجعيُّ من
+    # الخادم ولا يبلغ التطبيقَ أبداً.
+    expose_headers=[REQUEST_ID_HEADER],
 )
+
+# **فوق CORS في الترتيب، فيعمّ الردودَ كلَّها** — بما فيها ما يردّه CORS نفسُه
+app.add_middleware(RequestIdMiddleware)
 
 register_exception_handlers(app)
 app.include_router(api_router, prefix=settings.api_v1_prefix)

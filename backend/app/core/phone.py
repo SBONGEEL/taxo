@@ -102,3 +102,30 @@ def resolve_phone(raw: str, country_code: CountryCode | None = None) -> str:
             return normalize_phone(raw, code)
 
     raise InvalidPhoneNumber("أرسل الرقم بالصيغة الدولية أو حدّد رمز الدولة")
+
+
+def mask_phone(phone: str | None) -> str:
+    """رقمٌ صالحٌ للسجل — **البادئةُ وآخرُ ثلاثٍ، وما بينهما محجوب**.
+
+    **ولمَ لا يُحذف كلُّه**: السطرُ الذي يستعمل هذا يقول إن رمزاً لرقمٍ
+    استُعمل لرقمٍ آخر — **وهو حدثُ أمنٍ لا خبرٌ عابر**. وحذفُ الرقمين يجعل
+    «هجمةٌ على مئة رقم» و«مستخدمٌ واحدٌ أخطأ مرّتين» سطرين متطابقين، فيموت
+    السطرُ وهو قائم.
+
+    **ولمَ لا يُترك كلُّه**: رقمُ الهاتف **هو مُعرِّفُ الدخول** في هذا النظام
+    (القسم ٤)، وسجلُّ الحاوية يُقرأ من كلِّ من يبلغ الخادم.
+
+    **فالقسمةُ بينهما**: البادئةُ تقول من أيِّ سوق، وآخرُ ثلاثٍ تجعل تكرارَ
+    الرقم نفسِه مرئياً عبر السطور — **وهما ما يُبنى عليه الحكم**، بلا أن
+    يُطبع مُعرِّفٌ يُدخَل به إلى حساب.
+    """
+    if not phone:
+        return "«لا رقم»"
+
+    digits = _NON_DIGITS.sub("", phone.strip()).lstrip("+")
+    if not digits.isdigit() or len(digits) < 4:
+        return "«رقمٌ غيرُ صالح»"
+
+    country = country_for_phone(phone)
+    dial_code = _COUNTRY_RULES[country][0] if country else ""
+    return f"+{dial_code}…{digits[-3:]}" if dial_code else f"…{digits[-3:]}"

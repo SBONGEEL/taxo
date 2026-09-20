@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from app.core import validation_errors
+from app.core.request_id import HEADER as REQUEST_ID_HEADER
+from app.core.request_id import request_id_of
 
 logger = logging.getLogger(__name__)
 
@@ -543,14 +545,15 @@ class TotpRecoveryProofRequired(Conflict):
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """المعالجاتُ الثلاثةُ التي تغطّي كلَّ مخارج الخلفية (SPEC القسم ١٧.١).
+    """المعالجاتُ **الأربعةُ** التي تغطّي كلَّ مخارج الخلفية (SPEC القسم ١٧.١).
 
-    **ثلاثةٌ لا واحد، لأن للخطأ ثلاثةَ منابع**: أخطاءُ الأعمال التي نرفعها
+    **أربعةٌ لا واحد، لأن للخطأ أربعةَ منابع**: أخطاءُ الأعمال التي نرفعها
     (`AppError`)، وأخطاءُ التحقق التي يرفعها Pydantic قبل أن يصل الطلبُ إلى
     سطرٍ من كودنا (`RequestValidationError`)، وما ترفعه FastAPI نفسُها
-    (`HTTPException`: مسارٌ غيرُ موجود، طريقةٌ غيرُ مسموحة). وتغطيةُ الأول
-    وحدَه — وهو ما كان — تترك المنبعين الآخرين يخرجان بشكل FastAPI، وهو **شكلٌ
-    ثانٍ** يقرؤه العميلُ خطأً.
+    (`HTTPException`: مسارٌ غيرُ موجود، طريقةٌ غيرُ مسموحة). **وما لم يتوقّعه أحد**
+    (`Exception`) — وهو الرابعُ، أُضيف 2026-09-20 بعد أن كان يخرج نصّاً عارياً
+    بلا `code` ولا `message`. وتغطيةُ الأول وحدَه — وهو ما كان — تترك الثلاثةَ
+    الباقيةَ تخرج بشكل FastAPI، وهو **شكلٌ ثانٍ** يقرؤه العميلُ خطأً.
     """
 
     @app.exception_handler(AppError)
@@ -652,6 +655,42 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={"code": code, "message": message},
             headers=getattr(exc, "headers", None),
         )
+
+
+    @app.exception_handler(Exception)
+    async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
+        """**المنبعُ الرابع** — ما لم يتوقّعه أحد (2026-09-20).
+
+        **وكان غائباً، وغيابُه يُقرأ في هاتفِ إنسان**: استثناءٌ غيرُ متوقَّع
+        كان يخرج من `ServerErrorMiddleware` نصّاً عارياً `Internal Server
+        Error` بحالة ٥٠٠ — **لا `code` ولا `message`**. فيقرأ عميلُ التطبيق
+        جسماً لا يعرفه ويعرض نصَّه الاحتياطيَّ العام، **والعقدُ الذي بُني
+        ليكون واحداً يصير اثنين**: ثلاثةُ منابعَ تحترمه ورابعٌ لا.
+
+        **والرقمُ المرجعيُّ هو الإضافة**: `request_id` يخرج في الجسم وفي رأس
+        الردّ وفي سطر السجل معاً — فمن يقول «سقط طلبي» يحمل حرفاً يُبحث به،
+        بدل أن يُقارَن وقتُ الشكوى بساعة الخادم.
+
+        **ولا يُعرض نصُّ الاستثناء لصاحبه**: هو إنجليزيٌّ من مكتبة، وقد يحمل
+        اسمَ جدولٍ أو قيمةً — والقسم ١٧٫٤ يحكم. يذهب إلى السجل كاملاً.
+        """
+        request_id = request_id_of(request.scope)
+        logger.exception(
+            "استثناءٌ غيرُ متوقَّع في %s %s (request_id=%s)",
+            request.method,
+            request.url.path,
+            request_id or "—",
+        )
+        code, message = _HTTP_STATUS_TEXT[500]
+        body: dict[str, object] = {"code": code, "message": message}
+        headers: dict[str, str] = {}
+        if request_id:
+            body["request_id"] = request_id
+            # **والرأسُ يُكتب هنا لا في الوسيط**: ردُّ هذا المعالج يخرج من
+            # `ServerErrorMiddleware` فوق الوسيط، فلا يمرّ بمُغلِّفِ `send`
+            # الذي يكتب الرأسَ في الردود الأخرى.
+            headers[REQUEST_ID_HEADER] = request_id
+        return JSONResponse(status_code=500, content=body, headers=headers)
 
 
 # **نصوصُ حالاتِ HTTP** — سجلٌّ مركزيٌّ كبقية النصوص، لا نصٌّ في معالج.

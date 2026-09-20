@@ -15,6 +15,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.phone import mask_phone
 from app.services.firebase_auth import InvalidIdToken, VerifiedIdentity, get_verifier
 
 logger = logging.getLogger(__name__)
@@ -35,10 +36,15 @@ async def verify_phone_ownership(
     identity = await verifier.verify(id_token)
 
     if identity.phone != phone:
+        # **الرقمان محجوبان والحدثُ باقٍ** (2026-09-20): كان السطرُ يطبع
+        # الرقمين كاملين، **ورقمُ الهاتف هو مُعرِّفُ الدخول** في هذا النظام —
+        # فكان سجلُّ الحاوية يحمل مُعرِّفَي حسابين في كلِّ مرّةٍ يقع فيها هذا.
+        # و`provider_uid` يبقى عارياً: **هو مُعرِّفُ Firebase نفسِه**، وهو ما
+        # يُسلَّم إلى دعمهم، ولا يُقرأ رقمَ هاتف.
         logger.warning(
             "رمز Firebase لرقم %s استُعمل لرقم %s (uid=%s)",
-            identity.phone,
-            phone,
+            mask_phone(identity.phone),
+            mask_phone(phone),
             identity.provider_uid,
         )
         raise InvalidIdToken("رمز التحقق لا يخص هذا الرقم")
