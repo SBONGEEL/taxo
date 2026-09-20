@@ -58,8 +58,14 @@ async def test_the_matrix_changes_nothing_on_its_first_day(
     assert refused.status_code == 403, refused.text
 
 
-async def test_the_eleven_are_declared_and_admin_holds_them_all() -> None:
-    """**إحدى عشرةَ لا أكثر ولا أقلّ** — والقائمةُ هي التي أقرّها المالك."""
+async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
+    """**اثنتا عشرةَ لا أكثر ولا أقلّ** — والقائمةُ هي التي أقرّها المالك.
+
+    **وكانت إحدى عشرةَ حتى 2026-09-20**، فأُضيفت `errors.read` لشاشة الأعطال
+    بقرار المالك. **وهذا الاختبارُ هو ما أمسك الإضافةَ**: الأربعةُ النصوصُ
+    التي تقول «الإحدى عشرة» صُحّحت، **وهذا يعدّ لا يصف** — فسقط حيث مرّت هي.
+    **وعدٌّ مكتوبٌ بيدٍ يُمسك ما يفوت النثرَ**، وهي علّةُ وجوده.
+    """
     assert {p.value for p in AdminPermission} == {
         "settings.write",
         "users.manage",
@@ -72,6 +78,10 @@ async def test_the_eleven_are_declared_and_admin_holds_them_all() -> None:
         "read.only",
         "security.manage",
         "permissions.manage",
+        # **شاشةُ الأعطال** — أثرُ مكدَّسٍ وجهازٌ ومسار، لا قوائمَ عامة.
+        # فصلاحيتُها ليست `read.only` (قرارُ المالك 2026-09-20): «بابٌ واحدٌ
+        # صلاحيةٌ واحدة»، ومن يقرأ القوائمَ لا يلزم أن يقرأ هذه.
+        "errors.read",
     }
     assert permissions_service.DEFAULTS[UserRole.ADMIN] == permissions_service.ALL
     assert permissions_service.DEFAULTS[UserRole.SUPPORT] == {
