@@ -47,9 +47,23 @@ def test_mask_phone_never_returns_the_whole_number() -> None:
 
 
 async def test_firebase_mismatch_logs_masked_numbers(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """السطرُ يبقى تحذيراً، **والرقمان لا يبقيان**."""
+    """السطرُ يبقى تحذيراً، **والرقمان لا يبقيان**.
+
+    **ولا يُعتمَد على `caplog`** (قِيس 2026-09-20 في CI): جاء **فارغاً** في
+    المجموعة الكاملة وممتلئاً حين يُشغَّل هذا الملفُّ وحدَه — فسقط الاختبارُ
+    على `assert ('+962…111' in '')` **وهو يحرس شيئاً سليماً**.
+
+    **ونتيجةٌ تتبع ما قبلها ليست نتيجة**: `caplog` يعلّق مِقبضَه على الجذر
+    ويعتمد على الانتشار، وكلاهما حالٌ عامّةٌ يملكها ألفٌ وخمسُمئة اختبارٍ
+    قبله. **فالمقياسُ الآن مِقبضٌ يُركَّب على مسجِّل الوحدة نفسِها** — لا
+    جذرَ ولا انتشارَ ولا ترتيب.
+
+    **واسمُ المسجِّل يُقرأ من الوحدة لا يُكتب نصّاً**: `__name__` يتبعها إن
+    نُقلت، **واسمٌ مكتوبٌ بيدٍ يصير صامتاً يومَ تُنقل** — فيمرّ الاختبارُ
+    وهو لا يقيس شيئاً.
+    """
     from app.services.auth import firebase_identity
     from app.services.firebase_auth import InvalidIdToken, VerifiedIdentity
 
@@ -69,13 +83,30 @@ async def test_firebase_mismatch_logs_masked_numbers(
 
     monkeypatch.setattr(firebase_identity, "get_verifier", _get_verifier)
 
-    with caplog.at_level(logging.WARNING):
+    captured: list[logging.LogRecord] = []
+
+    class _Catch(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            captured.append(record)
+
+    logger = logging.getLogger(firebase_identity.__name__)
+    handler = _Catch(level=logging.WARNING)
+    previous = logger.level
+    logger.addHandler(handler)
+    logger.setLevel(logging.WARNING)
+    try:
         with pytest.raises(InvalidIdToken):
             await firebase_identity.verify_phone_ownership(
                 None, phone=asked_phone, id_token="whatever"
             )
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(previous)
 
-    written = "\n".join(record.getMessage() for record in caplog.records)
+    # **وغيابُ السطر يُقرأ سقوطاً لا سلامة**: الحدثُ أمنيٌّ ويجب أن يُكتب
+    assert captured, "لم يُكتب سطرُ تحذيرٍ أصلاً — والمطابقةُ حدثٌ يُسجَّل"
+
+    written = " | ".join(record.getMessage() for record in captured)
     assert token_phone not in written, "الرقمُ الكاملُ ما زال في السجل"
     assert asked_phone not in written, "الرقمُ الكاملُ ما زال في السجل"
     assert "+962…111" in written and "+962…222" in written
