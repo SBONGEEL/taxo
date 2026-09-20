@@ -15,8 +15,12 @@ services:
       # `${POSTGRES_PASSWORD:?...}`: **يرفض compose الإقلاعَ** ويقول أيُّ متغيّرٍ نقص.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}
       POSTGRES_DB: ${POSTGRES_DB:-taxo}
-    ports:
-      - "5432:5432"
+    # **لا `ports:` هنا بقصد** — الخلفيةُ تصل القاعدةَ باسم الخدمة على
+    # شبكة compose، كما تصل `whatsapp-gateway` التي لا منفذَ لها منذ
+    # يومها الأول. **ومنفذٌ منشورٌ لا يطرقه أحدٌ سطحٌ بلا مقابل.**
+    #
+    # ومن أراد وصولاً من المضيف في التطوير: `127.0.0.1:5432:5432` —
+    # **ربطٌ بالحلقة المحلية وحدَها**، لا `0.0.0.0`.
     volumes:
       - taxo_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -30,8 +34,7 @@ services:
     container_name: taxo-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
+    # **لا `ports:` هنا** — العلّةُ كاملةً عند `db` أعلاه.
     volumes:
       - taxo_redisdata:/data
     healthcheck:
