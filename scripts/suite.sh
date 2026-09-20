@@ -33,7 +33,12 @@ OUT="backend/.suite.out"
 #: اسمُ الحاوية الحيّة — يُكتب عند البدء ويُمحى عند الانتهاء الطبيعيّ.
 #: **وبقاؤه هو الدليل** على أن التشغيلَ قُتل من خارجه.
 MARK="backend/.suite.container"
-REDIS_URL="redis://redis:6379/0"
+# **كلمةُ Redis تُقرأ من ملفِّ البيئة**: المجموعةُ تتكلّم
+# مع redis نفسِه الذي يشترط المصادقة، **فعنوانٌ بلا كلمةٍ يردّ `NOAUTH`**
+# ويُقرأ عطباً في الكود.
+REDIS_PW="$(grep -E '^REDIS_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '')"
+[ -n "$REDIS_PW" ] || fail "لا `REDIS_PASSWORD` في $ENV_FILE — والمجموعةُ لا تصل Redis بدونها."
+REDIS_URL="redis://:${REDIS_PW}@redis:6379/0"
 
 dc() { docker compose --env-file "$ENV_FILE" "$@"; }
 

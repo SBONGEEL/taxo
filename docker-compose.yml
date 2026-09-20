@@ -33,12 +33,33 @@ services:
     image: redis:7-alpine
     container_name: taxo-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    # **كلمةُ مرورٍ و`protected-mode` معاً** (2026-09-20).
+    #
+    # **ولا احتياطَ صامتٌ لسرّ** (`${VAR:?}` كـ`POSTGRES_PASSWORD`): بيئةٌ
+    # ناقصةٌ **توقف الإقلاعَ وتسمّي الناقص**، ولا تُقلع بـRedis مفتوح.
+    #
+    # **والاثنان معاً لا أحدهما**: `protected-mode yes` بلا كلمةِ مرورٍ يرفض
+    # كلَّ اتصالٍ غيرِ محلّيّ **فيسقط الخلفيةُ نفسُها**؛ وكلمةٌ بلا
+    # `protected-mode` تترك الاحتياطَ الثاني معطَّلاً. **فيُضبطان في نفَس واحد.**
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --protected-mode
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD مطلوبٌ في ملفِّ البيئة — لا احتياطَ لسرّ}
+    # **والحاويةُ تحتاجها لفحص صحّتها** — `redis-cli ping` بلا مصادقةٍ يردّ
+    # `NOAUTH`، **فيُقرأ الفحصُ سقوطاً** ويقف `depends_on: service_healthy`
+    # على الخلفية والعامل والمجدول. وهو فخٌّ صامت: كلُّ شيءٍ سليمٌ والمكدَّسُ
+    # لا يقلع.
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD مطلوبٌ في ملفِّ البيئة — لا احتياطَ لسرّ}
     # **لا `ports:` هنا** — العلّةُ كاملةً عند `db` أعلاه.
     volumes:
       - taxo_redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping 2>/dev/null | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -58,7 +79,7 @@ services:
     environment:
       # داخل الشبكة الداخلية أسماء المضيفين هي أسماء الخدمات
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD مطلوبٌ في ملفِّ البيئة — لا احتياطَ لسرّ}@redis:6379/0
     depends_on:
       db:
         condition: service_healthy
@@ -152,7 +173,7 @@ services:
       - ${TAXO_ENV_FILE:-.env.local}
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD مطلوبٌ في ملفِّ البيئة — لا احتياطَ لسرّ}@redis:6379/0
     depends_on:
       db:
         condition: service_healthy
@@ -190,7 +211,7 @@ services:
       - ${TAXO_ENV_FILE:-.env.local}
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-taxo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD مطلوبٌ في .env — لا احتياطَ لسرّ}@db:5432/${POSTGRES_DB:-taxo}
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD مطلوبٌ في ملفِّ البيئة — لا احتياطَ لسرّ}@redis:6379/0
     depends_on:
       redis:
         condition: service_healthy

@@ -64,6 +64,7 @@ jobs:
           POSTGRES_PASSWORD={secrets.token_urlsafe(24)}
           POSTGRES_DB=taxo
           DATABASE_URL=postgresql+asyncpg://taxo:x@db:5432/taxo
+          REDIS_PASSWORD={secrets.token_urlsafe(24)}
           REDIS_URL=redis://redis:6379/0
           JWT_SECRET={secrets.token_urlsafe(48)}
           CREDENTIALS_ENCRYPTION_KEY={fernet}
@@ -78,6 +79,9 @@ jobs:
           # القيمةُ الحقيقيةُ لكلمة القاعدة تدخل عنوانَ الاتصال أيضاً
           pw=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
           sed -i "s|postgresql+asyncpg://taxo:x@|postgresql+asyncpg://taxo:$pw@|" .env
+          # **وكلمةُ Redis تدخل عنوانَها أيضاً** — redis يشترط المصادقة منذ 2026-09-20
+          rpw=$(grep '^REDIS_PASSWORD=' .env | cut -d= -f2-)
+          sed -i "s|redis://redis:6379/0|redis://:$rpw@redis:6379/0|" .env
 
       - name: بناءُ صورة الخلفية
         run: docker compose --env-file .env build backend
@@ -295,6 +299,7 @@ jobs:
           POSTGRES_PASSWORD={secrets.token_urlsafe(24)}
           POSTGRES_DB=taxo
           DATABASE_URL=postgresql+asyncpg://taxo:x@db:5432/taxo
+          REDIS_PASSWORD={secrets.token_urlsafe(24)}
           REDIS_URL=redis://redis:6379/0
           JWT_SECRET={secrets.token_urlsafe(48)}
           CREDENTIALS_ENCRYPTION_KEY={fernet}
@@ -308,6 +313,9 @@ jobs:
           PY
           pw=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
           sed -i "s|postgresql+asyncpg://taxo:x@|postgresql+asyncpg://taxo:$pw@|" .env
+          # **وكلمةُ Redis تدخل عنوانَها أيضاً** — redis يشترط المصادقة منذ 2026-09-20
+          rpw=$(grep '^REDIS_PASSWORD=' .env | cut -d= -f2-)
+          sed -i "s|redis://redis:6379/0|redis://:$rpw@redis:6379/0|" .env
 
       - name: بناءُ صورة الخلفية
         run: docker compose --env-file .env build backend
