@@ -1610,7 +1610,7 @@ export const readSite = () => api.get<SiteSettings>("/admin/site");
 export const updateSite = (body: SiteUpdate) =>
   api.patch<SiteSettings>("/admin/site", body);
 
-// ------------------------------------------------- تقاريرُ الأعطال (§D10)
+// ------------------------------------------------- تقاريرُ الأعطال (2026-09-20)
 
 /** **بلا جلسة بقصد**: الشاشةُ التي تسقط أكثرَ من غيرها هي شاشةُ الدخول. */
 export const postErrorReport = (body: ErrorReportBody) =>
@@ -1619,7 +1619,7 @@ export const postErrorReport = (body: ErrorReportBody) =>
   });
 
 
-// ------------------------------------------------ شاشةُ الأعطال (§D10)
+// ------------------------------------------------ شاشةُ الأعطال (2026-09-20)
 
 export const listErrorGroups = (
   params: {

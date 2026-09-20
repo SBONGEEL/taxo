@@ -148,7 +148,7 @@ celery_app.conf.update(
             "task": "app.tasks.pauses.sweep_pause_limits",
             "schedule": 60.0,
         },
-        # **يوميّاً**: العتبةُ ثلاثون يوماً (§D10)، ودورةٌ أسرعُ لا تجد ما تحذف
+        # **يوميّاً**: العتبةُ ثلاثون يوماً (2026-09-20)، ودورةٌ أسرعُ لا تجد ما تحذف
         "sweep-error-reports": {
             "task": "app.tasks.error_reports.sweep_error_reports",
             "schedule": 86_400.0,

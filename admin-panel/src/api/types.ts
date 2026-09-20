@@ -1777,7 +1777,7 @@ export type ErrorReportBody = {
 };
 
 
-// ------------------------------------------------ شاشةُ الأعطال (§D10)
+// ------------------------------------------------ شاشةُ الأعطال (2026-09-20)
 
 export type ErrorKind = "error" | "rejection" | "boundary" | "user_report";
 export type ErrorStatus = "open" | "resolved" | "ignored";

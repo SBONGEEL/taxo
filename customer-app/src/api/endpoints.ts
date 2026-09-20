@@ -486,7 +486,7 @@ export const cancelDeactivation = () =>
   api.del<DeactivationRequest>("/account/deactivation");
 
 
-// ------------------------------------------------- تقاريرُ الأعطال (§D10)
+// ------------------------------------------------- تقاريرُ الأعطال (2026-09-20)
 
 /** **بلا جلسة بقصد**: الشاشةُ التي تسقط أكثرَ من غيرها هي شاشةُ الدخول. */
 export const postErrorReport = (body: ErrorReportBody) =>
