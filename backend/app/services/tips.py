@@ -130,7 +130,7 @@ async def create(
     # **محفظةٌ مجمَّدة لا تُخرج مالاً**: التجميدُ إجراءُ اللوحة على محفظةٍ مشبوهة
     # (القسم 7/13.3)، وبقشيشٌ يخرج منها يجعل التجميدَ نصفَ تجميد. والحارسُ
     # موجودٌ في `wallet` فيُستدعى صريحاً كما يفعل التحويل — لا يُعاد كتابتُه
-    wallet.require_not_frozen(rider)
+    wallet.require_not_frozen(rider, WalletOwnerType.RIDER)
 
     row = await settings_for(session, country)
     assert row is not None  # `offered_in` تضمنه

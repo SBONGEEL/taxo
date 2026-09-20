@@ -202,7 +202,8 @@ async def create_request(
     if amount <= 0:
         raise InvalidInput("مبلغ السحب يجب أن يكون أكبر من صفر")
 
-    wallet.require_not_frozen(user)
+    # **محفظةُ الكبتن وحدَها**: لا سحبَ من محفظة راكب أصلاً (SPEC §7)
+    wallet.require_not_frozen(user, WalletOwnerType.DRIVER)
 
     if method == WithdrawalMethod.CLIQ and not (driver.cliq_alias or "").strip():
         raise InvalidInput("أضف alias كليك في ملفك قبل طلب السحب عبره")

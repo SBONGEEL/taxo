@@ -72,7 +72,7 @@ async def _wallet_out(
         owner_type=owner_type,
         balance=await wallet_service.balance(session, user.id, owner_type),
         currency=currency_for_country(user.country_code),
-        frozen=user.wallet_frozen,
+        frozen=wallet_service.is_frozen(user, owner_type),
         # **الاثنان معاً في نداءٍ واحد**: شاشةُ المحفظة تُفتح مرةً، ونداءٌ
         # ثانٍ لرقمٍ يُعرض بجانب الرصيد يجعل الشاشةَ ترسم نصفَ حقيقةٍ ثم تكملها
         cancellation_debt=(
@@ -359,7 +359,7 @@ async def get_my_driver_wallet(
             session, user.id, WalletOwnerType.DRIVER
         ),
         currency=currency_for_country(user.country_code),
-        frozen=user.wallet_frozen,
+        frozen=wallet_service.is_frozen(user, WalletOwnerType.DRIVER),
         pending_compensation=await cancellation.pending_for_driver(session, driver.id),
         carrier_dues=await cancellation.carrier_dues_of(session, driver.id),
         available_for_withdrawal=available,

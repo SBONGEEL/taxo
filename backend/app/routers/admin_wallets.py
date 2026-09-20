@@ -31,6 +31,7 @@ from app.models.enums import (
     WithdrawalStatus,
 )
 from app.models.user import User
+from app.models.wallet_freeze import WalletFreeze
 from app.schemas.wallet import (
     AdjustmentCreate,
     AdminTopupCreate,
@@ -77,7 +78,7 @@ async def _wallet_out(
         owner_type=owner_type,
         balance=await wallet_service.balance(session, user.id, owner_type),
         currency=currency_for_country(user.country_code),
-        frozen=user.wallet_frozen,
+        frozen=wallet_service.is_frozen(user, owner_type),
     )
 
 
@@ -184,15 +185,31 @@ async def _set_frozen(
 ) -> WalletOut:
     """**وإعلانُ المحفظة هنا كإعلانها في `get_wallet`** (§D6، 1-أ/2).
 
-    والتجميدُ **على الحساب** حتى الخطوة 6 (§D9.1 في `SPEC-DELIVERY.md`): فالإعلانُ
-    يختار **المحفظةَ التي يعرضها الجواب** ويُثبت أن للحساب محفظةً من ذلك النوع —
-    ولا يوحي بأن التجميدَ صار لمحفظةٍ بعينها. والسكوتُ كما كان.
+    **والتجميدُ صار للمحفظة نفسِها** (1-أ/6): الإعلانُ يختار **المحفظةَ التي
+    تُجمَّد**، لا المحفظةَ التي يعرضها الجوابُ وحدَها. **والسكوتُ كما كان** —
+    صاحبُ الدور الواحد لا يُسأل عمّا لا معنى له، وحاملُ الدورين يرتدّ بالخطأ
+    المسمّى.
+
+    **ووجودُ الصفِّ هو التجميد**: الرفعُ حذفُه، والتاريخُ في الأرشيف كما كان.
     """
     user = await _get_user(session, user_id)
-    wallet_service.owner_type_for(user, declared=declared)
-    user.wallet_frozen = frozen
+    owner_type = wallet_service.owner_type_for(user, declared=declared)
+    existing = next(
+        (row for row in user.wallet_freezes if row.owner_type is owner_type), None
+    )
+    if frozen and existing is None:
+        user.wallet_freezes.append(
+            WalletFreeze(owner_type=owner_type, reason=reason, frozen_by=admin.id)
+        )
+    elif frozen and existing is not None:
+        # تجميدٌ على تجميد: السببُ الأحدثُ هو ما يُقرأ في اللوحة
+        existing.reason = reason
+        existing.frozen_by = admin.id
+    elif not frozen and existing is not None:
+        user.wallet_freezes.remove(existing)
 
-    details: dict[str, object] = {"wallet_frozen": frozen}
+    # **والأرشيفُ يقول أيَّ محفظة** — وبغيره يُقرأ سجلُّ حاملِ الدورين بجوابين
+    details: dict[str, object] = {"wallet_frozen": frozen, "wallet": owner_type.value}
     if reason:
         details["reason"] = reason
     await audit.record(
@@ -204,6 +221,7 @@ async def _set_frozen(
         details=details,
     )
     await session.commit()
+    await session.refresh(user)
     return await _wallet_out(session, user, declared)
 
 

@@ -97,6 +97,7 @@ from app.models.wallet import (
     WalletTransaction,
     WithdrawalRequest,
 )
+from app.models.wallet_freeze import WalletFreeze
 from app.models.wallet_setting import WalletSetting
 from app.models.otp_template import OtpMessageTemplate, OtpTemplatePurpose
 from app.models.admin_permission import AdminPermissionGrant
@@ -199,6 +200,7 @@ __all__ = [
     "VehicleCategory",
     "WalletOwnerType",
     "PaymentSetting",
+    "WalletFreeze",
     "WalletSetting",
     "WalletTopupRequest",
     "WalletTransaction",

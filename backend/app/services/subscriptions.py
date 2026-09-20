@@ -472,7 +472,8 @@ async def purchase_with_wallet(
     هنا فتجد الثانيةُ اشتراكَ الأولى بدل أن تصطدم بالقيد الفريد.
     """
     await wallet.require_wallet_enabled(session, user.country_code)
-    wallet.require_not_frozen(user)
+    # **محفظةُ الكبتن وحدَها**: الشراءُ من رصيده هو، ولو كان راكباً أيضاً
+    wallet.require_not_frozen(user, WalletOwnerType.DRIVER)
 
     locked = await _locked_driver(session, driver.id)
     require_purchasable(locked)

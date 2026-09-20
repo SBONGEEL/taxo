@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
@@ -109,8 +109,34 @@ def owned_wallets(user: User) -> list[WalletOwnerType]:
     return [wallet for wallet, role in WALLET_ROLE.items() if user.has_role(role)]
 
 
-def require_not_frozen(user: User) -> None:
-    if user.wallet_frozen:
+def is_frozen(user: User, wallet: WalletOwnerType) -> bool:
+    """أمجمَّدةٌ **هذه المحفظةُ بعينها**؟ (1-أ/6، §D6).
+
+    **وكان السؤالُ «أمجمَّدٌ هذا الحسابُ؟»** — عمودٌ واحدٌ يجيب عن محفظتين، فكان
+    تجميدُ محفظةِ كبتنٍ مشبوهةٍ يمنع صاحبَها من دفع رحلته راكباً. **والتجميدُ
+    الذي لم يقرّره أحدٌ تجميدٌ لا يستطيع صاحبُه أن يسأل عنه.**
+
+    **ولا IO هنا أبداً**: الصفوفُ تأتي مع الحساب (`lazy="selectin"`)، كما
+    تأتي `role_grants`. **وحسابٌ بُني في بايثون للتوّ** لا صفوفَ له بحال.
+
+    **وغيرُ المحمَّلةِ تصيح ولا تُقرأ سلامة**: حسابٌ جاء من القاعدة بلا صفوفه
+    (تحميلٌ ضيّقٌ بـ`load_only` مثلاً) لا يُقرأ «غيرَ مجمَّد» — **فالحارسُ
+    الذي لا يملك ما يقيسه يقول «لم يُقس»، لا «سليم»**.
+    """
+    state = inspect(user)
+    if "wallet_freezes" in state.unloaded:
+        if state.transient or state.pending:
+            return False
+        raise RuntimeError(
+            "wallet_freezes غير محمَّلة على هذا الحساب — "
+            "لا يُقرأ غيابُها عدمَ تجميد (services/wallet.is_frozen)"
+        )
+    return any(row.owner_type is wallet for row in user.wallet_freezes)
+
+
+def require_not_frozen(user: User, wallet: WalletOwnerType) -> None:
+    """**والمحفظةُ تُسمّى صراحةً** — لا تُشتقّ من دورٍ قد يكون دورين."""
+    if is_frozen(user, wallet):
         raise WalletFrozen()
 
 
@@ -376,8 +402,10 @@ async def transfer(
         raise InvalidInput("لا يمكن التحويل بين حسابين في دولتين مختلفتين")
 
     await require_transfer_enabled(session, sender.country_code)
-    require_not_frozen(sender)
-    if recipient.wallet_frozen:
+    # **والتحويلُ بين محفظتَي راكبين** (الشرطُ فوق): فالمجمَّدةُ المعنيّةُ
+    # محفظةُ الراكب وحدَها — وكبتنٌ مجمَّدةٌ محفظتُه يحوّل من محفظة راكبه
+    require_not_frozen(sender, WalletOwnerType.RIDER)
+    if is_frozen(recipient, WalletOwnerType.RIDER):
         raise WalletFrozen("محفظة المستلم مجمّدة")
     if recipient.is_blocked:
         raise PermissionDenied("حساب المستلم محظور")

@@ -348,10 +348,11 @@ async def start_wallet_topup(
     """
     await wallet.require_wallet_enabled(session, owner.country_code)
     await require_card_enabled(session, owner.country_code)
-    wallet.require_not_frozen(owner)
     # **المحفظةُ المعلَنةُ تقول التطبيق**: شحنُ محفظةِ راكبٍ يبدأ من تطبيقه،
     # فلا يُسأل العميلُ سؤالاً ثانياً عن شيءٍ أعلنه
     owner_type = wallet.owner_type_for(owner, declared=declared)
+    # **والتجميدُ للمحفظة المعلَنة وحدَها** (1-أ/6)
+    wallet.require_not_frozen(owner, owner_type)
 
     order = ProviderOrder(
         provider=PaymentProvider.TELR,

@@ -17,6 +17,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.user_role_grant import UserRoleGrant  # noqa: F401
+from app.models.wallet_freeze import WalletFreeze  # noqa: F401
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import (
     AccountKind,
@@ -73,10 +74,6 @@ class User(UUIDMixin, TimestampMixin, Base):
     deactivated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    # تجميد المحفظة وحدها دون حظر الحساب (SPEC القسم 7/13.3): محفظة مشبوهة
-    # تُوقَف حركتها بينما يبقى صاحبها قادراً على الركوب والدفع نقداً
-    wallet_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-
     # كلمة المرور هي طريقة الدخول **دائماً** (المرحلة 8-ب). تبقى nullable
     # لحساباتٍ أُنشئت قبل ذلك بـ OTP وحده، ولحسابٍ يُنشئه مسارٌ إداري ثم يضع
     # صاحبه كلمته — ولا يُفتح حسابٌ بلا كلمة مرور بكلمةٍ يخترعها أحد
@@ -236,6 +233,24 @@ class User(UUIDMixin, TimestampMixin, Base):
     # السياق. و`role` العمودُ باقٍ للتوافق ويُقرأ منه **الدورُ الأساسي** وحدَه.
     role_grants: Mapped[list["UserRoleGrant"]] = relationship(
         "UserRoleGrant",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    # **المحافظُ الموقوفةُ تُحمَّل مع الحساب** (`selectin`) — على غرار
+    # `role_grants` بحرفه، وللعلّة نفسِها: كلُّ مسارِ مالٍ يسأل «أهذه المحفظةُ
+    # مجمَّدة؟» قبل أن يكتب قيداً، وتحميلٌ كسولٌ هناك استعلامٌ في كلِّ مسارٍ أو
+    # `MissingGreenlet` خارج السياق.
+    #
+    # **وهو ما يُبقي `require_not_frozen` متزامنة** (1-أ/6): دالّةُ فحصٍ
+    # تُنسى `await`ها **لا تصيح — تمرّ صامتةً**، فيُنفَق من محفظةٍ مجمَّدةٍ ولا
+    # يظهر شيء. وباباً أمنيّاً كهذا لا يُترك لسطرٍ يُنسى.
+    wallet_freezes: Mapped[list["WalletFreeze"]] = relationship(
+        "WalletFreeze",
+        # **صاحبُ المحفظة لا من جمّدها**: للجدول مساران إلى `users`
+        # (`user_id` و`frozen_by`)، فيُسمّى المقصودُ صراحةً
+        foreign_keys="WalletFreeze.user_id",
         lazy="selectin",
         cascade="all, delete-orphan",
         passive_deletes=True,

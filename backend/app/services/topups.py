@@ -165,7 +165,6 @@ async def create_request(
     # يُعرف لمن يُردّ**. ومكانُه الخدمةُ لا الراوتر — كبقيّة حرّاس هذا الملفّ.
     verification.require_usable_account(owner)
     await wallet.require_wallet_enabled(session, owner.country_code)
-    wallet.require_not_frozen(owner)
     # **لا قناةَ بلا حسابٍ يستقبل** (قرارُ المالك 2026-08-29): سوقٌ لم يُضبط
     # فيه `cliq_alias` **تُخفى عنه القناةُ كلُّها** — وشاشةٌ تطلب تحويلاً ولا
     # تقول إلى أين **تُنتج حوالةً ضائعة**، وهي أسوأُ من غياب القناة.
@@ -174,6 +173,9 @@ async def create_request(
     # **يُعلَن ويُختم**: المحفظةُ تُقرَّر هنا وتُقرأ عند التأكيد، فلا تُشتقّ
     # من دورٍ قد يكون دورين يومَها (SPEC §22)
     owner_type = wallet.owner_type_for(owner, declared=declared)
+    # **والتجميدُ يُسأل بعد أن تُعرف المحفظة** (1-أ/6): قبلها لم يكن
+    # ثمّة ما يُسأل عنه إلا الحساب كلُّه
+    wallet.require_not_frozen(owner, owner_type)
 
     amount = _validated_amount(amount)
     request = WalletTopupRequest(
@@ -220,7 +222,8 @@ async def confirm(
     if request.status != TopupRequestStatus.PENDING:
         raise InvalidStatusTransition()
 
-    wallet.require_not_frozen(owner)
+    # **من الصفِّ لا من الدور**: الطلبُ يحمل محفظتَه منذ إنشائه
+    wallet.require_not_frozen(owner, request.owner_type)
 
     credited = _validated_amount(amount) if amount is not None else request.amount
 

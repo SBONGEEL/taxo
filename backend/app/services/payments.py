@@ -418,7 +418,7 @@ async def _pay_from_wallet(
     المفتاح على صف المحفظة وحده حين ينقسم الدفع: البحث بالمفتاح يعيد دفعات
     الرحلة كلها، فالصف الثاني لا يحتاج مفتاحاً خاصاً به.
     """
-    wallet.require_not_frozen(rider)
+    wallet.require_not_frozen(rider, WalletOwnerType.RIDER)
 
     # القفل قبل قراءة الرصيد: رصيدٌ يُقرأ ثم يُخصم منه لاحقاً رصيدٌ قديم
     await wallet.lock_wallet(session, rider.id)
