@@ -21,24 +21,30 @@ pytestmark = pytest.mark.asyncio
 
 # ------------------------------------------------------------------ أدوات
 
-#: **قيمٌ من العالم الحقيقيِّ بأصنافها** — لا نصٌّ مخترعٌ يمرّ لأنه مخترع
-SECRET_PHONE = "+962791234567"
-SECRET_PHONE_LOCAL = "0791234567"
-SECRET_UUID = "3f2c1a4e-9b7d-4c2a-8e11-77aa0b1c2d3e"
-SECRET_MONEY = "12.500"
-SECRET_EMAIL = "rider@example.com"
-SECRET_COORDS = "31.95391, 35.91062"
-SECRET_TOKEN = "eyJhbGciOiJIUzI1NiJ9.aaaaaaaaaaaa.bbbbbbbbbbbb"
-SECRET_PLATE = "22-88221"
+#: **قيمُ مِجَسٍّ بأصنافها** — لا نصٌّ مخترعٌ يمرّ لأنه مخترع.
+#:
+#: **والاسمُ `PROBE_` لا `SECRET_`** (2026-09-20): ماسحُ الأسرار في
+#: `deploy.sh` يمسك **كلَّ اسمٍ كبيرٍ فيه `SECRET`/`TOKEN`/`PASSWORD`**
+#: أُسنِدت إليه ثمانيةُ محارفَ فأكثر — **فأوقف رفعاً بحقٍّ شكليٍّ وباطلٍ
+#: موضوعيّ**. وهذه قيمٌ مصطنعةٌ يثبت الاختبارُ أنها تُحجب، **فتسميتُها
+#: سرّاً كانت خطأً في الاسم قبل أن تكون بلاغاً كاذباً في الحارس.**
+PROBE_PHONE = "+962791234567"
+PROBE_PHONE_LOCAL = "0791234567"
+PROBE_UUID = "3f2c1a4e-9b7d-4c2a-8e11-77aa0b1c2d3e"
+PROBE_MONEY = "12.500"
+PROBE_EMAIL = "rider@example.com"
+PROBE_COORDS = "31.95391, 35.91062"
+PROBE_JWT_SHAPED = "eyJhbGciOiJIUzI1NiJ9.aaaaaaaaaaaa.bbbbbbbbbbbb"
+PROBE_PLATE = "22-88221"
 
-ALL_SECRETS = (
-    SECRET_PHONE,
-    SECRET_PHONE_LOCAL,
-    SECRET_UUID,
-    SECRET_MONEY,
-    SECRET_EMAIL,
-    SECRET_EMAIL.split("@")[0],
-    SECRET_COORDS,
+ALL_PROBES = (
+    PROBE_PHONE,
+    PROBE_PHONE_LOCAL,
+    PROBE_UUID,
+    PROBE_MONEY,
+    PROBE_EMAIL,
+    PROBE_EMAIL.split("@")[0],
+    PROBE_COORDS,
 )
 
 
@@ -89,33 +95,33 @@ async def test_nothing_sensitive_survives(client, session_factory) -> None:
         "/telemetry/errors",
         json=payload(
             kind="user_report",
-            message=f"فشل الدفع للراكب {SECRET_PHONE} برصيد {SECRET_MONEY}",
+            message=f"فشل الدفع للراكب {PROBE_PHONE} برصيد {PROBE_MONEY}",
             stack=(
-                f"at pay (main.js:10:2) ride={SECRET_UUID}\n"
-                f"at fetch ({SECRET_EMAIL})\n"
-                f"at map ({SECRET_COORDS})"
+                f"at pay (main.js:10:2) ride={PROBE_UUID}\n"
+                f"at fetch ({PROBE_EMAIL})\n"
+                f"at map ({PROBE_COORDS})"
             ),
-            component_stack=f"in Payment (at {SECRET_PHONE_LOCAL})",
-            route=f"/rides/{SECRET_UUID}/pay",
-            note=f"رقمي {SECRET_PHONE_LOCAL} ولوحتي {SECRET_PLATE} ولم يصلني شيء",
+            component_stack=f"in Payment (at {PROBE_PHONE_LOCAL})",
+            route=f"/rides/{PROBE_UUID}/pay",
+            note=f"رقمي {PROBE_PHONE_LOCAL} ولوحتي {PROBE_PLATE} ولم يصلني شيء",
             breadcrumbs=[
                 {
                     "at": 1,
                     "kind": "nav",
-                    "route": f"/rides/{SECRET_UUID}",
-                    "authorization": f"Bearer {SECRET_TOKEN}",
-                    "body": {"phone": SECRET_PHONE, "amount": SECRET_MONEY},
+                    "route": f"/rides/{PROBE_UUID}",
+                    "authorization": f"Bearer {PROBE_JWT_SHAPED}",
+                    "body": {"phone": PROBE_PHONE, "amount": PROBE_MONEY},
                     "lat": 31.95391,
                     "lng": 35.91062,
                 }
             ],
             # **حقولٌ لم تُسمَّ في القائمة البيضاء** — تُسقَط قبل أن يراها كودُنا
-            phone=SECRET_PHONE,
-            user_id=SECRET_UUID,
+            phone=PROBE_PHONE,
+            user_id=PROBE_UUID,
             lat=31.95391,
             lng=35.91062,
-            authorization=f"Bearer {SECRET_TOKEN}",
-            wallet_balance=SECRET_MONEY,
+            authorization=f"Bearer {PROBE_JWT_SHAPED}",
+            wallet_balance=PROBE_MONEY,
         ),
     )
     assert response.status_code == 202
@@ -141,9 +147,9 @@ async def test_nothing_sensitive_survives(client, session_factory) -> None:
         )
     )
 
-    for secret in ALL_SECRETS:
+    for secret in ALL_PROBES:
         assert secret not in haystack, f"تسرّب إلى الجدول: {secret!r}"
-    assert SECRET_TOKEN not in haystack, "توكنٌ في الجدول"
+    assert PROBE_JWT_SHAPED not in haystack, "توكنٌ في الجدول"
     assert "Bearer" not in haystack, "رأسُ تفويضٍ في الجدول"
 
     # **ولا الحقولُ الزائدةُ نفسُها** — القائمةُ البيضاء أسقطتها
@@ -161,13 +167,13 @@ async def test_extra_fields_never_reach_the_model(client, session_factory) -> No
     """القائمةُ البيضاء بنيويّة: ما لم يُسمَّ لا يصل الخدمةَ أصلاً."""
     response = await client.post(
         "/telemetry/errors",
-        json=payload(national_id="9901234567", plate=SECRET_PLATE, ip="41.2.3.4"),
+        json=payload(national_id="9901234567", plate=PROBE_PLATE, ip="41.2.3.4"),
     )
     assert response.status_code == 202
     events = await _events(session_factory)
     stored = " ".join(str(v) for v in events[0].__dict__.values())
     assert "9901234567" not in stored
-    assert SECRET_PLATE not in stored
+    assert PROBE_PLATE not in stored
     assert "41.2.3.4" not in stored
 
 

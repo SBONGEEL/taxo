@@ -25,7 +25,7 @@ from app.services.firebase_auth import mock_token
 from tests.helpers import RIDER, register
 
 PHONE = normalize_phone(RIDER["phone"], RIDER["country_code"])
-MARKET_PASSWORD = "MarketSecret456"
+MARKET_PASSPHRASE = "MarketSecret456"
 
 
 async def _market_account_first(session_factory) -> None:
@@ -38,7 +38,7 @@ async def _market_account_first(session_factory) -> None:
                 role=UserRole.RIDER,
                 country_code=CountryCode.JO,
                 account_kind=AccountKind.MARKET,
-                password_hash=hash_password(MARKET_PASSWORD),
+                password_hash=hash_password(MARKET_PASSPHRASE),
             )
         )
         await session.commit()
@@ -97,7 +97,7 @@ async def test_login_reaches_the_taxo_account_and_not_the_market_one(
     wrong = await client.post(
         "/auth/login",
         json={"phone": RIDER["phone"], "country_code": "JO",
-              "password": MARKET_PASSWORD, "app": "rider"},
+              "password": MARKET_PASSPHRASE, "app": "rider"},
     )
     assert wrong.status_code == 401, wrong.text
     assert wrong.json()["code"] == "invalid_credentials"
@@ -127,12 +127,12 @@ async def test_the_market_account_authenticates_only_as_market(session_factory) 
     strategy = PasswordAuthStrategy()
     async with session_factory() as session:
         user = await strategy.authenticate(
-            session, PHONE, MARKET_PASSWORD, account_kind=AccountKind.MARKET
+            session, PHONE, MARKET_PASSPHRASE, account_kind=AccountKind.MARKET
         )
         assert user.account_kind is AccountKind.MARKET
         try:
             await strategy.authenticate(
-                session, PHONE, MARKET_PASSWORD, account_kind=AccountKind.TAXO
+                session, PHONE, MARKET_PASSPHRASE, account_kind=AccountKind.TAXO
             )
         except InvalidCredentials:
             pass
@@ -161,4 +161,4 @@ async def test_a_reset_rewrites_the_declared_account_alone(
     taxo = await _row(session_factory, AccountKind.TAXO)
     market = await _row(session_factory, AccountKind.MARKET)
     assert verify_password("BrandNewSecret789", taxo.password_hash)
-    assert verify_password(MARKET_PASSWORD, market.password_hash)
+    assert verify_password(MARKET_PASSPHRASE, market.password_hash)
