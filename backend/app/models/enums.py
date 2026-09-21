@@ -997,4 +997,5 @@ class ErrorSort(StrEnum):
 
     USERS = "users"
     LAST_SEEN = "last_seen"
+    FIRST_SEEN = "first_seen"
     EVENTS = "events"

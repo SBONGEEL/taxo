@@ -13,9 +13,7 @@
 
 import type { CountryCode, Currency } from "@/api/types";
 
-import { digits,
-  DISPLAY_LOCALE,
-} from "@/lib/utils";
+import { counted, digits, DISPLAY_LOCALE } from "@/lib/utils";
 
 /** العملةُ **بعد** الرقم وبمقاسٍ أصغر ولونٍ `--mut` (DESIGN.md §4). */
 export const CURRENCY_LABEL: Record<Currency, string> = {
@@ -50,6 +48,62 @@ export function moment(iso: string) {
     day: "numeric",
     month: "long",
   }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
+}
+
+/** **متى كان ذلك** — «منذ 5 دقائق»، والدقيقُ يبقى في تلميح التمرير.
+ *
+ * **ولمَ نسبيٌّ على الشاشة ودقيقٌ في التلميح**: من يقرأ لوحةَ أعطالٍ يسأل
+ * «أما زال يقع الآن؟» — و«3:07 م» تحتاج منه أن يحسب، **والحسابُ في رأس
+ * القارئ هو ما تُبنى الشاشاتُ لتغنيَه عنه**. والدقيقُ يبقى لمن يطابق سطرَ
+ * سجلٍّ بوقته، فلا يضيع.
+ *
+ * **والأشكالُ مصرَّحةٌ لا مخترعة** (`counted`): «منذ دقيقتين» لا «منذ 2 دقيقة».
+ */
+const MINUTE_FORMS = {
+  one: "دقيقة",
+  two: "دقيقتين",
+  few: "دقائق",
+  many: "دقيقة",
+  bare: "دقيقة",
+};
+const HOUR_FORMS = {
+  one: "ساعة",
+  two: "ساعتين",
+  few: "ساعات",
+  many: "ساعة",
+  bare: "ساعة",
+};
+const DAY_FORMS = {
+  one: "يوم",
+  two: "يومين",
+  few: "أيام",
+  many: "يوماً",
+  bare: "يوم",
+};
+
+export function sinceNow(iso: string, now: number = Date.now()): string {
+  const seconds = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
+  if (seconds < 60) return "الآن";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `منذ ${counted(minutes, MINUTE_FORMS)}`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `منذ ${counted(hours, HOUR_FORMS)}`;
+  return `منذ ${counted(Math.floor(hours / 24), DAY_FORMS)}`;
+}
+
+/** الوقتُ الدقيقُ لتلميح التمرير — **ما يُطابَق به سطرُ سجلّ**. */
+export function exactMoment(iso: string): string {
+  const at = new Date(iso);
+  return digits(
+    at.toLocaleString(DISPLAY_LOCALE, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
+  );
 }
 
 /** يومٌ وشهرٌ بلا وقت — لتسميات الرسوم وصفوف الاشتراكات. */

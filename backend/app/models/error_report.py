@@ -98,6 +98,16 @@ class ErrorGroup(UUIDMixin, Base):
     first_seen_release: Mapped[str | None] = mapped_column(String(40), nullable=True)
     last_seen_release: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
+    #: **أعلى إطارٍ في الأثر** — `Payment.tsx:142` ونحوُه. يُملأ من أوّل حدثٍ
+    #: يحمل أثراً ولا يُبدَّل بعده: **المتَّهَمُ الأوّلُ هو موضعُ العطب**،
+    #: وما بعده قد يكون أثرَ عَرَضٍ تالٍ.
+    culprit: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    #: **آخرُ مرّةٍ عادت تقع بعد حسمها** — والوسمُ يبقى بعد إعادة الفتح
+    regressed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+
     resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

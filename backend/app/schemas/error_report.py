@@ -86,6 +86,8 @@ class ErrorGroupOut(BaseModel):
     kind: ErrorKind
     name: str
     title: str
+    #: أعلى إطارٍ في الأثر — يُقرأ في القائمة
+    culprit: str | None = None
     status: ErrorStatus
     event_count: int
     user_count: int
@@ -93,6 +95,38 @@ class ErrorGroupOut(BaseModel):
     last_seen_at: datetime
     first_seen_release: str | None
     last_seen_release: str | None
+    #: **حُسمت يوماً ثمّ عادت** — ولا يُستنتج من الحال الراهنة
+    regressed_at: datetime | None = None
+
+
+class ErrorSummaryOut(BaseModel):
+    """أرقامُ اللمحة — **مجموعةٌ في القاعدة لا في الصفحة**."""
+
+    open: int
+    new_24h: int
+    regressed_24h: int
+    devices_24h: int
+    devices_prev_24h: int
+    reported_open: int
+    oldest_reported_at: datetime | None
+
+
+class ErrorTrendOut(BaseModel):
+    """منحنى مجموعةٍ واحدة — **دلوٌ لكلِّ ساعةٍ بلا ثقوب**."""
+
+    group_id: uuid.UUID
+    hours: int
+    buckets: list[int]
+
+
+class ErrorBulkIn(BaseModel):
+    """حسمٌ أو كتمٌ لعدّة مجموعاتٍ — **والسقفُ يمنع إقراراً بالجملة**.
+
+    **ولا `reopen` في الجملة** بقصد: إعادةُ الفتح تصحيحُ خطأٍ بعينه يُراجَع
+    واحداً واحداً، **وفتحُ خمسين بضغطةٍ ليس تصحيحاً بل إلغاءُ عملِ من حسمها**.
+    """
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
 
 
 class ErrorEventOut(BaseModel):

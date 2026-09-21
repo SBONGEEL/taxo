@@ -25,7 +25,7 @@ import hashlib
 import re
 from datetime import UTC, datetime
 
-from sqlalchemy import update
+from sqlalchemy import case, func, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,6 +64,29 @@ def _top_frames(stack: str | None, *, count: int = 3) -> str:
         _DIGITS.sub("#", _CHUNK_HASH.sub("", frame))[:160] for frame in frames[:count]
     ]
     return "\n".join(normalized)
+
+
+def culprit_of(stack: str | None) -> str | None:
+    """أعلى إطارٍ في الأثر — **كما هو، بأرقامه**.
+
+    **ولا يُطبَّع هنا**: التطبيعُ للبصمة وحدَها، وهذا **يُعرض لإنسان** —
+    و`Payment.tsx:#` لا تدلّه على شيء. فرقمُ السطر هو نصفُ الفائدة.
+
+    **ولا يُحذف إطارُ مكتبةٍ منه**: قد يكون العطبُ داخلها بوسيطٍ أرسلناه،
+    **وحذفُه يقطع الخيط** — والشاشةُ تقول إنها لا تفرّق الاثنين.
+    """
+    if not stack:
+        return None
+    for line in stack.splitlines():
+        frame = line.strip()
+        if not frame:
+            continue
+        # يُسقَط سطرُ العنوان (`TypeError: …`) ويُؤخذ أوّلُ إطارٍ بحقّ
+        if frame.startswith("at "):
+            return frame[3:][:200]
+        if "(" in frame or ":" in frame.rsplit("/", 1)[-1]:
+            return frame[:200]
+    return None
 
 
 def fingerprint_of(payload: ErrorReportIn, *, message: str, stack: str | None) -> str:
@@ -115,6 +138,7 @@ async def record(session: AsyncSession, payload: ErrorReportIn) -> ErrorEvent:
             kind=payload.kind,
             name=payload.name[:200],
             title=message[:500],
+            culprit=culprit_of(stack),
             event_count=payload.repeat,
             user_count=0,
             first_seen_at=now,
@@ -128,6 +152,22 @@ async def record(session: AsyncSession, payload: ErrorReportIn) -> ErrorEvent:
                 "event_count": ErrorGroup.event_count + payload.repeat,
                 "last_seen_at": now,
                 "last_seen_release": payload.release,
+                # **الأوّلُ يبقى**: حدثٌ بلا أثرٍ لا يمحو متَّهَماً عُرف،
+                # وحدثٌ بأثرٍ يملأ الفراغَ إن كان أوّلُه بلا أثر.
+                "culprit": func.coalesce(ErrorGroup.culprit, culprit_of(stack)),
+                # **الارتداد**: محسومةٌ عادت تقع تُفتح من نفسها وتُوسَم.
+                #
+                # **ولا تُفتح المكتومة**: الكتمُ قرارٌ قائمٌ بأن لا تُرى، وفتحُها
+                # بكلِّ حدثٍ يُفرِّغه من معناه — **والحسمُ دعوى أنه أُصلح، فعودتُه
+                # تكذيبٌ لها**. وهما حالان لا حالٌ واحدةٌ بدرجتين.
+                "status": case(
+                    (ErrorGroup.status == ErrorStatus.RESOLVED, ErrorStatus.OPEN),
+                    else_=ErrorGroup.status,
+                ),
+                "regressed_at": case(
+                    (ErrorGroup.status == ErrorStatus.RESOLVED, now),
+                    else_=ErrorGroup.regressed_at,
+                ),
             },
         )
         .returning(ErrorGroup.id)

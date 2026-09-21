@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import desc, func, select
@@ -28,11 +29,14 @@ from app.core.deps import DbSession, ErrorsReader
 from app.models.enums import AuditAction, ClientApp, ErrorSort, ErrorStatus
 from app.models.error_report import ErrorEvent, ErrorGroup
 from app.schemas.error_report import (
+    ErrorBulkIn,
     ErrorEventOut,
     ErrorGroupDetailOut,
     ErrorGroupOut,
+    ErrorSummaryOut,
+    ErrorTrendOut,
 )
-from app.services import audit
+from app.services import audit, error_stats
 
 router = APIRouter(prefix="/admin/errors", tags=["admin:errors"])
 
@@ -61,6 +65,8 @@ async def list_error_groups(
     group_status: ErrorStatus | None = Query(default=None, alias="status"),
     release: str | None = Query(default=None, max_length=40),
     q: str | None = Query(default=None, max_length=120),
+    #: نافذةُ الزمن — **على «آخر ظهور»** لا على أوّله: السؤالُ «أما زال يقع؟»
+    hours: int | None = Query(default=None, ge=1, le=24 * 90),
     sort: ErrorSort = ErrorSort.USERS,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -79,6 +85,11 @@ async def list_error_groups(
     if release:
         # **آخرُ إصدارٍ رُئيت فيه** — «أما زالت تقع في الجديدة؟»
         stmt = stmt.where(ErrorGroup.last_seen_release == release)
+    if hours:
+        stmt = stmt.where(
+            ErrorGroup.last_seen_at
+            >= datetime.now(UTC) - timedelta(hours=hours)
+        )
     if q:
         needle = f"%{q.strip()}%"
         stmt = stmt.where(
@@ -89,10 +100,50 @@ async def list_error_groups(
         ErrorSort.USERS: (desc(ErrorGroup.user_count), desc(ErrorGroup.last_seen_at)),
         ErrorSort.EVENTS: (desc(ErrorGroup.event_count), desc(ErrorGroup.last_seen_at)),
         ErrorSort.LAST_SEEN: (desc(ErrorGroup.last_seen_at),),
+        ErrorSort.FIRST_SEEN: (desc(ErrorGroup.first_seen_at),),
     }[sort]
 
     rows = await session.execute(stmt.order_by(*order).limit(limit).offset(offset))
     return [ErrorGroupOut.model_validate(row) for row in rows.scalars()]
+
+
+@router.get("/summary", response_model=ErrorSummaryOut)
+async def error_summary(_reader: ErrorsReader, session: DbSession) -> ErrorSummaryOut:
+    """أرقامُ اللمحة.
+
+    **وموضعُه قبل `/{group_id}` شرطٌ لا ترتيبُ سرد**: مسارٌ ثابتٌ يُعرَّف بعد
+    مسارٍ بمعامل **يبتلعه** — يُقرأ `summary` مُعرِّفَ مجموعةٍ فيُجيب ٤٢٢.
+    """
+    return ErrorSummaryOut(**await error_stats.summary(session))  # type: ignore[arg-type]
+
+
+@router.get("/trend", response_model=list[ErrorTrendOut])
+async def error_trend(
+    _reader: ErrorsReader,
+    session: DbSession,
+    ids: str = Query(description="مُعرِّفاتٌ مفصولةٌ بفاصلة"),
+    hours: int = Query(default=24, ge=1, le=error_stats.MAX_TREND_HOURS),
+) -> list[ErrorTrendOut]:
+    """منحنى المرّات لكلِّ مجموعةٍ مطلوبة.
+
+    **ولا يُحسب لكلِّ المجموعات**: الصفحةُ تسأل عمّا تعرضه وحدَه — ومسحُ
+    الأحداث لمئةِ مجموعةٍ لا تُرى ثمنٌ يُدفع في كلِّ فتحةِ شاشة.
+    """
+    parsed: list[uuid.UUID] = []
+    for raw in ids.split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            parsed.append(uuid.UUID(raw))
+        except ValueError:
+            # **مُعرِّفٌ فاسدٌ يُسقَط ولا يُسقط النداء** — الرسمُ زينةٌ للجدول
+            continue
+    series = await error_stats.trend(session, parsed, hours)
+    return [
+        ErrorTrendOut(group_id=gid, hours=hours, buckets=buckets)
+        for gid, buckets in series.items()
+    ]
 
 
 @router.get("/{group_id}", response_model=ErrorGroupDetailOut)
@@ -151,6 +202,10 @@ async def _set_status(
     group.status = target
     group.resolved_at = func.now() if target is ErrorStatus.RESOLVED else None
     group.resolved_by = admin.id if target is ErrorStatus.RESOLVED else None
+    # **وسمُ الارتداد يُمحى بالحسم لا بإعادة الفتح**: الحسمُ دعوى إصلاحٍ
+    # جديدة، فتُقاس من الآن. **وإعادةُ الفتح ليست إصلاحاً** فلا تمحو شيئاً.
+    if target is ErrorStatus.RESOLVED:
+        group.regressed_at = None
 
     await audit.record(
         session,
@@ -163,6 +218,35 @@ async def _set_status(
     await session.commit()
     await session.refresh(group)
     return ErrorGroupOut.model_validate(group)
+
+
+# **أبوابُ الجملة قبل `/{group_id}/…`** — وإلا ابتلعها المسارُ ذو المعامل:
+# `POST /admin/errors/bulk/resolve` يُقرأ `group_id="bulk"` **فيجيب ٤٢٢**.
+# **وقِيس فسقط** قبل أن يُنقل. والترتيبُ في FastAPI هو أوّلُ مطابقٍ يفوز.
+@router.post("/bulk/resolve", response_model=list[ErrorGroupOut])
+async def bulk_resolve(
+    payload: ErrorBulkIn, admin: ErrorsReader, session: DbSession
+) -> list[ErrorGroupOut]:
+    """حسمُ عدّةٍ معاً — **وقيدُ تدقيقٍ لكلِّ واحدةٍ لا قيدٌ للدفعة**.
+
+    **وقيدٌ واحدٌ يقول «حُسمت ٤٠» لا يُجيب «أحُسمت هذه؟»** بعد شهر — والسجلُّ
+    يُقرأ بالكيان لا بالجلسة. فالثمنُ أربعون صفّاً، **والبديلُ ثقبٌ في الدفتر**.
+    """
+    return [
+        await _set_status(session, admin, gid, ErrorStatus.RESOLVED, "حُسم (جملةً)")
+        for gid in payload.ids
+    ]
+
+
+@router.post("/bulk/ignore", response_model=list[ErrorGroupOut])
+async def bulk_ignore(
+    payload: ErrorBulkIn, admin: ErrorsReader, session: DbSession
+) -> list[ErrorGroupOut]:
+    """كتمُ عدّةٍ معاً — بقيدٍ لكلِّ واحدة."""
+    return [
+        await _set_status(session, admin, gid, ErrorStatus.IGNORED, "كُتم (جملةً)")
+        for gid in payload.ids
+    ]
 
 
 @router.post("/{group_id}/resolve", response_model=ErrorGroupOut)

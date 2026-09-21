@@ -1790,9 +1790,13 @@ export type ErrorKind = "error" | "rejection" | "boundary" | "user_report";
 export type ErrorStatus = "open" | "resolved" | "ignored";
 export type ErrorPlatform = "android" | "ios" | "web";
 /** **الافتراضُ «المتأثّرون»** — وهو الفرقُ الذي يجعل القائمةَ تُقرأ. */
-export type ErrorSort = "users" | "last_seen" | "events";
+export type ErrorSort = "users" | "last_seen" | "events" | "first_seen";
 
 export type ErrorGroupRow = {
+  /** أعلى إطارٍ في الأثر — `Payment.tsx:142` ونحوُه */
+  culprit: string | null;
+  /** **حُسمت يوماً ثمّ عادت** — ولا يُستنتج من الحال الراهنة */
+  regressed_at: string | null;
   id: string;
   app: ClientApp;
   kind: ErrorKind;
@@ -1827,6 +1831,23 @@ export type ErrorEventRow = {
   note: string | null;
   occurred_at: string;
   received_at: string;
+};
+
+export type ErrorSummary = {
+  open: number;
+  new_24h: number;
+  regressed_24h: number;
+  devices_24h: number;
+  devices_prev_24h: number;
+  reported_open: number;
+  oldest_reported_at: string | null;
+};
+
+/** منحنى مجموعةٍ — **دلوٌ لكلِّ ساعةٍ بلا ثقوب**. */
+export type ErrorTrend = {
+  group_id: string;
+  hours: number;
+  buckets: number[];
 };
 
 export type ErrorGroupDetail = ErrorGroupRow & {

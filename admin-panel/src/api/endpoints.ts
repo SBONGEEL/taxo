@@ -10,6 +10,8 @@ import type {
   ErrorGroupRow,
   ErrorGroupDetail,
   ErrorEventRow,
+  ErrorSummary,
+  ErrorTrend,
   ErrorStatus,
   ErrorSort,
   ErrorReportBody,
@@ -1628,10 +1630,30 @@ export const listErrorGroups = (
     release?: string;
     q?: string;
     sort?: ErrorSort;
+    hours?: number;
     limit?: number;
     offset?: number;
   } = {},
 ) => api.get<ErrorGroupRow[]>("/admin/errors", { query: params });
+
+/** أرقامُ اللمحة — **مجموعةٌ في الخلفية**، فلا تخالف القاعدةَ عند قصِّ صفحة. */
+export const getErrorSummary = () =>
+  api.get<ErrorSummary>("/admin/errors/summary");
+
+/** منحنى ما تعرضه الصفحةُ وحدَه — لا كلُّ المجموعات. */
+export const getErrorTrend = (ids: string[], hours = 24) =>
+  ids.length
+    ? api.get<ErrorTrend[]>("/admin/errors/trend", {
+        query: { ids: ids.join(","), hours },
+      })
+    : Promise.resolve([] as ErrorTrend[]);
+
+/** حسمٌ جماعيّ — **وقيدُ تدقيقٍ لكلِّ مجموعةٍ لا قيدٌ للدفعة**. */
+export const bulkResolveErrors = (ids: string[]) =>
+  api.post<ErrorGroupRow[]>("/admin/errors/bulk/resolve", { ids });
+
+export const bulkIgnoreErrors = (ids: string[]) =>
+  api.post<ErrorGroupRow[]>("/admin/errors/bulk/ignore", { ids });
 
 export const getErrorGroup = (id: string) =>
   api.get<ErrorGroupDetail>(`/admin/errors/${id}`);

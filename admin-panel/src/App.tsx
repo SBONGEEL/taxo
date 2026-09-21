@@ -9,7 +9,13 @@
  * والدولةُ الافتراضية من `/config` لا مكتوبةً هنا، فمزوّدُها تحت `Boot`.
  */
 
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, useEffect } from "react";
+
+// **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
+// باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
+// هنا لا في مواضع النداء — **فما يُطبَّق في موضعٍ لا يُنسى في الثامن
+// والسبعين**، وهي مواضعُ `lazy` في هذه الملفّات الثلاثة.
+import { lazyChunk as lazy } from "@/lib/chunk-retry";
 import {
   Navigate,
   Route,
