@@ -6,6 +6,11 @@
  * إلى `number` يفتح باب الفاصلة العائمة على مالٍ حقيقي).
  */
 
+// **شكلُ الفُتات يسكن حيث يُبنى** (`lib/breadcrumbs.ts`) لا هنا — وهذا الملفُّ
+// مرآةُ الخلفية، والفُتاتُ الشيءُ الوحيدُ في الحمولة **يصنعه العميل**.
+// و`import type` يُمحى عند التصريف، **فلا مستوردَ في وقت التشغيل ولا دورة**.
+import type { Crumb } from "@/lib/breadcrumbs";
+
 export type CountryCode = "JO" | "LY";
 export type Currency = "JOD" | "LYD";
 export type VehicleCategory = "economy" | "comfort";
@@ -897,6 +902,8 @@ export type ErrorReportBody = {
   message: string;
   stack?: string;
   component_stack?: string;
+  /** خطواتُ ما قبل العطب — **الخادمُ يعيد بناءها من مفاتيحَ مسمّاة**. */
+  breadcrumbs?: Crumb[];
   occurred_at: string;
   online: boolean;
   repeat: number;

@@ -12,6 +12,7 @@
  * 3. **العنوان**: مسارٌ واحد `/api/v1` في مكانٍ واحد.
  */
 
+import { noteApi } from "@/lib/breadcrumbs";
 import { captureRequestId } from "@/lib/request-id";
 
 // **ولا احتياطَ صامتٌ لعنوان** (أربعُ نسخ، 2026-08-26): كان هنا
@@ -336,6 +337,10 @@ async function send<T>(path: string, options: RequestOptions, retry: boolean): P
   // **الخيطُ إلى سطر الخلفية** (المرحلة صفر): يُلتقط من كلِّ ردّ،
   // فحين يسقط شيءٌ بعده يحمل التقريرُ رقماً يُبحث به في السجل.
   captureRequestId(response.headers.get("x-request-id"));
+  // **فُتاتٌ من الموضع نفسِه** (٢٠٢٦-٠٩-٢١): الفعلُ وقالبُ المسار والحالة —
+  // **و`path` هنا بلا استعلام** لأن `buildUrl` يركّب `query` على حدة، فلا
+  // يمرّ مُعرِّفٌ في سلسلةِ استعلامٍ من حيث لا يُحتسب.
+  noteApi(options.method ?? "GET", path, response.status);
 
   if (response.status === 401 && retry && !options.anonymous) {
     if (await refreshOnce()) return send<T>(path, options, false);

@@ -11,6 +11,12 @@
  * بلا ماسك، وهو الذي لا يظهر على شاشةٍ أصلاً** · وحدُّ الخطأ حين تسقط شجرةُ
  * React. ورابعٌ بإصبع صاحبه: زرُّ «أرسل تقريراً».
  *
+ * ## ومعها الفُتات — **ما كان يفعله، لا ما انكسر** (٢٠٢٦-٠٩-٢١)
+ *
+ * الأبوابُ الأربعةُ تقول **أين** انكسر؛ و`lib/breadcrumbs.ts` يمسك الخطواتِ
+ * السابقة — تنقّلاً ونداءَ خلفيةٍ بفعله وحالته — **بلا جسمٍ ولا استعلام**.
+ * فيصير «كيف وصل إلى هنا» مقروءاً بدل أن يُخمَّن.
+ *
  * ## وما يمنع هذا الملفَّ من أن يصير هو العطب
  *
  * مُبلِّغٌ عن الأعطال يعمل داخل عطبٍ قائم، **فكلُّ سطرٍ فيه يفترض أن ما حوله
@@ -39,6 +45,7 @@ import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 
 import { postErrorReport } from "@/api/endpoints";
+import { type Crumb, maskPath, recentCrumbs, watchRoutes } from "@/lib/breadcrumbs";
 import { deviceId, platform } from "@/lib/device";
 import { lastRequestId } from "@/lib/request-id";
 
@@ -68,6 +75,7 @@ type Report = {
   message: string;
   stack?: string;
   component_stack?: string;
+  breadcrumbs?: Crumb[];
   occurred_at: string;
   online: boolean;
   repeat: number;
@@ -104,14 +112,15 @@ export function setCrashReportsEnabled(on: boolean): void {
 
 // ------------------------------------------------------------- البناء
 
-/** قالبُ المسار — **ولا يُرسل مُعرِّفٌ ولو كان في شريط العنوان**. */
+/** قالبُ المسار — **ولا يُرسل مُعرِّفٌ ولو كان في شريط العنوان**.
+ *
+ * **والتقنيعُ بيتٌ واحدٌ الآن** (`lib/breadcrumbs.maskPath`): كان هنا نسخةٌ
+ * منه ونسخةٌ في الفُتات، **ونسختان تفترقان أوّلَ تعديل** — فيُقنَّع المسارُ
+ * في مكانٍ ويُسرَّب في الآخر.
+ */
 function routeTemplate(): string {
   try {
-    return window.location.pathname
-      .split("/")
-      .map((part) => (/^[0-9a-fA-F-]{8,}$|^\d+$/.test(part) ? ":id" : part))
-      .join("/")
-      .slice(0, 200);
+    return maskPath(window.location.pathname);
   } catch {
     return "/";
   }
@@ -163,6 +172,7 @@ async function build(
   if (!hash || !currentApp) return null;
 
   const raw = error instanceof Error ? error : null;
+  const crumbs = recentCrumbs();
   const name = (raw?.name || "Error").slice(0, 200);
   const message = (raw?.message || String(error ?? "")).slice(0, 2_000) || "—";
 
@@ -181,6 +191,10 @@ async function build(
     message,
     stack: raw?.stack?.slice(0, 8_000),
     component_stack: componentStack?.slice(0, 8_000) ?? undefined,
+    // **ما كان يفعله قبل أن يقع** — وأثرُ المكدَّس لا يقوله أبداً.
+    // **ويُحذف الحقلُ إن كان فارغاً** ولا يُرسل `[]`: مصفوفةٌ فارغةٌ تُقرأ
+    // «جُمع فلم يكن شيء»، والغيابُ يُقرأ «لم يُجمع» — وهما خبران مختلفان.
+    breadcrumbs: crumbs.length ? crumbs : undefined,
     occurred_at: new Date().toISOString(),
     online: navigator.onLine,
     repeat: 1,
@@ -307,6 +321,10 @@ export async function sendUserReport(
 export function installCrashReports(app: CrashApp): void {
   if (currentApp) return;
   currentApp = app;
+
+  // **الفُتاتُ يبدأ قبل أوّل شاشة** — ومن يركّبه بعد التنقّل يفقد أوّلَه،
+  // وهو الخطوةُ التي يُبنى عليها الباقي.
+  watchRoutes();
 
   window.addEventListener("error", (event) => {
     capture("error", event.error ?? event.message, null);

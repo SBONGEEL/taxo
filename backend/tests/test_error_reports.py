@@ -297,3 +297,71 @@ async def test_concurrent_first_events_make_one_group(client, session_factory) -
             select(func.count()).select_from(ErrorGroupDevice)
         )
         assert devices.scalar_one() == 1
+# ------------------------------------------- الفُتاتُ كما يبنيه العميلُ اليوم
+
+
+async def test_a_real_client_crumb_survives_intact(client, session_factory) -> None:
+    """**ما يرسله العميلُ فعلاً يصل كما أرسله** — ولا يُمسخ في الطريق.
+
+    الاختبارُ الذي فوق هذا يثبت أن **الخبيثَ يُحجب**؛ وهذا يثبت النصفَ الآخر:
+    **أن السليمَ يمرّ**. وحارسٌ يحجب كلَّ شيءٍ يمرّ فحصَ التسريب ويُخرِج
+    شاشةً فارغة، **فالدعوتان تُقاسان معاً أو لا تُقاس واحدةٌ منهما**.
+    """
+    await client.post(
+        "/telemetry/errors",
+        json=payload(
+            breadcrumbs=[
+                {"at": "2026-09-21T04:18:58Z", "kind": "route", "route": "/rides/:id"},
+                {
+                    "at": "2026-09-21T04:19:01Z",
+                    "kind": "api",
+                    "method": "GET",
+                    "path": "/rides/:id",
+                    "status": 200,
+                },
+            ]
+        ),
+    )
+
+    events = await _events(session_factory)
+    assert len(events) == 1
+    assert events[0].breadcrumbs == [
+        {"at": "2026-09-21T04:18:58Z", "kind": "route", "route": "/rides/:id"},
+        {
+            "at": "2026-09-21T04:19:01Z",
+            "kind": "api",
+            "method": "GET",
+            "path": "/rides/:id",
+            "status": 200,
+        },
+    ]
+
+
+async def test_millisecond_stamp_is_eaten_by_the_money_pattern(
+    client, session_factory
+) -> None:
+    """**ولمَ يقصّ العميلُ الملّي** — القياسُ الذي بُني عليه القرار.
+
+    `toISOString()` يعطي `…T04:18:58.314Z`، ونمطُ المال (`\\d+\\.\\d{3}` —
+    صيغةُ `NUMERIC(12,3)`) **يبتلع `58.314`**. فالنمطُ صحيحٌ في موضعه،
+    **والعلّةُ أن يُمرَّر عليه ما لا يشبه المالَ إلا شكلاً** — وهي عائلةُ
+    «حارسٌ صادقٌ يصيح على سليم».
+
+    **ويُثبَّت السلوكُ هنا لا يُصلَح**: إضعافُ نمطِ المال ليمرّ الطابعُ يفتح
+    ثغرةً في حجبِ مبلغٍ حقيقيّ، **والثمنُ غيرُ متماثل**. فيقصّ العميلُ الملّي،
+    ويبقى هذا الاختبارُ شاهداً يسقط إن تغيّر النمطُ يوماً فظُنّ القصُّ ترفاً.
+    """
+    await client.post(
+        "/telemetry/errors",
+        json=payload(
+            breadcrumbs=[{"at": "2026-09-21T04:18:58.314Z", "kind": "route"}]
+        ),
+    )
+
+    events = await _events(session_factory)
+    stored = events[0].breadcrumbs[0]["at"]
+    assert stored != "2026-09-21T04:18:58.314Z", (
+        "مرّ الطابعُ بالملّي سليماً — تغيّر نمطُ المال، "
+        "فراجِع قصَّ الملّي في lib/breadcrumbs.ts فقد زالت علّتُه"
+    )
+    assert "«مبلغ»" in stored
