@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import logging
 
 import pytest
 from fastapi import FastAPI
@@ -51,18 +50,19 @@ async def test_firebase_mismatch_logs_masked_numbers(
 ) -> None:
     """السطرُ يبقى تحذيراً، **والرقمان لا يبقيان**.
 
-    **ولا يُعتمَد على `caplog`** (قِيس 2026-09-20 في CI): جاء **فارغاً** في
-    المجموعة الكاملة وممتلئاً حين يُشغَّل هذا الملفُّ وحدَه — فسقط الاختبارُ
-    على `assert ('+962…111' in '')` **وهو يحرس شيئاً سليماً**.
+    **ولا يمرّ القياسُ بنظام التسجيل أصلاً** (قِيس في CI مرّتين، 2026-09-20
+    و2026-09-21): جُرِّب بـ`caplog` فجاء فارغاً، ثمّ بمِقبضٍ يُركَّب على
+    مسجِّل الوحدة فجاء فارغاً أيضاً. **والسببُ لم يُثبت** — والمحاولتان
+    كلتاهما تسألان **حالاً عامّةً** يمرّ بها ألفٌ وخمسُمئة اختبارٍ قبلها.
 
-    **ونتيجةٌ تتبع ما قبلها ليست نتيجة**: `caplog` يعلّق مِقبضَه على الجذر
-    ويعتمد على الانتشار، وكلاهما حالٌ عامّةٌ يملكها ألفٌ وخمسُمئة اختبارٍ
-    قبله. **فالمقياسُ الآن مِقبضٌ يُركَّب على مسجِّل الوحدة نفسِها** — لا
-    جذرَ ولا انتشارَ ولا ترتيب.
+    **فصار المقياسُ ما يُمرَّر إلى النداء نفسِه**: يُستبدل `logger` بمُسجِّلٍ
+    يحفظ الوسائط. لا مستوياتٌ، ولا انتشارٌ، ولا مِقابض — **ولا حالَ يملكها
+    أحدٌ غيرُ هذا الاختبار**. وهو أيضاً أقربُ إلى الدعوى: الدعوى «ما يُكتب في
+    السطر محجوب»، وهذه تقرأ السطرَ قبل أن يغادر.
 
-    **واسمُ المسجِّل يُقرأ من الوحدة لا يُكتب نصّاً**: `__name__` يتبعها إن
-    نُقلت، **واسمٌ مكتوبٌ بيدٍ يصير صامتاً يومَ تُنقل** — فيمرّ الاختبارُ
-    وهو لا يقيس شيئاً.
+    **ويصيح إن لم يُبلَغ الفرعُ أصلاً**: `assert calls` قبل كلِّ شيء —
+    **واختبارٌ يمرّ لأن الشرطَ لم يقع أسوأُ من اختبارٍ يسقط**، وهو ما كان
+    يمكن أن يقع هنا لولا هذه الدعوى.
     """
     from app.services.auth import firebase_identity
     from app.services.firebase_auth import InvalidIdToken, VerifiedIdentity
@@ -83,35 +83,33 @@ async def test_firebase_mismatch_logs_masked_numbers(
 
     monkeypatch.setattr(firebase_identity, "get_verifier", _get_verifier)
 
-    captured: list[logging.LogRecord] = []
+    calls: list[tuple] = []
 
-    class _Catch(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            captured.append(record)
+    class _Recorder:
+        """يحفظ الوسائطَ كما وصلت — ولا يكتب شيئاً في أيِّ مكان."""
 
-    logger = logging.getLogger(firebase_identity.__name__)
-    handler = _Catch(level=logging.WARNING)
-    previous = logger.level
-    logger.addHandler(handler)
-    logger.setLevel(logging.WARNING)
-    try:
-        with pytest.raises(InvalidIdToken):
-            await firebase_identity.verify_phone_ownership(
-                None, phone=asked_phone, id_token="whatever"
-            )
-    finally:
-        logger.removeHandler(handler)
-        logger.setLevel(previous)
+        def warning(self, *args: object, **kwargs: object) -> None:
+            calls.append((args, kwargs))
 
-    # **وغيابُ السطر يُقرأ سقوطاً لا سلامة**: الحدثُ أمنيٌّ ويجب أن يُكتب
-    assert captured, "لم يُكتب سطرُ تحذيرٍ أصلاً — والمطابقةُ حدثٌ يُسجَّل"
+    monkeypatch.setattr(firebase_identity, "logger", _Recorder())
 
-    written = " | ".join(record.getMessage() for record in captured)
-    assert token_phone not in written, "الرقمُ الكاملُ ما زال في السجل"
-    assert asked_phone not in written, "الرقمُ الكاملُ ما زال في السجل"
-    assert "+962…111" in written and "+962…222" in written
+    with pytest.raises(InvalidIdToken):
+        await firebase_identity.verify_phone_ownership(
+            None, phone=asked_phone, id_token="whatever"
+        )
+
+    # **أوّلاً: أوُقع الفرعُ أصلاً؟** — وبغير هذه الدعوى يمرّ الاختبارُ فارغاً
+    assert calls, "لم يُنادَ التحذيرُ — الفرعُ لم يُبلَغ، والاختبارُ لا يقيس شيئاً"
+    assert len(calls) == 1, f"نداءٌ واحدٌ يُنتظر، ووصل {len(calls)}"
+
+    args, _kwargs = calls[0]
+    rendered = args[0] % tuple(args[1:])
+
+    assert token_phone not in rendered, "الرقمُ الكاملُ ما زال في السطر"
+    assert asked_phone not in rendered, "الرقمُ الكاملُ ما زال في السطر"
+    assert "+962…111" in rendered and "+962…222" in rendered
     # **و`provider_uid` يبقى عارياً بقصد** — هو مُعرِّفُ المزوّد لا رقمَ هاتف
-    assert "uid-xyz" in written
+    assert "uid-xyz" in rendered
 
 
 # ------------------------------------------------- المنبعُ الرابعُ والمُعرِّف
