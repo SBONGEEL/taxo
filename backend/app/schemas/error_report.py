@@ -86,8 +86,16 @@ class ErrorGroupOut(BaseModel):
     kind: ErrorKind
     name: str
     title: str
-    #: أعلى إطارٍ في الأثر — يُقرأ في القائمة
-    culprit: str | None = None
+    #: أعلى إطارٍ في الأثر — يُقرأ في القائمة.
+    #:
+    #: **ولا قيمةَ افتراضيةَ له** (قِيس ٢٠٢٦-٠٩-٢١): الافتراضُ يُخرجه من
+    #: `required` في المخطَّط، **فيقرؤه `test_two_doors` حقلاً «محسوباً»** —
+    #: أي قد يملؤه بابٌ وينساه آخر. وهو حارسٌ محقّ: الحمولةُ تُنشر من ستّة
+    #: أبواب. **والصدقُ أن الحقلَ مطلوبٌ نُطقاً وقيمتُه `null` حين لا أثر**،
+    #: لا أن يُصنَّف استثناءً — فكلُّ أبوابه `model_validate(row)`: الصفُّ
+    #: كلُّه لا حقولٌ تُملأ بيد. وأخواه `first_seen_release`
+    #: و`last_seen_release` مكتوبان هكذا منذ بُنيا.
+    culprit: str | None
     status: ErrorStatus
     event_count: int
     user_count: int
@@ -95,8 +103,9 @@ class ErrorGroupOut(BaseModel):
     last_seen_at: datetime
     first_seen_release: str | None
     last_seen_release: str | None
-    #: **حُسمت يوماً ثمّ عادت** — ولا يُستنتج من الحال الراهنة
-    regressed_at: datetime | None = None
+    #: **حُسمت يوماً ثمّ عادت** — ولا يُستنتج من الحال الراهنة.
+    #: **وبلا افتراضٍ كأخيه أعلاه** — انظر علّتَه.
+    regressed_at: datetime | None
 
 
 class ErrorSummaryOut(BaseModel):
