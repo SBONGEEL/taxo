@@ -15,8 +15,29 @@
  * **فالشاشةُ لا تملك ما تُخفيه** — وهذا أقوى من إخفاءٍ في الواجهة، لأن ما
  * يُخفيه المتصفّحُ يبقى في الردّ لمن يقرأ الـAPI.
  *
+ * > **⚠ واستثناءٌ مكتوبٌ لا مسكوتٌ عنه** (قِيس ٢٠٢٦-٠٩-٢١): **الإحداثيّةُ في
+ * > نصٍّ حرٍّ لا تُحجب** — `lat=31.9539 lng=35.9106` استقرّ في الجدول عارياً،
+ * > **وقرارُ المالك إبقاؤه**. فالسطرُ أعلاه يصف الهاتفَ والبريدَ والمبلغَ
+ * > والمُعرِّف، **ولا يُقاس عليه الموقع**.
+ *
  * **والمُعرِّفُ الوحيدُ `device_hash`**: مُعمّىً مرّتين ولا يُوصَل بصاحبه —
  * وهو موجودٌ ليُقال «جهازان أم أربعمئة»، لا ليُعرف أيُّ جهاز.
+ *
+ * ## والتفصيلُ يعرض كلَّ ما خُزِّن لا مُقتطَفاً منه (٢٠٢٦-٠٩-٢١)
+ *
+ * **كان يعرض آخرَ حدثٍ وحدَه**، وأثرَ المكدَّس في صندوقٍ يُقصّ بارتفاعٍ ثابت،
+ * والفُتاتَ `JSON` خاماً. **ومُقتطَفٌ يُقرأ كاملاً هو الشكلُ الثاني عشر**:
+ * بديلٌ يعمل فيستر ما بُني له. فصار يعرض:
+ *
+ * - **أثرَ المكدَّس كاملاً**، و**إطاراتُ المكتبات تُميَّز عن إطاراتنا** —
+ *   لأن العينَ تقفز إلى الثانية، وأولُ سطرٍ في الأثر غالباً ليس موضعَ العطب.
+ * - **كلَّ المرّات لا آخرَها**: «وقعت على ثلاثة أجهزةٍ في ثلاثة مساراتٍ» خبرٌ
+ *   لا يقوله آخرُ حدثٍ مهما فُصِّل، **وكلُّ مرّةٍ تُفتح وحدَها**.
+ * - **والفُتاتَ سطراً سطراً بأوقاته** — وهو ما يقول *ماذا كان يفعل قبل أن يقع*.
+ *
+ * > **⚠ والفُتاتُ فارغٌ اليومَ بحقّ**: الخلفيةُ تقبله (`scrub_breadcrumbs`)
+ * > والشاشةُ ترسمه، **ولا تطبيقَ يرسله بعد** — فالقسمُ يقول ذلك بنصّه ولا
+ * > يُقرأ سكوتُه «لم يقع شيءٌ قبل العطب».
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -45,6 +66,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
+import { digits } from "@/lib/utils";
 
 const APP_LABEL: Record<ClientApp, string> = {
   rider: "الراكب",
@@ -72,6 +94,20 @@ const KIND_LABEL: Record<string, string> = {
   user_report: "بلاغُ مستخدم",
 };
 
+/** **إطارُ مكتبةٍ لا إطارُنا** — والتمييزُ بصريٌّ لا حذف.
+ *
+ * **ولا يُحذف الإطارُ الأجنبيُّ بحال**: العطبُ يقع أحياناً *داخل* المكتبة
+ * بوسيطٍ أرسلناه نحن، **فحذفُه يقطع الخيط**. يُخفَّت لونُه فحسب، فتقفز العينُ
+ * إلى ما نملك إصلاحَه **دون أن يضيع ما لا نملكه**.
+ */
+const VENDOR_FRAME = /node_modules|\/vendor|vendor-|chunk-|react-dom|\.vite\//i;
+
+/** كم إطاراً يُعرض قبل الطيّ — **والبقيّةُ تُفتح ولا تُقصّ**. */
+const FRAME_PREVIEW = 12;
+
+/** ترتيبُ مفاتيح الفُتات كما يبنيها `core/scrub.py::_CRUMB_KEYS`. */
+const CRUMB_KEYS = ["kind", "level", "method", "status", "route", "path", "text"];
+
 const COLUMNS = "1fr 2.2fr 0.7fr 0.8fr 0.6fr 0.7fr 0.8fr";
 
 export function ErrorsScreen() {
@@ -83,6 +119,10 @@ export function ErrorsScreen() {
   const [rows, setRows] = useState<ErrorGroupRow[] | null>(null);
   const [selected, setSelected] = useState<ErrorGroupDetail | null>(null);
   const [notes, setNotes] = useState<ErrorEventRow[]>([]);
+  /** **كلُّ مرّات هذا العطب** — لا آخرُها وحدَها. */
+  const [events, setEvents] = useState<ErrorEventRow[]>([]);
+  /** **المرّةُ المعروضةُ الآن** — الأحدثُ افتراضاً، وتُبدَّل بالنقر. */
+  const [picked, setPicked] = useState<ErrorEventRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const search = useSearch();
 
@@ -111,7 +151,12 @@ export function ErrorsScreen() {
   const open = async (id: string) => {
     setError(null);
     try {
-      setSelected(await getErrorGroup(id));
+      const detail = await getErrorGroup(id);
+      setSelected(detail);
+      // **كلُّ المرّات** — «ثلاثةُ أجهزةٍ في ثلاثة مسارات» لا يقوله آخرُ حدث
+      const all = await listErrorEvents(id, false);
+      setEvents(all);
+      setPicked(detail.latest ?? all[0] ?? null);
       // **بلاغاتُ الناس أولاً**: جملةُ إنسانٍ تقول ما كان يحاول أن يفعل
       setNotes(await listErrorEvents(id, true));
     } catch (caught) {
@@ -131,6 +176,13 @@ export function ErrorsScreen() {
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
     }
+  };
+
+  const close = () => {
+    setSelected(null);
+    setNotes([]);
+    setEvents([]);
+    setPicked(null);
   };
 
   return (
@@ -247,8 +299,10 @@ export function ErrorsScreen() {
             <span className="text-muted" dir="ltr">
               {row.last_seen_release ?? "—"}
             </span>
-            <span className="text-muted">{row.event_count}</span>
-            <span className="font-semibold text-ink">{row.user_count}</span>
+            <span className="text-muted">{digits(row.event_count)}</span>
+            <span className="font-semibold text-ink">
+              {digits(row.user_count)}
+            </span>
             <span>
               <Badge tone={STATUS_TONE[row.status]}>
                 {STATUS_LABEL[row.status]}
@@ -267,12 +321,15 @@ export function ErrorsScreen() {
                 {selected.title}
               </p>
               <p className="mt-6 text-12 text-muted">
-                {APP_LABEL[selected.app]} · أول ظهور {moment(selected.first_seen_at)}{" "}
-                ({selected.first_seen_release ?? "—"}) · آخر ظهور{" "}
-                {moment(selected.last_seen_at)} ({selected.last_seen_release ?? "—"})
+                {APP_LABEL[selected.app]} · أول ظهور{" "}
+                {moment(selected.first_seen_at)} (
+                {selected.first_seen_release ?? "—"}) · آخر ظهور{" "}
+                {moment(selected.last_seen_at)} (
+                {selected.last_seen_release ?? "—"})
               </p>
               <p className="mt-4 text-12 text-muted">
-                {selected.event_count} مرّة · {selected.user_count} جهازاً متأثراً
+                {digits(selected.event_count)} مرّة ·{" "}
+                {digits(selected.user_count)} جهازاً متأثراً
               </p>
             </div>
 
@@ -306,10 +363,7 @@ export function ErrorsScreen() {
               ) : null}
               <button
                 type="button"
-                onClick={() => {
-                  setSelected(null);
-                  setNotes([]);
-                }}
+                onClick={close}
                 className="rounded-12 border border-line px-14 py-9 text-12.5 font-semibold text-muted"
               >
                 إغلاق
@@ -317,41 +371,26 @@ export function ErrorsScreen() {
             </div>
           </div>
 
-          {selected.latest ? (
+          {picked ? (
             <div className="mt-14 space-y-10">
-              <Detail label="المسار">{selected.latest.route ?? "—"}</Detail>
-              <Detail label="الجهاز">
-                {selected.latest.platform} · {selected.latest.os_version ?? "—"} ·{" "}
-                {selected.latest.online ? "متصل" : "غير متصل"}
-              </Detail>
-              {/* **الخيطُ إلى الخلفية** — يُبحث به في سجلّ الخادم مباشرةً */}
-              {selected.latest.request_id ? (
-                <Detail label="الرقم المرجعي">
-                  {selected.latest.request_id}
-                </Detail>
-              ) : null}
-              {selected.latest.stack ? (
-                <Block label="أثر المكدَّس">{selected.latest.stack}</Block>
-              ) : null}
-              {selected.latest.component_stack ? (
-                <Block label="شجرة المكوّنات">
-                  {selected.latest.component_stack}
-                </Block>
-              ) : null}
-              {selected.latest.breadcrumbs?.length ? (
-                <Block label="الفُتات">
-                  {JSON.stringify(selected.latest.breadcrumbs, null, 2)}
-                </Block>
-              ) : null}
+              <EventBody event={picked} newest={picked.id === events[0]?.id} />
             </div>
           ) : (
-            <p className="mt-12 text-12.5 text-muted">لا حدثَ محفوظٌ لهذه المجموعة.</p>
+            <p className="mt-12 text-12.5 text-muted">
+              لا حدثَ محفوظٌ لهذه المجموعة.
+            </p>
           )}
+
+          <Occurrences
+            events={events}
+            pickedId={picked?.id ?? null}
+            onPick={(event) => setPicked(event)}
+          />
 
           {notes.length ? (
             <div className="mt-14">
               <h3 className="mb-6 text-13 font-bold text-ink">
-                ما كتبه الناس ({notes.length})
+                ما كتبه الناس ({digits(notes.length)})
               </h3>
               <ul className="space-y-8">
                 {notes
@@ -361,7 +400,9 @@ export function ErrorsScreen() {
                       key={item.id}
                       className="rounded-12 border border-line bg-surface-2 p-12"
                     >
-                      <p className="text-12.5 leading-note text-ink">{item.note}</p>
+                      <p className="text-12.5 leading-note text-ink">
+                        {item.note}
+                      </p>
                       <p className="mt-4 text-11 text-muted">
                         {moment(item.received_at)}
                       </p>
@@ -376,7 +417,164 @@ export function ErrorsScreen() {
   );
 }
 
-function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+/** كلُّ ما خُزِّن عن **مرّةٍ واحدةٍ بعينها**. */
+function EventBody({
+  event,
+  newest,
+}: {
+  event: ErrorEventRow;
+  newest: boolean;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-8">
+        <Badge tone={newest ? "ok" : "muted"}>
+          {newest ? "الأحدث" : "مرّةٌ سابقة"}
+        </Badge>
+        {event.user_reported ? <Badge tone="warn">بلاغُ مستخدم</Badge> : null}
+        <span className="text-11 text-muted">
+          وقع {moment(event.occurred_at)} · وصل {moment(event.received_at)}
+        </span>
+      </div>
+
+      {event.user_reported && event.note ? (
+        <div className="rounded-12 border border-line bg-surface-2 p-12">
+          <p className="mb-4 text-12 font-semibold text-ink">
+            ما كتبه صاحبُ الجهاز
+          </p>
+          <p className="text-12.5 leading-note text-ink">{event.note}</p>
+        </div>
+      ) : null}
+
+      <Detail label="الرسالة">{event.message}</Detail>
+      <Detail label="المسار">{event.route ?? "—"}</Detail>
+
+      {/* **الجهازُ والبيئة** — «أفي النسخة الجديدة وحدَها؟» أولُ سؤالٍ يُسأل */}
+      <div className="flex flex-wrap gap-12">
+        <Detail label="المنصّة">{event.platform}</Detail>
+        <Detail label="الإصدار">{event.release ?? "—"}</Detail>
+        <Detail label="القناة">{event.channel ?? "—"}</Detail>
+        <Detail label="الشبكة">{event.online ? "متصل" : "غير متصل"}</Detail>
+        <Detail label="التكرار في الجلسة">{digits(event.repeat)}</Detail>
+      </div>
+      <Detail label="نظام التشغيل">{event.os_version ?? "—"}</Detail>
+      {/* **مُعمّىً مرّتين** — يقول «كم جهازاً»، ولا يقول أيُّ جهاز */}
+      <Detail label="بصمة الجهاز">{event.device_hash}</Detail>
+
+      {/* **الخيطُ إلى الخلفية** — يُنسخ ويُبحث به في سجلّ الخادم مباشرةً */}
+      {event.request_id ? (
+        <CopyLine label="الرقم المرجعي" value={event.request_id} />
+      ) : null}
+
+      {event.stack ? (
+        <StackBlock label="أثر المكدَّس" stack={event.stack} />
+      ) : null}
+      {event.component_stack ? (
+        <StackBlock label="شجرة المكوّنات" stack={event.component_stack} />
+      ) : null}
+
+      <Crumbs items={event.breadcrumbs} />
+    </>
+  );
+}
+
+/** **كلُّ المرّات** — وكلُّ واحدةٍ تُفتح وحدَها. */
+function Occurrences({
+  events,
+  pickedId,
+  onPick,
+}: {
+  events: ErrorEventRow[];
+  pickedId: string | null;
+  onPick: (event: ErrorEventRow) => void;
+}) {
+  if (events.length <= 1) return null;
+  return (
+    <div className="mt-14">
+      <h3 className="mb-6 text-13 font-bold text-ink">
+        كل المرّات ({digits(events.length)})
+      </h3>
+      <ul className="space-y-8">
+        {events.map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              onClick={() => onPick(item)}
+              className={
+                item.id === pickedId
+                  ? "flex w-full flex-wrap items-center gap-8 rounded-12 border border-brand bg-surface-2 p-12 text-start"
+                  : "flex w-full flex-wrap items-center gap-8 rounded-12 border border-line p-12 text-start"
+              }
+            >
+              <span className="text-12 text-muted">
+                {moment(item.received_at)}
+              </span>
+              <span className="text-12 text-ink" dir="ltr">
+                {item.route ?? "—"}
+              </span>
+              <span className="text-11 text-muted" dir="ltr">
+                {item.device_hash}
+              </span>
+              {item.user_reported ? <Badge tone="warn">بلاغ</Badge> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** الفُتاتُ بترتيبه وأوقاته — **سطراً سطراً لا `JSON` خاماً**. */
+function Crumbs({ items }: { items: Record<string, unknown>[] | null }) {
+  if (!items?.length) {
+    return (
+      <div>
+        <p className="mb-4 text-12 font-semibold text-ink">الفُتات</p>
+        <p className="text-12 leading-note text-muted">
+          لا فُتاتَ في هذه المرّة — ولا يُقرأ ذلك «لم يقع شيءٌ قبل العطب»:
+          الخلفيةُ تقبله والشاشةُ ترسمه، ولا تطبيقَ يرسله بعد.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <p className="mb-4 text-12 font-semibold text-ink">
+        الفُتات ({digits(items.length)})
+      </p>
+      <ol className="space-y-6">
+        {items.map((crumb, index) => {
+          const at = crumb.at;
+          return (
+            <li
+              key={index}
+              className="flex flex-wrap items-center gap-8 rounded-12 border border-line p-12"
+            >
+              <span className="text-11 text-muted" dir="ltr">
+                {typeof at === "string" ? moment(at) : "—"}
+              </span>
+              {CRUMB_KEYS.filter((key) => crumb[key] !== undefined).map(
+                (key) => (
+                  <span key={key} className="text-11.5 text-ink" dir="ltr">
+                    {key}={String(crumb[key])}
+                  </span>
+                ),
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function Detail({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <p className="text-12.5 text-muted">
       <span className="font-semibold text-ink">{label}: </span>
@@ -385,16 +583,67 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-function Block({ label, children }: { label: string; children: string }) {
+/** سطرٌ يُنسخ — **الرقمُ المرجعيُّ يُلصَق في بحث السجلّ، فلا يُكتب بيد**. */
+function CopyLine({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <p className="flex flex-wrap items-center gap-8 text-12.5 text-muted">
+      <span className="font-semibold text-ink">{label}: </span>
+      <span dir="ltr">{value}</span>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(value)
+            .then(() => setCopied(true))
+            .catch(() => setCopied(false));
+        }}
+        className="rounded-12 border border-line px-14 py-9 text-11 font-semibold text-muted"
+      >
+        {copied ? "نُسخ" : "انسخ"}
+      </button>
+    </p>
+  );
+}
+
+/** أثرٌ **يُفتح كاملاً**، وإطاراتُ المكتبات مُخفَّتةٌ لا محذوفة. */
+function StackBlock({ label, stack }: { label: string; stack: string }) {
+  const [all, setAll] = useState(false);
+  const lines = stack.split("\n");
+  const shown = all ? lines : lines.slice(0, FRAME_PREVIEW);
+  const hidden = lines.length - shown.length;
+
   return (
     <div>
       <p className="mb-4 text-12 font-semibold text-ink">{label}</p>
       <pre
         dir="ltr"
-        className="scr max-h-list overflow-auto rounded-12 border border-line bg-surface-2 p-12 text-11 leading-relaxed text-muted"
+        className={
+          all
+            ? "scr overflow-auto rounded-12 border border-line bg-surface-2 p-12 text-11 leading-relaxed text-muted"
+            : "scr max-h-list overflow-auto rounded-12 border border-line bg-surface-2 p-12 text-11 leading-relaxed text-muted"
+        }
       >
-        {children}
+        {shown.map((line, index) => (
+          <span
+            key={index}
+            className={
+              VENDOR_FRAME.test(line) ? "block text-muted" : "block text-ink"
+            }
+          >
+            {line}
+          </span>
+        ))}
       </pre>
+      {hidden > 0 || all ? (
+        <button
+          type="button"
+          onClick={() => setAll((was) => !was)}
+          className="mt-6 rounded-12 border border-line px-14 py-9 text-11 font-semibold text-muted"
+        >
+          {all ? "اطوِ الأثر" : `أظهر ${digits(hidden)} إطاراً إضافياً`}
+        </button>
+      ) : null}
     </div>
   );
 }
