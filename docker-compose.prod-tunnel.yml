@@ -30,6 +30,18 @@ services:
       PUBLIC_API_BASE_URL: https://api.tajora.ly
       CARD_RETURN_URL: https://app.tajora.ly/payments/card/return
       CARD_RETURN_URL_DRIVER: https://driver.tajora.ly/payments/card/return
+    # **بلا `--reload` على الإنتاج** (قرارُ المالك 2026-09-22) — والتطويرُ يُبقيه
+    # لأن الملفَّ الأساسيَّ لم يُمسّ. **الأمرُ نفسُه حرفاً ناقصاً `--reload`**:
+    # `alembic upgrade head` باقٍ، والمنفذُ والمضيفُ كما هما، ولا عمّال.
+    #
+    # **ولمَ يضرّ هناك**: `./backend` مربوطٌ على `/app` قراءةً وكتابة، **فكلُّ
+    # `git pull` يغيّر الشيفرةَ تحت العملية الحيّة** — و`--reload` يعيد تحميلَها
+    # فوراً، **قبل** أن تُشغَّل الترحيلةُ وقبل أن تُعاد الحاوية. فيخدم الإنتاجُ
+    # لحظاتٍ شيفرةً جديدةً على قاعدةٍ قديمة. وبدونه لا تتغيّر الشيفرةُ الحيّةُ إلا
+    # حين يعيد `deploy.sh` الحاويةَ بعد الترحيلة.
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   # **البناءُ المحزَّم يخدمه `nginx`، لا خادمُ التطوير** (2026-08-21).
   #
