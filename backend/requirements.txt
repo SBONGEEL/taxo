@@ -1,7 +1,10 @@
 # TAXO backend
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
-sqlalchemy[asyncio]>=2.0.30,<3.0
+# **دون 2.1** (٢٠٢٦-٠٩-٢٩): القيدُ المفتوحُ حُلَّ إلى 2.1.1 فسقطت التهيئةُ كلُّها
+# مع GeoAlchemy2 0.19 (`ColumnCollection is an abstract base class`، CI 36576457431)
+# — **ورفعُه قرارٌ يُقاس مع GeoAlchemy2 لا سقفٌ يُفتح وحدَه**
+sqlalchemy[asyncio]>=2.0.30,<2.1
 asyncpg>=0.29,<1.0
 alembic>=1.13,<2.0
 # أعمدة geography(POINT) للرحلات + تعريف نوع postgis لانعكاس alembic
