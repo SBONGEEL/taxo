@@ -7996,4 +7996,31 @@ framer-motion لا تتقدّم في تبويبٍ لا يُرسَم. **ويُق�
 يشغّل الصورةَ لا القرص، ويفرّقه عن التطوير، ويستوجب مراجعةَ الروابط المتداخلة
 تحت `/app` (`secrets` · `otp_template_rules.json` · حجمُ `documents`).
 **قرارٌ مستقلّ لوقتٍ لاحق.**
+
+## iOS — الخطوةُ الأولى: **الأربعُ تُجمَّع** (٢٠٢٦-٠٩-٢٩)
+
+**القرارُ والمسحُ في `SPEC.md` §58.** وهذا ما قِيس:
+
+    الإيداع   0ed1d05 على فرع ios-scaffold (لا master، ولا رفع)
+    iOS       التشغيل 36575316248 — الأربعُ خضر (macOS 26.6.2 · Xcode 26.6 · CocoaPods 1.17.0)
+              rider public  ly.tajora.rider        · TAXO             · api.tajora.ly
+              rider test    ly.tajora.rider.test   · TAXO تجريبي      · dev-api.tajora.ly
+              driver public ly.tajora.driver       · TAXO Driver      · api.tajora.ly
+              driver test   ly.tajora.driver.test  · TAXO كبتن تجريبي · dev-api.tajora.ly
+    النفيان   بلا TAXO_CHANNEL وقف · وبـserver.url محقوناً وقف — في الأربع
+    أندرويد   الإعدادُ المقيَّمُ متطابقٌ قبل وبعد في الأربع · ولا ملفَّ أندرويدٍ متتبَّعٍ تغيّر
+
+**والقيمُ الثلاثُ في كلِّ سطرٍ مقروءةٌ من داخل `App.app` المبنيّ** — `Info.plist`
+بـ`plutil`، و`capacitor.config.json` المضمَّن، و`public/index.html` = `dist`.
+
+**والتحذيراتُ ٣٨ للراكب و٤٢ للكبتن، وصفرُ خطأ** — وكلُّها من خارج شيفرتنا:
+مساراتُ سلسلةِ Metal على العدّاء، و`WKProcessPool` المهجورُ في Capacitor نفسِه،
+و`alert` في ملحق الإشعارات، ومرحلتا CocoaPods.
+
+**وما لم يُقَس، ويُقال**: لم يُشغَّل محاكٍ ولا جهاز — **فلا شاشةَ رُسمت ولا
+نداءَ خرج**. «تُجمَّع» لا «تعمل».
+
+**ودرسٌ صغيرٌ من اليوم نفسِه**: `Edit` من ويندوز على ملفٍّ داخل WSL **نزع بتَّ
+التنفيذ** عن `scripts/guards.sh` — وأمسكه `check:exec-bit` في خطّاف الإيداع قبل
+أن يمرّ.
 <!--/جديد-->
