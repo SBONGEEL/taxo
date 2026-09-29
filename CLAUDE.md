@@ -760,6 +760,12 @@ write-off from the charge itself. Its lock is taken **before** the status is che
 status change: without it two concurrent waives both read `pending` and one writes "waived" over a
 collection that already moved money out of a rider's wallet.
 
+<!--جديد-->
+**Account deletion (SPEC §59) fits the same order**: the `users` row → the driver row → the wallet
+lock, **as `FOR NO KEY UPDATE`** — every ledger insert takes `KEY SHARE` on the user row through its
+foreign key, and `FOR UPDATE` deadlocked a topup against a deletion request (caught by the race test).
+<!--/جديد-->
+
 Stage 8 added two mutating paths and both fit the same order. `cliq_topups.apply_state` locks the
 provider-order row and then takes the wallet advisory lock (no ride and no payment row exist on a
 wallet topup), and asks the acquirer *before* any lock in `reconcile`. `withdrawals.pay_via_provider`
