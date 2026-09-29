@@ -58,6 +58,7 @@ import type {
   CountryFeatureFlags,
   CountryRow,
   DeactivationRequestRow,
+  PendingDeletionRow,
   Delivery,
   DisputeResolution,
   DriverDocument,
@@ -934,6 +935,10 @@ export const listAuditLogs = (
 ) => api.get<AuditLog[]>("/admin/settings/audit-logs", { query: params });
 
 /** طلباتُ إلغاء التفعيل — والمعلّقةُ أولاً بحكم ترتيب الخلفية (البند ١٣). */
+/** **الحساباتُ في مهلة الحذف** (SPEC §59) — قراءةٌ لا قرار. */
+export const listPendingDeletions = () =>
+  api.get<PendingDeletionRow[]>("/admin/deletions");
+
 export const listDeactivations = (status?: string) =>
   api.get<DeactivationRequestRow[]>(
     "/admin/deactivations" + (status ? `?status=${status}` : ""),

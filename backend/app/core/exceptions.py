@@ -210,6 +210,54 @@ class PhoneAlreadyRegistered(Conflict):
     message = "رقم الهاتف مسجّل مسبقاً"
 
 
+class PhoneScheduledForDeletion(Conflict):
+    """**الرقمُ لحسابٍ في مهلة الحذف** (SPEC §59) — والمخرجُ الدخولُ لا تسجيلٌ ثانٍ.
+
+    **ورمزٌ غيرُ `phone_already_registered`**: «مسجّلٌ مسبقاً» يقول لمن طلب
+    حذفَ حسابه إن حسابَه ما زال قائماً ولا يقول كيف يعود إليه.
+    """
+
+    code = "phone_scheduled_for_deletion"
+    message = "لهذا الرقم حسابٌ مجدولٌ للحذف — سجّل الدخول لاستعادته"
+
+
+class AccountDeletionPending(AppError):
+    """**حسابٌ في مهلة الحذف** — لا رحلةَ ولا جهازَ حتى يُستعاد (SPEC §59-ج).
+
+    **ولا يُردّ به كلُّ باب**: السحبُ والمحفظةُ مفتوحان في المهلة — **فهي وقتُ
+    سحب الكبتن رصيدَه** — والمقفلُ ما يبدأ عملاً جديداً وحدَه.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "account_deletion_pending"
+    message = "حسابك مجدولٌ للحذف — استعده أولاً من شاشة الحساب"
+
+
+class DeletionBlocked(Conflict):
+    """**موانعُ الحذف كلُّها معاً** في `blockers` — لا أوّلُها."""
+
+    code = "deletion_blocked"
+    message = "لا يمكن حذفُ الحساب الآن"
+
+
+class DeletionBalanceUnacknowledged(Conflict):
+    """**رصيدٌ لم يُقَرّ بضياعه كما هو** — والرصيدُ الحاليُّ في `balance`."""
+
+    code = "deletion_balance_unacknowledged"
+    message = "اكتب رصيدك الحالي كما هو للموافقة على ضياعه"
+
+
+class AccountDeleted(Conflict):
+    """**حسابٌ جُهِّل لا يدخله مال** — يرفعه `wallet.record` تحت قفل المحفظة.
+
+    **وموضعُه الدفترُ لا الأبواب**: كلُّ مالٍ يدخل محفظةً يمرّ بـ`record`، فحارسٌ
+    هنا يمسك البابَ الذي يُنسى — شحنٌ يتسابق مع التجهيل لحظةَ وقوعه.
+    """
+
+    code = "account_deleted"
+    message = "هذا الحساب محذوف — لا تُقبل له معاملاتٌ جديدة"
+
+
 class EmailAlreadyRegistered(Conflict):
     """بريدٌ **مُثبَتٌ** على حسابٍ آخر (قرارُ المالك 2026-08-31).
 

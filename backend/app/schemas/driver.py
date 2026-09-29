@@ -377,13 +377,6 @@ class DriverStatusUpdate(BaseModel):
     reason: str | None = Field(default=None, max_length=255)
 
 
-class DeactivationRequestIn(BaseModel):
-    """طلبُ الكبتن إغلاقَ حسابه (البند ١٣) — والسببُ اختياريٌّ ونصٌّ حرّ.
-
-    من يترك يقول لماذا إن شاء، ولا يُحبس خروجُه على قائمةٍ نختارها له.
-    """
-
-    reason: str | None = Field(default=None, max_length=300)
 
 
 class DeactivationDecisionIn(BaseModel):
@@ -406,18 +399,6 @@ class DeactivationRequestOut(BaseModel):
     created_at: datetime
 
 
-class DeactivationStateOut(BaseModel):
-    """ما تحتاجه شاشةُ الكبتن في نداءٍ واحد.
-
-    **والموانعُ قائمةٌ لا أوّلُ سبب**: من أُخبر بمانعٍ فأزاله ثم صُدم بثانٍ
-    يقرأ الرفضَ مماطلة. **والمحتجَزُ يُقال برقمه** لا بجملةٍ عامة: من يرى
-    رصيداً لا يستطيع سحبَه كلَّه يستحق أن يعرف كم منه ولماذا.
-    """
-
-    request: DeactivationRequestOut | None
-    blockers: list[str]
-    reserve_amount: Decimal
-    currency: str
 
 
 # --------------------------------------------------- سلفُ الكباتن (البند ١٥)

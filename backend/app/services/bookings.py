@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from httpx import HTTPError
 
 from app.core.exceptions import (
+    AccountDeletionPending,
     AppError,
     Conflict,
     FeatureDisabled,
@@ -166,6 +167,10 @@ async def create(
     له أن يحجز للغد — وهذا هو نصفُ سببِ الجدول المستقل. والفحصُ يقع لحظةَ
     التنفيذ حيث يعني شيئاً.
     """
+    # **ولا حجزَ لحسابٍ في مهلة الحذف** (SPEC §59-ج)
+    if rider.deletion_due_at is not None:
+        raise AccountDeletionPending()
+
     if not await offered_in(session, rider):
         raise BookingsUnavailable()
 

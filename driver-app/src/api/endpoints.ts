@@ -14,8 +14,7 @@ import type {
   MyProgress,
   Advance,
   AdvanceState,
-  DeactivationRequest,
-  DeactivationState,
+  DeletionState,
   AppConfig,
   AppVersion,
   AuthMethod,
@@ -394,14 +393,21 @@ export const getRouteLine = (rideId: string) =>
   }>(`/rides/${rideId}/route-line`);
 
 /** حالُ إلغاء التفعيل: طلبُه إن وُجد، وموانعُه، والمحتجَزُ برقمه (البند ١٣). */
-export const getDeactivationState = () =>
-  api.get<DeactivationState>("/account/deactivation");
 
-export const requestDeactivation = (reason?: string) =>
-  api.post<DeactivationRequest>("/account/deactivation", { reason });
+// **حذفُ الحساب بعد مهلة** (SPEC §59، قرارُ المالك ٢٠٢٦-٠٩-٢٩) — حلّ محلَّ
+// «إغلاق الحساب» الذي كان طلباً يراجعه مشرف. **وبابٌ واحدٌ للدورين**.
+export const getDeletionState = () => api.get<DeletionState>("/account/deletion");
 
-export const cancelDeactivation = () =>
-  api.del<DeactivationRequest>("/account/deactivation");
+/** `forfeitAmount` المبلغُ كما هو إن كان في محفظة الراكب رصيد — وإلا لا شيء. */
+export const requestDeletion = (forfeitAmount?: string) =>
+  api.post<DeletionState>(
+    "/account/deletion",
+    forfeitAmount ? { forfeit_amount: forfeitAmount } : {},
+  );
+
+/** **الاستعادةُ في المهلة** — فعلٌ صريحٌ بعد الدخول. */
+export const restoreAccount = () => api.del<DeletionState>("/account/deletion");
+
 
 /** حالُ السلف: الأهليةُ بشروطها والسقفُ والدَّين (البند ١٥). */
 export const getAdvanceState = () => api.get<AdvanceState>("/drivers/me/advances");

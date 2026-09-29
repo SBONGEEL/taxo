@@ -1187,6 +1187,67 @@ async def publish_backup_alert(
     )
 
 
+#: **سببُ تأجيل الحذف بجملة المشرف** — والرمزُ في `data` لا الجملة
+DELETION_DEFER_TEXT: dict[str, str] = {
+    "active_ride": "رحلةٌ جارية",
+    "open_dispute": "نزاعٌ مفتوح على دفعة",
+    "unpaid_charge": "رسمُ إلغاءٍ مستحقٌّ عليه",
+    "unpaid_advance": "سلفةٌ غيرُ مسدَّدة",
+    "pending_money": "شحنٌ أو سحبٌ أو دفعُ بطاقةٍ لم يُحسم",
+    "rider_balance_changed": "رصيدُ محفظة الراكب تغيّر بعد موافقته على ضياعه",
+    "driver_balance": "في محفظة الكبتن رصيدٌ لم يُسحب",
+}
+
+
+async def publish_deletion_deferred(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    subject_user_id: uuid.UUID,
+    subject_name: str,
+    reason: str,
+) -> None:
+    """**حذفٌ حلّ موعدُه ولم يقع** (SPEC §59-د) — إلى كلِّ مشرف، وعبر الصندوق.
+
+    **ومرّةً عند تغيّر السبب لا كلَّ ساعة** — المستدعي يقرّر ذلك من
+    `Outcome.newly_deferred`: تنبيهٌ يتكرّر كلَّ ساعةٍ يُتجاهل في اليوم الأوّل.
+
+    **وبابُ الصندوق لا الدفع وحدَه** — المشرفُ بلا أجهزةِ دفعٍ بالتصميم، وهو
+    درسُ `publish_backup_alert` بعينه.
+    """
+    from sqlalchemy import select
+
+    from app.models.enums import UserRole
+    from app.models.user import User
+    from app.models.user_role_grant import has_role_clause
+
+    admins = (
+        await session.scalars(
+            select(User.id).where(
+                has_role_clause(UserRole.ADMIN), User.is_blocked.is_(False)
+            )
+        )
+    ).all()
+    for admin_id in admins:
+        await _safe_notify(
+            session,
+            redis,
+            user_id=admin_id,
+            message=PushMessage(
+                title="تأجّل حذفُ حساب",
+                body=(
+                    f"{subject_name}: {DELETION_DEFER_TEXT.get(reason, reason)} — "
+                    "افتح «حسابات في مهلة الحذف»."
+                ),
+                data={
+                    "type": "deletion_deferred",
+                    "user_id": str(subject_user_id),
+                    "reason": reason,
+                },
+            ),
+        )
+
+
 async def publish_share_partner_joined(
     session: AsyncSession,
     redis: Redis,

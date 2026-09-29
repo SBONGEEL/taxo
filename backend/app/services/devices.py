@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import InvalidInput
+from app.core.exceptions import AccountDeletionPending, InvalidInput
 from app.models.device import DeviceToken
 from app.models.enums import DevicePlatform
 from app.models.user import User
@@ -37,6 +37,10 @@ async def register(
     platform: DevicePlatform,
 ) -> DeviceToken:
     """يسجّل جهازاً أو يحدّث رمزه. الـ commit مسؤولية المستدعي."""
+    # **ولا إشعارَ في مهلة الحذف** (SPEC §59-ج): رموزُه مُحيت عند الطلب،
+    # وجهازٌ يُسجَّل بعدها يعيد ما مُحي بلا استعادة
+    if user.deletion_due_at is not None:
+        raise AccountDeletionPending()
     device_id = device_id.strip()
     token = token.strip()
     if not device_id or not token:

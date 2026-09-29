@@ -21,7 +21,6 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidInput, NotFound
@@ -128,7 +127,9 @@ async def _rider_wallet_balance(session: AsyncSession, user: User) -> bool:
     return await wallet_service.balance_of(session, user) > 0
 
 
-async def blockers(session: AsyncSession, user: User) -> list[str]:
+async def blockers(
+    session: AsyncSession, user: User, *, rider_balance_blocks: bool = True
+) -> list[str]:
     """ما يمنع الإغلاق الآن — **قائمةٌ لا أوّلُ سبب**.
 
     الشاشةُ تعرضها كلَّها: من أُخبر بمانعٍ فأزاله ثم صُدم بثانٍ يقرأ الرفضَ
@@ -159,7 +160,14 @@ async def blockers(session: AsyncSession, user: User) -> list[str]:
     #
     # **والراكبُ حالٌ أخرى**: **لا يسحب البتّة** (§7)، ومخرجُه الإنفاقُ أو
     # التحويل — **فالمانعُ عنده قابلٌ للإزالة بيده**، وهو شرطُ كلِّ مانعٍ هنا.
-    if driver is None and await _rider_wallet_balance(session, user):
+    #
+    # **وحذفُ الحساب لا يمنعه رصيدُ الراكب** (قرارُ المالك ٢٠٢٦-٠٩-٢٩، §59):
+    # يحوّله أو يُقرّ بضياعه كتابةً — فيسأل `account_deletion` بلا هذا المانع.
+    if (
+        rider_balance_blocks
+        and driver is None
+        and await _rider_wallet_balance(session, user)
+    ):
         found.append("wallet_balance")
 
     if driver is None:
@@ -179,76 +187,10 @@ async def blockers(session: AsyncSession, user: User) -> list[str]:
     return found
 
 
-#: **جملةُ كلِّ مانعٍ للرسالة وحدَها** — والشاشةُ تقرأ الرمز.
-#:
-#: **ولمَ هنا أيضاً وقد قيل «الرموزُ لا الجمل»**: هذه جملةُ **الاستثناء** حين
-#: يُرفض الطلب، لا نصُّ الشاشة. **ومن نادى البابَ من خارج التطبيق** — أداةٌ،
-#: أو شاشةٌ لم تحدَّث — يستحقّ جواباً مفهوماً لا رمزاً عارياً.
-_BLOCKER_TEXT = {
-    "active_ride": "رحلةٌ جارية",
-    "open_dispute": "نزاعٌ مفتوح",
-    "unpaid_advance": "سلفةٌ غيرُ مسدَّدة",
-    "unpaid_charge": "رسمُ إلغاءٍ مستحقّ",
-    "wallet_balance": "رصيدٌ في المحفظة",
-}
-
-
-async def pending_for(
-    session: AsyncSession, user_id: uuid.UUID
-) -> DeactivationRequest | None:
-    return await session.scalar(
-        select(DeactivationRequest).where(
-            DeactivationRequest.user_id == user_id,
-            DeactivationRequest.status == DeactivationStatus.PENDING,
-        )
-    )
-
-
-async def request(
-    session: AsyncSession, *, user: User, reason: str | None = None
-) -> DeactivationRequest:
-    """يفتح طلبَ إغلاقٍ للحساب — الـcommit للمستدعي."""
-    if user.deactivated_at is not None:
-        raise DeactivationBlocked("الحساب مُغلقٌ أصلاً")
-
-    # **وحالُ الكبتن تُقرأ أيضاً**: أثرُ الموافقة عنده `drivers.status` لا
-    # `deactivated_at` (انظر `decide`) — **فالسؤالُ عن العمود الخطأ يفتح
-    # طلبَ إغلاقٍ ثانياً لمن أُطفئت كبتنتُه سلفاً**.
-    existing_driver = await session.scalar(
-        select(Driver).where(Driver.user_id == user.id)
-    )
-    if (
-        existing_driver is not None
-        and existing_driver.status is DriverStatus.DEACTIVATED
-    ):
-        raise DeactivationBlocked("الحساب مُلغى التفعيل أصلاً")
-
-    found = await blockers(session, user)
-    if found:
-        raise DeactivationBlocked(
-            "أنهِ ما عليك أولاً: "
-            + "، ".join(_BLOCKER_TEXT[item] for item in found)
-        )
-
-    row = DeactivationRequest(user_id=user.id, reason=(reason or "").strip() or None)
-    session.add(row)
-    try:
-        await session.flush()
-    except IntegrityError as exc:
-        # الفهرسُ الجزئي: طلبٌ قائمٌ واحدٌ لكل حساب — والحارسُ في القاعدة لا في
-        # فحصٍ سابقٍ يمكن أن تسبقه ضغطةٌ ثانية
-        await session.rollback()
-        raise DeactivationBlocked("لديك طلبٌ قائمٌ بالفعل") from exc
-    return row
-
-
-async def cancel(session: AsyncSession, *, user: User) -> DeactivationRequest:
-    """يعدل صاحبُ الحساب عن طلبه — ما دام معلّقاً."""
-    row = await _locked_pending(session, user.id)
-    row.status = DeactivationStatus.CANCELLED
-    row.resolved_at = _now()
-    await session.flush()
-    return row
+# **الطلبُ والعدولُ من صاحب الحساب أُزيلا** (٢٠٢٦-٠٩-٢٩): حلّ محلَّهما
+# `services/account_deletion.py` — حذفٌ بعد مهلة بقرار المالك (§59). **وبقي
+# قرارُ المشرف** للطلبات القائمة قبل ذلك اليوم حتى يُبتّ فيها، وبقيت
+# `blockers` لأن الحذفَ يسأل الموانعَ نفسَها.
 
 
 async def _locked_pending(

@@ -31,6 +31,7 @@ import { ConfigProvider, useConfig } from "@/lib/config";
 import { RideProvider, useRide } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
+import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { showsNav } from "@/lib/tabs";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
@@ -86,9 +87,9 @@ const WalletTransferScreen = lazy(() =>
     default: m.WalletTransferScreen,
   })),
 );
-const CloseAccountScreen = lazy(() =>
-  import("@/screens/CloseAccount").then((m) => ({
-    default: m.CloseAccountScreen,
+const DeleteAccountScreen = lazy(() =>
+  import("@/screens/DeleteAccount").then((m) => ({
+    default: m.DeleteAccountScreen,
   })),
 );
 const CardsScreen = lazy(() =>
@@ -177,7 +178,12 @@ function Guarded({ children }: { children: ReactNode }) {
   const { user } = useSession();
   // **بعد الدخول وحدَه**: التوقيعُ هويةُ من دخل، لا صوتٌ يُقابل به من يكتب كلمةَ مروره
   useSoundUnlock(Boolean(user));
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  // **حسابٌ في مهلة الحذف يرى شاشةَ الاستعادة وحدَها** (SPEC §59-ج) — والقرارُ
+  // من الجلسة نفسِها لا من نداءٍ ثانٍ. **ولا بابَ آخرَ للراكب في المهلة**:
+  // الخلفيةُ تردّ الرحلةَ والجهازَ، والشاشةُ لا تَعِد بما يُردّ.
+  if (user.deletion_due_at) return <RestoreAccountScreen dueAt={user.deletion_due_at} />;
+  return <>{children}</>;
 }
 
 function Anonymous({ children }: { children: ReactNode }) {
@@ -413,13 +419,13 @@ export default function App() {
                           </Guarded>
                         }
                       />
-                      {/* **إغلاقُ الحساب** — شرطُ المتجر (٢٠٢٦-٠٩-٠٧)، والبابُ
-                          بابُ الكبتن نفسُه `‎/account/deactivation` */}
+                      {/* **حذفُ الحساب بعد مهلة** (SPEC §59) — حلّ محلَّ «إغلاق
+                          الحساب»، والبابُ `‎/account/deletion` للدورين */}
                       <Route
-                        path="/account/close"
+                        path="/account/delete"
                         element={
                           <Guarded>
-                            <CloseAccountScreen />
+                            <DeleteAccountScreen />
                           </Guarded>
                         }
                       />

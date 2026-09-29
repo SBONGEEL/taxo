@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.user_role_grant import UserRoleGrant  # noqa: F401
 from app.models.wallet_freeze import WalletFreeze  # noqa: F401
-from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
+from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
 from app.models.enums import (
     AccountKind,
     CountryCode,
@@ -72,6 +73,39 @@ class User(UUIDMixin, TimestampMixin, Base):
     # تعطيلٌ وإخفاء** — وهو ما يقوله نصُّ التأكيد للمستخدم حرفاً، فلا يَعِد
     # النصُّ بما لا يقع.
     deactivated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # ── حذفُ الحساب بعد مهلة (SPEC §59، الترحيلة `0081`) ─────────────────────
+    #
+    # **حالُ الحساب لا جدولٌ بجانبه**: كلُّ بابٍ يسأل «أهو مجدولٌ للحذف؟»
+    # (طلبُ رحلة · تسجيلُ جهاز · تسجيلُ رقم) **يقرأ الصفَّ الذي بيده أصلاً**.
+    # والبابُ الوحيدُ الذي يكتبها `services/account_deletion.py`.
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: موعدُ التجهيل — والمهمّةُ الدوريةُ تسأل عنه، و`NULL` = لا طلب
+    deletion_due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: **ما أقرّ بضياعه من رصيد محفظة الراكب كما كتبه** — يُقارَن بالرصيد تحت
+    #: القفل عند التأكيد وفي اليوم الثلاثين. **وليس قيداً**: الدفترُ لا يُمسّ.
+    deletion_forfeit_amount: Mapped[Decimal | None] = mapped_column(
+        MONEY, nullable=True
+    )
+    #: حالُ الكبتن قبل الطلب — **تعود إليها الاستعادةُ لا إلى افتراض**
+    deletion_driver_status: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )
+    #: **لماذا لم يُجهَّل في موعده** — رمزٌ لا جملة، والمشرفُ يُنبَّه عند تغيّره
+    deletion_deferred_reason: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    deletion_deferred_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: **جُهِّل** — ومعه `deactivated_at` فتردّه كلُّ الأبواب القائمة بلا سطرٍ جديد
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     # كلمة المرور هي طريقة الدخول **دائماً** (المرحلة 8-ب). تبقى nullable
@@ -314,6 +348,12 @@ class User(UUIDMixin, TimestampMixin, Base):
             postgresql_where=text("email_verified_at IS NOT NULL"),
         ),
         UniqueConstraint("phone", "account_kind", name="uq_users_phone_account_kind"),
+        # المهمّةُ تسأل «من حلّ موعدُه؟» كلَّ ساعة — ومن لم يطلب لا يدخل الفهرس
+        Index(
+            "ix_users_deletion_due_at",
+            deletion_due_at,
+            postgresql_where=text("deletion_due_at IS NOT NULL AND deleted_at IS NULL"),
+        ),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي

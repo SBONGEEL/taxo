@@ -92,6 +92,7 @@ celery_app = Celery(
         "app.tasks.whatsapp",
         "app.tasks.verification_campaign",
         "app.tasks.error_reports",
+        "app.tasks.accounts",
     ],
 )
 
@@ -132,6 +133,12 @@ celery_app.conf.update(
         # السلف (البند ١٥): الإيقافُ بانقضاء المهلة وتنبيهُ اقترابها. وكلُّ
         # عشر دقائق تكفي — المهلةُ أيامٌ لا دقائق، ورفعُ الإيقاف لا ينتظر هذه
         # الدورة أصلاً بل يقع في مسار السداد نفسِه
+        # **حذفُ الحسابات بعد المهلة** (SPEC §59-د): المهلةُ ثلاثون يوماً، فساعةٌ
+        # دقّةٌ كافية — ومن حلّ موعدُه ينتظر ساعةً على الأكثر
+        "anonymize-due-accounts": {
+            "task": "app.tasks.accounts.anonymize_due",
+            "schedule": 3600.0,
+        },
         "sweep-advances": {
             "task": "app.tasks.advances.sweep_advances",
             "schedule": 600.0,

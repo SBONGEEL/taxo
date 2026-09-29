@@ -85,7 +85,8 @@ from app.schemas.debt import (
     DebtConfirmIn,
     DebtWriteOffIn,
 )
-from app.services import deactivation
+from app.schemas.account import PendingDeletionRow
+from app.services import account_deletion, deactivation
 from app.services import permissions as permissions_service
 from app.services import (
     admin_search,
@@ -755,6 +756,22 @@ async def decide_deactivation(
     await session.commit()
     await session.refresh(row)
     return DeactivationRequestOut.model_validate(row)
+
+
+@router.get("/deletions", response_model=list[PendingDeletionRow])
+async def list_pending_deletions(
+    _: UsersManager, session: DbSession
+) -> list[PendingDeletionRow]:
+    """**الحساباتُ في مهلة الحذف وموعدُ تجهيلها** (SPEC §59) — والمؤجَّلةُ أوّلاً.
+
+    **قراءةٌ لا قرار**: الحذفُ يقع بموعده من المهمّة الدورية، **والمشرفُ لا يعجّله
+    ولا يلغيه** — الاستعادةُ لصاحب الحساب بالدخول وحدَه. والمؤجَّلُ ينتظر أن
+    يُزال سببُه (رصيدٌ يُسحب، نزاعٌ يُحسم)، **فيقع في الدورة التي تلي زوالَه**.
+    """
+    return [
+        PendingDeletionRow.model_validate(row)
+        for row in await account_deletion.pending_accounts(session)
+    ]
 
 
 # ------------------------------------------------------- السلف (البند ١٥)

@@ -63,6 +63,8 @@ export type VerificationMethod =
 export type OtpChannel = "whatsapp_otp" | "sms_otp";
 
 export interface User {
+  /** **موعدُ حذف حسابه إن طلبه** (SPEC §59) — منه تُرسم شاشةُ الاستعادة. */
+  deletion_due_at?: string | null;
   id: string;
   /** `null` نظرياً (المشرف) — والتطبيقان لا يريان إلا صاحبَهما. */
   phone: string | null;
@@ -726,24 +728,22 @@ export interface MyReferrals {
 }
 
 /** حالُ طلب إلغاء التفعيل وموانعُه (البند ١٣). */
-export interface DeactivationRequest {
-  id: string;
-  /** **صاحبُ الحساب لا الكبتن** (الترحيلة `0075`): صار البابُ واحداً للدورين
-   *  — `‎/account/deactivation` — **فالراكبُ يُغلق حسابَه من المسار نفسِه**. */
-  user_id: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
-  reason: string | null;
-  review_note: string | null;
-  resolved_at: string | null;
-  created_at: string;
-}
-
-export interface DeactivationState {
-  request: DeactivationRequest | null;
+export interface DeletionState {
+  /** `null` = لا طلب. والموعدُ بعد 30 يوماً من الطلب (SPEC §59). */
+  requested_at: string | null;
+  due_at: string | null;
+  /** رمزُ سبب التأجيل إن حلّ الموعدُ ولم يقع — والنصُّ في الشاشة */
+  deferred_reason: string | null;
   /** **قائمةٌ لا أوّلُ سبب**: من أزال مانعاً ثم صُدم بثانٍ يقرأ الرفضَ مماطلة. */
   blockers: string[];
-  reserve_amount: string;
+  rider_balance: string;
+  driver_balance: string;
+  /** ما أقرّ بضياعه كما كتبه — يُقارَن بالرصيد في اليوم الثلاثين */
+  forfeit_amount: string | null;
   currency: string;
+  is_driver: boolean;
+  /** **خيارُ التحويل يظهر حين يكون مفعّلاً في دولته وحدَه** (قرارُ المالك) */
+  transfer_enabled: boolean;
 }
 
 /** سلفُ الكباتن (البند ١٥). */

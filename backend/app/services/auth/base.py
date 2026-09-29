@@ -10,6 +10,7 @@ from app.core.exceptions import (
     EmailAlreadyRegistered,
     InvalidInput,
     PhoneAlreadyRegistered,
+    PhoneScheduledForDeletion,
 )
 from app.models.driver import Driver
 from app.models.enums import AccountKind, UserRole
@@ -40,9 +41,12 @@ async def create_account(
     # **الرقمُ مع نوعِ الحساب** (الترحيلة `0076`، §D9.1): الرقمُ نفسُه يحمل
     # حساباً من كلِّ نوع، والرفضُ لحسابٍ ثانٍ **من النوع نفسِه** وحدَه
     existing = await session.scalar(
-        select(User.id).where(User.phone == phone, User.account_kind == account_kind)
+        select(User).where(User.phone == phone, User.account_kind == account_kind)
     )
     if existing is not None:
+        # **ولحسابٍ في مهلة الحذف طريقُه الدخولُ لا تسجيلٌ ثانٍ** (SPEC §59-ج)
+        if existing.deletion_due_at is not None:
+            raise PhoneScheduledForDeletion()
         raise PhoneAlreadyRegistered()
 
     # **والبريدُ المُثبَتُ كذلك** — بلا حساسيةِ حالة، **وللمُثبَت وحدَه**:

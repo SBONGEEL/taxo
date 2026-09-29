@@ -282,9 +282,9 @@ export function AccountScreen() {
               لا في «الإعدادات» — تلك للجهاز. ولا يُخفى خلف تحذير: من يريد
               الخروج يجد بابَه، والمراجعةُ هي ما يحمي لا صعوبةُ العثور */}
           <Row
-            label="إلغاء تفعيل الحساب"
-            sub="طلبٌ يراجعه مشرف — ويُصرف رصيدُك بعده"
-            onClick={() => navigate("/account/deactivation")}
+            label="حذف الحساب"
+            sub="يُحذف نهائياً بعد 30 يوماً — واسحب رصيدك خلالها"
+            onClick={() => navigate("/account/delete")}
             last
           />
         </div>

@@ -70,6 +70,7 @@ import {
 } from "@/components/profile/DriverSections";
 import { DriverDebts } from "@/components/DriverDebts";
 import { Deactivations } from "@/components/Deactivations";
+import { PendingDeletions } from "@/components/PendingDeletions";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Button } from "@/components/ui/Button";
@@ -544,6 +545,7 @@ export function DriversScreen() {
       {/* **طلباتُ إلغاء التفعيل تحت قائمة الكباتن** (البند ١٣): هنا يُقرأ حالُ
           الكبتن أصلاً، وقرارٌ يُخرجه من التوزيع يسكن حيث تُقرأ حالتُه — لا في
           «المالية» رغم أنه يُطلق مالاً محتجَزاً */}
+      <PendingDeletions onError={setError} />
       <Deactivations onError={setError} />
       <Advances onError={setError} />
       <DriverDebts onError={setError} />

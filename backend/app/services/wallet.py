@@ -25,6 +25,7 @@ from sqlalchemy import func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
+    AccountDeleted,
     FeatureDisabled,
     InsufficientBalance,
     InvalidInput,
@@ -288,6 +289,16 @@ async def record(
     _validate_sign(tx_type, amount)
 
     await lock_wallet(session, owner.id)
+
+    # **حسابٌ جُهِّل لا يدخله مال ولا يخرج** (SPEC §59). ويُقرأ **بعد** القفل لا
+    # من `owner` الذي بيد المستدعي: التجهيلُ يأخذ القفلَ نفسَه ثم يثبّت، فشحنٌ
+    # انتظر القفلَ يرى ما ثبّته — **وإلا دخل مالٌ حساباً لا صاحبَ له**.
+    # **ولا يُعدِّل الدفترَ**: يرفض قيداً لم يُكتب بعد.
+    if (
+        await session.scalar(select(User.deleted_at).where(User.id == owner.id))
+        is not None
+    ):
+        raise AccountDeleted()
 
     if idempotency_key is not None:
         existing = await find_by_idempotency_key(session, owner.id, idempotency_key)

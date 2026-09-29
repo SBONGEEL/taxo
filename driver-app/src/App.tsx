@@ -44,6 +44,7 @@ import { DriverProvider, useDriver } from "@/lib/driver";
 import { GarageProvider } from "@/lib/garage";
 import { RideProvider, useRide } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
+import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { WelcomeSheet } from "@/components/WelcomeSheet";
 import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
 import { BottomNav } from "@/components/BottomNav";
@@ -120,9 +121,9 @@ const VehicleScreen = lazy(() =>
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
 );
-const DeactivationScreen = lazy(() =>
-  import("@/screens/Deactivation").then((m) => ({
-    default: m.DeactivationScreen,
+const DeleteAccountScreen = lazy(() =>
+  import("@/screens/DeleteAccount").then((m) => ({
+    default: m.DeleteAccountScreen,
   })),
 );
 const PermissionsScreen = lazy(() =>
@@ -231,11 +232,20 @@ function Anonymous({ children }: { children: ReactNode }) {
   return user ? <Navigate to="/" replace /> : <>{children}</>;
 }
 
+/** **ما يبقى مفتوحاً للكبتن في مهلة الحذف** (SPEC §59-ج): المحفظةُ وحدَها —
+ *  **المهلةُ وقتُ سحب رصيده**، ولا يُحذف حسابٌ فيه رصيد. */
+const OPEN_DURING_DELETION = ["/wallet"];
+
 function Guarded({ children }: { children: ReactNode }) {
   const { user } = useSession();
+  const { pathname } = useLocation();
   // **بعد الدخول وحدَه**: التوقيعُ هويةُ من دخل، لا صوتٌ يُقابل به من يكتب كلمةَ مروره
   useSoundUnlock(Boolean(user));
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.deletion_due_at && !OPEN_DURING_DELETION.some((path) => pathname.startsWith(path))) {
+    return <RestoreAccountScreen dueAt={user.deletion_due_at} />;
+  }
+  return <>{children}</>;
 }
 
 /** جذرُ الكبتن: المعتمد يرى الرئيسية، ومن لم يُقدّم بعدُ يُساق إلى خطوته
@@ -588,10 +598,10 @@ export default function App() {
                           }
                         />
                         <Route
-                          path="/account/deactivation"
+                          path="/account/delete"
                           element={
                             <Guarded>
-                              <DeactivationScreen />
+                              <DeleteAccountScreen />
                             </Guarded>
                           }
                         />

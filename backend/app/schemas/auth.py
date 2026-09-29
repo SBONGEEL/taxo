@@ -227,6 +227,9 @@ class UserOut(BaseModel):
     # إعلانُها عن نفسها لا يُختم (المرحلة 10-ج)
     gender_verified_at: datetime | None = None
     ride_gender_preference: GenderPreference = GenderPreference.ANY
+    # **موعدُ حذف حسابه إن طلبه** (SPEC §59) — ومنه وحدَه يرسم التطبيقُ شاشةَ
+    # الاستعادة بعد الدخول، **بلا نداءٍ ثانٍ يسأل ما يُقال في الجلسة نفسِها**
+    deletion_due_at: datetime | None = None
     created_at: datetime
 
 

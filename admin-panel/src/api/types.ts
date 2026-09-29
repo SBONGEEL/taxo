@@ -1072,6 +1072,17 @@ export interface AuditLog {
 }
 
 /** طلبُ إلغاء تفعيل حساب كبتن (البند ١٣). */
+/** **حسابٌ في مهلة الحذف** (SPEC §59) — وموعدُ تجهيله وسببُ تأجيله إن حلّ ولم يقع. */
+export interface PendingDeletionRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  deletion_requested_at: string;
+  deletion_due_at: string;
+  deletion_deferred_reason: string | null;
+  deletion_deferred_at: string | null;
+}
+
 export interface DeactivationRequestRow {
   id: string;
   /** **صاحبُ الحساب لا الكبتن** (الترحيلة `0075`): صار البابُ واحداً للدورين،

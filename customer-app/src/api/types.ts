@@ -67,6 +67,8 @@ export interface AuthMethod {
 export type GenderPreference = "male" | "female" | "any";
 
 export interface User {
+  /** **موعدُ حذف حسابه إن طلبه** (SPEC §59) — منه تُرسم شاشةُ الاستعادة. */
+  deletion_due_at?: string | null;
   id: string;
   /** `null` نظرياً (المشرف) — والتطبيقان لا يريان إلا صاحبَهما. */
   phone: string | null;
@@ -859,27 +861,22 @@ export interface RequiredPolicy {
  * **ولا نوعَ ثانٍ لشكلٍ واحد**: `‎/account/deactivation` واحدٌ للدورين، فما
  * يصل هنا هو ما يصل هناك حرفاً — **ونسختان تفترقان أوّلَ حقلٍ يُضاف**.
  */
-export interface DeactivationRequest {
-  id: string;
-  user_id: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
-  reason: string | null;
-  review_note: string | null;
-  resolved_at: string | null;
-  created_at: string;
-}
-
-export interface DeactivationState {
-  request: DeactivationRequest | null;
+export interface DeletionState {
+  /** `null` = لا طلب. والموعدُ بعد 30 يوماً من الطلب (SPEC §59). */
+  requested_at: string | null;
+  due_at: string | null;
+  /** رمزُ سبب التأجيل إن حلّ الموعدُ ولم يقع — والنصُّ في الشاشة */
+  deferred_reason: string | null;
   /** **قائمةٌ لا أوّلُ سبب**: من أزال مانعاً ثم صُدم بثانٍ يقرأ الرفضَ مماطلة. */
   blockers: string[];
-  // **ولا `reserve_amount` هنا وإن أرسلته الخلفية** (٢٠٢٦-٠٩-٠٧): المحتجَزُ
-  // **شرطٌ على سحب الكبتن**، والراكبُ لا يسحب البتّة (§7) — **فلا شاشةَ
-  // تعرضه عنده**.
-  //
-  // **وأمسكها `check:money-visible`**: كُتبت المرآةُ أوّلاً بحجّة «شكلٌ واحدٌ
-  // لبابٍ واحد»، **فصاح الحارسُ: مبلغٌ تحسبه الخلفيةُ ولا يقرؤه من أعلنه**.
-  // **وهو محقّ**: مرآةٌ لمالٍ لا يعرضه أحدٌ تُقرأ ميزةً قائمةً وهي فراغ.
+  rider_balance: string;
+  driver_balance: string;
+  /** ما أقرّ بضياعه كما كتبه — يُقارَن بالرصيد في اليوم الثلاثين */
+  forfeit_amount: string | null;
+  currency: string;
+  is_driver: boolean;
+  /** **خيارُ التحويل يظهر حين يكون مفعّلاً في دولته وحدَه** (قرارُ المالك) */
+  transfer_enabled: boolean;
 }
 
 

@@ -17,8 +17,7 @@ import type {
   ChallengeResponse,
   CliqTopup,
   Coordinates,
-  DeactivationRequest,
-  DeactivationState,
+  DeletionState,
   CountryCode,
   Device,
   GenderPreference,
@@ -474,16 +473,21 @@ export const getAppVersion = (
 // ويُنسى في أخيه، **ويخرج راكبٌ من بابٍ لا يسأل ما يسأله بابُ الكبتن**.
 
 /** حالُ الطلب وموانعُه — سؤالٌ واحدٌ بجوابٍ واحد. */
-export const getDeactivationState = () =>
-  api.get<DeactivationState>("/account/deactivation");
 
-/** يفتح طلبَ الإغلاق — **والسببُ اختياريّ**: من يترك يقول لماذا إن شاء. */
-export const requestDeactivation = (reason?: string) =>
-  api.post<DeactivationRequest>("/account/deactivation", { reason });
+// **حذفُ الحساب بعد مهلة** (SPEC §59، قرارُ المالك ٢٠٢٦-٠٩-٢٩) — حلّ محلَّ
+// «إغلاق الحساب» الذي كان طلباً يراجعه مشرف. **وبابٌ واحدٌ للدورين**.
+export const getDeletionState = () => api.get<DeletionState>("/account/deletion");
 
-/** يسحب طلبَه ما دام قيد المراجعة. */
-export const cancelDeactivation = () =>
-  api.del<DeactivationRequest>("/account/deactivation");
+/** `forfeitAmount` المبلغُ كما هو إن كان في محفظة الراكب رصيد — وإلا لا شيء. */
+export const requestDeletion = (forfeitAmount?: string) =>
+  api.post<DeletionState>(
+    "/account/deletion",
+    forfeitAmount ? { forfeit_amount: forfeitAmount } : {},
+  );
+
+/** **الاستعادةُ في المهلة** — فعلٌ صريحٌ بعد الدخول. */
+export const restoreAccount = () => api.del<DeletionState>("/account/deletion");
+
 
 
 // ------------------------------------------------- تقاريرُ الأعطال (2026-09-20)

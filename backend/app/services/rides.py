@@ -21,6 +21,7 @@ from sqlalchemy.orm import selectinload
 from app.core.currency import currency_for_country
 from app.core import service_area
 from app.core.exceptions import (
+    AccountDeletionPending,
     CancelReasonNotApplicable,
     CancellationDebtBlocked,
     InvalidInput,
@@ -358,6 +359,11 @@ async def request_ride(
     # على مؤشّرٍ جزئيّ، وصفرُ الحدِّ يعني «لا إيقاف» فلا يُستدعى شيءٌ أصلاً.
     # ومكانُه هنا لا في الراوتر: الحجزُ المجدول ينشئ رحلاتِه من هذا الباب
     # نفسِه (12-ط)، وحارسٌ في الراوتر بابٌ يُنسى في الباب الثاني
+    # **ولا رحلةَ لحسابٍ في مهلة الحذف** (SPEC §59-ج) — والحارسُ هنا لا في
+    # الراوتر: الحجزُ المجدولُ ينشئ رحلاتِه من هذا البابِ نفسِه
+    if rider.deletion_due_at is not None:
+        raise AccountDeletionPending()
+
     if await cancellation.blocks_new_ride(
         session, user_id=rider.id, country=rider.country_code
     ):

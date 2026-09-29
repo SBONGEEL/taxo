@@ -640,15 +640,18 @@ async def test_a_debt_blocks_closing_the_account(
         "/drivers/me/advances", json={"amount": "2.000"}, headers=driver["headers"]
     )
 
+    # **والبابُ بابُ الحذف بعد مهلة** (§59) — والمانعُ نفسُه باسمه
     state = (
-        await client.get("/account/deactivation", headers=driver["headers"])
+        await client.get("/account/deletion", headers=driver["headers"])
     ).json()
     assert "unpaid_advance" in state["blockers"]
 
     refused = await client.post(
-        "/account/deactivation", json={}, headers=driver["headers"]
+        "/account/deletion", json={}, headers=driver["headers"]
     )
     assert refused.status_code == 409
+    assert refused.json()["code"] == "deletion_blocked"
+    assert "unpaid_advance" in refused.json()["blockers"]
 
 
 # ------------------------------------------------------------------- الشطب
