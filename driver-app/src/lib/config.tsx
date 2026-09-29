@@ -15,6 +15,8 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+import { Capacitor } from "@capacitor/core";
+
 import { ApiError } from "@/api/client";
 import { getConfig } from "@/api/endpoints";
 import { cacheRules } from "@/lib/validation";
@@ -197,7 +199,25 @@ export function firebaseConfigOf(
 
 /** التوكن العام للخرائط — من عقد Mapbox عبر `/config`، لا من `.env`. */
 export function useMapboxToken(): string | null {
-  return useConfig().config?.providers.mapbox?.public_token ?? null;
+  const mapbox = useConfig().config?.providers.mapbox;
+  // **iOS يقرأ توكنَه وحدَه، بلا رجوعٍ إلى أخيه** (قرارُ المالك ٢٠٢٦-٠٩-٢٩):
+  // التوكنُ المقيَّدُ يُرفض ٤٠٣ من `capacitor://` لأن WebKit لا يرسل `Referer`
+  // — **فالرجوعُ إليه خريطةٌ فارغةٌ صامتة**، وهو ما يُسمّى بدله في
+  // `useMapboxMissing`. وأندرويد والويب كما كانا حرفاً.
+  if (Capacitor.getPlatform() === "ios") return mapbox?.ios_public_token || null;
+  return mapbox?.public_token ?? null;
+}
+
+/** **غيابُ توكن iOS يُسمّى ولا يُرسم فراغاً** — `null` حين لا شيءَ يُسمّى.
+ *
+ *  **وقبل وصول `/config` لا يُسمّى شيء**: غيابٌ لم يُقَس بعدُ ليس غياباً. */
+export const IOS_MAP_TOKEN_MISSING =
+  "الخريطة غير متاحة على iPhone حالياً — توكن الخرائط الخاص بـiOS غير مضبوط.";
+
+export function useMapboxMissing(): string | null {
+  const { config } = useConfig();
+  if (!config || Capacitor.getPlatform() !== "ios") return null;
+  return config.providers.mapbox?.ios_public_token ? null : IOS_MAP_TOKEN_MISSING;
 }
 
 /** دولةُ شاشات ما قبل الدخول وبادئتُها — من `GET /config` وحده.

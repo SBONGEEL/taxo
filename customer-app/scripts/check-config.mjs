@@ -34,6 +34,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { certify } from "../../tools/certify.mjs";
+import { providerMirrorProblems } from "../../tools/check-provider-mirror.mjs";
 
 const SCHEMAS = join(process.cwd(), "..", "backend", "app", "schemas");
 const TYPES = join(process.cwd(), "src", "api", "types.ts");
@@ -152,6 +153,14 @@ for (const { file, model, type, required } of MIRRORS) {
         ` — تُقرأ \`undefined\` في زمن التشغيل`,
     );
   }
+}
+
+// **وحقولُ العقود المنشورة في `providers`** — كانت خارجَ هذا الحارس كلُّها
+// (العمقُ صفرٌ وحدَه)، فحقلٌ يُضاف إلى عقدٍ لا مرآةَ له ولا صوت. (٢٠٢٦-٠٩-٢٩)
+{
+  const mirror = providerMirrorProblems(types);
+  problems.push(...mirror.problems);
+  checked += mirror.checked;
 }
 
 if (problems.length > 0) {

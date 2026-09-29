@@ -208,7 +208,12 @@ export interface AppConfig {
   app: string;
   auth: AuthMethod;
   countries: CountryConfig[];
-  providers: Record<string, Record<string, string | undefined>>;
+  /** **الخرائطُ مكتوبةُ النوع وحدَها** (٢٠٢٦-٠٩-٢٩): `ios_public_token` يُقرأ على
+   *  iOS بلا رجوع، فخطأُ اسمه خريطةٌ غائبةٌ على كلِّ iPhone — و`check:config`
+   *  يقابل هذه الكتلةَ بما يُنشر. والباقي قاموسٌ مفتوحٌ كما كان. */
+  providers: {
+    mapbox?: { public_token?: string; ios_public_token?: string };
+  } & Record<string, Record<string, string | undefined>>;
   /** الدولة التي تفترضها شاشاتُ ما قبل الدخول (لا منتقيَ دولٍ فيها). */
   default_country_code: CountryCode;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣).

@@ -36,6 +36,7 @@ import { MAP_LANGUAGE } from "@/lib/map-rtl";
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
 import { trimRoute } from "@/lib/route-line";
 import { skinImageUrl, skinSizePx } from "@/lib/skin";
+import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -697,8 +698,20 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     [],
   );
 
+  // **غيابُ توكن iOS يُسمّى ولا يُرسم فراغاً** (SPEC §58) — وغيرُ iOS كما كان
+  const missing = useMapboxMissing();
   if (!token) {
-    return (
+    return missing ? (
+      <div
+        role="alert"
+        className={cn(
+          "flex h-full w-full items-center justify-center bg-bg px-24 text-center text-13 text-muted",
+          className,
+        )}
+      >
+        {missing}
+      </div>
+    ) : (
       <div
         className={cn("map-placeholder h-full w-full bg-bg", className)}
         aria-label="الخريطة غير متاحة"

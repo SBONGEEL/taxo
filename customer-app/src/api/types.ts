@@ -218,8 +218,12 @@ export interface AppConfig {
   app: string;
   auth: AuthMethod;
   countries: CountryConfig[];
+  /** **مرآةٌ لما يُنشر لا لكلِّ عقد** — `check:config` يقابلها بحقول
+   *  `expose_to_clients` في `registry.py` في الاتجاهين (٢٠٢٦-٠٩-٢٩). وكانت
+   *  تحمل أربعةَ مزوّدين لا يُنشر منهم حقلٌ ولا يقرؤهم أحد، فأُزيلوا. */
   providers: {
-    mapbox?: { public_token?: string };
+    /** `ios_public_token` لحزمة iOS وحدَها، بلا قيود URL (SPEC §58). */
+    mapbox?: { public_token?: string; ios_public_token?: string };
     firebase_auth?: {
       project_id?: string;
       api_key?: string;
@@ -233,10 +237,6 @@ export interface AppConfig {
       sender_id?: string;
       vapid_key?: string;
     };
-    cliq_acquirer?: { endpoint?: string; company_alias?: string };
-    payout?: { endpoint?: string };
-    sms?: { provider_name?: string; sender_id?: string; endpoint?: string };
-    telr?: { test_mode?: boolean };
   };
   /** الدولة التي تفترضها شاشاتُ ما قبل الدخول (لا منتقيَ دولٍ فيها). */
   default_country_code: CountryCode;

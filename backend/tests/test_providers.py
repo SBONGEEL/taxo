@@ -299,6 +299,39 @@ async def test_config_exposes_only_publishable_mapbox_token(
     assert MAPBOX_SECRET not in json.dumps(body)
 
 
+async def test_the_ios_token_is_published_beside_the_web_one(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """**توكنُ iOS يُنشر كأخيه، والسرّيُّ لا** (SPEC §58).
+
+    وغيابُه لا يُنشر حقلاً فارغاً — فالتطبيقُ يسمّي غيابَه ولا يقرأ نصّاً خالياً.
+    """
+    await _save_mapbox(
+        client,
+        admin_headers,
+        values={
+            "public_token": MAPBOX_PUBLIC,
+            "ios_public_token": "pk.ios-only",
+            "secret_token": MAPBOX_SECRET,
+        },
+    )
+    body = (await client.get("/config")).json()
+    assert body["providers"]["mapbox"] == {
+        "public_token": MAPBOX_PUBLIC,
+        "ios_public_token": "pk.ios-only",
+    }
+    assert MAPBOX_SECRET not in json.dumps(body)
+
+    # وحين يُفرَّغ يغيب من `/config` كلّاً — لا يصل مفتاحاً بقيمةٍ خالية
+    await _save_mapbox(
+        client,
+        admin_headers,
+        values={"public_token": MAPBOX_PUBLIC, "ios_public_token": "", "secret_token": "****"},
+    )
+    body = (await client.get("/config")).json()
+    assert body["providers"]["mapbox"] == {"public_token": MAPBOX_PUBLIC}
+
+
 async def test_inactive_provider_is_not_published(
     client: AsyncClient, admin_headers: dict
 ) -> None:

@@ -70,6 +70,23 @@ PROVIDERS: dict[ProviderKey, ProviderSpec] = {
                 secret=False,
                 expose_to_clients=True,
             ),
+            # **توكنٌ ثانٍ لحزمة iOS وحدَها** (قرارُ المالك ٢٠٢٦-٠٩-٢٩، SPEC §58).
+            #
+            # **والعلّةُ مقيسةٌ لا مفترضة**: قيودُ URL في Mapbox تُقرأ من ترويسة
+            # `Referer` وحدَها — `Origin` وحدَه يُرفض ٤٠٣ حتى للنطاق المصرَّح به —
+            # **وWebKit لا يرسل `Referer` من `capacitor://`**. فالتوكنُ المقيَّدُ
+            # يسقط على iOS مهما سُمّي أصلُ الحزمة، ولا حلَّ بالقيود.
+            #
+            # **فهو بلا قيود URL بالضرورة، ومنشورٌ كأخيه** — ويُقرأ على iOS وحدَه
+            # بلا رجوعٍ إلى `public_token`. **وغيرُ إلزاميّ**: عقدُ الخرائط يعمل
+            # للويب وأندرويد بدونه، **وغيابُه يُسمّى على iOS لا يُسكت عنه**.
+            ProviderField(
+                key="ios_public_token",
+                label="التوكن العام لـiOS (pk) — بلا قيود URL",
+                secret=False,
+                required=False,
+                expose_to_clients=True,
+            ),
             ProviderField(key="secret_token", label="التوكن السري (sk)"),
         ),
     ),

@@ -46,6 +46,7 @@ import {
   selfMarkerElement,
 } from "@/lib/skin-marker";
 import { trimRoute } from "@/lib/route-line";
+import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
 import { digits, cn } from "@/lib/utils";
 
@@ -485,15 +486,18 @@ export function MapView({
     );
   }, [fit, pickup, dropoff]);
 
+  // **غيابُ توكن iOS يُسمّى باسمه** (SPEC §58) — وغيرُ iOS كما كان حرفاً
+  const missing = useMapboxMissing();
   if (!token) {
     return (
       <div
+        role={missing ? "alert" : undefined}
         className={cn(
           "flex h-full w-full items-center justify-center bg-stripe font-mono text-10 tracking-map text-muted",
           className,
         )}
       >
-        الخريطة غير مهيأة — راجع عقد Mapbox
+        {missing ?? "الخريطة غير مهيأة — راجع عقد Mapbox"}
       </div>
     );
   }
