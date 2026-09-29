@@ -40,9 +40,33 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { argv, exit } from "node:process";
 import { CHANNEL_NAMES, fromEnv, resolve } from "./channels.mjs";
+import { androidLaunchColor, iosLaunchColors } from "./ios-assets.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const APPS = ["customer-app", "driver-app"];
+
+/** مفاتيحُ الأذونات لكلِّ تطبيق — **ما يُنادى في الشيفرة** (SPEC §58-ج). */
+const USAGE_KEYS = {
+  "customer-app": [
+    "NSLocationWhenInUseUsageDescription",
+    "NSFaceIDUsageDescription",
+    "NSCameraUsageDescription",
+    "NSPhotoLibraryUsageDescription",
+  ],
+  "driver-app": [
+    "NSLocationWhenInUseUsageDescription",
+    "NSLocationAlwaysAndWhenInUseUsageDescription",
+    "NSFaceIDUsageDescription",
+    "NSCameraUsageDescription",
+    "NSPhotoLibraryUsageDescription",
+  ],
+};
+
+/** مخطّطُ كلِّ تطبيق ومخطّطُ أخيه — **كما في `AndroidManifest.xml`**. */
+const SCHEMES = {
+  "customer-app": { own: "taxo-rider", asks: "taxo-driver" },
+  "driver-app": { own: "taxo-driver", asks: "taxo-rider" },
+};
 
 const problems = [];
 const fail = (line) => problems.push(line);
@@ -145,6 +169,33 @@ if (mode === "--static") {
     if (name?.[1] !== "$(TAXO_APP_NAME)") {
       fail(`${app}: CFBundleDisplayName = ${name?.[1] ?? "(غائب)"} — **يُمرَّر عند البناء**`);
     }
+    // **نصوصُ الأذونات حاضرةٌ غيرُ فارغة** — ونداءُ إذنٍ بلا نصِّه يُسقط التطبيقَ على iOS
+    for (const key of USAGE_KEYS[app]) {
+      const m = plist.match(new RegExp(`<key>${key}</key>\\s*<string>([^<]*)</string>`));
+      if (!m || !m[1].trim()) fail(`${app}: ${key} غائبٌ أو فارغ في Info.plist`);
+    }
+    // **ولا خلفيّةَ مُعلَنةٌ قبل ملحقها** (قرارُ المالك ٢٠٢٦-٠٩-٢٩): إعلانٌ بلا فعل
+    if (plist.includes("<key>UIBackgroundModes</key>")) {
+      fail(`${app}: UIBackgroundModes مُعلَنٌ ولا ملحقَ خلفيٍّ مبنيّ`);
+    }
+    // **زرُّ التبديل**: يستقبل مخطّطَه، ويسأل عن مخطّط أخيه
+    const own = plist.match(/<key>CFBundleURLSchemes<\/key>\s*<array>\s*<string>([^<]*)<\/string>/)?.[1];
+    const asks = plist.match(/<key>LSApplicationQueriesSchemes<\/key>\s*<array>\s*<string>([^<]*)<\/string>/)?.[1];
+    if (own !== SCHEMES[app].own) fail(`${app}: CFBundleURLSchemes = ${own ?? "(غائب)"} والمنتظَر ${SCHEMES[app].own}`);
+    if (asks !== SCHEMES[app].asks) fail(`${app}: LSApplicationQueriesSchemes = ${asks ?? "(غائب)"} والمنتظَر ${SCHEMES[app].asks}`);
+    // **لونُ الإقلاع = لونُ أندرويد من مصدره** — ولا شعارَ في شاشة الإقلاع
+    try {
+      const ios = iosLaunchColors(app);
+      const day = androidLaunchColor(app, "values");
+      const night = androidLaunchColor(app, "values-night");
+      if (ios.day !== day || ios.night !== night) {
+        fail(`${app}: لونُ الإقلاع iOS ${ios.day}/${ios.night} ≠ أندرويد ${day}/${night} — أعِد node tools/ios-assets.mjs`);
+      }
+    } catch (error) {
+      fail(`${app}: لم يُقَس لونُ الإقلاع — ${error.message}`);
+    }
+    const launch = readFileSync(join(ios, "App", "App", "Base.lproj", "LaunchScreen.storyboard"), "utf8");
+    if (/<imageView|image="/.test(launch)) fail(`${app}: شاشةُ الإقلاع ترسم صورة — والقرارُ لونٌ صامتٌ بلا شعار`);
     const ignored = readFileSync(join(ios, ".gitignore"), "utf8").split("\n").map((l) => l.trim());
     for (const generated of ["App/App/capacitor.config.json", "App/App/public"]) {
       if (!ignored.includes(generated)) {

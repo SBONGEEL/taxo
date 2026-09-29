@@ -45,5 +45,34 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- **نصوصُ الأذونات من المالك حرفاً** (٢٠٢٦-٠٩-٢٩) — ولا UIBackgroundModes
+	     قبل ملحق الموقع الخلفيّ: إعلانٌ بلا فعلٍ يُرفض في المراجعة ويكذب. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يحتاج TAXO Driver موقعك لعرضك للركاب القريبين وتوجيهك أثناء الرحلة.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ليستمرّ استقبال الطلبات ومشاركة موقعك مع الراكب أثناء الرحلة حتى حين يكون التطبيق في الخلفية.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>لتسجيل الدخول السريع ببصمة الوجه بدل كتابة كلمة المرور.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>لتصوير الصورة الشخصية والوثائق عند التسجيل.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>لاختيار الصورة الشخصية والوثائق من صورك.</string>
+	<!-- **زرُّ التبديل** (SPEC §23): يستقبل مخطّطَه، ويُصرِّح بمخطّط أخيه
+	     ليُجيب canOpenURL — وبغيره يعيد النظامُ false عن تطبيقٍ مثبَّت. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>taxo-driver</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>taxo-driver</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>taxo-rider</string>
+	</array>
 </dict>
 </plist>

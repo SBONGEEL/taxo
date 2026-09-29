@@ -22,6 +22,7 @@
  */
 
 import { AppLauncher } from "@capacitor/app-launcher";
+import { Capacitor } from "@capacitor/core";
 
 import { startHandoff } from "@/api/endpoints";
 import { ApiError } from "@/api/client";
@@ -61,7 +62,12 @@ export async function switchToDriver(): Promise<boolean> {
   // **`canOpenUrl` على أندرويد يأخذ اسمَ الحزمة لا عنواناً** — قِيس على S21:
   // بتمرير العنوان يسجّل المكوّنُ «Package name 'taxo-…://handoff' not found».
   // و`openUrl` يأخذ العنوانَ نفسَه. مُعامِلان بنفس الاسم ومعنيان مختلفان.
-  const { value } = await AppLauncher.canOpenUrl({ url: "ly.tajora.driver" });
+  //
+  // **وعلى iOS العكس**: لا أسماءَ حزمٍ هناك، و`canOpenURL` يسأل عن **مخطّط**
+  // مُصرَّحٍ به في `LSApplicationQueriesSchemes` — وبغيره يعيد false عن مثبَّت.
+  // **وأندرويد لا يتغيّر منه حرف** (٢٠٢٦-٠٩-٢٩).
+  const probe = Capacitor.getPlatform() === "ios" ? "taxo-driver://" : "ly.tajora.driver";
+  const { value } = await AppLauncher.canOpenUrl({ url: probe });
   if (!value) return false; // غيرُ مثبَّت — والصفحةُ تتولّاه
 
   await AppLauncher.openUrl({
