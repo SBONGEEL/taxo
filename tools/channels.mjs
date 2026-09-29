@@ -50,6 +50,22 @@ export function fromEnv(app) {
   return resolve((process.env.TAXO_CHANNEL ?? "").trim(), app);
 }
 
+/** **أهذا أمرُ Capacitor لـiOS؟** — والجوابُ من نصِّ الأمر نفسِه.
+ *
+ * **iOS تُجمَّع شاشاتُه داخل الحزمة** (قرارُ المالك 2026-09-29): لا
+ * `server.url`، والأصلُ `capacitor://localhost`، والحزمةُ تخاطب `apiBase`
+ * مباشرةً. **وأندرويد يبقى غلافاً حول النطاق** كما كان.
+ *
+ * **ولمَ من `argv` لا من متغيّرِ بيئة**: الأداةُ تقيّم `capacitor.config.ts`
+ * في عمليّتها هي، **فالمنصّةُ مكتوبةٌ في الأمر** (`cap sync ios`) — ومتغيّرٌ
+ * ثانٍ يُنسى فيقع iOS على غلافٍ بلا أن يقول أحدٌ شيئاً. **و`cap sync` بلا
+ * منصّةٍ يكتب الغلافَ في iOS أيضاً** — وذاك ما يمسكه `tools/check-ios.mjs`
+ * بعد كلِّ مزامنة، **فهذا الاستنتاجُ ليس الحارس**.
+ */
+export function isIosCommand(argv = process.argv) {
+  return argv.slice(2).includes("ios");
+}
+
 /** كلُّ الأزواج (قناة × تطبيق) — يقرؤها الحارسُ ليعرف ما هو متّسق. */
 export function allPairs() {
   return CHANNEL_NAMES.flatMap((c) => APP_NAMES.map((a) => resolve(c, a)));

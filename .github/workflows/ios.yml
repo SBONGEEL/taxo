@@ -1,0 +1,99 @@
+# **iOS — الخطوةُ الأولى: الأربعُ تُجمَّع** (قرارُ المالك 2026-09-29).
+#
+# **على iOS تُجمَّع الشاشاتُ داخل الحزمة** — `dist` مرفقٌ يخاطب `apiBase`
+# مباشرةً، **لا غلافٌ يفتح عنواناً بعيداً**. وأندرويد يبقى غلافاً ولا يُمسّ:
+# هذا الملفُّ لا يبني حزمةَ أندرويد ولا يلمس `ci.yml`.
+#
+# **وخُضرتُه تعني شيئاً واحداً**: «الأربعُ (تطبيقان × قناتان) تُجمَّع على
+# iOS للمحاكي بلا توقيع». **لا** أنها تعمل، **ولا** أن CORS يقبلها، **ولا**
+# أن ملحقاً يعمل، **ولا** أنها تُوقَّع أو تُرفع — فتلك بنودٌ لاحقةٌ وبعضُها
+# ينتظر حسابَ Apple.
+#
+# **ولا سرَّ هنا ولا نداءَ للإنتاج**: لا توقيعَ ولا `GoogleService-Info.plist`،
+# والعنوانُ يُخبز في الحزمة ولا يُنادى.
+name: iOS
+
+on:
+  push:
+    branches: ["**"]
+    # **ما يغيّر ما يُجمَّع وحدَه** — عدّاءُ macOS أثمنُ من أن يُنفَق على
+    # إيداعِ توثيق
+    paths:
+      - "customer-app/**"
+      - "driver-app/**"
+      - "channels.json"
+      - "tools/channels.mjs"
+      - "tools/build-channel.mjs"
+      - "tools/build-ios.mjs"
+      - "tools/check-ios.mjs"
+      - "tools/check-hosts.mjs"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: iOS · ${{ matrix.app }} · ${{ matrix.channel }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      # **ولا `fail-fast`**: الغرضُ أن يُعرف **أيُّ** الأربع أحمر
+      fail-fast: false
+      matrix:
+        app: [customer-app, driver-app]
+        channel: [public, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - run: npm ci
+        working-directory: ${{ matrix.app }}
+
+      - name: الأدوات
+        run: |
+          sw_vers -productVersion
+          xcodebuild -version | head -1
+          pod --version
+
+      # **المعرّفُ والاسمُ متغيّران في مشروع Xcode** لا قيمٌ مخبوزة
+      - name: الحارسُ الساكن
+        run: node tools/check-ios.mjs
+
+      # **النفيُ يُقاس لا يُفترض**: حارسٌ لم يُرَ يسقط لا يُعرف أنه يحرس
+      - name: بلا قناةٍ يقف
+        run: |
+          if env -u TAXO_CHANNEL node tools/build-ios.mjs "${{ matrix.app }}" --sync-only; then
+            echo "✗ بُني بلا TAXO_CHANNEL"; exit 1
+          fi
+          echo "✓ وقف بلا قناة"
+
+      - name: البناء — dist · المزامنة · التجميع · المبنيُّ من داخله
+        env:
+          TAXO_CHANNEL: ${{ matrix.channel }}
+        run: node tools/build-ios.mjs "${{ matrix.app }}"
+
+      # **وبغلافٍ يقف** — يُحقن `server.url` في الملفِّ المزامَن الحقيقيّ،
+      # ويُطلب من الحارس أن يسقط، ثمّ يُعاد الملفّ
+      - name: وبغلافٍ يقف
+        env:
+          TAXO_CHANNEL: ${{ matrix.channel }}
+        run: |
+          f="${{ matrix.app }}/ios/App/App/capacitor.config.json"
+          cp "$f" "$f.orig"
+          node -e 'const fs=require("fs");const f=process.argv[1];const c=JSON.parse(fs.readFileSync(f));c.server={url:"https://example.invalid"};fs.writeFileSync(f,JSON.stringify(c))' "$f"
+          if node tools/check-ios.mjs --synced "${{ matrix.app }}"; then
+            echo "✗ مرّ الحارسُ وفي الإعداد server.url"; exit 1
+          fi
+          mv "$f.orig" "$f"
+          echo "✓ وقف على server.url"

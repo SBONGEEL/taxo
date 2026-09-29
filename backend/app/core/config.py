@@ -132,6 +132,14 @@ class Settings(BaseSettings):
         "https://dev-app.tajora.ly",
         "https://dev-driver.tajora.ly",
         "https://dev-admin.tajora.ly",
+        # ── أصلُ حزمة iOS (قرارُ المالك 2026-09-29) ─────────────────────────
+        #
+        # **على iOS تُجمَّع الشاشاتُ داخل الحزمة** فأصلُها `capacitor://localhost`
+        # لا النطاق — وبغيره يُردّ كلُّ نداءٍ يحمل `Authorization` عند طلبه
+        # التمهيديّ. **وهو أصلٌ لا يحمله موقعٌ على الويب**: CORS يحرس
+        # المتصفّحات، وتطبيقٌ أصليٌّ ينادي الخلفيةَ بلا CORS أصلاً — فقبولُه
+        # لا يفتح لموقعٍ باباً. **وأندرويد غلافٌ على النطاق** فلا يحتاجه.
+        "capacitor://localhost",
     ]
 
     @property
