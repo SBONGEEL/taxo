@@ -50,6 +50,8 @@ run "check:ci-timeouts"     node tools/check-ci-timeouts.mjs
 run "check:env-leak"        node tools/check-env-leak.mjs
 run "check:exec-bit"        node tools/check-exec-bit.mjs
 run "check:enum-coverage"   node tools/check-enum-coverage.mjs
+# **الساكنُ وحدَه** — المزامَنُ والمبنيُّ يُقاسان في `ios.yml` على macOS
+run "check:ios"             node tools/check-ios.mjs
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do

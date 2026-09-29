@@ -20,9 +20,14 @@ services:
       # يُحوَّل آخِراً، وحتى يُحوَّل يبقى `stg-*` هو الطريقَ إلى الخادم.
       #
       # **وحذفُها بعد استقرار القلب فعلٌ ثانٍ في يومٍ آخر** — لا معه.
+      #
+      # **و`capacitor://localhost` أصلُ حزمة iOS** (قرارُ المالك 2026-09-29):
+      # شاشاتُها داخل الحزمة لا على النطاق — وعلّتُه في `core/config.py`.
+      # **ولا يسري إلا مع رفعٍ** — والإيداعُ الذي أضافه لم يُرفع.
       CORS_ORIGINS: >-
         ["https://app.tajora.ly","https://driver.tajora.ly","https://admin.tajora.ly",
-         "https://stg-app.tajora.ly","https://stg-driver.tajora.ly","https://stg-admin.tajora.ly"]
+         "https://stg-app.tajora.ly","https://stg-driver.tajora.ly","https://stg-admin.tajora.ly",
+         "capacitor://localhost"]
       # **وهذه الثلاثةُ تُكتب بالاسم الهدف لا بالقديم**: قيمةٌ واحدةٌ لا تحتمل
       # اسمين، والهدفُ هو ما يصير صحيحاً لحظةَ تحويل السجلّ. **وثمنُ النافذة
       # بينهما مقيسٌ لا مقدَّر**: على قاعدة الخادم اليومَ `rides=0` و

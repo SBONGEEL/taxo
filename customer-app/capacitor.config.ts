@@ -23,25 +23,34 @@
  */
 
 import type { CapacitorConfig } from "@capacitor/cli";
-import { fromEnv } from "../tools/channels.mjs";
+import { fromEnv, isIosCommand } from "../tools/channels.mjs";
 
 const ch = fromEnv("customer-app");
+
+/** **iOS بلا غلاف** (قرارُ المالك 2026-09-29): الشاشاتُ من `dist` داخل
+ *  الحزمة، ولا `server` البتّة — **وأندرويد لا يتغيّر منه حرف**. */
+const bundled = isIosCommand();
 
 const config: CapacitorConfig = {
   appId: ch.appId,
   appName: ch.appName,
   // مطلوبٌ حتى مع `server.url`: الأداةُ تتحقق من وجوده وإن لم تنسخ منه شيئاً
+  // — **وعلى iOS هو الشاشاتُ نفسُها**
   webDir: "dist",
   android: {
     allowMixedContent: false,
   },
-  server: {
-    url: ch.shellUrl,
-    androidScheme: "https",
-    // **لا `cleartext`**: كلُّ شيءٍ خلف HTTPS، وفتحُ النصِّ الصريح هنا يجعل
-    // أوّلَ خطأ عنوانٍ يمرّ بلا أن يُرى بدل أن يُرفض
-    cleartext: false,
-  },
+  ...(bundled
+    ? {}
+    : {
+        server: {
+          url: ch.shellUrl,
+          androidScheme: "https",
+          // **لا `cleartext`**: كلُّ شيءٍ خلف HTTPS، وفتحُ النصِّ الصريح هنا يجعل
+          // أوّلَ خطأ عنوانٍ يمرّ بلا أن يُرى بدل أن يُرفض
+          cleartext: false,
+        },
+      }),
   // **لا إضافةَ شاشةِ بدء** (قرارُ المالك 2026-08-14): كانت ترسم الشعارَ ثم
   // ترسمه الشاشةُ الترحيبيةُ المتحركة مرةً ثانية.
 };
