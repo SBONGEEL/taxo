@@ -55,7 +55,8 @@
   والقطعُ الأولُ **غلافٌ حول الخادم الحي** (`server.url`) لا أصولاً محزَّمة: يُحمَّل من
   النطاق نفسِه الذي تعرفه قيودُ Mapbox ونطاقاتُ Firebase، فلا يُعاد ضبطُ تكاملٍ تحقّقنا
   منه. وثمنُه مكتوب: **لا يعمل والخادمُ مغلق**. وتحزيمُ الأصول بندٌ تالٍ يحتاج إضافةَ
-  `localhost` إلى قيود توكن Mapbox أولاً
+  `localhost` إلى قيود توكن Mapbox أولاً. **وعلى iOS صار التحزيمُ هو القرار** (قرارُ
+  المالك 2026-09-29، §58) — وأندرويد يبقى غلافاً
 
 - **وخامسةٌ منذ 2026-09-01 — غلافُ المشرف**: `ly.tajora.admin` (والتجريبيُّ
   `ly.tajora.admin.test`) حول `panel.tajora.ly`. **ولا مشروعٌ رابع**: الغلافُ
@@ -7621,3 +7622,65 @@ where users can request app account deletion». **ولم يكن للراكب م�
   `VITE_API_BASE_URL: http://127.0.0.1:8001` (`docker-compose.yml:256`) —
   **وهو الهاتفُ نفسُه** — فتقف عند «تعذّر الوصول إلى الخدمة» قبل الرئيسية.
   **فالظهورُ والتتابعُ وتبدُّلُ الزرِّ والتحذيرُ: لم تُقس.**
+
+## ٥٨ — iOS: الشاشاتُ داخل الحزمة (قرارُ المالك ٢٠٢٦-٠٩-٢٩)
+
+### ٥٨-أ) القرار
+
+- **على iOS تُجمَّع شاشاتُ الراكب والكبتن داخل الحزمة**: `dist` مرفقٌ يخاطب
+  `apiBase` القناة مباشرةً، والأصلُ `capacitor://localhost` — **لا غلافٌ يفتح
+  عنواناً بعيداً**.
+- **وأندرويد يبقى غلافاً كما هو** (`server.url`) ولا يُمسّ بناؤه ولا مجرى نشره.
+- **والتحديثُ الآليُّ للشاشات (OTA) بندٌ لاحقٌ لا يُبنى الآن** — فكلُّ تغييرٍ
+  في شاشةٍ على iOS يحتاج حزمةً جديدة حتى يُبنى.
+- **والمعرّفاتُ من `channels.json` نفسِه**: `ly.tajora.rider` · `ly.tajora.driver`،
+  وباللاحقة `.test` للتجريبيّة — **تُمرَّر عند البناء ولا تُخبز في مشروع Xcode**.
+
+### ٥٨-ب) كيف بُني — الخطوةُ الأولى: «تُجمَّع» لا «تعمل»
+
+| ما | أين |
+|---|---|
+| iOS بلا `server` حين يسمّي الأمرُ المنصّة | `tools/channels.mjs::isIosCommand` · `capacitor.config.ts` للتطبيقين |
+| المعرّفُ والاسمُ متغيّران في المشروع | `$(TAXO_APP_ID)` · `$(TAXO_APP_NAME)` في `project.pbxproj` و`Info.plist` |
+| بابٌ واحدٌ للبناء | `tools/build-ios.mjs` — dist · `cap sync ios` · حارس · `xcodebuild` للمحاكي بلا توقيع · حارس |
+| الحارس | `tools/check-ios.mjs` — ساكنٌ (في `scripts/guards.sh`) · بعد المزامنة · من داخل `App.app` |
+| الأربعُ على macOS | `.github/workflows/ios.yml` — ومعها النفيان: بلا قناةٍ يقف، وبغلافٍ يقف |
+| أصلُ الحزمة في CORS | `backend/app/core/config.py` · `docker-compose.prod-tunnel.yml` · `docker-compose.tunnel.yml` |
+
+**وقِيس أن أندرويد لم يتغيّر**: الإعدادُ المقيَّمُ (`cap config`) للأزواج الأربعة
+متطابقٌ قبل التعديل وبعده، و`server.url` لـiOS غائبٌ في الأربعة.
+**و`cap sync` بلا منصّةٍ يكتب الغلافَ في iOS** (قِيس) — فالاستنتاجُ من الأمر
+ليس الحارس، **والحارسُ ما يقرأ الملفَّ بعد المزامنة**.
+
+**والأيقونةُ وشاشةُ البدء في `ios/` قالبُ Capacitor** لا هويةُ TAXO — تُستبدل
+قبل أيِّ رفعٍ إلى المتجر.
+
+### ٥٨-ج) ما وجده المسحُ ولم يُبنَ منه شيء
+
+**كلُّ ما في هذا الجدول «مقروءٌ من الشيفرة»، ولم يُقَس على جهاز iOS** — فلا جهازَ
+ولا محاكيَ شُغِّل. **وما فيه «يلزم» ليس بنداً مقرَّراً**: القرارُ في كلِّ سطرٍ
+للمالك قبل أن يُبنى.
+
+| البند | اليوم | على iOS المجمَّع |
+|---|---|---|
+| **الملحقات** | ستّةٌ لها تنفيذُ iOS، وأدناها iOS 14.0 (والمشروعُ 14.0) | **`OnlineService` و`OfferAlert` أصليّان لأندرويد وحدَه** — نداؤهما يُرفض ويُبتلع |
+| **صفحةُ البطاقة** | `window.location.assign(redirect)` داخل الغلاف، والعودةُ إلى `app.tajora.ly/payments/card/return` | الملاحةُ إلى نطاقٍ خارجيٍّ تخرج من الحزمة، **والعودةُ تقع على الموقع لا على التطبيق** |
+| **تحقّقُ Firebase بالهاتف** | `RecaptchaVerifier` + `signInWithPhoneNumber` من النطاق | أصلٌ غيرُ `http(s)` — **لم يُقَس**، والمرشَّحُ الأصليّ `@capacitor-firebase/authentication@7.5.0` |
+| **قيودُ توكن Mapbox** | النطاقُ مصرَّحٌ به (§2) | الأصلُ `capacitor://localhost` — **لم يُقَس**، ويُضاف إلى القيود أو يُصدَر توكنٌ للحزمة |
+| **الجلسة** | `localStorage` على أصل النطاق | أصلٌ جديدٌ ثابتٌ للحزمة — لا ينتقل شيءٌ من الموقع، ولا كوكيز في الشيفرة (صفر) |
+| **CORS** | أسماءُ النطاقات وحدَها | **أُضيف `capacitor://localhost`** — وقِيس الطلبُ التمهيديُّ بـ`Authorization`: 200 |
+| **موقعُ الكبتن** | `watchPosition` في الـWebView، **والخلفيةُ بخدمةٍ أماميةٍ أصليةٍ لأندرويد** تبثّ بـ`HttpURLConnection` | **لا شيء**: iOS يجمّد الـJS في الخلفية وعند القفل (سلوكُ النظام، ولم يُقَس هنا) — والمرشّحان: `@transistorsoft/capacitor-background-geolocation@9.0.0` (آخرُ ما يقبل Capacitor 7) · `@capacitor-community/background-geolocation@1.2.26` (نظيرُه `>=3`) |
+| **الإشعارات** | الكبتن: `@capacitor/push-notifications` يعطي رمزَ FCM لأن `google-services.json` مطبَّق. الراكب: `firebase/messaging` الويبيّ. والخلفيةُ ترسل FCM v1 بالرمز وحدَه | الكبتن: **الملحقُ يعطي رمزَ APNs لا FCM** — فلا يبلغه إشعار؛ ويلزم Firebase Messaging أصلياً (`@capacitor-firebase/messaging@7.5.0`) ومفتاحُ APNs في Firebase و`GoogleService-Info.plist`. الراكب: لا Web Push في WKWebView |
+| **زرُّ التبديل** | مخطّطٌ خاصّ (`taxo-rider://` · `taxo-driver://`) و`canOpenUrl` باسم الحزمة | `canOpenUrl` على iOS يأخذ عنواناً لا اسمَ حزمة، ويلزم `LSApplicationQueriesSchemes`، **والمخطّطُ غيرُ مسجَّلٍ في `Info.plist`** (`CFBundleURLTypes`). ولا Universal Links إلا إن قُرِّرت: `apple-app-site-association` + Associated Domains |
+| **حذفُ الحساب** | موجود: الراكب `CloseAccount.tsx`، والكبتن `Deactivation.tsx`، والخلفية `routers/account.py` | موجودٌ ويُحمل كما هو — **وموافقتُه لصيغة Apple (طلبٌ يُراجَع) لم تُقَس** |
+| **الأذونات** | الراكب: الموقع · الإشعارات. الكبتن: الموقع · الخلفية · الإشعارات · الرسمُ فوق التطبيقات · ملءُ الشاشة · توفيرُ الطاقة | مفاتيحُ `Info.plist` بتعليلٍ عربيّ: `NSLocationWhenInUseUsageDescription` (الاثنان) · `NSFaceIDUsageDescription` (الاثنان، للبصمة) · `NSCameraUsageDescription` و`NSPhotoLibraryUsageDescription` (صورةُ الراكب، ووثائقُ الكبتن ومركبتُه) · وللكبتن `NSLocationAlwaysAndWhenInUseUsageDescription` مع `UIBackgroundModes` حين يُبنى البثُّ الخلفيّ. **ولا نصَّ منها مكتوبٌ بعد** — النصُّ للمالك |
+
+### ٥٨-د) وما ينتظر يدَ المالك قبل أن يصير «يعمل»
+
+1. **حسابُ Apple Developer** — ومعه معرّفُ الفريق، وتسجيلُ المعرّفات الأربعة.
+2. **أربعةُ تطبيقات iOS في Firebase** (`ly.tajora.rider` · `.test` · `ly.tajora.driver`
+   · `.test`) لملفّات `GoogleService-Info.plist` — **ومفتاحُ APNs (`.p8`) مرفوعاً
+   إلى Firebase**، وبغيره لا يبلغ إشعارٌ جهازَ iOS مهما اكتمل الباقي.
+3. **`capacitor://localhost` في قيود توكن Mapbox**، أو توكنٌ للحزمة.
+4. **نصوصُ الأذونات العربيةُ** في ٥٨-ج.
+5. **أيقونةُ iOS وشاشةُ بدئها** من هوية التطبيقين.

@@ -63,7 +63,9 @@ jobs:
       - name: الأدوات
         run: |
           sw_vers -productVersion
-          xcodebuild -version | head -1
+          # **بلا `| head`**: يقطع الأنبوبَ فيرمي xcodebuild استثناءً في السجلّ
+          # (قِيس في التشغيل 36575316248) — ضجيجٌ يُقرأ عطباً
+          xcodebuild -version
           pod --version
 
       # **المعرّفُ والاسمُ متغيّران في مشروع Xcode** لا قيمٌ مخبوزة
