@@ -8,6 +8,7 @@
  * `GET /rides/me/active` — لأن ما فات أثناء الانقطاع لا يُبثّ ثانيةً.
  */
 
+import { Capacitor } from "@capacitor/core";
 import {
   createContext,
   useCallback,
@@ -23,6 +24,7 @@ import { getActiveRide, nearbyDrivers } from "@/api/endpoints";
 import type { Coordinates, NearbyDriver, Ride } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { onForegroundMessage } from "@/lib/firebase";
+import { listenToPush } from "@/lib/push";
 import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
@@ -218,16 +220,27 @@ export function RideProvider({ children }: { children: ReactNode }) {
     };
   }, [user, onEvent, refresh]);
 
-  // إشعارٌ يصل والتطبيق مفتوح لا يعرضه المتصفح (SPEC القسم 10) — فيُعرض هنا
+  // إشعارٌ يصل والتطبيق مفتوح لا يعرضه المتصفح (SPEC القسم 10) — فيُعرض هنا.
+  // **وعلى الجهاز من الملحق الأصليّ** (٢٠٢٦-٠٩-٢٩): النظامُ لا يرسم إشعاراً
+  // والتطبيقُ في المقدّمة، و`firebase/messaging` لا يعمل داخل WebView.
   useEffect(() => {
     if (!user) return;
-    const fcm = firebaseConfigOf(config?.providers.fcm);
-    if (!fcm) return;
 
     let unsubscribe: (() => void) | null = null;
-    onForegroundMessage(fcm, (payload) => {
+    const show = (payload: { title?: string; body?: string }) => {
       if (payload.title) notify(payload.title, payload.body);
-    })
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      listenToPush(show)
+        .then((off) => (unsubscribe = off))
+        .catch(() => undefined);
+      return () => unsubscribe?.();
+    }
+
+    const fcm = firebaseConfigOf(config?.providers.fcm);
+    if (!fcm) return;
+    onForegroundMessage(fcm, show)
       .then((off) => (unsubscribe = off))
       .catch(() => undefined);
 

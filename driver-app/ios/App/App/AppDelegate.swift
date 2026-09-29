@@ -1,5 +1,7 @@
 import UIKit
 import Capacitor
+import FirebaseCore
+import FirebaseMessaging
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,8 +9,44 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // **Firebase يُهيَّأ حين يوجد ملفُّه وحدَه** (٢٠٢٦-٠٩-٢٩): `configure()` بلا
+        // `GoogleService-Info.plist` **يُسقط التطبيقَ عند الإقلاع** — والملفُّ من
+        // يد المالك ولا يُودَع. فبغيابه يعمل التطبيقُ كلُّه، **وتُرفض الإشعاراتُ
+        // باسمها** أدناه لا بسقوط.
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            FirebaseApp.configure()
+        }
         return true
+    }
+
+    // **رمزُ APNs يُحوَّل رمزَ FCM قبل أن يبلغ JS** (قرارُ المالك ٢٠٢٦-٠٩-٢٩).
+    //
+    // الخلفيةُ ترسل بـFCM وحدَه (`push/fcm.py`)، و`@capacitor/push-notifications`
+    // على iOS يسلّم رمزَ APNs — **فرمزٌ كهذا يُسجَّل ولا يصله إشعارٌ أبداً**.
+    // والملحقُ يقبل النصَّ في الحدث نفسِه فيطلقه `registration` كما على أندرويد.
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        guard FirebaseApp.app() != nil else {
+            // **ولا يُمرَّر رمزُ APNs على أنه رمزُ FCM** — يُرفض باسمه
+            NotificationCenter.default.post(
+                name: .capacitorDidFailToRegisterForRemoteNotifications,
+                object: NSError(domain: "taxo.push", code: 1, userInfo: [
+                    NSLocalizedDescriptionKey: "GoogleService-Info.plist غائب — لا رمزَ FCM على iOS"
+                ])
+            )
+            return
+        }
+        Messaging.messaging().apnsToken = deviceToken
+        Messaging.messaging().token { token, error in
+            if let error = error {
+                NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+            } else if let token = token {
+                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: token)
+            }
+        }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

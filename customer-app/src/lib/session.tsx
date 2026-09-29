@@ -9,6 +9,7 @@
  * - المقبس يُفتح بنفس `device_id` (انظر `lib/socket.ts`).
  */
 
+import { Capacitor } from "@capacitor/core";
 import {
   createContext,
   useCallback,
@@ -48,6 +49,7 @@ import type { AuthResponse, User } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
+import { registerNativePush } from "@/lib/push";
 
 interface SessionState {
   user: User | null;
@@ -106,8 +108,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   /** تسجيل الجهاز بعد الدخول — يُبتلع فشلُه: إشعاراتٌ لا تصل أهون من دخولٍ
    * لا يكتمل (SPEC القسم 10: «الفشل يُبتلع ويُسجَّل»). */
+  //
+  // **ومسارانِ لا مسار** (قرارُ المالك ٢٠٢٦-٠٩-٢٩، كالكبتن منذ ٢٠٢٦-٠٨-٢١): على
+  // الجهاز **الطريقُ الأصليّ** على أندرويد وiOS، وفي المتصفّح طريقُ الويب كما
+  // كان. **ولا يُسأل الأصليُّ عن `vapid`**: ذاك مفتاحُ Web Push وحدَه.
   useEffect(() => {
     if (!user || registered.current) return;
+
+    if (Capacitor.isNativePlatform()) {
+      registered.current = true;
+      registerNativePush()
+        .then(({ token }) =>
+          token
+            ? registerDevice({ device_id: deviceId(), token, platform: platform() })
+            : null,
+        )
+        .catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
+      return;
+    }
+
     const fcm = firebaseConfigOf(config?.providers.fcm);
     const vapid = config?.providers.fcm?.vapid_key;
     if (!fcm || !vapid) return;

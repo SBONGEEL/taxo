@@ -16,11 +16,14 @@ def capacitor_pods
   pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
   pod 'CapacitorAppLauncher', :path => '../../node_modules/@capacitor/app-launcher'
   pod 'CapacitorGeolocation', :path => '../../node_modules/@capacitor/geolocation'
+  pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
 end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  # **رمزُ FCM على iOS** (٢٠٢٦-٠٩-٢٩) — `AppDelegate` يحوّل به رمزَ APNs.
+  # **والخطُّ 11 بقصد**: الخطُّ 12 يرفع أدنى iOS فوق ١٤، والمشروعُ على ١٤.
+  pod 'FirebaseMessaging', '~> 11.0'
 end
 
 post_install do |installer|

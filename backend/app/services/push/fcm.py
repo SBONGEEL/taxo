@@ -60,6 +60,22 @@ UNREGISTERED_STATUSES = frozenset({"UNREGISTERED", "NOT_FOUND", "INVALID_ARGUMEN
 logger = logging.getLogger(__name__)
 
 
+def _apns_expiration(message: PushMessage) -> dict[str, str]:
+    """`apns-expiration` بثواني يونكس — **لما يحمل عمرَه وحدَه**، وإلا لا ترويسة.
+
+    والقيمةُ الفاسدةُ تُسقط الترويسةَ لا الإشعار: إشعارٌ يصل متأخراً أهونُ من
+    إشعارٍ لا يصل لأن حقلاً في حمولته لم يُقرأ رقماً.
+    """
+    raw = message.data.get("expires_in_seconds")
+    try:
+        seconds = int(raw) if raw is not None else 0
+    except ValueError:
+        return {}
+    if seconds <= 0:
+        return {}
+    return {"apns-expiration": str(int(time.time()) + seconds)}
+
+
 class FcmPushProvider:
     provider_name = "fcm"
 
@@ -142,10 +158,22 @@ class FcmPushProvider:
                         },
                     }
                 ),
+                # **iOS — ثلاثةٌ أُضيفت مع الطريق الأصليّ للتطبيقين** (٢٠٢٦-٠٩-٢٩):
+                #
+                # ١. `apns-push-type: alert` — تشترطه Apple لكلِّ إشعارٍ يُرسم.
+                # ٢. `aps.sound` — **بغيره يُرسم الإشعارُ صامتاً** على iOS.
+                # ٣. `apns-expiration` لما يحمل عمرَه (`expires_in_seconds`، وهو
+                #    عرضُ الرحلة وحدَه اليوم): عرضٌ يصل بعد انقضاء مهلته يدعو
+                #    الكبتنَ إلى رحلةٍ ذهبت لغيره — **فلا يُسلَّم بعدها أصلاً**.
+                #    والعمرُ يُقرأ من الرسالة نفسِها لا من ثابتٍ هنا: المهلةُ
+                #    إعدادٌ في `dispatch_settings`، **وبيتٌ ثانٍ لها يفترق**.
                 "apns": {
                     "headers": {
-                        "apns-priority": "10" if message.high_priority else "5"
-                    }
+                        "apns-priority": "10" if message.high_priority else "5",
+                        "apns-push-type": "alert",
+                        **_apns_expiration(message),
+                    },
+                    "payload": {"aps": {"sound": "default"}},
                 },
                 "webpush": {
                     "headers": {"Urgency": "high" if message.high_priority else "normal"}
