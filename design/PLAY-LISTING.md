@@ -1372,3 +1372,194 @@ account that was invited». **ومسارُ `/apps/testing/` لا يحمل `/u/4/
 `alertsAvailable()` كاذبة، وهي كذلك خارج الغلاف الأصليّ. **فالمرئيُّ على
 الإنتاج بايتاتُه لا بكسلاتُه**، والشاشةُ نفسُها صُوِّرت على جهازٍ حقيقيٍّ ضدّ
 بيئة التطوير (§د-١٤).
+
+## د-١٧) طلبا الإصدار العلنيّ أُرسلا للتطبيقين — **بأجوبةٍ صادقةٍ لا منفوخة** (٢٠٢٦-١٠-٠٣)
+
+**أرسلهما وكيلٌ بأمرِ المالك الصريح** بعد أن قرأ المسوّداتِ وأقرّها، وأضاف
+ثلاثَ وقائعَ لم تكن في أيِّ سجلّ (ب أدناه). **ولم يُمسّ غيرُ النموذج**: لا
+بطاقةُ متجر، ولا جمهورُ مختبِرين، ولا إصدار، ولا مسار.
+
+### أ) ما تقوله اللوحةُ بعد الإرسال — **بنصّها**
+
+    TAXO Driver  ly.tajora.driver  ·  أُرسل اليوم 4:55 ص (توقيتُ المتصفّح)
+    Taxo         ly.tajora.rider   ·  أُرسل اليوم 4:58 ص (توقيتُ المتصفّح)
+
+> «تلقّينا طلبك للحصول على إذن بالإصدار العلني. نحن نراجع نموذج الطلب الذي
+> قدّمته. وسنرسل رسالة إلكترونية إلى صاحب الحساب لإبلاغه بآخر الأخبار. تستغرق
+> هذه العملية عادةً 7 أيام أو أقل، ولكنّها قد تستغرق وقتًا أطول في بعض
+> الأحيان.»
+
+**فالحالُ: قيد المراجعة، والمدّةُ المتوقَّعة ٧ أيامٍ أو أقلّ عادةً** — والنصُّ
+واحدٌ في التطبيقين. **والخبرُ يصل بريدَ صاحب الحساب لا اللوحة.**
+
+### ب) ثلاثُ وقائعَ أكّدها المالك — **لم تكن مكتوبةً قبل اليوم**
+
+| الواقعة | قولُ المالك |
+|---|---|
+| من المختبِرون | خليطٌ من الأصدقاء والعائلة، **وكباتنُ من مجموعات واتساب السائقين لدى المالك**. **بلا مقابل** |
+| سهولةُ جمعهم | **«سهل»** — جُمعوا عبر مجموعة Google واحدة |
+| التثبيتاتُ المتوقَّعة في العام الأول | **1,000 إلى 10,000** للتطبيقين |
+
+**ومعها ثلاثٌ أكّدها قبلها في الجلسة نفسِها**: الجمعُ عبر `taxo-testers` ·
+أوّلُ الأعضاء قُبلوا في ١٥ سبتمبر · **جُمع ١٢ مختبِراً**.
+
+> **⚠ والرقمُ ١٢ قولُ المالك لا قياسُ سجلّ**: §د-١٥ يقول إن المجموعةَ كان
+> فيها **3 أعضاء مقبولين** يومَ ١٥ سبتمبر. **وما يحسم الفرقَ هو Play نفسُه**:
+> شرطا «‎12 مختبرًا على الأقل» و«‎14 يومًا على الأقل» **مؤشَّران ✓ في
+> التطبيقين**. **ولا تعرض اللوحةُ العددَ بعينه** — علامةً لا رقماً.
+
+### ج) و«0 – 10 آلاف» لا «1,000 – 10,000» — **ولمَ**
+
+**السؤالُ خياراتٌ ثابتةٌ لا حقلٌ حرّ**، وخياراتُه بنصّها:
+
+    ‫0 - 10 آلاف  ·  ‫10 آلاف - 100 ألف  ·  ‫100 ألف - مليون  ·  أكثر من مليون  ·  لا أعلم
+
+**ولا خيارَ يطابق تقديرَ المالك بحدّيه.** **فاختير الأدنى لأنه يحويه كلَّه**
+(١٬٠٠٠–١٠٬٠٠٠ ⊂ ٠–١٠٬٠٠٠) — **ولم يُختر ما يتجاوزه**، فالسقفُ ١٠ آلاف
+قولُه. **وهو اختيارُ الوكيل بقاعدة الاحتواء، لا قولٌ للمالك**، ويُذكر كذلك.
+
+### د) ما قاسه الوكيلُ في اللوحة قبل الكتابة — **ويحكم الأجوبة**
+
+| | الكبتن `ly.tajora.driver` | الراكب `ly.tajora.rider` |
+|---|---|---|
+| شروطُ الإنتاج الثلاثة | ✓ ✓ ✓ | ✓ ✓ ✓ |
+| المسارُ المغلق | Alpha · **517 (1.1)** · طُرح ١٨ سبتمبر 12:51 ص | Alpha · **496 (1.0)** · طُرح ١١ سبتمبر 2:35 ص |
+| الجمهور | «مجموعات Google» = `taxo-testers@googlegroups.com` | **المجموعةُ نفسُها** (كان على قائمة بريدٍ بأربعة عناوين في §د-١٥) |
+| «عنوان URL للملاحظات أو عنوان البريد الإلكتروني» | **فارغ (0/512)** | **فارغ (0/512)** |
+| تعليقاتُ اختبار التطبيق | **صفحةٌ فارغة** | **صفحةٌ فارغة** |
+| المراجعات | 0 | 0 |
+| «المستخدمون الذين ثبّتوا التطبيق» | **4** | **4** |
+| البلدان في المسار | 3 | 3 (§د-١٣ كتب «الأردن وحدَه» للكبتن) |
+
+**فتفاعلُ المختبِرين محدود: أربعةُ تثبيتاتٍ لكلِّ تطبيق، وصفرُ ملاحظةٍ مسجَّلة**
+— **ولم يُعرض على المختبِرين طريقٌ لإرسالها أصلاً**، فالحقلُ فارغٌ في المسارين.
+**فكلُّ ما يُذكر إصلاحاً في الأجوبة وجدناه نحن في اختبارنا، لا بلاغُ مختبِر**،
+وقيل ذلك في الأجوبة بلفظه.
+
+### هـ) والإصلاحاتُ المذكورة — **مطابَقةٌ بالإيداعات لا بالذاكرة**
+
+| الإصلاح | الإيداع | التطبيق |
+|---|---|---|
+| الشريطُ السفليُّ يغطّي زرَّي الجولة | `197530c` · ١٧ سبتمبر 23:48 (+02) | الكبتن |
+| زرُّ الجولة أبيضُ على أبيض | `6fde80c` · ١٨ سبتمبر 00:11 (+02) | الكبتن |
+| الإفصاحُ البارزُ عن الموقع | أُودع `0983d66` (١٢ سبتمبر) · **رُفع ١٨ سبتمبر** (`227e04a`، §د-١٦) | الكبتن |
+| صندوقُ اللافتات يُسحب ويدور | `8a37527` · ١٩ سبتمبر | الاثنان |
+
+**وإصلاحا الجولة سبقا طرحَ 517 بأقلَّ من ساعة** — فكُتب «مع بدء الاختبار
+المغلق» لا «أثناءه». **وصندوقُ اللافتات قِيس في Chrome على المكوّن الحقيقيّ،
+والسحبُ بإصبعٍ على هاتفٍ لم يُقس** (نصُّ الإيداع)، **ووجودُه في حزمة الإنتاج
+قِيس اليوم**: `pan-y` في قطعة `Home` المخدومة من `app.tajora.ly` و
+`driver.tajora.ly`. **وتاريخُ رفعه بعينه غيرُ مكتوب.**
+
+### و) الأسئلةُ بنصّ اللوحة، والأجوبةُ كما أُرسلت — **حرفاً**
+
+**والأسئلةُ واحدةٌ في التطبيقين**، وكلُّ حقلٍ نصّيٍّ سقفُه **300 حرف**.
+**وكلُّ جوابٍ قُرئ من الحقل نفسِه (`value`) قبل الضغط** — لا من نصِّ ما كُتب.
+
+**الخطوة ١ — أسئلة عن الاختبار المغلق**
+
+1. «كيف استعنت بالمستخدمين لإجراء اختبارك المغلق؟ على سبيل المثال، هل طلبت
+   من الأصدقاء وأفراد الأسرة، أم استعنت بأحد موفّري خدمات الاختبارات بمقابل؟»
+2. «ما مدى سهولة الاستعانة بمُختبِرين لتطبيقك؟» — صعب جدًا · صعب · ليس صعبًا
+   ولا سهلاً · سهل · سهل جدًا
+3. «يرجى وصف التفاعل الذي تلقّيته من المختبِرين أثناء الاختبار المغلق.»
+4. «يُرجى تقديم ملخص للملاحظات والآراء التي تلقّيتها من المختبِرين، مع ذكر
+   الطريقة المتّبعة لجمعها منهم.»
+
+**الخطوة ٢ — لمحة عن تطبيقك**
+
+5. «مَنْ الجمهور الذي يستهدفه تطبيقك؟»
+6. «وضّح القيمة التي يقدّمها تطبيقك للمستخدمين.»
+7. «كم عدد عمليات التثبيت التي تتوقع أن يحقّقها تطبيقك في عامك الأول؟»
+
+**الخطوة ٣ — جاهزية التطبيق للنشر في قناة الإصدار العلني**
+
+8. «ما التغييرات التي أجريتها على تطبيقك بناءً على المعلومات المستفادة من
+   الاختبار المغلق؟»
+9. «كيف قررت أنّ تطبيقك جاهز للإصدار العلني؟»
+
+#### TAXO Driver
+
+1. ```
+   Unpaid testers: friends and family, plus captains from our WhatsApp groups of drivers. All joined our Google Group, taxo-testers, by request, and we accepted each one. The first members were accepted on 15 September 2026; 12 testers were gathered. Release 517 went to the closed track on 18 Sep.
+   ```
+2. **سهل**
+3. ```
+   Engagement from testers was limited, and we did not measure which features each tester used; Play shows 4 installs. Most testing in this period was our own, on a real device (Samsung Note 20): the first-run permissions tour, the location disclosure, and going online to receive requests.
+   ```
+4. ```
+   Play Console shows no tester feedback for this app, and no feedback address was set on the test track. The issues we fixed came from our own device testing, not tester reports: the bottom bar covered the permissions tour's buttons, and a tour button was white text on a white background.
+   ```
+5. ```
+   Licensed taxi drivers in Jordan who are registered and approved on the TAXO platform. The app is for approved drivers only and cannot be used to book a ride.
+   ```
+6. ```
+   Drivers receive ride requests from nearby riders, accept one, navigate from the pickup point to the destination, and collect the fare. They also manage their earnings, wallet, withdrawal requests, subscription and documents in the app.
+   ```
+7. **‫0 - 10 آلاف** (ج أعلاه)
+8. ```
+   Fixed as the closed test began, found in our own device testing: the bottom bar covered the permissions tour's buttons (17 Sep); a tour button was white on white (18 Sep); the prominent background-location disclosure, shown before the system permission prompt, went live on 18 Sep.
+   ```
+9. ```
+   Play's closed-test criteria are met. Every change passes our full automated test suite and code checks in CI before deployment. The permissions flow and location disclosure were tested on a real device, and we confirmed the disclosure is in the build our server delivers.
+   ```
+
+#### Taxo
+
+1. ```
+   Unpaid testers: friends and family, plus captains from our WhatsApp groups of drivers. The test began on 11 September with an email list of 4 testers and now uses our Google Group, taxo-testers, joined by request. The first members were accepted on 15 September 2026; 12 testers were gathered.
+   ```
+2. **سهل**
+3. ```
+   Engagement from testers was limited, and we did not measure which features each tester used; Play shows 4 installs. The changes made during the test came from our own testing, which we describe in the next answer and in the production readiness section.
+   ```
+4. ```
+   Play Console shows no tester feedback for this app, and no feedback address was set on the test track. The issue we fixed came from our own testing, not tester reports: the promotions carousel on the home screen could not be swiped and did not advance on its own.
+   ```
+5. ```
+   People in Jordan who need a ride: they want to request a nearby car, see the price before confirming, and follow the car on the map.
+   ```
+6. ```
+   Riders set the pickup and destination on the map, pick a vehicle class and see the price before confirming. They follow the car on the map, pay in cash, from an in-app wallet or by card, and keep a record of every ride and payment, with a dispute option.
+   ```
+7. **‫0 - 10 آلاف** (ج أعلاه)
+8. ```
+   Fixed on 19 Sep, found in our own testing: the home-screen promotions carousel now swipes horizontally and advances every 5 seconds. It pauses under the finger and in a hidden tab, does not move when reduced motion is on, and a swipe no longer opens the banner's link.
+   ```
+9. ```
+   Play's closed-test criteria are met. Every change passes our full automated test suite and code checks in CI before deployment, and the carousel change was verified in the browser on the real component and confirmed in the build our server delivers today.
+   ```
+
+### ز) أين كانت سجلّاتُ الاختبار المغلق — **وما لم يكن مكتوباً قبل اليوم**
+
+**بحث الوكيلُ أوّلاً في `D:\prj\TAXO`** — الشجرةِ الميتة — **فلم يجد هذا الملفّ
+ولا أقسامَ `HANDOFF` المطلوبة**، وقال ذلك ولم يملأ الفراغ. **والسجلّاتُ كانت هنا
+في شجرة WSL** (§د-١٣ إلى §د-١٦). **فقولُ «السجلّاتُ في شجرة ويندوز» كان
+مقلوباً**، وحسمه القياس.
+
+**وما لم يكن في أيِّ سجلٍّ حتى اليوم**: من المختبِرون · أنهم بلا مقابل ·
+عددُهم ١٢ · سهولةُ جمعهم · التثبيتاتُ المتوقَّعة. **فكلُّها قولُ المالك في هذه
+الجلسة، وهذا القسمُ أوّلُ موضعٍ كُتبت فيه.**
+
+### ح) ثلاثةُ أشياءَ قِيست في النموذج نفسِه — **تُقرأ قبل أيِّ تعبئةٍ قادمة**
+
+1. **الاستبيانُ خطّيّ**: الخطوتان ٢ و٣ **لا تُفتحان قبل ملء الأولى وضغط
+   «التالي»** — ونقرُ رأسِ الخطوة لا يقفز. **فنصُّهما لا يُقرأ مسبقاً**،
+   وصفحةُ مساعدة Google تذكر مواضيعَهما لا نصَّهما.
+2. **والإنجليزيةُ لا تُقرأ بـ`?hl=en` على هذا المتصفّح**: Chrome يترجمها آلياً
+   إلى العربية (`translated-rtl`، ومئاتُ وسوم `<font>`) — **فما يُقرأ حينها
+   ترجمةُ آلةٍ لا نصُّ Google**. **والعربيةُ الأصليةُ هي نصُّ Google**، وهي
+   ما نُقل أعلاه. **وجزءٌ من الحوار تُرجم مع ذلك** («مرجع» و«يغلق» بدل «رجوع»
+   و«إغلاق») — **ولا يمسّ قيمَ الحقول**.
+3. **نقرٌ وقع والحوارُ غيرُ ظاهر**: النقرةُ الأولى بالمرجع تركت الحوارَ في
+   الشجرة **بارتفاع صفر**، **فذهبت ثلاثُ كتاباتٍ إلى لا شيء** — وقِيس ذلك
+   بقراءة `value` فارغاً. **فالدرسُ: لا نجاحَ يُعلَن لكتابةٍ قبل قراءة الحقل
+   نفسِه** — وأُعيدت بعد فتح الحوار بالنقر على موضعه.
+
+### ⚠ ما ينتظر المالك
+
+1. **بريدُ Google بالقرار** — يصل صاحبَ الحساب، ولا فعلَ قبله.
+2. **حقلُ الملاحظات في المسارين فارغ** — **ملؤه قرارُه** (بريدٌ أو رابط)، فما
+   دام فارغاً لا طريقَ لمختبِرٍ أن يكتب.
+3. **إن قُبل الطلبان**: الإصدارُ العلنيُّ نفسُه خطوةٌ منفصلة — **لا يقع بالقبول
+   وحدَه**.
