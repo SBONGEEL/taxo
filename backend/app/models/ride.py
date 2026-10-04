@@ -68,6 +68,13 @@ TERMINAL_STATUSES: tuple[RideStatus, ...] = (
     RideStatus.NO_DRIVER_FOUND,
 )
 
+# **مجموعاتُ «رحلاتي» (§٦١-ط/١)** — «ملغاة» هي الحالاتُ النهائيةُ غيرُ المكتملة، **تُشتقّ منها لا تُكتب ثانيةً**:
+# حالةٌ نهائيةٌ جديدةٌ تدخل «ملغاة» وحدَها، ولا تغيب عن المرشّح لأن أحداً نسيها هنا
+HISTORY_GROUPS: dict[str, tuple[RideStatus, ...]] = {
+    "completed": (RideStatus.COMPLETED,),
+    "cancelled": tuple(s for s in TERMINAL_STATUSES if s is not RideStatus.COMPLETED),
+}
+
 # WGS84 — نفس مرجع الإحداثيات الذي تُرسله الواجهات وتفهمه Mapbox
 SRID = 4326
 

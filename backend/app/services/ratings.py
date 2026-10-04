@@ -88,6 +88,27 @@ async def rate(
     return rating
 
 
+async def rider_average(
+    session: AsyncSession, rider_id: uuid.UUID
+) -> tuple[Decimal | None, int]:
+    """متوسّطُ تقييمات الكباتن لهذا الراكب وعددُها (§٦١-ط/٢) — **بلا تقييمٍ لا صفرٌ بل `None`**.
+
+    والتقريبُ نفسُه الذي يُبنى به `drivers.rating_avg` (منزلتان، نصفٌ إلى أعلى)، **وتقييمُ الراكب للكبتن لا يدخله**:
+    `rater_type` هو الكبتن وحدَه.
+    """
+    row = (
+        await session.execute(
+            select(func.avg(Rating.stars), func.count(Rating.id))
+            .join(Ride, Ride.id == Rating.ride_id)
+            .where(Ride.rider_id == rider_id, Rating.rater_type == RatingRaterType.DRIVER)
+        )
+    ).one()
+    average, count = row
+    if not count:
+        return None, 0
+    return Decimal(str(average)).quantize(_RATING_STEP, rounding=ROUND_HALF_UP), int(count)
+
+
 async def refresh_driver_average(
     session: AsyncSession, driver_id: uuid.UUID
 ) -> Decimal:

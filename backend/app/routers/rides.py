@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 import uuid
 from decimal import Decimal
@@ -26,6 +26,7 @@ from app.schemas.tip import TipCreate, TipOptionsOut, TipOut
 from app.schemas.ride import (
     CoordinatesIn,
     RideListItem,
+    RiderSummaryOut,
     RideCancelRequest,
     RideCreateRequest,
     RideEstimateOut,
@@ -184,6 +185,9 @@ async def list_my_rides(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     side: RideSide = None,
+    group: Literal["completed", "cancelled"] | None = Query(
+        default=None, description="مرشّحُ «رحلاتي»: المكتملة أو الملغاة — وبدونه كلُّ الرحلات كما كانت"
+    ),
 ) -> list[RideListItem]:
     """سجل الرحلات: للراكب رحلاته، وللكبتن ما أُسند إليه.
 
@@ -191,7 +195,7 @@ async def list_my_rides(
     صفحةٌ من عشرين رحلة لا تصير عشرين نداءً — نفس ما يفعله سجلُّ اللوحة.
     """
     rides = await rides_service.list_rides_for_user(
-        session, user, limit=limit, offset=offset, declared=side
+        session, user, limit=limit, offset=offset, declared=side, group=group
     )
     summaries = await ride_log.payment_summaries(session, [ride.id for ride in rides])
     return [
@@ -206,6 +210,17 @@ async def list_my_rides(
             (ride, summaries.get(ride.id, ride_log.EMPTY_SUMMARY)) for ride in rides
         )
     ]
+
+
+@router.get("/me/summary", response_model=RiderSummaryOut)
+async def get_my_rider_summary(user: RiderUser, session: DbSession) -> RiderSummaryOut:
+    """بطاقةُ «حسابي» عند الراكب (R15): عددُ رحلاته المكتملة، ومتوسّطُ ما قيّمه به الكباتن وعددُه — **له وحدَه**."""
+    average, count = await ratings_service.rider_average(session, user.id)
+    return RiderSummaryOut(
+        completed_rides=await rides_service.completed_rides_of_rider(session, user.id),
+        rating_avg=average,
+        ratings_count=count,
+    )
 
 
 @router.get("/me/active", response_model=RideOut | None)

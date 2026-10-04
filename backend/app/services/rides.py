@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from redis.asyncio import Redis
-from sqlalchemy import and_, false, or_, select, text
+from sqlalchemy import and_, false, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -45,6 +45,7 @@ from app.models.enums import (
 from app.models.ride import (
     ACTIVE_DRIVER_STATUSES,
     ACTIVE_RIDER_STATUSES,
+    HISTORY_GROUPS,
     MAX_INTERMEDIATE_STOPS,
     Ride,
     RideStop,
@@ -269,9 +270,16 @@ async def list_rides_for_user(
     limit: int,
     offset: int,
     declared: UserRole | None = None,
+    group: str | None = None,
 ) -> Sequence[Ride]:
-    """رحلات المستخدم بدوره: الراكب رحلاته، والكبتن ما أُسند إليه."""
+    """رحلات المستخدم بدوره: الراكب رحلاته، والكبتن ما أُسند إليه.
+
+    **و`group` يصفّي في الاستعلام نفسِه** (§٦١-ط/١): تصفيةُ صفحةٍ محمَّلةٍ تكذب على ما لم يُحمَّل — «ملغاة» كانت ستُظهر
+    ما في الصفحة الأولى وحدَها. وبلا `group` لا يتغيّر شيءٌ عمّا كان.
+    """
     stmt = select(Ride).options(*_LOAD_DRIVER_CARD)
+    if group is not None:
+        stmt = stmt.where(Ride.status.in_(HISTORY_GROUPS[group]))
 
     if _side_of(user, declared) is UserRole.DRIVER:
         driver_id = await session.scalar(select(Driver.id).where(Driver.user_id == user.id))
@@ -281,6 +289,18 @@ async def list_rides_for_user(
 
     stmt = stmt.order_by(Ride.created_at.desc()).limit(limit).offset(offset)
     return (await session.scalars(stmt)).all()
+
+
+async def completed_rides_of_rider(session: AsyncSession, rider_id: uuid.UUID) -> int:
+    """عددُ رحلات الراكب المكتملة — لبطاقة «حسابي» (§٦١-ط/٢). **يُعدّ في القاعدة** لا من صفحةٍ محمَّلة."""
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Ride)
+            .where(Ride.rider_id == rider_id, Ride.status == RideStatus.COMPLETED)
+        )
+        or 0
+    )
 
 
 # ------------------------------------------------------------------- الطلب

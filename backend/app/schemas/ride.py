@@ -105,6 +105,14 @@ class RideCancelRequest(BaseModel):
     reason_code: CancelReasonCode | None = None
 
 
+class RiderSummaryOut(BaseModel):
+    """بطاقةُ «حسابي» (R15، §٦١-ط/٢): رحلاتُه المكتملة وتقييمُه — **و`rating_avg` فارغٌ بلا تقييم** فلا يُرسم صفر."""
+
+    completed_rides: int
+    rating_avg: Decimal | None
+    ratings_count: int
+
+
 class RideListItem(BaseModel):
     """صفٌّ في سجل الرحلات — الرحلةُ **ومعها حالُ دفعها**.
 
