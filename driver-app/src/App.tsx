@@ -75,6 +75,9 @@ const RegisterDocumentsScreen = lazy(() =>
     default: m.RegisterDocumentsScreen,
   })),
 );
+const PendingT2Screen = lazy(() =>
+  import("@/screens/t2/PendingT2").then((m) => ({ default: m.PendingT2Screen })),
+);
 const PendingScreen = lazy(() =>
   import("@/screens/Pending").then((m) => ({ default: m.PendingScreen })),
 );
@@ -291,7 +294,8 @@ function DriverHome() {
     );
   if (profile.vehicles.length === 0)
     return <Navigate to="/register/documents" replace />;
-  return <PendingScreen />;
+  // **C03 في الداكن المرسوم، والقائمةُ في الفاتح** (§61-ب)
+  return <ByTheme night={<PendingT2Screen />} day={<PendingScreen />} />;
 }
 
 /** الشريطُ **خارج الحركة وفوقها** — انظر `customer-app/src/App.tsx` لنفس العلّة:

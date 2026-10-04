@@ -21,6 +21,9 @@
   --hot-t: #2a1a12;
   --err: #f0584c;
   --err-t: #2c1615;
+  /* حافةُ ملاحظة الجمر ونقطةُ الخطوة القادمة (C03) */
+  --hot-edge: #5a3322;
+  --dot-off: #3a404a;
   min-height: 100%;
   background: var(--asphalt);
   color: var(--paper);
@@ -172,3 +175,203 @@ html.pink .t2 {
   cursor: pointer;
 }
 .t2-more:disabled { opacity: 0.6; cursor: default; }
+
+/* ── قيد المراجعة (C03) ─────────────────────────────────────────────────────
+   **صفحةٌ تتمرّر في نفسها** — المستنداتُ تحت الخطّ قد تطول. **وتحجز مكانَ شريط التبويب بـ`pb-nav`**:
+   اللوحةُ لا ترسمه هنا، **وهو قائمٌ فوق الشاشة في master** وبه وحدَه يبلغ الكبتنُ المنتظِرُ «حسابي» (وحذفَ حسابه) */
+.t2-pending {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-inline: 24px;
+}
+/* الحلقةُ: مسارٌ قاتمٌ وقوسٌ بالجمر — **يدور ببطء كما كانت حلقةُ الشاشة القائمة** (`spin 2.4s`)، ويقف لمن طلب تقليلَ الحركة */
+.t2-wait {
+  position: relative;
+  flex: none;
+  width: 140px;
+  height: 140px;
+  margin: 30px auto 22px;
+}
+.t2-wait-track,
+.t2-wait-arc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid var(--rule);
+}
+.t2-wait-arc {
+  border-color: transparent;
+  border-top-color: var(--ember);
+  border-right-color: var(--ember);
+  transform: rotate(-20deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .t2-wait-arc { animation: t2-spin 2.4s linear infinite; }
+}
+@keyframes t2-spin {
+  from { transform: rotate(-20deg); }
+  to { transform: rotate(340deg); }
+}
+.t2-wait-core {
+  position: absolute;
+  inset: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--card);
+}
+.t2-wait-core .t2-icon { font-size: 44px; color: var(--ember); }
+/* **والرفضُ بالأحمر** كما كانت حلقتُه في الشاشة القائمة — لم تُرسم (§١٧) */
+.t2-wait.rejected .t2-wait-arc { border-top-color: var(--err); border-right-color: var(--err); }
+.t2-wait.rejected .t2-wait-core .t2-icon { color: var(--err); }
+.t2-pending-title {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+}
+.t2-pending-lede {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--mut);
+}
+.t2-steps {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 0 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--card);
+}
+.t2-step-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--dot-off);
+}
+.t2-step-dot.done { border: 0; background: var(--ok); color: var(--asphalt); }
+.t2-step-dot.done .t2-icon { font-size: 16px; }
+.t2-step-dot.now {
+  border: 0;
+  background: var(--ember);
+  box-shadow: 0 0 0 5px rgba(255, 106, 51, 0.2);
+}
+.t2-step-line {
+  justify-self: center;
+  width: 2px;
+  height: 20px;
+  background: var(--edge);
+}
+.t2-step-line.done { background: var(--ok); }
+.t2-step-title { font-size: 14.5px; font-weight: 600; }
+.t2-step-title.now { font-weight: 700; }
+.t2-step-title.later { color: var(--mut); }
+.t2-step-sub { font-size: 12px; color: var(--mut); }
+.t2-step-sub.now { color: var(--ember); }
+.t2-hint {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--hot-edge);
+  background: var(--hot-t);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.t2-hint .t2-icon { font-size: 20px; line-height: 1.2; color: var(--ember); }
+.t2-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 12px;
+}
+.t2-doc {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--card);
+}
+.t2-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.t2-doc-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 12px;
+  background: var(--rule);
+  color: var(--mut);
+}
+.t2-doc-icon .t2-icon { font-size: 21px; }
+.t2-doc-icon.ok { background: var(--ok-t); color: var(--ok); }
+.t2-doc-icon.warn { background: var(--amber-t); color: var(--amber); }
+.t2-doc-icon.danger { background: var(--err-t); color: var(--err); }
+.t2-doc-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.t2-doc-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--mut);
+}
+.t2-chip {
+  padding: 3px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--rule);
+  color: var(--mut);
+}
+.t2-chip.ok { background: var(--ok-t); color: var(--ok); }
+.t2-chip.warn { background: var(--amber-t); color: var(--amber); }
+.t2-chip.danger { background: var(--err-t); color: var(--err); }
+.t2-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 56px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--ember);
+  color: var(--asphalt);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-cta:active { transform: scale(0.98); }
+.t2-signout {
+  flex: none;
+  margin-top: 18px;
+  padding: 10px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--err);
+  cursor: pointer;
+}

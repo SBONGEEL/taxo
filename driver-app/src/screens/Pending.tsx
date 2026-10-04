@@ -20,7 +20,7 @@ import { useDriver } from "@/lib/driver";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-const DOC_LABEL: Record<DocumentType, string> = {
+export const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
   national_id: "الهوية الشخصية",
   vehicle_registration: "رخصة المركبة والتأمين",
@@ -34,7 +34,7 @@ const DOC_LABEL: Record<DocumentType, string> = {
   profile_photo: "الصورة الشخصية",
 };
 
-const STATUS = {
+export const STATUS = {
   approved: { label: "مقبول", tone: "text-ok" },
   rejected: { label: "مرفوض", tone: "text-danger" },
   pending: { label: "قيد المراجعة", tone: "text-warn" },
