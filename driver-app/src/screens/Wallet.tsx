@@ -47,7 +47,11 @@ const HOLDING: ReadonlySet<Withdrawal["status"]> = new Set([
   "approved",
 ]);
 
-export function WalletScreen() {
+/** **حالُ المحفظة وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة وC09 في `screens/t2`).
+ *
+ * الرصيدُ والمتاحُ والحجزُ والدفترُ وصفحاتُه وطلبُ السحب — **مالُ كبتنٍ تقرؤه شاشتان، فلا تكتبانه مرّتين**.
+ * فالشاشتان ترسمان، والخطّافُ يقرأ. */
+export function useWalletScreen() {
   const navigate = useNavigate();
   const { profile, refresh: refreshDriver } = useDriver();
   // **الصرفُ موقوف** — يُقال لصاحب الطلب المعتمَد، وهو مالُ إنسانٍ ينتظره.
@@ -101,6 +105,46 @@ export function WalletScreen() {
       setBusy(false);
     }
   }
+
+  return {
+    navigate,
+    profile,
+    refreshDriver,
+    payoutStopped,
+    wallet,
+    entries,
+    holds,
+    more,
+    busy,
+    sheet,
+    setSheet,
+    done,
+    setDone,
+    error,
+    load,
+    loadMore,
+  };
+}
+
+export function WalletScreen() {
+  const {
+    navigate,
+    profile,
+    refreshDriver,
+    payoutStopped,
+    wallet,
+    entries,
+    holds,
+    more,
+    busy,
+    sheet,
+    setSheet,
+    done,
+    setDone,
+    error,
+    load,
+    loadMore,
+  } = useWalletScreen();
 
   if (!wallet) {
     return (

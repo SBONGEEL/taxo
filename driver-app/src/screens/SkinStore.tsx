@@ -30,7 +30,11 @@ import { digits, cn } from "@/lib/utils";
 
 const PAGE = 48;
 
-export function SkinStoreScreen() {
+/** **حالُ «متجر المركبات» وأفعالُه — بيتٌ واحدٌ للشاشتين** (القائمة وC11 في `screens/t2`).
+ *
+ * الصفحاتُ ومراقبُ القاع والشراءُ بورقة تأكيده — **مالُ كبتنٍ يخرج من محفظته، فلا تكتبه شاشتان مرّتين**.
+ * فالشاشتان ترسمان، والخطّافُ يفعل. */
+export function useSkinStoreScreen() {
   const goBack = useGoBack();
   const { enabled, refresh: refreshGarage } = useGarage();
   const [store, setStore] = useState<SkinStorePayload | null>(null);
@@ -123,6 +127,48 @@ export function SkinStoreScreen() {
       setBusy(false);
     }
   }
+
+  return {
+    goBack,
+    enabled,
+    store,
+    skins,
+    paging,
+    sentinel,
+    loading,
+    failed,
+    open,
+    setOpen,
+    confirming,
+    setConfirming,
+    busy,
+    buyError,
+    setBuyError,
+    done,
+    confirm,
+  };
+}
+
+export function SkinStoreScreen() {
+  const {
+    goBack,
+    enabled,
+    store,
+    skins,
+    paging,
+    sentinel,
+    loading,
+    failed,
+    open,
+    setOpen,
+    confirming,
+    setConfirming,
+    busy,
+    buyError,
+    setBuyError,
+    done,
+    confirm,
+  } = useSkinStoreScreen();
 
   // **مطفأً: رجوعٌ لا رسالةُ خطأ** — كالكراج سواءً
   if (!enabled) return <Navigate to="/account" replace />;

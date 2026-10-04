@@ -24,13 +24,15 @@ import { useGoBack } from "@/lib/back";
 
 type Period = Earnings["period"];
 
-const PERIOD_LABEL: Record<Period, string> = {
+export const PERIOD_LABEL: Record<Period, string> = {
   today: "اليوم",
   week: "الأسبوع",
   month: "الشهر",
 };
 
-export function EarningsScreen() {
+/** **حالُ «أرباحي» — بيتٌ واحدٌ للشاشتين** (القائمة وC09 في `screens/t2`): الفترةُ وأرقامُها الخمسة
+ * من `GET /drivers/me/earnings` كما تصل. */
+export function useEarningsScreen() {
   const goBack = useGoBack();
   const [period, setPeriod] = useState<Period>("today");
   const [data, setData] = useState<Earnings | null>(null);
@@ -46,6 +48,24 @@ export function EarningsScreen() {
       setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة الأرباح"),
     );
   }, [load]);
+
+  return {
+    goBack,
+    period,
+    setPeriod,
+    data,
+    error,
+  };
+}
+
+export function EarningsScreen() {
+  const {
+    goBack,
+    period,
+    setPeriod,
+    data,
+    error,
+  } = useEarningsScreen();
 
   const currency = data ? CURRENCY_LABEL[data.currency] : "";
   const negative = data ? data.net.trimStart().startsWith("-") : false;

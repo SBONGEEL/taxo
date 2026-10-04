@@ -35,7 +35,7 @@ import {
   vehicleYears,
 } from "@/lib/vehicle-options";
 
-const DOC_LABEL: Record<DocumentType, string> = {
+export const DOC_LABEL: Record<DocumentType, string> = {
   driving_license: "رخصة القيادة",
   national_id: "الهوية الشخصية",
   vehicle_registration: "رخصة المركبة",
@@ -49,13 +49,17 @@ const DOC_LABEL: Record<DocumentType, string> = {
   profile_photo: "الصورة الشخصية",
 };
 
-const REVIEW_LABEL = {
+export const REVIEW_LABEL = {
   approved: { text: "مقبول", tone: "text-ok", dot: "bg-ok" },
   pending: { text: "قيد المراجعة", tone: "text-warn", dot: "bg-warn" },
   rejected: { text: "مرفوض", tone: "text-danger", dot: "bg-danger" },
 } as const;
 
-export function VehicleScreen() {
+/** **حالُ المركبة والمستندات وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة وC12 في `screens/t2`).
+ *
+ * رفعُ مستندٍ يستبدل صفَّه ويعيد المعتمَدَ «قيد المراجعة» (سياسة 9-ب) — **وشاشتان تكتبانه مرّتين تفترقان في أوّل
+ * تعديل**. فالشاشتان ترسمان، والخطّافُ يفعل. */
+export function useVehicleScreen() {
   const goBack = useGoBack();
   const { profile, refresh } = useDriver();
   const [state, setState] = useState<DriverDocuments | null>(null);
@@ -108,6 +112,42 @@ export function VehicleScreen() {
   // **الوثائقُ ثم صورُ المركبة الستّ** (البند ١١) — نفسُ ترتيب شاشة التسجيل،
   // فمن رفع هناك يجد الترتيبَ نفسَه هنا حين يستبدل
   const types: DocumentType[] = REQUIRED_DOCUMENTS;
+
+  return {
+    goBack,
+    profile,
+    refresh,
+    state,
+    busy,
+    editing,
+    setEditing,
+    reverted,
+    setReverted,
+    done,
+    error,
+    replace,
+    vehicle,
+    types,
+  };
+}
+
+export function VehicleScreen() {
+  const {
+    goBack,
+    profile,
+    refresh,
+    state,
+    busy,
+    editing,
+    setEditing,
+    reverted,
+    setReverted,
+    done,
+    error,
+    replace,
+    vehicle,
+    types,
+  } = useVehicleScreen();
 
   return (
     <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
@@ -303,7 +343,7 @@ function Pair({
  * لا. والتحذيرُ يظهر **حين يمسّ التعديلُ هويةً فعلاً** لا دائماً: تحذيرٌ
  * يظهر مع تصحيح لونٍ يُقرأ ضجيجاً ثم لا يُقرأ حين يهمّ.
  */
-function VehicleForm({
+export function VehicleForm({
   vehicle,
   approved,
   onCancel,

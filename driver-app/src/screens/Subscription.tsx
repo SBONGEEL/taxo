@@ -66,10 +66,10 @@ const DURATION_LABEL: Record<SubscriptionDuration, string> = {
   monthly: "30 يوماً · الأوفر للمتفرغ",
 };
 
-type State = "active" | "expiring" | "expired" | "none";
+export type State = "active" | "expiring" | "expired" | "none";
 
 /** الحالُ الأربع من جوابٍ واحد — لا حقلَ لها في الخلفية فتُشتق هنا. */
-function stateOf(subscription: MySubscription | null): State {
+export function stateOf(subscription: MySubscription | null): State {
   if (!subscription) return "none";
   if (subscription.is_active) {
     // «ينتهي قريباً» هي نفسها نافذة تنبيه القسم 8: أقل من يومٍ واحد
@@ -80,7 +80,7 @@ function stateOf(subscription: MySubscription | null): State {
   return subscription.coverage_until ? "expired" : "none";
 }
 
-const COPY: Record<
+export const COPY: Record<
   State,
   { title: string; body: string; tone: string; dot: string }
 > = {
@@ -537,7 +537,7 @@ export function SubscriptionScreen() {
   );
 }
 
-function formatRange(from: string, to: string): string {
+export function formatRange(from: string, to: string): string {
   const format = (value: string) =>
     new Date(value).toLocaleDateString(DISPLAY_LOCALE, {
       day: "numeric",

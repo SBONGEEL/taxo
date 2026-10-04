@@ -81,6 +81,18 @@ const SettingsT2Screen = lazy(() =>
 const MissionsT2Screen = lazy(() =>
   import("@/screens/t2/MissionsT2").then((m) => ({ default: m.MissionsT2Screen })),
 );
+const SubscriptionT2Screen = lazy(() =>
+  import("@/screens/t2/SubscriptionT2").then((m) => ({ default: m.SubscriptionT2Screen })),
+);
+const VehicleT2Screen = lazy(() =>
+  import("@/screens/t2/VehicleT2").then((m) => ({ default: m.VehicleT2Screen })),
+);
+const WalletT2Screen = lazy(() =>
+  import("@/screens/t2/WalletT2").then((m) => ({ default: m.WalletT2Screen })),
+);
+const SkinStoreT2Screen = lazy(() =>
+  import("@/screens/t2/SkinStoreT2").then((m) => ({ default: m.SkinStoreT2Screen })),
+);
 const PendingT2Screen = lazy(() =>
   import("@/screens/t2/PendingT2").then((m) => ({ default: m.PendingT2Screen })),
 );
@@ -354,8 +366,13 @@ function PushRouter() {
   return null;
 }
 
+/** المساراتُ التي ترسمها لوحةُ TAXO 2.0 **بلا شريط تبويب** في الداكن المرسوم — «C10» زرُّها في القاع، والرجوعُ
+ *  يعيد إلى الشريط. **والفاتحُ بالشاشة القائمة وشريطها كما هما.** */
+const T2_COVERING = ["/subscription"];
+
 function NavBar() {
   const { pathname } = useLocation();
+  const { dark } = useTheme();
   // **ولا يظهر ورحلةٌ أو عرضٌ يملأ الشاشة** — وهذا سلوكٌ كان قائماً وكاد يضيع
   // حين رُفع الشريطُ من الشاشات إلى `App`: كان يُرسم في فرع «لا رحلة» وحدَه.
   // وضياعُه ليس تشويشاً بصرياً: قِيس أن `elementFromPoint` في منتصف زرِّ
@@ -381,7 +398,7 @@ function NavBar() {
           لسببٍ أمنيٍّ لا تراه. وأيُّ إزاحةٍ ثابتةٍ ستصطدم بشيءٍ في شاشةٍ ما،
           فالقاعدةُ ليست رقماً بل شرطاً: **لا يُعرض تعريفٌ بمفتاحٍ فوق قرار**. */}
       <WomenModeNotice />
-      {showsNav(pathname) ? <BottomNav /> : null}
+      {showsNav(pathname) && !(dark && T2_COVERING.includes(pathname)) ? <BottomNav /> : null}
     </>
   );
 }
@@ -513,7 +530,7 @@ export default function App() {
                           path="/subscription"
                           element={
                             <Guarded>
-                              <SubscriptionScreen />
+                              <ByTheme night={<SubscriptionT2Screen />} day={<SubscriptionScreen />} />
                             </Guarded>
                           }
                         />
@@ -546,7 +563,7 @@ export default function App() {
                           path="/wallet"
                           element={
                             <Guarded>
-                              <WalletScreen />
+                              <ByTheme night={<WalletT2Screen />} day={<WalletScreen />} />
                             </Guarded>
                           }
                         />
@@ -594,7 +611,7 @@ export default function App() {
                           path="/account/vehicle"
                           element={
                             <Guarded>
-                              <VehicleScreen />
+                              <ByTheme night={<VehicleT2Screen />} day={<VehicleScreen />} />
                             </Guarded>
                           }
                         />
@@ -680,7 +697,7 @@ export default function App() {
                           path="/account/garage/store"
                           element={
                             <Guarded>
-                              <SkinStoreScreen />
+                              <ByTheme night={<SkinStoreT2Screen />} day={<SkinStoreScreen />} />
                             </Guarded>
                           }
                         />

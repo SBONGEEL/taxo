@@ -447,3 +447,597 @@ div.t2-srow { cursor: default; }
   cursor: pointer;
 }
 .t2-save:disabled { opacity: 0.45; cursor: default; }
+
+/* ── جسرُ الألوان القائمة: مكوّنٌ قائمٌ داخل سطحٍ من الهوية يأخذ رموزَها ───────────────────────────────
+   **والمكوّنُ لا يُنسخ**: ورقةُ تأكيد الاشتراك (وأخواتُها) تُرسم كما هي، **وألوانُ صنوفها** (`--bg` · `--sur` · `--brand`…)
+   **تُقرأ من رموز الهوية** داخل هذا الإطار — فلا تفترق ورقتان لمنطقٍ واحد. */
+.t2 .t2-legacy {
+  --bg: var(--t2-bg);
+  --sur: var(--t2-surface);
+  --sur2: var(--t2-sunken);
+  --brd: var(--t2-line);
+  --tx: var(--t2-text);
+  --mut: var(--t2-muted);
+  --inv: var(--t2-on-accent);
+  --acc: var(--t2-text);
+  --ok: var(--t2-success);
+  --warn: var(--t2-warning);
+  --dng: var(--t2-danger);
+  --sa: var(--t2-sunken);
+  --sb: var(--t2-sunken);
+  --brand: var(--t2-accent);
+  --brand-ink: var(--t2-on-accent);
+  --brand-soft: var(--t2-accent-soft);
+  --brand-brd: var(--t2-accent-line);
+}
+
+/* ── الاشتراك (C10) — الحالُ والعمولةُ والخططُ والزرّ، بقيم اللوحة ─────────────────────────────────── */
+/* **وارتفاعُ السطر «normal» والأرقامُ متناسبةٌ كما في اللوحة** — لا 1.5 الموروثةُ من Tailwind ولا `tabular-nums` الجسم
+   (Unbounded بأرقامٍ جدوليةٍ يجعل «1.500» بعرض «8.000»)؛ وورقةُ التأكيد القائمةُ تُعاد إلى ما كانت عليه أدناه */
+.t2.t2-sub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-sub-loading { display: flex; align-items: center; justify-content: center; }
+.t2-sub-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px 16px;
+}
+/* **الذيلُ أسفلَ الشاشة** (فاصلُ اللوحة المرن) — **و34 اللوحةِ منطقةُ مؤشّر البيت نفسُها**، فلا تُضاف إليها الحافّة */
+.t2-sub-foot { flex: none; padding: 8px 18px max(34px, env(safe-area-inset-bottom, 0px)); }
+.t2-sub .t2-head { margin-bottom: 14px; }
+.t2-sub-now { padding: 16px; border-radius: 22px; background: var(--t2-surface); }
+.t2-sub-now-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.t2-sub-now-name { font-size: 19px; font-weight: 700; }
+.t2-sub-now .t2-chip { padding: 3px 10px; font-size: 11.5px; }
+.t2-sub-now-left { margin-top: 4px; font-size: 13px; }
+.t2-sub-now-left.muted { line-height: 1.6; color: var(--t2-muted); }
+.t2-sub-track { height: 6px; margin: 12px 0 8px; overflow: hidden; border-radius: 3px; background: var(--t2-line); }
+.t2-sub-fill { height: 100%; border-radius: 3px; background: var(--t2-success); }
+.t2-sub-now-end { font-size: 12px; color: var(--t2-muted); }
+.t2-sub-perk {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--t2-accent-line);
+  border-radius: 20px;
+  background: var(--t2-accent-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.t2-sub-plans { display: flex; flex-direction: column; gap: 7px; }
+.t2-sub-plan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px; /* **62 اللوحة** — وسطرُ عرضٍ طويلٌ يلتفّ فيطول الصفّ، ولا يُقطع موعدُ انتهائه */
+  padding: 8px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-sub-plan.on { border: 2px solid var(--t2-accent); background: var(--t2-surface); }
+.t2-sub-plan:disabled { opacity: 0.6; cursor: default; }
+.t2-sub-radio { flex: none; width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--t2-dot-off); border-radius: 50%; }
+.t2-sub-plan.on .t2-sub-radio { border: 5px solid var(--t2-accent); }
+.t2-sub-plan-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-sub-plan-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
+.t2-sub-plan.on .t2-sub-plan-name { font-weight: 700; }
+.t2-sub-current { padding: 1px 7px; border: 1px solid var(--t2-line); border-radius: 99px; font-size: 10.5px; font-weight: 600; color: var(--t2-muted); }
+.t2-sub-plan-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-sub-plan-sub.ok { color: var(--t2-success); }
+.t2-sub-price { flex: none; white-space: nowrap; }
+.t2-sub-num { font-family: var(--t2-font-num); font-size: 15px; font-weight: 600; }
+.t2-sub-plan.on .t2-sub-num { font-weight: 700; }
+.t2-sub-cur { font-size: 11px; color: var(--t2-muted); }
+.t2-sub-was { margin-inline-end: 6px; font-size: 11.5px; color: var(--t2-muted); text-decoration: line-through; }
+.t2-sub-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 60px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-sub-cta:disabled { opacity: 0.45; cursor: default; }
+.t2-sub-cta:active:enabled { transform: scale(0.98); }
+.t2-sub-after { margin: 8px 0 0; text-align: center; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-sub-done { margin: 10px 2px 0; font-size: 13px; font-weight: 600; color: var(--t2-success); }
+.t2-sub-renew {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-sub-renew:disabled { opacity: 0.6; cursor: default; }
+.t2-sub-renew-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-sub-renew-title { font-size: 14.5px; font-weight: 600; }
+.t2-sub-renew-hint { margin-top: 2px; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+.t2-sub-fine { margin: 12px 2px 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-sub-past { align-items: center; }
+.t2-sub-saved { display: block; margin-top: 3px; font-size: 11.5px; font-weight: 600; color: var(--t2-success); }
+.t2-sub-past-end { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 4px; }
+.t2-sub-past-amount { font-size: 13.5px; font-weight: 700; }
+.t2-sub-sheet { position: absolute; inset: 0; z-index: 50; line-height: 1.5; font-variant-numeric: tabular-nums; }
+
+/* ── الوثائق (C12) — الخلاصةُ وشريطُها، وصفُّ كلِّ وثيقةٍ بنبرة حالها، بقيم اللوحة ──────────────────── */
+/* **السطرُ «normal» والأرقامُ متناسبةٌ كما في اللوحة** (كـC10)؛ ونموذجُ المركبة القائمُ يُعاد إلى ما كان عليه أدناه */
+.t2.t2-vdocs {
+  height: 100%;
+  overflow-y: auto;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-vdocs .t2-head { margin-bottom: 14px; }
+.t2-vdocs-loading { display: flex; justify-content: center; padding: 24px 0; }
+.t2-vdocs-sum { margin-bottom: 12px; padding: 16px; border-radius: 22px; background: var(--t2-surface); }
+.t2-vdocs-sum-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.t2-vdocs-count { font-size: 17px; font-weight: 700; }
+.t2-vdocs-stop { font-size: 12.5px; font-weight: 600; color: var(--t2-danger); }
+.t2-vdocs-bar { display: flex; gap: 4px; margin-top: 12px; }
+.t2-vdocs-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--t2-dot-off); }
+.t2-vdocs-seg.ok { background: var(--t2-success); }
+.t2-vdocs-seg.warn { background: var(--t2-warning); }
+.t2-vdocs-seg.danger { background: var(--t2-danger); }
+.t2-vdocs-done { margin: 0 2px 10px; font-size: 13px; font-weight: 600; color: var(--t2-success); }
+.t2-vdocs .t2-note:not(.t2-vdocs-note) { margin: 0 2px 10px; }
+.t2-vdocs-list { display: flex; flex-direction: column; gap: 7px; }
+/* **الصفُّ صفُّ C03** (`.t2-doc` · `.t2-doc-row` · `.t2-doc-icon`) — وهنا زرٌّ يفتح الملفّات، فيُعاد ما يضيفه المتصفّحُ للزرّ */
+.t2-vdocs-row {
+  display: block;
+  width: 100%;
+  border: 0;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-vdocs-row.alarm { border: 1.5px solid var(--t2-danger); }
+.t2-vdocs-row:disabled { opacity: 0.6; cursor: default; }
+.t2-vdocs-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.t2-vdocs-title { font-size: 14.5px; font-weight: 600; }
+.t2-vdocs-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-vdocs-sub.warn { color: var(--t2-warning); }
+/* **«قيد المراجعة» بنصٍّ أفتح من الخافت** كما رسمته اللوحة (#B9BEC6) — وقيمتُه في الهوية `--t2-inverse-muted` */
+.t2-vdocs-chip-off { color: var(--t2-inverse-muted); }
+.t2-vdocs-renew { flex: none; font-size: 12.5px; font-weight: 700; color: var(--t2-accent-text); }
+.t2-vdocs-upload {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 11px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.t2-vdocs-busy { flex: none; font-size: 14px; color: var(--t2-muted); }
+.t2-vdocs-note { margin: 6px 0 0; }
+.t2-vdocs-fine { margin: 14px 2px 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-vdocs-car { padding: 16px; border-radius: 22px; background: var(--t2-surface); }
+.t2-vdocs-car-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.t2-vdocs-car-name { font-size: 15px; font-weight: 700; }
+.t2-vdocs-car-cat { font-size: 12px; color: var(--t2-muted); }
+.t2-vdocs-pair { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--t2-divider); font-size: 13px; }
+.t2-vdocs-pair > span:first-child { color: var(--t2-muted); }
+.t2-vdocs-pair > span:last-child { font-weight: 600; }
+.t2-vdocs-edit { margin-top: 12px; }
+.t2-vdocs-car .t2-note { margin: 10px 0 0; }
+.t2-vdocs-form { line-height: 1.5; font-variant-numeric: tabular-nums; }
+
+/* ── الأرباحُ والمحفظةُ والسحب (C09) — الفترةُ والصافي، والقابلُ للسحب وطلبُه، والدفتر، بقيم اللوحة ─────────── */
+/* **السطرُ «normal» والأرقامُ متناسبةٌ كما في اللوحة** (كـC10)؛ وورقةُ السحب القائمةُ تُعاد إلى ما كانت عليه أدناه.
+   **ويحجز مكانَ الشريط القائم بـ`pb-nav`** — اللوحةُ ترسم شريطاً غيرَه ولم يُبنَ، والقائمُ هو بابُ التبويبات اليوم */
+.t2.t2-wal { position: relative; height: 100%; line-height: normal; font-variant-numeric: normal; }
+.t2-wal-loading { display: flex; align-items: center; justify-content: center; padding: 0 18px; }
+.t2-wal-scroll {
+  height: 100%;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  padding-inline: 18px;
+}
+.t2-wal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.t2-wal-title { margin: 0; font-size: 26px; font-weight: 700; }
+.t2-wal-period { display: flex; flex: none; padding: 4px; border-radius: 99px; background: var(--t2-surface); }
+.t2-wal-period-opt {
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.t2-wal-period-opt.on { background: var(--t2-text); color: var(--t2-bg); font-weight: 700; }
+.t2-wal-wait { display: flex; justify-content: center; padding: 30px 0; }
+.t2-wal-net { display: flex; align-items: baseline; gap: 6px; }
+.t2-wal-net-num { font-family: var(--t2-font-num); font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+.t2-wal-net.negative .t2-wal-net-num { color: var(--t2-danger); }
+.t2-wal-net-cur { font-size: 15px; color: var(--t2-muted); }
+.t2-wal-sub { display: flex; gap: 12px; margin: 4px 0 14px; font-size: 12.5px; color: var(--t2-muted); }
+/* **تفصيلُ الصافي في موضع رسم الأيّام** — بطاقةُ الرسم نفسُها (16 · 16 · 12، و22 للزوايا) */
+.t2-wal-break { padding: 16px 16px 12px; border-radius: 22px; background: var(--t2-surface); }
+.t2-wal-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--t2-divider);
+  font-size: 13px;
+}
+.t2-wal-line:first-child { padding-top: 0; }
+.t2-wal-line:last-of-type { border-bottom: 0; }
+.t2-wal-line > span:first-child { color: var(--t2-muted); }
+.t2-wal-line > span:last-child { font-weight: 600; }
+.t2-wal-line.ok > span { color: var(--t2-success); }
+.t2-wal-hint { margin: 4px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--t2-muted); }
+.t2-wal-hint.warn { margin-top: 8px; color: var(--t2-warning); }
+.t2-wal-cash { margin-top: 10px; padding: 16px; border-radius: 22px; background: var(--t2-surface); }
+.t2-wal-cash-top { display: flex; align-items: center; gap: 12px; }
+.t2-wal-cash-main { flex: 1; min-width: 0; }
+.t2-wal-cash-label { font-size: 12.5px; color: var(--t2-muted); }
+.t2-wal-cash-amount { display: flex; align-items: baseline; gap: 5px; }
+.t2-wal-cash-num { font-family: var(--t2-font-num); font-size: 24px; font-weight: 700; }
+.t2-wal-cash-cur { font-size: 12px; color: var(--t2-muted); }
+.t2-wal-withdraw {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-wal-withdraw .t2-icon { font-size: 19px; }
+.t2-wal-withdraw:active { transform: scale(0.98); }
+.t2-wal-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--t2-warning-soft);
+  color: var(--t2-warning);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.t2-wal-note .t2-icon { font-size: 17px; line-height: 1.2; }
+.t2-wal-note.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+.t2-wal-fine { margin: 10px 0 0; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+.t2-wal-door {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 54px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-wal-door-title { flex: 1; font-size: 13.5px; font-weight: 600; }
+.t2-wal-door-go { color: var(--t2-muted); }
+.t2-wal-done { margin: 10px 2px 0; font-size: 13px; font-weight: 600; color: var(--t2-success); }
+.t2-wal-tx { margin-top: 10px; padding: 0 14px; border-radius: 22px; background: var(--t2-surface); }
+.t2-wal-txrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 8px 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--t2-divider);
+}
+.t2-wal-txrow:last-child { border-bottom: 0; }
+.t2-wal-txicon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+}
+.t2-wal-txicon .t2-icon { font-size: 19px; }
+.t2-wal-txicon.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-wal-txmain { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.t2-wal-txtitle { font-size: 13.5px; font-weight: 600; }
+.t2-wal-txwhen { font-size: 11.5px; color: var(--t2-muted); }
+.t2-wal-txend { display: flex; flex: none; flex-direction: column; align-items: flex-end; }
+.t2-wal-txamount { font-size: 14px; font-weight: 600; }
+.t2-wal-txamount.ok { color: var(--t2-success); }
+.t2-wal-txafter { font-size: 10.5px; color: var(--t2-muted); }
+.t2-wal-more { margin-top: 10px; }
+.t2-wal-empty { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.t2-wal-empty b { color: var(--t2-text); }
+.t2-wal-sheet { position: absolute; inset: 0; z-index: 50; line-height: 1.5; font-variant-numeric: tabular-nums; }
+
+/* ── متجرُ المركبات (C11) — المعاينةُ على الخريطة، والمرشِّحات، وشبكةُ الثلاث، والشريطُ السفليّ، بقيم اللوحة ───────── */
+/* **قيمٌ رسمتها اللوحةُ ولا رمزَ لها بعد** — تُقرأ من رمزٍ مقترَحٍ **وتسقط إلى أقرب رمزٍ قائم** حتى يُضاف
+   (`design/drafts/captain-C09-C12.md`): `--t2-card-deep` #15181D · `--t2-card-line` #22262D · `--t2-well-deep` #101317 ·
+   `--t2-edge` #262A31 · `--t2-glass` (أبيضُ ٥٪). **والسطرُ «normal» والأرقامُ متناسبةٌ كما في اللوحة** (كـC10) */
+.t2.t2-store {
+  position: relative;
+  height: 100%;
+  line-height: normal;
+  font-variant-numeric: normal;
+  background: radial-gradient(110% 40% at 15% 0%, var(--t2-accent-soft), transparent 60%), var(--t2-bg);
+}
+.t2-store-loading { display: flex; align-items: center; justify-content: center; }
+.t2-store-scroll {
+  height: 100%;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 14px calc(112px + env(safe-area-inset-bottom, 0px));
+}
+.t2-store-head { display: flex; align-items: center; gap: 12px; padding: 0 4px; }
+.t2-store-back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line, var(--t2-sunken));
+  border-radius: 50%;
+  background: var(--t2-glass, var(--t2-surface));
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-store-back .t2-icon { font-size: 21px; }
+.t2-store-title { flex: 1; margin: 0; font-size: 20px; font-weight: 700; }
+.t2-store-wallet {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line, var(--t2-sunken));
+  border-radius: 18px;
+  background: var(--t2-glass, var(--t2-surface));
+  white-space: nowrap;
+}
+.t2-store-wallet .t2-icon { font-size: 16px; color: var(--t2-muted); }
+.t2-store-wallet-num { font-family: var(--t2-font-num); font-size: 12.5px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.t2-store-wallet-cur { font-size: 10.5px; color: var(--t2-muted); }
+.t2-store-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 196px;
+  margin-top: 16px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 28px;
+  background: var(--t2-surface);
+  box-shadow: 0 0 0 1px var(--t2-edge, var(--t2-line)), var(--t2-float-shadow);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+/* **المعاينةُ الحقيقيةُ تملأ البطاقة** — بلا إطار مكوّنها ولا زواياه (`SkinMapPreview`) */
+.t2-store-preview .t2-store-map { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; }
+.t2-store-shade,
+.t2-store-fade { position: absolute; inset: 0; background: var(--t2-bg); pointer-events: none; }
+.t2-store-shade {
+  opacity: 0.7;
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, transparent 18%, black 70%);
+  mask-image: radial-gradient(circle at 50% 42%, transparent 18%, black 70%);
+}
+.t2-store-fade {
+  opacity: 0.95;
+  -webkit-mask-image: linear-gradient(transparent 58%, black 86%);
+  mask-image: linear-gradient(transparent 58%, black 86%);
+}
+.t2-store-seen {
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border: 1px solid var(--t2-card-line, var(--t2-sunken));
+  border-radius: 99px;
+  background: var(--t2-bg);
+  font-size: 12px;
+  font-weight: 600;
+}
+.t2-store-seen .t2-icon { font-size: 15px; color: var(--t2-accent); }
+.t2-store-info { position: absolute; inset-inline: 16px; bottom: 14px; display: flex; flex-direction: column; }
+.t2-store-info-name { font-size: 17px; font-weight: 700; }
+.t2-store-info-sub { margin-top: 2px; font-size: 12px; color: var(--t2-muted); }
+.t2-store-chips { display: flex; gap: 6px; margin-top: 16px; overflow-x: auto; scrollbar-width: none; }
+.t2-store-chips::-webkit-scrollbar { display: none; }
+.t2-store-chip {
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: none;
+  color: var(--t2-inverse-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.t2-store-chip.on { border-color: var(--t2-text); background: var(--t2-text); color: var(--t2-bg); font-weight: 700; }
+.t2-store-done { margin: 12px 2px 0; font-size: 13px; font-weight: 600; color: var(--t2-success); }
+.t2-store .t2-note { margin: 12px 2px 0; }
+.t2-store-empty { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; }
+.t2-store-empty b { color: var(--t2-text); }
+/* **وصفُ الندرة** — رأسُ قسمها في الشاشة القائمة، ولا ترسمه اللوحة: يظهر حين يُختار مرشِّحُها */
+.t2-store-note { margin: 10px 4px 0; font-size: 11.5px; line-height: 1.5; color: var(--t2-muted); }
+.t2-store-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.t2-store-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 150px;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line, var(--t2-sunken));
+  border-radius: 22px;
+  background: var(--t2-card-deep, var(--t2-surface));
+  color: var(--t2-text);
+  font: inherit;
+  cursor: pointer;
+}
+.t2-store-card.on {
+  border: 2px solid var(--t2-accent);
+  background: linear-gradient(160deg, var(--t2-accent-soft), var(--t2-surface));
+}
+.t2-store-card.locked { opacity: 0.72; }
+.t2-store-well {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 14px;
+  background-color: var(--t2-well-deep, var(--t2-bg));
+  background-image: radial-gradient(var(--t2-card-line, var(--t2-sunken)) 1.2px, transparent 1.6px);
+  background-size: 9px 9px;
+}
+/* **الرسمةُ كما رفعها المشرف** (`SkinArt`) — بلا أرضية مكوّنها، فالبئرُ المنقّطةُ أرضيّتُها */
+.t2-store-well .t2-store-art { width: 100%; height: 100%; padding: 6px; box-sizing: border-box; border-radius: 0; background: none; }
+.t2-store-card-text { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.t2-store-card-name { font-size: 13px; font-weight: 700; }
+.t2-store-card-kind { margin-top: 1px; font-size: 10.5px; color: var(--t2-muted); }
+.t2-store-tag {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--t2-sunken);
+  color: var(--t2-inverse-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: center; /* **سببُ المنع يلتفّ ولا يخرج من البطاقة** — «تحتاج مستوىً أعلى» أعرضُ من «بلاتيني» المرسومة */
+}
+.t2-store-tag.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-store-tag.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
+.t2-store-tag .t2-icon { font-size: 12px; }
+.t2-store-price { display: flex; align-items: baseline; gap: 3px; }
+.t2-store-price-num { font-family: var(--t2-font-num); font-size: 12.5px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.t2-store-price-cur { font-size: 10px; color: var(--t2-muted); }
+.t2-store-stock { font-size: 10px; color: var(--t2-muted); text-align: center; }
+.t2-store-check {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+}
+.t2-store-check .t2-icon { font-size: 16px; }
+.t2-store-sentinel { height: 1px; }
+.t2-store-paging { display: flex; justify-content: center; padding: 14px 0; }
+.t2-store-fine { margin: 16px 2px 0; font-size: 11px; line-height: 1.6; color: var(--t2-muted); }
+.t2-store-bar {
+  position: absolute;
+  inset-inline: 14px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding-inline: 8px 18px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-edge, var(--t2-line));
+  border-radius: 22px;
+  background: var(--t2-surface);
+}
+.t2-store-bar-main { flex: 1; min-width: 0; line-height: 1.35; }
+.t2-store-bar-price { display: flex; align-items: baseline; gap: 6px; }
+.t2-store-bar-num { font-family: var(--t2-font-num); font-size: 18px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.t2-store-bar-cur { font-size: 11px; color: var(--t2-muted); }
+.t2-store-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 700; }
+.t2-store-bar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--t2-muted); }
+.t2-store-buy,
+.t2-store-garage {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 16px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t2-store-buy .t2-icon { font-size: 19px; }
+.t2-store-buy:disabled { opacity: 0.45; cursor: default; }
+.t2-store-garage { border: 1.5px solid var(--t2-text); background: none; color: var(--t2-text); font-weight: 600; }
+.t2-store-sheet { position: absolute; inset: 0; z-index: 50; line-height: 1.5; font-variant-numeric: tabular-nums; }
