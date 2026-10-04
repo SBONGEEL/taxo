@@ -47,7 +47,12 @@ import { digits, cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
 
-export function SettingsScreen() {
+/** **حالُ الإعدادات وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة وC15 في `screens/t2`).
+ *
+ * كلُّ مفتاحٍ هنا قاعدةٌ مكتوبةٌ بعلّتها (نغمةُ الطلب لا يُسكتها العامّ، البصمةُ لا تُقلب مفتاحاً
+ * عند الرفض…)، **وشاشتان تكتبان القاعدةَ مرّتين تفترقان أوّلَ ما تُعدَّل إحداهما**. فالشاشتان
+ * ترسمان، والخطّافُ يفعل. */
+export function useCaptainSettings() {
   const goBack = useGoBack();
   const { profile, refresh } = useDriver();
   const { choice, toggle } = useTheme();
@@ -131,6 +136,119 @@ export function SettingsScreen() {
     }
   }
 
+  function toggleBiometric() {
+    if (!biometry) return;
+    setBioError(null);
+    void setBiometric(!biometry.enabled).catch((caught: unknown) => {
+      // **الرفضُ يُقال ولا يُقلب مفتاحاً**: مفتاحٌ يبدو مشتعلاً وهو
+      // مطفأٌ يجعل المستخدمَ يظنّ أن له باباً لا يُفتح
+      setBioError(
+        caught instanceof Error
+          ? caught.message
+          : "تعذّر تفعيل الدخول بالبصمة",
+      );
+    });
+  }
+
+  function toggleSounds() {
+    const next = !sounds;
+    setSoundsEnabled(next);
+    setSounds(next);
+    if (next) play("notify");
+  }
+
+  function toggleOtherSounds() {
+    const next = !otherSounds;
+    setOtherSoundsEnabled(next);
+    setOtherSounds(next);
+    if (next) play("rideCompleted");
+  }
+
+  function toggleOfferSound() {
+    const next = !offerSound;
+    setOfferSoundEnabled(next);
+    setOfferSound(next);
+    if (next) play("offer");
+  }
+
+  function toggleCrashReports() {
+    const next = !crashReports;
+    setCrashReportsEnabled(next);
+    setCrashReports(next);
+  }
+
+  return {
+    goBack,
+    profile,
+    choice,
+    toggle,
+    pink,
+    available,
+    setPink,
+    biometry,
+    bioError,
+    toggleBiometric,
+    country,
+    womenService,
+    preference,
+    savingPreference,
+    savePreference,
+    quietHours,
+    marketing,
+    flipMarketing,
+    sounds,
+    toggleSounds,
+    otherSounds,
+    toggleOtherSounds,
+    offerSound,
+    toggleOfferSound,
+    crashReports,
+    toggleCrashReports,
+    alias,
+    setAlias,
+    savingAlias,
+    saveAlias,
+    done,
+    error,
+  };
+}
+
+export function SettingsScreen() {
+  const {
+    goBack,
+    profile,
+    choice,
+    toggle,
+    pink,
+    available,
+    setPink,
+    biometry,
+    bioError,
+    toggleBiometric,
+    country,
+    womenService,
+    preference,
+    savingPreference,
+    savePreference,
+    quietHours,
+    marketing,
+    flipMarketing,
+    sounds,
+    toggleSounds,
+    otherSounds,
+    toggleOtherSounds,
+    offerSound,
+    toggleOfferSound,
+    crashReports,
+    toggleCrashReports,
+    alias,
+    setAlias,
+    savingAlias,
+    saveAlias,
+    done,
+    error,
+  } = useCaptainSettings();
+
   return (
     <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
       <div className="mb-16 mt-6 flex items-center gap-10">
@@ -177,18 +295,7 @@ export function SettingsScreen() {
             title={`الدخول بـ${biometryLabel(biometry.kind)}`}
             hint="يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور."
             on={biometry.enabled}
-            onToggle={() => {
-              setBioError(null);
-              void setBiometric(!biometry.enabled).catch((caught: unknown) => {
-                // **الرفضُ يُقال ولا يُقلب مفتاحاً**: مفتاحٌ يبدو مشتعلاً وهو
-                // مطفأٌ يجعل المستخدمَ يظنّ أن له باباً لا يُفتح
-                setBioError(
-                  caught instanceof Error
-                    ? caught.message
-                    : "تعذّر تفعيل الدخول بالبصمة",
-                );
-              });
-            }}
+            onToggle={toggleBiometric}
           />
           {bioError ? (
             <p className="mt-10 text-11 leading-snug text-danger">{bioError}</p>
@@ -203,12 +310,7 @@ export function SettingsScreen() {
           title="أصوات التطبيق"
           hint="المفتاحُ الأعلى — إطفاؤه يُسكت كلَّ شيءٍ عدا نغمة الطلب."
           on={sounds}
-          onToggle={() => {
-            const next = !sounds;
-            setSoundsEnabled(next);
-            setSounds(next);
-            if (next) play("notify");
-          }}
+          onToggle={toggleSounds}
         />
         <div className="mt-13 border-t border-line pt-13">
           {/* **فئةٌ لا نغمة** (قرارُ المالك 2026-08-30): كان هذا المفتاحُ
@@ -219,12 +321,7 @@ export function SettingsScreen() {
             title="أصوات الرحلة والإشعارات"
             hint="بدءُ الرحلة والوصولُ والإنهاءُ والتحصيلُ ودخولُ المال والإشعارات — دون نغمة الطلب."
             on={otherSounds}
-            onToggle={() => {
-              const next = !otherSounds;
-              setOtherSoundsEnabled(next);
-              setOtherSounds(next);
-              if (next) play("rideCompleted");
-            }}
+            onToggle={toggleOtherSounds}
           />
         </div>
         <div className="mt-13 border-t border-line pt-13">
@@ -237,12 +334,7 @@ export function SettingsScreen() {
             title="نغمة الطلب الوارد"
             hint="تعمل حتى لو أطفأت الأصوات العامة — إطفاؤها من هنا وحده، وقد تفوتك طلبات."
             on={offerSound}
-            onToggle={() => {
-              const next = !offerSound;
-              setOfferSoundEnabled(next);
-              setOfferSound(next);
-              if (next) play("offer");
-            }}
+            onToggle={toggleOfferSound}
           />
         </div>
       </section>
@@ -252,11 +344,7 @@ export function SettingsScreen() {
           title="إرسال تقارير الأعطال"
           hint="تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يقول أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته."
           on={crashReports}
-          onToggle={() => {
-            const next = !crashReports;
-            setCrashReportsEnabled(next);
-            setCrashReports(next);
-          }}
+          onToggle={toggleCrashReports}
         />
       </section>
 

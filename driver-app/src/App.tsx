@@ -75,6 +75,9 @@ const RegisterDocumentsScreen = lazy(() =>
     default: m.RegisterDocumentsScreen,
   })),
 );
+const SettingsT2Screen = lazy(() =>
+  import("@/screens/t2/SettingsT2").then((m) => ({ default: m.SettingsT2Screen })),
+);
 const MissionsT2Screen = lazy(() =>
   import("@/screens/t2/MissionsT2").then((m) => ({ default: m.MissionsT2Screen })),
 );
@@ -583,7 +586,7 @@ export default function App() {
                           path="/account/settings"
                           element={
                             <Guarded>
-                              <SettingsScreen />
+                              <ByTheme night={<SettingsT2Screen />} day={<SettingsScreen />} />
                             </Guarded>
                           }
                         />
