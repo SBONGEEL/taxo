@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#000000</color>
+    <!-- خلفيةُ الأيقونة التكيّفية = **أرضُ الأيقونة كما رُسمت** (الإسفلتُ — أرضُ أيقونة الكبتن، TAXO 2.0 «Identity»):
+         الطبقةُ الأماميةُ العلامةُ وحدَها على شفافية (`ic_launcher_foreground`)، فما يملأ البلاطةَ هو هذا اللون.
+         **ويُميَّز التطبيقان بقلب الأرض وحدَه** (الهوية). والنكهةُ التجريبيةُ تستبدل هذا اللونَ وحدَه بشارتها (`src/trial/`). -->
+    <color name="ic_launcher_background">#0E1013</color>
 </resources>
