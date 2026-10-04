@@ -672,3 +672,309 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   -webkit-box-orient: vertical;
 }
 .t2-home-trip-go { font-size: 12px; font-weight: 700; color: var(--t2-accent-text); }
+
+/* ── ورقةُ الطلب فوق الخريطة «R06» — وما فوق الخريطة في أطوار الطلب ─────────────────────────────────── */
+.t2.t2-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(var(--vvh, 100dvh) - 168px);
+  margin: 0 10px calc(8px + var(--vv-bottom, 0px));
+  padding-top: 10px;
+  border-radius: 30px;
+  background: var(--t2-bg);
+  box-shadow: var(--t2-sheet-shadow);
+  pointer-events: auto;
+}
+.t2-sheet-grab { flex: none; width: 40px; height: 5px; margin: 0 auto 14px; border-radius: 3px; background: var(--t2-dash); }
+.t2-sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 16px; scrollbar-width: none; }
+.t2-sheet-body::-webkit-scrollbar { display: none; }
+.t2-sheet-foot {
+  flex: none;
+  padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--t2-line);
+}
+.t2-sheet-fine { margin: 8px 2px 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-sheet-fine.center { margin-top: 14px; text-align: center; }
+.t2 .t2-error { margin-bottom: 10px; border-radius: 16px; border-color: var(--t2-danger); background: var(--t2-danger-soft); color: var(--t2-danger); font-size: 13px; }
+
+/* الرأسُ فوق الخريطة: سهمُ الرجوع أو حرفُ الحساب، والجرسُ ومبدّلُ السِمة */
+.t2.t2-maphead {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  inset-inline: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  background: none;
+  pointer-events: none;
+}
+.t2-maphead > * { pointer-events: auto; }
+.t2-maphead-gap { flex: 1; pointer-events: none; }
+.t2-mapbtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  box-shadow: var(--t2-float-btn-shadow);
+  cursor: pointer;
+}
+.t2-mapbtn .t2-icon { font-size: 22px; }
+.t2-mapbtn-avatar { box-shadow: var(--t2-float-btn-shadow); }
+.t2.t2-locate { position: absolute; bottom: 42%; inset-inline-end: 16px; min-height: 0; }
+
+/* الدبوس: دائرةُ الانطلاق ومربّعُ الوجهة — لغةُ خريطة الهوية */
+.t2.t2-pin-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 160px;
+  min-height: 0;
+  background: none;
+  pointer-events: none;
+}
+.t2-pin { display: block; width: 22px; height: 22px; box-sizing: border-box; border: 4px solid var(--t2-surface); box-shadow: var(--t2-float-btn-shadow); }
+.t2-pin.from { border-radius: 50%; background: var(--t2-text); }
+.t2-pin.to { border-radius: 7px; background: var(--t2-accent); }
+.t2-pin-stem { display: block; width: 2px; height: 14px; background: var(--t2-text); }
+
+/* ورقتا «حرّك الخريطة» و«إلى أين؟» */
+.t2-picking-hint { margin: 0 0 10px; text-align: center; font-size: 13.5px; color: var(--t2-muted); }
+.t2-picking-address { margin: 0 0 12px; padding: 12px 14px; border-radius: 16px; background: var(--t2-surface); font-size: 14px; font-weight: 600; }
+.t2-picking-actions { display: flex; flex-direction: column; gap: 8px; }
+.t2-picking-actions .t2-button, .t2-schedule-row .t2-button, .t2-schedule-open, .t2-callout-action { width: 100%; }
+.t2-whereto-title { margin: 0 0 12px; font-size: 18px; font-weight: 700; }
+.t2-whereto-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 50px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-whereto-pickup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-whereto-pickup > .t2-icon { font-size: 20px; color: var(--t2-accent-text); }
+.t2-whereto-pickup-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-whereto-change { font-size: 12.5px; font-weight: 600; color: var(--t2-muted); }
+
+/* بطاقةُ المسار: «من» و«إلى» بنقطتيهما، و«+» */
+.t2-route {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--t2-surface);
+}
+.t2-route-from { justify-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--t2-text); }
+.t2-route-join { justify-self: center; width: 2px; height: 14px; background: var(--t2-line); }
+.t2-route-to { justify-self: center; width: 10px; height: 10px; border-radius: 3px; background: var(--t2-accent); }
+.t2-route-text { display: flex; flex-direction: column; min-width: 0; }
+.t2-route-edit { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.t2-route-label { font-size: 11.5px; color: var(--t2-muted); }
+.t2-route-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; }
+.t2-route-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  cursor: pointer;
+}
+
+/* المحطاتُ الوسيطة — مربّعٌ برقمه، وسهمان وحذف */
+.t2-stops { margin-top: 10px; }
+.t2-stops-head { margin: 0 2px 8px; font-size: 12px; color: var(--t2-muted); }
+.t2-stops-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.t2-stop { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 16px; background: var(--t2-surface); }
+.t2-stop-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.t2-stop-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.t2-stop-btn { display: flex; padding: 2px; border: 0; background: none; color: var(--t2-muted); cursor: pointer; }
+.t2-stop-btn:disabled { opacity: 0.3; cursor: default; }
+.t2-stop-btn.danger { color: var(--t2-danger); }
+.t2-stop-btn .t2-icon { font-size: 18px; }
+
+/* «اختر الفئة» — بطاقاتُ الفئات، والسعرُ على المختارة */
+.t2-pick-head { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 2px 10px; }
+.t2-pick-title { font-size: 15px; font-weight: 700; }
+.t2-pick-meta { font-size: 12.5px; color: var(--t2-muted); }
+.t2-cats { display: flex; flex-direction: column; gap: 6px; }
+.t2-cat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 62px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-cat.on { border: 2px solid var(--t2-text); background: var(--t2-surface); }
+.t2-cat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: var(--t2-well);
+}
+.t2-cat.on .t2-cat-icon { background: var(--t2-sunken); }
+.t2-cat-icon .t2-icon { font-size: 24px; }
+.t2-cat-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-cat-name { font-size: 15px; font-weight: 600; }
+.t2-cat.on .t2-cat-name { font-weight: 700; }
+.t2-cat-hint { font-size: 12px; color: var(--t2-muted); }
+.t2-cat-price { font-family: var(--t2-font-num); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.t2-cat-wait { font-size: 12px; color: var(--t2-muted); }
+
+/* تفضيلُ الكبتن — ثلاثةٌ في صفّ */
+.t2-pref { margin-top: 14px; }
+.t2-pref-title { margin: 0 2px 8px; font-size: 12.5px; color: var(--t2-muted); }
+.t2-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; border-radius: 16px; background: var(--t2-well); }
+.t2-seg-opt {
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-seg-opt.on { background: var(--t2-surface); color: var(--t2-text); }
+.t2-pref .t2-note { margin-top: 8px; }
+
+/* صفُّ الدفع والكوبون */
+.t2-payrow { display: flex; align-items: center; gap: 10px; min-height: 46px; margin: 12px 0 0; padding: 0 4px; }
+.t2-payrow-pay, .t2-payrow-coupon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-payrow-pay > .t2-icon:first-child { font-size: 21px; }
+.t2-payrow-more { font-size: 18px; color: var(--t2-muted); }
+.t2-payrow-sep { width: 1px; height: 22px; margin: 0 6px; background: var(--t2-line); }
+.t2-payrow-coupon { font-size: 13px; color: var(--t2-muted); }
+.t2-payrow-coupon .t2-icon, .t2-payrow-promo > .t2-icon { font-size: 18px; }
+.t2-payrow-promo { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--t2-success); }
+.t2-payrow-x { display: flex; padding: 0; border: 0; background: none; color: var(--t2-muted); cursor: pointer; }
+.t2-payrow-x .t2-icon { font-size: 16px; }
+.t2-coupon, .t2-schedule { margin-top: 10px; padding: 12px 14px; border-radius: 18px; background: var(--t2-surface); }
+.t2-coupon-label { display: block; margin-bottom: 6px; font-size: 12px; color: var(--t2-muted); }
+.t2-coupon-row { display: flex; gap: 8px; }
+.t2-coupon-input { flex: 1; min-width: 0; text-transform: uppercase; }
+.t2-coupon-apply { flex: none; }
+.t2-coupon .t2-error { margin: 8px 0 0; }
+.t2-schedule .t2-input { width: 100%; }
+.t2-schedule-row { display: flex; gap: 8px; margin-top: 10px; }
+.t2-schedule-open { margin-top: 12px; }
+
+/* المشاركة بموافقتيها */
+.t2-share { margin-top: 10px; padding: 12px 14px; border-radius: 18px; background: var(--t2-surface); }
+.t2-share-row { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.t2-share-guard { margin-top: 10px; padding: 10px; border-radius: 14px; background: var(--t2-accent-soft); }
+.t2-check { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--t2-accent); }
+.t2-share-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-share-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.t2-share-title .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-share-body { margin-top: 2px; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-share-guard .t2-share-body { margin: 0; color: var(--t2-text); }
+.t2-callout-action { margin-top: 10px; }
+.t2-sheet-body > .t2-note, .t2-sheet-body > .t2-callout { margin-top: 10px; }
+
+/* زرُّ الطلب — الجمرُ ونصُّه حبر، والسعرُ آخرُ ما تقع عليه العين */
+.t2-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 60px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-cta:disabled { opacity: 0.55; cursor: default; }
+.t2-cta-price { font-family: var(--t2-font-num); font-size: 15px; font-weight: 600; white-space: nowrap; }
+
+/* ورقةُ اختيار طريقة الدفع */
+.t2-picker { position: fixed; inset-inline: 0; bottom: 0; z-index: 68; margin: 0 auto; max-width: 32rem; }
+.t2-picker .t2.t2-sheet { margin: 0; border-radius: 30px 30px 0 0; max-height: calc(var(--vvh, 100dvh) - 76px); }
+.t2-picker-title { margin: 0 2px 10px; font-size: 16px; font-weight: 700; }
+.t2-pay-row > .t2-icon:first-child { align-self: center; font-size: 22px; color: var(--t2-muted); }
+.t2-pay-check { align-self: center; font-size: 20px; color: var(--t2-accent-text); }

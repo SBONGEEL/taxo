@@ -44,6 +44,7 @@ import { ByTheme } from "@/components/ByTheme";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
 import { RiderHome, type RiderHomeProps } from "@/components/home/RiderHome";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
+import type { ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { TrackingSheet } from "@/components/ride/TrackingSheet";
@@ -58,6 +59,14 @@ import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
 import { RiderHomeT2 } from "@/screens/t2/RiderHomeT2";
+import { ConfirmRideT2 } from "@/screens/t2/ConfirmRideT2";
+import {
+  LocateButtonT2,
+  MapHeaderT2,
+  PickingSheetT2,
+  PinT2,
+  WhereToSheetT2,
+} from "@/screens/t2/HomeMapT2";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -498,6 +507,46 @@ export function HomeScreen() {
     map: mapNode,
   };
 
+  // «رجوع» (الحزمة ب): يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟».
+  // ويمسح الوجهةَ لأن بقاءها يترك الشاشةَ في حالٍ لا زرَّ يعيدها
+  // منه إلى ورقة التأكيد — أما المحطاتُ فمعها، إذ لا معنى
+  // لمحطاتٍ بلا وجهة. **وفعلٌ واحدٌ للوجهين**: زرُّ الورقة القائمة وسهمُ الخريطة في TAXO 2.0
+  const leaveConfirm = () => {
+    setPhase("idle");
+    setDropoff(null);
+    setDropoffAddress(null);
+    setStops([]);
+  };
+
+  const locateMe = async () => {
+    const position = await currentPosition();
+    if (position) map.current?.flyTo(position, 15);
+  };
+
+  /** **ورقةُ التأكيد — خصائصُ واحدةٌ للوجهين** (القائمُ في الليليّ، و«R06» في النهاريّ المرسوم). */
+  const confirmProps: ConfirmRideProps | null =
+    pickup && dropoff
+      ? {
+          pickup,
+          pickupAddress,
+          dropoff,
+          dropoffAddress,
+          categories: countryConfig?.vehicle_categories ?? ["economy"],
+          onEditDestination: () => setSearchOpen(true),
+          onRequest: submit,
+          onSchedule: schedule,
+          requesting,
+          requestError: error,
+          stops,
+          onStopsChange: setStops,
+          onAddStop: () => setPhase("pick-stop"),
+          blockedByPreference,
+          onClearPreference: () => void clearGenderPreference(),
+          countryConfig,
+          onBack: leaveConfirm,
+        }
+      : null;
+
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
       {browsing ? (
@@ -506,6 +555,23 @@ export function HomeScreen() {
         <>
       {mapNode}
 
+      {/* **ما فوق الخريطة بالمظهر**: القائمُ في الليليّ كما هو، وTAXO 2.0 في النهاريّ المرسوم — بالأفعال نفسِها */}
+      {!dark ? (
+        <>
+          {picking ? <PinT2 target={phase === "pick-pickup" ? "pickup" : "dropoff"} /> : null}
+          <MapHeaderT2
+            initial={user?.name.slice(0, 1) ?? "؟"}
+            unread={unreadNotifications}
+            dark={dark}
+            onBack={phase === "confirm" && confirmProps ? leaveConfirm : null}
+            onOpenAccount={() => navigate("/account")}
+            onOpenNotifications={() => navigate("/account/notifications")}
+            onToggleTheme={() => setChoice(dark ? "light" : "dark")}
+          />
+          <LocateButtonT2 onLocate={() => void locateMe()} />
+        </>
+      ) : (
+        <>
       {/* دبوسٌ ثابت في المركز: الخريطة تتحرك تحته لا هو فوقها */}
       {picking ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-40">
@@ -560,15 +626,14 @@ export function HomeScreen() {
 
       <button
         type="button"
-        onClick={async () => {
-          const position = await currentPosition();
-          if (position) map.current?.flyTo(position, 15);
-        }}
+        onClick={locateMe}
         className="ctl absolute bottom-[42%] end-16 size-44"
         aria-label="موقعي الحالي"
       >
         <Crosshair className="size-20" />
       </button>
+        </>
+      )}
 
       {/* **الأوراقُ تنتهي فوق الشريط** (`bottom:66px` في النموذج): ورقةٌ تلتصق
           بأسفل الشاشة تحت شريطٍ ثابتٍ تُخفي سطرَها الأخير — وهو زرُّ الطلب */}
@@ -589,6 +654,14 @@ export function HomeScreen() {
                 ride={outcome}
                 onDismiss={() => setDismissed(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
+              />
+            ) : picking && !dark ? (
+              <PickingSheetT2
+                targetLabel={phase === "pick-pickup" ? "نقطة الانطلاق" : "وجهتك"}
+                address={pinAddress}
+                loading={pinLoading}
+                onConfirm={confirmPin}
+                onCancel={() => setPhase(dropoff ? "confirm" : "idle")}
               />
             ) : picking ? (
               <Sheet>
@@ -617,34 +690,22 @@ export function HomeScreen() {
                   </Button>
                 </div>
               </Sheet>
-            ) : phase === "confirm" && pickup && dropoff ? (
-              <ConfirmRide
-                pickup={pickup}
-                pickupAddress={pickupAddress}
-                dropoff={dropoff}
-                dropoffAddress={dropoffAddress}
-                categories={countryConfig?.vehicle_categories ?? ["economy"]}
-                onEditDestination={() => setSearchOpen(true)}
-                onRequest={submit}
-                onSchedule={schedule}
-                requesting={requesting}
-                requestError={error}
-                stops={stops}
-                onStopsChange={setStops}
-                onAddStop={() => setPhase("pick-stop")}
-                blockedByPreference={blockedByPreference}
-                onClearPreference={() => void clearGenderPreference()}
-                countryConfig={countryConfig}
-                // «رجوع» (الحزمة ب): يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟».
-                // ويمسح الوجهةَ لأن بقاءها يترك الشاشةَ في حالٍ لا زرَّ يعيدها
-                // منه إلى ورقة التأكيد — أما المحطاتُ فمعها، إذ لا معنى
-                // لمحطاتٍ بلا وجهة
-                onBack={() => {
-                  setPhase("idle");
-                  setDropoff(null);
-                  setDropoffAddress(null);
-                  setStops([]);
-                }}
+            ) : phase === "confirm" && confirmProps ? (
+              <ByTheme day={<ConfirmRideT2 {...confirmProps} />} night={<ConfirmRide {...confirmProps} />} />
+            ) : !dark ? (
+              <WhereToSheetT2
+                places={places}
+                pickupLabel={pickupAddress ?? (pickup ? "الموقع المحدد" : "موقعي الحالي")}
+                onSearch={() => setSearchOpen(true)}
+                onPickPlace={(place) =>
+                  pickPlace({
+                    id: `place:${place.id}`,
+                    name: place.label,
+                    address: place.address ?? "",
+                    coordinates: { lat: place.lat, lng: place.lng },
+                  })
+                }
+                onChangePickup={() => setPhase("pick-pickup")}
               />
             ) : (
               <Sheet>

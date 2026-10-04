@@ -23,6 +23,15 @@ import type { PayableMethod, PaymentChannel } from "@/lib/payment";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { Sheet } from "@/components/ui/Sheet";
 import { cn } from "@/lib/utils";
+import { SheetT2 } from "@/screens/t2/SheetT2";
+
+/** رموزُ الهوية لقنوات الدفع — **وجهُ TAXO 2.0 وحدَه**؛ والقائمُ بأيقونات قنواته (`lib/payment`). */
+export const PAY_ICON_T2: Record<PayableMethod, string> = {
+  wallet: "account_balance_wallet",
+  cliq: "smartphone",
+  card: "credit_card",
+  cash: "payments",
+};
 
 export function PaymentPicker({
   channels,
@@ -32,13 +41,53 @@ export function PaymentPicker({
   /** رصيدُ المحفظة نصّاً جاهزاً — يُعرض سطراً فرعياً كما في التصميم
    *  (`walletSub`)، ولا يُحسب منه شيء. */
   walletHint,
+  variant,
 }: {
   channels: PaymentChannel[];
   selected: PayableMethod | null;
   onSelect: (method: PayableMethod) => void;
   onClose: () => void;
   walletHint?: string | null;
+  /** **وجهُ TAXO 2.0** (من ورقة «R06»): القنواتُ والاختيارُ والإغلاقُ هي هي، والشكلُ من الهوية. */
+  variant?: "t2";
 }) {
+  if (variant === "t2")
+    return createPortal(
+      <>
+        <button type="button" aria-label="إغلاق" onClick={onClose} className="fixed inset-0 z-[67] bg-dim" />
+        <div className="t2-picker">
+          <SheetT2>
+            <div className="t2-picker-title">طريقة الدفع</div>
+            <div className="t2-list" role="radiogroup" aria-label="طريقة الدفع">
+              {channels.map(({ method, hint }) => (
+                <button
+                  key={method}
+                  type="button"
+                  role="radio"
+                  aria-checked={method === selected}
+                  onClick={() => {
+                    onSelect(method);
+                    onClose();
+                  }}
+                  className="t2-row t2-pay-row"
+                >
+                  <span className="t2-icon" aria-hidden="true">{PAY_ICON_T2[method]}</span>
+                  <span className="t2-row-main">
+                    <span className="t2-row-title">{PAYMENT_METHOD_LABEL[method]}</span>
+                    <span className="t2-row-body">{method === "wallet" && walletHint ? walletHint : hint}</span>
+                  </span>
+                  {method === selected ? (
+                    <span className="t2-icon t2-pay-check" aria-hidden="true">check</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </SheetT2>
+        </div>
+      </>,
+      document.body,
+    );
+
   return createPortal(
     <>
       <button
