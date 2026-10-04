@@ -25,6 +25,7 @@ from app.models.driver import Driver
 from app.models.enums import CountryCode, DriverStatus, VehicleCategory
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.services import approach
 from app.services import geo, route
 from app.services import presence_token
 from app.ws import events
@@ -140,6 +141,8 @@ async def report_location(
     await events.publish_driver_location(
         redis, driver_id=context.driver_id, lat=lat, lng=lng, heading=heading
     )
+    # **«الكبتن يقترب»** (§61-ي/١١): قراءةُ مفتاحٍ واحدٍ لمن لا رحلةَ له — ولا يُسقط البثَّ بسقوطه
+    await approach.check(redis, driver_id=context.driver_id, lat=lat, lng=lng)
 
 
 async def nearby_available(

@@ -88,6 +88,8 @@ class NotificationSettingOut(BaseModel):
     quiet_hours_start: time
     quiet_hours_end: time
     timezone: str
+    # **مسافةُ إشعار «الكبتن يقترب»** بالأمتار (§61-ي/١١)
+    approach_notice_meters: int
 
 
 class NotificationSettingUpdate(BaseModel):
@@ -95,6 +97,8 @@ class NotificationSettingUpdate(BaseModel):
     quiet_hours_start: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     quiet_hours_end: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     timezone: str = Field(min_length=3, max_length=64)
+    # **اختياريٌّ** فلا يتغيّر عقدُ من لا يرسله (§61-ي/١١) — ٢٠٠–٣٠٠٠ متر
+    approach_notice_meters: int | None = Field(default=None, ge=200, le=3000)
 
 
 # ------------------------------------------- صندوق وارد المستخدم (9-ب)

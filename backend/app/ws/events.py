@@ -49,6 +49,8 @@ class RideEvent(StrEnum):
     STOP_REACHED = "stop_reached"
     STOP_RESUMED = "stop_resumed"
     STOP_WAIT_EXCEEDED = "stop_wait_exceeded"
+    # **«الكبتن يقترب»** (§61-ي/١١) — للراكب وحدَه، مرّةً لكلِّ رحلة، **ولا يقرؤه التوزيعُ ولا انتقالُ الحالات**
+    DRIVER_APPROACHING = "driver_approaching"
 
 
 class PaymentEvent(StrEnum):
@@ -153,6 +155,15 @@ async def publish_ride_event(redis: Redis, ride: Ride, event: RideEvent) -> None
     await publish(redis, user_channel(ride.rider_id), payload)
     if ride.driver is not None:
         await publish(redis, user_channel(ride.driver.user_id), payload)
+
+
+async def publish_driver_approaching(redis: Redis, ride: Ride) -> None:
+    """«الكبتن يقترب» للراكب وحدَه (§61-ي/١١) — الكبتنُ يعرف أين هو، وحدثٌ في تطبيقه عن نفسه لا يُقرأ."""
+    payload = {
+        "type": RideEvent.DRIVER_APPROACHING.value,
+        "ride": RideOut.from_ride(ride).model_dump(mode="json"),
+    }
+    await publish(redis, user_channel(ride.rider_id), payload)
 
 
 async def publish_ride_offer(

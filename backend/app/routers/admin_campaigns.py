@@ -200,6 +200,8 @@ async def update_settings(
     setting.quiet_hours_start = _parse_time(payload.quiet_hours_start)
     setting.quiet_hours_end = _parse_time(payload.quiet_hours_end)
     setting.timezone = _valid_timezone(payload.timezone)
+    if payload.approach_notice_meters is not None:
+        setting.approach_notice_meters = payload.approach_notice_meters
     await session.commit()
     await session.refresh(setting)
     return NotificationSettingOut.model_validate(setting)

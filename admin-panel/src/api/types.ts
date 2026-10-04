@@ -191,6 +191,8 @@ export interface NotificationSetting {
   quiet_hours_start: string;
   quiet_hours_end: string;
   timezone: string;
+  /** مسافةُ إشعار «الكبتن يقترب» بالأمتار (§61-ي/١١) — ٢٠٠–٣٠٠٠. */
+  approach_notice_meters: number;
 }
 
 // ------------------------------------------------------------ الكباتن

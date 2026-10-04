@@ -34,7 +34,7 @@ from app.schemas.ride import (
     RideOut,
     RouteLineOut,
 )
-from app.services import avatar, cancellation, rider_photo
+from app.services import approach, avatar, cancellation, rider_photo
 from app.services import (
     dispatch,
     documents as documents_service,
@@ -401,6 +401,17 @@ async def accept_ride(
     # بعده تُطلق تحميلاً كسولاً خارج السياق غير المتزامن (`MissingGreenlet`).
     # وهي المصيدةُ التي من أجلها تنتهي كلُّ دالةٍ مُعدِّلةٍ بـ`_flush_and_reload`
     out = _to_out(ride)
+
+    # **«الكبتن يقترب» يُفعَّل بعد القبول** (§61-ي/١١) — من الجواب المبنيّ لا من الرحلة: أعمدتُها بعد الـcommit مُبطَلة
+    await approach.arm(
+        redis,
+        session,
+        driver_id=driver.id,
+        ride_id=out.id,
+        country_code=out.country_code,
+        pickup_lat=out.pickup.lat,
+        pickup_lng=out.pickup.lng,
+    )
 
     # **وشكلُ المسار يُطلب مرةً هنا** (البند ٨، قرارُ المالك): بعد الـcommit فلا
     # يُحمل قفلُ صفِّ الرحلة عبر نداء Mapbox، وقبل أن يفتح أيُّ طرفٍ خريطته.

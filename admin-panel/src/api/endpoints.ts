@@ -364,6 +364,7 @@ export const setQuietHours = (
     quiet_hours_start: string;
     quiet_hours_end: string;
     timezone: string;
+    approach_notice_meters?: number;
   },
 ) =>
   api.put<NotificationSetting>(`/admin/campaigns/settings/${country}`, payload);

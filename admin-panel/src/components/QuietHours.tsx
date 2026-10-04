@@ -39,6 +39,8 @@ export function QuietHours({
   const [start, setStart] = useState<string | null>(null);
   const [end, setEnd] = useState("");
   const [zone, setZone] = useState("");
+  // **مسافةُ «الكبتن يقترب»** (§61-ي/١١) — في الصفِّ نفسِه وبالبابِ نفسِه
+  const [approach, setApproach] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -47,6 +49,7 @@ export function QuietHours({
     setStart(row.quiet_hours_start);
     setEnd(row.quiet_hours_end);
     setZone(row.timezone);
+    setApproach(String(row.approach_notice_meters));
   }, [country]);
 
   useEffect(() => {
@@ -98,6 +101,21 @@ export function QuietHours({
             </datalist>
           </div>
 
+          <div className="mt-10 grid gap-10 md:grid-cols-3">
+            <Field
+              label="إشعار «الكبتن يقترب» — على بُعد (متر)"
+              dir="ltr"
+              inputMode="numeric"
+              value={approach}
+              disabled={!isAdmin}
+              onChange={(event) => setApproach(event.target.value.replace(/[^0-9]/g, ""))}
+            />
+          </div>
+          <p className="mt-6 text-11 leading-note text-muted">
+            يصل الراكبَ مرّةً حين يقترب كبتنُه من نقطة الانطلاق بهذه المسافة (200–3000). و800 م نحو دقيقتين في المدينة — مسافةٌ لا
+            زمن، فلا زمنَ قيادةٍ يُحسب في النظام. ويسري على ما يُقبل من الرحلات بعد الحفظ.
+          </p>
+
           <p className="mt-8 text-11 leading-note text-muted">
             بهذه المنطقة يُحسب <b className="text-ink">«يومُ الدولة»</b> في كلِّ
             تقرير وفي جدولة النسخ الاحتياطي — لا بتوقيت الخادم. وصيغةُ الساعة{" "}
@@ -115,6 +133,7 @@ export function QuietHours({
                   quiet_hours_start: start,
                   quiet_hours_end: end,
                   timezone: zone.trim(),
+                  approach_notice_meters: approach ? Number(approach) : undefined,
                 })
                   .then(() =>
                     onSaved(

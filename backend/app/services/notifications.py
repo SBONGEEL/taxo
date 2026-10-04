@@ -105,7 +105,11 @@ DRIVER_RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str] | None] = {
 # وبعدها إمّا قُبلت — فحدثُ `driver_assigned` هو الأثر الصحيح — أو انتقلت
 # لكبتنٍ آخر. وصفٌّ باقٍ يقول «طلب رحلة جديد» لطلبٍ مضى يفتح عند الضغط
 # لا شيء، ويملأ الصندوق بما لا يُقرأ حتى يصير الجرس بلا معنى.
-EPHEMERAL_KINDS: frozenset[str] = frozenset({RideEvent.RIDE_OFFER.value})
+#
+# **و«الكبتن يقترب»** (§61-ي/١١): لحظةٌ تمضي بعد دقيقتين — وصفٌّ يبقى يقول «يقترب» لكبتنٍ وصل لا يُقرأ.
+EPHEMERAL_KINDS: frozenset[str] = frozenset(
+    {RideEvent.RIDE_OFFER.value, RideEvent.DRIVER_APPROACHING.value}
+)
 
 SUBSCRIPTION_EVENT_TEXT: dict[SubscriptionEvent, tuple[str, str]] = {
     SubscriptionEvent.SUBSCRIPTION_EXPIRING: (
@@ -871,6 +875,21 @@ async def publish_booking_preference_dropped(
                 "booking_id": str(booking_id),
                 "ride_id": str(ride_id),
             },
+        ),
+    )
+
+
+async def publish_driver_approaching(session: AsyncSession, redis: Redis, ride: Ride) -> None:
+    """«الكبتن يقترب» (§61-ي/١١): حدثٌ في مقبس الراكب، **وإشعارٌ حين لا مقبس** — للراكب وحدَه، ولا يُحفظ في صندوقه."""
+    await events.publish_driver_approaching(redis, ride)
+    await _safe_notify(
+        session,
+        redis,
+        user_id=ride.rider_id,
+        message=PushMessage(
+            title="كبتنُك يقترب",
+            body="على وشك الوصول إلى نقطة الانطلاق — استعدّ.",
+            data={"type": RideEvent.DRIVER_APPROACHING.value, "ride_id": str(ride.id)},
         ),
     )
 

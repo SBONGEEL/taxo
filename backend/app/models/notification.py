@@ -159,6 +159,10 @@ class NotificationSetting(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "notification_settings"
     __table_args__ = (
         UniqueConstraint("country_code", name="uq_notification_settings_country_code"),
+        CheckConstraint(
+            "approach_notice_meters BETWEEN 200 AND 3000",
+            name="ck_notification_settings_approach_notice_meters",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -167,6 +171,10 @@ class NotificationSetting(UUIDMixin, TimestampMixin, Base):
     quiet_hours_start: Mapped[time] = mapped_column(Time, nullable=False)
     quiet_hours_end: Mapped[time] = mapped_column(Time, nullable=False)
     timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+    # **مسافةُ إشعار «الكبتن يقترب»** (§61-ي/١١) — مسافةٌ لا زمن: لا زمنَ قيادةٍ يُحسب في النظام. ٨٠٠ م نحو دقيقتين في المدينة
+    approach_notice_meters: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=800, server_default="800"
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<NotificationSetting {self.country_code}>"

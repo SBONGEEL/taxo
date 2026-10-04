@@ -78,6 +78,8 @@ const TERMINAL_EVENTS = new Set([
 
 const EVENT_TOAST: Record<string, { title: string; body?: string }> = {
   driver_assigned: { title: "قَبِل كبتنٌ رحلتك", body: "هو الآن في طريقه إليك" },
+  // **«الكبتن يقترب»** (§61-ي/١١) — مرّةً لكلِّ رحلة، والصوتُ بعد إقرار أصوات TAXO
+  driver_approaching: { title: "كبتنُك يقترب", body: "على وشك الوصول إلى نقطة الانطلاق — استعدّ." },
   driver_arrived: { title: "وصل الكبتن", body: "الكبتن بانتظارك في نقطة الانطلاق" },
   ride_started: { title: "بدأت الرحلة", body: "رحلة موفقة" },
   ride_completed: { title: "انتهت الرحلة", body: "شاشة الدفع بانتظارك" },

@@ -276,6 +276,8 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     # تفضيلُ جنس الكبتن **لهذه الرحلة** — يُنسخ من ملف الراكبة عند الطلب
     # ولا يُقرأ منه بعد ذلك: تغييرُ التفضيل في الملف يحكم الطلب القادم لا
     # طلباً يبحث له عن كبتنٍ الآن (نفس منطق `commission_percent_at_ride`)
+    # **«الكبتن يقترب»** (§61-ي/١١): يُكتب مرّةً بتحديثٍ مشروطٍ حين يُرسل الإشعار — ولا يقرؤه التوزيعُ ولا انتقالُ الحالات
+    approach_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     gender_preference: Mapped[GenderPreference] = mapped_column(
         pg_enum(GenderPreference, "gender_preference"),
         nullable=False,
