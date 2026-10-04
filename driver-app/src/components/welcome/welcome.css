@@ -8,32 +8,23 @@
  * والمنحنيات بأسمائها في اللوحة:
  *   o  = cubic-bezier(.2,.8,.2,1)   ·   io = cubic-bezier(.65,0,.35,1)
  *
- * **ولا صنفَ Tailwind هنا** — قيمُ TAXO 2.0 ليست في سلّم `DESIGN.md` §6 بعد.
+ * **والألوانُ والخطُّ من نظام التصميم** (`src/taxo2/`، §61-ج) — **والمظهرُ مثبَّتٌ ليليّاً** (`t2-night` على الجذر): الترحيبُ
+ * رُسم بالإسفلت وحدَه فيبقى كذلك في الوضع النهاريّ للتطبيق، **والكبتنةُ في الوضع النسائيّ يصير جمرُها برقوقاً فاتحاً من
+ * الرموز** كما كان يفعل هنا. **وما بقي هنا ظلالُ الرسم وحدَها** (`--cw-sub` · `--cw-dot` وألوانُ الطبقات والخريطة).
  */
 
 .cw {
-  --asphalt: #0e1013;
-  --paper: #f2efe8;
-  --ember: #ff6a33;
-  --mut: #9097a1;
-  --mut2: #6b717a;
-  --sub: #b9bec6;
-  --edge: #2b3038;
-  --dot: #3a3f48;
+  --cw-sub: #b9bec6;
+  --cw-dot: #3a3f48;
   position: fixed;
   inset: 0;
   z-index: 90;
   overflow: hidden;
-  background: var(--asphalt);
-  color: var(--paper);
-  font-family: "Readex Pro", system-ui, sans-serif;
+  background: var(--t2-bg);
+  color: var(--t2-text);
   -webkit-tap-highlight-color: transparent;
   touch-action: pan-y;
 }
-/* **الكبتنةُ في الوضع النسائيّ**: البرقوقُ الفاتح لونُ الخدمة في تطبيق الكبتن
-   (`Identity`: #F08CC0). والترحيبُ لم يُرسم به بعد — فهذا يحفظ ما كان يفعله
-   الشعارُ الورديُّ في الترحيبية القديمة لا أكثر. */
-html.pink .cw { --ember: #f08cc0; }
 .cw.is-leaving {
   opacity: 0;
   transition: opacity 0.3s ease-out;
@@ -83,12 +74,12 @@ html.pink .cw { --ember: #f08cc0; }
   inset: 0;
   transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.cw-veil-solid { background: var(--asphalt); opacity: 0.84; }
+.cw-veil-solid { background: var(--t2-bg); opacity: 0.84; }
 .cw-veil-grad {
   background: linear-gradient(rgba(14, 16, 19, 0.55) 0%, rgba(14, 16, 19, 0.3) 34%, rgba(14, 16, 19, 0.92) 54%, #0e1013 62%);
   opacity: 0;
 }
-.cw-dim { background: var(--asphalt); opacity: 0; transition-delay: 0.12s; }
+.cw-dim { background: var(--t2-bg); opacity: 0; transition-delay: 0.12s; }
 .cw.page-1 .cw-veil-solid,
 .cw.page-2 .cw-veil-solid { opacity: 0; }
 .cw.page-1 .cw-veil-grad,
@@ -125,7 +116,7 @@ html.pink .cw { --ember: #f08cc0; }
   opacity: 0;
   transition: opacity 0.4s 0.3s;
 }
-.cw-pin::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ember); }
+.cw-pin::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--t2-accent); }
 .cw.page-1 .cw-pin.p1,
 .cw.page-2 .cw-pin.p2 { opacity: 1; }
 
@@ -143,12 +134,12 @@ html.pink .cw { --ember: #f08cc0; }
   line-height: 1;
   letter-spacing: -0.03em;
   white-space: nowrap;
-  color: var(--paper);
+  color: var(--t2-text);
 }
 .cw-xb { position: relative; display: inline-block; width: 51.61px; height: 49.55px; margin: 0 4.13px; vertical-align: -1.03px; }
 .cw-xb > span { position: absolute; left: 50%; top: 50%; width: 64px; height: 14.45px; border-radius: 8.26px; }
-.cw-xb > span:first-child { background: var(--paper); transform: translate(-50%, -50%) rotate(-50deg); }
-.cw-xb > span:last-child { background: var(--ember); transform: translate(-50%, -50%) rotate(50deg); }
+.cw-xb > span:first-child { background: var(--t2-text); transform: translate(-50%, -50%) rotate(-50deg); }
+.cw-xb > span:last-child { background: var(--t2-accent); transform: translate(-50%, -50%) rotate(50deg); }
 .cw-badge {
   position: absolute;
   top: 410px;
@@ -156,8 +147,8 @@ html.pink .cw { --ember: #f08cc0; }
   transform: translateX(-50%);
   font-size: 12px;
   font-weight: 700;
-  color: var(--asphalt);
-  background: var(--paper);
+  color: var(--t2-bg);
+  background: var(--t2-text);
   padding: 4px 12px;
   border-radius: 99px;
 }
@@ -193,7 +184,7 @@ html.pink .cw { --ember: #f08cc0; }
 }
 .cw-top .cw-mini .cw-xb { width: 15.32px; height: 14.71px; margin: 0 1.23px; vertical-align: -0.31px; }
 .cw-top .cw-mini .cw-xb > span { width: 19px; height: 4.29px; border-radius: 2.45px; }
-.cw-top .cw-pill { font-size: 11px; font-weight: 700; color: var(--asphalt); background: var(--paper); padding: 3px 9px; border-radius: 99px; }
+.cw-top .cw-pill { font-size: 11px; font-weight: 700; color: var(--t2-bg); background: var(--t2-text); padding: 3px 9px; border-radius: 99px; }
 .cw-textbtn {
   border: 0;
   background: none;
@@ -201,7 +192,7 @@ html.pink .cw { --ember: #f08cc0; }
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--mut);
+  color: var(--t2-muted);
   cursor: pointer;
 }
 
@@ -219,12 +210,12 @@ html.pink .cw { --ember: #f08cc0; }
 .cw-copy h1 { margin: 0; font-weight: 700; line-height: 1.3; text-wrap: pretty; }
 .cw-copy.centered h1 { font-size: 38px; }
 .cw-copy:not(.centered) h1 { font-size: 36px; }
-.cw-copy p { margin: 14px 0 0; font-size: 15px; line-height: 1.75; color: var(--sub); }
+.cw-copy p { margin: 14px 0 0; font-size: 15px; line-height: 1.75; color: var(--cw-sub); }
 .cw-copy.centered p { margin-left: auto; margin-right: auto; max-width: 31ch; }
 .cw-copy:not(.centered) p { max-width: 30ch; }
 .cw-pager { display: flex; gap: 6px; }
-.cw-pager span { width: 8px; height: 4px; border-radius: 2px; background: var(--dot); transition: width 0.3s, background 0.3s; }
-.cw-pager span.on { width: 22px; background: var(--ember); }
+.cw-pager span { width: 8px; height: 4px; border-radius: 2px; background: var(--cw-dot); transition: width 0.3s, background 0.3s; }
+.cw-pager span.on { width: 22px; background: var(--t2-accent); }
 .cw-copy .cw-pager { margin-bottom: 22px; }
 .is-card .cw-copy,
 .is-card .cw-login,
@@ -250,8 +241,8 @@ html.pink .cw { --ember: #f08cc0; }
   padding: 0 22px;
   border: 0;
   border-radius: 18px;
-  background: var(--ember);
-  color: var(--asphalt);
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
   font: inherit;
   font-size: 16px;
   font-weight: 700;
@@ -266,9 +257,9 @@ html.pink .cw { --ember: #f08cc0; }
   bottom: calc(42px + env(safe-area-inset-bottom, 0px));
   height: 52px;
   border-radius: 18px;
-  border: 1.5px solid var(--edge);
+  border: 1.5px solid var(--t2-line);
   background: transparent;
-  color: var(--paper);
+  color: var(--t2-text);
   font: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -284,7 +275,7 @@ html.pink .cw { --ember: #f08cc0; }
   bottom: calc(104px + env(safe-area-inset-bottom, 0px));
   height: 56px;
   border-radius: 18px;
-  background: var(--ember);
+  background: var(--t2-accent);
   border-top: 1px solid transparent;
   overflow: hidden;
   box-sizing: border-box;
@@ -318,7 +309,7 @@ html.pink .cw { --ember: #f08cc0; }
   align-items: center;
   justify-content: space-between;
   padding: 0 22px;
-  color: var(--asphalt);
+  color: var(--t2-on-accent);
   font-size: 16px;
   font-weight: 700;
   transition: opacity 0.12s 0.08s;
@@ -336,9 +327,9 @@ html.pink .cw { --ember: #f08cc0; }
   transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .is-card .cw-card { opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0.48s; }
-.cw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--dot); margin: 0 auto 18px; }
-.cw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--paper); }
-.cw-card .cw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--mut); }
+.cw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--cw-dot); margin: 0 auto 18px; }
+.cw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--t2-text); }
+.cw-card .cw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--t2-muted); }
 .cw-card .cw-picker { margin-top: 14px; }
 .cw-field {
   display: flex;
@@ -348,14 +339,14 @@ html.pink .cw { --ember: #f08cc0; }
   margin-top: 18px;
   padding: 0 16px;
   border-radius: 16px;
-  background: var(--asphalt);
-  border: 1.5px solid var(--edge);
+  background: var(--t2-bg);
+  border: 1.5px solid var(--t2-line);
   box-sizing: border-box;
   direction: ltr;
 }
-.cw-field:focus-within { border-color: var(--ember); }
-.cw-field .cw-dial { font-size: 15px; font-weight: 600; color: var(--paper); }
-.cw-field .cw-sep { width: 1px; height: 24px; background: var(--edge); }
+.cw-field:focus-within { border-color: var(--t2-accent); }
+.cw-field .cw-dial { font-size: 15px; font-weight: 600; color: var(--t2-text); }
+.cw-field .cw-sep { width: 1px; height: 24px; background: var(--t2-line); }
 .cw-field input {
   flex: 1;
   min-width: 0;
@@ -365,8 +356,8 @@ html.pink .cw { --ember: #f08cc0; }
   font: inherit;
   font-size: 16px;
   letter-spacing: 0.02em;
-  color: var(--paper);
-  caret-color: var(--ember);
+  color: var(--t2-text);
+  caret-color: var(--t2-accent);
 }
 .cw-go {
   width: 100%;
@@ -374,15 +365,15 @@ html.pink .cw { --ember: #f08cc0; }
   margin-top: 14px;
   border: 0;
   border-radius: 18px;
-  background: var(--ember);
-  color: var(--asphalt);
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
   font: inherit;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
 }
 .cw-go:disabled { opacity: 0.35; cursor: default; }
-.cw-foot { margin: 14px 0 0; text-align: center; font-size: 12px; color: var(--mut2); }
+.cw-foot { margin: 14px 0 0; text-align: center; font-size: 12px; color: var(--t2-faint); }
 
 .cw-skip {
   position: absolute;
@@ -391,7 +382,7 @@ html.pink .cw { --ember: #f08cc0; }
   bottom: calc(34px + env(safe-area-inset-bottom, 0px));
   text-align: center;
   font-size: 12.5px;
-  color: var(--mut2);
+  color: var(--t2-faint);
 }
 @keyframes cw-pz {
   0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
@@ -410,7 +401,7 @@ html.pink .cw { --ember: #f08cc0; }
   font-size: 10px;
   line-height: 1.3;
   letter-spacing: 0.01em;
-  color: var(--mut);
+  color: var(--t2-muted);
   white-space: nowrap;
   pointer-events: none;
 }

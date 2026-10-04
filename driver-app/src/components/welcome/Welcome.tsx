@@ -26,6 +26,7 @@ import { CountryPicker } from "@/components/CountryPicker";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { digitsOnly, looksComplete } from "@/lib/phone";
 
+import "@/taxo2";
 import "./welcome.css";
 
 // ── من اللوحة حرفاً ─────────────────────────────────────────────────────────
@@ -268,6 +269,8 @@ export function Welcome({
   return (
     <div
       className={[
+        "t2",
+        "t2-night",
         "cw",
         onPages ? `page-${page}` : "",
         phase === "entry" ? "is-card" : "",
@@ -300,16 +303,16 @@ export function Welcome({
               </span>
             ))}
             <svg width="390" height="844" viewBox="0 0 390 844" style={{ position: "absolute", left: 0, top: 0, overflow: "visible", animation: intro.anim.trailOp }} aria-hidden="true">
-              <path d={HD} fill="none" stroke="var(--ember)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1} style={{ animation: intro.anim.trailDash }} />
+              <path d={HD} fill="none" stroke="var(--t2-accent)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1} style={{ animation: intro.anim.trailDash }} />
             </svg>
             {/* الراكبُ ينتظرك نابضاً في شارع الرينبو */}
-            <span style={{ position: "absolute", left: E[0], top: E[1], width: 6, height: 6, borderRadius: "50%", border: ".45px solid #F2EFE8", boxSizing: "border-box", animation: "cw-pz 1.6s ease-out infinite" }} />
-            <span style={{ position: "absolute", left: E[0], top: E[1], width: 5, height: 5, borderRadius: "50%", background: "#F2EFE8", border: ".9px solid #0E1013", boxSizing: "border-box", transform: "translate(-50%,-50%)", animation: intro.anim.riderDot }} />
+            <span style={{ position: "absolute", left: E[0], top: E[1], width: 6, height: 6, borderRadius: "50%", border: ".45px solid var(--t2-text)", boxSizing: "border-box", animation: "cw-pz 1.6s ease-out infinite" }} />
+            <span style={{ position: "absolute", left: E[0], top: E[1], width: 5, height: 5, borderRadius: "50%", background: "var(--t2-text)", border: ".9px solid var(--t2-bg)", boxSizing: "border-box", transform: "translate(-50%,-50%)", animation: intro.anim.riderDot }} />
             {/* سيارتُك بهالةٍ جمرية */}
             <div style={{ position: "absolute", left: 0, top: 0, width: 20, height: 20, borderRadius: "50%", background: "rgba(255,106,51,.14)", border: ".5px solid rgba(255,106,51,.6)", boxSizing: "border-box", offsetPath: `path('${HD}')`, offsetRotate: "auto", offsetAnchor: "center", offsetDistance: "0%", animation: intro.anim.car }} />
-            <div style={{ position: "absolute", left: 0, top: 0, width: 10, height: 5.4, borderRadius: 2.2, background: "var(--ember)", border: ".7px solid #0E1013", boxSizing: "border-box", boxShadow: "0 .6px 1.6px rgba(0,0,0,.35)", offsetPath: `path('${HD}')`, offsetRotate: "auto", offsetAnchor: "center", offsetDistance: "0%", animation: intro.anim.car }}>
-              <span style={{ position: "absolute", right: 1.3, top: 0.5, bottom: 0.5, width: 1.9, borderRadius: 0.7, background: "#0E1013" }} />
-              <span style={{ position: "absolute", left: 0.9, top: 0.8, bottom: 0.8, width: 1.1, borderRadius: 0.5, background: "#0E1013", opacity: 0.55 }} />
+            <div style={{ position: "absolute", left: 0, top: 0, width: 10, height: 5.4, borderRadius: 2.2, background: "var(--t2-accent)", border: ".7px solid var(--t2-bg)", boxSizing: "border-box", boxShadow: "0 .6px 1.6px rgba(0,0,0,.35)", offsetPath: `path('${HD}')`, offsetRotate: "auto", offsetAnchor: "center", offsetDistance: "0%", animation: intro.anim.car }}>
+              <span style={{ position: "absolute", right: 1.3, top: 0.5, bottom: 0.5, width: 1.9, borderRadius: 0.7, background: "var(--t2-bg)" }} />
+              <span style={{ position: "absolute", left: 0.9, top: 0.8, bottom: 0.8, width: 1.1, borderRadius: 0.5, background: "var(--t2-bg)", opacity: 0.55 }} />
             </div>
           </div>
         ) : (
@@ -327,8 +330,8 @@ export function Welcome({
 
         {phase === "intro" ? (
           <>
-            <span className="cw-ping" style={{ position: "absolute", left: FX, top: 360, width: 40, height: 40, borderRadius: "50%", border: "2px solid #F2EFE8", boxSizing: "border-box", opacity: 0, animation: intro.anim.ping1 }} />
-            <span className="cw-ping" style={{ position: "absolute", left: FX, top: 360, width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--ember)", boxSizing: "border-box", opacity: 0, animation: intro.anim.ping2 }} />
+            <span className="cw-ping" style={{ position: "absolute", left: FX, top: 360, width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--t2-text)", boxSizing: "border-box", opacity: 0, animation: intro.anim.ping1 }} />
+            <span className="cw-ping" style={{ position: "absolute", left: FX, top: 360, width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--t2-accent)", boxSizing: "border-box", opacity: 0, animation: intro.anim.ping2 }} />
           </>
         ) : null}
 
@@ -340,8 +343,8 @@ export function Welcome({
             >
               {(
                 [
-                  ["#F2EFE8", -50, phase === "intro" ? intro.anim.bar1 : "cw-bb1 .8s both"],
-                  ["var(--ember)", 50, phase === "intro" ? intro.anim.bar2 : "cw-bb2 .8s both"],
+                  ["var(--t2-text)", -50, phase === "intro" ? intro.anim.bar1 : "cw-bb1 .8s both"],
+                  ["var(--t2-accent)", 50, phase === "intro" ? intro.anim.bar2 : "cw-bb2 .8s both"],
                 ] as const
               ).map(([color, rotate, animation]) => (
                 <div key={rotate} style={{ position: "absolute", left: 0, top: 0, width: 26.67, height: 6.02, transform: `translate(-50%,-50%) rotate(${rotate}deg)` }}>

@@ -10,37 +10,23 @@
  *   o  = cubic-bezier(.2,.8,.2,1)   ·   io = cubic-bezier(.65,0,.35,1)
  *   bk = cubic-bezier(.34,1.56,.64,1)
  *
- * **ولا صنفَ Tailwind هنا**: سلّمُ `DESIGN.md` §6 سلّمُ التصميم القديم، وقيمُ
- * TAXO 2.0 (الحجرُ والحبرُ والجمر) ليست فيه بعد — فتسكن متغيّراتٍ في هذا الملفّ
- * حتى يُنقل السلّمُ كلُّه، لا صنفاً خارج السلّم يُصرَّف بلا أثر.
+ * **والألوانُ والخطُّ من نظام التصميم** (`src/taxo2/`، §61-ج) — **والمظهرُ مثبَّتٌ نهاريّاً** (`t2-day` على الجذر): الترحيبُ
+ * رُسم بالحجر وحدَه فيبقى كذلك في الوضع الليليّ للتطبيق، **والسِمةُ الورديةُ تصبغ جمرَه برقوقاً من الرموز** كما كانت تفعل هنا.
+ * **وما بقي هنا ظلالُ الرسم وحدَها** (`--rw-mut2` · `--rw-label` · `--rw-body`، والهالةُ بلونيها) — لا معنى لها خارجه.
  */
 
 .rw {
-  --stone: #f4f1ea;
-  --ink: #14161a;
-  --ember: #f05a28;
-  --ember-dk: #c2410c;
-  --mut: #6a6862;
-  --mut2: #8a857b;
-  --line: #e0dad0;
-  --label: #a39d90;
-  --body: #3f3e3a;
+  --rw-mut2: #8a857b;
+  --rw-label: #a39d90;
+  --rw-body: #3f3e3a;
   position: fixed;
   inset: 0;
   z-index: 90;
   overflow: hidden;
-  background: var(--stone);
-  color: var(--ink);
-  font-family: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  background: var(--t2-bg);
+  color: var(--t2-text);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-}
-/* **السِمةُ الوردية تصبغ الجمرَ برقوقاً** — الخدمةُ النسائيةُ وحدها (`Identity`:
-   «البرقوق للخدمة النسائية وحدها»). والترحيبُ لم يُرسم بها في اللوحة بعد،
-   فالبرقوقُ هنا يحفظ ما كان يفعله الشعارُ الورديُّ في الترحيبية القديمة. */
-html.pink .rw {
-  --ember: #9c2c6e;
-  --ember-dk: #9c2c6e;
 }
 .rw.is-leaving {
   opacity: 0;
@@ -85,7 +71,7 @@ html.pink .rw {
 .rw-veil {
   position: absolute;
   inset: 0;
-  background: var(--stone);
+  background: var(--t2-bg);
   opacity: 0.82;
 }
 
@@ -103,7 +89,7 @@ html.pink .rw {
   line-height: 1;
   letter-spacing: -0.03em;
   white-space: nowrap;
-  color: var(--ink);
+  color: var(--t2-text);
 }
 .rw-xb {
   position: relative;
@@ -122,11 +108,11 @@ html.pink .rw {
   border-radius: 8.26px;
 }
 .rw-xb > span:first-child {
-  background: var(--ink);
+  background: var(--t2-text);
   transform: translate(-50%, -50%) rotate(-50deg);
 }
 .rw-xb > span:last-child {
-  background: var(--ember);
+  background: var(--t2-accent);
   transform: translate(-50%, -50%) rotate(50deg);
 }
 
@@ -163,7 +149,7 @@ html.pink .rw {
   width: 10px;
   height: 5.4px;
   border-radius: 2.2px;
-  background: var(--ink);
+  background: var(--t2-text);
   border: 0.7px solid #fff;
   box-sizing: border-box;
   box-shadow: 0 0.6px 1.6px rgba(0, 0, 0, 0.35);
@@ -173,10 +159,10 @@ html.pink .rw {
   opacity: 0;
 }
 .rw-car > span:first-child {
-  position: absolute; right: 1.3px; top: 0.5px; bottom: 0.5px; width: 1.9px; border-radius: 0.7px; background: var(--ember);
+  position: absolute; right: 1.3px; top: 0.5px; bottom: 0.5px; width: 1.9px; border-radius: 0.7px; background: var(--t2-accent);
 }
 .rw-car > span:last-child {
-  position: absolute; left: 0.9px; top: 0.8px; bottom: 0.8px; width: 1.1px; border-radius: 0.5px; background: var(--ember); opacity: 0.55;
+  position: absolute; left: 0.9px; top: 0.8px; bottom: 0.8px; width: 1.1px; border-radius: 0.5px; background: var(--t2-accent); opacity: 0.55;
 }
 .rw-intro .rw-car { animation: rw-car-go 4.2s both, rw-car-op 4.2s both; }
 @keyframes rw-car-go {
@@ -211,7 +197,7 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
 .rw-dot {
   width: 18px;
   height: 18px;
-  background: var(--ember);
+  background: var(--t2-accent);
   border: 3px solid #fff;
   box-sizing: border-box;
   box-shadow: 0 3px 8px rgba(20, 22, 26, 0.25);
@@ -243,7 +229,7 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
 .rw-ping {
   width: 40px;
   height: 40px;
-  border: 2px solid var(--ember);
+  border: 2px solid var(--t2-accent);
   box-sizing: border-box;
   transform: translate(-50%, -50%) scale(0.3);
 }
@@ -293,8 +279,8 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   border-radius: 3.44px;
   transform: scaleX(0);
 }
-.rw-xmark > span:first-child > i { background: var(--ink); }
-.rw-xmark > span:last-child > i { background: var(--ember); }
+.rw-xmark > span:first-child > i { background: var(--t2-text); }
+.rw-xmark > span:last-child > i { background: var(--t2-accent); }
 .rw-intro .rw-xmark { animation: rw-x-s 4.2s both, rw-x-o 4.2s both; }
 .rw-intro .rw-xmark > span:first-child > i { animation: rw-bar1 4.2s both; }
 .rw-intro .rw-xmark > span:last-child > i { animation: rw-bar2 4.2s both; }
@@ -367,13 +353,13 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   text-align: center;
 }
 .rw-copy h1 { margin: 0; font-size: 44px; font-weight: 700; line-height: 1.25; }
-.rw-copy .rw-origin { margin: 10px 0 0; font-size: 18px; font-weight: 500; color: var(--body); }
+.rw-copy .rw-origin { margin: 10px 0 0; font-size: 18px; font-weight: 500; color: var(--rw-body); }
 .rw-copy .rw-explain {
   margin: 16px auto 0;
   max-width: 30ch;
   font-size: 14px;
   line-height: 1.75;
-  color: var(--mut);
+  color: var(--t2-muted);
   text-wrap: pretty;
 }
 .rw-rise { opacity: 0; transform: translateY(12px); animation: rw-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -406,12 +392,12 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   bottom: calc(58px + env(safe-area-inset-bottom, 0px));
   height: 58px;
   border-radius: 18px;
-  background: var(--ink);
+  background: var(--t2-inverse);
   overflow: hidden;
   border: 0;
   padding: 0;
   font: inherit;
-  color: var(--stone);
+  color: var(--t2-on-inverse);
   text-align: start;
   cursor: pointer;
   transition:
@@ -475,21 +461,21 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   pointer-events: auto;
   transition-delay: 0.48s;
 }
-.rw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 18px; }
-.rw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--ink); }
-.rw-card .rw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--mut); }
+.rw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--t2-line); margin: 0 auto 18px; }
+.rw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--t2-text); }
+.rw-card .rw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--t2-muted); }
 .rw-countries { display: flex; gap: 8px; margin-top: 14px; }
 .rw-countries button {
   flex: 1;
   height: 40px;
   border-radius: 12px;
-  border: 1.5px solid var(--line);
+  border: 1.5px solid var(--t2-line);
   background: #fff;
   font: inherit;
   font-size: 14px;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
-.rw-countries button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.rw-countries button[aria-pressed="true"] { border-color: var(--t2-text); color: var(--t2-text); font-weight: 600; }
 .rw-field {
   display: flex;
   align-items: center;
@@ -499,13 +485,13 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   padding: 0 16px;
   border-radius: 16px;
   background: #fff;
-  border: 1.5px solid var(--line);
+  border: 1.5px solid var(--t2-line);
   box-sizing: border-box;
   direction: ltr;
 }
-.rw-field:focus-within { border-color: var(--ember); }
-.rw-field .rw-dial { font-size: 15px; font-weight: 600; color: var(--ink); }
-.rw-field .rw-sep { width: 1px; height: 24px; background: var(--line); }
+.rw-field:focus-within { border-color: var(--t2-accent); }
+.rw-field .rw-dial { font-size: 15px; font-weight: 600; color: var(--t2-text); }
+.rw-field .rw-sep { width: 1px; height: 24px; background: var(--t2-line); }
 .rw-field input {
   flex: 1;
   min-width: 0;
@@ -515,8 +501,8 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   font: inherit;
   font-size: 16px;
   letter-spacing: 0.02em;
-  color: var(--ink);
-  caret-color: var(--ember);
+  color: var(--t2-text);
+  caret-color: var(--t2-accent);
 }
 .rw-go {
   display: flex;
@@ -527,8 +513,8 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   margin-top: 14px;
   border: 0;
   border-radius: 18px;
-  background: var(--ink);
-  color: var(--stone);
+  background: var(--t2-inverse);
+  color: var(--t2-on-inverse);
   font: inherit;
   font-size: 16px;
   font-weight: 600;
@@ -544,7 +530,7 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   bottom: calc(34px + env(safe-area-inset-bottom, 0px));
   text-align: center;
   font-size: 12.5px;
-  color: var(--mut2);
+  color: var(--rw-mut2);
 }
 
 /* ── ذكرُ الخريطة — **ما تشترطه الرخص** (§61-أ: شأنٌ رخصيٌّ يقرّره البناء) ─────────
@@ -560,7 +546,7 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   font-size: 10px;
   line-height: 1.3;
   letter-spacing: 0.01em;
-  color: var(--mut);
+  color: var(--t2-muted);
   white-space: nowrap;
   pointer-events: none;
 }

@@ -29,6 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthCountry, usePhoneCountry } from "@/lib/config";
 import { COUNTRY_LABEL, digitsOnly, looksComplete } from "@/lib/phone";
 
+import "@/taxo2";
 import "./welcome.css";
 
 // ── من اللوحة حرفاً ─────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ export function Welcome({
 
   return (
     <div
-      className={["rw", animating, phase === "entry" ? "is-card" : "", phase === "leaving" ? "is-leaving" : ""]
+      className={["t2", "t2-day", "rw", animating, phase === "entry" ? "is-card" : "", phase === "leaving" ? "is-leaving" : ""]
         .filter(Boolean)
         .join(" ")}
       onClick={phase === "intro" ? skip : undefined}
@@ -187,7 +188,7 @@ export function Welcome({
             <>
               <svg className="rw-trail" width="390" height="844" viewBox="0 0 390 844" aria-hidden="true">
                 <path d={HD} fill="none" stroke="rgba(255,255,255,.95)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" pathLength={1} />
-                <path d={HD} fill="none" stroke="var(--ember)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" pathLength={1} />
+                <path d={HD} fill="none" stroke="var(--t2-accent)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" pathLength={1} />
               </svg>
               <div className="rw-car" style={{ offsetPath: `path('${HD}')` }}>
                 <span />
