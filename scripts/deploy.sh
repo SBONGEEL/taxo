@@ -63,6 +63,14 @@
 # **مقصورٍ على هذا المستودع وللقراءة وحدَها** — لا رمزٍ واسع.
 set -euo pipefail
 
+# ═══ ٠) الفرع — **قبل الإعلان وقبل أيِّ نداءٍ للخادم** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+#
+# **لا رفعَ إلا من `master`.** وما يُرفع هو HEAD **الدليلِ الحاليّ**، والسكربتُ
+# قد يُنادى من مستودعٍ آخر — **فيُسأل الاثنان**. والعلّةُ والحدُّ في
+# `scripts/deploy-branch-gate.sh`.
+bash "$(dirname "${BASH_SOURCE[0]}")/deploy-branch-gate.sh" \
+  "$PWD" "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
+
 HOST="${TAXO_DEPLOY_HOST:-taxo@169.58.207.123}"
 REMOTE="${TAXO_REMOTE_PROJECT:-~/taxo}"
 # **وموضعُ النسخة يُقاس لا يُفترض** (أُصلح ٢٠٢٦-٠٩-٠٦): كان `/d/taxo-backups`

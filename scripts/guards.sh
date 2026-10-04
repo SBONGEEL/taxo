@@ -52,6 +52,11 @@ run "check:exec-bit"        node tools/check-exec-bit.mjs
 run "check:enum-coverage"   node tools/check-enum-coverage.mjs
 # **الساكنُ وحدَه** — المزامَنُ والمبنيُّ يُقاسان في `ios.yml` على macOS
 run "check:ios"             node tools/check-ios.mjs
+# **وبوّابةُ الفرع تُقاس هنا لا تُتذكَّر** (٢٠٢٦-١٠-٠٤): شجرةُ إعادة التصميم
+# تعيش أسابيعَ بجانب `master`، **وتعديلٌ في `deploy.sh` يُزيح البوّابةَ تحت
+# أوّلِ نداءٍ للخادم لا يشكو حتى يُرفع**. مستودعاتٌ مؤقّتةٌ وشواهدُ للشبكة —
+# ثوانٍ، **ولا خادمَ ولا دفع**.
+run "deploy-branch-gate"    bash scripts/tests/deploy-branch-gate.test.sh
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do
