@@ -16,81 +16,35 @@
 
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { ApiError } from "@/api/client";
-import { addTip, getTipOptions, listRideRatings, rateRide } from "@/api/endpoints";
-import type { TipOptions } from "@/api/types";
+import { TIP_MIN_STARS, useRating } from "@/components/ride/useRating";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Stage } from "@/components/ui/Stage";
 import { cn, formatMoney } from "@/lib/utils";
 
-/** أقلُّ عددِ نجومٍ يُسأل عنده عن بقشيش — تضييقُ واجهةٍ لا قاعدةَ خلفية. */
-const TIP_MIN_STARS = 4;
-
 export function RatingScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
 
-  const [stars, setStars] = useState(0);
-  const [comment, setComment] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const [tip, setTip] = useState<TipOptions | null>(null);
-  const [tipping, setTipping] = useState<string | null>(null);
-  // المبلغُ المختار قبل الإرسال — و`null` يعني لم يُختر بعد
-  const [chosenTip, setChosenTip] = useState<string | null>(null);
-
-  useEffect(() => {
-    // **الخلفيةُ تقول إن كان يُعرض** — ونداءٌ يفشل لا يُظهر خطأً: البقشيشُ
-    // إضافةٌ على شاشة التقييم لا سببٌ لتعطيلها
-    getTipOptions(rideId)
-      .then(setTip)
-      .catch(() => setTip(null));
-  }, [rideId]);
-
-  useEffect(() => {
-    listRideRatings(rideId)
-      .then((entries) => {
-        const mine = entries.find((entry) => entry.rater_type === "rider");
-        if (mine) {
-          setStars(mine.stars);
-          setComment(mine.comment ?? "");
-          setDone(true);
-        }
-      })
-      .catch(() => undefined);
-  }, [rideId]);
-
-  async function submit() {
-    setBusy(true);
-    setError(null);
-    try {
-      await rateRide(rideId, stars, comment);
-      setDone(true);
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال التقييم");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function sendTip(amount: string) {
-    setTipping(amount);
-    setError(null);
-    try {
-      const given = await addTip(rideId, amount);
-      setTip((current) => (current ? { ...current, given } : current));
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال البقشيش");
-    } finally {
-      setTipping(null);
-    }
-  }
+  // **المنطقُ من الخطّاف بنصّه** (`useRating`) — يقرؤه الوجهان، فلا يفترقان في تقييمٍ ولا بقشيش
+  const {
+    stars,
+    setStars,
+    comment,
+    setComment,
+    error,
+    done,
+    busy,
+    tip,
+    setTip,
+    tipping,
+    chosenTip,
+    setChosenTip,
+    submit,
+    sendTip,
+  } = useRating(rideId);
 
   return (
     <Stage onBack={() => navigate("/", { replace: true })}>

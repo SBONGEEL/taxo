@@ -1278,3 +1278,85 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-trk-progress-car > i:last-child { background: var(--t2-surface); transform: rotate(-45deg); }
 .t2.t2-trk-theme { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); inset-inline-end: 20px; min-height: 0; }
 .t2.t2-trk-theme.low { top: calc(118px + env(safe-area-inset-top, 0px)); }
+
+/* ── نهايةُ الرحلة «R10» — مقاساتُ اللوحة كما هي (`padding: 6px 22px 36px` تحت شريط الحالة) ───────────────── */
+.t2.t2-r10 {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 22px max(36px, env(safe-area-inset-bottom, 0px));
+  background: var(--t2-bg);
+}
+.t2-r10-head { display: flex; align-items: center; gap: 12px; }
+.t2-r10-check { display: flex; align-items: center; justify-content: center; flex: none; width: 48px; height: 48px; border-radius: 50%; background: var(--t2-success-soft); }
+.t2-r10-check .t2-icon { font-size: 26px; color: var(--t2-success); }
+.t2-r10-head-main { flex: 1; min-width: 0; }
+.t2-r10-title { margin: 0; font-size: 22px; font-weight: 700; }
+.t2-r10-sub { overflow: hidden; font-size: 13px; color: var(--t2-muted); text-overflow: ellipsis; white-space: nowrap; }
+.t2-r10-skip { padding: 0; border: 0; background: none; color: var(--t2-muted); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.t2-r10-fare { margin-top: 16px; padding: 16px 18px; border-radius: 24px; background: var(--t2-surface); }
+.t2-r10-fare-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.t2-r10-fare-label { font-size: 12.5px; color: var(--t2-muted); }
+.t2-r10-fare-amount { display: flex; align-items: baseline; gap: 6px; }
+.t2-r10-fare-amount .t2-num { font-size: 40px; font-weight: 700; line-height: 1.15; letter-spacing: -0.03em; }
+.t2-r10-fare-cur { font-size: 15px; font-weight: 600; }
+.t2-r10-pay {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+  padding: 6px 11px;
+  border-radius: 99px;
+  background: var(--t2-bg);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-r10-pay .t2-icon { font-size: 16px; }
+.t2-r10-dash { margin: 12px 0 8px; border-top: 1.5px dashed var(--t2-line); }
+.t2-r10-rows { display: grid; grid-template-columns: 1fr auto; gap: 5px 0; font-size: 13px; }
+.t2-r10-row { display: contents; }
+.t2-r10-row-label { color: var(--t2-muted); }
+.t2-r10-row-value { font-weight: 500; }
+.t2-r10-ask { margin-top: 18px; text-align: center; font-size: 16px; font-weight: 700; }
+.t2-r10-stars { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.t2-r10-star { padding: 0; border: 0; background: none; color: var(--t2-dash); cursor: pointer; }
+.t2-r10-star .t2-icon { font-size: 40px; font-variation-settings: "FILL" 1; }
+.t2-r10-star.on { color: var(--t2-accent); }
+.t2-r10-star:disabled { cursor: default; }
+.t2 .t2-r10-comment { height: 72px; min-height: 0; margin-top: 12px; resize: none; }
+.t2-r10-tip-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 8px; }
+.t2-r10-tip-title { font-size: 14px; font-weight: 700; }
+.t2-r10-tip-note { font-size: 12px; color: var(--t2-muted); }
+.t2-r10-tip-row { display: flex; gap: 6px; }
+.t2-r10-tip-opt {
+  flex: 1;
+  height: 44px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-dash);
+  border-radius: 14px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.t2-r10-tip-opt.on { border: 2px solid var(--t2-text); background: var(--t2-surface); font-weight: 700; }
+.t2-r10-tip-from { margin: 8px 2px 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2 .t2-r10-tip-send { width: 100%; margin-top: 10px; }
+.t2-r10-thanks { margin: 16px 0 0; text-align: center; font-size: 13px; color: var(--t2-muted); }
+.t2-r10-done { justify-content: center; margin-top: 12px; }
+.t2-r10-spacer { flex: 1; min-height: 16px; }
+.t2-r10-cta {
+  height: 58px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-text);
+  color: var(--t2-bg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-r10-cta:disabled { opacity: 0.45; cursor: default; }

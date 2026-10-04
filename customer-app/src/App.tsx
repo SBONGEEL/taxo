@@ -108,6 +108,9 @@ const NotificationsScreen = lazy(() =>
     default: m.NotificationsScreen,
   })),
 );
+const RatingT2Screen = lazy(() =>
+  import("@/screens/t2/RatingT2").then((m) => ({ default: m.RatingT2Screen })),
+);
 const AccountT2Screen = lazy(() =>
   import("@/screens/t2/AccountT2").then((m) => ({ default: m.AccountT2Screen })),
 );
@@ -398,7 +401,8 @@ export default function App() {
                         path="/rides/:rideId/rate"
                         element={
                           <Guarded>
-                            <RatingScreen />
+                            {/* **نهايةُ الرحلة «R10» في المظهر المرسوم**، والقائمةُ في الآخر — المنطقُ واحد (`useRating`) */}
+                            <ByTheme day={<RatingT2Screen />} night={<RatingScreen />} />
                           </Guarded>
                         }
                       />
