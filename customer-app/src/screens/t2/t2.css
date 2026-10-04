@@ -267,6 +267,8 @@
 /* **وصبغُ الدائرة هنا لا في الرموز**: السِمةُ الورديةُ تصبغ الجمرَ وحدَه (`tokens.css`)، **وخافتُه في غير هذه الدائرة لم
    يُرسم برقوقاً** — فلو صُبغ الرمزُ لَتغيّرت شارةُ العرض في الإشعارات بلا رسم */
 html.pink .t2-avatar { background: var(--t2-women-soft); }
+/* **ولصاحبة الخدمة النسائية برقوقٌ في كلِّ سِمة** — كما ترسمها «R05» (من حسابها: `useWomenService().available`) */
+.t2-avatar.women { border-color: var(--t2-women); background: var(--t2-women-soft); color: var(--t2-women); }
 
 .t2-prof-main { flex: 1; min-width: 0; }
 .t2-prof-name { font-size: 20px; font-weight: 700; }
@@ -362,6 +364,8 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   font-weight: 600;
 }
 .t2-home-place .t2-icon { font-size: 17px; }
+.t2-home-place { color: var(--t2-text); font-family: inherit; cursor: pointer; }
+.t2-home-place-more { color: var(--t2-muted); }
 .t2-home-place-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .t2-home-spacer { flex: 1; }
 .t2-home-bell {
@@ -441,7 +445,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 }
 .t2-home-hero-go .t2-icon { font-size: 30px; }
 
-/* الخريطةُ بطاقةً في عمود، و«رحلة» في الآخر */
+/* الخريطةُ بطاقةً في عمود، و«رحلة» و«طرد» في الآخر */
 .t2-home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .t2-home-map { position: relative; grid-row: span 2; height: 250px; overflow: hidden; border-radius: 28px; }
 /* **الحافّةُ فوق الخريطة لا تحتها** — ظلٌّ داخليٌّ على الحاوية تغطّيه لوحةُ الخريطة */
@@ -471,24 +475,6 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   pointer-events: none;
 }
 .t2-home-near .t2-num { font-size: 12px; font-weight: 600; }
-.t2-home-expand {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border-radius: 99px;
-  border: 1px solid var(--t2-line);
-  background: var(--t2-surface);
-  color: var(--t2-text);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.t2-home-expand .t2-icon { font-size: 14px; }
 .t2-home-close {
   position: absolute;
   top: calc(14px + env(safe-area-inset-top, 0px));
@@ -514,7 +500,8 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  grid-row: span 2;
+  height: 120px;
+  box-sizing: border-box;
   padding: 14px;
   border: 0;
   border-radius: 24px;
@@ -527,30 +514,6 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-home-ride .t2-icon { font-size: 30px; }
 .t2-home-ride-label { font-size: 16px; font-weight: 700; }
 
-/* بلاطاتُ المتجر — أربعٌ في الصفّ */
-.t2-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
-.t2-tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-  min-height: 100px;
-  padding: 12px;
-  box-sizing: border-box;
-  border-radius: 22px;
-  background: var(--t2-surface);
-  color: var(--t2-text);
-}
-.t2-tile.open { cursor: pointer; }
-.t2-tile.soon { background: transparent; border: 1.5px dashed var(--t2-dash); color: var(--t2-muted); }
-.t2-tile-icon { font-size: 27px; }
-.t2-tile-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
-.t2-tile-sub { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 500; color: var(--t2-muted); }
-.t2-tile-badge { position: absolute; top: 10px; left: 8px; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 600; }
-.t2-tile-badge.new { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
-.t2-tile-badge.soon { padding-block: 1px; border: 1px solid var(--t2-line); background: var(--t2-surface); color: var(--t2-warning); }
 
 /* اللافتة — بطاقةُ الجمر بشريطها، ونصُّها حبرٌ دائماً */
 .t2-promo { margin-bottom: 8px; overflow: hidden; border-radius: 24px; background: var(--t2-accent); color: var(--t2-on-accent); }
@@ -577,7 +540,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   transform: translateY(-50%) rotate(-40deg);
   pointer-events: none;
 }
-.t2-promo-icon { position: relative; flex: none; font-size: 30px; }
+
 .t2-promo-text { position: relative; flex: 1; min-width: 0; }
 .t2-promo-title { font-size: 14px; font-weight: 700; }
 .t2-promo-body { margin-top: 2px; font-size: 12px; }
@@ -586,7 +549,7 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-promo-dot { display: block; width: 5px; height: 5px; padding: 0; border: 0; border-radius: 3px; background: var(--t2-line); }
 .t2-promo-dot.on { width: 14px; background: var(--t2-muted); }
 
-/* ما في الرئيسية القائمة ولم يُرسم — بلغة اللوحة: الأماكنُ · سطرُ التأكيد · الإحالةُ · آخرُ الرحلات */
+/* شاراتُ الأماكن (ورقةُ «إلى أين؟») · وسطرُ التأكيد */
 .t2-home-places { display: flex; gap: 8px; margin-bottom: 10px; }
 .t2-home-chip {
   display: flex;
@@ -626,52 +589,6 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-callout-title { font-size: 13px; font-weight: 700; }
 .t2-callout-body { margin: 2px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
 .t2-callout-link { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--t2-accent-text); }
-.t2-home-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 14px;
-  padding: 14px 16px;
-  border: 0;
-  border-radius: 22px;
-  background: var(--t2-surface);
-  color: var(--t2-text);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-.t2-home-row .t2-icon { font-size: 22px; color: var(--t2-accent-text); }
-.t2-home-row-label { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; }
-.t2-home-row-trail { font-size: 12.5px; font-weight: 700; }
-.t2-home-all { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
-.t2-home-recent { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
-.t2-home-recent::-webkit-scrollbar { display: none; }
-.t2-home-trip {
-  display: flex;
-  flex-direction: column;
-  flex: none;
-  width: 176px;
-  padding: 12px 14px;
-  border: 0;
-  border-radius: 22px;
-  background: var(--t2-surface);
-  color: var(--t2-text);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-.t2-home-trip-fare { font-size: 11.5px; color: var(--t2-muted); }
-.t2-home-trip-route {
-  display: -webkit-box;
-  margin: 5px 0;
-  overflow: hidden;
-  font-size: 12.5px;
-  line-height: 1.45;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.t2-home-trip-go { font-size: 12px; font-weight: 700; color: var(--t2-accent-text); }
 
 /* ── ورقةُ الطلب فوق الخريطة «R06» — وما فوق الخريطة في أطوار الطلب ─────────────────────────────────── */
 .t2.t2-sheet {
@@ -978,3 +895,86 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-picker-title { margin: 0 2px 10px; font-size: 16px; font-weight: 700; }
 .t2-pay-row > .t2-icon:first-child { align-self: center; font-size: 22px; color: var(--t2-muted); }
 .t2-pay-check { align-self: center; font-size: 20px; color: var(--t2-accent-text); }
+
+/* ── R05 كما رُسمت: لمسةُ البطاقة تفتح الخريطة، وصفُّ الخدمات الأربع، ورسالةُ «قريباً» ─────────────────── */
+.t2-home-map-tap { position: absolute; inset: 0; z-index: 1; padding: 0; border: 0; background: none; cursor: pointer; }
+.t2-home-near { z-index: 2; }
+.t2-svc-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.t2-svc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  height: 100px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-svc.women { border: 1.5px solid var(--t2-women-line); background: var(--t2-women-soft); color: var(--t2-women); }
+.t2-svc.soon { border: 1.5px dashed var(--t2-dash); background: transparent; color: var(--t2-muted); }
+.t2-svc-icon { font-size: 27px; }
+.t2-svc-title { font-size: 13px; font-weight: 600; }
+.t2-svc-badge { position: absolute; top: 10px; left: 8px; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 600; }
+.t2-svc-badge.new { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+.t2-svc-badge.soon { padding-block: 1px; border: 1px solid var(--t2-line); background: var(--t2-surface); color: var(--t2-warning); }
+.t2-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  max-width: calc(100% - 48px);
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: var(--t2-inverse);
+  color: var(--t2-on-inverse);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transform: translateX(-50%);
+  box-shadow: var(--t2-float-shadow);
+}
+
+/* ── الخريطةُ بلغة «TaxoMap»: السيارةُ ونقطةُ «أنت هنا» والانطلاقُ والوجهة (علاماتٌ فوق `t2-map`) ─────── */
+.t2-map-car {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 30px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-surface);
+  border-radius: 7px;
+  background: var(--t2-text);
+  box-shadow: var(--t2-map-car-shadow);
+}
+.t2-map-car-front, .t2-map-car-back { position: absolute; display: block; background: var(--t2-accent); }
+.t2-map-car-front { left: 2px; right: 2px; top: 6px; height: 7px; border-radius: 3px 3px 2px 2px; }
+.t2-map-car-back { left: 3px; right: 3px; bottom: 4px; height: 4px; border-radius: 2px 2px 3px 3px; opacity: 0.55; }
+.t2-map-me {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--t2-map-me-halo);
+}
+.t2-map-me-dot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 3px solid var(--t2-surface);
+  border-radius: 50%;
+  background: var(--t2-accent);
+  box-shadow: var(--t2-map-me-shadow);
+}
+.t2-map-pin { display: block; width: 22px; height: 22px; box-sizing: border-box; border: 5px solid var(--t2-surface); box-shadow: var(--t2-map-pin-shadow); }
+.t2-map-pin.from { border-radius: 50%; background: var(--t2-text); }
+.t2-map-pin.to { border-radius: 6px; background: var(--t2-accent); }

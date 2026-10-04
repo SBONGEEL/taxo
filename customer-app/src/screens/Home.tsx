@@ -51,7 +51,7 @@ import { TrackingSheet } from "@/components/ride/TrackingSheet";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { useCountryConfig, useMapboxToken } from "@/lib/config";
-import { DEFAULT_CENTER, currentPosition, reverseGeocode, type Place } from "@/lib/geocode";
+import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { RIDE_STATUS_LABEL } from "@/lib/labels";
 import { isActive, useRide } from "@/lib/ride";
 import { usePlaces } from "@/lib/places";
@@ -156,6 +156,23 @@ export function HomeScreen() {
   }, []);
 
   const tracking = isActive(ride);
+
+  // **شارةُ الموقع في رأس رئيسية TAXO 2.0** (§٦١-د): اسمُ منطقة نقطة الانطلاق — **من Mapbox لا تخميناً**، ونقطتُها هي هي
+  // (موقعُ الجهاز أو ما وضعه بالدبوس). **وبلا نقطةٍ أو بلا جوابٍ لا شارة.**
+  const [area, setArea] = useState<string | null>(null);
+  useEffect(() => {
+    if (!token || !pickup) return;
+    const controller = new AbortController();
+    void reverseArea(token, pickup, controller.signal).then(
+      (name) => !controller.signal.aborted && setArea(name),
+    );
+    return () => controller.abort();
+    // النقطةُ بإحداثيّتيها لا بهويّة الكائن: كائنٌ جديدٌ للنقطة نفسِها لا يعيد السؤال
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, pickup?.lat, pickup?.lng]);
+
+  // **«نسائية» تبدأ هذا الطلبَ بـ«كبتنة فقط»** (§٦١-د/ج) — والراكبةُ تغيّره بنفسها في ورقة الطلب، ولا شيءَ آليّ
+  const [presetPreference, setPresetPreference] = useState<GenderPreference | undefined>();
 
   // **مسارُ الرحلة على الطرق** (البند ٨): يُقرأ **مرةً لكل رحلة** بعد القبول —
   // الخلفيةُ جمّدته على الرحلة لحظتَها، فقراءةٌ ثانية تعيد الشيءَ نفسَه.
@@ -372,6 +389,7 @@ export function HomeScreen() {
       setPhase("idle");
       setDropoff(null);
       setDropoffAddress(null);
+      setPresetPreference(undefined);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
       // **رفضٌ بلا مخرجٍ ليس رفضاً**: تفضيلٌ نسائيٌّ بقي في ملفها من سوقٍ
@@ -446,7 +464,8 @@ export function HomeScreen() {
         center={center}
         // أثناء الرحلة يرى الراكب كبتنه وحده (SPEC القسم 10)
         drivers={tracking ? [] : drivers}
-        pickup={tracking ? ride!.pickup : pickup}
+        // **ونهارُ TAXO 2.0 في الرئيسية يرسم «أنت هنا» وحدَها** (R05) — نقطةُ الانطلاق هي هي، فدبوسُها فوقها نقطتان لشيءٍ واحد
+        pickup={tracking ? ride!.pickup : !dark && browsing ? null : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
         driverLocation={driverPing}
         // **مركبةُ الكبتن بعد القبول وحدَه** — وقبله لا تتغيّر الخريطةُ في
@@ -457,7 +476,8 @@ export function HomeScreen() {
         trimAt={driverPing}
         // **نبضةُ الموقع الحالي** — لونُها `--brand` فتتبع الوضعَ والسِمة.
         // وتختفي أثناء الرحلة: الانتباهُ حينها لسيارة الكبتن لا لموقعي
-        showMyLocation={tracking || picking ? null : pickup}
+        // **وفي ورقة الطلب نهاراً دائرةُ الانطلاق ومربّعُ الوجهة وحدهما** (R06) — بلا هالةٍ فوق الدائرة
+        showMyLocation={tracking || picking || (!dark && !browsing) ? null : pickup}
         // **ونبضةٌ حول الانطلاق ما دام البحثُ جارياً** — تتوقف عند القبول،
         // فنبضٌ يبقى بعد الإسناد يقول «ما زلنا نبحث» وقد وُجد
         searching={ride?.status === "searching" || ride?.status === "requested"}
@@ -488,7 +508,10 @@ export function HomeScreen() {
     onOpenNotifications: () => navigate("/account/notifications"),
     onOpenWallet: () => navigate("/wallet"),
     onOpenAccount: () => navigate("/account"),
-    onAskDestination: () => setSearchOpen(true),
+    onAskDestination: () => {
+      setPresetPreference(undefined);
+      setSearchOpen(true);
+    },
     places,
     onPickPlace: (saved) =>
       pickPlace({
@@ -505,6 +528,12 @@ export function HomeScreen() {
     onOpenRides: () => navigate("/rides"),
     onRepeat: repeatRide,
     map: mapNode,
+    area,
+    onChangePickup: () => setPhase("pick-pickup"),
+    onWomenRide: () => {
+      setPresetPreference("female");
+      setSearchOpen(true);
+    },
   };
 
   // «رجوع» (الحزمة ب): يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟».
@@ -516,6 +545,7 @@ export function HomeScreen() {
     setDropoff(null);
     setDropoffAddress(null);
     setStops([]);
+    setPresetPreference(undefined);
   };
 
   const locateMe = async () => {
@@ -544,6 +574,7 @@ export function HomeScreen() {
           onClearPreference: () => void clearGenderPreference(),
           countryConfig,
           onBack: leaveConfirm,
+          initialPreference: presetPreference,
         }
       : null;
 

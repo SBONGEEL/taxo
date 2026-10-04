@@ -1,37 +1,36 @@
-/** الرئيسية — TAXO 2.0 «R05» (Claude Design «Rider»)، **في المظهر النهاريّ المرسوم وحدَه**.
+/** الرئيسية — TAXO 2.0 «R05» (Claude Design «Rider»)، **في المظهر النهاريّ المرسوم وحدَه — ومطابقةٌ للتصميم** (§٦١-د).
  *
- * **وجهٌ لا منطق**: الشاشةُ (`screens/Home.tsx`) تمرّر الشيءَ نفسَه للوجهين (`RiderHomeProps`) — الخريطةُ عقدةٌ
- * واحدة، والنداءاتُ هي هي (المحفظةُ والمتجرُ والإحالةُ وآخرُ الرحلات)، **وكلُّ زرٍّ يذهب حيث يذهب في القائم**.
- * والبلاطاتُ واللافتاتُ من اللوحة بسلوكها (`StorefrontT2`)، **والتوسيعُ وزرُّ الجهاز الخلفيُّ من `useExpandable`**.
+ * **وجهٌ لا منطق**: الشاشةُ (`screens/Home.tsx`) تمرّر الشيءَ نفسَه للوجهين (`RiderHomeProps`)، والخريطةُ عقدةٌ واحدة،
+ * والتوسيعُ وزرُّ الجهاز الخلفيُّ من `useExpandable`، واللافتاتُ من `PromoBanners` بجلدها.
  *
- * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`TAXO2-DESIGN-CORRECTIONS.md` §٢٢):
- * - **«اقتصادي يصل خلال 3 د»** وشارةُ «3 د» على «رحلة»: **المهلةُ لا تُحسب قبل أن تُعرف نقطةُ الالتقاط** — وهي علّةُ
- *   الرئيسية القائمة نفسُها. فالبطاقةُ «إلى أين؟» وحدَها.
- * - **«طرد»**: التوصيلُ مسارٌ آخرُ لم يُبنَ (SPEC-DELIVERY)، **وبلاطتُه في اللوحة «قريباً»** فتظهر بين البلاطات بحالها.
- *   **فـ«رحلة» تملأ العمودَ وحدَها.**
- * - **«نسائية» بلاطةً**: لا بلاطةَ بها في المتجر — والخدمةُ النسائيةُ كما هي اليوم (§61).
- * - **السهمُ في شارة الموقع** (تغييرُ نقطة الانطلاق من الرئيسية): لا بابَ له هنا اليوم — تُغيَّر في ورقة الطلب.
+ * **والقيمُ الحيّةُ من بياناتٍ حقيقيةٍ أو لا شيء** (§٦١-د/د): شارةُ الموقع اسمُ منطقة نقطة الانطلاق من Mapbox (`area`)، وعددُ
+ * الكباتن حولك من `GET /drivers/nearby`، والحرفُ من الحساب. **و«يصل خلال 3 د» وشارةُ «3 د» لا مصدرَ لهما اليوم** — فلا
+ * يُرسم مكانَهما شيء (أُبلغ المالك). **و«30%» في اللافتة لا عمودَ لها في صفوف اللافتات** — فلا رقمَ هناك (أُبلغ).
  *
- * **وما في الرئيسية القائمة ولم يُرسم يبقى بلغة اللوحة**: الأماكنُ المحفوظة · سطرُ تأكيد الرقم · الإحالةُ · آخرُ
- * رحلاتك (وتوسيعُ الخريطة). **ونُزل اثنان**: رصيدُ المحفظة في الرأس (لا مكانَ له في الرأس المرسوم، وتبويبُ المحفظة
- * يحمله) والتحيّةُ («صباح الخير») — والشارةُ تقول أين هو.
+ * **والبلاطاتُ الأربعُ كما رُسمت** (§٦١-د/أ–ج): «المطار» بـ«جديد» و«طرد» و«بالساعة» **رسالةُ «قريباً» عند اللمس ولا شيءَ غيرُها**،
+ * و«مجدولة» رحلاتُه المجدولة (بمفتاح سوقها)، و«نسائية» **تبدأ الطلبَ بـ«كبتنة فقط» وهي تغيّره بنفسها** — كما تعمل الخدمةُ اليوم.
+ *
+ * **وما نُزل بلغ من موضعٍ آخر** (§٦١-د/و): الأماكنُ المحفوظةُ في البحث وفي «حسابي»، وآخرُ الرحلات و«أعِد الرحلة» في «رحلاتي»
+ * وتفاصيلها، والإحالةُ في «حسابي»، والرصيدُ في «المحفظة»، **والخريطةُ الكاملةُ بلمسة البطاقة** بدل زرِّ «توسيع».
  */
+
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import type { RiderHomeProps } from "@/components/home/RiderHome";
 import { useExpandable } from "@/components/home/MapCard";
-import { formatMoney } from "@/lib/utils";
+import { useScheduledRides } from "@/lib/bookings";
+import { useSession } from "@/lib/session";
+import { useWomenService } from "@/lib/women";
 import { Wordmark } from "@/taxo2";
 
-import { PROMO_SKIN_T2, ServiceTilesT2 } from "./StorefrontT2";
+import { PROMO_SKIN_T2 } from "./StorefrontT2";
 import "@/taxo2";
 import "./t2.css";
 
-/** أيقونةُ المكان المحفوظ **من عموده `icon`** — كالرئيسية القائمة (`PLACE_MARK`) بالأسماء الثلاثة نفسِها. */
-const PLACE_ICON: Record<string, string> = { home: "home", work: "work", star: "star" };
-
-/** «كم كبتناً حولك» بعربيةٍ تُقرأ — **العددُ وحدَه بلا مهلة** (المهلةُ لا تُقاس قبل نقطة الالتقاط). */
+/** «كم كبتناً حولك» بعربيةٍ تُقرأ — **العددُ وحدَه بلا مهلة**. */
 function nearbyLabel(count: number): string {
   if (count === 1) return "كبتن حولك";
   if (count === 2) return "كبتنان حولك";
@@ -39,7 +38,7 @@ function nearbyLabel(count: number): string {
   return "كبتناً حولك";
 }
 
-/** **الخريطةُ بطاقةً** — والعقدةُ هي هي في الحالين: يتبدّل صنفُ الحاوية لا موضعُها (كـ`MapCard`). */
+/** **الخريطةُ بطاقةً** — والعقدةُ هي هي في الحالين. **ولا زرَّ «توسيع»** كما رُسمت: **لمسةُ البطاقة تفتحها** (§٦١-د/و). */
 function MapCardT2({
   map,
   nearby,
@@ -53,24 +52,22 @@ function MapCardT2({
   return (
     <div className={open ? "t2-home-map open" : "t2-home-map"}>
       {map}
-      {!open && nearby > 0 ? (
-        <span className="t2-home-near">
-          {nearby > 2 ? <span className="t2-num">{nearby}</span> : null}
-          {nearbyLabel(nearby)}
-        </span>
-      ) : null}
-      {/* **التوسيعُ شارةٌ ظاهرةٌ لا نقرٌ صامت** (قرارُ المالك ٢٠٢٦-٠٨-٣٠) — بلغة الهوية */}
       {!open ? (
-        <button type="button" className="t2-home-expand" onClick={() => setOpen(true)}>
-          <span className="t2-icon" aria-hidden="true">open_in_full</span>
-          توسيع
-        </button>
+        <>
+          <button type="button" className="t2-home-map-tap" onClick={() => setOpen(true)} aria-label="فتح الخريطة" />
+          {nearby > 0 ? (
+            <span className="t2-home-near">
+              {nearby > 2 ? <span className="t2-num">{nearby}</span> : null}
+              {nearbyLabel(nearby)}
+            </span>
+          ) : null}
+        </>
       ) : (
         <>
           <button type="button" className="t2-home-close" onClick={() => setOpen(false)} aria-label="إغلاق الخريطة">
             <span className="t2-icon" aria-hidden="true">close</span>
           </button>
-          {/* **وزرُّ العمل في متناوله وهي موسَّعة** — فلا يُغلقها ليطلب */}
+          {/* **وزرُّ العمل في متناوله وهي مفتوحة** — فلا يُغلقها ليطلب */}
           <div className="t2-home-map-action">
             <button type="button" className="t2-button action" onClick={onAskDestination}>
               إلى أين؟ اطلب رحلة
@@ -84,27 +81,38 @@ function MapCardT2({
 
 export function RiderHomeT2({
   name,
-  place,
   unread,
-  currency,
   nearby,
   onOpenNotifications,
   onOpenAccount,
   onAskDestination,
-  places,
-  onPickPlace,
-  tiles,
   banners,
-  referrals,
-  onOpenReferrals,
-  recent,
-  onOpenRides,
-  onRepeat,
   map,
+  area = null,
+  onChangePickup,
+  onWomenRide,
 }: RiderHomeProps) {
-  // **أوّلُ برنامجٍ مشتعل** — بالشرط نفسِه في الرئيسية القائمة: بجائزةٍ مقروءةٍ أو لا صفّ
-  const program =
-    referrals?.programs.find((row) => row.enabled && row.reward_amount !== "0") ?? null;
+  const navigate = useNavigate();
+  const women = useWomenService();
+  const scheduled = useScheduledRides();
+  const { user } = useSession();
+
+  // **رسالةُ «قريباً»** — تُقال ثمّ تختفي، ولا تفتح شيئاً
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(null), 2600);
+    return () => window.clearTimeout(id);
+  }, [notice]);
+  const soon = (what: string) => setNotice(`${what} — قريباً`);
+
+  /** **«نسائية» كما تعمل الخدمةُ اليوم**: من عُرضت عليها تبدأ طلبَها بـ«كبتنة فقط»، ومن لم تُعلن جنسها تُعلنه في «بياناتي»
+   *  (بابُ اليوم نفسُه)، ومن أعلن غيرَ ذلك تُقال له العلّة. */
+  function openWomen() {
+    if (women.available) onWomenRide?.();
+    else if (!user?.gender) navigate("/account/profile");
+    else setNotice("الخدمة النسائية للراكبات");
+  }
 
   return (
     <div className="t2 t2-page t2-home pb-nav">
@@ -112,20 +120,26 @@ export function RiderHomeT2({
         <span className="t2-home-brand">
           <Wordmark size={15} />
         </span>
-        {/* **ولا مدينةَ تُخمَّن**: عنوانُ موقعه حين يُعرف، وإلا فلا شارة */}
-        {place ? (
-          <span className="t2-home-place">
+        {/* **اسمُ منطقة نقطة الانطلاق** — ولمستُه تفتح دبوسَ الانطلاق؛ وبلا اسمٍ معروفٍ لا شارة */}
+        {area ? (
+          <button type="button" className="t2-home-place" onClick={onChangePickup}>
             <span className="t2-icon fill" aria-hidden="true">location_on</span>
-            <span className="t2-home-place-text">{place}</span>
-          </span>
+            <span className="t2-home-place-text">{area}</span>
+            <span className="t2-icon t2-home-place-more" aria-hidden="true">expand_more</span>
+          </button>
         ) : null}
         <span className="t2-home-spacer" />
         <button type="button" className="t2-home-bell" onClick={onOpenNotifications} aria-label="الإشعارات">
           <span className="t2-icon" aria-hidden="true">notifications</span>
-          {/* **نقطةٌ لا رقم** — السؤالُ هنا «هل ثمّ جديد؟» */}
           {unread ? <span className="t2-home-dot" /> : null}
         </button>
-        <button type="button" className="t2-avatar sm" onClick={onOpenAccount} aria-label="حسابي">
+        {/* **البرقوقُ لصاحبة الخدمة النسائية** كما رُسمت — من حسابها لا من السِمة */}
+        <button
+          type="button"
+          className={women.available ? "t2-avatar sm women" : "t2-avatar sm"}
+          onClick={onOpenAccount}
+          aria-label="حسابي"
+        >
           {name.slice(0, 1)}
         </button>
       </div>
@@ -144,56 +158,48 @@ export function RiderHomeT2({
           <span className="t2-icon" aria-hidden="true">local_taxi</span>
           <span className="t2-home-ride-label">رحلة</span>
         </button>
+        <button type="button" className="t2-home-ride" onClick={() => soon("طرد")}>
+          <span className="t2-icon" aria-hidden="true">package_2</span>
+          <span className="t2-home-ride-label">طرد</span>
+        </button>
       </div>
 
-      {/* ── أماكنُه المحفوظة — **ولا صفَّ بلا أماكن** (في القائمة، ولم تُرسم) */}
-      {places.length > 0 ? (
-        <div className="t2-home-places">
-          {places.slice(0, 3).map((saved) => (
-            <button key={saved.id} type="button" className="t2-home-chip" onClick={() => onPickPlace(saved)}>
-              <span className="t2-icon" aria-hidden="true">{PLACE_ICON[saved.icon] ?? "star"}</span>
-              <span>{saved.label}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className="t2-svc-row">
+        <button type="button" className="t2-svc" onClick={() => soon("المطار")}>
+          <span className="t2-icon t2-svc-icon" aria-hidden="true">flight_takeoff</span>
+          <span className="t2-svc-title">المطار</span>
+          <span className="t2-svc-badge new">جديد</span>
+        </button>
+        <button
+          type="button"
+          className="t2-svc"
+          onClick={() => (scheduled ? navigate("/account/bookings") : soon("الرحلات المجدولة"))}
+        >
+          <span className="t2-icon t2-svc-icon" aria-hidden="true">event_upcoming</span>
+          <span className="t2-svc-title">مجدولة</span>
+        </button>
+        {/* **حيث الخدمةُ مطفأةٌ لا يظهر شيءٌ منها** — قاعدةُ اليوم (`lib/women.ts`) */}
+        {women.enabled ? (
+          <button type="button" className="t2-svc women" onClick={openWomen}>
+            <span className="t2-icon t2-svc-icon" aria-hidden="true">woman</span>
+            <span className="t2-svc-title">نسائية</span>
+          </button>
+        ) : null}
+        <button type="button" className="t2-svc soon" onClick={() => soon("بالساعة")}>
+          <span className="t2-icon t2-svc-icon" aria-hidden="true">timer</span>
+          <span className="t2-svc-title">بالساعة</span>
+          <span className="t2-svc-badge soon">قريباً</span>
+        </button>
+      </div>
 
-      {/* **فوق البلاطات لا تحتها** — الحسابُ المحدود يُمنع من أوّل ما تفتحه */}
+      {/* **الحسابُ المحدود يُقال في كلِّ فتحة** (قرارُ المالك ٢٠٢٦-٠٨-٣١) — ويظهر بشرطه وحدَه */}
       <PhonePendingNotice variant="t2" />
-      <ServiceTilesT2 tiles={tiles} />
       <PromoBanners banners={banners} skin={PROMO_SKIN_T2} />
 
-      {program ? (
-        <button type="button" className="t2-home-row" onClick={onOpenReferrals}>
-          <span className="t2-icon" aria-hidden="true">redeem</span>
-          <span className="t2-home-row-label">
-            ادعُ صديقاً واربح {formatMoney(program.reward_amount, currency)}
-          </span>
-          <span className="t2-home-row-trail">مشاركة</span>
-        </button>
-      ) : null}
-
-      {recent.length > 0 ? (
-        <>
-          <div className="t2-section">
-            آخر رحلاتك
-            <button type="button" className="t2-section-aside t2-home-all" onClick={onOpenRides}>
-              الكل
-            </button>
-          </div>
-          <div className="t2-home-recent">
-            {recent.map((ride) => (
-              <button key={ride.id} type="button" className="t2-home-trip" onClick={() => onRepeat(ride)}>
-                {/* **الأجرةُ النهائيةُ إن كانت** — ولا يُعرض تقديرٌ في موضع محصَّل */}
-                <span className="t2-home-trip-fare">{formatMoney(ride.final_fare, ride.currency)}</span>
-                <span className="t2-home-trip-route">
-                  {ride.pickup_address ?? "نقطة الانطلاق"} ← {ride.dropoff_address ?? "الوجهة"}
-                </span>
-                <span className="t2-home-trip-go">أعِد الرحلة</span>
-              </button>
-            ))}
-          </div>
-        </>
+      {notice ? (
+        <div className="t2-toast" role="status" aria-live="polite">
+          {notice}
+        </div>
       ) : null}
     </div>
   );

@@ -109,6 +109,9 @@ export interface ConfirmRideProps {
   onBack: () => void;
   /** إعداداتُ دولة الحساب — منها تُقرأ قنواتُ الدفع المتاحة وعملتُها. */
   countryConfig: CountryConfig | null;
+  /** **تفضيلٌ يُبدأ به هذا الطلبُ وحدَه** — بلاطةُ «نسائية» في رئيسية TAXO 2.0 تبدأه بـ«كبتنة فقط» (§٦١-د/ج)،
+   *  **وهي تغيّره بنفسها** من المنتقي نفسِه. وبلا قيمةٍ يبدأ من افتراضي ملفها كما كان. */
+  initialPreference?: GenderPreference;
 }
 
 export function useConfirmRide({
@@ -117,6 +120,7 @@ export function useConfirmRide({
   categories,
   stops,
   countryConfig,
+  initialPreference,
 }: ConfirmRideProps) {
   const women = useWomenService();
   // الحجزُ (12-ط) — مفتاحُه يخفي الزرَّ كلَّه لا يعطّله
@@ -126,9 +130,9 @@ export function useConfirmRide({
   // دولةُ الحساب — الكوبونُ per-country فالتحقّقُ يحملها
   const multiStop = useMultiStop();
   const [category, setCategory] = useState<VehicleCategory>(categories[0] ?? "economy");
-  // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها
+  // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها — **أو ممّا بدأته بلاطةُ «نسائية»، ولمن عُرضت عليها الخدمةُ وحدَها**
   const [preference, setPreference] = useState<GenderPreference>(
-    women.defaultPreference,
+    women.available && initialPreference ? initialPreference : women.defaultPreference,
   );
   const [estimate, setEstimate] = useState<RideEstimate | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -100,6 +100,49 @@ export async function reverseGeocode(
   }
 }
 
+/** **اسمُ المنطقة لنقطة** — حيٌّ أو بلدةٌ أو مدينة، **أدقُّها** — لشارة الموقع في رأس الرئيسية (TAXO 2.0 «R05»:
+ *  «جبل عمّان»). **من Mapbox لا من الجهاز**: الاسمُ قراءةٌ لا تخمين، **و`null` إن لم يُعرف — فلا شارة**. */
+export async function reverseArea(
+  token: string,
+  point: Coordinates,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (!token) return null;
+
+  const url = new URL(REVERSE);
+  url.searchParams.set("longitude", String(point.lng));
+  url.searchParams.set("latitude", String(point.lat));
+  url.searchParams.set("access_token", token);
+  url.searchParams.set("language", "ar");
+  url.searchParams.set("limit", "1");
+
+  try {
+    const response = await fetch(url, { signal });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { features?: AreaFeature[] };
+    const first = body.features?.[0]?.properties;
+    // **أدقُّ ما في سياق العنوان** — الحيُّ قبل البلدة قبل المدينة — من نداءٍ واحد
+    const context = first?.context;
+    return (
+      context?.neighborhood?.name ??
+      context?.locality?.name ??
+      context?.place?.name ??
+      first?.name ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** ما يُقرأ من سياق نتيجة Mapbox v6 — أسماءُ المستويات وحدَها. */
+interface AreaFeature {
+  properties?: {
+    name?: string;
+    context?: Partial<Record<"neighborhood" | "locality" | "place", { name?: string }>>;
+  };
+}
+
 /** موقع الجهاز — يُطلب مرةً ولا يُلحّ: من رفض يضع دبوسه بيده. */
 export function currentPosition(): Promise<Coordinates | null> {
   if (!("geolocation" in navigator)) return Promise.resolve(null);

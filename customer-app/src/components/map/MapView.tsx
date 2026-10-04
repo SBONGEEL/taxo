@@ -40,7 +40,58 @@ import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
+/** **النهارُ في TAXO 2.0 خريطةٌ هادئة** (§٦١-د: «بلا معالمَ ولا ازدحامِ شوارع»): قاعدةُ Mapbox الأهدأ، ثمّ تُصبغ بلغة
+ *  «TaxoMap» في الهوية عند كلِّ تحميلٍ للستايل (`calmLook`). **والليلُ كما كان** — ستايلُه وعلاماتُه لم تُمسّ. */
+const STYLE_LIGHT = "mapbox://styles/mapbox/light-v11";
+
+/** الطرقُ الكبرى بيضاء والصغرى أخفتُ منها — كما ترسمهما «TaxoMap». */
+const MAJOR_ROADS = [
+  "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
+  "secondary", "secondary_link", "tertiary", "tertiary_link",
+];
+
+/** **صبغُ الخريطة بلغة الهوية** — الأرضُ والحدائقُ والطرقُ من رموز `--t2-map-*` على الحاوية (`t2 t2-map`)، **وكلُّ اسمٍ
+ *  ومَعلمٍ ومبنى وحدٍّ يُخفى**. والألوانُ تُقرأ من الرموز لا تُكتب هنا: `paint` في mapbox لا يقرأ `var()`. **وبلا رموزٍ لا صبغ**
+ *  — تبقى القاعدةُ الهادئةُ كما هي، ولا لونَ يُخترع. */
+function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
+  const css = getComputedStyle(host);
+  const token = (name: string) => css.getPropertyValue(name).trim();
+  const land = token("--t2-map-land");
+  const park = token("--t2-map-park");
+  const road = token("--t2-map-road");
+  const minor = token("--t2-map-road-minor");
+  if (!land || !park || !road || !minor) return;
+  const clutter = /building|^admin|waterway|-case|road-(path|steps|pedestrian|rail|construction)|aeroway|ferry|aerialway|transit|hillshade|contour/;
+  for (const layer of instance.getStyle()?.layers ?? []) {
+    const { id, type } = layer;
+    try {
+      if (type === "symbol" || clutter.test(id)) {
+        instance.setLayoutProperty(id, "visibility", "none");
+      } else if (type === "background") {
+        instance.setPaintProperty(id, "background-color", land);
+      } else if (type === "fill" && id === "land") {
+        instance.setPaintProperty(id, "fill-color", land);
+      } else if (type === "fill" && (id.startsWith("landcover") || id.startsWith("national-park"))) {
+        instance.setPaintProperty(id, "fill-color", park);
+      } else if (type === "fill" && id.startsWith("landuse")) {
+        instance.setPaintProperty(id, "fill-color", [
+          "match", ["get", "class"],
+          ["park", "pitch", "grass", "wood", "scrub", "garden", "national_park", "cemetery"], park,
+          land,
+        ]);
+      } else if (type === "line" && /^(road|bridge|tunnel)-/.test(id)) {
+        instance.setPaintProperty(id, "line-color", ["match", ["get", "class"], MAJOR_ROADS, road, minor]);
+      }
+    } catch {
+      // طبقةٌ لا تحمل هذه الخاصّية — تُترك كما هي
+    }
+  }
+}
+
+/** **سيارةُ الهوية** (TaxoMap): جسمٌ بالحبر بحافّةٍ بيضاء، وزجاجٌ أماميٌّ بالجمر وخلفيٌّ أخفت — 16×30. */
+function t2CarMarkup(): string {
+  return `<span class="t2-map-car"><i class="t2-map-car-front"></i><i class="t2-map-car-back"></i></span>`;
+}
 const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 
 // زمن تنعيم الحركة: أقصر قليلاً من دورة البثّ، فتصل السيارة موضعها الجديد
@@ -122,11 +173,12 @@ interface TweenedMarker {
  * كبتنٍ لا يبثّ اتجاهه. وهو **مبدأُ عطب الإعفاء نفسُه** (`test_photo_leak.py`):
  * **التمييزُ المرئيُّ وشايةٌ حتى حين يبدو تحسيناً.**
  */
-function carElement(): HTMLElement {
+function carElement(t2 = false): HTMLElement {
   const element = document.createElement("div");
   element.className = "taxo-car";
   // **القياسُ لا التقدير**: 30×30 مقيسٌ على عرض 390 بكسل — التفصيل في التقرير.
-  element.innerHTML = `
+  // **وفي نهار TAXO 2.0 سيارةُ الهوية** — والغلافُ والدورانُ هما هما
+  element.innerHTML = t2 ? t2CarMarkup() : `
     <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"
          style="filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.45))">
       <g fill="var(--tx)" stroke="var(--inv)" stroke-width="0.7">
@@ -172,11 +224,11 @@ function headingLayer(element: HTMLElement): HTMLElement {
  * تترك الراكبَ بلا سيارةٍ على الخريطة. **فالسقوطُ إلى العامّة لا يُرى**،
  * وهو الشكلُ الثالثَ عشر مطبَّقاً: الغيابُ لا يُميَّز عن الحضور.
  */
-function driverElement(skin: RideDriverSkin | null | undefined): HTMLElement {
-  const element = carElement();
+function driverElement(skin: RideDriverSkin | null | undefined, t2 = false): HTMLElement {
+  const element = carElement(t2);
   if (!skin) return element;
 
-  const generic = element.querySelector("svg");
+  const generic = element.querySelector(t2 ? ".t2-map-car" : "svg");
   const size = skinSizePx(skin);
   const image = document.createElement("img");
   // **وصفٌ فارغٌ بقصد**: اسمُ المركبة مكتوبٌ في بطاقة الكبتن، وقارئُ الشاشة
@@ -191,7 +243,7 @@ function driverElement(skin: RideDriverSkin | null | undefined): HTMLElement {
     "load",
     () => {
       image.style.display = "block";
-      if (generic instanceof SVGElement) generic.style.display = "none";
+      if (generic instanceof SVGElement || generic instanceof HTMLElement) generic.style.display = "none";
     },
     { once: true },
   );
@@ -227,6 +279,22 @@ function cssColor(token: string, fallback: string): string {
     .getPropertyValue(token)
     .trim();
   return value || fallback;
+}
+
+/** **«أنت هنا» بلغة الهوية** — نقطةُ الجمر بحافّةٍ بيضاء في هالتها (TaxoMap)، **ساكنةٌ كما رُسمت**. */
+function t2MeElement(label: string): HTMLElement {
+  const element = document.createElement("div");
+  element.setAttribute("aria-label", label);
+  element.innerHTML = `<span class="t2-map-me"><i class="t2-map-me-dot"></i></span>`;
+  return element;
+}
+
+/** **الانطلاقُ دائرةٌ بالحبر، والوجهةُ مربّعٌ بالجمر** — «لغة الخريطة» في الهوية، بحافّةٍ بيضاء. */
+function t2PinElement(kind: "from" | "to", label: string): HTMLElement {
+  const element = document.createElement("div");
+  element.setAttribute("aria-label", label);
+  element.innerHTML = `<span class="t2-map-pin ${kind}"></span>`;
+  return element;
 }
 
 function pinElement(color: string, label: string): HTMLElement {
@@ -290,6 +358,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   const frame = useRef<number | null>(null);
   const moveEnd = useRef(onMoveEnd);
   const { dark } = useTheme();
+  // **النهارُ لغةُ TAXO 2.0، والليلُ كما كان** — يُقرأ في معالجِ `style.load` المسجَّل مرّةً واحدة
+  const darkRef = useRef(dark);
+  darkRef.current = dark;
+  const t2 = !dark;
 
   moveEnd.current = onMoveEnd;
 
@@ -321,6 +393,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
     instance.on("style.load", () => {
       instance.resize();
+      // **الصبغُ قبل الإشارة** — فطبقاتُ الرحلة تُضاف فوق خريطةٍ مصبوغة
+      if (!darkRef.current && container.current) calmLook(instance, container.current);
       setStyleVersion((version) => version + 1);
     });
     instance.on("moveend", () => {
@@ -329,6 +403,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     });
 
     map.current = instance;
+    // **في التطوير وحدَه**: اللوحةُ على حاويتها، فيُقرأ ما رُسم (الطبقاتُ وألوانُها) من المتصفّح لا ظنّاً
+    if (import.meta.env.DEV && container.current) {
+      (container.current as HTMLDivElement & { __map?: mapboxgl.Map }).__map = instance;
+    }
 
     // **الحاويةُ تتبدّل فتتبدّل معها اللوحة** (2026-08-30): البطاقةُ تتوسّع
     // إلى ملء الشاشة، **و`mapbox-gl` يقيس مقاسَه مرّةً عند البناء** — فبلا
@@ -352,8 +430,39 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   }, [token]);
 
   // تبديل الستايل مع الوضع الليلي
+  //
+  // **لا عند البناء**: الستايلُ مضبوطٌ في المُنشئ، **ونداءٌ ثانٍ بالعنوان نفسِه يُطبَّق فرقاً** — يقارن الستايلَ الحيَّ بنسخةٍ
+  // نظيفةٍ فيمحو صبغَ `calmLook` **بلا `style.load` يعيده** (قِيس ٢٠٢٦-١٠-٠٤: خلفيةُ Mapbox الأصلية وأسماءٌ ظاهرة بعد الصبغ).
+  // **وعند التبديل تحميلٌ كاملٌ لا فرق** (`diff: false`) — فيقع `style.load` ويُصبغ النهارُ من جديد.
+  const styleApplied = useRef(false);
   useEffect(() => {
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+    if (!styleApplied.current) {
+      styleApplied.current = true;
+      return;
+    }
+    // أنواعُ mapbox تُلزم حقلَي الخطّ المحلّي في الخيارات — والمكتبةُ تقبل `diff` وحدَه
+    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT, {
+      diff: false,
+    } as Parameters<mapboxgl.Map["setStyle"]>[1]);
+  }, [dark]);
+
+  // **والعلاماتُ تُبنى من جديدٍ مع المظهر**: سيارةُ الليل ونبضتُه بألوان §1.1، وسيارةُ النهار ودبابيسُه بلغة الهوية — والعلامةُ
+  // لا تُعاد صياغتُها في مكانها. فتُرفع كلُّها هنا، **وكلُّ أثرٍ أدناه يعيد رسمَ ما يخصّه** (المظهرُ في تبعيّاته)
+  const firstTheme = useRef(true);
+  useEffect(() => {
+    if (firstTheme.current) {
+      firstTheme.current = false;
+      return;
+    }
+    for (const entry of carMarkers.current.values()) entry.marker.remove();
+    carMarkers.current.clear();
+    driverMarker.current?.marker.remove();
+    driverMarker.current = null;
+    drawnSkin.current = null;
+    for (const slot of [pickupMarker, dropoffMarker, myLocationMarker, searchPulse]) {
+      slot.current?.remove();
+      slot.current = null;
+    }
   }, [dark]);
 
   // ------------------------------------------------- حلقة التنعيم الواحدة
@@ -439,7 +548,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       // **والنادرةُ لا تصل هنا أصلاً**: الخلفيةُ ترسل البديلَ المنشورَ لمن
       // لا مركبةَ ظاهرةً له، فكلُّ من على الخريطة يحمل شيئاً — والغيابُ لا
       // يُميَّز عن الحضور.
-      const element = driverElement(driver.skin);
+      const element = driverElement(driver.skin, t2);
       // **والدورانُ من الصفّ لا يُخمَّن** — `map_rotates`: العلويّةُ
       // المرسومةُ تدور، والرندرُ الواقعيُّ ثابت. وهو نفسُ سطر العلامة
       // المُسنَدة، فلا قاعدتان لشيءٍ واحد.
@@ -470,7 +579,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         carMarkers.current.delete(ref);
       }
     }
-  }, [drivers, ensureLoop]);
+  }, [drivers, ensureLoop, t2]);
 
   // ------------------------------------------------- موقع الكبتن المُسنَد
   useEffect(() => {
@@ -513,7 +622,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     // (`rotationAlignment: "map"`)، والواقعيُّ **يبقى قائماً أمام القارئ**
     // (`"viewport"`) — فلا يستلقي على جنبه حين يلفّ الراكبُ الخريطة
     const rotates = driverSkin ? driverSkin.rotates : true;
-    const element = driverElement(driverSkin);
+    const element = driverElement(driverSkin, t2);
     if (rotates) element.style.rotate = `${driverLocation.heading ?? 0}deg`;
     driverMarker.current = {
       marker: new mapboxgl.Marker({
@@ -531,7 +640,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       duration: DRIVER_TWEEN_MS,
       rotates,
     };
-  }, [driverLocation, driverSkin, ensureLoop]);
+  }, [driverLocation, driverSkin, ensureLoop, t2]);
 
   // ------------------------------------------------ نبضةُ الموقع والبحث
   useEffect(() => {
@@ -545,14 +654,14 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     }
     if (!myLocationMarker.current) {
       myLocationMarker.current = new mapboxgl.Marker({
-        element: pulseElement("موقعي"),
+        element: t2 ? t2MeElement("موقعي") : pulseElement("موقعي"),
       })
         .setLngLat([showMyLocation.lng, showMyLocation.lat])
         .addTo(instance);
       return;
     }
     myLocationMarker.current.setLngLat([showMyLocation.lng, showMyLocation.lat]);
-  }, [showMyLocation]);
+  }, [showMyLocation, t2]);
 
   // نبضةٌ حول دبوس الانطلاق ما دام البحثُ جارياً — **وتتوقف عند القبول**:
   // نبضٌ يبقى بعد أن يُسنَد الكبتن يقول «ما زلنا نبحث» وقد وُجد
@@ -574,7 +683,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       return;
     }
     searchPulse.current.setLngLat([pickup.lng, pickup.lat]);
-  }, [searching, pickup]);
+  }, [searching, pickup, t2]);
 
   // ----------------------------------------------------- الدبابيس والخط
   useEffect(() => {
@@ -586,6 +695,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       point: Coordinates | null | undefined,
       color: string,
       label: string,
+      kind: "from" | "to",
     ) => {
       if (!point) {
         slot.current?.remove();
@@ -596,17 +706,19 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         slot.current.setLngLat([point.lng, point.lat]);
         return;
       }
-      slot.current = new mapboxgl.Marker({
-        element: pinElement(color, label),
-        anchor: "bottom",
-      })
+      // **في نهار TAXO 2.0 دائرةٌ ومربّعٌ يقعان على النقطة نفسِها** (مركزُهما لا طرفُ دبوس)، **والليلُ دبوسُه كما كان**
+      slot.current = new mapboxgl.Marker(
+        t2
+          ? { element: t2PinElement(kind, label), anchor: "center" }
+          : { element: pinElement(color, label), anchor: "bottom" },
+      )
         .setLngLat([point.lng, point.lat])
         .addTo(instance);
     };
 
-    place(pickupMarker, pickup, "var(--ok)", "نقطة الانطلاق");
-    place(dropoffMarker, dropoff, "var(--dng)", "الوجهة");
-  }, [pickup, dropoff]);
+    place(pickupMarker, pickup, "var(--ok)", "نقطة الانطلاق", "from");
+    place(dropoffMarker, dropoff, "var(--dng)", "الوجهة", "to");
+  }, [pickup, dropoff, t2]);
 
   useEffect(() => {
     const instance = map.current;
@@ -646,6 +758,31 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     }
 
     instance.addSource(id, { type: "geojson", data: line });
+    // **نهارُ TAXO 2.0: خطُّ الجمر فوق ظلٍّ خافت** (TaxoMap) — والتقطيعُ حيث لا مسارَ حقيقيّاً كما كان: خطٌّ مستقيمٌ بين نقطتين
+    // ليس طريقاً، **ورسمُه متّصلاً كما رسمته اللوحةُ يقول «هذا هو الطريق» وليس هو**
+    if (!dark && container.current) {
+      const css = getComputedStyle(container.current);
+      const accent = css.getPropertyValue("--t2-accent").trim();
+      const casing = css.getPropertyValue("--t2-map-casing").trim();
+      if (accent && casing) {
+        instance.addLayer({
+          id: `${id}-casing`,
+          type: "line",
+          source: id,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": casing, "line-width": 10 },
+        });
+        instance.addLayer({
+          id,
+          type: "line",
+          source: id,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": accent, "line-width": 5 },
+        });
+        instance.setPaintProperty(id, "line-dasharray", drawn ? [1, 0] : [1.5, 1.5]);
+        return;
+      }
+    }
     instance.addLayer({
       id,
       type: "line",
@@ -719,5 +856,6 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     );
   }
 
-  return <div ref={container} className={cn("h-full w-full", className)} />;
+  // **الحاويةُ تحمل رموزَ الهوية نهاراً** (`t2 t2-map`): منها تُقرأ ألوانُ الصبغ والخطّ، وبها تُرسم السيارةُ والدبابيسُ بأصناف CSS
+  return <div ref={container} className={cn("h-full w-full", t2 && "t2 t2-map", className)} />;
 });
