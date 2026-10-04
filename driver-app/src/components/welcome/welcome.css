@@ -398,6 +398,27 @@ html.pink .cw { --ember: #f08cc0; }
   100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
 }
 
+/* ── ذكرُ الخريطة — **ما تشترطه الرخص** (§61-أ: شأنٌ رخصيٌّ يقرّره البناء) ─────────
+   OpenStreetMap: «على الخريطة أو بجانبها» ما دامت معروضة؛ وOpen-Meteo: «إسنادٌ واضحٌ
+   لبرنامج Copernicus وإشارةٌ إلى Open-Meteo». **أسفلَ كلِّ زرّ** (الأزرارُ من ٣٤ فما
+   فوق)، **وحين تغطّي البطاقةُ الأسفل يصعد فوق الشريط العلويّ** — يسارُه خالٍ هناك. */
+.cw-credit {
+  position: absolute;
+  left: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: var(--mut);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cw.is-card .cw-credit {
+  bottom: auto;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cw *,
   .cw *::before,

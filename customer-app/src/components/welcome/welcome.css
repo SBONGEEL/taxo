@@ -547,6 +547,30 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   color: var(--mut2);
 }
 
+/* ── ذكرُ الخريطة — **ما تشترطه الرخص** (§61-أ: شأنٌ رخصيٌّ يقرّره البناء) ─────────
+   OpenStreetMap: «على الخريطة أو بجانبها» ما دامت معروضة، «والصورُ الثابتةُ تُسنَد
+   كالتفاعلية». وOpen-Meteo: «إسنادٌ واضحٌ لبرنامج Copernicus وإشارةٌ إلى Open-Meteo»
+   — فخطوطُ الارتفاع منه. **صغيرٌ مقروءٌ ولا يلتقط اللمس**، أسفلَ كلِّ زرٍّ وفوق
+   الحافّة الآمنة؛ **وحين تغطّي البطاقةُ الأسفل يصعد إلى الزاوية العليا**. */
+.rw-credit {
+  position: absolute;
+  left: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: var(--mut);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.is-card .rw-credit {
+  left: auto;
+  right: 12px;
+  bottom: auto;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+}
+
 /* **«مع تقليل الحركة: الإطارُ الأخيرُ مباشرة»** — من اللوحة نفسِها */
 @media (prefers-reduced-motion: reduce) {
   .rw *,

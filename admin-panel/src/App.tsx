@@ -9,7 +9,7 @@
  * والدولةُ الافتراضية من `/config` لا مكتوبةً هنا، فمزوّدُها تحت `Boot`.
  */
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -26,13 +26,14 @@ import {
 import type { ReactNode } from "react";
 
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { Welcome } from "@/components/welcome/Welcome";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { CountriesProvider } from "@/lib/countries";
 import { CountryProvider } from "@/lib/country";
 import { listenToPushTaps } from "@/lib/push";
 import { SessionProvider, useSession } from "@/lib/session";
-import { ThemeProvider } from "@/lib/theme";
+import { ThemeProvider, useTheme } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { LoginScreen } from "@/screens/Login";
 
@@ -217,6 +218,19 @@ function PushTaps() {
     };
   }, [navigate]);
   return null;
+}
+
+/** **الترحيبُ عند كلِّ فتحة** — للوحة وتطبيقِ المشرف معاً (قرارُ المالك ٢٠٢٦-١٠-٠٤، §61-٥).
+ *
+ * **ولا يأخذان غيرَه** حتى يُصمَّما: تكوُّنُ الـX ثمّ يمضي — الداخلُ إلى حيث كان، وغيرُ الداخل إلى
+ * شاشة الدخول القائمة **التي تحته أصلاً** (`Guarded`)، فلا تنقّلَ هنا ولا نداء. والسِمةُ سِمةُ
+ * اللوحة لحظةَ الفتح (ليليٌّ افتراضاً)، **والشعارُ يُحتوى على الحاسوب** (`welcome.css`).
+ */
+function WelcomeGate() {
+  const { dark } = useTheme();
+  const [shown, setShown] = useState(true);
+  if (!shown) return null;
+  return <Welcome dark={dark} onDone={() => setShown(false)} />;
 }
 
 function Anonymous({ children }: { children: ReactNode }) {
@@ -480,6 +494,7 @@ export default function App() {
                 </Routes>
                 </ErrorBoundary>
               </Suspense>
+              <WelcomeGate />
             </Router>
           </Boot>
         </SessionProvider>

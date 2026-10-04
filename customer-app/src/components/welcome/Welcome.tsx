@@ -236,6 +236,11 @@ export function Welcome({
         ) : null}
       </div>
 
+      {/* **ذكرُ الخريطة ما دامت معروضة** — شرطُ الرخصة لا زينة (§61-أ، `welcome.css`) */}
+      <span className="rw-credit" dir="ltr">
+        © OpenStreetMap · Copernicus DEM · Open-Meteo
+      </span>
+
       {phase === "intro" ? <span className="rw-skip">المس الشاشة للتخطّي</span> : null}
 
       {phase === "welcome" || phase === "entry" ? (
