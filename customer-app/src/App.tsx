@@ -106,6 +106,9 @@ const NotificationsScreen = lazy(() =>
     default: m.NotificationsScreen,
   })),
 );
+const RidesT2Screen = lazy(() =>
+  import("@/screens/t2/RidesT2").then((m) => ({ default: m.RidesT2Screen })),
+);
 const NotificationsT2Screen = lazy(() =>
   import("@/screens/t2/NotificationsT2").then((m) => ({
     default: m.NotificationsT2Screen,
@@ -367,7 +370,7 @@ export default function App() {
                         path="/rides"
                         element={
                           <Guarded>
-                            <RidesScreen />
+                            <ByTheme day={<RidesT2Screen />} night={<RidesScreen />} />
                           </Guarded>
                         }
                       />

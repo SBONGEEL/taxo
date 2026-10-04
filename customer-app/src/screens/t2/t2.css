@@ -22,6 +22,8 @@
   --plum-t: #f7e3ee;
   --warn: #a86a00;
   --err: #c5352b;
+  --err-t: #f8e1de;
+  --dim: #a8a398;
   min-height: 100%;
   background: var(--stone);
   color: var(--ink);
@@ -221,4 +223,135 @@ button.t2-row:enabled { cursor: pointer; }
   .t2-tab {
     transition: flex-grow 240ms ease, background-color 240ms ease, color 240ms ease, transform 120ms ease;
   }
+}
+
+/* ── رحلاتي (R12) ───────────────────────────────────────────────────────────
+   **صفحةُ جذرِ تبويبٍ تتمرّر في نفسها** كـ`Screen` القائم، وتحجز مكانَ الشريط العائم بـ`pb-nav` نفسِه */
+.t2-page {
+  height: 100%;
+  overflow-y: auto;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  padding-inline: 18px;
+}
+.t2-h1 {
+  margin: 0 0 14px;
+  font-size: 26px;
+  font-weight: 700;
+}
+.t2-month {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mut);
+  margin: 0 2px 8px;
+}
+.t2-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.t2-ride {
+  display: block;
+  background: var(--card);
+  border-radius: 22px;
+  padding: 13px 16px;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-ride:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-ride { transition: transform 120ms ease; }
+}
+.t2-ride-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.t2-ride-when {
+  font-size: 12.5px;
+  color: var(--mut);
+  white-space: nowrap;
+}
+/* شاراتُ الصفّ: الحالةُ كما رسمتها اللوحة، **والنزاعُ وحالُ السداد بجانبها من الصفّ القائم** */
+.t2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+.t2-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+  background: var(--stone);
+  color: var(--mut);
+}
+.t2-chip.ok { background: var(--mint); color: var(--ok); }
+.t2-chip.danger { background: var(--err-t); color: var(--err); }
+/* «لم تُدفع»/«بانتظار التأكيد» — **لونُ التنبيه من الهوية على الحجر**، لا لونٌ جديد */
+.t2-chip.warn { color: var(--warn); }
+.t2-route {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.t2-dot {
+  justify-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.t2-dot.to {
+  border-radius: 2px;
+  background: var(--ember);
+}
+.t2-route.off { color: var(--mut); }
+.t2-route.off .t2-dot { background: var(--dim); }
+.t2-place {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t2-ride-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--mut);
+}
+/* **يلتفّ ولا يُقطع**: القناةُ آخرُ السطر، وقطعُه يُخفي ما كان الصفُّ القائمُ يعرضه (القرار 37) */
+.t2-ride-meta {
+  min-width: 0;
+  line-height: 1.5;
+}
+.t2-fare {
+  flex: none;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.t2-more {
+  display: block;
+  width: 100%;
+  padding: 13px 0;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mut);
+  cursor: pointer;
 }
