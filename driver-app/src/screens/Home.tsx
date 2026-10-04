@@ -17,6 +17,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import { AUTO_ACCEPT_KM, autoAcceptEnabled } from "@/lib/driving-prefs";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -338,6 +340,21 @@ export function useHomeScreen() {
       setBusy(false);
     }
   }, []);
+
+  // **القبولُ التلقائيُّ للطلبات القريبة** (§٦١-ط/٧): مطفأٌ افتراضاً · دون كيلومترٍ إلى الراكب · **والتطبيقُ في المقدّمة وحدَه**
+  // (والعرضُ في الخلفية يبقى للشاشة الأصلية كما اليوم) · **وبالباب نفسِه الذي يضغطه الكبتن** — مرّةً لكلِّ عرض
+  const autoAccepted = useRef<string | null>(null);
+  useEffect(() => {
+    if (!offer || !autoAcceptEnabled() || document.visibilityState !== "visible") return;
+    if (!(offer.distanceKm < AUTO_ACCEPT_KM) || autoAccepted.current === offer.ride.id) return;
+    autoAccepted.current = offer.ride.id;
+    void run(async () => {
+      setRide(await acceptRide(offer.ride.id));
+      dismissOffer();
+    });
+    // العرضُ وحدَه يطلقه — `run` و`setRide` و`dismissOffer` ثابتة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offer]);
 
   async function advance() {
     if (!ride) return;

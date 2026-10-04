@@ -10,6 +10,7 @@
  */
 
 import type { Ride } from "@/api/types";
+import { navApp, type NavApp } from "@/lib/driving-prefs";
 
 export type MapTarget = {
   lat: number;
@@ -88,11 +89,21 @@ function isIOS(): boolean {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
-/** الروابطُ الثلاثة بالترتيب — **والويبُ آخرُها وهو ما يجعل الزرَّ لا يموت**. */
-export function linksFor(target: MapTarget): string[] {
+/** الروابطُ الثلاثة بالترتيب — **والويبُ آخرُها وهو ما يجعل الزرَّ لا يموت**.
+ *
+ * **و«تطبيقُ الملاحة» يختار** (§٦١-ط/٦): «Waze» برابطه العامّ (يفتح التطبيقَ إن وُجد وإلا الويب) · «خرائط قوقل» برابط قوقل
+ * العامّ بطلب الملاحة (وفي iOS تطبيقُه أوّلاً) · **و«اختيار النظام» — الافتراضيُّ — ما كان هنا حرفاً**.
+ */
+export function linksFor(target: MapTarget, app: NavApp = navApp()): string[] {
   const { lat, lng, label } = target;
   const point = `${lat},${lng}`;
   const web = `https://www.google.com/maps/dir/?api=1&destination=${point}&travelmode=driving`;
+
+  if (app === "waze") return [`https://waze.com/ul?ll=${point}&navigate=yes`, web];
+  if (app === "google") {
+    const navigate = `${web}&dir_action=navigate`;
+    return isIOS() ? [`comgooglemaps://?daddr=${point}&directionsmode=driving`, navigate] : [navigate];
+  }
 
   if (isIOS()) {
     return [

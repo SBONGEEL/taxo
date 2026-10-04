@@ -6,7 +6,8 @@
  * بأيقونةٍ ومفتاحٍ بشكلها.
  *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`TAXO2-DESIGN-CORRECTIONS.md` §١٩):
- * - **«قبول تلقائي للطلبات القريبة» · «طلبات المطار» · «تطبيق الملاحة» · «صوت الإرشاد»**: لا شيءَ منها في التطبيق.
+ * - **«قبول تلقائي للطلبات القريبة» و«تطبيق الملاحة» بُنيا بقرار المالك** (§٦١-ط/٦–٧) تفضيلين على الجهاز (`lib/driving-prefs`).
+ *   **و«طلبات المطار» و«صوت الإرشاد» «قريباً»** (§٦١-ط/٨–٩): لا رحلاتِ مطارٍ يحرّكها المفتاح، والإرشادُ ينتظر أصواتَ TAXO.
  * - **«الخدمة النسائية — للكبتنات، استقبال الراكبات فقط»** مفتاحاً: التفضيلُ في التطبيق **ثلاثيٌّ لكلِّ كبتن**
  *   (الجميع · النساء فقط · الرجال فقط) — فبقي ثلاثياً بشرحه.
  * - **«اللغة»**: محذوفةٌ بقرار المالك (§61). **و«تسجيل الخروج»**: بابُه في «حسابي» — وبابان لفعلٍ واحدٍ يفترقان.
@@ -16,10 +17,11 @@
  * وتقاريرُ الأعطال، وإشعاراتُ العروض، والسِمةُ الوردية.
  */
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { biometryLabel } from "@/lib/biometric";
+import { NAV_APPS, autoAcceptEnabled, navApp, setAutoAccept, setNavApp, type NavApp } from "@/lib/driving-prefs";
 import { useCaptainSettings } from "@/screens/Settings";
 
 import "@/taxo2";
@@ -67,6 +69,19 @@ function Toggle({
   );
 }
 
+/** صفٌّ لما يُرسم ولا يعمل بعد — **«قريباً» في موضع المفتاح**، فلا مفتاحَ يُحفظ ولا يفعل شيئاً. */
+function Soon({ icon, title }: { icon: string; title: string }) {
+  return (
+    <div className="t2-srow" aria-disabled="true">
+      <span className="t2-icon t2-srow-icon" aria-hidden="true">{icon}</span>
+      <span className="t2-srow-main">
+        <span className="t2-srow-title">{title}</span>
+      </span>
+      <span className="t2-soon">قريباً</span>
+    </div>
+  );
+}
+
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section>
@@ -111,6 +126,10 @@ export function SettingsT2Screen() {
     done,
     error,
   } = useCaptainSettings();
+  // **تفضيلا القيادة على الجهاز** (§٦١-ط/٦–٧) — يُقرآن مرّةً ويُكتبان مع كلِّ تبديل
+  const [autoAccept, setAutoAcceptState] = useState(autoAcceptEnabled);
+  const [nav, setNavState] = useState<NavApp>(navApp);
+  const [picking, setPicking] = useState(false);
 
   return (
     <div className="t2 t2-settings scr">
@@ -122,6 +141,17 @@ export function SettingsT2Screen() {
       </div>
 
       <Group label="استقبال الطلبات">
+        <Toggle
+          icon="bolt"
+          title="قبول تلقائي للطلبات القريبة"
+          hint="أقل من 1 كم فقط — والتطبيقُ مفتوح"
+          on={autoAccept}
+          onToggle={() => {
+            setAutoAccept(!autoAccept);
+            setAutoAcceptState(!autoAccept);
+          }}
+        />
+        <Soon icon="flight_takeoff" title="طلبات المطار" />
         {/* تفضيلُ جنس الركاب — **دائمٌ لا لكل رحلة، ولكلِّ كبتن**، ولا يظهر والخدمةُ مطفأةٌ في دولته (10-ج) */}
         {womenService ? (
           <div className="t2-srow tall">
@@ -165,6 +195,45 @@ export function SettingsT2Screen() {
           on={offerSound}
           onToggle={toggleOfferSound}
         />
+      </Group>
+
+      <Group label="الملاحة">
+        <button
+          type="button"
+          className="t2-srow"
+          aria-expanded={picking}
+          onClick={() => setPicking(!picking)}
+        >
+          <span className="t2-icon t2-srow-icon" aria-hidden="true">navigation</span>
+          <span className="t2-srow-main">
+            <span className="t2-srow-title">تطبيق الملاحة</span>
+          </span>
+          <span className="t2-srow-value">{NAV_APPS.find((app) => app.value === nav)?.label}</span>
+          <span className="t2-icon t2-chev" aria-hidden="true">{picking ? "expand_more" : "chevron_left"}</span>
+        </button>
+        {picking ? (
+          <div className="t2-navpick" role="radiogroup" aria-label="تطبيق الملاحة">
+            {NAV_APPS.map((app) => (
+              <button
+                key={app.value}
+                type="button"
+                role="radio"
+                aria-checked={nav === app.value}
+                className={nav === app.value ? "t2-navpick-opt on" : "t2-navpick-opt"}
+                onClick={() => {
+                  setNavApp(app.value);
+                  setNavState(app.value);
+                  setPicking(false);
+                }}
+              >
+                <span className="t2-navpick-dot" aria-hidden="true" />
+                {app.label}
+                {app.value === "system" ? <span className="t2-navpick-sub">كما اليوم — يسألك الهاتف</span> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <Soon icon="record_voice_over" title="صوت الإرشاد" />
       </Group>
 
       <Group label="التطبيق">
