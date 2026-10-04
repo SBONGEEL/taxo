@@ -106,6 +106,9 @@ const NotificationsScreen = lazy(() =>
     default: m.NotificationsScreen,
   })),
 );
+const AccountT2Screen = lazy(() =>
+  import("@/screens/t2/AccountT2").then((m) => ({ default: m.AccountT2Screen })),
+);
 const WalletT2Screen = lazy(() =>
   import("@/screens/t2/WalletT2").then((m) => ({ default: m.WalletT2Screen })),
 );
@@ -429,7 +432,7 @@ export default function App() {
                         path="/account"
                         element={
                           <Guarded>
-                            <AccountScreen />
+                            <ByTheme day={<AccountT2Screen />} night={<AccountScreen />} />
                           </Guarded>
                         }
                       />

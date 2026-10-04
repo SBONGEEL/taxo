@@ -516,3 +516,94 @@ button.t2-row:enabled { cursor: pointer; }
 .t2-tx-amt.in { color: var(--ok); }
 .t2-tx-after { font-size: 11px; color: var(--mut); white-space: nowrap; }
 .t2-chev { color: var(--dim); }
+
+/* ── حسابي (R15) ─────────────────────────────────────────────────────────── */
+.t2-account { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+.t2-prof {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+/* **الحرفُ الأولُ في دائرة**: اللوحةُ ترسمه برقوقاً لصاحبة الخدمة النسائية — **فالسِمةُ الورديةُ تجعله كذلك**،
+   والجمرُ في غيرها (لم يُرسم: §١٦ من التصحيحات) */
+.t2-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  flex: none;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--ember);
+  background: var(--peach);
+  color: var(--ember-dk);
+  font-size: 26px;
+  font-weight: 700;
+}
+html.pink .t2-avatar { background: var(--plum-t); }
+.t2-prof-main { flex: 1; min-width: 0; }
+.t2-prof-name { font-size: 20px; font-weight: 700; }
+.t2-prof-phone {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--mut);
+  text-align: end;
+}
+.t2-edit .t2-icon { font-size: 20px; }
+.t2-arows { margin-bottom: 10px; }
+.t2-arow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 50px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-arow:last-child { border-bottom: 0; }
+.t2-arow:disabled { opacity: 0.6; cursor: default; }
+.t2-arow > .t2-icon:first-child { font-size: 21px; }
+.t2-arow .t2-chev { font-size: 20px; }
+.t2-arow.tall { height: auto; padding: 12px 0; }
+.t2-arow-label { flex: 1; min-width: 0; font-size: 14.5px; }
+.t2-arow-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--mut);
+}
+.t2-arow-trail { font-size: 13px; color: var(--mut); }
+.t2-arow-note {
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--warn);
+}
+.t2-logout,
+.t2-endall {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.t2-logout {
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--err);
+}
+.t2-endall { font-size: 12px; color: var(--mut); }

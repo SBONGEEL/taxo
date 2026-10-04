@@ -23,7 +23,7 @@ import { ErrorNote } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
 import { DrawerSheet } from "@/components/ui/Sheet";
 import { useScheduledRides } from "@/lib/bookings";
-import { blockedReason, switchToDriver } from "@/lib/switch-app";
+import { useSwitchToDriver } from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -131,7 +131,12 @@ export function AccountScreen() {
 /** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١، قرارُ المالك ٢٠٢٦-١٠-٠٤) — لهاتفٍ أو
  *  حاسوبٍ ضاع. **ويُسأل قبل أن يقع**: يُخرج صاحبَ الحساب من هذا الجهاز أيضاً،
  *  وفعلٌ يُخرج من كلِّ مكانٍ لا يقع بلمسةٍ عابرة. */
-function SignOutEverywhereRow() {
+export function SignOutEverywhereRow({
+  className = "pressable w-full p-10 text-center text-12 text-muted",
+}: {
+  /** شكلُ الزرّ وحدَه — **والورقةُ وفعلُها واحدٌ للشاشتين** (القائمة وR15). */
+  className?: string;
+} = {}) {
   const { signOutEverywhere } = useSession();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -151,11 +156,7 @@ function SignOutEverywhereRow() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="pressable w-full p-10 text-center text-12 text-muted"
-      >
+      <button type="button" onClick={() => setOpen(true)} className={className}>
         إنهاء كل الجلسات
       </button>
       <DrawerSheet open={open} onOpenChange={(next) => !busy && setOpen(next)} title="إنهاء كل الجلسات">
@@ -180,23 +181,8 @@ function SignOutEverywhereRow() {
 
 /** صفُّ التبديل — **يرسم ما يقدر عليه، ويقول سببَه إن مُنع**. */
 function SwitchRow() {
-  const [busy, setBusy] = useState(false);
-  const [blocked, setBlocked] = useState<string | null>(null);
-
-  async function press() {
-    setBusy(true);
-    setBlocked(null);
-    try {
-      // `false` تعني **غير مثبَّت** — والصفحةُ تشرح وتعطي رابطَ التنزيل
-      if (!(await switchToDriver())) window.location.href = "/account/switch/driver-not-installed";
-    } catch (caught) {
-      // نصُّ المنع من الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17)
-      // **لا رسالةَ إلا للمنع المعلن** — والفتحُ نفسُه لا يفشل
-      setBlocked(blockedReason(caught));
-    } finally {
-      setBusy(false);
-    }
-  }
+  // الفعلُ وحالُه من بيتهما (`lib/switch-app.ts::useSwitchToDriver`) — **وشاشةُ R15 تقرأ منه نفسِه**
+  const { busy, blocked, press } = useSwitchToDriver();
 
   return (
     <div className="mt-14 overflow-hidden rounded-16 border border-line bg-surface">

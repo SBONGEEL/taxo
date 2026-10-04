@@ -23,6 +23,7 @@
 
 import { AppLauncher } from "@capacitor/app-launcher";
 import { Capacitor } from "@capacitor/core";
+import { useState } from "react";
 
 import { startHandoff } from "@/api/endpoints";
 import { ApiError } from "@/api/client";
@@ -82,4 +83,32 @@ export function blockedReason(error: unknown): string | null {
     return error.message;
   }
   return null;
+}
+
+/** **صفُّ التبديل في «حسابي» — ضغطُه وحالُه**، بيتٌ واحدٌ للشاشة القائمة وشاشة TAXO 2.0 (R15):
+ *  يرسم كلٌّ منهما صفَّه بلغته، **والفعلُ واحد** — فلا يفترقان أوّلَ ما يُعدَّل أحدُهما. */
+export function useSwitchToDriver(): {
+  busy: boolean;
+  blocked: string | null;
+  press: () => Promise<void>;
+} {
+  const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
+
+  async function press() {
+    setBusy(true);
+    setBlocked(null);
+    try {
+      // `false` تعني **غير مثبَّت** — والصفحةُ تشرح وتعطي رابطَ التنزيل
+      if (!(await switchToDriver())) window.location.href = NOT_INSTALLED_PATH;
+    } catch (caught) {
+      // نصُّ المنع من الخلفية — ولا تُكتب هنا عربيةٌ ثانية (§17)
+      // **لا رسالةَ إلا للمنع المعلن** — والفتحُ نفسُه لا يفشل
+      setBlocked(blockedReason(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return { busy, blocked, press };
 }
