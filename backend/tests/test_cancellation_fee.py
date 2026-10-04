@@ -252,9 +252,12 @@ async def test_a_gender_mismatch_cancellation_still_costs_nothing(
     await enable_features(session_factory, "women_service_enabled")
     setup = await _setup(client, admin_headers, session_factory, balance="20.000")
     rider = setup["rider"]
-    await client.patch(
-        "/users/me", json={"gender": "female"}, headers=rider["headers"]
+    # **البابُ `/auth/me` والردُّ يُقرأ** (قِيس ٢٠٢٦-١٠-٠٤): كان يرسل إلى `/users/me` — ولا بابَ بهذا الاسم — ولا يقرأ الردّ،
+    # فبقيت الراكبةُ بلا جنسٍ ومرّ الاختبارُ لأن الكبتنةَ على «الجميع» (الصحيحُ بالصدفة يستر الخاطئَ بالبنية — `GUARDS.md`)
+    declared = await client.patch(
+        "/auth/me", json={"gender": "female"}, headers=rider["headers"]
     )
+    assert declared.status_code == 200, declared.text
     # وكبتنةٌ مختومةٌ أنثى: الطلبُ المجنَّس لا يصل رجلاً أصلاً (المطابقةُ في
     # `dispatch.eligible_driver_ids`)، فالحالُ الواقعةُ أن تصلها هي ثم تُلغي
     # الراكبةُ بحجّة عدم التطابق — والحارسُ القائمُ يقبل السببَ لأن رحلتَها
