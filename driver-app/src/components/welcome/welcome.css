@@ -1,0 +1,411 @@
+/* «نقطة اللقاء» — ترحيبُ الكبتن (TAXO 2.0 · Claude Design «Welcome»: C0 · C1 · C2 · C3 · C4).
+ *
+ * **القيمُ من اللوحة حرفاً**. والمقدّمةُ (C0) تُبنى مفاتيحُها في الشيفرة بمولّد
+ * اللوحة نفسِه (`tr`) لأن الكاميرا تتبع السيارةَ على أربعَ عشرةَ نقطةً من المسار
+ * — **مرّةً واحدةً تقف عند إطارها الأخير** (4.4ث)، وما بعده في اللوحة رجوعٌ إلى
+ * أوّل الحلقة. وهنا ما لا يتغيّر: الشاشاتُ الثلاثُ والانتقالُ إلى بطاقة التسجيل.
+ *
+ * والمنحنيات بأسمائها في اللوحة:
+ *   o  = cubic-bezier(.2,.8,.2,1)   ·   io = cubic-bezier(.65,0,.35,1)
+ *
+ * **ولا صنفَ Tailwind هنا** — قيمُ TAXO 2.0 ليست في سلّم `DESIGN.md` §6 بعد.
+ */
+
+.cw {
+  --asphalt: #0e1013;
+  --paper: #f2efe8;
+  --ember: #ff6a33;
+  --mut: #9097a1;
+  --mut2: #6b717a;
+  --sub: #b9bec6;
+  --edge: #2b3038;
+  --dot: #3a3f48;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  background: var(--asphalt);
+  color: var(--paper);
+  font-family: "Readex Pro", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
+}
+/* **الكبتنةُ في الوضع النسائيّ**: البرقوقُ الفاتح لونُ الخدمة في تطبيق الكبتن
+   (`Identity`: #F08CC0). والترحيبُ لم يُرسم به بعد — فهذا يحفظ ما كان يفعله
+   الشعارُ الورديُّ في الترحيبية القديمة لا أكثر. */
+html.pink .cw { --ember: #f08cc0; }
+.cw.is-leaving {
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  pointer-events: none;
+}
+
+.cw-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 390px;
+  height: 844px;
+  transform: translate(-50%, -50%) scale(var(--cw-scale, 1));
+}
+.cw-cam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 390px;
+  height: 844px;
+  transform-origin: 0 0;
+  transform: translate(-382.78px, -1053.42px) scale(3);
+}
+.cw-cam img { display: block; width: 390px; height: 844px; max-width: none; }
+.cw-maplabel {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(0.3333);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #59606a;
+  white-space: nowrap;
+}
+
+/* ── الخريطةُ الثابتة للشاشات الثلاث — تنزلق ببطءٍ أقلّ من النصّ ─────────── */
+.cw-map {
+  position: absolute;
+  width: 1170px;
+  height: 2532px;
+  max-width: none;
+  transition: left 0.9s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cw-veil-solid,
+.cw-veil-grad,
+.cw-dim {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cw-veil-solid { background: var(--asphalt); opacity: 0.84; }
+.cw-veil-grad {
+  background: linear-gradient(rgba(14, 16, 19, 0.55) 0%, rgba(14, 16, 19, 0.3) 34%, rgba(14, 16, 19, 0.92) 54%, #0e1013 62%);
+  opacity: 0;
+}
+.cw-dim { background: var(--asphalt); opacity: 0; transition-delay: 0.12s; }
+.cw.page-1 .cw-veil-solid,
+.cw.page-2 .cw-veil-solid { opacity: 0; }
+.cw.page-1 .cw-veil-grad,
+.cw.page-2 .cw-veil-grad { opacity: 1; }
+.cw.is-card .cw-dim { opacity: 0.55; }
+
+.cw-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #4a5059;
+  white-space: nowrap;
+  transition: opacity 0.4s;
+}
+.cw.page-1 .cw-label,
+.cw.page-2 .cw-label { opacity: 0; }
+.cw-pin {
+  position: absolute;
+  left: 195px;
+  top: 300px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 99px;
+  background: rgba(14, 16, 19, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.4s 0.3s;
+}
+.cw-pin::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ember); }
+.cw.page-1 .cw-pin.p1,
+.cw.page-2 .cw-pin.p2 { opacity: 1; }
+
+/* ── الشعار الكبير، ثم الصغيرُ في الأعلى ─────────────────────────────────── */
+.cw-word {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 360px;
+  transform: translateY(-50%);
+  text-align: center;
+  font-family: "Unbounded", "Readex Pro", sans-serif;
+  font-weight: 800;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  color: var(--paper);
+}
+.cw-xb { position: relative; display: inline-block; width: 51.61px; height: 49.55px; margin: 0 4.13px; vertical-align: -1.03px; }
+.cw-xb > span { position: absolute; left: 50%; top: 50%; width: 64px; height: 14.45px; border-radius: 8.26px; }
+.cw-xb > span:first-child { background: var(--paper); transform: translate(-50%, -50%) rotate(-50deg); }
+.cw-xb > span:last-child { background: var(--ember); transform: translate(-50%, -50%) rotate(50deg); }
+.cw-badge {
+  position: absolute;
+  top: 410px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--asphalt);
+  background: var(--paper);
+  padding: 4px 12px;
+  border-radius: 99px;
+}
+/* «والشعارُ يصغر إلى الأعلى» — إلى موضعه في شريط الرأس */
+.cw-biglogo {
+  position: absolute;
+  inset: 0;
+  transform-origin: 195px 360px;
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s 0.35s;
+}
+.cw.page-1 .cw-biglogo,
+.cw.page-2 .cw-biglogo { transform: translate(108px, -292px) scale(0.297); opacity: 0; }
+.cw-top {
+  position: absolute;
+  top: calc(58px + env(safe-area-inset-top, 0px));
+  left: 22px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  opacity: 0;
+  transition: opacity 0.3s 0.55s;
+  pointer-events: none;
+}
+.cw.page-1 .cw-top,
+.cw.page-2 .cw-top { opacity: 1; pointer-events: auto; }
+.cw-top .cw-mini {
+  font-family: "Unbounded", sans-serif;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.cw-top .cw-mini .cw-xb { width: 15.32px; height: 14.71px; margin: 0 1.23px; vertical-align: -0.31px; }
+.cw-top .cw-mini .cw-xb > span { width: 19px; height: 4.29px; border-radius: 2.45px; }
+.cw-top .cw-pill { font-size: 11px; font-weight: 700; color: var(--asphalt); background: var(--paper); padding: 3px 9px; border-radius: 99px; }
+.cw-textbtn {
+  border: 0;
+  background: none;
+  padding: 8px 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+/* ── النصوص ─────────────────────────────────────────────────────────────── */
+.cw-copy {
+  position: absolute;
+  top: 470px;
+  left: 28px;
+  right: 28px;
+  transition: opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cw-copy.centered { text-align: center; }
+.cw-copy.off-next { opacity: 0; transform: translateX(-40px); pointer-events: none; }
+.cw-copy.off-prev { opacity: 0; transform: translateX(40px); pointer-events: none; }
+.cw-copy h1 { margin: 0; font-weight: 700; line-height: 1.3; text-wrap: pretty; }
+.cw-copy.centered h1 { font-size: 38px; }
+.cw-copy:not(.centered) h1 { font-size: 36px; }
+.cw-copy p { margin: 14px 0 0; font-size: 15px; line-height: 1.75; color: var(--sub); }
+.cw-copy.centered p { margin-left: auto; margin-right: auto; max-width: 31ch; }
+.cw-copy:not(.centered) p { max-width: 30ch; }
+.cw-pager { display: flex; gap: 6px; }
+.cw-pager span { width: 8px; height: 4px; border-radius: 2px; background: var(--dot); transition: width 0.3s, background 0.3s; }
+.cw-pager span.on { width: 22px; background: var(--ember); }
+.cw-copy .cw-pager { margin-bottom: 22px; }
+.is-card .cw-copy,
+.is-card .cw-login,
+.is-card .cw-top { opacity: 0; transform: translateY(-14px); pointer-events: none; }
+
+/* ── الأزرار في الأسفل ───────────────────────────────────────────────────── */
+.cw-actions {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(42px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.cw-ember {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--ember);
+  color: var(--asphalt);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cw-ember svg,
+.cw-cta-label svg { width: 22px; height: 22px; fill: currentColor; }
+.cw-login {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(42px + env(safe-area-inset-bottom, 0px));
+  height: 52px;
+  border-radius: 18px;
+  border: 1.5px solid var(--edge);
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.25s, transform 0.3s;
+}
+
+/* ── C4 · «سجّل كشريك» يتمدّد ويصير بطاقةً داكنة ──────────────────────────── */
+.cw-cta {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  height: 56px;
+  border-radius: 18px;
+  background: var(--ember);
+  border-top: 1px solid transparent;
+  overflow: hidden;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition:
+    left 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    right 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    bottom 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    height 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    border-radius 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    background-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    border-top-color 0.3s 0.5s;
+}
+.cw-cta.is-pressed { animation: cw-press 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes cw-press { 50% { transform: scale(0.97); } }
+.is-card .cw-cta {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(470px, calc(100% - 96px));
+  border-radius: 32px 32px 0 0;
+  background: #15181d;
+  border-top-color: #262a31;
+  cursor: default;
+}
+.cw-cta-label {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  color: var(--asphalt);
+  font-size: 16px;
+  font-weight: 700;
+  transition: opacity 0.12s 0.08s;
+}
+.is-card .cw-cta-label { opacity: 0; pointer-events: none; }
+.cw-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 12px 22px calc(16px + env(safe-area-inset-bottom, 0px));
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.is-card .cw-card { opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0.48s; }
+.cw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--dot); margin: 0 auto 18px; }
+.cw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--paper); }
+.cw-card .cw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--mut); }
+.cw-card .cw-picker { margin-top: 14px; }
+.cw-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border-radius: 16px;
+  background: var(--asphalt);
+  border: 1.5px solid var(--edge);
+  box-sizing: border-box;
+  direction: ltr;
+}
+.cw-field:focus-within { border-color: var(--ember); }
+.cw-field .cw-dial { font-size: 15px; font-weight: 600; color: var(--paper); }
+.cw-field .cw-sep { width: 1px; height: 24px; background: var(--edge); }
+.cw-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  color: var(--paper);
+  caret-color: var(--ember);
+}
+.cw-go {
+  width: 100%;
+  height: 56px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--ember);
+  color: var(--asphalt);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cw-go:disabled { opacity: 0.35; cursor: default; }
+.cw-foot { margin: 14px 0 0; text-align: center; font-size: 12px; color: var(--mut2); }
+
+.cw-skip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--mut2);
+}
+@keyframes cw-pz {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cw *,
+  .cw *::before,
+  .cw *::after {
+    animation-duration: 0.001s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    transition-delay: 0s !important;
+  }
+}

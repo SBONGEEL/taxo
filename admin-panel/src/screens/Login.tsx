@@ -35,8 +35,8 @@ function toNational(input: string, dialCode: string): string {
   return digits.replace(/^0+/, "");
 }
 
+// **ولا رسالةَ خمول** (SPEC §60): الدخولُ يبقى حتى يخرج صاحبُه
 const REASON_NOTE: Record<string, string> = {
-  idle: "انتهت جلستك بعد فترة خمول — أعد الدخول للمتابعة.",
   expired: "انتهت صلاحية جلستك — أعد الدخول للمتابعة.",
 };
 

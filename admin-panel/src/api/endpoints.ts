@@ -310,13 +310,15 @@ export const disableTotp = (proof: { password: string; code?: string; recovery_c
 
 export const getSecurityPolicy = () => api.get<SecurityPolicy>("/admin/security");
 
-export const updateSecurityPolicy = (body: {
-  admin_totp_required?: boolean;
-  admin_idle_timeout_minutes?: number;
-}) => api.put<SecurityPolicy>("/admin/security", body);
+// **ولا مهلةَ خمولٍ في الجسم** (SPEC §60): خرجت من الخلفية والشاشة معاً
+export const updateSecurityPolicy = (body: { admin_totp_required?: boolean }) =>
+  api.put<SecurityPolicy>("/admin/security", body);
 
 export const logout = (refreshToken: string) =>
   api.post<void>("/auth/logout", { refresh_token: refreshToken });
+
+/** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١) — كلُّ أجهزة الحساب، وهذا منها. */
+export const revokeAllSessions = () => api.post<void>("/auth/sessions/revoke-all");
 
 // ------------------------------------------------------------ الحملات
 

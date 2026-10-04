@@ -23,6 +23,7 @@ from app.core.config import settings
 from app.core import app_scope
 from app.core.deps import (
     ClientIP,
+    CurrentSessionId,
     CurrentUser,
     DbSession,
     RedisDep,
@@ -130,14 +131,13 @@ async def _guard(redis, *keys_and_caps) -> None:
 
 
 async def _issue(session, redis, user: User) -> TokenPair:
-    """كلُّ إصدارِ زوجِ توكناتٍ يمرّ من هنا — ومعه مهلةُ خمول اللوحة.
+    """كلُّ إصدارِ زوجِ توكناتٍ يمرّ من هنا — **جلسةٌ جديدةٌ في القاعدة**.
 
-    بابٌ واحد لأن الطبقةَ الأولى من المهلة (القسم 14.1) هي عمرُ مفتاح الـ
-    refresh: مسارٌ يصدر التوكنات بنفسه ينسى المهلةَ، فتبقى جلسةُ مشرفٍ حيّةً
-    أياماً لأن كلمةَ مروره كُتبت من مسارٍ آخر.
+    **ولا مهلةَ خمولٍ بعد اليوم** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤): الدخولُ
+    يبقى حتى يخرج صاحبُه في كلِّ تطبيق، **واللوحةُ منها**. وبقي البابُ واحداً لأن
+    الجلسةَ صفٌّ يُكتب — ومسارٌ يصدر التوكنات بنفسه يصدر توكناً لجلسةٍ لا وجودَ لها.
     """
-    ttl = await security_settings.refresh_ttl_for(session, user)
-    return await token_service.issue_token_pair(redis, user, refresh_ttl_seconds=ttl)
+    return await token_service.issue_token_pair(session, user)
 
 
 # ------------------------------------------------------------------ الوصف
@@ -686,6 +686,8 @@ async def reset_password(
     verification.mark_verified(user)
     await session.commit()
     await session.refresh(user)
+    # **مقابسُ الجلسات التي أُبطلت تُغلق بعد الالتزام** (SPEC §60)
+    await token_service.kick(redis, user.id)
 
     await rate_limit.reset(redis, f"password-reset:phone:{phone}")
     tokens = await _issue(session, redis, user)
@@ -699,20 +701,30 @@ async def reset_password(
 async def refresh(
     payload: RefreshRequest, session: DbSession, redis: RedisDep
 ) -> TokenPair:
-    user_id, _ = await token_service.rotate_refresh_token(redis, payload.refresh_token)
-
-    user = await session.get(User, user_id)
-    if user is None or user.is_blocked or user.deactivated_at is not None:
-        # حساب محذوف أو محظور: أبطل بقية جلساته أيضاً
-        await token_service.revoke_all_for_user(redis, user_id)
-        raise InvalidToken()
-
-    return await _issue(session, redis, user)
+    """التدوير — **والجلسةُ تبقى حتى يخرج صاحبُها** (SPEC §60). الحسابُ المحظورُ أو
+    المُغلَقُ يُرفض وتُبطل كلُّ جلساته، كما كان (`token_service.rotate`)."""
+    _, tokens = await token_service.rotate(session, redis, payload.refresh_token)
+    return tokens
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(payload: RefreshRequest, redis: RedisDep) -> None:
-    await token_service.revoke_refresh_token(redis, payload.refresh_token)
+async def logout(payload: RefreshRequest, session: DbSession, redis: RedisDep) -> None:
+    """**ينهي الجلسةَ على الخادم** لا على الجهاز وحدَه (SPEC §60-ب/٢)."""
+    await token_service.revoke_session(session, redis, payload.refresh_token)
+
+
+@router.post("/sessions/revoke-all", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_all_sessions(
+    user: CurrentUser, session: DbSession, redis: RedisDep
+) -> None:
+    """**إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١، قرارُ المالك ٢٠٢٦-١٠-٠٤) — ليُخرج صاحبُ
+    الحساب هاتفاً أو حاسوباً ضاع من بعيد. **كلُّ جلساته وهذه منها**، ورموزُ الإشعار
+    لكلِّ أجهزته، ورمزُ الحضور — ثمّ تُغلق مقابسُه المفتوحة.
+
+    **ولكلِّ من يدخل** — راكباً وكبتناً وطاقمَ لوحة: `CurrentUser` لا بوّابةَ
+    عاملٍ ثانٍ أمامه، فمشرفٌ مُلزَمٌ لم يسجّل عاملَه بعد يملك أن يُخرج حاسوباً ضاع.
+    """
+    await token_service.end_all_sessions(session, redis, user)
 
 
 @router.get("/me", response_model=UserOut)
@@ -738,9 +750,6 @@ async def totp_status(user: SecuritySelfUser, session: DbSession) -> TotpStatusO
         recovery_verified_at=record.recovery_codes_verified_at if record else None,
         recovery_codes_remaining=await totp.remaining_recovery_codes(session, user.id),
         required=await security_settings.totp_required_for(session, user),
-        session_idle_timeout_minutes=await security_settings.idle_timeout_minutes(
-            session
-        ),
     )
 
 
@@ -788,9 +797,6 @@ async def totp_verify_recovery(
         recovery_verified_at=record.recovery_codes_verified_at,
         recovery_codes_remaining=remaining,
         required=await security_settings.totp_required_for(session, user),
-        session_idle_timeout_minutes=await security_settings.idle_timeout_minutes(
-            session
-        ),
     )
 
 
@@ -800,6 +806,7 @@ async def totp_disable(
     user: SecuritySelfUser,
     session: DbSession,
     redis: RedisDep,
+    current_sid: CurrentSessionId,
 ) -> None:
     """يُطفئ العامل **بكلمةِ المرور وعاملٍ حاضرٍ معاً** — ويُرفض وقتَ الإلزام.
 
@@ -819,7 +826,17 @@ async def totp_disable(
         session, user, code=payload.code, recovery_code=payload.recovery_code
     )
     await session.commit()
-    await token_service.revoke_all_for_user(redis, user.id)
+    # **جلساتُه الأخرى لا هذه** — وهو ما تقوله الشاشةُ منذ بُنيت («وأُبطلت جلساتك
+    # الأخرى»). **وكان قبل §60 يمحو مفتاحَ هذه أيضاً** فتسقط بعد ربع ساعة.
+    await token_service.revoke_all_for_user(
+        session,
+        redis,
+        user.id,
+        reason=token_service.REVOKE_TWO_FACTOR_OFF,
+        except_sid=current_sid,
+    )
+    await session.commit()
+    await token_service.kick(redis, user.id, keep=current_sid)
 
     await notifications.publish_security_event(
         session,

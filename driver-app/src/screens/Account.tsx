@@ -16,7 +16,8 @@ import { ChevronLeft } from "lucide-react";
 
 import { getMySubscription } from "@/api/endpoints";
 import type { DriverStatus, MySubscription } from "@/api/types";
-import { Spinner } from "@/components/ui/Feedback";
+import { Button } from "@/components/ui/Button";
+import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useGarage } from "@/lib/garage";
@@ -300,9 +301,73 @@ export function AccountScreen() {
         >
           تسجيل الخروج
         </button>
+
+        <SignOutEverywhereRow />
       </div>
 
     </div>
+  );
+}
+
+/** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١، قرارُ المالك ٢٠٢٦-١٠-٠٤) — لهاتفٍ أو
+ *  حاسوبٍ ضاع. **ويُسأل قبل أن يقع** بورقةِ التأكيد التي يستعملها التطبيقُ
+ *  (`Advances.tsx`): يُخرج الكبتنَ من هذا الجهاز أيضاً، وفعلٌ يُخرج من كلِّ
+ *  مكانٍ لا يقع بلمسةٍ عابرة. */
+function SignOutEverywhereRow() {
+  const { signOutEverywhere } = useSession();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirm() {
+    setBusy(true);
+    setError(null);
+    try {
+      await signOutEverywhere();
+    } catch (caught) {
+      // نصُّ الخلفية كما هو (§17) — ولا عربيةَ ثانيةٌ هنا
+      setError(caught instanceof Error ? caught.message : "تعذّر إنهاء الجلسات — أعد المحاولة");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="pressable w-full p-10 text-center text-12 text-muted"
+      >
+        إنهاء كل الجلسات
+      </button>
+      {confirming ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-dim"
+          onClick={() => !busy && setConfirming(false)}
+        >
+          <div
+            className="w-full rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-16 font-bold text-ink">إنهاء كل الجلسات</p>
+            <p className="mt-8 text-13.5 leading-relaxed text-muted">
+              تخرج من حسابك على كلِّ جهازٍ دخلتَ منه — وهذا منها — ولا تصل
+              إشعاراتُ حسابك ولا طلباتُ الرحلات إلى أيٍّ منها. استعمله إن ضاع
+              هاتفٌ أو حاسوب.
+            </p>
+            <ErrorNote message={error} />
+            <div className="mt-16 flex flex-col gap-9">
+              <Button variant="danger" loading={busy} onClick={() => void confirm()}>
+                إنهاء كل الجلسات
+              </Button>
+              <Button variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
+                رجوع
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 

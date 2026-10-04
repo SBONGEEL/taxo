@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { registerAccount, startSignupChallenge } from "@/api/endpoints";
@@ -62,7 +62,12 @@ export function RegisterScreen() {
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  // **الرقمُ الذي كُتب في بطاقة «سجّل كشريك»** (TAXO 2.0) — يصل مع التنقّل فلا
+  // يُكتب مرّتين. **ولا نداءَ يتغيّر**: التسجيلُ هنا بطلبه وترتيبه كما كان
+  const location = useLocation();
+  const [phone, setPhone] = useState(
+    () => (location.state as { phone?: string } | null)?.phone ?? "",
+  );
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);

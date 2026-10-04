@@ -225,7 +225,7 @@ async def _staff_headers(role: str, phone: str, name: str) -> dict[str, str]:
         )
         session.add(user)
         await session.commit()
-        tokens = await token_service.issue_token_pair(get_redis_client(), user)
+        tokens = await token_service.issue_token_pair(session, user)
 
     return {"Authorization": f"Bearer {tokens.access_token}"}
 
@@ -233,7 +233,9 @@ async def _staff_headers(role: str, phone: str, name: str) -> dict[str, str]:
 # **ورمزُ الموظَّف يُسكّ بعد الكنس لا قبله** (قِيس 2026-09-11).
 #
 # **العطبُ**: `_staff_headers` يكتب جلسةَ الرمز في Redis، و`_clean_state`
-# **يُفرغ Redis لكلِّ اختبار**. وترتيبُ المُثبِّتات بينهما **لم يكن مضموناً**:
+# **يُفرغ Redis لكلِّ اختبار**. (ومنذ SPEC §60 صارت الجلسةُ صفّاً في القاعدة،
+# **و`_clean_state` يُفرغ القاعدةَ أيضاً — فالترتيبُ لازمٌ كما كان**.)
+# وترتيبُ المُثبِّتات بينهما **لم يكن مضموناً**:
 # هذان لا يعتمدان على الكانس، فمدارُهما يتغيّر بتغيّر مجموعة المُثبِّتات في
 # الاختبار — **فيُسكّ الرمزُ ثم يُمحى، فيردّ الخادمُ `invalid_token`**.
 #

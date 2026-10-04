@@ -95,8 +95,14 @@ async def _reset(phone: str, *, release_enforcement: bool) -> int:
 
         await session.commit()
 
-    redis = get_redis_client()
-    revoked = await token_service.revoke_all_for_user(redis, user.id)
+        # **بعد التزام الإلغاء لا معه** كما كان: الجلساتُ صفوفٌ في القاعدة منذ
+        # SPEC §60، فإبطالُها التزامٌ ثانٍ، ثم تُغلق مقابسُه المفتوحة
+        redis = get_redis_client()
+        revoked = await token_service.revoke_all_for_user(
+            session, redis, user.id, reason=token_service.REVOKE_TOTP_RESET
+        )
+        await session.commit()
+    await token_service.kick(redis, user.id)
     print(f"أُبطلت {revoked} جلسة")
     return 0
 

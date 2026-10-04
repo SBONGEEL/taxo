@@ -191,8 +191,20 @@ async def test_me_rejects_refresh_token_used_as_access(
 
 
 async def test_refresh_rotates_and_invalidates_old_token(
-    client: AsyncClient, rider_payload: dict
+    client: AsyncClient, rider_payload: dict, session_factory
 ) -> None:
+    """التدويرُ باقٍ (SPEC §60): **الرمزُ يُستهلك مرّةً ويُستبدل**.
+
+    **وتغيّر جوابُ إعادته** بقرار المالك (الجلسةُ تبقى حتى يخرج صاحبُها): في
+    مهلة السماح يُعطى **الرمزَ الحاليَّ نفسَه** — جوابٌ ضاع في الشبكة لا يُخرج
+    أحداً — **وبعدها تُبطل الجلسةُ كلُّها**: مستهلَكٌ يعود علامةُ سرقة. وكان
+    قبل §60 يُرفض الرمزُ وحدَه وتبقى الجلسة — **فالتأكيدُ هنا أشدُّ لا أرخى**.
+    """
+    from datetime import timedelta
+
+    from app.models.auth_session import AuthSession
+    from app.services.token_service import GRACE
+
     tokens = (await client.post("/auth/register", json=rider_payload)).json()["tokens"]
 
     first = await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
@@ -200,14 +212,28 @@ async def test_refresh_rotates_and_invalidates_old_token(
     new_tokens = first.json()
     assert new_tokens["refresh_token"] != tokens["refresh_token"]
 
-    # إعادة استخدام التوكن القديم مرفوضة
+    # في مهلة السماح: الحاليُّ نفسُه حرفاً — لا فرعَ ثالثَ في السلسلة
+    lost_reply = await client.post(
+        "/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert lost_reply.status_code == 200, lost_reply.text
+    assert lost_reply.json()["refresh_token"] == new_tokens["refresh_token"]
+
+    # وبعدها: إعادةُ القديم مرفوضة **وتُسقط الجلسةَ كلَّها**
+    async with session_factory() as session:
+        for row in (await session.scalars(select(AuthSession))).all():
+            row.current_issued_at -= GRACE + timedelta(seconds=1)
+        await session.commit()
     replay = await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert replay.status_code == 401
-
-    # الجديد يعمل
     assert (
         await client.post("/auth/refresh", json={"refresh_token": new_tokens["refresh_token"]})
-    ).status_code == 200
+    ).status_code == 401
+    assert (
+        await client.get(
+            "/auth/me", headers={"Authorization": f"Bearer {new_tokens['access_token']}"}
+        )
+    ).status_code == 401
 
 
 async def test_logout_revokes_refresh_token(

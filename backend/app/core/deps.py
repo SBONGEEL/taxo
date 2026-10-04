@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
@@ -22,7 +23,7 @@ from app.models.driver import Driver
 from app.models.enums import UserRole
 from app.models.user import User
 from app.services import presence_token as presence_service
-from app.services.token_service import access_token_subject
+from app.services.token_service import access_sid, authenticate_access
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -56,10 +57,9 @@ async def get_current_user(
     if credentials is None or not credentials.credentials:
         raise InvalidToken("مطلوب توكن دخول")
 
-    user_id = access_token_subject(credentials.credentials)
-    user = await session.get(User, user_id)
-    if user is None:
-        raise InvalidToken()
+    # **والجلسةُ تُسأل في كلِّ طلب** (SPEC §60): الخروجُ وإنهاءُ الكلّ يسريان عند
+    # الطلب التالي لا بعد انتهاء التوكن — هاتفٌ ضائعٌ لا يبقى يعمل ربعَ ساعة
+    user, _ = await authenticate_access(session, credentials.credentials)
     if user.is_blocked:
         raise AccountBlocked()
     # **والمُغلقُ بطلب صاحبه يُردّ برمزه هو** (الترحيلة `0075`): توكنٌ صالحٌ
@@ -71,6 +71,21 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def current_session_id(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
+    ] = None,
+) -> uuid.UUID | None:
+    """جلسةُ الطلب نفسِه (SPEC §60) — **لا تُصادِق شيئاً**، فلا تُستعمل إلا مع
+    تبعيةٍ صادقت التوكنَ نفسَه قبلها. لمن يُبطل جلساتِ صاحبه **إلا هذه**."""
+    if credentials is None or not credentials.credentials:
+        return None
+    return access_sid(credentials.credentials)
+
+
+CurrentSessionId = Annotated[uuid.UUID | None, Depends(current_session_id)]
 
 
 def require_roles(*roles: UserRole, enforce_two_factor: bool = True):

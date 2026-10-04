@@ -124,3 +124,24 @@ async def note_login(
             entity_id=row.id,
             details={"username": row.username},
         )
+
+
+async def note_resume(session: AsyncSession, user: User) -> None:
+    """**جلسةُ حساب الطوارئ تُستأنف بعد غياب — فيصيح كما يصيح الدخول** (SPEC §60).
+
+    **وكان الصياحُ عند الدخول يكفي** لأن جلسةَ اللوحة كانت تموت بعد نصف ساعةٍ من
+    الخمول، **فكلُّ استعمالٍ بعد غيابٍ كان دخولاً**. ومنذ صار الدخولُ يبقى حتى
+    الخروج صار الاستئنافُ هو الاستعمالَ الجديد — **فلكلِّ استعمالٍ صياحُه كما
+    كان**، بالنوع نفسِه الذي يقرؤه من يراقب، و`resumed` يقول أيَّهما.
+    """
+    row = await for_user(session, user.id)
+    if row is None or not row.is_break_glass:
+        return
+    await audit.record(
+        session,
+        actor=user,
+        action=AuditAction.UPDATE,
+        entity_type="admin_break_glass_login",
+        entity_id=row.id,
+        details={"username": row.username, "resumed": True},
+    )

@@ -6,8 +6,8 @@
 
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
@@ -36,6 +36,15 @@ export function LoginScreen() {
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // **الرقمُ الذي كُتب في بطاقة الترحيب** (TAXO 2.0) — يصل مع التنقّل فلا
+  // يُكتب مرّتين. والشاشةُ قد تكون مركَّبةً تحت الترحيب قبل أن يصل، فيُقرأ
+  // كلّما تغيّر لا عند التركيب وحدَه. **ولا نداءَ يتغيّر**: الدخولُ هنا كما كان.
+  const location = useLocation();
+  const handedPhone = (location.state as { phone?: string } | null)?.phone;
+  useEffect(() => {
+    if (handedPhone) setPhone(handedPhone);
+  }, [handedPhone]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();

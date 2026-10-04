@@ -50,21 +50,26 @@ def _now() -> datetime:
 def _create_token(
     subject: str,
     token_type: TokenType,
-    expires_delta: timedelta,
+    expires_delta: timedelta | None,
     extra_claims: dict[str, Any] | None = None,
-) -> tuple[str, str, datetime]:
-    """يُرجع (token, jti, expires_at)."""
-    issued_at = _now()
-    expires_at = issued_at + expires_delta
-    jti = str(uuid.uuid4())
+    *,
+    jti: str | None = None,
+    issued_at: datetime | None = None,
+) -> tuple[str, str, datetime | None]:
+    """يُرجع (token, jti, expires_at) — و`expires_at` لا وجودَ له بلا عمر."""
+    issued_at = issued_at or _now()
+    jti = jti or str(uuid.uuid4())
     payload: dict[str, Any] = {
         "sub": subject,
         "typ": token_type,
         "jti": jti,
         "iat": int(issued_at.timestamp()),
-        "exp": int(expires_at.timestamp()),
         "iss": settings.app_name,
     }
+    expires_at = None
+    if expires_delta is not None:
+        expires_at = issued_at + expires_delta
+        payload["exp"] = int(expires_at.timestamp())
     if extra_claims:
         payload.update(extra_claims)
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -74,17 +79,33 @@ def _create_token(
 def create_access_token(
     subject: str, extra_claims: dict[str, Any] | None = None
 ) -> tuple[str, str, datetime]:
-    return _create_token(
+    token, jti, expires_at = _create_token(
         subject,
         "access",
         timedelta(minutes=settings.access_token_expire_minutes),
         extra_claims,
     )
+    assert expires_at is not None  # توكنُ الوصول قصيرُ العمر دائماً
+    return token, jti, expires_at
 
 
-def create_refresh_token(subject: str) -> tuple[str, str, datetime]:
+def create_refresh_token(
+    subject: str,
+    *,
+    sid: str | None = None,
+    jti: str | None = None,
+    issued_at: datetime | None = None,
+) -> tuple[str, str, datetime | None]:
+    """رمزُ التجديد — **بلا تاريخ انتهاء** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤).
+
+    **صلاحيتُه صفٌّ حيٌّ في `auth_sessions` ورمزٌ يطابقه**، لا ساعة: الدخولُ يبقى
+    حتى يخرج صاحبُه. و`sid` مُعرِّفُ الجلسة، و`jti`/`issued_at` يُمرَّران حين يُعاد
+    سكُّ الرمز الحاليِّ **حرفاً** في مهلة السماح (`token_service.rotate`) — فالتوقيعُ
+    حتميٌّ ما دامت الحمولةُ هي هي.
+    """
+    claims = {"sid": sid} if sid else None
     return _create_token(
-        subject, "refresh", timedelta(days=settings.refresh_token_expire_days)
+        subject, "refresh", None, claims, jti=jti, issued_at=issued_at
     )
 
 

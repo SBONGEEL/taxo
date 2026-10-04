@@ -7,13 +7,9 @@
 
 from __future__ import annotations
 
-import uuid
-
-import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
-from app.core.redis_client import get_redis_client
 from app.models.enums import CountryCode, UserRole
 from app.models.notification import UserNotification
 from app.models.user import User
@@ -60,17 +56,6 @@ async def _enroll_and_confirm(
     return secret, codes
 
 
-async def _forget_sessions(redis, user_id) -> None:
-    """يمحو مفاتيحَ جلساتٍ صنعتها الفيكستشر قبل أن تُضبط السياسة.
-
-    فيكستشر `admin_headers` تُصدر توكناً قبل أي إعداد، فمفتاحُها بعمر الأيام
-    المعتاد — وقياسُ المهلة على مجموعِ المفاتيح يقيسه معه.
-    """
-    keys = [key async for key in redis.scan_iter(f"auth:refresh:{user_id}:*")]
-    if keys:
-        await redis.delete(*keys)
-
-
 async def _second_admin(session_factory) -> dict[str, str]:
     """مشرفٌ ثانٍ — لا فيكستشر له، ويلزم لاختبار الإلزام على غير من أشعله."""
     from app.core.security import hash_password
@@ -86,7 +71,7 @@ async def _second_admin(session_factory) -> dict[str, str]:
         )
         session.add(user)
         await session.commit()
-        tokens = await token_service.issue_token_pair(get_redis_client(), user)
+        tokens = await token_service.issue_token_pair(session, user)
     return {"Authorization": f"Bearer {tokens.access_token}"}
 
 
@@ -296,9 +281,9 @@ async def test_the_secret_is_never_readable_again(
     status = await client.get("/auth/me/totp", headers=admin_headers)
     assert status.status_code == 200
     assert "secret" not in status.json()
-    # ومهلةُ الخمول تصل من هنا: مؤقّتُ اللوحة يقرؤها بدل أن يكتبها في كوده،
-    # و`support` يحتاجها ولا يقرأ `GET /admin/security`
-    assert status.json()["session_idle_timeout_minutes"] == 30
+    # **ومهلةُ الخمول لم تعد تصل من هنا** — نُزعت بقرار المالك (SPEC §60)،
+    # فلا مؤقّتَ في اللوحة يقرؤها
+    assert "session_idle_timeout_minutes" not in status.json()
     assert status.json()["confirmed"] is True
     assert status.json()["recovery_codes_remaining"] == totp.RECOVERY_CODE_COUNT
 
@@ -459,95 +444,100 @@ async def test_only_admins_read_or_write_the_policy(
 ) -> None:
     assert (await client.get("/admin/security", headers=support_headers)).status_code == 403
     refused = await client.put(
-        "/admin/security", json={"admin_idle_timeout_minutes": 15}, headers=support_headers
+        "/admin/security", json={"admin_totp_required": False}, headers=support_headers
     )
     assert refused.status_code == 403
 
 
-# --------------------------------------------------------- مهلة الخمول
+# ------------------------------------------- مهلةُ الخمول — نُزعت (SPEC §60)
+#
+# **كانت هنا ثلاثةُ اختباراتٍ لمهلة خمول اللوحة** (سقفُها ستّون دقيقة، وعمرُ مفتاح
+# التجديد بها، وتجديدُها بالتدوير). **ونُزعت المهلةُ بقرار المالك ٢٠٢٦-١٠-٠٤**:
+# الدخولُ يبقى حتى يخرج صاحبُه في كلِّ تطبيق، واللوحةُ منها. **فحلّ محلَّها ما
+# يقيس القرارَ نفسَه** — لا اختبارٌ حُذف ليمرّ غيرُه.
 
 
-@pytest.mark.parametrize("minutes", [1, 61, 1440])
-async def test_the_idle_timeout_is_capped_at_sixty_minutes(
-    client: AsyncClient, admin_headers: dict, minutes: int
-) -> None:
-    """السقفُ في الكود لا في يد المشرف: اللوحة تفتح مفاتيح المزوّدين والدفع."""
-    response = await client.put(
-        "/admin/security",
-        json={"admin_idle_timeout_minutes": minutes},
-        headers=admin_headers,
-    )
-    assert response.status_code == 422
-
-
-async def test_staff_refresh_keys_expire_with_the_idle_timeout(
+async def test_the_idle_timeout_is_no_longer_a_policy(
     client: AsyncClient, admin_headers: dict, session_factory
 ) -> None:
-    """الطبقةُ الأولى من المهلة: عمرُ مفتاح الـrefresh — لا عمودُ «آخرِ نشاط»."""
-    await client.put(
+    """الحقلُ غائبٌ عن الجواب، **وكتابتُه لا تغيّر شيئاً ولا تكتب قيداً**.
+
+    وطلبٌ من لوحةٍ قديمةٍ ما زالت ترسله **لا يسقط** — يُهمَل كأيِّ حقلٍ مجهول.
+    """
+    from app.models.audit import AdminAuditLog
+
+    read = await client.get("/admin/security", headers=admin_headers)
+    assert read.status_code == 200
+    assert "admin_idle_timeout_minutes" not in read.json()
+    assert "max_idle_timeout_minutes" not in read.json()
+
+    stale = await client.put(
         "/admin/security",
         json={"admin_idle_timeout_minutes": 10},
         headers=admin_headers,
     )
-    redis = get_redis_client()
+    assert stale.status_code == 200, stale.text
+    async with session_factory() as session:
+        rows = await session.scalar(
+            select(func.count())
+            .select_from(AdminAuditLog)
+            .where(AdminAuditLog.entity_type == "security_settings")
+        )
+    assert rows == 0
+
+
+async def test_a_staff_session_survives_any_idle_time(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """**جلسةُ مشرفٍ تُركت شهراً تُجدَّد** — كان سقفُها نصفَ ساعةٍ قبل §60.
+
+    ويُقاس بتقديم ساعة الجلسة نفسِها في القاعدة لا بالانتظار: الصفُّ هو ما
+    يقرؤه التجديد، **ولا شيءَ غيرُه يحمل عمراً** — ورمزُ التجديد بلا `exp`.
+    """
+    from datetime import timedelta
+
+    from app.core.security import decode_token
+    from app.models.auth_session import AuthSession
+
+    body = await _login(client)
+    refresh_token = body["tokens"]["refresh_token"]
+    assert "exp" not in decode_token(refresh_token, "refresh")
 
     async with session_factory() as session:
         admin_id = await session.scalar(select(User.id).where(User.phone == ADMIN_PHONE))
-    await _forget_sessions(redis, admin_id)
+        for row in (
+            await session.scalars(select(AuthSession).where(AuthSession.user_id == admin_id))
+        ).all():
+            row.current_issued_at -= timedelta(days=31)
+            row.last_used_at -= timedelta(days=31)
+            row.created_at -= timedelta(days=31)
+        await session.commit()
 
-    await _login(client)
-    keys = [key async for key in redis.scan_iter(f"auth:refresh:{admin_id}:*")]
-    assert len(keys) == 1
-    ttl = await redis.ttl(keys[0])
-    assert 0 < ttl <= 600
-
-    # والراكبُ لا تمسّه السياسة: تطبيقُه لا يفتح مفتاح مزوّدٍ ولا طلبَ سحب
-    from tests.helpers import RIDER, register
-
-    rider = await register(client, RIDER)
-    rider_id = uuid.UUID(rider["user"]["id"])
-    rider_keys = [key async for key in redis.scan_iter(f"auth:refresh:{rider_id}:*")]
-    assert await redis.ttl(rider_keys[0]) > 600
-
-
-async def test_rotation_renews_the_window(
-    client: AsyncClient, admin_headers: dict, session_factory
-) -> None:
-    """التدويرُ لمرةٍ واحدة هو النبضة — فالنشاطُ يمدّ النافذة ولا يلمس عموداً."""
-    await client.put(
-        "/admin/security",
-        json={"admin_idle_timeout_minutes": 10},
-        headers=admin_headers,
+    refreshed = await client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    assert refreshed.status_code == 200, refreshed.text
+    me = await client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {refreshed.json()['access_token']}"},
     )
-    redis = get_redis_client()
-    async with session_factory() as session:
-        admin_id = await session.scalar(
-            select(User.id).where(User.phone == ADMIN_PHONE)
-        )
-    await _forget_sessions(redis, admin_id)
-
-    body = await _login(client)
-    refreshed = await client.post(
-        "/auth/refresh", json={"refresh_token": body["tokens"]["refresh_token"]}
-    )
-    assert refreshed.status_code == 200
-
-    keys = [key async for key in redis.scan_iter(f"auth:refresh:{admin_id}:*")]
-    # الجلسةُ المدوَّرة وحدها: التدويرُ يحذف مفتاحَه ويكتب مفتاحاً جديداً
-    assert len(keys) == 1
-    assert 0 < await redis.ttl(keys[0]) <= 600
+    assert me.status_code == 200
 
 
 async def test_the_policy_write_leaves_an_audit_entry(
     client: AsyncClient, admin_headers: dict, session_factory
 ) -> None:
+    """**ومفتاحُ الإلزام هو ما يُكتب اليوم** — فيُقاس القيدُ عليه بعد نزع المهلة."""
     from app.models.audit import AdminAuditLog
 
-    await client.put(
-        "/admin/security",
-        json={"admin_idle_timeout_minutes": 15},
+    _, codes = await _enroll_and_confirm(client, admin_headers)
+    await client.post(
+        "/auth/me/totp/recovery/verify",
+        json={"recovery_code": codes[0]},
         headers=admin_headers,
     )
+    enabled = await client.put(
+        "/admin/security", json={"admin_totp_required": True}, headers=admin_headers
+    )
+    assert enabled.status_code == 200, enabled.text
     async with session_factory() as session:
         rows = await session.scalar(
             select(func.count())
@@ -559,7 +549,7 @@ async def test_the_policy_write_leaves_an_audit_entry(
     # وكتابةٌ لا تغيّر شيئاً لا تكتب قيداً — سجلٌّ يملؤه اللاشيء يخفي القرارات
     await client.put(
         "/admin/security",
-        json={"admin_idle_timeout_minutes": 15},
+        json={"admin_totp_required": True},
         headers=admin_headers,
     )
     async with session_factory() as session:

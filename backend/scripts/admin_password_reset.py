@@ -28,7 +28,7 @@ from app.core.redis_client import get_redis_client
 from app.models.admin_credential import AdminCredential, normalize_username
 from app.models.enums import AuditAction
 from app.models.user import User
-from app.services import audit
+from app.services import audit, token_service
 from app.services.auth.password import set_password
 
 
@@ -74,6 +74,9 @@ async def _run(username: str, revoke: bool) -> int:
             },
         )
         await session.commit()
+        # **ومقابسُه المفتوحة تُغلق بعد الالتزام** (SPEC §60): جلساتُه أُبطلت في
+        # القاعدة مع الكلمة، ومقبسٌ مفتوحٌ لا يسأل القاعدةَ إلا عند فتحه
+        await token_service.kick(redis, user.id)
 
     print(f"أُعيدت كلمةُ مرور «{username}».")
     if revoke:

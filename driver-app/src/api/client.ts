@@ -6,7 +6,7 @@
  *    `core/exceptions.py`)، فيرتفع `ApiError` برسالته العربية جاهزةً للعرض —
  *    ولا تخترع الواجهة نصّاً لخطأٍ قالته الخلفية بالعربية أصلاً.
  * 2. **تجديد الجلسة**: توكن الدخول قصير العمر، والتجديد **دورةٌ واحدة**
- *    (`rotate_refresh_token` يحذف المفتاح ويرفض إعادته). فطلبٌ يرتدّ 401
+ *    (`token_service.rotate` يستهلكه، وإعادتُه بعد مهلة السماح تُبطل الجلسة). فطلبٌ يرتدّ 401
  *    يجدّد **مرةً واحدة** ويعيد المحاولة، وطلباتٌ متوازية تتقاسم نفس وعد
  *    التجديد — وإلا أحرق كلٌّ منها رمز الآخر وخرج المستخدم من حسابه.
  * 3. **العنوان**: مسارٌ واحد `/api/v1` في مكانٍ واحد.
@@ -77,7 +77,7 @@ export class ApiError extends Error {
  * على القرص: `localStorage` حين تكون البصمةُ مطفأة، **والمخزنُ الآمن وحدَه**
  * حين تُشعَل.
  *
- * **ولمَ لا بيتان**: الرمزُ **يُستهلك مرّةً ويُدوَّر** (`rotate_refresh_token`)،
+ * **ولمَ لا بيتان**: الرمزُ **يُستهلك مرّةً ويُدوَّر** (`token_service.rotate`)،
  * **فنسخةٌ ثانيةٌ تموت عند أوّل تجديد** ثم تردّ «جلسة منتهية» بلا سبب يظهر —
  * وهو الشكلُ الثامن. انظر `lib/biometric.ts`.
  */
@@ -114,7 +114,12 @@ export function setRefreshPersister(fn: (token: string) => void) {
 
 export const tokens = {
   access: () => localStorage.getItem(ACCESS_KEY),
-  refresh: () => liveRefresh ?? localStorage.getItem(REFRESH_KEY),
+  /** **المشتركُ أوّلاً حين يكون هو البيت** (SPEC §60): تبويبان يتقاسمان
+   *  `localStorage` ولكلٍّ ذاكرتُه، فمن دوّر الرمزَ في أحدهما ترك الآخرَ بنسخةٍ
+   *  مستهلَكة — **وإعادتُها بعد مهلة السماح تُبطل الجلسةَ كلَّها**. والذاكرةُ
+   *  حين لا بيتَ غيرُها (البصمةُ مشتعلة، أو مُحي المشتركُ). */
+  refresh: () =>
+    (biometricArmed() ? null : localStorage.getItem(REFRESH_KEY)) ?? liveRefresh,
   /** **يُستدعى بعد كلِّ تدوير** — فيبقى المخزَّنُ هو الحيَّ لا نسخةً منه.
    *
    * **والبيتُ واحدٌ فعلاً لا في التوثيق وحدَه** (صُحّح 2026-08-29): كان يكتب
@@ -189,18 +194,30 @@ async function refreshSession(): Promise<boolean> {
     return false;
   }
 
-  const response = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: token }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: token }),
+    });
+  } catch (error) {
+    // **انقطاعُ الشبكة ليس حكماً على الجلسة** (SPEC §60) — يُرفع خطأَ شبكةٍ
+    // كأيِّ نداء، والرمزُ باقٍ لمحاولةٍ تالية
+    throw networkError(error);
+  }
 
-  if (!response.ok) {
+  // **`401` وحدَه حكمٌ على الجلسة** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤): الدخولُ
+  // يبقى حتى يخرج صاحبُه. وكان أيُّ ردٍّ غيرِ ناجحٍ يمحو الرمز — **فخادمٌ يُعاد
+  // تشغيلُه (`502`/`503`) كان يُخرج كلَّ من جدّد في تلك الدقيقة**. فما عدا `401`
+  // عطبٌ عابرٌ يُقال ولا يمحو شيئاً.
+  if (response.status === 401) {
     // **هنا وحدَه قال الخادمُ «لم تعد صالحة»** — رمزٌ قُدِّم فرُفض
     serverRejectedToken = true;
     tokens.clear();
     return false;
   }
+  if (!response.ok) throw await toError(response);
   tokens.save(await response.json());
   return true;
 }

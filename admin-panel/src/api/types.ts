@@ -85,7 +85,6 @@ export interface TotpStatus {
   recovery_verified_at: string | null;
   recovery_codes_remaining: number;
   required: boolean;
-  session_idle_timeout_minutes: number;
 }
 
 export interface TotpEnrollment {
@@ -103,9 +102,6 @@ export interface TotpConfirmation {
 
 export interface SecurityPolicy {
   admin_totp_required: boolean;
-  admin_idle_timeout_minutes: number;
-  min_idle_timeout_minutes: number;
-  max_idle_timeout_minutes: number;
   my_factor: TotpStatus;
 }
 

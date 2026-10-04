@@ -156,6 +156,9 @@ export const clearMyPhoto = () => api.del<User>("/auth/me/photo");
 export const logout = (refreshToken: string) =>
   api.post<void>("/auth/logout", { refresh_token: refreshToken });
 
+/** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١) — كلُّ أجهزة الحساب، وهذا منها. */
+export const revokeAllSessions = () => api.post<void>("/auth/sessions/revoke-all");
+
 // ------------------------------------------------------------ الرحلات
 
 export const estimateRide = (payload: {

@@ -1,0 +1,560 @@
+/* «نقطة اللقاء» — ترحيبُ الراكب (TAXO 2.0 · Claude Design «Welcome»: R0 · R1 · R2).
+ *
+ * **القيمُ من اللوحة حرفاً** — الألوانُ والمقاساتُ والمواضعُ والتوقيتُ ومنحنياتُه.
+ * والتوقيتُ هناك حلقةٌ تتكرّر للعرض (T = 6.6ث)؛ وهنا **مرّةٌ واحدةٌ تقف عند
+ * الإطار الأخير** (4.2ث): `R1` في اللوحة «تكمل من آخر إطارٍ في المقدّمة دون
+ * قطع»، وما بعد 4.2ث في الحلقة رجوعٌ إلى أوّلها لا جزءٌ من القصة.
+ *
+ * **والنسبُ المئويةُ مشتقّةٌ من الثواني لا مقدَّرة**: كلُّ `x%` = ثانيتُها في
+ * اللوحة ÷ 4.2. والمنحنيات الثلاثة أسماؤها في اللوحة:
+ *   o  = cubic-bezier(.2,.8,.2,1)   ·   io = cubic-bezier(.65,0,.35,1)
+ *   bk = cubic-bezier(.34,1.56,.64,1)
+ *
+ * **ولا صنفَ Tailwind هنا**: سلّمُ `DESIGN.md` §6 سلّمُ التصميم القديم، وقيمُ
+ * TAXO 2.0 (الحجرُ والحبرُ والجمر) ليست فيه بعد — فتسكن متغيّراتٍ في هذا الملفّ
+ * حتى يُنقل السلّمُ كلُّه، لا صنفاً خارج السلّم يُصرَّف بلا أثر.
+ */
+
+.rw {
+  --stone: #f4f1ea;
+  --ink: #14161a;
+  --ember: #f05a28;
+  --ember-dk: #c2410c;
+  --mut: #6a6862;
+  --mut2: #8a857b;
+  --line: #e0dad0;
+  --label: #a39d90;
+  --body: #3f3e3a;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  background: var(--stone);
+  color: var(--ink);
+  font-family: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* **السِمةُ الوردية تصبغ الجمرَ برقوقاً** — الخدمةُ النسائيةُ وحدها (`Identity`:
+   «البرقوق للخدمة النسائية وحدها»). والترحيبُ لم يُرسم بها في اللوحة بعد،
+   فالبرقوقُ هنا يحفظ ما كان يفعله الشعارُ الورديُّ في الترحيبية القديمة. */
+html.pink .rw {
+  --ember: #9c2c6e;
+  --ember-dk: #9c2c6e;
+}
+.rw.is-leaving {
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  pointer-events: none;
+}
+
+/* ── المسرح: إطارُ اللوحة 390×844 يُغطّي الشاشة ويُتوسَّط ─────────────────── */
+.rw-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 390px;
+  height: 844px;
+  transform: translate(-50%, -50%) scale(var(--rw-scale, 1));
+  transform-origin: 50% 50%;
+}
+.rw-cam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 390px;
+  height: 844px;
+  transform-origin: 0 0;
+  transform: translate(-382.78px, -1053.42px) scale(3);
+}
+.rw-cam img {
+  display: block;
+  width: 390px;
+  height: 844px;
+  max-width: none;
+}
+.rw-label {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(0.3333);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #9a9488;
+  white-space: nowrap;
+}
+.rw-veil {
+  position: absolute;
+  inset: 0;
+  background: var(--stone);
+  opacity: 0.82;
+}
+
+/* ── الشعار: TA·X·O بخط Unbounded 800، والـX مسارانِ يتقاطعان ──────────────── */
+.rw-word {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 360px;
+  transform: translateY(-50%);
+  text-align: center;
+  font-family: "Unbounded", "Readex Pro", sans-serif;
+  font-weight: 800;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.rw-xb {
+  position: relative;
+  display: inline-block;
+  width: 51.61px;
+  height: 49.55px;
+  margin: 0 4.13px;
+  vertical-align: -1.03px;
+}
+.rw-xb > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 64px;
+  height: 14.45px;
+  border-radius: 8.26px;
+}
+.rw-xb > span:first-child {
+  background: var(--ink);
+  transform: translate(-50%, -50%) rotate(-50deg);
+}
+.rw-xb > span:last-child {
+  background: var(--ember);
+  transform: translate(-50%, -50%) rotate(50deg);
+}
+
+/* ── R0 · المقدّمة (مرّةً واحدة، 4.2ث) ────────────────────────────────────── */
+.rw-intro .rw-cam {
+  animation: rw-cam 4.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes rw-cam {
+  from { transform: translate(-442.77px, -1194.76px) scale(3.3); }
+  to { transform: translate(-382.78px, -1053.42px) scale(3); }
+}
+.rw-trail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  opacity: 0;
+}
+.rw-intro .rw-trail { animation: rw-trail-op 4.2s both; }
+@keyframes rw-trail-op {
+  0%, 63.095% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  78.571%, 100% { opacity: 0; }
+}
+.rw-trail path { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.rw-intro .rw-trail path { animation: rw-dash 4.2s both; }
+@keyframes rw-dash {
+  0%, 11.905% { stroke-dashoffset: 1; animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  61.905%, 100% { stroke-dashoffset: 0; }
+}
+.rw-car {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 5.4px;
+  border-radius: 2.2px;
+  background: var(--ink);
+  border: 0.7px solid #fff;
+  box-sizing: border-box;
+  box-shadow: 0 0.6px 1.6px rgba(0, 0, 0, 0.35);
+  offset-rotate: auto;
+  offset-anchor: center;
+  offset-distance: 0%;
+  opacity: 0;
+}
+.rw-car > span:first-child {
+  position: absolute; right: 1.3px; top: 0.5px; bottom: 0.5px; width: 1.9px; border-radius: 0.7px; background: var(--ember);
+}
+.rw-car > span:last-child {
+  position: absolute; left: 0.9px; top: 0.8px; bottom: 0.8px; width: 1.1px; border-radius: 0.5px; background: var(--ember); opacity: 0.55;
+}
+.rw-intro .rw-car { animation: rw-car-go 4.2s both, rw-car-op 4.2s both; }
+@keyframes rw-car-go {
+  0%, 11.905% { offset-distance: 0%; animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  61.905%, 100% { offset-distance: 100%; }
+}
+@keyframes rw-car-op {
+  0%, 10.714% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  15.476% { opacity: 1; }
+  61.905% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  67.857%, 100% { opacity: 0; }
+}
+.rw-intro .rw-veil { animation: rw-veil 4.2s both; }
+@keyframes rw-veil {
+  0% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  16.667% { opacity: 0; }
+  75% { opacity: 0; animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  91.667%, 100% { opacity: 0.82; }
+}
+/* نقطتُك — هالةٌ ونقطةٌ في موضع اللقاء، وأنت ثابت */
+.rw-halo,
+.rw-dot,
+.rw-ping {
+  position: absolute;
+  left: 217.1px;
+  top: 360px;
+  border-radius: 50%;
+  opacity: 0;
+}
+.rw-halo { width: 58px; height: 58px; background: rgba(240, 90, 40, 0.16); transform: translate(-50%, -50%) scale(0); }
+html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
+.rw-dot {
+  width: 18px;
+  height: 18px;
+  background: var(--ember);
+  border: 3px solid #fff;
+  box-sizing: border-box;
+  box-shadow: 0 3px 8px rgba(20, 22, 26, 0.25);
+  transform: translate(-50%, -50%) scale(0);
+}
+.rw-intro .rw-halo { animation: rw-halo-s 4.2s both, rw-halo-o 4.2s both; }
+@keyframes rw-halo-s {
+  0%, 4.762% { transform: translate(-50%, -50%) scale(0); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  16.667%, 100% { transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes rw-halo-o {
+  0%, 4.762% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  11.905% { opacity: 1; }
+  69.048% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  76.19%, 100% { opacity: 0; }
+}
+.rw-intro .rw-dot { animation: rw-dot-s 4.2s both, rw-dot-o 4.2s both; }
+@keyframes rw-dot-s {
+  0%, 3.571% { transform: translate(-50%, -50%) scale(0); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  13.095%, 100% { transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes rw-dot-o {
+  0%, 3.571% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  9.524% { opacity: 1; }
+  65.476% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  70.238%, 100% { opacity: 0; }
+}
+/* اللقاء: نبضتان (2.6ث و2.85ث) — والاهتزازةُ الواحدةُ من الشيفرة */
+.rw-ping {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--ember);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%) scale(0.3);
+}
+.rw-intro .rw-ping.p1 { animation: rw-ping1-s 4.2s both, rw-ping1-o 4.2s both; }
+.rw-intro .rw-ping.p2 { animation: rw-ping2-s 4.2s both, rw-ping2-o 4.2s both; }
+@keyframes rw-ping1-s {
+  0%, 61.905% { transform: translate(-50%, -50%) scale(0.3); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  85.714%, 100% { transform: translate(-50%, -50%) scale(2.8); }
+}
+@keyframes rw-ping1-o {
+  0%, 61.667% { opacity: 0; }
+  61.905% { opacity: 0.85; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  85.714%, 100% { opacity: 0; }
+}
+@keyframes rw-ping2-s {
+  0%, 67.857% { transform: translate(-50%, -50%) scale(0.3); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  91.667%, 100% { transform: translate(-50%, -50%) scale(2.8); }
+}
+@keyframes rw-ping2-o {
+  0%, 67.619% { opacity: 0; }
+  67.857% { opacity: 0.85; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  91.667%, 100% { opacity: 0; }
+}
+/* الـX يتكوّن في نقطة اللقاء نفسِها ويكبر إلى حجمه في الشعار */
+.rw-xmark {
+  position: absolute;
+  left: 217.1px;
+  top: 360px;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.rw-xmark > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26.67px;
+  height: 6.02px;
+}
+.rw-xmark > span:first-child { transform: translate(-50%, -50%) rotate(-50deg); }
+.rw-xmark > span:last-child { transform: translate(-50%, -50%) rotate(50deg); }
+.rw-xmark > span > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 3.44px;
+  transform: scaleX(0);
+}
+.rw-xmark > span:first-child > i { background: var(--ink); }
+.rw-xmark > span:last-child > i { background: var(--ember); }
+.rw-intro .rw-xmark { animation: rw-x-s 4.2s both, rw-x-o 4.2s both; }
+.rw-intro .rw-xmark > span:first-child > i { animation: rw-bar1 4.2s both; }
+.rw-intro .rw-xmark > span:last-child > i { animation: rw-bar2 4.2s both; }
+@keyframes rw-x-s {
+  0%, 72.619% { transform: scale(1); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  84.524%, 100% { transform: scale(2.4); }
+}
+@keyframes rw-x-o {
+  0%, 63.81% { opacity: 0; }
+  64.286% { opacity: 1; }
+  79.762% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  92.857%, 100% { opacity: 0; }
+}
+@keyframes rw-bar1 {
+  0%, 64.286% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  71.429%, 100% { transform: scaleX(1); }
+}
+@keyframes rw-bar2 {
+  0%, 66.667% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  73.81%, 100% { transform: scaleX(1); }
+}
+/* ثم تتجمع الحروفُ حوله */
+.rw-intro .rw-word { animation: rw-word-o 4.2s both, rw-word-ls 4.2s both; }
+@keyframes rw-word-o {
+  0%, 79.762% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  91.667%, 100% { opacity: 1; }
+}
+@keyframes rw-word-ls {
+  0%, 79.762% { letter-spacing: 0.14em; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  97.619%, 100% { letter-spacing: -0.03em; }
+}
+
+/* ── «من المرة الثانية: لحظة تكوّن X فقط (0.8 ثانية)» ─────────────────────── */
+.rw-brief .rw-xmark { animation: rw-bx-s 0.8s both, rw-bx-o 0.8s both; }
+.rw-brief .rw-xmark > span:first-child > i { animation: rw-bbar1 0.8s both; }
+.rw-brief .rw-xmark > span:last-child > i { animation: rw-bbar2 0.8s both; }
+.rw-brief .rw-word { animation: rw-bword-o 0.8s both, rw-bword-ls 0.8s both; }
+@keyframes rw-bx-s {
+  0%, 37.5% { transform: scale(1); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  68.75%, 100% { transform: scale(2.4); }
+}
+@keyframes rw-bx-o {
+  0% { opacity: 1; }
+  56.25% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  87.5%, 100% { opacity: 0; }
+}
+@keyframes rw-bbar1 {
+  0% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  25%, 100% { transform: scaleX(1); }
+}
+@keyframes rw-bbar2 {
+  0%, 6.25% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  31.25%, 100% { transform: scaleX(1); }
+}
+@keyframes rw-bword-o {
+  0%, 50% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  87.5%, 100% { opacity: 1; }
+}
+@keyframes rw-bword-ls {
+  0%, 50% { letter-spacing: 0.14em; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  100% { letter-spacing: -0.03em; }
+}
+
+/* ── R1 · «أهلاً وسهلاً» — تصعد بهدوء، ثم سطرُ الأصل، ثم الشرح، ثم الزرّ ───── */
+.rw-copy {
+  position: absolute;
+  top: 436px;
+  left: 28px;
+  right: 28px;
+  text-align: center;
+}
+.rw-copy h1 { margin: 0; font-size: 44px; font-weight: 700; line-height: 1.25; }
+.rw-copy .rw-origin { margin: 10px 0 0; font-size: 18px; font-weight: 500; color: var(--body); }
+.rw-copy .rw-explain {
+  margin: 16px auto 0;
+  max-width: 30ch;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--mut);
+  text-wrap: pretty;
+}
+.rw-rise { opacity: 0; transform: translateY(12px); animation: rw-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rw-rise.d1 { animation-delay: 0.1s; }
+.rw-rise.d2 { animation-delay: 0.2s; }
+.rw-rise.d3 { animation-delay: 0.3s; }
+@keyframes rw-rise {
+  to { opacity: 1; transform: translateY(0); }
+}
+.rw-copy-out {
+  transition: opacity 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.is-card .rw-copy-out { opacity: 0; transform: translateY(-14px); }
+
+/* ── R2 · الزرُّ نفسُه يتمدّد ويصير بطاقةَ الدخول ─────────────────────────── */
+.rw-logo-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 195px 360px;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s;
+}
+.is-card .rw-logo-layer { transform: translateY(-266px) scale(0.46); }
+.rw-veil.static { transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s; }
+.is-card .rw-veil.static { opacity: 0.92; }
+
+.rw-cta {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  height: 58px;
+  border-radius: 18px;
+  background: var(--ink);
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--stone);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    left 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    right 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    bottom 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    height 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    border-radius 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
+    background-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s;
+}
+.rw-cta.rw-rise { animation-delay: 0.5s; }
+/* **والصعودُ باقٍ في القائمة مع الضغطة**: لو استُبدل بها لعاد الزرُّ إلى قيمته
+   الأولى (`opacity: 0`) واختفى تحت الإصبع. والاسمُ الباقي لا يُعاد تشغيلُه. */
+.rw-cta.is-pressed {
+  animation:
+    rw-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both,
+    rw-press 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes rw-press {
+  50% { transform: scale(0.97); }
+}
+.is-card .rw-cta {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(470px, calc(100% - 96px));
+  border-radius: 32px 32px 0 0;
+  background: #fff;
+  cursor: default;
+}
+.rw-cta-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: opacity 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s;
+}
+.is-card .rw-cta-label { opacity: 0; pointer-events: none; }
+.rw-cta-label svg { width: 22px; height: 22px; fill: currentColor; }
+.rw-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 12px 22px calc(16px + env(safe-area-inset-bottom, 0px));
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.is-card .rw-card {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition-delay: 0.48s;
+}
+.rw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 18px; }
+.rw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--ink); }
+.rw-card .rw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--mut); }
+.rw-countries { display: flex; gap: 8px; margin-top: 14px; }
+.rw-countries button {
+  flex: 1;
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: var(--mut);
+}
+.rw-countries button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.rw-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-sizing: border-box;
+  direction: ltr;
+}
+.rw-field:focus-within { border-color: var(--ember); }
+.rw-field .rw-dial { font-size: 15px; font-weight: 600; color: var(--ink); }
+.rw-field .rw-sep { width: 1px; height: 24px; background: var(--line); }
+.rw-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  caret-color: var(--ember);
+}
+.rw-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 56px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--stone);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rw-go:disabled { opacity: 0.3; cursor: default; }
+
+/* ── «المس الشاشة للتخطّي» ─────────────────────────────────────────────── */
+.rw-skip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--mut2);
+}
+
+/* **«مع تقليل الحركة: الإطارُ الأخيرُ مباشرة»** — من اللوحة نفسِها */
+@media (prefers-reduced-motion: reduce) {
+  .rw *,
+  .rw *::before,
+  .rw *::after {
+    animation-duration: 0.001s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.001s !important;
+    transition-delay: 0s !important;
+  }
+}

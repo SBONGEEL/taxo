@@ -151,6 +151,26 @@ def _uid(body: dict) -> uuid.UUID:
     return uuid.UUID(str(body.get("user_id") or body["user"]["id"]))
 
 
+async def _login_again(client: AsyncClient, payload: dict) -> dict[str, str]:
+    """**دخولٌ جديدٌ بعد الطلب** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤).
+
+    الطلبُ يُبطل الجلساتِ كلَّها، **وتوكنُ الوصول يُسأل عن جلسته في كلِّ طلب** —
+    فيسقط القديمُ عند طلبه التالي. **وكان قبل §60 يبقى يعمل حتى ينتهي**، فكانت
+    هذه الاختباراتُ تتابع به. والتطبيقُ نفسُه يخرج بعد الطلب ثمّ يدخل إلى شاشة
+    الاستعادة (`DeleteAccount.tsx`) — **وهذا ما يفعله الاختبارُ الآن**.
+    """
+    response = await client.post(
+        "/auth/login",
+        json={
+            "phone": payload["phone"],
+            "password": payload["password"],
+            "country_code": payload["country_code"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['tokens']['access_token']}"}
+
+
 # ------------------------------------------------------------------ الموانع
 
 
@@ -267,25 +287,8 @@ async def test_the_grace_period_closes_new_work_and_keeps_the_way_back(
     assert timedelta(days=29, hours=23) < due - datetime.now(UTC) <= timedelta(days=30)
     # **رموزُ الأجهزة تُمحى لحظةَ الطلب** — لا إشعارَ في المهلة
     assert await _count(session_factory, DeviceToken, DeviceToken.user_id == uid) == 0
-
-    ride = await client.post(
-        "/rides",
-        json={"pickup": PICKUP, "dropoff": DROPOFF, "vehicle_category": "economy"},
-        headers=rider["headers"],
-    )
-    assert ride.status_code == 403, ride.text
-    assert ride.json()["code"] == "account_deletion_pending"
-
-    device = await client.put(
-        "/me/devices",
-        json={"device_id": "device-2", "token": "fcm-token-2", "platform": "android"},
-        headers=rider["headers"],
-    )
-    assert device.status_code == 403 and device.json()["code"] == "account_deletion_pending"
-
-    again = await client.post("/auth/register", json=_signup_body(RIDER))
-    assert again.status_code == 409, again.text
-    assert again.json()["code"] == "phone_scheduled_for_deletion"
+    # **وجلساتُه كلُّها تسقط لحظتَها** (SPEC §60) — والتوكنُ الذي طلب بها منها
+    assert (await client.get("/auth/me", headers=rider["headers"])).status_code == 401
 
     # **والدخولُ يُقبل**، والجلسةُ تقول الموعدَ فيرسم التطبيقُ شاشةَ الاستعادة
     login = await client.post(
@@ -295,6 +298,26 @@ async def test_the_grace_period_closes_new_work_and_keeps_the_way_back(
     assert login.status_code == 200, login.text
     assert login.json()["user"]["deletion_due_at"] is not None
     headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    # **والعملُ الجديدُ مغلقٌ على الجلسة الجديدة أيضاً** — الحارسُ في الحساب لا في التوكن
+    ride = await client.post(
+        "/rides",
+        json={"pickup": PICKUP, "dropoff": DROPOFF, "vehicle_category": "economy"},
+        headers=headers,
+    )
+    assert ride.status_code == 403, ride.text
+    assert ride.json()["code"] == "account_deletion_pending"
+
+    device = await client.put(
+        "/me/devices",
+        json={"device_id": "device-2", "token": "fcm-token-2", "platform": "android"},
+        headers=headers,
+    )
+    assert device.status_code == 403 and device.json()["code"] == "account_deletion_pending"
+
+    again = await client.post("/auth/register", json=_signup_body(RIDER))
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "phone_scheduled_for_deletion"
 
     restored = await client.delete("/account/deletion", headers=headers)
     assert restored.status_code == 200, restored.text
@@ -315,7 +338,8 @@ async def test_a_driver_leaves_dispatch_and_comes_back_to_what_he_was(
         row = await session.get(Driver, driver_id)
         assert row is not None and row.status is DriverStatus.DEACTIVATED
 
-    assert (await client.delete("/account/deletion", headers=driver["headers"])).status_code == 200
+    headers = await _login_again(client, DRIVER)
+    assert (await client.delete("/account/deletion", headers=headers)).status_code == 200
     async with session_factory() as session:
         row = await session.get(Driver, driver_id)
         assert row is not None and row.status is DriverStatus.APPROVED
@@ -325,10 +349,11 @@ async def test_a_suspended_driver_comes_back_suspended(
     client: AsyncClient, session_factory
 ) -> None:
     """**الاستعادةُ لا تفتح باباً أغلقه مشرف** — من كان موقوفاً يعود موقوفاً."""
+    suspended = DRIVER | {"phone": "0796660121", "name": "كبتنٌ موقوف"}
     driver = await approved_driver(
         client,
         session_factory,
-        DRIVER | {"phone": "0796660121", "name": "كبتنٌ موقوف"},
+        suspended,
         plate_number="AMM-0121",
         subscribed=False,
     )
@@ -340,7 +365,8 @@ async def test_a_suspended_driver_comes_back_suspended(
         await session.commit()
 
     assert (await client.post("/account/deletion", json={}, headers=driver["headers"])).status_code == 201
-    assert (await client.delete("/account/deletion", headers=driver["headers"])).status_code == 200
+    headers = await _login_again(client, suspended)
+    assert (await client.delete("/account/deletion", headers=headers)).status_code == 200
     async with session_factory() as session:
         row = await session.get(Driver, driver_id)
         assert row is not None and row.status is DriverStatus.SUSPENDED
@@ -547,11 +573,15 @@ async def test_after_anonymization_the_token_is_refused_and_the_number_is_free(
     rider = await rider_session(client)
     uid = _uid(rider)
     assert (await client.post("/account/deletion", json={}, headers=rider["headers"])).status_code == 201
+    # جلسةٌ فُتحت في المهلة — **وهي ما يبقى حيّاً حتى التجهيل** منذ §60
+    in_grace = await _login_again(client, RIDER)
     await _due_now(session_factory, uid)
     assert (await _run(session_factory))["anonymized"] == 1
 
-    refused = await client.get("/wallet/me", headers=rider["headers"])
+    refused = await client.get("/wallet/me", headers=in_grace)
     assert refused.status_code == 403 and refused.json()["code"] == "account_closed"
+    # **والتوكنُ الذي طلب الحذفَ سقط لحظةَ الطلب** (SPEC §60) لا بعد التجهيل
+    assert (await client.get("/wallet/me", headers=rider["headers"])).status_code == 401
     # **الرقمُ يعود حرّاً**: حسابٌ جديدٌ لا صلةَ له بالمجهَّل
     fresh = await client.post("/auth/register", json=_signup_body(RIDER))
     assert fresh.status_code == 201, fresh.text

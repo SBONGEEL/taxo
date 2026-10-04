@@ -46,7 +46,11 @@ async def request_deletion(
         session, redis, user=user, forfeit_amount=payload.forfeit_amount
     )
     await session.commit()
-    await token_service.revoke_all_for_user(redis, user.id)
+    await token_service.revoke_all_for_user(
+        session, redis, user.id, reason=token_service.REVOKE_DELETION
+    )
+    await session.commit()
+    await token_service.kick(redis, user.id)
     return DeletionStateOut(**await account_deletion.state(session, locked))
 
 

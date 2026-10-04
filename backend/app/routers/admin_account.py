@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.deps import DbSession, RedisDep, StaffUser
+from app.core.deps import CurrentSessionId, DbSession, RedisDep, StaffUser
 from app.core.exceptions import InvalidCredentials
 from app.schemas.admin_account import (
     AdminAccountOut,
@@ -17,7 +17,7 @@ from app.schemas.admin_account import (
     ChangeUsernameIn,
 )
 from app.core.security import verify_password
-from app.services import admin_credentials
+from app.services import admin_credentials, token_service
 from app.services.auth.password import set_password
 
 router = APIRouter(prefix="/admin/account", tags=["admin"])
@@ -55,6 +55,7 @@ async def change_password(
     admin: StaffUser,
     session: DbSession,
     redis: RedisDep,
+    current_sid: CurrentSessionId,
 ) -> None:
     """يغيّر كلمتَه — **بالحالية، ويُبطل بقيةَ الجلسات لا هذه**.
 
@@ -71,11 +72,18 @@ async def change_password(
         raise InvalidCredentials("كلمة المرور الحالية غير صحيحة")
 
     # **نفسُ السياسة القائمة**: الطولُ ٨–١٢٨ وقائمةُ المنع — لا شرطَ يُضاف
-    # ولا يُنقص (`auth/password.validate_password`). و`set_password` تُبطل كلَّ
-    # مفاتيح التجديد بنفسها، **فالجلساتُ الأخرى تسقط عند أول تجديد**.
+    # ولا يُنقص (`auth/password.validate_password`).
     #
-    # **والجلسةُ الحاليةُ تبقى**: توكنُ الوصول في يدها قصيرُ العمر ولا يُبطَل
-    # قبل انتهائه أصلاً (SPEC القسم 14) — فمن بدّل كلمتَه يُكمل عملَه، ومن
-    # سواه يخرج. وإخراجُه هو نفسُه يجعله يتردّد في التبديل، وهو نقيضُ الغرض.
-    await set_password(session, redis, user=admin, new_password=payload.new_password)
+    # **والجلسةُ الحاليةُ تبقى، والبقيةُ تسقط عند طلبها التالي** (SPEC §60):
+    # `keep_sid` يستثنيها من الإبطال، و`kick` يُغلق مقابسَ غيرها لا مقابسَها.
+    # **وكان قبل §60 يمحو مفتاحَ تجديدها هي أيضاً** — فتسقط بعد ربع ساعة رغم
+    # الوعد المكتوب هنا وفي الشاشة. **والوعدُ هو المقصود**، فصار هو الواقع.
+    await set_password(
+        session,
+        redis,
+        user=admin,
+        new_password=payload.new_password,
+        keep_sid=current_sid,
+    )
     await session.commit()
+    await token_service.kick(redis, admin.id, keep=current_sid)

@@ -22,6 +22,7 @@ import {
 import type { ReactNode } from "react";
 
 import {
+  ApiError,
   refreshNow,
   setBiometricArmedReader,
   setRefreshPersister,
@@ -43,6 +44,7 @@ import {
   getMe,
   logout as logoutRequest,
   registerDevice,
+  revokeAllSessions,
   unregisterDevice,
 } from "@/api/endpoints";
 import type { AuthResponse, User } from "@/api/types";
@@ -50,12 +52,22 @@ import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
 import { registerNativePush } from "@/lib/push";
+import { setSplashStatus } from "@/lib/splash";
+
+/** **عطبٌ عابرٌ لا حكمٌ على الجلسة**: شبكةٌ (`status 0`) أو خادمٌ ساقطٌ (`5xx`)،
+ *  أو خطأٌ لم يمرّ بعميل HTTP أصلاً. وما عدا ذلك قاله الخادمُ عن الحساب. */
+function isTransient(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return true;
+  return error.status === 0 || error.status >= 500;
+}
 
 interface SessionState {
   user: User | null;
   loading: boolean;
   signIn: (response: AuthResponse) => void;
   signOut: () => Promise<void>;
+  /** إنهاءُ كلِّ جلسات الحساب على كلِّ الأجهزة — وهذه منها (SPEC §60). */
+  signOutEverywhere: () => Promise<void>;
   refreshUser: () => Promise<void>;
   /** حالُ الدخول بالبصمة — **تُقاس ولا تُفترض**، و`null` «لم تُقرأ بعد». */
   biometry: BiometryStatus | null;
@@ -69,6 +81,7 @@ const SessionContext = createContext<SessionState>({
   loading: true,
   signIn: () => undefined,
   signOut: async () => undefined,
+  signOutEverywhere: async () => undefined,
   refreshUser: async () => undefined,
   biometry: null,
   refreshBiometry: async () => undefined,
@@ -100,10 +113,37 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    getMe()
-      .then(setUser)
-      .catch(() => tokens.clear())
-      .finally(() => setLoading(false));
+    // **إقلاعٌ بلا شبكة لا يُخرج** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤): كان أيُّ
+    // فشلٍ في `GET /auth/me` يمحو الرموز — فمن فتح التطبيقَ في نفقٍ أو والخادمُ
+    // يُعاد تشغيلُه وجد نفسَه خارجَ حسابه. **فالعابرُ يُعاد وتبقى الترحيبيةُ**
+    // تقول حالَ الشبكة، وما قاله الخادمُ (`401` بعد تجديدٍ مرفوض، أو حظر)
+    // يمحو كما كان.
+    let cancelled = false;
+    let attempt = 0;
+    const load = () => {
+      getMe()
+        .then((me) => {
+          if (cancelled) return;
+          setSplashStatus(null);
+          setUser(me);
+          setLoading(false);
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          if (isTransient(error)) {
+            attempt += 1;
+            setSplashStatus(navigator.onLine === false ? "offline" : "slow");
+            window.setTimeout(load, Math.min(10_000, 1_000 * 2 ** attempt));
+            return;
+          }
+          tokens.clear();
+          setLoading(false);
+        });
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /** تسجيل الجهاز بعد الدخول — يُبتلع فشلُه: إشعاراتٌ لا تصل أهون من دخولٍ
@@ -210,6 +250,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await refreshBiometry();
   }, [refreshBiometry]);
 
+  /** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١) — لهاتفٍ أو حاسوبٍ ضاع.
+   *
+   * الخلفيةُ تُبطل كلَّ جلسات الحساب **وهذه منها**، وتمحو رموزَ الإشعار لكلِّ
+   * أجهزته؛ فلا يبقى هنا إلا ما يفعله الخروجُ محلّياً. **والجهازُ يُحذف أوّلاً**
+   * والتوكنُ ما زال صالحاً، كما في الخروج.
+   */
+  const signOutEverywhere = useCallback(async () => {
+    await unregisterDevice(deviceId()).catch(() => undefined);
+    await revokeAllSessions();
+    tokens.clear();
+    await forgetToken();
+    registered.current = false;
+    setUser(null);
+    await refreshBiometry();
+  }, [refreshBiometry]);
+
   const refreshUser = useCallback(async () => {
     setUser(await getMe());
   }, []);
@@ -220,6 +276,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loading,
       signIn,
       signOut,
+      signOutEverywhere,
       refreshUser,
       biometry,
       refreshBiometry,
@@ -231,6 +288,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loading,
       signIn,
       signOut,
+      signOutEverywhere,
       refreshUser,
       biometry,
       refreshBiometry,

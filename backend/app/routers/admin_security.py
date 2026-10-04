@@ -1,8 +1,8 @@
 """سياسةُ دخول اللوحة — قراءةٌ وكتابةٌ لـ`admin` حصراً (القسم 14.1، 12-د).
 
-**لا `StaffUser` هنا**: هذه سياسةُ من يدخل اللوحة، وتوسيعُ مهلة الخمول أو إطفاء
-الإلزام قرارٌ على الطاقم كلّه لا إجراءُ دعمٍ فنيّ — كصفحة العقود بالضبط
-(القسم 13/8).
+**لا `StaffUser` هنا**: هذه سياسةُ من يدخل اللوحة، وإطفاءُ الإلزام قرارٌ على
+الطاقم كلّه لا إجراءُ دعمٍ فنيّ — كصفحة العقود بالضبط (القسم 13/8). **ومهلةُ
+الخمول التي كانت تُكتب هنا نُزعت** (SPEC §60): الدخولُ يبقى حتى يخرج صاحبُه.
 
 وكلُّ كتابةٍ تدخل سجل التدقيق بأسماءِ ما تغيّر لا بقيمه، كبقية كتابات اللوحة.
 """
@@ -32,9 +32,6 @@ async def _my_factor(session, user) -> TotpStatusOut:
         recovery_verified_at=record.recovery_codes_verified_at if record else None,
         recovery_codes_remaining=await totp.remaining_recovery_codes(session, user.id),
         required=await security_settings.totp_required_for(session, user),
-        session_idle_timeout_minutes=await security_settings.idle_timeout_minutes(
-            session
-        ),
     )
 
 
@@ -42,7 +39,6 @@ async def _read(session, user) -> SecuritySettingOut:
     row = await security_settings.get(session)
     return SecuritySettingOut(
         admin_totp_required=bool(row and row.admin_totp_required),
-        admin_idle_timeout_minutes=await security_settings.idle_timeout_minutes(session),
         my_factor=await _my_factor(session, user),
     )
 
@@ -64,7 +60,6 @@ async def update_security_settings(
         session,
         actor=user,
         admin_totp_required=payload.admin_totp_required,
-        admin_idle_timeout_minutes=payload.admin_idle_timeout_minutes,
     )
     if changed:
         await audit.record(

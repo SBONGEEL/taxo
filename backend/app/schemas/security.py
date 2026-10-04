@@ -6,10 +6,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.security_setting import (
-    MAX_IDLE_TIMEOUT_MINUTES,
-    MIN_IDLE_TIMEOUT_MINUTES,
-)
 from app.services.totp import DIGITS, PERIOD_SECONDS
 
 # الرمزُ ستُّ خانات، والحدُّ هنا حدُّ **نقل** يتسع لمسافةٍ يلصقها المستخدم؛
@@ -91,12 +87,8 @@ class TotpStatusOut(BaseModel):
     recovery_verified_at: datetime | None = None
     recovery_codes_remaining: int
     required: bool
-    # **مهلةُ خمول جلسته هو** — لا سياسةٌ تُنشر: الطبقةُ التي تُقفل تبويباً
-    # متروكاً على مكتب تعيش في اللوحة (القسم 14.1)، ومؤقّتٌ في المتصفح بمدةٍ
-    # مكتوبةٍ في كوده يفترق عن `security_settings` أولَ مرةٍ تُعدَّل. وهو هنا
-    # لا في `GET /admin/security` لأن `support` يحتاجه ولا يقرأ ذاك المسار،
-    # ولا في `GET /config` لأن العابرَ لا شأن له بمهلة مكتبٍ إداريّ
-    session_idle_timeout_minutes: int
+    # **وكان هنا `session_idle_timeout_minutes`** — مهلةُ خمولِ اللوحة. **ونُزع بقرار
+    # المالك** (SPEC §60): الدخولُ يبقى حتى يخرج صاحبُه، فلا مؤقّتَ في المتصفح يقرؤه
 
 
 class SecuritySettingOut(BaseModel):
@@ -111,16 +103,11 @@ class SecuritySettingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     admin_totp_required: bool
-    admin_idle_timeout_minutes: int
-    min_idle_timeout_minutes: int = MIN_IDLE_TIMEOUT_MINUTES
-    max_idle_timeout_minutes: int = MAX_IDLE_TIMEOUT_MINUTES
     my_factor: TotpStatusOut
 
 
 class SecuritySettingUpdate(BaseModel):
-    """ما يملك المشرفُ تغييره — والسقفُ محروسٌ هنا وفي الخدمة وفي القاعدة."""
+    """ما يملك المشرفُ تغييره — **مفتاحُ الإلزام وحدَه** منذ نُزعت مهلةُ الخمول
+    (SPEC §60). وحقلٌ مجهولٌ في الطلب يُهمَل كما كان، فطلبٌ قديمٌ لا يسقط."""
 
     admin_totp_required: bool | None = None
-    admin_idle_timeout_minutes: int | None = Field(
-        default=None, ge=MIN_IDLE_TIMEOUT_MINUTES, le=MAX_IDLE_TIMEOUT_MINUTES
-    )

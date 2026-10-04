@@ -5,6 +5,53 @@
 
 **نقلٌ لا تحرير.** كلُّ ما تحت هذا السطر منقولٌ من `CLAUDE.md` بحرفه — لا حرفَ تغيّر ولا سطرَ أُعيدت صياغتُه.
 وفهرسُه في `CLAUDE.md` تحت «الفهرس — كلُّ ما نُقل».
+
+## شجرةُ إعادة التصميم — التبديلُ بين مكدّسَي التطوير (قِيس ٢٠٢٦-١٠-٠٤)
+
+**على فرع `redesign` وحدَه** (`~/prj/TAXO-redesign`). **ولا يعمل المكدّسان معاً**: الذاكرةُ لا
+تحملهما (`STATE.md`)، **والخلفيّتان تنشران المنفذَ نفسَه (`8001`)**. فقبل كلِّ `up`:
+`docker ps --filter name=taxo-`.
+
+**من `master` إلى الفرع** — ما يوقفه `stop` يبقى بحاوياته وحجومه:
+
+```bash
+cd ~/prj/TAXO && docker compose --env-file .env.local stop
+cd ~/prj/TAXO-redesign && docker compose --env-file .env.local up -d db redis backend
+```
+
+**ومن الفرع إلى `master`** — قِيس بالتشغيل: `taxo-rd-*` توقّفت، ثمّ قامت `taxo-db` و`taxo-redis`
+**صحيحتين في ثوانٍ**، و`master` على إيداعه بلا تغيير:
+
+```bash
+cd ~/prj/TAXO-redesign && docker compose --env-file .env.local stop
+cd ~/prj/TAXO && docker compose --env-file .env.local start db redis
+```
+
+**و`.env.local` الفرع هو ما يفصل**: سطراه يجعلان المشروعَ `taxo-rd` والحاوياتِ `taxo-rd-*`
+والحجومَ `taxo-rd_*`. **وأيُّ أمرِ compose في شجرة الفرع بملفِّ بيئة `master` يعيد إنشاءَ حاويات
+`master` على قاعدتها** — والخلفيةُ تُقلع بـ`alembic upgrade head`.
+
+**والواجهاتُ على الفرع تُشغَّل على المضيف لا في حاوياتها**: حاوياتُ الواجهة في compose تحمل
+`VITE_API_BASE_URL` **عنوانَ نفق `master`**، فتخاطب خلفيةً غيرَ خلفية الفرع. والمنافذُ الثلاثة في
+`cors_origins`:
+
+```bash
+cd ~/prj/TAXO-redesign/customer-app && VITE_API_BASE_URL=http://localhost:8001 npx vite --port 5173 --strictPort
+cd ~/prj/TAXO-redesign/driver-app   && VITE_API_BASE_URL=http://localhost:8001 npx vite --port 5174 --strictPort
+cd ~/prj/TAXO-redesign/admin-panel  && VITE_API_BASE_URL=http://localhost:8001 npx vite --port 5175 --strictPort
+```
+
+**وفخٌّ قِيس**: خادمٌ يُطلق بـ`nohup … &` داخل `wsl -e bash -lc '…'` **يموت مع الجلسة** بلا
+أثرٍ في سجلّه — يُشغَّل في مهمّةٍ تبقى، لا في جلسةٍ تُغلق.
+
+**وقاعدةُ الفرع مستقلّة** (`taxo-rd_*`): بُذرت بـ`scripts.seed`، وحساباتُ التطوير فيها أُنشئت
+**بباب الإنشاء نفسِه** (`create_account`) وأرقامُها أرقامُ الجدول أدناه، **فلا رمزَ تحقّقٍ ولا
+رسالةَ تُرسل**. ومشرفُها المحلّيُّ `rd.mushrif` بكلمة الجدول.
+
+**وحاويةُ المجموعة تُقتل حين تضيق الذاكرة** (٢٠٢٦-١٠-٠٤): أوقف Claude Code تشغيلَ المجموعة
+الكاملة على الفرع عند ربعها لأن الجهازَ قارب نفادَ الذاكرة، **و`suite.sh` حذف حاويتَه في
+`trap`** — فلا نتيجةَ ولا اسمَ لِما سقط، لأن pytest لا يسمّي الساقطَ إلا في آخر التشغيل.
+**فلا يُعاد التشغيلُ إلا بإذن**، وبعد تخفيف الحِمل.
 <!--/جديد-->
 
 ## Commands

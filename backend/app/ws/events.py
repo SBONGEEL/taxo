@@ -114,6 +114,31 @@ async def publish(redis: Redis, channel: str, payload: dict[str, Any]) -> None:
     await redis.publish(channel, json.dumps(payload, ensure_ascii=False))
 
 
+#: **أمرُ إغلاقٍ للمقبس لا حدثٌ للتطبيق** (SPEC §60): يقرؤه `ws/routes.py::_pump`
+#: ويُغلق المقبسَ ولا يمرّره — جلسةٌ أُبطلت لا يبقى مقبسُها يتلقّى شيئاً.
+SESSION_REVOKED = "session_revoked"
+
+
+async def publish_session_revoked(
+    redis: Redis,
+    user_id: uuid.UUID | str,
+    *,
+    sid: uuid.UUID | None = None,
+    keep: uuid.UUID | None = None,
+) -> None:
+    """تُغلق مقابسُ جلسةٍ بعينها (`sid`)، أو كلُّ مقابس الحساب بلا `sid` — **إلا
+    مقابسَ `keep`**: من غيّر كلمتَه بنفسه يُخرج غيرَه لا نفسَه."""
+    await publish(
+        redis,
+        user_channel(user_id),
+        {
+            "type": SESSION_REVOKED,
+            "sid": str(sid) if sid else None,
+            "keep": str(keep) if keep else None,
+        },
+    )
+
+
 async def publish_ride_event(redis: Redis, ride: Ride, event: RideEvent) -> None:
     """يبث حدث الرحلة لطرفيها معاً (SPEC القسم 10).
 

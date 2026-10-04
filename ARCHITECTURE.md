@@ -674,6 +674,24 @@ explicitly. This is deliberate — stage 5's ledger requires multi-write atomic 
 single-use rotation — `rotate_refresh_token` deletes the key and rejects replay. Access tokens cannot
 be revoked before expiry; account-level revocation goes through `revoke_all_for_user`.
 
+<!--جديد-->
+> **⚠ الفقرةُ التي فوق هذه منقولةٌ ولا تُحرَّر — وقد نُسخت على فرع `redesign`** (SPEC §60،
+> قرارُ المالك ٢٠٢٦-١٠-٠٤: **الدخولُ يبقى حتى يخرج صاحبُه**). فتُقرأ معها لا بدلَها:
+>
+> - **الجلسةُ صفٌّ في `auth_sessions` لا مفتاحٌ في Redis**، ورمزُ التجديد **بلا `exp`**، وكلا
+>   التوكنين يحمل `sid`. فإعادةُ تشغيل Redis أو إفراغُه لا تُخرج أحداً.
+> - **التدويرُ باقٍ** (`token_service.rotate` لا `rotate_refresh_token`، والصفُّ يُقفل قبل
+>   الفحص): السابقُ في `GRACE` (ستّون ثانية) **يُعطى الحاليَّ نفسَه مُعاداً سكُّه حرفاً**،
+>   وما هو أقدمُ يُبطل الجلسةَ كلَّها علامةَ سرقة.
+> - **«توكنُ الوصول لا يُبطَل قبل انتهائه» لم يعد صحيحاً**: يُسأل عن جلسته في كلِّ طلب
+>   (`authenticate_access`)، فالخروجُ وإنهاءُ الكلّ يسريان عند الطلب التالي، **وكلُّ إبطالٍ
+>   يُتبَع بعد التزامه بـ`token_service.kick`** الذي يُغلق المقابسَ المفتوحة.
+> - **`revoke_all_for_user` بابٌ واحدٌ كما كان** — وتوقيعُه صار `(session, redis, user_id,
+>   reason=…)`، والالتزامُ على المنادي ثمّ `kick`. **ورموزُ ما قبل §60** (بلا `sid`) تُقبل
+>   مرّةً عند أوّل تجديدٍ وتصير صفّاً، فالتحويلُ لا يُخرج أحداً.
+<!--/جديد-->
+
+
 Enums are Postgres native types created via `models/base.py::pg_enum`, which stores the lowercase
 `.value` rather than the member name. Reuse it for every new enum column. `feature_flags.feature_key`
 is the deliberate exception: a plain `String(64)` guarded by the `FeatureKey` enum in the schema layer,

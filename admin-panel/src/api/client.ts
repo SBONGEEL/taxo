@@ -6,7 +6,7 @@
  *    `core/exceptions.py`)، فيرتفع `ApiError` برسالته العربية جاهزةً للعرض —
  *    ولا تخترع الواجهة نصّاً لخطأٍ قالته الخلفية بالعربية أصلاً.
  * 2. **تجديد الجلسة**: توكن الدخول قصير العمر، والتجديد **دورةٌ واحدة**
- *    (`rotate_refresh_token` يحذف المفتاح ويرفض إعادته). فطلبٌ يرتدّ 401
+ *    (`token_service.rotate` يستهلكه، وإعادتُه بعد مهلة السماح تُبطل الجلسة). فطلبٌ يرتدّ 401
  *    يجدّد **مرةً واحدة** ويعيد المحاولة، وطلباتٌ متوازية تتقاسم نفس وعد
  *    التجديد — وإلا أحرق كلٌّ منها رمز الآخر وخرج المستخدم من حسابه.
  * 3. **العنوان**: مسارٌ واحد `/api/v1` في مكانٍ واحد.
@@ -107,16 +107,28 @@ async function refreshSession(): Promise<boolean> {
   const token = tokens.refresh();
   if (!token) return false;
 
-  const response = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: token }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: token }),
+    });
+  } catch (error) {
+    // **انقطاعُ الشبكة ليس حكماً على الجلسة** (SPEC §60) — يُرفع خطأَ شبكةٍ
+    // كأيِّ نداء، والرمزُ باقٍ لمحاولةٍ تالية
+    throw networkError(error);
+  }
 
-  if (!response.ok) {
+  // **`401` وحدَه حكمٌ على الجلسة** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤): الدخولُ
+  // يبقى حتى يخرج صاحبُه، واللوحةُ منها. وكان أيُّ ردٍّ غيرِ ناجحٍ يمحو الرمز —
+  // **فخادمٌ يُعاد تشغيلُه (`502`/`503`) كان يُخرج كلَّ تبويبٍ جدّد في تلك
+  // الدقيقة**. فما عدا `401` عطبٌ عابرٌ يُقال ولا يمحو شيئاً.
+  if (response.status === 401) {
     tokens.clear();
     return false;
   }
+  if (!response.ok) throw await toError(response);
   tokens.save(await response.json());
   return true;
 }

@@ -1,18 +1,17 @@
 """سياسةُ دخول اللوحة — قراءتُها وكتابتُها (SPEC القسم 14.1، المرحلة 12-د).
 
-الموضعُ الوحيد الذي يجيب عن ثلاثة أسئلة، وكلُّها تُسأل في مسارٍ حارّ:
+الموضعُ الوحيد الذي يجيب عن سؤالين، وكلاهما يُسأل في مسارٍ حارّ:
 
 1. **هل الإلزام مشتعل؟** (`core/deps` يسأله في كل طلبٍ إداريّ)
-2. **كم مهلةُ الخمول؟** (يسألها كلُّ إصدارِ توكنٍ لطاقم اللوحة)
-3. **هل يجوز إشعال الإلزام الآن؟** (شرطُ المالك: بعد إثبات الاسترداد)
+2. **هل يجوز إشعال الإلزام الآن؟** (شرطُ المالك: بعد إثبات الاسترداد)
 
 **والغيابُ يُقرأ بالافتراضات ولا يُبذَر صفٌّ**: صفٌّ مبذورٌ لا يضيف إلا موضعاً
 ثانياً تُكتب فيه الافتراضاتُ فيفترق عن الكود يوماً. والصفُّ يُنشأ عند أول كتابة.
 
-**والسقفُ الأقصى للمهلة في الكود لا في يد المشرف**: اللوحة تفتح مفاتيح
-المزوّدين والدفع، فمهلةٌ يوسّعها مشرفٌ إلى يومٍ تُبطل الحارسَ من داخله. والحدُّ
-مكتوبٌ في `models/security_setting.py` ومحروسٌ في القاعدة بـCHECK أيضاً — طبقةُ
-Pydantic تردّ المدخل، والقاعدةُ تردّ كلَّ ما لم يمرّ منها.
+**وكان هنا سؤالٌ ثالث — «كم مهلةُ الخمول؟» — ونُزع بقرار المالك** (SPEC §60،
+٢٠٢٦-١٠-٠٤): **الدخولُ يبقى حتى يخرج صاحبُه**، في اللوحة كما في التطبيقين.
+**وعمودُه `admin_idle_timeout_minutes` باقٍ في القاعدة لا يُقرأ** — نزعُه ترحيلةٌ
+تمسّ جدولاً قائماً بلا حاجة، وبقاؤه يجعل الرجوعَ عن القرار سطراً لا ترحيلة.
 """
 
 from __future__ import annotations
@@ -22,18 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import TotpRecoveryProofRequired
 from app.models.enums import UserRole
-from app.models.security_setting import (
-    DEFAULT_IDLE_TIMEOUT_MINUTES,
-    MAX_IDLE_TIMEOUT_MINUTES,
-    MIN_IDLE_TIMEOUT_MINUTES,
-    SecuritySetting,
-)
+from app.models.security_setting import SecuritySetting
 from app.models.user import User
 from app.services import totp
-
-# أدوارُ اللوحة — ومهلةُ الخمول لها وحدها: راكبٌ يُخرَج من تطبيقه كل نصف ساعة
-# يفقد التطبيق، ولا يفتح تطبيقُه مفتاحَ مزوّدٍ ولا طلبَ سحب
-STAFF_ROLES: frozenset[UserRole] = frozenset({UserRole.ADMIN, UserRole.SUPPORT})
 
 
 async def get(session: AsyncSession) -> SecuritySetting | None:
@@ -71,25 +61,6 @@ async def totp_required_for(session: AsyncSession, user: User) -> bool:
     return bool(row and row.admin_totp_required)
 
 
-async def idle_timeout_minutes(session: AsyncSession) -> int:
-    row = await get(session)
-    return row.admin_idle_timeout_minutes if row else DEFAULT_IDLE_TIMEOUT_MINUTES
-
-
-async def refresh_ttl_for(session: AsyncSession, user: User) -> int | None:
-    """عمرُ مفتاح الـrefresh لهذا الحساب — و`None` تعني «المدّة المعتادة».
-
-    **الطبقةُ الأولى من مهلة الخمول**: يُكتب المفتاح بهذا العمر ويُجدَّد عند كل
-    تدوير، فالتدويرُ لمرةٍ واحدة (القائمُ أصلاً) هو نبضةُ النشاط نفسُها — لا
-    عمودُ «آخرِ نشاط» ولا مؤقّتٌ ثانٍ يمكن أن يخالفه. وما تملكه هذه الطبقة أن
-    **توكنَ تجديدٍ مسروقاً يبطل بعد نصف ساعة**؛ أما التبويبُ المتروك على مكتبٍ
-    فتملكه اللوحةُ وحدها (القسم 14.1).
-    """
-    if not user.has_role(*STAFF_ROLES):
-        return None
-    return await idle_timeout_minutes(session) * 60
-
-
 async def ensure_factor_ready(session: AsyncSession, user: User) -> None:
     """يرفع `TotpEnrollmentRequired` على مشرفٍ مُلزَمٍ بلا عاملٍ مؤكَّد.
 
@@ -111,7 +82,6 @@ async def update(
     *,
     actor: User,
     admin_totp_required: bool | None = None,
-    admin_idle_timeout_minutes: int | None = None,
 ) -> tuple[SecuritySetting, list[str]]:
     """يكتب السياسة ويعيد (الصف، ما تغيّر فعلاً) — القيدُ والـcommit للراوتر.
 
@@ -127,24 +97,6 @@ async def update(
         await session.flush()
 
     changed: list[str] = []
-
-    if (
-        admin_idle_timeout_minutes is not None
-        and admin_idle_timeout_minutes != row.admin_idle_timeout_minutes
-    ):
-        if not (
-            MIN_IDLE_TIMEOUT_MINUTES
-            <= admin_idle_timeout_minutes
-            <= MAX_IDLE_TIMEOUT_MINUTES
-        ):
-            from app.core.exceptions import InvalidInput
-
-            raise InvalidInput(
-                f"مهلة الخمول بين {MIN_IDLE_TIMEOUT_MINUTES} و"
-                f"{MAX_IDLE_TIMEOUT_MINUTES} دقيقة"
-            )
-        row.admin_idle_timeout_minutes = admin_idle_timeout_minutes
-        changed.append("admin_idle_timeout_minutes")
 
     if (
         admin_totp_required is not None

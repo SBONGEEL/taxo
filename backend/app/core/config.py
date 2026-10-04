@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    # **لا قارئَ له منذ SPEC §60** — رمزُ التجديد بلا عمر، والجلسةُ تبقى حتى يخرج
+    # صاحبُها. **باقٍ لأن ملفّاتِ البيئة القائمة تضبطه**، ونزعُه يجعلها تضبط ما لا يوجد
     refresh_token_expire_days: int = 30
 
     # تشفير provider_credentials at rest

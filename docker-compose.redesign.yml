@@ -1,0 +1,29 @@
+# طبقةُ شجرة إعادة التصميم — **تُضاف فوق `docker-compose.yml` ولا تحلّ محلَّه**
+# (قرارُ المالك ٢٠٢٦-١٠-٠٤). على الفرع `redesign` وحدَه: لا يُرفع، **ولا يعمل
+# مكدّسُه مع مكدّس `master` معاً** — الذاكرةُ لا تحملهما.
+#
+# **العلّة**: `docker-compose.yml` يثبّت `name: taxo-app` **وأسماءَ الحاويات**،
+# فاسمُ الدليل لا يفصل شيئاً — وبغير هذه الطبقة يعيد `up` من هذه الشجرة إنشاءَ
+# حاويات `master` نفسِها **وعلى قاعدتها**، والخلفيةُ تُقلع بـ`alembic upgrade
+# head`. والتفصيلُ مقيساً في `STATE.md`.
+#
+# **وتُختار تلقائياً لا بالتذكّر**: `.env.local` في هذه الشجرة (غيرُ متتبَّع)
+# يحمل اسمَ المشروع وقائمةَ الملفّين — فكلُّ أمرٍ بـ`--env-file .env.local`،
+# ومنه `dev-up.sh` و`suite.sh`، يذهب إلى هذا المشروع وحجومِه. **ولا تُكتب قيمةُ
+# القائمة هنا حرفاً**: `check:env-leak` يقرأ كلَّ قيمةٍ في `.env.local` من اثني
+# عشر حرفاً فأكثر ويبحث عنها في الشجرة.
+#
+# **و`name:` هنا احتياطٌ ثانٍ لا الأوّل**: من سمّى هذه الطبقةَ بـ`-f` صريحاً
+# بقي في مشروعها ولو نسي ملفَّ البيئة.
+name: taxo-rd
+
+services:
+  db:               { container_name: taxo-rd-db }
+  redis:            { container_name: taxo-rd-redis }
+  backend:          { container_name: taxo-rd-backend }
+  whatsapp-gateway: { container_name: taxo-rd-whatsapp-gateway }
+  worker:           { container_name: taxo-rd-worker }
+  beat:             { container_name: taxo-rd-beat }
+  customer-app:     { container_name: taxo-rd-customer-app }
+  driver-app:       { container_name: taxo-rd-driver-app }
+  admin-panel:      { container_name: taxo-rd-admin-panel }

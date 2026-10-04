@@ -5,7 +5,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -18,10 +18,12 @@ import {
   BrowserRouter as Router,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
+import { Welcome } from "@/components/welcome/Welcome";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -219,6 +221,37 @@ function NavBar() {
       <WomenModeNotice />
       {showsNav(pathname) ? <BottomNav /> : null}
     </>
+  );
+}
+
+/** **الترحيبُ عند كلِّ فتحة** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٠ و١١).
+ *
+ * فوق المسارات لا مساراً بينها: الشاشةُ التي تحته (الرئيسية أو الدخول) تُرسم
+ * في الوقت نفسِه، **فلا انتظارَ بعد أن يمضي**. و«داخلٌ أم لا» يُقرأ **مرّةً لحظةَ
+ * الإقلاع** — دخولٌ يقع في أثناء الترحيب لا يقلب نوعَه في منتصفه.
+ *
+ * وغيرُ الداخل يُسلَّم إلى شاشة الدخول **ومعه الرقمُ الذي كتبه** — ولا نداءَ
+ * هنا: الدخولُ يقع هناك بطلبه نفسِه (البند ١٢ ينتظر خطواتٍ مرسومة).
+ */
+function WelcomeGate() {
+  const { user, biometry } = useSession();
+  const navigate = useNavigate();
+  const signedInAtBoot = useRef(Boolean(user)).current;
+  // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل
+  // زرَّها — **بالشرط نفسِه الذي يرسمه** (`Login.tsx`). فيرى ما يراه الداخلُ ويمضي
+  // إليها كما في `master`، **لا بطاقةَ رقمٍ يُجبَر على كتابته ليبلغ زرَّ البصمة**.
+  // والقياسُ لا يُفترض: `biometry` يصل بعد الإقلاع بلحظة، والترحيبُ يتبعه إن وصل.
+  const returning = signedInAtBoot || Boolean(biometry?.available && biometry.armed);
+  const [shown, setShown] = useState(true);
+  if (!shown) return null;
+  return (
+    <Welcome
+      signedIn={returning}
+      onDone={(phone) => {
+        setShown(false);
+        if (!returning) navigate("/login", { replace: true, state: phone ? { phone } : null });
+      }}
+    />
   );
 }
 
@@ -445,6 +478,7 @@ export default function App() {
                   </BoundaryByRoute>
                   <HardwareBack />
                   <NavBar />
+                  <WelcomeGate />
                 </Router>
               </RideProvider>
               </PlacesProvider>

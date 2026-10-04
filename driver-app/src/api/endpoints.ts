@@ -134,6 +134,9 @@ export const registerAccount = (payload: {
     { anonymous: true },
   );
 
+/** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١) — كلُّ أجهزة الحساب، وهذا منها. */
+export const revokeAllSessions = () => api.post<void>("/auth/sessions/revoke-all");
+
 export const logout = (refresh_token: string) =>
   api.post<void>("/auth/logout", { refresh_token });
 

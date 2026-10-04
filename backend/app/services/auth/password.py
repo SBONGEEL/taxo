@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -176,18 +178,30 @@ class PasswordAuthStrategy:
 
 
 async def set_password(
-    session: AsyncSession, redis: Redis, *, user: User, new_password: str
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user: User,
+    new_password: str,
+    keep_sid: uuid.UUID | None = None,
 ) -> User:
     """يعيّن كلمة مرورٍ جديدة **ويُبطل كل جلسات صاحبها**.
 
     الإبطال جزءٌ من العملية لا خطوةٌ تالية: من غيّر كلمته لأنها تسرّبت لم
-    يُغيّر شيئاً إن بقيت جلسةُ من سرّبها مفتوحة. و`revoke_all_for_user` يمحو
-    مفاتيح التحديث؛ أما توكن الوصول القصير فينتهي بنفسه (SPEC القسم 14).
+    يُغيّر شيئاً إن بقيت جلسةُ من سرّبها مفتوحة. و`revoke_all_for_user` يختم
+    الجلساتِ في المعاملة نفسِها (SPEC §60) — **فتسقط الكلمةُ والإبطالُ معاً أو
+    يقعان معاً** — وتوكنُ الوصول يُسأل عن جلسته في كلِّ طلبٍ فيُرفض عند التالي.
 
-    الـ commit مسؤولية الراوتر.
+    الـ commit مسؤولية الراوتر، **ومعه إغلاقُ المقابس بعده** (`token_service.kick`).
     """
     user.password_hash = hash_password(
         validate_password(new_password, phone=user.phone)
     )
-    await token_service.revoke_all_for_user(redis, user.id)
+    await token_service.revoke_all_for_user(
+        session,
+        redis,
+        user.id,
+        reason=token_service.REVOKE_PASSWORD_CHANGED,
+        except_sid=keep_sid,
+    )
     return user

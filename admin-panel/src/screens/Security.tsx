@@ -432,9 +432,6 @@ function PolicyCard({
   onSaved: (next: SecurityPolicy, message: string) => void;
   onError: (caught: unknown) => void;
 }) {
-  const [minutes, setMinutes] = useState(
-    String(policy.admin_idle_timeout_minutes),
-  );
   const [busy, setBusy] = useState(false);
 
   const factor = policy.my_factor;
@@ -498,46 +495,53 @@ function PolicyCard({
         </p>
       ) : null}
 
-      <div className="mt-16 border-t border-line pt-14">
-        <Field
-          label={`مهلة الخمول (دقائق — بين ${digits(
-            String(policy.min_idle_timeout_minutes),
-          )} و${digits(String(policy.max_idle_timeout_minutes))})`}
-          id="idle"
-          name="admin_idle_timeout_minutes"
-          dir="ltr"
-          inputMode="numeric"
-          value={minutes}
-          onChange={(event) =>
-            setMinutes(event.target.value.replace(/[^0-9]/g, ""))
-          }
-        />
-        <p className="mt-8 text-11 leading-snug text-muted">
-          تعمل في طبقتين، ولكلٍّ ما تملكه: عمرُ توكن التجديد في الخلفية يُبطل
-          توكناً مسروقاً، ومؤقّتٌ في هذا المتصفح <b>يقيس نقرَك وكتابتك لا حركةَ
-          الشبكة</b> فيُقفل تبويباً متروكاً على مكتب — والخريطةُ الحيّة تستفتي كل
-          خمس ثوانٍ، فمقياسٌ على النداءات يجدّد جلسةَ مكتبٍ خالٍ إلى الأبد.
-          والسقفُ الأقصى في الكود لا هنا: اللوحة تفتح مفاتيح المزوّدين والدفع.
-        </p>
-        <Button
-          className="mt-12"
-          size="sm"
-          variant="secondary"
-          loading={busy}
-          disabled={
-            minutes === "" ||
-            Number(minutes) === policy.admin_idle_timeout_minutes
-          }
-          onClick={() =>
-            void save(
-              { admin_idle_timeout_minutes: Number(minutes) },
-              "حُفظت مهلة الخمول — تسري على الجلسات الجديدة",
-            )
-          }
-        >
-          حفظ المهلة
+      {/* **ولا مهلةَ خمولٍ بعد اليوم** (SPEC §60، قرارُ المالك ٢٠٢٦-١٠-٠٤): الدخولُ
+          يبقى حتى يخرج صاحبُه في كلِّ تطبيق، **واللوحةُ منها**. فحقلُها خرج من
+          هنا ومن الخلفية معاً — حقلٌ يُعدَّل ولا يفعل شيئاً «بابٌ بلا زرٍّ» مقلوب */}
+    </section>
+  );
+}
+
+/** **جلساتي — إنهاءُ كلِّها** (SPEC §60-ب/١) — لكلِّ من يدخل اللوحة، لا للمشرف
+ *  وحدَه: من ضاع حاسوبُه أو هاتفُه يُخرجه من هنا. **ويُسأل قبل أن يقع** —
+ *  يُخرج صاحبَه من هذا التبويب أيضاً. */
+function SessionsCard({ onError }: { onError: (message: string | null) => void }) {
+  const { signOutEverywhere } = useSession();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function confirm() {
+    setBusy(true);
+    onError(null);
+    try {
+      await signOutEverywhere();
+    } catch (caught) {
+      onError(caught instanceof ApiError ? caught.message : "تعذّر إنهاء الجلسات");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-24 rounded-16 border border-line bg-surface p-16">
+      <h2 className="text-15 font-bold text-ink">جلساتي</h2>
+      <p className="mt-4 text-12.5 leading-note text-muted">
+        الدخولُ يبقى حتى تخرج. وإن ضاع حاسوبٌ أو هاتفٌ دخلتَ منه فأنهِ كلَّ
+        جلساتك من هنا — تخرج من كلِّ جهازٍ، وهذا منها.
+      </p>
+      {confirming ? (
+        <div className="mt-12 flex flex-wrap gap-8">
+          <Button size="sm" variant="danger" loading={busy} onClick={() => void confirm()}>
+            تأكيد — إنهاء كل الجلسات
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
+            إلغاء
+          </Button>
+        </div>
+      ) : (
+        <Button className="mt-12" size="sm" variant="secondary" onClick={() => setConfirming(true)}>
+          إنهاء كل الجلسات
         </Button>
-      </div>
+      )}
     </section>
   );
 }
@@ -629,6 +633,8 @@ export function SecurityScreen() {
           />
         </div>
       </section>
+
+      <SessionsCard onError={setError} />
 
       {isAdmin ? (
         <div className="mt-24">

@@ -15,7 +15,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -46,6 +46,7 @@ import { RideProvider, useRide } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { WelcomeSheet } from "@/components/WelcomeSheet";
+import { Welcome } from "@/components/welcome/Welcome";
 import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
 import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
@@ -375,6 +376,40 @@ function BoundaryByRoute({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;
 }
 
+/** **الترحيبُ عند كلِّ فتحة** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٠ و١١).
+ *
+ * فوق المسارات لا مساراً بينها: الشاشةُ التي تحته — ومنها جولةُ الأذونات بإفصاح
+ * الموقع — تُرسم في الوقت نفسِه، **ولا يُطلب إذنُ الموقع إلا من تلك الجولة
+ * بلمسة الكبتن**، فالترحيبُ لا يقدّم طلبَ النظام على الإفصاح. و«داخلٌ أم لا»
+ * يُقرأ مرّةً لحظةَ الإقلاع.
+ *
+ * وغيرُ الداخل يُسلَّم إلى شاشة التسجيل ومعه رقمُه، أو إلى الدخول — ولا نداءَ
+ * هنا: التسجيلُ والدخولُ يقعان هناك بطلبهما نفسِه.
+ */
+function WelcomeGate() {
+  const { user, biometry } = useSession();
+  const navigate = useNavigate();
+  const signedInAtBoot = useRef(Boolean(user)).current;
+  // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل
+  // زرَّها — **بالشرط نفسِه الذي يرسمه** (`Login.tsx`). فيرى ما يراه الداخلُ ويمضي
+  // إليها كما في `master`، **لا صفحاتِ شراكةٍ وبطاقةَ تسجيلٍ لا يحتاجها**.
+  // والقياسُ لا يُفترض: `biometry` يصل بعد الإقلاع بلحظة، والترحيبُ يتبعه إن وصل.
+  const returning = signedInAtBoot || Boolean(biometry?.available && biometry.armed);
+  const [shown, setShown] = useState(true);
+  if (!shown) return null;
+  return (
+    <Welcome
+      signedIn={returning}
+      onDone={(next) => {
+        setShown(false);
+        if (!returning && next) {
+          navigate(next.to, { replace: true, state: next.phone ? { phone: next.phone } : null });
+        }
+      }}
+    />
+  );
+}
+
 export default function App() {
   // **`reducedMotion="user"` من مكانٍ واحد** (§8)
   return (
@@ -647,6 +682,7 @@ export default function App() {
                     <HardwareBack />
                     <PushRouter />
                   <NavBar />
+                  <WelcomeGate />
                   </Router>
                 </RideProvider>
                 </GarageProvider>

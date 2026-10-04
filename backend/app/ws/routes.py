@@ -44,7 +44,7 @@ from app.services import (
     presence as socket_presence,
     rides as rides_service,
 )
-from app.services.token_service import access_token_subject
+from app.services import token_service
 from app.ws import events
 from app.ws.hub import Subscription
 
@@ -66,9 +66,14 @@ POLL_TIMEOUT_SECONDS = 0.5
 async def _authenticate(
     session: AsyncSession, websocket: WebSocket, token: str, role: UserRole
 ) -> User | None:
-    """يقبل الاتصال ثم يتحقق — القبول أولاً ليصل سبب الرفض للعميل برمز واضح."""
+    """يقبل الاتصال ثم يتحقق — القبول أولاً ليصل سبب الرفض للعميل برمز واضح.
+
+    **والجلسةُ تُسأل مع التوكن** (SPEC §60): مقبسٌ لجلسةٍ أُبطلت لا يُفتح. ومُعرِّفُها
+    يُحفظ على المقبس ليعرف `_pump` أيَّ أمرِ إغلاقٍ يخصّه.
+    """
+    sid = None
     try:
-        user = await session.get(User, access_token_subject(token))
+        user, sid = await token_service.authenticate_access(session, token)
     except AppError:
         user = None
 
@@ -78,6 +83,7 @@ async def _authenticate(
     if not user.has_role(role):
         await websocket.close(code=WS_FORBIDDEN, reason="لا تملك صلاحية هذه القناة")
         return None
+    websocket.state.sid = sid
     return user
 
 
@@ -93,11 +99,40 @@ async def _mark_present(redis: Redis, user_id: uuid.UUID, device_id: str) -> Non
         await asyncio.sleep(socket_presence.REFRESH_SECONDS)
 
 
+def _revocation(websocket: WebSocket, payload: dict[str, Any]) -> bool | None:
+    """**أمرُ إغلاق الجلسة** (SPEC §60-ب/١) — يقرؤه كلُّ مقبسٍ يمرّر قناةَ صاحبه.
+
+    `None`: ليس أمراً، فيُمرَّر كما هو. `True`: يخصّ جلسةَ هذا المقبس فيُغلق.
+    `False`: لجلسةٍ أخرى من الحساب نفسِه، فيُبلَع — **ولا يصل التطبيقَ أبداً**.
+
+    **ومقبسُ جلسةٍ أُبطلت لا يتلقّى بعدها شيئاً**: هاتفٌ ضاع وأُنهيت جلساتُه لا يبقى
+    مقبسُه المفتوحُ يستقبل الطلباتِ والأحداث. والأمرُ للحساب كلِّه (`sid` فارغ) أو
+    لجلسةٍ بعينها، وأمرُ الحساب كلِّه قد يستثني جلسةً (`keep`) — جلسةَ من غيّر
+    كلمتَه بنفسه. **وفي بيتٍ واحد** لأن للمقابس حلقتين (`_pump` و`_rider_loop`)،
+    **وكانت الثانيةُ تمرّره كأيِّ حدثٍ وتبقى مفتوحة** — أمسكه
+    `test_auth_sessions.py` قبل أن يُودَع.
+    """
+    if payload.get("type") != events.SESSION_REVOKED:
+        return None
+    sid = getattr(websocket.state, "sid", None)
+    mine = str(sid) if sid is not None else None
+    target, keep = payload.get("sid"), payload.get("keep")
+    if target is None:
+        return keep is None or keep != mine
+    return target == mine
+
+
 async def _pump(websocket: WebSocket, subscription: Subscription) -> None:
-    """يمرر ما يصل من Redis إلى المقبس كما هو."""
+    """يمرر ما يصل من Redis إلى المقبس كما هو — **إلا أمرَ إغلاق الجلسة** (`_revocation`)."""
     while True:
         payload = await subscription.poll(POLL_TIMEOUT_SECONDS)
-        if payload is not None:
+        if payload is None:
+            continue
+        revoked = _revocation(websocket, payload)
+        if revoked:
+            await websocket.close(code=WS_UNAUTHORIZED, reason="انتهت الجلسة")
+            return
+        if revoked is None:
             await websocket.send_json(payload)
 
 
@@ -280,8 +315,14 @@ async def _rider_loop(
     while True:
         payload = await subscription.poll(POLL_TIMEOUT_SECONDS)
         if payload is not None:
-            await _apply_event(payload, state, subscription)
-            await websocket.send_json(payload)
+            # **أمرُ إغلاق الجلسة قبل أيِّ حدث** (SPEC §60) — ولا يُمرَّر إلى التطبيق
+            revoked = _revocation(websocket, payload)
+            if revoked:
+                await websocket.close(code=WS_UNAUTHORIZED, reason="انتهت الجلسة")
+                return
+            if revoked is None:
+                await _apply_event(payload, state, subscription)
+                await websocket.send_json(payload)
 
         # أثناء الرحلة يرى الراكب كبتنه وحده — لا سيارات أخرى (SPEC القسم 10)
         if state.driver_id is None and state.lat is not None:
