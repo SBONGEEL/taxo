@@ -32,6 +32,7 @@
 
 import {
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -74,7 +75,7 @@ function Glyph({ name, className }: { name: string; className: string }) {
  * **ولا `<img src>` مباشرة**: البابُ يسأل عن الجلسة والسوق، **و`<img>` لا
  * يحمل ترويسة** — فتُجلب بالمفتاح وتُعرض من `blob:`.
  */
-function BannerImage({ bannerId }: { bannerId: string }) {
+export function BannerImage({ bannerId }: { bannerId: string }) {
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,7 +113,7 @@ function BannerImage({ bannerId }: { bannerId: string }) {
  *
  *  **والعنوانُ اسمُ العرض كما كتبه المشرف**، لا جملةً مؤلَّفةً في الشيفرة:
  *  ما يُطلق من اللوحة يظهر بنصّه. */
-function OfferCard({ offer }: { offer: StorefrontOffer }) {
+export function OfferCard({ offer }: { offer: StorefrontOffer }) {
   return (
     <div className="p-14">
       <div className="flex items-start gap-10">
@@ -154,7 +155,7 @@ const SLOP_PX = 8;
 /** **سحبٌ يتجاوز هذا الجزءَ من العرض يقلب الشريحة** — وما دونه يرتدّ. */
 const PAGE_RATIO = 0.18;
 
-type Slide = { key: string } & (
+export type Slide = { key: string } & (
   | { kind: "offer"; offer: StorefrontOffer }
   | { kind: "banner"; banner: PromoBanner }
 );
@@ -191,19 +192,40 @@ function SlideFace({ slide, loadImage }: { slide: Slide; loadImage: boolean }) {
 }
 
 /** **أتُنقر هذه الشريحة؟** — والعرضُ ينقر دائماً إلى شاشة الاشتراك. */
-function isOpenable(slide: Slide): boolean {
+export function isOpenable(slide: Slide): boolean {
   return (
     slide.kind === "offer" ||
     (slide.banner.link_kind !== "none" && slide.banner.link !== null)
   );
 }
 
+/** **جلدُ الصندوق** — الإطارُ والوجهُ والنقاط. **والحركةُ والسحبُ والنقرُ والجلبُ المؤجَّل في الصندوق لا في
+ *  الجلد**: صندوقُ TAXO 2.0 (`screens/t2/StorefrontT2`) يلبس جلدَه ويقرأ سلوكَه من هنا، **فلا يفترق الصندوقان
+ *  في دورانٍ ولا في رابط**. **وبلا جلدٍ يُرسم كما كان حرفاً** — وهو ما تعاينه اللوحة. */
+export interface PromoSkin {
+  /** إطارُ الصندوق — ويُضاف إليه ما يخصّ النقرَ أو السحب. */
+  frame: string;
+  face: (slide: Slide, loadImage: boolean) => ReactNode;
+  /** صفُّ النقاط، ونقطةٌ بحالها. */
+  dots: string;
+  dot: (on: boolean) => string;
+}
+
+const DEFAULT_SKIN: PromoSkin = {
+  frame: "mb-8 overflow-hidden rounded-16 border border-line bg-surface-2",
+  face: (slide, loadImage) => <SlideFace slide={slide} loadImage={loadImage} />,
+  dots: "mb-12 flex justify-center gap-5",
+  dot: (on) => (on ? "block h-5 w-14 rounded-3 bg-muted" : "block size-5 rounded-3 bg-line"),
+};
+
 export function PromoBanners({
   banners,
   offer = null,
+  skin = DEFAULT_SKIN,
 }: {
   banners: PromoBanner[];
   offer?: StorefrontOffer | null;
+  skin?: PromoSkin;
 }) {
   const navigate = useNavigate();
   // **`prefers-reduced-motion` من مصدرِ Framer نفسِه** (§8) — ومن طلبه لا
@@ -293,7 +315,7 @@ export function PromoBanners({
     window.open(slide.banner.link!, "_blank", "noopener,noreferrer");
   };
 
-  const frame = "mb-8 overflow-hidden rounded-16 border border-line bg-surface-2";
+  const frame = skin.frame;
 
   if (!carousel) {
     const only = slides[0];
@@ -303,7 +325,7 @@ export function PromoBanners({
         onClick={openable ? () => open(only) : undefined}
         className={`${frame} ${openable ? "pressable cursor-pointer" : ""}`}
       >
-        <SlideFace slide={only} loadImage />
+        {skin.face(only, true)}
       </div>
     );
   }
@@ -413,25 +435,21 @@ export function PromoBanners({
                 onClick={openable ? () => open(slide) : undefined}
                 className={`w-full shrink-0 ${openable ? "pressable cursor-pointer" : ""}`}
               >
-                <SlideFace slide={slide} loadImage={index <= reach} />
+                {skin.face(slide, index <= reach)}
               </div>
             );
           })}
         </div>
       </div>
 
-      <div className="mb-12 flex justify-center gap-5">
+      <div className={skin.dots}>
         {slides.map((item, index) => (
           <button
             key={item.key}
             type="button"
             aria-label={`لافتة ${index + 1}`}
             onClick={() => setAt(index)}
-            className={
-              index === current
-                ? "block h-5 w-14 rounded-3 bg-muted"
-                : "block size-5 rounded-3 bg-line"
-            }
+            className={skin.dot(index === current)}
           />
         ))}
       </div>

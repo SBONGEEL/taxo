@@ -40,8 +40,9 @@ import type {
   VehicleCategory,
   Wallet,
 } from "@/api/types";
+import { ByTheme } from "@/components/ByTheme";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
-import { RiderHome } from "@/components/home/RiderHome";
+import { RiderHome, type RiderHomeProps } from "@/components/home/RiderHome";
 import { ConfirmRide } from "@/components/home/ConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
@@ -56,6 +57,7 @@ import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
+import { RiderHomeT2 } from "@/screens/t2/RiderHomeT2";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -464,39 +466,42 @@ export function HomeScreen() {
     />
   );
 
+  /** **ما يُمرَّر للصفحة — كائنٌ واحدٌ للوجهين**: صفحةُ TAXO 2.0 «R05» في النهاريّ المرسوم، والقائمةُ في الليليّ
+   *  (§61-ب). فلا يفترق ما تقرؤه الصفحتان ولا أين يذهب زرٌّ فيهما. */
+  const homeProps: RiderHomeProps = {
+    name: user?.name ?? "بك",
+    // **عنوانُ موقعه حين يُعرف** — ولا مدينةَ تُخمَّن من إحداثيّة
+    place: pickupAddress,
+    unread: unreadNotifications,
+    wallet,
+    currency: countryConfig?.currency ?? "JOD",
+    nearby: drivers.length,
+    onOpenNotifications: () => navigate("/account/notifications"),
+    onOpenWallet: () => navigate("/wallet"),
+    onOpenAccount: () => navigate("/account"),
+    onAskDestination: () => setSearchOpen(true),
+    places,
+    onPickPlace: (saved) =>
+      pickPlace({
+        id: `place:${saved.id}`,
+        name: saved.label,
+        address: saved.address ?? "",
+        coordinates: { lat: saved.lat, lng: saved.lng },
+      }),
+    tiles: storefront?.tiles ?? [],
+    banners: storefront?.banners ?? [],
+    referrals,
+    onOpenReferrals: () => navigate("/account/referrals"),
+    recent,
+    onOpenRides: () => navigate("/rides"),
+    onRepeat: repeatRide,
+    map: mapNode,
+  };
+
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
       {browsing ? (
-        <RiderHome
-          name={user?.name ?? "بك"}
-          // **عنوانُ موقعه حين يُعرف** — ولا مدينةَ تُخمَّن من إحداثيّة
-          place={pickupAddress}
-          unread={unreadNotifications}
-          wallet={wallet}
-          currency={countryConfig?.currency ?? "JOD"}
-          nearby={drivers.length}
-          onOpenNotifications={() => navigate("/account/notifications")}
-          onOpenWallet={() => navigate("/wallet")}
-          onOpenAccount={() => navigate("/account")}
-          onAskDestination={() => setSearchOpen(true)}
-          places={places}
-          onPickPlace={(saved) =>
-            pickPlace({
-              id: `place:${saved.id}`,
-              name: saved.label,
-              address: saved.address ?? "",
-              coordinates: { lat: saved.lat, lng: saved.lng },
-            })
-          }
-          tiles={storefront?.tiles ?? []}
-          banners={storefront?.banners ?? []}
-          referrals={referrals}
-          onOpenReferrals={() => navigate("/account/referrals")}
-          recent={recent}
-          onOpenRides={() => navigate("/rides")}
-          onRepeat={repeatRide}
-          map={mapNode}
-        />
+        <ByTheme day={<RiderHomeT2 {...homeProps} />} night={<RiderHome {...homeProps} />} />
       ) : (
         <>
       {mapNode}

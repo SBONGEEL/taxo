@@ -7,5 +7,6 @@ import "./tokens.css";
 import "./primitives.css";
 
 export { Icon } from "./Icon";
+export { SERVICE_ICON, serviceIcon } from "./serviceIcon";
 export { Switch } from "./Switch";
 export { Wordmark } from "./Wordmark";

@@ -70,7 +70,41 @@ if (problems.length) {
   process.exit(1);
 }
 
+// ── والجسرُ بين أيقونات اللوحة ورموز الهوية (`serviceIcon.ts`) ─────────────────────────────────────────
+//
+// **جهتان تُقاسان لأن كلتيهما تسقط صامتة**: اسمٌ في القائمة المقرَّرة بلا مقابل يُرسم `grid_view` بدل ما اختاره
+// المشرف — **وهو «بديلٌ يعمل ويخفي العطب» الذي أنشأ القائمةَ المقرَّرة أصلاً** — ومقابلٌ ليس في مقتطَع الخطّ
+// **يُرسم اسمُه نصّاً** («local_taxi» مكتوبةً في البلاطة). والخطُّ يُقتطَع بالأسماء في `index.html` لكلِّ تطبيق.
+const allowedSrc = readFileSync(join(ROOT, "backend", "app", "services", "storefront.py"), "utf8");
+const tuple = allowedSrc.match(/SERVICE_ICONS:\s*tuple\[str, \.\.\.\]\s*=\s*\(([\s\S]*?)\n\)/)?.[1];
+const allowed = tuple ? [...tuple.matchAll(/"([a-z0-9-]+)"/g)].map((m) => m[1]) : [];
+const bridgeSrc = readFileSync(join(ROOT, "customer-app", REL, "serviceIcon.ts"), "utf8");
+const bridge = new Map(
+  [...bridgeSrc.matchAll(/^\s*"?([a-z0-9-]+)"?:\s*"([a-z0-9_]+)",/gm)].map((m) => [m[1], m[2]]),
+);
+const iconProblems = [];
+// **صمتُ القارئ عطبٌ لا سلامة**: صفرٌ مقروءٌ من أيٍّ من الجهتين يوقف
+if (allowed.length === 0) iconProblems.push("  لم تُقرأ `SERVICE_ICONS` من `storefront.py` — تغيّر شكلُها؟");
+if (bridge.size === 0) iconProblems.push("  لم يُقرأ الجسرُ من `serviceIcon.ts` — تغيّر شكلُه؟");
+for (const name of allowed) if (!bridge.has(name)) iconProblems.push(`  «${name}» في القائمة المقرَّرة بلا مقابلٍ في الجسر`);
+for (const name of bridge.keys()) if (!allowed.includes(name)) iconProblems.push(`  «${name}» في الجسر وليس في القائمة المقرَّرة — مقابلٌ لما لا يُختار`);
+for (const app of APPS) {
+  const html = readFileSync(join(ROOT, app, "index.html"), "utf8");
+  const subset = new Set((html.match(/icon_names=([a-z0-9_,]+)/)?.[1] ?? "").split(",").filter(Boolean));
+  if (subset.size === 0) iconProblems.push(`  لم يُقرأ مقتطَعُ الخطّ من ${app}/index.html`);
+  for (const glyph of new Set(bridge.values()))
+    if (!subset.has(glyph)) iconProblems.push(`  «${glyph}» ليس في مقتطَع خطِّ ${app} — يُرسم اسمُه نصّاً`);
+}
+if (iconProblems.length) {
+  console.error("\n✗ جسرُ الأيقونات (`serviceIcon.ts`):");
+  for (const line of iconProblems) console.error(line);
+  process.exit(1);
+}
+
 const all = createHash("sha256")
   .update([...a.files.entries()].sort().map(([k, v]) => `${k}:${v}`).join("\n"))
   .digest("hex");
-certify("check:taxo2", `✓ نظامُ التصميم متطابقٌ في التطبيقين — ${a.files.size} ملفّات (${all.slice(0, 12)})`);
+certify(
+  "check:taxo2",
+  `✓ نظامُ التصميم متطابقٌ في التطبيقين — ${a.files.size} ملفّات (${all.slice(0, 12)})، وجسرُ الأيقونات يغطّي ${allowed.length} اسماً في الخطّين`,
+);

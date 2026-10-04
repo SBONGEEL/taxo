@@ -34,6 +34,12 @@ function Glyph({ name, className }: { name: string; className: string }) {
   return <Icon className={className} />;
 }
 
+/** **أتُفتح البلاطة؟** — فعّالةٌ ولها مقصد. **وبلاطةُ TAXO 2.0 تقرأ القاعدةَ من هنا** (`screens/t2/StorefrontT2`)
+ *  فلا تفترق البطاقتان في أيِّها يُنقر. */
+export function tileOpenable(tile: ServiceTile): boolean {
+  return tile.status === "active" && tile.destination !== null;
+}
+
 export function ServiceTiles({ tiles }: { tiles: ServiceTile[] }) {
   const navigate = useNavigate();
   if (tiles.length === 0) return null;
@@ -41,7 +47,7 @@ export function ServiceTiles({ tiles }: { tiles: ServiceTile[] }) {
   return (
     <div className="mb-12 grid grid-cols-3 gap-8">
       {tiles.map((tile) => {
-        const openable = tile.status === "active" && tile.destination !== null;
+        const openable = tileOpenable(tile);
         return (
           <div
             key={tile.id}

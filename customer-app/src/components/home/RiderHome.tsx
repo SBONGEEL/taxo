@@ -59,7 +59,8 @@ const PLACE_MARK: Record<string, typeof House> = {
   star: Star,
 };
 
-interface Props {
+/** **ومدخلُ رئيسية TAXO 2.0 هو هو** (`screens/t2/RiderHomeT2`) — الشاشةُ تمرّر الشيءَ نفسَه للوجهين. */
+export interface RiderHomeProps {
   name: string;
   /** عنوانُ موقعه إن عُرف — **ولا مدينةَ تُخمَّن**. */
   place: string | null;
@@ -118,7 +119,7 @@ export function RiderHome({
   onOpenRides,
   onRepeat,
   map,
-}: Props) {
+}: RiderHomeProps) {
   // **أوّلُ برنامجٍ مشتعل** — و«لم يُحدَّد» تعني أن الصفَّ لا يُرسم أصلاً
   const program =
     referrals?.programs.find(

@@ -42,7 +42,9 @@ interface Props {
   expandedStatus?: ReactNode;
 }
 
-export function MapCard({ children, badge, action, expandedStatus }: Props) {
+/** **التوسيعُ وزرُّ الجهاز الخلفيّ في بيتٍ واحد** — وبطاقةُ TAXO 2.0 تقرؤه منه (`screens/t2/RiderHomeT2`)،
+ *  فلا تفترق البطاقتان في أوّل ما يُضغط. */
+export function useExpandable(): [boolean, (open: boolean) => void] {
   const [open, setOpen] = useState(false);
 
   // **زرُّ الجهاز الخلفيُّ يغلقها قبل أن يغادر الشاشة** — ومن ضغطه وهو يرى
@@ -58,6 +60,12 @@ export function MapCard({ children, badge, action, expandedStatus }: Props) {
       if (window.history.state?.map) window.history.back();
     };
   }, [open]);
+
+  return [open, setOpen];
+}
+
+export function MapCard({ children, badge, action, expandedStatus }: Props) {
+  const [open, setOpen] = useExpandable();
 
   return (
     <div

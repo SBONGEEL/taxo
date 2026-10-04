@@ -23,6 +23,7 @@ import {
 import type { ReactNode } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
+import { ByTheme } from "@/components/ByTheme";
 import { BottomNavT2 } from "@/components/BottomNavT2";
 import { Welcome } from "@/components/welcome/Welcome";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
@@ -249,12 +250,6 @@ function NavBar() {
 /** المساراتُ التي ترسمها لوحةُ TAXO 2.0 **بلا شريط تبويب** — R14 «الإشعارات». */
 const T2_COVERING = ["/account/notifications"];
 
-/** **المظهرُ المرسومُ أوّلاً** (§61-ب): لوحةُ الراكب نهاريّةٌ وحدَها حتى يُرسم الليليّ — فالشاشةُ
- *  الجديدةُ في النهاريّ، **والقائمةُ في الليليّ كما هي** حتى يُرسم. لا يُفقد شيءٌ ولا يُخترع. */
-function ByTheme({ day, night }: { day: ReactNode; night: ReactNode }) {
-  const { dark } = useTheme();
-  return <>{dark ? night : day}</>;
-}
 
 /** **الترحيبُ عند كلِّ فتحة** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٠ و١١).
  *

@@ -25,12 +25,36 @@ import { useSession } from "@/lib/session";
 /** **مسارُ التأكيد في هذا التطبيق** — بيتٌ واحدٌ يقرؤه الحالان. */
 const CONFIRM_PATH = "/account/profile";
 
-export function PhonePendingNotice() {
+/** نصُّ الحال المحدودة — **بيتٌ واحدٌ للوجهين**، فلا يفترق ما يقوله القائمُ عمّا يقوله TAXO 2.0. */
+const PENDING_BODY =
+  "سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد — فلا طلبَ رحلةٍ ولا محفظةَ حتى تؤكّده.";
+
+/** **وجهُ TAXO 2.0** — الحالان والنصّان والوجهةُ هي هي، والشكلُ من الهوية (`.t2-callout`). */
+function CalloutT2({ tone, title, body }: { tone: "danger" | "warn"; title: string; body: string }) {
+  return (
+    <div role="status" className={`t2-callout ${tone}`}>
+      <span className="t2-icon fill" aria-hidden="true">
+        error
+      </span>
+      <div className="t2-callout-main">
+        <div className="t2-callout-title">{title}</div>
+        <p className="t2-callout-body">{body}</p>
+        <Link to={CONFIRM_PATH} className="t2-callout-link">
+          أكّده الآن
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export function PhonePendingNotice({ variant }: { variant?: "t2" } = {}) {
   const { user } = useSession();
   // **حالان لا واحدة**: `suspension` حسابٌ **كان كاملاً فأُوقف** بانقضاء
   // مهلة الحملة، و`phone_pending` حسابٌ **وُلد محدوداً** لأنه سجّل ببريده.
   // **والموقوفُ أشدّ فيُقدَّم**، ونصُّه يأتي من الخلفية لا يُكتب هنا.
   if (user?.suspension) {
+    if (variant === "t2")
+      return <CalloutT2 tone="danger" title="حسابك موقوف" body={user.suspension.message} />;
     return (
       <div
         role="status"
@@ -54,6 +78,15 @@ export function PhonePendingNotice() {
   }
   if (!user?.phone_pending) return null;
 
+  if (variant === "t2")
+    return (
+      <CalloutT2
+        tone="warn"
+        title="أكّد رقم هاتفك"
+        body={PENDING_BODY}
+      />
+    );
+
   return (
     <div
       role="status"
@@ -62,10 +95,7 @@ export function PhonePendingNotice() {
       <ShieldAlert className="mt-2 size-16 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
         <div className="text-12 font-bold text-ink">أكّد رقم هاتفك</div>
-        <p className="mt-2 text-11 leading-note text-muted">
-          سجّلتَ ببريدك، والرقمُ محجوزٌ باسمك ولم يُثبَت بعد — فلا طلبَ رحلةٍ
-          ولا محفظةَ حتى تؤكّده.
-        </p>
+        <p className="mt-2 text-11 leading-note text-muted">{PENDING_BODY}</p>
         <Link
           to={CONFIRM_PATH}
           className="mt-6 inline-block text-11 font-semibold text-accent underline"
