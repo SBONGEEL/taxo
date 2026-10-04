@@ -21,34 +21,16 @@ import { listMyRides } from "@/api/endpoints";
 import type { RideListItem, RideStatus } from "@/api/types";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { PAYMENT_METHOD_LABEL, RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
-import { DISPLAY_LOCALE, formatDistance, formatMoney } from "@/lib/utils";
+import { formatDistance, formatMoney } from "@/lib/utils";
+
+import { byMonth, startOfToday, whenParts } from "./when";
 
 import "./t2.css";
 
 const PAGE = 20;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** الحالاتُ التي ترسمها اللوحةُ «ملغاة» — **ونصُّ كلٍّ منها يبقى نصَّه** (من ألغى). */
 const ENDED_UNSERVED: RideStatus[] = ["cancelled_by_rider", "cancelled_by_driver", "no_driver_found"];
-
-/** «اليوم · 10:12» · «أمس · 21:40» · «2 أكتوبر · 08:05» — كما في اللوحة، **بخاناتٍ لاتينية**. */
-function whenParts(iso: string, startOfToday: number): { day: string; time: string } {
-  const at = new Date(iso);
-  const time = at.toLocaleTimeString(DISPLAY_LOCALE, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  const ms = at.getTime();
-  if (ms >= startOfToday) return { day: "اليوم", time };
-  if (ms >= startOfToday - DAY_MS) return { day: "أمس", time };
-  return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
-}
-
-/** رأسُ الشهر: «أكتوبر 2026». */
-function monthOf(iso: string): string {
-  return new Date(iso).toLocaleDateString(DISPLAY_LOCALE, { month: "long", year: "numeric" });
-}
 
 /** نصُّ شارة الحالة ونبرتُها: «مكتملة» بالأخضر كما في اللوحة، **ونصُّ الإلغاء نصُّ السجلّ** بالأحمر —
  *  ومعه «بلا رسوم» حين لم يُقدَّر رسم (`cancellation_fee` صفرٌ أو غائب)، **ولا رقمَ حين قُدِّر**: الرسمُ
@@ -86,16 +68,8 @@ export function RidesT2Screen() {
     void load(0);
   }, []);
 
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  // **بالترتيب الذي يصل به** (الأحدثُ أوّلاً من الخلفية) — والشهرُ رأسُ كلِّ سلسلةٍ متّصلة
-  const months: { label: string; items: RideListItem[] }[] = [];
-  for (const item of rides) {
-    const label = monthOf(item.ride.created_at);
-    const last = months[months.length - 1];
-    if (last && last.label === label) last.items.push(item);
-    else months.push({ label, items: [item] });
-  }
+  const today = startOfToday();
+  const months = byMonth(rides, (item) => item.ride.created_at);
 
   return (
     <div className="t2 t2-page pb-nav">
@@ -117,7 +91,7 @@ export function RidesT2Screen() {
               <div className="t2-cards">
                 {month.items.map((item) => {
                   const { ride, has_open_dispute, payment_methods, settlement } = item;
-                  const when = whenParts(ride.created_at, startOfToday);
+                  const when = whenParts(ride.created_at, today);
                   const chip = statusChip(item);
                   const unserved = ENDED_UNSERVED.includes(ride.status);
                   // «نسائية» مكانَ الفئة كما في اللوحة — **وصفٌ للطلب لا لصاحبته** (`TrackingSheet`)
