@@ -24,6 +24,10 @@
   /* حافةُ ملاحظة الجمر ونقطةُ الخطوة القادمة (C03) */
   --hot-edge: #5a3322;
   --dot-off: #3a404a;
+  /* حافةُ بطاقة المستوى والمهمّةِ المنجَزة، ولونُ القفل (C13) */
+  --gold-edge: #3a3220;
+  --ok-edge: #1f4a33;
+  --locked: #6b717a;
   min-height: 100%;
   background: var(--asphalt);
   color: var(--paper);
@@ -375,3 +379,162 @@ html.pink .t2 {
   color: var(--err);
   cursor: pointer;
 }
+
+/* ── المستوى والمهام (C13) ──────────────────────────────────────────────── */
+.t2-missions {
+  height: 100%;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.t2-section {
+  margin: 18px 2px 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.t2-empty {
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--card);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--mut);
+}
+.t2-level {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid var(--gold-edge);
+  border-radius: 24px;
+  background: var(--card);
+}
+.t2-level-stripe {
+  position: absolute;
+  left: -30px;
+  top: -20px;
+  width: 170px;
+  height: 30px;
+  border-radius: 15px;
+  background: var(--amber);
+  opacity: 0.16;
+  pointer-events: none;
+}
+.t2-level-stripe.a { transform: rotate(45deg); }
+.t2-level-stripe.b { transform: rotate(-45deg); }
+.t2-level-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.t2-level-medal {
+  font-size: 34px;
+  font-variation-settings: "FILL" 1;
+  color: var(--amber);
+}
+.t2-level-k { font-size: 12.5px; color: var(--mut); }
+.t2-level-v { font-size: 26px; font-weight: 700; line-height: 1.2; }
+/* السلّم: المنجَزُ بعلامةٍ خضراء، والحاليُّ بالكهرمان، وما فوقه مقفل */
+.t2-ladder {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--mut);
+}
+.t2-rung {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--locked);
+}
+.t2-rung .t2-icon { font-size: 15px; }
+.t2-rung.done { color: var(--mut); }
+.t2-rung.done .t2-icon { color: var(--ok); }
+.t2-rung.now { font-weight: 700; color: var(--amber); }
+.t2-rung.now .t2-icon { font-variation-settings: "FILL" 1; }
+.t2-level-note {
+  position: relative;
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--mut);
+}
+.t2-level-note.ok { color: var(--ok); }
+.t2-level-next {
+  position: relative;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--rule);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.t2-missions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.t2-mission {
+  padding: 14px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: var(--card);
+}
+.t2-mission.done { border-color: var(--ok-edge); }
+.t2-mission-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.t2-mission-top > .t2-icon { font-size: 22px; }
+.t2-mission.done .t2-mission-top > .t2-icon { color: var(--ok); }
+.t2-mission-main { flex: 1; min-width: 0; }
+.t2-mission-title { font-size: 14.5px; font-weight: 600; }
+.t2-mission-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mut);
+}
+.t2-mission-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.t2-mission-track {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--edge);
+}
+.t2-mission-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ember);
+}
+.t2-mission.done .t2-mission-fill { background: var(--ok); }
+.t2-mission-count { font-size: 12px; color: var(--mut); }
+.t2-mission.done .t2-mission-count { color: var(--ok); }
+.t2-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.t2-badge-row:last-child { border-bottom: 0; }
+.t2-badge-row > .t2-icon { font-size: 21px; color: var(--amber); }
+.t2-badge-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.t2-badge-label { font-size: 13.5px; font-weight: 600; }
+.t2-badge-desc { font-size: 11.5px; color: var(--mut); }
+.t2-badge-date { font-size: 11px; color: var(--mut); }

@@ -26,10 +26,10 @@ import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { useGoBack } from "@/lib/back";
 import { digits, cn } from "@/lib/utils";
 
-const LEVEL_LABEL = ["مبتدئ", "فضّي", "ذهبي", "ماسيّ"];
+export const LEVEL_LABEL = ["مبتدئ", "فضّي", "ذهبي", "ماسيّ"];
 
 /** «كم بقي» — **أوّلُ مهمّةٍ ناقصةٍ هي الجواب**، وسردُ الثلاثة يخفي المطلوب. */
-function nextStep(items: MissionProgress[]): string | null {
+export function nextStep(items: MissionProgress[]): string | null {
   const pending = items.find((item) => !item.done);
   if (!pending) return null;
   if (pending.mission.metric === "min_rating") {
