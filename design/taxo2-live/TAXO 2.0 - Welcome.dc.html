@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300..700&amp;family=Unbounded:wght@500..800&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>body{margin:0;background:#D9D4C9}a{color:#C2410C;text-decoration:none}a:hover{color:#14161A}</style>
+</helmet>
+<section dir="rtl" style="padding:64px 56px 110px;font-family:'Readex Pro',system-ui,sans-serif;color:#14161A">
+
+<div style="max-width:980px;margin-bottom:52px">
+<p dir="ltr" style="margin:0 0 10px;font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#6A6862;text-align:end">TAXO 2.0 — WELCOME · MEETING POINT</p>
+<h1 style="margin:0;font-size:44px;font-weight:700;line-height:1.2">نقطة اللقاء</h1>
+<div style="display:flex;gap:8px;margin-top:16px">
+<a href="TAXO%202.0%20-%20Identity.dc.html" style="display:flex;align-items:center;gap:8px;background:#FFFFFF;border:1px solid #CFC8BB;border-radius:99px;padding:9px 16px;font-size:13.5px;font-weight:600;color:#14161A;white-space:nowrap">الهوية<span style="font:17px/1 'Material Symbols Rounded'">arrow_back</span></a>
+<a href="TAXO%202.0%20-%20Rider.dc.html" style="display:flex;align-items:center;gap:8px;background:#FFFFFF;border:1px solid #CFC8BB;border-radius:99px;padding:9px 16px;font-size:13.5px;font-weight:600;color:#14161A;white-space:nowrap">تطبيق الراكب<span style="font:17px/1 'Material Symbols Rounded'">arrow_back</span></a>
+<a href="TAXO%202.0%20-%20Captain.dc.html" style="display:flex;align-items:center;gap:8px;background:#14161A;border:1px solid #14161A;border-radius:99px;padding:9px 16px;font-size:13.5px;font-weight:600;color:#F2EFE8;white-space:nowrap">تطبيق الكبتن<span style="font:17px/1 'Material Symbols Rounded'">arrow_back</span></a>
+</div>
+<p style="margin:18px 0 0;font-size:16.5px;line-height:1.8;color:#3F3E3A;text-wrap:pretty">كل رحلة في TAXO لحظةُ لقاء بين شخصين في نقطة واحدة. المقدّمة تحكي هذه اللحظة مرتين: الراكب يرى الكبتن يأتي إليه، والكبتن يرى نفسه يمضي إلى الراكب — والمساران يلتقيان في الموضع نفسه على شارع الرينبو، فيصير اللقاء حرف X ويكتمل الاسم.</p>
+<p style="margin:12px 0 0;font-size:13px;line-height:1.7;color:#6A6862">الخريطة بيانات حقيقية لعمّان: شوارع من © OpenStreetMap contributors، وخطوط الارتفاع من نموذج Copernicus عبر Open-Meteo. مسار الكبتن هو المسار الفعلي من العبدلي إلى شارع الرينبو.</p>
+</div>
+
+<div style="display:flex;align-items:baseline;gap:12px;margin:0 0 22px"><span style="font-size:22px;font-weight:700">تطبيق الراكب</span><span style="font-size:14px;color:#6A6862">يُستقبَل كضيف · نهاري</span></div>
+<div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start;margin-bottom:84px">
+
+<div data-screen-label="R0 مقدمة الراكب" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R0</span><span style="font-size:16px;font-weight:600">المقدّمة المتحركة</span><span style="font-size:12px;color:#6A6862;margin-inline-start:auto">تتكرر تلقائياً</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<div style="position:absolute;inset:0">{{ riderIntro }}</div>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;bottom:34px;left:0;right:0;text-align:center;font-size:12.5px;color:#8A857B">المس الشاشة للتخطّي</span>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F">
+<div><b dir="ltr">0.0s</b> تظهر خريطة جبل عمّان، ونقطتك تضيء.</div>
+<div><b dir="ltr">0.5s</b> الكبتن يخرج من طرف الشاشة ويمشي إليك على مساره الحقيقي من العبدلي، وأنت ثابت.</div>
+<div><b dir="ltr">2.6s</b> اللقاء: نبضتان واهتزازة خفيفة واحدة.</div>
+<div><b dir="ltr">2.7s</b> يتكوّن X في نقطة اللقاء نفسها ويكبر إلى حجمه في الشعار، ثم تتجمع حوله الحروف.</div>
+<div style="color:#8A857B">من المرة الثانية: لحظة تكوّن X فقط (0.8 ثانية). مع «تقليل الحركة»: الإطار الأخير مباشرة.</div>
+</div>
+</div>
+
+<div data-screen-label="R1 ترحيب الراكب" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R1</span><span style="font-size:16px;font-weight:600">الترحيب</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<img src="assets/amman-day.svg" alt="" style="position:absolute;left:-382.78px;top:-1053.42px;width:1170px;height:2532px;max-width:none">
+<div style="position:absolute;inset:0;background:#F4F1EA;opacity:.82"></div>
+<span style="position:absolute;left:95.7px;top:296px;transform:translate(-50%,-50%);font-size:10.5px;font-weight:600;letter-spacing:.14em;color:#A39D90;white-space:nowrap">جبل عمّان</span>
+<span style="position:absolute;left:285.9px;top:154px;transform:translate(-50%,-50%);font-size:10.5px;font-weight:600;letter-spacing:.14em;color:#A39D90;white-space:nowrap">اللويبدة</span>
+<span dir="ltr" style="position:absolute;left:0;right:0;top:360px;transform:translateY(-50%);text-align:center;font-family:Unbounded;font-weight:800;font-size:64px;line-height:1;letter-spacing:-.03em;color:#14161A">TA<span style="position:relative;display:inline-block;width:51.61px;height:49.55px;margin:0 4.13px;vertical-align:-1.03px"><span style="position:absolute;left:50%;top:50%;width:64px;height:14.45px;border-radius:8.26px;background:#14161A;transform:translate(-50%,-50%) rotate(-50deg)"></span><span style="position:absolute;left:50%;top:50%;width:64px;height:14.45px;border-radius:8.26px;background:#F05A28;transform:translate(-50%,-50%) rotate(50deg)"></span></span>O</span>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;top:60px;left:22px;font-size:13px;font-weight:600;color:#6A6862">English</span>
+<div style="position:absolute;top:436px;left:28px;right:28px;text-align:center">
+<h2 style="margin:0;font-size:44px;font-weight:700;line-height:1.25">أهلاً وسهلاً</h2>
+<p style="margin:10px 0 0;font-size:18px;font-weight:500;color:#3F3E3A">حللتَ أهلاً، ووطئتَ سهلاً.</p>
+<p style="margin:16px auto 0;max-width:30ch;font-size:14px;line-height:1.75;color:#6A6862;text-wrap:pretty">جئتَ بين أهلك، وطريقك سهل — هكذا نريد أن تكون كل رحلة.</p>
+</div>
+<div style="position:absolute;left:24px;right:24px;bottom:58px;height:58px;border-radius:18px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:16px;font-weight:600"><span>تفضّل</span><span style="font:22px/1 'Material Symbols Rounded'">arrow_back</span></div>
+<p style="position:absolute;left:24px;right:24px;bottom:26px;margin:0;text-align:center;font-size:11.5px;color:#8A857B">بالمتابعة توافق على <u>الشروط</u> و<u>سياسة الخصوصية</u>.</p>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F">
+<div>تكمل من آخر إطار في المقدّمة دون قطع: الشعار في مكانه، والخريطة خافتة خلفه.</div>
+<div><b dir="ltr">+0.1s</b> «أهلاً وسهلاً» تصعد بهدوء، ثم سطر الأصل، ثم الشرح.</div>
+<div><b dir="ltr">+0.5s</b> يظهر زر «تفضّل».</div>
+</div>
+</div>
+
+<div data-screen-label="R2 الانتقال إلى الدخول" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R2</span><span style="font-size:16px;font-weight:600">الزر يصير بطاقة الدخول</span><span style="font-size:12px;color:#6A6862;margin-inline-start:auto">تتكرر تلقائياً</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<div style="position:absolute;inset:0">{{ riderMorph }}</div>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F">
+<div><b dir="ltr">0.00s</b> لمسة على «تفضّل»: انضغاط خفيف <span dir="ltr">97%</span>.</div>
+<div><b dir="ltr">0.12s</b> الزر نفسه يتمدد ويصير بطاقة بيضاء من أسفل الشاشة.</div>
+<div><b dir="ltr">0.12s</b> معه يصغر الشعار ويصعد إلى الأعلى، وتخفت الخريطة.</div>
+<div><b dir="ltr">0.48s</b> يظهر حقل الهاتف مفعّلاً. بعده: الدخول بكلمة المرور (<a href="TAXO%202.0%20-%20Rider.dc.html#r02">R02</a>) أو إنشاء حساب (<a href="TAXO%202.0%20-%20Rider.dc.html#r03">R03</a>).</div>
+</div>
+</div>
+
+</div>
+
+<div style="display:flex;align-items:baseline;gap:12px;margin:0 0 22px"><span style="font-size:22px;font-weight:700">تطبيق الكبتن</span><span style="font-size:14px;color:#6A6862">يُستقبَل كشريك · ليلي</span></div>
+<div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+
+<div data-screen-label="C0 مقدمة الكبتن" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">C0</span><span style="font-size:16px;font-weight:600">المقدّمة المتحركة</span><span style="font-size:12px;color:#6A6862;margin-inline-start:auto">تتكرر تلقائياً</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#0E1013;box-shadow:0 0 0 10px #000000,0 0 0 11px #34373D,0 50px 90px -30px rgba(0,0,0,.6)">
+<div style="position:absolute;inset:0">{{ captainIntro }}</div>
+<dc-import name="TaxoStatus" dark="{{ true }}" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;bottom:34px;left:0;right:0;text-align:center;font-size:12.5px;color:#6B717A">المس الشاشة للتخطّي</span>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F">
+<div>القصة نفسها من الجهة الأخرى: الكاميرا تتبعك أنت.</div>
+<div><b dir="ltr">0.2s</b> سيارتك تضيء في العبدلي بهالة جمرية.</div>
+<div><b dir="ltr">0.6s</b> تمضي على المسار الحقيقي، والراكب ينتظرك نابضاً في شارع الرينبو.</div>
+<div><b dir="ltr">2.8s</b> تصل: نبضة واهتزازة، ثم يتكوّن X ويكتمل TAXO، وتظهر «كبتن».</div>
+</div>
+</div>
+
+<div data-screen-label="C1 الرفيق قبل الطريق" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">C1</span><span style="font-size:16px;font-weight:600">الترحيب</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#0E1013;box-shadow:0 0 0 10px #000000,0 0 0 11px #34373D,0 50px 90px -30px rgba(0,0,0,.6);color:#F2EFE8">
+<img src="assets/amman-night.svg" alt="" style="position:absolute;left:-382.78px;top:-1053.42px;width:1170px;height:2532px;max-width:none">
+<div style="position:absolute;inset:0;background:#0E1013;opacity:.84"></div>
+<span style="position:absolute;left:95.7px;top:296px;transform:translate(-50%,-50%);font-size:10.5px;font-weight:600;letter-spacing:.14em;color:#4A5059;white-space:nowrap">جبل عمّان</span>
+<span style="position:absolute;left:285.9px;top:154px;transform:translate(-50%,-50%);font-size:10.5px;font-weight:600;letter-spacing:.14em;color:#4A5059;white-space:nowrap">اللويبدة</span>
+<span dir="ltr" style="position:absolute;left:0;right:0;top:360px;transform:translateY(-50%);text-align:center;font-family:Unbounded;font-weight:800;font-size:64px;line-height:1;letter-spacing:-.03em;color:#F2EFE8">TA<span style="position:relative;display:inline-block;width:51.61px;height:49.55px;margin:0 4.13px;vertical-align:-1.03px"><span style="position:absolute;left:50%;top:50%;width:64px;height:14.45px;border-radius:8.26px;background:#F2EFE8;transform:translate(-50%,-50%) rotate(-50deg)"></span><span style="position:absolute;left:50%;top:50%;width:64px;height:14.45px;border-radius:8.26px;background:#FF6A33;transform:translate(-50%,-50%) rotate(50deg)"></span></span>O</span>
+<span style="position:absolute;top:410px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;color:#0E1013;background:#F2EFE8;padding:4px 12px;border-radius:99px">كبتن</span>
+<dc-import name="TaxoStatus" dark="{{ true }}" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;top:60px;left:22px;font-size:13px;font-weight:600;color:#9097A1">English</span>
+<div style="position:absolute;top:470px;left:28px;right:28px;text-align:center">
+<h2 style="margin:0;font-size:38px;font-weight:700;line-height:1.3">الرفيق قبل الطريق.</h2>
+<p style="margin:14px auto 0;max-width:31ch;font-size:15px;line-height:1.75;color:#B9BEC6;text-wrap:pretty">مثلٌ عربي: اختر رفيقك قبل أن تبدأ رحلتك. ونحن رفيقك من قبل أول رحلة.</p>
+</div>
+<div style="position:absolute;left:24px;right:24px;bottom:42px;display:flex;flex-direction:column;align-items:center;gap:16px">
+<div style="display:flex;gap:6px"><span style="width:22px;height:4px;border-radius:2px;background:#FF6A33"></span><span style="width:8px;height:4px;border-radius:2px;background:#3A3F48"></span><span style="width:8px;height:4px;border-radius:2px;background:#3A3F48"></span></div>
+<div style="align-self:stretch;height:56px;border-radius:18px;background:#FF6A33;color:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:16px;font-weight:700"><span>التالي</span><span style="font:22px/1 'Material Symbols Rounded'">arrow_back</span></div>
+<span style="font-size:14px;font-weight:600;color:#9097A1">تخطَّ</span>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F"><div>تكمل من آخر إطار في المقدّمة. المثل يظهر أولاً، ثم شرحه، ثم المؤشر والزر.</div><div>السحب لليسار ينقل إلى الشاشة التالية، والخريطة تنزلق معه ببطء أقل من النص.</div></div>
+</div>
+
+<div data-screen-label="C2 عمولة أقل" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">C2</span><span style="font-size:16px;font-weight:600">الشراكة — العمولة</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#0E1013;box-shadow:0 0 0 10px #000000,0 0 0 11px #34373D,0 50px 90px -30px rgba(0,0,0,.6);color:#F2EFE8">
+<img src="assets/amman-night.svg" alt="" style="position:absolute;left:-473.7px;top:-907.2px;width:1170px;height:2532px;max-width:none">
+<div style="position:absolute;inset:0;background:linear-gradient(rgba(14,16,19,.55) 0%,rgba(14,16,19,.3) 34%,rgba(14,16,19,.92) 54%,#0E1013 62%)"></div>
+<span style="position:absolute;left:195px;top:300px;transform:translate(-50%,-50%);display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:99px;background:rgba(14,16,19,.78);border:1px solid rgba(255,255,255,.1);font-size:12.5px;font-weight:600;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:#FF6A33"></span>اللويبدة</span>
+<dc-import name="TaxoStatus" dark="{{ true }}" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<div style="position:absolute;top:58px;left:22px;right:22px;display:flex;align-items:center;gap:9px"><span dir="ltr" style="font-family:Unbounded;font-weight:800;font-size:19px;letter-spacing:-.03em">TA<span style="position:relative;display:inline-block;width:15.32px;height:14.71px;margin:0 1.23px;vertical-align:-0.31px"><span style="position:absolute;left:50%;top:50%;width:19px;height:4.29px;border-radius:2.45px;background:#F2EFE8;transform:translate(-50%,-50%) rotate(-50deg)"></span><span style="position:absolute;left:50%;top:50%;width:19px;height:4.29px;border-radius:2.45px;background:#FF6A33;transform:translate(-50%,-50%) rotate(50deg)"></span></span>O</span><span style="font-size:11px;font-weight:700;color:#0E1013;background:#F2EFE8;padding:3px 9px;border-radius:99px">كبتن</span><span style="flex:1"></span><span style="font-size:13px;font-weight:600;color:#9097A1">تخطَّ</span></div>
+<div style="position:absolute;top:470px;left:28px;right:28px">
+<div style="display:flex;gap:6px;margin-bottom:22px"><span style="width:8px;height:4px;border-radius:2px;background:#3A3F48"></span><span style="width:22px;height:4px;border-radius:2px;background:#FF6A33"></span><span style="width:8px;height:4px;border-radius:2px;background:#3A3F48"></span></div>
+<h2 style="margin:0;font-size:36px;font-weight:700;line-height:1.3;text-wrap:pretty">عمولة أقل بكثير من السوق.</h2>
+<p style="margin:14px 0 0;font-size:15px;line-height:1.75;color:#B9BEC6">لأنك شريك في الطريق، لا مجرد سائق عليه.</p>
+</div>
+<div style="position:absolute;left:24px;right:24px;bottom:42px;height:56px;border-radius:18px;background:#FF6A33;color:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:16px;font-weight:700"><span>التالي</span><span style="font:22px/1 'Material Symbols Rounded'">arrow_back</span></div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F"><div>الخريطة تنزلق إلى اللويبدة، والشعار يصغر إلى الأعلى.</div><div>النص بلا أي رقم أو نسبة: العمولة تُضبط من لوحة الإدارة.</div></div>
+</div>
+
+<div data-screen-label="C3 وقتك بيدك" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">C3</span><span style="font-size:16px;font-weight:600">الشراكة — الوقت</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#0E1013;box-shadow:0 0 0 10px #000000,0 0 0 11px #34373D,0 50px 90px -30px rgba(0,0,0,.6);color:#F2EFE8">
+<img src="assets/amman-night.svg" alt="" style="position:absolute;left:-789px;top:-1026.9px;width:1170px;height:2532px;max-width:none">
+<div style="position:absolute;inset:0;background:linear-gradient(rgba(14,16,19,.55) 0%,rgba(14,16,19,.3) 34%,rgba(14,16,19,.92) 54%,#0E1013 62%)"></div>
+<span style="position:absolute;left:195px;top:300px;transform:translate(-50%,-50%);display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:99px;background:rgba(14,16,19,.78);border:1px solid rgba(255,255,255,.1);font-size:12.5px;font-weight:600;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:#FF6A33"></span>البلد</span>
+<dc-import name="TaxoStatus" dark="{{ true }}" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<div style="position:absolute;top:58px;left:22px;right:22px;display:flex;align-items:center;gap:9px"><span dir="ltr" style="font-family:Unbounded;font-weight:800;font-size:19px;letter-spacing:-.03em">TA<span style="position:relative;display:inline-block;width:15.32px;height:14.71px;margin:0 1.23px;vertical-align:-0.31px"><span style="position:absolute;left:50%;top:50%;width:19px;height:4.29px;border-radius:2.45px;background:#F2EFE8;transform:translate(-50%,-50%) rotate(-50deg)"></span><span style="position:absolute;left:50%;top:50%;width:19px;height:4.29px;border-radius:2.45px;background:#FF6A33;transform:translate(-50%,-50%) rotate(50deg)"></span></span>O</span><span style="font-size:11px;font-weight:700;color:#0E1013;background:#F2EFE8;padding:3px 9px;border-radius:99px">كبتن</span></div>
+<div style="position:absolute;top:470px;left:28px;right:28px">
+<div style="display:flex;gap:6px;margin-bottom:22px"><span style="width:8px;height:4px;border-radius:2px;background:#3A3F48"></span><span style="width:8px;height:4px;border-radius:2px;background:#3A3F48"></span><span style="width:22px;height:4px;border-radius:2px;background:#FF6A33"></span></div>
+<h2 style="margin:0;font-size:36px;font-weight:700;line-height:1.3">وقتك بيدك.</h2>
+<p style="margin:14px 0 0;font-size:15px;line-height:1.75;color:#B9BEC6;max-width:30ch">تختار باقتك وساعات عملك، وتسحب أرباحك من التطبيق.</p>
+</div>
+<div style="position:absolute;left:24px;right:24px;bottom:42px;display:flex;flex-direction:column;gap:10px">
+<div style="height:56px;border-radius:18px;background:#FF6A33;color:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:16px;font-weight:700"><span>سجّل كشريك</span><span style="font:22px/1 'Material Symbols Rounded'">arrow_back</span></div>
+<div style="height:52px;border-radius:18px;border:1.5px solid #2B3038;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">دخول</div>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F"><div>الخريطة تنزلق إلى البلد. الشاشة الأخيرة فيها الزران: «سجّل كشريك» و«دخول».</div><div>لا ذكر لطريقة سحب بعينها.</div></div>
+</div>
+
+<div data-screen-label="C4 الانتقال إلى التسجيل" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">C4</span><span style="font-size:16px;font-weight:600">الزر يصير بطاقة التسجيل</span><span style="font-size:12px;color:#6A6862;margin-inline-start:auto">تتكرر تلقائياً</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#0E1013;box-shadow:0 0 0 10px #000000,0 0 0 11px #34373D,0 50px 90px -30px rgba(0,0,0,.6);color:#F2EFE8">
+<div style="position:absolute;inset:0">{{ captainMorph }}</div>
+<dc-import name="TaxoStatus" dark="{{ true }}" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+<div style="font-size:12.5px;line-height:1.8;color:#5A574F">
+<div>«سجّل كشريك» يتمدد ويصير بطاقة داكنة، ويختفي النص و«دخول» معاً.</div>
+<div>بعدها خطوات التسجيل: الحساب ثم المركبة ثم الوثائق (<a href="TAXO%202.0%20-%20Captain.dc.html#c02">C02</a>).</div>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  build() {
+    if (this._v) return this._v;
+    const h = React.createElement;
+    const HD = 'M122.45 359.03L125.67 360.81L128.9 361.99L131.89 362.64L135.69 363.12L139.24 363.01L142.71 362.72L151.83 361.28L158.27 360.5L171.72 357.17L173.79 357.47L178.99 358.79L194.4 365.45L198.93 366.7L201.02 366.77L204.74 365.92L212.49 366.66L224.24 368.04L227.26 368.56L231.95 370.45L249.95 387.94L250.76 389.26L257.01 395.46L258.46 397.41L260.38 402.18L262.55 426.13L265.9 438.02L265.79 438.96L266.16 442.18L259.24 443.04L256.35 442.96L252.97 441.81L245.82 437.59L243.91 436.94L241.62 436.89L238.83 437.75L236.97 438.86L233.32 441.72L230.71 444.54L225.56 449.11L222.84 450.66L219.23 451.48L215.27 451.97L211.71 451.21L202.86 449.98L201.51 449.85L199.49 449.98L196.49 451.25L189.74 454.89L186.59 456.23L182.49 457.71L178.01 458.92L177.82 459.94L178.02 461.13L190.48 467.45L199.96 471.14';
+    const P = HD.slice(1).split('L').map(s => s.split(' ').map(Number));
+    const cum = [0];
+    for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    const LEN = cum[cum.length - 1];
+    const at = f => { const d = f * LEN; let i = 1; while (i < cum.length - 1 && cum[i] < d) i++; const t = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1); return [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * t, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * t]; };
+    const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const S = P[0], E = P[P.length - 1], FX = 217.1;
+    const EZ = { o: 'cubic-bezier(.2,.8,.2,1)', io: 'cubic-bezier(.65,0,.35,1)', bk: 'cubic-bezier(.34,1.56,.64,1)' };
+    let css = "@keyframes txpz{0%{transform:translate(-50%,-50%) scale(.6);opacity:.9}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}@keyframes txcaret{0%,49%{opacity:1}50%,100%{opacity:0}}";
+    let n = 0;
+    const tr = (T, prop, pts) => { const name = 'wk' + (n++); const p = pts.map(a => a.slice()); if (p[0][0] > 0) p.unshift([0, p[0][1]]); if (p[p.length - 1][0] < T) p.push([T, p[p.length - 1][1]]); css += '@keyframes ' + name + '{' + p.map(([t, v, e]) => (t / T * 100).toFixed(3) + '%{' + prop + ':' + v + ';animation-timing-function:' + (EZ[e] || 'linear') + '}').join('') + '}'; return name + ' ' + T + 's infinite'; };
+    const A = (...a) => a.join(',');
+    const cam = (x, y, s) => `translate(${(FX - s * x).toFixed(2)}px,${(360 - s * y).toFixed(2)}px) scale(${s})`;
+    const ab = (st, ...kids) => h('div', { style: Object.assign({ position: 'absolute' }, st) }, ...kids);
+    const label = (t, x, y, c) => h('span', { key: t, style: { position: 'absolute', left: x, top: y, transform: 'translate(-50%,-50%) scale(.3333)', fontSize: 10.5, fontWeight: 600, letterSpacing: '.14em', color: c, whiteSpace: 'nowrap' } }, t);
+    const LB = [['جبل عمّان', 159.5, 449.9], ['اللويبدة', 222.9, 402.4], ['العبدلي', 141, 353]];
+    const onPath = (st, anim, ...kids) => h('div', { style: Object.assign({ position: 'absolute', left: 0, top: 0, offsetPath: `path('${HD}')`, offsetRotate: 'auto', offsetAnchor: 'center', offsetDistance: '0%', animation: anim }, st) }, ...kids);
+    const car = (body, glass, ring, anim) => onPath({ width: 10, height: 5.4, borderRadius: 2.2, background: body, border: '.7px solid ' + ring, boxSizing: 'border-box', boxShadow: '0 .6px 1.6px rgba(0,0,0,.35)' }, anim,
+      h('span', { style: { position: 'absolute', right: 1.3, top: .5, bottom: .5, width: 1.9, borderRadius: .7, background: glass } }),
+      h('span', { style: { position: 'absolute', left: .9, top: .8, bottom: .8, width: 1.1, borderRadius: .5, background: glass, opacity: .55 } }));
+    const trail = (color, casing, dash, op) => h('svg', { width: 390, height: 844, viewBox: '0 0 390 844', style: { position: 'absolute', left: 0, top: 0, overflow: 'visible', animation: op } },
+      casing ? h('path', { d: HD, fill: 'none', stroke: casing, strokeWidth: 2.8, strokeLinecap: 'round', strokeLinejoin: 'round', pathLength: 1, strokeDasharray: '1 1', strokeDashoffset: 1, style: { animation: dash } }) : null,
+      h('path', { d: HD, fill: 'none', stroke: color, strokeWidth: 1.35, strokeLinecap: 'round', strokeLinejoin: 'round', pathLength: 1, strokeDasharray: '1 1', strokeDashoffset: 1, style: { animation: dash } }));
+    const XB = (k0, ink, em) => { const k = k0 * 64 / 31; return h('span', { style: { position: 'relative', display: 'inline-block', width: 25 * k, height: 24 * k, margin: '0 ' + (2 * k) + 'px', verticalAlign: (-0.5 * k) + 'px' } }, ...[[ink, -50], [em, 50]].map(([c, r], i) => h('span', { key: i, style: { position: 'absolute', left: '50%', top: '50%', width: 31 * k, height: 7 * k, borderRadius: 4 * k, background: c, transform: 'translate(-50%,-50%) rotate(' + r + 'deg)' } }))); };
+    const xMark = (ink, ember, anim, a1, a2) => ab({ left: FX, top: 360, width: 0, height: 0, transformOrigin: '0 0', animation: anim },
+      ...[[ink, -50, a1], [ember, 50, a2]].map(([c, r, a], i) => ab({ key: i, left: 0, top: 0, width: 26.67, height: 6.02, transform: `translate(-50%,-50%) rotate(${r}deg)` }, h('div', { style: { width: '100%', height: '100%', borderRadius: 3.44, background: c, transform: 'scaleX(0)', animation: a } }))));
+    const wordStyle = { position: 'absolute', left: 0, right: 0, top: 360, transform: 'translateY(-50%)', textAlign: 'center', fontFamily: 'Unbounded', fontWeight: 800, fontSize: 64, lineHeight: 1, letterSpacing: '-.03em', whiteSpace: 'nowrap' };
+    const word = (color, T, t) => { const em = color === '#14161A' ? '#F05A28' : '#FF6A33'; return h('span', { dir: 'ltr', style: Object.assign({}, wordStyle, { color, opacity: 0, animation: A(tr(T, 'opacity', [[0, 0], [t, 0, 'o'], [t + .5, 1], [T - .35, 1, 'io'], [T, 0]]), tr(T, 'letter-spacing', [[0, '.14em'], [t, '.14em', 'o'], [t + .75, '-.03em']])) }) }, 'TA', XB(1, color, em), 'O'); };
+    const ping = (c, T, t0) => h('span', { style: { position: 'absolute', left: FX, top: 360, width: 40, height: 40, borderRadius: '50%', border: '2px solid ' + c, boxSizing: 'border-box', opacity: 0, animation: A(tr(T, 'transform', [[0, 'translate(-50%,-50%) scale(.3)'], [t0, 'translate(-50%,-50%) scale(.3)', 'o'], [t0 + 1, 'translate(-50%,-50%) scale(2.8)']]), tr(T, 'opacity', [[0, 0], [t0 - .01, 0], [t0, .85, 'o'], [t0 + 1, 0]])) } });
+    const draw = (T, t0, t1) => tr(T, 'transform', [[0, 'scaleX(0)'], [t0, 'scaleX(0)', 'o'], [t1, 'scaleX(1)']]);
+
+    // Rider intro
+    const T1 = 6.6;
+    const rIntro = h('div', { style: { position: 'absolute', inset: 0, overflow: 'hidden' } },
+      ab({ left: 0, top: 0, width: 390, height: 844, transformOrigin: '0 0', transform: cam(E[0], E[1], 3), animation: tr(T1, 'transform', [[0, cam(E[0], E[1], 3.3), 'o'], [4.2, cam(E[0], E[1], 3)]]) },
+        h('img', { src: 'assets/amman-day.svg', alt: '', style: { display: 'block', width: 390, height: 844, maxWidth: 'none' } }),
+        ...LB.map(([t, x, y]) => label(t, x, y, '#9A9488')),
+        trail('#F05A28', 'rgba(255,255,255,.95)', tr(T1, 'stroke-dashoffset', [[0, 1], [0.5, 1, 'io'], [2.6, 0]]), tr(T1, 'opacity', [[0, 1], [2.65, 1, 'o'], [3.3, 0], [6.6, 0]])),
+        car('#14161A', '#F05A28', '#FFFFFF', A(tr(T1, 'offset-distance', [[0, '0%'], [0.5, '0%', 'io'], [2.6, '100%']]), tr(T1, 'opacity', [[0, 0], [0.45, 0, 'o'], [0.65, 1], [2.6, 1, 'o'], [2.85, 0]])))),
+      ab({ inset: 0, background: '#F4F1EA', animation: tr(T1, 'opacity', [[0, 1, 'o'], [0.7, 0], [3.15, 0, 'io'], [3.85, .82], [6.25, .82, 'io'], [6.6, 1]]) }),
+      h('span', { style: { position: 'absolute', left: FX, top: 360, width: 58, height: 58, borderRadius: '50%', background: 'rgba(240,90,40,.16)', transform: 'translate(-50%,-50%) scale(0)', animation: A(tr(T1, 'transform', [[0.2, 'translate(-50%,-50%) scale(0)', 'bk'], [0.7, 'translate(-50%,-50%) scale(1)']]), tr(T1, 'opacity', [[0, 0], [0.2, 0, 'o'], [0.5, 1], [2.9, 1, 'o'], [3.2, 0]])) } }),
+      h('span', { style: { position: 'absolute', left: FX, top: 360, width: 18, height: 18, borderRadius: '50%', background: '#F05A28', border: '3px solid #FFFFFF', boxSizing: 'border-box', boxShadow: '0 3px 8px rgba(20,22,26,.25)', transform: 'translate(-50%,-50%) scale(0)', animation: A(tr(T1, 'transform', [[0.15, 'translate(-50%,-50%) scale(0)', 'bk'], [0.55, 'translate(-50%,-50%) scale(1)']]), tr(T1, 'opacity', [[0, 0], [0.15, 0, 'o'], [0.4, 1], [2.75, 1, 'o'], [2.95, 0]])) } }),
+      ping('#F05A28', T1, 2.6), ping('#F05A28', T1, 2.85),
+      xMark('#14161A', '#F05A28', A(tr(T1, 'transform', [[0, 'scale(1)'], [3.05, 'scale(1)', 'io'], [3.55, 'scale(2.4)']]), tr(T1, 'opacity', [[0, 0], [2.68, 0], [2.7, 1], [3.35, 1, 'o'], [3.9, 0]])), draw(T1, 2.7, 3.0), draw(T1, 2.8, 3.1)),
+      word('#14161A', T1, 3.35));
+
+    // Captain intro
+    const T2 = 6.8, t0 = 0.6, dur = 2.2, K = 14;
+    const camPts = [[0, cam(S[0], S[1], 3)], [t0, cam(S[0], S[1], 3)]], disPts = [[0, '0%'], [t0, '0%']], dashPts = [[0, 1], [t0, 1]];
+    for (let k = 1; k <= K; k++) { const e = eio(k / K), p = at(e), t = t0 + dur * k / K; camPts.push([t, cam(p[0], p[1], 3)]); disPts.push([t, (e * 100).toFixed(2) + '%']); dashPts.push([t, (1 - e).toFixed(4)]); }
+    const cOp = tr(T2, 'opacity', [[0, 0], [0.2, 0, 'o'], [0.5, 1], [t0 + dur, 1, 'o'], [t0 + dur + .25, 0]]);
+    const cDis = tr(T2, 'offset-distance', disPts);
+    const cIntro = h('div', { style: { position: 'absolute', inset: 0, overflow: 'hidden' } },
+      ab({ left: 0, top: 0, width: 390, height: 844, transformOrigin: '0 0', transform: cam(E[0], E[1], 3), animation: tr(T2, 'transform', camPts) },
+        h('img', { src: 'assets/amman-night.svg', alt: '', style: { display: 'block', width: 390, height: 844, maxWidth: 'none' } }),
+        ...LB.map(([t, x, y]) => label(t, x, y, '#59606A')),
+        trail('#FF6A33', null, tr(T2, 'stroke-dashoffset', dashPts), tr(T2, 'opacity', [[0, 1], [2.85, 1, 'o'], [3.5, 0], [6.8, 0]])),
+        h('span', { style: { position: 'absolute', left: E[0], top: E[1], width: 6, height: 6, borderRadius: '50%', border: '.45px solid #F2EFE8', boxSizing: 'border-box', animation: 'txpz 1.6s ease-out infinite' } }),
+        h('span', { style: { position: 'absolute', left: E[0], top: E[1], width: 5, height: 5, borderRadius: '50%', background: '#F2EFE8', border: '.9px solid #0E1013', boxSizing: 'border-box', transform: 'translate(-50%,-50%)', animation: tr(T2, 'opacity', [[0, 0], [0.6, 0, 'o'], [1.0, 1], [2.85, 1, 'o'], [3.1, 0]]) } }),
+        onPath({ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,106,51,.14)', border: '.5px solid rgba(255,106,51,.6)', boxSizing: 'border-box' }, A(cDis, cOp)),
+        car('#FF6A33', '#0E1013', '#0E1013', A(cDis, cOp))),
+      ab({ inset: 0, background: '#0E1013', animation: tr(T2, 'opacity', [[0, 1, 'o'], [0.7, 0], [3.35, 0, 'io'], [4.05, .84], [6.45, .84, 'io'], [6.8, 1]]) }),
+      ping('#F2EFE8', T2, 2.8), ping('#FF6A33', T2, 3.05),
+      xMark('#F2EFE8', '#FF6A33', A(tr(T2, 'transform', [[0, 'scale(1)'], [3.25, 'scale(1)', 'io'], [3.75, 'scale(2.4)']]), tr(T2, 'opacity', [[0, 0], [2.88, 0], [2.9, 1], [3.55, 1, 'o'], [4.1, 0]])), draw(T2, 2.9, 3.2), draw(T2, 3.0, 3.3)),
+      word('#F2EFE8', T2, 3.55),
+      h('span', { style: { position: 'absolute', top: 410, left: 195, fontSize: 12, fontWeight: 700, color: '#0E1013', background: '#F2EFE8', padding: '4px 12px', borderRadius: 99, opacity: 0, animation: A(tr(T2, 'opacity', [[0, 0], [3.85, 0, 'o'], [4.25, 1], [6.45, 1, 'io'], [6.8, 0]]), tr(T2, 'transform', [[0, 'translate(-50%,8px)'], [3.85, 'translate(-50%,8px)', 'o'], [4.3, 'translate(-50%,0px)']])) } }, 'كبتن'));
+
+    // Morph helpers
+    const T3 = 5.8;
+    const mp = (a, b, t1 = 1.32, t2 = 1.92, r1 = 4.9, r2 = 5.45, e = 'o') => [[0, a], [t1, a, e], [t2, b], [r1, b, e], [r2, a]];
+    const fadeOut = A(tr(T3, 'opacity', [[0, 1], [1.25, 1, 'o'], [1.5, 0], [4.95, 0, 'o'], [5.4, 1]]), tr(T3, 'transform', [[0, 'translateY(0px)'], [1.25, 'translateY(0px)', 'o'], [1.55, 'translateY(-14px)'], [4.95, 'translateY(-14px)', 'o'], [5.4, 'translateY(0px)']]));
+    const contentIn = A(tr(T3, 'opacity', [[0, 0], [1.8, 0, 'o'], [2.15, 1], [4.85, 1, 'o'], [4.98, 0]]), tr(T3, 'transform', [[0, 'translateY(12px)'], [1.8, 'translateY(12px)', 'o'], [2.2, 'translateY(0px)']]));
+    const labelOut = tr(T3, 'opacity', [[0, 1], [1.3, 1, 'o'], [1.42, 0], [5.3, 0, 'o'], [5.45, 1]]);
+    const press = tr(T3, 'transform', [[0, 'scale(1)'], [1.1, 'scale(1)', 'o'], [1.2, 'scale(.97)', 'o'], [1.32, 'scale(1)']]);
+    const card = (base, mh, colA, colB, labelKids, contentKids, extra) => h('div', { style: { position: 'absolute', left: base.side, right: base.side, bottom: base.bottom, height: base.h, borderRadius: base.r, background: colA, overflow: 'hidden', borderTop: '1px solid transparent', boxSizing: 'border-box', animation: A(
+      tr(T3, 'left', mp(base.side + 'px', '0px')), tr(T3, 'right', mp(base.side + 'px', '0px')), tr(T3, 'bottom', mp(base.bottom + 'px', '0px')), tr(T3, 'height', mp(base.h + 'px', mh + 'px')),
+      tr(T3, 'border-radius', mp(`${base.r}px ${base.r}px ${base.r}px ${base.r}px`, '32px 32px 0px 0px')),
+      tr(T3, 'background-color', [[0, colA], [1.32, colA, 'o'], [1.75, colB], [4.95, colB, 'o'], [5.35, colA]]), press, ...(extra || [])) } },
+      h('div', { style: { position: 'absolute', left: 0, right: 0, top: 0, height: base.h, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', boxSizing: 'border-box', animation: labelOut } }, ...labelKids),
+      h('div', { style: { position: 'absolute', left: 0, right: 0, top: 0, padding: '12px 22px 0', opacity: 0, animation: contentIn } }, ...contentKids));
+    const field = (bg, fg, mut, acc, typed) => h('div', { dir: 'ltr', style: { display: 'flex', alignItems: 'center', gap: 12, height: 56, padding: '0 16px', marginTop: 18, borderRadius: 16, background: bg, border: '1.5px solid ' + acc, boxSizing: 'border-box' } },
+      h('span', { style: { fontSize: 15, fontWeight: 600, color: fg } }, '+962'), h('span', { style: { width: 1, height: 24, background: mut } }),
+      h('span', { style: { fontSize: 16, color: fg, letterSpacing: '.02em' } }, typed), h('span', { style: { width: 2, height: 22, background: acc, marginLeft: -9, animation: 'txcaret 1s infinite' } }));
+
+    // Rider morph
+    const rMorph = h('div', { style: { position: 'absolute', inset: 0, overflow: 'hidden' } },
+      h('img', { src: 'assets/amman-day.svg', alt: '', style: { position: 'absolute', left: -382.78, top: -1053.42, width: 1170, height: 2532, maxWidth: 'none' } }),
+      ab({ inset: 0, background: '#F4F1EA', opacity: .82, animation: tr(T3, 'opacity', mp(.82, .92)) }),
+      ab({ left: 0, top: 0, width: 390, height: 844, transformOrigin: '195px 360px', animation: tr(T3, 'transform', mp('translateY(0px) scale(1)', 'translateY(-266px) scale(.46)', 1.32, 1.95)) },
+        h('span', { dir: 'ltr', style: Object.assign({}, wordStyle, { color: '#14161A' }) }, 'TA', XB(1, '#14161A', '#F05A28'), 'O')),
+      ab({ inset: 0, animation: fadeOut },
+        ab({ top: 436, left: 28, right: 28, textAlign: 'center' },
+          h('div', { style: { fontSize: 44, fontWeight: 700, lineHeight: 1.25 } }, 'أهلاً وسهلاً'),
+          h('div', { style: { marginTop: 10, fontSize: 18, fontWeight: 500, color: '#3F3E3A' } }, 'حللتَ أهلاً، ووطئتَ سهلاً.'),
+          h('div', { style: { margin: '16px auto 0', maxWidth: '30ch', fontSize: 14, lineHeight: 1.75, color: '#6A6862' } }, 'جئتَ بين أهلك، وطريقك سهل — هكذا نريد أن تكون كل رحلة.')),
+        ab({ left: 24, right: 24, bottom: 26, textAlign: 'center', fontSize: 11.5, color: '#8A857B' }, 'بالمتابعة توافق على الشروط وسياسة الخصوصية.')),
+      card({ side: 24, bottom: 58, h: 58, r: 18 }, 470, '#14161A', '#FFFFFF',
+        [h('span', { key: 1, style: { color: '#F4F1EA', fontSize: 16, fontWeight: 600 } }, 'تفضّل'), h('span', { key: 2, style: { font: "22px/1 'Material Symbols Rounded'", color: '#F4F1EA' } }, 'arrow_back')],
+        [h('div', { key: 0, style: { width: 40, height: 5, borderRadius: 3, background: '#E0DAD0', margin: '0 auto 18px' } }),
+         h('div', { key: 1, style: { fontSize: 24, fontWeight: 700, color: '#14161A' } }, 'رقم هاتفك'),
+         h('div', { key: 2, style: { marginTop: 6, fontSize: 14, lineHeight: 1.6, color: '#6A6862' } }, 'لديك حساب؟ تدخل بكلمة المرور. جديد؟ ننشئ حسابك برمز تحقق.'),
+         h('div', { key: 3 }, field('#FFFFFF', '#14161A', '#E0DAD0', '#F05A28', '79')),
+         h('div', { key: 4, style: { marginTop: 14, height: 56, borderRadius: 18, background: '#14161A', opacity: .3, color: '#F4F1EA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 600 } }, 'متابعة'),
+         h('div', { key: 5, style: { marginTop: 14, textAlign: 'center', fontSize: 12, color: '#8A857B' } }, 'بالمتابعة توافق على الشروط وسياسة الخصوصية.')]));
+
+    // Captain morph
+    const cMorph = h('div', { style: { position: 'absolute', inset: 0, overflow: 'hidden' } },
+      h('img', { src: 'assets/amman-night.svg', alt: '', style: { position: 'absolute', left: -789, top: -1026.9, width: 1170, height: 2532, maxWidth: 'none' } }),
+      ab({ inset: 0, background: 'linear-gradient(rgba(14,16,19,.55) 0%,rgba(14,16,19,.3) 34%,rgba(14,16,19,.92) 54%,#0E1013 62%)' }),
+      ab({ inset: 0, background: '#0E1013', opacity: 0, animation: tr(T3, 'opacity', mp(0, .55)) }),
+      h('span', { style: { position: 'absolute', left: 195, top: 300, transform: 'translate(-50%,-50%)', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 13px', borderRadius: 99, background: 'rgba(14,16,19,.78)', border: '1px solid rgba(255,255,255,.1)', fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap' } }, h('span', { style: { width: 7, height: 7, borderRadius: '50%', background: '#FF6A33' } }), 'البلد'),
+      ab({ top: 58, left: 22, right: 22, display: 'flex', alignItems: 'center', gap: 9 },
+        h('span', { dir: 'ltr', style: { fontFamily: 'Unbounded', fontWeight: 800, fontSize: 19, letterSpacing: '-.03em' } }, 'TA', XB(19 / 64, '#F2EFE8', '#FF6A33'), 'O'),
+        h('span', { style: { fontSize: 11, fontWeight: 700, color: '#0E1013', background: '#F2EFE8', padding: '3px 9px', borderRadius: 99 } }, 'كبتن')),
+      ab({ inset: 0, animation: fadeOut },
+        ab({ top: 470, left: 28, right: 28 },
+          h('div', { style: { display: 'flex', gap: 6, marginBottom: 22 } }, ...[8, 8, 22].map((w, i) => h('span', { key: i, style: { width: w, height: 4, borderRadius: 2, background: i === 2 ? '#FF6A33' : '#3A3F48' } }))),
+          h('div', { style: { fontSize: 36, fontWeight: 700, lineHeight: 1.3 } }, 'وقتك بيدك.'),
+          h('div', { style: { marginTop: 14, fontSize: 15, lineHeight: 1.75, color: '#B9BEC6', maxWidth: '30ch' } }, 'تختار باقتك وساعات عملك، وتسحب أرباحك من التطبيق.')),
+        ab({ left: 24, right: 24, bottom: 42, height: 52, borderRadius: 18, border: '1.5px solid #2B3038', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600 }, 'دخول')),
+      card({ side: 24, bottom: 104, h: 56, r: 18 }, 470, '#FF6A33', '#15181D',
+        [h('span', { key: 1, style: { color: '#0E1013', fontSize: 16, fontWeight: 700 } }, 'سجّل كشريك'), h('span', { key: 2, style: { font: "22px/1 'Material Symbols Rounded'", color: '#0E1013' } }, 'arrow_back')],
+        [h('div', { key: 0, style: { width: 40, height: 5, borderRadius: 3, background: '#3A3F48', margin: '0 auto 18px' } }),
+         h('div', { key: 1, style: { fontSize: 24, fontWeight: 700, color: '#F2EFE8' } }, 'رقم هاتفك'),
+         h('div', { key: 2, style: { marginTop: 6, fontSize: 14, lineHeight: 1.6, color: '#9097A1' } }, 'نرسل لك رمز تحقق لتبدأ تسجيلك كشريك.'),
+         h('div', { key: 3 }, field('#0E1013', '#F2EFE8', '#2B3038', '#FF6A33', '78')),
+         h('div', { key: 4, style: { marginTop: 14, height: 56, borderRadius: 18, background: '#FF6A33', opacity: .35, color: '#0E1013', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700 } }, 'متابعة'),
+         h('div', { key: 5, style: { marginTop: 14, textAlign: 'center', fontSize: 12, color: '#6B717A' } }, 'بعدها: بياناتك، ثم مركبتك ووثائقك.')],
+        [tr(T3, 'border-top-color', [[0, 'rgba(38,42,49,0)'], [1.6, 'rgba(38,42,49,0)'], [1.9, 'rgba(38,42,49,1)'], [4.95, 'rgba(38,42,49,1)'], [5.3, 'rgba(38,42,49,0)']])]));
+
+    this._v = { riderIntro: h(React.Fragment, null, h('style', null, css), rIntro), captainIntro: cIntro, riderMorph: rMorph, captainMorph: cMorph };
+    return this._v;
+  }
+  renderVals() { return this.build(); }
+}
+</script>
+</body>
+</html>

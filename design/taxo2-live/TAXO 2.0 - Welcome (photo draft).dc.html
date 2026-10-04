@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300..700&amp;family=Unbounded:wght@500..800&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<script src="./image-slot.js"></script>
+<style>body{margin:0;background:#D9D4C9}a{color:#C2410C;text-decoration:none}a:hover{color:#14161A}</style>
+</helmet>
+<section dir="rtl" style="padding:64px 56px 96px;font-family:'Readex Pro',system-ui,sans-serif;color:#14161A">
+<div style="margin-bottom:44px;max-width:900px">
+<p dir="ltr" style="margin:0 0 10px;font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#6A6862;text-align:end">TAXO 2.0 — WELCOME</p>
+<h1 style="margin:0;font-size:40px;font-weight:700;line-height:1.2">شاشة الترحيب</h1>
+<p style="margin:10px 0 0;font-size:16px;line-height:1.75;color:#3F3E3A;max-width:60ch;text-wrap:pretty">صورة حقيقية تملأ الشاشة، وفوقها لوحة واحدة هادئة: الشعار، وجملة، وزر. الصور أماكن مخصّصة — اسحب صورتك عليها.</p>
+</div>
+<div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+<div data-screen-label="W1 ترحيب الراكب" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">W1</span><span style="font-size:16px;font-weight:600">ترحيب — تطبيق الراكب</span></div>
+
+</div>
+
+<div data-screen-label="W2 ترحيب الكبتن" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">W2</span><span style="font-size:16px;font-weight:600">ترحيب — تطبيق الكبتن</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#0E1013;box-shadow:0 0 0 10px #000000,0 0 0 11px #34373D,0 50px 90px -30px rgba(0,0,0,.6);color:#F2EFE8">
+<div style="position:absolute;top:0;left:0;right:0;height:520px"></div>
+
+<dc-import name="TaxoStatus" dark="{{ true }}" style="position:absolute;top:0;left:0;right:0;pointer-events:none" hint-size="390px,50px"></dc-import>
+<div style="position:absolute;top:60px;left:22px;right:22px;display:flex;align-items:center;gap:10px;pointer-events:none">
+<span dir="ltr" style="font-family:Unbounded;font-weight:800;font-size:22px;letter-spacing:-.03em;color:#F2EFE8">TA<span style="color:#FF6A33">X</span>O</span>
+<span style="font-size:11.5px;font-weight:700;color:#0E1013;background:#F2EFE8;padding:3px 9px;border-radius:99px">كبتن</span>
+<span style="flex:1"></span>
+<span style="height:34px;padding:0 13px;border-radius:17px;background:rgba(14,16,19,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;font-size:12.5px;font-weight:600">English</span>
+</div>
+<div style="position:absolute;left:24px;right:24px;bottom:40px;pointer-events:none">
+<h2 style="margin:0;font-size:30px;font-weight:700;line-height:1.35">قُد بشروطك،<br>والأجرة كاملة لك.</h2>
+<div style="display:flex;flex-direction:column;gap:12px;margin:22px 0 26px">
+<div style="display:flex;align-items:center;gap:12px;font-size:14px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,106,51,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="font:19px/1 'Material Symbols Rounded';color:#FF6A33">percent</span></span>صفر عمولة طوال اشتراكك</div>
+<div style="display:flex;align-items:center;gap:12px;font-size:14px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,106,51,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="font:19px/1 'Material Symbols Rounded';color:#FF6A33">account_balance</span></span>اسحب أرباحك متى شئت عبر CliQ</div>
+<div style="display:flex;align-items:center;gap:12px;font-size:14px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,106,51,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="font:19px/1 'Material Symbols Rounded';color:#FF6A33">schedule</span></span>تفعيل الحساب خلال 24 ساعة</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;pointer-events:auto">
+<div style="height:56px;border-radius:18px;background:#FF6A33;color:#0E1013;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">سجّل ككبتن</div>
+<div style="height:52px;border-radius:18px;border:1.5px solid rgba(242,239,232,.22);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">لديّ حساب — دخول</div>
+</div>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+</body>
+</html>
