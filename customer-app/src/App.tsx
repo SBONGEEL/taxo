@@ -62,6 +62,9 @@ const ForgotPasswordScreen = lazy(() =>
     default: m.ForgotPasswordScreen,
   })),
 );
+const LegalT2Screen = lazy(() =>
+  import("@/screens/t2/LegalT2").then((m) => ({ default: m.LegalT2Screen })),
+);
 const AccountScreen = lazy(() =>
   import("@/screens/Account").then((m) => ({ default: m.AccountScreen })),
 );
@@ -496,6 +499,15 @@ export default function App() {
                         element={
                           <Guarded>
                             <DeleteAccountScreen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **«الشروط والخصوصية»** (§٦١-ط/٣) — صفحةٌ واحدةٌ للوجهين تتبع المظهرَ القائم */}
+                      <Route
+                        path="/account/legal"
+                        element={
+                          <Guarded>
+                            <LegalT2Screen />
                           </Guarded>
                         }
                       />

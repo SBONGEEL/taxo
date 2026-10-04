@@ -8,27 +8,48 @@
  * المسافةُ والقناة، وشارةُ النزاع، و«لم تُدفع»/«بانتظار التأكيد»، **ومن ألغى** — فـ«ملغاة» وحدَها
  * تجمع ثلاثَ حالاتٍ يفرّقها السجلُّ اليوم.
  *
- * **وما رسمته اللوحةُ بلا بابٍ في التطبيق لا يُبنى** حتى يقرّره المالك: المرشّحاتُ الأربعة (لا مرشّحَ
- * في `GET /rides/me`، وتصفيةُ صفحةٍ محمَّلةٍ تكذب على ما لم يُحمَّل)، وبطاقةُ المجدولة بـ«تعديل»
- * (الحجزُ يُلغى ولا يُعدَّل، ويعيش في «رحلات مجدولة» بطلبه).
+ * **والمرشّحاتُ الأربعة بُنيت بقرار المالك** (§٦١-ط/١): «مكتملة» و«ملغاة» **تصفّيان في الخلفية** (`?group=`) — تصفيةُ
+ * صفحةٍ محمَّلةٍ كانت ستكذب على ما لم يُحمَّل — و«مجدولة» **بابُ الحجوز القائم** (`GET /me/bookings`، القائمةُ منها)، و«الكل»
+ * **كما كان حرفاً** وفوقه بطاقةُ ما جُدول كما رُسم. **وزرُّ «تعديل» لم يُبنَ**: تعديلُ الحجز ينتظر إقرارَ المالك (`APPROVALS-MONEY.md`
+ * §١) — فالبطاقةُ تفتح «رحلات مجدولة» حيث يُلغى. **والأجرةُ عليها «تقديرياً»**: تُحسب عند التنفيذ (القسم 5.11).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { listMyRides } from "@/api/endpoints";
-import type { RideListItem, RideStatus } from "@/api/types";
+import { listBookings, listMyRides } from "@/api/endpoints";
+import type { Booking, RideGroup, RideListItem, RideStatus } from "@/api/types";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { PAYMENT_METHOD_LABEL, RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { formatDistance, formatMoney } from "@/lib/utils";
 
-import { byMonth, startOfToday, whenParts } from "./when";
+import { aheadParts, byMonth, startOfToday, whenParts } from "./when";
 
 import "@/taxo2";
 import "./t2.css";
 
 const PAGE = 20;
+
+type Filter = "all" | RideGroup | "scheduled";
+
+/** المرشّحاتُ كما رُسمت، بترتيبها. */
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "all", label: "الكل" },
+  { key: "completed", label: "مكتملة" },
+  { key: "scheduled", label: "مجدولة" },
+  { key: "cancelled", label: "ملغاة" },
+];
+
+const EMPTY: Record<Filter, { title: string; hint?: string }> = {
+  all: { title: "لا رحلات بعد", hint: "أول رحلة تبدأ من الشاشة الرئيسية." },
+  completed: { title: "لا رحلات مكتملة بعد" },
+  scheduled: { title: "لا رحلات مجدولة" },
+  cancelled: { title: "لا رحلات ملغاة" },
+};
+
+/** **ما ينتظر موعدَه وحدَه** — ما نُفِّذ صار رحلةً في القائمة، وما فات أو أُلغي في «رحلات مجدولة». */
+const upcoming = (bookings: Booking[]) => bookings.filter((booking) => booking.status === "pending");
 
 /** الحالاتُ التي ترسمها اللوحةُ «ملغاة» — **ونصُّ كلٍّ منها يبقى نصَّه** (من ألغى). */
 const ENDED_UNSERVED: RideStatus[] = ["cancelled_by_rider", "cancelled_by_driver", "no_driver_found"];
@@ -48,26 +69,57 @@ function statusChip(item: RideListItem): { text: string; tone: "ok" | "danger" |
 }
 
 export function RidesT2Screen() {
+  const [filter, setFilter] = useState<Filter>("all");
   const [rides, setRides] = useState<RideListItem[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [more, setMore] = useState(false);
+  // **جوابٌ متأخّرٌ لمرشّحٍ سابقٍ لا يكتب فوق الحاليّ** — من بدّل المرشّحَ مرّتين بسرعةٍ يرى ما اختاره آخراً
+  const latest = useRef(0);
 
-  async function load(offset: number) {
+  async function load(offset: number, which: Filter) {
+    const ticket = ++latest.current;
     try {
-      const page = await listMyRides(PAGE, offset);
+      if (which === "scheduled") {
+        const all = await listBookings();
+        if (ticket !== latest.current) return;
+        setBookings(upcoming(all));
+        setRides([]);
+        setMore(false);
+        return;
+      }
+      const [page, booked] = await Promise.all([
+        listMyRides(PAGE, offset, which === "all" ? undefined : which),
+        // **وفي «الكل» بطاقةُ ما جُدول فوق السجلّ** كما رُسمت — **وتعثّرُها لا يُسقط السجلّ**: هي إضافةٌ على الشاشة القائمة
+        which === "all" && offset === 0 ? listBookings().catch(() => null) : Promise.resolve(null),
+      ]);
+      if (ticket !== latest.current) return;
       setRides((current) => (offset === 0 ? page : [...current, ...page]));
+      if (offset === 0) setBookings(booked ? upcoming(booked) : []);
       setMore(page.length === PAGE);
     } catch (caught) {
+      if (ticket !== latest.current) return;
       setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة رحلاتك");
     } finally {
-      setLoading(false);
+      if (ticket === latest.current) setLoading(false);
     }
   }
 
   useEffect(() => {
-    void load(0);
-  }, []);
+    void load(0, filter);
+    // التحميلُ لكلِّ مرشّح — والصفحاتُ التالية من «عرض المزيد»
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
+  function choose(next: Filter) {
+    if (next === filter) return;
+    setLoading(true);
+    setError(null);
+    setRides([]);
+    setBookings([]);
+    setFilter(next);
+  }
 
   const today = startOfToday();
   const months = byMonth(rides, (item) => item.ride.created_at);
@@ -76,15 +128,57 @@ export function RidesT2Screen() {
     <div className="t2 t2-page pb-nav">
       <h1 className="t2-h1">رحلاتي</h1>
 
+      <div className="t2-filters" role="tablist" aria-label="تصفية الرحلات">
+        {FILTERS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={filter === key}
+            className={filter === key ? "t2-filter on" : "t2-filter"}
+            onClick={() => choose(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <Spinner />
       ) : (
         <>
           <ErrorNote message={error} />
 
-          {rides.length === 0 ? (
-            <EmptyState title="لا رحلات بعد" hint="أول رحلة تبدأ من الشاشة الرئيسية." />
+          {rides.length === 0 && bookings.length === 0 && !error ? (
+            <EmptyState title={EMPTY[filter].title} hint={EMPTY[filter].hint} />
           ) : null}
+
+          {bookings.map((booking) => {
+            const at = aheadParts(booking.scheduled_at, today);
+            const fare = booking.estimated_fare_at_booking;
+            return (
+              <Link key={booking.id} to="/account/bookings" className="t2-booking">
+                <span className="t2-booking-when">
+                  <span className="t2-icon" aria-hidden="true">event_upcoming</span>
+                  مجدولة · {at.day} <span dir="ltr">{at.time}</span> {at.half}
+                </span>
+                <span className="t2-route">
+                  <span className="t2-dot" />
+                  <span className="t2-place">{booking.pickup_address ?? "نقطة على الخريطة"}</span>
+                  <span className="t2-dot to" />
+                  <span className="t2-place strong">{booking.dropoff_address ?? "وجهة على الخريطة"}</span>
+                </span>
+                <span className="t2-booking-foot">
+                  <span>{booking.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[booking.vehicle_category]}</span>
+                  {fare !== null ? (
+                    <span className="t2-booking-fare">
+                      {formatMoney(fare, booking.currency)} <small>تقديرياً</small>
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            );
+          })}
 
           {months.map((month) => (
             <section key={month.label}>
@@ -147,7 +241,7 @@ export function RidesT2Screen() {
           ))}
 
           {more ? (
-            <button type="button" className="t2-more" onClick={() => void load(rides.length)}>
+            <button type="button" className="t2-more" onClick={() => void load(rides.length, filter)}>
               عرض المزيد
             </button>
           ) : null}

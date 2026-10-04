@@ -46,6 +46,8 @@ import type {
   WalletTransaction,
   Storefront,
   RequiredPolicy,
+  RideGroup,
+  RiderSummary,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -216,8 +218,11 @@ export const getActiveRide = () => api.get<Ride | null>("/rides/me/active?side=r
 
 export const getRide = (rideId: string) => api.get<Ride>(`/rides/${rideId}`);
 
-export const listMyRides = (limit = 20, offset = 0) =>
-  api.get<RideListItem[]>("/rides/me", { query: { limit, offset, side: "rider" } });
+export const listMyRides = (limit = 20, offset = 0, group?: RideGroup) =>
+  api.get<RideListItem[]>("/rides/me", { query: { limit, offset, side: "rider", group } });
+
+/** بطاقةُ «حسابي» (R15) — **للراكب وحدَه**، والمتوسّطُ يُحسب في الخلفية (§٦١-ط/٢). */
+export const getRiderSummary = () => api.get<RiderSummary>("/rides/me/summary");
 
 /** `reason_code` سببٌ **مصنَّف** بجانب النص: `gender_mismatch` وحدها تُسقط
  *  رسوم الإلغاء وتُدخل بلاغاً، فلا تُترك لنصٍّ حر (المرحلة 10-ج). */

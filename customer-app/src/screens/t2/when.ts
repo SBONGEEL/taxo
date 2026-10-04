@@ -28,6 +28,19 @@ export function whenParts(iso: string, today: number): { day: string; time: stri
   return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
 }
 
+/** **موعدٌ قادم** كما ترسمه بطاقةُ «مجدولة» (R12): «غداً · 06:15 ص» — **بساعةٍ من اثنتي عشرة وص/م** كما في اللوحة
+ *  (بطاقاتُ الماضي بأربعٍ وعشرين، وهذا رسمُها هي). */
+export function aheadParts(iso: string, today: number): { day: string; time: string; half: string } {
+  const at = new Date(iso);
+  const hours = at.getHours();
+  const time = `${String(hours % 12 || 12).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+  const half = hours < 12 ? "ص" : "م";
+  const ms = at.getTime();
+  if (ms < today + DAY_MS) return { day: "اليوم", time, half };
+  if (ms < today + 2 * DAY_MS) return { day: "غداً", time, half };
+  return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time, half };
+}
+
 /** رأسُ الشهر: «أكتوبر 2026». */
 export function monthOf(iso: string): string {
   return new Date(iso).toLocaleDateString(DISPLAY_LOCALE, { month: "long", year: "numeric" });

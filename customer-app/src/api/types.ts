@@ -649,6 +649,16 @@ export interface NotificationPreferences {
  *  الرحلةُ نفسُها، فلا `fulfilled` هنا ولا `no_driver`. */
 export type BookingStatus = "pending" | "dispatched" | "missed" | "cancelled";
 
+/** **مجموعتا «رحلاتي»** (§٦١-ط/١) — تصفّيان في الخلفية؛ و«الكل» بلا مرشّح، و«مجدولة» بابُ الحجوز. */
+export type RideGroup = "completed" | "cancelled";
+
+/** **بطاقةُ «حسابي»** (R15، §٦١-ط/٢): رحلاتُه المكتملة، ومتوسّطُ ما قيّمه به الكباتن — **`null` بلا تقييم**. */
+export interface RiderSummary {
+  completed_rides: number;
+  rating_avg: string | null;
+  ratings_count: number;
+}
+
 export interface Booking {
   id: string;
   status: BookingStatus;
