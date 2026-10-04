@@ -1,0 +1,174 @@
+/* شاشاتُ الكبتن في TAXO 2.0 — **المظهرُ الليليُّ المرسوم** (Claude Design «Captain»، «Identity»).
+ *
+ * **القيمُ من اللوحة حرفاً**، متغيّراتٍ في هذا الملفّ لا أصنافَ Tailwind (`check:scale`). **والفاتحُ
+ * لم يُرسم بعد** (§61-ب) — فشاشاتُ هذا المجلّد لا تُعرض إلا والمظهرُ داكن (افتراضُ الكبتن)، والقائمةُ
+ * تبقى في الفاتح حتى يُرسم.
+ */
+
+.t2 {
+  --asphalt: #0e1013;
+  --paper: #f2efe8;
+  --card: #171a1f;
+  --edge: #2b3038;
+  --rule: #20242b;
+  --mut: #9097a1;
+  --ember: #ff6a33;
+  /* نبراتُ الدوائر كما رُسمت في C14 — خلفيةٌ قاتمةٌ ولونُ معنى */
+  --ok: #3dbe7e;
+  --ok-t: #16291f;
+  --amber: #e3a537;
+  --amber-t: #2a2312;
+  --hot-t: #2a1a12;
+  --err: #f0584c;
+  --err-t: #2c1615;
+  min-height: 100%;
+  background: var(--asphalt);
+  color: var(--paper);
+  font-family: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+/* **السِمةُ الوردية**: البرقوقُ الفاتحُ مكانَ الجمر على الإسفلت — كما في ترحيب الكبتن */
+html.pink .t2 {
+  --ember: #f08cc0;
+}
+
+.t2-icon {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.t2-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.t2-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--edge);
+  color: var(--paper);
+  cursor: pointer;
+}
+.t2-back .t2-icon { font-size: 22px; }
+.t2-title {
+  flex: 1;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+.t2-action {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ember);
+  cursor: pointer;
+}
+
+/* ── الإشعارات (C14) ────────────────────────────────────────────────────── */
+.t2-notifs {
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.t2-group {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mut);
+  margin: 0 4px 8px;
+}
+.t2-list {
+  background: var(--card);
+  border-radius: 22px;
+  padding: 0 14px;
+  margin-bottom: 16px;
+}
+.t2-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-row:last-child { border-bottom: 0; }
+.t2-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--rule);
+  color: var(--paper);
+}
+.t2-badge.ok { background: var(--ok-t); color: var(--ok); }
+.t2-badge.warn { background: var(--amber-t); color: var(--amber); }
+.t2-badge.hot { background: var(--hot-t); color: var(--ember); }
+.t2-badge.danger { background: var(--err-t); color: var(--err); }
+.t2-row-main { flex: 1; min-width: 0; }
+.t2-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.t2-row-title { font-size: 14.5px; font-weight: 700; }
+.t2-row-when {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 11.5px;
+  color: var(--mut);
+}
+.t2-unread {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ember);
+}
+.t2-row-body {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--mut);
+}
+/* «عرض المزيد» — **لم تُرسم في اللوحة** والتطبيقُ يقلّب صفحاتٍ اليوم؛ فتُرسم بلغة البطاقة نفسِها */
+.t2-more {
+  display: block;
+  width: 100%;
+  padding: 13px 0;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mut);
+  cursor: pointer;
+}
+.t2-more:disabled { opacity: 0.6; cursor: default; }

@@ -40,10 +40,11 @@ import {
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { listNotifications, markNotificationsRead } from "@/api/endpoints";
-import type { Currency, UserNotification } from "@/api/types";
+import type { UserNotification } from "@/api/types";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { digits, cn } from "@/lib/utils";
+import { composeBody } from "@/lib/notification-text";
+import { formatWhen } from "@/lib/rideFormat";
+import { cn } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 
 const PAGE_SIZE = 30;
@@ -63,36 +64,7 @@ const KIND_STYLE: Record<string, { icon: LucideIcon; tone: string }> = {
   campaign: { icon: Megaphone, tone: "text-muted" },
 };
 
-/** نصُّ الصف مصوغاً من القيم الخام — و`null` يعني «قع على نصّ الخلفية». */
-function composeBody(entry: UserNotification): string | null {
-  const data = entry.data;
-  if (!data) return null;
-
-  const money =
-    data.amount && data.currency
-      ? `${digits(data.amount)} ${CURRENCY_LABEL[data.currency as Currency] ?? ""}`
-      : null;
-
-  switch (entry.kind) {
-    case "cliq_transfer_submitted":
-      return money && data.transfer_reference
-        ? `${money} — مرجع الحوالة ${data.transfer_reference}`
-        : money;
-    case "cliq_confirmation_expired":
-      return money ? `${money} — تفصل فيها الإدارة الآن.` : null;
-    case "ride_completed":
-      return money ? `أجرة الرحلة ${money}.` : null;
-    case "document_rejected":
-      return data.review_note || null;
-    case "subscription_expiring":
-    case "subscription_expired":
-      return data.expires_at
-        ? `تغطيتك حتى ${formatWhen(data.expires_at)}.`
-        : null;
-    default:
-      return null;
-  }
-}
+// `composeBody` في `lib/notification-text.ts` — بيتٌ واحدٌ للشاشتين
 
 /** أين يذهب الصفُّ حين يُنقر — **من `lib/notification-route` لا من هنا**.
  *

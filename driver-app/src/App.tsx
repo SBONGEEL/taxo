@@ -50,7 +50,7 @@ import { Welcome } from "@/components/welcome/Welcome";
 import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
 import { BottomNav } from "@/components/BottomNav";
 import { showsNav } from "@/lib/tabs";
-import { ThemeProvider } from "@/lib/theme";
+import { ThemeProvider, useTheme } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
@@ -153,6 +153,11 @@ const CardReturnScreen = lazy(() =>
 const NotificationsScreen = lazy(() =>
   import("@/screens/Notifications").then((m) => ({
     default: m.NotificationsScreen,
+  })),
+);
+const NotificationsT2Screen = lazy(() =>
+  import("@/screens/t2/NotificationsT2").then((m) => ({
+    default: m.NotificationsT2Screen,
   })),
 );
 const SubscriptionScreen = lazy(() =>
@@ -369,6 +374,14 @@ function NavBar() {
       {showsNav(pathname) ? <BottomNav /> : null}
     </>
   );
+}
+
+/** **المظهرُ المرسومُ أوّلاً** (§61-ب): لوحةُ الكبتن ليليّةٌ وحدَها حتى يُرسم الفاتح — فالشاشةُ
+ *  الجديدةُ في الداكن (افتراضُ الكبتن)، **والقائمةُ في الفاتح كما هي** حتى يُرسم. لا يُفقد شيءٌ
+ *  ولا يُخترع. */
+function ByTheme({ day, night }: { day: ReactNode; night: ReactNode }) {
+  const { dark } = useTheme();
+  return <>{dark ? night : day}</>;
 }
 
 function BoundaryByRoute({ children }: { children: ReactNode }) {
@@ -588,7 +601,10 @@ export default function App() {
                           path="/notifications"
                           element={
                             <Guarded>
-                              <NotificationsScreen />
+                              <ByTheme
+                                night={<NotificationsT2Screen />}
+                                day={<NotificationsScreen />}
+                              />
                             </Guarded>
                           }
                         />
