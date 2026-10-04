@@ -154,7 +154,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       }
     >
       {/* المسار: «من» و«إلى» بنقطتيهما، و«+» محطةٌ في الطريق */}
-      <div className="t2-route">
+      <div className="t2-reqroute">
         <span className="t2-route-from" aria-hidden="true" />
         <div className="t2-route-text">
           <div className="t2-route-label">من</div>

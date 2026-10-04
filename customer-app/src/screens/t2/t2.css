@@ -728,8 +728,9 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-whereto-pickup-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .t2-whereto-change { font-size: 12.5px; font-weight: 600; color: var(--t2-muted); }
 
-/* بطاقةُ المسار: «من» و«إلى» بنقطتيهما، و«+» */
-.t2-route {
+/* بطاقةُ المسار في ورقة الطلب (R06): «من» و«إلى» بنقطتيهما، و«+» — **باسمٍ لها لا `.t2-route`**: ذاك سطرُ المسار في «رحلاتي»
+   (R12)، **واسمٌ واحدٌ لشيئين قلب بطاقاتِ السجلّ نهاراً** منذ إيداع R06 (قِيس ٢٠٢٦-١٠-٠٤ بلقطةٍ متجاورة) */
+.t2-reqroute {
   display: grid;
   grid-template-columns: 14px 1fr auto;
   align-items: center;
