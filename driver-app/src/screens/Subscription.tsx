@@ -110,7 +110,11 @@ const COPY: Record<
   },
 };
 
-export function SubscriptionScreen() {
+/** **حالُ الاشتراك وأفعالُه — بيتٌ واحدٌ للشاشتين** (القائمة وC10 في `screens/t2`).
+ *
+ * الشراءُ مالٌ يخرج من محفظة كبتن: مفتاحُ عدم التكرار، والتأكيدُ قبل الخصم، وقنواتُه الثلاث بعللها —
+ * **وشاشتان تكتبانها مرّتين تفترقان في أوّل تعديل**. فالشاشتان ترسمان، والخطّافُ يفعل. */
+export function useSubscriptionScreen() {
   const goBack = useGoBack();
   const { user } = useSession();
   // القناةُ تظهر إن كان مفتاحُها مرفوعاً في دولة الكبتن — والغيابُ معطَّل
@@ -227,6 +231,64 @@ export function SubscriptionScreen() {
       setBuying(null);
     }
   }
+
+  /** **أفعالُ ورقة التأكيد** — تُغلق الورقةَ ثمّ تنادي القناة، كما كانت في الورقة نفسِها. */
+  function payFromWallet(plan: SubscriptionPlan) {
+    setConfirming(null);
+    void buy(plan.id);
+  }
+
+  function payByCard(plan: SubscriptionPlan) {
+    setConfirming(null);
+    void buyWithCard(plan.id);
+  }
+
+  function payByCliq(plan: SubscriptionPlan) {
+    setConfirming(null);
+    void payWithCliq(plan.id);
+  }
+
+  return {
+    goBack,
+    cardEnabled,
+    cliqAlias,
+    autoRenew,
+    savingRenew,
+    toggleRenew,
+    subscription,
+    history,
+    loading,
+    buying,
+    confirming,
+    setConfirming,
+    error,
+    done,
+    payFromWallet,
+    payByCard,
+    payByCliq,
+  };
+}
+
+export function SubscriptionScreen() {
+  const {
+    goBack,
+    cardEnabled,
+    autoRenew,
+    savingRenew,
+    toggleRenew,
+    subscription,
+    history,
+    loading,
+    buying,
+    confirming,
+    setConfirming,
+    error,
+    done,
+    cliqAlias,
+    payFromWallet,
+    payByCard,
+    payByCliq,
+  } = useSubscriptionScreen();
 
   if (loading) {
     return (
@@ -459,116 +521,16 @@ export function SubscriptionScreen() {
       </div>
 
       {confirming ? (
-        <div
-          className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
-          onClick={() => setConfirming(null)}
-        >
-          <div
-            className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 className="mb-4 text-16 font-bold text-ink">
-              تأكيد شراء {confirming.name}
-            </h2>
-            <p className="mb-16 text-12 leading-note text-muted">
-              يُخصم المبلغ من رصيد محفظتك فوراً، ويبدأ الاشتراك من انتهاء تغطيتك
-              الحالية إن كانت سارية.
-            </p>
-            {/* **المبلغُ هنا هو ما يُخصم فعلاً، لا سعرُ الخطة** (قِيس على
-                هاتفٍ حقيقي 2026-08-19): كانت الورقةُ تعرض ١٫٥٠٠ ويُخصم ١٫٢٧٥.
-                والفرقُ لصالح الكبتن، لكنها **آخرُ شاشةٍ يقرؤها قبل أن يتحرك
-                المال** — ورقمٌ فيها غيرُ المخصوم يجعلها تكذب في مبلغها.
-                ولم يكشفه شيء: الفحصُ على سطح المكتب نادى الـAPI مباشرةً فلم
-                يفتح الورقةَ أصلاً. */}
-            <div className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12">
-              <div className="flex items-baseline justify-between">
-                <span className="text-12.5 text-muted">المبلغ</span>
-                <span className="text-17 font-bold text-ink">
-                  {digits(
-                    confirming.price_after_discount ?? confirming.price,
-                  )}{" "}
-                  <span className="text-11 font-medium text-muted">
-                    {CURRENCY_LABEL[confirming.currency]}
-                  </span>
-                </span>
-              </div>
-              {/* والسعرُ الأصليُّ يبقى مرئياً مشطوباً: من رأى «١٫٥٠٠» في
-                  البطاقة ثم «١٫٢٧٥» وحدَها هنا يظنّها خطةً أخرى */}
-              {confirming.price_after_discount && confirming.offer_name ? (
-                <div className="mt-8 flex items-baseline justify-between">
-                  <span className="text-11 text-ok">{confirming.offer_name}</span>
-                  <span className="text-11.5 text-muted line-through">
-                    {digits(confirming.price)}{" "}
-                    {CURRENCY_LABEL[confirming.currency]}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-9">
-              <Button
-                size="md"
-                loading={buying !== null}
-                onClick={() => {
-                  const plan = confirming;
-                  setConfirming(null);
-                  void buy(plan.id);
-                }}
-              >
-                خصم من المحفظة
-              </Button>
-              {/* **ما لا عقدَ له يُعرض معطَّلاً بعلّته لا يُخفى** (قرارُ
-                  المالك 2026-08-29): الإخفاءُ يجعل الكبتنَ يظنّ الطريقةَ
-                  **غيرَ مدعومةٍ في التطبيق** فيسأل الدعمَ عن ميزةٍ يراها في
-                  غيره؛ **والمعطَّلُ بعلّته يقول «قادمة» لا «غيرُ موجودة»**.
-                  وهي قاعدةُ شاشة الإقلاع نفسُها: **يقول ما يعرفه.** */}
-              <Button
-                size="md"
-                variant="secondary"
-                disabled={!cardEnabled || buying !== null}
-                onClick={() => {
-                  const plan = confirming;
-                  setConfirming(null);
-                  void buyWithCard(plan.id);
-                }}
-              >
-                الدفع ببطاقة
-              </Button>
-              {!cardEnabled ? (
-                <p className="-mt-4 text-11 leading-note text-muted">
-                  الدفع بالبطاقة غير متاح بعد — لم يُفعَّل عقد المزوّد.
-                </p>
-              ) : null}
-
-              {/* **كليك اليدويّ** — يظهر حين يكون لسوقه حسابٌ مضبوط، ويُعطَّل
-                  بعلّته حين لا يكون. **ولا يُدّعى أنه بوّابةٌ آلية**: الشاشةُ
-                  التالية تقول إن التحصيل يدويّ. */}
-              <Button
-                size="md"
-                variant="secondary"
-                disabled={!cliqAlias || buying !== null}
-                onClick={() => {
-                  const plan = confirming;
-                  setConfirming(null);
-                  void payWithCliq(plan.id);
-                }}
-              >
-                الدفع بكليك
-              </Button>
-              {!cliqAlias ? (
-                <p className="-mt-4 text-11 leading-note text-muted">
-                  الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.
-                </p>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setConfirming(null)}
-                className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
-              >
-                تراجع
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmSubscriptionSheet
+          plan={confirming}
+          buying={buying}
+          cardEnabled={cardEnabled}
+          cliqAlias={cliqAlias}
+          onClose={() => setConfirming(null)}
+          onWallet={payFromWallet}
+          onCard={payByCard}
+          onCliq={payByCliq}
+        />
       ) : null}
 
     </div>
@@ -582,4 +544,122 @@ function formatRange(from: string, to: string): string {
       month: "long",
     });
   return `${format(from)} – ${format(to)}`;
+}
+
+/** **ورقةُ التأكيد قبل الخصم — واحدةٌ للشاشتين**: المبلغُ فيها ما يُخصم فعلاً، والقنواتُ الثلاث بعللها. */
+export function ConfirmSubscriptionSheet({
+  plan,
+  buying,
+  cardEnabled,
+  cliqAlias,
+  onClose,
+  onWallet,
+  onCard,
+  onCliq,
+}: {
+  plan: SubscriptionPlan;
+  buying: string | null;
+  cardEnabled: boolean;
+  cliqAlias: string | null;
+  onClose: () => void;
+  onWallet: (plan: SubscriptionPlan) => void;
+  onCard: (plan: SubscriptionPlan) => void;
+  onCliq: (plan: SubscriptionPlan) => void;
+}) {
+  return (
+    <div
+      className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
+      onClick={onClose}
+    >
+      <div
+        className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 className="mb-4 text-16 font-bold text-ink">
+          تأكيد شراء {plan.name}
+        </h2>
+        <p className="mb-16 text-12 leading-note text-muted">
+          يُخصم المبلغ من رصيد محفظتك فوراً، ويبدأ الاشتراك من انتهاء تغطيتك
+          الحالية إن كانت سارية.
+        </p>
+        {/* **المبلغُ هنا هو ما يُخصم فعلاً، لا سعرُ الخطة** (قِيس على
+            هاتفٍ حقيقي 2026-08-19): كانت الورقةُ تعرض ١٫٥٠٠ ويُخصم ١٫٢٧٥.
+            والفرقُ لصالح الكبتن، لكنها **آخرُ شاشةٍ يقرؤها قبل أن يتحرك
+            المال** — ورقمٌ فيها غيرُ المخصوم يجعلها تكذب في مبلغها.
+            ولم يكشفه شيء: الفحصُ على سطح المكتب نادى الـAPI مباشرةً فلم
+            يفتح الورقةَ أصلاً. */}
+        <div className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12">
+          <div className="flex items-baseline justify-between">
+            <span className="text-12.5 text-muted">المبلغ</span>
+            <span className="text-17 font-bold text-ink">
+              {digits(
+                plan.price_after_discount ?? plan.price,
+              )}{" "}
+              <span className="text-11 font-medium text-muted">
+                {CURRENCY_LABEL[plan.currency]}
+              </span>
+            </span>
+          </div>
+          {/* والسعرُ الأصليُّ يبقى مرئياً مشطوباً: من رأى «١٫٥٠٠» في
+              البطاقة ثم «١٫٢٧٥» وحدَها هنا يظنّها خطةً أخرى */}
+          {plan.price_after_discount && plan.offer_name ? (
+            <div className="mt-8 flex items-baseline justify-between">
+              <span className="text-11 text-ok">{plan.offer_name}</span>
+              <span className="text-11.5 text-muted line-through">
+                {digits(plan.price)}{" "}
+                {CURRENCY_LABEL[plan.currency]}
+              </span>
+            </div>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-9">
+          <Button size="md" loading={buying !== null} onClick={() => onWallet(plan)}>
+            خصم من المحفظة
+          </Button>
+          {/* **ما لا عقدَ له يُعرض معطَّلاً بعلّته لا يُخفى** (قرارُ
+              المالك 2026-08-29): الإخفاءُ يجعل الكبتنَ يظنّ الطريقةَ
+              **غيرَ مدعومةٍ في التطبيق** فيسأل الدعمَ عن ميزةٍ يراها في
+              غيره؛ **والمعطَّلُ بعلّته يقول «قادمة» لا «غيرُ موجودة»**.
+              وهي قاعدةُ شاشة الإقلاع نفسُها: **يقول ما يعرفه.** */}
+          <Button
+            size="md"
+            variant="secondary"
+            disabled={!cardEnabled || buying !== null}
+            onClick={() => onCard(plan)}
+          >
+            الدفع ببطاقة
+          </Button>
+          {!cardEnabled ? (
+            <p className="-mt-4 text-11 leading-note text-muted">
+              الدفع بالبطاقة غير متاح بعد — لم يُفعَّل عقد المزوّد.
+            </p>
+          ) : null}
+
+          {/* **كليك اليدويّ** — يظهر حين يكون لسوقه حسابٌ مضبوط، ويُعطَّل
+              بعلّته حين لا يكون. **ولا يُدّعى أنه بوّابةٌ آلية**: الشاشةُ
+              التالية تقول إن التحصيل يدويّ. */}
+          <Button
+            size="md"
+            variant="secondary"
+            disabled={!cliqAlias || buying !== null}
+            onClick={() => onCliq(plan)}
+          >
+            الدفع بكليك
+          </Button>
+          {!cliqAlias ? (
+            <p className="-mt-4 text-11 leading-note text-muted">
+              الدفع بكليك غير متاح في سوقك — لم يُضبط حساب الاستقبال.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="pressable w-full py-8 text-center text-12.5 font-semibold text-muted"
+          >
+            تراجع
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
