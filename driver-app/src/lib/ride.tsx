@@ -273,6 +273,8 @@ export function RideProvider({ children }: { children: ReactNode }) {
     onlineService.stop();
     setOnline(false);
     setConnecting(false);
+    // **والنغمةُ مع البطاقة** — من خرج من الاستقبال وبطاقتُه قائمةٌ لا يبقى هاتفُه يرنّ
+    stopOfferLoop();
     setOffer(null);
   }, []);
 
@@ -324,10 +326,14 @@ export function RideProvider({ children }: { children: ReactNode }) {
     if (!offer) return;
     const remaining = offer.expiresAt - Date.now();
     if (remaining <= 0) {
+      stopOfferLoop();
       setOffer(null);
       return;
     }
-    const timer = window.setTimeout(() => setOffer(null), remaining);
+    const timer = window.setTimeout(() => {
+      stopOfferLoop();
+      setOffer(null);
+    }, remaining);
     return () => window.clearTimeout(timer);
   }, [offer]);
 
@@ -343,7 +349,12 @@ export function RideProvider({ children }: { children: ReactNode }) {
       goOnline,
       goOffline,
       setRide,
-      dismissOffer: () => setOffer(null),
+      // **طيُّ البطاقة يطوي نغمتَها** (قِيس ٢٠٢٦-١٠-٠٤): كانت الحلقةُ لا يوقفها إلا حدثٌ من المقبس، **والرافضُ لا يصله
+      // حدث** (الخادمُ يُسقطه من الجولة بصمت) — فبقيت النغمةُ تتكرّر كلَّ ٢٫٣ ثانية بعد أن اختفت البطاقة
+      dismissOffer: () => {
+        stopOfferLoop();
+        setOffer(null);
+      },
       dismissTransfer: () => setTransfer(null),
       clearError: () => setError(null),
     }),
