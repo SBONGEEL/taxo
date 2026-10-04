@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from app.core.config import settings
 from app.models.enums import (
@@ -163,7 +163,18 @@ class DriverOut(BaseModel):
     auto_renew: bool
     is_online: bool
     current_ride_id: uuid.UUID | None
+    # **فحصُ المركبة** (§61-ط/٥) — يقرؤه تطبيقُه ليرسم الخطوةَ بحالها في «طلبك قيد المراجعة»
+    inspection_at: datetime | None
+    inspection_place: str | None
+    inspection_passed_at: datetime | None
     created_at: datetime
+
+
+class DriverInspectionIn(BaseModel):
+    """موعدُ فحص المركبة (§61-ط/٥) — **بمنطقته الزمنية**: موعدٌ بلا منطقةٍ يُقرأ بساعتين خطأً في سوقٍ وصوابٍ في آخر."""
+
+    at: AwareDatetime
+    place: str = Field(min_length=1, max_length=160)
 
 
 class DriverProfileOut(BaseModel):
@@ -364,6 +375,10 @@ class AdminDriverRow(BaseModel):
     # وصفرٌ منعٌ — وهما حالتان لا يحملهما رقمٌ واحد. ويُنشر لأن زرَّ التعديل
     # بلا القيمة الحالية زرٌّ يكتب فوق ما لا يراه صاحبُه
     advance_cap_override: Decimal | None
+    # **فحصُ المركبة** (§61-ط/٥) — ويُنشر لأن زرَّ الموعد بلا الموعد القائم زرٌّ يكتب فوق ما لا يراه صاحبُه
+    inspection_at: datetime | None
+    inspection_place: str | None
+    inspection_passed_at: datetime | None
     created_at: datetime
 
 

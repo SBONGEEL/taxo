@@ -37,11 +37,14 @@ import { ApiError } from "@/api/client";
 import {
   activateDriver,
   approveDriver,
+  clearDriverInspection,
   driverDocumentBlob,
   getDriverDocuments,
   listDrivers,
+  passDriverInspection,
   rejectDriver,
   reviewDocument,
+  scheduleDriverInspection,
   setAdvanceCap,
   setDriverGender,
   suspendDriver,
@@ -80,7 +83,7 @@ import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
-import { digits, cn } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits, cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<DriverStatus, string> = {
   pending: "بانتظار الاعتماد",
@@ -856,6 +859,8 @@ function DriverDrawer({
 
         <AdvanceCap row={row} canDecide={canDecide} onChanged={onChanged} />
 
+        <Inspection row={row} canDecide={canDecide} onChanged={onChanged} />
+
         <h3 className="mb-10 mt-18 text-13 font-bold text-muted">
           توثيق الجنس
         </h3>
@@ -1061,4 +1066,96 @@ function approvedMessage(done: number, before: number): string {
   return rest > 0
     ? `اعتُمدت ${done} وثائق ممّا عاينتَه — ويبقى ${rest} لم تُفتح ورقتُها`
     : `اعتُمدت ${done} وثائق — ولم يبقَ منتظِر`;
+}
+
+/** **فحصُ المركبة** (§61-ط/٥) — موعدٌ ومكانٌ يراهما الكبتن في «طلبك قيد المراجعة»، و«اجتاز الفحص».
+ *
+ * **ولا يشترطه الاعتماد**: زرُّ «اعتماد» أعلاه كما هو — والمشرفُ يقرّر متى يعتمد. **وموعدٌ جديدٌ يُسقط اجتيازاً سابقاً**: فحصٌ
+ * يُعاد يُقرأ من جديد. **والوقتُ بمنطقة متصفّح المشرف** يُرسل بمنطقته (`toISOString`)، فلا يُقرأ بساعتين خطأً في سوقٍ آخر. */
+function Inspection({
+  row,
+  canDecide,
+  onChanged,
+}: {
+  row: AdminDriverRow;
+  canDecide: boolean;
+  onChanged: (message: string) => void;
+}) {
+  const [at, setAt] = useState("");
+  const [place, setPlace] = useState(row.inspection_place ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      onChanged(message);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const when = (iso: string) =>
+    new Date(iso).toLocaleString(DISPLAY_LOCALE, { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const status = row.inspection_passed_at
+    ? `اجتاز الفحص — ${when(row.inspection_passed_at)}`
+    : row.inspection_at
+      ? `الموعد: ${when(row.inspection_at)} — ${row.inspection_place ?? ""}`
+      : "لا موعد بعد";
+
+  return (
+    <>
+      <h3 className="mb-10 mt-18 text-13 font-bold text-muted">فحص المركبة</h3>
+      <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
+        <p className="text-13 font-semibold text-ink">{status}</p>
+        <p className="mt-6 text-11 leading-note text-muted">
+          يراه الكبتن في «طلبك قيد المراجعة» ويصله إشعارٌ بالموعد. ولا يشترطه الاعتماد.
+        </p>
+        {canDecide ? (
+          <div className="mt-10 grid gap-8">
+            <Field
+              label="اليوم والساعة"
+              type="datetime-local"
+              dir="ltr"
+              value={at}
+              onChange={(event) => setAt(event.target.value)}
+            />
+            <Field label="المكان" value={place} maxLength={160} onChange={(event) => setPlace(event.target.value)} />
+            <div className="flex flex-wrap gap-8">
+              <Button
+                disabled={busy || !at || !place.trim()}
+                onClick={() =>
+                  void run(
+                    () => scheduleDriverInspection(row.driver_id, new Date(at).toISOString(), place.trim()),
+                    "حُدِّد موعدُ الفحص — وأُخبر الكبتن",
+                  )
+                }
+              >
+                حفظ الموعد
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy || Boolean(row.inspection_passed_at)}
+                onClick={() => void run(() => passDriverInspection(row.driver_id), "اجتاز الفحص")}
+              >
+                اجتاز الفحص
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={busy || (!row.inspection_at && !row.inspection_passed_at)}
+                onClick={() => void run(() => clearDriverInspection(row.driver_id), "أُلغي موعدُ الفحص")}
+              >
+                إلغاء الموعد
+              </Button>
+            </div>
+            <ErrorNote message={error} />
+          </div>
+        ) : null}
+      </div>
+    </>
+  );
 }

@@ -248,6 +248,10 @@ export interface AdminDriverRow {
   missing_required: DocumentType[];
   /** سقفُ السلفة الخاصُّ به — `null` لا تخصيص، و`"0.000"` منعٌ من السلف. */
   advance_cap_override: string | null;
+  /** **فحصُ المركبة** (§61-ط/٥) — موعدٌ يراه الكبتن، ولا يشترطه الاعتماد. */
+  inspection_at: string | null;
+  inspection_place: string | null;
+  inspection_passed_at: string | null;
   created_at: string;
 }
 

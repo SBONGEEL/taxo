@@ -267,6 +267,10 @@ export interface Driver {
   rating_avg: string;
   is_online: boolean;
   current_ride_id: string | null;
+  /** **فحصُ المركبة** (§61-ط/٥): موعدٌ ومكانٌ يضعهما المشرف ووقتُ اجتيازه — ولا يشترطها الاعتماد. */
+  inspection_at: string | null;
+  inspection_place: string | null;
+  inspection_passed_at: string | null;
   created_at: string;
 }
 

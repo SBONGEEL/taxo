@@ -57,6 +57,18 @@ function receivedAt(iso: string): { day: string; time: string } {
   return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
 }
 
+/** **موعدُ الفحص** كما يُكتب في الخطّ: «غداً · 10:30» — بخاناتٍ لاتينية وساعةٍ بأربعٍ وعشرين كبقية الخطّ. */
+function appointmentAt(iso: string): { day: string; time: string } {
+  const at = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = 24 * 60 * 60 * 1000;
+  const time = at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  if (at.getTime() >= today && at.getTime() < today + day) return { day: "اليوم", time };
+  if (at.getTime() >= today + day && at.getTime() < today + 2 * day) return { day: "غداً", time };
+  return { day: at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }), time };
+}
+
 export function PendingT2Screen() {
   const { signOut } = useSession();
   const { profile } = useDriver();
@@ -73,6 +85,13 @@ export function PendingT2Screen() {
       })
       .catch(() => undefined);
   }, []);
+
+  // **فحصُ المركبة ومراجعةُ الوثائق** — من ملفّه ومن القائمة المقروءة أعلاه (§٦١-ط/٥)
+  const driver = profile?.driver ?? null;
+  const passed = Boolean(driver?.inspection_passed_at);
+  const appointment = driver?.inspection_at ? appointmentAt(driver.inspection_at) : null;
+  const reviewed =
+    documents.length > 0 && missing.length === 0 && documents.every((document) => document.review_status === "approved");
 
   const rejected = profile?.driver.status === "rejected";
   const received = profile ? receivedAt(profile.driver.created_at) : null;
@@ -94,7 +113,9 @@ export function PendingT2Screen() {
           : "نراجع وثائقك عادةً خلال 24 ساعة، ونرسل لك إشعاراً فور الاعتماد."}
       </p>
 
-      {/* **الخطُّ الزمنيُّ للمنتظِر وحدَه** — ولا «فحص المركبة»: لا خطوةَ كهذه في التطبيق (§١٧) */}
+      {/* **الخطُّ الزمنيُّ للمنتظِر وحدَه** — **و«فحص المركبة» بُنيت بقرار المالك** (§٦١-ط/٥): موعدٌ يضعه المشرف، بحالاتها الثلاث
+          كما رُسمت — «نحدد موعدك بعد اعتماد الوثائق» · الموعدُ ومكانُه · «اجتزتَ الفحص». **و«مراجعة الوثائق» تمّت حين لا ينقص
+          مستندٌ ولا ينتظر** — من القائمة المقروءة نفسِها لا من افتراض */}
       {rejected ? null : (
         <div className="t2-steps">
           <span className="t2-step-dot done">
@@ -110,12 +131,42 @@ export function PendingT2Screen() {
           </div>
           <span className="t2-step-line done" />
           <span />
-          <span className="t2-step-dot now" />
+          {reviewed ? (
+            <span className="t2-step-dot done">
+              <span className="t2-icon" aria-hidden="true">check</span>
+            </span>
+          ) : (
+            <span className="t2-step-dot now" />
+          )}
           <div>
-            <div className="t2-step-title now">مراجعة الوثائق</div>
-            <div className="t2-step-sub now">جارٍ الآن</div>
+            <div className={reviewed ? "t2-step-title" : "t2-step-title now"}>مراجعة الوثائق</div>
+            <div className={reviewed ? "t2-step-sub" : "t2-step-sub now"}>{reviewed ? "اعتُمدت وثائقُك" : "جارٍ الآن"}</div>
           </div>
-          <span className="t2-step-line" />
+          <span className={reviewed ? "t2-step-line done" : "t2-step-line"} />
+          <span />
+          {passed ? (
+            <span className="t2-step-dot done">
+              <span className="t2-icon" aria-hidden="true">check</span>
+            </span>
+          ) : (
+            <span className={appointment ? "t2-step-dot now" : "t2-step-dot"} />
+          )}
+          <div>
+            <div className={passed ? "t2-step-title" : appointment ? "t2-step-title now" : "t2-step-title later"}>فحص المركبة</div>
+            <div className={appointment && !passed ? "t2-step-sub now" : "t2-step-sub"}>
+              {passed ? (
+                "اجتزتَ الفحص"
+              ) : appointment ? (
+                <>
+                  {appointment.day} · <span dir="ltr">{appointment.time}</span>
+                  {driver?.inspection_place ? ` — ${driver.inspection_place}` : null}
+                </>
+              ) : (
+                "نحدد موعدك بعد اعتماد الوثائق"
+              )}
+            </div>
+          </div>
+          <span className={passed ? "t2-step-line done" : "t2-step-line"} />
           <span />
           <span className="t2-step-dot" />
           <div>

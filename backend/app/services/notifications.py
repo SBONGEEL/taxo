@@ -875,6 +875,26 @@ async def publish_booking_preference_dropped(
     )
 
 
+async def publish_inspection_scheduled(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+) -> None:
+    """حُدِّد موعدُ فحص المركبة (§61-ط/٥) — **والموعدُ في التطبيق لا في النصّ**: ساعةٌ تُكتب هنا تحتاج منطقةَ السوق
+    الزمنية، ونصٌّ يحمل ساعةً خطأً أسوأُ من نصٍّ يدلّ على مكانها."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title="حُدِّد موعدُ فحص مركبتك",
+            body="افتح التطبيق لترى اليومَ والساعةَ والمكان.",
+            data={"type": "inspection_scheduled"},
+        ),
+    )
+
+
 async def publish_women_mode_revoked(
     session: AsyncSession,
     redis: Redis,

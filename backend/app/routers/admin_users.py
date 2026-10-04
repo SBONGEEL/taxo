@@ -73,6 +73,7 @@ from app.schemas.driver import (
     DriverDocumentOut,
     DriverDocumentsOut,
     DriverGenderUpdate,
+    DriverInspectionIn,
     DriverOut,
     DriverStatusUpdate,
     VehicleOut,
@@ -435,6 +436,9 @@ async def list_drivers(
             gender_verified=user.gender_verified_at is not None,
             gender_preference=driver.gender_preference,
             advance_cap_override=driver.advance_cap_override,
+            inspection_at=driver.inspection_at,
+            inspection_place=driver.inspection_place,
+            inspection_passed_at=driver.inspection_passed_at,
             documents_pending=pending_count,
             documents_rejected=rejected_count,
             # الناقصُ من المطلوب: ما لم يُقبل بعد — وهو ما يمنع الاعتماد.
@@ -692,6 +696,68 @@ async def approve_driver(
     """
     driver = await _driver(session, driver_id)
     driver = await drivers_service.approve(session, driver=driver, actor=admin)
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)
+
+
+# ------------------------------------------------------------ فحصُ المركبة (§61-ط/٥)
+#
+# **موعدٌ يراه الكبتن، ولا يشترطه الاعتماد**: `approve_driver` أعلاه لا يقرأ هذه الأعمدة — فمسارُ الاعتماد القائمُ كما هو، والمشرفُ
+# يقرّر متى يعتمد. **وكلُّ بابٍ يقفل صفَّ الكبتن قبل أن يكتب** (ترتيبُ الأقفال: صفُّ الكبتن وحدَه هنا) **ويُدقَّق**.
+
+
+async def _inspection_audit(session, admin, driver: Driver, fields: list[str]) -> None:
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="driver",
+        entity_id=driver.id,
+        details={"fields": fields, "inspection": True},
+    )
+
+
+@router.put("/drivers/{driver_id}/inspection", response_model=DriverOut)
+async def schedule_inspection(
+    driver_id: uuid.UUID,
+    payload: DriverInspectionIn,
+    admin: UsersManager,
+    session: DbSession,
+    redis: RedisDep,
+) -> DriverOut:
+    """يضع موعدَ الفحص ومكانَه — **وموعدٌ جديدٌ يُسقط اجتيازاً سابقاً**: فحصٌ يُعاد يُقرأ من جديد. ويُخبَر الكبتن."""
+    driver = await drivers_service.lock(session, await _driver(session, driver_id))
+    driver.inspection_at = payload.at
+    driver.inspection_place = payload.place.strip()
+    driver.inspection_passed_at = None
+    await _inspection_audit(session, admin, driver, ["inspection_at", "inspection_place", "inspection_passed_at"])
+    await session.commit()
+    await session.refresh(driver)
+    # **الإشعارُ بعد الـcommit** كبقية البثّ — ومن لم يفتح التطبيقَ يعرف أن له موعداً
+    await notifications.publish_inspection_scheduled(session, redis, user_id=driver.user_id)
+    return DriverOut.model_validate(driver)
+
+
+@router.post("/drivers/{driver_id}/inspection/pass", response_model=DriverOut)
+async def pass_inspection(driver_id: uuid.UUID, admin: UsersManager, session: DbSession) -> DriverOut:
+    """«اجتاز الفحص» — **ولا يعتمد الكبتن**: الاعتمادُ زرُّه هو."""
+    driver = await drivers_service.lock(session, await _driver(session, driver_id))
+    driver.inspection_passed_at = datetime.now(UTC)
+    await _inspection_audit(session, admin, driver, ["inspection_passed_at"])
+    await session.commit()
+    await session.refresh(driver)
+    return DriverOut.model_validate(driver)
+
+
+@router.delete("/drivers/{driver_id}/inspection", response_model=DriverOut)
+async def clear_inspection(driver_id: uuid.UUID, admin: UsersManager, session: DbSession) -> DriverOut:
+    """يُلغي الموعدَ واجتيازَه — فتعود الخطوةُ عند الكبتن «نحدد موعدك بعد اعتماد الوثائق»."""
+    driver = await drivers_service.lock(session, await _driver(session, driver_id))
+    driver.inspection_at = None
+    driver.inspection_place = None
+    driver.inspection_passed_at = None
+    await _inspection_audit(session, admin, driver, ["inspection_at", "inspection_place", "inspection_passed_at"])
     await session.commit()
     await session.refresh(driver)
     return DriverOut.model_validate(driver)

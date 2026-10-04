@@ -452,6 +452,14 @@ export const activateDriver = (driverId: string) =>
  * أصلاً، وإرجاعُ معتمدٍ إلى الطابور لأجل حقلٍ واحد يجعل تفريغ المتراكم
  * مستحيلاً — وهو المتراكم الذي يبقى `women_service_enabled` مطفأً حتى يُفرَّغ.
  */
+// **فحصُ المركبة** (§61-ط/٥) — ثلاثةُ أبوابٍ مدقَّقة، **ولا يقرؤها الاعتماد**
+export const scheduleDriverInspection = (driverId: string, at: string, place: string) =>
+  api.put<{ id: string }>(`/admin/drivers/${driverId}/inspection`, { at, place });
+export const passDriverInspection = (driverId: string) =>
+  api.post<{ id: string }>(`/admin/drivers/${driverId}/inspection/pass`);
+export const clearDriverInspection = (driverId: string) =>
+  api.del<{ id: string }>(`/admin/drivers/${driverId}/inspection`);
+
 export const setDriverGender = (driverId: string, gender: Gender) =>
   api.put<{ id: string; status: DriverStatus }>(
     `/admin/drivers/${driverId}/gender`,

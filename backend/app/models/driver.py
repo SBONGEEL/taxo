@@ -93,6 +93,11 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     # مسجَّلٍ في التدقيق. و**`NULL` يعني «لا تخصيص»** فيُحسب سقفُه من السياسة،
     # **وصفرٌ يعني «ممنوعٌ من السلف»**: حالتان لا يجوز أن يحملهما رقمٌ واحد
     advance_cap_override: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    # **فحصُ المركبة** (§61-ط/٥): موعدٌ ومكانٌ يضعهما المشرف، ووقتُ اجتيازه — **يراها الكبتنُ في «طلبك قيد المراجعة»
+    # ولا يقرؤها الاعتماد** (`drivers.approve`)، فمسارُ الاعتماد القائمُ لم يتغيّر
+    inspection_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    inspection_place: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    inspection_passed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # **عمودٌ محضَّرٌ يقرؤه التوزيع** (البند ١٥): «موقوفٌ لدَينٍ تجاوز مهلته».
     # وموضعُه هنا لا استعلامٌ في `eligible_driver_ids` مقصود: تلك الدالةُ تُنادى
     # لكل طلبٍ ولخريطة كل راكب، وجمعُ دفترٍ داخلها يضع حساباً ماليّاً في المسار
