@@ -25,6 +25,7 @@ import { useSession } from "@/lib/session";
 import { useSwitchToDriver } from "@/lib/switch-app";
 import { SignOutEverywhereRow } from "@/screens/Account";
 
+import "@/taxo2";
 import "./t2.css";
 
 interface Row {

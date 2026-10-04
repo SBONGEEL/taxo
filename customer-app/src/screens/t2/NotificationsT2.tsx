@@ -21,6 +21,7 @@ import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { composeBody, destinationOf } from "@/lib/notification-text";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 
+import "@/taxo2";
 import "./t2.css";
 
 type Tone = "live" | "plain" | "offer" | "money" | "women" | "warn" | "danger";

@@ -1,233 +1,12 @@
-/* شاشاتُ الراكب في TAXO 2.0 — **المظهرُ النهاريُّ المرسوم** (Claude Design «Rider»، «Identity»).
+/* شاشاتُ الراكب في TAXO 2.0 — **تخطيطُها وحدَه** (مواضعُ ومسافاتٌ ومقاساتٌ من اللوحة).
  *
- * **القيمُ من اللوحة حرفاً**، متغيّراتٍ في هذا الملفّ لا أصنافَ Tailwind: سلّمُ `DESIGN.md` سلّمُ
- * التصميم القديم، وألوانُ TAXO 2.0 ليست فيه بعد — **وصنفٌ خارج السلّم يُصرَّف بلا أثر** (`check:scale`).
- * فتسكن هنا حتى يُنقل السلّمُ كلُّه. **والليليُّ لم يُرسم بعد** (§61-ب) — فشاشاتُ هذا المجلّد
- * لا تُعرض إلا والمظهرُ نهاريّ، والقائمةُ تبقى في الليليّ حتى يُرسم.
+ * **والرموزُ والمكوّناتُ الأوّلية من نظام التصميم** (`src/taxo2/`، يُستورد قبل هذا الملف): لا لونَ مكتوباً هنا ولا مكوّنٌ
+ * مكرَّر — `var(--t2-…)` وحدَها. والمظهرُ المرسومُ للراكب هو الفاتح؛ والليليُّ لم يُرسم بعد (§61-ب).
  */
-
-.t2 {
-  --stone: #f4f1ea;
-  --ink: #14161a;
-  --card: #ffffff;
-  --mut: #6a6862;
-  --edge: #e0dad0;
-  --rule: #f0ece4;
-  --ember: #f05a28;
-  --ember-dk: #c2410c;
-  --peach: #fde6db;
-  --mint: #dceee4;
-  --ok: #1e7f55;
-  --plum: #9c2c6e;
-  --plum-t: #f7e3ee;
-  --warn: #a86a00;
-  --err: #c5352b;
-  --err-t: #f8e1de;
-  --dim: #a8a398;
-  --ink-mut: #b9bec6;
-  --ink-edge: #3b3e45;
-  /* نصٌّ فوق الجمر: الحبرُ في اللوحة، **والأبيضُ فوق البرقوق** (`Rider`: «background:#9C2C6E;color:#FFFFFF») */
-  --on-ember: #14161a;
-  min-height: 100%;
-  background: var(--stone);
-  color: var(--ink);
-  font-family: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
-}
-/* **السِمةُ الوردية تصبغ الجمرَ برقوقاً** — «البرقوق للخدمة النسائية وحدها» (`Identity`)،
-   كما في ترحيب الراكب */
-html.pink .t2 {
-  --ember: #9c2c6e;
-  --ember-dk: #9c2c6e;
-  --on-ember: #ffffff;
-}
-
-/* أيقوناتُ اللوحة: Material Symbols Rounded — تُحمَّل مقتطعةً بأسمائها من `index.html` */
-.t2-icon {
-  font-family: "Material Symbols Rounded";
-  font-weight: normal;
-  font-style: normal;
-  font-size: 20px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: nowrap;
-  direction: ltr;
-  font-feature-settings: "liga";
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
-}
-
-/* ── رأسُ الشاشة: زرُّ رجوعٍ دائريّ، والعنوان، وفعلٌ بالجمر ─────────────────── */
-.t2-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.t2-back {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--card);
-  border: 1px solid var(--edge);
-  color: var(--ink);
-  cursor: pointer;
-}
-.t2-back .t2-icon { font-size: 22px; }
-.t2-title {
-  flex: 1;
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-}
-.t2-action {
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ember-dk);
-  cursor: pointer;
-}
 
 /* ── الإشعارات (R14) ────────────────────────────────────────────────────── */
 .t2-notifs {
   padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
-}
-.t2-group {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mut);
-  margin: 0 4px 8px;
-}
-.t2-list {
-  background: var(--card);
-  border-radius: 22px;
-  padding: 0 14px;
-  margin-bottom: 16px;
-}
-.t2-row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  padding: 14px 0;
-  border: 0;
-  border-bottom: 1px solid var(--rule);
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: start;
-}
-.t2-row:last-child { border-bottom: 0; }
-button.t2-row:enabled { cursor: pointer; }
-.t2-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--stone);
-  color: var(--ink);
-}
-.t2-badge.live { background: var(--ink); color: var(--ember); }
-.t2-badge.offer { background: var(--peach); color: var(--ember-dk); }
-.t2-badge.money { background: var(--mint); color: var(--ok); }
-.t2-badge.women { background: var(--plum-t); color: var(--plum); }
-.t2-badge.warn { color: var(--warn); }
-.t2-badge.danger { color: var(--err); }
-.t2-row-main { flex: 1; min-width: 0; }
-.t2-row-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.t2-row-title { font-size: 14.5px; font-weight: 700; }
-.t2-row-when {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  font-size: 11.5px;
-  color: var(--mut);
-}
-.t2-unread {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ember);
-}
-.t2-row-body {
-  display: block;
-  margin-top: 3px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--mut);
-}
-
-/* ── شريطُ التبويب (TaxoTabs) ──────────────────────────────────────────────
-   الحاويةُ تحمل متغيّراتِ `.t2` لا سطحَها: لا خلفيةَ تحجب الخريطة ولا ارتفاعَ صفحة.
-   **والمقاسُ مقاسُ الشريط القائم** (ارتفاعٌ ٦٢ فوق `pb-float`) فما تحجزه الشاشاتُ له لم يتغيّر.
-   وخطُّ «البيت» تحته في اللوحة رسمُ الجهاز لا جزءٌ من الشريط، فلا يُبنى */
-.t2.t2-tabs {
-  min-height: 0;
-  background: none;
-}
-.t2-tabs-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 62px;
-  padding: 0 7px;
-  border-radius: 31px;
-  background: var(--card);
-  box-shadow: 0 0 0 1px rgba(20, 22, 26, 0.05), 0 14px 34px -8px rgba(20, 22, 26, 0.28);
-}
-.t2-tab {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-width: 0;
-  height: 48px;
-  border-radius: 24px;
-  color: var(--mut);
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.t2-tab .t2-icon { font-size: 22px; }
-.t2-tab-label {
-  font-size: 10px;
-  white-space: nowrap;
-}
-/* النشطُ حبّةٌ أعرضُ بالحبر: الأيقونةُ ممتلئةً واسمُها جنباً إلى جنب */
-.t2-tab.on {
-  flex: 1.5;
-  flex-direction: row;
-  gap: 6px;
-  background: var(--ink);
-  color: var(--stone);
-}
-.t2-tab.on .t2-icon { font-variation-settings: "FILL" 1; }
-.t2-tab.on .t2-tab-label {
-  font-size: 13px;
-  font-weight: 600;
-}
-/* **استجابةُ اللمس** كـ`pressable` في التطبيق (§8)، وتسكن هنا كي لا يتنازع الصنفان على `transition` */
-.t2-tab:active { transform: scale(0.98); }
-@media (prefers-reduced-motion: no-preference) {
-  .t2-tab {
-    transition: flex-grow 240ms ease, background-color 240ms ease, color 240ms ease, transform 120ms ease;
-  }
 }
 
 /* ── رحلاتي (R12) ───────────────────────────────────────────────────────────
@@ -238,15 +17,11 @@ button.t2-row:enabled { cursor: pointer; }
   padding-top: calc(6px + env(safe-area-inset-top, 0px));
   padding-inline: 18px;
 }
-.t2-h1 {
-  margin: 0 0 14px;
-  font-size: 26px;
-  font-weight: 700;
-}
+
 .t2-month {
   font-size: 12px;
   font-weight: 600;
-  color: var(--mut);
+  color: var(--t2-muted);
   margin: 0 2px 8px;
 }
 .t2-cards {
@@ -257,7 +32,7 @@ button.t2-row:enabled { cursor: pointer; }
 }
 .t2-ride {
   display: block;
-  background: var(--card);
+  background: var(--t2-surface);
   border-radius: 22px;
   padding: 13px 16px;
   color: inherit;
@@ -277,7 +52,7 @@ button.t2-row:enabled { cursor: pointer; }
 }
 .t2-ride-when {
   font-size: 12.5px;
-  color: var(--mut);
+  color: var(--t2-muted);
   white-space: nowrap;
 }
 /* شاراتُ الصفّ: الحالةُ كما رسمتها اللوحة، **والنزاعُ وحالُ السداد بجانبها من الصفّ القائم** */
@@ -288,19 +63,7 @@ button.t2-row:enabled { cursor: pointer; }
   gap: 6px;
   min-width: 0;
 }
-.t2-chip {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 99px;
-  white-space: nowrap;
-  background: var(--stone);
-  color: var(--mut);
-}
-.t2-chip.ok { background: var(--mint); color: var(--ok); }
-.t2-chip.danger { background: var(--err-t); color: var(--err); }
-/* «لم تُدفع»/«بانتظار التأكيد» — **لونُ التنبيه من الهوية على الحجر**، لا لونٌ جديد */
-.t2-chip.warn { color: var(--warn); }
+
 .t2-route {
   display: grid;
   grid-template-columns: 10px 1fr;
@@ -313,14 +76,14 @@ button.t2-row:enabled { cursor: pointer; }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--t2-text);
 }
 .t2-dot.to {
   border-radius: 2px;
-  background: var(--ember);
+  background: var(--t2-accent);
 }
-.t2-route.off { color: var(--mut); }
-.t2-route.off .t2-dot { background: var(--dim); }
+.t2-route.off { color: var(--t2-muted); }
+.t2-route.off .t2-dot { background: var(--t2-faint); }
 .t2-place {
   min-width: 0;
   overflow: hidden;
@@ -334,7 +97,7 @@ button.t2-row:enabled { cursor: pointer; }
   gap: 10px;
   margin-top: 9px;
   font-size: 12.5px;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
 /* **يلتفّ ولا يُقطع**: القناةُ آخرُ السطر، وقطعُه يُخفي ما كان الصفُّ القائمُ يعرضه (القرار 37) */
 .t2-ride-meta {
@@ -345,29 +108,16 @@ button.t2-row:enabled { cursor: pointer; }
   flex: none;
   font-size: 14.5px;
   font-weight: 600;
-  color: var(--ink);
-}
-.t2-more {
-  display: block;
-  width: 100%;
-  padding: 13px 0;
-  border: 1px solid var(--edge);
-  border-radius: 18px;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--mut);
-  cursor: pointer;
+  color: var(--t2-text);
 }
 
 /* ── المحفظة (R11) ───────────────────────────────────────────────────────── */
-.t2-num { font-family: "Unbounded", "Readex Pro", system-ui, sans-serif; }
+
 .t2-balance {
   position: relative;
   overflow: hidden;
-  background: var(--ink);
-  color: var(--stone);
+  background: var(--t2-inverse);
+  color: var(--t2-on-inverse);
   border-radius: 26px;
   padding: 20px;
 }
@@ -381,12 +131,12 @@ button.t2-row:enabled { cursor: pointer; }
   border-radius: 17px;
   pointer-events: none;
 }
-.t2-stripe.a { background: var(--ember); transform: rotate(45deg); }
-.t2-stripe.b { background: var(--stone); opacity: 0.12; transform: rotate(-45deg); }
+.t2-stripe.a { background: var(--t2-accent); transform: rotate(45deg); }
+.t2-stripe.b { background: var(--t2-on-inverse); opacity: 0.12; transform: rotate(-45deg); }
 .t2-balance-label {
   position: relative;
   font-size: 13px;
-  color: var(--ink-mut);
+  color: var(--t2-inverse-muted);
 }
 .t2-balance-amount {
   position: relative;
@@ -401,7 +151,7 @@ button.t2-row:enabled { cursor: pointer; }
   letter-spacing: -0.03em;
   line-height: 1.1;
 }
-.t2-balance-cur { font-size: 15px; color: var(--ink-mut); }
+.t2-balance-cur { font-size: 15px; color: var(--t2-inverse-muted); }
 .t2-balance-actions {
   position: relative;
   display: flex;
@@ -412,7 +162,7 @@ button.t2-row:enabled { cursor: pointer; }
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: var(--ink-mut);
+  color: var(--t2-inverse-muted);
 }
 .t2-btn {
   flex: 1;
@@ -430,50 +180,22 @@ button.t2-row:enabled { cursor: pointer; }
   -webkit-tap-highlight-color: transparent;
 }
 .t2-btn .t2-icon { font-size: 20px; }
-.t2-btn.ember { background: var(--ember); color: var(--on-ember); }
+.t2-btn.ember { background: var(--t2-accent); color: var(--t2-on-accent); }
 .t2-btn.ghost {
   background: none;
-  border: 1px solid var(--ink-edge);
-  color: var(--stone);
+  border: 1px solid var(--t2-inverse-line);
+  color: var(--t2-on-inverse);
   font-weight: 600;
 }
 .t2-btn:active { transform: scale(0.98); }
-/* ملاحظةٌ تحت البطاقة — بشكل سطر الخطأ في اللوحة (R13): أيقونةٌ ممتلئةٌ ونصٌّ بلون معناه */
-.t2-note {
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-  margin: 10px 2px 0;
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-.t2-note .t2-icon {
-  font-size: 16px;
-  line-height: 1.3;
-  font-variation-settings: "FILL" 1;
-}
-.t2-note.warn { color: var(--warn); }
-.t2-note.danger { color: var(--err); }
-.t2-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin: 18px 2px 10px;
-  font-size: 15px;
-  font-weight: 700;
-}
-.t2-section-aside {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--mut);
-}
+
 .t2-tx {
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 60px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--t2-divider);
 }
 .t2-tx:last-child { border-bottom: 0; }
 .t2-tx-link {
@@ -494,10 +216,10 @@ button.t2-row:enabled { cursor: pointer; }
   height: 38px;
   flex: none;
   border-radius: 12px;
-  background: var(--stone);
-  color: var(--ink);
+  background: var(--t2-sunken);
+  color: var(--t2-text);
 }
-.t2-tx-icon.in { background: var(--mint); color: var(--ok); }
+.t2-tx-icon.in { background: var(--t2-success-soft); color: var(--t2-success); }
 .t2-tx-main {
   display: flex;
   flex-direction: column;
@@ -505,7 +227,7 @@ button.t2-row:enabled { cursor: pointer; }
   min-width: 0;
 }
 .t2-tx-title { font-size: 14px; font-weight: 600; }
-.t2-tx-sub { font-size: 12px; color: var(--mut); }
+.t2-tx-sub { font-size: 12px; color: var(--t2-muted); }
 .t2-tx-end {
   display: flex;
   flex-direction: column;
@@ -513,9 +235,9 @@ button.t2-row:enabled { cursor: pointer; }
   flex: none;
 }
 .t2-tx-amt { font-size: 14.5px; font-weight: 600; white-space: nowrap; }
-.t2-tx-amt.in { color: var(--ok); }
-.t2-tx-after { font-size: 11px; color: var(--mut); white-space: nowrap; }
-.t2-chev { color: var(--dim); }
+.t2-tx-amt.in { color: var(--t2-success); }
+.t2-tx-after { font-size: 11px; color: var(--t2-muted); white-space: nowrap; }
+.t2-chev { color: var(--t2-faint); }
 
 /* ── حسابي (R15) ─────────────────────────────────────────────────────────── */
 .t2-account { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
@@ -536,19 +258,22 @@ button.t2-row:enabled { cursor: pointer; }
   flex: none;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 2px solid var(--ember);
-  background: var(--peach);
-  color: var(--ember-dk);
+  border: 2px solid var(--t2-accent);
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
   font-size: 26px;
   font-weight: 700;
 }
-html.pink .t2-avatar { background: var(--plum-t); }
+/* **وصبغُ الدائرة هنا لا في الرموز**: السِمةُ الورديةُ تصبغ الجمرَ وحدَه (`tokens.css`)، **وخافتُه في غير هذه الدائرة لم
+   يُرسم برقوقاً** — فلو صُبغ الرمزُ لَتغيّرت شارةُ العرض في الإشعارات بلا رسم */
+html.pink .t2-avatar { background: var(--t2-women-soft); }
+
 .t2-prof-main { flex: 1; min-width: 0; }
 .t2-prof-name { font-size: 20px; font-weight: 700; }
 .t2-prof-phone {
   margin-top: 2px;
   font-size: 13px;
-  color: var(--mut);
+  color: var(--t2-muted);
   text-align: end;
 }
 .t2-edit .t2-icon { font-size: 20px; }
@@ -561,7 +286,7 @@ html.pink .t2-avatar { background: var(--plum-t); }
   height: 50px;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--t2-divider);
   background: none;
   font: inherit;
   color: inherit;
@@ -578,16 +303,16 @@ html.pink .t2-avatar { background: var(--plum-t); }
   display: block;
   margin-top: 2px;
   font-size: 12px;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
-.t2-arow-trail { font-size: 13px; color: var(--mut); }
+.t2-arow-trail { font-size: 13px; color: var(--t2-muted); }
 .t2-arow-note {
   margin: 0;
   padding: 10px 0;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--t2-divider);
   font-size: 12px;
   line-height: 1.55;
-  color: var(--warn);
+  color: var(--t2-warning);
 }
 .t2-logout,
 .t2-endall {
@@ -604,6 +329,6 @@ html.pink .t2-avatar { background: var(--plum-t); }
   margin-top: 14px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--err);
+  color: var(--t2-danger);
 }
-.t2-endall { font-size: 12px; color: var(--mut); }
+.t2-endall { font-size: 12px; color: var(--t2-muted); }

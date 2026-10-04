@@ -46,6 +46,8 @@ run "check:destinations"    node tools/check-destinations.mjs
 run "check:fields"          node tools/check-fields.mjs
 run "check:storefront-card" node tools/check-storefront-card.mjs
 run "check:update-gate"     node tools/check-update-gate.mjs
+# **ونظامُ تصميم TAXO 2.0 منسوخٌ في التطبيقين** (§61-ج) — يُقاس بايتاً كبوّابة التحديث
+run "check:taxo2"          node tools/check-taxo2.mjs
 run "check:ci-timeouts"     node tools/check-ci-timeouts.mjs
 run "check:env-leak"        node tools/check-env-leak.mjs
 run "check:exec-bit"        node tools/check-exec-bit.mjs

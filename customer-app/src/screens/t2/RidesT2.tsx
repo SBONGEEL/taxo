@@ -25,6 +25,7 @@ import { formatDistance, formatMoney } from "@/lib/utils";
 
 import { byMonth, startOfToday, whenParts } from "./when";
 
+import "@/taxo2";
 import "./t2.css";
 
 const PAGE = 20;

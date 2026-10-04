@@ -1,186 +1,13 @@
-/* شاشاتُ الكبتن في TAXO 2.0 — **المظهرُ الليليُّ المرسوم** (Claude Design «Captain»، «Identity»).
+/* شاشاتُ الكبتن في TAXO 2.0 — **تخطيطُها وحدَه** (مواضعُ ومسافاتٌ ومقاساتٌ من اللوحة).
  *
- * **القيمُ من اللوحة حرفاً**، متغيّراتٍ في هذا الملفّ لا أصنافَ Tailwind (`check:scale`). **والفاتحُ
- * لم يُرسم بعد** (§61-ب) — فشاشاتُ هذا المجلّد لا تُعرض إلا والمظهرُ داكن (افتراضُ الكبتن)، والقائمةُ
- * تبقى في الفاتح حتى يُرسم.
+ * **والرموزُ والمكوّناتُ الأوّلية من نظام التصميم** (`src/taxo2/`، يُستورد قبل هذا الملف): لا لونَ مكتوباً هنا ولا مكوّنٌ
+ * مكرَّر — `var(--t2-…)` وحدَها. والمظهرُ المرسومُ للكبتن هو الداكن؛ والفاتحُ لم يُرسم بعد (§61-ب).
  */
-
-.t2 {
-  --asphalt: #0e1013;
-  --paper: #f2efe8;
-  --card: #171a1f;
-  --edge: #2b3038;
-  --rule: #20242b;
-  --mut: #9097a1;
-  --ember: #ff6a33;
-  /* نبراتُ الدوائر كما رُسمت في C14 — خلفيةٌ قاتمةٌ ولونُ معنى */
-  --ok: #3dbe7e;
-  --ok-t: #16291f;
-  --amber: #e3a537;
-  --amber-t: #2a2312;
-  --hot-t: #2a1a12;
-  --err: #f0584c;
-  --err-t: #2c1615;
-  /* حافةُ ملاحظة الجمر ونقطةُ الخطوة القادمة (C03) */
-  --hot-edge: #5a3322;
-  --dot-off: #3a404a;
-  /* حافةُ بطاقة المستوى والمهمّةِ المنجَزة، ولونُ القفل (C13) */
-  --gold-edge: #3a3220;
-  --ok-edge: #1f4a33;
-  --locked: #6b717a;
-  /* البرقوقُ الفاتحُ لأيقونة الخدمة النسائية على الإسفلت (C15) */
-  --plum-l: #f08cc0;
-  min-height: 100%;
-  background: var(--asphalt);
-  color: var(--paper);
-  font-family: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
-}
-/* **السِمةُ الوردية**: البرقوقُ الفاتحُ مكانَ الجمر على الإسفلت — كما في ترحيب الكبتن */
-html.pink .t2 {
-  --ember: #f08cc0;
-}
-
-.t2-icon {
-  font-family: "Material Symbols Rounded";
-  font-weight: normal;
-  font-style: normal;
-  font-size: 20px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: nowrap;
-  direction: ltr;
-  font-feature-settings: "liga";
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
-}
-
-.t2-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.t2-back {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--card);
-  border: 1px solid var(--edge);
-  color: var(--paper);
-  cursor: pointer;
-}
-.t2-back .t2-icon { font-size: 22px; }
-.t2-title {
-  flex: 1;
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-}
-.t2-action {
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ember);
-  cursor: pointer;
-}
 
 /* ── الإشعارات (C14) ────────────────────────────────────────────────────── */
 .t2-notifs {
   padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
 }
-.t2-group {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mut);
-  margin: 0 4px 8px;
-}
-.t2-list {
-  background: var(--card);
-  border-radius: 22px;
-  padding: 0 14px;
-  margin-bottom: 16px;
-}
-.t2-row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  padding: 14px 0;
-  border: 0;
-  border-bottom: 1px solid var(--rule);
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-.t2-row:last-child { border-bottom: 0; }
-.t2-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--rule);
-  color: var(--paper);
-}
-.t2-badge.ok { background: var(--ok-t); color: var(--ok); }
-.t2-badge.warn { background: var(--amber-t); color: var(--amber); }
-.t2-badge.hot { background: var(--hot-t); color: var(--ember); }
-.t2-badge.danger { background: var(--err-t); color: var(--err); }
-.t2-row-main { flex: 1; min-width: 0; }
-.t2-row-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.t2-row-title { font-size: 14.5px; font-weight: 700; }
-.t2-row-when {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  font-size: 11.5px;
-  color: var(--mut);
-}
-.t2-unread {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ember);
-}
-.t2-row-body {
-  display: block;
-  margin-top: 3px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--mut);
-}
-/* «عرض المزيد» — **لم تُرسم في اللوحة** والتطبيقُ يقلّب صفحاتٍ اليوم؛ فتُرسم بلغة البطاقة نفسِها */
-.t2-more {
-  display: block;
-  width: 100%;
-  padding: 13px 0;
-  border: 1px solid var(--edge);
-  border-radius: 18px;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--mut);
-  cursor: pointer;
-}
-.t2-more:disabled { opacity: 0.6; cursor: default; }
 
 /* ── قيد المراجعة (C03) ─────────────────────────────────────────────────────
    **صفحةٌ تتمرّر في نفسها** — المستنداتُ تحت الخطّ قد تطول. **وتحجز مكانَ شريط التبويب بـ`pb-nav`**:
@@ -206,21 +33,18 @@ html.pink .t2 {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 4px solid var(--rule);
+  border: 4px solid var(--t2-sunken);
 }
 .t2-wait-arc {
   border-color: transparent;
-  border-top-color: var(--ember);
-  border-right-color: var(--ember);
+  border-top-color: var(--t2-accent);
+  border-right-color: var(--t2-accent);
   transform: rotate(-20deg);
 }
 @media (prefers-reduced-motion: no-preference) {
   .t2-wait-arc { animation: t2-spin 2.4s linear infinite; }
 }
-@keyframes t2-spin {
-  from { transform: rotate(-20deg); }
-  to { transform: rotate(340deg); }
-}
+
 .t2-wait-core {
   position: absolute;
   inset: 18px;
@@ -228,12 +52,12 @@ html.pink .t2 {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--card);
+  background: var(--t2-surface);
 }
-.t2-wait-core .t2-icon { font-size: 44px; color: var(--ember); }
+.t2-wait-core .t2-icon { font-size: 44px; color: var(--t2-accent); }
 /* **والرفضُ بالأحمر** كما كانت حلقتُه في الشاشة القائمة — لم تُرسم (§١٧) */
-.t2-wait.rejected .t2-wait-arc { border-top-color: var(--err); border-right-color: var(--err); }
-.t2-wait.rejected .t2-wait-core .t2-icon { color: var(--err); }
+.t2-wait.rejected .t2-wait-arc { border-top-color: var(--t2-danger); border-right-color: var(--t2-danger); }
+.t2-wait.rejected .t2-wait-core .t2-icon { color: var(--t2-danger); }
 .t2-pending-title {
   margin: 0 0 8px;
   text-align: center;
@@ -245,7 +69,7 @@ html.pink .t2 {
   text-align: center;
   font-size: 14.5px;
   line-height: 1.7;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
 .t2-steps {
   display: grid;
@@ -253,7 +77,7 @@ html.pink .t2 {
   gap: 0 14px;
   padding: 18px;
   border-radius: 22px;
-  background: var(--card);
+  background: var(--t2-surface);
 }
 .t2-step-dot {
   display: flex;
@@ -263,27 +87,27 @@ html.pink .t2 {
   height: 24px;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 2px solid var(--dot-off);
+  border: 2px solid var(--t2-dot-off);
 }
-.t2-step-dot.done { border: 0; background: var(--ok); color: var(--asphalt); }
+.t2-step-dot.done { border: 0; background: var(--t2-success); color: var(--t2-on-accent); }
 .t2-step-dot.done .t2-icon { font-size: 16px; }
 .t2-step-dot.now {
   border: 0;
-  background: var(--ember);
+  background: var(--t2-accent);
   box-shadow: 0 0 0 5px rgba(255, 106, 51, 0.2);
 }
 .t2-step-line {
   justify-self: center;
   width: 2px;
   height: 20px;
-  background: var(--edge);
+  background: var(--t2-line);
 }
-.t2-step-line.done { background: var(--ok); }
+.t2-step-line.done { background: var(--t2-success); }
 .t2-step-title { font-size: 14.5px; font-weight: 600; }
 .t2-step-title.now { font-weight: 700; }
-.t2-step-title.later { color: var(--mut); }
-.t2-step-sub { font-size: 12px; color: var(--mut); }
-.t2-step-sub.now { color: var(--ember); }
+.t2-step-title.later { color: var(--t2-muted); }
+.t2-step-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-step-sub.now { color: var(--t2-accent-text); }
 .t2-hint {
   display: flex;
   gap: 10px;
@@ -291,12 +115,12 @@ html.pink .t2 {
   margin-top: 12px;
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid var(--hot-edge);
-  background: var(--hot-t);
+  border: 1px solid var(--t2-accent-line);
+  background: var(--t2-accent-soft);
   font-size: 13px;
   line-height: 1.65;
 }
-.t2-hint .t2-icon { font-size: 20px; line-height: 1.2; color: var(--ember); }
+.t2-hint .t2-icon { font-size: 20px; line-height: 1.2; color: var(--t2-accent); }
 .t2-docs {
   display: flex;
   flex-direction: column;
@@ -306,7 +130,7 @@ html.pink .t2 {
 .t2-doc {
   padding: 12px 14px;
   border-radius: 18px;
-  background: var(--card);
+  background: var(--t2-surface);
 }
 .t2-doc-row {
   display: flex;
@@ -321,13 +145,13 @@ html.pink .t2 {
   height: 40px;
   flex: none;
   border-radius: 12px;
-  background: var(--rule);
-  color: var(--mut);
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
 }
 .t2-doc-icon .t2-icon { font-size: 21px; }
-.t2-doc-icon.ok { background: var(--ok-t); color: var(--ok); }
-.t2-doc-icon.warn { background: var(--amber-t); color: var(--amber); }
-.t2-doc-icon.danger { background: var(--err-t); color: var(--err); }
+.t2-doc-icon.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-doc-icon.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
+.t2-doc-icon.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
 .t2-doc-label {
   flex: 1;
   min-width: 0;
@@ -338,20 +162,9 @@ html.pink .t2 {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.55;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
-.t2-chip {
-  padding: 3px 9px;
-  border-radius: 99px;
-  white-space: nowrap;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--rule);
-  color: var(--mut);
-}
-.t2-chip.ok { background: var(--ok-t); color: var(--ok); }
-.t2-chip.warn { background: var(--amber-t); color: var(--amber); }
-.t2-chip.danger { background: var(--err-t); color: var(--err); }
+
 .t2-cta {
   display: flex;
   align-items: center;
@@ -361,8 +174,8 @@ html.pink .t2 {
   margin-top: 20px;
   border: 0;
   border-radius: 18px;
-  background: var(--ember);
-  color: var(--asphalt);
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
   font: inherit;
   font-size: 15px;
   font-weight: 700;
@@ -378,7 +191,7 @@ html.pink .t2 {
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  color: var(--err);
+  color: var(--t2-danger);
   cursor: pointer;
 }
 
@@ -387,27 +200,14 @@ html.pink .t2 {
   height: 100%;
   padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
 }
-.t2-section {
-  margin: 18px 2px 10px;
-  font-size: 15px;
-  font-weight: 700;
-}
-.t2-empty {
-  margin: 0;
-  padding: 16px;
-  border-radius: 20px;
-  background: var(--card);
-  text-align: center;
-  font-size: 12.5px;
-  color: var(--mut);
-}
+
 .t2-level {
   position: relative;
   overflow: hidden;
   padding: 18px;
-  border: 1px solid var(--gold-edge);
+  border: 1px solid var(--t2-warning-line);
   border-radius: 24px;
-  background: var(--card);
+  background: var(--t2-surface);
 }
 .t2-level-stripe {
   position: absolute;
@@ -416,7 +216,7 @@ html.pink .t2 {
   width: 170px;
   height: 30px;
   border-radius: 15px;
-  background: var(--amber);
+  background: var(--t2-warning);
   opacity: 0.16;
   pointer-events: none;
 }
@@ -431,9 +231,9 @@ html.pink .t2 {
 .t2-level-medal {
   font-size: 34px;
   font-variation-settings: "FILL" 1;
-  color: var(--amber);
+  color: var(--t2-warning);
 }
-.t2-level-k { font-size: 12.5px; color: var(--mut); }
+.t2-level-k { font-size: 12.5px; color: var(--t2-muted); }
 .t2-level-v { font-size: 26px; font-weight: 700; line-height: 1.2; }
 /* السلّم: المنجَزُ بعلامةٍ خضراء، والحاليُّ بالكهرمان، وما فوقه مقفل */
 .t2-ladder {
@@ -443,33 +243,33 @@ html.pink .t2 {
   gap: 6px;
   margin-top: 14px;
   font-size: 11.5px;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
 .t2-rung {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--locked);
+  color: var(--t2-faint);
 }
 .t2-rung .t2-icon { font-size: 15px; }
-.t2-rung.done { color: var(--mut); }
-.t2-rung.done .t2-icon { color: var(--ok); }
-.t2-rung.now { font-weight: 700; color: var(--amber); }
+.t2-rung.done { color: var(--t2-muted); }
+.t2-rung.done .t2-icon { color: var(--t2-success); }
+.t2-rung.now { font-weight: 700; color: var(--t2-warning); }
 .t2-rung.now .t2-icon { font-variation-settings: "FILL" 1; }
 .t2-level-note {
   position: relative;
   margin: 12px 0 0;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
-.t2-level-note.ok { color: var(--ok); }
+.t2-level-note.ok { color: var(--t2-success); }
 .t2-level-next {
   position: relative;
   margin: 10px 0 0;
   padding: 10px 12px;
   border-radius: 14px;
-  background: var(--rule);
+  background: var(--t2-sunken);
   font-size: 12.5px;
   line-height: 1.55;
 }
@@ -482,23 +282,23 @@ html.pink .t2 {
   padding: 14px;
   border: 1px solid transparent;
   border-radius: 20px;
-  background: var(--card);
+  background: var(--t2-surface);
 }
-.t2-mission.done { border-color: var(--ok-edge); }
+.t2-mission.done { border-color: var(--t2-success-line); }
 .t2-mission-top {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 .t2-mission-top > .t2-icon { font-size: 22px; }
-.t2-mission.done .t2-mission-top > .t2-icon { color: var(--ok); }
+.t2-mission.done .t2-mission-top > .t2-icon { color: var(--t2-success); }
 .t2-mission-main { flex: 1; min-width: 0; }
 .t2-mission-title { font-size: 14.5px; font-weight: 600; }
 .t2-mission-desc {
   margin-top: 2px;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
 .t2-mission-bar {
   display: flex;
@@ -511,26 +311,26 @@ html.pink .t2 {
   height: 6px;
   overflow: hidden;
   border-radius: 3px;
-  background: var(--edge);
+  background: var(--t2-line);
 }
 .t2-mission-fill {
   height: 100%;
   border-radius: 3px;
-  background: var(--ember);
+  background: var(--t2-accent);
 }
-.t2-mission.done .t2-mission-fill { background: var(--ok); }
-.t2-mission-count { font-size: 12px; color: var(--mut); }
-.t2-mission.done .t2-mission-count { color: var(--ok); }
+.t2-mission.done .t2-mission-fill { background: var(--t2-success); }
+.t2-mission-count { font-size: 12px; color: var(--t2-muted); }
+.t2-mission.done .t2-mission-count { color: var(--t2-success); }
 .t2-badge-row {
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 54px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--t2-divider);
 }
 .t2-badge-row:last-child { border-bottom: 0; }
-.t2-badge-row > .t2-icon { font-size: 21px; color: var(--amber); }
+.t2-badge-row > .t2-icon { font-size: 21px; color: var(--t2-warning); }
 .t2-badge-main {
   display: flex;
   flex-direction: column;
@@ -538,8 +338,8 @@ html.pink .t2 {
   min-width: 0;
 }
 .t2-badge-label { font-size: 13.5px; font-weight: 600; }
-.t2-badge-desc { font-size: 11.5px; color: var(--mut); }
-.t2-badge-date { font-size: 11px; color: var(--mut); }
+.t2-badge-desc { font-size: 11.5px; color: var(--t2-muted); }
+.t2-badge-date { font-size: 11px; color: var(--t2-muted); }
 
 /* ── الإعدادات (C15) ────────────────────────────────────────────────────── */
 .t2-settings {
@@ -555,7 +355,7 @@ html.pink .t2 {
   min-height: 56px;
   padding: 10px 0;
   border: 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--t2-divider);
   background: none;
   font: inherit;
   color: inherit;
@@ -568,7 +368,7 @@ div.t2-srow { cursor: default; }
 .t2-srow.tall { align-items: flex-start; padding: 14px 0; }
 .t2-srow-icon { flex: none; font-size: 21px; }
 .t2-srow.tall .t2-srow-icon { margin-top: 1px; }
-.t2-srow-icon.pink { color: var(--plum-l); }
+.t2-srow-icon.pink { color: var(--t2-women); }
 .t2-srow-main {
   display: flex;
   flex-direction: column;
@@ -579,41 +379,18 @@ div.t2-srow { cursor: default; }
 .t2-srow-hint {
   font-size: 11.5px;
   line-height: 1.5;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
-.t2-srow-value { flex: none; font-size: 13px; color: var(--mut); }
+.t2-srow-value { flex: none; font-size: 13px; color: var(--t2-muted); }
 .t2-srow-error {
   margin: 0;
   padding: 0 0 10px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--t2-divider);
   font-size: 11.5px;
   line-height: 1.5;
-  color: var(--err);
+  color: var(--t2-danger);
 }
-/* المفتاحُ كما رُسم: مطفأٌ رماديٌّ ومقبضُه في البداية، ومشتعلٌ بالجمر ومقبضُه أبيضُ في النهاية */
-.t2-switch {
-  position: relative;
-  flex: none;
-  width: 48px;
-  height: 28px;
-  border-radius: 99px;
-  background: var(--edge);
-}
-.t2-switch-knob {
-  position: absolute;
-  top: 3px;
-  inset-inline-start: 3px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--mut);
-}
-.t2-switch.on { background: var(--ember); }
-.t2-switch.on .t2-switch-knob { inset-inline-start: 23px; background: #ffffff; }
-@media (prefers-reduced-motion: no-preference) {
-  .t2-switch { transition: background-color 160ms ease; }
-  .t2-switch-knob { transition: inset-inline-start 160ms ease, background-color 160ms ease; }
-}
+
 .t2-seg {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -622,60 +399,48 @@ div.t2-srow { cursor: default; }
 }
 .t2-seg-opt {
   padding: 10px 6px;
-  border: 1px solid var(--edge);
+  border: 1px solid var(--t2-line);
   border-radius: 12px;
   background: none;
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--mut);
+  color: var(--t2-muted);
   cursor: pointer;
 }
-.t2-seg-opt.on { border-color: var(--paper); background: var(--rule); color: var(--paper); }
+.t2-seg-opt.on { border-color: var(--t2-text); background: var(--t2-sunken); color: var(--t2-text); }
 .t2-seg-opt:disabled { opacity: 0.6; cursor: default; }
 .t2-explain {
   display: block;
   margin-top: 12px;
   padding: 12px;
   border-radius: 14px;
-  background: var(--rule);
+  background: var(--t2-sunken);
   font-size: 11.5px;
   line-height: 1.6;
-  color: var(--mut);
+  color: var(--t2-muted);
 }
 .t2-explain-title {
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--paper);
+  color: var(--t2-text);
 }
 .t2-alias {
   display: flex;
   gap: 8px;
   margin-top: 10px;
 }
-.t2-input {
-  flex: 1;
-  min-width: 0;
-  height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--edge);
-  border-radius: 12px;
-  background: var(--asphalt);
-  color: var(--paper);
-  font: inherit;
-  font-size: 14px;
-}
-.t2-input:focus { outline: none; border-color: var(--ember); }
+
 .t2-save {
   flex: none;
   height: 44px;
   padding: 0 16px;
   border: 0;
   border-radius: 12px;
-  background: var(--ember);
-  color: var(--asphalt);
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
   font: inherit;
   font-size: 13.5px;
   font-weight: 700;

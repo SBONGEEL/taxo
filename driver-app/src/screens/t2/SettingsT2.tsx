@@ -22,6 +22,7 @@ import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { biometryLabel } from "@/lib/biometric";
 import { useCaptainSettings } from "@/screens/Settings";
 
+import "@/taxo2";
 import "./t2.css";
 
 /** مفتاحٌ بشكل اللوحة — **`role="switch"`** كمفاتيح الشاشة القائمة. */

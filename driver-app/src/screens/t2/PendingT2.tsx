@@ -25,6 +25,7 @@ import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 import { DOC_LABEL, STATUS } from "@/screens/Pending";
 
+import "@/taxo2";
 import "./t2.css";
 
 /** أيقونةُ كلِّ مستندٍ بمفردات اللوحة (C12): الرخصةُ والهويةُ والمركبة — **والصورةُ الشخصيةُ بالشخص**. */

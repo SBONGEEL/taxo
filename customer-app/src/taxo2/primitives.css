@@ -1,0 +1,374 @@
+/* ═══ TAXO 2.0 — نظامُ التصميم · المكوّناتُ الأوّلية ════════════════════════════════════════════════
+ *
+ * **كلُّ ما تشترك فيه الشاشات** — والشاشةُ تكتب في ملفّها **تخطيطَها وحدَه** بالرموز (`tokens.css`)، لا ألواناً ولا مكوّناً.
+ * **والمقاساتُ من اللوحة حرفاً**؛ **والألوانُ رموزٌ** تتبع المظهر (الفاتح افتراضاً، والداكن تحت `html.dark`).
+ * **وأصنافٌ عاديةٌ لا Tailwind**: سلّمُ `DESIGN.md` سلّمُ التصميم القديم، وصنفٌ خارجه يُصرَّف بلا أثر (`check:scale`).
+ */
+
+/* ── الأيقونات: Material Symbols Rounded (الهوية) — تُحمَّل مقتطعةً بأسمائها من `index.html` في كلِّ تطبيق ── */
+.t2-icon {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.t2-icon.fill { font-variation-settings: "FILL" 1; }
+
+/* ── الأرقام: Unbounded (الهوية — الأجرة والرصيد والأرباح والوقت) ── */
+.t2-num { font-family: var(--t2-font-num); }
+
+/* ── العلامة النصية TAXO (`Wordmark.tsx`): Unbounded 800، والـX قضيبان متقاطعان ── */
+/* سطريّةٌ لا مرنة: انخفاضُ الـX (`vertical-align`) من اللوحة لا يعمل داخل صفٍّ مرن */
+.t2-wordmark {
+  display: inline-block;
+  font-family: var(--t2-font-num);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.t2-wordmark-x {
+  position: relative;
+  display: inline-block;
+}
+.t2-wordmark-x > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+/* ── رأسُ الشاشة الداخلية: زرُّ رجوعٍ دائريّ، والعنوان، وفعلٌ بالجمر ── */
+.t2-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.t2-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--t2-surface);
+  border: 1px solid var(--t2-line);
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-back .t2-icon { font-size: 22px; }
+.t2-title {
+  flex: 1;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+.t2-action {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-accent-text);
+  cursor: pointer;
+}
+/* عنوانُ جذر التبويب — أكبرُ ولا رجوعَ قبله */
+.t2-h1 {
+  margin: 0 0 14px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* ── عناوينُ الأقسام ── */
+.t2-group {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2-muted);
+  margin: 0 4px 8px;
+}
+.t2-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 18px 2px 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.t2-section-aside {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--t2-muted);
+}
+
+/* ── القائمة: بطاقةٌ بصفوفٍ يفصلها خطّ ── */
+.t2-list {
+  background: var(--t2-surface);
+  border-radius: 22px;
+  padding: 0 14px;
+  margin-bottom: 16px;
+}
+.t2-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid var(--t2-divider);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+}
+.t2-row:last-child { border-bottom: 0; }
+button.t2-row:enabled { cursor: pointer; }
+.t2-row-main { flex: 1; min-width: 0; }
+.t2-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.t2-row-title { font-size: 14.5px; font-weight: 700; }
+.t2-row-when {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 11.5px;
+  color: var(--t2-muted);
+}
+.t2-row-body {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t2-muted);
+}
+/* نقطةُ غير المقروء بالجمر بجانب الوقت */
+.t2-unread {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t2-accent);
+}
+
+/* ── الدائرة: أيقونةُ نوعٍ بنبرة معناه ── */
+.t2-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+}
+.t2-badge.live { background: var(--t2-inverse); color: var(--t2-accent); }
+.t2-badge.offer { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+.t2-badge.hot { background: var(--t2-accent-soft); color: var(--t2-accent); }
+.t2-badge.money,
+.t2-badge.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-badge.women { background: var(--t2-women-soft); color: var(--t2-women); }
+.t2-badge.warn { background: var(--t2-badge-warn-bg); color: var(--t2-warning); }
+.t2-badge.danger { background: var(--t2-badge-danger-bg); color: var(--t2-danger); }
+
+/* ── الشارة: حالٌ في كلمة ── */
+.t2-chip {
+  padding: 3px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+.t2-chip.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-chip.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
+.t2-chip.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+
+/* ── «عرض المزيد»: صفحاتٌ تُقلَّب بلغة البطاقة ── */
+.t2-more {
+  display: block;
+  width: 100%;
+  padding: 13px 0;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.t2-more:disabled { opacity: 0.6; cursor: default; }
+
+/* ── الملاحظة: سطرُ الخطأ في اللوحة — أيقونةٌ ممتلئةٌ ونصٌّ بلون معناه ── */
+.t2-note {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 10px 2px 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.t2-note .t2-icon {
+  font-size: 16px;
+  line-height: 1.3;
+  font-variation-settings: "FILL" 1;
+}
+.t2-note.warn { color: var(--t2-warning); }
+.t2-note.danger { color: var(--t2-danger); }
+
+/* ── الفراغ: بطاقةٌ بجملةٍ واحدة ── */
+.t2-empty {
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--t2-surface);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--t2-muted);
+}
+
+/* ── المفتاح: مطفأٌ ومقبضُه في البداية، ومشتعلٌ بالجمر ومقبضُه أبيضُ في النهاية ── */
+.t2-switch {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border-radius: 99px;
+  background: var(--t2-line);
+}
+.t2-switch-knob {
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--t2-muted);
+}
+.t2-switch.on { background: var(--t2-accent); }
+.t2-switch.on .t2-switch-knob { inset-inline-start: 23px; background: #ffffff; }
+
+/* ── الحقل ── */
+.t2-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+}
+.t2-input:focus { outline: none; border-color: var(--t2-accent); }
+
+/* ── الأزرار (الهوية — «المكوّنات الأساسية»): أساسيٌّ بالحبر · فعلٌ بالجمر («طلب / قبول») · ثانويٌّ بحافّة ── */
+.t2-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 54px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-button.primary { background: var(--t2-inverse); color: var(--t2-on-inverse); }
+.t2-button.action { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-button.secondary {
+  background: none;
+  border: 1.5px solid var(--t2-text);
+  color: var(--t2-text);
+}
+.t2-button:disabled { opacity: 0.45; cursor: default; }
+.t2-button:active:enabled { transform: scale(0.98); }
+
+/* ── شريطُ التبويب (TaxoTabs): عائمٌ فوق الخريطة، والنشطُ حبّةٌ أعرض ── */
+.t2.t2-tabs {
+  min-height: 0;
+  background: none;
+}
+.t2-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 62px;
+  padding: 0 7px;
+  border-radius: 31px;
+  background: var(--t2-float-bg);
+  box-shadow: var(--t2-float-shadow);
+}
+/* الكبتن: حافّةٌ وظلٌّ أعمق (TaxoTabs «captain») */
+html.dark .t2-tabs-bar {
+  box-sizing: border-box;
+  padding: 0 6px;
+  border: 1px solid var(--t2-line);
+}
+.t2-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  height: 48px;
+  border-radius: 24px;
+  color: var(--t2-muted);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-tab .t2-icon { font-size: 22px; }
+.t2-tab-label {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.t2-tab.on {
+  flex: 1.5;
+  flex-direction: row;
+  gap: 6px;
+  background: var(--t2-tab-on);
+  color: var(--t2-on-tab-on);
+}
+.t2-tab.on .t2-icon { font-variation-settings: "FILL" 1; }
+.t2-tab.on .t2-tab-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+html.dark .t2-tab.on .t2-tab-label { font-weight: 700; }
+.t2-tab:active { transform: scale(0.98); }
+
+/* ── الحركة: تتبدّل بهدوء، وتقف لمن طلب تقليلَها ── */
+@keyframes t2-spin {
+  from { transform: rotate(-20deg); }
+  to { transform: rotate(340deg); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .t2-tab {
+    transition: flex-grow var(--t2-med) var(--t2-ease), background-color var(--t2-med) var(--t2-ease),
+      color var(--t2-med) var(--t2-ease), transform var(--t2-fast) var(--t2-ease);
+  }
+  .t2-switch { transition: background-color 160ms var(--t2-ease); }
+  .t2-switch-knob { transition: inset-inline-start 160ms var(--t2-ease), background-color 160ms var(--t2-ease); }
+  .t2-button { transition: transform var(--t2-fast) var(--t2-ease); }
+}

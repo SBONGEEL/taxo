@@ -27,6 +27,7 @@ import { useGoBack } from "@/lib/back";
 import { digits } from "@/lib/utils";
 import { LEVEL_LABEL, nextStep } from "@/screens/Missions";
 
+import "@/taxo2";
 import "./t2.css";
 
 export function MissionsT2Screen() {

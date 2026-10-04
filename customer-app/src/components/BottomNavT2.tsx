@@ -11,7 +11,7 @@ import { NavLink } from "react-router-dom";
 
 import { TABS } from "@/lib/tabs";
 
-import "@/screens/t2/t2.css";
+import "@/taxo2";
 
 /** أيقونةُ كلِّ وجهةٍ في اللوحة (Material Symbols) — بالمسار لا بالترتيب. */
 const TAB_ICON: Record<string, string> = {

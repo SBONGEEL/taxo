@@ -22,6 +22,7 @@ import { destinationFor } from "@/lib/notification-route";
 import { composeBody } from "@/lib/notification-text";
 import { DISPLAY_LOCALE } from "@/lib/utils";
 
+import "@/taxo2";
 import "./t2.css";
 
 const PAGE_SIZE = 30;
