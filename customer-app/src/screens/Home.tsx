@@ -68,6 +68,7 @@ import {
   PinT2,
   WhereToSheetT2,
 } from "@/screens/t2/HomeMapT2";
+import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -245,6 +246,8 @@ export function HomeScreen() {
   // أثناء الرحلة: الإطار يضم الكبتن والوجهة معاً
   useEffect(() => {
     if (!ride || !tracking) return;
+    // **ونهارُ TAXO 2.0 يؤطّر فوق ورقته الملتصقة** (R07–R09) — من مراقب ارتفاعها أدناه لا من الحشو الثابت
+    if (!dark) return;
     // **بعد ركوب الراكب الإطارُ يضم الوجهة لا نقطة الانطلاق** — و`at_stop`
     // منها (المرحلة 12-ب): قفزةٌ إلى الانطلاق وسط الرحلة تُرجع الخريطة إلى
     // مكانٍ غادره الاثنان
@@ -597,28 +600,55 @@ export function HomeScreen() {
    *  والليليُّ لا يمسّه شيء — الشريطُ والورقةُ القائمان كما كانا. */
   const requestT2 = !dark && !tracking && outcome === null && (picking || confirming);
   useCoverNav(requestT2);
+  /** **والتتبّعُ نهاراً «R07–R09»** — بلا شريطٍ أصلاً (الرحلةُ الجاريةُ تخفيه، `App.tsx::NavBar`) والورقةُ ملتصقةٌ كما رُسمت. */
+  const trackingT2 = !dark && tracking;
+  const sheetAttached = requestT2 || trackingT2;
 
-  /** **إطارُ «R06» فوق ورقته** — الحشوُ الثابتُ (٣٢٠) لورقةٍ فوق الشريط، والملتصقةُ أطولُ منه فيغيب الطريقُ تحتها.
-   *  فيُقاس ارتفاعُها ويُعاد الإطارُ حين يتغيّر بما يُرى (يصل السعرُ · يُفتح الكوبون)، والسهمُ فوقه محفوظ.
-   *  **والارتفاعُ نفسُه يرفع شعارَ الخريطة** في أطوار الطلب كلِّها (الدبوسُ أيضاً). */
+  // آخرُ ما يُؤطَّر به — يُقرأ داخل المراقب بلا أن يعيد كلُّ بثٍّ إنشاءَه
+  const rideNow = useRef(ride);
+  rideNow.current = ride;
+  const pingNow = useRef(driverPing);
+  pingNow.current = driverPing;
+
+  /** **إطارُ «R06–R09» فوق ورقته** — الحشوُ الثابتُ (٣٢٠) لورقةٍ فوق الشريط، والملتصقةُ أطولُ منه فيغيب الطريقُ تحتها.
+   *  فيُقاس ارتفاعُها ويُعاد الإطارُ حين يتغيّر بما يُرى (يصل السعرُ · يُفتح الكوبون · تتبدّل الحال)، والرأسُ فوقه محفوظ.
+   *  **والارتفاعُ نفسُه يرفع شعارَ الخريطة** في الأطوار كلِّها (الدبوسُ أيضاً). */
   const sheetBox = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const box = sheetBox.current;
-    if (!requestT2 || !box) {
+    if (!sheetAttached || !box) {
       setSheetInset(0);
       return;
     }
+    const frame = (): [Coordinates, Coordinates, number] | null => {
+      if (confirming && pickup && dropoff) return [pickup, dropoff, 120];
+      const current = rideNow.current;
+      if (!trackingT2 || !current) return null;
+      const riding = current.status === "in_progress" || current.status === "at_stop";
+      const target = riding ? current.dropoff : current.pickup;
+      // **وبطاقةُ الطريق في R09 أطولُ من حبّة R08** — فالإطارُ يبدأ تحتها
+      const top = riding ? 170 : 120;
+      const ping = pingNow.current;
+      if (ping) return [{ lat: ping.lat, lng: ping.lng }, target, top];
+      // **بلا موقعٍ للكبتن** (البحث): مربّعٌ صغيرٌ حول النقطة — فتُؤطَّر فوق الورقة لا تحتها
+      return [
+        { lat: target.lat - 0.004, lng: target.lng - 0.004 },
+        { lat: target.lat + 0.004, lng: target.lng + 0.004 },
+        top,
+      ];
+    };
     let last = 0;
     const observer = new ResizeObserver(() => {
       const height = Math.round(box.getBoundingClientRect().height);
       setSheetInset(height);
-      if (!confirming || !pickup || !dropoff || Math.abs(height - last) < 24) return;
+      if (Math.abs(height - last) < 24) return;
       last = height;
-      map.current?.fitBounds(pickup, dropoff, { top: 120, bottom: height + 40 });
+      const view = frame();
+      if (view) map.current?.fitBounds(view[0], view[1], { top: view[2], bottom: height + 40 });
     });
     observer.observe(box);
     return () => observer.disconnect();
-  }, [requestT2, confirming, pickup, dropoff]);
+  }, [sheetAttached, trackingT2, confirming, pickup, dropoff, ride?.status]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
@@ -629,7 +659,22 @@ export function HomeScreen() {
       {mapNode}
 
       {/* **ما فوق الخريطة بالمظهر**: القائمُ في الليليّ كما هو، وTAXO 2.0 في النهاريّ المرسوم — بالأفعال نفسِها */}
-      {!dark ? (
+      {trackingT2 ? (
+        // **التتبّعُ كما رُسم** (R07–R09): لا رأسَ ولا «موقعي» — «الكبتن على بعد…» أو بطاقةُ الطريق، **ومبدّلُ السِمة باقٍ**
+        // (قرارُ المالك ٢٥ — وفي الرحلة لا شريطَ ولا «إعدادات» يُبلغان)
+        <>
+          {ride!.status === "in_progress" || ride!.status === "at_stop" ? (
+            <TripCardT2 ride={ride!} driverPing={driverPing} routePoints={routeLine} />
+          ) : (
+            <ApproachChipT2 ride={ride!} driverPing={driverPing} />
+          )}
+          <ThemeButtonT2
+            dark={dark}
+            low={ride!.status === "in_progress" || ride!.status === "at_stop"}
+            onToggle={() => setChoice(dark ? "light" : "dark")}
+          />
+        </>
+      ) : !dark ? (
         <>
           {picking ? <PinT2 target={phase === "pick-pickup" ? "pickup" : "dropoff"} /> : null}
           <MapHeaderT2
@@ -714,7 +759,7 @@ export function HomeScreen() {
       {/* **وفي أطوار الطلب نهاراً لا شريطَ** (`requestT2`) — فالورقةُ ملتصقةٌ بأسفل الشاشة كما رُسمت */}
       <div
         ref={sheetBox}
-        className={`pointer-events-none absolute inset-x-0 ${requestT2 ? "bottom-0" : "bottom-nav"} mx-auto max-w-lg`}
+        className={`pointer-events-none absolute inset-x-0 ${sheetAttached ? "bottom-0" : "bottom-nav"} mx-auto max-w-lg`}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -726,7 +771,20 @@ export function HomeScreen() {
             className="pointer-events-auto"
           >
             {tracking ? (
-              <TrackingSheet ride={ride!} onChanged={() => void refresh()} />
+              <ByTheme
+                day={
+                  <TrackingSheetT2
+                    ride={ride!}
+                    onChanged={() => void refresh()}
+                    driverPing={driverPing}
+                    routePoints={routeLine}
+                    pickupLine={
+                      pickup && pickup.lat === ride!.pickup.lat && pickup.lng === ride!.pickup.lng ? pickupLine : null
+                    }
+                  />
+                }
+                night={<TrackingSheet ride={ride!} onChanged={() => void refresh()} />}
+              />
             ) : outcome ? (
               <OutcomeSheet
                 ride={outcome}

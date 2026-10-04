@@ -30,6 +30,25 @@ function near(point: number[], at: LatLng): number {
   return dx * dx + dy * dy;
 }
 
+/** المسافةُ بين نقطتين بالكيلومتر (Haversine) — **للعرض وحدَه** («الكبتن على بعد…» · «كم متبقية» في TAXO 2.0):
+ *  حسابُ هندسةٍ لا يُسعَّر منه شيء، كالقصّ أدناه. */
+export function distanceKm(a: LatLng, b: LatLng): number {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+/** طولُ خطٍّ بالكيلومتر — نقاطُه `[lng, lat]` كما يحفظها المسار. */
+export function lengthKm(points: number[][]): number {
+  let km = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    km += distanceKm({ lat: points[i - 1][1], lng: points[i - 1][0] }, { lat: points[i][1], lng: points[i][0] });
+  }
+  return km;
+}
+
 /** يُرجع ما بقي من المسار ابتداءً من أقرب نقطةٍ إلى `at`.
  *
  * و`null` في `at` تُرجع المسارَ كاملاً — وهي الحالُ قبل أن يتحرك الكبتن.

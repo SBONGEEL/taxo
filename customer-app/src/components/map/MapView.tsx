@@ -312,6 +312,16 @@ function t2MeElement(label: string): HTMLElement {
   return element;
 }
 
+/** **رادارُ البحث** (R07): ثلاثُ حلقاتٍ بالجمر تتّسع من الانطلاق بفارق ٠٫٩ ثانية (`txring` في اللوحة)، **ونقطةُ الجمر بهالتها في
+ *  مركزها**. ومع «تقليل الحركة» تقف الحلقاتُ على ثلاثة أطوارٍ كما رُسمت (`t2.css`). */
+function t2RadarElement(label: string): HTMLElement {
+  const element = document.createElement("div");
+  element.setAttribute("aria-label", label);
+  element.innerHTML = `<span class="t2-map-radar"><i></i><i></i><i></i></span><span class="t2-map-me"><i class="t2-map-me-dot"></i></span>`;
+  element.style.width = "max-content";
+  return element;
+}
+
 /** **الانطلاقُ دائرةٌ بالحبر، والوجهةُ مربّعٌ بالجمر** — «لغة الخريطة» في الهوية، بحافّةٍ بيضاء. */
 function t2PinElement(kind: "from" | "to", label: string): HTMLElement {
   const element = document.createElement("div");
@@ -703,7 +713,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     }
     if (!searchPulse.current) {
       searchPulse.current = new mapboxgl.Marker({
-        element: pulseElement("جارٍ البحث عن كبتن"),
+        // **ونهارُ TAXO 2.0 رادارُ اللوحة** (R07): ثلاثُ حلقاتٍ واسعةٍ بالجمر ونقطةُ الانطلاق في مركزها — والليلُ نبضتُه كما كانت
+        element: t2 ? t2RadarElement("جارٍ البحث عن كبتن") : pulseElement("جارٍ البحث عن كبتن"),
       })
         .setLngLat([pickup.lng, pickup.lat])
         .addTo(instance);
@@ -743,9 +754,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
         .addTo(instance);
     };
 
-    place(pickupMarker, pickup, "var(--ok)", "نقطة الانطلاق", "from");
+    // **وفي بحث TAXO 2.0 يقف الرادارُ وحدَه على الانطلاق** (R07) — نقطتُه في مركزه، فدائرةُ الحبر تحتها نقطتان لشيءٍ واحد
+    place(pickupMarker, t2 && searching ? null : pickup, "var(--ok)", "نقطة الانطلاق", "from");
     place(dropoffMarker, dropoff, "var(--dng)", "الوجهة", "to");
-  }, [pickup, dropoff, t2]);
+  }, [pickup, dropoff, t2, searching]);
 
   useEffect(() => {
     const instance = map.current;
@@ -756,8 +768,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     const drawn = routePoints && routePoints.length >= 2
       ? trimRoute(routePoints, trimAt)
       : null;
+    // **ولا خطَّ مستقيماً أثناء بحث TAXO 2.0** كما رُسم (R07): الرادارُ وحدَه يقول «نبحث»
     const straight =
-      tripLine && pickup && dropoff
+      tripLine && pickup && dropoff && !(t2 && searching)
         ? [
             [pickup.lng, pickup.lat],
             [dropoff.lng, dropoff.lat],
@@ -831,7 +844,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       // والتقطيعُ يقول ذلك بلا نصّ. والمتّصلُ يقول «هذا هو الطريق»
       drawn ? [1, 0] : [1.5, 1.5],
     );
-  }, [pickup, dropoff, tripLine, routePoints, trimAt, dark, styleVersion]);
+  }, [pickup, dropoff, tripLine, routePoints, trimAt, dark, styleVersion, t2, searching]);
 
   // ------------------------------------------------------------ التحكّم
   useImperativeHandle(
