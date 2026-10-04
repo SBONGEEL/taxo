@@ -37,7 +37,7 @@ import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { showsNav } from "@/lib/tabs";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
-import { ThemeProvider } from "@/lib/theme";
+import { ThemeProvider, useTheme } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
@@ -103,6 +103,11 @@ const SettingsScreen = lazy(() =>
 const NotificationsScreen = lazy(() =>
   import("@/screens/Notifications").then((m) => ({
     default: m.NotificationsScreen,
+  })),
+);
+const NotificationsT2Screen = lazy(() =>
+  import("@/screens/t2/NotificationsT2").then((m) => ({
+    default: m.NotificationsT2Screen,
   })),
 );
 const ReferralsScreen = lazy(() =>
@@ -215,13 +220,27 @@ function NavBar() {
   // و«أرسل تفاصيل رحلتك» — وتعريفٌ بمفتاحٍ يقف فوق أحدهما يُقرأ عطباً.
   // القاعدةُ نفسُها في تطبيق الكبتن، وهناك قِيست مرتين
   const { ride } = useRide();
+  const { dark } = useTheme();
   if (ride !== null) return null;
+  // **وشاشاتُ TAXO 2.0 التي لا شريطَ فيها في اللوحة** (R14) تغطّيه — في المظهر المرسوم وحدَه،
+  // والشاشةُ القائمةُ في الآخر تُبقيه كما كان
+  const coveredByT2 = !dark && T2_COVERING.includes(pathname);
   return (
     <>
       <WomenModeNotice />
-      {showsNav(pathname) ? <BottomNav /> : null}
+      {showsNav(pathname) && !coveredByT2 ? <BottomNav /> : null}
     </>
   );
+}
+
+/** المساراتُ التي ترسمها لوحةُ TAXO 2.0 **بلا شريط تبويب** — R14 «الإشعارات». */
+const T2_COVERING = ["/account/notifications"];
+
+/** **المظهرُ المرسومُ أوّلاً** (§61-ب): لوحةُ الراكب نهاريّةٌ وحدَها حتى يُرسم الليليّ — فالشاشةُ
+ *  الجديدةُ في النهاريّ، **والقائمةُ في الليليّ كما هي** حتى يُرسم. لا يُفقد شيءٌ ولا يُخترع. */
+function ByTheme({ day, night }: { day: ReactNode; night: ReactNode }) {
+  const { dark } = useTheme();
+  return <>{dark ? night : day}</>;
 }
 
 /** **الترحيبُ عند كلِّ فتحة** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٠ و١١).
@@ -440,7 +459,10 @@ export default function App() {
                         path="/account/notifications"
                         element={
                           <Guarded>
-                            <NotificationsScreen />
+                            <ByTheme
+                              day={<NotificationsT2Screen />}
+                              night={<NotificationsScreen />}
+                            />
                           </Guarded>
                         }
                       />

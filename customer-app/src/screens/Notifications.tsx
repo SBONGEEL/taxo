@@ -33,9 +33,8 @@ import type { UserNotification } from "@/api/types";
 import { Screen } from "@/components/ui/Screen";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { formatMoney,
-  DISPLAY_LOCALE,
-} from "@/lib/utils";
+import { composeBody, destinationOf } from "@/lib/notification-text";
+import { DISPLAY_LOCALE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 /** الأيقونةُ واللونُ بحسب النوع — والافتراضُ جرسٌ محايد لنوعٍ لا نعرفه. */
@@ -57,37 +56,7 @@ const KIND_STYLE: Record<string, { icon: LucideIcon; tone: string }> = {
   promo: { icon: TicketPercent, tone: "text-ok" },
 };
 
-/** نصُّ الصف مصوغاً من القيم الخام — و`null` يعني «قع على نصّ الخلفية». */
-function composeBody(entry: UserNotification): string | null {
-  const data = entry.data;
-  if (!data) return null;
-
-  const money =
-    data.amount && data.currency
-      ? formatMoney(data.amount, data.currency)
-      : null;
-
-  switch (entry.kind) {
-    case "ride_completed":
-      return money ? `أجرة الرحلة ${money}.` : null;
-    case "cliq_confirmation_expired":
-      return money ? `${money} — تفصل فيها الإدارة الآن.` : null;
-    case "topup_confirmed":
-      return money ? `أُضيف ${money} إلى رصيدك.` : null;
-    default:
-      return null;
-  }
-}
-
-/** أين يذهب الصفُّ حين يُنقر — **من `data` لا من نصّ العنوان**. */
-function destinationOf(entry: UserNotification): string | null {
-  const rideId = entry.data?.ride_id;
-  const bookingId = entry.data?.booking_id;
-  if (bookingId && !rideId) return "/account/bookings";
-  if (rideId) return `/rides/${rideId}`;
-  if (entry.kind === "topup_confirmed") return "/wallet";
-  return null;
-}
+// `composeBody` و`destinationOf` في `lib/notification-text.ts` — بيتٌ واحدٌ للشاشتين
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString(DISPLAY_LOCALE, {
