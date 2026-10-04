@@ -80,7 +80,11 @@ import { useTheme } from "@/lib/theme";
 import { PermissionNotice } from "@/components/PermissionNotice";
 import { digits } from "@/lib/utils";
 
-export function HomeScreen() {
+/** **حالُ الرئيسية وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة، وC04–C08 في `screens/t2`).
+ *
+ * المقبسُ والعرضُ والرحلةُ الجارية وانتقالاتُها وخطُّها وتعليمتُها ووصولُها المتوقَّع، وما بعد الإنهاء (التحصيلُ ثمّ
+ * التقييم) — **رحلةُ كبتنٍ ومالُ راكبٍ تقرؤهما شاشتان، فلا تكتبانهما مرّتين**. فالشاشتان ترسمان، والخطّافُ يفعل. */
+export function useHomeScreen() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { user } = useSession();
@@ -382,6 +386,113 @@ export function HomeScreen() {
 
   // **المستوى `null` لا صفر** حين لا تكون المهامُّ مشغَّلةً في السوق
   const level = progress?.enabled ? progress.level : null;
+
+  return {
+    navigate,
+    user,
+    womenService,
+    profile,
+    activeSkin,
+    preference,
+    dark,
+    toggle,
+    token,
+    online,
+    connecting,
+    ride,
+    offer,
+    transfer,
+    position,
+    error,
+    goOnline,
+    goOffline,
+    setRide,
+    dismissOffer,
+    dismissTransfer,
+    clearError,
+    awaitedOffer,
+    settling,
+    setSettling,
+    rating,
+    setRating,
+    subscription,
+    earnings,
+    storefront,
+    progress,
+    busy,
+    unread,
+    actionError,
+    currencyCode,
+    currency,
+    colleagues,
+    routeLine,
+    steps,
+    thresholdM,
+    eta,
+    instruction,
+    covered,
+    run,
+    advance,
+    goLabel,
+    subscriptionLine,
+    vehicleLine,
+    vehicleNote,
+    level,
+  };
+}
+
+export function HomeScreen() {
+  const {
+    navigate,
+    user,
+    womenService,
+    profile,
+    activeSkin,
+    preference,
+    dark,
+    toggle,
+    token,
+    online,
+    connecting,
+    ride,
+    offer,
+    transfer,
+    position,
+    error,
+    goOnline,
+    goOffline,
+    setRide,
+    dismissOffer,
+    dismissTransfer,
+    clearError,
+    awaitedOffer,
+    settling,
+    setSettling,
+    rating,
+    setRating,
+    earnings,
+    storefront,
+    busy,
+    unread,
+    actionError,
+    currencyCode,
+    currency,
+    colleagues,
+    routeLine,
+    eta,
+    instruction,
+    covered,
+    run,
+    advance,
+    goLabel,
+    subscriptionLine,
+    vehicleLine,
+    vehicleNote,
+    level,
+  } = useHomeScreen();
+  // **يُشتقّ هنا لا يُستلم من الخطّاف** — السطرُ نفسُه هناك: التضييقُ بشرطٍ مُسمّى يحتاج الثابتين في نطاقٍ واحد، فبه
+  // يعرف `tsc` أنّ `ride` رحلةٌ لا `null` في فرع التتبّع
+  const tracking = isActive(ride);
 
   // تسبقان كلَّ شيء: من أنهى رحلةً يُحصّل ثم يُقيّم قبل أن يرى الخريطة
   if (settling) {

@@ -57,6 +57,7 @@ import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
 import { walkDone } from "@/lib/permission-walk";
 import { destinationFor } from "@/lib/notification-route";
 import { listenToPush } from "@/lib/push";
+import { useNavCovered } from "@/lib/navCover";
 import { LoginScreen } from "@/screens/Login";
 
 const RiderNotInstalledScreen = lazy(() =>
@@ -103,6 +104,10 @@ const PendingScreen = lazy(() =>
 // الأولى: من جاء ليسجّل دخوله لا ينتظر محرّك خرائط
 const HomeScreen = lazy(() =>
   import("@/screens/Home").then((m) => ({ default: m.HomeScreen })),
+);
+// **C04–C08 في الداكن المرسوم** — الرئيسيةُ وطلبُها ورحلتُها وتحصيلُها، والمنطقُ من `useHomeScreen` نفسِه
+const HomeT2Screen = lazy(() =>
+  import("@/screens/t2/HomeT2").then((m) => ({ default: m.HomeT2Screen })),
 );
 const RidesScreen = lazy(() =>
   import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
@@ -302,7 +307,8 @@ function DriverHome() {
   if (profile.driver.status === "approved")
     return (
       <>
-        <HomeScreen />
+        {/* **C04–C08 في الداكن المرسوم، والرئيسيةُ القائمةُ في الفاتح** (§61-ب) */}
+        <ByTheme night={<HomeT2Screen />} day={<HomeScreen />} />
         <WelcomeSheet />
         {/* **بعد ورقة الترحيب في ترتيب الرسم**: الاثنتان `z-50`، والأخيرةُ
             تعلو — وهديّةُ أول اشتراكٍ تقع **بعد** أن يقرأ الترحيب ويشترك،
@@ -381,7 +387,10 @@ function NavBar() {
   // فـ`z-50` داخلها لا يعلو `z-30` خارجَها مهما كبر
   const { ride, offer } = useRide();
   const { profile } = useDriver();
-  const covered = ride !== null || offer !== null;
+  // **وشاشةٌ تقول إنها تغطّيه وهي ليست مساراً** (`lib/navCover`): التحصيلُ بعد الإنهاء (C08) — الرحلةُ صارت `null`
+  // والمسارُ `/`، وزرُّه في القاع حيث يطفو الشريط. **ولا يقولها إلا شاشاتُ `screens/t2`** فالفاتحُ كما هو
+  const coveredByScreen = useNavCovered();
+  const covered = ride !== null || offer !== null || coveredByScreen;
   if (covered) return null;
   // **وجولةُ الأذونات شاشةُ قرارٍ تملأ الرئيسية** (عطبٌ قِيس على Note 20
   // 2026-09-17): كان الشريطُ يُرسم فوقها **فيغطّي زرَّ «اسمح بالموقع» و«ليس

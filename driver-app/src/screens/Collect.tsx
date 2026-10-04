@@ -49,12 +49,9 @@ interface Props {
   onDone: () => void;
 }
 
-export function CollectScreen({
-  ride,
-  currencyLabel,
-  currencyFull,
-  onDone,
-}: Props) {
+/** **حالُ التحصيل — بيتٌ واحدٌ للشاشتين** (القائمة وC08 في `screens/t2`): الدفعاتُ تُقرأ وتُعاد قراءتُها كلَّ خمس ثوانٍ
+ *  حتى يختار الراكبُ قناته. **مالُ راكبٍ في يد كبتن تقرؤه شاشتان، فلا تكتبانه مرّتين.** */
+export function useCollectScreen(ride: Ride) {
   const [state, setState] = useState<RidePayments | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,14 +74,12 @@ export function CollectScreen({
     return () => window.clearInterval(timer);
   }, [load]);
 
-  if (!state) {
-    return (
-      <div className="flex h-full items-center justify-center bg-bg">
-        <Spinner />
-      </div>
-    );
-  }
+  return { state, error, setError, busy, setBusy };
+}
 
+/** **أين المالُ الآن — تصنيفٌ واحدٌ للشاشتين**: ما بيده ينتظر تأكيدَه، وما قُيّد له، وما قبضه وأكّده. **ولا حسابَ
+ *  فيه** (§14): كلُّ رقمٍ مبلغُ دفعةٍ أو أجرةٌ من الخلفية كما وصل. */
+export function collectView(state: RidePayments, ride: Ride) {
   // دفعةٌ بيده تنتظر تأكيده — وهي وحدها ما يُقبض الآن
   const pending: Payment | undefined = state.payments.find(
     (payment) => payment.status === "pending" && IN_HAND.has(payment.method),
@@ -119,6 +114,28 @@ export function CollectScreen({
           };
 
   const method = pending?.method ?? kept[0]?.method ?? credited[0]?.method;
+
+  return { pending, credited, kept, commission, mixed, headline, method };
+}
+
+export function CollectScreen({
+  ride,
+  currencyLabel,
+  currencyFull,
+  onDone,
+}: Props) {
+  const { state, error, setError, busy, setBusy } = useCollectScreen(ride);
+
+  if (!state) {
+    return (
+      <div className="flex h-full items-center justify-center bg-bg">
+        <Spinner />
+      </div>
+    );
+  }
+
+  const { pending, credited, kept, commission, mixed, headline, method } =
+    collectView(state, ride);
 
   return (
     <div className="scr flex h-full flex-col justify-center bg-bg px-26 pb-safe pt-safe">

@@ -1,0 +1,1060 @@
+/* الرئيسيةُ والطلبُ والرحلةُ والتحصيل (C04–C08) — **تخطيطُها وحدَه**، بقيم اللوحة («TAXO 2.0 - Captain» · «TaxoMap»).
+ *
+ * **والرموزُ من نظام التصميم** (`src/taxo2/`): لا لونَ مكتوباً هنا. **وما رسمته اللوحةُ ولا رمزَ له** يُكتب
+ * `var(--t2-جديد, var(--t2-أقرب))` ويُطلب رمزُه بقيمته (`design/REDESIGN-PARITY.md` §أ٢)، **والشفافيةُ على لونٍ
+ * مرسوم** (`rgba(255,106,51,.12)` وأخواتُها) تُحسب من رمزه بـ`color-mix` فتتبع السِمةَ الوردية كما يتبعها الجمر.
+ * **والمظهرُ المرسومُ للكبتن هو الداكن** — والشاشاتُ لا تُرسم في غيره (`ByTheme` في `App.tsx`).
+ */
+
+/* ── الجذر: صفحةٌ تتمرّر في الخمول، وإطارٌ ثابتٌ في الطلب والرحلة ─────────────────────────────── */
+/* **وارتفاعُ السطر «normal» والأرقامُ متناسبةٌ كما في اللوحة** — لا 1.5 الموروثةُ من Tailwind ولا `tabular-nums` الجسم
+   (قِيس: كلُّ سطرٍ أطولُ بثلاثةٍ ونصف فتنزل الشاشةُ أربعةً بعد أوّل عنوان). **والقائمُ داخلها يُعاد إلى ما كان عليه** أدناه */
+.t2.t2-hm {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: var(--t2-bg);
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+/* **ما يُرسم بالمكوّن القائم داخلها** (الإذنُ · التحقّقُ · اللافتاتُ · حوالةُ كليك · صورةُ الراكب وورقتُها) — بمقاييسه كما كانت */
+.t2-hm .t2-legacy,
+.t2-hm .t2-rd-avatar {
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+/* الخمولُ (C04): وهجُ الجمر في الزاوية كما رُسم — `radial-gradient(110% 45% at 85% 0%, …13%, … 62%)` */
+.t2.t2-hm.home {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background:
+    radial-gradient(110% 45% at 85% 0%, color-mix(in srgb, var(--t2-accent) 13%, transparent), transparent 62%),
+    var(--t2-bg);
+  /* شريطُ التبويب القائمُ عائمٌ فوق القاع (`BottomNav`) — فيُحجز مكانُه كما تحجزه `pb-nav` */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+.t2.t2-hm.home::-webkit-scrollbar { display: none; }
+
+/* ── C04 · الرأس: العلامة · المستوى · الجرس · الحرف ── */
+.t2-hm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  margin: calc(6px + env(safe-area-inset-top, 0px)) 18px 0;
+}
+.t2-hm-head .t2-wordmark { color: var(--t2-text); }
+.t2-hm-level {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--t2-warning) 30%, transparent);
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--t2-warning) 10%, transparent);
+  color: var(--t2-warning);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-hm-level .t2-icon { font-size: 14px; }
+.t2-hm-gap { flex: 1; }
+.t2-hm-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--t2-card-line);
+  border-radius: 50%;
+  background: var(--t2-glass);
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-hm-bell .t2-icon { font-size: 21px; }
+.t2-hm-bell-dot {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-bg);
+  border-radius: 50%;
+  background: var(--t2-accent);
+}
+.t2-hm-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  box-sizing: border-box;
+  border: 1.5px solid var(--t2-warning);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--t2-avatar-from, var(--t2-dot-off)), var(--t2-sunken));
+  color: var(--t2-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ── C04 · صافي اليوم وشاراتُه ── */
+.t2-hm-earn { margin: 20px 20px 0; }
+.t2-hm-earn-label { font-size: 13px; color: var(--t2-muted); }
+.t2-hm-earn-row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+.t2-hm-earn-num {
+  font-family: var(--t2-font-num);
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t2-text);
+}
+.t2-hm-earn-cur { font-size: 15px; color: var(--t2-muted); }
+.t2-hm-chips { display: flex; gap: 8px; margin-top: 14px; }
+.t2-hm-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line);
+  border-radius: 16px;
+  background: var(--t2-glass);
+  font-size: 12px;
+  color: var(--t2-inverse-muted);
+  white-space: nowrap;
+}
+.t2-hm-chip .t2-icon { font-size: 15px; color: var(--t2-muted); }
+.t2-hm-chip .t2-icon.fill { color: var(--t2-accent); }
+.t2-hm-chip-num {
+  font-family: var(--t2-font-num);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t2-text);
+}
+
+/* ما يبقى فوق زرِّ الاستقبال رغم أنّ اللوحة لا ترسمه (الإذن · الخطأ · تفضيلُ الركّاب) — **لا يظهر إلا حين يكون** */
+.t2-hm-notes { margin: 16px 14px 0; }
+.t2-hm-notes:empty { display: none; }
+.t2-hm-pref {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-accent-line);
+  border-radius: 16px;
+  background: var(--t2-accent-soft);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-hm-pref-text { font-size: 12.5px; font-weight: 600; color: var(--t2-accent-text); }
+.t2-hm-pref-go { font-size: 11.5px; color: var(--t2-muted); text-decoration: underline; }
+
+/* ── الخريطة: عقدةٌ واحدةٌ في الأطوار كلِّها — بطاقةٌ في الخمول، وإطارٌ أعلى الشاشة في الطلب والرحلة ── */
+.t2-hm-map { position: relative; overflow: hidden; background: var(--t2-map-land); }
+.t2-hm.home .t2-hm-map {
+  height: 248px;
+  margin: 30px 14px 0;
+  border-radius: 30px;
+  box-shadow: 0 0 0 1px var(--t2-edge), var(--t2-map-card-shadow, var(--t2-float-shadow));
+}
+/* **الموسَّعةُ ملءُ الشاشة** (قرارُ المالك 2026-08-30 — «توسيع» في الشاشة القائمة) */
+.t2-hm.home .t2-hm-map.open {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  height: auto;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.t2-hm.offer .t2-hm-map { position: absolute; top: 0; left: 0; right: 0; height: 300px; }
+/* **والرحلةُ: الخريطةُ تنتهي تحت حافّة الورقة بخمسين** كما رُسمت (540 فوق ورقةٍ تبدأ عند 490) — والورقةُ تُقاس فتتبعها */
+.t2-hm.ride .t2-hm-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--t2-sheet-h, 354px) - 50px);
+}
+/* شعارُ Mapbox ونسبتُه **فوق ما يغطّيه** — شرطُ الرخصة مرئيٌّ لا مرسومٌ تحت زرّ */
+.t2-hm.home .t2-hm-map:not(.open) .mapboxgl-ctrl-bottom-left,
+.t2-hm.home .t2-hm-map:not(.open) .mapboxgl-ctrl-bottom-right { bottom: 70px; }
+.t2-hm.home .t2-hm-map.open .mapboxgl-ctrl-bottom-left,
+.t2-hm.home .t2-hm-map.open .mapboxgl-ctrl-bottom-right { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.t2-hm.ride .t2-hm-map .mapboxgl-ctrl-bottom-left,
+.t2-hm.ride .t2-hm-map .mapboxgl-ctrl-bottom-right { bottom: 50px; }
+
+/* تدرّجُ البطاقة: قاتمٌ في الأعلى والأسفل لتُقرأ الشارةُ والزرّ — `rgba(14,16,19,.55) → 0 26% → 0 58% → .75` */
+.t2-hm-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    color-mix(in srgb, var(--t2-bg) 55%, transparent),
+    transparent 26%,
+    transparent 58%,
+    color-mix(in srgb, var(--t2-bg) 75%, transparent)
+  );
+}
+.t2-hm-map.open .t2-hm-shade { display: none; }
+
+/* شارةُ أعلى البطاقة (موضعُ «خريطة الطلب») — **وهي «توسيع» هنا**: الخريطةُ الحراريةُ لا مصدرَ لها، والتوسيعُ ميزةٌ قائمة */
+.t2-hm-mapchip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border: 1px solid color-mix(in srgb, var(--t2-text) 8%, transparent);
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--t2-bg) 70%, transparent);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-hm-mapchip .t2-icon { font-size: 15px; color: var(--t2-accent); }
+.t2-hm-map.open .t2-hm-mapchip {
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  padding: 0;
+  border-color: var(--t2-line);
+  background: var(--t2-surface);
+}
+.t2-hm-map.open .t2-hm-mapchip .t2-icon { font-size: 22px; color: var(--t2-text); }
+
+/* ── زرُّ الموقع (من `MapView` بـ`t2`) — دائرةُ اللوحة، وموضعُه بحسب الطور ── */
+.t2-maploc {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-maploc.free { color: var(--t2-muted); }
+/* البطاقة: ٣٦ في الزاوية — `top:10px;left:10px` وزجاجُ الشارة */
+.t2-hm.home .t2-maploc {
+  top: 10px;
+  left: 10px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid color-mix(in srgb, var(--t2-text) 8%, transparent);
+  background: color-mix(in srgb, var(--t2-bg) 70%, transparent);
+}
+.t2-hm.home .t2-maploc .t2-icon { font-size: 19px; }
+.t2-hm.home .t2-hm-map.open .t2-maploc { top: calc(14px + env(safe-area-inset-top, 0px)); left: 16px; width: 44px; height: 44px; }
+/* الرحلة: ٤٨ في الطرف كما رُسم (C06: `left:16px`) — **وفوق شعار Mapbox لا عليه** (الشعارُ فوق حافّة الورقة بخمسين، وارتفاعُه ٢٣) */
+.t2-hm.ride .t2-maploc {
+  left: 16px;
+  bottom: 88px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--t2-line);
+  background: var(--t2-surface);
+}
+.t2-hm.ride .t2-maploc .t2-icon { font-size: 24px; }
+/* **والطلبُ لا يرسمه** (C05) — الكاميرا تضمّ الدبوسين فلا متابعةَ تُبدَّل، **وفي الشاشة القائمة تغطّيه البطاقةُ وعتمتُها** */
+.t2-hm.offer .t2-maploc { display: none; }
+
+/* ── زرُّ الاستقبال: حبّةُ الجمر في قاع البطاقة (متصل)، وسطحٌ بحافّةٍ حين لا يستقبل ── */
+.t2-hm-go {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+  padding: 0 8px 0 18px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 99px;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-hm-map.open .t2-hm-go { left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.t2-hm-go.on {
+  background: linear-gradient(90deg, var(--t2-accent-hi, var(--t2-accent)), var(--t2-accent));
+  color: var(--t2-on-accent);
+  box-shadow: 0 10px 30px -6px color-mix(in srgb, var(--t2-accent) 55%, transparent);
+}
+.t2-hm-go.off {
+  border: 1px solid var(--t2-line);
+  background: var(--t2-surface);
+  color: var(--t2-text);
+}
+.t2-hm-go:disabled { opacity: 0.6; cursor: default; }
+.t2-hm-go-dot { position: relative; flex: none; width: 10px; height: 10px; }
+.t2-hm-go-dot > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--t2-on-accent);
+}
+.t2-hm-go.off .t2-hm-go-dot > i { background: var(--t2-dot-off); }
+/* «txpulse»: نسخةٌ تتّسع وتخبو كلَّ ١٫٨ ثانية — **ولا نبضَ لمن طلب تقليلَ الحركة** */
+.t2-hm-go.on .t2-hm-go-dot > i.pulse { animation: t2-hm-pulse 1.8s ease-out infinite; }
+@keyframes t2-hm-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t2-hm-go.on .t2-hm-go-dot > i.pulse { animation: none; opacity: 0; }
+}
+.t2-hm-go-text { flex: 1; min-width: 0; line-height: 1.35; }
+.t2-hm-go-title { display: block; font-size: 15px; font-weight: 700; }
+.t2-hm-go-sub { display: block; font-size: 11.5px; font-weight: 600; opacity: 0.85; }
+.t2-hm-go.off .t2-hm-go-sub { color: var(--t2-muted); opacity: 1; }
+.t2-hm-go-power {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--t2-bg);
+  color: var(--t2-accent);
+}
+.t2-hm-go.off .t2-hm-go-power { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-hm-go-power .t2-icon { font-size: 22px; }
+
+/* ── C04 · خدماتك ── */
+.t2-hm-svc-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 16px 18px 0;
+}
+.t2-hm-svc-title { font-size: 15px; font-weight: 700; }
+.t2-hm-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 7px 14px 0;
+}
+.t2-hm-tile {
+  position: relative;
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line);
+  border-radius: 22px;
+  background: linear-gradient(160deg, var(--t2-tile-from, var(--t2-card-deep)), var(--t2-tile-to, var(--t2-well-deep)));
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+}
+button.t2-hm-tile { cursor: pointer; }
+.t2-hm-tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.t2-hm-tile-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--t2-accent) 12%, transparent);
+  color: var(--t2-accent);
+}
+.t2-hm-tile-icon.ok { background: color-mix(in srgb, var(--t2-success) 12%, transparent); color: var(--t2-success); }
+.t2-hm-tile-icon .t2-icon { font-size: 21px; }
+.t2-hm-tile-tag {
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--t2-accent) 12%, transparent);
+  color: var(--t2-accent);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-hm-tile-tag.ok { background: color-mix(in srgb, var(--t2-success) 12%, transparent); color: var(--t2-success); }
+.t2-hm-tile-tag.new { background: var(--t2-text); color: var(--t2-bg); }
+.t2-hm-tile-tag.soon { background: var(--t2-glass); color: var(--t2-muted); }
+.t2-hm-tile-title {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* **وصفُ البلاطة كما كتبه المشرف** (`subtitle`) — سطرٌ تحت الاسم؛ والبلاطةُ تطول له ولا تقصّه شارةً لا تتّسع */
+.t2-hm-tile-sub {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  font-size: 10.5px;
+  color: var(--t2-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ما يبقى تحت البلاطات رغم أنّ اللوحة لا ترسمه: اللافتات · الاشتراك · المركبة */
+.t2-hm-more { margin: 12px 14px 0; }
+.t2-hm-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-hm-row .t2-icon { font-size: 20px; color: var(--t2-warning); }
+.t2-hm-row-main { flex: 1; min-width: 0; }
+.t2-hm-row-title { font-size: 13px; font-weight: 600; }
+.t2-hm-row-sub { margin-top: 2px; font-size: 11.5px; color: var(--t2-muted); }
+.t2-hm-row-go { font-size: 12px; font-weight: 700; }
+.t2-hm-row .t2-icon.go { color: var(--t2-muted); }
+
+/* لافتاتُ اللوحة بجلد الهوية الليليّ — بطاقةُ الجمر بشريطها كما رُسمت للراكب (R05)، والصندوقُ وسلوكُه من `PromoBanners` */
+.t2-hm-promo { margin-bottom: 8px; overflow: hidden; border-radius: 24px; background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-hm-promo img { display: block; width: 100%; object-fit: cover; }
+.t2-hm-promo-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 84px;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.t2-hm-promo-stripe {
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  width: 170px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--t2-bg);
+  opacity: 0.12;
+  transform: translateY(-50%) rotate(-40deg);
+  pointer-events: none;
+}
+.t2-hm-promo-text { position: relative; flex: 1; min-width: 0; }
+.t2-hm-promo-title { font-size: 14px; font-weight: 700; }
+.t2-hm-promo-body { margin-top: 2px; font-size: 12px; }
+.t2-hm-promo-go { position: relative; flex: none; font-size: 24px; }
+.t2-hm-promo-dots { display: flex; justify-content: center; gap: 5px; margin-bottom: 12px; }
+.t2-hm-promo-dot { display: block; width: 5px; height: 5px; padding: 0; border: 0; border-radius: 3px; background: var(--t2-line); }
+.t2-hm-promo-dot.on { width: 14px; background: var(--t2-muted); }
+
+/* ── الخريطةُ بلغة «TaxoMap»: دبوسا الانطلاق والوجهة (علاماتٌ يرسمها `MapView` بـ`t2`) ── */
+.t2-map-pin {
+  display: block;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 5px solid var(--t2-map-pin-ring, var(--t2-text));
+  box-shadow: var(--t2-map-pin-shadow);
+}
+.t2-map-pin.from { border-radius: 50%; background: var(--t2-map-pin-ink, var(--t2-on-accent)); }
+.t2-map-pin.to { border-radius: 6px; background: var(--t2-accent); }
+
+/* ── C05 · طلبٌ وارد ── */
+/* **فوق رحلةٍ جارية** تُعتَّم الورقةُ تحته كما تُعتَّم في الشاشة القائمة */
+.t2-of-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  background: color-mix(in srgb, var(--t2-bg) 62%, transparent);
+}
+.t2-of {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) - 6px));
+  z-index: 20;
+}
+/* «نغمة + اهتزاز» فوق البطاقة — **حالُ الصوت لا زينة** (الشاشةُ القائمة)، بلغة رأس الورقة في C05·B */
+.t2-of-ring-note {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 10px;
+  padding: 7px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  background: var(--t2-surface);
+  color: var(--t2-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+.t2-of-bars { display: flex; align-items: center; gap: 2.5px; height: 14px; }
+.t2-of-bars > i { display: block; width: 3px; border-radius: 2px; background: var(--t2-accent); }
+.t2-of-bars > i:nth-child(1) { height: 6px; }
+.t2-of-bars > i:nth-child(2) { height: 14px; }
+.t2-of-bars > i:nth-child(3) { height: 9px; }
+.t2-of-bars > i:nth-child(4) { height: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-of-bars > i { animation: t2-of-eq 0.9s ease-in-out infinite alternate; transform-origin: center; }
+  .t2-of-bars > i:nth-child(2) { animation-delay: 0.15s; }
+  .t2-of-bars > i:nth-child(3) { animation-delay: 0.3s; }
+  .t2-of-bars > i:nth-child(4) { animation-delay: 0.45s; }
+}
+@keyframes t2-of-eq {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.45); }
+}
+.t2-of-card {
+  padding: 20px 18px 18px;
+  border: 1px solid var(--t2-line);
+  border-radius: 32px;
+  background: var(--t2-surface);
+  box-shadow: var(--t2-offer-shadow, var(--t2-float-shadow));
+}
+.t2-of-top { display: flex; align-items: center; gap: 14px; }
+.t2-of-timer { position: relative; flex: none; width: 58px; height: 58px; }
+.t2-of-timer svg { display: block; transform: rotate(-90deg); }
+.t2-of-timer-track { stroke: var(--t2-line); }
+.t2-of-timer-arc { stroke: var(--t2-accent); transition: stroke-dashoffset 1s linear; }
+@media (prefers-reduced-motion: reduce) { .t2-of-timer-arc { transition: none; } }
+.t2-of-timer-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--t2-font-num);
+  font-size: 17px;
+  font-weight: 700;
+}
+.t2-of-head { flex: 1; min-width: 0; }
+.t2-of-kind { font-size: 13px; color: var(--t2-muted); }
+.t2-of-fare { display: flex; align-items: baseline; gap: 6px; }
+.t2-of-fare-num {
+  font-family: var(--t2-font-num);
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.t2-of-fare-cur { font-size: 15px; color: var(--t2-muted); }
+/* شاراتُ الطلب القائمة — **تُقرأ قبل القبول** (نسائي · مشتركة · محجوزة · محطات · مبلغٌ لكبتنٍ آخر) */
+.t2-of-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.t2-of-tag {
+  padding: 4px 10px;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  background: var(--t2-sunken);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-of-tag.women { border-color: var(--t2-women-line); background: var(--t2-women-soft); color: var(--t2-women); }
+.t2-of-tag.warn { color: var(--t2-warning); }
+.t2-of-near { display: flex; align-items: center; gap: 8px; margin: 16px 0 10px; font-size: 14px; font-weight: 600; }
+.t2-of-near .t2-icon { font-size: 20px; color: var(--t2-accent); }
+.t2-of-route {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--t2-sunken);
+}
+.t2-of-from { width: 10px; height: 10px; border-radius: 50%; background: var(--t2-text); }
+.t2-of-link { justify-self: center; width: 2px; height: 14px; background: var(--t2-dot-off); }
+.t2-of-to { width: 10px; height: 10px; border-radius: 3px; background: var(--t2-accent); }
+.t2-of-place { min-width: 0; font-size: 14.5px; font-weight: 600; }
+.t2-of-trip { font-size: 12px; color: var(--t2-muted); }
+.t2-of-actions { display: flex; gap: 8px; margin-top: 16px; }
+.t2-of-decline,
+.t2-of-accept {
+  display: flex;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 20px;
+  font: inherit;
+  cursor: pointer;
+}
+.t2-of-decline {
+  flex: 1;
+  border: 1.5px solid var(--t2-dot-off);
+  background: none;
+  color: var(--t2-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+.t2-of-accept {
+  flex: 2.4;
+  gap: 8px;
+  border: 0;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+.t2-of-accept .t2-icon { font-size: 24px; }
+.t2-of-decline:disabled,
+.t2-of-accept:disabled { opacity: 0.5; cursor: default; }
+
+/* ── C06 · C07 · التعليمةُ التالية — بالجمر في الطريق إلى الراكب، وبالسطح أثناء الرحلة ── */
+.t2-rd-nav {
+  position: absolute;
+  top: calc(6px + env(safe-area-inset-top, 0px));
+  left: 12px;
+  right: 12px;
+  z-index: 15;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: var(--t2-nav-shadow, var(--t2-float-shadow));
+  pointer-events: none;
+}
+.t2-rd-nav-main { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+.t2-rd-nav.approach .t2-rd-nav-main { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-rd-nav.trip { border: 1px solid var(--t2-line); background: var(--t2-surface); }
+/* **ارتفاعُ البطاقة ارتفاعُ مربّع السهم المرسوم (٥٢)** — والسهمُ لا مصدرَ له فلا يُرسم، والبطاقةُ لا تقصر لغيابه */
+.t2-rd-nav.trip .t2-rd-nav-main { min-height: 52px; }
+.t2-rd-nav-text { flex: 1; min-width: 0; }
+.t2-rd-nav-dist { display: flex; align-items: baseline; gap: 5px; }
+.t2-rd-nav-num { font-family: var(--t2-font-num); font-size: 26px; font-weight: 700; line-height: 1.1; }
+.t2-rd-nav.trip .t2-rd-nav-num { font-size: 24px; }
+.t2-rd-nav-unit { font-size: 15px; font-weight: 700; }
+.t2-rd-nav-say { margin-top: 2px; font-size: 14px; font-weight: 600; }
+.t2-rd-nav.trip .t2-rd-nav-say { font-size: 13.5px; }
+.t2-rd-nav-then {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: var(--t2-surface);
+  color: var(--t2-inverse-muted);
+  font-size: 12.5px;
+}
+
+/* ── الورقة: مقبضٌ ثمّ الرأسُ والراكبُ وما بقي من الرحلة والزرّ ── */
+.t2-rd-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 10px 18px max(16px, calc(env(safe-area-inset-bottom, 0px) - 2px));
+  box-sizing: border-box;
+  border-top: 1px solid var(--t2-line);
+  border-radius: 30px 30px 0 0;
+  background: var(--t2-surface);
+}
+.t2-rd-sheet::-webkit-scrollbar { display: none; }
+.t2-rd-grab { width: 40px; height: 5px; margin: 0 auto 14px; border-radius: 3px; background: var(--t2-dot-off); }
+.t2-rd-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.t2-rd-head.trip { align-items: flex-end; margin-bottom: 0; }
+.t2-rd-head-main { flex: 1; min-width: 0; }
+.t2-rd-big { display: flex; align-items: baseline; gap: 8px; }
+.t2-rd-big-num { font-family: var(--t2-font-num); font-size: 28px; font-weight: 700; }
+.t2-rd-big-unit { font-size: 14px; font-weight: 600; }
+.t2-rd-big-title { font-size: 18px; font-weight: 700; }
+.t2-rd-caption { font-size: 12.5px; color: var(--t2-muted); }
+.t2-rd-to { font-size: 18px; font-weight: 700; }
+.t2-rd-left { margin-top: 2px; font-size: 12.5px; color: var(--t2-muted); }
+.t2-rd-fare { flex: none; text-align: end; }
+.t2-rd-fare-row { display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; }
+.t2-rd-fare-num { font-family: var(--t2-font-num); font-size: 24px; font-weight: 700; }
+.t2-rd-fare-cur { font-size: 12px; color: var(--t2-muted); }
+.t2-rd-fare-note { font-size: 11.5px; color: var(--t2-muted); }
+.t2-rd-navbtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  flex: none;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-rd-navbtn .t2-icon { font-size: 18px; }
+.t2-rd-rider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--t2-sunken);
+}
+/* **صورةُ الراكب بزرّها وورقة بلاغها** (`RiderAvatar` كما هو) — بمقاس اللوحة ولونها */
+.t2-rd-avatar > button { width: 44px; height: 44px; border: 0; background: var(--t2-line); }
+.t2-rd-rider-main { flex: 1; min-width: 0; }
+.t2-rd-rider-name { font-size: 15px; font-weight: 700; }
+.t2-rd-rider-sub {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--t2-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.t2-rd-rider-share { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: var(--t2-muted); }
+.t2-rd-rider-fare { flex: none; text-align: end; }
+.t2-rd-rider-fare-num { font-family: var(--t2-font-num); font-size: 15px; font-weight: 700; }
+.t2-rd-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+.t2-rd-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+button.t2-rd-chip { cursor: pointer; }
+.t2-rd-chip .t2-icon { font-size: 16px; }
+.t2-rd-chip.avatar { padding-inline-start: 5px; }
+.t2-rd-chip .t2-rd-avatar > button { width: 20px; height: 20px; }
+
+/* المحطاتُ بعناوينها، وعدّادُ الانتظار ورسمُه — **العدّادُ محليٌّ يتقدّم، والمبلغُ من الخلفية** */
+.t2-rd-strip {
+  margin-top: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-sunken);
+}
+.t2-rd-strip.warn { border-color: var(--t2-warning); }
+.t2-rd-strip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; }
+.t2-rd-strip-label { font-weight: 700; }
+.t2-rd-strip-min { color: var(--t2-muted); }
+.t2-rd-strip-end { margin-inline-start: auto; font-weight: 700; }
+.t2-rd-strip-warn { margin-top: 6px; font-size: 11px; line-height: 1.6; color: var(--t2-warning); }
+.t2-rd-stops { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 8px 10px; }
+.t2-rd-stop-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--t2-dot-off); }
+.t2-rd-stop-dot.done { background: var(--t2-success); }
+.t2-rd-stop-dot.here { box-sizing: border-box; border: 2px solid var(--t2-text); background: none; }
+.t2-rd-stop-name { min-width: 0; overflow: hidden; font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; }
+.t2-rd-stop-name.done { color: var(--t2-muted); }
+.t2-rd-stop-tag { font-size: 11px; font-weight: 600; color: var(--t2-muted); }
+.t2-rd-stop-tag.here { color: var(--t2-text); }
+.t2-rd-wait { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px; }
+.t2-rd-wait > span:first-child { color: var(--t2-muted); }
+.t2-rd-wait > span:last-child { font-weight: 600; }
+
+/* الأزرار: الفعلُ بالجمر ٦٠، والثانويُّ بحافّة، والإلغاءُ نصّاً */
+.t2-rd-btn {
+  display: flex;
+  width: 100%;
+  height: 60px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-rd-btn.ghost {
+  height: 52px;
+  border: 1.5px solid var(--t2-dot-off);
+  background: none;
+  color: var(--t2-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.t2-rd-btn.ghost.ok { border-color: var(--t2-success); color: var(--t2-success); }
+.t2-rd-btn:disabled { opacity: 0.5; cursor: default; }
+.t2-rd-cancel {
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.t2-rd-error { margin-top: 10px; }
+
+/* «اسحب لإنهاء الرحلة» — مقبضُ الجمر في البداية، ويُسحب إلى النهاية؛ **ولمسةٌ لا تُنهي رحلة** */
+.t2-rd-swipe {
+  position: relative;
+  display: flex;
+  height: 66px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  background: var(--t2-sunken);
+  touch-action: none;
+  user-select: none;
+}
+.t2-rd-swipe-label { display: flex; align-items: center; gap: 4px; font-size: 14.5px; font-weight: 600; color: var(--t2-muted); }
+.t2-rd-swipe-label .t2-icon { font-size: 18px; opacity: 0.5; }
+.t2-rd-swipe-knob {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  display: flex;
+  width: 54px;
+  height: 54px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  transform: translate(calc(-1 * var(--drag, 0px)), -50%);
+  transition: transform var(--t2-med) var(--t2-ease-out);
+  cursor: grab;
+}
+.t2-rd-swipe.dragging .t2-rd-swipe-knob { transition: none; cursor: grabbing; }
+.t2-rd-swipe-knob .t2-icon { font-size: 26px; }
+.t2-rd-swipe.busy { opacity: 0.6; }
+
+/* ورقةُ أسباب الإلغاء بلغة الهوية — **الأسبابُ والشرطُ والنصُّ من الورقة القائمة** */
+.t2-rd-cx-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: color-mix(in srgb, var(--t2-bg) 62%, transparent);
+}
+.t2-rd-cx-sheet {
+  padding: 10px 18px max(24px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--t2-line);
+  border-radius: 30px 30px 0 0;
+  background: var(--t2-surface);
+}
+.t2-rd-cx-title { margin: 0; font-size: 18px; font-weight: 700; }
+.t2-rd-cx-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.t2-rd-cx-opt {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-rd-cx-opt.on { border-color: var(--t2-accent-line); background: var(--t2-accent-soft); color: var(--t2-accent-text); font-weight: 700; }
+.t2-rd-cx-radio { width: 18px; height: 18px; flex: none; box-sizing: border-box; border: 2px solid var(--t2-dot-off); border-radius: 50%; }
+.t2-rd-cx-opt.on .t2-rd-cx-radio { border: 5px solid var(--t2-accent); }
+.t2-rd-cx-note {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--t2-sunken);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+.t2-rd-cx-confirm {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-danger);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-rd-cx-confirm:disabled { opacity: 0.5; cursor: default; }
+
+/* ── C08 · إنهاءُ الرحلة والتحصيل ── */
+.t2.t2-co {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 20px max(34px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  scrollbar-width: none;
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2.t2-co::-webkit-scrollbar { display: none; }
+.t2-co-loading { display: flex; flex: 1; align-items: center; justify-content: center; }
+.t2-co-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.t2-co-done {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--t2-success-soft);
+  color: var(--t2-success);
+}
+.t2-co-done .t2-icon { font-size: 26px; }
+.t2-co-title { font-size: 22px; font-weight: 700; }
+.t2-co-sub { font-size: 13px; color: var(--t2-muted); }
+.t2-co-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 28px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+}
+.t2-co-card.calm { background: var(--t2-surface); color: var(--t2-text); }
+.t2-co-stripe {
+  position: absolute;
+  left: -40px;
+  bottom: -24px;
+  width: 200px;
+  height: 40px;
+  border-radius: 20px;
+  background: var(--t2-bg);
+  opacity: 0.1;
+  transform: rotate(45deg);
+}
+.t2-co-caption { position: relative; font-size: 14px; font-weight: 700; }
+.t2-co-amount { position: relative; display: flex; align-items: baseline; gap: 6px; margin: 2px 0 6px; }
+.t2-co-amount-num {
+  font-family: var(--t2-font-num);
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.t2-co-amount-cur { font-size: 17px; font-weight: 700; }
+.t2-co-split { position: relative; font-size: 13px; line-height: 1.6; }
+.t2-co-rows {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 0;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  font-size: 13.5px;
+}
+.t2-co-k { color: var(--t2-muted); }
+.t2-co-k.strong,
+.t2-co-v.strong { color: var(--t2-text); font-weight: 700; }
+.t2-co-v { font-weight: 500; }
+.t2-co-v.ok { color: var(--t2-success); }
+.t2-co-k .t2-co-pill {
+  margin-inline-start: 6px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--t2-success-soft);
+  color: var(--t2-success);
+  font-size: 11px;
+  font-weight: 600;
+}
+.t2-co-note { display: flex; align-items: flex-start; gap: 8px; margin: 12px 2px 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+.t2-co-note .t2-icon { font-size: 18px; line-height: 1.3; }
+.t2-co-rate { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding: 0 2px; }
+.t2-co-rate-title { font-size: 15px; font-weight: 700; }
+.t2-co-stars { display: flex; gap: 3px; }
+.t2-co-star { padding: 0; border: 0; background: none; color: var(--t2-dot-off); cursor: pointer; }
+.t2-co-star .t2-icon { font-size: 30px; }
+.t2-co-star.on { color: var(--t2-accent); }
+.t2-co-gap { flex: 1; min-height: 20px; }
+.t2-co-btn {
+  display: flex;
+  width: 100%;
+  height: 62px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-co-btn:disabled { opacity: 0.5; cursor: default; }
+.t2-co-skip {
+  display: block;
+  width: 100%;
+  margin: 14px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.t2-co-error { margin-bottom: 10px; }

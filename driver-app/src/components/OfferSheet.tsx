@@ -30,15 +30,8 @@ interface Props {
   onDecline: () => void;
 }
 
-export function OfferSheet({
-  offer,
-  currencyLabel,
-  categoryLabel,
-  methodLabel,
-  busy,
-  onAccept,
-  onDecline,
-}: Props) {
+/** **ثوانٍ باقيةٌ من لحظة الانتهاء — بيتٌ واحدٌ للبطاقتين** (القائمة وC05 في `screens/t2`). */
+export function useOfferCountdown(offer: Offer): number {
   const [left, setLeft] = useState(() =>
     Math.max(0, Math.ceil((offer.expiresAt - Date.now()) / 1_000)),
   );
@@ -49,6 +42,20 @@ export function OfferSheet({
     }, 250);
     return () => window.clearInterval(timer);
   }, [offer.expiresAt]);
+
+  return left;
+}
+
+export function OfferSheet({
+  offer,
+  currencyLabel,
+  categoryLabel,
+  methodLabel,
+  busy,
+  onAccept,
+  onDecline,
+}: Props) {
+  const left = useOfferCountdown(offer);
 
   const offset = Math.round((1 - left / offer.totalSeconds) * DASH);
 

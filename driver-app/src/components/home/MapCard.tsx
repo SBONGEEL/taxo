@@ -38,7 +38,8 @@ interface Props {
   expandedStatus?: ReactNode;
 }
 
-export function MapCard({ children, badge, action, expandedStatus }: Props) {
+/** **توسيعُ البطاقة وزرُّ الجهاز الخلفيّ — بيتٌ واحدٌ للبطاقتين** (القائمة، وC04 في `screens/t2`). */
+export function useMapExpand() {
   const [open, setOpen] = useState(false);
 
   // **زرُّ الجهاز الخلفيُّ يغلقها قبل أن يغادر الشاشة** — ومن ضغطه وهو يرى
@@ -54,6 +55,12 @@ export function MapCard({ children, badge, action, expandedStatus }: Props) {
       if (window.history.state?.map) window.history.back();
     };
   }, [open]);
+
+  return { open, setOpen };
+}
+
+export function MapCard({ children, badge, action, expandedStatus }: Props) {
+  const { open, setOpen } = useMapExpand();
 
   return (
     <div

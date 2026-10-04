@@ -25,7 +25,8 @@ interface Props {
   onDone: () => void;
 }
 
-export function RateRiderScreen({ ride, onDone }: Props) {
+/** **حالُ التقييم وإرسالُه — بيتٌ واحدٌ للشاشتين** (القائمة، ونجومُ C08 في `screens/t2`). */
+export function useRateRider(ride: Ride, onDone: () => void) {
   const [stars, setStars] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,6 +50,12 @@ export function RateRiderScreen({ ride, onDone }: Props) {
       setBusy(false);
     }
   }
+
+  return { stars, setStars, error, busy, submit };
+}
+
+export function RateRiderScreen({ ride, onDone }: Props) {
+  const { stars, setStars, error, busy, submit } = useRateRider(ride, onDone);
 
   return (
     <div className="flex h-full flex-col justify-center bg-bg px-28 pb-safe pt-safe text-center">

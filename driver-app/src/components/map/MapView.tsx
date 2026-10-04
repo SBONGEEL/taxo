@@ -84,7 +84,78 @@ interface Props {
    *  مفتوحةٍ في سوقه» فلا يُرسم شيءٌ ولا يُقال شيء. */
   colleagues?: NearbyDriver[] | null;
   className?: string;
+  /** **خريطةُ TAXO 2.0 بلغة «TaxoMap»** (C04–C07، الليليُّ المرسوم وحدَه): الأرضُ والحدائقُ والطرقُ من رموز `--t2-map-*`
+   *  بلا أسماءٍ ولا معالم، ودبوسا الهوية، وخطُّ الجمر فوق ظلّه، وزرُّ الموقع بلغة اللوحة — **والوصولُ المتوقَّعُ في
+   *  الورقة لا فوق الخريطة**. **ولا يمرّره إلا `screens/t2`**: الشاشاتُ القائمةُ بخريطتها كما هي حرفاً. */
+  t2?: boolean;
+  /** **ما مضى من المسار يُرسم خافتاً** (C07) بدل أن يُقصّ — والباقي بالجمر فوقه. مع `t2` وحدَه. */
+  routeTraveled?: boolean;
 }
+
+/** الطرقُ الكبرى بلون الطريق، وما سواها بلون الشارع — كما في خريطة الراكب (`customer-app/components/map`). */
+const MAJOR_ROADS = [
+  "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
+  "secondary", "secondary_link", "tertiary", "tertiary_link",
+];
+const ARTERIAL_ROADS = ["motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link"];
+
+/** **صبغُ الخريطة بلغة الهوية** — منقولٌ من خريطة الراكب بحرفه: الأرضُ والحدائقُ والطرقُ من رموز `--t2-map-*` على الحاوية
+ *  (وفي الليليّ قيمُ «TaxoMap» الداكنة)، **وكلُّ اسمٍ ومَعلمٍ ومبنى وحدٍّ يُخفى**. والألوانُ تُقرأ من الرموز لا تُكتب هنا:
+ *  `paint` في mapbox لا يقرأ `var()`. **وبلا رموزٍ لا صبغ** — تبقى القاعدةُ كما هي، ولا لونَ يُخترع. */
+function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
+  const css = getComputedStyle(host);
+  const token = (name: string) => css.getPropertyValue(name).trim();
+  const land = token("--t2-map-land");
+  const park = token("--t2-map-park");
+  const road = token("--t2-map-road");
+  const minor = token("--t2-map-road-minor");
+  if (!land || !park || !road || !minor) return;
+  const clutter = /building|^admin|waterway|-case|road-(path|steps|pedestrian|rail|construction)|aeroway|ferry|aerialway|transit|hillshade|contour/;
+  for (const layer of instance.getStyle()?.layers ?? []) {
+    const { id, type } = layer;
+    try {
+      if (type === "symbol" || clutter.test(id)) {
+        instance.setLayoutProperty(id, "visibility", "none");
+      } else if (type === "background") {
+        instance.setPaintProperty(id, "background-color", land);
+      } else if (type === "fill" && id === "land") {
+        instance.setPaintProperty(id, "fill-color", land);
+      } else if (type === "fill" && (id.startsWith("landcover") || id.startsWith("national-park"))) {
+        instance.setPaintProperty(id, "fill-color", park);
+      } else if (type === "fill" && id.startsWith("landuse")) {
+        instance.setPaintProperty(id, "fill-color", [
+          "match", ["get", "class"],
+          ["park", "pitch", "grass", "wood", "scrub", "garden", "national_park", "cemetery"], park,
+          land,
+        ]);
+      } else if (type === "line" && /^(road|bridge|tunnel)-/.test(id)) {
+        instance.setPaintProperty(id, "line-color", ["match", ["get", "class"], MAJOR_ROADS, road, minor]);
+        instance.setPaintProperty(id, "line-opacity", [
+          "interpolate", ["linear"], ["zoom"],
+          13, ["match", ["get", "class"], ARTERIAL_ROADS, 1, 0],
+          14.5, 1,
+        ]);
+      }
+    } catch {
+      // طبقةٌ لا تحمل هذه الخاصّية — تُترك كما هي
+    }
+  }
+}
+
+/** **الانطلاقُ دائرةٌ بالحبر، والوجهةُ مربّعٌ بالجمر** — «لغة الخريطة» في الهوية بحافّةٍ بيضاء (أصنافُها في `screens/t2/ride.css`). */
+function t2PinElement(kind: "from" | "to", label: string): HTMLElement {
+  const element = document.createElement("div");
+  element.setAttribute("aria-label", label);
+  element.innerHTML = `<span class="t2-map-pin ${kind}"></span>`;
+  return element;
+}
+
+/** أيقونةُ زرِّ الموقع بلغة اللوحة لكلِّ طور — **والطورُ يُقرأ من الأيقونة واسمِ الزرّ** كما في الشاشات القائمة. */
+const T2_FOLLOW_ICON: Record<FollowMode, string> = {
+  follow: "my_location",
+  heading: "navigation",
+  free: "location_searching",
+};
 
 const DEFAULT_CENTER: Coordinates = { lat: 31.9539, lng: 35.9106 };
 
@@ -146,6 +217,8 @@ export function MapView({
   subscribed = true,
   colleagues = null,
   className,
+  t2 = false,
+  routeTraveled = false,
 }: Props) {
   const { dark } = useTheme();
   const host = useRef<HTMLDivElement | null>(null);
@@ -204,6 +277,15 @@ export function MapView({
     map.current.on("dragstart", release);
     map.current.on("rotatestart", release);
     map.current.on("pitchstart", release);
+    // **صبغُ «TaxoMap» مع كلِّ ستايلٍ يُحمَّل** — تبديلُ الستايل يمسح الصبغَ كما يمسح الطبقات
+    if (t2) {
+      const instance = map.current;
+      instance.on("style.load", () => {
+        if (host.current) calmLook(instance, host.current);
+      });
+      // **في التطوير وحدَه**: الخريطةُ على حاويتها، فيُقرأ ما رُسم (الطبقاتُ وألوانُها) من المتصفّح لا ظنّاً — كخريطة الراكب
+      if (import.meta.env.DEV) (host.current as unknown as { __map?: mapboxgl.Map }).__map = instance;
+    }
 
     // **الحاويةُ تتبدّل فتتبدّل معها اللوحة** (2026-08-30): البطاقةُ تتوسّع
     // إلى ملء الشاشة، **و`mapbox-gl` يقيس مقاسَه مرّةً عند البناء** — فبلا
@@ -226,6 +308,9 @@ export function MapView({
   }, [token]);
 
   useEffect(() => {
+    // **ولا يُعاد الستايلُ تحت «TaxoMap»** — قِيس: هذا السطرُ يقع مع الإنشاء، **والتطبيقُ بالفرق يعيد ألوانَ الستايل وأسماءَه
+    // فوق الصبغ** بعد أن يقع. والشاشةُ المرسومةُ تُفكّ مع تبديل المظهر (`ByTheme`) فلا تحتاجه (وهو ما تفعله خريطةُ الراكب)
+    if (t2) return;
     map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
   }, [dark]);
 
@@ -416,7 +501,10 @@ export function MapView({
       }
       if (existing) existing.setLngLat([point.lng, point.lat]);
       else {
-        pins.current[key] = new mapboxgl.Marker({
+        pins.current[key] = new mapboxgl.Marker(
+          t2
+            ? { element: t2PinElement(key === "pickup" ? "from" : "to", label), anchor: "center" }
+            : {
           element: pinElement(color, label),
           anchor: "bottom",
         })
@@ -424,7 +512,7 @@ export function MapView({
           .addTo(instance);
       }
     }
-  }, [pickup, dropoff]);
+  }, [pickup, dropoff, t2]);
 
   // **خطُّ المسار** (البند ٨) — يُضاف حين يصل ويُحدَّث حين يتقدّم الكبتن.
   // و`styleVersion` ليست هنا كما في تطبيق الراكب لأن هذا المكوّن لا يعيد بناء
@@ -439,6 +527,34 @@ export function MapView({
 
     const draw = () => {
       const source = instance.getSource(id) as mapboxgl.GeoJSONSource | undefined;
+      // **ما مضى خافتاً تحت الباقي** (C07): المسارُ كاملاً بلون ما مضى، والباقي بالجمر فوقه — فلا يُرى الخافتُ إلا خلفه
+      if (t2) {
+        const doneId = `${id}-done`;
+        const done = instance.getSource(doneId) as mapboxgl.GeoJSONSource | undefined;
+        const whole =
+          routeTraveled && routePoints && routePoints.length >= 2
+            ? {
+                type: "Feature" as const,
+                properties: {},
+                geometry: { type: "LineString" as const, coordinates: routePoints },
+              }
+            : { type: "FeatureCollection" as const, features: [] };
+        if (done) done.setData(whole);
+        else if (host.current) {
+          const css = getComputedStyle(host.current);
+          const faint =
+            css.getPropertyValue("--t2-map-route-done").trim() ||
+            css.getPropertyValue("--t2-faint").trim();
+          instance.addSource(doneId, { type: "geojson", data: whole });
+          instance.addLayer({
+            id: doneId,
+            type: "line",
+            source: doneId,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": faint || cssColor("--mut", "#8b949e"), "line-width": 5 },
+          });
+        }
+      }
       if (!coordinates) {
         source?.setData({ type: "FeatureCollection", features: [] });
         return;
@@ -453,6 +569,29 @@ export function MapView({
         return;
       }
       instance.addSource(id, { type: "geojson", data });
+      // **خطُّ الجمر فوق ظلٍّ خافت** («TaxoMap»): الظلُّ والجمرُ من رموز الحاوية لا من لوحةٍ مكتوبة
+      if (t2 && host.current) {
+        const css = getComputedStyle(host.current);
+        const accent = css.getPropertyValue("--t2-accent").trim();
+        const casing = css.getPropertyValue("--t2-map-casing").trim();
+        if (accent && casing) {
+          instance.addLayer({
+            id: `${id}-casing`,
+            type: "line",
+            source: id,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": casing, "line-width": 10 },
+          });
+          instance.addLayer({
+            id,
+            type: "line",
+            source: id,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": accent, "line-width": 5 },
+          });
+          return;
+        }
+      }
       instance.addLayer({
         id,
         type: "line",
@@ -472,7 +611,7 @@ export function MapView({
     // يمسح المصادر كلَّها — فيُعاد الرسمُ على `style.load` كذلك
     if (instance.isStyleLoaded()) draw();
     else instance.once("style.load", draw);
-  }, [routePoints, trimAt, dark]);
+  }, [routePoints, trimAt, dark, t2, routeTraveled]);
 
   useEffect(() => {
     const instance = map.current;
@@ -515,8 +654,26 @@ export function MapView({
     <div className={cn("relative h-full w-full", className)}>
       <div ref={host} className="h-full w-full" />
 
+      {/* **زرُّ التموضع بلغة اللوحة** (C04 · C06): دائرةٌ بأيقونة الطور — **والأطوارُ الثلاثةُ نفسُها** (`cycle`) واسمُ الزرّ
+          يقول الطورَ الحاليّ. **وموضعُه من صنف الحاوية** في `screens/t2/ride.css` (البطاقةُ أو الخريطةُ الكاملة) */}
+      {t2 ? (
+        center ? (
+          <button
+            type="button"
+            onClick={cycle}
+            aria-label={labelFor(follow)}
+            title={labelFor(follow)}
+            className={`t2-maploc ${follow}`}
+          >
+            <span className="t2-icon" aria-hidden="true">
+              {T2_FOLLOW_ICON[follow]}
+            </span>
+          </button>
+        ) : null
+      ) : null}
+
       {/* **الوصولُ المتوقَّع** — يظهر حين يُقاس ويختفي حين لا يُقاس */}
-      {etaMinutes !== null ? (
+      {!t2 && etaMinutes !== null ? (
         <div className="pointer-events-none absolute start-14 top-64 z-10 rounded-full border border-line bg-surface px-12 py-7 text-12 font-bold text-ink shadow-md">
           {digits(String(etaMinutes))} دقيقة
         </div>
@@ -526,7 +683,7 @@ export function MapView({
           وتحت بطاقةِ الرحلة، فلا يزاحم قراراً (قاعدةُ «لا شيءَ يعلو قراراً»).
           **ونصُّه يقول الطورَ الحاليَّ لا الفعلَ التالي**: أيقونةٌ وحدَها تجعل
           الكبتنَ يضغط ليعرف ماذا تفعل، وهو يقود */}
-      {center ? (
+      {!t2 && center ? (
         <button
           type="button"
           onClick={cycle}

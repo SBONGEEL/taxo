@@ -64,19 +64,8 @@ interface Props {
   instruction: NextInstruction | null;
 }
 
-export function ActiveRide({
-  ride,
-  currencyLabel,
-  busy,
-  instruction,
-  onAdvance,
-  onCancel,
-  genderPreference,
-  onPause,
-  onResume,
-  onArriveStop,
-  onResumeStop,
-}: Props) {
+/** **طورُ الرحلة وزرُّها وأسبابُ إلغائها — بيتٌ واحدٌ للورقتين** (القائمة، وC06/C07 في `screens/t2`). */
+export function useActiveRide(ride: Ride, genderPreference: GenderPreference) {
   const phase = PHASES[ride.status as Phase] ?? PHASES.accepted;
   const riding = ride.status === "in_progress" || ride.status === "at_stop";
   // المحطةُ التي يقف عندها الآن، وأولُ محطةٍ لم يصلها بعد
@@ -97,6 +86,46 @@ export function ActiveRide({
   );
 
   const mapTarget = targetFor(ride);
+
+  return {
+    phase,
+    riding,
+    waiting,
+    stopAction,
+    picking,
+    setPicking,
+    reason,
+    setReason,
+    reasons,
+    mapTarget,
+  };
+}
+
+export function ActiveRide({
+  ride,
+  currencyLabel,
+  busy,
+  instruction,
+  onAdvance,
+  onCancel,
+  genderPreference,
+  onPause,
+  onResume,
+  onArriveStop,
+  onResumeStop,
+}: Props) {
+  const {
+    phase,
+    riding,
+    waiting,
+    stopAction,
+    picking,
+    setPicking,
+    reason,
+    setReason,
+    reasons,
+    mapTarget,
+  } = useActiveRide(ride, genderPreference);
 
   return (
     <>
@@ -400,7 +429,7 @@ export function ActiveRide({
  * **وكل عشر ثوانٍ لا كل ثانية**: المعروضُ دقائقُ صحيحة، فتحديثٌ في الثانية
  * يوقظ الشاشةَ ستين مرةً ليكتب الرقمَ نفسَه — وبطاريةُ الكبتن تعمل ساعات.
  */
-function useElapsedMinutes(since: string | null): number {
+export function useElapsedMinutes(since: string | null): number {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
