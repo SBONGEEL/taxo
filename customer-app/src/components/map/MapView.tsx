@@ -18,6 +18,7 @@
 
 import mapboxgl from "mapbox-gl";
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -49,6 +50,8 @@ const MAJOR_ROADS = [
   "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
   "secondary", "secondary_link", "tertiary", "tertiary_link",
 ];
+/** ما يبقى من الطرق حين تبتعد الكاميرا (تحت ١٣) — الشرايينُ وحدَها. */
+const ARTERIAL_ROADS = ["motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link"];
 
 /** **صبغُ الخريطة بلغة الهوية** — الأرضُ والحدائقُ والطرقُ من رموز `--t2-map-*` على الحاوية (`t2 t2-map`)، **وكلُّ اسمٍ
  *  ومَعلمٍ ومبنى وحدٍّ يُخفى**. والألوانُ تُقرأ من الرموز لا تُكتب هنا: `paint` في mapbox لا يقرأ `var()`. **وبلا رموزٍ لا صبغ**
@@ -81,6 +84,13 @@ function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
         ]);
       } else if (type === "line" && /^(road|bridge|tunnel)-/.test(id)) {
         instance.setPaintProperty(id, "line-color", ["match", ["get", "class"], MAJOR_ROADS, road, minor]);
+        // **وتهدأ الشوارعُ حين تبتعد الكاميرا** (R06 بالطريق كلِّه، كما رُسم: طرقٌ كبرى وحدَها): تحت ١٣ لا يُرسم إلا
+        // `ARTERIAL_ROADS`، والباقي يظهر حتى ١٤٫٥ — والقريبُ (R05 على ١٥) كما هو
+        instance.setPaintProperty(id, "line-opacity", [
+          "interpolate", ["linear"], ["zoom"],
+          13, ["match", ["get", "class"], ARTERIAL_ROADS, 1, 0],
+          14.5, 1,
+        ]);
       }
     } catch {
       // طبقةٌ لا تحمل هذه الخاصّية — تُترك كما هي
@@ -99,11 +109,21 @@ const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 const NEARBY_TWEEN_MS = 4_500;
 const DRIVER_TWEEN_MS = 2_800;
 
+/** حشوُ الإطار بالبكسل — والافتراضيُّ (`FIT_PADDING`) لورقةٍ قائمةٍ فوق شريط التبويب. */
+export interface FitPadding {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+const FIT_PADDING: FitPadding = { top: 90, bottom: 320, left: 60, right: 60 };
+
 export interface MapHandle {
   /** يعيد التوسيط على نقطة (عند الضغط على «موقعي»). */
   flyTo: (point: Coordinates, zoom?: number) => void;
-  /** يضبط الإطار ليضم النقطتين معاً. */
-  fitBounds: (a: Coordinates, b: Coordinates) => void;
+  /** يضبط الإطار ليضم النقطتين معاً — و`padding` لمن يعرف ما يغطّي الخريطةَ (ورقةُ «R06» بارتفاعها). */
+  fitBounds: (a: Coordinates, b: Coordinates, padding?: Partial<FitPadding>) => void;
   center: () => Coordinates | null;
 }
 
@@ -141,6 +161,9 @@ interface MapViewProps {
   searching?: boolean;
   onMoveEnd?: (center: Coordinates) => void;
   className?: string;
+  /** **ما يغطّي أسفلَ الخريطة بالبكسل** — ورقةُ «R06» الملتصقة. **شعارُ Mapbox ونسبتُه شرطُ الرخصة** فيرتفعان فوقها
+   *  ولا يُرسمان عليها. وبلا قيمةٍ لا يُكتب على الحاوية شيء. */
+  controlsInset?: number;
 }
 
 interface TweenedMarker {
@@ -338,6 +361,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     interactive = true,
     onMoveEnd,
     className,
+    controlsInset = 0,
   },
   ref,
 ) {
@@ -553,7 +577,9 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       // المرسومةُ تدور، والرندرُ الواقعيُّ ثابت. وهو نفسُ سطر العلامة
       // المُسنَدة، فلا قاعدتان لشيءٍ واحد.
       const rotates = driver.skin ? driver.skin.rotates : true;
-      if (rotates) element.style.rotate = `${driver.heading ?? 0}deg`;
+      // **على الطبقة الداخلية لا القشرة** (`headingLayer`) — وكانت تُكتب على القشرة التي تملكها mapbox فتدور معها
+      // إزاحتُها: سيارةٌ باتجاه ٦٠° رُسمت على بُعد ٣٣٠ بكسلاً من موضعها (قِيس ٢٠٢٦-١٠-٠٤، والحلقةُ وحدَها صُحّحت في ٠٨-٢٨)
+      if (rotates) headingLayer(element).style.rotate = `${driver.heading ?? 0}deg`;
       const marker = new mapboxgl.Marker({
         element,
         rotationAlignment: rotates ? "map" : "viewport",
@@ -623,7 +649,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     // (`"viewport"`) — فلا يستلقي على جنبه حين يلفّ الراكبُ الخريطة
     const rotates = driverSkin ? driverSkin.rotates : true;
     const element = driverElement(driverSkin, t2);
-    if (rotates) element.style.rotate = `${driverLocation.heading ?? 0}deg`;
+    // على الطبقة الداخلية كالعلامات القريبة أعلاه — فالقشرةُ لـmapbox وحدَها
+    if (rotates) headingLayer(element).style.rotate = `${driverLocation.heading ?? 0}deg`;
     driverMarker.current = {
       marker: new mapboxgl.Marker({
         element,
@@ -819,13 +846,13 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
           duration: 700,
           easing: (t) => 1 - (1 - t) ** 3,
         }),
-      fitBounds: (a, b) =>
+      fitBounds: (a, b, padding) =>
         map.current?.fitBounds(
           [
             [Math.min(a.lng, b.lng), Math.min(a.lat, b.lat)],
             [Math.max(a.lng, b.lng), Math.max(a.lat, b.lat)],
           ],
-          { padding: { top: 90, bottom: 320, left: 60, right: 60 }, duration: 700 },
+          { padding: { ...FIT_PADDING, ...padding }, duration: 700 },
         ),
       center: () => {
         const point = map.current?.getCenter();
@@ -857,5 +884,11 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   }
 
   // **الحاويةُ تحمل رموزَ الهوية نهاراً** (`t2 t2-map`): منها تُقرأ ألوانُ الصبغ والخطّ، وبها تُرسم السيارةُ والدبابيسُ بأصناف CSS
-  return <div ref={container} className={cn("h-full w-full", t2 && "t2 t2-map", className)} />;
+  return (
+    <div
+      ref={container}
+      className={cn("h-full w-full", t2 && "t2 t2-map", className)}
+      style={controlsInset > 0 ? ({ "--t2-map-inset": `${controlsInset}px` } as CSSProperties) : undefined}
+    />
+  );
 });

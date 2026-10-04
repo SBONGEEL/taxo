@@ -112,6 +112,9 @@ export interface ConfirmRideProps {
   /** **تفضيلٌ يُبدأ به هذا الطلبُ وحدَه** — بلاطةُ «نسائية» في رئيسية TAXO 2.0 تبدأه بـ«كبتنة فقط» (§٦١-د/ج)،
    *  **وهي تغيّره بنفسها** من المنتقي نفسِه. وبلا قيمةٍ يبدأ من افتراضي ملفها كما كان. */
   initialPreference?: GenderPreference;
+  /** **عنوانُ موقع الجهاز من Mapbox** — سطرُ «من» في «R06» حين لا `pickupAddress` (موقعُ الجهاز لا يُسمّى). للعرض وحدَه:
+   *  **لا يُرسل مع الطلب**، والورقةُ القائمةُ لا تقرؤه. */
+  pickupLine?: string | null;
 }
 
 export function useConfirmRide({

@@ -100,14 +100,24 @@ export async function reverseGeocode(
   }
 }
 
+/** ما يُقرأ لنقطة الانطلاق من نداءٍ عكسيٍّ واحد — **وكلاهما `null` إن لم يُعرف**: فلا شارةَ ولا سطر. */
+export interface AreaReading {
+  /** اسمُ المنطقة — شارةُ الموقع في رأس الرئيسية (R05). */
+  area: string | null;
+  /** «الشارع، المنطقة» — سطرُ «من» في ورقة الطلب (R06) حين لا عنوانَ غيرُه. */
+  address: string | null;
+}
+
 /** **اسمُ المنطقة لنقطة** — حيٌّ أو بلدةٌ أو مدينة، **أدقُّها** — لشارة الموقع في رأس الرئيسية (TAXO 2.0 «R05»:
- *  «جبل عمّان»). **من Mapbox لا من الجهاز**: الاسمُ قراءةٌ لا تخمين، **و`null` إن لم يُعرف — فلا شارة**. */
+ *  «جبل عمّان»)، **ومعه «الشارع، المنطقة» من النداء نفسِه** لسطر «من» في «R06» («شارع الرينبو، جبل عمّان»).
+ *  **من Mapbox لا من الجهاز**: الاسمُ قراءةٌ لا تخمين، **و`null` إن لم يُعرف — فلا شارة**. */
 export async function reverseArea(
   token: string,
   point: Coordinates,
   signal?: AbortSignal,
-): Promise<string | null> {
-  if (!token) return null;
+): Promise<AreaReading> {
+  const none: AreaReading = { area: null, address: null };
+  if (!token) return none;
 
   const url = new URL(REVERSE);
   url.searchParams.set("longitude", String(point.lng));
@@ -118,20 +128,21 @@ export async function reverseArea(
 
   try {
     const response = await fetch(url, { signal });
-    if (!response.ok) return null;
+    if (!response.ok) return none;
     const body = (await response.json()) as { features?: AreaFeature[] };
     const first = body.features?.[0]?.properties;
     // **أدقُّ ما في سياق العنوان** — الحيُّ قبل البلدة قبل المدينة — من نداءٍ واحد
     const context = first?.context;
-    return (
-      context?.neighborhood?.name ??
-      context?.locality?.name ??
-      context?.place?.name ??
-      first?.name ??
-      null
-    );
+    const area =
+      context?.neighborhood?.name ?? context?.locality?.name ?? context?.place?.name ?? null;
+    return {
+      area: area ?? first?.name ?? null,
+      // **«الشارع، المنطقة» كما رُسم** («شارع الرينبو، جبل عمّان») — من اسم النتيجة وسياقها في النداء نفسِه، **لا
+      // `full_address`**: ذاك يحمل الدولةَ وفاصلةً فارغةً حيث يغيب مستوى («…رياض 7، ، عمّان، الأردن» — مقيس)
+      address: first?.name ? (area && area !== first.name ? `${first.name}، ${area}` : first.name) : null,
+    };
   } catch {
-    return null;
+    return none;
   }
 }
 

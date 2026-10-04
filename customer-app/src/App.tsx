@@ -37,6 +37,7 @@ import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { showsNav } from "@/lib/tabs";
+import { useNavCovered } from "@/lib/navCover";
 import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { ThemeProvider, useTheme } from "@/lib/theme";
@@ -232,10 +233,12 @@ function NavBar() {
   // القاعدةُ نفسُها في تطبيق الكبتن، وهناك قِيست مرتين
   const { ride } = useRide();
   const { dark } = useTheme();
+  // **وأطوارُ الطلب في الرئيسية** (R06) حالٌ داخل `/` لا مسار — فتقول هي ما تغطّيه (`lib/navCover`)
+  const coveredByScreen = useNavCovered();
   if (ride !== null) return null;
-  // **وشاشاتُ TAXO 2.0 التي لا شريطَ فيها في اللوحة** (R14) تغطّيه — في المظهر المرسوم وحدَه،
+  // **وشاشاتُ TAXO 2.0 التي لا شريطَ فيها في اللوحة** (R14 · R06) تغطّيه — في المظهر المرسوم وحدَه،
   // والشاشةُ القائمةُ في الآخر تُبقيه كما كان
-  const coveredByT2 = !dark && T2_COVERING.includes(pathname);
+  const coveredByT2 = !dark && (T2_COVERING.includes(pathname) || coveredByScreen);
   return (
     <>
       <WomenModeNotice />

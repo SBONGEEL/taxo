@@ -54,6 +54,7 @@ import { useCountryConfig, useMapboxToken } from "@/lib/config";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { RIDE_STATUS_LABEL } from "@/lib/labels";
 import { isActive, useRide } from "@/lib/ride";
+import { useCoverNav } from "@/lib/navCover";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -160,12 +161,17 @@ export function HomeScreen() {
   // **شارةُ الموقع في رأس رئيسية TAXO 2.0** (§٦١-د): اسمُ منطقة نقطة الانطلاق — **من Mapbox لا تخميناً**، ونقطتُها هي هي
   // (موقعُ الجهاز أو ما وضعه بالدبوس). **وبلا نقطةٍ أو بلا جوابٍ لا شارة.**
   const [area, setArea] = useState<string | null>(null);
+  // **ومن النداء نفسِه عنوانُها كاملاً** — سطرُ «من» في «R06» حين لا عنوانَ غيرُه (موقعُ الجهاز لا يُسمّى)، **للنهاريّ وحدَه**:
+  // الورقةُ القائمةُ تقرأ `pickupAddress` كما كانت
+  const [pickupLine, setPickupLine] = useState<string | null>(null);
   useEffect(() => {
     if (!token || !pickup) return;
     const controller = new AbortController();
-    void reverseArea(token, pickup, controller.signal).then(
-      (name) => !controller.signal.aborted && setArea(name),
-    );
+    void reverseArea(token, pickup, controller.signal).then((reading) => {
+      if (controller.signal.aborted) return;
+      setArea(reading.area);
+      setPickupLine(reading.address);
+    });
     return () => controller.abort();
     // النقطةُ بإحداثيّتيها لا بهويّة الكائن: كائنٌ جديدٌ للنقطة نفسِها لا يعيد السؤال
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -457,6 +463,9 @@ export function HomeScreen() {
    *  يُضاف غداً يقع في الفرع الصحيح لأن الشرطَ يسمّي ما يقبله لا ما يرفضه**. */
   const browsing = !tracking && outcome === null && phase === "idle";
 
+  /** ارتفاعُ الورقة الملتصقة في أطوار الطلب نهاراً — شعارُ الخريطة ونسبتُها فوقها (`controlsInset`). */
+  const [sheetInset, setSheetInset] = useState(0);
+
   const mapNode = (
     <MapView
         ref={map}
@@ -481,6 +490,8 @@ export function HomeScreen() {
         // **ونبضةٌ حول الانطلاق ما دام البحثُ جارياً** — تتوقف عند القبول،
         // فنبضٌ يبقى بعد الإسناد يقول «ما زلنا نبحث» وقد وُجد
         searching={ride?.status === "searching" || ride?.status === "requested"}
+        // **شعارُ Mapbox ونسبتُه فوق الورقة الملتصقة لا عليها** — شرطُ الرخصة يبقى مرئيّاً على الخريطة
+        controlsInset={sheetInset}
         onMoveEnd={(point) => {
           setCenter(point);
           // بلا رمزٍ لا نداء — كما في `describe` بالضبط
@@ -575,8 +586,39 @@ export function HomeScreen() {
           countryConfig,
           onBack: leaveConfirm,
           initialPreference: presetPreference,
+          pickupLine,
         }
       : null;
+
+  /** **ورقةُ التأكيد كما رسمتها «R06»** — في النهاريّ المرسوم: ورقةُ الطلب نفسُها لا «إلى أين؟» بلا انطلاق. */
+  const confirming = phase === "confirm" && confirmProps !== null;
+  /** **أطوارُ الطلب في نهار TAXO 2.0 بلا شريط تبويب** كما رُسمت (R06، §٦١-د) — الدبوسُ وورقةُ التأكيد، **ولكلٍّ منهما
+   *  مخرجُه إلى الرئيسية وشريطِها** (السهمُ و«إلغاء»). **و«إلى أين؟» بلا انطلاقٍ يُبقيه**: لا سهمَ فيها يعيد.
+   *  والليليُّ لا يمسّه شيء — الشريطُ والورقةُ القائمان كما كانا. */
+  const requestT2 = !dark && !tracking && outcome === null && (picking || confirming);
+  useCoverNav(requestT2);
+
+  /** **إطارُ «R06» فوق ورقته** — الحشوُ الثابتُ (٣٢٠) لورقةٍ فوق الشريط، والملتصقةُ أطولُ منه فيغيب الطريقُ تحتها.
+   *  فيُقاس ارتفاعُها ويُعاد الإطارُ حين يتغيّر بما يُرى (يصل السعرُ · يُفتح الكوبون)، والسهمُ فوقه محفوظ.
+   *  **والارتفاعُ نفسُه يرفع شعارَ الخريطة** في أطوار الطلب كلِّها (الدبوسُ أيضاً). */
+  const sheetBox = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = sheetBox.current;
+    if (!requestT2 || !box) {
+      setSheetInset(0);
+      return;
+    }
+    let last = 0;
+    const observer = new ResizeObserver(() => {
+      const height = Math.round(box.getBoundingClientRect().height);
+      setSheetInset(height);
+      if (!confirming || !pickup || !dropoff || Math.abs(height - last) < 24) return;
+      last = height;
+      map.current?.fitBounds(pickup, dropoff, { top: 120, bottom: height + 40 });
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [requestT2, confirming, pickup, dropoff]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
@@ -594,12 +636,13 @@ export function HomeScreen() {
             initial={user?.name.slice(0, 1) ?? "؟"}
             unread={unreadNotifications}
             dark={dark}
-            onBack={phase === "confirm" && confirmProps ? leaveConfirm : null}
+            onBack={confirming ? leaveConfirm : null}
             onOpenAccount={() => navigate("/account")}
             onOpenNotifications={() => navigate("/account/notifications")}
             onToggleTheme={() => setChoice(dark ? "light" : "dark")}
           />
-          <LocateButtonT2 onLocate={() => void locateMe()} />
+          {/* **ولا زرَّ «موقعي» في ورقة الطلب** كما رُسمت — النقطتان محدّدتان، والدبوسُ وحدَه يحتاجه */}
+          {confirming ? null : <LocateButtonT2 onLocate={() => void locateMe()} />}
         </>
       ) : (
         <>
@@ -668,7 +711,11 @@ export function HomeScreen() {
 
       {/* **الأوراقُ تنتهي فوق الشريط** (`bottom:66px` في النموذج): ورقةٌ تلتصق
           بأسفل الشاشة تحت شريطٍ ثابتٍ تُخفي سطرَها الأخير — وهو زرُّ الطلب */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-nav mx-auto max-w-lg">
+      {/* **وفي أطوار الطلب نهاراً لا شريطَ** (`requestT2`) — فالورقةُ ملتصقةٌ بأسفل الشاشة كما رُسمت */}
+      <div
+        ref={sheetBox}
+        className={`pointer-events-none absolute inset-x-0 ${requestT2 ? "bottom-0" : "bottom-nav"} mx-auto max-w-lg`}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={tracking || outcome ? `ride-${ride!.status}` : phase}

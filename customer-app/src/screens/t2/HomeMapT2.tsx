@@ -3,9 +3,10 @@
  * الرأسُ وزرُّ الموقع والدبوسُ وورقتا «حرّك الخريطة» و«إلى أين؟» — **بأفعال الشاشة القائمة نفسِها** تمرّرها
  * `screens/Home.tsx` كما تمرّرها للوجه القائم.
  *
- * **والرأسُ كما رسمته «R06»** — سهمُ رجوعٍ في جهة البدء — **ومعه ما في الرأس القائم ولم يُرسم**: الجرسُ بنقطته،
- * **ومبدّلُ السِمة** (قرارُ المالك ٢٥: «من يبدّلها لأن الشمس على الشاشة يبدّلها وهو ينظر إلى الخريطة»)، وحرفُ الحساب
- * حيث لا سهم. **والدبوسُ** بلغة خريطة الهوية: دائرةٌ للانطلاق ومربّعٌ للوجهة («لغة الخريطة» في الهوية).
+ * **والرأسُ في ورقة الطلب كما رسمته «R06» حرفاً** (§٦١-د): **سهمُ الرجوع وحدَه**. والجرسُ ومبدّلُ السِمة **باقيان حيث
+ * لا سهم** (الدبوس)، **وبلوغُهما من ورقة الطلب بالسهم نفسِه**: الرئيسيةُ فيها الجرس، و«حسابي ← الإعدادات» فيها السِمة —
+ * فقرارُ المالك ٢٥ («من يبدّلها لأن الشمس على الشاشة يبدّلها وهو ينظر إلى الخريطة») **يبقى في أطوار الخريطة الأخرى**.
+ * **والدبوسُ** بلغة خريطة الهوية: دائرةٌ للانطلاق ومربّعٌ للوجهة («لغة الخريطة» في الهوية).
  */
 
 import type { SavedPlace } from "@/api/types";
@@ -32,17 +33,21 @@ export function MapHeaderT2({
   onOpenNotifications: () => void;
   onToggleTheme: () => void;
 }) {
-  return (
-    <div className="t2 t2-maphead">
-      {onBack ? (
+  // **ورقةُ الطلب: السهمُ وحدَه كما رُسم** — والرئيسيةُ (وفيها الجرسُ والحسابُ والسِمةُ من «الإعدادات») خلفَه
+  if (onBack) {
+    return (
+      <div className="t2 t2-maphead">
         <button type="button" className="t2-mapbtn" onClick={onBack} aria-label="رجوع">
           <span className="t2-icon" aria-hidden="true">arrow_forward</span>
         </button>
-      ) : (
-        <button type="button" className="t2-avatar sm t2-mapbtn-avatar" onClick={onOpenAccount} aria-label="حسابي">
-          {initial}
-        </button>
-      )}
+      </div>
+    );
+  }
+  return (
+    <div className="t2 t2-maphead">
+      <button type="button" className="t2-avatar sm t2-mapbtn-avatar" onClick={onOpenAccount} aria-label="حسابي">
+        {initial}
+      </button>
       <span className="t2-maphead-gap" />
       <button type="button" className="t2-mapbtn" onClick={onOpenNotifications} aria-label="الإشعارات">
         <span className="t2-icon" aria-hidden="true">notifications</span>
@@ -123,7 +128,8 @@ export function WhereToSheetT2({
   onChangePickup: () => void;
 }) {
   return (
-    <SheetT2>
+    // **طافيةٌ فوق الشريط**: لا سهمَ فيها يعيد، فالشريطُ مخرجُها (`SheetT2`)
+    <SheetT2 floating>
       <p className="t2-whereto-title">إلى أين؟</p>
       <button type="button" className="t2-whereto-field" onClick={onSearch}>
         <span className="t2-icon" aria-hidden="true">search</span>
