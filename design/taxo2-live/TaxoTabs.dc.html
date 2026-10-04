@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<sc-if value="{{ rider }}" hint-placeholder-val="{{ true }}">
+<div style="position:relative;height:88px;box-sizing:border-box;font-family:'Readex Pro',system-ui,sans-serif">
+<div style="position:absolute;left:16px;right:16px;bottom:24px;height:62px;border-radius:31px;background:#FFFFFF;box-shadow:0 0 0 1px rgba(20,22,26,.05),0 14px 34px -8px rgba(20,22,26,.28);display:flex;align-items:center;gap:4px;padding:0 7px">
+<sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+<sc-if value="{{ it.on }}"><div style="flex:1.5;height:48px;border-radius:24px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:center;gap:6px"><span style="font:22px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1">{{ it.icon }}</span><span style="font-size:13px;font-weight:600">{{ it.label }}</span></div></sc-if>
+<sc-if value="{{ it.off }}"><div style="flex:1;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#6A6862"><span style="font:22px/1 'Material Symbols Rounded'">{{ it.icon }}</span><span style="font-size:10px">{{ it.label }}</span></div></sc-if>
+</sc-for>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</sc-if>
+<sc-if value="{{ captain }}" hint-placeholder-val="{{ false }}">
+<div style="position:relative;height:88px;box-sizing:border-box;font-family:'Readex Pro',system-ui,sans-serif">
+<div style="position:absolute;left:16px;right:16px;bottom:24px;height:62px;border-radius:31px;background:#1C2026;border:1px solid #2B3038;box-sizing:border-box;box-shadow:0 14px 34px -6px rgba(0,0,0,.6);display:flex;align-items:center;gap:4px;padding:0 6px">
+<sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+<sc-if value="{{ it.on }}"><div style="flex:1.5;height:48px;border-radius:24px;background:#FF6A33;color:#0E1013;display:flex;align-items:center;justify-content:center;gap:6px"><span style="font:22px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1">{{ it.icon }}</span><span style="font-size:13px;font-weight:700">{{ it.label }}</span></div></sc-if>
+<sc-if value="{{ it.off }}"><div style="flex:1;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#9097A1"><span style="font:22px/1 'Material Symbols Rounded'">{{ it.icon }}</span><span style="font-size:10px">{{ it.label }}</span></div></sc-if>
+</sc-for>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#F2EFE8"></span>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:88},&quot;app&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;rider&quot;,&quot;captain&quot;],&quot;default&quot;:&quot;rider&quot;,&quot;tsType&quot;:&quot;'rider'|'captain'&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;trips&quot;,&quot;wallet&quot;,&quot;earnings&quot;,&quot;levels&quot;,&quot;account&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const captain = this.props.app === 'captain';
+    const active = this.props.active ?? 'home';
+    const base = captain
+      ? [['home','home','الرئيسية'],['earnings','payments','الأرباح'],['levels','workspace_premium','المستوى'],['account','person','حسابي']]
+      : [['home','home','الرئيسية'],['trips','receipt_long','رحلاتي'],['wallet','account_balance_wallet','المحفظة'],['account','person','حسابي']];
+    const items = base.map(([k, icon, label]) => ({ icon, label, on: k === active, off: k !== active }));
+    return { captain, rider: !captain, items };
+  }
+}
+</script>
+</body>
+</html>

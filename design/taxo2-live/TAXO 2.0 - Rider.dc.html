@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300..700&amp;family=Unbounded:wght@500..800&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>body{margin:0;background:#D9D4C9}a{color:#C2410C;text-decoration:none}a:hover{color:#14161A}@keyframes txring{0%{transform:translate(-50%,-50%) scale(.25);opacity:.7}100%{transform:translate(-50%,-50%) scale(1.5);opacity:0}}</style>
+</helmet>
+<section id="rider" dir="rtl" style="width:2134px;padding:64px 56px 120px;font-family:'Readex Pro',system-ui,sans-serif;color:#14161A;box-sizing:content-box">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;margin-bottom:56px">
+<div>
+<p dir="ltr" style="margin:0 0 10px;font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#6A6862;text-align:end">TAXO 2.0 — RIDER · 15 SCREENS</p>
+<h1 style="margin:0;font-size:44px;font-weight:700;line-height:1.2">تطبيق الراكب</h1>
+<p style="margin:10px 0 0;font-size:17px;line-height:1.7;max-width:70ch;color:#3F3E3A">نهاري بلون الحجر الجيري. الحبر للنص والزر الأساسي، والجمر لما يحرّك الرحلة: الطلب والمسار والتنبيه. البرقوق محجوز للخدمة النسائية.</p>
+</div>
+<div style="display:flex;gap:10px">
+<a href="TAXO%202.0%20-%20Identity.dc.html" style="display:flex;align-items:center;gap:8px;background:#FFFFFF;border:1px solid #CFC8BB;border-radius:99px;padding:10px 18px;font-size:14px;font-weight:600;white-space:nowrap;color:#14161A">الهوية <span style="font:18px/1 'Material Symbols Rounded'">arrow_back</span></a>
+<a href="TAXO%202.0%20-%20Captain.dc.html" style="display:flex;align-items:center;gap:8px;background:#14161A;border-radius:99px;padding:10px 18px;font-size:14px;font-weight:600;white-space:nowrap;color:#F2EFE8">تطبيق الكبتن <span style="font:18px/1 'Material Symbols Rounded'">arrow_back</span></a>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:76px 46px;align-items:flex-start">
+
+<div id="r01" data-screen-label="R01 البداية" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R01</span><span style="font-size:16px;font-weight:600">البداية</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45);display:flex;flex-direction:column">
+<span style="position:absolute;left:50%;top:300px;width:820px;height:124px;border-radius:62px;background:#14161A;opacity:.05;transform:translate(-50%,-50%) rotate(40deg)"></span>
+<span style="position:absolute;left:50%;top:300px;width:820px;height:124px;border-radius:62px;background:#F05A28;opacity:.12;transform:translate(-50%,-50%) rotate(-40deg)"></span>
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="position:relative;display:flex;justify-content:space-between;align-items:center;padding:12px 24px 0">
+<span style="display:flex;align-items:center;gap:6px;border:1.5px solid #14161A;border-radius:99px;padding:7px 13px;font-size:13px;font-weight:600"><span style="font:17px/1 'Material Symbols Rounded'">location_on</span>الأردن</span>
+<span style="font-size:13px;font-weight:600">English</span>
+</div>
+<div style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 26px">
+<div dir="ltr" style="font-family:Unbounded;font-weight:800;font-size:94px;line-height:.95;letter-spacing:-.035em">TA<span style="color:#F05A28">X</span>O</div>
+</div>
+<div style="position:relative;padding:0 24px 42px;display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:31px;line-height:1.3;font-weight:700">كل مشاويرك<br>من تطبيق واحد.</h2>
+<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#6A6862">رحلات وطرود ومطار ورحلات مجدولة — في عمّان والزرقاء وإربد.</p>
+<div style="height:58px;border-radius:18px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">إنشاء حساب</div>
+<div style="height:58px;border-radius:18px;border:1.5px solid #14161A;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;box-sizing:border-box">لديّ حساب — تسجيل الدخول</div>
+<p style="margin:4px 0 0;font-size:12px;line-height:1.6;text-align:center;color:#6A6862">بالمتابعة توافق على <u>الشروط</u> و<u>سياسة الخصوصية</u>.</p>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r02" data-screen-label="R02 الدخول" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R02</span><span style="font-size:16px;font-weight:600">الدخول</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45);display:flex;flex-direction:column">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+<span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:22px/1 'Material Symbols Rounded'">arrow_forward</span></span>
+<h2 style="margin:28px 0 8px;font-size:30px;font-weight:700;line-height:1.3">أهلاً من جديد</h2>
+<p style="margin:0 0 30px;font-size:15px;line-height:1.6;color:#6A6862">ادخل برقم هاتفك وكلمة المرور.</p>
+<label style="font-size:13px;font-weight:600;margin-bottom:8px">رقم الهاتف</label>
+<div dir="ltr" style="display:flex;align-items:center;gap:12px;height:56px;padding:0 16px;background:#FFFFFF;border:1.5px solid #C5352B;border-radius:16px;box-sizing:border-box"><span style="font-size:15px;font-weight:600">+962</span><span style="width:1px;height:24px;background:#E0DAD0"></span><span style="font-size:16px;letter-spacing:.02em">79 555 01</span><span style="width:2px;height:22px;background:#F05A28;margin-left:-8px"></span></div>
+<div style="display:flex;gap:6px;align-items:flex-start;margin-top:8px;color:#C5352B;font-size:12.5px;line-height:1.55"><span style="font:16px/1.3 'Material Symbols Rounded';font-variation-settings:'FILL' 1">error</span><span>الرقم ناقص — الرقم الأردني 9 أرقام بعد <span dir="ltr">+962</span>، مثل <span dir="ltr">79 123 4567</span>.</span></div>
+<label style="font-size:13px;font-weight:600;margin:20px 0 8px">كلمة المرور</label>
+<div style="display:flex;align-items:center;gap:12px;height:56px;padding:0 16px;background:#FFFFFF;border:1.5px solid #E0DAD0;border-radius:16px;box-sizing:border-box"><span style="flex:1;font-size:18px;letter-spacing:.18em">••••••••••</span><span style="font:22px/1 'Material Symbols Rounded';color:#6A6862">visibility</span></div>
+<a style="margin-top:14px;font-size:14px;font-weight:600;color:#C2410C;align-self:flex-start">نسيت كلمة المرور؟</a>
+<div style="flex:1"></div>
+<div style="height:58px;border-radius:18px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">دخول</div>
+<div style="display:flex;align-items:center;gap:12px;margin:16px 0;color:#6A6862;font-size:12.5px"><span style="flex:1;height:1px;background:#E0DAD0"></span>أو<span style="flex:1;height:1px;background:#E0DAD0"></span></div>
+<div style="height:56px;border-radius:18px;border:1.5px solid #D2CBBE;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;box-sizing:border-box"><span style="font:20px/1 'Material Symbols Rounded'">sms</span>الدخول برمز لمرة واحدة</div>
+<p style="margin:20px 0 0;text-align:center;font-size:14px;color:#6A6862">جديد على TAXO؟ <a style="font-weight:600;color:#14161A;text-decoration:underline">أنشئ حساباً</a></p>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r03" data-screen-label="R03 التسجيل" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R03</span><span style="font-size:16px;font-weight:600">التسجيل</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45);display:flex;flex-direction:column">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 38px">
+<div style="display:flex;align-items:center;gap:16px">
+<span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none"><span style="font:22px/1 'Material Symbols Rounded'">arrow_forward</span></span>
+<div style="flex:1;display:flex;gap:6px"><span style="flex:1;height:4px;border-radius:2px;background:#14161A"></span><span style="flex:1;height:4px;border-radius:2px;background:#DDD6CA"></span></div>
+<span dir="ltr" style="font-size:13px;color:#6A6862;font-weight:500">1 / 2</span>
+</div>
+<h2 style="margin:22px 0 6px;font-size:28px;font-weight:700;line-height:1.3">أنشئ حسابك</h2>
+<p style="margin:0 0 20px;font-size:14.5px;line-height:1.6;color:#6A6862">رقمك هو هويتك في TAXO — نتحقق منه مرة واحدة.</p>
+<label style="font-size:13px;font-weight:600;margin-bottom:7px">الاسم الكامل</label>
+<div style="display:flex;align-items:center;height:54px;padding:0 16px;background:#FFFFFF;border:1.5px solid #E0DAD0;border-radius:16px;box-sizing:border-box;font-size:15.5px">سارة الخطيب</div>
+<label style="font-size:13px;font-weight:600;margin:14px 0 7px">رقم الهاتف</label>
+<div dir="ltr" style="display:flex;align-items:center;gap:12px;height:54px;padding:0 16px;background:#FFFFFF;border:1.5px solid #E0DAD0;border-radius:16px;box-sizing:border-box"><span style="font-size:15px;font-weight:600">+962</span><span style="width:1px;height:24px;background:#E0DAD0"></span><span style="flex:1;font-size:15.5px">79 555 0142</span><span style="font:20px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#1E7F55">check_circle</span></div>
+<label style="font-size:13px;font-weight:600;margin:14px 0 7px">كلمة المرور</label>
+<div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 16px;background:#FFFFFF;border:1.5px solid #C5352B;border-radius:16px;box-sizing:border-box"><span style="flex:1;font-size:18px;letter-spacing:.18em">•••••</span><span style="font:22px/1 'Material Symbols Rounded';color:#6A6862">visibility_off</span></div>
+<div style="display:flex;gap:6px;align-items:flex-start;margin-top:7px;color:#C5352B;font-size:12.5px;line-height:1.55"><span style="font:16px/1.3 'Material Symbols Rounded';font-variation-settings:'FILL' 1">error</span><span>كلمة المرور قصيرة — 8 أحرف على الأقل، بينها رقم واحد.</span></div>
+<label style="font-size:13px;font-weight:600;margin:16px 0 7px">نخاطبك بصيغة</label>
+<div style="display:flex;gap:8px">
+<div style="flex:1;height:50px;border-radius:15px;border:1.5px solid #E0DAD0;display:flex;align-items:center;justify-content:center;font-size:15px;box-sizing:border-box">راكب</div>
+<div style="flex:1;height:50px;border-radius:15px;border:2px solid #9C2C6E;background:#FFFFFF;color:#9C2C6E;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:600;box-sizing:border-box"><span style="font:18px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1">check_circle</span>راكبة</div>
+</div>
+<div style="display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:11px 13px;border-radius:14px;background:#F7E3EE;border:1px solid #E9BCD5;font-size:12.5px;line-height:1.6"><span style="font:18px/1.2 'Material Symbols Rounded';color:#9C2C6E">woman</span><span>يتيح لكِ هذا طلب كبتنة عبر الخدمة النسائية، ويمكن تغييره من الحساب.</span></div>
+<div style="flex:1"></div>
+<div style="height:58px;border-radius:18px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">متابعة</div>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r04" data-screen-label="R04 رمز التحقق" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R04</span><span style="font-size:16px;font-weight:600">رمز التحقق</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45);display:flex;flex-direction:column">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="display:flex;flex-direction:column;padding:8px 24px 0">
+<div style="display:flex;align-items:center;gap:16px">
+<span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none"><span style="font:22px/1 'Material Symbols Rounded'">arrow_forward</span></span>
+<div style="flex:1;display:flex;gap:6px"><span style="flex:1;height:4px;border-radius:2px;background:#14161A"></span><span style="flex:1;height:4px;border-radius:2px;background:#14161A"></span></div>
+<span dir="ltr" style="font-size:13px;color:#6A6862;font-weight:500">2 / 2</span>
+</div>
+<h2 style="margin:24px 0 8px;font-size:28px;font-weight:700;line-height:1.3">أدخل رمز التحقق</h2>
+<p style="margin:0 0 24px;font-size:14.5px;line-height:1.7;color:#6A6862">أرسلنا رمزاً من 4 أرقام إلى <span dir="ltr" style="color:#14161A;font-weight:600">+962 79 555 0142</span> · <a style="font-weight:600;color:#C2410C">تعديل الرقم</a></p>
+<div dir="ltr" style="display:flex;gap:12px">
+<span style="flex:1;height:74px;border-radius:18px;background:#FFFFFF;border:1.5px solid #C5352B;display:flex;align-items:center;justify-content:center;font-family:Unbounded;font-weight:600;font-size:28px">4</span>
+<span style="flex:1;height:74px;border-radius:18px;background:#FFFFFF;border:1.5px solid #C5352B;display:flex;align-items:center;justify-content:center;font-family:Unbounded;font-weight:600;font-size:28px">8</span>
+<span style="flex:1;height:74px;border-radius:18px;background:#FFFFFF;border:1.5px solid #C5352B;display:flex;align-items:center;justify-content:center;font-family:Unbounded;font-weight:600;font-size:28px">1</span>
+<span style="flex:1;height:74px;border-radius:18px;background:#FFFFFF;border:1.5px solid #C5352B;display:flex;align-items:center;justify-content:center;font-family:Unbounded;font-weight:600;font-size:28px">7</span>
+</div>
+<div style="display:flex;gap:6px;align-items:flex-start;margin-top:10px;color:#C5352B;font-size:12.5px;line-height:1.55"><span style="font:16px/1.3 'Material Symbols Rounded';font-variation-settings:'FILL' 1">error</span><span>الرمز غير صحيح — تأكد من آخر رسالة وصلتك. بقيت محاولتان.</span></div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:18px;font-size:13.5px;color:#6A6862"><span style="font:18px/1 'Material Symbols Rounded'">schedule</span>إعادة الإرسال بعد <span dir="ltr" style="font-weight:600;color:#14161A">0:42</span></div>
+<div style="height:58px;border-radius:18px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;margin-top:26px">تحقق</div>
+</div>
+<div style="flex:1"></div>
+<div dir="ltr" style="background:#E7E2D8;padding:10px 8px 34px;display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">1</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">2</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">3</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">4</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">5</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">6</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">7</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">8</span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">9</span>
+<span></span>
+<span style="height:48px;border-radius:10px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">0</span>
+<span style="height:48px;display:flex;align-items:center;justify-content:center"><span style="font:24px/1 'Material Symbols Rounded'">backspace</span></span>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r05" data-screen-label="R05 الرئيسية" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R05</span><span style="font-size:16px;font-weight:600">الرئيسية</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoMap" route="none" style="position:absolute;top:0;left:0;right:0;height:330px" hint-size="390px,330px"></dc-import>
+<div style="position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(#F4F1EA 30%,rgba(244,241,234,0))"></div>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<div style="position:absolute;top:58px;left:20px;right:20px;display:flex;align-items:center;gap:12px">
+<span style="width:46px;height:46px;border-radius:50%;background:#F7E3EE;border:2px solid #9C2C6E;color:#9C2C6E;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;box-sizing:border-box">س</span>
+<div style="flex:1"><div style="font-size:12.5px;color:#6A6862">مساء الخير</div><div style="font-size:18px;font-weight:700">سارة</div></div>
+<span style="position:relative;width:46px;height:46px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:23px/1 'Material Symbols Rounded'">notifications</span><span style="position:absolute;top:10px;right:11px;width:9px;height:9px;border-radius:50%;background:#F05A28;border:2px solid #FFFFFF"></span></span>
+</div>
+<div style="position:absolute;top:284px;bottom:0;left:0;right:0;background:#F4F1EA;border-radius:30px 30px 0 0;padding:18px 18px 0;box-shadow:0 -10px 30px rgba(20,22,26,.08)">
+<div style="display:flex;align-items:center;gap:12px;height:64px;padding:0 12px;background:#FFFFFF;border-radius:22px;box-shadow:0 1px 2px rgba(20,22,26,.06),0 10px 24px -12px rgba(20,22,26,.25)">
+<span style="width:42px;height:42px;border-radius:14px;background:#F05A28;display:flex;align-items:center;justify-content:center"><span style="font:23px/1 'Material Symbols Rounded'">search</span></span>
+<span style="flex:1;font-size:19px;font-weight:600">إلى أين؟</span>
+<span style="display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:99px;background:#F4F1EA;font-size:13px;font-weight:600"><span style="font:17px/1 'Material Symbols Rounded'">schedule</span>الآن</span>
+</div>
+<div style="display:flex;gap:8px;margin:12px 0 18px">
+<span style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:99px;background:#FFFFFF;border:1px solid #E0DAD0;font-size:13px"><span style="font:17px/1 'Material Symbols Rounded'">home</span>المنزل</span>
+<span style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:99px;background:#FFFFFF;border:1px solid #E0DAD0;font-size:13px"><span style="font:17px/1 'Material Symbols Rounded'">work</span>العمل</span>
+<span style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:99px;background:#FFFFFF;border:1px solid #E0DAD0;font-size:13px"><span style="font:17px/1 'Material Symbols Rounded'">history</span>سيتي مول</span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span style="font-size:16px;font-weight:700">الخدمات</span><span style="font-size:13px;color:#6A6862">الكل</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+<div style="height:90px;border-radius:20px;background:#FFFFFF;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="align-self:flex-start;font:28px/1 'Material Symbols Rounded'">local_taxi</span><span style="font-size:13.5px;font-weight:600">رحلة</span></div>
+<div style="height:90px;border-radius:20px;background:#FFFFFF;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="align-self:flex-start;font:28px/1 'Material Symbols Rounded'">package_2</span><span style="font-size:13.5px;font-weight:600">طرد</span></div>
+<div style="position:relative;height:90px;border-radius:20px;background:#FFFFFF;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="align-self:flex-start;font:28px/1 'Material Symbols Rounded'">flight_takeoff</span><span style="font-size:13.5px;font-weight:600">المطار</span><span style="position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:600;color:#C2410C;background:#FDE6DB;padding:3px 7px;border-radius:7px">جديد</span></div>
+<div style="height:90px;border-radius:20px;background:#FFFFFF;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="align-self:flex-start;font:28px/1 'Material Symbols Rounded'">event_upcoming</span><span style="font-size:13.5px;font-weight:600">مجدولة</span></div>
+<div style="height:90px;border-radius:20px;background:#FFFFFF;border:1.5px solid #E9BCD5;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="align-self:flex-start;font:28px/1 'Material Symbols Rounded';color:#9C2C6E">woman</span><span style="font-size:13.5px;font-weight:600;color:#9C2C6E">نسائية</span></div>
+<div style="position:relative;height:90px;border-radius:20px;border:1.5px dashed #D2CBBE;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="align-self:flex-start;font:28px/1 'Material Symbols Rounded';color:#6A6862">timer</span><span style="font-size:13.5px;font-weight:600;color:#6A6862">بالساعة</span><span style="position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:600;color:#A86A00;background:#FFFFFF;border:1px solid #E0DAD0;padding:2px 7px;border-radius:7px">قريباً</span></div>
+</div>
+<div style="position:relative;overflow:hidden;margin-top:12px;height:70px;border-radius:20px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;gap:12px;padding:0 16px">
+<span style="position:absolute;left:-20px;top:50%;width:150px;height:26px;border-radius:13px;background:#F05A28;opacity:.9;transform:translateY(-50%) rotate(-45deg)"></span>
+<div style="flex:1;position:relative"><div style="font-size:14.5px;font-weight:600">خصم 30% على رحلات المطار</div><div style="font-size:12px;color:#B9BEC6;margin-top:2px">الرمز <span dir="ltr" style="font-weight:600;color:#F4F1EA">FLY30</span> · حتى 15 أكتوبر</div></div>
+</div>
+</div>
+<dc-import name="TaxoTabs" app="rider" active="home" style="position:absolute;left:0;right:0;bottom:0" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+
+<div id="r06" data-screen-label="R06 طلب رحلة" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R06</span><span style="font-size:16px;font-weight:600">طلب رحلة — الفئة والسعر</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoMap" route="request" style="position:absolute;top:0;left:0;right:0;height:300px" hint-size="390px,300px"></dc-import>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;top:58px;right:20px;width:44px;height:44px;border-radius:50%;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(20,22,26,.15)"><span style="font:22px/1 'Material Symbols Rounded'">arrow_forward</span></span>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#F4F1EA;border-radius:30px 30px 0 0;padding:10px 18px 30px;box-shadow:0 -12px 40px rgba(20,22,26,.14)">
+<div style="width:40px;height:5px;border-radius:3px;background:#D2CBBE;margin:0 auto 14px"></div>
+<div style="display:grid;grid-template-columns:14px 1fr auto;gap:2px 12px;align-items:center;background:#FFFFFF;border-radius:20px;padding:12px 14px">
+<span style="width:10px;height:10px;border-radius:50%;background:#14161A;justify-self:center"></span>
+<div><div style="font-size:11.5px;color:#6A6862">من</div><div style="font-size:14.5px;font-weight:600">شارع الرينبو، جبل عمّان</div></div>
+<span></span>
+<span style="width:2px;height:14px;background:#E0DAD0;justify-self:center"></span><span></span><span></span>
+<span style="width:10px;height:10px;border-radius:3px;background:#F05A28;justify-self:center"></span>
+<div><div style="font-size:11.5px;color:#6A6862">إلى</div><div style="font-size:14.5px;font-weight:600">سيتي مول، الصويفية</div></div>
+<span style="width:32px;height:32px;border-radius:50%;background:#F4F1EA;display:flex;align-items:center;justify-content:center"><span style="font:20px/1 'Material Symbols Rounded'">add</span></span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 10px"><span style="font-size:15px;font-weight:700">اختر الفئة</span><span style="font-size:12.5px;color:#6A6862">6.8 كم · 14 د</span></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:12px;height:62px;padding:0 12px;border-radius:18px;background:#FFFFFF;border:2px solid #14161A;box-sizing:border-box">
+<span style="width:42px;height:42px;border-radius:13px;background:#F4F1EA;display:flex;align-items:center;justify-content:center"><span style="font:24px/1 'Material Symbols Rounded'">local_taxi</span></span>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">اقتصادي</div><div style="font-size:12px;color:#6A6862">4 ركاب · يصل خلال 3 د</div></div>
+<div style="display:flex;align-items:baseline;gap:4px"><span dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:16px">2.450</span><span style="font-size:11px;color:#6A6862">د.أ</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:62px;padding:0 12px;border-radius:18px;border:1px solid #E0DAD0;box-sizing:border-box">
+<span style="width:42px;height:42px;border-radius:13px;background:#ECE8DF;display:flex;align-items:center;justify-content:center"><span style="font:24px/1 'Material Symbols Rounded'">directions_car</span></span>
+<div style="flex:1"><div style="font-size:15px;font-weight:600">مريح</div><div style="font-size:12px;color:#6A6862">سيارة أحدث · 4 ركاب</div></div>
+<div style="display:flex;align-items:baseline;gap:4px"><span dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:16px">3.150</span><span style="font-size:11px;color:#6A6862">د.أ</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:62px;padding:0 12px;border-radius:18px;border:1px solid #E0DAD0;box-sizing:border-box">
+<span style="width:42px;height:42px;border-radius:13px;background:#ECE8DF;display:flex;align-items:center;justify-content:center"><span style="font:24px/1 'Material Symbols Rounded'">airport_shuttle</span></span>
+<div style="flex:1"><div style="font-size:15px;font-weight:600">عائلي</div><div style="font-size:12px;color:#6A6862">حتى 6 ركاب وحقائب</div></div>
+<div style="display:flex;align-items:baseline;gap:4px"><span dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:16px">4.200</span><span style="font-size:11px;color:#6A6862">د.أ</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:62px;padding:0 12px;border-radius:18px;border:1px solid #E9BCD5;box-sizing:border-box">
+<span style="width:42px;height:42px;border-radius:13px;background:#F7E3EE;display:flex;align-items:center;justify-content:center"><span style="font:24px/1 'Material Symbols Rounded';color:#9C2C6E">woman</span></span>
+<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600">نسائية <span style="font-size:10.5px;font-weight:600;color:#9C2C6E;background:#F7E3EE;border:1px solid #E9BCD5;padding:1px 7px;border-radius:99px">كبتنة</span></div><div style="font-size:12px;color:#6A6862">كبتنة لراكبة · يصل خلال 7 د</div></div>
+<div style="display:flex;align-items:baseline;gap:4px"><span dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:16px">2.900</span><span style="font-size:11px;color:#6A6862">د.أ</span></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:12px 0;height:46px;padding:0 4px">
+<span style="font:21px/1 'Material Symbols Rounded'">payments</span><span style="font-size:14px;font-weight:600">كاش</span><span style="font:18px/1 'Material Symbols Rounded';color:#6A6862">expand_more</span>
+<span style="width:1px;height:22px;background:#E0DAD0;margin:0 6px"></span>
+<span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#1E7F55"><span style="font:18px/1 'Material Symbols Rounded'">sell</span><span dir="ltr">TAXO20</span> مطبّق</span>
+</div>
+<div style="height:60px;border-radius:18px;background:#F05A28;color:#14161A;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:16px;font-weight:700"><span>اطلب اقتصادي</span><span><span dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:15px">2.450</span> د.أ</span></div>
+</div>
+</div>
+</div>
+
+<div id="r07" data-screen-label="R07 البحث عن كبتن" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R07</span><span style="font-size:16px;font-weight:600">البحث عن كبتن</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoMap" route="none" style="position:absolute;top:0;left:0;right:0;height:520px" hint-size="390px,520px"></dc-import>
+<div style="position:absolute;left:52%;top:291px">{{ radar }}</div>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#F4F1EA;border-radius:30px 30px 0 0;padding:10px 22px 34px;box-shadow:0 -12px 40px rgba(20,22,26,.14)">
+<div style="width:40px;height:5px;border-radius:3px;background:#D2CBBE;margin:0 auto 18px"></div>
+<h3 style="margin:0 0 6px;font-size:23px;font-weight:700">نبحث لك عن كبتن قريب</h3>
+<p style="margin:0 0 16px;font-size:14px;color:#6A6862;line-height:1.6">عادةً أقل من دقيقة — 6 كباتن حولك الآن.</p>
+<div style="height:6px;border-radius:3px;background:#E3DDD2;overflow:hidden;margin-bottom:18px"><div style="width:38%;height:100%;border-radius:3px;background:#F05A28"></div></div>
+<div style="display:flex;align-items:center;gap:14px;background:#FFFFFF;border-radius:20px;padding:14px">
+<div style="flex:1;display:grid;grid-template-columns:10px 1fr;gap:6px 10px;align-items:center">
+<span style="width:8px;height:8px;border-radius:50%;background:#14161A"></span><span style="font-size:13.5px">شارع الرينبو</span>
+<span style="width:8px;height:8px;border-radius:2px;background:#F05A28"></span><span style="font-size:13.5px">سيتي مول</span>
+</div>
+<div style="text-align:start;padding-inline-start:14px;border-inline-start:1px solid #E0DAD0"><div style="font-size:12px;color:#6A6862">اقتصادي · كاش</div><div style="font-size:15px;font-weight:600"><span dir="ltr" style="font-family:Unbounded;font-size:14px">2.450</span> د.أ</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;margin:14px 2px 18px;font-size:12.5px;color:#6A6862"><span style="font:18px/1 'Material Symbols Rounded'">verified_user</span>يظهر رمز الرحلة بمجرد قبول الكبتن.</div>
+<div style="height:56px;border-radius:18px;border:1.5px solid #E0DAD0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#C5352B;box-sizing:border-box">إلغاء الطلب</div>
+<p style="margin:8px 0 0;text-align:center;font-size:12px;color:#6A6862">الإلغاء الآن مجاني.</p>
+</div>
+</div>
+</div>
+
+<div id="r08" data-screen-label="R08 تتبّع الكبتن" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R08</span><span style="font-size:16px;font-weight:600">تتبّع الكبتن</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoMap" route="approach" style="position:absolute;top:0;left:0;right:0;height:470px" hint-size="390px,470px"></dc-import>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<span style="position:absolute;top:60px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:#14161A;color:#F4F1EA;padding:10px 16px;border-radius:99px;font-size:13.5px;font-weight:600;white-space:nowrap;box-shadow:0 8px 20px rgba(20,22,26,.25)"><span style="width:8px;height:8px;border-radius:50%;background:#F05A28"></span>الكبتن على بعد 1.2 كم</span>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#F4F1EA;border-radius:30px 30px 0 0;padding:10px 18px 30px;box-shadow:0 -12px 40px rgba(20,22,26,.14)">
+<div style="width:40px;height:5px;border-radius:3px;background:#D2CBBE;margin:0 auto 12px"></div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:0 2px">
+<div style="flex:1"><div style="font-size:19px;font-weight:700">الكبتن في الطريق إليك</div><div style="font-size:13px;color:#6A6862;margin-top:2px">هيونداي إلنترا · بيضاء</div></div>
+<div style="display:flex;align-items:baseline;gap:4px"><span dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:44px;line-height:1;letter-spacing:-.03em">4</span><span style="font-size:14px;font-weight:600">د</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;background:#FFFFFF;border-radius:22px;padding:12px 14px">
+<span style="width:52px;height:52px;border-radius:50%;background:repeating-linear-gradient(45deg,#ECE8DF 0 6px,#E3DDD2 6px 12px);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;flex:none">م</span>
+<div style="flex:1"><div style="font-size:15.5px;font-weight:700">محمد العبادي</div><div style="display:flex;align-items:center;gap:4px;font-size:12.5px;color:#6A6862;margin-top:2px"><span style="font:15px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#F05A28">star</span><span style="color:#14161A;font-weight:600">4.92</span> · 2,140 رحلة</div></div>
+<div dir="ltr" style="display:flex;align-items:stretch;border:1.5px solid #14161A;border-radius:9px;overflow:hidden"><span style="background:#14161A;color:#F4F1EA;font:600 9px/1 ui-monospace,Menlo,monospace;padding:0 4px;display:flex;align-items:center">JO</span><span style="font-family:Unbounded;font-weight:600;font-size:13px;padding:7px 8px">21-48390</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:10px;background:#14161A;color:#F4F1EA;border-radius:20px;padding:13px 16px">
+<div style="flex:1"><div style="font-size:14px;font-weight:600">رمز الرحلة</div><div style="font-size:12px;color:#B9BEC6;margin-top:2px">قله للكبتن قبل أن تركب</div></div>
+<span dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:26px;letter-spacing:.18em;color:#F05A28">4821</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+<div style="height:64px;border-radius:16px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:22px/1 'Material Symbols Rounded'">call</span><span style="font-size:12px">اتصال</span></div>
+<div style="height:64px;border-radius:16px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:22px/1 'Material Symbols Rounded'">chat</span><span style="font-size:12px">رسالة</span></div>
+<div style="height:64px;border-radius:16px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:22px/1 'Material Symbols Rounded'">ios_share</span><span style="font-size:12px">مشاركة</span></div>
+<div style="height:64px;border-radius:16px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:22px/1 'Material Symbols Rounded'">shield</span><span style="font-size:12px">أمان</span></div>
+</div>
+<p style="margin:14px 0 0;text-align:center;font-size:13px;font-weight:600;color:#C5352B">إلغاء الرحلة · قد تُطبَّق رسوم</p>
+</div>
+</div>
+</div>
+
+<div id="r09" data-screen-label="R09 أثناء الرحلة" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R09</span><span style="font-size:16px;font-weight:600">أثناء الرحلة</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoMap" route="trip" style="position:absolute;top:0;left:0;right:0;height:560px" hint-size="390px,560px"></dc-import>
+<dc-import name="TaxoStatus" style="position:absolute;top:0;left:0;right:0" hint-size="390px,50px"></dc-import>
+<div style="position:absolute;top:58px;left:16px;right:16px;background:#FFFFFF;border-radius:22px;padding:14px 16px;box-shadow:0 10px 30px rgba(20,22,26,.16)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="flex:1"><div style="font-size:12px;color:#6A6862">في الطريق إلى</div><div style="font-size:16px;font-weight:700">سيتي مول، الصويفية</div></div>
+<div style="text-align:end"><div dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:22px;line-height:1.1">10:24</div><div style="font-size:11.5px;color:#6A6862">وقت الوصول</div></div>
+</div>
+<div style="position:relative;height:16px;margin-top:12px;display:flex;align-items:center">
+<span style="position:absolute;right:0;left:0;height:4px;border-radius:2px;background:#ECE8DF"></span>
+<span style="position:absolute;right:0;width:58%;height:4px;border-radius:2px;background:#F05A28"></span>
+<span style="position:absolute;right:-2px;width:10px;height:10px;border-radius:50%;background:#14161A"></span>
+<span style="position:absolute;left:-2px;width:10px;height:10px;border-radius:3px;background:#F05A28"></span>
+<span style="position:absolute;right:58%;transform:translateX(50%);width:20px;height:20px;border-radius:50%;background:#14161A;border:2px solid #FFFFFF;box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span style="position:absolute;width:8px;height:2px;background:#F05A28;transform:rotate(45deg)"></span><span style="position:absolute;width:8px;height:2px;background:#FFFFFF;transform:rotate(-45deg)"></span></span>
+</div>
+</div>
+<span style="position:absolute;top:452px;left:16px;display:flex;align-items:center;gap:6px;height:44px;padding:0 16px;border-radius:99px;background:#C5352B;color:#FFFFFF;font-size:14px;font-weight:700;box-shadow:0 8px 20px rgba(197,53,43,.35)"><span style="font:20px/1 'Material Symbols Rounded'">sos</span>طوارئ</span>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#F4F1EA;border-radius:30px 30px 0 0;padding:10px 18px 32px;box-shadow:0 -12px 40px rgba(20,22,26,.14)">
+<div style="width:40px;height:5px;border-radius:3px;background:#D2CBBE;margin:0 auto 14px"></div>
+<div style="display:flex;align-items:center;gap:12px">
+<span style="width:44px;height:44px;border-radius:50%;background:repeating-linear-gradient(45deg,#ECE8DF 0 6px,#E3DDD2 6px 12px);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700">م</span>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">محمد العبادي</div><div style="font-size:12.5px;color:#6A6862">هيونداي إلنترا · <span dir="ltr">21-48390</span></div></div>
+<span style="width:42px;height:42px;border-radius:50%;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font:20px/1 'Material Symbols Rounded'">call</span></span>
+<span style="width:42px;height:42px;border-radius:50%;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font:20px/1 'Material Symbols Rounded'">chat</span></span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);margin:14px 0;background:#FFFFFF;border-radius:20px;padding:14px 0">
+<div style="text-align:center"><div dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:18px">6.4</div><div style="font-size:12px;color:#6A6862;margin-top:2px">كم متبقية</div></div>
+<div style="text-align:center;border-inline:1px solid #ECE8DF"><div dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:18px">11</div><div style="font-size:12px;color:#6A6862;margin-top:2px">دقيقة</div></div>
+<div style="text-align:center"><div dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:18px">2.450</div><div style="font-size:12px;color:#6A6862;margin-top:2px">د.أ تقديرياً</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:56px;padding:0 14px;border-radius:18px;background:#FFFFFF;margin-bottom:8px"><span style="font:22px/1 'Material Symbols Rounded'">share_location</span><span style="flex:1;font-size:14px;font-weight:600">شارك رحلتك مع شخص تثق به</span><span style="font:20px/1 'Material Symbols Rounded';color:#6A6862">chevron_left</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:56px;padding:0 14px;border-radius:18px;background:#FFFFFF"><span style="font:22px/1 'Material Symbols Rounded'">payments</span><span style="flex:1;font-size:14px;font-weight:600">الدفع: كاش</span><span style="font-size:13px;font-weight:600;color:#C2410C">تغيير</span></div>
+</div>
+</div>
+</div>
+
+<div id="r10" data-screen-label="R10 نهاية الرحلة والتقييم" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R10</span><span style="font-size:16px;font-weight:600">نهاية الرحلة والتقييم</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45);display:flex;flex-direction:column">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="flex:1;display:flex;flex-direction:column;padding:6px 22px 36px">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="width:48px;height:48px;border-radius:50%;background:#DCEEE4;display:flex;align-items:center;justify-content:center"><span style="font:26px/1 'Material Symbols Rounded';color:#1E7F55">check</span></span>
+<div style="flex:1"><div style="font-size:22px;font-weight:700">وصلتِ بالسلامة</div><div style="font-size:13px;color:#6A6862">سيتي مول · <span dir="ltr">10:26</span> ص</div></div>
+<span style="font-size:13.5px;font-weight:600;color:#6A6862">تخطّي</span>
+</div>
+<div style="background:#FFFFFF;border-radius:24px;padding:16px 18px;margin-top:16px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between">
+<div><div style="font-size:12.5px;color:#6A6862">الأجرة النهائية</div><div style="display:flex;align-items:baseline;gap:6px"><span dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:40px;letter-spacing:-.03em;line-height:1.15">3.750</span><span style="font-size:15px;font-weight:600">د.أ</span></div></div>
+<span style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:99px;background:#F4F1EA;margin-bottom:6px"><span style="font:16px/1 'Material Symbols Rounded'">payments</span>كاش للكبتن</span>
+</div>
+<div style="border-top:1.5px dashed #E0DAD0;margin:12px 0 8px"></div>
+<div style="display:grid;grid-template-columns:1fr auto;gap:5px 0;font-size:13px">
+<span style="color:#6A6862">الأجرة الأساسية</span><span dir="ltr" style="font-weight:500">0.500</span>
+<span style="color:#6A6862">المسافة · 6.8 كم</span><span dir="ltr" style="font-weight:500">2.720</span>
+<span style="color:#6A6862">الوقت · 14 د</span><span dir="ltr" style="font-weight:500">0.700</span>
+<span style="color:#1E7F55">خصم <span dir="ltr">TAXO20</span></span><span dir="ltr" style="font-weight:500;color:#1E7F55">−0.170</span>
+</div>
+</div>
+<div style="text-align:center;margin-top:18px;font-size:16px;font-weight:700">كيف كانت رحلتك مع محمد؟</div>
+<div style="display:flex;justify-content:center;gap:6px;margin-top:8px">
+<span style="font:40px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#F05A28">star</span><span style="font:40px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#F05A28">star</span><span style="font:40px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#F05A28">star</span><span style="font:40px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#F05A28">star</span><span style="font:40px/1 'Material Symbols Rounded';font-variation-settings:'FILL' 1;color:#F05A28">star</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:12px">
+<span style="padding:8px 13px;border-radius:99px;background:#14161A;color:#F4F1EA;font-size:13px;font-weight:600">قيادة آمنة</span>
+<span style="padding:8px 13px;border-radius:99px;background:#14161A;color:#F4F1EA;font-size:13px;font-weight:600">سيارة نظيفة</span>
+<span style="padding:8px 13px;border-radius:99px;border:1px solid #D2CBBE;font-size:13px">ودود</span>
+<span style="padding:8px 13px;border-radius:99px;border:1px solid #D2CBBE;font-size:13px">وصل بسرعة</span>
+<span style="padding:8px 13px;border-radius:99px;border:1px solid #D2CBBE;font-size:13px">يعرف الطريق</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px"><span style="font-size:14px;font-weight:700">بقشيش للكبتن</span><span style="font-size:12px;color:#6A6862">يصله كاملاً</span></div>
+<div style="display:flex;gap:6px">
+<span style="flex:1;height:44px;border-radius:14px;border:1px solid #D2CBBE;display:flex;align-items:center;justify-content:center;font-size:13.5px;box-sizing:border-box">بدون</span>
+<span dir="ltr" style="flex:1;height:44px;border-radius:14px;border:1px solid #D2CBBE;display:flex;align-items:center;justify-content:center;font-size:13.5px;box-sizing:border-box">0.250</span>
+<span dir="ltr" style="flex:1;height:44px;border-radius:14px;border:2px solid #14161A;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:700;box-sizing:border-box">0.500</span>
+<span dir="ltr" style="flex:1;height:44px;border-radius:14px;border:1px solid #D2CBBE;display:flex;align-items:center;justify-content:center;font-size:13.5px;box-sizing:border-box">1.000</span>
+</div>
+<div style="flex:1"></div>
+<div style="height:58px;border-radius:18px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">إرسال التقييم</div>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r11" data-screen-label="R11 المحفظة" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R11</span><span style="font-size:16px;font-weight:600">المحفظة</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="padding:6px 18px 0">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><h2 style="margin:0;font-size:26px;font-weight:700">المحفظة</h2><span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:22px/1 'Material Symbols Rounded'">qr_code_2</span></span></div>
+<div style="position:relative;overflow:hidden;background:#14161A;color:#F4F1EA;border-radius:26px;padding:20px">
+<span style="position:absolute;left:-30px;top:-10px;width:200px;height:34px;border-radius:17px;background:#F05A28;transform:rotate(45deg)"></span>
+<span style="position:absolute;left:-30px;top:-10px;width:200px;height:34px;border-radius:17px;background:#F4F1EA;opacity:.12;transform:rotate(-45deg)"></span>
+<div style="position:relative;font-size:13px;color:#B9BEC6">الرصيد المتاح</div>
+<div style="position:relative;display:flex;align-items:baseline;gap:6px;margin:4px 0 18px"><span dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:42px;letter-spacing:-.03em;line-height:1.1">12.350</span><span style="font-size:15px;color:#B9BEC6">د.أ</span></div>
+<div style="position:relative;display:flex;gap:8px">
+<span style="flex:1;height:46px;border-radius:14px;background:#F05A28;color:#14161A;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14.5px;font-weight:700"><span style="font:20px/1 'Material Symbols Rounded'">add</span>شحن الرصيد</span>
+<span style="flex:1;height:46px;border-radius:14px;border:1px solid #3B3E45;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14.5px;font-weight:600;box-sizing:border-box"><span style="font:20px/1 'Material Symbols Rounded'">sync_alt</span>تحويل لصديق</span>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 10px"><span style="font-size:15px;font-weight:700">طرق الدفع</span><span style="font-size:13px;color:#6A6862">إدارة</span></div>
+<div style="display:flex;gap:8px">
+<div style="flex:1.2;height:84px;border-radius:18px;background:#FFFFFF;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><div style="display:flex;justify-content:space-between;align-items:center"><span dir="ltr" style="font:700 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em">VISA</span><span style="font-size:10.5px;font-weight:600;color:#1E7F55;background:#DCEEE4;padding:2px 7px;border-radius:7px">افتراضية</span></div><span dir="ltr" style="font-size:14px;font-weight:600;text-align:end">•••• 4242</span></div>
+<div style="flex:1;height:84px;border-radius:18px;background:#FFFFFF;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span dir="ltr" style="font:700 12px/1 ui-monospace,Menlo,monospace;text-align:end">CliQ</span><span style="font-size:13px;font-weight:600">كليك</span></div>
+<div style="flex:.7;height:84px;border-radius:18px;border:1.5px dashed #D2CBBE;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:24px/1 'Material Symbols Rounded';color:#6A6862">add</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 10px"><span style="font-size:15px;font-weight:700">الحركات</span><span style="font-size:13px;color:#6A6862">أكتوبر</span></div>
+<div style="background:#FFFFFF;border-radius:22px;padding:0 14px">
+<div style="display:flex;align-items:center;gap:12px;height:60px;border-bottom:1px solid #F0ECE4"><span style="width:38px;height:38px;border-radius:12px;background:#F4F1EA;display:flex;align-items:center;justify-content:center"><span style="font:20px/1 'Material Symbols Rounded'">local_taxi</span></span><div style="flex:1"><div style="font-size:14px;font-weight:600">رحلة إلى دابوق</div><div style="font-size:12px;color:#6A6862">أمس · <span dir="ltr">21:58</span></div></div><span dir="ltr" style="font-size:14.5px;font-weight:600">−4.100</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:60px;border-bottom:1px solid #F0ECE4"><span style="width:38px;height:38px;border-radius:12px;background:#DCEEE4;display:flex;align-items:center;justify-content:center"><span style="font:20px/1 'Material Symbols Rounded';color:#1E7F55">add_card</span></span><div style="flex:1"><div style="font-size:14px;font-weight:600">شحن عبر البطاقة</div><div style="font-size:12px;color:#6A6862">أمس · <span dir="ltr">•••• 4242</span></div></div><span dir="ltr" style="font-size:14.5px;font-weight:600;color:#1E7F55">+10.000</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:60px"><span style="width:38px;height:38px;border-radius:12px;background:#F4F1EA;display:flex;align-items:center;justify-content:center"><span style="font:20px/1 'Material Symbols Rounded'">sync_alt</span></span><div style="flex:1"><div style="font-size:14px;font-weight:600">تحويل إلى ليلى</div><div style="font-size:12px;color:#6A6862">29 سبتمبر</div></div><span dir="ltr" style="font-size:14.5px;font-weight:600">−2.000</span></div>
+</div>
+</div>
+<dc-import name="TaxoTabs" app="rider" active="wallet" style="position:absolute;left:0;right:0;bottom:0" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+
+<div id="r12" data-screen-label="R12 سجل الرحلات" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R12</span><span style="font-size:16px;font-weight:600">سجل الرحلات</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="padding:6px 18px 0">
+<h2 style="margin:0 0 14px;font-size:26px;font-weight:700">رحلاتي</h2>
+<div style="display:flex;gap:7px;margin-bottom:14px">
+<span style="padding:8px 14px;border-radius:99px;background:#14161A;color:#F4F1EA;font-size:13px;font-weight:600">الكل</span>
+<span style="padding:8px 14px;border-radius:99px;border:1px solid #D2CBBE;font-size:13px">مكتملة</span>
+<span style="padding:8px 14px;border-radius:99px;border:1px solid #D2CBBE;font-size:13px">مجدولة</span>
+<span style="padding:8px 14px;border-radius:99px;border:1px solid #D2CBBE;font-size:13px">ملغاة</span>
+</div>
+<div style="background:#FDE6DB;border:1px solid #F6C3AE;border-radius:22px;padding:14px 16px;margin-bottom:16px">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#C2410C"><span style="font:17px/1 'Material Symbols Rounded'">event_upcoming</span>مجدولة · غداً <span dir="ltr">06:15</span> ص</span><span style="font-size:12.5px;font-weight:600">تعديل</span></div>
+<div style="display:grid;grid-template-columns:10px 1fr;gap:5px 10px;align-items:center;font-size:14px">
+<span style="width:8px;height:8px;border-radius:50%;background:#14161A"></span><span>المنزل · عبدون</span>
+<span style="width:8px;height:8px;border-radius:2px;background:#F05A28"></span><span style="font-weight:600">مطار الملكة علياء الدولي</span>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px"><span>مريح · كبتن يُعيَّن قبل 30 د</span><span style="font-weight:700"><span dir="ltr">18.500</span> د.أ</span></div>
+</div>
+<div style="font-size:12px;font-weight:600;color:#6A6862;margin:0 2px 8px">أكتوبر <span dir="ltr">2026</span></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="background:#FFFFFF;border-radius:22px;padding:13px 16px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><span style="font-size:12.5px;color:#6A6862;white-space:nowrap">اليوم · <span dir="ltr">10:12</span></span><span style="font-size:11px;font-weight:600;color:#1E7F55;background:#DCEEE4;padding:3px 9px;border-radius:99px">مكتملة</span></div>
+<div style="display:grid;grid-template-columns:10px 1fr;gap:4px 10px;align-items:center;font-size:14px"><span style="width:7px;height:7px;border-radius:50%;background:#14161A"></span><span>شارع الرينبو</span><span style="width:7px;height:7px;border-radius:2px;background:#F05A28"></span><span>سيتي مول</span></div>
+<div style="display:flex;justify-content:space-between;margin-top:9px;font-size:12.5px;color:#6A6862"><span>اقتصادي · محمد ع.</span><span style="font-size:14.5px;font-weight:600;color:#14161A"><span dir="ltr">3.750</span> د.أ</span></div>
+</div>
+<div style="background:#FFFFFF;border-radius:22px;padding:13px 16px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><span style="font-size:12.5px;color:#6A6862;white-space:nowrap">أمس · <span dir="ltr">21:40</span></span><span style="font-size:11px;font-weight:600;color:#1E7F55;background:#DCEEE4;padding:3px 9px;border-radius:99px">مكتملة</span></div>
+<div style="display:grid;grid-template-columns:10px 1fr;gap:4px 10px;align-items:center;font-size:14px"><span style="width:7px;height:7px;border-radius:50%;background:#14161A"></span><span>الشميساني</span><span style="width:7px;height:7px;border-radius:2px;background:#F05A28"></span><span>دابوق</span></div>
+<div style="display:flex;justify-content:space-between;margin-top:9px;font-size:12.5px;color:#6A6862"><span>نسائية · رنا ح.</span><span style="font-size:14.5px;font-weight:600;color:#14161A"><span dir="ltr">4.100</span> د.أ</span></div>
+</div>
+<div style="background:#FFFFFF;border-radius:22px;padding:13px 16px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><span style="font-size:12.5px;color:#6A6862;white-space:nowrap">2 أكتوبر · <span dir="ltr">08:05</span></span><span style="font-size:11px;font-weight:600;color:#C5352B;background:#F8E1DE;padding:3px 9px;border-radius:99px">ملغاة · بلا رسوم</span></div>
+<div style="display:grid;grid-template-columns:10px 1fr;gap:4px 10px;align-items:center;font-size:14px;color:#6A6862"><span style="width:7px;height:7px;border-radius:50%;background:#A8A398"></span><span>جبل الحسين</span><span style="width:7px;height:7px;border-radius:2px;background:#A8A398"></span><span>الجامعة الأردنية</span></div>
+</div>
+</div>
+</div>
+<dc-import name="TaxoTabs" app="rider" active="trips" style="position:absolute;left:0;right:0;bottom:0" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+
+<div id="r13" data-screen-label="R13 العروض" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R13</span><span style="font-size:16px;font-weight:600">العروض</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="padding:6px 18px 0">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:22px/1 'Material Symbols Rounded'">arrow_forward</span></span><h2 style="margin:0;font-size:22px;font-weight:700">العروض</h2></div>
+<div style="position:relative;overflow:hidden;background:#F05A28;border-radius:26px;padding:20px">
+<span style="position:absolute;left:-50px;bottom:-30px;width:260px;height:52px;border-radius:26px;background:#14161A;opacity:.1;transform:rotate(45deg)"></span>
+<span style="position:absolute;left:-50px;bottom:-30px;width:260px;height:52px;border-radius:26px;background:#F4F1EA;opacity:.25;transform:rotate(-45deg)"></span>
+<div style="position:relative;display:flex;align-items:baseline;gap:8px"><span dir="ltr" style="font-family:Unbounded;font-weight:800;font-size:62px;line-height:1;letter-spacing:-.04em">30%</span></div>
+<div style="position:relative;font-size:17px;font-weight:700;margin:8px 0 14px">على كل رحلات المطار</div>
+<div style="position:relative;display:flex;align-items:center;gap:10px">
+<span style="display:flex;align-items:center;gap:8px;border:1.5px dashed #14161A;border-radius:12px;padding:8px 12px"><span dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:15px">FLY30</span><span style="font:18px/1 'Material Symbols Rounded'">content_copy</span></span>
+<span style="font-size:12.5px">حتى 15 أكتوبر</span>
+</div>
+</div>
+<label style="display:block;font-size:13px;font-weight:600;margin:18px 2px 7px">عندك رمز عرض؟</label>
+<div style="display:flex;align-items:center;gap:10px;height:54px;padding:0 6px 0 16px;background:#FFFFFF;border:1.5px solid #C5352B;border-radius:16px;box-sizing:border-box"><span dir="ltr" style="flex:1;font-size:15.5px;font-weight:600;letter-spacing:.06em;text-align:end">SUMMER25</span><span style="height:42px;padding:0 16px;border-radius:12px;background:#14161A;color:#F4F1EA;display:flex;align-items:center;font-size:14px;font-weight:600">تطبيق</span></div>
+<div style="display:flex;gap:6px;align-items:flex-start;margin-top:7px;color:#C5352B;font-size:12.5px;line-height:1.55"><span style="font:16px/1.3 'Material Symbols Rounded';font-variation-settings:'FILL' 1">error</span><span>انتهت صلاحية هذا الرمز في 30 سبتمبر — جرّب رمزاً آخر.</span></div>
+<div style="font-size:15px;font-weight:700;margin:18px 2px 10px">عروضك</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="position:relative;display:flex;align-items:stretch;background:#FFFFFF;border-radius:20px;height:80px">
+<div style="width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-inline-end:1.5px dashed #E0DAD0"><span dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:19px">1.000</span><span style="font-size:11px;color:#6A6862">د.أ</span></div>
+<div style="flex:1;padding:0 16px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:14px;font-weight:600">خصم على رحلتك القادمة</div><div style="font-size:12px;color:#6A6862;margin-top:3px"><span dir="ltr">TAXO1</span> · حتى 31 أكتوبر</div></div>
+<span style="position:absolute;right:87px;top:-8px;width:18px;height:18px;border-radius:50%;background:#F4F1EA"></span><span style="position:absolute;right:87px;bottom:-8px;width:18px;height:18px;border-radius:50%;background:#F4F1EA"></span>
+</div>
+<div style="position:relative;display:flex;align-items:stretch;background:#FFFFFF;border-radius:20px;height:80px">
+<div style="width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-inline-end:1.5px dashed #E0DAD0"><span dir="ltr" style="font-family:Unbounded;font-weight:700;font-size:19px">20%</span><span style="font-size:11px;color:#6A6862">طرود</span></div>
+<div style="flex:1;padding:0 16px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:14px;font-weight:600">على أول طردين ترسلهما</div><div style="font-size:12px;color:#6A6862;margin-top:3px"><span dir="ltr">PKG20</span> · حتى 20 أكتوبر</div></div>
+<span style="position:absolute;right:87px;top:-8px;width:18px;height:18px;border-radius:50%;background:#F4F1EA"></span><span style="position:absolute;right:87px;bottom:-8px;width:18px;height:18px;border-radius:50%;background:#F4F1EA"></span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:10px;border:1.5px solid #14161A;border-radius:20px;padding:14px 16px">
+<span style="font:26px/1 'Material Symbols Rounded'">redeem</span>
+<div style="flex:1"><div style="font-size:14px;font-weight:700">ادعُ صديقاً — 2.000 د.أ لكلٍّ منكما</div><div style="font-size:12px;color:#6A6862;margin-top:2px">رمزك <span dir="ltr" style="font-weight:600;color:#14161A">SARA26</span></div></div>
+<span style="font:20px/1 'Material Symbols Rounded'">ios_share</span>
+</div>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r14" data-screen-label="R14 الإشعارات" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R14</span><span style="font-size:16px;font-weight:600">الإشعارات</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="padding:6px 18px 0">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:22px/1 'Material Symbols Rounded'">arrow_forward</span></span><h2 style="margin:0;flex:1;font-size:22px;font-weight:700">الإشعارات</h2><span style="font-size:13px;font-weight:600;color:#C2410C">قراءة الكل</span></div>
+<div style="font-size:12px;font-weight:600;color:#6A6862;margin:0 4px 8px">اليوم</div>
+<div style="background:#FFFFFF;border-radius:22px;padding:0 14px;margin-bottom:16px">
+<div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #F0ECE4"><span style="width:40px;height:40px;border-radius:50%;background:#14161A;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:20px/1 'Material Symbols Rounded';color:#F05A28">local_taxi</span></span><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14.5px;font-weight:700">كبتنك وصل</span><span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6A6862"><span dir="ltr">10:08</span><span style="width:8px;height:8px;border-radius:50%;background:#F05A28"></span></span></div><div style="font-size:13px;color:#6A6862;line-height:1.55;margin-top:3px">محمد بانتظارك عند المدخل الرئيسي — هيونداي بيضاء <span dir="ltr">21-48390</span>.</div></div></div>
+<div style="display:flex;gap:12px;padding:14px 0"><span style="width:40px;height:40px;border-radius:50%;background:#F4F1EA;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:20px/1 'Material Symbols Rounded'">receipt_long</span></span><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14.5px;font-weight:700">إيصال رحلتك</span><span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6A6862"><span dir="ltr">10:27</span><span style="width:8px;height:8px;border-radius:50%;background:#F05A28"></span></span></div><div style="font-size:13px;color:#6A6862;line-height:1.55;margin-top:3px">3.750 د.أ — من شارع الرينبو إلى سيتي مول.</div></div></div>
+</div>
+<div style="font-size:12px;font-weight:600;color:#6A6862;margin:0 4px 8px">أمس</div>
+<div style="background:#FFFFFF;border-radius:22px;padding:0 14px;margin-bottom:16px">
+<div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #F0ECE4"><span style="width:40px;height:40px;border-radius:50%;background:#FDE6DB;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:20px/1 'Material Symbols Rounded';color:#C2410C">sell</span></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><span style="font-size:14.5px;font-weight:700">عرض جديد لك</span><span dir="ltr" style="font-size:11.5px;color:#6A6862">18:30</span></div><div style="font-size:13px;color:#6A6862;line-height:1.55;margin-top:3px"><span dir="ltr">FLY30</span>: خصم 30% على رحلات المطار حتى 15 أكتوبر.</div></div></div>
+<div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #F0ECE4"><span style="width:40px;height:40px;border-radius:50%;background:#DCEEE4;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:20px/1 'Material Symbols Rounded';color:#1E7F55">account_balance_wallet</span></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><span style="font-size:14.5px;font-weight:700">شُحن رصيدك</span><span dir="ltr" style="font-size:11.5px;color:#6A6862">14:02</span></div><div style="font-size:13px;color:#6A6862;line-height:1.55;margin-top:3px">أُضيف 10.000 د.أ عبر البطاقة <span dir="ltr">•••• 4242</span>.</div></div></div>
+<div style="display:flex;gap:12px;padding:14px 0"><span style="width:40px;height:40px;border-radius:50%;background:#F4F1EA;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:20px/1 'Material Symbols Rounded'">support_agent</span></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><span style="font-size:14.5px;font-weight:700">رد على بلاغك</span><span dir="ltr" style="font-size:11.5px;color:#6A6862">09:15</span></div><div style="font-size:13px;color:#6A6862;line-height:1.55;margin-top:3px">راجعنا مسار رحلة 28 سبتمبر وأعدنا 0.600 د.أ إلى محفظتك.</div></div></div>
+</div>
+<div style="font-size:12px;font-weight:600;color:#6A6862;margin:0 4px 8px">هذا الأسبوع</div>
+<div style="background:#FFFFFF;border-radius:22px;padding:0 14px">
+<div style="display:flex;gap:12px;padding:14px 0"><span style="width:40px;height:40px;border-radius:50%;background:#F7E3EE;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:20px/1 'Material Symbols Rounded';color:#9C2C6E">woman</span></span><div style="flex:1"><div style="display:flex;justify-content:space-between"><span style="font-size:14.5px;font-weight:700">الخدمة النسائية في إربد</span><span style="font-size:11.5px;color:#6A6862">الإثنين</span></div><div style="font-size:13px;color:#6A6862;line-height:1.55;margin-top:3px">صار بإمكانك طلب كبتنة في إربد أيضاً.</div></div></div>
+</div>
+</div>
+<span style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#14161A"></span>
+</div>
+</div>
+
+<div id="r15" data-screen-label="R15 الحساب" style="display:flex;flex-direction:column;gap:14px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span dir="ltr" style="font:600 11px/1 ui-monospace,Menlo,monospace;background:#14161A;color:#F4F1EA;padding:5px 8px;border-radius:6px">R15</span><span style="font-size:16px;font-weight:600">الحساب</span></div>
+<div style="position:relative;width:390px;height:844px;border-radius:54px;overflow:hidden;background:#F4F1EA;box-shadow:0 0 0 10px #14161A,0 0 0 11px #3B3E45,0 50px 90px -30px rgba(20,22,26,.45)">
+<dc-import name="TaxoStatus" hint-size="390px,50px"></dc-import>
+<div style="padding:10px 18px 0">
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+<span style="width:68px;height:68px;border-radius:50%;background:#F7E3EE;border:2px solid #9C2C6E;color:#9C2C6E;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;box-sizing:border-box;flex:none">س</span>
+<div style="flex:1"><div style="font-size:20px;font-weight:700">سارة الخطيب</div><div dir="ltr" style="font-size:13px;color:#6A6862;text-align:end;margin-top:2px">+962 79 555 0142</div></div>
+<span style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:1px solid #E0DAD0;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="font:20px/1 'Material Symbols Rounded'">edit</span></span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);background:#FFFFFF;border-radius:20px;padding:12px 0;margin-bottom:10px">
+<div style="text-align:center"><div dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:17px">142</div><div style="font-size:11.5px;color:#6A6862">رحلة</div></div>
+<div style="text-align:center;border-inline:1px solid #ECE8DF"><div dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:17px">4.95</div><div style="font-size:11.5px;color:#6A6862">تقييمك</div></div>
+<div style="text-align:center"><div dir="ltr" style="font-family:Unbounded;font-weight:600;font-size:17px">2024</div><div style="font-size:11.5px;color:#6A6862">معنا منذ</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;background:#F7E3EE;border:1px solid #E9BCD5;border-radius:22px;padding:14px 16px;margin-bottom:10px">
+<span style="width:42px;height:42px;border-radius:50%;background:#FFFFFF;display:flex;align-items:center;justify-content:center;flex:none"><span style="font:22px/1 'Material Symbols Rounded';color:#9C2C6E">woman</span></span>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">الخدمة النسائية</div><div style="font-size:12.5px;line-height:1.5;margin-top:2px">نطابقك مع كبتنة كلما توفرت</div></div>
+<span style="position:relative;width:50px;height:30px;border-radius:99px;background:#9C2C6E;flex:none"><span style="position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:#FFFFFF"></span></span>
+</div>
+<div style="background:#FFFFFF;border-radius:22px;padding:0 14px">
+<div style="display:flex;align-items:center;gap:12px;height:50px;border-bottom:1px solid #F0ECE4"><span style="font:21px/1 'Material Symbols Rounded'">bookmark</span><span style="flex:1;font-size:14.5px">الأماكن المحفوظة</span><span style="font-size:13px;color:#6A6862">3</span><span style="font:20px/1 'Material Symbols Rounded';color:#A8A398">chevron_left</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:50px;border-bottom:1px solid #F0ECE4"><span style="font:21px/1 'Material Symbols Rounded'">credit_card</span><span style="flex:1;font-size:14.5px">طرق الدفع</span><span dir="ltr" style="font-size:13px;color:#6A6862">VISA 4242</span><span style="font:20px/1 'Material Symbols Rounded';color:#A8A398">chevron_left</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:50px;border-bottom:1px solid #F0ECE4"><span style="font:21px/1 'Material Symbols Rounded'">shield_person</span><span style="flex:1;font-size:14.5px">الأمان وجهات الطوارئ</span><span style="font:20px/1 'Material Symbols Rounded';color:#A8A398">chevron_left</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:50px;border-bottom:1px solid #F0ECE4"><span style="font:21px/1 'Material Symbols Rounded'">translate</span><span style="flex:1;font-size:14.5px">اللغة</span><span style="font-size:13px;color:#6A6862">العربية</span><span style="font:20px/1 'Material Symbols Rounded';color:#A8A398">chevron_left</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:50px;border-bottom:1px solid #F0ECE4"><span style="font:21px/1 'Material Symbols Rounded'">help</span><span style="flex:1;font-size:14.5px">المساعدة والدعم</span><span style="font:20px/1 'Material Symbols Rounded';color:#A8A398">chevron_left</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:50px"><span style="font:21px/1 'Material Symbols Rounded'">gavel</span><span style="flex:1;font-size:14.5px">الشروط والخصوصية</span><span style="font:20px/1 'Material Symbols Rounded';color:#A8A398">chevron_left</span></div>
+</div>
+<p style="margin:14px 0 0;text-align:center;font-size:14px;font-weight:600;color:#C5352B">تسجيل الخروج</p>
+</div>
+<dc-import name="TaxoTabs" app="rider" active="account" style="position:absolute;left:0;right:0;bottom:0" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const ring = (d) => React.createElement('span', { key: d, style: { position: 'absolute', left: 0, top: 0, width: 240, height: 240, borderRadius: '50%', border: '2px solid #F05A28', background: 'rgba(240,90,40,.07)', transform: 'translate(-50%,-50%)', animation: `txring 2.7s ease-out ${d}s infinite` } });
+    const radar = React.createElement('div', { style: { position: 'relative', width: 0, height: 0 } }, [0, 0.9, 1.8].map(ring));
+    return { radar };
+  }
+}
+</script>
+</body>
+</html>
