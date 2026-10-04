@@ -23,6 +23,7 @@ import {
 import type { ReactNode } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
+import { BottomNavT2 } from "@/components/BottomNavT2";
 import { Welcome } from "@/components/welcome/Welcome";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
@@ -228,7 +229,10 @@ function NavBar() {
   return (
     <>
       <WomenModeNotice />
-      {showsNav(pathname) && !coveredByT2 ? <BottomNav /> : null}
+      {/* **وشريطُ TaxoTabs في المظهر المرسوم**، والقائمُ في الآخر — الوجهاتُ هي هي (`lib/tabs.ts`) */}
+      {showsNav(pathname) && !coveredByT2 ? (
+        <ByTheme day={<BottomNavT2 />} night={<BottomNav />} />
+      ) : null}
     </>
   );
 }

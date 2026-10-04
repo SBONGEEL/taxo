@@ -164,3 +164,61 @@ button.t2-row:enabled { cursor: pointer; }
   line-height: 1.55;
   color: var(--mut);
 }
+
+/* ── شريطُ التبويب (TaxoTabs) ──────────────────────────────────────────────
+   الحاويةُ تحمل متغيّراتِ `.t2` لا سطحَها: لا خلفيةَ تحجب الخريطة ولا ارتفاعَ صفحة.
+   **والمقاسُ مقاسُ الشريط القائم** (ارتفاعٌ ٦٢ فوق `pb-float`) فما تحجزه الشاشاتُ له لم يتغيّر.
+   وخطُّ «البيت» تحته في اللوحة رسمُ الجهاز لا جزءٌ من الشريط، فلا يُبنى */
+.t2.t2-tabs {
+  min-height: 0;
+  background: none;
+}
+.t2-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 62px;
+  padding: 0 7px;
+  border-radius: 31px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px rgba(20, 22, 26, 0.05), 0 14px 34px -8px rgba(20, 22, 26, 0.28);
+}
+.t2-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  height: 48px;
+  border-radius: 24px;
+  color: var(--mut);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-tab .t2-icon { font-size: 22px; }
+.t2-tab-label {
+  font-size: 10px;
+  white-space: nowrap;
+}
+/* النشطُ حبّةٌ أعرضُ بالحبر: الأيقونةُ ممتلئةً واسمُها جنباً إلى جنب */
+.t2-tab.on {
+  flex: 1.5;
+  flex-direction: row;
+  gap: 6px;
+  background: var(--ink);
+  color: var(--stone);
+}
+.t2-tab.on .t2-icon { font-variation-settings: "FILL" 1; }
+.t2-tab.on .t2-tab-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+/* **استجابةُ اللمس** كـ`pressable` في التطبيق (§8)، وتسكن هنا كي لا يتنازع الصنفان على `transition` */
+.t2-tab:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-tab {
+    transition: flex-grow 240ms ease, background-color 240ms ease, color 240ms ease, transform 120ms ease;
+  }
+}
