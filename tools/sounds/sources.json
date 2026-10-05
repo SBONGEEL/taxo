@@ -1,0 +1,188 @@
+[
+ {
+  "role": "request",
+  "key": "req-a",
+  "file": "pixabay-487906.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/02/20/audio_b74b0ce8a1.mp3",
+  "sha256": "0e4106c4b4adefdaefb1e748c3ec9130266db2dcffc38feee39c625928d8d10b",
+  "opt": {
+   "len": 2.2,
+   "fade": 0.12
+  }
+ },
+ {
+  "role": "request",
+  "key": "req-b",
+  "file": "pixabay-494939.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/03/audio_e76d0bf8c1.mp3",
+  "sha256": "2fb10c8e75f8c228ada174fb26554e4a02b49fb697dff9fa418f797811ea2051",
+  "opt": {
+   "len": 2.2,
+   "cycle_after": 1.6,
+   "fade": 0.15
+  }
+ },
+ {
+  "role": "request",
+  "key": "req-c",
+  "file": "mixkit-2820.wav",
+  "url": "https://assets.mixkit.co/active_storage/sfx/2820/2820.wav",
+  "sha256": "5d5271c68ef86a815c3ee3cc34f090ea3292db795933ebaa1aece856651f06df",
+  "opt": {
+   "len": 2.2,
+   "fade": 0.3
+  }
+ },
+ {
+  "role": "accepted",
+  "key": "acc-a",
+  "file": "pixabay-494262.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/02/audio_a2a2855a9f.mp3",
+  "sha256": "33b200c45be66dfecd8130e94b8942b34720abe8fdffb36981aa18286f78237a",
+  "opt": {}
+ },
+ {
+  "role": "accepted",
+  "key": "acc-b",
+  "file": "pixabay-370046.mp3",
+  "url": "https://cdn.pixabay.com/audio/2025/07/04/audio_3f2001ba0b.mp3",
+  "sha256": "7832b6cf973ec406283b2a39601e1f35ad43f0748e11ce51c9096abd167b5d5e",
+  "opt": {}
+ },
+ {
+  "role": "accepted",
+  "key": "acc-c",
+  "file": "pixabay-494259.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/02/audio_1d7788374a.mp3",
+  "sha256": "e0416cdef7fa0c8a73053f35eb63b5744a5db3d84106ea27abed0795613ae3b3",
+  "opt": {}
+ },
+ {
+  "role": "approaching",
+  "key": "app-a",
+  "file": "pixabay-146623.mp3",
+  "url": "https://cdn.pixabay.com/audio/2023/04/17/audio_b34c0f2e71.mp3",
+  "sha256": "02e5d092df5ec4d7ba1908a3e02c7fb0d7f0c18d8acfa37a0d8e5ae0ba8b1544",
+  "opt": {}
+ },
+ {
+  "role": "arrived",
+  "key": "arr-a",
+  "file": "pixabay-485897.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/02/16/audio_28056f5b36.mp3",
+  "sha256": "1431ec6e48e69d0be46b272cb32b81be59b831bfff9b5cd8af342a94089ff1ee",
+  "opt": {}
+ },
+ {
+  "role": "arrived",
+  "key": "arr-b",
+  "file": "pixabay-480571.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/02/06/audio_8eb1a18caf.mp3",
+  "sha256": "42f6807a4ca04dac647ae192de5b0d04483af07fb510b6be72fa832c8e74cfa0",
+  "opt": {}
+ },
+ {
+  "role": "message",
+  "key": "msg-a",
+  "file": "pixabay-363746.mp3",
+  "url": "https://cdn.pixabay.com/audio/2025/06/22/audio_0c4a98c8b5.mp3",
+  "sha256": "d9b387ef345d53a9020ffe0b963f3542a648fb3f9a4fe13e5ac924a5206db762",
+  "opt": {}
+ },
+ {
+  "role": "message",
+  "key": "msg-b",
+  "file": "pixabay-363675.mp3",
+  "url": "https://cdn.pixabay.com/audio/2025/06/22/audio_41316ca0ca.mp3",
+  "sha256": "f0d9e1db55d578504b54b752b113b2c2ca91937594edc19247c0f2a3947a9654",
+  "opt": {}
+ },
+ {
+  "role": "started",
+  "key": "sta-a",
+  "file": "pixabay-351299.mp3",
+  "url": "https://cdn.pixabay.com/audio/2025/05/29/audio_8d79877e56.mp3",
+  "sha256": "416bef34427e51d60955fef04859ba73c6fee78ba2ce67d42e6b7f752aed6beb",
+  "opt": {}
+ },
+ {
+  "role": "started",
+  "key": "sta-b",
+  "file": "pixabay-494543.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/03/audio_87ea435eb1.mp3",
+  "sha256": "dfc5eec671b988d984b5dab2bf5d53a7897505f17c3353af896a314df40cec2b",
+  "opt": {}
+ },
+ {
+  "role": "ended",
+  "key": "end-a",
+  "file": "pixabay-487899.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/02/20/audio_8b1d7ef488.mp3",
+  "sha256": "7a6844df96d2430f0db990b0214bb05e498969340aa53ce13efc20e28375e671",
+  "opt": {}
+ },
+ {
+  "role": "ended",
+  "key": "end-b",
+  "file": "pixabay-493470.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/01/audio_983b5eab08.mp3",
+  "sha256": "4cf74fd1f9cc2b4d643c75d84972741650a7ababbd0cf3dbcd55af556846164e",
+  "opt": {}
+ },
+ {
+  "role": "ended",
+  "key": "end-c",
+  "file": "mixkit-2863.wav",
+  "url": "https://assets.mixkit.co/active_storage/sfx/2863/2863.wav",
+  "sha256": "57051b9ef3c58a3df2e8c3679a80420e4020481ad551e8726a83d29faaa7852b",
+  "opt": {}
+ },
+ {
+  "role": "payment",
+  "key": "pay-a",
+  "file": "pixabay-494249.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/02/audio_9fd30487cc.mp3",
+  "sha256": "a854275553b207b613df05894303bfbf3d2cf74b595c298417c172facbf5c7a0",
+  "opt": {}
+ },
+ {
+  "role": "payment",
+  "key": "pay-b",
+  "file": "pixabay-494261.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/02/audio_ffe2d48f99.mp3",
+  "sha256": "41e7bf130928974683072951be2ae3ddb8858e8580b108ebfe41e0eb90b6ae9a",
+  "opt": {}
+ },
+ {
+  "role": "error",
+  "key": "err-a",
+  "file": "pixabay-563613.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/07/07/audio_b0f420743e.mp3",
+  "sha256": "5d03aba81b275227404544d601a88d6637494ce9df9364cbcf6216285c50f255",
+  "opt": {}
+ },
+ {
+  "role": "error",
+  "key": "err-b",
+  "file": "pixabay-206492.mp3",
+  "url": "https://cdn.pixabay.com/audio/2024/05/03/audio_6130b029fd.mp3",
+  "sha256": "3ec21ad945f8496b48d287eb8a4b5291e9f76f08061f3096c178f932eca37195",
+  "opt": {}
+ },
+ {
+  "role": "general",
+  "key": "gen-a",
+  "file": "pixabay-370048.mp3",
+  "url": "https://cdn.pixabay.com/audio/2025/07/04/audio_a32bdcf6c0.mp3",
+  "sha256": "a0ba8fde6501b833d8615d5a3bdd611dd8a8d9ea95efd3f0b47adf62e162f760",
+  "opt": {}
+ },
+ {
+  "role": "general",
+  "key": "gen-b",
+  "file": "pixabay-494256.mp3",
+  "url": "https://cdn.pixabay.com/audio/2026/03/02/audio_00b29462c1.mp3",
+  "sha256": "abe3a00464d9050fb1fa236f4e330ffaa5eb2a4035cdf04922529db11664c410",
+  "opt": {}
+ }
+]

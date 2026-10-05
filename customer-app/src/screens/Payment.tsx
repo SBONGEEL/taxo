@@ -45,6 +45,7 @@ import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { usePaymentPreference, type PayableMethod } from "@/lib/payment";
 import { useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
+import { play } from "@/lib/sound";
 import {
   currencyName,
   formatDistance,
@@ -201,6 +202,17 @@ export function PaymentScreen() {
     }, 5_000);
     return () => window.clearInterval(timer);
   }, [awaiting.length, load]);
+
+  /** **«نجح دفعٌ أو شحن»** (§٦١-ي/١٠) — **عند الانتقال إلى «مسدَّدة» لا عند فتح
+   * شاشةٍ مسدَّدة**: من يعود إلى رحلةٍ دفعها أمس لا يُستقبَل بنغمة نجاح. والانتقالُ
+   * يقع بعد الدفع بالمحفظة لحظتَه، أو حين يؤكّد الكبتنُ كاشاً أو كليك في الاستطلاع
+   * أعلاه — **والحكمُ `settlement` من الخلفية** لا حسابٌ هنا (القسم 14). */
+  const wasSettled = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (state === null) return;
+    if (wasSettled.current === false && settled) play("paid");
+    wasSettled.current = settled;
+  }, [state, settled]);
 
   /** صفوفُ البطاقة (`payRows`) — **قراءةٌ لا حساب**.
    *

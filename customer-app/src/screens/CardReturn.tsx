@@ -9,7 +9,7 @@
  */
 
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
@@ -18,6 +18,7 @@ import type { CardOrder } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Screen } from "@/components/ui/Screen";
+import { isUnlocked, play } from "@/lib/sound";
 import { formatMoney } from "@/lib/utils";
 
 export function CardReturnScreen() {
@@ -29,6 +30,8 @@ export function CardReturnScreen() {
   const [order, setOrder] = useState<CardOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** **نغمةُ النجاح مرّةً واحدة** — «أعد الاستعلام» على طلبٍ محسومٍ لا يعيدها. */
+  const announced = useRef(false);
 
   const check = useCallback(async () => {
     if (!cartId) {
@@ -39,7 +42,15 @@ export function CardReturnScreen() {
     setLoading(true);
     setError(null);
     try {
-      setOrder(await getCardOrder(cartId));
+      const next = await getCardOrder(cartId);
+      setOrder(next);
+      // **«نجح دفعٌ أو شحن»** (§٦١-ي/١٠) — والعودةُ من صفحة المزود تحميلٌ جديد،
+      // فلا صوتَ قبل أوّل لمسة (`unlock`): **لا يُحسب مُعلَناً ما لم يُسمع**، فيُسمع
+      // في الاستعلام التالي بعد لمسة
+      if (next.status === "paid" && !announced.current && isUnlocked()) {
+        announced.current = true;
+        play(rideId ? "paid" : "topup");
+      }
     } catch (caught) {
       setError(
         caught instanceof ApiError ? caught.message : "تعذّر الاستعلام عن حال الدفع",
@@ -47,7 +58,7 @@ export function CardReturnScreen() {
     } finally {
       setLoading(false);
     }
-  }, [cartId]);
+  }, [cartId, rideId]);
 
   useEffect(() => {
     void check();

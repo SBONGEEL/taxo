@@ -34,6 +34,7 @@ import { useCountryConfig } from "@/lib/config";
 import { useLocation } from "react-router-dom";
 
 import { useSession } from "@/lib/session";
+import { play } from "@/lib/sound";
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
 import { cn, formatMoney, currencyLabel } from "@/lib/utils";
 
@@ -103,7 +104,13 @@ export function WalletTopupScreen() {
     try {
       const updated = await checkCliqTopup(cliq.cart_id);
       setCliq(updated);
-      if (updated.status === "paid") setDone("وصلت الحوالة — شُحن رصيدك.");
+      // **الصوتُ مع «شُحن» لا قبله** (§٦١-ي/١٠): البطاقةُ بلا صفحةٍ تقول «سيظهر
+      // خلال لحظات» فلا تُعلَن، والطلبُ اليدويُّ ينتظر الإدارة — **ونغمةُ نجاحٍ
+      // قبل أن يُقيَّد المالُ تَعِد بما لم يقع**
+      if (updated.status === "paid") {
+        setDone("وصلت الحوالة — شُحن رصيدك.");
+        play("topup");
+      }
       if (updated.status === "created") {
         setError("لم تصل الحوالة بعد — أعد المحاولة بعد لحظات.");
       }

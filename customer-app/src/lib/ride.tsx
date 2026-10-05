@@ -28,6 +28,7 @@ import { listenToPush } from "@/lib/push";
 import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
+import { play, type Cue } from "@/lib/sound";
 
 export interface DriverPing {
   lat: number;
@@ -78,7 +79,7 @@ const TERMINAL_EVENTS = new Set([
 
 const EVENT_TOAST: Record<string, { title: string; body?: string }> = {
   driver_assigned: { title: "قَبِل كبتنٌ رحلتك", body: "هو الآن في طريقه إليك" },
-  // **«الكبتن يقترب»** (§61-ي/١١) — مرّةً لكلِّ رحلة، والصوتُ بعد إقرار أصوات TAXO
+  // **«الكبتن يقترب»** (§61-ي/١١) — مرّةً لكلِّ رحلة، وصوتُه في `EVENT_SOUND`
   driver_approaching: { title: "كبتنُك يقترب", body: "على وشك الوصول إلى نقطة الانطلاق — استعدّ." },
   driver_arrived: { title: "وصل الكبتن", body: "الكبتن بانتظارك في نقطة الانطلاق" },
   ride_started: { title: "بدأت الرحلة", body: "رحلة موفقة" },
@@ -93,6 +94,19 @@ const EVENT_TOAST: Record<string, { title: string; body?: string }> = {
     body: "الرحلة مستمرة — نحاول استعادة موقعه",
   },
   driver_reconnected: { title: "عاد اتصال الكبتن" },
+};
+
+/** **أصواتُ الراكب** (§٦١-ي/١٠) — وكانت في الجدول منذ المرحلة ٩ **ولا سلكَ إليها**،
+ *  وشاشةُ الإعدادات تَعِد بها («عند قبول الكبتن ووصوله»). **تحت «أصوات التطبيق»
+ *  القائم** (`play` يسأله)، **ومع الحدث الذي يُرسم له بلاغُه**: صوتٌ بلا بلاغٍ يُرى
+ *  أو بلاغٌ بلا صوتٍ يُسمع لحدثٍ واحدٍ يُقرآن حدثين. والإلغاءُ وما يشبهه بلا صوت —
+ *  كما كانت. */
+const EVENT_SOUND: Partial<Record<string, Cue>> = {
+  driver_assigned: "accepted",
+  driver_approaching: "approaching",
+  driver_arrived: "arrived",
+  ride_started: "started",
+  ride_completed: "ended",
 };
 
 export function RideProvider({ children }: { children: ReactNode }) {
@@ -181,6 +195,8 @@ export function RideProvider({ children }: { children: ReactNode }) {
               notify(toast.title, toast.body);
             }
           }
+          const cue = EVENT_SOUND[event.type];
+          if (cue) play(cue);
         }
       }
     },

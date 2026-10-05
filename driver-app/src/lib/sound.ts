@@ -1,11 +1,15 @@
-/** الهوية الصوتية — `DESIGN.md` §9. موتيفٌ واحد تتفرّع منه كلُّ النغمات.
+/** الهوية الصوتية — `DESIGN.md` §9، **وأصواتُ المكتبات المؤقّتة** (`SPEC.md` §٦١-ك).
  *
- * **مولَّدةٌ برمجياً لا ملفات**: الجدولُ أدناه ~٢ كيلوبايت مقابل ~٦٠ من الأصول،
- * **ولا شبكةَ فلا تأخيرَ لأول رسم** — وكلُّها مشتقّةٌ من `MOTIF` الواحد، وهو ما
- * يجعلها هويةً لا خمسةَ عشرَ ملفاً لا يجمعها شيء.
+ * **أكثرُها اليومَ ملفّاتٌ لا مذبذبات** (اختيارُ المالك ٢٠٢٦-١٠-٠٥): رفض النغماتِ
+ * المولَّدةَ برمجياً، واختار من مكتبةٍ مرخَّصةٍ أصواتاً **مؤقّتةً** بروح مثالين
+ * أرسلهما — `FILES` أدناه، ومصدرُ كلِّ ملفٍّ وترخيصُه في `design/TAXO-SOUNDS.md`
+ * ووصفةُ تشطيبه في `tools/sounds/`. **وتُستبدل لاحقاً بأصواتٍ تُصنع لـTAXO وحدَها.**
+ * **وما لم يُختر له صوتٌ يبقى نغمةَ الموتيف** (`CUES`) حتى يقرّر.
  *
  * **والسياقُ يُنشأ عند أول تشغيلٍ لا عند التحميل**: `AudioContext` مورِدٌ ثقيل،
  * وإنشاؤه في وحدةٍ تُستورد مع التطبيق يوقظ عتادَ الصوت لمن لن يسمع شيئاً.
+ * **والملفّاتُ تُفكّ معه** (عند أوّل إيماءة) — فلا تأخيرَ لأوّل رسمٍ، **ولا تأخيرَ
+ * لأوّل نغمة**: الطلبُ لا يصل قبل لمساتٍ كثيرةٍ تسبقه (الدخولُ والاتصال).
  *
  * **والمتصفحاتُ تمنع الصوتَ قبل إيماءة**: `unlock()` تُنادى من أول لمسةٍ في
  * التطبيق، وقبلها كلُّ `play` تصمت بلا خطأ. ولذلك نُقل توقيعُ الشاشة الترحيبية
@@ -32,8 +36,6 @@ const KEY_OFFER = "taxo.driver.sound.offer";
 const A4 = 440;
 const D5 = 587.33;
 const E5 = 659.25;
-const A5 = 880;
-const D6 = 1174.66;
 
 interface Note {
   /** التردد بالهرتز — من سلّم §9 لا رقمٌ يُكتب في موضع الاستعمال. */
@@ -59,33 +61,34 @@ export type Cue =
   | "notify"
   | "signature";
 
-/** كلُّ نغمةٍ اشتقاقٌ من الموتيف — والجدولُ هو الهوية (§9.1). */
-const CUES: Record<Cue, Note[]> = {
-  // **الطلبُ الوارد — الأهمُّ والأطول**: الموتيف ×3 بفواصل 250ms، وشدّةٌ
-  // تتدرّج قليلاً. يُكرَّر بلا فاصلٍ مسموع حتى ينتهي العدّاد (§9.1)
-  offer: [
-    { hz: A4, at: 0, for: 0.2, gain: 0.42 },
-    { hz: D5, at: 0.16, for: 0.2, gain: 0.42 },
-    { hz: E5, at: 0.32, for: 0.24, gain: 0.42 },
-    { hz: A4, at: 0.81, for: 0.2, gain: 0.5 },
-    { hz: D5, at: 0.97, for: 0.2, gain: 0.5 },
-    { hz: E5, at: 1.13, for: 0.24, gain: 0.5 },
-    { hz: A4, at: 1.62, for: 0.2, gain: 0.58 },
-    { hz: D5, at: 1.78, for: 0.2, gain: 0.58 },
-    { hz: E5, at: 1.94, for: 0.26, gain: 0.58 },
-  ],
+/** **ما اختاره المالك — يحلّ محلَّ نغمته في موضعها وتحت مفاتيحها** (§٦١-ي/١٢).
+ *
+ * والمساراتُ نسبةً إلى `public/` — **ملفُّ كلِّ صوتٍ واحدٌ في التطبيقين**، فما
+ * يسمعه الكبتنُ لبدء الرحلة هو ما يسمعه الراكب. */
+const FILES: Partial<Record<Cue, string>> = {
+  // **الطلبُ الوارد — الأهمُّ والأطول**: ٢٫٢ ث بالضبط، فتوقيتُ تكراره كما كان
+  // (طولُه + ١٢٠ م.ث). وأعلى من البقية بـ٢ ديسيبل في ملفّه نفسِه (−٢٠ LUFS)
+  offer: "sounds/request.mp3",
+  rideStarted: "sounds/started.mp3",
+  // **الإنهاءُ غيرُ التحصيل** (قرارُ المالك 2026-08-30): هذه لانتهاء العمل،
+  // و`collected` لوصول المال — **ونغمةٌ واحدةٌ لحدثين تجعل الكبتنَ يظنّ أنه
+  // قبض وهو لم يقبض بعد**. فملفّان مختلفان، كما كانت نغمتين مختلفتين.
+  rideCompleted: "sounds/ended.mp3",
+  // **والتحصيلُ والإيداعُ صوتٌ واحد**: «نجح دفعٌ أو شحن» — كلاهما مالٌ وصل
+  collected: "sounds/payment.mp3",
+  credited: "sounds/payment.mp3",
+  // **الخطأُ ليس صوتاً منفّراً**: نغمتان منخفضتان نازلتان
+  error: "sounds/error.mp3",
+  notify: "sounds/notify.mp3",
+};
+
+/** **نغماتُ الموتيف — لما لم يُختر له صوتٌ بعد** (§9.1). */
+const CUES: Partial<Record<Cue, Note[]>> = {
   // انتهاءُ المهلة — الموتيف نازلاً
   offerExpired: [
     { hz: E5, at: 0, for: 0.18 },
     { hz: D5, at: 0.15, for: 0.18 },
     { hz: A4, at: 0.3, for: 0.2 },
-  ],
-  // **بدءُ الرحلة — الموتيف صاعداً وقد اكتمل**: `A4 → D5 → E5` بلا تكرار،
-  // فهو إعلانُ انطلاقٍ لا نداءٌ ينتظر جواباً.
-  rideStarted: [
-    { hz: A4, at: 0, for: 0.16 },
-    { hz: D5, at: 0.13, for: 0.16 },
-    { hz: E5, at: 0.26, for: 0.22 },
   ],
   // **وصولُ الكبتن — هادئ**: نغمتان من الموتيف بثلثَي الشدّة. **يقع والكبتنُ
   // يقود**، فصوتٌ يفزعه أسوأُ من صمت.
@@ -93,39 +96,13 @@ const CUES: Record<Cue, Note[]> = {
     { hz: D5, at: 0, for: 0.14, gain: 0.34 },
     { hz: E5, at: 0.12, for: 0.18, gain: 0.34 },
   ],
-  // **إنهاءُ الرحلة — الموتيف تامّاً ثم ينحلّ إلى الأوكتاف**: أطولُ ما في
-  // الجدول بعد الطلب، **لأنه خاتمةٌ لا خبرٌ عابر**.
-  //
-  // **وغيرُ `collected` عمداً** (قرارُ المالك 2026-08-30): تلك للتحصيل — أي
-  // **لوصول المال**؛ وهذه لانتهاء العمل. **ونغمةٌ واحدةٌ لحدثين تجعل الكبتنَ
-  // يظنّ أنه قبض وهو لم يقبض بعد.**
-  rideCompleted: [
-    { hz: A4, at: 0, for: 0.16 },
-    { hz: D5, at: 0.13, for: 0.16 },
-    { hz: E5, at: 0.26, for: 0.16 },
-    { hz: A5, at: 0.4, for: 0.28 },
-  ],
-  collected: [
-    { hz: D5, at: 0, for: 0.16 },
-    { hz: E5, at: 0.13, for: 0.18 },
-  ],
-  credited: [
-    { hz: A5, at: 0, for: 0.14 },
-    { hz: D6, at: 0.12, for: 0.18 },
-  ],
   // تنبيهُ انتهاء الاشتراك — الموتيف أوكتافاً أخفض، هادئ
   subscriptionEnding: [
     { hz: A4 / 2, at: 0, for: 0.18, gain: 0.4 },
     { hz: D5 / 2, at: 0.15, for: 0.18, gain: 0.4 },
     { hz: E5 / 2, at: 0.3, for: 0.22, gain: 0.4 },
   ],
-  // **الخطأُ ليس صوتاً منفّراً**: الموتيف منعكساً، نغمتان، بثلث الشدة
-  error: [
-    { hz: E5, at: 0, for: 0.18, gain: 0.34 },
-    { hz: A4, at: 0.15, for: 0.2, gain: 0.34 },
-  ],
-  notify: [{ hz: D5, at: 0, for: 0.2 }],
-  // توقيعُ العلامة — الموتيف مهلاً، وهو أوّلُ ما يُسمع
+  // توقيعُ العلامة — الموتيف مهلاً، وهو أوّلُ ما يُسمع (**وسؤالُه مفتوحٌ**: §٦١-ي/١٤)
   signature: [
     { hz: A4, at: 0, for: 0.26 },
     { hz: D5, at: 0.17, for: 0.26 },
@@ -187,7 +164,8 @@ export function setOfferSoundEnabled(on: boolean): void {
 let context: AudioContext | null = null;
 let unlocked = false;
 
-/** يُنادى من أول إيماءةٍ في التطبيق — وبدونها كلُّ تشغيلٍ يصمت بلا خطأ. */
+/** يُنادى من أول إيماءةٍ في التطبيق — وبدونها كلُّ تشغيلٍ يصمت بلا خطأ.
+ *  **ومعه تُفكّ الملفّاتُ كلُّها**، فأوّلُ نغمةٍ تُعزف من الذاكرة لا من الشبكة. */
 export function unlock(): void {
   if (unlocked) return;
   try {
@@ -197,6 +175,7 @@ export function unlock(): void {
   } catch {
     unlocked = false;
   }
+  if (context) for (const cue of Object.keys(FILES) as Cue[]) void load(cue);
 }
 
 export function isUnlocked(): boolean {
@@ -210,6 +189,58 @@ function allowed(cue: Cue): boolean {
   // **وما عداه فئةٌ واحدةٌ تحت مفتاحها، وكلاهما تحت العام**: إطفاءُ العامِّ
   // يُسكت الفئتين، وإطفاءُ فئةٍ لا يمسّ الأخرى
   return soundsEnabled() && otherSoundsEnabled();
+}
+
+// ------------------------------------------------------------- الملفّات
+
+const buffers = new Map<string, AudioBuffer>();
+const loading = new Map<string, Promise<AudioBuffer | null>>();
+
+/** يفكّ ملفَّ النغمة مرّةً ويحفظه — **وتعذُّرُه يُكتب ولا يُبدَّل بغيره**: نغمةٌ
+ *  قديمةٌ تُعزف مكانه **تُخفي أنّ الملفَّ لم يصل** (الشكلُ الثاني عشر)، والمحاولةُ
+ *  تُعاد في التشغيل التالي. */
+function load(cue: Cue): Promise<AudioBuffer | null> {
+  const file = FILES[cue];
+  const ctx = context;
+  if (!file || !ctx) return Promise.resolve(null);
+  const ready = buffers.get(file);
+  if (ready) return Promise.resolve(ready);
+  let pending = loading.get(file);
+  if (!pending) {
+    pending = fetch(`${import.meta.env.BASE_URL}${file}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((data) => ctx.decodeAudioData(data))
+      .then((buffer) => {
+        buffers.set(file, buffer);
+        return buffer;
+      })
+      .catch((caught: unknown) => {
+        console.warn(`[sound] تعذّر تحميل ${file}`, caught);
+        return null;
+      })
+      .finally(() => loading.delete(file));
+    loading.set(file, pending);
+  }
+  return pending;
+}
+
+/** نغماتُ الطلب الجارية — **ليوقفها الرفضُ لحظتَه** لا في آخر دورتها. */
+const offerVoices = new Set<{ source: AudioBufferSourceNode; gain: GainNode }>();
+
+function sound(ctx: AudioContext, cue: Cue, buffer: AudioBuffer): void {
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  source.buffer = buffer;
+  source.connect(gain).connect(ctx.destination);
+  if (cue === "offer") {
+    const voice = { source, gain };
+    offerVoices.add(voice);
+    source.onended = () => offerVoices.delete(voice);
+  }
+  source.start();
 }
 
 /** يعزف نغمةً واحدة على السياق المفتوح — بلا شرطٍ ولا فحصِ مفتاح. */
@@ -240,9 +271,16 @@ function voice(ctx: AudioContext, note: Note, from: number): void {
  * ويبقى جيبُه يهتزّ**، وهو ما لا يفسّره له شيء.
  */
 export function play(cue: Cue): void {
-  if (!unlocked || !context || !allowed(cue)) return;
-  const now = context.currentTime;
-  for (const note of CUES[cue]) voice(context, note, now);
+  const ctx = context;
+  if (!unlocked || !ctx || !allowed(cue)) return;
+  if (FILES[cue]) {
+    void load(cue).then((buffer) => {
+      if (buffer) sound(ctx, cue, buffer);
+    });
+  } else {
+    const now = ctx.currentTime;
+    for (const note of CUES[cue] ?? []) voice(ctx, note, now);
+  }
   buzz(cue);
 }
 
@@ -267,17 +305,23 @@ function buzz(cue: Cue): void {
   }
 }
 
-/** طولُ النغمة بالثواني — يحتاجه المكرِّر ليصل الدورات بلا فاصلٍ مسموع. */
+/** طولُ النغمة بالثواني — **من الملفّ نفسِه** حين يكون ملفّاً، فلا رقمَ ثانٍ
+ *  لطولٍ واحد يفترق عنه أوّلَ مرّةٍ يُستبدل الملفّ. وصفرٌ لملفٍّ لم يُفكّ بعد. */
 export function durationOf(cue: Cue): number {
-  return CUES[cue].reduce((end, note) => Math.max(end, note.at + note.for), 0);
+  const file = FILES[cue];
+  if (file) return buffers.get(file)?.duration ?? 0;
+  return (CUES[cue] ?? []).reduce((end, note) => Math.max(end, note.at + note.for), 0);
 }
 
 
 // ------------------------------------------------------- تكرارُ الطلب الوارد
 
 let loopTimer: number | null = null;
+/** **رقمُ الحلقة الجارية** — يزيد مع كلِّ إيقاف: ملفٌّ يُفكّ بعد الرفض **لا يبدأ
+ *  حلقةً لعرضٍ انتهى** (وهو بعينه عطبُ «النغمةُ تبقى بعد الرفض»، §٦١-ي/٩). */
+let loopRun = 0;
 
-/** يكرّر نغمةَ الطلب حتى `stopLoop()` — **بلا فاصلٍ مسموع** بين الدورات.
+/** يكرّر نغمةَ الطلب حتى `stopOfferLoop()` — **بلا فاصلٍ مسموع** بين الدورات.
  *
  * الفاصلُ محسوبٌ من طول النغمة نفسِها (`durationOf`) لا رقمٌ يُكتب هنا: رقمان
  * لطولٍ واحد يفترقان أوّلَ مرةٍ تُعدَّل نغمةٌ في الجدول، فتتراكب الدورتان أو
@@ -286,18 +330,33 @@ let loopTimer: number | null = null;
 export function startOfferLoop(): void {
   stopOfferLoop();
   if (!unlocked || !allowed("offer")) return;
-  // **والاهتزازُ يقع داخل `play`** — فلا نداءَ ثانٍ هنا
-  play("offer");
-  loopTimer = window.setInterval(
-    () => play("offer"),
-    durationOf("offer") * 1000 + 120,
-  );
+  const run = loopRun;
+  void load("offer").then((buffer) => {
+    if (!buffer || run !== loopRun) return;
+    // **والاهتزازُ يقع داخل `play`** — فلا نداءَ ثانٍ هنا
+    play("offer");
+    loopTimer = window.setInterval(() => play("offer"), durationOf("offer") * 1000 + 120);
+  });
 }
 
+/** يوقف الحلقةَ **ونغمتَها الجاريةَ معها** — بخفوتٍ ٣٠ م.ث لا قطعٍ يُسمع نقرة. */
 export function stopOfferLoop(): void {
+  loopRun += 1;
   if (loopTimer !== null) {
     window.clearInterval(loopTimer);
     loopTimer = null;
   }
+  const ctx = context;
+  if (!ctx) return;
+  for (const { source, gain } of offerVoices) {
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.03);
+    try {
+      source.stop(now + 0.035);
+    } catch {
+      // انتهت وحدَها في اللحظة نفسِها — ولا شيءَ يُوقَف
+    }
+  }
+  offerVoices.clear();
 }
-

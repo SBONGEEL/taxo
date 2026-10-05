@@ -1,11 +1,14 @@
-/** الهوية الصوتية — `DESIGN.md` §9. موتيفٌ واحد تتفرّع منه كلُّ النغمات.
+/** الهوية الصوتية — `DESIGN.md` §9، **وأصواتُ المكتبات المؤقّتة** (`SPEC.md` §٦١-ك).
  *
- * **مولَّدةٌ برمجياً لا ملفات**: الجدولُ أدناه ~٢ كيلوبايت مقابل ~٦٠ من الأصول،
- * **ولا شبكةَ فلا تأخيرَ لأول رسم** — وكلُّها مشتقّةٌ من `MOTIF` الواحد، وهو ما
- * يجعلها هويةً لا خمسةَ عشرَ ملفاً لا يجمعها شيء.
+ * **أكثرُها اليومَ ملفّاتٌ لا مذبذبات** (اختيارُ المالك ٢٠٢٦-١٠-٠٥): رفض النغماتِ
+ * المولَّدةَ برمجياً، واختار من مكتبةٍ مرخَّصةٍ أصواتاً **مؤقّتةً** بروح مثالين
+ * أرسلهما — `FILES` أدناه، ومصدرُ كلِّ ملفٍّ وترخيصُه في `design/TAXO-SOUNDS.md`
+ * ووصفةُ تشطيبه في `tools/sounds/`. **وتُستبدل لاحقاً بأصواتٍ تُصنع لـTAXO وحدَها.**
+ * **وما لم يُختر له صوتٌ يبقى نغمةَ الموتيف** (`CUES`) حتى يقرّر.
  *
  * **والسياقُ يُنشأ عند أول تشغيلٍ لا عند التحميل**: `AudioContext` مورِدٌ ثقيل،
  * وإنشاؤه في وحدةٍ تُستورد مع التطبيق يوقظ عتادَ الصوت لمن لن يسمع شيئاً.
+ * **والملفّاتُ تُفكّ معه** (عند أوّل إيماءة) — فلا تأخيرَ لأوّل رسمٍ ولا لأوّل نغمة.
  *
  * **والمتصفحاتُ تمنع الصوتَ قبل إيماءة**: `unlock()` تُنادى من أول لمسةٍ في
  * التطبيق، وقبلها كلُّ `play` تصمت بلا خطأ. ولذلك نُقل توقيعُ الشاشة الترحيبية
@@ -26,8 +29,6 @@ const KEY_NOTIFICATIONS = "taxo.sound.notifications";
 const A4 = 440;
 const D5 = 587.33;
 const E5 = 659.25;
-const A5 = 880;
-const D6 = 1174.66;
 
 interface Note {
   /** التردد بالهرتز — من سلّم §9 لا رقمٌ يُكتب في موضع الاستعمال. */
@@ -43,53 +44,44 @@ interface Note {
 export type Cue =
   | "request"
   | "accepted"
+  | "approaching"
   | "arrived"
   | "started"
+  | "ended"
   | "paid"
   | "topup"
   | "error"
   | "notify"
   | "signature";
 
-/** كلُّ نغمةٍ اشتقاقٌ من الموتيف — والجدولُ هو الهوية (§9.1). */
-const CUES: Record<Cue, Note[]> = {
+/** **ما اختاره المالك — يحلّ محلَّ نغمته في موضعها وتحت مفاتيحها** (§٦١-ي/١٢).
+ *
+ * والمساراتُ نسبةً إلى `public/` — **ملفُّ كلِّ صوتٍ واحدٌ في التطبيقين**، فما
+ * يسمعه الراكبُ لبدء الرحلة هو ما يسمعه الكبتن. */
+const FILES: Partial<Record<Cue, string>> = {
+  // **قبولُ كبتن — الأهم**: ثلاثُ نغماتٍ صاعدةٍ دافئة
+  accepted: "sounds/accepted.mp3",
+  // **«الكبتن يقترب»** (§٦١-ي/١١): نغمةٌ واحدةٌ ليّنة — تنبيهٌ لا يُقلق
+  approaching: "sounds/approaching.mp3",
+  arrived: "sounds/arrived.mp3",
+  started: "sounds/started.mp3",
+  ended: "sounds/ended.mp3",
+  // **والدفعُ والشحنُ صوتٌ واحد**: «نجح دفعٌ أو شحن» — كلاهما مالٌ وصل
+  paid: "sounds/payment.mp3",
+  topup: "sounds/payment.mp3",
+  // **الخطأُ ليس صوتاً منفّراً**: نغمتان منخفضتان نازلتان
+  error: "sounds/error.mp3",
+  notify: "sounds/notify.mp3",
+};
+
+/** **نغماتُ الموتيف — لما لم يُختر له صوتٌ بعد** (§9.1). */
+const CUES: Partial<Record<Cue, Note[]>> = {
   // تأكيدُ الطلب — أوّلُ نغمتين
   request: [
     { hz: A4, at: 0, for: 0.16 },
     { hz: D5, at: 0.12, for: 0.16 },
   ],
-  // **قبولُ كبتن — الأهم**: الموتيف كاملاً صاعداً
-  accepted: [
-    { hz: A4, at: 0, for: 0.18 },
-    { hz: D5, at: 0.14, for: 0.18 },
-    { hz: E5, at: 0.28, for: 0.22 },
-  ],
-  arrived: [
-    { hz: D5, at: 0, for: 0.16 },
-    { hz: E5, at: 0.12, for: 0.16 },
-    { hz: A5, at: 0.24, for: 0.18 },
-  ],
-  started: [
-    { hz: D5, at: 0, for: 0.16 },
-    { hz: A5, at: 0.13, for: 0.18 },
-  ],
-  paid: [
-    { hz: A4, at: 0, for: 0.16 },
-    { hz: D5, at: 0.13, for: 0.16 },
-    { hz: E5, at: 0.26, for: 0.16 },
-    { hz: D6, at: 0.34, for: 0.2 },
-  ],
-  topup: [
-    { hz: A5, at: 0, for: 0.14 },
-    { hz: D6, at: 0.12, for: 0.18 },
-  ],
-  // **الخطأُ ليس صوتاً منفّراً**: الموتيف منعكساً، نغمتان، بثلث الشدة
-  error: [
-    { hz: E5, at: 0, for: 0.18, gain: 0.34 },
-    { hz: A4, at: 0.15, for: 0.2, gain: 0.34 },
-  ],
-  notify: [{ hz: D5, at: 0, for: 0.2 }],
-  // توقيعُ العلامة — الموتيف مهلاً، وهو أوّلُ ما يُسمع
+  // توقيعُ العلامة — الموتيف مهلاً، وهو أوّلُ ما يُسمع (**وسؤالُه مفتوحٌ**: §٦١-ي/١٤)
   signature: [
     { hz: A4, at: 0, for: 0.26 },
     { hz: D5, at: 0.17, for: 0.26 },
@@ -129,7 +121,8 @@ export function setNotificationSoundEnabled(on: boolean): void {
 let context: AudioContext | null = null;
 let unlocked = false;
 
-/** يُنادى من أول إيماءةٍ في التطبيق — وبدونها كلُّ تشغيلٍ يصمت بلا خطأ. */
+/** يُنادى من أول إيماءةٍ في التطبيق — وبدونها كلُّ تشغيلٍ يصمت بلا خطأ.
+ *  **ومعه تُفكّ الملفّاتُ كلُّها**، فأوّلُ نغمةٍ تُعزف من الذاكرة لا من الشبكة. */
 export function unlock(): void {
   if (unlocked) return;
   try {
@@ -139,6 +132,7 @@ export function unlock(): void {
   } catch {
     unlocked = false;
   }
+  if (context) for (const cue of Object.keys(FILES) as Cue[]) void load(cue);
 }
 
 export function isUnlocked(): boolean {
@@ -148,6 +142,40 @@ export function isUnlocked(): boolean {
 function allowed(cue: Cue): boolean {
   if (NOTIFICATION_CUES.has(cue)) return notificationSoundEnabled();
   return soundsEnabled();
+}
+
+const buffers = new Map<string, AudioBuffer>();
+const loading = new Map<string, Promise<AudioBuffer | null>>();
+
+/** يفكّ ملفَّ النغمة مرّةً ويحفظه — **وتعذُّرُه يُكتب ولا يُبدَّل بغيره**: نغمةٌ
+ *  قديمةٌ تُعزف مكانه **تُخفي أنّ الملفَّ لم يصل** (الشكلُ الثاني عشر)، والمحاولةُ
+ *  تُعاد في التشغيل التالي. */
+function load(cue: Cue): Promise<AudioBuffer | null> {
+  const file = FILES[cue];
+  const ctx = context;
+  if (!file || !ctx) return Promise.resolve(null);
+  const ready = buffers.get(file);
+  if (ready) return Promise.resolve(ready);
+  let pending = loading.get(file);
+  if (!pending) {
+    pending = fetch(`${import.meta.env.BASE_URL}${file}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((data) => ctx.decodeAudioData(data))
+      .then((buffer) => {
+        buffers.set(file, buffer);
+        return buffer;
+      })
+      .catch((caught: unknown) => {
+        console.warn(`[sound] تعذّر تحميل ${file}`, caught);
+        return null;
+      })
+      .finally(() => loading.delete(file));
+    loading.set(file, pending);
+  }
+  return pending;
 }
 
 /** يعزف نغمةً واحدة على السياق المفتوح — بلا شرطٍ ولا فحصِ مفتاح. */
@@ -173,12 +201,25 @@ function voice(ctx: AudioContext, note: Note, from: number): void {
 
 /** يعزف نغمةً — ويصمت بلا خطأ إن كان الصوتُ مطفأً أو لم تقع إيماءةٌ بعد. */
 export function play(cue: Cue): void {
-  if (!unlocked || !context || !allowed(cue)) return;
-  const now = context.currentTime;
-  for (const note of CUES[cue]) voice(context, note, now);
+  const ctx = context;
+  if (!unlocked || !ctx || !allowed(cue)) return;
+  if (FILES[cue]) {
+    void load(cue).then((buffer) => {
+      if (!buffer) return;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    });
+    return;
+  }
+  const now = ctx.currentTime;
+  for (const note of CUES[cue] ?? []) voice(ctx, note, now);
 }
 
-/** طولُ النغمة بالثواني — يحتاجه المكرِّر ليصل الدورات بلا فاصلٍ مسموع. */
+/** طولُ النغمة بالثواني — **من الملفّ نفسِه** حين يكون ملفّاً (صفرٌ قبل فكّه). */
 export function durationOf(cue: Cue): number {
-  return CUES[cue].reduce((end, note) => Math.max(end, note.at + note.for), 0);
+  const file = FILES[cue];
+  if (file) return buffers.get(file)?.duration ?? 0;
+  return (CUES[cue] ?? []).reduce((end, note) => Math.max(end, note.at + note.for), 0);
 }
