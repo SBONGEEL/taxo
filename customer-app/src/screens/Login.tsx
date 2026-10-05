@@ -1,181 +1,195 @@
-/** الدخول — **كلمة مرور دائماً ولكل المستخدمين** (SPEC القسم 11.1).
+/** الدخول — **R02 «أهلاً من جديد»** بلغة TAXO 2.0، **وكلمةُ مرورٍ دائماً ولكلِّ المستخدمين** (SPEC القسم 11.1).
  *
- * لا شرطَ هنا على المُحقِّق: OTP تحقّقٌ لا دخول، وشاشةُ الدخول واحدةٌ مهما
- * كانت العقود المفعّلة (SPEC القسم 2/15-أ).
+ * لا شرطَ هنا على المُحقِّق: OTP تحقّقٌ لا دخول، وشاشةُ الدخول واحدةٌ مهما كانت العقودُ المفعّلة (SPEC القسم 2/15-أ). **ولذلك
+ * لا «دخولَ برمزٍ لمرّةٍ واحدة»** وإن رسمته اللوحة (§٦١-أ): **مكانُه يحمل الدخولَ بالبصمة** حيث تتاح — الطريقُ الثاني الذي
+ * يملكه التطبيقُ فعلاً.
+ *
+ * **والسببُ تحت حقله** (§٦٢/٢٠): خطأٌ يسمّي حقلاً يُكتب تحته ويُنقل إليه التركيز، **وما لا حقلَ له** (حسابٌ موقوف، شبكة) سطرٌ
+ * فوق الزرّ.
  */
-
-import { motion } from "framer-motion";
-import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { login } from "@/api/endpoints";
-import { PhoneInput } from "@/components/PhoneInput";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote } from "@/components/ui/Feedback";
-import { Field } from "@/components/ui/Field";
-import { useAuthCountry, usePhoneCountry } from "@/lib/config";
-import { focusField } from "@/lib/validation";
-import { looksComplete } from "@/lib/phone";
+import { reopenWelcome } from "@/components/welcome/gate";
 import { biometryLabel } from "@/lib/biometric";
+import { useAuthCountry, usePhoneCountry } from "@/lib/config";
+import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { Brand } from "@/components/Brand";
+import {
+  AuthBlock,
+  AuthChoice,
+  AuthOr,
+  AuthPage,
+  AuthPhone,
+  AuthSecret,
+  AuthTitle,
+  AuthTop,
+  Icon,
+} from "@/taxo2";
+
+type Failure = { field: "phone" | "password" | null; message: string };
 
 export function LoginScreen() {
   const { signIn, biometry, signInWithBiometry } = useSession();
-  const [bioBusy, setBioBusy] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // **مصدرٌ واحدٌ لدولة شاشات المصادقة** (`useAuthCountry`) — ولا منتقيَ هنا
-  // كما في التصميم: البادئة ثابتةٌ من `default_country_code`
+  // **مصدرٌ واحدٌ لدولة شاشات المصادقة** (`useAuthCountry`)
   const { country, countries, setCountry } = useAuthCountry();
-  const { nationalLength } = usePhoneCountry(country);
+  const { dialCode, nationalLength } = usePhoneCountry(country);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [visible, setVisible] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
 
-  // **الرقمُ الذي كُتب في بطاقة الترحيب** (TAXO 2.0) — يصل مع التنقّل فلا
-  // يُكتب مرّتين. والشاشةُ قد تكون مركَّبةً تحت الترحيب قبل أن يصل، فيُقرأ
-  // كلّما تغيّر لا عند التركيب وحدَه. **ولا نداءَ يتغيّر**: الدخولُ هنا كما كان.
-  const location = useLocation();
+  // **الرقمُ الذي جاء مع التنقّل** يُقرأ كلّما تغيّر — ولا نداءَ يتغيّر: الدخولُ هنا كما كان
   const handedPhone = (location.state as { phone?: string } | null)?.phone;
   useEffect(() => {
     if (handedPhone) setPhone(handedPhone);
   }, [handedPhone]);
 
+  const complete = looksComplete(phone, nationalLength);
+  const short =
+    touched && phone.length > 0 && !complete && dialCode !== null
+      ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.`
+      : null;
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!complete || password.length < 1 || busy) {
+      setTouched(true);
+      return;
+    }
     setBusy(true);
-    setError(null);
+    setFailure(null);
     try {
       const response = await login(phone, password, country);
-      // **جوابان لا جواب**: حسابٌ يحمل عاملاً ثانياً يعود بلا توكن (12-د).
-      // ولا يُسجَّل عاملٌ إلا لحسابات اللوحة (`SecuritySelfUser`)، فهذا الجواب
-      // هنا يعني حساب طاقمٍ يحاول الدخول من تطبيقٍ ليس له — ويُقال له ذلك
-      // صراحةً بدل أن يُحفظ توكنٌ غائبٌ فتُفتح جلسةٌ فارغة
+      // **جوابان لا جواب**: حسابُ طاقمٍ يحمل عاملاً ثانياً يعود بلا توكن (12-د) — ويُقال له ذلك صراحةً
       if (response.totp_required || !response.user || !response.tokens) {
-        setError(
-          "هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة.",
-        );
+        setFailure({ field: null, message: "هذا الحساب يحتاج تحقّقاً ثنائياً — وهو لحسابات لوحة الإدارة، فادخل من اللوحة." });
         return;
       }
       signIn({ user: response.user, tokens: response.tokens });
       navigate("/", { replace: true });
     } catch (caught) {
       if (caught instanceof ApiError) {
-        setError(caught.message);
         const field = caught.field("field");
-        if (field) focusField(field);
+        const at = field === "phone" || field === "password" ? field : null;
+        setFailure({ field: at, message: caught.message });
+        if (at) document.getElementById(at)?.focus();
       } else {
-        setError("تعذّر الدخول — أعد المحاولة");
+        setFailure({ field: null, message: "تعذّر الدخول — أعد المحاولة" });
       }
     } finally {
       setBusy(false);
     }
   }
 
+
   return (
-    <div className="flex min-h-full flex-col px-24 py-40 pb-safe pt-safe">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-auto mt-auto w-full max-w-md space-y-24"
-      >
-        <Brand subtitle="اطلب تاكسي في ثوانٍ" />
+    <AuthPage>
+      {/* **الرجوعُ إلى الترحيب** (R02 ← R01) — شاشةُ دخولٍ لا تاريخَ قبلها في التطبيق، فيُطلب الترحيبُ ولا يُرجَع في التاريخ */}
+      <AuthTop onBack={reopenWelcome} />
+      <AuthTitle title="أهلاً من جديد" sub="ادخل برقم هاتفك وكلمة المرور." />
 
-        <form onSubmit={submit} className="space-y-16">
-          <PhoneInput
-            phone={phone}
-            country={country}
-            countries={countries}
-            onPhoneChange={setPhone}
-            onCountryChange={setCountry}
-            disabled={busy}
-            showCountry={countries.length > 1}
+      <form onSubmit={submit} className="t2-auth-form" noValidate>
+        {/* **سوقان أو أكثر ⇒ يُختار السوق** — زرّان لا قائمة: سوقان اثنان، والقائمةُ تخفي أحدَهما خلف ضغطة */}
+        {countries.length > 1 ? (
+          <AuthBlock label="السوق">
+            <AuthChoice
+              label="السوق"
+              value={country}
+              options={countries.map((code) => ({ value: code, label: COUNTRY_LABEL[code] }))}
+              onChange={setCountry}
+            />
+          </AuthBlock>
+        ) : null}
+
+        <AuthBlock
+          label="رقم الهاتف"
+          htmlFor="phone"
+          error={
+            dialCode === null
+              ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+              : short ?? (failure?.field === "phone" ? failure.message : null)
+          }
+        >
+          <AuthPhone
+            id="phone"
+            name="phone"
+            dial={dialCode}
+            value={phone}
+            maxLength={nationalLength}
+            disabled={busy || dialCode === null}
+            invalid={Boolean(short) || failure?.field === "phone"}
+            onBlur={() => setTouched(true)}
+            onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
           />
+        </AuthBlock>
 
-          <Field
-            label="كلمة المرور"
-            type={visible ? "text" : "password"}
+        <AuthBlock label="كلمة المرور" htmlFor="password" error={failure?.field === "password" ? failure.message : null}>
+          <AuthSecret
+            id="password"
+            name="password"
             autoComplete="current-password"
             value={password}
             disabled={busy}
+            invalid={failure?.field === "password"}
             onChange={(event) => setPassword(event.target.value)}
-            suffix={
-              <button
-                type="button"
-                onClick={() => setVisible((value) => !value)}
-                aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-                className="pressable text-muted transition hover:text-ink"
-              >
-                {visible ? (
-                  <EyeOff className="size-20" />
-                ) : (
-                  <Eye className="size-20" />
-                )}
-              </button>
-            }
           />
+        </AuthBlock>
 
-          <ErrorNote message={error} />
+        <Link to="/forgot-password" className="t2-auth-link t2-auth-forgot">
+          نسيت كلمة المرور؟
+        </Link>
 
-          <Button
-            type="submit"
-            size="lg"
-            loading={busy}
-            disabled={
-              !looksComplete(phone, nationalLength) || password.length < 1
-            }
-          >
-            دخول
-          </Button>
-        </form>
-
-        {/* **ثلاثةٌ مجتمعة**: جهازٌ أصليّ · بصمةٌ متاحة · **ورمزٌ محفوظٌ فعلاً**
-            (`armed`). وفي المتصفّح `available` كاذبةٌ بلا نداءِ ملحقٍ أصلاً. */}
-        {biometry?.available && biometry.armed ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            loading={bioBusy}
-            onClick={() => {
-              setError(null);
-              setBioBusy(true);
-              void signInWithBiometry()
-                .catch((caught: unknown) => {
-                  setError(
-                    caught instanceof Error
-                      ? caught.message
-                      : "تعذّر الدخول بالبصمة",
-                  );
-                })
-                .finally(() => setBioBusy(false));
-            }}
-          >
-            الدخول بـ{biometryLabel(biometry.kind)}
-          </Button>
+        {failure && failure.field === null ? (
+          <div className="t2-auth-banner" role="alert">
+            <Icon name="error" />
+            <span>{failure.message}</span>
+          </div>
         ) : null}
 
-        <div className="text-14">
-          <Link to="/forgot-password" className="pressable text-muted hover:text-ink">
-            نسيت كلمة المرور؟
-          </Link>
-        </div>
-      </motion.div>
+        <div className="t2-auth-push" />
 
-      {/* **مثبَّتٌ أسفل الشاشة** كما في التصميم (`margin-top:auto`): سطرٌ
-          يُقرأ بعد أن يفشل الدخول أو قبل أن يُحاوَل، فمكانُه الطرفُ لا وسطُ
-          النموذج — ولا يزاحم الزرَّ الأساسي */}
-      <p className="mt-auto pt-24 text-center text-13 text-muted">
-        ليس لديك حساب؟{" "}
-        <Link to="/register" className="pressable font-semibold text-ink underline">
-          سجّل الآن
-        </Link>
+        <div className="t2-auth-actions">
+          <button type="submit" className="t2-button primary" disabled={busy || dialCode === null || !complete || password.length < 1}>
+            {busy ? "لحظة…" : "دخول"}
+          </button>
+
+          {/* **ثلاثةٌ مجتمعة**: جهازٌ أصليّ · بصمةٌ متاحة · **ورمزٌ محفوظٌ فعلاً** (`armed`) */}
+          {biometry?.available && biometry.armed ? (
+            <>
+              <AuthOr />
+              <button
+                type="button"
+                className="t2-button secondary"
+                disabled={bioBusy}
+                onClick={() => {
+                  setFailure(null);
+                  setBioBusy(true);
+                  void signInWithBiometry()
+                    .catch((caught: unknown) =>
+                      setFailure({ field: null, message: caught instanceof Error ? caught.message : "تعذّر الدخول بالبصمة" }),
+                    )
+                    .finally(() => setBioBusy(false));
+                }}
+              >
+                <Icon name="fingerprint" />
+                <span>الدخول بـ{biometryLabel(biometry.kind)}</span>
+              </button>
+            </>
+          ) : null}
+        </div>
+      </form>
+
+      <p className="t2-auth-foot">
+        جديد على TAXO؟ <Link to="/register">أنشئ حساباً</Link>
       </p>
-    </div>
+    </AuthPage>
   );
 }

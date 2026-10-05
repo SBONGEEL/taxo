@@ -6,6 +6,22 @@
 import "./tokens.css";
 import "./primitives.css";
 
+export {
+  AuthBlock,
+  AuthChoice,
+  AuthCode,
+  AuthConditions,
+  AuthConsent,
+  AuthError,
+  AuthInput,
+  AuthOr,
+  AuthPage,
+  AuthPhone,
+  AuthSecret,
+  AuthTitle,
+  AuthTop,
+  AuthWomenNote,
+} from "./Auth";
 export { Icon } from "./Icon";
 export { SERVICE_ICON, serviceIcon } from "./serviceIcon";
 export { Switch } from "./Switch";

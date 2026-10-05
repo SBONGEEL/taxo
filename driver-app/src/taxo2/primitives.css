@@ -300,6 +300,14 @@ button.t2-row:enabled { cursor: pointer; }
   border: 1.5px solid var(--t2-text);
   color: var(--t2-text);
 }
+/* **والأساسيُّ على الإسفلت جمرٌ** — كما رسمته اللوحةُ في C01 («دخول»: جمرٌ ونصُّ إسفلتٍ ٧٠٠): الحبرُ على الإسفلت لا يُرى،
+   **والمعكوسُ لا يُعاد على الداكن** (رأسُ `tokens.css`) فلا يُستعار له. ولا شاشةَ كبتنٍ تستعمل هذا الصنف — فلا يتغيّر بها مرسوم */
+html.dark .t2:not(.t2-day) .t2-button.primary,
+.t2.t2-night .t2-button.primary {
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-weight: 700;
+}
 .t2-button:disabled { opacity: 0.45; cursor: default; }
 .t2-button:active:enabled { transform: scale(0.98); }
 

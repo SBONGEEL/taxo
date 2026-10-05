@@ -10,15 +10,21 @@
  *   o  = cubic-bezier(.2,.8,.2,1)   ·   io = cubic-bezier(.65,0,.35,1)
  *   bk = cubic-bezier(.34,1.56,.64,1)
  *
- * **والألوانُ والخطُّ من نظام التصميم** (`src/taxo2/`، §61-ج) — **والمظهرُ مثبَّتٌ نهاريّاً** (`t2-day` على الجذر): الترحيبُ
- * رُسم بالحجر وحدَه فيبقى كذلك في الوضع الليليّ للتطبيق، **والسِمةُ الورديةُ تصبغ جمرَه برقوقاً من الرموز** كما كانت تفعل هنا.
- * **وما بقي هنا ظلالُ الرسم وحدَها** (`--rw-mut2` · `--rw-label` · `--rw-body`، والهالةُ بلونيها) — لا معنى لها خارجه.
+ * **والألوانُ والخطُّ من نظام التصميم** (`src/taxo2/`، §61-ج) — **والمظهرُ يتبع التطبيق** (§٦٢/٨): رُسم الترحيبُ بالحجر للراكب،
+ * **وفي الداكن يُرسم بإسفلت الهوية وخريطة الليل** — كان مثبَّتاً نهاريّاً (`t2-day`) فيومض فاتحاً قبل تطبيقٍ داكن. **وما بقي هنا
+ * ظلالُ الرسم وحدَها** (`--rw-*`) بقيمتي المظهرين — لا معنى لها خارجه — **والسِمةُ الورديةُ تصبغ جمرَه برقوقاً من الرموز**.
+ *
+ * **وما بعد «أهلاً وسهلاً» زرّان** (§٦١/٤ و§٦٢/١١): «حساب جديد» و«دخول» إلى شاشتيهما — **وكان زرُّ «تفضّل» يتمدّد بطاقةً تطلب الرقمَ
+ * ثمّ تُسلّمه إلى شاشة الدخول القديمة**، فيرى المالكُ الجديدَ ثمّ القديمَ في خطوتين متتاليتين (عطبُ §٦٢/٢).
  */
 
 .rw {
   --rw-mut2: #8a857b;
-  --rw-label: #a39d90;
   --rw-body: #3f3e3a;
+  --rw-label-ink: #9a9488; /* أسماءُ الأحياء على الخريطة */
+  --rw-ring: #ffffff; /* حافّةُ السيارة ونقطةِ اللقاء فوق الخريطة */
+  --rw-trail: rgba(255, 255, 255, 0.95); /* حاشيةُ المسار تحت خطّ الجمر */
+  --rw-halo: rgba(240, 90, 40, 0.16);
   position: fixed;
   inset: 0;
   z-index: 90;
@@ -28,9 +34,20 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
+/* **الليل — إسفلتُ الهوية** (قيمُ ترحيب الكبتن: الأسماءُ خافتةٌ على الإسفلت، والحافّةُ بلون الأرض) */
+html.dark .rw {
+  --rw-mut2: #7d838c;
+  --rw-body: #cfcbc2;
+  --rw-label-ink: #5f656e;
+  --rw-ring: var(--t2-bg);
+  --rw-trail: rgba(14, 16, 19, 0.85);
+  --rw-halo: rgba(255, 106, 51, 0.16);
+}
+html.pink .rw { --rw-halo: rgba(156, 44, 110, 0.16); }
+html.pink.dark .rw { --rw-halo: rgba(240, 140, 192, 0.16); }
 .rw.is-leaving {
   opacity: 0;
-  transition: opacity 0.3s ease-out;
+  transition: opacity 0.35s ease-out;
   pointer-events: none;
 }
 
@@ -65,7 +82,7 @@
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: #9a9488;
+  color: var(--rw-label-ink);
   white-space: nowrap;
 }
 .rw-veil {
@@ -150,7 +167,7 @@
   height: 5.4px;
   border-radius: 2.2px;
   background: var(--t2-text);
-  border: 0.7px solid #fff;
+  border: 0.7px solid var(--rw-ring);
   box-sizing: border-box;
   box-shadow: 0 0.6px 1.6px rgba(0, 0, 0, 0.35);
   offset-rotate: auto;
@@ -192,13 +209,12 @@
   border-radius: 50%;
   opacity: 0;
 }
-.rw-halo { width: 58px; height: 58px; background: rgba(240, 90, 40, 0.16); transform: translate(-50%, -50%) scale(0); }
-html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
+.rw-halo { width: 58px; height: 58px; background: var(--rw-halo); transform: translate(-50%, -50%) scale(0); }
 .rw-dot {
   width: 18px;
   height: 18px;
   background: var(--t2-accent);
-  border: 3px solid #fff;
+  border: 3px solid var(--rw-ring);
   box-sizing: border-box;
   box-shadow: 0 3px 8px rgba(20, 22, 26, 0.25);
   transform: translate(-50%, -50%) scale(0);
@@ -313,11 +329,13 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   97.619%, 100% { letter-spacing: -0.03em; }
 }
 
-/* ── «من المرة الثانية: لحظة تكوّن X فقط (0.8 ثانية)» ─────────────────────── */
-.rw-brief .rw-xmark { animation: rw-bx-s 0.8s both, rw-bx-o 0.8s both; }
-.rw-brief .rw-xmark > span:first-child > i { animation: rw-bbar1 0.8s both; }
-.rw-brief .rw-xmark > span:last-child > i { animation: rw-bbar2 0.8s both; }
-.rw-brief .rw-word { animation: rw-bword-o 0.8s both, rw-bword-ls 0.8s both; }
+/* ── «من المرة الثانية: لحظة تكوّن X فقط» — **بإيقاع المقدّمة نفسِه (١٫٤ث) لا مضغوطاً في ٠٫٨ث** (§٦٢/٥ و/١٠) ─────────
+   النسبُ كما هي — فالمراحلُ نفسُها (القضيبان، ثمّ الكِبَر، ثمّ تجمّعُ الحروف) — **والمدّةُ مدّةُ هذا المقطع في المقدّمة** (٢٫٧ث ← ٤٫١ث).
+   كان المالكُ يقول: «يختفي بسرعةٍ لا تُرى معها حركتُه»؛ **ووقفةٌ بعدها على الشعار مكتملاً** (`HOLD_MS` في `Welcome.tsx`). */
+.rw-brief .rw-xmark { animation: rw-bx-s 1.4s both, rw-bx-o 1.4s both; }
+.rw-brief .rw-xmark > span:first-child > i { animation: rw-bbar1 1.4s both; }
+.rw-brief .rw-xmark > span:last-child > i { animation: rw-bbar2 1.4s both; }
+.rw-brief .rw-word { animation: rw-bword-o 1.4s both, rw-bword-ls 1.4s both; }
 @keyframes rw-bx-s {
   0%, 37.5% { transform: scale(1); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
   68.75%, 100% { transform: scale(2.4); }
@@ -344,7 +362,7 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   100% { letter-spacing: -0.03em; }
 }
 
-/* ── R1 · «أهلاً وسهلاً» — تصعد بهدوء، ثم سطرُ الأصل، ثم الشرح، ثم الزرّ ───── */
+/* ── R1 · «أهلاً وسهلاً» — تصعد بهدوء، ثم سطرُ الأصل، ثم الشرح، ثم الزرّان ───────────────────────── */
 .rw-copy {
   position: absolute;
   top: 436px;
@@ -369,158 +387,74 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
 @keyframes rw-rise {
   to { opacity: 1; transform: translateY(0); }
 }
-.rw-copy-out {
-  transition: opacity 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.is-card .rw-copy-out { opacity: 0; transform: translateY(-14px); }
 
-/* ── R2 · الزرُّ نفسُه يتمدّد ويصير بطاقةَ الدخول ─────────────────────────── */
-.rw-logo-layer {
-  position: absolute;
-  inset: 0;
-  transform-origin: 195px 360px;
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s;
-}
-.is-card .rw-logo-layer { transform: translateY(-266px) scale(0.46); }
-.rw-veil.static { transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s; }
-.is-card .rw-veil.static { opacity: 0.92; }
-
-.rw-cta {
+/* ── الزرّان (§٦١/٤): «حساب جديد» بلغة «تفضّل» في اللوحة (حبّةُ الحبر ٥٨ بزاوية ١٨)، و«دخول» ثانويٌّ بحافّة ─────────── */
+.rw-actions {
   position: absolute;
   left: 24px;
   right: 24px;
-  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
-  height: 58px;
-  border-radius: 18px;
-  background: var(--t2-inverse);
-  overflow: hidden;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--t2-on-inverse);
-  text-align: start;
-  cursor: pointer;
-  transition:
-    left 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    right 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    bottom 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    height 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    border-radius 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    background-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s;
+  bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.rw-cta.rw-rise { animation-delay: 0.5s; }
-/* **والصعودُ باقٍ في القائمة مع الضغطة**: لو استُبدل بها لعاد الزرُّ إلى قيمته
-   الأولى (`opacity: 0`) واختفى تحت الإصبع. والاسمُ الباقي لا يُعاد تشغيلُه. */
-.rw-cta.is-pressed {
-  animation:
-    rw-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both,
-    rw-press 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-@keyframes rw-press {
-  50% { transform: scale(0.97); }
-}
-.is-card .rw-cta {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: min(470px, calc(100% - 96px));
-  border-radius: 32px 32px 0 0;
-  background: #fff;
-  cursor: default;
-}
-.rw-cta-label {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 58px;
+.rw-actions.rw-rise { animation-delay: 0.5s; }
+.rw-btn {
   display: flex;
   align-items: center;
+  height: 58px;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rw-btn.primary {
   justify-content: space-between;
   padding: 0 22px;
-  font-size: 16px;
-  font-weight: 600;
-  transition: opacity 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s;
-}
-.is-card .rw-cta-label { opacity: 0; pointer-events: none; }
-.rw-cta-label svg { width: 22px; height: 22px; fill: currentColor; }
-.rw-card {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  padding: 12px 22px calc(16px + env(safe-area-inset-bottom, 0px));
-  opacity: 0;
-  transform: translateY(12px);
-  pointer-events: none;
-  transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.is-card .rw-card {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition-delay: 0.48s;
-}
-.rw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--t2-line); margin: 0 auto 18px; }
-.rw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--t2-text); }
-.rw-card .rw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--t2-muted); }
-.rw-countries { display: flex; gap: 8px; margin-top: 14px; }
-.rw-countries button {
-  flex: 1;
-  height: 40px;
-  border-radius: 12px;
-  border: 1.5px solid var(--t2-line);
-  background: #fff;
-  font: inherit;
-  font-size: 14px;
-  color: var(--t2-muted);
-}
-.rw-countries button[aria-pressed="true"] { border-color: var(--t2-text); color: var(--t2-text); font-weight: 600; }
-.rw-field {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 56px;
-  margin-top: 18px;
-  padding: 0 16px;
-  border-radius: 16px;
-  background: #fff;
-  border: 1.5px solid var(--t2-line);
-  box-sizing: border-box;
-  direction: ltr;
-}
-.rw-field:focus-within { border-color: var(--t2-accent); }
-.rw-field .rw-dial { font-size: 15px; font-weight: 600; color: var(--t2-text); }
-.rw-field .rw-sep { width: 1px; height: 24px; background: var(--t2-line); }
-.rw-field input {
-  flex: 1;
-  min-width: 0;
   border: 0;
-  outline: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 16px;
-  letter-spacing: 0.02em;
-  color: var(--t2-text);
-  caret-color: var(--t2-accent);
-}
-.rw-go {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 56px;
-  margin-top: 14px;
-  border: 0;
-  border-radius: 18px;
   background: var(--t2-inverse);
   color: var(--t2-on-inverse);
+}
+.rw-btn.primary svg { width: 22px; height: 22px; fill: currentColor; }
+/* **وعلى الإسفلت جمرٌ** — أساسيُّ الليل في اللوحة (C01)، والحبرُ عليه لا يُرى */
+html.dark .rw-btn.primary { background: var(--t2-accent); color: var(--t2-on-accent); font-weight: 700; }
+.rw-btn.secondary {
+  justify-content: center;
+  height: 56px;
+  border: 1px solid var(--t2-dash);
+  background: var(--t2-surface);
+  color: var(--t2-text);
+}
+.rw-btn:active { transform: scale(0.98); }
+
+/* ── حالُ الإقلاع على الترحيب — **هو شاشةُ الإقلاع** (`lib/splash.ts`): نصٌّ ساكنٌ ورمزٌ قصيرٌ وزرٌّ لما لا يعالج نفسَه ─────── */
+.rw-status {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.rw-status p { margin: 0; font-size: 13.5px; color: var(--t2-muted); }
+.rw-status .rw-status-code { font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0.6; }
+.rw-status button {
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--t2-dash);
+  border-radius: 13px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
   font: inherit;
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
 }
-.rw-go:disabled { opacity: 0.3; cursor: default; }
 
 /* ── «المس الشاشة للتخطّي» ─────────────────────────────────────────────── */
 .rw-skip {
@@ -549,12 +483,6 @@ html.pink .rw-halo { background: rgba(156, 44, 110, 0.16); }
   color: var(--t2-muted);
   white-space: nowrap;
   pointer-events: none;
-}
-.is-card .rw-credit {
-  left: auto;
-  right: 12px;
-  bottom: auto;
-  top: calc(14px + env(safe-area-inset-top, 0px));
 }
 
 /* **«مع تقليل الحركة: الإطارُ الأخيرُ مباشرة»** — من اللوحة نفسِها */

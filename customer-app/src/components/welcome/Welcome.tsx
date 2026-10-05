@@ -1,33 +1,24 @@
-/** «نقطة اللقاء» — ترحيبُ الراكب عند كلِّ فتحة (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤).
+/** «نقطة اللقاء» — ترحيبُ الراكب عند كلِّ فتحة، **وهو شاشةُ الإقلاع نفسُها** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤ و§٦٢/١ و/١٠).
  *
- * **من التصميم لا من الذوق**: Claude Design «TAXO 2.0 - Welcome» (R0 · R1 · R2)
- * — مسارُ الكبتن الحقيقيُّ من العبدلي إلى شارع الرينبو، والكاميرا، والتوقيتُ
- * ومنحنياتُه منقولةٌ من شيفرة اللوحة نفسِها (`welcome.css` يقول كيف).
+ * **من التصميم لا من الذوق**: Claude Design «TAXO 2.0 - Welcome» (R0 · R1) — مسارُ الكبتن الحقيقيُّ من العبدلي إلى شارع الرينبو،
+ * والكاميرا، والتوقيتُ ومنحنياتُه منقولةٌ من شيفرة اللوحة نفسِها (`welcome.css` يقول كيف).
  *
- * **وديناميكيٌّ بقرار المالك** (البندان ١٠ و١١):
- * - **داخلٌ**: تكوُّنُ الـX وحدَه ثمّ التطبيق — يظهر قليلاً ويمضي بنفسه.
- * - **غيرُ داخل**: أوّلَ فتحةٍ على الجهاز المقدّمةُ كاملة، وبعدها الـX وحدَه
- *   («من المرة الثانية: لحظة تكوّن X فقط»)، ثمّ «أهلاً وسهلاً» وزرُّ «تفضّل»
- *   الذي يتمدّد ويصير بطاقةَ الدخول.
- * - **«تقليلُ الحركة»**: الإطارُ الأخيرُ مباشرة (`welcome.css`).
+ * **ثلاثةُ أطوارٍ ثمّ فرعان:**
+ * - **أوّلَ فتحةٍ على الجهاز لمن لم يدخل**: المقدّمةُ كاملة (٤٫٢ث).
+ * - **وما بعدها**: تكوُّنُ الـX وتجمّعُ الحروف **بإيقاع المقدّمة نفسِه** (١٫٤ث) **ثمّ وقفةٌ على الشعار مكتملاً** — **كان ٠٫٨ث ثمّ يذوب
+ *   فلا تُرى الحركة** (عطبُ §٦٢/٥)، فصار حدّاً أدنى يُرى فيه.
+ * - **ثمّ ينتظر الإقلاع** إن لم يكتمل — وحالُ الشبكة مرسومةٌ عليه (`lib/splash.ts`): **هو شاشةُ الإقلاع**، فلا شاشةَ قبله ولا بعده.
+ * - **داخلٌ ⇒ يذوب وحدَه** · **غيرُ داخل ⇒ «أهلاً وسهلاً» وزرّان: «حساب جديد» و«دخول»** (§٦١/٤ و§٦٢/١١) إلى شاشتيهما.
+ * - **«تقليلُ الحركة»**: الإطارُ الأخيرُ مباشرة (`welcome.css`) — **والوقفةُ نفسُها باقية** فيُرى ولا يومض.
  *
- * **و«كلُّ فتحة» إقلاعٌ لا عودةٌ من الخلفية**: الترحيبُ يُرسم مرّةً لكلِّ تحميلٍ
- * للتطبيق. ورجوعٌ من واتساب في منتصف رحلةٍ لا يُقابَل بشاشةٍ تحجب الرحلة.
- *
- * **وما لم يُبنَ من اللوحة — بعلّته، وينتظر تصحيحَه في Claude Design:**
- * - **«English»**: التطبيقُ عربيٌّ وحده — زرٌّ لا بابَ خلفه.
- * - **«بالمتابعة توافق على الشروط وسياسة الخصوصية»**: موافقةٌ مفترَضة، والمالكُ
- *   استبدلها بمربّعٍ يُضغط في التسجيل (٢٠٢٦-٠٩-٠٥، `PolicyConsent`) — فلا تُعاد.
- * - **ما بعد «متابعة»**: خطواتُ الدخول والتسجيل لم تُرسم بعد بما يطابق ما يطلبه
- *   التطبيق (التأكيد، والدولة، والموافقة، والبصمة) — **فتُسلَّم البطاقةُ إلى شاشة
- *   الدخول القائمة ومعها الرقم**. ولا نداءَ جديدَ ولا ترتيبَ جديد: الدخولُ يقع
- *   هناك بطلبه نفسِه.
+ * **ويتبع مظهرَ التطبيق** (§٦٢/٨): رُسم بالحجر للراكب، **وفي الداكن يُرسم بإسفلت الهوية وخريطة الليل** — لا شاشةَ بمظهرٍ غير مظهر
+ * صاحبها. **و«كلُّ فتحة» إقلاعٌ لا عودةٌ من الخلفية**: رجوعٌ من واتساب في منتصف رحلةٍ لا يُقابَل بشاشةٍ تحجبها.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
-import { useAuthCountry, usePhoneCountry } from "@/lib/config";
-import { COUNTRY_LABEL, digitsOnly, looksComplete } from "@/lib/phone";
+import { removeBootFrame, retrySplash, splashText, useSplashStatus } from "@/lib/splash";
+import { useTheme } from "@/lib/theme";
 
 import "@/taxo2";
 import "./welcome.css";
@@ -43,15 +34,20 @@ const LABELS: Array<[string, number, number]> = [
 ];
 /** طولُ المقدّمة حتى إطارها الأخير — ما بعده في اللوحة رجوعٌ إلى أوّل الحلقة. */
 const INTRO_MS = 4200;
-const BRIEF_MS = 800;
+/** **تكوُّنُ الـX وتجمّعُ الحروف بإيقاع المقدّمة** (٢٫٧ث ← ٤٫١ث فيها) — كان ٠٫٨ث فيمضي قبل أن يُرى (§٦٢/٥). */
+const BRIEF_MS = 1400;
+/** **الوقفةُ على الشعار مكتملاً** قبل أن يمضي — حدُّ العرض الأدنى بعد الحركة، **وهي نفسُها مع «تقليل الحركة»**. */
+const HOLD_MS = 600;
+/** الذوبانُ — `welcome.css` (`.rw.is-leaving`). */
+const LEAVE_MS = 350;
 /** «اللقاء: نبضتان واهتزازةٌ خفيفةٌ واحدة» — 2.6ث في اللوحة. */
 const MEET_MS = 2600;
 const SEEN_KEY = "taxo.welcome.seen";
 
-type Phase = "intro" | "brief" | "welcome" | "entry" | "leaving";
+type Phase = "intro" | "brief" | "hold" | "welcome" | "leaving";
+export type WelcomeNext = "/login" | "/register";
 
-/** سهمُ `arrow_back` من Material Symbols Rounded — شكلُه نفسُه، بلا تحميل خطٍّ
- *  كاملٍ لأيقونةٍ واحدة. وفي الواجهة العربية يشير يساراً: «إلى الأمام». */
+/** سهمُ `arrow_back` من Material Symbols Rounded — شكلُه نفسُه بلا خطٍّ كامل. وفي الواجهة العربية يشير يساراً: «إلى الأمام». */
 function ArrowBack() {
   return (
     <svg viewBox="0 -960 960 960" aria-hidden="true">
@@ -76,13 +72,15 @@ function markSeen(): void {
   }
 }
 
+function reducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 /** قياسُ المسرح: إطارُ اللوحة 390×844 **يُغطّي** الشاشة كما تُغطّيها الخريطة. */
 function useStageScale(): number {
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(() => Math.max(window.innerWidth / 390, window.innerHeight / 844));
   useEffect(() => {
-    const measure = () =>
-      setScale(Math.max(window.innerWidth / 390, window.innerHeight / 844));
-    measure();
+    const measure = () => setScale(Math.max(window.innerWidth / 390, window.innerHeight / 844));
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
@@ -90,31 +88,37 @@ function useStageScale(): number {
 }
 
 export function Welcome({
+  booted,
   signedIn,
+  returning,
+  reopened = false,
   onDone,
 }: {
-  /** داخلٌ ⇒ يظهر قليلاً ويمضي. وغيرُ داخل ⇒ يقود إلى الخطوات. */
+  /** `/config` والجلسةُ وصلا — **وقبله يبقى الترحيبُ شاشةَ الإقلاع**. */
+  booted: boolean;
+  /** داخلٌ بعد الإقلاع ⇒ يمضي بنفسه. */
   signedIn: boolean;
-  /** يُنادى حين ينتهي الترحيب — ومعه الرقمُ إن كُتب في البطاقة. */
-  onDone: (phone?: string) => void;
+  /** **ما يُعرف قبل الإقلاع**: رمزٌ محفوظٌ أو بصمةٌ مسلَّحة — يختار الطورَ الأوّل وحدَه (المقدّمةُ لمن لم يدخل قطّ). */
+  returning: boolean;
+  /** عودةٌ من «الدخول» أو «التسجيل» بسهم الرجوع ⇒ «أهلاً وسهلاً» مباشرة بلا حركة. */
+  reopened?: boolean;
+  onDone: (next?: WelcomeNext) => void;
 }) {
   const scale = useStageScale();
+  const { dark } = useTheme();
   const [phase, setPhase] = useState<Phase>(() =>
-    !signedIn && !seenBefore() ? "intro" : "brief",
+    reopened ? "welcome" : !returning && !seenBefore() ? "intro" : "brief",
   );
-  const [pressed, setPressed] = useState(false);
-  const [phone, setPhone] = useState("");
-  const input = useRef<HTMLInputElement>(null);
+  const [next, setNext] = useState<WelcomeNext | undefined>();
+  const splash = useSplashStatus();
 
-  const { country, countries, setCountry } = useAuthCountry();
-  const { dialCode, nationalLength } = usePhoneCountry(country);
+  // **يحلّ محلَّ إطار الإقلاع في الإطار نفسِه** — قبل الرسم لا بعده، فلا ومضةَ بينهما
+  useLayoutEffect(() => removeBootFrame(), []);
 
-  // **المقدّمةُ والـX يمضيان بأنفسهما** — ولا مؤقّتَ ثانٍ يخالف ما في CSS:
-  // المدّةُ نفسُها مكتوبةٌ هنا وهناك، و`animationend` لا يُعتمد عليه مع
-  // «تقليل الحركة» (المدّةُ 0.001ث قد لا تُطلق حدثاً في بعض المحرّكات).
+  // **المقدّمةُ والـX يمضيان بأنفسهما** — والمدّةُ نفسُها مكتوبةٌ هنا وفي CSS؛ و`animationend` لا يُعتمد عليه مع «تقليل الحركة»
   useEffect(() => {
     if (phase !== "intro" && phase !== "brief") return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = reducedMotion();
     const span = reduced ? 0 : phase === "intro" ? INTRO_MS : BRIEF_MS;
     const timers: number[] = [];
     if (phase === "intro" && !reduced) {
@@ -124,53 +128,53 @@ export function Welcome({
     timers.push(
       window.setTimeout(() => {
         if (phase === "intro") markSeen();
-        if (signedIn) {
-          // **داخلٌ: يمضي بنفسه** — وقفةٌ قصيرةٌ على الشعار ثمّ يذوب
-          setPhase("leaving");
-        } else {
-          setPhase("welcome");
-        }
-      }, span + (signedIn ? 250 : 0)),
+        setPhase("hold");
+      }, span),
     );
     return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [phase, signedIn]);
+  }, [phase]);
+
+  // **الوقفةُ ثمّ الفرع — ولا فرعَ قبل الإقلاع**: الترحيبُ باقٍ على الشعار وحالُ الشبكة تحته حتى يصل `/config` والجلسة
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (phase !== "hold") return;
+    const id = window.setTimeout(() => setHeld(true), HOLD_MS);
+    return () => window.clearTimeout(id);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== "hold" || !held || !booted) return;
+    setPhase(signedIn ? "leaving" : "welcome");
+  }, [phase, held, booted, signedIn]);
+
+  // **صاحبُ البصمة يُعرف بعد الإقلاع بلحظة** — فإن عُرف والترحيبُ على «أهلاً وسهلاً» قبل أن يلمس شيئاً، يمضي كما يمضي الداخل
+  useEffect(() => {
+    if (signedIn && phase === "welcome" && !reopened) setPhase("leaving");
+  }, [signedIn, phase, reopened]);
 
   useEffect(() => {
     if (phase !== "leaving") return;
-    const id = window.setTimeout(() => onDone(phone || undefined), 300);
+    const id = window.setTimeout(() => onDone(next), LEAVE_MS);
     return () => window.clearTimeout(id);
-  }, [phase, onDone, phone]);
-
-  // **صاحبُ البصمة يُعرف بعد الإقلاع بلحظة** (`biometry` يُقاس ولا يُفترض) — فإن عُرف
-  // والترحيبُ ما زال على «أهلاً وسهلاً» قبل أن يلمس شيئاً، يمضي كما يمضي الداخل
-  useEffect(() => {
-    if (signedIn && phase === "welcome") setPhase("leaving");
-  }, [signedIn, phase]);
-
-  // **«يظهر حقلُ الهاتف مفعّلاً»** عند 0.48ث من اللمس
-  useEffect(() => {
-    if (phase !== "entry") return;
-    const id = window.setTimeout(() => input.current?.focus(), 520);
-    return () => window.clearTimeout(id);
-  }, [phase]);
+  }, [phase, onDone, next]);
 
   const skip = () => {
     if (phase !== "intro") return;
     markSeen();
-    setPhase(signedIn ? "leaving" : "welcome");
+    setPhase("hold");
+  };
+  const go = (to: WelcomeNext) => {
+    if (phase !== "welcome") return;
+    setNext(to);
+    setPhase("leaving");
   };
 
-  const open = () => {
-    setPressed(true);
-    setPhase("entry");
-  };
-
-  const ready = dialCode !== null && looksComplete(phone, nationalLength);
   const animating = phase === "intro" ? "rw-intro" : phase === "brief" ? "rw-brief" : "";
+  const settled = phase === "welcome" || (phase === "leaving" && next !== undefined);
+  const waiting = phase === "hold" && held && !booted && splash.status;
 
   return (
     <div
-      className={["t2", "t2-day", "rw", animating, phase === "entry" ? "is-card" : "", phase === "leaving" ? "is-leaving" : ""]
+      className={["t2", "rw", animating, settled ? "is-settled" : "", phase === "leaving" ? "is-leaving" : ""]
         .filter(Boolean)
         .join(" ")}
       onClick={phase === "intro" ? skip : undefined}
@@ -178,7 +182,7 @@ export function Welcome({
     >
       <div className="rw-stage" style={{ ["--rw-scale" as string]: String(scale) }}>
         <div className="rw-cam">
-          <img src="/welcome/amman-day.svg" alt="" />
+          <img src={dark ? "/welcome/amman-night.svg" : "/welcome/amman-day.svg"} alt="" />
           {LABELS.map(([text, x, y]) => (
             <span key={text} className="rw-label" style={{ left: x, top: y }}>
               {text}
@@ -187,7 +191,7 @@ export function Welcome({
           {phase === "intro" ? (
             <>
               <svg className="rw-trail" width="390" height="844" viewBox="0 0 390 844" aria-hidden="true">
-                <path d={HD} fill="none" stroke="rgba(255,255,255,.95)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" pathLength={1} />
+                <path d={HD} fill="none" stroke="var(--rw-trail)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" pathLength={1} />
                 <path d={HD} fill="none" stroke="var(--t2-accent)" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" pathLength={1} />
               </svg>
               <div className="rw-car" style={{ offsetPath: `path('${HD}')` }}>
@@ -198,7 +202,9 @@ export function Welcome({
           ) : null}
         </div>
 
-        <div className={phase === "intro" ? "rw-veil" : "rw-veil static"} />
+        {/* **صنفٌ واحدٌ لا «static» معه**: كان `rw-veil static` — و`.static` صنفُ Tailwind (`position: static`) يغلب
+            `position: absolute` فينهار الغطاءُ إلى صفرٍ وتظهر الخريطةُ بكامل حدّتها بعد المقدّمة (قِيس بالأنماط المحسوبة، ٢٠٢٦-١٠-٠٥) */}
+        <div className="rw-veil" />
 
         {phase === "intro" ? (
           <>
@@ -226,16 +232,27 @@ export function Welcome({
           </div>
         </div>
 
-        {phase === "welcome" || phase === "entry" ? (
-          <div className="rw-copy rw-copy-out">
+        {settled ? (
+          <div className="rw-copy">
             <h1 className="rw-rise d1">أهلاً وسهلاً</h1>
             <p className="rw-origin rw-rise d2">حللتَ أهلاً، ووطئتَ سهلاً.</p>
-            <p className="rw-explain rw-rise d3">
-              جئتَ بين أهلك، وطريقك سهل — هكذا نريد أن تكون كل رحلة.
-            </p>
+            <p className="rw-explain rw-rise d3">جئتَ بين أهلك، وطريقك سهل — هكذا نريد أن تكون كل رحلة.</p>
           </div>
         ) : null}
       </div>
+
+      {/* **حالُ الإقلاع على الترحيب نفسِه** — ثلاثةُ نصوصٍ لثلاثةِ أشياءَ تُعرف، والرمزُ لما لا يُعرف سببُه */}
+      {waiting && splash.status ? (
+        <div className="rw-status" role="status">
+          <p>{splashText(splash.status)}</p>
+          {splash.code ? <p className="rw-status-code" dir="ltr">{splash.code}</p> : null}
+          {splash.status !== "slow" ? (
+            <button type="button" onClick={retrySplash}>
+              إعادة المحاولة
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* **ذكرُ الخريطة ما دامت معروضة** — شرطُ الرخصة لا زينة (§61-أ، `welcome.css`) */}
       <span className="rw-credit" dir="ltr">
@@ -244,65 +261,15 @@ export function Welcome({
 
       {phase === "intro" ? <span className="rw-skip">المس الشاشة للتخطّي</span> : null}
 
-      {phase === "welcome" || phase === "entry" ? (
-        <div
-          className={["rw-cta", "rw-rise", pressed ? "is-pressed" : ""].filter(Boolean).join(" ")}
-          role={phase === "welcome" ? "button" : undefined}
-          tabIndex={phase === "welcome" ? 0 : -1}
-          onClick={phase === "welcome" ? open : undefined}
-          onKeyDown={(event) => {
-            if (phase === "welcome" && (event.key === "Enter" || event.key === " ")) open();
-          }}
-        >
-          <div className="rw-cta-label">
-            <span>تفضّل</span>
+      {settled ? (
+        <div className="rw-actions rw-rise">
+          <button type="button" className="rw-btn primary" onClick={() => go("/register")}>
+            <span>حساب جديد</span>
             <ArrowBack />
-          </div>
-          <form
-            className="rw-card"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (ready) setPhase("leaving");
-            }}
-          >
-            <div className="rw-grab" aria-hidden="true" />
-            <h2>رقم هاتفك</h2>
-            <p className="rw-sub">لديك حساب؟ تدخل بكلمة المرور. جديد؟ ننشئ حسابك برمز تحقق.</p>
-            {/* **سوقان أو أكثر ⇒ يُختار السوق** كما في شاشات المصادقة القائمة —
-                اللوحةُ ترسم `+962` وحدَه، والتطبيقُ يحمل ما تنشره `/config` */}
-            {countries.length > 1 ? (
-              <div className="rw-countries">
-                {countries.map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    aria-pressed={code === country}
-                    onClick={() => setCountry(code)}
-                  >
-                    {COUNTRY_LABEL[code]}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <label className="rw-field">
-              <span className="rw-dial">+{dialCode ?? ""}</span>
-              <span className="rw-sep" aria-hidden="true" />
-              <input
-                ref={input}
-                name="phone"
-                inputMode="tel"
-                autoComplete="tel-national"
-                aria-label="رقم الهاتف"
-                value={phone}
-                disabled={dialCode === null}
-                maxLength={nationalLength + 4}
-                onChange={(event) => setPhone(digitsOnly(event.target.value))}
-              />
-            </label>
-            <button type="submit" className="rw-go" disabled={!ready}>
-              متابعة
-            </button>
-          </form>
+          </button>
+          <button type="button" className="rw-btn secondary" onClick={() => go("/login")}>
+            دخول
+          </button>
         </div>
       ) : null}
     </div>

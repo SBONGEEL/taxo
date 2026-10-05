@@ -5,7 +5,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -25,7 +25,9 @@ import type { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { ByTheme } from "@/components/ByTheme";
 import { BottomNavT2 } from "@/components/BottomNavT2";
-import { Welcome } from "@/components/welcome/Welcome";
+import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
+import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
+import { tokens } from "@/api/client";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -38,7 +40,6 @@ import { SessionProvider, useSession } from "@/lib/session";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { showsNav } from "@/lib/tabs";
 import { useNavCovered } from "@/lib/navCover";
-import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
@@ -172,30 +173,17 @@ function useSoundUnlock(active: boolean): void {
   }, [active]);
 }
 
-function Boot({ children }: { children: ReactNode }) {
+/** **اكتمالُ الإقلاع**: `/config` والجلسة — وقبله لا شاشةَ تُرسم تحت الترحيب. */
+function useBooted(): boolean {
   const { config } = useConfig();
   const { loading } = useSession();
+  return Boolean(config) && !loading;
+}
 
-  // **الترحيبيةُ تُزال حين ينتهي الإقلاع** (`DESIGN.md` §7.5) — سواءٌ انتهى
-  // بنجاحٍ أو بخطأ: شاشةُ خطأٍ تحت شاشةٍ ترحيبيةٍ باقيةٍ خطأٌ لا يراه أحد
-  const booted = Boolean(config) && !loading;
-  useEffect(() => {
-    // **لا تُزال عند الخطأ**: الترحيبيةُ نفسُها هي من يعرض حالَ الشبكة الآن
-    // (`DESIGN.md` §7.8) — تُبقي الشعارَ والدورانَ ونصَّ السبب وزرَّ المحاولة.
-    // وكانت تُزال هنا حين كان الخطأُ يعني شاشةً بديلة، فصار إزالتُها تُدخل
-    // المستخدمَ إلى واجهةٍ فارغة — وهو بعينه ما طُلب منعُه
-    if (booted) hideSplash();
-  }, [booted]);
-
-  // الإعدادات شرطٌ لرسم شاشة الدخول نفسها (أيُّ مُحقِّق، وأيُّ دول)
-  // **ولا شاشةَ خطأٍ ثانية**: الترحيبيةُ باقيةٌ فوق كل شيء وتحمل السببَ
-  // وزرَّ المحاولة (§7.8)، وشاشةٌ تحتها لا يراها أحد
-  if (!config) return null;
-
-  // **ولا شاشةَ انتظارٍ ثانية**: الترحيبيةُ ما زالت فوق كل شيء حتى الآن،
-  // وشاشتان متتاليتان تُقرآن تعثّراً (§7.5)
-  if (!config || loading) return null;
-
+function Boot({ children }: { children: ReactNode }) {
+  // **ولا شاشةَ خطأٍ ولا انتظارٍ ثانية**: الترحيبُ فوق كلِّ شيءٍ حتى يكتمل الإقلاع، **وهو الذي يرسم حالَ الشبكة وزرَّ المحاولة**
+  // (`lib/splash.ts`، §٦٢/١) — وشاشةٌ تحته لا يراها أحد، وشاشتان متتاليتان تُقرآن تعثّراً (§7.5)
+  if (!useBooted()) return null;
   return <>{children}</>;
 }
 
@@ -260,33 +248,53 @@ function NavBar() {
 const T2_COVERING = ["/account/notifications"];
 
 
-/** **الترحيبُ عند كلِّ فتحة** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٠ و١١).
+/** **الترحيبُ عند كلِّ فتحة — وهو شاشةُ الإقلاع نفسُها** (TAXO 2.0، البندان ١٠ و١١، و§٦٢/١ و/١٠).
  *
- * فوق المسارات لا مساراً بينها: الشاشةُ التي تحته (الرئيسية أو الدخول) تُرسم
- * في الوقت نفسِه، **فلا انتظارَ بعد أن يمضي**. و«داخلٌ أم لا» يُقرأ **مرّةً لحظةَ
- * الإقلاع** — دخولٌ يقع في أثناء الترحيب لا يقلب نوعَه في منتصفه.
+ * **يُركَّب من أوّل رسمٍ لا بعد الإقلاع**: كان داخل `Boot` فيُرسم بعد `/config` والجلسة — **وقبله «ترحيبيةٌ» قديمةٌ في `index.html`**،
+ * فرأى المالكُ القديمَ ثمّ الجديدَ في كلِّ فتحة. **والآن يحلّ محلَّ إطار الإقلاع** (أوّلُ إطارٍ منه بعينه)، **ويبقى حتى يكتمل الإقلاع**
+ * وحالُ الشبكة عليه — ثمّ: **داخلٌ ⇒ يذوب** · **غيرُ داخلٍ ⇒ «حساب جديد» أو «دخول»** إلى شاشتيهما.
  *
- * وغيرُ الداخل يُسلَّم إلى شاشة الدخول **ومعه الرقمُ الذي كتبه** — ولا نداءَ
- * هنا: الدخولُ يقع هناك بطلبه نفسِه (البند ١٢ ينتظر خطواتٍ مرسومة).
+ * فوق المسارات لا مساراً بينها: الشاشةُ التي تحته تُرسم في الوقت نفسِه، **فلا انتظارَ بعد أن يمضي**. **وسهمُ الرجوع في الدخول
+ * والتسجيل يعيده** (`gate.ts`) إلى زرّيه بلا حركة.
  */
 function WelcomeGate() {
   const { user, biometry } = useSession();
+  const booted = useBooted();
   const navigate = useNavigate();
-  const signedInAtBoot = useRef(Boolean(user)).current;
-  // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل
-  // زرَّها — **بالشرط نفسِه الذي يرسمه** (`Login.tsx`). فيرى ما يراه الداخلُ ويمضي
-  // إليها كما في `master`، **لا بطاقةَ رقمٍ يُجبَر على كتابته ليبلغ زرَّ البصمة**.
-  // والقياسُ لا يُفترض: `biometry` يصل بعد الإقلاع بلحظة، والترحيبُ يتبعه إن وصل.
-  const returning = signedInAtBoot || Boolean(biometry?.available && biometry.armed);
+  // **ما يُعرف قبل الإقلاع** يختار الطورَ الأوّلَ وحدَه: رمزٌ محفوظٌ يعني عائداً — والفرعُ الأخيرُ من الجلسة بعد الإقلاع
+  const heldToken = useRef(Boolean(tokens.access())).current;
+  // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل زرَّها — فيرى ما يراه الداخلُ ويمضي إليها
+  const armed = Boolean(biometry?.available && biometry.armed);
+  const signedIn = Boolean(user);
   const [shown, setShown] = useState(true);
+  const [reopened, setReopened] = useState(false);
+  useEffect(() => setWelcomeOpen(shown), [shown]);
+  const requests = useSyncExternalStore(subscribeWelcome, welcomeRequests);
+  const seen = useRef(requests);
+  useEffect(() => {
+    if (requests === seen.current) return;
+    seen.current = requests;
+    setReopened(true);
+    setShown(true);
+  }, [requests]);
+  const done = useCallback(
+    (next?: WelcomeNext) => {
+      setShown(false);
+      setReopened(false);
+      if (signedIn) return;
+      navigate(next ?? "/login", { replace: true });
+    },
+    [signedIn, navigate],
+  );
   if (!shown) return null;
   return (
     <Welcome
-      signedIn={returning}
-      onDone={(phone) => {
-        setShown(false);
-        if (!returning) navigate("/login", { replace: true, state: phone ? { phone } : null });
-      }}
+      key={reopened ? `again-${requests}` : "boot"}
+      booted={booted}
+      signedIn={signedIn || armed}
+      returning={heldToken || armed}
+      reopened={reopened}
+      onDone={done}
     />
   );
 }
@@ -313,11 +321,11 @@ export default function App() {
           {/* تحت الجلسة والإعدادات: السِمة تُقرأ من إعلان صاحبة الحساب ومن
               مفتاح دولتها، فلا معنى لها قبلهما */}
           <BrandProvider>
+            <Router>
             <Boot>
               {/* تحت الجلسة: الأماكنُ والوجهاتُ الأخيرة كلاهما لحسابٍ بعينه */}
               <PlacesProvider>
               <RideProvider>
-                <Router>
                   <Toasts />
                   {/* **الحركةُ فوق `Suspense` لا تحته** (`ui/Motion.tsx`):
                       البديلُ فوقها كان يستبدل الشجرةَ المتحركةَ كلَّها فيموت
@@ -527,11 +535,12 @@ export default function App() {
                   </BoundaryByRoute>
                   <HardwareBack />
                   <NavBar />
-                  <WelcomeGate />
-                </Router>
               </RideProvider>
               </PlacesProvider>
             </Boot>
+            {/* **فوق `Boot` لا داخلَه**: يُرسم من أوّل إطار ويبقى حتى يكتمل الإقلاع (§٦٢/١) */}
+            <WelcomeGate />
+            </Router>
           </BrandProvider>
         </SessionProvider>
       </ConfigProvider>

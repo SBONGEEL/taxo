@@ -75,3 +75,20 @@ export function passwordsReady(password: string, confirm: string): boolean {
   if (confirm !== password || password.length === 0) return false;
   return passwordError(password) === null;
 }
+
+/** **شروطُ الكلمة كما تنشرها الخلفية** — كلُّ شرطٍ بحاله لما كُتب، لقائمة `AuthConditions` (TAXO 2.0).
+ *  الشروطُ من `rule.conditions` لا من نصٍّ هنا: ما يُقال تحت الحقل هو ما تقيسه الخلفيةُ نفسُها (SPEC ١٧.٣). */
+export function passwordConditions(value: string): Array<{ key: string; label: string; ok: boolean }> {
+  const rule = passwordRule();
+  if (!rule?.conditions?.length) return [];
+  return rule.conditions.map((condition) => ({
+    key: condition.key,
+    label: condition.label,
+    ok:
+      condition.key === "min_length"
+        ? rule.min_length === undefined || value.length >= rule.min_length
+        : condition.key === "max_length"
+          ? rule.max_length === undefined || value.length <= rule.max_length
+          : false,
+  }));
+}
