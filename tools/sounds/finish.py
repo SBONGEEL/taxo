@@ -120,7 +120,9 @@ def finish(entry: dict, formats: bool) -> dict:
     if lufs(phone(y)) - lufs(y) < -1.5:
         b, a = biquad("ls", 350, -3.0); y = signal.lfilter(b, a, y)
         notes.append("low-shelf -3 dB @350 (phone)")
-    target = -20.0 if entry["role"] == "request" else -22.0
+    # **−٢٢ للعائلة، وطلبُ الكبتن −٢٠** — **وما صُمّم أهدأ يقول جهارتَه في `opt.lufs`**
+    # («وصلتُ» عند الكبتن: يقع وهو يقود، فصوتٌ يفزعه أسوأُ من صمت — §9.1)
+    target = float(opt.get("lufs", -20.0 if entry["role"] == "request" else -22.0))
     y = y * 10 ** ((target - lufs(y)) / 20)
     tp = true_peak_db(y)
     if tp > -1.0:
