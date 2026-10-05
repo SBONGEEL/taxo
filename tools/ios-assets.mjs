@@ -20,9 +20,13 @@ export const IOS_APPS = ["customer-app", "driver-app"];
 /** `#rrggbb` من ملفّ موارد أندرويد — **أو وقوفٌ باسم الملفّ**. */
 export function androidLaunchColor(app, variant) {
   const file = join(ROOT, app, "android/app/src/main/res", variant, "launch_background.xml");
-  const hex = readFileSync(file, "utf8").match(
-    /<color\s+name="launch_background">\s*#([0-9a-fA-F]{6})\s*<\/color>/,
-  )?.[1];
+  const text = readFileSync(file, "utf8");
+  // **و«--» داخل تعليق XML يُسقط بناءَ الحزمة** (`mergeResources`، قِيس ٢٠٢٦-١٠-٠٥: كُتب اسمُ رمزٍ مثل `--t2-bg` في تعليق) —
+  // وCI لا يبني الحزمة، **فيُمسك هنا** حيث يُقرأ الملفُّ في كلِّ تشغيلٍ لـ`check:ios`
+  for (const [, body] of text.matchAll(/<!--([\s\S]*?)-->/g)) {
+    if (body.includes("--")) throw new Error(`«--» داخل تعليقٍ في ${file} — XML لا يقبله وgradle يُسقط البناء`);
+  }
+  const hex = text.match(/<color\s+name="launch_background">\s*#([0-9a-fA-F]{6})\s*<\/color>/)?.[1];
   if (!hex) throw new Error(`لا launch_background بصيغة #rrggbb في ${file}`);
   return `#${hex.toLowerCase()}`;
 }
