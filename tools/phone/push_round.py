@@ -163,6 +163,56 @@ def uids() -> dict[str, str]:
     return found
 
 
+# **ما يخصّنا وحدَه يُحفظ** (شرطُ المالك ٢٠٢٦-١٠-٠٥: «لا شيءَ شخصيٌّ يُقرأ أو يُحفظ»): الهاتفُ هاتفُ المالك، وفيه
+# رسائلُه وما يسمعه. **فلا تُكتب لقطةٌ خامٌ لكلِّ التطبيقات أبداً** — المحلِّلاتُ تعمل في الذاكرة، وما يُكتب
+# مصفّىً بتطبيقَينا: قنواتُهما، ومنشورُهما، ومشغّلاتُ صوتهما — **ومشغّلاتُ النظام لأصوات الإشعار والمنبّه
+# وحدَها**: بها يُثبت صوتُ القناة (النظامُ يعزفه لا التطبيق)، ولا محتوى فيها ولا اسمَ تطبيق.
+_SYSTEM_SOUND_USAGES = ("USAGE_NOTIFICATION", "USAGE_ALARM")
+
+
+def own_audio(events: list[str], app_uids: dict[str, str]) -> list[str]:
+    """أحداثُ الصوت التي تخصّنا: مشغّلاتُ تطبيقَينا، ومشغّلاتُ النظام لأصوات الإشعار والمنبّه — **وأحداثُها بأرقامها**."""
+    ours = {uid for uid in app_uids.values()}
+    kept_piids: set[str] = set()
+    kept: list[str] = []
+    for line in events:
+        piid = re.search(r"piid:\s*(\d+)", line)
+        owner = re.search(r"uid/pid:(\d+)/", line)
+        if owner and piid:
+            uid = owner.group(1)
+            system_sound = uid == "1000" and any(usage in line for usage in _SYSTEM_SOUND_USAGES)
+            if uid in ours or system_sound:
+                kept_piids.add(piid.group(1))
+                kept.append(line)
+            continue
+        if piid and piid.group(1) in kept_piids:
+            kept.append(line)
+    return kept
+
+
+def own_notification_lines(dump: str) -> str:
+    """أسطرُ تطبيقَينا وحدَها من `dumpsys notification` — قنواتُهما وسجلّاتُ منشورهما، **لا سطرَ لغيرهما**."""
+    lines = dump.splitlines()
+    kept: list[str] = []
+    current: str | None = None
+    for index, line in enumerate(lines):
+        app = _APP.match(line)
+        if app:
+            current = app.group(1) if app.group(1) in PACKAGES else None
+            if current:
+                kept.append(line)
+            continue
+        if current and "NotificationChannel{" in line:
+            kept.append(line)
+            continue
+        record = _RECORD.search(line)
+        if record and record.group(1) in PACKAGES:
+            block = lines[index : index + 160]
+            end = next((j for j, row in enumerate(block[1:], 1) if "NotificationRecord(" in row), len(block))
+            kept.extend(block[:end])
+    return "\n".join(kept)
+
+
 # ------------------------------------------------------------------ اللقطة
 
 
@@ -172,8 +222,10 @@ def snapshot(out: Path, label: str) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     notification = adb("shell", "dumpsys", "notification", "--noredact")
     audio = adb("shell", "dumpsys", "audio")
-    (folder / "notification.txt").write_text(redact(notification), encoding="utf-8")
-    (folder / "audio.txt").write_text(redact(audio), encoding="utf-8")
+    app_uids = uids()
+    # **مصفّىً قبل أن يُكتب** — لا لقطةَ خامٌ لتطبيقات المالك الأخرى
+    (folder / "notification.txt").write_text(redact(own_notification_lines(notification)), encoding="utf-8")
+    (folder / "audio.txt").write_text(redact("\n".join(own_audio(audio_events(audio), app_uids))), encoding="utf-8")
 
     summary: dict[str, object] = {
         "at": datetime.now().isoformat(timespec="seconds"),
@@ -182,7 +234,7 @@ def snapshot(out: Path, label: str) -> None:
         "android": adb("shell", "getprop", "ro.build.version.release").strip(),
         "zen_mode": adb("shell", "settings", "get", "global", "zen_mode").strip(),
         "ringer": sorted({row.strip() for row in audio.splitlines() if "ringer mode" in row.lower()})[:4],
-        "uids": uids(),
+        "uids": app_uids,
         "apps": {},
         "channels": channels(notification),
         "posted": posted(notification),
@@ -205,9 +257,6 @@ def snapshot(out: Path, label: str) -> None:
 # ------------------------------------------------------------------ المراقبة
 
 
-_LOGCAT_KEEP = re.compile(r"FirebaseMessaging|FCM|Capacitor|chromium|PushNotification|ly\.tajora|taxo\.")
-
-
 def watch(out: Path, minutes: float) -> None:
     device()
     folder = out / "watch"
@@ -216,27 +265,32 @@ def watch(out: Path, minutes: float) -> None:
     events = (folder / "events.log").open("a", encoding="utf-8")
     logcat_file = (folder / "logcat.log").open("a", encoding="utf-8")
     app_uids = uids()
+    if not app_uids:
+        sys.exit("✗ لا تطبيقَ من تطبيقَينا مثبَّتٌ على الهاتف")
 
     def note(line: str) -> None:
         events.write(f"{datetime.now().strftime('%H:%M:%S')} {line}\n")
         events.flush()
 
-    # **من الآن لا من أوّل السجلّ، وبلا مسح** — `-T 1` يبدأ من آخر سطر
-    logcat = subprocess.Popen([ADB, "logcat", "-v", "time", "-T", "1"], stdout=subprocess.PIPE)
+    # **من الآن لا من أوّل السجلّ، وبلا مسح** — `-T 1` يبدأ من آخر سطر. **ولتطبيقَينا وحدَهما** (`--uid`):
+    # سجلُّ الهاتف كلِّه فيه ما يخصّ المالكَ وتطبيقاتِه، فلا يُقرأ أصلاً
+    logcat = subprocess.Popen(
+        [ADB, "logcat", "-v", "time", "-T", "1", f"--uid={','.join(app_uids.values())}"],
+        stdout=subprocess.PIPE,
+    )
 
     def pump() -> None:
         assert logcat.stdout is not None
         for raw in logcat.stdout:
             line = raw.decode("utf-8", "replace").rstrip()
-            if _LOGCAT_KEEP.search(line):
-                logcat_file.write(redact(line) + "\n")
-                logcat_file.flush()
+            logcat_file.write(redact(line) + "\n")
+            logcat_file.flush()
 
     threading.Thread(target=pump, daemon=True).start()
     note(f"بدأت المراقبة — uids {app_uids}")
 
     seen: dict[str, dict[str, str]] = {}
-    heard: set[str] = set(audio_events(adb("shell", "dumpsys", "audio")))
+    heard: set[str] = set(own_audio(audio_events(adb("shell", "dumpsys", "audio")), app_uids))
     deadline = time.monotonic() + minutes * 60
     tick = 0
     try:
@@ -250,11 +304,11 @@ def watch(out: Path, minutes: float) -> None:
                     note(redact(f"- {row['pkg']} [{row['channel']}] {row['title']}"))
             seen = now
             if tick % 3 == 0:
-                for line in audio_events(adb("shell", "dumpsys", "audio")):
+                for line in own_audio(audio_events(adb("shell", "dumpsys", "audio")), app_uids):
                     if line not in heard:
                         heard.add(line)
-                        owner = next((p for p, uid in app_uids.items() if f"/{uid}/" in line or f":{uid}/" in line), "")
-                        note(redact(f"♪ {owner or '—'} {line}"))
+                        owner = next((p for p, uid in app_uids.items() if f"/{uid}/" in line), "")
+                        note(redact(f"♪ {owner or 'النظام'} {line}"))
             tick += 1
             time.sleep(1)
     finally:
@@ -288,6 +342,10 @@ _SAMPLE_AUDIO = """\
   10-05 14:00:01:123 new player piid:4071 uid/pid:10234/12345 type:android.media.MediaPlayer attr:AudioAttributes: usage=USAGE_ALARM content=CONTENT_TYPE_SONIFICATION flags=0x800
   10-05 14:00:01:130 player piid:4071 event:started
   10-05 14:00:02:000 unrelated line without piid
+  10-05 14:00:03:000 new player piid:5000 uid/pid:10111/777 type:android.media.AudioTrack attr:AudioAttributes: usage=USAGE_MEDIA content=CONTENT_TYPE_MUSIC
+  10-05 14:00:03:010 player piid:5000 event:started
+  10-05 14:00:04:000 new player piid:6000 uid/pid:1000/900 type:android.media.SoundPool attr:AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION
+  10-05 14:00:04:010 player piid:6000 event:started
 """
 
 
@@ -301,10 +359,18 @@ def selftest() -> None:
     assert len(rows) == 1 and rows[0]["channel"] == "taxo.offer" and rows[0]["title"] == "طلب رحلة جديد", rows
     assert rows[0]["text"] == "2.500 د.أ · 1.2 كم · 20 ث"
     events = audio_events(_SAMPLE_AUDIO)
-    assert len(events) == 2 and "usage=USAGE_ALARM" in events[0], events
+    assert len(events) == 6 and "usage=USAGE_ALARM" in events[0], events
+    # **ما يخصّنا وحدَه**: مشغّلُنا وحدثُه، وصوتُ إشعارٍ يعزفه النظام — ولا مشغّلَ لتطبيقٍ آخرَ ولا حدثَه
+    mine = own_audio(events, {"ly.tajora.driver": "10234"})
+    assert [("piid:4071" in e, "piid:6000" in e) for e in mine] == [(True, False), (True, False), (False, True), (False, True)], mine
+    assert not any("piid:5000" in e or "10111" in e for e in mine), mine
+    lines = own_notification_lines(_SAMPLE_NOTIFICATION)
+    assert "ly.tajora.driver" in lines and "com.other.app" not in lines, lines
+    assert "طلب رحلة جديد" in lines and "taxo.offer" in lines
     assert redact("wss://x/ws/driver?token=abc.def&device_id=1") == "wss://x/ws/driver?token=<محجوب>&device_id=1"
     assert "<رمزٌ طويلٌ محجوب>" in redact("t " + "a" * 142)
-    print("✓ المحلِّلاتُ تقرأ النصَّ المصنوع: قناتان · إشعارٌ واحدٌ بقناته وعنوانه · حدثا صوت · والحجبُ يعمل")
+    print("✓ المحلِّلاتُ تقرأ النصَّ المصنوع: قناتان · إشعارٌ واحدٌ بقناته وعنوانه · وأحداثُ الصوت · والحجبُ يعمل"
+          " · **وما لغير تطبيقَينا يُسقط** (قنواتُه ومنشورُه ومشغّلُه)")
 
 
 def main() -> None:
