@@ -469,3 +469,48 @@ html.dark .cap-auth .t2-auth-actions .t2-button.secondary { border: 1.5px solid 
   .cap-join:active,
   .cap-doc:active:enabled { transform: scale(0.98); }
 }
+
+/* ══ جولةُ الأذونات (أوّلَ دخول) — بلغة خطوات C02 ════════════════════════════════════════════════════════════════
+ * أيقونةُ الإذن في مربّع الجمر الخافت (٥٦ بزاوية ١٨ كبلاطات C04)، والتنبيهُ بلون التنبيه، والتأجيلُ رابطٌ هادئٌ تحت الفعل */
+.cap-perm-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-top: 26px;
+  border-radius: 18px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.cap-perm-icon .t2-icon { font-size: 28px; }
+.cap-perm .t2-auth-title.step { margin-top: 18px; }
+.cap-perm-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--t2-warning-line, var(--t2-line));
+  border-radius: 14px;
+  background: var(--t2-warning-soft);
+  color: var(--t2-warning);
+  font-size: 13px;
+  line-height: 20px;
+}
+.cap-perm-warn .t2-icon { flex: none; font-size: 18px; }
+.cap-perm-later {
+  position: relative;
+  align-self: center;
+  padding: 6px 12px;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cap-perm-later::after {
+  content: "";
+  position: absolute;
+  inset: -8px -6px;
+}

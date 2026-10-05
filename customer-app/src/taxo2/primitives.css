@@ -318,6 +318,45 @@ button.t2-row:enabled { cursor: pointer; }
   pointer-events: none;
 }
 
+/* ── البلاغُ داخل الشاشة «t2-callout» (حالٌ قائمةٌ لا حدث: حسابٌ موقوف، رقمٌ لم يُثبَت، إذنٌ ناقص) — **انتقل إلى هنا من شاشات
+ * الراكب** حين احتاجه الكبتنُ (§٦٢/١: «لا تصلك طلبات الآن» كان بطرازٍ قديمٍ فوق C04)، فلا يُنسخ في ملفّين يفترقان ── */
+.t2-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--t2-line);
+  background: var(--t2-surface);
+}
+.t2-callout > .t2-icon { margin-top: 1px; font-size: 18px; }
+.t2-callout.warn > .t2-icon { color: var(--t2-warning); }
+.t2-callout.danger > .t2-icon { color: var(--t2-danger); }
+.t2-callout-main { flex: 1; min-width: 0; }
+.t2-callout-title { margin: 0; font-size: 13px; font-weight: 700; }
+.t2-callout-body { margin: 2px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-callout-link { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--t2-accent-text); }
+/* وبلاغٌ بعدّة بنود (الأذوناتُ الناقصة): بندٌ تحت بندٍ بفاصل، ولكلٍّ فعلُه */
+.t2-callouts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.t2-callouts .t2-callout { margin-bottom: 0; }
+.t2-callout-list { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 0; padding: 0; list-style: none; }
+.t2-callout-list > li + li { padding-top: 10px; border-top: 1px solid var(--t2-divider); }
+.t2-callout-item { margin: 0; font-size: 12.5px; font-weight: 600; }
+.t2-callout-open {
+  position: relative;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-callout-open::after { content: ""; position: absolute; inset: -14px -10px; }
+
 /* ── الأزرار (الهوية — «المكوّنات الأساسية»): أساسيٌّ بالحبر · فعلٌ بالجمر («طلب / قبول») · ثانويٌّ بحافّة ── */
 .t2-button {
   display: flex;

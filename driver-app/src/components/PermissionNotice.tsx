@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { alertsAvailable, permissionStatus, type PermissionStatus } from "@/lib/offer-alert";
+import { Icon } from "@/taxo2";
 import { ROWS, type Row } from "@/lib/permission-rows";
 
 export function PermissionNotice() {
@@ -55,27 +56,34 @@ export function PermissionNotice() {
   const blocking = missing.filter((row) => row.severity === "blocking");
   const advisory = missing.filter((row) => row.severity === "advisory");
 
+  // **بلغة TAXO 2.0** (§٦٢/١ و/٦): كان بطاقتين بطرازٍ قديمٍ فوق C04 — صار `t2-callout` (`taxo2/primitives.css`) كبلاغ الراكب
   return (
-    <div className="mb-10 space-y-8">
+    <div className="t2-callouts">
       {blocking.length > 0 ? (
-        <section className="rounded-14 border border-danger bg-surface-2 px-14 py-12" role="alert">
-          <p className="text-12.5 font-semibold text-danger">لا تصلك طلبات الآن</p>
-          <ul className="mt-6 space-y-8">
-            {blocking.map((row) => (
-              <NoticeRow key={row.key} row={row} />
-            ))}
-          </ul>
+        <section className="t2-callout danger" role="alert">
+          <Icon name="error" fill />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">لا تصلك طلبات الآن</p>
+            <ul className="t2-callout-list">
+              {blocking.map((row) => (
+                <NoticeRow key={row.key} row={row} />
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
 
       {advisory.length > 0 ? (
-        <section className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-          <p className="text-12.5 font-semibold text-warn">ينقص ما يقوّي وصولَ الطلب</p>
-          <ul className="mt-6 space-y-8">
-            {advisory.map((row) => (
-              <NoticeRow key={row.key} row={row} />
-            ))}
-          </ul>
+        <section className="t2-callout warn">
+          <Icon name="info" fill />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">ينقص ما يقوّي وصولَ الطلب</p>
+            <ul className="t2-callout-list">
+              {advisory.map((row) => (
+                <NoticeRow key={row.key} row={row} />
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
     </div>
@@ -86,14 +94,10 @@ export function PermissionNotice() {
 function NoticeRow({ row }: { row: Row }) {
   return (
     <li>
-      <p className="text-11.5 font-semibold text-ink">{row.label}</p>
-      <p className="mt-2 text-11.5 leading-6 text-muted">{row.why}</p>
+      <p className="t2-callout-item">{row.label}</p>
+      <p className="t2-callout-body">{row.why}</p>
       {row.open ? (
-        <button
-          type="button"
-          onClick={() => void row.open?.()}
-          className="pressable mt-4 text-11.5 font-semibold text-accent"
-        >
+        <button type="button" onClick={() => void row.open?.()} className="t2-callout-open">
           افتح الإعداد
         </button>
       ) : null}

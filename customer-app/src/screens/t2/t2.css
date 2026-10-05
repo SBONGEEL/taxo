@@ -629,23 +629,6 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 }
 .t2-home-chip .t2-icon { font-size: 17px; color: var(--t2-muted); }
 .t2-home-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.t2-callout {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 10px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  border: 1px solid var(--t2-line);
-  background: var(--t2-surface);
-}
-.t2-callout > .t2-icon { margin-top: 1px; font-size: 18px; }
-.t2-callout.warn > .t2-icon { color: var(--t2-warning); }
-.t2-callout.danger > .t2-icon { color: var(--t2-danger); }
-.t2-callout-main { flex: 1; min-width: 0; }
-.t2-callout-title { font-size: 13px; font-weight: 700; }
-.t2-callout-body { margin: 2px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
-.t2-callout-link { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--t2-accent-text); }
 
 /* ── ورقةُ الطلب فوق الخريطة «R06» — وما فوق الخريطة في أطوار الطلب ─────────────────────────────────── */
 /* **ملتصقةٌ بأسفل الشاشة كما رُسمت** (R06: `bottom:0 · radius 30 30 0 0 · padding 10 18 30`) — وسقفُها تحت سهم الرجوع */

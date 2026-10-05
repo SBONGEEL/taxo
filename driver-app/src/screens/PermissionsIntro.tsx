@@ -6,6 +6,10 @@
  *
  * **ولا تُعرض لمن لا ينقصه شيء**: الجولةُ تُخطى كاملةً إن كانت السبعةُ ممنوحة،
  * **ولا تُعرض شاشةُ ترحيبٍ تقول «كلُّ شيءٍ تمام»** — وقتُ الكبتن أثمن.
+ *
+ * **بلغة TAXO 2.0** (§٦٢/١ و/٦): كانت أوّلَ ما يراه الكبتنُ بعد الدخول **بطرازٍ قديم** (قِيس على S21 ٢٠٢٦-١٠-٠٥). لا لوحةَ
+ * لها، **فرُسمت من خطوات C02**: مسارُ «١ / ٤» وعنوانُ الخطوة وسطرُها (`taxo2/Auth`)، وأيقونةُ الإذن في مربّع الجمر الخافت،
+ * والفعلُ جمرٌ والتأجيلُ رابطٌ هادئ. **والمنطقُ حرفاً.**
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -26,6 +30,18 @@ import {
   refusalsOf,
   type WalkStep,
 } from "@/lib/permission-walk";
+import { AuthPage, AuthTitle, AuthTop, Icon } from "@/taxo2";
+
+import "@/components/t2/captain-auth.css";
+
+/** أيقونةُ كلِّ إذن — بالمفتاح لا بالترتيب، ومن خطّ الأيقونات المقتطع (`index.html`). */
+const STEP_ICON: Record<string, string> = {
+  location: "location_on",
+  notifications: "notifications",
+  batteryUnrestricted: "battery_charging_full",
+  overlay: "layers",
+  backgroundLocation: "my_location",
+};
 
 export function PermissionsIntroScreen() {
   const navigate = useNavigate();
@@ -116,39 +132,31 @@ export function PermissionsIntroScreen() {
   };
 
   return (
-    <div className="scr flex h-full flex-col justify-between bg-bg px-16 pb-16 pt-safe">
-      <div className="mt-24">
-        <p className="text-11.5 text-muted">
-          {index + 1} / {steps.length}
-        </p>
-        <h1 className="mt-10 text-20 font-bold text-ink">{step.title}</h1>
-        <p className="mt-10 text-12.5 leading-note text-muted">{step.body}</p>
+    <div className="cap-auth cap-perm">
+      <AuthPage>
+        <AuthTop step={index + 1} total={steps.length} />
+        <span className="cap-perm-icon" aria-hidden="true">
+          <Icon name={STEP_ICON[step.key] ?? "verified_user"} />
+        </span>
+        <AuthTitle step title={step.title} sub={step.body} />
 
         {blockedStep || exhausted ? (
-          <p className="mt-14 rounded-14 border border-line bg-surface-2 px-14 py-12 text-11.5 leading-6 text-warn">
-            رفضتَ هذا الإذن مرّتين، فلا يعرض النظام نافذته مرّةً أخرى. امنحه من
-            إعدادات التطبيق متى شئت.
+          <p className="cap-perm-warn" role="status">
+            <Icon name="info" fill />
+            رفضتَ هذا الإذن مرّتين، فلا يعرض النظام نافذته مرّةً أخرى. امنحه من إعدادات التطبيق متى شئت.
           </p>
         ) : null}
-      </div>
 
-      <div className="space-y-10">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void act()}
-          className="pressable w-full rounded-14 bg-accent py-14 text-13 font-semibold text-accent-ink disabled:opacity-60"
-        >
-          {exhausted || blockedStep ? "فتح الإعدادات" : step.cta}
-        </button>
-        <button
-          type="button"
-          onClick={skip}
-          className="pressable w-full py-10 text-12 text-muted"
-        >
-          {index + 1 >= steps.length ? "لاحقاً" : "ليس الآن"}
-        </button>
-      </div>
+        <div className="t2-auth-push" />
+        <div className="t2-auth-actions">
+          <button type="button" className="t2-button primary" disabled={busy} onClick={() => void act()}>
+            {exhausted || blockedStep ? "فتح الإعدادات" : step.cta}
+          </button>
+          <button type="button" className="cap-perm-later" onClick={skip}>
+            {index + 1 >= steps.length ? "لاحقاً" : "ليس الآن"}
+          </button>
+        </div>
+      </AuthPage>
     </div>
   );
 }
