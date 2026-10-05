@@ -571,8 +571,13 @@ async def test_sweep_notices_expiry_within_a_day_once(
 
     event = await _next_event()
     assert event is not None and event["type"] == "subscription_expiring"
+    # **ومعه بلاغُه على المقبس** (§٦١-ل/٣): التطبيقُ لا يرسم هذا الحدثَ نفسَه، فيصله بلاغاً يُرسم بصوته — **مرّةً كالحدث**.
+    # وكان الاختبارُ يقرأ الحدثَ وحدَه ثمّ يُسأل عن «لا شيءَ بعده» فيجد البلاغَ الأوّلَ في الصفّ (CI على الفرع، ٢٠٢٦-١٠-٠٥)
+    notice = await _next_event()
+    assert notice is not None and notice["type"] == "notice"
+    assert notice["data"]["type"] == "subscription_expiring"
 
-    # البث الثاني لا يقع: أثر التنبيه محفوظ في Redis
+    # البث الثاني لا يقع — **لا الحدثُ ولا بلاغُه**: أثر التنبيه محفوظ في Redis
     async with session_factory() as session:
         await subscriptions_service.publish_sweep(
             session, redis, await _sweep(session_factory)
