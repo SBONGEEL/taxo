@@ -58,6 +58,8 @@ export type DriverSocketEvent =
       transfer_reference: string;
       expires_at: string | null;
     }
+  // **بلاغٌ لما لا يُرسم من حدثٍ له** (§٦١-ل/٣) — الحمولةُ نفسُها التي يحملها إشعارُه
+  | { type: "notice"; title: string; body: string; data: Record<string, string> }
   | { type: "error"; detail: string };
 // ولا عضوَ جامع `{ type: string }` في الاتحاد: وجودُه يجعل كل فرعٍ في
 // `switch` غيرَ مُضيَّق فيصير كلُّ حقلٍ `unknown`. والأحداثُ غيرُ المعروفة
@@ -106,14 +108,22 @@ export class DriverSocket {
 
   constructor(private readonly options: Options) {}
 
+  /** **ظهورُ التطبيق لصاحبه يُبلَّغ به المقبس** (§٦١-ل/٣): المقبسُ يبقى حيّاً
+   *  والتطبيقُ في الخلفية — والخدمةُ الأماميةُ تُبقيه عمداً — **فكانت الخلفيةُ
+   *  تحجب الإشعارَ عن هاتفٍ في الجيب**. فيُبلَّغ عند كلِّ تبدّلٍ وعند كلِّ اتصال. */
+  private readonly reportVisibility = () =>
+    this.send({ type: "visibility", visible: !document.hidden });
+
   open() {
     this.closed = false;
+    document.addEventListener("visibilitychange", this.reportVisibility);
     this.startWatching();
     this.connect();
   }
 
   close() {
     this.closed = true;
+    document.removeEventListener("visibilitychange", this.reportVisibility);
     if (this.timer !== null) window.clearTimeout(this.timer);
     if (this.ticker !== null) window.clearInterval(this.ticker);
     if (this.watch !== null) navigator.geolocation?.clearWatch(this.watch);
@@ -215,6 +225,8 @@ export class DriverSocket {
 
     socket.onopen = () => {
       this.retries = 0;
+      // **والمقبسُ الجديدُ يبدأ «أمامَ صاحبه»** عند الخلفية — فيُقال له الحالُ فوراً
+      this.reportVisibility();
       // **والعودةُ تُطفئ البديل**: مقبسٌ وREST معاً بثٌّ مضاعفٌ لموقعٍ واحد
       this.stopFallback();
       this.broadcast();

@@ -66,14 +66,37 @@ def _apns_expiration(message: PushMessage) -> dict[str, str]:
     والقيمةُ الفاسدةُ تُسقط الترويسةَ لا الإشعار: إشعارٌ يصل متأخراً أهونُ من
     إشعارٍ لا يصل لأن حقلاً في حمولته لم يُقرأ رقماً.
     """
+    seconds = _lifetime(message)
+    if seconds is None:
+        return {}
+    return {"apns-expiration": str(int(time.time()) + seconds)}
+
+
+def _lifetime(message: PushMessage) -> int | None:
+    """عمرُ الإشعار بالثواني إن حمله (`expires_in_seconds`) — **والفاسدُ لا عمرَ له**."""
     raw = message.data.get("expires_in_seconds")
     try:
         seconds = int(raw) if raw is not None else 0
     except ValueError:
-        return {}
-    if seconds <= 0:
-        return {}
-    return {"apns-expiration": str(int(time.time()) + seconds)}
+        return None
+    return seconds if seconds > 0 else None
+
+
+def _android(message: PushMessage) -> dict[str, Any]:
+    """قسمُ أندرويد: الأولويةُ، **وعمرُه كعمر APNs** (§٦١-ل/٣)، وقناتُه إن سُمّيت.
+
+    **و`ttl` أخو `apns-expiration`**: عرضٌ يصل هاتفاً مطفأً بعد أن يُفتح بعد ساعة يدعو الكبتنَ إلى رحلةٍ
+    ذهبت لغيره — وكان أندرويد وحدَه بلا عمر (FCM يحفظ الإشعارَ أربعة أسابيع افتراضاً).
+    """
+    android: dict[str, Any] = {"priority": "high" if message.high_priority else "normal"}
+    seconds = _lifetime(message)
+    if seconds is not None:
+        android["ttl"] = f"{seconds}s"
+    # **القناةُ تُذكر في الحمولة لا في التطبيق**: الإشعارُ الواصلُ والتطبيقُ في
+    # الخلفية يرسمه النظامُ لا شيفرتُنا
+    if message.android_channel_id is not None:
+        android["notification"] = {"channel_id": message.android_channel_id}
+    return android
 
 
 class FcmPushProvider:
@@ -140,24 +163,12 @@ class FcmPushProvider:
     # -------------------------------------------------------------- الإرسال
 
     def _payload(self, token: str, message: PushMessage) -> dict[str, Any]:
-        priority = "high" if message.high_priority else "normal"
         return {
             "message": {
                 "token": token,
                 "notification": {"title": message.title, "body": message.body},
                 "data": {k: str(v) for k, v in message.data.items()},
-                "android": (
-                    {"priority": priority}
-                    if message.android_channel_id is None
-                    else {
-                        "priority": priority,
-                        # **القناةُ تُذكر في الحمولة لا في التطبيق**: الإشعارُ
-                        # الواصلُ والتطبيقُ في الخلفية يرسمه النظامُ لا شيفرتُنا
-                        "notification": {
-                            "channel_id": message.android_channel_id
-                        },
-                    }
-                ),
+                "android": _android(message),
                 # **iOS — ثلاثةٌ أُضيفت مع الطريق الأصليّ للتطبيقين** (٢٠٢٦-٠٩-٢٩):
                 #
                 # ١. `apns-push-type: alert` — تشترطه Apple لكلِّ إشعارٍ يُرسم.

@@ -35,8 +35,14 @@ async def register(
     device_id: str,
     token: str,
     platform: DevicePlatform,
+    push_channels: int | None = None,
 ) -> DeviceToken:
-    """يسجّل جهازاً أو يحدّث رمزه. الـ commit مسؤولية المستدعي."""
+    """يسجّل جهازاً أو يحدّث رمزه. الـ commit مسؤولية المستدعي.
+
+    **و`push_channels` ما يحمله الجهازُ من قنواتٍ بقوله** (§٦١-ل) — يُكتب في كلِّ
+    تسجيل **ولو `None`**: حزمةٌ أقدمُ لا تبلّغ به، وما بلّغت به حزمةٌ سابقةٌ على
+    الجهاز نفسِه لا يبقى بعد أن عاد إليه ما لا يحمله.
+    """
     # **ولا إشعارَ في مهلة الحذف** (SPEC §59-ج): رموزُه مُحيت عند الطلب،
     # وجهازٌ يُسجَّل بعدها يعيد ما مُحي بلا استعادة
     if user.deletion_due_at is not None:
@@ -74,6 +80,7 @@ async def register(
     # إعادة التسجيل تُحيي رمزاً عُطّل: التطبيق يعمل الآن ورمزه جديد
     existing.is_active = True
     existing.last_seen_at = _now()
+    existing.push_channels = push_channels
     await session.flush()
     return existing
 
@@ -111,12 +118,34 @@ async def active_tokens_for(
     `exclude_device_ids` هي الأجهزة المفتوحة على WebSocket (القسم 10): وصلها
     الحدثُ فعلاً، فإشعارُها تكرارٌ على شاشة مفتوحة.
     """
+    return [
+        token
+        for token, _ in await active_targets_for(
+            session, user_id, exclude_device_ids=exclude_device_ids
+        )
+    ]
+
+
+async def active_targets_for(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    exclude_device_ids: Iterable[str] = (),
+) -> list[tuple[str, int | None]]:
+    """**الرمزُ ومجموعةُ قنواته** — ما يحتاجه الإرسالُ ليختار القناةَ لكلِّ جهاز (§٦١-ل).
+
+    والاستثناءُ نفسُه: الأجهزةُ المفتوحةُ على WebSocket (القسم 10) لا يُرسَل إليها.
+    """
     excluded = {device_id for device_id in exclude_device_ids if device_id}
-    stmt = select(DeviceToken.device_id, DeviceToken.token).where(
-        DeviceToken.user_id == user_id, DeviceToken.is_active.is_(True)
-    )
+    stmt = select(
+        DeviceToken.device_id, DeviceToken.token, DeviceToken.push_channels
+    ).where(DeviceToken.user_id == user_id, DeviceToken.is_active.is_(True))
     rows = (await session.execute(stmt)).all()
-    return [token for device_id, token in rows if device_id not in excluded]
+    return [
+        (token, push_channels)
+        for device_id, token, push_channels in rows
+        if device_id not in excluded
+    ]
 
 
 async def deactivate_tokens(session: AsyncSession, tokens: Iterable[str]) -> int:

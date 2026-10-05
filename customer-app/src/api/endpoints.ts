@@ -365,6 +365,8 @@ export const registerDevice = (payload: {
   device_id: string;
   token: string;
   platform: "ios" | "android" | "web";
+  /** **مجموعةُ القنوات التي على الجهاز فعلاً** (§٦١-ل) — وغيابُها حزمةٌ أقدم. */
+  push_channels?: number;
 }) => api.put<Device>("/me/devices", payload);
 
 export const unregisterDevice = (deviceId: string) =>

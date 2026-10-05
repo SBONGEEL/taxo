@@ -11,6 +11,9 @@ public class MainActivity extends BridgeActivity {
         // يُسجَّل بعده لا يجده الويبُ حين ينادي — عطبٌ صامتٌ لا استثناءَ له
         registerPlugin(OnlinePlugin.class);
         registerPlugin(OfferAlertPlugin.class);
+        // **القنواتُ قبل أوّل إشعار** (§٦١-ل/٣): ما يصل والتطبيقُ مغلقٌ يرسمه النظامُ
+        // بقناته، **وقناةٌ لم تُنشأ تُسقطه إلى الاحتياطية بلا صوتها**
+        TaxoChannels.ensure(this);
         super.onCreate(savedInstanceState);
     }
 

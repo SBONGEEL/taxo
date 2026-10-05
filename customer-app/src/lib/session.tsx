@@ -51,7 +51,7 @@ import type { AuthResponse, User } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
-import { registerNativePush } from "@/lib/push";
+import { channelSet, markPushReady, registerNativePush } from "@/lib/push";
 import { setSplashStatus } from "@/lib/splash";
 
 /** **عطبٌ عابرٌ لا حكمٌ على الجلسة**: شبكةٌ (`status 0`) أو خادمٌ ساقطٌ (`5xx`)،
@@ -157,13 +157,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     if (Capacitor.isNativePlatform()) {
       registered.current = true;
-      registerNativePush()
-        .then(({ token }) =>
-          token
-            ? registerDevice({ device_id: deviceId(), token, platform: platform() })
-            : null,
-        )
-        .catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
+      void (async () => {
+        const { token } = await registerNativePush();
+        if (!token) return;
+        // **ومعه ما على الجهاز من قنوات** (§٦١-ل): به يختار الخادمُ القناة
+        const channels = await channelSet();
+        await registerDevice({
+          device_id: deviceId(),
+          token,
+          platform: platform(),
+          ...(channels ? { push_channels: channels } : {}),
+        });
+        markPushReady();
+      })().catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
       return;
     }
 
@@ -173,11 +179,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     registered.current = true;
     requestPushToken(fcm, vapid)
-      .then((token) =>
-        token
-          ? registerDevice({ device_id: deviceId(), token, platform: platform() })
-          : null,
-      )
+      .then(async (token) => {
+        if (!token) return;
+        await registerDevice({ device_id: deviceId(), token, platform: platform() });
+        markPushReady();
+      })
       .catch((error) => console.warn("تعذّر تسجيل الجهاز للإشعارات", error));
   }, [user, config]);
 

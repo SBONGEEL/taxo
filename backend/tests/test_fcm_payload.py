@@ -56,3 +56,29 @@ def test_a_malformed_lifetime_drops_the_header_not_the_push() -> None:
     payload = _provider()._payload("tok", message)["message"]
     assert "apns-expiration" not in payload["apns"]["headers"]
     assert payload["notification"] == {"title": "t", "body": "b"}
+
+
+# ---------------------------------------------------- أندرويد (§٦١-ل/٣، ٢٠٢٦-١٠-٠٥)
+
+
+def test_android_offer_carries_its_lifetime_and_channel() -> None:
+    """**`ttl` أخو `apns-expiration`**: عرضٌ يصل بعد مهلته يدعو إلى رحلةٍ ذهبت لغيره."""
+    message = PushMessage(
+        title="طلب رحلة جديد",
+        body="…",
+        data={"type": "ride_offer", "ride_id": "r", "expires_in_seconds": "20"},
+        high_priority=True,
+        android_channel_id="taxo.offer.v2",
+    )
+    android = _provider()._payload("tok", message)["message"]["android"]
+    assert android == {
+        "priority": "high",
+        "ttl": "20s",
+        "notification": {"channel_id": "taxo.offer.v2"},
+    }
+
+
+def test_android_without_lifetime_or_channel_is_as_before() -> None:
+    """**ما لا يحمل عمراً ولا قناةً كما كان حرفاً** — فلا يتغيّر إشعارٌ لم يُقصد."""
+    message = PushMessage(title="t", body="b", data={"expires_in_seconds": "soon"})
+    assert _provider()._payload("tok", message)["message"]["android"] == {"priority": "normal"}

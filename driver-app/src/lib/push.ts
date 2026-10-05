@@ -77,16 +77,53 @@ export async function registerNativePush(): Promise<PushRegistration> {
   return { state: "granted", token };
 }
 
-/** يعلّق مستمعَي «وصل» و«نُقر» — ويعيد ما يفكّهما. */
+/** **وصل رمزُ هذا الجهاز إلى الخلفية في هذه الجلسة** — فالغائبُ يصله الإشعارُ من النظام. */
+let ready = false;
+
+export function markPushReady(): void {
+  ready = true;
+}
+
+/** **الغائبُ عن التطبيق يسمع إشعارَه من النظام بصوت قناته** (§٦١-ل/٣) — فلا تُعزف
+ *  نغمةُ الويب فوقه. **ومن لا رمزَ له** (إذنٌ مرفوض، حزمةٌ بلا إضافة) **يبقى على
+ *  نغمة الويب كما كان** — فلا يُسلب صوتاً لا بديلَ له. */
+export function heardFromSystem(): boolean {
+  return ready && document.hidden;
+}
+
+/** قنواتُ المجموعة الثانية في هذه الحزمة — **تُنشئها الحزمةُ عند إقلاعها**
+ *  (`TaxoChannels.java`)، **وغيابُ واحدةٍ منها يعني حزمةً أقدم**. */
+const CHANNELS_V2 = ["taxo.offer.v2", "taxo.ended", "taxo.payment", "taxo.general"];
+
+/** **إصدارُ مجموعة القنوات على الجهاز فعلاً** (§٦١-ل/٥) — يُسأل أندرويد ولا يُفترض:
+ *  الحزمُ تُحمِّل شاشاتها من خادم، فهذه الشيفرةُ قد تكون أحدثَ من الحزمة التي تحملها.
+ *  **و`undefined` حزمةٌ أقدم** يُرسل إليها الخادمُ كما اليوم. */
+export async function channelSet(): Promise<number | undefined> {
+  if (Capacitor.getPlatform() !== "android") return undefined;
+  try {
+    const { channels } = await PushNotifications.listChannels();
+    const present = new Set(channels.map((channel) => channel.id));
+    return CHANNELS_V2.every((id) => present.has(id)) ? 2 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** يعلّق مستمعَي «وصل» و«نُقر» — ويعيد ما يفكّهما.
+ *  **و«وصل» يحمل العنوانَ والنصَّ مع `data`** — بهما يُرسم البلاغُ داخل التطبيق (§٦١-ل/٣). */
 export async function listenToPush(handlers: {
-  received: (data: Record<string, string>) => void;
+  received: (data: Record<string, string>, notice: { title?: string; body?: string }) => void;
   tapped: (data: Record<string, string>) => void;
 }): Promise<() => void> {
   if (!Capacitor.isNativePlatform()) return () => undefined;
 
   const received = await PushNotifications.addListener(
     "pushNotificationReceived",
-    (item) => handlers.received((item.data ?? {}) as Record<string, string>),
+    (item) =>
+      handlers.received((item.data ?? {}) as Record<string, string>, {
+        title: item.title,
+        body: item.body,
+      }),
   );
   const tapped = await PushNotifications.addListener(
     "pushNotificationActionPerformed",

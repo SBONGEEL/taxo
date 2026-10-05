@@ -14,6 +14,9 @@ class DeviceRegisterRequest(BaseModel):
     device_id: str = Field(min_length=4, max_length=64)
     token: str = Field(min_length=8, max_length=512)
     platform: DevicePlatform
+    #: **إصدارُ مجموعة القنوات التي وجدها التطبيقُ على الجهاز** (§٦١-ل) — يُسأل عنه أندرويد لا الويب،
+    #: **وغيابُه حزمةٌ أقدم** يُرسَل إليها كما اليوم
+    push_channels: int | None = Field(default=None, ge=1, le=99)
 
 
 class DeviceOut(BaseModel):

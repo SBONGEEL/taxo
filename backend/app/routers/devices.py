@@ -40,6 +40,7 @@ async def register_device(
         device_id=payload.device_id,
         token=payload.token,
         platform=payload.platform,
+        push_channels=payload.push_channels,
     )
     await session.commit()
     await session.refresh(device)

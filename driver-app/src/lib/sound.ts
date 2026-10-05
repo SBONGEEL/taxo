@@ -326,8 +326,13 @@ let loopRun = 0;
  * الفاصلُ محسوبٌ من طول النغمة نفسِها (`durationOf`) لا رقمٌ يُكتب هنا: رقمان
  * لطولٍ واحد يفترقان أوّلَ مرةٍ تُعدَّل نغمةٌ في الجدول، فتتراكب الدورتان أو
  * تفغر بينهما فجوة.
+ *
+ * **و`since` لبدءٍ مؤجَّل** (§٦١-ل/٥): الطلبُ والتطبيقُ في الخلفية ينتظر جوابَ
+ * التنبيه الأصليّ — أيرنّ هو أم لا — **ورفضٌ يقع أثناء الانتظار يُبقيها صامتة**:
+ * كلُّ إيقافٍ بعد `offerLoopToken()` يُبطل البدءَ الذي طلبه.
  */
-export function startOfferLoop(): void {
+export function startOfferLoop(since?: number): void {
+  if (since !== undefined && since !== loopRun) return;
   stopOfferLoop();
   if (!unlocked || !allowed("offer")) return;
   const run = loopRun;
@@ -337,6 +342,11 @@ export function startOfferLoop(): void {
     play("offer");
     loopTimer = window.setInterval(() => play("offer"), durationOf("offer") * 1000 + 120);
   });
+}
+
+/** **ختمُ اللحظة** — يُعطى لـ`startOfferLoop(since)` فلا تبدأ حلقةٌ أُوقف عرضُها بعده. */
+export function offerLoopToken(): number {
+  return loopRun;
 }
 
 /** يوقف الحلقةَ **ونغمتَها الجاريةَ معها** — بخفوتٍ ٣٠ م.ث لا قطعٍ يُسمع نقرة. */

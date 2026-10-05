@@ -136,8 +136,11 @@ def finish(entry: dict, formats: bool) -> dict:
                     "-c:a", "pcm_s24le", str(wav)], input=pcm.tobytes(), check=True)
     enc = [("mp3", ["-ar", "44100", "-c:a", "libmp3lame", "-b:a", "192k"])]
     if formats:
-        enc += [("ogg", ["-ar", "44100", "-c:a", "libvorbis", "-q:a", "6"]),
-                ("caf", ["-ar", "44100", "-c:a", "pcm_s16le", "-f", "caf"])]
+        # **`+bitexact` لهذين** (٢٠٢٦-١٠-٠٥): مُغلِّفُ ogg يختار رقمَ تسلسلٍ عشوائياً لكلِّ تشغيل، فيخرج الصوتُ
+        # نفسُه ببصمةٍ أخرى — **وما يُودَع في `res/raw` يُعاد بايتاً من هذه الوصفة**. وmp3 بلا تغيير: بصماتُه مسجَّلة
+        exact = ["-fflags", "+bitexact", "-flags:a", "+bitexact"]
+        enc += [("ogg", ["-ar", "44100", "-c:a", "libvorbis", "-q:a", "6", *exact]),
+                ("caf", ["-ar", "44100", "-c:a", "pcm_s16le", *exact, "-f", "caf"])]
     for ext, args in enc:
         subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-i", str(wav), *args, str(OUT / f"{key}.{ext}")],
                        check=True)

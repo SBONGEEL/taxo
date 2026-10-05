@@ -24,7 +24,15 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,6 +71,11 @@ class DeviceToken(UUIDMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
+    # **إصدارُ مجموعة قنوات أندرويد التي يحملها الجهازُ بقوله** (SPEC §٦١-ل/٣–٥):
+    # الحزمُ تُحمِّل شاشاتها من خادم، فشيفرةُ الويب قد تكون أحدثَ من الحزمة —
+    # والقناةُ تُختار بما في الحزمة لا بما في الويب (`services/push/channels.py`).
+    # **و`NULL` حزمةٌ أقدمُ على قنواتها اليوم حرفاً**
+    push_channels: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     def __repr__(self) -> str:  # pragma: no cover - تشخيصي
         return f"<DeviceToken {self.platform} {self.device_id}>"

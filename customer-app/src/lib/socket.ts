@@ -26,6 +26,8 @@ export type SocketEvent =
   | { type: "no_driver_found"; ride: Ride }
   | { type: "driver_connection_lost" | "driver_reconnected"; ride?: Ride }
   | { type: "error"; detail: string }
+  // **بلاغٌ لما لا يُرسم من حدثٍ له** (§٦١-ل/٣) — الحمولةُ نفسُها التي يحملها إشعارُه
+  | { type: "notice"; title: string; body: string; data: Record<string, string> }
   | { type: string; [key: string]: unknown };
 
 interface Options {
@@ -47,13 +49,21 @@ export class RiderSocket {
 
   constructor(private readonly options: Options) {}
 
+  /** **ظهورُ التطبيق لصاحبه يُبلَّغ به المقبس** (§٦١-ل/٣): المقبسُ يبقى حيّاً
+   *  دقائقَ والتطبيقُ في الخلفية — **فكانت الخلفيةُ تحجب إشعارَ «قَبِل كبتن»
+   *  عن هاتفٍ في الجيب**. فيُبلَّغ عند كلِّ تبدّلٍ وعند كلِّ اتصال. */
+  private readonly reportVisibility = () =>
+    this.send({ type: "visibility", visible: !document.hidden });
+
   open() {
     this.closed = false;
+    document.addEventListener("visibilitychange", this.reportVisibility);
     this.connect();
   }
 
   close() {
     this.closed = true;
+    document.removeEventListener("visibilitychange", this.reportVisibility);
     if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = null;
     this.socket?.close();
@@ -86,6 +96,8 @@ export class RiderSocket {
 
     socket.onopen = () => {
       this.retries = 0;
+      // **والمقبسُ الجديدُ يبدأ «أمامَ صاحبه»** عند الخلفية — فيُقال له الحالُ فوراً
+      this.reportVisibility();
       if (this.viewport) this.setViewport(this.viewport);
       this.options.onOpen?.();
     };

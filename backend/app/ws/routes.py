@@ -87,15 +87,55 @@ async def _authenticate(
     return user
 
 
-async def _mark_present(redis: Redis, user_id: uuid.UUID, device_id: str) -> None:
+#: رسالةُ التطبيق حين يغيب عن صاحبه أو يعود (`{"type": "visibility", "visible": bool}`)
+VISIBILITY = "visibility"
+
+
+@dataclass(slots=True)
+class _Presence:
+    """أثرُ جهاز هذا المقبس — **وحالُه: أمامَ صاحبه أم في الخلفية** (SPEC §٦١-ل/٣).
+
+    **وما لم يبلّغ يُحسب أمامَه** (`background=False`): حكمُ اليوم حرفاً، فشيفرةٌ
+    أقدمُ لا تبلّغ لا يتغيّر عليها شيء.
+    """
+
+    redis: Redis
+    user_id: uuid.UUID
+    device_id: str | None
+    background: bool = False
+
+    async def report(self, message: dict[str, Any]) -> None:
+        """يقرأ رسالةَ الظهور ويكتبها **فوراً** — لا ينتظر ضربةَ الإنعاش التالية.
+
+        **والتالفةُ تُبلَع**: رسالةٌ بلا `visible` منطقيٍّ لا تُسقط مقبساً ولا تُخمَّن.
+        """
+        visible = message.get("visible")
+        if not isinstance(visible, bool) or self.device_id is None:
+            return
+        background = not visible
+        if background == self.background:
+            return
+        self.background = background
+        await socket_presence.heartbeat(
+            self.redis, self.user_id, self.device_id, background=background
+        )
+
+
+async def _mark_present(presence: _Presence, device_id: str) -> None:
     """يُبقي أثر هذا الجهاز حياً ما دام المقبس مفتوحاً (SPEC القسم 10).
 
     الأثر هو ما يمنع إشعار Push المكرر: الحدث يصل هذه الشاشة عبر المقبس، فلا
     يُرسل إليها إشعارٌ ثانٍ. وينعش دورياً لا مرةً واحدة، فمقبسٌ مات فجأةً
     (شبكةٌ قُطعت بلا إغلاق) لا يحرم صاحبَه من الإشعارات إلا لدقيقة ونصف.
+    **وحالُه يُجدَّد معه** (`_Presence`) — فعلامةُ الخلفية تعيش ما عاش أثرُه.
     """
     while True:
-        await socket_presence.heartbeat(redis, user_id, device_id)
+        await socket_presence.heartbeat(
+            presence.redis,
+            presence.user_id,
+            device_id,
+            background=presence.background,
+        )
         await asyncio.sleep(socket_presence.REFRESH_SECONDS)
 
 
@@ -156,9 +196,13 @@ async def _driver_reader(
     websocket: WebSocket,
     redis: Redis,
     context: drivers_service.PresenceContext,
+    presence: _Presence,
 ) -> None:
     while True:
         message = await websocket.receive_json()
+        if isinstance(message, dict) and message.get("type") == VISIBILITY:
+            await presence.report(message)
+            continue
         if not isinstance(message, dict) or message.get("type") != "location":
             continue
         try:
@@ -218,6 +262,7 @@ async def driver_socket(
         # بيتَ ثانٍ يمكن أن يقول غيرَ ما يقوله الموزِّع.
         pending = await dispatch.pending_offer_frame(session, redis, driver=driver)
 
+    presence = _Presence(redis, user.id, device_id)
     try:
         async with Subscription(redis) as subscription:
             await subscription.subscribe(events.user_channel(user.id))
@@ -228,8 +273,8 @@ async def driver_socket(
             await _serve(
                 websocket,
                 _pump(websocket, subscription),
-                _driver_reader(websocket, redis, context),
-                *_presence_tasks(redis, user.id, device_id),
+                _driver_reader(websocket, redis, context, presence),
+                *_presence_tasks(presence),
             )
     except WebSocketDisconnect:
         pass
@@ -256,10 +301,15 @@ class _RiderState:
     lng: float | None = None
 
 
-async def _rider_reader(websocket: WebSocket, state: _RiderState) -> None:
-    """يستقبل مركز الخريطة الحالي — حوله تُرسم السيارات القريبة."""
+async def _rider_reader(
+    websocket: WebSocket, state: _RiderState, presence: _Presence
+) -> None:
+    """يستقبل مركز الخريطة الحالي — حوله تُرسم السيارات القريبة. **ومعه ظهورُ التطبيق** (§٦١-ل/٣)."""
     while True:
         message = await websocket.receive_json()
+        if isinstance(message, dict) and message.get("type") == VISIBILITY:
+            await presence.report(message)
+            continue
         if not isinstance(message, dict) or message.get("type") != "viewport":
             continue
         try:
@@ -378,6 +428,7 @@ async def rider_socket(
         if active is not None and active.driver_id is not None:
             state.driver_id = active.driver_id
 
+    presence = _Presence(redis, user.id, device_id)
     try:
         async with Subscription(redis) as subscription:
             await subscription.subscribe(events.user_channel(user.id))
@@ -389,8 +440,8 @@ async def rider_socket(
             await _serve(
                 websocket,
                 _rider_loop(websocket, redis, user, state, subscription),
-                _rider_reader(websocket, state),
-                *_presence_tasks(redis, user.id, device_id),
+                _rider_reader(websocket, state, presence),
+                *_presence_tasks(presence),
             )
     except WebSocketDisconnect:
         pass
@@ -398,14 +449,15 @@ async def rider_socket(
         await _clear_presence(redis, user.id, device_id)
 
 
-def _presence_tasks(redis: Redis, user_id: uuid.UUID, device_id: str | None):
+def _presence_tasks(presence: _Presence):
     """مهمةُ الإنعاش إن عرّف العميل جهازه، وإلا لا شيء.
 
     **مقبسٌ بلا `device_id` لا يمنع Push**: لا سبيل لمعرفة أيَّ جهازٍ هو،
     وحرمانُ كل أجهزة الحساب لأن أحدها مفتوح يعني هاتفاً في الجيب لا يرنّ
     لأن لوحاً على الطاولة مفتوح.
     """
-    return () if not device_id else (_mark_present(redis, user_id, device_id),)
+    device_id = presence.device_id
+    return () if not device_id else (_mark_present(presence, device_id),)
 
 
 async def _clear_presence(

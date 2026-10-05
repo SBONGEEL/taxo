@@ -141,6 +141,31 @@ async def publish_session_revoked(
     )
 
 
+#: **بلاغٌ يُرسم داخل التطبيق بصوته** (SPEC §٦١-ل/٣): ما يُرسل إشعاراً ولا يرسمه التطبيقُ من حدثٍ له.
+NOTICE = "notice"
+
+
+async def publish_notice(
+    redis: Redis,
+    user_id: uuid.UUID | str,
+    *,
+    title: str,
+    body: str,
+    data: dict[str, str],
+) -> None:
+    """البلاغُ نفسُه الذي يُرسل إشعاراً — **إلى مقابس صاحبه كلِّها**.
+
+    **والتطبيقُ يرسمه إن كان أمامَ صاحبه وحدَه**: الغائبُ يصله الإشعارُ نفسُه من
+    النظام، فرسمُه في الخلفية بلاغان وصوتان لحدثٍ واحد. **و`data` هي حمولةُ
+    الإشعار نفسُها** — منها يختار التطبيقُ صوتَه كما يختاره من الإشعار.
+    """
+    await publish(
+        redis,
+        user_channel(user_id),
+        {"type": NOTICE, "title": title, "body": body, "data": data},
+    )
+
+
 async def publish_ride_event(redis: Redis, ride: Ride, event: RideEvent) -> None:
     """يبث حدث الرحلة لطرفيها معاً (SPEC القسم 10).
 

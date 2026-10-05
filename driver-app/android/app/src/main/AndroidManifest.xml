@@ -93,6 +93,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- **قناةُ الافتراض** (SPEC §٦١-ل/٣): ما يصل بلا قناةٍ أو بقناةٍ لم تُنشأ
+             يقع فيها بصوت «الإشعار» — **وكان يقع في احتياطية FCM بصوت الهاتف**.
+             تُنشئها `TaxoChannels` عند الإقلاع. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="taxo.general" />
     </application>
 
     <!-- Permissions -->

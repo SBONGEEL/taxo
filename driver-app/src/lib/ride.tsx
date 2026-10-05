@@ -33,7 +33,9 @@ import {
 import { onlineService } from "@/lib/online-service";
 import { digits } from "@/lib/utils";
 import { CATEGORY_LABEL, CURRENCY_LABEL } from "@/lib/rideFormat";
-import { play, startOfferLoop, stopOfferLoop } from "@/lib/sound";
+import { offerLoopToken, play, startOfferLoop, stopOfferLoop } from "@/lib/sound";
+import { heardFromSystem } from "@/lib/push";
+import { presentNotice } from "@/components/PushNotices";
 
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
 import type { Coordinates, Ride } from "@/api/types";
@@ -122,7 +124,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
         // **النغمةُ تُكرَّر حتى ينتهي العدّاد** (§9.1) — **ولم تكن تُنادى من
         // أيِّ موضع** (قِيس 2026-08-30): الجدولُ مبنيٌّ منذ المرحلة ١٠
         // **ولا سلكَ إليه**، فكانت البطاقةُ تصل صامتةً.
-        startOfferLoop();
+        if (!document.hidden) startOfferLoop();
 
         // **الأولويةُ كما رسمها التصميم**: بطاقةٌ داخل التطبيق ← ورقةٌ سفليّة
         // ← فقاعةٌ عائمة ← إشعارُ ملء الشاشة. **أوّلُ متاحٍ يُستعمل والبقيّةُ
@@ -131,7 +133,14 @@ export function RideProvider({ children }: { children: ReactNode }) {
         // **وهذا الشرطُ يفصل الأولى عمّا بعدها وحدَه**: من ينظر إلى الشاشة
         // يرى البطاقةَ فيها، **وورقةٌ فوقها تغطّي ما جاءت تعرضه**. والاختيارُ
         // بين الثلاث الباقيات في `OfferAlert` — لأنه يقرأ القفلَ والإذن.
+        //
+        // **والنغمةُ في الخلفية لمن يرنّ أوّلاً** (§٦١-ل/٥): حزمةُ الدمج ترنّ
+        // بنفسها بصوت الطلب على مجرى المنبّه — **فلا ترنّ نغمةُ الويب فوقها**؛
+        // والأقدمُ لا تقول شيئاً **فترنّ نغمةُ الويب كما كانت**. **ورفضٌ أو
+        // انقضاءٌ أثناء السؤال يُبقيها صامتة** (`offerLoopToken`).
         if (document.hidden) {
+          stopOfferLoop();
+          const since = offerLoopToken();
           void showOfferAlert({
             rideId: event.ride.id,
             fare: digits(event.ride.estimated_fare),
@@ -146,6 +155,8 @@ export function RideProvider({ children }: { children: ReactNode }) {
             pickup: event.ride.pickup_address ?? "",
             drop: event.ride.dropoff_address ?? "",
             seconds: event.expires_in_seconds,
+          }).then((sounding) => {
+            if (!sounding) startOfferLoop(since);
           });
         }
         break;
@@ -178,10 +189,13 @@ export function RideProvider({ children }: { children: ReactNode }) {
         break;
       // **الإنهاءُ غيرُ التحصيل**: هذه لانتهاء العمل، و`collected` لوصول
       // المال — **ونغمةٌ واحدةٌ لحدثين تجعله يظنّ أنه قبض ولم يقبض**
+      //
+      // **وهذان لهما إشعارٌ أيضاً** — والغائبُ عن التطبيق يصله الإشعارُ بصوت
+      // قناته (§٦١-ل/٣)، **فلا تُسمع نغمةُ الويب فوقه** (`heardFromSystem`)
       case "ride_completed":
         setOffer(null);
         stopOfferLoop();
-        play("rideCompleted");
+        if (!heardFromSystem()) play("rideCompleted");
         void hideOfferAlert();
         setRide(event.ride);
         break;
@@ -189,9 +203,13 @@ export function RideProvider({ children }: { children: ReactNode }) {
       case "ride_cancelled":
         setOffer(null);
         stopOfferLoop();
-        play("notify");
+        if (!heardFromSystem()) play("notify");
         void hideOfferAlert();
         setRide(event.ride);
+        break;
+      // **بلاغُ ما لا يُرسم من حدثٍ له** (§٦١-ل/٣) — اشتراكٌ، وثيقةٌ، بقشيش
+      case "notice":
+        presentNotice(event);
         break;
       case "cliq_transfer_submitted":
         setTransfer({

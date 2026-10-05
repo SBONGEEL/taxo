@@ -105,7 +105,7 @@ public class OfferAlertPlugin extends Plugin {
      */
     @PluginMethod
     public void show(PluginCall call) {
-        OfferAlert.show(getContext(), new OfferData(
+        boolean sounding = OfferAlert.show(getContext(), new OfferData(
                 call.getString("rideId", ""),
                 call.getString("fare", ""),
                 call.getString("currency", ""),
@@ -116,7 +116,10 @@ public class OfferAlertPlugin extends Plugin {
                 call.getString("drop", ""),
                 call.getInt("seconds", 7)
         ));
-        call.resolve();
+        // **أترنّ الحزمةُ بنفسها** (§٦١-ل/٥) — فلا تبدأ نغمةُ الويب فوقها
+        JSObject out = new JSObject();
+        out.put("sounding", sounding);
+        call.resolve(out);
     }
 
     /**

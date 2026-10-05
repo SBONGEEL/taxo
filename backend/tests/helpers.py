@@ -768,12 +768,13 @@ async def register_device(
     device_id: str = "device-1",
     token: str = "fcm-token-1",
     platform: str = "android",
+    push_channels: int | None = None,
 ) -> dict:
-    response = await client.put(
-        "/me/devices",
-        json={"device_id": device_id, "token": token, "platform": platform},
-        headers=headers,
-    )
+    payload: dict[str, Any] = {"device_id": device_id, "token": token, "platform": platform}
+    # **ويُرسل كما يرسله التطبيق** (§٦١-ل): غائباً من حزمةٍ أقدم، لا `null` صريحاً
+    if push_channels is not None:
+        payload["push_channels"] = push_channels
+    response = await client.put("/me/devices", json=payload, headers=headers)
     assert response.status_code == 200, response.text
     return response.json()
 

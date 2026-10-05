@@ -57,7 +57,12 @@ import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { setNativeSession } from "@/lib/offer-alert";
 import { deviceId, platform } from "@/lib/device";
 import { requestPushToken } from "@/lib/firebase";
-import { registerNativePush, type PushState } from "@/lib/push";
+import {
+  channelSet,
+  markPushReady,
+  registerNativePush,
+  type PushState,
+} from "@/lib/push";
 import { setSplashStatus } from "@/lib/splash";
 
 /** **عطبٌ عابرٌ لا حكمٌ على الجلسة**: شبكةٌ (`status 0`) أو خادمٌ ساقطٌ (`5xx`)،
@@ -211,11 +216,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           const outcome = await registerNativePush();
           setPushState(outcome.state);
           if (outcome.token) {
+            // **ومعه ما على الجهاز من قنوات** (§٦١-ل): به يختار الخادمُ القناة
+            const channels = await channelSet();
             await registerDevice({
               device_id: deviceId(),
               token: outcome.token,
               platform: platform(),
+              ...(channels ? { push_channels: channels } : {}),
             });
+            markPushReady();
           }
           return;
         }
@@ -230,6 +239,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             token,
             platform: platform(),
           });
+          markPushReady();
         }
       } catch (error) {
         console.warn("تعذّر تسجيل الجهاز للإشعارات", error);

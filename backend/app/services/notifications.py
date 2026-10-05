@@ -51,7 +51,7 @@ from app.models.enums import Currency, DocumentReviewStatus, DocumentType
 from app.models.payment import Payment
 from app.models.ride import Ride, RideStop
 from app.services import devices, documents, inbox, presence
-from app.services.push import PushMessage, PushResult, get_push_provider_or_none
+from app.services.push import PushMessage, PushResult, channels, get_push_provider_or_none
 from app.ws import events
 from app.ws.events import DocumentEvent, RideEvent, SubscriptionEvent
 
@@ -111,6 +111,27 @@ EPHEMERAL_KINDS: frozenset[str] = frozenset(
     {RideEvent.RIDE_OFFER.value, RideEvent.DRIVER_APPROACHING.value}
 )
 
+# **ما يرسمه التطبيقُ المفتوحُ من حدثه هو بصوته** (SPEC §٦١-ل/٣، ٢٠٢٦-١٠-٠٥) — فلا بلاغَ ثانٍ له.
+#
+# الراكبُ: بلاغاتُ `EVENT_TOAST` وأصواتُ `EVENT_SOUND` (`customer-app/src/lib/ride.tsx`). والكبتنُ: بطاقةُ
+# الطلب ونغمتُه، وشاشةُ رحلته بأصواتها، وبطاقةُ تأكيد كليك (`driver-app/src/lib/ride.tsx`). **وما عداها
+# كان يُحجب إشعارُه عن الشاشة المفتوحة ولا يُرسم فيها شيء** — اشتراكٌ يقارب الانتهاء، مستندٌ رُفض، إكراميةٌ
+# وصلت — فيُرسل إليها بلاغاً (`events.publish_notice`). **ومن أضاف هنا نوعاً يرسمه تطبيقٌ ولا يرسمه الآخر
+# أسقط بلاغَ الآخر** — فالمرجعُ الملفّان المذكوران لا الذاكرة.
+RENDERED_IN_APP: frozenset[str] = frozenset(
+    {
+        RideEvent.RIDE_OFFER.value,
+        RideEvent.DRIVER_ASSIGNED.value,
+        RideEvent.DRIVER_APPROACHING.value,
+        RideEvent.DRIVER_ARRIVED.value,
+        RideEvent.RIDE_STARTED.value,
+        RideEvent.RIDE_COMPLETED.value,
+        RideEvent.RIDE_CANCELLED.value,
+        RideEvent.NO_DRIVER_FOUND.value,
+        events.PaymentEvent.CLIQ_TRANSFER_SUBMITTED.value,
+    }
+)
+
 SUBSCRIPTION_EVENT_TEXT: dict[SubscriptionEvent, tuple[str, str]] = {
     SubscriptionEvent.SUBSCRIPTION_EXPIRING: (
         "اشتراكك يقارب الانتهاء",
@@ -144,7 +165,12 @@ async def notify_user(
     user_id: uuid.UUID,
     message: PushMessage,
 ) -> PushResult:
-    """يرسل إشعاراً إلى أجهزة مستخدمٍ **غير المفتوحة الآن**.
+    """يرسل إشعاراً إلى أجهزة مستخدمٍ **ليست أمامَ صاحبها الآن**.
+
+    **والمفتوحُ في الخلفية يُرسَل إليه** (SPEC §٦١-ل/٣): كان الحجبُ لكلِّ مقبسٍ
+    حيّ، فهاتفٌ في الجيب مقبسُه لم يُغلق لا يصله شيء. **إلا طلبَ الرحلة**: تنبيهُه
+    الأصليُّ يرنّ من المقبس والتطبيقُ في الخلفية (`OfferAlert`)، فإشعارٌ معه
+    بلاغان لطلبٍ واحد — فيبقى على قاعدة المقبس كما كان.
 
     الـ commit هنا مقصود ومحدود: تعطيلُ رمزٍ ميت أثرٌ يخص هذا الملف وحده،
     ويقع بعد أن أنهى المستدعي معاملته (البثّ دائماً بعد الـ commit) — فلا
@@ -154,14 +180,31 @@ async def notify_user(
     if provider is None:
         return PushResult()  # لا عقد FCM — الحدث وصل على WebSocket
 
-    open_devices = await presence.active_devices(redis, user_id)
-    tokens = await devices.active_tokens_for(
+    if message.data.get("type") == RideEvent.RIDE_OFFER.value:
+        open_devices = await presence.active_devices(redis, user_id)
+    else:
+        open_devices = await presence.foreground_devices(redis, user_id)
+    targets = await devices.active_targets_for(
         session, user_id, exclude_device_ids=open_devices
     )
-    if not tokens:
+    if not targets:
         return PushResult()
 
-    result = await provider.send(tokens, message)
+    # **كلُّ مجموعة قنواتٍ برسالتها** (SPEC §٦١-ل): الجهازُ يُرسَل إليه بما يحمله
+    # فعلاً، **والأقدمُ كما هو حرفاً** — قناةٌ غائبةٌ عن جهازٍ تُسقط الإشعارَ إلى
+    # الاحتياطية بلا منبّه (`push/channels.py`)
+    groups: dict[int, list[str]] = {}
+    for token, push_channels in targets:
+        groups.setdefault(channels.level_of(push_channels), []).append(token)
+    sent = [
+        await provider.send(tokens, channels.for_level(message, level))
+        for level, tokens in groups.items()
+    ]
+    result = PushResult(
+        delivered=sum(part.delivered for part in sent),
+        failed=sum(part.failed for part in sent),
+        invalid_tokens=tuple(token for part in sent for token in part.invalid_tokens),
+    )
     if result.invalid_tokens:
         await devices.deactivate_tokens(session, result.invalid_tokens)
         await session.commit()
@@ -203,6 +246,20 @@ async def _safe_notify(
         except Exception:  # pragma: no cover - يعتمد على عطل قاعدة
             logger.exception("تعذّر تسجيل إشعار في صندوق %s", user_id)
             await session.rollback()
+
+    # **والبلاغُ داخل التطبيق قبل الإشعار** (§٦١-ل/٣): لا يحتاج عقدَ FCM ولا إذنَ إشعارات —
+    # فمن رفض الإذن يرى بلاغَه والتطبيقُ أمامه
+    if kind not in RENDERED_IN_APP:
+        try:
+            await events.publish_notice(
+                redis,
+                user_id,
+                title=message.title,
+                body=message.body,
+                data=dict(message.data),
+            )
+        except Exception:  # pragma: no cover - يعتمد على عطل Redis
+            logger.exception("تعذّر بثّ بلاغٍ إلى %s", user_id)
 
     try:
         await notify_user(session, redis, user_id=user_id, message=message)

@@ -57,6 +57,7 @@ import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
 import { walkDone } from "@/lib/permission-walk";
 import { destinationFor } from "@/lib/notification-route";
 import { listenToPush } from "@/lib/push";
+import { PushNotices, presentNotice } from "@/components/PushNotices";
 import { useNavCovered } from "@/lib/navCover";
 import { LoginScreen } from "@/screens/Login";
 
@@ -347,19 +348,10 @@ function PushRouter() {
   useEffect(() => {
     let dispose: (() => void) | null = null;
     void listenToPush({
-      // **والتطبيقُ مفتوح: النظامُ لا يرسم شيئاً** — وما يصل هنا يصله
-      // المقبسُ أصلاً، فلا يُرسم فوقه شيءٌ ثانٍ يُقرأ حدثين لحدثٍ واحد.
-      //
-      // **إلا البقشيش** (قِيس 2026-08-30): هو **الوحيدُ الذي يصل دفعاً بلا
-      // مقبس** — أحداثُ الكبتن أحدَ عشرَ وليس فيها بقشيش، و
-      // `notifications.publish_tip_received` ترسله إشعاراً وحدَه. **فالقاعدةُ
-      // فوق صحيحةٌ لكلِّ ما له مقبس، ولا تنطبق عليه.**
-      //
-      // **وهي اللحظةُ التي يستحقّ الكبتنُ أن يسمعها**، ولا حدثَ يُخترع لها:
-      // `credited` كانت مبنيّةً بلا سلكٍ إليها، وهذا سلكُها.
-      received: (data) => {
-        if (data.type === "tip_received") play("credited");
-      },
+      // **والتطبيقُ مفتوح: النظامُ لا يرسم شيئاً** — فيُرسم هنا بلاغٌ بصوته
+      // (§٦١-ل/٣)، **من البابِ نفسِه الذي يرسم بلاغَ المقبس** (`presentNotice`)
+      // — فلا يُرسم حدثٌ واحدٌ مرّتين إن وصل من الطريقين معاً.
+      received: (data, { title, body }) => presentNotice({ title, body, data }),
       tapped: (data) => {
         const to = destinationFor(data.type, data);
         if (to) navigate(to);
@@ -733,6 +725,7 @@ export default function App() {
                     </BoundaryByRoute>
                     <HardwareBack />
                     <PushRouter />
+                    <PushNotices />
                   <NavBar />
                   <WelcomeGate />
                   </Router>

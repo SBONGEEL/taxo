@@ -54,7 +54,8 @@ interface OfferAlertPlugin {
   requestOverlay(): Promise<void>;
   requestFullScreenIntent(): Promise<void>;
   openAppSettings(): Promise<void>;
-  show(options: NativeOffer): Promise<void>;
+  /** **`sounding`: الحزمةُ ترنّ بنفسها** على مجرى المنبّه (§٦١-ل/٥) — والأقدمُ لا تردّ شيئاً. */
+  show(options: NativeOffer): Promise<{ sounding?: boolean } | undefined>;
   hide(): Promise<void>;
   setSession(options: {
     apiBase: string | null;
@@ -90,10 +91,15 @@ export async function openAppSettings(): Promise<void> {
   if (alertsAvailable()) await plugin.openAppSettings().catch(() => undefined);
 }
 
-/** يُظهر البطاقةَ فوق كلِّ شيء — **ولا يُنادى والتطبيقُ ظاهر**. */
-export async function showOfferAlert(options: NativeOffer): Promise<void> {
-  if (!alertsAvailable()) return;
-  await plugin.show(options).catch(() => undefined);
+/** يُظهر البطاقةَ فوق كلِّ شيء — **ولا يُنادى والتطبيقُ ظاهر**.
+ *
+ * **ويقول أترنّ هي بنفسها** (§٦١-ل/٥): حزمةُ الدمج ترنّ بصوت الطلب على مجرى
+ * المنبّه في الأسطح الثلاثة، **فلا ترنّ نغمةُ الويب فوقها**؛ والحزمةُ الأقدمُ
+ * لا تقول شيئاً **فتبقى نغمةُ الويب كما كانت حرفاً**. */
+export async function showOfferAlert(options: NativeOffer): Promise<boolean> {
+  if (!alertsAvailable()) return false;
+  const result = await plugin.show(options).catch(() => undefined);
+  return result?.sounding === true;
 }
 
 /** **ما تحتاجه الأسطحُ الأصليّةُ لتقبل بنفسها** — قاعدةُ الخدمة ورمزُ الوصول.

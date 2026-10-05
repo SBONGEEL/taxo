@@ -24,7 +24,8 @@ import { getActiveRide, nearbyDrivers } from "@/api/endpoints";
 import type { Coordinates, NearbyDriver, Ride } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { onForegroundMessage } from "@/lib/firebase";
-import { listenToPush } from "@/lib/push";
+import { heardFromSystem, listenToPush } from "@/lib/push";
+import { firstSighting } from "@/lib/notice";
 import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
@@ -140,6 +141,24 @@ export function RideProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  /** **البابُ الواحدُ للبلاغ بصوته** (§٦١-ل/٣) — من إشعارٍ والتطبيقُ أمامَ صاحبه
+   *  (النظامُ لا يرسمه حينها)، **ومن بلاغ المقبس** لما لا يُرسم من حدثٍ له: دفعٌ
+   *  تأكّد، إكراميةٌ، تعويضُ إلغاء. **وكانا يصلان صامتين**: الخلفيةُ تحجب الإشعارَ
+   *  عن مقبسٍ حيّ، والمقبسُ لا يحمل لهما حدثاً.
+   *
+   *  **والغائبُ لا يُرسم له شيء** — الإشعارُ نفسُه يصله من النظام بصوت قناته.
+   *  **وما رُسم من الطريقين معاً يُرسم مرّة** (`firstSighting`). وصوتُ الحدث إن
+   *  كان حدثَ رحلة، **وإلا «الإشعار» تحت مفتاحه** («صوت الإشعارات» يَعِد بها). */
+  const presentNotice = useCallback(
+    (payload: { title?: string; body?: string; data?: Record<string, string> }) => {
+      if (!payload.title || document.hidden) return;
+      if (!firstSighting(payload.title, payload.body)) return;
+      notify(payload.title, payload.body);
+      play(EVENT_SOUND[payload.data?.type ?? ""] ?? "notify");
+    },
+    [notify],
+  );
+
   const refresh = useCallback(async () => {
     const active = await getActiveRide().catch(() => null);
     setRide(active);
@@ -170,6 +189,10 @@ export function RideProvider({ children }: { children: ReactNode }) {
         case "error":
           return;
 
+        case "notice":
+          presentNotice(event as { title?: string; body?: string; data?: Record<string, string> });
+          return;
+
         default: {
           const withRide = event as { ride?: Ride };
           if (withRide.ride) {
@@ -195,12 +218,14 @@ export function RideProvider({ children }: { children: ReactNode }) {
               notify(toast.title, toast.body);
             }
           }
+          // **والغائبُ يسمع إشعارَه من النظام بصوت قناته** (§٦١-ل/٣) — فلا تُعزف
+          // نغمةُ الويب فوقه؛ **ومن لا رمزَ له تبقى له كما كانت** (`heardFromSystem`)
           const cue = EVENT_SOUND[event.type];
-          if (cue) play(cue);
+          if (cue && !heardFromSystem()) play(cue);
         }
       }
     },
-    [notify],
+    [notify, presentNotice],
   );
 
   useEffect(() => {
@@ -245,12 +270,10 @@ export function RideProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     let unsubscribe: (() => void) | null = null;
-    const show = (payload: { title?: string; body?: string }) => {
-      if (payload.title) notify(payload.title, payload.body);
-    };
+    // **والبلاغُ بصوته من البابِ الواحد** (`presentNotice`، §٦١-ل/٣)
 
     if (Capacitor.isNativePlatform()) {
-      listenToPush(show)
+      listenToPush(presentNotice)
         .then((off) => (unsubscribe = off))
         .catch(() => undefined);
       return () => unsubscribe?.();
@@ -258,12 +281,12 @@ export function RideProvider({ children }: { children: ReactNode }) {
 
     const fcm = firebaseConfigOf(config?.providers.fcm);
     if (!fcm) return;
-    onForegroundMessage(fcm, show)
+    onForegroundMessage(fcm, presentNotice)
       .then((off) => (unsubscribe = off))
       .catch(() => undefined);
 
     return () => unsubscribe?.();
-  }, [user, config, notify]);
+  }, [user, config, presentNotice]);
 
   /** يحرك المنظور، **ويملأ أوّلَ رسمةٍ من REST بدل انتظار المقبس**.
    *

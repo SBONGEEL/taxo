@@ -48,7 +48,16 @@ import android.provider.Settings;
  */
 public final class OfferAlert {
 
-    public static final String CHANNEL_ID = "taxo.offer";
+    /**
+     * <b>قناةُ الطلب الجديدة</b> — صوتُ الطلب الجديد على مجرى المنبّه نفسِه (SPEC §٦١-ل/٥،
+     * ٢٠٢٦-١٠-٠٥). <b>وكانت {@code taxo.offer} بمنبّه الهاتف الافتراضيّ</b>، وصوتُ قناةٍ لا يُغيَّر
+     * بعد إنشائها (أندرويد) — <b>فالصوتُ الجديدُ معرّفٌ جديد</b>.
+     *
+     * <p><b>والقديمةُ لا تُحذف</b>: الخادمُ يرسل إليها ما لم يبلّغه الجهازُ بالمجموعة الثانية
+     * ({@code device_tokens.push_channels})، <b>وقناةٌ محذوفةٌ تُسقط الطلبَ إلى الافتراض بلا
+     * منبّه</b> — فبقاؤها سطرٌ زائدٌ في الإعدادات، وحذفُها طلبٌ يصل همساً.
+     */
+    public static final String CHANNEL_ID = "taxo.offer.v2";
     public static final int NOTIFICATION_ID = 4202;
 
     private static final String PREFS = "taxo.offer.presence";
@@ -88,9 +97,10 @@ public final class OfferAlert {
         channel.enableLights(true);
         channel.setShowBadge(true);
         // **مجرى المنبّه هو ما ينجو من الصامت** — وهو ما يطلبه التصميم:
-        // «النغمة والاهتزاز يعملان في كلٍّ منها»
+        // «النغمة والاهتزاز يعملان في كلٍّ منها». **والصوتُ صوتُ الطلب الجديد**
+        // (اختيارُ المالك §٦١-ك) لا منبّهُ الهاتف — والمجرى نفسُه (§٦١-ل/٥)
         channel.setSound(
-                Settings.System.DEFAULT_ALARM_ALERT_URI,
+                TaxoChannels.sound(context, R.raw.taxo_request),
                 new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -119,16 +129,19 @@ public final class OfferAlert {
     /**
      * <b>واحدةٌ لا اثنتان</b> — والاختيارُ يقع <b>قبل العرض لا بعده</b>، وهو
      * نصُّ القاعدة الثانية في التصميم.
+     *
+     * <p><b>ويعيد أيرنّ بنفسه</b> (§٦١-ل/٥): ملءُ الشاشة بصوت قناته مكرَّراً، والورقةُ
+     * والفقاعةُ بـ{@link OfferTone} — <b>فلا تبدأ نغمةُ الويب فوقه</b>. و{@code false}
+     * حين تعذّر الصوت، فيرنّ الويبُ مكانه.
      */
-    public static void show(Context context, OfferData offer) {
+    public static boolean show(Context context, OfferData offer) {
         ensureChannel(context);
         hide(context);
 
         if (locked(context)) {
             // **الشاشةُ المقفلةُ لملء الشاشة وحدَه** (قرارُ المالك): لا فقاعةَ
             // ولا ورقةَ فوق القفل
-            fullScreen(context, offer, true);
-            return;
+            return fullScreen(context, offer, true);
         }
         if (canDrawOverlay(context)) {
             if (recentlyInApp(context)) {
@@ -136,13 +149,13 @@ public final class OfferAlert {
             } else {
                 OfferBubble.show(context, offer);
             }
-            return;
+            return OfferTone.start(context, offer.seconds);
         }
         // **بلا إذنِ تراكبٍ تسقط الورقةُ والفقاعةُ معاً** — والطريقُ الباقي
-        fullScreen(context, offer, false);
+        return fullScreen(context, offer, false);
     }
 
-    private static void fullScreen(Context context, OfferData offer, boolean isLocked) {
+    private static boolean fullScreen(Context context, OfferData offer, boolean isLocked) {
         Intent screen = new Intent(context, OfferActivity.class);
         screen.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -155,7 +168,7 @@ public final class OfferAlert {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationManager manager = context.getSystemService(NotificationManager.class);
-        if (manager == null) return;
+        if (manager == null) return false;
 
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? new Notification.Builder(context, CHANNEL_ID)
@@ -177,7 +190,12 @@ public final class OfferAlert {
         if (canUseFullScreen(context)) {
             builder.setFullScreenIntent(pending, true);
         }
-        manager.notify(NOTIFICATION_ID, builder.build());
+        Notification notification = builder.build();
+        // **ويتكرّر صوتُ القناة حتى يُطوى الإشعار** (§٦١-ل/٥): منبّهُ الهاتف الذي
+        // كان طويلٌ بطبعه، **وصوتُ الطلب ثانيتان** — فبلا التكرار يرنّ مرّةً ويسكت
+        // والمهلةُ تجري. **والطيُّ مضمونٌ**: `hide` عند كلِّ نهاية، و`setTimeoutAfter` بالمهلة
+        notification.flags |= Notification.FLAG_INSISTENT;
+        manager.notify(NOTIFICATION_ID, notification);
 
         // **ولا شاشةَ فارغة**: من مُنح ملءَ الشاشة يُفتح له النشاطُ مباشرةً
         // أيضاً — والإشعارُ يبقى مدخلَه إن كان النظامُ منع الإطلاق
@@ -188,10 +206,13 @@ public final class OfferAlert {
                 // إطلاقٌ من الخلفية قد يُمنع — والإشعارُ هو الطريقُ الثاني
             }
         }
+        // **والصوتُ صوتُ القناة** — يرنّ ما دام الإشعارُ قائماً، ولو مُنع النشاط
+        return true;
     }
 
-    /** يطوي كلَّ ما قد يكون ظاهراً — <b>الثلاثةَ معاً</b>، فلا يبقى أثر. */
+    /** يطوي كلَّ ما قد يكون ظاهراً — <b>الثلاثةَ معاً ونغمتَها</b>، فلا يبقى أثر. */
     public static void hide(Context context) {
+        OfferTone.stop();
         OfferBubble.hide(context);
         OfferSheetWindow.hide(context);
         NotificationManager manager = context.getSystemService(NotificationManager.class);

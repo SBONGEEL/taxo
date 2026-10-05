@@ -57,13 +57,59 @@ export async function registerNativePush(): Promise<PushRegistration> {
   return { state: "granted", token };
 }
 
-/** ما يصل والتطبيقُ مفتوح — **النظامُ لا يرسمه**، فتعرضه الشاشة. */
+/** **وصل رمزُ هذا الجهاز إلى الخلفية في هذه الجلسة** — فالغائبُ يصله الإشعارُ من النظام. */
+let ready = false;
+
+export function markPushReady(): void {
+  ready = true;
+}
+
+/** **الغائبُ عن التطبيق يسمع إشعارَه من النظام بصوت قناته** (§٦١-ل/٣) — فلا تُعزف
+ *  نغمةُ الويب فوقه. **ومن لا رمزَ له** (إذنٌ مرفوض، أو الحزمةُ المنشورةُ اليومَ
+ *  وهي بلا إضافة الإشعارات) **يبقى على نغمة الويب كما كان** — فلا يُسلب صوتاً لا
+ *  بديلَ له. */
+export function heardFromSystem(): boolean {
+  return ready && document.hidden;
+}
+
+/** قنواتُ المجموعة الثانية في هذه الحزمة — **تُنشئها الحزمةُ عند إقلاعها**
+ *  (`TaxoChannels.java`)، **وغيابُ واحدةٍ منها يعني حزمةً أقدم**. */
+const CHANNELS_V2 = [
+  "taxo.accepted",
+  "taxo.approaching",
+  "taxo.arrived",
+  "taxo.started",
+  "taxo.ended",
+  "taxo.payment",
+  "taxo.general",
+];
+
+/** **إصدارُ مجموعة القنوات على الجهاز فعلاً** (§٦١-ل/٥) — يُسأل أندرويد ولا يُفترض:
+ *  الحزمُ تُحمِّل شاشاتها من خادم، فهذه الشيفرةُ قد تكون أحدثَ من الحزمة التي تحملها.
+ *  **و`undefined` حزمةٌ أقدم** يُرسل إليها الخادمُ كما اليوم. */
+export async function channelSet(): Promise<number | undefined> {
+  if (Capacitor.getPlatform() !== "android") return undefined;
+  try {
+    const { channels } = await PushNotifications.listChannels();
+    const present = new Set(channels.map((channel) => channel.id));
+    return CHANNELS_V2.every((id) => present.has(id)) ? 2 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** ما يصل والتطبيقُ مفتوح — **النظامُ لا يرسمه**، فتعرضه الشاشة.
+ *  **ومعه `data`** — نوعُه يختار صوتَه (§٦١-ل/٣)، كما في طريق المتصفّح (`onForegroundMessage`). */
 export async function listenToPush(
-  received: (item: { title?: string; body?: string }) => void,
+  received: (item: { title?: string; body?: string; data?: Record<string, string> }) => void,
 ): Promise<() => void> {
   if (!Capacitor.isNativePlatform()) return () => undefined;
   const handle = await PushNotifications.addListener("pushNotificationReceived", (item) =>
-    received({ title: item.title, body: item.body }),
+    received({
+      title: item.title,
+      body: item.body,
+      data: (item.data ?? {}) as Record<string, string>,
+    }),
   );
   return () => void handle.remove();
 }
