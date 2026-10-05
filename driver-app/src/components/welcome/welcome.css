@@ -8,14 +8,24 @@
  * والمنحنيات بأسمائها في اللوحة:
  *   o  = cubic-bezier(.2,.8,.2,1)   ·   io = cubic-bezier(.65,0,.35,1)
  *
- * **والألوانُ والخطُّ من نظام التصميم** (`src/taxo2/`، §61-ج) — **والمظهرُ مثبَّتٌ ليليّاً** (`t2-night` على الجذر): الترحيبُ
- * رُسم بالإسفلت وحدَه فيبقى كذلك في الوضع النهاريّ للتطبيق، **والكبتنةُ في الوضع النسائيّ يصير جمرُها برقوقاً فاتحاً من
- * الرموز** كما كان يفعل هنا. **وما بقي هنا ظلالُ الرسم وحدَها** (`--cw-sub` · `--cw-dot` وألوانُ الطبقات والخريطة).
+ * **والألوانُ والخطُّ من نظام التصميم** (`src/taxo2/`، §61-ج) — **والمظهرُ يتبع التطبيق** (§٦٢/٨): رُسم الترحيبُ بالإسفلت
+ * للكبتن، **وفي الفاتح يُرسم بحجر الهوية وخريطة النهار** — كان مثبَّتاً ليليّاً (`t2-night`) فيومض داكناً قبل تطبيقٍ فاتح.
+ * **والكبتنةُ في الوضع النسائيّ يصير جمرُها برقوقاً من الرموز**. **وما بقي هنا ظلالُ الرسم وحدَها** (`--cw-*`) بقيمتي المظهرين.
+ *
+ * **و«سجّل كشريك» زرٌّ إلى خطوات التسجيل** (§٦٢/١١) — كان يتمدّد بطاقةً تطلب الرقمَ ثمّ تسلّمه إلى شاشة التسجيل القديمة، فيرى
+ * الكبتنُ الجديدَ ثمّ القديمَ في خطوتين متتاليتين (عطبُ §٦٢/٢). والرقمُ يُكتب مرّةً في خطوة «الحساب».
  */
 
 .cw {
   --cw-sub: #b9bec6;
   --cw-dot: #3a3f48;
+  --cw-label-ink: #4a5059; /* أسماءُ الأحياء فوق الغطاء */
+  --cw-map-ink: #59606a; /* أسماءُ الأحياء في الكاميرا */
+  --cw-fade: 14, 16, 19; /* الإسفلت — مكوّناتُه لتدرّج الغطاء */
+  --cw-pin-bg: rgba(14, 16, 19, 0.78);
+  --cw-pin-line: rgba(255, 255, 255, 0.1);
+  --cw-car-halo: rgba(255, 106, 51, 0.14);
+  --cw-car-ring: rgba(255, 106, 51, 0.6);
   position: fixed;
   inset: 0;
   z-index: 90;
@@ -25,9 +35,23 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: pan-y;
 }
+/* **النهار — حجرُ الهوية** (قيمُ ترحيب الراكب: الأسماءُ خافتةٌ على الحجر، والغطاءُ حجر) */
+html:not(.dark) .cw {
+  --cw-sub: #6a6862;
+  --cw-dot: #d2cbbe;
+  --cw-label-ink: #9a9488;
+  --cw-map-ink: #a39d90;
+  --cw-fade: 244, 241, 234;
+  --cw-pin-bg: rgba(255, 255, 255, 0.88);
+  --cw-pin-line: rgba(20, 22, 26, 0.08);
+  --cw-car-halo: rgba(240, 90, 40, 0.14);
+  --cw-car-ring: rgba(240, 90, 40, 0.6);
+}
+html.pink .cw { --cw-car-halo: rgba(240, 140, 192, 0.14); --cw-car-ring: rgba(240, 140, 192, 0.6); }
+html.pink:not(.dark) .cw { --cw-car-halo: rgba(156, 44, 110, 0.14); --cw-car-ring: rgba(156, 44, 110, 0.6); }
 .cw.is-leaving {
   opacity: 0;
-  transition: opacity 0.3s ease-out;
+  transition: opacity 0.35s ease-out;
   pointer-events: none;
 }
 
@@ -55,7 +79,7 @@
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: #59606a;
+  color: var(--cw-map-ink);
   white-space: nowrap;
 }
 
@@ -76,7 +100,7 @@
 }
 .cw-veil-solid { background: var(--t2-bg); opacity: 0.84; }
 .cw-veil-grad {
-  background: linear-gradient(rgba(14, 16, 19, 0.55) 0%, rgba(14, 16, 19, 0.3) 34%, rgba(14, 16, 19, 0.92) 54%, #0e1013 62%);
+  background: linear-gradient(rgba(var(--cw-fade), 0.55) 0%, rgba(var(--cw-fade), 0.3) 34%, rgba(var(--cw-fade), 0.92) 54%, var(--t2-bg) 62%);
   opacity: 0;
 }
 .cw-dim { background: var(--t2-bg); opacity: 0; transition-delay: 0.12s; }
@@ -84,7 +108,6 @@
 .cw.page-2 .cw-veil-solid { opacity: 0; }
 .cw.page-1 .cw-veil-grad,
 .cw.page-2 .cw-veil-grad { opacity: 1; }
-.cw.is-card .cw-dim { opacity: 0.55; }
 
 .cw-label {
   position: absolute;
@@ -92,7 +115,7 @@
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: #4a5059;
+  color: var(--cw-label-ink);
   white-space: nowrap;
   transition: opacity 0.4s;
 }
@@ -108,8 +131,8 @@
   gap: 7px;
   padding: 8px 13px;
   border-radius: 99px;
-  background: rgba(14, 16, 19, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--cw-pin-bg);
+  border: 1px solid var(--cw-pin-line);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -217,9 +240,6 @@
 .cw-pager span { width: 8px; height: 4px; border-radius: 2px; background: var(--cw-dot); transition: width 0.3s, background 0.3s; }
 .cw-pager span.on { width: 22px; background: var(--t2-accent); }
 .cw-copy .cw-pager { margin-bottom: 22px; }
-.is-card .cw-copy,
-.is-card .cw-login,
-.is-card .cw-top { opacity: 0; transform: translateY(-14px); pointer-events: none; }
 
 /* ── الأزرار في الأسفل ───────────────────────────────────────────────────── */
 .cw-actions {
@@ -248,8 +268,7 @@
   font-weight: 700;
   cursor: pointer;
 }
-.cw-ember svg,
-.cw-cta-label svg { width: 22px; height: 22px; fill: currentColor; }
+.cw-ember svg { width: 22px; height: 22px; fill: currentColor; }
 .cw-login {
   position: absolute;
   left: 24px;
@@ -267,113 +286,42 @@
   transition: opacity 0.25s, transform 0.3s;
 }
 
-/* ── C4 · «سجّل كشريك» يتمدّد ويصير بطاقةً داكنة ──────────────────────────── */
-.cw-cta {
+/* ── C4 · «سجّل كشريك» — زرُّ الجمر نفسُه، **إلى خطوات التسجيل** (§٦٢/١١) فوق «دخول» ─────────────────────── */
+.cw-join {
   position: absolute;
   left: 24px;
   right: 24px;
   bottom: calc(104px + env(safe-area-inset-bottom, 0px));
-  height: 56px;
-  border-radius: 18px;
-  background: var(--t2-accent);
-  border-top: 1px solid transparent;
-  overflow: hidden;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition:
-    left 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    right 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    bottom 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    height 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    border-radius 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    background-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s,
-    border-top-color 0.3s 0.5s;
 }
-.cw-cta.is-pressed { animation: cw-press 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes cw-press { 50% { transform: scale(0.97); } }
-.is-card .cw-cta {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: min(470px, calc(100% - 96px));
-  border-radius: 32px 32px 0 0;
-  background: #15181d;
-  border-top-color: #262a31;
-  cursor: default;
-}
-.cw-cta-label {
+.cw-join:active,
+.cw-login:active { transform: scale(0.98); }
+
+/* ── حالُ الإقلاع على الترحيب — **هو شاشةُ الإقلاع** (`lib/splash.ts`) ───────────────────────────────── */
+.cw-status {
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 56px;
+  left: 24px;
+  right: 24px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 22px;
-  color: var(--t2-on-accent);
-  font-size: 16px;
-  font-weight: 700;
-  transition: opacity 0.12s 0.08s;
+  gap: 8px;
+  text-align: center;
 }
-.is-card .cw-cta-label { opacity: 0; pointer-events: none; }
-.cw-card {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  padding: 12px 22px calc(16px + env(safe-area-inset-bottom, 0px));
-  opacity: 0;
-  transform: translateY(12px);
-  pointer-events: none;
-  transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.is-card .cw-card { opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0.48s; }
-.cw-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--cw-dot); margin: 0 auto 18px; }
-.cw-card h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--t2-text); }
-.cw-card .cw-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--t2-muted); }
-.cw-card .cw-picker { margin-top: 14px; }
-.cw-field {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 56px;
-  margin-top: 18px;
-  padding: 0 16px;
-  border-radius: 16px;
-  background: var(--t2-bg);
-  border: 1.5px solid var(--t2-line);
-  box-sizing: border-box;
-  direction: ltr;
-}
-.cw-field:focus-within { border-color: var(--t2-accent); }
-.cw-field .cw-dial { font-size: 15px; font-weight: 600; color: var(--t2-text); }
-.cw-field .cw-sep { width: 1px; height: 24px; background: var(--t2-line); }
-.cw-field input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 16px;
-  letter-spacing: 0.02em;
+.cw-status p { margin: 0; font-size: 13.5px; color: var(--t2-muted); }
+.cw-status .cw-status-code { font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0.6; }
+.cw-status button {
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--t2-line);
+  border-radius: 13px;
+  background: var(--t2-surface);
   color: var(--t2-text);
-  caret-color: var(--t2-accent);
-}
-.cw-go {
-  width: 100%;
-  height: 56px;
-  margin-top: 14px;
-  border: 0;
-  border-radius: 18px;
-  background: var(--t2-accent);
-  color: var(--t2-on-accent);
   font: inherit;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
 }
-.cw-go:disabled { opacity: 0.35; cursor: default; }
-.cw-foot { margin: 14px 0 0; text-align: center; font-size: 12px; color: var(--t2-faint); }
 
 .cw-skip {
   position: absolute;
@@ -404,10 +352,6 @@
   color: var(--t2-muted);
   white-space: nowrap;
   pointer-events: none;
-}
-.cw.is-card .cw-credit {
-  bottom: auto;
-  top: calc(14px + env(safe-area-inset-top, 0px));
 }
 
 @media (prefers-reduced-motion: reduce) {

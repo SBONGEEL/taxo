@@ -49,7 +49,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("light", !dark);
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", dark ? "#14181d" : "#f2f0eb");
+      // **أرضُ TAXO 2.0** (`taxo2/tokens.css`: `--t2-bg`) — كان `#14181d`/`#f2f0eb` من الهوية القديمة فيبقى خطٌّ غريبٌ أعلى الهاتف
+      ?.setAttribute("content", dark ? "#0e1013" : "#f4f1ea");
   }, [dark]);
 
   const setChoice = useCallback((next: ThemeChoice) => {

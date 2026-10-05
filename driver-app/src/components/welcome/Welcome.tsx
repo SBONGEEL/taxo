@@ -1,4 +1,4 @@
-/** «نقطة اللقاء» — ترحيبُ الكبتن عند كلِّ فتحة (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤).
+/** «نقطة اللقاء» — ترحيبُ الكبتن عند كلِّ فتحة، **وهو شاشةُ الإقلاع نفسُها** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤ و§٦٢/١ و/١٠).
  *
  * **من التصميم لا من الذوق**: Claude Design «TAXO 2.0 - Welcome» (C0 · C1 · C2 ·
  * C3 · C4). القصةُ نفسُها من الجهة الأخرى — الكاميرا تتبعك أنت: سيارتُك تضيء في
@@ -6,25 +6,22 @@
  * يتكوّن الـX ويكتمل TAXO وتظهر «كبتن». **ومولّدُ المفاتيح (`tr`) منقولٌ من شيفرة
  * اللوحة**، مقصوصاً عند الإطار الأخير لأن الحلقةَ هناك للعرض.
  *
- * **وديناميكيٌّ بقرار المالك** (البندان ١٠ و١١):
- * - **داخلٌ**: تكوُّنُ الـX وحدَه ثمّ التطبيق — يظهر قليلاً ويمضي بنفسه.
- * - **غيرُ داخل**: أوّلَ فتحةٍ المقدّمةُ كاملة، وبعدها الـX وحدَه، ثمّ الشاشاتُ
- *   الثلاث («الرفيق قبل الطريق.» · «عمولة أقل بكثير من السوق.» · «وقتك بيدك.»)
- *   **بلا رقمٍ ولا نسبةٍ للعمولة، وبلا ذكرٍ لطريقة سحبٍ بعينها** — بنصِّ اللوحة.
- *   ثمّ «سجّل كشريك» يتمدّد ويصير بطاقةَ التسجيل، و«دخول» إلى شاشة الدخول.
+ * **أطوارٌ ثمّ فرعان** (البندان ١٠ و١١، و§٦٢):
+ * - **أوّلَ فتحةٍ لمن لم يدخل**: المقدّمةُ كاملة (٤٫٤ث). **وما بعدها**: تكوُّنُ الـX وتجمّعُ الحروف و«كبتن» **بإيقاع المقدّمة**
+ *   (١٫٤ث — كان ٠٫٨ث فيمضي قبل أن يُرى) **ثمّ وقفةٌ على الشعار مكتملاً** — حدٌّ أدنى يُرى فيه.
+ * - **ثمّ ينتظر الإقلاع** وحالُ الشبكة عليه (`lib/splash.ts`) — **هو شاشةُ الإقلاع**، يحلّ محلَّ إطارها في `index.html`.
+ * - **داخلٌ ⇒ يذوب وحدَه** · **غيرُ داخلٍ ⇒ الشاشاتُ الثلاث** («الرفيق قبل الطريق.» · «عمولة أقل بكثير من السوق.» · «وقتك بيدك.»)
+ *   **بلا رقمٍ ولا نسبةٍ للعمولة، وبلا ذكرٍ لطريقة سحبٍ بعينها** — بنصِّ اللوحة — **ثمّ «سجّل كشريك» إلى خطوات التسجيل
+ *   و«دخول» إلى شاشة الدخول**. **وسهمُ الرجوع منهما يعيد الشاشةَ الأخيرةَ بزرّيها** (`gate.ts`).
+ * - **ويتبع مظهرَ التطبيق** (§٦٢/٨): رُسم بالإسفلت، **وفي الفاتح بحجر الهوية وخريطة النهار**.
  *
- * **وما لم يُبنَ من اللوحة — بعلّته، وينتظر تصحيحَه في Claude Design:**
- * - **«English»**: التطبيقُ عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
- * - **ما بعد «متابعة»**: خطواتُ التسجيل لم تُرسم بعد بما يطابق التطبيق (التأكيد
- *   والدولة والموافقة) — **فتُسلَّم البطاقةُ إلى شاشة التسجيل القائمة ومعها
- *   الرقم**، ولا نداءَ جديدَ ولا ترتيبَ جديد.
+ * **وما لم يُبنَ من اللوحة — بعلّته**: «English» — التطبيقُ عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { CountryPicker } from "@/components/CountryPicker";
-import { useAuthCountry, usePhoneCountry } from "@/lib/config";
-import { digitsOnly, looksComplete } from "@/lib/phone";
+import { removeBootFrame, retrySplash, splashText, useSplashStatus } from "@/lib/splash";
+import { useTheme } from "@/lib/theme";
 
 import "@/taxo2";
 import "./welcome.css";
@@ -63,10 +60,18 @@ const LB: Array<[string, number, number]> = [
 
 /** المقدّمةُ حتى إطارها الأخير — والـX وحدَه «من المرة الثانية». */
 const INTRO_S = 4.4;
-const BRIEF_MS = 800;
+/** **تكوُّنُ الـX وتجمّعُ الحروف و«كبتن» بإيقاع المقدّمة** (٢٫٩ث ← ٤٫٣ث فيها) — كان ٠٫٨ث فيمضي قبل أن يُرى (§٦٢/٥). */
+const BRIEF_S = 1.4;
+const BRIEF_MS = BRIEF_S * 1000;
+/** **الوقفةُ على الشعار مكتملاً** — حدُّ العرض الأدنى بعد الحركة، **ونفسُها مع «تقليل الحركة»**. */
+const HOLD_MS = 600;
+/** الذوبانُ — `welcome.css` (`.cw.is-leaving`). */
+const LEAVE_MS = 350;
 /** «تصل: نبضةٌ واهتزازة» — 2.8ث في اللوحة. */
 const ARRIVE_MS = 2800;
-const SEEN_KEY = "taxo.driver.welcome.seen";
+/** **مفتاحُ المقدّمة وحدَها** — كان `taxo.driver.welcome.seen`، **وهو مفتاحُ ورقة الترحيب بعد الاعتماد نفسُه** (`lib/welcome.ts`):
+ *  كبتنٌ رأى المقدّمةَ يومَ ثبّت التطبيقَ **لا يرى الورقةَ أبداً بعد اعتماده**، ومن أغلق الورقةَ يُحرم المقدّمة (قِيس ٢٠٢٦-١٠-٠٥). */
+const SEEN_KEY = "taxo.driver.welcome.intro.seen";
 
 /** **مولّدُ اللوحة (`tr`) مرّةً واحدةً لا حلقة**: نقاطٌ بعد `T` تُسقط، وتُثبَّت
  *  القيمةُ الأخيرة (`both`) — فيقف كلُّ شيءٍ في موضعه من إطار اللوحة الأخير. */
@@ -144,7 +149,7 @@ function buildIntro(T: number) {
   return { css, anim };
 }
 
-/** «من المرة الثانية: لحظة تكوّن X فقط (0.8 ثانية)» — على الإطار الأخير. */
+/** «من المرة الثانية: لحظة تكوّن X فقط» — **بإيقاع المقدّمة (١٫٤ث) لا مضغوطاً في ٠٫٨ث** (§٦٢/٥)، والنسبُ نفسُها. */
 const BRIEF_CSS = `
 @keyframes cw-bx{0%{transform:scale(1);opacity:1}37.5%{transform:scale(1);animation-timing-function:${EZ.io}}56.25%{opacity:1;animation-timing-function:${EZ.o}}68.75%{transform:scale(2.4)}87.5%,100%{transform:scale(2.4);opacity:0}}
 @keyframes cw-bb1{0%{transform:scaleX(0);animation-timing-function:${EZ.o}}25%,100%{transform:scaleX(1)}}
@@ -178,10 +183,9 @@ function markSeen(): void {
 }
 
 function useStageScale(): number {
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(() => Math.max(window.innerWidth / 390, window.innerHeight / 844));
   useEffect(() => {
     const measure = () => setScale(Math.max(window.innerWidth / 390, window.innerHeight / 844));
-    measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
@@ -195,28 +199,40 @@ const MAP_AT: Array<[number, number]> = [
   [-789, -1026.9],
 ];
 
-type Phase = "intro" | "brief" | "pages" | "entry" | "leaving";
+type Phase = "intro" | "brief" | "hold" | "pages" | "leaving";
+export type WelcomeNext = "/login" | "/register";
 
 export function Welcome({
+  booted,
   signedIn,
+  returning,
+  reopened = false,
   onDone,
 }: {
+  /** `/config` والجلسةُ وصلا — **وقبله يبقى الترحيبُ شاشةَ الإقلاع**. */
+  booted: boolean;
+  /** داخلٌ بعد الإقلاع ⇒ يمضي بنفسه. */
   signedIn: boolean;
-  /** يُنادى حين ينتهي الترحيب — وإلى أين: التسجيلُ ومعه الرقم، أو الدخول. */
-  onDone: (next?: { to: "/register" | "/login"; phone?: string }) => void;
+  /** **ما يُعرف قبل الإقلاع** (رمزٌ محفوظٌ أو بصمةٌ مسلَّحة) — يختار الطورَ الأوّل وحدَه. */
+  returning: boolean;
+  /** عودةٌ من «الدخول» أو «التسجيل» بسهم الرجوع ⇒ الشاشةُ الأخيرةُ بزرّيها مباشرة. */
+  reopened?: boolean;
+  onDone: (next?: WelcomeNext) => void;
 }) {
   const scale = useStageScale();
-  const [phase, setPhase] = useState<Phase>(() => (!signedIn && !seenBefore() ? "intro" : "brief"));
-  const [page, setPage] = useState(0);
-  const [pressed, setPressed] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [next, setNext] = useState<{ to: "/register" | "/login"; phone?: string } | undefined>();
-  const input = useRef<HTMLInputElement>(null);
+  const { dark } = useTheme();
+  const [phase, setPhase] = useState<Phase>(() =>
+    reopened ? "pages" : !returning && !seenBefore() ? "intro" : "brief",
+  );
+  const [page, setPage] = useState(reopened ? 2 : 0);
+  const [next, setNext] = useState<WelcomeNext | undefined>();
+  const [held, setHeld] = useState(false);
   const drag = useRef<number | null>(null);
   const intro = useMemo(() => buildIntro(INTRO_S), []);
+  const splash = useSplashStatus();
 
-  const { country, countries, setCountry } = useAuthCountry();
-  const { dialCode, nationalLength } = usePhoneCountry(country);
+  // **يحلّ محلَّ إطار الإقلاع في الإطار نفسِه** — قبل الرسم لا بعده، فلا ومضةَ بينهما
+  useLayoutEffect(() => removeBootFrame(), []);
 
   useEffect(() => {
     if (phase !== "intro" && phase !== "brief") return;
@@ -229,55 +245,52 @@ export function Welcome({
     timers.push(
       window.setTimeout(() => {
         if (phase === "intro") markSeen();
-        setPhase(signedIn ? "leaving" : "pages");
-      }, span + (signedIn ? 250 : 0)),
+        setPhase("hold");
+      }, span),
     );
     return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [phase, signedIn]);
+  }, [phase]);
+
+  // **الوقفةُ ثمّ الفرع — ولا فرعَ قبل الإقلاع** (§٦٢/١ و/١٠)
+  useEffect(() => {
+    if (phase !== "hold") return;
+    const id = window.setTimeout(() => setHeld(true), HOLD_MS);
+    return () => window.clearTimeout(id);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== "hold" || !held || !booted) return;
+    setPhase(signedIn ? "leaving" : "pages");
+  }, [phase, held, booted, signedIn]);
+
+  // **صاحبُ البصمة يُعرف بعد الإقلاع بلحظة** — فإن عُرف والترحيبُ على أوّل صفحاته قبل أن يلمس شيئاً، يمضي كما يمضي الداخل
+  useEffect(() => {
+    if (signedIn && phase === "pages" && page === 0 && !reopened) setPhase("leaving");
+  }, [signedIn, phase, page, reopened]);
 
   useEffect(() => {
     if (phase !== "leaving") return;
-    const id = window.setTimeout(() => onDone(next), 300);
+    const id = window.setTimeout(() => onDone(next), LEAVE_MS);
     return () => window.clearTimeout(id);
   }, [phase, onDone, next]);
 
-  // **صاحبُ البصمة يُعرف بعد الإقلاع بلحظة** (`biometry` يُقاس ولا يُفترض) — فإن عُرف
-  // والترحيبُ على أوّل صفحاته قبل أن يلمس شيئاً، يمضي كما يمضي الداخل
-  useEffect(() => {
-    if (signedIn && phase === "pages" && page === 0) setPhase("leaving");
-  }, [signedIn, phase, page]);
-
-  useEffect(() => {
-    if (phase !== "entry") return;
-    const id = window.setTimeout(() => input.current?.focus(), 520);
-    return () => window.clearTimeout(id);
-  }, [phase]);
-
-  const leave = (target?: { to: "/register" | "/login"; phone?: string }) => {
+  const leave = (target: WelcomeNext) => {
+    if (phase !== "pages") return;
     setNext(target);
     setPhase("leaving");
   };
   const skipIntro = () => {
     if (phase !== "intro") return;
     markSeen();
-    setPhase(signedIn ? "leaving" : "pages");
+    setPhase("hold");
   };
-  const ready = dialCode !== null && looksComplete(phone, nationalLength);
-  const onPages = phase === "pages" || phase === "entry";
+  const onPages = phase === "pages" || (phase === "leaving" && next !== undefined);
   const [mx, my] = MAP_AT[page];
+  const waiting = phase === "hold" && held && !booted && splash.status;
+  const mapSrc = dark ? "/welcome/amman-night.svg" : "/welcome/amman-day.svg";
 
   return (
     <div
-      className={[
-        "t2",
-        "t2-night",
-        "cw",
-        onPages ? `page-${page}` : "",
-        phase === "entry" ? "is-card" : "",
-        phase === "leaving" ? "is-leaving" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={["t2", "cw", onPages ? `page-${page}` : "", phase === "leaving" ? "is-leaving" : ""].filter(Boolean).join(" ")}
       onClick={phase === "intro" ? skipIntro : undefined}
       // **السحبُ لليسار ينقل إلى الشاشة التالية** (اللوحة) — واليمينُ يرجع
       onPointerDown={(event) => {
@@ -296,7 +309,7 @@ export function Welcome({
       <div className="cw-stage" style={{ ["--cw-scale" as string]: String(scale) }}>
         {phase === "intro" ? (
           <div className="cw-cam" style={{ animation: intro.anim.cam }}>
-            <img src="/welcome/amman-night.svg" alt="" />
+            <img src={mapSrc} alt="" />
             {LB.map(([text, x, y]) => (
               <span key={text} className="cw-maplabel" style={{ left: x, top: y }}>
                 {text}
@@ -308,8 +321,8 @@ export function Welcome({
             {/* الراكبُ ينتظرك نابضاً في شارع الرينبو */}
             <span style={{ position: "absolute", left: E[0], top: E[1], width: 6, height: 6, borderRadius: "50%", border: ".45px solid var(--t2-text)", boxSizing: "border-box", animation: "cw-pz 1.6s ease-out infinite" }} />
             <span style={{ position: "absolute", left: E[0], top: E[1], width: 5, height: 5, borderRadius: "50%", background: "var(--t2-text)", border: ".9px solid var(--t2-bg)", boxSizing: "border-box", transform: "translate(-50%,-50%)", animation: intro.anim.riderDot }} />
-            {/* سيارتُك بهالةٍ جمرية */}
-            <div style={{ position: "absolute", left: 0, top: 0, width: 20, height: 20, borderRadius: "50%", background: "rgba(255,106,51,.14)", border: ".5px solid rgba(255,106,51,.6)", boxSizing: "border-box", offsetPath: `path('${HD}')`, offsetRotate: "auto", offsetAnchor: "center", offsetDistance: "0%", animation: intro.anim.car }} />
+            {/* سيارتُك بهالةٍ بلون الجمر — **برقوقٌ في النسائيّ** (`--cw-car-*`) */}
+            <div style={{ position: "absolute", left: 0, top: 0, width: 20, height: 20, borderRadius: "50%", background: "var(--cw-car-halo)", border: ".5px solid var(--cw-car-ring)", boxSizing: "border-box", offsetPath: `path('${HD}')`, offsetRotate: "auto", offsetAnchor: "center", offsetDistance: "0%", animation: intro.anim.car }} />
             <div style={{ position: "absolute", left: 0, top: 0, width: 10, height: 5.4, borderRadius: 2.2, background: "var(--t2-accent)", border: ".7px solid var(--t2-bg)", boxSizing: "border-box", boxShadow: "0 .6px 1.6px rgba(0,0,0,.35)", offsetPath: `path('${HD}')`, offsetRotate: "auto", offsetAnchor: "center", offsetDistance: "0%", animation: intro.anim.car }}>
               <span style={{ position: "absolute", right: 1.3, top: 0.5, bottom: 0.5, width: 1.9, borderRadius: 0.7, background: "var(--t2-bg)" }} />
               <span style={{ position: "absolute", left: 0.9, top: 0.8, bottom: 0.8, width: 1.1, borderRadius: 0.5, background: "var(--t2-bg)", opacity: 0.55 }} />
@@ -317,7 +330,7 @@ export function Welcome({
           </div>
         ) : (
           <>
-            <img className="cw-map" src="/welcome/amman-night.svg" alt="" style={{ left: mx, top: my }} />
+            <img className="cw-map" src={mapSrc} alt="" style={{ left: mx, top: my }} />
             <span className="cw-label" style={{ left: 95.7, top: 296 }}>جبل عمّان</span>
             <span className="cw-label" style={{ left: 285.9, top: 154 }}>اللويبدة</span>
           </>
@@ -339,12 +352,12 @@ export function Welcome({
           {phase === "intro" || phase === "brief" ? (
             <div
               aria-hidden="true"
-              style={{ position: "absolute", left: FX, top: 360, width: 0, height: 0, transformOrigin: "0 0", animation: phase === "intro" ? intro.anim.xmark : "cw-bx .8s both" }}
+              style={{ position: "absolute", left: FX, top: 360, width: 0, height: 0, transformOrigin: "0 0", animation: phase === "intro" ? intro.anim.xmark : `cw-bx ${BRIEF_S}s both` }}
             >
               {(
                 [
-                  ["var(--t2-text)", -50, phase === "intro" ? intro.anim.bar1 : "cw-bb1 .8s both"],
-                  ["var(--t2-accent)", 50, phase === "intro" ? intro.anim.bar2 : "cw-bb2 .8s both"],
+                  ["var(--t2-text)", -50, phase === "intro" ? intro.anim.bar1 : `cw-bb1 ${BRIEF_S}s both`],
+                  ["var(--t2-accent)", 50, phase === "intro" ? intro.anim.bar2 : `cw-bb2 ${BRIEF_S}s both`],
                 ] as const
               ).map(([color, rotate, animation]) => (
                 <div key={rotate} style={{ position: "absolute", left: 0, top: 0, width: 26.67, height: 6.02, transform: `translate(-50%,-50%) rotate(${rotate}deg)` }}>
@@ -357,7 +370,7 @@ export function Welcome({
             className="cw-word"
             dir="ltr"
             aria-label="TAXO"
-            style={phase === "intro" ? { animation: intro.anim.word } : phase === "brief" ? { animation: "cw-bw .8s both" } : undefined}
+            style={phase === "intro" ? { animation: intro.anim.word } : phase === "brief" ? { animation: `cw-bw ${BRIEF_S}s both` } : undefined}
           >
             TA
             <span className="cw-xb" aria-hidden="true">
@@ -368,7 +381,7 @@ export function Welcome({
           </div>
           <span
             className="cw-badge"
-            style={phase === "intro" ? { animation: intro.anim.badge } : phase === "brief" ? { animation: "cw-bbadge .8s both" } : undefined}
+            style={phase === "intro" ? { animation: intro.anim.badge } : phase === "brief" ? { animation: `cw-bbadge ${BRIEF_S}s both` } : undefined}
           >
             كبتن
           </span>
@@ -414,6 +427,19 @@ export function Welcome({
         </div>
       ) : null}
 
+      {/* **حالُ الإقلاع على الترحيب نفسِه** — ثلاثةُ نصوصٍ لثلاثةِ أشياءَ تُعرف، والرمزُ لما لا يُعرف سببُه */}
+      {waiting && splash.status ? (
+        <div className="cw-status" role="status">
+          <p>{splashText(splash.status)}</p>
+          {splash.code ? <p className="cw-status-code" dir="ltr">{splash.code}</p> : null}
+          {splash.status !== "slow" ? (
+            <button type="button" onClick={retrySplash}>
+              إعادة المحاولة
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* **ذكرُ الخريطة ما دامت معروضة** — شرطُ الرخصة لا زينة (§61-أ، `welcome.css`) */}
       <span className="cw-credit" dir="ltr">
         © OpenStreetMap · Copernicus DEM · Open-Meteo
@@ -440,57 +466,14 @@ export function Welcome({
 
       {onPages && page === 2 ? (
         <>
-          <button type="button" className="cw-login" onClick={() => phase === "pages" && leave({ to: "/login" })}>
+          {/* **«سجّل كشريك» إلى خطوات التسجيل** (§٦٢/١١) — والرقمُ يُكتب هناك مرّةً، لا في بطاقةٍ هنا ثمّ ثانيةً هناك */}
+          <button type="button" className="cw-ember cw-join" onClick={() => leave("/register")}>
+            <span>سجّل كشريك</span>
+            <ArrowBack />
+          </button>
+          <button type="button" className="cw-login" onClick={() => leave("/login")}>
             دخول
           </button>
-          <div
-            className={["cw-cta", pressed ? "is-pressed" : ""].filter(Boolean).join(" ")}
-            role={phase === "pages" ? "button" : undefined}
-            tabIndex={phase === "pages" ? 0 : -1}
-            onClick={() => {
-              if (phase !== "pages") return;
-              setPressed(true);
-              setPhase("entry");
-            }}
-          >
-            <div className="cw-cta-label">
-              <span>سجّل كشريك</span>
-              <ArrowBack />
-            </div>
-            <form
-              className="cw-card"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (ready) leave({ to: "/register", phone });
-              }}
-            >
-              <div className="cw-grab" aria-hidden="true" />
-              <h2>رقم هاتفك</h2>
-              <p className="cw-sub">نرسل لك رمز تحقق لتبدأ تسجيلك كشريك.</p>
-              <div className="cw-picker">
-                <CountryPicker country={country} countries={countries} onChange={setCountry} />
-              </div>
-              <label className="cw-field">
-                <span className="cw-dial">+{dialCode ?? ""}</span>
-                <span className="cw-sep" aria-hidden="true" />
-                <input
-                  ref={input}
-                  name="phone"
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                  aria-label="رقم الهاتف"
-                  value={phone}
-                  disabled={dialCode === null}
-                  maxLength={nationalLength + 4}
-                  onChange={(event) => setPhone(digitsOnly(event.target.value))}
-                />
-              </label>
-              <button type="submit" className="cw-go" disabled={!ready}>
-                متابعة
-              </button>
-              <p className="cw-foot">بعدها: بياناتك، ثم مركبتك ووثائقك.</p>
-            </form>
-          </div>
         </>
       ) : null}
     </div>

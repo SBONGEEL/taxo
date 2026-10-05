@@ -18,6 +18,8 @@
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 
+import { AUTH_ROOTS, isWelcomeOpen, reopenWelcome } from "@/components/welcome/gate";
+
 /** يبدأ الاستماع، ويُعيد دالةَ إيقافٍ للتنظيف. */
 export function bindHardwareBack(): () => void {
   if (!Capacitor.isNativePlatform()) return () => undefined;
@@ -27,6 +29,12 @@ export function bindHardwareBack(): () => void {
     const depth = typeof state?.idx === "number" ? state.idx : 0;
     if (depth > 0) {
       window.history.back();
+      return;
+    }
+    // **وشاشتا الدخول ليستا الجذر** (§٦٢/١١): الترحيبُ قبلهما فوق المسارات لا في التاريخ — فالرجوعُ منهما يعيده كسهم الشاشة،
+    // **والخروجُ من الترحيب نفسِه**
+    if (!isWelcomeOpen() && AUTH_ROOTS.includes(window.location.pathname)) {
+      reopenWelcome();
       return;
     }
     // **الخروجُ من جذر التطبيق وحدَه**: من كان في الشاشة الأولى ولا تاريخَ

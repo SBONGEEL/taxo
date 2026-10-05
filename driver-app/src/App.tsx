@@ -15,7 +15,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -38,7 +38,6 @@ import { RouteTransition } from "@/components/ui/Motion";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
-import { hideSplash } from "@/lib/splash";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { GarageProvider } from "@/lib/garage";
@@ -46,11 +45,13 @@ import { RideProvider, useRide } from "@/lib/ride";
 import { SessionProvider, useSession } from "@/lib/session";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { WelcomeSheet } from "@/components/WelcomeSheet";
-import { Welcome } from "@/components/welcome/Welcome";
+import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
+import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
+import { tokens } from "@/api/client";
 import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
-import { BottomNav } from "@/components/BottomNav";
+import { BottomNavT2 } from "@/components/BottomNavT2";
 import { showsNav } from "@/lib/tabs";
-import { ThemeProvider, useTheme } from "@/lib/theme";
+import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
@@ -98,14 +99,8 @@ const SkinStoreT2Screen = lazy(() =>
 const PendingT2Screen = lazy(() =>
   import("@/screens/t2/PendingT2").then((m) => ({ default: m.PendingT2Screen })),
 );
-const PendingScreen = lazy(() =>
-  import("@/screens/Pending").then((m) => ({ default: m.PendingScreen })),
-);
 // الرئيسية تجرّ `mapbox-gl` وهو أكبر من التطبيق كله، فلا تُحمَّل مع الحزمة
 // الأولى: من جاء ليسجّل دخوله لا ينتظر محرّك خرائط
-const HomeScreen = lazy(() =>
-  import("@/screens/Home").then((m) => ({ default: m.HomeScreen })),
-);
 // **C04–C08 في الداكن المرسوم** — الرئيسيةُ وطلبُها ورحلتُها وتحصيلُها، والمنطقُ من `useHomeScreen` نفسِه
 const HomeT2Screen = lazy(() =>
   import("@/screens/t2/HomeT2").then((m) => ({ default: m.HomeT2Screen })),
@@ -120,9 +115,6 @@ const RideDetailsScreen = lazy(() =>
 );
 const DisputeScreen = lazy(() =>
   import("@/screens/Dispute").then((m) => ({ default: m.DisputeScreen })),
-);
-const WalletScreen = lazy(() =>
-  import("@/screens/Wallet").then((m) => ({ default: m.WalletScreen })),
 );
 const EarningsScreen = lazy(() =>
   import("@/screens/Earnings").then((m) => ({ default: m.EarningsScreen })),
@@ -139,12 +131,6 @@ const WithdrawalsScreen = lazy(() =>
 );
 const AccountScreen = lazy(() =>
   import("@/screens/Account").then((m) => ({ default: m.AccountScreen })),
-);
-const SettingsScreen = lazy(() =>
-  import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
-);
-const VehicleScreen = lazy(() =>
-  import("@/screens/Vehicle").then((m) => ({ default: m.VehicleScreen })),
 );
 const CardsScreen = lazy(() =>
   import("@/screens/Cards").then((m) => ({ default: m.CardsScreen })),
@@ -168,35 +154,19 @@ const AdvancesScreen = lazy(() =>
     default: m.AdvancesScreen,
   })),
 );
-const MissionsScreen = lazy(() =>
-  import("@/screens/Missions").then((m) => ({ default: m.MissionsScreen })),
-);
 const ReferralsScreen = lazy(() =>
   import("@/screens/Referrals").then((m) => ({ default: m.ReferralsScreen })),
 );
 const CardReturnScreen = lazy(() =>
   import("@/screens/CardReturn").then((m) => ({ default: m.CardReturnScreen })),
 );
-const NotificationsScreen = lazy(() =>
-  import("@/screens/Notifications").then((m) => ({
-    default: m.NotificationsScreen,
-  })),
-);
 const NotificationsT2Screen = lazy(() =>
   import("@/screens/t2/NotificationsT2").then((m) => ({
     default: m.NotificationsT2Screen,
   })),
 );
-const SubscriptionScreen = lazy(() =>
-  import("@/screens/Subscription").then((m) => ({
-    default: m.SubscriptionScreen,
-  })),
-);
 const GarageScreen = lazy(() =>
   import("@/screens/Garage").then((m) => ({ default: m.GarageScreen })),
-);
-const SkinStoreScreen = lazy(() =>
-  import("@/screens/SkinStore").then((m) => ({ default: m.SkinStoreScreen })),
 );
 
 function Loading() {
@@ -235,28 +205,17 @@ function useSoundUnlock(active: boolean): void {
   }, [active]);
 }
 
-function Boot({ children }: { children: ReactNode }) {
+/** **اكتمالُ الإقلاع**: `/config` والجلسة — وقبله لا شاشةَ تُرسم تحت الترحيب. */
+function useBooted(): boolean {
   const { config } = useConfig();
   const { loading } = useSession();
+  return Boolean(config) && !loading;
+}
 
-  // **الترحيبيةُ تُزال حين ينتهي الإقلاع** (`DESIGN.md` §7.5) — بنجاحٍ أو بخطأ
-  const booted = Boolean(config) && !loading;
-  useEffect(() => {
-    // **لا تُزال عند الخطأ**: الترحيبيةُ نفسُها هي من يعرض حالَ الشبكة الآن
-    // (`DESIGN.md` §7.8) — تُبقي الشعارَ والدورانَ ونصَّ السبب وزرَّ المحاولة.
-    // وكانت تُزال هنا حين كان الخطأُ يعني شاشةً بديلة، فصار إزالتُها تُدخل
-    // المستخدمَ إلى واجهةٍ فارغة — وهو بعينه ما طُلب منعُه
-    if (booted) hideSplash();
-  }, [booted]);
-
-  // الإعدادات شرطٌ لرسم شاشة الدخول نفسها: منها يُعرف أيُّ مُحقِّقٍ يرسم
-  // **ولا شاشةَ خطأٍ ثانية**: الترحيبيةُ باقيةٌ فوق كل شيء وتحمل السببَ
-  // وزرَّ المحاولة (§7.8)، وشاشةٌ تحتها لا يراها أحد
-  if (!config) return null;
-
-  // **ولا شاشةَ انتظارٍ ثانية**: الترحيبيةُ ما زالت فوق كل شيء (§7.5)
-  if (!config || loading) return null;
-
+function Boot({ children }: { children: ReactNode }) {
+  // **ولا شاشةَ خطأٍ ولا انتظارٍ ثانية**: الترحيبُ فوق كلِّ شيءٍ حتى يكتمل الإقلاع، **وهو الذي يرسم حالَ الشبكة وزرَّ المحاولة**
+  // (`lib/splash.ts`، §٦٢/١) — والإعداداتُ شرطٌ لرسم شاشة الدخول نفسِها (أيُّ مُحقِّقٍ يُرسم)
+  if (!useBooted()) return null;
   return <>{children}</>;
 }
 
@@ -308,8 +267,8 @@ function DriverHome() {
   if (profile.driver.status === "approved")
     return (
       <>
-        {/* **C04–C08 في الداكن المرسوم، والرئيسيةُ القائمةُ في الفاتح** (§61-ب) */}
-        <ByTheme night={<HomeT2Screen />} day={<HomeScreen />} />
+        {/* **C04–C08 في المظهرين** (§٦٢/٣) — كانت الرئيسيةُ القديمةُ في الفاتح */}
+        <HomeT2Screen />
         <WelcomeSheet />
         {/* **بعد ورقة الترحيب في ترتيب الرسم**: الاثنتان `z-50`، والأخيرةُ
             تعلو — وهديّةُ أول اشتراكٍ تقع **بعد** أن يقرأ الترحيب ويشترك،
@@ -319,8 +278,8 @@ function DriverHome() {
     );
   if (profile.vehicles.length === 0)
     return <Navigate to="/register/documents" replace />;
-  // **C03 في الداكن المرسوم، والقائمةُ في الفاتح** (§61-ب)
-  return <ByTheme night={<PendingT2Screen />} day={<PendingScreen />} />;
+  // **C03 في المظهرين** (§٦٢/٣) — كانت القائمةُ القديمةُ في الفاتح
+  return <PendingT2Screen />;
 }
 
 /** الشريطُ **خارج الحركة وفوقها** — انظر `customer-app/src/App.tsx` لنفس العلّة:
@@ -364,13 +323,11 @@ function PushRouter() {
   return null;
 }
 
-/** المساراتُ التي ترسمها لوحةُ TAXO 2.0 **بلا شريط تبويب** في الداكن المرسوم — «C10» زرُّها في القاع، والرجوعُ
- *  يعيد إلى الشريط. **والفاتحُ بالشاشة القائمة وشريطها كما هما.** */
+/** المساراتُ التي ترسمها لوحةُ TAXO 2.0 **بلا شريط تبويب** — «C10» زرُّها في القاع، والرجوعُ يعيد إلى الشريط. **في المظهرين**. */
 const T2_COVERING = ["/subscription"];
 
 function NavBar() {
   const { pathname } = useLocation();
-  const { dark } = useTheme();
   // **ولا يظهر ورحلةٌ أو عرضٌ يملأ الشاشة** — وهذا سلوكٌ كان قائماً وكاد يضيع
   // حين رُفع الشريطُ من الشاشات إلى `App`: كان يُرسم في فرع «لا رحلة» وحدَه.
   // وضياعُه ليس تشويشاً بصرياً: قِيس أن `elementFromPoint` في منتصف زرِّ
@@ -399,17 +356,10 @@ function NavBar() {
           لسببٍ أمنيٍّ لا تراه. وأيُّ إزاحةٍ ثابتةٍ ستصطدم بشيءٍ في شاشةٍ ما،
           فالقاعدةُ ليست رقماً بل شرطاً: **لا يُعرض تعريفٌ بمفتاحٍ فوق قرار**. */}
       <WomenModeNotice />
-      {showsNav(pathname) && !(dark && T2_COVERING.includes(pathname)) ? <BottomNav /> : null}
+      {/* **TaxoTabs في المظهرين** (§٦٢/٣) — كان الشريطُ القديمُ يُرسم حتى في الداكن */}
+      {showsNav(pathname) && !T2_COVERING.includes(pathname) ? <BottomNavT2 /> : null}
     </>
   );
-}
-
-/** **المظهرُ المرسومُ أوّلاً** (§61-ب): لوحةُ الكبتن ليليّةٌ وحدَها حتى يُرسم الفاتح — فالشاشةُ
- *  الجديدةُ في الداكن (افتراضُ الكبتن)، **والقائمةُ في الفاتح كما هي** حتى يُرسم. لا يُفقد شيءٌ
- *  ولا يُخترع. */
-function ByTheme({ day, night }: { day: ReactNode; night: ReactNode }) {
-  const { dark } = useTheme();
-  return <>{dark ? night : day}</>;
 }
 
 function BoundaryByRoute({ children }: { children: ReactNode }) {
@@ -417,36 +367,51 @@ function BoundaryByRoute({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;
 }
 
-/** **الترحيبُ عند كلِّ فتحة** (TAXO 2.0، قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٠ و١١).
+/** **الترحيبُ عند كلِّ فتحة — وهو شاشةُ الإقلاع نفسُها** (TAXO 2.0، البندان ١٠ و١١، و§٦٢/١ و/١٠).
  *
- * فوق المسارات لا مساراً بينها: الشاشةُ التي تحته — ومنها جولةُ الأذونات بإفصاح
- * الموقع — تُرسم في الوقت نفسِه، **ولا يُطلب إذنُ الموقع إلا من تلك الجولة
- * بلمسة الكبتن**، فالترحيبُ لا يقدّم طلبَ النظام على الإفصاح. و«داخلٌ أم لا»
- * يُقرأ مرّةً لحظةَ الإقلاع.
- *
- * وغيرُ الداخل يُسلَّم إلى شاشة التسجيل ومعه رقمُه، أو إلى الدخول — ولا نداءَ
- * هنا: التسجيلُ والدخولُ يقعان هناك بطلبهما نفسِه.
+ * **يُركَّب من أوّل رسمٍ لا بعد الإقلاع**: كان داخل `Boot` فيُرسم بعد `/config` والجلسة — وقبله «ترحيبيةٌ» قديمةٌ في
+ * `index.html`. **والآن يحلّ محلَّ إطار الإقلاع ويبقى حتى يكتمل الإقلاع** وحالُ الشبكة عليه — ثمّ: داخلٌ ⇒ يذوب · غيرُ داخلٍ ⇒
+ * شاشاتُ الشراكة ثمّ «سجّل كشريك» أو «دخول». فوق المسارات لا مساراً بينها — **ولا يُطلب إذنُ الموقع إلا من جولة الأذونات
+ * بلمسة الكبتن**، فالترحيبُ لا يقدّم طلبَ النظام على الإفصاح. **وسهمُ الرجوع في الدخول والتسجيل يعيده** (`gate.ts`).
  */
 function WelcomeGate() {
   const { user, biometry } = useSession();
+  const booted = useBooted();
   const navigate = useNavigate();
-  const signedInAtBoot = useRef(Boolean(user)).current;
-  // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل
-  // زرَّها — **بالشرط نفسِه الذي يرسمه** (`Login.tsx`). فيرى ما يراه الداخلُ ويمضي
-  // إليها كما في `master`، **لا صفحاتِ شراكةٍ وبطاقةَ تسجيلٍ لا يحتاجها**.
-  // والقياسُ لا يُفترض: `biometry` يصل بعد الإقلاع بلحظة، والترحيبُ يتبعه إن وصل.
-  const returning = signedInAtBoot || Boolean(biometry?.available && biometry.armed);
+  // **ما يُعرف قبل الإقلاع** يختار الطورَ الأوّلَ وحدَه: رمزٌ محفوظٌ يعني عائداً — والفرعُ الأخيرُ من الجلسة بعد الإقلاع
+  const heldToken = useRef(Boolean(tokens.access())).current;
+  // **وصاحبُ البصمة عائدٌ لا جديد**: جلستُه محفوظةٌ خلف بصمته، وشاشةُ الدخول تحمل زرَّها — فيرى ما يراه الداخلُ ويمضي إليها
+  const armed = Boolean(biometry?.available && biometry.armed);
+  const signedIn = Boolean(user);
   const [shown, setShown] = useState(true);
+  const [reopened, setReopened] = useState(false);
+  useEffect(() => setWelcomeOpen(shown), [shown]);
+  const requests = useSyncExternalStore(subscribeWelcome, welcomeRequests);
+  const seen = useRef(requests);
+  useEffect(() => {
+    if (requests === seen.current) return;
+    seen.current = requests;
+    setReopened(true);
+    setShown(true);
+  }, [requests]);
+  const done = useCallback(
+    (next?: WelcomeNext) => {
+      setShown(false);
+      setReopened(false);
+      if (signedIn) return;
+      navigate(next ?? "/login", { replace: true });
+    },
+    [signedIn, navigate],
+  );
   if (!shown) return null;
   return (
     <Welcome
-      signedIn={returning}
-      onDone={(next) => {
-        setShown(false);
-        if (!returning && next) {
-          navigate(next.to, { replace: true, state: next.phone ? { phone: next.phone } : null });
-        }
-      }}
+      key={reopened ? `again-${requests}` : "boot"}
+      booted={booted}
+      signedIn={signedIn || armed}
+      returning={heldToken || armed}
+      reopened={reopened}
+      onDone={done}
     />
   );
 }
@@ -465,6 +430,7 @@ export default function App() {
           {/* تحت الجلسة والإعدادات: السِمة تُقرأ من جنس صاحبة الحساب ومن
               مفتاح دولتها، فلا معنى لها قبلهما */}
           <BrandProvider>
+            <Router>
             <Boot>
               <DriverProvider>
                 {/* **تحت الجلسة والكبتن**: الكراجُ نداءُ كبتنٍ مسجَّل، وفوق
@@ -472,7 +438,6 @@ export default function App() {
                     لجوابٍ واحد — وثلاثةُ نداءاتٍ له تفترق */}
                 <GarageProvider>
                 <RideProvider>
-                  <Router>
                     {/* **الحركةُ فوق `Suspense` لا تحته**، و`Routes` مُثبَّتةٌ على
                         الموقع الذي تحمله الورقةُ الخارجة — نفسُ ما قِيس في تطبيق
                         الراكب: بلا الأولى يموت الانتقال عند أوّل مسارٍ كسول،
@@ -531,7 +496,7 @@ export default function App() {
                           path="/subscription"
                           element={
                             <Guarded>
-                              <ByTheme night={<SubscriptionT2Screen />} day={<SubscriptionScreen />} />
+                              <SubscriptionT2Screen />
                             </Guarded>
                           }
                         />
@@ -564,7 +529,7 @@ export default function App() {
                           path="/wallet"
                           element={
                             <Guarded>
-                              <ByTheme night={<WalletT2Screen />} day={<WalletScreen />} />
+                              <WalletT2Screen />
                             </Guarded>
                           }
                         />
@@ -604,7 +569,7 @@ export default function App() {
                           path="/account/settings"
                           element={
                             <Guarded>
-                              <ByTheme night={<SettingsT2Screen />} day={<SettingsScreen />} />
+                              <SettingsT2Screen />
                             </Guarded>
                           }
                         />
@@ -612,7 +577,7 @@ export default function App() {
                           path="/account/vehicle"
                           element={
                             <Guarded>
-                              <ByTheme night={<VehicleT2Screen />} day={<VehicleScreen />} />
+                              <VehicleT2Screen />
                             </Guarded>
                           }
                         />
@@ -629,10 +594,7 @@ export default function App() {
                           path="/notifications"
                           element={
                             <Guarded>
-                              <ByTheme
-                                night={<NotificationsT2Screen />}
-                                day={<NotificationsScreen />}
-                              />
+                              <NotificationsT2Screen />
                             </Guarded>
                           }
                         />
@@ -698,7 +660,7 @@ export default function App() {
                           path="/account/garage/store"
                           element={
                             <Guarded>
-                              <ByTheme night={<SkinStoreT2Screen />} day={<SkinStoreScreen />} />
+                              <SkinStoreT2Screen />
                             </Guarded>
                           }
                         />
@@ -706,7 +668,7 @@ export default function App() {
                           path="/account/missions"
                           element={
                             <Guarded>
-                              <ByTheme night={<MissionsT2Screen />} day={<MissionsScreen />} />
+                              <MissionsT2Screen />
                             </Guarded>
                           }
                         />
@@ -727,12 +689,13 @@ export default function App() {
                     <PushRouter />
                     <PushNotices />
                   <NavBar />
-                  <WelcomeGate />
-                  </Router>
                 </RideProvider>
                 </GarageProvider>
               </DriverProvider>
             </Boot>
+            {/* **فوق `Boot` لا داخلَه**: يُرسم من أوّل إطار ويبقى حتى يكتمل الإقلاع (§٦٢/١) */}
+            <WelcomeGate />
+            </Router>
           </BrandProvider>
         </SessionProvider>
       </ConfigProvider>
