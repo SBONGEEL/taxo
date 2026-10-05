@@ -22,6 +22,7 @@ export {
   AuthTop,
   AuthWomenNote,
 } from "./Auth";
+export { DateField } from "./DateField";
 export { Icon } from "./Icon";
 export { SERVICE_ICON, serviceIcon } from "./serviceIcon";
 export { Switch } from "./Switch";

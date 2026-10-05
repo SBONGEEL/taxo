@@ -104,19 +104,3 @@ export function checkForm(
   }
   return null;
 }
-
-/** ينقل التركيزَ إلى الحقل الذي سمّته الخلفية (SPEC ١٧.٧).
- *
- * **والخريطةُ لأن اسمَ الحقل في الشاشة ليس دائماً اسمَه في المخطط**: كلمةُ
- * المرور الجديدة تُسمّى `new-password` لدلالة الإكمال التلقائي، والخلفيةُ
- * تسمّيها `password`. وبغير التوجيه يُعلَّم لا شيء ولا ينتقل التركيزُ إلى مكان.
- */
-const FIELD_INPUT: Record<string, string> = {
-  password: "new-password",
-};
-
-export function focusField(field: string): void {
-  document
-    .querySelector<HTMLInputElement>(`[name="${FIELD_INPUT[field] ?? field}"]`)
-    ?.focus();
-}

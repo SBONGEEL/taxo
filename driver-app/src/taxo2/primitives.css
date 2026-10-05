@@ -277,6 +277,47 @@ button.t2-row:enabled { cursor: pointer; }
 }
 .t2-input:focus { outline: none; border-color: var(--t2-accent); }
 
+/* ── حقلُ التاريخ (`DateField`، §٦٢/٢٠) — بشكل `.t2-input`: زرٌّ ظاهرٌ بلغة الحقل فوق حقلٍ أصليٍّ مخفيٍّ يفتح منتقيَ النظام ── */
+.t2-date {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.t2-date-face {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-date-face:focus-visible { outline: none; border-color: var(--t2-accent); }
+.t2-date-face .t2-icon { flex: none; font-size: 20px; color: var(--t2-muted); }
+.t2-date-value { font-variant-numeric: tabular-nums; }
+.t2-date-hint { color: var(--t2-muted); }
+.t2-date-native {
+  position: absolute;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ── الأزرار (الهوية — «المكوّنات الأساسية»): أساسيٌّ بالحبر · فعلٌ بالجمر («طلب / قبول») · ثانويٌّ بحافّة ── */
 .t2-button {
   display: flex;
@@ -365,6 +406,103 @@ html.dark .t2-tabs-bar {
 }
 html.dark .t2-tab.on .t2-tab-label { font-weight: 700; }
 .t2-tab:active { transform: scale(0.98); }
+
+/* ── التنبيهاتُ داخل التطبيق (§٦٢/١ و/٨) — كانت بلغةٍ سابقةٍ في المظهرين: بطاقةٌ بيضاءُ في الداكن ──────────────── *
+ * **`t2-notice`**: ما يصل والتطبيقُ مفتوح (الخلفيةُ لا ترسل إشعاراً لجهازٍ مقبسُه حيّ) — بطاقةُ سطحٍ أعلى الشاشة بحافّةٍ وظلٍّ
+ * عائم، وأيقونتُها في مربّعِ الجمر الخافت كأيقونات القوائم. **`t2-snack`**: تعريفٌ يبقى حتى يُغلق (الوضعُ النسائيّ) — بمادّة
+ * شريط التبويب العائم نفسِها (`--t2-float-bg`) فوقه، **فلا لونَ جديدٌ ولا مادّةٌ جديدة**. وكلاهما بالرموز وحدَها: يعملان في
+ * المظهرين والنسائيّ. */
+.t2.t2-notices {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 512px;
+  margin-inline: auto;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-inline: 16px;
+  box-sizing: border-box;
+  min-height: 0;
+  background: none;
+  pointer-events: none;
+}
+.t2-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-block: 12px;
+  padding-inline: 12px 8px;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  box-shadow: var(--t2-float-shadow);
+  pointer-events: auto;
+}
+.t2-notice-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-notice-icon .t2-icon { font-size: 20px; }
+.t2-notice-main { flex: 1; min-width: 0; padding-top: 1px; }
+.t2-notice-title { margin: 0; font-size: 14px; font-weight: 600; line-height: 20px; }
+.t2-notice-body { margin: 2px 0 0; font-size: 12.5px; line-height: 19px; color: var(--t2-muted); }
+.t2-notice-close,
+.t2-snack-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.t2-notice-close .t2-icon,
+.t2-snack-close .t2-icon { font-size: 18px; }
+.t2.t2-snack {
+  position: fixed;
+  inset-inline: 16px;
+  bottom: calc(var(--t2-snack-offset, 108px) + env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  min-height: 0;
+  margin-inline: auto;
+  padding-block: 8px;
+  padding-inline: 16px 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-float-bg);
+  color: var(--t2-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 19px;
+  box-shadow: var(--t2-float-shadow);
+}
+.t2-snack > .t2-icon { flex: none; font-size: 18px; color: var(--t2-accent-text); }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-notice { animation: t2-notice-in 0.24s var(--t2-ease) both; }
+  .t2-snack { animation: t2-snack-in 0.28s var(--t2-ease) both; }
+}
+@keyframes t2-notice-in { from { transform: translateY(-12px); opacity: 0; } }
+@keyframes t2-snack-in { from { transform: translateY(10px); opacity: 0; } }
 
 /* ── الحركة: تتبدّل بهدوء، وتقف لمن طلب تقليلَها ── */
 @keyframes t2-spin {

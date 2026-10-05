@@ -32,7 +32,7 @@ import { MAX_STOPS } from "@/lib/multistop";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { SheetT2 } from "./SheetT2";
-import "@/taxo2";
+import { DateField } from "@/taxo2";
 import "./t2.css";
 
 /** رمزُ كلِّ فئةٍ كما رسمته اللوحة. */
@@ -410,14 +410,15 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             <label className="t2-coupon-label" htmlFor="booking-when">
               موعد الانطلاق
             </label>
-            <input
+            {/* **لا `<input type="datetime-local">` ظاهراً**: كان يرسم خاناتِه بحروفٍ معكوسة (§٦٢/٢٠) — `DateField` */}
+            <DateField
               id="booking-when"
-              type="datetime-local"
-              className="t2-input"
+              kind="datetime-local"
+              label="موعد الانطلاق"
               value={c.when}
               min={localInputValue(earliest())}
               max={localInputValue(latest())}
-              onChange={(event) => c.setWhen(event.target.value)}
+              onChange={c.setWhen}
             />
             <p className="t2-sheet-fine">
               نبدأ البحث عن كبتنٍ قبل موعدك بعشر دقائق. <b>والسعر يُحسب عند التنفيذ</b> — الرقمُ أعلاه تقديرُ اليوم.

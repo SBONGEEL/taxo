@@ -11,12 +11,12 @@
  * لا يعرف أحدُهما الآخر**.
  */
 
-import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import { play } from "@/lib/sound";
 import { firstSighting } from "@/lib/notice";
+
+import "@/taxo2";
 
 interface Notice {
   id: number;
@@ -68,34 +68,32 @@ function subscribe(listener: () => void): () => void {
 
 export function PushNotices() {
   const current = useSyncExternalStore(subscribe, () => notices);
+  if (!current.length) return null;
 
+  // **بلغة TAXO 2.0 في المظهرين** (§٦٢/١ و/٨) — `t2-notice`: كانت بطاقةً بيضاءَ بلغةٍ سابقةٍ فوق ليل الكبتن
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] mx-auto flex max-w-lg flex-col gap-8 px-16 pt-safe">
-      <AnimatePresence initial={false}>
-        {current.map((notice) => (
-          <motion.div
-            key={notice.id}
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            className="pointer-events-auto flex items-start gap-8 rounded-12 border border-line bg-surface px-16 py-12 shadow-lg"
-            role="status"
+    <div className="t2 t2-notices">
+      {current.map((notice) => (
+        <div key={notice.id} className="t2-notice" role="status">
+          <span className="t2-notice-icon" aria-hidden="true">
+            <span className="t2-icon">notifications</span>
+          </span>
+          <div className="t2-notice-main">
+            <p className="t2-notice-title">{notice.title}</p>
+            {notice.body ? <p className="t2-notice-body">{notice.body}</p> : null}
+          </div>
+          <button
+            type="button"
+            className="t2-notice-close"
+            onClick={() => emit(notices.filter((item) => item.id !== notice.id))}
+            aria-label="إغلاق"
           >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-ink">{notice.title}</p>
-              {notice.body ? <p className="mt-2 text-14 text-muted">{notice.body}</p> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => emit(notices.filter((item) => item.id !== notice.id))}
-              className="pressable rounded-8 p-4 text-muted transition hover:bg-surface-2"
-              aria-label="إغلاق"
-            >
-              <X className="size-16" />
-            </button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+            <span className="t2-icon" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

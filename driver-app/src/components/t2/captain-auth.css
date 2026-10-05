@@ -1,0 +1,471 @@
+/* ═══ الكبتن — الدخولُ والتسجيلُ بخطواته الثلاث (C01 · C02، وخطوتا «الحساب» و«المركبة» بلغتها) ═════════════════════
+ *
+ * **تخطيطُ شاشات الكبتن وحدَه** فوق قطع `src/taxo2/` المشتركة (`AuthPage` · `AuthBlock` · `AuthChoice` · `AuthCode`…):
+ * المقاساتُ من اللوحة («TAXO 2.0 - Captain»، C01 · C02 بأنماطها المحسوبة) **والألوانُ رموزٌ وحدَها** (`var(--t2-…)`) —
+ * فيعمل في الإسفلت والحجر والنسائيّ. **وما لم يُرسم** (خطوتا «الحساب» و«المركبة»، وخطوةٌ لم تُبلَغ) **يُرسم بلغة C02 نفسِها**.
+ *
+ * **وشريطُ الحالة في اللوحة خمسون**: كلُّ موضعٍ فيها يُقرأ هنا من حافّة المنطقة الآمنة (`env(safe-area-inset-top)`) بعد طرحها.
+ */
+
+/* ── الصفحة: تتمرّر في نفسها كأخواتها في `screens/t2`، وسطرُها «normal» وأرقامُها متناسبةٌ كما في اللوحة ─────────────── */
+.cap-auth {
+  height: 100%;
+  overflow-y: auto;
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+/* **منتقي التاريخ وقائمةُ الاقتراحات بلون المظهر** — بلا هذا يُرسم سهمُ التاريخ قاتماً على الإسفلت */
+html.dark .cap-auth { color-scheme: dark; }
+
+/* بين حقلين ١٨ كما في C01 — والحقلُ نفسُه (٥٦ بزاوية ١٦) من `auth.css` */
+.cap-auth .t2-auth-block + .t2-auth-block { margin-top: 18px; }
+
+/* **الزرُّ المعطَّلُ كما رسمته C02** («إرسال للمراجعة»): سطحٌ غائرٌ ونصٌّ خافت لا جمرٌ باهت. **في الداكن وحدَه**: على الحجر
+   السطحُ الغائرُ لونُ الصفحة نفسُه فيختفي الزرّ — فيبقى فيه ما في تطبيق الراكب */
+html.dark .cap-auth .t2-button.primary:disabled {
+  opacity: 1;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+/* والثانويُّ (الدخولُ بالبصمة) بحافّة C03 («تواصل مع الدعم») — خطٌّ متّصلٌ بلون الحافّة كما رُسم هناك */
+html.dark .cap-auth .t2-auth-actions .t2-button.secondary { border: 1.5px solid var(--t2-line); }
+/* ومربّعُ الموافقة بالإطار المتقطّع المرسوم (`--t2-dash`: ‎#3A404A في الإسفلت — C04 · C13)؛ والمؤشَّرُ يبقى جمراً (`auth.css` أخصّ) */
+.cap-auth .t2-auth-box { border-color: var(--t2-dash); }
+
+/* ── مساحةُ اللمس ٤٤ على الأقل بلا تغييرٍ في الرسم: طبقةٌ شفّافةٌ حول ما صغُر (الروابط، العين، وثيقتا الموافقة) ──────── */
+.cap-auth .t2-auth-link,
+.cap-auth .t2-auth-eye,
+.cap-auth .t2-auth-docs button,
+.cap-auth .t2-auth-consent-row,
+.cap-auth .t2-auth-resend button,
+.cap-auth .t2-auth-foot a { position: relative; }
+.cap-auth .t2-auth-link::after,
+.cap-auth .t2-auth-resend button::after,
+.cap-auth .t2-auth-foot a::after {
+  content: "";
+  position: absolute;
+  inset: -13px -8px;
+}
+.cap-auth .t2-auth-eye::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.cap-auth .t2-auth-docs button::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+.cap-auth .t2-auth-consent-row::after {
+  content: "";
+  position: absolute;
+  inset: -11px -14px;
+}
+
+/* سطرٌ تحت الزرّ — «أكمل الوثائق الناقصة ليتفعّل الإرسال.» (C02) وأخواتُه */
+.cap-after {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--t2-muted);
+}
+
+/* لقارئ الشاشة وحدَه */
+.cap-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ══ C01 الدخول ═══════════════════════════════════════════════════════════════════════════════════════════
+ * حشوةُ اللوحة `12px 24px 40px` — **والأربعون منطقةُ مؤشّر البيت نفسُها**، فلا تُضاف إليها الحافّة (كـC10).
+ * **وزرُّ الرجوع إلى الترحيب ليس في اللوحة**: يقع في سطر العلامة بلغة C02 (رجوعٌ ٤٤ ثمّ العنوان)، فتصير الحشوةُ ٦ والسطرُ ٤٤
+ * — **ويبقى مركزُ العلامة وأعلى العنوان في موضعهما من اللوحة** (٧٨ و١٩٤ تحت شريط الحالة). */
+.cap-login .t2-auth {
+  position: relative;
+  z-index: 0; /* سياقُ تكديسٍ: الـX فوق خلفية الصفحة وتحت كلِّ ما فيها */
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) 24px max(40px, env(safe-area-inset-bottom, 0px));
+}
+
+/* **الـX الكبير خلف العنوان** — قضيبُ الجمر (٠٫٩) وقضيبٌ بلون النصّ (٠٫٠٨) يتقاطعان: ٥٦٠×٩٦ بزاوية ٤٨، مركزُهما عند ٦٢٪ أفقياً
+   و١٥٠ من أعلى الإطار (٥٠ شريطُ الحالة + ١٠٠)، بزاويتي ±٤٠°، كما في اللوحة حرفاً. والطبقةُ تملأ الصفحةَ وتقصّ ما خرج عن
+   عرضها، فلا تمريرَ أفقيّ.
+   **والجمرُ وحدَه ينتهي قبل العنوان**: في اللوحة يمرّ تحت طرف «جاهز للطريق؟» وتحت أوّل السطر الخافت — نصٌّ ورقيٌّ عليه بتباين
+   ٢٫٩٧:١ وخافتٌ ١٫١٦:١ — فيُقصّ عند أعلى العنوان بتلاشٍ طولُه ٤٨ (نصفُ عرض القضيب). **والقضيبُ الآخرُ يمتدّ كما رُسم**: بشفافية
+   ٠٫٠٨ يبقى الخافتُ فوقه ٥٫٤:١ والورقيُّ ١٣٫٩:١. **والقناعُ يقرأ الشفافيةَ وحدَها**: أيُّ لونٍ معتمٍ يصلح فيه، والرمزُ كي لا يُكتب لون */
+.cap-x,
+.cap-x-cut {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cap-x {
+  bottom: 0;
+  z-index: -1;
+}
+.cap-x-cut {
+  height: calc(env(safe-area-inset-top, 0px) + 194px); /* ٦ حشوة + ٤٤ سطرُ العلامة + ١٤٤ فوق العنوان */
+  -webkit-mask-image: linear-gradient(to bottom, var(--t2-text) calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to bottom, var(--t2-text) calc(100% - 48px), transparent);
+}
+.cap-x-ember,
+.cap-x-paper {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 100px);
+  left: 62%;
+  width: 560px;
+  height: 96px;
+  border-radius: 48px;
+}
+.cap-x-ember {
+  background: var(--t2-accent);
+  opacity: 0.9;
+  transform: translate(-50%, -50%) rotate(40deg);
+}
+.cap-x-paper {
+  background: var(--t2-text);
+  opacity: 0.08;
+  transform: translate(-50%, -50%) rotate(-40deg);
+}
+
+/* سطرُ العلامة: TAXO (Unbounded 800 · 26) وشارةُ «كبتن» بالورق على الإسفلت (١٢٫٥/٧٠٠، حشوة ٤ × ١٠) */
+.cap-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.cap-brand .t2-auth-back { margin-inline-end: 2px; } /* ١٢ بين الرجوع وما بعده كما في رأس C02 */
+.cap-pill {
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--t2-text);
+  color: var(--t2-bg);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* العنوان ٣٢/٤١٫٦ وأعلاه ١٩٤ تحت شريط الحالة، والسطرُ تحته ١٥/٢٤ (من `auth.css`)، ثمّ ٢٦ إلى أوّل حقل */
+.cap-login .t2-auth-title {
+  margin-top: 144px;
+  font-size: 32px;
+  line-height: 41.6px;
+}
+.cap-login .t2-auth-form { margin-top: 26px; }
+.cap-login .t2-auth-actions .t2-button.primary { height: 60px; }
+
+/* «كبتن جديد؟» — بطاقةٌ تُضغط: ٦٠ وحافّتان، سطحٌ وحافّة، زاوية ١٨، والأيقونتان ٢٢ و٢٠ */
+.cap-join {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 62px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cap-join .cap-join-icon { font-size: 22px; }
+.cap-join .cap-join-go { font-size: 20px; }
+.cap-join-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.cap-join-title { font-size: 14px; font-weight: 600; }
+.cap-join-sub { font-size: 12px; color: var(--t2-muted); }
+
+/* ══ C02 التسجيل — الرأسُ والخطوات، ثمّ «الحساب» و«المركبة» و«الوثائق» ═══════════════════════════════════════════════
+ * حشوةُ اللوحة `6px 20px 32px`، **والاثنان والثلاثون منطقةُ مؤشّر البيت نفسُها** */
+.cap-reg .t2-auth {
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) 20px max(32px, env(safe-area-inset-bottom, 0px));
+}
+/* المحتوى يبدأ بعد الخطوات بأربعة عشر (هامشُها) — لا بثلاثين `auth.css` */
+.cap-reg .t2-auth-form { margin-top: 0; }
+.cap-reg .t2-auth-title.step { margin-top: 0; }
+.cap-reg .t2-auth-actions .t2-button.primary { height: 56px; }
+
+/* الرأس: رجوعٌ دائريٌّ ٤٤ (`.t2-auth-back`) ثمّ «إنشاء حساب كبتن» ٢٠/٧٠٠، بينهما ١٢ */
+.cap-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.cap-head-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--t2-text);
+}
+
+/* الخطوات: دوائرُ ٢٨ وعرضُ الخطوة ٦٤ وتسميتُها ١١٫٥ تحتها بستّ، وبينها خطٌّ ٢ عند منتصف الدائرة.
+   **المنتهيةُ خضراءُ بعلامة** وخطُّها أخضر، **والحاليّةُ برقمها على الجمر** وخطُّها جمر (C02)، **والتي لم تُبلَغ** — لم تُرسم —
+   **بحلقة «خطوةٍ لم تُبلَغ» من C03** (`--t2-dot-off`، وعلى الحجر حافّةُ ما هو «قريباً») وخطٍّ بلون الحافّة كخطِّ C03 */
+.cap-steps {
+  display: flex;
+  align-items: flex-start;
+  margin: 16px 0 14px;
+}
+.cap-step {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 64px;
+}
+.cap-step-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  font-family: var(--t2-font-num);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cap-step-dot .t2-icon { font-size: 18px; }
+.cap-step.done .cap-step-dot { background: var(--t2-success); color: var(--t2-on-accent); }
+.cap-step.now .cap-step-dot { background: var(--t2-accent); color: var(--t2-on-accent); }
+.cap-step.next .cap-step-dot {
+  border: 2px solid var(--t2-dash);
+  color: var(--t2-muted);
+}
+.cap-step-label {
+  font-size: 11.5px;
+  color: var(--t2-muted);
+  white-space: nowrap;
+}
+.cap-step.now .cap-step-label { font-weight: 600; color: var(--t2-text); }
+.cap-steps-line {
+  flex: 1;
+  height: 2px;
+  margin-top: 13px;
+  background: var(--t2-line);
+}
+.cap-steps-line.done { background: var(--t2-success); }
+.cap-steps-line.now { background: var(--t2-accent); }
+
+/* ── «الوثائق» (C02) — بطاقةُ المركبة، ثمّ الأقسامُ بصفوفها ─────────────────────────────────────────────────────── */
+.cap-car {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+}
+.cap-car .cap-car-icon { font-size: 24px; }
+.cap-car-main { flex: 1; min-width: 0; }
+.cap-car-name { font-size: 14px; font-weight: 600; }
+.cap-car-plate { font-size: 12px; color: var(--t2-muted); text-align: end; }
+.cap-car-edit {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cap-car-edit::after {
+  content: "";
+  position: absolute;
+  inset: -14px -10px;
+}
+
+/* عنوانُ القسم ١٥/٧٠٠ وعدُّه ١٢٫٥ خافتاً على خطٍّ واحد */
+.cap-sec-wrap + .cap-sec-wrap { margin-top: 18px; }
+.cap-sec {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 2px 8px;
+}
+.cap-sec-title { margin: 0; font-size: 15px; font-weight: 700; }
+.cap-sec-count { font-size: 12.5px; color: var(--t2-muted); }
+.cap-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* الصفّ: ٥٨ (ويطول بتلميحه)، سطحٌ بزاوية ١٦ وحشوةٌ ١٢، وصورةٌ مخطّطةٌ ٤٠ بزاوية ١٠ — **والصفُّ كلُّه زرٌّ يفتح الملفّات** */
+.cap-doc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 16px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* لم تُرفع: إطارٌ متقطّعٌ بلا سطح، وبئرٌ بسهم الرفع */
+.cap-doc.missing {
+  border: 1.5px dashed var(--t2-dash);
+  background: none;
+}
+/* رُفضت: إطارٌ أحمر وصورتُها باهتة، و«أعد الرفع» ورقاً على الإسفلت */
+.cap-doc.refused { border: 1.5px solid var(--t2-danger); }
+.cap-doc:disabled { cursor: default; opacity: 0.6; }
+.cap-doc.busy:disabled { opacity: 1; }
+.cap-doc-thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: repeating-linear-gradient(45deg, var(--t2-sunken) 0 5px, var(--t2-line) 5px 10px);
+}
+.cap-doc.refused .cap-doc-thumb { opacity: 0.6; }
+.cap-doc-up {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--t2-sunken);
+}
+.cap-doc-up .t2-icon { font-size: 22px; }
+.cap-doc-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cap-doc-title { font-size: 14px; font-weight: 600; }
+.cap-doc-tag { font-weight: 400; color: var(--t2-muted); }
+.cap-doc-sub {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--t2-muted);
+}
+.cap-doc-sub.ok { color: var(--t2-success); }
+.cap-doc-done {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--t2-success);
+}
+.cap-doc-done .t2-icon { font-size: 18px; }
+.cap-doc-redo {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--t2-text);
+  color: var(--t2-bg);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.cap-doc-pct {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2-muted);
+}
+
+/* تحت الصفّ: سببُ الرفض (`AuthError`، ٦ كما في اللوحة)، والرفعُ الجاري بنسبته وإلغائه، وإعادةُ ما تعثّر، وتاريخُ الانتهاء */
+.cap-doc-item .t2-auth-error { margin-top: 6px; }
+.cap-doc-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  padding-inline: 12px;
+}
+.cap-doc-bar {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--t2-line);
+}
+.cap-doc-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--t2-success);
+}
+.cap-doc-cancel,
+.cap-doc-retry {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cap-doc-cancel { color: var(--t2-danger); }
+.cap-doc-retry {
+  display: block;
+  margin-top: 8px;
+  color: var(--t2-accent-text);
+}
+.cap-doc-cancel::after,
+.cap-doc-retry::after {
+  content: "";
+  position: absolute;
+  inset: -13px -8px;
+}
+.cap-doc-expiry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding-inline-start: 12px;
+  font-size: 12.5px;
+  color: var(--t2-muted);
+}
+.cap-doc-expiry > span { flex: none; }
+/* الحقلُ نفسُه `DateField` (`taxo2`) — **بجوف الحقل كأخواته في هذه الشاشات** لا بلون الصفحة */
+.cap-doc-expiry .t2-date-face { background: var(--t2-field); }
+
+/* حسابُ CliQ بعد الأقسام */
+.cap-alias { margin-top: 18px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .cap-doc-bar > span { transition: width var(--t2-med) var(--t2-ease); }
+  .cap-join:active,
+  .cap-doc:active:enabled { transform: scale(0.98); }
+}

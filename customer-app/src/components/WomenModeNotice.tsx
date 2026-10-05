@@ -9,37 +9,32 @@
  * يُفعل به. وهذا **تعريفٌ بمفتاح**: من غابت عن الشاشة ثلاث ثوانٍ تفقده ولا يعود
  * أبداً — فيبقى وضعٌ لا تعرف كيف تُطفئه. فالشكلُ من §2.7 والعمرُ من غرضه.
  *
- * **ولونُه `--acc` لا `--brand`**: حزمةُ التصميم النسائية تحصر التلوينَ في
- * «الشعار والزر الأساسي والخيار المحدد» — والتوستُ ليس منها. ولو صُبغ وردياً
- * لصار إعلاناً عن نفسه مرتين.
+ * **ولا يُصبغ برقوقاً**: حزمةُ التصميم النسائية تحصر التلوينَ في «الشعار والزر
+ * الأساسي والخيار المحدد» — والتوستُ ليس منها. ولو صُبغ وردياً لصار إعلاناً عن
+ * نفسه مرتين؛ **فأيقونتُه وحدَها بالجمر** (الذي صار برقوقاً في النسائيّ).
+ *
+ * **بلغة TAXO 2.0** (§٦٢/١ و/٨) — `t2-snack` بمادّة شريط التبويب العائم: كان حبّةً بلونٍ سابقٍ («--acc») فاتحةً حتى
+ * في الداكن، **فظهر القديمُ فوق كلِّ شاشةٍ جديدة** حتى تُغلقه (قِيس على S21، ٢٠٢٦-١٠-٠٥).
  */
 
-import { X } from "lucide-react";
-
 import { useBrand } from "@/lib/brand";
+
+import "@/taxo2";
 
 export function WomenModeNotice() {
   const { showNotice, dismissNotice } = useBrand();
   if (!showNotice) return null;
 
   return (
-    <div
-      role="status"
-      // **`inset-x-0 mx-auto` لا `left-1/2 -translate-x-1/2`**: الثانيةُ تبدو
-      // مركزةً وهي تقصّ العرضَ المتاح إلى نصفه — صندوقٌ `fixed` بـ`left:50%`
-      // بلا `right` يتقلّص في ما بقي من الشاشة (قُيس: ٢٠١ من ٤٠٢)، فتلتفّ
-      // جملةٌ قصيرةٌ ثلاثةَ أسطر. والإزاحةُ تُعيد التمركزَ **بعد** أن يُحسب
-      // العرض، فلا تُصلحه. وهذا ما يفعله `Toasts.tsx` أصلاً
-      className="fixed inset-x-16 bottom-nav z-[80] mx-auto flex w-max max-w-[88%] items-center gap-10 rounded-full bg-accent px-20 py-10 text-12.5 font-bold text-accent-ink shadow-toast"
-    >
+    <div role="status" className="t2 t2-snack">
+      <span className="t2-icon" aria-hidden="true">
+        woman
+      </span>
       <span>تم تفعيل الوضع النسائي — يمكنك إطفاؤه من الإعدادات</span>
-      <button
-        type="button"
-        onClick={dismissNotice}
-        aria-label="إغلاق"
-        className="pressable -me-6 shrink-0 rounded-full p-4 opacity-70 transition hover:opacity-100"
-      >
-        <X className="size-14" />
+      <button type="button" onClick={dismissNotice} aria-label="إغلاق" className="t2-snack-close">
+        <span className="t2-icon" aria-hidden="true">
+          close
+        </span>
       </button>
     </div>
   );

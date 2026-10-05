@@ -1,54 +1,57 @@
-/** التسجيل — الخطوة 1 من 3 ثم إثباتُ الرقم (SPEC القسم 12/1).
+/** التسجيل — **الخطوةُ الأولى «الحساب» ثمّ إثباتُ الرقم** (SPEC القسم 12/1)، **بلغة C02** (Claude Design «TAXO 2.0 - Captain»):
+ * رأسُ «إنشاء حساب كبتن» بخطواته الثلاث، وحقولُ C01. **و«الحساب» لم تُرسم في اللوحة** — فرُسمت بلغة أختها (`RegisterTop`).
  *
- * ترتيبُ التصميم مطابقٌ للمواصفات حرفياً وليس صدفة: **الرقم يُثبت قبل أن
- * ينتظر المراجعة** — رقمُ الكبتن هو ما تصل عليه حوالات كليك (القسم 6/9)،
- * فالإثبات شرطُ الاعتماد لا تفصيلٌ يُؤجَّل.
+ * ترتيبُ الخطوات مطابقٌ للمواصفات حرفياً وليس صدفة: **الرقم يُثبت قبل أن ينتظر المراجعة** — رقمُ الكبتن هو ما تصل عليه حوالات
+ * كليك (القسم 6/9)، فالإثبات شرطُ الاعتماد لا تفصيلٌ يُؤجَّل.
  *
- * والإثبات وكلمةُ المرور يُرسلان في **طلبٍ واحد** (`POST /auth/register`):
- * حسابٌ يُفتح بالإثبات وحده حسابٌ بلا كلمة مرور، وإثباتٌ يفتح جلسةً قبل أن
- * تُكتب الكلمة يترك للمهاجم شيئاً إن انقطع الطلب بعده (القسم 15/أ).
+ * والإثبات وكلمةُ المرور يُرسلان في **طلبٍ واحد** (`POST /auth/register`): حسابٌ يُفتح بالإثبات وحده حسابٌ بلا كلمة مرور،
+ * وإثباتٌ يفتح جلسةً قبل أن تُكتب الكلمة يترك للمهاجم شيئاً إن انقطع الطلب بعده (القسم 15/أ).
  *
- * الشكل من `design/DESIGN.md` §5.3: «الخطوة ١ من ٣» 12px، العنوان 22/700،
- * الحقول بفجوة 12، ثم زرٌّ أساسي وملاحظةٌ 11.5 بسطرٍ 1.7.
+ * **وما صحّحه المالكُ في اللوحة** (§٦١-أ و§٦٢/١١): رمزٌ **بطول ما ينشره المُحقِّق** · قاعدةُ الكلمة **كما تنشرها الخلفية** (لا «بينها
+ * رقم») · **تأكيدُ الكلمة** · **الدولةُ حين يُنشر سوقان** · **والموافقةُ على السياسات شرطٌ في الزرّ**.
  */
 
-import { useCallback, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { registerAccount, startSignupChallenge } from "@/api/endpoints";
 import type { OtpChannel } from "@/api/types";
-import { CountryPicker } from "@/components/CountryPicker";
-import { PhoneField } from "@/components/PhoneField";
-import { PhoneVerification } from "@/components/PhoneVerification";
-import { PolicyConsent } from "@/components/PolicyConsent";
-import { AuthScreen } from "@/components/ui/AuthScreen";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote } from "@/components/ui/Feedback";
-import { Field } from "@/components/ui/Field";
+import { MarketChoice } from "@/components/t2/MarketChoice";
+import { PolicyConsentT2 } from "@/components/t2/PolicyConsentT2";
+import { RegisterTop } from "@/components/t2/RegisterTop";
+import { VerifyCode } from "@/components/t2/VerifyCode";
+import { reopenWelcome } from "@/components/welcome/gate";
 import { useAuthCountry, useConfig, usePhoneCountry } from "@/lib/config";
-import { looksComplete, toE164 } from "@/lib/phone";
+import { confirmError, passwordConditions, passwordError, passwordsReady } from "@/lib/password";
+import { looksComplete, toE164, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
-import { confirmError, passwordError, passwordRule, passwordsReady } from "@/lib/password";
-import { FieldConditions } from "@/components/FieldConditions";
+import {
+  AuthBlock,
+  AuthConditions,
+  AuthInput,
+  AuthPage,
+  AuthPhone,
+  AuthSecret,
+  Icon,
+} from "@/taxo2";
+
+import "@/components/t2/captain-auth.css";
+
+type Field = "name" | "phone" | "password";
+type Failure = { field: Field | null; message: string };
 
 /** يوجّه خطأَ حقلٍ من الخلفية إلى حقله في الشاشة (SPEC ١٧.٧).
  *
- * **والخريطةُ لأن اسمَ الحقل في الشاشة ليس دائماً اسمَه في المخطط**: حقلُ
- * كلمة المرور هنا `new-password` (لدلالة الإكمال التلقائي)، والخلفيةُ تسمّيه
- * `password`. وبغير التوجيه يُعلَّم لا شيء وينتقل التركيزُ إلى لا مكان.
+ * **والخريطةُ لأن اسمَ الحقل في الشاشة ليس دائماً اسمَه في المخطط**: حقلُ كلمة المرور هنا `new-password` (لدلالة الإكمال
+ * التلقائي)، والخلفيةُ تسمّيه `password`. وبغير التوجيه يُعلَّم لا شيء وينتقل التركيزُ إلى لا مكان.
  */
-const FIELD_INPUT: Record<string, string> = {
-  password: "new-password",
+const INPUT_ID: Record<Field, string> = {
   name: "name",
   phone: "phone",
+  password: "new-password",
 };
-
-function focusField(field: string): void {
-  document
-    .querySelector<HTMLInputElement>(`[name="${FIELD_INPUT[field] ?? field}"]`)
-    ?.focus();
-}
 
 export function RegisterScreen() {
   const navigate = useNavigate();
@@ -63,22 +66,25 @@ export function RegisterScreen() {
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
   // **الرقمُ الذي كُتب في بطاقة «سجّل كشريك»** (TAXO 2.0) — يصل مع التنقّل فلا
-  // يُكتب مرّتين. **ولا نداءَ يتغيّر**: التسجيلُ هنا بطلبه وترتيبه كما كان
+  // يُكتب مرّتين، **ويُطبَّع كما يُطبَّع ما يُكتب في الحقل** (الصفرُ البادئ والبادئةُ المكرَّرة)
+  // فيُقرأ مكتملاً حين يكون. **ولا نداءَ يتغيّر**: التسجيلُ هنا بطلبه وترتيبه كما كان
   const location = useLocation();
-  const [phone, setPhone] = useState(
-    () => (location.state as { phone?: string } | null)?.phone ?? "",
-  );
+  const [phone, setPhone] = useState(() => {
+    const handed = (location.state as { phone?: string } | null)?.phone ?? "";
+    return handed && dialCode !== null ? toNational(handed, dialCode) : handed;
+  });
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [busy, setBusy] = useState(false);
+  const page = useRef<HTMLDivElement>(null);
 
-  // المُحقِّقُ يتبع الدولةَ المختارة لا الافتراضية (12-هـ)
-  const method =
-    config?.countries.find((entry) => entry.country_code === country)
-      ?.verification ??
-    config?.auth.verification ??
-    "none";
+  // المُحقِّقُ **وطولُ رمزه** يتبعان الدولةَ المختارة لا الافتراضية (12-هـ) — والطولُ من صفِّ
+  // الدولة أوّلاً ثمّ من `auth` كما كان يُقرأ، فلا يتغيّر عددُ الخانات حيث يتّفقان
+  const entry = config?.countries.find((item) => item.country_code === country);
+  const method = entry?.verification ?? config?.auth.verification ?? "none";
+  const otpLength = entry?.otp_length ?? config?.auth.otp_length ?? null;
   // **ولا رقمَ بلا مفتاحٍ منشور** (`usePhoneCountry`): بمفتاحٍ فارغٍ يُبنى
   // رقمٌ بلا دولة، وبمفتاح سوقٍ آخرَ يُبنى رقمُ إنسانٍ آخر — فيُقال إن الرمز
   // أُرسل ولا يصل أحداً. والفراغُ هنا يُعطّل الإرسالَ ويُقال سببُه
@@ -98,18 +104,34 @@ export function RegisterScreen() {
   const [agreed, setAgreed] = useState(false);
   const consentOk = policyIds.length === 0 || agreed;
 
-  const complete =
+  const complete = looksComplete(phone, nationalLength);
+  const ready =
     name.trim().length >= 2 &&
-    looksComplete(phone, nationalLength) &&
+    complete &&
     passwordsReady(password, confirmation) &&
     consentOk;
 
-  function next() {
-    setError(null);
-    if (password !== confirmation) {
-      setError("كلمتا المرور غير متطابقتين");
+  const errorOf = (field: Field) => (failure?.field === field ? failure.message : null);
+  const nameShort =
+    touched && name.length > 0 && name.trim().length < 2 ? "الاسم قصير — حرفان على الأقل." : null;
+  const phoneShort =
+    touched && phone.length > 0 && !complete && dialCode !== null
+      ? `الرقم ناقص — ${nationalLength} أرقام بعد +${dialCode}.`
+      : null;
+
+  // الخطوةُ الجديدةُ تُفتح من أعلاها لا من حيث توقّف التمرير
+  useEffect(() => {
+    if (page.current) page.current.scrollTop = 0;
+  }, [step]);
+
+  function next(event: FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    if (!ready) {
+      setTouched(true);
       return;
     }
+    setFailure(null);
     // مُحقِّقٌ مطفأ للطوارئ: الخلفية تقبل التسجيل بلا إثبات وتَسِم الحساب
     // (SPEC القسم 4)، فلا خطوةَ إثباتٍ تُعرض على أحد
     if (method === "none") {
@@ -121,7 +143,7 @@ export function RegisterScreen() {
 
   async function create(verificationToken?: string) {
     setBusy(true);
-    setError(null);
+    setFailure(null);
     try {
       signIn(
         await registerAccount({
@@ -138,15 +160,15 @@ export function RegisterScreen() {
     } catch (caught) {
       if (caught instanceof ApiError) {
         const field = caught.field("field");
-        setError(caught.message);
-        // الحقلُ المرفوض يُعلَّم ويُنتقل إليه — لا شريطٌ وحدَه يترك صاحبَه يبحث
-        if (field) focusField(field);
+        const at: Field | null = field === "name" || field === "phone" || field === "password" ? field : null;
+        setFailure({ field: at, message: caught.message });
+        // **الحقلُ المرفوض يُعلَّم ويُنتقل إليه** — وهو في نموذج «الحساب»، فيُعاد إليه.
+        // **وإثباتٌ استُهلك لا يُعاد استعماله** (401): بدايةٌ نظيفةٌ من النموذج كما كان
+        if (at || caught.status === 401) setStep("details");
+        if (at) window.setTimeout(() => document.getElementById(INPUT_ID[at])?.focus(), 0);
       } else {
-        setError("تعذّر الاتصال بالخادم — أعد المحاولة");
+        setFailure({ field: null, message: "تعذّر الاتصال بالخادم — أعد المحاولة" });
       }
-      // إثباتٌ استُهلك لا يُعاد استعماله
-      if (caught instanceof ApiError && caught.status === 401)
-        setStep("details");
     } finally {
       setBusy(false);
     }
@@ -154,105 +176,136 @@ export function RegisterScreen() {
 
   if (step === "verify") {
     return (
-      <AuthScreen onBack={() => setStep("details")}>
-        <PhoneVerification
-          phone={e164}
-          method={method}
-          otpLength={config?.auth.otp_length ?? null}
-          title="تحقق من رقمك"
-          subtitle={`أرسلنا رمز تحقق إلى ${e164} — التحقق من الرقم مرة واحدة عند التسجيل.`}
-          requestChallenge={requestChallenge}
-          onProven={(token) => void create(token)}
-          submitting={busy}
-        />
-        <ErrorNote message={error} />
-      </AuthScreen>
+      <div ref={page} className="cap-auth cap-reg scr">
+        <AuthPage>
+          <VerifyCode
+            top={<RegisterTop step={1} onBack={() => setStep("details")} />}
+            phone={e164}
+            method={method}
+            otpLength={otpLength}
+            requestChallenge={requestChallenge}
+            onProven={(token) => void create(token)}
+            onBack={() => setStep("details")}
+            note="التحقق من الرقم مرة واحدة عند التسجيل."
+            outerError={failure?.field === null ? failure.message : null}
+            busy={busy}
+          />
+        </AuthPage>
+      </div>
     );
   }
 
   return (
-    <AuthScreen onBack={() => navigate("/login")} className="px-26">
-      <div className="mt-20 text-12 text-muted">الخطوة 1 من 3</div>
-      <h1 className="mb-4 text-22 font-bold text-ink">إنشاء حساب كبتن</h1>
-      <p className="mb-20 text-12.5 leading-snug text-muted">
-        الرقم هو مُعرّف دخولك، ويُخزَّن بصيغة دولية.
-      </p>
+    <div ref={page} className="cap-auth cap-reg scr">
+      <AuthPage>
+        {/* **الرجوعُ إلى الترحيب** — كالدخول: لا تاريخَ قبل التسجيل في التطبيق، فيُطلب الترحيبُ ولا يُرجَع في التاريخ */}
+        <RegisterTop step={1} onBack={() => reopenWelcome()} />
 
-      <form
-        className="flex flex-col gap-12"
-        onSubmit={(event) => {
-          event.preventDefault();
-          next();
-        }}
-      >
-        <Field
-          label="الاسم الكامل"
-          name="name"
-          autoComplete="name"
-          placeholder="مثال: أبو محمد الزعبي"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+        <form onSubmit={next} className="t2-auth-form" noValidate>
+          <AuthBlock label="الاسم الكامل" htmlFor="name" error={nameShort ?? errorOf("name")}>
+            <AuthInput
+              id="name"
+              name="name"
+              autoComplete="name"
+              placeholder="مثال: أبو محمد الزعبي"
+              value={name}
+              invalid={Boolean(nameShort ?? errorOf("name"))}
+              onBlur={() => setTouched(true)}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </AuthBlock>
 
-        <PhoneField value={phone} onChange={setPhone} country={country} />
+          <MarketChoice country={country} countries={countries} onChange={setCountry} />
 
-        <CountryPicker
-          country={country}
-          countries={countries}
-          onChange={setCountry}
-        />
+          <AuthBlock
+            label="رقم الهاتف"
+            htmlFor="phone"
+            error={
+              dialCode === null
+                ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+                : phoneShort ?? errorOf("phone")
+            }
+            hint="الرقم هو مُعرّف دخولك، ويُخزَّن بصيغة دولية."
+          >
+            <AuthPhone
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              dial={dialCode}
+              value={phone}
+              maxLength={nationalLength}
+              valid={complete}
+              disabled={dialCode === null}
+              invalid={Boolean(phoneShort ?? errorOf("phone"))}
+              onBlur={() => setTouched(true)}
+              onChange={(event) =>
+                dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode))
+              }
+            />
+          </AuthBlock>
 
-        <Field
-          label="كلمة المرور"
-          name="new-password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          error={passwordError(password) ?? undefined}
-        />
-          <FieldConditions rule={passwordRule()} value={password} />
-        <Field
-          label="تأكيد كلمة المرور"
-          name="confirm-password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          value={confirmation}
-          error={confirmError(password, confirmation) ?? undefined}
-          onChange={(event) => setConfirmation(event.target.value)}
-        />
+          {/* **القاعدةُ كما تنشرها الخلفية** (٨–١٢٨ وقائمةُ المنع تفحصها هي) — بنودُها من `/config` لا من نصٍّ هنا */}
+          <AuthBlock
+            label="كلمة المرور"
+            htmlFor="new-password"
+            error={passwordError(password) ?? errorOf("password")}
+          >
+            <AuthSecret
+              id="new-password"
+              name="new-password"
+              autoComplete="new-password"
+              value={password}
+              invalid={Boolean(passwordError(password) ?? errorOf("password"))}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <AuthConditions items={passwordConditions(password)} />
+          </AuthBlock>
 
-        <ErrorNote message={error} />
+          <AuthBlock
+            label="تأكيد كلمة المرور"
+            htmlFor="confirm-password"
+            error={confirmError(password, confirmation)}
+          >
+            <AuthSecret
+              id="confirm-password"
+              name="confirm-password"
+              autoComplete="new-password"
+              value={confirmation}
+              invalid={Boolean(confirmError(password, confirmation))}
+              onChange={(event) => setConfirmation(event.target.value)}
+            />
+          </AuthBlock>
 
-        <Button
-          type="submit"
-          size="md"
-          className="mt-20"
-          loading={busy}
-          disabled={!complete}
-        >
-          التالي
-        </Button>
-      </form>
+          {/* **مربّعٌ يُضغط لا جملةٌ تفترض** (البند ١٠، ٢٠٢٦-٠٩-٠٥) — **ونصُّ الكبتن غيرُ نصِّ الراكب** (§34-٢):
+              فيه رفعُ رخصةٍ وبياناتُ مركبةٍ وحسابُ صرف */}
+          <PolicyConsentT2
+            country={country}
+            checked={agreed}
+            onChange={setAgreed}
+            onLoaded={setPolicyIds}
+          />
 
-      {/* **مربّعٌ يُضغط لا جملةٌ تفترض** (البند ١٠، ٢٠٢٦-٠٩-٠٥): كان هنا
-          سطرٌ يقول «بالمتابعة أنت توافق على شروط الاستخدام» **بلا رابطٍ ولا
-          نصٍّ ولا صفٍّ يُكتب**. **ونصُّ الكبتن غيرُ نصِّ الراكب** (§34-٢):
-          فيه رفعُ رخصةٍ وبياناتُ مركبةٍ وحسابُ صرف. */}
-      <div className="mt-14">
-        <PolicyConsent
-          country={country}
-          checked={agreed}
-          onChange={setAgreed}
-          onLoaded={setPolicyIds}
-        />
-      </div>
+          {failure && failure.field === null ? (
+            <div className="t2-auth-banner" role="alert">
+              <Icon name="error" />
+              <span>{failure.message}</span>
+            </div>
+          ) : null}
 
-      <p className="mt-14 text-center text-11.5 leading-note text-muted">
-        الرقم يُثبت بالتحقق مرة واحدة.
-      </p>
-    </AuthScreen>
+          <div className="t2-auth-push" />
+          <div className="t2-auth-actions">
+            <button type="submit" className="t2-button primary" disabled={busy || !ready}>
+              {busy ? "لحظة…" : "التالي"}
+            </button>
+          </div>
+          {method !== "none" ? <p className="cap-after">الرقم يُثبت بالتحقق مرة واحدة.</p> : null}
+        </form>
+
+        <p className="t2-auth-foot">
+          لديك حساب؟ <Link to="/login">ادخل</Link>
+        </p>
+      </AuthPage>
+    </div>
   );
 }

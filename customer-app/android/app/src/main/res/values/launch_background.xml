@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- لونُ `—bg` النهاري — وهذا التطبيق يتبع وضعَ النظام -->
-    <color name="launch_background">#f2f0eb</color>
+    <!-- لونُ `--t2-bg` النهاري («الحجرُ الجيري»، TAXO 2.0) — وهذا التطبيق يتبع وضعَ النظام.
+         **وهو لونُ إطار الإقلاع في `index.html` نفسُه** فلا قفزةَ لونٍ بين النافذة وأوّل رسمة (§٦٢/١،
+         قِيس على S21 ٢٠٢٦-١٠-٠٥: كان `#f2f0eb` من اللغة السابقة) -->
+    <color name="launch_background">#f4f1ea</color>
 </resources>
