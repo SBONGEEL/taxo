@@ -1,4 +1,4 @@
-/** الإشعارات — TAXO 2.0 «R14» (Claude Design «Rider»)، **في المظهر النهاريّ المرسوم وحدَه**.
+/** الإشعارات — TAXO 2.0 «R14» (Claude Design «Rider»)، **في المظهرين** — رُسم نهاريّاً، **والليليُّ برموز إسفلت الهوية نفسِها** (§٦٢/٣).
  *
  * **الطلباتُ والوجهاتُ والنصوصُ هي هي** (`screens/Notifications.tsx`): `GET /notifications`
  * ثمّ `POST /notifications/read` لـ«قراءة الكل»، والصياغةُ والوجهةُ من `lib/notification-text`

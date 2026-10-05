@@ -15,7 +15,6 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Crosshair, MapPin, Moon, Search, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -40,14 +39,11 @@ import type {
   VehicleCategory,
   Wallet,
 } from "@/api/types";
-import { ByTheme } from "@/components/ByTheme";
 import { DestinationSearch } from "@/components/home/DestinationSearch";
-import { RiderHome, type RiderHomeProps } from "@/components/home/RiderHome";
-import { ConfirmRide } from "@/components/home/ConfirmRide";
+import type { RiderHomeProps } from "@/screens/t2/RiderHomeT2";
 import type { ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
-import { TrackingSheet } from "@/components/ride/TrackingSheet";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { useCountryConfig, useMapboxToken } from "@/lib/config";
@@ -243,25 +239,8 @@ export function HomeScreen() {
     if (!tracking) setViewport(center);
   }, [center, tracking, setViewport]);
 
-  // أثناء الرحلة: الإطار يضم الكبتن والوجهة معاً
-  useEffect(() => {
-    if (!ride || !tracking) return;
-    // **ونهارُ TAXO 2.0 يؤطّر فوق ورقته الملتصقة** (R07–R09) — من مراقب ارتفاعها أدناه لا من الحشو الثابت
-    if (!dark) return;
-    // **بعد ركوب الراكب الإطارُ يضم الوجهة لا نقطة الانطلاق** — و`at_stop`
-    // منها (المرحلة 12-ب): قفزةٌ إلى الانطلاق وسط الرحلة تُرجع الخريطة إلى
-    // مكانٍ غادره الاثنان
-    const riding = ride.status === "in_progress" || ride.status === "at_stop";
-    const target = riding ? ride.dropoff : ride.pickup;
-    if (driverPing) {
-      map.current?.fitBounds({ lat: driverPing.lat, lng: driverPing.lng }, target);
-    } else {
-      map.current?.flyTo(target, 14);
-    }
-    // عند تبدّل الحالة وحدها لا مع كل بثّ موقع، وإلا قاومت الخريطةُ إصبعَ
-    // المستخدم كلما حرّكها
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ride?.status, tracking]);
+  // **أثناء الرحلة يؤطّر مراقبُ الورقة الملتصقة** (R07–R09، أدناه) — فوقها لا تحتها، **في المظهرين** (§٦٢/٣ و/٨). وكان هنا إطارٌ
+  // ثانٍ بالحشو الثابت لليليّ وحدَه، حين كان الليليُّ يرسم الشاشةَ القديمة
 
   const describe = useCallback(
     async (point: Coordinates, target: "pickup" | "dropoff") => {
@@ -477,7 +456,7 @@ export function HomeScreen() {
         // أثناء الرحلة يرى الراكب كبتنه وحده (SPEC القسم 10)
         drivers={tracking ? [] : drivers}
         // **ونهارُ TAXO 2.0 في الرئيسية يرسم «أنت هنا» وحدَها** (R05) — نقطةُ الانطلاق هي هي، فدبوسُها فوقها نقطتان لشيءٍ واحد
-        pickup={tracking ? ride!.pickup : !dark && browsing ? null : pickup}
+        pickup={tracking ? ride!.pickup : browsing ? null : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
         driverLocation={driverPing}
         // **مركبةُ الكبتن بعد القبول وحدَه** — وقبله لا تتغيّر الخريطةُ في
@@ -489,7 +468,7 @@ export function HomeScreen() {
         // **نبضةُ الموقع الحالي** — لونُها `--brand` فتتبع الوضعَ والسِمة.
         // وتختفي أثناء الرحلة: الانتباهُ حينها لسيارة الكبتن لا لموقعي
         // **وفي ورقة الطلب نهاراً دائرةُ الانطلاق ومربّعُ الوجهة وحدهما** (R06) — بلا هالةٍ فوق الدائرة
-        showMyLocation={tracking || picking || (!dark && !browsing) ? null : pickup}
+        showMyLocation={tracking || picking || !browsing ? null : pickup}
         // **ونبضةٌ حول الانطلاق ما دام البحثُ جارياً** — تتوقف عند القبول،
         // فنبضٌ يبقى بعد الإسناد يقول «ما زلنا نبحث» وقد وُجد
         searching={ride?.status === "searching" || ride?.status === "requested"}
@@ -593,15 +572,15 @@ export function HomeScreen() {
         }
       : null;
 
-  /** **ورقةُ التأكيد كما رسمتها «R06»** — في النهاريّ المرسوم: ورقةُ الطلب نفسُها لا «إلى أين؟» بلا انطلاق. */
+  /** **ورقةُ التأكيد كما رسمتها «R06»** — ورقةُ الطلب نفسُها لا «إلى أين؟» بلا انطلاق. */
   const confirming = phase === "confirm" && confirmProps !== null;
-  /** **أطوارُ الطلب في نهار TAXO 2.0 بلا شريط تبويب** كما رُسمت (R06، §٦١-د) — الدبوسُ وورقةُ التأكيد، **ولكلٍّ منهما
-   *  مخرجُه إلى الرئيسية وشريطِها** (السهمُ و«إلغاء»). **و«إلى أين؟» بلا انطلاقٍ يُبقيه**: لا سهمَ فيها يعيد.
-   *  والليليُّ لا يمسّه شيء — الشريطُ والورقةُ القائمان كما كانا. */
-  const requestT2 = !dark && !tracking && outcome === null && (picking || confirming);
+  /** **أطوارُ الطلب بلا شريط تبويب** كما رُسمت (R06، §٦١-د) — الدبوسُ وورقةُ التأكيد، **ولكلٍّ منهما مخرجُه إلى الرئيسية
+   *  وشريطِها** (السهمُ و«إلغاء»). **و«إلى أين؟» بلا انطلاقٍ يُبقيه**: لا سهمَ فيها يعيد. **وفي المظهرين** (§٦٢/٣) — كان
+   *  الليليُّ يرسم الشريطَ والورقةَ القديمين. */
+  const requestT2 = !tracking && outcome === null && (picking || confirming);
   useCoverNav(requestT2);
-  /** **والتتبّعُ نهاراً «R07–R09»** — بلا شريطٍ أصلاً (الرحلةُ الجاريةُ تخفيه، `App.tsx::NavBar`) والورقةُ ملتصقةٌ كما رُسمت. */
-  const trackingT2 = !dark && tracking;
+  /** **والتتبّعُ «R07–R09»** — بلا شريطٍ أصلاً (الرحلةُ الجاريةُ تخفيه، `App.tsx::NavBar`) والورقةُ ملتصقةٌ كما رُسمت. */
+  const trackingT2 = tracking;
   const sheetAttached = requestT2 || trackingT2;
 
   // آخرُ ما يُؤطَّر به — يُقرأ داخل المراقب بلا أن يعيد كلُّ بثٍّ إنشاءَه
@@ -653,12 +632,12 @@ export function HomeScreen() {
   return (
     <div className="relative h-full w-full overflow-hidden bg-bg">
       {browsing ? (
-        <ByTheme day={<RiderHomeT2 {...homeProps} />} night={<RiderHome {...homeProps} />} />
+        <RiderHomeT2 {...homeProps} />
       ) : (
         <>
       {mapNode}
 
-      {/* **ما فوق الخريطة بالمظهر**: القائمُ في الليليّ كما هو، وTAXO 2.0 في النهاريّ المرسوم — بالأفعال نفسِها */}
+      {/* **ما فوق الخريطة — TAXO 2.0 في المظهرين** (§٦٢/٣): كان الليليُّ يرسم الرأسَ والدبوسَ القديمين، بالأفعال نفسِها */}
       {trackingT2 ? (
         // **التتبّعُ كما رُسم** (R07–R09): لا رأسَ ولا «موقعي» — «الكبتن على بعد…» أو بطاقةُ الطريق، **ومبدّلُ السِمة باقٍ**
         // (قرارُ المالك ٢٥ — وفي الرحلة لا شريطَ ولا «إعدادات» يُبلغان)
@@ -674,7 +653,7 @@ export function HomeScreen() {
             onToggle={() => setChoice(dark ? "light" : "dark")}
           />
         </>
-      ) : !dark ? (
+      ) : (
         <>
           {picking ? <PinT2 target={phase === "pick-pickup" ? "pickup" : "dropoff"} /> : null}
           <MapHeaderT2
@@ -688,69 +667,6 @@ export function HomeScreen() {
           />
           {/* **ولا زرَّ «موقعي» في ورقة الطلب** كما رُسمت — النقطتان محدّدتان، والدبوسُ وحدَه يحتاجه */}
           {confirming ? null : <LocateButtonT2 onLocate={() => void locateMe()} />}
-        </>
-      ) : (
-        <>
-      {/* دبوسٌ ثابت في المركز: الخريطة تتحرك تحته لا هو فوقها */}
-      {picking ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-40">
-          <motion.div initial={{ y: -8 }} animate={{ y: 0 }} className="text-38">
-            📍
-          </motion.div>
-        </div>
-      ) : null}
-
-      {/* رأسُ الخريطة كما في النموذج بعد الحزمة (أ): **حرفُ الحساب** في طرفٍ،
-          والجرسُ ومبدّلُ السِمة في الآخر. وسقط منه زرّا «القائمة» و«المحفظة»:
-          الأولُ صار الشريطَ السفليَّ كلَّه (فحُذفت `/menu`)، والثاني تبويباً
-          فيه — واختصارٌ فوق الخريطة إلى تبويبٍ ظاهرٍ أسفلَها بابان لشيءٍ واحد */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-8 px-16 pt-safe">
-        <button
-          type="button"
-          onClick={() => navigate("/account")}
-          className="ctl size-44 text-14 font-bold"
-          aria-label="حسابي"
-        >
-          {user?.name.slice(0, 1) ?? "؟"}
-        </button>
-        <div className="flex items-center gap-8">
-          <button
-            type="button"
-            onClick={() => navigate("/account/notifications")}
-            aria-label="الإشعارات"
-            // **`pointer-events-auto` لا زينة**: الحاويةُ `pointer-events-none`
-            // كي تمرّ إيماءاتُ الخريطة من حولها، فكلُّ زرٍّ فيها يُعيد تمكينَ
-            // نفسه. وبغيره يُرسم الزرُّ ويُقاس ويبدو سليماً **ولا يُنقر** —
-            // والقياسُ وحده يكشفه: `elementFromPoint` يعيد canvas الخريطة
-            className="ctl relative size-44"
-          >
-            <Bell className="size-20" />
-            {/* **نقطةٌ لا رقم** كما في التصميم (`unreadShow`): الرقمُ يحتاج قراءةً
-                ثانيةً كلَّ فتحةٍ للرئيسية، والنقطةُ تجيب السؤالَ الوحيد الذي
-                يُسأل هنا — «هل ثمّ جديد؟». والعددُ نفسُه في الشاشة */}
-            {unreadNotifications ? (
-              <span className="absolute end-8 top-8 size-8 rounded-full bg-danger" />
-            ) : null}
-          </button>
-          <button
-            type="button"
-            onClick={() => setChoice(dark ? "light" : "dark")}
-            aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"}
-            className="ctl size-44"
-          >
-            {dark ? <Sun className="size-20" /> : <Moon className="size-20" />}
-          </button>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={locateMe}
-        className="ctl absolute bottom-[42%] end-16 size-44"
-        aria-label="موقعي الحالي"
-      >
-        <Crosshair className="size-20" />
-      </button>
         </>
       )}
 
@@ -771,19 +687,14 @@ export function HomeScreen() {
             className="pointer-events-auto"
           >
             {tracking ? (
-              <ByTheme
-                day={
-                  <TrackingSheetT2
-                    ride={ride!}
-                    onChanged={() => void refresh()}
-                    driverPing={driverPing}
-                    routePoints={routeLine}
-                    pickupLine={
-                      pickup && pickup.lat === ride!.pickup.lat && pickup.lng === ride!.pickup.lng ? pickupLine : null
-                    }
-                  />
+              <TrackingSheetT2
+                ride={ride!}
+                onChanged={() => void refresh()}
+                driverPing={driverPing}
+                routePoints={routeLine}
+                pickupLine={
+                  pickup && pickup.lat === ride!.pickup.lat && pickup.lng === ride!.pickup.lng ? pickupLine : null
                 }
-                night={<TrackingSheet ride={ride!} onChanged={() => void refresh()} />}
               />
             ) : outcome ? (
               <OutcomeSheet
@@ -791,7 +702,7 @@ export function HomeScreen() {
                 onDismiss={() => setDismissed(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
               />
-            ) : picking && !dark ? (
+            ) : picking ? (
               <PickingSheetT2
                 targetLabel={phase === "pick-pickup" ? "نقطة الانطلاق" : "وجهتك"}
                 address={pinAddress}
@@ -799,36 +710,9 @@ export function HomeScreen() {
                 onConfirm={confirmPin}
                 onCancel={() => setPhase(dropoff ? "confirm" : "idle")}
               />
-            ) : picking ? (
-              <Sheet>
-                <div className="space-y-12 pb-16">
-                  <p className="text-center text-14 text-muted">
-                    حرّك الخريطة حتى يقف الدبوس على{" "}
-                    {phase === "pick-pickup" ? "نقطة الانطلاق" : "وجهتك"}
-                  </p>
-                  {/* **العنوانُ المعكوس جغرافياً** كما في التصميم: تأكيدُ نقطةٍ
-                      بلا اسمها تأكيدٌ على العمى. و«نقرأ العنوان…» أثناء النداء
-                      لأن صمتاً ثم ظهورَ نصٍّ يُقرأ وميضاً */}
-                  <p className="rounded-12 border border-line bg-bg px-14 py-12 text-13.5 text-ink">
-                    {pinLoading
-                      ? "نقرأ العنوان…"
-                      : (pinAddress ?? "حرّك الخريطة لقراءة العنوان")}
-                  </p>
-                  <Button size="lg" onClick={confirmPin}>
-                    تأكيد الموقع
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => setPhase(dropoff ? "confirm" : "idle")}
-                  >
-                    إلغاء
-                  </Button>
-                </div>
-              </Sheet>
             ) : phase === "confirm" && confirmProps ? (
-              <ByTheme day={<ConfirmRideT2 {...confirmProps} />} night={<ConfirmRide {...confirmProps} />} />
-            ) : !dark ? (
+              <ConfirmRideT2 {...confirmProps} />
+            ) : (
               <WhereToSheetT2
                 places={places}
                 pickupLabel={pickupAddress ?? (pickup ? "الموقع المحدد" : "موقعي الحالي")}
@@ -843,79 +727,6 @@ export function HomeScreen() {
                 }
                 onChangePickup={() => setPhase("pick-pickup")}
               />
-            ) : (
-              <Sheet>
-                <div className="space-y-12 pb-8">
-                  <p className="text-18 font-semibold text-ink">إلى أين؟</p>
-                  {/* **حقلٌ لا زرٌّ بشكل حقل**: ارتفاعٌ لا ينزل عن 48 (هدفُ لمسٍ
-                      مريح)، وتعبئةُ `--sur2` فوق سطح الورقة `--sur` فيُقرأ حدُّه
-                      من الفرق لا من خطٍّ باهت، و`rounded-13` نصفُ قطر «حقل
-                      الإدخال في المحمول» (`DESIGN.md` §1.3).
-                      **وحالةُ التركيز تتبع `--brand`** فتتبدّل مع السِمة الوردية
-                      بلا شرطٍ في هذا الملف. */}
-                  <button
-                    type="button"
-                    onClick={() => setSearchOpen(true)}
-                    className="pressable flex min-h-48 w-full items-center gap-12 rounded-13 border border-line bg-bg px-16 text-start transition focus-visible:border-brand active:border-brand"
-                  >
-                    <Search className="size-20 shrink-0 text-muted" />
-                    <span className="truncate text-14.5 text-muted">
-                      ابحث عن وجهتك أو حدّدها بالدبوس
-                    </span>
-                  </button>
-                  {/* اختصارا «المنزل» و«العمل» — أولُ مكانين محفوظين
-                      (`FUTURE-FEATURES` بند 1). ولا يظهر الصفُّ بلا أماكن:
-                      صفٌّ فارغٌ دائمٌ لأجل حالةٍ لم تقع بعد */}
-                  {places.length > 0 ? (
-                    <div className="flex gap-8">
-                      {places.slice(0, 2).map((place) => (
-                        <button
-                          key={place.id}
-                          type="button"
-                          onClick={() =>
-                            pickPlace({
-                              id: `place:${place.id}`,
-                              name: place.label,
-                              address: place.address ?? "",
-                              coordinates: { lat: place.lat, lng: place.lng },
-                            })
-                          }
-                          className="pressable min-w-0 flex-1 rounded-12 border border-line bg-surface px-12 py-10 text-start transition hover:bg-surface-2"
-                        >
-                          <span className="block truncate font-medium text-ink">
-                            {place.label}
-                          </span>
-                          <span className="block truncate text-12 text-muted">
-                            {place.address ?? "نقطة محفوظة"}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {/* **صفٌّ لا سطرٌ معلّق**: كان نصّاً عارياً تحت الحقل يُقرأ
-                      زائدةً لا عنصراً — بلا أيقونةٍ تقول «مكان»، وبلا حدٍّ يربطه
-                      بما فوقه، وبلا ما يقول إنه **يُضغط**. وهو يُضغط: منه يدخل
-                      طورُ `pick-pickup`. فصار صفاً بأيقونة موقعٍ بلون `--brand`
-                      (فيتبع السِمة)، وتسميةٍ فوق القيمة، وكلمةِ «تغيير» تقول
-                      وظيفتَه — بنفس ارتفاع الحقل ونصفِ قطره، فيُقرأ الاثنان
-                      عائلةً واحدة. */}
-                  <button
-                    type="button"
-                    onClick={() => setPhase("pick-pickup")}
-                    className="pressable flex min-h-48 w-full items-center gap-12 rounded-13 border border-line px-16 text-start transition focus-visible:border-brand active:border-brand"
-                  >
-                    <MapPin className="size-18 shrink-0 text-brand" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-11.5 text-muted">نقطة الانطلاق</span>
-                      <span className="block truncate text-14 text-ink">
-                        {pickupAddress ?? (pickup ? "الموقع المحدد" : "موقعي الحالي")}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-12 text-muted">تغيير</span>
-                  </button>
-                </div>
-              </Sheet>
             )}
           </motion.div>
         </AnimatePresence>

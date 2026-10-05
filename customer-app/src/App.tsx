@@ -22,8 +22,6 @@ import {
 } from "react-router-dom";
 import type { ReactNode } from "react";
 
-import { BottomNav } from "@/components/BottomNav";
-import { ByTheme } from "@/components/ByTheme";
 import { BottomNavT2 } from "@/components/BottomNavT2";
 import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
 import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
@@ -41,7 +39,7 @@ import { RestoreAccountScreen } from "@/screens/RestoreAccount";
 import { showsNav } from "@/lib/tabs";
 import { useNavCovered } from "@/lib/navCover";
 import { isUnlocked, play, unlock } from "@/lib/sound";
-import { ThemeProvider, useTheme } from "@/lib/theme";
+import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
 import { bindHardwareBack } from "@/lib/hardware-back";
 import { LoginScreen } from "@/screens/Login";
@@ -66,12 +64,6 @@ const ForgotPasswordScreen = lazy(() =>
 const LegalT2Screen = lazy(() =>
   import("@/screens/t2/LegalT2").then((m) => ({ default: m.LegalT2Screen })),
 );
-const AccountScreen = lazy(() =>
-  import("@/screens/Account").then((m) => ({ default: m.AccountScreen })),
-);
-const RidesScreen = lazy(() =>
-  import("@/screens/Rides").then((m) => ({ default: m.RidesScreen })),
-);
 const RideDetailsScreen = lazy(() =>
   import("@/screens/RideDetails").then((m) => ({
     default: m.RideDetailsScreen,
@@ -79,12 +71,6 @@ const RideDetailsScreen = lazy(() =>
 );
 const PaymentScreen = lazy(() =>
   import("@/screens/Payment").then((m) => ({ default: m.PaymentScreen })),
-);
-const RatingScreen = lazy(() =>
-  import("@/screens/Rating").then((m) => ({ default: m.RatingScreen })),
-);
-const WalletScreen = lazy(() =>
-  import("@/screens/WalletHome").then((m) => ({ default: m.WalletScreen })),
 );
 const WalletTopupScreen = lazy(() =>
   import("@/screens/WalletTopup").then((m) => ({
@@ -106,11 +92,6 @@ const CardsScreen = lazy(() =>
 );
 const SettingsScreen = lazy(() =>
   import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
-);
-const NotificationsScreen = lazy(() =>
-  import("@/screens/Notifications").then((m) => ({
-    default: m.NotificationsScreen,
-  })),
 );
 const RatingT2Screen = lazy(() =>
   import("@/screens/t2/RatingT2").then((m) => ({ default: m.RatingT2Screen })),
@@ -226,20 +207,16 @@ function NavBar() {
   // و«أرسل تفاصيل رحلتك» — وتعريفٌ بمفتاحٍ يقف فوق أحدهما يُقرأ عطباً.
   // القاعدةُ نفسُها في تطبيق الكبتن، وهناك قِيست مرتين
   const { ride } = useRide();
-  const { dark } = useTheme();
   // **وأطوارُ الطلب في الرئيسية** (R06) حالٌ داخل `/` لا مسار — فتقول هي ما تغطّيه (`lib/navCover`)
   const coveredByScreen = useNavCovered();
   if (ride !== null) return null;
-  // **وشاشاتُ TAXO 2.0 التي لا شريطَ فيها في اللوحة** (R14 · R06) تغطّيه — في المظهر المرسوم وحدَه،
-  // والشاشةُ القائمةُ في الآخر تُبقيه كما كان
-  const coveredByT2 = !dark && (T2_COVERING.includes(pathname) || coveredByScreen);
+  // **وشاشاتُ TAXO 2.0 التي لا شريطَ فيها في اللوحة** (R14 · R06) تغطّيه — **في المظهرين** (§٦٢/٣)
+  const coveredByT2 = T2_COVERING.includes(pathname) || coveredByScreen;
   return (
     <>
       <WomenModeNotice />
-      {/* **وشريطُ TaxoTabs في المظهر المرسوم**، والقائمُ في الآخر — الوجهاتُ هي هي (`lib/tabs.ts`) */}
-      {showsNav(pathname) && !coveredByT2 ? (
-        <ByTheme day={<BottomNavT2 />} night={<BottomNav />} />
-      ) : null}
+      {/* **وشريطُ TaxoTabs في المظهرين** — كان القائمُ يُرسم في الليليّ (`ByTheme`)، والوجهاتُ هي هي (`lib/tabs.ts`) */}
+      {showsNav(pathname) && !coveredByT2 ? <BottomNavT2 /> : null}
     </>
   );
 }
@@ -388,7 +365,7 @@ export default function App() {
                         path="/rides"
                         element={
                           <Guarded>
-                            <ByTheme day={<RidesT2Screen />} night={<RidesScreen />} />
+                            <RidesT2Screen />
                           </Guarded>
                         }
                       />
@@ -412,8 +389,8 @@ export default function App() {
                         path="/rides/:rideId/rate"
                         element={
                           <Guarded>
-                            {/* **نهايةُ الرحلة «R10» في المظهر المرسوم**، والقائمةُ في الآخر — المنطقُ واحد (`useRating`) */}
-                            <ByTheme day={<RatingT2Screen />} night={<RatingScreen />} />
+                            {/* **نهايةُ الرحلة «R10» في المظهرين** — المنطقُ واحد (`useRating`) */}
+                            <RatingT2Screen />
                           </Guarded>
                         }
                       />
@@ -421,7 +398,7 @@ export default function App() {
                         path="/wallet"
                         element={
                           <Guarded>
-                            <ByTheme day={<WalletT2Screen />} night={<WalletScreen />} />
+                            <WalletT2Screen />
                           </Guarded>
                         }
                       />
@@ -445,7 +422,7 @@ export default function App() {
                         path="/account"
                         element={
                           <Guarded>
-                            <ByTheme day={<AccountT2Screen />} night={<AccountScreen />} />
+                            <AccountT2Screen />
                           </Guarded>
                         }
                       />
@@ -485,10 +462,7 @@ export default function App() {
                         path="/account/notifications"
                         element={
                           <Guarded>
-                            <ByTheme
-                              day={<NotificationsT2Screen />}
-                              night={<NotificationsScreen />}
-                            />
+                            <NotificationsT2Screen />
                           </Guarded>
                         }
                       />

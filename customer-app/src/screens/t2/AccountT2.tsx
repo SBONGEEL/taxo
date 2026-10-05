@@ -1,4 +1,4 @@
-/** حسابي — TAXO 2.0 «R15» (Claude Design «Rider»)، **في المظهر النهاريّ المرسوم وحدَه**.
+/** حسابي — TAXO 2.0 «R15» (Claude Design «Rider»)، **في المظهرين** — رُسم نهاريّاً، **والليليُّ برموز إسفلت الهوية نفسِها** (§٦٢/٣).
  *
  * **لا طلبَ جديد**: الاسمُ والرقمُ من الجلسة، وعددُ الأماكن من `PlacesProvider` (محمَّلةٌ عند الإقلاع).
  * **والأبوابُ أبوابُ الشاشة القائمة كلُّها** (`screens/Account.tsx`) بمفاتيحها، وفعلا التبديلِ وإنهاءِ
@@ -28,7 +28,7 @@ import { useScheduledRides } from "@/lib/bookings";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useSwitchToDriver } from "@/lib/switch-app";
-import { SignOutEverywhereRow } from "@/screens/Account";
+import { SignOutEverywhereRow } from "@/components/account/SignOutEverywhere";
 
 import "@/taxo2";
 import "./t2.css";

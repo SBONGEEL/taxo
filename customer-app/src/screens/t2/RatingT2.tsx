@@ -1,4 +1,4 @@
-/** نهايةُ الرحلة — TAXO 2.0 «R10» (Claude Design «Rider»)، **في المظهر النهاريّ المرسوم وحدَه** — وجهُ شاشة التقييم.
+/** نهايةُ الرحلة — TAXO 2.0 «R10» (Claude Design «Rider»)، **في المظهرين** — رُسم نهاريّاً، **والليليُّ برموز إسفلت الهوية نفسِها** (§٦٢/٣) — وجهُ شاشة التقييم.
  *
  * **وجهٌ ثانٍ لشاشة التقييم لا شاشةٌ ثانية**: النجومُ والملاحظةُ والإرسالُ والبقشيشُ كلُّها من `useRating` — **فلا يفترق
  * الوجهان في تقييمٍ ولا في بقشيش**. **وبطاقةُ الأجرة قراءةٌ لا حساب**: الأجرةُ النهائيةُ وطريقةُ الدفع والسطورُ كما تعرضها شاشةُ
@@ -85,7 +85,7 @@ export function RatingT2Screen() {
   const tipShown = r.tip?.offered && !r.tip.given && r.stars >= TIP_MIN_STARS;
 
   return (
-    <div className="t2 t2-day t2-r10">
+    <div className="t2 t2-r10">
       <div className="t2-r10-head">
         <span className="t2-r10-check" aria-hidden="true">
           <span className="t2-icon">check</span>

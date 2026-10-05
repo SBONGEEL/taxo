@@ -1,4 +1,4 @@
-/** الرئيسية — TAXO 2.0 «R05» (Claude Design «Rider»)، **في المظهر النهاريّ المرسوم وحدَه — ومطابقةٌ للتصميم** (§٦١-د).
+/** الرئيسية — TAXO 2.0 «R05» (Claude Design «Rider»)، **مطابقةٌ للتصميم** (§٦١-د) — **في المظهرين**: رُسمت نهاريّاً، والليليُّ برموز إسفلت الهوية نفسِها (§٦٢/٣).
  *
  * **وجهٌ لا منطق**: الشاشةُ (`screens/Home.tsx`) تمرّر الشيءَ نفسَه للوجهين (`RiderHomeProps`)، والخريطةُ عقدةٌ واحدة،
  * والتوسيعُ وزرُّ الجهاز الخلفيُّ من `useExpandable`، واللافتاتُ من `PromoBanners` بجلدها.
@@ -14,12 +14,13 @@
  * وتفاصيلها، والإحالةُ في «حسابي»، والرصيدُ في «المحفظة»، **والخريطةُ الكاملةُ بلمسة البطاقة** بدل زرِّ «توسيع».
  */
 
+import type { ReactNode } from "react";
+import type { MyReferrals, PromoBanner, Ride, SavedPlace, ServiceTile, Wallet } from "@/api/types";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
-import type { RiderHomeProps } from "@/components/home/RiderHome";
 import { useExpandable } from "@/components/home/MapCard";
 import { useScheduledRides } from "@/lib/bookings";
 import { useSession } from "@/lib/session";
@@ -29,6 +30,40 @@ import { Wordmark } from "@/taxo2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
 import "@/taxo2";
 import "./t2.css";
+
+/** خصائصُ الرئيسية (R05) — **كانت في الوجه القديم** (`components/home/RiderHome.tsx`) ونُزع (§٦٢/٣). */
+export interface RiderHomeProps {
+  name: string;
+  /** عنوانُ موقعه إن عُرف — **ولا مدينةَ تُخمَّن**. */
+  place: string | null;
+  unread: boolean;
+  wallet: Wallet | null;
+  /** **رمزُ العملة لا علامتُها** — `formatMoney` يحلّها، **وحلُّها هنا ثانيةً
+   *  يطبعها مرّتين** (`check:money`). */
+  currency: string;
+  /** عددُ الكباتن القريبين — **بلا مهلةٍ لا تُقاس**. */
+  nearby: number;
+  onOpenNotifications: () => void;
+  onOpenWallet: () => void;
+  onOpenAccount: () => void;
+  onAskDestination: () => void;
+  places: SavedPlace[];
+  onPickPlace: (place: SavedPlace) => void;
+  tiles: ServiceTile[];
+  banners: PromoBanner[];
+  referrals: MyReferrals | null;
+  onOpenReferrals: () => void;
+  recent: Ride[];
+  onOpenRides: () => void;
+  onRepeat: (ride: Ride) => void;
+  /** الخريطةُ بطاقةً — تُمرَّر كما هي فلا تُبنى مرّتين. */
+  map: ReactNode;
+  /** اسمُ منطقة نقطة الانطلاق لشارة الرأس (`null` = لا شارة)، وفتحُ دبوس الانطلاق من الشارة، وبدءُ الطلب بـ«كبتنة فقط» (§٦١-د). */
+  area?: string | null;
+  onChangePickup?: () => void;
+  onWomenRide?: () => void;
+}
+
 
 /** «كم كبتناً حولك» بعربيةٍ تُقرأ — **العددُ وحدَه بلا مهلة**. */
 function nearbyLabel(count: number): string {
