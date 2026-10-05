@@ -49,6 +49,8 @@ run "check:update-gate"     node tools/check-update-gate.mjs
 # **ونظامُ تصميم TAXO 2.0 منسوخٌ في التطبيقين** (§61-ج) — يُقاس بايتاً كبوّابة التحديث
 run "check:taxo2"          node tools/check-taxo2.mjs
 run "check:t2-css"         node tools/check-t2-css.mjs
+# **ولا نغمةَ مركّبةً في التطبيقات** (§٦٢/١٢): كلُّ صوتٍ ملفٌّ من العائلة، وكلُّ ملفٍّ في `public/`
+run "check:sounds"         node tools/check-sounds.mjs
 run "check:ci-timeouts"     node tools/check-ci-timeouts.mjs
 run "check:env-leak"        node tools/check-env-leak.mjs
 run "check:exec-bit"        node tools/check-exec-bit.mjs

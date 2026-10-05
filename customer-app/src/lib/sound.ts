@@ -1,10 +1,13 @@
 /** الهوية الصوتية — `DESIGN.md` §9، **وأصواتُ المكتبات المؤقّتة** (`SPEC.md` §٦١-ك).
  *
- * **أكثرُها اليومَ ملفّاتٌ لا مذبذبات** (اختيارُ المالك ٢٠٢٦-١٠-٠٥): رفض النغماتِ
+ * **كلُّها ملفّاتٌ، ولا مذبذبَ في التطبيق** (§٦٢/١٢، ٢٠٢٦-١٠-٠٥): رفض المالكُ النغماتِ
  * المولَّدةَ برمجياً، واختار من مكتبةٍ مرخَّصةٍ أصواتاً **مؤقّتةً** بروح مثالين
  * أرسلهما — `FILES` أدناه، ومصدرُ كلِّ ملفٍّ وترخيصُه في `design/TAXO-SOUNDS.md`
  * ووصفةُ تشطيبه في `tools/sounds/`. **وتُستبدل لاحقاً بأصواتٍ تُصنع لـTAXO وحدَها.**
- * **وما لم يُختر له صوتٌ يبقى نغمةَ الموتيف** (`CUES`) حتى يقرّر.
+ * **وكانت نغماتُ «الموتيف» المركّبةُ باقيةً لما لم يُختر له صوت — فكانت أوّلَ ما
+ * يُسمع** (التوقيعُ عند أوّل لمسة) **وقال المالك: «الأصواتُ ما زالت القديمة»**. فاختير
+ * لها من العائلة نفسِها (`tools/sounds/sources.json`)، **و`FILES` كاملٌ بنوعه**: صوتٌ
+ * بلا ملفٍّ لا يُبنى، **ولا مسارَ في الشيفرة يعزف غيرَ ملفّ** (`check:sounds`).
  *
  * **والسياقُ يُنشأ عند أول تشغيلٍ لا عند التحميل**: `AudioContext` مورِدٌ ثقيل،
  * وإنشاؤه في وحدةٍ تُستورد مع التطبيق يوقظ عتادَ الصوت لمن لن يسمع شيئاً.
@@ -25,22 +28,6 @@
 const KEY = "taxo.sound";
 const KEY_NOTIFICATIONS = "taxo.sound.notifications";
 
-/** الموتيف: `A4 → D5 → E5` — رابعةٌ تامّة صاعدة ثم درجةٌ كاملة (§9). */
-const A4 = 440;
-const D5 = 587.33;
-const E5 = 659.25;
-
-interface Note {
-  /** التردد بالهرتز — من سلّم §9 لا رقمٌ يُكتب في موضع الاستعمال. */
-  hz: number;
-  /** بدايتُها من أول النغمة بالثواني. */
-  at: number;
-  /** طولُها بالثواني. */
-  for: number;
-  /** شدّتُها — الخطأُ بثلث الشدة عمداً (§9.1). */
-  gain?: number;
-}
-
 export type Cue =
   | "request"
   | "accepted"
@@ -58,8 +45,10 @@ export type Cue =
  *
  * والمساراتُ نسبةً إلى `public/` — **ملفُّ كلِّ صوتٍ واحدٌ في التطبيقين**، فما
  * يسمعه الراكبُ لبدء الرحلة هو ما يسمعه الكبتن. */
-const FILES: Partial<Record<Cue, string>> = {
-  // **قبولُ كبتن — الأهم**: ثلاثُ نغماتٍ صاعدةٍ دافئة
+const FILES: Record<Cue, string> = {
+  // **تأكيدُ الطلب** — أُرسل طلبُك (كان أوّلَ نغمتين من الموتيف)
+  request: "sounds/confirm.mp3",
+  // **قبولُ كبتن — الأهم**
   accepted: "sounds/accepted.mp3",
   // **«الكبتن يقترب»** (§٦١-ي/١١): نغمةٌ واحدةٌ ليّنة — تنبيهٌ لا يُقلق
   approaching: "sounds/approaching.mp3",
@@ -69,24 +58,11 @@ const FILES: Partial<Record<Cue, string>> = {
   // **والدفعُ والشحنُ صوتٌ واحد**: «نجح دفعٌ أو شحن» — كلاهما مالٌ وصل
   paid: "sounds/payment.mp3",
   topup: "sounds/payment.mp3",
-  // **الخطأُ ليس صوتاً منفّراً**: نغمتان منخفضتان نازلتان
+  // **الخطأُ ليس صوتاً منفّراً**: ليّنٌ قصير
   error: "sounds/error.mp3",
   notify: "sounds/notify.mp3",
-};
-
-/** **نغماتُ الموتيف — لما لم يُختر له صوتٌ بعد** (§9.1). */
-const CUES: Partial<Record<Cue, Note[]>> = {
-  // تأكيدُ الطلب — أوّلُ نغمتين
-  request: [
-    { hz: A4, at: 0, for: 0.16 },
-    { hz: D5, at: 0.12, for: 0.16 },
-  ],
-  // توقيعُ العلامة — الموتيف مهلاً، وهو أوّلُ ما يُسمع (**وسؤالُه مفتوحٌ**: §٦١-ي/١٤)
-  signature: [
-    { hz: A4, at: 0, for: 0.26 },
-    { hz: D5, at: 0.17, for: 0.26 },
-    { hz: E5, at: 0.34, for: 0.34 },
-  ],
+  // **توقيعُ العلامة** — أوّلُ ما يُسمع بعد الدخول (§9.2)
+  signature: "sounds/welcome.mp3",
 };
 
 /** النغماتُ التي يحكمها مفتاحُ الإشعارات لا المفتاحُ العام. */
@@ -178,48 +154,20 @@ function load(cue: Cue): Promise<AudioBuffer | null> {
   return pending;
 }
 
-/** يعزف نغمةً واحدة على السياق المفتوح — بلا شرطٍ ولا فحصِ مفتاح. */
-function voice(ctx: AudioContext, note: Note, from: number): void {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  // **مثلثةٌ لا مربّعة**: توافقياتُ المربّعة العليا هي ما يجعل نغمةَ الهاتف
-  // حادّةً — والمثلثةُ تحمل دفئاً بلا أن تخترق (§9)
-  osc.type = "triangle";
-  osc.frequency.value = note.hz;
-
-  const peak = note.gain ?? 0.5;
-  const start = from + note.at;
-  // هجومٌ 15ms وانحدارٌ أُسّي (§9): القطعُ المفاجئ يُسمع نقرةً
-  gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(peak, start + 0.015);
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + note.for);
-
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(start);
-  osc.stop(start + note.for + 0.02);
-}
-
 /** يعزف نغمةً — ويصمت بلا خطأ إن كان الصوتُ مطفأً أو لم تقع إيماءةٌ بعد. */
 export function play(cue: Cue): void {
   const ctx = context;
   if (!unlocked || !ctx || !allowed(cue)) return;
-  if (FILES[cue]) {
-    void load(cue).then((buffer) => {
-      if (!buffer) return;
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start();
-    });
-    return;
-  }
-  const now = ctx.currentTime;
-  for (const note of CUES[cue] ?? []) voice(ctx, note, now);
+  void load(cue).then((buffer) => {
+    if (!buffer) return;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start();
+  });
 }
 
-/** طولُ النغمة بالثواني — **من الملفّ نفسِه** حين يكون ملفّاً (صفرٌ قبل فكّه). */
+/** طولُ النغمة بالثواني — **من الملفّ نفسِه** (صفرٌ قبل فكّه). */
 export function durationOf(cue: Cue): number {
-  const file = FILES[cue];
-  if (file) return buffers.get(file)?.duration ?? 0;
-  return (CUES[cue] ?? []).reduce((end, note) => Math.max(end, note.at + note.for), 0);
+  return buffers.get(FILES[cue])?.duration ?? 0;
 }
