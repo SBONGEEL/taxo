@@ -32,6 +32,8 @@ ADB = os.environ.get("ADB") or str(
     Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk" / "platform-tools" / "adb.exe"
 )
 PACKAGES = ("ly.tajora.driver", "ly.tajora.rider")
+#: **نسختا التجربة** (`.test`) — تُحمِّلان شاشاتهما من مكدّس التطوير عبر `dev-*` (`channels.json`)
+TRIAL_PACKAGES = ("ly.tajora.driver.test", "ly.tajora.rider.test")
 
 _REDACTIONS = (
     (re.compile(r"(token=)[^&\s\"']+"), r"\1<محجوب>"),
@@ -315,7 +317,14 @@ def main() -> None:
     live.add_argument("--out", type=Path, required=True)
     live.add_argument("--minutes", type=float, default=45)
     sub.add_parser("selftest")
+    parser.add_argument(
+        "--trial", action="store_true", help="نسختا التجربة (.test) بدل المنشورتين"
+    )
     args = parser.parse_args()
+    if args.trial and args.command != "selftest":
+        # **المحلِّلاتُ تقرأ `PACKAGES` عند كلِّ نداء** — فاستبدالُه هنا يكفيها كلَّها.
+        # والقياسُ الذاتيُّ على نصِّه المصنوع بالأسماء المنشورة، فلا يمسّه
+        globals()["PACKAGES"] = TRIAL_PACKAGES
     if args.command == "snapshot":
         snapshot(args.out, args.label)
     elif args.command == "watch":
