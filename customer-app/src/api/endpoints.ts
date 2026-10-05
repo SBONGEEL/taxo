@@ -7,21 +7,21 @@
 import { api, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
-  ErrorReportBody,
   AppConfig,
   AppVersion,
-  MyReferrals,
   AuthMethod,
   AuthResponse,
   Booking,
   ChallengeResponse,
   CliqTopup,
   Coordinates,
-  DeletionState,
   CountryCode,
+  DeletionState,
   Device,
+  ErrorReportBody,
   GenderPreference,
   LoginResponse,
+  MyReferrals,
   NearbyDriver,
   NotificationPreferences,
   OtpChannel,
@@ -29,12 +29,17 @@ import type {
   PlaceIcon,
   PromoPreview,
   Rating,
+  RatingTag,
+  RequiredPolicy,
   Ride,
   RideEstimate,
+  RideGroup,
   RideListItem,
   RidePayments,
+  RiderSummary,
   SavedCard,
   SavedPlace,
+  Storefront,
   Tip,
   TipOptions,
   TopupRequest,
@@ -44,10 +49,6 @@ import type {
   VehicleCategory,
   Wallet,
   WalletTransaction,
-  Storefront,
-  RequiredPolicy,
-  RideGroup,
-  RiderSummary,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -264,8 +265,8 @@ export const getTipOptions = (rideId: string) =>
 export const addTip = (rideId: string, amount: string) =>
   api.post<Tip>(`/rides/${rideId}/tip`, { amount });
 
-export const rateRide = (rideId: string, stars: number, comment?: string) =>
-  api.post<Rating>(`/rides/${rideId}/ratings`, { stars, comment: comment || null });
+export const rateRide = (rideId: string, stars: number, comment?: string, tags: RatingTag[] = []) =>
+  api.post<Rating>(`/rides/${rideId}/ratings`, { stars, comment: comment || null, tags });
 
 // ------------------------------------------------------------ الدفع
 

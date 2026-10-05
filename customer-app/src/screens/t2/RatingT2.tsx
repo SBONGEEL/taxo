@@ -7,16 +7,19 @@
  * **والدفعُ يبقى خطوتَه قبلها** (`/rides/:id/pay`): اللوحةُ ترسم «R10» بعد دفعٍ تمّ، **وضمُّ الدفع إليها مسارُ مالٍ جديد** لا يُبنى
  * بلا قرار المالك (`TAXO2-DESIGN-CORRECTIONS.md` §٢٩).
  *
- * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته**: سطورُ «الأجرة الأساسية · المسافة · الوقت» بمبالغها (لا تفصيلَ بها في الخلفية،
- * واشتقاقُها حسابُ مالٍ في الواجهة) · **وسومُ التقييم** («قيادة آمنة»…: لا وسومَ في التقييم — ميزةٌ جديدة) · **وإرسالُ البقشيش مع
- * التقييم بزرٍّ واحد**: قرارُ المالك ٢٠٢٦-٠٨-١٩ «الاختيارُ يُرى، والإرسالُ فعلٌ مستقل» — فبقي زرُّ «أرسل» للبقشيش وحدَه.
+ * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته**: سطورُ «الأجرة الأساسية · المسافة · الوقت» بمبالغها — **بُني تفصيلُها في الخلفية ويُعرض على
+ * المالك قبل أن يُودَع** (§٦٢-د/١: ميزةُ مالٍ تُعرض قبل البناء)؛ واشتقاقُها هنا حسابُ مالٍ في الواجهة · **وإرسالُ البقشيش مع التقييم بزرٍّ
+ * واحد**: قرارُ المالك ٢٠٢٦-٠٨-١٩ «الاختيارُ يُرى، والإرسالُ فعلٌ مستقل» — فبقي زرُّ «أرسل» للبقشيش وحدَه.
+ *
+ * **ووسومُ التقييم بُنيت** (§٦٢-ج/٢٥ — ليست مالاً): خمسةُ وسومٍ كما رُسمت، **تظهر من أربع نجومٍ فصاعداً** (كلُّها مديح، ومديحٌ تحت
+ * نجمتين تناقض) وتُرسل مع التقييم نفسِه؛ مفاتيحُها من الخلفية (`RatingTag`) وتسمياتُها هنا.
  */
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getRide, getRidePayments } from "@/api/endpoints";
-import type { Ride, RidePayments } from "@/api/types";
+import type { RatingTag, Ride, RidePayments } from "@/api/types";
 import { TIP_MIN_STARS, useRating } from "@/components/ride/useRating";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
@@ -25,6 +28,18 @@ import { currencyLabel, formatDistance, formatMoney, formatTime } from "@/lib/ut
 
 import "@/taxo2";
 import "./t2.css";
+
+/** وسومُ R10 بترتيب اللوحة — **التسميةُ هنا والمفتاحُ من الخلفية** (`RatingTag`). */
+const RATING_TAGS: { tag: RatingTag; label: string }[] = [
+  { tag: "safe_driving", label: "قيادة آمنة" },
+  { tag: "clean_car", label: "سيارة نظيفة" },
+  { tag: "friendly", label: "ودود" },
+  { tag: "fast_arrival", label: "وصل بسرعة" },
+  { tag: "knows_way", label: "يعرف الطريق" },
+];
+
+/** الوسومُ مديحٌ كلُّها — **تظهر من أربع نجوم** فلا يُعرض مديحٌ على تقييمٍ منخفض. */
+const TAGS_MIN_STARS = 4;
 
 /** **«وصلتِ» للراكبة و«وصلتَ» للراكب** — وبلا جنسٍ معلَنٍ بلا حركة، فلا يُخمَّن. */
 function arrivedTitle(gender: string | null | undefined) {
@@ -162,7 +177,27 @@ export function RatingT2Screen() {
         ))}
       </div>
 
-      {/* **الملاحظةُ باقيةٌ حيث رسمت اللوحةُ الوسوم** — الوسومُ لا وجودَ لها في التقييم، والملاحظةُ تعمل اليوم */}
+      {r.stars >= TAGS_MIN_STARS ? (
+        <div className="t2-r10-tags" role="group" aria-label="ما أعجبك في الرحلة">
+          {RATING_TAGS.map(({ tag, label }) => {
+            const on = r.tags.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={on}
+                disabled={r.done}
+                className={on ? "t2-r10-tag on" : "t2-r10-tag"}
+                onClick={() => r.toggleTag(tag)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {/* **والملاحظةُ باقيةٌ تحت الوسوم** — كانت في موضعها حين لم تكن وسوم، وتعمل اليوم */}
       <textarea
         className="t2-input t2-r10-comment"
         maxLength={500}

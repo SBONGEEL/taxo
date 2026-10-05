@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { addTip, getTipOptions, listRideRatings, rateRide } from "@/api/endpoints";
-import type { TipOptions } from "@/api/types";
+import type { RatingTag, TipOptions } from "@/api/types";
 
 /** أقلُّ عددِ نجومٍ يُسأل عنده عن بقشيش — تضييقُ واجهةٍ لا قاعدةَ خلفية. */
 export const TIP_MIN_STARS = 4;
@@ -16,6 +16,8 @@ export const TIP_MIN_STARS = 4;
 export function useRating(rideId: string) {
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
+  // **وسومُ R10** (§٦٢-ج/٢٥) — تُرسل مع التقييم نفسِه
+  const [tags, setTags] = useState<RatingTag[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,7 @@ export function useRating(rideId: string) {
         if (mine) {
           setStars(mine.stars);
           setComment(mine.comment ?? "");
+          setTags(mine.tags ?? []);
           setDone(true);
         }
       })
@@ -50,7 +53,7 @@ export function useRating(rideId: string) {
     setBusy(true);
     setError(null);
     try {
-      await rateRide(rideId, stars, comment);
+      await rateRide(rideId, stars, comment, tags);
       setDone(true);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال التقييم");
@@ -77,6 +80,9 @@ export function useRating(rideId: string) {
     setStars,
     comment,
     setComment,
+    tags,
+    toggleTag: (tag: RatingTag) =>
+      setTags((current) => (current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag])),
     error,
     done,
     busy,

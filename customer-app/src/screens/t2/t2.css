@@ -1361,6 +1361,33 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-r10-row-label { color: var(--t2-muted); }
 .t2-r10-row-value { font-weight: 500; }
 .t2-r10-ask { margin-top: 18px; text-align: center; font-size: 16px; font-weight: 700; }
+/* وسومُ R10 — حبوبٌ بحافّة، **والمختارةُ بالحبر على الحجر وبالحجر على الإسفلت** (`--t2-text` · `--t2-bg`) كما رُسمت */
+.t2-r10-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.t2-r10-tag {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1.5px solid var(--t2-line);
+  border-radius: 99px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-r10-tag.on {
+  border-color: var(--t2-text);
+  background: var(--t2-text);
+  color: var(--t2-bg);
+}
+.t2-r10-tag:disabled { cursor: default; }
 .t2-r10-stars { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
 .t2-r10-star { padding: 0; border: 0; background: none; color: var(--t2-dash); cursor: pointer; }
 .t2-r10-star .t2-icon { font-size: 40px; font-variation-settings: "FILL" 1; }

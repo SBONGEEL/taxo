@@ -19,9 +19,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AlreadyRated, RatingNotAllowed
+from app.core.exceptions import AlreadyRated, InvalidInput, RatingNotAllowed
 from app.models.driver import Driver
-from app.models.enums import RatingRaterType, RideStatus, UserRole
+from app.models.enums import RatingRaterType, RatingTag, RideStatus, UserRole
 from app.models.rating import Rating
 from app.models.ride import Ride
 from app.models.user import User
@@ -59,18 +59,26 @@ async def rate(
     rater: User,
     stars: int,
     comment: str | None,
+    tags: Sequence[RatingTag] = (),
 ) -> Rating:
-    """يسجّل تقييم طرفٍ ويحدّث متوسط الكبتن إن كان المقيِّم راكباً."""
+    """يسجّل تقييم طرفٍ ويحدّث متوسط الكبتن إن كان المقيِّم راكباً.
+
+    **والوسومُ للراكب وحدَه** (R10 — §٦٢-ج/٢٥): لم تُرسم وسومٌ لتقييم الكبتن للراكب، **فطلبٌ مصنوعٌ يحملها منه يُرفض** لا يُحفظ
+    صامتاً. **وتُحفظ بلا تكرارٍ وبترتيبها**.
+    """
     if ride.status != RideStatus.COMPLETED:
         raise RatingNotAllowed("التقييم بعد اكتمال الرحلة")
 
     rater_type = rater_type_for(ride, rater)
+    if tags and rater_type is not RatingRaterType.RIDER:
+        raise InvalidInput("الوسومُ لتقييم الكبتن وحدَه")
     rating = Rating(
         ride_id=ride.id,
         rater_type=rater_type,
         rater_id=rater.id,
         stars=stars,
         comment=(comment or "").strip() or None,
+        tags=list(dict.fromkeys(str(tag) for tag in tags)),
     )
     session.add(rating)
 

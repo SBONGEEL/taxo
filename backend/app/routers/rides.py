@@ -659,7 +659,12 @@ async def rate_ride(
     """
     ride = await rides_service.get_ride_for_user(session, ride_id, user)
     rating = await ratings_service.rate(
-        session, ride=ride, rater=user, stars=payload.stars, comment=payload.comment
+        session,
+        ride=ride,
+        rater=user,
+        stars=payload.stars,
+        comment=payload.comment,
+        tags=payload.tags,
     )
     await session.commit()
     return RatingOut.model_validate(rating)

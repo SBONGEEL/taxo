@@ -13,8 +13,8 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
+from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger, String, UniqueConstraint, text
+from sqlalchemy.dialects.postgresql import ARRAY, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
@@ -53,6 +53,10 @@ class Rating(UUIDMixin, TimestampMixin, Base):
     )
     stars: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # **وسومُ R10** (§٦٢-ج/٢٥) — مفاتيحُ `RatingTag` لا نصوص، وللراكب وحدَه (`ratings.rate` يرفضها من الكبتن)
+    tags: Mapped[list[str]] = mapped_column(
+        ARRAY(String(24)), nullable=False, default=list, server_default=text("'{}'::varchar[]")
+    )
 
     ride: Mapped["Ride"] = relationship("Ride", foreign_keys=[ride_id])
     rater: Mapped["User"] = relationship("User", foreign_keys=[rater_id])

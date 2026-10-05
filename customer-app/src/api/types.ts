@@ -608,8 +608,12 @@ export interface Rating {
   rater_type: "rider" | "driver";
   stars: number;
   comment: string | null;
+  tags: RatingTag[];
   created_at: string;
 }
+
+/** وسومُ R10 — مرآةُ `RatingTag` في الخلفية (`check:enums`). */
+export type RatingTag = "safe_driving" | "clean_car" | "friendly" | "fast_arrival" | "knows_way";
 
 /** كبتنٌ قريبٌ على الخريطة الحرّة — **مجهَّلٌ بحكم §10**.
  *

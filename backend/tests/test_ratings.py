@@ -178,3 +178,47 @@ async def test_a_driver_from_another_ride_cannot_rate_it(
     )
 
     assert (await _rate(client, stranger["headers"], ride["id"], 1)).status_code == 404
+
+
+# ------------------------------------------------ وسومُ R10 (§٦٢-ج/٢٥)
+
+
+async def test_the_rider_tags_are_kept_once_and_in_order(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    rider = await _rider(client)
+    driver = await _online_driver(client, session_factory)
+    ride = await completed_ride(client, rider, driver)
+
+    response = await _rate(
+        client, rider, ride["id"], 5, tags=["safe_driving", "clean_car", "safe_driving"]
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["tags"] == ["safe_driving", "clean_car"]
+
+
+async def test_an_unknown_tag_is_refused(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    rider = await _rider(client)
+    driver = await _online_driver(client, session_factory)
+    ride = await completed_ride(client, rider, driver)
+
+    response = await _rate(client, rider, ride["id"], 5, tags=["rude"])
+    assert response.status_code == 422, response.text
+
+
+async def test_the_captain_cannot_tag_the_rider(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """الوسومُ مرسومةٌ لتقييم الكبتن وحدَه — **طلبٌ مصنوعٌ من الكبتن يحملها يُرفض لا يُحفظ صامتاً**."""
+    rider = await _rider(client)
+    driver = await _online_driver(client, session_factory)
+    ride = await completed_ride(client, rider, driver)
+
+    response = await _rate(client, driver["headers"], ride["id"], 4, tags=["friendly"])
+    assert response.status_code == 422, response.text
+    # ولا يُحفظ تقييمٌ نصفُه مرفوض: التقييمُ نفسُه بلا وسوم يمرّ بعده
+    again = await _rate(client, driver["headers"], ride["id"], 4)
+    assert again.status_code == 201, again.text
+    assert again.json()["tags"] == []

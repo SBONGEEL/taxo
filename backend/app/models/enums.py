@@ -311,6 +311,20 @@ class RatingRaterType(StrEnum):
     DRIVER = "driver"
 
 
+class RatingTag(StrEnum):
+    """وسومُ تقييم الراكب للكبتن — **كما رسمتها R10** (§٦٢-ج/٢٥): قيادةٌ آمنة · سيارةٌ نظيفة · ودود · وصل بسرعة · يعرف الطريق.
+
+    **مفاتيحُ لا نصوص**: التسميةُ في التطبيق، والمفتاحُ ما يُحفظ ويُعدّ في اللوحة. **وللراكب وحده** — تقييمُ الكبتن للراكب لم تُرسم له وسوم.
+    """
+
+    SAFE_DRIVING = "safe_driving"
+    CLEAN_CAR = "clean_car"
+    FRIENDLY = "friendly"
+    FAST_ARRIVAL = "fast_arrival"
+    KNOWS_WAY = "knows_way"
+
+
+
 class SubscriptionDurationType(StrEnum):
     DAILY = "daily"
     WEEKLY = "weekly"
