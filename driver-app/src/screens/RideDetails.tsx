@@ -189,7 +189,9 @@ export function RideDetailsScreen() {
         <div className="t2-rdt-map">
           <MapView
             token={token}
-            center={ride.pickup}
+            // **لا سيارةَ للكبتن على خريطة رحلةٍ مضت** — `center` يرسم علامتَه عنده، فكانت سيارتُه عند نقطة الانطلاق (رآه «p3a»)؛
+            // والإطارُ من `fit` على المسار والدبوسين
+            center={null}
             pickup={ride.pickup}
             dropoff={ride.dropoff}
             routePoints={route}
