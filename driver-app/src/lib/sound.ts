@@ -34,6 +34,8 @@ const KEY = "taxo.driver.sound";
 const KEY_OTHER = "taxo.driver.sound.notifications";
 /** **مفتاحُ الطلب الوارد وحدَه** — انظر `offerSoundEnabled`. */
 const KEY_OFFER = "taxo.driver.sound.offer";
+/** **مفتاحُ «صوت الإرشاد»** (§٦٢-ج/٣٤) — انظر `guidanceSoundEnabled`. */
+const KEY_GUIDANCE = "taxo.driver.sound.guidance";
 
 export type Cue =
   | "offer"
@@ -46,7 +48,8 @@ export type Cue =
   | "subscriptionEnding"
   | "error"
   | "notify"
-  | "signature";
+  | "signature"
+  | "turn";
 
 /** **ما اختاره المالك — يحلّ محلَّ نغمته في موضعها وتحت مفاتيحها** (§٦١-ي/١٢).
  *
@@ -75,6 +78,8 @@ const FILES: Record<Cue, string> = {
   subscriptionEnding: "sounds/subscription.mp3",
   // **توقيعُ العلامة** — أوّلُ ما يُسمع بعد الدخول (§9.2)
   signature: "sounds/welcome.mp3",
+  // **المنعطفُ القادم** (§٦٢-ج/٣٤) — نغمةٌ واحدةٌ نقيّة لا يستعملها حدثٌ آخر: تُعرف من أوّل سماعٍ وهو يقود
+  turn: "sounds/turn.mp3",
 };
 
 
@@ -130,6 +135,20 @@ export function setOfferSoundEnabled(on: boolean): void {
   localStorage.setItem(KEY_OFFER, on ? "on" : "off");
 }
 
+/** **«صوت الإرشاد» مطفأٌ حتى يُشعله** (§٦١-ط/٩، §٦٢-ج/٣٤) — **عكسُ مفاتيح الصوت فوقه**: تلك أصواتٌ قائمةٌ يُطفئها صاحبُها،
+ *  وهذه نغمةٌ جديدةٌ تقع وهو يقود، فلا تُفاجئ من لم يطلبها. **وتحت المفتاح العام** كبقية ما عدا الطلب. */
+export function guidanceSoundEnabled(): boolean {
+  try {
+    return localStorage.getItem(KEY_GUIDANCE) === "on";
+  } catch {
+    return false;
+  }
+}
+
+export function setGuidanceSoundEnabled(on: boolean): void {
+  localStorage.setItem(KEY_GUIDANCE, on ? "on" : "off");
+}
+
 let context: AudioContext | null = null;
 let unlocked = false;
 
@@ -155,6 +174,8 @@ function allowed(cue: Cue): boolean {
   // **الطلبُ الوارد يتخطّى المفتاحَ العام** — ومعه نغمةُ انقضائه: من قصد
   // إسكاتَ الطلب قصد إسكاتَ طرفَيه، **ونصفُ حدثٍ مسموعٌ أربكُ من صامتٍ كلِّه**
   if (OFFER_CUES.has(cue)) return offerSoundEnabled();
+  // **ونغمةُ المنعطف تحت مفتاحها وتحت العام** — لا تحت «أصوات الرحلة والإشعارات»: من أشعل الإرشادَ قصده بعينه
+  if (cue === "turn") return soundsEnabled() && guidanceSoundEnabled();
   // **وما عداه فئةٌ واحدةٌ تحت مفتاحها، وكلاهما تحت العام**: إطفاءُ العامِّ
   // يُسكت الفئتين، وإطفاءُ فئةٍ لا يمسّ الأخرى
   return soundsEnabled() && otherSoundsEnabled();
@@ -238,6 +259,8 @@ export function play(cue: Cue): void {
  * زيادةٌ على الصوت لا بديلٌ عنه.
  */
 function buzz(cue: Cue): void {
+  // **ونغمةُ المنعطف بلا اهتزاز**: اختار صوتاً، والهاتفُ في حامل السيارة يطقطق مع كلِّ منعطف
+  if (cue === "turn") return;
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
     navigator.vibrate(

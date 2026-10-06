@@ -71,6 +71,7 @@ import {
   type NextInstruction,
   type RouteStep,
 } from "@/lib/next-instruction";
+import { useTurnCue } from "@/lib/turn-cue";
 import { CollectScreen } from "@/screens/Collect";
 import { RateRiderScreen } from "@/screens/RateRider";
 import { MapView } from "@/components/map/MapView";
@@ -314,6 +315,8 @@ export function useHomeScreen() {
     backOn.current += 1;
     if (backOn.current >= BACK_ON_ROUTE_STREAK) setInstruction(found);
   }, [position, activeSteps, thresholdM]);
+  // **ونغمةُ المنعطف من الشريط نفسِه** (§٦٢-ج/٣٤) — لمن أشعل «صوت الإرشاد» وحدَه
+  useTurnCue(instruction, activeSteps);
 
   const drift = useRef(0);
   const [reroutesLeft, setReroutesLeft] = useState<number | null>(null);

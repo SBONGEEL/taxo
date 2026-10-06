@@ -35,6 +35,8 @@ export interface NextInstruction {
   meters: number;
   /** سهمُ المناورة — و`null` حين لا يُعرف (`maneuverIcon`). */
   icon: string | null;
+  /** **رقمُ خطوتها في المسار** — يميّز مناورتين بنصٍّ واحد، فلا تُسكت نغمةُ الأولى نغمةَ الثانية (`lib/turn-cue`). */
+  index: number;
 }
 
 /** **سهمُ المناورة من نوعها واتجاهها** (§٦٢-ج/٤٢، C06 · C07) — باسم أيقونةٍ في مقتطَع الخطّ (`index.html`).
@@ -120,7 +122,7 @@ export function nextInstruction(
   const meters = at
     ? Math.round(metersBetween(at, { lng: end[0], lat: end[1] }))
     : here.step.distance_m;
-  return { text: upcoming.text, meters, icon: maneuverIcon(upcoming) };
+  return { text: upcoming.text, meters, icon: maneuverIcon(upcoming), index: here.index + 1 };
 }
 
 /** **ثلاثُ قراءاتٍ لتعود، وواحدةٌ لتغيب** — وهو ما يمنع الرفيف. */

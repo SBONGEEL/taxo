@@ -226,5 +226,13 @@
   "url": "https://cdn.pixabay.com/audio/2025/07/04/audio_a32bdcf6c0.mp3",
   "sha256": "a0ba8fde6501b833d8615d5a3bdd611dd8a8d9ea95efd3f0b47adf62e162f760",
   "opt": {}
+ },
+ {
+  "role": "turn",
+  "key": "turn",
+  "file": "mixkit-2863.wav",
+  "url": "https://assets.mixkit.co/active_storage/sfx/2863/2863.wav",
+  "sha256": "57051b9ef3c58a3df2e8c3679a80420e4020481ad551e8726a83d29faaa7852b",
+  "opt": {}
  }
 ]

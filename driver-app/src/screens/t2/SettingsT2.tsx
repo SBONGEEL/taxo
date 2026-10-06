@@ -7,7 +7,9 @@
  *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`TAXO2-DESIGN-CORRECTIONS.md` §١٩):
  * - **«قبول تلقائي للطلبات القريبة» و«تطبيق الملاحة» بُنيا بقرار المالك** (§٦١-ط/٦–٧) تفضيلين على الجهاز (`lib/driving-prefs`).
- *   **و«طلبات المطار» و«صوت الإرشاد» «قريباً»** (§٦١-ط/٨–٩): لا رحلاتِ مطارٍ يحرّكها المفتاح، والإرشادُ ينتظر أصواتَ TAXO.
+ * - **«صوت الإرشاد» بُني نغمةَ منعطف** (§٦٢-ج/٣٤، `lib/turn-cue`) **مطفأً افتراضاً** — **وحيث شريطُ الإرشاد مطفأٌ في السوق
+ *   (`next_instruction_enabled`) يبقى «قريباً»**: لا تعليمةَ تُعزف لها نغمة، ومفتاحٌ يُحفظ ولا يفعل شيئاً يَعِد بما لا يقع.
+ * - **و«طلبات المطار» «قريباً»** (§٦١-ط/٨): لا رحلاتِ مطارٍ يحرّكها المفتاح — **ورحلاتُ المطار (§٦٢-ج/٦) مالٌ ينتظر إذنَ المالك**.
  * - **«الخدمة النسائية — للكبتنات، استقبال الراكبات فقط»** مفتاحاً: التفضيلُ في التطبيق **ثلاثيٌّ لكلِّ كبتن**
  *   (الجميع · النساء فقط · الرجال فقط) — فبقي ثلاثياً بشرحه. **وللكبتنة صفٌّ بالاسم المرسوم إلى صفحته «CW1»** (§٦٢-ج/٢٣،
  *   `WomenModeT2.tsx`) — بالاختيار الثلاثيّ نفسِه.
@@ -23,6 +25,7 @@ import { useState, type ReactNode } from "react";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { biometryLabel } from "@/lib/biometric";
 import { NAV_APPS, autoAcceptEnabled, navApp, setAutoAccept, setNavApp, type NavApp } from "@/lib/driving-prefs";
+import { guidanceSoundEnabled, play, setGuidanceSoundEnabled } from "@/lib/sound";
 import { useCaptainSettings } from "@/screens/Settings";
 
 import { WomenModeRowT2 } from "./WomenModeT2";
@@ -132,6 +135,9 @@ export function SettingsT2Screen() {
   const [autoAccept, setAutoAcceptState] = useState(autoAcceptEnabled);
   const [nav, setNavState] = useState<NavApp>(navApp);
   const [picking, setPicking] = useState(false);
+  const [guidance, setGuidanceState] = useState(guidanceSoundEnabled);
+  // **شريطُ الإرشاد مفتاحُ السوق** — مطفأً لا تعليمةَ ولا نغمة، فلا مفتاح
+  const guidanceReady = country?.features.next_instruction_enabled === true;
 
   return (
     <div className="t2 t2-settings scr">
@@ -237,7 +243,23 @@ export function SettingsT2Screen() {
             ))}
           </div>
         ) : null}
-        <Soon icon="record_voice_over" title="صوت الإرشاد" />
+        {guidanceReady ? (
+          <Toggle
+            icon="record_voice_over"
+            title="صوت الإرشاد"
+            hint="نغمة قصيرة قبل كل منعطف بنحو 150 م، وأنت تقود على خريطة TAXO."
+            on={guidance}
+            onToggle={() => {
+              const next = !guidance;
+              setGuidanceSoundEnabled(next);
+              setGuidanceState(next);
+              // **يسمعها مرّةً حين يُشعلها** كبقية مفاتيح الصوت — فيعرفها على الطريق
+              if (next) play("turn");
+            }}
+          />
+        ) : (
+          <Soon icon="record_voice_over" title="صوت الإرشاد" />
+        )}
       </Group>
 
       <Group label="التطبيق">
