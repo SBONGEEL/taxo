@@ -41,8 +41,10 @@ import { useMapboxMissing } from "@/lib/config";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-/** **النهارُ في TAXO 2.0 خريطةٌ هادئة** (§٦١-د: «بلا معالمَ ولا ازدحامِ شوارع»): قاعدةُ Mapbox الأهدأ، ثمّ تُصبغ بلغة
- *  «TaxoMap» في الهوية عند كلِّ تحميلٍ للستايل (`calmLook`). **والليلُ كما كان** — ستايلُه وعلاماتُه لم تُمسّ. */
+/** **خريطةُ TAXO 2.0 هادئةٌ في المظهرين** (§٦١-د: «بلا معالمَ ولا ازدحامِ شوارع»): قاعدةُ Mapbox الأهدأ لكلِّ مظهر، ثمّ تُصبغ
+ *  بلغة «TaxoMap» من رموز الهوية عند كلِّ تحميلٍ للستايل (`calmLook`) — **وفي الليل برموزه الداكنة كخريطة الكبتن**. كان الليلُ
+ *  «كما كان» (بنمط Mapbox القديم ودبابيسَ حمراءَ وخضراء) يومَ كانت الشاشاتُ الليليةُ قديمة؛ **وصارت TAXO 2.0 (§٦٢/٣) فتبعتها
+ *  الخريطة** (رآه وكيلُ «p3a» ٢٠٢٦-١٠-٠٦). */
 const STYLE_LIGHT = "mapbox://styles/mapbox/light-v11";
 
 /** الطرقُ الكبرى بيضاء والصغرى أخفتُ منها — كما ترسمهما «TaxoMap». */
@@ -392,10 +394,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   const frame = useRef<number | null>(null);
   const moveEnd = useRef(onMoveEnd);
   const { dark } = useTheme();
-  // **النهارُ لغةُ TAXO 2.0، والليلُ كما كان** — يُقرأ في معالجِ `style.load` المسجَّل مرّةً واحدة
+  // **لغةُ TAXO 2.0 في المظهرين** — العلاماتُ والدبابيسُ والخطّ؛ والمظهرُ يُقرأ في معالجِ `style.load` المسجَّل مرّةً واحدة
   const darkRef = useRef(dark);
   darkRef.current = dark;
-  const t2 = !dark;
+  const t2 = true;
 
   moveEnd.current = onMoveEnd;
 
@@ -428,7 +430,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     instance.on("style.load", () => {
       instance.resize();
       // **الصبغُ قبل الإشارة** — فطبقاتُ الرحلة تُضاف فوق خريطةٍ مصبوغة
-      if (!darkRef.current && container.current) calmLook(instance, container.current);
+      if (container.current) calmLook(instance, container.current);
       setStyleVersion((version) => version + 1);
     });
     instance.on("moveend", () => {
@@ -800,7 +802,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     instance.addSource(id, { type: "geojson", data: line });
     // **نهارُ TAXO 2.0: خطُّ الجمر فوق ظلٍّ خافت** (TaxoMap) — والتقطيعُ حيث لا مسارَ حقيقيّاً كما كان: خطٌّ مستقيمٌ بين نقطتين
     // ليس طريقاً، **ورسمُه متّصلاً كما رسمته اللوحةُ يقول «هذا هو الطريق» وليس هو**
-    if (!dark && container.current) {
+    if (container.current) {
       const css = getComputedStyle(container.current);
       const accent = css.getPropertyValue("--t2-accent").trim();
       const casing = css.getPropertyValue("--t2-map-casing").trim();
