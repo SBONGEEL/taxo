@@ -48,28 +48,25 @@ export function ConfirmDelete({
 
   return (
     <Modal title="تأكيدُ الحذف" onClose={onClose}>
-      <p className="text-13 leading-note text-ink">
-        سيُحذف: <b className="font-bold">{what}</b>
+      <p className="ad-confirm-what">
+        سيُحذف: <b>{what}</b>
         {count !== undefined && count > 1 ? (
           <>
             {" "}
-            — ومعه <b className="font-bold">{count}</b> صفّاً مرتبطاً به
+            — ومعه <b>{count}</b> صفّاً مرتبطاً به
           </>
         ) : null}
       </p>
-      {note ? (
-        <p className="mt-8 text-11.5 leading-note text-muted">{note}</p>
-      ) : null}
-      <p className="mt-8 text-11.5 leading-note text-muted">
+      {note ? <p className="ad-confirm-note">{note}</p> : null}
+      <p className="ad-confirm-note">
         ولا يُحذف ما رآه الناسُ أو استعملوه — يُخفى بدل ذلك، والخادمُ يرفض
         ويقول السبب.
       </p>
 
-      <div className="mt-16 flex gap-10">
+      <div className="ad-confirm-actions">
         <Button
           size="md"
-          variant="secondary"
-          className="border-danger text-danger"
+          variant="danger"
           loading={busy}
           onClick={() => {
             setBusy(true);

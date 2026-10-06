@@ -8,7 +8,7 @@
          **ومنعُ التكبير على شاشةٍ فيها جداولُ أرقامٍ منعُ إتاحة**. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="TAXO — لوحة التحكم" />
-    <meta name="theme-color" content="#14181d" />
+    <meta name="theme-color" content="#0e1013" />
     <link rel="icon" type="image/svg+xml" href="/icons/taxo.svg" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,16 +18,25 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <!-- **خطّا TAXO 2.0** (Claude Design «Identity»): Unbounded لشعار الترحيب، وReadex Pro
-         لسطر ذكر الخريطة — بالطريق نفسِه الذي يُحمَّل به خطُّ اللوحة القائم -->
+    <!-- **خطّا TAXO 2.0** (Claude Design «Identity»): Readex Pro للنصّ كلِّه، وUnbounded للعلامة
+         والأرقام — **اللوحةُ بنظام التصميم نفسِه** (§٦٢/١٦) -->
     <link
       href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300..700&family=Unbounded:wght@500..800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- **أيقوناتُ TAXO 2.0** (Material Symbols Rounded) — **مقتطعةً بأسمائها** بترتيبها الأبجديّ كما يشترط المُقدِّم،
+         و`block` لا `swap`: نصُّ الاسم لا يُرى لحظةَ التحميل. **ومن سمّى أيقونةً في شيفرة اللوحة أضاف اسمَها هنا** —
+         و`check:taxo2` يقيس الجهتين: كلُّ اسمٍ مسمّىً في المقتطَع، والمقتطَعُ مرتَّبٌ بلا تكرار -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=account_balance_wallet,arrow_forward,badge,bar_chart,bug_report,calendar_today,campaign,card_membership,check,check_circle,chevron_left,close,dark_mode,description,directions_car,error,event,expand_more,fact_check,gavel,group,hide_image,history,hub,light_mode,lock,logout,manage_accounts,map,menu,navigation,notifications_off,payments,person,policy,public,radio_button_unchecked,receipt_long,redeem,remove,request_quote,route,search,sell,settings,shield,shopping_bag,sms,space_dashboard,star,system_update,tune,verified_user,visibility,visibility_off,warning,woman&display=block"
       rel="stylesheet"
     />
 
     <title>TAXO — لوحة التحكم</title>
   </head>
-  <body>
+  <!-- **`t2` على الجسد**: رموزُ TAXO 2.0 تُعرَّف على `.t2`، **وجسورُ الأصناف القائمة** (`index.css`) تُحلّ حيث تُعرَّف — فالجسدُ
+       جذرُها، والحوارُ والدرجُ تحته. **و`html.dark` يبدّلها** (`lib/theme`) -->
+  <body class="t2">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

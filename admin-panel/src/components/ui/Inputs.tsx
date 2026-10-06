@@ -7,6 +7,7 @@
 
 import { useId, useState } from "react";
 
+import { FieldError } from "@/components/ui/Field";
 import { useFieldError } from "@/lib/form-errors";
 import { currencyLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -57,12 +58,8 @@ export function MoneyField({
           {label}
         </label>
       ) : null}
-      <div
-        className={cn(
-          "flex items-center gap-8 rounded-10 border bg-surface-2 px-12",
-          reason ? "border-danger" : "border-line",
-        )}
-      >
+      {/* **الحقلُ والعملةُ صندوقٌ واحد** — العملةُ بعد الرقم وبلون الخافت (الهوية: «3.750 د.أ») */}
+      <div className={cn("ad-money", reason && "invalid", disabled && "disabled")}>
         <input
           id={id}
           name={name}
@@ -80,17 +77,13 @@ export function MoneyField({
             // **الصياغةُ عند الخروج وحدَه** — وثلاثُ خاناتٍ كصيغة القاعدة
             onChange(parsed.toFixed(3));
           }}
-          className="w-full bg-transparent py-8 text-start text-12.5 text-ink outline-none"
+          className="ad-money-input"
           aria-invalid={reason ? true : undefined}
         />
-        <span className="shrink-0 text-11.5 font-semibold text-muted">
-          {currencyLabel(currency)}
-        </span>
+        <span className="ad-money-cur">{currencyLabel(currency)}</span>
       </div>
-      {hint && !reason ? (
-        <p className="mt-6 text-11 leading-note text-muted">{hint}</p>
-      ) : null}
-      {reason ? <p className="mt-6 text-12 text-danger">{reason}</p> : null}
+      {hint && !reason ? <p className="ad-hint">{hint}</p> : null}
+      {reason ? <FieldError message={reason} /> : null}
     </div>
   );
 }
@@ -225,7 +218,7 @@ export function DurationField({
           {label}
         </label>
       ) : null}
-      <div className="flex gap-8">
+      <div className="ad-duration">
         <input
           id={id}
           name={name}
@@ -239,7 +232,7 @@ export function DurationField({
             emit(event.target.value, unit.key);
           }}
           onBlur={() => setTyped(null)}
-          className={cn("fld w-full text-start", reason && "border-danger")}
+          className={cn("fld", reason && "invalid")}
           aria-invalid={reason ? true : undefined}
           aria-describedby={reason ? `${id}-error` : undefined}
         />
@@ -250,7 +243,7 @@ export function DurationField({
             setTyped(null);
             emit(current.count || "1", event.target.value);
           }}
-          className="fld w-auto shrink-0"
+          className="fld ad-duration-unit"
           aria-label="وحدة المدّة"
         >
           {UNITS.filter((option) => option.seconds >= floor).map((option) => (
@@ -260,14 +253,8 @@ export function DurationField({
           ))}
         </select>
       </div>
-      {hint && !reason ? (
-        <p className="mt-6 text-11 leading-note text-muted">{hint}</p>
-      ) : null}
-      {reason ? (
-        <p id={`${id}-error`} className="mt-6 text-12 text-danger">
-          {reason}
-        </p>
-      ) : null}
+      {hint && !reason ? <p className="ad-hint">{hint}</p> : null}
+      {reason ? <FieldError id={`${id}-error`} message={reason} /> : null}
     </div>
   );
 }

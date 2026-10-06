@@ -8,6 +8,8 @@
  */
 import type { ReactNode } from "react";
 
+import { Icon } from "@/taxo2";
+
 export function GuardBanner({
   on,
   title,
@@ -19,10 +21,14 @@ export function GuardBanner({
   children: ReactNode;
 }) {
   if (!on) return null;
+  // **بلاغُ الهوية بنغمة التنبيه** (`kit.css` — `.ad-banner`): حالٌ قائمةٌ لا حدث
   return (
-    <div className="mb-16 rounded-13 border border-warn bg-surface-2 px-16 py-13">
-      <p className="text-14 font-semibold text-ink">{title}</p>
-      <p className="mt-6 text-13 leading-relaxed text-muted">{children}</p>
+    <div className="ad-banner" role="status">
+      <Icon name="warning" fill />
+      <div>
+        <p className="ad-banner-title">{title}</p>
+        <p className="ad-banner-body">{children}</p>
+      </div>
     </div>
   );
 }

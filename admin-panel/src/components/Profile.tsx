@@ -36,7 +36,8 @@ import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
-import { cn, digits } from "@/lib/utils";
+import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 /** قسمٌ يُطوى ويُفتح، **ويقرأ بابَه عند أوّل فتحةٍ لا قبلها**.
  *
@@ -46,6 +47,7 @@ import { cn, digits } from "@/lib/utils";
  */
 export function ProfileSection<T>({
   title,
+  icon,
   hint,
   load,
   children,
@@ -55,6 +57,8 @@ export function ProfileSection<T>({
   open: initiallyOpen = false,
 }: {
   title: string;
+  /** **أيقونةُ القسم** في مربّعها الغائر (A09) — زينةٌ بجانب العنوان، والمعنى في العنوان. */
+  icon?: string;
   hint?: string;
   load: () => Promise<T>;
   children: (data: T, reload: () => void) => ReactNode;
@@ -89,34 +93,32 @@ export function ProfileSection<T>({
   }, [open, load, round]);
 
   return (
-    <section className="mt-14">
+    // **بطاقةٌ تُطوى وتُفتح** (A09): رأسُها صفُّ قائمةٍ بأيقونته وسهمه، وجسدُها في البطاقة نفسِها
+    <section className={open ? "ad-sec open" : "ad-sec"}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center gap-9 rounded-12 border border-line bg-surface-2 px-13 py-10 text-start"
+        className="ad-sec-head"
       >
-        <span
-          aria-hidden
-          className={cn(
-            "text-11 text-muted transition-transform",
-            open && "rotate-90",
-          )}
-        >
-          ◂
-        </span>
-        <span className="flex-1 text-13 font-bold text-ink">{title}</span>
+        {icon ? (
+          <span className="ad-tile">
+            <Icon name={icon} />
+          </span>
+        ) : null}
+        <span className="ad-sec-title">{title}</span>
         {badge}
+        <Icon name="expand_more" className="ad-sec-chev" />
       </button>
 
       {open ? (
-        <div className="mt-9">
-          {hint ? (
-            <p className="mb-9 text-11 leading-note text-muted">{hint}</p>
-          ) : null}
+        <div className="ad-sec-body">
+          {hint ? <p className="ad-sec-hint">{hint}</p> : null}
           <ErrorNote message={error} />
           {error ? null : data === null ? (
-            <Spinner className="mx-auto my-16" />
+            <div className="ad-sec-loading">
+              <Spinner />
+            </div>
           ) : (
             children(data, () => setRound((n) => n + 1))
           )}
@@ -138,17 +140,11 @@ export function Facts({
   rows: { label: string; value: ReactNode; ltr?: boolean }[];
 }) {
   return (
-    <dl className="grid grid-cols-2 gap-x-12 gap-y-9 rounded-14 border border-line bg-surface-2 px-14 py-12">
+    <dl className="ad-facts">
       {rows.map((row) => (
         <div key={row.label} className="min-w-0">
-          <dt className="text-10.5 text-muted">{row.label}</dt>
-          <dd
-            dir={row.ltr ? "ltr" : undefined}
-            className={cn(
-              "truncate text-12.5 text-ink",
-              row.ltr && "text-start",
-            )}
-          >
+          <dt>{row.label}</dt>
+          <dd dir={row.ltr ? "ltr" : undefined}>
             {row.value === null || row.value === undefined || row.value === ""
               ? "—"
               : row.value}
@@ -177,17 +173,13 @@ export function MiniList<T>({
   empty: string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-11.5 leading-note text-muted">{empty}</p>;
+    return <p className="ad-mini-empty">{empty}</p>;
   }
+  // **صفوفٌ يفصلها خطٌّ في بطاقة القسم** (كقوائم الهوية) — لا صندوقٌ لكلِّ صفّ
   return (
-    <ul className="flex flex-col gap-7">
+    <ul className="ad-mini">
       {rows.map((row) => (
-        <li
-          key={keyOf(row)}
-          className="rounded-12 border border-line px-13 py-9 text-12.5"
-        >
-          {render(row)}
-        </li>
+        <li key={keyOf(row)}>{render(row)}</li>
       ))}
     </ul>
   );
@@ -209,24 +201,20 @@ export function MiniRow({
 }) {
   return (
     <>
-      <div className="flex items-center gap-10">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-ink">{title}</span>
-          {at ? (
-            <span className="block text-10.5 text-muted">{moment(at)}</span>
-          ) : null}
+      <div className="ad-mini-row">
+        <span className="ad-mini-main">
+          <span className="ad-mini-title">{title}</span>
+          {at ? <span className="ad-mini-at">{moment(at)}</span> : null}
         </span>
         {value ? (
           tone ? (
             <Badge tone={tone}>{value}</Badge>
           ) : (
-            <span className="shrink-0 font-semibold text-ink">{value}</span>
+            <span className="ad-mini-value">{value}</span>
           )
         ) : null}
       </div>
-      {note ? (
-        <p className="mt-5 text-10.5 leading-note text-muted">{note}</p>
-      ) : null}
+      {note ? <p className="ad-mini-note">{note}</p> : null}
     </>
   );
 }
@@ -239,7 +227,7 @@ export function MiniRow({
 export function CappedNote({ shown, cap }: { shown: number; cap: number }) {
   if (shown < cap) return null;
   return (
-    <p className="mt-7 text-10.5 leading-note text-muted">
+    <p className="ad-capped">
       يُعرض آخرُ {digits(String(cap))} — وهذا ليس عددَها. القائمةُ الكاملةُ في
       شاشتها.
     </p>

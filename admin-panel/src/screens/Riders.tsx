@@ -47,11 +47,12 @@ import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Drawer } from "@/components/ui/Drawer";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { moment, money } from "@/lib/format";
+import { currencyLabel, moment } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { WALLET_TX_LABEL } from "@/lib/labels";
@@ -335,32 +336,11 @@ function RiderDrawer({
 
   return (
     <FormErrors value={form.field}>
-    <div className="fixed inset-0 z-50 bg-dim" onClick={onClose}>
-      <div
-        className="scr absolute bottom-0 start-0 top-0 w-drawer max-w-full animate-slidein border-e border-line bg-surface p-22"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-18 flex items-start gap-12">
-          <span className="flex size-48 flex-none items-center justify-center rounded-full border border-line bg-surface-2 text-16 font-bold text-ink">
-            {user.name.trim().slice(0, 1)}
-          </span>
-          <div className="flex-1">
-            <div className="text-16 font-bold text-ink">{user.name}</div>
-            <div dir="ltr" className="text-12 text-muted">
-              {user.phone}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="إغلاق"
-            className="text-18 text-muted"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="mb-16 flex flex-wrap gap-6">
+    <Drawer
+      name={user.name}
+      phone={user.phone}
+      badges={
+        <>
           {user.is_blocked ? (
             <Badge tone="danger">محظور</Badge>
           ) : (
@@ -372,8 +352,10 @@ function RiderDrawer({
           {wallet?.frozen ? (
             <Badge tone="warn">محفظةُ الراكب مجمّدة</Badge>
           ) : null}
-        </div>
-
+        </>
+      }
+      onClose={onClose}
+    >
         {/* **الملفُّ الشخصيُّ الكامل** (§37، البند ١) — **ومقابلُ درج الكبتن
             لا نسخةٌ منه**: ما يخصّ الكيان (مركبةٌ واشتراكٌ وسلفة) لا وجودَ له
             للراكب، وما يخصّ الشخصَ مشتركٌ في `profile/Sections.tsx`.
@@ -394,15 +376,19 @@ function RiderDrawer({
           onChanged={(message) => setNote(message)}
         />
 
-        <h3 className="mb-10 mt-18 text-13 font-bold text-muted">المحفظة</h3>
+        <h3 className="ad-dh">المحفظة</h3>
         {wallet === null ? (
-          <Spinner className="mx-auto" />
+          <div className="ad-sec-loading">
+            <Spinner />
+          </div>
         ) : (
-          <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-            <div className="text-22 font-bold text-ink">
-              {money(wallet.balance, wallet.currency)}
+          <div className="ad-box">
+            {/* **الرصيدُ رقمُ الهوية** (Unbounded) وعملتُه بعده بالخافت — مصوغاً كما وصل من الدفتر */}
+            <div className="ad-amount">
+              <span className="ad-num ad-balance">{digits(wallet.balance)}</span>
+              <span className="ad-cur">{currencyLabel(wallet.currency)}</span>
             </div>
-            <p className="mt-4 text-11 leading-note text-muted">
+            <p className="ad-box-hint">
               رصيدٌ محسوبٌ من الدفتر لا عمودٌ مخزَّن — ولا يُعدَّل قيدٌ بل يُكتب
               قيدٌ مضاد.
             </p>
@@ -412,10 +398,8 @@ function RiderDrawer({
                 disabled={busy}
                 onClick={() => void toggleFreeze()}
                 className={cn(
-                  "mt-10 w-full rounded-10 border py-8 text-11.5 font-semibold disabled:opacity-60",
-                  wallet.frozen
-                    ? "border-line text-ink"
-                    : "border-warn text-warn",
+                  "ad-btn ad-btn-sm mt-12",
+                  wallet.frozen ? "ad-btn-secondary" : "ad-btn-warn",
                 )}
               >
                 {wallet.frozen ? "رفع التجميد" : "تجميد محفظة الراكب"}
@@ -426,42 +410,47 @@ function RiderDrawer({
 
         {ledger && ledger.length > 0 ? (
           <>
-            <h3 className="mb-10 mt-16 text-13 font-bold text-muted">
-              آخر الحركات
-            </h3>
-            <ul className="flex flex-col gap-7">
-              {ledger.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-center gap-10 rounded-12 border border-line px-13 py-9"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-12.5 text-ink">
-                      {TX_LABEL[entry.type] ?? entry.type}
-                    </span>
-                    <span className="block text-10.5 text-muted">
-                      {moment(entry.created_at)}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      "text-12.5 font-semibold",
-                      entry.amount.startsWith("-") ? "text-danger" : "text-ok",
-                    )}
-                  >
-                    {digits(entry.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <h3 className="ad-dh">آخر الحركات</h3>
+            <div className="ad-box ad-box-list">
+              <ul className="ad-mini">
+                {ledger.map((entry) => (
+                  <li key={entry.id}>
+                    <div className="ad-mini-row">
+                      <span className="ad-mini-main">
+                        <span className="ad-mini-title">
+                          {TX_LABEL[entry.type] ?? entry.type}
+                        </span>
+                        <span className="ad-mini-at">
+                          {moment(entry.created_at)}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "ad-ledger-amount",
+                          entry.amount.startsWith("-")
+                            ? "ad-tone-danger"
+                            : "ad-tone-ok",
+                        )}
+                      >
+                        {digits(entry.amount)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </>
         ) : null}
 
-        <ErrorNote message={error} />
-        <SuccessNote message={note} />
+        {error || note ? (
+          <div className="ad-stack mt-12">
+            <ErrorNote message={error} />
+            <SuccessNote message={note} />
+          </div>
+        ) : null}
 
         {canDecide ? (
-          <div className="mt-16">
+          <div className="ad-drawer-reason">
             <Field
               label="السبب"
               name="reason"
@@ -470,7 +459,7 @@ function RiderDrawer({
               maxLength={255}
               onChange={(event) => setReason(event.target.value)}
             />
-            <div className="mt-12">
+            <div className="ad-decide">
               {user.is_blocked ? (
                 <Button
                   size="md"
@@ -488,8 +477,7 @@ function RiderDrawer({
               ) : (
                 <Button
                   size="md"
-                  variant="secondary"
-                  className="border-danger text-danger"
+                  variant="danger"
                   disabled={busy || reason.trim().length < 3}
                   onClick={() =>
                     void run(
@@ -502,19 +490,18 @@ function RiderDrawer({
                 </Button>
               )}
             </div>
-            <p className="mt-8 text-11 leading-note text-muted">
+            <p className="ad-hint">
               الحظرُ يسري على الجلسة القائمة فوراً: العمود يُقرأ في كل طلب، فلا
               ينتظر انتهاء التوكن.
             </p>
           </div>
         ) : (
-          <p className="mt-16 text-11.5 leading-note text-muted">
+          <p className="ad-drawer-note">
             الحظرُ والتجميد لـ admin وحده — القسم 13/8 يعطي الدعمَ قراءةً
             ومعالجةَ نزاعات.
           </p>
         )}
-      </div>
-    </div>
+    </Drawer>
     </FormErrors>
   );
 }

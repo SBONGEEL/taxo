@@ -2,54 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* لوحة الألوان من `design/DESIGN.md` §1.1 بقيمها الست عشرية كما هي.
-   والوضع الليلي افتراضُ اللوحة كذلك — كما يبدأ النموذج (`_theme() ?? "dark"`)
-   ومع مبدّلٍ في الرأس يُحفظ. فالجذر العاري ليليٌّ و`.light` يبدّل القيم
-   نفسها، ولا يحمل أيُّ مكوّن شرطاً بين الوضعين. */
+/* **ألوانُ اللوحة رموزُ TAXO 2.0** (§٦٢/١٦ — «نظامُ تصميمٍ واحد»): كانت هنا لوحةُ `design/DESIGN.md` §1.1 بقيمها الست عشرية،
+   **فصارت أسماؤها القديمة جسوراً إلى رموز الهوية** (`taxo2/tokens.css`) — فكلُّ صنفٍ قائمٍ (`bg-surface` · `text-muted` ·
+   `border-line` …) **يتبع الهويةَ بلا لمس شاشته**، والشاشاتُ التي رُسمت من جديد تقرأ الرموزَ نفسَها مباشرة.
+
+   **والجذرُ `body.t2`** (`index.html`): الرموزُ تُعرَّف على `.t2`، **والمتغيّرُ يُحلّ حيث يُعرَّف** — فجسرٌ على `:root` كان سيُحلّ
+   قبل أن توجد الرموز. **والداكنُ افتراضُ اللوحة** (`lib/theme`): `html.dark` يبدّل الرموزَ، والجسورُ تتبعها.
+
+   **والأساسيُّ وحدَه بجسرين** — `--acc`/`--inv`: حبرٌ ونصُّه الحجرُ على الفاتح، **وجمرٌ ونصُّه الإسفلتُ على الداكن** (§٦٢-ب/٧:
+   «الحبرُ على الداكن لا يُرى»، و«المعكوسُ لا يُعاد على الداكن»). */
 @layer base {
-  :root,
-  .dark {
-    --bg: #14181d;
-    --sur: #0d1014;
-    --sur2: #1a2027;
-    --brd: #2a313a;
-    --tx: #e6edf3;
-    --mut: #8b949e;
-    --inv: #0d1014;
-    --acc: #e6edf3;
-    --ok: #3fb970;
-    --warn: #d9a62e;
-    --dng: #e5534b;
-    --sa: #1c2128;
-    --sb: #20262e;
-    --dim: rgba(4, 6, 8, 0.6);
-    /* قيمتا `--brand` الافتراضيتان (`--tx`/`--inv`) — اللوحة لا تُفعّل السِمة
-       الوردية، والرمزُ هنا كي لا يفترق الملف عن `DESIGN.md` §1.1-ب */
-    --brand: #e6edf3;
-    --brand-ink: #0d1014;
-    --brand-soft: #1a2027;
-    --brand-brd: #2a313a;
+  .t2 {
+    --bg: var(--t2-bg);
+    --sur: var(--t2-surface);
+    --sur2: var(--t2-sunken);
+    --brd: var(--t2-line);
+    --tx: var(--t2-text);
+    --mut: var(--t2-muted);
+    --acc: var(--t2-inverse);
+    --inv: var(--t2-on-inverse);
+    --ok: var(--t2-success);
+    --warn: var(--t2-warning);
+    --dng: var(--t2-danger);
+    /* الخريطةُ النائبة (`bg-stripe`): السطحُ والغائرُ — يتبعان المظهر */
+    --sa: var(--t2-surface);
+    --sb: var(--t2-sunken);
+    --dim: var(--t2-scrim);
+    /* رموزُ السِمة الوردية القديمة — اللوحةُ لا تُفعّلها، وتبقى جسوراً كي لا يُرسم صنفٌ بلا لون */
+    --brand: var(--t2-text);
+    --brand-ink: var(--t2-bg);
+    --brand-soft: var(--t2-sunken);
+    --brand-brd: var(--t2-line);
   }
 
-  .light {
-    --bg: #f2f0eb;
-    --sur: #ffffff;
-    --sur2: #faf9f6;
-    --brd: #ddd8cf;
-    --tx: #171b20;
-    --mut: #6e7681;
-    --inv: #f2f0eb;
-    --acc: #171b20;
-    --ok: #1a7f4e;
-    --warn: #9a6b00;
-    --dng: #c73e36;
-    --sa: #e6e3db;
-    --sb: #ece9e1;
-    --dim: rgba(20, 24, 29, 0.4);
-    --brand: #171b20;
-    --brand-ink: #f2f0eb;
-    --brand-soft: #faf9f6;
-    --brand-brd: #ddd8cf;
+  html.dark .t2 {
+    --acc: var(--t2-accent);
+    --inv: var(--t2-on-accent);
   }
 
   html,
@@ -59,7 +47,7 @@
   }
 
   body {
-    /* مقاس الجذر 14px (DESIGN.md §1.2) — كل مقاسات التصميم منسوبةٌ إليه */
+    /* مقاسُ الجذر 14px — كلُّ مقاساتِ الأصناف القائمة منسوبةٌ إليه */
     @apply bg-bg text-14 text-ink antialiased;
     margin: 0;
     /* اللوحة مالية: شكلٌ واحد للرقم في كل جدول */
@@ -68,30 +56,16 @@
     overscroll-behavior-y: none;
   }
 
-  /* حقول الإدخال لا ترث الخط من `body` في المتصفحات (DESIGN.md §1.2) */
+  /* حقول الإدخال لا ترث الخط من `body` في المتصفحات */
   input,
   textarea,
   select,
   button {
     font-family: inherit;
   }
-
 }
 
 @layer components {
-  /* `.fld` من DESIGN.md §2.3 — القيم كما هي بلا تقريب */
-  .fld {
-    @apply w-full rounded-13 border border-line bg-surface px-15 py-13 text-14.5
-      text-ink outline-none placeholder:text-muted disabled:opacity-60;
-    box-sizing: border-box;
-  }
-
-  /* التصميم لا يرسم حالة تركيز؛ وحدُّ لونِ النص أخفُّ ما يفي بالوصول بلا
-     إدخال لونٍ ليس في اللوحة */
-  .fld:focus {
-    @apply border-ink;
-  }
-
   /* **قصاصةُ الشاشة** (`env(safe-area-inset-*)`): الترويسةُ لاصقةٌ في
      `top-0` **فيقع سطرُها الأوّل تحت الحزّ** على هاتفٍ محزوز، والمحتوى
      يلامس حافّةَ الإيماء أسفل. **والقيمُ نسخةٌ من `driver-app/src/index.css`
@@ -101,10 +75,6 @@
   }
   .safe-bottom {
     padding-bottom: max(18px, env(safe-area-inset-bottom));
-  }
-
-  .label {
-    @apply mb-6 block text-12 text-muted;
   }
 
   /* شريطُ التمرير مخفيٌّ في المحمول (DESIGN.md §2.11) */

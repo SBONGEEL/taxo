@@ -34,6 +34,12 @@
  * **ولا يُفترض أنه المطلوب**: `confirm_payment` في الخلفية **يرفض التفعيلَ
  * بأقلَّ من الثمن ويُبقي المطالبةَ بفرقها مكتوباً** — وشاشةٌ تُرسل المبلغَ
  * المطلوبَ دائماً تُلغي ذلك الحارسَ من حيث لا يُرى.
+ *
+ * ## وبلغة TAXO 2.0 (AM01 — `design/t2-new/admin/AM01-payments.dc.html`)
+ *
+ * بطاقاتُ الهوية على الإسفلت: الاسمُ والمبلغُ بخطّ Unbounded وعملتُه بعده بالخافت، والمرجعُ والغرضُ ووقتُ الضغط صفوفٌ يفصلها
+ * خطّ، **والأزرارُ ٤٨ لا تُضغط بالظفر**. **والتدفّقُ كما كان حرفاً**: «راجِع» يفتح المبلغَ مملوءاً بالمطلوب قابلاً للتعديل، والسببَ،
+ * و«أكّد» و«ارفض» و«تراجع».
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -47,16 +53,20 @@ import {
 import type { CliqClaim } from "@/api/types";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
-import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
+import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
-import { money, moment } from "@/lib/format";
+import { currencyLabel, moment } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 /** **الغرضُ بالعربية** — والمشرفُ يقرأ «اشتراك» لا `subscription`. */
 const PURPOSE: Record<string, string> = {
   subscription: "اشتراك",
   wallet_topup: "شحن محفظة",
   driver_debt: "سداد دَين",
+  // **`debt` هو ما ترسله الخلفية** (`ProviderOrderPurpose.DEBT`) — وكان يُطبع «debt» خاماً على الهاتف
+  debt: "سداد دَين",
   ride_payment: "أجرة رحلة",
 };
 
@@ -105,9 +115,9 @@ export function MobilePayments() {
   return (
     // **عرضٌ مقيَّدٌ ومركَّز**: على الهاتف يملأ الشاشة، وعلى الحاسوب لا يتمدّد
     // سطراً بعرض المكتب — **والقراءةُ تسقط بعد ٧٥ محرفاً**
-    <div className="mx-auto w-full max-w-paper px-14 py-16">
-      <h1 className="text-17 font-bold text-ink">المدفوعات</h1>
-      <p className="mt-4 text-12 leading-note text-muted">
+    <div className="ad-mpay">
+      <h1 className="ad-mpay-title">المدفوعات</h1>
+      <p className="ad-mpay-lede">
         من ضغط «تمّ الدفع» في تطبيقه وينتظر تأكيدك — الأقدم أوّلاً.
       </p>
 
@@ -116,70 +126,68 @@ export function MobilePayments() {
           يُقرأ «لا مدفوعات اليوم». **والجملةُ لا تتجاوز الحقيقة**: القائمةُ
           تتحدّث حين تُفتح، فالنقصُ في الإيقاظ لا في الوصول. */}
       {pushState === "denied" ? (
-        <p className="mt-10 rounded-12 border border-line bg-surface-2 px-12 py-10 text-11.5 leading-note text-muted">
-          إذن الإشعارات مرفوض — لن يوقظك شيء وأنت خارج التطبيق. افتح هذه
-          الصفحة بنفسك، أو امنح الإذن من إعدادات النظام.
-        </p>
+        <div className="ad-note warn" role="status">
+          <Icon name="notifications_off" fill />
+          <span>
+            إذن الإشعارات مرفوض — لن يوقظك شيء وأنت خارج التطبيق. افتح هذه
+            الصفحة بنفسك، أو امنح الإذن من إعدادات النظام.
+          </span>
+        </div>
       ) : null}
 
-      <ErrorNote message={error} />
-      <SuccessNote message={done} />
+      {error || done ? (
+        <div className="ad-stack mb-12">
+          <ErrorNote message={error} />
+          <SuccessNote message={done} />
+        </div>
+      ) : null}
 
       {rows === null ? (
-        <p className="mt-16 text-12 text-muted">…يُحمَّل</p>
+        <div className="ad-mpay-loading">
+          <Spinner />
+        </div>
       ) : rows.length === 0 ? (
-        <div className="mt-16 rounded-16 border border-line bg-surface-2 p-20 text-center">
-          <p className="text-13 font-bold text-ink">لا مدفوعات تنتظر</p>
-          <p className="mt-4 text-11.5 leading-note text-muted">
+        <div className="ad-mpay-empty">
+          <p className="ad-mpay-empty-title">لا مدفوعات تنتظر</p>
+          <p className="ad-mpay-empty-hint">
             حين يضغط أحدُهم «تمّ الدفع» يظهر هنا ويصلك إشعار.
           </p>
         </div>
       ) : (
-        <ul className="mt-14 space-y-12">
+        <ul className="ad-mpay-list">
           {rows.map((row) => (
-            <li
-              key={row.id}
-              className="rounded-16 border border-line bg-surface p-14"
-            >
-              <div className="flex items-baseline justify-between gap-10">
-                <span className="text-14 font-bold text-ink">
-                  {row.payer_name ?? "—"}
-                </span>
-                <span className="text-16 font-bold text-ink">
-                  {money(row.amount, row.currency)}
+            <li key={row.id} className="ad-claim">
+              <div className="ad-claim-top">
+                <span className="ad-claim-name">{row.payer_name ?? "—"}</span>
+                <span className="ad-amount">
+                  <span className="ad-num">{digits(row.amount)}</span>
+                  <span className="ad-cur">{currencyLabel(row.currency)}</span>
                 </span>
               </div>
 
-              <div dir="ltr" className="mt-2 text-start text-12 text-muted">
+              <div dir="ltr" className="ad-claim-phone ad-ltr">
                 {row.payer_phone ?? "—"}
               </div>
 
-              <dl className="mt-10 space-y-6 border-t border-line pt-10">
-                <div className="flex items-baseline justify-between gap-10">
-                  <dt className="text-11.5 text-muted">المرجع</dt>
-                  <dd
-                    dir="ltr"
-                    className="select-all break-all text-start text-12 font-bold text-ink"
-                  >
+              <dl className="ad-claim-dl">
+                <div>
+                  <dt>المرجع</dt>
+                  <dd dir="ltr" className="ad-claim-ref">
                     {row.cart_id}
                   </dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-10">
-                  <dt className="text-11.5 text-muted">الغرض</dt>
-                  <dd className="text-12 text-ink">
-                    {PURPOSE[row.purpose] ?? row.purpose}
-                  </dd>
+                <div>
+                  <dt>الغرض</dt>
+                  <dd>{PURPOSE[row.purpose] ?? row.purpose}</dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-10">
-                  <dt className="text-11.5 text-muted">وقت الضغط</dt>
-                  <dd className="text-12 text-ink">
-                    {row.declared_paid_at ? moment(row.declared_paid_at) : "—"}
-                  </dd>
+                <div>
+                  <dt>وقت الضغط</dt>
+                  <dd>{row.declared_paid_at ? moment(row.declared_paid_at) : "—"}</dd>
                 </div>
               </dl>
 
               {open === row.id ? (
-                <div className="mt-12 space-y-10 border-t border-line pt-12">
+                <div className="ad-claim-review">
                   <Field
                     name="amount"
                     label="المبلغ الذي وصلك فعلاً"
@@ -187,7 +195,7 @@ export function MobilePayments() {
                     value={amount}
                     onChange={(event) => setAmount(event.target.value)}
                   />
-                  <p className="text-11 leading-note text-muted">
+                  <p className="ad-hint">
                     ناقصٌ عن المطلوب يُبقي الطلب معلّقاً بفرقه مكتوباً، ولا
                     يُفعَّل شيء.
                   </p>
@@ -197,9 +205,9 @@ export function MobilePayments() {
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
                   />
-                  <div className="flex gap-8">
+                  <div className="ad-claim-buttons">
                     <Button
-                      className="flex-1"
+                      size="md"
                       loading={busy}
                       disabled={!amount.trim()}
                       onClick={() => void act("confirm", row)}
@@ -207,7 +215,7 @@ export function MobilePayments() {
                       أكّد
                     </Button>
                     <Button
-                      className="flex-1"
+                      size="md"
                       variant="danger"
                       loading={busy}
                       disabled={reason.trim().length < 8}
@@ -216,17 +224,14 @@ export function MobilePayments() {
                       ارفض
                     </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => setOpen(null)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setOpen(null)}>
                     تراجع
                   </Button>
                 </div>
               ) : (
                 <Button
-                  className="mt-12 w-full"
+                  size="md"
+                  className="mt-12"
                   onClick={() => {
                     setOpen(row.id);
                     // **يُملأ بالمطلوب ويبقى قابلاً للتعديل** — فالأغلبُ أن
@@ -243,7 +248,7 @@ export function MobilePayments() {
         </ul>
       )}
 
-      <p className="mt-16 text-11 leading-note text-muted">
+      <p className="ad-mpay-foot">
         الأرقام لاتينية عمداً: المرجع يُطابَق حرفاً بحرف مع كشف حسابك،
         وتحويلُ خاناته يجعلك تقارن نصّاً بشكلٍ آخر.
       </p>

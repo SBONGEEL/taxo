@@ -94,18 +94,19 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children;
 
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-14 bg-bg px-32 text-center">
-        <h1 className="text-18 font-bold text-ink">حدث خطأ في هذه الشاشة</h1>
-        <p className="text-12.5 leading-note text-muted">
+      // **بلغة TAXO 2.0** (عُدّةُ اللوحة): عنوانٌ وسطرُ سبب، وأزرارٌ ثانويةٌ بحافّة — والمنطقُ كما كان
+      <div className="ad-crash">
+        <h1 className="ad-crash-title">حدث خطأ في هذه الشاشة</h1>
+        <p className="ad-crash-text">
           لم يقع شيءٌ على حسابك أو رحلتك — المشكلة في العرض وحده. أعد المحاولة،
           وإن تكررت أبلغ الدعم.
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-10">
+        <div className="ad-crash-actions">
           <button
             type="button"
             onClick={() => this.setState({ ...EMPTY })}
-            className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-ink"
+            className="ad-btn ad-btn-sm ad-btn-secondary ad-btn-auto"
           >
             أعد المحاولة
           </button>
@@ -114,7 +115,7 @@ export class ErrorBoundary extends Component<Props, State> {
             onClick={() => {
               window.location.replace("/");
             }}
-            className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-muted"
+            className="ad-btn ad-btn-sm ad-btn-ghost ad-btn-auto"
           >
             العودة للرئيسية
           </button>
@@ -122,7 +123,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={() => this.setState({ noteOpen: true })}
-              className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-muted"
+              className="ad-btn ad-btn-sm ad-btn-ghost ad-btn-auto"
             >
               أرسل تقريراً
             </button>
@@ -130,24 +131,24 @@ export class ErrorBoundary extends Component<Props, State> {
         </div>
 
         {this.state.noteOpen && this.state.sent === null && (
-          <div className="flex w-full max-w-modal flex-col gap-8">
+          <div className="ad-crash-note">
             <textarea
               value={this.state.note}
               onChange={(event) => this.setState({ note: event.target.value })}
               maxLength={500}
               rows={3}
               placeholder="ماذا كنت تفعل حين توقفت الشاشة؟"
-              className="w-full rounded-12 border border-line bg-bg p-12 text-12.5 text-ink"
+              className="fld"
             />
             {/* **يُقال قبل الكتابة لا بعدها** — الجملةُ تُنظَّف في الخادم */}
-            <p className="text-11 leading-note text-muted">
+            <p className="ad-hint">
               لا تكتب رقمك أو رمز التحقق — تُحجب هذه تلقائياً قبل الحفظ.
             </p>
             <button
               type="button"
               onClick={() => void this.submit()}
               disabled={this.state.sending}
-              className="rounded-12 border border-line px-16 py-10 text-12.5 font-semibold text-ink disabled:opacity-50"
+              className="ad-btn ad-btn-sm ad-btn-secondary"
             >
               {this.state.sending ? "يُرسل…" : "إرسال"}
             </button>
@@ -155,7 +156,7 @@ export class ErrorBoundary extends Component<Props, State> {
         )}
 
         {this.state.sent !== null && (
-          <p className="text-12.5 leading-note text-muted">
+          <p className="ad-crash-text">
             {this.state.sent === "yes"
               ? "وصل التقرير — شكراً لك."
               : "سيُرسل التقرير حين تعود الشبكة."}

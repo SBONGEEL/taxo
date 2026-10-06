@@ -48,7 +48,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("light", !dark);
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", dark ? "#14181d" : "#f2f0eb");
+      // **لونُ شريط النظام لونُ الصفحة** — الإسفلتُ والحجرُ من رموز TAXO 2.0 (`--t2-bg`)، لا لوحةُ `DESIGN.md` القديمة
+      ?.setAttribute("content", dark ? "#0e1013" : "#f4f1ea");
   }, [dark]);
 
   const setChoice = useCallback((next: ThemeChoice) => {

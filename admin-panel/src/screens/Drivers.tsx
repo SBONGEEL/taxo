@@ -76,14 +76,18 @@ import { Deactivations } from "@/components/Deactivations";
 import { PendingDeletions } from "@/components/PendingDeletions";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
+import { Badge } from "@/components/ui/Badge";
+import type { Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Checkbox, Field } from "@/components/ui/Field";
+import { Drawer } from "@/components/ui/Drawer";
+import { Checkbox, Field, FieldError } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, digits, cn } from "@/lib/utils";
+import { DateField, Icon } from "@/taxo2";
 
 const STATUS_LABEL: Record<DriverStatus, string> = {
   pending: "بانتظار الاعتماد",
@@ -96,13 +100,14 @@ const STATUS_LABEL: Record<DriverStatus, string> = {
   deactivated: "ألغى تفعيله",
 };
 
-const STATUS_TONE: Record<DriverStatus, string> = {
-  pending: "text-warn",
-  approved: "text-ok",
-  rejected: "text-danger",
-  suspended: "text-danger",
+/** **الحالُ شارةٌ بنغمتها** (A05) — كانت نصّاً ملوَّناً. */
+const STATUS_TONE: Record<DriverStatus, Tone> = {
+  pending: "warn",
+  approved: "ok",
+  rejected: "danger",
+  suspended: "danger",
   // **ولونُه محايدٌ لا خطر**: خروجٌ بطلبه لا عقوبةٌ عليه.
-  deactivated: "text-muted",
+  deactivated: "muted",
 };
 
 const DOC_LABEL: Record<DocumentType, string> = {
@@ -176,30 +181,21 @@ function DocumentPreview({
 
   if (url) {
     return (
-      <div className="mt-10">
-        <div className="relative">
-          <img
-            src={url}
-            alt="الوثيقة"
-            className="max-h-170 w-full rounded-12 border border-line object-contain"
+      <div className="ad-doc-preview">
+        <img src={url} alt="الوثيقة" className="ad-doc-img" />
+        {/* عائمٌ على الحافة العليا — يُقرأ مع الورقة في نظرةٍ واحدة */}
+        <div className="ad-doc-expiry">
+          <span className="ad-doc-expiry-label" aria-hidden="true">
+            تنتهي في
+          </span>
+          {/* **حقلُ التاريخ من نظام التصميم لا الأصليُّ عارياً** (§٦٢-ب/١٥): الأصليُّ في صفحةٍ عربيّةٍ يرسم «يوم/شهر/سنة»
+              بحروفٍ معكوسة — **وقِيس هنا كذلك ولو بـ`dir="ltr"`** («ةنس/رهش/موي» في لقطة الدرج). **والقيمةُ والحدثُ كما
+              كانا**: نصُّ `YYYY-MM-DD` يُرسل مع البتّة، ومنتقي النظام نفسُه يُفتح */}
+          <DateField
+            value={expiry}
+            onChange={onExpiryChange}
+            label="تنتهي في"
           />
-          {/* عائمٌ على الحافة العليا — يُقرأ مع الورقة في نظرةٍ واحدة */}
-          <label className="absolute inset-x-8 top-8 flex items-center gap-8 rounded-10 bg-dim px-10 py-6 backdrop-blur">
-            <span className="shrink-0 text-11 font-semibold text-inv">
-              تنتهي في
-            </span>
-            {/* **حقلٌ خامٌ لا `Field` بقصد**: هذا عائمٌ على حافة صورة الوثيقة
-                داخل `<label>` واحدة، **و`Field` يلفّ نفسَه في `div` بتسميةٍ
-                فوقه** فيكسر الطبقة. **والاتّجاهُ يُكتب بيدٍ هنا وحدَه** —
-                والخمسةُ الباقيةُ تأخذه من `Field` نفسِه (§39٫١٢٫٢). */}
-            <input
-              type="date"
-              dir="ltr"
-              value={expiry}
-              onChange={(event) => onExpiryChange(event.target.value)}
-              className="fld flex-1 py-4 text-11.5"
-            />
-          </label>
         </div>
         <button
           type="button"
@@ -207,7 +203,7 @@ function DocumentPreview({
             URL.revokeObjectURL(url);
             setUrl(null);
           }}
-          className="mt-6 text-11.5 font-semibold text-muted"
+          className="ad-doc-hide"
         >
           إخفاء
         </button>
@@ -216,7 +212,7 @@ function DocumentPreview({
   }
 
   return (
-    <div className="mt-10">
+    <div>
       <button
         type="button"
         disabled={busy}
@@ -231,13 +227,12 @@ function DocumentPreview({
             .catch((caught: Error) => setFailed(caught.message))
             .finally(() => setBusy(false));
         }}
-        className="text-11.5 font-semibold text-ink underline disabled:opacity-60"
+        className="ad-doc-view"
       >
+        <Icon name="visibility" />
         {busy ? "جارٍ الفتح…" : "اعرض الوثيقة"}
       </button>
-      {failed ? (
-        <p className="mt-4 text-11 text-danger">{failed}</p>
-      ) : null}
+      {failed ? <p className="ad-doc-fail">{failed}</p> : null}
     </div>
   );
 }
@@ -279,18 +274,18 @@ function AdvanceCap({
 
   return (
     <>
-      <h3 className="mb-10 mt-18 text-13 font-bold text-muted">سقف السلفة</h3>
-      <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-        <p className="text-13 font-semibold text-ink">{current}</p>
-        <p className="mt-6 text-11 leading-note text-muted">
-          <b className="text-ink">يخفض ولا يرفع</b>: السقفُ المطبَّق هو الأدنى بين
-          المحسوب (من قيمة الاشتراك اليوميّ، ينمو بما سُدّد) وهذا. فارغٌ = لا
-          تخصيص، و<b className="text-ink">صفرٌ = منعٌ من السلف</b>.
+      <h3 className="ad-dh">سقف السلفة</h3>
+      <div className="ad-box">
+        <p className="ad-box-state">{current}</p>
+        <p className="ad-box-hint">
+          <b>يخفض ولا يرفع</b>: السقفُ المطبَّق هو الأدنى بين المحسوب (من قيمة
+          الاشتراك اليوميّ، ينمو بما سُدّد) وهذا. فارغٌ = لا تخصيص، و
+          <b>صفرٌ = منعٌ من السلف</b>.
         </p>
 
         {canDecide ? (
           <>
-            <div className="mt-10 grid gap-10">
+            <div className="ad-box-fields">
               <Field
                 label="السقف (فارغ = لا تخصيص)"
                 dir="ltr"
@@ -306,42 +301,39 @@ function AdvanceCap({
                 onChange={(event) => setReason(event.target.value)}
               />
             </div>
-            {failed ? (
-              <p className="mt-6 text-11 text-danger">{failed}</p>
-            ) : null}
-            <Button
-              className="mt-10"
-              size="sm"
-              loading={busy}
-              disabled={reason.trim().length < 3}
-              onClick={() => {
-                setBusy(true);
-                setFailed(null);
-                setAdvanceCap(row.driver_id, {
-                  cap: cap.trim() === "" ? null : cap.trim(),
-                  reason: reason.trim(),
-                })
-                  .then(() => {
-                    setReason("");
-                    onChanged("ضُبط سقفُ السلفة");
+            {failed ? <FieldError message={failed} /> : null}
+            <div className="ad-box-actions">
+              <Button
+                size="sm"
+                loading={busy}
+                disabled={reason.trim().length < 3}
+                onClick={() => {
+                  setBusy(true);
+                  setFailed(null);
+                  setAdvanceCap(row.driver_id, {
+                    cap: cap.trim() === "" ? null : cap.trim(),
+                    reason: reason.trim(),
                   })
-                  .catch((caught) =>
-                    setFailed(
-                      caught instanceof ApiError
-                        ? caught.message
-                        : "تعذّر الضبط",
-                    ),
-                  )
-                  .finally(() => setBusy(false));
-              }}
-            >
-              احفظ السقف
-            </Button>
+                    .then(() => {
+                      setReason("");
+                      onChanged("ضُبط سقفُ السلفة");
+                    })
+                    .catch((caught) =>
+                      setFailed(
+                        caught instanceof ApiError
+                          ? caught.message
+                          : "تعذّر الضبط",
+                      ),
+                    )
+                    .finally(() => setBusy(false));
+                }}
+              >
+                احفظ السقف
+              </Button>
+            </div>
           </>
         ) : (
-          <p className="mt-8 text-11 leading-note text-muted">
-            الضبطُ لـ admin وحده — هذا مالٌ يُقرَض.
-          </p>
+          <p className="ad-box-hint">الضبطُ لـ admin وحده — هذا مالٌ يُقرَض.</p>
         )}
       </div>
     </>
@@ -420,34 +412,34 @@ export function DriversScreen() {
       title="السائقون واعتماد الوثائق"
       subtitle="لا يعمل كبتنٌ قبل المراجعة — والاعتماد يشترط رقماً مُثبتاً ومستنداتٍ مقبولة"
     >
-      <Pills
-        value={filter}
-        onPick={(key) => setFilter(key)}
-        options={[
-          { key: "pending", label: "بانتظار الاعتماد" },
-          { key: "approved", label: "معتمدون" },
-          { key: "suspended", label: "موقوفون" },
-          { key: "rejected", label: "مرفوضون" },
-          { key: "all", label: "الكل" },
-        ]}
-      />
+      <div className="ad-filters">
+        <Pills
+          value={filter}
+          onPick={(key) => setFilter(key)}
+          options={[
+            { key: "pending", label: "بانتظار الاعتماد" },
+            { key: "approved", label: "معتمدون" },
+            { key: "suspended", label: "موقوفون" },
+            { key: "rejected", label: "مرفوضون" },
+            { key: "all", label: "الكل" },
+          ]}
+        />
 
-      <div className="mb-14 max-w-prose">
-        <Checkbox checked={unverifiedGender} onChange={setUnverifiedGender}>
-          <span className="block text-12.5 font-semibold text-ink">
-            من لم يُثبَّت جنسُه بعد
-          </span>
-          <span className="block text-11 leading-note text-muted">
-            المتراكمُ الذي تبقى الخدمة النسائية مطفأةً حتى يُفرَّغ — تشغيلُها
-            قبله يعني خدمةً بلا سائقاتٍ يمكن ترشيحُهنّ.
-          </span>
-        </Checkbox>
+        <div className="ad-toggle-card">
+          <Checkbox checked={unverifiedGender} onChange={setUnverifiedGender}>
+            <span className="ad-toggle-title">من لم يُثبَّت جنسُه بعد</span>
+            <span className="ad-toggle-hint">
+              المتراكمُ الذي تبقى الخدمة النسائية مطفأةً حتى يُفرَّغ — تشغيلُها
+              قبله يعني خدمةً بلا سائقاتٍ يمكن ترشيحُهنّ.
+            </span>
+          </Checkbox>
+        </div>
       </div>
 
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <div className="mt-12">
+      <div className={error || done ? "mt-12" : undefined}>
         <Table
           toolbar={
             <TableSearch
@@ -476,42 +468,42 @@ export function DriversScreen() {
           }}
           render={(row) => (
             <>
-              <span className="flex items-center gap-9">
-                <span className="flex size-30 flex-none items-center justify-center rounded-full border border-line bg-surface-2 text-11 font-bold text-ink">
+              <span className="ad-person">
+                <span className="ad-person-avatar" aria-hidden="true">
                   {row.name.trim().slice(0, 1)}
                 </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-ink">
-                    {row.name}
-                  </span>
+                <span className="ad-person-text">
+                  <span className="ad-person-name">{row.name}</span>
                   {!row.phone_verified ? (
-                    <span className="block text-10.5 text-danger">
+                    <span className="ad-person-note">
                       رقمٌ غير مُثبت — لا يُعتمد
                     </span>
                   ) : null}
                 </span>
               </span>
 
-              <span dir="ltr" className="text-start text-muted">
+              <span dir="ltr" className="ad-ltr ad-tone-muted">
                 {row.phone}
               </span>
 
-              <span className={cn("font-semibold", STATUS_TONE[row.status])}>
-                {STATUS_LABEL[row.status]}
+              <span>
+                <Badge tone={STATUS_TONE[row.status]}>
+                  {STATUS_LABEL[row.status]}
+                </Badge>
               </span>
 
-              <span className="text-muted">
+              <span>
                 {row.documents_pending > 0 ? (
-                  <span className="text-warn">
+                  <span className="ad-tone-warn">
                     {digits(String(row.documents_pending))} بانتظار
                     المراجعة
                   </span>
                 ) : row.missing_required.length > 0 ? (
-                  <span className="text-danger">
+                  <span className="ad-tone-danger">
                     ينقص {digits(String(row.missing_required.length))}
                   </span>
                 ) : (
-                  <span className="text-ok">مكتملة</span>
+                  <span className="ad-tone-ok">مكتملة</span>
                 )}
               </span>
 
@@ -519,26 +511,31 @@ export function DriversScreen() {
                   «ذكر» — عرضُ قيمةٍ بلا ختمٍ يجعلها تبدو معتبَرة وهي ليست */}
               <span>
                 {row.gender_verified && row.gender ? (
-                  <span className="text-ink">{GENDER_LABEL[row.gender]}</span>
+                  <span>{GENDER_LABEL[row.gender]}</span>
                 ) : (
-                  <span className="text-warn">لم يُثبَّت</span>
+                  <span className="ad-tone-warn">لم يُثبَّت</span>
                 )}
               </span>
 
-              <span className="text-ink">
-                {row.rating_avg === "0.00"
-                  ? "—"
-                  : `★ ${digits(row.rating_avg)}`}
+              <span className="ad-tone-muted">
+                {row.rating_avg === "0.00" ? (
+                  "—"
+                ) : (
+                  <span className="ad-rating">
+                    <Icon name="star" fill />
+                    {digits(row.rating_avg)}
+                  </span>
+                )}
               </span>
 
-              <span className="flex justify-end">
-                <button
-                  type="button"
+              <span className="ad-row-end">
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setOpen(row)}
-                  className="text-11.5 font-semibold text-ink underline"
                 >
                   الوثائق والقرار
-                </button>
+                </Button>
               </span>
             </>
           )}
@@ -548,6 +545,7 @@ export function DriversScreen() {
       {/* **طلباتُ إلغاء التفعيل تحت قائمة الكباتن** (البند ١٣): هنا يُقرأ حالُ
           الكبتن أصلاً، وقرارٌ يُخرجه من التوزيع يسكن حيث تُقرأ حالتُه — لا في
           «المالية» رغم أنه يُطلق مالاً محتجَزاً */}
+      <div className="ad-section-gap" />
       <PendingDeletions onError={setError} />
       <Deactivations onError={setError} />
       <Advances onError={setError} />
@@ -663,31 +661,14 @@ function DriverDrawer({
 
   return (
     <FormErrors value={form.field}>
-    <div className="fixed inset-0 z-50 bg-dim" onClick={onClose}>
-      <div
-        className="scr absolute bottom-0 start-0 top-0 w-drawer max-w-full animate-slidein border-e border-line bg-surface p-22"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-18 flex items-start gap-12">
-          <span className="flex size-48 flex-none items-center justify-center rounded-full border border-line bg-surface-2 text-16 font-bold text-ink">
-            {row.name.trim().slice(0, 1)}
-          </span>
-          <div className="flex-1">
-            <div className="text-16 font-bold text-ink">{row.name}</div>
-            <div dir="ltr" className="text-12 text-muted">
-              {row.phone}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="إغلاق"
-            className="text-18 text-muted"
-          >
-            ✕
-          </button>
-        </div>
-
+    <Drawer
+      name={row.name}
+      phone={row.phone}
+      badges={
+        <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
+      }
+      onClose={onClose}
+    >
         {/* **الملفُّ الشخصيُّ الكامل** (§37، البند ١): أقسامٌ تُفتح بطلبٍ
             وتقرأ **من بابِ كلِّ مفهوم** — لا بابٌ جامعٌ يصير مصدراً ثانياً
             (§5-ج: «الصفحةُ تقرأ ولا تحسب من جديد»). **وترتيبُها ترتيبُ
@@ -722,7 +703,7 @@ function DriverDrawer({
           onChanged={(message) => onDone(message)}
         />
 
-        <h3 className="mb-10 mt-18 text-13 font-bold text-muted">الوثائق</h3>
+        <h3 className="ad-dh">الوثائق</h3>
         <BulkApprove
           docs={docs}
           seen={seen}
@@ -748,43 +729,40 @@ function DriverDrawer({
           }
         />
         {docs === null ? (
-          <Spinner className="mx-auto" />
+          <div className="ad-sec-loading">
+            <Spinner />
+          </div>
         ) : docs.documents.length === 0 ? (
-          <p className="text-12.5 leading-note text-muted">
-            لم يرفع أيّ مستند بعد.
-          </p>
+          <p className="ad-mini-empty">لم يرفع أيّ مستند بعد.</p>
         ) : (
-          <ul className="flex flex-col gap-9">
+          <ul className="ad-mini-reset">
             {docs.documents.map((document) => (
-              <li
-                key={document.id}
-                className="rounded-14 border border-line bg-surface-2 px-14 py-12"
-              >
-                <div className="flex items-center gap-10">
-                  <span className="flex-1 text-13 font-semibold text-ink">
+              <li key={document.id} className="ad-doc">
+                <div className="ad-doc-top">
+                  <span className="ad-tile">
+                    <Icon name="description" />
+                  </span>
+                  <span className="ad-doc-title">
                     {DOC_LABEL[document.doc_type]}
                   </span>
-                  <span
-                    className={cn(
-                      "text-11.5 font-bold",
+                  <Badge
+                    tone={
                       document.review_status === "approved"
-                        ? "text-ok"
+                        ? "ok"
                         : document.review_status === "rejected"
-                          ? "text-danger"
-                          : "text-warn",
-                    )}
+                          ? "danger"
+                          : "warn"
+                    }
                   >
                     {document.review_status === "approved"
                       ? "مقبولة"
                       : document.review_status === "rejected"
                         ? "مرفوضة"
                         : "بانتظار المراجعة"}
-                  </span>
+                  </Badge>
                 </div>
                 {document.review_note ? (
-                  <p className="mt-6 text-11 leading-snug text-danger">
-                    {document.review_note}
-                  </p>
+                  <p className="ad-doc-note">{document.review_note}</p>
                 ) : null}
 
                 {/* **ولا يُعتمد ما لا يُرى**: كان القرارُ يُتَّخذ على نوعِ
@@ -809,7 +787,7 @@ function DriverDrawer({
                     ضغطةٌ ثانيةٌ هنا. (وجدته المرحلةُ ١٣: تسعُ ضغطاتٍ على تسعة
                     مستندات أرسلت تسعَ مراجعاتٍ لمعرّفٍ واحدٍ كلُّها ٤٠٩) */}
                 {canDecide && document.review_status === "pending" ? (
-                  <div className="mt-10 flex gap-8">
+                  <div className="ad-doc-actions">
                     <button
                       type="button"
                       disabled={busy}
@@ -826,7 +804,7 @@ function DriverDrawer({
                           "اعتُمدت الوثيقة ✓",
                         )
                       }
-                      className="flex-1 rounded-10 border border-line py-8 text-11.5 font-semibold text-ok disabled:opacity-60"
+                      className="ad-btn ad-btn-sm ad-btn-ok"
                     >
                       اعتماد
                     </button>
@@ -846,7 +824,7 @@ function DriverDrawer({
                           "رُفضت الوثيقة — أُبلغ السائق",
                         )
                       }
-                      className="flex-1 rounded-10 border border-line py-8 text-11.5 font-semibold text-danger disabled:opacity-60"
+                      className="ad-btn ad-btn-sm ad-btn-danger"
                     >
                       رفض
                     </button>
@@ -861,39 +839,33 @@ function DriverDrawer({
 
         <Inspection row={row} canDecide={canDecide} onChanged={onChanged} />
 
-        <h3 className="mb-10 mt-18 text-13 font-bold text-muted">
-          توثيق الجنس
-        </h3>
-        <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-          <div className="flex items-center gap-10">
-            <span className="flex-1 text-13 font-semibold text-ink">
+        <h3 className="ad-dh">توثيق الجنس</h3>
+        <div className="ad-box">
+          <div className="ad-box-row">
+            <p className="ad-box-state">
               {row.gender_verified && row.gender
                 ? `مُثبت — ${GENDER_LABEL[row.gender]}`
                 : "لم يُثبَّت بعد"}
-            </span>
-            <span
-              className={cn(
-                "text-11.5 font-bold",
-                row.gender_verified ? "text-ok" : "text-warn",
-              )}
-            >
+            </p>
+            <Badge tone={row.gender_verified ? "ok" : "warn"}>
               {row.gender_verified ? "مختوم" : "بانتظار المشرف"}
-            </span>
+            </Badge>
           </div>
 
-          <p className="mt-6 text-11 leading-note text-muted">
+          <p className="ad-box-hint">
             {PREFERENCE_LABEL[row.gender_preference]} — تفضيلٌ دائم يضبطه صاحبُ
             الحساب من تطبيقه.
           </p>
 
           {canDecide ? (
             <>
-              <div className="mt-10 flex gap-8">
+              <div className="ad-gender">
                 {(["female", "male"] as Gender[]).map((value) => (
                   <button
                     key={value}
                     type="button"
                     disabled={busy}
+                    aria-pressed={row.gender_verified && row.gender === value}
                     onClick={() =>
                       void run(
                         () => setDriverGender(row.driver_id, value),
@@ -901,24 +873,22 @@ function DriverDrawer({
                       )
                     }
                     className={cn(
-                      "flex-1 rounded-10 border py-8 text-11.5 font-semibold disabled:opacity-60",
-                      row.gender_verified && row.gender === value
-                        ? "border-ink text-ink"
-                        : "border-line text-muted",
+                      "ad-btn ad-btn-sm ad-btn-secondary",
+                      row.gender_verified && row.gender === value && "on",
                     )}
                   >
                     {GENDER_LABEL[value]}
                   </button>
                 ))}
               </div>
-              <p className="mt-8 text-11 leading-note text-muted">
+              <p className="ad-box-hint">
                 يُقرأ من الهوية المرفوعة أعلاه، لا من قول صاحبه: بلا ختمِ مشرفٍ
                 يصير بلوغُ صفة «سائقة للنساء» كتابةَ كلمةٍ في حقل. والضبطُ لا
                 يعيد دورة اعتماد — الوثائق مراجَعةٌ أصلاً.
               </p>
             </>
           ) : (
-            <p className="mt-8 text-11 leading-note text-muted">
+            <p className="ad-box-hint">
               الضبطُ لـ admin وحده — إعلانُ جنس الكبتن يقيّد أمان غيره
               (القسم 13/8).
             </p>
@@ -926,32 +896,37 @@ function DriverDrawer({
         </div>
 
         {canDecide ? (
-          <div className="mt-14">
+          <div className="ad-drawer-reason">
             <Field
               label="سبب الرفض أو الإيقاف"
-            name="reason"
+              name="reason"
               placeholder="يصل نصُّه إلى السائق"
               value={reason}
               maxLength={255}
               onChange={(event) => setReason(event.target.value)}
             />
-            <p className="mt-6 text-11 leading-note text-muted">
+            <p className="ad-hint">
               الرفضُ بلا سببٍ يجعل السائق يعيد رفع الصورة نفسها وينتظر بلا
               نهاية.
             </p>
           </div>
         ) : null}
 
-        <ErrorNote message={error} />
+        {error ? (
+          <div className="mt-12">
+            <ErrorNote message={error} />
+          </div>
+        ) : null}
 
         {canDecide ? (
-          <div className="mt-16 flex flex-col gap-9">
+          <div className="ad-decide">
             {row.status !== "approved" ? (
               <>
                 {blockers.length > 0 ? (
-                  <p className="rounded-12 border border-warn bg-surface-2 px-13 py-11 text-11.5 leading-note text-muted">
-                    لا يمكن الاعتماد بعد: {blockers.join(" · ")}
-                  </p>
+                  <div className="ad-note warn" role="status">
+                    <Icon name="lock" fill />
+                    <span>لا يمكن الاعتماد بعد: {blockers.join(" · ")}</span>
+                  </div>
                 ) : null}
                 <Button
                   size="md"
@@ -974,8 +949,7 @@ function DriverDrawer({
             {row.status === "approved" || row.status === "pending" ? (
               <Button
                 size="md"
-                variant="secondary"
-                className="border-danger text-danger"
+                variant="danger"
                 disabled={busy || reason.trim().length < 3}
                 onClick={() =>
                   void run(
@@ -994,13 +968,12 @@ function DriverDrawer({
             ) : null}
           </div>
         ) : (
-          <p className="mt-16 text-11.5 leading-note text-muted">
+          <p className="ad-drawer-note">
             القرارُ لـ admin وحده — مراجعةٌ تفتح باب العمل على المنصة ليست إجراء
             دعمٍ فني (القسم 13/8).
           </p>
         )}
-      </div>
-    </div>
+    </Drawer>
     </FormErrors>
   );
 }
@@ -1035,16 +1008,16 @@ function BulkApprove({
   const rest = pendingIds(docs).length - ready.length;
 
   return (
-    <div className="mb-10 rounded-12 border border-line bg-surface-2 px-13 py-10">
+    <div className="ad-bulk">
       <button
         type="button"
         disabled={busy}
         onClick={() => onApprove(ready)}
-        className="text-12 font-semibold text-ok disabled:opacity-60"
+        className="ad-btn ad-btn-sm ad-btn-ok"
       >
         اعتمِد ما عاينتَه ({ready.length})
       </button>
-      <p className="mt-4 text-11 leading-note text-muted">
+      <p className="ad-bulk-note">
         {rest > 0
           ? `ويبقى ${rest} لم تُفتح ورقتُها — ولا يُعتمد ما لا يُرى.`
           : "وكلُّ ما ينتظر قد عُوين."}
@@ -1109,24 +1082,31 @@ function Inspection({
 
   return (
     <>
-      <h3 className="mb-10 mt-18 text-13 font-bold text-muted">فحص المركبة</h3>
-      <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-        <p className="text-13 font-semibold text-ink">{status}</p>
-        <p className="mt-6 text-11 leading-note text-muted">
+      <h3 className="ad-dh">فحص المركبة</h3>
+      <div className="ad-box">
+        <p className="ad-box-state">{status}</p>
+        <p className="ad-box-hint">
           يراه الكبتن في «طلبك قيد المراجعة» ويصله إشعارٌ بالموعد. ولا يشترطه الاعتماد.
         </p>
         {canDecide ? (
-          <div className="mt-10 grid gap-8">
-            <Field
-              label="اليوم والساعة"
-              type="datetime-local"
-              dir="ltr"
-              value={at}
-              onChange={(event) => setAt(event.target.value)}
-            />
+          <div className="ad-box-fields">
+            {/* **الموعدُ بحقل التاريخ المشترك** (§٦٢-ب/١٥) — الأصليُّ يرسم خاناتِه معكوسةً في صفحةٍ عربيّة */}
+            <div>
+              <label className="label" htmlFor="inspection-at">
+                اليوم والساعة
+              </label>
+              <DateField
+                id="inspection-at"
+                kind="datetime-local"
+                value={at}
+                onChange={setAt}
+                label="اليوم والساعة"
+              />
+            </div>
             <Field label="المكان" value={place} maxLength={160} onChange={(event) => setPlace(event.target.value)} />
-            <div className="flex flex-wrap gap-8">
+            <div className="ad-box-actions">
               <Button
+                size="sm"
                 disabled={busy || !at || !place.trim()}
                 onClick={() =>
                   void run(
@@ -1138,6 +1118,7 @@ function Inspection({
                 حفظ الموعد
               </Button>
               <Button
+                size="sm"
                 variant="secondary"
                 disabled={busy || Boolean(row.inspection_passed_at)}
                 onClick={() => void run(() => passDriverInspection(row.driver_id), "اجتاز الفحص")}
@@ -1145,6 +1126,7 @@ function Inspection({
                 اجتاز الفحص
               </Button>
               <Button
+                size="sm"
                 variant="ghost"
                 disabled={busy || (!row.inspection_at && !row.inspection_passed_at)}
                 onClick={() => void run(() => clearDriverInspection(row.driver_id), "أُلغي موعدُ الفحص")}

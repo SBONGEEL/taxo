@@ -1,4 +1,5 @@
-// منقولٌ حرفاً بحرف من `design/DESIGN.md` §6 — وهو المصدر لا هذا الملف.
+// **السلالمُ** (المقاساتُ والمسافاتُ والزوايا) منقولةٌ من `design/DESIGN.md` §6 — **والألوانُ والخطُّ من TAXO 2.0** (§٦٢/١٦):
+// الألوانُ متغيّراتٌ يربطها `index.css` برموز `taxo2/tokens.css`، والخطُّ Readex Pro كما في الهوية (`--t2-font`).
 // أيُّ قيمةٍ تُعدَّل هنا وحدها تصير انحرافاً صامتاً عن نظام التصميم.
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -9,7 +10,8 @@ export default {
     // الافتراضيات متاحةً يعني أن أوّل `text-sm` يكتبها أحدُنا تُخرج المشروع
     // من النظام بلا إنذار. والمفاتيح **بالبكسل** فالصنفُ يشهد على قيمته.
     fontFamily: {
-      sans: ['"IBM Plex Sans Arabic"', "system-ui", "sans-serif"],
+      // **خطُّ الهوية** (`--t2-font`): Readex Pro للنصّ، وIBM Plex احتياطٌ كما في التطبيقين
+      sans: ['"Readex Pro"', '"IBM Plex Sans Arabic"', "system-ui", "sans-serif"],
       mono: ["ui-monospace", "Menlo", "monospace"],
     },
     fontSize: {

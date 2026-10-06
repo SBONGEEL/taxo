@@ -1,100 +1,98 @@
-/** هيكلُ اللوحة: رأسٌ لاصق من صفّين — `DESIGN.md` §3.1.
+/** إطارُ اللوحة (A00، TAXO 2.0) — **عمودٌ جانبيٌّ عائمٌ بخمس مجموعات، وترويسةٌ فيها البحثُ العامّ ومبدّلُ السوق وحسابُ المشرف**.
  *
- * **وأقسامُ المرحلة 11 كلُّها مبنيّةٌ الآن**، فلا عنصرَ في القائمة بلا شاشة.
- * وآليةُ «قريباً» باقيةٌ عمداً (`to` غائبةً تعني «لم تُبنَ بعد»): ما يرسمه
- * التصميم من أقسامٍ خارج القسم 13 — الرحلاتُ المجدولة والكوبونات وما معهما —
- * يقع في المرحلة 12، ويوم يُضاف اسمُه هنا يُرسم معطّلاً يقول حالَه. وقائمةٌ
- * تنقر فيها فلا يقع شيء أسوأ من قائمةٍ تقول «قريباً»: الأولى تجعل المستخدم
- * يشك في اللوحة، والثانية تخبره بحالها.
+ * **والمنطقُ كما كان حرفاً** — المجموعاتُ ومساراتُها، و`adminOnly`، ومبدّلُ السوق، والمظهرُ، والخروجُ، وسطرُ التحقّق الثنائيّ —
+ * **والتغييرُ في الشكل وحدَه** (`design/t2-new/admin/A00-frame.dc.html`): كانت المجموعاتُ قوائمَ منسدلةً في رأسٍ من صفّين، **فصارت
+ * عموداً يُقرأ كلُّه بنظرة**، والنشطُ حبّةٌ بلون «التبويب النشط» في الهوية (`--t2-tab-on`: الجمرُ على الإسفلت والحبرُ على الحجر) —
+ * **شريطُ TaxoTabs نفسُه قائماً**.
  *
- * **ومبدّلُ الدولة يعيش هنا** لأنه يضيّق ما تعرضه كلُّ شاشة: صفحةُ الحملات
- * تقرأ منه الدولةَ التي تُجدول فيها وساعاتِ هدوئها. وهو حالةُ عرضٍ لا إعداد
- * حساب، فمكانه `sessionStorage` لا الخلفية.
+ * **وتحت ١٠٢٤ بكسلاً** يصير العمودُ درجاً يُفتح بزرّ القائمة، **ويحمل في أسفله الحسابَ والمظهرَ والخروج** — فالترويسةُ على الهاتف
+ * سطرٌ واحدٌ لا يُسحق فيه زرّ (AM02).
  *
- * **والدور يرسم ولا يحرس**: `support` لا يرى ما ليس له، والحمايةُ في الخلفية
- * على كل مسار (القسم 13/8) — إخفاءُ زرٍّ ليس منعاً.
+ * **وآليةُ «قريباً» باقيةٌ عمداً** (`to` غائبةً تعني «لم تُبنَ بعد»): قائمةٌ تنقر فيها فلا يقع شيءٌ أسوأُ من قائمةٍ تقول «قريباً».
+ *
+ * **ومبدّلُ الدولة يعيش هنا** لأنه يضيّق ما تعرضه كلُّ شاشة — وهو حالةُ عرضٍ لا إعدادُ حساب، فمكانه `sessionStorage` لا الخلفية.
+ *
+ * **والدورُ يرسم ولا يحرس**: `support` لا يرى ما ليس له، والحمايةُ في الخلفية على كلِّ مسار (القسم 13/8) — إخفاءُ زرٍّ ليس منعاً.
  */
 
-import { AlertTriangle, LogOut, Moon, Sun } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
-
-import { GlobalSearch } from "@/components/GlobalSearch";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
+import { getMyTotp } from "@/api/endpoints";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useCountries } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
-import { getMyTotp } from "@/api/endpoints";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+import { Icon, Wordmark } from "@/taxo2";
 
-/** المجموعات كما في `DESIGN.md` §3.1 — و`to` غائبةً تعني «لم تُبنَ بعد». */
+/** المجموعاتُ كما في `DESIGN.md` §3.1 — و`to` غائبةً تعني «لم تُبنَ بعد». **والأيقونةُ من الهوية** (Material Symbols Rounded). */
 const GROUPS: {
   label: string;
-  items: { label: string; to?: string; adminOnly?: boolean }[];
+  items: { label: string; icon: string; to?: string; adminOnly?: boolean }[];
 }[] = [
   {
     label: "العمليات",
     items: [
-      { label: "نظرة عامة", to: "/overview" },
-      { label: "الخريطة الحيّة", to: "/live-map", adminOnly: true },
-      { label: "سجل الرحلات", to: "/rides" },
+      { label: "نظرة عامة", icon: "space_dashboard", to: "/overview" },
+      { label: "الخريطة الحيّة", icon: "map", to: "/live-map", adminOnly: true },
+      { label: "سجل الرحلات", icon: "route", to: "/rides" },
     ],
   },
   {
     label: "الأشخاص",
     items: [
-      { label: "السائقون والوثائق", to: "/drivers" },
-      { label: "الركّاب", to: "/riders" },
-      { label: "النزاعات والدعم", to: "/disputes" },
-      { label: "بلاغات الصور", to: "/photo-reports", adminOnly: true },
+      { label: "السائقون والوثائق", icon: "badge", to: "/drivers" },
+      { label: "الركّاب", icon: "group", to: "/riders" },
+      { label: "النزاعات والدعم", icon: "gavel", to: "/disputes" },
+      { label: "بلاغات الصور", icon: "hide_image", to: "/photo-reports", adminOnly: true },
     ],
   },
   {
     label: "المالية",
     items: [
-      { label: "المحافظ والسحب", to: "/finance" },
-      { label: "الدفعات", to: "/payments" },
-      { label: "الاشتراكات والباقات", to: "/subscriptions" },
-      { label: "عروض الاشتراكات", to: "/offers", adminOnly: true },
-      { label: "التسعيرة", to: "/pricing" },
+      { label: "المحافظ والسحب", icon: "account_balance_wallet", to: "/finance" },
+      { label: "الدفعات", icon: "payments", to: "/payments" },
+      { label: "الاشتراكات والباقات", icon: "card_membership", to: "/subscriptions" },
+      { label: "عروض الاشتراكات", icon: "redeem", to: "/offers", adminOnly: true },
+      { label: "التسعيرة", icon: "sell", to: "/pricing" },
       // **تحت «المالية» لا «النظام»**: المركبةُ منتَجٌ له سعرٌ وكميّةٌ وإيراد،
       // ومن يبحث عن «كم بعنا منها» يبحث حيث تُقرأ الأرقام
-      { label: "مركبات المتجر", to: "/vehicle-skins", adminOnly: true },
-      { label: "مشتريات المركبات", to: "/vehicle-skins/purchases", adminOnly: true },
+      { label: "مركبات المتجر", icon: "directions_car", to: "/vehicle-skins", adminOnly: true },
+      { label: "مشتريات المركبات", icon: "shopping_bag", to: "/vehicle-skins/purchases", adminOnly: true },
     ],
   },
   {
     label: "التقارير",
     items: [
-      { label: "التقارير والإحصاءات", to: "/reports" },
-      { label: "الإشعارات الجماعية", to: "/campaigns", adminOnly: true },
+      { label: "التقارير والإحصاءات", icon: "bar_chart", to: "/reports" },
+      { label: "الإشعارات الجماعية", icon: "campaign", to: "/campaigns", adminOnly: true },
     ],
   },
   {
     label: "النظام",
     items: [
-      { label: "المستخدمون والصلاحيات", to: "/users" },
-      { label: "سجل التدقيق", to: "/audit" },
+      { label: "المستخدمون والصلاحيات", icon: "manage_accounts", to: "/users" },
+      { label: "سجل التدقيق", icon: "fact_check", to: "/audit" },
       // **الأعطالُ جوارَ التدقيق**: كلاهما «ما جرى» لا «ما يُضبَط»
-      { label: "الأعطال", to: "/errors", adminOnly: true },
-      { label: "الإعدادات", to: "/settings" },
+      { label: "الأعطال", icon: "bug_report", to: "/errors", adminOnly: true },
+      { label: "الإعدادات", icon: "settings", to: "/settings" },
       // بلا `adminOnly`: بطاقةُ «عاملي» لكل من يدخل اللوحة، وبطاقةُ السياسة
       // وحدها للـ`admin` — والشاشةُ تُخفيها بنفسها (SPEC §14.1)
-      { label: "الأمان", to: "/security" },
+      { label: "الأمان", icon: "shield", to: "/security" },
       // عالميٌّ لا يتبع مبدّلَ الدولة — الرقمُ والعقدُ عالميان
-      { label: "قوالب رسائل الرمز", to: "/otp-templates", adminOnly: true },
-      { label: "عقود مزوّدي API", to: "/providers", adminOnly: true },
+      { label: "قوالب رسائل الرمز", icon: "sms", to: "/otp-templates", adminOnly: true },
+      { label: "عقود مزوّدي API", icon: "hub", to: "/providers", adminOnly: true },
       // **إصداراتُ التطبيقات** (البند ٨): إعدادُ منصّةٍ يقرّر من يفتح
       // التطبيق — لا إدارةَ أسطول، ولا يتبع مبدّلَ الدولة
-      { label: "إصدارات التطبيقات", to: "/releases", adminOnly: true },
+      { label: "إصدارات التطبيقات", icon: "system_update", to: "/releases", adminOnly: true },
       // **السياساتُ والشروط** (البند ١٠): نصٌّ قانونيٌّ في القاعدة لا في
       // الحزمة — وتعديلُه لا يكون نشراً
-      { label: "السياسات والشروط", to: "/policies", adminOnly: true },
+      { label: "السياسات والشروط", icon: "policy", to: "/policies", adminOnly: true },
       // **الموقع** (البند ٤٩): ما يعرضه `taxo.tajora.ly` — نصوصٌ وروابطُ
       // ومفتاحُ التوزيع. **إعدادُ منصّةٍ لا إدارةُ أسطول**، ولا يتبع مبدّلَ الدولة
-      { label: "الموقع", to: "/site", adminOnly: true },
+      { label: "الموقع", icon: "public", to: "/site", adminOnly: true },
     ],
   },
 ];
@@ -103,7 +101,6 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "مالك · صلاحيات كاملة",
   support: "دعم فني",
 };
-
 
 /** **سطرٌ دائمٌ لمشرفٍ بلا عاملٍ ثانٍ** (شرطُ المالك 2026-08-21).
  *
@@ -118,7 +115,7 @@ const ROLE_LABEL: Record<string, string> = {
  * ما يُبطل وجودَه. والخلفيةُ هي التي تقرّر — `required` تصل من `/auth/me/totp`
  * محسوبةً هناك، ولا تُحسب هنا ثانيةً: قاعدةٌ في مكانين تفترق.
  *
- * **والصمتُ عند فشل النداء مقصود**: القشرةُ تُرسم فوق كلِّ شاشة، وشريطُ خطأٍ
+ * **والصمتُ عند فشل النداء مقصود**: الإطارُ يُرسم فوق كلِّ شاشة، وشريطُ خطأٍ
  * لأن نداءً تعثّر يزاحم عملاً حقيقياً بخبرٍ لا يفيد.
  */
 function FactorReminder() {
@@ -140,20 +137,51 @@ function FactorReminder() {
 
   if (!due) return null;
   return (
-    <div className="border-b border-warn bg-surface-2 px-20 py-9">
-      <div className="mx-auto flex max-w-screen-2xl items-center gap-9 text-12 text-ink">
-        <AlertTriangle size={15} className="shrink-0 text-warn" />
-        <span className="min-w-0 flex-1">
-          حسابك بلا تحقّقٍ بخطوتين — كلمةُ المرور وحدَها تفتح لوحةً تُدير مالَ
-          الكباتن والركّاب.
-        </span>
-        <NavLink
-          to="/security"
-          className="flex min-h-44 shrink-0 items-center rounded-10 border border-line bg-surface px-10 py-5 text-11.5 font-semibold text-ink sm:min-h-0"
+    <div className="ad-reminder" role="status">
+      <Icon name="shield" fill className="ad-reminder-icon" />
+      <span className="ad-reminder-text">
+        حسابك بلا تحقّقٍ بخطوتين — كلمةُ المرور وحدَها تفتح لوحةً تُدير مالَ
+        الكباتن والركّاب.
+      </span>
+      <NavLink to="/security" className="ad-reminder-link">
+        فعّله الآن
+      </NavLink>
+    </div>
+  );
+}
+
+/** مبدّلُ السوق — **الأسواقُ من الخلفية لا من قائمةٍ مكتوبة** (SPEC §24).
+ *
+ * اللوحةُ ترى المخفيَّ كما ترى الظاهر، وعليه نقطةٌ تقول إنه مطفأٌ في التطبيقات — من يُجهّز سوقاً يحتاج أن يعرف أنه لم يُفتح
+ * بعد. **والاختيارُ يُقرأ من سمةٍ لا من لون** (قرارُ المالك 2026-08-28): `radiogroup`/`radio` لا `switch` — **هذا اختيارٌ واحدٌ
+ * من اثنين لا حالُ تشغيل**.
+ */
+function CountrySwitch() {
+  const { country, setCountry } = useCountry();
+  const { rows } = useCountries();
+  // **قبل وصول الجواب تُرسم الدولةُ المعروضةُ وحدها** — لا قائمةٌ محفوظة
+  // تومض ثم تُصحَّح، ولا شريطٌ فارغٌ يقفز عند وصولها
+  const countries = rows ?? [
+    { country_code: country, name: country, visible: true },
+  ];
+  return (
+    <div role="radiogroup" aria-label="السوق" className="ad-seg ad-country">
+      {countries.map((row) => (
+        <button
+          key={row.country_code}
+          type="button"
+          role="radio"
+          aria-checked={country === row.country_code}
+          onClick={() => setCountry(row.country_code)}
+          title={row.visible ? undefined : "مخفيّة في التطبيقات"}
+          className={country === row.country_code ? "ad-seg-opt on" : "ad-seg-opt"}
         >
-          فعّله الآن
-        </NavLink>
-      </div>
+          {!row.visible && (
+            <span aria-label="مخفيّة في التطبيقات" className="ad-seg-dot" />
+          )}
+          {row.name}
+        </button>
+      ))}
     </div>
   );
 }
@@ -170,178 +198,180 @@ export function Shell({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, isAdmin, signOut } = useSession();
   const { dark, toggle } = useTheme();
-  const { country, setCountry } = useCountry();
-  const { rows } = useCountries();
-  // **قبل وصول الجواب تُرسم الدولةُ المعروضةُ وحدها** — لا قائمةٌ محفوظة
-  // تومض ثم تُصحَّح، ولا شريطٌ فارغٌ يقفز عند وصولها
-  const countries = rows ?? [
-    { country_code: country, name: country, visible: true },
-  ];
+  // **درجُ القائمة على الهاتف** — يُغلق بالتنقّل، وبالنقر خارجه، وبـEsc
+  const [menu, setMenu] = useState(false);
+  const nav = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setMenu(false);
+  }, [pathname]);
+
+  // **النشطُ في مرمى العين**: كلُّ شاشةٍ ترسم إطارَها فيُبنى العمودُ من جديد — وعمودٌ أطولُ من الشاشة (٢٦ قسماً للمالك)
+  // كان سيعود إلى أوّله فيخفي «الموقع» تحت الطيّ وهو المفتوح. **يُمرَّر العمودُ وحدَه لا الصفحة** — عند كلِّ رسمٍ له،
+  // **وعند فتح الدرج على الهاتف** (مغلقاً لا يُرسم فلا ارتفاعَ يُقاس)
+  useEffect(() => {
+    const list = nav.current;
+    const item = list?.querySelector<HTMLElement>(".ad-nav-item.on");
+    if (!list || !item || list.clientHeight === 0) return;
+    if (item.offsetTop + item.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = item.offsetTop - list.clientHeight / 2;
+    }
+  }, [pathname, menu]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenu(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
+
+  const initial = (user?.name ?? "").trim().slice(0, 1);
+  const role = ROLE_LABEL[user?.role ?? ""] ?? user?.role;
+  const leave = () => void signOut().then(() => navigate("/login"));
+  const themeLabel = "تبديل المظهر";
+  const themeIcon = dark ? "light_mode" : "dark_mode";
 
   return (
-    <div className="min-h-screen bg-bg">
-      {/* `safe-top` — **قصاصةُ أعلى الشاشة**: الترويسةُ لاصقةٌ في `top-0`،
-          **وبلا الحشوة يقع سطرُها الأوّل تحت الحزّ**. والصنفُ في
-          `index.css` كما في تطبيق الكبتن، **بيتٌ واحدٌ للقاعدة**. */}
-      <header className="safe-top sticky top-0 z-30 border-b border-line bg-surface">
-        {/* **يلتفّ تحت `sm` ولا يفيض** (قِيس ٢٠٢٦-٠٩-٠٥): كان صفّاً واحداً
-            بلا التفافٍ وبارتفاعٍ ثابت، **فبلغ عرضُه ٤٦٣ في شاشةٍ عرضُها ٣٦٠**
-            — **والفائضُ يخرج يساراً في RTL** فلا يبلغه تمريرٌ ولا عين.
-            **والزرّان لم يخرجا وحدَهما بل انضغطا إلى ٢٢×٣٤**، وهو ما يجعل
-            مساحةَ اللمس دون الحدّ بينما الصنفُ يقول `size-34`. */}
-        <div className="flex flex-wrap items-center gap-x-14 gap-y-8 px-20 py-8 sm:h-header sm:flex-nowrap sm:py-0">
-          <span className="shrink-0 text-21 font-bold tracking-wordmark text-ink">
-            TAXO
-          </span>
-          {/* **الوصفُ والفاصلُ زينةٌ لا أداة** — أوّلُ ما يُطوى حين يضيق */}
-          <span className="hidden text-12.5 text-muted sm:block">لوحة التحكم</span>
-          <span className="hidden h-26 w-px bg-line sm:block" />
-
-          {/* **الأسواقُ من الخلفية لا من قائمةٍ مكتوبة** (SPEC §24): اللوحةُ
-              ترى المخفيَّ كما ترى الظاهر، وعليه نقطةٌ تقول إنه مطفأٌ في
-              التطبيقات — من يُجهّز سوقاً يحتاج أن يعرف أنه لم يُفتح بعد. */}
-          {/* **الاختيارُ يُقرأ من سمةٍ لا من لون** (قرارُ المالك 2026-08-28):
-              كان السوقُ المختارُ يُميَّز بخلفيةٍ وحدَها، **فقارئُ الشاشة يقرأ
-              زرَّين بلا أن يعرف أيَّهما قائم**. وهي علّةُ المفاتيح نفسُها في
-              ثوبِ اختيارٍ من متعدّد — فيُوسَم `radiogroup`/`radio` لا
-              `switch`: **هذا اختيارٌ واحدٌ من اثنين لا حالُ تشغيل**. */}
-          <div
-            role="radiogroup"
-            aria-label="السوق"
-            className="flex shrink-0 items-center gap-3 rounded-full bg-surface-2 p-3"
+    <div className="ad-app">
+      <aside
+        id="ad-side"
+        className={menu ? "ad-side open" : "ad-side"}
+        aria-label="أقسام اللوحة"
+      >
+        <div className="ad-side-brand">
+          <Wordmark size={24} />
+          <span className="ad-side-tag">لوحة التحكم</span>
+          <button
+            type="button"
+            className="ad-round ad-side-close"
+            onClick={() => setMenu(false)}
+            aria-label="إغلاق القائمة"
           >
-            {countries.map((row) => (
-              <button
-                key={row.country_code}
-                type="button"
-                role="radio"
-                aria-checked={country === row.country_code}
-                onClick={() => setCountry(row.country_code)}
-                title={row.visible ? undefined : "مخفيّة في التطبيقات"}
-                className={cn(
-                  "flex min-h-44 min-w-44 items-center justify-center gap-6 rounded-full px-13 py-6 text-12 font-semibold sm:min-h-0 sm:min-w-0",
-                  country === row.country_code
-                    ? "bg-surface text-ink"
-                    : "text-muted",
-                )}
-              >
-                {!row.visible && (
-                  <span
-                    aria-label="مخفيّة في التطبيقات"
-                    className="size-6 rounded-full bg-muted"
-                  />
-                )}
-                {row.name}
-              </button>
-            ))}
-          </div>
-
-          {/* **البحثُ العامُّ قبل الفاصل لا بعده** (§39٫١٢٫٤): هو أداةُ
-              عملٍ لا زرَّ حساب، **ومكانُه حيث تقع العينُ أوّلاً**. */}
-          <GlobalSearch />
-
-          <div className="ms-auto flex shrink-0 items-center gap-10">
-            {/* **الاسمُ والدورُ خبرٌ لا زرّ** — يُطوى قبل أن يُسحق زرّ */}
-            <div className="hidden text-end sm:block">
-              <div className="text-12.5 font-semibold text-ink">
-                {user?.name}
-              </div>
-              <div className="text-10.5 text-muted">
-                {ROLE_LABEL[user?.role ?? ""] ?? user?.role}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label="تبديل المظهر"
-              className="flex size-44 shrink-0 items-center justify-center rounded-10 border border-line text-ink sm:size-34"
-            >
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <button
-              type="button"
-              onClick={() => void signOut().then(() => navigate("/login"))}
-              aria-label="خروج"
-              className="flex size-44 shrink-0 items-center justify-center rounded-10 border border-line text-ink sm:size-34"
-            >
-              <LogOut size={15} />
-            </button>
-          </div>
+            <Icon name="close" />
+          </button>
         </div>
 
-        {/* **بلا `overflow-x-auto`** — وهذا ليس تفصيلاً تجميلياً: CSS يجعل المحورَ
-            الآخر `auto` حين يكون أحدُهما `auto` (`visible` تُحسب `auto`)، فيصير
-            الشريطُ حاويةَ قصٍّ رأسياً وقائمتُه المنسدلة **ابنتُه**. وقياسُ
-            المتصفح: القائمةُ 130px تُقَص كاملةً (`menuBottom 230` مقابل
-            `navBottom 100`) فيصير `scrollHeight` 172 في صندوقٍ ارتفاعُه 42، ويرسم
-            المتصفحُ شريطَ تمريرٍ عمودياً — على الحافة اليسرى في RTL.
-            و`flex-wrap` بدلَه: خمسُ مجموعاتٍ × 72px لا تحتاج تمريراً في شريطٍ
-            عرضُه 1024 فما فوق، وتلتفّ إن ضاق أكثر. */}
-        <nav className="flex flex-wrap items-end gap-2 px-20">
-          {GROUPS.map((group) => (
-            <div key={group.label} className="group relative">
-              {/* **`group-hover` وحدَه بابٌ بلا زرٍّ على اللمس**: إصبعٌ لا
-                  تُحوِّم، **فالمجموعاتُ الخمسُ لا تُفتح من هاتف البتّة**.
-                  و`focus-within` يفتحها بلمسةٍ وبلوحةِ مفاتيح معاً،
-                  **والعنوانُ يصير زرّاً ليقبل التركيز** — وسمٌ لا منطق:
-                  لا `onClick` ولا حالةَ ولا نداء. */}
-              <button
-                type="button"
-                className="flex min-h-44 w-full cursor-default items-center px-14 pb-10 pt-12 text-13 font-semibold text-muted sm:min-h-0"
-              >
-                {group.label}
-              </button>
-              <div className="absolute start-0 top-full z-40 hidden min-w-menu rounded-14 border border-line bg-surface p-6 shadow-menu group-focus-within:block group-hover:block">
-                {group.items
-                  .filter((item) => !item.adminOnly || isAdmin)
-                  .map((item) =>
-                    item.to ? (
-                      <NavLink
-                        key={item.label}
-                        to={item.to}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex min-h-44 items-center rounded-10 px-12 py-10 text-12.5 sm:min-h-0",
-                            isActive
-                              ? "bg-stripe-a font-bold text-ink"
-                              : "text-ink",
-                          )
-                        }
-                      >
-                        {item.label}
-                      </NavLink>
-                    ) : (
-                      <span
-                        key={item.label}
-                        className="flex min-h-44 items-center justify-between rounded-10 px-12 py-10 text-12.5 text-muted sm:min-h-0"
-                      >
-                        {item.label}
-                        <span className="text-9.5">قريباً</span>
-                      </span>
-                    ),
-                  )}
+        <nav ref={nav} className="ad-nav scr">
+          {GROUPS.map((group) => {
+            const items = group.items.filter((item) => !item.adminOnly || isAdmin);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.label} className="ad-nav-group">
+                <p className="ad-nav-label">{group.label}</p>
+                {items.map((item) =>
+                  item.to ? (
+                    <NavLink
+                      key={item.label}
+                      to={item.to}
+                      // `end` — «مركبات المتجر» لا تبقى نشطةً تحت «مشتريات المركبات»
+                      end
+                      className={({ isActive }) =>
+                        isActive ? "ad-nav-item on" : "ad-nav-item"
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <Icon name={item.icon} fill={isActive} />
+                          <span>{item.label}</span>
+                        </>
+                      )}
+                    </NavLink>
+                  ) : (
+                    <span key={item.label} className="ad-nav-item soon">
+                      <Icon name={item.icon} />
+                      <span>{item.label}</span>
+                      <span className="ad-nav-soon">قريباً</span>
+                    </span>
+                  ),
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
-      </header>
 
-      <FactorReminder />
-
-      <main className="safe-bottom px-20 py-18">
-        <div className="mb-16 flex items-start justify-between gap-16">
-          <div>
-            <h1 className="text-21 font-bold text-ink">{title}</h1>
-            {subtitle ? (
-              <p className="mt-3 text-12.5 text-muted">{subtitle}</p>
-            ) : null}
+        {/* **على الهاتف وحدَه**: الحسابُ والمظهرُ والخروجُ في أسفل الدرج — والترويسةُ تحملها على الحاسوب */}
+        <div className="ad-side-foot">
+          <div className="ad-account flat">
+            <span className="ad-avatar">{initial}</span>
+            <span className="ad-account-text">
+              <span className="ad-account-name">{user?.name}</span>
+              <span className="ad-account-role">{role}</span>
+            </span>
           </div>
-          {actions ? <div className="flex gap-10">{actions}</div> : null}
+          <div className="ad-side-actions">
+            <button type="button" className="ad-btn ad-btn-secondary ad-btn-md" onClick={toggle} aria-label={themeLabel}>
+              <Icon name={themeIcon} />
+              المظهر
+            </button>
+            <button type="button" className="ad-btn ad-btn-secondary ad-btn-md" onClick={leave}>
+              <Icon name="logout" />
+              خروج
+            </button>
+          </div>
         </div>
-        {children}
-      </main>
+      </aside>
+
+      {menu ? (
+        <div className="ad-scrim" onClick={() => setMenu(false)} aria-hidden="true" />
+      ) : null}
+
+      <div className="ad-main">
+        {/* `safe-top` — **قصاصةُ أعلى الشاشة**: الترويسةُ لاصقة، **وبلا الحشوة يقع سطرُها الأوّل تحت الحزّ** */}
+        <header className="ad-head safe-top">
+          <button
+            type="button"
+            className="ad-round ad-menu"
+            onClick={() => setMenu(true)}
+            aria-label="القائمة"
+            aria-expanded={menu}
+            aria-controls="ad-side"
+          >
+            <Icon name="menu" />
+          </button>
+          <span className="ad-head-mark">
+            <Wordmark size={21} />
+          </span>
+
+          {/* **البحثُ العامُّ أوّلَ الترويسة** (§39٫١٢٫٤): أداةُ عملٍ لا زرُّ حساب، **ومكانُه حيث تقع العينُ أوّلاً** */}
+          <GlobalSearch />
+          <CountrySwitch />
+
+          <span className="ad-head-gap" />
+
+          {/* **الاسمُ والدورُ خبرٌ لا زرّ** — والزرّان بجانبه ٤٤ لا يُسحقان */}
+          <button type="button" onClick={toggle} aria-label={themeLabel} className="ad-round ad-desk">
+            <Icon name={themeIcon} />
+          </button>
+          <div className="ad-account ad-desk">
+            <span className="ad-avatar">{initial}</span>
+            <span className="ad-account-text">
+              <span className="ad-account-name">{user?.name}</span>
+              <span className="ad-account-role">{role}</span>
+            </span>
+          </div>
+          <button type="button" onClick={leave} aria-label="خروج" className="ad-round ad-desk">
+            <Icon name="logout" />
+          </button>
+        </header>
+
+        <FactorReminder />
+
+        <main className="ad-page safe-bottom">
+          <div className="ad-page-head">
+            <div className="ad-page-titles">
+              <h1 className="ad-page-title">{title}</h1>
+              {subtitle ? <p className="ad-page-sub">{subtitle}</p> : null}
+            </div>
+            {actions ? <div className="ad-page-actions">{actions}</div> : null}
+          </div>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

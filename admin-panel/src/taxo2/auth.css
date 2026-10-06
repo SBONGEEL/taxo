@@ -1,0 +1,482 @@
+/* ═══ TAXO 2.0 — الدخولُ والتسجيلُ والرمز (R02 · R03 · R04 — وأخواتُها عند الكبتن C01 · C02) ═══════════════════════
+ *
+ * **القيمُ من اللوحة لا من العين** — استُخرجت من `design/taxo2-live/TAXO 2.0 - Rider.dc.html` بأنماطها المحسوبة (§٦٢/١٧):
+ * الرأسُ ٤٤ · العنوانُ ٣٠/٣٩ في الدخول و٢٨/٣٦٫٤ في الخطوات · الحقلُ ٥٦ (٥٤ في الخطوات) بزاوية ١٦ · الزرُّ ٥٨ بزاوية ١٨ · سطرُ
+ * الخطأ ١٢٫٥/١٩٫٤ بأيقونته · مربّعُ الرمز بزاوية ١٨ وخطِّ Unbounded.
+ *
+ * **وما صحّحه المالكُ في اللوحة يُرسم بلغتها** (§٦١-أ و§٦٢/١١): رمزٌ من **ستِّ** خانات (اللوحةُ أربع) فتتقاسم الخاناتُ عرضَ
+ * الأربع نفسَه · **تأكيدُ كلمة المرور واختيارُ السوق والموافقةُ على السياسات** بلغة الحقل والاختيار · **ولا «دخولَ برمزٍ لمرّةٍ
+ * واحدة»**: مكانُه في اللوحة يحمل الدخولَ بالبصمة حيث تتاح.
+ *
+ * **بالرموز وحدَها** فيعمل في المظهرين والنسائيّ؛ **وما لا رمزَ له في الهوية صار رمزاً هنا** (`--t2-track` · `--t2-field`).
+ */
+
+.t2 {
+  --t2-field: var(--t2-surface); /* جوفُ الحقل — أبيضُ على الحجر، وسطحُ البطاقة على الإسفلت */
+  --t2-track: #ddd6ca; /* مسارُ خطوةٍ لم تُبلغ (R03 «1 / 2») */
+}
+html.dark .t2:not(.t2-day),
+.t2.t2-night {
+  --t2-track: var(--t2-line);
+}
+
+/* ── الصفحة: من الحافة إلى الحافة، والمحتوى داخل المنطقة الآمنة ─────────────────────────────── */
+.t2-auth {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top, 0px) + 11px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+.t2-auth-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.t2-auth-push { flex: 1; min-height: 24px; }
+
+/* ── الرأس: رجوعٌ دائريّ، وعدّادُ الخطوات ومسارُها ────────────────────────────────────────────── */
+.t2-auth-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 44px;
+}
+.t2-auth-back {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--t2-line);
+  border-radius: 50%;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-auth-back .t2-icon { font-size: 22px; }
+.t2-auth-track {
+  display: flex;
+  flex: 1;
+  gap: 5px;
+}
+.t2-auth-track > span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--t2-track);
+}
+.t2-auth-track > span.on { background: var(--t2-text); }
+.t2-auth-count {
+  flex: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t2-muted);
+  direction: ltr;
+}
+
+/* ── العنوان والسطرُ تحته ───────────────────────────────────────────────────────────────── */
+.t2-auth-title {
+  margin: 28px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 39px;
+  color: var(--t2-text);
+}
+.t2-auth-title.step {
+  margin-top: 22px;
+  font-size: 28px;
+  line-height: 36.4px;
+}
+.t2-auth-sub {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--t2-muted);
+}
+.t2-auth-title.step + .t2-auth-sub {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 23.2px;
+}
+.t2-auth-sub strong { font-weight: 600; color: var(--t2-text); }
+.t2-auth-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 30px;
+}
+.t2-auth-title.step ~ .t2-auth-form { margin-top: 21px; }
+
+/* ── الحقل: عنوانُه، وجوفُه، وسطرُ خطئه أو تلميحه ─────────────────────────────────────────── */
+.t2-auth-block + .t2-auth-block { margin-top: 14px; }
+.t2-auth-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-text);
+}
+.t2-auth-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-field);
+  color: var(--t2-text);
+}
+.t2-auth-form.step .t2-auth-field { height: 54px; }
+.t2-auth-field:focus-within { border-color: var(--t2-accent); }
+.t2-auth-field.error,
+.t2-auth-field.error:focus-within { border-color: var(--t2-danger); }
+.t2-auth-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 16px;
+  caret-color: var(--t2-accent);
+}
+.t2-auth-form.step .t2-auth-field input { font-size: 15.5px; }
+.t2-auth-field input::placeholder { color: var(--t2-faint); }
+.t2-auth-field input:disabled { opacity: 0.6; }
+/* الهاتفُ من اليسار: «+962 | 79 555 01» كما رُسم */
+.t2-auth-field.phone { direction: ltr; padding-left: 17px; }
+.t2-auth-field.phone input { letter-spacing: 0.02em; text-align: left; }
+.t2-auth-dial {
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+.t2-auth-sep {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  background: var(--t2-line);
+}
+.t2-auth-ok { flex: none; font-size: 20px; color: var(--t2-success); }
+/* كلمةُ المرور: نقاطٌ متباعدة، والعينُ في الطرف */
+.t2-auth-field.secret input:not(.shown) {
+  font-size: 18px;
+  letter-spacing: 0.18em;
+}
+.t2-auth-eye {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-inline-end: -6px;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.t2-auth-eye .t2-icon { font-size: 22px; }
+
+/* سطرُ الخطأ — أيقونةٌ ممتلئةٌ ونصٌّ بلون الخطأ، تحت الحقل مباشرة (§٦٢/٢٠) */
+.t2-auth-error,
+.t2-auth-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 19.375px;
+}
+.t2-auth-error { color: var(--t2-danger); }
+.t2-auth-hint { color: var(--t2-muted); }
+.t2-auth-error .t2-icon {
+  flex: none;
+  font-size: 16px;
+  line-height: 20.8px;
+  font-variation-settings: "FILL" 1;
+}
+
+/* شروطُ الحقل — علامةٌ لا لونٌ وحدَه */
+.t2-auth-conds {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.t2-auth-conds li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--t2-muted);
+}
+.t2-auth-conds li .t2-icon { font-size: 16px; color: var(--t2-faint); }
+.t2-auth-conds li.ok { color: var(--t2-success); }
+.t2-auth-conds li.ok .t2-icon { color: var(--t2-success); font-variation-settings: "FILL" 1; }
+
+/* ── الاختيار: خيارانِ أو أكثر بحافّة، والمختارُ بحافّةٍ مزدوجةٍ وعلامة ──────────────────────── */
+.t2-auth-choice {
+  display: flex;
+  gap: 8px;
+}
+.t2-auth-choice button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 50px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 15px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-auth-choice button .t2-icon { font-size: 18px; font-variation-settings: "FILL" 1; }
+.t2-auth-choice button[aria-pressed="true"] {
+  border: 2px solid var(--t2-text);
+  background: var(--t2-field);
+  font-weight: 600;
+}
+/* «راكبة» — البرقوقُ للخدمة النسائية وحدها (الهوية) */
+.t2-auth-choice button.women[aria-pressed="true"] {
+  border-color: var(--t2-women);
+  color: var(--t2-women);
+}
+.t2-auth-women {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--t2-women-line);
+  border-radius: 14px;
+  background: var(--t2-women-soft);
+  font-size: 12.5px;
+  line-height: 20px;
+  color: var(--t2-text);
+}
+.t2-auth-women .t2-icon { flex: none; font-size: 18px; color: var(--t2-women); }
+
+/* ── الموافقة: مربّعٌ يُضغط، ووثيقتان تُفتحان ─────────────────────────────────────────────── */
+.t2-auth-consent {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-field);
+}
+.t2-auth-consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-auth-box {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: -1px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--t2-dash);
+  border-radius: 7px;
+  color: transparent;
+}
+.t2-auth-box .t2-icon { font-size: 16px; }
+.t2-auth-consent-row[aria-checked="true"] .t2-auth-box {
+  border-color: var(--t2-accent);
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+}
+.t2-auth-docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-inline-start: 32px;
+}
+.t2-auth-docs button {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 10px;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-auth-docs button[aria-expanded="true"] { border-color: var(--t2-accent); }
+.t2-auth-doc {
+  max-height: 240px;
+  margin-top: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-bg);
+  font-size: 12.5px;
+  line-height: 20px;
+  color: var(--t2-text);
+}
+.t2-auth-doc p { margin: 0 0 8px; }
+
+/* ── الرمز: خاناتٌ تعرض ما يُكتب في حقلٍ واحدٍ خلفها (فيبقى الملءُ الآليُّ من الرسالة) ────────── */
+.t2-auth-code {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  direction: ltr;
+}
+.t2-auth-title.step ~ .t2-auth-form.code { margin-top: 25px; }
+.t2-auth-code > span {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  height: 64px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-field);
+  color: var(--t2-text);
+  font-family: var(--t2-font-num);
+  font-size: 24px;
+  font-weight: 600;
+}
+.t2-auth-code.four > span { height: 76px; border-radius: 18px; font-size: 28px; }
+.t2-auth-code > span.at { border-color: var(--t2-accent); }
+.t2-auth-code.error > span { border-color: var(--t2-danger); }
+.t2-auth-code input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  font-size: 16px; /* أقلُّ من ١٦ يكبّر iOS الصفحةَ عند التركيز */
+  caret-color: transparent;
+}
+.t2-auth-resend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 13.5px;
+  color: var(--t2-muted);
+}
+.t2-auth-resend .t2-icon { font-size: 18px; }
+.t2-auth-resend strong { font-weight: 600; color: var(--t2-text); direction: ltr; }
+.t2-auth-resend button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-auth-resend button:disabled { color: var(--t2-muted); font-weight: 400; cursor: default; }
+
+/* ── الرابطُ والفاصلُ والسطرُ الأخير ────────────────────────────────────────────────────── */
+.t2-auth-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.t2-auth-forgot { display: block; width: fit-content; margin-top: 14px; }
+.t2-auth-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+.t2-auth-actions .t2-auth-or { margin: 4px 0; }
+.t2-auth-actions .t2-button { height: 58px; font-size: 16px; }
+.t2-auth-actions .t2-button.secondary {
+  height: 56px;
+  border: 1px solid var(--t2-dash);
+  font-size: 15px;
+}
+.t2-auth-actions .t2-button .t2-icon { font-size: 20px; }
+.t2-auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  font-size: 12.5px;
+  color: var(--t2-muted);
+}
+.t2-auth-or::before,
+.t2-auth-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--t2-line);
+}
+.t2-auth-foot {
+  margin: 20px 0 0;
+  font-size: 14px;
+  text-align: center;
+  color: var(--t2-muted);
+}
+.t2-auth-foot a,
+.t2-auth-foot button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.t2-auth-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t2-danger-soft);
+  color: var(--t2-danger);
+  font-size: 13px;
+  line-height: 20px;
+}
+.t2-auth-banner .t2-icon { flex: none; font-size: 18px; font-variation-settings: "FILL" 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .t2-auth-field,
+  .t2-auth-code > span { transition: border-color var(--t2-fast) var(--t2-ease); }
+  .t2-auth-back:active,
+  .t2-auth-choice button:active { transform: scale(0.97); }
+}

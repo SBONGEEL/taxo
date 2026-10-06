@@ -1,4 +1,4 @@
-/** حوارٌ مركزيّ — `DESIGN.md` §2.4 بالقياسات نفسها التي كانت في `Campaigns`.
+/** حوارٌ مركزيّ — **ورقةُ سطحٍ بزاويةٍ ٢٤ فوق ظلّ `--t2-scrim`** (TAXO 2.0؛ كان `DESIGN.md` §2.4).
  *
  * **استُخرج من `screens/Campaigns.tsx` لا كُتب من جديد** (12-ز): جدولُ رموز
  * الخصم يحتاج الحوارَ نفسه، ونسخُه ملفَّين يجعل حوارين يفترقان في أول تعديلٍ
@@ -20,15 +20,15 @@ export function Modal({
   children: ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
-      onClick={onClose}
-    >
+    <div className="ad-modal" onClick={onClose}>
       <div
-        className="max-h-[86vh] w-modal max-w-full overflow-auto rounded-20 border border-line bg-surface p-24"
+        className="ad-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="mb-16 text-16 font-bold text-ink">{title}</h2>
+        <h2 className="ad-modal-title">{title}</h2>
         {children}
       </div>
     </div>

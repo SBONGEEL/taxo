@@ -26,6 +26,15 @@ import { globalSearch } from "@/api/endpoints";
 import type { RideStatus, SearchHit } from "@/api/types";
 import { Picker, type PickerOption } from "@/components/ui/Picker";
 import { RIDE_STATUS_LABEL, SEARCH_KIND_LABEL } from "@/lib/labels";
+import { Icon } from "@/taxo2";
+
+/** أيقونةُ الصنف في سطر النتيجة — **زينةٌ بجانب الكلمة لا بدلاً منها**: الصنفُ مكتوبٌ في السطر الثاني كما كان. */
+const KIND_ICON: Record<SearchHit["kind"], string> = {
+  user: "person",
+  driver: "badge",
+  ride: "route",
+  claim: "receipt_long",
+};
 
 /** السطرُ الثاني لكلِّ إصابة — **وكلُّ اسمٍ من السجلّ المركزيّ**.
  *
@@ -42,7 +51,8 @@ function describe(hit: SearchHit): string {
     hit.kind === "ride"
       ? (RIDE_STATUS_LABEL[hit.hint as RideStatus] ?? hit.hint)
       : hit.hint;
-  return `${kind} · ${hint}`;
+  // **القيمةُ معزولةٌ باتّجاهها** (`\u2066…\u2069`): رقمٌ يبدأ بـ«+» في سطرٍ عربيّ كان يُقرأ «962790000012+»
+  return `${kind} · \u2066${hint}\u2069`;
 }
 
 export function GlobalSearch() {
@@ -62,6 +72,7 @@ export function GlobalSearch() {
       // **الصنفُ في السطر الثاني لا في أيقونة**: «كبتن · 07…» يُقرأ بلا
       // مفتاحِ ألوانٍ يحفظه أحد، **والأسماءُ من السجلّ المركزيّ**
       hint: describe(hit),
+      icon: KIND_ICON[hit.kind],
     }));
   }, []);
 
@@ -95,18 +106,16 @@ export function GlobalSearch() {
   }
 
   return (
-    // **`side` من سلّم العرض القائم لا مقاسٌ جديد** (`check:scale`): ٣٤٠px
-    // تسع «اسمٌ وتحته الصنفُ والرقم» بلا قصّ، ولا تزاحم شريطَ الأسواق
-    // **٣٤٠px في صفٍّ لا يلتفّ تُكسر**: `max-w-full` تقيسها إلى الحاوية
-    // لا إلى الشاشة، **فانضغط الحقلُ إلى ٣٢px عرضاً** — حقلُ بحثٍ لا
-    // يُكتب فيه. **فسطرٌ كاملٌ تحت `sm`**، و٣٤٠ فوقها كما كان.
-    <div className="order-last w-full sm:order-none sm:w-side sm:max-w-full">
+    // **حقلٌ واحدٌ بأيقونة البحث** — عرضُه ٤٠٠ في ترويسة الحاسوب، **وسطرٌ كاملٌ تحت ١٠٢٤** (الإطار `frame.css`)
+    <div className="ad-search">
+      <Icon name="search" className="ad-search-icon" />
       <Picker
         value={null}
         onPick={jump}
         search={search}
         placeholder="ابحث في اللوحة كلِّها — اسمٌ أو رقمٌ أو مرجع…"
         emptyText="لا حسابَ ولا كبتنَ ولا رحلةَ ولا مطالبةَ بهذا النصّ."
+        ariaLabel="البحث العامّ"
       />
     </div>
   );

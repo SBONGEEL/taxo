@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
-import { day, moment, money } from "@/lib/format";
+import { currencyLabel, day, moment, money } from "@/lib/format";
 import {
   CHARGE_STATUS_LABEL,
   CHARGE_STATUS_TONE,
@@ -93,13 +93,14 @@ export function AccountSection({
   return (
     <ProfileSection<User>
       title="الحساب"
+      icon="person"
       hint="حالُ الحساب نفسِه — لا حالُ دوره. وحسابٌ محظورٌ لا يدخل ولا يطلب رحلةً مهما كان اعتمادُه."
       load={load}
       open
     >
       {(user) => (
         <>
-          <div className="mb-9 flex flex-wrap gap-6">
+          <div className="ad-sec-badges">
             {user.is_blocked ? (
               <Badge tone="danger">محظور</Badge>
             ) : (
@@ -178,6 +179,7 @@ export function WalletSection({
   return (
     <ProfileSection
       title="المحفظة والدفتر"
+      icon="account_balance_wallet"
       hint="رصيدٌ محسوبٌ من الدفتر لا عمودٌ مخزَّن — ولا يُعدَّل قيدٌ بل يُكتب قيدٌ مضاد."
       load={load}
     >
@@ -185,29 +187,29 @@ export function WalletSection({
         const isFrozen = frozen ?? wallet.frozen;
         return (
         <>
-          <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-            <div className="text-22 font-bold text-ink">
-              {money(wallet.balance, wallet.currency)}
+          {/* **الرصيدُ رقمُ الهوية** (Unbounded) وعملتُه بعده بالخافت — **مصوغاً لا محسوباً**: النصُّ كما وصل من الدفتر */}
+          <div className="ad-wallet">
+            <div className="ad-amount">
+              <span className="ad-num">{digits(wallet.balance)}</span>
+              <span className="ad-cur">{currencyLabel(wallet.currency)}</span>
             </div>
             {isFrozen ? (
-              <p className="mt-6">
+              <p className="ad-sec-badges">
                 <Badge tone="warn">
                   {side === "driver" ? "محفظةُ الكبتن مجمّدة" : "محفظةٌ مجمّدة"}
                 </Badge>
               </p>
             ) : null}
             {canDecide ? (
-              <>
-                <div className="mt-10">
-                  <Field
-                    label="السبب"
-                    name="freeze-reason"
-                    placeholder="يدخل سجل التدقيق ولا يصل صاحب الحساب"
-                    value={reason}
-                    maxLength={255}
-                    onChange={(event) => setReason(event.target.value)}
-                  />
-                </div>
+              <div className="ad-wallet-actions">
+                <Field
+                  label="السبب"
+                  name="freeze-reason"
+                  placeholder="يدخل سجل التدقيق ولا يصل صاحب الحساب"
+                  value={reason}
+                  maxLength={255}
+                  onChange={(event) => setReason(event.target.value)}
+                />
                 <button
                   type="button"
                   disabled={busy}
@@ -223,13 +225,13 @@ export function WalletSection({
                       .finally(() => setBusy(false));
                   }}
                   className={cn(
-                    "mt-10 w-full rounded-10 border py-8 text-11.5 font-semibold disabled:opacity-60",
-                    isFrozen ? "border-line text-ink" : "border-warn text-warn",
+                    "ad-btn ad-btn-sm",
+                    isFrozen ? "ad-btn-secondary" : "ad-btn-warn",
                   )}
                 >
                   {isFrozen ? "رفع التجميد" : "تجميد محفظة الكبتن"}
                 </button>
-              </>
+              </div>
             ) : null}
           </div>
           <div className="mt-9">
@@ -238,19 +240,17 @@ export function WalletSection({
               keyOf={(entry) => entry.id}
               empty="لا حركةَ في هذا الدفتر بعد."
               render={(entry) => (
-                <div className="flex items-center gap-10">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-ink">
+                <div className="ad-mini-row">
+                  <span className="ad-mini-main">
+                    <span className="ad-mini-title">
                       {WALLET_TX_LABEL[entry.type] ?? entry.type}
                     </span>
-                    <span className="block text-10.5 text-muted">
-                      {moment(entry.created_at)}
-                    </span>
+                    <span className="ad-mini-at">{moment(entry.created_at)}</span>
                   </span>
                   <span
                     className={cn(
-                      "shrink-0 font-semibold",
-                      entry.amount.startsWith("-") ? "text-danger" : "text-ok",
+                      "ad-ledger-amount",
+                      entry.amount.startsWith("-") ? "ad-tone-danger" : "ad-tone-ok",
                     )}
                   >
                     {digits(entry.amount)}
@@ -293,6 +293,7 @@ export function RidesSection({
   return (
     <ProfileSection
       title={side === "rider" ? "آخرُ رحلاته راكباً" : "آخرُ رحلاته كبتناً"}
+      icon="history"
       load={load}
     >
       {(rows) => (
@@ -347,6 +348,7 @@ export function ChargesSection({
   return (
     <ProfileSection
       title="رسومُ الإلغاء"
+      icon="receipt_long"
       hint="دَينٌ بين طرفين تحمله المنصةُ ولا تملكه — ولا يُحصَّل من غير مسار تحصيله."
       load={load}
     >
@@ -424,6 +426,7 @@ export function ControlsSection({
   return (
     <ProfileSection<User>
       title="التحكّم والتواصل"
+      icon="tune"
       hint="تصحيحُ بياناته، ورسالةٌ إليه — والهاتفُ والسوقُ لا يُحرَّران من هنا."
       load={load}
     >
@@ -480,101 +483,102 @@ function Controls({
     name.trim() !== user.name || email.trim() !== (user.email ?? "");
 
   return (
-    <section className="mt-14 rounded-14 border border-line bg-surface-2 p-14">
-      <h3 className="mb-10 text-13 font-bold text-ink">التحكّم والتواصل</h3>
+    // **كتلٌ في بطاقة القسم** لا قسمٌ داخل قسم: كان العنوانُ «التحكّم والتواصل» يُكتب مرّتين — في رأس القسم وفي جسده
+    <div>
       <ErrorNote message={error} />
       <SuccessNote message={note} />
 
-      <div className="grid grid-cols-2 gap-10">
-        <Field
-          label="الاسم"
-          name="profile_name"
-          value={name}
-          maxLength={120}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <Field
-          label="البريد"
-          name="profile_email"
-          dir="ltr"
-          value={email}
-          maxLength={320}
-          onChange={(event) => setEmail(event.target.value)}
-        />
+      <div className="ad-controls-block">
+        <div className="ad-controls">
+          <Field
+            label="الاسم"
+            name="profile_name"
+            value={name}
+            maxLength={120}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <Field
+            label="البريد"
+            name="profile_email"
+            dir="ltr"
+            value={email}
+            maxLength={320}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </div>
+        <p className="ad-hint">
+          وكتابةُ بريدٍ من هنا تُسقط إثباتَه — يبقى بياناً يُراسَل به حتى يُثبته
+          صاحبُه. والهاتفُ والسوقُ لا يُحرَّران: أوّلُهما مُعرّفُ الدخول،
+          والثاني مختومٌ على كلِّ رحلةٍ ودفعة.
+        </p>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy || !edited || name.trim().length < 2}
+          onClick={() =>
+            void run(
+              () =>
+                updateUserProfile(user.id, {
+                  name: name.trim(),
+                  email: email.trim() || null,
+                }),
+              "حُفظ التعديل — والقيمةُ قبل وبعد في سجل التدقيق.",
+            )
+          }
+        >
+          احفظ البيانات
+        </Button>
       </div>
-      <p className="mt-6 text-10.5 leading-note text-muted">
-        وكتابةُ بريدٍ من هنا تُسقط إثباتَه — يبقى بياناً يُراسَل به حتى يُثبته
-        صاحبُه. والهاتفُ والسوقُ لا يُحرَّران: أوّلُهما مُعرّفُ الدخول،
-        والثاني مختومٌ على كلِّ رحلةٍ ودفعة.
-      </p>
-      <Button
-        className="mt-10"
-        size="sm"
-        variant="secondary"
-        disabled={busy || !edited || name.trim().length < 2}
-        onClick={() =>
-          void run(
-            () =>
-              updateUserProfile(user.id, {
-                name: name.trim(),
-                email: email.trim() || null,
-              }),
-            "حُفظ التعديل — والقيمةُ قبل وبعد في سجل التدقيق.",
-          )
-        }
-      >
-        احفظ البيانات
-      </Button>
 
-      <h4 className="mb-8 mt-16 text-11.5 font-bold text-muted">
-        رسالةٌ إلى صاحب الحساب
-      </h4>
-      <Field
-        label="العنوان"
-        name="message_title"
-        value={title}
-        maxLength={80}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <div className="mt-8">
-        <label className="mb-6 block text-11.5 text-muted">النص</label>
-        <textarea
-          name="message_body"
-          rows={3}
-          value={body}
-          maxLength={600}
-          onChange={(event) => setBody(event.target.value)}
-          className="w-full rounded-12 border border-line bg-surface px-12 py-10 text-12 leading-note text-ink"
+      <div className="ad-controls-block">
+        <h4 className="ad-controls-title">رسالةٌ إلى صاحب الحساب</h4>
+        <Field
+          label="العنوان"
+          name="message_title"
+          value={title}
+          maxLength={80}
+          onChange={(event) => setTitle(event.target.value)}
         />
+        <div className="mt-8">
+          <label className="label" htmlFor="message_body">
+            النص
+          </label>
+          <textarea
+            id="message_body"
+            name="message_body"
+            rows={3}
+            value={body}
+            maxLength={600}
+            onChange={(event) => setBody(event.target.value)}
+            className="fld"
+          />
+        </div>
+        <p className="ad-hint">
+          تصل صندوقَ الوارد في تطبيقه، وتُدفع إلى جهازه إن كان مغلقاً — ونصُّها
+          يُحفظ في سجل التدقيق كما كُتب.
+        </p>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy || title.trim().length < 2 || body.trim().length < 2}
+          onClick={() =>
+            void run(async () => {
+              await notifyUser(user.id, {
+                title: title.trim(),
+                body: body.trim(),
+              });
+              setTitle("");
+              setBody("");
+            }, "أُرسلت الرسالة إلى صندوق وارده.")
+          }
+        >
+          أرسِل
+        </Button>
       </div>
-      <p className="mt-6 text-10.5 leading-note text-muted">
-        تصل صندوقَ الوارد في تطبيقه، وتُدفع إلى جهازه إن كان مغلقاً — ونصُّها
-        يُحفظ في سجل التدقيق كما كُتب.
-      </p>
-      <Button
-        className="mt-10"
-        size="sm"
-        variant="secondary"
-        disabled={busy || title.trim().length < 2 || body.trim().length < 2}
-        onClick={() =>
-          void run(async () => {
-            await notifyUser(user.id, {
-              title: title.trim(),
-              body: body.trim(),
-            });
-            setTitle("");
-            setBody("");
-          }, "أُرسلت الرسالة إلى صندوق وارده.")
-        }
-      >
-        أرسِل
-      </Button>
 
       {showBlock ? (
-        <>
-          <h4 className="mb-8 mt-16 text-11.5 font-bold text-muted">
-            حالُ الحساب
-          </h4>
+        <div className="ad-controls-block">
+          <h4 className="ad-controls-title">حالُ الحساب</h4>
           <Field
             label="السبب"
             name="block_reason"
@@ -583,45 +587,43 @@ function Controls({
             maxLength={255}
             onChange={(event) => setReason(event.target.value)}
           />
-          <div className="mt-10">
-            {user.is_blocked ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () => unblockUser(user.id, reason.trim() || undefined),
-                    "رُفع الحظر عن الحساب.",
-                  )
-                }
-              >
-                رفع الحظر
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="border-danger text-danger"
-                disabled={busy || reason.trim().length < 3}
-                onClick={() =>
-                  void run(
-                    () => blockUser(user.id, reason.trim()),
-                    "حُظر الحساب — لا يدخل ولا يطلب رحلة.",
-                  )
-                }
-              >
-                احظر الحساب
-              </Button>
-            )}
-          </div>
-          <p className="mt-8 text-10.5 leading-note text-muted">
-            الحظرُ يسري على الجلسة القائمة فوراً — العمودُ يُقرأ في كلِّ طلب.
-            **وهو غيرُ إيقاف حملة تأكيد الأرقام**: ذاك يُفكّ بتأكيد الرقم
+          {user.is_blocked ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  () => unblockUser(user.id, reason.trim() || undefined),
+                  "رُفع الحظر عن الحساب.",
+                )
+              }
+            >
+              رفع الحظر
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={busy || reason.trim().length < 3}
+              onClick={() =>
+                void run(
+                  () => blockUser(user.id, reason.trim()),
+                  "حُظر الحساب — لا يدخل ولا يطلب رحلة.",
+                )
+              }
+            >
+              احظر الحساب
+            </Button>
+          )}
+          {/* **كانت النجمتان تُطبعان حرفاً** («**وهو غيرُ…**» نصٌّ في JSX لا Markdown) — صارتا وسماً */}
+          <p className="ad-hint">
+            الحظرُ يسري على الجلسة القائمة فوراً — العمودُ يُقرأ في كلِّ طلب.{" "}
+            <b>وهو غيرُ إيقاف حملة تأكيد الأرقام</b>: ذاك يُفكّ بتأكيد الرقم
             وحدَه، بلا مشرف.
           </p>
-        </>
+        </div>
       ) : null}
-    </section>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
-/** حقلٌ بتسميته — `design/DESIGN.md` §2.3.
+/** حقلٌ بتسميته — **حقلُ TAXO 2.0** (`.fld` في `t2/kit.css`: ٤٤ بزاويةٍ ١٢ على غائر البطاقة، وحافّةٌ بالجمر عند التركيز).
  *
- * التسمية **فوق** الحقل دائماً (12px، `--mut`، مسافة 6px تحتها)، والحقل
- * نفسه `.fld` في `index.css`.
+ * التسمية **فوق** الحقل دائماً، والخطأُ **تحته** بأيقونته.
  *
  * **وللحقل حالةُ خطأٍ منذ عقد الأخطاء** (SPEC ١٧.٧). وكان التصميمُ يضع نصَّ
  * الخطأ تحت النموذج كلِّه — وهو صحيحٌ لخطأٍ يخصّ الطلبَ كلَّه («تعذّر
@@ -19,6 +18,17 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react
 
 import { useFieldError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
+import { Icon, Switch as Knob } from "@/taxo2";
+
+/** **سببُ الخطأ تحت حقله** (§٦٢/٢٠) — أيقونةٌ ممتلئةٌ ونصٌّ بلون الخطأ، **كسطر الخطأ في الهوية**. */
+export function FieldError({ id, message }: { id?: string; message: string }) {
+  return (
+    <p id={id} className="ad-err">
+      <Icon name="error" fill />
+      <span>{message}</span>
+    </p>
+  );
+}
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -56,17 +66,13 @@ export function Field({ label, className, id, error, ...rest }: Props) {
         id={inputId}
         // الحدُّ الأحمر يقول «هنا»، والنصُّ يقول «لماذا» — وأحدهما بلا الآخر
         // إمّا لونٌ بلا سبب أو سببٌ لا يُعرف موضعه
-        className={cn("fld", reason && "border-danger", className)}
+        className={cn("fld", reason && "invalid", className)}
         aria-invalid={reason ? true : undefined}
         aria-describedby={reason ? `${inputId}-error` : undefined}
         {...rest}
         dir={dir}
       />
-      {reason ? (
-        <p id={`${inputId}-error`} className="mt-6 text-12 text-danger">
-          {reason}
-        </p>
-      ) : null}
+      {reason ? <FieldError id={`${inputId}-error`} message={reason} /> : null}
     </div>
   );
 }
@@ -126,6 +132,7 @@ export function Switch({
   disabled?: boolean;
 }) {
   return (
+    // **الزرُّ هو المفتاحُ عند قارئ الشاشة، والرسمُ مفتاحُ الهوية** (`taxo2/Switch`: ٤٨×٢٨، مشتعلٌ بالجمر)
     <button
       type="button"
       role="switch"
@@ -133,18 +140,9 @@ export function Switch({
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cn(
-        "relative block h-27 w-46 flex-none rounded-full transition-colors disabled:opacity-60",
-        checked ? "bg-ok" : "bg-line",
-      )}
+      className="ad-switch"
     >
-      <span
-        aria-hidden
-        className={cn(
-          "absolute top-3 block size-21 rounded-full bg-surface transition-all",
-          checked ? "start-22" : "start-3",
-        )}
-      />
+      <Knob on={checked} />
     </button>
   );
 }
@@ -167,20 +165,12 @@ export function Checkbox({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex min-h-44 w-full items-start gap-9 py-11 text-start disabled:opacity-60 sm:min-h-0 sm:py-0"
+      className="ad-check-row"
     >
-      <span
-        aria-hidden
-        className={cn(
-          "mt-2 flex size-18 flex-none items-center justify-center rounded-5 border text-11 font-bold",
-          checked
-            ? "border-accent bg-accent text-accent-ink"
-            : "border-line text-transparent",
-        )}
-      >
-        ✓
+      <span aria-hidden className={checked ? "ad-check on" : "ad-check"}>
+        <Icon name="check" />
       </span>
-      <span className="min-w-0">{children}</span>
+      <span className="ad-check-text">{children}</span>
     </button>
   );
 }

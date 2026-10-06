@@ -1,13 +1,13 @@
-/** رسائل الحال: خطأ، نجاح، وانتظار.
+/** رسائل الحال: خطأ، نجاح، وانتظار — **بلغة TAXO 2.0**.
  *
- * **نصُّ الخطأ هو ما قالته الخلفية** (`{code, message}` بالعربية) — لا
- * تخترع الواجهة عبارةً لخطأٍ سُمّي أصلاً. وشكلُها من `DESIGN.md` §2.2:
- * بطاقةٌ بحدٍّ بلون الحالة وخلفية `--sur2`، بمقاس 12.5 وسطرٍ 1.7.
+ * **نصُّ الخطأ هو ما قالته الخلفية** (`{code, message}` بالعربية) — لا تخترع الواجهة عبارةً لخطأٍ سُمّي أصلاً. وشكلُها بلاغُ
+ * الهوية (`.t2-callout`): أيقونةُ معناه ممتلئةً ونصٌّ على خافتِ لونه — **سطرٌ يُقرأ لا لونٌ يُلمح**.
  */
 
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 function Note({
   message,
@@ -17,20 +17,14 @@ function Note({
   tone: "danger" | "ok" | "warn";
 }) {
   if (!message) return null;
-  const color = {
-    danger: "border-danger text-danger",
-    ok: "border-ok text-ok",
-    warn: "border-warn text-warn",
-  }[tone];
+  const icon = { danger: "error", ok: "check_circle", warn: "warning" }[tone];
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
-      className={cn(
-        "rounded-12 border bg-surface-2 px-13 py-11 text-12.5 leading-note",
-        color,
-      )}
+      className={cn("ad-note", tone)}
     >
-      {message}
+      <Icon name={icon} fill />
+      <span>{message}</span>
     </div>
   );
 }
@@ -47,16 +41,13 @@ export const SuccessNote = ({
   message: string | null | undefined;
 }) => <Note message={message} tone="ok" />;
 
-/** مؤشّرُ الانتظار من §2.10: حلقةٌ 34×34 بحدٍّ `--brd` وقمّةٍ `--tx`. */
+/** مؤشّرُ الانتظار: حلقةٌ بحافّةٍ خافتةٍ وقمّةٍ بالجمر — **وتقف لمن طلب تقليلَ الحركة** (`kit.css`). */
 export function Spinner({ className }: { className?: string }) {
   return (
     <span
       aria-label="جارٍ التحميل"
       role="status"
-      className={cn(
-        "block size-34 animate-spin rounded-full border-2 border-line border-t-ink",
-        className,
-      )}
+      className={cn("ad-spin", className)}
     />
   );
 }
@@ -65,17 +56,13 @@ export function Spinner({ className }: { className?: string }) {
  * الفارغة في هذا التطبيق تمتلئ بالعمل لا بضغطة. */
 export function EmptyNote({ title, hint }: { title: string; hint: string }) {
   return (
-    <div className="px-16 py-38 text-center">
-      <p className="text-14 font-bold text-ink">{title}</p>
-      <p className="mt-6 text-12.5 leading-note text-muted">{hint}</p>
+    <div className="ad-empty">
+      <p className="ad-empty-title">{title}</p>
+      <p className="ad-empty-hint">{hint}</p>
     </div>
   );
 }
 
 export function CenteredMessage({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-16 px-28 text-center">
-      {children}
-    </div>
-  );
+  return <div className="ad-centered">{children}</div>;
 }

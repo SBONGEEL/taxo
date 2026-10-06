@@ -1,0 +1,308 @@
+/* ═══ لوحةُ الإدارة — الإطار (A00 · AM02) ════════════════════════════════════════════════════════════
+ *
+ * **عمودٌ عائمٌ بخمس مجموعات، وترويسةٌ فيها البحثُ العامّ ومبدّلُ السوق وحسابُ المشرف** — `design/t2-new/admin/A00-frame.dc.html`.
+ * **العمودُ شريطُ TaxoTabs قائماً**: مادّتُه `--t2-float-bg` وظلُّه `--t2-float-shadow`، **والنشطُ حبّةُ «التبويب النشط»**
+ * (`--t2-tab-on`: الجمرُ على الإسفلت والحبرُ على الحجر) — فلا لونَ ولا مادّةَ جديدة.
+ *
+ * **وتحت ١٠٢٤ يصير العمودُ درجاً** (AM02c) يحمل في أسفله الحسابَ والمظهرَ والخروج، والترويسةُ سطران: القائمةُ والعلامةُ والسوق،
+ * ثمّ البحثُ بعرض الشاشة. **بالرموز وحدَها** فيعمل في المظهرين.
+ */
+
+.ad-app { min-height: 100%; }
+
+/* ── العمود ───────────────────────────────────────────────────────────────────────────────── */
+.ad-side {
+  position: fixed;
+  z-index: 40;
+  inset-block: 16px;
+  inset-inline-start: 16px;
+  display: flex;
+  flex-direction: column;
+  width: 248px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--t2-float-bg);
+  color: var(--t2-text);
+  box-shadow: var(--t2-float-shadow);
+}
+/* **حافّةٌ على الإسفلت وحدَه** — كشريط الكبتن (TaxoTabs «captain»)؛ والحجرُ يكفيه ظلُّه */
+html.dark .ad-side { border: 1px solid var(--t2-line); }
+.ad-side-brand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 20px 14px;
+}
+.ad-side-tag {
+  padding: 3px 8px;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--t2-muted);
+  white-space: nowrap;
+}
+/* **بمحدِّدين لا بواحد**: الزرُّ يحمل `.ad-round` أيضاً (`display: grid`) — وبمحدِّدٍ واحدٍ يغلب الأخيرُ فيظهر على الحاسوب */
+.ad-side-brand .ad-side-close { display: none; margin-inline-start: auto; }
+
+.ad-nav {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 0 10px 14px;
+  overflow-y: auto;
+}
+.ad-nav-group + .ad-nav-group { margin-top: 12px; }
+.ad-nav-label {
+  margin: 4px 10px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--t2-muted);
+}
+.ad-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 13px;
+  color: var(--t2-text);
+  font-size: 13.5px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ad-nav-item .t2-icon { font-size: 20px; color: var(--t2-muted); }
+.ad-nav-item.on {
+  background: var(--t2-tab-on);
+  color: var(--t2-on-tab-on);
+  font-weight: 600;
+}
+.ad-nav-item.on .t2-icon { color: var(--t2-on-tab-on); }
+.ad-nav-item:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: -2px; }
+.ad-nav-item.soon { color: var(--t2-muted); cursor: default; }
+.ad-nav-soon { margin-inline-start: auto; font-size: 10.5px; }
+@media (hover: hover) {
+  .ad-nav-item:not(.on):not(.soon):hover { background: var(--t2-sunken); }
+}
+
+/* **أسفلُ الدرج على الهاتف وحدَه** — الحسابُ والمظهرُ والخروج */
+.ad-side-foot {
+  display: none;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--t2-line);
+}
+.ad-side-actions { display: flex; gap: 8px; }
+.ad-side-actions .ad-btn { flex: 1; }
+
+.ad-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: var(--t2-scrim);
+}
+
+/* ── المساحة والترويسة ────────────────────────────────────────────────────────────────────── */
+.ad-main {
+  min-width: 0;
+  margin-inline-start: 280px;
+  padding-inline: 12px 24px;
+}
+.ad-head {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0 12px;
+  background: var(--t2-bg);
+}
+.ad-head .ad-menu,
+.ad-head .ad-head-mark { display: none; }
+.ad-head-gap { flex: 1; }
+
+/* زرٌّ دائريٌّ ٤٤ بحافّة — كزرّ الرجوع في الهوية (`.t2-back`) */
+.ad-round {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--t2-line);
+  border-radius: 50%;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ad-round .t2-icon { font-size: 20px; }
+.ad-round:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+
+/* البحثُ العامّ: حقلٌ بأيقونته، وقائمةُ نتائجه عائمةٌ تحته (`kit.css` — `.ad-pick-menu`) */
+/* **مرنٌ لا ثابت**: ٤٠٠ على الحاسوب العريض، ويضيق قبل أن يُسحق زرٌّ أو تفيض الترويسة (قِيس على ١٠٢٤: فاضت ٤٣ بكسلاً بعرضٍ ثابت) */
+.ad-search {
+  position: relative;
+  flex: 0 1 400px;
+  min-width: 180px;
+}
+.ad-search .fld {
+  min-height: 44px;
+  padding-inline-start: 42px;
+  border-radius: 14px;
+  background: var(--t2-surface);
+}
+.ad-search-icon {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  inset-inline-start: 13px;
+  font-size: 20px;
+  color: var(--t2-muted);
+  pointer-events: none;
+}
+
+/* حسابُ المشرف — دائرةُ الحرف الأوّل، والاسمُ والدور */
+.ad-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 44px;
+  box-sizing: border-box;
+  padding-inline: 6px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  background: var(--t2-surface);
+}
+.ad-account.flat {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.ad-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.ad-account.flat .ad-avatar { width: 36px; height: 36px; font-size: 14px; }
+.ad-account-text { display: flex; min-width: 0; flex-direction: column; line-height: 1.3; }
+.ad-account-name {
+  max-width: 180px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ad-account-role { font-size: 11px; color: var(--t2-muted); white-space: nowrap; }
+
+/* سطرُ التحقّق الثنائيّ — بلاغُ الهوية بنغمة التنبيه، **ولا يُغلق**: يزول وحدَه بزوال سببه */
+.ad-reminder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--t2-warning-line, var(--t2-line));
+  border-radius: 16px;
+  background: var(--t2-warning-soft);
+}
+.ad-reminder-icon { flex: none; font-size: 18px; color: var(--t2-warning); }
+.ad-reminder-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.6; color: var(--t2-text); }
+.ad-reminder-link {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--t2-warning-line, var(--t2-line));
+  border-radius: 10px;
+  color: var(--t2-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ── رأسُ الصفحة: العنوانُ وسطرُه، وأفعالُ الصفحة في طرفه ─────────────────────────────────── */
+.ad-page { padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+.ad-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin: 10px 0 16px;
+}
+.ad-page-titles { min-width: 0; }
+.ad-page-title { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.3; }
+.ad-page-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+.ad-page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* ── الهاتفُ واللوحيّ (تحت ١٠٢٤): العمودُ درج، والترويسةُ سطران ─────────────────────────── */
+/* **بين ١٠٢٤ و١٢٧٩ الحسابُ دائرتُه وحدَها** — الاسمُ والدورُ يُطويان قبل أن يضيق البحث */
+@media (max-width: 1279px) {
+  .ad-account.ad-desk { padding: 0 5px; }
+  .ad-account.ad-desk .ad-account-text { display: none; }
+}
+@media (max-width: 1023px) {
+  .ad-side {
+    z-index: 50;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: min(304px, 86vw);
+    padding-top: env(safe-area-inset-top, 0px);
+    border-radius: 0;
+    border-start-end-radius: 24px;
+    border-end-end-radius: 24px;
+    /* **مغلقاً لا يُرسم أصلاً**: درجٌ مُزاحٌ خارج الشاشة يمدّ عرضَ الصفحة (قِيس: ٣٩٠ صارت ٤٩٦ وانزاحت الصفحةُ يساراً) */
+    display: none;
+  }
+  .ad-side.open { display: flex; }
+  .ad-side-brand { padding: 8px 12px 12px 16px; }
+  .ad-side-tag { display: none; }
+  .ad-side-brand .ad-side-close { display: grid; }
+  .ad-side-foot { display: flex; }
+  .ad-main { margin-inline-start: 0; padding-inline: 16px; }
+  .ad-head {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  }
+  .ad-head .ad-menu { display: grid; }
+  .ad-head .ad-head-mark { display: flex; align-items: center; }
+  .ad-head .ad-desk { display: none; }
+  .ad-head-gap { order: 2; }
+  .ad-country { order: 3; }
+  .ad-search { order: 10; flex: 1 1 100%; width: 100%; }
+}
+@media (max-width: 639px) {
+  .ad-page-title { font-size: 22px; line-height: 1.35; }
+  .ad-page-sub { font-size: 12.5px; }
+  .ad-page-head { margin-top: 4px; }
+  .ad-page-actions { width: 100%; }
+  .ad-reminder { flex-wrap: wrap; }
+  .ad-reminder-link { min-height: 44px; }
+  /* **هدفُ لمسٍ ٤٤ كاملاً**: الحبّةُ تملأ الوعاءَ بلا حشوة — والحبّتان معاً عرضُ «الأردن · ليبيا» لا أكثر */
+  .ad-country { padding: 0; }
+  .ad-country .ad-seg-opt { height: 44px; padding: 0 13px; font-size: 12.5px; }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 1023px) {
+  .ad-side.open { animation: ad-side-in var(--t2-med) var(--t2-ease-out) both; }
+  .ad-scrim { animation: ad-scrim-in var(--t2-med) var(--t2-ease) both; }
+}
+@keyframes ad-side-in { from { transform: translateX(105%); } }
+@keyframes ad-scrim-in { from { opacity: 0; } }

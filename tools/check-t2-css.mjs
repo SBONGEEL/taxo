@@ -20,9 +20,10 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
-const APPS = ["customer-app", "driver-app"];
+// **ولوحةُ الإدارة ثالثتُها** (§٦٢/١٦): إطارُها وعُدّتُها وشاشاتُها في `src/t2/`، ونسختُها من نظام التصميم في `src/taxo2/`
+const APPS = ["customer-app", "driver-app", "admin-panel"];
 // عائلةُ TAXO 2.0 — حيث تُكتب الشاشاتُ الجديدةُ بأيدٍ كثيرة
-const DIRS = ["src/screens/t2", "src/taxo2", "src/components/welcome"];
+const DIRS = ["src/screens/t2", "src/taxo2", "src/components/welcome", "src/t2"];
 
 function cssFiles() {
   const out = [];

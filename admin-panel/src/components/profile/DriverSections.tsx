@@ -62,17 +62,18 @@ export function VehiclesSection({ driverId }: { driverId: string }) {
   return (
     <ProfileSection
       title="المركبة"
+      icon="directions_car"
       hint="يكتبها صاحبُها من تطبيقه، وتحريرُ هوّيتها يُسقط اعتمادَه إلى «بانتظار المراجعة» — فلا تُحرَّر من هنا."
       load={load}
     >
       {(rows) => (
         <>
           {rows.length === 0 ? (
-            <p className="text-11.5 leading-note text-muted">
+            <p className="ad-mini-empty">
               لا مركبةَ مسجَّلةٌ بعد — ولا يُعتمد كبتنٌ بلا رخصةِ مركبةٍ مقبولة.
             </p>
           ) : (
-            <div className="flex flex-col gap-9">
+            <div className="flex flex-col gap-8">
               {rows.map((vehicle) => (
                 <Facts
                   key={vehicle.id}
@@ -111,6 +112,7 @@ export function SubscriptionSection({ driverId }: { driverId: string }) {
   return (
     <ProfileSection
       title="الاشتراك"
+      icon="card_membership"
       hint="لا يصل الكبتنَ عرضٌ بلا اشتراكٍ ساري — والتجديدُ صفٌّ جديدٌ يبدأ من نهاية ما قبله لا من اليوم."
       load={load}
     >
@@ -173,12 +175,13 @@ export function MoneyOwedSection({ driverId }: { driverId: string }) {
   return (
     <ProfileSection
       title="ما عليه — السلف والمستحقّات"
+      icon="request_quote"
       hint="السلفةُ مالٌ أقرضته المنصة، والمستحقُّ عمولةُ رحلةٍ نقديةٍ قبضها ولم تصل. ولا يُجمعان في رقم."
       load={load}
     >
       {({ advances, debts }) => (
         <>
-          <h4 className="mb-7 text-11.5 font-bold text-muted">السلف</h4>
+          <h4 className="ad-sec-sub">السلف</h4>
           <MiniList
             rows={advances}
             keyOf={(row) => row.id}
@@ -200,9 +203,7 @@ export function MoneyOwedSection({ driverId }: { driverId: string }) {
             )}
           />
 
-          <h4 className="mb-7 mt-12 text-11.5 font-bold text-muted">
-            المستحقّات
-          </h4>
+          <h4 className="ad-sec-sub">المستحقّات</h4>
           <MiniList
             rows={debts}
             keyOf={(row) => row.id}
@@ -219,7 +220,7 @@ export function MoneyOwedSection({ driverId }: { driverId: string }) {
           />
 
           {advances.length + debts.length === 0 ? null : (
-            <p className="mt-9">
+            <p className="ad-sec-badges ad-sec-after">
               <Badge tone="warn">قائمٌ عليه مالٌ للمنصة</Badge>
             </p>
           )}
@@ -260,6 +261,7 @@ export function ActiveRideSection({ driverId }: { driverId: string }) {
   return (
     <ProfileSection
       title="الرحلة الجارية"
+      icon="navigation"
       hint="من بثِّ الموقع نفسِه الذي ترسمه الخريطة الحيّة — وفتحُها مُسجَّلٌ في سجل التدقيق باسمك."
       load={load}
     >
@@ -294,7 +296,7 @@ function ActiveRide({
 
   if (ride === null) {
     return (
-      <p className="text-11.5 leading-note text-muted">
+      <p className="ad-mini-empty">
         {/* **بلا ضميرٍ يذكر الجنس** (قاعدةُ العربية المجنَّسة): «له» تُقرأ
             خطأً على سائقةٍ معتمدة، **وقِيس ذلك بالعين على درج «هناء
             السائقة»** — والجملةُ تستقيم بلا الضمير أصلاً */}
@@ -306,7 +308,7 @@ function ActiveRide({
 
   return (
     <>
-      <div className="mb-9 flex flex-wrap items-center gap-6">
+      <div className="ad-sec-badges">
         <Badge tone={RIDE_STATUS_TONE[ride.status]}>
           {RIDE_STATUS_LABEL[ride.status]}
         </Badge>
@@ -321,6 +323,7 @@ function ActiveRide({
         )}
       </div>
 
+      <div className="ad-route">
       <RouteCanvas
         token={token}
         pickup={{ lat: ride.pickup_lat, lng: ride.pickup_lng }}
@@ -328,8 +331,9 @@ function ActiveRide({
         route={ride.route}
         position={ride.position}
       />
+      </div>
 
-      <div className="mt-9">
+      <div className="mt-8">
         <Facts
           rows={[
             { label: "من", value: ride.pickup_address ?? "نقطة على الخريطة" },
@@ -363,7 +367,7 @@ function ActiveRide({
       </div>
 
       {ride.route_truncated ? (
-        <p className="mt-7 text-10.5 leading-note text-muted">
+        <p className="ad-capped">
           المعروضُ أولُ ألف نقطة — المسارُ أطول، وما بعدها لا يُرسم.
         </p>
       ) : null}

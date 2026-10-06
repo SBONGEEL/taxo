@@ -35,11 +35,32 @@
  * البيانات، **فتقفز الصفحةُ تحت المؤشّر**.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 import { EmptyNote, Spinner } from "@/components/ui/Feedback";
 import { cn, digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+/** **خلايا الصفّ واحدةً واحدة** — `render` يردّ قطعةً (`<>…</>`) خلاياها بترتيب الأعمدة.
+ *
+ * **ولمَ تُفكّ**: على الهاتف يصير الصفُّ بطاقةً (AM02)، **وكلُّ خليّةٍ سطرٌ بعنوان عمودها** — فتُلفّ كلُّ خليّةٍ بغلافٍ يحمل اسمَ
+ * عمودها (`data-label`). **وعلى الحاسوب الغلافُ `display: contents`** فلا يتغيّر من الشبكة شيء: الخليّةُ نفسُها عنصرُ الشبكة كما كانت.
+ */
+function cellsOf(node: ReactNode): ReactNode[] {
+  if (isValidElement(node) && node.type === Fragment) {
+    return Children.toArray((node.props as { children?: ReactNode }).children);
+  }
+  return Children.toArray(node);
+}
 
 /** ما يبقى تحت الجدول من هامش الصفحة — **مسافةٌ من السلّم لا رقمٌ حرّ**. */
 const BOTTOM_GUTTER = 24;
@@ -226,12 +247,9 @@ export function Table<T>({
   // **حاويتان منفصلتان تُزيح الرأسَ عن صفوفه**، وهو الخطأُ الذي وُجد
   // `columns` ليمنعه. **وفوق ٧٠٤px لا يتغيّر شيء** — الحدُّ لا يُلمس.
   const head = (
-    <div
-      className="grid min-w-[44rem] gap-10 bg-surface-2 px-18 py-10 text-11 font-semibold text-muted"
-      style={{ gridTemplateColumns: grid }}
-    >
+    <div className="ad-table-head" style={{ gridTemplateColumns: grid }}>
       {selection ? (
-        <span className="flex items-center">
+        <span className="ad-table-pickcell">
           <SelectBox
             checked={allChosen}
             partial={someChosen}
@@ -254,15 +272,12 @@ export function Table<T>({
       // **هيكلٌ بارتفاع الصفوف** — لا دوّارةٌ في فراغٍ تجعل الصفحةَ تقفز
       <div>
         {[0, 1, 2, 3, 4].map((index) => (
-          <div
-            key={index}
-            className="flex min-h-44 items-center border-t border-line px-18"
-          >
-            <span className="h-10 w-full rounded-full bg-surface-2" />
+          <div key={index} className="ad-table-skel">
+            <span />
           </div>
         ))}
-        <div className="border-t border-line p-16">
-          <Spinner className="mx-auto" />
+        <div className="ad-table-skel-spin">
+          <Spinner />
         </div>
       </div>
     ) : rows.length === 0 ? (
@@ -278,13 +293,12 @@ export function Table<T>({
         return (
           <div
             key={key}
-            // **صفوفٌ متساويةُ الارتفاع**: `min-h-44` هدفُ لمسٍ كامل، وصفٌّ
-            // يقصر بمحتواه يجعل المسافاتِ غيرَ منتظمةٍ فتتعب العين
-            className="grid min-h-44 min-w-[44rem] items-center gap-10 border-t border-line px-18 py-12 text-12.5"
+            // **صفوفٌ متساويةُ الارتفاع**: ٦٠ هدفُ لمسٍ كامل، وصفٌّ يقصر بمحتواه يجعل المسافاتِ غيرَ منتظمةٍ فتتعب العين
+            className="ad-table-row"
             style={{ gridTemplateColumns: grid }}
           >
             {selection ? (
-              <span className="flex items-center">
+              <span className="ad-table-pickcell">
                 <SelectBox
                   checked={selection.selected.has(key)}
                   disabled={off}
@@ -293,7 +307,15 @@ export function Table<T>({
                 />
               </span>
             ) : null}
-            {render(row)}
+            {cellsOf(render(row)).map((cell, index) => (
+              <div
+                key={index}
+                className={index === 0 ? "ad-cell ad-cell-title" : "ad-cell"}
+                data-label={headers[index] ?? ""}
+              >
+                {cell}
+              </div>
+            ))}
           </div>
         );
       })
@@ -302,53 +324,40 @@ export function Table<T>({
   return (
     <div
       ref={ref}
-      // **min-w-0 على البطاقة نفسِها**: صارت لها ابنةٌ حدُّها الأدنى ٧٠٤px،
-      // **فنمت البطاقةُ إلى محتواها** حين كان أبوها شبكةً أو صفَّاً مرناً —
-      // ودفعت الصفحةَ إلى ٧٥٨ في شاشةٍ عرضُها ٤١٢. **والتمريرُ الأفقيُّ لا
-      // يعمل ما لم يُؤذَن للحاوية أن تضيق دون محتواها.**
-      className="flex min-w-0 flex-col overflow-hidden rounded-16 border border-line bg-surface"
+      // **min-w-0 على البطاقة نفسِها**: صارت لها ابنةٌ حدُّها الأدنى ٧٠٤px، **فنمت البطاقةُ إلى محتواها** حين كان أبوها شبكةً
+      // أو صفَّاً مرناً — ودفعت الصفحةَ إلى ٧٥٨ في شاشةٍ عرضُها ٤١٢. **والتمريرُ الأفقيُّ لا يعمل ما لم يُؤذَن للحاوية أن تضيق.**
+      // **وعلى الهاتف بطاقاتٌ لا جدول** (AM02): الارتفاعُ يتبع المحتوى والصفحةُ هي ما يُمرَّر (`kit.css`)
+      className={cn("ad-table", `ad-table-${mode}`)}
       style={mode === "viewport" && height ? { height } : undefined}
     >
-      {toolbar ? (
-        <div className="shrink-0 border-b border-line px-14 py-10">{toolbar}</div>
-      ) : null}
+      {toolbar ? <div className="ad-table-tools">{toolbar}</div> : null}
       {/* **شريطُ الاختيار فوق الرأس وثابتٌ معه** — لا ينزلق مع الصفوف:
           من اختار خمسةً ثمّ نزل يقرأ السادسَ يفقد زرَّ الفعل من الشاشة */}
       {selection && chosen > 0 ? (
-        <div className="shrink-0 border-b border-line bg-surface-2 px-18 py-10">
-          <div className="flex flex-wrap items-center gap-12">
-            <span className="text-11.5 font-semibold text-ink">
-              {/* **العددان معاً ولا يكذب أحدُهما**: «الكلّ» تعني المعروضَ في
-                  هذه الصفحة لا ما في القاعدة — والقائمةُ مسقوفةٌ بخمسين */}
-              اختِرتَ {digits(chosen)} من {digits(selectableKeys.length)} المعروضة
-            </span>
-            <button
-              type="button"
-              onClick={() => setAll(false)}
-              className="text-11.5 font-semibold text-muted underline"
-            >
-              ألغِ الاختيار
-            </button>
-            <span className="flex flex-wrap items-center gap-10">
-              {selection.actions?.(selection.selected, () => setAll(false))}
-            </span>
-          </div>
+        <div className="ad-table-chosen">
+          <span className="ad-table-chosen-count">
+            {/* **العددان معاً ولا يكذب أحدُهما**: «الكلّ» تعني المعروضَ في
+                هذه الصفحة لا ما في القاعدة — والقائمةُ مسقوفةٌ بخمسين */}
+            اختِرتَ {digits(chosen)} من {digits(selectableKeys.length)} المعروضة
+          </span>
+          <button
+            type="button"
+            onClick={() => setAll(false)}
+            className="ad-table-chosen-clear"
+          >
+            ألغِ الاختيار
+          </button>
+          <span className="ad-table-chosen-actions">
+            {selection.actions?.(selection.selected, () => setAll(false))}
+          </span>
         </div>
       ) : null}
       {/* **حاويةٌ واحدةٌ للأفق تضمّ الرأسَ والصفوف** — فلا ينزاح أحدُهما
           عن الآخر. **والرأسيُّ يبقى داخلها للصفوف وحدَها** كما كان. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
-        <div className="shrink-0">{head}</div>
+      <div className="ad-table-x">
+        <div className="ad-table-headwrap">{head}</div>
         {/* **الصفوفُ وحدَها تنزلق رأسياً** — بشريطها لا بشريط الصفحة */}
-        <div
-          className={cn(
-            "min-h-0",
-            mode === "viewport" && "flex-1 overflow-y-auto",
-            mode === "compact" && "max-h-list overflow-y-auto",
-          )}
-        >
-          {body}
-        </div>
+        <div className="ad-table-body">{body}</div>
       </div>
     </div>
   );
@@ -393,15 +402,9 @@ function SelectBox({
         event.stopPropagation();
         onChange(!checked);
       }}
-      className={cn(
-        "flex size-18 flex-none items-center justify-center rounded-5 border text-11 font-bold",
-        disabled && "cursor-not-allowed opacity-40",
-        checked || partial
-          ? "border-accent bg-accent text-accent-ink"
-          : "border-line text-transparent",
-      )}
+      className={checked || partial ? "ad-check on" : "ad-check"}
     >
-      {partial ? "–" : "✓"}
+      <Icon name={partial ? "remove" : "check"} />
     </button>
   );
 }
@@ -422,13 +425,15 @@ export function TableSearch({
   placeholder?: string;
 }) {
   return (
-    <div className="relative">
+    <div className="ad-tsearch">
+      <Icon name="search" className="ad-tsearch-icon" />
       <input
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="min-h-44 w-full rounded-10 border border-line bg-surface-2 px-12 py-8 text-12.5 text-ink placeholder:text-muted focus:border-ink focus:outline-none sm:min-h-0"
+        aria-label={placeholder}
+        className="fld"
       />
     </div>
   );
@@ -445,18 +450,16 @@ export function Pills<T extends string>({
   onPick: (key: T | "all") => void;
 }) {
   return (
-    <div className="mb-14 flex flex-wrap gap-8">
+    // **حبّاتُ الهوية** («الكل · مكتملة» في R12): المختارةُ ممتلئةٌ بلون النصّ، والباقي بحافّة. **و`aria-pressed`** يقول أيّها قائمٌ
+    // لقارئ الشاشة لا اللونُ وحدَه (قرارُ المالك 2026-08-28). **وعلى الهاتف صفٌّ واحدٌ يُمرَّر** لا يلتفّ فيدفع الجدولَ إلى أسفل
+    <div className="ad-pills">
       {options.map((option) => (
         <button
           key={option.key}
           type="button"
+          aria-pressed={value === option.key}
           onClick={() => onPick(option.key)}
-          className={cn(
-            "flex min-h-44 items-center rounded-full border px-14 py-7 text-12 font-semibold sm:min-h-0",
-            value === option.key
-              ? "border-ink text-ink"
-              : "border-line text-muted",
-          )}
+          className={value === option.key ? "ad-pill on" : "ad-pill"}
         >
           {option.label}
         </button>

@@ -1,0 +1,740 @@
+/* ═══ لوحةُ الإدارة — العُدّة (`components/ui/*` · `components/Table.tsx`) بلغة TAXO 2.0 ═══════════════════════════
+ *
+ * **ما تشترك فيه الشاشاتُ كلُّها** — الأزرار، والحقول، والشارة، والحوار، والدرج، والجدول، والمنتقي، وسطورُ الحال. **فشاشةٌ لم
+ * تُمَسّ بيدٍ تتبع الهويةَ من هنا** (§٦٢/١٦: «لا شاشةَ تنسّق نفسَها وحدَها»).
+ *
+ * **ويُحمَّل قبل أدوات Tailwind** (`main.tsx`): أصنافُه بمحدِّدٍ واحد، **فصنفُ المستدعي يغلب عند التساوي** — `border-danger
+ * text-danger` على زرٍّ ثانويٍّ ما زال يرسمه زرَّ خطر كما كان.
+ *
+ * **بالرموز وحدَها** (`var(--t2-…)`) — و`--acc`/`--inv` من `index.css`: **الأساسيُّ حبرٌ على الحجر وجمرٌ على الإسفلت**.
+ */
+
+/* ── الأزرار ─────────────────────────────────────────────────────────────────────────────── */
+.ad-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ad-btn .t2-icon { font-size: 19px; }
+.ad-btn-lg { min-height: 54px; padding: 0 20px; border-radius: 18px; font-size: 15px; }
+.ad-btn-md { min-height: 48px; padding: 0 18px; border-radius: 16px; font-size: 14px; }
+.ad-btn-sm { min-height: 40px; padding: 0 14px; border-radius: 13px; font-size: 13.5px; }
+.ad-btn-auto { width: auto; }
+.ad-btn-primary { background: var(--acc); color: var(--inv); font-weight: 700; }
+.ad-btn-secondary { background: none; border-color: var(--t2-line); color: var(--t2-text); }
+/* **الخطرُ بحافّته وخافتِه** — نصُّه بلون الخطأ على خافته (٤٫٦:١ في المظهرين) */
+.ad-btn-danger { background: var(--t2-danger-soft); border-color: var(--t2-danger); color: var(--t2-danger); font-weight: 700; }
+/* **والقبولُ والتنبيهُ بحافّةٍ لا بتعبئة**: نصُّ النجاح على خافته دون ٤٫٥:١ في الحجر — فالحافّةُ والنصُّ على سطح البطاقة */
+.ad-btn-ok { background: none; border-color: var(--t2-success); color: var(--t2-success); font-weight: 700; }
+.ad-btn-warn { background: none; border-color: var(--t2-warning); color: var(--t2-warning); font-weight: 700; }
+.ad-btn-ghost { background: none; color: var(--t2-muted); }
+.ad-btn:disabled { opacity: 0.45; cursor: default; }
+.ad-btn:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .ad-btn-secondary:hover:enabled { border-color: var(--t2-muted); }
+  .ad-btn-ghost:hover:enabled { color: var(--t2-text); }
+}
+@media (max-width: 639px) {
+  .ad-btn-sm { min-height: 44px; }
+}
+
+/* ── الحقول ───────────────────────────────────────────────────────────────────────────────── */
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t2-muted);
+}
+/* **حقلُ الهوية** (`.t2-input`): غائرٌ في البطاقة، وحافّةٌ بالجمر عند التركيز، وبالخطأ عند الرفض */
+.fld {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 9px 13px;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  outline: none;
+}
+.fld::placeholder { color: var(--t2-faint); }
+.fld:focus { border-color: var(--t2-accent); }
+.fld:disabled { opacity: 0.6; }
+.fld.invalid { border-color: var(--t2-danger); }
+textarea.fld { min-height: 88px; resize: vertical; }
+
+/* سببُ الخطأ تحت حقله — أيقونةٌ ممتلئةٌ ونصٌّ بلون الخطأ (§٦٢/٢٠) */
+.ad-err {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--t2-danger);
+}
+.ad-err .t2-icon { flex: none; font-size: 15px; line-height: 1.25; }
+.ad-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+
+/* المال: الحقلُ والعملةُ صندوقٌ واحد */
+.ad-money {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-bg);
+}
+.ad-money:focus-within { border-color: var(--t2-accent); }
+.ad-money.invalid { border-color: var(--t2-danger); }
+.ad-money.disabled { opacity: 0.6; }
+.ad-money-input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: start;
+}
+.ad-money-cur { flex: none; font-size: 12px; font-weight: 600; color: var(--t2-muted); }
+.ad-duration { display: flex; gap: 8px; }
+.ad-duration > .fld:first-child { flex: 1; text-align: start; }
+.ad-duration-unit { flex: none; width: auto; }
+
+/* مربّعُ الاختيار — **حافّتُه بالخافت لا بالمتقطّع** (٣:١ لمكوّنٍ يُضغط)، والمختارُ جمرٌ بعلامةٍ إسفلتيّة */
+.ad-check {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1.5px solid var(--t2-muted);
+  border-radius: 6px;
+  background: none;
+  color: transparent;
+}
+button.ad-check { cursor: pointer; }
+/* هدفُ لمسٍ أوسعُ من رسمه — المربّعُ ٢٠ والإصبعُ ٤٤ */
+button.ad-check::after { content: ""; position: absolute; inset: -12px; }
+.ad-check .t2-icon { font-size: 16px; }
+.ad-check.on { border-color: var(--t2-accent); background: var(--t2-accent); color: var(--t2-on-accent); }
+.ad-check:disabled { opacity: 0.4; cursor: not-allowed; }
+.ad-check:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.ad-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.ad-check-row:disabled { opacity: 0.6; cursor: default; }
+.ad-check-row:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 4px; border-radius: 6px; }
+.ad-check-text { min-width: 0; }
+
+/* المفتاح — الزرُّ يحمل `role="switch"` ورسمُه مفتاحُ الهوية (`.t2-switch`) */
+.ad-switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  cursor: pointer;
+}
+.ad-switch::after { content: ""; position: absolute; inset: -8px; }
+.ad-switch:disabled { opacity: 0.6; cursor: default; }
+.ad-switch:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+
+@media (max-width: 639px) {
+  .ad-check-row { min-height: 44px; padding: 10px 0; }
+}
+
+/* ── الشارة (`.t2-chip`) ──────────────────────────────────────────────────────────────────── */
+.ad-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 16px;
+}
+.ad-chip.ink { color: var(--t2-text); }
+
+/* ── سطورُ الحال: خطأٌ ونجاحٌ وتنبيه (بلاغُ الهوية) ─────────────────────────────────────────── */
+.ad-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ad-note .t2-icon { flex: none; font-size: 18px; line-height: 1.2; }
+.ad-note.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+/* **النجاحُ والتنبيهُ بنصٍّ كامل وأيقونةٍ بلونهما** — نصُّهما على خافتِهما دون ٤٫٥:١ في الحجر */
+.ad-note.ok { background: var(--t2-success-soft); color: var(--t2-text); }
+.ad-note.ok .t2-icon { color: var(--t2-success); }
+.ad-note.warn {
+  border: 1px solid var(--t2-warning-line, var(--t2-line));
+  background: var(--t2-warning-soft);
+  color: var(--t2-text);
+}
+.ad-note.warn .t2-icon { color: var(--t2-warning); }
+
+/* شريطُ حارسٍ مطفأ (`GuardBanner`) */
+.ad-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--t2-warning-line, var(--t2-line));
+  border-radius: 16px;
+  background: var(--t2-warning-soft);
+}
+.ad-banner > .t2-icon { flex: none; margin-top: 1px; font-size: 18px; color: var(--t2-warning); }
+.ad-banner-title { margin: 0; font-size: 14px; font-weight: 600; }
+.ad-banner-body { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--t2-muted); }
+
+/* الانتظار — حلقةٌ قمّتُها جمر، **وتسكن لمن طلب تقليلَ الحركة** */
+.ad-spin {
+  display: block;
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  border: 2.5px solid var(--t2-line);
+  border-top-color: var(--t2-accent);
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ad-spin { animation: ad-spin 0.9s linear infinite; }
+}
+@keyframes ad-spin { to { transform: rotate(360deg); } }
+
+/* «لا شيء بعد» — عنوانٌ وسطرُ سبب */
+.ad-empty { padding: 36px 16px; text-align: center; }
+.ad-empty-title { margin: 0; font-size: 14.5px; font-weight: 700; }
+.ad-empty-hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
+/* شاشةُ العطل (`ErrorBoundary`) — عنوانٌ وسطرُ سببٍ وأفعالٌ ثانوية، على أرض الصفحة */
+.ad-crash {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 32px;
+  background: var(--t2-bg);
+  text-align: center;
+}
+.ad-crash-title { margin: 0; font-size: 20px; font-weight: 700; }
+.ad-crash-text { margin: 0; max-width: 60ch; font-size: 13px; line-height: 1.7; color: var(--t2-muted); }
+.ad-crash-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+.ad-crash-note { display: flex; width: 560px; max-width: 100%; flex-direction: column; gap: 8px; }
+.ad-centered {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 28px;
+  text-align: center;
+}
+
+/* ── الحوار — ورقةُ سطحٍ فوق الظلّ، **وورقةٌ من الأسفل على الهاتف** ─────────────────────────── */
+.ad-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--t2-scrim);
+}
+.ad-modal-box {
+  width: 560px;
+  max-width: 100%;
+  max-height: 86vh;
+  box-sizing: border-box;
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid var(--t2-line);
+  border-radius: 24px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  box-shadow: var(--t2-float-shadow);
+}
+.ad-modal-title { margin: 0 0 16px; font-size: 18px; font-weight: 700; }
+.ad-confirm-what { margin: 0; font-size: 13.5px; line-height: 1.7; }
+.ad-confirm-what b { font-weight: 700; }
+.ad-confirm-note { margin: 8px 0 0; font-size: 12px; line-height: 1.7; color: var(--t2-muted); }
+.ad-confirm-actions { display: flex; gap: 10px; margin-top: 16px; }
+@media (max-width: 639px) {
+  .ad-modal { align-items: flex-end; padding: 0; }
+  .ad-modal-box {
+    width: 100%;
+    max-height: 92vh;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+/* ── الدرج (ملفُّ الحساب A09 · المراجعة A05) — من حافّة البداية، بالإسفلت وبطاقاتٍ عليه ─────────── */
+.ad-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: var(--t2-scrim);
+}
+.ad-drawer-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  display: flex;
+  flex-direction: column;
+  width: 520px;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-inline-end: 1px solid var(--t2-line);
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  box-shadow: var(--t2-float-shadow);
+}
+.ad-drawer-head {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 14px;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 22px 14px;
+}
+.ad-drawer-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+/* **على الحجر الغائرُ لونُ الدرج نفسُه** (قِيس: دائرةُ الحرف اختفت في الفاتح) — فالسطحُ بحافّة */
+html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0 0 0 1px var(--t2-line); }
+.ad-drawer-who { flex: 1; min-width: 0; }
+.ad-drawer-name { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.35; }
+.ad-drawer-sub { margin: 2px 0 0; font-size: 13px; color: var(--t2-muted); direction: ltr; text-align: right; }
+.ad-drawer-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ad-drawer-body {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 22px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ad-drawer-panel { animation: ad-drawer-in 0.22s var(--t2-ease-out) both; }
+}
+@keyframes ad-drawer-in { from { transform: translateX(28px); opacity: 0; } }
+@media (max-width: 639px) {
+  .ad-drawer-panel { width: 100%; border: 0; }
+  .ad-drawer-head { padding-inline: 16px; }
+  .ad-drawer-body { padding-inline: 16px; }
+}
+
+/* ── أقسامُ الملفّ (A09): بطاقةٌ تُطوى وتُفتح — رأسُها صفُّ قائمةٍ بأيقونته ─────────────────────── */
+.ad-sec { margin-bottom: 8px; border-radius: 18px; background: var(--t2-surface); }
+.ad-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 18px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.ad-sec-head:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: -2px; }
+.ad-sec-title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; }
+.ad-sec-chev { flex: none; font-size: 22px; color: var(--t2-muted); }
+.ad-sec.open .ad-sec-chev { transform: rotate(180deg); }
+.ad-sec-body { padding: 0 14px 14px; }
+.ad-sec-hint { margin: 0 0 10px; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.ad-sec-loading { display: flex; justify-content: center; padding: 14px 0; }
+.ad-sec-sub { margin: 14px 0 6px; font-size: 12.5px; font-weight: 700; color: var(--t2-muted); }
+.ad-sec-sub:first-child { margin-top: 0; }
+.ad-sec-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.ad-sec-badges.ad-sec-after { margin: 10px 0 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .ad-sec-chev { transition: transform var(--t2-med) var(--t2-ease); }
+}
+
+/* مربّعُ أيقونةٍ (الهوية: أيقوناتُ القوائم في مربّعٍ غائر) */
+.ad-tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+}
+.ad-tile .t2-icon { font-size: 18px; }
+.ad-sec .ad-sec-head > .ad-tile { width: 36px; height: 36px; }
+.ad-sec .ad-sec-head > .ad-tile .t2-icon { font-size: 19px; }
+.ad-tile.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.ad-tile.warn { background: var(--t2-badge-warn-bg); color: var(--t2-warning); }
+.ad-tile.danger { background: var(--t2-badge-danger-bg); color: var(--t2-danger); }
+.ad-tile.accent { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+
+/* الحقائق: شبكةُ مفتاحٍ وقيمة في غائر البطاقة */
+.ad-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t2-bg);
+}
+.ad-facts dt { font-size: 11.5px; color: var(--t2-muted); }
+.ad-facts dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ad-facts dd[dir="ltr"] { text-align: right; }
+
+/* قائمةٌ قصيرةٌ في قسم: صفوفٌ يفصلها خطّ (كقوائم الهوية) */
+.ad-mini,
+.ad-mini-reset { margin: 0; padding: 0; list-style: none; }
+.ad-mini > li { padding: 10px 0; border-bottom: 1px solid var(--t2-divider); font-size: 13.5px; }
+.ad-mini > li:last-child { border-bottom: 0; }
+.ad-mini-empty { margin: 0; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
+.ad-mini-row { display: flex; align-items: center; gap: 10px; }
+.ad-mini-main { flex: 1; min-width: 0; }
+.ad-mini-title { display: block; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.ad-mini-at { display: block; font-size: 11.5px; color: var(--t2-muted); }
+.ad-mini-value { flex: none; font-weight: 600; }
+.ad-mini-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.ad-capped { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+
+/* ── المنتقي والبحث ─────────────────────────────────────────────────────────────────────── */
+.ad-pick { position: relative; }
+.ad-pick-chosen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 5px 12px;
+  padding-inline-end: 6px;
+  border: 1px solid var(--t2-line);
+  border-radius: 12px;
+  background: var(--t2-sunken);
+}
+.ad-pick-chosen.invalid { border-color: var(--t2-danger); }
+.ad-pick-text { display: flex; flex: 1; min-width: 0; flex-direction: column; text-align: start; }
+.ad-pick-label { overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ad-pick-hint {
+  overflow: hidden;
+  font-size: 12px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--t2-muted);
+}
+.ad-pick-change {
+  flex: none;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ad-pick-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  inset-inline: 0;
+  max-height: 360px;
+  box-sizing: border-box;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-float-bg);
+  box-shadow: var(--t2-float-shadow);
+}
+.ad-pick-note { margin: 0; padding: 10px 12px; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.ad-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.ad-pick-row:hover,
+.ad-pick-row:focus-visible { outline: none; background: var(--t2-sunken); }
+.ad-pick-row:hover .ad-tile,
+.ad-pick-row:focus-visible .ad-tile { background: var(--t2-line); }
+
+/* بحثُ الجدول — حقلٌ بأيقونته في شريط الأدوات */
+.ad-tsearch { position: relative; max-width: 380px; }
+.ad-tsearch .fld { min-height: 40px; padding-inline-start: 40px; }
+.ad-tsearch-icon {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  inset-inline-start: 12px;
+  font-size: 19px;
+  color: var(--t2-muted);
+  pointer-events: none;
+}
+
+/* ── الحبّاتُ والمبدّلُ المقطَّع ───────────────────────────────────────────────────────────── */
+.ad-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.ad-pill {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 15px;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ad-pill.on { border-color: var(--t2-text); background: var(--t2-text); color: var(--t2-bg); font-weight: 600; }
+.ad-pill:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+
+/* المقطَّع (C09 «اليوم · الأسبوع · الشهر»): وعاءُ السطح، والمختارُ ورقٌ على الإسفلت وحبرٌ على الحجر */
+.ad-seg {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 4px;
+  border-radius: 99px;
+  background: var(--t2-surface);
+}
+.ad-seg-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ad-seg-opt.on { background: var(--t2-text); color: var(--t2-bg); font-weight: 700; }
+.ad-seg-opt:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 1px; }
+.ad-seg-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--t2-faint); }
+@media (max-width: 639px) {
+  .ad-pills { flex-wrap: nowrap; margin-inline: -16px; padding-inline: 16px; overflow-x: auto; scrollbar-width: none; }
+  .ad-pills::-webkit-scrollbar { display: none; }
+  .ad-pill { height: 44px; }
+  .ad-seg-opt { height: 40px; }
+}
+
+/* ── الجدول ───────────────────────────────────────────────────────────────────────────────── */
+.ad-table {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--t2-surface);
+}
+.ad-table-tools { flex: none; padding: 12px 16px; border-bottom: 1px solid var(--t2-divider); }
+.ad-table-chosen {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--t2-divider);
+  background: var(--t2-accent-soft);
+}
+.ad-table-chosen-count { font-size: 13px; font-weight: 600; }
+.ad-table-chosen-clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ad-table-chosen-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ad-table-x { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-x: auto; }
+.ad-table-headwrap { flex: none; }
+.ad-table-head,
+.ad-table-row {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  min-width: 44rem;
+  box-sizing: border-box;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--t2-divider);
+}
+.ad-table-head { min-height: 42px; font-size: 12px; font-weight: 600; color: var(--t2-muted); }
+.ad-table-row { min-height: 60px; padding-block: 10px; font-size: 13.5px; }
+.ad-table-body { min-height: 0; }
+.ad-table-viewport .ad-table-body { flex: 1; overflow-y: auto; }
+.ad-table-compact .ad-table-body { max-height: 320px; overflow-y: auto; }
+.ad-table-pickcell { display: flex; align-items: center; }
+/* **الغلافُ يختفي من الشبكة** — الخليّةُ نفسُها عنصرُها كما كانت (`Table.tsx` — `cellsOf`) */
+.ad-cell { display: contents; }
+.ad-table-skel { display: flex; align-items: center; min-height: 60px; padding: 0 20px; border-bottom: 1px solid var(--t2-divider); }
+.ad-table-skel > span { display: block; width: 100%; height: 12px; border-radius: 99px; background: var(--t2-sunken); }
+.ad-table-skel-spin { display: flex; justify-content: center; padding: 16px; }
+@media (hover: hover) {
+  .ad-table-row:hover { background: var(--t2-sunken); }
+}
+
+/* **على الهاتف بطاقاتٌ لا جدول** (AM02): الصفُّ بطاقة، **والخليّةُ الأولى عنوانُها**، وكلُّ خليّةٍ بعدها سطرٌ بعنوان عمودها، والأفعالُ
+   في أسفلها بعرضها. **والصفحةُ هي ما يُمرَّر** — لا صندوقٌ بارتفاعٍ ثابتٍ داخلها (`!important` يغلب الارتفاعَ المقيس) */
+@media (max-width: 639px) {
+  .ad-table { height: auto !important; overflow: visible; border-radius: 0; background: none; }
+  .ad-table-tools { padding: 0 0 12px; border: 0; }
+  .ad-table-tools .fld { background: var(--t2-surface); }
+  .ad-table-chosen { margin-bottom: 10px; padding: 10px 14px; border: 0; border-radius: 16px; }
+  .ad-table-x { overflow: visible; }
+  .ad-table-head { display: flex; min-width: 0; min-height: 0; padding: 0 2px 10px; border: 0; }
+  .ad-table-head > span:not(.ad-table-pickcell) { display: none; }
+  .ad-table-head:not(:has(.ad-table-pickcell)) { display: none; }
+  .ad-table-body { max-height: none !important; overflow: visible !important; }
+  .ad-table-row {
+    position: relative;
+    display: block;
+    min-width: 0;
+    margin-bottom: 10px;
+    padding: 12px 14px 14px;
+    border: 0;
+    border-radius: 20px;
+    background: var(--t2-surface);
+  }
+  .ad-table-row:hover { background: var(--t2-surface); }
+  .ad-table-row > .ad-table-pickcell { position: absolute; z-index: 1; top: 16px; inset-inline-end: 16px; }
+  .ad-table-row:has(> .ad-table-pickcell) .ad-cell-title { padding-inline-end: 36px; }
+  .ad-cell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 6px 0;
+    border-top: 1px solid var(--t2-divider);
+    font-size: 13px;
+  }
+  .ad-cell::before {
+    content: attr(data-label);
+    flex: none;
+    max-width: 42%;
+    font-size: 12px;
+    color: var(--t2-muted);
+  }
+  .ad-cell > * { min-width: 0; }
+  .ad-cell-title { display: block; min-height: 0; padding: 0 0 10px; border-top: 0; font-size: 14.5px; }
+  .ad-cell-title::before,
+  .ad-cell[data-label=""]::before { content: none; }
+  .ad-cell[data-label=""]:not(.ad-cell-title) { display: block; padding-top: 10px; }
+  .ad-cell button:not(.ad-check) { min-height: 44px; }
+  /* **خليّةُ الأفعال (بلا عنوان) أزرارٌ تُرى أزراراً**: زرٌّ نصّيٌّ في جدول الحاسوب يصير على الهاتف حبّةً بحافّةٍ تملأ سطرَها
+     (AM02 — «موافقة · رفض») — ولونُ نصِّه كما كتبته شاشتُه */
+  .ad-cell[data-label=""]:not(.ad-cell-title) button:not(.ad-check):not(.ad-btn) {
+    flex: 1;
+    padding: 0 14px;
+    border: 1.5px solid var(--t2-line);
+    border-radius: 13px;
+    font-size: 13.5px;
+  }
+  .ad-table-skel { margin-bottom: 10px; border: 0; border-radius: 20px; background: var(--t2-surface); }
+  .ad-table > .ad-table-x .ad-empty { border-radius: 20px; background: var(--t2-surface); }
+  /* بطاقةٌ داخل بطاقة (الأقسامُ تحت قائمة الكباتن): الصفُّ غائرٌ فيها لا بلونها */
+  .card .ad-table-row,
+  .card .ad-table-skel,
+  .card .ad-table > .ad-table-x .ad-empty { background: var(--t2-bg); }
+}
+
+/* **`.card` كان صنفاً بلا تعريف** في سبعة أقسامٍ (السلف · المستحقّات · إلغاء التفعيل · مهلة الحذف · قوالب الرمز · حملةُ التأكيد ·
+   المتجر) — فرُسمت بلا بطاقةٍ أصلاً. **صار بطاقةَ الهوية** */
+.card { border-radius: 22px; background: var(--t2-surface); }

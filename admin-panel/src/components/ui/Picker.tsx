@@ -32,6 +32,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 /** ما يعرضه سطرُ نتيجةٍ واحدة — **معرّفٌ للآلة، واسمٌ ووصفٌ للإنسان**. */
 export interface PickerOption {
@@ -40,6 +41,8 @@ export interface PickerOption {
   label: string;
   /** السطرُ الثاني — ما يفرّق متشابهَي الاسم: رقمٌ أو لوحةٌ أو رمز. */
   hint?: string | null;
+  /** **أيقونةُ الصنف** (Material Symbols) — زينةٌ في مربّعها بجانب السطرين، **والمعنى في السطرين لا فيها**. */
+  icon?: string;
 }
 
 const DEBOUNCE_MS = 250;
@@ -54,6 +57,8 @@ export function Picker({
   disabled = false,
   /** **نصٌّ يُعرض حين لا نتيجة** — ولا يُخلط بـ«لا بيانات بعد». */
   emptyText = "لا نتائج لبحثك",
+  /** اسمُ الحقل لقارئ الشاشة **حين لا تسميةَ مرئية** (البحثُ العامّ في الترويسة). */
+  ariaLabel,
 }: {
   label?: string;
   /** المختارُ الآن — **الكائنُ لا المعرّفُ وحدَه**: الشاشةُ تعرض اسمَه بلا
@@ -66,6 +71,7 @@ export function Picker({
   error?: string | null;
   disabled?: boolean;
   emptyText?: string;
+  ariaLabel?: string;
 }) {
   const inputId = useId();
   const [query, setQuery] = useState("");
@@ -118,7 +124,7 @@ export function Picker({
   }, [open]);
 
   return (
-    <div ref={box} className="relative">
+    <div ref={box} className="ad-pick">
       {label ? (
         <label className="label" htmlFor={inputId}>
           {label}
@@ -129,19 +135,16 @@ export function Picker({
         // **المختارُ يُعرض بطاقةً لا نصّاً في حقل**: حقلٌ فيه اسمٌ يُقرأ قابلاً
         // للتحرير، **وتحريرُه لا يغيّر المعرّفَ تحته** — فيصير المعروضُ غيرَ
         // المُرسَل، وهو أخطرُ من حقلٍ فارغ
-        <div
-          className={cn(
-            "flex items-center justify-between gap-10 rounded-10 border px-12 py-8",
-            error ? "border-danger" : "border-line",
-            "bg-surface-2",
-          )}
-        >
-          <span className="min-w-0">
-            <span className="block truncate text-12.5 font-semibold text-ink">
-              {value.label}
+        <div className={cn("ad-pick-chosen", error && "invalid")}>
+          {value.icon ? (
+            <span className="ad-tile">
+              <Icon name={value.icon} />
             </span>
+          ) : null}
+          <span className="ad-pick-text">
+            <span className="ad-pick-label">{value.label}</span>
             {value.hint ? (
-              <span dir="ltr" className="block truncate text-start text-11 text-muted">
+              <span dir="auto" className="ad-pick-hint">
                 {value.hint}
               </span>
             ) : null}
@@ -149,7 +152,7 @@ export function Picker({
           {disabled ? null : (
             <button
               type="button"
-              className="shrink-0 text-11.5 font-semibold text-muted"
+              className="ad-pick-change"
               onClick={() => {
                 onPick(null);
                 setQuery("");
@@ -167,36 +170,38 @@ export function Picker({
           value={query}
           disabled={disabled}
           placeholder={placeholder}
+          aria-label={label ? undefined : ariaLabel}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setQuery(event.target.value);
             setOpen(true);
           }}
-          className={cn("fld", error && "border-danger")}
+          className={cn("fld", error && "invalid")}
           aria-invalid={error ? true : undefined}
         />
       )}
 
-      {error ? <p className="mt-6 text-12 text-danger">{error}</p> : null}
+      {error ? (
+        <p className="ad-err">
+          <Icon name="error" fill />
+          <span>{error}</span>
+        </p>
+      ) : null}
 
       {open && !value ? (
-        <div className="absolute inset-x-0 z-30 mt-4 max-h-menu overflow-y-auto rounded-12 border border-line bg-surface shadow-menu">
+        <div className="ad-pick-menu scr">
           {query.trim().length < 2 ? (
-            <p className="px-12 py-10 text-11.5 text-muted">
-              اكتب حرفين على الأقل
-            </p>
+            <p className="ad-pick-note">اكتب حرفين على الأقل</p>
           ) : rows === null ? (
-            <p className="px-12 py-10 text-11.5 text-muted">…يُبحث</p>
+            <p className="ad-pick-note">…يُبحث</p>
           ) : rows.length === 0 ? (
-            <p className="px-12 py-10 text-11.5 text-muted">
-              {failed ?? emptyText}
-            </p>
+            <p className="ad-pick-note">{failed ?? emptyText}</p>
           ) : (
             rows.map((row) => (
               <button
                 key={row.id}
                 type="button"
-                className="block w-full border-b border-line px-12 py-10 text-start last:border-b-0 hover:bg-surface-2"
+                className="ad-pick-row"
                 onClick={() => {
                   onPick(row);
                   setOpen(false);
@@ -204,14 +209,21 @@ export function Picker({
                   setRows(null);
                 }}
               >
-                <span className="block text-12.5 font-semibold text-ink">
-                  {row.label}
-                </span>
-                {row.hint ? (
-                  <span dir="ltr" className="block text-start text-11 text-muted">
-                    {row.hint}
+                {row.icon ? (
+                  <span className="ad-tile">
+                    <Icon name={row.icon} />
                   </span>
                 ) : null}
+                <span className="ad-pick-text">
+                  <span className="ad-pick-label">{row.label}</span>
+                  {/* **`auto` لا `ltr`**: رقمٌ وحدَه يبقى من اليسار، وسطرٌ يبدأ بالعربية يُقرأ من اليمين — **والقيمةُ فيه
+                      معزولةٌ باتّجاهها** حيث تصوغه الشاشة (`GlobalSearch`) */}
+                  {row.hint ? (
+                    <span dir="auto" className="ad-pick-hint">
+                      {row.hint}
+                    </span>
+                  ) : null}
+                </span>
               </button>
             ))
           )}

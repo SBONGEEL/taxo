@@ -1,11 +1,12 @@
-/** الأزرار — بقيم `design/DESIGN.md` §2.1 حرفاً بحرف.
+/** الأزرار — **بلغة TAXO 2.0** («المكوّنات الأساسية» في الهوية): أساسيٌّ وثانويٌّ بحافّة، وخطرٌ، ونصّيّ.
  *
- * أربعة أنواعٍ لا خامس لها في التصميم: أساسيٌّ بتعبئة `--acc`، وثانويٌّ
- * محدَّد، وخطرٌ أحمر، ونصّيٌّ بلا إطار. وكلُّ زرٍّ أساسي **بعرضٍ كامل
- * وتوسيطِ نص**؛ وزرّان جنباً إلى جنب يُقسمان بـ`flex` لا بعرضٍ ثابت.
+ * **والأساسيُّ يتبع المظهر كما في الهوية**: حبرٌ على الحجر، **وجمرٌ على الإسفلت** (§٦٢-ب/٧ — «الحبرُ على الداكن لا يُرى»)
+ * — من `--acc` الذي يربطه `index.css` برمز المظهر. **والخطرُ بحافّته وخافتِه** لا بتعبئةٍ حمراء: الأبيضُ على أحمر الإسفلت دون
+ * ٤٫٥:١، وزرٌّ يوقف حساباً أو يرفض مالاً **يُقرأ تحذيراً قبل أن يُقرأ أمراً**.
  *
- * ولا حالةَ تركيزٍ مرسومة في التصميم، فالحلقةُ هنا أخفُّ ما يفي بالوصول
- * (`ring-ink/40`) بلا إدخال لونٍ ليس في اللوحة.
+ * **والمقاساتُ ثلاثة** (`lg` ٥٤ · `md` ٤٨ · `sm` ٤٠ — و٤٤ على الهاتف هدفَ لمسٍ كاملاً)، **وكلُّ زرٍّ بعرضٍ كاملٍ افتراضاً** كما كان،
+ * والمستدعي يضيّقه بصنفه (`flex-1` · `w-auto`). **وأصنافُ المستدعي تغلب** (`border-danger text-danger`): ملفُّ الأصناف يُحمَّل
+ * قبل أدوات Tailwind (`main.tsx`).
  */
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
@@ -23,18 +24,16 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-accent text-accent-ink font-bold",
-  secondary: "border border-line text-ink font-semibold",
-  danger: "bg-danger text-white font-bold",
-  ghost: "text-muted font-semibold",
+  primary: "ad-btn-primary",
+  secondary: "ad-btn-secondary",
+  danger: "ad-btn-danger",
+  ghost: "ad-btn-ghost",
 };
 
-// المقاسات الثلاثة من §2.1: (نصف القطر، الحشوة، مقاس الخط).
-// الحشوة متساويةُ الجوانب كما في التصميم (`padding:16px` لا `16px 24px`)
 const SIZES: Record<Size, string> = {
-  lg: "rounded-16 p-16 text-15",
-  md: "rounded-15 p-15 text-15",
-  sm: "rounded-13 p-13 text-13.5",
+  lg: "ad-btn-lg",
+  md: "ad-btn-md",
+  sm: "ad-btn-sm",
 };
 
 export function Button({
@@ -50,14 +49,7 @@ export function Button({
     <button
       type="button"
       disabled={disabled || loading}
-      className={cn(
-        "w-full text-center transition-opacity",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40",
-        "disabled:opacity-50",
-        SIZES[size],
-        VARIANTS[variant],
-        className,
-      )}
+      className={cn("ad-btn", SIZES[size], VARIANTS[variant], className)}
       {...rest}
     >
       {loading ? "…" : children}
