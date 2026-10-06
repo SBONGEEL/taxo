@@ -9,8 +9,8 @@
  *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`TAXO2-DESIGN-CORRECTIONS.md` §١٥):
  * - **«الرصيد المتاح»**: القرار 23 يقول «الرصيد» للراكب — لا محجوزَ له، فالوصفُ يفرّق بلا فرق.
- * - **مربّعاتُ البطاقات والكليك وزرُّ الإضافة**: تحتاج `GET /me/cards` على هذه الشاشة (طلبٌ رابع) —
- *   فبقي صفُّ «البطاقات المحفوظة» بابَها.
+ * - **زرُّ «+» في «طرق الدفع»**: لا بابَ اليومَ يحفظ بطاقةً بلا دفعة — **وهو بندٌ ينتظر إذنَ المالك** (§٦٢-ج/١٣)،
+ *   فزرٌّ لا يفعل شيئاً لا يُرسم. **والمربّعان بُنيا** (§٦٢-ج/٢٤): البطاقةُ الافتراضيةُ وكليك، و«إدارة» إلى البطاقات.
  * - **زرُّ الرمز (QR) في الرأس**: لا فعلَ له في محفظة الراكب اليوم.
  * - **عنوانُ الحركة بوجهة الرحلة** («رحلة إلى دابوق»): الحركةُ لا تحمل العنوان — فبقي اسمُ نوعها.
  *
@@ -22,8 +22,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getWallet, listTopups, listTransactions } from "@/api/endpoints";
-import type { TopupRequest, Wallet, WalletTransaction, WalletTransactionType } from "@/api/types";
+import { getWallet, listSavedCards, listTopups, listTransactions } from "@/api/endpoints";
+import type { SavedCard, TopupRequest, Wallet, WalletTransaction, WalletTransactionType } from "@/api/types";
 import { TopupSheet } from "@/components/wallet/TopupSheet";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
@@ -58,6 +58,8 @@ export function WalletT2Screen() {
   const [topups, setTopups] = useState<TopupRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // **مربّعُ البطاقة** (§٦٢-ج/٢٤) — طلبٌ رابعٌ خلف مفتاح البطاقة وحده، **وفشلُه لا يُسقط المحفظة**: يبقى بابُ «إدارة»
+  const [cards, setCards] = useState<SavedCard[] | null>(null);
 
   useEffect(() => {
     Promise.all([getWallet(), listTransactions(30), listTopups(10)])
@@ -76,6 +78,17 @@ export function WalletT2Screen() {
   const currency = country?.currency;
   const cardEnabled = country?.features.card_enabled === true;
   const cliqEnabled = country?.features.cliq_enabled === true;
+  useEffect(() => {
+    if (!cardEnabled) return;
+    let cancelled = false;
+    listSavedCards()
+      .then((rows) => !cancelled && setCards(rows))
+      .catch(() => !cancelled && setCards([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [cardEnabled]);
+  const card = cards?.find((row) => row.is_default) ?? cards?.[0] ?? null;
   const transferEnabled = country?.features.wallet_transfer_enabled === true;
 
   if (loading) {
@@ -165,21 +178,53 @@ export function WalletT2Screen() {
         </section>
       ) : null}
 
-      {/* **البطاقاتُ صفٌّ داخل المحفظة وخلف مفتاحها** كما في الشاشة القائمة — ومربّعاتُ اللوحة تنتظر طلبَها */}
-      {cardEnabled ? (
+      {/* **«طرق الدفع» كما رسمتها R11** (§٦٢-ج/٢٤): مربّعُ البطاقة الافتراضية ومربّعُ كليك، و«إدارة» إلى البطاقات —
+          **وكلٌّ خلف مفتاحه**. وبلا بطاقةٍ محفوظةٍ يبقى مربّعُها باباً يقول ذلك */}
+      {cardEnabled || (cliqEnabled && walletEnabled) ? (
         <section>
-          <div className="t2-section">طرق الدفع</div>
-          <div className="t2-list">
-            <button type="button" className="t2-tx t2-tx-link" onClick={() => navigate("/account/cards")}>
-              <span className="t2-tx-icon">
-                <span className="t2-icon" aria-hidden="true">credit_card</span>
-              </span>
-              <span className="t2-tx-main">
-                <span className="t2-tx-title">البطاقات المحفوظة</span>
-                <span className="t2-tx-sub">الدفع بضغطة، وبطاقةٌ افتراضية</span>
-              </span>
-              <span className="t2-icon t2-chev" aria-hidden="true">chevron_left</span>
-            </button>
+          <div className="t2-section">
+            <span>طرق الدفع</span>
+            {cardEnabled ? (
+              <button type="button" className="t2-section-aside t2-paytiles-manage" onClick={() => navigate("/account/cards")}>
+                إدارة
+              </button>
+            ) : null}
+          </div>
+          <div className="t2-paytiles">
+            {cardEnabled ? (
+              <button type="button" className="t2-paytile wide" onClick={() => navigate("/account/cards")}>
+                {card ? (
+                  <>
+                    <span className="t2-paytile-top">
+                      <span dir="ltr" className="t2-paytile-brand">
+                        {(card.brand ?? card.provider).toUpperCase()}
+                      </span>
+                      {card.is_default ? <span className="t2-chip ok">افتراضية</span> : null}
+                    </span>
+                    <span dir="ltr" className="t2-paytile-num">
+                      •••• {card.last4}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="t2-icon" aria-hidden="true">credit_card</span>
+                    <span className="t2-paytile-name">{cards === null ? "البطاقات" : "لا بطاقة محفوظة"}</span>
+                  </>
+                )}
+              </button>
+            ) : null}
+            {cliqEnabled && walletEnabled ? (
+              <button
+                type="button"
+                className="t2-paytile"
+                onClick={() => navigate("/wallet/topup", { state: { channel: "cliq" } })}
+              >
+                <span dir="ltr" className="t2-paytile-brand end">
+                  CliQ
+                </span>
+                <span className="t2-paytile-name">كليك</span>
+              </button>
+            ) : null}
           </div>
         </section>
       ) : null}

@@ -1428,3 +1428,31 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
   cursor: pointer;
 }
 .t2-r10-cta:disabled { opacity: 0.45; cursor: default; }
+
+/* ── «طرق الدفع» في المحفظة (R11، §٦٢-ج/٢٤) — مربّعاتٌ بارتفاع ٨٤ وزاوية ١٨ كما رُسمت ─────────────────────────── */
+.t2-paytiles { display: flex; gap: 8px; }
+.t2-paytile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  height: 84px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-paytile.wide { flex: 1.2; }
+.t2-paytile:active { transform: scale(0.98); }
+.t2-paytile-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.t2-paytile-brand { font: 700 12px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.06em; }
+.t2-paytile-brand.end { text-align: end; }
+.t2-paytile-num { font-size: 14px; font-weight: 600; text-align: end; font-variant-numeric: tabular-nums; }
+.t2-paytile-name { font-size: 13px; font-weight: 600; }
+.t2-paytiles-manage { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
