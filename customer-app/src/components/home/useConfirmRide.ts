@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { estimateRide, getWallet, validatePromo } from "@/api/endpoints";
 import type {
+  AppConfig,
   Coordinates,
   CountryConfig,
   GenderPreference,
@@ -24,15 +25,25 @@ import { usePaymentPreference } from "@/lib/payment";
 import { usePromoCodes } from "@/lib/promo";
 import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
+import { useConfig } from "@/lib/config";
 import { useWomenService } from "@/lib/women";
 import { formatMoney } from "@/lib/utils";
 
-/** نصٌّ لكل خيار — والثلاثةُ تقول أثرَه على الانتظار لا اسمَه. */
-export const PREFERENCE_NOTE: Record<GenderPreference, string> = {
-  female: "سيبحث النظام عن كبتنات فقط، ضمن نطاق 10 كم بدل 7 — قد يطول الانتظار.",
-  male: "سيبحث النظام عن كبتنٍ رجل فقط، ضمن نطاق 10 كم.",
-  any: "أي كبتن متاح — أسرع استجابة وأوسع نطاق.",
-};
+/** نصٌّ لكل خيار — والثلاثةُ تقول أثرَه على الانتظار لا اسمَه.
+ *
+ * **والنطاقُ من الخلفية** (`/config` · `dispatch` — §٦٢-ب/٤٨): كان «10 كم بدل 7» مكتوباً هنا نسخةً من ثابتَي `geo` — **رقمان لشيءٍ
+ * واحدٍ يفترقان أوّلَ تعديل**. **وقبل وصول الإعداد يُقال بلا رقم** — لا رقمَ يُخمَّن مكانه. */
+export function preferenceNote(preference: GenderPreference, dispatch: AppConfig["dispatch"] | undefined): string {
+  if (preference === "any") return "أي كبتن متاح — أسرع استجابة وأوسع نطاق.";
+  if (preference === "female") {
+    return dispatch
+      ? `سيبحث النظام عن كبتنات فقط، ضمن نطاق ${dispatch.gendered_max_search_radius_km} كم بدل ${dispatch.max_search_radius_km} — قد يطول الانتظار.`
+      : "سيبحث النظام عن كبتنات فقط، في نطاقٍ أوسع — قد يطول الانتظار.";
+  }
+  return dispatch
+    ? `سيبحث النظام عن كبتنٍ رجل فقط، ضمن نطاق ${dispatch.gendered_max_search_radius_km} كم.`
+    : "سيبحث النظام عن كبتنٍ رجل فقط، في نطاقٍ أوسع.";
+}
 
 /** «دقيقتان» لا «2 دقيقة» — **العربيةُ تعدّ بالمثنّى والجمع** (§17).
  *
@@ -149,6 +160,7 @@ export function useConfirmRide({
   const [preference, setPreference] = useState<GenderPreference>(
     women.available && initialPreference ? initialPreference : women.defaultPreference,
   );
+  const { config } = useConfig();
   const [estimate, setEstimate] = useState<RideEstimate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -300,6 +312,7 @@ export function useConfirmRide({
     setCategory,
     preference,
     setPreference,
+    preferenceNote: preferenceNote(preference, config?.dispatch),
     estimate,
     error,
     loading,

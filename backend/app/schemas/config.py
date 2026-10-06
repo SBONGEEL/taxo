@@ -57,6 +57,18 @@ class CountryConfigOut(BaseModel):
     email_signup: bool = False
 
 
+class DispatchOut(BaseModel):
+    """**أنصافُ أقطار البحث** (SPEC القسم 5.3 والمرحلة 10-ج) — من `geo` نفسِه.
+
+    **منشورةً لا منسوخة** (§٦٢-ب/٤٨): ورقةُ الطلب تقول للراكبة «ضمن نطاق 10 كم بدل 7»، وكان الرقمان مكتوبين فيها بيدٍ —
+    **ثابتٌ في الخلفية ونسختُه في التطبيق يفترقان أوّلَ تعديلٍ ولا يمسكهما شيء**. فتُنشر كقواعد التحقق: مصدرٌ واحد.
+    """
+
+    search_radius_km: float
+    max_search_radius_km: float
+    gendered_max_search_radius_km: float
+
+
 class ConfigOut(BaseModel):
     """إعدادات عامة للواجهات (SPEC القسم 2).
 
@@ -76,3 +88,4 @@ class ConfigOut(BaseModel):
     # ليتحقق فوراً قبل وصول الرد وعند انقطاع الشبكة. مُشتقّةٌ من المخططات
     # برمجياً، ونصوصُها من السجل المركزي — فلا نسخةَ قواعدَ في التطبيق تفترق.
     validation: dict[str, dict[str, Any]]
+    dispatch: DispatchOut

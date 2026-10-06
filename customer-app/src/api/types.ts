@@ -249,6 +249,8 @@ export interface AppConfig {
    * من السجل المركزي نفسِه، فلا تختلف رسالةُ الشاشة عن رسالة الخادم.
    */
   validation: Record<string, Record<string, FieldRule>>;
+  /** **أنصافُ أقطار البحث** من `geo` في الخلفية (§٦٢-ب/٤٨) — ورقةُ الطلب تقول نطاقَها منها، **ولا رقمَ يُكتب هنا**. */
+  dispatch: { search_radius_km: number; max_search_radius_km: number; gendered_max_search_radius_km: number };
 }
 
 export interface Coordinates {

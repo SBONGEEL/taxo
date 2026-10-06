@@ -7,8 +7,8 @@ from app.core.config import settings
 from app.core.deps import DbSession
 from app.models.enums import CountryCode
 from app.schemas.auth import AuthMethodResponse
-from app.schemas.config import ConfigOut
-from app.services import country_config, otp, verification
+from app.schemas.config import ConfigOut, DispatchOut
+from app.services import country_config, geo, otp, verification
 from app.services.providers import credentials as credentials_service
 from app.services.providers.registry import PROVIDERS
 
@@ -65,6 +65,12 @@ async def get_public_config(
         default_country_code=default,
         # مُشتقّةٌ من المخططات عند كل نداء — لا جدولَ حدودٍ يُكتب بجانبها ويبرد
         validation=validation_rules.published_rules(),
+        # **من `geo` نفسِه** — ما تقوله ورقةُ الطلب عن نطاق البحث هو ما يبحث فيه التوزيعُ فعلاً (§٦٢-ب/٤٨)
+        dispatch=DispatchOut(
+            search_radius_km=geo.SEARCH_RADIUS_KM,
+            max_search_radius_km=geo.MAX_SEARCH_RADIUS_KM,
+            gendered_max_search_radius_km=geo.GENDERED_MAX_SEARCH_RADIUS_KM,
+        ),
         auth=await _auth_method(session, country_code or default),
         countries=[await country_config.build(session, c) for c in countries],
         # كلُّ عقدٍ يحمل حقلاً `expose_to_clients` يُنشر هنا بحقوله العامة

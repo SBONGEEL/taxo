@@ -27,7 +27,7 @@ import { estimateRide } from "@/api/endpoints";
 import type { RideEstimate, VehicleCategory } from "@/api/types";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { StopsEditor } from "@/components/home/StopsEditor";
-import { PREFERENCE_NOTE, useConfirmRide, waitingNote, type ConfirmRideProps } from "@/components/home/useConfirmRide";
+import { useConfirmRide, waitingNote, type ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { earliest, latest, localInputValue } from "@/lib/bookings";
 import { PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
@@ -263,7 +263,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             {c.preference === "any" ? null : (
               <span className="t2-icon" aria-hidden="true">schedule</span>
             )}
-            {PREFERENCE_NOTE[c.preference]}
+            {c.preferenceNote}
           </p>
         </div>
       ) : null}

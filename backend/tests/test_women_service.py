@@ -304,6 +304,21 @@ async def test_the_flag_is_published_and_defaults_off(client: AsyncClient) -> No
     assert features[WOMEN] is False
 
 
+async def test_the_search_radii_are_published_from_dispatch_itself(client: AsyncClient) -> None:
+    """**«ضمن نطاق 10 كم بدل 7» من مصدره** (§٦٢-ب/٤٨): ورقةُ الطلب تبني نصَّها من `/config`، فالرقمان هما ما يبحث فيه التوزيع."""
+    from app.services import geo
+
+    response = await client.get("/config", params={"country_code": "JO"})
+    assert response.status_code == 200
+    assert response.json()["dispatch"] == {
+        "search_radius_km": geo.SEARCH_RADIUS_KM,
+        "max_search_radius_km": geo.MAX_SEARCH_RADIUS_KM,
+        "gendered_max_search_radius_km": geo.GENDERED_MAX_SEARCH_RADIUS_KM,
+    }
+    # **والطلبُ المجنَّسُ أوسعُ فعلاً** — وإلا كذب «بدل»
+    assert geo.GENDERED_MAX_SEARCH_RADIUS_KM > geo.MAX_SEARCH_RADIUS_KM
+
+
 # ------------------------------------------------------- التفضيل الافتراضي
 
 

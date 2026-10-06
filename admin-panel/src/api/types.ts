@@ -153,6 +153,8 @@ export interface AppConfig {
   default_country_code: CountryCode;
   /** قواعدُ التحقق مُشتقّةً من مخططات الخلفية (SPEC ١٧.٣) — لا نسخةَ منها هنا. */
   validation: Record<string, Record<string, FieldRule>>;
+  /** **أنصافُ أقطار البحث** من `geo` في الخلفية (§٦٢-ب/٤٨) — ورقةُ الطلب تقول نطاقَها منها، **ولا رقمَ يُكتب هنا**. */
+  dispatch: { search_radius_km: number; max_search_radius_km: number; gendered_max_search_radius_km: number };
 }
 
 // ------------------------------------------------------------ الحملات
