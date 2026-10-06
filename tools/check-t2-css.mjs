@@ -15,6 +15,13 @@
 // **وحدُّه مكتوبٌ فيه**: يقرأ الملفَّ الواحد — **ولا يمسك اسمين متصادمين في ملفّين** يُحمَّلان معاً (ترتيبُ تحميلهما يحسم)،
 // ولا تعارضاً بين محدِّدين مختلفين يصيبان العنصرَ نفسَه (`.a .b` و`.b`)، **ولا قاعدةً مجمَّعةً تعارض أختَها المجمَّعة**. **وصفرُ ملفٍّ
 // مقروءٍ سقوط.**
+//
+// **والثاني — رمزُ الداكن وحدَه بلا بديل** (قِيس ٢٠٢٦-١٠-٠٧): رموزٌ رُسمت في الداكن وحدَه (`html.dark .t2` في `tokens.css` بلا قيمةٍ
+// فاتحة) **تبطل في الفاتح فتمحو الخاصيّةَ كلَّها** — `border: 1.5px solid var(--t2-dot-off)` يصير «بلا حافّة». **وشاشاتُ الكبتن C04–C08
+// صارت في المظهرين (§٦٢/٣) وقواعدُها كُتبت للداكن**: ٢٥ استعمالاً بلا بديل، فـ«رفض» بلا حافّةٍ ومقبضُ الورقة غائبٌ وبلاطاتُ الرئيسية بلا
+// خلفيةٍ نهاراً — **ولم يمسكه شيء**، ووجده وكيلٌ بالعين. **فكلُّ `var()` لرمزٍ داكنٍ وحدَه يحمل بديلاً** (`var(--x, var(--أقرب))` — قاعدةُ
+// `tokens.css` نفسُها)، **إلا في قاعدةٍ محدِّداتُها كلُّها داكنة** (`html.dark …` · `.t2-night …`). **ولا يقرأ الأنماطَ المضمَّنةَ في TSX**،
+// ولا يسأل أهو البديلُ الأقرب — بل أثمّة بديل.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -131,8 +138,47 @@ for (const file of files) {
   }
 }
 
+// ── الثاني: رمزُ الداكن وحدَه بلا بديل ──────────────────────────────────────────────────────────────────────────
+// **المرجعُ نسخةٌ واحدة** — والنسخُ الثلاثُ متطابقةٌ بايتاً (`check:taxo2`)
+const TOKENS = join(ROOT, "driver-app", "src", "taxo2", "tokens.css");
+const tokenRules = rules(readFileSync(TOKENS, "utf8"));
+const defined = (selector) =>
+  new Set(
+    tokenRules
+      .filter((rule) => rule.selectors.includes(selector))
+      .flatMap((rule) => rule.decls.map((decl) => decl.prop).filter((prop) => prop.startsWith("--t2-"))),
+  );
+const lightTokens = defined(".t2");
+const darkTokens = defined("html.dark .t2:not(.t2-day)");
+const darkOnly = new Set([...darkTokens].filter((name) => !lightTokens.has(name)));
+if (lightTokens.size === 0 || darkTokens.size === 0) {
+  console.error(`✗ check:t2-css · لم تُقرأ كتلتا المظهرين من ${relative(ROOT, TOKENS)} — تغيّر محدِّدُهما؟ الحارسُ لا يقيس شيئاً`);
+  process.exit(1);
+}
+const darkScoped = (selector) => /html\.dark\b|\.t2-night\b/.test(selector);
+const unguarded = [];
+let usesSeen = 0;
+for (const file of files) {
+  for (const rule of rules(readFileSync(file, "utf8"))) {
+    if (rule.selectors.every(darkScoped)) continue;
+    for (const { prop, value } of rule.decls) {
+      for (const match of value.matchAll(/var\((--t2-[a-z0-9-]+)\s*(,)?/g)) {
+        if (!darkOnly.has(match[1])) continue;
+        usesSeen += 1;
+        if (!match[2]) unguarded.push(`${relative(ROOT, file)}:${rule.line} ${rule.selectors.join(", ")} { ${prop}: ${value} }`);
+      }
+    }
+  }
+}
+
 if (files.length === 0) {
   console.error("✗ check:t2-css · صفرُ ملفٍّ مقروء — الحارسُ لا يقرأ شيئاً");
+  process.exit(1);
+}
+if (unguarded.length > 0) {
+  console.error(`✗ check:t2-css · رمزٌ رُسم في الداكن وحدَه بلا بديل (${unguarded.length}) — يبطل في الفاتح فيمحو الخاصيّة:`);
+  for (const line of unguarded) console.error(`  ${line}`);
+  console.error("  — اكتب `var(--x, var(--أقرب))` بأقرب رمزٍ مرسومٍ في الفاتح، ولا تخترع له قيمة.");
   process.exit(1);
 }
 if (failures.length > 0) {
@@ -143,5 +189,6 @@ if (failures.length > 0) {
 }
 console.log(
   `✓ check:t2-css · لا محدِّدَ بقيمتين لخاصّيةٍ واحدة — ${files.length} ملفّاً، ${selectorsSeen} محدِّداً، ` +
-    `${repeated} مكرَّراً يضيف ولا يعارض · ${new Date().toISOString().slice(0, 16)}Z`,
+    `${repeated} مكرَّراً يضيف ولا يعارض · و${usesSeen} استعمالاً لـ${darkOnly.size} رمزاً داكناً وحدَه كلُّها ببديل · ` +
+    `${new Date().toISOString().slice(0, 16)}Z`,
 );

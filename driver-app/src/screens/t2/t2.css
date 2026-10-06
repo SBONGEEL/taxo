@@ -87,7 +87,7 @@
   height: 24px;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 2px solid var(--t2-dot-off);
+  border: 2px solid var(--t2-dot-off, var(--t2-dash));
 }
 .t2-step-dot.done { border: 0; background: var(--t2-success); color: var(--t2-on-accent); }
 .t2-step-dot.done .t2-icon { font-size: 16px; }
@@ -206,7 +206,7 @@
   position: relative;
   overflow: hidden;
   padding: 18px;
-  border: 1px solid var(--t2-warning-line);
+  border: 1px solid var(--t2-warning-line, var(--t2-line));
   border-radius: 24px;
   background: var(--t2-surface);
 }
@@ -285,7 +285,7 @@
   border-radius: 20px;
   background: var(--t2-surface);
 }
-.t2-mission.done { border-color: var(--t2-success-line); }
+.t2-mission.done { border-color: var(--t2-success-line, var(--t2-line)); }
 .t2-mission-top {
   display: flex;
   align-items: flex-start;
@@ -534,7 +534,7 @@ div.t2-srow { cursor: default; }
 }
 .t2-sub-plan.on { border: 2px solid var(--t2-accent); background: var(--t2-surface); }
 .t2-sub-plan:disabled { opacity: 0.6; cursor: default; }
-.t2-sub-radio { flex: none; width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--t2-dot-off); border-radius: 50%; }
+.t2-sub-radio { flex: none; width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--t2-dot-off, var(--t2-dash)); border-radius: 50%; }
 .t2-sub-plan.on .t2-sub-radio { border: 5px solid var(--t2-accent); }
 .t2-sub-plan-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .t2-sub-plan-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
@@ -608,7 +608,7 @@ div.t2-srow { cursor: default; }
 .t2-vdocs-count { font-size: 17px; font-weight: 700; }
 .t2-vdocs-stop { font-size: 12.5px; font-weight: 600; color: var(--t2-danger); }
 .t2-vdocs-bar { display: flex; gap: 4px; margin-top: 12px; }
-.t2-vdocs-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--t2-dot-off); }
+.t2-vdocs-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--t2-dot-off, var(--t2-dash)); }
 .t2-vdocs-seg.ok { background: var(--t2-success); }
 .t2-vdocs-seg.warn { background: var(--t2-warning); }
 .t2-vdocs-seg.danger { background: var(--t2-danger); }
