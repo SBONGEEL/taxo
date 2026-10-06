@@ -51,7 +51,7 @@ import { Badge } from "@/components/ui/Badge";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
-import { Checkbox, Field, Select } from "@/components/ui/Field";
+import { Checkbox, DateInput, Field, Select } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useConfig } from "@/lib/config";
 import { useCountries } from "@/lib/countries";
@@ -407,22 +407,20 @@ export function VehicleSkinsScreen() {
                     </option>
                   ))}
                 </Select>
-                <Field
+                <DateInput
                   label="بداية الموسم"
                   name="valid_from"
-                  type="date"
                   value={draft.valid_from}
-                  onChange={(e) =>
-                    setDraft({ ...draft, valid_from: e.target.value })
+                  onChange={(value) =>
+                    setDraft({ ...draft, valid_from: value })
                   }
                 />
-                <Field
+                <DateInput
                   label="نهاية الموسم"
                   name="valid_until"
-                  type="date"
                   value={draft.valid_until}
-                  onChange={(e) =>
-                    setDraft({ ...draft, valid_until: e.target.value })
+                  onChange={(value) =>
+                    setDraft({ ...draft, valid_until: value })
                   }
                 />
               </div>

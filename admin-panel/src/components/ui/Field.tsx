@@ -18,7 +18,7 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react
 
 import { useFieldError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
-import { Icon, Switch as Knob } from "@/taxo2";
+import { DateField, Icon, Switch as Knob } from "@/taxo2";
 
 /** **سببُ الخطأ تحت حقله** (§٦٢/٢٠) — أيقونةٌ ممتلئةٌ ونصٌّ بلون الخطأ، **كسطر الخطأ في الهوية**. */
 export function FieldError({ id, message }: { id?: string; message: string }) {
@@ -43,6 +43,9 @@ export function Field({ label, className, id, error, ...rest }: Props) {
   // و`Drivers` لا. **فافترق شكلُ الشيء الواحد**، وهو الشكلُ الثامن يُصنع بيد.
   // **والبيتُ يعرف الجواب فلا يكتبه كلُّ مستدعٍ**، ومن مرّر `dir` صراحةً يبقى
   // له ما مرّر.
+  //
+  // **ولم يعد في اللوحة حقلُ تاريخٍ أصليٌّ ظاهر** (المرحلةُ الثانية من TAXO 2.0): الخمسةُ صارت `DateInput` تحت — فحتى بـ`dir`
+  // قِيست خاناتُه معكوسة («ةنس/رهش/موي»). **والفرعُ باقٍ** لمن يكتب `type="date"` بعدُ، فلا يرجع ما أُصلح.
   const dir = rest.type === "date" ? (rest.dir ?? "ltr") : rest.dir;
   // **مُعرّفٌ مولَّدٌ حين لا يُمرَّر**: بغيره يصير `htmlFor={undefined}` فلا
   // تُربَط التسميةُ بحقلها — نقرُ التسمية لا يركّز الحقل، وقارئُ الشاشة يقرأ
@@ -71,6 +74,60 @@ export function Field({ label, className, id, error, ...rest }: Props) {
         aria-describedby={reason ? `${inputId}-error` : undefined}
         {...rest}
         dir={dir}
+      />
+      {reason ? <FieldError id={`${inputId}-error`} message={reason} /> : null}
+    </div>
+  );
+}
+
+/** **حقلُ التاريخ (والموعد) بتسميته** — `DateField` الهوية بدل `<input type="date">` الظاهر (§٦٢/٢٠).
+ *
+ * **لماذا لا `Field type="date"`**: في صفحةٍ عربيّةٍ يرسم المتصفّحُ خاناتِه «يوم/شهر/سنة» بحروفٍ معكوسة — **قِيس «ةنس/رهش/موي»
+ * في الدرج ولو بـ`dir="ltr"`** (المرحلةُ الأولى). فالظاهرُ زرٌّ بلغة الحقل، **والمنتقي منتقي النظام نفسُه**.
+ *
+ * **والعقدُ كما كان**: القيمةُ نصُّ `YYYY-MM-DD` (أو `YYYY-MM-DDTHH:MM` للموعد) تُرسل كما هي، **والخطأُ يجد حقلَه بالاسم**
+ * كـ`Field` (`useFieldError(name)`) — فالحدُّ أحمرُ والسببُ تحته. والتسميةُ مربوطةٌ بالزرّ (`htmlFor`): نقرُها يفتح المنتقي. */
+export function DateInput({
+  label,
+  name,
+  id,
+  value,
+  onChange,
+  kind = "date",
+  min,
+  max,
+  error,
+}: {
+  label: string;
+  /** اسمُ الحقل في مخطط الخلفية — به يجد خطأه */
+  name?: string;
+  id?: string;
+  value: string;
+  onChange: (value: string) => void;
+  kind?: "date" | "datetime-local";
+  min?: string;
+  max?: string;
+  /** سببُ الرفض — و`null` يعني لا خطأ. يُمرَّر أو يُلتقط من `FormErrors`. */
+  error?: string | null;
+}) {
+  const generated = useId();
+  const inputId = id ?? name ?? generated;
+  const fromContext = useFieldError(name);
+  const reason = error ?? fromContext;
+  return (
+    <div>
+      <label className="label" htmlFor={inputId}>
+        {label}
+      </label>
+      <DateField
+        id={inputId}
+        kind={kind}
+        value={value}
+        onChange={onChange}
+        label={label}
+        min={min}
+        max={max}
+        className={reason ? "invalid" : undefined}
       />
       {reason ? <FieldError id={`${inputId}-error`} message={reason} /> : null}
     </div>

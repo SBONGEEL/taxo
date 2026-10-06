@@ -48,7 +48,7 @@ import { Modal } from "@/components/ui/Modal";
 import { QuietHours } from "@/components/QuietHours";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
+import { DateInput, Field } from "@/components/ui/Field";
 import {
   EmptyNote,
   ErrorNote,
@@ -408,15 +408,12 @@ function Composer({
       </div>
 
       <div className="mt-14">
-        <label className="label" htmlFor="scheduled">
-          الجدولة
-        </label>
-        <input
+        <DateInput
           id="scheduled"
-          type="datetime-local"
-          className="fld"
+          label="الجدولة"
+          kind="datetime-local"
           value={scheduledAt}
-          onChange={(event) => setScheduledAt(event.target.value)}
+          onChange={setScheduledAt}
         />
         <p className="mt-6 text-11 leading-note text-muted">
           اتركه فارغاً لتبقى مسودّة. والموعدُ داخل ساعات الهدوء يؤجّل الإرسال

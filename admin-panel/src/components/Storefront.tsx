@@ -46,7 +46,7 @@ import type {
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Button } from "@/components/ui/Button";
-import { Field, Select } from "@/components/ui/Field";
+import { DateInput, Field, Select } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Table } from "@/components/Table";
 import {
@@ -619,12 +619,11 @@ function TileEditor({
             </option>
           ))}
         </Select>
-        <Field
+        <DateInput
           name="new_until"
           label="«جديد» حتى"
-          type="date"
           value={form.new_until}
-          onChange={(e) => setForm((f) => ({ ...f, new_until: e.target.value }))}
+          onChange={(value) => setForm((f) => ({ ...f, new_until: value }))}
         />
       </div>
 
@@ -751,19 +750,19 @@ function BannerEditor({
             setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))
           }
         />
-        <Field
+        <DateInput
           name="starts_at"
           label="من"
-          type="datetime-local"
+          kind="datetime-local"
           value={form.starts_at}
-          onChange={(e) => setForm((f) => ({ ...f, starts_at: e.target.value }))}
+          onChange={(value) => setForm((f) => ({ ...f, starts_at: value }))}
         />
-        <Field
+        <DateInput
           name="ends_at"
           label="إلى (إلزاميّة)"
-          type="datetime-local"
+          kind="datetime-local"
           value={form.ends_at}
-          onChange={(e) => setForm((f) => ({ ...f, ends_at: e.target.value }))}
+          onChange={(value) => setForm((f) => ({ ...f, ends_at: value }))}
         />
         <Select
           name="link_kind"

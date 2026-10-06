@@ -16,6 +16,9 @@
  *
  * **والفصلُ متاحٌ لـ`support`** خلافاً لبقية اللوحة: القسم 13/8 يعطيه «قراءة
  * ومعالجة نزاعات» — وهو الدور الذي وُجد لهذا.
+ *
+ * **وبلغة TAXO 2.0** (A07 · A07b): الجدولُ من العُدّة، والفصلُ حوارُها (`Modal`) — **والزرّان كما كانا**: حكمان نهائيّان
+ * بعرضين متساويين، «لم يصل» بلون الخطر. **ولا تأكيدَ يُضاف ولا يُنزع**: الحوارُ نفسُه هو التأكيد.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -32,7 +35,8 @@ import { NO_RESULTS, useSearch } from "@/lib/search";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
-import { digits,
+import { Modal } from "@/components/ui/Modal";
+import { cn, digits,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
 
@@ -77,7 +81,7 @@ export function DisputesScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <div className="mt-12">
+      <div className={cn("ad-disputes-table", (error || done) && "mt-12")}>
         <Table
           toolbar={
             <TableSearch
@@ -98,36 +102,28 @@ export function DisputesScreen() {
           }}
           render={(row) => (
             <>
-              <span className="font-semibold text-ink">
-                {digits(row.amount)}
-              </span>
+              <span className="ad-fare">{digits(row.amount)}</span>
               {/* **ومن يفصل نزاعاً يحتاج الطرفين لا أحدَهما** — §39٫١٢٫٤،
                   والبيتُ واحدٌ مع شاشة المدفوعات لأن البابَ واحد */}
               <PaymentParties payment={row} />
-              <span className="min-w-0">
-                <span className="block truncate text-ink">
-                  {row.dispute_reason ?? "—"}
-                </span>
+              <span className="ad-reason">
+                <span className="ad-reason-main">{row.dispute_reason ?? "—"}</span>
                 {row.dispute_reason === AUTO_REASON ? (
-                  <span className="block text-10.5 text-muted">
+                  <span className="ad-reason-sub">
                     آليّ — لم يتّهم أحدٌ أحداً، الكبتن لم يردّ حتى انقضت المهلة
                   </span>
                 ) : (
-                  <span className="block text-10.5 text-muted">من الكبتن</span>
+                  <span className="ad-reason-sub">من الكبتن</span>
                 )}
               </span>
-              <span dir="ltr" className="text-start text-muted">
+              <span dir="ltr" className="ad-ltr ad-tone-muted">
                 {row.cliq_transfer_reference ?? "—"}
               </span>
-              <span className="text-muted">{when(row.disputed_at)}</span>
-              <span className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setOpen(row)}
-                  className="text-11.5 font-semibold text-ink underline"
-                >
+              <span className="ad-tone-muted">{when(row.disputed_at)}</span>
+              <span className="ad-row-end">
+                <Button size="sm" variant="secondary" onClick={() => setOpen(row)}>
                   الفصل
-                </button>
+                </Button>
               </span>
             </>
           )}
@@ -181,21 +177,13 @@ function ResolveModal({
 
   return (
     <FormErrors value={form.field}>
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
-      onClick={onClose}
-    >
-      <div
-        className="w-modal max-w-full rounded-20 border border-line bg-surface p-24"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 className="mb-4 text-16 font-bold text-ink">فصل النزاع</h2>
-        <p className="mb-16 text-12 leading-note text-muted">
+      <Modal title="فصل النزاع" onClose={onClose}>
+        <p className="ad-modal-lede">
           الحكمُ يصف الواقعة لا الحالة: «وصل المال» تجعل الدفعة مؤكدةً ويُقيَّد
           ما يقيَّد، و«لم يصل» تجعلها فاشلة. وكلاهما نهائي ويدخل سجل التدقيق.
         </p>
 
-        <dl className="mb-16 rounded-14 border border-line bg-surface-2 px-14 py-12 text-12.5">
+        <dl className="ad-resolve-dl">
           <Row label="المبلغ" value={digits(payment.amount)} />
           <Row label="alias الكبتن" value={payment.cliq_alias ?? "—"} ltr />
           <Row label="مرجع TAXO" value={payment.cliq_reference ?? "—"} ltr />
@@ -203,11 +191,10 @@ function ResolveModal({
             label="المرجع الذي أدخله الراكب"
             value={payment.cliq_transfer_reference ?? "—"}
             ltr
-            last
           />
         </dl>
 
-        <p className="mb-14 text-11.5 leading-note text-muted">
+        <p className="ad-resolve-reason">
           {payment.dispute_reason === AUTO_REASON
             ? "فُتح آلياً بانقضاء المهلة: لم ينفِ الكبتن وصول المال، بل لم يردّ. اسأله قبل أن تحكم."
             : `سببُ الكبتن: ${payment.dispute_reason ?? "—"}`}
@@ -224,9 +211,8 @@ function ResolveModal({
 
         <ErrorNote message={error} />
 
-        <div className="mt-18 flex gap-10">
+        <div className="ad-modal-actions ad-modal-split">
           <Button
-            className="flex-1"
             size="md"
             loading={busy === "paid"}
             disabled={busy !== null}
@@ -235,9 +221,8 @@ function ResolveModal({
             وصل المال — لصالح الكبتن
           </Button>
           <Button
-            className="flex-1 border-danger text-danger"
             size="md"
-            variant="secondary"
+            variant="danger"
             loading={busy === "unpaid"}
             disabled={busy !== null}
             onClick={() => decide("unpaid")}
@@ -245,8 +230,7 @@ function ResolveModal({
             لم يصل — لصالح الراكب
           </Button>
         </div>
-      </div>
-    </div>
+      </Modal>
     </FormErrors>
   );
 }
@@ -255,19 +239,15 @@ function Row({
   label,
   value,
   ltr = false,
-  last = false,
 }: {
   label: string;
   value: string;
   ltr?: boolean;
-  last?: boolean;
 }) {
   return (
-    <div className={`flex justify-between ${last ? "" : "mb-8"}`}>
-      <dt className="text-muted">{label}</dt>
-      <dd dir={ltr ? "ltr" : undefined} className="font-semibold text-ink">
-        {value}
-      </dd>
+    <div>
+      <dt>{label}</dt>
+      <dd dir={ltr ? "ltr" : undefined}>{value}</dd>
     </div>
   );
 }

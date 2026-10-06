@@ -66,7 +66,8 @@ export function OpenProfile({
             : `/drivers?open=${id}&q=${encodeURIComponent(search ?? "")}`,
         );
       }}
-      className={className ?? "text-11 font-semibold text-muted underline"}
+      // **رابطُ الهوية** (`.ad-open` في `t2/kit.css`): خافتٌ بخطٍّ تحته، ويشتدّ حين يُمرّ عليه
+      className={className ?? "ad-open"}
     >
       {OPEN_PROFILE_LABEL}
     </button>

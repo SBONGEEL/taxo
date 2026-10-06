@@ -30,7 +30,7 @@ import {
 import type { CountryCode, PromoCode } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Field, Select } from "@/components/ui/Field";
+import { DateInput, Field, Select } from "@/components/ui/Field";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
 import { currencyLabel, currencyOf, day, money } from "@/lib/format";
@@ -336,12 +336,10 @@ function NewPromoModal({
       </div>
 
       <div className="mt-12">
-        <Field
+        <DateInput
           label="يبدأ في (اختياري — فارغ = فوراً)"
-          type="date"
-          dir="ltr"
           value={from}
-          onChange={(event) => setFrom(event.target.value)}
+          onChange={setFrom}
         />
         <Field
           label="سقفُ الاستعمال الكليّ (فارغ = بلا سقفِ عدد)"
@@ -350,13 +348,11 @@ function NewPromoModal({
           value={uses}
           onChange={(event) => setUses(event.target.value.replace(/[^0-9]/g, ""))}
         />
-        <Field
+        <DateInput
           label="ينتهي في (اختياري)"
           id="promo-until"
-          type="date"
-          dir="ltr"
           value={until}
-          onChange={(event) => setUntil(event.target.value)}
+          onChange={setUntil}
         />
       </div>
 

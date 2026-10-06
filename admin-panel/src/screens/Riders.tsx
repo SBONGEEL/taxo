@@ -166,7 +166,7 @@ export function RidersScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <div className="mt-12">
+      <div className={error || done ? "mt-12" : undefined}>
         <Table
           toolbar={
             <TableSearch
@@ -205,20 +205,20 @@ export function RidersScreen() {
           }}
           render={(row) => (
             <>
-              <span className="flex items-center gap-9">
-                <span className="flex size-30 flex-none items-center justify-center rounded-full border border-line bg-surface-2 text-11 font-bold text-ink">
+              <span className="ad-person">
+                <span className="ad-person-avatar" aria-hidden="true">
                   {row.name.trim().slice(0, 1)}
                 </span>
-                <span className="min-w-0 truncate font-semibold text-ink">
-                  {row.name}
+                <span className="ad-person-text">
+                  <span className="ad-person-name">{row.name}</span>
                 </span>
               </span>
 
-              <span dir="ltr" className="text-start text-muted">
+              <span dir="ltr" className="ad-ltr ad-tone-muted">
                 {row.phone}
               </span>
 
-              <span className="flex flex-wrap items-center gap-6">
+              <span className="ad-chips">
                 {row.is_blocked ? (
                   <Badge tone="danger">محظور</Badge>
                 ) : (
@@ -229,16 +229,13 @@ export function RidersScreen() {
                 ) : null}
               </span>
 
-              <span className="text-muted">{moment(row.created_at)}</span>
+              <span className="ad-tone-muted">{moment(row.created_at)}</span>
 
-              <span className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setOpen(row)}
-                  className="text-11.5 font-semibold text-ink underline"
-                >
+              {/* **زرٌّ ثانويٌّ لا رابط** (A06): الملفُّ هو فعلُ الصفّ الوحيد، وكذلك «الوثائق والقرار» في قائمة الكباتن */}
+              <span className="ad-row-end">
+                <Button size="sm" variant="secondary" onClick={() => setOpen(row)}>
                   {OPEN_PROFILE_LABEL}
-                </button>
+                </Button>
               </span>
             </>
           )}

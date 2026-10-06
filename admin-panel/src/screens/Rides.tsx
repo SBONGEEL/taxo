@@ -30,6 +30,10 @@
  * مبلغاً لا يظهر في أيِّ حقل، ويعيد المشرفُ الحسبةَ بيده وهو ما نفاه السطر
  * نفسُه. **ووعدٌ في توثيقٍ لا يقع أسوأ من غياب الوعد**: من يقرؤه يكفّ عن
  * البحث.
+ *
+ * **وبلغة TAXO 2.0** (A04 · A04b): الجدولُ من العُدّة، والتفاصيلُ ورقةٌ بأقسامٍ في بطاقات — **و«الطريقُ على الخريطة»** كما
+ * طلبه المالكُ في طلب التصميم (§٢، A04): نقاطُ `route` نفسُها التي كانت تُعدّ هنا «N نقطة»، **ترسمها `RouteCanvas`** بين
+ * دائرة الانطلاق ومربّع الوجهة — **بلا نداءٍ جديد**: الحمولةُ تحملها منذ القسم 5.7.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -44,10 +48,12 @@ import type {
   RideStatus,
 } from "@/api/types";
 import { OpenProfile } from "@/components/profile/OpenProfile";
+import { RouteCanvas } from "@/components/RouteCanvas";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { useConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import { moment, money } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
@@ -61,6 +67,7 @@ import {
   RIDE_STATUS_TONE,
 } from "@/lib/labels";
 import { digits, cn } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 // **الأسماءُ والنغماتُ من `lib/labels.ts`** — بيتٌ واحدٌ منذ 2026-09-02:
 // كُتبت هنا وفي المدفوعات والاشتراكات، **وافترقت فعلاً** («كوبون» مقابل
@@ -166,7 +173,8 @@ export function RidesScreen() {
 
       <ErrorNote message={error} />
 
-      <div className="mt-12">
+      {/* **عرضٌ أدنى** (`.ad-rides-table`): ثمانيةُ أعمدةٍ على ١٠٢٤ قصّت المعرّفَ والأسماء — فتُمرَّر أفقياً داخل بطاقتها */}
+      <div className={cn("ad-rides-table", error && "mt-12")}>
         <Table
           toolbar={
             <TableSearch
@@ -200,30 +208,27 @@ export function RidesScreen() {
                 type="button"
                 dir="ltr"
                 onClick={() => setOpen(row.id)}
-                className="truncate text-start font-semibold text-ink underline"
+                className="ad-link-id"
+                aria-label={`تفاصيل الرحلة ${shortId(row.id)}`}
               >
                 {shortId(row.id)}
               </button>
 
-              <span className="text-muted">{moment(row.created_at)}</span>
+              <span className="ad-tone-muted">{moment(row.created_at)}</span>
 
               {/* **واسمُ الطرف يحمل بابَه** (§39٫١٢٫٤): كان الصفُّ يعرض
                   اسمَ الراكب واسمَ الكبتن **ولا سبيلَ منه إلى ملفِّ أحدهما** —
                   فمن قرأ نزاعاً على رحلةٍ خرج إلى «الأشخاص» وبحث بالاسم من
                   جديد. */}
-              <span className="flex min-w-0 items-baseline gap-6">
-                <span className="min-w-0 truncate text-ink">
-                  {row.rider.name}
-                </span>
+              <span className="ad-party">
+                <span className="ad-party-name">{row.rider.name}</span>
                 <OpenProfile kind="rider" id={row.rider.user_id} />
               </span>
 
-              <span className="flex min-w-0 items-baseline gap-6">
+              <span className="ad-party">
                 {row.driver ? (
                   <>
-                    <span className="min-w-0 truncate text-ink">
-                      {row.driver.name}
-                    </span>
+                    <span className="ad-party-name">{row.driver.name}</span>
                     <OpenProfile
                       kind="driver"
                       id={row.driver.driver_id}
@@ -231,20 +236,20 @@ export function RidesScreen() {
                     />
                   </>
                 ) : (
-                  <span className="text-muted">—</span>
+                  <span className="ad-tone-muted">—</span>
                 )}
               </span>
 
-              <span className="min-w-0 truncate text-muted">
+              <span className="ad-ellipsis ad-tone-muted">
                 {row.pickup_address ?? "نقطة على الخريطة"} ←{" "}
                 {row.dropoff_address ?? "نقطة على الخريطة"}
               </span>
 
-              <span className="font-semibold text-ink">
+              <span className="ad-fare">
                 {money(row.final_fare ?? row.estimated_fare, row.currency)}
               </span>
 
-              <span className="text-muted">
+              <span className="ad-tone-muted">
                 {row.payment_methods.length === 0
                   ? "—"
                   : row.payment_methods
@@ -252,7 +257,7 @@ export function RidesScreen() {
                       .join(" + ")}
               </span>
 
-              <span className="flex items-center gap-6">
+              <span className="ad-chips">
                 <Badge tone={STATUS_TONE[row.status]}>
                   {STATUS_LABEL[row.status]}
                 </Badge>
@@ -272,7 +277,7 @@ export function RidesScreen() {
   );
 }
 
-/** النافذة — `DESIGN.md` §3.5: تعتيمٌ ولوحٌ موسَّط بـ`rise`. */
+/** النافذة — **ورقةٌ موسَّطةٌ بأرض الإسفلت وأقسامٍ في بطاقات** (A04b)؛ وعلى الهاتف ورقةٌ من الأسفل (العُدّة). */
 function RideModal({
   rideId,
   onClose,
@@ -294,49 +299,47 @@ function RideModal({
   }, [rideId]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dim px-20"
-      onClick={onClose}
-    >
+    <div className="ad-modal" onClick={onClose}>
       <div
-        className="scr w-full max-w-modal animate-rise rounded-20 border border-line bg-surface p-24"
-        style={{ maxHeight: "86vh" }}
+        className="ad-modal-box ad-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`الرحلة ${shortId(rideId)}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-16 flex items-start gap-12">
-          <div className="flex-1">
-            <div dir="ltr" className="text-16 font-bold text-ink">
+        <div className="ad-sheet-head">
+          <div className="ad-sheet-titles">
+            <p dir="ltr" className="ad-sheet-id">
               #{shortId(rideId)}
-            </div>
-            {ride ? (
-              <div className="mt-3 text-12 text-muted">
-                {moment(ride.created_at)}
-              </div>
-            ) : null}
+            </p>
+            {ride ? <p className="ad-sheet-sub">{moment(ride.created_at)}</p> : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="إغلاق"
-            className="text-18 text-muted"
-          >
-            ✕
+          <button type="button" onClick={onClose} aria-label="إغلاق" className="ad-round">
+            <Icon name="close" />
           </button>
         </div>
 
-        <ErrorNote message={error} />
+        <div className="ad-sheet-body">
+          <ErrorNote message={error} />
 
-        {ride === null ? (
-          error ? null : <Spinner className="mx-auto my-24" />
-        ) : (
-          <RideBody ride={ride} />
-        )}
+          {ride === null ? (
+            error ? null : (
+              <div className="ad-sec-loading">
+                <Spinner />
+              </div>
+            )
+          ) : (
+            <RideBody ride={ride} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 function RideBody({ ride }: { ride: AdminRideDetail }) {
+  const { config } = useConfig();
+  const token = config?.providers.mapbox?.public_token ?? null;
   // **الحكمُ يصل محسوباً** (`settlement`، من `services/settlement.py`): كانت
   // المقارنةُ هنا `Number(fare) > Number(paid_amount)` فتقرأ رحلةً ملغاةً
   // بلا أجرةٍ نهائية «مسدَّدة»، ودفعةً منتظِرةً «ناقصة» بلا تمييزٍ عن نزاع
@@ -345,7 +348,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
 
   return (
     <>
-      <div className="mb-16 flex flex-wrap items-center gap-6">
+      <div className="ad-sec-badges">
         <Badge tone={STATUS_TONE[ride.status]}>{STATUS_LABEL[ride.status]}</Badge>
         {ride.gender_preference !== "any" ? (
           <Badge tone="ink">
@@ -359,19 +362,34 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
       </div>
 
       <Section title="الطرفان">
-        <Row label="الراكب" value={ride.rider.name} hint={ride.rider.phone} />
+        <Row label="الراكب" value={ride.rider.name} hint={ride.rider.phone} hintLtr />
         <Row
           label="السائق"
           value={ride.driver?.name ?? "لم يُسنَد"}
           hint={ride.driver?.phone ?? undefined}
+          hintLtr
         />
         {ride.driver?.plate_number ? (
           // اللوحةُ مُعرّفٌ يُقارَن حرفاً بحرف — بلا تعريب خانات
-          <Row label="رقم اللوحة" value={ride.driver.plate_number} />
+          <Row label="رقم اللوحة" value={ride.driver.plate_number} ltr />
         ) : null}
       </Section>
 
-      <Section title="الطريق">
+      <Section
+        title="الطريق"
+        lead={
+          // **الدليلُ يُرى لا يُعدّ** — المسارُ الفعليُّ بين الدائرة والمربّع (A04b)، وبلا عقد Mapbox سطرٌ يقول السبب
+          <div className="ad-sheet-map">
+            <RouteCanvas
+              token={token}
+              pickup={{ lat: ride.pickup_lat, lng: ride.pickup_lng }}
+              dropoff={{ lat: ride.dropoff_lat, lng: ride.dropoff_lng }}
+              route={ride.route}
+              position={null}
+            />
+          </div>
+        }
+      >
         <Row label="من" value={ride.pickup_address ?? "نقطة على الخريطة"} />
         <Row label="إلى" value={ride.dropoff_address ?? "نقطة على الخريطة"} />
         <Row
@@ -450,19 +468,19 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
             — فلا يفصل في نزاع انتظارٍ بدليل. وكلُّ رقمٍ هنا **يصل محسوباً**
             من البانِي نفسِه الذي يقرؤه التطبيقان (§14). */}
         {ride.stops.length > 0 ? (
-          <div className="mt-10 rounded-12 border border-line bg-bg p-12">
-            <p className="mb-8 text-12 font-semibold text-ink">
+          <div className="ad-stops">
+            <p className="ad-stops-title">
               المحطات ({digits(String(ride.stops.length))})
             </p>
-            <ol className="space-y-8">
+            <ol className="ad-stops-list">
               {ride.stops.map((stop) => (
-                <li key={stop.id} className="flex items-start justify-between gap-10">
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-12 text-ink">
+                <li key={stop.id} className="ad-stop">
+                  <span className="ad-stop-main">
+                    <span className="ad-stop-name">
                       {digits(String(stop.sequence))}.{" "}
                       {stop.address ?? "نقطة على الخريطة"}
                     </span>
-                    <span className="block text-11 text-muted">
+                    <span className="ad-stop-when">
                       {stop.arrived_at
                         ? `وصل ${moment(stop.arrived_at)}${
                             stop.resumed_at ? ` · استأنف ${moment(stop.resumed_at)}` : " · لم يستأنف بعد"
@@ -471,11 +489,11 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
                       {stop.over_max_wait ? " · تجاوز السقف" : ""}
                     </span>
                   </span>
-                  <span className="shrink-0 text-end">
-                    <span className="block text-12 text-ink">
+                  <span className="ad-stop-side">
+                    <span className="ad-stop-amount">
                       {money(stop.waiting_charge, ride.currency)}
                     </span>
-                    <span className="block text-11 text-muted">
+                    <span className="ad-stop-when">
                       {digits(stop.waited_minutes)} دقيقة
                     </span>
                   </span>
@@ -512,29 +530,24 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
 
       <Section title="الدفعات">
         {ride.payments.length === 0 ? (
-          <p className="text-12 leading-note text-muted">
-            لا دفعة على هذه الرحلة بعد.
-          </p>
+          <p className="ad-mini-empty ad-kv-pad">لا دفعة على هذه الرحلة بعد.</p>
         ) : (
-          <ul className="flex flex-col gap-8">
+          <ul className="ad-mini">
             {ride.payments.map((payment) => (
-              <li
-                key={payment.id}
-                className="flex items-center gap-10 rounded-12 border border-line px-13 py-10"
-              >
-                <span className="flex-1 text-12.5 text-ink">
+              <li key={payment.id} className="ad-mini-row">
+                <span className="ad-mini-main">
                   {METHOD_LABEL[payment.method]} ·{" "}
                   {money(payment.amount, ride.currency)}
                 </span>
                 <span
                   className={cn(
-                    "text-11.5 font-bold",
+                    "ad-pay-status",
                     payment.status === "confirmed"
-                      ? "text-ok"
+                      ? "ad-tone-ok"
                       : payment.status === "disputed" ||
                           payment.status === "failed"
-                        ? "text-danger"
-                        : "text-warn",
+                        ? "ad-tone-danger"
+                        : "ad-tone-warn",
                   )}
                 >
                   {PAYMENT_STATUS_LABEL[payment.status]}
@@ -543,11 +556,11 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
             ))}
           </ul>
         )}
-        <p className="mt-8 text-11 leading-note text-muted">
-          فصلُ النزاع والاسترداد يقعان على الدفعة في «النزاعات والدعم» — لا على
-          الرحلة: رحلةٌ واحدة قد تحمل دفعتين.
-        </p>
       </Section>
+      <p className="ad-hint">
+        فصلُ النزاع والاسترداد يقعان على الدفعة في «النزاعات والدعم» — لا على
+        الرحلة: رحلةٌ واحدة قد تحمل دفعتين.
+      </p>
 
       {ride.ratings.length > 0 ? (
         <Section title="التقييمات">
@@ -564,9 +577,7 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
 
       {ride.cancelled_reason ? (
         <Section title="سبب الإلغاء">
-          <p className="text-12.5 leading-note text-ink">
-            {ride.cancelled_reason}
-          </p>
+          <p className="ad-kv-text">{ride.cancelled_reason}</p>
         </Section>
       ) : null}
     </>
@@ -581,17 +592,21 @@ const PAYMENT_STATUS_LABEL: Record<string, string> = {
   refunded: "مستردة",
 };
 
+/** قسمٌ في الورقة — عنوانٌ وبطاقةٌ بصفوفها، **و`lead` ما يسبق البطاقةَ** (خريطةُ الطريق). */
 function Section({
   title,
+  lead,
   children,
 }: {
   title: string;
+  lead?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="mb-16">
-      <h3 className="mb-8 text-13 font-bold text-muted">{title}</h3>
-      {children}
+    <section>
+      <h3 className="ad-dh">{title}</h3>
+      {lead}
+      <div className="ad-kv">{children}</div>
     </section>
   );
 }
@@ -600,18 +615,26 @@ function Row({
   label,
   value,
   hint,
+  ltr = false,
+  hintLtr = false,
 }: {
   label: string;
   value: string;
   hint?: string;
+  /** **القيمةُ مُعرّفٌ** (اللوحة) — من اليسار، بلا تعريب */
+  ltr?: boolean;
+  /** **التلميحُ رقمُ هاتف** — من اليسار */
+  hintLtr?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-10 border-b border-line py-8 last:border-b-0">
-      <span className="w-side-sm flex-none text-12 text-muted">{label}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-12.5 text-ink">{value}</span>
+    <div className="ad-kv-row">
+      <span className="ad-kv-label">{label}</span>
+      <span className="ad-kv-value">
+        <span dir={ltr ? "ltr" : undefined} className={ltr ? "ad-ltr" : undefined}>
+          {value}
+        </span>
         {hint ? (
-          <span className="mt-2 block text-11 leading-note text-muted">
+          <span dir={hintLtr ? "ltr" : undefined} className={hintLtr ? "ad-kv-hint ad-ltr" : "ad-kv-hint"}>
             {hint}
           </span>
         ) : null}

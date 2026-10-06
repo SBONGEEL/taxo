@@ -738,3 +738,142 @@ html:not(.dark) .ad-drawer-avatar { background: var(--t2-surface); box-shadow: 0
 /* **`.card` كان صنفاً بلا تعريف** في سبعة أقسامٍ (السلف · المستحقّات · إلغاء التفعيل · مهلة الحذف · قوالب الرمز · حملةُ التأكيد ·
    المتجر) — فرُسمت بلا بطاقةٍ أصلاً. **صار بطاقةَ الهوية** */
 .card { border-radius: 22px; background: var(--t2-surface); }
+
+/* ── حقلُ التاريخ بتسميته (`DateInput`) — `DateField` الهوية، **وحافّتُه بالخطأ حين يُرفض** كحافّة `.fld` ─────────────── */
+.t2-date.invalid .t2-date-face { border-color: var(--t2-danger); }
+
+/* ── الحوار: سطرُ تمهيدٍ تحت عنوانه، وصفُّ أفعاله، وما يتقدّم أثناء العمل (A06b · A07b) ───────────────────── */
+.ad-modal-lede { margin: -8px 0 16px; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
+.ad-modal-box > .ad-note { margin-top: 12px; }
+.ad-modal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
+.ad-modal-actions .ad-btn { width: auto; }
+/* **فعلان متكافئان بعرضين متساويين** (فصلُ النزاع) — وعلى الهاتف واحدٌ فوق الآخر: نصّاهما أطولُ من نصف السطر */
+.ad-modal-split .ad-btn { flex: 1; }
+.ad-modal-progress { font-size: 12px; color: var(--t2-muted); }
+.ad-fields { display: grid; gap: 12px; }
+@media (max-width: 639px) {
+  .ad-modal-split { flex-direction: column; align-items: stretch; }
+  .ad-modal-split .ad-btn { flex: none; width: 100%; }
+}
+
+/* ── خلايا الجدول المشتركة (A04 · A06 · A07): معرّفٌ يُفتح، وطرفٌ بزرّ ملفّه، ونصٌّ يُقصّ، وأجرةٌ، وشارات ──────────── */
+.ad-link-id {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: right;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ad-link-id:focus-visible { border-radius: 4px; outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.ad-ellipsis { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 639px) {
+  /* **في البطاقة يُقرأ النصُّ كاملاً** — القصُّ يناسب عموداً ضيّقاً لا سطراً بعرض الهاتف («من ← إلى» في سجل الرحلات) */
+  .ad-cell > .ad-ellipsis { white-space: normal; }
+}
+.ad-fare { font-weight: 600; white-space: nowrap; }
+.ad-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* الطرفان (`PaymentParties`): الراكبُ سطرٌ والكبتنُ تحته أخفت — ولكلٍّ «الملفّ» */
+.ad-parties { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.ad-party { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
+.ad-party-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-party.sub .ad-party-name { font-size: 12.5px; color: var(--t2-muted); }
+/* «الملفّ» من أيِّ صفٍّ يخصّ إنساناً (`OpenProfile`) — رابطٌ بخطٍّ تحته، خافتٌ حتى يُمرّ عليه */
+.ad-open {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ad-open:focus-visible { border-radius: 4px; outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .ad-open:hover { color: var(--t2-text); }
+}
+
+/* ── الخرائطُ بلغة «TaxoMap» (`LiveCanvas` · `RouteCanvas` — A03 · A04b · A09) ─────────────────────────────────────
+ * **علاماتُ التطبيقين نفسُها** (`.t2-map-car` · `.t2-map-pin` في `screens/t2/t2.css`): سيارةُ الهوية بزجاجٍ من الجمر، ودائرةُ
+ * الانطلاق ومربّعُ الوجهة بحافّةٍ بيضاء — **والحالُ في جسم السيارة**: متفرّغٌ بلون النصّ، وفي رحلةٍ بالنجاح، ومن توقّف بثُّه
+ * بالتنبيه خافتاً. **والمختارُ بهالة الجمر** (`--t2-map-me-halo`). */
+.ad-map { width: 100%; height: 100%; }
+.ad-map.route { height: 170px; border-radius: 14px; }
+.ad-map-off {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 24px;
+  background: var(--t2-surface);
+  text-align: center;
+}
+.ad-map-off p { margin: 0; max-width: 46ch; font-size: 12.5px; line-height: 1.8; color: var(--t2-muted); }
+.ad-map-off.route { height: 170px; padding: 20px; border: 1px solid var(--t2-line); border-radius: 14px; }
+.ad-map-car {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 30px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-surface);
+  border-radius: 7px;
+  background: var(--t2-text);
+  box-shadow: var(--t2-map-car-shadow);
+  cursor: pointer;
+}
+.ad-map-car.ride { background: var(--t2-success); }
+.ad-map-car.stale { background: var(--t2-warning); opacity: 0.6; }
+.ad-map-car.on { box-shadow: 0 0 0 10px var(--t2-map-me-halo), var(--t2-map-car-shadow); }
+.ad-map-car-front,
+.ad-map-car-back { position: absolute; display: block; background: var(--t2-accent); }
+.ad-map-car-front { left: 2px; right: 2px; top: 6px; height: 7px; border-radius: 3px 3px 2px 2px; }
+.ad-map-car-back { left: 3px; right: 3px; bottom: 4px; height: 4px; border-radius: 2px 2px 3px 3px; opacity: 0.55; }
+/* الطلبُ المنتظرُ حلقةٌ بالتنبيه — لا سيارةَ فيه بعد */
+.ad-map-wait {
+  display: block;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 3px solid var(--t2-warning);
+  border-radius: 50%;
+  background: var(--t2-surface);
+  box-shadow: var(--t2-map-pin-shadow);
+}
+.ad-map-pin {
+  display: block;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 5px solid var(--t2-map-pin-ring, var(--t2-surface));
+  box-shadow: var(--t2-map-pin-shadow);
+}
+.ad-map-pin.pickup { border-radius: 50%; background: var(--t2-map-pin-ink, var(--t2-text)); }
+.ad-map-pin.dropoff { border-radius: 6px; background: var(--t2-accent); }
+/* موضعُ الكبتن الآن (رحلةٌ جارية في ملفّه) — نقطةُ الجمر، وبالتنبيه حين يتوقّف بثُّه */
+.ad-map-live {
+  display: block;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 3px solid var(--t2-surface);
+  border-radius: 50%;
+  background: var(--t2-accent);
+  box-shadow: var(--t2-map-me-shadow);
+}
+.ad-map-live.stale { background: var(--t2-warning); }

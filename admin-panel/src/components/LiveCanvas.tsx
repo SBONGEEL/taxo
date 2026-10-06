@@ -20,6 +20,10 @@
  *
  * وبلا توكن (عقد Mapbox غير مفعّل) تبقى القائمة الجانبية كاملةً وتظهر مكان
  * الخريطة لوحةٌ تقول السبب — فالمعلومة كلُّها في القائمة، والخريطةُ عرضٌ لها.
+ *
+ * **وبلغة «TaxoMap»** (A03): الأرضُ والطرقُ من رموز الهوية (`lib/taxo-map`)، **والكبتنُ سيارةُ الهوية** تدور مع اتجاه سيره —
+ * جسمُها بلون حاله (متفرّغٌ بلون النصّ، وفي رحلةٍ بالنجاح، ومَن توقّف بثُّه بالتنبيه خافتاً)، **والمختارُ بهالةِ الجمر**،
+ * والطلبُ المنتظرُ حلقةٌ بالتنبيه. **والحالُ والاسمُ في التلميح كما كانا**، والقائمةُ إلى الجانب تقولهما نصّاً.
  */
 
 import mapboxgl from "mapbox-gl";
@@ -33,10 +37,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
 
 import type { LiveDriver, LivePendingRide } from "@/api/types";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, taxoLook } from "@/lib/taxo-map";
 import { useTheme } from "@/lib/theme";
-
-const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
-const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 
 interface Props {
   token: string | null;
@@ -59,25 +61,21 @@ function markerShell(): HTMLElement {
   return shell;
 }
 
-/** يضبط شكلَ علامةٍ قائمة بدل بنائها — انظر ملاحظة «تُحدَّث ولا تُعاد» أعلاه. */
+/** يضبط شكلَ علامةٍ قائمة بدل بنائها — انظر ملاحظة «تُحدَّث ولا تُعاد» أعلاه.
+ *
+ * **ثلاثُ حالاتٍ لا اثنتان**: «شاحبٌ» ليس «متفرّغاً» — بثُّه توقّف ومفتاحُ حضوره على وشك الانقضاء، فيختفي من الخريطة بلا
+ * أن يتحرك شيء. ومن يقرؤه متفرّغاً يبني عليه قراراً وهو غيرُ موجود. **والاتّجاهُ من بثّه** (`heading`)، وغيابُه شمالٌ لا عطب. */
 function paintDriver(shell: HTMLElement, driver: LiveDriver, selected: boolean) {
   const face = shell.firstElementChild as HTMLElement;
   face.className = [
-    "flex size-26 cursor-pointer items-center justify-center rounded-full",
-    "border-2 text-11 font-bold",
-    // تُقرأ على خريطةٍ داكنةٍ وفاتحة معاً: قرصٌ ممتلئ بلونٍ نقيض لا قرصٌ
-    // بلون السطح — علامةٌ رماديةٌ على أسفلت رمادي ليست علامة
-    // **ثلاثُ حالاتٍ لا اثنتان**: «شاحبٌ» ليس «متفرّغاً» — بثُّه توقّف
-    // ومفتاحُ حضوره على وشك الانقضاء، فيختفي من الخريطة بلا أن يتحرك شيء.
-    // ومن يقرؤه متفرّغاً يبني عليه قراراً وهو غيرُ موجود
-    driver.state === "on_ride"
-      ? "border-ok bg-ok text-accent-ink"
-      : driver.state === "stale"
-        ? "border-warn bg-bg text-warn opacity-60"
-        : "border-bg bg-ink text-bg",
-    selected ? "outline outline-2 outline-accent" : "",
+    "ad-map-car",
+    driver.state === "on_ride" ? "ride" : driver.state === "stale" ? "stale" : "free",
+    selected ? "on" : "",
   ].join(" ");
-  face.textContent = driver.name.trim().charAt(0) || "؟";
+  face.style.transform = `rotate(${driver.heading ?? 0}deg)`;
+  if (!face.firstElementChild) {
+    face.innerHTML = '<i class="ad-map-car-front"></i><i class="ad-map-car-back"></i>';
+  }
   // الاسمُ كاملاً في التلميح، وفي القائمة الجانبية معه الرقم واللوحة
   face.title =
     driver.state === "stale" && driver.seconds_since_update !== null
@@ -88,7 +86,7 @@ function paintDriver(shell: HTMLElement, driver: LiveDriver, selected: boolean) 
 function pendingElement(): HTMLElement {
   const shell = markerShell();
   const face = shell.firstElementChild as HTMLElement;
-  face.className = "block size-14 rounded-full border-2 border-warn bg-bg";
+  face.className = "ad-map-wait";
   face.title = "طلبٌ بانتظار سائق";
   return shell;
 }
@@ -106,18 +104,26 @@ export function LiveCanvas({
   const driverMarkers = useRef(new Map<string, mapboxgl.Marker>());
   const rideMarkers = useRef(new Map<string, mapboxgl.Marker>());
   const { dark } = useTheme();
+  // **الستايلُ المعروضُ الآن** — يُقارَن به قبل التبديل (تحت)
+  const shown = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token || !holder.current || map.current) return;
     mapboxgl.accessToken = token;
-    map.current = new mapboxgl.Map({
-      container: holder.current,
-      style: dark ? STYLE_DARK : STYLE_LIGHT,
+    const host = holder.current;
+    const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+    shown.current = style;
+    const instance = new mapboxgl.Map({
+      container: host,
+      style,
       language: MAP_LANGUAGE,
       center: [center.lng, center.lat],
       zoom: 11,
       attributionControl: false,
     });
+    map.current = instance;
+    // **صبغُ «TaxoMap» مع كلِّ ستايلٍ يُحمَّل** — تبديلُ المظهر يمسح الصبغَ كما يمسح الطبقات
+    instance.on("style.load", () => taxoLook(instance, host));
     return () => {
       map.current?.remove();
       map.current = null;
@@ -129,8 +135,17 @@ export function LiveCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // **يُبدَّل الستايلُ حين تتبدّل السمةُ لا عند التركيب** (قِيس في المرحلة الثانية): كان يُنادى بالستايل نفسِه أوّلَ مرّة، **و`setStyle`
+  // بالستايل نفسِه «يُفرّق» عليه** — فيعيد ألوانَ Mapbox فوق صبغ «TaxoMap» ولا يطلق `style.load` يعيده (بقيت الخريطةُ الفاتحةُ رماديّة).
+  // **و`diff: false`**: التبديلُ تحميلٌ كاملٌ يطلق `style.load`، فيعود الصبغُ (وما يُرسم عليه) مع كلِّ سمة.
   useEffect(() => {
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+    const instance = map.current;
+    const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+    if (!instance || shown.current === style) return;
+    shown.current = style;
+    // **الحقلان الآخران في نوع `SetStyleOptions` إلزاميّان خطأً** (mapbox-gl 3.28): تمريرُهما `undefined` يمحو خطَّ المحرف المحلّيّ
+    // الافتراضيّ، **فالتحويلُ هنا لا قيمةٌ مخترعة**
+    instance.setStyle(style, { diff: false } as Parameters<mapboxgl.Map["setStyle"]>[1]);
   }, [dark]);
 
   useEffect(() => {
@@ -207,8 +222,8 @@ export function LiveCanvas({
 
   if (!token) {
     return (
-      <div className="flex h-full items-center justify-center rounded-16 border border-line bg-surface-2 p-24 text-center">
-        <p className="text-12.5 leading-relaxed text-muted">
+      <div className="ad-map-off">
+        <p>
           عقدُ Mapbox غير مفعّل لهذه الدولة، فلا خريطة.
           <br />
           القائمةُ إلى الجانب كاملةٌ — فيها كلُّ ما ترسمه الخريطة.
@@ -217,5 +232,5 @@ export function LiveCanvas({
     );
   }
 
-  return <div ref={holder} className="h-full w-full rounded-16" />;
+  return <div ref={holder} className="ad-map" />;
 }

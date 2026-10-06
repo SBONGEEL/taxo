@@ -12,6 +12,9 @@
  *
  * **والاسمُ والرقمُ يظهران** كالخريطةِ الحيّة: قرارٌ على شخصٍ لا يُتّخذ على
  * معرّفٍ سُداسيٍّ عشريّ.
+ *
+ * **وبلغة TAXO 2.0** (A08): كلُّ بلاغٍ بطاقةٌ — الصورةُ ١١٢ إلى جانب الاسم والرقم ومن بلّغ — **والزرّان كما كانا**:
+ * «أعِد» ثانويٌّ و«احذف» بلون الخطر، **بلا تأكيدٍ يُضاف** (لم يكن قبلُ).
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -23,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { Shell } from "@/components/Shell";
 import { moment } from "@/lib/format";
+import { Icon } from "@/taxo2";
 
 /** **الصورةُ تُجلب بالجلسة لا برابطٍ مكشوف**: `<img src>` لا يحمل ترويسةَ
  * تفويض، فتُقرأ إلى `blob:` ثم تُرسم — وبهذا لا يوجد عنوانٌ لصورةِ شخصٍ يعمل
@@ -49,10 +53,13 @@ function ReportedPhoto({ reportId }: { reportId: string }) {
     };
   }, [reportId]);
   return (
-    <div className="size-82 overflow-hidden rounded-13 bg-stripe-a">
+    <div className="ad-report-photo">
+      {/* **ما لم تصل الصورةُ فمكانُها رسمُ شخص** — لا بياضٌ يُقرأ «لا صورة» */}
       {src ? (
-        <img src={src} alt="الصورةُ المبلَّغ عنها" className="size-full object-cover" />
-      ) : null}
+        <img src={src} alt="الصورةُ المبلَّغ عنها" />
+      ) : (
+        <Icon name="person" />
+      )}
     </div>
   );
 }
@@ -92,44 +99,56 @@ export function PhotoReports() {
 
   return (
     <Shell title="بلاغات الصور">
-      {error ? <ErrorNote message={error} /> : null}
-      {done ? <SuccessNote message={done} /> : null}
-      {rows === null ? <Spinner /> : null}
-      {rows !== null && rows.length === 0 ? (
-        <p className="text-14 text-muted">لا بلاغاتٍ معلّقة.</p>
-      ) : null}
-      <div className="flex flex-col gap-12">
-        {(rows ?? []).map((row) => (
-          <div
-            key={row.id}
-            className="flex items-start gap-16 rounded-13 border border-line bg-surface p-16"
-          >
-            <ReportedPhoto reportId={row.id} />
-            <div className="flex flex-1 flex-col gap-6">
-              <p className="text-15 text-ink">{row.subject_name ?? "—"}</p>
-              <p className="text-13 text-muted">{row.subject_phone ?? "—"}</p>
-              <p className="text-13 text-muted">
-                بلّغ: {row.reporter_name ?? "—"} · {moment(row.created_at)}
-              </p>
-              <div className="mt-8 flex gap-8">
-                <Button
-                  variant="ghost"
-                  disabled={busy === row.id}
-                  onClick={() => void decide(row, false)}
-                >
-                  أعِد الصورة
-                </Button>
-                <Button
-                  variant="danger"
-                  disabled={busy === row.id}
-                  onClick={() => void decide(row, true)}
-                >
-                  احذفها
-                </Button>
-              </div>
-            </div>
+      <div className="ad-reports-page">
+        <ErrorNote message={error} />
+        <SuccessNote message={done} />
+        {rows === null ? (
+          <div className="ad-sec-loading">
+            <Spinner />
           </div>
-        ))}
+        ) : null}
+        {rows !== null && rows.length === 0 ? (
+          <div className="ad-reports-empty">
+            <p className="ad-empty-title">لا بلاغاتٍ معلّقة.</p>
+          </div>
+        ) : null}
+        {rows !== null && rows.length > 0 ? (
+          <div className="ad-reports">
+            {rows.map((row) => (
+              <article key={row.id} className="ad-report">
+                <ReportedPhoto reportId={row.id} />
+                <div className="ad-report-body">
+                  <p className="ad-report-name">{row.subject_name ?? "—"}</p>
+                  {/* الرقمُ مُعرّفٌ يُقارَن حرفاً بحرف — من اليسار، كالخريطة الحيّة */}
+                  <p dir="ltr" className="ad-report-line ad-ltr">
+                    {row.subject_phone ?? "—"}
+                  </p>
+                  <p className="ad-report-line">
+                    بلّغ: {row.reporter_name ?? "—"} · {moment(row.created_at)}
+                  </p>
+                  <div className="ad-report-actions">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy === row.id}
+                      onClick={() => void decide(row, false)}
+                    >
+                      أعِد الصورة
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={busy === row.id}
+                      onClick={() => void decide(row, true)}
+                    >
+                      احذفها
+                    </Button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </div>
     </Shell>
   );

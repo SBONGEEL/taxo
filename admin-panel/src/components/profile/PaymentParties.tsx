@@ -20,19 +20,15 @@ import { OpenProfile } from "@/components/profile/OpenProfile";
 
 export function PaymentParties({ payment }: { payment: Payment }) {
   return (
-    <span className="min-w-0">
-      <span className="flex items-center gap-6">
-        <span className="min-w-0 truncate text-11.5 text-ink">
-          {payment.rider?.name ?? "—"}
-        </span>
+    <span className="ad-parties">
+      <span className="ad-party">
+        <span className="ad-party-name">{payment.rider?.name ?? "—"}</span>
         {payment.rider ? (
           <OpenProfile kind="rider" id={payment.rider.user_id} />
         ) : null}
       </span>
-      <span className="flex items-center gap-6">
-        <span className="min-w-0 truncate text-10.5 text-muted">
-          {payment.driver?.name ?? "—"}
-        </span>
+      <span className="ad-party sub">
+        <span className="ad-party-name">{payment.driver?.name ?? "—"}</span>
         {payment.driver ? (
           // **ويُضيَّق برقمه**: لا بابَ يقرأ صفَّ كبتنٍ واحد، فالدرجُ يُفتح
           // بمطابقة `drivers.id` **داخل القائمة المرشَّحة** — وقائمةٌ بلا

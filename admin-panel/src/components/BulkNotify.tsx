@@ -32,6 +32,7 @@ import { ApiError } from "@/api/client";
 import { notifyUser } from "@/api/endpoints";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { ErrorNote } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
 import { ACCOUNT_FORMS, counted, digits, INBOX_FORMS } from "@/lib/utils";
 
@@ -110,40 +111,42 @@ export function BulkNotify({
           title={`رسالةٌ إلى ${counted(userIds.length, ACCOUNT_FORMS)}`}
           onClose={() => (busy ? undefined : setOpen(false))}
         >
-          <Field
-            label="العنوان"
-            name="bulk_title"
-            value={title}
-            maxLength={MAX_TITLE}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <div className="mt-8">
-            <label className="mb-6 block text-11.5 text-muted">النص</label>
-            <textarea
-              name="bulk_body"
-              rows={4}
-              value={body}
-              maxLength={MAX_BODY}
-              onChange={(event) => setBody(event.target.value)}
-              className="w-full rounded-12 border border-line bg-surface px-12 py-10 text-12 leading-note text-ink"
+          <div className="ad-fields">
+            <Field
+              label="العنوان"
+              name="bulk_title"
+              value={title}
+              maxLength={MAX_TITLE}
+              onChange={(event) => setTitle(event.target.value)}
             />
+            <div>
+              {/* **التسميةُ مربوطةٌ بحقلها** (`htmlFor`) — كانت تسميةً بلا حقل: نقرُها لا يركّز، وقارئُ الشاشة يقرأ نصّاً بلا اسم */}
+              <label className="label" htmlFor="bulk_body">
+                النص
+              </label>
+              <textarea
+                id="bulk_body"
+                name="bulk_body"
+                rows={4}
+                value={body}
+                maxLength={MAX_BODY}
+                onChange={(event) => setBody(event.target.value)}
+                className="fld"
+              />
+            </div>
           </div>
-          <p className="mt-8 text-10.5 leading-note text-muted">
+          <p className="ad-hint">
             تصل صندوقَ الوارد في تطبيق كلِّ واحدٍ منهم، وتُدفع إلى جهازه إن كان
             مغلقاً — ونصُّها يُحفظ في سجل التدقيق كما كُتب، لكلِّ حساب.
           </p>
           {/* **ولا يُرسَل إلى موظّف** — تُقال قبل الضغط لا بعد الارتداد */}
-          <p className="mt-6 text-10.5 leading-note text-muted">
+          <p className="ad-hint">
             وحسابُ الموظّف يُردّ من الخلفية: القناةُ لصاحب التطبيق.
           </p>
 
-          {error ? (
-            <p className="mt-10 rounded-12 border border-line bg-surface-2 px-12 py-10 text-11.5 leading-note text-danger">
-              {error}
-            </p>
-          ) : null}
+          <ErrorNote message={error} />
 
-          <div className="mt-16 flex items-center gap-10">
+          <div className="ad-modal-actions">
             <Button size="sm" disabled={!ready || busy} loading={busy} onClick={() => void send()}>
               أرسِل
             </Button>
@@ -157,7 +160,7 @@ export function BulkNotify({
             </Button>
             {busy ? (
               // **التقدّمُ يُرى** — إرسالٌ متسلسلٌ إلى خمسين بلا عدّادٍ يبدو معلَّقاً
-              <span className="text-11.5 text-muted">
+              <span className="ad-modal-progress">
                 {digits(sent)} من {digits(userIds.length)}…
               </span>
             ) : null}

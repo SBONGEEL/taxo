@@ -61,11 +61,11 @@ import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 /** **الغرضُ بالعربية** — والمشرفُ يقرأ «اشتراك» لا `subscription`. */
-const PURPOSE: Record<string, string> = {
+// **بمرآة النوع لا `Record<string, string>`** (`CliqClaim["purpose"]` = `ProviderOrderPurpose`): الشكلُ الفضفاضُ مرّر `debt`
+// بلا ترجمةٍ فطُبع خاماً على الهاتف، وأبقى `driver_debt` — قيمةً لا ترسلها الخلفية. **وغرضٌ جديدٌ بلا اسمٍ يُسقط المُصرِّف الآن**
+const PURPOSE: Record<CliqClaim["purpose"], string> = {
   subscription: "اشتراك",
   wallet_topup: "شحن محفظة",
-  driver_debt: "سداد دَين",
-  // **`debt` هو ما ترسله الخلفية** (`ProviderOrderPurpose.DEBT`) — وكان يُطبع «debt» خاماً على الهاتف
   debt: "سداد دَين",
   ride_payment: "أجرة رحلة",
 };

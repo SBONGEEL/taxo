@@ -36,10 +36,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
 
 import type { DriverLivePosition, RidePoint } from "@/api/types";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, taxoLook, tokenColour } from "@/lib/taxo-map";
 import { useTheme } from "@/lib/theme";
-
-const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
-const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 
 const ROUTE_SOURCE = "ride-route";
 const ROUTE_LAYER = "ride-route-line";
@@ -68,10 +66,12 @@ function shell(className: string, title: string): HTMLElement {
   return node;
 }
 
-const PIN_PICKUP = "block size-12 rounded-full border-2 border-ok bg-bg";
-const PIN_DROPOFF = "block size-12 rounded-full border-2 border-ink bg-ink";
-const DOT_LIVE = "block size-16 rounded-full border-2 border-bg bg-accent";
-const DOT_STALE = "block size-16 rounded-full border-2 border-bg bg-warn";
+/** **أشكالُ «TaxoMap» الثلاثة** (الهوية): دائرةٌ للانطلاق، ومربّعٌ بالجمر للوجهة، والموضعُ الحيُّ نقطةٌ بالجمر — أو بالتنبيه
+ *  حين يتوقّف البثّ (`t2/screens.css`). */
+const PIN_PICKUP = "ad-map-pin pickup";
+const PIN_DROPOFF = "ad-map-pin dropoff";
+const DOT_LIVE = "ad-map-live";
+const DOT_STALE = "ad-map-live stale";
 
 export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) {
   const holder = useRef<HTMLDivElement>(null);
@@ -83,6 +83,8 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
   const live = useRef<mapboxgl.Marker | null>(null);
   const fitted = useRef(false);
   const { dark } = useTheme();
+  // **الستايلُ المعروضُ الآن** — يُقارَن به قبل التبديل (تحت)
+  const shown = useRef<string | null>(null);
 
   // **آخرُ مسارٍ في مرجع**: مُصغي `style.load` يعيش أطولَ من الرسمة التي
   // سجّلته، **فقراءةُ `route` من إغلاقه تعيد رسمَ مسارِ لحظةِ التسجيل**.
@@ -92,9 +94,12 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
   useEffect(() => {
     if (!token || !holder.current || map.current) return;
     mapboxgl.accessToken = token;
+    const host = holder.current;
+    const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+    shown.current = style;
     const instance = new mapboxgl.Map({
-      container: holder.current,
-      style: dark ? STYLE_DARK : STYLE_LIGHT,
+      container: host,
+      style,
       language: MAP_LANGUAGE,
       center: [pickup.lng, pickup.lat],
       zoom: 12,
@@ -102,10 +107,13 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
     });
     map.current = instance;
 
-    const paint = () => paintRoute(instance, latest.current);
+    const paint = () => paintRoute(instance, latest.current, host);
     instance.on("load", paint);
-    // **يُعاد بعد كلِّ تبديل سمة**: `setStyle` يمسح المصادرَ والطبقات
-    instance.on("style.load", paint);
+    // **يُعاد بعد كلِّ تبديل سمة**: `setStyle` يمسح المصادرَ والطبقات — **والصبغُ معه** («TaxoMap»)
+    instance.on("style.load", () => {
+      taxoLook(instance, host);
+      paint();
+    });
 
     return () => {
       instance.remove();
@@ -118,8 +126,17 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // **يُبدَّل الستايلُ حين تتبدّل السمةُ لا عند التركيب** (قِيس في المرحلة الثانية): كان يُنادى بالستايل نفسِه أوّلَ مرّة، **و`setStyle`
+  // بالستايل نفسِه «يُفرّق» عليه** — فيعيد ألوانَ Mapbox فوق صبغ «TaxoMap» ولا يطلق `style.load` يعيده (بقيت الخريطةُ الفاتحةُ رماديّة).
+  // **و`diff: false`**: التبديلُ تحميلٌ كاملٌ يطلق `style.load`، فيعود الصبغُ (وما يُرسم عليه) مع كلِّ سمة.
   useEffect(() => {
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+    const instance = map.current;
+    const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+    if (!instance || shown.current === style) return;
+    shown.current = style;
+    // **الحقلان الآخران في نوع `SetStyleOptions` إلزاميّان خطأً** (mapbox-gl 3.28): تمريرُهما `undefined` يمحو خطَّ المحرف المحلّيّ
+    // الافتراضيّ، **فالتحويلُ هنا لا قيمةٌ مخترعة**
+    instance.setStyle(style, { diff: false } as Parameters<mapboxgl.Map["setStyle"]>[1]);
   }, [dark]);
 
   // ── دبّوسا الانطلاق والوجهة ──────────────────────────────────────────────
@@ -149,7 +166,7 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
   useEffect(() => {
     const instance = map.current;
     if (!instance || !instance.isStyleLoaded()) return;
-    paintRoute(instance, route);
+    paintRoute(instance, route, holder.current);
   }, [route]);
 
   // ── الدبّوس الحيّ — **يُنقل ولا يُبنى** ───────────────────────────────────
@@ -190,8 +207,8 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
 
   if (!token) {
     return (
-      <div className="flex h-170 items-center justify-center rounded-14 border border-line bg-surface-2 px-20 text-center">
-        <p className="text-11 leading-note text-muted">
+      <div className="ad-map-off route">
+        <p>
           عقدُ Mapbox غير مفعّل لهذه الدولة، فلا خريطة. والسطورُ تحتها تقول حالَ
           الرحلة وطرفَيها.
         </p>
@@ -199,11 +216,11 @@ export function RouteCanvas({ token, pickup, dropoff, route, position }: Props) 
     );
   }
 
-  return <div ref={holder} className="h-170 w-full rounded-14" />;
+  return <div ref={holder} className="ad-map route" />;
 }
 
 /** يضيف مصدرَ المسار وطبقتَه إن غابا، ثمّ يكتب فيهما — **لا يبنيهما مرّتين**. */
-function paintRoute(instance: mapboxgl.Map, route: RidePoint[]) {
+function paintRoute(instance: mapboxgl.Map, route: RidePoint[], host: HTMLElement | null) {
   const data: GeoJSON.Feature<GeoJSON.LineString> = {
     type: "Feature",
     properties: {},
@@ -232,17 +249,16 @@ function paintRoute(instance: mapboxgl.Map, route: RidePoint[]) {
     // **لونٌ من رمز السمة لا قيمةٌ ثابتة**: السمتان تتبادلان تحت الخطّ، ولونٌ
     // واحدٌ يذوب في إحداهما
     paint: {
-      "line-color": lineColour(),
-      "line-width": 3,
-      "line-opacity": 0.9,
+      "line-color": lineColour(host),
+      "line-width": 4,
+      "line-opacity": 0.95,
     },
   });
 }
 
-/** لونُ الخطّ من متغيّر السمة القائم — و`#2563eb` مخرجٌ لا يقع إلا بلا سمة. */
-function lineColour(): string {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue("--acc")
-    .trim();
-  return value || "#2563eb";
+/** **لونُ الخطّ جمرُ الهوية** (`--t2-accent`، «TaxoMap»: الطريقُ بالجمر) — يُقرأ من الحاوية لا من الجذر: الرموزُ تُعرَّف على `.t2`
+ *  (`body`)، **وقراءتُها من `<html>` كانت تعيد فراغاً فيُرسم الخطُّ بالأزرق الاحتياطيّ** (قِيس في المرحلة الثانية). والاحتياطُ
+ *  مخرجٌ لا يقع إلا بلا رموز. */
+function lineColour(host: HTMLElement | null): string {
+  return tokenColour(host, "--t2-accent") || "#2563eb";
 }

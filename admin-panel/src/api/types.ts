@@ -1503,7 +1503,8 @@ export interface CliqClaim {
   currency: Currency;
   status: "created" | "paid" | "failed" | "cancelled";
   source: "manual" | "acquirer";
-  purpose: "ride" | "wallet_topup" | "subscription";
+  /** **مرآةُ `ProviderOrderPurpose` حرفاً** — كانت `"ride"` ولا `debt`، فتُرسم «debt» خاماً ولا يمسكها المُصرِّف. */
+  purpose: "ride_payment" | "wallet_topup" | "subscription" | "debt";
   failure_reason: string | null;
   created_at: string;
 }

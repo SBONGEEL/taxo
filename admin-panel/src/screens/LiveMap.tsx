@@ -16,6 +16,9 @@
  * **والتحديث بالاستعلام لا بمقبس**: مقبسُ `ws/` يبثّ لصاحب الرحلة وللكبتن
  * المسنَد، ولا قناةَ فيه تجمع دولةً كاملة — وإضافتها تعني بثَّ مواقع الجميع
  * إلى اتصالٍ مفتوح. واستعلامٌ كل خمس ثوانٍ يكفي سؤالاً عن «أين هم الآن».
+ *
+ * **وبلغة TAXO 2.0** (A03 — `design/t2-new/admin/A03-live-map.dc.html`): الخريطةُ بطاقةٌ بلغة «TaxoMap»، والعمودُ إلى جانبها
+ * بثلاثة أعدادٍ بخطّ Unbounded ثمّ القائمتين — **والمنطقُ كما كان حرفاً**: الاستطلاعُ والاختيارُ والتوسيطُ مرّةً عند الاختيار.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,6 +28,8 @@ import { getLiveMap } from "@/api/endpoints";
 import type { LiveDriver, LiveMap, LivePendingRide } from "@/api/types";
 import { LiveCanvas } from "@/components/LiveCanvas";
 import { Shell } from "@/components/Shell";
+import { Badge } from "@/components/ui/Badge";
+import type { Tone } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
@@ -32,6 +37,7 @@ import { useSession } from "@/lib/session";
 import { digits, cn,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 import type { CountryCode } from "@/api/types";
 
 /** مركزُ البداية قبل أن يظهر أحد — العاصمة، كما في تطبيق الراكب. */
@@ -100,12 +106,14 @@ export function LiveMapScreen() {
       title="الخريطة الحيّة"
       subtitle="من في الشارع الآن، والطلبات التي لم يأخذها أحد"
     >
-      <div className="mb-14 flex flex-wrap items-center gap-x-16 gap-y-6 rounded-13 border border-line bg-surface-2 px-14 py-10 text-11.5 text-muted">
-        <span>
+      {/* **فتحُها مُسجَّل — ويُقال ذلك أعلاها** (رأسُ الملفّ): صلاحيةٌ بهذا الاتساع تُعلن عن نفسها لمن يستعملها */}
+      <div className="ad-live-note">
+        <Icon name="visibility" />
+        <span className="ad-live-note-text">
           فتحُ هذه الشاشة مُسجَّلٌ في سجل التدقيق باسمك — فهي تعرض أسماء
           السائقين وأرقامهم ومواقعهم الآنية.
         </span>
-        <span className="ms-auto">
+        <span className="ad-live-note-time">
           {freshAt
             ? `آخر تحديث ${digits(
                 digits(freshAt.toLocaleTimeString(DISPLAY_LOCALE, {
@@ -121,10 +129,14 @@ export function LiveMapScreen() {
       <ErrorNote message={error} />
 
       {data === null ? (
-        <Spinner className="mx-auto" />
+        error ? null : (
+          <div className="ad-sec-loading">
+            <Spinner />
+          </div>
+        )
       ) : (
-        <div className="flex flex-col gap-14 lg:flex-row">
-          <div className="h-live flex-1 overflow-hidden rounded-16 border border-line bg-surface">
+        <div className="ad-live">
+          <div className="ad-live-map">
             <LiveCanvas
               token={token}
               center={CENTER[country]}
@@ -135,15 +147,11 @@ export function LiveMapScreen() {
             />
           </div>
 
-          <aside className="flex h-live flex-col gap-12 overflow-y-auto lg:w-side">
-            <div className="grid grid-cols-3 gap-8">
+          <aside className="ad-live-side" aria-label="القائمتان">
+            <div className="ad-tallies">
               <Tally label="متصلون" value={drivers.length} />
               <Tally label="متفرّغون" value={free} />
-              <Tally
-                label="بانتظار سائق"
-                value={pending.length}
-                tone={pending.length > 0 ? "text-warn" : undefined}
-              />
+              <Tally label="بانتظار سائق" value={pending.length} warn={pending.length > 0} />
             </div>
 
             <Section title="طلبات بانتظار سائق">
@@ -154,7 +162,8 @@ export function LiveMapScreen() {
               )}
             </Section>
 
-            <Section title="السائقون المتصلون">
+            {/* **يملأ العمودَ حين يحمل صفوفاً** فتُمرَّر داخله — وفارغاً بطاقةٌ بسطرها لا لوحٌ أجوف بطول الخريطة */}
+            <Section title="السائقون المتصلون" grow={drivers.length > 0}>
               {drivers.length === 0 ? (
                 <Empty text="لا أحد متصلٌ في هذه الدولة الآن." />
               ) : (
@@ -182,34 +191,51 @@ export function LiveMapScreen() {
 function Tally({
   label,
   value,
-  tone = "text-ink",
+  warn = false,
 }: {
   label: string;
   value: number;
-  tone?: string;
+  warn?: boolean;
 }) {
   return (
-    <div className="rounded-13 border border-line bg-surface p-12 text-center">
-      <div className={cn("text-20 font-bold", tone)}>
-        {digits(String(value))}
-      </div>
-      <div className="mt-3 text-10.5 text-muted">{label}</div>
+    <div className={warn ? "ad-tally warn" : "ad-tally"}>
+      <span className="ad-num">{digits(String(value))}</span>
+      <span className="ad-tally-label">{label}</span>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+  grow = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  grow?: boolean;
+}) {
   return (
-    <section className="rounded-16 border border-line bg-surface p-14">
-      <h2 className="mb-10 text-12.5 font-bold text-ink">{title}</h2>
-      <div className="flex flex-col gap-8">{children}</div>
+    <section className={grow ? "ad-live-sec grow" : "ad-live-sec"}>
+      <h2 className="ad-live-sec-title">{title}</h2>
+      <div className="ad-live-list">{children}</div>
     </section>
   );
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-11.5 text-muted">{text}</p>;
+  return <p className="ad-mini-empty">{text}</p>;
 }
+
+const STATE_LABEL: Record<LiveDriver["state"], string> = {
+  on_ride: "في رحلة",
+  stale: "بثُّه توقّف",
+  available: "متفرّغ",
+};
+const STATE_TONE: Record<LiveDriver["state"], Tone> = {
+  on_ride: "ok",
+  stale: "warn",
+  available: "muted",
+};
 
 function DriverRow({
   driver,
@@ -225,63 +251,44 @@ function DriverRow({
       type="button"
       aria-pressed={selected}
       onClick={onPick}
-      className={cn(
-        "rounded-13 border p-11 text-start",
-        selected ? "border-ink bg-stripe-a" : "border-line",
-      )}
+      className={cn("ad-live-row", selected && "on")}
     >
-      <div className="flex items-baseline justify-between gap-8">
-        <span className="text-12.5 font-semibold text-ink">{driver.name}</span>
-        <span
-          className={cn(
-            "text-10.5 font-semibold",
-            driver.state === "on_ride"
-              ? "text-ok"
-              : driver.state === "stale"
-                ? "text-warn"
-                : "text-muted",
-          )}
-        >
-          {driver.state === "on_ride"
-            ? "في رحلة"
-            : driver.state === "stale"
-              ? "بثُّه توقّف"
-              : "متفرّغ"}
-        </span>
-      </div>
+      <span className="ad-live-row-top">
+        <span className="ad-live-row-name">{driver.name}</span>
+        <Badge tone={STATE_TONE[driver.state]}>{STATE_LABEL[driver.state]}</Badge>
+      </span>
       {/* الرقمُ كما هو: المشرف يطلبه أو يقارنه بما يقوله الكبتن، وتعريبُ
           خاناته يجعله يطابق سلسلةً بشكلٍ آخر — الأرقام الهندية للكميّات لا
           للمعرّفات، كما في `Cards.tsx` و`Vehicle.tsx` عند الكبتن */}
-      <div className="mt-3 text-11 text-muted" dir="ltr">
+      <span className="ad-live-row-line ad-ltr" dir="ltr">
         {driver.phone}
-      </div>
+      </span>
       {/* **«منذ كم» لا «متى»**: اللوحةُ تُستفتى كلَّ خمس ثوانٍ، والمشرفُ
           يسأل عن الطزاجة لا عن التوقيت. و`null` تُقرأ «غيرُ معلوم» */}
-      <div className="mt-3 text-10.5 text-muted">
+      <span className="ad-live-row-line">
         {driver.seconds_since_update === null
           ? "آخر بثّ: غير معلوم"
           : `آخر بثّ منذ ${digits(String(driver.seconds_since_update))} ثانية`}
-      </div>
-      <div className="mt-3 text-10.5 text-muted">
+        {" · "}
         {CATEGORY_LABEL[driver.vehicle_category] ?? driver.vehicle_category}
         {driver.plate_number ? ` · ${driver.plate_number}` : ""}
-      </div>
+      </span>
     </button>
   );
 }
 
 function PendingRow({ ride }: { ride: LivePendingRide }) {
   return (
-    <div className="rounded-13 border border-warn bg-surface-2 p-11">
-      <div className="flex items-baseline justify-between gap-8">
-        <span className="text-11.5 font-semibold text-ink">
+    <div className="ad-live-row wait">
+      <span className="ad-live-row-top">
+        <span className="ad-live-row-name">
           {ride.status === "searching" ? "يُعرض على سائق" : "طلبٌ جديد"}
         </span>
-        <span className="text-10.5 text-muted">{sinceLabel(ride.created_at)}</span>
-      </div>
-      <div className="mt-3 text-10.5 text-muted" dir="ltr">
+        <span className="ad-live-row-since">{sinceLabel(ride.created_at)}</span>
+      </span>
+      <span className="ad-live-row-line ad-ltr" dir="ltr">
         {ride.lat.toFixed(4)}, {ride.lng.toFixed(4)}
-      </div>
+      </span>
     </div>
   );
 }

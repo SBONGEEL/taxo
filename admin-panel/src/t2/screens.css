@@ -1,4 +1,4 @@
-/* ═══ لوحةُ الإدارة — الشاشات (A01 · A02 · A05 · A09 · AM01) ═══════════════════════════════════════════
+/* ═══ لوحةُ الإدارة — الشاشات (A01 · A02 · A03 · A04 · A05 · A07 · A08 · A09 · AM01) ═══════════════════════════════════════════
  *
  * **تخطيطُ كلِّ شاشةٍ وحدَه** — مواضعُ ومسافاتٌ ومقاساتٌ من لوحاتها في `design/t2-new/admin/` — **بالرموز وحدَها**. وما احتاجته
  * شاشتان صار في `kit.css`.
@@ -414,3 +414,173 @@
 .ad-mpay-empty-hint { margin: 4px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
 .ad-mpay-loading { display: flex; justify-content: center; padding: 24px 0; }
 .ad-mpay-foot { margin: 16px 2px 0; font-size: 12px; line-height: 1.7; color: var(--t2-muted); }
+
+/* ═══ A03 — الخريطة الحيّة ════════════════════════════════════════════════════════════════════════ */
+.ad-live-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+}
+.ad-live-note > .t2-icon { flex: none; font-size: 18px; color: var(--t2-muted); }
+.ad-live-note-text { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.ad-live-note-time { flex: none; font-size: 12px; color: var(--t2-muted); white-space: nowrap; }
+.ad-live-note + .ad-note { margin-bottom: 12px; }
+/* **لوحان بارتفاعٍ واحد** (`h-live` كان ٦٢٠): الخريطةُ تملأ ما بقي، والعمودُ ٣٤٠ — **وقائمةُ السائقين وحدَها تُمرَّر** داخله */
+.ad-live { display: flex; gap: 14px; height: 640px; }
+.ad-live-map { position: relative; flex: 1; min-width: 0; overflow: hidden; border-radius: 22px; background: var(--t2-map-land); }
+.ad-live-side { display: flex; width: 340px; flex: none; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
+.ad-tallies { display: grid; flex: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ad-tally { padding: 12px 8px; border-radius: 18px; background: var(--t2-surface); text-align: center; }
+.ad-tally .ad-num { display: block; font-size: 22px; }
+.ad-tally.warn .ad-num { color: var(--t2-warning); }
+.ad-tally-label { display: block; margin-top: 3px; font-size: 11.5px; color: var(--t2-muted); }
+.ad-live-sec { flex: none; padding: 14px; border-radius: 20px; background: var(--t2-surface); }
+.ad-live-sec.grow { display: flex; flex: 1 0 180px; min-height: 0; flex-direction: column; }
+.ad-live-sec-title { margin: 0 0 10px; font-size: 14px; font-weight: 700; }
+.ad-live-list { display: flex; flex-direction: column; gap: 8px; }
+.ad-live-sec.grow .ad-live-list { flex: 1; min-height: 0; overflow-y: auto; }
+.ad-live-row {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 3px;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+}
+button.ad-live-row { cursor: pointer; }
+button.ad-live-row:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.ad-live-row.on { border-color: var(--t2-accent); background: var(--t2-accent-soft); }
+.ad-live-row.wait { border-color: var(--t2-warning-line, var(--t2-line)); }
+@media (hover: hover) {
+  button.ad-live-row:not(.on):hover { border-color: var(--t2-line); }
+}
+.ad-live-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ad-live-row-name { min-width: 0; overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ad-live-row-since { flex: none; font-size: 11.5px; color: var(--t2-muted); }
+.ad-live-row-line { font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
+/* **تحت ١٢٨٠ الخريطةُ بعرض الصفحة** — قِيس على ١٠٢٤: بجانب عمود ٣٤٠ بقي لها ٣٥٤ بكسلاً، شريطٌ طويلٌ ضيّق. فالقائمتان تحتها
+   متجاورتان، **وتحت ٧٦٨ واحدةٌ فوق الأخرى — والصفحةُ هي ما يُمرَّر**، لا صندوقٌ داخل صندوق */
+@media (max-width: 1279px) {
+  .ad-live { height: auto; flex-direction: column; }
+  .ad-live-map { flex: none; height: 420px; }
+  .ad-live-side { display: grid; width: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; overflow: visible; }
+  .ad-tallies { grid-column: 1 / -1; }
+  .ad-live-sec.grow .ad-live-list { overflow: visible; }
+}
+@media (max-width: 767px) {
+  .ad-live-side { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 639px) {
+  .ad-live-note { flex-wrap: wrap; align-items: flex-start; }
+  .ad-live-note-time { flex-basis: 100%; padding-inline-start: 30px; }
+  .ad-live-map { height: 320px; border-radius: 20px; }
+}
+
+/* ═══ A04 — سجل الرحلات ═══════════════════════════════════════════════════════════════════════════
+   **عرضٌ أدنى للجدولين العريضين** (الرحلاتُ ثمانيةُ أعمدة، والنزاعاتُ ستّة): على ١٠٢٤ ضاقت حتى قُصّ المعرّفُ والاسمُ في كلِّ صفّ
+   (قِيس) — فيُمرَّران أفقياً داخل بطاقتهما. **وعلى الهاتف بطاقاتٌ بلا حدّ** كبقية الجداول */
+.ad-rides-table .ad-table-head,
+.ad-rides-table .ad-table-row { min-width: 60rem; }
+.ad-disputes-table .ad-table-head,
+.ad-disputes-table .ad-table-row { min-width: 52rem; }
+@media (max-width: 639px) {
+  .ad-rides-table .ad-table-head,
+  .ad-rides-table .ad-table-row,
+  .ad-disputes-table .ad-table-head,
+  .ad-disputes-table .ad-table-row { min-width: 0; }
+}
+
+/* ── ورقةُ التفاصيل (A04b) — أرضُ الصفحة، والأقسامُ بطاقاتٌ عليها ── */
+.ad-modal-box.ad-sheet { display: flex; width: 640px; flex-direction: column; padding: 0; overflow: hidden; background: var(--t2-bg); }
+.ad-sheet-head { display: flex; flex: none; align-items: flex-start; gap: 12px; padding: 20px 24px 12px; }
+.ad-sheet-titles { flex: 1; min-width: 0; }
+.ad-sheet-id { margin: 0; font-family: var(--t2-font-num); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; text-align: right; }
+.ad-sheet-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--t2-muted); }
+.ad-sheet-body { flex: 1; min-height: 0; padding: 0 24px calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+.ad-sheet .ad-dh { margin: 16px 0 8px; font-size: 14px; }
+.ad-sheet-map { margin-bottom: 8px; }
+.ad-sheet-map .ad-map.route,
+.ad-sheet-map .ad-map-off.route { height: 200px; border-radius: 16px; }
+/* صفوفُ مفتاحٍ وقيمة في بطاقة — والتلميحُ تحت القيمة */
+.ad-kv { padding: 2px 14px; border-radius: 16px; background: var(--t2-surface); }
+.ad-kv-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--t2-divider); }
+.ad-kv-row:last-child { border-bottom: 0; }
+.ad-kv-label { flex: none; width: 150px; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.ad-kv-value { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.ad-kv-hint { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.5; color: var(--t2-muted); }
+.ad-kv-pad { padding: 10px 0; }
+.ad-kv-text { margin: 0; padding: 10px 0; font-size: 13.5px; line-height: 1.7; }
+.ad-stops { margin: 4px 0 8px; padding: 12px; border-radius: 12px; background: var(--t2-bg); }
+.ad-stops-title { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; }
+.ad-stops-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ad-stop { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ad-stop-main { flex: 1; min-width: 0; }
+.ad-stop-name { display: block; font-size: 12.5px; }
+.ad-stop-amount { display: block; font-size: 12.5px; font-weight: 600; }
+.ad-stop-when { display: block; font-size: 11.5px; color: var(--t2-muted); }
+.ad-stop-side { flex: none; text-align: end; }
+.ad-pay-status { flex: none; font-size: 12px; font-weight: 700; }
+@media (max-width: 639px) {
+  .ad-sheet-head { padding: 18px 16px 10px; }
+  .ad-sheet-body { padding-inline: 16px; }
+  .ad-kv-label { width: 112px; }
+}
+
+/* ═══ A07 — النزاعات والدعم ═══════════════════════════════════════════════════════════════════════ */
+.ad-reason { display: flex; min-width: 0; flex-direction: column; }
+.ad-reason-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-reason-sub { font-size: 11.5px; line-height: 1.5; color: var(--t2-muted); }
+.ad-resolve-dl { margin: 0 0 14px; padding: 6px 14px; border-radius: 14px; background: var(--t2-bg); }
+.ad-resolve-dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; }
+.ad-resolve-dl dt { flex: none; font-size: 12.5px; color: var(--t2-muted); }
+.ad-resolve-dl dd { margin: 0; min-width: 0; font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.ad-resolve-reason { margin: 0 0 14px; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
+@media (max-width: 639px) {
+  /* **في البطاقة يُقرأ السببُ كاملاً** — القصُّ يناسب عموداً ضيّقاً لا سطراً بعرض الهاتف */
+  .ad-reason-main { white-space: normal; }
+}
+
+/* ═══ A08 — بلاغات الصور ═════════════════════════════════════════════════════════════════════════ */
+.ad-reports-page { display: flex; flex-direction: column; gap: 12px; }
+.ad-reports { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ad-report { display: flex; min-width: 0; gap: 16px; padding: 16px; border-radius: 22px; background: var(--t2-surface); }
+.ad-report-photo {
+  display: grid;
+  width: 112px;
+  height: 112px;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-bg);
+  color: var(--t2-line);
+}
+.ad-report-photo .t2-icon { font-size: 56px; }
+.ad-report-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ad-report-body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
+.ad-report-name { margin: 0; overflow: hidden; font-size: 16px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ad-report-line { margin: 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+.ad-report-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ad-report-actions .ad-btn { width: auto; }
+.ad-reports-empty { padding: 36px 16px; border-radius: 22px; background: var(--t2-surface); text-align: center; }
+@media (max-width: 1099px) {
+  .ad-reports { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 639px) {
+  .ad-report { gap: 12px; padding: 14px; border-radius: 20px; }
+  .ad-report-photo { width: 88px; height: 88px; border-radius: 16px; }
+  .ad-report-actions .ad-btn { flex: 1; }
+}
