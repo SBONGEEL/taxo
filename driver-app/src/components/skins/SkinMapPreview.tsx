@@ -62,6 +62,8 @@ export function SkinMapPreview({
   const host = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  // **السِمةُ التي رُسمت بها الخريطةُ فعلاً** — فلا يُعاد النمطُ نفسُه عند التركيب (انظر أثرَ `dark` أدناه)
+  const applied = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (!token || !host.current || map.current) return;
@@ -75,6 +77,7 @@ export function SkinMapPreview({
       interactive: false,
       attributionControl: false,
     });
+    applied.current = dark;
     return () => {
       marker.current?.remove();
       marker.current = null;
@@ -84,8 +87,13 @@ export function SkinMapPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // **النمطُ يتبدّل حين تتبدّل السِمةُ وحدَه** — لا عند التركيب: كان هذا الأثرُ يجري بعد إنشاء الخريطة بالنمط نفسِه فيعيد
+  // `setStyle` والنمطُ يُحمَّل، فترمي mapbox «Cannot read properties of undefined (reading 'get')» من `getImage` إلى تقارير
+  // الأعطال كلَّما فُتحت ورقةُ مركبة (قِيس ٢٠٢٦-١٠-٠٦) — والعيبُ نفسُه أصلحه وكيلُ اللوحة في خرائطها
   useEffect(() => {
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+    if (!map.current || applied.current === null || applied.current === dark) return;
+    applied.current = dark;
+    map.current.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
   }, [dark]);
 
   useEffect(() => {
