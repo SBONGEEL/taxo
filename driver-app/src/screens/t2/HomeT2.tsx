@@ -101,6 +101,8 @@ export function HomeT2Screen() {
     steps,
     thresholdM,
     eta,
+    approachNow,
+    offerMinutes,
     instruction,
     covered,
     run,
@@ -361,6 +363,7 @@ export function HomeT2Screen() {
       {offer ? (
         <OfferT2
           offer={offer}
+          minutes={offerMinutes}
           currencyLabel={currency}
           categoryLabel={CATEGORY_LABEL[offer.ride.vehicle_category]}
           busy={busy}
@@ -392,6 +395,7 @@ export function HomeT2Screen() {
           position={position}
           routeLine={routeLine}
           eta={eta}
+          approachNow={approachNow}
           genderPreference={profile?.driver.gender_preference ?? "any"}
           sheetRef={sheetRef}
           onAdvance={() => void advance()}

@@ -42,6 +42,8 @@ interface Props {
   position: Coordinates | null;
   routeLine: number[][] | null;
   eta: number | null;
+  /** **ما بقي من الاقتراب** (§٦٢-ج/١٠) — دقائقُه ومسافتُه على خطّه؛ و`null` حيث لا مسار (المفتاحُ مطفأ). */
+  approachNow?: { minutes: number; km: number } | null;
   genderPreference: GenderPreference;
   /** الورقةُ تُقاس — فتنتهي الخريطةُ تحت حافّتها كما رُسمت (`HomeT2`). */
   sheetRef: (element: HTMLElement | null) => void;
@@ -64,6 +66,7 @@ export function RideT2({
   position,
   routeLine,
   eta,
+  approachNow = null,
   genderPreference,
   sheetRef,
   onAdvance,
@@ -131,7 +134,7 @@ export function RideT2({
           <TripHead ride={ride} currencyLabel={currencyLabel} position={position} routeLine={routeLine} eta={eta} />
         ) : (
           <div className="t2-rd-head">
-            <ApproachHead ride={ride} position={position} title={phase.title} />
+            <ApproachHead ride={ride} position={position} title={phase.title} approachNow={approachNow} />
             {mapTarget ? (
               <button
                 type="button"
@@ -287,8 +290,33 @@ export function RideT2({
 
 /** رأسُ الطريق إلى الراكب — **المسافةُ المستقيمةُ من موقعه إلى نقطة الالتقاء** (كمسافة العرض)، أو عنوانُ الطور حين لا
  *  موقعَ ولا معنى للمسافة («بانتظار الراكب» وهو عندها). */
-function ApproachHead({ ride, position, title }: { ride: Ride; position: Coordinates | null; title: string }) {
+function ApproachHead({
+  ride,
+  position,
+  title,
+  approachNow,
+}: {
+  ride: Ride;
+  position: Coordinates | null;
+  title: string;
+  approachNow: { minutes: number; km: number } | null;
+}) {
   const km = ride.status === "accepted" && position ? metersBetween(position, ride.pickup) / 1000 : null;
+  // **«4 د · 1.2 كم» كما رُسم في C06** حين يُعرف الاقتراب (§٦٢-ج/١٠) — المسافةُ على الطريق لا مستقيمة
+  if (ride.status === "accepted" && approachNow) {
+    return (
+      <div className="t2-rd-head-main">
+        <div className="t2-rd-big">
+          <span className="t2-rd-big-num" dir="ltr">
+            {digits(String(approachNow.minutes))}
+          </span>
+          <span className="t2-rd-big-unit">د</span>
+          <span className="t2-rd-big-unit">· {digits(approachNow.km.toFixed(1))} كم</span>
+        </div>
+        <div className="t2-rd-caption">إلى نقطة الالتقاء</div>
+      </div>
+    );
+  }
   return (
     <div className="t2-rd-head-main">
       {km !== null ? (

@@ -30,8 +30,10 @@ import {
   completeRide,
   resumeFromStop,
   declineRide,
+  getApproach,
   getEarnings,
   getMyProgress,
+  getOfferRoute,
   getMySubscription,
   getRouteLine,
   getStorefront,
@@ -52,7 +54,9 @@ import type {
 } from "@/api/types";
 import { listNearbyColleagues } from "@/api/endpoints";
 import { useGarage } from "@/lib/garage";
+import type { ApproachRoute } from "@/api/endpoints";
 import {
+  approachLeft,
   etaMinutes,
   offRouteMeters,
   OFF_ROUTE_METERS,
@@ -238,6 +242,43 @@ export function useHomeScreen() {
   // **والعتبةُ من الخلفية لا ثابتٌ هنا** (§17.3): رقمٌ في التطبيق يفترق عن
   // الخلفية أوّلَ تعديل. وفارغةٌ حالٌ صحيحة: المفتاحُ مطفأٌ فلا شريط
   const [steps, setSteps] = useState<RouteStep[]>([]);
+  // **مسارُ الاقتراب** (§٦٢-ج/١٠): يُقرأ مرّةً لرحلةٍ في طريقها إلى الراكب — **ومنه وحدَه وقتُ الطريق إليه وتعليماتُه وخطُّه**: كان
+  // الوقتُ يُحسب على خطِّ الرحلة إلى الوجهة والكبتنُ لم يبلغ بدايتَه (`TAXO2-DESIGN-CORRECTIONS` §٣٥). ومطفأً (`eta_enabled`) لا مسار
+  const approachingId = isActive(ride) && ride.status === "accepted" ? ride.id : null;
+  const [approach, setApproach] = useState<ApproachRoute | null>(null);
+  useEffect(() => {
+    if (!approachingId) {
+      setApproach(null);
+      return;
+    }
+    let cancelled = false;
+    getApproach(approachingId)
+      .then((route) => {
+        if (!cancelled) setApproach(route.points.length >= 2 ? route : null);
+      })
+      // **و٤٠٤ حالٌ صحيحة** (المفتاحُ مطفأ): الرأسُ يقول المسافةَ المستقيمةَ كما كان
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [approachingId]);
+  const activeSteps = approachingId && approach ? approach.steps : steps;
+  // **ومسارُ العرض** (C05 «4 د حتى الراكب») — يُطلب بعد أن يصل العرضُ فلا ينتظره، ويصير اقترابَه إن قَبِل وهو طازج
+  const offerId = offer?.ride.id ?? null;
+  const [offerMinutes, setOfferMinutes] = useState<number | null>(null);
+  useEffect(() => {
+    setOfferMinutes(null);
+    if (!offerId) return;
+    let cancelled = false;
+    getOfferRoute(offerId)
+      .then((route) => {
+        if (!cancelled) setOfferMinutes(Math.max(1, Math.ceil(route.duration_min)));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [offerId]);
   const [thresholdM, setThresholdM] = useState(OFF_ROUTE_METERS);
 
   // **الوصولُ المتوقَّع يُحسب هنا ولا يُطلب** (البند ١٧-٣): المسافةُ من الخطّ
@@ -260,11 +301,11 @@ export function useHomeScreen() {
   const backOn = useRef(0);
   const [instruction, setInstruction] = useState<NextInstruction | null>(null);
   useEffect(() => {
-    if (!position || steps.length === 0) {
+    if (!position || activeSteps.length === 0) {
       setInstruction(null);
       return;
     }
-    const found = nextInstruction(steps, position, thresholdM);
+    const found = nextInstruction(activeSteps, position, thresholdM);
     if (found === null) {
       backOn.current = 0;
       setInstruction(null);
@@ -272,7 +313,7 @@ export function useHomeScreen() {
     }
     backOn.current += 1;
     if (backOn.current >= BACK_ON_ROUTE_STREAK) setInstruction(found);
-  }, [position, steps, thresholdM]);
+  }, [position, activeSteps, thresholdM]);
 
   const drift = useRef(0);
   const [reroutesLeft, setReroutesLeft] = useState<number | null>(null);
@@ -442,10 +483,14 @@ export function useHomeScreen() {
     currencyCode,
     currency,
     colleagues,
-    routeLine,
-    steps,
+    // **في الطريق إلى الراكب يُرسم الاقتراب** إن وُجد — وبعد الالتقاء خطُّ الرحلة (§٦٢-ج/١٠)
+    routeLine: approachingId && approach ? approach.points : routeLine,
+    steps: activeSteps,
     thresholdM,
-    eta,
+    // **ولا وقتَ إلى الوجهة قبل الالتقاء** (§٣٥) — وقتُ الاقتراب في `approachNow`
+    eta: approachingId ? null : eta,
+    approachNow: approachingId ? approachLeft(approach, position) : null,
+    offerMinutes,
     instruction,
     covered,
     run,

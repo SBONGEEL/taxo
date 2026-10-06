@@ -6,7 +6,8 @@
  *
  * **وما رسمته اللوحةُ ولا مصدرَ له لا يُرسم مكانَه شيء** (§٦١-د/د):
  * - **«كاش»**: طريقةُ الدفع يختارها الراكبُ بعد الرحلة (§6) — لا تُعرف لحظةَ العرض (`methodLabel={null}` في الشاشة القائمة).
- * - **«4 د» حتى الراكب**: لا مهلةَ قيادةٍ إليه في العرض — المسافةُ وحدَها (`distance_to_pickup_km`).
+ * - **«4 د» حتى الراكب بُني** (§٦٢-ج/١٠): مسارُ العرض يُطلب بعد أن يصل العرضُ (`getOfferRoute`) فيُضاف حين يُعرف — **وحيث
+ *   المفتاحُ مطفأٌ تبقى المسافةُ وحدَها** كما كانت.
  * - **صفُّ الراكب** («ليلى · 4.8 · 36 رحلة»): **العرضُ لا يحمل هويةَ الراكب** عمداً (الشاشةُ القائمة) — لا اسمَ ولا تقييم.
  *
  * **وما في الشاشة القائمة ولم يُرسم — باقٍ بلغة اللوحة**: شاراتُ الطلب (نسائي · مشتركة · محجوزة · المحطات · مبلغٌ لكبتنٍ
@@ -24,6 +25,7 @@ const DASH = 157;
 
 export function OfferT2({
   offer,
+  minutes = null,
   currencyLabel,
   categoryLabel,
   busy,
@@ -32,6 +34,8 @@ export function OfferT2({
   onDecline,
 }: {
   offer: Offer;
+  /** **دقائقُ الطريق إلى الراكب** من مسار العرض (§٦٢-ج/١٠) — و`null` حتى تُعرف أو حيث المفتاحُ مطفأ. */
+  minutes?: number | null;
   currencyLabel: string;
   categoryLabel: string;
   busy: boolean;
@@ -96,7 +100,7 @@ export function OfferT2({
 
           <div className="t2-of-near">
             <Icon name="near_me" />
-            {digits(offer.distanceKm.toFixed(1))} كم حتى الراكب
+            {digits(offer.distanceKm.toFixed(1))} كم{minutes !== null ? ` · ${digits(String(minutes))} د` : ""} حتى الراكب
           </div>
 
           <div className="t2-of-route">

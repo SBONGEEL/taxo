@@ -98,6 +98,19 @@ export function etaMinutes(
   return Math.max(1, Math.round(meters / speed / 60));
 }
 
+/** **ما بقي من الاقتراب** (§٦٢-ج/١٠): المسافةُ على خطّه، والوقتُ **نسبتُها من مدّته كما قالها المزوّد** — فلا ينتظر سرعةً تُقاس
+ *  ولا يسأل الخادمَ ثانيةً. **ودقيقةٌ واحدةٌ حدٌّ أدنى** كـ`etaMinutes`. */
+export function approachLeft(
+  route: { points: number[][]; duration_min: number; distance_km: number } | null,
+  at: Coordinates | null,
+): { minutes: number; km: number } | null {
+  if (!route || !at || route.distance_km <= 0) return null;
+  const meters = remainingMeters(route.points, at);
+  if (meters === null) return null;
+  const share = Math.min(1, meters / (route.distance_km * 1000));
+  return { minutes: Math.max(1, Math.round(share * route.duration_min)), km: meters / 1000 };
+}
+
 /** كم يبعد الكبتنُ عن الخطّ بالأمتار — **مقياسُ الانحراف** (البند ١٧-٤). */
 export function offRouteMeters(
   points: number[][] | null,

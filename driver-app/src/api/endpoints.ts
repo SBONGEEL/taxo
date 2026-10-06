@@ -398,6 +398,21 @@ export const getMyReferrals = () =>
  * **مجمَّدٌ على الرحلة منذ القبول**، فقراءتُه ثانيةً تعيد الشيءَ نفسَه — ولا
  * يُطلب مسارٌ جديدٌ لحركة الكبتن: التقدّمُ قصٌّ في التطبيق لا نداءٌ لكل بثّة.
  */
+/** **مسارُ الكبتن إلى الراكب** (§٦٢-ج/١٠) — للعرض (C05) والاقتراب (C06): `[[lng, lat]…]` ومدّتُه ومسافتُه كما قالهما المزوّد،
+ *  والخطواتُ للكبتن (فارغةٌ حيث شريطُ التعليمة مطفأ). **والوقتُ المتبقّي يُحسب في الجهاز** لا بسؤالٍ ثانٍ. */
+export interface ApproachRoute {
+  points: number[][];
+  steps: RouteStep[];
+  duration_min: number;
+  distance_km: number;
+}
+
+/** مسارُ العرض — **لمن عُرض عليه وحدَه ما دام العرضُ قائماً**، ويُطلب بعد وصوله فلا ينتظره. */
+export const getOfferRoute = (rideId: string) => api.get<ApproachRoute>(`/rides/${rideId}/offer-route`);
+
+/** مسارُ الاقتراب — مخزَّنٌ من لحظة القبول (مسارُ العرض نفسُه إن كان طازجاً)، و٤٠٤ حيث المفتاحُ مطفأ. */
+export const getApproach = (rideId: string) => api.get<ApproachRoute>(`/rides/${rideId}/approach`);
+
 export const getRouteLine = (rideId: string) =>
   api.get<{
     points: number[][];
