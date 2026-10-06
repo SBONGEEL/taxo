@@ -941,6 +941,8 @@ div.t2-srow { cursor: default; }
 }
 .t2-store-chip.on { border-color: var(--t2-text); background: var(--t2-text); color: var(--t2-bg); font-weight: 700; }
 .t2-store-done { margin: 12px 2px 0; font-size: 13px; font-weight: 600; color: var(--t2-success); }
+/* **«فعّلها الآن»** تحت رسالة الشراء (§٦٢-ج/٤٠) — فعلٌ ثانٍ بزرٍّ ثانويٍّ لا بالجمر: الجمرُ للشراء */
+.t2-store-activate { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; }
 .t2-store .t2-note { margin: 12px 2px 0; }
 .t2-store-empty { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; }
 .t2-store-empty b { color: var(--t2-text); }

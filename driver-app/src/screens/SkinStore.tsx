@@ -36,7 +36,7 @@ const PAGE = 48;
  * فالشاشتان ترسمان، والخطّافُ يفعل. */
 export function useSkinStoreScreen() {
   const goBack = useGoBack();
-  const { enabled, refresh: refreshGarage } = useGarage();
+  const { enabled, refresh: refreshGarage, activate } = useGarage();
   const [store, setStore] = useState<SkinStorePayload | null>(null);
   /** **الصفحاتُ متراكمةٌ خارج `store`**: الأخيرُ يحمل الرصيدَ والمجموع، وهذه
    *  تحمل ما عُرض حتى الآن — وخلطُهما يجعل كلَّ صفحةٍ تمحو ما قبلها. */
@@ -51,6 +51,10 @@ export function useSkinStoreScreen() {
   const [busy, setBusy] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  // **ما اشتُري للتوّ — و«فعّلها الآن» فعلٌ ثانٍ صريح** (§٦٢-ج/٤٠): لا تفعيلَ تلقائيّ، والتفعيلُ بابُ «مركباتي» نفسُه (`activate`)
+  const [bought, setBought] = useState<VehicleSkin | null>(null);
+  const [activating, setActivating] = useState(false);
+  const [activateError, setActivateError] = useState<string | null>(null);
 
   /** **يُعاد من الصفر** — بعد شراءٍ مثلاً: الصفحاتُ المتراكمةُ تُستبدل ولا
    *  تُلحَق، وإلا ظهرت المركبةُ مرّتين (المشتراةُ ومكانُها القديم). */
@@ -116,6 +120,8 @@ export function useSkinStoreScreen() {
           result.balance_after,
         )} ${CURRENCY_LABEL[result.currency]}`,
       );
+      setBought(result.skin);
+      setActivateError(null);
       await Promise.all([load(), refreshGarage()]);
     } catch (caught) {
       // **نصُّ الخلفية كما هو** (§17): «رصيدٌ غيرُ كافٍ» و«نفدت الكمية»
@@ -125,6 +131,23 @@ export function useSkinStoreScreen() {
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** «فعّلها الآن» — **بالباب الذي يفعّل به «مركباتي»** (`useGarage().activate`) لا ببابٍ ثانٍ؛ ورفضُه يُقال بنصّ الخلفية. */
+  async function activateBought() {
+    const skin = bought;
+    if (!skin) return;
+    setActivating(true);
+    setActivateError(null);
+    try {
+      await activate(skin.id);
+      setBought(null);
+      setDone(`صارت «${skin.name}» مركبتَك على الخريطة`);
+    } catch (caught) {
+      setActivateError(caught instanceof ApiError ? caught.message : "تعذّر التفعيل");
+    } finally {
+      setActivating(false);
     }
   }
 
@@ -146,6 +169,10 @@ export function useSkinStoreScreen() {
     setBuyError,
     done,
     confirm,
+    bought,
+    activating,
+    activateError,
+    activateBought,
   };
 }
 

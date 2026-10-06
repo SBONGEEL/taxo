@@ -11,7 +11,8 @@
  * **والمرشِّحاتُ الندرةُ بأسمائها**: تُخفي ولا ترتّب، ووصفُ الندرة (رأسُ قسمها القائم) يظهر حين يُختار مرشِّحُها.
  *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`design/TAXO2-DESIGN-CORRECTIONS.md` §٢٧):
- * - **«شراء وتفعيل»**: الشراءُ لا يفعّل (`vehicle_skins.buy`) — والتفعيلُ بابُه «مركباتي»؛ فالزرُّ «شراء».
+ * - **«شراء وتفعيل»**: **لا تفعيلَ تلقائيّ** (§٦٢-ج/٤٠) — الزرُّ «شراء»، **وبعده «فعّلها الآن» فعلٌ ثانٍ صريح** بالباب الذي يفعّل
+ *   به «مركباتي» (`activateBought`). فالمالُ فعلٌ والتفعيلُ فعلٌ — ولا يقع الثاني بضغطة الأول.
  * - **«خصم الذهبي 10%» والسعرُ المشطوب «3.000»**: لا خصمَ بالمستوى في المتجر ولا حقلَ له.
  * - **«بلاتيني» على المقفولة**: اسمُ المستوى لا يصل في جواب المتجر — فالشارةُ سببُ المنع بنصّه (`BLOCKED_LABEL`).
  * - **فئاتُ «كلاسيك · فاخرة · محدودة»**: لا فئاتَ بهذه الأسماء — المرشِّحاتُ **الندرةُ بأسمائها** و«مملوكة».
@@ -186,6 +187,27 @@ export function SkinStoreT2Screen() {
           </p>
         ) : null}
         {s.done ? <p className="t2-store-done">{s.done}</p> : null}
+        {s.bought ? (
+          <button
+            type="button"
+            className="t2-button secondary t2-store-activate"
+            disabled={s.activating}
+            onClick={() => void s.activateBought()}
+          >
+            <span className="t2-icon" aria-hidden="true">
+              bolt
+            </span>
+            فعّلها الآن
+          </button>
+        ) : null}
+        {s.activateError ? (
+          <p className="t2-note danger" role="alert">
+            <span className="t2-icon" aria-hidden="true">
+              error
+            </span>
+            {s.activateError}
+          </p>
+        ) : null}
 
         {s.skins.length === 0 && !s.failed ? (
           <div className="t2-empty t2-store-empty">
