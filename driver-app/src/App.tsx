@@ -82,6 +82,9 @@ const RegisterDocumentsScreen = lazy(() =>
 const SettingsT2Screen = lazy(() =>
   import("@/screens/t2/SettingsT2").then((m) => ({ default: m.SettingsT2Screen })),
 );
+const WomenModeT2Screen = lazy(() =>
+  import("@/screens/t2/WomenModeT2").then((m) => ({ default: m.WomenModeT2Screen })),
+);
 const MissionsT2Screen = lazy(() =>
   import("@/screens/t2/MissionsT2").then((m) => ({ default: m.MissionsT2Screen })),
 );
@@ -598,6 +601,15 @@ export default function App() {
                           element={
                             <Guarded>
                               <SettingsT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **الوضعُ النسائيّ** (CW1، §٦٢-ج/٢٣) — من صفِّه في «الإعدادات» وشارته في الرئيسية، **وبلا شريطٍ كالإعدادات** */}
+                        <Route
+                          path="/account/settings/women"
+                          element={
+                            <Guarded>
+                              <WomenModeT2Screen />
                             </Guarded>
                           }
                         />

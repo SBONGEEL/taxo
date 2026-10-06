@@ -1,0 +1,217 @@
+/* ═══ TAXO 2.0 — الخدمةُ النسائيةُ عند الراكبة: R15 (بطاقتُها) · RW1 · RW2 · RW3 · RW4 — **تخطيطُها وحدَه** ═══
+ *
+ * **بالرموز وحدَها** (`src/taxo2/tokens.css`) فتعمل في الفاتح والداكن والنسائيّ: البرقوقُ `--t2-women` وخافتُه وحافّتُه، **وما فوقه
+ * `--t2-on-women`** (أبيضُ نهاراً كما رُسم في RW2 · RW4، وإسفلتٌ ليلاً كما رُسم في CW1–CW3). **والبرقوقُ للخدمة في كلِّ سِمة** —
+ * كبلاطة «نسائية» في R05 ودائرة صاحبتها (`t2.css`): ما رُسم برقوقاً لأنه من الخدمة لا يتبع مفتاحَ السِمة الوردية.
+ * **والأسماءُ `t2-w…`** لا تصطدم بأسماء `t2.css` · `request.css` · `account.css` (`check:t2-css`).
+ */
+
+/* ── الشارةُ «رحلة نسائية» (RW2) — حبّةُ البرقوق الخافت بأيقونتها ── */
+.t2-wchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--t2-women-line);
+  border-radius: 99px;
+  background: var(--t2-women-soft);
+  color: var(--t2-women);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-wchip .t2-icon { font-size: 15px; }
+
+/* ── زرُّ البرقوق (RW1 · RW3) — بمقاس أزرار الورقة (٥٨) ── */
+.t2-wbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 58px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-wbtn:disabled { opacity: 0.45; cursor: default; }
+.t2-wbtn:active:enabled { transform: scale(0.98); }
+
+/* ── R15 · بطاقةُ الخدمة النسائية في «حسابي»: خافتُ البرقوق وحافّتُه، ودائرةٌ بيضاءُ بأيقونتها، ومفتاحُ حالها ── */
+.t2-wsvc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-women-line);
+  border-radius: 22px;
+  background: var(--t2-women-soft);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-wsvc:active { transform: scale(0.99); }
+.t2-wsvc-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--t2-surface);
+  color: var(--t2-women);
+}
+.t2-wsvc-icon .t2-icon { font-size: 22px; }
+.t2-wsvc-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-wsvc-title { font-size: 15px; font-weight: 700; }
+.t2-wsvc-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.5; }
+/* **المفتاحُ حالٌ لا زرّ** — البطاقةُ كلُّها تفتح RW1، **وهناك يُشعَل التفضيلُ ويُطفأ** — مشتعلاً بالبرقوق كما رُسم */
+.t2-wsvc .t2-switch.on { background: var(--t2-women); }
+.t2-wsvc-go { flex: none; font-size: 20px; color: var(--t2-faint); }
+
+/* ── RW1 · صفحةُ الخدمة: بطاقةُ البرقوق بشريطها المائل ودائرتها، والبنودُ، والفعل ── */
+.t2-whero {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid var(--t2-women-line);
+  border-radius: 26px;
+  background: var(--t2-women-soft);
+}
+.t2-whero-stripe {
+  position: absolute;
+  left: -30px;
+  top: -20px;
+  width: 150px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--t2-women);
+  opacity: 0.12;
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+.t2-whero-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+}
+.t2-whero-icon .t2-icon { font-size: 28px; }
+.t2-whero-title { position: relative; margin: 14px 0 0; font-size: 24px; font-weight: 700; line-height: 1.35; }
+/* **نصٌّ مُبرقَق** كما رُسم (#5A3A4B نهاراً · #D9B8CB ليلاً في CW1) — من الرموز الثلاثة لا قيمةٌ رابعة */
+.t2-whero-body {
+  position: relative;
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: color-mix(in srgb, color-mix(in srgb, var(--t2-women) 40%, var(--t2-text)) 75%, var(--t2-muted));
+}
+.t2-wpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 18px 4px;
+  padding: 0;
+  list-style: none;
+}
+.t2-wpoints > li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; line-height: 1.6; }
+.t2-wpoints .t2-icon { flex: none; font-size: 21px; color: var(--t2-women); font-variation-settings: "FILL" 1; }
+/* **حالُ التفضيل الآن** — سطرٌ بعلامته قبل الفعل */
+.t2-wstate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--t2-surface);
+  font-size: 14px;
+  font-weight: 600;
+}
+.t2-wstate .t2-icon { flex: none; font-size: 20px; color: var(--t2-women); font-variation-settings: "FILL" 1; }
+.t2-wfine { margin: 8px 4px 0; text-align: center; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-wsp .t2-button.secondary { width: 100%; height: 54px; }
+.t2-wsp .t2-callout { margin-top: 4px; }
+
+/* ── RW2 · ورقةُ الطلب النسائيّ: الشارةُ والمسافةُ فوق المسار، والفئةُ بحافّة البرقوق، والزرُّ برقوقاً ── */
+.t2-wreq-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 2px 12px;
+}
+.t2-cats .t2-cat.on.women { border-color: var(--t2-women); }
+.t2-cats .t2-cat.women .t2-cat-icon { background: var(--t2-women-soft); color: var(--t2-women); }
+.t2-pref.women .t2-seg-opt.on { color: var(--t2-women); }
+.t2-cta.women { background: var(--t2-women); color: var(--t2-on-women); }
+
+/* ── RW3 · لا كبتنة قريبة: الخياراتُ بطاقاتٌ تُختار، والمختارةُ بحافّة البرقوق ودائرتها ممتلئة ── */
+.t2-wno-sub { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: var(--t2-muted); }
+.t2-wopts { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.t2-wopt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* **الحافّةُ أعرضُ والحشوُ أقلّ بقدرها** — فلا تقفز البطاقةُ حين تُختار */
+.t2-wopt.on { padding: 13px; border: 2px solid var(--t2-women); }
+.t2-wopt-icon { flex: none; font-size: 22px; }
+.t2-wopt.on .t2-wopt-icon { color: var(--t2-women); font-variation-settings: "FILL" 1; }
+.t2-wopt-main { flex: 1; min-width: 0; }
+.t2-wopt-title { display: block; font-size: 14.5px; font-weight: 700; }
+.t2-wopt-sub { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.55; color: var(--t2-muted); }
+.t2-wopt-sub.warn { color: var(--t2-warning); }
+.t2-wopt-radio { flex: none; font-size: 20px; color: var(--t2-faint); }
+.t2-wopt.on .t2-wopt-radio { color: var(--t2-women); font-variation-settings: "FILL" 1; }
+.t2-out-actions > .t2-wbtn { margin-top: 0; }
+.t2-out-later.t2-wcancel { color: var(--t2-danger); }
+
+/* ── RW4 · تتبّعُ الكبتنة: الحبّةُ برقوقاً فوق الخريطة، ودائرتُها بحافّته، وعلامةُ التوثيق بجانب اسمها ── */
+.t2.t2-trk-chip.women {
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--t2-women) 30%, transparent);
+}
+.t2-trk-chip.women .t2-icon { font-size: 17px; }
+.t2 .t2-trk-avatar.women {
+  border: 2px solid var(--t2-women);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--t2-women-soft) 0 6px,
+    color-mix(in srgb, var(--t2-women) 12%, var(--t2-women-soft)) 6px 12px
+  );
+  color: var(--t2-women);
+}
+.t2-wname { display: flex; align-items: center; gap: 6px; }
+.t2-wname .t2-icon { flex: none; font-size: 17px; color: var(--t2-women); }

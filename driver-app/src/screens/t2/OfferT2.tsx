@@ -10,14 +10,19 @@
  *   المفتاحُ مطفأٌ تبقى المسافةُ وحدَها** كما كانت.
  * - **صفُّ الراكب** («ليلى · 4.8 · 36 رحلة»): **العرضُ لا يحمل هويةَ الراكب** عمداً (الشاشةُ القائمة) — لا اسمَ ولا تقييم.
  *
- * **وما في الشاشة القائمة ولم يُرسم — باقٍ بلغة اللوحة**: شاراتُ الطلب (نسائي · مشتركة · محجوزة · المحطات · مبلغٌ لكبتنٍ
+ * **وما في الشاشة القائمة ولم يُرسم — باقٍ بلغة اللوحة**: شاراتُ الطلب (مشتركة · محجوزة · المحطات · مبلغٌ لكبتنٍ
  * آخر) **بنصّها وشرطها حرفاً** — تُقرأ قبل القبول — و«نغمة + اهتزاز» فوق البطاقة.
+ *
+ * **و«CW3» وجهُ هذه البطاقة لطلبٍ طُلبت فيه كبتنة** (§٦٢-ج/٢٣، `WomenRideT2.tsx` — وما لم يُبنَ منها بعلّته هناك): «رحلة نسائية ·
+ * الفئة» بالبرقوق **مكانَ** «طلب جديد» وشارةِ «طلب نسائي»، وحافّةُ البطاقة وقوسُ المهلة و«قبول» بالبرقوق — **والقبولُ والرفضُ هما هما**.
+ * **وطلبُ «ذكور» لم يعد يُوسم «طلب نسائي»** (`APPROVALS-WOMEN-MODES.md` §٦).
  */
 
 import type { Offer } from "@/lib/ride";
 import { useOfferCountdown } from "@/components/OfferSheet";
 import { bookedTime, trimDistance } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
+import { WomenOfferChipT2, isWomenRide } from "@/screens/t2/WomenRideT2";
 import { Icon } from "@/taxo2";
 
 /** محيطُ الحلقة كما رُسمت: `r=25` ⇒ ٢π×٢٥ ≈ ١٥٧ (`stroke-dasharray="157"` في اللوحة). */
@@ -47,11 +52,13 @@ export function OfferT2({
   const left = useOfferCountdown(offer);
   const offset = Math.round((1 - left / offer.totalSeconds) * DASH);
   const { ride } = offer;
+  // **CW3 — رحلةٌ نسائية** (§٦٢-ج/٢٣): ما طُلبت فيه كبتنة — الشارةُ مكانَ «طلب جديد»، والبطاقةُ بالبرقوق
+  const women = isWomenRide(ride);
 
   return (
     <>
       {over ? <div className="t2-of-dim" /> : null}
-      <div className="t2-of" role="dialog" aria-label="طلب رحلة جديد">
+      <div className={women ? "t2-of women" : "t2-of"} role="dialog" aria-label="طلب رحلة جديد">
         {/* **«نغمة + اهتزاز»** — حالُ الصوت لا زينة (الشاشةُ القائمة): من رآها ولم يسمع شيئاً عرف أنّ الصوتَ مطفأٌ في هاتفه */}
         <div className="t2-of-ring-note">
           <span className="t2-of-bars" aria-hidden="true">
@@ -85,7 +92,11 @@ export function OfferT2({
               </span>
             </div>
             <div className="t2-of-head">
-              <div className="t2-of-kind">طلب جديد · {categoryLabel}</div>
+              {women ? (
+                <WomenOfferChipT2 categoryLabel={categoryLabel} />
+              ) : (
+                <div className="t2-of-kind">طلب جديد · {categoryLabel}</div>
+              )}
               <div className="t2-of-fare">
                 <span className="t2-of-fare-num" dir="ltr">
                   {digits(ride.estimated_fare)}
@@ -130,16 +141,16 @@ export function OfferT2({
   );
 }
 
-/** شاراتُ ما يُقرأ قبل القبول — **كلُّ شرطٍ ونصٍّ من البطاقة القائمة** (`components/OfferSheet.tsx`)، وعللُها مكتوبةٌ هناك. */
+/** شاراتُ ما يُقرأ قبل القبول — **كلُّ شرطٍ ونصٍّ من البطاقة القائمة** (`components/OfferSheet.tsx`)، وعللُها مكتوبةٌ هناك.
+ *  **و«طلب نسائي» صار شارةَ الرأس** (CW3 — «رحلة نسائية») لما طُلبت فيه كبتنةٌ وحدَه: كان يُكتب لكلِّ تفضيلٍ غير «الجميع»، **ومنه
+ *  من طلب كبتناً رجلاً** (`APPROVALS-WOMEN-MODES.md` §٦). */
 function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: string }) {
   const { ride } = offer;
-  const women = ride.gender_preference !== "any";
   const shared = Number(ride.share_discount_percent) > 0;
   const carried = Number(ride.carried_cancellation_fee ?? 0) > 0;
-  if (!women && !shared && !ride.scheduled_for && ride.stops.length === 0 && !carried) return null;
+  if (!shared && !ride.scheduled_for && ride.stops.length === 0 && !carried) return null;
   return (
     <div className="t2-of-tags">
-      {women ? <span className="t2-of-tag women">طلب نسائي</span> : null}
       {shared ? <span className="t2-of-tag">مشتركة — قد ينضم راكب ثانٍ</span> : null}
       {ride.scheduled_for ? (
         <span className="t2-of-tag">محجوزة — {bookedTime(ride.scheduled_for)}</span>

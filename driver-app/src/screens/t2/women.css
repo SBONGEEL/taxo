@@ -1,0 +1,132 @@
+/* ═══ TAXO 2.0 — الخدمةُ النسائيةُ عند الكبتنة: CW1 (صفحتُها) · CW2 (الرئيسية) · CW3 (طلبٌ وارد) — **تخطيطُها وحدَه** ═══
+ *
+ * **بالرموز وحدَها** (`src/taxo2/tokens.css`) فتعمل في الداكن المرسوم والفاتح والنسائيّ: البرقوقُ `--t2-women` وخافتُه وحافّتُه، **وما
+ * فوقه `--t2-on-women`** (إسفلتٌ ليلاً كما رُسم في CW1–CW3). **وما رسمته اللوحةُ داكناً ولا رمزَ له في الفاتح** يُكتب
+ * `var(--t2-جديد, var(--t2-أقرب))` كأخواته (`ride.css`). **والأسماءُ `t2-w…`** لا تصطدم بأسماء `t2.css` · `ride.css` (`check:t2-css`).
+ */
+
+/* ── الشارةُ «وضع نسائي» (CW2) · «رحلة نسائية» (CW3) — حبّةُ البرقوق الخافت بأيقونتها ── */
+.t2-wchip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--t2-women-line);
+  border-radius: 99px;
+  background: var(--t2-women-soft);
+  color: var(--t2-women);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-wchip .t2-icon { font-size: 15px; }
+/* **زرّاً في رأس الرئيسية** (إلى CW1) — بمساحة لمسٍ ٤٤ لا تُكبّر الحبّة */
+button.t2-wchip { cursor: pointer; }
+button.t2-wchip::after { content: ""; position: absolute; inset: -10px -4px; }
+
+/* ── C15 · صفُّ «الخدمة النسائية» في الإعدادات — سهمُه إلى CW1 ── */
+.t2-wrow-go { flex: none; font-size: 20px; color: var(--t2-faint); }
+
+/* ── CW1 · صفحةُ الخدمة: بطاقةُ البرقوق ودائرتُها، والشروطُ صفوفاً، والاختيارُ بطاقاتٍ ── */
+.t2-wmode .t2-head { margin-bottom: 14px; }
+.t2-whero {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid var(--t2-women-line);
+  border-radius: 26px;
+  background: var(--t2-women-soft);
+}
+.t2-whero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+}
+.t2-whero-icon .t2-icon { font-size: 28px; }
+.t2-whero-title { margin: 14px 0 0; font-size: 24px; font-weight: 700; line-height: 1.35; }
+/* **نصٌّ مُبرقَق** كما رُسم (#D9B8CB ليلاً · #5A3A4B نهاراً في RW1) — من الرموز الثلاثة لا قيمةٌ رابعة */
+.t2-whero-body {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: color-mix(in srgb, color-mix(in srgb, var(--t2-women) 40%, var(--t2-text)) 75%, var(--t2-muted));
+}
+.t2-wlabel { margin: 18px 4px 8px; font-size: 13px; font-weight: 600; color: var(--t2-muted); }
+.t2-wconds { display: flex; flex-direction: column; gap: 6px; }
+.t2-wcond {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: var(--t2-card-deep, var(--t2-surface));
+}
+.t2-wcond-icon { flex: none; font-size: 20px; font-variation-settings: "FILL" 1; }
+.t2-wcond-icon.ok { color: var(--t2-success); }
+.t2-wcond-icon.wait { color: var(--t2-warning); }
+.t2-wcond-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-wcond-title { font-size: 14px; }
+.t2-wcond-hint { margin-top: 2px; font-size: 11.5px; line-height: 1.5; color: var(--t2-muted); }
+.t2-wopts { display: flex; flex-direction: column; gap: 8px; }
+.t2-wopt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line, var(--t2-line));
+  border-radius: 18px;
+  background: var(--t2-card-deep, var(--t2-surface));
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* **الحافّةُ أعرضُ بنصف بكسل والحشوُ أقلّ بقدرها** — فلا تقفز البطاقةُ حين تُختار */
+.t2-wopt.on { padding: 13.5px; border: 1.5px solid var(--t2-women); background: var(--t2-women-soft); }
+.t2-wopt:disabled { opacity: 0.6; cursor: default; }
+.t2-wopt-radio { flex: none; font-size: 20px; color: var(--t2-faint); }
+.t2-wopt.on .t2-wopt-radio { color: var(--t2-women); font-variation-settings: "FILL" 1; }
+.t2-wopt-main { flex: 1; min-width: 0; }
+.t2-wopt-title { display: block; font-size: 14.5px; font-weight: 700; }
+.t2-wopt-sub { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.55; color: var(--t2-muted); }
+.t2-wmode .t2-explain { margin-top: 14px; }
+
+/* ── CW2 · الرئيسيةُ في الوضع النسائيّ: الحرفُ بحافّة البرقوق وتدرّجه، وحبّةُ الاستقبال برقوقاً ── */
+/* `linear-gradient(135deg,#4A2A3C,#2A1A24)` المرسوم — البرقوقُ على الإسفلت بنسبتين */
+.t2-hm-avatar.women {
+  border-color: var(--t2-women);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--t2-women) 22%, var(--t2-bg)),
+    color-mix(in srgb, var(--t2-women) 10%, var(--t2-bg))
+  );
+}
+/* **الرموزُ تُعاد داخل الحبّة لا ألوانُها**: تدرّجُها ونقطتُها وزرُّ تشغيلها كلُّها من الجمر في `ride.css` — فيصير الجمرُ هنا برقوقاً */
+.t2-hm-go.on.women {
+  --t2-accent: var(--t2-women);
+  --t2-accent-hi: var(--t2-women);
+  --t2-on-accent: var(--t2-on-women);
+}
+/* **ومع شارة المستوى لا يتّسع الرأسُ للكلمتين على الضيّق** (C04 رسم المستوى، وCW2 رسم «وضع نسائي» مكانَه) — فتبقى الأيقونةُ وحدَها */
+@media (max-width: 419px) {
+  .t2-hm-head:has(> .t2-hm-level) .t2-wchip-text { display: none; }
+}
+
+/* ── CW3 · طلبٌ وارد — رحلةٌ نسائية: حافّةُ البطاقة وقوسُ المهلة وأيقونةُ المسافة و«قبول» بالبرقوق ── */
+.t2-of.women .t2-of-card { border-color: var(--t2-women-line); }
+.t2-of.women .t2-of-timer-arc { stroke: var(--t2-women); }
+.t2-of.women .t2-of-near .t2-icon { color: var(--t2-women); }
+.t2-of.women .t2-of-accept { background: var(--t2-women); color: var(--t2-on-women); }
+.t2-of-head > .t2-wchip { margin-bottom: 6px; }

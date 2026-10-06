@@ -173,6 +173,8 @@ export function HomeScreen() {
 
   // **«نسائية» تبدأ هذا الطلبَ بـ«كبتنة فقط»** (§٦١-د/ج) — والراكبةُ تغيّره بنفسها في ورقة الطلب، ولا شيءَ آليّ
   const [presetPreference, setPresetPreference] = useState<GenderPreference | undefined>();
+  // **و«جدولي الرحلة لوقت لاحق» (RW3، §٦٢-ج/٢٣) تفتحها بفئة تلك الرحلة ومنتقي الموعد مفتوحاً** — `null` في كلِّ طلبٍ غيرِه
+  const [presetSchedule, setPresetSchedule] = useState<VehicleCategory | null>(null);
 
   // **مسارُ الرحلة على الطرق** (البند ٨): يُقرأ **مرةً لكل رحلة** بعد القبول —
   // الخلفيةُ جمّدته على الرحلة لحظتَها، فقراءةٌ ثانية تعيد الشيءَ نفسَه.
@@ -346,6 +348,7 @@ export function HomeScreen() {
       setPhase("idle");
       setDropoff(null);
       setDropoffAddress(null);
+      setPresetSchedule(null);
       navigate("/account/bookings");
     } catch (caught) {
       setError(
@@ -393,6 +396,7 @@ export function HomeScreen() {
       setDropoff(null);
       setDropoffAddress(null);
       setPresetPreference(undefined);
+      setPresetSchedule(null);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
       // **رفضٌ بلا مخرجٍ ليس رفضاً**: تفضيلٌ نسائيٌّ بقي في ملفها من سوقٍ
@@ -447,6 +451,22 @@ export function HomeScreen() {
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
     }
+  }
+
+  /** **«جدولي الرحلة لوقت لاحق»** (RW3، §٦٢-ج/٢٣) — **ورقةُ الطلب نفسُها لا بابٌ ثانٍ**: نقطتا الرحلة التي لم تجد كبتنة وعنواناهما،
+   *  **وتفضيلُها هي** (لا يُبدَّل) **وفئتُها**، ومنتقي الموعد مفتوحاً — **والحجزُ يمرّ بـ`schedule` القائم** بموعده وفحوصه. **ولا محطات**:
+   *  الحجزُ لا يحملها (`createBooking`). وتُطوى الخاتمة؛ فمن عادت بالسهم عادت إلى الرئيسية. */
+  function scheduleAgain(previous: Ride) {
+    setPickup(previous.pickup);
+    setPickupAddress(previous.pickup_address);
+    setDropoff(previous.dropoff);
+    setDropoffAddress(previous.dropoff_address);
+    setStops([]);
+    setPresetPreference(previous.gender_preference);
+    setPresetSchedule(previous.vehicle_category);
+    setError(null);
+    setDismissed(previous.id);
+    setPhase("confirm");
   }
 
   const picking =
@@ -518,6 +538,7 @@ export function HomeScreen() {
     onOpenAccount: () => navigate("/account"),
     onAskDestination: () => {
       setPresetPreference(undefined);
+      setPresetSchedule(null);
       setSearchOpen(true);
     },
     places,
@@ -554,6 +575,7 @@ export function HomeScreen() {
     setDropoffAddress(null);
     setStops([]);
     setPresetPreference(undefined);
+    setPresetSchedule(null);
   };
 
   const locateMe = async () => {
@@ -583,6 +605,8 @@ export function HomeScreen() {
           countryConfig,
           onBack: leaveConfirm,
           initialPreference: presetPreference,
+          initialCategory: presetSchedule ?? undefined,
+          initialScheduling: presetSchedule !== null,
           pickupLine,
         }
       : null;
@@ -719,6 +743,7 @@ export function HomeScreen() {
                 ride={outcome}
                 onDismiss={() => setDismissed(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
+                onScheduleAgain={() => scheduleAgain(outcome)}
                 error={error}
               />
             ) : picking ? (

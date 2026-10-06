@@ -18,7 +18,7 @@ import type {
   VehicleCategory,
 } from "@/api/types";
 import type { DraftStop } from "@/components/home/StopsEditor";
-import { useScheduledRides } from "@/lib/bookings";
+import { earliest, localInputValue, useScheduledRides } from "@/lib/bookings";
 import { useMultiStop } from "@/lib/multistop";
 import { usePaymentPreference } from "@/lib/payment";
 import { usePromoCodes } from "@/lib/promo";
@@ -112,6 +112,11 @@ export interface ConfirmRideProps {
   /** **تفضيلٌ يُبدأ به هذا الطلبُ وحدَه** — بلاطةُ «نسائية» في رئيسية TAXO 2.0 تبدأه بـ«كبتنة فقط» (§٦١-د/ج)،
    *  **وهي تغيّره بنفسها** من المنتقي نفسِه. وبلا قيمةٍ يبدأ من افتراضي ملفها كما كان. */
   initialPreference?: GenderPreference;
+  /** **فئةٌ يُبدأ بها** — «جدولي الرحلة لوقت لاحق» (RW3، §٦٢-ج/٢٣) تفتح الورقةَ بفئة الرحلة التي لم تجد كبتنة، **فلا تُبدَّل فئتُها
+   *  بلا قولها**. وبلا قيمةٍ أوّلُ فئات السوق كما كان. */
+  initialCategory?: VehicleCategory;
+  /** **ومنتقي الموعد مفتوحاً** — الاختيارُ نفسُه في RW3 («جدولي») لا يُطلب ثانيةً بزرِّ «حدّد موعداً». حيث الحجوزُ مشتعلةٌ وحدَها. */
+  initialScheduling?: boolean;
   /** **عنوانُ موقع الجهاز من Mapbox** — سطرُ «من» في «R06» حين لا `pickupAddress` (موقعُ الجهاز لا يُسمّى). للعرض وحدَه:
    *  **لا يُرسل مع الطلب**، والورقةُ القائمةُ لا تقرؤه. */
   pickupLine?: string | null;
@@ -124,15 +129,20 @@ export function useConfirmRide({
   stops,
   countryConfig,
   initialPreference,
+  initialCategory,
+  initialScheduling,
 }: ConfirmRideProps) {
   const women = useWomenService();
   // الحجزُ (12-ط) — مفتاحُه يخفي الزرَّ كلَّه لا يعطّله
   const scheduled = useScheduledRides();
-  const [scheduling, setScheduling] = useState(false);
-  const [when, setWhen] = useState("");
+  // **ومفتوحاً من أوّله حين جاءت من «جدولي الرحلة لوقت لاحق»** (RW3) — بأقرب موعدٍ كما يفتحه زرُّه
+  const [scheduling, setScheduling] = useState(Boolean(initialScheduling) && scheduled);
+  const [when, setWhen] = useState(() => (initialScheduling && scheduled ? localInputValue(earliest()) : ""));
   // دولةُ الحساب — الكوبونُ per-country فالتحقّقُ يحملها
   const multiStop = useMultiStop();
-  const [category, setCategory] = useState<VehicleCategory>(categories[0] ?? "economy");
+  const [category, setCategory] = useState<VehicleCategory>(
+    initialCategory && categories.includes(initialCategory) ? initialCategory : categories[0] ?? "economy",
+  );
   // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها — **أو ممّا بدأته بلاطةُ «نسائية»، ولمن عُرضت عليها الخدمةُ وحدَها**
   const [preference, setPreference] = useState<GenderPreference>(
     women.available && initialPreference ? initialPreference : women.defaultPreference,

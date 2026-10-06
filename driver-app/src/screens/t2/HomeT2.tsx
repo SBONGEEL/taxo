@@ -23,6 +23,11 @@
  * تفضيلُ جنس الركّاب · تحذيرُ الأذونات · الخطأ · «رقمُك قيد التحقق» · اللافتاتُ وعرضُ الاشتراك · سطرُ الاشتراك و«جدّد» ·
  * المركبةُ وبابُها · **«توسيع» الخريطة** · حالُ الاتصال بأطواره («جارٍ الاتصال…» · «بانتظار إشارة الموقع» · «نفتح الطلب…»).
  * **ومبدّلُ السِمة في «الإعدادات» الليلية** (C15 · «المظهر») و**نسبةُ العمولة في «الأرباح»** (C09) — نُزعا من الرأس ولم يضيعا.
+ *
+ * ## CW2 · CW3 — الوضعُ النسائيّ والطلبُ النسائيّ (§٦٢-ج/٢٣ — `WomenRideT2.tsx`، وما لم يُبنَ منهما بعلّته هناك)
+ *
+ * كبتنةٌ اختارت «الراكبات فقط»: «وضع نسائي» في الرأس، والحرفُ بالبرقوق، و«متصلة — طلبات الراكبات فقط» في الحبّة **مكانَ** شريط
+ * التفضيل — **والاستقبالُ هو هو**.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
@@ -58,6 +63,7 @@ import { CollectT2Screen } from "@/screens/t2/CollectT2";
 import { OfferT2 } from "@/screens/t2/OfferT2";
 import { RideT2 } from "@/screens/t2/RideT2";
 import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
+import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { Icon, Wordmark } from "@/taxo2";
 
 import "./t2.css";
@@ -177,6 +183,8 @@ export function HomeT2Screen() {
   };
   // **التقييمُ كما يصل** (`rating_avg` بمنزلتين — «4.92» كما رُسم)؛ والشاشةُ القائمةُ تقرّبه إلى منزلة
   const rating = profile ? profile.driver.rating_avg : null;
+  // **CW2 — الوضعُ النسائيّ** (§٦٢-ج/٢٣): كبتنةٌ اختارت «الراكبات فقط» حيث الخدمةُ مشتعلة
+  const womenMode = isWomenMode(womenService, preference, user?.gender);
 
   return (
     <div
@@ -193,6 +201,7 @@ export function HomeT2Screen() {
               {LEVEL_LABEL[level] ?? `المستوى ${digits(String(level))}`}
             </span>
           ) : null}
+          {womenMode ? <WomenModeChipT2 onOpen={() => navigate("/account/settings/women")} /> : null}
           <span className="t2-hm-gap" />
           <button
             type="button"
@@ -203,7 +212,7 @@ export function HomeT2Screen() {
             <Icon name="notifications" />
             {unread > 0 ? <span className="t2-hm-bell-dot" /> : null}
           </button>
-          <div className="t2-hm-avatar" aria-hidden="true">
+          <div className={womenMode ? "t2-hm-avatar women" : "t2-hm-avatar"} aria-hidden="true">
             {(user?.name ?? "كبتن").slice(0, 1)}
           </div>
         </div>
@@ -242,7 +251,8 @@ export function HomeT2Screen() {
           أن يعمل. **ولا يظهر شيءٌ هنا إلا حين يكون** — والفارغُ يختفي فتبقى البطاقةُ في موضعها المرسوم */}
       {mode === "home" ? (
         <div className="t2-hm-notes t2-legacy">
-          {womenService && preference !== "any" ? (
+          {/* **وفي الوضع النسائيّ تقوله الحبّةُ والشارة** (CW2) — فلا شريطَ ثانٍ بالشيء نفسِه */}
+          {womenService && preference !== "any" && !womenMode ? (
             <button type="button" className="t2-hm-pref" onClick={() => navigate("/account/settings")}>
               <span className="t2-hm-pref-text">أستقبل ركاباً: {PREFERENCE_LABEL[preference]}</span>
               <span className="t2-hm-pref-go">تغيير</span>
@@ -311,6 +321,7 @@ export function HomeT2Screen() {
               goLabel={goLabel}
               demandHigh={demandHigh}
               onToggle={toggleOnline}
+              women={womenMode}
             />
           </>
         ) : null}
@@ -512,6 +523,7 @@ function GoPill({
   goLabel,
   demandHigh,
   onToggle,
+  women = false,
 }: {
   online: boolean;
   connecting: boolean;
@@ -521,18 +533,25 @@ function GoPill({
   /** «الطلب مرتفع حولك الآن» تحت «متصل» — في موضع «الأقرب لك» المرسوم (§٦٢-ج/٤٣). */
   demandHigh: boolean;
   onToggle: () => void;
+  /** **CW2 — الوضعُ النسائيّ** (§٦٢-ج/٢٣): نصّاها مؤنّثين و«طلبات الراكبات فقط»، والحبّةُ برقوقاً (`WomenRideT2`). */
+  women?: boolean;
 }) {
-  const title = online
-    ? `متصل — ${awaitedOffer ? "نفتح الطلب…" : located ? "بانتظار الطلبات" : "بانتظار إشارة الموقع"}`
-    : connecting
-      ? goLabel
-      : "غير متصل";
-  const demand = online && demandHigh ? "الطلب مرتفع حولك الآن" : null;
-  const sub = online ? demand : connecting ? null : goLabel;
+  const shown = women ? womenGoText({ online, connecting, located, awaitedOffer, goLabel }) : null;
+  const title = shown
+    ? shown.title
+    : online
+      ? `متصل — ${awaitedOffer ? "نفتح الطلب…" : located ? "بانتظار الطلبات" : "بانتظار إشارة الموقع"}`
+      : connecting
+        ? goLabel
+        : "غير متصل";
+  // **«الطلب مرتفع» لغير الوضع النسائيّ** (§٦٢-ج/٤٣): العدُّ لكلِّ الطلبات، ومن لا تصلها إلا طلباتُ الراكبات يقرؤه وعداً لا يقع —
+  // وسطرُها («يمكنك تغيير ذلك من الإعدادات») باقٍ في موضعه
+  const demand = !women && online && demandHigh ? "الطلب مرتفع حولك الآن" : null;
+  const sub = shown ? shown.sub : online ? demand : connecting ? null : goLabel;
   return (
     <button
       type="button"
-      className={`t2-hm-go ${online ? "on" : "off"}`}
+      className={`t2-hm-go ${online ? "on" : "off"}${women ? " women" : ""}`}
       onClick={onToggle}
       disabled={connecting}
       // **الفعلُ يُقال لقارئ الشاشة مع الحال** — الحبّةُ تقول «متصل»، والضغطةُ «إيقاف الاستقبال»

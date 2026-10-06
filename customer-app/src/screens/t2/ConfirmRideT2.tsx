@@ -13,6 +13,9 @@
  *   التفضيل بخياراته الثلاثة لمن عُرضت عليها الخدمة، كما هو اليوم (§61).
  * - **«4 ركاب · يصل خلال 3 د»**: لا مهلةَ قبل نقطة الالتقاط ولا عددَ مقاعد في الفئة — فالسطرُ وصفُ الفئة القائم.
  *
+ * **و«RW2» وجهُ هذه الورقة نفسِها بتفضيل «كبتنة»** (§٦٢-ج/٢٣، `WomenRideT2.tsx` — وما لم يُبنَ منها بعلّته هناك): شارةُ «رحلة نسائية»
+ * فوق المسار، والفئةُ بحافّة البرقوق و«كبتنة موثّقة»، و«اطلبي كبتنة» برقوقاً — **والطلبُ هو هو**.
+ *
  * **وما في الورقة القائمة ولم يُرسم يبقى بلغة اللوحة**: المحطاتُ وترتيبُها · ملاحظةُ رسم الانتظار · المشاركة · رصيدُ
  * المحفظة · الحجز · الحدُّ الأدنى للأجرة · سطرُ «السعر النهائي قد يتغيّر». **و«رجوع» صار زرَّ السهم فوق الخريطة** كما رُسم.
  * **ومقدارُ الخصم وإزالةُ الكوبون** خلف لمسة «مطبّق» — الشارةُ كما رُسمت، والفعلُ باقٍ.
@@ -32,6 +35,7 @@ import { MAX_STOPS } from "@/lib/multistop";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { SheetT2 } from "./SheetT2";
+import { WomenRequestHeadT2 } from "./WomenRideT2";
 import { DateField } from "@/taxo2";
 import "./t2.css";
 
@@ -125,6 +129,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   const fares = useCategoryFares(props, c.category, c.loading ? null : c.estimate);
   // **تفصيلُ الكوبون خلف لمسة «مطبّق»**: مقدارُ الخصم وإزالتُه — الشارةُ كما رُسمت، والفعلُ باقٍ
   const [promoOpen, setPromoOpen] = useState(false);
+  // **RW2 — الطلبُ النسائيّ** (§٦٢-ج/٢٣): تفضيلُ هذا الطلب «كبتنة» لمن عُرضت عليها الخدمة — **وهي تغيّره من المنتقي نفسِه**
+  const women = c.women.available && c.preference === "female";
+  const meta = c.estimate && !c.loading ? `${formatDistance(c.estimate.distance_km)} · ${shortDuration(c.estimate.duration_min)}` : null;
 
   return (
     <SheetT2
@@ -134,7 +141,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           {blockedByPreference ? null : <ErrorNote message={c.error ?? requestError} className="t2-error" />}
           <button
             type="button"
-            className="t2-cta"
+            className={women ? "t2-cta women" : "t2-cta"}
             disabled={!c.estimate || c.loading || requesting}
             aria-busy={requesting}
             onClick={() =>
@@ -144,7 +151,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               })
             }
           >
-            <span>{requesting ? "نرسل طلبك…" : `اطلب ${VEHICLE_LABEL[c.category]}`}</span>
+            <span>{requesting ? "نرسل طلبك…" : women ? "اطلبي كبتنة" : `اطلب ${VEHICLE_LABEL[c.category]}`}</span>
             {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
             {c.shownFare && !c.loading ? (
               <span className="t2-cta-price">{formatMoney(c.shownFare, currency)}</span>
@@ -153,6 +160,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </>
       }
     >
+      {/* **RW2: الشارةُ والمسافةُ فوق المسار** — والمسافةُ في رأس الفئات في غيره */}
+      {women ? <WomenRequestHeadT2 meta={meta} /> : null}
+
       {/* المسار: «من» و«إلى» بنقطتيهما، و«+» محطةٌ في الطريق */}
       <div className="t2-reqroute">
         <span className="t2-route-from" aria-hidden="true" />
@@ -185,11 +195,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
 
       <div className="t2-pick-head">
         <span className="t2-pick-title">اختر الفئة</span>
-        {c.estimate && !c.loading ? (
-          <span className="t2-pick-meta">
-            {formatDistance(c.estimate.distance_km)} · {shortDuration(c.estimate.duration_min)}
-          </span>
-        ) : null}
+        {meta && !women ? <span className="t2-pick-meta">{meta}</span> : null}
       </div>
       <div className="t2-cats" role="radiogroup" aria-label="الفئة">
         {categories.map((option) => {
@@ -200,7 +206,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               type="button"
               role="radio"
               aria-checked={on}
-              className={on ? "t2-cat on" : "t2-cat"}
+              className={`t2-cat${on ? " on" : ""}${women ? " women" : ""}`}
               onClick={() => c.setCategory(option)}
             >
               <span className="t2-cat-icon">
@@ -208,7 +214,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               </span>
               <span className="t2-cat-main">
                 <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
-                <span className="t2-cat-hint">{VEHICLE_HINT[option]}</span>
+                {/* **RW2: «كبتنة موثّقة»** — طلبُ «كبتنة» لا يُسنَد إلا لمختومةٍ من هويتها (`dispatch`) */}
+                <span className="t2-cat-hint">{women ? "كبتنة موثّقة" : VEHICLE_HINT[option]}</span>
               </span>
               {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها
                   من تقديرها (`useCategoryFares`)، **والمخصومُ على الزرّ** */}
@@ -231,7 +238,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
 
       {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}
       {c.women.available ? (
-        <div className="t2-pref">
+        <div className={women ? "t2-pref women" : "t2-pref"}>
           <div className="t2-pref-title">تفضيل الكبتن</div>
           <div className="t2-seg" role="radiogroup" aria-label="تفضيل الكبتن">
             {PREFERENCES.map((option) => (

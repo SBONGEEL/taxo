@@ -6,6 +6,9 @@
  * متاح» **طلبٌ جديد بنفس النقطتين** لطلبٍ مجنَّسٍ لم يجد كبتنة، و«حسناً» أو «لاحقاً» تطويها.
  *
  * **وسببُ فشل «أقبل أي كبتن» يُقال تحت زرّه** (§٦٢/٢٠): كانت الرئيسيةُ تحفظه ولا ترسمه في هذا الطور.
+ *
+ * **ولطلب «كبتنة» الذي انتهى بلا كبتنة وجهُه «RW3»** (§٦٢-ج/٢٣، `WomenRideT2.tsx`) — حيث الخدمةُ مفتوحة: خياراتٌ تختارها هي، و«أقبل
+ * أي كبتن» فيه هو هو. **وطلبُ «ذكور» يبقى هنا** كما كان: ليس الخدمةَ النسائية.
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,10 +16,12 @@ import { useNavigate } from "react-router-dom";
 import type { Ride } from "@/api/types";
 import { RIDE_STATUS_LABEL } from "@/lib/labels";
 import { currencyLabel, formatMoney } from "@/lib/utils";
+import { useWomenService } from "@/lib/women";
 import { Icon } from "@/taxo2";
 
 import { NoteT2 } from "./KitT2";
 import { SheetT2 } from "./SheetT2";
+import { WomenNoCaptainT2, isWomenRide } from "./WomenRideT2";
 import "./t2.css";
 import "./request.css";
 
@@ -34,16 +39,31 @@ export function OutcomeSheetT2({
   ride,
   onDismiss,
   onAcceptAnyDriver,
+  onScheduleAgain,
   error,
 }: {
   ride: Ride;
   onDismiss: () => void;
   onAcceptAnyDriver: () => Promise<void>;
+  /** **«جدولي الرحلة لوقت لاحق»** (RW3) — ورقةُ الطلب بمنتقي الموعد، من الرئيسية */
+  onScheduleAgain?: () => void;
   /** **خطأُ «أقبل أي كبتن»** — من الرئيسية التي ترسل الطلب */
   error: string | null;
 }) {
   const navigate = useNavigate();
   const [retrying, setRetrying] = useState(false);
+  const women = useWomenService();
+  // **RW3 — لا كبتنة قريبة** (§٦٢-ج/٢٣): لطلب «كبتنة» انتهى بلا كبتنة، حيث الخدمةُ مفتوحة — والخيارُ لها، ولا شيءَ آليّ
+  if (ride.status === "no_driver_found" && isWomenRide(ride) && women.enabled) {
+    return (
+      <WomenNoCaptainT2
+        onDismiss={onDismiss}
+        onAcceptAnyDriver={onAcceptAnyDriver}
+        onScheduleAgain={onScheduleAgain}
+        error={error}
+      />
+    );
+  }
   const completed = ride.status === "completed";
   // طلبٌ مجنَّس لم يجد كبتناً: هنا وحده يُعرض التنازل عن الشرط
   const missedGendered = ride.status === "no_driver_found" && ride.gender_preference !== "any";

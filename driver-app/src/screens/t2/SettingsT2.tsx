@@ -9,7 +9,8 @@
  * - **«قبول تلقائي للطلبات القريبة» و«تطبيق الملاحة» بُنيا بقرار المالك** (§٦١-ط/٦–٧) تفضيلين على الجهاز (`lib/driving-prefs`).
  *   **و«طلبات المطار» و«صوت الإرشاد» «قريباً»** (§٦١-ط/٨–٩): لا رحلاتِ مطارٍ يحرّكها المفتاح، والإرشادُ ينتظر أصواتَ TAXO.
  * - **«الخدمة النسائية — للكبتنات، استقبال الراكبات فقط»** مفتاحاً: التفضيلُ في التطبيق **ثلاثيٌّ لكلِّ كبتن**
- *   (الجميع · النساء فقط · الرجال فقط) — فبقي ثلاثياً بشرحه.
+ *   (الجميع · النساء فقط · الرجال فقط) — فبقي ثلاثياً بشرحه. **وللكبتنة صفٌّ بالاسم المرسوم إلى صفحته «CW1»** (§٦٢-ج/٢٣،
+ *   `WomenModeT2.tsx`) — بالاختيار الثلاثيّ نفسِه.
  * - **«اللغة»**: محذوفةٌ بقرار المالك (§61). **و«تسجيل الخروج»**: بابُه في «حسابي» — وبابان لفعلٍ واحدٍ يفترقان.
  * - **«ساعات الهدوء» بسهم**: تُقرأ من إعداد الدولة ولا تُحرَّر هنا — فبلا سهم.
  *
@@ -24,6 +25,7 @@ import { biometryLabel } from "@/lib/biometric";
 import { NAV_APPS, autoAcceptEnabled, navApp, setAutoAccept, setNavApp, type NavApp } from "@/lib/driving-prefs";
 import { useCaptainSettings } from "@/screens/Settings";
 
+import { WomenModeRowT2 } from "./WomenModeT2";
 import "@/taxo2";
 import "./t2.css";
 
@@ -152,8 +154,10 @@ export function SettingsT2Screen() {
           }}
         />
         <Soon icon="flight_takeoff" title="طلبات المطار" />
+        {/* **وللكبتنة صفُّ «الخدمة النسائية» إلى CW1** (§٦٢-ج/٢٣) — والاختيارُ الثلاثيُّ نفسُه هناك */}
+        {womenService && available ? <WomenModeRowT2 preference={preference} /> : null}
         {/* تفضيلُ جنس الركاب — **دائمٌ لا لكل رحلة، ولكلِّ كبتن**، ولا يظهر والخدمةُ مطفأةٌ في دولته (10-ج) */}
-        {womenService ? (
+        {womenService && !available ? (
           <div className="t2-srow tall">
             <span className="t2-icon t2-srow-icon" aria-hidden="true">person</span>
             <span className="t2-srow-main">

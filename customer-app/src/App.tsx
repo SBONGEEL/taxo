@@ -129,6 +129,9 @@ const CardReturnScreen = lazy(() =>
 const ProfileScreen = lazy(() =>
   import("@/screens/Profile").then((m) => ({ default: m.ProfileScreen })),
 );
+const WomenServiceT2Screen = lazy(() =>
+  import("@/screens/t2/WomenServiceT2").then((m) => ({ default: m.WomenServiceT2Screen })),
+);
 
 /** يفتح الصوتَ عند أوّل إيماءةٍ ويعزف توقيعَ العلامة مرةً واحدة.
  *
@@ -513,6 +516,15 @@ export default function App() {
                         element={
                           <Guarded>
                             <ProfileScreen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **الخدمةُ النسائية** (RW1، §٦٢-ج/٢٣) — من بطاقتها في «حسابي»، **والشريطُ تحتها كأخواتها** */}
+                      <Route
+                        path="/account/women"
+                        element={
+                          <Guarded>
+                            <WomenServiceT2Screen />
                           </Guarded>
                         }
                       />

@@ -13,6 +13,9 @@
  * **وبُني منها بندان** (§٦٢-ج/٢٧): **السياراتُ حولك أثناء البحث** وعدُّها في سطر R07 («6 كباتن حولك الآن» — ممّا تُرسمه الخريطةُ
  * نفسُها، `Home.tsx`)، **وعددُ رحلات الكبتن** في بطاقة R08 («4.92 · 2,140 رحلة» — `GET /rides/{id}/driver/stats`).
  *
+ * **و«RW4» وجهُ R08 لمن طلبت كبتنة** (§٦٢-ج/٢٣، `WomenRideT2.tsx` — وما لم يُبنَ منها بعلّته هناك): الحبّةُ برقوقاً، والعنوانُ
+ * مؤنّثاً، وبطاقةُ الكبتنة بدائرتها وعلامتها — **والإلغاءُ والإرسالُ والرسمةُ هي هي**.
+ *
  * **وما في الورقة القائمة ولم يُرسم يبقى بلغة اللوحة**: شارةُ «رحلة نسائية» وانتظارُ الكبتنة واقتراحُ المشاركة لها (§61: كما هي
  * اليوم) · شارتا المشاركة · المحطاتُ وعدّادُ الانتظار والوقفةُ غيرُ المخطَّطة (مالٌ يُقال حين ينشأ) · رسمةُ مركبة المتجر · أسبابُ
  * الإلغاء بعد القبول.
@@ -37,6 +40,7 @@ import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney } from "@/li
 
 import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
+import { WomenApproachChipT2, WomenCaptainCardT2, isWomenRide, womenApproachTitle } from "./WomenRideT2";
 import "@/taxo2";
 import "./t2.css";
 import "./tracking-count.css";
@@ -341,6 +345,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
   // ── R08: الكبتن في الطريق · ينتظرك ───────────────────────────────────────────────────────────────────
   const arrived = ride.status === "arrived";
+  // **RW4 — الكبتنةُ لمن طلبتها** (§٦٢-ج/٢٣): العنوانُ مؤنّثاً، وبطاقتُها بالبرقوق (`WomenRideT2`)
+  const womenRide = isWomenRide(ride);
   return (
     <SheetT2
       footer={
@@ -360,7 +366,9 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
     >
       <div className="t2-trk-head2">
         <div className="t2-trk-head2-main">
-          <div className="t2-trk-title2">{arrived ? "الكبتن ينتظرك في نقطة الانطلاق" : "الكبتن في الطريق إليك"}</div>
+          <div className="t2-trk-title2">
+            {womenRide ? womenApproachTitle(arrived) : arrived ? "الكبتن ينتظرك في نقطة الانطلاق" : "الكبتن في الطريق إليك"}
+          </div>
           {vehicle ? (
             <div className="t2-trk-veh">
               {vehicle.make} {vehicle.model} · {vehicle.color}
@@ -369,7 +377,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         </div>
         {badges}
       </div>
-      {driver ? (
+      {driver && womenRide ? <WomenCaptainCardT2 ride={ride} /> : null}
+      {driver && !womenRide ? (
         <div className="t2-trk-driver">
           <DriverAvatar rideId={ride.id} name={driver.name} className="t2-trk-avatar" />
           <div className="t2-trk-dmain">
@@ -407,6 +416,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
 /** **«الكبتن على بعد…» فوق الخريطة** (R08) — من موقعه المبثوث إلى نقطة الالتقاء خطّاً مستقيماً، و«وصل» حين يصل. */
 export function ApproachChipT2({ ride, driverPing }: { ride: Ride; driverPing: LatLng | null }) {
+  // **RW4 — حبّةُ الكبتنة بالبرقوق** لمن طلبت كبتنة (§٦٢-ج/٢٣)
+  if (isWomenRide(ride)) return <WomenApproachChipT2 ride={ride} driverPing={driverPing} />;
   if (ride.status === "arrived") {
     return (
       <div className="t2 t2-trk-chip">
