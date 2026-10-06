@@ -73,6 +73,7 @@
   font-weight: 700;
 }
 .t2-action {
+  position: relative; /* لطبقة اللمس تحت — «قراءة الكل» ٢٠ بكسلاً رسماً (§٦٢-ب/٥٠) */
   border: 0;
   background: none;
   padding: 0;
@@ -81,6 +82,16 @@
   font-weight: 600;
   color: var(--t2-accent-text);
   cursor: pointer;
+}
+/* **ولمسُه ٤٤×٤٤ على الأقلّ ورسمُه كما هو** — طبقةٌ شفّافةٌ تتوسّطه */
+.t2-action::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }
 /* عنوانُ جذر التبويب — أكبرُ ولا رجوعَ قبله */
 .t2-h1 {

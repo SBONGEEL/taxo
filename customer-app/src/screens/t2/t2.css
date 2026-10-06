@@ -240,7 +240,8 @@
 .t2-chev { color: var(--t2-faint); }
 
 /* ── مرشّحاتُ «رحلاتي» (R12، §٦١-ط/١) — المختارُ حبرٌ على حجر، والباقي حافّةٌ رقيقة ─────────────────────────── */
-.t2-filters { display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+/* **الصفُّ يُمرَّر أفقياً فيقصّ ما يخرج منه** — فسعةٌ رأسيّةٌ لطبقة لمس الشرائح (§٦٢-ب/٥٠) بلا تغيير مكانه: −٣ و+٣ */
+.t2-filters { display: flex; gap: 7px; margin: -3px 0 11px; padding-block: 3px; overflow-x: auto; scrollbar-width: none; }
 .t2-filters::-webkit-scrollbar { display: none; }
 .t2-filter {
   flex: none;
@@ -377,6 +378,8 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-endall {
   display: block;
   width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
   padding: 10px;
   border: 0;
   background: none;
@@ -1475,3 +1478,26 @@ html.is-hidden .t2-map-radar > i { animation-play-state: paused; }
 .t2-paytile-num { font-size: 14px; font-weight: 600; text-align: end; font-variant-numeric: tabular-nums; }
 .t2-paytile-name { font-size: 13px; font-weight: 600; }
 .t2-paytiles-manage { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
+
+/* ── أهدافُ اللمس (§٦٢/٢٢ · §٦٢-ب/٥٠) — **٤٤×٤٤ على الأقلّ ورسمُها كما رُسم** ───────────────────────────────────────────────
+   طبقةٌ شفّافةٌ تتوسّط العنصرَ وتمدّ لمسَه (`::after`) ولا تغيّر حجمَه المرسوم. **وحيث يتجاور زرّان بلا فاصلٍ يكبر الزرُّ نفسُه**
+   (`.t2-logout` · `.t2-endall` أعلاه): طبقتان متداخلتان تجعلان لمسةً على حافّة «تسجيل الخروج» تُنهي كلَّ الجلسات. قِيست بالمتصفّح. */
+.t2-home-place,
+.t2-filter,
+.t2-paytiles-manage,
+.t2-trk-cancel-link { position: relative; }
+
+.t2-home-place::after,
+.t2-filter::after,
+.t2-paytiles-manage::after,
+.t2-trk-cancel-link::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+/* **«إدارة» فوق بلاطتي الدفع بـ٩٫٥** — طبقتُها تُرفع ٢ فلا تبلغ البلاطة (قِيس: كانت تتداخل بسطر) */
+.t2-paytiles-manage::after { top: calc(50% - 2px); }

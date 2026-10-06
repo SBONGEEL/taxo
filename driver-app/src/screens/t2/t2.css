@@ -184,6 +184,8 @@
 .t2-cta:active { transform: scale(0.98); }
 .t2-signout {
   flex: none;
+  min-height: 44px; /* هدفُ لمس (§٦٢-ب/٥٠) — كان ٤١ */
+  box-sizing: border-box;
   margin-top: 18px;
   padding: 10px;
   border: 0;

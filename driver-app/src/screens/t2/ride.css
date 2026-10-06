@@ -423,7 +423,9 @@
   font-size: 12.5px;
   cursor: pointer;
 }
-.t2-hm-svc-all::after { content: ""; position: absolute; inset: -16px -14px; }
+/* **وطبقتُه لا تبلغ البلاطةَ تحته** (§٦٢-ب/٥٠): كانت تنزل ١٦ والفجوةُ دون ١٠ — فلمسةٌ على أعلى البلاطة الأولى تفتح «الكل» (قِيس بـ`elementFromPoint`).
+   **فتعلو ١٧ وتنزل ٨** — ٤٤ طولاً على الأقلّ */
+.t2-hm-svc-all::after { content: ""; position: absolute; inset: -17px -14px -8px; }
 /* **نقطةُ «الوثائق»** (C04) — على ركن مربّع الأيقونة، بحافّةٍ من لون البلاطة */
 .t2-hm-tile-dot {
   position: absolute;
@@ -1166,3 +1168,17 @@ button.t2-rd-chip { cursor: pointer; }
   cursor: pointer;
 }
 .t2-co-error { margin-bottom: 10px; }
+
+/* ── أهدافُ اللمس (§٦٢/٢٢ · §٦٢-ب/٥٠) — **٤٤×٤٤ على الأقلّ ورسمُها كما رُسم**: الجرسُ (٤٢) و«توسيع» (٢٩) و«موقعي» في البطاقة (٣٦)
+   تبقى بمقاسها المرسوم، وطبقةٌ شفّافةٌ تتوسّطها تمدّ لمسَها. والثلاثةُ مُموضَعةٌ أصلاً (`relative` · `absolute`) فلا موضعَ يتغيّر */
+.t2-hm-bell::after,
+.t2-hm-mapchip::after,
+.t2-hm.home .t2-maploc::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
