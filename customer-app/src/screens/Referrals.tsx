@@ -1,4 +1,5 @@
-/** «ادعُ صديقك» — رمزي ومن سجّل به (SPEC §9.1، تعميمُ 12-ح).
+/** «ادعُ صديقك» — TAXO 2.0 «R25» (`design/t2-new/rider/R25-referrals.dc.html` · `R25b-…`)، **في المظهرين والنسائيّ** —
+ *  رمزي ومن سجّل به (SPEC §9.1، تعميمُ 12-ح). **والرمزُ في بطاقة الرصيد من R11 بعينها** (الحبرُ وشريطاه وزرّا الجمر والحافّة).
  *
  * **وهي نسخةٌ من شاشة تطبيق الكبتن لا اشتقاقٌ ثانٍ** — كـ`BottomNav` بالضبط:
  * التطبيقان يتقاسمان نظامَ تصميمٍ واحداً، وشاشتان تُبنيان مرتين تفترقان أوّلَ
@@ -19,42 +20,57 @@
  */
 
 import { useEffect, useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import { getMyReferrals } from "@/api/endpoints";
 import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
-import { ErrorNote, EmptyState } from "@/components/ui/Feedback";
-import { Screen } from "@/components/ui/Screen";
-import { Stagger, StaggerItem } from "@/components/ui/Motion";
+import { useGoBack } from "@/lib/back";
 import { useSession } from "@/lib/session";
-import { cn, formatMoney } from "@/lib/utils";
+import { currencyLabel, formatMoney } from "@/lib/utils";
+import { BlankT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
+import { Icon } from "@/taxo2";
 
-/** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن. */
-function stageOf(row: ReferralStage): { text: string; tone: string } {
-  if (row.rewarded) return { text: "وصلت المكافأة", tone: "text-ok" };
+import "@/screens/t2/t2.css";
+import "@/screens/t2/account.css";
+
+/** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن. والنبرةُ معناه: نجاحٌ · انتظار · تنبيه · حبر. */
+function stageOf(row: ReferralStage): { text: string; tone: "ok" | "muted" | "warn" | "ink" } {
+  if (row.rewarded) return { text: "وصلت المكافأة", tone: "ok" };
   if (row.referral_type === "driver") {
     if (!row.driver_approved) {
-      return { text: "حسابه قيد المراجعة", tone: "text-muted" };
+      return { text: "حسابه قيد المراجعة", tone: "muted" };
     }
     if (!row.has_subscription) {
-      return { text: "لم يشترِ اشتراكاً بعد", tone: "text-muted" };
+      return { text: "لم يشترِ اشتراكاً بعد", tone: "muted" };
     }
   }
   if (row.rides_done < row.rides_required) {
     return {
       text: `أكمل ${row.rides_done} من ${row.rides_required} رحلات`,
-      tone: "text-muted",
+      tone: "muted",
     };
   }
   // **فوق السقف يُقال، لا يُصمت عنه**: «مستحقّة ولن تُدفع» حقيقةٌ يملكها صاحبُها
   if (row.over_monthly_cap) {
-    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "text-warn" };
+    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "warn" };
   }
-  return { text: "استحقّت — المكافأة في الطريق", tone: "text-ink" };
+  return { text: "استحقّت — المكافأة في الطريق", tone: "ink" };
+}
+
+/** **المبلغُ بخطّين كما في R06**: الرقمُ بخطّ الأرقام، والعملةُ صغيرةً خافتة — والرقمُ من الخلفية كما وصل. */
+function Amount({ value, currency, off = false }: { value: string; currency: string; off?: boolean }) {
+  return (
+    <span className={off ? "t2-amt off" : "t2-amt"}>
+      <span dir="ltr" className="t2-num">
+        {formatMoney(value)}
+      </span>
+      <span className="t2-amt-cur">{currencyLabel(currency)}</span>
+    </span>
+  );
 }
 
 export function ReferralsScreen() {
+  const goBack = useGoBack("/account");
   const { user } = useSession();
   const currency = user?.country_code === "LY" ? "LYD" : "JOD";
   const [data, setData] = useState<MyReferrals | null>(null);
@@ -112,80 +128,68 @@ export function ReferralsScreen() {
   }
 
   function amountOf(program: ReferralProgram) {
-    return formatMoney(program.reward_amount, currency);
+    return <Amount value={program.reward_amount} currency={currency} />;
   }
 
   return (
-    <Screen title="ادعُ صديقك" back="/account" nav>
-      <ErrorNote message={error} />
+    <div className="t2 t2-page pb-nav">
+      <SubHeadT2 title="ادعُ صديقك" onBack={goBack} />
+
+      {error ? (
+        <NoteT2 tone="danger" lead>
+          {error}
+        </NoteT2>
+      ) : null}
+
       {data === null ? null : (
-        <div className="space-y-14">
-          <section className="rounded-16 border border-line bg-surface p-16 text-center">
-            <p className="text-12 text-muted">رمز الدعوة الخاص بك</p>
-            <p dir="ltr" className="mt-8 text-26 font-bold tracking-code text-ink">
+        <>
+          <section className="t2-balance">
+            <span className="t2-stripe a" aria-hidden="true" />
+            <span className="t2-stripe b" aria-hidden="true" />
+            <div className="t2-balance-label">رمز الدعوة الخاص بك</div>
+            <div dir="ltr" className="t2-code-value">
               {data.code}
-            </p>
-            <div className="mt-14 flex gap-10">
-              <button
-                type="button"
-                onClick={() => void copy()}
-                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
+            </div>
+            <div className="t2-balance-actions">
+              <button type="button" className="t2-btn ember" onClick={() => void copy()}>
+                <Icon name={copied ? "check" : "content_copy"} />
                 {copied ? "نُسخ" : "انسخ"}
               </button>
-              <button
-                type="button"
-                onClick={() => void share()}
-                className="flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
-              >
-                <Share2 size={16} />
+              <button type="button" className="t2-btn ghost" onClick={() => void share()}>
+                <Icon name="ios_share" />
                 شارك
               </button>
             </div>
           </section>
 
           {pays ? (
-            <section className="rounded-16 border border-line bg-surface p-16">
-              <h2 className="text-13.5 font-bold text-ink">
-                رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به
-              </h2>
-              <div className="mt-10 space-y-8">
+            <>
+              <div className="t2-section">رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به</div>
+              <div className="t2-list t2-sgroup">
                 {data.programs.map((program) => {
-                  const active =
-                    program.enabled && Number(program.reward_amount) > 0;
+                  const active = program.enabled && Number(program.reward_amount) > 0;
                   const isDriver = program.referral_type === "driver";
                   return (
-                    <div
-                      key={program.referral_type}
-                      className="flex items-start justify-between gap-10 rounded-13 border border-line bg-surface-2 p-12"
-                    >
-                      <div>
-                        <p className="text-12.5 font-semibold text-ink">
-                          {isDriver ? "سجّل كبتناً" : "سجّل راكباً"}
-                        </p>
-                        <p className="mt-4 text-11.5 text-muted">
+                    <div key={program.referral_type} className="t2-prog">
+                      <span className="t2-badge">
+                        <Icon name={isDriver ? "local_taxi" : "person"} />
+                      </span>
+                      <div className="t2-prog-main">
+                        <p className="t2-prog-title">{isDriver ? "سجّل كبتناً" : "سجّل راكباً"}</p>
+                        <p className="t2-prog-cond">
                           {isDriver
                             ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${program.required_rides} رحلات`
                             : `يُكمل ${program.required_rides} رحلات`}
                         </p>
                         {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** */}
                         {isDriver && Number(program.female_bonus_amount) > 0 ? (
-                          <p className="mt-4 text-11.5 text-ok">
-                            وإن كانت سائقةً موثَّقة:{" "}
-                            {formatMoney(program.female_total_amount, currency)} —
-                            الأساسُ وعلاوتُه معاً
+                          <p className="t2-prog-bonus">
+                            وإن كانت سائقةً موثَّقة: {formatMoney(program.female_total_amount, currency)} — الأساسُ وعلاوتُه
+                            معاً
                           </p>
                         ) : null}
                       </div>
-                      <span
-                        className={cn(
-                          "shrink-0 text-13 font-bold",
-                          active ? "text-ink" : "text-muted",
-                        )}
-                      >
-                        {active ? amountOf(program) : "—"}
-                      </span>
+                      {active ? amountOf(program) : <span className="t2-amt off">—</span>}
                     </div>
                   );
                 })}
@@ -193,71 +197,51 @@ export function ReferralsScreen() {
 
               {/* **السقفُ قبل أن يدعو** — شرطُ المالك الثالث بحرفه */}
               {cap !== undefined ? (
-                <p
-                  className={cn(
-                    "mt-10 text-11.5",
-                    left === 0 ? "text-warn" : "text-muted",
-                  )}
-                >
+                <NoteT2 tone={left === 0 ? "warn" : "plain"}>
                   {left === 0
                     ? `بلغتَ سقفَ هذا الشهر (${cap}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
                     : `سقفُ هذا الشهر ${cap} دعوات — بقي لك ${left}.`}
-                </p>
+                </NoteT2>
               ) : null}
 
-              <p className="mt-8 text-11.5 text-muted">
-                مجموع ما وصلك: {formatMoney(data.total_rewarded, currency)}
-              </p>
-            </section>
+              <NoteT2 tone="plain">مجموع ما وصلك: {formatMoney(data.total_rewarded, currency)}</NoteT2>
+            </>
           ) : (
-            <section className="rounded-16 border border-line bg-surface p-16">
-              <h2 className="text-13.5 font-bold text-ink">كيف تعمل</h2>
-              <p className="mt-8 text-12.5 leading-relaxed text-muted">
-                شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الدعوةُ في
-                حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.
+            <>
+              <div className="t2-section">كيف تعمل</div>
+              <p className="t2-howto">
+                شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الدعوةُ في حسابك من الآن — والمكافأةُ تُعلن هنا متى
+                حُدِّدت.
               </p>
-            </section>
+            </>
           )}
 
-          <section>
-            <h2 className="mb-8 text-13.5 font-bold text-ink">من سجّل برمزك</h2>
-            {data.referrals.length === 0 ? (
-              <EmptyState title="لم يسجّل أحدٌ برمزك بعد" />
-            ) : (
-              <Stagger className="space-y-8">
-                {data.referrals.map((row) => {
-                  const where = stageOf(row);
-                  return (
-                    <StaggerItem
-                      key={row.id}
-                      className="flex items-center justify-between gap-10 rounded-13 border border-line bg-surface p-12"
-                    >
-                      <span>
-                        <span
-                          className={cn("block text-12.5 font-medium", where.tone)}
-                        >
-                          {where.text}
-                        </span>
-                        <span className="mt-2 block text-11 text-muted">
-                          {row.referral_type === "driver" ? "كبتن" : "راكب"}
-                        </span>
-                      </span>
-                      <span className="text-11.5 text-muted">
-                        {row.rewarded && row.reward_amount
-                          ? formatMoney(
-                              row.reward_amount,
-                              row.reward_currency ?? currency,
-                            )
-                          : null}
-                      </span>
-                    </StaggerItem>
-                  );
-                })}
-              </Stagger>
-            )}
-          </section>
-        </div>
+          <div className="t2-section">من سجّل برمزك</div>
+          {data.referrals.length === 0 ? (
+            <BlankT2 icon="group" title="لم يسجّل أحدٌ برمزك بعد" />
+          ) : (
+            <div className="t2-list">
+              {data.referrals.map((row) => {
+                const where = stageOf(row);
+                return (
+                  <div key={row.id} className="t2-ref">
+                    <span className="t2-badge">
+                      <Icon name={row.referral_type === "driver" ? "local_taxi" : "person"} />
+                    </span>
+                    <div className="t2-ref-main">
+                      <p className={`t2-ref-stage ${where.tone}`}>{where.text}</p>
+                      <p className="t2-ref-who">{row.referral_type === "driver" ? "كبتن" : "راكب"}</p>
+                    </div>
+                    {row.rewarded && row.reward_amount ? (
+                      <Amount value={row.reward_amount} currency={row.reward_currency ?? currency} />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
-    </Screen>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
-/** بحث الوجهة بالـ Geocoding — **مكمّلٌ للدبوس لا بديلٌ عنه** (القسم 11.3).
+/** بحث الوجهة بالـ Geocoding — TAXO 2.0 «R29d» (`design/t2-new/rider/R29d-destination-search.dc.html`)، **في المظهرين
+ *  والنسائيّ** — **مكمّلٌ للدبوس لا بديلٌ عنه** (القسم 11.3).
  *
  * لذلك زرُّ «حدّدها على الخريطة» ظاهرٌ دائماً بجانب النتائج، ولا يعتمد شيءٌ
  * هنا على نجاح البحث: عنوانٌ لم يُعثر عليه لا يمنع رحلة.
@@ -6,16 +7,22 @@
  * **والأماكنُ المحفوظة والوجهاتُ الأخيرة تظهران قبل الكتابة وتختفيان بعدها**
  * (`FUTURE-FEATURES` بند 1 و2): من فتح الورقة ليذهب إلى بيته لا يكتب، ومن
  * بدأ يكتب لا يريد قائمةً تزاحم نتائجه.
+ *
+ * **والسلوكُ سلوكُ الورقة القائمة بعينه** (`DrawerT2` فوق `vaul` كما كانت): البحثُ بمهلته، والاختيارُ، والدبوس — **وما تغيّر
+ * الوجهُ وحدَه**: ورقةُ R06–R09، وحقلُ R13 بأيقونته، والمحفوظُ والأخيرةُ صفوفاً في بطاقةٍ تحت عنوانٍ كـ R14.
  */
 
-import { Briefcase, Clock, House, Loader2, MapPin, Navigation, Search, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { CountryCode, Coordinates } from "@/api/types";
-import { DrawerSheet } from "@/components/ui/Sheet";
-import { EmptyState } from "@/components/ui/Feedback";
 import { searchPlaces, type Place } from "@/lib/geocode";
 import { usePlaces } from "@/lib/places";
+import { DrawerT2 } from "@/screens/t2/DrawerT2";
+import { BlankT2, LoaderT2 } from "@/screens/t2/KitT2";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/t2.css";
+import "@/screens/t2/request.css";
 
 const DEBOUNCE_MS = 350;
 
@@ -78,146 +85,126 @@ export function DestinationSearch({
   }, [query, token, country, near]);
 
   return (
-    <DrawerSheet open={open} onOpenChange={onOpenChange} title="إلى أين؟">
-      <div className="space-y-16 pb-24">
-        <div className="relative">
-          <Search className="pointer-events-none absolute inset-y-0 start-12 my-auto size-20 text-muted" />
-          <input
-            autoFocus
-            className="field ps-44"
-            placeholder="ابحث عن عنوان أو معلم"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          {searching ? (
-            <Loader2 className="absolute inset-y-0 end-12 my-auto size-20 animate-spin text-muted" />
-          ) : null}
-        </div>
+    <DrawerT2 open={open} onOpenChange={onOpenChange} title="إلى أين؟">
+      <label className="t2-dest-field">
+        <Icon name="search" />
+        <input
+          autoFocus
+          placeholder="ابحث عن عنوان أو معلم"
+          aria-label="ابحث عن عنوان أو معلم"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {searching ? <LoaderT2 small /> : null}
+      </label>
 
-        <button
-          type="button"
-          onClick={() => {
-            onOpenChange(false);
-            onPickOnMap();
-          }}
-          className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-surface px-16 py-12 text-start transition hover:bg-surface-2"
-        >
-          <Navigation className="size-20 text-brand" />
-          <span className="font-medium text-ink">حدّدها على الخريطة بالدبوس</span>
-        </button>
+      <button
+        type="button"
+        onClick={() => {
+          onOpenChange(false);
+          onPickOnMap();
+        }}
+        className="t2-dest-pin"
+      >
+        <Icon name="location_on" fill />
+        <span className="t2-dest-pin-label">حدّدها على الخريطة بالدبوس</span>
+        <Icon name="chevron_left" className="t2-chev" />
+      </button>
 
-        {!typing && places.length > 0 ? (
-          <section>
-            <p className="mb-8 text-12 text-muted">أماكن محفوظة</p>
-            <ul className="space-y-4">
-              {places.map((place) => (
-                <li key={place.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onPick({
-                        id: `place:${place.id}`,
-                        name: place.label,
-                        address: place.address ?? "",
-                        coordinates: { lat: place.lat, lng: place.lng },
-                      });
-                      onOpenChange(false);
-                    }}
-                    className="pressable flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
-                  >
-                    <PlaceIconMark icon={place.icon} />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-ink">
-                        {place.label}
-                      </span>
-                      {place.address ? (
-                        <span className="block truncate text-14 text-muted">
-                          {place.address}
-                        </span>
-                      ) : null}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {!typing && recents.length > 0 ? (
-          <section>
-            <p className="mb-8 text-12 text-muted">وجهات أخيرة</p>
-            <ul className="space-y-4">
-              {recents.map((recent) => (
-                <li key={recent.key}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onPick({
-                        id: `recent:${recent.key}`,
-                        name: recent.address,
-                        address: "",
-                        coordinates: recent.point,
-                      });
-                      onOpenChange(false);
-                    }}
-                    className="pressable flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
-                  >
-                    <Clock className="mt-2 size-20 shrink-0 text-muted" />
-                    {/* سطرٌ واحدٌ كاملاً — تفكيكُ العنوان إلى مكانٍ ومنطقة
-                        تخمينٌ يخطئ على ما لا يشبه المثال (البند 2) */}
-                    <span className="min-w-0 truncate font-medium text-ink">
-                      {recent.address}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <ul className="space-y-4">
-          {results.map((place) => (
-            <li key={place.id}>
+      {!typing && places.length > 0 ? (
+        <section>
+          <div className="t2-group t2-dest-group">أماكن محفوظة</div>
+          <div className="t2-list">
+            {places.map((place) => (
               <button
+                key={place.id}
                 type="button"
                 onClick={() => {
-                  onPick(place);
+                  onPick({
+                    id: `place:${place.id}`,
+                    name: place.label,
+                    address: place.address ?? "",
+                    coordinates: { lat: place.lat, lng: place.lng },
+                  });
                   onOpenChange(false);
                 }}
-                className="pressable flex w-full items-start gap-12 rounded-12 px-12 py-12 text-start transition hover:bg-surface-2"
+                className="t2-dest-row"
               >
-                <MapPin className="mt-2 size-20 shrink-0 text-muted" />
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-ink">{place.name}</span>
-                  {place.address ? (
-                    <span className="block truncate text-14 text-muted">{place.address}</span>
-                  ) : null}
+                <Icon name={placeIcon(place.icon)} fill className="mark" />
+                <span className="t2-dest-main">
+                  <span className="t2-dest-title">{place.label}</span>
+                  {place.address ? <span className="t2-dest-sub">{place.address}</span> : null}
                 </span>
               </button>
-            </li>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {!typing && recents.length > 0 ? (
+        <section>
+          <div className="t2-group t2-dest-group">وجهات أخيرة</div>
+          <div className="t2-list">
+            {recents.map((recent) => (
+              <button
+                key={recent.key}
+                type="button"
+                onClick={() => {
+                  onPick({
+                    id: `recent:${recent.key}`,
+                    name: recent.address,
+                    address: "",
+                    coordinates: recent.point,
+                  });
+                  onOpenChange(false);
+                }}
+                className="t2-dest-row"
+              >
+                <Icon name="schedule" />
+                {/* سطرٌ واحدٌ كاملاً — تفكيكُ العنوان إلى مكانٍ ومنطقة
+                    تخمينٌ يخطئ على ما لا يشبه المثال (البند 2) */}
+                <span className="t2-dest-main">
+                  <span className="t2-dest-title">{recent.address}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {results.length > 0 ? (
+        <div className="t2-list t2-dest-results">
+          {results.map((place) => (
+            <button
+              key={place.id}
+              type="button"
+              onClick={() => {
+                onPick(place);
+                onOpenChange(false);
+              }}
+              className="t2-dest-row"
+            >
+              <Icon name="location_on" />
+              <span className="t2-dest-main">
+                <span className="t2-dest-title">{place.name}</span>
+                {place.address ? <span className="t2-dest-sub">{place.address}</span> : null}
+              </span>
+            </button>
           ))}
-        </ul>
+        </div>
+      ) : null}
 
-        {!searching && query.trim().length >= 2 && results.length === 0 ? (
-          <EmptyState
-            title="لا نتائج لهذا البحث"
-            hint="جرّب اسماً أقصر، أو حدّد الوجهة على الخريطة"
-          />
-        ) : null}
+      {!searching && query.trim().length >= 2 && results.length === 0 ? (
+        <BlankT2 icon="search" title="لا نتائج لهذا البحث" hint="جرّب اسماً أقصر، أو حدّد الوجهة على الخريطة" />
+      ) : null}
 
-        {!token ? (
-          <p className="text-14 text-muted">
-            البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة.
-          </p>
-        ) : null}
-      </div>
-    </DrawerSheet>
+      {!token ? <p className="t2-note t2-dest-note">البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة.</p> : null}
+    </DrawerT2>
   );
 }
 
 /** أيقونةُ المكان — و**المجهولُ نجمة** لا فراغ: نوعٌ جديد في الخلفية يظهر
  * بشكلٍ محايد بدل أن يختفي الصف. */
-function PlaceIconMark({ icon }: { icon: string }) {
-  const Mark = icon === "home" ? House : icon === "work" ? Briefcase : Star;
-  return <Mark className="mt-2 size-20 shrink-0 text-brand" />;
+function placeIcon(icon: string): string {
+  return icon === "home" ? "home" : icon === "work" ? "work" : "star";
 }

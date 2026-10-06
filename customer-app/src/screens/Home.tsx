@@ -44,17 +44,13 @@ import type { RiderHomeProps } from "@/screens/t2/RiderHomeT2";
 import type { ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
-import { Button } from "@/components/ui/Button";
-import { Sheet } from "@/components/ui/Sheet";
 import { useCountryConfig, useMapboxToken } from "@/lib/config";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
-import { RIDE_STATUS_LABEL } from "@/lib/labels";
 import { isActive, useRide } from "@/lib/ride";
 import { useCoverNav } from "@/lib/navCover";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
-import { formatMoney } from "@/lib/utils";
 import { RiderHomeT2 } from "@/screens/t2/RiderHomeT2";
 import { ConfirmRideT2 } from "@/screens/t2/ConfirmRideT2";
 import {
@@ -65,6 +61,7 @@ import {
   WhereToSheetT2,
 } from "@/screens/t2/HomeMapT2";
 import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/screens/t2/TrackingT2";
+import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
 
@@ -581,7 +578,9 @@ export function HomeScreen() {
   useCoverNav(requestT2);
   /** **والتتبّعُ «R07–R09»** — بلا شريطٍ أصلاً (الرحلةُ الجاريةُ تخفيه، `App.tsx::NavBar`) والورقةُ ملتصقةٌ كما رُسمت. */
   const trackingT2 = tracking;
-  const sheetAttached = requestT2 || trackingT2;
+  /** **وخاتمةُ الرحلة «R29» ملتصقةٌ كذلك** — لا شريطَ تحتها أصلاً (`NavBar` يُخفيه ما دامت رحلةٌ معروضة)، وكانت ورقتُها القديمةُ
+   *  تطفو فوق مكانه فارغاً. */
+  const sheetAttached = requestT2 || trackingT2 || outcome !== null;
 
   // آخرُ ما يُؤطَّر به — يُقرأ داخل المراقب بلا أن يعيد كلُّ بثٍّ إنشاءَه
   const rideNow = useRef(ride);
@@ -697,10 +696,11 @@ export function HomeScreen() {
                 }
               />
             ) : outcome ? (
-              <OutcomeSheet
+              <OutcomeSheetT2
                 ride={outcome}
                 onDismiss={() => setDismissed(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
+                error={error}
               />
             ) : picking ? (
               <PickingSheetT2
@@ -746,78 +746,5 @@ export function HomeScreen() {
       />
 
     </div>
-  );
-}
-
-/** خاتمةُ رحلة: الدفع بعد الإنهاء، وخبرٌ يُقرأ بعد الإلغاء (SPEC القسم 5). */
-function OutcomeSheet({
-  ride,
-  onDismiss,
-  onAcceptAnyDriver,
-}: {
-  ride: Ride;
-  onDismiss: () => void;
-  onAcceptAnyDriver: () => Promise<void>;
-}) {
-  const navigate = useNavigate();
-  const [retrying, setRetrying] = useState(false);
-  const completed = ride.status === "completed";
-  // طلبٌ مجنَّس لم يجد كبتناً: هنا وحده يُعرض التنازل عن الشرط
-  const missedGendered =
-    ride.status === "no_driver_found" && ride.gender_preference !== "any";
-
-  return (
-    <Sheet>
-      <div className="space-y-12 pb-16">
-        <p className="text-18 font-semibold text-ink">{RIDE_STATUS_LABEL[ride.status]}</p>
-
-        {completed ? (
-          <>
-            <p className="text-14 text-muted">
-              الأجرة النهائية{" "}
-              <span className="font-semibold text-ink">
-                {formatMoney(ride.final_fare ?? ride.estimated_fare, ride.currency)}
-              </span>
-            </p>
-            <Button size="lg" onClick={() => navigate(`/rides/${ride.id}/pay`)}>
-              الانتقال إلى الدفع
-            </Button>
-          </>
-        ) : missedGendered ? (
-          <>
-            {/* **تخييرٌ لا رفض**: الطلبُ سقط لأن الشرط لم يتحقق، والقرارُ في
-                التنازل عنه قرارُها هي — ونعرضه مرةً هنا لا نطبّقه عنها.
-                و«أنتظر كبتنة» ليس زراً بعد: لا مسارَ في الخلفية يواصل بحثاً
-                انتهى، فوعدٌ بلا مسارٍ أسوأ من غيابه (`FUTURE-FEATURES`) */}
-            <p className="text-14 leading-relaxed text-muted">
-              لا كبتنة متاحة قريبة الآن. يمكنك طلب رحلةٍ جديدة بعد قليل، أو
-              قبول أي كبتن متاح الآن — الاختيار لكِ.
-            </p>
-            <Button
-              size="lg"
-              loading={retrying}
-              onClick={async () => {
-                setRetrying(true);
-                try {
-                  await onAcceptAnyDriver();
-                } finally {
-                  setRetrying(false);
-                }
-              }}
-            >
-              أقبل أي كبتن متاح
-            </Button>
-          </>
-        ) : (
-          <p className="text-14 text-muted">
-            {ride.cancelled_reason ?? "يمكنك طلب رحلة جديدة الآن."}
-          </p>
-        )}
-
-        <Button variant="ghost" className="w-full" onClick={onDismiss}>
-          {completed ? "لاحقاً" : "حسناً"}
-        </Button>
-      </div>
-    </Sheet>
   );
 }

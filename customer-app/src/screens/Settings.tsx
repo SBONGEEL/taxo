@@ -1,25 +1,25 @@
-/** الإعدادات — شاشةٌ مستقلةٌ كما في تصميم الراكب (`pgSettings`).
+/** الإعدادات — TAXO 2.0 «R23» (`design/t2-new/rider/R23-settings.dc.html`)، **في المظهرين والنسائيّ** — لوحةٌ جديدةٌ من عائلة R15
+ *  ومن صفوف C15 (مجموعاتٌ بعناوينها، وصفٌّ بأيقونةٍ ومفتاحٍ بشكل الهوية).
  *
  * **وما يجمعها ليس التصنيف بل المالك**: كلُّ ما فيها يخصّ **الجهاز الذي بيدك**
  * — مظهرٌ، وسِمةٌ نسائية، وإشعاراتُ عروض — لا الحساب. أما الاسمُ والرقمُ والجنسُ
- * والتفضيلُ الافتراضي فتخصّ الحساب، ومكانُها «حسابي». وشاشةٌ تجمعهما تجعل من
+ * والتفضيلُ الافتراضي فتخصّ الحساب، ومكانُها «بياناتي». وشاشةٌ تجمعهما تجعل من
  * جاء يبدّل لوناً يقرأ بياناته الشخصية، ومن جاء يصحّح بياناته يبدّل لوناً.
  *
  * **وساعاتُ الهدوء تُقرأ من `GET /config` لا تُكتب هنا** (قرار 44): رقمٌ في
  * الواجهة يخالف الجدولَ أولَ مرةٍ يُعدَّل، والمنطقةُ الزمنيةُ معه — وإلا قُرئت
  * الساعةُ بتوقيت الجهاز لا بتوقيت الدولة.
+ *
+ * **والمنطقُ هو هو حرفاً** (الطلباتُ والمفاتيحُ وقواعدُها): `GET`/`PUT` تفضيلات الإشعارات، والبصمةُ والأصواتُ والتقاريرُ والمظهرُ
+ * والسِمةُ على الجهاز. **وما تغيّر طبقةُ العرض**: المجموعاتُ الثلاث، و**الصفُّ كلُّه زرُّ مفتاحه** (هدفُ لمسٍ أعرض)، **وسببُ
+ * فشل الحفظ تحت صفّه** لا أعلى الشاشة.
  */
 
-import { useEffect, useState } from "react";
-import { BellRing, Volume2, Moon, Sun, SunMoon } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
-import {
-  getNotificationPreferences,
-  setNotificationPreferences,
-} from "@/api/endpoints";
-import { Screen } from "@/components/ui/Screen";
-import { ErrorNote } from "@/components/ui/Feedback";
+import { getNotificationPreferences, setNotificationPreferences } from "@/api/endpoints";
+import { useGoBack } from "@/lib/back";
 import { useBrand } from "@/lib/brand";
 import { useConfig } from "@/lib/config";
 import { biometryLabel } from "@/lib/biometric";
@@ -32,10 +32,22 @@ import {
   setSoundsEnabled,
   soundsEnabled,
 } from "@/lib/sound";
-import { cn } from "@/lib/utils";
 import { crashReportsEnabled, setCrashReportsEnabled } from "@/lib/crash-reports";
+import { AuthChoice, Icon, Switch } from "@/taxo2";
+import { SubHeadT2 } from "@/screens/t2/KitT2";
+
+import "@/screens/t2/t2.css";
+import "@/screens/t2/account.css";
+
+/** المظاهرُ الثلاثة بترتيبها — **النظامُ أوّلاً** كما كانت. */
+const THEMES = [
+  { value: "system" as const, label: "النظام" },
+  { value: "light" as const, label: "نهاري" },
+  { value: "dark" as const, label: "ليلي" },
+];
 
 export function SettingsScreen() {
+  const goBack = useGoBack("/account");
   const { user, biometry, setBiometric } = useSession();
   const [bioError, setBioError] = useState<string | null>(null);
   const { config } = useConfig();
@@ -72,248 +84,172 @@ export function SettingsScreen() {
   }
 
   return (
-    <Screen title="الإعدادات" back="/account" nav>
-      <ErrorNote message={error} />
-      <div className="space-y-14">
-        <section className="card space-y-12 p-16">
-          <div className="flex items-start justify-between gap-12">
-            <div>
-              <p className="flex items-center gap-8 font-medium text-ink">
-                <BellRing className="size-20" />
-                إشعارات العروض والكوبونات
-              </p>
-              <p className="mt-2 text-14 text-muted">
-                عروضٌ وتخفيضات. إشعارات رحلتك تصلك دائماً.
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={marketing === true}
-              aria-label="إشعارات العروض والكوبونات"
-              disabled={marketing === null}
-              onClick={() => toggleMarketing(!marketing)}
-              className={cn(
-                "pressable relative h-28 w-48 shrink-0 rounded-full transition",
-                marketing ? "bg-brand" : "bg-line",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-4 size-20 rounded-full bg-white transition-all",
-                  marketing ? "start-24" : "start-4",
-                )}
-              />
-            </button>
-          </div>
-        </section>
+    <div className="t2 t2-page pb-nav">
+      <SubHeadT2 title="الإعدادات" onBack={goBack} />
 
-        {/* **أصواتُ التطبيق** (`DESIGN.md` §9): مفتاحان — العامُّ وصوتُ
-            الإشعارات. **على الجهاز لا الحساب** كالسِمة: من يُسكت تطبيقه في
-            اجتماعٍ لا يريد إسكاته على هاتفه في البيت. ومفعَّلان افتراضياً،
-            فالصوتُ ميزةٌ يُطفئها صاحبُها لا ميزةٌ تنتظر إشعالاً */}
-        <section className="card divide-y divide-line">
-          {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن
-              يملكه**: `available` كاذبةٌ في المتصفّح وعلى جهازٍ بلا بصمةٍ
-              مسجَّلة، فلا مفتاحَ ولا سطرَ يشرح ما لا يستطيعه القارئ. */}
-          {/* **الغيابُ الصامتُ عائلةُ «الشبكة ضعيفة»** (تصحيحُ المالك
-              2026-08-29): سطرٌ يقول **ما يفعله القارئ** ولا يدّعي سبباً لا
-              يعرفه. وفي المتصفّح لا سطرَ ولا مفتاح — `native` كاذبة. */}
-          {biometry?.native && !biometry.available ? (
-            <div className="p-16">
-              <p className="font-medium text-ink">الدخول السريع</p>
-              <p className="mt-2 text-14 text-muted">فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.</p>
-            </div>
-          ) : null}
-
-          {biometry?.available ? (
-            <div className="flex items-center justify-between gap-12 p-16">
-              <div className="min-w-0">
-                <p className="font-medium text-ink">
-                  الدخول بـ{biometryLabel(biometry.kind)}
-                </p>
-                <p className="mt-2 text-14 text-muted">
-                  يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك
-                  أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور.
-                </p>
-                {bioError ? (
-                  <p className="mt-6 text-13 text-danger">{bioError}</p>
-                ) : null}
-              </div>
-              <Toggle
-                on={biometry.enabled}
-                label={`الدخول بـ${biometryLabel(biometry.kind)}`}
-                onToggle={() => {
-                  setBioError(null);
-                  void setBiometric(!biometry.enabled).catch(
-                    (caught: unknown) => {
-                      // **الرفضُ يُقال ولا يُقلب مفتاحاً**
-                      setBioError(
-                        caught instanceof Error
-                          ? caught.message
-                          : "تعذّر تفعيل الدخول بالبصمة",
-                      );
-                    },
-                  );
-                }}
-              />
-            </div>
-          ) : null}
-
-          <div className="flex items-center justify-between gap-12 p-16">
-            <div className="min-w-0">
-              <p className="flex items-center gap-8 font-medium text-ink">
-                <Volume2 className="size-20" />
-                أصوات التطبيق
-              </p>
-              <p className="mt-2 text-14 text-muted">
-                نغماتٌ قصيرة عند قبول الكبتن ووصوله واكتمال الدفع.
-              </p>
-            </div>
-            <Toggle
-              on={sounds}
-              label="أصوات التطبيق"
-              onToggle={() => {
-                const next = !sounds;
-                setSoundsEnabled(next);
-                setSounds(next);
-                // تُسمع النغمةُ عند الإشعال — فيعرف صاحبُها ما أشعل
-                if (next) play("notify");
-              }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-12 p-16">
-            <div className="min-w-0">
-              <p className="font-medium text-ink">صوت الإشعارات</p>
-              <p className="mt-2 text-14 text-muted">
-                نغمةُ الإشعارات وحدها — مستقلّةٌ عن بقية الأصوات.
-              </p>
-            </div>
-            <Toggle
-              on={notifySound}
-              label="صوت الإشعارات"
-              onToggle={() => {
-                const next = !notifySound;
-                setNotificationSoundEnabled(next);
-                setNotifySound(next);
-                if (next) play("notify");
-              }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-12 p-16">
-            <div className="min-w-0">
-              <p className="font-medium text-ink">إرسال تقارير الأعطال</p>
-              <p className="mt-2 text-14 text-muted">تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يساعدنا نعرف أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته.</p>
-            </div>
-            <Toggle
-              on={crashReports}
-              label="إرسال تقارير الأعطال"
-              onToggle={() => {
-                const next = !crashReports;
-                setCrashReportsEnabled(next);
-                setCrashReports(next);
-              }}
-            />
-          </div>
-        </section>
-
+      <Group label="الإشعارات">
+        <Toggle
+          icon="campaign"
+          title="إشعارات العروض والكوبونات"
+          hint="عروضٌ وتخفيضات. إشعارات رحلتك تصلك دائماً."
+          on={marketing === true}
+          disabled={marketing === null}
+          onToggle={() => void toggleMarketing(!marketing)}
+        />
+        {/* **سببُ فشل الحفظ تحت صفّه** (§٦٢/٢٠) — والمفتاحُ عاد إلى حاله */}
+        {error ? (
+          <p className="t2-srow-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Toggle
+          icon="notifications"
+          title="صوت الإشعارات"
+          hint="نغمةُ الإشعارات وحدها — مستقلّةٌ عن بقية الأصوات."
+          on={notifySound}
+          onToggle={() => {
+            const next = !notifySound;
+            setNotificationSoundEnabled(next);
+            setNotifySound(next);
+            if (next) play("notify");
+          }}
+        />
         {/* ساعاتُ الهدوء — **تُعرض ولا تُحرَّر**: قاعدةٌ للحملات يضبطها المشرف
             per-country، ومكانُها هنا كي يعرف من ينتظر عرضاً متى لا يصله.
-            و«إشعارات رحلتك تصلك في أي وقت» تُقال صريحةً: الهدوءُ للتسويق وحده */}
+            و«إشعارات رحلتك تصلك في أي وقت» تُقال صريحةً: الهدوءُ للتسويق وحده.
+            **وبلا سهمٍ يَعِد بتحرير** */}
         {country?.quiet_hours_start && country?.quiet_hours_end ? (
-          <section className="card space-y-4 p-16">
-            <div className="flex items-center justify-between gap-12">
-              <p className="font-medium text-ink">ساعات الهدوء</p>
-              <span dir="ltr" className="text-13 font-semibold text-ink">
-                {country.quiet_hours_start} – {country.quiet_hours_end}
-              </span>
-            </div>
-            <p className="text-12 leading-relaxed text-muted">
-              تخصّ الحملات التسويقية وحدها — إشعارات رحلتك تصلك في أي وقت.
-            </p>
-          </section>
-        ) : null}
-
-        <section className="card space-y-12 p-16">
-          <p className="font-medium text-ink">مظهر التطبيق</p>
-          <div className="grid grid-cols-3 gap-8">
-            {(
-              [
-                { value: "system", label: "النظام", icon: SunMoon },
-                { value: "light", label: "نهاري", icon: Sun },
-                { value: "dark", label: "ليلي", icon: Moon },
-              ] as const
-            ).map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setChoice(value)}
-                className={cn(
-                  "pressable flex flex-col items-center gap-4 rounded-12 border px-8 py-12 text-14 transition",
-                  choice === value
-                    ? "border-brand bg-brand-soft text-ink"
-                    : "border-line text-muted hover:bg-surface-2",
-                )}
-              >
-                <Icon className="size-20" />
-                {label}
-              </button>
-            ))}
+          <div className="t2-srow">
+            <Icon name="bedtime" className="t2-srow-icon" />
+            <span className="t2-srow-main">
+              <span className="t2-srow-title">ساعات الهدوء</span>
+              <span className="t2-srow-hint">تخصّ الحملات التسويقية وحدها — إشعارات رحلتك تصلك في أي وقت.</span>
+            </span>
+            <span dir="ltr" className="t2-srow-value">
+              {country.quiet_hours_start} – {country.quiet_hours_end}
+            </span>
           </div>
-        </section>
+        ) : null}
+      </Group>
 
+      <Group label="التطبيق">
+        <div className="t2-srow tall">
+          <Icon name="dark_mode" className="t2-srow-icon" />
+          <span className="t2-srow-main">
+            <span className="t2-srow-title">مظهر التطبيق</span>
+            <AuthChoice label="مظهر التطبيق" value={choice} options={THEMES} onChange={setChoice} />
+          </span>
+        </div>
         {/* السِمة الوردية — **إقرارُها وحده يكفي** (البند 6): عرضٌ بصريٌّ لا
             يَعِد بخدمة، فلا يُعلَّق على مفتاحٍ قُطريٍّ ولا على ختمِ الإدارة.
-            ومن ليست كذلك لا ترى مفتاحاً معطّلاً ولا رسالةَ اعتذار */}
+            ومن ليست كذلك لا ترى مفتاحاً معطّلاً ولا رسالةَ اعتذار.
+            **والسببُ مكتوبٌ لأنه ليس ذوقاً**: القرارُ عن المكان الذي أنتِ فيه لا عن جمال اللون */}
         {themeAvailable ? (
-          <section className="card space-y-12 p-16">
-            <div className="flex items-start justify-between gap-16">
-              <div>
-                <p className="font-medium text-ink">السِمة الوردية</p>
-                {/* السببُ مكتوبٌ لأنه ليس ذوقاً: القرارُ عن المكان الذي أنتِ
-                    فيه لا عن جمال اللون */}
-                <p className="mt-4 text-12 leading-relaxed text-muted">
-                  هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها
-                  من حولك.
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={pink}
-                aria-label="السِمة الوردية"
-                onClick={() => setPink(!pink)}
-                className={cn(
-                  "pressable relative h-28 w-48 flex-none rounded-full transition",
-                  pink ? "bg-brand" : "bg-line",
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute top-4 size-20 rounded-full bg-surface transition-all",
-                    pink ? "start-24" : "start-4",
-                  )}
-                />
-              </button>
-            </div>
-          </section>
+          <Toggle
+            icon="woman"
+            women
+            title="السِمة الوردية"
+            hint="هوية خدمة التوصيل النسائي. أطفئيها متى شئتِ — الشاشة يراها من حولك."
+            on={pink}
+            onToggle={() => setPink(!pink)}
+          />
         ) : null}
-      </div>
-    </Screen>
+        {/* **أصواتُ التطبيق** (`DESIGN.md` §9) — **على الجهاز لا الحساب** كالسِمة: من يُسكت تطبيقه في اجتماعٍ لا يريد
+            إسكاته على هاتفه في البيت. ومفعَّلةٌ افتراضياً، فالصوتُ ميزةٌ يُطفئها صاحبُها لا ميزةٌ تنتظر إشعالاً */}
+        <Toggle
+          icon="volume_up"
+          title="أصوات التطبيق"
+          hint="نغماتٌ قصيرة عند قبول الكبتن ووصوله واكتمال الدفع."
+          on={sounds}
+          onToggle={() => {
+            const next = !sounds;
+            setSoundsEnabled(next);
+            setSounds(next);
+            // تُسمع النغمةُ عند الإشعال — فيعرف صاحبُها ما أشعل
+            if (next) play("notify");
+          }}
+        />
+        <Toggle
+          icon="bug_report"
+          title="إرسال تقارير الأعطال"
+          hint="تقريرٌ تقنيٌّ بلا رقمك ولا موقعك ولا رصيدك — يساعدنا نعرف أين توقّفت الشاشة. وزرُّ «أرسل تقريراً» يعمل ولو أطفأته."
+          on={crashReports}
+          onToggle={() => {
+            const next = !crashReports;
+            setCrashReportsEnabled(next);
+            setCrashReports(next);
+          }}
+        />
+      </Group>
+
+      {/* **الدخولُ السريع** (قرارُ المالك 2026-08-29) — **ولا يظهر إلا لمن يملكه**: `available` كاذبةٌ في المتصفّح وعلى جهازٍ
+          بلا بصمةٍ مسجَّلة. **والغيابُ الصامتُ عائلةُ «الشبكة ضعيفة»** (تصحيحُ المالك 2026-08-29): سطرٌ يقول **ما يفعله
+          القارئ** ولا يدّعي سبباً لا يعرفه. وفي المتصفّح لا مجموعةَ ولا سطرَ ولا مفتاح — `native` كاذبة. */}
+      {biometry?.available || biometry?.native ? (
+        <Group label="الدخول">
+          {biometry.native && !biometry.available ? (
+            <div className="t2-srow">
+              <Icon name="fingerprint" className="t2-srow-icon" />
+              <span className="t2-srow-main">
+                <span className="t2-srow-title">الدخول السريع</span>
+                <span className="t2-srow-hint">
+                  فعّل قفل الشاشة وبصمة إصبع في إعدادات جهازك. وبصمة الوجه في أجهزة سامسونج لا تفتح هذه الميزة.
+                </span>
+              </span>
+            </div>
+          ) : null}
+          {biometry.available ? (
+            <Toggle
+              icon="fingerprint"
+              title={`الدخول بـ${biometryLabel(biometry.kind)}`}
+              hint="يفتح جلستك المحفوظة على هذا الجهاز — ولا تُحفظ كلمةُ مرورك أبداً، ويُمحى المحفوظ عند الخروج أو تبديل كلمة المرور."
+              on={biometry.enabled}
+              onToggle={() => {
+                setBioError(null);
+                void setBiometric(!biometry.enabled).catch((caught: unknown) => {
+                  // **الرفضُ يُقال ولا يُقلب مفتاحاً**
+                  setBioError(caught instanceof Error ? caught.message : "تعذّر تفعيل الدخول بالبصمة");
+                });
+              }}
+            />
+          ) : null}
+          {bioError ? (
+            <p className="t2-srow-error" role="alert">
+              {bioError}
+            </p>
+          ) : null}
+        </Group>
+      ) : null}
+    </div>
   );
 }
 
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section>
+      <div className="t2-group">{label}</div>
+      <div className="t2-list t2-sgroup">{children}</div>
+    </section>
+  );
+}
 
-/** مفتاحٌ واحد بشكل التصميم — يُعاد استعماله بدل نسخِ ثمانيةِ أصنافٍ لكلِّ صفّ. */
+/** **الصفُّ كلُّه زرُّ المفتاح** — `role="switch"` كمفاتيح الشاشة القائمة، والمفتاحُ المرئيُّ زينةٌ (`Switch` · `aria-hidden`). */
 function Toggle({
+  icon,
+  title,
+  hint,
   on,
-  label,
+  disabled,
+  women = false,
   onToggle,
 }: {
+  icon: string;
+  title: string;
+  hint?: string;
   on: boolean;
-  label: string;
+  disabled?: boolean;
+  /** أيقونةُ الخدمة النسائية بالبرقوق (الهوية) */
+  women?: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -321,19 +257,17 @@ function Toggle({
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={label}
+      aria-label={title}
+      disabled={disabled}
       onClick={onToggle}
-      className={cn(
-        "pressable relative h-28 w-48 shrink-0 rounded-full transition",
-        on ? "bg-brand" : "bg-line",
-      )}
+      className="t2-srow"
     >
-      <span
-        className={cn(
-          "absolute top-4 size-20 rounded-full bg-white transition-all",
-          on ? "start-24" : "start-4",
-        )}
-      />
+      <Icon name={icon} className={women ? "t2-srow-icon women" : "t2-srow-icon"} />
+      <span className="t2-srow-main">
+        <span className="t2-srow-title">{title}</span>
+        {hint ? <span className="t2-srow-hint">{hint}</span> : null}
+      </span>
+      <Switch on={on} />
     </button>
   );
 }

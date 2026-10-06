@@ -1,4 +1,7 @@
-/** صورةُ الراكب — **اختياريةٌ، بمعاينةٍ قبل الرفع، وبلا مراجعة**
+/** بطاقةُ الهوية والصورة — TAXO 2.0 «R22» (`design/t2-new/rider/R22-profile.dc.html`): **الدائرةُ هي الصورة** — المختارةُ
+ *  أو المرفوعةُ في هذه الجلسة، وإلا الحرفُ الأوّل كما في R15 — وبجانبها الاسمُ والرقم، ثمّ البريدُ المُثبَت، ثمّ «صورتي» وأفعالُها.
+ *
+ * **والصورةُ اختياريةٌ، بمعاينةٍ قبل الرفع، وبلا مراجعة**
  *  (قرارُ المالك 2026-08-22، `PUT`/`DELETE /auth/me/photo`).
  *
  * **ولا تُكتب هنا كلمةٌ توحي بانتظار موافقة**: البابُ يَنشر فور الرفع، وشاشةٌ
@@ -14,18 +17,21 @@
  * **ولا منطقَ «هل له صورة» في التطبيق**: البابُ الذي يعرضها للكبتن يردّ
  * ٢٠٠ بصورةٍ دائماً بطولٍ ثابت — والغيابُ المرئيُّ نفسُه وشاية (الشكلُ
  * الثالثَ عشر). فلا تُرسم هنا حالٌ اسمُها «لا صورةَ لك» ولا يُقاس عليها شيء.
+ *
+ * **والاسمُ والرقمُ والبريدُ هنا لا في الشاشة** لأن الدائرةَ بجانبها هي الصورةُ نفسُها — فلا تُرسم دائرتان لشخصٍ واحد.
+ * **والرقمُ لا يُحرَّر ولا يُعرَّب** — معرَّفٌ يُقارَن ويُملى؛ **والبريدُ يُعرض ولا يُحرَّر** (قرارُ المالك 2026-08-31): تغييرُ
+ * بريدٍ مُثبَتٍ يحتاج إثباتَ الجديد، و`null` تعني لا بريدَ مُثبَت فلا يُرسم سطرٌ فارغ.
  */
 
-import { Camera, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { clearMyPhoto, setMyPhoto } from "@/api/endpoints";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
+import { NoteT2 } from "@/screens/t2/KitT2";
 import { describeShrink, shrinkImage } from "@/lib/shrink";
 import { useSession } from "@/lib/session";
 import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 /** ما يُقبل من المعرض أو الكاميرا — والخلفيةُ تقرأ النوعَ من البايتات لا من هذا. */
 const ACCEPT = "image/*";
@@ -131,144 +137,143 @@ export function PhotoCard() {
   const uploading = busy === "upload";
 
   return (
-    <section className="card space-y-14 p-16">
-      <div className="flex items-center gap-14">
-        <span className="flex size-64 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brand-brd bg-brand-soft text-26 font-bold text-brand">
-          {shown ? (
-            <img src={shown} alt="" className="size-full object-cover" />
-          ) : (
-            user?.name.slice(0, 1) ?? "؟"
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium text-ink">صورتي</p>
-          <p className="mt-2 text-12 leading-relaxed text-muted">
-            اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا
-            يراها راكبٌ آخر. وتظهر فور رفعها.
-          </p>
+    <section className="t2-idcard">
+      <div className="t2-idcard-top">
+        {/* الدائرةُ بلغة R15 — **برقوقيّةٌ في السِمة الوردية** (`t2.css`) */}
+        <span className="t2-avatar">{shown ? <img src={shown} alt="" /> : (user?.name.slice(0, 1) ?? "؟")}</span>
+        <div className="t2-prof-main">
+          <div className="t2-prof-name">{user?.name}</div>
+          <div dir="ltr" className="t2-prof-phone">
+            {user?.phone}
+          </div>
         </div>
       </div>
 
-      {/* **حدُّ التطبيق يُقال ولا يُخفى**: لا بابَ يقرأ الصورةَ المرفوعةَ في
-          شاشةِ الحساب، فالدائرةُ أعلاه حرفُ الاسم لا الصورة. وسكوتُنا عن ذلك
-          يجعل من رفع صورتَه أمس يقرأ الحرفَ «حُذفت صورتي» */}
-      {shown ? null : (
-        <p className="text-11.5 leading-note text-muted">
-          ما في الدائرة حرفُ اسمك لا صورتُك المرفوعة — وعرضُ الصورة الحالية في
-          هذه الشاشة لم يُبنَ بعد. واختيارُ صورةٍ جديدةٍ يحلّ محلّ ما قبلها.
-        </p>
-      )}
-
-      <input
-        ref={picker}
-        type="file"
-        accept={ACCEPT}
-        className="hidden"
-        onChange={(event) => {
-          choose(event.target.files?.[0]);
-          // **يُفرَّغ المدخل**: اختيارُ الملف نفسِه مرةً ثانيةً بعد إلغاءٍ لا
-          // يُطلق `change` ما لم تُمسح القيمة
-          event.target.value = "";
-        }}
-      />
-
-      {uploading ? (
-        <div className="space-y-8">
-          <div className="flex items-baseline justify-between gap-8">
-            <p className="text-13 text-muted">جارٍ رفع الصورة</p>
-            <p className="text-13 font-semibold text-ink">
-              {digits(String(progress))}٪
-            </p>
-          </div>
-          <div
-            className="h-6 w-full overflow-hidden rounded-6 bg-surface-2"
-            role="progressbar"
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="h-full rounded-6 bg-brand transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => abort.current?.abort()}>
-            <X className="size-16" />
-            أوقف الرفع
-          </Button>
-        </div>
-      ) : picked ? (
-        <div className="flex gap-8">
-          <Button className="flex-1" onClick={() => void send(picked)}>
-            ارفع هذه الصورة
-          </Button>
-          <Button variant="secondary" onClick={discard}>
-            تراجع
-          </Button>
-        </div>
-      ) : (
-        <div className="flex gap-8">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => picker.current?.click()}
-          >
-            <Camera className="size-16" />
-            اختر صورة
-          </Button>
-          <Button
-            variant="ghost"
-            className="text-danger"
-            disabled={busy !== null}
-            onClick={() => setConfirmClear(true)}
-          >
-            <Trash2 className="size-16" />
-            احذف
-          </Button>
-        </div>
-      )}
-
-      {/* **خطوةٌ ثانيةٌ للحذف**: الملفُّ يُمحى من القرص ولا يُستردّ، وضغطةٌ
-          واحدةٌ على زرٍّ بجانب «اختر صورة» تقع بالخطأ */}
-      {confirmClear ? (
-        <div className="space-y-10 rounded-12 border border-danger bg-surface-2 p-12">
-          <p className="text-13 text-ink">
-            ستُحذف صورتك نهائياً، ويرى كبتنُ رحلتك حرفَ اسمك بدلاً منها.
+      {user?.email ? (
+        <div className="t2-idcard-sec">
+          <p className="t2-idcard-label">البريد المُثبَت</p>
+          <p dir="ltr" className="t2-idcard-email">
+            {user.email}
           </p>
-          <div className="flex gap-8">
-            <Button
-              variant="danger"
-              size="sm"
-              className="flex-1"
-              loading={busy === "clear"}
-              onClick={() => void remove()}
-            >
-              نعم، احذفها
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setConfirmClear(false)}
-            >
-              تراجع
-            </Button>
-          </div>
         </div>
       ) : null}
 
-      {/* **الخطأُ يحمل زرّاً لا نصّاً وحدَه**: من انقطع رفعُه لا يجد المدخلَ
-          مفتوحاً، وإعادةُ اختيار الصورة من المعرض خطواتٌ يفقد بينها الغرض */}
-      <ErrorNote message={error} />
-      {error && picked && !uploading ? (
-        <Button variant="secondary" size="sm" onClick={() => void send(picked)}>
-          أعد رفع الصورة نفسها
-        </Button>
-      ) : null}
+      <div className="t2-idcard-sec">
+        <p className="t2-idcard-title">صورتي</p>
+        <p className="t2-idcard-body">
+          اختياريةٌ، ويراها كبتنُ رحلتك بعد قبوله طلبَك وحده — لا قبله، ولا يراها راكبٌ آخر. وتظهر فور رفعها.
+        </p>
 
-      <SuccessNote message={done} />
-      {shrunkNote ? (
-        <p className="text-11.5 leading-note text-muted">{shrunkNote}</p>
-      ) : null}
+        {/* **حدُّ التطبيق يُقال ولا يُخفى**: لا بابَ يقرأ الصورةَ المرفوعةَ في
+            شاشةِ الحساب، فالدائرةُ أعلاه حرفُ الاسم لا الصورة. وسكوتُنا عن ذلك
+            يجعل من رفع صورتَه أمس يقرأ الحرفَ «حُذفت صورتي» */}
+        {shown ? null : (
+          <p className="t2-idcard-note">
+            ما في الدائرة حرفُ اسمك لا صورتُك المرفوعة — وعرضُ الصورة الحالية في هذه الشاشة لم يُبنَ بعد. واختيارُ صورةٍ
+            جديدةٍ يحلّ محلّ ما قبلها.
+          </p>
+        )}
+
+        <input
+          ref={picker}
+          type="file"
+          accept={ACCEPT}
+          className="t2-idcard-file"
+          aria-label="اختر صورة"
+          onChange={(event) => {
+            choose(event.target.files?.[0]);
+            // **يُفرَّغ المدخل**: اختيارُ الملف نفسِه مرةً ثانيةً بعد إلغاءٍ لا
+            // يُطلق `change` ما لم تُمسح القيمة
+            event.target.value = "";
+          }}
+        />
+
+        {uploading ? (
+          <div className="t2-idcard-progress">
+            <div className="t2-idcard-progress-top">
+              <span>جارٍ رفع الصورة</span>
+              <span dir="ltr" className="t2-num">
+                {digits(String(progress))}%
+              </span>
+            </div>
+            <div
+              className="t2-idcard-bar"
+              role="progressbar"
+              aria-label="جارٍ رفع الصورة"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <span style={{ width: `${progress}%` }} />
+            </div>
+            <button type="button" className="t2-cbtn soft full" onClick={() => abort.current?.abort()}>
+              <Icon name="close" />
+              أوقف الرفع
+            </button>
+          </div>
+        ) : picked ? (
+          <div className="t2-idcard-row">
+            <button type="button" className="t2-cbtn ink grow" onClick={() => void send(picked)}>
+              ارفع هذه الصورة
+            </button>
+            <button type="button" className="t2-cbtn soft" onClick={discard}>
+              تراجع
+            </button>
+          </div>
+        ) : (
+          <div className="t2-idcard-row">
+            <button type="button" className="t2-cbtn soft grow" onClick={() => picker.current?.click()}>
+              <Icon name="photo_camera" />
+              اختر صورة
+            </button>
+            <button
+              type="button"
+              className="t2-cbtn destroy-text"
+              disabled={busy !== null}
+              onClick={() => setConfirmClear(true)}
+            >
+              <Icon name="delete" />
+              احذف
+            </button>
+          </div>
+        )}
+
+        {/* **خطوةٌ ثانيةٌ للحذف**: الملفُّ يُمحى من القرص ولا يُستردّ، وضغطةٌ
+            واحدةٌ على زرٍّ بجانب «اختر صورة» تقع بالخطأ */}
+        {confirmClear ? (
+          <div className="t2-idcard-confirm">
+            <p>ستُحذف صورتك نهائياً، ويرى كبتنُ رحلتك حرفَ اسمك بدلاً منها.</p>
+            <div className="t2-idcard-row">
+              <button
+                type="button"
+                className="t2-cbtn destroy grow"
+                disabled={busy === "clear"}
+                aria-busy={busy === "clear"}
+                onClick={() => void remove()}
+              >
+                نعم، احذفها
+              </button>
+              <button type="button" className="t2-cbtn soft" onClick={() => setConfirmClear(false)}>
+                تراجع
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* **الخطأُ يحمل زرّاً لا نصّاً وحدَه**: من انقطع رفعُه لا يجد المدخلَ
+            مفتوحاً، وإعادةُ اختيار الصورة من المعرض خطواتٌ يفقد بينها الغرض */}
+        {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
+        {error && picked && !uploading ? (
+          <div className="t2-idcard-row">
+            <button type="button" className="t2-cbtn soft full" onClick={() => void send(picked)}>
+              أعد رفع الصورة نفسها
+            </button>
+          </div>
+        ) : null}
+
+        {done ? <NoteT2 tone="ok">{done}</NoteT2> : null}
+        {shrunkNote ? <p className="t2-idcard-note">{shrunkNote}</p> : null}
+      </div>
     </section>
   );
 }

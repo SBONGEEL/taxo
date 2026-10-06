@@ -1,4 +1,5 @@
-/** الأماكن المحفوظة — الصفحة الكاملة (`FUTURE-FEATURES` بند 1).
+/** الأماكن المحفوظة — TAXO 2.0 «R24» (`design/t2-new/rider/R24-places.dc.html` · `R24b-…` · `R24c-…`)، **في المظهرين
+ *  والنسائيّ** — لوحةٌ جديدةٌ من عائلة R15 (`FUTURE-FEATURES` بند 1).
  *
  * قائمةٌ بأماكنه وزرُّ إضافةٍ وتعديلٌ لكل صف. و**الإحداثيات تأتي من الرئيسية
  * لا من هنا**: اختيارُ نقطةٍ يحتاج خريطةً، وخريطةٌ ثانية في هذه الصفحة تعني
@@ -7,33 +8,37 @@
  *
  * **ولا حذفَ بلا تأكيد**: مكانٌ يُحذف بضغطةٍ واحدة يُحذف بالخطأ، وإعادتُه
  * تعني تحديدَ نقطةٍ على خريطةٍ من جديد.
+ *
+ * **والمنطقُ هو هو حرفاً** (`POST`/`PATCH`/`DELETE /me/places` ثمّ إعادةُ القراءة من `PlacesProvider`)؛ **وما تغيّر طبقةُ
+ * العرض**: صفوفٌ في بطاقة بمربّع أيقونةٍ بالجمر الخافت، والنموذجُ بحقل الهوية واختيارِ R03.
  */
 
-import { House, Briefcase, MapPin, Star, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { createPlace, deletePlace, updatePlace } from "@/api/endpoints";
 import type { PlaceIcon, SavedPlace } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, EmptyState } from "@/components/ui/Feedback";
-import { Screen } from "@/components/ui/Screen";
-import { Stagger, StaggerItem } from "@/components/ui/Motion";
+import { useGoBack } from "@/lib/back";
 import { usePlaces, type RecentDestination } from "@/lib/places";
-import { cn } from "@/lib/utils";
+import { BlankT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
+import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 
-const ICONS: { value: PlaceIcon; label: string; Mark: typeof House }[] = [
-  { value: "home", label: "المنزل", Mark: House },
-  { value: "work", label: "العمل", Mark: Briefcase },
-  { value: "star", label: "مكان", Mark: Star },
+import "@/screens/t2/t2.css";
+import "@/screens/t2/account.css";
+
+const ICONS: { value: PlaceIcon; label: string; icon: string }[] = [
+  { value: "home", label: "المنزل", icon: "home" },
+  { value: "work", label: "العمل", icon: "work" },
+  { value: "star", label: "مكان", icon: "star" },
 ];
 
-function Mark({ icon }: { icon: string }) {
-  const found = ICONS.find((option) => option.value === icon) ?? ICONS[2];
-  return <found.Mark className="size-20 shrink-0 text-brand" />;
+/** أيقونةُ المكان — و**المجهولُ نجمة** لا فراغ: نوعٌ جديد في الخلفية يظهر بشكلٍ محايد بدل أن يختفي الصف. */
+function markOf(icon: string): string {
+  return (ICONS.find((option) => option.value === icon) ?? ICONS[2]).icon;
 }
 
 export function PlacesScreen() {
+  const goBack = useGoBack("/account");
   const { places, recents, refresh } = usePlaces();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,111 +60,101 @@ export function PlacesScreen() {
   }
 
   return (
-    <Screen title="الأماكن المحفوظة" back="/account" nav>
-      <div className="space-y-16">
-        <ErrorNote message={error} />
+    <div className="t2 t2-page pb-nav">
+      <SubHeadT2 title="الأماكن المحفوظة" onBack={goBack} />
 
-        {places.length === 0 ? (
-          <EmptyState
-            title="لا أماكن محفوظة بعد"
-            hint="احفظ وجهةً من رحلاتك الأخيرة أدناه، فتصير ضغطةً واحدة في المرة القادمة"
-          />
-        ) : (
-          <Stagger className="space-y-8">
-            {places.map((place) => (
-              <StaggerItem key={place.id} className="card p-16">
-                {editing?.id === place.id ? (
-                  <PlaceForm
-                    initial={place}
-                    busy={busy}
-                    onCancel={() => setEditing(null)}
-                    onSave={(label, icon) =>
-                      void run(() => updatePlace(place.id, { label, icon }))
-                    }
-                  />
-                ) : (
-                  <div className="flex items-center gap-12">
-                    <Mark icon={place.icon} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-ink">{place.label}</p>
-                      <p className="truncate text-14 text-muted">
-                        {place.address ?? "نقطة على الخريطة"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(place)}
-                      className="pressable text-14 font-medium text-ink underline"
-                    >
-                      تعديل
-                    </button>
-                    <ConfirmDelete
-                      busy={busy}
-                      onConfirm={() => void run(() => deletePlace(place.id))}
-                    />
-                  </div>
-                )}
-              </StaggerItem>
-            ))}
-          </Stagger>
-        )}
+      {error ? (
+        <NoteT2 tone="danger" lead>
+          {error}
+        </NoteT2>
+      ) : null}
 
-        {/* الإضافةُ من الوجهات الأخيرة: نقطةٌ سبق أن ذهب إليها — فلا حاجة
-            إلى خريطةٍ ثانية في هذه الصفحة */}
-        {recents.length > 0 ? (
-          <section>
-            <p className="mb-8 text-12 text-muted">احفظ من وجهاتك الأخيرة</p>
-            {naming ? (
-              /* **الاسمُ يُسأل قبل الحفظ لا بعده**: عنوانٌ كاملٌ اسماً
-                 («شارع … ، عمّان، الأردن») لا يُقرأ اختصاراً على الرئيسية،
-                 وحفظُ مكانين بلا اسمٍ يصطدم بقيد التفرّد */
-              <div className="card mb-8 p-16">
-                <p className="mb-10 truncate text-14 text-muted">
-                  {naming.address}
-                </p>
+      {places.length === 0 ? (
+        <BlankT2
+          icon="bookmark"
+          title="لا أماكن محفوظة بعد"
+          hint="احفظ وجهةً من رحلاتك الأخيرة أدناه، فتصير ضغطةً واحدة في المرة القادمة"
+        />
+      ) : (
+        <div className="t2-list">
+          {places.map((place) =>
+            editing?.id === place.id ? (
+              <div key={place.id} className="t2-plc form">
                 <PlaceForm
-                  initial={{ label: "", icon: "star" }}
+                  initial={place}
                   busy={busy}
-                  onCancel={() => setNaming(null)}
-                  onSave={(label, icon) =>
-                    void run(async () => {
-                      await createPlace({
-                        label,
-                        lat: naming.point.lat,
-                        lng: naming.point.lng,
-                        address: naming.address,
-                        icon,
-                      });
-                      setNaming(null);
-                    })
-                  }
+                  onCancel={() => setEditing(null)}
+                  onSave={(label, icon) => void run(() => updatePlace(place.id, { label, icon }))}
                 />
               </div>
-            ) : null}
+            ) : (
+              <div key={place.id} className="t2-plc">
+                <span className="t2-plc-mark">
+                  <Icon name={markOf(place.icon)} fill />
+                </span>
+                <div className="t2-plc-main">
+                  <p className="t2-plc-label">{place.label}</p>
+                  <p className="t2-plc-addr">{place.address ?? "نقطة على الخريطة"}</p>
+                </div>
+                <button type="button" className="t2-tlink" onClick={() => setEditing(place)}>
+                  تعديل
+                </button>
+                <ConfirmDelete busy={busy} onConfirm={() => void run(() => deletePlace(place.id))} />
+              </div>
+            ),
+          )}
+        </div>
+      )}
 
-            <Stagger className="space-y-8">
-              {/* المزوّدُ يُخرج المحفوظَ من «الأخيرة» أصلاً — فلا تصفيةَ هنا */}
-              {recents.map((recent) => (
-                  <StaggerItem key={recent.key} className="card flex items-center gap-12 p-16">
-                    <MapPin className="size-20 shrink-0 text-muted" />
-                    <span className="min-w-0 flex-1 truncate text-14 text-ink">
-                      {recent.address}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setNaming(recent)}
-                      className="pressable text-14 font-medium text-brand underline disabled:opacity-50"
-                    >
-                      احفظ
-                    </button>
-                  </StaggerItem>
-              ))}
-            </Stagger>
-          </section>
-        ) : null}
-      </div>
-    </Screen>
+      {/* الإضافةُ من الوجهات الأخيرة: نقطةٌ سبق أن ذهب إليها — فلا حاجة
+          إلى خريطةٍ ثانية في هذه الصفحة */}
+      {recents.length > 0 ? (
+        <section>
+          <div className="t2-section">احفظ من وجهاتك الأخيرة</div>
+          {naming ? (
+            /* **الاسمُ يُسأل قبل الحفظ لا بعده**: عنوانٌ كاملٌ اسماً
+               («شارع … ، عمّان، الأردن») لا يُقرأ اختصاراً على الرئيسية،
+               وحفظُ مكانين بلا اسمٍ يصطدم بقيد التفرّد */
+            <div className="t2-list t2-plc-naming">
+              <p className="t2-plc-naming-addr">
+                <Icon name="location_on" />
+                <span>{naming.address}</span>
+              </p>
+              <PlaceForm
+                initial={{ label: "", icon: "star" }}
+                busy={busy}
+                onCancel={() => setNaming(null)}
+                onSave={(label, icon) =>
+                  void run(async () => {
+                    await createPlace({
+                      label,
+                      lat: naming.point.lat,
+                      lng: naming.point.lng,
+                      address: naming.address,
+                      icon,
+                    });
+                    setNaming(null);
+                  })
+                }
+              />
+            </div>
+          ) : null}
+
+          {/* المزوّدُ يُخرج المحفوظَ من «الأخيرة» أصلاً — فلا تصفيةَ هنا */}
+          <div className="t2-list">
+            {recents.map((recent) => (
+              <div key={recent.key} className="t2-recent">
+                <Icon name="location_on" />
+                <span className="t2-recent-addr">{recent.address}</span>
+                <button type="button" className="t2-tlink accent" disabled={busy} onClick={() => setNaming(recent)}>
+                  احفظ
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
   );
 }
 
@@ -175,93 +170,66 @@ function PlaceForm({
   onSave: (label: string, icon: PlaceIcon) => void;
   onCancel: () => void;
 }) {
+  const id = useId();
   const [label, setLabel] = useState(initial.label);
   const [icon, setIcon] = useState<PlaceIcon>(
     (ICONS.find((option) => option.value === initial.icon)?.value ?? "star") as PlaceIcon,
   );
 
   return (
-    <div className="space-y-12">
-      <input
-        className="field"
-        value={label}
-        maxLength={60}
-        onChange={(event) => setLabel(event.target.value)}
-        placeholder="اسم المكان"
-      />
-      <div className="grid grid-cols-3 gap-8">
+    <div className="t2-plc-form">
+      <AuthBlock label="اسم المكان" htmlFor={id}>
+        <AuthInput id={id} value={label} maxLength={60} onChange={(event) => setLabel(event.target.value)} />
+      </AuthBlock>
+      {/* **اختيارُ R03 بأيقونة كلِّ خيار** — الأيقونةُ هي ما يُختار هنا */}
+      <div className="t2-auth-choice" role="group" aria-label="أيقونة المكان">
         {ICONS.map((option) => (
           <button
             key={option.value}
             type="button"
+            aria-pressed={option.value === icon}
             onClick={() => setIcon(option.value)}
-            className={cn(
-              "pressable flex items-center justify-center gap-6 rounded-12 border p-10 text-14",
-              option.value === icon
-                ? "border-brand bg-brand-soft text-ink"
-                : "border-line text-muted",
-            )}
           >
-            <option.Mark className="size-16" />
-            {option.label}
+            <Icon name={option.icon} />
+            <span>{option.label}</span>
           </button>
         ))}
       </div>
-      <div className="flex gap-8">
-        <Button
-          size="md"
-          className="flex-1"
-          loading={busy}
-          disabled={label.trim().length === 0}
+      <div className="t2-idcard-row">
+        <button
+          type="button"
+          className="t2-cbtn ink grow"
+          disabled={busy || label.trim().length === 0}
+          aria-busy={busy}
           onClick={() => onSave(label.trim(), icon)}
         >
           حفظ
-        </Button>
-        <Button size="md" variant="ghost" className="flex-1" onClick={onCancel}>
+        </button>
+        <button type="button" className="t2-cbtn soft grow" onClick={onCancel}>
           إلغاء
-        </Button>
+        </button>
       </div>
     </div>
   );
 }
 
 /** ضغطتان لا واحدة — والثانيةُ تقول «تأكيد» صراحةً. */
-function ConfirmDelete({
-  busy,
-  onConfirm,
-}: {
-  busy: boolean;
-  onConfirm: () => void;
-}) {
+function ConfirmDelete({ busy, onConfirm }: { busy: boolean; onConfirm: () => void }) {
   const [armed, setArmed] = useState(false);
 
   if (!armed) {
     return (
-      <button
-        type="button"
-        aria-label="حذف"
-        onClick={() => setArmed(true)}
-        className="pressable text-danger"
-      >
-        <Trash2 className="size-18" />
+      <button type="button" aria-label="حذف" className="t2-ibtn destroy" onClick={() => setArmed(true)}>
+        <Icon name="delete" />
       </button>
     );
   }
   return (
-    <span className="flex items-center gap-8">
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onConfirm}
-        className="pressable text-14 font-medium text-danger underline disabled:opacity-50"
-      >
+    <span className="t2-plc-confirm">
+      <button type="button" className="t2-tlink destroy" disabled={busy} onClick={onConfirm}>
         تأكيد
       </button>
-      <button
-        type="button"
-        onClick={() => setArmed(false)}
-        className="pressable text-14 text-muted"
-      >
+      <button type="button" className="t2-tlink muted" onClick={() => setArmed(false)}>
         تراجع
       </button>
     </span>

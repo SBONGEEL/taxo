@@ -180,13 +180,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       </div>
 
       {c.multiStop ? (
-        <StopsEditor
-          stops={stops}
-          onChange={onStopsChange}
-          onAdd={onAddStop}
-          waitingNote={waitingNote(c.estimate)}
-          variant="t2"
-        />
+        <StopsEditor stops={stops} onChange={onStopsChange} waitingNote={waitingNote(c.estimate)} />
       ) : null}
 
       <div className="t2-pick-head">

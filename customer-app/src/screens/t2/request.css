@@ -1,0 +1,184 @@
+/* ═══ TAXO 2.0 — أوراقُ الطلب التي لم يكن لها وجهٌ من العائلة (لوحاتُ R29 في `design/t2-new/rider/`) — **تخطيطُها وحدَه** ═══
+ *
+ * خاتمةُ الرحلة (من RW3 · R10)، وورقةُ «إلى أين؟» للبحث (من R06 · R14)، وتقدّمُ المحطات وعدّادُ الانتظار والوقفةُ في ورقة
+ * التتبّع (من R09). **بالرموز وحدَها** — الفاتحُ والداكنُ والنسائيّ.
+ */
+
+/* ── خاتمةُ الرحلة: دائرةُ معناها والعنوان (RW3)، والأجرةُ النهائية (R10)، وزرُّ الفعل ثمّ «لاحقاً» ── */
+.t2-out-head { display: flex; align-items: center; gap: 12px; }
+.t2-out-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+}
+.t2-out-icon .t2-icon { font-size: 24px; }
+.t2-out-icon.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-out-icon.women { background: var(--t2-women-soft); color: var(--t2-women); }
+.t2-out-icon.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+.t2-out-title { margin: 0; font-size: 19px; font-weight: 700; }
+.t2-out-text { margin: 14px 2px 0; font-size: 14px; line-height: 1.7; color: var(--t2-muted); }
+.t2-out-fare {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 24px;
+  background: var(--t2-surface);
+}
+.t2-out-fare-label { font-size: 12.5px; color: var(--t2-muted); }
+.t2-out-fare-amount { display: flex; align-items: baseline; gap: 6px; }
+.t2-out-fare-amount .t2-num { font-size: 40px; font-weight: 700; line-height: 1.15; letter-spacing: -0.03em; }
+.t2-out-fare-cur { font-size: 15px; font-weight: 600; }
+.t2-out-actions { display: flex; flex-direction: column; padding-top: 18px; }
+.t2-out-actions > .t2-button { height: 58px; font-size: 16px; }
+.t2-out-actions > .t2-note { margin-top: 8px; }
+.t2-out-later {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── «إلى أين؟» — حقلُ البحث (R13) والدبوس، والمحفوظُ والأخيرة صفوفاً في بطاقة ── */
+.t2-dest-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+}
+.t2-dest-field:focus-within { border-color: var(--t2-accent); }
+.t2-dest-field > .t2-icon { flex: none; font-size: 21px; color: var(--t2-muted); }
+.t2-dest-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 16px; /* أقلُّ من ١٦ يكبّر iOS الصفحةَ عند التركيز */
+  caret-color: var(--t2-accent);
+}
+.t2-dest-field input::placeholder { color: var(--t2-faint); }
+.t2-dest-pin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 54px;
+  margin-top: 10px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-dest-pin > .t2-icon:first-child { flex: none; font-size: 21px; color: var(--t2-accent-text); }
+.t2-dest-pin-label { flex: 1; }
+.t2-dest-pin > .t2-chev { font-size: 20px; }
+.t2-group.t2-dest-group { margin-top: 18px; }
+.t2-dest-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 0;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid var(--t2-divider);
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-dest-row:last-child { border-bottom: 0; }
+.t2-dest-row > .t2-icon { flex: none; font-size: 21px; color: var(--t2-muted); }
+.t2-dest-row > .t2-icon.mark { color: var(--t2-accent-text); }
+.t2-dest-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-dest-title,
+.t2-dest-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t2-dest-title { font-size: 14.5px; font-weight: 600; }
+.t2-dest-sub { font-size: 12.5px; color: var(--t2-muted); }
+.t2-dest-results { margin-top: 12px; }
+.t2-drawer-body > .t2-blank { margin-top: 12px; }
+.t2-dest-note { color: var(--t2-muted); }
+
+/* ── تقدّمُ المحطات وعدّادُ الانتظار (R09) — مربّعٌ برقمه، والمنتهيةُ بالنجاح، والواقفُ عندها بالجمر ── */
+.t2-stopbar,
+.t2-pause {
+  margin: 10px 0 8px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--t2-surface);
+}
+.t2-pause { border: 1px solid var(--t2-line); }
+.t2-pause.over { border-color: var(--t2-warning); }
+.t2-stopbar-track { display: flex; align-items: center; gap: 6px; }
+.t2-stopbar-sq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--t2-line);
+  border-radius: 6px;
+  color: var(--t2-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.t2-stopbar-sq.done { border-color: var(--t2-success); background: var(--t2-success); color: var(--t2-surface); }
+.t2-stopbar-sq.here { border-color: var(--t2-accent); background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-stopbar-join { flex: 1; height: 2px; border-radius: 1px; background: var(--t2-line); }
+.t2-stopbar-join.done { background: var(--t2-success); }
+.t2-stopbar-end { flex: none; font-size: 12px; color: var(--t2-muted); }
+/* العدّاد: الوقتُ يُحسب على الجهاز (بخطّ الأرقام)، والمالُ كما وصل من الخلفية */
+.t2-meter { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.t2-stopbar .t2-meter { margin-top: 12px; }
+.t2-meter-label { margin: 0; font-size: 12px; color: var(--t2-muted); }
+.t2-meter-clock {
+  margin: 0;
+  font-family: var(--t2-font-num);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: right;
+}
+.t2-meter-money { flex: none; text-align: end; }
+.t2-meter-amount { display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; margin: 0; }
+.t2-meter-amount .t2-num { font-size: 15px; font-weight: 600; }
+.t2-meter-cur { font-size: 11px; color: var(--t2-muted); }
+.t2-stopbar > .t2-note,
+.t2-pause > .t2-note { margin-top: 8px; }

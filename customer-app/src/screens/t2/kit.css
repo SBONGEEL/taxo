@@ -1,0 +1,224 @@
+/* ═══ TAXO 2.0 — قطعٌ تشترك فيها شاشاتُ «حسابي» الداخليةُ وأوراقُ الطلب (لوحاتُ R22–R29 في `design/t2-new/rider/`) ═══
+ *
+ * **بالرموز وحدَها** (`src/taxo2/tokens.css`) فتعمل في الفاتح والداكن والنسائيّ. **وكلُّ قطعةٍ هنا من رسمٍ قائم**: الورقةُ من
+ * أوراق R06–R09، وزرُّ البطاقة من أزرار بطاقة الرصيد R11، والأزرارُ الكبيرةُ من الهوية («المكوّنات الأساسية») ومن R02 للحافّة
+ * الهادئة. **وما يحتاجه تطبيقٌ آخرُ يُقترح لنظام التصميم المشترك** (`taxo2/primitives.css`) لا يُنسخ.
+ */
+
+/* ── الورقةُ المنبثقة (`DrawerT2`) — حجرٌ بزاويتين ٣٠ ومقبضٍ وظلٍّ كأوراق R06–R09، فوق سلوك `vaul` القائم ── */
+.t2.t2-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  min-height: 0;
+  background: var(--t2-scrim);
+}
+.t2.t2-drawer {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  max-width: 32rem;
+  max-height: calc(100dvh - 76px);
+  min-height: 0;
+  margin: 0 auto;
+  padding-top: 10px;
+  box-sizing: border-box;
+  border-radius: 30px 30px 0 0;
+  background: var(--t2-bg);
+  box-shadow: var(--t2-sheet-shadow);
+  outline: none;
+}
+.t2-drawer-grab {
+  flex: none;
+  width: 40px;
+  height: 5px;
+  margin: 0 auto 14px;
+  border-radius: 3px;
+  background: var(--t2-dash);
+}
+.t2-drawer-title {
+  flex: none;
+  margin: 0;
+  padding: 0 18px 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.t2-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 18px max(24px, env(safe-area-inset-bottom, 0px));
+  scrollbar-width: none;
+}
+.t2-drawer-body::-webkit-scrollbar { display: none; }
+.t2-drawer-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--t2-muted);
+}
+.t2-drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.t2-drawer-actions > .t2-button { height: 56px; }
+
+/* ── الأزرارُ الكبيرة (`.t2-button` من الهوية): **خطرٌ** لما لا رجعةَ فيه، و**هادئٌ** بحافّةٍ رقيقة (R02 «الدخول برمز…»
+ *    ونصُّه حبر) — **ونصُّ الخطر سطحُ البطاقة** كزرِّ إلغاء الرحلة (R07، `t2-trk-confirm-row`) فيُقرأ في المظهرين ── */
+.t2-button.t2-destroy {
+  background: var(--t2-danger);
+  color: var(--t2-surface);
+}
+.t2-button.t2-quiet {
+  border: 1px solid var(--t2-dash);
+  background: none;
+  color: var(--t2-text);
+}
+.t2-button.t2-wide { width: 100%; }
+
+/* ── زرُّ البطاقة: ٤٦ بزاوية ١٤ كأزرار بطاقة الرصيد (R11)، بلغة الحجر ── */
+.t2-cbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 46px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-cbtn .t2-icon { font-size: 20px; }
+.t2-cbtn.soft { border: 1px solid var(--t2-dash); }
+.t2-cbtn.ink {
+  background: var(--t2-inverse);
+  color: var(--t2-on-inverse);
+}
+/* **والحبرُ على الإسفلت جمرٌ** — قاعدةُ `.t2-button.primary` نفسُها (§٦٢-ب/٧): المعكوسُ لا يُعاد على الداكن */
+html.dark .t2:not(.t2-day) .t2-cbtn.ink,
+.t2.t2-night .t2-cbtn.ink {
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-weight: 700;
+}
+.t2-cbtn.destroy {
+  background: var(--t2-danger);
+  color: var(--t2-surface);
+}
+.t2-cbtn.destroy-text { color: var(--t2-danger); }
+.t2-cbtn.grow { flex: 1; }
+.t2-cbtn.full { width: 100%; }
+.t2-cbtn:disabled { opacity: 0.45; cursor: default; }
+.t2-cbtn:active:enabled { transform: scale(0.98); }
+
+/* ── الرابطُ النصيّ في طرف صفّ («تعديل» · «احفظ» · «ألغِ الحجز») — بهدف لمسٍ ٤٤ ── */
+.t2-tlink {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-tlink.accent { color: var(--t2-accent-text); font-weight: 700; }
+.t2-tlink.destroy { color: var(--t2-danger); font-weight: 700; }
+.t2-tlink.muted { color: var(--t2-muted); }
+.t2-tlink:disabled { opacity: 0.45; cursor: default; }
+/* زرُّ أيقونةٍ وحدَه (الحذف في صفٍّ) — ٤٤ بلون معناه */
+.t2-ibtn {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.t2-ibtn .t2-icon { font-size: 20px; }
+.t2-ibtn.destroy { color: var(--t2-danger); }
+
+/* ── الملاحظةُ بالنجاح — أختُ `.t2-note.warn` و`.t2-note.danger` (الهوية: نجاح · تنبيه · خطأ) ── */
+.t2-note.t2-ok { color: var(--t2-success); }
+/* وملاحظةُ الشاشة فوق محتواها — بلا هامشٍ علويٍّ يزيحها عن الرأس */
+.t2-note.t2-lead { margin: 0 2px 12px; }
+
+/* ── الفراغ: بطاقةٌ بدائرة أيقونةٍ وعنوانٍ وتلميح (بطاقةُ `.t2-empty` بثلاثة أسطر) ── */
+.t2-blank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 26px 20px;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  text-align: center;
+}
+.t2-blank-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+.t2-blank-icon .t2-icon { font-size: 26px; }
+.t2-blank-title { margin: 0; font-size: 15px; font-weight: 700; }
+.t2-blank-hint { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+
+/* ── الانتظار: حلقةٌ بقوسٍ من الجمر، **وتقف مع «تقليل الحركة»** ── */
+.t2-loader {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 32px auto;
+  box-sizing: border-box;
+  border: 3px solid var(--t2-line);
+  border-top-color: var(--t2-accent);
+  border-radius: 50%;
+}
+.t2-loader.sm {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-width: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .t2-loader { animation: t2-loader-turn 0.9s linear infinite; }
+}
+@keyframes t2-loader-turn {
+  to { transform: rotate(360deg); }
+}

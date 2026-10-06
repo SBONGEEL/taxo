@@ -1,4 +1,5 @@
-/** تقدّمُ المحطات وعدّادُ الانتظار عند الراكب (SPEC القسم 5.10، المرحلة 12-ب).
+/** تقدّمُ المحطات وعدّادُ الانتظار عند الراكب (SPEC القسم 5.10، المرحلة 12-ب) — بلغة TAXO 2.0 «R29e»
+ *  (`design/t2-new/rider/R29e-trip-stops-wait.dc.html`) داخل ورقة R09، **في المظهرين والنسائيّ**.
  *
  * **العدّادُ يمشي هنا والمبلغُ يأتي من الخلفية** — وهذا الفصلُ هو كلُّ القصة:
  * عرضُ الوقت حسابُ وقت، وعرضُ المال حسابُ مال، والقسم 14 يحصر الثاني في
@@ -9,18 +10,15 @@
  * سببُ وجود هذا المكوّن أصلاً. عدّادٌ يظهر بعد الرحلة لا يمنع مفاجأة.
  *
  * **والمنتهيةُ خيطٌ أخضر** (`DESIGN.md` §2.8-ب): التقدّمُ يُقرأ من الشكل لا
- * من نصٍّ يقول «المحطة ١ من ٢».
- *
- * **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R09b`): بطاقةُ «كم متبقية» في R09، ومربّعُ المحطة المرقَّم من «محطاتك» في R06 —
- * ما مضى أخضرُ خافت، وما هو الآن بالجمر، وما بعده حافّةٌ متقطّعة؛ والوقتُ بخطِّ الأرقام.
+ * من نصٍّ يقول «المحطة ١ من ٢». **والواقفُ عندها مربّعٌ بالجمر** كمربّعات المحطات في ورقة الطلب (R06).
  */
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
-import { formatMoney } from "@/lib/utils";
+import { currencyLabel, formatMoney } from "@/lib/utils";
 
-import "@/screens/t2/money.css";
+import "@/screens/t2/request.css";
 
 /** `mm:ss` — والمصدرُ ختمُ الخلفية لا لحظةُ فتح الشاشة. */
 function elapsed(since: string, now: number): string {
@@ -46,44 +44,48 @@ export function StopProgress({ ride }: { ride: Ride }) {
   if (ride.stops.length === 0) return null;
 
   return (
-    <div className="t2-m-meter">
-      <div className="t2-m-track">
+    <div className="t2-stopbar">
+      <div className="t2-stopbar-track">
         {ride.stops.map((stop, index) => {
           const done = stop.resumed_at !== null;
           const here = stop.arrived_at !== null && stop.resumed_at === null;
           return (
-            <div key={stop.id} className="t2-m-track-seg">
-              <span className={done ? "t2-m-stop done" : here ? "t2-m-stop here" : "t2-m-stop"}>{index + 1}</span>
-              <span className={done ? "t2-m-link-line done" : "t2-m-link-line"} aria-hidden="true" />
-            </div>
+            <Fragment key={stop.id}>
+              <span className={done ? "t2-stopbar-sq done" : here ? "t2-stopbar-sq here" : "t2-stopbar-sq"}>
+                {index + 1}
+              </span>
+              <span className={done ? "t2-stopbar-join done" : "t2-stopbar-join"} aria-hidden="true" />
+            </Fragment>
           );
         })}
-        <span className="t2-m-track-end">وجهتك</span>
+        <span className="t2-stopbar-end">وجهتك</span>
       </div>
 
       {waiting ? (
-        <div className="t2-m-meter-row">
+        <div className="t2-meter">
           <div>
-            <div className="t2-m-meter-label">الكبتن واقفٌ عند المحطة {waiting.sequence}</div>
+            <p className="t2-meter-label">الكبتن واقفٌ عند المحطة {waiting.sequence}</p>
             {/* الوقتُ يُحسب هنا — والمالُ لا */}
-            <div dir="ltr" className="t2-m-clock">
+            <p dir="ltr" className="t2-meter-clock">
               {elapsed(waiting.arrived_at!, now)}
-            </div>
+            </p>
           </div>
-          <div className="t2-m-meter-end">
-            <div className="t2-m-meter-label">رسم الانتظار حتى الآن</div>
-            <div className="t2-m-meter-charge">{formatMoney(ride.waiting_charge, ride.currency)}</div>
+          <div className="t2-meter-money">
+            <p className="t2-meter-label">رسم الانتظار حتى الآن</p>
+            <p className="t2-meter-amount">
+              <span dir="ltr" className="t2-num">
+                {formatMoney(ride.waiting_charge)}
+              </span>
+              <span className="t2-meter-cur">{currencyLabel(ride.currency)}</span>
+            </p>
           </div>
         </div>
       ) : null}
 
       {waiting?.over_max_wait ? (
-        <p className="t2-m-meter-note">
+        <p className="t2-note warn">
           <span className="t2-icon" aria-hidden="true">error</span>
-          <span>
-            تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء
-            الرحلة هنا.
-          </span>
+          <span>تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء الرحلة هنا.</span>
         </p>
       ) : null}
     </div>
