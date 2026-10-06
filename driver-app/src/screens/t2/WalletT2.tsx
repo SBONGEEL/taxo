@@ -319,6 +319,18 @@ export function WalletT2Screen() {
           </span>
         </button>
 
+        {/* **بابُ «سجل الرحلات»** — خرج من الشريط حين صارت تبويباتُ C04 كما رُسمت (§٦٢-ب/٢٦)، **وفيه مدخلُ الاعتراض على
+            الدفعة** (§٦١-ب/٣) — فمكانُه حيث أسئلةُ المال */}
+        <button type="button" className="t2-wal-door" onClick={() => w.navigate("/rides")}>
+          <span className="t2-wal-txicon" aria-hidden="true">
+            <span className="t2-icon">route</span>
+          </span>
+          <span className="t2-wal-door-title">سجل الرحلات</span>
+          <span className="t2-icon t2-wal-door-go" aria-hidden="true">
+            arrow_back
+          </span>
+        </button>
+
         {w.error ? (
           <p className="t2-note danger">
             <span className="t2-icon" aria-hidden="true">

@@ -23,7 +23,6 @@ import { ApiError } from "@/api/client";
 import { getMyProgress } from "@/api/endpoints";
 import type { MyProgress } from "@/api/types";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { useGoBack } from "@/lib/back";
 import { digits } from "@/lib/utils";
 import { LEVEL_LABEL, nextStep } from "@/screens/Missions";
 
@@ -31,7 +30,6 @@ import "@/taxo2";
 import "./t2.css";
 
 export function MissionsT2Screen() {
-  const goBack = useGoBack();
   const [data, setData] = useState<MyProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,10 +49,8 @@ export function MissionsT2Screen() {
 
   return (
     <div className="t2 t2-missions scr">
+      {/* **تبويبٌ لا صفحةٌ داخليّة** (C04، §٦٢-ب/٢٦) — فلا رجوعَ والشريطُ تحته */}
       <div className="t2-head">
-        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
-          <span className="t2-icon" aria-hidden="true">arrow_forward</span>
-        </button>
         <h1 className="t2-title">المستوى والمهام</h1>
       </div>
 

@@ -198,7 +198,8 @@
 /* ── المستوى والمهام (C13) ──────────────────────────────────────────────── */
 .t2-missions {
   height: 100%;
-  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  /* **تبويبٌ** (§٦٢-ب/٢٦): ما تحت الشريط العائم يُحجز بقدره — ٦٢ ارتفاعُه وفوقه حاشيتُه، و١٦ فسحة */
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(78px + max(14px, env(safe-area-inset-bottom, 0px)));
 }
 
 .t2-level {

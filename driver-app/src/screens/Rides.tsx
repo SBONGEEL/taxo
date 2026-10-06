@@ -30,6 +30,7 @@ import {
   statusTone,
   trimDistance,
 } from "@/lib/rideFormat";
+import { useGoBack } from "@/lib/back";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -56,6 +57,8 @@ function unserved(status: RideStatus): boolean {
 }
 
 export function RidesScreen() {
+  // **صفحةٌ داخليّةٌ لا تبويب** (§٦٢-ب/٢٦) — رجوعُها إلى «الأرباح» حيث بابُها
+  const goBack = useGoBack("/wallet");
   const navigate = useNavigate();
   const [rides, setRides] = useState<RideListItem[] | null>(null);
   const [more, setMore] = useState(false);
@@ -90,7 +93,12 @@ export function RidesScreen() {
 
   return (
     <div className="t2 t2-log scr">
-      <h1 className="t2-h1">سجل الرحلات</h1>
+      <div className="t2-head">
+        <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+          <Icon name="arrow_forward" />
+        </button>
+        <h1 className="t2-title">سجل الرحلات</h1>
+      </div>
 
       {error ? (
         <p className="t2-note danger" role="alert">

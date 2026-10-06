@@ -8,8 +8,8 @@
   height: 100%;
   overflow-y: auto;
   box-sizing: border-box;
-  /* **ما تحت الشريط العائم يُحجز بقدره**: ٦٢ ارتفاعُه وفوقه حاشيتُه (`pb-float`)، و١٦ فسحة */
-  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(78px + max(14px, env(safe-area-inset-bottom, 0px)));
+  /* **صفحةٌ داخليّةٌ بلا شريط** (§٦٢-ب/٢٦) — أسفلُها حافّةُ الأمان وحدها */
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
   line-height: normal;
   font-variant-numeric: normal;
 }

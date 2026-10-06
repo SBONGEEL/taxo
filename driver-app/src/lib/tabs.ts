@@ -6,7 +6,7 @@
  * إلى غيره.
  */
 
-import { Clock, Home, User, Wallet } from "lucide-react";
+import { Award, Home, User, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface Tab {
@@ -15,10 +15,13 @@ export interface Tab {
   icon: LucideIcon;
 }
 
+/** **تبويباتُ C04 كما رُسمت** (§٦٢-ب/٢٦): الرئيسية · الأرباح · المستوى · حسابي — **كانت تنتظر سجلَّ الرحلات** بباب الاعتراض فيه
+ * (§٦١-ب/٣)، **فلمّا بُني (C16) خرج من الشريط إلى «الأرباح»** حيث أسئلةُ المال. **و«المستوى» قبل «حسابي»** — `nav-order` يأخذ أوّلَ
+ * تبويبٍ يبدأ به المسار، و`/account/missions` يبدأ بـ`/account` أيضاً. */
 export const TABS: Tab[] = [
   { to: "/", label: "الرئيسية", icon: Home },
-  { to: "/rides", label: "الرحلات", icon: Clock },
-  { to: "/wallet", label: "المحفظة", icon: Wallet },
+  { to: "/wallet", label: "الأرباح", icon: Wallet },
+  { to: "/account/missions", label: "المستوى", icon: Award },
   { to: "/account", label: "حسابي", icon: User },
 ];
 
@@ -28,7 +31,7 @@ export const TABS: Tab[] = [
  * في تصميمه، بينما صفحاتُ الراكب الداخلية تُبقيه (القرار 53). فالافتراضُ في كلٍّ
  * منهما هو ما يقوله نموذجُه، والقائمةُ تصف الفرقَ بدل أن تخفيه.
  */
-const WITH_NAV = ["/", "/rides", "/wallet", "/account", "/subscription"];
+const WITH_NAV = ["/", "/wallet", "/account/missions", "/account", "/subscription"];
 
 export function showsNav(pathname: string): boolean {
   return WITH_NAV.includes(pathname);
