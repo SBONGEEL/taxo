@@ -93,6 +93,9 @@ class PromoBanner(UUIDMixin, TimestampMixin, Base):
     )
     title: Mapped[str] = mapped_column(String(80), nullable=False)
     body: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    #: **الرقمُ الكبيرُ** («30%» في R05، §٦٢-ج/٢٦) — نصٌّ قصيرٌ يكتبه المشرف **لا خصمٌ يُحسب**: الخصمُ في عقد الكوبون وحدَه،
+    #: وهذا ما تقوله اللافتةُ عنه. **و`NULL` لافتةٌ بلا رقم** تُرسم كما كانت
+    headline: Mapped[str | None] = mapped_column(String(8), nullable=True)
     icon: Mapped[str | None] = mapped_column(String(40), nullable=True)
     audience: Mapped[CampaignAudience] = mapped_column(
         pg_enum(CampaignAudience, "campaign_audience"), nullable=False

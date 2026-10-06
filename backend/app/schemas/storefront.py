@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import (
     BannerLinkKind,
@@ -35,12 +35,26 @@ class ServiceTileOut(BaseModel):
     is_new: bool
 
 
+#: **خاناتٌ لاتينيةٌ ورمزُ نسبةٍ لاتينيّ** — المشرفُ قد يكتب «٣٠٪» فتُرسم كما يُرسم كلُّ رقمٍ في التطبيقين («30%»)
+_HEADLINE_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹٪", "01234567890123456789%")
+
+
+def _headline(value: str | None) -> str | None:
+    """الرقمُ الكبيرُ مشذَّباً بخاناتٍ لاتينية — **والفارغُ «لا رقم»** لا سلسلةٌ فارغةٌ تُرسم مربّعاً خالياً."""
+    if value is None:
+        return None
+    cleaned = value.translate(_HEADLINE_DIGITS).strip()
+    return cleaned or None
+
+
 class PromoBannerOut(BaseModel):
     """لافتةٌ حيّةٌ الآن — **والنافذةُ قيست في الخلفية قبل الإرسال**."""
 
     id: uuid.UUID
     title: str
     body: str | None = None
+    #: الرقمُ الكبيرُ («30%»، §٦٢-ج/٢٦) — و`null` لافتةٌ بلا رقم
+    headline: str | None = None
     icon: str | None = None
     link_kind: BannerLinkKind
     link: str | None = None
@@ -166,6 +180,7 @@ class PromoBannerIn(BaseModel):
     country_code: CountryCode
     title: str = Field(min_length=1, max_length=80)
     body: str | None = Field(default=None, max_length=160)
+    headline: str | None = Field(default=None, max_length=8)
     icon: str | None = Field(default=None, max_length=40)
     audience: CampaignAudience
     sort_order: int = Field(default=0, ge=0, le=999)
@@ -176,12 +191,15 @@ class PromoBannerIn(BaseModel):
     link: str | None = Field(default=None, max_length=300)
     is_active: bool = True
 
+    _clean_headline = field_validator("headline")(_headline)
+
 
 class PromoBannerPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(default=None, min_length=1, max_length=80)
     body: str | None = Field(default=None, max_length=160)
+    headline: str | None = Field(default=None, max_length=8)
     icon: str | None = Field(default=None, max_length=40)
     audience: CampaignAudience | None = None
     sort_order: int | None = Field(default=None, ge=0, le=999)
@@ -190,6 +208,8 @@ class PromoBannerPatch(BaseModel):
     link_kind: BannerLinkKind | None = None
     link: str | None = Field(default=None, max_length=300)
     is_active: bool | None = None
+
+    _clean_headline = field_validator("headline")(_headline)
 
 
 class AdminPromoBannerOut(BaseModel):
@@ -205,6 +225,7 @@ class AdminPromoBannerOut(BaseModel):
     country_code: CountryCode
     title: str
     body: str | None = None
+    headline: str | None = None
     icon: str | None = None
     audience: CampaignAudience
     sort_order: int

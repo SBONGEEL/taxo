@@ -1096,6 +1096,8 @@ export interface PromoBanner {
   id: string;
   title: string;
   body: string | null;
+  /** **الرقمُ الكبير** («30%»، §٦٢-ج/٢٦) — نصٌّ قصيرٌ يكتبه المشرف، و`null` لافتةٌ بلا رقم. */
+  headline: string | null;
   /** **أيقونةُ lucide** — زخرفيّةٌ بجانب النصّ، وهي غيرُ صورة اللافتة:
    *  الصورةُ بايتاتٌ تُجلب من `/storefront/banners/{id}/image` (منذ 08-31)،
    *  **ولا حقلَ يقول «لها صورة»** — الطلبُ نفسُه هو الجواب. */

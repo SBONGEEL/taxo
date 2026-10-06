@@ -131,6 +131,12 @@ export function BannerPreview({ banner }: { banner: PromoBannerRow }) {
           {banner.icon ? (
             <Glyph name={banner.icon} className="size-44 shrink-0 text-line" />
           ) : null}
+          {/* **الرقمُ الكبير** (§٦٢-ج/٢٦) — يُرى في المعاينة كما يُرسم في وجه التطبيقين */}
+          {banner.headline ? (
+            <span dir="ltr" className="shrink-0 text-30 font-bold leading-none text-ink">
+              {banner.headline}
+            </span>
+          ) : null}
           <div className="min-w-0 flex-1">
             <div className="text-14 font-bold text-ink">{banner.title}</div>
             {banner.body ? (

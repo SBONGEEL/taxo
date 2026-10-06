@@ -691,6 +691,7 @@ function BannerEditor({
   const [form, setForm] = useState({
     title: banner.title,
     body: banner.body ?? "",
+    headline: banner.headline ?? "",
     icon: banner.icon,
     audience: banner.audience,
     sort_order: banner.sort_order,
@@ -706,6 +707,7 @@ function BannerEditor({
     ...banner,
     title: form.title,
     body: form.body || null,
+    headline: form.headline.trim() || null,
     icon: form.icon,
   };
 
@@ -723,6 +725,15 @@ function BannerEditor({
           label="النص (اختياريّ)"
           value={form.body}
           onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+        />
+        {/* **الرقمُ الكبير** (§٦٢-ج/٢٦) — «30%» في لافتة الرئيسية؛ **نصٌّ يقوله المشرفُ لا خصمٌ يُحسب** (الخصمُ في الكوبون) */}
+        <Field
+          name="headline"
+          label="الرقم الكبير (اختياريّ) — مثل 30%"
+          value={form.headline}
+          maxLength={8}
+          dir="ltr"
+          onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
         />
         <Select
           name="audience"
@@ -873,6 +884,7 @@ function BannerEditor({
             updatePromoBanner(banner.id, {
               title: form.title,
               body: form.body || null,
+              headline: form.headline.trim() || null,
               icon: form.icon,
               audience: form.audience,
               sort_order: form.sort_order,

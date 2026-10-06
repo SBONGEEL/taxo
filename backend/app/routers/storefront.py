@@ -115,6 +115,7 @@ async def my_storefront(
                 id=banner.id,
                 title=banner.title,
                 body=banner.body,
+                headline=banner.headline,
                 icon=banner.icon,
                 link_kind=banner.link_kind,
                 link=banner.link,

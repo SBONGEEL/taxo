@@ -565,6 +565,8 @@ button.t2-hm-tile { cursor: pointer; }
   pointer-events: none;
 }
 .t2-hm-promo-text { position: relative; flex: 1; min-width: 0; }
+/* **الرقمُ الكبير** (§٦٢-ج/٢٦) — كوجه الراكب R05 */
+.t2-hm-promo-big { position: relative; flex: none; font-family: var(--t2-font-num); font-size: 30px; font-weight: 800; letter-spacing: -0.04em; }
 .t2-hm-promo-title { font-size: 14px; font-weight: 700; }
 .t2-hm-promo-body { margin-top: 2px; font-size: 12px; }
 .t2-hm-promo-go { position: relative; flex: none; font-size: 24px; }

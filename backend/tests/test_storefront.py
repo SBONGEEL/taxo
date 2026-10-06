@@ -473,6 +473,30 @@ async def test_a_banner_outside_its_window_is_not_served(
     assert [row["title"] for row in body["banners"]] == ["حيّة"]
 
 
+async def test_the_banner_headline_is_latin_trimmed_and_served(
+    client: AsyncClient, admin_headers: dict, rider_payload: dict
+) -> None:
+    """**الرقمُ الكبير** («30%»، §٦٢-ج/٢٦): يُكتب «٣٠٪» فيُحفظ ويُنشر «30%» — بخاناتٍ لاتينيةٍ كما يُرسم كلُّ رقمٍ في التطبيقين؛
+    **والفارغُ «لا رقم»** لا سلسلةٌ فارغة؛ **وما زاد على ثمانية أحرفٍ يُرفض** — اللافتةُ تقول رقماً لا جملة."""
+    banner = await _create_banner(client, admin_headers, title="خصم المطار", headline=" ٣٠٪ ", is_active=True)
+    assert banner["headline"] == "30%"
+
+    rider = await rider_session(client, rider_payload)
+    body = (await client.get("/storefront", headers=rider["headers"])).json()
+    assert [(row["title"], row["headline"]) for row in body["banners"]] == [("خصم المطار", "30%")]
+
+    cleared = await client.patch(
+        f"/admin/settings/promo-banners/{banner['id']}", json={"headline": "  "}, headers=admin_headers
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["headline"] is None
+
+    too_long = await client.post(
+        "/admin/settings/promo-banners", json=_banner(headline="123456789"), headers=admin_headers
+    )
+    assert too_long.status_code == 422, too_long.text
+
+
 async def test_a_tile_active_for_drivers_may_not_point_at_a_rider_screen(
     client: AsyncClient, admin_headers: dict
 ) -> None:

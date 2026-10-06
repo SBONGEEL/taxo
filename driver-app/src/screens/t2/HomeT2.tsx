@@ -607,6 +607,12 @@ const PROMO_SKIN: PromoSkin = {
         {loadImage ? <BannerImage bannerId={banner.id} /> : null}
         <div className="t2-hm-promo-row">
           <span className="t2-hm-promo-stripe" aria-hidden="true" />
+          {/* **«30%» الكبيرة** (§٦٢-ج/٢٦) — من حقلها في صفِّ اللافتة، كوجه الراكب */}
+          {banner.headline ? (
+            <span className="t2-hm-promo-big" dir="ltr">
+              {banner.headline}
+            </span>
+          ) : null}
           <div className="t2-hm-promo-text">
             <div className="t2-hm-promo-title">{banner.title}</div>
             {banner.body ? <div className="t2-hm-promo-body">{banner.body}</div> : null}

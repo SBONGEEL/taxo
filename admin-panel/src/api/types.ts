@@ -1582,6 +1582,8 @@ export interface PromoBannerRow {
   country_code: CountryCode;
   title: string;
   body: string | null;
+  /** **الرقمُ الكبير** («30%»، §٦٢-ج/٢٦) — ثمانيةُ أحرفٍ على الأكثر، و`null` لافتةٌ بلا رقم. */
+  headline: string | null;
   icon: string | null;
   audience: CampaignAudience;
   sort_order: number;

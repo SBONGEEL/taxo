@@ -22,8 +22,13 @@ export const PROMO_SKIN_T2: PromoSkin = {
         {loadImage ? <BannerImage bannerId={banner.id} /> : null}
         <div className="t2-promo-row">
           <span className="t2-promo-stripe" aria-hidden="true" />
-          {/* **موضعُ «30%» الكبيرة** — ولا عمودَ لها في صفِّ اللافتة اليوم، فلا يُرسم شيء (§٦١-د/هـ، أُبلغ المالك).
-              **ولا أيقونةَ اللافتة هنا**: اللوحةُ لا ترسمها في هذا الوجه */}
+          {/* **«30%» الكبيرة** (§٦٢-ج/٢٦) — من حقلها في صفِّ اللافتة؛ **وبلا رقمٍ لا موضعَ يُحجز**. **ولا أيقونةَ اللافتة هنا**:
+              اللوحةُ لا ترسمها في هذا الوجه */}
+          {banner.headline ? (
+            <span className="t2-promo-big" dir="ltr">
+              {banner.headline}
+            </span>
+          ) : null}
           <div className="t2-promo-text">
             <div className="t2-promo-title">{banner.title}</div>
             {banner.body ? <div className="t2-promo-body">{banner.body}</div> : null}
