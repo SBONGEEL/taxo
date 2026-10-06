@@ -430,6 +430,15 @@ export interface RideStop {
  * باليد — والأخيرُ **لا يزيد الرصيد** ويُعرض موسوماً. و`net` قد يكون سالباً
  * حين تُخصم عمولةُ رحلةٍ نقدية بلا أرباحَ تقابلها.
  */
+/** يومٌ من نافذة الأرباح **بيوم الدولة** (§٦٢-ج/٣٨) — وأيّامُ النافذة تُجمع إلى `net` نفسِه. */
+export interface EarningsDay {
+  /** `YYYY-MM-DD` بتقويم الدولة. */
+  day: string;
+  net: string;
+  /** حصّتُه من أكبر أيّام النافذة بإشارته (−١…١) — يُرسم بها العمودُ كما تصل، فلا قسمةَ مالٍ في الواجهة. */
+  peak_share: number;
+}
+
 export interface Earnings {
   period: "today" | "week" | "month";
   from_at: string;
@@ -444,6 +453,10 @@ export interface Earnings {
   net: string;
   directly_collected: string;
   completed_rides: number;
+  /** صافي كلِّ يومٍ في النافذة (§٦٢-ج/٣٨) — يومٌ بلا قيدٍ صفٌّ بصفر. */
+  days: EarningsDay[];
+  /** التغيّرُ بالمئة عن النافذة السابقة المساوية لها **حتى الساعة نفسِها** — `null` حيث لا أساسَ له. */
+  change_percent: number | null;
 }
 
 export interface Wallet {

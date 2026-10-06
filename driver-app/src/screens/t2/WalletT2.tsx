@@ -6,10 +6,11 @@
  *
  * **ولا حسابَ هنا** (§14): كلُّ رقمٍ يصل من الخلفية جاهزاً — الصافي والمتاحُ والحجزُ وأرصدةُ الدفتر.
  *
+ * **ورسمُ الأيّام ونسبةُ التغيّر بُنيا من الخلفية** (§٦٢-ج/٣٨): `days` و`change_percent` في جواب الأرباح نفسِه — الأعمدةُ
+ * تُرسم بحصصها كما تصل (`EarningsDays`)، والنسبةُ عن **النافذة السابقة المساوية حتى الساعة نفسِها** تُحسب هناك لا هنا (§14).
+ *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته** (`design/TAXO2-DESIGN-CORRECTIONS.md` §٢٥):
- * - **رسمُ أيّام الأسبوع وقيمةُ اليوم عليه**: `GET /drivers/me/earnings` يجيب بمجموع الفترة لا بأيّامها.
- * - **«+12% عن الأسبوع الماضي»**: لا فترةَ سابقةَ في الجواب — والنسبةُ بين فترتين حسابُ مالٍ في الواجهة.
- * - **«31 ساعة»**: لا ساعاتِ عملٍ في أيِّ باب.
+ * - **«31 ساعة»**: لا ساعاتِ عملٍ في أيِّ باب — ومقياسُها (§٦٢-ج/٣٧) بياناتُ عملٍ تنتظر إذنَ المالك.
  * - **«يصل خلال يوم عمل»**: وعدٌ بموعدٍ لا مصدرَ له — فبقي سطرُ الحجز بنصّه القائم.
  * - **شريطُ التبويب (الرئيسية · الأرباح · المستوى · حسابي)**: يخالف تبويبات اليوم — والشريطُ القائمُ باقٍ فوق الشاشة.
  *
@@ -28,9 +29,24 @@ import { PERIOD_LABEL, useEarningsScreen } from "@/screens/Earnings";
 import { useWalletScreen } from "@/screens/Wallet";
 
 import { countRides } from "./count";
+import { EarningsDays } from "./EarningsDays";
 
 import "@/taxo2";
 import "./t2.css";
+
+/** **عمّا تُقارَن النسبة** — النافذةُ السابقةُ المساويةُ لها حتى الساعة نفسِها (§٦٢-ج/٣٨). */
+const COMPARED_TO: Record<Earnings["period"], string> = {
+  today: "عن أمس حتى هذه الساعة",
+  week: "عن الأسبوع الماضي",
+  month: "عن الشهر الماضي",
+};
+
+/** «+12%» كما رُسمت، والهبوطُ بعلامة الطرح التي يكتب بها التصميمُ سالبَه («−8.000»). */
+function changeText(percent: number): string {
+  if (percent > 0) return `+${percent}%`;
+  if (percent < 0) return `\u2212${Math.abs(percent)}%`;
+  return "0%";
+}
 
 /** **أيقونةُ كلِّ قيدٍ بمصدره** كما في الشاشة القائمة (`TRANSACTION_ICON`) — بحروف Material، والاشتراكُ كما رسمته اللوحة. */
 const TX_ICON: Record<WalletTransactionType, string> = {
@@ -134,11 +150,22 @@ export function WalletT2Screen() {
               </span>
             </div>
             <div className="t2-wal-sub">
+              {data.change_percent === null ? null : (
+                <span className={data.change_percent > 0 ? "t2-wal-change up" : "t2-wal-change"}>
+                  <span dir="ltr">{changeText(data.change_percent)}</span>{" "}
+                  {COMPARED_TO[data.period]}
+                </span>
+              )}
               <span>صافي ما دخل محفظتك</span>
               <span>{countRides(data.completed_rides)}</span>
             </div>
 
-            {/* ── تفصيلُ الصافي في موضع الرسم: أرقامُ «أرباحي» كما تصل ── */}
+            {/* ── أيّامُ النافذة كما رُسمت — و«اليوم» يومٌ واحدٌ هو الرقمُ فوقه فلا رسمَ له ── */}
+            {data.days.length > 1 ? (
+              <EarningsDays days={data.days} currency={CURRENCY_LABEL[data.currency]} />
+            ) : null}
+
+            {/* ── تفصيلُ الصافي تحت الرسم: أرقامُ «أرباحي» كما تصل ── */}
             <div className="t2-wal-break">
               <div className="t2-wal-line">
                 <span>أرباح الرحلات</span>

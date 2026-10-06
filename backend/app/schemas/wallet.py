@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -162,6 +162,15 @@ class DriverWalletOut(WalletOut):
     commission_this_month: Decimal = Decimal("0.000")
 
 
+class EarningsDayOut(BaseModel):
+    """يومٌ من نافذة الأرباح بيوم الدولة (§٦٢-ج/٣٨) — **وأيّامُها تُجمع إلى `net`**."""
+
+    day: date
+    net: Decimal
+    # حصّتُه من أكبر أيّام النافذة بإشارته (−١…١) — يُرسم بها العمودُ كما تصل
+    peak_share: float
+
+
 class EarningsOut(BaseModel):
     """ملخّصُ أرباح الكبتن على نافذة (SPEC القسم 9 و12/7).
 
@@ -190,6 +199,10 @@ class EarningsOut(BaseModel):
     net: Decimal
     directly_collected: Decimal
     completed_rides: int
+    # **منذ §٦٢-ج/٣٨** (رسمُ C09): صافي كلِّ يومٍ في النافذة، والتغيّرُ بالمئة عن
+    # النافذة السابقة المساوية لها حتى الساعة نفسِها — `null` حيث لا أساسَ له
+    days: list[EarningsDayOut]
+    change_percent: int | None
 
 
 # ------------------------------------------------------- إجراءات الإدارة

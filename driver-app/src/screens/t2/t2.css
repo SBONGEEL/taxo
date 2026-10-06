@@ -689,9 +689,33 @@ div.t2-srow { cursor: default; }
 .t2-wal-net-num { font-family: var(--t2-font-num); font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
 .t2-wal-net.negative .t2-wal-net-num { color: var(--t2-danger); }
 .t2-wal-net-cur { font-size: 15px; color: var(--t2-muted); }
-.t2-wal-sub { display: flex; gap: 12px; margin: 4px 0 14px; font-size: 12.5px; color: var(--t2-muted); }
-/* **تفصيلُ الصافي في موضع رسم الأيّام** — بطاقةُ الرسم نفسُها (16 · 16 · 12، و22 للزوايا) */
+.t2-wal-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 0 14px; font-size: 12.5px; color: var(--t2-muted); }
+/* **نسبةُ التغيّر** (§٦٢-ج/٣٨) — الصعودُ بالنجاح كما رُسم، والهبوطُ خبرٌ لا خطأٌ فيبقى خافتاً */
+.t2-wal-change { font-weight: 600; }
+.t2-wal-change.up { color: var(--t2-success); }
+/* **تفصيلُ الصافي تحت رسم الأيّام** — بطاقةُ الرسم نفسُها (16 · 16 · 12، و22 للزوايا) */
 .t2-wal-break { padding: 16px 16px 12px; border-radius: 22px; background: var(--t2-surface); }
+/* ── أيّامُ النافذة (§٦٢-ج/٣٨، `EarningsDays`) — كما رُسمت في C09: عمودٌ لليوم، والجمرُ لليوم وقيمتُه فوقه ── */
+.t2-days-card { position: relative; padding: 16px 16px 12px; border-radius: 22px; background: var(--t2-surface); }
+.t2-days-card + .t2-wal-break { margin-top: 10px; }
+.t2-days { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 16px 0 0; list-style: none; }
+.t2-days.month { gap: 3px; }
+.t2-days-col { display: flex; flex: 1; flex-direction: column; align-items: center; min-width: 0; }
+.t2-days-up { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; width: 100%; height: var(--t2-days-up); }
+.t2-days-down { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.t2-days-bar { flex: none; width: 100%; border-radius: 8px 8px 3px 3px; background: var(--t2-line); }
+.t2-days-bar.neg { border-radius: 3px 3px 8px 8px; background: color-mix(in srgb, var(--t2-danger) 45%, transparent); }
+.t2-days.month .t2-days-bar { border-radius: 3px 3px 1px 1px; }
+.t2-days.month .t2-days-bar.neg { border-radius: 1px 1px 3px 3px; }
+.t2-days-col.today .t2-days-bar { background: var(--t2-accent); }
+.t2-days-col.today .t2-days-bar.neg { background: var(--t2-danger); }
+/* **يومٌ بلا قيدٍ بالإطار المتقطّع الذي رُسم لليوم الذي لم يأتِ** */
+.t2-days-empty { flex: none; box-sizing: border-box; width: 100%; height: 6px; border: 1px dashed var(--t2-dash); border-radius: 3px; }
+.t2-days-val { font-size: 10px; font-weight: 600; white-space: nowrap; }
+.t2-days-label { margin-top: 6px; font-size: 11px; line-height: 1.2; color: var(--t2-muted); white-space: nowrap; }
+.t2-days-col.today .t2-days-label { font-weight: 700; color: var(--t2-text); }
+/* خطُّ الصفر: حشوةُ البطاقة (16) + متّسعُ القيمة فوق الأعمدة (16) + منطقةُ الصاعد */
+.t2-days-zero { position: absolute; inset-inline: 16px; top: calc(32px + var(--t2-days-up)); height: 1px; background: var(--t2-line); }
 .t2-wal-line {
   display: flex;
   justify-content: space-between;

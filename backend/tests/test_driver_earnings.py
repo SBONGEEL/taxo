@@ -108,6 +108,124 @@ async def test_a_rider_has_no_earnings_door(
     assert response.status_code == 403
 
 
+# ------------------------------------- أيّامُ النافذة ونسبةُ التغيّر (§٦٢-ج/٣٨)
+
+
+async def _wallet_ride(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> tuple[dict, Decimal]:
+    """كبتنٌ أنهى رحلةً دُفعت من المحفظة — بالمسار الحقيقيّ — وأجرتُها."""
+    from tests.helpers import topup_wallet
+
+    rider = await rider_session(client)
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+    ride = await completed_ride(client, rider["headers"], driver)
+    me = await client.get("/auth/me", headers=rider["headers"])
+    await topup_wallet(client, admin_headers, me.json()["id"], "50.000")
+    paid = await pay_ride(client, rider["headers"], ride["id"], "wallet")
+    assert paid.status_code == 201, paid.text
+    return driver, Decimal(ride["final_fare"] or ride["estimated_fare"])
+
+
+async def _summary_at(session_factory, driver: dict, period: str, now):
+    """الخدمةُ نفسُها **بساعةٍ مُزاحة** — والدفترُ لا يُعدَّل (`0006`)، فيُزاح الحاضرُ لا القيد."""
+    import uuid
+
+    from app.models.driver import Driver
+    from app.models.enums import CountryCode
+    from app.services import earnings
+
+    async with session_factory() as session:
+        row = await session.get(Driver, driver["driver_id"])
+        return await earnings.summary(
+            session,
+            driver=row,
+            user_id=uuid.UUID(driver["user_id"]),
+            country=CountryCode.JO,
+            period=period,
+            now=now,
+        )
+
+
+async def test_the_days_add_up_to_the_net_and_today_is_last(
+    client: AsyncClient,
+    jordan_settings: None,
+    jordan_wallet: None,
+    session_factory,
+    admin_headers: dict,
+) -> None:
+    """سبعةُ أيّامٍ للأسبوع، **يومٌ بلا قيدٍ صفٌّ بصفر**، ومجموعُها `net` بعينه.
+
+    وبإسقاط الأيّام الفارغة يصير الأسبوعُ يوماً واحداً — رسمٌ يكذب بلا رقمٍ خاطئ.
+    """
+    driver, fare = await _wallet_ride(client, session_factory, admin_headers)
+    body = await _earnings(client, driver, "week")
+
+    days = body["days"]
+    assert len(days) == 7
+    assert [Decimal(d["net"]) for d in days] == [Decimal("0.000")] * 6 + [fare]
+    assert sum(Decimal(d["net"]) for d in days) == Decimal(body["net"])
+    # **الحصّةُ جاهزةٌ للرسم**: أكبرُ يومٍ واحدٌ صحيح، والفارغُ صفر
+    assert [d["peak_share"] for d in days] == [0.0] * 6 + [1.0]
+    # **ثلاثُ منازل كأيِّ مالٍ آخر** — «0» يُعرض «0» بين «12.400» و«8.000»
+    assert all(len(d["net"].split(".")[1]) == 3 for d in days)
+    # لا أسبوعَ سابقاً فيه شيء: **لا نسبةَ** لا «+∞٪»
+    assert body["change_percent"] is None
+
+    today = await _earnings(client, driver, "today")
+    assert len(today["days"]) == 1
+    assert Decimal(today["days"][0]["net"]) == fare
+
+
+async def test_the_window_walks_by_country_days_and_the_previous_one_matches_it(
+    client: AsyncClient,
+    jordan_settings: None,
+    jordan_wallet: None,
+    session_factory,
+    admin_headers: dict,
+) -> None:
+    """**بعد ثلاثة أيّام** يقع القيدُ في رابع الأعمدة من آخرها؛ **وبعد أسبوع** يخرج من
+    النافذة ويدخل السابقةَ لها — فالحاضرُ صفرٌ والسابقُ أجرتُه: «−100٪» بالضبط.
+
+    وبنافذةٍ سابقةٍ تُحسب من UTC أو بطولٍ غير طول الفترة لا يقع القيدُ فيها.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    driver, fare = await _wallet_ride(client, session_factory, admin_headers)
+    now = datetime.now(UTC)
+
+    later = await _summary_at(session_factory, driver, "week", now + timedelta(days=3))
+    assert [d.net for d in later.days] == [Decimal("0.000")] * 3 + [fare] + [Decimal("0.000")] * 3
+    assert later.net == fare and later.change_percent is None
+
+    week_on = await _summary_at(session_factory, driver, "week", now + timedelta(days=7))
+    assert week_on.net == Decimal("0.000")
+    assert all(d.net == Decimal("0.000") and d.peak_share == 0.0 for d in week_on.days)
+    assert week_on.change_percent == -100
+
+    # **واليومُ يُقارَن بأمسِ حتى الساعة نفسِها**: غداً بعد ساعة القيد يقع القيدُ في
+    # أمسِ قبل ساعته فيُعدّ أساساً؛ وغداً قبلها بساعةٍ يقع بعدها فلا يُعدّ — ولو
+    # قُورن اليومُ بأمسِ كاملاً لَعُدّ في الحالين، وقرأ الكبتنُ كلَّ صباحٍ هبوطاً
+    after = await _summary_at(session_factory, driver, "today", now + timedelta(days=1, minutes=1))
+    assert after.net == Decimal("0.000") and after.change_percent == -100
+    before = await _summary_at(session_factory, driver, "today", now + timedelta(days=1, hours=-1))
+    assert before.change_percent is None
+
+
+def test_the_change_has_no_number_where_it_has_no_base() -> None:
+    """النسبةُ مقرَّبةٌ نصفاً إلى أعلى — **ولا رقمَ حيث لا أساس**: سابقٌ صفرٌ أو سالب، أو حاضرٌ سالب."""
+    from app.services.earnings import _change_percent
+
+    assert _change_percent(Decimal("186.400"), Decimal("166.400")) == 12
+    assert _change_percent(Decimal("50.500"), Decimal("100.000")) == -50  # −49.5 ← −50
+    assert _change_percent(Decimal("100.500"), Decimal("100.000")) == 1  # 0.5 ← 1
+    assert _change_percent(Decimal("0.000"), Decimal("10.000")) == -100
+    assert _change_percent(Decimal("10.000"), Decimal("0.000")) is None
+    assert _change_percent(Decimal("10.000"), Decimal("-4.000")) is None
+    assert _change_percent(Decimal("-2.000"), Decimal("10.000")) is None
+
+
 # ------------------------------------------------ شارةُ النزاع (بند 19)
 
 

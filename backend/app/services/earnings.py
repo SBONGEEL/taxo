@@ -17,14 +17,21 @@
 
 **والنافذةُ يومُ الدولة** بمِنطقتها المخزَّنة، كنافذة «نظرة عامة» تماماً: لا
 يقصّ خادمُ UTC ثلاث ساعاتٍ من أول اليوم في عمّان.
+
+**وأيّامُ النافذة ونسبةُ تغيّرها منذ §٦٢-ج/٣٨** (رسمُ C09): صافي كلِّ يومٍ بيوم
+الدولة — **وأيّامُها تُجمع إلى `net` نفسِه** لا إلى رقمٍ ثانٍ، فعمودٌ لا يطابق
+الرقمَ فوقه يُقرأ عطباً — ونسبةٌ عن **النافذة السابقة المساوية لها حتى الساعة
+نفسِها**: اليومُ إلى التاسعة يُقارَن بأمسِ إلى التاسعة لا بأمسِ كاملاً، وإلّا
+قرأ الكبتنُ كلَّ صباحٍ هبوطاً لم يقع.
 """
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
-from decimal import Decimal
+from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,10 +48,30 @@ from app.models.payment import DIRECTLY_COLLECTED_METHODS, Payment
 from app.models.ride import Ride
 from app.models.wallet import WalletTransaction
 from app.services import pricing
-from app.services.stats import PERIOD_DAYS, _window, _zone
+from app.services.stats import PERIOD_DAYS, _days_in, _window, _zone
 
 # نوافذُ الشاشة الثلاث كما يسمّيها القسم 12/7 — نفس مفاتيح «نظرة عامة»
 PERIODS = tuple(PERIOD_DAYS)
+
+# **أركانُ الصافي بإشاراتها** — هي هي حدودُ `net` في `summary` (دخلٌ يزيده وخصمٌ
+# ينقصه)، فيُجمع اليومُ بالقاعدة نفسِها لا بقاعدةٍ ثانيةٍ تفترق عنها أوّلَ ركنٍ يُضاف
+NET_SIGN: dict[WalletTransactionType, int] = {
+    WalletTransactionType.RIDE_EARNING: 1,
+    WalletTransactionType.TIP: 1,
+    WalletTransactionType.COMMISSION: -1,
+    WalletTransactionType.ADVANCE_REPAYMENT: -1,
+}
+
+
+@dataclass(frozen=True, slots=True)
+class EarningsDay:
+    """يومٌ من النافذة **بيوم الدولة** (§٦٢-ج/٣٨)."""
+
+    day: date
+    net: Decimal
+    # **حصّةُ اليوم من أكبر أيّام النافذة، بإشارته** (−١…١): العمودُ يُرسم بها
+    # كما تصل، فلا قسمةَ مالٍ في الواجهة (§14) — ويومٌ سالبٌ يتدلّى تحت الخطّ
+    peak_share: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +95,12 @@ class Earnings:
     net: Decimal
     directly_collected: Decimal
     completed_rides: int
+    # **صافي كلِّ يومٍ في النافذة** (§٦٢-ج/٣٨) — يومٌ بلا قيدٍ صفٌّ بصفر،
+    # ومجموعُها `net` بعينه
+    days: tuple[EarningsDay, ...]
+    # **التغيّرُ عن النافذة السابقة المساوية لها حتى الساعة نفسِها**، بالمئة
+    # مقرَّباً — و`None` حين لا أساسَ له (انظر `_change_percent`)
+    change_percent: int | None
 
 
 async def _ledger_sum(
@@ -95,6 +128,50 @@ async def _ledger_sum(
     # كلُّ مالٍ آخر فيها «٠.٠٠٠». والتقريبُ في الخدمة لا في الواجهة —
     # تنسيقُ المال قرارُ عرض، لكن **عددَ منازله جزءٌ من القيمة** هنا
     return pricing.round_money(Decimal(total or 0))
+
+
+async def _net_by_day(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    zone: ZoneInfo,
+    from_at: datetime,
+    to_at: datetime,
+) -> dict[date, Decimal]:
+    """صافي كلِّ يومٍ فيه قيد — **استعلامٌ واحدٌ مجمَّعٌ بيوم الدولة** لا صفوفٌ تُنقل.
+
+    `timezone(المِنطقة، created_at)` يقلب اللحظةَ إلى ساعة الدولة قبل أن يُؤخذ
+    يومُها: قيدُ الحادية عشرة ليلاً في عمّان يومُه يومُ عمّان، لا الغدُ الذي
+    يراه خادمُ UTC — قاعدةُ `stats.reports` نفسُها.
+    """
+    day = func.date(func.timezone(str(zone), WalletTransaction.created_at)).label("day")
+    rows = await session.execute(
+        select(day, WalletTransaction.type, func.sum(func.abs(WalletTransaction.amount)))
+        .where(
+            WalletTransaction.owner_id == user_id,
+            WalletTransaction.owner_type == WalletOwnerType.DRIVER,
+            WalletTransaction.type.in_(tuple(NET_SIGN)),
+            WalletTransaction.created_at >= from_at,
+            WalletTransaction.created_at <= to_at,
+        )
+        .group_by(day, WalletTransaction.type)
+    )
+    by_day: dict[date, Decimal] = {}
+    for value, kind, total in rows.all():
+        by_day[value] = by_day.get(value, Decimal(0)) + NET_SIGN[kind] * Decimal(total)
+    return by_day
+
+
+def _change_percent(current: Decimal, previous: Decimal) -> int | None:
+    """التغيّرُ بالمئة مقرَّباً — **ولا رقمَ حيث لا أساسَ له**.
+
+    - **سابقٌ صفرٌ أو سالب**: لا يُقسم عليه؛ و«+٣٠٠٪» عن أسبوعٍ خسر فيه الكبتن
+      عمولةً لا يقول شيئاً يصدق.
+    - **حاضرٌ سالب**: «−١٥٠٪» صحيحٌ حساباً ولا يُقرأ — وتنبيهُ الشاشة القائم
+      («العمولة تجاوزت أرباح المحفظة») هو ما يقول ذلك اليوم.
+    """
+    if previous <= 0 or current < 0:
+        return None
+    return int(((current - previous) * 100 / previous).to_integral_value(ROUND_HALF_UP))
 
 
 async def summary(
@@ -155,6 +232,35 @@ async def summary(
         )
     )
 
+    # ── أيّامُ النافذة، ثمّ النافذةُ السابقةُ المساويةُ لها (§٦٢-ج/٣٨) ──
+    found = await _net_by_day(session, user_id, zone, from_at, to_at)
+    nets = [
+        (value, pricing.round_money(found.get(value, Decimal(0))))
+        for value in _days_in(zone, from_at, to_at)
+    ]
+    peak = max((abs(net) for _, net in nets), default=Decimal(0))
+    days = tuple(
+        EarningsDay(
+            day=value,
+            net=net,
+            peak_share=float(round(net / peak, 4)) if peak else 0.0,
+        )
+        for value, net in nets
+    )
+    # **بساعة الحائط في مِنطقة الدولة** لا بطرح ساعاتٍ من UTC: النافذةُ السابقة
+    # تبدأ من منتصف ليلٍ محلّيٍّ وتنتهي عند الساعة نفسِها قبل فترةٍ بطولها
+    span = timedelta(days=PERIOD_DAYS.get(period, 1))
+    previous = await _net_by_day(
+        session,
+        user_id,
+        zone,
+        (from_at.astimezone(zone) - span).astimezone(from_at.tzinfo),
+        (to_at.astimezone(zone) - span).astimezone(to_at.tzinfo),
+    )
+    current_net = pricing.round_money(
+        wallet_earnings + tips - commission - advance_repaid
+    )
+
     return Earnings(
         period=period,
         from_at=from_at,
@@ -171,9 +277,11 @@ async def summary(
         advance_repaid=advance_repaid,
         # **والاقتطاعُ يدخل الصافي**: مالٌ خرج من المحفظة فعلاً، وصافيٌّ لا
         # يطرحه لا يطابق ما يراه صاحبُه في رصيده — نفسُ حجّة إدخال البقشيش
-        net=pricing.round_money(
-            wallet_earnings + tips - commission - advance_repaid
-        ),
+        net=current_net,
         directly_collected=pricing.round_money(Decimal(directly_collected or 0)),
         completed_rides=int(completed or 0),
+        days=days,
+        change_percent=_change_percent(
+            current_net, pricing.round_money(sum(previous.values(), Decimal(0)))
+        ),
     )
