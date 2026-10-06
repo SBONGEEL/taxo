@@ -244,6 +244,59 @@
 }
 .t2-hm-map.open .t2-hm-mapchip .t2-icon { font-size: 22px; color: var(--t2-text); }
 
+/* ── طبقةُ الزحام وبطاقةُ النقر في الخريطة الموسَّعة (§٦٢-ج/٤٨) — بلغة زرِّ الإغلاق فوقها ── */
+.t2-hm-traffic {
+  position: absolute;
+  top: calc(66px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--t2-line);
+  border-radius: 99px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-hm-traffic .t2-icon { font-size: 22px; }
+.t2-hm-traffic.on { border-color: transparent; background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-hm-tapcard {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 20px;
+  background: var(--t2-surface);
+  box-shadow: var(--t2-float-shadow);
+}
+.t2-hm-tapcard-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.t2-hm-tapcard-name { overflow: hidden; font-size: 14px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.t2-hm-tapcard-sub { overflow: hidden; font-size: 11.5px; color: var(--t2-muted); white-space: nowrap; text-overflow: ellipsis; }
+.t2-hm-tapcard-go { flex: none; height: 44px; padding: 0 12px; border-radius: 14px; font-size: 12.5px; }
+.t2-hm-tapcard-go .t2-icon { font-size: 18px; }
+.t2-hm-tapcard-close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+
 /* ── زرُّ الموقع (من `MapView` بـ`t2`) — دائرةُ اللوحة، وموضعُه بحسب الطور ── */
 .t2-maploc {
   position: absolute;
@@ -530,6 +583,8 @@ button.t2-hm-tile { cursor: pointer; }
 }
 .t2-map-pin.from { border-radius: 50%; background: var(--t2-map-pin-ink, var(--t2-on-accent)); }
 .t2-map-pin.to { border-radius: 6px; background: var(--t2-accent); }
+/* **النقطةُ المنقورة** (§٦٢-ج/٤٨) — دائرةٌ بالجمر بحافّة الدبوسين */
+.t2-map-pin.tap { border-radius: 50%; background: var(--t2-accent); }
 
 /* ── C05 · طلبٌ وارد ── */
 /* **فوق رحلةٍ جارية** تُعتَّم الورقةُ تحته كما تُعتَّم في الشاشة القائمة */

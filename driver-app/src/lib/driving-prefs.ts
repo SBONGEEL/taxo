@@ -18,6 +18,7 @@ export const AUTO_ACCEPT_KM = 1;
 
 const NAV_KEY = "taxo.driver.nav_app";
 const AUTO_KEY = "taxo.driver.auto_accept";
+const TRAFFIC_KEY = "taxo.driver.traffic";
 
 export function navApp(): NavApp {
   try {
@@ -42,6 +43,24 @@ export function autoAcceptEnabled(): boolean {
     return localStorage.getItem(AUTO_KEY) === "on";
   } catch {
     return false;
+  }
+}
+
+/** **طبقةُ الزحام** (§٦٢-ج/٤٨) — مطفأةٌ حتى يرفعها هو من الخريطة الموسَّعة، **وتتبعه في خرائطه كلِّها** (الرئيسيةُ والرحلة). */
+export function trafficLayer(): boolean {
+  try {
+    return localStorage.getItem(TRAFFIC_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+export function setTrafficLayer(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(TRAFFIC_KEY, "on");
+    else localStorage.removeItem(TRAFFIC_KEY);
+  } catch {
+    // جهازٌ يرفض التخزين: تبقى لهذه الفتحة وحدَها
   }
 }
 

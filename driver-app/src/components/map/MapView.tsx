@@ -96,6 +96,55 @@ interface Props {
   t2?: boolean;
   /** **ما مضى من المسار يُرسم خافتاً** (C07) بدل أن يُقصّ — والباقي بالجمر فوقه. مع `t2` وحدَه. */
   routeTraveled?: boolean;
+  /** **طبقةُ الزحام** (§٦٢-ج/٤٨) — تفضيلُ الجهاز (`driving-prefs`)؛ مع `t2` وحدَه. */
+  traffic?: boolean;
+  /** **النقرُ على الخريطة** (بطاقةُ النقر، §٦٢-ج/٤٨) — يُمرَّر حيث يُقصد وحدَه (الخريطةُ الموسَّعة)؛ مع `t2` وحدَه. */
+  onTap?: ((at: Coordinates) => void) | null;
+  /** دبوسُ النقطة المنقورة — حتى تُغلق بطاقتُها. */
+  tapPin?: Coordinates | null;
+}
+
+/** **طبقةُ الزحام** من `mapbox-traffic-v1` (§٦٢-ج/٤٨): **المزدحمُ وحدَه يُرسم** (متوسّط · كثيف · شديد) — والطريقُ السالكُ لا خطَّ
+ *  له، فلا تصير الخريطةُ كلُّها ألواناً. **وألوانُها من رموز الحاوية** (`--t2-warning` · `--t2-danger`) لا من لوحةٍ مكتوبة،
+ *  **وتحت خطِّ المسار لا فوقه**: المسارُ هو ما يقوده الكبتن، والزحامُ سياقُه. */
+const TRAFFIC = "taxo-traffic";
+const ROUTE_LAYERS = ["taxo-route-line-done", "taxo-route-line-casing", "taxo-route-line"];
+
+function addTraffic(instance: mapboxgl.Map, host: HTMLElement) {
+  if (instance.getLayer(TRAFFIC)) return;
+  const css = getComputedStyle(host);
+  const warning = css.getPropertyValue("--t2-warning").trim();
+  const danger = css.getPropertyValue("--t2-danger").trim();
+  if (!warning || !danger) return;
+  if (!instance.getSource(TRAFFIC)) {
+    instance.addSource(TRAFFIC, { type: "vector", url: "mapbox://mapbox.mapbox-traffic-v1" });
+  }
+  const before = ROUTE_LAYERS.find((id) => instance.getLayer(id));
+  instance.addLayer(
+    {
+      id: TRAFFIC,
+      type: "line",
+      source: TRAFFIC,
+      "source-layer": "traffic",
+      filter: ["in", ["get", "congestion"], ["literal", ["moderate", "heavy", "severe"]]],
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: {
+        "line-color": ["match", ["get", "congestion"], "moderate", warning, danger],
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          11, ["match", ["get", "congestion"], "severe", 2.5, 1.5],
+          16, ["match", ["get", "congestion"], "severe", 6, 4],
+        ],
+        "line-opacity": 0.85,
+      },
+    },
+    before,
+  );
+}
+
+function removeTraffic(instance: mapboxgl.Map) {
+  if (instance.getLayer(TRAFFIC)) instance.removeLayer(TRAFFIC);
+  if (instance.getSource(TRAFFIC)) instance.removeSource(TRAFFIC);
 }
 
 /** الطرقُ الكبرى بلون الطريق، وما سواها بلون الشارع — كما في خريطة الراكب (`customer-app/components/map`). */
@@ -227,6 +276,9 @@ export function MapView({
   className,
   t2 = false,
   routeTraveled = false,
+  traffic = false,
+  onTap = null,
+  tapPin = null,
 }: Props) {
   const { dark } = useTheme();
   const host = useRef<HTMLDivElement | null>(null);
@@ -238,6 +290,12 @@ export function MapView({
   const animation = useRef<number | null>(null);
   const cars = useRef<Map<string, Tween>>(new Map());
   const carLoop = useRef<number | null>(null);
+  // **التفضيلُ والنقرُ بمرجعين** — يقرؤهما مُعالِجا الخريطة المسجَّلان مرّةً عند البناء، فلا تُجمَّد أوّلُ قيمة
+  const trafficRef = useRef(traffic);
+  trafficRef.current = traffic;
+  const onTapRef = useRef(onTap);
+  onTapRef.current = onTap;
+  const tapMarker = useRef<mapboxgl.Marker | null>(null);
 
   // **طورُ المتابعة** (البند ١٧-٢) — و`ref` بجانب الحالة لأن مُعالِج السحب
   // يُسجَّل مرةً واحدةً عند بناء الخريطة، فقراءتُه للحالة تُجمّد أوّلَ قيمة
@@ -290,6 +348,12 @@ export function MapView({
       const instance = map.current;
       instance.on("style.load", () => {
         if (host.current) calmLook(instance, host.current);
+        // **والزحامُ مع كلِّ ستايلٍ يُحمَّل** — التبديلُ يمسح الطبقات كما يمسح الصبغ
+        if (host.current && trafficRef.current) addTraffic(instance, host.current);
+      });
+      // **النقرُ يُسأل عنه المرجعُ ساعتَه**: من لم يمرّر `onTap` (الخريطةُ الصغيرة والرحلة) لا تقع نقرتُه على شيء
+      instance.on("click", (event) => {
+        onTapRef.current?.({ lat: event.lngLat.lat, lng: event.lngLat.lng });
       });
       // **في التطوير وحدَه**: الخريطةُ على حاويتها، فيُقرأ ما رُسم (الطبقاتُ وألوانُها) من المتصفّح لا ظنّاً — كخريطة الراكب
       if (import.meta.env.DEV) (host.current as unknown as { __map?: mapboxgl.Map }).__map = instance;
@@ -314,6 +378,32 @@ export function MapView({
     // مرةً واحدة: تبديلُ الستايل يقع في تأثيرٍ آخر بلا إعادة بناء
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // **طبقةُ الزحام تتبع التفضيل** — وقبل تحميل الستايل يتولّاها `style.load` أعلاه
+  // **و«الستايلُ لم يكتمل» ليس «لا زحام»**: `isStyleLoaded` يبقى كاذباً ما دامت مصادرُ تُحمَّل — ولو بعد `style.load` — فطبقةٌ
+  // تُطلب حينها كانت تضيع بصمت (قِيس ٢٠٢٦-١٠-٠٦: صفرُ نداءٍ للزحام في إحدى السِمتين). فتُؤجَّل إلى أوّل سكونٍ بعدها
+  useEffect(() => {
+    const instance = map.current;
+    if (!t2 || !instance || !host.current) return;
+    const apply = () => {
+      if (!host.current) return;
+      if (trafficRef.current) addTraffic(instance, host.current);
+      else removeTraffic(instance);
+    };
+    if (instance.isStyleLoaded()) apply();
+    else instance.once("idle", apply);
+  }, [traffic, t2]);
+
+  // **دبوسُ النقطة المنقورة** — دائرةٌ بالجمر بحافّة الدبوسين، ويُرفع بإغلاق بطاقتها
+  useEffect(() => {
+    const instance = map.current;
+    tapMarker.current?.remove();
+    tapMarker.current = null;
+    if (!t2 || !instance || !tapPin) return;
+    const element = document.createElement("div");
+    element.innerHTML = `<span class="t2-map-pin tap"></span>`;
+    tapMarker.current = new mapboxgl.Marker({ element }).setLngLat([tapPin.lng, tapPin.lat]).addTo(instance);
+  }, [tapPin, t2]);
 
   useEffect(() => {
     // **ولا يُعاد الستايلُ تحت «TaxoMap»** — قِيس: هذا السطرُ يقع مع الإنشاء، **والتطبيقُ بالفرق يعيد ألوانَ الستايل وأسماءَه

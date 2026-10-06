@@ -25,7 +25,7 @@
  * **ومبدّلُ السِمة في «الإعدادات» الليلية** (C15 · «المظهر») و**نسبةُ العمولة في «الأرباح»** (C09) — نُزعا من الرأس ولم يضيعا.
  */
 
-import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
 import {
@@ -37,7 +37,7 @@ import {
   resumeFromStop,
   resumePause,
 } from "@/api/endpoints";
-import type { Currency, MyProgress, MySubscription, ServiceTile } from "@/api/types";
+import type { Coordinates, Currency, MyProgress, MySubscription, ServiceTile } from "@/api/types";
 import { CliqTransferSheet } from "@/components/CliqTransferSheet";
 import { useMapExpand } from "@/components/home/MapCard";
 import { BannerImage, OfferCard, PromoBanners, type PromoSkin } from "@/components/home/PromoBanners";
@@ -45,6 +45,10 @@ import { MapView } from "@/components/map/MapView";
 import { PermissionNotice } from "@/components/PermissionNotice";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { useDemandHigh, useDocumentsAttention } from "@/lib/attention";
+import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
+import { metersBetween } from "@/lib/eta";
+import { openIn } from "@/lib/external-maps";
+import { reversePlace, type PlaceReading } from "@/lib/geocode";
 import { isActive } from "@/lib/ride";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
@@ -110,6 +114,34 @@ export function HomeT2Screen() {
   // **يُشتقّ هنا** كما في الشاشة القائمة — به يعرف `tsc` أنّ `ride` رحلةٌ في فرع التتبّع
   const tracking = isActive(ride);
   const { open, setOpen } = useMapExpand();
+  // **طبقةُ الزحام وبطاقةُ النقر** (§٦٢-ج/٤٨): التفضيلُ على الجهاز ويتبعه في خرائطه كلِّها، **والنقرُ في الخريطة الموسَّعة وحدَها**
+  // — الصغيرةُ بطاقةٌ تُلمس للتوسيع، والرحلةُ خريطةُ قيادةٍ لا تُسأل
+  const [traffic, setTraffic] = useState(trafficLayer);
+  const toggleTraffic = () => {
+    const next = !traffic;
+    setTrafficLayer(next);
+    setTraffic(next);
+  };
+  const [tapped, setTapped] = useState<Tapped | null>(null);
+  const reading = useRef<AbortController | null>(null);
+  const tapAt = useCallback(
+    (at: Coordinates) => {
+      reading.current?.abort();
+      const controller = new AbortController();
+      reading.current = controller;
+      setTapped({ at, place: null, reading: true });
+      void reversePlace(token ?? "", at, controller.signal).then((place) => {
+        if (!controller.signal.aborted) setTapped({ at, place, reading: false });
+      });
+    },
+    [token],
+  );
+  // **البطاقةُ تُغلق مع الخريطة** — ولا تبقى نقطةٌ منقورةٌ في خريطةٍ أُغلقت
+  useEffect(() => {
+    if (open) return;
+    reading.current?.abort();
+    setTapped(null);
+  }, [open]);
   const [sheetRef, sheetHeight] = useMeasuredHeight();
   const mode = tracking ? "ride" : offer ? "offer" : "home";
   // **ما يحتاج انتباهَه** (§٦٢-ج/٤٣): نقطةُ «الوثائق»، و«الطلب مرتفع» ما دام متصلاً في الرئيسية وحدَها
@@ -240,6 +272,9 @@ export function HomeT2Screen() {
           etaMinutes={eta}
           t2
           routeTraveled={riding}
+          traffic={traffic}
+          onTap={mode === "home" && open ? tapAt : null}
+          tapPin={mode === "home" && open ? (tapped?.at ?? null) : null}
         />
         {mode === "home" ? (
           <>
@@ -253,6 +288,19 @@ export function HomeT2Screen() {
               <Icon name={open ? "close" : "open_in_full"} />
               {open ? null : "توسيع"}
             </button>
+            {open ? (
+              <button
+                type="button"
+                className={traffic ? "t2-hm-traffic on" : "t2-hm-traffic"}
+                onClick={toggleTraffic}
+                aria-pressed={traffic}
+                aria-label="طبقة الزحام"
+                title="طبقة الزحام"
+              >
+                <Icon name="traffic" />
+              </button>
+            ) : null}
+            {open && tapped ? <TapCard tapped={tapped} position={position} onClose={() => setTapped(null)} /> : null}
             <GoPill
               online={online}
               connecting={connecting}
@@ -404,6 +452,49 @@ function RideCount({ n }: { n: number }) {
       </span>
       {n <= 10 ? "رحلات" : "رحلة"}
     </>
+  );
+}
+
+/** النقطةُ المنقورةُ في الخريطة الموسَّعة — وعنوانُها حين يُقرأ (`null` إن لم يُعرف). */
+interface Tapped {
+  at: Coordinates;
+  place: PlaceReading | null;
+  reading: boolean;
+}
+
+/** **بطاقةُ النقر** (§٦٢-ج/٤٨، `FUTURE-FEATURES` الخرائط #٣): اسمُ النقطة وعنوانُها وبُعدُها، **و«افتح في الملاحة»** إلى تطبيق خرائطه
+ *  المختار (`openIn` — بابُ «فتح في الملاحة» نفسُه). **ولا عنوانَ يُخترع**: ما لم يُقرأ يُقال «نقطة على الخريطة». */
+function TapCard({ tapped, position, onClose }: { tapped: Tapped; position: Coordinates | null; onClose: () => void }) {
+  const title = tapped.place?.name ?? (tapped.reading ? "جارٍ قراءة العنوان…" : "نقطة على الخريطة");
+  const km = position ? metersBetween(position, tapped.at) / 1000 : null;
+  const sub = [km !== null ? `على بعد ${digits(km.toFixed(1))} كم` : null, tapped.place?.address ?? null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div className="t2-hm-tapcard" role="dialog" aria-label="نقطة على الخريطة">
+      <div className="t2-hm-tapcard-text">
+        <span className="t2-hm-tapcard-name">{title}</span>
+        {sub ? <span className="t2-hm-tapcard-sub">{sub}</span> : null}
+      </div>
+      <button
+        type="button"
+        className="t2-button action t2-hm-tapcard-go"
+        onClick={() =>
+          openIn({
+            lat: tapped.at.lat,
+            lng: tapped.at.lng,
+            label: tapped.place?.name ?? "نقطة على الخريطة",
+            cta: "افتح في الملاحة",
+          })
+        }
+      >
+        <Icon name="navigation" />
+        افتح في الملاحة
+      </button>
+      <button type="button" className="t2-hm-tapcard-close" aria-label="إغلاق" onClick={onClose}>
+        <Icon name="close" />
+      </button>
+    </div>
   );
 }
 
