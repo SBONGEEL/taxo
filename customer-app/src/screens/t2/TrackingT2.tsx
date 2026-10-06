@@ -8,15 +8,19 @@
  * المسار المجمَّد على الرحلة وموضع الكبتن عليه — **حسابُ هندسةٍ للعرض لا يُسعَّر منه شيء** (`lib/route-line`).
  *
  * **وما رسمته اللوحةُ ولا مصدرَ له اليوم — لم يُرسم** (`TAXO2-DESIGN-CORRECTIONS.md` §٢٤): رمزُ الرحلة · مهلةُ الوصول ووقتُه ·
- * عددُ رحلات الكبتن · «اتصال» و«رسالة» و«أمان» و«طوارئ SOS» · «عادةً أقل من دقيقة» · السياراتُ حولك أثناء البحث.
+ * «اتصال» و«رسالة» و«أمان» و«طوارئ SOS» · «عادةً أقل من دقيقة».
+ *
+ * **وبُني منها بندان** (§٦٢-ج/٢٧): **السياراتُ حولك أثناء البحث** وعدُّها في سطر R07 («6 كباتن حولك الآن» — ممّا تُرسمه الخريطةُ
+ * نفسُها، `Home.tsx`)، **وعددُ رحلات الكبتن** في بطاقة R08 («4.92 · 2,140 رحلة» — `GET /rides/{id}/driver/stats`).
  *
  * **وما في الورقة القائمة ولم يُرسم يبقى بلغة اللوحة**: شارةُ «رحلة نسائية» وانتظارُ الكبتنة واقتراحُ المشاركة لها (§61: كما هي
  * اليوم) · شارتا المشاركة · المحطاتُ وعدّادُ الانتظار والوقفةُ غيرُ المخطَّطة (مالٌ يُقال حين ينشأ) · رسمةُ مركبة المتجر · أسبابُ
  * الإلغاء بعد القبول.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { getRideDriverStats } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { PaymentPicker, PAY_ICON_T2 } from "@/components/payment/PaymentPicker";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
@@ -29,11 +33,13 @@ import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { usePaymentPreference } from "@/lib/payment";
 import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
-import { currencyLabel, formatDistance, formatMoney } from "@/lib/utils";
+import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney } from "@/lib/utils";
 
+import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
 import "@/taxo2";
 import "./t2.css";
+import "./tracking-count.css";
 
 export interface TrackingT2Props {
   ride: Ride;
@@ -45,6 +51,39 @@ export interface TrackingT2Props {
   /** **عنوانُ نقطة الانطلاق من Mapbox** حين طُلبت من موقع الجهاز بلا عنوان — ما رأته في «R06» بعينه، **ويُمرَّر حين تكون
    *  النقطةُ هي هي** (`Home`)، وإلا فلا: عنوانُ موقعٍ آخرَ ليس انطلاقَ هذه الرحلة. */
   pickupLine?: string | null;
+  /** **كم سيارةً ترسمها الخريطةُ حولك أثناء البحث** (R07، §٦٢-ج/٢٧) — العددُ نفسُه لا عدٌّ ثانٍ، و`null` حين لا تُرسم سيارة
+   *  (تفضيلُ الرحلة غيرُ تفضيل الملفّ) فلا يُقال عددٌ لا تراه. */
+  nearby?: number | null;
+}
+
+/** «2,140 رحلة» كما رُسمت في R08 — **والتمييزُ بآخر خانتين**: «3 رحلات» و«103 رحلات»، و«11 رحلة» و«2,140 رحلة»؛ والخاناتُ
+ *  لاتينيةٌ بفواصل الآلاف (`DISPLAY_LOCALE`، §20). */
+function ridesLabel(count: number): string {
+  if (count === 1) return "رحلة واحدة";
+  if (count === 2) return "رحلتان";
+  const tail = count % 100;
+  // **مسافةٌ لا تنكسر** بين العدد ومعدوده — فلا يبقى الرقمُ آخرَ سطرٍ والتمييزُ أوّلَ تاليه
+  return `${new Intl.NumberFormat(DISPLAY_LOCALE).format(count)} ${tail >= 3 && tail <= 10 ? "رحلات" : "رحلة"}`;
+}
+
+/** **عددُ رحلات الكبتن المكتملة لبطاقته في R08** — يُسأل مرّةً لكلِّ رحلةٍ ما دام الكبتنُ في الطريق أو ينتظر، **ولا يُعرض صفرٌ
+ *  ولا يُنتظر**: بطاقةٌ بلا العدد حتى يصل، أو إن تعثّر. */
+function useDriverRides(ride: Ride): number | null {
+  const [count, setCount] = useState<number | null>(null);
+  const approaching = ride.driver !== null && (ride.status === "accepted" || ride.status === "arrived");
+  useEffect(() => {
+    if (!approaching) return;
+    let live = true;
+    getRideDriverStats(ride.id)
+      .then((stats) => {
+        if (live) setCount(stats.completed_rides);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [ride.id, approaching]);
+  return count;
 }
 
 /** ما بقي من الطريق وما مضى منه — **من المسار المجمَّد وموضع الكبتن عليه**، و`null` بلا أحدهما: لا رقمَ يُخمَّن. */
@@ -58,8 +97,9 @@ export function tripProgress(routePoints: number[][] | null, driverPing: LatLng 
 
 const riding = (ride: Ride) => ride.status === "in_progress" || ride.status === "at_stop";
 
-export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pickupLine }: TrackingT2Props) {
+export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pickupLine, nearby = null }: TrackingT2Props) {
   const t = useTrackingSheet({ ride, onChanged });
+  const driverRides = useDriverRides(ride);
   const countryConfig = useCountryConfig(ride.country_code);
   // **طريقةُ الدفع تفضيلٌ محلّي** كما في ورقة الطلب — تُعرض هنا وتُبدَّل، **ولا تُرسل مع الرحلة** (`lib/payment`)
   const { available: channels, resolved: payMethod, choose } = usePaymentPreference(countryConfig);
@@ -154,8 +194,13 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           <h3 className="t2-trk-title">نبحث لك عن كبتن قريب</h3>
           {badges}
         </div>
-        {/* **سطرُ التطبيق القائم لا سطرُ اللوحة**: «عادةً أقل من دقيقة» وعدٌ بلا مصدر (§٦١-د/د) */}
-        <p className="t2-trk-sub">نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين</p>
+        {/* **سطرُ التطبيق القائم لا سطرُ اللوحة**: «عادةً أقل من دقيقة» وعدٌ بلا مصدر (§٦١-د/د). **و«6 كباتن حولك الآن» من اللوحة**
+            (§٦٢-ج/٢٧) — عددُ ما ترسمه الخريطةُ نفسُه، **ولا يُقال صفرٌ ولا عددٌ لا يُرسم** */}
+        <p className="t2-trk-sub">
+          نعرض طلبك على أقرب الكباتن — قد يستغرق دقيقتين
+          {/* **والعددُ لا ينفصل عن معدوده** آخرَ السطر (` `) — قِيس: «6» وحدَها آخرَ سطرٍ و«كباتن» أوّلَ تاليه */}
+          {nearby ? `. ${nearby > 2 ? `${nearby} ` : ""}${nearbyLabel(nearby)} الآن.` : ""}
+        </p>
         {/* **شريطٌ يتحرّك ولا يتقدّم** — «لا نعرف كم يبقى، وشريطٌ يتقدّم يَعِد بما لا نملكه» (الورقة القائمة) */}
         <div className="t2-trk-bar" role="progressbar" aria-label="نبحث عن كبتن" aria-busy="true">
           <span />
@@ -329,9 +374,17 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           <DriverAvatar rideId={ride.id} name={driver.name} className="t2-trk-avatar" />
           <div className="t2-trk-dmain">
             <div className="t2-trk-dname lg">{driver.name}</div>
-            <div className="t2-trk-rating">
+            <div className={driverRides ? "t2-trk-rating with-rides" : "t2-trk-rating"}>
               <span className="t2-icon fill" aria-hidden="true">star</span>
               <span className="t2-trk-rating-value">{Number(driver.rating_avg).toFixed(2)}</span>
+              {/* **«· 2,140 رحلة» كما رُسمت** (§٦٢-ج/٢٧) — ما أكمله فعلاً، **ولا يُرسم صفرٌ** لكبتنٍ في أوّل رحلاته. **والعددُ ومعدودُه
+                  لا ينفصلان** (`t2-trk-rides`): على ٣٦٠ ينزلان سطراً معاً بدل «2,140» وحدَها و«رحلة» تحتها (قِيس) */}
+              {driverRides ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="t2-trk-rides">{ridesLabel(driverRides)}</span>
+                </>
+              ) : null}
             </div>
           </div>
           {vehicle ? (

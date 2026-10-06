@@ -15,16 +15,18 @@ from sqlalchemy import select
 from app.core.deps import CurrentDriver, CurrentUser, DbSession, RedisDep, RiderUser
 from app.core import storage
 from app.core import service_area
-from app.core.exceptions import NotFound, PermissionDenied
+from app.core.exceptions import Conflict, NotFound, PermissionDenied
 from app.models.driver import Driver
 from app.models.user import User
 from app.models.enums import CancellationChargeStatus, RideStatus, UserRole
-from app.models.ride import Ride
+from app.models.ride import ACTIVE_DRIVER_STATUSES, TERMINAL_STATUSES, Ride
 from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.promo import PromoPreviewOut, PromoValidateRequest
 from app.schemas.tip import TipCreate, TipOptionsOut, TipOut
 from app.schemas.ride import (
     CoordinatesIn,
+    RecordedRouteOut,
+    RideDriverStatsOut,
     RideListItem,
     RiderSummaryOut,
     RideCancelRequest,
@@ -262,6 +264,49 @@ async def get_route_line(
     return RouteLineOut(
         points=points or [],
         steps=route_line.decode_steps(ride.route_steps) if is_driver else [],
+    )
+
+
+@router.get("/{ride_id}/route", response_model=RecordedRouteOut)
+async def get_recorded_route(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> RecordedRouteOut:
+    """**المسارُ الذي سارته الرحلة** — لتفاصيلها عند طرفَيها (R18 · C17، §٦٢-ج/١١).
+
+    **لطرفَيها وحدهما** (`get_ride_for_party`): وغيرُهما ٤٠٤ — **والمشرفُ منهم**، فله بابُه تحت صلاحياته
+    (`/admin/rides/{id}`). **وبعد أن تنتهي وحدَه**: ما دامت جاريةً فالمسارُ لم يكتمل، والطرفان يريان موضعَ
+    السيارة حيّاً أصلاً — **فلا يُقرأ خطٌّ ناقصٌ على أنه الرحلة**.
+
+    **ومن البانِي الذي يقرأ به المشرف** (`ride_log.route_of`): الترتيبُ نفسُه والسقفُ نفسُه والقصُّ يُقال.
+    """
+    ride = await rides_service.get_ride_for_party(session, ride_id, user)
+    if ride.status not in TERMINAL_STATUSES:
+        raise Conflict("المسار يُعرض بعد انتهاء الرحلة")
+    points, truncated = await ride_log.route_of(session, ride.id)
+    return RecordedRouteOut(
+        points=[[point.lng, point.lat] for point in points],
+        truncated=truncated,
+    )
+
+
+@router.get("/{ride_id}/driver/stats", response_model=RideDriverStatsOut)
+async def get_driver_stats(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession
+) -> RideDriverStatsOut:
+    """**كم رحلةً أكمل كبتنُ هذه الرحلة** — لبطاقته في R08 (§٦٢-ج/٢٧).
+
+    **مفتاحُه الرحلةُ لا الكبتن** (كصورته): لا يُعدّ كبتنٌ بمعرّفه. **ولطرفَيها وحدهما، وما دامت جاريةً بكبتنها**:
+    البطاقةُ تُرى أثناء الرحلة، **ورحلةٌ انتهت لا تبقى نافذةً** يُقرأ منها عملُ الكبتن يوماً بعد يوم.
+    """
+    ride = await rides_service.get_ride_for_party(session, ride_id, user)
+    if ride.driver_id is None:
+        raise NotFound("لا كبتن لهذه الرحلة بعد")
+    if ride.status not in ACTIVE_DRIVER_STATUSES:
+        raise Conflict("انتهت الرحلة — بطاقة الكبتن تُقرأ أثناءها")
+    return RideDriverStatsOut(
+        completed_rides=await rides_service.completed_rides_of_driver(
+            session, ride.driver_id
+        )
     )
 
 

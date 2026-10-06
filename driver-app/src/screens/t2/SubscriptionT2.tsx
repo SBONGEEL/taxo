@@ -40,6 +40,26 @@ const DURATION_T2: Record<SubscriptionDuration, string> = {
   monthly: "30 يوماً",
 };
 
+/** **سطرُ الخطّة تحت اسمها** — مدّتُها، ثمّ عرضُها باسمه وموعده، أو ما استنفده منه (البند ٥٤). **بيتٌ واحدٌ لـC10 وC32**
+ *  («عرض الباقات» قيد المراجعة): الخطّةُ نفسُها تُقال بالكلمات نفسِها في الصفحتين. **ومن لا يستحقّ لا يُقال له شيء.** */
+export function planSubLine(row: SubscriptionPlan): string {
+  const offer = row.offer_name
+    ? ` · ${row.offer_name}${
+        row.offer_ends_at
+          ? ` — حتى ${digits(
+              new Date(row.offer_ends_at).toLocaleDateString(DISPLAY_LOCALE, {
+                day: "numeric",
+                month: "numeric",
+              }),
+            )}`
+          : ""
+      }`
+    : row.exhausted_offer_name
+      ? ` · استفدتَ من «${row.exhausted_offer_name}» من قبل`
+      : "";
+  return `${DURATION_T2[row.duration_type]}${offer}`;
+}
+
 const CHIP: Record<State, { text: string; tone: string }> = {
   active: { text: "ساري", tone: "ok" },
   expiring: { text: "ينتهي قريباً", tone: "warn" },
@@ -205,24 +225,7 @@ export function SubscriptionT2Screen() {
                       row.offer_name ? "t2-sub-plan-sub ok" : "t2-sub-plan-sub"
                     }
                   >
-                    {DURATION_T2[row.duration_type]}
-                    {row.offer_name
-                      ? ` · ${row.offer_name}${
-                          row.offer_ends_at
-                            ? ` — حتى ${digits(
-                                new Date(row.offer_ends_at).toLocaleDateString(
-                                  DISPLAY_LOCALE,
-                                  {
-                                    day: "numeric",
-                                    month: "numeric",
-                                  },
-                                ),
-                              )}`
-                            : ""
-                        }`
-                      : row.exhausted_offer_name
-                        ? ` · استفدتَ من «${row.exhausted_offer_name}» من قبل`
-                        : ""}
+                    {planSubLine(row)}
                   </span>
                 </span>
                 <span className="t2-sub-price">

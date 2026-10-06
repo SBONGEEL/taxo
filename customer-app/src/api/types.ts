@@ -676,6 +676,32 @@ export interface RiderSummary {
   ratings_count: number;
 }
 
+/** **المسارُ الذي سارته الرحلة** (`GET /rides/{id}/route`، §٦٢-ج/١١) — `[lng, lat]` كـ`route-line`، **وفارغٌ حين صمت
+ *  تطبيقُ الكبتن** فلا يُرسم خطّ. و`truncated` يقول إن الذيلَ قُصّ عند سقف الخلفية. */
+export interface RecordedRoute {
+  points: number[][];
+  truncated: boolean;
+}
+
+/** **كم رحلةً أكمل كبتنُ الرحلة الجارية** (`GET /rides/{id}/driver/stats`، R08 «2,140 رحلة»، §٦٢-ج/٢٧). */
+export interface RideDriverStats {
+  completed_rides: number;
+}
+
+/** سؤالٌ وجوابُه كما يكتبهما المشرفُ في «الموقع» (`site_settings.faq`) — **والترتيبُ من الحقل لا من موضع العنصر**. */
+export interface FaqItem {
+  q: string;
+  a: string;
+  order?: number;
+}
+
+/** **ما تقرؤه «المساعدة والدعم» من `GET /public/site`** (§٦٢-ج/١٦) — **حقلان من حمولةٍ أوسع بقصد**: الصفحةُ التعريفيةُ
+ *  تقرأ الباقي، والتطبيقُ لا يعلن مرآةً لما لا يقرؤه. والبابُ عامٌّ بلا جلسة، **والمحتوى من اللوحة لا من التطبيق**. */
+export interface SiteHelp {
+  support_email: string;
+  faq: FaqItem[];
+}
+
 export interface Booking {
   id: string;
   status: BookingStatus;

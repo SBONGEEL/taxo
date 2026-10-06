@@ -65,8 +65,8 @@ export interface RiderHomeProps {
 }
 
 
-/** «كم كبتناً حولك» بعربيةٍ تُقرأ — **العددُ وحدَه بلا مهلة**. */
-function nearbyLabel(count: number): string {
+/** «كم كبتناً حولك» بعربيةٍ تُقرأ — **العددُ وحدَه بلا مهلة**. **وبيتُها هنا لـR05 وR07 معاً** («6 كباتن حولك الآن» أثناء البحث). */
+export function nearbyLabel(count: number): string {
   if (count === 1) return "كبتن حولك";
   if (count === 2) return "كبتنان حولك";
   if (count <= 10) return "كباتن حولك";

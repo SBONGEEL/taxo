@@ -170,6 +170,25 @@ async def get_ride_for_user(
     raise NotFound("الرحلة غير موجودة")
 
 
+async def get_ride_for_party(
+    session: AsyncSession, ride_id: uuid.UUID, user: User
+) -> Ride:
+    """الرحلةُ **لطرفَيها وحدهما** — راكبِها وكبتنِها — وإلا ٤٠٤ (لا IDOR، §14).
+
+    **وأضيقُ من `get_ride_for_user` بقصد**: ذاك يفتح الرحلةَ لكلِّ مشرفٍ ودعم، وهذا
+    بابُ ما يخصّ الطرفين من أثر الرحلة (§٦٢-ج/١١ و/٢٧): **المسارُ الذي سارته**
+    وبطاقةُ كبتنها. **والمشرفُ يقرأ المسارَ من بابه** (`GET /admin/rides/{id}` — دليلُ
+    النزاع، §13.4) **تحت مصفوفة صلاحياته** (§41)؛ وبابٌ ثانٍ له هنا يتخطّاها بلا قيد.
+    """
+    ride = await get_ride(session, ride_id)
+    if ride.rider_id == user.id:
+        return ride
+    if ride.driver is not None and ride.driver.user_id == user.id:
+        return ride
+    # **٤٠٤ لا ٤٠٣** — كالباب الأوسع: وجودُ الرحلة ليس معلومةً يستحقّها غيرُ طرفَيها
+    raise NotFound("الرحلة غير موجودة")
+
+
 
 def _side_of(user: User, declared: UserRole | None = None) -> UserRole:
     """أيَّ جانبٍ من الرحلة يقف صاحبُ الحساب — **والعمليةُ تعلنه** (§22).
@@ -298,6 +317,22 @@ async def completed_rides_of_rider(session: AsyncSession, rider_id: uuid.UUID) -
             select(func.count())
             .select_from(Ride)
             .where(Ride.rider_id == rider_id, Ride.status == RideStatus.COMPLETED)
+        )
+        or 0
+    )
+
+
+async def completed_rides_of_driver(session: AsyncSession, driver_id: uuid.UUID) -> int:
+    """عددُ رحلات الكبتن المكتملة — **«2,140 رحلة» في بطاقته التي يراها الراكب** (R08، §٦٢-ج/٢٧).
+
+    **يُعدّ في القاعدة ساعةَ يُسأل** ولا يُحفظ عموداً: كاتبٌ ثانٍ لعددٍ يملكه جدولُ الرحلات يفترق عنه، والسؤالُ
+    مرّةٌ لكلِّ بطاقة. **وأخوه** `completed_rides_of_rider` بالشرط نفسِه — «مكتملة» وحدَها.
+    """
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Ride)
+            .where(Ride.driver_id == driver_id, Ride.status == RideStatus.COMPLETED)
         )
         or 0
     )

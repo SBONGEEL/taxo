@@ -30,8 +30,10 @@ import type {
   PromoPreview,
   Rating,
   RatingTag,
+  RecordedRoute,
   RequiredPolicy,
   Ride,
+  RideDriverStats,
   RideEstimate,
   RideGroup,
   RideListItem,
@@ -39,6 +41,7 @@ import type {
   RiderSummary,
   SavedCard,
   SavedPlace,
+  SiteHelp,
   Storefront,
   Tip,
   TipOptions,
@@ -426,6 +429,15 @@ export const markNotificationsRead = (ids?: string[]) =>
 export const getRouteLine = (rideId: string) =>
   api.get<{ points: number[][] }>(`/rides/${rideId}/route-line`);
 
+/** **المسارُ الذي سارته الرحلة** — لتفاصيلها بعد أن تنتهي (R18، §٦٢-ج/١١). **لطرفَيها وحدهما**، وغيرُهما ٤٠٤.
+ *  **وغيرُ `getRouteLine`**: ذاك ما قاله Mapbox قبل السير، وهذا ما سجّله بثُّ الكبتن أثناءه. */
+export const getRecordedRoute = (rideId: string) =>
+  api.get<RecordedRoute>(`/rides/${rideId}/route`);
+
+/** **عددُ رحلات الكبتن المكتملة** لبطاقته في R08 (§٦٢-ج/٢٧) — **مفتاحُه الرحلةُ لا الكبتن**، ويُجيب ما دامت جارية. */
+export const getRideDriverStats = (rideId: string) =>
+  api.get<RideDriverStats>(`/rides/${rideId}/driver/stats`);
+
 /** رمزُ الإحالة ومن سجّل به — **منفذٌ واحدٌ للتطبيقين** (`/me/` لا `/drivers/me/`):
  *  الرمزُ صار لكل حساب، ومسارٌ تحت `/drivers` بابٌ لا يفتح للراكب أصلاً. */
 export const getMyReferrals = () => api.get<MyReferrals>("/me/referrals");
@@ -476,6 +488,12 @@ export const getAppVersion = (
     anonymous: true,
     query: build === null ? { app } : { app, build },
   });
+
+/** **«المساعدة والدعم»** (R30، §٦٢-ج/١٦): الأسئلةُ الشائعةُ وبريدُ الدعم **من إعدادات الموقع التي يديرها المشرف** —
+ *  البابُ العامُّ نفسُه الذي تقرؤه الصفحةُ التعريفية (`GET /public/site`)، **فلا نسخةَ ثانيةً للمحتوى تفترق عنها**.
+ *  و`anonymous` بقصد: البابُ بلا جلسة، ولا شيءَ فيه يخصّ شخصاً. */
+export const getSiteHelp = () =>
+  api.get<SiteHelp>("/public/site", { anonymous: true });
 
 // ------------------------------------------- إغلاقُ الحساب (٢٠٢٦-٠٩-٠٧)
 //

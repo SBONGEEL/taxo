@@ -58,6 +58,8 @@ import type {
   DriverDebtState,
   Storefront,
   RequiredPolicy,
+  RecordedRoute,
+  SubscriptionPlan,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -311,6 +313,11 @@ export const getMySubscription = () =>
 export const getSubscriptionHistory = () =>
   api.get<DriverSubscription[]>("/subscriptions/me/history");
 
+/** **الخططُ وحدَها** — لـ«عرض الباقات» عند من طلبُه قيد المراجعة (C32، §٦٢-ج/٣٣): **عرضٌ بلا شراء**، والخلفيةُ ترفض الشراءَ
+ *  قبل الاعتماد (`require_purchasable`). **ومعها خصمُ هذا الكبتن محسوباً** من البانِي نفسِه الذي يخدم `/subscriptions/me`. */
+export const listSubscriptionPlans = () =>
+  api.get<SubscriptionPlan[]>("/subscriptions/plans");
+
 /** الشراء بالبطاقة — يفتح عمليةً عند المزود ولا يُنشئ اشتراكاً قبل جوابه. */
 export const buySubscriptionWithCard = (
   planId: string,
@@ -396,6 +403,11 @@ export const getRouteLine = (rideId: string) =>
     /** عتبةُ الانحراف بالأمتار — **تأتي من الخلفية** ولا تُكتب هنا (§17.3). */
     deviation_threshold_m: number;
   }>(`/rides/${rideId}/route-line`);
+
+/** **المسارُ الذي سارته الرحلة** — لتفاصيلها بعد أن تنتهي (C17d، §٦٢-ج/١١). **لطرفَيها وحدهما**، وغيرُهما ٤٠٤. **وغيرُ
+ *  `getRouteLine`**: ذاك ما قاله Mapbox قبل السير، وهذا ما سجّله بثُّك أثناءه. */
+export const getRecordedRoute = (rideId: string) =>
+  api.get<RecordedRoute>(`/rides/${rideId}/route`);
 
 /** حالُ إلغاء التفعيل: طلبُه إن وُجد، وموانعُه، والمحتجَزُ برقمه (البند ١٣). */
 

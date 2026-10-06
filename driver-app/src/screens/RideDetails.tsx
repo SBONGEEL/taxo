@@ -6,8 +6,9 @@
  * **والنزاع على كليك وحدها** (`payments.dispute_by_driver`): التحويل يقع خارج التطبيق ولا API يشهد عليه، فبين «حوّلتُ» و«لم
  * يصلني» فراغٌ يملؤه إنسان. الكاش يقع يداً بيد فلا فراغ فيه، والمحفظة يشهد عليها الدفتر. والزرُّ هنا مشروطٌ بدفعة كليك تنتظر التأكيد.
  *
- * **ولا خطَّ مسارٍ فوق الخريطة**: `ride_route_points` يُسجَّل للخلفية — لإعادة حساب `final_fare` ولدليل النزاع في اللوحة — ولا
- * منفذَ يقرؤه للكبتن. فالخريطة (بلغة «TaxoMap»، `MapView` بـ`t2`) تعرض الدبوسين وحدهما، ولا تعد بمسارٍ لم يقله أحد.
+ * **والمسارُ الذي سارها فوق الخريطة** (`C17d`، §٦٢-ج/١١): `ride_route_points` يُسجَّل لإعادة حساب `final_fare` ولدليل النزاع،
+ * **وصار له بابٌ لطرفَي الرحلة** (`GET /rides/{id}/route`) — فيُرسم خطَّ الجمر فوق ظلّه بلغة «TaxoMap» (`MapView` بـ`t2`)، **والإطارُ
+ * يضمّه كلَّه** (`fitRoute`). **ولا خطَّ من عندنا**: بلا نقاطٍ — أو قبل أن تنتهي — يبقى الدبوسان وحدهما كما كانا.
  *
  * **ولا تفصيلَ تعرفةٍ سطراً سطراً**: `GET /config` لا ينشر أسعار `pricing_settings` — والواجهة لا تضرب مسافةً في سعرٍ لتُخرج رقماً
  * (القسم 14: الحساب في الخلفية حصراً). فما يظهر ما قالته الخلفية: مقدَّرٌ، ومسافة، ومدّة، ونهائيّ، ونسبةُ عمولةٍ مجمَّدة على الرحلة.
@@ -23,6 +24,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import {
   confirmPayment,
+  getRecordedRoute,
   getRide,
   getRidePayments,
   listRideRatings,
@@ -53,6 +55,10 @@ import { startOfToday, whenParts } from "./t2/when";
 
 import "./t2/ride.css";
 import "./t2/rides.css";
+
+/** **حشوُ إطار الشريط** (`.t2-rdt-map`: ١٥٠ وحافّةُ الشاشة العليا) — فوقُه شريطُ الحالة، وجانباه زرّا الرجوع والموقع، وقاعُه شعارُ
+ *  Mapbox ونسبتُه (شرطُ الرخصة). **وكان ٨٠ من كلِّ جهة** — حشوُ خريطةٍ تملأ الشاشة — فيبقى للخطّ ٤٠ بكسلاً ويُرسم نقطةً (قِيس). */
+const STRIP_PADDING = { top: 62, bottom: 34, left: 72, right: 72 };
 
 /** نصُّ فصل الإدارة — `paid` تصف الواقعة لا الحالة الناتجة. */
 const RESOLUTION_LABEL: Record<"paid" | "unpaid", string> = {
@@ -91,6 +97,23 @@ export function RideDetailsScreen() {
       ),
     );
   }, [load]);
+
+  // **المسارُ الذي سارته** (§٦٢-ج/١١) — للمكتملة وحدَها، **ولا يؤخّر الثلاثةَ ولا يُسقطها**: يُسأل بعد أن تُرسم، وفشلُه أو
+  // فراغُه يترك الدبوسين كما كانا. **ونقطتان على الأقلّ** خطٌّ
+  const [route, setRoute] = useState<number[][] | null>(null);
+  const completed = ride?.status === "completed";
+  useEffect(() => {
+    if (!completed) return;
+    let live = true;
+    getRecordedRoute(rideId)
+      .then((recorded) => {
+        if (live) setRoute(recorded.points.length >= 2 ? recorded.points : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [rideId, completed]);
 
   async function confirm(paymentId: string) {
     setConfirming(true);
@@ -169,7 +192,10 @@ export function RideDetailsScreen() {
             center={ride.pickup}
             pickup={ride.pickup}
             dropoff={ride.dropoff}
+            routePoints={route}
             fit
+            fitRoute
+            fitPadding={STRIP_PADDING}
             t2
           />
           <button

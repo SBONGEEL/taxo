@@ -65,6 +65,9 @@ const ForgotPasswordScreen = lazy(() =>
 const LegalT2Screen = lazy(() =>
   import("@/screens/t2/LegalT2").then((m) => ({ default: m.LegalT2Screen })),
 );
+const HelpT2Screen = lazy(() =>
+  import("@/screens/t2/HelpT2").then((m) => ({ default: m.HelpT2Screen })),
+);
 const RideDetailsScreen = lazy(() =>
   import("@/screens/RideDetails").then((m) => ({
     default: m.RideDetailsScreen,
@@ -493,6 +496,15 @@ export default function App() {
                         element={
                           <Guarded>
                             <LegalT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **«المساعدة والدعم»** (R30، §٦٢-ج/١٦) — الأسئلةُ وبريدُ الدعم من إعدادات الموقع، **والشريطُ تحتها كأخواتها** */}
+                      <Route
+                        path="/account/help"
+                        element={
+                          <Guarded>
+                            <HelpT2Screen />
                           </Guarded>
                         }
                       />

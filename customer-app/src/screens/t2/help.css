@@ -1,0 +1,82 @@
+/* «المساعدة والدعم» (R30، §٦٢-ج/١٦) — **تخطيطُها وحدَه بالرموز**: الرأسُ وبطاقةُ القائمة وعنوانُ القسم من النظام (`t2-head` ·
+ * `t2-list` · `t2-section`)، وهنا بطاقةُ البريد وصفُّ السؤال وجوابُه. **ولا لونَ مكتوباً** — فيتبع الفاتحَ والإسفلتَ والبرقوق. */
+
+/* ── بطاقةُ البريد — صفٌّ واحدٌ يفتح البريد، وأيقونتُه في مربّع الجمر الخافت كأيقونات R24 ── */
+.t2-help-mail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 14px;
+  box-sizing: border-box;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-help-mail:active { transform: scale(0.98); }
+.t2-help-mail:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.t2-help-mail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 12px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-help-mail-icon .t2-icon { font-size: 21px; }
+.t2-help-mail-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-help-mail-title { font-size: 14.5px; font-weight: 600; }
+/* **العنوانُ لاتينيٌّ من اليسار تحت عنوانه العربيّ** (`dir="ltr"`) — و`end` في اتجاهه هو حافّةُ السطر العربيّ الذي فوقه */
+.t2-help-mail-address {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: end;
+  font-size: 13px;
+  color: var(--t2-muted);
+}
+.t2-help-mail .t2-chev { flex: none; font-size: 20px; }
+
+/* ── الأسئلة: صفٌّ يتّسع لجوابه، والسهمُ ينقلب حين يُفتح ── */
+.t2-help-item { border-bottom: 1px solid var(--t2-divider); }
+.t2-help-item:last-child { border-bottom: 0; }
+.t2-help-q {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 0;
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-help-q:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: -2px; border-radius: 12px; }
+.t2-help-q-text { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.45; }
+.t2-help-chev { flex: none; font-size: 20px; color: var(--t2-faint); }
+.t2-help-item.open .t2-help-chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-help-chev { transition: transform var(--t2-med) var(--t2-ease); }
+}
+.t2-help-a {
+  margin: 0;
+  padding: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--t2-muted);
+  white-space: pre-line;
+}
+.t2-help-a[hidden] { display: none; }
+
+/* ── التعثّر: «أعد المحاولة» بعرض الصفحة تحت سببه ── */
+.t2-help-retry { width: 100%; margin-top: 14px; }

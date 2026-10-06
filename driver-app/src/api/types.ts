@@ -613,6 +613,13 @@ export interface MySubscription {
   plans: SubscriptionPlan[];
 }
 
+/** **المسارُ الذي سارته الرحلة** (`GET /rides/{id}/route`، §٦٢-ج/١١) — `[lng, lat]` كـ`route-line`، **وفارغٌ حين صمت بثُّك**
+ *  فلا يُرسم خطّ. و`truncated` يقول إن الذيلَ قُصّ عند سقف الخلفية. */
+export interface RecordedRoute {
+  points: number[][];
+  truncated: boolean;
+}
+
 /** مرآةُ `PaymentMethod` — أربعُ قنوات. **ولا `mixed` فيها**: الدفعُ المختلط
  * (محفظة + كاش) **صفّان** على رحلةٍ واحدة لا قناةٌ ثالثة، ولذلك لا فهرس فريد
  * على `payments.ride_id` أصلاً (القسم 6). */

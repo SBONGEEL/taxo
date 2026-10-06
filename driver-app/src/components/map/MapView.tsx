@@ -64,6 +64,12 @@ interface Props {
   dropoff?: Coordinates | null;
   /** يضم النقطتين في الإطار — أثناء الرحلة لا قبلها. */
   fit?: boolean;
+  /** **والخطَّ كلَّه معهما** (مع `fit`) — للمسار الذي سارته رحلةٌ انتهت (C17d، §٦٢-ج/١١): طريقٌ انعطف بعيداً عن المستقيم
+   *  يخرج من إطارٍ يضمّ طرفيه وحدهما. **وبلا هذا الوسيط لا يتغيّر إطارُ أحد** — الرئيسيةُ وورقتُها كما كانتا. */
+  fitRoute?: boolean;
+  /** **حشوُ الإطار بالبكسل** (مع `fit`) — والافتراضيُّ ٨٠ من كلِّ جهةٍ لخريطةٍ تملأ الشاشة. **وشريطٌ بارتفاع ٢٠٠** (C17) يبقى له
+   *  منها ٤٠ بكسلاً فيُرسم الخطُّ نقطةً (قِيس) — فيمرّر حشوَه. */
+  fitPadding?: number | { top: number; bottom: number; left: number; right: number };
   /** **مسارُ الرحلة على الطرق كما قاله Mapbox** — `[[lng, lat], …]` (البند ٨).
    *
    *  وهذا لا ينقض «لا خطَّ مسارٍ بين النقطتين» في رأس هذا الملف: ذاك يمنع خطاً
@@ -210,6 +216,8 @@ export function MapView({
   pickup,
   dropoff,
   fit = false,
+  fitRoute = false,
+  fitPadding = 80,
   routePoints = null,
   trimAt = null,
   etaMinutes = null,
@@ -616,14 +624,21 @@ export function MapView({
   useEffect(() => {
     const instance = map.current;
     if (!instance || !fit || !pickup || !dropoff) return;
+    // **والخطُّ داخلٌ في الإطار حين يُطلب** (`fitRoute`) — نقاطُه `[lng, lat]`، وحسابُ هندسةٍ للعرض لا يُسعَّر منه شيء
+    const traced = fitRoute && routePoints && routePoints.length >= 2 ? routePoints : [];
+    const lngs = [pickup.lng, dropoff.lng, ...traced.map((point) => point[0])];
+    const lats = [pickup.lat, dropoff.lat, ...traced.map((point) => point[1])];
     instance.fitBounds(
       [
-        [Math.min(pickup.lng, dropoff.lng), Math.min(pickup.lat, dropoff.lat)],
-        [Math.max(pickup.lng, dropoff.lng), Math.max(pickup.lat, dropoff.lat)],
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
       ],
-      { padding: 80, duration: 600, maxZoom: 15 },
+      { padding: fitPadding, duration: 600, maxZoom: 15 },
     );
-  }, [fit, pickup, dropoff]);
+    // **و`routePoints` في التبعيّات حين يُطلب وحدَه** — فلا يُعاد إطارُ الرئيسية مع كلِّ قصٍّ للمسار وراء الكبتن. **والحشوُ
+    // قيمةٌ ثابتةٌ من مناديه** فلا يُتابَع (كائنٌ جديدٌ في كلِّ رسمٍ كان سيعيد الإطارَ مع كلِّ رسم)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fit, pickup, dropoff, fitRoute ? routePoints : null]);
 
   // **غيابُ توكن iOS يُسمّى باسمه** (SPEC §58) — وغيرُ iOS كما كان حرفاً
   const missing = useMapboxMissing();

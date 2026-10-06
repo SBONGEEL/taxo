@@ -88,6 +88,9 @@ const MissionsT2Screen = lazy(() =>
 const SubscriptionT2Screen = lazy(() =>
   import("@/screens/t2/SubscriptionT2").then((m) => ({ default: m.SubscriptionT2Screen })),
 );
+const PlansPreviewT2Screen = lazy(() =>
+  import("@/screens/t2/PlansPreviewT2").then((m) => ({ default: m.PlansPreviewT2Screen })),
+);
 const VehicleT2Screen = lazy(() =>
   import("@/screens/t2/VehicleT2").then((m) => ({ default: m.VehicleT2Screen })),
 );
@@ -500,6 +503,16 @@ export default function App() {
                           element={
                             <Guarded>
                               <SubscriptionT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **«عرض الباقات» لمن طلبُه قيد المراجعة** (C32، §٦٢-ج/٣٣) — عرضٌ بلا شراء، وبلا شريطٍ كـC10
+                            (`showsNav` قائمةُ سماحٍ لا تذكره)، **ومن اعتُمد يُحوَّل إلى «الاشتراك»** */}
+                        <Route
+                          path="/subscription/plans"
+                          element={
+                            <Guarded>
+                              <PlansPreviewT2Screen />
                             </Guarded>
                           }
                         />

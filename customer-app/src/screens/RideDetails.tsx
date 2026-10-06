@@ -7,14 +7,18 @@
  * **بلغة TAXO 2.0** (لوحتا `design/t2-new/rider/R18` · `R18b`): شريطُ الخريطة من الحافة والصفحةُ ورقةٌ فوقه (R06)، والأجرةُ
  * بطاقةُ R10، والمسارُ بطاقةُ «من · إلى»، والأرقامُ شبكةُ R09، والكبتنُ بطاقةُ R08، والدفعاتُ قائمةُ R11. **والنداءاتُ الثلاثةُ
  * والقواعدُ والوجهاتُ حرفاً** — وكلُّ سطرٍ كان يُعرض باقٍ.
+ *
+ * **والمسارُ الذي سارته على الشريط** (`R18c`، §٦٢-ج/١١): خطُّ الجمر فوق ظلّه كما ترسمه «TaxoMap» — **من نقاطٍ سجّلها بثُّ الكبتن**
+ * (`GET /rides/{id}/route`) لا خطٍّ من عندنا، **ورابعُ نداءٍ لا يؤخّر الثلاثة**: يُسأل بعد أن تُرسم، للمكتملة وحدَها (لا نقاطَ
+ * لغيرها)، **وفشلُه أو فراغُه يترك الدبوسين وحدهما** كما كانا.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
-import { getRide, getRidePayments, listRideRatings } from "@/api/endpoints";
-import type { Rating, Ride, RidePayments, RideStatus } from "@/api/types";
+import { getRecordedRoute, getRide, getRidePayments, listRideRatings } from "@/api/endpoints";
+import type { Coordinates, Rating, Ride, RidePayments, RideStatus } from "@/api/types";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { MapView, type MapHandle } from "@/components/map/MapView";
@@ -37,6 +41,17 @@ const STRIP_PADDING = { top: 76, bottom: 54, left: 48, right: 48 };
 
 /** الحالاتُ التي ترسمها «رحلاتي» (R12) بنبرة الخطأ — **والنصُّ نصُّ السجلّ** (من ألغى). */
 const UNSERVED: RideStatus[] = ["cancelled_by_rider", "cancelled_by_driver", "no_driver_found"];
+
+/** **إطارُ الشريط يضمّ الخطَّ كلَّه** لا طرفيه وحدهما: طريقٌ انعطف بعيداً عن المستقيم بين الانطلاق والوصول يخرج من إطارٍ يضمّهما
+ *  فقط. ركنان (جنوبيٌّ غربيّ · شماليٌّ شرقيّ) لـ`fitBounds` — **حسابُ هندسةٍ للعرض** لا يُسعَّر منه شيء. */
+function frameOf(ride: Ride, route: number[][] | null): [Coordinates, Coordinates] {
+  const lats = [ride.pickup.lat, ride.dropoff.lat, ...(route ?? []).map((point) => point[1])];
+  const lngs = [ride.pickup.lng, ride.dropoff.lng, ...(route ?? []).map((point) => point[0])];
+  return [
+    { lat: Math.min(...lats), lng: Math.min(...lngs) },
+    { lat: Math.max(...lats), lng: Math.max(...lngs) },
+  ];
+}
 
 export function RideDetailsScreen() {
   const { rideId = "" } = useParams();
@@ -67,13 +82,32 @@ export function RideDetailsScreen() {
       .finally(() => setLoading(false));
   }, [rideId]);
 
+  // **المسارُ الذي سارته** (§٦٢-ج/١١) — للمكتملة وحدَها، و`null` حتى يصل أو حين لا يُرسم: **نقطتان على الأقلّ** خطٌّ، وما دونهما
+  // لا خطّ. **ولا خطأَ يُعرض لفشله**: الشاشةُ كاملةٌ بلا خطّ كما كانت قبله
+  const [route, setRoute] = useState<number[][] | null>(null);
+  const completed = ride?.status === "completed";
+  useEffect(() => {
+    if (!completed) return;
+    let live = true;
+    getRecordedRoute(rideId)
+      .then((recorded) => {
+        if (live) setRoute(recorded.points.length >= 2 ? recorded.points : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [rideId, completed]);
+
   const token = useMapboxToken();
-  // **الإطارُ يضمّ النقطتين**: `center` وحدَه يضع الانطلاقَ في الوسط ويترك
+  // **الإطارُ يضمّ النقطتين — والخطَّ حين يصل**: `center` وحدَه يضع الانطلاقَ في الوسط ويترك
   // الوصولَ خارج الشريط — ودبوسٌ واحدٌ في خريطةِ رحلةٍ لا يقول شيئاً
   const map = useRef<MapHandle>(null);
   useEffect(() => {
-    if (ride) map.current?.fitBounds(ride.pickup, ride.dropoff, STRIP_PADDING);
-  }, [ride]);
+    if (!ride) return;
+    const [southWest, northEast] = frameOf(ride, route);
+    map.current?.fitBounds(southWest, northEast, STRIP_PADDING);
+  }, [ride, route]);
 
   /** الرجوعُ فوق الخريطة — **ثابتٌ حين تُمرَّر الصفحة** (موضعُه في R06). */
   const floatingBack = (
@@ -151,9 +185,9 @@ export function RideDetailsScreen() {
 
   return (
     <div className="t2 t2-m-ride">
-      {/* **شريطُ الخريطة من الحافة** (القرار 38): دبوسا الانطلاق والوصول **بلا خطِّ مسار** — المسارُ الفعليُّ مسجَّلٌ في
-          `ride_route_points` للخلفية ولا منفذَ يقرؤه، وخطٌّ مستقيمٌ من عندنا يوهم بمسارٍ لم يقله أحد. **وشعارُ Mapbox فوق الورقة**
-          لا تحتها (`controlsInset`) — شرطُ الرخصة مرئيّ */}
+      {/* **شريطُ الخريطة من الحافة** (القرار 38): دبوسا الانطلاق والوصول، **والخطُّ المسارُ الذي سجّله بثُّ الكبتن** حين يكون
+          (`routePoints` — متّصلاً بالجمر فوق ظلّه، R18c) — **ولا خطَّ مستقيماً من عندنا** (`tripLine={false}`): خطٌّ بين نقطتين يوهم
+          بمسارٍ لم يقله أحد. **وشعارُ Mapbox فوق الورقة** لا تحتها (`controlsInset`) — شرطُ الرخصة مرئيّ */}
       {token ? (
         <>
           {floatingBack}
@@ -165,6 +199,7 @@ export function RideDetailsScreen() {
               pickup={ride.pickup}
               dropoff={ride.dropoff}
               tripLine={false}
+              routePoints={route}
               interactive={false}
               controlsInset={30}
               className="h-full w-full"

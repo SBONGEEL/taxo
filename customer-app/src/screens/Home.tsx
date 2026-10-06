@@ -236,6 +236,24 @@ export function HomeScreen() {
     if (!tracking) setViewport(center);
   }, [center, tracking, setViewport]);
 
+  /** **سياراتٌ حولك أثناء البحث** (R07، §٦٢-ج/٢٧) — والمقبسُ يبثّها أصلاً ما لم يُسنَد كبتن (`ws/routes.py`: «أثناء الرحلة يرى
+   *  الراكب كبتنه وحده»)، **وكانت الخريطةُ ترمي ما يصل**. **ولا تُرسم سيارةٌ لن تأتي**: ما يُرسم من صنف الرحلة وحدَه كما يوزّع
+   *  التوزيعُ (`presence.vehicle_category == ride.vehicle_category`). **والطلبُ المفتوحُ وحدَه** («أي كبتن» في الرحلة وفي الملفّ):
+   *  الخلفيةُ ترشّح القائمةَ بتفضيل الملفّ لا الرحلة (`drivers.nearby_available`)، **وعدُّ الكبتنات المتاحات بندٌ غيرُه** (§٦٢-ج/٢٨،
+   *  مطفأٌ يتبع الخدمةَ النسائية) — فطلبُ «كبتنة فقط» يبقى بالرادار وحده كما كان. **و`null` = لا شيءَ يُرسم ولا يُعدّ**. */
+  const searchingNow = ride?.status === "searching" || ride?.status === "requested";
+  const carsWhileSearching =
+    ride && searchingNow && ride.gender_preference === "any" && (user?.ride_gender_preference ?? "any") === "any"
+      ? drivers.filter((driver) => driver.vehicle_category === ride.vehicle_category)
+      : null;
+  // **والبحثُ يسأل حول نقطة انطلاقه** لا حول آخر ما كانت عليه الكاميرا قبل الطلب — منها يقع التوزيع ومنها يتّسع الرادار
+  const searchFrom = carsWhileSearching !== null && ride ? ride.pickup : null;
+  useEffect(() => {
+    if (searchFrom) setViewport(searchFrom);
+    // النقطةُ بإحداثيّتيها لا بهويّة الكائن — كلُّ إطارٍ يحمل رحلةً بكائنٍ جديد
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFrom?.lat, searchFrom?.lng, setViewport]);
+
   // **أثناء الرحلة يؤطّر مراقبُ الورقة الملتصقة** (R07–R09، أدناه) — فوقها لا تحتها، **في المظهرين** (§٦٢/٣ و/٨). وكان هنا إطارٌ
   // ثانٍ بالحشو الثابت لليليّ وحدَه، حين كان الليليُّ يرسم الشاشةَ القديمة
 
@@ -450,8 +468,8 @@ export function HomeScreen() {
         ref={map}
         token={token}
         center={center}
-        // أثناء الرحلة يرى الراكب كبتنه وحده (SPEC القسم 10)
-        drivers={tracking ? [] : drivers}
+        // أثناء الرحلة يرى الراكب كبتنه وحده (SPEC القسم 10) — **وقبل أن يُسنَد يرى ما حوله** ممّا قد يأتيه (R07)
+        drivers={tracking ? carsWhileSearching ?? [] : drivers}
         // **ونهارُ TAXO 2.0 في الرئيسية يرسم «أنت هنا» وحدَها** (R05) — نقطةُ الانطلاق هي هي، فدبوسُها فوقها نقطتان لشيءٍ واحد
         pickup={tracking ? ride!.pickup : browsing ? null : pickup}
         dropoff={tracking ? ride!.dropoff : dropoff}
@@ -691,6 +709,7 @@ export function HomeScreen() {
                 onChanged={() => void refresh()}
                 driverPing={driverPing}
                 routePoints={routeLine}
+                nearby={carsWhileSearching === null ? null : carsWhileSearching.length}
                 pickupLine={
                   pickup && pickup.lat === ride!.pickup.lat && pickup.lng === ride!.pickup.lng ? pickupLine : null
                 }

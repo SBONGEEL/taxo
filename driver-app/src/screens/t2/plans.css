@@ -1,0 +1,45 @@
+/* «عرض الباقات» قيد المراجعة (C32، §٦٢-ج/٣٣) ورابطُه في C03 — **تخطيطٌ وحدَه بالرموز**. الصفحةُ جسمُ C10 نفسُه
+ * (`t2-sub` · `t2-sub-scroll` · `t2-sub-foot` · `t2-sub-plan` في `t2.css`)، وهنا ما يخصّ العرضَ بلا شراء. **ولا لونَ مكتوباً**. */
+
+/* ── «عرض الباقات» آخرَ سطر C03 كما رُسم — رابطٌ بالجمر الغامق داخل النصّ، **ومساحةُ لمسه أوسعُ من حروفه** (٤٤ على الأقلّ)
+   كـ`t2-callout-open` في النظام، فلا يتغيّر بها ارتفاعُ السطر ── */
+.t2-hint-link {
+  position: relative;
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-hint-link::after { content: ""; position: absolute; inset: -14px -10px; }
+.t2-hint-link:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; border-radius: 6px; }
+
+/* ── الصفحة: صفوفُ C10 قائمةً لا أزراراً ── */
+.t2-plans .t2-sub-perk { margin-top: 0; }
+.t2-plans-list { margin: 0; padding: 0; list-style: none; }
+.t2-sub-plan.view { cursor: default; }
+.t2-plans-empty { margin-top: 18px; }
+.t2-plans-retry { width: 100%; margin-top: 14px; }
+
+/* **مكانُ زرّ الشراء إطارٌ متقطّعٌ** — `--t2-dash` إطارُ ما لم يُتَح بعد في الهوية (R05 «قريباً» · C04)، بارتفاع زرّ C10 (٦٠)،
+   **ونصُّه خافتٌ لا بلون الفعل**: لا شيءَ هنا يُضغط */
+.t2-plans-later {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 60px;
+  margin: 0;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--t2-dash);
+  border-radius: 18px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--t2-muted);
+}
+.t2-plans-later .t2-icon { flex: none; font-size: 20px; }
