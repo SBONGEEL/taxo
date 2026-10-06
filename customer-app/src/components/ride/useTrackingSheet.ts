@@ -26,6 +26,9 @@ export const CANCEL_REASONS: CancelReason[] = [
   { label: "عنوان الالتقاء خطأ" },
 ];
 
+/** **سببُ «عدم التطابق» لطلبٍ بتفضيل «ذكور»** (§٦٢-ب/٤٧) — الخلفيةُ تقبله للتفضيلين بلا رسوم، والمرسومُ نصُّ «إناث» وحدَه. */
+const MALE_MISMATCH_LABEL = "الكبتن ليس ذكراً — عدم تطابق";
+
 /** «أرسل تفاصيل رحلتك» (SPEC القسم 11.4) — نصٌّ يُرسل عبر ورقة مشاركة النظام.
  *
  * **وسُمّي بغير «مشاركة الرحلة» بعد 12-ي**: صارت المشاركةُ اسماً لشيءٍ آخر —
@@ -79,8 +82,14 @@ export function useTrackingSheet({
   const [skinArt, setSkinArt] = useState<"loading" | "ready" | "broken">("loading");
 
   const searching = ride.status === "requested" || ride.status === "searching";
-  // «رحلةٌ نسائية» = ما طُلب فيها جنسٌ بعينه — وصفٌ للطلب لا لصاحبته
+  // **«مجنَّسةٌ» = ما طُلب فيها جنسٌ بعينه** — وصفٌ للطلب لا لصاحبته، ويحكم سببَ «عدم التطابق» وحدَه (الخلفيةُ تقبله للتفضيلين)
   const gendered = ride.gender_preference !== "any";
+  // **و«نسائيةٌ» = ما طُلبت فيها كبتنة** (§٦٢-ب/٤٧) — الشارةُ وملاحظةُ الانتظار واقتراحُ المشاركة: طلبٌ بتفضيل «ذكور» ليس رحلةً نسائية،
+  // **وكان يُوسَم بها** وسببُ إلغائه «الكبتن ليس أنثى» — كما كانت بطاقةُ الكبتن قبل §٦٢-ب/٤٤
+  const women = ride.gender_preference === "female";
+  const reasons = CANCEL_REASONS.filter((option) => option.code !== "gender_mismatch" || gendered).map((option) =>
+    option.code === "gender_mismatch" && !women ? { ...option, label: MALE_MISMATCH_LABEL } : option,
+  );
   const afterAccept = ride.status === "accepted" || ride.status === "arrived";
 
   async function cancel() {
@@ -111,7 +120,8 @@ export function useTrackingSheet({
     skinArt,
     setSkinArt,
     searching,
-    gendered,
+    women,
+    reasons,
     afterAccept,
     cancel,
   };

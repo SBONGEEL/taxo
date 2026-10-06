@@ -207,12 +207,17 @@ export function RideProvider({ children }: { children: ReactNode }) {
             // «لم نجد كبتناً» على طلبٍ نسائي يحتاج سببَه: نصٌّ عامّ يقول
             // «لم يقبل أحد» يُقرأ رفضاً شخصياً، والصحيحُ أن المتاحات كنّ
             // بعيداتٍ أو مشغولات — ومعه المخرجُ الفعلي (المرحلة 10-ج)
-            const gendered =
-              withRide.ride && withRide.ride.gender_preference !== "any";
-            if (event.type === "no_driver_found" && gendered) {
+            const preference = withRide.ride?.gender_preference ?? "any";
+            if (event.type === "no_driver_found" && preference === "female") {
               notify(
                 "لم نجد كبتنة متاحة",
                 "لا كبتنة قريبة الآن. جرّبي بعد قليل، أو اطلبي أي كبتن.",
+              );
+            } else if (event.type === "no_driver_found" && preference === "male") {
+              // **و«ذكور» ليس طلبَ كبتنة** (§٦٢-ب/٤٧) — ويختاره الرجلُ في ملفّه أيضاً، فلا يُخاطَب بالمؤنّث
+              notify(
+                "لم نجد كبتناً من الذكور",
+                "لا كبتن من الذكور قريبٌ الآن — يمكنك المحاولة بعد قليل، أو طلب أي كبتن.",
               );
             } else {
               notify(toast.title, toast.body);

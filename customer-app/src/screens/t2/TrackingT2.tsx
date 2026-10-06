@@ -29,7 +29,7 @@ import { PaymentPicker, PAY_ICON_T2 } from "@/components/payment/PaymentPicker";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { PauseNotice } from "@/components/ride/PauseNotice";
 import { StopProgress } from "@/components/ride/StopProgress";
-import { CANCELLABLE, CANCEL_REASONS, shareRide, useTrackingSheet } from "@/components/ride/useTrackingSheet";
+import { CANCELLABLE, shareRide, useTrackingSheet } from "@/components/ride/useTrackingSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
@@ -119,9 +119,9 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
   /** شارتا الطلب — **وصفٌ لما طُلب** كما في الورقة القائمة: «رحلة نسائية» تطمينٌ بأن الشرطَ سارٍ، والمشاركةُ بحاليها. */
   const badges =
-    t.gendered || Number(ride.share_discount_percent) > 0 ? (
+    t.women || Number(ride.share_discount_percent) > 0 ? (
       <div className="t2-trk-badges">
-        {t.gendered ? <span className="t2-trk-badge women">رحلة نسائية</span> : null}
+        {t.women ? <span className="t2-trk-badge women">رحلة نسائية</span> : null}
         {Number(ride.share_discount_percent) > 0 ? (
           <span className="t2-trk-badge">{ride.share_group_id ? "رحلة مشتركة" : "بانتظار شريك"}</span>
         ) : null}
@@ -136,7 +136,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
       </p>
       {t.afterAccept ? (
         <div className="t2-trk-reasons">
-          {CANCEL_REASONS.filter((option) => option.code !== "gender_mismatch" || t.gendered).map((option) => (
+          {t.reasons.map((option) => (
             <button
               key={option.label}
               type="button"
@@ -227,7 +227,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           </div>
         </div>
         {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
-        {t.gendered ? (
+        {t.women ? (
           <p className="t2-note">
             <span className="t2-icon" aria-hidden="true">schedule</span>
             نبحث عن كبتنة متاحة. عددهنّ أقل، فقد يطول الانتظار قليلاً — ونوسّع دائرة البحث قبل أن نعتذر.
@@ -299,7 +299,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         <StopProgress ride={ride} />
         <PauseNotice ride={ride} />
         {/* **اقتراحُ المشاركة لمن طلبت الخدمة** لحظةَ تحرّك السيارة (المرحلة 10-ج) — كما هو اليوم */}
-        {ride.status === "in_progress" && t.gendered && !t.shareHintClosed ? (
+        {ride.status === "in_progress" && t.women && !t.shareHintClosed ? (
           <div className="t2-callout">
             <span className="t2-icon fill" aria-hidden="true">verified_user</span>
             <div className="t2-callout-main">
