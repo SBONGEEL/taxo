@@ -1,0 +1,743 @@
+/* «حسابي» وأبوابُه في TAXO 2.0 (C23–C31) — **تخطيطُها وحدَه**، بقيم لوحات `design/t2-new/captain/` المأخوذة من C03 · C04 ·
+ * C08–C15 · CW1–CW4 («TAXO 2.0 - Captain»).
+ *
+ * **والرموزُ من نظام التصميم** (`src/taxo2/`): لا لونَ مكتوباً هنا — `var(--t2-…)` وحدَها، فتعمل الشاشاتُ في الفاتح والداكن
+ * والورديّ. **وما رسمته شاشاتُ الكبتن ولا رمزَ له في الفاتح** (`--t2-card-deep` · `--t2-card-line` · `--t2-glass` …) يُكتب
+ * `var(--t2-مرسوم, var(--t2-أقرب))` كما في `t2.css`. **والسطرُ «normal» والأرقامُ متناسبةٌ كما في اللوحة** (كـC10).
+ *
+ * **والأسماءُ بسوابقَ لا تشاركها شاشةٌ أخرى** (`t2-ax` المشترك هنا · `t2-acc` · `t2-adv` · `t2-pcard` · `t2-del` · `t2-rst` ·
+ * `t2-perm` · `t2-ref` · `t2-cret` · `t2-swap` · `t2-gar`): `check:t2-css` يقرأ الملفَّ الواحد، **ولا يمسك اسمين متصادمين في
+ * ملفّين** يُحمَّلان معاً — فالسابقةُ هي ما يمنع ذلك هنا.
+ */
+
+/* ── المشترك: الجذرُ والتمريرُ والذيلُ المثبَّت (C10)، ومربّعُ الأيقونة (C12)، والورقةُ (CW4 · ورقةُ الإلغاء) ─────────── */
+.t2.t2-ax {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-ax-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  box-sizing: border-box;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.t2-ax-scroll::-webkit-scrollbar { display: none; }
+/* **مع ذيلٍ مثبَّتٍ تكون الحافّةُ السفليّةُ للذيل** — ٣٤ اللوحةِ منطقةُ مؤشّر البيت نفسُها (`t2-sub-foot`) */
+.t2-ax-scroll.has-foot { padding-bottom: 16px; }
+.t2-ax-foot { flex: none; padding: 8px 18px max(34px, env(safe-area-inset-bottom, 0px)); }
+.t2-ax .t2-head { margin-bottom: 14px; }
+.t2-ax-center { display: flex; flex: 1; align-items: center; justify-content: center; padding: 40px 0; }
+
+/* **انتظارٌ بلغة الهوية** — حلقةٌ بلون الحافّة وقمّتُها بلون النصّ (مقاسُ `Spinner` القائم ٣٤)، تقف لمن طلب تقليلَ الحركة */
+.t2-ax-spin {
+  display: block;
+  width: 34px;
+  height: 34px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-line);
+  border-top-color: var(--t2-text);
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .t2-ax-spin { animation: t2-ax-turn 0.9s linear infinite; }
+}
+@keyframes t2-ax-turn { to { transform: rotate(360deg); } }
+
+/* مربّعُ الأيقونة بنبرة الحال — صفُّ C12 (٤٠ بزاوية ١٢، والأيقونة ٢١)، والصغيرُ ٣٦ بزاوية ١١ */
+.t2-ax-tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+.t2-ax-tile .t2-icon { font-size: 21px; }
+.t2-ax-tile.sm { width: 36px; height: 36px; border-radius: 11px; }
+.t2-ax-tile.sm .t2-icon { font-size: 19px; }
+.t2-ax-tile.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-ax-tile.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
+.t2-ax-tile.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+.t2-ax-tile.accent { background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+.t2-ax-tile.women { background: var(--t2-women-soft); color: var(--t2-women); }
+
+/* سهمُ الصفّ بلون الخافت (C15 ‎#6B717A) */
+.t2-ax-chev { flex: none; font-size: 20px; color: var(--t2-faint); }
+
+/* الأزرار: الجمرُ (C08 · C10) — ومعطَّلُه كما رسمته C02 في الداكن (سطحٌ غائرٌ ونصٌّ خافت)، وعلى الحجر شفيفٌ كأخيه عند الراكب */
+.t2-ax-cta,
+.t2-ax-danger,
+.t2-ax-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-ax-cta { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-ax-cta .t2-icon { font-size: 20px; }
+/* **الخطِرُ بالأحمر ونصِّ السطح** — كـ`.t2-button.danger` عند الراكب: ٥٫٣:١ على الإسفلت و٥٫٤:١ على الحجر (نصُّ الجمر ٣٫٤:١ على الحجر) */
+.t2-ax-danger { background: var(--t2-danger); color: var(--t2-surface); }
+/* الثانويُّ بحافّة C03 («تواصل مع الدعم») */
+.t2-ax-ghost {
+  border: 1.5px solid var(--t2-line);
+  background: none;
+  color: var(--t2-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.t2-ax-cta:disabled,
+.t2-ax-danger:disabled { opacity: 0.45; cursor: default; }
+html.dark .t2:not(.t2-day) .t2-ax-cta:disabled,
+.t2.t2-night .t2-ax-cta:disabled {
+  opacity: 1;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+.t2-ax-ghost:disabled { opacity: 0.6; cursor: default; }
+.t2-ax-cta:active:enabled,
+.t2-ax-danger:active:enabled,
+.t2-ax-ghost:active:enabled { transform: scale(0.98); }
+.t2-ax-pair { display: flex; gap: 8px; }
+.t2-ax-pair > * { flex: 1; }
+/* الرابطُ الهادئُ تحت الزرّ — C08 «لم أستلم المبلغ — افتح نزاعاً» (٤٤ للمس) */
+.t2-ax-quiet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-ax-quiet:disabled { opacity: 0.6; cursor: default; }
+.t2-ax-cta:focus-visible,
+.t2-ax-danger:focus-visible,
+.t2-ax-ghost:focus-visible,
+.t2-ax-quiet:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+
+/* الحقل — حقلُ المال والإقرار: ٥٢ بزاوية ١٤ على لون الصفحة، وعنوانُه فوقه (١٣/٦٠٠)، وسببُ الخطأ تحته */
+.t2-ax-label { display: block; margin: 14px 0 8px; font-size: 13px; font-weight: 600; }
+.t2-ax-field {
+  display: block;
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 14px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font-family: var(--t2-font-num);
+  font-size: 17px;
+  font-weight: 600;
+}
+.t2-ax-field:focus { outline: none; border-color: var(--t2-accent); }
+.t2-ax-field[aria-invalid="true"] { border: 1.5px solid var(--t2-danger); }
+.t2-ax-field:disabled { opacity: 0.6; }
+.t2-ax-field::placeholder { color: var(--t2-faint); }
+.t2-ax-hint { margin: 6px 2px 0; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+
+/* البطاقةُ — سطحٌ بزاوية ٢٢ وحشوةٍ ١٦ (C09 · C10) */
+.t2-ax-card { padding: 16px; border-radius: 22px; background: var(--t2-surface); }
+.t2-ax-card + .t2-ax-card { margin-top: 10px; }
+/* الفراغُ بعنوانٍ وسطر (`.t2-wal-empty`) */
+.t2-ax-empty { display: flex; flex-direction: column; gap: 4px; }
+.t2-ax-empty b { font-size: 13.5px; font-weight: 700; color: var(--t2-text); }
+/* **المبلغُ بخطّ الأرقام وعملتُه** (C09 «الرصيد القابل للسحب») */
+.t2-ax-money { display: flex; align-items: baseline; gap: 5px; }
+.t2-ax-money-num { font-family: var(--t2-font-num); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.t2-ax-money-cur { font-size: 12px; color: var(--t2-muted); }
+
+/* الورقةُ فوق ستارٍ يحجب الشاشة وشريطَ التبويب — بحافّةٍ علويّةٍ ومقبض (CW4 · ورقةُ الإلغاء في C06) */
+.t2-ax-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--t2-scrim);
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-ax-sheet-card {
+  max-height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px 18px max(24px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--t2-line);
+  border-radius: 30px 30px 0 0;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+}
+.t2-ax-grab { width: 40px; height: 5px; margin: 0 auto 14px; border-radius: 3px; background: var(--t2-dash); }
+.t2-ax-sheet-title { margin: 0; font-size: 18px; font-weight: 700; }
+.t2-ax-sheet-body { margin: 8px 0 0; font-size: 13.5px; line-height: 1.65; color: var(--t2-muted); }
+.t2-ax-sheet-actions { margin-top: 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-ax-sheet { animation: t2-ax-fade 0.2s ease-out both; }
+  .t2-ax-sheet-card { animation: t2-ax-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+@keyframes t2-ax-fade { from { opacity: 0; } }
+@keyframes t2-ax-up { from { transform: translateY(24px); opacity: 0; } }
+
+/* ── C23 · حسابي — بنيةُ R15 (الحرفُ ثمّ القائمةُ ثمّ الخروج) بصفوف C15، وفوق الشريط العائم ─────────────────────────── */
+.t2.t2-acc {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  box-sizing: border-box;
+  /* **الشريطُ عائمٌ فوق القاع** (`BottomNavT2`) — فيُحجز مكانُه كما تحجزه الرئيسية (`t2-hm`) */
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 18px calc(96px + env(safe-area-inset-bottom, 0px));
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2.t2-acc::-webkit-scrollbar { display: none; }
+.t2-acc-loading { display: flex; align-items: center; justify-content: center; }
+.t2-acc-prof { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+/* **الحرفُ في دائرة R15** (٦٨، حافّةٌ ٢ بالجمر على خافته) — **والسِمةُ الورديةُ تجعل جوفَه برقوقاً** كما عند الراكب (`.t2-avatar`):
+   الخافتُ لا يُصبغ في الرموز، فيبقى بنّيّاً تحت حلقةٍ وردية */
+.t2-acc-avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-accent);
+  border-radius: 50%;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+  font-size: 26px;
+  font-weight: 700;
+}
+html.pink .t2-acc-avatar { background: var(--t2-women-soft); }
+.t2-acc-main { flex: 1; min-width: 0; }
+.t2-acc-name { overflow: hidden; font-size: 20px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-acc-phone { margin-top: 2px; font-size: 13px; color: var(--t2-muted); text-align: end; }
+/* حبّةُ التقييم — شارةُ C04 (٣٢، زجاجٌ بحافّة، ونجمةُ الجمر ورقمٌ بخطّ الأرقام) */
+.t2-acc-rate {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-card-line, var(--t2-line));
+  border-radius: 16px;
+  background: var(--t2-glass, var(--t2-surface));
+}
+.t2-acc-rate .t2-icon { font-size: 15px; color: var(--t2-accent); }
+.t2-acc-rate-num { font-family: var(--t2-font-num); font-size: 12.5px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+
+/* القائمةُ — بطاقةُ `t2-list` بهامشٍ ١٠ بين البطاقات، **وصفوفُها صفوفُ C15** (`t2-srow` من `t2.css`) */
+.t2-acc .t2-list { margin-bottom: 10px; }
+.t2-acc .t2-list > :last-child { border-bottom: 0; }
+/* صفُّ الحال — مربّعُ C12 وعنوانٌ ١٤٫٥/٦٠٠ وسطرٌ ١٢ */
+.t2-acc-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 0;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid var(--t2-divider);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+button.t2-acc-state { cursor: pointer; }
+.t2-acc-state-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.t2-acc-state-title { font-size: 14.5px; font-weight: 600; }
+.t2-acc-state-sub { font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
+.t2-acc-state-sub.warn { color: var(--t2-warning); }
+.t2-acc-state-sub.danger { color: var(--t2-danger); }
+/* سطرُ الجنس — مثبَّتٌ من الإدارة ولا يُعدَّل */
+.t2-acc-gender { padding: 14px 0; }
+.t2-acc-gender-top { display: flex; align-items: center; gap: 12px; }
+.t2-acc-gender-label { flex: 1; font-size: 14.5px; font-weight: 600; }
+.t2-acc-gender-value { font-size: 13px; font-weight: 700; }
+.t2-acc-gender-value.women { color: var(--t2-women); }
+.t2-acc-gender-note { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-acc-gender-note + .t2-acc-gender-note { margin-top: 4px; }
+/* سببُ منع التبديل — بالكهرمان تحت صفّه (عند الراكب `t2-arow-note`)؛ **والفاصلُ حافّةُ الصفّ فوقه** فلا خطّان */
+.t2-acc-blocked {
+  margin: 0;
+  padding: 10px 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--t2-warning);
+}
+.t2-acc-out,
+.t2-acc-endall {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.t2-acc-out { margin-top: 14px; font-size: 14px; font-weight: 600; color: var(--t2-danger); }
+.t2-acc-endall { font-size: 12px; color: var(--t2-muted); }
+.t2-acc-out:focus-visible,
+.t2-acc-endall:focus-visible,
+.t2-acc-state:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+
+/* ── C24 · السلفة — الشروطُ صفوفُ CW1 «الشروط»، والسقفُ بأرقام C09، والدَّينُ بطاقةٌ بحالها ─────────────────────────── */
+.t2-adv-reqs-label { margin: 0 4px 8px; font-size: 13px; font-weight: 600; color: var(--t2-muted); }
+.t2-adv-reqs { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.t2-adv-req {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: var(--t2-card-deep, var(--t2-surface));
+}
+.t2-adv-req > .t2-icon { font-size: 20px; color: var(--t2-faint); }
+.t2-adv-req.met > .t2-icon { color: var(--t2-success); }
+.t2-adv-req-label { flex: 1; min-width: 0; font-size: 14px; }
+.t2-adv-req-value { flex: none; font-size: 12.5px; color: var(--t2-warning); }
+.t2-adv-req.met .t2-adv-req-value { color: var(--t2-muted); }
+.t2-adv-cap { margin-top: 16px; }
+.t2-adv-k { margin: 0; font-size: 12.5px; color: var(--t2-muted); }
+.t2-adv-k.danger { font-weight: 600; color: var(--t2-danger); }
+.t2-adv-line { margin: 8px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--t2-muted); }
+.t2-adv-debt.overdue { border: 1.5px solid var(--t2-danger); }
+/* سطرُ الإيقاف — ملاحظةُ C09 بلون الخطر */
+.t2-adv-stop {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--t2-danger-soft);
+  color: var(--t2-danger);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.t2-adv-stop .t2-icon { flex: none; font-size: 17px; line-height: 1.2; }
+.t2-adv-repay { margin-top: 14px; height: 52px; border-radius: 16px; }
+/* السدادُ في المهلة ثانويٌّ بحافّة النصّ (C10 «الدفع من» المختار) */
+.t2-adv-repay.t2-ax-ghost { border-color: var(--t2-text); }
+/* صندوقُ التأكيد — المبلغُ وشرطُ السداد قبل الموافقة */
+.t2-adv-box { margin-top: 14px; padding: 14px 16px; border-radius: 18px; background: var(--t2-sunken); }
+.t2-adv-box-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.t2-adv-box-row > span:first-child { font-size: 13px; color: var(--t2-muted); }
+.t2-adv-box .t2-ax-money-num { font-size: 20px; }
+.t2-adv-box-rule { height: 1px; margin: 12px 0; background: var(--t2-line); }
+.t2-adv-box-title { margin: 0; font-size: 13px; font-weight: 600; }
+.t2-adv-box-text { margin: 4px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-adv-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+
+/* ── C25 · البطاقات المحفوظة — صفُّ C12 بمربّع العلامة، والافتراضيةُ بحافّة المختار (C10)، والفعلان شريطٌ تحتها ─────────── */
+.t2-pcard-list { display: flex; flex-direction: column; gap: 8px; }
+.t2-pcard {
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background: var(--t2-surface);
+}
+.t2-pcard.default { border-color: var(--t2-text); }
+.t2-pcard-top { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.t2-pcard-brand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 30px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 8px;
+  background: var(--t2-sunken);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.t2-pcard-main { flex: 1; min-width: 0; }
+.t2-pcard-num { font-size: 15px; font-weight: 600; letter-spacing: 0.04em; text-align: end; }
+.t2-pcard-exp { font-size: 12px; color: var(--t2-muted); text-align: end; }
+.t2-pcard-acts { display: flex; border-top: 1px solid var(--t2-divider); }
+.t2-pcard-act {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-pcard-act + .t2-pcard-act { border-inline-start: 1px solid var(--t2-divider); }
+.t2-pcard-act.danger { color: var(--t2-danger); }
+.t2-pcard-act:disabled { opacity: 0.6; cursor: default; }
+.t2-pcard-act:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: -2px; }
+.t2-ax-fine {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 14px 2px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+.t2-ax-fine .t2-icon { flex: none; font-size: 16px; line-height: 1.3; }
+
+/* ── C26 · حذف الحساب — النصوصُ من `lib/deletion-text` حرفاً، وأقسامُها بمربّعاتٍ ونقاط، والفعلُ الأخيرُ أحمر ─────────────── */
+.t2-del-intro { margin: 0 0 10px; font-size: 13.5px; line-height: 1.7; }
+.t2-del-blocks { padding: 0 14px; border-radius: 22px; background: var(--t2-surface); }
+.t2-del-block { padding: 14px 0; border-bottom: 1px solid var(--t2-divider); }
+.t2-del-block:last-child { border-bottom: 0; }
+.t2-del-block-head { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 14.5px; font-weight: 700; }
+.t2-del-bullets { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding: 0; padding-inline-start: 48px; list-style: none; }
+.t2-del-bullets li { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-del-bullets li::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--t2-faint);
+}
+/* الموانعُ — `t2-callout warn` من النظام، وقائمتُها نقاطُ هذه الشاشة */
+.t2-del .t2-callout { margin-bottom: 10px; }
+.t2-del .t2-callout .t2-del-bullets { padding-inline-start: 0; }
+.t2-del-lead { margin: 0 2px 12px; font-size: 14px; line-height: 1.7; }
+/* **حقلُ الإقرار بالمبلغ لاتينيٌّ من اليسار** (`dir="ltr"`) — ويُقرأ من طرف الحقل كما يُقرأ المبلغُ في الصفحة */
+.t2-del-field { text-align: end; }
+.t2-del-text { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-del-confirm { padding: 20px 16px; }
+.t2-del-confirm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--t2-danger-soft);
+  color: var(--t2-danger);
+}
+.t2-del-confirm-icon .t2-icon { font-size: 28px; }
+.t2-del-confirm-body { margin: 16px 0 0; font-size: 15px; font-weight: 600; line-height: 1.7; }
+.t2-del-confirm-more { margin: 6px 0 0; font-size: 14px; line-height: 1.7; }
+.t2-del-confirm-out { margin: 10px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+
+/* ── C26d · الاستعادةُ في المهلة — شاشةُ حالٍ بلغة C03 (حلقةٌ بأيقونة، وعنوانٌ ٢٦، وسطرٌ خافت)، فوق الشريط العائم ──────── */
+.t2.t2-rst {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+  box-sizing: border-box;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 24px calc(96px + env(safe-area-inset-bottom, 0px));
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2.t2-rst::-webkit-scrollbar { display: none; }
+.t2-rst-ring { position: relative; flex: none; width: 120px; height: 120px; margin: 20px auto 22px; }
+.t2-rst-track,
+.t2-rst-arc { position: absolute; inset: 0; box-sizing: border-box; border: 4px solid var(--t2-sunken); border-radius: 50%; }
+.t2-rst-arc { border-color: transparent; border-top-color: var(--t2-danger); border-right-color: var(--t2-danger); transform: rotate(-20deg); }
+.t2-rst-core {
+  position: absolute;
+  inset: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--t2-surface);
+  color: var(--t2-danger);
+}
+.t2-rst-core .t2-icon { font-size: 40px; }
+.t2-rst-title { margin: 0 0 8px; text-align: center; font-size: 26px; font-weight: 700; }
+.t2-rst-lede { margin: 0; text-align: center; font-size: 14.5px; line-height: 1.7; color: var(--t2-muted); }
+.t2-rst-lede + .t2-rst-lede { margin-top: 6px; font-size: 13px; }
+.t2-rst .t2-ax-card { margin-top: 20px; }
+.t2-rst .t2-ax-card + .t2-ax-card { margin-top: 10px; }
+.t2-rst-text { margin: 0; font-size: 13.5px; line-height: 1.65; }
+/* زرُّ السحب — زرُّ C09 «سحب عبر CliQ» (٤٤ بزاوية ١٤) */
+.t2-rst-withdraw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-rst-withdraw .t2-icon { font-size: 19px; }
+.t2-rst .t2-callout { margin: 10px 0 0; }
+.t2-rst-push { flex: 1; min-height: 24px; }
+.t2-rst-cta { flex: none; margin-top: 12px; }
+.t2-rst .t2-note { flex: none; }
+.t2-rst-out {
+  flex: none;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-danger);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-rst-out:disabled { opacity: 0.6; cursor: default; }
+
+/* ── C27 · أذونات الجهاز — المانعُ في الأعلى (`t2-callout` بلاغُ الرئيسية نفسُه)، وصفُّ C12 لكلِّ إذن ────────────────────── */
+.t2-perm .t2-callout { margin-bottom: 12px; }
+.t2-perm .t2-callout.ok > .t2-icon { color: var(--t2-success); }
+.t2-perm-ok-title { color: var(--t2-success); }
+.t2-perm .t2-callout > .t2-icon.muted { color: var(--t2-muted); }
+.t2-perm-msg { margin: 0; font-size: 13px; line-height: 1.65; color: var(--t2-muted); }
+.t2-perm-msg.warn { color: var(--t2-warning); }
+.t2-perm-list { display: flex; flex-direction: column; gap: 7px; }
+.t2-perm-row { padding: 12px 14px; border-radius: 18px; background: var(--t2-surface); }
+.t2-perm-row.blocking { border: 1.5px solid var(--t2-danger); }
+.t2-perm-top { display: flex; align-items: center; gap: 12px; }
+.t2-perm-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; }
+.t2-perm-why { margin: 8px 0 0; padding-inline-start: 52px; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+/* زرُّ المنح — زرُّ C12 «ارفع الوثيقة» (٣٤ بزاوية ١١)، ومساحةُ لمسه ٤٤ بطبقةٍ شفّافة */
+.t2-perm-open {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  margin: 10px 0 0;
+  margin-inline-start: 52px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-perm-open::after { content: ""; position: absolute; inset: -5px -4px; }
+.t2-perm-maker { margin-top: 14px; padding: 14px; border-radius: 16px; background: var(--t2-sunken); }
+.t2-perm-maker.t2-ax-fine { margin-inline: 0; }
+
+/* ── C28 · أَحِلْ صديقك — الرمزُ على الجمر الخافت (بطاقةُ C10 «عمولة»)، والبرنامجان، ومن سجّل ──────────────────────────── */
+.t2-ref-code {
+  padding: 18px;
+  border: 1px solid var(--t2-accent-line);
+  border-radius: 22px;
+  background: var(--t2-accent-soft);
+  text-align: center;
+}
+.t2-ref-code-k { margin: 0; font-size: 12.5px; color: var(--t2-muted); }
+.t2-ref-code-v { margin: 8px 0 0; font-family: var(--t2-font-num); font-size: 28px; font-weight: 700; letter-spacing: 0.12em; line-height: 1.2; }
+.t2-ref-acts { display: flex; gap: 8px; margin-top: 16px; }
+.t2-ref-act {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-ref-act .t2-icon { font-size: 19px; color: var(--t2-accent-text); }
+.t2-ref-act.done .t2-icon { color: var(--t2-success); }
+.t2-ref-act:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.t2-ref-how { margin-top: 10px; }
+.t2-ref-how-title { margin: 0; font-size: 14.5px; font-weight: 700; }
+.t2-ref-how-text { margin: 6px 0 0; font-size: 13px; line-height: 1.7; color: var(--t2-muted); }
+.t2-ref-programs { padding: 0 14px 14px; border-radius: 22px; background: var(--t2-surface); }
+.t2-ref-program { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--t2-divider); }
+.t2-ref-program-main { flex: 1; min-width: 0; }
+.t2-ref-program-title { margin: 0; font-size: 14.5px; font-weight: 600; }
+.t2-ref-program-cond { margin: 0; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+.t2-ref-program-bonus { margin: 2px 0 0; font-size: 12px; line-height: 1.55; color: var(--t2-success); }
+.t2-ref-amount { display: flex; flex: none; align-items: baseline; gap: 4px; }
+.t2-ref-amount-num { font-family: var(--t2-font-num); font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+.t2-ref-amount-num.sm { font-size: 13px; }
+.t2-ref-amount-cur { font-size: 11px; color: var(--t2-muted); }
+.t2-ref-amount.off { font-size: 15px; font-weight: 600; color: var(--t2-muted); }
+.t2-ref-note { margin: 12px 0 0; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+.t2-ref-note.warn { color: var(--t2-warning); }
+.t2-ref-note + .t2-ref-note { margin-top: 4px; }
+.t2-ref-rows { padding: 0 14px; border-radius: 22px; background: var(--t2-surface); }
+.t2-ref-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--t2-divider);
+}
+.t2-ref-row:last-child { border-bottom: 0; }
+.t2-ref-row-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.t2-ref-row-stage { font-size: 14px; font-weight: 600; }
+.t2-ref-row-stage.ok { color: var(--t2-success); }
+.t2-ref-row-stage.muted { color: var(--t2-muted); }
+.t2-ref-row-stage.warn { color: var(--t2-warning); }
+.t2-ref-row-kind { font-size: 12px; color: var(--t2-muted); }
+
+/* ── C29 · العودةُ من صفحة الدفع — دائرةٌ بنبرة الجواب (دائرةُ C08 مكبَّرة)، والمبلغ، وزرٌّ واحدٌ أسفلَ الشاشة ─────────────── */
+.t2-cret-body { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 6px; }
+.t2-cret-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+.t2-cret-badge .t2-icon { font-size: 48px; }
+.t2-cret-badge.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-cret-badge.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
+.t2-cret-badge.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+.t2-cret-title { margin: 22px 0 0; font-size: 24px; font-weight: 700; }
+.t2-cret-text { margin: 8px 0 0; font-size: 14px; line-height: 1.7; color: var(--t2-muted); }
+.t2-cret-amount { margin-top: 18px; gap: 6px; }
+.t2-cret-amount .t2-ax-money-num { font-size: 30px; }
+.t2-cret-amount .t2-ax-money-cur { font-size: 14px; }
+.t2-cret .t2-ax-scroll { display: flex; flex-direction: column; }
+/* **المركزُ مركزُ ما فوق الذيل** كما رُسم — فلا حافّةَ سفلى تزيحه */
+.t2-cret .t2-ax-scroll.has-foot { padding-bottom: 0; }
+
+/* ── C30 · تطبيقُ الراكب غير مثبَّت — لغةُ جولة الأذونات (مربّعُ الجمر الخافت، والعنوانُ وسطرُه، والفعلُ أسفلَ الشاشة) ──────── */
+.t2-swap-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-top: 26px; /* ٢٦ تحت زرِّ الرجوع كما رُسم — **وحافّةُ الرأس (١٤) تنطوي فيها** فلا تُجمع معها */
+  border-radius: 18px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-swap-icon .t2-icon { font-size: 28px; }
+.t2-swap-title { margin: 18px 0 0; font-size: 28px; font-weight: 700; line-height: 1.3; }
+.t2-swap-text { margin: 6px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--t2-muted); }
+
+/* ── C31 · مركباتي — بطاقاتُ C11 (`t2-store-card` · `t2-store-well` من `t2.css`)، والمتجرُ بابٌ بارز، وتنبيهُ الاشتراك صفُّ C12 ── */
+.t2-gar-store {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-accent-line);
+  border-radius: 20px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-gar-store .t2-ax-tile { background: var(--t2-bg); color: var(--t2-accent-text); }
+.t2-gar-store-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.t2-gar-store-title { font-size: 15px; font-weight: 700; }
+.t2-gar-store-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-gar-store .t2-ax-chev { color: var(--t2-accent-text); }
+.t2-gar-nosub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--t2-danger);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-gar-nosub-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.t2-gar-nosub-title { font-size: 13.5px; font-weight: 700; }
+.t2-gar-nosub-text { font-size: 11.5px; line-height: 1.5; color: var(--t2-muted); }
+.t2-gar-nosub-go {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 11px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.t2-gar-lede { margin: 4px 2px 10px; font-size: 12.5px; line-height: 1.55; color: var(--t2-muted); }
+.t2-gar-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+/* **الكراجُ كلُّه مملوك**، فالوسمُ «في كراجك» لا السعر — وبطاقةُ المتجر تُستعار بمقاسها */
+.t2-gar-grid .t2-store-card { margin: 0; }
+/* **«في كراجك» مقروءٌ على الحجر**: وسمُ المتجر بلون المعكوس الخافت (#B9BEC6 — C11 على الإسفلت) **يكاد لا يُرى على الفاتح** (١٫٨:١)،
+   فيأخذ هنا الخافتَ (٤٫٩:١) — والإسفلتُ كما رُسم */
+html.light .t2-gar-grid .t2-store-tag:not(.ok) { color: var(--t2-muted); }
+.t2-gar-fine { margin: 14px 2px 0; font-size: 11.5px; line-height: 1.6; color: var(--t2-muted); }

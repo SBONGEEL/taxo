@@ -1,4 +1,4 @@
-/** البطاقات المحفوظة — SPEC القسم 6.4، وشكلُها من `DESIGN.md` §5.3.
+/** البطاقات المحفوظة — SPEC القسم 6.4، **بلغة TAXO 2.0** «C25» (`design/t2-new/captain/C25*.dc.html`).
  *
  * **لا رقمَ بطاقةٍ هنا ولا رمزَ مزود**: المحفوظ لدينا `provider_token` ولا
  * يخرج من الخلفية أبداً — هو ما يُدفع به، وعرضُه يبطل غرض الـtokenization
@@ -12,6 +12,9 @@
  * المزود تعيد الكبتن إلى تطبيقٍ ليس تطبيقه. الاثنان في
  * `FUTURE-FEATURES.md` بند 44، وحتى ذلك تقول الشاشة أين تُحفظ البطاقة فعلاً
  * بدل زرٍّ يعد بما لا يقع.
+ *
+ * **والشكلُ**: صفُّ «C12» بمربّع العلامة، **والافتراضيةُ بحافّة «المختار» في C10** ووسمِها، **والفعلان شريطٌ تحت البطاقة** —
+ * كلٌّ منهما ٤٤ للمس بدل رابطين صغيرين متراكبين. **والمنطقُ حرفاً**: النداءاتُ الثلاثة، والتعطيلُ أثناء فعلِ البطاقة نفسِها.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -23,9 +26,10 @@ import {
   makeCardDefault,
 } from "@/api/endpoints";
 import type { SavedCard } from "@/api/types";
-import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
-import { cn } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/account.css";
 
 export function CardsScreen() {
   const goBack = useGoBack();
@@ -59,86 +63,92 @@ export function CardsScreen() {
   }
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
-        <button
-          type="button"
-          onClick={() => goBack()}
-          aria-label="رجوع"
-          className="pressable text-18 text-muted"
-        >
-          →
-        </button>
-        <h1 className="text-20 font-bold text-ink">البطاقات المحفوظة</h1>
-      </div>
+    <div className="t2 t2-ax">
+      <div className="t2-ax-scroll">
+        <div className="t2-head">
+          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+            <Icon name="arrow_forward" />
+          </button>
+          <h1 className="t2-title">البطاقات المحفوظة</h1>
+        </div>
 
-      <ErrorNote message={error} />
+        {error ? (
+          <p className="t2-note danger" role="alert">
+            <Icon name="error" />
+            {error}
+          </p>
+        ) : null}
 
-      {cards === null && !error ? <Spinner className="mx-auto" /> : null}
+        {cards === null && !error ? (
+          <div className="t2-ax-center">
+            <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+          </div>
+        ) : null}
 
-      {cards?.length === 0 ? (
-        <EmptyNote
-          title="لا بطاقات محفوظة"
-          hint="تُحفظ البطاقة حين تدفع بها وتختار حفظها — لا من هذه الشاشة."
-        />
-      ) : null}
+        {cards?.length === 0 ? (
+          <div className="t2-empty t2-ax-empty">
+            <b>لا بطاقات محفوظة</b>
+            <span>تُحفظ البطاقة حين تدفع بها وتختار حفظها — لا من هذه الشاشة.</span>
+          </div>
+        ) : null}
 
-      <div className="flex flex-col gap-10">
-        {(cards ?? []).map((card) => (
-          <div
-            key={card.id}
-            className={cn(
-              "flex items-center gap-12 rounded-16 border bg-surface p-15",
-              card.is_default ? "border-ink" : "border-line",
-            )}
-          >
-            <span className="flex h-27 w-40 flex-none items-center justify-center overflow-hidden rounded-5 border border-line bg-surface-2 px-2 text-9 font-bold text-ink">
-              {card.brand ?? "بطاقة"}
-            </span>
-            <div className="min-w-0 flex-1">
-              {/* ما هو مطبوعٌ على البطاقة يُعرض كما هو ليطابقها الكبتن
-                  بعينه — الأرقام العربية-الهندية للكميات لا للمعرّفات */}
-              <div dir="ltr" className="text-13.5 font-bold text-ink">
-                •••• {card.last4}
+        <div className="t2-pcard-list">
+          {(cards ?? []).map((card) => (
+            <div
+              key={card.id}
+              className={card.is_default ? "t2-pcard default" : "t2-pcard"}
+            >
+              <div className="t2-pcard-top">
+                <span className="t2-pcard-brand">{card.brand ?? "بطاقة"}</span>
+                <div className="t2-pcard-main">
+                  {/* ما هو مطبوعٌ على البطاقة يُعرض كما هو ليطابقها الكبتن
+                      بعينه — الأرقام العربية-الهندية للكميات لا للمعرّفات */}
+                  <div dir="ltr" className="t2-pcard-num">
+                    •••• {card.last4}
+                  </div>
+                  <div dir="ltr" className="t2-pcard-exp">
+                    {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
+                  </div>
+                </div>
+                {card.is_default ? <span className="t2-chip ok">افتراضية</span> : null}
               </div>
-              <div dir="ltr" className="text-end text-11 text-muted">
-                {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-5">
-              {card.is_default ? (
-                <span className="text-10.5 font-bold text-ok">افتراضية</span>
-              ) : (
+              <div className="t2-pcard-acts">
+                {card.is_default ? null : (
+                  <button
+                    type="button"
+                    disabled={busy === card.id}
+                    onClick={() =>
+                      void act(card.id, () => makeCardDefault(card.id))
+                    }
+                    className="t2-pcard-act"
+                  >
+                    اجعلها افتراضية
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={busy === card.id}
                   onClick={() =>
-                    void act(card.id, () => makeCardDefault(card.id))
+                    void act(card.id, () => deleteSavedCard(card.id))
                   }
-                  className="pressable text-10.5 font-bold text-muted disabled:opacity-60"
+                  className="t2-pcard-act danger"
+                  aria-label={`حذف البطاقة •••• ${card.last4}`}
                 >
-                  اجعلها افتراضية
+                  حذف
                 </button>
-              )}
-              <button
-                type="button"
-                disabled={busy === card.id}
-                onClick={() =>
-                  void act(card.id, () => deleteSavedCard(card.id))
-                }
-                className="pressable text-10.5 text-danger disabled:opacity-60"
-              >
-                حذف
-              </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <p className="mt-14 text-11.5 leading-note text-muted">
-        لا نحتفظ برقم بطاقتك ولا برمزها السري — رمزٌ من المزوّد فقط. وتُحفظ
-        البطاقة حين تدفع بها وتختار حفظها.
-      </p>
+        <p className="t2-ax-fine">
+          <Icon name="lock" />
+          <span>
+            لا نحتفظ برقم بطاقتك ولا برمزها السري — رمزٌ من المزوّد فقط. وتُحفظ
+            البطاقة حين تدفع بها وتختار حفظها.
+          </span>
+        </p>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-/** حسابي — SPEC القسم 12، وشكلُه من `DESIGN.md` §5.3.
+/** حسابي — SPEC القسم 12، **بلغة TAXO 2.0** «C23» (`design/t2-new/captain/C23-account.dc.html`) في المظهرين والورديّ.
  *
  * صفحةُ عبورٍ لا صفحةُ تحرير: ما يملك الكبتن تغييرَه من ملفه حقلٌ واحد
  * (`cliq_alias` عبر `PATCH /drivers/me`)، ومكانُه الإعدادات مع بقية ما
@@ -7,36 +7,41 @@
  * إثبات بابٌ لسرقة حساب. فيُعرضان ولا يُحرَّران.
  *
  * ولا مبدّلَ لغةٍ في الرأس: التطبيق عربيٌّ وحده (`DESIGN-DECISIONS` بند 18).
+ *
+ * **والشكلُ من عائلة TAXO 2.0** (§٦٢/٦–٧): بنيةُ «R15» حسابِ الراكب — الحرفُ في دائرةٍ والاسمُ والرقمُ، ثمّ القائمةُ، ثمّ الخروج —
+ * **بصفوف «C15»** (أيقونةٌ وعنوانٌ وتلميحٌ وسهم) وبطاقةِ حالٍ بمربّعات «C12». **والمنطقُ حرفاً**: النداءُ نفسُه (`GET
+ * /subscriptions/me`)، والمفاتيحُ نفسُها تحجب صفوفَها، والجملُ نفسُها، وورقةُ تأكيدِ إنهاء الجلسات قبل أن يقع.
  */
 
 import { REQUIRED_DOCUMENTS } from "@/lib/documents";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 
 import { getMySubscription } from "@/api/endpoints";
 import type { DriverStatus, MySubscription } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig, useFeature } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
 import { useGarage } from "@/lib/garage";
 import { forDisplay } from "@/lib/phone";
 import { blockedReason, switchToRider } from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
-import { digits, cn,
-  DISPLAY_LOCALE,
-} from "@/lib/utils";
+import { DISPLAY_LOCALE, digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/t2.css";
+import "@/screens/t2/account.css";
+
+type Tone = "ok" | "warn" | "danger";
 
 /** والنوعُ `DriverStatus` لا `string`: حالٌ جديدةٌ في الخلفية تكسر البناء
  * هنا بدل أن تخرج على الشاشة سطراً فارغاً. */
-const STATUS_LINE: Record<DriverStatus, { text: string; dot: string }> = {
-  approved: { text: "حساب معتمد", dot: "bg-ok" },
-  pending: { text: "قيد المراجعة — لا تصلك طلبات بعد", dot: "bg-warn" },
-  rejected: { text: "طلبك مرفوض — راجع الدعم", dot: "bg-danger" },
-  suspended: { text: "حسابك موقوف — راجع الدعم", dot: "bg-danger" },
+const STATUS_LINE: Record<DriverStatus, { text: string; tone: Tone; icon: string }> = {
+  approved: { text: "حساب معتمد", tone: "ok", icon: "verified" },
+  pending: { text: "قيد المراجعة — لا تصلك طلبات بعد", tone: "warn", icon: "hourglass_top" },
+  rejected: { text: "طلبك مرفوض — راجع الدعم", tone: "danger", icon: "error" },
+  suspended: { text: "حسابك موقوف — راجع الدعم", tone: "danger", icon: "error" },
   // **الإلغاءُ نهايةٌ لا إيقاف** — فنصُّه يقول ذلك ولا يَعِد بمراجعة
-  deactivated: { text: "حسابك مُلغى", dot: "bg-danger" },
+  deactivated: { text: "حسابك مُلغى", tone: "danger", icon: "error" },
 };
 
 export function AccountScreen() {
@@ -79,8 +84,8 @@ export function AccountScreen() {
 
   if (!profile) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg">
-        <Spinner />
+      <div className="t2 t2-acc t2-acc-loading">
+        <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
       </div>
     );
   }
@@ -89,7 +94,7 @@ export function AccountScreen() {
   const status = STATUS_LINE[driver.status];
   const vehicle = vehicles[0];
 
-  // سطرُ الاشتراك ولونُ شريطه — نفس الحالات الأربع في شاشة الاشتراك
+  // سطرُ الاشتراك ونبرتُه — نفس الحالات الأربع في شاشة الاشتراك
   const subLine = !subscription
     ? "…"
     : subscription.is_active
@@ -97,11 +102,14 @@ export function AccountScreen() {
       : subscription.coverage_until
         ? "منتهٍ — جدّد للعودة للتوزيع"
         : "لا اشتراك — اشترك للبدء";
-  const subTone = !subscription?.is_active
-    ? "bg-danger"
-    : subscription.days_remaining <= 1
-      ? "bg-warn"
-      : "bg-ok";
+  // **ولا لونَ قبل الجواب**: كان الشريطُ أحمرَ حتى يصل النداء، فيُقرأ «منتهٍ» عن اشتراكٍ ساري — والنبرةُ بعده كما كانت
+  const subTone: Tone | "" = !subscription
+    ? ""
+    : !subscription.is_active
+      ? "danger"
+      : subscription.days_remaining <= 1
+        ? "warn"
+        : "ok";
 
   // ولا يُقال «كل المستندات مقبولة» من حال الكبتن: من اعتُمد ثم رُفض مستندٌ
   // حدّثه يقرأ جملةً تكذّبها شاشةُ المستندات نفسها. والمرفوضُ ليس «بانتظار
@@ -132,51 +140,88 @@ export function AccountScreen() {
         : pendingDocs > 0
           ? `${digits(String(pendingDocs))} مستند قيد المراجعة`
           : "كل المستندات مقبولة";
+  // **المرفوضُ أحمرُ والناقصُ كهرمانيّ** — ما ينتظر الكبتنَ يُرى، وما ينتظر الإدارةَ خافت
+  const docsTone = rejectedDocs > 0 ? "danger" : missingDocs > 0 ? "warn" : "";
 
   return (
-    <div className="relative h-full bg-bg">
-      <div className="scr h-full px-16 pb-nav pt-safe">
-        <div className="mb-16 mt-6 flex items-center gap-14">
-          <div className="flex size-54 items-center justify-center rounded-full border border-line bg-surface-2 text-18 font-bold text-ink">
-            {user.name.trim().slice(0, 1)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-17 font-bold text-ink">
-              {user.name}
-            </div>
-            <div className="text-12 text-muted">
-              {/* الرقم كما هو: معرّفٌ يُقارَن ويُملى، لا كمّيةٌ تُقرأ — نفس
-                  قاعدة `Cards.tsx` و`Vehicle.tsx` (`CLAUDE.md`) */}
-              <span dir="ltr">
-                {/* `null` نظرياً (المشرف) ولا مشرفَ هنا — و«—» أصدقُ من
-                    فراغٍ يُقرأ عطباً في الرسم */}
-                {user.phone
-                  ? country
-                    ? forDisplay(user.phone, country.dial_code)
-                    : user.phone
-                  : "—"}
-              </span>{" "}
-              · ★ {digits(driver.rating_avg)}
-            </div>
+    <div className="t2 t2-acc">
+      <div className="t2-acc-prof">
+        <span className="t2-acc-avatar" aria-hidden="true">
+          {user.name.trim().slice(0, 1)}
+        </span>
+        <div className="t2-acc-main">
+          <div className="t2-acc-name">{user.name}</div>
+          {/* الرقم كما هو: معرّفٌ يُقارَن ويُملى، لا كمّيةٌ تُقرأ — نفس
+              قاعدة `Cards.tsx` و`Vehicle.tsx` (`CLAUDE.md`) */}
+          <div dir="ltr" className="t2-acc-phone">
+            {/* `null` نظرياً (المشرف) ولا مشرفَ هنا — و«—» أصدقُ من
+                فراغٍ يُقرأ عطباً في الرسم */}
+            {user.phone
+              ? country
+                ? forDisplay(user.phone, country.dial_code)
+                : user.phone
+              : "—"}
           </div>
         </div>
+        <span className="t2-acc-rate" aria-label={`تقييمك ${digits(driver.rating_avg)}`}>
+          <Icon name="star" fill />
+          <span className="t2-acc-rate-num" dir="ltr">
+            {digits(driver.rating_avg)}
+          </span>
+        </span>
+      </div>
 
-        <div className="mb-12 flex items-center gap-8 rounded-12 border border-line bg-surface px-13 py-10">
-          <span className={cn("block size-8 rounded-full", status.dot)} />
-          <span className="text-12 text-muted">
-            {status.text} · {docsNote}
+      {/* **بطاقةُ الحال**: حالُ الحساب ومستنداته، ثمّ الاشتراكُ بنبرته — بابُه إلى «الاشتراك» */}
+      <div className="t2-list">
+        <div className="t2-acc-state">
+          <span className={`t2-ax-tile ${status.tone}`} aria-hidden="true">
+            <Icon name={status.icon} />
+          </span>
+          <span className="t2-acc-state-main">
+            <span className="t2-acc-state-title">{status.text}</span>
+            <span className={docsTone ? `t2-acc-state-sub ${docsTone}` : "t2-acc-state-sub"}>
+              {docsNote}
+            </span>
           </span>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/subscription")}
+          className="t2-acc-state"
+        >
+          <span className={subTone ? `t2-ax-tile ${subTone}` : "t2-ax-tile"} aria-hidden="true">
+            <Icon name="card_membership" />
+          </span>
+          <span className="t2-acc-state-main">
+            <span className="t2-acc-state-title">الاشتراك</span>
+            <span className="t2-acc-state-sub">{subLine}</span>
+          </span>
+          <Icon name="chevron_left" className="t2-ax-chev" />
+        </button>
+      </div>
 
-        {/* توثيقُ الجنس (المرحلة 10-ج): تقرؤه الكبتنة لتعرف أنه **مثبَّتٌ من
-            الإدارة عن هويتها** ومتى — لا حقلٌ نسيت ملأه. وقبل التثبيت لا
-            تصلها الطلبات المجنّسة أصلاً، وقولُ ذلك هنا يمنع سؤال «لماذا لا
-            تصلني طلبات النساء». ولا يُعدَّل من التطبيق */}
-        {womenService ? (
-          <div className="mb-10 rounded-16 border border-brand-brd bg-surface p-15">
-            <div className="flex items-center justify-between gap-10">
-              <span className="text-13.5 font-bold text-ink">الجنس</span>
-              <span className="text-13 font-bold text-brand">
+      {/* توثيقُ الجنس (المرحلة 10-ج): تقرؤه الكبتنة لتعرف أنه **مثبَّتٌ من
+          الإدارة عن هويتها** ومتى — لا حقلٌ نسيت ملأه. وقبل التثبيت لا
+          تصلها الطلبات المجنّسة أصلاً، وقولُ ذلك هنا يمنع سؤال «لماذا لا
+          تصلني طلبات النساء». ولا يُعدَّل من التطبيق */}
+      {womenService ? (
+        <div className="t2-list">
+          <div className="t2-acc-gender">
+            <div className="t2-acc-gender-top">
+              <span
+                className={user.gender === "female" ? "t2-ax-tile women" : "t2-ax-tile"}
+                aria-hidden="true"
+              >
+                <Icon name={user.gender === "female" ? "woman" : "person"} />
+              </span>
+              <span className="t2-acc-gender-label">الجنس</span>
+              <span
+                className={
+                  user.gender === "female"
+                    ? "t2-acc-gender-value women"
+                    : "t2-acc-gender-value"
+                }
+              >
                 {user.gender === "female"
                   ? "أنثى"
                   : user.gender === "male"
@@ -184,7 +229,7 @@ export function AccountScreen() {
                     : "غير مثبَّت"}
               </span>
             </div>
-            <p className="mt-8 text-11.5 leading-note text-muted">
+            <p className="t2-acc-gender-note">
               {user.gender_verified_at
                 ? `موثّق من الهوية بواسطة الإدارة · ${new Date(
                     user.gender_verified_at,
@@ -195,124 +240,118 @@ export function AccountScreen() {
                   })}`
                 : "قبل التثبيت لا تصلك الطلبات التي تحدّد جنساً — لا كطلباتٍ مرفوضة، بل لا تُعرض أصلاً."}
             </p>
-            <p className="mt-6 text-11.5 leading-note text-muted">
+            <p className="t2-acc-gender-note">
               لا يُعدَّل من التطبيق. للتصحيح راسل الدعم.
             </p>
           </div>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={() => navigate("/subscription")}
-          className="pressable mb-10 flex w-full items-center gap-12 card p-15 text-start"
-        >
-          <span className={cn("block h-38 w-6 rounded-4", subTone)} />
-          <span className="flex-1">
-            <span className="block text-13.5 font-bold text-ink">الاشتراك</span>
-            <span className="block text-11.5 text-muted">{subLine}</span>
-          </span>
-          <ChevronLeft size={16} className="text-muted" />
-        </button>
-
-        <div className="overflow-hidden card">
-          <Row
-            label="المركبة والمستندات"
-            sub={
-              vehicle
-                ? `${vehicle.make} ${vehicle.model}`
-                : "لم تُسجّل مركبة بعد"
-            }
-            onClick={() => navigate("/account/vehicle")}
-          />
-          <Row
-            label="البطاقات المحفوظة"
-            sub="بطاقاتُ الدفع التي حفظتَها"
-            onClick={() => navigate("/account/cards")}
-          />
-          {/* **بلا مفتاح ولا شرط**: شاشةُ حالٍ تُقرأ في أيِّ وقت — ومن
-              سُحب إذنُه من إعدادات الهاتف لا يمرّ بنا ليُعرض له بابُها */}
-          <Row
-            label="أذونات الجهاز"
-            sub="ما يمنع وصول الطلبات إليك، وما يُضعفه"
-            onClick={() => navigate("/account/permissions")}
-          />
-          {/* **بلا مفتاح**: الدَّينُ ينشأ من العمل نفسِه لا من ميزةٍ تُشغَّل،
-              **ومن عليه مستحقٌّ يُمنع** — فبابٌ يظهر بشرطٍ يجعل الممنوعَ لا
-              يجد أين يسدّد. والشاشةُ تعمل بصفر وتقول «لا مستحقّات عليك». */}
-          <Row
-            label="المستحقّات"
-            sub="ما عليك من عمولة رحلات قبضتَ أجرتها نقداً"
-            onClick={() => navigate("/account/debt")}
-          />
-          {advancesOn ? (
-            <Row
-              label="السلفة"
-              sub="سلفةٌ تُقتطع من أرباح رحلاتك"
-              onClick={() => navigate("/account/advances")}
-            />
-          ) : null}
-          {/* **مركباتي قبل المهام**: كلاهما يُفتح عن قصد، وهذه يُفتح بابُها
-              في كلِّ فتحةٍ للتطبيق (المفعَّلةُ على الخريطة أمام عينه).
-              **وخلف مفتاحها**: صفٌّ يَعِد بمتجرٍ في سوقٍ لا متجرَ فيه أسوأُ
-              من غيابه — والخلفيةُ ترفض على كلِّ حال */}
-          {skinsOn ? (
-            <Row
-              label="مركباتي"
-              sub="مركبتك على الخريطة والمتجر"
-              onClick={() => navigate("/account/garage")}
-            />
-          ) : null}
-          {levelsOn ? (
-            <Row
-              label="مهامّي ومستواي"
-              sub="مهامُّ الشهر وشاراتي"
-              onClick={() => navigate("/account/missions")}
-            />
-          ) : null}
-          <Row
-            label="أَحِلْ صديقك"
-            sub="رمزك ومن سجّل به"
-            onClick={() => navigate("/account/referrals")}
-          />
-          <Row
-            label="الإعدادات"
-            sub="الإشعارات · المظهر · alias كليك"
-            onClick={() => navigate("/account/settings")}
-          />
-          {/* **آخرُ الصفوف وأشدُّها أثراً** (البند ١٣): ما يخصّ الحساب يسكن هنا
-              لا في «الإعدادات» — تلك للجهاز. ولا يُخفى خلف تحذير: من يريد
-              الخروج يجد بابَه، والمراجعةُ هي ما يحمي لا صعوبةُ العثور */}
-          <Row
-            label="حذف الحساب"
-            sub="يُحذف نهائياً بعد 30 يوماً — واسحب رصيدك خلالها"
-            onClick={() => navigate("/account/delete")}
-            last
-          />
         </div>
+      ) : null}
 
-        {/* **في «حسابي» لا في شريطٍ سفليٍّ ولا على الرئيسية** (§23): تبديلٌ
-            لا يُضغط يومياً، وموضعُه بين ما يُفتح عن قصد */}
-        <SwitchRow />
-
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="pressable mt-14 w-full p-10 text-center text-13 font-semibold text-danger"
-        >
-          تسجيل الخروج
-        </button>
-
-        <SignOutEverywhereRow />
+      <div className="t2-list">
+        <Row
+          icon="directions_car"
+          label="المركبة والمستندات"
+          sub={
+            vehicle
+              ? `${vehicle.make} ${vehicle.model}`
+              : "لم تُسجّل مركبة بعد"
+          }
+          onClick={() => navigate("/account/vehicle")}
+        />
+        <Row
+          icon="credit_card"
+          label="البطاقات المحفوظة"
+          sub="بطاقاتُ الدفع التي حفظتَها"
+          onClick={() => navigate("/account/cards")}
+        />
+        {/* **بلا مفتاح ولا شرط**: شاشةُ حالٍ تُقرأ في أيِّ وقت — ومن
+            سُحب إذنُه من إعدادات الهاتف لا يمرّ بنا ليُعرض له بابُها */}
+        <Row
+          icon="verified_user"
+          label="أذونات الجهاز"
+          sub="ما يمنع وصول الطلبات إليك، وما يُضعفه"
+          onClick={() => navigate("/account/permissions")}
+        />
+        {/* **بلا مفتاح**: الدَّينُ ينشأ من العمل نفسِه لا من ميزةٍ تُشغَّل،
+            **ومن عليه مستحقٌّ يُمنع** — فبابٌ يظهر بشرطٍ يجعل الممنوعَ لا
+            يجد أين يسدّد. والشاشةُ تعمل بصفر وتقول «لا مستحقّات عليك». */}
+        <Row
+          icon="toll"
+          label="المستحقّات"
+          sub="ما عليك من عمولة رحلات قبضتَ أجرتها نقداً"
+          onClick={() => navigate("/account/debt")}
+        />
+        {advancesOn ? (
+          <Row
+            icon="request_quote"
+            label="السلفة"
+            sub="سلفةٌ تُقتطع من أرباح رحلاتك"
+            onClick={() => navigate("/account/advances")}
+          />
+        ) : null}
+        {/* **مركباتي قبل المهام**: كلاهما يُفتح عن قصد، وهذه يُفتح بابُها
+            في كلِّ فتحةٍ للتطبيق (المفعَّلةُ على الخريطة أمام عينه).
+            **وخلف مفتاحها**: صفٌّ يَعِد بمتجرٍ في سوقٍ لا متجرَ فيه أسوأُ
+            من غيابه — والخلفيةُ ترفض على كلِّ حال */}
+        {skinsOn ? (
+          <Row
+            icon="garage"
+            label="مركباتي"
+            sub="مركبتك على الخريطة والمتجر"
+            onClick={() => navigate("/account/garage")}
+          />
+        ) : null}
+        {levelsOn ? (
+          <Row
+            icon="flag"
+            label="مهامّي ومستواي"
+            sub="مهامُّ الشهر وشاراتي"
+            onClick={() => navigate("/account/missions")}
+          />
+        ) : null}
+        <Row
+          icon="redeem"
+          label="أَحِلْ صديقك"
+          sub="رمزك ومن سجّل به"
+          onClick={() => navigate("/account/referrals")}
+        />
+        <Row
+          icon="settings"
+          label="الإعدادات"
+          sub="الإشعارات · المظهر · alias كليك"
+          onClick={() => navigate("/account/settings")}
+        />
+        {/* **آخرُ الصفوف وأشدُّها أثراً** (البند ١٣): ما يخصّ الحساب يسكن هنا
+            لا في «الإعدادات» — تلك للجهاز. ولا يُخفى خلف تحذير: من يريد
+            الخروج يجد بابَه، والمراجعةُ هي ما يحمي لا صعوبةُ العثور */}
+        <Row
+          icon="delete"
+          label="حذف الحساب"
+          sub="يُحذف نهائياً بعد 30 يوماً — واسحب رصيدك خلالها"
+          onClick={() => navigate("/account/delete")}
+        />
       </div>
 
+      {/* **في «حسابي» لا في شريطٍ سفليٍّ ولا على الرئيسية** (§23): تبديلٌ
+          لا يُضغط يومياً، وموضعُه بين ما يُفتح عن قصد */}
+      <SwitchRow />
+
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        className="t2-acc-out"
+      >
+        تسجيل الخروج
+      </button>
+
+      <SignOutEverywhereRow />
     </div>
   );
 }
 
 /** **إنهاءُ كلِّ الجلسات** (SPEC §60-ب/١، قرارُ المالك ٢٠٢٦-١٠-٠٤) — لهاتفٍ أو
- *  حاسوبٍ ضاع. **ويُسأل قبل أن يقع** بورقةِ التأكيد التي يستعملها التطبيقُ
- *  (`Advances.tsx`): يُخرج الكبتنَ من هذا الجهاز أيضاً، وفعلٌ يُخرج من كلِّ
- *  مكانٍ لا يقع بلمسةٍ عابرة. */
+ *  حاسوبٍ ضاع. **ويُسأل قبل أن يقع** بورقةِ تأكيد (C23b): يُخرج الكبتنَ من هذا
+ *  الجهاز أيضاً، وفعلٌ يُخرج من كلِّ مكانٍ لا يقع بلمسةٍ عابرة. */
 function SignOutEverywhereRow() {
   const { signOutEverywhere } = useSession();
   const [confirming, setConfirming] = useState(false);
@@ -336,33 +375,54 @@ function SignOutEverywhereRow() {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="pressable w-full p-10 text-center text-12 text-muted"
+        className="t2-acc-endall"
       >
         إنهاء كل الجلسات
       </button>
       {confirming ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-dim"
+          className="t2-ax-sheet"
           onClick={() => !busy && setConfirming(false)}
         >
           <div
-            className="w-full rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+            className="t2-ax-sheet-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="t2-acc-endall-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <p className="text-16 font-bold text-ink">إنهاء كل الجلسات</p>
-            <p className="mt-8 text-13.5 leading-relaxed text-muted">
+            <div className="t2-ax-grab" aria-hidden="true" />
+            <h2 id="t2-acc-endall-title" className="t2-ax-sheet-title">
+              إنهاء كل الجلسات
+            </h2>
+            <p className="t2-ax-sheet-body">
               تخرج من حسابك على كلِّ جهازٍ دخلتَ منه — وهذا منها — ولا تصل
               إشعاراتُ حسابك ولا طلباتُ الرحلات إلى أيٍّ منها. استعمله إن ضاع
               هاتفٌ أو حاسوب.
             </p>
-            <ErrorNote message={error} />
-            <div className="mt-16 flex flex-col gap-9">
-              <Button variant="danger" loading={busy} onClick={() => void confirm()}>
-                إنهاء كل الجلسات
-              </Button>
-              <Button variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
+            {error ? (
+              <p className="t2-note danger" role="alert">
+                <Icon name="error" />
+                {error}
+              </p>
+            ) : null}
+            <div className="t2-ax-sheet-actions">
+              <button
+                type="button"
+                className="t2-ax-danger"
+                disabled={busy}
+                onClick={() => void confirm()}
+              >
+                {busy ? "…" : "إنهاء كل الجلسات"}
+              </button>
+              <button
+                type="button"
+                className="t2-ax-quiet"
+                disabled={busy}
+                onClick={() => setConfirming(false)}
+              >
                 رجوع
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -371,31 +431,26 @@ function SignOutEverywhereRow() {
   );
 }
 
+/** صفٌّ في القائمة — **صفُّ «C15»** (`t2-srow`): أيقونةٌ وعنوانٌ وتلميحٌ وسهم. */
 function Row({
+  icon,
   label,
   sub,
   onClick,
-  last = false,
 }: {
+  icon: string;
   label: string;
   sub: string;
   onClick: () => void;
-  last?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "pressable flex w-full items-center gap-12 px-15 py-14 text-start",
-        last ? "" : "border-b border-line",
-      )}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-13.5 font-semibold text-ink">{label}</span>
-        <span className="block truncate text-11 text-muted">{sub}</span>
+    <button type="button" onClick={onClick} className="t2-srow">
+      <Icon name={icon} className="t2-srow-icon" />
+      <span className="t2-srow-main">
+        <span className="t2-srow-title">{label}</span>
+        <span className="t2-srow-hint">{sub}</span>
       </span>
-      <ChevronLeft size={16} className="shrink-0 text-muted" />
+      <Icon name="chevron_left" className="t2-ax-chev" />
     </button>
   );
 }
@@ -421,27 +476,21 @@ function SwitchRow() {
   }
 
   return (
-    <div className="mt-14 overflow-hidden rounded-16 border border-line bg-surface">
+    <div className="t2-list">
       <button
         type="button"
         disabled={busy}
         onClick={() => void press()}
-        className="pressable flex w-full items-center gap-12 px-15 py-14 text-start transition"
+        className="t2-srow"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-13.5 font-semibold text-ink">
-            تبديل إلى تطبيق الراكب
-          </span>
-          <span className="block truncate text-11 text-muted">
-            نفس الحساب — تنتقل جلستك بلا تسجيل دخول
-          </span>
+        <Icon name="swap_horiz" className="t2-srow-icon" />
+        <span className="t2-srow-main">
+          <span className="t2-srow-title">تبديل إلى تطبيق الراكب</span>
+          <span className="t2-srow-hint">نفس الحساب — تنتقل جلستك بلا تسجيل دخول</span>
         </span>
+        <Icon name="chevron_left" className="t2-ax-chev" />
       </button>
-      {blocked ? (
-        <p className="border-t border-line px-15 py-10 text-11.5 leading-note text-warn">
-          {blocked}
-        </p>
-      ) : null}
+      {blocked ? <p className="t2-acc-blocked">{blocked}</p> : null}
     </div>
   );
 }

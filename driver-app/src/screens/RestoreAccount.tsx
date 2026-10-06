@@ -3,6 +3,10 @@
  * **والفرقُ عن الراكب بابٌ واحد**: المحفظة. **المهلةُ وقتُ سحب رصيده** — ولا
  * يُحذف حسابٌ فيه رصيد — فزرُّ «سحب الرصيد» يفتح المحفظةَ وحدَها من التطبيق،
  * والحارسُ في `App.tsx` يتركها مفتوحةً في المهلة.
+ *
+ * **تُعرض مكانَ كلِّ شاشةٍ محميّة** (`Guarded` في `App.tsx`) ما دام `deletion_due_at` قائماً — **فشريطُ التبويب فوقها** في
+ * مسارات التبويب، ولها حشوتُه. **بلغة TAXO 2.0** «C26d» (`design/t2-new/captain/C26d-restore.dc.html`): شاشةُ حالٍ بلغة «C03» —
+ * حلقةٌ بأيقونة، وعنوانٌ ٢٦، وسطرٌ خافت — والسحبُ زرُّ «C09»، والاستعادةُ زرُّ الجمر. **والمنطقُ حرفاً.**
  */
 
 import { useEffect, useState } from "react";
@@ -11,11 +15,12 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { getDeletionState, restoreAccount } from "@/api/endpoints";
 import type { DeletionState } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote } from "@/components/ui/Feedback";
 import { DELETION_TEXT as T } from "@/lib/deletion-text";
 import { useSession } from "@/lib/session";
 import { formatDue, moneyText } from "@/screens/DeleteAccount";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/account.css";
 
 export function RestoreAccountScreen({ dueAt }: { dueAt: string }) {
   const navigate = useNavigate();
@@ -47,50 +52,70 @@ export function RestoreAccountScreen({ dueAt }: { dueAt: string }) {
   const deferred = state?.deferred_reason;
   const driverBalance = state ? Number(state.driver_balance) : 0;
   return (
-    <div className="scr h-full bg-bg px-16 pb-nav pt-safe">
-      <h1 className="mb-16 mt-6 text-20 font-bold text-ink">{T.restoreTitle}</h1>
+    <div className="t2 t2-rst">
+      <div className="t2-rst-ring" aria-hidden="true">
+        <span className="t2-rst-track" />
+        <span className="t2-rst-arc" />
+        <span className="t2-rst-core">
+          <Icon name="event_upcoming" />
+        </span>
+      </div>
 
-      <section className="mb-12 card p-15">
-        <p className="text-12.5 leading-snug text-ink">{T.restoreBody(formatDue(dueAt))}</p>
-        {state?.forfeit_amount ? (
-          <p className="mt-6 text-11.5 leading-snug text-muted">
-            {T.confirmForfeit(moneyText(state.forfeit_amount, state.currency))}
-          </p>
-        ) : null}
-      </section>
+      <h1 className="t2-rst-title">{T.restoreTitle}</h1>
+      <p className="t2-rst-lede">{T.restoreBody(formatDue(dueAt))}</p>
+      {state?.forfeit_amount ? (
+        <p className="t2-rst-lede">
+          {T.confirmForfeit(moneyText(state.forfeit_amount, state.currency))}
+        </p>
+      ) : null}
 
       {state && driverBalance > 0 ? (
-        <section className="mb-12 card p-15">
-          <p className="text-12 leading-snug text-ink">
+        <section className="t2-ax-card">
+          <p className="t2-rst-text">
             {T.restoreDriverBalance(moneyText(state.driver_balance, state.currency))}
           </p>
-          <Button className="mt-12" variant="secondary" size="sm" onClick={() => navigate("/wallet")}>
+          <button type="button" className="t2-rst-withdraw" onClick={() => navigate("/wallet")}>
+            <Icon name="south_west" />
             {T.withdrawButton}
-          </Button>
+          </button>
         </section>
       ) : null}
 
       {deferred ? (
-        <section className="mb-12 rounded-18 border border-warn bg-surface p-15">
-          <p className="text-13.5 font-semibold text-warn">{T.deferredTitle}</p>
-          <p className="mt-6 text-12 leading-snug text-muted">{T.deferred[deferred] ?? deferred}</p>
+        <section className="t2-callout warn" role="status">
+          <Icon name="info" fill />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">{T.deferredTitle}</p>
+            <p className="t2-callout-body">{T.deferred[deferred] ?? deferred}</p>
+          </div>
         </section>
       ) : null}
 
-      <div className="flex gap-10">
-        <Button loading={busy} onClick={() => void restore()}>
-          {T.restoreButton}
-        </Button>
-        <Button variant="secondary" disabled={busy} onClick={() => void signOut()}>
-          {T.signOutButton}
-        </Button>
-      </div>
+      <div className="t2-rst-push" />
 
       {error ? (
-        <div className="mt-12">
-          <ErrorNote message={error} />
-        </div>
+        <p className="t2-note danger" role="alert">
+          <Icon name="error" />
+          {error}
+        </p>
       ) : null}
+
+      <button
+        type="button"
+        className="t2-ax-cta t2-rst-cta"
+        disabled={busy}
+        onClick={() => void restore()}
+      >
+        {busy ? "…" : T.restoreButton}
+      </button>
+      <button
+        type="button"
+        className="t2-rst-out"
+        disabled={busy}
+        onClick={() => void signOut()}
+      >
+        {T.signOutButton}
+      </button>
     </div>
   );
 }

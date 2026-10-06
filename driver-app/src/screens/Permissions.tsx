@@ -16,6 +16,10 @@
  * ولا قوائمَ سامسونغ البيضاء — والجسرُ يعلن ذلك (`manufacturerSettingsKnown`
  * دائماً `false`)، **والادّعاءُ أسوأُ من السكوت** لأنه يوقف صاحبَه عن البحث
  * حين ينقطع عمله.
+ *
+ * **بلغة TAXO 2.0** «C27» (`design/t2-new/captain/C27*.dc.html`): المانعُ في الأعلى **بلاغُ الرئيسية نفسُه** (`t2-callout`،
+ * `PermissionNotice`)، **وأيقوناتُ الأذونات أيقوناتُ جولة أوّل فتح** (`PermissionsIntro`) في صفِّ «C12» بنبرة حاله ووسمه،
+ * **وزرُّ المنح زرُّ «ارفع الوثيقة»**. والنصوصُ والتصنيفُ من `lib/permission-rows` كما هي.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -27,7 +31,20 @@ import {
 } from "@/lib/offer-alert";
 import { ROWS } from "@/lib/permission-rows";
 import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
 
+import "@/screens/t2/account.css";
+
+/** أيقونةُ كلِّ إذن — **أيقوناتُ الجولة** (`PermissionsIntro::STEP_ICON`) وما ليس فيها بمعناه، بالمفتاح لا بالترتيب. */
+const ROW_ICON: Record<string, string> = {
+  location: "location_on",
+  notifications: "notifications",
+  offerChannel: "notifications_active",
+  backgroundLocation: "my_location",
+  batteryUnrestricted: "battery_charging_full",
+  overlay: "layers",
+  fullScreenIntent: "open_in_full",
+};
 
 export function PermissionsScreen() {
   const goBack = useGoBack("/account");
@@ -55,118 +72,117 @@ export function PermissionsScreen() {
     : [];
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
-        <button
-          type="button"
-          onClick={() => goBack()}
-          aria-label="رجوع"
-          className="pressable text-18 text-muted"
-        >
-          →
-        </button>
-        <h1 className="text-20 font-bold text-ink">أذونات الجهاز</h1>
-      </div>
+    <div className="t2 t2-ax t2-perm">
+      <div className="t2-ax-scroll">
+        <div className="t2-head">
+          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+            <Icon name="arrow_forward" />
+          </button>
+          <h1 className="t2-title">أذونات الجهاز</h1>
+        </div>
 
-      {!alertsAvailable() ? (
-        <p className="rounded-16 border border-line bg-surface p-16 text-12.5 leading-note text-muted">
-          هذه الشاشة تقرأ أذونات الهاتف، وأنت تفتح التطبيق من المتصفّح — فلا
-          شيء هنا يُقرأ. افتحها من تطبيق الكبتن المثبَّت.
-        </p>
-      ) : null}
+        {!alertsAvailable() ? (
+          <section className="t2-callout">
+            <Icon name="info" fill className="muted" />
+            <p className="t2-perm-msg">
+              هذه الشاشة تقرأ أذونات الهاتف، وأنت تفتح التطبيق من المتصفّح — فلا
+              شيء هنا يُقرأ. افتحها من تطبيق الكبتن المثبَّت.
+            </p>
+          </section>
+        ) : null}
 
-      {alertsAvailable() && checked && state === null ? (
-        <p className="rounded-16 border border-warn bg-surface p-16 text-12.5 leading-note text-warn">
-          تعذّرت قراءة حال الأذونات من النظام. لا يعني ذلك أنّها ممنوحة ولا
-          أنّها ممنوعة — أعد فتح الشاشة، وإن تكرّر فافتح إعدادات التطبيق.
-        </p>
-      ) : null}
+        {alertsAvailable() && checked && state === null ? (
+          <section className="t2-callout warn">
+            <Icon name="info" fill />
+            <p className="t2-perm-msg warn">
+              تعذّرت قراءة حال الأذونات من النظام. لا يعني ذلك أنّها ممنوحة ولا
+              أنّها ممنوعة — أعد فتح الشاشة، وإن تكرّر فافتح إعدادات التطبيق.
+            </p>
+          </section>
+        ) : null}
 
-      {state ? (
-        <>
-          {/* **المانعُ في الأعلى ومنفصلٌ** — ورتبةٌ واحدةٌ للكلِّ تجعل الحرجَ
-              يُقرأ اقتراحاً */}
-          {missing.length > 0 ? (
-            <section
-              className="mb-14 rounded-20 border border-danger bg-surface p-18"
-              role="alert"
-            >
-              <h2 className="text-14 font-bold text-danger">
-                لا تصلك طلبات الآن
-              </h2>
-              <p className="mt-6 text-11.5 leading-note text-ink">
-                {missing.map((row) => row.label).join(" · ")} — امنح ما ينقص
-                أدناه ثم عد.
-              </p>
-            </section>
-          ) : (
-            <section className="mb-14 rounded-20 border border-line bg-surface p-18">
-              <h2 className="text-14 font-bold text-ok">كل ما يلزم ممنوح</h2>
-              <p className="mt-6 text-11.5 leading-note text-muted">
-                لا شيء يمنع وصول الطلبات إليك من جهة الأذونات.
-              </p>
-            </section>
-          )}
-
-          <div className="rounded-20 border border-line bg-surface p-4">
-            {ROWS.map((row) => {
-              const on = row.read(state);
-              return (
-                <div
-                  key={row.key}
-                  className="border-b border-line p-14 last:border-0"
-                >
-                  <div className="flex items-baseline justify-between gap-10">
-                    <span className="text-13.5 font-bold text-ink">
-                      {row.label}
-                    </span>
-                    <span
-                      className={
-                        on
-                          ? "text-11.5 font-bold text-ok"
-                          : row.severity === "blocking"
-                            ? "text-11.5 font-bold text-danger"
-                            : "text-11.5 font-bold text-warn"
-                      }
-                    >
-                      {on
-                        ? "ممنوح"
-                        : row.severity === "blocking"
-                          ? "مطلوب"
-                          : "مستحسن"}
-                    </span>
-                  </div>
-                  <p className="mt-4 text-11 leading-note text-muted">
-                    {row.why}
+        {state ? (
+          <>
+            {/* **المانعُ في الأعلى ومنفصلٌ** — ورتبةٌ واحدةٌ للكلِّ تجعل الحرجَ
+                يُقرأ اقتراحاً */}
+            {missing.length > 0 ? (
+              <section className="t2-callout danger" role="alert">
+                <Icon name="error" fill />
+                <div className="t2-callout-main">
+                  <h2 className="t2-callout-title">لا تصلك طلبات الآن</h2>
+                  <p className="t2-callout-body">
+                    {missing.map((row) => row.label).join(" · ")} — امنح ما ينقص
+                    أدناه ثم عد.
                   </p>
-                  {!on && row.open ? (
-                    <button
-                      type="button"
-                      onClick={() => void row.open?.()}
-                      className="pressable mt-8 rounded-12 border border-line px-12 py-8 text-11.5 font-bold text-ink"
-                    >
-                      افتح موضع المنح
-                    </button>
-                  ) : null}
                 </div>
-              );
-            })}
-          </div>
+              </section>
+            ) : (
+              <section className="t2-callout ok">
+                <Icon name="check_circle" fill />
+                <div className="t2-callout-main">
+                  <h2 className="t2-callout-title t2-perm-ok-title">كل ما يلزم ممنوح</h2>
+                  <p className="t2-callout-body">
+                    لا شيء يمنع وصول الطلبات إليك من جهة الأذونات.
+                  </p>
+                </div>
+              </section>
+            )}
 
-          {/* **ما لا نعرفه يُقال «لا نعرف»** — ولا يُدَّعى ضبطُه.
-              **والسطرُ مشروطٌ بالحقل لا مكتوبٌ دائماً**: يومَ يفتح أندرويد
-              باباً يقرأ إعداداتِ المصنّع يصير الحقلُ `true` **فيختفي السطرُ
-              من نفسه** — ونصٌّ ثابتٌ كان سيبقى يعتذر عن شيءٍ صار معروفاً. */}
-          {!state.manufacturerSettingsKnown ? (
-          <p className="mt-14 rounded-16 border border-line bg-surface-2 p-14 text-11 leading-note text-muted">
-            وإعدادات المصنّع لا يقرؤها التطبيق ولا يعرف حالها: «التشغيل
-            التلقائيّ» و«توفير الطاقة الخاص» في هواتف سامسونغ وشاومي وهواوي
-            تُوقف الخدمة بلا أن يظهر لنا شيء. فإن انقطع عملك ولا شيء هنا أحمر،
-            فابحث عنها في إعدادات هاتفك.
-          </p>
-          ) : null}
-        </>
-      ) : null}
+            <div className="t2-perm-list">
+              {ROWS.map((row) => {
+                const on = row.read(state);
+                const tone = on ? "ok" : row.severity === "blocking" ? "danger" : "warn";
+                return (
+                  <div
+                    key={row.key}
+                    className={!on && row.severity === "blocking" ? "t2-perm-row blocking" : "t2-perm-row"}
+                  >
+                    <div className="t2-perm-top">
+                      <span className={`t2-ax-tile ${tone}`} aria-hidden="true">
+                        <Icon name={ROW_ICON[row.key] ?? "verified_user"} />
+                      </span>
+                      <span className="t2-perm-label">{row.label}</span>
+                      <span className={`t2-chip ${tone}`}>
+                        {on
+                          ? "ممنوح"
+                          : row.severity === "blocking"
+                            ? "مطلوب"
+                            : "مستحسن"}
+                      </span>
+                    </div>
+                    <p className="t2-perm-why">{row.why}</p>
+                    {!on && row.open ? (
+                      <button
+                        type="button"
+                        onClick={() => void row.open?.()}
+                        className="t2-perm-open"
+                      >
+                        افتح موضع المنح
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* **ما لا نعرفه يُقال «لا نعرف»** — ولا يُدَّعى ضبطُه.
+                **والسطرُ مشروطٌ بالحقل لا مكتوبٌ دائماً**: يومَ يفتح أندرويد
+                باباً يقرأ إعداداتِ المصنّع يصير الحقلُ `true` **فيختفي السطرُ
+                من نفسه** — ونصٌّ ثابتٌ كان سيبقى يعتذر عن شيءٍ صار معروفاً. */}
+            {!state.manufacturerSettingsKnown ? (
+              <p className="t2-ax-fine t2-perm-maker">
+                <Icon name="info" />
+                <span>
+                  وإعدادات المصنّع لا يقرؤها التطبيق ولا يعرف حالها: «التشغيل
+                  التلقائيّ» و«توفير الطاقة الخاص» في هواتف سامسونغ وشاومي وهواوي
+                  تُوقف الخدمة بلا أن يظهر لنا شيء. فإن انقطع عملك ولا شيء هنا أحمر،
+                  فابحث عنها في إعدادات هاتفك.
+                </span>
+              </p>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

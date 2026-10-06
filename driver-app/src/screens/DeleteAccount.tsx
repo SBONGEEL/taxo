@@ -6,6 +6,10 @@
  * بضياعه كتابةً كما في تطبيق الراكب — والتحويلُ من تطبيق الراكب وحدَه.
  *
  * **والنصوصُ كلُّها من `lib/deletion-text.ts`** — نسخةٌ حرفيّةٌ من تطبيق الراكب.
+ *
+ * **بلغة TAXO 2.0** «C26» (`design/t2-new/captain/C26*.dc.html`): أقسامُ «ما يُحذف · ما يُحفظ · خلال المهلة» بمربّعات «C12»
+ * ونقاط، والفعلُ في ذيلٍ مثبَّتٍ (C10) **أحمرُ** لأنه يمضي إلى حذف. **والمنطقُ حرفاً**: الخطواتُ الثلاث وشروطُ تعطيلها،
+ * والإقرارُ بالمبلغ كتابةً، والنداءُ ثمّ الخروجُ ثمّ الدخول.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -14,13 +18,13 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { getDeletionState, requestDeletion } from "@/api/endpoints";
 import type { DeletionState } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { Field } from "@/components/ui/Field";
 import { useGoBack } from "@/lib/back";
 import { DELETION_TEXT as T, GRACE_DAYS, normalizeAmount } from "@/lib/deletion-text";
 import { useSession } from "@/lib/session";
 import { DISPLAY_LOCALE, currencyLabel, digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/account.css";
 
 type Step = "intro" | "balance" | "confirm";
 
@@ -34,15 +38,39 @@ export function moneyText(amount: string, currency: string): string {
   return `${digits(amount)} ${currencyLabel(currency)}`;
 }
 
+/** نقاطُ القسم — **نقطةٌ صغيرةٌ بلون الخافت** قبل كلِّ سطر (`::before`). */
 function Bullets({ items }: { items: readonly string[] }) {
   return (
-    <ul className="mt-6 space-y-5">
+    <ul className="t2-del-bullets">
       {items.map((item) => (
-        <li key={item} className="text-11.5 leading-snug text-muted">
-          • {item}
-        </li>
+        <li key={item}>{item}</li>
       ))}
     </ul>
+  );
+}
+
+/** قسمٌ بمربّع أيقونته وعنوانه ونقاطه. */
+function Block({
+  icon,
+  tone,
+  title,
+  items,
+}: {
+  icon: string;
+  tone: string;
+  title: string;
+  items: readonly string[];
+}) {
+  return (
+    <section className="t2-del-block">
+      <h2 className="t2-del-block-head">
+        <span className={`t2-ax-tile sm ${tone}`} aria-hidden="true">
+          <Icon name={icon} />
+        </span>
+        {title}
+      </h2>
+      <Bullets items={items} />
+    </section>
   );
 }
 
@@ -66,10 +94,42 @@ export function DeleteAccountScreen() {
 
   useEffect(load, [load]);
 
+  const header = (
+    <div className="t2-head">
+      <button
+        type="button"
+        className="t2-back"
+        aria-label="رجوع"
+        onClick={() => (step === "intro" ? goBack() : setStep("intro"))}
+      >
+        <Icon name="arrow_forward" />
+      </button>
+      <h1 className="t2-title">
+        {step === "balance" ? T.balanceTitle : step === "confirm" ? T.confirmTitle : T.title}
+      </h1>
+    </div>
+  );
+
+  const errorNote = error ? (
+    <p className="t2-note danger" role="alert">
+      <Icon name="error" />
+      {error}
+    </p>
+  ) : null;
+
   if (!state) {
     return (
-      <div className="h-full bg-bg px-16 pt-safe">
-        {error ? <ErrorNote message={error} /> : <Spinner />}
+      <div className="t2 t2-ax t2-del">
+        <div className="t2-ax-scroll">
+          {header}
+          {error ? (
+            errorNote
+          ) : (
+            <div className="t2-ax-center">
+              <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -78,6 +138,7 @@ export function DeleteAccountScreen() {
   const balanceText = moneyText(state.rider_balance, state.currency);
   const acknowledged = normalizeAmount(typed) === state.rider_balance;
   const dueDate = formatDue(new Date(Date.now() + GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString());
+  const mismatch = Boolean(typed) && !acknowledged;
 
   async function confirm() {
     setBusy(true);
@@ -95,102 +156,139 @@ export function DeleteAccountScreen() {
   }
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-nav pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
-        <button
-          type="button"
-          onClick={() => (step === "intro" ? goBack() : setStep("intro"))}
-          aria-label="رجوع"
-          className="pressable text-18 text-muted"
-        >
-          →
-        </button>
-        <h1 className="text-20 font-bold text-ink">
-          {step === "balance" ? T.balanceTitle : step === "confirm" ? T.confirmTitle : T.title}
-        </h1>
-      </div>
+    <div className="t2 t2-ax t2-del">
+      <div className="t2-ax-scroll has-foot">
+        {header}
 
-      {state.blockers.length > 0 ? (
-        <section className="mb-12 rounded-18 border border-warn bg-surface p-15">
-          <p className="mb-8 text-13.5 font-semibold text-warn">{T.blockedTitle}</p>
-          <Bullets items={state.blockers.map((code) => T.blockers[code] ?? code)} />
-        </section>
-      ) : null}
-
-      {step === "intro" ? (
-        <>
-          <section className="mb-12 card p-15">
-            <p className="text-12 leading-snug text-ink">{T.intro}</p>
-            <p className="mt-14 text-13 font-bold text-ink">{T.erasedTitle}</p>
-            <Bullets items={T.erased(state.is_driver)} />
-            <p className="mt-14 text-13 font-bold text-ink">{T.keptTitle}</p>
-            <Bullets items={T.kept} />
-            <p className="mt-14 text-13 font-bold text-ink">{T.graceTitle}</p>
-            <Bullets items={T.grace(state.is_driver)} />
+        {/* **الموانعُ قائمةٌ لا أوّلُ سبب** — بلاغُ النظام (`t2-callout warn`) والفعلُ معطَّلٌ تحته */}
+        {state.blockers.length > 0 ? (
+          <section className="t2-callout warn" role="alert">
+            <Icon name="info" fill />
+            <div className="t2-callout-main">
+              <p className="t2-callout-title">{T.blockedTitle}</p>
+              <Bullets items={state.blockers.map((code) => T.blockers[code] ?? code)} />
+            </div>
           </section>
-          <Button
-            variant="danger"
-            disabled={state.blockers.length > 0}
-            onClick={() => setStep(hasBalance ? "balance" : "confirm")}
-          >
-            {T.next}
-          </Button>
-        </>
-      ) : null}
+        ) : null}
 
-      {step === "balance" ? (
-        <>
-          <p className="mb-12 text-12.5 leading-snug text-ink">{T.balanceIntro(balanceText)}</p>
-          {state.transfer_enabled ? (
-            <section className="mb-12 card p-15">
-              <p className="text-13 font-bold text-ink">{T.transferTitle}</p>
-              <p className="mt-6 text-11.5 leading-snug text-muted">{T.transferElsewhere}</p>
-            </section>
-          ) : null}
-          <section className="mb-12 card p-15">
-            <p className="text-13 font-bold text-ink">{T.forfeitTitle}</p>
-            <div className="mt-10">
-              <Field
-                label={T.forfeitLabel(balanceText)}
+        {step === "intro" ? (
+          <>
+            <p className="t2-ax-card t2-del-intro">{T.intro}</p>
+            <div className="t2-del-blocks">
+              <Block icon="delete" tone="danger" title={T.erasedTitle} items={T.erased(state.is_driver)} />
+              <Block icon="inventory_2" tone="" title={T.keptTitle} items={T.kept} />
+              <Block icon="schedule" tone="warn" title={T.graceTitle} items={T.grace(state.is_driver)} />
+            </div>
+          </>
+        ) : null}
+
+        {step === "balance" ? (
+          <>
+            <p className="t2-del-lead">{T.balanceIntro(balanceText)}</p>
+            {state.transfer_enabled ? (
+              <section className="t2-ax-card">
+                <h2 className="t2-del-block-head">
+                  <span className="t2-ax-tile sm" aria-hidden="true">
+                    <Icon name="swap_horiz" />
+                  </span>
+                  {T.transferTitle}
+                </h2>
+                <p className="t2-del-text">{T.transferElsewhere}</p>
+              </section>
+            ) : null}
+            <section className="t2-ax-card">
+              <h2 className="t2-del-block-head">
+                <span className="t2-ax-tile sm danger" aria-hidden="true">
+                  <Icon name="delete" />
+                </span>
+                {T.forfeitTitle}
+              </h2>
+              <label className="t2-ax-label" htmlFor="t2-del-forfeit">
+                {T.forfeitLabel(balanceText)}
+              </label>
+              <input
+                id="t2-del-forfeit"
+                className="t2-ax-field t2-del-field"
                 dir="ltr"
                 inputMode="decimal"
                 placeholder={state.rider_balance}
                 value={typed}
-                error={typed && !acknowledged ? T.forfeitMismatch : undefined}
+                aria-invalid={mismatch || undefined}
+                aria-describedby={mismatch ? "t2-del-forfeit-error" : "t2-del-forfeit-hint"}
                 onChange={(event) => setTyped(event.target.value)}
               />
-              <p className="mt-6 text-11 text-muted">{T.forfeitHint}</p>
-            </div>
+              {/* **سببُ الخطأ تحت حقله** (§٦٢/٢٠) */}
+              {mismatch ? (
+                <p className="t2-note danger" id="t2-del-forfeit-error" role="alert">
+                  <Icon name="error" />
+                  {T.forfeitMismatch}
+                </p>
+              ) : null}
+              <p className="t2-ax-hint" id="t2-del-forfeit-hint">
+                {T.forfeitHint}
+              </p>
+            </section>
+          </>
+        ) : null}
+
+        {step === "confirm" ? (
+          <section className="t2-ax-card t2-del-confirm">
+            <span className="t2-del-confirm-icon" aria-hidden="true">
+              <Icon name="delete" />
+            </span>
+            <p className="t2-del-confirm-body">{T.confirmBody(dueDate)}</p>
+            {hasBalance ? (
+              <p className="t2-del-confirm-more">{T.confirmForfeit(balanceText)}</p>
+            ) : null}
+            <p className="t2-del-confirm-out">{T.confirmSignOut}</p>
           </section>
-          <Button variant="danger" disabled={!acknowledged} onClick={() => setStep("confirm")}>
+        ) : null}
+
+        {errorNote}
+      </div>
+
+      <div className="t2-ax-foot">
+        {step === "intro" ? (
+          <button
+            type="button"
+            className="t2-ax-danger"
+            disabled={state.blockers.length > 0}
+            onClick={() => setStep(hasBalance ? "balance" : "confirm")}
+          >
             {T.next}
-          </Button>
-        </>
-      ) : null}
-
-      {step === "confirm" ? (
-        <section className="card p-15">
-          <p className="text-12.5 leading-snug text-ink">{T.confirmBody(dueDate)}</p>
-          {hasBalance ? (
-            <p className="mt-6 text-12.5 leading-snug text-ink">{T.confirmForfeit(balanceText)}</p>
-          ) : null}
-          <p className="mt-6 text-11.5 leading-snug text-muted">{T.confirmSignOut}</p>
-          <div className="mt-14 flex gap-10">
-            <Button variant="danger" loading={busy} onClick={() => void confirm()}>
-              {T.confirmButton}
-            </Button>
-            <Button variant="secondary" disabled={busy} onClick={() => goBack()}>
+          </button>
+        ) : null}
+        {step === "balance" ? (
+          <button
+            type="button"
+            className="t2-ax-danger"
+            disabled={!acknowledged}
+            onClick={() => setStep("confirm")}
+          >
+            {T.next}
+          </button>
+        ) : null}
+        {step === "confirm" ? (
+          <div className="t2-ax-pair">
+            <button
+              type="button"
+              className="t2-ax-danger"
+              disabled={busy}
+              onClick={() => void confirm()}
+            >
+              {busy ? "…" : T.confirmButton}
+            </button>
+            <button
+              type="button"
+              className="t2-ax-ghost"
+              disabled={busy}
+              onClick={() => goBack()}
+            >
               {T.cancelButton}
-            </Button>
+            </button>
           </div>
-        </section>
-      ) : null}
-
-      {error ? (
-        <div className="mt-12">
-          <ErrorNote message={error} />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

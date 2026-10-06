@@ -16,34 +16,40 @@
  *
  * **وجملةُ الحالة تُبنى هنا** من حقائقَ ترسلها الخلفية لا نصّاً جاهزاً — نفسُ
  * قاعدةِ بناء نصِّ الإشعار من `data`: الخلفيةُ لا تعرف من يقرأ.
+ *
+ * **بلغة TAXO 2.0** «C28» (`design/t2-new/captain/C28*.dc.html`): الرمزُ بطلُ الشاشة على الجمر الخافت (بطاقةُ «C10» «عمولة»)
+ * وزرّا النسخ والمشاركة فيه، والبرنامجان صفوفٌ بمربّع «C12» ومبلغٍ بخطّ الأرقام، ومن سجّل قائمةٌ بنبرة مرحلته. **والمنطقُ حرفاً.**
  */
 
 import { useEffect, useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { getMyReferrals } from "@/api/endpoints";
 import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
-import { digits, cn } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/account.css";
 
 /** أوّلُ شرطٍ ناقصٍ هو الجواب — وسردُ الثلاثة يخفي المطلوبَ الآن.
  *
  * **ولا «بانتظار إثبات الجنس» بعد التعميم**: كان شرطاً فصار علاوةً، فوسمُه
  * كان سيقول إن الإحالةَ متوقّفةٌ على ما لا يوقفها.
+ *
+ * **والنبرةُ اسمٌ لا صنفُ لون** (`ok` · `muted` · `warn` · `""` للحبر) — يرسمها صنفُ الشاشة بالرموز.
  */
 function stageOf(row: ReferralStage): { text: string; tone: string } {
-  if (row.rewarded) return { text: "وصلت المكافأة", tone: "text-ok" };
+  if (row.rewarded) return { text: "وصلت المكافأة", tone: "ok" };
   if (row.referral_type === "driver") {
     if (!row.driver_approved) {
-      return { text: "حسابه قيد المراجعة", tone: "text-muted" };
+      return { text: "حسابه قيد المراجعة", tone: "muted" };
     }
     if (!row.has_subscription) {
-      return { text: "لم يشترِ اشتراكاً بعد", tone: "text-muted" };
+      return { text: "لم يشترِ اشتراكاً بعد", tone: "muted" };
     }
   }
   if (row.rides_done < row.rides_required) {
@@ -51,14 +57,14 @@ function stageOf(row: ReferralStage): { text: string; tone: string } {
       text: `أكمل ${digits(String(row.rides_done))} من ${digits(
         String(row.rides_required),
       )} رحلات`,
-      tone: "text-muted",
+      tone: "muted",
     };
   }
   // **فوق السقف يُقال، لا يُصمت عنه**: «مستحقّة ولن تُدفع» حقيقةٌ يملكها صاحبُها
   if (row.over_monthly_cap) {
-    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "text-warn" };
+    return { text: "فوق سقف هذا الشهر — لن تُدفع", tone: "warn" };
   }
-  return { text: "استحقّت — المكافأة في الطريق", tone: "text-ink" };
+  return { text: "استحقّت — المكافأة في الطريق", tone: "" };
 }
 
 export function ReferralsScreen() {
@@ -110,7 +116,8 @@ export function ReferralsScreen() {
 
   async function share() {
     if (!data) return;
-    const text = `سجّل في تاكسو برمزي ${data.code}`;
+    // **TAXO باللاتينية** (§٦٢/٢٠) — كان «تاكسو» في الرسالة التي يرسلها الكبتنُ لمن يدعوه
+    const text = `سجّل في TAXO برمزي ${data.code}`;
     if (navigator.share) {
       try {
         await navigator.share({ text });
@@ -123,182 +130,180 @@ export function ReferralsScreen() {
   }
 
   function amountOf(program: ReferralProgram) {
-    return `${digits(program.reward_amount)} ${currency}`;
+    return (
+      <span className="t2-ref-amount">
+        <span className="t2-ref-amount-num" dir="ltr">
+          {digits(program.reward_amount)}
+        </span>
+        <span className="t2-ref-amount-cur">{currency}</span>
+      </span>
+    );
   }
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
-        <button
-          type="button"
-          onClick={() => goBack()}
-          aria-label="رجوع"
-          className="pressable text-18 text-muted"
-        >
-          →
-        </button>
-        <h1 className="text-20 font-bold text-ink">أَحِلْ صديقك</h1>
-      </div>
+    <div className="t2 t2-ax">
+      <div className="t2-ax-scroll">
+        <div className="t2-head">
+          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+            <Icon name="arrow_forward" />
+          </button>
+          <h1 className="t2-title">أَحِلْ صديقك</h1>
+        </div>
 
-      <ErrorNote message={error} />
-      {data === null ? (
-        <Spinner />
-      ) : (
-        <div className="space-y-14">
-          <section className="card p-16 text-center">
-            <p className="text-12 text-muted">رمز الإحالة الخاص بك</p>
-            {/* **لاتينيٌّ ومتباعدُ الحروف**: يُقرأ ليُنطق ويُكتب في شاشةٍ أخرى */}
-            <p
-              dir="ltr"
-              className="mt-8 text-26 font-bold tracking-code text-ink"
-            >
-              {data.code}
-            </p>
-            <div className="mt-14 flex gap-10">
-              <button
-                type="button"
-                onClick={() => void copy()}
-                className="pressable flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-                {copied ? "نُسخ" : "انسخ"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void share()}
-                className="pressable flex flex-1 items-center justify-center gap-8 rounded-13 border border-line bg-surface-2 py-12 text-13 font-semibold text-ink"
-              >
-                <Share2 size={16} />
-                شارك
-              </button>
+        {error ? (
+          <p className="t2-note danger" role="alert">
+            <Icon name="error" />
+            {error}
+          </p>
+        ) : null}
+        {data === null ? (
+          error ? null : (
+            <div className="t2-ax-center">
+              <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
             </div>
-          </section>
-
-          {/* **رمزٌ واحدٌ وبرنامجان** — شرطُ المالك الثاني: النصُّ يشرح أن الرمز
-              يعمل مع الاثنين وأن المكافأة تختلف بحسب من يسجّل به */}
-          {pays ? (
-            <section className="card p-16">
-              <h2 className="text-13.5 font-bold text-ink">
-                رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به
-              </h2>
-              <div className="mt-10 space-y-8">
-                {data.programs.map((program) => {
-                  const active =
-                    program.enabled && Number(program.reward_amount) > 0;
-                  const isDriver = program.referral_type === "driver";
-                  return (
-                    <div
-                      key={program.referral_type}
-                      className="flex items-start justify-between gap-10 rounded-13 border border-line bg-surface-2 p-12"
-                    >
-                      <div>
-                        <p className="text-12.5 font-semibold text-ink">
-                          {isDriver ? "سجّل كبتناً" : "سجّل راكباً"}
-                        </p>
-                        <p className="mt-4 text-11.5 text-muted">
-                          {isDriver
-                            ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${digits(
-                                String(program.required_rides),
-                              )} رحلات`
-                            : `يُكمل ${digits(
-                                String(program.required_rides),
-                              )} رحلات`}
-                        </p>
-                        {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** —
-                            ورقمان منفصلان يُقرأ ثانيهما بديلاً عن الأول */}
-                        {isDriver && Number(program.female_bonus_amount) > 0 ? (
-                          <p className="mt-4 text-11.5 text-ok">
-                            وإن كانت سائقةً موثَّقة:{" "}
-                            {digits(program.female_total_amount)} {currency}{" "}
-                            — الأساسُ وعلاوتُه معاً
-                          </p>
-                        ) : null}
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0 text-13 font-bold",
-                          active ? "text-ink" : "text-muted",
-                        )}
-                      >
-                        {active ? amountOf(program) : "—"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* **السقفُ قبل أن يدعو** — شرطُ المالك الثالث بحرفه */}
-              {cap !== undefined ? (
-                <p
-                  className={cn(
-                    "mt-10 text-11.5",
-                    left === 0 ? "text-warn" : "text-muted",
-                  )}
+          )
+        ) : (
+          <>
+            <section className="t2-ref-code">
+              <p className="t2-ref-code-k">رمز الإحالة الخاص بك</p>
+              {/* **لاتينيٌّ ومتباعدُ الحروف**: يُقرأ ليُنطق ويُكتب في شاشةٍ أخرى */}
+              <p dir="ltr" className="t2-ref-code-v">
+                {data.code}
+              </p>
+              <div className="t2-ref-acts">
+                <button
+                  type="button"
+                  onClick={() => void copy()}
+                  className={copied ? "t2-ref-act done" : "t2-ref-act"}
                 >
-                  {left === 0
-                    ? `بلغتَ سقفَ هذا الشهر (${digits(String(cap))}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
-                    : `سقفُ هذا الشهر ${digits(String(cap))} إحالات — بقي لك ${digits(String(left))}.`}
-                </p>
-              ) : null}
-
-              <p className="mt-8 text-11.5 text-muted">
-                مجموع ما وصلك: {digits(data.total_rewarded)} {currency}
-              </p>
+                  <Icon name={copied ? "check" : "content_copy"} />
+                  {copied ? "نُسخ" : "انسخ"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void share()}
+                  className="t2-ref-act"
+                >
+                  <Icon name="share" />
+                  شارك
+                </button>
+              </div>
             </section>
-          ) : (
-            <section className="card p-16">
-              <h2 className="text-13.5 font-bold text-ink">كيف تعمل</h2>
-              <p className="mt-8 text-12.5 leading-relaxed text-muted">
-                شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الإحالةُ في
-                حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.
-              </p>
-            </section>
-          )}
 
-          <section>
-            <h2 className="mb-8 text-13.5 font-bold text-ink">من سجّل برمزك</h2>
-            {data.referrals.length === 0 ? (
-              <p className="card p-16 text-center text-12.5 text-muted">
-                لم يسجّل أحدٌ برمزك بعد.
-              </p>
+            {/* **رمزٌ واحدٌ وبرنامجان** — شرطُ المالك الثاني: النصُّ يشرح أن الرمز
+                يعمل مع الاثنين وأن المكافأة تختلف بحسب من يسجّل به */}
+            {pays ? (
+              <>
+                <h2 className="t2-section">رمزك واحدٌ، والمكافأةُ بحسب من يسجّل به</h2>
+                <section className="t2-ref-programs">
+                  {data.programs.map((program) => {
+                    const active =
+                      program.enabled && Number(program.reward_amount) > 0;
+                    const isDriver = program.referral_type === "driver";
+                    return (
+                      <div key={program.referral_type} className="t2-ref-program">
+                        <span className="t2-ax-tile sm accent" aria-hidden="true">
+                          <Icon name={isDriver ? "local_taxi" : "person_add"} />
+                        </span>
+                        <div className="t2-ref-program-main">
+                          <p className="t2-ref-program-title">
+                            {isDriver ? "سجّل كبتناً" : "سجّل راكباً"}
+                          </p>
+                          <p className="t2-ref-program-cond">
+                            {isDriver
+                              ? `يُعتمد حسابه ويشتري اشتراكاً ويُكمل ${digits(
+                                  String(program.required_rides),
+                                )} رحلات`
+                              : `يُكمل ${digits(
+                                  String(program.required_rides),
+                                )} رحلات`}
+                          </p>
+                          {/* **العلاوةُ بجانب الأساس بجملةٍ تقول المُحصَّل** —
+                              ورقمان منفصلان يُقرأ ثانيهما بديلاً عن الأول */}
+                          {isDriver && Number(program.female_bonus_amount) > 0 ? (
+                            <p className="t2-ref-program-bonus">
+                              وإن كانت سائقةً موثَّقة:{" "}
+                              {digits(program.female_total_amount)} {currency}{" "}
+                              — الأساسُ وعلاوتُه معاً
+                            </p>
+                          ) : null}
+                        </div>
+                        {active ? amountOf(program) : <span className="t2-ref-amount off">—</span>}
+                      </div>
+                    );
+                  })}
+
+                  {/* **السقفُ قبل أن يدعو** — شرطُ المالك الثالث بحرفه */}
+                  {cap !== undefined ? (
+                    <p className={left === 0 ? "t2-ref-note warn" : "t2-ref-note"}>
+                      {left === 0
+                        ? `بلغتَ سقفَ هذا الشهر (${digits(String(cap))}). ما يُسجَّل بعده يبقى منسوباً لك ولا يُدفع حتى الشهر القادم.`
+                        : `سقفُ هذا الشهر ${digits(String(cap))} إحالات — بقي لك ${digits(String(left))}.`}
+                    </p>
+                  ) : null}
+
+                  <p className="t2-ref-note">
+                    مجموع ما وصلك: {digits(data.total_rewarded)} {currency}
+                  </p>
+                </section>
+              </>
             ) : (
-              <Stagger className="space-y-8">
-                {data.referrals.map((row) => {
-                  const where = stageOf(row);
-                  return (
-                    <StaggerItem
-                      key={row.id}
-                      className="flex items-center justify-between gap-10 rounded-13 border border-line bg-surface p-12"
-                    >
-                      <span>
-                        <span
-                          className={cn("block text-12.5 font-medium", where.tone)}
-                        >
-                          {where.text}
+              <section className="t2-ax-card t2-ref-how">
+                <h2 className="t2-ref-how-title">كيف تعمل</h2>
+                <p className="t2-ref-how-text">
+                  شارك رمزك مع من تدعوه، فيكتبه عند التسجيل. وتُسجَّل الإحالةُ في
+                  حسابك من الآن — والمكافأةُ تُعلن هنا متى حُدِّدت.
+                </p>
+              </section>
+            )}
+
+            <section>
+              <h2 className="t2-section">من سجّل برمزك</h2>
+              {data.referrals.length === 0 ? (
+                <p className="t2-empty">لم يسجّل أحدٌ برمزك بعد.</p>
+              ) : (
+                <Stagger className="t2-ref-rows">
+                  {data.referrals.map((row) => {
+                    const where = stageOf(row);
+                    const isDriver = row.referral_type === "driver";
+                    return (
+                      <StaggerItem key={row.id} className="t2-ref-row">
+                        <span className="t2-ax-tile sm" aria-hidden="true">
+                          <Icon name={isDriver ? "local_taxi" : "person"} />
                         </span>
-                        <span className="mt-2 block text-11 text-muted">
-                          {row.referral_type === "driver" ? "كبتن" : "راكب"}
+                        <span className="t2-ref-row-main">
+                          <span
+                            className={where.tone ? `t2-ref-row-stage ${where.tone}` : "t2-ref-row-stage"}
+                          >
+                            {where.text}
+                          </span>
+                          <span className="t2-ref-row-kind">
+                            {isDriver ? "كبتن" : "راكب"}
+                          </span>
                         </span>
-                      </span>
-                      <span className="text-11.5 text-muted">
-                        {row.rewarded && row.reward_amount
-                          ? `${digits(row.reward_amount)} ${
-                              row.reward_currency
+                        {row.rewarded && row.reward_amount ? (
+                          <span className="t2-ref-amount">
+                            <span className="t2-ref-amount-num sm" dir="ltr">
+                              {digits(row.reward_amount)}
+                            </span>
+                            <span className="t2-ref-amount-cur">
+                              {row.reward_currency
                                 ? CURRENCY_LABEL[
                                     row.reward_currency as "JOD" | "LYD"
                                   ]
-                                : currency
-                            }`
-                          : null}
-                      </span>
-                    </StaggerItem>
-                  );
-                })}
-              </Stagger>
-            )}
-          </section>
-        </div>
-      )}
+                                : currency}
+                            </span>
+                          </span>
+                        ) : null}
+                      </StaggerItem>
+                    );
+                  })}
+                </Stagger>
+              )}
+            </section>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -10,20 +10,40 @@
  *
  * **ولا اشتراكَ: يُقال ولا يُخفى الكراج.** المركباتُ ملكُه اشترك أو لم يشترك،
  * والذي يقف هو **ظهورُها على الخريطة** — فتُقال العلّةُ ومعها بابُها.
+ *
+ * **خلف مفتاح السوق** (`vehicle_skins_enabled`، يُقرأ من `useGarage`): مطفأً يعود المسارُ إلى «حسابي» ولا صفَّ إليه —
+ * **وبُنيت بلغة TAXO 2.0 جاهزةً ليومِ يُشعَل** (§٦٢/١٣). «C31» (`design/t2-new/captain/C31*.dc.html`): بطاقاتُ متجر المركبات
+ * «C11» بعينها (`t2-store-card` من `t2.css`)، والمتجرُ بابٌ بارزٌ على الجمر الخافت، وتنبيهُ الاشتراك صفُّ «C12» الأحمر بزرّه.
+ * **والمنطقُ حرفاً**: القراءةُ عند الفتح، والتفعيلُ من ورقة المنتج نفسِها (`SkinDetailSheet`، بجسر الألوان كما في المتجر).
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Store } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import type { VehicleSkin } from "@/api/types";
-import { SkinCard } from "@/components/skins/SkinCard";
+import { SkinArt } from "@/components/skins/SkinArt";
 import { SkinDetailSheet } from "@/components/skins/SkinDetailSheet";
-import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { useGarage } from "@/lib/garage";
 import { RARITY_LABEL } from "@/lib/skins";
+import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/t2.css";
+import "@/screens/t2/account.css";
+
+/** **سطرُ البطاقة القائمة بنصّه**: المتبقّي حين تكون الكميّةُ محدودة، ومن اقتناها — و`null` بلا حدٍّ فلا سطر. */
+function stockLine(skin: VehicleSkin): string | null {
+  if (skin.remaining !== null) {
+    return `${skin.remaining > 0 ? `متبقٍّ ${digits(String(skin.remaining))}` : "نفدت الكمية"} · ${digits(
+      String(skin.owners_count),
+    )} اقتنوها`;
+  }
+  return skin.owners_count > 0
+    ? `${digits(String(skin.owners_count))} اقتنوها`
+    : null;
+}
 
 export function GarageScreen() {
   const goBack = useGoBack();
@@ -65,8 +85,10 @@ export function GarageScreen() {
 
   if (loading && !garage) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg">
-        <Spinner />
+      <div className="t2 t2-ax">
+        <div className="t2-ax-center">
+          <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
+        </div>
       </div>
     );
   }
@@ -74,18 +96,13 @@ export function GarageScreen() {
   const skins = garage?.skins ?? [];
 
   return (
-    <div className="relative h-full bg-bg">
-      <div className="scr h-full px-16 pb-nav pt-safe">
-        <div className="mb-16 flex items-center gap-10">
-          <button
-            type="button"
-            onClick={() => goBack()}
-            aria-label="رجوع"
-            className="pressable text-18 text-muted"
-          >
-            →
+    <div className="t2 t2-ax">
+      <div className="t2-ax-scroll">
+        <div className="t2-head">
+          <button type="button" className="t2-back" aria-label="رجوع" onClick={() => goBack()}>
+            <Icon name="arrow_forward" />
           </button>
-          <h1 className="text-20 font-bold text-ink">مركباتي</h1>
+          <h1 className="t2-title">مركباتي</h1>
         </div>
 
         {/* **زرُّ المتجر بارزٌ في الأعلى**: الكراجُ يمتلئ من المتجر، ومن فتح
@@ -93,17 +110,16 @@ export function GarageScreen() {
         <button
           type="button"
           onClick={() => navigate("/account/garage/store")}
-          className="pressable mb-16 flex w-full items-center gap-12 rounded-16 bg-brand px-15 py-14 text-start"
+          className="t2-gar-store"
         >
-          <Store size={18} className="text-brand-ink" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-14 font-bold text-brand-ink">
-              متجر المركبات
-            </span>
-            <span className="block text-11 text-brand-ink opacity-80">
-              مركباتٌ مميزةٌ ونادرةٌ وأسطورية
-            </span>
+          <span className="t2-ax-tile" aria-hidden="true">
+            <Icon name="storefront" />
           </span>
+          <span className="t2-gar-store-main">
+            <span className="t2-gar-store-title">متجر المركبات</span>
+            <span className="t2-gar-store-sub">مركباتٌ مميزةٌ ونادرةٌ وأسطورية</span>
+          </span>
+          <Icon name="chevron_left" className="t2-ax-chev" />
         </button>
 
         {/* **العلّةُ ومعها بابُها**: «لن تظهر» بلا زرٍّ يقود إلى الاشتراك
@@ -112,46 +128,74 @@ export function GarageScreen() {
           <button
             type="button"
             onClick={() => navigate("/subscription")}
-            className="pressable mb-14 flex w-full items-center gap-10 rounded-14 border border-danger bg-surface px-13 py-11 text-start"
+            className="t2-gar-nosub"
           >
-            <span className="block h-36 w-6 shrink-0 rounded-4 bg-danger" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-12.5 font-bold text-ink">
-                مركبتك لا تظهر على الخريطة
-              </span>
-              <span className="block text-11 leading-snug text-muted">
+            <span className="t2-ax-tile danger" aria-hidden="true">
+              <Icon name="visibility_off" />
+            </span>
+            <span className="t2-gar-nosub-main">
+              <span className="t2-gar-nosub-title">مركبتك لا تظهر على الخريطة</span>
+              <span className="t2-gar-nosub-text">
                 بلا اشتراكٍ ساري لا تصلك طلبات ولا يراك أحد. اشترك لتستقبل
                 الطلبات.
               </span>
             </span>
-            <span className="shrink-0 rounded-9 bg-brand px-12 py-7 text-11.5 font-bold text-brand-ink">
-              اشترك
-            </span>
+            <span className="t2-gar-nosub-go">اشترك</span>
           </button>
         ) : null}
 
-        <ErrorNote message={error} />
+        {error ? (
+          <p className="t2-note danger" role="alert">
+            <Icon name="error" />
+            {error}
+          </p>
+        ) : null}
 
         {skins.length === 0 ? (
-          <EmptyNote
-            title="لا مركبة في كراجك بعد"
-            hint="أول اشتراكٍ يهديك واحدة، والمتجر فيه غيرها."
-          />
+          <div className="t2-empty t2-ax-empty">
+            <b>لا مركبة في كراجك بعد</b>
+            <span>أول اشتراكٍ يهديك واحدة، والمتجر فيه غيرها.</span>
+          </div>
         ) : (
           <>
-            <div className="mb-10 mt-4 text-12 text-muted">
+            <p className="t2-gar-lede">
               المفعَّلةُ وحدَها تظهر على الخريطة — اضغط أيَّ مركبةٍ لتفعيلها.
+            </p>
+            <div className="t2-gar-grid">
+              {skins.map((skin) => {
+                const stock = stockLine(skin);
+                return (
+                  // **بطاقةُ «C11» بعينها** — الضغطُ يفتح ورقةَ المنتج وفيها «فعّلها»، كما كانت البطاقةُ القائمة
+                  <button
+                    key={skin.id}
+                    type="button"
+                    className={skin.active ? "t2-store-card on" : "t2-store-card"}
+                    onClick={() => setOpen(skin)}
+                  >
+                    <span className="t2-store-well">
+                      <SkinArt skin={skin} className="t2-store-art" />
+                    </span>
+                    <span className="t2-store-card-text">
+                      <span className="t2-store-card-name">{skin.name}</span>
+                      <span className="t2-store-card-kind">{RARITY_LABEL[skin.rarity]}</span>
+                    </span>
+                    {/* **المفعَّلةُ معلَّمةٌ بعلامتين لا بواحدة**: الإطارُ **والكلمة** — الإطارُ وحدَه يُقرأ «مختارة» */}
+                    {skin.active ? (
+                      <span className="t2-store-tag ok">مفعّلة</span>
+                    ) : (
+                      <span className="t2-store-tag">في كراجك</span>
+                    )}
+                    {stock ? <span className="t2-store-stock">{stock}</span> : null}
+                    {skin.active ? (
+                      <span className="t2-store-check" aria-hidden="true">
+                        <Icon name="check" />
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
-            <div className="grid grid-cols-2 gap-10">
-              {skins.map((skin) => (
-                <SkinCard
-                  key={skin.id}
-                  skin={skin}
-                  onOpen={() => setOpen(skin)}
-                />
-              ))}
-            </div>
-            <p className="mt-14 text-11 leading-note text-muted">
+            <p className="t2-gar-fine">
               مركبتك واحدةٌ لحسابك كلِّه — تظهر مهما كانت السيارة التي تقودها
               اليوم. وأنواعُها: {Object.values(RARITY_LABEL).join(" · ")}.
             </p>
@@ -159,14 +203,17 @@ export function GarageScreen() {
         )}
       </div>
 
+      {/* **ورقةُ المنتج نفسُها** — بألوان الهوية عبر جسر الألوان القائمة (`.t2-legacy`)، كما في المتجر */}
       {open ? (
-        <SkinDetailSheet
-          skin={open}
-          busy={busy}
-          onBuy={null}
-          onActivate={() => void choose(open)}
-          onClose={() => setOpen(null)}
-        />
+        <div className="t2-legacy t2-store-sheet">
+          <SkinDetailSheet
+            skin={open}
+            busy={busy}
+            onBuy={null}
+            onActivate={() => void choose(open)}
+            onClose={() => setOpen(null)}
+          />
+        </div>
       ) : null}
     </div>
   );

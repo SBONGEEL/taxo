@@ -10,42 +10,45 @@
  *
  * **ولا تخمينَ على غير محسوم**: طلبٌ ما زال `created`/`pending` يبقى معلّقاً
  * — لا نجاحاً يُفرح ولا فشلاً يُقلق — وتُعاد المحاولة بضغطة.
+ *
+ * **بلغة TAXO 2.0** «C29» (`design/t2-new/captain/C29*.dc.html`): شاشةُ حالٍ بدائرةٍ بنبرة الجواب (دائرةُ «C08» مكبَّرة)،
+ * والمبلغُ كما يصل بخطّ الأرقام، وزرٌّ واحدٌ في ذيلٍ مثبَّت (C10). **والمنطقُ حرفاً.**
  */
 
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getCardOrder } from "@/api/endpoints";
 import type { CardOrder } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/account.css";
 
 const SETTLED = {
   paid: {
-    icon: CheckCircle2,
-    tone: "text-ok",
+    icon: "check",
+    tone: "ok",
     title: "تم الدفع",
     body: "فُعّل اشتراكك — تجد تفاصيله في شاشة الاشتراك.",
   },
   failed: {
-    icon: XCircle,
-    tone: "text-danger",
+    icon: "close",
+    tone: "danger",
     title: "لم يتم الدفع",
     body: "لم يُخصم من بطاقتك شيء. جرّب مرة أخرى أو ادفع من محفظتك.",
   },
   cancelled: {
-    icon: XCircle,
-    tone: "text-muted",
+    icon: "close",
+    tone: "",
     title: "أُلغيت العملية",
     body: "لم يُخصم من بطاقتك شيء.",
   },
   refunded: {
-    icon: CheckCircle2,
-    tone: "text-muted",
+    icon: "undo",
+    tone: "",
     title: "استُرجع المبلغ",
     body: "أعادت الإدارة المبلغ إلى بطاقتك.",
   },
@@ -87,49 +90,64 @@ export function CardReturnScreen() {
   }, [check]);
 
   const settled = order ? SETTLED[order.status as keyof typeof SETTLED] : null;
-  const Icon = settled?.icon ?? Clock;
+  // **غيرُ المحسوم بالكهرمان وساعته** — لا أخضرَ يُفرح ولا أحمرَ يُقلق
+  const tone = settled ? settled.tone : "warn";
 
   return (
-    <div className="flex h-full flex-col justify-center bg-bg px-26 pb-safe pt-safe text-center">
-      {loading ? (
-        <Spinner className="mx-auto" />
-      ) : (
-        <>
-          <Icon
-            size={54}
-            className={`mx-auto mb-16 ${settled?.tone ?? "text-warn"}`}
-          />
-          <h1 className="text-19 font-bold text-ink">
-            {settled?.title ?? "لم يُحسم بعد"}
-          </h1>
-          <p className="mt-8 text-12.5 leading-note text-muted">
-            {settled?.body ??
-              "لم يصل جواب المزود بعد. لا تدفع مرة أخرى — أعد الاستعلام بعد لحظات."}
-          </p>
-
-          {order ? (
-            <p className="mt-14 text-15 font-bold text-ink">
-              {digits(order.amount)} {CURRENCY_LABEL[order.currency]}
-            </p>
-          ) : null}
-
-          <div className="mt-16">
-            <ErrorNote message={error} />
+    <div className="t2 t2-ax t2-cret">
+      <div className={loading ? "t2-ax-scroll" : "t2-ax-scroll has-foot"}>
+        {loading ? (
+          <div className="t2-ax-center">
+            <span className="t2-ax-spin" role="status" aria-label="جارٍ التحميل" />
           </div>
+        ) : (
+          <div className="t2-cret-body">
+            <span className={tone ? `t2-cret-badge ${tone}` : "t2-cret-badge"} aria-hidden="true">
+              <Icon name={settled?.icon ?? "schedule"} />
+            </span>
+            <h1 className="t2-cret-title">
+              {settled?.title ?? "لم يُحسم بعد"}
+            </h1>
+            <p className="t2-cret-text">
+              {settled?.body ??
+                "لم يصل جواب المزود بعد. لا تدفع مرة أخرى — أعد الاستعلام بعد لحظات."}
+            </p>
 
+            {order ? (
+              <div className="t2-ax-money t2-cret-amount">
+                <span className="t2-ax-money-num" dir="ltr">
+                  {digits(order.amount)}
+                </span>
+                <span className="t2-ax-money-cur">{CURRENCY_LABEL[order.currency]}</span>
+              </div>
+            ) : null}
+
+            {error ? (
+              <p className="t2-note danger" role="alert">
+                <Icon name="error" />
+                {error}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {loading ? null : (
+        <div className="t2-ax-foot">
           {settled ? (
-            <Button
-              className="mt-16"
+            <button
+              type="button"
+              className="t2-ax-cta"
               onClick={() => navigate("/subscription", { replace: true })}
             >
               إلى الاشتراك
-            </Button>
+            </button>
           ) : (
-            <Button className="mt-16" onClick={() => void check()}>
+            <button type="button" className="t2-ax-cta" onClick={() => void check()}>
               أعد الاستعلام
-            </Button>
+            </button>
           )}
-        </>
+        </div>
       )}
     </div>
   );
