@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
@@ -22,6 +23,47 @@ REQUEST_TIMEOUT_SECONDS = 10.0
 
 _KM = Decimal("0.001")
 _MIN = Decimal("0.01")
+
+# **كلمةُ Mapbox كما هي أو لا شيء** (§٦٢-ج/٤٢): نوعُ المناورة واتجاهُها مفرداتٌ
+# قصيرةٌ معروفة («turn» · «sharp right»، وأطولُها «exit roundabout» بخمسة عشر
+# حرفاً)، وما سواها لا يُخزَّن على الرحلة — **والطولُ شرطٌ مع الشكل**: قِيس أن
+# الشكلَ وحدَه يقبل كلمةً من أربعين حرفاً
+_MANEUVER_WORD = re.compile(r"^[a-z]+( [a-z]+){0,2}$")
+_MANEUVER_MAX = 24
+
+
+def _word(value: object) -> str | None:
+    if isinstance(value, str) and len(value) <= _MANEUVER_MAX and _MANEUVER_WORD.match(value):
+        return value
+    return None
+
+
+def _collect_steps(best: dict) -> list[dict] | None:
+    """خطواتُ المسار كما تُخزَّن على الرحلة — نصُّها ومسافتُها وشكلُها، **ونوعُ مناورتها واتجاهُها**.
+
+    **والسهمُ من النوع والاتجاه لا من النصّ** (§٦٢-ج/٤٢): النصُّ جملةٌ عربيةٌ تتبدّل
+    صياغتُها، والنوعُ والاتجاهُ مفرداتٌ ثابتةٌ يكتبها Mapbox لكلِّ خطوة — **فسهمٌ يُشتقّ
+    من النصّ يُخمَّن، وسهمٌ يُخمَّن خطأً يكذب على من يقود**. وغيابُهما (خطوةٌ بلا
+    مناورةٍ معروفة) خطوةٌ بلا سهمٍ لا خطوةٌ مرفوضة.
+    """
+    collected: list[dict] = []
+    for leg in best.get("legs") or []:
+        for step in leg.get("steps") or []:
+            maneuver = step.get("maneuver") or {}
+            instruction = (maneuver.get("instruction") or "").strip()
+            shape = (step.get("geometry") or {}).get("coordinates")
+            if not instruction or not isinstance(shape, list) or len(shape) < 2:
+                continue
+            collected.append(
+                {
+                    "text": instruction,
+                    "distance_m": int(float(step.get("distance") or 0)),
+                    "shape": [[float(p[0]), float(p[1])] for p in shape],
+                    "maneuver": _word(maneuver.get("type")),
+                    "modifier": _word(maneuver.get("modifier")),
+                }
+            )
+    return collected or None
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,23 +162,7 @@ async def fetch_route(
         if isinstance(coordinates, list) and len(coordinates) >= 2:
             geometry = [[float(point[0]), float(point[1])] for point in coordinates]
 
-    steps: list[dict] | None = None
-    if with_steps:
-        collected: list[dict] = []
-        for leg in best.get("legs") or []:
-            for step in leg.get("steps") or []:
-                instruction = ((step.get("maneuver") or {}).get("instruction") or "").strip()
-                shape = (step.get("geometry") or {}).get("coordinates")
-                if not instruction or not isinstance(shape, list) or len(shape) < 2:
-                    continue
-                collected.append(
-                    {
-                        "text": instruction,
-                        "distance_m": int(float(step.get("distance") or 0)),
-                        "shape": [[float(p[0]), float(p[1])] for p in shape],
-                    }
-                )
-        steps = collected or None
+    steps = _collect_steps(best) if with_steps else None
 
     return Route(
         distance_km=(meters / 1000).quantize(_KM, rounding=ROUND_HALF_UP),

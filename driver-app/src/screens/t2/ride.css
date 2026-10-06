@@ -654,6 +654,21 @@ button.t2-hm-tile { cursor: pointer; }
 .t2-rd-nav.trip { border: 1px solid var(--t2-line); background: var(--t2-surface); }
 /* **ارتفاعُ البطاقة ارتفاعُ مربّع السهم المرسوم (٥٢)** — والسهمُ لا مصدرَ له فلا يُرسم، والبطاقةُ لا تقصر لغيابه */
 .t2-rd-nav.trip .t2-rd-nav-main { min-height: 52px; }
+/* **سهمُ المناورة كما رُسم** (§٦٢-ج/٤٢): ٤٤ على الجمر في C06، ومربّعٌ ٥٢ من الجمر وسهمُه ٣٤ في C07 */
+.t2-rd-nav-ico { flex: none; font-size: 44px; line-height: 1; }
+.t2-rd-nav-tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+}
+.t2-rd-nav-tile .t2-icon { font-size: 34px; }
+.t2-rd-nav-then .t2-icon { flex: none; font-size: 18px; }
 .t2-rd-nav-text { flex: 1; min-width: 0; }
 .t2-rd-nav-dist { display: flex; align-items: baseline; gap: 5px; }
 .t2-rd-nav-num { font-family: var(--t2-font-num); font-size: 26px; font-weight: 700; line-height: 1.1; }

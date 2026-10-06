@@ -6,12 +6,13 @@
  * من بياناتٍ حقيقية، لا مال** (§14).
  *
  * **وما رسمته اللوحةُ ولا مصدرَ له لا يُرسم مكانَه شيء** (§٦١-د/د):
- * - **سهمُ المناورة** (`turn_right` · `straight`): خطواتُ المسار تحمل **النصَّ والمسافةَ والشكلَ** وحدها (`route_line.decode_steps`)
- *   — لا نوعَ مناورة، **وسهمٌ يُخمَّن خطأً يكذب على من يقود**. والنصُّ نفسُه يقول الاتجاه.
+ * - **سهمُ المناورة بُني** (§٦٢-ج/٤٢): الخطوةُ تحمل نوعَ مناورتها واتجاهَها بكلمة Mapbox (`maneuverIcon`) — **وخطوةٌ بلا كلمةٍ
+ *   نصٌّ بلا سهم**، فسهمٌ يُخمَّن خطأً يكذب على من يقود.
  * - **«4 د» إلى نقطة الالتقاء**: الخطُّ المجمَّدُ خطُّ الرحلة نفسِها لا اقترابِ الكبتن — فالوقتُ المحسوبُ منه وقتٌ إلى الوجهة.
  *   **والمسافةُ مستقيمةٌ من موقعه إلى نقطة الالتقاء** (كمسافة العرض نفسِها)، والوقتُ لا يُرسم.
  * - **مسارُ الاقتراب المنقَّط** · **«اتصال» و«رسالة»** · **ملاحظةُ الراكب** · **«أمان»** · **«رمز الرحلة مطابق»** ·
- *   **«كاش»** · **اسمُ الراكب وتقييمُه** · **«حتى الآن»** (عدّادُ أجرةٍ حيّ): لا بابَ لأيٍّ منها اليوم.
+ *   **«كاش»** · **اسمُ الراكب وتقييمُه**: لا بابَ لأيٍّ منها اليوم. **و«حتى الآن» بُني** (§٦٢-ج/٤٢) بمعناه في نظامٍ سعرُه مقدَّم:
+ *   المقدَّرةُ وما تراكم من انتظارٍ ووقفات (`current_fare`) — **لا عدّادَ مسافة**.
  *
  * **وما في الشاشة القائمة ولم يُرسم — باقٍ بلغة اللوحة**: صورةُ الراكب ببلاغها · الأجرةُ المقدَّرة · حالُ المشاركة ·
  * المحطاتُ بعناوينها وعدّادُ انتظارها ورسمُه · الوقفةُ غيرُ المخطَّطة («نقطة توقف» · «استئناف») · «وصلتُ المحطة» ·
@@ -25,7 +26,7 @@ import { type CancelReason, useActiveRide, useElapsedMinutes } from "@/component
 import { RiderAvatar } from "@/components/ride/RiderAvatar";
 import { metersBetween, remainingMeters } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
-import { currentStep, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
+import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -80,7 +81,9 @@ export function RideT2({
   const here = instruction ? currentStep(steps, position, thresholdM) : null;
   const after = here ? steps[here.index + 2] : undefined;
   const then =
-    here && after ? { text: after.text, meters: Math.round(steps[here.index + 1].distance_m) } : null;
+    here && after
+      ? { text: after.text, meters: Math.round(steps[here.index + 1].distance_m), icon: maneuverIcon(after) }
+      : null;
 
   const shared = Number(ride.share_discount_percent) > 0;
   const shareText = ride.share_group_id ? "رحلة مشتركة — راكبان" : "مشتركة — قد ينضم راكب ثانٍ";
@@ -90,6 +93,16 @@ export function RideT2({
       {instruction ? (
         <div className={`t2-rd-nav ${riding ? "trip" : "approach"}`}>
           <div className="t2-rd-nav-main">
+            {/* **السهمُ كما رُسم**: كبيرٌ على الجمر في الطريق إلى الراكب (C06)، وفي مربّعٍ من الجمر أثناء الرحلة (C07) */}
+            {instruction.icon ? (
+              riding ? (
+                <span className="t2-rd-nav-tile">
+                  <Icon name={instruction.icon} />
+                </span>
+              ) : (
+                <Icon name={instruction.icon} className="t2-rd-nav-ico" />
+              )
+            ) : null}
             <div className="t2-rd-nav-text">
               <div className="t2-rd-nav-dist">
                 <span className="t2-rd-nav-num" dir="ltr">
@@ -102,7 +115,10 @@ export function RideT2({
           </div>
           {!riding && then ? (
             <div className="t2-rd-nav-then">
-              ثم {then.text} بعد {digits(String(then.meters))} م
+              {then.icon ? <Icon name={then.icon} /> : null}
+              <span>
+                ثم {then.text} بعد {digits(String(then.meters))} م
+              </span>
             </div>
           ) : null}
         </div>
@@ -290,8 +306,9 @@ function ApproachHead({ ride, position, title }: { ride: Ride; position: Coordin
   );
 }
 
-/** رأسُ الرحلة — الوجهةُ وما بقي إليها (الوقتُ حين يُقاس، والمسافةُ من الخطّ المجمَّد)، **والأجرةُ المقدَّرةُ باسمها**:
- *  لا عدّادَ أجرةٍ حيّاً في النظام، و«حتى الآن» على رقمٍ مقدَّرٍ تقول ما ليس كذلك. */
+/** رأسُ الرحلة — الوجهةُ وما بقي إليها (الوقتُ حين يُقاس، والمسافةُ من الخطّ المجمَّد)، **وعدّادُ الأجرة** (§٦٢-ج/٤٢):
+ *  `current_fare` كما يجمعه الخادم. **واسمُه يقول ما فيه**: «تقديرياً» ما لم يتراكم شيء (هو المقدَّرةُ نفسُها)، و«حتى الآن» حين
+ *  دخله انتظارٌ أو وقفة — فلا يُقرأ عدّادَ مسافةٍ في نظامٍ سعرُه مقدَّم (القسم 5.7). */
 function TripHead({
   ride,
   currencyLabel,
@@ -320,11 +337,13 @@ function TripHead({
       <div className="t2-rd-fare">
         <div className="t2-rd-fare-row">
           <span className="t2-rd-fare-num" dir="ltr">
-            {digits(ride.estimated_fare)}
+            {digits(ride.current_fare)}
           </span>
           <span className="t2-rd-fare-cur">{currencyLabel}</span>
         </div>
-        <div className="t2-rd-fare-note">تقديرياً</div>
+        <div className="t2-rd-fare-note">
+          {Number(ride.waiting_charge) > 0 || Number(ride.pause_charge) > 0 ? "حتى الآن" : "تقديرياً"}
+        </div>
       </div>
     </div>
   );

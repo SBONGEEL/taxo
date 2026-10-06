@@ -390,6 +390,8 @@ export interface Ride {
   pause_charge: string;
   pause_price_per_min: string;
   pause_max_minutes: number;
+  /** **عدّادُ الأجرة** (§٦٢-ج/٤٢): المقدَّرةُ ورسمُ الانتظار والوقفات حتى لحظة القراءة — **يجمعها الخادم** (§14). */
+  current_fare: string;
 
   current_leg: number;
   waiting_charge: string;

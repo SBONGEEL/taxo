@@ -23,6 +23,9 @@ export interface RouteStep {
   text: string;
   distance_m: number;
   shape: number[][];
+  /** **نوعُ المناورة واتجاهُها بكلمة Mapbox** (§٦٢-ج/٤٢) — و`null`/غيابُهما (خطوةٌ خُزِّنت قبلهما) نصٌّ بلا سهم. */
+  maneuver?: string | null;
+  modifier?: string | null;
 }
 
 /** ما يُعرض الآن — و`null` تعني **لا شريط**، وهي حالٌ صحيحةٌ لا عطب. */
@@ -30,6 +33,51 @@ export interface NextInstruction {
   text: string;
   /** كم بقي حتى المناورة، بالأمتار. */
   meters: number;
+  /** سهمُ المناورة — و`null` حين لا يُعرف (`maneuverIcon`). */
+  icon: string | null;
+}
+
+/** **سهمُ المناورة من نوعها واتجاهها** (§٦٢-ج/٤٢، C06 · C07) — باسم أيقونةٍ في مقتطَع الخطّ (`index.html`).
+ *
+ * **و`null` لكلِّ ما لا يُعرف يقيناً**: سهمٌ يُخمَّن خطأً يكذب على من يقود، والنصُّ تحته يقول الاتجاهَ على كلِّ حال. فالدوّارُ
+ * بلا جهةٍ لا سهمَ له (لا أيقونةَ لـ«الدوّار مستقيماً»)، والمناورةُ المجهولةُ كذلك. **والمرآةُ لا تُقلب**: يمينُ الطريق يمينٌ في RTL.
+ */
+export function maneuverIcon(step: Pick<RouteStep, "maneuver" | "modifier"> | undefined): string | null {
+  const type = step?.maneuver ?? null;
+  const modifier = step?.modifier ?? null;
+  if (type === null) return null;
+  if (type === "arrive") return "flag";
+  const left = modifier !== null && modifier.includes("left");
+  const right = modifier !== null && modifier.includes("right");
+  if (type === "roundabout" || type === "rotary" || type === "roundabout turn" || type === "exit roundabout" || type === "exit rotary") {
+    if (left) return "roundabout_left";
+    if (right) return "roundabout_right";
+    return null;
+  }
+  if (type === "merge") return "merge";
+  if (type === "fork") return left ? "fork_left" : right ? "fork_right" : "straight";
+  if (type === "on ramp" || type === "off ramp") return left ? "ramp_left" : right ? "ramp_right" : "straight";
+  switch (modifier) {
+    // **الدورانُ يساراً** في طرقٍ تُساق على اليمين (الأردن وليبيا)
+    case "uturn":
+      return "u_turn_left";
+    case "sharp right":
+      return "turn_sharp_right";
+    case "right":
+      return "turn_right";
+    case "slight right":
+      return "turn_slight_right";
+    case "straight":
+      return "straight";
+    case "slight left":
+      return "turn_slight_left";
+    case "left":
+      return "turn_left";
+    case "sharp left":
+      return "turn_sharp_left";
+    default:
+      return type === "depart" || type === "continue" || type === "new name" ? "straight" : null;
+  }
 }
 
 /** الخطوةُ التي يقف عليها الكبتن — **أقربُ خطوةٍ إليه**، أو `null`.
@@ -72,7 +120,7 @@ export function nextInstruction(
   const meters = at
     ? Math.round(metersBetween(at, { lng: end[0], lat: end[1] }))
     : here.step.distance_m;
-  return { text: upcoming.text, meters };
+  return { text: upcoming.text, meters, icon: maneuverIcon(upcoming) };
 }
 
 /** **ثلاثُ قراءاتٍ لتعود، وواحدةٌ لتغيب** — وهو ما يمنع الرفيف. */

@@ -327,6 +327,22 @@ export function RideProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => () => socket.current?.close(), []);
 
+  // **ما يتراكم يُقرأ وهو يتراكم** (§٦٢-ج/٤٢): رسمُ الانتظار والوقفة وعدّادُ الأجرة مبالغُ يحسبها الخادمُ لحظةَ القراءة —
+  // وبلا إطارٍ جديدٍ تقف حيث قُرئت والدقائقُ تمشي («وقد يتأخّر دقائق» — `useElapsedMinutes`). **فما دام انتظارٌ أو وقفةٌ
+  // مفتوحاً تُقرأ الرحلةُ كلَّ نصف دقيقة**، وحين يُغلق يكفّ: لا نداءَ على رحلةٍ لا يتراكم فيها شيء
+  const accruing =
+    ride !== null &&
+    (ride.open_pause !== null || ride.stops.some((stop) => stop.arrived_at !== null && stop.resumed_at === null));
+  useEffect(() => {
+    if (!accruing) return;
+    const timer = window.setInterval(() => {
+      getActiveRide()
+        .then((active) => setRide(isActive(active) ? active : null))
+        .catch(() => undefined);
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [accruing]);
+
   // موقعُ الجهاز للخريطة — يُقرأ من المقبس نفسه فلا يُفتح مُراقبان
   useEffect(() => {
     if (!online) return;

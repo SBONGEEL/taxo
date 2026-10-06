@@ -286,6 +286,35 @@ async def test_the_pause_charge_is_inside_the_final_fare(
     assert Decimal(row["final_fare"]) == estimated + charge
 
 
+async def test_the_fare_meter_is_the_estimate_plus_what_has_accrued(
+    client: AsyncClient, session_factory, jordan_settings: None
+) -> None:
+    """**عدّادُ الأجرة** (§٦٢-ج/٤٢): المقدَّرةُ وما تراكم **في اللحظة نفسِها التي يُنشر فيها ما تراكم** —
+    ويطابق `final_fare` عند الإنهاء ما لم ينحرف الطريق.
+
+    وبعدّادٍ يُقرأ من المقدَّرة وحدَها يسقط الأول، وبعدّادٍ يُحسب بلحظةٍ غيرِ لحظة السطرين يسقط الثاني.
+    """
+    await _set_pause_pricing(session_factory, per_min="0.500", arrival_free=0)
+    driver = await approved_driver(client, session_factory, DRIVER)
+    await bring_online(client, driver)
+    rider = await rider_session(client)
+    ride = await started_ride(client, rider["headers"], driver)
+
+    await client.post(f"/rides/{ride['id']}/pause", headers=driver["headers"])
+    await _age_pause(session_factory, ride["id"], 4)
+
+    now = (await client.get(f"/rides/{ride['id']}", headers=driver["headers"])).json()
+    accrued = Decimal(now["pause_charge"]) + Decimal(now["waiting_charge"])
+    assert accrued >= Decimal("2.000")
+    assert Decimal(now["current_fare"]) == Decimal(now["estimated_fare"]) + accrued
+    assert len(now["current_fare"].split(".")[1]) == 3
+
+    finished = await client.post(f"/rides/{ride['id']}/complete", headers=driver["headers"])
+    assert finished.status_code == 200, finished.text
+    done = finished.json()
+    assert Decimal(done["current_fare"]) == Decimal(done["final_fare"])
+
+
 async def test_completing_closes_an_open_pause_so_it_stops_growing(
     client: AsyncClient, session_factory, jordan_settings: None
 ) -> None:

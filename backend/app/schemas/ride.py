@@ -344,6 +344,11 @@ class RideOut(BaseModel):
     pause_charge: Decimal = Decimal("0.000")
     pause_price_per_min: Decimal = Decimal("0.000")
     pause_max_minutes: int = 0
+    # **عدّادُ الأجرة** (§٦٢-ج/٤٢، C07 «حتى الآن»): المقدَّرةُ ورسمُ الانتظار والوقفات
+    # **حتى اللحظة** — وهي `_final_fare` بعينها ما لم ينحرف الطريق. **والسعرُ هنا
+    # مقدَّمٌ لا عدّادُ مسافة** (القسم 5.7): فلا يكبر بالكيلومتر، ويكبر بما يتراكم
+    # وحدَه — وانحرافُ الطريق يُحكم عند الإنهاء لا قبله
+    current_fare: Decimal = Decimal("0.000")
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -407,6 +412,12 @@ class RideOut(BaseModel):
                 Decimal("0.000"),
             )
         )
+        waiting_charge = pricing.waiting_charge(
+            ride.stops,
+            free_minutes=ride.stop_free_minutes_at_ride,
+            price_per_min=ride.stop_price_per_min_at_ride,
+            now=moment,
+        )
 
         return cls(
             stops=stops,
@@ -414,12 +425,7 @@ class RideOut(BaseModel):
             share_discount_percent=ride.share_discount_percent_at_ride,
             share_group_id=ride.share_group_id,
             share_seat=ride.share_seat,
-            waiting_charge=pricing.waiting_charge(
-                ride.stops,
-                free_minutes=ride.stop_free_minutes_at_ride,
-                price_per_min=ride.stop_price_per_min_at_ride,
-                now=moment,
-            ),
+            waiting_charge=waiting_charge,
             stop_free_minutes=ride.stop_free_minutes_at_ride,
             stop_price_per_min=ride.stop_price_per_min_at_ride,
             stop_max_wait_minutes=ride.stop_max_wait_minutes_at_ride,
@@ -431,6 +437,11 @@ class RideOut(BaseModel):
             pause_charge=pause_charge,
             pause_price_per_min=ride.pause_price_per_min_at_ride,
             pause_max_minutes=ride.pause_max_minutes_at_ride,
+            # **بالقيم نفسِها التي تُنشر بجانبه** — لحظةٌ واحدةٌ للثلاثة، فلا يفترق
+            # العدّادُ عن السطرين اللذين يشرحانه
+            current_fare=pricing.round_money(
+                ride.estimated_fare + waiting_charge + pause_charge
+            ),
             id=ride.id,
             rider_id=ride.rider_id,
             status=ride.status,
@@ -476,6 +487,10 @@ class RouteStepOut(BaseModel):
     text: str
     distance_m: int
     shape: list[list[float]]
+    # **نوعُ المناورة واتجاهُها بكلمة Mapbox** (§٦٢-ج/٤٢) — منهما يُرسم السهم.
+    # و`null` لخطوةٍ خُزِّنت قبلهما أو بلا مناورةٍ معروفة: نصٌّ بلا سهم
+    maneuver: str | None = None
+    modifier: str | None = None
 
 
 class RouteLineOut(BaseModel):
