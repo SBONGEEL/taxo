@@ -8,12 +8,17 @@
  *
  * **والنصُّ يفرّق بين الحالين**: انتظارٌ عند الوصول (تأخّر هو) ووقفةٌ في منتصف
  * الرحلة (طلبها هو). وجملةٌ واحدةٌ لهما تلوم من لم يفعل شيئاً في إحداهما.
+ *
+ * **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R08b`): بطاقةُ «كم متبقية» بعمودين — الوقتُ بخطِّ الأرقام، والمهلةُ تُقال قبل أن
+ * تنتهي، **وحافّةُ التنبيه حين يتجاوز الحدّ**.
  */
 
 import { useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
-import { cn, formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
+
+import "@/screens/t2/money.css";
 
 function elapsed(since: string, now: number): string {
   const started = new Date(since).getTime();
@@ -41,39 +46,35 @@ export function PauseNotice({ ride }: { ride: Ride }) {
   const billing = minutes >= free;
 
   return (
-    <div
-      className={cn(
-        "mt-10 rounded-13 border p-12",
-        pause.over_max ? "border-warn bg-surface-2" : "border-line bg-surface-2",
-      )}
-    >
-      <div className="flex items-end justify-between gap-10">
+    <div className={pause.over_max ? "t2-m-meter gap warn" : "t2-m-meter gap"}>
+      <div className="t2-m-meter-row">
         <div>
-          <p className="text-12 text-muted">
+          <div className="t2-m-meter-label">
             {pause.kind === "arrival"
               ? "الكبتن ينتظرك عند نقطة الانطلاق"
               : "الكبتن واقفٌ بطلبك"}
-          </p>
+          </div>
           {/* الوقتُ يُحسب هنا — والمالُ لا */}
-          <p className="text-20 font-bold tabular-nums text-ink">
+          <div dir="ltr" className="t2-m-clock">
             {elapsed(pause.started_at, now)}
-          </p>
+          </div>
         </div>
-        <div className="text-end">
+        <div className="t2-m-meter-end">
           {/* **والمهلةُ تُقال قبل أن تنتهي لا بعدها**: راكبٌ يرى صفراً ولا يعرف
               لماذا يظنّ العدّادَ معطوباً، ثم يفاجئه رقمٌ بعد دقيقة */}
-          <p className="text-12 text-muted">
+          <div className="t2-m-meter-label">
             {billing ? "رسم الانتظار حتى الآن" : `أول ${free} دقائق مجاناً`}
-          </p>
-          <p className="font-bold text-ink">
-            {formatMoney(ride.pause_charge, ride.currency)}
-          </p>
+          </div>
+          <div className="t2-m-meter-charge">{formatMoney(ride.pause_charge, ride.currency)}</div>
         </div>
       </div>
       {pause.over_max ? (
-        <p className="mt-8 text-12 leading-relaxed text-warn">
-          تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكبتن أن
-          يُنهي الرحلة عند هذه النقطة.
+        <p className="t2-m-meter-note">
+          <span className="t2-icon" aria-hidden="true">error</span>
+          <span>
+            تجاوز الانتظارُ الحدَّ المسموح — العدّادُ ما زال يعمل، وللكبتن أن
+            يُنهي الرحلة عند هذه النقطة.
+          </span>
         </p>
       ) : null}
     </div>

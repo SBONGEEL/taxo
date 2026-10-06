@@ -1,0 +1,625 @@
+/* شاشاتُ المال عند الراكب في TAXO 2.0 — الشحن (R16) · التحويل (R17) · تفاصيلُ الرحلة (R18) · الدفع (R19) · العودةُ من صفحة المزوّد
+ * (R20) · البطاقات (R21)، **وما يُرسم منها داخل شاشاتٍ بُنيت** (ورقةُ الشحن فوق R11، والمحطاتُ والوقفةُ في R08 · R09).
+ *
+ * **اللوحاتُ في `design/t2-new/rider/`** — رُسمت من عائلة R06 · R08 · R10 · R11 · R13 · R14، **وكلُّ قيمةٍ هنا قيمتُها هناك**.
+ * **والرموزُ وحدَها** (`var(--t2-…)`) فتعمل في الفاتح والداكن والنسائيّ. **وكلُّ اسمٍ يبدأ بـ`t2-m-`** — ملفٌّ ثانٍ يُحمَّل مع `t2.css`
+ * لا يصطدم بأسمائه (`check:t2-css` يقرأ الملفَّ الواحد، ولا يمسك اسمين متصادمين في ملفّين).
+ *
+ * **و`--t2-well` لا قيمةَ له في الداكن** (`tokens.css` — لم يُرسم): بئرُ الحجر يبقى بيجاً على الإسفلت. فحيث يُستعمل هنا يُستبدل في
+ * الداكن بـ`--t2-sunken` (ما يغوص في البطاقة) — رمزٌ مرسومٌ في المظهرين، لا لونٌ يُخترع.
+ */
+
+/* ── الصفحة: من الحافة إلى الحافة، والمحتوى داخل المنطقة الآمنة، وتحجز مكانَ الشريط العائم (62 + قاعُه) ─────────────── */
+.t2.t2-m-page {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(78px + max(14px, env(safe-area-inset-bottom, 0px)));
+}
+/* **الطبقةُ الكاملة بلا شريط** (الدفع · نتيجةُ الدفع) — بنيةُ R10: عمودٌ يدفع زرَّه إلى القاع، ويُمرَّر إن طال */
+.t2.t2-m-stage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 22px max(36px, env(safe-area-inset-bottom, 0px));
+}
+.t2-m-stage > * { flex-shrink: 0; }
+.t2-m-push { flex: 1 0 16px; }
+.t2-m-stage .t2-head { margin-bottom: 0; }
+.t2-m-stage-title { display: flex; align-items: center; height: 44px; }
+
+/* ── البطاقةُ البيضاء (R10) وما فيها ─────────────────────────────────────────────────────────────── */
+.t2-m-card { border-radius: 24px; background: var(--t2-surface); padding: 16px 18px; }
+.t2-m-gap { margin-top: 10px; }
+.t2-m-gap-lg { margin-top: 18px; }
+.t2-m-label { display: block; font-size: 12.5px; color: var(--t2-muted); }
+.t2-m-dash { margin: 12px 0; border-top: 1.5px dashed var(--t2-line); }
+.t2-m-dash.tight { margin: 10px 0 8px; }
+
+/* المبلغ: الرقمُ بخطِّ الأرقام ٤٠ كما في بطاقة الأجرة، والعملةُ بجانبه */
+.t2-m-amount { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+.t2-m-amount-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--t2-text);
+  font-family: var(--t2-font-num);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-align: right;
+  caret-color: var(--t2-accent);
+}
+.t2-m-amount-input::placeholder { color: var(--t2-faint); }
+.t2-m-amount-card:focus-within { box-shadow: inset 0 0 0 1.5px var(--t2-accent); }
+.t2-m-cur { font-size: 15px; font-weight: 600; }
+.t2-m-num { font-family: var(--t2-font-num); font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+.t2-m-num.xl { font-size: 40px; }
+.t2-m-num.lg { font-size: 36px; }
+.t2-m-num.md { font-size: 34px; }
+.t2-m-num.sm { font-size: 20px; letter-spacing: -0.02em; }
+
+/* المبالغُ السريعة — خياراتُ البقشيش في R10 */
+.t2-m-quick { display: flex; gap: 6px; }
+.t2-m-chip {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-dash);
+  border-radius: 14px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t2-m-chip.on { border: 2px solid var(--t2-text); font-weight: 700; }
+
+/* سطورُ البطاقة — شبكةُ R10: التسميةُ خافتة، والقيمةُ ٥٠٠ */
+.t2-m-rows { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; font-size: 13px; }
+.t2-m-row { display: contents; }
+.t2-m-row-label { color: var(--t2-muted); }
+.t2-m-row-value { font-weight: 500; text-align: end; }
+.t2-m-row-value.strong { font-weight: 700; }
+
+/* ── طريقةُ الشحن: بطاقاتُ «اختر الفئة» في R06 ───────────────────────────────────────────────────── */
+.t2-m-chans { display: flex; flex-direction: column; gap: 6px; }
+.t2-m-chan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-m-chan.on { padding: 8px 11px; border: 2px solid var(--t2-text); background: var(--t2-surface); }
+.t2-m-chan-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: var(--t2-well);
+}
+.t2-m-chan.on .t2-m-chan-icon { background: var(--t2-sunken); }
+.t2-m-chan-icon .t2-icon { font-size: 24px; }
+.t2-m-chan-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-m-chan-title { font-size: 15px; font-weight: 600; }
+.t2-m-chan.on .t2-m-chan-title { font-weight: 700; }
+.t2-m-chan-hint { font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
+
+/* ── الأزرار: مقاسُ R10 (٥٨/١٦)، و«رجوع» نصٌّ بلا إطار، والسعرُ آخرُ زرِّ الجمر كما في «اطلب» (R06) ─────────────── */
+.t2 .t2-m-cta { width: 100%; height: 58px; font-size: 16px; }
+.t2 .t2-m-cta.action { font-weight: 700; }
+.t2 .t2-m-wide { width: 100%; }
+.t2-m-cta-split { justify-content: space-between; padding: 0 22px; }
+.t2-m-cta-price { font-family: var(--t2-font-num); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.t2-m-link {
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.t2-m-link:disabled { opacity: 0.45; cursor: default; }
+.t2-m-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.t2-m-foot { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+/* زرٌّ ينتظر الخلفية: حلقةٌ بلون نصّه، تقف ساكنةً مع «تقليل الحركة» */
+.t2-m-btn-spin {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .t2-m-btn-spin { animation: t2-m-turn 0.8s linear infinite; }
+}
+.t2-m-fine { margin: 2px 8px 0; text-align: center; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-m-hint { margin: 8px 2px 0; font-size: 12.5px; line-height: 1.55; color: var(--t2-muted); }
+
+/* ── البلاغان: ما لا حقلَ له سطرٌ فوق الزرّ — بنبرة الخطأ أو النجاح (لغةُ `t2-auth-banner`) ─────────────────────────── */
+.t2-m-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.t2-m-banner > .t2-icon { flex: none; font-size: 18px; line-height: 20px; font-variation-settings: "FILL" 1; }
+/* **النصُّ بالحبر والنبرةُ في الأيقونة والأرضية** — الخطأُ على خافته ٤٫٢٩:١ والنجاحُ على خافته ٤٫١٢:١ في الفاتح، وكلاهما دون
+   ٤٫٥ لنصٍّ بحجم ١٣؛ والحبرُ على الخافتين فوق ١٢:١ في المظهرين */
+.t2-m-banner.danger { background: var(--t2-danger-soft); color: var(--t2-text); }
+.t2-m-banner.danger > .t2-icon { color: var(--t2-danger); }
+.t2-m-banner.ok { background: var(--t2-success-soft); color: var(--t2-text); }
+.t2-m-banner.ok > .t2-icon { color: var(--t2-success); }
+.t2 .t2-m-callout { margin: 10px 0 0; }
+.t2-m-callout b { font-weight: 700; color: var(--t2-text); }
+
+/* ── الورقةُ فوق الشاشة: ظلٌّ يُغلق بالضغط، وورقةُ R06 ملتصقةٌ بالقاع وتعلو لوحةَ المفاتيح ─────────────────────────── */
+.t2.t2-m-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 67;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: var(--t2-scrim);
+  cursor: default;
+}
+.t2-m-modal { position: fixed; inset-inline: 0; bottom: 0; z-index: 68; max-width: 32rem; margin: 0 auto; }
+.t2-m-modal .t2.t2-sheet {
+  margin: 0 0 var(--vv-bottom, 0px);
+  border-radius: 30px 30px 0 0;
+  max-height: calc(var(--vvh, 100dvh) - 76px);
+}
+/* **وقائمةٌ هي آخرُ الورقة لا هامشَ تحتها** — قاعُ الورقة يحمل حشوتَه (`--safe-area`) */
+.t2-m-modal .t2-sheet-body > .t2-list:last-child { margin-bottom: 0; }
+.t2-m-sheet-title { margin: 0 2px; font-size: 19px; font-weight: 700; }
+.t2-m-sheet-sub { margin: 2px 2px 12px; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+.t2-m-sheet-title + .t2-list { margin-top: 10px; }
+
+/* صفُّ اختيارٍ في قائمة (لغةُ منتقي الدفع): أيقونةٌ خافتة، وعنوانٌ وسطر، وعلامةٌ أو سهم */
+.t2-m-opt > .t2-icon:first-child { align-self: center; font-size: 22px; color: var(--t2-muted); }
+.t2-m-opt-end { align-self: center; font-size: 20px; }
+.t2-m-opt-end.check { color: var(--t2-accent-text); }
+.t2-m-opt-end.go { color: var(--t2-faint); }
+.t2-m-opt:disabled { opacity: 0.45; }
+.t2-m-opt.single { align-items: center; }
+
+/* مربّعُ الحفظ — مربّعُ الموافقة في R03، والحقلُ الأصليُّ تحته يحمل التركيزَ والحال */
+.t2-m-check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.t2-m-check input { position: absolute; inset-inline-start: 4px; width: 22px; height: 22px; margin: 0; opacity: 0; cursor: pointer; }
+.t2-m-check-box {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--t2-dash);
+  border-radius: 7px;
+  color: transparent;
+}
+.t2-m-check-box .t2-icon { font-size: 16px; }
+.t2-m-check input:checked + .t2-m-check-box { border-color: var(--t2-accent); background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-m-check input:focus-visible + .t2-m-check-box { box-shadow: 0 0 0 3px var(--t2-accent-soft); }
+
+/* ── رمزُ الدفع: أسودُ على أبيض في كلِّ سِمة (قارئاتُ البنوك تتوقّع ذلك) بإطار البطاقة ───────────────────────────────── */
+.t2-m-qr-wrap { display: flex; justify-content: center; }
+.t2-m-qr {
+  display: block;
+  box-sizing: content-box;
+  padding: 10px;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+}
+/* **وعلى الإسفلت إطارٌ فاتح** — سطحُ البطاقة الداكن حول رمزٍ أبيضَ يُضيّق هامشَه الصامت؛ والمعكوسُ لا يُعاد على الداكن فيبقى حجراً */
+html.dark .t2:not(.t2-day) .t2-m-qr { border-color: transparent; background: var(--t2-on-inverse); }
+.t2-m-qr-wait { display: block; box-sizing: content-box; padding: 10px; border-radius: 18px; background: var(--t2-line); }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-m-qr-wait { animation: t2-m-pulse 1.4s var(--t2-ease) infinite; }
+}
+@keyframes t2-m-pulse { 50% { opacity: 0.55; } }
+
+.t2-m-cliq-title { margin: 0; font-size: 19px; font-weight: 700; }
+.t2-m-cliq-title.sm { font-size: 17px; }
+.t2-m-cliq-text { margin: 6px 0 14px; font-size: 13.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-m-cliq-text.sm { margin: 4px 0 14px; font-size: 13px; }
+.t2 .t2-m-open { width: 100%; margin-top: 14px; text-decoration: none; }
+.t2-m-copies { margin: 12px 0 0; }
+.t2-m-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0;
+  border-bottom: 1px solid var(--t2-divider);
+}
+.t2-m-copy:last-child { border-bottom: 0; }
+.t2-m-copy dt { flex: 1; min-width: 0; font-size: 12.5px; color: var(--t2-muted); }
+.t2-m-copy dd { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 600; }
+.t2-m-copy-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-inline-end: -10px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.t2-m-copy-btn .t2-icon { font-size: 18px; }
+.t2-m-copy-btn.done { color: var(--t2-success); }
+.t2-m-field-gap { margin-top: 14px; }
+.t2-m-ref { color: var(--t2-text); font-weight: 600; text-align: right; }
+
+/* ── المستلم: بطاقةُ الكبتن في R08 — الدائرةُ بعلامة «وُجد الحساب» ─────────────────────────────────────────── */
+.t2-m-person { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 22px; background: var(--t2-surface); }
+.t2-m-person-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--t2-success-soft);
+  color: var(--t2-success);
+}
+.t2-m-person-badge .t2-icon { font-size: 26px; }
+.t2-m-person-main { flex: 1; min-width: 0; }
+.t2-m-person-name { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-person-sub { margin-top: 2px; font-size: 12.5px; color: var(--t2-muted); text-align: right; }
+.t2-m-change {
+  flex: none;
+  height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-m-change:disabled { opacity: 0.45; cursor: default; }
+
+/* ملخّصُ التأكيد في قدم الورقة — صفوفُ «إلى · رقمه · المبلغ · رصيدك بعده» */
+.t2-m-sum { padding: 14px 16px; border-radius: 20px; background: var(--t2-surface); }
+.t2-m-sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.t2-m-sum-row + .t2-m-sum-row { margin-top: 6px; }
+.t2-m-sum-label { flex: none; font-size: 13px; color: var(--t2-muted); }
+.t2-m-sum-name { min-width: 0; overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-sum-sub { font-size: 13px; color: var(--t2-muted); }
+.t2-m-sum-after { font-size: 13.5px; font-weight: 600; }
+.t2-m-sum-after.short { color: var(--t2-danger); }
+.t2-m-sum .t2-m-dash { margin: 12px 0; }
+.t2-m-foot > .t2-m-sum + .t2-button { margin-top: 6px; }
+.t2-m-strong { font-weight: 600; color: var(--t2-text); }
+.t2-m-sheet-sub.last { margin-bottom: 2px; }
+.t2-m-callout-text { margin: 0; }
+
+/* ── تفاصيلُ الرحلة: شريطُ الخريطة من الحافة، والصفحةُ ورقةٌ فوقه (R06) ───────────────────────────────────────── */
+.t2.t2-m-ride {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding-bottom: calc(78px + max(14px, env(safe-area-inset-bottom, 0px)));
+}
+.t2-m-ride-map { height: calc(164px + env(safe-area-inset-top, 0px)); overflow: hidden; background: var(--t2-map-land); }
+/* الرجوعُ فوق الخريطة يبقى في مكانه حين تُمرَّر الصفحة — ولا يأخذ مكاناً في عمودها */
+.t2-m-ride-top { position: sticky; top: 0; z-index: 5; height: 0; }
+.t2-m-ride-top .t2-mapbtn { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); inset-inline-start: 20px; }
+.t2-m-ride-sheet {
+  position: relative;
+  margin-top: -30px;
+  padding: 20px 18px 0;
+  border-radius: 30px 30px 0 0;
+  background: var(--t2-bg);
+  box-shadow: var(--t2-sheet-shadow);
+}
+.t2-m-ride-sheet.flat { margin-top: 0; padding-top: calc(6px + env(safe-area-inset-top, 0px)); border-radius: 0; box-shadow: none; }
+.t2-m-ride-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+.t2-m-ride-head .t2-back { margin-inline-end: 2px; }
+.t2-m-ride-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; font-weight: 700; }
+.t2-m-ride-when { margin-top: 2px; font-size: 13px; color: var(--t2-muted); }
+.t2-m-fare { margin-top: 12px; padding: 14px 18px; }
+.t2-m-ride-sheet .t2-m-actions { margin-top: 14px; }
+.t2-m-route {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--t2-surface);
+}
+.t2-m-route-value { font-size: 14.5px; font-weight: 600; line-height: 1.45; }
+.t2-m-reason { margin-top: 2px; font-size: 14px; line-height: 1.6; }
+
+/* الأرقامُ الثلاثة (أو الأربعة) — شبكةُ R09 */
+.t2-m-stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 12px 0; border-radius: 20px; background: var(--t2-surface); }
+.t2-m-stats.four { grid-template-columns: repeat(2, 1fr); row-gap: 12px; }
+.t2-m-stat { padding: 0 6px; text-align: center; }
+.t2-m-stats:not(.four) .t2-m-stat + .t2-m-stat,
+.t2-m-stats.four .t2-m-stat:nth-child(even) { border-inline-start: 1px solid var(--t2-well); }
+.t2-m-stat-value { font-size: 15px; font-weight: 600; }
+.t2-m-stat-label { margin-top: 2px; font-size: 11.5px; color: var(--t2-muted); }
+
+/* الكبتن — بطاقةُ R08: الدائرةُ المخطّطة واللوحةُ اللاتينية */
+.t2-m-driver { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 22px; background: var(--t2-surface); }
+.t2-m-driver-main { flex: 1; min-width: 0; }
+.t2-m-driver-name { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.t2-m-driver-rating { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12.5px; color: var(--t2-muted); }
+.t2-m-driver-rating .t2-icon { font-size: 15px; color: var(--t2-accent); }
+.t2-m-driver-rating b { font-weight: 600; color: var(--t2-text); }
+.t2-m-driver-car { margin-top: 2px; overflow: hidden; font-size: 12.5px; color: var(--t2-muted); text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── وجهُ الكبتن (`DriverAvatar`): الحرفُ في دائرةٍ مخطّطة — الصورةُ تملؤها حين تكون ─────────────────────────────────── */
+.t2-m-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: repeating-linear-gradient(45deg, var(--t2-well) 0 6px, var(--t2-line) 6px 12px);
+  color: var(--t2-text);
+  font-size: 19px;
+  font-weight: 700;
+}
+.t2-m-avatar > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── الدفعاتُ — قائمةُ «الحركات» في R11، والحالةُ شارةٌ تحت المبلغ ─────────────────────────────────────────────── */
+.t2-m-pay { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-bottom: 1px solid var(--t2-divider); }
+.t2-m-pay:last-child { border-bottom: 0; }
+.t2-m-pay-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--t2-sunken);
+}
+.t2-m-pay-icon .t2-icon { font-size: 20px; }
+.t2-m-pay-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-m-pay-title { font-size: 14px; font-weight: 600; }
+.t2-m-pay-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-m-pay-sub b { font-weight: 400; color: var(--t2-text); }
+.t2-m-pay-dispute { margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--t2-danger); }
+.t2-m-pay-end { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.t2-m-pay-amt { font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+.t2-m-pay.promo .t2-m-pay-icon { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-m-pay.promo .t2-m-pay-title,
+.t2-m-pay.promo .t2-m-pay-amt { color: var(--t2-success); }
+
+/* ── الدفع: بطاقةُ الأجرة في R10 وحبّةُ القناة ───────────────────────────────────────────────────────────── */
+.t2-m-due { margin-top: 18px; }
+.t2-m-due-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.t2-m-due-cur { font-size: 12px; color: var(--t2-muted); }
+.t2-m-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  margin-bottom: 6px;
+  padding: 6px 11px;
+  border-radius: 99px;
+  background: var(--t2-bg);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t2-m-pill .t2-icon { font-size: 16px; }
+
+/* ── نتيجةُ الدفع: علامةُ R10 مكبَّرةً في القلب ──────────────────────────────────────────────────────────── */
+.t2-m-result { display: flex; flex: 1 0 auto; flex-direction: column; align-items: center; justify-content: center; padding: 24px 0; text-align: center; }
+.t2-m-result-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--t2-well);
+  color: var(--t2-muted);
+}
+.t2-m-result-mark .t2-icon { font-size: 40px; }
+.t2-m-result-mark.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-m-result-mark.ok .t2-icon { font-size: 46px; }
+.t2-m-result-mark.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+.t2-m-result-mark.danger .t2-icon { font-size: 44px; }
+.t2-m-result-title { margin: 18px 0 0; font-size: 22px; font-weight: 700; }
+.t2-m-result-title.sm { font-size: 20px; }
+.t2-m-result-text { max-width: 300px; margin: 6px 0 0; font-size: 13.5px; line-height: 1.65; color: var(--t2-muted); }
+.t2-m-result-amount { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+.t2 .t2-m-again { height: 46px; margin-top: 18px; padding: 0 18px; border-radius: 14px; font-size: 14.5px; }
+.t2 .t2-m-again .t2-icon { font-size: 20px; }
+.t2-m-wait { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0; font-size: 13.5px; color: var(--t2-muted); }
+.t2-m-spin { width: 28px; height: 28px; box-sizing: border-box; border: 3px solid var(--t2-line); border-top-color: var(--t2-accent); border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-m-spin { animation: t2-m-turn 0.9s linear infinite; }
+}
+@keyframes t2-m-turn { to { transform: rotate(360deg); } }
+
+/* ── البطاقاتُ المحفوظة: مربّعُ «طرق الدفع» في R11 بعرض الشاشة ───────────────────────────────────────────────── */
+.t2-m-saved { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.t2-m-saved-card { padding: 14px 16px 2px; border-radius: 22px; background: var(--t2-surface); }
+.t2-m-saved-top,
+.t2-m-saved-mid { display: flex; justify-content: space-between; gap: 8px; }
+.t2-m-saved-top { align-items: center; }
+.t2-m-saved-mid { align-items: baseline; margin-top: 18px; }
+.t2-m-brand { font: 700 12px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+.t2-m-default { padding: 2px 7px; border-radius: 7px; background: var(--t2-success-soft); color: var(--t2-success); font-size: 10.5px; font-weight: 600; }
+.t2-m-last4 { font-size: 16px; font-weight: 600; }
+.t2-m-expiry { font-size: 12px; color: var(--t2-muted); }
+.t2-m-saved-acts { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; border-top: 1px solid var(--t2-divider); }
+.t2-m-saved-acts.end { justify-content: flex-end; }
+.t2-m-make-default {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-accent-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-m-make-default .t2-icon { font-size: 18px; }
+.t2-m-delete {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-inline-end: -10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-danger);
+  cursor: pointer;
+}
+.t2-m-delete .t2-icon { font-size: 20px; }
+
+.t2-m-banner + .t2-m-saved,
+.t2-m-banner + .t2-m-empty { margin-top: 10px; }
+
+/* الفراغ: بطاقةٌ بيضاءُ بأيقونةٍ في بئرها وجملتين */
+.t2-m-empty { padding: 28px 20px; border-radius: 22px; background: var(--t2-surface); text-align: center; }
+.t2-m-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--t2-well);
+}
+.t2-m-empty-icon .t2-icon { font-size: 26px; }
+.t2-m-empty-title { margin-top: 12px; font-size: 15px; font-weight: 700; }
+.t2-m-empty-hint { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+
+/* ── المحطاتُ والوقفة (R08 · R09) — بطاقةُ «كم متبقية»: الوقتُ بخطِّ الأرقام، والمالُ كما وصل ─────────────────────── */
+.t2-m-meter { margin-bottom: 8px; padding: 12px 14px; border: 1px solid transparent; border-radius: 20px; background: var(--t2-surface); }
+.t2-m-meter.warn { border-color: var(--t2-warning); }
+.t2-m-meter.gap { margin: 10px 0 0; }
+.t2-m-track { display: flex; align-items: center; gap: 6px; }
+.t2-m-track-seg { display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; }
+.t2-m-stop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--t2-dash);
+  border-radius: 7px;
+  color: var(--t2-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.t2-m-stop.done { border: 0; background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-m-stop.here { border: 0; background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-m-link-line { flex: 1; height: 2px; border-radius: 1px; background: var(--t2-line); }
+.t2-m-link-line.done { background: var(--t2-success); }
+.t2-m-track-end { font-size: 12px; color: var(--t2-muted); }
+.t2-m-meter-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.t2-m-track + .t2-m-meter-row { margin-top: 12px; }
+.t2-m-meter-label { font-size: 12px; color: var(--t2-muted); }
+.t2-m-clock { font-family: var(--t2-font-num); font-size: 20px; font-weight: 600; line-height: 1.2; text-align: right; }
+.t2-m-meter-end { text-align: end; }
+.t2-m-meter-charge { font-size: 15px; font-weight: 700; }
+/* **وتجاوزُ الحدّ: النصُّ بالحبر، والتنبيهُ في الأيقونة والحافّة** — نصُّ التنبيه على الأبيض ٤٫٤٤:١ دون حدِّ القراءة */
+.t2-m-meter-note { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-text); }
+.t2-m-meter-note > .t2-icon { flex: none; font-size: 16px; line-height: 19px; color: var(--t2-warning); font-variation-settings: "FILL" 1; }
+
+/* ── الهيكلُ أثناء التحميل — شكلُ ما سيصل، ونبضٌ يقف مع «تقليل الحركة» ───────────────────────────────────────── */
+.t2-m-skel { display: block; border-radius: 20px; background: var(--t2-line); }
+.t2-m-skel.map { height: calc(164px + env(safe-area-inset-top, 0px)); border-radius: 0; }
+.t2-m-skel.line { width: 40%; height: 13px; margin-top: 6px; border-radius: 7px; }
+.t2-m-skel.card { height: 124px; margin-top: 12px; border-radius: 24px; }
+.t2-m-skel.block { height: 76px; margin-top: 10px; }
+@media (prefers-reduced-motion: no-preference) {
+  .t2-m-skel { animation: t2-m-pulse 1.4s var(--t2-ease) infinite; }
+}
+
+/* ── الداكن: البئرُ لم يُرسم على الإسفلت — فالبئرُ فيه ما يغوص في البطاقة (رأسُ الملفّ) ─────────────────────────────── */
+html.dark .t2:not(.t2-day) .t2-m-chan-icon,
+html.dark .t2:not(.t2-day) .t2-m-result-mark:not(.ok):not(.danger),
+html.dark .t2:not(.t2-day) .t2-m-empty-icon { background: var(--t2-sunken); }
+html.dark .t2:not(.t2-day) .t2-m-chan.on .t2-m-chan-icon { background: var(--t2-line); }
+html.dark .t2:not(.t2-day) .t2-m-stats:not(.four) .t2-m-stat + .t2-m-stat,
+html.dark .t2:not(.t2-day) .t2-m-stats.four .t2-m-stat:nth-child(even) { border-inline-start-color: var(--t2-line); }
+html.dark .t2:not(.t2-day) .t2-m-avatar {
+  background: repeating-linear-gradient(45deg, var(--t2-sunken) 0 6px, var(--t2-line) 6px 12px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .t2-m-chip,
+  .t2-m-chan { transition: border-color var(--t2-fast) var(--t2-ease), background-color var(--t2-fast) var(--t2-ease); }
+  .t2-m-chip:active,
+  .t2-m-chan:active,
+  .t2-m-change:active,
+  .t2-m-make-default:active { transform: scale(0.98); }
+}

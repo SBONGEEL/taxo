@@ -6,15 +6,18 @@
  *
  * ولا يظهر هذا الاختيار إلا إن كانت للمستخدم بطاقةٌ محفوظة: قائمةٌ من عنصرٍ
  * واحد اسمه «بطاقة جديدة» خطوةٌ زائدة بين الراكب ودفعه.
+ *
+ * **بلغة TAXO 2.0 ورقةً فوق شاشة الدفع** (لوحةُ `design/t2-new/rider/R19c`) — أختُ «طريقة الدفع»: صفوفٌ بعلامة الاختيار، والالتزامُ
+ * بالجمر في قدمٍ لا تُمرَّر. **والمنطقُ حرفاً**: النداءُ نفسُه، والافتراضيةُ مختارةٌ ابتداءً، والحفظُ للجديدة وحدَها، و«تراجع»
+ * معطّلٌ ما دام الدفعُ جارياً — **والظلُّ كذلك لا يُغلقها حينها**.
  */
 
-import { CreditCard, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { listSavedCards } from "@/api/endpoints";
 import type { SavedCard } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+import { BusyLabel, SheetModalT2 } from "@/screens/t2/MoneyT2";
 
 export function CardChoice({
   busy,
@@ -41,83 +44,79 @@ export function CardChoice({
   if (cards === null) return null;
 
   return (
-    <section className="card space-y-12 p-16">
-      <h2 className="font-semibold text-ink">الدفع بالبطاقة</h2>
+    <SheetModalT2
+      onClose={busy ? null : onCancel}
+      footer={
+        <div className="t2-m-foot">
+          <button
+            type="button"
+            className="t2-button action t2-m-cta"
+            disabled={busy}
+            aria-busy={busy}
+            onClick={() =>
+              onPay(selected === null ? { save_card: save } : { saved_card_id: selected })
+            }
+          >
+            <BusyLabel busy={busy}>{selected === null ? "متابعة إلى صفحة الدفع" : "ادفع الآن"}</BusyLabel>
+          </button>
+          <button type="button" className="t2-button secondary t2-m-wide" onClick={onCancel} disabled={busy}>
+            تراجع
+          </button>
+        </div>
+      }
+    >
+      <div className="t2-m-sheet-title">الدفع بالبطاقة</div>
 
       {cards.length > 0 ? (
-        <ul className="space-y-8">
+        <div className="t2-list" role="radiogroup" aria-label="الدفع بالبطاقة">
           {cards.map((card) => (
-            <li key={card.id}>
-              <button
-                type="button"
-                aria-pressed={selected === card.id}
-                onClick={() => setSelected(card.id)}
-                className={cn(
-                  "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
-                  selected === card.id
-                    ? "border-brand bg-brand-soft"
-                    : "border-line hover:bg-surface-2",
-                )}
-              >
-                <CreditCard className="size-20 text-ink" />
-                <span className="flex-1">
-                  <span className="block font-medium text-ink">
+            <button
+              key={card.id}
+              type="button"
+              role="radio"
+              aria-checked={selected === card.id}
+              onClick={() => setSelected(card.id)}
+              className="t2-row t2-m-opt"
+            >
+              <Icon name="credit_card" />
+              <span className="t2-row-main">
+                <span className="t2-row-title">
+                  <span dir="ltr">
                     {card.brand ?? "بطاقة"} •••• {card.last4}
                   </span>
-                  <span className="block text-12 text-muted">
-                    تنتهي {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
-                  </span>
                 </span>
-              </button>
-            </li>
-          ))}
-          <li>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className={cn(
-                "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
-                selected === null
-                  ? "border-brand bg-brand-soft"
-                  : "border-line hover:bg-surface-2",
-              )}
-            >
-              <Plus className="size-20 text-ink" />
-              <span className="font-medium text-ink">بطاقة جديدة</span>
+                <span className="t2-row-body">
+                  تنتهي <span dir="ltr">{String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}</span>
+                </span>
+              </span>
+              {selected === card.id ? <Icon name="check" className="t2-m-opt-end check" /> : null}
             </button>
-          </li>
-        </ul>
+          ))}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={selected === null}
+            onClick={() => setSelected(null)}
+            className="t2-row t2-m-opt single"
+          >
+            <Icon name="add" />
+            <span className="t2-row-main">
+              <span className="t2-row-title">بطاقة جديدة</span>
+            </span>
+            {selected === null ? <Icon name="check" className="t2-m-opt-end check" /> : null}
+          </button>
+        </div>
       ) : null}
 
       {selected === null ? (
-        <label className="flex items-center gap-8 text-14 text-muted">
-          <input
-            type="checkbox"
-            // اللوحة hex الآن لا ثلاثيّاتِ rgb (المرحلة 12-أ)
-            className="size-16 accent-[var(--brand)]"
-            checked={save}
-            onChange={(event) => setSave(event.target.checked)}
-          />
-          احفظ هذه البطاقة للدفع بضغطة لاحقاً
+        <label className="t2-m-check">
+          <input type="checkbox" checked={save} onChange={(event) => setSave(event.target.checked)} />
+          <span className="t2-m-check-box" aria-hidden="true">
+            <Icon name="check" />
+          </span>
+          <span>احفظ هذه البطاقة للدفع بضغطة لاحقاً</span>
         </label>
       ) : null}
-
-      <div className="flex gap-8">
-        <Button
-          className="flex-1"
-          loading={busy}
-          onClick={() =>
-            onPay(
-              selected === null ? { save_card: save } : { saved_card_id: selected },
-            )
-          }
-        >
-          {selected === null ? "متابعة إلى صفحة الدفع" : "ادفع الآن"}
-        </Button>
-        <Button variant="ghost" onClick={onCancel} disabled={busy}>
-          تراجع
-        </Button>
-      </div>
-    </section>
+    </SheetModalT2>
   );
 }

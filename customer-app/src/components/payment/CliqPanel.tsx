@@ -14,20 +14,21 @@
  *
  * ولا زرَّ «تم الدفع» هنا: المال يذهب إلى alias الكبتن مباشرةً ولا يمر
  * بالمنصة، فلا أحد عندنا يشهد عليه — والتأكيد قولُ الكبتن وحده (القسم 6).
+ *
+ * **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R19b`): بطاقةٌ بيضاءُ بزاوية R10 — الرمزُ، ثمّ ما يُنسخ، ثمّ «افتح تطبيق البنك»، ثمّ
+ * المرجعُ بحقل R03 وسببُ خطئه تحته.
  */
 
 import { motion } from "framer-motion";
-import { Check, Copy, ExternalLink, Hourglass } from "lucide-react";
 import { useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { submitCliqReference } from "@/api/endpoints";
 import type { CliqCharge, RidePayments } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote } from "@/components/ui/Feedback";
-import { Field } from "@/components/ui/Field";
 import { formatMoney } from "@/lib/utils";
+import { AuthBlock, AuthInput, Icon } from "@/taxo2";
+import { BusyLabel } from "@/screens/t2/MoneyT2";
 
 export function CliqPanel({
   charge,
@@ -67,21 +68,17 @@ export function CliqPanel({
     <motion.section
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card space-y-16 p-16"
+      className="t2-m-card t2-m-gap"
     >
-      <header>
-        <h2 className="font-semibold text-ink">الدفع عبر كليك</h2>
-        <p className="text-14 text-muted">
-          حوّل {formatMoney(charge.amount, charge.currency)} إلى alias الكبتن، ثم أدخل
-          مرجع الحوالة.
-        </p>
-      </header>
+      <h2 className="t2-m-cliq-title sm">الدفع عبر كليك</h2>
+      <p className="t2-m-cliq-text sm">
+        حوّل {formatMoney(charge.amount, charge.currency)} إلى alias الكبتن، ثم أدخل
+        مرجع الحوالة.
+      </p>
 
-      <div className="flex justify-center">
-        <QrCode payload={charge.qr_payload} />
-      </div>
+      <QrCode payload={charge.qr_payload} size={180} />
 
-      <dl className="space-y-8 text-14">
+      <dl className="t2-m-copies">
         <CopyRow
           label="alias الكبتن"
           value={charge.alias}
@@ -94,56 +91,61 @@ export function CliqPanel({
           copied={copied === "reference"}
           onCopy={() => copy(charge.reference, "reference")}
         />
-        <div className="flex items-center justify-between gap-8">
-          <dt className="text-muted">المبلغ</dt>
-          <dd className="font-semibold text-ink">
-            {formatMoney(charge.amount, charge.currency)}
-          </dd>
+        <div className="t2-m-copy">
+          <dt>المبلغ</dt>
+          <dd>{formatMoney(charge.amount, charge.currency)}</dd>
         </div>
       </dl>
 
-      <Button variant="secondary" className="w-full" asChild>
-        <a href={charge.deep_link}>
-          <ExternalLink className="size-16" />
-          افتح تطبيق البنك
-        </a>
-      </Button>
+      <a href={charge.deep_link} className="t2-button secondary t2-m-open">
+        <Icon name="open_in_new" />
+        افتح تطبيق البنك
+      </a>
 
       {submitted ? (
-        <div className="flex items-start gap-8 rounded-12 border border-line bg-bg p-12 text-14">
-          <Hourglass className="mt-2 size-16 shrink-0 text-muted" />
-          <div>
-            <p className="font-medium text-ink">أرسلنا مرجعك للكبتن — بانتظار تأكيده</p>
-            <p dir="ltr" className="mt-2 text-muted">
+        <div className="t2-callout t2-m-callout">
+          <Icon name="hourglass_top" />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">أرسلنا مرجعك للكبتن — بانتظار تأكيده</p>
+            <p dir="ltr" className="t2-callout-body t2-m-ref">
               {charge.transfer_reference}
             </p>
-            <p className="mt-4 text-12 text-muted">
+            <p className="t2-callout-body">
               المرجع يُسجَّل مرةً واحدة ولا يُعدَّل. إن لم تصل الحوالة الكبتنَ سيفتح
               نزاعاً تفصل فيه الإدارة.
             </p>
           </div>
         </div>
       ) : (
-        <div className="space-y-12 border-t border-line pt-12">
-          <Field
+        <>
+          <div className="t2-m-dash" aria-hidden="true" />
+          {/* **سببُ الخطأ تحت حقله** (§٦٢/٢٠) — والتلميحُ مكانَه حين لا خطأ */}
+          <AuthBlock
             label="مرجع الحوالة من تطبيق بنكك"
-            value={reference}
-            dir="ltr"
-            className="text-start"
-            onChange={(event) => setReference(event.target.value)}
-            placeholder="FT24…"
+            htmlFor="cliq-reference"
+            error={error}
             hint="يُسجَّل مرةً واحدة ولا يُعدَّل — تأكّد منه قبل الإرسال."
-          />
-          <ErrorNote message={error} />
-          <Button
-            className="w-full"
-            loading={busy}
-            disabled={reference.trim().length < 3}
+          >
+            <AuthInput
+              id="cliq-reference"
+              dir="ltr"
+              autoComplete="off"
+              value={reference}
+              invalid={Boolean(error)}
+              onChange={(event) => setReference(event.target.value)}
+              placeholder="FT24…"
+            />
+          </AuthBlock>
+          <button
+            type="button"
+            className="t2-button primary t2-m-cta t2-m-field-gap"
+            disabled={busy || reference.trim().length < 3}
+            aria-busy={busy}
             onClick={submit}
           >
-            حوّلتُ — أرسل المرجع للكبتن
-          </Button>
-        </div>
+            <BusyLabel busy={busy}>حوّلتُ — أرسل المرجع للكبتن</BusyLabel>
+          </button>
+        </>
       )}
     </motion.section>
   );
@@ -161,23 +163,17 @@ function CopyRow({
   onCopy: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-8">
-      <dt className="text-muted">{label}</dt>
-      <dd className="flex items-center gap-8">
-        <span dir="ltr" className="font-semibold text-ink">
-          {value}
-        </span>
+    <div className="t2-m-copy">
+      <dt>{label}</dt>
+      <dd>
+        <span dir="ltr">{value}</span>
         <button
           type="button"
           onClick={onCopy}
-          className="pressable rounded-8 p-6 text-muted transition hover:bg-surface-2 hover:text-ink"
+          className={copied ? "t2-m-copy-btn done" : "t2-m-copy-btn"}
           aria-label={`نسخ ${label}`}
         >
-          {copied ? (
-            <Check className="size-16 text-ok" />
-          ) : (
-            <Copy className="size-16" />
-          )}
+          <Icon name={copied ? "check" : "content_copy"} />
         </button>
       </dd>
     </div>

@@ -4,80 +4,80 @@
  * القسم 6). فعرضُ «الدفعة» مفرداً يخفي نصف ما دُفع.
  *
  * **وصفُّ `promo` خصمٌ لا دفعة** (12-ز): تدفعه الشركةُ عن الراكب، فيُرسم
- * بإشارة ناقصٍ وبلون `--ok` بلا حالةٍ ولا تاريخ — «مؤكَّد» على خصمٍ تلقائيٍّ
+ * بإشارة ناقصٍ وبلون النجاح بلا حالةٍ ولا تاريخ — «مؤكَّد» على خصمٍ تلقائيٍّ
  * كلامٌ زائد، وعرضُه كدفعةٍ عادية يجعل الراكب يظن أنه دفع مبلغين.
+ *
+ * **بلغة TAXO 2.0** (لوحتا `design/t2-new/rider/R18b` · `R19b`): قائمةُ «الحركات» في R11 — أيقونةُ القناة في بئرها، والتاريخُ
+ * تحت اسمها، والمبلغُ وشارةُ حاله في الطرف.
  */
 
-import { TicketPercent } from "lucide-react";
-
-import type { Payment } from "@/api/types";
-import { Stagger, StaggerItem } from "@/components/ui/Motion";
-import { Badge } from "@/components/ui/Feedback";
+import type { Payment, PaymentMethod, PaymentStatus } from "@/api/types";
 import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/labels";
 import { formatDateTime, formatMoney } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
-const TONE = {
-  confirmed: "success",
-  pending: "warning",
-  disputed: "danger",
-  failed: "danger",
-  refunded: "neutral",
-} as const;
+import "@/screens/t2/money.css";
+
+/** نبرةُ الشارة بالحال — المؤكَّدُ نجاحٌ، والمنتظَرُ تنبيه، والنزاعُ والفشلُ خطأ، والمستردُّ محايد. */
+const TONE: Record<PaymentStatus, string> = {
+  confirmed: "t2-chip ok",
+  pending: "t2-chip warn",
+  disputed: "t2-chip danger",
+  failed: "t2-chip danger",
+  refunded: "t2-chip",
+};
+
+/** أيقونةُ القناة — رموزُ منتقي الدفع، والخصمان بأيقونتيهما. */
+const ICON: Record<PaymentMethod, string> = {
+  wallet: "account_balance_wallet",
+  cliq: "smartphone",
+  card: "credit_card",
+  cash: "payments",
+  promo: "sell",
+  share: "group",
+};
 
 export function PaymentsList({ payments }: { payments: Payment[] }) {
   return (
-    <section className="space-y-8">
-      <h2 className="label">دفعات هذه الرحلة</h2>
-      <Stagger className="space-y-8">
+    <section>
+      <h2 className="t2-section">دفعات هذه الرحلة</h2>
+      <div className="t2-list">
         {payments.map((payment) =>
           payment.method === "promo" ? (
-            <StaggerItem
-              key={payment.id}
-              className="card flex items-center justify-between gap-8 p-12"
-            >
-              <span className="flex items-center gap-8 font-medium text-ok">
-                <TicketPercent className="size-16" />
-                {PAYMENT_METHOD_LABEL.promo}
+            <div key={payment.id} className="t2-m-pay promo">
+              <span className="t2-m-pay-icon">
+                <Icon name={ICON.promo} />
               </span>
-              <span className="font-semibold text-ok">
-                −{formatMoney(payment.amount, payment.currency)}
+              <span className="t2-m-pay-main">
+                <span className="t2-m-pay-title">{PAYMENT_METHOD_LABEL.promo}</span>
               </span>
-            </StaggerItem>
+              <span className="t2-m-pay-amt">−{formatMoney(payment.amount, payment.currency)}</span>
+            </div>
           ) : (
-          <StaggerItem key={payment.id} className="card p-12">
-            <div className="flex items-center justify-between gap-8">
-              <span className="font-medium text-ink">
-                {PAYMENT_METHOD_LABEL[payment.method]}
+            <div key={payment.id} className="t2-m-pay">
+              <span className="t2-m-pay-icon">
+                <Icon name={ICON[payment.method]} />
               </span>
-              <span className="font-semibold text-ink">
-                {formatMoney(payment.amount, payment.currency)}
+              <span className="t2-m-pay-main">
+                <span className="t2-m-pay-title">{PAYMENT_METHOD_LABEL[payment.method]}</span>
+                <span className="t2-m-pay-sub">{formatDateTime(payment.confirmed_at ?? payment.created_at)}</span>
+                {payment.cliq_transfer_reference ? (
+                  <span className="t2-m-pay-sub">
+                    مرجع الحوالة: <b dir="ltr">{payment.cliq_transfer_reference}</b>
+                  </span>
+                ) : null}
+                {payment.status === "disputed" && payment.dispute_reason ? (
+                  <span className="t2-m-pay-dispute">نزاع: {payment.dispute_reason} — تفصل فيه الإدارة.</span>
+                ) : null}
+              </span>
+              <span className="t2-m-pay-end">
+                <span className="t2-m-pay-amt">{formatMoney(payment.amount, payment.currency)}</span>
+                <span className={TONE[payment.status]}>{PAYMENT_STATUS_LABEL[payment.status]}</span>
               </span>
             </div>
-            <div className="mt-6 flex items-center justify-between gap-8 text-12 text-muted">
-              <Badge tone={TONE[payment.status]}>
-                {PAYMENT_STATUS_LABEL[payment.status]}
-              </Badge>
-              <span>{formatDateTime(payment.confirmed_at ?? payment.created_at)}</span>
-            </div>
-
-            {payment.cliq_transfer_reference ? (
-              <p className="mt-8 text-12 text-muted">
-                مرجع الحوالة:{" "}
-                <span dir="ltr" className="text-ink">
-                  {payment.cliq_transfer_reference}
-                </span>
-              </p>
-            ) : null}
-
-            {payment.status === "disputed" && payment.dispute_reason ? (
-              <p className="mt-8 text-12 text-danger">
-                نزاع: {payment.dispute_reason} — تفصل فيه الإدارة.
-              </p>
-            ) : null}
-          </StaggerItem>
           ),
         )}
-      </Stagger>
+      </div>
     </section>
   );
 }

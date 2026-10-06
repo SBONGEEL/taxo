@@ -131,7 +131,6 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         }}
         onClose={() => setPickingPay(false)}
         walletHint={null}
-        variant="t2"
       />
     ) : null;
 

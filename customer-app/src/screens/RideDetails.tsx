@@ -3,6 +3,10 @@
  * **المسافة الفعلية تُعرض حين تكون** ولا تُخترع حين تغيب: `null` تعني أن
  * تطبيق الكبتن صمت فبقي المقدَّر هو الحكم — وصفرٌ في مكانها يقول «سار صفر
  * كيلومتر» (SPEC القسم 4/5.7).
+ *
+ * **بلغة TAXO 2.0** (لوحتا `design/t2-new/rider/R18` · `R18b`): شريطُ الخريطة من الحافة والصفحةُ ورقةٌ فوقه (R06)، والأجرةُ
+ * بطاقةُ R10، والمسارُ بطاقةُ «من · إلى»، والأرقامُ شبكةُ R09، والكبتنُ بطاقةُ R08، والدفعاتُ قائمةُ R11. **والنداءاتُ الثلاثةُ
+ * والقواعدُ والوجهاتُ حرفاً** — وكلُّ سطرٍ كان يُعرض باقٍ.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -10,26 +14,34 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getRide, getRidePayments, listRideRatings } from "@/api/endpoints";
-import type { Rating, Ride, RidePayments } from "@/api/types";
+import type { Rating, Ride, RidePayments, RideStatus } from "@/api/types";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
-import { Button } from "@/components/ui/Button";
-import { Badge, ErrorNote } from "@/components/ui/Feedback";
 import { MapView, type MapHandle } from "@/components/map/MapView";
+import { useGoBack } from "@/lib/back";
 import { useMapboxToken } from "@/lib/config";
-import { Skeleton } from "@/components/ui/Motion";
-import { Screen } from "@/components/ui/Screen";
 import { RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import {
+  currencyLabel,
   formatDateTime,
   formatDistance,
   formatDuration,
   formatMoney,
 } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+import { BannerT2, HeadT2 } from "@/screens/t2/MoneyT2";
+
+/** **ما يغطّي الشريطَ من حوافّه** — الرجوعُ وشريطُ الحالة فوق، والورقةُ تعلو قاعَه بثلاثين: فيُضبط الإطارُ على ما يُرى منه. */
+const STRIP_PADDING = { top: 76, bottom: 54, left: 48, right: 48 };
+
+/** الحالاتُ التي ترسمها «رحلاتي» (R12) بنبرة الخطأ — **والنصُّ نصُّ السجلّ** (من ألغى). */
+const UNSERVED: RideStatus[] = ["cancelled_by_rider", "cancelled_by_driver", "no_driver_found"];
 
 export function RideDetailsScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
+  // **من حيث جئت، والرئيسيةُ لمن دخل مباشرةً** (`lib/back.ts`) — كما كان رأسُ الشاشة
+  const goBack = useGoBack("/");
 
   const [ride, setRide] = useState<Ride | null>(null);
   const [payments, setPayments] = useState<RidePayments | null>(null);
@@ -59,51 +71,87 @@ export function RideDetailsScreen() {
   // الوصولَ خارج الشريط — ودبوسٌ واحدٌ في خريطةِ رحلةٍ لا يقول شيئاً
   const map = useRef<MapHandle>(null);
   useEffect(() => {
-    if (ride) map.current?.fitBounds(ride.pickup, ride.dropoff);
+    if (ride) map.current?.fitBounds(ride.pickup, ride.dropoff, STRIP_PADDING);
   }, [ride]);
 
+  /** الرجوعُ فوق الخريطة — **ثابتٌ حين تُمرَّر الصفحة** (موضعُه في R06). */
+  const floatingBack = (
+    <div className="t2-m-ride-top">
+      <button type="button" className="t2-mapbtn" aria-label="رجوع" onClick={goBack}>
+        <Icon name="arrow_forward" />
+      </button>
+    </div>
+  );
+
   if (loading) {
-    // **هيكلٌ لا دوّامة** (§8): ثلاثةُ نداءاتٍ متتابعة تعني ثوانيَ من السواد،
-    // والهيكلُ يرسم **شكلَ ما سيصل** فتستقرّ العينُ على مواضعه ولا تقفز حين يصل
+    // **هيكلٌ لا دوّامة** (§8): ثلاثةُ نداءاتٍ متتابعة تعني ثوانيَ من الفراغ، والهيكلُ يرسم **شكلَ ما سيصل** فتستقرّ العينُ على
+    // مواضعه ولا تقفز حين يصل — والعنوانُ والرجوعُ قائمان كما كانا
     return (
-      <Screen title="تفاصيل الرحلة" nav>
-        <div className="space-y-20">
-          <Skeleton className="-mx-16 -mt-16 h-170 rounded-none" />
-          <div className="flex items-start justify-between gap-12">
-            <div className="space-y-8">
-              <Skeleton className="h-12 w-82" />
-              <Skeleton className="h-26 w-150" />
-            </div>
-            <Skeleton className="h-24 w-82 rounded-full" />
+      <div className="t2 t2-m-ride" aria-busy="true">
+        {token ? floatingBack : null}
+        {token ? <span className="t2-m-skel map" aria-hidden="true" /> : null}
+        <div className={token ? "t2-m-ride-sheet" : "t2-m-ride-sheet flat"}>
+          <div className="t2-m-ride-head">
+            {token ? null : (
+              <button type="button" className="t2-back" aria-label="رجوع" onClick={goBack}>
+                <Icon name="arrow_forward" />
+              </button>
+            )}
+            <h1 className="t2-m-ride-title">تفاصيل الرحلة</h1>
           </div>
-          <Skeleton className="h-150" />
-          <Skeleton className="h-82" />
+          <span className="t2-m-skel line" aria-hidden="true" />
+          <span className="t2-m-skel card" aria-hidden="true" />
+          <span className="t2-m-skel block" aria-hidden="true" />
+          <span className="t2-m-skel block" aria-hidden="true" />
         </div>
-      </Screen>
+      </div>
     );
   }
 
   if (!ride) {
     return (
-      <Screen title="تفاصيل الرحلة" nav>
-        <ErrorNote message={error ?? "الرحلة غير موجودة"} />
-      </Screen>
+      <div className="t2 t2-m-page">
+        <HeadT2 title="تفاصيل الرحلة" onBack={goBack} />
+        <BannerT2 tone="danger" message={error ?? "الرحلة غير موجودة"} />
+      </div>
     );
   }
 
   const owing = payments !== null && Number(payments.outstanding) > 0;
   const rated = ratings.some((entry) => entry.rater_type === "rider");
+  const chip =
+    ride.status === "completed" ? "t2-chip ok" : UNSERVED.includes(ride.status) ? "t2-chip danger" : "t2-chip";
+
+  /** **سطورُ الأجرة — تُقرأ ولا تُحسب** (§5.10 و§5.10-ب/و): المجموعُ والضربُ في الخلفية (§14). **وصفرٌ لا يُرسم** — سطرٌ فارغٌ
+   *  يعلّم قارئَه ألّا يقرأ. **والمقدَّرُ سطرٌ حين تكون النهائيةُ هي الرقمَ الكبير**، وإلا فهو الرقمُ الكبيرُ نفسُه. */
+  const rows: { label: string; value: string }[] = [];
+  if (ride.final_fare) rows.push({ label: "السعر المقدّر", value: formatMoney(ride.estimated_fare, ride.currency) });
+  if (Number(ride.stops_charge) > 0)
+    rows.push({ label: `رسم المحطات (${ride.stops.length})`, value: formatMoney(ride.stops_charge, ride.currency) });
+  if (Number(ride.waiting_charge) > 0)
+    rows.push({ label: "رسم الانتظار عند المحطات", value: formatMoney(ride.waiting_charge, ride.currency) });
+  if (Number(ride.pause_charge) > 0)
+    rows.push({ label: "رسم الوقفات أثناء الرحلة", value: formatMoney(ride.pause_charge, ride.currency) });
+  if (ride.cancellation_fee) rows.push({ label: "رسوم الإلغاء", value: formatMoney(ride.cancellation_fee, ride.currency) });
+
+  const stats = [
+    { label: "المسافة المقدّرة", value: formatDistance(ride.distance_km) },
+    ...(ride.actual_distance_km ? [{ label: "المسافة الفعلية", value: formatDistance(ride.actual_distance_km) }] : []),
+    { label: "المدة المقدّرة", value: formatDuration(ride.duration_min) },
+    { label: "فئة المركبة", value: VEHICLE_LABEL[ride.vehicle_category] },
+  ];
+
+  const vehicle = ride.driver?.vehicle ?? null;
 
   return (
-    <Screen title="تفاصيل الرحلة" nav>
-      <div className="space-y-20">
-        {/* **شريطُ الخريطة 170px** (القرار 38): دبوسا الانطلاق والوصول
-            **بلا خطِّ مسار** — المسارُ الفعليُّ مسجَّلٌ في `ride_route_points`
-            للخلفية ولا منفذَ يقرؤه، وخطٌّ مستقيمٌ من عندنا يوهم بمسارٍ لم يقله
-            أحد. ولذلك **لا تُكتب عليه «المسار الفعلي المسجَّل»** كما في
-            النموذج: عنوانٌ يَعِد بما لا يُرسم */}
-        {token ? (
-          <div className="-mx-16 -mt-16 h-170 overflow-hidden">
+    <div className="t2 t2-m-ride">
+      {/* **شريطُ الخريطة من الحافة** (القرار 38): دبوسا الانطلاق والوصول **بلا خطِّ مسار** — المسارُ الفعليُّ مسجَّلٌ في
+          `ride_route_points` للخلفية ولا منفذَ يقرؤه، وخطٌّ مستقيمٌ من عندنا يوهم بمسارٍ لم يقله أحد. **وشعارُ Mapbox فوق الورقة**
+          لا تحتها (`controlsInset`) — شرطُ الرخصة مرئيّ */}
+      {token ? (
+        <>
+          {floatingBack}
+          <div className="t2-m-ride-map">
             <MapView
               ref={map}
               token={token}
@@ -112,179 +160,155 @@ export function RideDetailsScreen() {
               dropoff={ride.dropoff}
               tripLine={false}
               interactive={false}
+              controlsInset={30}
               className="h-full w-full"
             />
           </div>
+        </>
+      ) : null}
+
+      <div className={token ? "t2-m-ride-sheet" : "t2-m-ride-sheet flat"}>
+        <div className="t2-m-ride-head">
+          {token ? null : (
+            <button type="button" className="t2-back" aria-label="رجوع" onClick={goBack}>
+              <Icon name="arrow_forward" />
+            </button>
+          )}
+          <h1 className="t2-m-ride-title">تفاصيل الرحلة</h1>
+          <span className={chip}>{RIDE_STATUS_LABEL[ride.status]}</span>
+        </div>
+        <div className="t2-m-ride-when">{formatDateTime(ride.created_at)}</div>
+
+        {/* **الأجرةُ أوّلاً وكبيرة** (بطاقةُ R10): الرقمُ هو ما يُفتح له هذا السجلُّ أصلاً، فيُقرأ قبل أن تُقرأ الحقول */}
+        <div className="t2-m-card t2-m-fare">
+          <div className="t2-m-label">{ride.final_fare ? "الأجرة النهائية" : "السعر المقدّر"}</div>
+          <div className="t2-m-amount">
+            <span dir="ltr" className="t2-m-num lg">
+              {formatMoney(ride.final_fare ?? ride.estimated_fare)}
+            </span>
+            <span className="t2-m-cur">{currencyLabel(ride.currency)}</span>
+          </div>
+          {rows.length > 0 ? (
+            <>
+              <div className="t2-m-dash tight" aria-hidden="true" />
+              <div className="t2-m-rows">
+                {rows.map((row) => (
+                  <div key={row.label} className="t2-m-row">
+                    <span className="t2-m-row-label">{row.label}</span>
+                    <span className="t2-m-row-value">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {/* «من · إلى» — بطاقةُ المسار في R06، **والعنوانُ كاملاً يلتفّ ولا يُقطع** */}
+        <div className="t2-m-route t2-m-gap">
+          <span className="t2-route-from" aria-hidden="true" />
+          <div>
+            <div className="t2-route-label">من</div>
+            <div className="t2-m-route-value">{ride.pickup_address ?? "نقطة على الخريطة"}</div>
+          </div>
+          <span className="t2-route-join" aria-hidden="true" />
+          <span />
+          <span className="t2-route-to" aria-hidden="true" />
+          <div>
+            <div className="t2-route-label">إلى</div>
+            <div className="t2-m-route-value">{ride.dropoff_address ?? "نقطة على الخريطة"}</div>
+          </div>
+        </div>
+
+        <div className={stats.length === 4 ? "t2-m-stats four t2-m-gap" : "t2-m-stats t2-m-gap"}>
+          {stats.map((stat) => (
+            <div key={stat.label} className="t2-m-stat">
+              <div className="t2-m-stat-value">{stat.value}</div>
+              <div className="t2-m-stat-label">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {ride.cancelled_reason ? (
+          <div className="t2-m-card t2-m-gap">
+            <div className="t2-m-label">سبب الإلغاء</div>
+            <div className="t2-m-reason">{ride.cancelled_reason}</div>
+          </div>
         ) : null}
 
-        {/* رأسٌ بأجرةٍ كبيرةٍ وشارةِ حالة (تخطيطُ التصميم): الرقمُ هو ما يُفتح
-            له هذا السجلُّ أصلاً، فيُقرأ قبل أن تُقرأ الحقول */}
-        <div className="flex items-start justify-between gap-12">
-          <div>
-            <p className="text-12 text-muted">{formatDateTime(ride.created_at)}</p>
-            <p className="text-26 font-bold text-ink">
-              {formatMoney(ride.final_fare ?? ride.estimated_fare, ride.currency)}
-            </p>
-          </div>
-          <Badge tone={ride.status === "completed" ? "success" : "neutral"}>
-            {RIDE_STATUS_LABEL[ride.status]}
-          </Badge>
-        </div>
-
-        <div className="card space-y-12 p-16">
-          <Row label="من" value={ride.pickup_address ?? "نقطة على الخريطة"} />
-          <Row label="إلى" value={ride.dropoff_address ?? "نقطة على الخريطة"} />
-          <Row label="المسافة المقدّرة" value={formatDistance(ride.distance_km)} />
-          {ride.actual_distance_km ? (
-            <Row
-              label="المسافة الفعلية"
-              value={formatDistance(ride.actual_distance_km)}
-            />
-          ) : null}
-          <Row label="المدة المقدّرة" value={formatDuration(ride.duration_min)} />
-          <Row label="فئة المركبة" value={VEHICLE_LABEL[ride.vehicle_category]} />
-          {ride.cancelled_reason ? (
-            <Row label="سبب الإلغاء" value={ride.cancelled_reason} />
-          ) : null}
-        </div>
-
-        <div className="card space-y-8 p-16">
-          <Row
-            label="السعر المقدّر"
-            value={formatMoney(ride.estimated_fare, ride.currency)}
-          />
-          {ride.final_fare ? (
-            <Row
-              label="الأجرة النهائية"
-              value={formatMoney(ride.final_fare, ride.currency)}
-              strong
-            />
-          ) : null}
-          {/* **تفصيلُ ما دخل الأجرةَ ولا تراه المسافة** (§5.10 و§5.10-ب/و).
-              **قيمٌ تُقرأ لا تُحسب**: المجموعُ والضربُ في الخلفية (§14).
-              **وصفرٌ لا يُرسم** — سطرٌ فارغٌ يعلّم قارئَه ألّا يقرأ */}
-          {Number(ride.stops_charge) > 0 ? (
-            <Row
-              label={`رسم المحطات (${ride.stops.length})`}
-              value={formatMoney(ride.stops_charge, ride.currency)}
-            />
-          ) : null}
-          {Number(ride.waiting_charge) > 0 ? (
-            <Row
-              label="رسم الانتظار عند المحطات"
-              value={formatMoney(ride.waiting_charge, ride.currency)}
-            />
-          ) : null}
-          {Number(ride.pause_charge) > 0 ? (
-            <Row
-              label="رسم الوقفات أثناء الرحلة"
-              value={formatMoney(ride.pause_charge, ride.currency)}
-            />
-          ) : null}
-          {ride.cancellation_fee ? (
-            <Row
-              label="رسوم الإلغاء"
-              value={formatMoney(ride.cancellation_fee, ride.currency)}
-            />
-          ) : null}
-        </div>
-
-        {/* **بطاقةُ الكبتن كما في التصميم (`pgRideDetail`)** لا صفوفَ
-            «حقلٌ: قيمة»: الصفوفُ للأرقام التي تُقارن (أجرةٌ ومسافة)، والكبتنُ
-            **شخصٌ يُتعرَّف عليه** — حرفٌ أولُ واسمٌ ومركبةٌ ونجوم. ومن يفتح
-            رحلةً مضت يسأل «من أوصلني» لا «ما قيمةُ حقل الكبتن».
-            **واللوحةُ لاتينيةٌ بلا تحويل خانات**: تُطابَق حرفاً بحرف. */}
+        {/* **بطاقةُ الكبتن** (R08) لا صفوفَ «حقلٌ: قيمة»: الكبتنُ **شخصٌ يُتعرَّف عليه** — حرفٌ أولُ واسمٌ ونجومٌ ومركبة.
+            **واللوحةُ لاتينيةٌ بلا تحويل خانات**: تُطابَق حرفاً بحرف */}
         {ride.driver ? (
-          <div className="card flex items-center gap-12 p-14">
-            <DriverAvatar
-              rideId={ride.id}
-              name={ride.driver.name}
-              className="size-44 text-16"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-ink">
-                {ride.driver.name}
-              </p>
-              {ride.driver.vehicle ? (
-                <p className="mt-2 truncate text-12.5 text-muted">
-                  {ride.driver.vehicle.make} {ride.driver.vehicle.model} ·{" "}
-                  {ride.driver.vehicle.color}
-                  {" · "}
-                  <span dir="ltr">{ride.driver.vehicle.plate_number}</span>
-                </p>
+          <div className="t2-m-driver t2-m-gap">
+            <DriverAvatar rideId={ride.id} name={ride.driver.name} />
+            <div className="t2-m-driver-main">
+              <div className="t2-m-driver-name">{ride.driver.name}</div>
+              {Number(ride.driver.rating_avg) > 0 ? (
+                <div className="t2-m-driver-rating">
+                  <Icon name="star" fill />
+                  {/* **خاناتٌ لاتينيةٌ لأنها عُرفُ هذا التطبيق** — وكسرٌ واحدٌ كما كان */}
+                  <b>{Number(ride.driver.rating_avg).toFixed(1)}</b>
+                </div>
+              ) : null}
+              {vehicle ? (
+                <div className="t2-m-driver-car">
+                  {vehicle.make} {vehicle.model} · {vehicle.color}
+                </div>
               ) : null}
             </div>
-            {Number(ride.driver.rating_avg) > 0 ? (
-              <span className="shrink-0 text-13 font-semibold text-ink">
-                {/* **خاناتٌ لاتينيةٌ لأنها عُرفُ هذا التطبيق**: لا وجودَ
-                    لـ`digits` في `customer-app` أصلاً، وكلُّ سطرِ مالٍ
-                    ومسافةٍ فيه لاتينيّ — فتعريبُ رقمٍ واحدٍ يجعله الشاذَّ */}
-                {Number(ride.driver.rating_avg).toFixed(1)} ★
-              </span>
+            {vehicle ? (
+              <div dir="ltr" className="t2-trk-plate">
+                <span className="t2-trk-plate-cc">{ride.country_code}</span>
+                <span className="t2-trk-plate-no">{vehicle.plate_number}</span>
+              </div>
             ) : null}
           </div>
         ) : null}
-        {payments && payments.payments.length > 0 ? (
-          <PaymentsList payments={payments.payments} />
-        ) : null}
 
-        <ErrorNote message={error} />
+        {payments && payments.payments.length > 0 ? <PaymentsList payments={payments.payments} /> : null}
 
-        {owing ? (
-          <Button size="lg" onClick={() => navigate(`/rides/${ride.id}/pay`)}>
-            إكمال الدفع — {formatMoney(payments!.outstanding, payments!.currency)}
-          </Button>
-        ) : ride.status === "completed" && !rated ? (
-          <Button size="lg" onClick={() => navigate(`/rides/${ride.id}/rate`)}>
-            قيّم هذه الرحلة
-          </Button>
-        ) : null}
+        <BannerT2 tone="danger" message={error} />
 
-        {/* «أعد الطلب» — **طلبٌ جديد بنفس النقطتين لا نسخُ رحلةٍ مضت**
-            (`FUTURE-FEATURES` بند 3): السعرُ يُعاد حسابه، والمحطاتُ لا
-            تُنسخ (قد لا تكون الخدمة مفعّلة اليوم)، والتفضيلُ يُقرأ من الملف
-            كأي طلبٍ جديد. ولا يظهر إلا على رحلةٍ انتهت: إعادةُ طلبِ رحلةٍ
-            جارية تعني رحلتين */}
-        {ride.status === "completed" ? (
-          <Button
-            size="lg"
-            variant="secondary"
-            onClick={() =>
-              navigate("/", {
-                state: {
-                  again: {
-                    pickup: ride.pickup,
-                    pickupAddress: ride.pickup_address,
-                    dropoff: ride.dropoff,
-                    dropoffAddress: ride.dropoff_address,
+        <div className="t2-m-actions">
+          {owing ? (
+            // **زرُّ الجمر وسعرُه آخرُ السطر** — «اطلب» في R06: ما يُدفع الآن يُقرأ قبل الضغط
+            <button
+              type="button"
+              className="t2-button action t2-m-cta t2-m-cta-split"
+              onClick={() => navigate(`/rides/${ride.id}/pay`)}
+            >
+              <span>إكمال الدفع</span>
+              <span className="t2-m-cta-price">{formatMoney(payments!.outstanding, payments!.currency)}</span>
+            </button>
+          ) : ride.status === "completed" && !rated ? (
+            <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${ride.id}/rate`)}>
+              قيّم هذه الرحلة
+            </button>
+          ) : null}
+
+          {/* «أعد الطلب» — **طلبٌ جديد بنفس النقطتين لا نسخُ رحلةٍ مضت** (`FUTURE-FEATURES` بند 3): السعرُ يُعاد حسابه،
+              والمحطاتُ لا تُنسخ، والتفضيلُ يُقرأ من الملف كأي طلبٍ جديد. ولا يظهر إلا على رحلةٍ انتهت */}
+          {ride.status === "completed" ? (
+            <button
+              type="button"
+              className="t2-button secondary t2-m-wide"
+              onClick={() =>
+                navigate("/", {
+                  state: {
+                    again: {
+                      pickup: ride.pickup,
+                      pickupAddress: ride.pickup_address,
+                      dropoff: ride.dropoff,
+                      dropoffAddress: ride.dropoff_address,
+                    },
                   },
-                },
-              })
-            }
-          >
-            أعد الطلب
-          </Button>
-        ) : null}
+                })
+              }
+            >
+              أعد الطلب
+            </button>
+          ) : null}
+        </div>
       </div>
-    </Screen>
-  );
-}
-
-function Row({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-12 text-14">
-      <span className="shrink-0 text-muted">{label}</span>
-      <span className={strong ? "text-end font-bold text-ink" : "text-end text-ink"}>
-        {value}
-      </span>
     </div>
   );
 }

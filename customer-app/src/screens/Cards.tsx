@@ -5,19 +5,24 @@
  *
  * وحذفُ الافتراضية يرقّي غيرها في الخلفية: محفظةُ بطاقاتٍ بلا افتراضية تجعل
  * «الدفع بضغطة» بلا ضغطة تُعرض.
+ *
+ * **بلغة TAXO 2.0** (لوحتا `design/t2-new/rider/R21` · `R21b`): مربّعُ «طرق الدفع» في R11 بعرض الشاشة — العلامةُ وشارةُ
+ * «الافتراضية» فوق، والرقمُ والانتهاءُ تحت، والفعلان في سطرٍ أخير. **ولا زرَّ «إضافة»**: البطاقةُ تُحفظ عند الدفع وحدَه، والفراغُ
+ * يقول ذلك. **والنداءاتُ الثلاثةُ حرفاً** — ولا تأكيدَ للحذف كما لم يكن.
  */
 
-import { CreditCard, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { deleteSavedCard, listSavedCards, setDefaultCard } from "@/api/endpoints";
 import type { SavedCard } from "@/api/types";
-import { Badge, EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { Screen } from "@/components/ui/Screen";
-import { Stagger, StaggerItem } from "@/components/ui/Motion";
+import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
+import { BannerT2, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2";
 
 export function CardsScreen() {
+  // **من حيث جئت، و«حسابي» لمن دخل مباشرةً** (`lib/back.ts`) — كما كان رأسُ الشاشة
+  const goBack = useGoBack("/account");
   const [cards, setCards] = useState<SavedCard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,59 +50,63 @@ export function CardsScreen() {
   }
 
   return (
-    <Screen title="بطاقاتي" back="/account" nav>
+    <div className="t2 t2-m-page">
+      <HeadT2 title="بطاقاتي" onBack={goBack} />
+
       {loading ? (
-        <Spinner />
+        <WaitT2 />
       ) : (
-        <div className="space-y-12">
-          <ErrorNote message={error} />
+        <>
+          <BannerT2 tone="danger" message={error} />
 
           {cards.length === 0 ? (
-            <EmptyState
-              title="لا بطاقات محفوظة"
-              hint="عند الدفع بالبطاقة يمكنك اختيار حفظها للمرة القادمة."
-            />
+            <div className="t2-m-empty">
+              <span className="t2-m-empty-icon" aria-hidden="true">
+                <Icon name="credit_card" />
+              </span>
+              <div className="t2-m-empty-title">لا بطاقات محفوظة</div>
+              <p className="t2-m-empty-hint">عند الدفع بالبطاقة يمكنك اختيار حفظها للمرة القادمة.</p>
+            </div>
           ) : (
-            <Stagger className="space-y-8">
+            <ul className="t2-m-saved">
               {cards.map((card) => (
-                <StaggerItem key={card.id} className="card flex items-center gap-12 p-16">
-                  <CreditCard className="size-24 text-ink" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-ink">
-                      {card.brand ?? "بطاقة"} •••• {card.last4}
-                    </p>
-                    <p className="text-12 text-muted">
-                      تنتهي {String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}
-                    </p>
+                <li key={card.id} className="t2-m-saved-card">
+                  <div className="t2-m-saved-top">
+                    <span dir="ltr" className="t2-m-brand">
+                      {card.brand ?? "بطاقة"}
+                    </span>
+                    {card.is_default ? <span className="t2-m-default">الافتراضية</span> : null}
                   </div>
-
-                  {card.is_default ? (
-                    <Badge tone="warning">الافتراضية</Badge>
-                  ) : (
+                  <div className="t2-m-saved-mid">
+                    <span dir="ltr" className="t2-m-last4">
+                      •••• {card.last4}
+                    </span>
+                    <span className="t2-m-expiry">
+                      تنتهي <span dir="ltr">{String(card.expiry_month).padStart(2, "0")}/{card.expiry_year}</span>
+                    </span>
+                  </div>
+                  <div className={card.is_default ? "t2-m-saved-acts end" : "t2-m-saved-acts"}>
+                    {card.is_default ? null : (
+                      <button type="button" className="t2-m-make-default" onClick={() => act(setDefaultCard(card.id))}>
+                        <Icon name="star" />
+                        اجعلها الافتراضية
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => act(setDefaultCard(card.id))}
-                      className="pressable rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-ink"
-                      aria-label="اجعلها الافتراضية"
+                      className="t2-m-delete"
+                      onClick={() => act(deleteSavedCard(card.id))}
+                      aria-label="حذف البطاقة"
                     >
-                      <Star className="size-16" />
+                      <Icon name="delete" />
                     </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => act(deleteSavedCard(card.id))}
-                    className="pressable rounded-8 p-8 text-muted transition hover:bg-surface-2 hover:text-danger"
-                    aria-label="حذف البطاقة"
-                  >
-                    <Trash2 className="size-16" />
-                  </button>
-                </StaggerItem>
+                  </div>
+                </li>
               ))}
-            </Stagger>
+            </ul>
           )}
-        </div>
+        </>
       )}
-    </Screen>
+    </div>
   );
 }

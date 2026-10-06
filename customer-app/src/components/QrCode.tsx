@@ -4,22 +4,23 @@
  * المستفيد والمبلغ ومرجعاً يُحاسَب عليه، وبناؤها في الخلفية حصراً (SPEC
  * القسم 14). هذا المكوّن لا يعرف من محتواها شيئاً — ولو عرف لصار طرفاً في
  * تحديد ما يُدفع.
+ *
+ * **بإطار TAXO 2.0** (`money.css` — لوحتا R16b · R19b): أسودُ على أبيضَ في كلِّ سِمة، والإطارُ يتبع المظهر.
  */
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 
 import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+
+import "@/screens/t2/money.css";
 
 export function QrCode({
   payload,
-  size = 220,
-  className,
+  size = 196,
 }: {
   payload: string;
   size?: number;
-  className?: string;
 }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const { dark } = useTheme();
@@ -42,22 +43,13 @@ export function QrCode({
     };
   }, [payload, size, dark]);
 
-  if (!dataUrl) {
-    return (
-      <div
-        className={cn("animate-pulse rounded-12 bg-line", className)}
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-
   return (
-    <img
-      src={dataUrl}
-      alt="رمز الدفع"
-      width={size}
-      height={size}
-      className={cn("rounded-12 bg-white p-8", className)}
-    />
+    <div className="t2-m-qr-wrap">
+      {dataUrl ? (
+        <img src={dataUrl} alt="رمز الدفع" width={size} height={size} className="t2-m-qr" />
+      ) : (
+        <span className="t2-m-qr-wait" style={{ width: size, height: size }} aria-hidden="true" />
+      )}
+    </div>
   );
 }

@@ -6,34 +6,34 @@
  *
  * والحدود اليومية والشهرية تحكمها الخلفية (`wallet_settings`)، وصفرٌ فيها
  * يعني «لم يُضبط بعد» فترتدّ العملية برسالةٍ تقول ذلك — لا تخترع الواجهة حداً.
+ *
+ * **بلغة TAXO 2.0** (لوحاتُ `design/t2-new/rider/R17` · `R17b` · `R17c`): حقلُ الهاتف في R03، والمستلمُ بطاقةُ الكبتن في R08،
+ * والمبلغُ بطاقةُ R10، **وورقةُ التأكيد باقيةٌ كما هي** — الاسمُ والمبلغُ و«رصيدك بعده» في قدمٍ لا تُمرَّر. **والنداءاتُ والقواعدُ
+ * وشروطُ التعطيل حرفاً.**
  */
 
-import { ArrowLeftRight, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getWallet, lookupRecipient, transfer } from "@/api/endpoints";
 import type { CountryCode, TransferRecipient } from "@/api/types";
-import { PhoneInput } from "@/components/PhoneInput";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
-import { Field } from "@/components/ui/Field";
-import { Screen } from "@/components/ui/Screen";
-import { useConfig, useCountryConfig } from "@/lib/config";
-import { usePhoneCountry } from "@/lib/config";
-import { looksComplete } from "@/lib/phone";
+import { useGoBack } from "@/lib/back";
+import { useConfig, useCountryConfig, usePhoneCountry } from "@/lib/config";
+import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
 import { useSession } from "@/lib/session";
 import {
-  cn,
   currencyLabel,
   formatMoney,
   newIdempotencyKey,
   subtractMoney,
 } from "@/lib/utils";
+import { AuthBlock, AuthChoice, AuthPhone, Icon } from "@/taxo2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, SheetModalT2 } from "@/screens/t2/MoneyT2";
 
 export function WalletTransferScreen() {
   const navigate = useNavigate();
+  const goBack = useGoBack("/wallet");
   const { user } = useSession();
   const { config } = useConfig();
   const country = useCountryConfig(user?.country_code);
@@ -43,7 +43,7 @@ export function WalletTransferScreen() {
   const countries =
     config?.countries.map((entry) => entry.country_code) ?? [];
   const [code, setCode] = useState<CountryCode>(user?.country_code ?? "JO");
-  const { nationalLength } = usePhoneCountry(code);
+  const { dialCode, nationalLength } = usePhoneCountry(code);
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState<TransferRecipient | null>(null);
@@ -109,202 +109,205 @@ export function WalletTransferScreen() {
     }
   }
 
+  // **سببُ الخطأ تحت حقله** (§٦٢/٢٠): ما يردّه البحثُ عن المستلم يخصّ الرقم — فتحته؛ وما يردّه التحويلُ سطرٌ فوق الزرّ
+  const phoneError =
+    dialCode === null
+      ? "مفتاحُ هذه الدولة غير متاح الآن — اختر دولةً أخرى أو أعد المحاولة."
+      : recipient
+        ? null
+        : error;
+  const currency = country?.currency;
+
   return (
-    <Screen title="تحويل رصيد" back="/wallet" nav>
-      <div className="space-y-20">
-        {recipient ? (
-          <div className="card flex items-center gap-12 p-16">
-            <UserCheck className="size-24 text-ok" />
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-ink">
-                {recipient.name}
-              </p>
-              <p dir="ltr" className="text-14 text-muted">
-                {recipient.phone}
-              </p>
+    <div className="t2 t2-m-page">
+      <HeadT2 title="تحويل رصيد" onBack={goBack} />
+
+      {recipient ? (
+        // **المستلمُ وُجد** — الاسمُ قبل الرقم، والدائرةُ بعلامة «وُجد الحساب» (R08)
+        <div className="t2-m-person">
+          <span className="t2-m-person-badge" aria-hidden="true">
+            <Icon name="how_to_reg" />
+          </span>
+          <div className="t2-m-person-main">
+            <div className="t2-m-person-name">{recipient.name}</div>
+            <div dir="ltr" className="t2-m-person-sub">
+              {recipient.phone}
             </div>
-            <button
-              type="button"
-              onClick={() => setRecipient(null)}
-              className="pressable ms-auto text-14 text-muted hover:text-ink"
-            >
-              تغيير
-            </button>
           </div>
-        ) : (
-          <PhoneInput
-            phone={phone}
-            country={code}
-            countries={countries}
-            onPhoneChange={setPhone}
-            onCountryChange={setCode}
-            disabled={busy}
-          />
-        )}
+          <button type="button" className="t2-m-change" onClick={() => setRecipient(null)}>
+            تغيير
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* **دولتان أو أكثر ⇒ تُختار الدولة** — زرّان لا قائمة، كشاشات الدخول (`AuthChoice`) */}
+          {countries.length > 1 ? (
+            <AuthBlock label="الدولة">
+              <AuthChoice
+                label="الدولة"
+                value={code}
+                options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
+                onChange={setCode}
+              />
+            </AuthBlock>
+          ) : null}
+          <AuthBlock label="رقم الهاتف" htmlFor="transfer-phone" error={phoneError}>
+            <AuthPhone
+              id="transfer-phone"
+              type="tel"
+              autoComplete="tel"
+              dial={dialCode}
+              value={phone}
+              maxLength={nationalLength}
+              placeholder={"7".padEnd(nationalLength, "X")}
+              // **حقلٌ معطَّلٌ خيرٌ من رقمٍ بمفتاحٍ خاطئ**: بلا مفتاحٍ منشورٍ لهذه
+              // الدولة لا يُبنى رقمٌ أصلاً — فالبديلُ أن يُبنى بمفتاح سوقٍ آخر
+              disabled={busy || dialCode === null}
+              invalid={Boolean(phoneError)}
+              onChange={(event) =>
+                dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode))
+              }
+            />
+          </AuthBlock>
+        </>
+      )}
 
+      {recipient ? (
+        <>
+          <div className="t2-m-gap">
+            {/* **الرمزُ لا الكود**: كلُّ سطحٍ ماليٍّ آخر يقول «د.أ» */}
+            <AmountCardT2 id="transfer-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency} />
+          </div>
+          <p className="t2-m-hint">الحدّان اليومي والشهري يضبطهما فريق TAXO</p>
+        </>
+      ) : null}
+
+      {/* **والعلّةُ مع الزرِّ لا داخلَ ورقةٍ لا تُفتح** (قرارُ المالك
+          2026-08-23): إطفاءُ الزرِّ وحدَه يترك صاحبَه أمام زرٍّ ميّتٍ بلا
+          سبب — **وهو أسوأُ من زرٍّ يعمل ثم يرتدّ**، لأن الثاني يقول شيئاً.
+          وتقول الرقمَ الذي يملكه كي لا يخمّن. */}
+      {short ? (
+        <div className="t2-callout warn t2-m-callout">
+          <Icon name="error" />
+          <div className="t2-callout-main">
+            <p className="t2-callout-body t2-m-callout-text">
+              رصيدك لا يكفي — المتاح <b>{formatMoney(balance ?? "0", currency)}</b>. اشحن محفظتك أو أنقص المبلغ.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {recipient ? <BannerT2 tone="danger" message={error} /> : null}
+      <BannerT2 tone="ok" message={done} />
+
+      <div className="t2-m-actions">
         {recipient ? (
-          <Field
-            label="المبلغ"
-            inputMode="decimal"
-            dir="ltr"
-            className="text-start"
-            value={amount}
-            onChange={(event) =>
-              setAmount(event.target.value.replace(/[^\d.]/g, ""))
-            }
-            // **الرمزُ لا الكود**: كلُّ سطحٍ ماليٍّ آخر يقول «د.أ»، وهذا وحدَه
-            // كان يقول «JOD» — نفسُ شكلِ حقلِ الشحن الذي أُصلح في 2026-08-13
-            suffix={currencyLabel(country?.currency)}
-            hint="الحدّان اليومي والشهري يضبطهما فريق TAXO"
-          />
-        ) : null}
-
-        {/* **والعلّةُ مع الزرِّ لا داخلَ ورقةٍ لا تُفتح** (قرارُ المالك
-            2026-08-23): إطفاءُ الزرِّ وحدَه يترك صاحبَه أمام زرٍّ ميّتٍ بلا
-            سبب — **وهو أسوأُ من زرٍّ يعمل ثم يرتدّ**، لأن الثاني يقول شيئاً.
-            وتقول الرقمَ الذي يملكه كي لا يخمّن. */}
-        {short ? (
-          <p className="rounded-12 border border-warn bg-surface-2 px-13 py-10 text-12 leading-relaxed text-muted">
-            رصيدك لا يكفي — المتاح{" "}
-            <b className="text-ink">
-              {formatMoney(balance ?? "0", country?.currency)}
-            </b>
-            . اشحن محفظتك أو أنقص المبلغ.
-          </p>
-        ) : null}
-
-        <ErrorNote message={error} />
-        <SuccessNote message={done} />
-
-        {recipient ? (
-          <Button
-            size="lg"
-            loading={busy}
+          <button
+            type="button"
+            className="t2-button primary t2-m-cta"
             // **ولا زرَّ حيٌّ على عمليةٍ سترتدّ** — الخلفيةُ ترفض ما يتجاوز
             // الرصيد، **وزرٌّ يعمل ثم يردّ ٤٠٩ يعلّم صاحبَه أن يعيد الضغط**.
-            // وهو شكلُ ورقة السحب التي أُصلحت في المرحلة ١٣: «زرٌّ معطّلٌ يقول
-            // لماذا خيرٌ من زرٍّ يعمل ثم يرتدّ».
-            disabled={Number(amount) <= 0 || short}
+            disabled={busy || Number(amount) <= 0 || short}
+            aria-busy={busy}
             onClick={() => setConfirming(true)}
           >
-            <ArrowLeftRight className="size-16" />
-            تأكيد التحويل
-          </Button>
+            <BusyLabel busy={busy}>
+              <Icon name="sync_alt" />
+              تأكيد التحويل
+            </BusyLabel>
+          </button>
         ) : (
-          <Button
-            size="lg"
-            loading={busy}
-            disabled={!looksComplete(phone, nationalLength)}
+          <button
+            type="button"
+            className="t2-button primary t2-m-cta"
+            disabled={busy || !looksComplete(phone, nationalLength)}
+            aria-busy={busy}
             onClick={findRecipient}
           >
-            متابعة
-          </Button>
+            <BusyLabel busy={busy}>متابعة</BusyLabel>
+          </button>
         )}
 
         {done ? (
-          <Button
-            variant="ghost"
-            className="w-full"
-            onClick={() => navigate("/wallet")}
-          >
+          <button type="button" className="t2-button secondary t2-m-wide" onClick={() => navigate("/wallet")}>
             العودة للمحفظة
-          </Button>
+          </button>
         ) : null}
       </div>
 
       {confirming ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end bg-dim"
-          onClick={() => setConfirming(false)}
-        >
-          {/* **سقفٌ وتمريرٌ وقدمٌ ثابتة** (عطبٌ مقيسٌ 2026-08-23): كانت الورقةُ
-              مثبَّتةً من الأسفل (`items-end`) بلا `max-height` وبلا تمرير، فتنمو
-              صعوداً ويقصّها الإطار. **وهذه الشاشةُ أخطرُ ما يقع فيه**: لوحةُ
-              المفاتيح مفتوحةٌ بالضرورة — المستخدمُ لتوّه كتب المبلغ — والإطارُ
-              يتقلّص معها (قِيس في هذا المشروع ٨٢٠ ⇐ ٤٦٢). فالمبلغُ و«رصيدك
-              بعده» في **قدمٍ لا تُمرَّر**، والعنوانُ وحدَه يُمرَّر. */}
-          <div
-            className="flex max-h-[calc(var(--vvh,100dvh)-76px)] mb-[var(--vv-bottom,0px)] w-full flex-col rounded-t-24 border-t border-line bg-surface pt-20"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="scr min-h-0 flex-1 px-18">
-              <h2 className="mb-4 text-16 font-bold text-ink">تأكيد التحويل</h2>
-              <p className="mb-14 text-12 leading-snug text-muted">
-                لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.
-              </p>
-            </div>
-
-            <div className="shrink-0 px-18 pb-24">
-            <div className="rounded-14 border border-line bg-surface-2 px-14 py-12">
-              {/* **الاسمُ أولاً وأكبر**: الرقمُ ما كُتب، والاسمُ ما يُتحقَّق به */}
-              <div className="flex items-baseline justify-between">
-                <span className="text-12.5 text-muted">إلى</span>
-                <span className="text-15 font-bold text-ink">
-                  {recipient?.name}
-                </span>
-              </div>
-              <div className="mt-6 flex items-baseline justify-between">
-                <span className="text-12.5 text-muted">رقمه</span>
-                <span dir="ltr" className="text-12.5 text-muted">
-                  {recipient?.phone}
-                </span>
-              </div>
-              <div className="mt-10 flex items-baseline justify-between border-t border-line pt-10">
-                <span className="text-12.5 text-muted">المبلغ</span>
-                <span className="text-17 font-bold text-ink">
-                  {formatMoney(amount, country?.currency ?? "JOD")}
-                </span>
-              </div>
-              {balance ? (
-                <div className="mt-6 flex items-baseline justify-between">
-                  <span className="text-12.5 text-muted">رصيدك بعده</span>
-                  {/* **ولا يُعرض سالباً** (عطبٌ مقيسٌ على الجهاز 2026-08-23:
-                      رصيدٌ صفرٌ ومبلغُ 12.500 أعطى «رصيدك بعده −12.500 د.أ»).
-                      **و«رصيدك بعده» لا يكون سالباً بالتعريف**: التحويلُ لا
-                      يقع أصلاً، فالرقمُ يصف حالاً لن تكون. والسالبُ يُقرأ
-                      **ديناً**، ولا دَينَ هنا.
-                      **وهو الشكلُ الذي أُصلح مرةً في `withdrawals.available_balance`**
-                      — ولم يمسكه ذاك الحدُّ لأنه **موضعٌ آخر تماماً**: ذاك
-                      خلفيٌّ في مسار سحب الكبتن، وهذا **طرحٌ في المتصفّح** على
-                      شاشة تحويل الراكب. **حدٌّ في موضعٍ لا يحرس موضعاً ثانياً
-                      يحسب الشيءَ نفسَه.** */}
-                  <span className={cn("text-13", short ? "text-danger" : "text-ink")}>
-                    {short
-                      ? "لا يكفي رصيدك"
-                      : formatMoney(
-                          subtractMoney(balance, amount),
-                          country?.currency ?? "JOD",
-                        )}
+        // **سقفٌ وتمريرٌ وقدمٌ ثابتة** (عطبٌ مقيسٌ 2026-08-23): لوحةُ المفاتيح مفتوحةٌ بالضرورة — المستخدمُ لتوّه كتب المبلغ —
+        // والإطارُ يتقلّص معها (قِيس ٨٢٠ ⇐ ٤٦٢). فالمبلغُ و«رصيدك بعده» في **قدمٍ لا تُمرَّر**، والعنوانُ وحدَه يُمرَّر (`SheetT2`)
+        <SheetModalT2
+          onClose={() => setConfirming(false)}
+          footer={
+            <div className="t2-m-foot">
+              <div className="t2-m-sum">
+                {/* **الاسمُ أولاً وأكبر**: الرقمُ ما كُتب، والاسمُ ما يُتحقَّق به */}
+                <div className="t2-m-sum-row">
+                  <span className="t2-m-sum-label">إلى</span>
+                  <span className="t2-m-sum-name">{recipient?.name}</span>
+                </div>
+                <div className="t2-m-sum-row">
+                  <span className="t2-m-sum-label">رقمه</span>
+                  <span dir="ltr" className="t2-m-sum-sub">
+                    {recipient?.phone}
                   </span>
                 </div>
-              ) : null}
-            </div>
-
-            <div className="mt-16 flex flex-col gap-9">
-              <Button
-                size="lg"
-                loading={busy}
+                <div className="t2-m-dash" aria-hidden="true" />
+                <div className="t2-m-sum-row">
+                  <span className="t2-m-sum-label">المبلغ</span>
+                  <span>
+                    <span dir="ltr" className="t2-m-num sm">
+                      {formatMoney(amount)}
+                    </span>{" "}
+                    <span className="t2-m-sum-sub t2-m-strong">{currencyLabel(country?.currency ?? "JOD")}</span>
+                  </span>
+                </div>
+                {balance ? (
+                  <div className="t2-m-sum-row">
+                    <span className="t2-m-sum-label">رصيدك بعده</span>
+                    {/* **ولا يُعرض سالباً** (عطبٌ مقيسٌ على الجهاز 2026-08-23: رصيدٌ صفرٌ ومبلغُ 12.500 أعطى
+                        «رصيدك بعده −12.500 د.أ»). **و«رصيدك بعده» لا يكون سالباً بالتعريف**: التحويلُ لا يقع أصلاً،
+                        فالرقمُ يصف حالاً لن تكون. والسالبُ يُقرأ **ديناً**، ولا دَينَ هنا.
+                        **وهو الشكلُ الذي أُصلح مرةً في `withdrawals.available_balance`** — ولم يمسكه ذاك الحدُّ لأنه
+                        **موضعٌ آخر تماماً**: ذاك خلفيٌّ في مسار سحب الكبتن، وهذا **طرحٌ في المتصفّح** على شاشة تحويل
+                        الراكب. **حدٌّ في موضعٍ لا يحرس موضعاً ثانياً يحسب الشيءَ نفسَه.** */}
+                    <span className={short ? "t2-m-sum-after short" : "t2-m-sum-after"}>
+                      {short
+                        ? "لا يكفي رصيدك"
+                        : formatMoney(subtractMoney(balance, amount), country?.currency ?? "JOD")}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="t2-button primary t2-m-cta"
+                disabled={busy}
+                aria-busy={busy}
                 onClick={() => {
                   setConfirming(false);
                   void send();
                 }}
               >
-                أرسل الآن
-              </Button>
-              <Button
-                size="lg"
-                variant="ghost"
+                <BusyLabel busy={busy}>أرسل الآن</BusyLabel>
+              </button>
+              <button
+                type="button"
+                className="t2-button secondary t2-m-wide"
                 disabled={busy}
                 onClick={() => setConfirming(false)}
               >
                 رجوع
-              </Button>
+              </button>
             </div>
-            </div>
-          </div>
-        </div>
+          }
+        >
+          <div className="t2-m-sheet-title">تأكيد التحويل</div>
+          <p className="t2-m-sheet-sub last">لا يمكن التراجع بعد الإرسال — راجعِ الاسمَ لا الرقم وحدَه.</p>
+        </SheetModalT2>
       ) : null}
-
-    </Screen>
+    </div>
   );
 }

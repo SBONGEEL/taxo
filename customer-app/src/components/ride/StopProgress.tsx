@@ -10,12 +10,17 @@
  *
  * **والمنتهيةُ خيطٌ أخضر** (`DESIGN.md` §2.8-ب): التقدّمُ يُقرأ من الشكل لا
  * من نصٍّ يقول «المحطة ١ من ٢».
+ *
+ * **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R09b`): بطاقةُ «كم متبقية» في R09، ومربّعُ المحطة المرقَّم من «محطاتك» في R06 —
+ * ما مضى أخضرُ خافت، وما هو الآن بالجمر، وما بعده حافّةٌ متقطّعة؛ والوقتُ بخطِّ الأرقام.
  */
 
 import { useEffect, useState } from "react";
 
 import type { Ride } from "@/api/types";
-import { cn, formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
+
+import "@/screens/t2/money.css";
 
 /** `mm:ss` — والمصدرُ ختمُ الخلفية لا لحظةُ فتح الشاشة. */
 function elapsed(since: string, now: number): string {
@@ -41,59 +46,44 @@ export function StopProgress({ ride }: { ride: Ride }) {
   if (ride.stops.length === 0) return null;
 
   return (
-    <div className="rounded-12 border border-line bg-bg px-12 py-10">
-      <div className="flex items-center gap-6">
+    <div className="t2-m-meter">
+      <div className="t2-m-track">
         {ride.stops.map((stop, index) => {
           const done = stop.resumed_at !== null;
           const here = stop.arrived_at !== null && stop.resumed_at === null;
           return (
-            <div key={stop.id} className="flex flex-1 items-center gap-6">
-              <span
-                className={cn(
-                  "flex size-20 flex-none items-center justify-center rounded-2 text-10 font-bold",
-                  done
-                    ? "bg-ok text-accent-ink"
-                    : here
-                      ? "bg-warn text-accent-ink"
-                      : "border border-line text-muted",
-                )}
-              >
-                {index + 1}
-              </span>
-              <span
-                className={cn("h-px flex-1", done ? "bg-ok" : "bg-line")}
-                aria-hidden
-              />
+            <div key={stop.id} className="t2-m-track-seg">
+              <span className={done ? "t2-m-stop done" : here ? "t2-m-stop here" : "t2-m-stop"}>{index + 1}</span>
+              <span className={done ? "t2-m-link-line done" : "t2-m-link-line"} aria-hidden="true" />
             </div>
           );
         })}
-        <span className="text-12 text-muted">وجهتك</span>
+        <span className="t2-m-track-end">وجهتك</span>
       </div>
 
       {waiting ? (
-        <div className="mt-10 flex items-end justify-between">
+        <div className="t2-m-meter-row">
           <div>
-            <p className="text-12 text-muted">
-              الكبتن واقفٌ عند المحطة {waiting.sequence}
-            </p>
+            <div className="t2-m-meter-label">الكبتن واقفٌ عند المحطة {waiting.sequence}</div>
             {/* الوقتُ يُحسب هنا — والمالُ لا */}
-            <p className="text-20 font-bold tabular-nums text-ink">
+            <div dir="ltr" className="t2-m-clock">
               {elapsed(waiting.arrived_at!, now)}
-            </p>
+            </div>
           </div>
-          <div className="text-end">
-            <p className="text-12 text-muted">رسم الانتظار حتى الآن</p>
-            <p className="font-bold text-ink">
-              {formatMoney(ride.waiting_charge, ride.currency)}
-            </p>
+          <div className="t2-m-meter-end">
+            <div className="t2-m-meter-label">رسم الانتظار حتى الآن</div>
+            <div className="t2-m-meter-charge">{formatMoney(ride.waiting_charge, ride.currency)}</div>
           </div>
         </div>
       ) : null}
 
       {waiting?.over_max_wait ? (
-        <p className="mt-8 text-12 leading-relaxed text-warn">
-          تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء
-          الرحلة هنا.
+        <p className="t2-m-meter-note">
+          <span className="t2-icon" aria-hidden="true">error</span>
+          <span>
+            تجاوز الانتظار الحدَّ المسموح عند هذه المحطة — يمكن للكبتن إنهاء
+            الرحلة هنا.
+          </span>
         </p>
       ) : null}
     </div>

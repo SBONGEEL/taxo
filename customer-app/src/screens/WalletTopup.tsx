@@ -1,4 +1,4 @@
-/** شحن المحفظة بقنواته الثلاث (SPEC القسم 7).
+/** شحن المحفظة بقنواته الثلاث (SPEC القسم 7) — **بلغة TAXO 2.0** (لوحتا `design/t2-new/rider/R16` · `R16b`).
  *
  * ثلاث قنوات وثلاثة ردود مختلفة — ولذلك ثلاثة مسارات في الخلفية لا مسارٌ
  * واحد بحقولٍ فارغة:
@@ -12,10 +12,13 @@
  * والقناة الآلية قد لا يكون لها عقد؛ حينها ترتدّ 503 وتبقى اليدوية قائمة —
  * «مزوّدٌ متوقف لا يقطع قناة شحنٍ كاملة» (القسم 15/أ). فالشاشة تعرض اليدوية
  * دائماً وتجرّب الآلية أولاً.
+ *
+ * **وما تغيّر طبقةُ العرض وحدَها** — النداءاتُ والقواعدُ وشروطُ تعطيل الزرّ حرفاً: بطاقةُ المبلغ بخطِّ الأرقام (R10)، والقنواتُ
+ * بطاقاتُ «اختر الفئة» (R06)، وصفحةُ الرمز بطاقةٌ بيضاء، **والشريطُ باقٍ** كما كان (القرار 53: صفحاتُ المحفظة الداخلية بشريطها).
  */
 
-import { CreditCard, Smartphone, Landmark } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import {
@@ -26,17 +29,14 @@ import {
 } from "@/api/endpoints";
 import type { CliqTopup } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
-import { Field } from "@/components/ui/Field";
-import { Screen } from "@/components/ui/Screen";
+import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
-import { useLocation } from "react-router-dom";
-
 import { useSession } from "@/lib/session";
 import { play } from "@/lib/sound";
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
-import { cn, formatMoney, currencyLabel } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
+import { AuthBlock, AuthInput, Icon } from "@/taxo2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2 } from "@/screens/t2/MoneyT2";
 
 // **بيتٌ واحدٌ للورقة والشاشة** — وثلاثةٌ لا أربعة (قرار 20 والتصميم)
 const QUICK_AMOUNTS = QUICK_TOPUP_AMOUNTS;
@@ -46,6 +46,8 @@ type Channel = "card" | "cliq" | "manual";
 export function WalletTopupScreen() {
   const { user } = useSession();
   const country = useCountryConfig(user?.country_code);
+  // **من حيث جئت، والمحفظةُ لمن دخل مباشرةً** (`lib/back.ts`) — كما كان رأسُ الشاشة
+  const goBack = useGoBack("/wallet");
 
   // **اختيارُ الورقة يصل في حالة المسار** (تصميمُ `topupShow`): الورقةُ تجمع
   // المبلغَ والقناةَ والشاشةُ تنفّذ — فلا منطقَ قناةٍ في مكانين. والدخولُ
@@ -122,161 +124,145 @@ export function WalletTopupScreen() {
   }
 
   return (
-    <Screen title="شحن الرصيد" back="/wallet" nav>
-      <div className="space-y-20">
-        {cliq ? (
-          <section className="card space-y-16 p-16">
-            <h2 className="font-semibold text-ink">حوّل عبر كليك</h2>
-            <p className="text-14 text-muted">
-              امسح الرمز من تطبيق بنكك بمبلغ {formatMoney(cliq.amount, cliq.currency)}.
-            </p>
-            {cliq.qr_payload ? (
-              <div className="flex justify-center">
-                <QrCode payload={cliq.qr_payload} />
-              </div>
-            ) : null}
-            {cliq.deep_link ? (
-              <Button variant="secondary" className="w-full" asChild>
-                <a href={cliq.deep_link}>افتح تطبيق البنك</a>
-              </Button>
-            ) : null}
+    <div className="t2 t2-m-page">
+      <HeadT2 title="شحن الرصيد" onBack={goBack} />
 
-            <ErrorNote message={error} />
-            <SuccessNote message={done} />
+      {cliq ? (
+        // **صفحةُ الرمز** (R16b) — بطاقةٌ بيضاء: الرمزُ أسودُ على أبيضَ في كلِّ سِمة، ثمّ تطبيقُ البنك، ثمّ «تحقّق الآن»
+        <section className="t2-m-card">
+          <h2 className="t2-m-cliq-title">حوّل عبر كليك</h2>
+          <p className="t2-m-cliq-text">
+            امسح الرمز من تطبيق بنكك بمبلغ {formatMoney(cliq.amount, cliq.currency)}.
+          </p>
+          {cliq.qr_payload ? <QrCode payload={cliq.qr_payload} /> : null}
+          {cliq.deep_link ? (
+            <a href={cliq.deep_link} className="t2-button secondary t2-m-open">
+              <Icon name="open_in_new" />
+              افتح تطبيق البنك
+            </a>
+          ) : null}
 
-            {cliq.status === "paid" ? null : (
-              <Button className="w-full" loading={busy} onClick={recheck}>
-                حوّلتُ — تحقّق الآن
-              </Button>
-            )}
-            <Button variant="ghost" className="w-full" onClick={() => setCliq(null)}>
-              رجوع
-            </Button>
-          </section>
-        ) : (
-          <>
-            <div>
-              <Field
-                label="المبلغ"
-                inputMode="decimal"
-                dir="ltr"
-                className="text-start"
-                value={amount}
-                onChange={(event) =>
-                  setAmount(event.target.value.replace(/[^\d.]/g, ""))
-                }
-                suffix={currencyLabel(currency)}
-              />
-              <div className="mt-8 flex gap-8">
-                {QUICK_AMOUNTS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setAmount(value)}
-                    className={cn(
-                      "pressable flex-1 rounded-8 border px-8 py-8 text-14 transition",
-                      amount === value
-                        ? "border-brand bg-brand-soft text-ink"
-                        : "border-line text-muted hover:bg-surface-2",
-                    )}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <BannerT2 tone="danger" message={error} />
+          <BannerT2 tone="ok" message={done} />
 
-            <div className="space-y-8">
-              <p className="label">طريقة الشحن</p>
+          {cliq.status === "paid" ? null : (
+            <button
+              type="button"
+              className="t2-button primary t2-m-cta t2-m-gap"
+              disabled={busy}
+              aria-busy={busy}
+              onClick={recheck}
+            >
+              <BusyLabel busy={busy}>حوّلتُ — تحقّق الآن</BusyLabel>
+            </button>
+          )}
+          <button type="button" className="t2-m-link" onClick={() => setCliq(null)}>
+            رجوع
+          </button>
+        </section>
+      ) : (
+        <>
+          <AmountCardT2 id="topup-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency}>
+            <QuickAmountsT2 amounts={QUICK_AMOUNTS} value={amount} onPick={setAmount} label={(value) => formatMoney(value)} />
+          </AmountCardT2>
 
-              {cliqEnabled ? (
-                <ChannelOption
-                  active={channel === "cliq"}
-                  onSelect={() => setChannel("cliq")}
-                  icon={Smartphone}
-                  title="كليك — رمز فوري"
-                  hint="امسح الرمز من تطبيق بنكك ويُشحن رصيدك آلياً"
-                />
-              ) : null}
-
-              {cardEnabled ? (
-                <ChannelOption
-                  active={channel === "card"}
-                  onSelect={() => setChannel("card")}
-                  icon={CreditCard}
-                  title="بطاقة"
-                  hint="شحنٌ فوري عبر صفحة دفع آمنة"
-                />
-              ) : null}
-
+          <h2 className="t2-section">طريقة الشحن</h2>
+          <div className="t2-m-chans" role="radiogroup" aria-label="طريقة الشحن">
+            {cliqEnabled ? (
               <ChannelOption
-                active={channel === "manual"}
-                onSelect={() => setChannel("manual")}
-                icon={Landmark}
-                title="حوالة يدوية"
-                hint="حوّل ثم أدخل المرجع — تؤكده الإدارة"
-              />
-            </div>
-
-            {channel === "manual" ? (
-              <Field
-                label="مرجع الحوالة"
-                dir="ltr"
-                className="text-start"
-                value={reference}
-                onChange={(event) => setReference(event.target.value)}
-                hint="رقم الحوالة كما يظهر في تطبيق بنكك"
+                active={channel === "cliq"}
+                onSelect={() => setChannel("cliq")}
+                icon="smartphone"
+                title="كليك — رمز فوري"
+                hint="امسح الرمز من تطبيق بنكك ويُشحن رصيدك آلياً"
               />
             ) : null}
 
-            <ErrorNote message={error} />
-            <SuccessNote message={done} />
+            {cardEnabled ? (
+              <ChannelOption
+                active={channel === "card"}
+                onSelect={() => setChannel("card")}
+                icon="credit_card"
+                title="بطاقة"
+                hint="شحنٌ فوري عبر صفحة دفع آمنة"
+              />
+            ) : null}
 
-            <Button
-              size="lg"
-              loading={busy}
+            <ChannelOption
+              active={channel === "manual"}
+              onSelect={() => setChannel("manual")}
+              icon="account_balance"
+              title="حوالة يدوية"
+              hint="حوّل ثم أدخل المرجع — تؤكده الإدارة"
+            />
+          </div>
+
+          {channel === "manual" ? (
+            <div className="t2-m-gap-lg">
+              <AuthBlock label="مرجع الحوالة" htmlFor="topup-reference" hint="رقم الحوالة كما يظهر في تطبيق بنكك">
+                <AuthInput
+                  id="topup-reference"
+                  dir="ltr"
+                  autoComplete="off"
+                  value={reference}
+                  onChange={(event) => setReference(event.target.value)}
+                />
+              </AuthBlock>
+            </div>
+          ) : null}
+
+          <BannerT2 tone="danger" message={error} />
+          <BannerT2 tone="ok" message={done} />
+
+          <div className="t2-m-actions">
+            <button
+              type="button"
+              className="t2-button primary t2-m-cta"
               disabled={
+                busy ||
                 Number(amount) <= 0 ||
                 (channel === "manual" && reference.trim().length < 3)
               }
+              aria-busy={busy}
               onClick={submit}
             >
-              متابعة
-            </Button>
-          </>
-        )}
-      </div>
-    </Screen>
+              <BusyLabel busy={busy}>متابعة</BusyLabel>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
+/** قناةُ شحن — بطاقةُ «اختر الفئة» في R06: المختارةُ بحافّةٍ مزدوجةٍ بالحبر. */
 function ChannelOption({
   active,
   onSelect,
-  icon: Icon,
+  icon,
   title,
   hint,
 }: {
   active: boolean;
   onSelect: () => void;
-  icon: typeof CreditCard;
+  icon: string;
   title: string;
   hint: string;
 }) {
   return (
     <button
       type="button"
-      aria-pressed={active}
+      role="radio"
+      aria-checked={active}
       onClick={onSelect}
-      className={cn(
-        "pressable flex w-full items-center gap-12 rounded-12 border px-16 py-12 text-start transition",
-        active ? "border-brand bg-brand-soft" : "border-line bg-surface hover:bg-surface-2",
-      )}
+      className={active ? "t2-m-chan on" : "t2-m-chan"}
     >
-      <Icon className="size-20 text-ink" />
-      <span>
-        <span className="block font-medium text-ink">{title}</span>
-        <span className="block text-12 text-muted">{hint}</span>
+      <span className="t2-m-chan-icon">
+        <Icon name={icon} />
+      </span>
+      <span className="t2-m-chan-main">
+        <span className="t2-m-chan-title">{title}</span>
+        <span className="t2-m-chan-hint">{hint}</span>
       </span>
     </button>
   );

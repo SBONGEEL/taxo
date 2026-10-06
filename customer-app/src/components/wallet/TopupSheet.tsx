@@ -1,25 +1,20 @@
-/** ورقةُ شحن الرصيد — تصميمُ الراكب (`topupShow`).
+/** ورقةُ شحن الرصيد — تصميمُ الراكب (`topupShow`)، **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R16c`) فوق المحفظة «R11».
  *
- * **وهي الورقةُ الحقيقيةُ الوحيدة من الثلاث التي طُلب تحويلُها**، وقياسُ النموذج
- * هو ما فرّق: `topupShow` طبقةُ تعتيمٍ (`--dim`، z 70) فوقها ورقةٌ سفليةٌ بنصف
- * قطرٍ أعلى `24px` وحركةِ `slideup`؛ أما `payShow` و`rateShow` فـ`inset:0`
- * بخلفيةٍ معتمةٍ كاملة (z 60) — أي **شاشتان كاملتان لا ورقتان**. فما احتاج
- * تحويلاً واحدٌ لا ثلاثة، وما عداهما يُطابَق في **بنيته** لا في نوعه.
+ * **ولا تحمل هذه الورقةُ منطقَ القنوات**: تجمع المبلغَ والقناةَ ثم تُسلّم إلى `/wallet/topup` — وهو البابُ الذي يعرف كلَّ قناةٍ
+ * وشروطَها (البطاقةُ تُحوَّل إلى صفحة المزود، وكليك الآليةُ تفتح صفحةَ QR بقرار 29، واليدويةُ تنتظر تأكيد الإدارة). ومنطقٌ منسوخٌ
+ * في ورقةٍ يفترق عن أصله أولَ مرةٍ يتغيّر شرط.
  *
- * **ولا تحمل هذه الورقةُ منطقَ القنوات**: تجمع المبلغَ والقناةَ ثم تُسلّم إلى
- * `/wallet/topup` — وهو البابُ الذي يعرف كلَّ قناةٍ وشروطَها (البطاقةُ تُحوَّل
- * إلى صفحة المزود، وكليك الآليةُ تفتح صفحةَ QR بقرار 29، واليدويةُ تنتظر تأكيد
- * الإدارة). ومنطقٌ منسوخٌ في ورقةٍ يفترق عن أصله أولَ مرةٍ يتغيّر شرط.
+ * **وما تغيّر طبقةُ العرض وحدَها**: بطاقةُ المبلغ بخطِّ الأرقام والمبالغُ السريعة بلغة خيارات البقشيش (R10)، والقناتان صفّان
+ * بلغة منتقي الدفع (R06). **والقيمُ هي هي**: «10» ابتداءً، والقناةُ معطّلةٌ ما دام المبلغُ صفراً، والقناةُ الغائبةُ لا تُرسم.
  */
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Landmark } from "lucide-react";
 
-import { Field } from "@/components/ui/Field";
-import { Sheet } from "@/components/ui/Sheet";
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
-import { cn, currencyLabel, formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+import { AmountCardT2, QuickAmountsT2, SheetModalT2 } from "@/screens/t2/MoneyT2";
 
 export function TopupSheet({
   currency,
@@ -37,100 +32,55 @@ export function TopupSheet({
   const valid = Number(amount) > 0;
 
   return (
-    <>
-      {/* التعتيمُ يُغلق بالضغط عليه كبقية أوراق التطبيق */}
-      <button
-        type="button"
-        aria-label="إغلاق"
-        onClick={onClose}
-        className="fixed inset-0 z-[69] bg-dim"
-      />
-      <div className="fixed inset-x-0 bottom-0 z-[70]">
-        <Sheet attached>
-          <div className="space-y-14 pb-16">
-            <div>
-              <p className="text-16 font-semibold text-ink">شحن الرصيد</p>
-              <p className="mt-2 text-12 text-muted">
-                اختر المبلغ ثم طريقة الشحن.
-              </p>
-            </div>
+    <SheetModalT2 onClose={onClose}>
+      <div className="t2-m-sheet-title">شحن الرصيد</div>
+      <p className="t2-m-sheet-sub">اختر المبلغ ثم طريقة الشحن.</p>
 
-            <Field
-              label="المبلغ"
-              inputMode="decimal"
-              dir="ltr"
-              value={amount}
-              onChange={(event) =>
-                setAmount(event.target.value.replace(/[^\d.]/g, ""))
-              }
-              suffix={currencyLabel(currency)}
-            />
-            <div className="flex gap-8">
-              {QUICK_TOPUP_AMOUNTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setAmount(value)}
-                  className={cn(
-                    "pressable flex-1 rounded-8 border px-8 py-8 text-14 transition",
-                    amount === value
-                      ? "border-brand bg-brand-soft text-ink"
-                      : "border-line text-muted hover:bg-surface-2",
-                  )}
-                >
-                  {formatMoney(value, currency)}
-                </button>
-              ))}
-            </div>
+      <AmountCardT2 id="topup-sheet-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency}>
+        <QuickAmountsT2
+          amounts={QUICK_TOPUP_AMOUNTS}
+          value={amount}
+          onPick={setAmount}
+          label={(value) => formatMoney(value, currency)}
+        />
+      </AmountCardT2>
 
-            {/* **القنواتُ صفوفٌ لا حبّات** كما في التصميم: لكلٍّ سطرُ شرحٍ يقول
-                ما يقع بعد الضغط — «فوريّ» أم «بعد التأكد». والقناةُ الغائبةُ
-                لا تُرسم معطّلةً: مفتاحُها مطفأٌ في هذا السوق */}
-            <div className="space-y-8">
-              {cardEnabled ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate("/wallet/topup", {
-                      state: { amount, channel: "card" },
-                    })
-                  }
-                  disabled={!valid}
-                  className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-bg p-14 text-start transition hover:bg-surface-2 disabled:opacity-50"
-                >
-                  <CreditCard className="size-20 text-muted" />
-                  <span className="flex-1">
-                    <span className="block font-medium text-ink">بطاقة</span>
-                    <span className="block text-12 text-muted">
-                      شحن فوري عبر صفحة الدفع الآمنة
-                    </span>
-                  </span>
-                </button>
-              ) : null}
-              {cliqEnabled ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate("/wallet/topup", {
-                      state: { amount, channel: "cliq" },
-                    })
-                  }
-                  disabled={!valid}
-                  className="pressable flex w-full items-center gap-12 rounded-12 border border-line bg-bg p-14 text-start transition hover:bg-surface-2 disabled:opacity-50"
-                >
-                  <Landmark className="size-20 text-muted" />
-                  <span className="flex-1">
-                    <span className="block font-medium text-ink">كليك</span>
-                    <span className="block text-12 text-muted">
-                      حوّل ثم يُضاف بعد التأكد
-                    </span>
-                  </span>
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </Sheet>
-      </div>
-    </>
+      {/* **القنواتُ صفوفٌ لا حبّات** كما في التصميم: لكلٍّ سطرُ شرحٍ يقول ما يقع بعد الضغط — «فوريّ» أم «بعد التأكد».
+          والقناةُ الغائبةُ لا تُرسم معطّلةً: مفتاحُها مطفأٌ في هذا السوق */}
+      {cardEnabled || cliqEnabled ? (
+        <div className="t2-list t2-m-gap">
+          {cardEnabled ? (
+            <button
+              type="button"
+              className="t2-row t2-m-opt"
+              disabled={!valid}
+              onClick={() => navigate("/wallet/topup", { state: { amount, channel: "card" } })}
+            >
+              <Icon name="credit_card" />
+              <span className="t2-row-main">
+                <span className="t2-row-title">بطاقة</span>
+                <span className="t2-row-body">شحن فوري عبر صفحة الدفع الآمنة</span>
+              </span>
+              <Icon name="chevron_left" className="t2-m-opt-end go" />
+            </button>
+          ) : null}
+          {cliqEnabled ? (
+            <button
+              type="button"
+              className="t2-row t2-m-opt"
+              disabled={!valid}
+              onClick={() => navigate("/wallet/topup", { state: { amount, channel: "cliq" } })}
+            >
+              <Icon name="smartphone" />
+              <span className="t2-row-main">
+                <span className="t2-row-title">كليك</span>
+                <span className="t2-row-body">حوّل ثم يُضاف بعد التأكد</span>
+              </span>
+              <Icon name="chevron_left" className="t2-m-opt-end go" />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </SheetModalT2>
   );
 }

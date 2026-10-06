@@ -27,8 +27,6 @@
  */
 
 import { useCallback, useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import { Banknote, CreditCard, Smartphone, Wallet } from "lucide-react";
 
 import type { CountryConfig, PaymentMethod } from "@/api/types";
 
@@ -46,9 +44,10 @@ type PlatformWrittenMethod = "promo" | "share";
 /** ما يجوز لصاحب الحساب اختياره. */
 export type PayableMethod = Exclude<PaymentMethod, PlatformWrittenMethod>;
 
+/** **وبلا أيقونة**: كانت أيقونةُ `lucide` لكلِّ قناةٍ هنا، ويقرؤها وجهُ المنتقي القائم وحدَه — **ونُزع** (§٦٢/٣)، فرموزُ
+ *  الهوية في `PAY_ICON_T2` (`components/payment/PaymentPicker.tsx`). وحقلٌ لا يقرؤه أحدٌ في `lib/` يُنزع (`check:readers`). */
 export interface PaymentChannel {
   method: PayableMethod;
-  icon: LucideIcon;
   /** المفتاح الذي يحكم القناة — والكاش بلا مفتاح لأنه يعمل بلا إعداد. */
   feature?: string;
   hint: string;
@@ -56,10 +55,10 @@ export interface PaymentChannel {
 
 /** الترتيب مقصود: المحفظة أولاً وكليك ثانياً (SPEC القسم 6.2). */
 export const PAYMENT_CHANNELS: PaymentChannel[] = [
-  { method: "wallet", icon: Wallet, feature: "wallet_enabled", hint: "خصمٌ فوري من رصيدك" },
-  { method: "cliq", icon: Smartphone, feature: "cliq_enabled", hint: "حوّل على alias الكبتن" },
-  { method: "card", icon: CreditCard, feature: "card_enabled", hint: "بطاقة أو محفظة الهاتف" },
-  { method: "cash", icon: Banknote, hint: "سلّم المبلغ للكبتن" },
+  { method: "wallet", feature: "wallet_enabled", hint: "خصمٌ فوري من رصيدك" },
+  { method: "cliq", feature: "cliq_enabled", hint: "حوّل على alias الكبتن" },
+  { method: "card", feature: "card_enabled", hint: "بطاقة أو محفظة الهاتف" },
+  { method: "cash", hint: "سلّم المبلغ للكبتن" },
 ];
 
 /** قنواتُ هذه الدولة وحدها — والقناةُ الغائبةُ لا تُرسم معطّلةً بل تختفي. */

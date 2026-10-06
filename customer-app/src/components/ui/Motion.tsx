@@ -16,7 +16,6 @@ import { useLocation, useNavigationType } from "react-router-dom";
 import { Spinner } from "@/components/ui/Feedback";
 import { DURATION, EASE, SLIDE_PX, STAGGER_STEP } from "@/lib/motion";
 import { isBackward } from "@/lib/nav-order";
-import { cn } from "@/lib/utils";
 
 /** انتقالُ الشاشات — **باتجاه التنقّل، ومقيساً في المتصفح لا مفترضاً**.
  *
@@ -130,26 +129,5 @@ export function StaggerItem({
     >
       {children}
     </motion.div>
-  );
-}
-
-/** هيكلٌ عظميٌّ بدل شاشةٍ فارغة (§8).
- *
- * **ولماذا لا دوّامة؟** الدوّامةُ تقول «انتظر» ولا تقول ماذا يأتي؛ والهيكلُ
- * يرسم **شكلَ ما سيصل**، فتستقرّ العينُ على مواضعه قبل أن يصل المحتوى ولا
- * تقفز حين يصل. وتفاصيلُ الرحلة تنتظر ثلاثةَ نداءاتٍ متتابعة — ثوانٍ كانت
- * سواداً كاملاً.
- *
- * والنبضُ `animate-pulse` من Tailwind، ويُلغيه `motion-reduce`.
- */
-export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "animate-pulse rounded-12 bg-surface-2 motion-reduce:animate-none",
-        className,
-      )}
-    />
   );
 }

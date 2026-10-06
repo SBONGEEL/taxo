@@ -6,20 +6,21 @@
  *
  * و«لا تخمين على غير محسوم»: طلبٌ ما زال `created` يبقى معلّقاً — لا يُعرض
  * نجاحاً ولا فشلاً، وتُعاد المحاولة بضغطة.
+ *
+ * **بلغة TAXO 2.0** (لوحاتُ `design/t2-new/rider/R20` · `R20b` · `R20c`): طبقةٌ بلا شريطٍ ولا رجوع — علامةُ R10 مكبَّرةً في القلب
+ * بنبرة الحال (نجاحٌ · خطأٌ · محايد)، و«متابعة» في القاع. **والنداءُ والوجهتان والصوتُ حرفاً.**
  */
 
-import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getCardOrder } from "@/api/endpoints";
 import type { CardOrder } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { Screen } from "@/components/ui/Screen";
 import { isUnlocked, play } from "@/lib/sound";
-import { formatMoney } from "@/lib/utils";
+import { currencyLabel, formatMoney } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+import { BannerT2, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2";
 
 export function CardReturnScreen() {
   const [params] = useSearchParams();
@@ -67,46 +68,62 @@ export function CardReturnScreen() {
   const back = () => navigate(rideId ? `/rides/${rideId}/pay` : "/wallet", { replace: true });
 
   return (
-    <Screen title="نتيجة الدفع" back={false}>
+    <div className="t2 t2-m-stage">
+      <HeadT2 title="نتيجة الدفع" />
+
       {loading ? (
-        <Spinner label="نسأل المزود عن حال العملية…" />
+        <div className="t2-m-result">
+          <WaitT2 label="نسأل المزود عن حال العملية…" />
+        </div>
       ) : (
-        <div className="space-y-20">
-          <ErrorNote message={error} />
+        <>
+          <BannerT2 tone="danger" message={error} />
 
           {order?.status === "paid" ? (
-            <div className="card flex flex-col items-center gap-8 p-24 text-center">
-              <CheckCircle2 className="size-40 text-ok" />
-              <p className="text-18 font-semibold text-ink">تم الدفع</p>
-              <p className="text-muted">{formatMoney(order.amount, order.currency)}</p>
+            <div className="t2-m-result">
+              <span className="t2-m-result-mark ok" aria-hidden="true">
+                <Icon name="check" />
+              </span>
+              <p className="t2-m-result-title">تم الدفع</p>
+              <div className="t2-m-result-amount">
+                <span dir="ltr" className="t2-m-num md">
+                  {formatMoney(order.amount)}
+                </span>
+                <span className="t2-m-cur">{currencyLabel(order.currency)}</span>
+              </div>
             </div>
           ) : order?.status === "failed" || order?.status === "cancelled" ? (
-            <div className="card flex flex-col items-center gap-8 p-24 text-center">
-              <XCircle className="size-40 text-danger" />
-              <p className="text-18 font-semibold text-ink">لم تكتمل العملية</p>
-              <p className="text-14 text-muted">
-                {order.failure_reason ?? "يمكنك المحاولة بقناة أخرى."}
-              </p>
+            <div className="t2-m-result">
+              <span className="t2-m-result-mark danger" aria-hidden="true">
+                <Icon name="close" />
+              </span>
+              <p className="t2-m-result-title">لم تكتمل العملية</p>
+              <p className="t2-m-result-text">{order.failure_reason ?? "يمكنك المحاولة بقناة أخرى."}</p>
             </div>
           ) : order ? (
-            <div className="card space-y-12 p-24 text-center">
-              <RefreshCw className="mx-auto size-32 text-muted" />
-              <p className="font-semibold text-ink">العملية قيد المعالجة</p>
-              <p className="text-14 text-muted">
+            <div className="t2-m-result">
+              <span className="t2-m-result-mark" aria-hidden="true">
+                <Icon name="hourglass_top" />
+              </span>
+              <p className="t2-m-result-title sm">العملية قيد المعالجة</p>
+              <p className="t2-m-result-text">
                 لم يحسمها المزود بعد. لا نعدّها مدفوعةً ولا ساقطة — أعد الاستعلام بعد
                 لحظات.
               </p>
-              <Button variant="secondary" onClick={check}>
+              <button type="button" className="t2-button secondary t2-m-again" onClick={check}>
+                <Icon name="refresh" />
                 أعد الاستعلام
-              </Button>
+              </button>
             </div>
-          ) : null}
+          ) : (
+            <div className="t2-m-push" />
+          )}
 
-          <Button size="lg" onClick={back}>
+          <button type="button" className="t2-button primary t2-m-cta" onClick={back}>
             متابعة
-          </Button>
-        </div>
+          </button>
+        </>
       )}
-    </Screen>
+    </div>
   );
 }

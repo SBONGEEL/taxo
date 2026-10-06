@@ -461,7 +461,6 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           onSelect={c.choose}
           onClose={() => c.setPickingPay(false)}
           walletHint={c.balance === null ? null : `الرصيد: ${formatMoney(c.balance, currency)}`}
-          variant="t2"
         />
       ) : null}
     </SheetT2>

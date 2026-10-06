@@ -12,12 +12,16 @@
  * **ولا حقلَ `has_photo` في الخلفية**: الطلبُ نفسُه هو الجواب — بايتاتٌ أو
  * 404. وحقلٌ ثانٍ يقول «لها صورة» بيتٌ ثانٍ للحقيقة يفترق عن الملف أوّلَ
  * مراجعةٍ تُغيّر حالَه.
+ *
+ * **بلغة TAXO 2.0** (`money.css` — بطاقةُ الكبتن في R08): الحرفُ في دائرةٍ مخطّطة، ومقاسُها من صنف من يناديها
+ * (`t2-trk-avatar` في ورقة التتبّع، وR18 في التفاصيل) — **والدائرةُ نفسُها في الحالين** فلا تكون الصورةُ أو غيابُها شكلاً آخر.
  */
 
 import { useEffect, useState } from "react";
 
 import { api } from "@/api/client";
-import { cn } from "@/lib/utils";
+
+import "@/screens/t2/money.css";
 
 export function DriverAvatar({
   rideId,
@@ -53,21 +57,13 @@ export function DriverAvatar({
     };
   }, [rideId]);
 
-  const base = cn(
-    "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-soft font-bold text-ink",
-    className,
-  );
+  const base = className ? `t2-m-avatar ${className}` : "t2-m-avatar";
 
   if (src) {
     return (
       <span className={base}>
-        <img
-          src={src}
-          alt=""
-          className="size-full object-cover"
-          // **وصفٌ فارغٌ بقصد**: الاسمُ مكتوبٌ بجانبها، ووصفٌ يكرّره يجعل
-          // قارئَ الشاشة يقوله مرتين
-        />
+        {/* **وصفٌ فارغٌ بقصد**: الاسمُ مكتوبٌ بجانبها، ووصفٌ يكرّره يجعل قارئَ الشاشة يقوله مرتين */}
+        <img src={src} alt="" />
       </span>
     );
   }

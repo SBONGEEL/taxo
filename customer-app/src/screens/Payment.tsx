@@ -14,15 +14,15 @@
  *
  * ---
  *
- * **والشكلُ طبقةٌ موسَّطة لا شاشةُ قائمة** (الحزمة ب، تصميمُ `payShow`): مبلغٌ
- * كبيرٌ في الوسط، ثم بطاقةُ صفوفٍ تشرحه، ثم زرٌّ واحد. وهذا الشكلُ **يفترض أن
- * القناةَ اختيرت قبل الرحلة** — وهو ما بنته ورقةُ التأكيد في الحزمة نفسِها،
- * ولذلك لم يُنقل الشكلُ في الحزمة (ج) مع أخته `rateShow`.
+ * **والشكلُ طبقةٌ كاملة لا شاشةُ قائمة** (الحزمة ب، تصميمُ `payShow`): مبلغٌ كبيرٌ، ثم ما يشرحه، ثم زرٌّ واحد. وهذا الشكلُ
+ * **يفترض أن القناةَ اختيرت قبل الرحلة** — وهو ما بنته ورقةُ التأكيد في الحزمة نفسِها.
  *
- * **وقائمةُ القنوات لم تُحذف، بل صارت خلف «طريقة أخرى»**، وهذا شرطُ القرار 3
- * لا زينة: التفضيلُ **لا يُقيّد صاحبَه عند الدفع**. فمن اختار المحفظةَ قبل
- * الرحلة ثم وجد رصيدَه لا يكفي يجد كلَّ قناةٍ متاحةٍ على بعد ضغطةٍ واحدة —
- * وطبقةٌ بزرٍّ واحدٍ بلا مخرجٍ تجعل التفضيلَ قيداً، وهو ما رفضه القرار نصّاً.
+ * **وقائمةُ القنوات لم تُحذف، بل صارت خلف «طريقة أخرى»**، وهذا شرطُ القرار 3 لا زينة: التفضيلُ **لا يُقيّد صاحبَه عند الدفع**.
+ * فمن اختار المحفظةَ قبل الرحلة ثم وجد رصيدَه لا يكفي يجد كلَّ قناةٍ متاحةٍ على بعد ضغطةٍ واحدة.
+ *
+ * **بلغة TAXO 2.0** (لوحاتُ `design/t2-new/rider/R19` · `R19b` · `R19c`): بنيةُ R10 — رأسٌ، وبطاقةُ الأجرة وحبّةُ القناة، والزرُّ
+ * في القاع بالجمر («طلب / قبول» في الهوية)، **والبطاقةُ ورقةٌ** أختُ «طريقة الدفع». **والنداءاتُ والمفاتيحُ والاستطلاعُ والأصواتُ
+ * حرفاً.**
  */
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -34,12 +34,9 @@ import { getRide, getRidePayments, payRide } from "@/api/endpoints";
 import type { Ride, RidePayments } from "@/api/types";
 import { CardChoice } from "@/components/payment/CardChoice";
 import { CliqPanel } from "@/components/payment/CliqPanel";
-import { PaymentPicker } from "@/components/payment/PaymentPicker";
+import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { PaymentsList } from "@/components/payment/PaymentsList";
-import { Button } from "@/components/ui/Button";
-import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
-import { Screen } from "@/components/ui/Screen";
-import { Stage } from "@/components/ui/Stage";
+import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { usePaymentPreference, type PayableMethod } from "@/lib/payment";
@@ -47,11 +44,14 @@ import { useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { play } from "@/lib/sound";
 import {
+  currencyLabel,
   currencyName,
   formatDistance,
   formatMoney,
   newIdempotencyKey,
 } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+import { BannerT2, BusyLabel, HeadT2, WaitT2 } from "@/screens/t2/MoneyT2";
 
 /** نصُّ الزرِّ والملاحظةِ لكل قناة — **وما بعد الضغط لا اسمَ القناة**.
  *
@@ -117,6 +117,8 @@ function stopBreakdown(
 export function PaymentScreen() {
   const { rideId = "" } = useParams();
   const navigate = useNavigate();
+  // **أثناء القراءة رجوعٌ إلى حيث جئت** كما كان رأسُ شاشة الانتظار (`lib/back.ts`)، **وبعدها إلى الرئيسية** كما كانت الطبقة
+  const goBack = useGoBack("/");
   const { user } = useSession();
   const { refresh } = useRide();
   const country = useCountryConfig(user?.country_code);
@@ -170,10 +172,6 @@ export function PaymentScreen() {
    * — شكراً لك» بالأخضر، وتحتها مباشرةً «كاش ٢٫٤٨١ بانتظار التأكيد». شاشةٌ
    * تناقض قائمتَها بسطرين، ولا يُبلَّغ عن هذا لأنه لا خطأ فيه: **كِذبةٌ هادئة**.
    *
-   * ولم يظهر قبل اليوم لأن بلوغَه يحتاج رحلةً حقيقيةً تُدفع بمحفظةٍ أقلَّ من
-   * أجرتها — وهي الحالُ التي بَنَتها الحزمةُ (ب) لتفحص ملاحظةَ الدفع المختلط،
-   * فوجدت أن ما تَعِد به الملاحظةُ تنقضه الشاشةُ التالية.
-   *
    * **والدواءُ صار حقلاً في الردّ لا حساباً هنا** (2026-08-15): تجيب الخلفيةُ
    * بـ`settlement` من `services/settlement.py`، وكانت هذه الشاشةُ واحدةً من
    * أربعٍ تستنتج الجوابَ بحسابها الخاص — فأخطأت ثلاثٌ منها بثلاث طرق. ونصُّ
@@ -214,7 +212,7 @@ export function PaymentScreen() {
     wasSettled.current = settled;
   }, [state, settled]);
 
-  /** صفوفُ البطاقة (`payRows`) — **قراءةٌ لا حساب**.
+  /** سطورُ البطاقة (`payRows`) — **قراءةٌ لا حساب**.
    *
    * كلُّ قيمةٍ هنا حقلٌ جاء من الخلفية كما هو: الأجرةُ النهائية والمسافةُ
    * الفعلية. ولا صفَّ لـ«ما دُفع» لأن اشتقاقَه طرحٌ لمبلغين — وما دُفع مفصَّلٌ
@@ -292,160 +290,137 @@ export function PaymentScreen() {
     }
   }
 
-  // **التحميلُ يبقى `Screen` لا `Stage`**: طبقةٌ موسَّطةٌ فارغةٌ بدوّامةٍ في
-  // منتصف شاشةٍ سوداء تُقرأ عطلاً، والانتقالُ إليها بعد لحظةٍ يومض
+  // **التحميلُ برأس الشاشة نفسِه**: طبقةٌ فارغةٌ بدوّامةٍ في منتصفها تُقرأ عطلاً، والانتقالُ إليها بعد لحظةٍ يومض
   if (loading) {
     return (
-      <Screen title="الدفع" back="/">
-        <Spinner label="نقرأ حال الدفع…" />
-      </Screen>
+      <div className="t2 t2-m-stage">
+        <HeadT2 title="الدفع" onBack={goBack} />
+        <WaitT2 label="نقرأ حال الدفع…" />
+      </div>
     );
   }
 
   return (
-    <Stage onBack={() => navigate("/")}>
-      <div className="space-y-18">
-        {/* **الرأسُ الموسَّط** (`payShow`): عنوانٌ صغير، ثم الرقمُ كبيراً، ثم
-            سطرٌ يسمّي العملةَ والقناةَ معاً. والرقمُ هو المتبقي لا الأجرة، لأن
-            ما يُسأل عنه الآن هو ما يُدفع الآن */}
-        <div className="text-center">
-          <p className="text-13 text-muted">
-            {nothingToStart ? "إجمالي الأجرة" : "المتبقي على هذه الرحلة"}
-          </p>
-          <p className="text-44 font-bold leading-hero text-ink">
-            {formatMoney(
-              nothingToStart ? (state?.final_fare ?? null) : (state?.outstanding ?? null),
-              state?.currency,
-            )}
-          </p>
-          <p className="mt-4 text-13 text-muted">
-            {currencyName(state?.currency)}
-            {nothingToStart || !resolved
-              ? null
-              : ` · ${PAYMENT_METHOD_LABEL[resolved.method]}`}
-          </p>
-        </div>
+    <div className="t2 t2-m-stage">
+      <HeadT2 title="الدفع" onBack={() => navigate("/")} />
 
-        {rows.length > 0 ? (
-          <div className="card px-16 py-14">
-            {rows.map((row) => (
-              <div
-                key={row.label}
-                className="flex justify-between py-4 text-12.5 last:pb-0"
-              >
-                <span className="text-muted">{row.label}</span>
-                <span className={row.strong ? "font-bold text-ink" : "text-ink"}>
-                  {row.value}
-                </span>
-              </div>
-            ))}
+      {/* **ما يُدفع الآن** (بطاقةُ R10): المتبقّي لا الأجرة — لأن ما يُسأل عنه الآن هو ما يُدفع الآن — والعملةُ باسمها، والقناةُ
+          في حبّة R10 */}
+      <div className="t2-m-card t2-m-due">
+        <div className="t2-m-due-top">
+          <div>
+            <div className="t2-m-label">{nothingToStart ? "إجمالي الأجرة" : "المتبقي على هذه الرحلة"}</div>
+            <div className="t2-m-amount">
+              <span dir="ltr" className="t2-m-num xl">
+                {formatMoney(nothingToStart ? (state?.final_fare ?? null) : (state?.outstanding ?? null))}
+              </span>
+              <span className="t2-m-cur">{currencyLabel(state?.currency)}</span>
+            </div>
+            <div className="t2-m-due-cur">{currencyName(state?.currency)}</div>
           </div>
-        ) : null}
-
-        <ErrorNote message={error} />
-
-        {settled ? (
+          {nothingToStart || !resolved ? null : (
+            <span className="t2-m-pill">
+              <Icon name={PAY_ICON_T2[resolved.method]} />
+              {PAYMENT_METHOD_LABEL[resolved.method]}
+            </span>
+          )}
+        </div>
+        {rows.length > 0 ? (
           <>
-            <SuccessNote message="اكتمل دفع هذه الرحلة — شكراً لك." />
-            <Button size="lg" onClick={() => navigate(`/rides/${rideId}/rate`)}>
-              قيّم رحلتك
-            </Button>
+            <div className="t2-m-dash tight" aria-hidden="true" />
+            <div className="t2-m-rows">
+              {rows.map((row) => (
+                <div key={row.label} className="t2-m-row">
+                  <span className="t2-m-row-label">{row.label}</span>
+                  <span className={row.strong ? "t2-m-row-value strong" : "t2-m-row-value"}>{row.value}</span>
+                </div>
+              ))}
+            </div>
           </>
-        ) : nothingToStart ? (
-          <>
-            {/* **لم يبقَ ما يُبدأ من هنا، ولم يكتمل الدفعُ بعد.** فلا زرَّ دفعٍ
-                (لا صفَّ جديد يُنشأ) ولا «شكراً» (المالُ لم يصل). والنصُّ يسمّي
-                القناةَ والمبلغَ لأن «بانتظار التأكيد» وحدَها لا تقول لمن يقرؤها
-                هل عليه أن يُخرج نقداً من جيبه الآن أم ينتظر */}
-            {/* **والنزاعُ لا يُقرأ «بانتظار التأكيد»**: صفُّه لا ينتظر ضغطةً
-                من أحد بل قراراً من الإدارة، ومن يقرأ «بانتظار» يعود ينتظر */}
-            {settlement === "disputed" ? (
-              <div className="rounded-12 border border-danger bg-surface-2 px-14 py-12">
-                <p className="text-14 font-medium text-ink">
-                  على دفعة هذه الرحلة نزاعٌ مفتوح
-                </p>
-                <p className="mt-4 text-12 leading-snug text-muted">
-                  تنظر فيه الإدارة، ولا يُطلب منك دفعٌ جديدٌ الآن. يصلك الجوابُ
-                  في الإشعارات.
+        ) : null}
+      </div>
+
+      <BannerT2 tone="danger" message={error} />
+
+      {settled ? <BannerT2 tone="ok" message="اكتمل دفع هذه الرحلة — شكراً لك." /> : null}
+
+      {/* **لم يبقَ ما يُبدأ من هنا، ولم يكتمل الدفعُ بعد.** فلا زرَّ دفعٍ (لا صفَّ جديد يُنشأ) ولا «شكراً» (المالُ لم يصل).
+          والنصُّ يسمّي القناةَ والمبلغَ لأن «بانتظار التأكيد» وحدَها لا تقول لمن يقرؤها هل عليه أن يُخرج نقداً من جيبه الآن.
+          **والنزاعُ لا يُقرأ «بانتظار التأكيد»**: صفُّه لا ينتظر ضغطةً من أحد بل قراراً من الإدارة */}
+      {!settled && nothingToStart ? (
+        <>
+          {settlement === "disputed" ? (
+            <div className="t2-callout danger t2-m-callout">
+              <Icon name="gavel" />
+              <div className="t2-callout-main">
+                <p className="t2-callout-title">على دفعة هذه الرحلة نزاعٌ مفتوح</p>
+                <p className="t2-callout-body">
+                  تنظر فيه الإدارة، ولا يُطلب منك دفعٌ جديدٌ الآن. يصلك الجوابُ في الإشعارات.
                 </p>
               </div>
-            ) : null}
-            {awaiting.map((row) => (
-              <div
-                key={row.id}
-                className="rounded-12 border border-warn bg-surface-2 px-14 py-12"
-              >
-                <p className="text-14 font-medium text-ink">
+            </div>
+          ) : null}
+          {awaiting.map((row) => (
+            <div key={row.id} className="t2-callout warn t2-m-callout">
+              <Icon name="hourglass_top" />
+              <div className="t2-callout-main">
+                <p className="t2-callout-title">
                   {row.method === "cash"
                     ? `سلّم ${formatMoney(row.amount, row.currency)} كاشاً للكبتن`
                     : `${formatMoney(row.amount, row.currency)} بقناة ${PAYMENT_METHOD_LABEL[row.method]} بانتظار التأكيد`}
                 </p>
-                <p className="mt-4 text-12 leading-snug text-muted">
-                  يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.
-                </p>
+                <p className="t2-callout-body">يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.</p>
               </div>
-            ))}
-            <Button size="lg" onClick={() => navigate(`/rides/${rideId}/rate`)}>
-              قيّم رحلتك
-            </Button>
-          </>
-        ) : resolved ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={resolved.method}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-12"
+            </div>
+          ))}
+        </>
+      ) : null}
+
+      {/* صفحة دفع كليك داخل التطبيق (SPEC القسم 6.2 — المرحلة 9) */}
+      {state?.cliq_charge ? <CliqPanel charge={state.cliq_charge} onSubmitted={setState} /> : null}
+
+      {state && state.payments.length > 0 ? <PaymentsList payments={state.payments} /> : null}
+
+      <div className="t2-m-push" />
+
+      {settled || nothingToStart ? (
+        <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${rideId}/rate`)}>
+          قيّم رحلتك
+        </button>
+      ) : resolved ? (
+        <AnimatePresence mode="wait">
+          <motion.div key={resolved.method} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+            {/* **الالتزامُ بالجمر** — «طلب / قبول» في الهوية */}
+            <button
+              type="button"
+              className="t2-button action t2-m-cta"
+              disabled={busy !== null}
+              aria-busy={busy === resolved.method}
+              onClick={() => (resolved.method === "card" ? setChoosingCard(true) : pay(resolved.method))}
             >
-              <Button
-                size="lg"
-                loading={busy === resolved.method}
-                disabled={busy !== null}
-                onClick={() =>
-                  resolved.method === "card"
-                    ? setChoosingCard(true)
-                    : pay(resolved.method)
-                }
-              >
-                {CTA[resolved.method].label}
-              </Button>
+              <BusyLabel busy={busy === resolved.method}>{CTA[resolved.method].label}</BusyLabel>
+            </button>
 
-              {/* **المخرجُ الذي يمنع التفضيلَ من أن يصير قيداً** (القرار 3).
-                  ولا يظهر بقناةٍ واحدة: «طريقة أخرى» حيث لا أخرى وعدٌ يُخلَف */}
-              {available.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setPicking(true)}
-                  className="pressable block w-full text-center text-12.5 font-semibold text-muted"
-                >
-                  طريقة أخرى
-                </button>
-              ) : null}
+            {/* **المخرجُ الذي يمنع التفضيلَ من أن يصير قيداً** (القرار 3). ولا يظهر بقناةٍ واحدة: «طريقة أخرى» حيث لا أخرى
+                وعدٌ يُخلَف */}
+            {available.length > 1 ? (
+              <button type="button" className="t2-m-link" onClick={() => setPicking(true)}>
+                طريقة أخرى
+              </button>
+            ) : null}
 
-              <p className="text-center text-11.5 leading-snug text-muted">
-                {CTA[resolved.method].note}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-        ) : null}
+            <p className="t2-m-fine">{CTA[resolved.method].note}</p>
+          </motion.div>
+        </AnimatePresence>
+      ) : null}
 
-        {choosingCard && !nothingToStart ? (
-          <CardChoice
-            busy={busy === "card"}
-            onPay={(extras) => pay("card", extras)}
-            onCancel={() => setChoosingCard(false)}
-          />
-        ) : null}
-
-        {/* صفحة دفع كليك داخل التطبيق (SPEC القسم 6.2 — المرحلة 9) */}
-        {state?.cliq_charge ? (
-          <CliqPanel charge={state.cliq_charge} onSubmitted={setState} />
-        ) : null}
-
-        {state && state.payments.length > 0 ? (
-          <PaymentsList payments={state.payments} />
-        ) : null}
-      </div>
+      {choosingCard && !nothingToStart ? (
+        <CardChoice
+          busy={busy === "card"}
+          onPay={(extras) => pay("card", extras)}
+          onCancel={() => setChoosingCard(false)}
+        />
+      ) : null}
 
       {picking && resolved ? (
         <PaymentPicker
@@ -455,6 +430,6 @@ export function PaymentScreen() {
           onClose={() => setPicking(false)}
         />
       ) : null}
-    </Stage>
+    </div>
   );
 }
