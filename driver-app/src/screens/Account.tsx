@@ -25,7 +25,7 @@ import { useGarage } from "@/lib/garage";
 import { forDisplay } from "@/lib/phone";
 import { blockedReason, switchToRider } from "@/lib/switch-app";
 import { useSession } from "@/lib/session";
-import { DISPLAY_LOCALE, digits } from "@/lib/utils";
+import { DISPLAY_LOCALE, digits, ratedAverage } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
@@ -163,12 +163,15 @@ export function AccountScreen() {
               : "—"}
           </div>
         </div>
-        <span className="t2-acc-rate" aria-label={`تقييمك ${digits(driver.rating_avg)}`}>
-          <Icon name="star" fill />
-          <span className="t2-acc-rate-num" dir="ltr">
-            {digits(driver.rating_avg)}
+        {/* **ولا «★ 0.00» لمن لم يُقيَّم بعد** (§٦٢-ب/٤٩) */}
+        {ratedAverage(driver.rating_avg) ? (
+          <span className="t2-acc-rate" aria-label={`تقييمك ${digits(driver.rating_avg)}`}>
+            <Icon name="star" fill />
+            <span className="t2-acc-rate-num" dir="ltr">
+              {digits(driver.rating_avg)}
+            </span>
           </span>
-        </span>
+        ) : null}
       </div>
 
       {/* **بطاقةُ الحال**: حالُ الحساب ومستنداته، ثمّ الاشتراكُ بنبرته — بابُه إلى «الاشتراك» */}

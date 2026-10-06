@@ -85,7 +85,7 @@ import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { PermissionNotice } from "@/components/PermissionNotice";
-import { digits } from "@/lib/utils";
+import { digits, ratedAverage } from "@/lib/utils";
 
 /** **حالُ الرئيسية وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة، وC04–C08 في `screens/t2`).
  *
@@ -607,7 +607,7 @@ export function HomeScreen() {
         <CaptainHome
           name={user?.name ?? "كبتن"}
           rating={
-            profile ? Number(profile.driver.rating_avg).toFixed(1) : null
+            profile && ratedAverage(profile.driver.rating_avg) ? Number(profile.driver.rating_avg).toFixed(1) : null
           }
           level={level}
           online={online}

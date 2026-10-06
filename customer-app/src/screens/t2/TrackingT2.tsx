@@ -36,7 +36,7 @@ import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { usePaymentPreference } from "@/lib/payment";
 import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
-import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney } from "@/lib/utils";
+import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney, ratedAverage } from "@/lib/utils";
 
 import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
@@ -383,18 +383,25 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           <DriverAvatar rideId={ride.id} name={driver.name} className="t2-trk-avatar" />
           <div className="t2-trk-dmain">
             <div className="t2-trk-dname lg">{driver.name}</div>
-            <div className={driverRides ? "t2-trk-rating with-rides" : "t2-trk-rating"}>
-              <span className="t2-icon fill" aria-hidden="true">star</span>
-              <span className="t2-trk-rating-value">{Number(driver.rating_avg).toFixed(2)}</span>
-              {/* **«· 2,140 رحلة» كما رُسمت** (§٦٢-ج/٢٧) — ما أكمله فعلاً، **ولا يُرسم صفرٌ** لكبتنٍ في أوّل رحلاته. **والعددُ ومعدودُه
-                  لا ينفصلان** (`t2-trk-rides`): على ٣٦٠ ينزلان سطراً معاً بدل «2,140» وحدَها و«رحلة» تحتها (قِيس) */}
-              {driverRides ? (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="t2-trk-rides">{ridesLabel(driverRides)}</span>
-                </>
-              ) : null}
-            </div>
+            {/* **ولا «★ 0.00» لكبتنٍ لم يُقيَّم بعد** (`ratedAverage`، §٦٢-ب/٤٩) — والسطرُ كلُّه يغيب إن لم يبقَ فيه شيء */}
+            {ratedAverage(driver.rating_avg) || driverRides ? (
+              <div className={driverRides ? "t2-trk-rating with-rides" : "t2-trk-rating"}>
+                {ratedAverage(driver.rating_avg) ? (
+                  <>
+                    <span className="t2-icon fill" aria-hidden="true">star</span>
+                    <span className="t2-trk-rating-value">{Number(driver.rating_avg).toFixed(2)}</span>
+                  </>
+                ) : null}
+                {/* **«· 2,140 رحلة» كما رُسمت** (§٦٢-ج/٢٧) — ما أكمله فعلاً، **ولا يُرسم صفرٌ** لكبتنٍ في أوّل رحلاته. **والعددُ ومعدودُه
+                    لا ينفصلان** (`t2-trk-rides`): على ٣٦٠ ينزلان سطراً معاً بدل «2,140» وحدَها و«رحلة» تحتها (قِيس) */}
+                {driverRides ? (
+                  <>
+                    {ratedAverage(driver.rating_avg) ? <span aria-hidden="true">·</span> : null}
+                    <span className="t2-trk-rides">{ridesLabel(driverRides)}</span>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           {vehicle ? (
             <div dir="ltr" className="t2-trk-plate">

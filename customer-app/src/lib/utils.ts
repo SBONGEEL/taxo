@@ -54,6 +54,13 @@ export function currencyName(currency: string | null | undefined): string {
  * (`NUMERIC(12,3)`)، وتمريرُه عبر float يفقد دقّتَه حيث لا يُلاحظ (SPEC §14).
  * فالتبديلُ على الخانات لا على القيمة، ويصلح للمال ولغيره سواءً.
  */
+/** **متوسّطُ تقييمٍ يُرسم أو لا يُرسم** (§٦٢-ب/٤٩) — النجومُ من 1 إلى 5 (قيدُ `rating_stars_range`)، **فمتوسّطُ الصفر لا يقع إلا بلا
+ *  تقييم**، وتخزّنه الخلفيةُ «0.00» (`ratings.refresh_driver_average`). و«★ 0.00» تُقرأ «قيّمه الناسُ صفراً» وهو لم يُقيَّم بعد —
+ *  **فـ`null` = لا نجمةَ ولا رقم**، كما لا يُرسم صفرُ الرحلات. */
+export function ratedAverage(value: string | null | undefined): string | null {
+  return value !== null && value !== undefined && Number(value) > 0 ? value : null;
+}
+
 export function digits(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
   return String(value)

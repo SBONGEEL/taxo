@@ -35,7 +35,7 @@ import type { Ride } from "@/api/types";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { useScheduledRides } from "@/lib/bookings";
 import { distanceKm, type LatLng } from "@/lib/route-line";
-import { formatDistance } from "@/lib/utils";
+import { formatDistance, ratedAverage } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
 import { Icon } from "@/taxo2";
 
@@ -234,9 +234,14 @@ export function WomenCaptainCardT2({ ride }: { ride: Ride }) {
           <Icon name="verified" fill />
         </div>
         <div className="t2-trk-rating">
-          <Icon name="star" fill />
-          <span className="t2-trk-rating-value">{Number(driver.rating_avg).toFixed(2)}</span>
-          <span aria-hidden="true">·</span>
+          {/* **ولا «★ 0.00» لكبتنةٍ لم تُقيَّم بعد** (§٦٢-ب/٤٩) — «كبتنة موثّقة» وحدَها */}
+          {ratedAverage(driver.rating_avg) ? (
+            <>
+              <Icon name="star" fill />
+              <span className="t2-trk-rating-value">{Number(driver.rating_avg).toFixed(2)}</span>
+              <span aria-hidden="true">·</span>
+            </>
+          ) : null}
           كبتنة موثّقة
         </div>
       </div>

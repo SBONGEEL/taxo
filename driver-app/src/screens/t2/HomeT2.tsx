@@ -56,7 +56,7 @@ import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
 import { isActive } from "@/lib/ride";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, ratedAverage } from "@/lib/utils";
 import { useHomeScreen } from "@/screens/Home";
 import { LEVEL_LABEL } from "@/screens/Missions";
 import { CollectT2Screen } from "@/screens/t2/CollectT2";
@@ -182,7 +182,8 @@ export function HomeT2Screen() {
     else goOnline();
   };
   // **التقييمُ كما يصل** (`rating_avg` بمنزلتين — «4.92» كما رُسم)؛ والشاشةُ القائمةُ تقرّبه إلى منزلة
-  const rating = profile ? profile.driver.rating_avg : null;
+  // **ولا شارةَ «★ 0.00» لمن لم يُقيَّم بعد** (§٦٢-ب/٤٩) — كما لا تُرسم «0 رحلة» رقماً
+  const rating = profile ? ratedAverage(profile.driver.rating_avg) : null;
   // **CW2 — الوضعُ النسائيّ** (§٦٢-ج/٢٣): كبتنةٌ اختارت «الراكبات فقط» حيث الخدمةُ مشتعلة
   const womenMode = isWomenMode(womenService, preference, user?.gender);
 
