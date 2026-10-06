@@ -119,6 +119,12 @@ class DocumentReviewIn(BaseModel):
         return self
 
 
+class DemandOut(BaseModel):
+    """«الطلب مرتفع» حول الكبتن (§٦٢-ج/٤٣، C04) — **نعم/لا وحدَها**: لا عددَ ولا موضع (`services/demand.py`)."""
+
+    high: bool
+
+
 class DriverDocumentsOut(BaseModel):
     """مستندات كبتنٍ ومعها ما ينقصه للاعتماد — سؤالٌ واحد بجوابٍ واحد.
 

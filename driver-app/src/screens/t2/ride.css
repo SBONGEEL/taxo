@@ -335,6 +335,7 @@
 .t2-hm-go-text { flex: 1; min-width: 0; line-height: 1.35; }
 .t2-hm-go-title { display: block; font-size: 15px; font-weight: 700; }
 .t2-hm-go-sub { display: block; font-size: 11.5px; font-weight: 600; opacity: 0.85; }
+.t2-hm-go-sub .t2-icon { margin-inline-end: 3px; font-size: 13px; vertical-align: -2px; }
 .t2-hm-go.off .t2-hm-go-sub { color: var(--t2-muted); opacity: 1; }
 .t2-hm-go-power {
   display: flex;
@@ -358,6 +359,41 @@
   margin: 16px 18px 0;
 }
 .t2-hm-svc-title { font-size: 15px; font-weight: 700; }
+/* **«الكل»** (§٦٢-ج/٤٣) — كلمةٌ خافتةٌ كما رُسمت، **ومساحةُ لمسها ٤٤ وأكثر** بظلٍّ لا يُرى */
+.t2-hm-svc-all {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.t2-hm-svc-all::after { content: ""; position: absolute; inset: -16px -14px; }
+/* **نقطةُ «الوثائق»** (C04) — على ركن مربّع الأيقونة، بحافّةٍ من لون البلاطة */
+.t2-hm-tile-dot {
+  position: absolute;
+  top: -3px;
+  inset-inline-start: -3px;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-card-deep);
+  border-radius: 50%;
+  background: var(--t2-danger);
+}
+/* ── صفحةُ «الكل» — الشبكةُ نفسُها بإطار الصفحات الفرعية (`.t2-sub`) ── */
+.t2-svc { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.t2-svc-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px max(24px, env(safe-area-inset-bottom, 0px));
+}
+.t2-svc .t2-head { margin-bottom: 14px; }
+.t2-svc .t2-hm-tiles { margin: 0; }
+.t2-svc-wait { display: flex; justify-content: center; padding: 48px 0; }
 .t2-hm-tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

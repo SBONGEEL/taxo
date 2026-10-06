@@ -11,10 +11,11 @@
  * ## C04 — ما رسمته اللوحةُ ولا مصدرَ له لا يُرسم مكانَه شيء (§٦١-د/د)
  *
  * - **«6:20 ساعة»**: لا ساعاتِ عملٍ في أيِّ باب. («9 رحلات» و«4.92» بُنيتا: `completed_rides` · `rating_avg`.)
- * - **«خريطة الطلب» ومناطقُها** («عبدون ×1.4» · «الأقرب لك: عبدون ×1.4 · 2.3 كم»): لا خريطةَ طلبٍ ولا مضاعِفَ سعرٍ في النظام.
- *   **وموضعُ الشارة صار «توسيع»** — ميزةُ البطاقة القائمة (قرارُ المالك 2026-08-30) بلغة الشارة.
- * - **«الكل»**: لا شاشةَ خدماتٍ كاملة — البلاطاتُ كلُّها هنا.
- * - **نقطةُ «الوثائق» الحمراء**: البلاطاتُ من اللوحة (`GET /storefront`) ولا حالَ مستنداتٍ معها.
+ * - **«خريطة الطلب» ومناطقُها** («عبدون ×1.4» · «الأقرب لك: عبدون ×1.4 · 2.3 كم»): لا خريطةَ طلبٍ ولا مضاعِفَ سعرٍ في النظام
+ *   (التسعيرُ المتحرّك «لا يُبنى الآن»). **وموضعُ الشارة صار «توسيع»** — ميزةُ البطاقة القائمة (قرارُ المالك 2026-08-30) بلغة الشارة.
+ *   **وفي موضع «الأقرب لك» تحت «متصل» سطرُ «الطلب مرتفع حولك الآن»** (§٦٢-ج/٤٣) — من عدِّ ما طُلب حوله لا من خريطة (`useDemandHigh`).
+ * - **«الكل» ونقطةُ «الوثائق» بُنيتا** (§٦٢-ج/٤٣، `ServicesT2`): ستُّ بلاطاتٍ هنا ما يعمل منها أوّلاً، و«الكل» حين تزيد؛ والنقطةُ على
+ *   بلاطة المركبة ووثائقها حين تحتاج وثائقُه فعلاً. **وأيقوناتُ البلاطات الستّ المرسومة صارت في قائمة اللوحة** والجسرِ والخطّ.
  * - **«أرباح اليوم»** ⇐ **«صافي اليوم»**: الرقمُ صافي ما دخل المحفظة (`earnings.net`) — الكاشُ وكليك خارجه، كما قيل في C09.
  *
  * ## وما في الرئيسية القائمة ولم يُرسم — باقٍ بلغة اللوحة
@@ -40,20 +41,20 @@ import type { Currency, MyProgress, MySubscription, ServiceTile } from "@/api/ty
 import { CliqTransferSheet } from "@/components/CliqTransferSheet";
 import { useMapExpand } from "@/components/home/MapCard";
 import { BannerImage, OfferCard, PromoBanners, type PromoSkin } from "@/components/home/PromoBanners";
-import { tileOpenable } from "@/components/home/ServiceTiles";
 import { MapView } from "@/components/map/MapView";
 import { PermissionNotice } from "@/components/PermissionNotice";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
+import { useDemandHigh, useDocumentsAttention } from "@/lib/attention";
 import { isActive } from "@/lib/ride";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import { useHomeScreen } from "@/screens/Home";
 import { LEVEL_LABEL } from "@/screens/Missions";
 import { CollectT2Screen } from "@/screens/t2/CollectT2";
-import { countDays } from "@/screens/t2/count";
 import { OfferT2 } from "@/screens/t2/OfferT2";
 import { RideT2 } from "@/screens/t2/RideT2";
-import { Icon, Wordmark, serviceIcon } from "@/taxo2";
+import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
+import { Icon, Wordmark } from "@/taxo2";
 
 import "./t2.css";
 import "./ride.css";
@@ -111,6 +112,9 @@ export function HomeT2Screen() {
   const { open, setOpen } = useMapExpand();
   const [sheetRef, sheetHeight] = useMeasuredHeight();
   const mode = tracking ? "ride" : offer ? "offer" : "home";
+  // **ما يحتاج انتباهَه** (§٦٢-ج/٤٣): نقطةُ «الوثائق»، و«الطلب مرتفع» ما دام متصلاً في الرئيسية وحدَها
+  const documentsAttention = useDocumentsAttention();
+  const demandHigh = useDemandHigh(online && mode === "home");
   // **الطلبُ والرحلةُ يبدآن من أعلى الصفحة**: طبقاتُ الإطار مطلقةُ الموضع داخل جذرٍ يتمرّر، **ورئيسيةٌ مُمرَّرةٌ ثمّ طلبٌ وارد
   // كانت تُزيح البطاقةَ والورقةَ بمقدار التمرير**
   const root = useRef<HTMLDivElement | null>(null);
@@ -255,6 +259,7 @@ export function HomeT2Screen() {
               located={position !== null}
               awaitedOffer={awaitedOffer}
               goLabel={goLabel}
+              demandHigh={demandHigh}
               onToggle={toggleOnline}
             />
           </>
@@ -273,6 +278,7 @@ export function HomeT2Screen() {
           tiles={storefront?.tiles ?? []}
           subscription={subscription}
           progress={progress}
+          attention={documentsAttention}
           covered={covered}
           navigate={navigate}
         />
@@ -409,6 +415,7 @@ function GoPill({
   located,
   awaitedOffer,
   goLabel,
+  demandHigh,
   onToggle,
 }: {
   online: boolean;
@@ -416,6 +423,8 @@ function GoPill({
   located: boolean;
   awaitedOffer: boolean;
   goLabel: string;
+  /** «الطلب مرتفع حولك الآن» تحت «متصل» — في موضع «الأقرب لك» المرسوم (§٦٢-ج/٤٣). */
+  demandHigh: boolean;
   onToggle: () => void;
 }) {
   const title = online
@@ -423,7 +432,8 @@ function GoPill({
     : connecting
       ? goLabel
       : "غير متصل";
-  const sub = online || connecting ? null : goLabel;
+  const demand = online && demandHigh ? "الطلب مرتفع حولك الآن" : null;
+  const sub = online ? demand : connecting ? null : goLabel;
   return (
     <button
       type="button"
@@ -431,7 +441,7 @@ function GoPill({
       onClick={onToggle}
       disabled={connecting}
       // **الفعلُ يُقال لقارئ الشاشة مع الحال** — الحبّةُ تقول «متصل»، والضغطةُ «إيقاف الاستقبال»
-      aria-label={online ? `${title}، ${goLabel}` : undefined}
+      aria-label={online ? `${title}${demand ? `، ${demand}` : ""}، ${goLabel}` : undefined}
     >
       <span className="t2-hm-go-dot" aria-hidden="true">
         {online ? <i className="pulse" /> : null}
@@ -439,7 +449,12 @@ function GoPill({
       </span>
       <span className="t2-hm-go-text">
         <span className="t2-hm-go-title">{title}</span>
-        {sub ? <span className="t2-hm-go-sub">{sub}</span> : null}
+        {sub ? (
+          <span className="t2-hm-go-sub">
+            {demand ? <Icon name="local_fire_department" fill /> : null}
+            {sub}
+          </span>
+        ) : null}
       </span>
       <span className="t2-hm-go-power" aria-hidden="true">
         <Icon name="power_settings_new" />
@@ -448,20 +463,21 @@ function GoPill({
   );
 }
 
-/** **خدماتك** — البلاطاتُ من اللوحة (`GET /storefront`) بلغة C04، **وقاعدةُ الضغط من بيتها** (`tileOpenable`): «قريباً» تُقرأ
- *  ولا تُنقر. **وشارةُ البلاطة من بيانها**: «جديد» محسوبةٌ في الخلفية، والأيّامُ الباقيةُ من الاشتراك، والمهامُّ المنجزةُ
- *  من المستوى — **ولا رقمَ يُخترع لبلاطةٍ لا بيانَ معها**. */
+/** **خدماتك** — ستُّ بلاطاتٍ بلغة C04 (`homeTiles`: ما يعمل أوّلاً)، **و«الكل» حين تزيد** (§٦٢-ج/٤٣) — والشبكةُ وشاراتُها ونقطتُها
+ *  من بيتها (`ServiceGrid`) فلا تفترق عن صفحة «الكل». */
 function Services({
   tiles,
   subscription,
   progress,
   covered,
+  attention,
   navigate,
 }: {
   tiles: ServiceTile[];
   subscription: MySubscription | null;
   progress: MyProgress | null;
   covered: boolean;
+  attention: boolean;
   navigate: NavigateFunction;
 }) {
   if (tiles.length === 0) return null;
@@ -469,64 +485,22 @@ function Services({
     <>
       <div className="t2-hm-svc-head">
         <span className="t2-hm-svc-title">خدماتك</span>
+        {tiles.length > HOME_TILES ? (
+          <button type="button" className="t2-hm-svc-all" onClick={() => navigate("/services")}>
+            الكل
+          </button>
+        ) : null}
       </div>
-      <div className="t2-hm-tiles">
-        {tiles.map((tile) => {
-          const tag = tileTag(tile, subscription, progress);
-          const ok = tile.destination === "/subscription" && covered;
-          const body = (
-            <>
-              <span className="t2-hm-tile-top">
-                <span className={`t2-hm-tile-icon${ok ? " ok" : ""}`}>
-                  <Icon name={serviceIcon(tile.icon)} fill />
-                </span>
-                {tag ? (
-                  <span className={`t2-hm-tile-tag ${tag.tone}`} dir={tag.ltr ? "ltr" : undefined}>
-                    {tag.text}
-                  </span>
-                ) : null}
-              </span>
-              <span>
-                <span className="t2-hm-tile-title">{tile.title}</span>
-                {tile.subtitle && tile.status !== "soon" && !tile.is_new ? (
-                  <span className="t2-hm-tile-sub">{tile.subtitle}</span>
-                ) : null}
-              </span>
-            </>
-          );
-          return tileOpenable(tile) ? (
-            <button key={tile.id} type="button" className="t2-hm-tile" onClick={() => navigate(tile.destination!)}>
-              {body}
-            </button>
-          ) : (
-            <div key={tile.id} className="t2-hm-tile">
-              {body}
-            </div>
-          );
-        })}
-      </div>
+      <ServiceGrid
+        tiles={homeTiles(tiles)}
+        subscription={subscription}
+        progress={progress}
+        covered={covered}
+        attention={attention}
+        navigate={navigate}
+      />
     </>
   );
-}
-
-function tileTag(
-  tile: ServiceTile,
-  subscription: MySubscription | null,
-  progress: MyProgress | null,
-): { text: string; tone: string; ltr?: boolean } | null {
-  if (tile.status === "soon") return { text: "قريباً", tone: "soon" };
-  if (tile.is_new) return { text: "جديد", tone: "new" };
-  if (tile.destination === "/subscription" && subscription?.is_active) {
-    return { text: countDays(subscription.days_remaining), tone: "ok" };
-  }
-  if (tile.destination === "/account/missions" && progress?.enabled && progress.missions_total > 0) {
-    return {
-      text: `${digits(String(progress.missions_done))}/${digits(String(progress.missions_total))}`,
-      tone: "",
-      ltr: true,
-    };
-  }
-  return null;
 }
 
 /** **لافتاتُ اللوحة بجلد الهوية** — بطاقةُ الجمر بشريطها كما رُسمت للراكب (R05)، **والدورانُ والسحبُ والنقرُ والصورُ من

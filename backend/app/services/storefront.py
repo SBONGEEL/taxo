@@ -54,15 +54,19 @@ SERVICE_ICONS: tuple[str, ...] = (
     # ── تنقّلٌ ومركبات
     "car", "car-taxi-front", "bus", "truck", "bike", "plane-takeoff",
     "map-pin", "map", "route", "navigation", "calendar-clock",
+    # **ورسمُ C04 بأيقوناته الستّ** (§٦٢-ج/٤٣): كانت خارج القائمة فلا يختارها مشرف — والجسرُ يترجمها برمز الرسم نفسِه
+    "warehouse",
     # ── طرودٌ وتسوّق
     "package", "boxes", "shopping-bag", "shopping-cart", "store", "gift",
     # ── مالٌ ومحفظة
     "wallet", "banknote", "credit-card", "coins", "receipt", "percent",
+    "arrow-down-left", "hand-coins",
     # ── حسابٌ وخدمة
     "user", "users", "shield-check", "life-buoy", "headphones", "star",
     "trophy", "badge-check", "bell", "settings", "file-text", "clock",
+    "id-card", "folder-open",
     # ── عامّ
-    "layout-grid", "sparkles", "heart", "flame", "zap",
+    "layout-grid", "sparkles", "heart", "flame", "zap", "flag",
 )
 
 

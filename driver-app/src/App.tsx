@@ -88,6 +88,9 @@ const MissionsT2Screen = lazy(() =>
 const SubscriptionT2Screen = lazy(() =>
   import("@/screens/t2/SubscriptionT2").then((m) => ({ default: m.SubscriptionT2Screen })),
 );
+const ServicesT2Screen = lazy(() =>
+  import("@/screens/t2/ServicesT2").then((m) => ({ default: m.ServicesT2Screen })),
+);
 const PlansPreviewT2Screen = lazy(() =>
   import("@/screens/t2/PlansPreviewT2").then((m) => ({ default: m.PlansPreviewT2Screen })),
 );
@@ -508,6 +511,15 @@ export default function App() {
                         />
                         {/* **«عرض الباقات» لمن طلبُه قيد المراجعة** (C32، §٦٢-ج/٣٣) — عرضٌ بلا شراء، وبلا شريطٍ كـC10
                             (`showsNav` قائمةُ سماحٍ لا تذكره)، **ومن اعتُمد يُحوَّل إلى «الاشتراك»** */}
+                        {/* **«الكل» في خدمات الرئيسية** (C04، §٦٢-ج/٤٣) — البلاطاتُ كلُّها بترتيب اللوحة، وبلا شريطٍ كالصفحات الفرعية */}
+                        <Route
+                          path="/services"
+                          element={
+                            <Guarded>
+                              <ServicesT2Screen />
+                            </Guarded>
+                          }
+                        />
                         <Route
                           path="/subscription/plans"
                           element={

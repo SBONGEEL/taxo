@@ -20,6 +20,7 @@ export const SERVICE_ICON: Readonly<Record<string, string>> = {
   route: "route",
   navigation: "navigation",
   "calendar-clock": "event_upcoming",
+  warehouse: "garage",
   // ── طرودٌ وتسوّق
   package: "package_2",
   boxes: "inventory_2",
@@ -34,6 +35,8 @@ export const SERVICE_ICON: Readonly<Record<string, string>> = {
   coins: "toll",
   receipt: "receipt_long",
   percent: "percent",
+  "arrow-down-left": "south_west",
+  "hand-coins": "request_quote",
   // ── حسابٌ وخدمة
   user: "person",
   users: "group",
@@ -47,12 +50,15 @@ export const SERVICE_ICON: Readonly<Record<string, string>> = {
   settings: "settings",
   "file-text": "description",
   clock: "schedule",
+  "id-card": "card_membership",
+  "folder-open": "folder_shared",
   // ── عامّ
   "layout-grid": "grid_view",
   sparkles: "auto_awesome",
   heart: "favorite",
   flame: "local_fire_department",
   zap: "bolt",
+  flag: "flag",
 };
 
 /** رمزُ الهوية لاسم lucide — **و`grid_view` لما لا يُعرف** (والحارسُ يمنع أن يقع: القائمةُ والجدولُ يُقاسان). */

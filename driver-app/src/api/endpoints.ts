@@ -223,6 +223,9 @@ export const updateVehicle = (
   }>(`/drivers/me/vehicles/${vehicleId}`, payload);
 
 /** ملخّصُ الأرباح — **مجموعٌ في الخلفية** بنافذة يوم الدولة (القسم 9 و12/7). */
+/** «الطلب مرتفع» حول موقعه المبثوث (§٦٢-ج/٤٣) — **نعم/لا وحدَها**. */
+export const getDemand = () => api.get<{ high: boolean }>("/drivers/me/demand");
+
 export const getEarnings = (period: "today" | "week" | "month") =>
   api.get<Earnings>("/drivers/me/earnings", { query: { period } });
 

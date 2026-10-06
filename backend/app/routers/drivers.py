@@ -29,6 +29,7 @@ from app.models.vehicle import Vehicle
 from app.core.currency import currency_for_country
 from app.schemas.auth import UserOut
 from app.schemas.driver import (
+    DemandOut,
     AdvanceDebtOut,
     PresenceTokenOut,
     AdvanceOut,
@@ -195,6 +196,20 @@ async def update_my_vehicle(
         vehicle=VehicleOut.model_validate(result.vehicle),
         approval_reverted=result.approval_reverted,
         driver_status=driver.status,
+    )
+
+
+@router.get("/me/demand", response_model=DemandOut)
+async def my_demand(
+    driver: CurrentDriver, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> DemandOut:
+    """«الطلب مرتفع» حول موقعه المبثوث (§٦٢-ج/٤٣) — **نعم/لا وحدَها**، والنقطةُ موقعُه لا ما يرسله التطبيق."""
+    from app.services import demand
+
+    return DemandOut(
+        high=await demand.high_near(
+            session, redis, driver=driver, country=user.country_code, now=datetime.now(UTC)
+        )
     )
 
 
