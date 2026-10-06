@@ -186,7 +186,16 @@ export function WomenNoCaptainT2({
 // ── RW4 ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /** **«الكبتنة على بعد…» بالبرقوق** (RW4) — من موقعها المبثوث إلى نقطة الالتقاء خطّاً مستقيماً، كحبّة R08 بعينها. */
-export function WomenApproachChipT2({ ride, driverPing }: { ride: Ride; driverPing: LatLng | null }) {
+export function WomenApproachChipT2({
+  ride,
+  driverPing,
+  minutes = null,
+}: {
+  ride: Ride;
+  driverPing: LatLng | null;
+  /** دقائقُها الباقية من مسار الاقتراب (§٦٢-ج/١٠) — و`null` حيث المفتاحُ مطفأ. */
+  minutes?: number | null;
+}) {
   if (ride.status === "arrived") {
     return (
       <div className="t2 t2-trk-chip women">
@@ -200,6 +209,7 @@ export function WomenApproachChipT2({ ride, driverPing }: { ride: Ride; driverPi
     <div className="t2 t2-trk-chip women">
       <Icon name="woman" fill />
       الكبتنة على بعد {formatDistance(distanceKm(driverPing, ride.pickup))}
+      {minutes !== null ? ` · ${minutes} د` : ""}
     </div>
   );
 }

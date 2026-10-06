@@ -526,3 +526,21 @@ export const postErrorReport = (body: ErrorReportBody) =>
   api.post<{ accepted: boolean }>("/telemetry/errors", body, {
     anonymous: true,
   });
+
+/** «تصل خلال 3 د» لكلِّ فئةٍ قبل الطلب (§٦٢-ج/١٠) — **`enabled: false` حيث المفتاحُ مطفأ** فلا يُرسم شيء، وفئةٌ بلا كبتنٍ متاحٍ غائبة. */
+export interface NearestEta {
+  enabled: boolean;
+  categories: { vehicle_category: VehicleCategory; minutes: number }[];
+}
+
+export const getNearestEta = (point: Coordinates) =>
+  api.get<NearestEta>("/rides/eta", { query: { lat: point.lat, lng: point.lng } });
+
+/** مسارُ الاقتراب (§٦٢-ج/١٠) — لطرفَي الرحلة، `[[lng, lat]…]` ومدّتُه ومسافتُه؛ **والوقتُ المتبقّي يُحسب في الهاتف** (`lib/arrival`). */
+export interface ApproachRoute {
+  points: number[][];
+  duration_min: number;
+  distance_km: number;
+}
+
+export const getApproach = (rideId: string) => api.get<ApproachRoute>(`/rides/${rideId}/approach`);

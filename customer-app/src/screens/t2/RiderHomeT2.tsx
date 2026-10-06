@@ -22,7 +22,9 @@ import { useNavigate } from "react-router-dom";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
+import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
 import { useScheduledRides } from "@/lib/bookings";
+import { VEHICLE_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { useWomenService } from "@/lib/women";
 import { Wordmark } from "@/taxo2";
@@ -43,6 +45,8 @@ export interface RiderHomeProps {
   currency: string;
   /** عددُ الكباتن القريبين — **بلا مهلةٍ لا تُقاس**. */
   nearby: number;
+  /** **دقائقُ أقرب كبتنٍ لكلِّ فئة** (§٦٢-ج/١٠) — «اقتصادي يصل خلال 3 د» تحت «إلى أين؟» وشارةُ «3 د»؛ و`null` حيث المفتاحُ مطفأ. */
+  eta?: CategoryMinutes | null;
   onOpenNotifications: () => void;
   onOpenWallet: () => void;
   onOpenAccount: () => void;
@@ -118,6 +122,7 @@ export function RiderHomeT2({
   name,
   unread,
   nearby,
+  eta = null,
   onOpenNotifications,
   onOpenAccount,
   onAskDestination,
@@ -131,6 +136,13 @@ export function RiderHomeT2({
   const women = useWomenService();
   const scheduled = useScheduledRides();
   const { user } = useSession();
+  // **«اقتصادي يصل خلال 3 د»** (§٦٢-ج/١٠): أوّلُ فئةٍ لها رقمٌ بترتيب الجواب، **وأسرعُها شارةُ «رحلة»**
+  const heroEta = (() => {
+    if (!eta) return null;
+    const first = Object.entries(eta).find(([, value]) => typeof value === "number");
+    return first ? { category: first[0] as keyof typeof VEHICLE_LABEL, minutes: first[1] as number } : null;
+  })();
+  const fastest = fastestMinutes(eta);
 
   // **رسالةُ «قريباً»** — تُقال ثمّ تختفي، ولا تفتح شيئاً
   const [notice, setNotice] = useState<string | null>(null);
@@ -181,7 +193,18 @@ export function RiderHomeT2({
 
       <button type="button" className="t2-home-hero" onClick={onAskDestination}>
         <span className="t2-home-hero-stripe" aria-hidden="true" />
-        <span className="t2-home-hero-title">إلى أين؟</span>
+        <span className="t2-home-hero-text">
+          <span className="t2-home-hero-title">إلى أين؟</span>
+          {heroEta ? (
+            <span className="t2-home-hero-sub">
+              {VEHICLE_LABEL[heroEta.category]} يصل خلال{" "}
+              <b className="t2-home-hero-min" dir="ltr">
+                {heroEta.minutes}
+              </b>{" "}
+              د
+            </span>
+          ) : null}
+        </span>
         <span className="t2-home-hero-go" aria-hidden="true">
           <span className="t2-icon">arrow_back</span>
         </span>
@@ -192,6 +215,12 @@ export function RiderHomeT2({
         <button type="button" className="t2-home-ride" onClick={onAskDestination}>
           <span className="t2-icon" aria-hidden="true">local_taxi</span>
           <span className="t2-home-ride-label">رحلة</span>
+          {/* **شارةُ «3 د»** — أسرعُ ما يصل من الفئات (§٦٢-ج/١٠) */}
+          {fastest !== null ? (
+            <span className="t2-home-ride-eta">
+              <b dir="ltr">{fastest}</b> د
+            </span>
+          ) : null}
         </button>
         <button type="button" className="t2-home-ride" onClick={() => soon("طرد")}>
           <span className="t2-icon" aria-hidden="true">package_2</span>

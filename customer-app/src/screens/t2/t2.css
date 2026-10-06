@@ -487,7 +487,11 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
   transform: translateY(-50%) rotate(-40deg);
   pointer-events: none;
 }
+.t2-home-hero-text { position: relative; display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .t2-home-hero-title { position: relative; flex: 1; font-size: 28px; font-weight: 700; line-height: 1.3; }
+/* **«اقتصادي يصل خلال 3 د»** (R05، §٦٢-ج/١٠) — ١٣ خافتاً على الحبر، والرقمُ بخطّ الأرقام وبالجمر كما رُسم */
+.t2-home-hero-sub { margin-top: 4px; font-size: 13px; color: var(--t2-inverse-muted); }
+.t2-home-hero-min { font-family: var(--t2-font-num); font-weight: 600; color: var(--t2-accent); }
 .t2-home-hero-go {
   position: relative;
   display: flex;
@@ -570,6 +574,19 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 }
 .t2-home-ride .t2-icon { font-size: 30px; }
 .t2-home-ride-label { font-size: 16px; font-weight: 700; }
+/* **شارةُ «3 د»** على بلاطة «رحلة» (R05) — في ركنها كما رُسمت */
+.t2-home-ride-eta {
+  position: absolute;
+  top: 14px;
+  inset-inline-end: 14px;
+  padding: 4px 9px;
+  border-radius: 99px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+.t2-home-ride-eta b { font-family: var(--t2-font-num); font-weight: 600; }
 
 
 /* اللافتة — بطاقةُ الجمر بشريطها، ونصُّها حبرٌ دائماً */

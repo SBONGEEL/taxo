@@ -415,9 +415,18 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 }
 
 /** **«الكبتن على بعد…» فوق الخريطة** (R08) — من موقعه المبثوث إلى نقطة الالتقاء خطّاً مستقيماً، و«وصل» حين يصل. */
-export function ApproachChipT2({ ride, driverPing }: { ride: Ride; driverPing: LatLng | null }) {
+export function ApproachChipT2({
+  ride,
+  driverPing,
+  minutes = null,
+}: {
+  ride: Ride;
+  driverPing: LatLng | null;
+  /** **دقائقُه الباقية** من مسار الاقتراب (§٦٢-ج/١٠) — و`null` حيث المفتاحُ مطفأ: المسافةُ وحدَها كما كانت. */
+  minutes?: number | null;
+}) {
   // **RW4 — حبّةُ الكبتنة بالبرقوق** لمن طلبت كبتنة (§٦٢-ج/٢٣)
-  if (isWomenRide(ride)) return <WomenApproachChipT2 ride={ride} driverPing={driverPing} />;
+  if (isWomenRide(ride)) return <WomenApproachChipT2 ride={ride} driverPing={driverPing} minutes={minutes} />;
   if (ride.status === "arrived") {
     return (
       <div className="t2 t2-trk-chip">
@@ -431,6 +440,7 @@ export function ApproachChipT2({ ride, driverPing }: { ride: Ride; driverPing: L
     <div className="t2 t2-trk-chip">
       <span className="t2-trk-chip-dot" aria-hidden="true" />
       الكبتن على بعد {formatDistance(distanceKm(driverPing, ride.pickup))}
+      {minutes !== null ? ` · ${minutes} د` : ""}
     </div>
   );
 }

@@ -45,6 +45,7 @@ import type { ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useMapboxToken } from "@/lib/config";
+import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { isActive, useRide } from "@/lib/ride";
 import { useCoverNav } from "@/lib/navCover";
@@ -525,6 +526,10 @@ export function HomeScreen() {
 
   /** **ما يُمرَّر للصفحة — كائنٌ واحدٌ للوجهين**: صفحةُ TAXO 2.0 «R05» في النهاريّ المرسوم، والقائمةُ في الليليّ
    *  (§61-ب). فلا يفترق ما تقرؤه الصفحتان ولا أين يذهب زرٌّ فيهما. */
+  // **زمنُ الوصول** (§٦٢-ج/١٠): قبل الطلب ما دامت الرئيسيةُ أو ورقةُ الطلب مفتوحة، وفي الطريق إليها من مسار الاقتراب — ومطفأً لا رقم
+  const nearestEta = useNearestEta(pickup ?? center, browsing || phase === "confirm");
+  const approachMinutes = useApproachMinutes(tracking ? ride : null, driverPing);
+
   const homeProps: RiderHomeProps = {
     name: user?.name ?? "بك",
     // **عنوانُ موقعه حين يُعرف** — ولا مدينةَ تُخمَّن من إحداثيّة
@@ -533,6 +538,7 @@ export function HomeScreen() {
     wallet,
     currency: countryConfig?.currency ?? "JOD",
     nearby: drivers.length,
+    eta: nearestEta,
     onOpenNotifications: () => navigate("/account/notifications"),
     onOpenWallet: () => navigate("/wallet"),
     onOpenAccount: () => navigate("/account"),
@@ -592,6 +598,7 @@ export function HomeScreen() {
           dropoff,
           dropoffAddress,
           categories: countryConfig?.vehicle_categories ?? ["economy"],
+          eta: nearestEta,
           onEditDestination: () => setSearchOpen(true),
           onRequest: submit,
           onSchedule: schedule,
@@ -686,7 +693,7 @@ export function HomeScreen() {
           {ride!.status === "in_progress" || ride!.status === "at_stop" ? (
             <TripCardT2 ride={ride!} driverPing={driverPing} routePoints={routeLine} />
           ) : (
-            <ApproachChipT2 ride={ride!} driverPing={driverPing} />
+            <ApproachChipT2 ride={ride!} driverPing={driverPing} minutes={approachMinutes} />
           )}
           <ThemeButtonT2
             dark={dark}

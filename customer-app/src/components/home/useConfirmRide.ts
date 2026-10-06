@@ -120,6 +120,8 @@ export interface ConfirmRideProps {
   /** **عنوانُ موقع الجهاز من Mapbox** — سطرُ «من» في «R06» حين لا `pickupAddress` (موقعُ الجهاز لا يُسمّى). للعرض وحدَه:
    *  **لا يُرسل مع الطلب**، والورقةُ القائمةُ لا تقرؤه. */
   pickupLine?: string | null;
+  /** **دقائقُ أقرب كبتنٍ لكلِّ فئة** (§٦٢-ج/١٠، «· يصل خلال 3 د» في R06) — و`null`/غيابُها حيث المفتاحُ مطفأ. */
+  eta?: Partial<Record<VehicleCategory, number>> | null;
 }
 
 export function useConfirmRide({

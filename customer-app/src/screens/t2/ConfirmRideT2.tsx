@@ -123,6 +123,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     blockedByPreference,
     onClearPreference,
     countryConfig,
+    eta,
   } = props;
   const c = useConfirmRide(props);
   const currency = c.estimate?.currency ?? countryConfig?.currency;
@@ -215,7 +216,11 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               <span className="t2-cat-main">
                 <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
                 {/* **RW2: «كبتنة موثّقة»** — طلبُ «كبتنة» لا يُسنَد إلا لمختومةٍ من هويتها (`dispatch`) */}
-                <span className="t2-cat-hint">{women ? "كبتنة موثّقة" : VEHICLE_HINT[option]}</span>
+                <span className="t2-cat-hint">
+                  {women ? "كبتنة موثّقة" : VEHICLE_HINT[option]}
+                  {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
+                  {eta?.[option] ? ` · يصل خلال ${eta[option]} د` : ""}
+                </span>
               </span>
               {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها
                   من تقديرها (`useCategoryFares`)، **والمخصومُ على الزرّ** */}
