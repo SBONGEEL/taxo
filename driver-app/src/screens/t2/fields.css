@@ -1,0 +1,40 @@
+/* حقلُ الإدخال في شاشات الكبتن (C18 · C20 · C21) — **بلغة حقل الدخول المرسوم** (`taxo2/auth.css`، R02 · C01): ٥٤ بزاوية ١٦،
+ * وحافّةٌ بلون الخطّ تصير جمراً عند التركيز، وجوفُ السطح — **وعلى بطاقةٍ أو ورقةٍ جوفُ الخلفية** (`on-card`) فيبين الحقلُ عن سطحه
+ * كما يبين `.t2-input` (`primitives.css`). **بالرموز وحدَها** فيعمل في الفاتح والداكن والنسائيّ.
+ *
+ * **ومحلُّه هنا لا في `taxo2/`** (نسخةٌ متطابقةٌ بايتاً بين التطبيقين يعمل فيها غيري) — ويُقترح هناك باسم `.t2-field`. */
+
+.t2-fld-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-text);
+}
+.t2-fld {
+  display: block;
+  width: 100%;
+  height: 54px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 15.5px;
+  caret-color: var(--t2-accent);
+  outline: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.t2-fld::placeholder { color: var(--t2-faint); }
+.t2-fld:focus { border-color: var(--t2-accent); }
+.t2-fld:disabled { opacity: 0.6; }
+.t2-fld.on-card { background: var(--t2-bg); }
+.t2-fld-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}

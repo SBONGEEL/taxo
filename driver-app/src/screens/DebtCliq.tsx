@@ -1,8 +1,7 @@
-/** **شاشةُ سداد دَينٍ بكليك** — نفسُ بطاقة الاشتراك، وهو مقصود.
+/** **شاشةُ سداد دَينٍ بكليك** — TAXO 2.0 «C21» (`design/t2-new/captain/C21c-debt-cliq.dc.html`) — نفسُ قسيمة الاشتراك، وهو مقصود.
  *
- * **بيتٌ واحدٌ لغرضين** (`components/CliqClaimView`): الرسمُ واحدٌ لأن القضيب
- * واحد، **والمختلفُ جملةُ «مؤكَّد» وحدَها** — هناك اشتراكٌ فُعِّل، وهنا دَينٌ
- * نقص.
+ * **بيتٌ واحدٌ لغرضين** (`components/CliqClaimView`): الرسمُ واحدٌ لأن القضيب واحد، **والمختلفُ جملةُ «مؤكَّد» وحدَها** — هناك
+ * اشتراكٌ فُعِّل، وهنا دَينٌ نقص. **والمنطقُ هو هو** (القراءةُ والاستعلامُ كلَّ ١٥ ثانية ما دامت معلّقة)؛ والرأسُ رأسُ C10 · C12.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -12,8 +11,11 @@ import { ApiError } from "@/api/client";
 import { listMyDebtClaims } from "@/api/endpoints";
 import type { DebtClaim } from "@/api/types";
 import { CliqClaimView } from "@/components/CliqClaimView";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
+
+import "./t2/money.css";
 
 export function DebtCliqScreen() {
   const goBack = useGoBack("/account/debt");
@@ -40,21 +42,30 @@ export function DebtCliqScreen() {
   }, [claim, load]);
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
+    <div className="t2 t2-clq-page scr">
+      <div className="t2-head">
         <button
           type="button"
-          onClick={() => goBack()}
+          className="t2-back"
           aria-label="رجوع"
-          className="pressable text-18 text-muted"
+          onClick={() => goBack()}
         >
-          →
+          <Icon name="arrow_forward" />
         </button>
-        <h1 className="text-20 font-bold text-ink">سداد المستحقّات</h1>
+        <h1 className="t2-title">سداد المستحقّات</h1>
       </div>
 
-      <ErrorNote message={error} />
-      {claim === null && !error ? <Spinner className="mx-auto" /> : null}
+      {error ? (
+        <p className="t2-note danger" role="alert">
+          <Icon name="error" fill />
+          {error}
+        </p>
+      ) : null}
+      {claim === null && !error ? (
+        <div className="t2-money-wait">
+          <Spinner />
+        </div>
+      ) : null}
 
       {claim ? (
         <CliqClaimView

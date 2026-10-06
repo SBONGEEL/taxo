@@ -1,17 +1,18 @@
-/** ورقةُ طلب السحب — `DESIGN.md` §5.3، وSPEC القسم 9.
+/** ورقةُ طلب السحب — TAXO 2.0 «C20» (`design/t2-new/captain/C20b-*.dc.html`)، تُفتح من «سحب عبر CliQ» في الأرباح (C09) — SPEC القسم 9.
  *
- * **رقمان جاهزان لا ثلاثةٌ مُخترعة**: التصميم يعرض ثلاثة مبالغَ سريعة بقيمٍ
- * ثابتة. وكلُّ قيمةٍ لا تأتي من الخلفية تعني ضربَ مالٍ أو قسمتَه في الواجهة،
- * وهو ممنوع (القسم 14). فالزرّان هنا **الحد الأدنى** و**كل المتاح** — كلاهما
- * حقلٌ في `GET /wallet/me/driver` يُنسخ كما هو — وبينهما حقلُ مبلغٍ حرّ.
+ * **وهي خطوةُ التأكيد نفسُها**: زرُّ الأرباح يفتحها ولا يرسل، و«إرسال الطلب» هنا وحدَه يرسل — كما كانت حرفاً.
  *
- * **والقناةُ كليك وحدها**: `WithdrawalMethod` فيه `bank` أيضاً، ولا حقلَ
- * لبيانات حسابٍ بنكي على `drivers` — فطلبٌ بنكيٌّ من التطبيق طلبٌ بلا وجهة.
- * والحوالةُ البنكية تبقى ممكنةً من الإدارة حيث تُعرف الوجهة بغير الجدول.
+ * **رقمان جاهزان لا ثلاثةٌ مُخترعة**: التصميم القديم يعرض ثلاثة مبالغَ سريعة بقيمٍ ثابتة. وكلُّ قيمةٍ لا تأتي من الخلفية تعني ضربَ مالٍ
+ * أو قسمتَه في الواجهة، وهو ممنوع (القسم 14). فالبلاطتان هنا **الحد الأدنى** و**كل المتاح** — كلاهما حقلٌ في `GET /wallet/me/driver`
+ * يُنسخ كما هو — وبينهما حقلُ مبلغٍ حرّ.
  *
- * و`alias` كليك شرطُ الخلفية (`withdrawals.create_request`)، فمن لا alias له
- * يضعه من هنا بدل أن يُرسل طلباً يُرفض: الرفضُ صحيحٌ ونصُّه واضح، لكنه طريقٌ
- * مسدود إن كانت الشاشةُ التي تُصلحه لم تُبنَ بعد.
+ * **والقناةُ كليك وحدها**: `WithdrawalMethod` فيه `bank` أيضاً، ولا حقلَ لبيانات حسابٍ بنكي على `drivers` — فطلبٌ بنكيٌّ من التطبيق
+ * طلبٌ بلا وجهة. والحوالةُ البنكية تبقى ممكنةً من الإدارة حيث تُعرف الوجهة بغير الجدول.
+ *
+ * و`alias` كليك شرطُ الخلفية (`withdrawals.create_request`)، فمن لا alias له يضعه من هنا بدل أن يُرسل طلباً يُرفض.
+ *
+ * **ولغتُها أوراقُ الكبتن** (C07: سطحٌ بحافّةٍ علويةٍ وزاوية ٣٠ ومقبض)، **والبلاطتان بلاطتا «الدفع من» في C10** — بالرموز وحدَها،
+ * **فلا تحتاج جسرَ الألوان القائمة** (`.t2-legacy`) الذي كان يلفّها في C09.
  */
 
 import { useState } from "react";
@@ -19,10 +20,11 @@ import { useState } from "react";
 import { ApiError } from "@/api/client";
 import { requestWithdrawal, updateDriver } from "@/api/endpoints";
 import type { DriverWallet } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
-import { ErrorNote } from "@/components/ui/Feedback";
-import { digits, cn } from "@/lib/utils";
+import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "@/screens/t2/fields.css";
+import "@/screens/t2/money.css";
 
 interface Props {
   wallet: DriverWallet;
@@ -80,38 +82,42 @@ export function WithdrawSheet({
   }
 
   return (
-    <div
-      className="absolute inset-0 z-50 animate-fadein-fast bg-dim"
-      onClick={onClose}
-    >
+    <div className="t2 t2-wds" onClick={onClose}>
       <div
-        className="absolute inset-x-0 bottom-0 animate-slideup rounded-t-24 border-t border-line bg-surface px-18 pb-24 pt-20"
+        className="t2-wds-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="withdraw-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="mb-4 text-16 font-bold text-ink">طلب سحب</h2>
-        <p className="mb-16 text-12 text-muted">
+        <span className="t2-wds-grab" aria-hidden="true" />
+        <h2 id="withdraw-title" className="t2-wds-title">
+          طلب سحب
+        </h2>
+        <p className="t2-wds-lead">
           يصلك عبر كليك بعد موافقة الإدارة، ويُخصم من رصيدك عند الدفع لا عند
           الطلب.
         </p>
 
-        {/* **حين يعلو الحدُّ الأدنى على المتاح**: الزرّان السريعان كلاهما
-            يؤدّي إلى ٤٠٩ — «الحد الأدنى» أكبرُ من رصيده، و«كل المتاح» أقلُّ من
-            الحدّ. فيضغط ويرتدّ ويعيد، وهو ما تمنعه قاعدةُ «زرٌّ معطَّلٌ يقول
-            لماذا خيرٌ من زرٍّ يعمل ثم يرتدّ». وجدته المرحلةُ ١٣ على الجهاز */}
+        {/* **حين يعلو الحدُّ الأدنى على المتاح**: البلاطتان كلتاهما تؤدّيان إلى ٤٠٩ — «الحد الأدنى» أكبرُ من رصيده، و«كل
+            المتاح» أقلُّ من الحدّ. فيضغط ويرتدّ ويعيد، وهو ما تمنعه قاعدةُ «زرٌّ معطَّلٌ يقول لماذا خيرٌ من زرٍّ يعمل ثم يرتدّ».
+            وجدته المرحلةُ ١٣ على الجهاز */}
         {blocked ? (
-          <p className="mb-14 rounded-12 border border-warn bg-surface-2 px-14 py-11 text-11.5 leading-note text-warn">
-            لا يمكن السحب الآن: الحدُّ الأدنى{" "}
-            {digits(wallet.min_withdrawal_amount)} {currencyLabel}،
-            والمتاح لديك {digits(wallet.available_for_withdrawal)}{" "}
-            {currencyLabel}
-            {Number(wallet.withdrawal_reserve_amount) > 0
-              ? ` — ومنها ${digits(wallet.withdrawal_reserve_amount)} محتجَزةٌ لا تُسحب`
-              : ""}
-            .
+          <p className="t2-wds-blocked">
+            <Icon name="info" />
+            <span>
+              لا يمكن السحب الآن: الحدُّ الأدنى{" "}
+              {digits(wallet.min_withdrawal_amount)} {currencyLabel}، والمتاح
+              لديك {digits(wallet.available_for_withdrawal)} {currencyLabel}
+              {Number(wallet.withdrawal_reserve_amount) > 0
+                ? ` — ومنها ${digits(wallet.withdrawal_reserve_amount)} محتجَزةٌ لا تُسحب`
+                : ""}
+              .
+            </span>
           </p>
         ) : null}
 
-        <div className="mb-14 flex gap-8">
+        <div className="t2-wds-quick">
           <Quick
             label="الحد الأدنى"
             value={wallet.min_withdrawal_amount}
@@ -128,8 +134,12 @@ export function WithdrawSheet({
           />
         </div>
 
-        <Field
-          label="أو اكتب مبلغاً"
+        <label className="t2-fld-label" htmlFor="withdraw-amount">
+          أو اكتب مبلغاً
+        </label>
+        <input
+          id="withdraw-amount"
+          className="t2-fld on-card"
           inputMode="decimal"
           dir="ltr"
           placeholder="0.000"
@@ -138,40 +148,48 @@ export function WithdrawSheet({
         />
 
         {hasAlias ? (
-          <p className="mt-14 rounded-12 border border-line bg-surface-2 px-14 py-11 text-12 text-muted">
-            التحويل عبر كليك إلى{" "}
-            <b dir="ltr" className="font-bold text-ink">
-              {cliqAlias}
-            </b>
+          <p className="t2-wds-alias">
+            التحويل عبر كليك إلى <b dir="ltr">{cliqAlias}</b>
           </p>
         ) : (
-          <div className="mt-14">
-            <Field
-              label="alias كليك"
+          <div className="t2-wds-aliasfield">
+            <label className="t2-fld-label" htmlFor="withdraw-alias">
+              alias كليك
+            </label>
+            <input
+              id="withdraw-alias"
+              className="t2-fld on-card"
               dir="ltr"
               placeholder="ABUMOHD"
               value={alias}
               onChange={(event) => setAlias(event.target.value)}
             />
-            <p className="mt-6 text-11.5 leading-note text-muted">
+            <p className="t2-fld-hint">
               عليه تستلم تحويلات السحب — تأكد من مطابقته لبنكك.
             </p>
           </div>
         )}
 
-        <ErrorNote message={error} />
+        {error ? (
+          <p className="t2-note danger" role="alert">
+            <Icon name="error" fill />
+            {error}
+          </p>
+        ) : null}
 
-        <Button
-          className="mt-16"
-          size="md"
-          loading={busy}
+        <button
+          type="button"
+          className="t2-wds-send"
           disabled={
-            blocked || !amount || (!hasAlias && alias.trim().length === 0)
+            busy ||
+            blocked ||
+            !amount ||
+            (!hasAlias && alias.trim().length === 0)
           }
           onClick={() => void submit()}
         >
-          إرسال الطلب
-        </Button>
+          {busy ? "…" : "إرسال الطلب"}
+        </button>
       </div>
     </div>
   );
@@ -195,14 +213,14 @@ function Quick({
       type="button"
       aria-pressed={active}
       onClick={() => onPick(value)}
-      className={cn(
-        "pressable flex-1 rounded-12 border p-12 text-center text-ink",
-        active ? "border-ink bg-surface-2" : "border-line",
-      )}
+      className="t2-wds-tile"
     >
-      <span className="block text-11 text-muted">{label}</span>
-      <span className="block text-14 font-bold">
-        {digits(value)} {currencyLabel}
+      <span className="t2-wds-tile-k">{label}</span>
+      <span className="t2-wds-tile-v">
+        <span className="t2-wds-tile-num" dir="ltr">
+          {digits(value)}
+        </span>{" "}
+        <span className="t2-wds-tile-cur">{currencyLabel}</span>
       </span>
     </button>
   );

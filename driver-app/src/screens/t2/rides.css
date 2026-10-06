@@ -1,0 +1,317 @@
+/* سجلُّ الرحلات وتفاصيلُها والاعتراض — TAXO 2.0 «C16 · C17 · C18» (`design/t2-new/captain/`)، **تخطيطُها وحدَه**.
+ *
+ * **القيمُ من اللوحات** وهي مؤلَّفةٌ من أقرب المرسوم: بطاقةُ «رحلاتي» R12 بلغة الإسفلت، وكتلةُ المسار في C05، وجدولُ C08،
+ * وصفوفُ الخطط في C10 للأسباب، وزرّا C05 للقرار. **والألوانُ رموزٌ** (`var(--t2-…)`) فتعمل في الفاتح والداكن والنسائيّ. */
+
+/* ── C16 · سجلُّ الرحلات (جذرُ تبويب: الشريطُ العائمُ تحته) ─────────────────────────────────────────── */
+.t2.t2-log {
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  /* **ما تحت الشريط العائم يُحجز بقدره**: ٦٢ ارتفاعُه وفوقه حاشيتُه (`pb-float`)، و١٦ فسحة */
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px calc(78px + max(14px, env(safe-area-inset-bottom, 0px)));
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-log-wait { display: flex; justify-content: center; padding: 30px 0; }
+.t2-log .t2-note { margin: 0 2px 12px; }
+.t2-log-empty { display: flex; flex-direction: column; gap: 4px; line-height: 1.6; }
+.t2-log-empty b { font-size: 13.5px; color: var(--t2-text); }
+.t2-log-month-title { margin: 16px 2px 8px; font-size: 12px; font-weight: 600; color: var(--t2-muted); }
+.t2-log-month:first-of-type .t2-log-month-title { margin-top: 0; }
+.t2-log-cards { display: flex; flex-direction: column; gap: 8px; }
+/* البطاقةُ كلُّها زرٌّ واحدٌ إلى التفاصيل — R12: ٢٢ للزوايا و١٣ · ١٦ للحشو */
+.t2-log-card {
+  display: block;
+  width: 100%;
+  padding: 13px 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 0;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* **ما ينتظر تأكيدَك بالجمر الخافت** — كبطاقة «مجدولة» في R12: بحافّتها وذيلٍ يقول ما يُفعل */
+.t2-log-card.awaiting {
+  padding-bottom: 0;
+  border: 1px solid var(--t2-accent-line);
+  background: var(--t2-accent-soft);
+}
+.t2-log-card:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.t2-log-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.t2-log-when { flex: none; font-size: 12.5px; color: var(--t2-muted); white-space: nowrap; }
+.t2-log-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.t2-log-route {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.t2-log-route.off { color: var(--t2-muted); }
+.t2-log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--t2-text); }
+.t2-log-dot.to { border-radius: 2px; background: var(--t2-accent); }
+.t2-log-route.off .t2-log-dot { background: var(--t2-faint); }
+.t2-log-place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-log-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--t2-muted);
+}
+.t2-log-fare { flex: none; font-size: 14.5px; font-weight: 600; color: var(--t2-text); white-space: nowrap; }
+.t2-log-act {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 11px -16px 0;
+  padding: 11px 16px;
+  border-top: 1px solid var(--t2-accent-line);
+  color: var(--t2-accent-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.t2-log-act .t2-icon { font-size: 18px; }
+.t2-log-act-text { flex: 1; }
+.t2-log-more { margin-top: 12px; }
+
+/* ── C17 · تفاصيلُ الرحلة: خريطةٌ من الحافّة، ثمّ الأجرةُ والمسارُ والجدول، **والقرارُ مثبَّتٌ في القاع** ─────────── */
+.t2.t2-rdt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-rdt-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+/* حالُ الانتظار والخطأ قبل وصول الرحلة — برأسٍ يعيد من حيث جاء */
+.t2-rdt-wait { padding: calc(6px + env(safe-area-inset-top, 0px)) 18px 24px; }
+.t2-rdt-wait-body { display: flex; justify-content: center; padding: 40px 0; }
+.t2-rdt-wait .t2-note { margin: 0 2px; }
+/* **الخريطةُ من الحافّة تحت شريط الحالة** (§٦٢/٩) — ١٥٠ فوق الحاشية، كما رُسمت ٢٠٠ بشريطها */
+.t2-rdt-map { position: relative; height: calc(150px + env(safe-area-inset-top, 0px)); overflow: hidden; }
+.t2-rdt-back { position: absolute; top: calc(6px + env(safe-area-inset-top, 0px)); inset-inline-start: 18px; z-index: 11; }
+/* زرُّ الموقع (من `MapView` بـ`t2`) — **في الزاوية الأخرى من الرأس**، فشعارُ Mapbox ونسبتُه في القاع لا يُغطَّيان */
+.t2-rdt-map .t2-maploc {
+  top: calc(6px + env(safe-area-inset-top, 0px));
+  inset-inline-end: 18px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--t2-line);
+  background: var(--t2-surface);
+}
+.t2-rdt-body { padding: 16px 18px 20px; }
+.t2-rdt-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.t2-rdt-when { font-size: 13px; color: var(--t2-muted); }
+.t2-rdt-fare { display: flex; align-items: baseline; gap: 6px; margin: 2px 0 12px; }
+.t2-rdt-fare-num {
+  font-family: var(--t2-font-num);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.t2-rdt-fare-cur { font-size: 15px; color: var(--t2-muted); }
+/* كتلةُ المسار — C05: بئرُ السطح بزاوية ٢٠، ونقطةُ الانطلاق بالحبر، والوجهةُ مربّعٌ بالجمر */
+.t2-rdt-route {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 20px;
+  /* **على الحجر «ما يغوص» بلون الصفحة نفسِه فلا يُرى** (`--t2-sunken` نهاراً = `--t2-bg`) — فالكتلةُ بئرُ الحجر (`--t2-well`، R06)
+     نهاراً، **وبئرُ السطح ليلاً كما رُسمت** (C05 · C17). و`--t2-well` لا قيمةَ ليليّةَ له بعد — فيُعاد هنا ويُقترح هناك */
+  background: var(--t2-well);
+}
+html.dark .t2-rdt-route { background: var(--t2-sunken); }
+.t2-rdt-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--t2-text); }
+.t2-rdt-dot.to { border-radius: 3px; background: var(--t2-accent); }
+.t2-rdt-link { justify-self: center; width: 2px; height: 14px; background: var(--t2-dot-off, var(--t2-line)); }
+.t2-rdt-place { font-size: 14.5px; font-weight: 600; }
+/* الجدول — C08: سطحٌ بزاوية ٢٢، والاسمُ خافتٌ والقيمةُ في الطرف */
+.t2-rdt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  font-size: 13.5px;
+}
+.t2-rdt-k { color: var(--t2-muted); }
+.t2-rdt-v { font-weight: 500; text-align: end; white-space: nowrap; }
+.t2-rdt-k.strong { color: var(--t2-text); font-weight: 700; }
+.t2-rdt-v.strong { font-weight: 700; }
+.t2-rdt-v.ok { color: var(--t2-success); }
+.t2-rdt-v.warn { color: var(--t2-warning); }
+.t2-rdt-pay { margin-top: 10px; }
+.t2-rdt-star { display: inline-flex; align-items: center; gap: 3px; }
+.t2-rdt-star .t2-icon { font-size: 16px; color: var(--t2-accent); font-variation-settings: "FILL" 1; }
+.t2-rdt-deadline {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 10px 2px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+.t2-rdt-deadline .t2-icon { font-size: 16px; line-height: 1.3; }
+.t2-rdt-notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  /* **نهاراً سطحٌ أبيض** — بئرُ السطح وخافتُ التنبيه كلاهما بلون الحجر (لا تنبيهَ خافتاً في الهوية الفاتحة)، فبلاغٌ على الصفحة لا يُرى */
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.t2-rdt-notice.warn { color: var(--t2-warning); }
+html.dark .t2-rdt-notice { background: var(--t2-sunken); }
+html.dark .t2-rdt-notice.warn { background: var(--t2-warning-soft); }
+.t2-rdt-notice .t2-icon { font-size: 18px; line-height: 1.25; }
+/* **القرارُ في القاع** (كـC08 · C10) — و٣٤ اللوحةِ منطقةُ مؤشّر البيت نفسُها */
+.t2-rdt-foot { flex: none; padding: 12px 18px max(34px, env(safe-area-inset-bottom, 0px)); background: var(--t2-bg); }
+.t2-rdt-foot .t2-note { margin: 0 2px 10px; }
+.t2-rdt-acts { display: flex; gap: 8px; }
+.t2-rdt-yes,
+.t2-rdt-no,
+.t2-rdt-cash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 60px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-rdt-yes { flex: 2; border: 0; background: var(--t2-accent); color: var(--t2-on-accent); font-weight: 700; }
+.t2-rdt-yes .t2-icon { font-size: 22px; }
+/* **«لم تصلني» بحدِّ الخطر ولونه** — الرفضُ فعلٌ ثقيل (الورقةُ القائمة، البند 32) */
+.t2-rdt-no { flex: 1; border: 1.5px solid var(--t2-danger); background: none; color: var(--t2-danger); font-weight: 600; }
+.t2-rdt-cash { width: 100%; border: 0; background: var(--t2-accent); color: var(--t2-on-accent); font-weight: 700; }
+.t2-rdt-yes:disabled,
+.t2-rdt-no:disabled,
+.t2-rdt-cash:disabled { opacity: 0.45; cursor: default; }
+.t2-rdt-yes:active:enabled,
+.t2-rdt-no:active:enabled,
+.t2-rdt-cash:active:enabled { transform: scale(0.98); }
+
+/* ── C18 · فتحُ نزاع: بطاقةُ الدفعة، والأسبابُ صفوفُ C10، والملاحظة، والإرسالُ في القاع ───────────────────── */
+.t2.t2-dsp {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px max(34px, env(safe-area-inset-bottom, 0px));
+  line-height: normal;
+  font-variant-numeric: normal;
+}
+.t2-dsp .t2-head { flex: none; margin-bottom: 14px; }
+.t2-dsp-wait { display: flex; justify-content: center; padding: 40px 0; }
+.t2-dsp-lede { flex: none; margin: 0 2px 14px; font-size: 14px; line-height: 1.65; color: var(--t2-muted); }
+.t2-dsp-card { flex: none; padding: 14px 16px; border-radius: 22px; background: var(--t2-surface); }
+.t2-dsp-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.t2-dsp-when { font-size: 13px; color: var(--t2-muted); }
+.t2-dsp-sum { flex: none; white-space: nowrap; }
+.t2-dsp-num { font-family: var(--t2-font-num); font-size: 20px; font-weight: 700; }
+.t2-dsp-cur { font-size: 12px; color: var(--t2-muted); }
+.t2-dsp-refs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--t2-divider);
+  font-size: 13px;
+}
+.t2-dsp-ref-k { color: var(--t2-muted); }
+.t2-dsp-ref-v { font-weight: 600; }
+.t2-dsp > .t2-note { margin: 12px 2px 0; }
+.t2-dsp-form { display: flex; flex: 1 0 auto; flex-direction: column; }
+.t2-dsp-reasons { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+.t2-dsp-reason {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-dsp-reason.on { border: 2px solid var(--t2-accent); background: var(--t2-surface); font-weight: 600; }
+.t2-dsp-reason:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.t2-dsp-radio {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-dot-off, var(--t2-line));
+  border-radius: 50%;
+}
+.t2-dsp-reason.on .t2-dsp-radio { border: 5px solid var(--t2-accent); }
+.t2-dsp-note { margin-top: 16px; }
+.t2-dsp-push { flex: 1 0 20px; }
+.t2-dsp-form .t2-note { margin: 0 2px 10px; }
+/* **الإرسالُ بلون الخطر** كما كان (`variant="danger"`) — ونصُّه بلون الخلفية: إسفلتٌ على الأحمر الليليّ، وحجرٌ على أحمر النهار */
+.t2-dsp-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 56px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-danger);
+  color: var(--t2-bg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-dsp-send:disabled { opacity: 0.45; cursor: default; }
+.t2-dsp-send:active:enabled { transform: scale(0.98); }
+.t2-dsp-fine { margin: 10px 0 0; text-align: center; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .t2-log-card { transition: transform var(--t2-fast) var(--t2-ease); }
+  .t2-log-card:active { transform: scale(0.99); }
+}

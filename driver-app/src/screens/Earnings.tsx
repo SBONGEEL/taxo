@@ -1,15 +1,15 @@
-/** أرباحي — SPEC القسم 9 و12/7 (`FUTURE-FEATURES` بند 17).
+/** أرباحي — TAXO 2.0 «C19» (`design/t2-new/captain/C19-earnings.dc.html`) — SPEC القسم 9 و12/7 (`FUTURE-FEATURES` بند 17).
 
-**والقسم 9 يفصل ما يمر بالمحفظة عمّا يُقبض باليد، وهذه الشاشة تفصلهما بصرياً**:
-رقمان في بطاقتين لا رقمٌ واحد. فالكاش وكليك لا يزيدان الرصيد — الكبتن قبضهما
-فعلاً — لكنهما دخلٌ، وكشفٌ يخفي نصف دخله كشفٌ لا يُصدَّق.
+**والقسم 9 يفصل ما يمر بالمحفظة عمّا يُقبض باليد، وهذه الشاشة تفصلهما**: الرقمُ الكبيرُ صافي ما دخل المحفظة **ويُقال اسمُه تحته**،
+والمُحصَّلُ مباشرةً سطرٌ بشرحه. فالكاش وكليك لا يزيدان الرصيد — الكبتن قبضهما فعلاً — لكنهما دخلٌ، وكشفٌ يخفي نصف دخله كشفٌ لا يُصدَّق.
 
-**والصافي قد يكون سالباً ولا يُقصّ عند الصفر**: يومٌ كلُّه كاش ونطاقُ العمولة
-`all_rides` يترك عليه عمولةً بلا أرباحَ تقابلها — وإخفاءُ ذلك يجعله يكتشف
-نقصان رصيده بلا سبب ظاهر.
+**والصافي قد يكون سالباً ولا يُقصّ عند الصفر**: يومٌ كلُّه كاش ونطاقُ العمولة `all_rides` يترك عليه عمولةً بلا أرباحَ تقابلها —
+وإخفاءُ ذلك يجعله يكتشف نقصان رصيده بلا سبب ظاهر.
 
-**ولا حسابَ هنا**: الأرقام الخمسة تصل مجموعةً من `GET /drivers/me/earnings`
-(القسم 14) — ولا يُطرح رقمٌ من رقمٍ في هذه الشاشة.
+**ولا حسابَ هنا**: الأرقام الخمسة تصل مجموعةً من `GET /drivers/me/earnings` (القسم 14) — ولا يُطرح رقمٌ من رقمٍ في هذه الشاشة.
+
+**ولغتُها لغةُ C09 حرفاً** — الفترةُ والصافي وتفصيلُه بأصناف «الأرباح» نفسِها (`screens/t2/t2.css`)، **وبرأسٍ برجوعٍ** لأنها صفحةٌ داخلية:
+وجهٌ واحدٌ لأرقامٍ واحدة في الشاشتين، **ومن بيتٍ واحد** (`useEarningsScreen`).
 */
 
 import { useCallback, useEffect, useState } from "react";
@@ -17,10 +17,16 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { getEarnings } from "@/api/endpoints";
 import type { Earnings } from "@/api/types";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
-import { digits, cn } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
+
+import { countRides } from "./t2/count";
+
+import "./t2/t2.css";
+import "./t2/money.css";
 
 type Period = Earnings["period"];
 
@@ -30,7 +36,7 @@ export const PERIOD_LABEL: Record<Period, string> = {
   month: "الشهر",
 };
 
-/** **حالُ «أرباحي» — بيتٌ واحدٌ للشاشتين** (القائمة وC09 في `screens/t2`): الفترةُ وأرقامُها الخمسة
+/** **حالُ «أرباحي» — بيتٌ واحدٌ للشاشتين** (هذه وC09 في `screens/t2`): الفترةُ وأرقامُها الخمسة
  * من `GET /drivers/me/earnings` كما تصل. */
 export function useEarningsScreen() {
   const goBack = useGoBack();
@@ -59,122 +65,112 @@ export function useEarningsScreen() {
 }
 
 export function EarningsScreen() {
-  const {
-    goBack,
-    period,
-    setPeriod,
-    data,
-    error,
-  } = useEarningsScreen();
+  const { goBack, period, setPeriod, data, error } = useEarningsScreen();
 
-  const currency = data ? CURRENCY_LABEL[data.currency] : "";
+  // **الإشارةُ من النصّ** — لا طرحَ ولا مقارنةَ بصفر
   const negative = data ? data.net.trimStart().startsWith("-") : false;
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
+    <div className="t2 t2-ern scr">
+      <div className="t2-head">
         <button
           type="button"
-          onClick={() => goBack()}
+          className="t2-back"
           aria-label="رجوع"
-          className="pressable text-18 text-muted"
+          onClick={() => goBack()}
         >
-          →
+          <Icon name="arrow_forward" />
         </button>
-        <h1 className="text-20 font-bold text-ink">أرباحي</h1>
+        <h1 className="t2-title">أرباحي</h1>
+        <div className="t2-wal-period" role="tablist" aria-label="الفترة">
+          {(Object.keys(PERIOD_LABEL) as Period[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={key === period}
+              className={
+                key === period ? "t2-wal-period-opt on" : "t2-wal-period-opt"
+              }
+              onClick={() => setPeriod(key)}
+            >
+              {PERIOD_LABEL[key]}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex gap-8">
-        {(Object.keys(PERIOD_LABEL) as Period[]).map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setPeriod(key)}
-            className={cn(
-              "pressable flex-1 rounded-13 border py-10 text-12.5 font-semibold",
-              key === period
-                ? "border-ink text-ink"
-                : "border-line text-muted",
-            )}
-          >
-            {PERIOD_LABEL[key]}
-          </button>
-        ))}
-      </div>
-
-      <ErrorNote message={error} />
+      {error ? (
+        <p className="t2-note danger" role="alert">
+          <Icon name="error" fill />
+          {error}
+        </p>
+      ) : null}
 
       {data === null ? (
-        error ? null : <Spinner className="mx-auto my-38" />
+        error ? null : (
+          <div className="t2-wal-wait">
+            <Spinner />
+          </div>
+        )
       ) : (
-        <div className="mt-14 space-y-10">
-          <div className="card p-16">
-            <div className="text-11.5 text-muted">صافي ما دخل محفظتك</div>
-            <div
-              className={cn(
-                "mt-4 text-30 font-bold",
-                negative ? "text-danger" : "text-ink",
-              )}
-            >
-              {digits(data.net)}{" "}
-              <span className="text-15 text-muted">{currency}</span>
+        <>
+          <div className={negative ? "t2-wal-net negative" : "t2-wal-net"}>
+            <span className="t2-wal-net-num" dir="ltr">
+              {digits(data.net)}
+            </span>
+            <span className="t2-wal-net-cur">
+              {CURRENCY_LABEL[data.currency]}
+            </span>
+          </div>
+          <div className="t2-wal-sub">
+            <span>صافي ما دخل محفظتك</span>
+            <span>{countRides(data.completed_rides)}</span>
+          </div>
+
+          <div className="t2-wal-break">
+            <div className="t2-wal-line">
+              <span>أرباح الرحلات</span>
+              <span dir="ltr">{digits(data.wallet_earnings)}</span>
             </div>
-            <div className="mt-8 flex items-center justify-between text-11.5">
-              <span className="text-muted">
-                أرباح الرحلات {digits(data.wallet_earnings)}
-              </span>
-              <span className="text-muted">
-                عمولة {digits(data.commission)}
-              </span>
+            <div className="t2-wal-line">
+              <span>عمولة</span>
+              <span dir="ltr">{digits(data.commission)}</span>
             </div>
-            {/* **سطرٌ ثالثٌ مستقل** (12-و): البقشيشُ دخلَ المحفظة **بلا عمولةٍ
-                عليه** وهو الوحيد كذلك — فبغير سطرِه لا يتّسق «أرباح الرحلات»
-                مع «عمولة» لمن يجمعهما بيده. ويظهر حين يوجد فقط: صفرٌ دائمٌ في
-                سوقٍ لا بقشيشَ فيه سطرٌ يشغل الشاشة بلا معنى */}
+            {/* **سطرٌ مستقل** (12-و): البقشيشُ دخلَ المحفظة **بلا عمولةٍ عليه** وهو الوحيد كذلك — فبغير سطرِه لا يتّسق «أرباح
+                الرحلات» مع «عمولة» لمن يجمعهما بيده. ويظهر حين يوجد فقط */}
             {Number(data.tips) > 0 ? (
-              <div className="mt-4 text-11.5 text-ok">
-                بقشيش {digits(data.tips)} — كاملاً بلا عمولة
+              <div className="t2-wal-line ok">
+                <span>بقشيش — كاملاً بلا عمولة</span>
+                <span dir="ltr">{digits(data.tips)}</span>
               </div>
             ) : null}
-            {/* **وسطرٌ خامسٌ منذ البند ١٥**: ما اقتُطع سداداً للسلفة —
-                رقمٌ ينقص من الأرباح بلا سببٍ مكتوبٍ يُقرأ عطباً، ويُسأل عنه
-                الدعمُ مرةً لكلِّ كبتن. ولا يظهر لمن لا سلفةَ له */}
+            {/* **ما اقتُطع سداداً للسلفة** (البند ١٥) — رقمٌ ينقص من الأرباح بلا سببٍ مكتوبٍ يُقرأ عطباً. ولا يظهر لمن لا سلفةَ له */}
             {Number(data.advance_repaid) > 0 ? (
-              <div className="mt-4 text-11.5 text-muted">
-                سدادُ سلفة {digits(data.advance_repaid)}
+              <div className="t2-wal-line">
+                <span>سدادُ سلفة</span>
+                <span dir="ltr">{digits(data.advance_repaid)}</span>
               </div>
             ) : null}
+            <div className="t2-wal-line">
+              <span>مُحصَّل مباشرة</span>
+              <span>
+                <span dir="ltr">{digits(data.directly_collected)}</span>{" "}
+                {CURRENCY_LABEL[data.currency]}
+              </span>
+            </div>
+            <p className="t2-wal-hint">
+              كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك،
+              وتظهر هنا لأنها من دخلك.
+            </p>
             {negative ? (
-              <p className="mt-8 text-11 leading-note text-warn">
+              <p className="t2-wal-hint warn">
                 العمولة تجاوزت أرباح المحفظة في هذه الفترة — عمولةُ الرحلات
                 النقدية تُخصم من رصيدك ولو لم يمرّ مالُها به.
               </p>
             ) : null}
           </div>
-
-          <div className="card p-16">
-            <div className="flex items-baseline justify-between">
-              <span className="text-11.5 text-muted">مُحصَّل مباشرة</span>
-              <span className="text-15 font-bold text-ink">
-                {digits(data.directly_collected)}{" "}
-                <span className="text-11.5 text-muted">{currency}</span>
-              </span>
-            </div>
-            <p className="mt-6 text-11 leading-note text-muted">
-              كاش وكليك قبضتَهما من الركّاب مباشرةً — لا تدخل رصيد محفظتك،
-              وتظهر هنا لأنها من دخلك.
-            </p>
-          </div>
-
-          <div className="card p-16">
-            <div className="flex items-baseline justify-between">
-              <span className="text-11.5 text-muted">رحلات مكتملة</span>
-              <span className="text-15 font-bold text-ink">
-                {digits(String(data.completed_rides))}
-              </span>
-            </div>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

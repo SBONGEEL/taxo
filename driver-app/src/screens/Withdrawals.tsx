@@ -1,4 +1,4 @@
-/** طلبات السحب — SPEC القسم 9، وشكلُها من `DESIGN.md` §5.3.
+/** طلبات السحب — TAXO 2.0 «C20» (`design/t2-new/captain/C20-withdrawals.dc.html`) — SPEC القسم 9، **في المظهرين والنسائيّ**.
  *
  * أربعُ حالاتٍ لا اثنتان، والفرقُ بينها فرقٌ في **أين المال الآن**:
  *
@@ -9,36 +9,42 @@
  * | مدفوع | حُوِّل، **وهنا وحده يُكتب قيد `withdrawal`** في الدفتر |
  * | مرفوض | أُفرج عن المحجوز وعاد إلى المتاح |
  *
- * فالشاشةُ تقول ذلك صراحةً في حاشيتها: من يرى «موافَق عليه» ولا يرى المال في
- * بنكه يظن أن شيئاً ضاع، وهو في الطريق.
+ * فالشاشةُ تقول ذلك صراحةً في حاشيتها: من يرى «موافَق عليه» ولا يرى المال في بنكه يظن أن شيئاً ضاع، وهو في الطريق.
+ *
+ * **والطلبُ هو هو** (`GET /wallet/me/withdrawals` بصفحاتٍ من عشرين و«عرض المزيد»). **وما تغيّر طبقةُ العرض**: صفُّ الوثائق C12 —
+ * **ولونُ الحال في مربّع الأيقونة وشارتِه** بدل الشريط الجانبيّ، بالنبرة نفسِها (`withdrawalTone`): الكهرمانُ لما يحجز، والأخضرُ لما
+ * دُفع، والأحمرُ لما رُفض.
  */
 
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { listWithdrawals } from "@/api/endpoints";
 import type { Withdrawal } from "@/api/types";
-import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
-import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
+import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { useSession } from "@/lib/session";
 import {
   WITHDRAWAL_METHOD_LABEL,
   WITHDRAWAL_STATUS_LABEL,
   withdrawalTone,
 } from "@/lib/walletFormat";
-import { digits, cn } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
+
+import { startOfToday, whenParts } from "./t2/when";
+
+import "./t2/money.css";
 
 const PAGE_SIZE = 20;
 
-/** لونُ الشريط الجانبي هو لونُ الحال نفسه — خلفيةً هنا ونصّاً هناك. */
-const BAR_TONE: Record<Withdrawal["status"], string> = {
-  pending: "bg-warn",
-  approved: "bg-warn",
-  paid: "bg-ok",
-  rejected: "bg-danger",
+/** **نبرةُ الحال من قاعدتها الواحدة** (`withdrawalTone`) — لونُ الشارة ومربّعِ الأيقونة. */
+const TONE: Record<string, "ok" | "warn" | "danger"> = {
+  "text-ok": "ok",
+  "text-warn": "warn",
+  "text-danger": "danger",
 };
 
 export function WithdrawalsScreen() {
@@ -74,90 +80,97 @@ export function WithdrawalsScreen() {
     void load(0);
   }, [load]);
 
+  const today = startOfToday();
+
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
+    <div className="t2 t2-wdl scr">
+      <div className="t2-head">
         <button
           type="button"
-          onClick={() => goBack()}
+          className="t2-back"
           aria-label="رجوع"
-          className="pressable text-18 text-muted"
+          onClick={() => goBack()}
         >
-          →
+          <Icon name="arrow_forward" />
         </button>
-        <h1 className="text-20 font-bold text-ink">طلبات السحب</h1>
+        <h1 className="t2-title">طلبات السحب</h1>
       </div>
 
-      <ErrorNote message={error} />
-
-      {requests === null && !error ? <Spinner className="mx-auto" /> : null}
-
-      {requests?.length === 0 ? (
-        <EmptyNote
-          title="لا طلبات سحب"
-          hint="اطلب سحباً من المحفظة، وتتبّع حاله هنا حتى يصلك المال."
-        />
+      {error ? (
+        <p className="t2-note danger" role="alert">
+          <Icon name="error" fill />
+          {error}
+        </p>
       ) : null}
 
-      <Stagger className="flex flex-col gap-9">
-        {(requests ?? []).map((request) => (
-          <StaggerItem
-            key={request.id}
-            className="flex items-center gap-12 rounded-15 border border-line bg-surface px-14 py-13"
-          >
-            <span
-              className={cn(
-                "block h-34 w-6 flex-none rounded-4",
-                BAR_TONE[request.status],
-              )}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="text-14 font-bold text-ink">
-                {digits(request.amount)} {currency}
-              </div>
-              <div className="text-11 text-muted">
-                {formatWhen(request.created_at)} ·{" "}
-                {WITHDRAWAL_METHOD_LABEL[request.method]}
-              </div>
-              {/* سببُ الرفض أو مرجعُ الحوالة — ما كتبته الإدارة على الصف */}
-              {request.note ? (
-                <div className="mt-3 text-11 leading-snug text-muted">
-                  {request.note}
-                </div>
-              ) : null}
-              {request.reference ? (
-                <div className="mt-3 text-11 text-muted">
-                  مرجع التحويل{" "}
-                  <span dir="ltr" className="text-ink">
-                    {request.reference}
+      {requests === null && !error ? (
+        <div className="t2-money-wait">
+          <Spinner />
+        </div>
+      ) : null}
+
+      {requests?.length === 0 ? (
+        <div className="t2-empty t2-money-empty">
+          <b>لا طلبات سحب</b>
+          <span>اطلب سحباً من المحفظة، وتتبّع حاله هنا حتى يصلك المال.</span>
+        </div>
+      ) : null}
+
+      {requests && requests.length > 0 ? (
+        <div className="t2-wdl-list">
+          {requests.map((request) => {
+            const tone = TONE[withdrawalTone(request.status)] ?? "warn";
+            const when = whenParts(request.created_at, today);
+            return (
+              <div key={request.id} className="t2-wdl-card">
+                <div className="t2-wdl-row">
+                  <span className={`t2-wdl-icon ${tone}`} aria-hidden="true">
+                    <Icon name="south_west" />
+                  </span>
+                  <span className="t2-wdl-main">
+                    <span className="t2-wdl-amount">
+                      <span dir="ltr">{digits(request.amount)}</span> {currency}
+                    </span>
+                    <span className="t2-wdl-sub">
+                      {digits(when.day)} ·{" "}
+                      <span dir="ltr">{digits(when.time)}</span> ·{" "}
+                      {WITHDRAWAL_METHOD_LABEL[request.method]}
+                    </span>
+                  </span>
+                  <span className={`t2-chip ${tone}`}>
+                    {WITHDRAWAL_STATUS_LABEL[request.status]}
                   </span>
                 </div>
-              ) : null}
-            </div>
-            <span
-              className={cn(
-                "text-11.5 font-bold",
-                withdrawalTone(request.status),
-              )}
-            >
-              {WITHDRAWAL_STATUS_LABEL[request.status]}
-            </span>
-          </StaggerItem>
-        ))}
-      </Stagger>
+                {/* سببُ الرفض أو مرجعُ الحوالة — ما كتبته الإدارة على الصف */}
+                {request.note ? (
+                  <p className="t2-wdl-note">{request.note}</p>
+                ) : null}
+                {request.reference ? (
+                  <p className="t2-wdl-ref">
+                    مرجع التحويل{" "}
+                    <span dir="ltr" className="t2-wdl-ref-code">
+                      {request.reference}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       {more ? (
         <button
           type="button"
+          className="t2-more t2-money-more"
           disabled={busy}
           onClick={() => void load(requests?.length ?? 0)}
-          className="pressable mt-12 w-full rounded-14 border border-line py-13 text-center text-12.5 font-semibold text-muted disabled:opacity-60"
         >
           {busy ? "…" : "عرض المزيد"}
         </button>
       ) : null}
 
-      <p className="mt-14 text-11.5 leading-note text-muted">
+      <p className="t2-wdl-fine">
         الطلب المعلّق يحجز مبلغه من الرصيد المتاح، وقيد السحب يُكتب عند الدفع
         فقط.
       </p>

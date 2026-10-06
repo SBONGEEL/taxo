@@ -1,16 +1,16 @@
-/** فتح نزاع — SPEC القسم 6.2، وشكلُه من `DESIGN.md` §5.3.
+/** فتح نزاع — TAXO 2.0 «C18» (`design/t2-new/captain/C18-*.dc.html`) — SPEC القسم 6.2، **في المظهرين والنسائيّ**.
  *
- * **على كليك وحدها**، وأسبابُه أسبابُ كليك لا أسبابُ الكاش: الراكب هنا
- * *يقول* إنه حوّل، والحوالةُ إما لم تصل، أو وصلت ناقصةً، أو وصلت باسمٍ لا
- * يطابق ما اتُّفق عليه. أسبابُ التصميم الثلاثة («لم يدفع إطلاقاً»، «نزل
- * وغادر دون دفع») مكتوبةٌ لرحلة كاش لا نزاعَ فيها أصلاً — انحرافٌ مسجّلٌ في
- * `DESIGN-DECISIONS.md`.
+ * **على كليك وحدها**، وأسبابُه أسبابُ كليك لا أسبابُ الكاش: الراكب هنا *يقول* إنه حوّل، والحوالةُ إما لم تصل، أو وصلت ناقصةً، أو
+ * وصلت باسمٍ لا يطابق ما اتُّفق عليه. أسبابُ التصميم القديم الثلاثة («لم يدفع إطلاقاً»، «نزل وغادر دون دفع») مكتوبةٌ لرحلة كاش لا
+ * نزاعَ فيها أصلاً — انحرافٌ مسجّلٌ في `DESIGN-DECISIONS.md`.
  *
- * والسببُ نصٌّ حرّ في الخلفية (`reason: str`, 3–255): فالخياراتُ الثلاثة
- * تُملي النص وحقلُ الملاحظة يُلحق به، ولا يذهب إلى الإدارة رمزٌ بلا كلام.
+ * والسببُ نصٌّ حرّ في الخلفية (`reason: str`, 3–255): فالخياراتُ الثلاثة تُملي النص وحقلُ الملاحظة يُلحق به، ولا يذهب إلى الإدارة
+ * رمزٌ بلا كلام.
  *
- * ومرجعُ الحوالة — ما ولّده TAXO وما أدخله الراكب — يُعرض هنا لا زينةً: به
- * يبحث الكبتن في كشف حسابه قبل أن يفتح نزاعاً لم يقع.
+ * ومرجعُ الحوالة — ما ولّده TAXO وما أدخله الراكب — يُعرض هنا لا زينةً: به يبحث الكبتن في كشف حسابه قبل أن يفتح نزاعاً لم يقع.
+ *
+ * **والمنطقُ هو هو حرفاً** (الطلبان، والنصُّ الواحد، والزرُّ معطَّلٌ حتى يُختار سبب). **وما تغيّر طبقةُ العرض**: بطاقةُ الدفعة بسطح
+ * C08، **والأسبابُ صفوفُ «باقتك القادمة» في C10** (أقربُ اختيارٍ مرسوم)، والملاحظةُ حقلُ الدخول، والإرسالُ في القاع بلون الخطر كما كان.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -19,12 +19,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { disputePayment, getRide, getRidePayments } from "@/api/endpoints";
 import type { Payment, Ride } from "@/api/types";
-import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { digits, cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/Feedback";
+import { CURRENCY_LABEL } from "@/lib/rideFormat";
+import { digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { Icon } from "@/taxo2";
+
+import { startOfToday, whenParts } from "./t2/when";
+
+import "./t2/fields.css";
+import "./t2/rides.css";
 
 const REASONS = [
   "لم تصلني الحوالة إطلاقاً",
@@ -83,116 +87,150 @@ export function DisputeScreen() {
     }
   }
 
+  const head = (
+    <div className="t2-head">
+      <button
+        type="button"
+        className="t2-back"
+        aria-label="رجوع"
+        onClick={() => goBack()}
+      >
+        <Icon name="arrow_forward" />
+      </button>
+      <h1 className="t2-title">فتح نزاع</h1>
+    </div>
+  );
+
   if (!ride) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg px-16">
-        {error ? <ErrorNote message={error} /> : <Spinner />}
+      <div className="t2 t2-dsp">
+        {head}
+        {error ? (
+          <p className="t2-note danger" role="alert">
+            <Icon name="error" fill />
+            {error}
+          </p>
+        ) : (
+          <div className="t2-dsp-wait">
+            <Spinner />
+          </div>
+        )}
       </div>
     );
   }
 
   const currency = CURRENCY_LABEL[ride.currency];
+  const when = whenParts(ride.created_at, startOfToday());
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-14 mt-6 flex items-center gap-10">
-        <button
-          type="button"
-          onClick={() => goBack()}
-          aria-label="رجوع"
-          className="pressable text-18 text-muted"
-        >
-          →
-        </button>
-        <h1 className="text-20 font-bold text-ink">فتح نزاع</h1>
-      </div>
+    <div className="t2 t2-dsp scr">
+      {head}
 
-      <p className="mb-16 text-12.5 leading-note text-muted">
+      <p className="t2-dsp-lede">
         افتح نزاعاً إن لم تصلك حوالة الرحلة. تفصله الإدارة: مدفوعة أو غير
         مدفوعة.
       </p>
 
-      <div className="mb-12 card p-14">
-        <div className="flex justify-between text-12.5">
-          <span className="text-muted">{formatWhen(ride.created_at)}</span>
-          <span className="font-bold text-ink">
-            {digits(
-              payment?.amount ?? ride.final_fare ?? ride.estimated_fare,
-            )}{" "}
-            {currency}
+      <div className="t2-dsp-card">
+        <div className="t2-dsp-top">
+          <span className="t2-dsp-when">
+            {digits(when.day)} · <span dir="ltr">{digits(when.time)}</span>
+          </span>
+          <span className="t2-dsp-sum">
+            <span className="t2-dsp-num" dir="ltr">
+              {digits(payment?.amount ?? ride.final_fare ?? ride.estimated_fare)}
+            </span>{" "}
+            <span className="t2-dsp-cur">{currency}</span>
           </span>
         </div>
-        {payment?.cliq_reference ? (
-          <div className="mt-8 flex justify-between text-11.5">
-            <span className="text-muted">مرجع TAXO</span>
-            <span className="font-medium text-ink">
-              {payment.cliq_reference}
-            </span>
-          </div>
-        ) : null}
-        {payment?.cliq_transfer_reference ? (
-          <div className="mt-6 flex justify-between text-11.5">
-            <span className="text-muted">المرجع الذي أدخله الراكب</span>
-            <span className="font-medium text-ink">
-              {payment.cliq_transfer_reference}
-            </span>
+        {payment?.cliq_reference || payment?.cliq_transfer_reference ? (
+          <div className="t2-dsp-refs">
+            {payment?.cliq_reference ? (
+              <>
+                <span className="t2-dsp-ref-k">مرجع TAXO</span>
+                <span className="t2-dsp-ref-v" dir="ltr">
+                  {payment.cliq_reference}
+                </span>
+              </>
+            ) : null}
+            {payment?.cliq_transfer_reference ? (
+              <>
+                <span className="t2-dsp-ref-k">المرجع الذي أدخله الراكب</span>
+                <span className="t2-dsp-ref-v" dir="ltr">
+                  {payment.cliq_transfer_reference}
+                </span>
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>
 
       {payment === null ? (
-        <ErrorNote message="لا دفعة كليك بانتظار تأكيدك على هذه الرحلة. النزاع متاح على دفعات كليك وحدها." />
+        <p className="t2-note danger" role="alert">
+          <Icon name="error" fill />
+          لا دفعة كليك بانتظار تأكيدك على هذه الرحلة. النزاع متاح على دفعات كليك
+          وحدها.
+        </p>
       ) : (
-        <>
-          <div className="mb-14 flex flex-col gap-9">
+        <div className="t2-dsp-form">
+          <div
+            className="t2-dsp-reasons"
+            role="radiogroup"
+            aria-label="سبب النزاع"
+          >
             {REASONS.map((option) => (
               <button
                 key={option}
                 type="button"
-                aria-pressed={reason === option}
+                role="radio"
+                aria-checked={reason === option}
+                className={
+                  reason === option ? "t2-dsp-reason on" : "t2-dsp-reason"
+                }
                 onClick={() => setReason(option)}
-                className={cn(
-                  "pressable flex items-center gap-11 rounded-14 border bg-surface px-14 py-13 text-start",
-                  reason === option ? "border-ink" : "border-line",
-                )}
               >
-                <span
-                  className={cn(
-                    "block size-16 flex-none rounded-full border",
-                    reason === option
-                      ? "border-ink bg-ink"
-                      : "border-line bg-transparent",
-                  )}
-                />
-                <span className="text-13 text-ink">{option}</span>
+                <span className="t2-dsp-radio" aria-hidden="true" />
+                <span>{option}</span>
               </button>
             ))}
           </div>
 
-          <Field
-            label="ملاحظة"
-            placeholder="أضف تفصيلاً يساعد الإدارة…"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            maxLength={200}
-          />
+          <div className="t2-dsp-note">
+            <label className="t2-fld-label" htmlFor="dispute-note">
+              ملاحظة
+            </label>
+            <input
+              id="dispute-note"
+              className="t2-fld"
+              placeholder="أضف تفصيلاً يساعد الإدارة…"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              maxLength={200}
+            />
+          </div>
 
-          <ErrorNote message={error} />
+          <div className="t2-dsp-push" />
 
-          <Button
-            variant="danger"
-            className="mt-18"
-            loading={busy}
-            disabled={reason === null}
+          {error ? (
+            <p className="t2-note danger" role="alert">
+              <Icon name="error" fill />
+              {error}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            className="t2-dsp-send"
+            disabled={reason === null || busy}
             onClick={() => void submit()}
           >
-            إرسال النزاع
-          </Button>
+            {busy ? "…" : "إرسال النزاع"}
+          </button>
 
-          <p className="mt-12 text-11.5 leading-note text-muted">
+          <p className="t2-dsp-fine">
             المسار الفعلي مسجَّلٌ مع الرحلة، وتراه الإدارة حين تفصل في النزاع.
           </p>
-        </>
+        </div>
       )}
     </div>
   );

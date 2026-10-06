@@ -1,17 +1,16 @@
-/** **مستحقّاتُ الكبتن** — الترحيلة `0061`، قرارُ المالك 2026-08-30.
+/** **مستحقّاتُ الكبتن** — TAXO 2.0 «C21» (`design/t2-new/captain/C21-*.dc.html`) — الترحيلة `0061`، قرارُ المالك 2026-08-30.
  *
- * **ونصُّ المحجوب يقول ثلاثةً لا «حسابك مجمَّد»** (نصُّ قراره): **المبلغَ
- * بالضبط**، **وسبيلَ السداد**، **وأن العملَ يعود فور السداد**. والثلاثةُ
- * تأتي من الخلفية ولا تخترعها الشاشة — والرابعُ الذي لا يُقال: **لماذا نشأ**،
- * وهو في كلِّ صفٍّ برحلته.
+ * **ونصُّ المحجوب يقول ثلاثةً لا «حسابك مجمَّد»** (نصُّ قراره): **المبلغَ بالضبط**، **وسبيلَ السداد**، **وأن العملَ يعود فور
+ * السداد**. والثلاثةُ تأتي من الخلفية ولا تخترعها الشاشة — والرابعُ الذي لا يُقال: **لماذا نشأ**، وهو في كلِّ صفٍّ برحلته.
  *
- * **ولمَ صار للدَّين شاشةٌ أصلاً**: قبل اليوم كانت عمولةُ رحلةِ الكاش تُخصم
- * من المحفظة، فمن لا رصيدَ له **لا يُنهي رحلته** والجملةُ تقول «اشحن
- * المحفظة» **وبابُ الشحن مُلغى**. فصار المستحقُّ في جدولِه، **ولا بدّ لجدولٍ
- * يمنع الناسَ من العمل أن يكون له وجهٌ يُقرأ**.
+ * **ولمَ صار للدَّين شاشةٌ أصلاً**: قبل اليوم كانت عمولةُ رحلةِ الكاش تُخصم من المحفظة، فمن لا رصيدَ له **لا يُنهي رحلته** والجملةُ
+ * تقول «اشحن المحفظة» **وبابُ الشحن مُلغى**. فصار المستحقُّ في جدولِه، **ولا بدّ لجدولٍ يمنع الناسَ من العمل أن يكون له وجهٌ يُقرأ**.
  *
- * **والسدادُ جزئيٌّ مقبول**: يكتب ما يستطيع ويُنقص دَينَه — **والمنعُ يُرفع
- * عند الصفر لا قبله**، وتقوله الشاشةُ صراحةً فلا ينتظر ما لا يأتي.
+ * **والسدادُ جزئيٌّ مقبول**: يكتب ما يستطيع ويُنقص دَينَه — **والمنعُ يُرفع عند الصفر لا قبله**، وتقوله الشاشةُ صراحةً.
+ *
+ * **والمنطقُ هو هو حرفاً** (الطلبان، والحقلُ يُملأ بالمجموع، و«سدّد بكليك» يفتح مطالبةً ثمّ يعيد القراءة، ومطالبةٌ معلّقةٌ تفتح
+ * تفاصيلَها). **وما تغيّر طبقةُ العرض**: المجموعُ برقم C09، **والبلاغُ الموقِفُ بحافّة C12 الحمراء**، والسدادُ بطاقةٌ بحقل الدخول
+ * وزرّ الجمر — **وكان زرُّه أبيضَ بلا نصٍّ في الداكن** (لونُ العلامة القديم على الإسفلت، قِيس قبل البناء).
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -20,10 +19,14 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { getDebtState, listMyDebtClaims, payDebtWithCliq } from "@/api/endpoints";
 import type { DebtClaim, DriverDebtState } from "@/api/types";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
+import { Icon } from "@/taxo2";
+
+import "./t2/fields.css";
+import "./t2/money.css";
 
 const SOURCE_TEXT = {
   ride_commission: "عمولة رحلة قبضتَ أجرتها نقداً",
@@ -70,64 +73,77 @@ export function DebtScreen() {
   const pending = claims.filter((claim) => claim.status === "created");
 
   return (
-    <div className="scr h-full bg-bg px-16 pb-12 pt-safe">
-      <div className="mb-16 mt-6 flex items-center gap-10">
+    <div className="t2 t2-debt scr">
+      <div className="t2-head">
         <button
           type="button"
-          onClick={() => goBack()}
+          className="t2-back"
           aria-label="رجوع"
-          className="pressable text-18 text-muted"
+          onClick={() => goBack()}
         >
-          →
+          <Icon name="arrow_forward" />
         </button>
-        <h1 className="text-20 font-bold text-ink">المستحقّات عليك</h1>
+        <h1 className="t2-title">المستحقّات عليك</h1>
       </div>
 
-      <ErrorNote message={error} />
-      {state === null && !error ? <Spinner className="mx-auto" /> : null}
+      {error ? (
+        <p className="t2-note danger" role="alert">
+          <Icon name="error" fill />
+          {error}
+        </p>
+      ) : null}
+      {state === null && !error ? (
+        <div className="t2-money-wait">
+          <Spinner />
+        </div>
+      ) : null}
 
       {state ? (
         <>
-          <section className="mb-12 rounded-20 border border-line bg-surface p-20 text-center">
-            <div className="text-12 text-muted">مجموع ما عليك</div>
-            <div className="mt-4 text-34 font-bold leading-hero text-ink">
-              {digits(state.total)} {currency}
-            </div>
+          <section className="t2-debt-total">
+            <span className="t2-debt-k">مجموع ما عليك</span>
+            <span className="t2-debt-amount">
+              <span className="t2-debt-num" dir="ltr">
+                {digits(state.total)}
+              </span>
+              <span className="t2-debt-cur">{currency}</span>
+            </span>
             {state.total === "0.000" ? (
-              <p className="mt-10 text-12 text-ok">لا مستحقّات عليك.</p>
+              <p className="t2-debt-clear">
+                <Icon name="check_circle" fill />
+                لا مستحقّات عليك.
+              </p>
             ) : null}
           </section>
 
           {/* **نصُّ المحجوب — ثلاثةٌ في فقرةٍ واحدة، لا «حسابك مجمَّد»** */}
           {state.blocked ? (
-            <section
-              className="mb-12 rounded-20 border border-danger bg-surface p-20"
-              role="alert"
-            >
-              <h2 className="text-15 font-bold text-danger">
-                استقبال الطلبات موقوف
-              </h2>
-              <p className="mt-8 text-12.5 leading-note text-ink">
+            <section className="t2-debt-alarm" role="alert">
+              <div className="t2-debt-alarm-head">
+                <span className="t2-debt-alarm-icon" aria-hidden="true">
+                  <Icon name="lock" />
+                </span>
+                <h2 className="t2-debt-alarm-title">استقبال الطلبات موقوف</h2>
+              </div>
+              <p className="t2-debt-alarm-body">
                 عليك {digits(state.total)} {currency} من عمولة رحلات قبضتَ
                 أجرتها نقداً.
                 {state.cliq_alias ? (
                   <>
                     {" "}
                     حوّل المبلغ بكليك إلى{" "}
-                    <span dir="ltr" className="select-all font-bold">
+                    <b dir="ltr" className="t2-debt-alias">
                       {state.cliq_alias}
-                    </span>{" "}
+                    </b>{" "}
                     ثم أكّد من الزرّ أدناه.
                   </>
                 ) : (
                   " تواصل مع الإدارة لسداده — لم يُضبط حساب كليك لسوقك بعد."
                 )}{" "}
-                <span className="font-bold">
-                  ويعود العمل فور وصول السداد كاملاً.
-                </span>
+                <b>ويعود العمل فور وصول السداد كاملاً.</b>
               </p>
               {/* **والجزئيُّ يُقال بعينه** فلا ينتظر رفعاً لا يأتي */}
-              <p className="mt-8 text-11 leading-note text-muted">
+              <p className="t2-debt-alarm-fine">
                 السداد الجزئيّ مقبول ويُنقص المبلغ، لكن الاستقبال لا يعود إلا
                 عند بلوغه صفراً.
               </p>
@@ -135,36 +151,33 @@ export function DebtScreen() {
           ) : null}
 
           {state.total !== "0.000" ? (
-            <section className="mb-12 rounded-20 border border-line bg-surface p-20">
-              <label
-                htmlFor="debt-amount"
-                className="text-12.5 font-bold text-ink"
-              >
+            <section className="t2-debt-pay">
+              <label className="t2-fld-label" htmlFor="debt-amount">
                 كم تريد أن تسدّد الآن؟
               </label>
               <input
                 id="debt-amount"
+                className="t2-fld on-card t2-debt-input"
                 dir="ltr"
                 inputMode="decimal"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
-                className="mt-8 w-full rounded-14 border border-line bg-surface-2 px-14 py-12 text-center text-18 font-bold text-ink"
               />
-              <p className="mt-8 text-11 leading-note text-muted">
+              <p className="t2-fld-hint">
                 تُفتح مطالبة بكليك، تحوّل المبلغ إلى الحساب المكتوب فيها، ثم
                 يراجعها مشرف خلال {digits(String(state.review_min_minutes))} إلى{" "}
                 {digits(String(state.review_max_minutes))} دقائق.
               </p>
               <button
                 type="button"
+                className="t2-debt-cta"
                 onClick={() => void pay()}
                 disabled={busy || !state.cliq_alias}
-                className="pressable mt-12 w-full rounded-14 bg-brand px-16 py-14 text-14 font-bold text-on-brand disabled:opacity-50"
               >
                 {busy ? "جارٍ…" : "سدّد بكليك"}
               </button>
               {!state.cliq_alias ? (
-                <p className="mt-8 text-11 leading-note text-warn">
+                <p className="t2-debt-warn">
                   لم يُضبط حساب كليك لسوقك بعد — تواصل مع الإدارة.
                 </p>
               ) : null}
@@ -172,43 +185,45 @@ export function DebtScreen() {
           ) : null}
 
           {pending.length > 0 ? (
-            <section className="mb-12 rounded-20 border border-line bg-surface p-20">
-              <h2 className="text-13.5 font-bold text-ink">
-                مطالبة بانتظار التأكيد
-              </h2>
-              {pending.map((claim) => (
-                <button
-                  key={claim.id}
-                  type="button"
-                  onClick={() => navigate(`/debt/cliq/${claim.id}`)}
-                  className="pressable mt-10 flex w-full items-baseline justify-between rounded-14 border border-line bg-surface-2 px-14 py-12"
-                >
-                  <span className="text-13 font-bold text-ink">
-                    {digits(claim.amount)} {CURRENCY_LABEL[claim.currency]}
-                  </span>
-                  <span className="text-11.5 text-warn">افتح التفاصيل ←</span>
-                </button>
-              ))}
-            </section>
+            <>
+              <h2 className="t2-section">مطالبة بانتظار التأكيد</h2>
+              <div className="t2-debt-list">
+                {pending.map((claim) => (
+                  <button
+                    key={claim.id}
+                    type="button"
+                    className="t2-debt-claim"
+                    onClick={() => navigate(`/debt/cliq/${claim.id}`)}
+                  >
+                    <span className="t2-debt-claim-icon" aria-hidden="true">
+                      <Icon name="schedule" />
+                    </span>
+                    <span className="t2-debt-claim-amount">
+                      <span dir="ltr">{digits(claim.amount)}</span>{" "}
+                      {CURRENCY_LABEL[claim.currency]}
+                    </span>
+                    <span className="t2-debt-claim-open">افتح التفاصيل</span>
+                    <Icon name="chevron_left" className="t2-debt-claim-go" />
+                  </button>
+                ))}
+              </div>
+            </>
           ) : null}
 
           {state.rows.length > 0 ? (
-            <section className="rounded-20 border border-line bg-surface p-20">
-              <h2 className="text-13.5 font-bold text-ink">ممّ نشأت</h2>
-              {state.rows.map((row) => (
-                <div
-                  key={row.id}
-                  className="mt-10 flex items-baseline justify-between border-t border-line pt-10 first:border-0 first:pt-0"
-                >
-                  <span className="text-11.5 leading-note text-muted">
-                    {SOURCE_TEXT[row.source]}
-                  </span>
-                  <span dir="ltr" className="text-13 font-bold text-ink">
-                    {digits(row.amount)}
-                  </span>
-                </div>
-              ))}
-            </section>
+            <>
+              <h2 className="t2-section">ممّ نشأت</h2>
+              <div className="t2-debt-list">
+                {state.rows.map((row) => (
+                  <div key={row.id} className="t2-debt-row">
+                    <span className="t2-debt-row-k">{SOURCE_TEXT[row.source]}</span>
+                    <span dir="ltr" className="t2-debt-row-v">
+                      {digits(row.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : null}
         </>
       ) : null}

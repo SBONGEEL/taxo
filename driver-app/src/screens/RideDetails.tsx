@@ -1,23 +1,20 @@
-/** تفاصيل الرحلة — SPEC القسم 12/6، وشكلُها من `DESIGN.md` §5.3.
+/** تفاصيل الرحلة — TAXO 2.0 «C17» (`design/t2-new/captain/C17-*.dc.html`) — SPEC القسم 12/6، **في المظهرين والنسائيّ**.
  *
- * ثلاثةُ أسئلةٍ يفتح الكبتن هذه الشاشة ليجيب عنها: **كم قبضتُ**، و**بأي
- * قناة**، و**هل وصلني المال فعلاً**. والثالثُ وحده يفتح باب النزاع.
+ * ثلاثةُ أسئلةٍ يفتح الكبتن هذه الشاشة ليجيب عنها: **كم قبضتُ**، و**بأي قناة**، و**هل وصلني المال فعلاً**. والثالثُ وحده يفتح باب
+ * النزاع — **وهو بابُ الاعتراض الذي يصله السجلُّ** (C16، §٦١-ب/٣): «لم تصلني» بجانب «وصلتني» **في قاع الشاشة كقرار C08**.
  *
- * **والنزاع على كليك وحدها** (`payments.dispute_by_driver`): التحويل يقع
- * خارج التطبيق ولا API يشهد عليه، فبين «حوّلتُ» و«لم يصلني» فراغٌ يملؤه
- * إنسان. الكاش يقع يداً بيد فلا فراغ فيه، والمحفظة يشهد عليها الدفتر.
- * والتصميم يعرض زرَّ النزاع على رحلة الكاش بأسبابٍ نقدية — وهو انحرافٌ عن
- * الخلفية مسجّلٌ في `DESIGN-DECISIONS.md`، والزرُّ هنا مشروطٌ بدفعة كليك
- * تنتظر التأكيد.
+ * **والنزاع على كليك وحدها** (`payments.dispute_by_driver`): التحويل يقع خارج التطبيق ولا API يشهد عليه، فبين «حوّلتُ» و«لم
+ * يصلني» فراغٌ يملؤه إنسان. الكاش يقع يداً بيد فلا فراغ فيه، والمحفظة يشهد عليها الدفتر. والزرُّ هنا مشروطٌ بدفعة كليك تنتظر التأكيد.
  *
- * **ولا خطَّ مسارٍ فوق الخريطة**: `ride_route_points` يُسجَّل للخلفية —
- * لإعادة حساب `final_fare` ولدليل النزاع في اللوحة — ولا منفذَ يقرؤه
- * للكبتن. فالخريطة تعرض الدبوسين وحدهما، ولا تعد بمسارٍ لم يقله أحد.
+ * **ولا خطَّ مسارٍ فوق الخريطة**: `ride_route_points` يُسجَّل للخلفية — لإعادة حساب `final_fare` ولدليل النزاع في اللوحة — ولا
+ * منفذَ يقرؤه للكبتن. فالخريطة (بلغة «TaxoMap»، `MapView` بـ`t2`) تعرض الدبوسين وحدهما، ولا تعد بمسارٍ لم يقله أحد.
  *
- * **ولا تفصيلَ تعرفةٍ سطراً سطراً**: التصميم يعرض «التعرفة الأساسية · لكل كم
- * · لكل دقيقة»، و`GET /config` لا ينشر أسعار `pricing_settings` — والواجهة
- * لا تضرب مسافةً في سعرٍ لتُخرج رقماً (القسم 14: الحساب في الخلفية حصراً).
- * فما يظهر ما قالته الخلفية: مقدَّرٌ، ومسافة، ومدّة، ونهائيّ، ونسبةُ عمولة.
+ * **ولا تفصيلَ تعرفةٍ سطراً سطراً**: `GET /config` لا ينشر أسعار `pricing_settings` — والواجهة لا تضرب مسافةً في سعرٍ لتُخرج رقماً
+ * (القسم 14: الحساب في الخلفية حصراً). فما يظهر ما قالته الخلفية: مقدَّرٌ، ومسافة، ومدّة، ونهائيّ، ونسبةُ عمولةٍ مجمَّدة على الرحلة.
+ *
+ * **والمنطقُ هو هو حرفاً**: الطلباتُ الثلاثة، والتأكيدُ (`POST /payments/{id}/confirm`) ثمّ إعادةُ القراءة، وأسبقيّةُ ما يُعرض
+ * (فصلٌ ← نزاعٌ مفتوح ← كاشٌ ينتظر ← كليك ينتظر). **وما تغيّر طبقةُ العرض**: الخريطةُ من الحافّة، والأجرةُ برقم C09، وكتلةُ المسار
+ * من C05، والجدولُ من C08، **والقرارُ مثبَّتٌ في القاع** فلا يُطلب تمريرٌ ليُجاب سؤالُ المال.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -37,20 +34,25 @@ import type {
   Ride,
   RidePayments,
 } from "@/api/types";
-import { Button } from "@/components/ui/Button";
 import { MapView } from "@/components/map/MapView";
-import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Spinner } from "@/components/ui/Feedback";
 import { useMapboxToken } from "@/lib/config";
 import {
   CURRENCY_LABEL,
   METHOD_LABEL,
   RIDE_STATUS_LABEL,
   formatWhen,
-  statusTone,
   trimDistance,
 } from "@/lib/rideFormat";
-import { digits, cn } from "@/lib/utils";
+import { digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
+import { chipTone } from "@/screens/Rides";
+import { Icon } from "@/taxo2";
+
+import { startOfToday, whenParts } from "./t2/when";
+
+import "./t2/ride.css";
+import "./t2/rides.css";
 
 /** نصُّ فصل الإدارة — `paid` تصف الواقعة لا الحالة الناتجة. */
 const RESOLUTION_LABEL: Record<"paid" | "unpaid", string> = {
@@ -107,8 +109,29 @@ export function RideDetailsScreen() {
 
   if (!ride) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg px-16">
-        {error ? <ErrorNote message={error} /> : <Spinner />}
+      <div className="t2 t2-rdt">
+        <div className="t2-rdt-wait">
+          <div className="t2-head">
+            <button
+              type="button"
+              className="t2-back"
+              aria-label="رجوع"
+              onClick={() => goBack()}
+            >
+              <Icon name="arrow_forward" />
+            </button>
+          </div>
+          {error ? (
+            <p className="t2-note danger" role="alert">
+              <Icon name="error" fill />
+              {error}
+            </p>
+          ) : (
+            <div className="t2-rdt-wait-body">
+              <Spinner />
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -119,13 +142,10 @@ export function RideDetailsScreen() {
   const disputable: Payment | undefined = rows.find(
     (payment) => payment.method === "cliq" && payment.status === "pending",
   );
-  // **والكاشُ يُؤكَّد من هنا أيضاً** — وجدته المرحلةُ ١٣ على الجهاز: الشاشةُ
-  // تكتب «بانتظار تأكيدك» على دفعةٍ نقدية ولا تبني لها زرّاً، والبابُ الوحيد
-  // بطاقةُ التحصيل في الرئيسية — وهي تختفي بإعادة فتح التطبيق أو بأيّ تنقّل،
-  // لأن الرحلةَ المكتملة ليست «جارية» فلا يستعيدها `getActiveRide`. فمن قبض
-  // مالَه ثم أغلق تطبيقَه لا يجد أبداً ما يؤكّد به، والدفعةُ تبقى `pending`
-  // فتُقرأ الرحلةُ **غيرَ مدفوعة**. **ولا زرَّ نزاعٍ معه**: `dispute_by_driver`
-  // يرفض غيرَ كليك، ومن لم يُسلَّم مالاً لا يضغط «استلمت»
+  // **والكاشُ يُؤكَّد من هنا أيضاً** — وجدته المرحلةُ ١٣ على الجهاز: الشاشةُ تكتب «بانتظار تأكيدك» على دفعةٍ نقدية ولا تبني لها
+  // زرّاً، والبابُ الوحيد بطاقةُ التحصيل في الرئيسية — وهي تختفي بإعادة فتح التطبيق أو بأيّ تنقّل، لأن الرحلةَ المكتملة ليست «جارية»
+  // فلا يستعيدها `getActiveRide`. فمن قبض مالَه ثم أغلق تطبيقَه لا يجد أبداً ما يؤكّد به، والدفعةُ تبقى `pending` فتُقرأ الرحلةُ
+  // **غيرَ مدفوعة**. **ولا زرَّ نزاعٍ معه**: `dispute_by_driver` يرفض غيرَ كليك، ومن لم يُسلَّم مالاً لا يضغط «استلمت»
   const collectable: Payment | undefined = rows.find(
     (payment) => payment.method === "cash" && payment.status === "pending",
   );
@@ -136,193 +156,228 @@ export function RideDetailsScreen() {
   // تقييمُ الكبتن للراكب — لا تقييمُ الراكب له
   const mine = ratings.find((rating) => rating.rater_type === "driver");
   const commission = Number(ride.commission_percent_at_ride);
+  const when = whenParts(ride.created_at, startOfToday());
+  // **القرارُ في القاع حين يكون مالٌ بانتظار قوله** — وفصلُ الإدارة ونزاعُها المفتوح يسبقانه كما سبقاه
+  const deciding = !resolved && !disputed && (collectable ?? disputable);
 
   return (
-    <div className="scr h-full bg-bg pb-12">
-      <div className="relative h-170">
-        <MapView
-          token={token}
-          center={ride.pickup}
-          pickup={ride.pickup}
-          dropoff={ride.dropoff}
-          fit
-        />
-        <button
-          type="button"
-          onClick={() => goBack()}
-          aria-label="رجوع"
-          className="pressable absolute start-14 top-14 flex size-34 items-center justify-center rounded-full border border-line bg-surface text-ink"
-        >
-          →
-        </button>
-      </div>
-
-      <div className="p-16">
-        <ErrorNote message={error} />
-
-        <div className="mb-14 flex items-baseline justify-between">
-          <div>
-            <div className="text-12 text-muted">
-              {formatWhen(ride.created_at)}
-            </div>
-            <div className="whitespace-nowrap text-26 font-bold text-ink">
-              {digits(ride.final_fare ?? ride.estimated_fare)} {currency}
-            </div>
-          </div>
-          <span
-            className={cn(
-              "shrink-0 rounded-full border border-line px-11 py-6 text-11.5 font-bold",
-              statusTone(ride.status),
-            )}
+    <div className="t2 t2-rdt">
+      <div className="t2-rdt-scroll scr">
+        <div className="t2-rdt-map">
+          <MapView
+            token={token}
+            center={ride.pickup}
+            pickup={ride.pickup}
+            dropoff={ride.dropoff}
+            fit
+            t2
+          />
+          <button
+            type="button"
+            className="t2-back t2-rdt-back"
+            aria-label="رجوع"
+            onClick={() => goBack()}
           >
-            {RIDE_STATUS_LABEL[ride.status]}
-          </span>
+            <Icon name="arrow_forward" />
+          </button>
         </div>
 
-        <div className="mb-16 grid grid-cols-[12px_minmax(0,1fr)] gap-x-10 gap-y-4">
-          <span className="mx-auto mt-5 block size-8 rounded-full bg-ink" />
-          <div className="text-12.5 text-ink">
-            {ride.pickup_address ?? "نقطة الانطلاق"}
+        <div className="t2-rdt-body">
+          <div className="t2-rdt-top">
+            <span className="t2-rdt-when">
+              {digits(when.day)} · <span dir="ltr">{digits(when.time)}</span>
+            </span>
+            <span className={`t2-chip ${chipTone(ride.status)}`}>
+              {RIDE_STATUS_LABEL[ride.status]}
+            </span>
           </div>
-          <span className="mx-auto block h-12 w-2 bg-line" />
-          <span />
-          <span className="mx-auto mt-2 block size-8 rounded-2 bg-muted" />
-          <div className="text-12.5 text-muted">
-            {ride.dropoff_address ?? "الوجهة"}
+          <div className="t2-rdt-fare">
+            <span className="t2-rdt-fare-num" dir="ltr">
+              {digits(ride.final_fare ?? ride.estimated_fare)}
+            </span>
+            <span className="t2-rdt-fare-cur">{currency}</span>
           </div>
-        </div>
 
-        <section className="mb-12 card p-15">
-          <h2 className="mb-11 text-13 font-bold text-ink">تفصيل السعر</h2>
-          <Row
-            label="السعر المقدّر"
-            value={`${digits(ride.estimated_fare)} ${currency}`}
-          />
-          {/* الفعليةُ تُسمّى فعلية: جدولٌ يخلط المقدَّر بالمحقَّق بلا اسمٍ
-              يجعل الكبتن يحسب على رقمٍ لا يعرف مصدره */}
-          <Row
-            label={
-              ride.actual_distance_km ? "المسافة الفعلية" : "المسافة المقدّرة"
-            }
-            value={`${trimDistance(ride.actual_distance_km ?? ride.distance_km)} كم`}
-          />
-          <Row
-            label="المدّة المقدّرة"
-            value={`${trimDistance(ride.duration_min)} دقيقة`}
-          />
-          {/* **ما وقف لأجله يُسمّى في تفصيله** (§5.10 و§5.10-ب/و): الكبتنُ
-              يقرأ هنا لماذا صار النهائيُّ غيرَ المقدَّر، فلا يظنّ نقصاً ولا
-              يسأل الدعم. **قيمٌ تُقرأ لا تُحسب** (§14)، **وصفرٌ لا يُرسم** */}
-          {Number(ride.stops_charge) > 0 ? (
-            <Row
-              label={`رسم المحطات (${digits(String(ride.stops.length))})`}
-              value={`${digits(ride.stops_charge)} ${currency}`}
-            />
-          ) : null}
-          {Number(ride.waiting_charge) > 0 ? (
-            <Row
-              label="رسم الانتظار عند المحطات"
-              value={`${digits(ride.waiting_charge)} ${currency}`}
-            />
-          ) : null}
-          {Number(ride.pause_charge) > 0 ? (
-            <Row
-              label="رسم الوقفات أثناء الرحلة"
-              value={`${digits(ride.pause_charge)} ${currency}`}
-            />
-          ) : null}
-          <Row
-            label="العمولة"
-            value={
-              commission === 0
-                ? "0٪ حالياً"
-                : `${digits(String(commission))}٪`
-            }
-            tone="text-ok"
-          />
-          <Row
-            label="السعر النهائي"
-            value={`${digits(ride.final_fare ?? ride.estimated_fare)} ${currency}`}
-            strong
-            last
-          />
-        </section>
+          <div className="t2-rdt-route">
+            <span className="t2-rdt-dot" aria-hidden="true" />
+            <span className="t2-rdt-place">
+              {ride.pickup_address ?? "نقطة الانطلاق"}
+            </span>
+            <span className="t2-rdt-link" aria-hidden="true" />
+            <span />
+            <span className="t2-rdt-dot to" aria-hidden="true" />
+            <span className="t2-rdt-place">
+              {ride.dropoff_address ?? "الوجهة"}
+            </span>
+          </div>
 
-        {rows.length > 0 || mine ? (
-          <section className="mb-12 card p-15">
-            {rows.map((payment) => (
+          <h2 className="t2-section">تفصيل السعر</h2>
+          <div className="t2-rdt-grid">
+            <Row label="السعر المقدّر" value={digits(ride.estimated_fare)} />
+            {/* الفعليةُ تُسمّى فعلية: جدولٌ يخلط المقدَّر بالمحقَّق بلا اسمٍ يجعل الكبتن يحسب على رقمٍ لا يعرف مصدره */}
+            <Row
+              label={
+                ride.actual_distance_km ? "المسافة الفعلية" : "المسافة المقدّرة"
+              }
+              value={`${trimDistance(ride.actual_distance_km ?? ride.distance_km)} كم`}
+            />
+            <Row
+              label="المدّة المقدّرة"
+              value={`${trimDistance(ride.duration_min)} دقيقة`}
+            />
+            {/* **ما وقف لأجله يُسمّى في تفصيله** (§5.10 و§5.10-ب/و): الكبتنُ يقرأ هنا لماذا صار النهائيُّ غيرَ المقدَّر، فلا يظنّ
+                نقصاً ولا يسأل الدعم. **قيمٌ تُقرأ لا تُحسب** (§14)، **وصفرٌ لا يُرسم** */}
+            {Number(ride.stops_charge) > 0 ? (
               <Row
-                key={payment.id}
-                label={`${METHOD_LABEL[payment.method]} · ${paymentStatusLabel(payment)}`}
-                value={`${digits(payment.amount)} ${currency}`}
-                tone={payment.status === "confirmed" ? "text-ink" : "text-warn"}
-              />
-            ))}
-            {mine ? (
-              <Row
-                label="تقييمك للراكب"
-                value={`★ ${digits(String(mine.stars))}`}
-                tone="text-warn"
-                last
+                label={`رسم المحطات (${digits(String(ride.stops.length))})`}
+                value={digits(ride.stops_charge)}
               />
             ) : null}
-          </section>
-        ) : null}
+            {Number(ride.waiting_charge) > 0 ? (
+              <Row
+                label="رسم الانتظار عند المحطات"
+                value={digits(ride.waiting_charge)}
+              />
+            ) : null}
+            {Number(ride.pause_charge) > 0 ? (
+              <Row
+                label="رسم الوقفات أثناء الرحلة"
+                value={digits(ride.pause_charge)}
+              />
+            ) : null}
+            {/* **النسبةُ المجمَّدةُ على هذه الرحلة** (`commission_percent_at_ride`) — سجلٌّ لما حوسب به، لا وعدٌ تسويقيّ */}
+            <Row
+              label="العمولة"
+              value={
+                commission === 0
+                  ? "0٪ حالياً"
+                  : `${digits(String(commission))}٪`
+              }
+              tone="ok"
+            />
+            <Row
+              label="السعر النهائي"
+              value={digits(ride.final_fare ?? ride.estimated_fare)}
+              strong
+            />
+          </div>
 
-        {resolved ? (
-          <div className="rounded-15 border border-line bg-surface p-14 text-12.5 leading-snug text-muted">
-            {resolved.resolution
-              ? RESOLUTION_LABEL[resolved.resolution]
-              : "فُصل النزاع"}
-            {resolved.resolution_note ? ` — ${resolved.resolution_note}` : ""}
-          </div>
-        ) : disputed ? (
-          <div className="rounded-15 border border-warn bg-surface p-14 text-12.5 leading-snug text-muted">
-            نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.
-          </div>
-        ) : collectable ? (
-          <Button
-            size="md"
-            loading={confirming}
-            onClick={() => void confirm(collectable.id)}
-          >
-            استلمت المبلغ كاش
-          </Button>
-        ) : disputable ? (
-          <>
-            {/* **الفعلُ الإيجابي أولاً**: من وصلته الحوالة يجد بابَه هنا لا في
-                بطاقةٍ عابرة قد يكون أغلقها. وشاشةٌ تعرض «افتح نزاعاً» وحده
-                تُملي على الكبتن الجوابَ الذي لم يقله */}
-            <div className="flex gap-10">
-              <Button
-                className="flex-1"
-                size="md"
-                loading={confirming}
-                onClick={() => void confirm(disputable.id)}
-              >
-                وصلتني
-              </Button>
-              <Button
-                className="flex-1 border-danger text-danger"
-                size="md"
-                variant="secondary"
+          {rows.length > 0 || mine ? (
+            <div className="t2-rdt-grid t2-rdt-pay">
+              {rows.map((payment) => (
+                <Row
+                  key={payment.id}
+                  label={`${METHOD_LABEL[payment.method]} · ${paymentStatusLabel(payment)}`}
+                  value={digits(payment.amount)}
+                  tone={payment.status === "confirmed" ? undefined : "warn"}
+                />
+              ))}
+              {mine ? (
+                <>
+                  <span className="t2-rdt-k">تقييمك للراكب</span>
+                  <span className="t2-rdt-v">
+                    <span className="t2-rdt-star">
+                      <Icon name="star" fill />
+                      <span dir="ltr">{digits(String(mine.stars))}</span>
+                    </span>
+                  </span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* المهلةُ تُقال هنا أيضاً: من أغلق البطاقة لا يراها إلا هنا — **تحت الدفعة التي تخصّها** */}
+          {!resolved &&
+          !disputed &&
+          !collectable &&
+          disputable?.cliq_confirmation_expires_at ? (
+            <p className="t2-rdt-deadline">
+              <Icon name="schedule" />
+              <span>
+                إن لم تؤكّد أو ترفض حتى{" "}
+                {formatWhen(disputable.cliq_confirmation_expires_at)} صارت
+                الدفعة نزاعاً تفصل فيه الإدارة.
+              </span>
+            </p>
+          ) : null}
+
+          {resolved ? (
+            <p className="t2-rdt-notice">
+              <Icon name="balance" />
+              <span>
+                {resolved.resolution
+                  ? RESOLUTION_LABEL[resolved.resolution]
+                  : "فُصل النزاع"}
+                {resolved.resolution_note
+                  ? ` — ${resolved.resolution_note}`
+                  : ""}
+              </span>
+            </p>
+          ) : disputed ? (
+            <p className="t2-rdt-notice warn">
+              <Icon name="balance" />
+              <span>نزاعك مفتوح وبانتظار فصل الإدارة. سيصلك إشعار بالنتيجة.</span>
+            </p>
+          ) : null}
+
+          {/* خطأٌ بلا قرارٍ في القاع (قراءةٌ لاحقة) يُقال هنا */}
+          {error && !deciding ? (
+            <p className="t2-note danger" role="alert">
+              <Icon name="error" fill />
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {deciding ? (
+        <div className="t2-rdt-foot">
+          {error ? (
+            <p className="t2-note danger" role="alert">
+              <Icon name="error" fill />
+              {error}
+            </p>
+          ) : null}
+          {collectable ? (
+            <button
+              type="button"
+              className="t2-rdt-cash"
+              disabled={confirming}
+              onClick={() => void confirm(collectable.id)}
+            >
+              {confirming ? "…" : "استلمت المبلغ كاش"}
+            </button>
+          ) : disputable ? (
+            // **الفعلُ الإيجابي حاضرٌ مع الاعتراض**: من وصلته الحوالة يجد بابَه هنا لا في بطاقةٍ عابرة قد يكون أغلقها. وشاشةٌ
+            // تعرض «افتح نزاعاً» وحده تُملي على الكبتن الجوابَ الذي لم يقله — **وترتيبُهما ترتيبُ «رفض · قبول» في C05**
+            <div className="t2-rdt-acts">
+              <button
+                type="button"
+                className="t2-rdt-no"
                 disabled={confirming}
                 onClick={() => navigate(`/rides/${ride.id}/dispute`)}
               >
                 لم تصلني
-              </Button>
+              </button>
+              <button
+                type="button"
+                className="t2-rdt-yes"
+                disabled={confirming}
+                onClick={() => void confirm(disputable.id)}
+              >
+                {confirming ? (
+                  "…"
+                ) : (
+                  <>
+                    <Icon name="check" />
+                    وصلتني
+                  </>
+                )}
+              </button>
             </div>
-            {/* المهلةُ تُقال هنا أيضاً: من أغلق البطاقة لا يراها إلا هنا */}
-            {disputable.cliq_confirmation_expires_at ? (
-              <p className="mt-10 text-11.5 leading-note text-muted">
-                إن لم تؤكّد أو ترفض حتى{" "}
-                {formatWhen(disputable.cliq_confirmation_expires_at)} صارت
-                الدفعة نزاعاً تفصل فيه الإدارة.
-              </p>
-            ) : null}
-          </>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -346,25 +401,28 @@ const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   disputed: "في نزاع",
 };
 
+/** صفُّ الجدول (C08): الاسمُ خافتٌ في البداية والقيمةُ في الطرف — **والمبالغُ أرقامٌ بلا عملة** كما رُسمت، فالعملةُ مع الأجرة فوق. */
 function Row({
   label,
   value,
-  tone = "text-ink",
+  tone,
   strong = false,
-  last = false,
 }: {
   label: string;
   value: string;
-  tone?: string;
+  tone?: "ok" | "warn";
   strong?: boolean;
-  last?: boolean;
 }) {
   return (
-    <div className={cn("flex justify-between text-12.5", last ? "" : "mb-8")}>
-      <span className="text-muted">{label}</span>
-      <span className={cn(tone, strong ? "font-bold" : "font-medium")}>
+    <>
+      <span className={strong ? "t2-rdt-k strong" : "t2-rdt-k"}>{label}</span>
+      <span
+        className={["t2-rdt-v", strong ? "strong" : null, tone ?? null]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {value}
       </span>
-    </div>
+    </>
   );
 }
