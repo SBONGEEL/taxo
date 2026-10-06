@@ -329,36 +329,36 @@ html.pink.dark .rw { --rw-halo: rgba(240, 140, 192, 0.16); }
   97.619%, 100% { letter-spacing: -0.03em; }
 }
 
-/* ── «من المرة الثانية: لحظة تكوّن X فقط» — **بإيقاع المقدّمة نفسِه (١٫٤ث) لا مضغوطاً في ٠٫٨ث** (§٦٢/٥ و/١٠) ─────────
-   النسبُ كما هي — فالمراحلُ نفسُها (القضيبان، ثمّ الكِبَر، ثمّ تجمّعُ الحروف) — **والمدّةُ مدّةُ هذا المقطع في المقدّمة** (٢٫٧ث ← ٤٫١ث).
-   كان المالكُ يقول: «يختفي بسرعةٍ لا تُرى معها حركتُه»؛ **ووقفةٌ بعدها على الشعار مكتملاً** (`HOLD_MS` في `Welcome.tsx`). */
-.rw-brief .rw-xmark { animation: rw-bx-s 1.4s both, rw-bx-o 1.4s both; }
-.rw-brief .rw-xmark > span:first-child > i { animation: rw-bbar1 1.4s both; }
-.rw-brief .rw-xmark > span:last-child > i { animation: rw-bbar2 1.4s both; }
-.rw-brief .rw-word { animation: rw-bword-o 1.4s both, rw-bword-ls 1.4s both; }
-@keyframes rw-bx-s {
-  0%, 37.5% { transform: scale(1); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
-  68.75%, 100% { transform: scale(2.4); }
-}
-@keyframes rw-bx-o {
-  0% { opacity: 1; }
-  56.25% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-  87.5%, 100% { opacity: 0; }
-}
+/* ── «من المرة الثانية: لحظة تكوّن X فقط (0.8 ثانية)» — **كما رسمتها اللوحة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦) ─────────────────
+   كانت ١٫٤ث تبدأ بعد الحزمة — فتُرى شاشةٌ شبهُ سوداء ثمّ X صغيرةٌ تمضي. **وصارت تبدأ في إطار الإقلاع من أوّل رسم** (`index.html`)
+   **ويكمل الترحيبُ من حيث وصلت** (`--rw-brief-delay` سالبٌ بما مضى). والقيمُ هي هي في `index.html` (`bt-*`).
+   الـ٠٫٨ث: القضيبان (٠←٠٫٣ · ٠٫١←٠٫٤) · الكِبَرُ إلى حجم الشعار (٠٫٣←٠٫٦) · الحروفُ تتجمّع والـX يذوب فيها (٠٫٤٥←٠٫٨). */
+.rw-brief .rw-xmark { animation: rw-bx-s 0.8s var(--rw-brief-delay, 0ms) both, rw-bx-o 0.8s var(--rw-brief-delay, 0ms) both; }
+.rw-brief .rw-xmark > span:first-child > i { animation: rw-bbar1 0.8s var(--rw-brief-delay, 0ms) both; }
+.rw-brief .rw-xmark > span:last-child > i { animation: rw-bbar2 0.8s var(--rw-brief-delay, 0ms) both; }
+.rw-brief .rw-word { animation: rw-bword-o 0.8s var(--rw-brief-delay, 0ms) both, rw-bword-ls 0.8s var(--rw-brief-delay, 0ms) both; }
 @keyframes rw-bbar1 {
   0% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-  25%, 100% { transform: scaleX(1); }
+  37.5%, 100% { transform: scaleX(1); }
 }
 @keyframes rw-bbar2 {
-  0%, 6.25% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-  31.25%, 100% { transform: scaleX(1); }
+  0%, 12.5% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  50%, 100% { transform: scaleX(1); }
+}
+@keyframes rw-bx-s {
+  0%, 37.5% { transform: scale(1); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  75%, 100% { transform: scale(2.4); }
+}
+@keyframes rw-bx-o {
+  0%, 68.75% { opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  100% { opacity: 0; }
 }
 @keyframes rw-bword-o {
-  0%, 50% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
-  87.5%, 100% { opacity: 1; }
+  0%, 56.25% { opacity: 0; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  100% { opacity: 1; }
 }
 @keyframes rw-bword-ls {
-  0%, 50% { letter-spacing: 0.14em; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  0%, 56.25% { letter-spacing: 0.14em; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
   100% { letter-spacing: -0.03em; }
 }
 

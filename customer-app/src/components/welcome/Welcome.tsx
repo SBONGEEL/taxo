@@ -15,7 +15,7 @@
  * صاحبها. **و«كلُّ فتحة» إقلاعٌ لا عودةٌ من الخلفية**: رجوعٌ من واتساب في منتصف رحلةٍ لا يُقابَل بشاشةٍ تحجبها.
  */
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { removeBootFrame, retrySplash, splashText, useSplashStatus } from "@/lib/splash";
 import { useTheme } from "@/lib/theme";
@@ -35,7 +35,16 @@ const LABELS: Array<[string, number, number]> = [
 /** طولُ المقدّمة حتى إطارها الأخير — ما بعده في اللوحة رجوعٌ إلى أوّل الحلقة. */
 const INTRO_MS = 4200;
 /** **تكوُّنُ الـX وتجمّعُ الحروف بإيقاع المقدّمة** (٢٫٧ث ← ٤٫١ث فيها) — كان ٠٫٨ث فيمضي قبل أن يُرى (§٦٢/٥). */
-const BRIEF_MS = 1400;
+const BRIEF_MS = 800;
+/** **حدُّ العرض الأدنى من أوّل رسم** (بلاغُ المالك ٢٠٢٦-١٠-٠٦): الـ٠٫٨ث ثمّ الشعارُ مكتملاً حتى ثانيتين — **لا مدّةٌ تُضاف بعد الحركة**،
+ *  فمن تأخّرت حزمتُه لا يطول ترحيبُه، ومن سبقت لا يختفي ترحيبُه سريعاً (§٦٢/٥). */
+const MIN_SHOW_MS = 2000;
+
+/** **ما بدأه إطارُ الإقلاع** (`index.html`): للعائد تتكوّن الـX هناك من أوّل رسم — **والترحيبُ يكمل من حيث وصلت لا من أوّلها**. */
+function bootBrief(): { start: number; reduced: boolean } | null {
+  const info = (window as unknown as { __taxoBoot?: { start: number; brief: boolean; reduced: boolean } }).__taxoBoot;
+  return info?.brief ? info : null;
+}
 /** **الوقفةُ على الشعار مكتملاً** قبل أن يمضي — حدُّ العرض الأدنى بعد الحركة، **وهي نفسُها مع «تقليل الحركة»**. */
 const HOLD_MS = 600;
 /** الذوبانُ — `welcome.css` (`.rw.is-leaving`). */
@@ -106,8 +115,18 @@ export function Welcome({
 }) {
   const scale = useStageScale();
   const { dark } = useTheme();
+  // **من حيث وصل إطارُ الإقلاع** — ومن بدأ قبله يُقاس منه حدُّ العرض الأدنى
+  const boot = useRef(bootBrief()).current;
+  const startedAt = useRef(boot?.start ?? performance.now()).current;
+  const briefOffset = useRef(boot ? Math.min(BRIEF_MS, performance.now() - boot.start) : 0).current;
   const [phase, setPhase] = useState<Phase>(() =>
-    reopened ? "welcome" : !returning && !seenBefore() ? "intro" : "brief",
+    reopened
+      ? "welcome"
+      : !returning && !seenBefore()
+        ? "intro"
+        : boot && (boot.reduced || briefOffset >= BRIEF_MS)
+          ? "hold"
+          : "brief",
   );
   const [next, setNext] = useState<WelcomeNext | undefined>();
   const splash = useSplashStatus();
@@ -119,7 +138,7 @@ export function Welcome({
   useEffect(() => {
     if (phase !== "intro" && phase !== "brief") return;
     const reduced = reducedMotion();
-    const span = reduced ? 0 : phase === "intro" ? INTRO_MS : BRIEF_MS;
+    const span = reduced ? 0 : phase === "intro" ? INTRO_MS : Math.max(0, BRIEF_MS - (performance.now() - startedAt));
     const timers: number[] = [];
     if (phase === "intro" && !reduced) {
       // اهتزازةٌ خفيفةٌ واحدة لحظةَ اللقاء — حيث يتيحها الجهاز، وبلا شكوى حيث لا
@@ -138,7 +157,8 @@ export function Welcome({
   const [held, setHeld] = useState(false);
   useEffect(() => {
     if (phase !== "hold") return;
-    const id = window.setTimeout(() => setHeld(true), HOLD_MS);
+    // **الوقفةُ على الشعار مكتملاً**: لا تقلّ عن `HOLD_MS`، **ولا يقلّ العرضُ كلُّه عن `MIN_SHOW_MS` من أوّل رسم**
+    const id = window.setTimeout(() => setHeld(true), Math.max(HOLD_MS, MIN_SHOW_MS - (performance.now() - startedAt)));
     return () => window.clearTimeout(id);
   }, [phase]);
   useEffect(() => {
@@ -179,6 +199,7 @@ export function Welcome({
         .join(" ")}
       onClick={phase === "intro" ? skip : undefined}
       role="presentation"
+      style={{ ["--rw-brief-delay" as string]: `-${Math.round(briefOffset)}ms` }}
     >
       <div className="rw-stage" style={{ ["--rw-scale" as string]: String(scale) }}>
         <div className="rw-cam">

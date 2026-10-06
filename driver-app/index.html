@@ -58,6 +58,13 @@
           }
           // **مقياسُ مسرح الترحيب** — الإطارُ ٣٩٠×٨٤٤ يُغطّي الشاشة كما يُغطّيها الترحيبُ نفسُه (`useStageScale`)
           root.style.setProperty("--boot-scale", String(Math.max(innerWidth / 390, innerHeight / 844)));
+          // **تكوّنُ الـX للعائد يبدأ من أوّل رسم** (بلاغُ المالك ٢٠٢٦-١٠-٠٦، `#boot .bt-logo` أدناه): العائدُ من رأى المقدّمةَ أو بقيت
+          // جلستُه — **والمقدّمةُ الأولى لا تبدأ هنا** (غطاؤها كاملٌ حتى تُركَّب). و«تقليلُ الحركة» الحقيقيُّ يعرض الإطارَ الأخير وحدَه.
+          // **والترحيبُ يكمل من حيث وصلت** (`__taxoBoot.start` — `Welcome.tsx`)
+          var returning = localStorage.getItem("taxo.driver.welcome.intro.seen") === "1" || !!localStorage.getItem("taxo.driver.access_token");
+          var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+          window.__taxoBoot = { start: performance.now(), brief: returning, reduced: reduce };
+          root.classList.add(returning ? (reduce ? "bt-final" : "bt-brief") : "bt-first");
         } catch (e) {
           /* تخزينٌ محجوب: تبقى الافتراضاتُ كما هي — ولا تُمنع الشاشة */
         }
@@ -81,6 +88,53 @@
       html.dark #boot .bt-night { display: block; }
       #boot .bt-veil { position: absolute; inset: 0; background: #f4f1ea; opacity: 0.84; }
       html.dark #boot .bt-veil { background: #0e1013; }
+      /* **الشعارُ وتكوّنُ الـX للعائد — من أوّل رسم** (بلاغُ المالك ٢٠٢٦-١٠-٠٦): كان الترحيبُ ينتظر الحزمة (نحو ثانيتين عبر الشبكة على
+         S21) فتُرى شاشةٌ شبهُ سوداء ثمّ X صغيرةٌ تمضي — «لا شيءَ يتحرّك». **فالـ٠٫٨ث المرسومةُ في اللوحة («من المرة الثانية: لحظةُ تكوّن
+         X فقط») تبدأ هنا**، والترحيبُ يكمل من حيث وصلت. القيمُ نسخةٌ من `welcome.css` (المواضعُ والألوان) — **والمقدّمةُ الأولى لا تبدأ
+         هنا**: غطاؤها كاملٌ حتى تُركَّب. */
+      #boot .bt-logo { display: none; position: absolute; inset: 0; }
+      html.bt-brief #boot .bt-logo, html.bt-final #boot .bt-logo { display: block; }
+      html.bt-first #boot .bt-veil { opacity: 1; }
+      #boot .bt-xmark { position: absolute; left: 217.1px; top: 360px; width: 0; height: 0; transform-origin: 0 0; opacity: 0; }
+      #boot .bt-xmark > span { position: absolute; left: 0; top: 0; width: 26.67px; height: 6.02px; }
+      #boot .bt-xmark > span:first-child { transform: translate(-50%, -50%) rotate(-50deg); }
+      #boot .bt-xmark > span:last-child { transform: translate(-50%, -50%) rotate(50deg); }
+      #boot .bt-xmark i { display: block; width: 100%; height: 100%; border-radius: 3.44px; transform: scaleX(0); background: #14161a; }
+      #boot .bt-xmark > span:last-child i, #boot .bt-xb > span:last-child { background: #f05a28; }
+      html.dark #boot .bt-xmark > span:first-child i, html.dark #boot .bt-xb > span:first-child { background: #f2efe8; }
+      html.dark #boot .bt-xmark > span:last-child i, html.dark #boot .bt-xb > span:last-child { background: #ff6a33; }
+      html.pink #boot .bt-xmark > span:last-child i, html.pink #boot .bt-xb > span:last-child { background: #9c2c6e; }
+      html.pink.dark #boot .bt-xmark > span:last-child i, html.pink.dark #boot .bt-xb > span:last-child { background: #f08cc0; }
+      #boot .bt-word {
+        position: absolute; left: 0; right: 0; top: 360px; transform: translateY(-50%); text-align: center; opacity: 0;
+        font-family: "Unbounded", "Readex Pro", sans-serif; font-weight: 800; font-size: 64px; line-height: 1; letter-spacing: -0.03em;
+        white-space: nowrap; color: #14161a;
+      }
+      html.dark #boot .bt-word { color: #f2efe8; }
+      #boot .bt-xb { position: relative; display: inline-block; width: 51.61px; height: 49.55px; margin: 0 4.13px; vertical-align: -1.03px; }
+      #boot .bt-xb > span { position: absolute; left: 50%; top: 50%; width: 64px; height: 14.45px; border-radius: 8.26px; background: #14161a; }
+      #boot .bt-xb > span:first-child { transform: translate(-50%, -50%) rotate(-50deg); }
+      #boot .bt-xb > span:last-child { transform: translate(-50%, -50%) rotate(50deg); }
+      html.bt-brief #boot .bt-xmark { animation: bt-x-s .8s var(--bt-delay, 0ms) both, bt-x-o .8s var(--bt-delay, 0ms) both; }
+      html.bt-brief #boot .bt-xmark > span:first-child i { animation: bt-b1 .8s var(--bt-delay, 0ms) both; }
+      html.bt-brief #boot .bt-xmark > span:last-child i { animation: bt-b2 .8s var(--bt-delay, 0ms) both; }
+      html.bt-brief #boot .bt-word { animation: bt-w-o .8s var(--bt-delay, 0ms) both, bt-w-ls .8s var(--bt-delay, 0ms) both; }
+      html.bt-final #boot .bt-word { opacity: 1; }
+      /* الـ٠٫٨ث: القضيبان (٠←٠٫٣ · ٠٫١←٠٫٤) · الكِبَرُ إلى حجم الشعار (٠٫٣←٠٫٦) · الحروفُ تتجمّع والـX يذوب فيها (٠٫٤٥←٠٫٨) */
+      @keyframes bt-b1 { 0% { transform: scaleX(0); animation-timing-function: cubic-bezier(.2,.8,.2,1); } 37.5%, 100% { transform: scaleX(1); } }
+      @keyframes bt-b2 { 0%, 12.5% { transform: scaleX(0); animation-timing-function: cubic-bezier(.2,.8,.2,1); } 50%, 100% { transform: scaleX(1); } }
+      @keyframes bt-x-s { 0%, 37.5% { transform: scale(1); animation-timing-function: cubic-bezier(.65,0,.35,1); } 75%, 100% { transform: scale(2.4); } }
+      @keyframes bt-x-o { 0%, 68.75% { opacity: 1; animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { opacity: 0; } }
+      @keyframes bt-w-o { 0%, 56.25% { opacity: 0; animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { opacity: 1; } }
+      @keyframes bt-w-ls { 0%, 56.25% { letter-spacing: .14em; animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { letter-spacing: -.03em; } }
+      #boot .bt-badge {
+        position: absolute; top: 410px; left: 50%; transform: translateX(-50%); opacity: 0;
+        font: 700 12px/1.4 "Readex Pro", system-ui, sans-serif; color: #f4f1ea; background: #14161a; padding: 4px 12px; border-radius: 99px;
+      }
+      html.dark #boot .bt-badge { color: #0e1013; background: #f2efe8; }
+      html.bt-brief #boot .bt-badge { animation: bt-badge .8s var(--bt-delay, 0ms) both; }
+      html.bt-final #boot .bt-badge { opacity: 1; transform: translateX(-50%); }
+      @keyframes bt-badge { 0%, 56.25% { opacity: 0; transform: translate(-50%, 8px); animation-timing-function: cubic-bezier(.2,.8,.2,1); } 100% { opacity: 1; transform: translate(-50%, 0); } }
     </style>
   </head>
   <body>
@@ -89,6 +143,11 @@
         <img class="bt-map bt-day" src="/welcome/amman-day.svg" alt="" />
         <img class="bt-map bt-night" src="/welcome/amman-night.svg" alt="" />
         <div class="bt-veil"></div>
+        <div class="bt-logo" aria-hidden="true">
+          <div class="bt-xmark"><span><i></i></span><span><i></i></span></div>
+          <div class="bt-word" dir="ltr">TA<span class="bt-xb"><span></span><span></span></span>O</div>
+          <span class="bt-badge">كبتن</span>
+        </div>
       </div>
     </div>
     <div id="root"></div>

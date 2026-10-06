@@ -60,11 +60,20 @@ const LB: Array<[string, number, number]> = [
 
 /** المقدّمةُ حتى إطارها الأخير — والـX وحدَه «من المرة الثانية». */
 const INTRO_S = 4.4;
-/** **تكوُّنُ الـX وتجمّعُ الحروف و«كبتن» بإيقاع المقدّمة** (٢٫٩ث ← ٤٫٣ث فيها) — كان ٠٫٨ث فيمضي قبل أن يُرى (§٦٢/٥). */
-const BRIEF_S = 1.4;
+/** **«من المرة الثانية: لحظة تكوّن X فقط (0.8 ثانية)» كما رسمتها اللوحة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦) — كانت ١٫٤ث تبدأ بعد الحزمة
+ *  فتُرى شاشةٌ شبهُ سوداء ثمّ X صغيرةٌ تمضي. **وصارت تبدأ في إطار الإقلاع من أوّل رسم** (`index.html`) ويكمل الترحيبُ من حيث وصلت. */
+const BRIEF_S = 0.8;
 const BRIEF_MS = BRIEF_S * 1000;
-/** **الوقفةُ على الشعار مكتملاً** — حدُّ العرض الأدنى بعد الحركة، **ونفسُها مع «تقليل الحركة»**. */
+/** **الوقفةُ على الشعار مكتملاً** — أقلُّها بعد الحركة، **ونفسُها مع «تقليل الحركة»**. */
 const HOLD_MS = 600;
+/** **حدُّ العرض الأدنى من أوّل رسم** — الـ٠٫٨ث ثمّ الشعارُ حتى ثانيتين، **لا مدّةٌ تُضاف بعد الحركة** (§٦٢/٥). */
+const MIN_SHOW_MS = 2000;
+
+/** **ما بدأه إطارُ الإقلاع** (`index.html`) — والترحيبُ يكمل من حيث وصلت. */
+function bootBrief(): { start: number; reduced: boolean } | null {
+  const info = (window as unknown as { __taxoBoot?: { start: number; brief: boolean; reduced: boolean } }).__taxoBoot;
+  return info?.brief ? info : null;
+}
 /** الذوبانُ — `welcome.css` (`.cw.is-leaving`). */
 const LEAVE_MS = 350;
 /** «تصل: نبضةٌ واهتزازة» — 2.8ث في اللوحة. */
@@ -151,11 +160,12 @@ function buildIntro(T: number) {
 
 /** «من المرة الثانية: لحظة تكوّن X فقط» — **بإيقاع المقدّمة (١٫٤ث) لا مضغوطاً في ٠٫٨ث** (§٦٢/٥)، والنسبُ نفسُها. */
 const BRIEF_CSS = `
-@keyframes cw-bx{0%{transform:scale(1);opacity:1}37.5%{transform:scale(1);animation-timing-function:${EZ.io}}56.25%{opacity:1;animation-timing-function:${EZ.o}}68.75%{transform:scale(2.4)}87.5%,100%{transform:scale(2.4);opacity:0}}
-@keyframes cw-bb1{0%{transform:scaleX(0);animation-timing-function:${EZ.o}}25%,100%{transform:scaleX(1)}}
-@keyframes cw-bb2{0%,6.25%{transform:scaleX(0);animation-timing-function:${EZ.o}}31.25%,100%{transform:scaleX(1)}}
-@keyframes cw-bw{0%,50%{opacity:0;letter-spacing:.14em;animation-timing-function:${EZ.o}}87.5%{opacity:1}100%{opacity:1;letter-spacing:-.03em}}
-@keyframes cw-bbadge{0%,50%{opacity:0;transform:translate(-50%,8px);animation-timing-function:${EZ.o}}100%{opacity:1;transform:translate(-50%,0)}}
+@keyframes cw-bx{0%,37.5%{transform:scale(1);animation-timing-function:${EZ.io}}75%,100%{transform:scale(2.4)}}
+@keyframes cw-bxo{0%,68.75%{opacity:1;animation-timing-function:${EZ.o}}100%{opacity:0}}
+@keyframes cw-bb1{0%{transform:scaleX(0);animation-timing-function:${EZ.o}}37.5%,100%{transform:scaleX(1)}}
+@keyframes cw-bb2{0%,12.5%{transform:scaleX(0);animation-timing-function:${EZ.o}}50%,100%{transform:scaleX(1)}}
+@keyframes cw-bw{0%,56.25%{opacity:0;letter-spacing:.14em;animation-timing-function:${EZ.o}}100%{opacity:1;letter-spacing:-.03em}}
+@keyframes cw-bbadge{0%,56.25%{opacity:0;transform:translate(-50%,8px);animation-timing-function:${EZ.o}}100%{opacity:1;transform:translate(-50%,0)}}
 `;
 
 /** سهمُ `arrow_back` من Material Symbols Rounded — شكلُه نفسُه بلا خطٍّ كامل. */
@@ -221,8 +231,19 @@ export function Welcome({
 }) {
   const scale = useStageScale();
   const { dark } = useTheme();
+  const boot = useRef(bootBrief()).current;
+  const startedAt = useRef(boot?.start ?? performance.now()).current;
+  const briefOffset = useRef(boot ? Math.min(BRIEF_MS, performance.now() - boot.start) : 0).current;
+  /** **الحركةُ القصيرةُ من حيث وصلت في الإقلاع** — تأخيرٌ سالبٌ بما مضى */
+  const briefAnim = (name: string) => `${name} ${BRIEF_S}s ${-Math.round(briefOffset)}ms both`;
   const [phase, setPhase] = useState<Phase>(() =>
-    reopened ? "pages" : !returning && !seenBefore() ? "intro" : "brief",
+    reopened
+      ? "pages"
+      : !returning && !seenBefore()
+        ? "intro"
+        : boot && (boot.reduced || briefOffset >= BRIEF_MS)
+          ? "hold"
+          : "brief",
   );
   const [page, setPage] = useState(reopened ? 2 : 0);
   const [next, setNext] = useState<WelcomeNext | undefined>();
@@ -237,7 +258,7 @@ export function Welcome({
   useEffect(() => {
     if (phase !== "intro" && phase !== "brief") return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const span = reduced ? 0 : phase === "intro" ? INTRO_S * 1000 : BRIEF_MS;
+    const span = reduced ? 0 : phase === "intro" ? INTRO_S * 1000 : Math.max(0, BRIEF_MS - (performance.now() - startedAt));
     const timers: number[] = [];
     if (phase === "intro" && !reduced) {
       timers.push(window.setTimeout(() => navigator.vibrate?.(12), ARRIVE_MS));
@@ -254,7 +275,7 @@ export function Welcome({
   // **الوقفةُ ثمّ الفرع — ولا فرعَ قبل الإقلاع** (§٦٢/١ و/١٠)
   useEffect(() => {
     if (phase !== "hold") return;
-    const id = window.setTimeout(() => setHeld(true), HOLD_MS);
+    const id = window.setTimeout(() => setHeld(true), Math.max(HOLD_MS, MIN_SHOW_MS - (performance.now() - startedAt)));
     return () => window.clearTimeout(id);
   }, [phase]);
   useEffect(() => {
@@ -352,12 +373,12 @@ export function Welcome({
           {phase === "intro" || phase === "brief" ? (
             <div
               aria-hidden="true"
-              style={{ position: "absolute", left: FX, top: 360, width: 0, height: 0, transformOrigin: "0 0", animation: phase === "intro" ? intro.anim.xmark : `cw-bx ${BRIEF_S}s both` }}
+              style={{ position: "absolute", left: FX, top: 360, width: 0, height: 0, transformOrigin: "0 0", animation: phase === "intro" ? intro.anim.xmark : `${briefAnim("cw-bx")}, ${briefAnim("cw-bxo")}` }}
             >
               {(
                 [
-                  ["var(--t2-text)", -50, phase === "intro" ? intro.anim.bar1 : `cw-bb1 ${BRIEF_S}s both`],
-                  ["var(--t2-accent)", 50, phase === "intro" ? intro.anim.bar2 : `cw-bb2 ${BRIEF_S}s both`],
+                  ["var(--t2-text)", -50, phase === "intro" ? intro.anim.bar1 : briefAnim("cw-bb1")],
+                  ["var(--t2-accent)", 50, phase === "intro" ? intro.anim.bar2 : briefAnim("cw-bb2")],
                 ] as const
               ).map(([color, rotate, animation]) => (
                 <div key={rotate} style={{ position: "absolute", left: 0, top: 0, width: 26.67, height: 6.02, transform: `translate(-50%,-50%) rotate(${rotate}deg)` }}>
@@ -370,7 +391,7 @@ export function Welcome({
             className="cw-word"
             dir="ltr"
             aria-label="TAXO"
-            style={phase === "intro" ? { animation: intro.anim.word } : phase === "brief" ? { animation: `cw-bw ${BRIEF_S}s both` } : undefined}
+            style={phase === "intro" ? { animation: intro.anim.word } : phase === "brief" ? { animation: briefAnim("cw-bw") } : undefined}
           >
             TA
             <span className="cw-xb" aria-hidden="true">
@@ -381,7 +402,7 @@ export function Welcome({
           </div>
           <span
             className="cw-badge"
-            style={phase === "intro" ? { animation: intro.anim.badge } : phase === "brief" ? { animation: `cw-bbadge ${BRIEF_S}s both` } : undefined}
+            style={phase === "intro" ? { animation: intro.anim.badge } : phase === "brief" ? { animation: briefAnim("cw-bbadge") } : undefined}
           >
             كبتن
           </span>
