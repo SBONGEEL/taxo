@@ -484,6 +484,8 @@ async def request_ride(
         distance_km=quote.route.distance_km,
         duration_min=quote.route.duration_min,
         estimated_fare=quote.fare,
+        # **وتفصيلُه من الحساب نفسِه** (R10، §٦٢-ج/٢٥) — مجموعُه `estimated_fare` حرفاً
+        fare_lines=pricing.lines_json(quote.lines),
         currency=currency_for_country(rider.country_code),
         # **نسبةُ السوق مبدئياً — وتُحسم لحظةَ القبول** (§25.11).
         #
@@ -758,25 +760,38 @@ async def _final_fare(
     تعديلُ المشرف يحكم ما بعده (SPEC القسم 5.10). ويُضاف **بعد** الحدّ
     الأدنى لا قبله: الحدُّ الأدنى حدُّ أجرةِ طريق، ورسمُ انتظارٍ يُبتلع فيه
     يعني كبتناً وقف عشرين دقيقةً بلا مقابل.
+
+    **ويُجمَّد تفصيلُها على الرحلة معها** (`ride.fare_lines`، R10 — §٦٢-ج/٢٥): أسطرُ أجرة الطريق (المجمَّدةُ لحظةَ الطلب، أو
+    المعادُ حسابُها حين انحرف الطريق) ثمّ الانتظارُ والوقفات — **والمبالغُ نفسُها التي يُجمع منها السعر**. **ولا يُجمَّد تفصيلٌ لا
+    يساوي المبلغ**: رحلةٌ أقدمُ من العمود (بلا أسطر)، أو مجموعٌ يخالف — فلا تفصيلَ يُرسم بدل تفصيلٍ كاذب.
     """
     base = ride.estimated_fare
+    base_lines: list[dict[str, str]] = list(ride.fare_lines or [])
     if actual_km is not None and route.deviates(ride.distance_km, actual_km):
         rule = await pricing.get_rule(
             session, ride.country_code, ride.vehicle_category
         )
-        base, _ = pricing.calculate_fare(
+        base, _, recomputed = pricing.fare_breakdown(
             rule,
             Route(distance_km=actual_km, duration_min=ride.duration_min),
             ride.stops_count,
         )
+        base_lines = pricing.lines_json(recomputed)
 
     # **ورسمُ الوقفات داخلٌ في `final_fare`** (قرارُ المالك في الفرع و):
     # المجموعُ واحدٌ والسببُ ظاهرٌ في التفصيل — لا مبلغان يُجمعان بيد
-    return pricing.round_money(
-        base
-        + await waiting_charge_for(session, ride)
-        + await pause_charge_for(session, ride)
-    )
+    waiting = await waiting_charge_for(session, ride)
+    pause = await pause_charge_for(session, ride)
+    final = pricing.round_money(base + waiting + pause)
+
+    lines = list(base_lines)
+    if waiting:
+        lines.append(pricing.FareLine("waiting", waiting).as_json())
+    if pause:
+        lines.append(pricing.FareLine("pause", pause).as_json())
+    total = sum((Decimal(line["amount"]) for line in lines), Decimal(0))
+    ride.fare_lines = lines if base_lines and total == final else None
+    return final
 
 
 async def pause_charge_for(

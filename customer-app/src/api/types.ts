@@ -377,6 +377,10 @@ export interface Ride {
   share_group_id: string | null;
   share_seat: number;
 
+  /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
+   *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */
+  fare_lines: FareLine[];
+
   // --- تعدد الوجهات (المرحلة 12-ب) ---
   stops: RideStop[];
   /** الوقفةُ المفتوحةُ الآن — و`null` تعني لا وقفة (§5.10-ب). */
@@ -614,6 +618,15 @@ export interface Rating {
 
 /** وسومُ R10 — مرآةُ `RatingTag` في الخلفية (`check:enums`). */
 export type RatingTag = "safe_driving" | "clean_car" | "friendly" | "fast_arrival" | "knows_way";
+
+/** صنفُ سطرِ تفصيل الأجرة — مرآةُ `FareLineKind` في الخلفية (`check:enums`). */
+export type FareLineKind = "base" | "distance" | "time" | "stops" | "minimum" | "waiting" | "pause";
+
+export interface FareLine {
+  kind: FareLineKind;
+  amount: string;
+  quantity?: string | null;
+}
 
 /** كبتنٌ قريبٌ على الخريطة الحرّة — **مجهَّلٌ بحكم §10**.
  *

@@ -325,6 +325,20 @@ class RatingTag(StrEnum):
 
 
 
+
+class FareLineKind(StrEnum):
+    """أصنافُ أسطر تفصيل الأجرة (`rides.fare_lines`، §٦٢-ج/٢٥) — `pricing.fare_breakdown` و`rides._final_fare` يكتبانها."""
+
+    BASE = "base"
+    DISTANCE = "distance"
+    TIME = "time"
+    STOPS = "stops"
+    MINIMUM = "minimum"
+    WAITING = "waiting"
+    PAUSE = "pause"
+
+
+
 class SubscriptionDurationType(StrEnum):
     DAILY = "daily"
     WEEKLY = "weekly"

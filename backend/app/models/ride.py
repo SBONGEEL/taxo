@@ -23,7 +23,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
@@ -253,6 +253,11 @@ class Ride(UUIDMixin, TimestampMixin, Base):
 
     estimated_fare: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     final_fare: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    # **تفصيلُ الأجرة مجمَّداً** (R10، §٦٢-ج/٢٥): أسطرُ `pricing.fare_breakdown` لحظةَ الطلب، **وتُستبدل عند الإنهاء** بأسطر
+    # الأجرة النهائية (ومعها الانتظارُ والوقفات) — **ومجموعُها يساوي المبلغَ الذي بجانبها حرفاً** (`estimated_fare` ثمّ `final_fare`).
+    # **ولمَ تُجمَّد لا تُعاد بنائها عند القراءة**: معدّلاتُ التسعيرة لا تُجمَّد على الرحلة، فتفصيلٌ يُبنى غداً من تسعيرةٍ عدّلها
+    # المشرف لا يساوي سعراً جُمّد أمس. **و`NULL` رحلةٌ أقدمُ من العمود** — لا تفصيلَ يُرسم لها بدل تفصيلٍ مخترَع.
+    fare_lines: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB, nullable=True)
     cancellation_fee: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     # **ما قد يحمله كبتنُ هذه الرحلة لكبتنٍ آخر** (`CANCELLATION-FEE.md` §6-أ):
     # دَينُ إلغاءٍ على الراكب يُسلَّم نقداً مع الأجرة. **وهو تجميدٌ لا بيتٌ ثانٍ**:

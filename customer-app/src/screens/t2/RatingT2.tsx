@@ -25,6 +25,7 @@ import { ErrorNote } from "@/components/ui/Feedback";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { currencyLabel, formatDistance, formatMoney, formatTime } from "@/lib/utils";
+import { fareLineRows } from "@/lib/fareLines";
 
 import "@/taxo2";
 import "./t2.css";
@@ -84,17 +85,34 @@ export function RatingT2Screen() {
     .map((method) => (method === "cash" ? "كاش للكبتن" : PAYMENT_METHOD_LABEL[method]))
     .join(" + ");
 
-  /** سطورُ البطاقة — **ما تعرضه شاشةُ الدفع نفسُها**: المسافةُ الفعليةُ ورسومُ المحطات والانتظار والوقفات ورسمُ إلغاءٍ سابق. */
-  const rows: { label: string; value: string }[] = [];
-  if (ride?.actual_distance_km) rows.push({ label: "المسافة الفعلية", value: formatDistance(ride.actual_distance_km) });
-  if (ride && Number(ride.stops_charge) > 0)
-    rows.push({ label: `رسم المحطات (${ride.stops.length})`, value: formatMoney(ride.stops_charge, ride.currency) });
-  if (ride && Number(ride.waiting_charge) > 0)
-    rows.push({ label: "رسم الانتظار عند المحطات", value: formatMoney(ride.waiting_charge, ride.currency) });
-  if (ride && Number(ride.pause_charge) > 0)
-    rows.push({ label: "رسم الوقفات أثناء الرحلة", value: formatMoney(ride.pause_charge, ride.currency) });
+  /** سطورُ البطاقة — **تفصيلُ الأجرة كما جمّدته الخلفية** (§٦٢-د/٦): أسطرٌ مجموعُها الأجرةُ نفسُها، **وتحتها منفصلةً** ما ليس
+   *  منها: خصمُ الكوبون والمشاركة ورسمُ إلغاءٍ سابق. **ورحلةٌ أقدمُ من التجميد** تبقى بسطورها السابقة حرفاً — ما تعرضه شاشةُ
+   *  الدفع نفسُها: المسافةُ الفعليةُ ورسومُ المحطات والانتظار والوقفات ورسمُ إلغاءٍ سابق. */
+  const lines = ride ? fareLineRows(ride) : null;
+  const rows: { label: string; value: string }[] = lines ?? [];
+  const extras: { label: string; value: string }[] = [];
+  if (lines) {
+    for (const row of payments?.payments ?? []) {
+      if ((row.method === "promo" || row.method === "share") && row.status === "confirmed")
+        extras.push({
+          label: row.method === "promo" ? "خصم الكوبون" : "خصم المشاركة",
+          value: formatMoney(row.amount, payments?.currency),
+        });
+    }
+  } else if (ride) {
+    if (ride.actual_distance_km) rows.push({ label: "المسافة الفعلية", value: formatDistance(ride.actual_distance_km) });
+    if (Number(ride.stops_charge) > 0)
+      rows.push({ label: `رسم المحطات (${ride.stops.length})`, value: formatMoney(ride.stops_charge, ride.currency) });
+    if (Number(ride.waiting_charge) > 0)
+      rows.push({ label: "رسم الانتظار عند المحطات", value: formatMoney(ride.waiting_charge, ride.currency) });
+    if (Number(ride.pause_charge) > 0)
+      rows.push({ label: "رسم الوقفات أثناء الرحلة", value: formatMoney(ride.pause_charge, ride.currency) });
+  }
   if (payments && Number(payments.cancellation_debt) > 0)
-    rows.push({ label: "رسمُ إلغاءٍ سابق", value: formatMoney(payments.cancellation_debt, payments.currency) });
+    (lines ? extras : rows).push({
+      label: "رسمُ إلغاءٍ سابق",
+      value: formatMoney(payments.cancellation_debt, payments.currency),
+    });
 
   const first = ride?.driver?.name.split(" ")[0] ?? null;
   const tipShown = r.tip?.offered && !r.tip.given && r.stars >= TIP_MIN_STARS;
@@ -143,19 +161,21 @@ export function RatingT2Screen() {
               </span>
             ) : null}
           </div>
-          {rows.length > 0 ? (
-            <>
-              <div className="t2-r10-dash" aria-hidden="true" />
-              <div className="t2-r10-rows">
-                {rows.map((row) => (
-                  <div key={row.label} className="t2-r10-row">
-                    <span className="t2-r10-row-label">{row.label}</span>
-                    <span className="t2-r10-row-value">{row.value}</span>
-                  </div>
-                ))}
+          {[rows, lines ? extras : []].map((group, index) =>
+            group.length > 0 ? (
+              <div key={index}>
+                <div className="t2-r10-dash" aria-hidden="true" />
+                <div className="t2-r10-rows">
+                  {group.map((row) => (
+                    <div key={row.label} className="t2-r10-row">
+                      <span className="t2-r10-row-label">{row.label}</span>
+                      <span className="t2-r10-row-value">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </>
-          ) : null}
+            ) : null,
+          )}
         </div>
       ) : null}
 

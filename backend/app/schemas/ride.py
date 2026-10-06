@@ -13,6 +13,7 @@ from app.models.enums import (
     CancelReasonCode,
     CountryCode,
     Currency,
+    FareLineKind,
     GenderPreference,
     PaymentMethod,
     RideStatus,
@@ -181,6 +182,15 @@ def stops_of(ride: "Ride", moment: datetime) -> list["RideStopOut"]:
     ]
 
 
+class FareLineOut(BaseModel):
+    """سطرٌ من تفصيل الأجرة — **من الخلفية حرفاً** (§١٤): الشاشةُ ترسم `amount` ولا تضرب `quantity` في شيء."""
+
+    kind: FareLineKind
+    amount: Decimal
+    # كيلومتراتٌ أو دقائقُ أو عددُ محطات — **لتسمية السطر وحدَها**
+    quantity: Decimal | None = None
+
+
 class RideStopOut(BaseModel):
     """محطةٌ وسيطة كما يراها الطرفان — ومعها **ما استحقّ عندها**.
 
@@ -285,6 +295,9 @@ class RideOut(BaseModel):
     duration_min: Decimal
     estimated_fare: Decimal
     final_fare: Decimal | None
+    # **تفصيلُ الأجرة مجمَّداً** (R10، §٦٢-ج/٢٥): قبل الإنهاء أسطرُ `estimated_fare`، وبعده أسطرُ `final_fare` — **ومجموعُ كلٍّ منهما
+    # مبلغُه حرفاً**. وفارغٌ لرحلةٍ أقدمَ من التجميد: لا تفصيلَ يُرسم بدل تفصيلٍ مخترَع
+    fare_lines: list[FareLineOut] = Field(default_factory=list)
     cancellation_fee: Decimal | None
     # **مبلغٌ مستوفى لكبتنٍ آخر يُسلَّم نقداً مع الأجرة** (§6-أ)، مجمَّدٌ لحظةَ
     # الطلب. يقرؤه تطبيقُ الكبتن ليرسم بطاقةً **قبل** القبول: من قَبِل وهو
@@ -433,6 +446,7 @@ class RideOut(BaseModel):
             duration_min=ride.duration_min,
             estimated_fare=ride.estimated_fare,
             final_fare=ride.final_fare,
+            fare_lines=[FareLineOut.model_validate(line) for line in (ride.fare_lines or [])],
             cancellation_fee=ride.cancellation_fee,
             carried_cancellation_fee=ride.carried_cancellation_fee,
             commission_percent_at_ride=ride.commission_percent_at_ride,

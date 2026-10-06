@@ -54,10 +54,72 @@ class FareEstimate:
     stop_free_minutes: int
     stop_price_per_min: Decimal
     stop_max_wait_minutes: int
+    # **تفصيلُ الأجرة سطراً سطراً** (R10، §٦٢-ج/٢٥) — من الحساب نفسِه، فمجموعُه `fare` حرفاً
+    lines: tuple["FareLine", ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class FareLine:
+    """سطرٌ من تفصيل الأجرة — **يُحسب حيث يُحسب المبلغ** (`fare_breakdown`) فلا يفترقان (§١٤: المالُ في الخلفية).
+
+    `kind`: `base` · `distance` · `time` · `stops` · `minimum` · `waiting` · `pause`. و`quantity` كيلومتراتٌ أو دقائقُ أو عددٌ
+    **لتسمية السطر وحدَها** («المسافة · 6.8 كم») — **لا يُضرب في الشاشة**؛ المبلغُ هو `amount`.
+    """
+
+    kind: str
+    amount: Decimal
+    quantity: Decimal | None = None
+
+    def as_json(self) -> dict[str, str]:
+        out = {"kind": self.kind, "amount": str(self.amount)}
+        if self.quantity is not None:
+            out["quantity"] = str(self.quantity)
+        return out
+
+
+def lines_json(lines: Sequence[FareLine]) -> list[dict[str, str]]:
+    """للتجميد على الرحلة (`rides.fare_lines`، JSONB) — **نصوصٌ لا أعداد**، فلا تقريبَ يمرّ بـfloat."""
+    return [line.as_json() for line in lines]
 
 
 def round_money(amount: Decimal) -> Decimal:
     return amount.quantize(MONEY_STEP, rounding=ROUND_HALF_UP)
+
+
+def fare_breakdown(
+    rule: PricingRule, route: Route, stops_count: int = 0
+) -> tuple[Decimal, bool, list[FareLine]]:
+    """السعرُ، وهل جبره الحدُّ الأدنى، **وأسطرُه** — حسابٌ واحدٌ لثلاثتها.
+
+    **والأسطرُ تُجمع إلى السعر حرفاً**: التقريبُ في السعر مرّةٌ واحدةٌ على المجموع (لا على كلِّ حدّ)، والأسطرُ يُقرَّب كلٌّ منها —
+    **فالفرقُ بين الطريقين (لا يتجاوز جزءاً من الألف لكلِّ حدٍّ مقرَّب) يُحمَل على أكبر سطرٍ متغيّر** (المسافة غالباً). ولا يُعرض سطرٌ
+    قيمتُه صفر. **وجبرُ الحدّ الأدنى سطرٌ بنفسه** («تكملة الحدّ الأدنى») لا تعديلٌ صامتٌ في غيره.
+    """
+    # `rule.stop_fee or 0`: العمودُ `server_default="0"` فكلُّ صفٍّ في القاعدة
+    # يحمل قيمة، أما صفٌّ بُني في الذاكرة ولم يُفلَش بعد فحقلُه `None` —
+    # والأجرةُ لا يجوز أن تتعلق بلحظة الفلش
+    stop_fee = rule.stop_fee or Decimal(0)
+    raw = [
+        ("base", rule.base_fare, None),
+        ("distance", route.distance_km * rule.price_per_km, route.distance_km),
+        ("time", route.duration_min * rule.price_per_min, route.duration_min),
+        ("stops", stop_fee * stops_count, Decimal(stops_count) if stops_count else None),
+    ]
+    fare = round_money(sum((amount for _, amount, _ in raw), Decimal(0)))
+
+    lines = [FareLine(kind, round_money(amount), quantity) for kind, amount, quantity in raw if amount != 0]
+    residual = fare - sum((line.amount for line in lines), Decimal(0))
+    if residual and lines:
+        variable = [i for i, line in enumerate(lines) if line.kind in ("distance", "time")] or list(range(len(lines)))
+        target = max(variable, key=lambda i: lines[i].amount)
+        line = lines[target]
+        lines[target] = FareLine(line.kind, line.amount + residual, line.quantity)
+
+    minimum = round_money(rule.minimum_fare)
+    if fare < minimum:
+        lines.append(FareLine("minimum", minimum - fare))
+        return minimum, True, lines
+    return fare, False, lines
 
 
 def calculate_fare(
@@ -67,22 +129,10 @@ def calculate_fare(
 
     و`stops_count` عددُ المحطات **الوسيطة**: رسمُها المقطوع يدخل التقدير
     المعروض قبل الطلب، بخلاف رسم الانتظار الذي لا يُعرف إلا بعد وقوعه.
+    **والحسابُ نفسُه في `fare_breakdown`** — فلا يفترق السعرُ عن تفصيله.
     """
-    # `rule.stop_fee or 0`: العمودُ `server_default="0"` فكلُّ صفٍّ في القاعدة
-    # يحمل قيمة، أما صفٌّ بُني في الذاكرة ولم يُفلَش بعد فحقلُه `None` —
-    # والأجرةُ لا يجوز أن تتعلق بلحظة الفلش
-    fare = (
-        rule.base_fare
-        + route.distance_km * rule.price_per_km
-        + route.duration_min * rule.price_per_min
-        + (rule.stop_fee or Decimal(0)) * stops_count
-    )
-    fare = round_money(fare)
-
-    minimum = round_money(rule.minimum_fare)
-    if fare < minimum:
-        return minimum, True
-    return fare, False
+    fare, minimum_applied, _ = fare_breakdown(rule, route, stops_count)
+    return fare, minimum_applied
 
 
 async def get_rule(
@@ -118,7 +168,7 @@ async def estimate(
     """
     rule = await get_rule(session, country_code, vehicle_category)
     route = await route_between(session, pickup, dropoff, country_code, stops=stops)
-    fare, minimum_applied = calculate_fare(rule, route, len(stops))
+    fare, minimum_applied, lines = fare_breakdown(rule, route, len(stops))
 
     return FareEstimate(
         country_code=CountryCode(country_code),
@@ -138,6 +188,7 @@ async def estimate(
         stop_free_minutes=rule.stop_free_minutes or 0,
         stop_price_per_min=round_money(rule.stop_price_per_min or Decimal(0)),
         stop_max_wait_minutes=rule.stop_max_wait_minutes or 0,
+        lines=tuple(lines),
     )
 
 

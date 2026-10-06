@@ -28,6 +28,7 @@ import {
   formatDuration,
   formatMoney,
 } from "@/lib/utils";
+import { fareLineRows } from "@/lib/fareLines";
 import { Icon } from "@/taxo2";
 import { BannerT2, HeadT2 } from "@/screens/t2/MoneyT2";
 
@@ -124,15 +125,20 @@ export function RideDetailsScreen() {
 
   /** **سطورُ الأجرة — تُقرأ ولا تُحسب** (§5.10 و§5.10-ب/و): المجموعُ والضربُ في الخلفية (§14). **وصفرٌ لا يُرسم** — سطرٌ فارغٌ
    *  يعلّم قارئَه ألّا يقرأ. **والمقدَّرُ سطرٌ حين تكون النهائيةُ هي الرقمَ الكبير**، وإلا فهو الرقمُ الكبيرُ نفسُه. */
-  const rows: { label: string; value: string }[] = [];
-  if (ride.final_fare) rows.push({ label: "السعر المقدّر", value: formatMoney(ride.estimated_fare, ride.currency) });
-  if (Number(ride.stops_charge) > 0)
+  // **وتفصيلُ الأجرة المجمَّد أوّلاً حين يوجد** (R10، §٦٢-د/٦): أسطرٌ مجموعُها الرقمُ الكبيرُ نفسُه، **وتحتها منفصلاً** ما ليس منه
+  // (المقدَّرُ حين تكون النهائيةُ هي الرقم، ورسومُ الإلغاء). **ورحلةٌ أقدمُ من التجميد** تبقى بسطورها السابقة حرفاً
+  const lines = fareLineRows(ride);
+  const rows: { label: string; value: string }[] = lines ?? [];
+  const extras: { label: string; value: string }[] = [];
+  const after = lines ? extras : rows;
+  if (ride.final_fare) after.push({ label: "السعر المقدّر", value: formatMoney(ride.estimated_fare, ride.currency) });
+  if (!lines && Number(ride.stops_charge) > 0)
     rows.push({ label: `رسم المحطات (${ride.stops.length})`, value: formatMoney(ride.stops_charge, ride.currency) });
-  if (Number(ride.waiting_charge) > 0)
+  if (!lines && Number(ride.waiting_charge) > 0)
     rows.push({ label: "رسم الانتظار عند المحطات", value: formatMoney(ride.waiting_charge, ride.currency) });
-  if (Number(ride.pause_charge) > 0)
+  if (!lines && Number(ride.pause_charge) > 0)
     rows.push({ label: "رسم الوقفات أثناء الرحلة", value: formatMoney(ride.pause_charge, ride.currency) });
-  if (ride.cancellation_fee) rows.push({ label: "رسوم الإلغاء", value: formatMoney(ride.cancellation_fee, ride.currency) });
+  if (ride.cancellation_fee) after.push({ label: "رسوم الإلغاء", value: formatMoney(ride.cancellation_fee, ride.currency) });
 
   const stats = [
     { label: "المسافة المقدّرة", value: formatDistance(ride.distance_km) },
@@ -188,19 +194,21 @@ export function RideDetailsScreen() {
             </span>
             <span className="t2-m-cur">{currencyLabel(ride.currency)}</span>
           </div>
-          {rows.length > 0 ? (
-            <>
-              <div className="t2-m-dash tight" aria-hidden="true" />
-              <div className="t2-m-rows">
-                {rows.map((row) => (
-                  <div key={row.label} className="t2-m-row">
-                    <span className="t2-m-row-label">{row.label}</span>
-                    <span className="t2-m-row-value">{row.value}</span>
-                  </div>
-                ))}
+          {[rows, extras].map((group, index) =>
+            group.length > 0 ? (
+              <div key={index}>
+                <div className="t2-m-dash tight" aria-hidden="true" />
+                <div className="t2-m-rows">
+                  {group.map((row) => (
+                    <div key={row.label} className="t2-m-row">
+                      <span className="t2-m-row-label">{row.label}</span>
+                      <span className="t2-m-row-value">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </>
-          ) : null}
+            ) : null,
+          )}
         </div>
 
         {/* «من · إلى» — بطاقةُ المسار في R06، **والعنوانُ كاملاً يلتفّ ولا يُقطع** */}
