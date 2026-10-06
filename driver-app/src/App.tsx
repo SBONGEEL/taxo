@@ -35,6 +35,7 @@ import type { ReactNode } from "react";
 import { CenteredMessage, Spinner } from "@/components/ui/Feedback";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/Motion";
+import { StaleShellNotice } from "@/components/StaleShellNotice";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
@@ -356,6 +357,8 @@ function NavBar() {
           لسببٍ أمنيٍّ لا تراه. وأيُّ إزاحةٍ ثابتةٍ ستصطدم بشيءٍ في شاشةٍ ما،
           فالقاعدةُ ليست رقماً بل شرطاً: **لا يُعرض تعريفٌ بمفتاحٍ فوق قرار**. */}
       <WomenModeNotice />
+      {/* **والنسخةُ المحفوظةُ تُقال** حين عرضها العاملُ بعد مهلته (§٦٢-د/٦) */}
+      <StaleShellNotice />
       {/* **TaxoTabs في المظهرين** (§٦٢/٣) — كان الشريطُ القديمُ يُرسم حتى في الداكن */}
       {showsNav(pathname) && !T2_COVERING.includes(pathname) ? <BottomNavT2 /> : null}
     </>

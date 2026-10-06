@@ -26,6 +26,7 @@ import { BottomNavT2 } from "@/components/BottomNavT2";
 import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
 import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
 import { tokens } from "@/api/client";
+import { StaleShellNotice } from "@/components/StaleShellNotice";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { Toasts } from "@/components/Toasts";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -215,6 +216,8 @@ function NavBar() {
   return (
     <>
       <WomenModeNotice />
+      {/* **والنسخةُ المحفوظةُ تُقال** حين عرضها العاملُ بعد مهلته (§٦٢-د/٦) */}
+      <StaleShellNotice />
       {/* **وشريطُ TaxoTabs في المظهرين** — كان القائمُ يُرسم في الليليّ (`ByTheme`)، والوجهاتُ هي هي (`lib/tabs.ts`) */}
       {showsNav(pathname) && !coveredByT2 ? <BottomNavT2 /> : null}
     </>

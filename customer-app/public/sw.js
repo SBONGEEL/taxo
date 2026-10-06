@@ -82,17 +82,12 @@ self.addEventListener("fetch", (event) => {
   // الخلفية والخرائط والخطوط: شبكةٌ دائماً، بلا وساطة
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
-  // التنقّل: الشبكة أولاً حتى يصل أحدثُ إصدار، والقشرة عند الانقطاع
+  // التنقّل: الشبكةُ أوّلاً **في مهلتها** (§٦٢-د/٦)، والقشرةُ المحفوظةُ بعدها أو عند الانقطاع
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // **الجيلُ يُعرف من الفهرس الذي وصل** — ثمّ يُكنس ما تجاوز السقف
-          if (response.ok) event.waitUntil(recordGeneration(response.clone()));
-          return response;
-        })
-        .catch(() => caches.match("/index.html").then((r) => r ?? Response.error())),
-    );
+    const network = fetch(request);
+    // **الفهرسُ الذي وصل يُحفظ ويُسجَّل جيلُه ولو عُرضت المحفوظةُ قبله** — فالفتحةُ التالية عليه
+    event.waitUntil(network.then((response) => (response.ok ? keepShell(response.clone()) : undefined)).catch(() => undefined));
+    event.respondWith(answerNavigation(network));
     return;
   }
 
@@ -120,6 +115,42 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+// ------------------------------------------------------------ مهلةُ التنقّل
+//
+// **قرارُ المالك ٢٠٢٦-١٠-٠٦ (SPEC §٦٢-د/٦)**: كان التنقّلُ «الشبكةُ أوّلاً» **بلا حدّ** — قِيس على S21 ٠٫٤–٠٫٩٣ ث في كلِّ فتح،
+// **و٤٫٨ ث حين تعثّرت الشبكة** والقشرةُ في المخزن. **فبعد ١٫٥ ث بلا جوابٍ صالح تُعرض القشرةُ المحفوظة**، ويكمل الطلبُ في الخلفية
+// فتُحفظ وتُعرض في الفتحة التالية. **وكلفتُه مكتوبةٌ في القرار**: إصدارٌ جديدٌ يصل صاحبَ الشبكة البطيئة في الفتحة التالية.
+
+/** **مهلةُ التنقّل** — بعدها القشرةُ المحفوظة إن وُجدت. */
+const NAV_TIMEOUT_MS = 1500;
+
+/** **جوابُ التنقّل**: الشبكةُ إن أجابت صالحةً في مهلتها، وإلا المحفوظةُ **بعلامةٍ تقرؤها الصفحة** (`StaleShellNotice`).
+ *  وجوابٌ غيرُ صالحٍ (خطأُ حافّةٍ ٥xx حين يسقط الأصل) **لا يُعرض بدل قشرةٍ صالحة** — صفحةُ خطأٍ غريبةٌ بدل التطبيق. */
+async function answerNavigation(network) {
+  const saved = await caches.match("/index.html");
+  // **أوّلُ فتحٍ بلا قشرة** — كما كان: ما تقوله الشبكة
+  if (!saved) return network.catch(() => Response.error());
+  const valid = network.then((response) => (response.ok ? response : null), () => null);
+  const timedOut = new Promise((resolve) => setTimeout(() => resolve(null), NAV_TIMEOUT_MS));
+  const first = await Promise.race([valid, timedOut]);
+  return first ?? markSaved(saved);
+}
+
+/** القشرةُ المحفوظةُ **بعلامة** — `<meta name="taxo-shell" content="saved">` في رأسها، فتقول الصفحةُ للمستخدم ما يرى. */
+async function markSaved(saved) {
+  const html = await saved.text();
+  const marked = html.replace(/<head[^>]*>/i, (head) => `${head}<meta name="taxo-shell" content="saved">`);
+  return new Response(marked, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
+
+/** **الفهرسُ الذي وصل قشرةً محفوظة** — كانت تُحفظ عند التثبيت وحده فتبقى أجيالاً خلف ما يُخدَم، **ومهلةُ التنقّل تعرضها**:
+ *  فقشرةٌ قديمةٌ تسمّي حزماً كُنست = تطبيقٌ أبيض. **ثمّ يُسجَّل جيلُه** فتُحمى حزمُه من الكنس. */
+async function keepShell(response) {
+  const cache = await caches.open(CACHE);
+  await cache.put("/index.html", response.clone());
+  await recordGeneration(response);
+}
 
 // ------------------------------------------------------------- الأجيال
 //
