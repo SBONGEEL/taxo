@@ -41,7 +41,8 @@ public class RingView extends View {
         track.setStyle(Paint.Style.STROKE);
         track.setColor(p.brd);
         arc.setStyle(Paint.Style.STROKE);
-        arc.setColor(p.ok);
+        // **حلقةُ المهلة بالجمر على الحافّة** كما رُسمت في C05·C (§٦٢-ج/٤٤)
+        arc.setColor(p.acc);
         arc.setStrokeCap(Paint.Cap.ROUND);
         label.setColor(p.tx);
         label.setTextAlign(Paint.Align.CENTER);

@@ -193,14 +193,15 @@ public class OfferActivity extends Activity {
         column.setOnClickListener(onClick);
 
         TextView badge = OfferUi.text(
-                this, glyph, primary ? 25f : 21f, primary ? Color.WHITE : p.mut, false);
+                // **«اقبل» بالجمر وحبرٍ فوقه** كما رُسم في C05 بأوجهه الأربعة (§٦٢-ج/٤٤) — كان أخضرَ بأبيض (٢٫٩:١ على الجمر لو بقي أبيض)
+                this, glyph, primary ? 25f : 21f, primary ? p.inv : p.mut, false);
         badge.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(
                 OfferUi.dp(this, side), OfferUi.dp(this, side));
         badgeLp.bottomMargin = OfferUi.dp(this, 9);
         badge.setLayoutParams(badgeLp);
         badge.setBackground(primary
-                ? OfferUi.box(p.ok, Color.TRANSPARENT, this, side / 2f)
+                ? OfferUi.box(p.acc, Color.TRANSPARENT, this, side / 2f)
                 : OfferUi.box(p.sur2, p.brd, this, side / 2f));
         column.addView(badge);
         column.addView(OfferUi.text(

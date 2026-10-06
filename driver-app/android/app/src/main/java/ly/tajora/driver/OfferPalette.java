@@ -5,7 +5,11 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 
 /**
- * ألوانُ التصميم حرفاً — <b>`mobile-app-design-request` بسِمتيه</b>.
+ * ألوانُ TAXO 2.0 حرفاً — <b>رموزُ الهوية بأدوارها</b> (`driver-app/src/taxo2/tokens.css`، §٦٢-ج/٤٤): كانت ألوانَ اللغة السابقة
+ * (`mobile-app-design-request`) فتظهر ورقةُ الطلب وفقاعتُه وشاشتُه الكاملة بهويةٍ غيرِ هوية التطبيق. **والأدوارُ هي هي**
+ * (ما يقرؤه `OfferUi` لم يتغيّر): bg ← الأرض · sur ← البطاقة · sur2 ← الغائر · brd ← الحافّة · tx ← النصّ · mut ← الخافت ·
+ * acc ← <b>الجمر</b> (الفعلُ الأساسيُّ عند الكبتن في السِمتين، كـ«وصلتني» و«إرسال الطلب») · inv ← ما فوق الجمر · ok ← النجاح ·
+ * sa/sb ← البطاقة/الغائر · dim ← الظلّ (`--t2-scrim`).
  *
  * <p><b>ولمَ نُسخت هنا ولم تُقرأ من الويب</b>: هذه الأسطحُ الثلاثةُ (شاشةُ ملء
  * الشاشة · الورقةُ السفلية · الفقاعة) <b>تُرسم والـWebView قد تكون غيرَ
@@ -22,31 +26,33 @@ public final class OfferPalette {
 
     private OfferPalette(boolean dark) {
         if (dark) {
-            bg = Color.parseColor("#14181d");
-            sur = Color.parseColor("#0d1014");
-            sur2 = Color.parseColor("#1a2027");
-            brd = Color.parseColor("#2a313a");
-            tx = Color.parseColor("#e6edf3");
-            mut = Color.parseColor("#8b949e");
-            inv = Color.parseColor("#0d1014");
-            acc = Color.parseColor("#e6edf3");
-            ok = Color.parseColor("#3fb970");
-            sa = Color.parseColor("#1c2128");
-            sb = Color.parseColor("#20262e");
-            dim = Color.argb(158, 4, 6, 8);
+            // **الإسفلت** — `html.dark` في tokens.css
+            bg = Color.parseColor("#0e1013");
+            sur = Color.parseColor("#171a1f");
+            sur2 = Color.parseColor("#20242b");
+            brd = Color.parseColor("#2b3038");
+            tx = Color.parseColor("#f2efe8");
+            mut = Color.parseColor("#9097a1");
+            inv = Color.parseColor("#0e1013");
+            acc = Color.parseColor("#ff6a33");
+            ok = Color.parseColor("#3dbe7e");
+            sa = Color.parseColor("#171a1f");
+            sb = Color.parseColor("#20242b");
+            dim = Color.argb(153, 0, 0, 0);
         } else {
-            bg = Color.parseColor("#f2f0eb");
+            // **الحجرُ الجيريّ** — الجذرُ في tokens.css
+            bg = Color.parseColor("#f4f1ea");
             sur = Color.parseColor("#ffffff");
-            sur2 = Color.parseColor("#faf9f6");
-            brd = Color.parseColor("#ddd8cf");
-            tx = Color.parseColor("#171b20");
-            mut = Color.parseColor("#6e7681");
-            inv = Color.parseColor("#f2f0eb");
-            acc = Color.parseColor("#171b20");
-            ok = Color.parseColor("#1a7f4e");
-            sa = Color.parseColor("#e6e3db");
-            sb = Color.parseColor("#ece9e1");
-            dim = Color.argb(115, 20, 24, 29);
+            sur2 = Color.parseColor("#f4f1ea");
+            brd = Color.parseColor("#e0dad0");
+            tx = Color.parseColor("#14161a");
+            mut = Color.parseColor("#6a6862");
+            inv = Color.parseColor("#14161a");
+            acc = Color.parseColor("#f05a28");
+            ok = Color.parseColor("#1e7f55");
+            sa = Color.parseColor("#ffffff");
+            sb = Color.parseColor("#f4f1ea");
+            dim = Color.argb(115, 20, 22, 26);
         }
     }
 
