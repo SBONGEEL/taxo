@@ -24,6 +24,9 @@ from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.promo import PromoPreviewOut, PromoValidateRequest
 from app.schemas.tip import TipCreate, TipOptionsOut, TipOut
 from app.schemas.ride import (
+    ApproachOut,
+    EtaCategoryOut,
+    EtaOut,
     CoordinatesIn,
     RecordedRouteOut,
     RideDriverStatsOut,
@@ -37,6 +40,7 @@ from app.schemas.ride import (
     RouteLineOut,
 )
 from app.services import approach, avatar, cancellation, rider_photo
+from app.services import eta
 from app.services import (
     dispatch,
     documents as documents_service,
@@ -225,6 +229,30 @@ async def get_my_rider_summary(user: RiderUser, session: DbSession) -> RiderSumm
     )
 
 
+@router.get("/eta", response_model=EtaOut)
+async def nearest_eta(
+    user: RiderUser,
+    session: DbSession,
+    redis: RedisDep,
+    lat: float = Query(ge=-90, le=90),
+    lng: float = Query(ge=-180, le=180),
+) -> EtaOut:
+    """«تصل خلال 3 د» لكلِّ فئةٍ قبل الطلب (R05 · R06، §٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ **بتفضيلها**، مخزَّناً دقيقةً لكلِّ خليّة.
+
+    **قبل `/{ride_id}`** في الترتيب: وإلا قُرئت «eta» معرّفَ رحلة.
+    """
+    if not await eta.enabled(session, user.country_code):
+        return EtaOut(enabled=False)
+    minutes = await eta.nearest_minutes(session, redis, rider=user, lat=lat, lng=lng)
+    return EtaOut(
+        enabled=True,
+        categories=[
+            EtaCategoryOut(vehicle_category=category, minutes=value)
+            for category, value in sorted(minutes.items(), key=lambda item: item[0].value)
+        ],
+    )
+
+
 @router.get("/me/active", response_model=RideOut | None)
 async def get_my_active_ride(
     user: CurrentUser, session: DbSession, side: RideSide = None
@@ -265,6 +293,38 @@ async def get_route_line(
         points=points or [],
         steps=route_line.decode_steps(ride.route_steps) if is_driver else [],
     )
+
+
+@router.get("/{ride_id}/offer-route", response_model=ApproachOut)
+async def get_offer_route(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
+) -> ApproachOut:
+    """مسارُ الكبتن المعروضِ عليه إلى الراكب (C05 «1.2 كم · 4 د»، §٦٢-ج/١٠) — **له وحدَه ما دام العرضُ قائماً**.
+
+    **يُطلب بعد وصول العرض لا قبله**: العرضُ لا ينتظر مزوّداً. **وإن قَبِل وهو طازجٌ صار اقترابَه** بلا نداءٍ ثانٍ.
+    """
+    await dispatch.require_offer(redis, ride_id, driver.id)
+    ride = await rides_service.get_ride(session, ride_id)
+    packed = await eta.offer_route(session, redis, ride=ride, driver_id=driver.id)
+    if packed is None:
+        raise NotFound("لا مسارَ لهذا العرض")
+    return ApproachOut(**packed)
+
+
+@router.get("/{ride_id}/approach", response_model=ApproachOut)
+async def get_approach(
+    ride_id: uuid.UUID, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> ApproachOut:
+    """مسارُ الاقتراب (C06 · R08، §٦٢-ج/١٠) — **لطرفَي الرحلة وحدهما**، والخطواتُ للكبتن.
+
+    **مخزَّنٌ من لحظة القبول** (مسارُ العرض نفسُه إن كان طازجاً)، ويُطلب هنا مرّةً إن لم يُكتب — **وبعد الوصول لا اقتراب**.
+    """
+    ride = await rides_service.get_ride_for_party(session, ride_id, user)
+    packed = await eta.approach(session, redis, ride=ride)
+    if packed is None:
+        raise NotFound("لا مسارَ اقترابٍ لهذه الرحلة")
+    is_driver = ride.driver is not None and ride.driver.user_id == user.id
+    return ApproachOut(**(packed | ({} if is_driver else {"steps": []})))
 
 
 @router.get("/{ride_id}/route", response_model=RecordedRouteOut)
@@ -463,6 +523,8 @@ async def accept_ride(
     # وفشلُه لا يمسّ القبول — `ensure` تبتلع خطأ المزوّد وتعيد `None`
     if await route_line.ensure(session, ride.id) is not None:
         await session.commit()
+    # **ومسارُ الاقتراب لحظةَ القبول** (§٦٢-ج/١٠) — مسارُ العرض الطازجُ نفسُه إن طُلب، فلا نداءَ ثانٍ؛ وفشلُه لا يمسّ القبول
+    await eta.approach(session, redis, ride=ride)
     return out
 
 

@@ -381,6 +381,7 @@ export type FeatureKey =
   | "vehicle_skins_enabled"
   | "driver_advances_enabled"
   | "next_instruction_enabled"
+  | "eta_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما

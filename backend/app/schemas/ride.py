@@ -493,6 +493,33 @@ class RouteStepOut(BaseModel):
     modifier: str | None = None
 
 
+class ApproachOut(BaseModel):
+    """مسارُ الكبتن إلى نقطة الالتقاء — للعرض (C05) أو الاقتراب (C06 · R08)، §٦٢-ج/١٠.
+
+    **`[[lng, lat]…]` كـ`RouteLineOut`**، ومعه مدّتُه ومسافتُه كما قالهما المزوّد — **والوقتُ المتبقّي يُحسب في الجهاز** من
+    الخطّ وموضع الكبتن لا بسؤالٍ ثانٍ (الاستطلاعُ يضاعف الفاتورة). **والخطواتُ للكبتن وحدَه** (الراكبُ لا يقودها).
+    """
+
+    points: list[list[float]]
+    steps: list[RouteStepOut] = []
+    duration_min: float
+    distance_km: float
+
+
+class EtaCategoryOut(BaseModel):
+    vehicle_category: VehicleCategory
+    #: دقائقُ أقربِ كبتنٍ متاحٍ من هذه الفئة — **دقيقةٌ واحدةٌ حدٌّ أدنى**
+    minutes: int
+
+
+class EtaOut(BaseModel):
+    """«تصل خلال 3 د» قبل الطلب (R05 · R06، §٦٢-ج/١٠) — **`enabled: false` حيث المفتاحُ مطفأ** فلا يُرسم شيء،
+    **وفئةٌ بلا كبتنٍ متاحٍ غائبةٌ** لا «بعيدة»."""
+
+    enabled: bool
+    categories: list[EtaCategoryOut] = []
+
+
 class RouteLineOut(BaseModel):
     """شكلُ مسار الرحلة كما قاله Mapbox — `[[lng, lat], …]` (البند ٨).
 
