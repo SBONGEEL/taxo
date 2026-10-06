@@ -35,10 +35,10 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
 
+// **بلغة «TaxoMap» كخريطة الراكب** (٢٠٢٦-١٠-٠٧، §٦٢-ب/٥١): كانت `streets-v12` بألوانها ومعالمها — **والسؤالُ هنا «أتُقرأ المركبةُ وسط
+// ما على خريطة الراكب؟»**، وخريطةُ الراكب صارت «TaxoMap» في المظهرين (§٦٢-ب/٤٣). فقاعدةُ اللوحة الهادئةُ وصبغُها (`lib/taxo-map`)
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, taxoLook } from "@/lib/taxo-map";
 import { useTheme } from "@/lib/theme";
-
-const STYLE_LIGHT = "mapbox://styles/mapbox/streets-v12";
-const STYLE_DARK = "mapbox://styles/mapbox/dark-v11";
 
 /** **مقاسُ علامة الكبتن على خريطة الراكب** — ٣٠ بكسل CSS.
  *
@@ -85,6 +85,8 @@ export function SkinMapPreview({
 }: Props) {
   const holder = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  // **الستايلُ المعروضُ الآن** — يُقارَن به قبل التبديل، كـ`LiveCanvas`
+  const shown = useRef<string | null>(null);
   const subject = useRef<mapboxgl.Marker | null>(null);
   const extras = useRef<mapboxgl.Marker[]>([]);
   const { dark } = useTheme();
@@ -106,14 +108,20 @@ export function SkinMapPreview({
   useEffect(() => {
     if (!token || !holder.current || map.current) return;
     mapboxgl.accessToken = token;
-    map.current = new mapboxgl.Map({
-      container: holder.current,
-      style: dark ? STYLE_DARK : STYLE_LIGHT,
+    const host = holder.current;
+    const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+    shown.current = style;
+    const instance = new mapboxgl.Map({
+      container: host,
+      style,
       language: MAP_LANGUAGE,
       center: CENTER,
       zoom: 15.4,
       attributionControl: false,
     });
+    map.current = instance;
+    // **الصبغُ مع كلِّ ستايلٍ يُحمَّل** — تبديلُ المظهر يمسحه كما يمسح الطبقات
+    instance.on("style.load", () => taxoLook(instance, host));
     return () => {
       map.current?.remove();
       map.current = null;
@@ -122,8 +130,14 @@ export function SkinMapPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // **يُبدَّل حين تتبدّل السمةُ لا عند التركيب** — `setStyle` بالستايل نفسِه «يُفرّق» عليه فيعيد ألوانَ Mapbox فوق الصبغ بلا `style.load`
+  // يعيده (قاعدةُ `LiveCanvas` بعلّتها، ومثلُها أُصلح في معاينة الكبتن af9e7a4)؛ و`diff: false` تحميلٌ كاملٌ يطلق `style.load`
   useEffect(() => {
-    map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT);
+    const instance = map.current;
+    const style = dark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+    if (!instance || shown.current === style) return;
+    shown.current = style;
+    instance.setStyle(style, { diff: false } as Parameters<mapboxgl.Map["setStyle"]>[1]);
   }, [dark]);
 
   // **العلامةُ تُحدَّث ولا تُعاد** — قاعدةُ `LiveCanvas` نفسُها: إعادةُ بنائها
