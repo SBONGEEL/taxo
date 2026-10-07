@@ -16,12 +16,13 @@ import type {
   GenderPreference,
   PromoPreview,
   RideEstimate,
+  RideForOther,
   VehicleCategory,
 } from "@/api/types";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { earliest, localInputValue, useScheduledRides } from "@/lib/bookings";
+import { requesterCanPay, usePayerPreference, useRideForOther } from "@/lib/for-other";
 import { useMultiStop } from "@/lib/multistop";
-import { usePaymentPreference } from "@/lib/payment";
 import { usePromoCodes } from "@/lib/promo";
 import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
@@ -99,6 +100,8 @@ export interface ConfirmRideProps {
     preference: GenderPreference,
     promoCode?: string,
     sharing?: { share: boolean; shareGenderConfirmed: boolean },
+    /** **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — الراكبُ الفعليُّ ومن يدفع، أو غيابُه لرحلةٍ يركبها صاحبُها. */
+    forOther?: RideForOther,
   ) => void;
   requesting: boolean;
   requestError: string | null;
@@ -165,10 +168,18 @@ export function useConfirmRide({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): مسوّدةٌ في الورقة حتى يُرسل الطلب — **ومفتاحُها يخفي الخيارَ كلَّه**. **ولا تُعرض في
+  // الحجز** (الحجزُ لا يحملها بعد، `createBooking`)، **ولا مع المشاركة**: راكبٌ غريبٌ في سيارةٍ طُلبت لغيرك لم يُقرَّر
+  const forOtherEnabled = useRideForOther();
+  const [forOtherDraft, setForOther] = useState<RideForOther | null>(null);
+  // **ولا تُقرأ مسوّدةٌ بقيت من مفتاحٍ أُطفئ بعدها** — لا في الطلب ولا في قنوات الدفع
+  const forOther = forOtherEnabled ? forOtherDraft : null;
+
   // **طريقةُ الدفع تفضيلٌ محلّي** (قرار 3): تُعرض هنا وتُمرَّر إلى شاشة الدفع،
-  // ولا تُرسل مع الطلب ولا تُقيّد صاحبَها بعد الرحلة
+  // ولا تُرسل مع الطلب ولا تُقيّد صاحبَها بعد الرحلة.
+  // **ومضيَّقةٌ بالدافع في رحلةٍ لغيره** (`usePayerPreference`): المحفظةُ والبطاقةُ وحدهما، أو لا قناةَ إن دفع الراكبُ نقداً
   const { available: channels, resolved: payMethod, choose } =
-    usePaymentPreference(countryConfig);
+    usePayerPreference(countryConfig, forOther?.payer ?? null);
   const [pickingPay, setPickingPay] = useState(false);
 
   // الرصيدُ يُقرأ لسطرِ الملاحظة وحدَه (`walletSub` و`fareNote` في التصميم) —
@@ -291,13 +302,20 @@ export function useConfirmRide({
    * `screens/Payment.tsx`). والصياغةُ تقديرٌ لا إخبار («ستُخصم» لا «خُصمت»)
    * كما يفرض القرار 3: الأجرةُ النهائيةُ تُحسب على المسار الفعلي.
    */
+  //
+  // **وفي رحلةٍ لغيره لا باقيَ نقداً** (`cash_remainder=False`): محفظةٌ لا تغطّي **ترتدّ** (`insufficient_balance`) — فالسطرُ
+  // القائمُ («تدفع الباقي كاشاً») يَعِد بما لا يقع، ويُقال بدله ما يقع
   const walletNote =
     payMethod?.method !== "wallet" || balance === null || shownFare === null
       ? null
       : Number(balance) <= 0
-        ? "لا رصيد في محفظتك — اشحنها أو اختر طريقةً أخرى عند الدفع."
+        ? forOther
+          ? "لا رصيد في محفظتك — اشحنها قبل الدفع أو ادفع بالبطاقة."
+          : "لا رصيد في محفظتك — اشحنها أو اختر طريقةً أخرى عند الدفع."
         : Number(balance) < Number(shownFare)
-          ? "رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن."
+          ? forOther
+            ? "رصيدك لا يغطّي الأجرة المقدَّرة — الرحلةُ لغيرك تُدفع كاملةً من المحفظة أو بالبطاقة، بلا باقٍ نقداً."
+            : "رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن."
           : null;
 
   return {
@@ -342,5 +360,10 @@ export function useConfirmRide({
     shareReady,
     shownFare,
     walletNote,
+    // **خيارُ «لشخص آخر» حيث المفتاحُ مشتعلٌ وليس حجزاً**
+    forOtherOffered: forOtherEnabled && !scheduling,
+    forOther,
+    setForOther,
+    requesterPayable: requesterCanPay(countryConfig),
   };
 }

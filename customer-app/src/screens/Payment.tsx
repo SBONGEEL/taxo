@@ -23,6 +23,9 @@
  * **بلغة TAXO 2.0** (لوحاتُ `design/t2-new/rider/R19` · `R19b` · `R19c`): بنيةُ R10 — رأسٌ، وبطاقةُ الأجرة وحبّةُ القناة، والزرُّ
  * في القاع بالجمر («طلب / قبول» في الهوية)، **والبطاقةُ ورقةٌ** أختُ «طريقة الدفع». **والنداءاتُ والمفاتيحُ والاستطلاعُ والأصواتُ
  * حرفاً.**
+ *
+ * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الطالبُ يدفع بالمحفظة أو البطاقة وحدهما، **وإن دفع الراكبُ نقداً فالشاشةُ حالٌ تُقرأ** —
+ * «يدفعها الراكبُ نقداً للكبتن» — **بلا قناةٍ ولا زرِّ دفع**.
  */
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -38,8 +41,9 @@ import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
+import { usePayerPreference } from "@/lib/for-other";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
-import { usePaymentPreference, type PayableMethod } from "@/lib/payment";
+import type { PayableMethod } from "@/lib/payment";
 import { useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { play } from "@/lib/sound";
@@ -139,7 +143,13 @@ export function PaymentScreen() {
   // **القناةُ المختارةُ قبل الرحلة هي ما تفتح عليه الشاشة** — والقائمةُ نفسُها
   // وراء «طريقة أخرى»، فالاختيارُ هنا يُحدّث التفضيلَ أيضاً: من بدّلها عند
   // الدفع بدّلها عن قصد، وتفضيلٌ لا يتعلّم من ذلك يُعاد تصحيحُه كلَّ رحلة
-  const { available, resolved, choose } = usePaymentPreference(country);
+  //
+  // **وفي رحلةٍ لغيره تضيق القنواتُ بالدافع** (§٦٣-ج/١، `usePayerPreference`): الطالبُ يدفع بالمحفظة أو البطاقة وحدهما
+  // (والخلفيةُ ترفض غيرَهما `payer_method_mismatch`)، **وإن دفع الراكبُ نقداً فلا قناةَ يختارها أحدٌ هنا** — دفعتُه فتحتها
+  // الخلفيةُ عند الإنهاء، **وكلُّ قناةٍ من هنا ترتدّ ٤٠٩**. فالشاشةُ تقول ذلك بدل زرٍّ يرتدّ
+  const payer = ride?.for_other ? ride.payer : null;
+  const passengerCash = payer === "passenger_cash";
+  const { available, resolved, choose } = usePayerPreference(country, payer);
 
   const load = useCallback(async () => {
     const [row, payments] = await Promise.all([
@@ -179,6 +189,8 @@ export function PaymentScreen() {
    */
   const settlement = state?.settlement ?? "not_due";
   const awaiting = (state?.payments ?? []).filter((row) => row.status === "pending");
+  // **دفعةُ نقد الراكب الفعليّ** كما فتحتها الخلفيةُ عند الإنهاء (§٦٣-ج/١) — مبلغُها يُقرأ ولا يُحسب
+  const passengerDue = passengerCash ? awaiting.find((row) => row.method === "cash") : undefined;
   const settled = settlement === "settled";
   const nothingToStart = settlement === "awaiting" || settlement === "disputed";
 
@@ -360,20 +372,38 @@ export function PaymentScreen() {
               </div>
             </div>
           ) : null}
-          {awaiting.map((row) => (
-            <div key={row.id} className="t2-callout warn t2-m-callout">
-              <Icon name="hourglass_top" />
-              <div className="t2-callout-main">
-                <p className="t2-callout-title">
-                  {row.method === "cash"
-                    ? `سلّم ${formatMoney(row.amount, row.currency)} كاشاً للكبتن`
-                    : `${formatMoney(row.amount, row.currency)} بقناة ${PAYMENT_METHOD_LABEL[row.method]} بانتظار التأكيد`}
-                </p>
-                <p className="t2-callout-body">يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.</p>
+          {/* **نقدُ الراكب الفعليّ لا يسلّمه صاحبُ الحساب** (§٦٣-ج/١) — «سلّم كاشاً» أمرٌ لمن ليس في السيارة، فسطرُه أدناه */}
+          {awaiting
+            .filter((row) => !(passengerCash && row.method === "cash"))
+            .map((row) => (
+              <div key={row.id} className="t2-callout warn t2-m-callout">
+                <Icon name="hourglass_top" />
+                <div className="t2-callout-main">
+                  <p className="t2-callout-title">
+                    {row.method === "cash"
+                      ? `سلّم ${formatMoney(row.amount, row.currency)} كاشاً للكبتن`
+                      : `${formatMoney(row.amount, row.currency)} بقناة ${PAYMENT_METHOD_LABEL[row.method]} بانتظار التأكيد`}
+                  </p>
+                  <p className="t2-callout-body">يكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها في تطبيقه.</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </>
+      ) : null}
+
+      {/* **يدفعها الراكبُ نقداً — حالٌ تُقرأ لا قناةٌ تُختار** (§٦٣-ج/١): دفعتُه تفتحها الخلفيةُ عند الإنهاء، **فلا زرَّ دفعٍ ولا
+          «طريقة أخرى»** — كلُّ قناةٍ من هذا الحساب ترتدّ. **والمبلغُ مبلغُ دفعته كما فتحتها** حين تكون قد فُتحت */}
+      {passengerCash && !settled && settlement !== "disputed" ? (
+        <div className="t2-callout t2-m-callout">
+          <Icon name="payments" />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">يدفعها الراكبُ نقداً للكبتن</p>
+            <p className="t2-callout-body">
+              {passengerDue ? `${formatMoney(passengerDue.amount, passengerDue.currency)} — ` : ""}
+              لا شيءَ تدفعه من تطبيقك، ويكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {/* صفحة دفع كليك داخل التطبيق (SPEC القسم 6.2 — المرحلة 9) */}
@@ -383,7 +413,7 @@ export function PaymentScreen() {
 
       <div className="t2-m-push" />
 
-      {settled || nothingToStart ? (
+      {settled || nothingToStart || passengerCash ? (
         <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${rideId}/rate`)}>
           قيّم رحلتك
         </button>

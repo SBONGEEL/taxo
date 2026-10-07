@@ -19,6 +19,9 @@
  * **وما في الورقة القائمة ولم يُرسم يبقى بلغة اللوحة**: المحطاتُ وترتيبُها · ملاحظةُ رسم الانتظار · المشاركة · رصيدُ
  * المحفظة · الحجز · الحدُّ الأدنى للأجرة · سطرُ «السعر النهائي قد يتغيّر». **و«رجوع» صار زرَّ السهم فوق الخريطة** كما رُسم.
  * **ومقدارُ الخصم وإزالةُ الكوبون** خلف لمسة «مطبّق» — الشارةُ كما رُسمت، والفعلُ باقٍ.
+ *
+ * **و«لشخص آخر»** (§٦٣-ج/١، `ForOtherT2.tsx`) — لا لوحةَ لها: بطاقةُ «المشاركة» خياراً، وشارةُ «لـ: الاسم» بعده، **ولا تُجمع مع
+ * المشاركة ولا مع الحجز** (كلٌّ معطَّلٌ بعلّته حين يُختار الآخر). **وقنواتُ الدفع تضيق بالدافع** في الخطّاف لا هنا.
  */
 
 import { useEffect, useState } from "react";
@@ -34,6 +37,7 @@ import { PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels"
 import { MAX_STOPS } from "@/lib/multistop";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
+import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
 import { SheetT2 } from "./SheetT2";
 import { WomenRequestHeadT2 } from "./WomenRideT2";
 import { DateField } from "@/taxo2";
@@ -130,6 +134,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   const fares = useCategoryFares(props, c.category, c.loading ? null : c.estimate);
   // **تفصيلُ الكوبون خلف لمسة «مطبّق»**: مقدارُ الخصم وإزالتُه — الشارةُ كما رُسمت، والفعلُ باقٍ
   const [promoOpen, setPromoOpen] = useState(false);
+  // **ورقةُ «لشخص آخر»** (§٦٣-ج/١) — مفتوحةٌ للاختيار أو للتعديل؛ والمسوّدةُ نفسُها في `useConfirmRide`
+  const [forOtherOpen, setForOtherOpen] = useState(false);
   // **RW2 — الطلبُ النسائيّ** (§٦٢-ج/٢٣): تفضيلُ هذا الطلب «كبتنة» لمن عُرضت عليها الخدمة — **وهي تغيّره من المنتقي نفسِه**
   const women = c.women.available && c.preference === "female";
   const meta = c.estimate && !c.loading ? `${formatDistance(c.estimate.distance_km)} · ${shortDuration(c.estimate.duration_min)}` : null;
@@ -146,10 +152,17 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             disabled={!c.estimate || c.loading || requesting}
             aria-busy={requesting}
             onClick={() =>
-              props.onRequest(c.category, c.preference, c.applied?.code, {
-                share: c.shareReady,
-                shareGenderConfirmed: c.shareReady && c.shareGuarded,
-              })
+              props.onRequest(
+                c.category,
+                c.preference,
+                c.applied?.code,
+                // **والمشاركةُ لا تُرسل مع رحلةٍ لغيره** — الخياران لا يُجمعان في الورقة، وهذا يمنع ما قد يبقى منهما
+                {
+                  share: c.shareReady && !c.forOther,
+                  shareGenderConfirmed: c.shareReady && c.shareGuarded && !c.forOther,
+                },
+                c.forOther ?? undefined,
+              )
             }
           >
             <span>{requesting ? "نرسل طلبك…" : women ? "اطلبي كبتنة" : `اطلب ${VEHICLE_LABEL[c.category]}`}</span>
@@ -358,6 +371,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               type="checkbox"
               className="t2-check"
               checked={c.share}
+              // **ولا تُجمع مع رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) — والعلّةُ مكتوبةٌ تحتها لا زرٌّ ميّتٌ بلا سبب
+              disabled={c.forOther !== null}
               onChange={(event) => {
                 c.setShare(event.target.checked);
                 if (!event.target.checked) c.setShareGendered(false);
@@ -369,9 +384,15 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 شارك الرحلة ووفّر
               </span>
               <span className="t2-share-body">
-                قد ينضم راكبٌ آخر في طريقك، وتدفع {formatMoney(c.estimate!.share_fare!, c.estimate?.currency)} بدل{" "}
-                {formatMoney(c.estimate!.estimated_fare, c.estimate?.currency)} — وتصل متأخراً قليلاً. والسعرُ لك حتى لو لم
-                يوجد شريك.
+                {c.forOther !== null ? (
+                  "لا تُجمع مع رحلةٍ لشخصٍ آخر."
+                ) : (
+                  <>
+                    قد ينضم راكبٌ آخر في طريقك، وتدفع {formatMoney(c.estimate!.share_fare!, c.estimate?.currency)} بدل{" "}
+                    {formatMoney(c.estimate!.estimated_fare, c.estimate?.currency)} — وتصل متأخراً قليلاً. والسعرُ لك حتى
+                    لو لم يوجد شريك.
+                  </>
+                )}
               </span>
             </span>
           </label>
@@ -389,6 +410,16 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             </label>
           ) : null}
         </div>
+      ) : null}
+
+      {/* **«لشخص آخر»** (§٦٣-ج/١) — حيث المفتاحُ مشتعلٌ وليس حجزاً، **ومعطَّلٌ بعلّته مع المشاركة** */}
+      {c.forOtherOffered ? (
+        <ForOtherOptionT2
+          draft={c.forOther}
+          blockedBy={c.share ? "لا تُجمع مع مشاركة الرحلة — ألغِ المشاركةَ لتطلبها لغيرك." : null}
+          onOpen={() => setForOtherOpen(true)}
+          onClear={() => c.setForOther(null)}
+        />
       ) : null}
 
       {blockedByPreference ? (
@@ -444,17 +475,24 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            className="t2-button secondary t2-schedule-open"
-            onClick={() => {
-              c.setWhen(localInputValue(earliest()));
-              c.setScheduling(true);
-            }}
-          >
-            <span className="t2-icon" aria-hidden="true">event_upcoming</span>
-            حدّد موعداً
-          </button>
+          <>
+            <button
+              type="button"
+              className="t2-button secondary t2-schedule-open"
+              // **الحجزُ لا يحمل رحلةً لغيره بعد** (`createBooking`) — وحجزٌ يُثبَّت بلا راكبه يُسقط ما كتبه صاحبُه صامتاً
+              disabled={c.forOther !== null}
+              onClick={() => {
+                c.setWhen(localInputValue(earliest()));
+                c.setScheduling(true);
+              }}
+            >
+              <span className="t2-icon" aria-hidden="true">event_upcoming</span>
+              حدّد موعداً
+            </button>
+            {c.forOther !== null ? (
+              <p className="t2-sheet-fine">الحجزُ لموعدٍ لا يحمل رحلةً لشخصٍ آخر بعد — أزِل «لـ: {c.forOther.name}» لتحجز.</p>
+            ) : null}
+          </>
         )
       ) : null}
 
@@ -467,6 +505,18 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           onSelect={c.choose}
           onClose={() => c.setPickingPay(false)}
           walletHint={c.balance === null ? null : `الرصيد: ${formatMoney(c.balance, currency)}`}
+        />
+      ) : null}
+
+      {forOtherOpen ? (
+        <ForOtherSheetT2
+          initial={c.forOther}
+          requesterPayable={c.requesterPayable}
+          onSave={(next) => {
+            c.setForOther(next);
+            setForOtherOpen(false);
+          }}
+          onClose={() => setForOtherOpen(false)}
         />
       ) : null}
     </SheetT2>

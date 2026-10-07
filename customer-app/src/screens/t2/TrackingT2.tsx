@@ -19,6 +19,9 @@
  * **وما في الورقة القائمة ولم يُرسم يبقى بلغة اللوحة**: شارةُ «رحلة نسائية» وانتظارُ الكبتنة واقتراحُ المشاركة لها (§61: كما هي
  * اليوم) · شارتا المشاركة · المحطاتُ وعدّادُ الانتظار والوقفةُ غيرُ المخطَّطة (مالٌ يُقال حين ينشأ) · رسمةُ مركبة المتجر · أسبابُ
  * الإلغاء بعد القبول.
+ *
+ * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١، `ForOtherTrackT2`) — لا لوحةَ لها: اسمُ الراكب حين يُنشر، وسطرُ الدافع، و«شارك رابط التتبّع»
+ * في الأطوار الثلاثة؛ **وقنواتُ الدفع المعروضةُ تضيق بالدافع** (`usePayerPreference`).
  */
 
 import { useEffect, useState } from "react";
@@ -32,12 +35,13 @@ import { StopProgress } from "@/components/ride/StopProgress";
 import { CANCELLABLE, shareRide, useTrackingSheet } from "@/components/ride/useTrackingSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
+import { usePayerPreference } from "@/lib/for-other";
 import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
-import { usePaymentPreference } from "@/lib/payment";
 import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
 import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney, ratedAverage } from "@/lib/utils";
 
+import { ForOtherTrackT2 } from "./ForOtherT2";
 import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
 import { isWomenRide, RideCodeCardT2, WomenApproachChipT2, womenApproachTitle, WomenCaptainCardT2 } from "./WomenRideT2";
@@ -105,8 +109,13 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   const t = useTrackingSheet({ ride, onChanged });
   const driverRides = useDriverRides(ride);
   const countryConfig = useCountryConfig(ride.country_code);
-  // **طريقةُ الدفع تفضيلٌ محلّي** كما في ورقة الطلب — تُعرض هنا وتُبدَّل، **ولا تُرسل مع الرحلة** (`lib/payment`)
-  const { available: channels, resolved: payMethod, choose } = usePaymentPreference(countryConfig);
+  // **طريقةُ الدفع تفضيلٌ محلّي** كما في ورقة الطلب — تُعرض هنا وتُبدَّل، **ولا تُرسل مع الرحلة** (`lib/payment`).
+  // **ومضيَّقةٌ بالدافع في رحلةٍ لغيره** (§٦٣-ج/١): المحفظةُ والبطاقةُ وحدهما، **ولا قناةَ تُعرض** إن دفع الراكبُ نقداً —
+  // فسطرُ الدافع في كتلتها (`ForOtherTrackT2`) هو ما يُقال بدلها
+  const { available: channels, resolved: payMethod, choose } = usePayerPreference(
+    countryConfig,
+    ride.for_other ? ride.payer : null,
+  );
   const [pickingPay, setPickingPay] = useState(false);
 
   const share = async () => {
@@ -226,6 +235,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             </div>
           </div>
         </div>
+        {/* **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الدافعُ ورابطُ التتبّع من أوّل البحث — والاسمُ لا يُنشر قبل القبول */}
+        {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
         {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
         {t.women ? (
           <p className="t2-note">
@@ -323,6 +334,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             </div>
           </div>
         ) : null}
+        {/* **الراكبُ الفعليُّ والدافعُ ورابطُ التتبّع** (§٦٣-ج/١) — تحت بطاقة الرحلة */}
+        {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
         {skinRow}
         {shareRow}
         {payMethod ? (
@@ -413,6 +426,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           ) : null}
         </div>
       ) : null}
+      {/* **الراكبُ الفعليُّ والدافعُ ورابطُ التتبّع** (§٦٣-ج/١) — تحت بطاقة الكبتن */}
+      {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
       {skinRow}
       {/* **انتظارُ الوصول يُقال حين ينشأ** (§5.10) — مالٌ في لحظته كما في الورقة القائمة */}
       <PauseNotice ride={ride} />

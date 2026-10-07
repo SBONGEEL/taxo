@@ -28,6 +28,7 @@ import type {
   PaymentMethod,
   PlaceIcon,
   PromoPreview,
+  PublicTrack,
   Rating,
   RatingTag,
   RecordedRoute,
@@ -35,6 +36,7 @@ import type {
   Ride,
   RideDriverStats,
   RideEstimate,
+  RideForOther,
   RideGroup,
   RideListItem,
   RidePayments,
@@ -191,7 +193,20 @@ export const requestRide = (payload: {
    *  `share` يجعل الموافقةَ ضمنيةً — والقبولُ الصامتُ لا يكفي أمناً. */
   share?: boolean;
   share_gender_confirmed?: boolean;
+  /** **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — غيابُه رحلةٌ يركبها صاحبُها. والخلفيةُ تفحص المفتاحَ **عند الإنشاء**، فرفضُه
+   *  (`ride_for_other_unavailable`) يصل برسالته ولو أخفت الواجهةُ الخيار. */
+  for_other?: RideForOther;
 }) => api.post<Ride>("/rides", payload);
+
+/** **رمزُ رابط التتبّع** لرحلةٍ يطلبها لغيره (§٦٣-ج/١) — **الرمزُ نفسُه في كلِّ ضغطة**، والتطبيقُ يبني الرابطَ من عنوانه هو
+ *  (`lib/for-other.ts::trackUrl`)، فلا نطاقَ مكتوبٌ في الخلفية يفترق عن مكان التطبيق. */
+export const createTrackLink = (rideId: string) =>
+  api.post<{ token: string }>(`/rides/${rideId}/track-link`);
+
+/** **ما يراه من يفتح الرابط** — بابٌ عامٌّ **بلا توكن** (`anonymous`): الرمزُ العشوائيُّ هو الإذنُ كلُّه، وزائرُ الصفحة
+ *  لا حسابَ له أصلاً. ورمزٌ لا يُعرف ⇒ ٤٠٤. */
+export const getPublicTrack = (token: string, signal?: AbortSignal) =>
+  api.get<PublicTrack>(`/public/track/${encodeURIComponent(token)}`, { anonymous: true, signal });
 
 // ------------------------------------------------------- الأماكن المحفوظة
 

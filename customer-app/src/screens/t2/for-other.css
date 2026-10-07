@@ -1,0 +1,150 @@
+/* ═══ TAXO 2.0 — «رحلةٌ لشخصٍ آخر» (§٦٣-ج/١) — **لا لوحةَ لها**، فتُركَّب من عُدّة الهوية: بطاقةُ «المشاركة» وشارتُها، وبطاقتا
+ * «اختر الفئة»، وبطاقةُ الكبتن في التتبّع ولوحتُه. **تخطيطُها وحدَه، بالرموز وحدَها** — الفاتحُ والداكنُ والنسائيّ.
+ */
+
+/* ── الخيارُ في ورقة الطلب: بطاقةُ «المشاركة» زرّاً، وسهمُها ── */
+.t2-fo-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-fo-open:disabled { cursor: default; }
+.t2-fo-open:disabled .t2-share-title { color: var(--t2-muted); }
+.t2-fo-open-go { flex: none; font-size: 20px; color: var(--t2-muted); }
+
+/* ── شارةُ «لـ: الاسم» بعد الاختيار — بتعديلها وإزالتها ── */
+.t2-fo-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 8px 10px 12px;
+  border: 1.5px solid var(--t2-text);
+  border-radius: 18px;
+  background: var(--t2-surface);
+}
+.t2-fo-chip-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--t2-well);
+}
+.t2-fo-chip-icon .t2-icon { font-size: 20px; }
+.t2-fo-chip-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.t2-fo-chip-title { overflow: hidden; font-size: 14px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.t2-fo-chip-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-fo-chip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--t2-muted);
+  cursor: pointer;
+}
+.t2-fo-chip-btn .t2-icon { font-size: 20px; }
+
+/* ── ورقةُ الراكب: بطاقتا «من يدفع» تتّسعان لسطرين، والمعطَّلةُ خافتة ── */
+.t2-fo-payers .t2-cat { height: auto; min-height: 62px; padding: 10px 12px; }
+.t2-fo-payers .t2-cat:disabled { opacity: 0.45; cursor: default; }
+.t2-fo-keep { margin-bottom: 8px; color: var(--t2-muted); }
+.t2-fo-save { width: 100%; }
+
+/* ── كتلتُها في التتبّع: الراكبُ والدافعُ في بطاقة، ثمّ «شارك رابط التتبّع» ── */
+.t2-fo-ride { margin: 10px 0 8px; }
+.t2-fo-ride-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--t2-surface);
+}
+.t2-fo-ride-name,
+.t2-fo-ride-payer { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.t2-fo-ride-name b { font-weight: 700; }
+.t2-fo-ride-payer { font-size: 13px; color: var(--t2-muted); }
+.t2-fo-ride-name .t2-icon,
+.t2-fo-ride-payer .t2-icon { flex: none; font-size: 20px; }
+.t2-fo-link { width: 100%; margin-top: 8px; }
+.t2-fo-ride .t2-error { margin: 8px 0 0; }
+
+/* ═══ صفحةُ التتبّع العامّة «/t/:token» — **بلا دخول**، بلغة بطاقة الكبتن في R08 ═══ */
+/* **والرأسُ عنوانٌ بلا زرِّ رجوع** — فيُعطى من الأعلى ما يعطيه الزرُّ (٤٤) لأخواته، ولا يلتصق بحافّة الشاشة */
+.t2.t2-pt {
+  min-height: 100%;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--t2-bg);
+  color: var(--t2-text);
+}
+.t2-pt-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--t2-surface);
+}
+.t2-pt-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-pt-state-icon .t2-icon { font-size: 24px; }
+.t2-pt-state-icon.ended { background: var(--t2-sunken); color: var(--t2-muted); }
+.t2-pt-state-icon.danger { background: var(--t2-danger-soft); color: var(--t2-danger); }
+.t2-pt-state-text { margin: 0; font-size: 19px; font-weight: 700; }
+.t2-pt-state-sub { margin: 2px 0 0; font-size: 13px; color: var(--t2-muted); }
+.t2-pt .t2-trk-bar { margin: 12px 0 0; }
+.t2-pt-map {
+  position: relative;
+  height: 220px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--t2-well);
+}
+.t2-pt-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--t2-surface);
+}
+.t2-pt-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--t2-well);
+}
+.t2-pt-avatar .t2-icon { font-size: 26px; color: var(--t2-muted); }
+.t2-pt-card-main { flex: 1; min-width: 0; }
+.t2-pt-maps { width: 100%; margin-top: 12px; text-decoration: none; }

@@ -28,6 +28,12 @@ export type DriverStatus =
 /** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
 export type GenderPreference = "male" | "female" | "any";
 
+/** **من يدفع أجرةَ رحلةٍ طُلبت لشخصٍ آخر** (§٦٣-ج/١) — مرآةُ `RidePayer` في الخلفية بعضوَيها.
+ *
+ *  `requester` صاحبُ الطلب **من تطبيقه** (محفظةٌ أو بطاقة) — **فلا يقبض الكبتنُ شيئاً**؛ و`passenger_cash` الراكبُ الفعليُّ
+ *  نقداً، **ودفعتُه تفتحها الخلفيةُ عند الإنهاء** فيؤكّدها الكبتنُ كأيِّ دفعةِ كاش. */
+export type RidePayer = "requester" | "passenger_cash";
+
 export type DocumentType =
   
   | "driving_license"
@@ -396,6 +402,14 @@ export interface Ride {
   current_fare: string;
   /** **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، CW4) — السؤالُ وحدَه؛ والرمزُ عند الراكبة، **ولا يصل هذا التطبيقَ في أيِّ تمثيل**. */
   start_code_required: boolean;
+
+  /** **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — `for_other` و`payer` يُنشران دائماً، **وعلى بطاقة العرض قبل القبول**: من قَبِل وهو
+   *  يعرف أنه يقبض من غير صاحب الطلب أو لا يقبض شيئاً لا يشتكي (حجّةُ «محجوزة» و«مشتركة»). **والاسمُ والرقمُ بعد القبول
+   *  وحدَه وحتى الانتهاء** (`null` على العرض وبعده) — الرقمُ أُعطي ليتصل به من يأتي، لا ليمرّ على كلِّ من عُرض عليه. */
+  for_other: boolean;
+  payer: RidePayer;
+  passenger_name: string | null;
+  passenger_phone: string | null;
 
   current_leg: number;
   waiting_charge: string;

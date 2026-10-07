@@ -35,6 +35,7 @@ import type {
   GenderPreference,
   MyReferrals,
   Ride,
+  RideForOther,
   Storefront,
   VehicleCategory,
   Wallet,
@@ -365,6 +366,7 @@ export function HomeScreen() {
     preference: GenderPreference,
     promoCode?: string,
     sharing?: { share: boolean; shareGenderConfirmed: boolean },
+    forOther?: RideForOther,
   ) {
     if (!pickup || !dropoff) return;
     setRequesting(true);
@@ -385,6 +387,8 @@ export function HomeScreen() {
         // تُسقطها بصمت — فالتطبيقُ يرسل ما اختارته لا ما يُريحه
         share: sharing?.share,
         share_gender_confirmed: sharing?.shareGenderConfirmed,
+        // **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الراكبُ الفعليُّ ومن يدفع — والخلفيةُ تطبّع الرقمَ وتفحص المفتاحَ عند الإنشاء
+        for_other: forOther,
         stops: stops.map((stop) => ({
           lat: stop.lat,
           lng: stop.lng,

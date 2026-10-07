@@ -16,12 +16,16 @@
  * **و«CW3» وجهُ هذه البطاقة لطلبٍ طُلبت فيه كبتنة** (§٦٢-ج/٢٣، `WomenRideT2.tsx` — وما لم يُبنَ منها بعلّته هناك): «رحلة نسائية ·
  * الفئة» بالبرقوق **مكانَ** «طلب جديد» وشارةِ «طلب نسائي»، وحافّةُ البطاقة وقوسُ المهلة و«قبول» بالبرقوق — **والقبولُ والرفضُ هما هما**.
  * **وطلبُ «ذكور» لم يعد يُوسم «طلب نسائي»** (`APPROVALS-WOMEN-MODES.md` §٦).
+ *
+ * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — شارةُ «لشخص آخر» بين أخواتها **وسطرُ الدافع تحتها** (`ForOtherT2`)، بلا لوحة: من قَبِل وهو
+ * يعرف أنه يقبض من غير صاحب الطلب أو لا يقبض شيئاً لا يشتكي.
  */
 
 import type { Offer } from "@/lib/ride";
 import { useOfferCountdown } from "@/components/OfferSheet";
 import { bookedTime, trimDistance } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
+import { PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { WomenOfferChipT2, isWomenRide } from "@/screens/t2/WomenRideT2";
 import { Icon } from "@/taxo2";
 
@@ -108,6 +112,8 @@ export function OfferT2({
 
           {/* **شاراتُ الطلب — بنصّها وشرطها من `OfferSheet` حرفاً**، وتُقرأ قبل القبول لا بعده */}
           <OfferTags offer={offer} currencyLabel={currencyLabel} />
+          {/* **من يدفع رحلةً لشخصٍ آخر — يُقرأ قبل القبول** (§٦٣-ج/١): نقدٌ من الراكب الفعليّ، أو لا شيءَ يُقبض أصلاً */}
+          {ride.for_other ? <PayerNoteT2 payer={ride.payer} /> : null}
 
           <div className="t2-of-near">
             <Icon name="near_me" />
@@ -148,9 +154,11 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
   const { ride } = offer;
   const shared = Number(ride.share_discount_percent) > 0;
   const carried = Number(ride.carried_cancellation_fee ?? 0) > 0;
-  if (!shared && !ride.scheduled_for && ride.stops.length === 0 && !carried) return null;
+  if (!shared && !ride.scheduled_for && ride.stops.length === 0 && !carried && !ride.for_other) return null;
   return (
     <div className="t2-of-tags">
+      {/* **«لشخص آخر»** (§٦٣-ج/١) — الراكبُ غيرُ صاحب الحساب، واسمُه ورقمُه يصلانه بعد القبول وحدَه */}
+      {ride.for_other ? <span className="t2-of-tag">لشخص آخر</span> : null}
       {shared ? <span className="t2-of-tag">مشتركة — قد ينضم راكب ثانٍ</span> : null}
       {ride.scheduled_for ? (
         <span className="t2-of-tag">محجوزة — {bookedTime(ride.scheduled_for)}</span>

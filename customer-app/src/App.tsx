@@ -5,7 +5,7 @@
  */
 
 import { MotionConfig } from "framer-motion";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // **`lazy` مُغلَّفٌ بإعادةٍ واحدة** (`lib/chunk-retry.ts`): حزمةٌ كسولةٌ
 // باسمٍ زال بعد رفعٍ تُعيد الصفحةَ مرّةً لتجلب `index` الجديد. والتغليفُ
@@ -132,6 +132,41 @@ const ProfileScreen = lazy(() =>
 const WomenServiceT2Screen = lazy(() =>
   import("@/screens/t2/WomenServiceT2").then((m) => ({ default: m.WomenServiceT2Screen })),
 );
+const PublicTrackScreen = lazy(() =>
+  import("@/screens/t2/PublicTrackT2").then((m) => ({ default: m.PublicTrackScreen })),
+);
+
+/** **رابطُ التتبّع العامّ** «/t/:token» (§٦٣-ج/١) — يفتحه **من لا حسابَ له** في متصفّحٍ عاديّ.
+ *
+ * **شجرةٌ وحدَها لا مسارٌ بين المسارات**: داخل الشجرة الأمّ يقف أمامه ثلاثة — `Boot` ينتظر الجلسة، **والترحيبُ يغطّي كلَّ
+ * شيءٍ ثمّ يحوّل غيرَ الداخل إلى «الدخول»** (`WelcomeGate`)، و`*` يعيد كلَّ مسارٍ لا يُعرف إلى `/` المحروس. وفتحُ ثلاثتها
+ * لمسارٍ واحدٍ يعني ثلاثةَ استثناءاتٍ في ثلاثة مواضع، **ويكفي أن يُنسى أحدُها ليصير الرابطُ شاشةَ دخول**.
+ *
+ * **فيُرسم بالسِمة والإعدادات وحدهما**: السِمةُ لألوان الهوية، و`GET /config` العامُّ لتوكن الخريطة — **ولا جلسةَ ولا مقبس
+ * ولا تسجيلَ جهاز**: زائرُ رابطٍ ليس مستخدماً للتطبيق. */
+function isPublicTrack(pathname: string): boolean {
+  return /^\/t\/[^/]+\/?$/.test(pathname);
+}
+
+function PublicTrackApp() {
+  return (
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider>
+        <ConfigProvider>
+          <Router>
+            <ErrorBoundary resetKey="public-track">
+              <Suspense fallback={null}>
+                <Routes>
+                  <Route path="/t/:token" element={<PublicTrackScreen />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </Router>
+        </ConfigProvider>
+      </ThemeProvider>
+    </MotionConfig>
+  );
+}
 
 /** يفتح الصوتَ عند أوّل إيماءةٍ ويعزف توقيعَ العلامة مرةً واحدة.
  *
@@ -293,6 +328,8 @@ function BoundaryByRoute({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // **رابطُ التتبّع العامّ قبل الإقلاع كلِّه** — شجرتُه وحدَها (`PublicTrackApp`)
+  if (isPublicTrack(window.location.pathname)) return <PublicTrackApp />;
   // **`reducedMotion="user"` من مكانٍ واحد** (§8): كلُّ حركةِ Framer في التطبيق
   // تصير فوريةً لمن طلب تقليلَ الحركة، بلا أن يفحص مكوّنٌ واحدٌ التفضيل
   return (

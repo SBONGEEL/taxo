@@ -17,6 +17,9 @@
  * **وما في الشاشة القائمة ولم يُرسم — باقٍ بلغة اللوحة**: صورةُ الراكب ببلاغها · الأجرةُ المقدَّرة · حالُ المشاركة ·
  * المحطاتُ بعناوينها وعدّادُ انتظارها ورسمُه · الوقفةُ غيرُ المخطَّطة («نقطة توقف» · «استئناف») · «وصلتُ المحطة» ·
  * «افتح في الخرائط» أثناء الرحلة · أسبابُ الإلغاء ونصُّ «عدم التطابق».
+ *
+ * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١، `ForOtherT2`) — بلا لوحة: «الراكب: الاسم» بزرِّ «اتصل بالراكب» (الاسمُ والرقمُ من القبول حتى
+ * الانتهاء)، وسطرُ الدافع تحته.
  */
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
@@ -29,6 +32,7 @@ import { openIn } from "@/lib/external-maps";
 import { digitsOnly } from "@/lib/phone";
 import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
 import { digits } from "@/lib/utils";
+import { PassengerRowT2, PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { Icon } from "@/taxo2";
 
 interface Props {
@@ -177,17 +181,23 @@ export function RideT2({
             {shared ? <span className="t2-rd-chip">{shareText}</span> : null}
             {/* **صورةُ الراكب بزرّها وبلاغها** في موضع شارة الراكب — **ولا اسمَ يصل الكبتن**: «راكب TAXO» كما في الشاشة القائمة */}
             <span className="t2-rd-chip avatar">
-              <span className="t2-rd-avatar">
-                <RiderAvatar rideId={ride.id} />
-              </span>
+              {/* **رحلةٌ لشخصٍ آخر: صورةُ الطالب ليست وجهَ من سيركب** (§٦٣-ج/١) — فلا تُعرض، والراكبُ الفعليُّ في صفّه باسمه */}
+              {ride.for_other ? null : (
+                <span className="t2-rd-avatar">
+                  <RiderAvatar rideId={ride.id} />
+                </span>
+              )}
               راكب TAXO
             </span>
           </div>
         ) : (
           <div className="t2-rd-rider">
-            <span className="t2-rd-avatar">
-              <RiderAvatar rideId={ride.id} />
-            </span>
+            {/* **وفي رحلةٍ لشخصٍ آخر لا صورةَ للطالب** — ليس هو من يُلتقط (§٦٣-ج/١) */}
+            {ride.for_other ? null : (
+              <span className="t2-rd-avatar">
+                <RiderAvatar rideId={ride.id} />
+              </span>
+            )}
             <div className="t2-rd-rider-main">
               <div className="t2-rd-rider-name">راكب TAXO</div>
               <div className="t2-rd-rider-sub">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
@@ -202,6 +212,14 @@ export function RideT2({
             </div>
           </div>
         )}
+
+        {/* **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الراكبُ الفعليُّ بزرِّ الاتصال، وسطرُ الدافع — **و«لا تستلم شيئاً» مُبرَزة** */}
+        {ride.for_other ? (
+          <>
+            <PassengerRowT2 ride={ride} />
+            <PayerNoteT2 payer={ride.payer} />
+          </>
+        ) : null}
 
         <StopsT2 ride={ride} currencyLabel={currencyLabel} />
         <PauseT2 ride={ride} currencyLabel={currencyLabel} />

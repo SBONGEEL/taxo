@@ -66,6 +66,20 @@ export interface AuthMethod {
 /** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
 export type GenderPreference = "male" | "female" | "any";
 
+/** **من يدفع أجرةَ رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) — مرآةُ `RidePayer` في الخلفية بعضوَيها.
+ *
+ *  `requester` صاحبُ الحساب (كلُّ رحلةٍ عاديّة)، **وفي رحلةٍ لغيره يدفع بالمحفظة أو البطاقة وحدهما**؛ و`passenger_cash`
+ *  الراكبُ الفعليُّ نقداً، **ودفعتُه تفتحها الخلفيةُ عند الإنهاء** — فلا قناةَ يختارها صاحبُ الحساب أصلاً. */
+export type RidePayer = "requester" | "passenger_cash";
+
+/** **الراكبُ الفعليُّ ومن يدفع** كما يُرسل مع الطلب (`RideForOtherIn`) — **والرقمُ يُطبَّع في الخلفية** إلى E.164
+ *  بقواعد السوقين، ورقمٌ لا يُطبَّع يرفض الطلبَ كلَّه برسالتها. */
+export interface RideForOther {
+  name: string;
+  phone: string;
+  payer: RidePayer;
+}
+
 export interface User {
   /** **موعدُ حذف حسابه إن طلبه** (SPEC §59) — منه تُرسم شاشةُ الاستعادة. */
   deletion_due_at?: string | null;
@@ -380,6 +394,14 @@ export interface Ride {
   share_seat: number;
   /** **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، RW4) — والرمزُ نفسُه من بابه (`getStartCode`)، لا في هذا التمثيل الذي يصل الطرفين. */
   start_code_required: boolean;
+
+  /** **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — `for_other` و`payer` يُنشران دائماً. **والاسمُ والرقمُ في أطوار القبول وحدَها**
+   *  (`accepted` · `arrived` · `in_progress` · `at_stop`): `null` على العرض وبعد الانتهاء — **فغيابُهما لا يعني أن الرحلةَ لنفسه**،
+   *  و`for_other` وحدَه يقول ذلك. والرقمُ E.164 كما طبّعته الخلفية. */
+  for_other: boolean;
+  payer: RidePayer;
+  passenger_name: string | null;
+  passenger_phone: string | null;
 
   /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
    *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */
@@ -877,6 +899,20 @@ export interface Storefront {
   tiles: ServiceTile[];
   banners: PromoBanner[];
   offer: StorefrontOffer | null;
+}
+
+// ------------------------------------------- رابطُ التتبّع العامّ (§٦٣-ج/١)
+
+/** **ما يراه من يفتح رابطَ التتبّع بلا دخول** (`PublicTrackOut`) — أقلُّ ما يكفي: اسمُ الكبتن وسيارتُه ولوحتُها وموقعُه.
+ *
+ *  **والحالُ اتحادٌ داخل الحقل لا نوعٌ باسمه** — كـ`AppVersion.state`: مرآةُ `Literal` في المخطَّط لا `StrEnum`، وبعضُ
+ *  أعضائها (`searching` · `arrived`) أسماءُ أطوارٍ في `RideStatus` بالمصادفة. **و`ended` لا يحمل شيئاً معه** — الرابطُ
+ *  يتوقّف بانتهاء الرحلة. ولا رقمَ الطالب ولا محفظتَه في أيِّ حال. */
+export interface PublicTrack {
+  state: "searching" | "coming" | "arrived" | "riding" | "ended";
+  captain_name: string | null;
+  vehicle: { make: string; model: string; color: string; plate_number: string } | null;
+  position: Coordinates | null;
 }
 
 // ------------------------------------------------- بوّابةُ التحديث (البند ٨)

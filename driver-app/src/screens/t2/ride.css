@@ -1231,3 +1231,49 @@ button.t2-rd-chip { cursor: pointer; }
 /* «بدء الرحلة» بالبرقوق لرحلةٍ برمز، **وخافتٌ حتى تكتمل الخانات** (٠٫٤ كما رُسم) */
 .t2-rd-btn.women { background: var(--t2-women); color: var(--t2-on-women); }
 .t2-rd-btn.women:disabled { opacity: 0.4; }
+
+/* ── رحلةٌ لشخصٍ آخر (§٦٣-ج/١) — **لا لوحةَ لها**: سطرُ الدافع على العرض وفي الرحلة، وصفُّ الراكب الفعليّ بزرِّ الاتصال ── */
+/* **نبرةُ النجاح لنقد الراكب** (مالٌ في اليد كأيِّ كاش)، **ونبرةُ التنبيه لـ«لا تستلم شيئاً»** — الحالُ الوحيدةُ التي يُطلب فيها
+   من الكبتن ألّا يأخذ شيئاً */
+.t2-fo-payer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.t2-fo-payer .t2-icon { flex: none; font-size: 18px; }
+.t2-fo-payer b { font-weight: 800; }
+.t2-fo-payer.ok { background: var(--t2-success-soft); color: var(--t2-success); }
+.t2-fo-payer.warn { background: var(--t2-warning-soft); color: var(--t2-warning); }
+.t2-fo-passenger { margin-top: 8px; }
+.t2-fo-passenger-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--t2-line);
+}
+.t2-fo-passenger-icon .t2-icon { font-size: 22px; }
+.t2-fo-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  text-decoration: none;
+}
+.t2-fo-call .t2-icon { font-size: 22px; }
+/* «لا تستلم شيئاً» في التحصيل — بنبرة التنبيه نفسِها */
+.t2-co-note.warn { color: var(--t2-warning); font-weight: 600; }
