@@ -103,15 +103,20 @@ async def sweep(session: AsyncSession, *, limit: int = SWEEP_LIMIT) -> dict[str,
     `tasks/stops.py` بكل محطةٍ في معاملتها.
     """
     tally = {"settled": 0, "dropped": 0, "open": 0, "failed": 0}
-    for order in await stale_orders(session, limit=limit):
+    # **بالمعرِّفات لا بالصفوف، وكلُّ صفٍّ يُقرأ من جديدٍ قبل معالجته** (قِيس على S21 ٢٠٢٦-١٠-٠٨): `rollback` يُنهي صلاحيةَ صفوف
+    # الجلسة كلِّها، **فكان طلبٌ متعثّرٌ يُسقط الدورةَ** — قراءةُ `order.cart_id` في السجلّ بعده تحميلٌ كسولٌ خارج سياق async
+    # (`MissingGreenlet`)، **وما بعده من الطلبات لا يُكنس أبداً** ما دام المتعثّرُ أوّلَها
+    ids = [order.id for order in await stale_orders(session, limit=limit)]
+    for order_id in ids:
+        order = await session.get(ProviderOrder, order_id, populate_existing=True)
+        if order is None:  # pragma: no cover - صفٌّ اختفى بين القراءتين
+            continue
+        cart_id, provider = order.cart_id, order.provider.value
         try:
             tally[await _resolve(session, order)] += 1
             await session.commit()
         except Exception:  # noqa: BLE001 - انقطاعُ مزودٍ لا يُسقط الدورة
             await session.rollback()
             tally["failed"] += 1
-            logger.warning(
-                "تعذّر كنسُ الطلب %s (%s)", order.cart_id, order.provider.value,
-                exc_info=True,
-            )
+            logger.warning("تعذّر كنسُ الطلب %s (%s)", cart_id, provider, exc_info=True)
     return tally

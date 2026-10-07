@@ -226,6 +226,29 @@ async def test_a_fresh_order_is_not_asked_about(
 # ------------------------------------------------- تقليمُ صندوق الوارد
 
 
+async def test_a_failing_order_does_not_break_the_sweep(
+    client: AsyncClient, session_factory, admin_headers: dict, jordan_settings, monkeypatch
+):
+    """**طلبٌ متعثّرٌ يُعدّ ولا يُسقط الدورة** (قِيس على S21 ٢٠٢٦-١٠-٠٨): كان السجلُّ يقرأ الصفَّ بعد `rollback` فيرفع
+    `MissingGreenlet` من الكنس كلِّه — **وما بعده من الطلبات لا يُكنس أبداً**. والدورةُ التاليةُ تسوّيه حين يجيب المزود."""
+    _rider, cart_id = await _card_ride_order(client, session_factory, admin_headers)
+    await _age_order(session_factory, cart_id, minutes=45)
+    original = order_maintenance._resolve
+
+    async def broken(session, order):
+        raise RuntimeError("انقطاعُ مزوّدٍ مصطنع")
+
+    monkeypatch.setattr(order_maintenance, "_resolve", broken)
+    async with session_factory() as session:
+        tally = await order_maintenance.sweep(session)
+    assert tally["failed"] == 1, tally
+
+    monkeypatch.setattr(order_maintenance, "_resolve", original)
+    async with session_factory() as session:
+        tally = await order_maintenance.sweep(session)
+    assert tally["open"] == 1 and tally["failed"] == 0, tally
+
+
 async def _seed_notification(session_factory, user_id: str, *, days_old: int) -> None:
     async with session_factory() as session:
         row = UserNotification(
