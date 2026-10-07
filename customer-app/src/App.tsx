@@ -33,6 +33,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig } from "@/lib/config";
+import { onNotificationTap } from "@/lib/firebase";
 import { RideProvider, useRide } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
@@ -332,6 +333,13 @@ function WelcomeGate() {
   );
 }
 
+/** **لمسةُ إشعار النظام تنقل التطبيقَ المفتوح إلى وجهتها** (§٦٤-ج/٤-١، `onNotificationTap`) — تحت الموجّه لأنها تنقل به. */
+function NotificationTaps() {
+  const navigate = useNavigate();
+  useEffect(() => onNotificationTap((path) => navigate(path)), [navigate]);
+  return null;
+}
+
 /** يلفّ الشاشاتِ بحدِّ خطأ، ويصفّره عند كل تنقّل — فرسالةُ عطبٍ في شاشةٍ
  *  لا تبقى على التي بعدها. */
 function BoundaryByRoute({ children }: { children: ReactNode }) {
@@ -362,6 +370,7 @@ export default function App() {
               <PlacesProvider>
               <RideProvider>
                   <Toasts />
+                  <NotificationTaps />
                   {/* **الحركةُ فوق `Suspense` لا تحته** (`ui/Motion.tsx`):
                       البديلُ فوقها كان يستبدل الشجرةَ المتحركةَ كلَّها فيموت
                       الانتقال — قِيس في المتصفح. و`Routes` مُثبَّتةٌ على الموقع

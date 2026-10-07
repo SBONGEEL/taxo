@@ -11,6 +11,37 @@
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
 
+/* **لمسةُ الإشعار تبلغ وجهتَه** (§٦٤-ج/٤-١) — كانت كلُّ لمسةٍ بلا رحلةٍ تذهب إلى «/»، **وتطبيقٌ مفتوحٌ يُستحضَر ولا ينتقل**:
+ * فإشعارُ «لم نطلب رحلتك» (`booking_women_paused`) — **وهو طريقُها الأوّلُ إلى الخبر والتطبيقُ مغلق**، ومهلتُها نصفُ ساعةٍ بعد
+ * الموعد قبل أن يُعدّ فائتاً — لا يبلغ الاختيارَ أبداً. **فالوجهةُ وجهةُ `destinationOf`** (`lib/notification-text.ts`) بعينها:
+ * رحلةٌ إلى صفحتها، **وحجزٌ بلا رحلةٍ إلى «رحلاتي المجدولة»**.
+ *
+ * **ويُسجَّل قبل تهيئة Firebase لا بعدها**: الحمولةُ تحمل `notification`، **فالـSDK يرسم نسختَه هو** (فوق ما يرسمه
+ * `onBackgroundMessage`) ومستمعُه لنقرها يوقف ما بعده (`stopImmediatePropagation`) — فمستمعٌ بعده لا يرى نقرَ تلك النسخة أصلاً.
+ * **وحمولتُها تحت `FCM_MSG`** لا في `data` مباشرة. (مقروءٌ من مصدر `@firebase/messaging`، لا مقيسٌ على جهاز.)
+ *
+ * **و`navigate()` لا يعمل هنا**: لا يُنقل به إلا نافذةٌ يملكها العاملُ نفسُه، ونطاقُ هذا العامل نطاقُ الدفع لا التطبيق — فيرفض
+ * دائماً. **فتُرسل الوجهةُ إلى النافذة** وموجّهُها ينقلها (`onNotificationTap` في `lib/firebase.ts`) بلا إعادة تحميل.
+ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const raw = event.notification.data || {};
+  const data = (raw.FCM_MSG && raw.FCM_MSG.data) || raw;
+  const target = data.ride_id ? `/rides/${data.ride_id}` : data.booking_id ? "/account/bookings" : "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if ("focus" in client) {
+          client.postMessage({ type: "taxo:notification-tap", target });
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});
+
 const params = new URL(self.location.href).searchParams;
 
 try {
@@ -38,18 +69,3 @@ try {
   // إعدادٌ ناقص لا يُسقط عامل الخدمة: بقية التطبيق تعمل بلا إشعارات
   console.warn("TAXO: إعداد FCM غير صالح", error);
 }
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const rideId = event.notification.data && event.notification.data.ride_id;
-  const target = rideId ? `/rides/${rideId}` : "/";
-
-  event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
-      for (const client of windows) {
-        if ("focus" in client) return client.focus();
-      }
-      return self.clients.openWindow(target);
-    }),
-  );
-});

@@ -17,7 +17,9 @@ import { ApiError } from "@/api/client";
 import {
   bookIntercity,
   buyCommute,
+  cancelBooking,
   cancelCommute,
+  chooseAnyCaptain,
   cancelIntercityBooking,
   getWeeklyCashback,
   listIntercityBookings,
@@ -28,6 +30,7 @@ import {
   suspendCommuteDay,
 } from "@/api/endpoints";
 import type {
+  Booking,
   Commute,
   CommutePlan,
   CommuteQuote,
@@ -81,6 +84,62 @@ export function earliest(): Date {
 
 export function latest(): Date {
   return new Date(Date.now() + MAX_HORIZON_DAYS * 86_400_000);
+}
+
+// ═══════════════════════════════════════════════════════════ حجزٌ نسائيٌّ والخدمةُ متوقّفة (§٦٤-ج/٤-١)
+//
+// **لا يُبدَّل تلقائياً أبداً** (قرارُ المالك ٢٠٢٦-١٠-٠٧): حلّ وقتُه والخدمةُ مطفأة ⇒ لا رحلة، وإعلامٌ واحد، **والاختيارُ لها** —
+// «أي كبتن» أو الإلغاءُ بلا رسم. **ولا مالَ يُحسب هنا ولا حالَ تُخترع**: «ينتظر اختيارَها» يصل مشتقّاً (`awaiting_choice`)، والفعلان
+// يعيدان الحجزَ من الخلفية فيُستبدل في مكانه.
+
+/** **دقائقُ التسليم قبل الموعد** — مرآةُ `bookings.LEAD_MINUTES` في الخلفية: الدورةُ تطلب كلَّ حجزٍ منتظرٍ موعدُه في هذه الدقائق،
+ *  **مرّةً كلَّ دقيقة**. **ومكرَّرةٌ هنا بقصد** كحدِّ نصف الساعة أعلاه: لسطرٍ يُقرأ لا لحراسة — والدورةُ هي الحكم. */
+export const DISPATCH_LEAD_MINUTES = 10;
+
+/** **حجزٌ تطلبه الدورةُ في دقيقتها** — منتظرٌ لا ينتظر اختيارَها، وموعدُه في دقائق التسليم أو فات. وهو حالُ حجزٍ اختارت له «أي
+ *  كبتن» بعد أن توقّفت الخدمة (موعدُه حلّ أصلاً)، **فيقول سطرُه «نطلبها لك خلال دقيقة» لا «بانتظار موعده»** — ومن الحجز نفسِه
+ *  لا من حالٍ محلّية، فيصدق بعد إعادة الفتح كما يصدق لحظةَ اللمس. */
+export function requestingSoon(booking: Booking, now = Date.now()): boolean {
+  return (
+    booking.status === "pending" &&
+    !booking.awaiting_choice &&
+    new Date(booking.scheduled_at).getTime() - DISPATCH_LEAD_MINUTES * 60_000 <= now
+  );
+}
+
+/** **فعلا البطاقة** — «اطلبيها بأي كبتن» (`chooseAnyCaptain`) و«ألغي الحجز» (`cancelBooking` القائم، **مجاناً بلا استثناء** في
+ *  الخلفية). **وكلٌّ يعيد الحجزَ فيُسلَّم لصاحب القائمة** (`onChanged`) يستبدله في مكانه، **وسببُ تعثّره تحت بطاقته** لا في رأس
+ *  الصفحة (قاعدةُ `useMyCommutes`) — بنصّ الخلفية كما ردّته («هذا الحجز لم يعد منتظراً» إن سبقتها الدورة). */
+export function useBookingChoice(onChanged: (next: Booking) => void) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const run = useCallback(
+    async (booking: Booking, call: (id: string) => Promise<Booking>, fallback: string) => {
+      setBusy(booking.id);
+      setErrors((current) => {
+        const next = { ...current };
+        delete next[booking.id];
+        return next;
+      });
+      try {
+        onChanged(await call(booking.id));
+      } catch (caught) {
+        const text = caught instanceof ApiError ? caught.message : fallback;
+        setErrors((current) => ({ ...current, [booking.id]: text }));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [onChanged],
+  );
+
+  return {
+    busy,
+    errors,
+    anyCaptain: (booking: Booking) => void run(booking, chooseAnyCaptain, "تعذّر الإرسال — حاولي ثانية"),
+    cancel: (booking: Booking) => void run(booking, cancelBooking, "تعذّر الإلغاء — حاولي ثانية"),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════ المشوارُ الثابت (§٦٣-ج/٦)

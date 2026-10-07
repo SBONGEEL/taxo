@@ -11,12 +11,15 @@
  * بابُه القائم (`createBooking`): **يحمل التفضيلَ ويُفحص عند الحجز وعند التنفيذ** (`services/bookings.py`)، **ويظهر حيث الحجوزُ مشتعلةٌ
  * وحدَها** (`scheduled_rides_enabled`، `lib/bookings.ts`).
  *
+ * **و«انتظري، نوسّع البحث» أوّلُ خياراتها** (§٦٤-ج/٤-٣، جوابُ المالك ٢٠٢٦-١٠-٠٧: «بين الكبتنات وحدهنّ»): **البحثُ المنتهي لا
+ * يُستأنف** (`no_driver_found` نهائيّ) — فهو **طلبٌ جديدٌ بالرحلة نفسِها** بـ`widen_search`، والخلفيةُ توسّع الدائرةَ لدقائق أخرى
+ * **وشرطُ الجنس هو هو**. **ولا عددَ ولا نصفَ قطرٍ في نصّه**: العددُ لم يُقَل (`APPROVALS-62` §٦-٢)، والمدى لا يُنشر.
+ *
  * **وما رسمته اللوحةُ ولم يُبنَ — بعلّته**:
  * - **RW2 · «تصل خلال 7 د»**: زمنُ الوصول بندٌ يُبنى بعد هذا (§٦٢-ج/١٠) — ولا رقمَ بلا مصدر. **و«نسائية» فئةً بأيقونتها**: الخدمةُ
  *   تفضيلٌ لا فئة (R06) — فالفئاتُ كما هي بحافّة البرقوق، و«كبتنة موثّقة» سطرُها.
  * - **RW2 · «مشاركة الرحلة مع أمي — تلقائياً في كل رحلة نسائية»**: رابطُ التتبّع الحيّ ينتظر إذنَ المالك (§٦٢-ج/١٩، بيانات).
- * - **RW3 · «انتظري، نوسّع البحث»**: «أنتظر كبتنة» بندٌ مطفأٌ لم يُبنَ (§٦٢-ج/٢٨)، **والبحثُ المنتهي لا يُستأنف** (`no_driver_found`
- *   نهائيّ). **و«متابعة البحث»** ⇐ «متابعة»: لا بحثَ يُتابَع.
+ * - **RW3 · «متابعة البحث»** ⇐ «متابعة»: لا بحثَ يُتابَع — «نوسّع البحث» نفسُه طلبٌ جديد.
  * - **RW3 · «بحثنا في محيط 5 كم»**: المدى ثابتٌ في الخلفية (`geo.GENDERED_MAX_SEARCH_RADIUS_KM`) **ولا يُنشر** — ورقمٌ يُكتب هنا نسخةٌ
  *   ثانيةٌ تفترق، والمرسومُ «5» يخالفه أصلاً.
  * - **RW3 · «نحجز لك كبتنة مسبقاً للوقت الذي تختارينه»**: الحجزُ لا يحجز كبتنة — **يبدأ البحثَ قبل الموعد بعشر دقائق** (R06)، فهذا ما يُقال.
@@ -69,14 +72,16 @@ export function WomenRequestHeadT2({ meta }: { meta: string | null }) {
 
 // ── RW3 ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/** **خيارا الشاشة لا قيمُ عقد** — «اطلبي رحلة عادية» يرسل `gender_preference: "any"` من الرئيسية، لا هذا الاسم. */
-type Choice = "later" | "anyCaptain";
+/** **خياراتُ الشاشة لا قيمُ عقد** — «اطلبي رحلة عادية» يرسل `gender_preference: "any"` من الرئيسية، و«نوسّع البحث» `widen_search`،
+ *  لا هذه الأسماء. */
+type Choice = "widen" | "later" | "anyCaptain";
 
 /** **لا كبتنة قريبة** (RW3) — مكانَ خاتمة R29 لطلب «كبتنة» انتهى بلا كبتنة: **خياراتٌ تختارها هي، ولا شيءَ يقع قبل «متابعة»**. */
 export function WomenNoCaptainT2({
   onDismiss,
   onAcceptAnyDriver,
   onScheduleAgain,
+  onWidenSearch,
   error,
 }: {
   onDismiss: () => void;
@@ -84,7 +89,11 @@ export function WomenNoCaptainT2({
   onAcceptAnyDriver: () => Promise<void>;
   /** «جدولي الرحلة لوقت لاحق» — ورقةُ الطلب بمنتقي الموعد (الرئيسية). **وبلا هذا الفعل لا يُعرض الخيار.** */
   onScheduleAgain?: () => void;
-  /** خطأُ «اطلبي رحلة عادية» — من الرئيسية التي ترسل الطلب. */
+  /** **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣) — الرحلةُ نفسُها بتفضيلها و`widen_search` (الرئيسية). **وبلا هذا الفعل لا يُعرض الخيار**:
+   *  رحلةٌ لا تُعاد بنفسها (طردٌ · ساعات · لشخصٍ آخر)، أو وُسِّع بحثُها مرّةً، **أو مشتركة** — موافقتُها على المشاركة لا تُنسخ إلى
+   *  طلبٍ لم تضع عليه علامتَها (§٦٤-ج). */
+  onWidenSearch?: () => Promise<void>;
+  /** خطأُ الطلب الجديد («نوسّع البحث» أو «اطلبي رحلة عادية») — من الرئيسية التي ترسله. */
   error: string | null;
 }) {
   const scheduled = useScheduledRides();
@@ -95,6 +104,17 @@ export function WomenNoCaptainT2({
   const canSchedule = scheduled && women.enabled && onScheduleAgain !== undefined;
 
   const options: { value: Choice; icon: string; title: string; sub: string; warn?: boolean }[] = [
+    // **أوّلُها الانتظار** — ما لا يغيّر شيئاً ممّا اختارته: كبتنةٌ لا غيرُها، بدائرةٍ أوسع. **بلا عددٍ ولا نصفِ قطر** (رأسُ الملفّ)
+    ...(onWidenSearch
+      ? [
+          {
+            value: "widen" as const,
+            icon: "search",
+            title: "انتظري، نوسّع البحث",
+            sub: "نبحث بين الكبتنات في دائرةٍ أوسع لدقائق أخرى",
+          },
+        ]
+      : []),
     ...(canSchedule
       ? [
           {
@@ -119,10 +139,11 @@ export function WomenNoCaptainT2({
       onScheduleAgain?.();
       return;
     }
-    if (choice !== "anyCaptain") return;
+    const send = choice === "widen" ? onWidenSearch : choice === "anyCaptain" ? onAcceptAnyDriver : undefined;
+    if (!send) return;
     setBusy(true);
     try {
-      await onAcceptAnyDriver();
+      await send();
     } finally {
       setBusy(false);
     }
@@ -181,6 +202,47 @@ export function WomenNoCaptainT2({
         })}
       </div>
     </SheetT2>
+  );
+}
+
+// ── حجزٌ نسائيٌّ والخدمةُ متوقّفة (§٦٤-ج/٤-١) ──────────────────────────────────────────────────────
+
+/** **لم نطلب رحلتَها المجدولة — والاختيارُ لها** (§٦٤-ج/٤-١، `awaiting_choice`) — بالبرقوق في بطاقة الحجز حيثما رُسمت (R12 «مجدولة»
+ *  و R26 «رحلاتي المجدولة»). **لا لوحةَ له**، فيُركَّب من عُدّة الهوية: سطرُ الخبر، وزرّا البطاقة (`t2-cbtn`) — البرقوقُ لـ«أي كبتن»
+ *  والحافّةُ للإلغاء.
+ *
+ *  **ولا شيءَ يقع بلا لمستها** — قولُ المالك «لا يبدّلها التطبيقُ بنفسه أبداً». **و«أي كبتن» لا يُنفَّذ هنا**: الخلفيةُ تبدّل التفضيلَ
+ *  والدورةُ تطلبها في دقيقتها، فيعود الحجزُ منتظراً بسطر «نطلبها لك خلال دقيقة» (`requestingSoon`). **والإلغاءُ بابُه القائمُ نفسُه**
+ *  (`DELETE /me/bookings/{id}`) **بلا تأكيدٍ ثانٍ** كإلغاء البطاقة في R26 — **ومجانيٌّ بلا استثناء**: لا رحلةَ ولا كبتن. */
+export function WomenPausedChoiceT2({
+  busy,
+  error,
+  onAnyCaptain,
+  onCancel,
+}: {
+  busy: boolean;
+  /** سببُ تعثّر الفعل — بنصّ الخلفية، تحت الزرّين. */
+  error: string | null;
+  onAnyCaptain: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="t2-wpause" aria-busy={busy}>
+      <p className="t2-wpause-line">
+        <Icon name="woman" fill />
+        لم نطلب رحلتك — خدمةُ الكبتنات متوقّفةٌ الآن
+      </p>
+      <div className="t2-wpause-actions">
+        <button type="button" className="t2-cbtn grow t2-wpause-any" disabled={busy} onClick={onAnyCaptain}>
+          اطلبيها بأي كبتن
+        </button>
+        <button type="button" className="t2-cbtn grow soft" disabled={busy} onClick={onCancel}>
+          ألغي الحجز
+        </button>
+      </div>
+      <p className="t2-wpause-fine">الإلغاءُ بلا رسم — لم تُطلب رحلةٌ بعد.</p>
+      {error ? <NoteT2 tone="danger">{error}</NoteT2> : null}
+    </div>
   );
 }
 

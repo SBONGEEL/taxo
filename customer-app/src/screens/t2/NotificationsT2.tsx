@@ -40,6 +40,9 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   booking_missed: { icon: "calendar_clock", tone: "warn" },
   booking_no_driver: { icon: "calendar_clock", tone: "danger" },
   booking_preference_dropped: { icon: "calendar_clock", tone: "warn" },
+  // **حجزٌ نسائيٌّ لم نطلبه والخدمةُ متوقّفة** (§٦٤-ج/٤-١) — بالبرقوق كأخيه `women_mode_revoked`، ولمستُه تفتح «رحلاتي المجدولة»
+  // حيث تختار هي «أي كبتن» أو الإلغاء (`destinationOf`: حجزٌ بلا رحلة)
+  booking_women_paused: { icon: "woman", tone: "women" },
   // **الحجزُ المضمون** (§٦٣-ج/٣) — كبتنٌ قبله · اعتذر فنبحث عن غيره · رُدّ الرسمُ إلى المحفظة
   guarantee_accepted: { icon: "verified_user", tone: "live" },
   guarantee_reopened: { icon: "calendar_clock", tone: "warn" },

@@ -551,6 +551,34 @@ export function HomeScreen() {
     }
   }
 
+  /** **«انتظري، نوسّع البحث»** (RW3، §٦٤-ج/٤-٣) — **طلبٌ جديدٌ بالرحلة نفسِها لا استئنافُ بحثٍ منتهٍ** (علّةُ `acceptAnyDriver`):
+   *  النقطتان وعنواناهما والفئةُ **وتفضيلُها هي** كما طُلبت، والمحطاتُ بترتيبها — **و`widen_search`**: دائرةٌ أوسع بين الكبتنات
+   *  وحدهنّ لدقائق أخرى. **والسعرُ يُعاد حسابُه** كأيِّ طلبٍ جديد، ويُقرأ في شاشة البحث.
+   *
+   *  **ولا مشاركةَ تُحمل إلى طلبٍ لم تضع عليه علامتَها** (§٦٤-ج، `sharing.guard_gender_choice`): طلبٌ بتفضيلٍ نسائيٍّ لا يُشارَك
+   *  إلا باختيارها الصريح، و«كانت ستوافق لو سُئلت» ليست موافقة — **وموافقةٌ تُستنتج من نسبة خصمٍ هي تلك بعينها**، ونسبةُ صفرٍ
+   *  مضبوطةٌ كانت ستُعيدها منفردةً صامتة. فالمشتركةُ لا يُعرض لها الخيارُ أصلاً (المستدعي)، **ومن أرادتها مشتركةً فطريقُها ورقةُ
+   *  التأكيد حيث تضع العلامةَ بيدها**. **ولا يُعرض لما لا يُعاد بنفسه** (المستدعي). */
+  async function widenSearch(previous: Ride) {
+    setError(null);
+    try {
+      const created = await requestRide({
+        pickup: previous.pickup,
+        dropoff: previous.dropoff,
+        vehicle_category: previous.vehicle_category,
+        pickup_address: previous.pickup_address,
+        dropoff_address: previous.dropoff_address,
+        gender_preference: previous.gender_preference,
+        stops: previous.stops.map((stop) => ({ lat: stop.lat, lng: stop.lng, address: stop.address })),
+        widen_search: true,
+      });
+      setDismissed(null);
+      setRide(created);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
+    }
+  }
+
   /** **«جدولي الرحلة لوقت لاحق»** (RW3، §٦٢-ج/٢٣) — **ورقةُ الطلب نفسُها لا بابٌ ثانٍ**: نقطتا الرحلة التي لم تجد كبتنة وعنواناهما،
    *  **وتفضيلُها هي** (لا يُبدَّل) **وفئتُها**، ومنتقي الموعد مفتوحاً — **والحجزُ يمرّ بـ`schedule` القائم** بموعده وفحوصه. **ولا محطات**:
    *  الحجزُ لا يحملها (`createBooking`). وتُطوى الخاتمة؛ فمن عادت بالسهم عادت إلى الرئيسية. */
@@ -893,6 +921,19 @@ export function HomeScreen() {
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
                 // **ولا «جدولي» لطرد** (§٦٣-ج/٤) **ولا لساعات** (§٦٣-ج/٥) — الحجزُ لا يحملهما، وحجزٌ بنقطتيه وحدهما رحلةٌ عاديّة
                 onScheduleAgain={outcome.ride_type === "standard" ? () => scheduleAgain(outcome) : undefined}
+                // **و«نوسّع البحث» للرحلة التي تُعاد بنفسها وحدَها** (§٦٤-ج/٤-٣): لا طرد (المستلمُ لا يُنشر بعد الانتهاء) ولا ساعات
+                // (سعرُها يُسأل في ورقتها) **ولا لشخصٍ آخر** (اسمُه ورقمُه لا يُنشران بعد الانتهاء — وطلبٌ بلاهما رحلةٌ لها هي صامتةً)،
+                // **ولا مرّةً ثانية**: الدائرةُ الموسَّعةُ ثابتةٌ في الخلفية، فـ«دائرةٍ أوسع» تكذب على بحثٍ وُسِّع. **ولا لمشتركة**:
+                // موافقتُها على المشاركة تُعطى بيدها في ورقة التأكيد لا تُنسخ إلى طلبٍ جديد — والسؤالان معاً لأن نسبةَ صفرٍ مضبوطةٌ
+                // تُخفي المشاركةَ عن الأوّل
+                onWidenSearch={
+                  outcome.ride_type === "standard" &&
+                  !outcome.for_other &&
+                  !outcome.search_widened &&
+                  !(Number(outcome.share_discount_percent) > 0 || outcome.share_group_id)
+                    ? () => widenSearch(outcome)
+                    : undefined
+                }
                 error={error}
               />
             ) : picking ? (

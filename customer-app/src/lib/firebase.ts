@@ -137,3 +137,20 @@ export async function onForegroundMessage(
     });
   });
 }
+
+/** **لمسةُ إشعار النظام والتطبيقُ مفتوح** (§٦٤-ج/٤-١) — عاملُ الرسائل (`public/firebase-messaging-sw.js`) لا يملك نافذةَ التطبيق:
+ *  نطاقُه نطاقُ الدفع، و`navigate()` لا ينقل إلا نافذةً يملكها العامل. **فيرسل إليها الوجهةَ وهي تنتقل بموجّهها** — وإلا استُحضر
+ *  التطبيقُ على شاشته التي كان فيها، **ولم يبلغ إشعارُ «لم نطلب رحلتك» اختيارَها**.
+ *
+ *  **والوجهةُ مسارٌ داخليٌّ وحدَه** (`/…` لا `//…`): ما يصل من غير ذلك يُترك. ولا يحتاج Firebase — فلا استيرادَ كسول. */
+export function onNotificationTap(go: (path: string) => void): () => void {
+  if (!("serviceWorker" in navigator)) return () => undefined;
+  const listener = (event: MessageEvent) => {
+    const message = event.data as { type?: unknown; target?: unknown } | null;
+    if (message?.type !== "taxo:notification-tap" || typeof message.target !== "string") return;
+    if (!message.target.startsWith("/") || message.target.startsWith("//")) return;
+    go(message.target);
+  };
+  navigator.serviceWorker.addEventListener("message", listener);
+  return () => navigator.serviceWorker.removeEventListener("message", listener);
+}

@@ -40,6 +40,7 @@ export function OutcomeSheetT2({
   onDismiss,
   onAcceptAnyDriver,
   onScheduleAgain,
+  onWidenSearch,
   error,
 }: {
   ride: Ride;
@@ -47,6 +48,8 @@ export function OutcomeSheetT2({
   onAcceptAnyDriver: () => Promise<void>;
   /** **«جدولي الرحلة لوقت لاحق»** (RW3) — ورقةُ الطلب بمنتقي الموعد، من الرئيسية */
   onScheduleAgain?: () => void;
+  /** **«انتظري، نوسّع البحث»** (RW3، §٦٤-ج/٤-٣) — الرحلةُ نفسُها بـ`widen_search`، من الرئيسية */
+  onWidenSearch?: () => Promise<void>;
   /** **خطأُ «أقبل أي كبتن»** — من الرئيسية التي ترسل الطلب */
   error: string | null;
 }) {
@@ -60,6 +63,7 @@ export function OutcomeSheetT2({
         onDismiss={onDismiss}
         onAcceptAnyDriver={onAcceptAnyDriver}
         onScheduleAgain={onScheduleAgain}
+        onWidenSearch={onWidenSearch}
         error={error}
       />
     );

@@ -38,6 +38,7 @@ export function composeBody(entry: UserNotification): string | null {
 export function destinationOf(entry: UserNotification): string | null {
   const rideId = entry.data?.ride_id;
   const bookingId = entry.data?.booking_id;
+  // **حجزٌ بلا رحلة** — لم يُنفَّذ أو فات أو **ينتظر اختيارَها** (`booking_women_paused`، §٦٤-ج/٤-١): بطاقتُه في «رحلاتي المجدولة»
   if (bookingId && !rideId) return "/account/bookings";
   if (rideId) return `/rides/${rideId}`;
   if (entry.kind === "topup_confirmed") return "/wallet";

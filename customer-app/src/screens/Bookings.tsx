@@ -15,6 +15,10 @@
  * **والحجزُ المضمون** (§٦٣-ج/٣) — لا لوحةَ له: شارةُ «مضمون»، **واسمُ كبتنه** حين قبله أحد (وعدُ الضمان أن يُعرف قبل
  * الموعد)، **وأين رسمُه** بالمبلغ المجمَّد: محفوظ · دُفع للكبتن · رُدّ إليه. **والحالُ من الخلفية لا من حسابٍ هنا**، ومطفأً
  * لا يُرسم شيءٌ منه — **والدفترُ يبقى يسمّي قيودَه** في المحفظة.
+ *
+ * **وحجزٌ نسائيٌّ حلّ وقتُه والخدمةُ متوقّفة** (§٦٤-ج/٤-١، `awaiting_choice`) — **لم يُطلب**، وبطاقتُه بالبرقوق تقول ذلك وتعرض
+ * الاختيارَ لها (`WomenPausedChoiceT2`): «اطلبيها بأي كبتن» أو «ألغي الحجز» بلا رسم. **وكلُّ فعلٍ يعيد الحجزَ فيُستبدل في مكانه**،
+ * و«أي كبتن» يعيده منتظراً بسطر «نطلبها لك خلال دقيقة» (`requestingSoon`) — **فالدورةُ هي التي تطلبه، لا هذه الشاشة**.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -24,24 +28,36 @@ import { ApiError } from "@/api/client";
 import { cancelBooking, listBookings } from "@/api/endpoints";
 import type { Booking } from "@/api/types";
 import { useGoBack } from "@/lib/back";
+import { requestingSoon, useBookingChoice } from "@/lib/bookings";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { formatMoney, DISPLAY_LOCALE, digits } from "@/lib/utils";
 import { BlankT2, LoaderT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
+import { WomenPausedChoiceT2 } from "@/screens/t2/WomenRideT2";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/t2.css";
 import "@/screens/t2/account.css";
+import "@/screens/t2/women.css";
 
-/** أوّلُ حقيقةٍ تحكم: الحجزُ ثم رحلتُه — لا سردٌ للاثنين. والنبرةُ شارةُ الهوية: نجاحٌ · تنبيهٌ · خطأٌ · محايدةٌ · منتظَر. */
-function stateOf(booking: Booking): { text: string; tone: "plain" | "warn" | "live" | "danger" | "ok" } {
+/** أوّلُ حقيقةٍ تحكم: الحجزُ ثم رحلتُه — لا سردٌ للاثنين. والنبرةُ شارةُ الهوية: نجاحٌ · تنبيهٌ · خطأٌ · محايدةٌ · منتظَر —
+ *  **والبرقوقُ لما ينتظر اختيارَها** (§٦٤-ج/٤-١). */
+function stateOf(booking: Booking): { text: string; tone: "plain" | "warn" | "live" | "danger" | "ok" | "women" } {
   if (booking.status === "cancelled") {
     return { text: "أُلغي", tone: "plain" };
   }
   if (booking.status === "missed") {
-    return { text: "لم يُنفَّذ — كنتَ في رحلةٍ حينها", tone: "warn" };
+    // **وللحجز النسائيّ طريقٌ ثانٍ إلى `missed`** (§٦٤-ج/٤-١): خدمةٌ متوقّفةٌ ونصفُ ساعةٍ بعد الموعد بلا اختيار — **ولا حقلَ
+    // يفرّق الطريقين**، فعلّةُ «كنتَ في رحلة» تكذب على من لم تكن. فلا علّةَ لما طلب كبتنة، والعلّةُ لما طلب «أي كبتن» وحدَه
+    return booking.gender_preference === "any"
+      ? { text: "لم يُنفَّذ — كنتَ في رحلةٍ حينها", tone: "warn" }
+      : { text: "لم يُنفَّذ", tone: "warn" };
+  }
+  if (booking.awaiting_choice) {
+    return { text: "تنتظر اختيارك", tone: "women" };
   }
   if (booking.status === "pending") {
-    return { text: "بانتظار موعده", tone: "live" };
+    // **حلّ وقتُه وتطلبه الدورةُ في دقيقتها** — «بانتظار موعده» عن موعدٍ حلّ تقول ما ليس كذلك
+    return { text: requestingSoon(booking) ? "نطلبها لك خلال دقيقة" : "بانتظار موعده", tone: "live" };
   }
   // سُلّم للتوزيع: الرحلةُ تقول الباقي
   switch (booking.ride_status) {
@@ -66,6 +82,7 @@ const CHIP: Record<ReturnType<typeof stateOf>["tone"], string> = {
   live: "t2-chip t2-live",
   danger: "t2-chip danger",
   ok: "t2-chip ok",
+  women: "t2-chip t2-wbk-chip",
 };
 
 /** **أين رسمُ الضمان** — نصُّ كلِّ حالٍ ونبرتُه: المحفوظُ محايد، والواصلُ للكبتن حبر، والعائدُ إليه أخضر. */
@@ -77,6 +94,10 @@ const GUARANTEE_FEE: Record<NonNullable<Booking["guarantee_state"]>, { text: str
 
 /** سطرُ الكبتن: **اسمُه حين قبله أحد**، و«نبحث…» ما دام الحجزُ ينتظر — وبعد التسليم بلا كبتنٍ لا سطر: الرحلةُ تقول الباقي. */
 function captainLine(booking: Booking): string | null {
+  // **ولا «نبحث» عن حجزٍ ينتظر اختيارَها** (§٦٤-ج/٤-١): التنفيذُ ردّ الرسمَ وأخلى الكبتنَ قبل أن يقف
+  // (`guarantees.on_execute_without_captain`)، **ولا أحدَ يبحث** — والسطرُ فوق «لم نطلب رحلتك» يناقضه. **ولا بعد «أي كبتن»**:
+  // يعود منتظراً والرسمُ مردودٌ حتى تطلبه الدورة، و«نبحث عن كبتنٍ يضمن حجزك» فوق «رُدّ إلى محفظتك» تناقضه كذلك
+  if (booking.awaiting_choice || booking.guarantee_state === "refunded") return null;
   if (booking.captain_name) return `كبتنُك: ${booking.captain_name}`;
   return booking.status === "pending" ? "نبحث عن كبتنٍ يضمن حجزك" : null;
 }
@@ -121,6 +142,13 @@ export function BookingsScreen() {
     }
   }
 
+  // **فعلا الحجز الذي ينتظر اختيارَها** (§٦٤-ج/٤-١) — جوابُ الخلفية يُستبدل في مكانه، وسببُ التعثّر تحت بطاقته
+  const replace = useCallback(
+    (next: Booking) => setRows((current) => (current ?? []).map((row) => (row.id === next.id ? next : row))),
+    [],
+  );
+  const choice = useBookingChoice(replace);
+
   return (
     <div className="t2 t2-page pb-nav">
       <SubHeadT2 title="رحلاتي المجدولة" onBack={goBack} />
@@ -137,11 +165,13 @@ export function BookingsScreen() {
 
       {(rows ?? []).map((booking) => {
         const state = stateOf(booking);
-        const pending = booking.status === "pending";
+        const awaiting = booking.awaiting_choice;
+        // **وما ينتظر اختيارَها لا يُلغى من الرابط** — فعلاه في كتلة البرقوق تحت البطاقة
+        const pending = booking.status === "pending" && !awaiting;
         // «نسائية» مكانَ الفئة كما في بطاقة «مجدولة» في «رحلاتي» — **وصفٌ للطلب لا لصاحبته**
         const kind = booking.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[booking.vehicle_category];
         return (
-          <article key={booking.id} className={pending ? "t2-bk pending" : "t2-bk"}>
+          <article key={booking.id} className={awaiting ? "t2-bk t2-wbk" : pending ? "t2-bk pending" : "t2-bk"}>
             <div className="t2-bk-top">
               <span className="t2-bk-when">
                 <Icon name="event_upcoming" />
@@ -182,6 +212,14 @@ export function BookingsScreen() {
                 </Link>
               ) : null}
             </div>
+            {awaiting ? (
+              <WomenPausedChoiceT2
+                busy={choice.busy === booking.id}
+                error={choice.errors[booking.id] ?? null}
+                onAnyCaptain={() => choice.anyCaptain(booking)}
+                onCancel={() => choice.cancel(booking)}
+              />
+            ) : null}
           </article>
         );
       })}

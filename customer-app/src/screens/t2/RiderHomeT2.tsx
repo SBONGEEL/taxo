@@ -39,6 +39,7 @@ import { Wordmark } from "@/taxo2";
 
 import { DrawerT2 } from "./DrawerT2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
+import { DeclareGenderSheetT2 } from "./WomenServiceT2";
 import "@/taxo2";
 import "./t2.css";
 import "./cashback.css";
@@ -244,11 +245,12 @@ export function RiderHomeT2({
   }, [notice]);
   const soon = (what: string) => setNotice(`${what} — قريباً`);
 
-  /** **«نسائية» كما تعمل الخدمةُ اليوم**: من عُرضت عليها تبدأ طلبَها بـ«كبتنة فقط»، ومن لم تُعلن جنسها تُعلنه في «بياناتي»
-   *  (بابُ اليوم نفسُه)، ومن أعلن غيرَ ذلك تُقال له العلّة. */
+  /** **«نسائية» كما تعمل الخدمةُ اليوم**: من عُرضت عليها تبدأ طلبَها بـ«كبتنة فقط»، **ومن لم تُعلن جنسها تُسأل هنا** (§٦٤-ج/٤-٢،
+   *  `DeclareGenderSheetT2` — كانت تُرسل إلى «بياناتي» وهي تعرضه ولا تكتبه)، ومن أعلن غيرَ ذلك تُقال له العلّة. */
+  const [declaring, setDeclaring] = useState(false);
   function openWomen() {
     if (women.available) onWomenRide?.();
-    else if (!user?.gender) navigate("/account/profile");
+    else if (!user?.gender) setDeclaring(true);
     else setNotice("الخدمة النسائية للراكبات");
   }
 
@@ -369,6 +371,13 @@ export function RiderHomeT2({
         <div className="t2-toast" role="status" aria-live="polite">
           {notice}
         </div>
+      ) : null}
+
+      {/* **أعلنت أنها أنثى ⇒ صفحةُ الخدمة (RW1)** كبطاقة R15 بعينها — لا ورقةُ الطلب: تنبيهُ «تم تفعيل الوضع النسائي» يظهر لأوّل
+          مرّةٍ مع الإعلان (`WomenModeNotice`)، **وفوق ورقةٍ مفتوحةٍ يغطّي حقلَ البحث فيها** حتى تُغلقه (قِيس بالمتصفّح). وفي RW1 لا
+          ورقةَ تحته، وتقرأ ما الخدمةُ قبل طلبها الأوّل. ورجلٌ ⇒ «للراكبات» في الورقة ولا شيءَ بعدها */}
+      {women.enabled ? (
+        <DeclareGenderSheetT2 open={declaring} onOpenChange={setDeclaring} onFemale={() => navigate("/account/women")} />
       ) : null}
     </div>
   );

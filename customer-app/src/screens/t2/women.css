@@ -231,3 +231,48 @@
 .t2-trk-code-title { font-size: 14px; font-weight: 600; }
 .t2-trk-code-sub { margin-top: 2px; font-size: 12px; opacity: 0.85; }
 .t2-trk-code-num { font-family: var(--t2-font-num); font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+
+/* ── حجزٌ نسائيٌّ والخدمةُ متوقّفة (§٦٤-ج/٤-١) — **لا لوحةَ له**: بطاقةُ «مجدولة» (R12 · R26) بخافت البرقوق وحافّته مكانَ الجمر،
+ *    وتحت قاعها الخبرُ وزرّا البطاقة (`t2-cbtn` من العُدّة) — البرقوقُ لـ«أي كبتن» والحافّةُ للإلغاء ── */
+.t2-booking.t2-wbooking {
+  border-color: var(--t2-women-line);
+  background: var(--t2-women-soft);
+}
+.t2-wbooking .t2-booking-when { color: var(--t2-women); }
+.t2-bk.t2-wbk {
+  border: 1px solid var(--t2-women-line);
+  background: var(--t2-women-soft);
+}
+.t2-bk.t2-wbk .t2-bk-when { color: var(--t2-women); }
+.t2-chip.t2-wbk-chip { background: var(--t2-surface); color: var(--t2-women); }
+.t2-wpause {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--t2-women-line);
+}
+.t2-wpause-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.55;
+  color: var(--t2-women);
+}
+.t2-wpause-line .t2-icon { flex: none; font-size: 19px; }
+.t2-wpause-actions { display: flex; gap: 8px; margin-top: 12px; }
+.t2-cbtn.t2-wpause-any {
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+  font-weight: 700;
+}
+.t2-wpause-actions > .t2-cbtn.soft { border-color: var(--t2-women-line); background: var(--t2-surface); }
+.t2-wpause-fine { margin: 8px 0 0; text-align: center; font-size: 12px; line-height: 1.5; color: var(--t2-muted); }
+.t2-wpause .t2-note { margin-top: 8px; }
+
+/* ── إعلانُ الجنس حين تُضغط الخدمة (§٦٤-ج/٤-٢) — ورقةُ العُدّة (`DrawerT2`) بسؤال التسجيل نفسِه (`AuthChoice`) ── */
+.t2-wdecl-ask { margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
+.t2-wdecl-fine { margin: 10px 2px 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-wdecl-fine b { font-weight: 700; color: var(--t2-text); }
+.t2-drawer-actions > .t2-wbtn { height: 56px; }

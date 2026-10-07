@@ -12,23 +12,30 @@
  * صفحةٍ محمَّلةٍ كانت ستكذب على ما لم يُحمَّل — و«مجدولة» **بابُ الحجوز القائم** (`GET /me/bookings`، القائمةُ منها)، و«الكل»
  * **كما كان حرفاً** وفوقه بطاقةُ ما جُدول كما رُسم. **وزرُّ «تعديل» لم يُبنَ**: تعديلُ الحجز ينتظر إقرارَ المالك (`APPROVALS-MONEY.md`
  * §١) — فالبطاقةُ تفتح «رحلات مجدولة» حيث يُلغى. **والأجرةُ عليها «تقديرياً»**: تُحسب عند التنفيذ (القسم 5.11).
+ *
+ * **إلا حجزاً نسائيّاً ينتظر اختيارَها** (§٦٤-ج/٤-١، `awaiting_choice`): حلّ وقتُه والخدمةُ متوقّفة فلم يُطلب — **فلا يكون رابطاً**
+ * (زرّان داخل رابطٍ لمسةٌ واحدةٌ لشيئين) بل بطاقةً بالبرقوق تقول ذلك وتعرض فعلَيها هنا (`WomenPausedChoiceT2`). **و«أي كبتن» يعيده
+ * بطاقةً كأخواتها بسطر «نطلبها لك خلال دقيقة»** (`requestingSoon`)، **والإلغاءُ يُخرجه من «ما ينتظر موعده»**.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { listBookings, listMyRides } from "@/api/endpoints";
 import type { Booking, RideGroup, RideListItem, RideStatus } from "@/api/types";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
-import { useGuaranteedBooking } from "@/lib/bookings";
+import { requestingSoon, useBookingChoice, useGuaranteedBooking } from "@/lib/bookings";
 import { PAYMENT_METHOD_LABEL, RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { formatDistance, formatMoney } from "@/lib/utils";
+import { Icon } from "@/taxo2";
 
 import { aheadParts, byMonth, startOfToday, whenParts } from "./when";
+import { WomenPausedChoiceT2 } from "./WomenRideT2";
 
 import "@/taxo2";
 import "./t2.css";
+import "./women.css";
 
 const PAGE = 20;
 
@@ -80,6 +87,12 @@ export function RidesT2Screen() {
   const [more, setMore] = useState(false);
   // **جوابٌ متأخّرٌ لمرشّحٍ سابقٍ لا يكتب فوق الحاليّ** — من بدّل المرشّحَ مرّتين بسرعةٍ يرى ما اختاره آخراً
   const latest = useRef(0);
+  // **فعلا الحجز الذي ينتظر اختيارَها** (§٦٤-ج/٤-١) — جوابُ الخلفية يُستبدل في مكانه، **وما أُلغي يخرج** («ما ينتظر موعده» وحدَه)
+  const replace = useCallback(
+    (next: Booking) => setBookings((current) => upcoming(current.map((row) => (row.id === next.id ? next : row)))),
+    [],
+  );
+  const choice = useBookingChoice(replace);
 
   async function load(offset: number, which: Filter) {
     const ticket = ++latest.current;
@@ -159,11 +172,30 @@ export function RidesT2Screen() {
           {bookings.map((booking) => {
             const at = aheadParts(booking.scheduled_at, today);
             const fare = booking.estimated_fare_at_booking;
+            if (booking.awaiting_choice) {
+              return (
+                <PausedBookingT2
+                  key={booking.id}
+                  booking={booking}
+                  busy={choice.busy === booking.id}
+                  error={choice.errors[booking.id] ?? null}
+                  onAnyCaptain={() => choice.anyCaptain(booking)}
+                  onCancel={() => choice.cancel(booking)}
+                />
+              );
+            }
             return (
               <Link key={booking.id} to="/account/bookings" className="t2-booking">
                 <span className="t2-booking-when">
                   <span className="t2-icon" aria-hidden="true">event_upcoming</span>
-                  مجدولة · {at.day} <span dir="ltr">{at.time}</span> {at.half}
+                  {/* **حلّ وقتُه وتطلبه الدورةُ في دقيقتها** — كحجزٍ اختارت له «أي كبتن» (§٦٤-ج/٤-١) */}
+                  {requestingSoon(booking) ? (
+                    "نطلبها لك خلال دقيقة"
+                  ) : (
+                    <>
+                      مجدولة · {at.day} <span dir="ltr">{at.time}</span> {at.half}
+                    </>
+                  )}
                 </span>
                 <span className="t2-route">
                   <span className="t2-dot" />
@@ -255,5 +287,47 @@ export function RidesT2Screen() {
         </>
       )}
     </div>
+  );
+}
+
+/** **بطاقةُ «مجدولة» لحجزٍ ينتظر اختيارَها** (§٦٤-ج/٤-١) — ما تحمله أخواتُها (الموعد · النقطتان · «نسائية» · التقدير) **بالبرقوق
+ *  لا بالجمر**، وتحتها الخبرُ والفعلان. **وليست رابطاً**: الفعلان هنا، و«رحلاتي المجدولة» تعرض الشيءَ نفسَه لمن فتحها من الإشعار. */
+function PausedBookingT2({
+  booking,
+  busy,
+  error,
+  onAnyCaptain,
+  onCancel,
+}: {
+  booking: Booking;
+  busy: boolean;
+  error: string | null;
+  onAnyCaptain: () => void;
+  onCancel: () => void;
+}) {
+  const at = aheadParts(booking.scheduled_at, startOfToday());
+  const fare = booking.estimated_fare_at_booking;
+  return (
+    <article className="t2-booking t2-wbooking">
+      <span className="t2-booking-when">
+        <Icon name="event_upcoming" />
+        مجدولة · {at.day} <span dir="ltr">{at.time}</span> {at.half}
+      </span>
+      <span className="t2-route">
+        <span className="t2-dot" />
+        <span className="t2-place">{booking.pickup_address ?? "نقطة على الخريطة"}</span>
+        <span className="t2-dot to" />
+        <span className="t2-place strong">{booking.dropoff_address ?? "وجهة على الخريطة"}</span>
+      </span>
+      <span className="t2-booking-foot">
+        <span>نسائية</span>
+        {fare !== null ? (
+          <span className="t2-booking-fare">
+            {formatMoney(fare, booking.currency)} <small>تقديرياً</small>
+          </span>
+        ) : null}
+      </span>
+      <WomenPausedChoiceT2 busy={busy} error={error} onAnyCaptain={onAnyCaptain} onCancel={onCancel} />
+    </article>
   );
 }
