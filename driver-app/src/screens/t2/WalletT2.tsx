@@ -28,7 +28,7 @@ import { TRANSACTION_LABEL, isDebit, unsigned } from "@/lib/walletFormat";
 import { PERIOD_LABEL, useEarningsScreen } from "@/screens/Earnings";
 import { useWalletScreen } from "@/screens/Wallet";
 
-import { countRides } from "./count";
+import { countRides, workedHours } from "./count";
 import { EarningsDays } from "./EarningsDays";
 
 import "@/taxo2";
@@ -174,6 +174,8 @@ export function WalletT2Screen() {
               )}
               <span>صافي ما دخل محفظتك</span>
               <span>{countRides(data.completed_rides)}</span>
+              {/* **«31 ساعة»** (§٦٢-ج/٣٧، C09) — حيث المفتاحُ مشتعلٌ وحدَه: `null` «لم يُقَس» فلا يُرسم */}
+              {data.online_minutes == null ? null : <span>{workedHours(data.online_minutes)}</span>}
             </div>
 
             {/* ── أيّامُ النافذة كما رُسمت — و«اليوم» يومٌ واحدٌ هو الرقمُ فوقه فلا رسمَ له ── */}

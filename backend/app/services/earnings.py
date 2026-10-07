@@ -101,6 +101,9 @@ class Earnings:
     # **التغيّرُ عن النافذة السابقة المساوية لها حتى الساعة نفسِها**، بالمئة
     # مقرَّباً — و`None` حين لا أساسَ له (انظر `_change_percent`)
     change_percent: int | None
+    # **دقائقُ اتصاله في أيّام النافذة** (§٦٢-ج/٣٧، C04 «4:10 ساعة» · C09 «31 ساعة») — و`None` حيث مفتاحُ
+    # `work_hours_enabled` مطفأ: «لم يُقَس» لا «صفرُ ساعة»
+    online_minutes: int | None = None
 
 
 async def _ledger_sum(
@@ -260,6 +263,17 @@ async def summary(
     current_net = pricing.round_money(
         wallet_earnings + tips - commission - advance_repaid
     )
+    # **ساعاتُ العمل بأيّام النافذة نفسِها** (§٦٢-ج/٣٧) — من يوم السوق الأول فيها إلى آخره
+    from app.models.enums import FeatureKey
+    from app.services import activity, settings_service
+
+    online_minutes = (
+        await activity.minutes_between(
+            session, driver.id, from_at.astimezone(zone).date(), to_at.astimezone(zone).date()
+        )
+        if await settings_service.is_feature_enabled(session, country, FeatureKey.WORK_HOURS_ENABLED)
+        else None
+    )
 
     return Earnings(
         period=period,
@@ -284,4 +298,5 @@ async def summary(
         change_percent=_change_percent(
             current_net, pricing.round_money(sum(previous.values(), Decimal(0)))
         ),
+        online_minutes=online_minutes,
     )

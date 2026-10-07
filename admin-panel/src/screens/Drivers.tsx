@@ -39,6 +39,7 @@ import {
   approveDriver,
   clearDriverInspection,
   driverDocumentBlob,
+  getDriverActivity,
   getDriverDocuments,
   grantIntercityPermit,
   listDriverVehicles,
@@ -55,6 +56,7 @@ import {
 } from "@/api/endpoints";
 import type {
   AdminDriverRow,
+  DriverActivity,
   DocumentType,
   DriverDocuments,
   DriverStatus,
@@ -848,6 +850,9 @@ function DriverDrawer({
         {/* **تصريحُ «بين المدن»** (§٦٣-ج/٧) — بعد الفحص لأنه نتيجتُه: يُمنح لمركبةٍ فُحصت، **ويبقى الدرجُ مفتوحاً** بعد المنح والسحب */}
         <IntercityPermitCard driverId={row.driver_id} canDecide={canDecide} />
 
+        {/* **ساعاتُ العمل** (§٦٢-ج/٣٧، «يراها الكبتنُ والإدارة») — قراءةٌ وحدَها: لا فعلَ فيها */}
+        <WorkHoursCard driverId={row.driver_id} />
+
         <h3 className="ad-dh">توثيق الجنس</h3>
         <div className="ad-box">
           <div className="ad-box-row">
@@ -1171,6 +1176,69 @@ function localDay(date: Date): string {
  * **والتصريحُ لا يُحذف**: يسقط وحدَه بانتهاء التأمين، ويُسحب بزرّه فيُختم وقتُ سحبه — **وأحوالُه الثلاثُ تُقرأ هنا** (ساري · انتهى
  * تأمينُه · مسحوب). **والكتابةُ لـ`admin` وحدَه** كبقيّة قرارات الدرج، والخلفيةُ تحرسها (`SettingsWriter`).
  */
+/** «4:10» — ساعاتٌ ودقائقُ من دقائقَ تصل من الخلفية؛ تنسيقٌ لا حساب. */
+function clock(minutes: number): string {
+  return digits(`${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`);
+}
+
+function WorkRow({ label, minutes }: { label: string; minutes: number }) {
+  return (
+    <div className="ad-kv-row">
+      <span className="ad-kv-label">{label}</span>
+      <span className="ad-kv-value" dir="ltr">
+        {clock(minutes)}
+      </span>
+    </div>
+  );
+}
+
+function WorkHoursCard({ driverId }: { driverId: string }) {
+  const [data, setData] = useState<DriverActivity | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDriverActivity(driverId)
+      .then((value) => {
+        if (!cancelled) setData(value);
+      })
+      .catch((caught) => setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة ساعات العمل"));
+    return () => {
+      cancelled = true;
+    };
+  }, [driverId]);
+
+  return (
+    <>
+      <h3 className="ad-dh">ساعات العمل</h3>
+      <div className="ad-box">
+        <ErrorNote message={error} />
+        {data === null ? (
+          error ? null : (
+            <div className="ad-sec-loading">
+              <Spinner />
+            </div>
+          )
+        ) : !data.enabled ? (
+          <p className="ad-mini-empty">ساعاتُ العمل غيرُ مفعّلةٍ في هذا السوق — لا تُحسب دقيقة.</p>
+        ) : (
+          <>
+            <p className="ad-box-hint">دقائقُ اتصاله يستقبل الطلبات — ومعها وقتُ رحلاته — بيوم السوق. لا موقعَ يُحفظ.</p>
+            <div className="ad-kv">
+              <WorkRow label="اليوم" minutes={data.today_minutes} />
+              <WorkRow label="آخر 7 أيام" minutes={data.week_minutes} />
+              <WorkRow label="آخر 30 يوماً" minutes={data.month_minutes} />
+              {data.months.map((month) => (
+                <WorkRow key={month.month} label={digits(month.month.slice(0, 7))} minutes={month.minutes} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 function IntercityPermitCard({ driverId, canDecide }: { driverId: string; canDecide: boolean }) {
   const [permits, setPermits] = useState<IntercityPermit[] | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);

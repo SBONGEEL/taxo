@@ -163,6 +163,8 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         FeatureKey.RIDER_SUBSCRIPTION_ENABLED: False,
         FeatureKey.INTERCITY_ENABLED: False,
         FeatureKey.WEEKLY_CASHBACK_ENABLED: False,
+        # **ساعاتُ العمل مطفأةٌ حتى يُنشر سطرُ خصوصيّتها** (§٦٤-هـ/٤) — المفتاحُ يحكم الجمع
+        FeatureKey.WORK_HOURS_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

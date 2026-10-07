@@ -202,6 +202,8 @@ class EarningsOut(BaseModel):
     # **منذ §٦٢-ج/٣٨** (رسمُ C09): صافي كلِّ يومٍ في النافذة، والتغيّرُ بالمئة عن
     # النافذة السابقة المساوية لها حتى الساعة نفسِها — `null` حيث لا أساسَ له
     days: list[EarningsDayOut]
+    # **دقائقُ اتصاله في النافذة** (§٦٢-ج/٣٧) — `null` حيث المفتاحُ مطفأ: «لم يُقَس» لا «صفر»
+    online_minutes: int | None = None
     change_percent: int | None
 
 

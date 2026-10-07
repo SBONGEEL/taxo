@@ -7,6 +7,7 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  DriverActivity,
   ErrorGroupRow,
   ErrorGroupDetail,
   ErrorEventRow,
@@ -1553,6 +1554,10 @@ export const updateIntercityRoute = (
     is_active: boolean;
   }>,
 ) => api.patch<IntercityRoute>(`/admin/intercity/routes/${routeId}`, payload);
+
+/** **ساعاتُ عمل الكبتن** (§٦٢-ج/٣٧) — ثلاثون يوماً وما جُمع شهرياً، **والمجاميعُ من الخلفية**. ولا موقع. */
+export const getDriverActivity = (driverId: string) =>
+  api.get<DriverActivity>(`/admin/drivers/${driverId}/activity`);
 
 /** **تصاريحُ كبتن** — السارية والمسحوبة والمنتهية، الأحدثُ أوّلاً. */
 export const listIntercityPermits = (driverId: string) =>

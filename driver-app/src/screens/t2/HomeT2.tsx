@@ -10,7 +10,8 @@
  *
  * ## C04 — ما رسمته اللوحةُ ولا مصدرَ له لا يُرسم مكانَه شيء (§٦١-د/د)
  *
- * - **«6:20 ساعة»**: لا ساعاتِ عملٍ في أيِّ باب. («9 رحلات» و«4.92» بُنيتا: `completed_rides` · `rating_avg`.)
+ * - **«6:20 ساعة» بُنيت** (§٦٢-ج/٣٧، ٢٠٢٦-١٠-٠٧): `earnings.online_minutes` لليوم، **ولا تُرسم حيث مفتاحُها مطفأ**. («9 رحلات» و«4.92»:
+ *   `completed_rides` · `rating_avg`.)
  * - **«خريطة الطلب» ومناطقُها** («عبدون ×1.4» · «الأقرب لك: عبدون ×1.4 · 2.3 كم»): لا خريطةَ طلبٍ ولا مضاعِفَ سعرٍ في النظام
  *   (التسعيرُ المتحرّك «لا يُبنى الآن»). **وموضعُ الشارة صار «توسيع»** — ميزةُ البطاقة القائمة (قرارُ المالك 2026-08-30) بلغة الشارة.
  *   **وفي موضع «الأقرب لك» تحت «متصل» سطرُ «الطلب مرتفع حولك الآن»** (§٦٢-ج/٤٣) — من عدِّ ما طُلب حوله لا من خريطة (`useDemandHigh`).
@@ -75,7 +76,7 @@ import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { Icon, Wordmark } from "@/taxo2";
 
-import { countBookings, countCommutes, countRides } from "./count";
+import { countBookings, countCommutes, countRides, hoursClock } from "./count";
 
 import "./t2.css";
 import "./ride.css";
@@ -253,6 +254,15 @@ export function HomeT2Screen() {
               <span className="t2-hm-chip">
                 <Icon name="local_taxi" />
                 <RideCount n={earnings.completed_rides} />
+              </span>
+            ) : null}
+            {earnings?.online_minutes != null ? (
+              <span className="t2-hm-chip">
+                <Icon name="schedule" />
+                <span className="t2-hm-chip-num" dir="ltr">
+                  {hoursClock(earnings.online_minutes)}
+                </span>
+                ساعة
               </span>
             ) : null}
             {rating ? (

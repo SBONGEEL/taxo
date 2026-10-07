@@ -34,6 +34,7 @@ from app.routers import (
     intercity,
     intercity_admin,
     intercity_driver,
+    admin_activity,
     cashback,
     admin_stats,
     admin_subscriptions,
@@ -87,6 +88,7 @@ api_router.include_router(commute_driver.router)
 api_router.include_router(intercity_admin.router)
 api_router.include_router(intercity_driver.router)
 api_router.include_router(intercity.router)
+api_router.include_router(admin_activity.router)
 api_router.include_router(cashback.router)
 api_router.include_router(admin_verification_campaigns.router)
 api_router.include_router(admin_providers.router)

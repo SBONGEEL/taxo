@@ -658,6 +658,8 @@ class FeatureKey(StrEnum):
     # **الاسترداد الأسبوعي** (§٦٣-ج/٨ — تعريفُ المالك) — رحلةٌ كلَّ يومٍ لأسبوعٍ بلا جمعته، والمبلغُ من TAXO في اليوم الأخير.
     # ومطفأً لا سلسلةَ تُحسب ولا نارَ تُرسم؛ و`service_settings.cashback_amount` صفرٌ يُخفيه ولو اشتعل
     WEEKLY_CASHBACK_ENABLED = "weekly_cashback_enabled"
+    # **ساعاتُ العمل** (§٦٢-ج/٣٧، §٦٤-ج) — **يحكم الجمعَ لا العرضَ وحدَه**: مطفأً لا دقيقةَ تُحسب، فلا بياناتٌ شخصيةٌ قبل نشر سطرها
+    WORK_HOURS_ENABLED = "work_hours_enabled"
 
 
 class BookingStatus(StrEnum):

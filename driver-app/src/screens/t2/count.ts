@@ -12,6 +12,17 @@ export function countDays(n: number, genitive = false): string {
   return `${digits(String(n))} يوماً`;
 }
 
+/** **«4:10»** — ساعاتٌ ودقائقُ كما رسمتها C04، من دقائقَ تصل من الخلفية (تنسيقٌ لا حساب). */
+export function hoursClock(minutes: number): string {
+  return digits(`${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`);
+}
+
+/** **«31 ساعة»** كما رسمتها C09 — ساعاتٌ تامّةٌ بعدِّ `countHours` نفسِه، و«أقلّ من ساعة» تحتها. */
+export function workedHours(minutes: number): string {
+  const n = Math.floor(minutes / 60);
+  return n === 0 ? "أقلّ من ساعة" : countHours(n);
+}
+
 /** «42 رحلة» كما رسمتها C09 — و«رحلتان» و«3 رحلات»، والصفرُ «لا رحلات». */
 export function countRides(n: number): string {
   if (n === 0) return "لا رحلات";

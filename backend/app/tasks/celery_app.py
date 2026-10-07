@@ -97,6 +97,7 @@ celery_app = Celery(
         "app.tasks.guarantees",
         "app.tasks.commute",
         "app.tasks.intercity",
+        "app.tasks.activity",
         "app.tasks.cashback",
     ],
 )
@@ -202,6 +203,16 @@ celery_app.conf.update(
         "remind-cashback": {
             "task": "app.tasks.cashback.remind_cashback",
             "schedule": 900.0,
+        },
+        # **ساعاتُ العمل** (§٦٢-ج/٣٧): دقيقةٌ كلَّ دقيقة — ومفتاحُ الدقيقة يمنع عدَّها مرّتين
+        "record-activity-minute": {
+            "task": "app.tasks.activity.record_activity_minute",
+            "schedule": 60.0,
+        },
+        # **وما جاوز ثلاثةَ عشرَ شهراً يُجمع شهرياً** — مرّةً في اليوم تكفي
+        "roll-up-activity": {
+            "task": "app.tasks.activity.roll_up_activity",
+            "schedule": 86400.0,
         },
         "sweep-intercity": {
             "task": "app.tasks.intercity.sweep_intercity",

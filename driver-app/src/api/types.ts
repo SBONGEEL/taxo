@@ -497,6 +497,8 @@ export interface Earnings {
   days: EarningsDay[];
   /** التغيّرُ بالمئة عن النافذة السابقة المساوية لها **حتى الساعة نفسِها** — `null` حيث لا أساسَ له. */
   change_percent: number | null;
+  /** **دقائقُ اتصاله في النافذة** (§٦٢-ج/٣٧) — `null` حيث `work_hours_enabled` مطفأ: «لم يُقَس» فلا يُرسم شيء. */
+  online_minutes?: number | null;
 }
 
 export interface Wallet {

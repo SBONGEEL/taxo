@@ -393,6 +393,7 @@ export type FeatureKey =
   | "rider_subscription_enabled"
   | "intercity_enabled"
   | "weekly_cashback_enabled"
+  | "work_hours_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
@@ -1994,6 +1995,16 @@ export interface IntercityRoute {
 
 /** **تصريحُ «بين المدن»** (`PermitOut`) — يمنحه مشرفٌ بعد فحص المركبة لمركبةٍ بعينها، **ويسقط وحدَه بانتهاء التأمين**، ويُسحب بيده
  *  (`revoked_at`) — **لا يُحذف**. */
+/** **ساعاتُ عمل الكبتن** (§٦٢-ج/٣٧، §٦٤-ج) — دقائقُ اتصالٍ لا موقع. و`enabled` مطفأً: الأصفارُ «لم يُقَس» لا «لم يعمل». */
+export interface DriverActivity {
+  enabled: boolean;
+  today_minutes: number;
+  week_minutes: number;
+  month_minutes: number;
+  days: { day: string; minutes: number }[];
+  months: { month: string; minutes: number }[];
+}
+
 export interface IntercityPermit {
   id: string;
   driver_id: string;
