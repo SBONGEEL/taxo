@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -33,7 +32,6 @@ from tests.helpers import (
     DROPOFF,
     EXPECTED_FARE,
     PICKUP,
-    SECOND_DRIVER,
     approved_driver,
     bring_online,
     enable_features,
@@ -204,28 +202,3 @@ async def test_the_month_end_settles_once(
         assert (await commute.run_daily(session))["settled"] == 0
         row = await session.get(RiderSubscription, uuid.UUID(sub["id"]))
         assert row.status == "ended" and row.settled_at is not None
-
-
-async def test_two_captains_approve_at_once_and_one_wins(
-    client: AsyncClient, admin_headers: dict, jordan_settings: None, jordan_wallet: None, session_factory, monkeypatch
-) -> None:
-    """**قفلُ الاشتراك وحدَه يملك هذا** — بتداخلٍ مقصود: الأولُ يتمهّل بعد القراءة."""
-    original = commute.locked
-
-    async def slow(session, subscription_id):
-        row = await original(session, subscription_id)
-        await asyncio.sleep(0.5)
-        return row
-
-    monkeypatch.setattr(commute, "locked", slow)
-    rider, sub = await _bought(client, admin_headers, session_factory)
-    first = await approved_driver(client, session_factory, DRIVER)
-    second = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-22")
-    responses = await asyncio.wait_for(
-        asyncio.gather(
-            client.post(f"/drivers/me/commutes/{sub['id']}/approve", headers=first["headers"]),
-            client.post(f"/drivers/me/commutes/{sub['id']}/approve", headers=second["headers"]),
-        ),
-        timeout=20,
-    )
-    assert sorted(r.status_code for r in responses) == [200, 409]

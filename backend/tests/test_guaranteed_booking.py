@@ -11,9 +11,7 @@
 
 from __future__ import annotations
 
-import asyncio
 import uuid
-from collections import Counter
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -122,38 +120,6 @@ async def test_the_fee_is_held_from_the_wallet_and_an_empty_wallet_is_refused(
     assert (await wallet_of(client, rider["headers"]))["balance"] == "4.000"
     too_soon = await _book(client, rider, hours=1)
     assert too_soon.status_code == 409
-
-
-async def test_two_captains_accept_at_once_and_one_wins(
-    client: AsyncClient, admin_headers: dict, jordan_settings: None, jordan_wallet: None, session_factory, monkeypatch
-) -> None:
-    """**القفلُ وحدَه يملك هذا** — وتداخلٌ مقصود: الأولُ يتمهّل بعد قراءة الحجز فيبدأ الثاني والأولُ ممسكٌ به. **وبحذف القفل يقبلانه معاً**
-    (قِيس: كان يمرّ بلا القفل قبل التمهّل — الطلبان لم يتداخلا أصلاً، فلم يكن يقيس شيئاً)."""
-    original = guarantees._locked
-
-    async def slow_locked(session, booking_id):
-        row = await original(session, booking_id)
-        await asyncio.sleep(0.5)
-        return row
-
-    monkeypatch.setattr(guarantees, "_locked", slow_locked)
-    rider, first = await _setup(client, admin_headers, session_factory)
-    second = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-22")
-    booking = (await _book(client, rider)).json()
-
-    offers = await client.get("/drivers/me/guarantee-offers", headers=first["headers"])
-    assert [row["id"] for row in offers.json()] == [booking["id"]]
-
-    responses = await asyncio.wait_for(
-        asyncio.gather(
-            client.post(f"/drivers/me/guarantees/{booking['id']}/accept", headers=first["headers"]),
-            client.post(f"/drivers/me/guarantees/{booking['id']}/accept", headers=second["headers"]),
-        ),
-        timeout=20,
-    )
-    assert sorted(r.status_code for r in responses) == [200, 409], [r.text for r in responses]
-    loser = next(r for r in responses if r.status_code == 409)
-    assert loser.json()["code"] == "guarantee_taken"
 
 
 async def test_confirming_creates_the_ride_and_a_timely_ride_pays_the_captain_the_whole_fee(

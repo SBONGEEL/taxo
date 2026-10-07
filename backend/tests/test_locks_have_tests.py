@@ -26,6 +26,9 @@ TESTS = pathlib.Path(__file__).resolve().parent
 COVERED_ELSEWHERE: dict[str, str] = {
     "campaigns": "تُقاد من `tasks/notifications`، ويحرس تقدّمَها"
     " `notification_deliveries` بفريدٍ على (campaign_id, user_id) لا بقفل",
+    "cashback": "لا مساران متزامنان على سلسلةٍ واحدة: تُمدّ من `complete_ride` وحدَه وصفُّ الرحلة"
+    " مقفول، **ولكلِّ راكبٍ رحلةٌ قائمةٌ واحدة** (`uq_rides_active_rider`) — وقيدُ الدفتر بمفتاح"
+    " `cashback:<السلسلة>` لا يُكتب مرّتين. فاختبارٌ «يسقط بحذف القفل» لا يُبنى بصدق (٢٠٢٦-١٠-٠٧)",
     "cliq_topups": "يحرسه `test_stage8_concurrency.py` — جوابان متزامنان"
     " من المزوّد على طلبٍ واحد",
     "deactivation": "طلبُ إلغاءِ تفعيلٍ لا يمسّ مالاً، وفريدُ الطلب القائم"

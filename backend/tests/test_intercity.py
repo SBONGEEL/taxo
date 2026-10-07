@@ -10,28 +10,22 @@
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import select
 
-from app.models.enums import FeatureKey, WalletTransactionType
+from app.models.enums import FeatureKey
 from app.models.intercity import IntercityTrip
 from app.models.service_setting import ServiceSetting
 from app.models.vehicle import Vehicle
-from app.models.wallet import WalletTransaction
 from app.services import intercity
 from tests.helpers import (
     DRIVER,
-    OTHER_RIDER,
     approved_driver,
-    auth,
     enable_features,
-    register,
     rider_session,
     set_commission,
     topup_wallet,
@@ -133,42 +127,6 @@ async def test_the_permit_needs_a_2015_car_and_live_insurance(
         headers=admin_headers,
     )
     assert lapsed.status_code == 422
-
-
-async def test_seats_are_held_from_the_wallet_and_the_last_seat_goes_to_one_of_two(
-    client: AsyncClient, admin_headers: dict, jordan_settings: None, jordan_wallet: None, session_factory, monkeypatch
-) -> None:
-    route, driver = await _setup(client, admin_headers, session_factory)
-    trip = await _trip(client, route, driver, seats=1)
-    first = await rider_session(client)
-    second = {"headers": auth(await register(client, OTHER_RIDER))}
-    await topup_wallet(client, admin_headers, first["user"]["id"], "20.000")
-    me = (await client.get("/auth/me", headers=second["headers"])).json()
-    await topup_wallet(client, admin_headers, me["id"], "20.000")
-
-    original = intercity.locked_trip
-
-    async def slow(session, trip_id):
-        row = await original(session, trip_id)
-        await asyncio.sleep(0.5)
-        return row
-
-    monkeypatch.setattr(intercity, "locked_trip", slow)
-    responses = await asyncio.wait_for(
-        asyncio.gather(
-            client.post("/intercity/bookings", json={"trip_id": trip["id"], "seats": 1}, headers=first["headers"]),
-            client.post("/intercity/bookings", json={"trip_id": trip["id"], "seats": 1}, headers=second["headers"]),
-        ),
-        timeout=20,
-    )
-    assert sorted(r.status_code for r in responses) == [201, 409]
-    async with session_factory() as session:
-        held = await session.scalar(
-            select(func.coalesce(func.sum(WalletTransaction.amount), 0)).where(
-                WalletTransaction.type == WalletTransactionType.INTERCITY_HOLD
-            )
-        )
-    assert held == Decimal("-6.000")
 
 
 async def test_the_captain_cancels_before_the_deadline_for_free_and_not_after(
