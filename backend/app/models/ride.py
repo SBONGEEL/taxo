@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from geoalchemy2 import Geography, Geometry
 from geoalchemy2.elements import WKTElement
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -149,6 +150,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "AND share_discount_percent_at_ride <= 100",
             name="ride_share_discount_percent_range",
         ),
+        # **رحلةٌ لغير صاحبها وحدَها تحمل راكباً آخرَ ودافعاً نقدياً** (§٦٣-ج/١): رحلةٌ عاديّةٌ باسم راكبٍ غريب
+        # أو «يدفعها الراكبُ نقداً» تناقضٌ يفتح دفعةَ نقدٍ لا يقف أحدٌ عند السيارة ليدفعها
+        CheckConstraint(
+            "payer IN ('requester', 'passenger_cash') AND (for_other OR ("
+            "passenger_name IS NULL AND passenger_phone IS NULL AND payer = 'requester'))",
+            name="ride_for_other_fields",
+        ),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
             "uq_rides_active_rider",
@@ -177,6 +185,12 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "share_seat",
             unique=True,
             postgresql_where=text(_status_in(ACTIVE_DRIVER_STATUSES)),
+        ),
+        # **الكنسُ اليوميُّ يسأل هذا وحدَه** (§٦٣-ج/١): رحلاتٌ لغير أصحابها لم يُمحَ راكبُها بعد
+        Index(
+            "ix_rides_passenger_pending_erase",
+            "created_at",
+            postgresql_where=text("for_other AND passenger_erased_at IS NULL"),
         ),
         # وحدُّ المجموعة نفسِها: راكبان لا أكثر، ولو كانا على كبتنين بخطأ.
         Index(
@@ -360,6 +374,23 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     # (`GET /rides/{id}/start-code`) **ولا تصل الكبتنةَ في أيِّ تمثيل** — فهي ما تُدخله لتبدأ؛ و`RideOut` يحمل «أهو مطلوب» وحدَه.
     # **وعمودٌ لا مفتاحٌ في Redis**: رمزٌ يضيع بإعادة تشغيلٍ يحبس رحلةً لا تبدأ. و`NULL` = لا شرطَ على البدء
     start_code: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # ---------------------------------------------- رحلةٌ لشخصٍ آخر (§٦٣-ج/١)
+    #
+    # **`for_other` يبقى صادقاً بعد المحو**: الكنسُ اليوميُّ يمحو الاسمَ والرقمَ بعد ٣٠ يوماً من انتهاء الرحلة
+    # (`services/ride_for_other.purge_passengers`) ويكتب `passenger_erased_at` — **فالسجلُّ يقول ما كانت لا من كان**.
+    # **ولا يصلان كبتناً قبل القبول** (`RideOut`): العرضُ يمرّ على كباتن يرفضونه، والرقمُ أُعطي ليتصل به من يأتي
+    for_other: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    passenger_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    passenger_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    passenger_erased_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: من يدفع (`RidePayer`) — نصٌّ بقيدٍ لا `ENUM`، ويُقرأ في `payments.pay_ride` وعند الإنهاء
+    payer: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="requester", server_default=text("'requester'")
+    )
     # أربعةُ حقولِ انتظارٍ مجمَّدةٌ لحظة الإنشاء كالعمولة (SPEC القسم 5.10):
     # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن يتغيّر
     # عدّادُها تحت عين راكبها

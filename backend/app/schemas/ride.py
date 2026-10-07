@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +16,7 @@ from app.models.enums import (
     FareLineKind,
     GenderPreference,
     PaymentMethod,
+    RidePayer,
     RideStatus,
     VehicleCategory,
 )
@@ -78,6 +79,18 @@ class RideEstimateOut(BaseModel):
     stop_max_wait_minutes: int
 
 
+class RideForOtherIn(BaseModel):
+    """الراكبُ الفعليُّ ومن يدفع (§٦٣-ج/١) — **يُحفظان لهذه الرحلة وحدَها ويُمحيان بعد ٣٠ يوماً**.
+
+    والرقمُ يُطبَّع في الخدمة إلى E.164 بقواعد السوقين (+962 · +218)، ورقمٌ لا يُطبَّع **يرفض الطلب** — رقمٌ لا يُتّصل به
+    يُسقط سببَ حفظه.
+    """
+
+    name: str = Field(min_length=2, max_length=80)
+    phone: str = Field(min_length=6, max_length=20)
+    payer: RidePayer = RidePayer.REQUESTER
+
+
 class RideCreateRequest(RideEstimateRequest):
     # عنوانان اختياريان: الاعتماد الأساسي على الدبوس والـ Geocoding مكمّل
     pickup_address: str | None = Field(default=None, max_length=255)
@@ -97,6 +110,8 @@ class RideCreateRequest(RideEstimateRequest):
     # واحد لأن ما يقوله كلٌّ منهما مختلف — الأولُ «أقبل المشاركة»، والثاني
     # «أقبلها وأنا أعلم أن شريكي قد لا يوافق تفضيلي في جنس الكبتن»
     share_gender_confirmed: bool = False
+    # **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — `null` لرحلةٍ يركبها صاحبُها
+    for_other: RideForOtherIn | None = None
 
 
 class RideCancelRequest(BaseModel):
@@ -275,6 +290,12 @@ class RidePauseOut(BaseModel):
     over_max: bool = False
 
 
+#: أطوارُ ما بعد القبول وقبل الانتهاء — **فيها وحدَها يُنشر اسمُ الراكب الفعليّ ورقمُه** (§٦٣-ج/١)
+PASSENGER_VISIBLE = frozenset(
+    {RideStatus.ACCEPTED, RideStatus.ARRIVED, RideStatus.IN_PROGRESS, RideStatus.AT_STOP}
+)
+
+
 class RideOut(BaseModel):
     id: uuid.UUID
     rider_id: uuid.UUID
@@ -352,6 +373,16 @@ class RideOut(BaseModel):
     # **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، CW4) — **السؤالُ وحدَه لا الرمز**: هذا التمثيلُ يصل الطرفين وبثَّ المقبس، والرمزُ ما
     # تُدخله الكبتنة؛ فيُقرأ للراكبة من بابها (`GET /rides/{id}/start-code`)
     start_code_required: bool = False
+
+    # ------------------------------------ رحلةٌ لشخصٍ آخر (§٦٣-ج/١)
+    # **`for_other` و`payer` يُنشران دائماً**: الكبتنُ يقرأ على بطاقة العرض أنه سيقبض من غير صاحب الطلب أو لا يقبض شيئاً —
+    # **من قَبِل وهو يعرف لا يشتكي** (حجّةُ «موعدها» و«طلب نسائي»). **والاسمُ والرقمُ في أطوار القبول وحدَها**
+    # (`PASSENGER_VISIBLE`): العرضُ يمرّ على كباتن يرفضونه، والرقمُ أُعطي ليتصل به من يأتي — لا ليمرّ على كلِّ من عُرض عليه.
+    # **وبعد الانتهاء يُطويان** فلا يبقى رقمُ غريبٍ في سجلِّ أحد
+    for_other: bool = False
+    payer: RidePayer = RidePayer.REQUESTER
+    passenger_name: str | None = None
+    passenger_phone: str | None = None
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -446,6 +477,14 @@ class RideOut(BaseModel):
                 ride.estimated_fare + waiting_charge + pause_charge
             ),
             start_code_required=ride.start_code is not None,
+            for_other=ride.for_other,
+            payer=RidePayer(ride.payer),
+            passenger_name=(
+                ride.passenger_name if ride.status in PASSENGER_VISIBLE else None
+            ),
+            passenger_phone=(
+                ride.passenger_phone if ride.status in PASSENGER_VISIBLE else None
+            ),
             id=ride.id,
             rider_id=ride.rider_id,
             status=ride.status,
@@ -581,6 +620,32 @@ class StartRideRequest(BaseModel):
     """بدءُ الرحلة — **والرمزُ لرحلةٍ تطلبه وحدَها** (§٦٢-ج/٥). وغيابُ الجسم كلِّه بدءٌ بلا رمز كما كان: تطبيقٌ أقدمُ لا يرسل شيئاً."""
 
     code: str | None = Field(default=None, pattern=r"^[0-9]{4}$")
+
+
+class TrackLinkOut(BaseModel):
+    """رمزُ رابط التتبّع (§٦٣-ج/١) — **التطبيقُ يبني الرابطَ من عنوانه هو** (`/t/{token}`)، فلا نطاقَ مكتوبٌ في الخلفية
+    يفترق عن مكان التطبيق."""
+
+    token: str
+
+
+class PublicTrackVehicleOut(BaseModel):
+    make: str
+    model: str
+    color: str
+    plate_number: str
+
+
+class PublicTrackOut(BaseModel):
+    """ما يراه من يفتح رابطَ التتبّع بلا دخول (§٦٣-ج/١) — **أقلُّ ما يكفي**: اسمُ الكبتن وسيارتُه ولوحتُها وموقعُه.
+
+    **و`ended` بلا شيءٍ معه** — الرابطُ يتوقّف بانتهاء الرحلة، ولا يبقى منه أثرٌ لمن فتحه بعدها.
+    """
+
+    state: Literal["searching", "coming", "arrived", "riding", "ended"]
+    captain_name: str | None = None
+    vehicle: PublicTrackVehicleOut | None = None
+    position: CoordinatesIn | None = None
 
 
 class StartCodeOut(BaseModel):

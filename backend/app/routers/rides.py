@@ -40,6 +40,7 @@ from app.schemas.ride import (
     RouteLineOut,
     StartCodeOut,
     StartRideRequest,
+    TrackLinkOut,
 )
 from app.services import approach, avatar, cancellation, rider_photo
 from app.services import eta
@@ -50,6 +51,7 @@ from app.services import (
     pricing,
     promo as promo_service,
     ratings as ratings_service,
+    ride_for_other,
     ride_log,
     rides as rides_service,
     route,
@@ -157,6 +159,15 @@ async def request_ride(
         promo_code=payload.promo_code,
         share=payload.share,
         share_gender_confirmed=payload.share_gender_confirmed,
+        passenger=(
+            ride_for_other.PassengerRequest(
+                name=payload.for_other.name,
+                phone=payload.for_other.phone,
+                payer=payload.for_other.payer,
+            )
+            if payload.for_other is not None
+            else None
+        ),
         stops=[
             rides_service.StopRequest(
                 lat=stop.lat, lng=stop.lng, address=stop.address
@@ -556,6 +567,19 @@ async def mark_arrived(
         session, redis, ride, events.RideEvent.DRIVER_ARRIVED
     )
     return _to_out(ride)
+
+
+@router.post("/{ride_id}/track-link", response_model=TrackLinkOut)
+async def ride_track_link(
+    ride_id: uuid.UUID, rider: RiderUser, session: DbSession
+) -> TrackLinkOut:
+    """رابطُ تتبّعٍ يرسله الطالبُ بنفسه لمن يركب عنه (§٦٣-ج/١) — **الرمزُ نفسُه في كلِّ ضغطة**.
+
+    لصاحب الرحلة وحدَه، ولرحلةٍ لغيره جاريةٍ، **في سوقٍ أشعل مفتاحَها**.
+    """
+    token = await ride_for_other.track_link(session, ride_id=ride_id, rider=rider)
+    await session.commit()
+    return TrackLinkOut(token=token)
 
 
 @router.get("/{ride_id}/start-code", response_model=StartCodeOut)

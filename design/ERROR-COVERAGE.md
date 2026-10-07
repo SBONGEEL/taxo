@@ -78,6 +78,7 @@
 | `multi_stop_unavailable` | 409 | تعدد الوجهات غير مفعّل في هذه الدولة |
 | `no_open_pause` | 404 | لا توجد وقفةٌ مفتوحة |
 | `not_found` | 404 | العنصر غير موجود |
+| `payer_method_mismatch` | 409 | قناةُ الدفع لا تطابق من يدفع هذه الرحلة |
 | `pause_already_open` | 409 | ثمّة وقفةٌ مفتوحةٌ بالفعل |
 | `payout_failed` | 502 | تعذّر تنفيذ التحويل عند المزود |
 | `payout_unavailable` | 503 | التحويل الآلي غير مهيأ — راجع عقد payout في لوحة الإدارة |
@@ -96,6 +97,7 @@
 | `referral_code_unknown` | 404 | رمز الإحالة غير صحيح |
 | `referral_not_allowed` | 409 | لا يمكن استخدام رمز الإحالة |
 | `ride_already_active` | 409 | لديك رحلة جارية بالفعل |
+| `ride_for_other_unavailable` | 403 | الطلبُ لشخصٍ آخر غيرُ مفعّلٍ في بلدك |
 | `ride_already_paid` | 409 | هذه الرحلة لها دفعة قائمة تغطي قيمتها |
 | `ride_not_payable` | 409 | لا يمكن الدفع قبل اكتمال الرحلة |
 | `ride_offer_expired` | 409 | انتهت مهلة هذا الطلب أو عُرض على كبتن آخر |
@@ -116,6 +118,7 @@
 | `totp_enrollment_required` | 403 | الدخول إلى اللوحة يستلزم تسجيل التحقق الثنائي أولاً |
 | `totp_not_enrolled` | 409 | لا يوجد تحقق ثنائي مسجّل على هذا الحساب |
 | `totp_recovery_proof_required` | 409 | أثبت أن رمز الاسترداد يعمل قبل إلزام الجميع بالتحقق الثنائي |
+| `track_link_unavailable` | 409 | رابطُ التتبّع لرحلةٍ جاريةٍ تطلبها لغيرك |
 | `unsupported_document` | 422 | نوع الملف غير مدعوم — الصور (JPEG/PNG/WebP) وملفات PDF فقط |
 | `verification_channel_unavailable` | 400 | قناة التحقق المطلوبة غير متاحة لهذا الرقم |
 | `verification_send_failed` | 502 | تعذّر إرسال رمز التحقق |
@@ -449,7 +452,7 @@
 
 | المسار | الطريقة | الأخطاء الخاصة (الرمز — الحالة) |
 |---|---|---|
-| `/rides` | POST | `cancellation_debt_blocked` 402 · `invalid_input` 422 · `multi_stop_unavailable` 409 · `not_found` 404 · `pricing_rule_missing` 409 · `promo_invalid` 404 · `promo_unavailable` 403 · `ride_already_active` 409 · `routing_unavailable` 503 · `ride_sharing_gender_choice_required` 422 · `ride_sharing_unavailable` 422 · `women_service_unavailable` 409 |
+| `/rides` | POST | `cancellation_debt_blocked` 402 · `invalid_input` 422 · `multi_stop_unavailable` 409 · `not_found` 404 · `pricing_rule_missing` 409 · `promo_invalid` 404 · `promo_unavailable` 403 · `ride_already_active` 409 · `routing_unavailable` 503 · `ride_for_other_unavailable` 403 · `ride_sharing_gender_choice_required` 422 · `ride_sharing_unavailable` 422 · `women_service_unavailable` 409 |
 | `/rides/estimate` | POST | `pricing_rule_missing` 409 · `routing_failed` 502 · `routing_unavailable` 503 |
 | `/rides/me` | GET | — |
 | `/rides/me/active` | GET | — |

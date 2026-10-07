@@ -154,6 +154,8 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # و`level_settings.discount_meters` صفرٌ فوقه. ومطفأً **لا يُحسب مستوىً
         # أصلاً**، فلا تُشحن يوماً مستوياتٌ بُنيت في الظلّ على تعريفٍ لم يره أحد
         FeatureKey.DRIVER_LEVELS_ENABLED: False,
+        # **الخدماتُ الثماني مطفأةٌ حتى يُشعلها المالكُ لكلِّ سوق** (§٦٣، قرارُه ٢٠٢٦-١٠-٠٧)
+        FeatureKey.RIDE_FOR_OTHER_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

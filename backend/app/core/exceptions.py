@@ -427,6 +427,30 @@ class FeatureDisabled(AppError):
     message = "هذه الميزة غير مفعّلة في بلدك"
 
 
+class RideForOtherUnavailable(FeatureDisabled):
+    """طلبٌ لشخصٍ آخر أو رابطُ تتبّعه في سوقٍ مفتاحُه مطفأ (§٦٣-ج/١)."""
+
+    code = "ride_for_other_unavailable"
+    message = "الطلبُ لشخصٍ آخر غيرُ مفعّلٍ في بلدك"
+
+
+class PayerMethodMismatch(Conflict):
+    """قناةُ دفعٍ تخالف من اختار الطالبُ أن يدفع (§٦٣-ج/١).
+
+    **لا تُبتلع بتحويل القناة**: من اختار أن يدفع بمحفظته ثمّ دُفعت نقداً، أو العكس، يُحصَّل منه مرّتين أو لا يُحصَّل.
+    """
+
+    code = "payer_method_mismatch"
+    message = "قناةُ الدفع لا تطابق من يدفع هذه الرحلة"
+
+
+class TrackLinkUnavailable(Conflict):
+    """رابطُ تتبّعٍ لرحلةٍ ليست لغير صاحبها، أو انتهت (§٦٣-ج/١)."""
+
+    code = "track_link_unavailable"
+    message = "رابطُ التتبّع لرحلةٍ جاريةٍ تطلبها لغيرك"
+
+
 class WalletFrozen(AppError):
     status_code = status.HTTP_403_FORBIDDEN
     code = "wallet_frozen"

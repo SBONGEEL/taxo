@@ -31,7 +31,7 @@ from decimal import Decimal
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.core.deps import DbSession
+from app.core.deps import DbSession, RedisDep
 from app.models.enums import (
     ClientApp,
     CountryCode,
@@ -57,11 +57,28 @@ from app.services import (
     policies as policies_service,
     pricing,
     releases as releases_service,
+    ride_for_other,
     settings_service,
     site as site_service,
 )
+from app.schemas.ride import PublicTrackOut
 
 router = APIRouter(prefix="/public", tags=["public"])
+
+
+@router.get("/track/{token}", response_model=PublicTrackOut)
+async def public_track(token: str, session: DbSession, redis: RedisDep) -> PublicTrackOut:
+    """رابطُ تتبّع رحلةٍ لشخصٍ آخر (§٦٣-ج/١) — **بلا دخول**، والرمزُ العشوائيُّ هو الإذنُ كلُّه.
+
+    اسمُ الكبتن وسيارتُه ولوحتُها وموقعُه **حتى تنتهي الرحلة**، ثمّ «انتهت» وحدَها — **ولا رقمُ الطالب ولا محفظتُه**.
+    """
+    view = await ride_for_other.public_view(session, redis, token=token[:64])
+    return PublicTrackOut(
+        state=view.state,
+        captain_name=view.captain_name,
+        vehicle=view.vehicle,
+        position=view.position,
+    )
 
 #: الجمهورُ الذي يصحّ نشرُه لمن لا حسابَ له.
 PUBLIC_AUDIENCES = (AUDIENCE_ALL, AUDIENCE_NEW_DRIVER)

@@ -93,6 +93,7 @@ celery_app = Celery(
         "app.tasks.verification_campaign",
         "app.tasks.error_reports",
         "app.tasks.accounts",
+        "app.tasks.ride_for_other",
     ],
 )
 
@@ -188,6 +189,11 @@ celery_app.conf.update(
         "sweep-document-expiry": {
             "task": "app.tasks.document_expiry.sweep_document_expiry",
             "schedule": crontab(hour=2, minute=30),
+        },
+        # **محوُ الراكب الفعليّ بعد ٣٠ يوماً** (§٦٣-ج/١) — يومياً: الوعدُ في سياسة الخصوصية بالأيام، وكنسٌ أسبوعيٌّ يكسره
+        "purge-ride-passengers": {
+            "task": "app.tasks.ride_for_other.purge_passengers",
+            "schedule": crontab(hour=3, minute=10),
         },
         "sweep-orphan-documents": {
             "task": "app.tasks.maintenance.sweep_orphan_documents",

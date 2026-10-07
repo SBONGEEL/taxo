@@ -45,6 +45,7 @@ from app.core.exceptions import (
     InvalidInput,
     InvalidPaymentTransition,
     NotFound,
+    PayerMethodMismatch,
     PermissionDenied,
     RideAlreadyPaid,
     RideNotPayable,
@@ -60,6 +61,7 @@ from app.models.enums import (
     PaymentConfirmedBy,
     PaymentMethod,
     PaymentStatus,
+    RidePayer,
     RideStatus,
     UserRole,
     WalletOwnerType,
@@ -328,6 +330,7 @@ async def pay_ride(
         raise RideAlreadyPaid()
 
     await _require_method_enabled(session, ride, method)
+    _require_payer_method(ride, method)
 
     if method == PaymentMethod.CARD:
         # استيرادٌ داخل الدالة عمداً: `card_payments` يستورد هذا الملف ليصل إلى
@@ -354,6 +357,8 @@ async def pay_ride(
             rider=rider,
             outstanding=outstanding,
             idempotency_key=idempotency_key,
+            # **رحلةٌ لغيره يدفعها هو لا يبقى منها نقد** (§٦٣-ج/١): الطالبُ ليس عند السيارة ليدفع الباقي
+            cash_remainder=not ride.for_other,
         )
     else:
         alias = (
@@ -380,6 +385,45 @@ async def pay_ride(
         raise RideAlreadyPaid("هذه العملية نُفّذت بالفعل") from exc
 
     return await list_for_ride(session, ride.id)
+
+
+def _require_payer_method(ride: Ride, method: PaymentMethod) -> None:
+    """قناةُ الدفع تتبع من اختار الطالبُ أن يدفع (§٦٣-ج/١) — **ورحلةٌ يركبها صاحبُها لا يمسّها شيء**.
+
+    `passenger_cash`: الراكبُ الفعليُّ يدفع نقداً، **ودفعتُه تُفتح عند الإنهاء** (`open_payer_cash`) — فلا قناةَ يختارها
+    الطالب، وما بعد سقوطها (رفضُ الدفع) سؤالٌ للمالك (§٦٣-د/٥) **لا يُنشأ قيدُه قبل جوابه**. و`requester`: الطالبُ يدفع
+    بالمحفظة أو البطاقة — **لا نقدَ ولا كليك**: ليس عند السيارة ولا يحوّل إلى الكبتن من بعيد.
+    """
+    if not ride.for_other:
+        return
+    if ride.payer == RidePayer.PASSENGER_CASH:
+        raise PayerMethodMismatch("يدفع هذه الرحلةَ راكبُها نقداً للكبتن")
+    if method not in (PaymentMethod.WALLET, PaymentMethod.CARD):
+        raise PayerMethodMismatch("اخترتَ أن تدفع أنت — بالمحفظة أو البطاقة")
+
+
+async def open_payer_cash(session: AsyncSession, ride: Ride) -> Payment | None:
+    """دفعةُ نقد الراكب الفعليّ — **يفتحها الإنهاءُ لا الراكب** (§٦٣-ج/١).
+
+    اختار الطالبُ أن يدفع الراكبُ نقداً، وصاحبُ الدفعة لا يحمل التطبيق ليفتحها — فتُفتح **بما بقي بعد الخصمين** كما لو
+    اختارها هو في شاشة الدفع، **ويؤكّدها الكبتنُ بمساره القائم** (`confirm_by_driver`) فتقع العمولةُ ديناً كسائر النقد.
+    **وليست قيداً من تخمين**: قناةٌ اختارها الطالبُ صراحةً، ومبلغٌ هو الباقي حرفاً.
+
+    يُنادى من `rides.complete_ride` وصفُّ الرحلة مقفول — فالترتيبُ رحلةٌ ثمّ دفعة كما في `CLAUDE.md`، **والمفتاحُ
+    على الرحلة** فإنهاءٌ يُعاد لا يفتح دفعتين.
+    """
+    outstanding = await outstanding_amount(session, ride)
+    if outstanding <= 0:
+        return None
+    payment = _new_payment(
+        ride,
+        method=PaymentMethod.CASH,
+        amount=outstanding,
+        idempotency_key=f"payer-cash:{ride.id}",
+    )
+    session.add(payment)
+    await session.flush()
+    return payment
 
 
 async def _find_by_idempotency_key(
@@ -412,6 +456,7 @@ async def _pay_from_wallet(
     rider: User,
     outstanding: Decimal,
     idempotency_key: str,
+    cash_remainder: bool = True,
 ) -> list[Payment]:
     """خصمٌ فوري من رصيد الراكب، وما عجز عنه الرصيد يبقى كاشاً (القسم 6).
 
@@ -429,6 +474,9 @@ async def _pay_from_wallet(
     balance = await wallet.balance_of(session, rider, declared=WalletOwnerType.RIDER)
     if balance <= 0:
         raise InsufficientBalance("لا رصيد في محفظتك — اختر قناة أخرى")
+
+    if not cash_remainder and balance < outstanding:
+        raise InsufficientBalance("رصيدُك لا يغطّي الأجرة — اشحن محفظتك أو ادفع بالبطاقة")
 
     wallet_amount = min(balance, outstanding)
     payments = [

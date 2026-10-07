@@ -6,6 +6,7 @@ from app.models.verification_campaign import (  # noqa: F401
     VerificationEnforcement,
 )
 from app.models.booking import RideBooking
+from app.models.ride_track import RideTrackToken  # noqa: F401
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.debt import DriverDebt  # noqa: F401
 from app.models.dispatch_setting import DispatchSetting  # noqa: F401

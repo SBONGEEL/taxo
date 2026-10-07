@@ -42,6 +42,7 @@ from app.models.enums import (
     DriverStatus,
     FeatureKey,
     GenderPreference,
+    RidePayer,
     RideStatus,
     UserRole,
     VehicleCategory,
@@ -58,6 +59,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
+from app.services import ride_for_other
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
 
@@ -391,6 +393,7 @@ async def request_ride(
     scheduled_for: datetime | None = None,
     share: bool = False,
     share_gender_confirmed: bool = False,
+    passenger: "ride_for_other.PassengerRequest | None" = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -557,6 +560,13 @@ async def request_ride(
         # ونسبةِ العمولة — الرحلةُ تحمل **ما عُرض**، والمصدرُ يبقى الجدول
         carried_cancellation_fee=await cancellation.debt_of(session, rider.id),
     )
+    # **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): يُفحص مفتاحُها ويُطبَّع رقمُ راكبها **قبل** أن تُضاف — طلبٌ مرفوضٌ لا يترك صفّاً
+    if passenger is not None:
+        prepared = await ride_for_other.prepare(session, rider=rider, passenger=passenger)
+        ride.for_other = True
+        ride.passenger_name = prepared.name
+        ride.passenger_phone = prepared.phone
+        ride.payer = prepared.payer.value
     session.add(ride)
 
     # **الكوبونُ يُجمَّد قبل الـflush** (12-ز): الرمزُ يُتحقق منه تحت قفل صفّه،
@@ -792,6 +802,10 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
     غياب النقاط (تطبيقُ كبتنٍ صامت) يُبقي المقدَّر حكماً — لا تخمين لمسافة.
     تحصيل المبلغ نفسه في `services/payments.py` بعد هذه اللحظة.
     """
+    # **قفلُ الصفّ قبل فحص الانتقال** (قاعدةُ `CLAUDE.md`) — **وكشفه بناءُ «لشخصٍ آخر»** (§٦٣-ج/١، ٢٠٢٦-١٠-٠٧): إنهاءان
+    # متزامنان كانا يقرآن `in_progress` معاً فيمضيان، **وأوّلُ ما أمسكه قيدُ الدفعة الفريد** حين صار الإنهاءُ يفتح دفعةَ نقد —
+    # وقبلها كان يُحسب الخصمان مرّتين والقيدُ الفريدُ وحدَه يحرس. **ومسارُ البدء ما زال بلا قفلٍ وهو بندٌ مفتوحٌ بعلّته** (STATE)
+    await session.refresh(ride, with_for_update=True)
     _require_transition(ride, RideStatus.COMPLETED)
     ride.status = RideStatus.COMPLETED
     ride.completed_at = _now()
@@ -823,6 +837,12 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
         rider = await session.get(User, ride.rider_id)
         if rider is not None:
             await sharing_service.settle_discount(session, ride, rider=rider)
+
+    # **ودفعةُ نقد الراكب الفعليّ تُفتح هنا** (§٦٣-ج/١): صاحبُها لا يحمل التطبيق ليفتحها — **وبعد الخصمين** فتحمل الباقي
+    if ride.payer == RidePayer.PASSENGER_CASH:
+        from app.services import payments as payments_service
+
+        await payments_service.open_payer_cash(session, ride)
 
     driver.current_ride_id = None
     return await _flush_and_reload(session, ride)
