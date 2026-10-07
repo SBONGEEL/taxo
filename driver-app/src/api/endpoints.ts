@@ -60,6 +60,7 @@ import type {
   RequiredPolicy,
   RecordedRoute,
   SubscriptionPlan,
+  GuaranteeOffer,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -275,6 +276,29 @@ export const cancelRide = (
     reason,
     reason_code: reasonCode ?? null,
   });
+
+// ------------------------------------------------------------ الحجزُ المضمون (§٦٣-ج/٣)
+
+/** «عروضٌ تنتظرك» — حجوزٌ مضمونةٌ في سوقه وفئةِ مركبته بلا كبتن، الأقربُ موعداً أوّلاً. **وفارغةٌ لمن حُجب** أو حيث
+ *  الخدمةُ مطفأةٌ أو رسمُها صفر — فالفراغُ لا يُقرأ «لا طلبَ في السوق» وحدَه. */
+export const listGuaranteeOffers = () =>
+  api.get<GuaranteeOffer[]>("/drivers/me/guarantee-offers");
+
+/** «القادمة» — ما قبله ولم يُنفَّذ بعد. **وبعد التأكيد يخرج منها**: صار رحلتَه الجارية. */
+export const listMyGuarantees = () =>
+  api.get<GuaranteeOffer[]>("/drivers/me/guarantees");
+
+/** يقبله كبتنٌ واحد — **والثاني يجد ٤٠٩ `guarantee_taken`**، والمحجوبُ ٤٠٣ `guarantee_banned`. */
+export const acceptGuarantee = (bookingId: string) =>
+  api.post<GuaranteeOffer>(`/drivers/me/guarantees/${bookingId}/accept`);
+
+/** **اعتذارٌ قبل التأكيد بلا أثر** — والحجزُ يعود مفتوحاً لغيره. وبعد التأكيد لا يُنادى هذا: الاعتذارُ إلغاءُ الرحلة من شاشتها. */
+export const withdrawGuarantee = (bookingId: string) =>
+  api.post<GuaranteeOffer>(`/drivers/me/guarantees/${bookingId}/withdraw`);
+
+/** **«نعم، في الطريق»** — تُنشأ الرحلةُ مسنَدةً إليه وتعود هنا، **فتصير رحلتَه الجارية**. وقبل نافذة التأكيد ٤٠٩ بنصّها. */
+export const confirmGuarantee = (bookingId: string) =>
+  api.post<Ride>(`/drivers/me/guarantees/${bookingId}/confirm`);
 
 // ------------------------------------------------------------ الدفع
 

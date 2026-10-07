@@ -160,6 +160,7 @@ async def create(
     dropoff_address: str | None = None,
     gender_preference: GenderPreference | None = None,
     payment_method_hint: PaymentMethod | None = None,
+    guaranteed: bool = False,
 ) -> RideBooking:
     """يكتب حجزاً واحداً. الـcommit للراوتر.
 
@@ -239,6 +240,11 @@ async def create(
     )
     session.add(booking)
     await session.flush()
+    # **الحجزُ المضمون يحفظ رسمَه في المعاملة نفسِها** (§٦٣-ج/٣) — ويُرفض الحجزُ كلُّه إن لم يكفِ الرصيد
+    if guaranteed:
+        from app.services import guarantees
+
+        await guarantees.hold(session, booking=booking, rider=rider, scheduled_at=scheduled_at)
     await session.refresh(booking)
     return booking
 
@@ -267,6 +273,11 @@ async def cancel(
     locked.status = BookingStatus.CANCELLED
     locked.cancelled_at = _now()
     locked.cancelled_by = actor.id
+    # **ورسمُ الضمان يعود إلى صاحبه** (§٦٣-ج/٣، §٥-١/١٢ لم يُجَب) — ويُفكّ الكبتنُ المحجوز
+    if locked.guaranteed:
+        from app.services import guarantees
+
+        await guarantees.on_booking_cancelled(session, locked)
     # **قراءةٌ جديدة بعد التعديل**: `pickup_lat`/`lng` أعمدةٌ محسوبةٌ في القاعدة
     # وكلُّ UPDATE يُبطلها، فتسلسلُ الصفِّ بعدها يحاول تحميلاً كسولاً خارج سياق
     # async ويرفع `MissingGreenlet` — نفسُ `rides._flush_and_reload` حرفياً
@@ -274,6 +285,31 @@ async def cancel(
 
 
 # ------------------------------------------------------------------ التنفيذ
+
+
+async def create_ride_for(session: AsyncSession, booking: RideBooking) -> Ride:
+    """رحلةُ الحجز من بابها (`rides.request_ride`) — **لتأكيد الضمان** (§٦٣-ج/٣) حيث تُسند إلى كبتنها مباشرةً.
+
+    **وتفضيلُ الجنس كما في التنفيذ**: خدمةٌ أُطفئت بين الحجز والتأكيد لا تمنع الرحلة.
+    """
+    rider = await session.get(User, booking.rider_id)
+    assert rider is not None
+    preference = booking.gender_preference
+    if preference is not GenderPreference.ANY and not await settings_service.is_feature_enabled(
+        session, rider.country_code, FeatureKey.WOMEN_SERVICE_ENABLED
+    ):
+        preference = GenderPreference.ANY
+    return await rides_service.request_ride(
+        session,
+        rider=rider,
+        pickup=Coordinates(lat=booking.pickup_lat, lng=booking.pickup_lng),
+        dropoff=Coordinates(lat=booking.dropoff_lat, lng=booking.dropoff_lng),
+        vehicle_category=booking.vehicle_category,
+        pickup_address=booking.pickup_address,
+        dropoff_address=booking.dropoff_address,
+        gender_preference=preference,
+        scheduled_for=booking.scheduled_at,
+    )
 
 
 async def _flush_and_reload(
@@ -338,6 +374,13 @@ async def execute(
     if booking.status is not BookingStatus.PENDING:
         return None
 
+    # **حلّ التنفيذُ ولا كبتنَ أكّد الضمان** (§٦٣-ج/٣): يُردّ الرسمُ ويمضي رحلةً مجدولةً عاديّة
+    refunded = False
+    if booking.guaranteed:
+        from app.services import guarantees
+
+        refunded = await guarantees.on_execute_without_captain(session, booking)
+
     rider = await session.get(User, booking.rider_id)
     assert rider is not None
 
@@ -385,6 +428,16 @@ async def execute(
     booking.ride_id = ride.id
     booking.status = BookingStatus.DISPATCHED
     await _flush_and_reload(session, booking)
+
+    if refunded:
+        await session.commit()
+        from app.services.notifications import publish_guarantee_refunded
+
+        await _tell(
+            publish_guarantee_refunded(
+                session, redis, rider_id=booking.rider_id, booking_id=booking.id
+            )
+        )
 
     if downgraded:
         booking.notified_at = _now()

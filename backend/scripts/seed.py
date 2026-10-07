@@ -157,6 +157,7 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # **الخدماتُ الثماني مطفأةٌ حتى يُشعلها المالكُ لكلِّ سوق** (§٦٣، قرارُه ٢٠٢٦-١٠-٠٧)
         FeatureKey.RIDE_FOR_OTHER_ENABLED: False,
         FeatureKey.AIRPORT_ENABLED: False,
+        FeatureKey.GUARANTEED_BOOKING_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

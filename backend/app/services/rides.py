@@ -640,6 +640,22 @@ async def accept_ride(
     if driver.status != DriverStatus.APPROVED:
         raise PermissionDenied("حساب الكبتن غير معتمد بعد")
     await dispatch.require_offer(redis, ride_id, driver.id)
+    return await _take(session, ride_id, driver)
+
+
+async def take_reserved(session: AsyncSession, ride_id: uuid.UUID, driver: Driver) -> Ride:
+    """**الكبتنُ المحجوزُ يأخذ رحلةَ حجزه المضمون بلا عرض** (§٦٣-ج/٣) — «نعم» قبل الموعد بساعة هي قبولُه.
+
+    **والقبولُ نفسُه** (`_take`): القفلُ والعمولةُ المجمَّدةُ ورمزُ الرحلة — بلا شرط العرض وحدَه، فلا يفترق الطريقان.
+    """
+    if driver.status != DriverStatus.APPROVED:
+        raise PermissionDenied("حساب الكبتن غير معتمد بعد")
+    return await _take(session, ride_id, driver, reserved=True)
+
+
+async def _take(
+    session: AsyncSession, ride_id: uuid.UUID, driver: Driver, *, reserved: bool = False
+) -> Ride:
     if await _driver_has_active_ride(session, driver.id):
         raise RideAlreadyActive("لديك رحلة جارية بالفعل")
 
@@ -654,6 +670,10 @@ async def accept_ride(
     if driver_user is None or driver_user.country_code != ride.country_code:
         raise PermissionDenied("الرحلة خارج نطاق بلدك")
 
+    # **رحلةُ الحجز المضمون تُنشأ `requested` وتُسند فوراً** — فتمرّ بـ`searching` كما تمرّ كلُّ رحلةٍ قُبلت، بلا انتقالٍ جديد
+    if reserved and ride.status is RideStatus.REQUESTED:
+        _require_transition(ride, RideStatus.SEARCHING)
+        ride.status = RideStatus.SEARCHING
     _require_transition(ride, RideStatus.ACCEPTED)
 
     ride.driver_id = driver.id
@@ -840,6 +860,12 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
         rider = await session.get(User, ride.rider_id)
         if rider is not None:
             await sharing_service.settle_discount(session, ride, rider=rider)
+
+    # **ورسمُ الضمان يُحسم هنا** (§٦٣-ج/٣): لكبتنه كاملاً إن جاء في وقته، وإلا يُردّ — بعد قفل الرحلة، والحجزُ بعدها
+    if ride.scheduled_for is not None:
+        from app.services import guarantees
+
+        await guarantees.settle_on_complete(session, ride)
 
     # **ودفعةُ نقد الراكب الفعليّ تُفتح هنا** (§٦٣-ج/١): صاحبُها لا يحمل التطبيق ليفتحها — **وبعد الخصمين** فتحمل الباقي
     if ride.payer == RidePayer.PASSENGER_CASH:
@@ -1065,10 +1091,22 @@ async def cancel_ride(
     if mismatch and not _gender_mismatch_applies(ride, driver, by_role):
         raise CancelReasonNotApplicable()
 
+    # **الحجزُ المضمون** (§٦٣-ج/٣): كبتنٌ تأخّر عن مهلته ⇒ إلغاءُ الراكب مجّانيّ ويُردّ الرسم؛ **وكبتنٌ أكّد ثمّ ألغى ⇒ عقوبتُه**
+    # — وفي كلِّ إلغاءٍ آخرَ يعود الرسمُ إلى صاحبه. بعد قفل الرحلة: الترتيبُ رحلةٌ ثمّ حجز
+    guarantee_free = False
+    if ride.scheduled_for is not None:
+        from app.services import guarantees
+
+        if by_role == UserRole.DRIVER and driver is not None:
+            await guarantees.on_driver_cancelled(session, ride, driver)
+        else:
+            guarantee_free = await guarantees.free_cancel(session, ride)
+
     fee = Decimal("0.000")
     # لا رسوم على الكبتن الملغي — الرسم على من ألغى بعد ارتباط الطرفين
     if (
         by_role == UserRole.RIDER
+        and not guarantee_free
         and not mismatch
         and ride.status in (RideStatus.ACCEPTED, RideStatus.ARRIVED)
     ):

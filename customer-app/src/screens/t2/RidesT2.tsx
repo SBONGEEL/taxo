@@ -21,6 +21,7 @@ import { ApiError } from "@/api/client";
 import { listBookings, listMyRides } from "@/api/endpoints";
 import type { Booking, RideGroup, RideListItem, RideStatus } from "@/api/types";
 import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { useGuaranteedBooking } from "@/lib/bookings";
 import { PAYMENT_METHOD_LABEL, RIDE_STATUS_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { formatDistance, formatMoney } from "@/lib/utils";
 
@@ -69,6 +70,8 @@ function statusChip(item: RideListItem): { text: string; tone: "ok" | "danger" |
 }
 
 export function RidesT2Screen() {
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — مطفأً لا كلمةَ عنه على البطاقة
+  const guarantee = useGuaranteedBooking();
   const [filter, setFilter] = useState<Filter>("all");
   const [rides, setRides] = useState<RideListItem[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -169,7 +172,11 @@ export function RidesT2Screen() {
                   <span className="t2-place strong">{booking.dropoff_address ?? "وجهة على الخريطة"}</span>
                 </span>
                 <span className="t2-booking-foot">
-                  <span>{booking.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[booking.vehicle_category]}</span>
+                  <span>
+                    {booking.gender_preference === "female" ? "نسائية" : VEHICLE_LABEL[booking.vehicle_category]}
+                    {/* **«مضمون» كلمةً هنا** (§٦٣-ج/٣) — وكبتنُه ورسمُه في «رحلات مجدولة» التي تفتحها البطاقة */}
+                    {guarantee && booking.guaranteed ? " · مضمون" : ""}
+                  </span>
                   {fare !== null ? (
                     <span className="t2-booking-fare">
                       {formatMoney(fare, booking.currency)} <small>تقديرياً</small>

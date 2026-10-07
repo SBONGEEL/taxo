@@ -56,6 +56,22 @@ async def _out(session, booking: RideBooking) -> BookingOut:
         },
         ride_status=ride_status,
         currency=currency_for_country(booking.country_code),
+        guaranteed=booking.guaranteed,
+        guarantee_fee=booking.guarantee_fee_at_booking if booking.guaranteed else None,
+        guarantee_state=booking.guarantee_state,
+        captain_name=await _captain_name(session, booking),
+    )
+
+
+async def _captain_name(session, booking: RideBooking) -> str | None:
+    """اسمُ الكبتن المحجوز (§٦٣-ج/٣) — **كما يراه الراكبُ في بطاقة الكبتن**، ولا شيءَ غيرُه."""
+    if booking.driver_id is None:
+        return None
+    from app.models.driver import Driver
+    from app.models.user import User
+
+    return await session.scalar(
+        select(User.name).join(Driver, Driver.user_id == User.id).where(Driver.id == booking.driver_id)
     )
 
 
@@ -85,6 +101,7 @@ async def create_booking(
         dropoff_address=payload.dropoff_address,
         gender_preference=payload.gender_preference,
         payment_method_hint=payload.payment_method_hint,
+        guaranteed=payload.guaranteed,
     )
     await session.commit()
     await session.refresh(booking)

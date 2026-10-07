@@ -387,6 +387,7 @@ export type FeatureKey =
   | "ride_code_enabled"
   | "ride_for_other_enabled"
   | "airport_enabled"
+  | "guaranteed_booking_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
@@ -906,7 +907,13 @@ export type WalletTransactionType =
   | "advance"
   | "advance_repayment"
   | "cancellation_fee"
-  | "cancellation_compensation";
+  | "cancellation_compensation"
+  // **الحجزُ المضمون** (§٦٣-ج/٣): رسمٌ يُحفظ من الراكب ثمّ يصل الكبتنَ أو يُردّ، وغرامةُ الاعتذار وتعويضُها
+  | "guarantee_hold"
+  | "guarantee_fee"
+  | "guarantee_refund"
+  | "guarantee_penalty"
+  | "guarantee_compensation";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -1152,6 +1159,28 @@ export interface CancellationSetting {
   carrier_grace_hours: number;
   unpaid_after_days: number;
   unpaid_outcome: UnpaidCancellationOutcome;
+}
+
+/** **إعداداتُ الخدمات الجديدة لسوقٍ واحد** (§٦٣، `ServiceSettingOut`) — والحجزُ المضمونُ أوّلُها.
+ *
+ * **سوقٌ بلا صفٍّ يُنشر بافتراضاته** (الرسمُ صفر) فلا تُخفي اللوحةُ سوقاً لم يُضبط، **والصفُّ يُكتب بأوّل حفظ**. **وكلُّ ما
+ * هنا يحكم ما يأتي لا ما وقع**: رسمُ الضمان مجمَّدٌ على الحجز لحظةَ طلبه. */
+export interface ServiceSetting {
+  country_code: CountryCode;
+  /** **رسمُ الضمان** — نصٌّ بثلاث خاناتٍ كأيِّ مال (`NUMERIC(12,3)`)، **وصفرٌ يُخفي الخدمة** ولو اشتعل مفتاحُها. */
+  guarantee_fee: string;
+  /** تأخّرُ الكبتن عن الموعد الذي يردّ الرسمَ ويجعل إلغاءَ الراكب مجّانياً (١–١٢٠). */
+  guarantee_late_minutes: number;
+  /** قبل الموعد بكم يُسأل «هل أنت في الطريق؟» ويُفتح التأكيد (١٥–٢٤٠). */
+  guarantee_confirm_minutes: number;
+  /** مهلةُ الجواب قبل أن يُسحب منه بلا عقوبة (١–٦٠). */
+  guarantee_confirm_window_minutes: number;
+  /** قبل الموعد بكم ساعةً يظهر في «عروضٌ تنتظرك» (١–٧٢). */
+  guarantee_offer_hours: number;
+  /** اعتذاراتٌ بعد التأكيد تحجبه (١–١٠). */
+  guarantee_ban_threshold: number;
+  /** نافذةُ العدِّ ومدّةُ الحجب معاً بالأيام (١–٣٦٥). */
+  guarantee_ban_days: number;
 }
 
 /** مآلُ دَينٍ لم يعد صاحبُه — **الإدارةُ تختار والكودُ لا يحسم** (قرارُ المالك).

@@ -333,6 +333,34 @@ div.t2-srow { cursor: default; }
 /* **هدفُ لمسٍ ٤٤ لا يطيل البطاقة** — الرابطُ يتجاوز سطرَه بهامشٍ سالب */
 .t2-bk-foot > .t2-tlink { margin-block: -12px; margin-inline-end: -6px; }
 
+/* ── الحجزُ المضمون على البطاقة (§٦٣-ج/٣) — لا لوحةَ له: شارةٌ وسطرُ الكبتن وسطرُ الرسم، **بين المسار والقاع وبفاصلٍ منهما** ── */
+.t2-bkg {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--t2-divider);
+}
+.t2-bk.pending .t2-bkg { border-top-color: var(--t2-accent-line); }
+.t2-bkg-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.t2-chip.t2-bkg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--t2-surface);
+  color: var(--t2-accent-text);
+}
+.t2-bkg-chip .t2-icon { font-size: 14px; }
+.t2-bkg-captain { font-size: 12.5px; color: var(--t2-muted); }
+.t2-bkg-captain.named { font-weight: 700; color: var(--t2-text); }
+.t2-bkg-fee { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t2-muted); }
+.t2-bkg-fee.paid { color: var(--t2-text); }
+.t2-bkg-fee.ok { color: var(--t2-success); }
+.t2-bkg-amount { font-weight: 700; white-space: nowrap; }
+
 /* ── R27 — حذفُ الحساب: بطاقةُ ما يُحذف وما يُحفظ، والرصيد، والتأكيد ── */
 .t2-del-card {
   margin-bottom: 12px;

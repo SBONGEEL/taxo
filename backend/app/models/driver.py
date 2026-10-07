@@ -82,6 +82,10 @@ class Driver(UUIDMixin, TimestampMixin, Base):
     accepts_airport: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # **محجوبٌ عن الحجوزات المضمونة حتى** (§٦٣-ج/٣) — اعتذاران بعد التأكيد في شهر. و`NULL` غيرُ محجوب
+    guarantee_banned_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # رمزُ الإحالة (المرحلة 12-ح). **فريدٌ عالمياً لا per-country**: الرمزُ
     # يُقال في مكالمة، وواحدٌ في الأردن يطابق واحداً في ليبيا هو رمزٌ يذهب

@@ -25,6 +25,9 @@
  *
  * **و«رسمُ المطار»** (§٦٣-ج/٢) — لا لوحةَ له: سطرٌ هادئٌ تحت الفئات يقول إن السعرَ **يشمله** للكبتن، من تقدير الخلفية
  * (`airport_fee`) — **ولا يُجمع إلى السعر شيء**: الرقمُ على الفئة وعلى الزرِّ هو هو.
+ *
+ * **و«حجزٌ مضمون»** (§٦٣-ج/٣) — لا لوحةَ له: مفتاحٌ داخل «موعد الانطلاق» بلغة صفِّ المشاركة ومفتاحِ الهوية (`Switch`)،
+ * **بلا رقم رسمٍ** (لا بابَ عامٌّ ينشره قبل الحجز)، **ومعطَّلٌ بعلّته** لموعدٍ أقربَ من ساعتين.
  */
 
 import { useEffect, useState } from "react";
@@ -45,7 +48,7 @@ import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/li
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
 import { SheetT2 } from "./SheetT2";
 import { WomenRequestHeadT2 } from "./WomenRideT2";
-import { DateField } from "@/taxo2";
+import { DateField, Icon, Switch } from "@/taxo2";
 import "./t2.css";
 
 /** رمزُ كلِّ فئةٍ كما رسمته اللوحة. */
@@ -472,6 +475,33 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               max={localInputValue(latest())}
               onChange={c.setWhen}
             />
+            {/* **«حجزٌ مضمون»** (§٦٣-ج/٣) — حيث المفتاحُ مشتعلٌ وحدَه، **ومعطَّلٌ بعلّته** لموعدٍ أقربَ من ساعتين */}
+            {c.guaranteeOffered ? (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={c.guaranteed}
+                className="t2-guarantee"
+                disabled={!c.guaranteeFits}
+                onClick={() => c.setGuaranteed(!c.guaranteed)}
+              >
+                <span className="t2-share-main">
+                  <span className="t2-share-title">
+                    <Icon name="verified_user" />
+                    حجزٌ مضمون
+                  </span>
+                  {/* **بلا رقم**: لا بابَ عامٌّ ينشر الرسمَ قبل الحجز — **والمبلغُ المجمَّدُ يظهر على الحجز نفسِه** في «رحلاتي
+                      المجدولة». ورقمٌ يُكتب هنا من عندنا يفترق عن إعداد السوق أوّلَ تعديل */}
+                  <span className="t2-share-body">
+                    كبتنٌ يُحجز لك مسبقاً ويؤكّد قبل موعدك بساعة. رسمُ الضمان من محفظتك، يُردّ إن لم نجد كبتناً أو تأخّر.
+                  </span>
+                  {c.guaranteeFits ? null : (
+                    <span className="t2-guarantee-why">يُطلب قبل موعده بساعتين على الأقل — اختر موعداً أبعد.</span>
+                  )}
+                </span>
+                <Switch on={c.guaranteed} />
+              </button>
+            ) : null}
             <p className="t2-sheet-fine">
               نبدأ البحث عن كبتنٍ قبل موعدك بعشر دقائق. <b>والسعر يُحسب عند التنفيذ</b> — الرقمُ أعلاه تقديرُ اليوم.
             </p>
@@ -480,8 +510,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 type="button"
                 className="t2-button primary"
                 disabled={!c.when}
-                onClick={() => props.onSchedule(c.category, c.preference, c.when)}
+                onClick={() => props.onSchedule(c.category, c.preference, c.when, c.guaranteed)}
               >
+                {/* **الاسمُ واحدٌ في الحالين** — «ثبّت الحجز المضمون» يلتفّ سطرين في نصف الصفّ، والمفتاحُ فوقه يقول أيَّهما */}
                 ثبّت الحجز
               </button>
               <button type="button" className="t2-button secondary" onClick={() => c.setScheduling(false)}>

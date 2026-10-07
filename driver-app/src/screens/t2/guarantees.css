@@ -1,0 +1,96 @@
+/* ═══ الحجوزُ المضمونة (SPEC §٦٣-ج/٣) — **لا لوحةَ لها**: تخطيطُها وحدَه، **بالرموز وحدَها** فتعمل في المظهرين والنسائيّ ═══
+ *
+ * البطاقةُ بلغة بطاقة «مجدولة» عند الراكب (R26): سطحٌ بحافّة، **وجمرٌ خافتٌ لما يُسأل الآن** («هل أنت في الطريق؟»).
+ * **ولا رمزَ داكناً وحدَه بلا بديل** (`check:t2-css`): كلُّ ما هنا رموزٌ مرسومةٌ في المظهرين.
+ */
+
+.t2-gu { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.t2-gu-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px max(24px, env(safe-area-inset-bottom, 0px));
+}
+.t2-gu .t2-head { margin-bottom: 10px; }
+.t2-gu-lede { margin: 0 2px 4px; font-size: 13px; line-height: 1.7; color: var(--t2-muted); }
+.t2-gu-lede b { font-weight: 600; color: var(--t2-text); }
+.t2-gu-wait { display: flex; justify-content: center; padding: 48px 0; }
+.t2-gu-done { color: var(--t2-success); }
+
+/* ── البطاقة: الموعدُ والفئة · المسارُ بنقطتيه · سطرا المال · الفعل ── */
+.t2-gu-card {
+  margin-bottom: 10px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--t2-line);
+  border-radius: 22px;
+  background: var(--t2-surface);
+}
+.t2-gu-card.asking { border-color: var(--t2-accent-line); background: var(--t2-accent-soft); }
+.t2-gu-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.t2-gu-when { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; }
+.t2-gu-when .t2-icon { font-size: 18px; color: var(--t2-accent-text); }
+.t2-gu-time { font-family: var(--t2-font-num); font-size: 12.5px; }
+.t2-gu-route {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 10px;
+}
+.t2-gu-dot {
+  justify-self: center;
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 2px solid var(--t2-text);
+  border-radius: 50%;
+}
+.t2-gu-dot.to { border-color: var(--t2-accent); background: var(--t2-accent); }
+.t2-gu-place {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13.5px;
+  color: var(--t2-muted);
+}
+.t2-gu-place.strong { font-weight: 600; color: var(--t2-text); }
+
+/* **سطرا المال لا رقمٌ واحد** — تقديرُ الأجرة، ورسمُ الضمان له كاملاً بلون الوارد. ولا يُجمعان (§14) */
+.t2-gu-money {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin: 12px 0 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--t2-divider);
+  font-size: 12.5px;
+  color: var(--t2-muted);
+}
+.t2-gu-card.asking .t2-gu-money { border-top-color: var(--t2-accent-line); }
+.t2-gu-money b { font-family: var(--t2-font-num); font-weight: 600; color: var(--t2-text); }
+.t2-gu-fee { font-weight: 600; color: var(--t2-success); }
+.t2-gu-money .t2-gu-fee b { color: var(--t2-success); }
+
+.t2-gu-go { width: 100%; }
+.t2-gu-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.t2-gu-actions .t2-button.secondary { padding: 0 22px; }
+.t2-gu-hint { margin: 0 2px 10px; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-gu-hint.center { margin: 8px 0 0; text-align: center; }
+.t2-gu-ask { margin-bottom: 12px; border-color: var(--t2-accent-line); }
+.t2-gu-ask > .t2-icon { color: var(--t2-accent-text); }
+.t2-gu-ask b { font-weight: 600; color: var(--t2-text); }
+.t2-gu-card .t2-note { margin: 10px 2px 0; }
+
+/* ── مدخلُ الرئيسية (C04) — صفُّ «جدّد» نفسُه بالجمر، **وبجمرٍ خافتٍ حين يُسأل الآن** ── */
+.t2-gu-home { margin: 14px 14px 0; }
+.t2-gu-home .t2-hm-row { margin-bottom: 0; }
+.t2-hm-row.t2-gu-entry .t2-icon { color: var(--t2-accent-text); }
+.t2-hm-row.t2-gu-entry .t2-icon.go { color: var(--t2-muted); }
+.t2-hm-row.t2-gu-entry.asking { border-color: var(--t2-accent-line); background: var(--t2-accent-soft); }

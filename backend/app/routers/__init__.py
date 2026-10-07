@@ -28,6 +28,7 @@ from app.routers import (
     admin_security,
     admin_settings,
     admin_facilities,
+    guarantees,
     admin_stats,
     admin_subscriptions,
     admin_users,
@@ -74,6 +75,7 @@ api_router.include_router(telemetry.router)
 api_router.include_router(admin_errors.router)
 api_router.include_router(admin_settings.router)
 api_router.include_router(admin_facilities.router)
+api_router.include_router(guarantees.router)
 api_router.include_router(admin_verification_campaigns.router)
 api_router.include_router(admin_providers.router)
 api_router.include_router(admin_offers.router)

@@ -31,7 +31,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { ApiError } from "@/api/client";
-import { DurationField } from "@/components/ui/Inputs";
+import { DurationField, MoneyField } from "@/components/ui/Inputs";
 import { Storefront } from "@/components/Storefront";
 import { VerificationCampaign } from "@/components/VerificationCampaign";
 import {
@@ -43,6 +43,8 @@ import {
   listAdvanceSettings,
   listDispatchSettings,
   listCancellationSettings,
+  listServiceSettings,
+  updateServiceSettings,
   listOtpExhausted,
   listOtpSettings,
   updateOtpSettings,
@@ -66,6 +68,7 @@ import type {
   DispatchMode,
   DispatchSetting,
   CancellationSetting,
+  ServiceSetting,
   OtpExhausted,
   MapSetting,
   OtpSetting,
@@ -193,6 +196,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "المطار",
     hint: "رحلةٌ تبدأ أو تنتهي داخل منطقة مرفقٍ في «المرافق الحيوية» تحمل رسمَه للكبتن سطراً مستقلاً في السعر — **يصله كاملاً ولا تُقتطع منه العمولة**، ولا يمسّه خصم. **ولا يصلها إلا كبتنٌ أشعل «طلبات المطار» بنفسه**. ومرفقٌ مطفأٌ أو رسمُه صفرٌ لا يُطبَّق. ومطفأً لا رسمَ ولا تصفية، والرحلاتُ القائمةُ برسمها تكمل.",
   },
+  guaranteed_booking_enabled: {
+    title: "الحجز المضمون",
+    hint: "يختار الراكبُ عند حجز موعدٍ قبل ساعتين فأكثر أن يكون مضموناً: يُحفظ رسمُ الضمان من محفظته لحظةَ الحجز، ويقبله مسبقاً كبتنٌ مشتركٌ من «عروضٌ تنتظرك» ثمّ يؤكّد قبل الموعد، فيعرف الراكبُ اسمَ كبتنه قبل موعده. والرسمُ للكبتن حين تتمّ الرحلةُ معه في وقتها — يصله كاملاً ولا تُقتطع منه العمولة — ويُردّ إلى الراكب إن لم يوجد كبتنٌ أو تأخّر أو أُلغي الحجز. واعتذارُ الكبتن بعد التأكيد يأخذ منه الرسمَ للراكب ويُنذره، وتكرارُه يحجبه عن الحجوز المضمونة مدّةً. والأرقامُ في «الخدمات الجديدة» أدناه، ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً لا يُطلب حجزٌ مضمونٌ جديد، والقائمُ يكمل برسمه.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -233,6 +240,7 @@ const FLAGS: FeatureKey[] = [
   "ride_code_enabled",
   "ride_for_other_enabled",
   "airport_enabled",
+  "guaranteed_booking_enabled",
   "driver_map_nearby_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
@@ -315,6 +323,7 @@ export function SettingsScreen() {
   const [advance, setAdvance] = useState<AdvanceSetting[]>([]);
   const [dispatchRows, setDispatchRows] = useState<DispatchSetting[]>([]);
   const [cancel, setCancel] = useState<CancellationSetting[]>([]);
+  const [services, setServices] = useState<ServiceSetting[]>([]);
   const [otp, setOtp] = useState<OtpSetting[]>([]);
   const [mapRows, setMapRows] = useState<MapSetting[]>([]);
   const [burned, setBurned] = useState<OtpExhausted | null>(null);
@@ -331,7 +340,7 @@ export function SettingsScreen() {
   const [done, setDone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [f, c, w, p, r, rr, sh, adv, dsp, cxl, otpRows, mapRows, spent] =
+    const [f, c, w, p, r, rr, sh, adv, dsp, cxl, svc, otpRows, mapRows, spent] =
       await Promise.all([
       listFeatureFlags(),
       listCommission(),
@@ -345,6 +354,7 @@ export function SettingsScreen() {
       listAdvanceSettings(),
       listDispatchSettings(),
       listCancellationSettings(),
+      listServiceSettings(),
       listOtpSettings(),
       listMapSettings(),
       listOtpExhausted(),
@@ -359,6 +369,7 @@ export function SettingsScreen() {
     setAdvance(adv);
     setDispatchRows(dsp);
     setCancel(cxl);
+    setServices(svc);
     setOtp(otpRows);
     setMapRows(mapRows);
     setBurned(spent);
@@ -381,6 +392,7 @@ export function SettingsScreen() {
   const paymentRow = payment.find((row) => row.country_code === country);
   const advanceRow = advance.find((row) => row.country_code === country);
   const cancellationRow = cancel.find((row) => row.country_code === country);
+  const serviceRow = services.find((row) => row.country_code === country);
   const otpRow = otp.find((row) => row.country_code === country);
   const mapRow = mapRows.find((row) => row.country_code === country);
 
@@ -746,6 +758,39 @@ export function SettingsScreen() {
             ) : (
               <p className="text-12.5 text-muted">
                 لا سياسةَ إلغاءٍ لهذه الدولة بعد — تُكتب بأول حفظ.
+              </p>
+            )}
+          </section>
+
+          {/* **الخدماتُ الجديدة** (§٦٣، `service_settings`) — بطاقةٌ لجدولها كبقية البطاقات، **والحجزُ المضمونُ أوّلُها**.
+              **وتُرسم ولو كان مفتاحُه مطفأً**: الأرقامُ تُضبط قبل الإشعال لا بعده — ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعلت */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">الخدمات الجديدة</h2>
+            <h3 className="mb-2 mt-12 text-12.5 font-bold text-ink">
+              الحجز المضمون
+            </h3>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              كبتنٌ يُحجز للراكب مسبقاً ويؤكّد قبل موعده.{" "}
+              <b className="text-ink">رسمُ الضمان يُحفظ من محفظة الراكب لحظةَ الحجز</b>{" "}
+              ويصل الكبتنَ كاملاً حين تتمّ الرحلةُ معه في وقتها، أو يُردّ.{" "}
+              <b className="text-ink">وصفرُه يُخفي الخدمة</b> ولو اشتعل مفتاحُها.{" "}
+              <b className="text-ink">ولا أثرَ رجعياً</b>: الرسمُ مجمَّدٌ على الحجز
+              لحظةَ طلبه، فتعديلُه هنا يحكم ما يأتي لا ما ينتظر الآن.
+            </p>
+            {serviceRow ? (
+              <GuaranteeForm
+                key={serviceRow.country_code}
+                row={serviceRow}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">
+                لا إعدادَ خدماتٍ لهذه الدولة.
               </p>
             )}
           </section>
@@ -1796,6 +1841,139 @@ function CancellationForm({
             .catch((caught) =>
               onError(caught),
             )
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **الحجزُ المضمون** (§٦٣-ج/٣) — سبعةُ أرقامٍ لسوقٍ واحد: الرسمُ مالاً، والستّةُ مُدَداً وعدّاً.
+ *
+ * **ويُرسل ما تغيّر وحدَه** (`PATCH` جزئيّ): حقلٌ لم يلمسه المشرفُ لا يُكتب فوق ما كتبه غيرُه بين القراءة والحفظ، **وسجلُّ
+ * التدقيق يقول ما عُدِّل فعلاً** لا الصفَّ كلَّه. **والحدودُ في الخلفية** (`ServiceSettingUpdate`) — ورفضُها يُقال تحت حقله.
+ *
+ * **و`key={country}` عليه كبقية النماذج** — بغيره تبقى أرقامُ السوق السابق في الحقول بعد تبديل الرأس.
+ */
+function GuaranteeForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [fee, setFee] = useState(row.guarantee_fee);
+  const [late, setLate] = useState(row.guarantee_late_minutes);
+  const [confirmAt, setConfirmAt] = useState(row.guarantee_confirm_minutes);
+  const [answerWindow, setAnswerWindow] = useState(row.guarantee_confirm_window_minutes);
+  const [offerHours, setOfferHours] = useState(row.guarantee_offer_hours);
+  const [threshold, setThreshold] = useState(String(row.guarantee_ban_threshold));
+  const [banDays, setBanDays] = useState(row.guarantee_ban_days);
+  const [busy, setBusy] = useState(false);
+
+  // **الفرقُ يُحسب بالمقارنة لا بعلَمٍ يُرفع عند الكتابة**: من كتب ثمّ أعاد القيمةَ كما كانت لم يغيّر شيئاً
+  const changes: Partial<Omit<ServiceSetting, "country_code">> = {};
+  if (fee.trim() !== row.guarantee_fee) changes.guarantee_fee = fee.trim();
+  if (late !== row.guarantee_late_minutes) changes.guarantee_late_minutes = late;
+  if (confirmAt !== row.guarantee_confirm_minutes) changes.guarantee_confirm_minutes = confirmAt;
+  if (answerWindow !== row.guarantee_confirm_window_minutes)
+    changes.guarantee_confirm_window_minutes = answerWindow;
+  if (offerHours !== row.guarantee_offer_hours) changes.guarantee_offer_hours = offerHours;
+  if (Number(threshold) !== row.guarantee_ban_threshold)
+    changes.guarantee_ban_threshold = Number(threshold);
+  if (banDays !== row.guarantee_ban_days) changes.guarantee_ban_days = banDays;
+  const dirty = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <MoneyField
+          name="guarantee_fee"
+          label="رسم الضمان"
+          value={fee}
+          onChange={(next) => setFee(next.replace(/[^0-9.,]/g, ""))}
+          currency={currencyOf(row.country_code)}
+          disabled={disabled}
+          hint="من محفظة الراكب لحظةَ الحجز — وصفرٌ يُخفي الخدمة"
+        />
+        <DurationField
+          name="guarantee_late_minutes"
+          label="مهلة تأخّر الكبتن"
+          wire="minute"
+          value={late}
+          disabled={disabled}
+          onChange={setLate}
+          hint="بعدها يُردّ الرسمُ ويُلغي الراكبُ مجّاناً"
+        />
+        <DurationField
+          name="guarantee_confirm_minutes"
+          label="السؤال قبل الموعد"
+          wire="minute"
+          value={confirmAt}
+          disabled={disabled}
+          onChange={setConfirmAt}
+          hint="«هل أنت في الطريق؟» — ومنه يُفتح التأكيد"
+        />
+        <DurationField
+          name="guarantee_confirm_window_minutes"
+          label="مهلة الجواب"
+          wire="minute"
+          value={answerWindow}
+          disabled={disabled}
+          onChange={setAnswerWindow}
+          hint="بلا ردٍّ فيها يُسحب منه بلا عقوبة"
+        />
+        <DurationField
+          name="guarantee_offer_hours"
+          label="ظهوره في «عروضٌ تنتظرك»"
+          wire="hour"
+          value={offerHours}
+          disabled={disabled}
+          onChange={setOfferHours}
+          hint="قبل الموعد بهذه المدّة"
+        />
+        <Field
+          name="guarantee_ban_threshold"
+          label="اعتذاراتٌ بعد التأكيد تحجبه"
+          dir="ltr"
+          inputMode="numeric"
+          value={threshold}
+          disabled={disabled}
+          onChange={(event) => setThreshold(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <DurationField
+          name="guarantee_ban_days"
+          label="مدّة الحجب ونافذةُ العدّ"
+          wire="day"
+          value={banDays}
+          disabled={disabled}
+          onChange={setBanDays}
+          hint="تُعدّ الاعتذاراتُ فيها، ويُحجب مثلَها"
+        />
+      </div>
+      <p className="mt-6 text-11 leading-note text-muted">
+        اعتذارُ الكبتن بعد التأكيد يأخذ منه مبلغاً يساوي الرسمَ للراكب بقدر رصيده،
+        ويُسجَّل عليه إنذار — وبلوغُ العدد في المدّة يحجبه عن الحجوز المضمونة.
+        واعتذارُه قبل التأكيد بلا أثر.
+      </p>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || fee.trim() === "" || threshold === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, changes)
+            .then(() =>
+              onSaved("حُفظ الحجز المضمون — يسري على ما يُحجز بعده لا على حجزٍ قائم"),
+            )
+            .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}
       >

@@ -57,6 +57,10 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     # تعويضُ الإلغاء: دائنٌ للمتضرر — ومدينُه على **الراكب** لا على المنصّة،
     # فهما قيدان في دفترين لا قيدٌ من العدم كحافز الإحالة
     WalletTransactionType.CANCELLATION_COMPENSATION,
+    # الحجزُ المضمون (§٦٣-ج/٣): **الرسمُ للكبتن يخرج مما حفظه TAXO** (بلا مدينٍ يقابله في هذا الدفتر)، والردُّ والتعويضُ للراكب
+    WalletTransactionType.GUARANTEE_FEE,
+    WalletTransactionType.GUARANTEE_REFUND,
+    WalletTransactionType.GUARANTEE_COMPENSATION,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
@@ -75,6 +79,9 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     # شراءُ مركبةِ الكراج: مدينٌ من أرباحه — **ولا حدَّ ائتمانٍ هنا**، فالقيدُ
     # يُرفض إن لم يكفِ الرصيد كأيِّ مدينٍ آخر (`balance_after >= 0` في القاعدة)
     WalletTransactionType.SKIN_PURCHASE,
+    # **حفظُ رسم الضمان مدينٌ بلا دائن** — المالُ عند TAXO حتى يُحسم؛ **وغرامةُ المعتذر** مدينٌ على الكبتن
+    WalletTransactionType.GUARANTEE_HOLD,
+    WalletTransactionType.GUARANTEE_PENALTY,
 )
 
 # `adjustment` وحده يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص

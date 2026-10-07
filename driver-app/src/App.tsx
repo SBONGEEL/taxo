@@ -94,6 +94,9 @@ const SubscriptionT2Screen = lazy(() =>
 const ServicesT2Screen = lazy(() =>
   import("@/screens/t2/ServicesT2").then((m) => ({ default: m.ServicesT2Screen })),
 );
+const GuaranteesT2Screen = lazy(() =>
+  import("@/screens/t2/GuaranteesT2").then((m) => ({ default: m.GuaranteesT2Screen })),
+);
 const PlansPreviewT2Screen = lazy(() =>
   import("@/screens/t2/PlansPreviewT2").then((m) => ({ default: m.PlansPreviewT2Screen })),
 );
@@ -520,6 +523,16 @@ export default function App() {
                           element={
                             <Guarded>
                               <ServicesT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **الحجوزُ المضمونة** (§٦٣-ج/٣) — «القادمة» و«عروضٌ تنتظرك»، يبلغها مدخلُ الرئيسية ونقرةُ إشعارها،
+                            **وبلا شريطٍ كالصفحات الفرعية**؛ ومطفأً تعيد الشاشةُ نفسُها إلى الرئيسية */}
+                        <Route
+                          path="/guarantees"
+                          element={
+                            <Guarded>
+                              <GuaranteesT2Screen />
                             </Guarded>
                           }
                         />

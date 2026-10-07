@@ -985,6 +985,30 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-share-title .t2-icon { font-size: 18px; color: var(--t2-muted); }
 .t2-share-body { margin-top: 2px; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
 .t2-share-guard .t2-share-body { margin: 0; color: var(--t2-text); }
+
+/* «حجزٌ مضمون» (§٦٣-ج/٣) داخل «موعد الانطلاق» — صفُّ المشاركة نفسُه زرّاً بمفتاح الهوية، **وعلّةُ تعطيله سطرٌ بلون التنبيه** */
+.t2-guarantee {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 0 2px;
+  border: 0;
+  border-top: 1px solid var(--t2-divider);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-guarantee:disabled { cursor: default; }
+.t2-guarantee:disabled .t2-share-title,
+.t2-guarantee:disabled .t2-switch { opacity: 0.55; }
+.t2-guarantee .t2-share-title .t2-icon { color: var(--t2-accent-text); }
+.t2-guarantee .t2-switch { margin-top: 2px; }
+.t2-guarantee-why { margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--t2-warning); }
 .t2-callout-action { margin-top: 10px; }
 .t2-sheet-body > .t2-note, .t2-sheet-body > .t2-callout { margin-top: 10px; }
 

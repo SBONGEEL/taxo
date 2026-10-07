@@ -92,6 +92,12 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   advance_repayment: "سداد سلفة",
   skin_purchase: "شراء زينة مركبة",
   referral_bonus: "حافز دعوة صديق",
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — الحفظُ والردُّ والتعويضُ تقع له، والاثنان الباقيان للكبتن ويُسمّيان للعلّة نفسِها
+  guarantee_hold: "رسم حجز مضمون",
+  guarantee_refund: "ردّ رسم الضمان",
+  guarantee_compensation: "تعويض اعتذار الكبتن",
+  guarantee_fee: "رسم ضمان للكبتن",
+  guarantee_penalty: "غرامة اعتذار",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

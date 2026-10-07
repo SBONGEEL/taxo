@@ -27,6 +27,9 @@ export function destinationFor(
   if (kind === "ride_offer") {
     return data?.ride_id ? `${HOME}?offer=${data.ride_id}` : HOME;
   }
+  // **الحجزُ المضمون** (§٦٣-ج/٣): «هل أنت في الطريق؟» وسحبُه بلا ردّ — **إلى صفحته حيث يؤكّد أو يرى ما بقي**. والحمولةُ
+  // تحمل `booking_id` لا رحلة: الرحلةُ تُنشأ بالتأكيد نفسِه
+  if (kind.startsWith("guarantee_")) return "/guarantees";
   const rideId = data?.ride_id;
   if (rideId) return `/rides/${rideId}`;
   if (kind.startsWith("subscription_")) return "/subscription";

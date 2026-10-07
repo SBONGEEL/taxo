@@ -11,6 +11,10 @@
  *
  * **والطلبان همـا هما** (`GET /me/bookings` · `DELETE /me/bookings/:id`). **وعلى البطاقة ما تحمله بطاقةُ «مجدولة» في «رحلاتي»
  * من الحجز نفسِه** (`RidesT2`): الانطلاقُ والوجهةُ والفئة — **والأجرةُ تقديرٌ لا أجرة**، تُحسب عند التنفيذ.
+ *
+ * **والحجزُ المضمون** (§٦٣-ج/٣) — لا لوحةَ له: شارةُ «مضمون»، **واسمُ كبتنه** حين قبله أحد (وعدُ الضمان أن يُعرف قبل
+ * الموعد)، **وأين رسمُه** بالمبلغ المجمَّد: محفوظ · دُفع للكبتن · رُدّ إليه. **والحالُ من الخلفية لا من حسابٍ هنا**، ومطفأً
+ * لا يُرسم شيءٌ منه — **والدفترُ يبقى يسمّي قيودَه** في المحفظة.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -63,6 +67,19 @@ const CHIP: Record<ReturnType<typeof stateOf>["tone"], string> = {
   danger: "t2-chip danger",
   ok: "t2-chip ok",
 };
+
+/** **أين رسمُ الضمان** — نصُّ كلِّ حالٍ ونبرتُه: المحفوظُ محايد، والواصلُ للكبتن حبر، والعائدُ إليه أخضر. */
+const GUARANTEE_FEE: Record<NonNullable<Booking["guarantee_state"]>, { text: string; tone: string }> = {
+  held: { text: "محفوظ", tone: "t2-bkg-fee" },
+  paid: { text: "دُفع للكبتن", tone: "t2-bkg-fee paid" },
+  refunded: { text: "رُدّ إلى محفظتك", tone: "t2-bkg-fee ok" },
+};
+
+/** سطرُ الكبتن: **اسمُه حين قبله أحد**، و«نبحث…» ما دام الحجزُ ينتظر — وبعد التسليم بلا كبتنٍ لا سطر: الرحلةُ تقول الباقي. */
+function captainLine(booking: Booking): string | null {
+  if (booking.captain_name) return `كبتنُك: ${booking.captain_name}`;
+  return booking.status === "pending" ? "نبحث عن كبتنٍ يضمن حجزك" : null;
+}
 
 function when(iso: string): string {
   const date = new Date(iso);
@@ -138,6 +155,8 @@ export function BookingsScreen() {
               <span className="t2-dot to" />
               <span className="t2-place strong">{booking.dropoff_address ?? "نقطة على الخريطة"}</span>
             </div>
+            {/* **حجزٌ مضمونٌ يُرى ضمانُه ولو أُطفئت الخدمةُ بعده** — رسمُه محفوظٌ في محفظة صاحبه، فحالُ مالِه تُقال (§٦٣-ج/٣) */}
+            {booking.guaranteed ? <GuaranteeBlock booking={booking} /> : null}
             <div className="t2-bk-foot">
               <span>
                 {kind} ·{" "}
@@ -166,6 +185,33 @@ export function BookingsScreen() {
           </article>
         );
       })}
+    </div>
+  );
+}
+
+/** **ما يزيده الضمانُ على البطاقة** (§٦٣-ج/٣): الشارة · الكبتن · الرسم. **والمبلغُ هو المجمَّدُ على الحجز** كما ردّته الخلفية —
+ *  لا يُقرأ من إعداد السوق اليوم: رفعُ الرسم بعد الحجز لا يمسّه. */
+function GuaranteeBlock({ booking }: { booking: Booking }) {
+  const captain = captainLine(booking);
+  const fee = booking.guarantee_state ? GUARANTEE_FEE[booking.guarantee_state] : null;
+  return (
+    <div className="t2-bkg">
+      <div className="t2-bkg-head">
+        <span className="t2-chip t2-bkg-chip">
+          <Icon name="verified_user" />
+          مضمون
+        </span>
+        {captain ? (
+          <span className={booking.captain_name ? "t2-bkg-captain named" : "t2-bkg-captain"}>{captain}</span>
+        ) : null}
+      </div>
+      {fee ? (
+        <p className={fee.tone}>
+          رسمُ الضمان{" "}
+          {booking.guarantee_fee ? <span className="t2-bkg-amount">{formatMoney(booking.guarantee_fee, booking.currency)}</span> : null}{" "}
+          {fee.text}
+        </p>
+      ) : null}
     </div>
   );
 }

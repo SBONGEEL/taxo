@@ -625,6 +625,9 @@ class FeatureKey(StrEnum):
     # **المطار** (§٦٣-ج/٢) — رسمٌ للكبتن على رحلةٍ تبدأ أو تنتهي في مرفقٍ مفعَّلٍ رسمُه موجب (`facilities`)، **ولا يصلها إلا من أشعل
     # «طلبات المطار»**. ومطفأً لا رسمَ ولا تصفية، **والرحلاتُ القائمةُ برسمها تكمل** (مجمَّدٌ عليها)
     AIRPORT_ENABLED = "airport_enabled"
+    # **الحجزُ المضمون** (§٦٣-ج/٣) — كبتنٌ محجوزٌ مسبقاً برسمٍ يحفظه TAXO. ومطفأً لا يُطلب حجزٌ مضمونٌ جديد، **والقائمُ يكمل**
+    # (رسمُه محفوظٌ يُحسم كما قُرّر)، و`service_settings.guarantee_fee` صفرٌ يُخفيه ولو اشتعل
+    GUARANTEED_BOOKING_ENABLED = "guaranteed_booking_enabled"
 
 
 class BookingStatus(StrEnum):
@@ -703,6 +706,12 @@ class WalletTransactionType(StrEnum):
     # الطرفين معاً، وهي قاعدةُ البقشيش نفسُها من الجهة الأخرى
     CANCELLATION_FEE = "cancellation_fee"
     CANCELLATION_COMPENSATION = "cancellation_compensation"
+    # ---- الحجزُ المضمون (§٦٣-ج/٣) — **رسمٌ يحفظه TAXO** ثمّ يصل الكبتنَ أو يُردّ، **وغرامةُ المعتذر** من محفظته إلى الراكب
+    GUARANTEE_HOLD = "guarantee_hold"
+    GUARANTEE_FEE = "guarantee_fee"
+    GUARANTEE_REFUND = "guarantee_refund"
+    GUARANTEE_PENALTY = "guarantee_penalty"
+    GUARANTEE_COMPENSATION = "guarantee_compensation"
 
 
 class CancellationChargeStatus(StrEnum):

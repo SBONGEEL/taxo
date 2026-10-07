@@ -532,7 +532,13 @@ export type WalletTransactionType =
   | "cancellation_fee"
   | "cancellation_compensation"
   | "referral_bonus"
-  | "skin_purchase";
+  | "skin_purchase"
+  // **الحجزُ المضمون** (§٦٣-ج/٣): رسمُ الضمان يصله، **وغرامةُ اعتذاره بعد التأكيد** تخرج من محفظته — والثلاثةُ الباقيةُ للراكب
+  | "guarantee_hold"
+  | "guarantee_fee"
+  | "guarantee_refund"
+  | "guarantee_penalty"
+  | "guarantee_compensation";
 
 export interface WalletTransaction {
   id: string;
@@ -1228,3 +1234,29 @@ export type ErrorReportBody = {
   request_id?: string;
   note?: string;
 };
+
+// ------------------------------------------------ الحجزُ المضمون (§٦٣-ج/٣)
+
+/** حجزٌ مضمونٌ كما يراه الكبتن (`GuaranteeOfferOut`) — عرضاً في «عروضٌ تنتظرك» أو مقبولاً في «القادمة».
+ *
+ * **بلا اسم الراكب ولا رقمه** — لا يراهما في رحلةٍ عاديّةٍ أصلاً. **والأجرةُ تقديرُ لحظة الحجز**: تُحسب عند التنفيذ.
+ */
+export interface GuaranteeOffer {
+  id: string;
+  scheduled_at: string;
+  vehicle_category: VehicleCategory;
+  pickup_lat: number;
+  pickup_lng: number;
+  pickup_address: string | null;
+  dropoff_lat: number;
+  dropoff_lng: number;
+  dropoff_address: string | null;
+  /** تقديرٌ لحظةَ الحجز — **لا أجرة**: تُحسب عند التنفيذ. */
+  estimated_fare_at_booking: string | null;
+  /** **رسمُ الضمان له كاملاً** حين تتمّ الرحلةُ معه في وقتها — مجمَّدٌ على الحجز. */
+  guarantee_fee: string;
+  currency: Currency;
+  accepted: boolean;
+  /** **سُئل «هل أنت في الطريق؟»** — يُفتح التأكيدُ قبل الموعد بدقائقِ سوقه، وبلا ردٍّ في المهلة يُسحب منه بلا عقوبة. */
+  confirm_requested: boolean;
+}

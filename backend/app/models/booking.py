@@ -26,11 +26,13 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
     String,
+    text,
 )
 from sqlalchemy.orm import Mapped, column_property, mapped_column
 
@@ -64,6 +66,12 @@ class RideBooking(UUIDMixin, TimestampMixin, Base):
             "estimated_fare_at_booking IS NULL OR estimated_fare_at_booking >= 0",
             name="booking_estimate_not_negative",
         ),
+        # **الضمانُ وحدَه يحمل كبتناً ورسماً** (§٦٣-ج/٣) — حجزٌ عاديٌّ بكبتنٍ محجوزٍ تناقضٌ يُرفض في القاعدة
+        CheckConstraint(
+            "guarantee_fee_at_booking >= 0 AND (guarantee_state IS NULL OR guarantee_state IN "
+            "('held', 'paid', 'refunded')) AND (guaranteed OR (driver_id IS NULL AND guarantee_state IS NULL))",
+            name="booking_guarantee_valid",
+        ),
         # فهرسٌ جزئيٌّ لما ينتظر: المهمةُ تسأل كلَّ دقيقة، والجدولُ ينمو بالمنفَّذ
         Index(
             "ix_ride_bookings_due",
@@ -75,6 +83,23 @@ class RideBooking(UUIDMixin, TimestampMixin, Base):
     rider_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # ------------------------------------------------ الحجزُ المضمون (§٦٣-ج/٣)
+    #
+    # **الرسمُ مجمَّدٌ لحظةَ الحجز وحالُه** (`held` ثمّ `paid` أو `refunded`) — والقيدُ في الدفتر يقول مثلَه بمفتاحه
+    guaranteed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    guarantee_fee_at_booking: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
+    )
+    guarantee_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    #: **الكبتنُ المحجوز** — يقبله مسبقاً، ويُسأل قبل الموعد بساعة، و«نعم» تُنشئ الرحلةَ مسنَدةً إليه
+    driver_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("drivers.id"), nullable=True, index=True
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirm_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False
     )

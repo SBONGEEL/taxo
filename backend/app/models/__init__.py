@@ -8,6 +8,8 @@ from app.models.verification_campaign import (  # noqa: F401
 from app.models.booking import RideBooking
 from app.models.ride_track import RideTrackToken  # noqa: F401
 from app.models.facility import Facility  # noqa: F401
+from app.models.service_setting import ServiceSetting  # noqa: F401
+from app.models.driver_warning import DriverWarning  # noqa: F401
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.debt import DriverDebt  # noqa: F401
 from app.models.dispatch_setting import DispatchSetting  # noqa: F401

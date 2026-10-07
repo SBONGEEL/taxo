@@ -52,6 +52,7 @@ import type {
   CancellationChargeRow,
   CancellationChargeStatus,
   CancellationSetting,
+  ServiceSetting,
   CommissionAppliesTo,
   CommissionSetting,
   CountryCode,
@@ -1006,6 +1007,18 @@ export const updateCancellationSettings = (
     `/admin/settings/cancellation/${country}`,
     payload,
   );
+
+// ── الخدماتُ الجديدة (§٦٣) — **صفٌّ لكلِّ سوق** ولو لم يُضبط بعد (بافتراضاته)
+
+export const listServiceSettings = () =>
+  api.get<ServiceSetting[]>("/admin/settings/services");
+
+/** **ما تغيّر وحدَه** — أيُّ جزءٍ من الحقول، والخلفيةُ تكتب الصفَّ بأوّل حفظ. */
+export const updateServiceSettings = (
+  country: CountryCode,
+  payload: Partial<Omit<ServiceSetting, "country_code">>,
+) =>
+  api.patch<ServiceSetting>(`/admin/settings/services/${country}`, payload);
 
 /** رسومُ الإلغاء بطرفَيها — والدولةُ تُقرأ من الرحلة لا من عمودٍ على الصف. */
 export const listCancellationCharges = (

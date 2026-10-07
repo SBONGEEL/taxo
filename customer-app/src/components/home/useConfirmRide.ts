@@ -20,7 +20,7 @@ import type {
   VehicleCategory,
 } from "@/api/types";
 import type { DraftStop } from "@/components/home/StopsEditor";
-import { earliest, localInputValue, useScheduledRides } from "@/lib/bookings";
+import { earliest, guaranteeLeadOk, localInputValue, useGuaranteedBooking, useScheduledRides } from "@/lib/bookings";
 import { requesterCanPay, usePayerPreference, useRideForOther } from "@/lib/for-other";
 import { useMultiStop } from "@/lib/multistop";
 import { usePromoCodes } from "@/lib/promo";
@@ -118,6 +118,8 @@ export interface ConfirmRideProps {
     category: VehicleCategory,
     preference: GenderPreference,
     when: string,
+    /** **حجزٌ مضمون** (§٦٣-ج/٣) — `true` حيث المفتاحُ مشتعلٌ واختاره **والموعدُ يتّسع له** وحدَه. */
+    guaranteed: boolean,
   ) => void;
   /** «رجوع» من التصميم — يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟». */
   onBack: () => void;
@@ -154,6 +156,12 @@ export function useConfirmRide({
   // **ومفتوحاً من أوّله حين جاءت من «جدولي الرحلة لوقت لاحق»** (RW3) — بأقرب موعدٍ كما يفتحه زرُّه
   const [scheduling, setScheduling] = useState(Boolean(initialScheduling) && scheduled);
   const [when, setWhen] = useState(() => (initialScheduling && scheduled ? localInputValue(earliest()) : ""));
+  // **الحجزُ المضمون** (§٦٣-ج/٣): خيارٌ داخل الحجز لا زرٌّ ثالث — **ومفتاحُه يُخفيه**، **وموعدٌ أقربُ من ساعتين يعطّله**
+  // بعلّته. **والمُرسَلُ هو الفعّالُ لا المختار**: مفتاحٌ بقي مشتعلاً ثمّ قُرِّب الموعدُ لا يُرسل حجزاً سيُرفض كلُّه
+  const guaranteeOffered = useGuaranteedBooking();
+  const [guaranteedPick, setGuaranteed] = useState(false);
+  const guaranteeFits = when !== "" && guaranteeLeadOk(when);
+  const guaranteed = guaranteeOffered && guaranteedPick && guaranteeFits;
   // دولةُ الحساب — الكوبونُ per-country فالتحقّقُ يحملها
   const multiStop = useMultiStop();
   const [category, setCategory] = useState<VehicleCategory>(
@@ -325,6 +333,10 @@ export function useConfirmRide({
     setScheduling,
     when,
     setWhen,
+    guaranteeOffered,
+    guaranteeFits,
+    guaranteed,
+    setGuaranteed,
     multiStop,
     category,
     setCategory,

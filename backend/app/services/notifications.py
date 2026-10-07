@@ -1567,3 +1567,84 @@ async def publish_pause_limit_exceeded(
             data=dict(message.data),
         ),
     )
+
+
+# ------------------------------------------------------------------ الحجزُ المضمون (§٦٣-ج/٣)
+
+
+async def publish_guarantee_accepted(
+    session: AsyncSession, redis: Redis, *, rider_id: uuid.UUID, booking_id: uuid.UUID, captain_name: str
+) -> None:
+    """**يُعلَم الراكبُ باسم كبتنه** لحظةَ القبول — وهو وعدُ الحجز المضمون كلُّه."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="حجزُك مضمون",
+            body=f"الكبتن {captain_name} قبل حجزَك، ويؤكّد قبل الموعد بساعة.",
+            data={"type": "guarantee_accepted", "booking_id": str(booking_id)},
+        ),
+    )
+
+
+async def publish_guarantee_confirm_request(
+    session: AsyncSession, redis: Redis, *, driver_user_id: uuid.UUID, booking_id: uuid.UUID
+) -> None:
+    """«هل أنت في الطريق؟» — **وبلا ردٍّ في المهلة يُسحب الحجزُ منه بلا عقوبة**."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="هل أنت في الطريق؟",
+            body="حجزُك المضمون بعد ساعة — أكّد الآن، وإلا عاد لغيرك.",
+            data={"type": "guarantee_confirm", "booking_id": str(booking_id)},
+        ),
+    )
+
+
+async def publish_guarantee_reopened(
+    session: AsyncSession, redis: Redis, *, rider_id: uuid.UUID, booking_id: uuid.UUID
+) -> None:
+    """الكبتنُ المحجوزُ لم يؤكّد أو اعتذر — **ونبحث له عن غيره بأولوية**؛ والرسمُ محفوظٌ يُردّ إن لم نجد."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="نبحث لك عن كبتنٍ آخر",
+            body="اعتذر كبتنُ حجزك المضمون. نبحث عن غيره، ويُردّ رسمُ الضمان إن لم نجد.",
+            data={"type": "guarantee_reopened", "booking_id": str(booking_id)},
+        ),
+    )
+
+
+async def publish_guarantee_dropped(
+    session: AsyncSession, redis: Redis, *, driver_user_id: uuid.UUID, booking_id: uuid.UUID
+) -> None:
+    await _safe_notify(
+        session,
+        redis,
+        user_id=driver_user_id,
+        message=PushMessage(
+            title="سُحب الحجزُ المضمون",
+            body="لم تؤكّد في المهلة، فعاد الحجزُ لغيرك — بلا أثرٍ عليك.",
+            data={"type": "guarantee_dropped", "booking_id": str(booking_id)},
+        ),
+    )
+
+
+async def publish_guarantee_refunded(
+    session: AsyncSession, redis: Redis, *, rider_id: uuid.UUID, booking_id: uuid.UUID
+) -> None:
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="رُدّ رسمُ الضمان",
+            body="لم نجد كبتناً يضمن حجزَك، فعاد الرسمُ إلى محفظتك. ونطلب لك سيارةً في موعدك كالمعتاد.",
+            data={"type": "guarantee_refunded", "booking_id": str(booking_id)},
+        ),
+    )

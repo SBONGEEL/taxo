@@ -331,6 +331,7 @@ export function HomeScreen() {
     category: VehicleCategory,
     preference: GenderPreference,
     when: string,
+    guaranteed: boolean,
   ) {
     if (!pickup || !dropoff) return;
     setRequesting(true);
@@ -346,6 +347,9 @@ export function HomeScreen() {
         // **بمنطقةٍ زمنية**: `datetime-local` يعطي وقتاً محلياً بلا منطقة،
         // و`new Date(value)` يقرؤه بمنطقة الجهاز — فيصل الموعدُ كما رآه صاحبُه
         scheduled_at: new Date(when).toISOString(),
+        // **الحجزُ المضمون يُرسل حين اختير وحدَه** (§٦٣-ج/٣) — فحمولةُ الحجز العاديّ هي هي كما كانت. ورفضُه
+        // (رصيدٌ لا يكفي الرسم · موعدٌ أقربُ من ساعتين · خدمةٌ مطفأة) يرفض الحجزَ كلَّه ويُقال نصُّه تحت الزرّ
+        guaranteed: guaranteed || undefined,
       });
       setPhase("idle");
       setDropoff(null);

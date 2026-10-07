@@ -17,6 +17,23 @@ export function useScheduledRides(): boolean {
   return useFeature(user?.country_code, "scheduled_rides_enabled");
 }
 
+/** **الحجزُ المضمون** (§٦٣-ج/٣) — مفتاحُه يُخفي الخيارَ كلَّه لا يعطّله. **ولا رسمَ يُقرأ هنا**: لا بابَ عامٌّ ينشره قبل
+ *  الحجز، **وصفرُه في السوق يُرفض من الخلفية** (`guaranteed_booking_unavailable`) فيُقال نصُّها تحت الزرّ. */
+export function useGuaranteedBooking(): boolean {
+  const { user } = useSession();
+  return useFeature(user?.country_code, "guaranteed_booking_enabled");
+}
+
+/** **ساعتان قبل الموعد على الأقلّ** — مرآةُ `guarantees.MIN_LEAD` في الخلفية: ليتّسع لقبول كبتنٍ وتأكيدِه قبل الموعد
+ *  بساعة. **ومكرَّرةٌ هنا بقصد** كحدِّ نصف الساعة أعلاه: الشاشةُ تعطّل ما تعرف أنه سيُرفض، **والرفضُ في الخلفية هو الحارس**. */
+export const GUARANTEE_MIN_LEAD_MINUTES = 120;
+
+/** أيتّسع الموعدُ المختارُ لحجزٍ مضمون؟ — `when` بصيغة `datetime-local` (وقتٌ محلّيٌّ بلا منطقة). */
+export function guaranteeLeadOk(when: string): boolean {
+  const at = new Date(when).getTime();
+  return Number.isFinite(at) && at - Date.now() >= GUARANTEE_MIN_LEAD_MINUTES * 60_000;
+}
+
 /** قيمةٌ لحقل `datetime-local` — **بالوقت المحلي لا UTC**: الحقلُ يعرض ما
  *  يُعطى كما هو، و`toISOString` يعطي UTC فيرى صاحبُه ساعةً غيرَ ساعته. */
 export function localInputValue(date: Date): string {

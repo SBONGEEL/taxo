@@ -45,6 +45,10 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   topup: "add_card",
   transfer_in: "sync_alt",
   transfer_out: "sync_alt",
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — شارةُ الضمان نفسُها على بطاقة الحجز
+  guarantee_hold: "verified_user",
+  guarantee_refund: "verified_user",
+  guarantee_compensation: "verified_user",
 };
 
 export function WalletT2Screen() {

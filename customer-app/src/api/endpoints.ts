@@ -414,6 +414,9 @@ export const createBooking = (body: {
   pickup_address?: string | null;
   dropoff_address?: string | null;
   gender_preference?: GenderPreference;
+  /** **حجزٌ مضمون** (§٦٣-ج/٣) — رسمُه من المحفظة لحظةَ الحجز، **ويُرفض الحجزُ كلُّه** إن لم يكفِ الرصيد أو كان أقربَ
+   *  من ساعتين. وغيابُه حجزٌ عاديٌّ كما كان. */
+  guaranteed?: boolean;
 }) => api.post<Booking>("/me/bookings", body);
 
 export const cancelBooking = (bookingId: string) =>

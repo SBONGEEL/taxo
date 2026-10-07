@@ -54,6 +54,7 @@ import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
+import { useGuaranteeEntry, type GuaranteeEntry } from "@/lib/guarantees";
 import { isActive } from "@/lib/ride";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { digits, ratedAverage } from "@/lib/utils";
@@ -66,8 +67,11 @@ import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { Icon, Wordmark } from "@/taxo2";
 
+import { countBookings } from "./count";
+
 import "./t2.css";
 import "./ride.css";
+import "./guarantees.css";
 
 export function HomeT2Screen() {
   const {
@@ -156,6 +160,8 @@ export function HomeT2Screen() {
   // **ما يحتاج انتباهَه** (§٦٢-ج/٤٣): نقطةُ «الوثائق»، و«الطلب مرتفع» ما دام متصلاً في الرئيسية وحدَها
   const documentsAttention = useDocumentsAttention();
   const demandHigh = useDemandHigh(online && mode === "home");
+  // **الحجوزُ المضمونة** (§٦٣-ج/٣) — تُقرأ في الرئيسية وحدَها، وتُعاد كلَّما عاد إليها من رحلةٍ أو طلب
+  const guarantee = useGuaranteeEntry(mode === "home");
   // **الطلبُ والرحلةُ يبدآن من أعلى الصفحة**: طبقاتُ الإطار مطلقةُ الموضع داخل جذرٍ يتمرّر، **ورئيسيةٌ مُمرَّرةٌ ثمّ طلبٌ وارد
   // كانت تُزيح البطاقةَ والورقةَ بمقدار التمرير**
   const root = useRef<HTMLDivElement | null>(null);
@@ -335,6 +341,10 @@ export function HomeT2Screen() {
           <PhonePendingNotice />
         </div>
       ) : null}
+
+      {/* **الحجوزُ المضمونة** (§٦٣-ج/٣) — فوق الخدمات حين يكون فيها شيءٌ وحدَه: عرضٌ ينتظر، أو حجزٌ قبله، **أو سؤالُ «هل أنت
+          في الطريق؟»** وهو أوّلُها لأن الحجزَ يُسحب بعده بلا ردّ. ومطفأً أو فارغاً لا صفّ */}
+      {mode === "home" && guarantee ? <GuaranteeEntryRow entry={guarantee} onOpen={() => navigate("/guarantees")} /> : null}
 
       {mode === "home" ? (
         <Services
@@ -577,6 +587,29 @@ function GoPill({
         <Icon name="power_settings_new" />
       </span>
     </button>
+  );
+}
+
+/** **مدخلُ الحجوز المضمونة** (§٦٣-ج/٣) — صفُّ «جدّد» نفسُه بالجمر. **والسؤالُ يسبق العرض**: حجزٌ يُسأل عنه الآن يُسحب بلا ردّ،
+ *  والعروضُ تنتظر. **والعددُ بالعربية** (`countBookings`) لا «2 حجز». */
+function GuaranteeEntryRow({ entry, onOpen }: { entry: GuaranteeEntry; onOpen: () => void }) {
+  const title = entry.asking ? "هل أنت في الطريق؟" : entry.offers > 0 ? "عروضٌ تنتظرك" : "حجوزُك المضمونة القادمة";
+  const sub = entry.asking
+    ? "حجزُك المضمون قريب — أكّده الآن، وإلا عاد لغيرك"
+    : entry.offers > 0
+      ? `${countBookings(entry.offers)} في فئة مركبتك — ورسمُ الضمان لك كاملاً`
+      : `لك ${countBookings(entry.upcoming)} — نسألك قبل الموعد بساعة`;
+  return (
+    <div className="t2-gu-home">
+      <button type="button" className={entry.asking ? "t2-hm-row t2-gu-entry asking" : "t2-hm-row t2-gu-entry"} onClick={onOpen}>
+        <Icon name={entry.asking ? "schedule" : "event_upcoming"} fill />
+        <span className="t2-hm-row-main">
+          <span className="t2-hm-row-title">{title}</span>
+          <div className="t2-hm-row-sub">{sub}</div>
+        </span>
+        <Icon name="chevron_left" className="go" />
+      </button>
+    </div>
   );
 }
 

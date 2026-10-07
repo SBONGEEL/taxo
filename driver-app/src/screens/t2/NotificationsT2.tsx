@@ -41,6 +41,9 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   subscription_expired: { icon: "card_membership", tone: "danger" },
   document_approved: { icon: "verified", tone: "ok" },
   document_rejected: { icon: "description", tone: "danger" },
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — سؤالُ «هل أنت في الطريق؟» بالجمر، وسحبُه بلا ردٍّ بالكهرمان
+  guarantee_confirm: { icon: "schedule", tone: "hot" },
+  guarantee_dropped: { icon: "event_upcoming", tone: "warn" },
   campaign: { icon: "campaign", tone: "plain" },
 };
 const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };

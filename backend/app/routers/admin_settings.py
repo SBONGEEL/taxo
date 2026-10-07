@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, File, Query, UploadFile, status
@@ -19,6 +20,8 @@ from app.models.map_setting import MapSetting
 from app.models.otp_setting import OtpSetting
 from app.models.enums import AuditAction, CountryCode, FeatureKey, ProviderKey
 from app.models.pricing import PricingRule
+from app.models.service_setting import ServiceSetting
+from app.schemas.guarantee import ServiceSettingOut, ServiceSettingUpdate
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
 from app.models.payment_setting import PaymentSetting
@@ -557,6 +560,57 @@ async def update_cancellation_settings(
     )
     await _commit(session, setting)
     return CancellationSettingOut.model_validate(setting)
+
+
+# ------------------------------------------------------- الخدماتُ الجديدة (§٦٣)
+
+
+@router.get("/services", response_model=list[ServiceSettingOut])
+async def list_service_settings(_staff: StaffUser, session: DbSession) -> list[ServiceSettingOut]:
+    """صفٌّ لكلِّ سوق — **وسوقٌ بلا صفٍّ يُعرض بافتراضاته** (كلُّ مبلغٍ صفر) فلا تُخفي اللوحةُ سوقاً لم يُضبط."""
+    rows = {row.country_code: row for row in await session.scalars(select(ServiceSetting))}
+    out = []
+    for country in CountryCode:
+        row = rows.get(country) or ServiceSetting(
+            country_code=country,
+            guarantee_fee=Decimal("0.000"),
+            guarantee_late_minutes=10,
+            guarantee_confirm_minutes=60,
+            guarantee_confirm_window_minutes=10,
+            guarantee_offer_hours=24,
+            guarantee_ban_threshold=2,
+            guarantee_ban_days=30,
+        )
+        out.append(ServiceSettingOut.model_validate(row))
+    return out
+
+
+@router.patch("/services/{country_code}", response_model=ServiceSettingOut)
+async def update_service_settings(
+    country_code: CountryCode,
+    payload: ServiceSettingUpdate,
+    admin: SettingsWriter,
+    session: DbSession,
+) -> ServiceSettingOut:
+    """مبالغُ الخدمات الجديدة وعتباتُها لسوقٍ واحد (§٦٣). **وما يُعدَّل يحكم ما يأتي لا ما وقع**: رسمُ الضمان مجمَّدٌ على الحجز لحظةَ
+    طلبه، فرفعُه اليومَ لا يمسّ حجزاً قائماً."""
+    setting = await session.get(ServiceSetting, country_code)
+    if setting is None:
+        setting = ServiceSetting(country_code=country_code)
+        session.add(setting)
+        await session.flush()
+    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+    await audit.record(
+        session,
+        actor=admin,
+        action=AuditAction.UPDATE,
+        entity_type="service_setting",
+        entity_id=None,
+        details={"country_code": country_code.value},
+        changes=changed,
+    )
+    await _commit(session, setting)
+    return ServiceSettingOut.model_validate(setting)
 
 
 # ------------------------------------------------------- سياسات الدفع

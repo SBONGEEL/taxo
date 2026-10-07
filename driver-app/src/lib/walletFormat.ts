@@ -46,6 +46,12 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   cancellation_compensation: "تعويض إلغاء",
   referral_bonus: "مكافأة إحالة",
   skin_purchase: "شراء مركبة",
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — الرسمُ يصله والغرامةُ تخرج منه، والثلاثةُ الباقيةُ للراكب وتُسمّى للعلّة أعلاه
+  guarantee_fee: "رسم حجز مضمون",
+  guarantee_penalty: "غرامة اعتذار عن حجز مضمون",
+  guarantee_hold: "رسم ضمان محفوظ",
+  guarantee_refund: "ردّ رسم الضمان",
+  guarantee_compensation: "تعويض حجز مضمون",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -73,6 +79,12 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   cancellation_compensation: Scale,
   referral_bonus: Gift,
   skin_purchase: Car,
+  // **والحجزُ المضمون من بابٍ واحد** — الرسمُ وغرامتُه وردُّه
+  guarantee_fee: CalendarCheck,
+  guarantee_penalty: CalendarCheck,
+  guarantee_hold: CalendarCheck,
+  guarantee_refund: CalendarCheck,
+  guarantee_compensation: CalendarCheck,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

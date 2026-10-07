@@ -580,7 +580,13 @@ export type WalletTransactionType =
   | "advance"
   | "advance_repayment"
   | "cancellation_fee"
-  | "cancellation_compensation";
+  | "cancellation_compensation"
+  // **الحجزُ المضمون** (§٦٣-ج/٣): رسمٌ يُحفظ ثمّ يُردّ، وتعويضُ اعتذار الكبتن — **وثلاثتُها تقع للراكب**
+  | "guarantee_hold"
+  | "guarantee_fee"
+  | "guarantee_refund"
+  | "guarantee_penalty"
+  | "guarantee_compensation";
 
 export interface WalletTransaction {
   id: string;
@@ -752,6 +758,15 @@ export interface Booking {
   ride_status: RideStatus | null;
   cancelled_at: string | null;
   created_at: string;
+  // ---- الحجزُ المضمون (§٦٣-ج/٣) — **ولا يُعرض شيءٌ منها حيث المفتاحُ مطفأ**
+  guaranteed: boolean;
+  /** **الرسمُ المجمَّدُ لحظةَ الحجز** — لا رقمَ قبله: لا بابَ عامٌّ ينشر الرسمَ قبل أن يُحجز. و`null` لحجزٍ غيرِ مضمون. */
+  guarantee_fee: string | null;
+  /** **أين مالُه**: محفوظٌ عند TAXO · وصل الكبتن · عاد إليه. **حقلٌ لا اتحادٌ مسمّى بقصد**: القيمُ ثوابتُ في
+   *  `services/guarantees.py` لا `StrEnum`، فاتحادٌ باسمٍ يخلط `held` بقيمٍ يعرفها `check:enums` من تعداداتٍ أخرى. */
+  guarantee_state: "held" | "paid" | "refunded" | null;
+  /** **اسمُ الكبتن المحجوز** — كما يراه في بطاقة الكبتن، ولا شيءَ غيرُه. */
+  captain_name: string | null;
 }
 
 

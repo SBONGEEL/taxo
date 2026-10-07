@@ -68,6 +68,12 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   cancellation_compensation: "balance",
   referral_bonus: "redeem",
   skin_purchase: "directions_car",
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — شارةُ الضمان نفسُها في «الحجوز المضمونة»
+  guarantee_fee: "verified_user",
+  guarantee_penalty: "verified_user",
+  guarantee_hold: "verified_user",
+  guarantee_refund: "verified_user",
+  guarantee_compensation: "verified_user",
 };
 
 export function WalletT2Screen() {

@@ -34,6 +34,8 @@ class BookingCreate(BaseModel):
     dropoff_address: str | None = Field(default=None, max_length=255)
     gender_preference: GenderPreference | None = None
     payment_method_hint: PaymentMethod | None = None
+    # **حجزٌ مضمون** (§٦٣-ج/٣) — رسمُه من المحفظة لحظةَ الحجز، ولا يُطلب قبل ساعتين من موعده
+    guaranteed: bool = False
 
 
 class BookingOut(BaseModel):
@@ -67,3 +69,10 @@ class BookingOut(BaseModel):
     ride_status: RideStatus | None = None
     cancelled_at: datetime | None
     created_at: datetime
+    # ---- الحجزُ المضمون (§٦٣-ج/٣)
+    guaranteed: bool = False
+    #: الرسمُ المحفوظ — **وحالُه** (`held` · `paid` · `refunded`) فيرى صاحبُه أين مالُه
+    guarantee_fee: Decimal | None = None
+    guarantee_state: str | None = None
+    #: **اسمُ الكبتن المحجوز** — وعدُ الضمان أن يُعرف قبل الموعد
+    captain_name: str | None = None

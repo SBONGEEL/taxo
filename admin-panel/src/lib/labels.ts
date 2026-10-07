@@ -117,6 +117,12 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   advance_repayment: "سداد سلفة",
   skin_purchase: "شراء زينة مركبة",
   referral_bonus: "حافز إحالة",
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — **يُسمّى بجهته** كالأزواج أعلاه: حفظٌ من الراكب، ووصولٌ للكبتن، وردٌّ، وغرامةٌ وتعويضُها
+  guarantee_hold: "رسم ضمان محفوظ",
+  guarantee_fee: "رسم ضمان للكبتن",
+  guarantee_refund: "ردّ رسم الضمان",
+  guarantee_penalty: "غرامة اعتذار عن حجز مضمون",
+  guarantee_compensation: "تعويض اعتذار الكبتن",
 };
 
 // ─────────────────────────────────────────────── الاشتراك

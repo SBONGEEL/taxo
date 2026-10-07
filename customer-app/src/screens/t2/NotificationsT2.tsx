@@ -40,6 +40,10 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   booking_missed: { icon: "calendar_clock", tone: "warn" },
   booking_no_driver: { icon: "calendar_clock", tone: "danger" },
   booking_preference_dropped: { icon: "calendar_clock", tone: "warn" },
+  // **الحجزُ المضمون** (§٦٣-ج/٣) — كبتنٌ قبله · اعتذر فنبحث عن غيره · رُدّ الرسمُ إلى المحفظة
+  guarantee_accepted: { icon: "verified_user", tone: "live" },
+  guarantee_reopened: { icon: "calendar_clock", tone: "warn" },
+  guarantee_refunded: { icon: "account_balance_wallet", tone: "money" },
   women_mode_revoked: { icon: "woman", tone: "women" },
   campaign: { icon: "campaign", tone: "plain" },
   promo: { icon: "sell", tone: "offer" },

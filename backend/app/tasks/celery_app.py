@@ -94,6 +94,7 @@ celery_app = Celery(
         "app.tasks.error_reports",
         "app.tasks.accounts",
         "app.tasks.ride_for_other",
+        "app.tasks.guarantees",
     ],
 )
 
@@ -191,6 +192,11 @@ celery_app.conf.update(
             "schedule": crontab(hour=2, minute=30),
         },
         # **محوُ الراكب الفعليّ بعد ٣٠ يوماً** (§٦٣-ج/١) — يومياً: الوعدُ في سياسة الخصوصية بالأيام، وكنسٌ أسبوعيٌّ يكسره
+        # **الحجزُ المضمون كلَّ دقيقة** (§٦٣-ج/٣): مهلةُ التأكيد عشرُ دقائق، ودورةٌ أبطأُ منها تخون المهلة
+        "sweep-guarantees": {
+            "task": "app.tasks.guarantees.sweep_guarantees",
+            "schedule": 60.0,
+        },
         "purge-ride-passengers": {
             "task": "app.tasks.ride_for_other.purge_passengers",
             "schedule": crontab(hour=3, minute=10),
