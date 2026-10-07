@@ -37,6 +37,8 @@ class DayRevenueOut(BaseModel):
     day: str
     revenue: Decimal
     rides: int
+    #: نسبةُ اليوم من أعلى يومٍ (0–1) — ارتفاعُ العمود، من الخلفية (§14)
+    peak_share: Decimal
 
 
 class TopDriverOut(BaseModel):

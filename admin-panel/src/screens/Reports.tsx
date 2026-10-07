@@ -221,9 +221,6 @@ function RevenueBars({ data }: { data: Reports }) {
     );
   }
 
-  // الأقصى للنسبة وحدها — قسمةُ عرضٍ لا حسابُ مال، فلا يمر مبلغٌ بها إلى شاشة
-  const peak = Math.max(...days.map((row) => Number(row.revenue)), 1);
-
   // بلا ارتفاعٍ ثابت للحاوية: أطولُ عمودٍ 140px وفوقه قيمةٌ وتحته يوم، فيخرج
   // الارتفاعُ الطبيعي ١٩٠ كما في §3.4 — ورقمٌ ثابتٌ معها يقصّ التسميات
   return (
@@ -241,7 +238,8 @@ function RevenueBars({ data }: { data: Reports }) {
               "w-full rounded-t-5",
               index === days.length - 1 ? "bg-ink" : "bg-line",
             )}
-            style={{ height: `${(Number(row.revenue) / peak) * 140}px` }}
+            // **النسبةُ من الخلفية** (`peak_share`، §٦٢-ب/٥٢) — لا قسمةَ إيرادٍ في اللوحة
+            style={{ height: `${Number(row.peak_share) * 140}px` }}
           />
           <span className="text-9 text-muted">{shortDay(row.day)}</span>
         </div>

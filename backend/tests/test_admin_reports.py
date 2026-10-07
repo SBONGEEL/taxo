@@ -63,6 +63,9 @@ async def test_average_and_cancellation_rate_arrive_computed(
     assert sum(Decimal(row["revenue"]) for row in days) == fare
     # واليومُ الأخير هو اليوم — النافذة تنتهي عند الآن
     assert Decimal(days[-1]["revenue"]) == fare
+    # **وارتفاعُ العمود من هنا لا من اللوحة** (§٦٢-ب/٥٢): أعلى يومٍ واحد، والأيامُ الصفرُ صفر
+    assert days[-1]["peak_share"] == "1.000"
+    assert all(row["peak_share"] == "0.000" for row in days[:-1])
 
 
 async def test_cancellation_rate_counts_both_sides(
@@ -139,6 +142,8 @@ async def test_reports_are_scoped_to_the_requested_country(
     libya = await _reports(client, admin_headers, country_code="LY")
     # الأيامُ حاضرةٌ والأرقامُ صفر: النافذةُ نافذةٌ ولو لم تقع فيها رحلة
     assert all(row["rides"] == 0 for row in libya["revenue_by_day"])
+    # **ونافذةٌ بلا إيرادٍ لا تقسم على صفر** — كلُّ عمودٍ صفر
+    assert all(row["peak_share"] == "0.000" for row in libya["revenue_by_day"])
     assert Decimal(libya["avg_ride_fare"]) == Decimal("0.000")
     assert Decimal(libya["cancellation_rate"]) == Decimal("0.00")
     assert libya["currency"] == "LYD"

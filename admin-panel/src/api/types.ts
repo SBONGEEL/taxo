@@ -1014,6 +1014,8 @@ export interface DayRevenue {
   day: string;
   revenue: string;
   rides: number;
+  /** **نسبةُ اليوم من أعلى يومٍ (0–1)** — ارتفاعُ العمود، محسوبةً في الخلفية (§14، §٦٢-ب/٥٢) لا بقسمة الإيراد هنا. */
+  peak_share: string;
 }
 
 export interface TopDriver {

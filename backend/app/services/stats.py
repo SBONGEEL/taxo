@@ -52,6 +52,15 @@ DEFAULT_TIMEZONE = "Asia/Amman"
 TOP_DRIVERS = 5
 
 
+_MONEY_STEP = Decimal("0.001")
+
+
+def _money(value: object) -> Decimal:
+    """**المالُ بثلاث خاناتٍ دائماً** (الشكلُ السابع — §٦٢-ب/٥٢): `Decimal(0)` يُسلسَل «0» لا «0.000»، ومجموعٌ فارغٌ و`coalesce(…, 0)`
+    يعيدانه — فخرج إيرادُ يومٍ بلا رحلاتٍ «0» في «نظرة عامة» والتقارير. **وكلُّ مبلغٍ هنا يمرّ به**، فلا يتذكّر موضعٌ جديدٌ الخاناتِ وحدَه."""
+    return Decimal(value or 0).quantize(_MONEY_STEP)
+
+
 @dataclass(frozen=True, slots=True)
 class Overview:
     """ما ترسمه «نظرة عامة» — أرقامٌ جاهزة لا صفوفٌ تُجمع في الواجهة."""
@@ -79,6 +88,9 @@ class DayRevenue:
     day: str
     revenue: Decimal
     rides: int
+    # **نسبةُ اليوم من أعلى يومٍ في النافذة (0–1)** — ارتفاعُ عموده في اللوحة، **محسوبةً هنا لا هناك** (§14، §٦٢-ب/٥٢): كانت اللوحةُ
+    # تقسم الإيرادَ على أعلاه، وهي سابقةُ أعمدة C09 (`peak_share`) بعينها
+    peak_share: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -254,7 +266,7 @@ async def overview(
         to_at=to_at,
         completed_rides=int(completed or 0),
         cancelled_rides=int(cancelled or 0),
-        revenue=Decimal(revenue or 0),
+        revenue=_money(revenue),
         online_drivers=await online_driver_count(redis, country),
         active_rides=int(active_rides or 0),
         active_subscriptions=int(active_subs or 0),
@@ -383,20 +395,23 @@ async def reports(
     # أيام عملٍ ثلاثةَ أيامٍ متتالية — رسمٌ يكذب بلا رقمٍ خاطئ فيه. والملءُ هنا
     # لا في الواجهة: هي لا تعرف حدود النافذة ولا مِنطقة الدولة
     found = {
-        value: (Decimal(total), int(count))
+        value: (_money(total), int(count))
         for value, total, count in day_rows.all()
     }
+    window = {value: found.get(value, (_money(0), 0)) for value in _days_in(zone, from_at, to_at)}
+    peak = max((amount for amount, _ in window.values()), default=Decimal(0))
     revenue_by_day = [
         DayRevenue(
             day=value.isoformat(),
-            revenue=found.get(value, (Decimal(0), 0))[0],
-            rides=found.get(value, (Decimal(0), 0))[1],
+            revenue=amount,
+            rides=rides,
+            peak_share=(amount / peak).quantize(_MONEY_STEP) if peak > 0 else Decimal("0.000"),
         )
-        for value in _days_in(zone, from_at, to_at)
+        for value, (amount, rides) in window.items()
     ]
 
     completed = sum(row.rides for row in revenue_by_day)
-    revenue = sum((row.revenue for row in revenue_by_day), Decimal(0))
+    revenue = _money(sum((row.revenue for row in revenue_by_day), Decimal(0)))
     cancelled = int(
         await session.scalar(
             select(func.count())
@@ -445,7 +460,7 @@ async def reports(
             driver_id=driver_id,
             name=name,
             completed_rides=int(count),
-            revenue=Decimal(total),
+            revenue=_money(total),
             rating_avg=rating,
         )
         for driver_id, name, count, total, rating in top_rows.all()
@@ -475,7 +490,7 @@ async def reports(
     )
     sales_by_plan = [
         PlanSales(
-            plan_id=plan_id, plan_name=name, sold=int(count), revenue=Decimal(total)
+            plan_id=plan_id, plan_name=name, sold=int(count), revenue=_money(total)
         )
         for plan_id, name, count, total in plan_rows.all()
     ]
@@ -500,7 +515,7 @@ async def reports(
         ),
         active_drivers=active_drivers,
         subscriptions_sold=sum(row.sold for row in sales_by_plan),
-        subscription_revenue=sum((row.revenue for row in sales_by_plan), Decimal(0)),
+        subscription_revenue=_money(sum((row.revenue for row in sales_by_plan), Decimal(0))),
         sales_by_plan=sales_by_plan,
         top_drivers=top_drivers,
     )
