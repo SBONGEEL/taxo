@@ -123,6 +123,9 @@ async def update_my_driver_profile(
         driver.gender_preference = payload.gender_preference
     if payload.auto_renew is not None:
         driver.auto_renew = payload.auto_renew
+    if payload.accepts_airport is not None:
+        # **بيده وحدَه** (§٦٣-ج/٢): يُكتب ولو كان مفتاحُ السوق مطفأً — اختيارُه قائمٌ يومَ يُشعَل، ولا يُعرض عليه شيءٌ قبله
+        driver.accepts_airport = payload.accepts_airport
 
     await session.commit()
     await session.refresh(driver)

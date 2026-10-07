@@ -272,6 +272,8 @@ export interface Driver {
   gender_preference: GenderPreference;
   /** إذنُه بالتجديد التلقائي من محفظته (البند ١٤) — مطفأٌ حتى يرفعه هو. */
   auto_renew: boolean;
+  /** **«طلبات المطار»** (§٦٣-ج/٢) — بيده وحدَه، **ومطفأةٌ حتى يُشعلها**: لا تصله رحلةُ مطارٍ بلا إذنه. */
+  accepts_airport: boolean;
   rating_avg: string;
   is_online: boolean;
   current_ride_id: string | null;
@@ -410,6 +412,8 @@ export interface Ride {
   payer: RidePayer;
   passenger_name: string | null;
   passenger_phone: string | null;
+  /** **رحلةٌ تمسّ مطاراً** (§٦٣-ج/٢) — شارةُ «مطار» على بطاقة العرض قبل القبول، **والرسمُ سطرُه في `fare_lines`** لا هنا. */
+  airport: boolean;
 
   current_leg: number;
   waiting_charge: string;

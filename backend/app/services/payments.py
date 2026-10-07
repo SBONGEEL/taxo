@@ -564,6 +564,19 @@ async def _commission_for(
     return percent
 
 
+def _commission_amount(ride: Ride, amount: Decimal, percent: Decimal) -> Decimal:
+    """عمولةُ دفعةٍ **على حصّتها من الأجرة دون رسوم الكبتن** (§٦٣-ب: «للكبتن» = كاملاً بلا عمولة).
+
+    الرسمُ داخل `final_fare` فيُحصَّل بقناة الأجرة نفسِها، **وكلُّ دفعةٍ تحمل منه حصّتَها** — فالوعاءُ نسبةُ الأجرة دون الرسم إلى
+    الأجرة كلِّها، تُضرب في الدفعة. **وبلا رسمٍ هي `الدفعة × النسبة` حرفاً** كما كانت قبل المطار.
+    """
+    if ride.captain_fees_at_ride > 0 and ride.final_fare:
+        base = amount * (ride.final_fare - ride.captain_fees_at_ride) / ride.final_fare
+    else:
+        base = amount
+    return round_money(base * percent / 100)
+
+
 async def settle(
     session: AsyncSession,
     *,
@@ -689,7 +702,7 @@ async def _distribute(
     if percent <= 0:
         return
 
-    commission = round_money(payment.amount * percent / 100)
+    commission = _commission_amount(ride, payment.amount, percent)
     if commission <= 0:
         return
 
@@ -1037,7 +1050,7 @@ async def refund(
     driver_user = await _driver_user(session, ride)
     if driver_user is not None:
         percent = await _commission_for(session, ride, payment.method)
-        net = round_money(payment.amount - payment.amount * percent / 100)
+        net = round_money(payment.amount - _commission_amount(ride, payment.amount, percent))
         if net > 0:
             await wallet.record(
                 session,

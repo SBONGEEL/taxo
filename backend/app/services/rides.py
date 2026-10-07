@@ -559,6 +559,9 @@ async def request_ride(
         # على هذا الراكب يُسلَّم نقداً مع الأجرة. يُجمَّد هنا كموعد الحجز
         # ونسبةِ العمولة — الرحلةُ تحمل **ما عُرض**، والمصدرُ يبقى الجدول
         carried_cancellation_fee=await cancellation.debt_of(session, rider.id),
+        # **رسمُ المطار مجمَّداً** (§٦٣-ج/٢) — داخل `estimated_fare` وسطرُه في `fare_lines`، والمرفقُ للتوزيع والشارة
+        captain_fees_at_ride=quote.captain_fees,
+        facility_id=quote.facility_id,
     )
     # **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): يُفحص مفتاحُها ويُطبَّع رقمُ راكبها **قبل** أن تُضاف — طلبٌ مرفوضٌ لا يترك صفّاً
     if passenger is not None:
@@ -874,6 +877,12 @@ async def _final_fare(
             ride.stops_count,
         )
         base_lines = pricing.lines_json(recomputed)
+        # **ورسومُ الكبتن لا يمسّها انحرافُ الطريق** (§٦٣-ج/٢): مجمَّدةٌ لحظةَ الطلب، فتُضاف إلى أجرة الطريق المعادة بسطرها
+        if ride.captain_fees_at_ride > 0:
+            base = pricing.round_money(base + ride.captain_fees_at_ride)
+            base_lines += [
+                line for line in (ride.fare_lines or []) if line.get("kind") == "airport_fee"
+            ]
 
     # **ورسمُ الوقفات داخلٌ في `final_fare`** (قرارُ المالك في الفرع و):
     # المجموعُ واحدٌ والسببُ ظاهرٌ في التفصيل — لا مبلغان يُجمعان بيد

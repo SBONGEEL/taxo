@@ -22,6 +22,9 @@
  *
  * **و«لشخص آخر»** (§٦٣-ج/١، `ForOtherT2.tsx`) — لا لوحةَ لها: بطاقةُ «المشاركة» خياراً، وشارةُ «لـ: الاسم» بعده، **ولا تُجمع مع
  * المشاركة ولا مع الحجز** (كلٌّ معطَّلٌ بعلّته حين يُختار الآخر). **وقنواتُ الدفع تضيق بالدافع** في الخطّاف لا هنا.
+ *
+ * **و«رسمُ المطار»** (§٦٣-ج/٢) — لا لوحةَ له: سطرٌ هادئٌ تحت الفئات يقول إن السعرَ **يشمله** للكبتن، من تقدير الخلفية
+ * (`airport_fee`) — **ولا يُجمع إلى السعر شيء**: الرقمُ على الفئة وعلى الزرِّ هو هو.
  */
 
 import { useEffect, useState } from "react";
@@ -33,8 +36,10 @@ import { StopsEditor } from "@/components/home/StopsEditor";
 import { useConfirmRide, waitingNote, type ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { earliest, latest, localInputValue } from "@/lib/bookings";
+import { useFeature } from "@/lib/config";
 import { PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { MAX_STOPS } from "@/lib/multistop";
+import { useSession } from "@/lib/session";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
@@ -130,6 +135,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     eta,
   } = props;
   const c = useConfirmRide(props);
+  // **مفتاحُ «المطار» في سوق الراكب** (§٦٣-ج/٢) — مطفأً لا سطرَ ولو وصل رسمٌ (والخلفيةُ لا ترسله مطفأً أصلاً)
+  const { user } = useSession();
+  const airport = useFeature(user?.country_code, "airport_enabled");
   const currency = c.estimate?.currency ?? countryConfig?.currency;
   const fares = useCategoryFares(props, c.category, c.loading ? null : c.estimate);
   // **تفصيلُ الكوبون خلف لمسة «مطبّق»**: مقدارُ الخصم وإزالتُه — الشارةُ كما رُسمت، والفعلُ باقٍ
@@ -252,6 +260,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       </div>
       {c.estimate?.minimum_fare_applied && !c.loading ? (
         <p className="t2-sheet-fine">طُبِّق الحد الأدنى للأجرة</p>
+      ) : null}
+      {/* **رسمُ المطار سطرٌ هادئ** (§٦٣-ج/٢) — **داخلَ السعر أعلاه لا فوقه**: يُقال كي لا يُقرأ السعرُ غلاءً بلا سبب، ولا يُجمع
+          إليه شيء (§14). وللفئة المختارة وحدَها، **وحيث المفتاحُ مشتعلٌ في سوقه** */}
+      {airport && c.estimate?.airport_fee && !c.loading ? (
+        <p className="t2-sheet-fine">
+          يشمل رسمَ المطار {formatMoney(c.estimate.airport_fee, c.estimate.currency)} للكبتن
+        </p>
       ) : null}
 
       {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}

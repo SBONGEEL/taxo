@@ -386,6 +386,7 @@ export type FeatureKey =
   | "eta_enabled"
   | "ride_code_enabled"
   | "ride_for_other_enabled"
+  | "airport_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
@@ -1876,3 +1877,26 @@ export type ErrorTrend = {
 export type ErrorGroupDetail = ErrorGroupRow & {
   latest: ErrorEventRow | null;
 };
+
+// ------------------------------------------------ المرافقُ الحيويّة (§٦٣-ج/٢)
+
+/** صنفُ المرفق — مرآةُ `FACILITY_AIRPORT` في الخلفية، **والمطارُ وحدَه اليوم** (قيدُ `facility_kind_valid` في القاعدة). */
+export type FacilityKind = "airport";
+
+/** **نقطةٌ بترتيب GeoJSON** — `[lng, lat]` لا العكس، كخطوط المسار في هذا المشروع. */
+export type LngLat = [number, number];
+
+/** مرفقٌ كما تنشره اللوحة (`FacilityOut`). **ولا حذفَ له**: يُطفأ ولا يُمحى — رحلاتٌ قديمةٌ تشير إليه. */
+export interface Facility {
+  id: string;
+  country_code: CountryCode;
+  kind: FacilityKind;
+  name: string;
+  /** المضلّعُ `[[lng, lat], …]` **بلا النقطة المكرَّرة في آخره** — والخلفيةُ هي التي تُغلق الحلقة. */
+  area: LngLat[];
+  /** **رسمُ الكبتن بعملة السوق** — نصٌّ بثلاث خاناتٍ كأيِّ مال (`NUMERIC(12,3)`)، وصفرٌ لا يُطبَّق. */
+  fee: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

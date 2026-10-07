@@ -77,6 +77,8 @@ class RideEstimateOut(BaseModel):
     stop_free_minutes: int
     stop_price_per_min: Decimal
     stop_max_wait_minutes: int
+    # **رسمُ المطار للكبتن** (§٦٣-ج/٢) — داخل `estimated_fare` ويُنشر وحدَه ليُقال سطراً. و`null` بلا رسم
+    airport_fee: Decimal | None = None
 
 
 class RideForOtherIn(BaseModel):
@@ -383,6 +385,8 @@ class RideOut(BaseModel):
     payer: RidePayer = RidePayer.REQUESTER
     passenger_name: str | None = None
     passenger_phone: str | None = None
+    # **رحلةٌ تمسّ مطاراً** (§٦٣-ج/٢) — شارةُ «مطار» على بطاقة العرض، والرسمُ سطرُه في `fare_lines`
+    airport: bool = False
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -478,6 +482,7 @@ class RideOut(BaseModel):
             ),
             start_code_required=ride.start_code is not None,
             for_other=ride.for_other,
+            airport=ride.facility_id is not None,
             payer=RidePayer(ride.payer),
             passenger_name=(
                 ride.passenger_name if ride.status in PASSENGER_VISIBLE else None

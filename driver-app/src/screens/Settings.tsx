@@ -64,6 +64,10 @@ export function useCaptainSettings() {
   const womenService = useFeature(user?.country_code, "women_service_enabled");
   const preference = profile?.driver.gender_preference ?? "any";
   const [savingPreference, setSavingPreference] = useState(false);
+  // **«طلبات المطار»** (§٦٣-ج/٢) — المفتاحُ يُرسم حيث «المطار» مشتعلٌ في سوقه وحدَه، **والقيمةُ من ملفّه لا حالةٌ محلية**
+  const airport = useFeature(user?.country_code, "airport_enabled");
+  const acceptsAirport = profile?.driver.accepts_airport ?? false;
+  const [savingAirport, setSavingAirport] = useState(false);
   // «٢٢:٠٠ – ٠٨:٠٠» بخاناتٍ عربية، و`null` تبقى فراغاً لا صفراً
   const quietHours =
     country?.quiet_hours_start && country.quiet_hours_end
@@ -136,6 +140,22 @@ export function useCaptainSettings() {
     }
   }
 
+  /** **«طلبات المطار» بيده وحدَه** — والحفظُ فوريٌّ كتفضيل الجنس، **وعند الفشل يبقى المعروضُ ما في الملف**: `refresh` مصدرُ
+   *  القيمة، فمفتاحٌ يبدو مشتعلاً ولم يُحفظ يجعله ينتظر رحلاتٍ لا تصله. */
+  async function toggleAirport() {
+    setSavingAirport(true);
+    setError(null);
+    setDone(null);
+    try {
+      await updateDriver({ accepts_airport: !acceptsAirport });
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+    } finally {
+      setSavingAirport(false);
+    }
+  }
+
   function toggleBiometric() {
     if (!biometry) return;
     setBioError(null);
@@ -193,6 +213,10 @@ export function useCaptainSettings() {
     preference,
     savingPreference,
     savePreference,
+    airport,
+    acceptsAirport,
+    savingAirport,
+    toggleAirport,
     quietHours,
     marketing,
     flipMarketing,

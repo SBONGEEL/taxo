@@ -186,6 +186,8 @@ export const updateDriver = (payload: {
   gender_preference?: GenderPreference;
   /** إذنُ التجديد التلقائي (البند ١٤) — بيد الكبتن وحدَه. */
   auto_renew?: boolean;
+  /** «طلبات المطار» (§٦٣-ج/٢) — بيده وحدَه، ويُكتب ولو كان مفتاحُ السوق مطفأً. */
+  accepts_airport?: boolean;
 }) => api.patch<Driver>("/drivers/me", payload);
 
 export const addVehicle = (payload: {

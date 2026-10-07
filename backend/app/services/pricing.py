@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -56,6 +57,9 @@ class FareEstimate:
     stop_max_wait_minutes: int
     # **تفصيلُ الأجرة سطراً سطراً** (R10، §٦٢-ج/٢٥) — من الحساب نفسِه، فمجموعُه `fare` حرفاً
     lines: tuple["FareLine", ...] = ()
+    # **رسومُ الكبتن داخل `fare`** (§٦٣-ج/٢) — والمرفقُ الذي جاءت منه. **وصفرٌ و`None` بلا رسم**
+    captain_fees: Decimal = Decimal("0.000")
+    facility_id: "uuid.UUID | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +174,18 @@ async def estimate(
     route = await route_between(session, pickup, dropoff, country_code, stops=stops)
     fare, minimum_applied, lines = fare_breakdown(rule, route, len(stops))
 
+    # **رسمُ المطار يُحسب هنا وحدَه** (§٦٣-ج/٢) — بابُ التقدير هو بابُ الطلب، فما يُعرض هو ما يُطلب. **وبعد الحدّ الأدنى**:
+    # الحدُّ حدُّ أجرة طريق، ورسمٌ يُبتلع فيه رسمٌ لا يصل صاحبَه
+    from app.services import facilities
+
+    facility = await facilities.fee_for(
+        session, country_code=country_code, pickup=pickup, dropoff=dropoff
+    )
+    captain_fees = round_money(facility.fee if facility is not None else Decimal(0))
+    if captain_fees > 0:
+        fare = round_money(fare + captain_fees)
+        lines = [*lines, FareLine("airport_fee", captain_fees)]
+
     return FareEstimate(
         country_code=CountryCode(country_code),
         vehicle_category=VehicleCategory(vehicle_category),
@@ -189,7 +205,14 @@ async def estimate(
         stop_price_per_min=round_money(rule.stop_price_per_min or Decimal(0)),
         stop_max_wait_minutes=rule.stop_max_wait_minutes or 0,
         lines=tuple(lines),
+        captain_fees=captain_fees,
+        facility_id=facility.id if facility is not None and captain_fees > 0 else None,
     )
+
+
+def discountable(fare: Decimal, captain_fees: Decimal) -> Decimal:
+    """**وعاءُ الخصم: الأجرةُ دون رسوم الكبتن** (§٦٣-ب) — الرسمُ «للكبتن» يصله كاملاً، فلا يُخصم منه."""
+    return round_money(max(fare - captain_fees, Decimal(0)))
 
 
 def waiting_minutes(stop: "RideStop", now: datetime) -> Decimal:

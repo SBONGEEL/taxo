@@ -296,6 +296,9 @@ export interface RideEstimate {
   stop_free_minutes: number;
   stop_price_per_min: string;
   stop_max_wait_minutes: number;
+  /** **رسمُ المطار للكبتن** (§٦٣-ج/٢) — **داخلٌ في `estimated_fare` أصلاً**، ويُنشر وحدَه ليُقال سطراً لا ليُجمع إليه.
+   *  و`null` تعني «لا رسم» (لا مطارَ في الطرفين، أو السوقُ لم يُشعله) — لا صفراً يُقرأ رسماً. */
+  airport_fee: string | null;
 }
 
 export interface RideVehicle {
@@ -646,7 +649,7 @@ export interface Rating {
 export type RatingTag = "safe_driving" | "clean_car" | "friendly" | "fast_arrival" | "knows_way";
 
 /** صنفُ سطرِ تفصيل الأجرة — مرآةُ `FareLineKind` في الخلفية (`check:enums`). */
-export type FareLineKind = "base" | "distance" | "time" | "stops" | "minimum" | "waiting" | "pause";
+export type FareLineKind = "base" | "distance" | "time" | "stops" | "minimum" | "waiting" | "pause" | "airport_fee";
 
 export interface FareLine {
   kind: FareLineKind;

@@ -14,15 +14,19 @@ export function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** **حوارٌ أعرض لمحرِّرٍ فيه خريطة** («المرافق الحيوية»): ٥٦٠ تكفي نموذجاً، **ولا تكفي منطقةً تُرسم بالنقر** —
+   *  والهاتفُ ورقةٌ بعرضه كما كان. وغيابُه يبقي كلَّ حوارٍ قائمٍ كما هو بايتاً. */
+  wide?: boolean;
 }) {
   return (
     <div className="ad-modal" onClick={onClose}>
       <div
-        className="ad-modal-box"
+        className={wide ? "ad-modal-box wide" : "ad-modal-box"}
         role="dialog"
         aria-modal="true"
         aria-label={title}

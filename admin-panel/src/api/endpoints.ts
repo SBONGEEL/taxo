@@ -123,6 +123,8 @@ import type {
   DriverDebtRow,
   PromoBannerRow,
   ServiceTileRow,
+  Facility,
+  LngLat,
   VerificationCampaignRow,
   SiteSettings,
   SiteUpdate,
@@ -1474,6 +1476,33 @@ export const deleteServiceTile = (id: string) =>
 
 export const deletePromoBanner = (id: string) =>
   api.del<void>(`/admin/settings/promo-banners/${id}`);
+
+// ── المرافقُ الحيويّة ورسمُ المطار (§٦٣-ج/٢) — **ولا بابَ حذفٍ لها بقصد**: المرفقُ يُطفأ ولا يُمحى
+
+/** مرافقُ السوق **بما فيها المطفأة** — فالمشرفُ يرى ما أطفأه. */
+export const listFacilities = (country: CountryCode) =>
+  api.get<Facility[]>("/admin/facilities", { query: { country } });
+
+/** **المضلّعُ بلا إغلاق**: ثلاثُ نقاطٍ فأكثر بترتيب GeoJSON، **والخلفيةُ تُغلق الحلقة** وترفض المتقاطعَ باسمه. */
+export const createFacility = (payload: {
+  country_code: CountryCode;
+  name: string;
+  area: LngLat[];
+  /** نصُّ مالٍ كما كُتب — لا `Number` (§14) */
+  fee: string;
+  is_active: boolean;
+}) => api.post<Facility>("/admin/facilities", payload);
+
+/** تعديلٌ جزئيّ — **ما تغيّر وحدَه**، والإطفاءُ منه (`is_active: false`) لا حذف. */
+export const updateFacility = (
+  facilityId: string,
+  payload: Partial<{
+    name: string;
+    area: LngLat[];
+    fee: string;
+    is_active: boolean;
+  }>,
+) => api.patch<Facility>(`/admin/facilities/${facilityId}`, payload);
 
 /** **صورةُ اللافتة — تُرفع وتُخزَّن ويخدمها باب** (الترحيلة `0064`).
  *

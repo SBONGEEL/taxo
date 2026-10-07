@@ -164,7 +164,11 @@ async def settle_discount(
     if ride.share_discount_percent_at_ride <= 0 or ride.final_fare is None:
         return None
 
-    discount = discount_on(ride.final_fare, ride.share_discount_percent_at_ride)
+    # **الخصمُ على الأجرة دون رسوم الكبتن** (§٦٣-ب): الرسمُ يصله كاملاً
+    discount = discount_on(
+        pricing.discountable(ride.final_fare, ride.captain_fees_at_ride),
+        ride.share_discount_percent_at_ride,
+    )
     if discount <= 0:  # pragma: no cover - نسبةٌ مجمَّدةٌ تعطي صفراً
         return None
 

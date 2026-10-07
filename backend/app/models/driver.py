@@ -77,6 +77,11 @@ class Driver(UUIDMixin, TimestampMixin, Base):
         default=GenderPreference.ANY,
         server_default=GenderPreference.ANY.value,
     )
+    # **«طلبات المطار»** (§٦٣-ج/٢، قرارُ المالك): **مطفأةٌ حتى يُشعلها الكبتنُ بنفسه** من «خدماتي» — ومن لم يُشعلها لا يُعرض
+    # عليه طلبٌ يمسّ مطاراً (`dispatch._eligible_levels`)، ويُعرض عليه غيرُه كما كان
+    accepts_airport: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     # رمزُ الإحالة (المرحلة 12-ح). **فريدٌ عالمياً لا per-country**: الرمزُ
     # يُقال في مكالمة، وواحدٌ في الأردن يطابق واحداً في ليبيا هو رمزٌ يذهب

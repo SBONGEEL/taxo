@@ -157,6 +157,7 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "passenger_name IS NULL AND passenger_phone IS NULL AND payer = 'requester'))",
             name="ride_for_other_fields",
         ),
+        CheckConstraint("captain_fees_at_ride >= 0", name="ride_captain_fees_not_negative"),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
             "uq_rides_active_rider",
@@ -388,6 +389,18 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     #: من يدفع (`RidePayer`) — نصٌّ بقيدٍ لا `ENUM`، ويُقرأ في `payments.pay_ride` وعند الإنهاء
+    # ---------------------------------------------- رسومُ الكبتن (§٦٣-ج/٢)
+    #
+    # **مجموعُ ما في الأجرة للكبتن كاملاً** (رسمُ المطار اليوم) — **مجمَّدٌ لحظةَ الإنشاء** كالعمولة، **وداخلٌ في
+    # `estimated_fare`/`final_fare`** فيُحصَّل بقناة الأجرة نفسِها، **ويُطرح من وعاء العمولة** (`payments._commission_amount`)
+    # **ومن وعاء الخصم** (الكوبونُ والمشاركة). وسطرُه في `fare_lines`. وصفرٌ لكلِّ رحلةٍ لا رسمَ عليها
+    captain_fees_at_ride: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
+    )
+    #: المرفقُ الذي جاء منه الرسم — يقرؤه التوزيعُ («طلبات المطار») وشارةُ «مطار» عند الكبتن
+    facility_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("facilities.id"), nullable=True
+    )
     payer: Mapped[str] = mapped_column(
         String(16), nullable=False, default="requester", server_default=text("'requester'")
     )

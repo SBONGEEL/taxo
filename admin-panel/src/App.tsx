@@ -71,6 +71,10 @@ const OtpTemplatesScreen = lazy(() =>
 const SettingsScreen = lazy(() =>
   import("@/screens/Settings").then((m) => ({ default: m.SettingsScreen })),
 );
+// **المرافقُ الحيويّة** (§٦٣-ج/٢) — حزمةٌ كسولةٌ بخريطتها: `mapbox-gl` لا يُحمَّل لمن لم يفتحها
+const FacilitiesScreen = lazy(() =>
+  import("@/screens/Facilities").then((m) => ({ default: m.FacilitiesScreen })),
+);
 const ProvidersScreen = lazy(() =>
   import("@/screens/Providers").then((m) => ({ default: m.ProvidersScreen })),
 );
@@ -372,6 +376,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <SettingsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/facilities"
+                    element={
+                      <Guarded>
+                        <FacilitiesScreen />
                       </Guarded>
                     }
                   />

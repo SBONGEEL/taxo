@@ -25,6 +25,9 @@ function fareLineLabel(line: FareLine): string {
       return "رسم الانتظار عند المحطات";
     case "pause":
       return "رسم الوقفات أثناء الرحلة";
+    // **رسمُ المطار** (§٦٣-ج/٢) — لا لوحةَ له بعد؛ اسمُه كما يقوله الراكبُ للكبتن
+    case "airport_fee":
+      return "رسم المطار";
   }
 }
 

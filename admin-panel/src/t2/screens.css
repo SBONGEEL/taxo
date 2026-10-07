@@ -584,3 +584,100 @@ button.ad-live-row:focus-visible { outline: 2px solid var(--t2-accent); outline-
   .ad-report-photo { width: 88px; height: 88px; border-radius: 16px; }
   .ad-report-actions .ad-btn { flex: 1; }
 }
+
+/* ═══ المرافق الحيوية (§٦٣-ج/٢) — قائمةٌ ومحرِّرٌ فيه خريطةٌ تُرسم بالنقر ═════════════════════════════════════════════════ */
+/* **شرطا التطبيق سطرٌ لا يُغلق** — بطاقةُ سطحٍ بحافّةٍ كسطر الخريطة الحيّة، ورابطُ الإعدادات حبّةٌ في طرفه */
+.ad-fac-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+}
+.ad-fac-note > .t2-icon { flex: none; font-size: 18px; color: var(--t2-muted); }
+.ad-fac-note-text { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.ad-fac-note-link {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 10px;
+  color: var(--t2-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ad-fac-note-link:focus-visible { outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+.ad-fac-note + .ad-note { margin-bottom: 12px; }
+/* **الاسمُ بابُ المحرِّر** — نصٌّ بلون النصّ، وخطٌّ تحته عند المرور */
+.ad-fac-name {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.ad-fac-name { cursor: pointer; }
+button.ad-fac-name:focus-visible { border-radius: 4px; outline: 2px solid var(--t2-accent); outline-offset: 2px; }
+@media (hover: hover) {
+  button.ad-fac-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+.ad-fac-fee { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.ad-fac-fee-off { font-size: 11.5px; color: var(--t2-muted); }
+/* **المحرِّر**: النموذجُ عمودٌ ضيّق، والخريطةُ تأخذ الباقي — **وعلى الشاشة الضيّقة فوق بعض** */
+.ad-fac-edit { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 22px; }
+.ad-fac-form { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
+.ad-fac-kind { margin: -6px 0 0; font-size: 12px; color: var(--t2-muted); }
+.ad-fac-kind b { font-weight: 700; color: var(--t2-text); }
+.ad-fac-switch { display: flex; align-items: center; gap: 10px; }
+.ad-fac-switch-text { font-size: 13px; font-weight: 600; }
+.ad-fac-form > .ad-hint { margin: -6px 0 0; }
+.ad-fac-area { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
+.ad-fac-area-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ad-fac-area-head .label { margin-bottom: 0; }
+.ad-fac-count { font-size: 12px; font-weight: 600; color: var(--t2-muted); }
+.ad-fac-map {
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-map-land);
+}
+.ad-fac-area > .ad-hint { margin: 0; }
+.ad-fac-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-fac-tools .ad-btn { width: auto; }
+/* **رأسُ المضلّع** — حلقةٌ بالجمر تُسحب، **والأولى ممتلئة**: منها بدأ الرسمُ وإليها تعود الحلقة */
+.ad-map-vertex {
+  display: block;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 3px solid var(--t2-accent);
+  border-radius: 50%;
+  background: var(--t2-surface);
+  box-shadow: var(--t2-map-pin-shadow);
+  cursor: grab;
+}
+/* **وحافّةُ الأولى حافّةُ دبوسي الرحلة** (`--t2-map-pin-ring`): بلون السطح على الداكن كانت تذوب في الأرض فتبدو أصغرَ من أخواتها */
+.ad-map-vertex.first { background: var(--t2-accent); border-color: var(--t2-map-pin-ring, var(--t2-surface)); }
+@media (max-width: 859px) {
+  .ad-fac-edit { grid-template-columns: minmax(0, 1fr); }
+  .ad-fac-map { height: 300px; }
+}
+@media (max-width: 639px) {
+  .ad-fac-note { flex-wrap: wrap; }
+  .ad-fac-note-link { min-height: 44px; }
+  .ad-fac-tools .ad-btn { flex: 1; }
+}

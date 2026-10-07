@@ -377,7 +377,10 @@ async def settle_discount(
     if ride.promo_code_id is None or ride.final_fare is None:
         return None
 
-    discount = discount_on_ride(ride, ride.final_fare)
+    # **الخصمُ على الأجرة دون رسوم الكبتن** (§٦٣-ب): الرسمُ يصله كاملاً
+    discount = discount_on_ride(
+        ride, pricing.discountable(ride.final_fare, ride.captain_fees_at_ride)
+    )
     if discount <= 0:  # pragma: no cover - قاعدةٌ مجمَّدةٌ بقيمةٍ صفرية
         return None
 

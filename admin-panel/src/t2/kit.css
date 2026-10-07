@@ -300,6 +300,8 @@ button.ad-check::after { content: ""; position: absolute; inset: -12px; }
   color: var(--t2-text);
   box-shadow: var(--t2-float-shadow);
 }
+/* **الأعرضُ لمحرِّرٍ فيه خريطة** (`Modal wide` — «المرافق الحيوية»): و`max-width` أعلاه يقصّه على الهاتف كما يقصّ الأصل */
+.ad-modal-box.wide { width: 980px; }
 .ad-modal-title { margin: 0 0 16px; font-size: 18px; font-weight: 700; }
 .ad-confirm-what { margin: 0; font-size: 13.5px; line-height: 1.7; }
 .ad-confirm-what b { font-weight: 700; }

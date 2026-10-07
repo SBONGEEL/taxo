@@ -115,9 +115,14 @@ async def estimate_ride(
         dropoff=_coords(payload.dropoff),
         stops=[_coords(stop) for stop in payload.stops],
     )
+    # **الخصمُ على الأجرة دون رسم المطار** (§٦٣-ب) — ثمّ يعود الرسمُ إلى «سعر المشاركة» كاملاً
     shared = await sharing.preview(
-        session, fare=quote.fare, country=rider.country_code
+        session,
+        fare=pricing.discountable(quote.fare, quote.captain_fees),
+        country=rider.country_code,
     )
+    if shared:
+        shared = (shared[0], pricing.round_money(shared[1] + quote.captain_fees))
     return RideEstimateOut(
         share_discount=shared[0] if shared else None,
         share_fare=shared[1] if shared else None,
@@ -132,6 +137,7 @@ async def estimate_ride(
         stop_free_minutes=quote.stop_free_minutes,
         stop_price_per_min=quote.stop_price_per_min,
         stop_max_wait_minutes=quote.stop_max_wait_minutes,
+        airport_fee=quote.captain_fees if quote.captain_fees > 0 else None,
     )
 
 

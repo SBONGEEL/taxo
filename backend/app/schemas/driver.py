@@ -167,6 +167,8 @@ class DriverOut(BaseModel):
     rating_avg: Decimal
     # مفتاحُ التجديد التلقائي (البند ١٤) — يقرؤه تطبيقُه ليرسم المفتاح
     auto_renew: bool
+    # «طلبات المطار» (§٦٣-ج/٢) — يقرؤه تطبيقُه ليرسم المفتاح في «خدماتي»
+    accepts_airport: bool = False
     is_online: bool
     current_ride_id: uuid.UUID | None
     # **فحصُ المركبة** (§61-ط/٥) — يقرؤه تطبيقُه ليرسم الخطوةَ بحالها في «طلبك قيد المراجعة»
@@ -238,6 +240,8 @@ class DriverUpdate(BaseModel):
     # **إذنُ التجديد التلقائي** (البند ١٤): مالٌ يخرج من محفظته بلا ضغطةٍ منه،
     # فالمفتاحُ بيده وحدَه — لا بيد الإدارة ولا بحكم الافتراض
     auto_renew: bool | None = None
+    # **«طلبات المطار»** (§٦٣-ج/٢) — بيده وحدَه، **ومطفأةٌ حتى يُشعلها**
+    accepts_airport: bool | None = None
 
 
 class DriverLocationIn(BaseModel):

@@ -358,6 +358,7 @@ async def _eligible_levels(
     vehicle_category: VehicleCategory,
     *,
     gender: GenderMatch | None = None,
+    airport: bool = False,
 ) -> dict[uuid.UUID, int]:
     """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن — **ومستواه معه**.
 
@@ -418,6 +419,9 @@ async def _eligible_levels(
         subscribed,
         ~busy,
     ]
+    # **«طلبات المطار» يُشعلها الكبتنُ بنفسه** (§٦٣-ج/٢): رحلةٌ تحمل مرفقاً لا تُعرض على من لم يُشعلها
+    if airport:
+        conditions.append(Driver.accepts_airport.is_(True))
     if gender is not None:
         if gender.preference is not GenderPreference.ANY:
             conditions.append(User.gender == Gender(gender.preference.value))
@@ -506,6 +510,8 @@ async def _ranked_candidates(
             [presence.driver_id for presence in presences],
             ride.vehicle_category,
             gender=gender,
+            # **رحلةٌ تمسّ مطاراً لمن أشعل «طلبات المطار» وحدَه** (§٦٣-ج/٢)
+            airport=ride.facility_id is not None,
         )
         ranked = [p for p in presences if p.driver_id in levels]
         if not ranked:
