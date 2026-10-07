@@ -205,6 +205,32 @@ async def test_a_partial_settlement_reduces_the_debt_but_does_not_lift_the_block
         assert row.debt_blocked is False, "بلغ الصفرَ ولم يُرفع المنع"
 
 
+async def _set_ceiling(session_factory, value: str | None) -> None:
+    from app.models.enums import CountryCode
+    from app.models.payment_setting import PaymentSetting
+
+    async with session_factory() as session:
+        row = await session.scalar(select(PaymentSetting).where(PaymentSetting.country_code == CountryCode.JO))
+        row.driver_debt_ceiling = Decimal(value) if value is not None else None
+        await session.commit()
+
+
+@pytest.mark.parametrize("ceiling, blocked", [("1.000", True), ("5.000", False), (None, False)])
+async def test_the_ceiling_blocks_when_the_debt_arises_not_only_when_it_is_paid(
+    client: AsyncClient, jordan_settings: None, jordan_wallet: None, session_factory, ceiling, blocked
+) -> None:
+    """**السقفُ يُسأل لحظةَ يولد الدَّين** (§٦٤-ج) — كان يُسأل عند السداد وحدَه، **فرصيدٌ صفرٌ يقبض نقداً لا يُمنع أبداً**.
+
+    عمولةُ ١٫٢٠٠ فوق سقف ١٫٠٠٠ ⇒ ممنوعٌ في المعاملة نفسِها · **وتحت ٥٫٠٠٠ لا يُمنع** · **وبلا سقفٍ لا يُمنع أحد**."""
+    await set_commission(session_factory, "15")
+    await _set_ceiling(session_factory, ceiling)
+    driver, _payment = await _cash_ride_settled(client, session_factory)
+
+    async with session_factory() as session:
+        row = await session.get(Driver, driver["driver_id"])
+        assert row.debt_blocked is blocked, f"سقف {ceiling} ودَينُ {COMMISSION}: المنعُ {row.debt_blocked}"
+
+
 async def test_a_blocked_driver_is_not_offered_rides(
     client: AsyncClient, jordan_settings: None, session_factory
 ) -> None:

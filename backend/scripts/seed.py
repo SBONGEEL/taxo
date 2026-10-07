@@ -347,6 +347,14 @@ TIP_DEFAULTS: dict[CountryCode, dict[str, str]] = {
 }
 
 
+# **سقفُ دَين الكبتن** — قرارُ المالك ٢٠٢٦-١٠-٠٧ (§٦٤-ج): ٥٫٠٠٠ د.أ للأردن، ويُفحص عند نشوء الدَّين. **وليبيا بلا سقف**:
+# مستثناةٌ تبقى كما هي (§٦٤-هـ/٢) — و`None` «لا سقف» لا صفر
+DEBT_CEILING_DEFAULTS: dict[CountryCode, Decimal | None] = {
+    CountryCode.JO: Decimal("5.000"),
+    CountryCode.LY: None,
+}
+
+
 async def seed_payment_settings(session: AsyncSession) -> None:
     """مهلةُ تأكيد كليك ومبالغُ البقشيش لكل دولة.
 
@@ -361,7 +369,11 @@ async def seed_payment_settings(session: AsyncSession) -> None:
             amounts = {
                 key: Decimal(value) for key, value in TIP_DEFAULTS[country].items()
             }
-            session.add(PaymentSetting(country_code=country, **amounts))
+            session.add(
+                PaymentSetting(
+                    country_code=country, driver_debt_ceiling=DEBT_CEILING_DEFAULTS[country], **amounts
+                )
+            )
             _log(
                 f"سياسات دفع: {country.value} "
                 f"(مهلة تأكيد كليك {DEFAULT_CLIQ_CONFIRMATION_HOURS} ساعة، "
