@@ -72,6 +72,14 @@ class RideBooking(UUIDMixin, TimestampMixin, Base):
             "('held', 'paid', 'refunded')) AND (guaranteed OR (driver_id IS NULL AND guarantee_state IS NULL))",
             name="booking_guarantee_valid",
         ),
+        # **حجزٌ واحدٌ لكلِّ موعدٍ من الاشتراك** (§٦٣-ج/٦) — فالدورةُ تتكرّر بلا أن تُكرِّر
+        Index(
+            "uq_ride_bookings_commute_slot",
+            "commute_id",
+            "scheduled_at",
+            unique=True,
+            postgresql_where="commute_id IS NOT NULL",
+        ),
         # فهرسٌ جزئيٌّ لما ينتظر: المهمةُ تسأل كلَّ دقيقة، والجدولُ ينمو بالمنفَّذ
         Index(
             "ix_ride_bookings_due",
@@ -100,6 +108,8 @@ class RideBooking(UUIDMixin, TimestampMixin, Base):
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     confirm_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: **حجزٌ وُلّد من اشتراك المشوار الثابت** (§٦٣-ج/٦)
+    commute_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rider_subscriptions.id"), nullable=True)
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False
     )

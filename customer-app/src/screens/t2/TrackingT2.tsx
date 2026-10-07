@@ -149,6 +149,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   const hourly = ride.ride_type === "hourly";
   const clock = useHourlyClock(hourly ? ride.started_at : null, ride.hourly_hours);
   const prepaySwitch = useHourlyPrepaySwitch(ride, onChanged);
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — مدفوعةٌ من الاشتراك: **لا قناةَ تُعرض ولا تُبدَّل**، بل «مدفوعة من اشتراكك». ومن الصفّ
+  const commute = ride.commute;
   const [pickingPay, setPickingPay] = useState(false);
 
   const share = async () => {
@@ -161,8 +163,10 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
   /** شارتا الطلب — **وصفٌ لما طُلب** كما في الورقة القائمة: «رحلة نسائية» تطمينٌ بأن الشرطَ سارٍ، والمشاركةُ بحاليها. */
   const badges =
-    t.women || Number(ride.share_discount_percent) > 0 || parcel || hourly ? (
+    t.women || Number(ride.share_discount_percent) > 0 || parcel || hourly || commute ? (
       <div className="t2-trk-badges">
+        {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — رحلةٌ من اشتراكه، من الصفّ لا من المفتاح */}
+        {commute ? <span className="t2-trk-badge">مشوارٌ ثابت</span> : null}
         {/* **«طرد»** (§٦٣-ج/٤) — وصفٌ لما طُلب كأخواتها، من الصفّ لا من المفتاح */}
         {parcel ? <span className="t2-trk-badge">طرد</span> : null}
         {/* **«بالساعة»** (§٦٣-ج/٥) — بالحكم نفسِه */}
@@ -276,7 +280,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           <div className="t2-trk-route-fare">
             <div className="t2-trk-route-kind">
               {VEHICLE_LABEL[ride.vehicle_category]}
-              {payMethod ? ` · ${PAYMENT_METHOD_LABEL[payMethod.method]}` : ""}
+              {commute ? " · مدفوعة من اشتراكك" : payMethod ? ` · ${PAYMENT_METHOD_LABEL[payMethod.method]}` : ""}
             </div>
             <div className="t2-trk-route-price">
               <span dir="ltr" className="t2-num">{formatMoney(ride.estimated_fare)}</span> {currencyLabel(ride.currency)}
@@ -369,7 +373,10 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           ) : null}
           <div className="t2-trk-stat">
             <div dir="ltr" className="t2-trk-stat-value">{formatMoney(ride.estimated_fare)}</div>
-            <div className="t2-trk-stat-label">{currencyLabel(ride.currency)} تقديرياً</div>
+            {/* **سعرُ المشوار مجمَّدٌ لا تقدير** (§٦٣-ج/٦) — دُفع مع الاشتراك */}
+            <div className="t2-trk-stat-label">
+              {currencyLabel(ride.currency)} {commute ? "من اشتراكك" : "تقديرياً"}
+            </div>
           </div>
         </div>
         {/* المحطاتُ وعدّادُ الانتظار، والوقفةُ غيرُ المخطَّطة حين تنشأ — **مالٌ يُقال في لحظته** كما في الورقة القائمة */}
@@ -408,7 +415,13 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
         {skinRow}
         {shareRow}
-        {payMethod ? (
+        {/* **«مدفوعة من اشتراكك» مكانَ صفِّ الدفع** (§٦٣-ج/٦) — صفٌّ يُقرأ ولا يُضغط: لا قناةَ تُبدَّل */}
+        {commute ? (
+          <div className="t2-trk-rowbtn" role="note">
+            <span className="t2-icon" aria-hidden="true">event_repeat</span>
+            <span className="t2-trk-rowbtn-text">الدفع: مدفوعة من اشتراكك</span>
+          </div>
+        ) : payMethod ? (
           <button
             type="button"
             className="t2-trk-rowbtn"

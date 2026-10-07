@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, SmallInteger, text
+from sqlalchemy import CheckConstraint, Numeric, SmallInteger, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import MONEY, Base, TimestampMixin, pg_enum
@@ -28,6 +28,11 @@ class ServiceSetting(TimestampMixin, Base):
         CheckConstraint(
             "hourly_rate >= 0 AND hourly_km_per_hour >= 0 AND hourly_cancel_minutes >= 0 AND hourly_max_hours BETWEEN 1 AND 24",
             name="service_settings_hourly_valid",
+        ),
+        CheckConstraint(
+            "commute_discount_percent >= 0 AND commute_discount_percent < 100 AND commute_captain_incentive >= 0 "
+            "AND commute_max_suspend_days >= 0",
+            name="service_settings_commute_valid",
         ),
     )
 
@@ -79,3 +84,14 @@ class ServiceSetting(TimestampMixin, Base):
     #: **إلغاءُ الراكب بعد وصول الكبتن**: هذه الدقائقُ من سعر الساعة للكبتن
     hourly_cancel_minutes: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=30, server_default=text("30"))
     hourly_max_hours: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=8, server_default=text("8"))
+
+    # ------------------------------------------------ المشوارُ الثابت (§٦٣-ج/٦)
+    #: **الخصمُ** — يتقاسمه الكبتنُ وTAXO بقدر نسبة العمولة (§٦٣-ب). وصفرٌ يُخفي الخدمة
+    commute_discount_percent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0.00"), server_default=text("0")
+    )
+    #: **حافزُ الكبتن المعتمد لكلِّ رحلة** — من TAXO، وافتراضُه لا شيء (الشارةُ والأولويّة)
+    commute_captain_incentive: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
+    )
+    commute_max_suspend_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=4, server_default=text("4"))

@@ -97,6 +97,9 @@ const ServicesT2Screen = lazy(() =>
 const GuaranteesT2Screen = lazy(() =>
   import("@/screens/t2/GuaranteesT2").then((m) => ({ default: m.GuaranteesT2Screen })),
 );
+const CommutesT2Screen = lazy(() =>
+  import("@/screens/t2/CommutesT2").then((m) => ({ default: m.CommutesT2Screen })),
+);
 const PlansPreviewT2Screen = lazy(() =>
   import("@/screens/t2/PlansPreviewT2").then((m) => ({ default: m.PlansPreviewT2Screen })),
 );
@@ -533,6 +536,16 @@ export default function App() {
                           element={
                             <Guarded>
                               <GuaranteesT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **المشاويرُ الثابتة** (§٦٣-ج/٦) — «مشاويرُك» و«مشاويرُ تنتظر كبتناً»، يبلغها مدخلُ الرئيسية **وبلا شريطٍ**
+                            كأختها؛ والعروضُ خلف المفتاح، **وما اعتمده يُقرأ ولو أُطفئ** */}
+                        <Route
+                          path="/commutes"
+                          element={
+                            <Guarded>
+                              <CommutesT2Screen />
                             </Guarded>
                           }
                         />

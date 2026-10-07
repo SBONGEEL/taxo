@@ -328,7 +328,7 @@ export interface Withdrawal {
 // ------------------------------------------------------------ النزاعات
 
 export type PaymentMethod =
-  "cash" | "cliq" | "card" | "wallet" | "promo" | "share";
+  "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 export type DisputeResolution = "paid" | "unpaid";
@@ -390,6 +390,7 @@ export type FeatureKey =
   | "guaranteed_booking_enabled"
   | "parcel_enabled"
   | "hourly_enabled"
+  | "rider_subscription_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
@@ -917,7 +918,11 @@ export type WalletTransactionType =
   | "guarantee_fee"
   | "guarantee_refund"
   | "guarantee_penalty"
-  | "guarantee_compensation";
+  | "guarantee_compensation"
+  // **المشوارُ الثابت** (§٦٣-ج/٦): مقدَّمُ الراكب يحفظه TAXO، وما لم يُستعمل يعود رصيداً، وحافزُ الكبتن المعتمد من TAXO
+  | "commute_prepay"
+  | "commute_credit"
+  | "commute_incentive";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -1195,6 +1200,12 @@ export interface ServiceSetting {
   hourly_km_per_hour: number;
   hourly_cancel_minutes: number;
   hourly_max_hours: number;
+  /** **المشوارُ الثابت** (§٦٣-ج/٦) — **الخصمُ نسبةٌ** نصّاً (٠ إلى ما دون ١٠٠) يتقاسمه الكبتنُ وTAXO بقدر نسبة العمولة، **وصفرُه يُخفي
+   *  الخدمة** ولو اشتعل مفتاحُها؛ **وحافزُ الكبتن المعتمد لكلِّ رحلةٍ** مالاً بثلاث خاناتٍ من TAXO (صفرٌ لا حافز)؛ **وأقصى أيام التعليق**
+   *  لكلِّ اشتراك (٠–٣١). **والخصمُ يُجمَّد على الاشتراك لحظةَ شرائه** — فتعديلُه يحكم ما يُشترى بعده. */
+  commute_discount_percent: string;
+  commute_captain_incentive: string;
+  commute_max_suspend_days: number;
 }
 
 /** مآلُ دَينٍ لم يعد صاحبُه — **الإدارةُ تختار والكودُ لا يحسم** (قرارُ المالك).

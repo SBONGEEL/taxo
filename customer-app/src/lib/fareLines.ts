@@ -39,6 +39,9 @@ function fareLineLabel(line: FareLine): string {
       return line.quantity ? `مسافةٌ زائدة · ${formatDistance(line.quantity)}` : "مسافةٌ زائدة";
     case "hourly_extra_time":
       return line.quantity ? `وقتٌ زائد · ${digits(Math.round(Number(line.quantity)))} د` : "وقتٌ زائد";
+    // **المشوارُ الثابت** (§٦٣-ج/٦) — سطرٌ واحدٌ لا تفصيلَ طريق: السعرُ جُمِّد يومَ الاشتراك ولا يتبع الطريقَ ولا الذروة
+    case "commute":
+      return "سعرُ المشوار المجمَّد";
   }
 }
 

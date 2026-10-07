@@ -35,6 +35,8 @@ export function DestinationSearch({
   onPick,
   onPickOnMap,
   onSkip,
+  title = "إلى أين؟",
+  onHere,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,9 +44,15 @@ export function DestinationSearch({
   country: CountryCode;
   near: Coordinates | null;
   onPick: (place: Place) => void;
-  onPickOnMap: () => void;
+  /** **«حدّدها على الخريطة بالدبوس»** — وغيابُه لا صفَّ له: منتقي المشوار الثابت (§٦٣-ج/٦) صفحةٌ بلا خريطةٍ يُوضع عليها دبوس،
+   *  وصفٌّ يَعِد بخريطةٍ لا تُفتح بابٌ بلا زرّ. */
+  onPickOnMap?: () => void;
   /** **«بلا وجهة»** (§٦٣-ج/٥) — للرحلة بالساعة وحدَها: وجهتُها اختياريّة. وغيابُه (كلُّ طلبٍ غيرِها) لا صفَّ له. */
   onSkip?: () => void;
+  /** عنوانُ الورقة — «إلى أين؟» للطلب، و«من أين تنطلق؟» لانطلاق المشوار الثابت (§٦٣-ج/٦). */
+  title?: string;
+  /** **«موقعي الحالي»** — للمشوار الثابت وحدَه: انطلاقُ الطلب موقعُ الجهاز سلفاً، والمشوارُ يُختار انطلاقُه كوجهته. */
+  onHere?: () => void;
 }) {
   const { places, recents } = usePlaces();
   const [query, setQuery] = useState("");
@@ -88,7 +96,7 @@ export function DestinationSearch({
   }, [query, token, country, near]);
 
   return (
-    <DrawerT2 open={open} onOpenChange={onOpenChange} title="إلى أين؟">
+    <DrawerT2 open={open} onOpenChange={onOpenChange} title={title}>
       <label className="t2-dest-field">
         <Icon name="search" />
         <input
@@ -101,18 +109,36 @@ export function DestinationSearch({
         {searching ? <LoaderT2 small /> : null}
       </label>
 
-      <button
-        type="button"
-        onClick={() => {
-          onOpenChange(false);
-          onPickOnMap();
-        }}
-        className="t2-dest-pin"
-      >
-        <Icon name="location_on" fill />
-        <span className="t2-dest-pin-label">حدّدها على الخريطة بالدبوس</span>
-        <Icon name="chevron_left" className="t2-chev" />
-      </button>
+      {onPickOnMap ? (
+        <button
+          type="button"
+          onClick={() => {
+            onOpenChange(false);
+            onPickOnMap();
+          }}
+          className="t2-dest-pin"
+        >
+          <Icon name="location_on" fill />
+          <span className="t2-dest-pin-label">حدّدها على الخريطة بالدبوس</span>
+          <Icon name="chevron_left" className="t2-chev" />
+        </button>
+      ) : null}
+
+      {/* **«موقعي الحالي»** (§٦٣-ج/٦) — بصفِّ الدبوس نفسِه: بديلٌ عن البحث لا نتيجةٌ بين نتائجه */}
+      {onHere ? (
+        <button
+          type="button"
+          onClick={() => {
+            onOpenChange(false);
+            onHere();
+          }}
+          className="t2-dest-pin"
+        >
+          <Icon name="my_location" />
+          <span className="t2-dest-pin-label">موقعي الحالي</span>
+          <Icon name="chevron_left" className="t2-chev" />
+        </button>
+      ) : null}
 
       {/* **«بلا وجهة»** (§٦٣-ج/٥) — الرحلةُ بالساعة سعرُها ساعاتٌ لا طريق، **فالوجهةُ يقولها الراكبُ للكبتن** ولا يُطلب منه اختيارُها.
           بصفِّ الدبوس نفسِه: بديلٌ عن البحث لا نتيجةٌ بين نتائجه */}
@@ -215,10 +241,21 @@ export function DestinationSearch({
       ) : null}
 
       {!searching && query.trim().length >= 2 && results.length === 0 ? (
-        <BlankT2 icon="search" title="لا نتائج لهذا البحث" hint="جرّب اسماً أقصر، أو حدّد الوجهة على الخريطة" />
+        <BlankT2
+          icon="search"
+          title="لا نتائج لهذا البحث"
+          hint={onPickOnMap ? "جرّب اسماً أقصر، أو حدّد الوجهة على الخريطة" : "جرّب اسماً أقصر، أو اختر من أماكنك المحفوظة"}
+        />
       ) : null}
 
-      {!token ? <p className="t2-note t2-dest-note">البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة.</p> : null}
+      {/* **والمخرجُ ما في الورقة فعلاً** — «حدّدها على الخريطة» حيث صفُّ الدبوس، وإلا الأماكنُ والموقع (المشوار الثابت، §٦٣-ج/٦) */}
+      {!token ? (
+        <p className="t2-note t2-dest-note">
+          {onPickOnMap
+            ? "البحث بالعناوين غير متاح الآن — حدّد الوجهة على الخريطة."
+            : "البحث بالعناوين غير متاح الآن — اختر من أماكنك المحفوظة أو وجهاتك الأخيرة."}
+        </p>
+      ) : null}
     </DrawerT2>
   );
 }

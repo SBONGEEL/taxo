@@ -182,12 +182,15 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
     !ride.for_other &&
     !ride.airport &&
     !parcel &&
-    !hourly
+    !hourly &&
+    !ride.commute
   ) {
     return null;
   }
   return (
     <div className="t2-of-tags">
+      {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — مدفوعةٌ مقدّماً من اشتراك راكبها، **فلا نقدَ يُستلم**؛ والسعرُ أعلاه مجمَّدٌ لا تقدير */}
+      {ride.commute ? <span className="t2-of-tag">مشوارٌ ثابت — مدفوعة مقدّماً</span> : null}
       {/* **«طرد»** (§٦٣-ج/٤) — غرضٌ بدل راكب، **ومن صفِّ الرحلة لا من مفتاح السوق**: طلبٌ وصل قبل الإطفاء يبقى طرداً */}
       {parcel ? <span className="t2-of-tag">طرد</span> : null}
       {/* **«بالساعة»** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ لا طريق، **ومن صفِّ الرحلة** بالحكم نفسِه */}

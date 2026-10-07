@@ -120,6 +120,12 @@ const ReferralsScreen = lazy(() =>
 const BookingsScreen = lazy(() =>
   import("@/screens/Bookings").then((m) => ({ default: m.BookingsScreen })),
 );
+const CommutePlanT2Screen = lazy(() =>
+  import("@/screens/t2/CommuteT2").then((m) => ({ default: m.CommutePlanT2Screen })),
+);
+const CommutesT2Screen = lazy(() =>
+  import("@/screens/t2/CommuteT2").then((m) => ({ default: m.CommutesT2Screen })),
+);
 const PlacesScreen = lazy(() =>
   import("@/screens/Places").then((m) => ({ default: m.PlacesScreen })),
 );
@@ -493,6 +499,24 @@ export default function App() {
                         element={
                           <Guarded>
                             <BookingsScreen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **المشوارُ الثابت** (§٦٣-ج/٦) — الخطّةُ خلف مفتاحها (مطفأً تعيد الشاشةُ إلى «حسابي»)، **و«اشتراكاتي» تُقرأ ولو
+                          أُطفئ**؛ والشريطُ تحتهما كأخواتهما */}
+                      <Route
+                        path="/account/commute"
+                        element={
+                          <Guarded>
+                            <CommutePlanT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/commutes"
+                        element={
+                          <Guarded>
+                            <CommutesT2Screen />
                           </Guarded>
                         }
                       />

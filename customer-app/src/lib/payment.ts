@@ -38,8 +38,11 @@ import type { CountryConfig, PaymentMethod } from "@/api/types";
  *  `share` فصارت **تظهر خياراً في مُنتقي الدفع** — أي زرٌّ يعد الراكبَ بأن
  *  يدفع بخصمٍ تتحمّله الشركة. وأمسكه المصرّفُ عند `CTA` لا في متصفح، لأن
  *  `Record<PayableMethod, …>` يفرض عضواً لكلِّ قيمة.
+ *
+ *  **والمشوارُ الثابتُ ثالثُها** (§٦٣-ج/٦): مالُ الراكب نفسِه لكنه دُفع مقدّماً مع الاشتراك، **وتكتبه المنصّةُ عند الاكتمال** —
+ *  قرارُ شراءٍ لا قناةٌ تُختار في الرحلة (`PLATFORM_WRITTEN_METHODS` في الخلفية).
  */
-type PlatformWrittenMethod = "promo" | "share";
+type PlatformWrittenMethod = "promo" | "share" | "commute";
 
 /** ما يجوز لصاحب الحساب اختياره. */
 export type PayableMethod = Exclude<PaymentMethod, PlatformWrittenMethod>;

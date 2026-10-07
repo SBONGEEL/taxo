@@ -427,6 +427,8 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     hourly_cancel_minutes_at_ride: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     #: **من أين يُدفع المحجوزُ عند البدء** — `wallet` أو `cash`، ويبدّله الراكبُ قبل البدء إن لم يكفِ رصيدُه
     hourly_prepay_method: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    #: **رحلةٌ من اشتراك المشوار الثابت** (§٦٣-ج/٦) — سعرُها المجمَّد، وتُدفع من المحفوظ عند اكتمالها
+    commute_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rider_subscriptions.id"), nullable=True)
     payer: Mapped[str] = mapped_column(
         String(16), nullable=False, default="requester", server_default=text("'requester'")
     )

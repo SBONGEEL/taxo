@@ -169,6 +169,8 @@ class PaymentMethod(StrEnum):
     # ميزانية الكوبون** — أي سقفٌ ماليٌّ يُستهلك بما لا يخصّه. والتسميةُ تتبع:
     # إيصالُ الراكب يقول لماذا خُصم، و«خصم كوبون» على رحلةٍ بلا كوبونٍ كذبة
     SHARE = "share"
+    # **المشوارُ الثابت** (§٦٣-ج/٦): قناةٌ تكتبها المنصّةُ من المال المحفوظ لكلِّ رحلةٍ من الاشتراك تكتمل — كالكوبون، لا يختارها أحد
+    COMMUTE = "commute"
 
 
 class PaymentProvider(StrEnum):
@@ -344,6 +346,8 @@ class FareLineKind(StrEnum):
     HOURLY = "hourly"
     HOURLY_EXTRA_KM = "hourly_extra_km"
     HOURLY_EXTRA_TIME = "hourly_extra_time"
+    #: **سعرُ رحلة المشوار الثابت المجمَّد** (§٦٣-ج/٦) — سطرٌ واحدٌ لا تفصيلَ طريق: السعرُ لا يتبع الطريق
+    COMMUTE = "commute"
 
 
 
@@ -644,6 +648,9 @@ class FeatureKey(StrEnum):
     # **بالساعة** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ تُدفع عند البدء وما زاد في النهاية. ومطفأً يُرفض طلبُها والقائمةُ تكمل؛
     # و`service_settings.hourly_rate` صفرٌ يُخفيها ولو اشتعل
     HOURLY_ENABLED = "hourly_enabled"
+    # **اشتراكُ الراكب — المشوارُ الثابت** (§٦٣-ج/٦) — شهرٌ مدفوعٌ مقدّماً بسعرٍ مجمَّد ورحلاتٌ تُولَّد حجوزاً. ومطفأً لا يُشترى جديد،
+    # **والقائمُ يكمل شهرَه** (مالُه محفوظ)؛ و`service_settings.commute_discount_percent` صفرٌ يُخفيه ولو اشتعل
+    RIDER_SUBSCRIPTION_ENABLED = "rider_subscription_enabled"
 
 
 class BookingStatus(StrEnum):
@@ -728,6 +735,10 @@ class WalletTransactionType(StrEnum):
     GUARANTEE_REFUND = "guarantee_refund"
     GUARANTEE_PENALTY = "guarantee_penalty"
     GUARANTEE_COMPENSATION = "guarantee_compensation"
+    # ---- المشوارُ الثابت (§٦٣-ج/٦) — **المقدَّمُ يحفظه TAXO**، وما لم يُستعمل يعود رصيداً، وحافزُ الكبتن المعتمد من TAXO
+    COMMUTE_PREPAY = "commute_prepay"
+    COMMUTE_CREDIT = "commute_credit"
+    COMMUTE_INCENTIVE = "commute_incentive"
 
 
 class CancellationChargeStatus(StrEnum):

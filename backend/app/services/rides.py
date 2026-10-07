@@ -907,6 +907,12 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
 
         await guarantees.settle_on_complete(session, ride)
 
+    # **ورحلةُ المشوار الثابت تُدفع من المحفوظ** (§٦٣-ج/٦) — فلا يدفع الراكبُ عند الوصول
+    if ride.commute_id is not None:
+        from app.services import commute
+
+        await commute.settle_ride(session, ride)
+
     # **ودفعةُ نقد الراكب الفعليّ تُفتح هنا** (§٦٣-ج/١): صاحبُها لا يحمل التطبيق ليفتحها — **وبعد الخصمين** فتحمل الباقي
     if ride.payer in (RidePayer.PASSENGER_CASH, RidePayer.RECIPIENT_CASH):
         from app.services import payments as payments_service
@@ -931,6 +937,15 @@ async def _final_fare(
     المعادُ حسابُها حين انحرف الطريق) ثمّ الانتظارُ والوقفات — **والمبالغُ نفسُها التي يُجمع منها السعر**. **ولا يُجمَّد تفصيلٌ لا
     يساوي المبلغ**: رحلةٌ أقدمُ من العمود (بلا أسطر)، أو مجموعٌ يخالف — فلا تفصيلَ يُرسم بدل تفصيلٍ كاذب.
     """
+    # **المشوارُ الثابت: سعرُه المجمَّد وحدَه** (§٦٣-ج/٦) — لا ذروةَ ولا مسافةَ فعليّةَ ولا انتظار: اشتراه الراكبُ هكذا
+    if ride.commute_id is not None:
+        from app.models.rider_subscription import RiderSubscription
+
+        row = await session.get(RiderSubscription, ride.commute_id)
+        if row is not None:
+            ride.fare_lines = [pricing.FareLine("commute", row.price_per_ride).as_json()]
+            return row.price_per_ride
+
     # **بالساعة: المحجوزُ وما زاد** (§٦٣-ج/٥) — ورسومُ الكبتن (المطار) فوقها كما في كلِّ رحلة
     if ride.ride_type == "hourly":
         rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)

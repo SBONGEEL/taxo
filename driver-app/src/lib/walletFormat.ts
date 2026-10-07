@@ -52,6 +52,10 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   guarantee_hold: "رسم ضمان محفوظ",
   guarantee_refund: "ردّ رسم الضمان",
   guarantee_compensation: "تعويض حجز مضمون",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — الحافزُ يصله لكلِّ رحلةٍ يقودها معتمداً، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
+  commute_incentive: "حافزُ المشوار الثابت",
+  commute_prepay: "اشتراك المشوار الثابت",
+  commute_credit: "رصيدُ أيامٍ لم تُستعمل",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -85,6 +89,10 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   guarantee_hold: CalendarCheck,
   guarantee_refund: CalendarCheck,
   guarantee_compensation: CalendarCheck,
+  // **والمشوارُ الثابتُ من بابٍ واحد** — الحافزُ والمقدَّمُ وما عاد منه
+  commute_incentive: CalendarCheck,
+  commute_prepay: CalendarCheck,
+  commute_credit: CalendarCheck,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

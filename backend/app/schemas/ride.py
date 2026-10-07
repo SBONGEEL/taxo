@@ -432,6 +432,8 @@ class RideOut(BaseModel):
     hourly_hours: int | None = None
     hourly_included_km: int | None = None
     hourly_prepay_method: str | None = None
+    # **رحلةٌ من المشوار الثابت** (§٦٣-ج/٦) — مدفوعةٌ مقدّماً، فلا شاشةَ دفعٍ ولا «استلم» عند الكبتن
+    commute: bool = False
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -534,6 +536,7 @@ class RideOut(BaseModel):
                 ride.hourly_hours * (ride.hourly_km_per_hour_at_ride or 0) if ride.hourly_hours else None
             ),
             hourly_prepay_method=ride.hourly_prepay_method,
+            commute=ride.commute_id is not None,
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,

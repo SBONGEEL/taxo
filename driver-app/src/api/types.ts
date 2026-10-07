@@ -427,6 +427,9 @@ export interface Ride {
   hourly_hours: number | null;
   hourly_included_km: number | null;
   hourly_prepay_method: "wallet" | "cash" | null;
+  /** **رحلةٌ من المشوار الثابت** (§٦٣-ج/٦) — سعرُها المجمَّد دفعه الراكبُ مقدّماً مع اشتراكه، **وتُسوّى من المحفوظ عند الإنهاء**
+   *  فيُقيَّد له ما يُقيَّد من أيِّ أجرة: **لا يستلم شيئاً من الراكب**. وتصل على العرض قبل القبول. */
+  commute: boolean;
 
   current_leg: number;
   waiting_charge: string;
@@ -551,7 +554,11 @@ export type WalletTransactionType =
   | "guarantee_fee"
   | "guarantee_refund"
   | "guarantee_penalty"
-  | "guarantee_compensation";
+  | "guarantee_compensation"
+  // **المشوارُ الثابت** (§٦٣-ج/٦): **حافزُ الكبتن المعتمد** من TAXO يصله، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
+  | "commute_prepay"
+  | "commute_credit"
+  | "commute_incentive";
 
 export interface WalletTransaction {
   id: string;
@@ -667,7 +674,7 @@ export interface RecordedRoute {
 /** ومنها `promo` (12-ز): خصمُ كوبونٍ تدفعه الشركة — يُقيَّد للكبتن كأي دفعةٍ
  *  تمرّ بالمنصة، فيراه في كشفه لا في «تقبض الآن». */
 export type PaymentMethod =
-  "cash" | "wallet" | "card" | "cliq" | "promo" | "share";
+  "cash" | "wallet" | "card" | "cliq" | "promo" | "share" | "commute";
 /** مرآةُ `PaymentStatus` في `app/models/enums.py` — خمسُ قيمٍ لا ستّ.
  *
  * ولا `awaiting_confirmation` فيها: انتظارُ تأكيد الكبتن **ليس حالاً** بل
@@ -1272,4 +1279,22 @@ export interface GuaranteeOffer {
   accepted: boolean;
   /** **سُئل «هل أنت في الطريق؟»** — يُفتح التأكيدُ قبل الموعد بدقائقِ سوقه، وبلا ردٍّ في المهلة يُسحب منه بلا عقوبة. */
   confirm_requested: boolean;
+}
+
+/** **عرضُ المشوار الثابت** كما يراه الكبتن (§٦٣-ج/٦، `CommuteOfferOut`) — **بلا اسم الراكب ولا رقمه**: المسارُ والأيامُ (قناعُ بتاتٍ
+ *  بترتيب `weekday()`: الإثنين 1 … الأحد 64) والوقتان «HH:MM:SS» والمدّة، **وسعرُ الرحلة المجمَّدُ وعددُها من الخلفية** — ولا يُضربان
+ *  هنا (§14). و`approved` أله كبتنٌ معتمد. */
+export interface CommuteOffer {
+  id: string;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  weekdays: number;
+  go_time: string;
+  return_time: string | null;
+  starts_on: string;
+  ends_on: string;
+  price_per_ride: string;
+  rides_total: number;
+  currency: Currency;
+  approved: boolean;
 }

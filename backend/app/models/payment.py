@@ -78,6 +78,8 @@ WALLET_FUNDED_METHODS: tuple[PaymentMethod, ...] = (PaymentMethod.WALLET,)
 PLATFORM_WRITTEN_METHODS: tuple[PaymentMethod, ...] = (
     PaymentMethod.PROMO,
     PaymentMethod.SHARE,
+    # **والمشوارُ الثابت** (§٦٣-ج/٦): مالُ الراكب نفسِه لكنه دُفع مقدّماً — **قرارُ شراءٍ لا سلوكُ دفعٍ في الرحلة**
+    PaymentMethod.COMMUTE,
 )
 
 

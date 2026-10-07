@@ -1,0 +1,93 @@
+/* ═══ TAXO 2.0 — «المشوارُ الثابت» (§٦٣-ج/٦) — **لا لوحةَ له**، فيُركَّب من عُدّة الهوية: بطاقةُ المسار في ورقة الطلب (R06)، وأزرارُ
+ * «تفضيل الكبتن» للأيام، وبطاقةُ «المشاركة» للوقت والسعر، وحقلُ التاريخ لحقل الوقت، وبطاقةُ «رحلاتي المجدولة» (R26) للاشتراك.
+ * **تخطيطُها وحدَه، بالرموز وحدَها** — الفاتحُ والداكن.
+ */
+
+/* **ولا `padding-bottom` على الصفحة**: `pb-nav` يحجز مكانَ الشريط العائم، وقاعدةٌ هنا تطغى عليه فيغطّي الشريطُ زرَّ الاشتراك (قِيس) */
+.t2-cm-lede { margin: -6px 2px 14px; font-size: 13px; line-height: 1.7; color: var(--t2-muted); }
+.t2-cm-lede b { font-weight: 600; color: var(--t2-text); }
+
+/* ── المسار: «من» زرٌّ كـ«إلى»، وما لم يُختر بعدُ خافت ── */
+.t2-cm-route { row-gap: 6px; }
+.t2-cm-unset { font-weight: 500; color: var(--t2-muted); }
+.t2-cm-aside { font-size: 12.5px; color: var(--t2-muted); }
+
+/* ── الأيام: أربعةٌ في صفٍّ لا سبعة — «الأربعاء» لا يتّسع في سُبع ٣٦٠ ── */
+.t2-seg.t2-cm-days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.t2-cm-days .t2-seg-opt { padding: 0 2px; font-size: 13px; }
+
+/* ── الوقت: «الذهاب» بحقله، ومفتاحُ العودة صفّاً كـ«حجزٌ مضمون»، ثمّ حقلُ العودة ── */
+.t2-share.t2-cm-times { margin-top: 0; }
+.t2-cm-time { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.t2-cm-time + .t2-cm-return,
+.t2-cm-return + .t2-cm-time { margin-top: 10px; }
+.t2-cm-time-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.t2-cm-time-label .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-cm-clock { flex: none; width: 128px; }
+.t2-cm-return {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0 2px;
+  border: 0;
+  border-top: 1px solid var(--t2-divider);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── السعر: سطرٌ واحدٌ بأرقام الخلفية، و«وفّرتَ» بلون الوارد ── */
+.t2-share.t2-cm-quote { margin-top: 14px; }
+.t2-cm-quote .t2-share-title .t2-icon { color: var(--t2-accent-text); }
+.t2-cm-quote-line { margin: 8px 0 4px; font-size: 14px; line-height: 1.7; }
+/* **والمبلغُ لا ينكسر عن عملته** — «128.700» آخرَ سطرٍ و«د.أ» أوّلَ تاليه (قِيس على ٣٩٠) */
+.t2-cm-quote-line b { font-weight: 700; white-space: nowrap; }
+.t2-cm-saved { font-weight: 700; color: var(--t2-success); white-space: nowrap; }
+.t2-cm-quote-error { color: var(--t2-danger); }
+.t2-cm-topup { display: inline; padding: 0; font-size: inherit; }
+.t2-cta.t2-cm-cta { margin-top: 14px; }
+
+/* ── بعد الشراء ── */
+.t2-cm-done { margin: 8px 0 18px; padding: 20px 18px; border-radius: 22px; background: var(--t2-surface); text-align: center; }
+.t2-cm-done-icon .t2-icon { font-size: 44px; color: var(--t2-success); }
+.t2-cm-done-title { margin: 8px 0 6px; font-size: 18px; font-weight: 700; }
+.t2-cm-done-body { margin: 0; font-size: 13px; line-height: 1.75; color: var(--t2-muted); }
+.t2-cm-done-body b { font-weight: 600; color: var(--t2-text); }
+
+/* ── «اشتراكاتي»: بطاقةُ R26 بأسطرها ── */
+.t2-cm-meta,
+.t2-cm-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+.t2-cm-facts { padding-top: 10px; border-top: 1px solid var(--t2-divider); }
+.t2-bk.pending .t2-cm-facts { border-top-color: var(--t2-accent-line); }
+.t2-cm-facts b { font-weight: 700; color: var(--t2-text); }
+.t2-cm-captain { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 13px; color: var(--t2-muted); }
+.t2-cm-captain .t2-icon { font-size: 17px; }
+.t2-cm-captain.named { font-weight: 700; color: var(--t2-text); }
+.t2-cm-captain.named .t2-icon { color: var(--t2-accent-text); }
+.t2-cm-suspended { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-cm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 6px;
+  margin: 6px -6px -8px;
+}
+.t2-button.t2-cm-new { margin-top: 6px; }
+
+/* ── ورقةُ «علّق يوماً»: الأيامُ القادمةُ أزرارَ «تفضيل الكبتن» في عمودين ── */
+.t2-cm-pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 14px; padding: 4px; border-radius: 16px; background: var(--t2-well); }
+.t2-cm-pick .t2-seg-opt { padding: 0 6px; font-size: 13px; }
+.t2-empty.t2-cm-nodays { margin-top: 14px; }

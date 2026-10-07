@@ -58,6 +58,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   // خصمُ المشاركة (12-ي) — تدفعه الشركةُ كذلك، **وقناةٌ مستقلةٌ عن الكوبون**
   // كي لا يُقرأ خصمُ مشاركةٍ «خصم كوبون» على رحلةٍ بلا كوبون
   share: "خصم مشاركة",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — مالُه هو دفعه مقدّماً مع الاشتراك، **فلا يُقرأ «خصماً»**: سطرُ إيصالٍ يقول من أين دُفعت
+  commute: "اشتراك المشوار",
 };
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
@@ -98,6 +100,10 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   guarantee_compensation: "تعويض اعتذار الكبتن",
   guarantee_fee: "رسم ضمان للكبتن",
   guarantee_penalty: "غرامة اعتذار",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — المقدَّمُ وما عاد منه يقعان له، والحافزُ للكبتن ويُسمّى للعلّة أعلاه
+  commute_prepay: "اشتراك المشوار الثابت",
+  commute_credit: "رصيدُ أيامٍ لم تُستعمل",
+  commute_incentive: "حافزُ المشوار الثابت",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

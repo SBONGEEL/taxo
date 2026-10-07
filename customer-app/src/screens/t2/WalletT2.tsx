@@ -49,6 +49,9 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   guarantee_hold: "verified_user",
   guarantee_refund: "verified_user",
   guarantee_compensation: "verified_user",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — أيقونةُ «اشتراكاتي» للمقدَّم وما عاد منه
+  commute_prepay: "event_repeat",
+  commute_credit: "event_repeat",
 };
 
 export function WalletT2Screen() {

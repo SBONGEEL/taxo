@@ -1,7 +1,8 @@
 /** كل مسارات الخلفية التي يستعملها تطبيق الراكب — في ملف واحد.
  *
  * لا شاشة تكتب مساراً نصّاً: تغيّرُ مسارٍ في الخلفية يُصلَح هنا مرةً لا في
- * خمس شاشات. وما ليس للراكب ليس هنا (لا سحب، ولا اشتراكات، ولا لوحة إدارة).
+ * خمس شاشات. وما ليس للراكب ليس هنا (لا سحب، ولا اشتراكاتُ الكباتن، ولا لوحة إدارة) —
+ * **واشتراكُ المشوار الثابت له** (§٦٣-ج/٦).
  */
 
 import { api, upload } from "@/api/client";
@@ -14,6 +15,9 @@ import type {
   Booking,
   ChallengeResponse,
   CliqTopup,
+  Commute,
+  CommutePlan,
+  CommuteQuote,
   Coordinates,
   CountryCode,
   DeletionState,
@@ -441,6 +445,31 @@ export const createBooking = (body: {
 
 export const cancelBooking = (bookingId: string) =>
   api.del<Booking>(`/me/bookings/${bookingId}`);
+
+// --------------------------------------------- المشوارُ الثابت (§٦٣-ج/٦)
+
+/** **التسعير** — السعرُ المجمَّدُ للرحلة وعددُها والمجموعُ ونسبةُ الخصم، **كلُّها من الخلفية**. ومطفأً أو بخصمٍ صفرٍ ٤٠٣
+ *  `rider_subscription_unavailable`، وبلا يومٍ أو ببدءٍ ليس بعد اليوم ٤٢٢ بنصّه. */
+export const quoteCommute = (plan: CommutePlan) => api.post<CommuteQuote>("/me/commutes/quote", plan);
+
+/** **الشراء من المحفظة مقدّماً** — الحمولةُ نفسُها، والسعرُ يُعاد حسابُه هناك لا يُرسل. ورصيدٌ لا يغطّي ٤٠٩ `insufficient_balance`. */
+export const buyCommute = (plan: CommutePlan) => api.post<Commute>("/me/commutes", plan);
+
+/** **اشتراكاتي** — كلُّها بأحوالها، الأحدثُ بدءاً أوّلاً. **ويُقرأ ولو أُطفئت الخدمة**: مالُ القائم مدفوع. */
+export const listMyCommutes = () => api.get<Commute[]>("/me/commutes");
+
+/** **تعليقُ يومٍ قادمٍ من أيامه** — لا تُولَّد رحلتاه، **ويُرحَّل إلى ما بعد آخر يوم** (`ends_on` يمتدّ). وفوق الحدّ ٤٠٩ برسالته،
+ *  ويومٌ ليس من أيامه ٤٢٢ برسالته. */
+export const suspendCommuteDay = (commuteId: string, day: string) =>
+  api.post<Commute>(`/me/commutes/${commuteId}/suspend`, { day });
+
+/** **الإلغاء** — الحجوزُ القادمةُ تُلغى، **وكلُّ رحلةٍ لم تكتمل تعود بسعرها رصيداً في المحفظة لا نقداً**. */
+export const cancelCommute = (commuteId: string) =>
+  api.post<Commute>(`/me/commutes/${commuteId}/cancel`);
+
+/** **«استبدل الكبتن»** — يُفكّ المعتمد فيعود المشوارُ مفتوحاً لغيره. */
+export const releaseCommuteCaptain = (commuteId: string) =>
+  api.del<Commute>(`/me/commutes/${commuteId}/captain`);
 
 // ------------------------------------------------ صندوق الإشعارات (9-ب)
 

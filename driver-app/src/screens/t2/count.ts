@@ -29,6 +29,14 @@ export function countBookings(n: number): string {
   return `${digits(String(n))} حجزاً`;
 }
 
+/** «مشوارٌ واحد» و«مشواران» و«3 مشاوير» و«12 مشواراً» — عددُ المشاوير الثابتة على مدخل الرئيسية (§٦٣-ج/٦). */
+export function countCommutes(n: number): string {
+  if (n === 1) return "مشوارٌ واحد";
+  if (n === 2) return "مشواران";
+  if (n <= 10) return `${digits(String(n))} مشاوير`;
+  return `${digits(String(n))} مشواراً`;
+}
+
 export function countHours(n: number, genitive = false): string {
   if (n === 1) return "ساعة";
   if (n === 2) return genitive ? "ساعتين" : "ساعتان";

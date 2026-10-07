@@ -51,6 +51,10 @@ class ServiceSettingOut(BaseModel):
     hourly_km_per_hour: int
     hourly_cancel_minutes: int
     hourly_max_hours: int
+    #: المشوارُ الثابت (§٦٣-ج/٦) — الخصمُ وحافزُ الكبتن المعتمد وأقصى أيام التعليق
+    commute_discount_percent: Decimal
+    commute_captain_incentive: Decimal
+    commute_max_suspend_days: int
 
 
 class ServiceSettingUpdate(BaseModel):
@@ -66,3 +70,6 @@ class ServiceSettingUpdate(BaseModel):
     hourly_km_per_hour: int | None = Field(default=None, ge=0, le=200)
     hourly_cancel_minutes: int | None = Field(default=None, ge=0, le=240)
     hourly_max_hours: int | None = Field(default=None, ge=1, le=24)
+    commute_discount_percent: Decimal | None = Field(default=None, ge=0, lt=100, max_digits=5, decimal_places=2)
+    commute_captain_incentive: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+    commute_max_suspend_days: int | None = Field(default=None, ge=0, le=31)

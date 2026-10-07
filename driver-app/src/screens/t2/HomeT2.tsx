@@ -55,7 +55,7 @@ import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
-import { useGuaranteeEntry, type GuaranteeEntry } from "@/lib/guarantees";
+import { useCommuteEntry, useGuaranteeEntry, type CommuteEntry, type GuaranteeEntry } from "@/lib/guarantees";
 import { isActive } from "@/lib/ride";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { digits, ratedAverage } from "@/lib/utils";
@@ -68,7 +68,7 @@ import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { Icon, Wordmark } from "@/taxo2";
 
-import { countBookings } from "./count";
+import { countBookings, countCommutes } from "./count";
 
 import "./t2.css";
 import "./ride.css";
@@ -163,6 +163,8 @@ export function HomeT2Screen() {
   const demandHigh = useDemandHigh(online && mode === "home");
   // **الحجوزُ المضمونة** (§٦٣-ج/٣) — تُقرأ في الرئيسية وحدَها، وتُعاد كلَّما عاد إليها من رحلةٍ أو طلب
   const guarantee = useGuaranteeEntry(mode === "home");
+  // **والمشاويرُ الثابتة** (§٦٣-ج/٦) بالحكم نفسِه — **وما اعتمده يُقرأ ولو أُطفئت الخدمة**
+  const commute = useCommuteEntry(mode === "home");
   // **الطلبُ والرحلةُ يبدآن من أعلى الصفحة**: طبقاتُ الإطار مطلقةُ الموضع داخل جذرٍ يتمرّر، **ورئيسيةٌ مُمرَّرةٌ ثمّ طلبٌ وارد
   // كانت تُزيح البطاقةَ والورقةَ بمقدار التمرير**
   const root = useRef<HTMLDivElement | null>(null);
@@ -346,6 +348,9 @@ export function HomeT2Screen() {
       {/* **الحجوزُ المضمونة** (§٦٣-ج/٣) — فوق الخدمات حين يكون فيها شيءٌ وحدَه: عرضٌ ينتظر، أو حجزٌ قبله، **أو سؤالُ «هل أنت
           في الطريق؟»** وهو أوّلُها لأن الحجزَ يُسحب بعده بلا ردّ. ومطفأً أو فارغاً لا صفّ */}
       {mode === "home" && guarantee ? <GuaranteeEntryRow entry={guarantee} onOpen={() => navigate("/guarantees")} /> : null}
+
+      {/* **المشاويرُ الثابتة** (§٦٣-ج/٦) — تحت أختها وبصفّها: عرضٌ ينتظر كبتناً، أو مشوارٌ اعتمده. وفارغاً لا صفّ */}
+      {mode === "home" && commute ? <CommuteEntryRow entry={commute} onOpen={() => navigate("/commutes")} /> : null}
 
       {mode === "home" ? (
         <Services
@@ -590,6 +595,28 @@ function GoPill({
         <Icon name="power_settings_new" />
       </span>
     </button>
+  );
+}
+
+/** **مدخلُ المشاوير الثابتة** (§٦٣-ج/٦) — صفُّ مدخل الحجوز نفسُه. **والعرضُ يسبق ما اعتمده**: العرضُ يأخذه غيرُه إن انتظر، وما
+ *  اعتمده تصله رحلاتُه وحدَها. **والعددُ بالعربية** (`countCommutes`). */
+function CommuteEntryRow({ entry, onOpen }: { entry: CommuteEntry; onOpen: () => void }) {
+  const title = entry.offers > 0 ? "مشاويرُ ثابتةٌ تنتظر كبتناً" : "مشاويرُك الثابتة";
+  const sub =
+    entry.offers > 0
+      ? `${countCommutes(entry.offers)} في سوقك — مدفوعةٌ مقدّماً لشهر`
+      : `لك ${countCommutes(entry.mine)} — تصلك رحلاتُها قبل موعدها`;
+  return (
+    <div className="t2-gu-home">
+      <button type="button" className="t2-hm-row t2-gu-entry" onClick={onOpen}>
+        <Icon name="event_repeat" fill />
+        <span className="t2-hm-row-main">
+          <span className="t2-hm-row-title">{title}</span>
+          <div className="t2-hm-row-sub">{sub}</div>
+        </span>
+        <Icon name="chevron_left" className="go" />
+      </button>
+    </div>
   );
 }
 

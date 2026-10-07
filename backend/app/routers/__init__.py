@@ -29,6 +29,8 @@ from app.routers import (
     admin_settings,
     admin_facilities,
     guarantees,
+    commute,
+    commute_driver,
     admin_stats,
     admin_subscriptions,
     admin_users,
@@ -76,6 +78,8 @@ api_router.include_router(admin_errors.router)
 api_router.include_router(admin_settings.router)
 api_router.include_router(admin_facilities.router)
 api_router.include_router(guarantees.router)
+api_router.include_router(commute.router)
+api_router.include_router(commute_driver.router)
 api_router.include_router(admin_verification_campaigns.router)
 api_router.include_router(admin_providers.router)
 api_router.include_router(admin_offers.router)

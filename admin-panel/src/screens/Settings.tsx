@@ -208,6 +208,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "بالساعة",
     hint: "يحجز الراكبُ سيارةً اقتصاديّةً بالساعة: يختار عددَ الساعات حتى سقفٍ تضبطه، ووجهتُه اختياريّةٌ يقولها للكبتن في الطريق. والمحجوزُ — الساعاتُ في سعرها — يُدفع عند البدء: من محفظته يُسوّى فوراً ورصيدٌ لا يكفيه يمنع البدء، أو نقداً يؤكّد الكبتنُ استلامَه. وما زاد على كيلومترات الساعات أو دقائقها يُحسب عند الإنهاء بتعرفة الاقتصادي العاديّة، وتُقتطع العمولةُ من أجرتها كأيِّ رحلة. وإلغاءُ الراكب بعد وصول الكبتن يكلّفه دقائقَ من سعر الساعة تذهب إلى الكبتن. والأرقامُ في «الخدمات الجديدة» أدناه، وسعرٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُها، والقائمةُ تكمل بأسعارها.",
   },
+  rider_subscription_enabled: {
+    title: "المشوار الثابت",
+    hint: "يشترك الراكبُ في مشوارٍ يوميٍّ لشهرٍ من يوم البدء: يختار نقطتين وأيامَ الأسبوع ووقتَ الذهاب ووقتَ عودةٍ إن شاء، ويدفع الشهرَ مقدّماً من محفظته بسعرٍ للرحلة مجمَّد — تقديرُ الطريق بسعر الاقتصادي ناقصاً الخصم، لا تمسّه ذروةٌ ولا مسافةٌ فعليّة. وتُولَّد رحلاتُه حجوزاً لليوم التالي، يأخذها كبتنُه المعتمد — من اعتمد المشوارَ من عروضه — إن كان متاحاً، وإلا تُعرض على الجميع. وكلُّ رحلةٍ تكتمل تُدفع للكبتن من المحفوظ وتُقتطع منها العمولةُ كأيِّ أجرة، وللكبتن المعتمد حافزٌ من TAXO لكلِّ رحلةٍ إن ضبطته. وللراكب أن يعلّق يوماً فيُرحَّل إلى ما بعد آخر يوم، وأن يستبدل كبتنَه، وأن يلغي فيعود ما لم يُستعمل رصيداً في محفظته لا نقداً — وكذلك ما لم يكتمل عند نهاية الشهر. والأرقامُ في «الخدمات الجديدة» أدناه، وخصمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً لا يُشترى اشتراكٌ جديد، والقائمُ يكمل شهرَه.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -251,6 +255,7 @@ const FLAGS: FeatureKey[] = [
   "guaranteed_booking_enabled",
   "parcel_enabled",
   "hourly_enabled",
+  "rider_subscription_enabled",
   "driver_map_nearby_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
@@ -839,6 +844,29 @@ export function SettingsScreen() {
                   الإلغاء مجمَّدةٌ على الرحلة لحظةَ طلبها.
                 </p>
                 <HourlyForm
+                  key={serviceRow.country_code}
+                  row={serviceRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+              </div>
+            ) : null}
+
+            {/* **المشوارُ الثابت** (§٦٣-ج/٦) — ثلاثةُ أرقامٍ من الصفِّ نفسِه **بنموذجٍ مستقلٍّ بحفظه** كأخويه */}
+            {serviceRow ? (
+              <div className="mt-18 border-t border-line pt-14">
+                <h3 className="mb-2 text-12.5 font-bold text-ink">المشوار الثابت</h3>
+                <p className="mb-12 text-11 leading-snug text-muted">
+                  اشتراكٌ شهريٌّ لمشوارٍ يوميّ، يدفعه الراكبُ مقدّماً من محفظته بسعرٍ للرحلة مجمَّد.{" "}
+                  <b className="text-ink">وخصمٌ صفرٌ يُخفي الخدمة</b> ولو اشتعل مفتاحُها.{" "}
+                  <b className="text-ink">ولا أثرَ رجعياً</b>: الخصمُ مجمَّدٌ في سعر الاشتراك لحظةَ
+                  شرائه، والحافزُ يُقرأ عند اكتمال كلِّ رحلة.
+                </p>
+                <CommuteForm
                   key={serviceRow.country_code}
                   row={serviceRow}
                   disabled={!isAdmin}
@@ -2179,6 +2207,92 @@ function HourlyForm({
           setBusy(true);
           updateServiceSettings(row.country_code, changes)
             .then(() => onSaved("حُفظت الرحلةُ بالساعة — تسري على ما يُطلب بعدها لا على رحلةٍ قائمة"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **المشوارُ الثابت** (§٦٣-ج/٦) — ثلاثةُ أرقامٍ لسوقٍ واحد: الخصمُ نسبةً، وحافزُ الكبتن المعتمد مالاً، وأقصى أيام التعليق عدّاً.
+ *
+ * **ويُرسل ما تغيّر وحدَه** (`PATCH` جزئيّ كإخوته) — **والنسبةُ والمالُ نصّان كما وصلا** فلا يمرّان بعائم: «10.00» تبقى «10.00»
+ * ما لم تُلمس. **والحدودُ في الخلفية** (`ServiceSettingUpdate`: خصمٌ من ٠ إلى ما دون ١٠٠، حافزٌ لا سالب، تعليقٌ ٠–٣١) — ورفضُها
+ * يُقال تحت حقله. **ولا مبلغَ يُحسب هنا**: سعرُ الرحلة المجمَّد يحسبه التسعيرُ في الخلفية لحظةَ الشراء. و`key={country}` كإخوته.
+ */
+function CommuteForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [discount, setDiscount] = useState(row.commute_discount_percent);
+  const [incentive, setIncentive] = useState(row.commute_captain_incentive);
+  const [suspendDays, setSuspendDays] = useState(String(row.commute_max_suspend_days));
+  const [busy, setBusy] = useState(false);
+
+  // **الفرقُ بالمقارنة** — من كتب ثمّ أعاد القيمةَ كما كانت لم يغيّر شيئاً
+  const changes: Partial<Omit<ServiceSetting, "country_code">> = {};
+  if (discount.trim() !== row.commute_discount_percent) changes.commute_discount_percent = discount.trim();
+  if (incentive.trim() !== row.commute_captain_incentive) changes.commute_captain_incentive = incentive.trim();
+  if (Number(suspendDays) !== row.commute_max_suspend_days) changes.commute_max_suspend_days = Number(suspendDays);
+  const dirty = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        {/* **والتلميحُ تحت الحقل بصنف أخويه** (`ad-hint`) — `Field` لا يحمل تلميحاً */}
+        <div>
+          <Field
+            name="commute_discount_percent"
+            label="الخصم ٪"
+            dir="ltr"
+            inputMode="decimal"
+            value={discount}
+            disabled={disabled}
+            onChange={(event) => setDiscount(event.target.value.replace(/[^0-9.]/g, ""))}
+          />
+          <p className="ad-hint">يتقاسمه الكبتنُ وTAXO بقدر نسبة العمولة — وصفرٌ يُخفي الخدمة</p>
+        </div>
+        <MoneyField
+          name="commute_captain_incentive"
+          label="حافز الكبتن لكلِّ رحلة"
+          value={incentive}
+          onChange={(next) => setIncentive(next.replace(/[^0-9.,]/g, ""))}
+          currency={currencyOf(row.country_code)}
+          disabled={disabled}
+          hint="من TAXO للكبتن المعتمد لكلِّ رحلة — وصفرٌ لا حافز (الشارةُ والأولويّة)"
+        />
+        <div>
+          <Field
+            name="commute_max_suspend_days"
+            label="أقصى أيام التعليق"
+            dir="ltr"
+            inputMode="numeric"
+            value={suspendDays}
+            disabled={disabled}
+            onChange={(event) => setSuspendDays(event.target.value.replace(/[^0-9]/g, ""))}
+          />
+          <p className="ad-hint">لكلِّ اشتراك — ويُرحَّل كلُّ يومٍ معلَّقٍ إلى ما بعد آخر يوم</p>
+        </div>
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || discount.trim() === "" || incentive.trim() === "" || suspendDays === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, changes)
+            .then(() => onSaved("حُفظ المشوارُ الثابت — الخصمُ يسري على ما يُشترى بعده لا على اشتراكٍ قائم"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}

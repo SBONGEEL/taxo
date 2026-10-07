@@ -27,6 +27,8 @@
  * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الطالبُ يدفع بالمحفظة أو البطاقة وحدهما، **وإن دفع الراكبُ نقداً فالشاشةُ حالٌ تُقرأ** —
  * «يدفعها الراكبُ نقداً للكبتن» — **بلا قناةٍ ولا زرِّ دفع**. **والطردُ الذي يدفعه مستلمُه مثلُها** (§٦٣-ج/٤): «يدفعها المستلمُ
  * نقداً للكبتن»؛ ومرسلُه الدافعُ يدفع بأيِّ قناةٍ كأيِّ رحلة.
+ *
+ * **ورحلةُ المشوار الثابت** (§٦٣-ج/٦) «مدفوعة من اشتراكك» — قراءةٌ بلا منتقٍ ولا زرِّ دفع: سعرُها دُفع مقدّماً مع الاشتراك.
  */
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -154,6 +156,9 @@ export function PaymentScreen() {
   const recipientCash = payer === "recipient_cash";
   // **نقدٌ يسلّمه غيرُ صاحب الحساب** — الراكبُ الفعليُّ أو مستلمُ الطرد
   const cashByOther = passengerCash || recipientCash;
+  // **رحلةُ المشوار الثابت** (§٦٣-ج/٦) — سعرُها دُفع مقدّماً مع الاشتراك وتُسوّى من المحفوظ عند اكتمالها: **حالٌ تُقرأ لا قناةٌ
+  // تُختار** — فلا منتقيَ ولا زرَّ دفع (كلُّ قناةٍ من هنا ترتدّ: لم يبقَ ما يُدفع). ومن الصفّ لا من المفتاح
+  const commute = ride?.commute === true;
   const { available, resolved, choose } = usePayerPreference(country, payer);
 
   const load = useCallback(async () => {
@@ -326,16 +331,24 @@ export function PaymentScreen() {
       <div className="t2-m-card t2-m-due">
         <div className="t2-m-due-top">
           <div>
-            <div className="t2-m-label">{nothingToStart ? "إجمالي الأجرة" : "المتبقي على هذه الرحلة"}</div>
+            <div className="t2-m-label">
+              {commute ? "أجرةُ رحلتك من الاشتراك" : nothingToStart ? "إجمالي الأجرة" : "المتبقي على هذه الرحلة"}
+            </div>
             <div className="t2-m-amount">
               <span dir="ltr" className="t2-m-num xl">
-                {formatMoney(nothingToStart ? (state?.final_fare ?? null) : (state?.outstanding ?? null))}
+                {formatMoney(nothingToStart || commute ? (state?.final_fare ?? null) : (state?.outstanding ?? null))}
               </span>
               <span className="t2-m-cur">{currencyLabel(state?.currency)}</span>
             </div>
             <div className="t2-m-due-cur">{currencyName(state?.currency)}</div>
           </div>
-          {nothingToStart || !resolved ? null : (
+          {/* **حبّةُ الاشتراك مكانَ حبّة القناة** — لا قناةَ اختيرت */}
+          {commute ? (
+            <span className="t2-m-pill">
+              <Icon name="event_repeat" />
+              {PAYMENT_METHOD_LABEL.commute}
+            </span>
+          ) : nothingToStart || !resolved ? null : (
             <span className="t2-m-pill">
               <Icon name={PAY_ICON_T2[resolved.method]} />
               {PAYMENT_METHOD_LABEL[resolved.method]}
@@ -359,7 +372,20 @@ export function PaymentScreen() {
 
       <BannerT2 tone="danger" message={error} />
 
-      {settled ? <BannerT2 tone="ok" message="اكتمل دفع هذه الرحلة — شكراً لك." /> : null}
+      {settled && !commute ? <BannerT2 tone="ok" message="اكتمل دفع هذه الرحلة — شكراً لك." /> : null}
+
+      {/* **«مدفوعة من اشتراكك»** (§٦٣-ج/٦) — قراءةٌ لا فعل: دُفعت مقدّماً، والقيدُ في «دفعات هذه الرحلة» بقناة الاشتراك */}
+      {commute ? (
+        <div className="t2-callout t2-m-callout">
+          <Icon name="event_repeat" />
+          <div className="t2-callout-main">
+            <p className="t2-callout-title">مدفوعة من اشتراكك</p>
+            <p className="t2-callout-body">
+              سعرُها المجمَّد دُفع مقدّماً مع اشتراكك في المشوار الثابت — لا شيءَ تدفعه هنا ولا للكبتن.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {/* **لم يبقَ ما يُبدأ من هنا، ولم يكتمل الدفعُ بعد.** فلا زرَّ دفعٍ (لا صفَّ جديد يُنشأ) ولا «شكراً» (المالُ لم يصل).
           والنصُّ يسمّي القناةَ والمبلغَ لأن «بانتظار التأكيد» وحدَها لا تقول لمن يقرؤها هل عليه أن يُخرج نقداً من جيبه الآن.
@@ -421,7 +447,7 @@ export function PaymentScreen() {
 
       <div className="t2-m-push" />
 
-      {settled || nothingToStart || cashByOther ? (
+      {settled || nothingToStart || cashByOther || commute ? (
         <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${rideId}/rate`)}>
           قيّم رحلتك
         </button>

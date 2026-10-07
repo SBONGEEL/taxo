@@ -13,7 +13,7 @@
  * - **«اللغة»**: محذوفةٌ بقرار المالك (§61) — التطبيقُ عربيٌّ وحدَه.
  * - **«VISA 4242» بجانب طرق الدفع**: تحتاج `GET /me/cards` هنا — طلبٌ جديد.
  *
- * **وما في الشاشة القائمة ولم يُرسم يبقى** بلغة القائمة: رحلاتي المجدولة (خلف مفتاحها) · ادعُ صديقك ·
+ * **وما في الشاشة القائمة ولم يُرسم يبقى** بلغة القائمة: رحلاتي المجدولة (خلف مفتاحها) · **مشوارٌ ثابت واشتراكاتي** (§٦٣-ج/٦) · ادعُ صديقك ·
  * الإشعارات · الإعدادات · حذفُ الحساب (آخرَ القائمة بقصد) · التبديلُ إلى تطبيق السائق · إنهاءُ كلِّ الجلسات.
  * **و«بياناتي» صار زرَّ القلم في الرأس** كما في اللوحة — البابُ نفسُه.
  */
@@ -24,7 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { getRiderSummary } from "@/api/endpoints";
 import type { RiderSummary } from "@/api/types";
 
-import { useScheduledRides } from "@/lib/bookings";
+import { useCommuteService, useHasCommutes, useScheduledRides } from "@/lib/bookings";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useSwitchToDriver } from "@/lib/switch-app";
@@ -47,6 +47,8 @@ export function AccountT2Screen() {
   const { user, signOut } = useSession();
   const { places } = usePlaces();
   const scheduled = useScheduledRides();
+  const commuteService = useCommuteService();
+  const hasCommutes = useHasCommutes();
   const swap = useSwitchToDriver();
   // **الأرقامُ من الخلفية** (§٦١-ط/٢) — وحتى تصل، أو إن تعثّرت، «—» لا صفرٌ يُقرأ خبراً
   const [summary, setSummary] = useState<RiderSummary | null>(null);
@@ -73,6 +75,10 @@ export function AccountT2Screen() {
     { to: "/account/cards", icon: "credit_card", label: "طرق الدفع" },
     // **خلف مفتاحه** (12-ط) كما في الشاشة القائمة: صفٌّ يفتح شاشةً فارغةً في سوقٍ مطفأٍ يُقرأ عطباً
     ...(scheduled ? [{ to: "/account/bookings", icon: "event_upcoming", label: "رحلاتي المجدولة" }] : []),
+    // **المشوارُ الثابت** (§٦٣-ج/٦) — لا بلاطةَ له في الرئيسية (بلاطاتُها كما رُسمت، ومقاصدُ المتجر مسجَّلةٌ في الخلفية)، **فبيتُه هنا
+    // بجوار أخيه المجدول**: بابُ الجديد خلف مفتاحه، **و«اشتراكاتي» لمن له اشتراكٌ ولو أُطفئ المفتاح** — مالُه مدفوعٌ ويُرى
+    ...(commuteService ? [{ to: "/account/commute", icon: "event_repeat", label: "مشوارٌ ثابت" }] : []),
+    ...(hasCommutes ? [{ to: "/account/commutes", icon: "card_membership", label: "اشتراكاتي" }] : []),
     { to: "/account/referrals", icon: "redeem", label: "ادعُ صديقك" },
     { to: "/account/notifications", icon: "notifications", label: "الإشعارات" },
     { to: "/account/settings", icon: "settings", label: "الإعدادات" },

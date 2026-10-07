@@ -32,7 +32,7 @@ export type RideStatus =
 /** ومنها `promo` (12-ز): **قناةٌ لا يدفعها الراكب** — تُنشئها المنصةُ بقيمة
  *  خصم الكوبون فتظهر صفَّاً في الإيصال. لا تُعرض خياراً في شاشة الدفع. */
 export type PaymentMethod =
-  "cash" | "cliq" | "card" | "wallet" | "promo" | "share";
+  "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute";
 export type PaymentStatus =
   "pending" | "confirmed" | "failed" | "disputed" | "refunded";
 
@@ -449,6 +449,9 @@ export interface Ride {
   hourly_hours: number | null;
   hourly_included_km: number | null;
   hourly_prepay_method: HourlyPrepay | null;
+  /** **رحلةٌ من المشوار الثابت** (§٦٣-ج/٦) — سعرُها المجمَّد دُفع مقدّماً مع الاشتراك، **وتُسوّى من المحفوظ عند اكتمالها**: فلا
+   *  قناةَ تُختار ولا زرَّ دفع. ومن الصفّ لا من المفتاح — رحلةٌ وُلّدت قبل الإطفاء تبقى مدفوعة. */
+  commute: boolean;
 
   /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
    *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */
@@ -630,7 +633,11 @@ export type WalletTransactionType =
   | "guarantee_fee"
   | "guarantee_refund"
   | "guarantee_penalty"
-  | "guarantee_compensation";
+  | "guarantee_compensation"
+  // **المشوارُ الثابت** (§٦٣-ج/٦): المقدَّمُ يخرج من محفظته، **وما لم يُستعمل يعود رصيداً**؛ والحافزُ للكبتن ويُسمّى للعلّة أعلاه
+  | "commute_prepay"
+  | "commute_credit"
+  | "commute_incentive";
 
 export interface WalletTransaction {
   id: string;
@@ -711,7 +718,8 @@ export type FareLineKind =
   | "parcel_fee"
   | "hourly"
   | "hourly_extra_km"
-  | "hourly_extra_time";
+  | "hourly_extra_time"
+  | "commute";
 
 export interface FareLine {
   kind: FareLineKind;
@@ -822,6 +830,58 @@ export interface Booking {
    *  `services/guarantees.py` لا `StrEnum`، فاتحادٌ باسمٍ يخلط `held` بقيمٍ يعرفها `check:enums` من تعداداتٍ أخرى. */
   guarantee_state: "held" | "paid" | "refunded" | null;
   /** **اسمُ الكبتن المحجوز** — كما يراه في بطاقة الكبتن، ولا شيءَ غيرُه. */
+  captain_name: string | null;
+}
+
+// ---- المشوارُ الثابت — اشتراكُ الراكب (§٦٣-ج/٦)
+
+/** **خطّةُ المشوار** كما تُرسل للتسعير وللشراء (`CommutePlanIn`) — والحمولةُ نفسُها للبابين، فالسعرُ المعروضُ سعرُ ما يُشترى.
+ *  **والأيامُ قناعُ بتاتٍ بترتيب `weekday()` في الخلفية**: الإثنين 1 · الثلاثاء 2 · الأربعاء 4 · الخميس 8 · الجمعة 16 · السبت 32 ·
+ *  الأحد 64. والوقتان «HH:MM:SS» بساعة السوق، والبدءُ «YYYY-MM-DD» **من الغد على الأقل** (والخلفيةُ ترفض غيرَه ٤٢٢ بنصّها). */
+export interface CommutePlan {
+  pickup: Coordinates;
+  dropoff: Coordinates;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  weekdays: number;
+  go_time: string;
+  return_time: string | null;
+  starts_on: string;
+}
+
+/** **تسعيرُ المشوار — كلُّ رقمٍ من الخلفية** (§14): سعرُ الرحلة الواحدة مجمَّداً للشهر، وعددُ الرحلات، والمجموعُ الذي يُخصم من
+ *  المحفظة، **ونسبةُ الخصم تُقرأ «وفّرتَ 10٪» ولا تُضرب هنا**. وآخرُ يومٍ في الشهر محسوبٌ هناك كذلك. */
+export interface CommuteQuote {
+  discount_percent: string;
+  price_per_ride: string;
+  rides_total: number;
+  total: string;
+  ends_on: string;
+  currency: Currency;
+}
+
+/** **اشتراكُ مشوارٍ** كما يراه صاحبُه (`CommuteOut`) — يُقرأ ولو أُطفئت الخدمةُ بعده: مالُه مدفوعٌ ومحفوظ. */
+export interface Commute {
+  id: string;
+  /** **حقلٌ لا اتحادٌ مسمّى بقصد** — ثوابتُ في `models/rider_subscription.py` لا `StrEnum` (علّةُ `Booking.guarantee_state`). */
+  status: "active" | "ended" | "cancelled";
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  weekdays: number;
+  go_time: string;
+  return_time: string | null;
+  starts_on: string;
+  /** **يمتدّ بكلِّ يومٍ يُعلَّق** — إلى أوّل يومٍ من أيامه بعد آخرها. */
+  ends_on: string;
+  discount_percent: string;
+  price_per_ride: string;
+  rides_total: number;
+  /** ما اكتمل حتى الآن — **وما بقي يعود رصيداً** عند النهاية أو الإلغاء. */
+  rides_done: number;
+  amount_paid: string;
+  currency: Currency;
+  suspended_days: string[];
+  /** **اسمُ الكبتن المعتمد** — و`null` ما دام لم يعتمده أحد. */
   captain_name: string | null;
 }
 

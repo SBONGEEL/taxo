@@ -71,6 +71,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   wallet: "محفظة",
   promo: "خصم كوبون",
   share: "خصم مشاركة",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — مالُ الراكب دفعه مقدّماً مع اشتراكه، تكتبه المنصّةُ لكلِّ رحلةٍ تكتمل
+  commute: "اشتراك المشوار",
 };
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
@@ -123,6 +125,10 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   guarantee_refund: "ردّ رسم الضمان",
   guarantee_penalty: "غرامة اعتذار عن حجز مضمون",
   guarantee_compensation: "تعويض اعتذار الكبتن",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — **بجهته** كذلك: مقدَّمُ الراكب، وما عاد إليه، وحافزُ الكبتن المعتمد
+  commute_prepay: "اشتراك المشوار الثابت",
+  commute_credit: "رصيدُ أيامٍ لم تُستعمل",
+  commute_incentive: "حافزُ المشوار الثابت",
 };
 
 // ─────────────────────────────────────────────── الاشتراك

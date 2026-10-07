@@ -50,6 +50,8 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
   promo: "خصم كوبون",
   // خصمُ المشاركة (12-ي) — تتحمّله الشركة، فلا يَنقص ما يقبضه الكبتن
   share: "خصم مشاركة",
+  // **المشوارُ الثابت** (§٦٣-ج/٦) — دفعه الراكبُ مقدّماً مع اشتراكه، ويُقيَّد للكبتن كأيِّ دفعةٍ تمرّ بالمنصة
+  commute: "اشتراك المشوار",
 };
 
 export const RIDE_STATUS_LABEL: Record<RideStatus, string> = {

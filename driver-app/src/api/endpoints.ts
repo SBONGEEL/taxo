@@ -61,6 +61,7 @@ import type {
   RecordedRoute,
   SubscriptionPlan,
   GuaranteeOffer,
+  CommuteOffer,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -304,6 +305,25 @@ export const withdrawGuarantee = (bookingId: string) =>
 /** **«نعم، في الطريق»** — تُنشأ الرحلةُ مسنَدةً إليه وتعود هنا، **فتصير رحلتَه الجارية**. وقبل نافذة التأكيد ٤٠٩ بنصّها. */
 export const confirmGuarantee = (bookingId: string) =>
   api.post<Ride>(`/drivers/me/guarantees/${bookingId}/confirm`);
+
+// ------------------------------------------------------------ المشوارُ الثابت (§٦٣-ج/٦)
+
+/** «مشاويرُ تنتظر كبتناً» — اشتراكاتٌ قائمةٌ في سوقه بلا كبتنٍ معتمد، الأقربُ بدءاً أوّلاً. **وفارغةٌ حيث الخدمةُ مطفأةٌ أو خصمُها
+ *  صفر** — فالفراغُ لا يُقرأ «لا مشاويرَ في السوق» وحدَه. **وبلا اسم الراكب ولا رقمه.** */
+export const listCommuteOffers = () =>
+  api.get<CommuteOffer[]>("/drivers/me/commute-offers");
+
+/** «مشاويرُك» — القائمةُ التي اعتمدها. */
+export const listMyCommutes = () =>
+  api.get<CommuteOffer[]>("/drivers/me/commutes");
+
+/** **«اعتمد المشوار»** — يصير معتمدَه بقبوله، **والثاني يجد ٤٠٩ برسالته** («اعتمد هذا المشوارَ كبتنٌ آخر»)؛ وغيرُ المشترك ٤٠٩ كذلك. */
+export const approveCommute = (commuteId: string) =>
+  api.post<CommuteOffer>(`/drivers/me/commutes/${commuteId}/approve`);
+
+/** **«اعتذر عن المشوار»** — يُفكّ فيعود مفتوحاً لغيره. */
+export const releaseCommute = (commuteId: string) =>
+  api.post<CommuteOffer>(`/drivers/me/commutes/${commuteId}/release`);
 
 // ------------------------------------------------------------ الدفع
 

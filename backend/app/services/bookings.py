@@ -425,6 +425,14 @@ async def execute(
         )
         return None
 
+    # **رحلةُ المشوار الثابت** (§٦٣-ج/٦): سعرُها المجمَّد، **وكبتنُها المعتمدُ يأخذها مباشرةً إن كان متاحاً**
+    if booking.commute_id is not None:
+        from app.services import commute
+
+        assigned = await commute.on_ride_created(session, ride, booking)
+        if assigned is not None:
+            ride = assigned
+
     booking.ride_id = ride.id
     booking.status = BookingStatus.DISPATCHED
     await _flush_and_reload(session, booking)
@@ -525,7 +533,9 @@ async def run_due(session: AsyncSession, redis: Redis) -> dict[str, int]:
                 tally["missed"] += 1
                 continue
             await session.commit()
-            dispatch.start(ride.id)
+            # **رحلةٌ أُسندت مباشرةً** (كبتنُ المشوار الثابت) لا تُوزَّع
+            if ride.status is not RideStatus.ACCEPTED:
+                dispatch.start(ride.id)
             tally["dispatched"] += 1
         except Exception:  # noqa: BLE001 - حجزٌ متعثّر لا يُسقط الدورة
             await session.rollback()
