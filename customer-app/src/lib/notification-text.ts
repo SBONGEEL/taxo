@@ -41,5 +41,7 @@ export function destinationOf(entry: UserNotification): string | null {
   if (bookingId && !rideId) return "/account/bookings";
   if (rideId) return `/rides/${rideId}`;
   if (entry.kind === "topup_confirmed") return "/wallet";
+  // **تذكيرُ الاسترداد الأسبوعي** (§٦٣-ج/٨) — إلى الرئيسية حيث النارُ وأيامُها، ومنها يطلب رحلةَ اليوم
+  if (entry.kind === "cashback_reminder") return "/";
   return null;
 }

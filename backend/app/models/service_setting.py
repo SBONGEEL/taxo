@@ -35,6 +35,7 @@ class ServiceSetting(TimestampMixin, Base):
             name="service_settings_commute_valid",
         ),
         CheckConstraint("intercity_cancel_deadline_hours BETWEEN 1 AND 48", name="service_settings_intercity_valid"),
+        CheckConstraint("cashback_amount >= 0 AND cashback_days BETWEEN 2 AND 14", name="service_settings_cashback_valid"),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -100,3 +101,11 @@ class ServiceSetting(TimestampMixin, Base):
     # ------------------------------------------------ بين المدن (§٦٣-ج/٧)
     #: **المهلةُ قبل الانطلاق** — قبلها يلغي الكبتنُ بلا أثر، وعندها تُلغى رحلةٌ لم تبلغ حدَّها. اقتراحي ساعتان
     intercity_cancel_deadline_hours: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default=text("2"))
+
+    # ------------------------------------------------ الاسترداد الأسبوعي (§٦٣-ج/٨)
+    #: **المبلغُ الثابت** — لم يقل المالكُ رقماً، فصفرٌ يُخفي الخدمة حتى يضبطه
+    cashback_amount: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
+    )
+    #: **أيامُ «الأسبوع» بلا جمعته** — ٦ افتراضاً (§٦٣-د/٩)
+    cashback_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=6, server_default=text("6"))

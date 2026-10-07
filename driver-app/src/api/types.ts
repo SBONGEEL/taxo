@@ -562,7 +562,9 @@ export type WalletTransactionType =
   // **بين المدن** (§٦٣-ج/٧): **أجرةُ رحلته تصله من مال المقاعد المحفوظ** عند الإنهاء، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
   | "intercity_hold"
   | "intercity_refund"
-  | "intercity_earning";
+  | "intercity_earning"
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨): للراكب وحدَه من TAXO — لا يقع للكبتن ولا يُخصم منه، ويُسمّى للعلّة أعلاه
+  | "cashback";
 
 export interface WalletTransaction {
   id: string;

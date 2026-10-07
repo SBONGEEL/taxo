@@ -55,6 +55,8 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   // **بين المدن** (§٦٣-ج/٧) — أيقونةُ مدخلها في «حسابي» للمقعد وردِّه
   intercity_hold: "route",
   intercity_refund: "route",
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — نارُ سلسلته في الرئيسية نفسُها
+  cashback: "local_fire_department",
 };
 
 export function WalletT2Screen() {

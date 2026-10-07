@@ -133,6 +133,8 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   intercity_hold: "حجزُ مقعدٍ بين المدن",
   intercity_refund: "ردُّ حجزٍ بين المدن",
   intercity_earning: "أجرةُ رحلةٍ بين المدن",
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب من TAXO في اليوم الأخير من أسبوعه
+  cashback: "الاسترداد الأسبوعي",
 };
 
 // ─────────────────────────────────────────────── الاشتراك

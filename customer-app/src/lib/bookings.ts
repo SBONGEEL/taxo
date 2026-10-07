@@ -6,8 +6,9 @@
  * الحارس، وهذا راحةٌ لا حراسة.
  *
  * **والمشوارُ الثابتُ هنا أيضاً** (§٦٣-ج/٦): اشتراكٌ تُولَّد رحلاتُه حجوزاً مجدولةً (`ride_bookings.commute_id`) —
- * فهو حجزٌ يتكرّر، وبيتُه بيتُ الحجوز. **و«بين المدن» بعده** (§٦٣-ج/٧، آخرَ الملف): مقاعدُ تُحجز في رحلةٍ أعلنها كبتنٌ لموعدٍ
- * قادم — حجزٌ كذلك، وبيتُه هنا.
+ * فهو حجزٌ يتكرّر، وبيتُه بيتُ الحجوز. **و«بين المدن» بعده** (§٦٣-ج/٧): مقاعدُ تُحجز في رحلةٍ أعلنها كبتنٌ لموعدٍ
+ * قادم — حجزٌ كذلك، وبيتُه هنا. **و«الاسترداد الأسبوعي» آخرَ الملف** (§٦٣-ج/٨): ليس حجزاً بل رحلةٌ كلَّ يوم — وبيتُه بجانب
+ * المشوار الثابت، أخيه في «ما يتكرّر من رحلات الراكب».
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -18,6 +19,7 @@ import {
   buyCommute,
   cancelCommute,
   cancelIntercityBooking,
+  getWeeklyCashback,
   listIntercityBookings,
   listIntercityTrips,
   listMyCommutes,
@@ -32,6 +34,7 @@ import type {
   IntercityBooking,
   IntercityRoute,
   IntercityTrip,
+  WeeklyCashback,
 } from "@/api/types";
 import { useSession } from "@/lib/session";
 import { useFeature } from "@/lib/config";
@@ -520,4 +523,54 @@ export function useMyIntercityBookings() {
   }, []);
 
   return { rows, error, busy, notes, cancel: (row: IntercityBooking) => void cancel(row) };
+}
+
+// ═══════════════════════════════════════════════════════════ الاسترداد الأسبوعي (§٦٣-ج/٨)
+//
+// **رحلةٌ كلَّ يومٍ لأسبوع — الجمعةُ لا تُحسب، وفواتُ يومٍ يُعيد العدّ، والمبلغُ ينزل في المحفظة في اليوم الأخير.** والسلسلةُ تُحسب في
+// الخلفية عند إنهاء الرحلة بيوم السوق — **فلا يومَ يُعدّ هنا ولا مالَ يُحسب** (§14): الأيامُ الباقيةُ والمبلغُ المنتظَر وهل رُكب اليوم
+// وهل اليومُ جمعة، كلُّها من `GET /me/cashback`.
+
+/** **سلسلتُه كما تقولها الخلفية** — تُسأل حيث المفتاحُ مشتعلٌ وحدَه، و`null` حتى تصل **أو حيث لا خدمة** (`enabled: false`: مطفأةٌ أو
+ *  مبلغُها صفر — فلا نارَ تُرسم بلا وعد).
+ *
+ *  **وتُعاد كلّما عاد إلى الرئيسية**: فتحُها (التركيب — والرئيسيةُ تُركَّب من جديدٍ بعد كلِّ رحلة) **وعودةُ التطبيق إلى الواجهة**
+ *  (`visibilitychange`) — فمن أنهى رحلتَه أو فتح التطبيقَ من تذكيرٍ يرى «ركبتَ اليوم» لا ما كان صباحاً. **وتعثّرُها صمت**: النارُ
+ *  إضافةٌ على الرئيسية، وخطأٌ فوقها يحجب ما جاء الراكبُ له. */
+export function useWeeklyCashback(): WeeklyCashback | null {
+  const { user } = useSession();
+  const on = useFeature(user?.country_code, "weekly_cashback_enabled");
+  const [cashback, setCashback] = useState<WeeklyCashback | null>(null);
+
+  useEffect(() => {
+    if (!on) return;
+    let live = true;
+    const read = () => {
+      getWeeklyCashback()
+        .then((body) => {
+          if (live) setCashback(body.enabled ? body : null);
+        })
+        .catch(() => undefined);
+    };
+    read();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") read();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      live = false;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [on]);
+
+  return on ? cashback : null;
+}
+
+/** «يومٌ واحد · يومان · 4 أيام · 11 يوماً» — **العربيةُ تعدّ بالمثنّى والجمع والتمييز** (قاعدةُ `seatsCount`)؛ والأيامُ حتى ١٤ هنا
+ *  (`cashback_days` ٢–١٤) فالتمييزُ المفردُ يقع. */
+export function cashbackDaysText(count: number): string {
+  if (count === 1) return "يومٌ واحد";
+  if (count === 2) return "يومان";
+  const tail = count % 100;
+  return `${count} ${tail >= 3 && tail <= 10 ? "أيام" : "يوماً"}`;
 }

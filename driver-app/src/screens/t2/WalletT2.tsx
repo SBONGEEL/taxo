@@ -82,6 +82,8 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   intercity_earning: "route",
   intercity_hold: "route",
   intercity_refund: "route",
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب وحدَه، وأيقونةُ المكافأة كالإحالة إن رُسم يوماً
+  cashback: "redeem",
 };
 
 export function WalletT2Screen() {

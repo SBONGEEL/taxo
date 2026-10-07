@@ -216,6 +216,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "بين المدن",
     hint: "لا يُشعَل قبل أن يتحقّق المالكُ من القانون في السوق. رحلاتٌ بين المدن يعلنها الكبتنُ نفسُه على مسارٍ تضيفه في «مسارات بين المدن» — بمقاعدها وأقلِّ عددٍ ينطلق به — ولا يعلنها إلا كبتنٌ منحه مشرفٌ تصريحاً من ملفّه بعد فحص مركبته: 2015 فأحدث، وأربعةُ مقاعدَ على الأقل، وتأمينٌ سارٍ. ويحجز الراكبُ مقاعدَ تُدفع من محفظته يحفظها TAXO حتى تنتهي الرحلة، أو السيارةَ كاملةً نقداً للكبتن، بسعري المسار المجمَّدين على الرحلة لحظةَ إعلانها. وإلغاءُ الراكب قبل الانطلاق يعيد مالَه كاملاً، وللكبتن أن يلغي قبل المهلة بلا أثرٍ عليه ويُردّ للركّاب كاملاً، وعند المهلة تُلغى وحدَها رحلةٌ لم يبلغ محجوزُها حدَّها. وعند الإنهاء يصل الكبتنَ مالُ المقاعد وتُقتطع منه العمولةُ كأيِّ أجرة، وعمولةُ السيارة النقديّة دَينٌ عليه كرحلات النقد. والمهلةُ في «الخدمات الجديدة» أدناه. ومطفأً لا تُعلن رحلةٌ ولا يُحجز مقعدٌ جديد، والقائمُ يكمل.",
   },
+  weekly_cashback_enabled: {
+    title: "الاسترداد الأسبوعي",
+    hint: "رحلةٌ كلَّ يومٍ لأسبوعٍ يبدأ من أوّل رحلةٍ للراكب — الجمعةُ لا تُطلب ولا تقطع، وفواتُ يومٍ يُعيد العدّ — ومبلغٌ ثابتٌ ينزل في محفظته في اليوم الأخير، من TAXO لا من الكبتن. وتُحسب رحلاتُ الطالب أيّاً كانت قناةُ دفعها، ويرى الراكبُ في الرئيسية نارَه وأيامَه الباقيةَ والمبلغَ المنتظَر، وتذكّره ثلاثةُ إشعاراتٍ عن الأيام لا عن المال: صباحاً، ومساءً، وقبل أن يفوته اليوم. والمبلغُ وأيامُ الأسبوع في «الخدمات الجديدة» أدناه، ومبلغٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً لا يُحسب يومٌ ولا تُرسم نار.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -261,6 +265,7 @@ const FLAGS: FeatureKey[] = [
   "hourly_enabled",
   "rider_subscription_enabled",
   "intercity_enabled",
+  "weekly_cashback_enabled",
   "driver_map_nearby_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
@@ -894,6 +899,30 @@ export function SettingsScreen() {
                   كذلك — إلغاءَ الكبتن قبلها، والإلغاءَ الآليَّ عندها.
                 </p>
                 <IntercityForm
+                  key={serviceRow.country_code}
+                  row={serviceRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+              </div>
+            ) : null}
+
+            {/* **الاسترداد الأسبوعي** (§٦٣-ج/٨) — رقمان من الصفِّ نفسِه **بنموذجٍ مستقلٍّ بحفظه** كإخوته */}
+            {serviceRow ? (
+              <div className="mt-18 border-t border-line pt-14">
+                <h3 className="mb-2 text-12.5 font-bold text-ink">الاسترداد الأسبوعي</h3>
+                <p className="mb-12 text-11 leading-snug text-muted">
+                  رحلةٌ كلَّ يومٍ لأسبوعٍ بلا جمعته، ومبلغٌ ثابتٌ للراكب في يومه الأخير{" "}
+                  <b className="text-ink">من TAXO لا من الكبتن</b>.{" "}
+                  <b className="text-ink">ومبلغٌ صفرٌ يُخفي الخدمة</b> ولو اشتعل مفتاحُها.{" "}
+                  <b className="text-ink">ولا أثرَ رجعياً</b>: المبلغُ والأيامُ مجمَّدان على السلسلة لحظةَ
+                  بدئها، فتعديلُهما يحكم ما يبدأ بعده.
+                </p>
+                <CashbackForm
                   key={serviceRow.country_code}
                   row={serviceRow}
                   disabled={!isAdmin}
@@ -2378,6 +2407,78 @@ function IntercityForm({
           setBusy(true);
           updateServiceSettings(row.country_code, changes)
             .then(() => onSaved("حُفظت مهلةُ بين المدن — وتحكم الرحلاتِ المعلَنةَ القائمةَ كذلك"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **الاسترداد الأسبوعي** (§٦٣-ج/٨) — رقمان لسوقٍ واحد: **المبلغُ الثابت** مالاً من TAXO، **وأيامُ الأسبوع بلا جمعته** عدّاً.
+ *
+ * **ويُرسل ما تغيّر وحدَه** (`PATCH` جزئيّ كإخوته) — **والمالُ نصٌّ كما وصل** فلا يمرّ بعائم. **والحدودُ في الخلفية**
+ * (`ServiceSettingUpdate`: مبلغٌ لا سالب، أيامٌ ٢–١٤) ورفضُها تحت حقله. **ولا مبلغَ يُحسب هنا**: ما ينزل في المحفظة هو المجمَّدُ على
+ * السلسلة كما هو. و`key={country}` كإخوته.
+ */
+function CashbackForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [amount, setAmount] = useState(row.cashback_amount);
+  const [days, setDays] = useState(String(row.cashback_days));
+  const [busy, setBusy] = useState(false);
+
+  // **الفرقُ بالمقارنة** — من كتب ثمّ أعاد القيمةَ كما كانت لم يغيّر شيئاً
+  const changes: Partial<Omit<ServiceSetting, "country_code">> = {};
+  if (amount.trim() !== row.cashback_amount) changes.cashback_amount = amount.trim();
+  if (Number(days) !== row.cashback_days) changes.cashback_days = Number(days);
+  const dirty = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <MoneyField
+          name="cashback_amount"
+          label="مبلغ الاسترداد"
+          value={amount}
+          onChange={(next) => setAmount(next.replace(/[^0-9.,]/g, ""))}
+          currency={currencyOf(row.country_code)}
+          disabled={disabled}
+          hint="مبلغٌ ثابتٌ ينزل في محفظة الراكب في اليوم الأخير من أسبوعه — من TAXO. وصفرٌ يُخفي الخدمة."
+        />
+        {/* **والتلميحُ تحت الحقل بصنف إخوته** (`ad-hint`) — `Field` لا يحمل تلميحاً */}
+        <div>
+          <Field
+            name="cashback_days"
+            label="أيام الأسبوع"
+            dir="ltr"
+            inputMode="numeric"
+            value={days}
+            disabled={disabled}
+            onChange={(event) => setDays(event.target.value.replace(/[^0-9]/g, ""))}
+          />
+          <p className="ad-hint">أيامُ الأسبوع بلا جمعته — 6 افتراضاً</p>
+        </div>
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || amount.trim() === "" || days === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, changes)
+            .then(() => onSaved("حُفظ الاسترداد الأسبوعي — يسري على ما يبدأ من سلاسلَ بعده لا على سلسلةٍ قائمة"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}

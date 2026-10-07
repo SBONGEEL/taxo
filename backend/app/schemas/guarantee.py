@@ -57,6 +57,9 @@ class ServiceSettingOut(BaseModel):
     commute_max_suspend_days: int
     #: بين المدن (§٦٣-ج/٧) — مهلةُ إلغاء الكبتن بالساعات
     intercity_cancel_deadline_hours: int
+    #: الاسترداد الأسبوعي (§٦٣-ج/٨) — المبلغُ وأيامُ الأسبوع بلا جمعته
+    cashback_amount: Decimal
+    cashback_days: int
 
 
 class ServiceSettingUpdate(BaseModel):
@@ -76,3 +79,5 @@ class ServiceSettingUpdate(BaseModel):
     commute_captain_incentive: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
     commute_max_suspend_days: int | None = Field(default=None, ge=0, le=31)
     intercity_cancel_deadline_hours: int | None = Field(default=None, ge=1, le=48)
+    cashback_amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+    cashback_days: int | None = Field(default=None, ge=2, le=14)

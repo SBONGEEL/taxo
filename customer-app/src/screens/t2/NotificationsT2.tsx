@@ -44,6 +44,8 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   guarantee_accepted: { icon: "verified_user", tone: "live" },
   guarantee_reopened: { icon: "calendar_clock", tone: "warn" },
   guarantee_refunded: { icon: "account_balance_wallet", tone: "money" },
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — تذكيراتُه الثلاثة (صباحاً · مساءً · قبل أن يفوت اليوم) بنار الرئيسية نفسِها، ولمستُها تفتحها
+  cashback_reminder: { icon: "local_fire_department", tone: "offer" },
   women_mode_revoked: { icon: "woman", tone: "women" },
   campaign: { icon: "campaign", tone: "plain" },
   promo: { icon: "sell", tone: "offer" },

@@ -641,7 +641,9 @@ export type WalletTransactionType =
   // **بين المدن** (§٦٣-ج/٧): المقعدُ يخرج من محفظته ويحفظه TAXO، **ويعود كاملاً** إن أُلغي قبل الانطلاق؛ وأجرةُ الكبتن له ويُسمّى للعلّة أعلاه
   | "intercity_hold"
   | "intercity_refund"
-  | "intercity_earning";
+  | "intercity_earning"
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨): دائنٌ له **من TAXO** في اليوم الأخير من أسبوعه — لا يُخصم من كبتن
+  | "cashback";
 
 export interface WalletTransaction {
   id: string;
@@ -936,6 +938,21 @@ export interface IntercityBooking {
   amount: string;
   payment: "wallet" | "cash";
   status: "booked" | "cancelled" | "refunded" | "completed";
+}
+
+/** **الاسترداد الأسبوعي** (§٦٣-ج/٨) — ما يُرسم بجانب النار في الرئيسية (`GET /me/cashback`).
+ *
+ * **`enabled: false` وحدَه** حيث الخدمةُ مطفأةٌ في سوقه أو مبلغُها صفر — والحقولُ الباقيةُ `null` فلا يُرسم شيء. **والمبلغُ من الخلفية
+ * مجمَّداً على سلسلته** (أو مبلغُ السوق حيث لا سلسلة)، لا يُحسب هنا. و`friday`: اليومُ جمعةٌ في سوقه — لا تُطلب ولا تقطع. */
+export interface WeeklyCashback {
+  enabled: boolean;
+  days_required: number | null;
+  days_done: number | null;
+  days_left: number | null;
+  amount: string | null;
+  currency: Currency | null;
+  rode_today: boolean;
+  friday: boolean;
 }
 
 

@@ -97,6 +97,7 @@ celery_app = Celery(
         "app.tasks.guarantees",
         "app.tasks.commute",
         "app.tasks.intercity",
+        "app.tasks.cashback",
     ],
 )
 
@@ -197,6 +198,11 @@ celery_app.conf.update(
         # **الحجزُ المضمون كلَّ دقيقة** (§٦٣-ج/٣): مهلةُ التأكيد عشرُ دقائق، ودورةٌ أبطأُ منها تخون المهلة
         # **المشوارُ الثابت كلَّ ساعة** (§٦٣-ج/٦): حجوزُ الغد متكرّرةٌ بلا ضرر، ودورةٌ يوميّةٌ تفوتها ساعةُ عطلٍ تُفوّت يوماً على من دفع
         # **مهلةُ «بين المدن» كلَّ خمس دقائق** (§٦٣-ج/٧): رحلةٌ لم تبلغ حدَّها تُلغى ويُردّ لركّابها قبل أن يخرجوا
+        # **تذكيراتُ الاسترداد كلَّ ربع ساعة** (§٦٣-ج/٨): ساعاتُها الثلاث بتوقيت كلِّ سوق، ومفتاحٌ يمنع التكرار
+        "remind-cashback": {
+            "task": "app.tasks.cashback.remind_cashback",
+            "schedule": 900.0,
+        },
         "sweep-intercity": {
             "task": "app.tasks.intercity.sweep_intercity",
             "schedule": 300.0,

@@ -589,6 +589,8 @@ async def list_service_settings(_staff: StaffUser, session: DbSession) -> list[S
             commute_captain_incentive=Decimal("0.000"),
             commute_max_suspend_days=4,
             intercity_cancel_deadline_hours=2,
+            cashback_amount=Decimal("0.000"),
+            cashback_days=6,
         )
         out.append(ServiceSettingOut.model_validate(row))
     return out

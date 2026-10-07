@@ -655,6 +655,9 @@ class FeatureKey(StrEnum):
     RIDER_SUBSCRIPTION_ENABLED = "rider_subscription_enabled"
     # **بين المدن** (§٦٣-ج/٧) — **يُبنى مطفأً، والمالكُ يتحقّق من القانون قبل إشعاله**. ومطفأً لا يُعلَن ولا يُحجز جديد، والقائمُ يكمل
     INTERCITY_ENABLED = "intercity_enabled"
+    # **الاسترداد الأسبوعي** (§٦٣-ج/٨ — تعريفُ المالك) — رحلةٌ كلَّ يومٍ لأسبوعٍ بلا جمعته، والمبلغُ من TAXO في اليوم الأخير.
+    # ومطفأً لا سلسلةَ تُحسب ولا نارَ تُرسم؛ و`service_settings.cashback_amount` صفرٌ يُخفيه ولو اشتعل
+    WEEKLY_CASHBACK_ENABLED = "weekly_cashback_enabled"
 
 
 class BookingStatus(StrEnum):
@@ -747,6 +750,8 @@ class WalletTransactionType(StrEnum):
     INTERCITY_HOLD = "intercity_hold"
     INTERCITY_REFUND = "intercity_refund"
     INTERCITY_EARNING = "intercity_earning"
+    #: **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
+    CASHBACK = "cashback"
 
 
 class CancellationChargeStatus(StrEnum):

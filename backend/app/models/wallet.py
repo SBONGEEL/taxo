@@ -67,6 +67,8 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     # بين المدن (§٦٣-ج/٧): الردُّ للراكب، وما يصل الكبتنَ من المحفوظ عند الإنهاء
     WalletTransactionType.INTERCITY_REFUND,
     WalletTransactionType.INTERCITY_EARNING,
+    # **الاسترداد الأسبوعي** (§٦٣-ج/٨): من TAXO كحافز الإحالة — دائنٌ وحدَه
+    WalletTransactionType.CASHBACK,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (

@@ -108,6 +108,8 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   intercity_hold: "حجزُ مقعدٍ بين المدن",
   intercity_refund: "ردُّ حجزٍ بين المدن",
   intercity_earning: "أجرةُ رحلةٍ بين المدن",
+  // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — من TAXO له في اليوم الأخير من أسبوعه
+  cashback: "الاسترداد الأسبوعي",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

@@ -14,10 +14,13 @@
  *
  * **وما نُزل بلغ من موضعٍ آخر** (§٦١-د/و): الأماكنُ المحفوظةُ في البحث وفي «حسابي»، وآخرُ الرحلات و«أعِد الرحلة» في «رحلاتي»
  * وتفاصيلها، والإحالةُ في «حسابي»، والرصيدُ في «المحفظة»، **والخريطةُ الكاملةُ بلمسة البطاقة** بدل زرِّ «توسيع».
+ *
+ * **ونارُ «الاسترداد الأسبوعي» تحت صفِّ الخدمات** (§٦٣-ج/٨، `CashbackChipT2`) — **لا لوحةَ لها**، فتُركَّب من عُدّة الهوية: بطاقةٌ
+ * بسطح البلاطات ودائرةُ أيقونةٍ بالجمر، وورقةُ `DrawerT2` للشرح. **وحيث المفتاحُ مطفأٌ أو المبلغُ صفرٌ لا يُرسم منها شيء.**
  */
 
 import type { ReactNode } from "react";
-import type { MyReferrals, PromoBanner, Ride, SavedPlace, ServiceTile, Wallet } from "@/api/types";
+import type { MyReferrals, PromoBanner, Ride, SavedPlace, ServiceTile, Wallet, WeeklyCashback } from "@/api/types";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -25,17 +28,20 @@ import { PhonePendingNotice } from "@/components/PhonePendingNotice";
 import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
-import { useScheduledRides } from "@/lib/bookings";
+import { cashbackDaysText, useScheduledRides, useWeeklyCashback } from "@/lib/bookings";
 import { useHourly } from "@/lib/hourly";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { useParcel } from "@/lib/parcel";
 import { useSession } from "@/lib/session";
+import { formatMoney } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
 import { Wordmark } from "@/taxo2";
 
+import { DrawerT2 } from "./DrawerT2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
 import "@/taxo2";
 import "./t2.css";
+import "./cashback.css";
 
 /** خصائصُ الرئيسية (R05) — **كانت في الوجه القديم** (`components/home/RiderHome.tsx`) ونُزع (§٦٢/٣). */
 export interface RiderHomeProps {
@@ -126,6 +132,75 @@ function MapCardT2({
   );
 }
 
+/** **سطرُ الحال تحت الأيام** — بترتيبه: ركب اليومَ (ولا جمعةَ تُقال لمن ركب)، ثمّ الجمعة، ثمّ الدعوة. **ومن الخلفية كلُّه** (`rode_today` ·
+ *  `friday` بيوم السوق)، لا من ساعة الجهاز. */
+function cashbackLine(cashback: WeeklyCashback): string {
+  if (cashback.rode_today) return "ركبتَ اليوم — نارُك مشتعلة";
+  if (cashback.friday) return "الجمعةُ لا تُحسب";
+  return "رحلةٌ اليوم تُبقيها مشتعلة";
+}
+
+/** **نارُ «الاسترداد الأسبوعي»** (§٦٣-ج/٨) — الأيامُ الباقية والمبلغُ المنتظَر وسطرُ الحال، **ولمستُها تفتح شرحَ القاعدة بكلماتٍ بسيطة**.
+ *  **والنارُ بثلاث نبرات**: مشتعلةٌ بالجمر لمن ركب اليوم، وجمرٌ خافتٌ لمن لم يركب بعد، ورماديّةٌ يومَ الجمعة (لا تُطلب ولا تقطع).
+ *  **ولا مالَ يُحسب هنا** — المبلغُ كما أرسلته الخلفيةُ مجمَّداً على السلسلة. */
+function CashbackChipT2({ cashback }: { cashback: WeeklyCashback }) {
+  const [open, setOpen] = useState(false);
+  const left = cashback.days_left ?? 0;
+  const done = cashback.days_done ?? 0;
+  const required = cashback.days_required ?? 0;
+  const money = cashback.amount && cashback.currency ? formatMoney(cashback.amount, cashback.currency) : null;
+  const tone = cashback.rode_today ? "lit" : cashback.friday ? "rest" : "wait";
+
+  return (
+    <>
+      <button type="button" className={`t2-cbk ${tone}`} onClick={() => setOpen(true)}>
+        <span className="t2-cbk-fire" aria-hidden="true">
+          <span className="t2-icon fill">local_fire_department</span>
+        </span>
+        <span className="t2-cbk-text">
+          <span className="t2-cbk-top">
+            <span className="t2-cbk-days">{cashbackDaysText(left)}</span>
+            {money ? (
+              <span className="t2-cbk-money">
+                <b className="t2-num">{money}</b> تنتظرك
+              </span>
+            ) : null}
+          </span>
+          <span className="t2-cbk-sub">{cashbackLine(cashback)}</span>
+        </span>
+        <span className="t2-icon t2-cbk-more" aria-hidden="true">chevron_left</span>
+      </button>
+
+      <DrawerT2 open={open} onOpenChange={setOpen} title="الاسترداد الأسبوعي">
+        {/* **الأيامُ خاناتٌ لا نسبة** — ما أنجزه بالجمر وما بقي بحافّة، من عددين أرسلتهما الخلفية */}
+        <div className="t2-cbk-track" role="img" aria-label={`أنجزتَ ${done} من ${required}`}>
+          {Array.from({ length: required }, (_, index) => (
+            <span key={index} className={index < done ? "t2-cbk-seg on" : "t2-cbk-seg"} />
+          ))}
+        </div>
+        <div className="t2-cbk-track-note">
+          <span>
+            أنجزتَ <b className="t2-num">{done}</b> من <b className="t2-num">{required}</b>
+          </span>
+          {money ? (
+            <span className="t2-cbk-money">
+              <b className="t2-num">{money}</b> تنتظرك
+            </span>
+          ) : null}
+        </div>
+        <p className="t2-drawer-text">
+          رحلةٌ كلَّ يومٍ لأسبوع — الجمعةُ لا تُحسب، وفواتُ يومٍ يُعيد العدّ، والمبلغُ ينزل في محفظتك في اليوم الأخير.
+        </p>
+        <div className="t2-drawer-actions">
+          <button type="button" className="t2-button t2-quiet" onClick={() => setOpen(false)}>
+            فهمت
+          </button>
+        </div>
+      </DrawerT2>
+    </>
+  );
+}
+
 export function RiderHomeT2({
   name,
   unread,
@@ -149,6 +224,8 @@ export function RiderHomeT2({
   // **و«بالساعة» بمفتاح سوقها** (§٦٣-ج/٥) — بالحكم نفسِه
   const hourly = useHourly() && onHourly !== undefined;
   const scheduled = useScheduledRides();
+  // **نارُ الاسترداد الأسبوعي** (§٦٣-ج/٨) — `null` حيث المفتاحُ مطفأٌ أو المبلغُ صفر، فلا يُرسم شيء
+  const cashback = useWeeklyCashback();
   const { user } = useSession();
   // **«اقتصادي يصل خلال 3 د»** (§٦٢-ج/١٠): أوّلُ فئةٍ لها رقمٌ بترتيب الجواب، **وأسرعُها شارةُ «رحلة»**
   const heroEta = (() => {
@@ -281,6 +358,8 @@ export function RiderHomeT2({
           </button>
         )}
       </div>
+
+      {cashback ? <CashbackChipT2 cashback={cashback} /> : null}
 
       {/* **الحسابُ المحدود يُقال في كلِّ فتحة** (قرارُ المالك ٢٠٢٦-٠٨-٣١) — ويظهر بشرطه وحدَه */}
       <PhonePendingNotice variant="t2" />

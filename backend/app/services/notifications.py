@@ -1648,3 +1648,27 @@ async def publish_guarantee_refunded(
             data={"type": "guarantee_refunded", "booking_id": str(booking_id)},
         ),
     )
+
+
+async def publish_cashback_reminder(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    kind: str,
+    days_done: int,
+    days_left: int,
+) -> None:
+    """تذكيرُ الاسترداد الأسبوعي (§٦٣-ج/٨) — **عن الأيام لا عن المال** (نصُّ المالك): صباحاً · مساءً · وقبل أن تفوته."""
+    if kind == "warning":
+        title, body = "أيامُك على وشك أن تضيع", f"لم تركب اليوم بعد — رحلةٌ واحدةٌ تحفظ أيامك ({days_done})، وبقي لك {days_left}."
+    elif kind == "evening":
+        title, body = "لا تُطفئ نارك", f"رحلةٌ اليومَ تُبقي سلسلتك حيّة — بقي لك {days_left} أيام."
+    else:
+        title, body = "يومٌ جديدٌ في سلسلتك", f"أنجزتَ {days_done} أيام، وبقي لك {days_left}."
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(title=title, body=body, data={"type": "cashback_reminder", "kind": kind}),
+    )

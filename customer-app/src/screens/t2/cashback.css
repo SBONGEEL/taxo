@@ -1,0 +1,64 @@
+/* ═══ TAXO 2.0 — «الاسترداد الأسبوعي» (§٦٣-ج/٨) — **لا لوحةَ لها**، فتُركَّب من عُدّة الهوية: بطاقةٌ بسطح بلاطات R05 (`.t2-home-ride`)،
+ * ودائرةُ أيقونةٍ كدوائر الإشعارات (R14)، وورقةُ `DrawerT2` للشرح. **تخطيطُها وحدَه، بالرموز وحدَها** — الفاتحُ والداكنُ والنسائيّ.
+ */
+
+/* ── البطاقةُ تحت صفِّ الخدمات: النارُ، ثمّ «4 أيام · 3.000 تنتظرك» وسطرُ الحال، ثمّ السهم ── */
+.t2-cbk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 66px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 22px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.t2-cbk:active { transform: scale(0.99); }
+
+/* **النارُ بثلاث نبرات**: مشتعلةٌ بالجمر لمن ركب اليوم · جمرٌ خافتٌ لمن لم يركب بعد · رماديّةٌ يومَ الجمعة */
+.t2-cbk-fire {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+.t2-cbk-fire .t2-icon { font-size: 26px; }
+.t2-cbk.lit .t2-cbk-fire { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-cbk.rest .t2-cbk-fire { background: var(--t2-sunken); color: var(--t2-muted); }
+
+.t2-cbk-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.t2-cbk-top { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
+.t2-cbk-days { font-size: 15px; font-weight: 700; }
+.t2-cbk-money { font-size: 13px; font-weight: 600; color: var(--t2-accent-text); }
+.t2-cbk-money .t2-num { font-weight: 600; }
+.t2-cbk-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-cbk-more { flex: none; font-size: 20px; color: var(--t2-muted); }
+
+/* ── الورقة: الأيامُ خاناتٌ — ما أُنجز بالجمر وما بقي بالحافّة — ثمّ «أنجزتَ 2 من 6» والمبلغ ── */
+.t2-cbk-track { display: flex; gap: 6px; margin: 4px 0 10px; }
+.t2-cbk-seg { flex: 1; height: 8px; border-radius: 4px; background: var(--t2-line); }
+.t2-cbk-seg.on { background: var(--t2-accent); }
+.t2-cbk-track-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.t2-cbk-track-note .t2-num { font-weight: 700; }

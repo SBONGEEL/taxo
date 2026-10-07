@@ -913,6 +913,11 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
 
         await commute.settle_ride(session, ride)
 
+    # **الاسترداد الأسبوعي يُحسب عند الإنهاء** (§٦٣-ج/٨) — يومُ السوق، والسلسلةُ مقفولةٌ بعد الرحلة
+    from app.services import cashback
+
+    await cashback.on_ride_completed(session, ride)
+
     # **ودفعةُ نقد الراكب الفعليّ تُفتح هنا** (§٦٣-ج/١): صاحبُها لا يحمل التطبيق ليفتحها — **وبعد الخصمين** فتحمل الباقي
     if ride.payer in (RidePayer.PASSENGER_CASH, RidePayer.RECIPIENT_CASH):
         from app.services import payments as payments_service
