@@ -20,6 +20,7 @@ import type {
   Device,
   ErrorReportBody,
   GenderPreference,
+  HourlyPrepay,
   LoginResponse,
   MyReferrals,
   NearbyDriver,
@@ -38,6 +39,7 @@ import type {
   RideEstimate,
   RideForOther,
   RideGroup,
+  RideHourly,
   RideListItem,
   RideParcel,
   RidePayments,
@@ -179,6 +181,9 @@ export const estimateRide = (payload: {
   /** **تقديرُ طرد** (§٦٣-ج/٤) — يضيف رسمَه إلى السعر ويعيد شروطَه (`parcel_fee` · `parcel_terms`). **ولا يُسمّى `parcel`**:
    *  حمولةُ الطلب ترث هذا المخطّطَ في الخلفية، و`parcel` فيها تفاصيلُ الطرد. */
   is_parcel?: boolean;
+  /** **تقديرُ ساعات** (§٦٣-ج/٥) — السعرُ «الساعات × سعرها» بلا نداء مسار، والوجهةُ نقطةُ الانطلاق إن لم تُختر. وغيابُه رحلةٌ
+   *  عاديّة — **وسعرُ الساعة وكيلومتراتُها وسقفُها يصلان في كلِّ تقديرٍ على أيِّ حال**. */
+  hourly_hours?: number;
 }) => api.post<RideEstimate>("/rides/estimate", payload);
 
 export const requestRide = (payload: {
@@ -203,7 +208,15 @@ export const requestRide = (payload: {
   /** **الطرد** (§٦٣-ج/٤) — غيابُه رحلةٌ عاديّة. **والخلفيةُ هي الحارس**: مفتاحٌ مطفأٌ أو رسمٌ صفرٌ ⇒ `parcel_unavailable` (٤٠٣)،
    *  وبلا إقرارٍ بالشروط أو بغير فئة الاقتصادي أو برقمٍ وعنوانٍ لا يصحّان ⇒ `invalid_input` — ويُقال نصُّها تحت الزرّ. */
   parcel?: RideParcel;
+  /** **بالساعة** (§٦٣-ج/٥) — غيابُه رحلةٌ عاديّة. **والوجهةُ اختياريّة**: بلاها تُرسل نقطةُ الانطلاق نفسُها `dropoff`. ولا يُجمع
+   *  مع «لشخص آخر» ولا الطرد ولا المحطات ولا المشاركة — والخلفيةُ ترفض الجمعَ `invalid_input` برسالته. */
+  hourly?: RideHourly;
 }) => api.post<Ride>("/rides", payload);
+
+/** **«ادفع الساعاتِ نقداً بدل المحفظة» وعكسُه** (§٦٣-ج/٥) — قبل البدء وحدَه؛ وبعده ٤٠٩ برسالته. **والبابُ للراكب صاحب الرحلة**
+ *  (غيرُه ٤٠٤)، ويعيد الرحلةَ بقيمتها الجديدة. */
+export const changeHourlyPrepay = (rideId: string, prepay: HourlyPrepay) =>
+  api.patch<Ride>(`/rides/${rideId}/hourly-prepay`, { prepay });
 
 /** **رمزُ رابط التتبّع** لرحلةٍ يطلبها لغيره (§٦٣-ج/١) — **الرمزُ نفسُه في كلِّ ضغطة**، والتطبيقُ يبني الرابطَ من عنوانه هو
  *  (`lib/for-other.ts::trackUrl`)، فلا نطاقَ مكتوبٌ في الخلفية يفترق عن مكان التطبيق. */

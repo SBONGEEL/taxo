@@ -31,6 +31,14 @@ function fareLineLabel(line: FareLine): string {
     // **رسمُ الطرد** (§٦٣-ج/٤) — كرسم المطار: للكبتن، داخلَ الأجرة سطراً مستقلاً
     case "parcel_fee":
       return "رسم الطرد";
+    // **بالساعة** (§٦٣-ج/٥) — المحجوزُ بعدد ساعاته، **وما زاد عليه سطرٌ لكلٍّ بكمّيته**: الكيلومتراتُ فوق المشمولة والدقائقُ فوق
+    // الساعات، كلٌّ بالتعرفة العاديّة. والكمّيةُ للتسمية وحدَها — المبلغُ كما جمّدته الخلفية
+    case "hourly":
+      return line.quantity ? `الساعات المحجوزة (${digits(Math.round(Number(line.quantity)))})` : "الساعات المحجوزة";
+    case "hourly_extra_km":
+      return line.quantity ? `مسافةٌ زائدة · ${formatDistance(line.quantity)}` : "مسافةٌ زائدة";
+    case "hourly_extra_time":
+      return line.quantity ? `وقتٌ زائد · ${digits(Math.round(Number(line.quantity)))} د` : "وقتٌ زائد";
   }
 }
 

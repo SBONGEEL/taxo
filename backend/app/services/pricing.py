@@ -29,6 +29,7 @@ from app.models.pricing import PricingRule
 from app.services.directions import Coordinates, Route, route_between
 
 if TYPE_CHECKING:
+    from app.services.hourly import HourlyTerms
     from app.models.ride import RideStop
 
 # دقة الأعمدة المالية نفسها — التقريب مرة واحدة في النهاية لا في كل حد
@@ -162,6 +163,7 @@ async def estimate(
     dropoff: Coordinates,
     stops: Sequence[Coordinates] = (),
     parcel: bool = False,
+    hourly: "HourlyTerms | None" = None,
 ) -> FareEstimate:
     """تسعيرة الدولة + مسار Mapbox → سعر مقدّر.
 
@@ -172,8 +174,16 @@ async def estimate(
     مسافةُ الطريق كلِّه ومدتُه) و**الرسمَ المقطوع** معاً.
     """
     rule = await get_rule(session, country_code, vehicle_category)
-    route = await route_between(session, pickup, dropoff, country_code, stops=stops)
-    fare, minimum_applied, lines = fare_breakdown(rule, route, len(stops))
+    # **بالساعة سعرُها ساعاتٌ لا طريق** (§٦٣-ج/٥) — فلا نداءَ مسارٍ يُدفع ثمنُه، والمدّةُ ساعاتُها
+    if hourly is not None:
+        from app.services import hourly as hourly_service
+
+        route = Route(distance_km=Decimal("0.000"), duration_min=Decimal(hourly.hours * 60))
+        line = hourly_service.booked_line(hourly.hours, hourly.rate)
+        fare, minimum_applied, lines = line.amount, False, [line]
+    else:
+        route = await route_between(session, pickup, dropoff, country_code, stops=stops)
+        fare, minimum_applied, lines = fare_breakdown(rule, route, len(stops))
 
     # **رسمُ المطار يُحسب هنا وحدَه** (§٦٣-ج/٢) — بابُ التقدير هو بابُ الطلب، فما يُعرض هو ما يُطلب. **وبعد الحدّ الأدنى**:
     # الحدُّ حدُّ أجرة طريق، ورسمٌ يُبتلع فيه رسمٌ لا يصل صاحبَه

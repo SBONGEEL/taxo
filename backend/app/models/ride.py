@@ -161,7 +161,12 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             "AND (ride_type = 'parcel' OR (recipient_name IS NULL AND recipient_phone IS NULL AND recipient_address IS NULL))",
             name="ride_for_other_fields",
         ),
-        CheckConstraint("ride_type IN ('standard', 'parcel')", name="ride_type_valid"),
+        CheckConstraint("ride_type IN ('standard', 'parcel', 'hourly')", name="ride_type_valid"),
+        # **رحلةُ الساعة وحدَها تحمل ساعات** (§٦٣-ج/٥) — والمحجوزُ من المحفظة أو نقداً
+        CheckConstraint(
+            "(ride_type = 'hourly') = (hourly_hours IS NOT NULL) AND (hourly_prepay_method IS NULL OR hourly_prepay_method IN ('wallet', 'cash'))",
+            name="ride_hourly_fields",
+        ),
         CheckConstraint("captain_fees_at_ride >= 0", name="ride_captain_fees_not_negative"),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
@@ -415,6 +420,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     recipient_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     recipient_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recipient_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # ---------------------------------------------- بالساعة (§٦٣-ج/٥) — **مجمَّدةٌ لحظةَ الطلب** كالعمولة
+    hourly_hours: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    hourly_rate_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    hourly_km_per_hour_at_ride: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    hourly_cancel_minutes_at_ride: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    #: **من أين يُدفع المحجوزُ عند البدء** — `wallet` أو `cash`، ويبدّله الراكبُ قبل البدء إن لم يكفِ رصيدُه
+    hourly_prepay_method: Mapped[str | None] = mapped_column(String(8), nullable=True)
     payer: Mapped[str] = mapped_column(
         String(16), nullable=False, default="requester", server_default=text("'requester'")
     )

@@ -36,6 +36,7 @@ import type {
   MyReferrals,
   Ride,
   RideForOther,
+  RideHourly,
   RideParcel,
   Storefront,
   VehicleCategory,
@@ -49,6 +50,7 @@ import type { DraftStop } from "@/components/home/StopsEditor";
 import { useCountryConfig, useMapboxToken } from "@/lib/config";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
+import { noDestination } from "@/lib/hourly";
 import { isActive, useRide } from "@/lib/ride";
 import { useCoverNav } from "@/lib/navCover";
 import { usePlaces } from "@/lib/places";
@@ -67,6 +69,10 @@ import { ApproachChipT2, ThemeButtonT2, TrackingSheetT2, TripCardT2 } from "@/sc
 import { OutcomeSheetT2 } from "@/screens/t2/OutcomeT2";
 
 type Phase = "idle" | "pick-pickup" | "pick-dropoff" | "pick-stop" | "confirm";
+
+/** **أوّلُ ما تبدأ به ورقةُ الساعات** (§٦٣-ج/٥) — ساعةٌ واحدة (أدنى ما يُقبل في كلِّ سوق، فلا يتجاوز سقفاً لم يُقرأ بعد) **من المحفظة**:
+ *  الخيارُ الذي لا يحتاج الكبتنُ معه شيئاً بيده؛ والراكبُ يبدّلهما في الورقة. */
+const HOURLY_START: RideHourly = { hours: 1, prepay: "wallet" };
 
 /** ما يحمله «أعد الطلب» — نقطتان وعنواناهما، **بلا محطاتٍ ولا سعر**. */
 interface AgainState {
@@ -186,6 +192,15 @@ export function HomeScreen() {
     setParcelMode(false);
     setParcelDraft(null);
   };
+  // **وبلاطةُ «بالساعة» تبدأ طلبَ ساعات** (§٦٣-ج/٥): الوجهةُ اختياريّةٌ («بلا وجهة» في منتقيها)، ثمّ ورقةُ الطلب بكتلة الساعات.
+  // **ومسوّدتُها هنا كمسوّدة الطرد** — الساعاتُ ومن أين يُدفع محجوزُها تبقى إن طُويت الورقةُ لتعديل الوجهة. **ووجهةٌ لم تُختر
+  // تبقى `null` هنا** (فلا يُرسم دبوسُها) **وتُرسل نقطةُ الانطلاق مكانَها** بعقد الخلفية (`target` أدناه)
+  const [hourlyMode, setHourlyMode] = useState(false);
+  const [hourlyDraft, setHourlyDraft] = useState<RideHourly>(HOURLY_START);
+  const endHourly = () => {
+    setHourlyMode(false);
+    setHourlyDraft(HOURLY_START);
+  };
 
   // **مسارُ الرحلة على الطرق** (البند ٨): يُقرأ **مرةً لكل رحلة** بعد القبول —
   // الخلفيةُ جمّدته على الرحلة لحظتَها، فقراءةٌ ثانية تعيد الشيءَ نفسَه.
@@ -240,9 +255,11 @@ export function HomeScreen() {
     setPickupAddress(again.pickupAddress);
     setDropoff(again.dropoff);
     setDropoffAddress(again.dropoffAddress);
-    // **«أعد الطلب» رحلةٌ لا طرد** — وطردٌ بدأته البلاطةُ قبلها لا يلحقها
+    // **«أعد الطلب» رحلةٌ لا طرد** — وطردٌ بدأته البلاطةُ قبلها لا يلحقها. **ولا ساعات** (§٦٣-ج/٥) كذلك
     setParcelMode(false);
     setParcelDraft(null);
+    setHourlyMode(false);
+    setHourlyDraft(HOURLY_START);
     setPhase("confirm");
     window.history.replaceState({}, "");
   }, [location.state]);
@@ -314,7 +331,8 @@ export function HomeScreen() {
     if (phase === "pick-pickup") {
       setPickup(point);
       void describe(point, "pickup");
-      setPhase(dropoff ? "confirm" : "idle");
+      // **والساعاتُ بلا وجهةٍ ورقتُها بعد الانطلاق مباشرةً** (§٦٣-ج/٥) — الوجهةُ اختياريّة فلا يُعاد إلى «إلى أين؟»
+      setPhase(dropoff || hourlyMode ? "confirm" : "idle");
       return;
     }
     if (phase === "pick-stop") {
@@ -335,6 +353,15 @@ export function HomeScreen() {
     void describe(point, "dropoff");
     setPhase("confirm");
     if (pickup) map.current?.fitBounds(pickup, point);
+  }
+
+  /** **«بلا وجهة»** (§٦٣-ج/٥) — الرحلةُ بالساعة بنقطة انطلاقها وحدَها: ورقةُ الطلب بلا وجهة (ووجهةٌ اختيرت قبلها تُمحى — هذا
+   *  اختيارُه الآن). **وبلا انطلاقٍ معروفٍ** (موقعٌ لم يُسمح به) **يُختار أوّلاً بالدبوس**، ثمّ تُفتح الورقةُ من `confirmPin`. */
+  function skipDestination() {
+    setDropoff(null);
+    setDropoffAddress(null);
+    setStops([]);
+    setPhase(pickup ? "confirm" : "pick-pickup");
   }
 
   /** حجزٌ لموعد (12-ط) — **لا يُنشئ رحلةً ولا يغيّر شاشة**: الحجزُ ليس رحلة،
@@ -384,14 +411,17 @@ export function HomeScreen() {
     sharing?: { share: boolean; shareGenderConfirmed: boolean },
     forOther?: RideForOther,
     parcel?: RideParcel,
+    hourly?: RideHourly,
   ) {
-    if (!pickup || !dropoff) return;
+    // **ساعاتٌ بلا وجهةٍ تُرسل نقطةَ الانطلاق وجهةً** (§٦٣-ج/٥، عقدُ `HourlyIn`) — وكلُّ طلبٍ غيرِها بوجهته كما كان
+    const target = dropoff ?? (hourly ? pickup : null);
+    if (!pickup || !target) return;
     setRequesting(true);
     setError(null);
     try {
       const created = await requestRide({
         pickup,
-        dropoff,
+        dropoff: target,
         vehicle_category: category,
         pickup_address: pickupAddress,
         dropoff_address: dropoffAddress,
@@ -409,6 +439,9 @@ export function HomeScreen() {
         // **الطرد** (§٦٣-ج/٤): المستلمُ ومن يدفع وإقرارُ الشروط — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والرسمَ
         // والإقرارَ عند الإنشاء
         parcel,
+        // **بالساعة** (§٦٣-ج/٥): الساعاتُ ومن أين يُدفع محجوزُها — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والسعرَ
+        // والسقفَ والجمعَ عند الإنشاء
+        hourly,
         stops: stops.map((stop) => ({
           lat: stop.lat,
           lng: stop.lng,
@@ -423,6 +456,7 @@ export function HomeScreen() {
       setPresetPreference(undefined);
       setPresetSchedule(null);
       endParcel();
+      endHourly();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
       // **رفضٌ بلا مخرجٍ ليس رفضاً**: تفضيلٌ نسائيٌّ بقي في ملفها من سوقٍ
@@ -475,6 +509,28 @@ export function HomeScreen() {
       setPresetSchedule(null);
       setParcelMode(true);
       setParcelDraft(null);
+      endHourly();
+      setDismissed(previous.id);
+      setPhase("confirm");
+      return;
+    }
+    // **ورحلةُ ساعاتٍ لم تجد كبتناً كذلك** (§٦٣-ج/٥): طلبٌ بنقطتيه وحدهما رحلةٌ عاديّةٌ صامتةٌ بسعر طريقٍ لا ساعات. فتُفتح ورقتُها
+    // بساعاتها ومن أين يُدفع محجوزُها كما طُلبت، و«أي كبتن» — **وبلا وجهةٍ إن لم تكن لها**؛ والسعرُ يُسأل من جديد
+    if (previous.ride_type === "hourly") {
+      const none = noDestination(previous);
+      setPickup(previous.pickup);
+      setPickupAddress(previous.pickup_address);
+      setDropoff(none ? null : previous.dropoff);
+      setDropoffAddress(none ? null : previous.dropoff_address);
+      setStops([]);
+      setPresetPreference("any");
+      setPresetSchedule(null);
+      endParcel();
+      setHourlyMode(true);
+      setHourlyDraft({
+        hours: previous.hourly_hours ?? HOURLY_START.hours,
+        prepay: previous.hourly_prepay_method ?? HOURLY_START.prepay,
+      });
       setDismissed(previous.id);
       setPhase("confirm");
       return;
@@ -507,6 +563,7 @@ export function HomeScreen() {
     setPresetPreference(previous.gender_preference);
     setPresetSchedule(previous.vehicle_category);
     endParcel();
+    endHourly();
     setError(null);
     setDismissed(previous.id);
     setPhase("confirm");
@@ -588,6 +645,7 @@ export function HomeScreen() {
       setPresetPreference(undefined);
       setPresetSchedule(null);
       endParcel();
+      endHourly();
       setSearchOpen(true);
     },
     places,
@@ -611,6 +669,7 @@ export function HomeScreen() {
     onWomenRide: () => {
       setPresetPreference("female");
       endParcel();
+      endHourly();
       setSearchOpen(true);
     },
     // **«طرد»** (§٦٣-ج/٤) — منتقي الوجهة كما للرحلة، ثمّ ورقةُ الطلب بفئة الاقتصادي وورقةُ الطرد مفتوحة. **والبلاطةُ لا تناديه
@@ -620,6 +679,17 @@ export function HomeScreen() {
       setPresetSchedule(null);
       setParcelDraft(null);
       setParcelMode(true);
+      endHourly();
+      setSearchOpen(true);
+    },
+    // **«بالساعة»** (§٦٣-ج/٥) — منتقي الوجهة **بصفِّ «بلا وجهة»** (`skipDestination`)، ثمّ ورقةُ الطلب بكتلة الساعات. والانطلاقُ
+    // موقعُ الجهاز أو ما وُضع بالدبوس كأيِّ رحلة. **والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
+    onHourly: () => {
+      setPresetPreference(undefined);
+      setPresetSchedule(null);
+      endParcel();
+      setHourlyDraft(HOURLY_START);
+      setHourlyMode(true);
       setSearchOpen(true);
     },
   };
@@ -636,6 +706,7 @@ export function HomeScreen() {
     setPresetPreference(undefined);
     setPresetSchedule(null);
     endParcel();
+    endHourly();
   };
 
   const locateMe = async () => {
@@ -643,13 +714,15 @@ export function HomeScreen() {
     if (position) map.current?.flyTo(position, 15);
   };
 
-  /** **ورقةُ التأكيد — خصائصُ واحدةٌ للوجهين** (القائمُ في الليليّ، و«R06» في النهاريّ المرسوم). */
+  /** **ورقةُ التأكيد — خصائصُ واحدةٌ للوجهين** (القائمُ في الليليّ، و«R06» في النهاريّ المرسوم). **ووجهةُ الساعات اختياريّة**
+   *  (§٦٣-ج/٥): بلاها تُسعَّر الورقةُ وتُطلب بنقطة الانطلاق وجهةً — بعقد الخلفية — **ولا يُرسم لها دبوس**. */
+  const target = dropoff ?? (hourlyMode ? pickup : null);
   const confirmProps: ConfirmRideProps | null =
-    pickup && dropoff
+    pickup && target
       ? {
           pickup,
           pickupAddress,
-          dropoff,
+          dropoff: target,
           dropoffAddress,
           categories: countryConfig?.vehicle_categories ?? ["economy"],
           eta: nearestEta,
@@ -671,6 +744,10 @@ export function HomeScreen() {
           pickupLine,
           // **طلبُ طردٍ ومسوّدتُه** (§٦٣-ج/٤) — وغيابُه رحلةٌ عاديّة
           parcel: parcelMode ? { draft: parcelDraft, onChange: setParcelDraft } : undefined,
+          // **طلبُ ساعاتٍ ومسوّدتُه** (§٦٣-ج/٥) — و`destination` أاختيرت وجهة؛ وغيابُه رحلةٌ عاديّة
+          hourly: hourlyMode
+            ? { draft: hourlyDraft, onChange: setHourlyDraft, destination: dropoff !== null }
+            : undefined,
         }
       : null;
 
@@ -705,6 +782,14 @@ export function HomeScreen() {
     }
     const frame = (): [Coordinates, Coordinates, number] | null => {
       if (confirming && pickup && dropoff) return [pickup, dropoff, 120];
+      // **ساعاتٌ بلا وجهة** (§٦٣-ج/٥): مربّعٌ صغيرٌ حول الانطلاق — كما يُؤطَّر البحث
+      if (confirming && pickup) {
+        return [
+          { lat: pickup.lat - 0.004, lng: pickup.lng - 0.004 },
+          { lat: pickup.lat + 0.004, lng: pickup.lng + 0.004 },
+          120,
+        ];
+      }
       const current = rideNow.current;
       if (!trackingT2 || !current) return null;
       const riding = current.status === "in_progress" || current.status === "at_stop";
@@ -806,8 +891,8 @@ export function HomeScreen() {
                 ride={outcome}
                 onDismiss={() => setDismissed(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
-                // **ولا «جدولي» لطرد** (§٦٣-ج/٤) — الحجزُ لا يحمله، وحجزٌ بنقطتيه وحدهما رحلةٌ عاديّة
-                onScheduleAgain={outcome.ride_type === "parcel" ? undefined : () => scheduleAgain(outcome)}
+                // **ولا «جدولي» لطرد** (§٦٣-ج/٤) **ولا لساعات** (§٦٣-ج/٥) — الحجزُ لا يحملهما، وحجزٌ بنقطتيه وحدهما رحلةٌ عاديّة
+                onScheduleAgain={outcome.ride_type === "standard" ? () => scheduleAgain(outcome) : undefined}
                 error={error}
               />
             ) : picking ? (
@@ -816,7 +901,8 @@ export function HomeScreen() {
                 address={pinAddress}
                 loading={pinLoading}
                 onConfirm={confirmPin}
-                onCancel={() => setPhase(dropoff ? "confirm" : "idle")}
+                // **والساعاتُ تعود إلى ورقتها ولو بلا وجهة** (§٦٣-ج/٥) — ما دام انطلاقُها معروفاً
+                onCancel={() => setPhase(dropoff || (hourlyMode && pickup) ? "confirm" : "idle")}
               />
             ) : phase === "confirm" && confirmProps ? (
               <ConfirmRideT2 {...confirmProps} />
@@ -851,6 +937,8 @@ export function HomeScreen() {
         near={pickup ?? center}
         onPick={pickPlace}
         onPickOnMap={() => setPhase("pick-dropoff")}
+        // **«بلا وجهة» للساعات وحدَها** (§٦٣-ج/٥) — وكلُّ طلبٍ غيرِها بلا صفِّه كما كان
+        onSkip={hourlyMode ? skipDestination : undefined}
       />
 
     </div>

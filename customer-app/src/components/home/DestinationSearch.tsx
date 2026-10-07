@@ -34,6 +34,7 @@ export function DestinationSearch({
   near,
   onPick,
   onPickOnMap,
+  onSkip,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +43,8 @@ export function DestinationSearch({
   near: Coordinates | null;
   onPick: (place: Place) => void;
   onPickOnMap: () => void;
+  /** **«بلا وجهة»** (§٦٣-ج/٥) — للرحلة بالساعة وحدَها: وجهتُها اختياريّة. وغيابُه (كلُّ طلبٍ غيرِها) لا صفَّ له. */
+  onSkip?: () => void;
 }) {
   const { places, recents } = usePlaces();
   const [query, setQuery] = useState("");
@@ -110,6 +113,23 @@ export function DestinationSearch({
         <span className="t2-dest-pin-label">حدّدها على الخريطة بالدبوس</span>
         <Icon name="chevron_left" className="t2-chev" />
       </button>
+
+      {/* **«بلا وجهة»** (§٦٣-ج/٥) — الرحلةُ بالساعة سعرُها ساعاتٌ لا طريق، **فالوجهةُ يقولها الراكبُ للكبتن** ولا يُطلب منه اختيارُها.
+          بصفِّ الدبوس نفسِه: بديلٌ عن البحث لا نتيجةٌ بين نتائجه */}
+      {onSkip ? (
+        <button
+          type="button"
+          onClick={() => {
+            onOpenChange(false);
+            onSkip();
+          }}
+          className="t2-dest-pin"
+        >
+          <Icon name="timer" />
+          <span className="t2-dest-pin-label">بلا وجهة — تقولها للكبتن في الطريق</span>
+          <Icon name="chevron_left" className="t2-chev" />
+        </button>
+      ) : null}
 
       {!typing && places.length > 0 ? (
         <section>

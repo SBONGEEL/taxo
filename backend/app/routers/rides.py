@@ -41,6 +41,7 @@ from app.schemas.ride import (
     StartCodeOut,
     StartRideRequest,
     TrackLinkOut,
+    HourlyPrepayIn,
 )
 from app.services import approach, avatar, cancellation, rider_photo
 from app.services import eta
@@ -51,6 +52,7 @@ from app.services import (
     pricing,
     promo as promo_service,
     ratings as ratings_service,
+    hourly as hourly_service,
     parcels,
     ride_for_other,
     ride_log,
@@ -116,6 +118,16 @@ async def estimate_ride(
         dropoff=_coords(payload.dropoff),
         stops=[_coords(stop) for stop in payload.stops],
         parcel=payload.is_parcel,
+        hourly=(
+            await hourly_service.prepare(
+                session,
+                rider=rider,
+                request=hourly_service.HourlyRequest(hours=payload.hourly_hours, prepay="wallet"),
+                vehicle_category=payload.vehicle_category,
+            )
+            if payload.hourly_hours
+            else None
+        ),
     )
     # **الخصمُ على الأجرة دون رسم المطار** (§٦٣-ب) — ثمّ يعود الرسمُ إلى «سعر المشاركة» كاملاً
     shared = await sharing.preview(
@@ -143,7 +155,20 @@ async def estimate_ride(
         airport_fee=next((line.amount for line in quote.lines if line.kind == "airport_fee"), None),
         parcel_fee=next((line.amount for line in quote.lines if line.kind == "parcel_fee"), None),
         parcel_terms=list(parcels.TERMS) if payload.is_parcel else None,
+        **(await _hourly_terms(session, rider.country_code)),
     )
+
+
+async def _hourly_terms(session, country) -> dict:
+    """شروطُ الساعة للعرض (§٦٣-ج/٥) — **من صفِّ الإعدادات نفسِه الذي يُسعَّر منه**، و`null` حيث الخدمةُ مطفأة."""
+    row = await hourly_service.settings_for(session, country)
+    if row is None:
+        return {}
+    return {
+        "hourly_rate": row.hourly_rate,
+        "hourly_km_per_hour": row.hourly_km_per_hour,
+        "hourly_max_hours": row.hourly_max_hours,
+    }
 
 
 # -------------------------------------------------------------------- الطلب
@@ -188,6 +213,11 @@ async def request_ride(
                 accepted_terms=payload.parcel.accepted_terms,
             )
             if payload.parcel is not None
+            else None
+        ),
+        hourly=(
+            hourly_service.HourlyRequest(hours=payload.hourly.hours, prepay=payload.hourly.prepay)
+            if payload.hourly is not None
             else None
         ),
         stops=[
@@ -589,6 +619,22 @@ async def mark_arrived(
         session, redis, ride, events.RideEvent.DRIVER_ARRIVED
     )
     return _to_out(ride)
+
+
+@router.patch("/{ride_id}/hourly-prepay", response_model=RideOut)
+async def change_hourly_prepay(
+    ride_id: uuid.UUID, payload: HourlyPrepayIn, rider: RiderUser, session: DbSession
+) -> RideOut:
+    """**الراكبُ يبدّل من أين يُدفع محجوزُ الساعات قبل البدء** (§٦٣-ج/٥) — حين لا يكفي رصيدُه فيُرفض البدء."""
+    ride = await rides_service.get_ride(session, ride_id)
+    if ride.rider_id != rider.id:
+        raise NotFound("الرحلة غير موجودة")
+    await session.refresh(ride, with_for_update=True)
+    if ride.ride_type != "hourly" or ride.status not in (RideStatus.REQUESTED, RideStatus.SEARCHING, RideStatus.ACCEPTED, RideStatus.ARRIVED):
+        raise Conflict("يُبدَّل الدفعُ قبل بدء الرحلة وحدَه")
+    ride.hourly_prepay_method = payload.prepay
+    await session.commit()
+    return _to_out(await rides_service.get_ride(session, ride_id))
 
 
 @router.post("/{ride_id}/parcel-refuse", response_model=RideOut)

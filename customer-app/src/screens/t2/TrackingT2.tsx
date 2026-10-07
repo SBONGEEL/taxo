@@ -25,11 +25,16 @@
  *
  * **والطرد** (§٦٣-ج/٤، `ParcelTrackT2`) — لا لوحةَ له: شارةُ «طرد» بين أخواتها، و«إلى: المستلم» وعنوانُه حين يُنشران، وسطرُ
  * «يدفع المستلمُ نقداً» **ولا قناةَ تُعرض** حينها؛ **وبطاقةُ الطريق في R09 «طردك في الطريق» إلى مستلمه**. ومن الصفّ لا من المفتاح.
+ *
+ * **و«بالساعة»** (§٦٣-ج/٥، `HourlyTrackT2`) — لا لوحةَ لها: شارةُ «بالساعة»، و«بالساعة · 3 ساعات · حتى 45 كم»، **وقبل البدء من أين
+ * يُدفع المحجوزُ بزرِّ تبديله**؛ **وفي R09 الساعةُ مكانَ «كم متبقية»** — الباقي من الساعات ثمّ «وقتٌ زائد» بنبرة التنبيه — **والوجهةُ
+ * «بلا وجهة» حين لم تُختر**. وتأكيدُ الإلغاء يقول رسمَ ما بعد الوصول. ومن الصفّ لا من المفتاح.
  */
 
 import { useEffect, useState } from "react";
 
-import { getRideDriverStats } from "@/api/endpoints";
+import { ApiError } from "@/api/client";
+import { changeHourlyPrepay, getRideDriverStats } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { PaymentPicker, PAY_ICON_T2 } from "@/components/payment/PaymentPicker";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
@@ -39,12 +44,14 @@ import { CANCELLABLE, shareRide, useTrackingSheet } from "@/components/ride/useT
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
+import { clockText, hoursLabel, noDestination, useHourlyClock } from "@/lib/hourly";
 import { PAYMENT_METHOD_LABEL, VEHICLE_LABEL } from "@/lib/labels";
 import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
 import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney, ratedAverage } from "@/lib/utils";
 
 import { ForOtherTrackT2 } from "./ForOtherT2";
+import { HourlyTrackT2 } from "./HourlyT2";
 import { ParcelTrackT2 } from "./ParcelT2";
 import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
@@ -109,6 +116,26 @@ export function tripProgress(routePoints: number[][] | null, driverPing: LatLng 
 
 const riding = (ride: Ride) => ride.status === "in_progress" || ride.status === "at_stop";
 
+/** **«ادفع الساعاتِ نقداً بدل المحفظة» وعكسُه** (§٦٣-ج/٥) — قبل البدء وحدَه، **والرحلةُ تُعاد من الخلفية بعده** (`onChanged`)
+ *  فلا تُكتب القيمةُ الجديدةُ محلّياً قبل أن تقبلها. ورفضُه (٤٠٩ بعد البدء) يُقال بنصّ الخلفية تحت الزرّ. */
+function useHourlyPrepaySwitch(ride: Ride, onChanged: () => void) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function toggle() {
+    setBusy(true);
+    setError(null);
+    try {
+      await changeHourlyPrepay(ride.id, ride.hourly_prepay_method === "cash" ? "wallet" : "cash");
+      onChanged();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "تعذّر تغيير طريقة الدفع");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return { busy, error, toggle: () => void toggle() };
+}
+
 export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pickupLine, nearby = null }: TrackingT2Props) {
   const t = useTrackingSheet({ ride, onChanged });
   const driverRides = useDriverRides(ride);
@@ -118,6 +145,10 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   // فسطرُ الدافع في كتلتها (`ForOtherTrackT2`) هو ما يُقال بدلها. **وطردٌ يدفعه مستلمُه كذلك** (`ParcelTrackT2`)
   const { available: channels, resolved: payMethod, choose } = usePayerPreference(countryConfig, payerScope(ride));
   const parcel = ride.ride_type === "parcel";
+  // **بالساعة** (§٦٣-ج/٥) — من الصفّ لا من المفتاح، **وساعتُها من البدء المقيس** (`null` قبله): وقتٌ يُحسب لا مال
+  const hourly = ride.ride_type === "hourly";
+  const clock = useHourlyClock(hourly ? ride.started_at : null, ride.hourly_hours);
+  const prepaySwitch = useHourlyPrepaySwitch(ride, onChanged);
   const [pickingPay, setPickingPay] = useState(false);
 
   const share = async () => {
@@ -130,10 +161,12 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
 
   /** شارتا الطلب — **وصفٌ لما طُلب** كما في الورقة القائمة: «رحلة نسائية» تطمينٌ بأن الشرطَ سارٍ، والمشاركةُ بحاليها. */
   const badges =
-    t.women || Number(ride.share_discount_percent) > 0 || parcel ? (
+    t.women || Number(ride.share_discount_percent) > 0 || parcel || hourly ? (
       <div className="t2-trk-badges">
         {/* **«طرد»** (§٦٣-ج/٤) — وصفٌ لما طُلب كأخواتها، من الصفّ لا من المفتاح */}
         {parcel ? <span className="t2-trk-badge">طرد</span> : null}
+        {/* **«بالساعة»** (§٦٣-ج/٥) — بالحكم نفسِه */}
+        {hourly ? <span className="t2-trk-badge">بالساعة</span> : null}
         {t.women ? <span className="t2-trk-badge women">رحلة نسائية</span> : null}
         {Number(ride.share_discount_percent) > 0 ? (
           <span className="t2-trk-badge">{ride.share_group_id ? "رحلة مشتركة" : "بانتظار شريك"}</span>
@@ -145,7 +178,15 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
   const confirm = t.confirming ? (
     <div className="t2-trk-confirm">
       <p className="t2-trk-confirm-text">
-        {t.afterAccept ? "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء." : "سيتوقف البحث عن كبتن. متأكد؟"}
+        {/* **وللساعات رسمُ ما بعد الوصول من سعرها** (§٦٣-ج/٥، `hourly.cancel_fee`) — يُقال قبل «نعم» **بلا رقم**: الرحلةُ لا تنشر
+            دقائقَه، ورقمٌ يُخمَّن هنا يفترق عمّا جُمِّد عليها */}
+        {t.afterAccept
+          ? hourly && ride.status === "arrived"
+            ? "الكبتن عندك — إلغاؤك بعد وصول الكبتن يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة."
+            : hourly
+              ? "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء، وإلغاؤك بعد وصوله يُحتسب عليه رسمُ إلغاءٍ من سعر الساعة."
+              : "الكبتن في طريقه إليك — قد تُطبَّق رسوم إلغاء."
+          : "سيتوقف البحث عن كبتن. متأكد؟"}
       </p>
       {t.afterAccept ? (
         <div className="t2-trk-reasons">
@@ -227,7 +268,10 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             <span className="t2-trk-dot from" aria-hidden="true" />
             <span className="t2-trk-route-text">{ride.pickup_address ?? pickupLine ?? "نقطة الانطلاق"}</span>
             <span className="t2-trk-dot to" aria-hidden="true" />
-            <span className="t2-trk-route-text">{ride.dropoff_address ?? "الوجهة"}</span>
+            {/* **ساعاتٌ بلا وجهةٍ تقول ذلك** (§٦٣-ج/٥) — لا «الوجهة» عن نقطة الانطلاق نفسِها */}
+            <span className="t2-trk-route-text">
+              {hourly && noDestination(ride) ? "بلا وجهة — تقولها للكبتن" : (ride.dropoff_address ?? "الوجهة")}
+            </span>
           </div>
           <div className="t2-trk-route-fare">
             <div className="t2-trk-route-kind">
@@ -243,6 +287,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
         {/* **والطرد** (§٦٣-ج/٤): دافعُه من أوّل البحث، والمستلمُ بعد القبول */}
         {parcel ? <ParcelTrackT2 ride={ride} /> : null}
+        {/* **والساعات** (§٦٣-ج/٥): عددُها وكيلومتراتُها، ومن أين يُدفع محجوزُها بزرِّ تبديله — من أوّل البحث */}
+        {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
         {/* انتظارُ الكبتنة يُقال حين يُشعر به (المرحلة 10-ج) — كما هو اليوم */}
         {t.women ? (
           <p className="t2-note">
@@ -300,8 +346,22 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           </div>
         ) : null}
         {badges}
-        <div className={progress ? "t2-trk-stats" : "t2-trk-stats two"}>
-          {progress ? (
+        <div className={progress || clock ? "t2-trk-stats" : "t2-trk-stats two"}>
+          {/* **الساعةُ مكانَ «كم متبقية» للساعات** (§٦٣-ج/٥): الباقي من «البدء + الساعات»، **ثمّ «وقتٌ زائد» بنبرة التنبيه** — وما
+              زاد يُسعَّر في الخلفية عند الإنهاء، فلا مبلغَ يُقال هنا */}
+          {clock ? (
+            clock.left > 0 ? (
+              <div className="t2-trk-stat">
+                <div dir="ltr" className="t2-trk-stat-value">{clockText(clock.left)}</div>
+                <div className="t2-trk-stat-label">الوقتُ الباقي</div>
+              </div>
+            ) : (
+              <div className="t2-trk-stat t2-hr-over" role="status">
+                <div className="t2-trk-stat-value">وقتٌ زائد · {clock.over} د</div>
+                <div className="t2-trk-stat-label">فوق الساعات المحجوزة</div>
+              </div>
+            )
+          ) : progress ? (
             <div className="t2-trk-stat">
               <div dir="ltr" className="t2-trk-stat-value">{progress.left.toFixed(1)}</div>
               <div className="t2-trk-stat-label">كم متبقية</div>
@@ -344,6 +404,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
         {/* **مستلمُ الطرد ودافعُه** (§٦٣-ج/٤) */}
         {parcel ? <ParcelTrackT2 ride={ride} /> : null}
+        {/* **والساعاتُ وكيلومتراتُها المشمولة** (§٦٣-ج/٥) — بلا تبديل: المحجوزُ دُفع عند البدء */}
+        {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
         {skinRow}
         {shareRow}
         {payMethod ? (
@@ -438,6 +500,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
       {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
       {/* **مستلمُ الطرد ودافعُه** (§٦٣-ج/٤) — تحت بطاقة الكبتن */}
       {parcel ? <ParcelTrackT2 ride={ride} /> : null}
+      {/* **والساعاتُ ومن أين يُدفع محجوزُها** (§٦٣-ج/٥) — والتبديلُ ممكنٌ حتى يبدأ الكبتن */}
+      {hourly ? <HourlyTrackT2 ride={ride} prepaySwitch={prepaySwitch} /> : null}
       {skinRow}
       {/* **انتظارُ الوصول يُقال حين ينشأ** (§5.10) — مالٌ في لحظته كما في الورقة القائمة */}
       <PauseNotice ride={ride} />
@@ -492,11 +556,19 @@ export function TripCardT2({
   const progress = tripProgress(routePoints, driverPing);
   // **الطرد** (§٦٣-ج/٤): «طردك في الطريق» — **وإلى مستلمه باسمه** حين يُنشر، وإلا فإلى وجهته كأيِّ رحلة
   const parcel = ride.ride_type === "parcel";
+  // **بالساعة** (§٦٣-ج/٥): «بالساعة · 3 ساعات» — **و«بلا وجهة» حين لم تُختر**: الوجهاتُ يقولها الراكبُ للكبتن
+  const hourly = ride.ride_type === "hourly" && ride.hourly_hours !== null;
   return (
     <div className="t2 t2-trk-card">
-      <div className="t2-trk-card-label">{parcel ? "طردك في الطريق" : "في الطريق إلى"}</div>
+      <div className="t2-trk-card-label">
+        {parcel ? "طردك في الطريق" : hourly ? `بالساعة · ${hoursLabel(ride.hourly_hours!)}` : "في الطريق إلى"}
+      </div>
       <div className="t2-trk-card-dest">
-        {parcel && ride.recipient_name ? `إلى: ${ride.recipient_name}` : (ride.dropoff_address ?? "وجهتك")}
+        {parcel && ride.recipient_name
+          ? `إلى: ${ride.recipient_name}`
+          : hourly && noDestination(ride)
+            ? "بلا وجهة — تقولها للكبتن"
+            : (ride.dropoff_address ?? "وجهتك")}
       </div>
       {progress ? (
         <div className="t2-trk-progress" role="img" aria-label={`قُطع ${Math.round(progress.done * 100)}٪ من الطريق`}>

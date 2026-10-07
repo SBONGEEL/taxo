@@ -92,6 +92,17 @@ export interface RideParcel {
   accepted_terms: boolean;
 }
 
+/** **من أين يُدفع محجوزُ الساعات عند البدء** (§٦٣-ج/٥) — `wallet` دفعةٌ تُسوّى لحظةَ يبدأ الكبتن (ورصيدٌ لا يكفي يرفض البدءَ
+ *  برسالته)، و`cash` دفعةٌ نقديّةٌ معلَّقةٌ يؤكّد الكبتنُ استلامَها. **وما زاد يُدفع في النهاية** بالمسار القائم. */
+export type HourlyPrepay = "wallet" | "cash";
+
+/** **بالساعة** كما تُرسل مع الطلب (`HourlyIn`) — الساعاتُ (من ١ إلى سقف السوق) ومن أين يُدفع محجوزُها. **والخلفيةُ هي الحارس**:
+ *  مفتاحٌ مطفأٌ أو سعرٌ صفرٌ ⇒ `hourly_unavailable`، وغيرُ الاقتصادي أو ساعاتٌ خارج السقف ⇒ `invalid_input`. */
+export interface RideHourly {
+  hours: number;
+  prepay: HourlyPrepay;
+}
+
 export interface User {
   /** **موعدُ حذف حسابه إن طلبه** (SPEC §59) — منه تُرسم شاشةُ الاستعادة. */
   deletion_due_at?: string | null;
@@ -316,6 +327,11 @@ export interface RideEstimate {
   parcel_fee: string | null;
   /** **شروطُ الطرد بلفظ الخلفية** — تُعرض قبل الطلب ويُقرّ بها المرسل، **ولا تُكتب في الواجهة**. و`null` في غير تقدير طرد. */
   parcel_terms: string[] | null;
+  /** **بالساعة** (§٦٣-ج/٥) — سعرُ الساعة وكيلومتراتُها وأقصى الساعات **في كلِّ تقدير**، لتقول ورقةُ الساعات «8.000 للساعة شاملةً
+   *  15 كم» من الصفِّ الذي يُسعَّر منه. و`null` حيث الخدمةُ مطفأةٌ أو سعرُها صفر — فطلبُها يُرفض `hourly_unavailable`. */
+  hourly_rate: string | null;
+  hourly_km_per_hour: number | null;
+  hourly_max_hours: number | null;
 }
 
 export interface RideVehicle {
@@ -424,10 +440,15 @@ export interface Ride {
   passenger_phone: string | null;
   /** **الطرد** (§٦٣-ج/٤) — النوعُ يُنشر دائماً، **والمستلمُ في أطوار القبول وحدَها** كالراكب الفعليّ: `null` على البحث وبعد
    *  الانتهاء، فغيابُه لا يعني أنها رحلةٌ عاديّة — `ride_type` وحدَه يقول ذلك. */
-  ride_type: "standard" | "parcel";
+  ride_type: "standard" | "parcel" | "hourly";
   recipient_name: string | null;
   recipient_phone: string | null;
   recipient_address: string | null;
+  /** **بالساعة** (§٦٣-ج/٥) — الساعاتُ المحجوزة، **والكيلومتراتُ المشمولةُ محسوبةً في الخلفية** (فلا تضرب الشاشةُ ساعاتٍ في
+   *  كيلومترات)، ومن أين يُدفع المحجوزُ عند البدء. و`null` في غير رحلة الساعة — و`ride_type` وحدَه يقول أيّها. */
+  hourly_hours: number | null;
+  hourly_included_km: number | null;
+  hourly_prepay_method: HourlyPrepay | null;
 
   /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
    *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */
@@ -687,7 +708,10 @@ export type FareLineKind =
   | "waiting"
   | "pause"
   | "airport_fee"
-  | "parcel_fee";
+  | "parcel_fee"
+  | "hourly"
+  | "hourly_extra_km"
+  | "hourly_extra_time";
 
 export interface FareLine {
   kind: FareLineKind;

@@ -417,10 +417,16 @@ export interface Ride {
   airport: boolean;
   /** **الطرد** (§٦٣-ج/٤) — النوعُ على بطاقة العرض قبل القبول (شارةُ «طرد» وسطرُ دافعه)، **والمستلمُ اسمُه ورقمُه وعنوانُه بعد
    *  القبول وحدَه وحتى الانتهاء** (`null` على العرض وبعده) — كالراكب الفعليّ. */
-  ride_type: "standard" | "parcel";
+  ride_type: "standard" | "parcel" | "hourly";
   recipient_name: string | null;
   recipient_phone: string | null;
   recipient_address: string | null;
+  /** **بالساعة** (§٦٣-ج/٥) — الساعاتُ المحجوزة، **والكيلومتراتُ المشمولةُ محسوبةً في الخلفية** (فلا يضرب التطبيقُ شيئاً)، ومن أين
+   *  يُدفع المحجوزُ عند البدء: `wallet` يُسوّى لحظةَ البدء (ورصيدٌ لا يكفي يرفضه برسالته)، و`cash` دفعةٌ معلَّقةٌ يؤكّد الكبتنُ
+   *  استلامَها. و`null` في غير رحلة الساعة. **وتصل على العرض قبل القبول** — شارةُ «بالساعة» وسطرُها. */
+  hourly_hours: number | null;
+  hourly_included_km: number | null;
+  hourly_prepay_method: "wallet" | "cash" | null;
 
   current_leg: number;
   waiting_charge: string;

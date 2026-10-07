@@ -23,6 +23,10 @@
  *
  * **والطرد** (§٦٣-ج/٤، `ParcelT2`) — بلا لوحة: «المستلم: الاسم» وعنوانُه بزرِّ «اتصل بالمستلم»، **ولا صورةَ للمرسل** (كرحلةٍ
  * لغيره)، وسطرُ «يدفع المستلمُ نقداً» حين يدفع هو، **و«ارفض الطرد» بتأكيده في طور «وصل» وحدَه**.
+ *
+ * **و«بالساعة»** (§٦٣-ج/٥، `HourlyT2`) — بلا لوحة: قبل البدء سطرُ الساعات وكيلومتراتها ومن أين يُدفع المحجوز، **وأثناءها عدّادُ
+ * «الوقتُ الباقي / الساعات» والكيلومتراتُ المشمولة، وبطاقةُ «استلم … نقداً» حين يُدفع المحجوزُ نقداً**؛ والوجهةُ «يقولها الراكب» حين
+ * لم تُختر. **ورفضُ البدء** (رصيدُ الراكب لا يغطّي المحجوز، ٤٠٩) يُقال بنصّ الخلفية تحت الزرّ كأيِّ خطأ فعل.
  */
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
@@ -36,6 +40,7 @@ import { digitsOnly } from "@/lib/phone";
 import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
 import { digits } from "@/lib/utils";
 import { PassengerRowT2, PayerNoteT2 } from "@/screens/t2/ForOtherT2";
+import { HourlyCashCardT2, HourlyMeterT2, HourlyPlanT2, noDestination } from "@/screens/t2/HourlyT2";
 import { RecipientRowT2, RefuseParcelButtonT2, RefuseParcelSheetT2 } from "@/screens/t2/ParcelT2";
 import { Icon } from "@/taxo2";
 
@@ -246,6 +251,18 @@ export function RideT2({
           </>
         ) : null}
 
+        {/* **بالساعة** (§٦٣-ج/٥) — من الصفّ لا من المفتاح: قبل البدء سطرُها، وأثناءها عدّادُها **وبطاقةُ نقد المحجوز** إن كان نقداً */}
+        {ride.ride_type === "hourly" ? (
+          riding ? (
+            <>
+              <HourlyMeterT2 ride={ride} />
+              <HourlyCashCardT2 ride={ride} currencyLabel={currencyLabel} />
+            </>
+          ) : (
+            <HourlyPlanT2 ride={ride} />
+          )
+        ) : null}
+
         <StopsT2 ride={ride} currencyLabel={currencyLabel} />
         <PauseT2 ride={ride} currencyLabel={currencyLabel} />
 
@@ -428,7 +445,10 @@ function TripHead({
     <div className="t2-rd-head trip">
       <div className="t2-rd-head-main">
         <div className="t2-rd-caption">إلى</div>
-        <div className="t2-rd-to">{ride.dropoff_address ?? "الوجهة"}</div>
+        {/* **ساعاتٌ بلا وجهة** (§٦٣-ج/٥) — الطلبُ أرسل نقطةَ الانطلاق وجهةً، **والوجهاتُ يقولها الراكبُ في السيارة** */}
+        <div className="t2-rd-to">
+          {ride.ride_type === "hourly" && noDestination(ride) ? "الوجهاتُ يقولها الراكب" : (ride.dropoff_address ?? "الوجهة")}
+        </div>
         {left ? <div className="t2-rd-left">{left}</div> : null}
       </div>
       <div className="t2-rd-fare">

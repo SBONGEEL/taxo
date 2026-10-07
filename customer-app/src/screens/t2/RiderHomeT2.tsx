@@ -9,7 +9,8 @@
  *
  * **والبلاطاتُ الأربعُ كما رُسمت** (§٦١-د/أ–ج): «المطار» بـ«جديد» و«طرد» و«بالساعة» **رسالةُ «قريباً» عند اللمس ولا شيءَ غيرُها**،
  * و«مجدولة» رحلاتُه المجدولة (بمفتاح سوقها)، و«نسائية» **تبدأ الطلبَ بـ«كبتنة فقط» وهي تغيّره بنفسها** — كما تعمل الخدمةُ اليوم.
- * **و«طرد» حيث مفتاحُه مشتعلٌ تبدأ طلبَ طرد** (§٦٣-ج/٤، `onParcel`) — ومطفأً «قريباً» كما كانت.
+ * **و«طرد» حيث مفتاحُه مشتعلٌ تبدأ طلبَ طرد** (§٦٣-ج/٤، `onParcel`) — ومطفأً «قريباً» كما كانت. **و«بالساعة» مثلُها**
+ * (§٦٣-ج/٥، `onHourly`): مشتعلاً تبدأ طلبَ ساعاتٍ بلا شارة «قريباً»، ومطفأً كما رُسمت.
  *
  * **وما نُزل بلغ من موضعٍ آخر** (§٦١-د/و): الأماكنُ المحفوظةُ في البحث وفي «حسابي»، وآخرُ الرحلات و«أعِد الرحلة» في «رحلاتي»
  * وتفاصيلها، والإحالةُ في «حسابي»، والرصيدُ في «المحفظة»، **والخريطةُ الكاملةُ بلمسة البطاقة** بدل زرِّ «توسيع».
@@ -25,6 +26,7 @@ import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
 import { useScheduledRides } from "@/lib/bookings";
+import { useHourly } from "@/lib/hourly";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { useParcel } from "@/lib/parcel";
 import { useSession } from "@/lib/session";
@@ -70,6 +72,8 @@ export interface RiderHomeProps {
   onWomenRide?: () => void;
   /** **بدءُ طلب طرد** (§٦٣-ج/٤) — منتقي الوجهة ثمّ ورقتُه؛ والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل. */
   onParcel?: () => void;
+  /** **بدءُ طلب ساعات** (§٦٣-ج/٥) — منتقي الوجهة بـ«بلا وجهة» ثمّ ورقتُها؛ والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل. */
+  onHourly?: () => void;
 }
 
 
@@ -136,11 +140,14 @@ export function RiderHomeT2({
   onChangePickup,
   onWomenRide,
   onParcel,
+  onHourly,
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
   // **«طرد» بمفتاح سوقه** (§٦٣-ج/٤) — مطفأً تبقى البلاطةُ «قريباً» كما رُسمت ولا يظهر شيءٌ جديد
   const parcel = useParcel();
+  // **و«بالساعة» بمفتاح سوقها** (§٦٣-ج/٥) — بالحكم نفسِه
+  const hourly = useHourly() && onHourly !== undefined;
   const scheduled = useScheduledRides();
   const { user } = useSession();
   // **«اقتصادي يصل خلال 3 د»** (§٦٢-ج/١٠): أوّلُ فئةٍ لها رقمٌ بترتيب الجواب، **وأسرعُها شارةُ «رحلة»**
@@ -260,11 +267,19 @@ export function RiderHomeT2({
             <span className="t2-svc-title">نسائية</span>
           </button>
         ) : null}
-        <button type="button" className="t2-svc soon" onClick={() => soon("بالساعة")}>
-          <span className="t2-icon t2-svc-icon" aria-hidden="true">timer</span>
-          <span className="t2-svc-title">بالساعة</span>
-          <span className="t2-svc-badge soon">قريباً</span>
-        </button>
+        {/* **مشتعلاً تبدأ الطلبَ ولا شارةَ «قريباً»** (§٦٣-ج/٥) — ومطفأً كما رُسمت حرفاً */}
+        {hourly ? (
+          <button type="button" className="t2-svc" onClick={onHourly}>
+            <span className="t2-icon t2-svc-icon" aria-hidden="true">timer</span>
+            <span className="t2-svc-title">بالساعة</span>
+          </button>
+        ) : (
+          <button type="button" className="t2-svc soon" onClick={() => soon("بالساعة")}>
+            <span className="t2-icon t2-svc-icon" aria-hidden="true">timer</span>
+            <span className="t2-svc-title">بالساعة</span>
+            <span className="t2-svc-badge soon">قريباً</span>
+          </button>
+        )}
       </div>
 
       {/* **الحسابُ المحدود يُقال في كلِّ فتحة** (قرارُ المالك ٢٠٢٦-٠٨-٣١) — ويظهر بشرطه وحدَه */}

@@ -25,6 +25,10 @@ class ServiceSetting(TimestampMixin, Base):
             name="service_settings_guarantee_valid",
         ),
         CheckConstraint("parcel_fee >= 0", name="service_settings_parcel_fee_valid"),
+        CheckConstraint(
+            "hourly_rate >= 0 AND hourly_km_per_hour >= 0 AND hourly_cancel_minutes >= 0 AND hourly_max_hours BETWEEN 1 AND 24",
+            name="service_settings_hourly_valid",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -65,3 +69,13 @@ class ServiceSetting(TimestampMixin, Base):
     parcel_fee: Mapped[Decimal] = mapped_column(
         MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
     )
+
+    # ------------------------------------------------ بالساعة (§٦٣-ج/٥)
+    #: **سعرُ الساعة** شاملاً كيلومتراتِها — وصفرٌ يُخفي الخدمة
+    hourly_rate: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
+    )
+    hourly_km_per_hour: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=15, server_default=text("15"))
+    #: **إلغاءُ الراكب بعد وصول الكبتن**: هذه الدقائقُ من سعر الساعة للكبتن
+    hourly_cancel_minutes: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=30, server_default=text("30"))
+    hourly_max_hours: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=8, server_default=text("8"))

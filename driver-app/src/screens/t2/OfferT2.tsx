@@ -25,6 +25,9 @@
  *
  * **والطرد** (§٦٣-ج/٤) — شارةُ «طرد» بين أخواتها **وسطرُ «يدفع المستلمُ نقداً عند التسليم»** حين يدفع هو، بلا لوحة: من قَبِل
  * وهو يعرف أنه يحمل غرضاً ويقبض من غير المرسل لا يشتكي. والمستلمُ يصله بعد القبول، ورسمُ الطرد داخلَ الأجرة المعروضة.
+ *
+ * **و«بالساعة»** (§٦٣-ج/٥) — شارةُ «بالساعة» بين أخواتها، **و«3 ساعات · حتى 45 كم» مكانَ مسافة الرحلة وزمنها** (سعرُها ساعاتٌ لا
+ * طريق، فمسافةُ تقديرها صفر)، **و«الوجهاتُ يقولها الراكب»** حين لم تُختر وجهة — والأجرةُ المعروضةُ هي المحجوزُ نفسُه.
  */
 
 import type { Offer } from "@/lib/ride";
@@ -32,6 +35,7 @@ import { useOfferCountdown } from "@/components/OfferSheet";
 import { bookedTime, trimDistance } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import { PayerNoteT2 } from "@/screens/t2/ForOtherT2";
+import { hoursLabel, noDestination } from "@/screens/t2/HourlyT2";
 import { WomenOfferChipT2, isWomenRide } from "@/screens/t2/WomenRideT2";
 import { Icon } from "@/taxo2";
 
@@ -64,6 +68,8 @@ export function OfferT2({
   const { ride } = offer;
   // **CW3 — رحلةٌ نسائية** (§٦٢-ج/٢٣): ما طُلبت فيه كبتنة — الشارةُ مكانَ «طلب جديد»، والبطاقةُ بالبرقوق
   const women = isWomenRide(ride);
+  // **بالساعة** (§٦٣-ج/٥) — من صفِّ الرحلة لا من مفتاح السوق: طلبٌ وصل قبل الإطفاء يبقى بالساعة
+  const hours = ride.ride_type === "hourly" ? ride.hourly_hours : null;
 
   return (
     <>
@@ -131,12 +137,17 @@ export function OfferT2({
             <span className="t2-of-from" />
             <div className="t2-of-place">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
             <span className="t2-of-link" />
-            {/* **مسافةُ الرحلة وزمنُها كما قدّرتهما الخلفية** (`distance_km` · `duration_min`) — لا حسابَ هنا */}
+            {/* **مسافةُ الرحلة وزمنُها كما قدّرتهما الخلفية** (`distance_km` · `duration_min`) — لا حسابَ هنا. **وللساعات عددُها
+                وكيلومتراتُها المشمولة** (§٦٣-ج/٥) — من الرحلة كما حسبتها الخلفية */}
             <div className="t2-of-trip">
-              {trimDistance(ride.distance_km)} كم · {digits(String(Math.round(Number(ride.duration_min))))} د
+              {hours !== null
+                ? `${hoursLabel(hours)}${ride.hourly_included_km !== null ? ` · حتى ${digits(ride.hourly_included_km)} كم` : ""}`
+                : `${trimDistance(ride.distance_km)} كم · ${digits(String(Math.round(Number(ride.duration_min))))} د`}
             </div>
             <span className="t2-of-to" />
-            <div className="t2-of-place">{ride.dropoff_address ?? "الوجهة"}</div>
+            <div className="t2-of-place">
+              {hours !== null && noDestination(ride) ? "الوجهاتُ يقولها الراكب" : (ride.dropoff_address ?? "الوجهة")}
+            </div>
           </div>
 
           <div className="t2-of-actions">
@@ -162,13 +173,25 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
   const shared = Number(ride.share_discount_percent) > 0;
   const carried = Number(ride.carried_cancellation_fee ?? 0) > 0;
   const parcel = ride.ride_type === "parcel";
-  if (!shared && !ride.scheduled_for && ride.stops.length === 0 && !carried && !ride.for_other && !ride.airport && !parcel) {
+  const hourly = ride.ride_type === "hourly";
+  if (
+    !shared &&
+    !ride.scheduled_for &&
+    ride.stops.length === 0 &&
+    !carried &&
+    !ride.for_other &&
+    !ride.airport &&
+    !parcel &&
+    !hourly
+  ) {
     return null;
   }
   return (
     <div className="t2-of-tags">
       {/* **«طرد»** (§٦٣-ج/٤) — غرضٌ بدل راكب، **ومن صفِّ الرحلة لا من مفتاح السوق**: طلبٌ وصل قبل الإطفاء يبقى طرداً */}
       {parcel ? <span className="t2-of-tag">طرد</span> : null}
+      {/* **«بالساعة»** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ لا طريق، **ومن صفِّ الرحلة** بالحكم نفسِه */}
+      {hourly ? <span className="t2-of-tag">بالساعة</span> : null}
       {/* **«مطار»** (§٦٣-ج/٢) — تبدأ أو تنتهي في مطار، **ورسمُه له كاملاً في الأجرة أعلاه**. ومن صفِّ الرحلة لا من مفتاح السوق:
           الرسمُ جُمِّد عليها يومَ طُلبت، **فإطفاءُ المفتاح بعدها لا يُسقط الشارةَ عن رحلةٍ تحمله** */}
       {ride.airport ? <span className="t2-of-tag">مطار</span> : null}

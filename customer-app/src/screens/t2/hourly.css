@@ -1,0 +1,32 @@
+/* ═══ TAXO 2.0 — «بالساعة» (§٦٣-ج/٥) — **لا لوحةَ لها**، فتُركَّب من عُدّة الهوية: بطاقةُ «المشاركة» للعدّاد والسعر، وزرُّ «+»
+ * في بطاقة المسار لخطوتي العدّاد، وبطاقتا «من يدفع» في الطرد، وإحصاءاتُ R09 للساعة. **تخطيطُها وحدَه، بالرموز وحدَها** — الفاتحُ
+ * والداكن.
+ */
+
+/* ── العدّادُ: «الساعات» بأيقونتها، ثمّ «−  3  +» ── */
+.t2-share.t2-hr-box { margin-top: 0; }
+.t2-hr-hours { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.t2-hr-hours-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.t2-hr-hours-label .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-hr-stepper { display: flex; align-items: center; gap: 14px; }
+.t2-hr-step:disabled { opacity: 0.35; cursor: default; }
+.t2-hr-count { min-width: 22px; font-family: var(--t2-font-num); font-size: 22px; font-weight: 700; text-align: center; }
+
+/* ── سعرُ الساعة سطراً خافتاً، والمجموعُ تحت خطٍّ فاصل ── */
+.t2-hr-rate { margin-top: 8px; }
+.t2-hr-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--t2-line);
+}
+.t2-hr-total-label { font-size: 13px; color: var(--t2-muted); }
+.t2-hr-total-value { font-size: 15px; font-weight: 700; }
+.t2-hr-cap { margin: 6px 0 0; font-size: 11.5px; color: var(--t2-muted); }
+
+/* ── الساعةُ في إحصاءات R09: «وقتٌ زائد» بنبرة التنبيه ── */
+.t2-trk-stat.t2-hr-over .t2-trk-stat-value,
+.t2-trk-stat.t2-hr-over .t2-trk-stat-label { color: var(--t2-warning); }

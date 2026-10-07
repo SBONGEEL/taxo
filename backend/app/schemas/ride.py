@@ -50,6 +50,8 @@ class RideEstimateRequest(BaseModel):
     stops: list[StopIn] = Field(default_factory=list, max_length=2)
     # **تقديرُ طرد** (§٦٣-ج/٤) — يضيف رسمَه ويُعيد شروطَه. **ولا يُسمّى `parcel`**: طلبُ الرحلة يرث هذا المخطّط وله `parcel` بتفاصيله
     is_parcel: bool = False
+    # **تقديرُ ساعات** (§٦٣-ج/٥) — `null` لرحلةٍ عاديّة
+    hourly_hours: int | None = Field(default=None, ge=1, le=24)
 
 
 class RideEstimateOut(BaseModel):
@@ -84,6 +86,10 @@ class RideEstimateOut(BaseModel):
     # **رسمُ الطرد للكبتن وشروطُه** (§٦٣-ج/٤) — `null` في غير تقدير طرد. **والشروطُ من الخلفية** فلا تكتبها واجهتان بلفظين
     parcel_fee: Decimal | None = None
     parcel_terms: list[str] | None = None
+    # **بالساعة** (§٦٣-ج/٥) — سعرُ الساعة وكيلومتراتُها وأقصى الساعات، لتقول الشاشةُ «8.000 للساعة شاملةً 15 كم». و`null` حيث لا خدمة
+    hourly_rate: Decimal | None = None
+    hourly_km_per_hour: int | None = None
+    hourly_max_hours: int | None = None
 
 
 class RideForOtherIn(BaseModel):
@@ -106,6 +112,17 @@ class ParcelIn(BaseModel):
     recipient_address: str = Field(min_length=3, max_length=255)
     payer: RidePayer = RidePayer.REQUESTER
     accepted_terms: bool = False
+
+
+class HourlyIn(BaseModel):
+    """بالساعة (§٦٣-ج/٥) — الساعاتُ ومن أين يُدفع محجوزُها عند البدء."""
+
+    hours: int = Field(ge=1, le=24)
+    prepay: Literal["wallet", "cash"] = "wallet"
+
+
+class HourlyPrepayIn(BaseModel):
+    prepay: Literal["wallet", "cash"]
 
 
 class RideCreateRequest(RideEstimateRequest):
@@ -131,6 +148,8 @@ class RideCreateRequest(RideEstimateRequest):
     for_other: RideForOtherIn | None = None
     # **الطرد** (§٦٣-ج/٤) — `null` لرحلةٍ عاديّة
     parcel: ParcelIn | None = None
+    # **بالساعة** (§٦٣-ج/٥) — والوجهةُ اختياريّة: ترسل الواجهةُ نقطةَ الانطلاق نفسَها وجهةً إن لم تُختر
+    hourly: HourlyIn | None = None
 
 
 class RideCancelRequest(BaseModel):
@@ -409,6 +428,10 @@ class RideOut(BaseModel):
     recipient_name: str | None = None
     recipient_phone: str | None = None
     recipient_address: str | None = None
+    # **بالساعة** (§٦٣-ج/٥) — الساعاتُ والكيلومتراتُ المشمولة (محسوبةٌ هنا، فلا تضرب الشاشة) ومن أين يُدفع المحجوز
+    hourly_hours: int | None = None
+    hourly_included_km: int | None = None
+    hourly_prepay_method: str | None = None
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -506,6 +529,11 @@ class RideOut(BaseModel):
             for_other=ride.for_other,
             airport=ride.facility_id is not None,
             ride_type=ride.ride_type,
+            hourly_hours=ride.hourly_hours,
+            hourly_included_km=(
+                ride.hourly_hours * (ride.hourly_km_per_hour_at_ride or 0) if ride.hourly_hours else None
+            ),
+            hourly_prepay_method=ride.hourly_prepay_method,
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,

@@ -32,6 +32,10 @@
  * **و«الطرد»** (§٦٣-ج/٤، `ParcelT2.tsx`) — لا لوحةَ له: **الورقةُ نفسُها بفئة الاقتصادي وحدَها**، وورقةُ الطرد تُفتح أوّلَ ما تُفتح
  * (الشروطُ والمستلمُ ومن يدفع) ثمّ شارتُه «إلى: الاسم»، **وسطرُ «يشمل رسمَ الطرد» كسطر المطار** — والسعرُ هو هو من التقدير.
  * **ولا يُجمع مع «لشخص آخر» ولا المشاركة ولا الحجز** — كلٌّ معطَّلٌ بعلّته.
+ *
+ * **و«بالساعة»** (§٦٣-ج/٥، `HourlyT2.tsx`) — لا لوحةَ لها: **الورقةُ نفسُها بكتلة الساعات مكانَ الفئات** (الاقتصاديُّ وحدَه):
+ * العدّادُ وسعرُ الساعة وكيلومتراتُها والمجموعُ ومن أين يُدفع المحجوز، **والوجهةُ اختياريّةٌ** («بلا وجهة»)، ولا «+» محطة.
+ * **ولا تُجمع مع «لشخص آخر» ولا المشاركة ولا الحجز** — كلٌّ معطَّلٌ بعلّته. والسعرُ هو هو من التقدير.
  */
 
 import { useEffect, useState } from "react";
@@ -50,6 +54,7 @@ import { useSession } from "@/lib/session";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
+import { HourlySheetT2 } from "./HourlyT2";
 import { ParcelOptionT2, ParcelSheetT2 } from "./ParcelT2";
 import { SheetT2 } from "./SheetT2";
 import { WomenRequestHeadT2 } from "./WomenRideT2";
@@ -149,8 +154,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   const { user } = useSession();
   const airport = useFeature(user?.country_code, "airport_enabled");
   const currency = c.estimate?.currency ?? countryConfig?.currency;
-  // **الطردُ بفئة الاقتصادي وحدَها** (§٦٣-ج/٤) — ولو لم تكن أوّلَ فئات السوق؛ والخطّافُ يسأل تقديرَها بالرسم
-  const shown: VehicleCategory[] = c.parcelMode ? ["economy"] : categories;
+  // **الطردُ بفئة الاقتصادي وحدَها** (§٦٣-ج/٤) — ولو لم تكن أوّلَ فئات السوق؛ والخطّافُ يسأل تقديرَها بالرسم. **والساعاتُ مثلُه**
+  // (§٦٣-ج/٥) — فلا تقديرَ لفئةٍ لا تُطلب
+  const shown: VehicleCategory[] = c.parcelMode || c.hourlyMode ? ["economy"] : categories;
   const fares = useCategoryFares(props, shown, c.category, c.loading ? null : c.estimate);
   // **تفصيلُ الكوبون خلف لمسة «مطبّق»**: مقدارُ الخصم وإزالتُه — الشارةُ كما رُسمت، والفعلُ باقٍ
   const [promoOpen, setPromoOpen] = useState(false);
@@ -160,10 +166,17 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   // إضافة محطةٍ تجد مسوّدتَها** (`Home`) فلا تُفتح ثانيةً
   const [parcelOpen, setParcelOpen] = useState(() => c.parcelMode && c.parcel === null);
   const parcelPending = c.parcelMode && c.parcel === null;
-  const parcelOff = c.parcelMode ? "لا تُجمع مع الطرد." : null;
+  // **علّةُ ما لا يُجمع** — مع الطرد أو مع الساعات، بسطرٍ قصيرٍ تحت ما عُطِّل
+  const parcelOff = c.parcelMode ? "لا تُجمع مع الطرد." : c.hourlyMode ? "لا تُجمع مع الرحلة بالساعة." : null;
   // **RW2 — الطلبُ النسائيّ** (§٦٢-ج/٢٣): تفضيلُ هذا الطلب «كبتنة» لمن عُرضت عليها الخدمة — **وهي تغيّره من المنتقي نفسِه**
   const women = c.women.available && c.preference === "female";
-  const meta = c.estimate && !c.loading ? `${formatDistance(c.estimate.distance_km)} · ${shortDuration(c.estimate.duration_min)}` : null;
+  // **ولا «0 م · 2 س» للساعات** (§٦٣-ج/٥): سعرُها ساعاتٌ لا طريق، فمسافةُ تقديرها صفرٌ ومدّتُها ساعاتُها — سطرٌ بلا معنى
+  const meta =
+    c.estimate && !c.loading && !c.hourlyMode
+      ? `${formatDistance(c.estimate.distance_km)} · ${shortDuration(c.estimate.duration_min)}`
+      : null;
+  // **وجهةُ الساعات اختياريّة** — بلاها يُقال ذلك مكانَ العنوان، واللمسةُ تفتح البحثَ كما تفتحه لكلِّ وجهة
+  const noDestination = c.hourlyMode && !c.hourlyDestination;
 
   return (
     <SheetT2
@@ -172,14 +185,23 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ */}
           {blockedByPreference ? null : (
             <ErrorNote
-              message={c.error ?? requestError ?? (c.parcelUnavailable ? "الطرد غيرُ متاحٍ في بلدك الآن." : null)}
+              message={
+                c.error ??
+                requestError ??
+                (c.parcelUnavailable
+                  ? "الطرد غيرُ متاحٍ في بلدك الآن."
+                  : c.hourlyBlocked
+                    ? "الرحلةُ بالساعة غيرُ متاحةٍ في بلدك الآن."
+                    : null)
+              }
               className="t2-error"
             />
           )}
           <button
             type="button"
             className={women ? "t2-cta women" : "t2-cta"}
-            disabled={!c.estimate || c.loading || requesting || c.parcelUnavailable}
+            // **وساعاتٌ تعثّر تقديرُها لا تُطلب على رقمها القديم** (`hourlyBlocked`)
+            disabled={!c.estimate || c.loading || requesting || c.parcelUnavailable || c.hourlyBlocked}
             aria-busy={requesting}
             onClick={() =>
               // **طردٌ بلا مستلمٍ يفتح ورقتَه** لا طلباً ترفضه الخلفية — والزرُّ يقول ذلك باسمه
@@ -196,6 +218,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                     },
                     c.forOther ?? undefined,
                     c.parcel ?? undefined,
+                    // **الساعاتُ ومن أين يُدفع محجوزُها** (§٦٣-ج/٥) — وغيابُها رحلةٌ عاديّة
+                    c.hourly ?? undefined,
                   )
             }
           >
@@ -206,12 +230,14 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                   ? "أكمل بيانات الطرد"
                   : c.parcelMode
                     ? "اطلب توصيل الطرد"
-                    : women
-                      ? "اطلبي كبتنة"
-                      : `اطلب ${VEHICLE_LABEL[c.category]}`}
+                    : c.hourlyMode
+                      ? "اطلب بالساعة"
+                      : women
+                        ? "اطلبي كبتنة"
+                        : `اطلب ${VEHICLE_LABEL[c.category]}`}
             </span>
             {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
-            {c.shownFare && !c.loading && !c.parcelUnavailable ? (
+            {c.shownFare && !c.loading && !c.parcelUnavailable && !c.hourlyBlocked ? (
               <span className="t2-cta-price">{formatMoney(c.shownFare, currency)}</span>
             ) : null}
           </button>
@@ -235,10 +261,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         <span />
         <span className="t2-route-to" aria-hidden="true" />
         <button type="button" className="t2-route-text t2-route-edit" onClick={onEditDestination}>
-          <span className="t2-route-label">إلى</span>
-          <span className="t2-route-value">{dropoffAddress ?? "الوجهة المحددة"}</span>
+          <span className="t2-route-label">{c.hourlyMode ? "إلى · اختياريّة" : "إلى"}</span>
+          <span className="t2-route-value">
+            {noDestination ? "بلا وجهة — تقولها للكبتن" : (dropoffAddress ?? "الوجهة المحددة")}
+          </span>
         </button>
-        {c.multiStop && stops.length < MAX_STOPS ? (
+        {/* **ولا «+» محطةٍ للساعات** (§٦٣-ج/٥) — الخلفيةُ ترفض المحطاتِ معها، والراكبُ يقول وجهاتِه للكبتن في الطريق */}
+        {c.multiStop && stops.length < MAX_STOPS && !c.hourlyMode ? (
           <button type="button" className="t2-route-add" onClick={onAddStop} aria-label="إضافة محطة">
             <span className="t2-icon" aria-hidden="true">add</span>
           </button>
@@ -247,53 +276,69 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         )}
       </div>
 
-      {c.multiStop ? (
+      {c.multiStop && !c.hourlyMode ? (
         <StopsEditor stops={stops} onChange={onStopsChange} waitingNote={waitingNote(c.estimate)} />
       ) : null}
 
-      <div className="t2-pick-head">
-        <span className="t2-pick-title">اختر الفئة</span>
-        {meta && !women ? <span className="t2-pick-meta">{meta}</span> : null}
-      </div>
-      <div className="t2-cats" role="radiogroup" aria-label="الفئة">
-        {shown.map((option) => {
-          const on = option === c.category;
-          return (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              className={`t2-cat${on ? " on" : ""}${women ? " women" : ""}`}
-              onClick={() => c.setCategory(option)}
-            >
-              <span className="t2-cat-icon">
-                <span className="t2-icon" aria-hidden="true">{CATEGORY_ICON[option] ?? "local_taxi"}</span>
-              </span>
-              <span className="t2-cat-main">
-                <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
-                {/* **RW2: «كبتنة موثّقة»** — طلبُ «كبتنة» لا يُسنَد إلا لمختومةٍ من هويتها (`dispatch`) */}
-                <span className="t2-cat-hint">
-                  {women ? "كبتنة موثّقة" : VEHICLE_HINT[option]}
-                  {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
-                  {eta?.[option] ? ` · يصل خلال ${eta[option]} د` : ""}
-                </span>
-              </span>
-              {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها
-                  من تقديرها (`useCategoryFares`)، **والمخصومُ على الزرّ** */}
-              {on ? (
-                c.loading ? (
-                  <span className="t2-cat-wait">نحسب…</span>
-                ) : c.estimate ? (
-                  <Fare estimate={c.estimate} />
-                ) : null
-              ) : fares[option] ? (
-                <Fare estimate={fares[option]!} />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      {/* **كتلةُ الساعات مكانَ الفئات** (§٦٣-ج/٥) — الاقتصاديُّ وحدَه، والعدّادُ ومن أين يُدفع المحجوز؛ والمسوّدةُ عند `Home` */}
+      {c.hourlyMode && c.hourly && c.setHourly ? (
+        <HourlySheetT2
+          estimate={c.estimate}
+          loading={c.loading}
+          draft={c.hourly}
+          onChange={c.setHourly}
+          currency={currency}
+        />
+      ) : null}
+
+      {/* **والفئاتُ لكلِّ طلبٍ غيرِ الساعات** — كتلتُها أعلاه تقول «اقتصادي» ومجموعَها، ورقمٌ ثانٍ على بطاقةٍ وحيدةٍ يكرّره */}
+      {c.hourlyMode ? null : (
+        <>
+          <div className="t2-pick-head">
+            <span className="t2-pick-title">اختر الفئة</span>
+            {meta && !women ? <span className="t2-pick-meta">{meta}</span> : null}
+          </div>
+          <div className="t2-cats" role="radiogroup" aria-label="الفئة">
+            {shown.map((option) => {
+              const on = option === c.category;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  className={`t2-cat${on ? " on" : ""}${women ? " women" : ""}`}
+                  onClick={() => c.setCategory(option)}
+                >
+                  <span className="t2-cat-icon">
+                    <span className="t2-icon" aria-hidden="true">{CATEGORY_ICON[option] ?? "local_taxi"}</span>
+                  </span>
+                  <span className="t2-cat-main">
+                    <span className="t2-cat-name">{VEHICLE_LABEL[option]}</span>
+                    {/* **RW2: «كبتنة موثّقة»** — طلبُ «كبتنة» لا يُسنَد إلا لمختومةٍ من هويتها (`dispatch`) */}
+                    <span className="t2-cat-hint">
+                      {women ? "كبتنة موثّقة" : VEHICLE_HINT[option]}
+                      {/* **«· يصل خلال 3 د» كما رُسم** (§٦٢-ج/١٠) — أقربُ كبتنٍ متاحٍ من هذه الفئة؛ وبلا رقمٍ لا شيء */}
+                      {eta?.[option] ? ` · يصل خلال ${eta[option]} د` : ""}
+                    </span>
+                  </span>
+                  {/* **السعرُ على كلِّ فئةٍ كما رُسم** — المختارةُ من تقدير الخطّاف كما هو (و«نحسب…» ما دام يُحسب)، وغيرُها
+                      من تقديرها (`useCategoryFares`)، **والمخصومُ على الزرّ** */}
+                  {on ? (
+                    c.loading ? (
+                      <span className="t2-cat-wait">نحسب…</span>
+                    ) : c.estimate ? (
+                      <Fare estimate={c.estimate} />
+                    ) : null
+                  ) : fares[option] ? (
+                    <Fare estimate={fares[option]!} />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       {c.estimate?.minimum_fare_applied && !c.loading ? (
         <p className="t2-sheet-fine">طُبِّق الحد الأدنى للأجرة</p>
       ) : null}
@@ -341,17 +386,21 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         </div>
       ) : null}
 
-      {/* **الدفعُ والكوبونُ صفٌّ واحد** كما رُسم — وكلٌّ بشرطه: لا منتقٍ بقناةٍ وحيدة، ولا كوبونَ حيث المفتاحُ مطفأ */}
-      {(c.payMethod && c.channels.length > 1) || c.promoEnabled ? (
+      {/* **الدفعُ والكوبونُ صفٌّ واحد** كما رُسم — وكلٌّ بشرطه: لا منتقٍ بقناةٍ وحيدة، ولا كوبونَ حيث المفتاحُ مطفأ.
+          **ولا منتقيَ قناةٍ للساعات** (§٦٣-ج/٥): من أين يُدفع المحجوزُ اختيارُها في كتلتها، ومنتقٍ ثانٍ بجانبه يُقرأ خياراً ثانياً
+          للشيء نفسِه — وما زاد يُدفع في النهاية من شاشة الدفع كأيِّ رحلة */}
+      {(c.payMethod && c.channels.length > 1 && !c.hourlyMode) || c.promoEnabled ? (
         <div className="t2-payrow">
-          {c.payMethod && c.channels.length > 1 ? (
+          {c.payMethod && c.channels.length > 1 && !c.hourlyMode ? (
             <button type="button" className="t2-payrow-pay" onClick={() => c.setPickingPay(true)}>
               <span className="t2-icon" aria-hidden="true">{PAY_ICON_T2[c.payMethod.method]}</span>
               {PAYMENT_METHOD_LABEL[c.payMethod.method]}
               <span className="t2-icon t2-payrow-more" aria-hidden="true">expand_more</span>
             </button>
           ) : null}
-          {c.payMethod && c.channels.length > 1 && c.promoEnabled ? <span className="t2-payrow-sep" /> : null}
+          {c.payMethod && c.channels.length > 1 && !c.hourlyMode && c.promoEnabled ? (
+            <span className="t2-payrow-sep" />
+          ) : null}
           {c.promoEnabled ? (
             c.applied ? (
               <button
@@ -430,9 +479,10 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             <input
               type="checkbox"
               className="t2-check"
-              checked={c.share && !c.parcelMode}
-              // **ولا تُجمع مع رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) **ولا مع طرد** (§٦٣-ج/٤) — والعلّةُ مكتوبةٌ تحتها لا زرٌّ ميّتٌ بلا سبب
-              disabled={c.forOther !== null || c.parcelMode}
+              checked={c.share && !c.parcelMode && !c.hourlyMode}
+              // **ولا تُجمع مع رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) **ولا مع طرد** (§٦٣-ج/٤) **ولا مع الساعات** (§٦٣-ج/٥) — والعلّةُ
+              // مكتوبةٌ تحتها لا زرٌّ ميّتٌ بلا سبب
+              disabled={c.forOther !== null || c.parcelMode || c.hourlyMode}
               onChange={(event) => {
                 c.setShare(event.target.checked);
                 if (!event.target.checked) c.setShareGendered(false);
@@ -458,7 +508,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               </span>
             </span>
           </label>
-          {c.share && c.shareGuarded && !c.parcelMode ? (
+          {c.share && c.shareGuarded && !c.parcelMode && !c.hourlyMode ? (
             <label className="t2-share-row t2-share-guard">
               <input
                 type="checkbox"
@@ -481,9 +531,11 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           blockedBy={
             c.parcelMode
               ? "لا تُجمع مع الطرد — المستلمُ هو الطرفُ الآخر."
-              : c.share
-                ? "لا تُجمع مع مشاركة الرحلة — ألغِ المشاركةَ لتطلبها لغيرك."
-                : null
+              : c.hourlyMode
+                ? "لا تُجمع مع الرحلة بالساعة."
+                : c.share
+                  ? "لا تُجمع مع مشاركة الرحلة — ألغِ المشاركةَ لتطلبها لغيرك."
+                  : null
           }
           onOpen={() => setForOtherOpen(true)}
           onClear={() => c.setForOther(null)}
@@ -576,8 +628,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               type="button"
               className="t2-button secondary t2-schedule-open"
               // **الحجزُ لا يحمل رحلةً لغيره بعد** (`createBooking`) — وحجزٌ يُثبَّت بلا راكبه يُسقط ما كتبه صاحبُه صامتاً.
-              // **ولا طرداً** (§٦٣-ج/٤): حجزٌ يُثبَّت بلا مستلمٍ ولا إقرارٍ يصير رحلةً عاديّة
-              disabled={c.forOther !== null || c.parcelMode}
+              // **ولا طرداً** (§٦٣-ج/٤): حجزٌ يُثبَّت بلا مستلمٍ ولا إقرارٍ يصير رحلةً عاديّة. **ولا ساعات** (§٦٣-ج/٥): الحجزُ لا يحملها
+              disabled={c.forOther !== null || c.parcelMode || c.hourlyMode}
               onClick={() => {
                 c.setWhen(localInputValue(earliest()));
                 c.setScheduling(true);
@@ -588,6 +640,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             </button>
             {c.parcelMode ? (
               <p className="t2-sheet-fine">الحجزُ لموعدٍ لا يحمل طرداً — يُطلب الطردُ الآن.</p>
+            ) : c.hourlyMode ? (
+              <p className="t2-sheet-fine">الحجزُ لموعدٍ لا يحمل الرحلةَ بالساعة — تُطلب الآن.</p>
             ) : c.forOther !== null ? (
               <p className="t2-sheet-fine">الحجزُ لموعدٍ لا يحمل رحلةً لشخصٍ آخر بعد — أزِل «لـ: {c.forOther.name}» لتحجز.</p>
             ) : null}
@@ -595,7 +649,16 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         )
       ) : null}
 
-      <p className="t2-sheet-fine center">السعر النهائي قد يتغيّر إن اختلف المسار الفعلي كثيراً عن المقدَّر.</p>
+      {/* **والساعاتُ لا يغيّرها المسار** (§٦٣-ج/٥) — يغيّرها ما زاد عليها، **ورسمُ إلغائها بعد الوصول يُقال قبل الطلب**: بابُ التقدير لا
+          ينشر دقائقَه، فيُقال بلا رقمٍ لا برقمٍ يُخمَّن */}
+      {c.hourlyMode ? (
+        <p className="t2-sheet-fine center">
+          ما زاد على الساعات أو كيلومتراتها يُحسب في النهاية بالتعرفة العاديّة. وإلغاؤك بعد وصول الكبتن يُحتسب عليه رسمُ إلغاءٍ
+          من سعر الساعة.
+        </p>
+      ) : (
+        <p className="t2-sheet-fine center">السعر النهائي قد يتغيّر إن اختلف المسار الفعلي كثيراً عن المقدَّر.</p>
+      )}
 
       {c.pickingPay && c.payMethod ? (
         <PaymentPicker

@@ -17,12 +17,14 @@ import type {
   PromoPreview,
   RideEstimate,
   RideForOther,
+  RideHourly,
   RideParcel,
   VehicleCategory,
 } from "@/api/types";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { earliest, guaranteeLeadOk, localInputValue, useGuaranteedBooking, useScheduledRides } from "@/lib/bookings";
 import { requesterCanPay, usePayerPreference, useRideForOther } from "@/lib/for-other";
+import { useHourly } from "@/lib/hourly";
 import { useMultiStop } from "@/lib/multistop";
 import { useParcel } from "@/lib/parcel";
 import { usePromoCodes } from "@/lib/promo";
@@ -106,6 +108,8 @@ export interface ConfirmRideProps {
     forOther?: RideForOther,
     /** **الطرد** (§٦٣-ج/٤) — المستلمُ ومن يدفع وإقرارُ الشروط، أو غيابُه لرحلةٍ عاديّة. */
     parcel?: RideParcel,
+    /** **بالساعة** (§٦٣-ج/٥) — الساعاتُ ومن أين يُدفع محجوزُها، أو غيابُه لرحلةٍ عاديّة. */
+    hourly?: RideHourly,
   ) => void;
   requesting: boolean;
   requestError: string | null;
@@ -145,6 +149,10 @@ export interface ConfirmRideProps {
   /** **طلبُ طرد** (§٦٣-ج/٤) بدأته بلاطةُ «طرد» — وغيابُه رحلةٌ عاديّة. **والمسوّدةُ عند صاحب الورقة لا فيها** (`Home`): إضافةُ
    *  محطةٍ تطوي الورقةَ ثمّ تعيدها، ومسوّدةٌ فيها كانت تضيع معها — فيُعاد كتابةُ المستلم وإقرارُ الشروط من أوّله. */
   parcel?: { draft: RideParcel | null; onChange: (next: RideParcel) => void };
+  /** **طلبُ ساعات** (§٦٣-ج/٥) بدأته بلاطةُ «بالساعة» — وغيابُه رحلةٌ عاديّة. **والمسوّدةُ عند صاحب الورقة** كمسوّدة الطرد (`Home`):
+   *  الساعاتُ ومن أين يُدفع محجوزُها تبقى إن طُويت الورقةُ لتعديل الوجهة. و`destination` **أاختار الراكبُ وجهةً** — وبلاها
+   *  `dropoff` نقطةُ الانطلاق نفسُها بعقد الخلفية. */
+  hourly?: { draft: RideHourly; onChange: (next: RideHourly) => void; destination: boolean };
 }
 
 export function useConfirmRide({
@@ -157,20 +165,28 @@ export function useConfirmRide({
   initialCategory,
   initialScheduling,
   parcel: parcelProp,
+  hourly: hourlyProp,
 }: ConfirmRideProps) {
   // **الطرد** (§٦٣-ج/٤): طلبٌ بدأته البلاطة **وحيث المفتاحُ مشتعلٌ وحدَه** — مفتاحٌ أُطفئ بعد البدء يعيد الورقةَ رحلةً عاديّة
   // ولا يُرسل طرداً سيُرفض. **وفئتُه الاقتصاديُّ وحدَه** (الخلفيةُ ترفض غيرَها)، **ولا يُجمع مع «لشخص آخر» ولا المشاركة ولا الحجز**
   const parcelEnabled = useParcel();
   const parcelMode = parcelEnabled && parcelProp !== undefined;
   const parcel = parcelMode ? parcelProp.draft : null;
+  // **بالساعة** (§٦٣-ج/٥) بالحكم نفسِه: طلبٌ بدأته البلاطةُ **وحيث المفتاحُ مشتعل** — وبالاقتصادي وحدَه، **ولا يُجمع مع «لشخص آخر»
+  // ولا الطرد ولا المحطات ولا المشاركة ولا الحجز** (والخلفيةُ ترفض الجمعَ كلَّه)
+  const hourlyEnabled = useHourly();
+  const hourlyMode = hourlyEnabled && hourlyProp !== undefined && !parcelMode;
+  const hourly = hourlyMode ? hourlyProp.draft : null;
+  // **طلبٌ بخدمةٍ خاصّة** — طردٌ أو ساعات: ما يُعطَّل لأجله «لشخص آخر» والمشاركةُ والحجز
+  const special = parcelMode || hourlyMode;
   const women = useWomenService();
   // الحجزُ (12-ط) — مفتاحُه يخفي الزرَّ كلَّه لا يعطّله
   const scheduled = useScheduledRides();
   // **ومفتوحاً من أوّله حين جاءت من «جدولي الرحلة لوقت لاحق»** (RW3) — بأقرب موعدٍ كما يفتحه زرُّه
-  // **ولا حجزَ لطرد** — فلا يُفتح المنتقي ولو جاءت الورقةُ به
-  const [scheduling, setScheduling] = useState(Boolean(initialScheduling) && scheduled && !parcelMode);
+  // **ولا حجزَ لطردٍ ولا لساعات** — فلا يُفتح المنتقي ولو جاءت الورقةُ به
+  const [scheduling, setScheduling] = useState(Boolean(initialScheduling) && scheduled && !special);
   const [when, setWhen] = useState(() =>
-    initialScheduling && scheduled && !parcelMode ? localInputValue(earliest()) : "",
+    initialScheduling && scheduled && !special ? localInputValue(earliest()) : "",
   );
   // **الحجزُ المضمون** (§٦٣-ج/٣): خيارٌ داخل الحجز لا زرٌّ ثالث — **ومفتاحُه يُخفيه**، **وموعدٌ أقربُ من ساعتين يعطّله**
   // بعلّته. **والمُرسَلُ هو الفعّالُ لا المختار**: مفتاحٌ بقي مشتعلاً ثمّ قُرِّب الموعدُ لا يُرسل حجزاً سيُرفض كلُّه
@@ -183,8 +199,8 @@ export function useConfirmRide({
   const [categoryPick, setCategory] = useState<VehicleCategory>(
     initialCategory && categories.includes(initialCategory) ? initialCategory : categories[0] ?? "economy",
   );
-  // **الطردُ بسعر الاقتصادي وحدَه** — والمختارُ قبله يبقى لرحلةٍ عاديّةٍ إن عادت
-  const category: VehicleCategory = parcelMode ? "economy" : categoryPick;
+  // **الطردُ والساعاتُ بسعر الاقتصادي وحدَه** — والمختارُ قبلهما يبقى لرحلةٍ عاديّةٍ إن عادت
+  const category: VehicleCategory = special ? "economy" : categoryPick;
   // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها — **أو ممّا بدأته بلاطةُ «نسائية»، ولمن عُرضت عليها الخدمةُ وحدَها**
   const [preference, setPreference] = useState<GenderPreference>(
     women.available && initialPreference ? initialPreference : women.defaultPreference,
@@ -198,8 +214,9 @@ export function useConfirmRide({
   // الحجز** (الحجزُ لا يحملها بعد، `createBooking`)، **ولا مع المشاركة**: راكبٌ غريبٌ في سيارةٍ طُلبت لغيرك لم يُقرَّر
   const forOtherEnabled = useRideForOther();
   const [forOtherDraft, setForOther] = useState<RideForOther | null>(null);
-  // **ولا تُقرأ مسوّدةٌ بقيت من مفتاحٍ أُطفئ بعدها** — لا في الطلب ولا في قنوات الدفع. **ولا مع طرد**: المستلمُ هو الطرفُ الآخر
-  const forOther = forOtherEnabled && !parcelMode ? forOtherDraft : null;
+  // **ولا تُقرأ مسوّدةٌ بقيت من مفتاحٍ أُطفئ بعدها** — لا في الطلب ولا في قنوات الدفع. **ولا مع طرد**: المستلمُ هو الطرفُ الآخر.
+  // **ولا مع ساعات** (§٦٣-ج/٥): الخلفيةُ ترفض الجمع
+  const forOther = forOtherEnabled && !special ? forOtherDraft : null;
 
   // **طريقةُ الدفع تفضيلٌ محلّي** (قرار 3): تُعرض هنا وتُمرَّر إلى شاشة الدفع،
   // ولا تُرسل مع الطلب ولا تُقيّد صاحبَها بعد الرحلة.
@@ -215,7 +232,8 @@ export function useConfirmRide({
   // **ولا يُحسب منه شيء**: المقارنةُ «هل يغطّي؟» عرضٌ لا قرارُ مال، والقرارُ
   // في `payments._pay_from_wallet` بعد الرحلة تحت قفل المحفظة
   const [balance, setBalance] = useState<string | null>(null);
-  const walletOffered = channels.some((channel) => channel.method === "wallet");
+  // **وساعاتٌ تُدفع من المحفظة عند البدء** (§٦٣-ج/٥) تقرؤه كذلك — رصيدٌ لا يغطّيها يرفض البدءَ والكبتنُ عند الباب، فيُقال قبل الطلب
+  const walletOffered = channels.some((channel) => channel.method === "wallet") || hourly?.prepay === "wallet";
   useEffect(() => {
     if (!walletOffered) return;
     let cancelled = false;
@@ -273,6 +291,8 @@ export function useConfirmRide({
       stops: stops.map((stop) => ({ lat: stop.lat, lng: stop.lng })),
       // **تقديرُ طردٍ يحمل رسمَه وشروطَه** (§٦٣-ج/٤) — وغيرُه بحمولته كما كانت
       is_parcel: parcelMode || undefined,
+      // **وتقديرُ ساعاتٍ بعددها** (§٦٣-ج/٥) — «الساعات × سعرها» من الخلفية، ويُعاد السؤالُ بكلِّ ضغطةٍ على العدّاد
+      hourly_hours: hourly?.hours,
     })
       .then((value) => !cancelled && setEstimate(value))
       .catch(
@@ -287,7 +307,7 @@ export function useConfirmRide({
     };
     // المحطاتُ في التبعيات: إضافةُ محطةٍ أو ترتيبُها يغيّر المسار والرسم،
     // فيُعاد السؤال — ولا يُجمع فرقٌ في الواجهة
-  }, [pickup, dropoff, category, stops, parcelMode]);
+  }, [pickup, dropoff, category, stops, parcelMode, hourly?.hours]);
 
   async function apply() {
     if (!estimate) return;
@@ -314,8 +334,8 @@ export function useConfirmRide({
   // وصفُّ خصمٍ بلا رقمٍ يَعِد بما لا يُعرض
   const shareOffered = sharingEnabled && estimate?.share_fare != null;
   const shareGuarded = preference !== "any";
-  // **ولا مشاركةَ في طرد** (§٦٣-ج/٤) — اختيارٌ بقي قبل البدء لا يُرسل ولا يغيّر السعرَ المعروض
-  const shareReady = share && (!shareGuarded || shareGendered) && !parcelMode;
+  // **ولا مشاركةَ في طرد** (§٦٣-ج/٤) **ولا في ساعات** (§٦٣-ج/٥) — اختيارٌ بقي قبل البدء لا يُرسل ولا يغيّر السعرَ المعروض
+  const shareReady = share && (!shareGuarded || shareGendered) && !special;
   const shownFare =
     (shareReady ? estimate?.share_fare : null) ??
     applied?.fare_after ??
@@ -349,6 +369,16 @@ export function useConfirmRide({
             ? "رصيدك لا يغطّي الأجرة المقدَّرة — الرحلةُ لغيرك تُدفع كاملةً من المحفظة أو بالبطاقة، بلا باقٍ نقداً."
             : "رصيدك لا يغطّي الأجرة المقدَّرة — سيُخصم منه ما يغطّيه ثم تدفع الباقي كاشاً للكبتن."
           : null;
+
+  // **وفي الساعات: المحجوزُ كاملاً من المحفظة عند البدء أو لا يبدأ** (§٦٣-ج/٥، `hourly.prepay_on_start`) — **لا باقيَ نقداً**، فرصيدٌ
+  // لا يغطّيه يرفض البدءَ (`insufficient_balance`) والكبتنُ عند الباب. فيُقال قبل الطلب، **ومخرجاه معه**: الشحنُ أو النقد. والمقارنةُ
+  // عرضٌ لا حساب، كأختها أعلاه
+  const hourlyWalletNote =
+    hourly?.prepay !== "wallet" || balance === null || shownFare === null
+      ? null
+      : Number(balance) < Number(shownFare)
+        ? "رصيدك لا يغطّي الساعاتِ المحجوزة — اشحن محفظتك قبل أن يبدأ الكبتن، أو ادفعها نقداً عند البدء."
+        : null;
 
   return {
     women,
@@ -395,7 +425,8 @@ export function useConfirmRide({
     shareGuarded,
     shareReady,
     shownFare,
-    walletNote,
+    // **سطرُ المحفظة بحكم الطلب** — الساعاتُ لا تُدفع بعد الرحلة بل عند بدئها، فسطرُها غيرُ سطر الأجرة
+    walletNote: hourlyMode ? hourlyWalletNote : walletNote,
     // **خيارُ «لشخص آخر» حيث المفتاحُ مشتعلٌ وليس حجزاً**
     forOtherOffered: forOtherEnabled && !scheduling,
     forOther,
@@ -407,5 +438,17 @@ export function useConfirmRide({
     // **تقديرُ طردٍ بلا رسمٍ ⇒ الخدمةُ مخفيّةٌ في السوق** (رسمٌ صفرٌ أو مفتاحٌ أُطفئ بعد البدء) — والطلبُ سيُرفض
     // `parcel_unavailable`، فيُقال قبله ولا يُضغط زرٌّ يرتدّ
     parcelUnavailable: parcelMode && !loading && estimate !== null && estimate.parcel_fee === null,
+    hourlyMode,
+    hourly,
+    setHourly: hourlyProp?.onChange,
+    hourlyDestination: hourlyProp?.destination ?? true,
+    // **تقديرُ ساعاتٍ تعثّر لا يُطلب على رقمه القديم** (§٦٣-ج/٥): خدمةٌ أُطفئت بعد البدء (`hourly_unavailable`) أو ساعاتٌ فوق سقفٍ
+    // خُفِّض (`invalid_input`) — والرسالةُ تحت الزرّ من الخلفية. **وتقديرٌ بلا سعرِ ساعةٍ خدمةٌ مخفيّة** كرسم الطرد. **ومفتاحٌ أُطفئ
+    // والورقةُ مفتوحةٌ لا يعيدها رحلةً عاديّة** كالطرد: ساعاتٌ بلا وجهةٍ رحلةٌ إلى نقطة انطلاقها — فيُقال ويُعطَّل الزرّ
+    hourlyBlocked:
+      hourlyProp !== undefined &&
+      !parcelMode &&
+      !loading &&
+      (!hourlyEnabled || error !== null || (estimate !== null && estimate.hourly_rate === null)),
   };
 }

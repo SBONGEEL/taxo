@@ -60,6 +60,7 @@ from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
 from app.services import parcels, ride_for_other
+from app.services import hourly as hourly_service
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
 
@@ -395,6 +396,7 @@ async def request_ride(
     share_gender_confirmed: bool = False,
     passenger: "ride_for_other.PassengerRequest | None" = None,
     parcel: "parcels.ParcelRequest | None" = None,
+    hourly: "hourly_service.HourlyRequest | None" = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -510,6 +512,14 @@ async def request_ride(
         prepared_parcel = await parcels.prepare(
             session, rider=rider, parcel=parcel, vehicle_category=vehicle_category
         )
+    # **بالساعة تُفحص قبل التسعير** (§٦٣-ج/٥) — مفتاحُها وفئتُها وساعاتُها، ثمّ تُسعَّر ساعاتٍ لا طريقاً
+    hourly_terms = None
+    if hourly is not None:
+        if passenger is not None or parcel is not None or stops or share:
+            raise InvalidInput("الرحلةُ بالساعة لا تجتمع مع طلبٍ لغيرك ولا طردٍ ولا محطاتٍ ولا مشاركة")
+        hourly_terms = await hourly_service.prepare(
+            session, rider=rider, request=hourly, vehicle_category=vehicle_category
+        )
     quote = await pricing.estimate(
         session,
         country_code=rider.country_code,
@@ -518,6 +528,7 @@ async def request_ride(
         dropoff=dropoff,
         stops=[Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops],
         parcel=prepared_parcel is not None,
+        hourly=hourly_terms,
     )
     # تسعيرةُ الدولة تُقرأ مرةً واحدة: منها التقديرُ ومنها الحقولُ المجمَّدة
     rule = await pricing.get_rule(session, rider.country_code, vehicle_category)
@@ -580,6 +591,13 @@ async def request_ride(
         ride.passenger_name = prepared.name
         ride.passenger_phone = prepared.phone
         ride.payer = prepared.payer.value
+    if hourly_terms is not None:
+        ride.ride_type = "hourly"
+        ride.hourly_hours = hourly_terms.hours
+        ride.hourly_rate_at_ride = hourly_terms.rate
+        ride.hourly_km_per_hour_at_ride = hourly_terms.km_per_hour
+        ride.hourly_cancel_minutes_at_ride = hourly_terms.cancel_minutes
+        ride.hourly_prepay_method = hourly_terms.prepay
     if prepared_parcel is not None:
         ride.ride_type = "parcel"
         ride.recipient_name = prepared_parcel.recipient_name
@@ -811,11 +829,17 @@ async def start_ride(
 
     **ورحلةٌ برمزٍ لا تبدأ إلا به** (§٦٢-ج/٥، CW4) — ويُفحص **بعد** أن يصحّ الانتقال: رمزٌ صحيحٌ لرحلةٍ لا تُبدأ لا يستهلك محاولة.
     """
+    # **بالساعة يُدفع المحجوزُ عند البدء** (§٦٣-ج/٥) — **فيُقفل صفُّ الرحلة قبل الفحص**: بدءان معاً لا يدفعان مرّتين. **ولغير الساعة
+    # لا يتغيّر شيء** — قفلُ البدء العامُّ بندٌ مفتوحٌ بعد جولة S21 (متغيّرٌ واحدٌ في كلِّ مرّة)
+    if ride.ride_type == "hourly":
+        await session.refresh(ride, with_for_update=True)
     _require_transition(ride, RideStatus.IN_PROGRESS)
     if ride.start_code is not None:
         await _check_start_code(redis, ride, code)
     ride.status = RideStatus.IN_PROGRESS
     ride.started_at = _now()
+    if ride.ride_type == "hourly":
+        await hourly_service.prepay_on_start(session, ride)
 
     from app.services import pauses
 
@@ -907,6 +931,14 @@ async def _final_fare(
     المعادُ حسابُها حين انحرف الطريق) ثمّ الانتظارُ والوقفات — **والمبالغُ نفسُها التي يُجمع منها السعر**. **ولا يُجمَّد تفصيلٌ لا
     يساوي المبلغ**: رحلةٌ أقدمُ من العمود (بلا أسطر)، أو مجموعٌ يخالف — فلا تفصيلَ يُرسم بدل تفصيلٍ كاذب.
     """
+    # **بالساعة: المحجوزُ وما زاد** (§٦٣-ج/٥) — ورسومُ الكبتن (المطار) فوقها كما في كلِّ رحلة
+    if ride.ride_type == "hourly":
+        rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
+        fare, hourly_lines = hourly_service.final_fare(ride, rule, actual_km)
+        fees = [line for line in (ride.fare_lines or []) if line.get("kind") == "airport_fee"]
+        ride.fare_lines = hourly_lines + fees
+        return pricing.round_money(fare + ride.captain_fees_at_ride)
+
     base = ride.estimated_fare
     base_lines: list[dict[str, str]] = list(ride.fare_lines or [])
     if actual_km is not None and route.deviates(ride.distance_km, actual_km):
@@ -1128,6 +1160,9 @@ async def cancel_ride(
     ):
         rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
         fee = pricing.round_money(rule.cancellation_fee)
+        # **بالساعة بعد وصول الكبتن: دقائقُ الإلغاء من سعر الساعة** (§٦٣-ج/٥) — بمسار رسم الإلغاء نفسِه، للكبتن
+        if ride.ride_type == "hourly" and ride.status is RideStatus.ARRIVED:
+            fee = hourly_service.cancel_fee(ride)
 
     if mismatch:
         await _record_gender_mismatch(session, ride, driver, by_role=by_role)

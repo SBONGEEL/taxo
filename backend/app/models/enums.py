@@ -340,6 +340,10 @@ class FareLineKind(StrEnum):
     AIRPORT_FEE = "airport_fee"
     #: **رسمُ الطرد للكبتن** (§٦٣-ج/٤) — كرسم المطار: داخل الأجرة، خارج العمولة والخصم
     PARCEL_FEE = "parcel_fee"
+    #: **بالساعة** (§٦٣-ج/٥): الساعاتُ المحجوزة، وما زاد من كيلومتراتٍ ومن دقائقَ بالتعرفة العاديّة
+    HOURLY = "hourly"
+    HOURLY_EXTRA_KM = "hourly_extra_km"
+    HOURLY_EXTRA_TIME = "hourly_extra_time"
 
 
 
@@ -637,6 +641,9 @@ class FeatureKey(StrEnum):
     # **الطرد** (§٦٣-ج/٤) — رحلةٌ اقتصاديّةٌ تحمل غرضاً، برسمٍ للكبتن ومستلمٍ يُمحى بعد ٣٠ يوماً. ومطفأً يُرفض طلبُه، والقائمُ يكمل؛
     # و`service_settings.parcel_fee` صفرٌ يُخفيه ولو اشتعل
     PARCEL_ENABLED = "parcel_enabled"
+    # **بالساعة** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ تُدفع عند البدء وما زاد في النهاية. ومطفأً يُرفض طلبُها والقائمةُ تكمل؛
+    # و`service_settings.hourly_rate` صفرٌ يُخفيها ولو اشتعل
+    HOURLY_ENABLED = "hourly_enabled"
 
 
 class BookingStatus(StrEnum):

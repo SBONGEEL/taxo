@@ -159,6 +159,7 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         FeatureKey.AIRPORT_ENABLED: False,
         FeatureKey.GUARANTEED_BOOKING_ENABLED: False,
         FeatureKey.PARCEL_ENABLED: False,
+        FeatureKey.HOURLY_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

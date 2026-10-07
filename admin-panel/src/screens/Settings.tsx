@@ -204,6 +204,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "الطرد",
     hint: "يطلب الراكبُ توصيلَ غرضٍ بسيارةٍ اقتصاديّة: يقرأ شروطَ الطرد ويُقرّ بها قبل الطلب، ويكتب اسمَ المستلم ورقمَه وعنوانَ التسليم، ويختار من يدفع — هو، أو المستلمُ نقداً عند التسليم. ورسمُ الطرد فوق سعر الاقتصادي للكبتن — يصله كاملاً ولا تُقتطع منه العمولة، ولا يمسّه خصم. ويرى الكبتنُ المستلمَ بعد القبول وحدَه، ويُمحى بعد ثلاثين يوماً من انتهاء الرحلة. وللكبتن أن يرفض الطردَ عند الاستلام فتُلغى الرحلةُ بلا مالٍ على أحد. والرسمُ في «الخدمات الجديدة» أدناه، ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُ الطرد، والقائمُ يكمل برسمه.",
   },
+  hourly_enabled: {
+    title: "بالساعة",
+    hint: "يحجز الراكبُ سيارةً اقتصاديّةً بالساعة: يختار عددَ الساعات حتى سقفٍ تضبطه، ووجهتُه اختياريّةٌ يقولها للكبتن في الطريق. والمحجوزُ — الساعاتُ في سعرها — يُدفع عند البدء: من محفظته يُسوّى فوراً ورصيدٌ لا يكفيه يمنع البدء، أو نقداً يؤكّد الكبتنُ استلامَه. وما زاد على كيلومترات الساعات أو دقائقها يُحسب عند الإنهاء بتعرفة الاقتصادي العاديّة، وتُقتطع العمولةُ من أجرتها كأيِّ رحلة. وإلغاءُ الراكب بعد وصول الكبتن يكلّفه دقائقَ من سعر الساعة تذهب إلى الكبتن. والأرقامُ في «الخدمات الجديدة» أدناه، وسعرٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُها، والقائمةُ تكمل بأسعارها.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -246,6 +250,7 @@ const FLAGS: FeatureKey[] = [
   "airport_enabled",
   "guaranteed_booking_enabled",
   "parcel_enabled",
+  "hourly_enabled",
   "driver_map_nearby_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
@@ -810,6 +815,30 @@ export function SettingsScreen() {
                   لحظةَ طلبها.
                 </p>
                 <ParcelForm
+                  key={serviceRow.country_code}
+                  row={serviceRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+              </div>
+            ) : null}
+
+            {/* **بالساعة** (§٦٣-ج/٥) — أربعةُ أرقامٍ من الصفِّ نفسِه **بنموذجٍ مستقلٍّ بحفظه** كالطرد: حفظُها لا يمسّ أرقامَ غيرها */}
+            {serviceRow ? (
+              <div className="mt-18 border-t border-line pt-14">
+                <h3 className="mb-2 text-12.5 font-bold text-ink">بالساعة</h3>
+                <p className="mb-12 text-11 leading-snug text-muted">
+                  سيارةٌ اقتصاديّةٌ تُحجز بالساعات، يُدفع محجوزُها عند البدء وما زاد في
+                  النهاية بالتعرفة العاديّة.{" "}
+                  <b className="text-ink">وسعرٌ صفرٌ يُخفي الخدمة</b> ولو اشتعل مفتاحُها.{" "}
+                  <b className="text-ink">ولا أثرَ رجعياً</b>: السعرُ والكيلومتراتُ ودقائقُ
+                  الإلغاء مجمَّدةٌ على الرحلة لحظةَ طلبها.
+                </p>
+                <HourlyForm
                   key={serviceRow.country_code}
                   row={serviceRow}
                   disabled={!isAdmin}
@@ -2052,6 +2081,104 @@ function ParcelForm({
           setBusy(true);
           updateServiceSettings(row.country_code, { parcel_fee: fee.trim() })
             .then(() => onSaved("حُفظ رسم الطرد — يسري على ما يُطلب بعده لا على رحلةٍ قائمة"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **بالساعة** (§٦٣-ج/٥) — أربعةُ أرقامٍ لسوقٍ واحد: سعرُ الساعة مالاً، وكيلومتراتُها عدّاً، ودقائقُ الإلغاء مدّةً، وأقصى الساعات عدّاً.
+ *
+ * **ويُرسل ما تغيّر وحدَه** (`PATCH` جزئيّ كأخويه): حقلٌ لم يُلمس لا يُكتب فوق ما كتبه غيرُه بين القراءة والحفظ، وسجلُّ التدقيق
+ * يقول ما عُدِّل فعلاً. **والحدودُ في الخلفية** (`ServiceSettingUpdate`: كيلومتراتٌ ٠–٢٠٠، دقائقُ ٠–٢٤٠، ساعاتٌ ١–٢٤) — ورفضُها
+ * يُقال تحت حقله. **ولا مبلغَ يُحسب هنا**: «نصفُ ساعةٍ من السعر» تقوله الخلفيةُ عند الإلغاء من المجمَّد على الرحلة. و`key={country}`
+ * عليه كبقية النماذج.
+ */
+function HourlyForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [rate, setRate] = useState(row.hourly_rate);
+  const [km, setKm] = useState(String(row.hourly_km_per_hour));
+  const [cancelMinutes, setCancelMinutes] = useState(row.hourly_cancel_minutes);
+  const [maxHours, setMaxHours] = useState(String(row.hourly_max_hours));
+  const [busy, setBusy] = useState(false);
+
+  // **الفرقُ بالمقارنة** — من كتب ثمّ أعاد القيمةَ كما كانت لم يغيّر شيئاً
+  const changes: Partial<Omit<ServiceSetting, "country_code">> = {};
+  if (rate.trim() !== row.hourly_rate) changes.hourly_rate = rate.trim();
+  if (Number(km) !== row.hourly_km_per_hour) changes.hourly_km_per_hour = Number(km);
+  if (cancelMinutes !== row.hourly_cancel_minutes) changes.hourly_cancel_minutes = cancelMinutes;
+  if (Number(maxHours) !== row.hourly_max_hours) changes.hourly_max_hours = Number(maxHours);
+  const dirty = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <MoneyField
+          name="hourly_rate"
+          label="سعر الساعة"
+          value={rate}
+          onChange={(next) => setRate(next.replace(/[^0-9.,]/g, ""))}
+          currency={currencyOf(row.country_code)}
+          disabled={disabled}
+          hint="شاملاً كيلومتراتِ الساعة — وصفرٌ يُخفي الخدمة"
+        />
+        {/* **والتلميحُ تحت الحقل بصنف أخويه** (`ad-hint`) — `Field` لا يحمل تلميحاً، والعددُ بلا وحدةٍ يُقرأ ملتبساً */}
+        <div>
+          <Field
+            name="hourly_km_per_hour"
+            label="كيلومترات الساعة"
+            dir="ltr"
+            inputMode="numeric"
+            value={km}
+            disabled={disabled}
+            onChange={(event) => setKm(event.target.value.replace(/[^0-9]/g, ""))}
+          />
+          <p className="ad-hint">المشمولةُ في سعر الساعة — وما زاد بسعر الكيلومتر العاديّ</p>
+        </div>
+        <DurationField
+          name="hourly_cancel_minutes"
+          label="رسم إلغاء الراكب"
+          wire="minute"
+          value={cancelMinutes}
+          disabled={disabled}
+          onChange={setCancelMinutes}
+          hint="إلغاءُ الراكب بعد وصول الكبتن: هذه الدقائقُ من سعر الساعة للكبتن"
+        />
+        <div>
+          <Field
+            name="hourly_max_hours"
+            label="أقصى الساعات في الطلب"
+            dir="ltr"
+            inputMode="numeric"
+            value={maxHours}
+            disabled={disabled}
+            onChange={(event) => setMaxHours(event.target.value.replace(/[^0-9]/g, ""))}
+          />
+          <p className="ad-hint">سقفُ عدّاد الساعات عند الراكب — من 1 إلى 24</p>
+        </div>
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || rate.trim() === "" || km === "" || maxHours === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, changes)
+            .then(() => onSaved("حُفظت الرحلةُ بالساعة — تسري على ما يُطلب بعدها لا على رحلةٍ قائمة"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}
