@@ -20,7 +20,7 @@ from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRou
 from app.models.user import User
 from app.schemas.intercity import (
     BookingIn,
-    BookingOut,
+    IntercityBookingOut,
     PermitIn,
     PermitOut,
     RouteIn,
@@ -56,23 +56,23 @@ async def open_trips(rider: RiderUser, session: DbSession) -> list[TripOut]:
     return [await trip_out(session, row) for row in rows]
 
 
-@router.post("/bookings", response_model=BookingOut, status_code=status.HTTP_201_CREATED)
-async def book(payload: BookingIn, rider: RiderUser, session: DbSession) -> BookingOut:
+@router.post("/bookings", response_model=IntercityBookingOut, status_code=status.HTTP_201_CREATED)
+async def book(payload: BookingIn, rider: RiderUser, session: DbSession) -> IntercityBookingOut:
     row = await intercity.book(session, rider=rider, trip_id=payload.trip_id, seats=payload.seats, whole_car=payload.whole_car)
     await session.commit()
     return await booking_out(session, row)
 
 
-@router.get("/bookings", response_model=list[BookingOut])
-async def my_bookings(rider: RiderUser, session: DbSession) -> list[BookingOut]:
+@router.get("/bookings", response_model=list[IntercityBookingOut])
+async def my_bookings(rider: RiderUser, session: DbSession) -> list[IntercityBookingOut]:
     rows = await session.scalars(
         select(IntercityBooking).where(IntercityBooking.rider_id == rider.id).order_by(IntercityBooking.created_at.desc()).limit(50)
     )
     return [await booking_out(session, row) for row in rows]
 
 
-@router.post("/bookings/{booking_id}/cancel", response_model=BookingOut)
-async def cancel_booking(booking_id: uuid.UUID, rider: RiderUser, session: DbSession) -> BookingOut:
+@router.post("/bookings/{booking_id}/cancel", response_model=IntercityBookingOut)
+async def cancel_booking(booking_id: uuid.UUID, rider: RiderUser, session: DbSession) -> IntercityBookingOut:
     row = await intercity.cancel_booking(session, booking_id=booking_id, rider=rider)
     await session.commit()
     return await booking_out(session, row)

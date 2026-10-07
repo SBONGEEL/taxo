@@ -150,6 +150,8 @@ class RideCreateRequest(RideEstimateRequest):
     parcel: ParcelIn | None = None
     # **بالساعة** (§٦٣-ج/٥) — والوجهةُ اختياريّة: ترسل الواجهةُ نقطةَ الانطلاق نفسَها وجهةً إن لم تُختر
     hourly: HourlyIn | None = None
+    # **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣) — للطلب النسائيّ وحدَه، ويُردّ على غيره
+    widen_search: bool = False
 
 
 class RideCancelRequest(BaseModel):
@@ -434,6 +436,8 @@ class RideOut(BaseModel):
     hourly_prepay_method: str | None = None
     # **رحلةٌ من المشوار الثابت** (§٦٣-ج/٦) — مدفوعةٌ مقدّماً، فلا شاشةَ دفعٍ ولا «استلم» عند الكبتن
     commute: bool = False
+    # **بحثٌ موسَّعٌ اختارته** (§٦٤-ج/٤-٣) — تقول شاشتُها «نوسّع البحث» لا «نبحث»
+    search_widened: bool = False
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -537,6 +541,7 @@ class RideOut(BaseModel):
             ),
             hourly_prepay_method=ride.hourly_prepay_method,
             commute=ride.commute_id is not None,
+            search_widened=ride.search_widened,
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,

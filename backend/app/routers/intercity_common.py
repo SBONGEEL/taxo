@@ -20,7 +20,7 @@ from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRou
 from app.models.user import User
 from app.schemas.intercity import (
     BookingIn,
-    BookingOut,
+    IntercityBookingOut,
     PermitIn,
     PermitOut,
     RouteIn,
@@ -58,8 +58,8 @@ async def trip_out(session, trip: IntercityTrip, *, for_driver: bool = False) ->
     )
 
 
-async def booking_out(session, row: IntercityBooking) -> BookingOut:
-    return BookingOut(
+async def booking_out(session, row: IntercityBooking) -> IntercityBookingOut:
+    return IntercityBookingOut(
         id=row.id,
         trip=await trip_out(session, await session.get(IntercityTrip, row.trip_id)),
         seats=row.seats,

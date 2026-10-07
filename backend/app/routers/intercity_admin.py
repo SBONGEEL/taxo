@@ -20,7 +20,7 @@ from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRou
 from app.models.user import User
 from app.schemas.intercity import (
     BookingIn,
-    BookingOut,
+    IntercityBookingOut,
     PermitIn,
     PermitOut,
     RouteIn,

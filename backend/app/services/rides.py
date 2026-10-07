@@ -397,6 +397,7 @@ async def request_ride(
     passenger: "ride_for_other.PassengerRequest | None" = None,
     parcel: "parcels.ParcelRequest | None" = None,
     hourly: "hourly_service.HourlyRequest | None" = None,
+    widen_search: bool = False,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -482,6 +483,9 @@ async def request_ride(
         # يُبتلع صامتاً: طلبٌ يُسنَد لأيّ كبتنٍ بعد أن طُلب فيه غيرُه أسوأ من
         # طلبٍ يُرفض بسببه
         raise WomenServiceUnavailable()
+    # **«انتظري، نوسّع البحث» بين الكبتنات وحدهنّ** (§٦٤-ج/٤-٣): على طلبٍ بلا تفضيلٍ لا معنى له — دائرتُه السبعةُ مفتوحةٌ لكلِّ كبتن
+    if widen_search and preference is GenderPreference.ANY:
+        raise InvalidInput("توسيعُ البحث للطلب النسائيّ وحدَه")
 
     # **المشاركةُ تُفحص عند الإنشاء كالمحطات** (12-ي): واجهةٌ تخفي المفتاح لا
     # تمنع طلباً مصنوعاً بيد. و`share_percent` صفرٌ يعني رحلةً غيرَ مشتركة
@@ -561,6 +565,7 @@ async def request_ride(
         ),
         # يُجمَّد كالعمولة: تغييرُ الملف بعد الطلب لا يغيّر لمن يُعرض هذا الطلب
         gender_preference=preference,
+        search_widened=widen_search,
         # المحطاتُ ومعدلاتُ انتظارها **مجمَّدةٌ لحظتها** (SPEC القسم 5.10):
         # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن
         # يتغيّر عدّادُها تحت عين راكبها

@@ -97,7 +97,10 @@ class BookingIn(BaseModel):
     whole_car: bool = False
 
 
-class BookingOut(BaseModel):
+class IntercityBookingOut(BaseModel):
+    """حجزُ مقعدٍ بين المدن — **وباسمٍ لا يتكرّر**: `BookingOut` اسمُ الحجز المجدول، وتكرارُه جعل مخطَّطَ OpenAPI يسمّي الاثنين
+    بمسار الوحدة فلم يعد تصنيفُ `test_two_doors` يطابق اسمَه وسقط (قِيس ٢٠٢٦-١٠-٠٧)."""
+
     id: uuid.UUID
     trip: TripOut
     seats: int

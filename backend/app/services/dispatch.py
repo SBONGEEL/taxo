@@ -484,9 +484,13 @@ async def _ranked_candidates(
     أضيق ابتداءً فالتوسعةُ هي ما يفرق بين كبتنةٍ على بعد ثمانية كيلومترات
     و«لم نجد كبتناً».
     """
+    gendered = gender is not None and gender.preference is not GenderPreference.ANY
     widest = (
-        geo.GENDERED_MAX_SEARCH_RADIUS_KM
-        if gender is not None and gender.preference is not GenderPreference.ANY
+        # **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣): أوسعُ للطلب النسائيّ وحدَه — **وشرطُ الجنس هو هو**، فلا يقع على رجل
+        geo.GENDERED_WIDENED_SEARCH_RADIUS_KM
+        if gendered and ride.search_widened
+        else geo.GENDERED_MAX_SEARCH_RADIUS_KM
+        if gendered
         else geo.MAX_SEARCH_RADIUS_KM
     )
     for radius in (geo.SEARCH_RADIUS_KM, widest):
@@ -710,6 +714,10 @@ async def _fold(
         )
 
 
+#: **ما تزيده «انتظري، نوسّع البحث» على مهلة السوق** (§٦٤-ج/٤-٣، قراري) — ثلاثُ دقائق: انتظارٌ اختارته، لا بحثٌ بلا نهاية
+WIDEN_EXTRA_SECONDS = 180
+
+
 async def _run(ride_id: uuid.UUID) -> None:
     from app.services import rides as rides_service
 
@@ -731,9 +739,13 @@ async def _run(ride_id: uuid.UUID) -> None:
         # **تُقرأ القواعدُ مرّةً هنا** — والتبديلُ حيّاً يسري على الرحلة
         # التالية لا على هذه (انظر `services/dispatch_settings.py`)
         rules = await rules_for(session, locked.country_code)
+        widened = locked.search_widened
         await session.commit()
 
-    deadline = time.monotonic() + rules.total_timeout_seconds
+    # **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣): دقائقُ أكثر بمحاولاتٍ أكثر — اختارت أن تنتظر
+    extra = WIDEN_EXTRA_SECONDS if widened else 0
+    max_attempts = rules.max_attempts * (2 if widened else 1)
+    deadline = time.monotonic() + rules.total_timeout_seconds + extra
 
     # **المشاركةُ تُجرَّب قبل أوّل عرض** (12-ي): المقعدُ الثاني في سيارةٍ سائرةٍ
     # أصلاً أسرعُ للراكب وأربحُ للكبتن من إيقاظ سيارةٍ أخرى — وإن لم يوجد، تمضي
@@ -744,7 +756,7 @@ async def _run(ride_id: uuid.UUID) -> None:
         return
 
     try:
-        while attempts < rules.max_attempts and time.monotonic() < deadline:
+        while attempts < max_attempts and time.monotonic() < deadline:
             async with SessionLocal() as session:
                 ride = await _load_ride(session, ride_id)
                 # أُلغيت أو قُبلت من مسار آخر — لا شأن للتوزيع بها بعد الآن

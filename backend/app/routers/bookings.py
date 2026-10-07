@@ -4,7 +4,8 @@
 
 **ولا مسارَ «نفّذ الآن»**: التنفيذُ ساعةٌ لا زرّ. ومن أراد رحلةً الآن يطلبها من
 `POST /rides` — وزرٌّ يُنفّذ حجزاً قبل موعده يعني بابين يُنشئان رحلةً من حجزٍ
-واحد، وسباقاً بينهما على نفس الصف.
+واحد، وسباقاً بينهما على نفس الصف. **و«أي كبتن» (§٦٤-ج/٤-١) ليس كذلك**: يبدّل
+التفضيلَ تحت قفل الحجز ولا يُنشئ شيئاً — والدورةُ تطلبه في دقيقتها.
 """
 
 from __future__ import annotations
@@ -16,10 +17,12 @@ from sqlalchemy import select
 
 from app.core.currency import currency_for_country
 from app.core.deps import DbSession, RiderUser
+from app.models.enums import FeatureKey
 from app.models.booking import RideBooking
 from app.models.ride import Ride
 from app.schemas.booking import BookingCreate, BookingOut
 from app.services import bookings as bookings_service
+from app.services import settings_service
 from app.services.directions import Coordinates
 
 router = APIRouter(prefix="/me/bookings", tags=["bookings"])
@@ -55,6 +58,12 @@ async def _out(session, booking: RideBooking) -> BookingOut:
             )
         },
         ride_status=ride_status,
+        awaiting_choice=bookings_service.awaiting_choice(
+            booking,
+            await settings_service.is_feature_enabled(
+                session, booking.country_code, FeatureKey.WOMEN_SERVICE_ENABLED
+            ),
+        ),
         currency=currency_for_country(booking.country_code),
         guaranteed=booking.guaranteed,
         guarantee_fee=booking.guarantee_fee_at_booking if booking.guaranteed else None,
@@ -106,6 +115,17 @@ async def create_booking(
     await session.commit()
     await session.refresh(booking)
     return await _out(session, booking)
+
+
+@router.post("/{booking_id}/any-captain", response_model=BookingOut)
+async def choose_any_captain(
+    booking_id: uuid.UUID, rider: RiderUser, session: DbSession
+) -> BookingOut:
+    """**«اطلبيها بأي كبتن»** (§٦٤-ج/٤-١) — اختيارُها هي، والدورةُ تطلبها خلال دقيقة."""
+    booking = await bookings_service.get_for_rider(session, booking_id, rider.id)
+    chosen = await bookings_service.choose_any_captain(session, booking=booking, actor=rider)
+    await session.commit()
+    return await _out(session, chosen)
 
 
 @router.delete("/{booking_id}", response_model=BookingOut)

@@ -899,6 +899,10 @@ async def update_me(
         # ختمٍ لم يُثبَّت جنسُه بعد، فإعلانُه عن نفسه يقيّد رحلتَه هو وحدَها.
         if user.has_role(UserRole.DRIVER) or user.gender_verified_at is not None:
             raise InvalidInput("جنس الكبتن يثبّته المشرف من الهوية")
+        # **يُعلَن مرّةً ولا يُبدَّل إلا بالدعم** (قرارُ المالك ٢٠٢٦-٠٨-١٥، وجوابُه ٢٠٢٦-١٠-٠٧ §٦٤-ج/٤-٢): من لم تُعلنه تُعلنه
+        # حين تضغط الخدمةَ النسائية — **ومن أعلنته لا تغيّره من هاتفها**؛ والقيمةُ نفسُها تُعاد بلا خطأ
+        if user.gender is not None and user.gender != payload.gender:
+            raise InvalidInput("الجنسُ يُعلَن مرّةً — وتغييرُه عبر الدعم")
         # إعلانُ الراكبة بلا ختم — والختمُ شرطُ جانب الكبتن وحده
         user.gender = payload.gender
     if payload.ride_gender_preference is not None:

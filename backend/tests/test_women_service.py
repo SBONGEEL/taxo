@@ -715,6 +715,60 @@ async def test_the_flag_is_a_question_about_the_count(
 BEYOND_SEVEN_KM = {"lat": 32.0300, "lng": 35.9106}
 
 
+BEYOND_TEN_KM = {"lat": 32.0740, "lng": 35.9106}  # ~١٣ كم: خارج دائرة الطلب النسائيّ وداخل الموسَّعة
+
+
+async def test_waiting_widens_the_search_among_women_only(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**«انتظري، نوسّع البحث» بين الكبتنات وحدهنّ** (§٦٤-ج/٤-٣): كبتنةٌ على ~١٣ كم لا يصلها الطلبُ النسائيّ ويصلها الموسَّع —
+    **وكبتنٌ رجلٌ بجانب الراكبة لا يُعرض عليه أيٌّ منهما**. والتوسيعُ على طلبٍ بلا تفضيلٍ يُردّ."""
+    female = await _driver_with(client, session_factory, DRIVER, plate_number="AMM-1", gender=Gender.FEMALE)
+    await bring_online(client, female, BEYOND_TEN_KM)
+    male = await _driver_with(client, session_factory, SECOND_DRIVER, plate_number="AMM-2", gender=Gender.MALE)
+    await bring_online(client, male, NEAR_PICKUP)
+    await enable_features(session_factory, WOMEN)
+
+    rider = await _rider(client, gender="female")
+    first = await _request(client, rider["headers"], "female")
+    await wait_for_status(client, rider["headers"], first["id"], "no_driver_found")
+
+    widened = await client.post(
+        "/rides",
+        json={"pickup": PICKUP, "dropoff": {"lat": 31.9800, "lng": 35.8600}, "vehicle_category": "economy",
+              "gender_preference": "female", "widen_search": True},
+        headers=rider["headers"],
+    )
+    assert widened.status_code == 201, widened.text
+    assert widened.json()["search_widened"] is True
+    assert await wait_for_offer(widened.json()["id"]) == female["driver_id"]
+    cancelled = await _cancel(client, rider["headers"], widened.json()["id"])
+    assert cancelled.status_code == 200, cancelled.text
+
+    plain = await client.post(
+        "/rides",
+        json={"pickup": PICKUP, "dropoff": {"lat": 31.9800, "lng": 35.8600}, "vehicle_category": "economy",
+              "gender_preference": "any", "widen_search": True},
+        headers=rider["headers"],
+    )
+    assert plain.status_code == 422, plain.text
+
+
+async def test_a_rider_declares_her_gender_once_and_cannot_change_it_herself(
+    client: AsyncClient, session_factory
+) -> None:
+    """**تُعلنه حين تضغط الخدمةَ النسائية إن لم تُعلنه** (§٦٤-ج/٤-٢) — **ثمّ لا تغيّره من هاتفها**؛ والقيمةُ نفسُها تُعاد بلا خطأ."""
+    headers = auth(await register(client, RIDER))
+    first = await client.patch("/auth/me", headers=headers, json={"gender": "female"})
+    assert first.status_code == 200 and first.json()["gender"] == "female", first.text
+    again = await client.patch("/auth/me", headers=headers, json={"gender": "female"})
+    assert again.status_code == 200, again.text
+    changed = await client.patch("/auth/me", headers=headers, json={"gender": "male"})
+    assert changed.status_code == 422, changed.text
+    me = await client.get("/auth/me", headers=headers)
+    assert me.json()["gender"] == "female"
+
+
 async def test_a_gendered_request_reaches_further_than_seven_kilometres(
     client: AsyncClient, jordan_settings: None, session_factory
 ) -> None:

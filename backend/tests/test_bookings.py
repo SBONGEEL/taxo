@@ -401,6 +401,95 @@ async def test_a_booking_whose_dispatch_found_nobody_is_reported_once(
     assert "booking_no_driver" in kinds
 
 
+async def _women_booking_paused(client, session_factory):
+    """حجزٌ نسائيٌّ ثمّ تُطفأ الخدمةُ ويحلّ موعدُه — **الحالُ التي قرّر فيها المالك ألّا يبدّل التطبيقُ شيئاً**."""
+    from app.models.enums import CountryCode, FeatureKey
+    from app.services import settings_service
+
+    await enable_features(session_factory, "scheduled_rides_enabled", "women_service_enabled")
+    rider = await rider_session(client)
+    status, booking = await _book(client, rider["headers"], gender_preference="female")
+    assert status == 201, booking
+    async with session_factory() as session:
+        await settings_service.set_flag(
+            session, country_code=CountryCode.JO, feature_key=FeatureKey.WOMEN_SERVICE_ENABLED, enabled=False
+        )
+        await session.commit()
+    await _due_now(session_factory, booking["id"])
+    return rider, booking
+
+
+async def _run(session_factory, booking_id: str):
+    from app.core.redis_client import get_redis_client
+
+    async with session_factory() as session:
+        ride = await bookings_service.execute(session, get_redis_client(), uuid.UUID(booking_id))
+        await session.commit()
+    return ride
+
+
+async def test_a_womens_booking_is_never_switched_by_itself_she_is_told_once_and_chooses(
+    client: AsyncClient, session_factory, jordan_settings
+):
+    """**لا يُبدَّل تلقائياً أبداً** (§٦٤-ج/٤-١): الخدمةُ متوقّفةٌ عند التنفيذ ⇒ لا رحلة، **وإعلامٌ واحدٌ لا كلَّ دقيقة**، وبطاقتُها
+    «تنتظر اختيارك» — **ثمّ «أي كبتن» اختيارُها** فتُطلب في الدورة التالية بلا تفضيل."""
+    from app.models.notification import UserNotification
+
+    rider, booking = await _women_booking_paused(client, session_factory)
+    assert await _run(session_factory, booking["id"]) is None
+    assert await _run(session_factory, booking["id"]) is None
+    async with session_factory() as session:
+        assert await session.scalar(select(func.count()).select_from(Ride)) == 0
+        notices = list(await session.scalars(select(UserNotification)))
+    kinds = [row.kind for row in notices]
+    assert kinds.count("booking_women_paused") == 1, kinds
+    assert "booking_preference_dropped" not in kinds
+
+    mine = (await client.get("/me/bookings", headers=rider["headers"])).json()
+    assert [row["awaiting_choice"] for row in mine] == [True]
+
+    chosen = await client.post(f"/me/bookings/{booking['id']}/any-captain", headers=rider["headers"])
+    assert chosen.status_code == 200, chosen.text
+    assert chosen.json()["gender_preference"] == "any" and chosen.json()["awaiting_choice"] is False
+    ride = await _run(session_factory, booking["id"])
+    assert ride is not None and ride.gender_preference.value == "any"
+
+
+async def test_a_paused_womens_booking_cancels_free_and_lapses_unchosen(
+    client: AsyncClient, session_factory, jordan_settings
+):
+    """**الإلغاءُ بلا رسم** (لا رحلةَ لها أصلاً) · **ومن لم تختر يُطوى حجزُها بعد نصف ساعةٍ من موعده** ولا يُطلب بعد فوات وقته."""
+    from app.models.enums import CountryCode, FeatureKey
+    from app.services import settings_service
+
+    await enable_features(session_factory, "scheduled_rides_enabled", "women_service_enabled")
+    rider = await rider_session(client)
+    _s1, first = await _book(client, rider["headers"], gender_preference="female")
+    _s2, second = await _book(client, rider["headers"], minutes=120, gender_preference="female")
+    async with session_factory() as session:
+        await settings_service.set_flag(
+            session, country_code=CountryCode.JO, feature_key=FeatureKey.WOMEN_SERVICE_ENABLED, enabled=False
+        )
+        await session.commit()
+    await _due_now(session_factory, first["id"])
+    assert await _run(session_factory, first["id"]) is None
+    gone = await client.delete(f"/me/bookings/{first['id']}", headers=rider["headers"])
+    assert gone.status_code == 200 and gone.json()["status"] == "cancelled", gone.text
+
+    async with session_factory() as session:
+        await session.execute(
+            update(RideBooking)
+            .where(RideBooking.id == uuid.UUID(second["id"]))
+            .values(scheduled_at=datetime.now(UTC) - timedelta(minutes=bookings_service.CHOICE_GRACE_MINUTES + 1))
+        )
+        await session.commit()
+    assert await _run(session_factory, second["id"]) is None
+    async with session_factory() as session:
+        row = await session.get(RideBooking, uuid.UUID(second["id"]))
+        assert row.status is BookingStatus.MISSED
+        assert await session.scalar(select(func.count()).select_from(Ride)) == 0
+
+
 async def test_turning_the_flag_off_does_not_break_a_standing_promise(
     client: AsyncClient, session_factory, jordan_settings
 ):

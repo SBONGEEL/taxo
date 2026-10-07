@@ -57,7 +57,7 @@ from app.services.directions import Coordinates
 from app.services.notifications import (
     publish_booking_missed,
     publish_booking_no_driver,
-    publish_booking_preference_dropped,
+    publish_booking_women_paused,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,10 @@ logger = logging.getLogger(__name__)
 # أو دقيقتين (القسم 5.3)، فبدءُ التوزيع في اللحظة يعني كبتناً يصل متأخراً بيقين.
 # وعشرُ دقائقَ تكفي للبحث وللوصول إلى نقطة الانطلاق، ولا تُقدّم الموعدَ كثيراً.
 LEAD_MINUTES = 10
+
+#: **حجزٌ نسائيٌّ ينتظر اختيارَها** (§٦٤-ج/٤-١): إن لم تختر «أي كبتن» ولم تلغِ حتى نصف ساعةٍ بعد موعده يُطوى `missed` —
+#: فلا يبقى «ينتظر» في قائمتها إلى الأبد، ولا يُطلب بعد أن فات وقتُه
+CHOICE_GRACE_MINUTES = 30
 
 # **أقلُّ مهلةٍ للحجز**: حجزٌ لبعد خمسِ دقائق ليس حجزاً بل طلبٌ فوريٌّ بطريقٍ
 # أطول — ويُربك صاحبَه لأنه لا يرى بحثاً يجري. والحدُّ أكبرُ من الهامش بيقين.
@@ -384,18 +388,17 @@ async def execute(
     rider = await session.get(User, booking.rider_id)
     assert rider is not None
 
-    # **الخدمةُ قد تُطفأ بين الحجز والتنفيذ**: لا تُرفض الرحلةُ حينها — من رتّب
-    # موعدَه لا يُترك بلا سيارة — بل تُنشأ بلا تفضيلٍ **ويُبلَّغ صاحبُها**.
-    # والمخزَّنُ لا يُمحى: هو اختيارُها ويعود إن عادت الخدمة
+    # **الخدمةُ قد تُطفأ بين الحجز والتنفيذ — ولا تُبدَّل الرحلةُ بنفسها أبداً** (قرارُ المالك ٢٠٢٦-١٠-٠٧، §٦٤-ج/٤-١).
+    # كانت تُطلب «أي كبتن» ثمّ يُقال لها — **فتركب مع من لم تختره، وقد تدفع رسمَ إلغاءِ رحلةٍ لم تطلبها**. فالآن: لا رحلة،
+    # **وتُعلَم مرّةً** (`notified_at`) وتختار هي: «أي كبتن» (`choose_any_captain`) أو الإلغاء بلا رسم. **وإن عادت الخدمةُ
+    # قبل الموعد تمضي بتفضيلها كأن شيئاً لم يكن**؛ وإن فات الموعدُ نصفَ ساعةٍ بلا اختيارٍ يُطوى `missed`
     preference = booking.gender_preference
-    downgraded = False
     if preference is not GenderPreference.ANY and not await (
         settings_service.is_feature_enabled(
             session, rider.country_code, FeatureKey.WOMEN_SERVICE_ENABLED
         )
     ):
-        preference = GenderPreference.ANY
-        downgraded = True
+        return await _await_her_choice(session, redis, booking, refunded=refunded)
 
     try:
         ride = await rides_service.request_ride(
@@ -447,20 +450,64 @@ async def execute(
             )
         )
 
-    if downgraded:
-        booking.notified_at = _now()
+    return ride
+
+
+async def _await_her_choice(
+    session: AsyncSession, redis: Redis, booking: RideBooking, *, refunded: bool
+) -> None:
+    """**حجزٌ نسائيٌّ والخدمةُ متوقّفة** — لا رحلة؛ تُعلَم مرّةً وتختار (§٦٤-ج/٤-١).
+
+    **ويُثبَّت هنا لا في الدورة**: `run_due` لا يُثبّت ما يعود `None`، وردُّ رسم الضمان (`refunded`) وختمُ الإعلام كلاهما
+    يضيع بلا `commit` — **وإعلامٌ لا يُختم يُرسل كلَّ دقيقة**.
+    """
+    if _now() > booking.scheduled_at + timedelta(minutes=CHOICE_GRACE_MINUTES):
+        booking.status = BookingStatus.MISSED
         await session.flush()
         await session.commit()
+        return None
+    first = booking.notified_at is None
+    if first:
+        booking.notified_at = _now()
+    await session.flush()
+    await session.commit()
+    if refunded:
+        from app.services.notifications import publish_guarantee_refunded
+
         await _tell(
-            publish_booking_preference_dropped(
-                session,
-                redis,
-                rider_id=booking.rider_id,
-                booking_id=booking.id,
-                ride_id=ride.id,
+            publish_guarantee_refunded(
+                session, redis, rider_id=booking.rider_id, booking_id=booking.id
             )
         )
-    return ride
+    if first:
+        await _tell(
+            publish_booking_women_paused(
+                session, redis, rider_id=booking.rider_id, booking_id=booking.id
+            )
+        )
+    return None
+
+
+def awaiting_choice(booking: RideBooking, women_on: bool) -> bool:
+    """**ينتظر اختيارَها** — أُعلمت وما زال منتظراً وتفضيلُه نسائيٌّ والخدمةُ متوقّفة. وإن عادت الخدمةُ فلا ينتظر شيئاً."""
+    return (
+        booking.status is BookingStatus.PENDING
+        and booking.notified_at is not None
+        and booking.gender_preference is not GenderPreference.ANY
+        and not women_on
+    )
+
+
+async def choose_any_captain(
+    session: AsyncSession, *, booking: RideBooking, actor: User
+) -> RideBooking:
+    """**اختارت «أي كبتن»** (§٦٤-ج/٤-١) — هي لا التطبيق. **ولا يُنفَّذ هنا**: الدورةُ تطلبه خلال دقيقة بقفلها
+    (لا «نفّذ الآن» — بابان يُنشئان رحلةً من حجزٍ واحد سباقٌ على صفٍّ واحد، رأسُ `routers/bookings.py`)."""
+    locked = await _locked(session, booking.id)
+    if locked.status is not BookingStatus.PENDING:
+        raise BookingNotAllowed("هذا الحجز لم يعد منتظراً")
+    locked.gender_preference = GenderPreference.ANY
+    return await _flush_and_reload(session, locked)
 
 
 async def report_failures(session: AsyncSession, redis: Redis) -> int:

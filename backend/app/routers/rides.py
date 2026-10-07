@@ -195,6 +195,7 @@ async def request_ride(
         promo_code=payload.promo_code,
         share=payload.share,
         share_gender_confirmed=payload.share_gender_confirmed,
+        widen_search=payload.widen_search,
         passenger=(
             ride_for_other.PassengerRequest(
                 name=payload.for_other.name,

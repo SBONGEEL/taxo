@@ -67,6 +67,8 @@ class BookingOut(BaseModel):
     currency: Currency
     ride_id: uuid.UUID | None
     ride_status: RideStatus | None = None
+    # **ينتظر اختيارَها** (§٦٤-ج/٤-١): حجزٌ نسائيٌّ والخدمةُ متوقّفة — لم يُطلب، وبطاقتُه تعرض «أي كبتن» و«إلغاء»
+    awaiting_choice: bool = False
     cancelled_at: datetime | None
     created_at: datetime
     # ---- الحجزُ المضمون (§٦٣-ج/٣)

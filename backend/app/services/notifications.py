@@ -905,6 +905,32 @@ async def publish_booking_no_driver(
     )
 
 
+async def publish_booking_women_paused(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    rider_id: uuid.UUID,
+    booking_id: uuid.UUID,
+) -> None:
+    """**لم نطلب رحلتَها المجدولة** — الخدمةُ النسائيةُ متوقّفة، والاختيارُ لها (§٦٤-ج/٤-١).
+
+    **تحلّ محلَّ «طُلبت رحلتك بلا تفضيل»**: كان التطبيقُ يختار عنها، **والمالكُ قال لا يبدّلها بنفسه أبداً**.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=rider_id,
+        message=PushMessage(
+            title="لم نطلب رحلتك المجدولة",
+            body="خدمةُ الكبتنات متوقّفةٌ الآن. اختاري: رحلةٌ بأي كبتن، أو إلغاءُ الحجز بلا رسم.",
+            data={
+                "type": "booking_women_paused",
+                "booking_id": str(booking_id),
+            },
+        ),
+    )
+
+
 async def publish_booking_preference_dropped(
     session: AsyncSession,
     redis: Redis,
