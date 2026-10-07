@@ -129,7 +129,7 @@
   border-radius: 16px;
   background: var(--t2-glass, var(--t2-surface));
   font-size: 12px;
-  color: var(--t2-inverse-muted);
+  color: var(--t2-chip-text, var(--t2-muted));
   white-space: nowrap;
 }
 .t2-hm-chip .t2-icon { font-size: 15px; color: var(--t2-muted); }

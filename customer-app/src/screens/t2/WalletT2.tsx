@@ -25,12 +25,13 @@ import { ApiError } from "@/api/client";
 import { getWallet, listSavedCards, listTopups, listTransactions } from "@/api/endpoints";
 import type { SavedCard, TopupRequest, Wallet, WalletTransaction, WalletTransactionType } from "@/api/types";
 import { TopupSheet } from "@/components/wallet/TopupSheet";
-import { EmptyState, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
 import { TOPUP_STATUS_LABEL, TRANSACTION_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { currencyLabel, formatMoney } from "@/lib/utils";
 
+import { BlankT2 } from "./KitT2";
 import { byMonth, startOfToday, whenParts } from "./when";
 
 import "@/taxo2";
@@ -247,7 +248,8 @@ export function WalletT2Screen() {
           {months.length > 0 ? <span className="t2-section-aside">{months[0].label}</span> : null}
         </div>
         {entries.length === 0 ? (
-          <EmptyState title="لا عمليات بعد" hint="ستظهر هنا كل حركة على رصيدك." />
+          // **فراغُ اللغة الجديدة لا القديم** — رماديُّ `EmptyState` قاس 4.07 على الفاتح (مرورُ الوصول ٢٠٢٦-١٠-٠٧)
+          <BlankT2 icon="account_balance_wallet" title="لا عمليات بعد" hint="ستظهر هنا كل حركة على رصيدك." />
         ) : (
           months.map((month, index) => (
             <div key={month.label}>
