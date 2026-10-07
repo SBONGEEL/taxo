@@ -1026,6 +1026,8 @@ button.t2-rd-chip { cursor: pointer; }
   line-height: 1.6;
   color: var(--t2-muted);
 }
+/* **سطرُ الغرامة** (§٦٤-د) — على ليّن التنبيه لا الأحمر: يقول الثمنَ ولا يمنع */
+.t2-rd-cx-note.warn { background: var(--t2-warning-soft); color: var(--t2-text); }
 .t2-rd-cx-confirm {
   display: block;
   width: 100%;

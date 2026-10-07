@@ -151,7 +151,7 @@ async def test_two_captains_accept_at_once_and_one_wins(
         ),
         timeout=20,
     )
-    assert sorted(r.status_code for r in responses) == [200, 409]
+    assert sorted(r.status_code for r in responses) == [200, 409], [r.text for r in responses]
     loser = next(r for r in responses if r.status_code == 409)
     assert loser.json()["code"] == "guarantee_taken"
 
@@ -221,6 +221,35 @@ async def test_withdrawing_before_confirming_costs_nothing_and_after_costs_the_f
         row = await session.get(RideBooking, uuid.UUID(booking["id"]))
         assert row.status.value == "pending" and row.driver_id is None and row.guarantee_state == "held"
     assert await _ledger(session_factory, WalletTransactionType.GUARANTEE_COMPENSATION) == Decimal("0.400")
+
+    # **ويُنقَص تقييمُه من المرّة الأولى** (§٦٤-د): بلا تقييمٍ سابقٍ صار متوسّطُه نجمةَ الاعتذار وحدَها
+    async with session_factory() as session:
+        assert (await session.get(Driver, driver["driver_id"])).rating_avg == Decimal("1.00")
+
+
+async def test_the_cancel_sheet_states_the_penalty_before_the_captain_confirms(
+    client: AsyncClient, admin_headers: dict, jordan_settings: None, jordan_wallet: None, session_factory
+) -> None:
+    """**الشكلُ الثالثَ عشر**: غرامةُ الاعتذار مالٌ يخرج من جيب الكبتن — **فتُقال في ورقة الإلغاء قبل أن يؤكّد**، ولا تُقال حيث لا
+    غرامة، **ورحلةُ غيره ٤٠٤**."""
+    rider, driver = await _setup(client, admin_headers, session_factory)
+    booking = (await _book(client, rider)).json()
+    await client.post(f"/drivers/me/guarantees/{booking['id']}/accept", headers=driver["headers"])
+    await _move_to(session_factory, booking["id"], minutes_from_now=50)
+    ride = (await client.post(f"/drivers/me/guarantees/{booking['id']}/confirm", headers=driver["headers"])).json()
+
+    cost = await client.get(f"/drivers/me/rides/{ride['id']}/guarantee-cost", headers=driver["headers"])
+    assert cost.status_code == 200, cost.text
+    assert cost.json() == {"cancel_penalty": "1.000", "currency": "JOD", "ban_threshold": 2, "ban_days": 30}
+
+    other = await approved_driver(client, session_factory, SECOND_DRIVER, plate_number="AMM-22")
+    stranger = await client.get(f"/drivers/me/rides/{ride['id']}/guarantee-cost", headers=other["headers"])
+    assert stranger.status_code == 404, stranger.text
+
+    # **بعد الإلغاء لا غرامةَ تُقال** — الحجزُ عاد مفتوحاً ولم يعد على الرحلة
+    await client.post(f"/rides/{ride['id']}/cancel", json={"reason": "طرأ أمر"}, headers=driver["headers"])
+    after = await client.get(f"/drivers/me/rides/{ride['id']}/guarantee-cost", headers=driver["headers"])
+    assert after.status_code == 200 and after.json()["cancel_penalty"] is None, after.text
 
 
 async def _credit_driver(session_factory, driver: dict, amount: str) -> None:

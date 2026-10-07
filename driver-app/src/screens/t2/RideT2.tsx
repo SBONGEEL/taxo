@@ -36,6 +36,7 @@ import { type CancelReason, useActiveRide, useElapsedMinutes } from "@/component
 import { RiderAvatar } from "@/components/ride/RiderAvatar";
 import { metersBetween, remainingMeters } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
+import { useGuaranteeCancelCost } from "@/lib/guarantees";
 import { digitsOnly } from "@/lib/phone";
 import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
 import { digits } from "@/lib/utils";
@@ -106,6 +107,8 @@ export function RideT2({
   // **«ارفض الطرد» عند الاستلام وحدَه** — والخلفيةُ ترفض غيرَه ٤٠٩
   const canRefuse = parcel && ride.status === "arrived";
   const [refusing, setRefusing] = useState(false);
+  // **ثمنُ الإلغاء قبل تأكيده** (§٦٤-د): رحلةٌ مضمونةٌ أكّدها ⇒ رسمُها يخرج من محفظته — يُسأل حين تُفتح ورقةُ الأسباب
+  const cancelCost = useGuaranteeCancelCost(ride.id, ride.scheduled_for !== null, picking);
   useEffect(() => setRefusing(false), [ride.id, ride.status]);
   // **CW4 — رمزُ الرحلة** (§٦٢-ج/٥): عند الوصول لرحلةٍ تطلبه، **ولا بدءَ قبل خاناته الأربع**؛ ويُمحى إن تبدّلت الرحلة
   const needsCode = ride.status === "arrived" && ride.start_code_required;
@@ -348,6 +351,14 @@ export function RideT2({
                 </button>
               ))}
             </div>
+            {cancelCost?.cancel_penalty ? (
+              <p className="t2-rd-cx-note warn">
+                رحلةٌ مضمونةٌ أكّدتَها — إلغاؤها يأخذ من محفظتك حتى{" "}
+                <b dir="ltr">{digits(cancelCost.cancel_penalty)}</b> {currencyLabel} للراكب، ويُنقص تقييمَك ويُسجَّل عليك إنذار.
+                وبلوغُ {digits(String(cancelCost.ban_threshold))} من الاعتذارات خلال {digits(String(cancelCost.ban_days))} يوماً
+                يحجبك عن الحجوزات المضمونة.
+              </p>
+            ) : null}
             {reason?.code === "gender_mismatch" ? (
               <p className="t2-rd-cx-note">
                 لن تُحتسب عليكِ رسوم إلغاء. ويُسجَّل بلاغٌ على حساب الراكب، وتكرارُ البلاغات يوسم الحساب للمراجعة.

@@ -14,6 +14,7 @@ import {
   cancelIntercityTrip,
   completeIntercityTrip,
   departIntercityTrip,
+  getGuaranteeCancelCost,
   listCommuteOffers,
   listGuaranteeOffers,
   listIntercityRoutes,
@@ -23,9 +24,30 @@ import {
   postIntercityTrip,
   releaseCommute,
 } from "@/api/endpoints";
-import type { CommuteOffer, IntercityRoute, IntercityTrip } from "@/api/types";
+import type { CommuteOffer, GuaranteeCancelCost, IntercityRoute, IntercityTrip } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
+
+/** **سطرُ الغرامة في ورقة الإلغاء** (§٦٤-د، الشكلُ الثالثَ عشر: مالٌ يخرج من جيبه ولا يظهر على شاشة) — يُسأل حين تُفتح
+ * الورقةُ **لرحلةٍ مجدولةٍ وحدَها** (الضمانُ حجزٌ مجدول، فلا نداءَ على كلِّ رحلة). **وبلا شرط المفتاح**: رحلةٌ مضمونةٌ قُبلت تبقى
+ * مضمونةً ولو أُطفئت الخدمةُ بعدها. **وتعثّرُه صمت**: الإلغاءُ نفسُه يعيد الفحصَ تحت قفله، والسطرُ وصفُ لحظةٍ لا شرط. */
+export function useGuaranteeCancelCost(rideId: string, scheduled: boolean, open: boolean): GuaranteeCancelCost | null {
+  const [cost, setCost] = useState<GuaranteeCancelCost | null>(null);
+  useEffect(() => {
+    setCost(null);
+    if (!open || !scheduled) return;
+    let cancelled = false;
+    void getGuaranteeCancelCost(rideId)
+      .then((value) => {
+        if (!cancelled) setCost(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [rideId, scheduled, open]);
+  return cost;
+}
 
 export function useGuarantees(): boolean {
   const { user } = useSession();

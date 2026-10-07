@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AlreadyRated, InvalidInput, RatingNotAllowed
 from app.models.driver import Driver
+from app.models.driver_warning import WARNING_GUARANTEE_WITHDRAWAL, DriverWarning
 from app.models.enums import RatingRaterType, RatingTag, RideStatus, UserRole
 from app.models.rating import Rating
 from app.models.ride import Ride
@@ -120,19 +121,34 @@ async def rider_average(
 async def refresh_driver_average(
     session: AsyncSession, driver_id: uuid.UUID
 ) -> Decimal:
-    """يعيد حساب `rating_avg` من كل تقييمات الركاب لرحلات هذا الكبتن."""
-    average = await session.scalar(
-        select(func.avg(Rating.stars))
-        .join(Ride, Ride.id == Rating.ride_id)
-        .where(
-            Ride.driver_id == driver_id,
-            Rating.rater_type == RatingRaterType.RIDER,
+    """يعيد حساب `rating_avg` من كل تقييمات الركاب لرحلات هذا الكبتن — **ومن اعتذاراته في الحجز المضمون**.
+
+    **كلُّ اعتذارٍ بعد التأكيد نجمةٌ واحدةٌ في المتوسّط** (§٦٤-د، قولُ المالك «ويُنقَص تقييمُه» من المرّة الأولى): تُعدّ من
+    `driver_warnings` لا تُكتب صفَّ تقييم — **فلا تقييمَ يُنسب إلى راكبٍ لم يكتبه**، والمتوسّطُ يبقى مشتقّاً من جدولين لا مُراكَماً.
+    """
+    total, count = (
+        await session.execute(
+            select(func.coalesce(func.sum(Rating.stars), 0), func.count(Rating.id))
+            .join(Ride, Ride.id == Rating.ride_id)
+            .where(
+                Ride.driver_id == driver_id,
+                Rating.rater_type == RatingRaterType.RIDER,
+            )
+        )
+    ).one()
+    withdrawals = await session.scalar(
+        select(func.count(DriverWarning.id)).where(
+            DriverWarning.driver_id == driver_id,
+            DriverWarning.kind == WARNING_GUARANTEE_WITHDRAWAL,
         )
     )
+    entries = int(count) + int(withdrawals or 0)
     value = (
         Decimal("0.00")
-        if average is None
-        else Decimal(str(average)).quantize(_RATING_STEP, rounding=ROUND_HALF_UP)
+        if entries == 0
+        else (Decimal(int(total) + int(withdrawals or 0)) / Decimal(entries)).quantize(
+            _RATING_STEP, rounding=ROUND_HALF_UP
+        )
     )
 
     driver = await session.get(Driver, driver_id)

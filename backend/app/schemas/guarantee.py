@@ -30,6 +30,17 @@ class GuaranteeOfferOut(BaseModel):
     confirm_requested: bool
 
 
+class GuaranteeCancelCostOut(BaseModel):
+    """**ما يكلّفه إلغاءُ الكبتن رحلتَه الآن** (§٦٣-ج/٣) — `null` حيث لا كلفة: رحلةٌ عاديّة، أو حجزٌ لم يؤكّده."""
+
+    #: **رسمُ الضمان المجمَّد على الحجز** — يخرج من محفظته إلى الراكب بقدر رصيده (§٥-١/١٣)
+    cancel_penalty: Decimal | None
+    currency: Currency
+    #: **كم اعتذاراً يحجبه، وكم يوماً** — من إعدادات سوقه لا من الشاشة
+    ban_threshold: int
+    ban_days: int
+
+
 class ServiceSettingOut(BaseModel):
     """إعداداتُ الخدمات الجديدة لسوقٍ واحد (SPEC §٦٣) — **وكلُّ مبلغٍ يُضبط من اللوحة**، والأرقامُ الأولى افتراضاتُ المالك."""
 

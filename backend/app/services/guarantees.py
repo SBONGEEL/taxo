@@ -299,6 +299,10 @@ async def _penalize(session: AsyncSession, *, booking: RideBooking, driver: Driv
     )
     if count >= threshold:
         driver.guarantee_banned_until = _now() + timedelta(days=ban_days)
+    # **ويُنقَص تقييمُه من المرّة الأولى** (§٦٤-د): الإنذارُ نفسُه نجمةٌ في متوسّطه، فيُعاد بناؤه الآن
+    from app.services import ratings
+
+    await ratings.refresh_driver_average(session, driver.id)
     await session.flush()
     return warning
 
@@ -485,6 +489,28 @@ async def on_driver_cancelled(session: AsyncSession, ride: Ride, driver: Driver)
     booking.confirm_requested_at = None
     booking.confirmed_at = None
     return await _penalize(session, booking=booking, driver=driver)
+
+
+async def cancel_cost(
+    session: AsyncSession, *, ride_id: uuid.UUID, driver: Driver
+) -> tuple[RideBooking | None, ServiceSetting | None, CountryCode]:
+    """**ما يكلّفه الكبتنَ إلغاءُ رحلته الآن** — يُقرأ في ورقة الإلغاء قبل «تأكيد الإلغاء» (الشكلُ الثالثَ عشر: **مالٌ يخرج من جيبه
+    ولا يظهر على شاشة**). حجزٌ مضمونٌ أكّده هو ⇒ الحجزُ ورسمُه؛ وإلا `None`.
+
+    **قراءةٌ بلا قفل**: لا تغيّر حالاً، **والإلغاءُ نفسُه يعيد الفحصَ تحت قفله** (`on_driver_cancelled`) — فما تقوله الورقةُ
+    وصفٌ لحظةَ فتحها لا وعد. **ورحلةُ غيره ٤٠٤** (لا IDOR) كما في كلِّ بابٍ يمسّ رحلة."""
+    ride = await session.get(Ride, ride_id)
+    if ride is None or ride.driver_id != driver.id:
+        raise NotFound("الرحلة غير موجودة")
+    booking = await session.scalar(
+        select(RideBooking).where(
+            RideBooking.ride_id == ride.id,
+            RideBooking.guaranteed.is_(True),
+            RideBooking.driver_id == driver.id,
+            RideBooking.confirmed_at.is_not(None),
+        )
+    )
+    return booking, await settings_for(session, ride.country_code), ride.country_code
 
 
 async def sweep(session: AsyncSession, redis: Redis) -> dict[str, int]:

@@ -1268,6 +1268,17 @@ export type ErrorReportBody = {
  *
  * **بلا اسم الراكب ولا رقمه** — لا يراهما في رحلةٍ عاديّةٍ أصلاً. **والأجرةُ تقديرُ لحظة الحجز**: تُحسب عند التنفيذ.
  */
+/** **ما يكلّفه إلغاءُ الكبتن رحلتَه الآن** (§٦٣-ج/٣، §٦٤-د) — يُقرأ في ورقة الإلغاء قبل «تأكيد الإلغاء».
+ *
+ * `cancel_penalty` رسمُ الضمان المجمَّد حيث رحلةٌ مضمونةٌ أكّدها هو، و`null` حيث لا كلفة. **ويخرج من محفظته بقدر رصيده**
+ * (`APPROVALS-62` §٥-١/١٣) — فالسطرُ يقول «حتى». والعتبةُ والأيامُ من إعدادات سوقه لا من الشاشة. */
+export interface GuaranteeCancelCost {
+  cancel_penalty: string | null;
+  currency: Currency;
+  ban_threshold: number;
+  ban_days: number;
+}
+
 export interface GuaranteeOffer {
   id: string;
   scheduled_at: string;

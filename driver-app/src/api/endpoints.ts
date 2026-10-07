@@ -60,6 +60,7 @@ import type {
   RequiredPolicy,
   RecordedRoute,
   SubscriptionPlan,
+  GuaranteeCancelCost,
   GuaranteeOffer,
   CommuteOffer,
   IntercityRoute,
@@ -307,6 +308,10 @@ export const withdrawGuarantee = (bookingId: string) =>
 /** **«نعم، في الطريق»** — تُنشأ الرحلةُ مسنَدةً إليه وتعود هنا، **فتصير رحلتَه الجارية**. وقبل نافذة التأكيد ٤٠٩ بنصّها. */
 export const confirmGuarantee = (bookingId: string) =>
   api.post<Ride>(`/drivers/me/guarantees/${bookingId}/confirm`);
+
+/** **ثمنُ الإلغاء قبل «تأكيد الإلغاء»** (§٦٤-د) — يُسأل حين تُفتح ورقةُ الأسباب؛ و٤٠٤ لرحلة غيره. */
+export const getGuaranteeCancelCost = (rideId: string) =>
+  api.get<GuaranteeCancelCost>(`/drivers/me/rides/${rideId}/guarantee-cost`);
 
 // ------------------------------------------------------------ المشوارُ الثابت (§٦٣-ج/٦)
 

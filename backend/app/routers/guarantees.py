@@ -14,7 +14,7 @@ from app.core.currency import currency_for_country
 from app.core.deps import CurrentDriver, DbSession, RedisDep
 from app.models.booking import RideBooking
 from app.models.user import User
-from app.schemas.guarantee import GuaranteeOfferOut
+from app.schemas.guarantee import GuaranteeCancelCostOut, GuaranteeOfferOut
 from app.schemas.ride import RideOut
 from app.services import approach, dispatch, guarantees, notifications
 from app.services import rides as rides_service
@@ -95,6 +95,18 @@ async def withdraw_guarantee(
     await session.commit()
     await notifications.publish_guarantee_reopened(session, redis, rider_id=rider_id, booking_id=booking_id)
     return out
+
+
+@router.get("/rides/{ride_id}/guarantee-cost", response_model=GuaranteeCancelCostOut)
+async def guarantee_cancel_cost(ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession) -> GuaranteeCancelCostOut:
+    """**ورقةُ الإلغاء تقول الثمنَ قبل «تأكيد الإلغاء»** — رحلةٌ مضمونةٌ أكّدها ⇒ رسمُها من محفظته إلى الراكب، وإنذار."""
+    booking, row, country = await guarantees.cancel_cost(session, ride_id=ride_id, driver=driver)
+    return GuaranteeCancelCostOut(
+        cancel_penalty=booking.guarantee_fee_at_booking if booking is not None else None,
+        currency=currency_for_country(country),
+        ban_threshold=row.guarantee_ban_threshold if row is not None else 2,
+        ban_days=row.guarantee_ban_days if row is not None else 30,
+    )
 
 
 @router.post("/guarantees/{booking_id}/confirm", response_model=RideOut)
