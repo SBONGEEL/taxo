@@ -212,6 +212,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "المشوار الثابت",
     hint: "يشترك الراكبُ في مشوارٍ يوميٍّ لشهرٍ من يوم البدء: يختار نقطتين وأيامَ الأسبوع ووقتَ الذهاب ووقتَ عودةٍ إن شاء، ويدفع الشهرَ مقدّماً من محفظته بسعرٍ للرحلة مجمَّد — تقديرُ الطريق بسعر الاقتصادي ناقصاً الخصم، لا تمسّه ذروةٌ ولا مسافةٌ فعليّة. وتُولَّد رحلاتُه حجوزاً لليوم التالي، يأخذها كبتنُه المعتمد — من اعتمد المشوارَ من عروضه — إن كان متاحاً، وإلا تُعرض على الجميع. وكلُّ رحلةٍ تكتمل تُدفع للكبتن من المحفوظ وتُقتطع منها العمولةُ كأيِّ أجرة، وللكبتن المعتمد حافزٌ من TAXO لكلِّ رحلةٍ إن ضبطته. وللراكب أن يعلّق يوماً فيُرحَّل إلى ما بعد آخر يوم، وأن يستبدل كبتنَه، وأن يلغي فيعود ما لم يُستعمل رصيداً في محفظته لا نقداً — وكذلك ما لم يكتمل عند نهاية الشهر. والأرقامُ في «الخدمات الجديدة» أدناه، وخصمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً لا يُشترى اشتراكٌ جديد، والقائمُ يكمل شهرَه.",
   },
+  intercity_enabled: {
+    title: "بين المدن",
+    hint: "لا يُشعَل قبل أن يتحقّق المالكُ من القانون في السوق. رحلاتٌ بين المدن يعلنها الكبتنُ نفسُه على مسارٍ تضيفه في «مسارات بين المدن» — بمقاعدها وأقلِّ عددٍ ينطلق به — ولا يعلنها إلا كبتنٌ منحه مشرفٌ تصريحاً من ملفّه بعد فحص مركبته: 2015 فأحدث، وأربعةُ مقاعدَ على الأقل، وتأمينٌ سارٍ. ويحجز الراكبُ مقاعدَ تُدفع من محفظته يحفظها TAXO حتى تنتهي الرحلة، أو السيارةَ كاملةً نقداً للكبتن، بسعري المسار المجمَّدين على الرحلة لحظةَ إعلانها. وإلغاءُ الراكب قبل الانطلاق يعيد مالَه كاملاً، وللكبتن أن يلغي قبل المهلة بلا أثرٍ عليه ويُردّ للركّاب كاملاً، وعند المهلة تُلغى وحدَها رحلةٌ لم يبلغ محجوزُها حدَّها. وعند الإنهاء يصل الكبتنَ مالُ المقاعد وتُقتطع منه العمولةُ كأيِّ أجرة، وعمولةُ السيارة النقديّة دَينٌ عليه كرحلات النقد. والمهلةُ في «الخدمات الجديدة» أدناه. ومطفأً لا تُعلن رحلةٌ ولا يُحجز مقعدٌ جديد، والقائمُ يكمل.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -256,6 +260,7 @@ const FLAGS: FeatureKey[] = [
   "parcel_enabled",
   "hourly_enabled",
   "rider_subscription_enabled",
+  "intercity_enabled",
   "driver_map_nearby_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
@@ -867,6 +872,28 @@ export function SettingsScreen() {
                   شرائه، والحافزُ يُقرأ عند اكتمال كلِّ رحلة.
                 </p>
                 <CommuteForm
+                  key={serviceRow.country_code}
+                  row={serviceRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+              </div>
+            ) : null}
+
+            {/* **بين المدن** (§٦٣-ج/٧) — رقمٌ واحدٌ من الصفِّ نفسِه **بنموذجٍ مستقلٍّ بحفظه** كإخوته؛ والمساراتُ وأسعارُها في صفحتها */}
+            {serviceRow ? (
+              <div className="mt-18 border-t border-line pt-14">
+                <h3 className="mb-2 text-12.5 font-bold text-ink">بين المدن</h3>
+                <p className="mb-12 text-11 leading-snug text-muted">
+                  رحلاتٌ يعلنها الكباتنُ بتصريحٍ على مساراتٍ وأسعارٍ تضيفها في «مسارات بين المدن».{" "}
+                  <b className="text-ink">والمهلةُ تُقرأ حيّةً لا مجمَّدة</b>: تعديلُها يحكم الرحلاتِ المعلَنةَ القائمةَ
+                  كذلك — إلغاءَ الكبتن قبلها، والإلغاءَ الآليَّ عندها.
+                </p>
+                <IntercityForm
                   key={serviceRow.country_code}
                   row={serviceRow}
                   disabled={!isAdmin}
@@ -2293,6 +2320,64 @@ function CommuteForm({
           setBusy(true);
           updateServiceSettings(row.country_code, changes)
             .then(() => onSaved("حُفظ المشوارُ الثابت — الخصمُ يسري على ما يُشترى بعده لا على اشتراكٍ قائم"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **بين المدن** (§٦٣-ج/٧) — رقمٌ واحدٌ لسوقٍ واحد: **مهلةُ الإلغاء بالساعات قبل الانطلاق**. قبلها يلغي الكبتنُ رحلتَه بلا أثر،
+ * **وعندها تُلغى وحدَها رحلةٌ لم يبلغ محجوزُها أقلَّ ما ينطلق به** ويُردّ للركّاب كاملاً.
+ *
+ * **ويُرسل ما تغيّر وحدَه** كإخوته، **والحدُّ في الخلفية** (`ServiceSettingUpdate`: ١–٤٨) ورفضُه تحت حقله. **ولا تُجمَّد على الرحلة**
+ * — فالحفظُ يقول إنها تحكم القائمَ كذلك. و`key={country}` كإخوته.
+ */
+function IntercityForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [hours, setHours] = useState(String(row.intercity_cancel_deadline_hours));
+  const [busy, setBusy] = useState(false);
+  const changes: Partial<Omit<ServiceSetting, "country_code">> = {};
+  if (Number(hours) !== row.intercity_cancel_deadline_hours) changes.intercity_cancel_deadline_hours = Number(hours);
+  const dirty = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <div>
+          <Field
+            name="intercity_cancel_deadline_hours"
+            label="مهلة الإلغاء بالساعات"
+            dir="ltr"
+            inputMode="numeric"
+            value={hours}
+            disabled={disabled}
+            onChange={(event) => setHours(event.target.value.replace(/[^0-9]/g, ""))}
+          />
+          <p className="ad-hint">قبل الانطلاق — من 1 إلى 48. وتُعلَن الرحلةُ قبل موعدها بأكثرَ منها</p>
+        </div>
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || hours === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, changes)
+            .then(() => onSaved("حُفظت مهلةُ بين المدن — وتحكم الرحلاتِ المعلَنةَ القائمةَ كذلك"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}

@@ -64,6 +64,9 @@ CREDIT_TYPES: tuple[WalletTransactionType, ...] = (
     # المشوارُ الثابت (§٦٣-ج/٦): ما لم يُستعمل رصيداً للراكب، وحافزُ الكبتن المعتمد من TAXO — **دائنان بلا مدينٍ في هذا الدفتر**
     WalletTransactionType.COMMUTE_CREDIT,
     WalletTransactionType.COMMUTE_INCENTIVE,
+    # بين المدن (§٦٣-ج/٧): الردُّ للراكب، وما يصل الكبتنَ من المحفوظ عند الإنهاء
+    WalletTransactionType.INTERCITY_REFUND,
+    WalletTransactionType.INTERCITY_EARNING,
 )
 
 DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
@@ -87,6 +90,8 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.GUARANTEE_PENALTY,
     # **المقدَّمُ مدينٌ بلا دائن** — المالُ عند TAXO يُصرف رحلةً رحلةً بقناة `commute`
     WalletTransactionType.COMMUTE_PREPAY,
+    # **المقعدُ مدينٌ بلا دائن** — يحفظه TAXO حتى الإنهاء أو الردّ
+    WalletTransactionType.INTERCITY_HOLD,
 )
 
 # `adjustment` وحده يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص

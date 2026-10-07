@@ -1,0 +1,95 @@
+/* ═══ بين المدن (SPEC §٦٣-ج/٧) — **لا لوحةَ لها**: ما زاد على عُدّة «الحجوز المضمونة» (`guarantees.css`) — نموذجُ الإعلان بمساراته
+ * وعدّاديه، وقائمةُ الركّاب، وتأكيدُ الإلغاء. **تخطيطُها وحدَه، بالرموز وحدَها** فتعمل في المظهرين والنسائيّ.
+ */
+
+/* ── نموذجُ الإعلان: المساراتُ بطاقاتِ اختيارٍ كبطاقات «من يدفع» في الطرد، ثمّ الموعدُ والعدّادان ── */
+.t2-gu-card.t2-ict-form { padding-bottom: 16px; }
+.t2-ict-routes { display: flex; flex-direction: column; gap: 6px; }
+.t2-ict-route {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-ict-route.on { border: 2px solid var(--t2-text); background: var(--t2-surface); }
+.t2-ict-route-name { font-size: 14px; font-weight: 700; }
+.t2-ict-route-meta { font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.t2-ict-route-meta b { font-family: var(--t2-font-num); font-weight: 600; color: var(--t2-text); }.t2-fld-label.t2-ict-gap { margin-top: 14px; }
+.t2-ict-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.t2-ict-row-label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; }
+.t2-ict-row-label .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-ict-stepper { display: flex; align-items: center; gap: 12px; }
+/* **هدفُ لمسٍ ٤٤** — العدّادُ يُضغط وعينُ صاحبه على الطريق أحياناً */
+.t2-ict-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-ict-step:disabled { opacity: 0.35; cursor: default; }
+.t2-ict-count { min-width: 22px; font-family: var(--t2-font-num); font-size: 20px; font-weight: 700; text-align: center; }
+.t2-gu-card.t2-ict-form .t2-note { margin: 12px 2px 0; }
+.t2-button.t2-ict-post { margin-top: 14px; }
+
+/* ── الركّاب: الاسمُ ومقاعدُه، والرقمُ زرُّ اتصالٍ حين يصل ── */
+.t2-ict-people {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: -2px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+/* **الاسمُ لا يلتفّ** — سطرٌ بالاسم ومقاعده، **والرقمُ سطرٌ تحته** حين يصل، فلا يزاحم أحدُهما الآخر (قِيس: «عائلة النجّار» التفّ سطرين) */
+.t2-ict-person {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--t2-bg);
+  font-size: 13px;
+}
+.t2-ict-person > .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-ict-person-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.t2-ict-person-seats { color: var(--t2-muted); white-space: nowrap; }
+.t2-ict-call {
+  display: flex;
+  grid-column: 2 / -1;
+  justify-self: start;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin: -6px -10px -8px;
+  padding: 0 10px;
+  border-radius: 12px;
+  color: var(--t2-accent-text);
+  font-family: var(--t2-font-num);
+  font-weight: 600;
+  text-decoration: none;
+}
+.t2-ict-call .t2-icon { font-size: 18px; }
+
+/* ── تأكيدُ الإلغاء تحت البطاقة: صندوقُ الهوية بزرّين ── */
+.t2-callout.t2-ict-ask { border-color: var(--t2-line); }
+.t2-ict-ask > .t2-icon { color: var(--t2-danger); }
+.t2-ict-ask-actions { margin-top: 10px; }
+.t2-button.t2-ict-destroy { color: var(--t2-danger); }

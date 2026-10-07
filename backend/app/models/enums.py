@@ -220,6 +220,8 @@ class DriverDebtSource(StrEnum):
     """
 
     RIDE_COMMISSION = "ride_commission"
+    #: **عمولةُ رحلة «بين المدن» قُبضت نقداً** (§٦٣-ج/٧) — السيارةُ كاملةً في يد الكبتن، وعمولتُها دَين كعمولة النقد
+    INTERCITY_COMMISSION = "intercity_commission"
 
 
 class DriverDebtStatus(StrEnum):
@@ -651,6 +653,8 @@ class FeatureKey(StrEnum):
     # **اشتراكُ الراكب — المشوارُ الثابت** (§٦٣-ج/٦) — شهرٌ مدفوعٌ مقدّماً بسعرٍ مجمَّد ورحلاتٌ تُولَّد حجوزاً. ومطفأً لا يُشترى جديد،
     # **والقائمُ يكمل شهرَه** (مالُه محفوظ)؛ و`service_settings.commute_discount_percent` صفرٌ يُخفيه ولو اشتعل
     RIDER_SUBSCRIPTION_ENABLED = "rider_subscription_enabled"
+    # **بين المدن** (§٦٣-ج/٧) — **يُبنى مطفأً، والمالكُ يتحقّق من القانون قبل إشعاله**. ومطفأً لا يُعلَن ولا يُحجز جديد، والقائمُ يكمل
+    INTERCITY_ENABLED = "intercity_enabled"
 
 
 class BookingStatus(StrEnum):
@@ -739,6 +743,10 @@ class WalletTransactionType(StrEnum):
     COMMUTE_PREPAY = "commute_prepay"
     COMMUTE_CREDIT = "commute_credit"
     COMMUTE_INCENTIVE = "commute_incentive"
+    # ---- بين المدن (§٦٣-ج/٧) — **المقعدُ يحفظه TAXO**، ويُردّ كاملاً أو يصل الكبتنَ عند الإنهاء وعليه العمولة
+    INTERCITY_HOLD = "intercity_hold"
+    INTERCITY_REFUND = "intercity_refund"
+    INTERCITY_EARNING = "intercity_earning"
 
 
 class CancellationChargeStatus(StrEnum):

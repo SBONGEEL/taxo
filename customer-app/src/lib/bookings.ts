@@ -5,22 +5,34 @@
  * الشاشةُ أنه سيُرفض يعلّم صاحبَه أن يجرّب ثم يُخطئ. والرفضُ في الخلفية هو
  * الحارس، وهذا راحةٌ لا حراسة.
  *
- * **والمشوارُ الثابتُ هنا أيضاً** (§٦٣-ج/٦، آخرَ الملف): اشتراكٌ تُولَّد رحلاتُه حجوزاً مجدولةً (`ride_bookings.commute_id`) —
- * فهو حجزٌ يتكرّر، وبيتُه بيتُ الحجوز.
+ * **والمشوارُ الثابتُ هنا أيضاً** (§٦٣-ج/٦): اشتراكٌ تُولَّد رحلاتُه حجوزاً مجدولةً (`ride_bookings.commute_id`) —
+ * فهو حجزٌ يتكرّر، وبيتُه بيتُ الحجوز. **و«بين المدن» بعده** (§٦٣-ج/٧، آخرَ الملف): مقاعدُ تُحجز في رحلةٍ أعلنها كبتنٌ لموعدٍ
+ * قادم — حجزٌ كذلك، وبيتُه هنا.
  */
 
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import {
+  bookIntercity,
   buyCommute,
   cancelCommute,
+  cancelIntercityBooking,
+  listIntercityBookings,
+  listIntercityTrips,
   listMyCommutes,
   quoteCommute,
   releaseCommuteCaptain,
   suspendCommuteDay,
 } from "@/api/endpoints";
-import type { Commute, CommutePlan, CommuteQuote } from "@/api/types";
+import type {
+  Commute,
+  CommutePlan,
+  CommuteQuote,
+  IntercityBooking,
+  IntercityRoute,
+  IntercityTrip,
+} from "@/api/types";
 import { useSession } from "@/lib/session";
 import { useFeature } from "@/lib/config";
 import { DISPLAY_LOCALE, digits } from "@/lib/utils";
@@ -311,4 +323,201 @@ export function useMyCommutes() {
     release: (row: Commute) =>
       void run(row, () => releaseCommuteCaptain(row.id), () => "فككنا الكبتن — ونبحث لك عن كبتنٍ معتمدٍ آخر."),
   };
+}
+
+// ═══════════════════════════════════════════════════════════ بين المدن (§٦٣-ج/٧)
+//
+// **مطفأً لا تُتصفَّح رحلةٌ ولا يُحجز مقعد، والقائمُ يُرى** (قاعدةُ المشوار أعلاه): المفتاحُ يحكم بابَ التصفّح والحجز وحدَه، **و«حجوزاتي
+// بين المدن» تُقرأ ولو أُطفئ** — المالكُ يراجع القانونَ قبل الإشعال، وإطفاءٌ بعده لا يُخفي عن راكبٍ مقعداً دفع ثمنَه.
+//
+// **ولا مالَ يُحسب هنا** (§14): سعرُ المقعد وسعرُ السيارة مجمَّدان على الرحلة، **ومبلغُ الحجز من الخلفية** (`amount`) — لا يُضرب سعرٌ
+// في عددٍ ولو بدا بديهياً. **وما يُعدّ هنا مقاعدُ لا مال**: المتاحُ فرقُ عددين أرسلتهما الخلفية، والخلفيةُ تعيد العدَّ تحت قفل الرحلة.
+
+export function useIntercityService(): boolean {
+  const { user } = useSession();
+  return useFeature(user?.country_code, "intercity_enabled");
+}
+
+/** **المقاعدُ المتاحة** — المعروضةُ ناقصاً المحجوزة، **عددان من الخلفية**؛ وصفرٌ لا سالب. راحةٌ لا حراسة: الحجزُ يُعاد عدُّه هناك. */
+export function seatsLeft(trip: IntercityTrip): number {
+  return Math.max(0, trip.seats_offered - trip.seats_booked);
+}
+
+/** «مقعدٌ واحد · مقعدان · 3 مقاعد · 11 مقعداً» — **العربيةُ تعدّ بالمثنّى والجمع** (قاعدةُ `ridesCount`). */
+export function seatsCount(count: number): string {
+  if (count === 1) return "مقعدٌ واحد";
+  if (count === 2) return "مقعدان";
+  const tail = count % 100;
+  return `${count} ${tail >= 3 && tail <= 10 ? "مقاعد" : "مقعداً"}`;
+}
+
+/** «07:30» — **ساعةُ الانطلاق بتوقيت الجهاز و24 ساعة** كما يُكتب الموعدُ في كلِّ الشاشات (§20)، بخاناتٍ لاتينية. */
+export function tripClock(iso: string): string {
+  return digits(new Date(iso).toLocaleTimeString(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false }));
+}
+
+/** «الخميس 8 أكتوبر» — يومُ الانطلاق **بالتاريخ المحلّيّ** (علّةُ `isoDay`). */
+export function tripDay(iso: string): string {
+  return dayText(isoDay(new Date(iso)));
+}
+
+/** **رحلاتُ مسارٍ واحدٍ في يومٍ واحد** — كما تُعرض: المسارُ عنواناً واليومُ بجانبه، والرحلاتُ تحته بساعاتها. */
+export interface TripGroup {
+  key: string;
+  route: IntercityRoute;
+  day: string;
+  trips: IntercityTrip[];
+}
+
+/** **التجميعُ بالمسار واليوم بترتيب الخلفية** — الرحلاتُ تصل الأقربَ انطلاقاً أوّلاً، فأوّلُ مجموعةٍ أقربُ رحلة، **ولا ترتيبَ
+ *  ثانٍ يُخترع هنا**. واليومُ يومُ الجهاز لا UTC (رحلةُ ٠١:٠٠ بعمّان يومُها يومُها). */
+export function groupTrips(trips: IntercityTrip[]): TripGroup[] {
+  const groups = new Map<string, TripGroup>();
+  for (const trip of trips) {
+    const day = isoDay(new Date(trip.departs_at));
+    const key = `${trip.route.id}:${day}`;
+    const group = groups.get(key);
+    if (group) group.trips.push(trip);
+    else groups.set(key, { key, route: trip.route, day: dayText(day), trips: [trip] });
+  }
+  return [...groups.values()];
+}
+
+/** **الرحلاتُ المفتوحة** — تُسأل حيث المفتاحُ مشتعلٌ وحدَه (مطفأً جوابُها ٤٠٣ سلفاً)، **وتُعاد بعد كلِّ حجز**: المحجوزُ يتغيّر بحجزك
+ *  وبحجز غيرك، ورقمٌ قديمٌ تحت زرِّ «احجز» يَعِد بمقعدٍ ذهب. والرفضُ بنصّ الخلفية. */
+export function useIntercityTrips(enabled: boolean): {
+  trips: IntercityTrip[] | null;
+  error: string | null;
+  reload: () => void;
+} {
+  const [trips, setTrips] = useState<IntercityTrip[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    listIntercityTrips()
+      .then((rows) => {
+        if (!live) return;
+        setTrips(rows);
+        setError(null);
+      })
+      .catch((caught: unknown) => {
+        if (live) setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة رحلات بين المدن");
+      });
+    return () => {
+      live = false;
+    };
+  }, [enabled, round]);
+
+  return { trips, error, reload: useCallback(() => setRound((value) => value + 1), []) };
+}
+
+/** **الحجز** — مقاعدُ من المحفظة أو السيارةُ كاملةً نقداً، **والمبلغُ يعود من الخلفية** (`booked.amount`) فيُقال كما حُسب. **ورصيدٌ
+ *  لا يكفي يُقال ومعه بابُ الشحن** (`topup`) — رفضٌ بلا مخرجٍ ليس رفضاً (قاعدةُ `useCommutePurchase`). */
+export function useIntercityBooking(): {
+  busy: boolean;
+  failure: { message: string; topup: boolean } | null;
+  booked: IntercityBooking | null;
+  book: (trip: IntercityTrip, seats: number, wholeCar: boolean) => Promise<boolean>;
+  reset: () => void;
+} {
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<{ message: string; topup: boolean } | null>(null);
+  const [booked, setBooked] = useState<IntercityBooking | null>(null);
+
+  const book = useCallback(async (trip: IntercityTrip, seats: number, wholeCar: boolean) => {
+    setBusy(true);
+    setFailure(null);
+    try {
+      setBooked(await bookIntercity({ trip_id: trip.id, seats, whole_car: wholeCar }));
+      return true;
+    } catch (caught) {
+      setFailure({
+        message: caught instanceof ApiError ? caught.message : "تعذّر الحجز — حاول ثانية",
+        topup: caught instanceof ApiError && caught.code === "insufficient_balance",
+      });
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setFailure(null);
+    setBooked(null);
+  }, []);
+
+  return { busy, failure, booked, book, reset };
+}
+
+/** **أله حجزٌ بين المدن ولو انتهى؟** — يُسأل في «حسابي» **ولو أُطفئت الخدمة** (علّةُ `useHasCommutes`)، وتعثّرُه صمت. */
+export function useHasIntercityBookings(): boolean {
+  const [has, setHas] = useState(false);
+  useEffect(() => {
+    let live = true;
+    listIntercityBookings()
+      .then((rows) => {
+        if (live) setHas(rows.length > 0);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  return has;
+}
+
+/** **«حجوزاتي بين المدن»** — القائمة، **والإلغاءُ يعيد الحجزَ من الخلفية فيُستبدل في مكانه** وجوابُه تحت بطاقته (قاعدةُ
+ *  `useMyCommutes`). **والمبلغُ العائدُ لا يُحسب هنا**: ما عاد إلى المحفظة هو `amount` الحجز كما هو، وقيدُه في كشفها. */
+export function useMyIntercityBookings() {
+  const [rows, setRows] = useState<IntercityBooking[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, { tone: "ok" | "danger"; text: string }>>({});
+
+  useEffect(() => {
+    let live = true;
+    listIntercityBookings()
+      .then((list) => {
+        if (live) setRows(list);
+      })
+      .catch((caught: unknown) => {
+        if (live) setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة حجوزاتك");
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const cancel = useCallback(async (row: IntercityBooking) => {
+    setBusy(row.id);
+    setNotes((current) => {
+      const next = { ...current };
+      delete next[row.id];
+      return next;
+    });
+    try {
+      const next = await cancelIntercityBooking(row.id);
+      setRows((current) => (current ?? []).map((item) => (item.id === next.id ? next : item)));
+      setNotes((current) => ({
+        ...current,
+        [row.id]: {
+          tone: "ok",
+          text:
+            next.payment === "wallet"
+              ? "أُلغي الحجز — وعاد مالُك كاملاً إلى محفظتك."
+              : "أُلغي حجزُ السيارة — ولم تدفع شيئاً.",
+        },
+      }));
+    } catch (caught) {
+      const text = caught instanceof ApiError ? caught.message : "تعذّر الإلغاء — حاول ثانية";
+      setNotes((current) => ({ ...current, [row.id]: { tone: "danger", text } }));
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  return { rows, error, busy, notes, cancel: (row: IntercityBooking) => void cancel(row) };
 }

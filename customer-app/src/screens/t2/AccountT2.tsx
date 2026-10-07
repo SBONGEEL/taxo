@@ -13,7 +13,8 @@
  * - **«اللغة»**: محذوفةٌ بقرار المالك (§61) — التطبيقُ عربيٌّ وحدَه.
  * - **«VISA 4242» بجانب طرق الدفع**: تحتاج `GET /me/cards` هنا — طلبٌ جديد.
  *
- * **وما في الشاشة القائمة ولم يُرسم يبقى** بلغة القائمة: رحلاتي المجدولة (خلف مفتاحها) · **مشوارٌ ثابت واشتراكاتي** (§٦٣-ج/٦) · ادعُ صديقك ·
+ * **وما في الشاشة القائمة ولم يُرسم يبقى** بلغة القائمة: رحلاتي المجدولة (خلف مفتاحها) · **مشوارٌ ثابت واشتراكاتي** (§٦٣-ج/٦) ·
+ * **بين المدن وحجوزاتُه** (§٦٣-ج/٧) · ادعُ صديقك ·
  * الإشعارات · الإعدادات · حذفُ الحساب (آخرَ القائمة بقصد) · التبديلُ إلى تطبيق السائق · إنهاءُ كلِّ الجلسات.
  * **و«بياناتي» صار زرَّ القلم في الرأس** كما في اللوحة — البابُ نفسُه.
  */
@@ -24,7 +25,13 @@ import { useNavigate } from "react-router-dom";
 import { getRiderSummary } from "@/api/endpoints";
 import type { RiderSummary } from "@/api/types";
 
-import { useCommuteService, useHasCommutes, useScheduledRides } from "@/lib/bookings";
+import {
+  useCommuteService,
+  useHasCommutes,
+  useHasIntercityBookings,
+  useIntercityService,
+  useScheduledRides,
+} from "@/lib/bookings";
 import { usePlaces } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useSwitchToDriver } from "@/lib/switch-app";
@@ -49,6 +56,8 @@ export function AccountT2Screen() {
   const scheduled = useScheduledRides();
   const commuteService = useCommuteService();
   const hasCommutes = useHasCommutes();
+  const intercity = useIntercityService();
+  const hasIntercity = useHasIntercityBookings();
   const swap = useSwitchToDriver();
   // **الأرقامُ من الخلفية** (§٦١-ط/٢) — وحتى تصل، أو إن تعثّرت، «—» لا صفرٌ يُقرأ خبراً
   const [summary, setSummary] = useState<RiderSummary | null>(null);
@@ -79,6 +88,10 @@ export function AccountT2Screen() {
     // بجوار أخيه المجدول**: بابُ الجديد خلف مفتاحه، **و«اشتراكاتي» لمن له اشتراكٌ ولو أُطفئ المفتاح** — مالُه مدفوعٌ ويُرى
     ...(commuteService ? [{ to: "/account/commute", icon: "event_repeat", label: "مشوارٌ ثابت" }] : []),
     ...(hasCommutes ? [{ to: "/account/commutes", icon: "card_membership", label: "اشتراكاتي" }] : []),
+    // **بين المدن** (§٦٣-ج/٧) — بجوار أخويه وبحكمهما: التصفّحُ والحجزُ خلف مفتاحه (المالكُ يراجع القانونَ قبل إشعاله)، **و«حجوزاتي
+    // بين المدن» لمن له حجزٌ ولو أُطفئ** — مقعدٌ دُفع ثمنُه لا يختفي بمفتاح
+    ...(intercity ? [{ to: "/account/intercity", icon: "route", label: "بين المدن" }] : []),
+    ...(hasIntercity ? [{ to: "/account/intercity/bookings", icon: "event_upcoming", label: "حجوزاتي بين المدن" }] : []),
     { to: "/account/referrals", icon: "redeem", label: "ادعُ صديقك" },
     { to: "/account/notifications", icon: "notifications", label: "الإشعارات" },
     { to: "/account/settings", icon: "settings", label: "الإعدادات" },

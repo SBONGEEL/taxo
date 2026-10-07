@@ -637,7 +637,11 @@ export type WalletTransactionType =
   // **المشوارُ الثابت** (§٦٣-ج/٦): المقدَّمُ يخرج من محفظته، **وما لم يُستعمل يعود رصيداً**؛ والحافزُ للكبتن ويُسمّى للعلّة أعلاه
   | "commute_prepay"
   | "commute_credit"
-  | "commute_incentive";
+  | "commute_incentive"
+  // **بين المدن** (§٦٣-ج/٧): المقعدُ يخرج من محفظته ويحفظه TAXO، **ويعود كاملاً** إن أُلغي قبل الانطلاق؛ وأجرةُ الكبتن له ويُسمّى للعلّة أعلاه
+  | "intercity_hold"
+  | "intercity_refund"
+  | "intercity_earning";
 
 export interface WalletTransaction {
   id: string;
@@ -883,6 +887,55 @@ export interface Commute {
   suspended_days: string[];
   /** **اسمُ الكبتن المعتمد** — و`null` ما دام لم يعتمده أحد. */
   captain_name: string | null;
+}
+
+// ---- بين المدن — رحلاتٌ يعلنها الكباتن بمقاعدَ تُحجز (§٦٣-ج/٧)
+
+/** **مسارٌ بين مدينتين** كما يضيفه المالك (`RouteOut`) — بنقطتي تجمّعٍ يُلتقى فيهما، لا عنوانِ كلِّ راكب. **والسعران من الخلفية**
+ *  نصّاً بثلاث خانات، ولا يُحسب منهما شيءٌ هنا (§14). */
+export interface IntercityRoute {
+  id: string;
+  country_code: CountryCode;
+  from_city: string;
+  to_city: string;
+  from_lat: number;
+  from_lng: number;
+  from_point: string;
+  to_lat: number;
+  to_lng: number;
+  to_point: string;
+  price_car: string;
+  price_seat: string;
+  is_active: boolean;
+}
+
+/** **رحلةٌ معلَنة** (`TripOut`) — **السعران مجمَّدان عليها لحظةَ أعلنها الكبتن**، فتعديلُ المسار بعدها لا يمسّها. والمقاعدُ عددان
+ *  من الخلفية (المعروضةُ والمحجوزة) — **والمتاحُ فرقُهما عدّاً لا مالاً**. و`status` **نصٌّ لا اتحادٌ مسمّى بقصد**: عمودٌ نصّيٌّ بقيدٍ في
+ *  القاعدة لا `StrEnum` (علّةُ `Booking.guarantee_state`). و`passengers` فارغةٌ للراكب دائماً — **لا يرى الراكبُ ركّابَ غيره**. */
+export interface IntercityTrip {
+  id: string;
+  route: IntercityRoute;
+  departs_at: string;
+  seats_offered: number;
+  seats_booked: number;
+  min_seats: number;
+  price_car: string;
+  price_seat: string;
+  currency: Currency;
+  status: "open" | "departed" | "completed" | "cancelled";
+  passengers: Array<{ name: string; seats: number; phone: string | null }>;
+}
+
+/** **حجزُ راكبٍ** (`BookingOut`) — المقاعدُ **من المحفظة مقدّماً** (`wallet`)، أو السيارةُ كاملةً **نقداً للكبتن** (`cash`). و`amount`
+ *  **المبلغُ كما حسبته الخلفيةُ لحظةَ الحجز** — لا يُضرب سعرٌ في عددٍ هنا. والحالُ نصٌّ بقيدٍ في القاعدة (علّةُ `IntercityTrip.status`). */
+export interface IntercityBooking {
+  id: string;
+  trip: IntercityTrip;
+  seats: number;
+  whole_car: boolean;
+  amount: string;
+  payment: "wallet" | "cash";
+  status: "booked" | "cancelled" | "refunded" | "completed";
 }
 
 

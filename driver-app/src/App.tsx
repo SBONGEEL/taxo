@@ -100,6 +100,9 @@ const GuaranteesT2Screen = lazy(() =>
 const CommutesT2Screen = lazy(() =>
   import("@/screens/t2/CommutesT2").then((m) => ({ default: m.CommutesT2Screen })),
 );
+const IntercityT2Screen = lazy(() =>
+  import("@/screens/t2/IntercityT2").then((m) => ({ default: m.IntercityT2Screen })),
+);
 const PlansPreviewT2Screen = lazy(() =>
   import("@/screens/t2/PlansPreviewT2").then((m) => ({ default: m.PlansPreviewT2Screen })),
 );
@@ -546,6 +549,16 @@ export default function App() {
                           element={
                             <Guarded>
                               <CommutesT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **بين المدن** (§٦٣-ج/٧) — «أعلن رحلة» و«رحلاتُك»، يبلغها مدخلُ الرئيسية **وبلا شريطٍ** كأخواتها؛ والإعلانُ
+                            خلف المفتاح، **وما أعلنه يُقرأ ولو أُطفئ** — ركّابُه ينتظرونه */}
+                        <Route
+                          path="/intercity"
+                          element={
+                            <Guarded>
+                              <IntercityT2Screen />
                             </Guarded>
                           }
                         />

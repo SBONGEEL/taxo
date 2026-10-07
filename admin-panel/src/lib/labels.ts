@@ -129,6 +129,10 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   commute_prepay: "اشتراك المشوار الثابت",
   commute_credit: "رصيدُ أيامٍ لم تُستعمل",
   commute_incentive: "حافزُ المشوار الثابت",
+  // **بين المدن** (§٦٣-ج/٧) — **بجهته** كذلك: مقعدُ الراكب، وما رُدّ إليه، وأجرةُ الكبتن عند الإنهاء
+  intercity_hold: "حجزُ مقعدٍ بين المدن",
+  intercity_refund: "ردُّ حجزٍ بين المدن",
+  intercity_earning: "أجرةُ رحلةٍ بين المدن",
 };
 
 // ─────────────────────────────────────────────── الاشتراك

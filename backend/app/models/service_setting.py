@@ -34,6 +34,7 @@ class ServiceSetting(TimestampMixin, Base):
             "AND commute_max_suspend_days >= 0",
             name="service_settings_commute_valid",
         ),
+        CheckConstraint("intercity_cancel_deadline_hours BETWEEN 1 AND 48", name="service_settings_intercity_valid"),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -95,3 +96,7 @@ class ServiceSetting(TimestampMixin, Base):
         MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
     )
     commute_max_suspend_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=4, server_default=text("4"))
+
+    # ------------------------------------------------ بين المدن (§٦٣-ج/٧)
+    #: **المهلةُ قبل الانطلاق** — قبلها يلغي الكبتنُ بلا أثر، وعندها تُلغى رحلةٌ لم تبلغ حدَّها. اقتراحي ساعتان
+    intercity_cancel_deadline_hours: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default=text("2"))

@@ -96,6 +96,7 @@ celery_app = Celery(
         "app.tasks.ride_for_other",
         "app.tasks.guarantees",
         "app.tasks.commute",
+        "app.tasks.intercity",
     ],
 )
 
@@ -195,6 +196,11 @@ celery_app.conf.update(
         # **محوُ الراكب الفعليّ بعد ٣٠ يوماً** (§٦٣-ج/١) — يومياً: الوعدُ في سياسة الخصوصية بالأيام، وكنسٌ أسبوعيٌّ يكسره
         # **الحجزُ المضمون كلَّ دقيقة** (§٦٣-ج/٣): مهلةُ التأكيد عشرُ دقائق، ودورةٌ أبطأُ منها تخون المهلة
         # **المشوارُ الثابت كلَّ ساعة** (§٦٣-ج/٦): حجوزُ الغد متكرّرةٌ بلا ضرر، ودورةٌ يوميّةٌ تفوتها ساعةُ عطلٍ تُفوّت يوماً على من دفع
+        # **مهلةُ «بين المدن» كلَّ خمس دقائق** (§٦٣-ج/٧): رحلةٌ لم تبلغ حدَّها تُلغى ويُردّ لركّابها قبل أن يخرجوا
+        "sweep-intercity": {
+            "task": "app.tasks.intercity.sweep_intercity",
+            "schedule": 300.0,
+        },
         "run-commutes": {
             "task": "app.tasks.commute.run_commutes",
             "schedule": crontab(minute=7),

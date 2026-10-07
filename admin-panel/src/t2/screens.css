@@ -681,3 +681,47 @@ button.ad-fac-name:focus-visible { border-radius: 4px; outline: 2px solid var(--
   .ad-fac-note-link { min-height: 44px; }
   .ad-fac-tools .ad-btn { flex: 1; }
 }
+
+/* ═══ مساراتُ بين المدن (§٦٣-ج/٧) — قائمةٌ ومحرِّرٌ بضلعين، **بلغة «المرافق الحيوية»** (سطرُ الشرط · الاسمُ بابُ المحرِّر · المفتاح) ══ */
+/* **نقطتا التجمّع سطران في خليّةٍ واحدة** — «من» بلون النصّ و«إلى» خافتة، فلا يُقرأ عمودان لشيءٍ واحد */
+.ad-ic-points { display: flex; min-width: 0; flex-direction: column; gap: 2px; font-size: 12.5px; line-height: 1.5; }
+.ad-ic-points > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* **المحرِّر**: الضلعان جنباً إلى جنب — «من» ثمّ «إلى» بترتيب القراءة — **وعلى الشاشة الضيّقة فوق بعض** */
+.ad-ic-edit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.ad-ic-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+}
+.ad-ic-legend { padding: 0 6px; font-size: 13px; font-weight: 700; color: var(--t2-text); }
+.ad-ic-coords { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ad-hint.ad-ic-locked { margin: 10px 0 0; }
+.ad-ic-prices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.ad-fac-switch.ad-ic-switch { margin-top: 14px; }
+@media (max-width: 859px) {
+  .ad-ic-edit { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 639px) {
+  .ad-ic-prices { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── تصريحُ «بين المدن» في درج الكبتن — صفوفُ التصاريح بزرِّ السحب، ونموذجُ المنح تحتها ── */
+.ad-ic-permits { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.ad-ic-permit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 14px;
+}
+.ad-ic-permit-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.ad-ic-permit-title { font-size: 13px; font-weight: 600; }
+.ad-ic-permit-sub { font-size: 12px; color: var(--t2-muted); }
+.ad-ic-permit .ad-btn { width: auto; }

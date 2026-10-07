@@ -45,6 +45,8 @@ const LABEL = DEBT_STATUS_LABEL;
 
 const SOURCE: Record<DriverDebtRow["source"], string> = {
   ride_commission: "عمولة رحلة نقدية",
+  // **بين المدن** (§٦٣-ج/٧) — السيارةُ كاملةً قُبضت نقداً، وعمولتُها دَينٌ كعمولة النقد
+  intercity_commission: "عمولةُ رحلةٍ بين المدن قُبضت نقداً",
 };
 
 export function DriverDebts({ onError }: { onError: (message: string) => void }) {

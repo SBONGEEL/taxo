@@ -558,7 +558,11 @@ export type WalletTransactionType =
   // **المشوارُ الثابت** (§٦٣-ج/٦): **حافزُ الكبتن المعتمد** من TAXO يصله، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
   | "commute_prepay"
   | "commute_credit"
-  | "commute_incentive";
+  | "commute_incentive"
+  // **بين المدن** (§٦٣-ج/٧): **أجرةُ رحلته تصله من مال المقاعد المحفوظ** عند الإنهاء، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
+  | "intercity_hold"
+  | "intercity_refund"
+  | "intercity_earning";
 
 export interface WalletTransaction {
   id: string;
@@ -1071,7 +1075,8 @@ export interface CliqSubscriptionClaim {
 // الدفتر إلى جدولها، فلا يُمنع من إنهاء رحلةٍ لأن رصيدَه لا يغطّي عمولتَها
 // — وهو العطبُ الذي كان حيّاً قبل 2026-08-30.
 
-export type DriverDebtSource = "ride_commission";
+// **و«بين المدن» مصدرٌ ثانٍ** (§٦٣-ج/٧): السيارةُ كاملةً تُدفع له نقداً، وعمولتُها دَينٌ كعمولة رحلات النقد
+export type DriverDebtSource = "ride_commission" | "intercity_commission";
 export type DriverDebtStatus = "outstanding" | "settled" | "written_off";
 
 export interface DriverDebtRow {
@@ -1297,4 +1302,51 @@ export interface CommuteOffer {
   rides_total: number;
   currency: Currency;
   approved: boolean;
+}
+
+// ═══════════════ بين المدن (§٦٣-ج/٧) ═══════════════
+//
+// **الكبتنُ سيّدُ رحلته**: يعلنها بمقاعدها وأقلِّ عددٍ ينطلق به، ويلغيها قبل المهلة بلا أثر، وينطلق وينهي — **بتصريحٍ يمنحه
+// مشرفٌ بعد فحص المركبة**. والأسعارُ من المسار يضبطها المالك، **وتُجمَّد على الرحلة لحظةَ إعلانها**.
+
+/** **مسارٌ مفعَّلٌ في سوقه** (`RouteOut`) — مدينتان بنقطتي تجمّع، **وسعرا المقعد والسيارة من الخلفية** نصّاً، لا يُحسب منهما شيء. */
+export interface IntercityRoute {
+  id: string;
+  country_code: CountryCode;
+  from_city: string;
+  to_city: string;
+  from_lat: number;
+  from_lng: number;
+  from_point: string;
+  to_lat: number;
+  to_lng: number;
+  to_point: string;
+  price_car: string;
+  price_seat: string;
+  is_active: boolean;
+}
+
+/** **راكبٌ في رحلته** — **الاسمُ قبل الانطلاق بساعة، والرقمُ عند الانطلاق وحدَه** (§٦٣-هـ): قبلهما لا يصل شيءٌ، و`phone` `null`
+ *  ما دامت لم تنطلق. ومقاعدُه عددٌ (السيارةُ كاملةً مقاعدُها كلُّها). */
+export interface IntercityPassenger {
+  name: string;
+  seats: number;
+  phone: string | null;
+}
+
+/** **رحلتُه كما يراها** (`TripOut`) — المقاعدُ عددان من الخلفية (المعروضةُ والمحجوزة) وأقلُّ ما ينطلق به، **والسعران المجمَّدان**.
+ *  و`status` **نصٌّ لا اتحادٌ مسمّى بقصد**: عمودٌ نصّيٌّ بقيدٍ في القاعدة لا `StrEnum`، فاتحادٌ باسمٍ يخلط `departed` بقيمٍ يعرفها
+ *  `check:enums` من تعداداتٍ أخرى. */
+export interface IntercityTrip {
+  id: string;
+  route: IntercityRoute;
+  departs_at: string;
+  seats_offered: number;
+  seats_booked: number;
+  min_seats: number;
+  price_car: string;
+  price_seat: string;
+  currency: Currency;
+  status: "open" | "departed" | "completed" | "cancelled";
+  passengers: IntercityPassenger[];
 }

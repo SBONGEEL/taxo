@@ -56,6 +56,10 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   commute_incentive: "حافزُ المشوار الثابت",
   commute_prepay: "اشتراك المشوار الثابت",
   commute_credit: "رصيدُ أيامٍ لم تُستعمل",
+  // **بين المدن** (§٦٣-ج/٧) — أجرةُ رحلته من مال المقاعد المحفوظ عند الإنهاء، والاثنان الباقيان للراكب ويُسمّيان للعلّة أعلاه
+  intercity_earning: "أجرةُ رحلةٍ بين المدن",
+  intercity_hold: "حجزُ مقعدٍ بين المدن",
+  intercity_refund: "ردُّ حجزٍ بين المدن",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -93,6 +97,10 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   commute_incentive: CalendarCheck,
   commute_prepay: CalendarCheck,
   commute_credit: CalendarCheck,
+  // **وبين المدن رحلةٌ** — أيقونةُ أجرة الرحلة لأجرته، والمقعدُ وردُّه بالأيقونة نفسِها
+  intercity_earning: Car,
+  intercity_hold: Car,
+  intercity_refund: Car,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

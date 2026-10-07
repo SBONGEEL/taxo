@@ -104,6 +104,10 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   commute_prepay: "اشتراك المشوار الثابت",
   commute_credit: "رصيدُ أيامٍ لم تُستعمل",
   commute_incentive: "حافزُ المشوار الثابت",
+  // **بين المدن** (§٦٣-ج/٧) — المقعدُ وردُّه يقعان له، والأجرةُ للكبتن وتُسمّى للعلّة أعلاه
+  intercity_hold: "حجزُ مقعدٍ بين المدن",
+  intercity_refund: "ردُّ حجزٍ بين المدن",
+  intercity_earning: "أجرةُ رحلةٍ بين المدن",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

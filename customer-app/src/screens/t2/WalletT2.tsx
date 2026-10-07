@@ -52,6 +52,9 @@ const TX_ICON: Partial<Record<WalletTransactionType, string>> = {
   // **المشوارُ الثابت** (§٦٣-ج/٦) — أيقونةُ «اشتراكاتي» للمقدَّم وما عاد منه
   commute_prepay: "event_repeat",
   commute_credit: "event_repeat",
+  // **بين المدن** (§٦٣-ج/٧) — أيقونةُ مدخلها في «حسابي» للمقعد وردِّه
+  intercity_hold: "route",
+  intercity_refund: "route",
 };
 
 export function WalletT2Screen() {

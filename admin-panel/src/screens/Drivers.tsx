@@ -40,10 +40,14 @@ import {
   clearDriverInspection,
   driverDocumentBlob,
   getDriverDocuments,
+  grantIntercityPermit,
+  listDriverVehicles,
   listDrivers,
+  listIntercityPermits,
   passDriverInspection,
   rejectDriver,
   reviewDocument,
+  revokeIntercityPermit,
   scheduleDriverInspection,
   setAdvanceCap,
   setDriverGender,
@@ -56,6 +60,8 @@ import type {
   DriverStatus,
   Gender,
   GenderPreference,
+  IntercityPermit,
+  Vehicle,
 } from "@/api/types";
 import { Advances } from "@/components/Advances";
 import {
@@ -80,7 +86,7 @@ import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
-import { Checkbox, Field, FieldError } from "@/components/ui/Field";
+import { Checkbox, DateInput, Field, FieldError, Select } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
@@ -839,6 +845,9 @@ function DriverDrawer({
 
         <Inspection row={row} canDecide={canDecide} onChanged={onChanged} />
 
+        {/* **تصريحُ «بين المدن»** (§٦٣-ج/٧) — بعد الفحص لأنه نتيجتُه: يُمنح لمركبةٍ فُحصت، **ويبقى الدرجُ مفتوحاً** بعد المنح والسحب */}
+        <IntercityPermitCard driverId={row.driver_id} canDecide={canDecide} />
+
         <h3 className="ad-dh">توثيق الجنس</h3>
         <div className="ad-box">
           <div className="ad-box-row">
@@ -1137,6 +1146,182 @@ function Inspection({
             <ErrorNote message={error} />
           </div>
         ) : null}
+      </div>
+    </>
+  );
+}
+
+/** «2027-05-01» ← «01/05/2027» — **يومٌ لا لحظة**، فلا يمرّ بـ`Date` يُزيحه بالمنطقة (نمطُ `DateField`). */
+function dayFace(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : iso;
+}
+
+/** «YYYY-MM-DD» **بالتاريخ المحلّيّ** — لا `toISOString` الذي يُزيح اليومَ قرب منتصف الليل. */
+function localDay(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** **تصريحُ «بين المدن»** (§٦٣-ج/٧) — **يمنحه مشرفٌ بعد فحص المركبة**، ولا يعلن الكبتنُ رحلةً بين المدن بغيره.
+ *
+ * **والشروطُ تُفحص في الخلفية لا هنا** (`intercity.grant_permit`): مركبةٌ 2015 فأحدث، وأربعةُ مقاعدَ على الأقل، وتأمينٌ سارٍ —
+ * **ورفضُها ٤٢٢ يُقال بنصّه كما ردّته**. وما هنا راحةٌ لا حراسة: المقاعدُ تُكتب من 4، والتأمينُ يُختار من الغد.
+ *
+ * **والتصريحُ لا يُحذف**: يسقط وحدَه بانتهاء التأمين، ويُسحب بزرّه فيُختم وقتُ سحبه — **وأحوالُه الثلاثُ تُقرأ هنا** (ساري · انتهى
+ * تأمينُه · مسحوب). **والكتابةُ لـ`admin` وحدَه** كبقيّة قرارات الدرج، والخلفيةُ تحرسها (`SettingsWriter`).
+ */
+function IntercityPermitCard({ driverId, canDecide }: { driverId: string; canDecide: boolean }) {
+  const [permits, setPermits] = useState<IntercityPermit[] | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleId, setVehicleId] = useState("");
+  const [seats, setSeats] = useState("4");
+  const [insurance, setInsurance] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const [nextPermits, nextVehicles] = await Promise.all([listIntercityPermits(driverId), listDriverVehicles(driverId)]);
+    setPermits(nextPermits);
+    setVehicles(nextVehicles);
+    setVehicleId((current) => current || (nextVehicles[0]?.id ?? ""));
+  }, [driverId]);
+
+  useEffect(() => {
+    load().catch((caught) => setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة التصاريح"));
+  }, [load]);
+
+  async function run(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      await action();
+      setDone(message);
+      await load();
+    } catch (caught) {
+      // **نصُّ الخلفية كما ردّته** — مركبةٌ قديمة، أو تأمينٌ منتهٍ، أو مقاعدُ أقلّ
+      setError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const today = localDay(new Date());
+  const tomorrow = localDay(new Date(Date.now() + 86_400_000));
+  const vehicleName = (id: string) => {
+    const vehicle = vehicles.find((item) => item.id === id);
+    return vehicle ? `${vehicle.make} ${vehicle.model} · ${digits(String(vehicle.year))}` : "مركبةٌ لم تعد مسجَّلة";
+  };
+  const seatCount = Number(seats);
+
+  return (
+    <>
+      <h3 className="ad-dh">تصريح بين المدن</h3>
+      <div className="ad-box">
+        <p className="ad-box-hint">
+          لا يعلن الكبتنُ رحلةً بين المدن إلا بتصريحٍ سارٍ — يُمنح بعد فحص المركبة: 2015 فأحدث، وأربعةُ مقاعدَ على الأقل، وتأمينٌ
+          سارٍ. ويسقط وحدَه بانتهاء التأمين.
+        </p>
+
+        {permits === null ? (
+          error ? null : (
+            <div className="ad-sec-loading">
+              <Spinner />
+            </div>
+          )
+        ) : permits.length === 0 ? (
+          <p className="ad-mini-empty">لا تصريحَ له بعد.</p>
+        ) : (
+          <ul className="ad-ic-permits">
+            {permits.map((permit) => {
+              const revoked = permit.revoked_at !== null;
+              // **انتهاءُ التأمين يُسقطه وحدَه** — والمقارنةُ نصّاً بين يومين بصيغةٍ واحدة (`YYYY-MM-DD`)، لا مالٌ ولا لحظة
+              const lapsed = !revoked && permit.insurance_expires_on < today;
+              return (
+                <li key={permit.id} className="ad-ic-permit">
+                  <span className="ad-ic-permit-main">
+                    <span className="ad-ic-permit-title">{vehicleName(permit.vehicle_id)}</span>
+                    <span className="ad-ic-permit-sub">
+                      {digits(String(permit.seats))} مقاعد · التأمين حتى <span dir="ltr">{dayFace(permit.insurance_expires_on)}</span>
+                    </span>
+                  </span>
+                  <Badge tone={revoked ? "muted" : lapsed ? "warn" : "ok"}>
+                    {revoked ? "مسحوب" : lapsed ? "انتهى تأمينُه" : "ساري"}
+                  </Badge>
+                  {canDecide && !revoked && !lapsed ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void run(() => revokeIntercityPermit(permit.id), "سُحب التصريح — ولا يعلن بعده رحلةً جديدة")}
+                    >
+                      اسحب
+                    </Button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {canDecide ? (
+          vehicles.length === 0 ? (
+            <p className="ad-box-hint">لا مركبةَ مسجَّلةٌ له — والتصريحُ يُمنح لمركبةٍ بعينها.</p>
+          ) : (
+            <div className="ad-box-fields">
+              <Select label="المركبة" name="vehicle_id" value={vehicleId} onChange={(event) => setVehicleId(event.target.value)}>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.id}>
+                    {vehicle.make} {vehicle.model} · {digits(String(vehicle.year))} · {vehicle.plate_number}
+                  </option>
+                ))}
+              </Select>
+              <div>
+                <Field
+                  label="المقاعد"
+                  name="seats"
+                  dir="ltr"
+                  inputMode="numeric"
+                  value={seats}
+                  onChange={(event) => setSeats(event.target.value.replace(/[^0-9]/g, ""))}
+                />
+                <p className="ad-hint">من 4 إلى 8 — وهي أقصى ما يعرضه الكبتنُ في رحلته</p>
+              </div>
+              <DateInput
+                label="التأمين ساري حتى"
+                name="insurance_expires_on"
+                value={insurance}
+                min={tomorrow}
+                onChange={setInsurance}
+              />
+              <div className="ad-box-actions">
+                <Button
+                  size="sm"
+                  disabled={busy || !vehicleId || !insurance || seatCount < 4 || seatCount > 8}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        grantIntercityPermit(driverId, {
+                          vehicle_id: vehicleId,
+                          seats: seatCount,
+                          insurance_expires_on: insurance,
+                        }),
+                      "مُنح التصريح — صار يعلن رحلاتِه بين المدن",
+                    )
+                  }
+                >
+                  امنح التصريح
+                </Button>
+              </div>
+            </div>
+          )
+        ) : (
+          <p className="ad-box-hint">المنحُ والسحبُ لـ admin وحده — تصريحٌ يُعلن به الكبتنُ رحلاتٍ يدفع ركّابُها مقدّماً.</p>
+        )}
+        <ErrorNote message={error} />
+        <SuccessNote message={done} />
       </div>
     </>
   );

@@ -1,0 +1,60 @@
+/* ═══ TAXO 2.0 — «بين المدن» (§٦٣-ج/٧) — **لا لوحةَ له**، فيُركَّب من عُدّة الهوية: رأسُ «اختر الفئة» للمسار ويومِه، وبطاقةُ
+ * «رحلاتي المجدولة» (R26) للرحلة والحجز، وبطاقتا «من يدفع» في الطرد لما يُحجز، وزرُّ «+» في بطاقة المسار لخطوتي العدّاد.
+ * **تخطيطُها وحدَه، بالرموز وحدَها** — الفاتحُ والداكن.
+ */
+
+/* **ولا `padding-bottom` على الصفحة**: `pb-nav` يحجز مكانَ الشريط العائم (علّةُ `commute.css`) */
+.t2-ic-lede { margin: -6px 2px 14px; font-size: 13px; line-height: 1.7; color: var(--t2-muted); }
+.t2-ic-lede b { font-weight: 600; color: var(--t2-text); }
+.t2-button.t2-ic-mine { margin-bottom: 4px; }
+.t2-ic-aside { font-size: 12.5px; color: var(--t2-muted); }
+.t2-ic-group + .t2-ic-group { margin-top: 6px; }
+
+/* ── بطاقةُ الرحلة: السعران سطراً تحت المسار بفاصل، ثمّ «احجز» ── */
+.t2-ic-prices {
+  margin: 10px 0 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--t2-divider);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+/* **والمبلغُ لا ينكسر عن عملته** (قِيس في `commute.css`) */
+.t2-ic-prices b { font-weight: 700; color: var(--t2-text); white-space: nowrap; }
+.t2-button.t2-ic-book { height: 48px; }
+
+/* ── ورقةُ الحجز: الخياران، ثمّ «المقاعد  −  2  +» ── */
+.t2-ic-choice { margin-top: 14px; }
+.t2-share.t2-ic-seats { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.t2-ic-seats-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.t2-ic-seats-label .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-ic-stepper { display: flex; align-items: center; gap: 14px; }
+.t2-ic-step:disabled { opacity: 0.35; cursor: default; }
+.t2-ic-count { min-width: 22px; font-family: var(--t2-font-num); font-size: 22px; font-weight: 700; text-align: center; }
+.t2-ic-topup { display: inline; padding: 0; font-size: inherit; }
+
+/* ── بعد الحجز ── */
+.t2-ic-done { margin: 4px 0 6px; padding: 18px 16px; border-radius: 22px; background: var(--t2-surface); text-align: center; }
+.t2-ic-done-icon .t2-icon { font-size: 44px; color: var(--t2-success); }
+.t2-ic-done-title { margin: 8px 0 6px; font-size: 17px; font-weight: 700; }
+.t2-ic-done-body { margin: 0; font-size: 13px; line-height: 1.75; color: var(--t2-muted); }
+.t2-ic-done-body b { font-weight: 600; color: var(--t2-text); white-space: nowrap; }
+
+/* ── «حجوزاتي بين المدن»: بطاقةُ R26 بسطر المقاعد والمبلغ ── */
+.t2-ic-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--t2-divider);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t2-muted);
+}
+.t2-bk.pending .t2-ic-facts { border-top-color: var(--t2-accent-line); }
+.t2-ic-facts b { font-weight: 700; color: var(--t2-text); white-space: nowrap; }
+.t2-ic-trip-note { margin: 8px 0 0; font-size: 12.5px; font-weight: 600; color: var(--t2-muted); }
+.t2-ic-actions { display: flex; justify-content: flex-end; margin: 6px -6px -8px; }
+.t2-button.t2-ic-new { margin-top: 6px; }

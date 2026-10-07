@@ -78,6 +78,10 @@ const TX_ICON: Record<WalletTransactionType, string> = {
   commute_incentive: "event_repeat",
   commute_prepay: "event_repeat",
   commute_credit: "event_repeat",
+  // **بين المدن** (§٦٣-ج/٧) — أيقونةُ مدخلها في الرئيسية
+  intercity_earning: "route",
+  intercity_hold: "route",
+  intercity_refund: "route",
 };
 
 export function WalletT2Screen() {

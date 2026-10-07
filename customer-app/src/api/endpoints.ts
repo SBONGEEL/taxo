@@ -2,7 +2,7 @@
  *
  * لا شاشة تكتب مساراً نصّاً: تغيّرُ مسارٍ في الخلفية يُصلَح هنا مرةً لا في
  * خمس شاشات. وما ليس للراكب ليس هنا (لا سحب، ولا اشتراكاتُ الكباتن، ولا لوحة إدارة) —
- * **واشتراكُ المشوار الثابت له** (§٦٣-ج/٦).
+ * **واشتراكُ المشوار الثابت له** (§٦٣-ج/٦)، **وحجزُ مقاعد «بين المدن»** (§٦٣-ج/٧).
  */
 
 import { api, upload } from "@/api/client";
@@ -25,6 +25,8 @@ import type {
   ErrorReportBody,
   GenderPreference,
   HourlyPrepay,
+  IntercityBooking,
+  IntercityTrip,
   LoginResponse,
   MyReferrals,
   NearbyDriver,
@@ -470,6 +472,24 @@ export const cancelCommute = (commuteId: string) =>
 /** **«استبدل الكبتن»** — يُفكّ المعتمد فيعود المشوارُ مفتوحاً لغيره. */
 export const releaseCommuteCaptain = (commuteId: string) =>
   api.del<Commute>(`/me/commutes/${commuteId}/captain`);
+
+// --------------------------------------------- بين المدن (§٦٣-ج/٧)
+
+/** **الرحلاتُ المفتوحةُ في سوقه** — القادمةُ وحدَها، الأقربُ انطلاقاً أوّلاً. **ومطفأً ٤٠٣ `intercity_unavailable`** بنصّه: الخدمةُ
+ *  تنتظر قرارَ المالك بعد مراجعة القانون، فالشاشةُ لا تُفتح أصلاً حيث المفتاحُ مطفأ. */
+export const listIntercityTrips = () => api.get<IntercityTrip[]>("/intercity/trips");
+
+/** **الحجز** — المقاعدُ تُخصم من المحفظة لحظتَها (رصيدٌ لا يغطّي ٤٠٩ `insufficient_balance`)، **أو السيارةُ كاملةً نقداً للكبتن**
+ *  حين لا مقعدَ محجوزٌ بعد. **والمبلغُ يُحسب هناك** ويعود في `amount` — لا يُرسل ولا يُضرب هنا. */
+export const bookIntercity = (body: { trip_id: string; seats: number; whole_car: boolean }) =>
+  api.post<IntercityBooking>("/intercity/bookings", body);
+
+/** **حجوزاتي** — كلُّها بأحوالها، الأحدثُ أوّلاً. **ويُقرأ ولو أُطفئت الخدمة**: مالُ القائم محفوظ. */
+export const listIntercityBookings = () => api.get<IntercityBooking[]>("/intercity/bookings");
+
+/** **الإلغاءُ قبل الانطلاق يعيد المالَ كاملاً** إلى المحفظة (`intercity_refund`)؛ وبعده ٤٠٩ برسالته. */
+export const cancelIntercityBooking = (bookingId: string) =>
+  api.post<IntercityBooking>(`/intercity/bookings/${bookingId}/cancel`);
 
 // ------------------------------------------------ صندوق الإشعارات (9-ب)
 

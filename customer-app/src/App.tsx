@@ -126,6 +126,12 @@ const CommutePlanT2Screen = lazy(() =>
 const CommutesT2Screen = lazy(() =>
   import("@/screens/t2/CommuteT2").then((m) => ({ default: m.CommutesT2Screen })),
 );
+const IntercityT2Screen = lazy(() =>
+  import("@/screens/t2/IntercityT2").then((m) => ({ default: m.IntercityT2Screen })),
+);
+const IntercityBookingsT2Screen = lazy(() =>
+  import("@/screens/t2/IntercityT2").then((m) => ({ default: m.IntercityBookingsT2Screen })),
+);
 const PlacesScreen = lazy(() =>
   import("@/screens/Places").then((m) => ({ default: m.PlacesScreen })),
 );
@@ -517,6 +523,24 @@ export default function App() {
                         element={
                           <Guarded>
                             <CommutesT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      {/* **بين المدن** (§٦٣-ج/٧) — الرحلاتُ والحجزُ خلف مفتاحها (مطفأً تعيد الشاشةُ إلى «حسابي»)، **و«حجوزاتي بين المدن»
+                          تُقرأ ولو أُطفئ** — المالكُ يراجع القانونَ قبل الإشعال، ومالُ القائم محفوظ */}
+                      <Route
+                        path="/account/intercity"
+                        element={
+                          <Guarded>
+                            <IntercityT2Screen />
+                          </Guarded>
+                        }
+                      />
+                      <Route
+                        path="/account/intercity/bookings"
+                        element={
+                          <Guarded>
+                            <IntercityBookingsT2Screen />
                           </Guarded>
                         }
                       />

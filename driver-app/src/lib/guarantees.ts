@@ -1,5 +1,6 @@
-/** **الحجزُ المضمون عند الكبتن** (SPEC §٦٣-ج/٣) — مفتاحُه ومدخلُه في الرئيسية. **والمشوارُ الثابتُ أخوه** (§٦٣-ج/٦، آخرَ الملف):
- * اشتراكُ راكبٍ تُولَّد رحلاتُه حجوزاً يأخذها كبتنُه المعتمد — **قبولٌ مسبقٌ كقبول الحجز المضمون**، وبيتُه بيتُه.
+/** **الحجزُ المضمون عند الكبتن** (SPEC §٦٣-ج/٣) — مفتاحُه ومدخلُه في الرئيسية. **والمشوارُ الثابتُ أخوه** (§٦٣-ج/٦):
+ * اشتراكُ راكبٍ تُولَّد رحلاتُه حجوزاً يأخذها كبتنُه المعتمد — **قبولٌ مسبقٌ كقبول الحجز المضمون**، وبيتُه بيتُه. **و«بين المدن»
+ * ثالثُهما** (§٦٣-ج/٧، آخرَ الملف): رحلةٌ يعلنها لموعدٍ قادمٍ ويُحجز فيها مسبقاً — عملٌ مجدولٌ كأخويه، وبيتُه هنا.
  *
  * **ومطفأً لا يُرسم شيءٌ ولا يُسأل باب**: المفتاحُ يُقرأ من `/config` قبل أيِّ نداء، فرئيسيةُ سوقٍ لم تُشعَل فيه الخدمةُ لا
  * تطرق «عروضٌ تنتظرك» في كلِّ فتحة. **والخلفيةُ تحرس نفسَها على كلِّ حال** — تردّ قائمةً فارغةً حيث الخدمةُ مطفأةٌ أو رسمُها صفر.
@@ -10,13 +11,19 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import {
   approveCommute,
+  cancelIntercityTrip,
+  completeIntercityTrip,
+  departIntercityTrip,
   listCommuteOffers,
   listGuaranteeOffers,
+  listIntercityRoutes,
   listMyCommutes,
   listMyGuarantees,
+  listMyIntercityTrips,
+  postIntercityTrip,
   releaseCommute,
 } from "@/api/endpoints";
-import type { CommuteOffer } from "@/api/types";
+import type { CommuteOffer, IntercityRoute, IntercityTrip } from "@/api/types";
 import { useFeature } from "@/lib/config";
 import { useSession } from "@/lib/session";
 
@@ -162,5 +169,135 @@ export function useCommuteBoard() {
       void run(row, () => approveCommute(row.id), "اعتمدتَ المشوار — تصلك رحلاتُه قبل موعدها حين تكون متصلاً ومتاحاً."),
     release: (row: CommuteOffer) =>
       void run(row, () => releaseCommute(row.id), "اعتذرتَ عن المشوار — عاد مفتوحاً لكبتنٍ معتمدٍ آخر."),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════ بين المدن (§٦٣-ج/٧)
+//
+// **المفتاحُ يحكم الإعلانَ وحدَه، و«رحلاتُك» تُقرأ ولو أُطفئ**: رحلةٌ أعلنها وحُجز فيها قائمةٌ تكمل — **وكبتنٌ لا يرى رحلتَه لا يعرف
+// أن ركّاباً ينتظرونه في نقطة التجمّع**. والمالكُ يراجع القانونَ قبل الإشعال، فمطفأً لا مدخلَ لمن لا رحلةَ له.
+//
+// **ولا مالَ يُحسب هنا** (§14): سعرا المقعد والسيارة يُجمَّدان من المسار في الخلفية لحظةَ الإعلان، **وأجرتُه تُقيَّد هناك عند
+// الإنهاء**. وما يُعدّ هنا مقاعد.
+
+export function useIntercity(): boolean {
+  const { user } = useSession();
+  return useFeature(user?.country_code, "intercity_enabled");
+}
+
+/** **رحلةٌ لم تنتهِ** — مفتوحةٌ تنتظر موعدَها، أو انطلقت ولم يُنهِها. */
+const isLive = (trip: IntercityTrip) => trip.status === "open" || trip.status === "departed";
+
+/** **ما يقوله مدخلُ الرئيسية** — كم رحلةً له لم تنتهِ (وصفرٌ يعني دعوةً إلى الإعلان في سوقٍ مشتعل). و`null` حين تُطفأ الخدمةُ ولا
+ *  رحلةَ قائمةً له — **فلا مدخلَ لما لا يُفعل**. وتعثّرُ القراءة صمتٌ كأخويه: الصفحةُ نفسُها تقول خطأها إن فُتحت. */
+export interface IntercityEntry {
+  live: number;
+}
+
+export function useIntercityEntry(active: boolean): IntercityEntry | null {
+  const enabled = useIntercity();
+  const [live, setLive] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    listMyIntercityTrips()
+      .then((trips) => {
+        if (!cancelled) setLive(trips.filter(isLive).length);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
+
+  return enabled || live > 0 ? { live } : null;
+}
+
+/** **أفعالُ الرحلة الثلاثة** — أبوابُ الخلفية بأسمائها. **ومفاتيحُ كائنٍ لا اتحادٌ مسمّى**: `check:enums` يقرأ كلَّ `type X = "…"`
+ *  مرآةً لتعداد، وهذه أفعالٌ لا قيمُ عمود. */
+const INTERCITY_ACTIONS = {
+  cancel: { call: cancelIntercityTrip, done: "أُلغيت الرحلة — وعاد إلى كلِّ راكبٍ مالُه كاملاً." },
+  depart: { call: departIntercityTrip, done: "انطلقتَ — أرقامُ ركّابك تحت أسمائهم." },
+  complete: { call: completeIntercityTrip, done: "أنهيتَ الرحلة — أجرتُها في كشف محفظتك." },
+};
+type IntercityAction = keyof typeof INTERCITY_ACTIONS;
+
+/** **صفحةُ «بين المدن»** — المساراتُ (للإعلان، خلف المفتاح) ورحلاتُه، **وكلُّ فعلٍ يعيد الرحلةَ من الخلفية فتُستبدل في مكانها**
+ *  وجوابُه تحت بطاقتها. **ورسائلُ الرفض كما ردّتها الخلفية** — التصريحُ الناقص، والمهلةُ التي فاتت، والرحلةُ بلا حجز. */
+export function useIntercityBoard() {
+  const enabled = useIntercity();
+  const [routes, setRoutes] = useState<IntercityRoute[] | null>(null);
+  const [trips, setTrips] = useState<IntercityTrip[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, { tone: "ok" | "danger"; text: string }>>({});
+  const [posting, setPosting] = useState<{ tone: "ok" | "danger"; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    const [nextRoutes, nextTrips] = await Promise.all([
+      enabled ? listIntercityRoutes() : Promise.resolve<IntercityRoute[]>([]),
+      listMyIntercityTrips(),
+    ]);
+    setRoutes(nextRoutes);
+    setTrips(nextTrips);
+  }, [enabled]);
+
+  useEffect(() => {
+    load().catch((caught: unknown) =>
+      setError(caught instanceof ApiError ? caught.message : "تعذّر قراءة رحلات بين المدن"),
+    );
+  }, [load]);
+
+  /** **الإعلان** — `departs_at` لحظةٌ بمنطقتها (`toISOString`) فلا تُقرأ بساعتين خطأً، **والسعران يُجمَّدان هناك**. */
+  const post = useCallback(
+    async (body: { route_id: string; departs_at: string; seats: number; min_seats: number }) => {
+      setBusy("post");
+      setPosting(null);
+      try {
+        await postIntercityTrip(body);
+        setPosting({ tone: "ok", text: "أعلنتَ رحلتك — تظهر للركّاب في سوقك حتى موعدها." });
+        await load();
+        return true;
+      } catch (caught) {
+        setPosting({ tone: "danger", text: caught instanceof ApiError ? caught.message : "تعذّر الإعلان — حاول ثانية" });
+        return false;
+      } finally {
+        setBusy(null);
+      }
+    },
+    [load],
+  );
+
+  const act = useCallback(async (trip: IntercityTrip, kind: IntercityAction) => {
+    const { call, done } = INTERCITY_ACTIONS[kind];
+    setBusy(trip.id);
+    setNotes((current) => {
+      const next = { ...current };
+      delete next[trip.id];
+      return next;
+    });
+    try {
+      const next = await call(trip.id);
+      setTrips((current) => (current ?? []).map((item) => (item.id === next.id ? next : item)));
+      setNotes((current) => ({ ...current, [trip.id]: { tone: "ok", text: done } }));
+    } catch (caught) {
+      const text = caught instanceof ApiError ? caught.message : "تعذّر الإرسال — حاول ثانية";
+      setNotes((current) => ({ ...current, [trip.id]: { tone: "danger", text } }));
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  return {
+    enabled,
+    routes,
+    trips,
+    error,
+    busy,
+    notes,
+    posting,
+    post,
+    act: (trip: IntercityTrip, kind: IntercityAction) => void act(trip, kind),
   };
 }

@@ -391,6 +391,7 @@ export type FeatureKey =
   | "parcel_enabled"
   | "hourly_enabled"
   | "rider_subscription_enabled"
+  | "intercity_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
@@ -922,7 +923,11 @@ export type WalletTransactionType =
   // **المشوارُ الثابت** (§٦٣-ج/٦): مقدَّمُ الراكب يحفظه TAXO، وما لم يُستعمل يعود رصيداً، وحافزُ الكبتن المعتمد من TAXO
   | "commute_prepay"
   | "commute_credit"
-  | "commute_incentive";
+  | "commute_incentive"
+  // **بين المدن** (§٦٣-ج/٧): مقعدُ الراكب يحفظه TAXO، ويُردّ كاملاً أو يصل الكبتنَ أجرةً عند الإنهاء وعليه العمولة
+  | "intercity_hold"
+  | "intercity_refund"
+  | "intercity_earning";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {
@@ -1206,6 +1211,9 @@ export interface ServiceSetting {
   commute_discount_percent: string;
   commute_captain_incentive: string;
   commute_max_suspend_days: number;
+  /** **بين المدن** (§٦٣-ج/٧) — **مهلةُ الإلغاء بالساعات قبل الانطلاق** (١–٤٨): قبلها يلغي الكبتنُ رحلتَه بلا أثر، **وعندها تُلغى وحدَها
+   *  رحلةٌ لم يبلغ محجوزُها أقلَّ ما ينطلق به** ويُردّ للركّاب كاملاً. وتُقرأ حيّةً لا مجمَّدة: تعديلُها يحكم الرحلاتِ القائمةَ كذلك. */
+  intercity_cancel_deadline_hours: number;
 }
 
 /** مآلُ دَينٍ لم يعد صاحبُه — **الإدارةُ تختار والكودُ لا يحسم** (قرارُ المالك).
@@ -1584,7 +1592,8 @@ export interface DriverDebtRow {
   collected: string;
   currency: string;
   status: "outstanding" | "settled" | "written_off";
-  source: "ride_commission";
+  // **و«بين المدن» مصدرٌ ثانٍ** (§٦٣-ج/٧): عمولةُ السيارة الكاملة قبضها الكبتنُ نقداً
+  source: "ride_commission" | "intercity_commission";
   ride_id: string | null;
   created_at: string;
 }
@@ -1953,4 +1962,36 @@ export interface Facility {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// ------------------------------------------------ بين المدن (§٦٣-ج/٧)
+
+/** **مسارٌ بين مدينتين** كما تنشره اللوحة (`RouteOut`) — بنقطتي تجمّعٍ بأسمائهما وإحداثيّاتهما، **وسعرا السيارة والمقعد نصّاً بثلاث
+ *  خانات**. **والسعران يُجمَّدان على الرحلة لحظةَ يعلنها الكبتن** — فتعديلُهما يحكم ما يُعلن بعده. **ولا حذفَ له**: يُطفأ ولا يُمحى. */
+export interface IntercityRoute {
+  id: string;
+  country_code: CountryCode;
+  from_city: string;
+  to_city: string;
+  from_lat: number;
+  from_lng: number;
+  from_point: string;
+  to_lat: number;
+  to_lng: number;
+  to_point: string;
+  price_car: string;
+  price_seat: string;
+  is_active: boolean;
+}
+
+/** **تصريحُ «بين المدن»** (`PermitOut`) — يمنحه مشرفٌ بعد فحص المركبة لمركبةٍ بعينها، **ويسقط وحدَه بانتهاء التأمين**، ويُسحب بيده
+ *  (`revoked_at`) — **لا يُحذف**. */
+export interface IntercityPermit {
+  id: string;
+  driver_id: string;
+  vehicle_id: string;
+  seats: number;
+  /** «YYYY-MM-DD» — يومٌ لا لحظة. */
+  insurance_expires_on: string;
+  revoked_at: string | null;
 }

@@ -55,7 +55,14 @@ import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
 import { reversePlace, type PlaceReading } from "@/lib/geocode";
-import { useCommuteEntry, useGuaranteeEntry, type CommuteEntry, type GuaranteeEntry } from "@/lib/guarantees";
+import {
+  useCommuteEntry,
+  useGuaranteeEntry,
+  useIntercityEntry,
+  type CommuteEntry,
+  type GuaranteeEntry,
+  type IntercityEntry,
+} from "@/lib/guarantees";
 import { isActive } from "@/lib/ride";
 import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { digits, ratedAverage } from "@/lib/utils";
@@ -68,7 +75,7 @@ import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { Icon, Wordmark } from "@/taxo2";
 
-import { countBookings, countCommutes } from "./count";
+import { countBookings, countCommutes, countRides } from "./count";
 
 import "./t2.css";
 import "./ride.css";
@@ -165,6 +172,8 @@ export function HomeT2Screen() {
   const guarantee = useGuaranteeEntry(mode === "home");
   // **والمشاويرُ الثابتة** (§٦٣-ج/٦) بالحكم نفسِه — **وما اعتمده يُقرأ ولو أُطفئت الخدمة**
   const commute = useCommuteEntry(mode === "home");
+  // **وبين المدن** (§٦٣-ج/٧) بالحكم نفسِه — **ورحلةٌ أعلنها ولم تنتهِ تُرى ولو أُطفئت الخدمة**
+  const intercity = useIntercityEntry(mode === "home");
   // **الطلبُ والرحلةُ يبدآن من أعلى الصفحة**: طبقاتُ الإطار مطلقةُ الموضع داخل جذرٍ يتمرّر، **ورئيسيةٌ مُمرَّرةٌ ثمّ طلبٌ وارد
   // كانت تُزيح البطاقةَ والورقةَ بمقدار التمرير**
   const root = useRef<HTMLDivElement | null>(null);
@@ -351,6 +360,9 @@ export function HomeT2Screen() {
 
       {/* **المشاويرُ الثابتة** (§٦٣-ج/٦) — تحت أختها وبصفّها: عرضٌ ينتظر كبتناً، أو مشوارٌ اعتمده. وفارغاً لا صفّ */}
       {mode === "home" && commute ? <CommuteEntryRow entry={commute} onOpen={() => navigate("/commutes")} /> : null}
+
+      {/* **بين المدن** (§٦٣-ج/٧) — تحت أخويه وبصفّهما: دعوةٌ إلى الإعلان حيث الخدمةُ مشتعلة، أو رحلاتٌ له لم تنتهِ */}
+      {mode === "home" && intercity ? <IntercityEntryRow entry={intercity} onOpen={() => navigate("/intercity")} /> : null}
 
       {mode === "home" ? (
         <Services
@@ -612,6 +624,25 @@ function CommuteEntryRow({ entry, onOpen }: { entry: CommuteEntry; onOpen: () =>
         <Icon name="event_repeat" fill />
         <span className="t2-hm-row-main">
           <span className="t2-hm-row-title">{title}</span>
+          <div className="t2-hm-row-sub">{sub}</div>
+        </span>
+        <Icon name="chevron_left" className="go" />
+      </button>
+    </div>
+  );
+}
+
+/** **مدخلُ «بين المدن»** (§٦٣-ج/٧) — صفُّ أخويه نفسُه. **ورحلاتُه القائمةُ تسبق الدعوة**: ركّابٌ حجزوا ينتظرونه، والإعلانُ ينتظره
+ *  هو. **والعددُ بالعربية** (`countRides`). */
+function IntercityEntryRow({ entry, onOpen }: { entry: IntercityEntry; onOpen: () => void }) {
+  const sub =
+    entry.live > 0 ? `لك ${countRides(entry.live)} لم تنتهِ — ركّابُها ينتظرونك` : "أعلن رحلتك بين مدينتين — بتصريحٍ بعد فحص مركبتك";
+  return (
+    <div className="t2-gu-home">
+      <button type="button" className="t2-hm-row t2-gu-entry" onClick={onOpen}>
+        <Icon name="route" fill />
+        <span className="t2-hm-row-main">
+          <span className="t2-hm-row-title">بين المدن</span>
           <div className="t2-hm-row-sub">{sub}</div>
         </span>
         <Icon name="chevron_left" className="go" />

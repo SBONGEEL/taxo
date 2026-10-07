@@ -37,6 +37,14 @@ export function countCommutes(n: number): string {
   return `${digits(String(n))} مشواراً`;
 }
 
+/** «مقعدٌ واحد» و«مقعدان» و«3 مقاعد» و«12 مقعداً» — مقاعدُ رحلة «بين المدن» وركّابِها (§٦٣-ج/٧). */
+export function countSeats(n: number): string {
+  if (n === 1) return "مقعدٌ واحد";
+  if (n === 2) return "مقعدان";
+  if (n <= 10) return `${digits(String(n))} مقاعد`;
+  return `${digits(String(n))} مقعداً`;
+}
+
 export function countHours(n: number, genitive = false): string {
   if (n === 1) return "ساعة";
   if (n === 2) return genitive ? "ساعتين" : "ساعتان";

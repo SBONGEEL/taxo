@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "@/api/client";
 import { getDebtState, listMyDebtClaims, payDebtWithCliq } from "@/api/endpoints";
-import type { DebtClaim, DriverDebtState } from "@/api/types";
+import type { DebtClaim, DriverDebtSource, DriverDebtState } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
@@ -28,9 +28,12 @@ import { Icon } from "@/taxo2";
 import "./t2/fields.css";
 import "./t2/money.css";
 
-const SOURCE_TEXT = {
+// **خريطةٌ بنوعها لا `as const`** — فمصدرٌ يُضاف في الخلفية ولا اسمَ له هنا يُسقط `check:enum-coverage` بدل أن يُرسم مفتاحُه
+const SOURCE_TEXT: Record<DriverDebtSource, string> = {
   ride_commission: "عمولة رحلة قبضتَ أجرتها نقداً",
-} as const;
+  // **بين المدن** (§٦٣-ج/٧) — السيارةُ كاملةً قُبضت نقداً، وعمولتُها دَينٌ كعمولة النقد
+  intercity_commission: "عمولةُ رحلةٍ بين المدن قُبضت نقداً",
+};
 
 export function DebtScreen() {
   const goBack = useGoBack("/account");

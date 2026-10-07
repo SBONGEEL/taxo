@@ -62,6 +62,8 @@ import type {
   SubscriptionPlan,
   GuaranteeOffer,
   CommuteOffer,
+  IntercityRoute,
+  IntercityTrip,
 } from "@/api/types";
 
 // ------------------------------------------------------------ الإعدادات
@@ -324,6 +326,34 @@ export const approveCommute = (commuteId: string) =>
 /** **«اعتذر عن المشوار»** — يُفكّ فيعود مفتوحاً لغيره. */
 export const releaseCommute = (commuteId: string) =>
   api.post<CommuteOffer>(`/drivers/me/commutes/${commuteId}/release`);
+
+// ------------------------------------------------------------ بين المدن (§٦٣-ج/٧)
+
+/** **المساراتُ المفعَّلةُ في سوقه** — يختار منها رحلتَه، وسعراها من المالك. */
+export const listIntercityRoutes = () =>
+  api.get<IntercityRoute[]>("/drivers/me/intercity/routes");
+
+/** **رحلاتُه** — الأحدثُ موعداً أوّلاً، **وتُقرأ ولو أُطفئت الخدمة**: ما أعلنه وحُجز فيه قائمٌ يكمل. والركّابُ فيها بأسمائهم قبل
+ *  الانطلاق بساعة، وبأرقامهم عند الانطلاق وحدَه. */
+export const listMyIntercityTrips = () =>
+  api.get<IntercityTrip[]>("/drivers/me/intercity/trips");
+
+/** **إعلانُ رحلة** — بلا تصريحٍ سارٍ ٤٠٣ `intercity_permit_required` بنصّه، وموعدٌ قبل المهلة أو مقاعدُ خارج حدِّها ٤٢٢ بنصّه.
+ *  **والسعران يُجمَّدان من المسار هناك** — لا يُرسلان. */
+export const postIntercityTrip = (body: { route_id: string; departs_at: string; seats: number; min_seats: number }) =>
+  api.post<IntercityTrip>("/drivers/me/intercity/trips", body);
+
+/** **الإلغاءُ قبل المهلة بلا أثرٍ عليه، ويُردّ للركّاب كاملاً** — وبعدها ٤٠٩ برسالتها («راجع الدعم»). */
+export const cancelIntercityTrip = (tripId: string) =>
+  api.post<IntercityTrip>(`/drivers/me/intercity/trips/${tripId}/cancel`);
+
+/** **«انطلقتُ»** — وبلا حجزٍ ٤٠٩ برسالته. وبعده تصله أرقامُ ركّابه. */
+export const departIntercityTrip = (tripId: string) =>
+  api.post<IntercityTrip>(`/drivers/me/intercity/trips/${tripId}/depart`);
+
+/** **«وصلتُ»** — يصله مالُ المقاعد المحفوظ في محفظته وعليه العمولة، **والسيارةُ النقديّةُ عمولتُها دَين** — كلُّه في الخلفية. */
+export const completeIntercityTrip = (tripId: string) =>
+  api.post<IntercityTrip>(`/drivers/me/intercity/trips/${tripId}/complete`);
 
 // ------------------------------------------------------------ الدفع
 

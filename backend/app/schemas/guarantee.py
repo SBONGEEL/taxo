@@ -55,6 +55,8 @@ class ServiceSettingOut(BaseModel):
     commute_discount_percent: Decimal
     commute_captain_incentive: Decimal
     commute_max_suspend_days: int
+    #: بين المدن (§٦٣-ج/٧) — مهلةُ إلغاء الكبتن بالساعات
+    intercity_cancel_deadline_hours: int
 
 
 class ServiceSettingUpdate(BaseModel):
@@ -73,3 +75,4 @@ class ServiceSettingUpdate(BaseModel):
     commute_discount_percent: Decimal | None = Field(default=None, ge=0, lt=100, max_digits=5, decimal_places=2)
     commute_captain_incentive: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
     commute_max_suspend_days: int | None = Field(default=None, ge=0, le=31)
+    intercity_cancel_deadline_hours: int | None = Field(default=None, ge=1, le=48)

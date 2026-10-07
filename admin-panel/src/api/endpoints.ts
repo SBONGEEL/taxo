@@ -125,6 +125,8 @@ import type {
   PromoBannerRow,
   ServiceTileRow,
   Facility,
+  IntercityPermit,
+  IntercityRoute,
   LngLat,
   VerificationCampaignRow,
   SiteSettings,
@@ -1516,6 +1518,56 @@ export const updateFacility = (
     is_active: boolean;
   }>,
 ) => api.patch<Facility>(`/admin/facilities/${facilityId}`, payload);
+
+// ── بين المدن (§٦٣-ج/٧) — المساراتُ وتصاريحُ الكباتن. **ولا بابَ حذفٍ لأيٍّ منهما بقصد**: المسارُ يُطفأ، والتصريحُ يُسحب
+
+/** مساراتُ السوق **بما فيها المطفأة** — فالمشرفُ يرى ما أطفأه. */
+export const listIntercityRoutes = (country: CountryCode) =>
+  api.get<IntercityRoute[]>("/admin/intercity/routes", { query: { country } });
+
+/** **مسارٌ جديد** — المدينتان ونقطتا التجمّع بإحداثيّاتهما، **والسعران نصّاً كما كُتبا** (§14). ورفضُ الحدود ٤٢٢ بنصّه. */
+export const createIntercityRoute = (payload: {
+  country_code: CountryCode;
+  from_city: string;
+  to_city: string;
+  from_lat: number;
+  from_lng: number;
+  from_point: string;
+  to_lat: number;
+  to_lng: number;
+  to_point: string;
+  price_car: string;
+  price_seat: string;
+  is_active: boolean;
+}) => api.post<IntercityRoute>("/admin/intercity/routes", payload);
+
+/** تعديلٌ جزئيّ — **ما تغيّر وحدَه**: اسما النقطتين والسعران والإطفاء (`RoutePatch`). **والمدينتان والإحداثيّاتُ لا تُعدَّل**: مسارٌ
+ *  آخرُ يُضاف، فلا تُقرأ رحلاتٌ أُعلنت عليه أمسِ رحلاتٍ إلى مدينةٍ أخرى. */
+export const updateIntercityRoute = (
+  routeId: string,
+  payload: Partial<{
+    from_point: string;
+    to_point: string;
+    price_car: string;
+    price_seat: string;
+    is_active: boolean;
+  }>,
+) => api.patch<IntercityRoute>(`/admin/intercity/routes/${routeId}`, payload);
+
+/** **تصاريحُ كبتن** — السارية والمسحوبة والمنتهية، الأحدثُ أوّلاً. */
+export const listIntercityPermits = (driverId: string) =>
+  api.get<IntercityPermit[]>("/admin/intercity/permits", { query: { driver_id: driverId } });
+
+/** **منحُ التصريح بعد فحص المركبة** — **والشروطُ تُفحص هناك لا هنا**: مركبةٌ ٢٠١٥ فأحدث، أربعةُ مقاعدَ على الأقل، تأمينٌ سارٍ —
+ *  ورفضُها ٤٢٢ بنصّها يُقال كما هو. */
+export const grantIntercityPermit = (
+  driverId: string,
+  payload: { vehicle_id: string; seats: number; insurance_expires_on: string },
+) => api.post<IntercityPermit>(`/admin/intercity/drivers/${driverId}/permit`, payload);
+
+/** **سحبُ التصريح** — يُختم وقتُه ولا يُحذف الصفّ؛ ورحلاتُه المعلَنةُ قبله قائمة. */
+export const revokeIntercityPermit = (permitId: string) =>
+  api.post<IntercityPermit>(`/admin/intercity/permits/${permitId}/revoke`);
 
 /** **صورةُ اللافتة — تُرفع وتُخزَّن ويخدمها باب** (الترحيلة `0064`).
  *
