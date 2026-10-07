@@ -15,6 +15,12 @@ TokenType = Literal["access", "refresh"]
 
 _BCRYPT_ROUNDS = 12
 
+#: **سماحُ الساعة عند فكّ الرمز** (قِيس ٢٠٢٦-١٠-٠٧): PyJWT 2.15 يرفض رمزاً `iat`ه بعد «الآن» **بلا سماح**، و`iat` يُقطع إلى
+#: الثانية — **فخطوةُ ساعةٍ إلى الوراء** بعد سكّه تجعل الرمزَ الطازجَ «لم يصلح بعد» فيُردّ الطلبُ التالي ٤٠١ ويخرج صاحبُه.
+#: **وقِيست الخطوةُ في حاوية التطوير**: أربعٌ في دقيقة، أكبرُها ٠٫٤٣٥ ث — وهي ٤٠١ «كبتنان معاً» و«السقف عند نشوء الدَّين» العابرتان.
+#: **خمسُ ثوانٍ** تسعها وتسع انزياحَ ساعةٍ بين حاويتين، **ولا تُطيل عمرَ رمز الوصول (ثلاثون دقيقة) إلا بها**
+_CLOCK_LEEWAY = timedelta(seconds=5)
+
 
 # ---------------------------------------------------------------- كلمات المرور
 
@@ -120,6 +126,7 @@ def decode_token(token: str, expected_type: TokenType) -> dict[str, Any]:
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
             issuer=settings.app_name,
+            leeway=_CLOCK_LEEWAY,
         )
     except jwt.PyJWTError as exc:  # منتهٍ / توقيع خاطئ / تالف
         raise TokenError(str(exc)) from exc
