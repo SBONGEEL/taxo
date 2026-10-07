@@ -215,3 +215,19 @@
 }
 .t2-wname { display: flex; align-items: center; gap: 6px; }
 .t2-wname .t2-icon { flex: none; font-size: 17px; color: var(--t2-women); }
+
+/* ── RW4 · رمزُ الرحلة (§٦٢-ج/٥) — بقيم اللوحة: بطاقةُ البرقوق ٢٠ زاويةً و١٣/١٦ حشوةً، والرقمُ Unbounded ٢٦/٧٠٠ ── */
+.t2-trk-code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 13px 16px;
+  border-radius: 20px;
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+}
+.t2-trk-code-main { flex: 1; min-width: 0; }
+.t2-trk-code-title { font-size: 14px; font-weight: 600; }
+.t2-trk-code-sub { margin-top: 2px; font-size: 12px; opacity: 0.85; }
+.t2-trk-code-num { font-family: var(--t2-font-num); font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }

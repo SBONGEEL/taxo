@@ -40,7 +40,7 @@ import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney, ratedAverag
 
 import { nearbyLabel } from "./RiderHomeT2";
 import { SheetT2 } from "./SheetT2";
-import { WomenApproachChipT2, WomenCaptainCardT2, isWomenRide, womenApproachTitle } from "./WomenRideT2";
+import { isWomenRide, RideCodeCardT2, WomenApproachChipT2, womenApproachTitle, WomenCaptainCardT2 } from "./WomenRideT2";
 import "@/taxo2";
 import "./t2.css";
 import "./tracking-count.css";
@@ -378,6 +378,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {badges}
       </div>
       {driver && womenRide ? <WomenCaptainCardT2 ride={ride} /> : null}
+      {/* **رمزُ الرحلة تحت بطاقتها** (RW4، §٦٢-ج/٥) — لرحلةٍ تطلبه وحدَها */}
+      {driver && womenRide ? <RideCodeCardT2 ride={ride} /> : null}
       {driver && !womenRide ? (
         <div className="t2-trk-driver">
           <DriverAvatar rideId={ride.id} name={driver.name} className="t2-trk-avatar" />

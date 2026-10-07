@@ -29,8 +29,9 @@
  * والمحطات في RW2؛ وشارةُ «رحلة نسائية» وإرسالُ التفاصيل ورسمةُ المركبة والوقفةُ والإلغاءُ بأسبابه في RW4.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { getStartCode } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { DriverAvatar } from "@/components/ride/DriverAvatar";
 import { useScheduledRides } from "@/lib/bookings";
@@ -217,6 +218,40 @@ export function WomenApproachChipT2({
 /** عنوانُ ورقة RW4 — مؤنّثاً كما رُسم. */
 export function womenApproachTitle(arrived: boolean): string {
   return arrived ? "الكبتنة تنتظرك في نقطة الانطلاق" : "الكبتنة في الطريق إليك";
+}
+
+/** **رمزُ الرحلة** (RW4، §٦٢-ج/٥) — بطاقةُ البرقوق كما رُسمت: «تطلبه منك الكبتنة قبل أن تركبي» وخاناتُه الأربع.
+ *
+ * **ويُقرأ من بابه لا من الرحلة**: تمثيلُ الرحلة يصل الكبتنةَ أيضاً، والرمزُ ما تطلبه منها — فيحمل «أهو مطلوب» وحدَه. **ولا تُرسم
+ * البطاقةُ قبل وصول الرمز**: بطاقةٌ بلا أرقامٍ تُقرأ عطباً، وتعذُّرُه يُبقيها غائبةً لا فارغة. */
+export function RideCodeCardT2({ ride }: { ride: Ride }) {
+  const [code, setCode] = useState<string | null>(null);
+  const wanted = ride.start_code_required && (ride.status === "accepted" || ride.status === "arrived");
+  useEffect(() => {
+    setCode(null);
+    if (!wanted) return;
+    let cancelled = false;
+    getStartCode(ride.id)
+      .then((answer) => {
+        if (!cancelled) setCode(answer.code);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [ride.id, wanted]);
+  if (!wanted || !code) return null;
+  return (
+    <div className="t2-trk-code">
+      <div className="t2-trk-code-main">
+        <div className="t2-trk-code-title">رمز الرحلة</div>
+        <div className="t2-trk-code-sub">تطلبه منك الكبتنة قبل أن تركبي</div>
+      </div>
+      <span className="t2-trk-code-num" dir="ltr" aria-label={`رمز الرحلة ${code.split("").join(" ")}`}>
+        {code}
+      </span>
+    </div>
+  );
 }
 
 /** **بطاقةُ الكبتنة** (RW4) مكانَ بطاقة R08: دائرتُها بحافّة البرقوق، وعلامةُ التوثيق بجانب اسمها، و«كبتنة موثّقة» تحته — **وهي كذلك

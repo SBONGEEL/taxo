@@ -394,6 +394,8 @@ export interface Ride {
   pause_max_minutes: number;
   /** **عدّادُ الأجرة** (§٦٢-ج/٤٢): المقدَّرةُ ورسمُ الانتظار والوقفات حتى لحظة القراءة — **يجمعها الخادم** (§14). */
   current_fare: string;
+  /** **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، CW4) — السؤالُ وحدَه؛ والرمزُ عند الراكبة، **ولا يصل هذا التطبيقَ في أيِّ تمثيل**. */
+  start_code_required: boolean;
 
   current_leg: number;
   waiting_charge: string;

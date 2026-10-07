@@ -159,6 +159,8 @@ export function useHomeScreen() {
   const [busy, setBusy] = useState(false);
   const [unread, setUnread] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
+  // **ورمزُه** — لتقول ورقةُ الرحلة خطأَ رمز الرحلة تحت خاناته كما رُسم (CW4) لا تحت الزرّ
+  const [actionErrorCode, setActionErrorCode] = useState<string | null>(null);
 
   // عملةُ الدولة من `/config` — لا تُشتق في الواجهة (`currency_for_country`)
   const currencyCode =
@@ -374,12 +376,14 @@ export function useHomeScreen() {
   const run = useCallback(async (action: () => Promise<unknown>) => {
     setBusy(true);
     setActionError(null);
+    setActionErrorCode(null);
     try {
       await action();
     } catch (caught) {
       setActionError(
         caught instanceof ApiError ? caught.message : "تعذّر تنفيذ الإجراء",
       );
+      setActionErrorCode(caught instanceof ApiError ? caught.code : null);
     } finally {
       setBusy(false);
     }
@@ -400,11 +404,12 @@ export function useHomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offer]);
 
-  async function advance() {
+  /** **و`code` رمزُ الرحلة** لرحلةٍ تطلبه (§٦٢-ج/٥، CW4) — يُرسل مع البدء وحدَه. */
+  async function advance(code?: string) {
     if (!ride) return;
     await run(async () => {
       if (ride.status === "accepted") setRide(await arriveRide(ride.id));
-      else if (ride.status === "arrived") setRide(await startRide(ride.id));
+      else if (ride.status === "arrived") setRide(await startRide(ride.id, code));
       else if (ride.status === "in_progress" || ride.status === "at_stop") {
         // **الإنهاءُ من `at_stop` مسموحٌ عمداً**: مخرجُ السقف حين يطول
         // انتظارُ الراكب (SPEC القسم 5.10) — والخلفيةُ هي من يجيزه
@@ -483,6 +488,7 @@ export function useHomeScreen() {
     busy,
     unread,
     actionError,
+    actionErrorCode,
     currencyCode,
     currency,
     colleagues,

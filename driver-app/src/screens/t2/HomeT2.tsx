@@ -101,6 +101,7 @@ export function HomeT2Screen() {
     busy,
     unread,
     actionError,
+    actionErrorCode,
     currency,
     colleagues,
     routeLine,
@@ -410,7 +411,8 @@ export function HomeT2Screen() {
           approachNow={approachNow}
           genderPreference={profile?.driver.gender_preference ?? "any"}
           sheetRef={sheetRef}
-          onAdvance={() => void advance()}
+          onAdvance={(code) => void advance(code)}
+          errorCode={actionErrorCode}
           onPause={() => void run(async () => setRide(await beginPause(ride.id)))}
           onResume={() => void run(async () => setRide(await resumePause(ride.id)))}
           onArriveStop={(stopId) => void run(async () => setRide(await arriveAtStop(ride.id, stopId)))}

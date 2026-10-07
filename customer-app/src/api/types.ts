@@ -378,6 +378,8 @@ export interface Ride {
   share_discount_percent: string;
   share_group_id: string | null;
   share_seat: number;
+  /** **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، RW4) — والرمزُ نفسُه من بابه (`getStartCode`)، لا في هذا التمثيل الذي يصل الطرفين. */
+  start_code_required: boolean;
 
   /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
    *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */

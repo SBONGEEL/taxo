@@ -544,3 +544,6 @@ export interface ApproachRoute {
 }
 
 export const getApproach = (rideId: string) => api.get<ApproachRoute>(`/rides/${rideId}/approach`);
+
+/** **رمزُ الرحلة لصاحبتها** (§٦٢-ج/٥، RW4) — تطلبه منها الكبتنةُ قبل أن تركب؛ و٤٠٤ لرحلةٍ بلا رمزٍ أو بدأت. */
+export const getStartCode = (rideId: string) => api.get<{ code: string }>(`/rides/${rideId}/start-code`);

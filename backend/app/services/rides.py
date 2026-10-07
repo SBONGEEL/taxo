@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import hmac
+import secrets
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -30,6 +32,8 @@ from app.core.exceptions import (
     NotFound,
     PermissionDenied,
     RideAlreadyActive,
+    StartCodeLocked,
+    StartCodeMismatch,
     WomenServiceUnavailable,
 )
 from app.models.driver import Driver
@@ -659,6 +663,13 @@ async def accept_ride(
     if driver.commission_percent_from_subscription is not None:
         ride.commission_percent_at_ride = driver.commission_percent_from_subscription
 
+    # **رمزُ الرحلة** (§٦٢-ج/٥): لرحلةٍ نسائيةٍ في سوقٍ أشعل مفتاحَه — **يُولَّد عند القبول لا عند الطلب**، فلا رمزَ لرحلةٍ لم يقبلها
+    # أحد، **وتحت قفل الصفّ نفسِه**. و`secrets` لا `random`: رمزٌ يُتوقَّع يُفرغ الشرطَ من معناه
+    if ride.gender_preference is GenderPreference.FEMALE and await settings_service.is_feature_enabled(
+        session, ride.country_code, FeatureKey.RIDE_CODE_ENABLED
+    ):
+        ride.start_code = f"{secrets.randbelow(10_000):04d}"
+
     try:
         return await _flush_and_reload(session, ride)
     except IntegrityError as exc:
@@ -717,12 +728,43 @@ async def _driver_at_pickup(session: AsyncSession, ride: Ride) -> bool:
     return metres <= pauses.ARRIVAL_RADIUS_METERS
 
 
-async def start_ride(session: AsyncSession, ride: Ride) -> Ride:
+# **محاولاتُ رمز الرحلة** (§٦٢-ج/٥): خمسٌ كلَّ عشر دقائق لرحلةٍ واحدة — أربعُ خاناتٍ تُخمَّن بعشرة آلاف محاولة، وبالسقف تحتاج أسابيع
+START_CODE_TRIES = 5
+START_CODE_WINDOW_SECONDS = 600
+
+
+async def _check_start_code(redis: Redis | None, ride: Ride, code: str | None) -> None:
+    """**يُعدّ قبل أن يُقارَن** — `INCR` ذرّيٌّ، فمحاولتان متزامنتان لا تمرّان معاً من تحت السقف؛ والمطابقةُ تمحو العدّاد."""
+    key = f"ride:{ride.id}:start-code-tries"
+    if redis is not None:
+        tries = await redis.incr(key)
+        if tries == 1:
+            await redis.expire(key, START_CODE_WINDOW_SECONDS)
+        if tries > START_CODE_TRIES:
+            raise StartCodeLocked()
+    # **مقارنةٌ ثابتةُ الزمن** — فلا يكشف التوقيتُ أيَّ الخانات صحّت
+    if code is None or ride.start_code is None or not hmac.compare_digest(code, ride.start_code):
+        raise StartCodeMismatch()
+    if redis is not None:
+        await redis.delete(key)
+
+
+async def start_ride(
+    session: AsyncSession,
+    ride: Ride,
+    *,
+    redis: Redis | None = None,
+    code: str | None = None,
+) -> Ride:
     """بدءُ الرحلة — **ويُغلق معها عدّادُ انتظار الوصول**.
 
     ووقفةٌ تبقى مفتوحةً تُقاس **حتى الآن**، فتكبر فاتورتُها كلَّما فُتحت الشاشة.
+
+    **ورحلةٌ برمزٍ لا تبدأ إلا به** (§٦٢-ج/٥، CW4) — ويُفحص **بعد** أن يصحّ الانتقال: رمزٌ صحيحٌ لرحلةٍ لا تُبدأ لا يستهلك محاولة.
     """
     _require_transition(ride, RideStatus.IN_PROGRESS)
+    if ride.start_code is not None:
+        await _check_start_code(redis, ride, code)
     ride.status = RideStatus.IN_PROGRESS
     ride.started_at = _now()
 

@@ -247,8 +247,9 @@ export const declineRide = (rideId: string) =>
 export const arriveRide = (rideId: string) =>
   api.post<Ride>(`/rides/${rideId}/arrive`);
 
-export const startRide = (rideId: string) =>
-  api.post<Ride>(`/rides/${rideId}/start`);
+/** **ورحلةٌ برمزٍ تبدأ به** (§٦٢-ج/٥، CW4) — وبلا رمزٍ بلا جسمٍ كما كان. */
+export const startRide = (rideId: string, code?: string) =>
+  api.post<Ride>(`/rides/${rideId}/start`, code ? { code } : undefined);
 
 /** وصل الكبتنُ محطةً وسيطة — **من هنا يبدأ ختمُ الانتظار في الخلفية**. */
 export const arriveAtStop = (rideId: string, stopId: string) =>

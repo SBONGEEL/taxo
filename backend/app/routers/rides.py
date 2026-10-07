@@ -38,6 +38,8 @@ from app.schemas.ride import (
     RideEstimateRequest,
     RideOut,
     RouteLineOut,
+    StartCodeOut,
+    StartRideRequest,
 )
 from app.services import approach, avatar, cancellation, rider_photo
 from app.services import eta
@@ -556,12 +558,37 @@ async def mark_arrived(
     return _to_out(ride)
 
 
+@router.get("/{ride_id}/start-code", response_model=StartCodeOut)
+async def ride_start_code(
+    ride_id: uuid.UUID, rider: RiderUser, session: DbSession
+) -> StartCodeOut:
+    """رمزُ الرحلة لصاحبتها وحدَها (§٦٢-ج/٥، RW4) — **والكبتنةُ لا تبلغه هنا ولا في أيِّ تمثيل**: هو ما تطلبه منها قبل أن تركب.
+
+    **و٤٠٤ لكلِّ ما سوى ذلك** — رحلةُ غيرها، أو بلا رمز، أو بدأت أو انتهت: وجودُ الرمز نفسُه ليس معلومةً لغير صاحبتها.
+    """
+    ride = await rides_service.get_ride(session, ride_id)
+    if (
+        ride.rider_id != rider.id
+        or ride.start_code is None
+        or ride.status not in (RideStatus.ACCEPTED, RideStatus.ARRIVED)
+    ):
+        raise NotFound("لا رمزَ لهذه الرحلة")
+    return StartCodeOut(code=ride.start_code)
+
+
 @router.post("/{ride_id}/start", response_model=RideOut)
 async def start_ride(
-    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
+    ride_id: uuid.UUID,
+    driver: CurrentDriver,
+    session: DbSession,
+    redis: RedisDep,
+    payload: StartRideRequest | None = None,
 ) -> RideOut:
     ride = await rides_service.start_ride(
-        session, await _assigned_ride(session, ride_id, driver)
+        session,
+        await _assigned_ride(session, ride_id, driver),
+        redis=redis,
+        code=payload.code if payload else None,
     )
     await session.commit()
     # من هنا يُراقَب اتصال الكبتن حتى نهاية الرحلة (SPEC القسم 5)

@@ -26,6 +26,7 @@ import { type CancelReason, useActiveRide, useElapsedMinutes } from "@/component
 import { RiderAvatar } from "@/components/ride/RiderAvatar";
 import { metersBetween, remainingMeters } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
+import { digitsOnly } from "@/lib/phone";
 import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
@@ -36,6 +37,8 @@ interface Props {
   busy: boolean;
   /** خطأُ الفعل الأخير — **يُقال في الورقة** (الشاشةُ القائمةُ لا تعرضه أثناء الرحلة؛ §٢٩ في المسوّدة). */
   error: string | null;
+  /** **ورمزُه** — خطأُ رمز الرحلة يُقال تحت خاناته كما رُسم (CW4). */
+  errorCode?: string | null;
   instruction: NextInstruction | null;
   steps: RouteStep[];
   thresholdM: number;
@@ -47,7 +50,8 @@ interface Props {
   genderPreference: GenderPreference;
   /** الورقةُ تُقاس — فتنتهي الخريطةُ تحت حافّتها كما رُسمت (`HomeT2`). */
   sheetRef: (element: HTMLElement | null) => void;
-  onAdvance: () => void;
+  /** **و`code` رمزُ الرحلة** حين تطلبه (§٦٢-ج/٥) — يُرسل مع البدء. */
+  onAdvance: (code?: string) => void;
   onCancel: (reason: CancelReason) => void;
   onPause: () => void;
   onResume: () => void;
@@ -60,6 +64,7 @@ export function RideT2({
   currencyLabel,
   busy,
   error,
+  errorCode = null,
   instruction,
   steps,
   thresholdM,
@@ -78,6 +83,11 @@ export function RideT2({
 }: Props) {
   const { phase, riding, waiting, stopAction, picking, setPicking, reason, setReason, reasons, mapTarget } =
     useActiveRide(ride, genderPreference);
+  // **CW4 — رمزُ الرحلة** (§٦٢-ج/٥): عند الوصول لرحلةٍ تطلبه، **ولا بدءَ قبل خاناته الأربع**؛ ويُمحى إن تبدّلت الرحلة
+  const needsCode = ride.status === "arrived" && ride.start_code_required;
+  const [code, setCode] = useState("");
+  useEffect(() => setCode(""), [ride.id]);
+  const codeError = errorCode === "start_code_mismatch" || errorCode === "start_code_locked" ? error : null;
 
   // **ما بعد التعليمة التالية** (صفُّ «ثم…» في C06) — من الخطوات نفسِها: الخطوةُ التي يقف عليها، فالتاليةُ، فما بعدها.
   // **ولا يظهر إلا مع التعليمة**: شرطُ ظهورها وتأنّيه (`BACK_ON_ROUTE_STREAK`) هو شرطُه
@@ -215,20 +225,22 @@ export function RideT2({
         ) : null}
 
         {/* **الإنهاءُ سحباً** كما رُسم (C07) — **ولمسةٌ عابرةٌ لا تُنهي رحلة**. والاستئنافُ من محطةٍ والطوران الأوّلان أزرار */}
+        {needsCode ? <RideCodeT2 code={code} onChange={setCode} error={codeError} /> : null}
+
         {riding && !waiting ? (
-          <SwipeToFinish label="اسحب لإنهاء الرحلة" busy={busy} onDone={onAdvance} />
+          <SwipeToFinish label="اسحب لإنهاء الرحلة" busy={busy} onDone={() => onAdvance()} />
         ) : (
           <button
             type="button"
-            className={`t2-rd-btn${stopAction ? " ghost" : ""}`}
-            onClick={() => (waiting ? onResumeStop(waiting.id) : onAdvance())}
-            disabled={busy}
+            className={`t2-rd-btn${stopAction ? " ghost" : ""}${needsCode ? " women" : ""}`}
+            onClick={() => (waiting ? onResumeStop(waiting.id) : onAdvance(needsCode ? code : undefined))}
+            disabled={busy || (needsCode && code.length < 4)}
           >
             {phase.action}
           </button>
         )}
 
-        {error ? (
+        {error && !codeError ? (
           <p className="t2-note danger t2-rd-error">
             <Icon name="error" fill />
             {error}
@@ -442,6 +454,39 @@ function PauseT2({ ride, currencyLabel }: { ride: Ride; currencyLabel: string })
 /** **«اسحب لإنهاء الرحلة»** (C07): المقبضُ يُسحب من البداية إلى النهاية، **وما دون ٨٥٪ يعود** — فلمسةٌ عابرةٌ أو سحبةٌ قصيرةٌ
  *  لا تُنهي رحلةً وراكبُها في السيارة. **والإنهاءُ نفسُه نداءُ الشاشة القائمة** (`onDone` ⇐ `advance`). ومن لا يسحب (لوحةُ
  *  مفاتيح أو قارئُ شاشة) يُفعّله بـ«إدخال» — فعلٌ مقصودٌ لا لمسة. */
+/** **CW4 — رمزُ الرحلة** (§٦٢-ج/٥): «اطلبي من الراكبة رمز الرحلة» وأربعُ خاناتٍ كما رُسمت — **حقلٌ واحدٌ خلفها** (لوحةُ أرقامٍ ولصقٌ
+ *  ورمزٌ يُقرأ صوتاً)، **والخاناتُ العربيةُ تُقرأ لاتينيةً** (`digitsOnly`): لوحةُ مفاتيحَ عربيةٌ لا تُسقط رمزاً صحيحاً. والخطأُ تحتها بنصّ
+ *  الخلفية — رسالةُ CW4 بحرفها. */
+function RideCodeT2({ code, onChange, error }: { code: string; onChange: (next: string) => void; error: string | null }) {
+  return (
+    <div className={error ? "t2-rd-code wrong" : "t2-rd-code"}>
+      <div className="t2-rd-code-title">اطلبي من الراكبة رمز الرحلة</div>
+      <div className="t2-rd-code-sub">لا تبدأ الرحلة قبل أن يطابق الرمز.</div>
+      <div className="t2-rd-code-boxes" dir="ltr">
+        {[0, 1, 2, 3].map((index) => (
+          <span key={index} className={index === code.length ? "t2-rd-code-box on" : "t2-rd-code-box"} aria-hidden="true">
+            {code[index] ?? ""}
+          </span>
+        ))}
+        <input
+          className="t2-rd-code-input"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          aria-label="رمز الرحلة"
+          value={code}
+          onChange={(event) => onChange(digitsOnly(event.target.value).slice(0, 4))}
+        />
+      </div>
+      {error ? (
+        <p className="t2-rd-code-error" role="alert">
+          <Icon name="error" fill />
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function SwipeToFinish({ label, busy, onDone }: { label: string; busy: boolean; onDone: () => void }) {
   const track = useRef<HTMLDivElement | null>(null);
   const start = useRef<number | null>(null);

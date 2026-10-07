@@ -356,6 +356,10 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     reroute_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default=text("0")
     )
+    # **رمزُ الرحلة** (§٦٢-ج/٥) — أربعُ خاناتٍ تُولَّد عند القبول لرحلةٍ نسائيةٍ في سوقٍ أشعل مفتاحَه. **تراها الراكبةُ وحدَها**
+    # (`GET /rides/{id}/start-code`) **ولا تصل الكبتنةَ في أيِّ تمثيل** — فهي ما تُدخله لتبدأ؛ و`RideOut` يحمل «أهو مطلوب» وحدَه.
+    # **وعمودٌ لا مفتاحٌ في Redis**: رمزٌ يضيع بإعادة تشغيلٍ يحبس رحلةً لا تبدأ. و`NULL` = لا شرطَ على البدء
+    start_code: Mapped[str | None] = mapped_column(String(4), nullable=True)
     # أربعةُ حقولِ انتظارٍ مجمَّدةٌ لحظة الإنشاء كالعمولة (SPEC القسم 5.10):
     # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن يتغيّر
     # عدّادُها تحت عين راكبها

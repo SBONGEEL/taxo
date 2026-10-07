@@ -349,6 +349,9 @@ class RideOut(BaseModel):
     # مقدَّمٌ لا عدّادُ مسافة** (القسم 5.7): فلا يكبر بالكيلومتر، ويكبر بما يتراكم
     # وحدَه — وانحرافُ الطريق يُحكم عند الإنهاء لا قبله
     current_fare: Decimal = Decimal("0.000")
+    # **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، CW4) — **السؤالُ وحدَه لا الرمز**: هذا التمثيلُ يصل الطرفين وبثَّ المقبس، والرمزُ ما
+    # تُدخله الكبتنة؛ فيُقرأ للراكبة من بابها (`GET /rides/{id}/start-code`)
+    start_code_required: bool = False
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -442,6 +445,7 @@ class RideOut(BaseModel):
             current_fare=pricing.round_money(
                 ride.estimated_fare + waiting_charge + pause_charge
             ),
+            start_code_required=ride.start_code is not None,
             id=ride.id,
             rider_id=ride.rider_id,
             status=ride.status,
@@ -571,3 +575,15 @@ class RideDriverStatsOut(BaseModel):
     """
 
     completed_rides: int
+
+
+class StartRideRequest(BaseModel):
+    """بدءُ الرحلة — **والرمزُ لرحلةٍ تطلبه وحدَها** (§٦٢-ج/٥). وغيابُ الجسم كلِّه بدءٌ بلا رمز كما كان: تطبيقٌ أقدمُ لا يرسل شيئاً."""
+
+    code: str | None = Field(default=None, pattern=r"^[0-9]{4}$")
+
+
+class StartCodeOut(BaseModel):
+    """رمزُ الرحلة لصاحبتها — أربعُ خاناتٍ لاتينية."""
+
+    code: str
