@@ -1277,3 +1277,7 @@ button.t2-rd-chip { cursor: pointer; }
 .t2-fo-call .t2-icon { font-size: 22px; }
 /* «لا تستلم شيئاً» في التحصيل — بنبرة التنبيه نفسِها */
 .t2-co-note.warn { color: var(--t2-warning); font-weight: 600; }
+
+/* ── الطرد (§٦٣-ج/٤) — **لا لوحةَ له**: صفُّ المستلم هو صفُّ الراكب الفعليّ، **وعنوانُ التسليم يلتفّ ولا يُقصّ** — الكبتنُ يقود
+   إليه، ونصفُ عنوانٍ بثلاث نقاطٍ لا يُوصل ── */
+.t2-pc-recipient .t2-rd-rider-sub { margin-top: 2px; line-height: 1.5; white-space: normal; }

@@ -394,6 +394,9 @@ def _require_payer_method(ride: Ride, method: PaymentMethod) -> None:
     الطالب، وما بعد سقوطها (رفضُ الدفع) سؤالٌ للمالك (§٦٣-د/٥) **لا يُنشأ قيدُه قبل جوابه**. و`requester`: الطالبُ يدفع
     بالمحفظة أو البطاقة — **لا نقدَ ولا كليك**: ليس عند السيارة ولا يحوّل إلى الكبتن من بعيد.
     """
+    # **والطرد** (§٦٣-ج/٤): المستلمُ نقداً ⇒ دفعتُه يفتحها الإنهاء؛ والمرسلُ عند الالتقاط ⇒ أيُّ قناة
+    if ride.payer == RidePayer.RECIPIENT_CASH:
+        raise PayerMethodMismatch("يدفع هذا الطردَ مستلمُه نقداً للكبتن")
     if not ride.for_other:
         return
     if ride.payer == RidePayer.PASSENGER_CASH:

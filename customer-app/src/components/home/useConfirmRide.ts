@@ -17,12 +17,14 @@ import type {
   PromoPreview,
   RideEstimate,
   RideForOther,
+  RideParcel,
   VehicleCategory,
 } from "@/api/types";
 import type { DraftStop } from "@/components/home/StopsEditor";
 import { earliest, guaranteeLeadOk, localInputValue, useGuaranteedBooking, useScheduledRides } from "@/lib/bookings";
 import { requesterCanPay, usePayerPreference, useRideForOther } from "@/lib/for-other";
 import { useMultiStop } from "@/lib/multistop";
+import { useParcel } from "@/lib/parcel";
 import { usePromoCodes } from "@/lib/promo";
 import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
@@ -102,6 +104,8 @@ export interface ConfirmRideProps {
     sharing?: { share: boolean; shareGenderConfirmed: boolean },
     /** **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — الراكبُ الفعليُّ ومن يدفع، أو غيابُه لرحلةٍ يركبها صاحبُها. */
     forOther?: RideForOther,
+    /** **الطرد** (§٦٣-ج/٤) — المستلمُ ومن يدفع وإقرارُ الشروط، أو غيابُه لرحلةٍ عاديّة. */
+    parcel?: RideParcel,
   ) => void;
   requesting: boolean;
   requestError: string | null;
@@ -138,6 +142,9 @@ export interface ConfirmRideProps {
   pickupLine?: string | null;
   /** **دقائقُ أقرب كبتنٍ لكلِّ فئة** (§٦٢-ج/١٠، «· يصل خلال 3 د» في R06) — و`null`/غيابُها حيث المفتاحُ مطفأ. */
   eta?: Partial<Record<VehicleCategory, number>> | null;
+  /** **طلبُ طرد** (§٦٣-ج/٤) بدأته بلاطةُ «طرد» — وغيابُه رحلةٌ عاديّة. **والمسوّدةُ عند صاحب الورقة لا فيها** (`Home`): إضافةُ
+   *  محطةٍ تطوي الورقةَ ثمّ تعيدها، ومسوّدةٌ فيها كانت تضيع معها — فيُعاد كتابةُ المستلم وإقرارُ الشروط من أوّله. */
+  parcel?: { draft: RideParcel | null; onChange: (next: RideParcel) => void };
 }
 
 export function useConfirmRide({
@@ -149,13 +156,22 @@ export function useConfirmRide({
   initialPreference,
   initialCategory,
   initialScheduling,
+  parcel: parcelProp,
 }: ConfirmRideProps) {
+  // **الطرد** (§٦٣-ج/٤): طلبٌ بدأته البلاطة **وحيث المفتاحُ مشتعلٌ وحدَه** — مفتاحٌ أُطفئ بعد البدء يعيد الورقةَ رحلةً عاديّة
+  // ولا يُرسل طرداً سيُرفض. **وفئتُه الاقتصاديُّ وحدَه** (الخلفيةُ ترفض غيرَها)، **ولا يُجمع مع «لشخص آخر» ولا المشاركة ولا الحجز**
+  const parcelEnabled = useParcel();
+  const parcelMode = parcelEnabled && parcelProp !== undefined;
+  const parcel = parcelMode ? parcelProp.draft : null;
   const women = useWomenService();
   // الحجزُ (12-ط) — مفتاحُه يخفي الزرَّ كلَّه لا يعطّله
   const scheduled = useScheduledRides();
   // **ومفتوحاً من أوّله حين جاءت من «جدولي الرحلة لوقت لاحق»** (RW3) — بأقرب موعدٍ كما يفتحه زرُّه
-  const [scheduling, setScheduling] = useState(Boolean(initialScheduling) && scheduled);
-  const [when, setWhen] = useState(() => (initialScheduling && scheduled ? localInputValue(earliest()) : ""));
+  // **ولا حجزَ لطرد** — فلا يُفتح المنتقي ولو جاءت الورقةُ به
+  const [scheduling, setScheduling] = useState(Boolean(initialScheduling) && scheduled && !parcelMode);
+  const [when, setWhen] = useState(() =>
+    initialScheduling && scheduled && !parcelMode ? localInputValue(earliest()) : "",
+  );
   // **الحجزُ المضمون** (§٦٣-ج/٣): خيارٌ داخل الحجز لا زرٌّ ثالث — **ومفتاحُه يُخفيه**، **وموعدٌ أقربُ من ساعتين يعطّله**
   // بعلّته. **والمُرسَلُ هو الفعّالُ لا المختار**: مفتاحٌ بقي مشتعلاً ثمّ قُرِّب الموعدُ لا يُرسل حجزاً سيُرفض كلُّه
   const guaranteeOffered = useGuaranteedBooking();
@@ -164,9 +180,11 @@ export function useConfirmRide({
   const guaranteed = guaranteeOffered && guaranteedPick && guaranteeFits;
   // دولةُ الحساب — الكوبونُ per-country فالتحقّقُ يحملها
   const multiStop = useMultiStop();
-  const [category, setCategory] = useState<VehicleCategory>(
+  const [categoryPick, setCategory] = useState<VehicleCategory>(
     initialCategory && categories.includes(initialCategory) ? initialCategory : categories[0] ?? "economy",
   );
+  // **الطردُ بسعر الاقتصادي وحدَه** — والمختارُ قبله يبقى لرحلةٍ عاديّةٍ إن عادت
+  const category: VehicleCategory = parcelMode ? "economy" : categoryPick;
   // يبدأ من افتراضي ملفها ثم تغيّره لهذه الرحلة وحدها — **أو ممّا بدأته بلاطةُ «نسائية»، ولمن عُرضت عليها الخدمةُ وحدَها**
   const [preference, setPreference] = useState<GenderPreference>(
     women.available && initialPreference ? initialPreference : women.defaultPreference,
@@ -180,14 +198,17 @@ export function useConfirmRide({
   // الحجز** (الحجزُ لا يحملها بعد، `createBooking`)، **ولا مع المشاركة**: راكبٌ غريبٌ في سيارةٍ طُلبت لغيرك لم يُقرَّر
   const forOtherEnabled = useRideForOther();
   const [forOtherDraft, setForOther] = useState<RideForOther | null>(null);
-  // **ولا تُقرأ مسوّدةٌ بقيت من مفتاحٍ أُطفئ بعدها** — لا في الطلب ولا في قنوات الدفع
-  const forOther = forOtherEnabled ? forOtherDraft : null;
+  // **ولا تُقرأ مسوّدةٌ بقيت من مفتاحٍ أُطفئ بعدها** — لا في الطلب ولا في قنوات الدفع. **ولا مع طرد**: المستلمُ هو الطرفُ الآخر
+  const forOther = forOtherEnabled && !parcelMode ? forOtherDraft : null;
 
   // **طريقةُ الدفع تفضيلٌ محلّي** (قرار 3): تُعرض هنا وتُمرَّر إلى شاشة الدفع،
   // ولا تُرسل مع الطلب ولا تُقيّد صاحبَها بعد الرحلة.
-  // **ومضيَّقةٌ بالدافع في رحلةٍ لغيره** (`usePayerPreference`): المحفظةُ والبطاقةُ وحدهما، أو لا قناةَ إن دفع الراكبُ نقداً
-  const { available: channels, resolved: payMethod, choose } =
-    usePayerPreference(countryConfig, forOther?.payer ?? null);
+  // **ومضيَّقةٌ بالدافع في رحلةٍ لغيره** (`usePayerPreference`): المحفظةُ والبطاقةُ وحدهما، أو لا قناةَ إن دفع الراكبُ نقداً.
+  // **وفي طردٍ يدفعه مستلمُه لا قناةَ كذلك**؛ ومرسلُه الدافعُ يختار ما يشاء — هو عند الالتقاط (`payerScope`)
+  const { available: channels, resolved: payMethod, choose } = usePayerPreference(
+    countryConfig,
+    forOther?.payer ?? (parcel?.payer === "recipient_cash" ? "recipient_cash" : null),
+  );
   const [pickingPay, setPickingPay] = useState(false);
 
   // الرصيدُ يُقرأ لسطرِ الملاحظة وحدَه (`walletSub` و`fareNote` في التصميم) —
@@ -250,6 +271,8 @@ export function useConfirmRide({
       dropoff,
       vehicle_category: category,
       stops: stops.map((stop) => ({ lat: stop.lat, lng: stop.lng })),
+      // **تقديرُ طردٍ يحمل رسمَه وشروطَه** (§٦٣-ج/٤) — وغيرُه بحمولته كما كانت
+      is_parcel: parcelMode || undefined,
     })
       .then((value) => !cancelled && setEstimate(value))
       .catch(
@@ -264,7 +287,7 @@ export function useConfirmRide({
     };
     // المحطاتُ في التبعيات: إضافةُ محطةٍ أو ترتيبُها يغيّر المسار والرسم،
     // فيُعاد السؤال — ولا يُجمع فرقٌ في الواجهة
-  }, [pickup, dropoff, category, stops]);
+  }, [pickup, dropoff, category, stops, parcelMode]);
 
   async function apply() {
     if (!estimate) return;
@@ -291,7 +314,8 @@ export function useConfirmRide({
   // وصفُّ خصمٍ بلا رقمٍ يَعِد بما لا يُعرض
   const shareOffered = sharingEnabled && estimate?.share_fare != null;
   const shareGuarded = preference !== "any";
-  const shareReady = share && (!shareGuarded || shareGendered);
+  // **ولا مشاركةَ في طرد** (§٦٣-ج/٤) — اختيارٌ بقي قبل البدء لا يُرسل ولا يغيّر السعرَ المعروض
+  const shareReady = share && (!shareGuarded || shareGendered) && !parcelMode;
   const shownFare =
     (shareReady ? estimate?.share_fare : null) ??
     applied?.fare_after ??
@@ -377,5 +401,11 @@ export function useConfirmRide({
     forOther,
     setForOther,
     requesterPayable: requesterCanPay(countryConfig),
+    parcelMode,
+    parcel,
+    setParcel: parcelProp?.onChange,
+    // **تقديرُ طردٍ بلا رسمٍ ⇒ الخدمةُ مخفيّةٌ في السوق** (رسمٌ صفرٌ أو مفتاحٌ أُطفئ بعد البدء) — والطلبُ سيُرفض
+    // `parcel_unavailable`، فيُقال قبله ولا يُضغط زرٌّ يرتدّ
+    parcelUnavailable: parcelMode && !loading && estimate !== null && estimate.parcel_fee === null,
   };
 }

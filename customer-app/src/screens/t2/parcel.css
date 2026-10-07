@@ -1,0 +1,30 @@
+/* ═══ TAXO 2.0 — «الطرد» (§٦٣-ج/٤) — **لا لوحةَ له**، فيُركَّب من عُدّة الهوية: مربّعُ الموافقة في التسجيل (`t2-auth-consent`)
+ * للشروط، وشارةُ «لشخص آخر» وكتلتُها في التتبّع (`for-other.css`). **تخطيطُه وحدَه، بالرموز وحدَها** — الفاتحُ والداكن.
+ */
+
+/* ── الشروطُ في ورقة الطرد: عنوانٌ، فالأربعةُ نقاطاً، فمربّعُ الإقرار تحت خطٍّ فاصل ── */
+.t2-auth-consent.t2-pc-terms { margin-top: 0; margin-bottom: 14px; }
+.t2-pc-terms-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--t2-text); }
+.t2-pc-terms-title .t2-icon { font-size: 18px; color: var(--t2-muted); }
+.t2-pc-terms-list {
+  margin: 10px 0 0;
+  list-style: disc;
+  padding-inline-start: 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t2-text);
+}
+.t2-pc-terms-list li + li { margin-top: 6px; }
+.t2-pc-terms-list li::marker { color: var(--t2-muted); }
+.t2-pc-terms-wait { margin: 10px 0 0; font-size: 12.5px; color: var(--t2-muted); }
+.t2-pc-terms .t2-pc-terms-accept {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--t2-line);
+  font-weight: 600;
+}
+.t2-pc-terms .t2-pc-terms-accept:disabled { opacity: 0.5; cursor: default; }
+
+/* ── كتلتُه في التتبّع: «إلى: المستلم» وعنوانُه سطراً خافتاً تحته ── */
+.t2-pc-ride-to { display: flex; flex-direction: column; min-width: 0; }
+.t2-pc-ride-addr { font-size: 12.5px; color: var(--t2-muted); }

@@ -24,6 +24,7 @@ class ServiceSetting(TimestampMixin, Base):
             "AND guarantee_ban_threshold > 0 AND guarantee_ban_days > 0",
             name="service_settings_guarantee_valid",
         ),
+        CheckConstraint("parcel_fee >= 0", name="service_settings_parcel_fee_valid"),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -57,4 +58,10 @@ class ServiceSetting(TimestampMixin, Base):
     )
     guarantee_ban_days: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=30, server_default=text("30")
+    )
+
+    # ------------------------------------------------ الطرد (§٦٣-ج/٤)
+    #: **رسمُ الطرد للكبتن** فوق سعر الاقتصادي — وصفرٌ يُخفي الخدمة
+    parcel_fee: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
     )

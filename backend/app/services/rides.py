@@ -59,7 +59,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
-from app.services import ride_for_other
+from app.services import parcels, ride_for_other
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
 
@@ -394,6 +394,7 @@ async def request_ride(
     share: bool = False,
     share_gender_confirmed: bool = False,
     passenger: "ride_for_other.PassengerRequest | None" = None,
+    parcel: "parcels.ParcelRequest | None" = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -501,6 +502,14 @@ async def request_ride(
         share_percent = row.discount_percent
 
     # السعر يُعاد حسابه هنا ولا يُقرأ من طلب العميل مهما أرسل
+    # **الطردُ يُفحص قبل التسعير** (§٦٣-ج/٤): مفتاحُه وإقرارُ الشروط والفئة — ثمّ يُسعَّر برسمه
+    prepared_parcel = None
+    if parcel is not None:
+        if passenger is not None:
+            raise InvalidInput("الطردُ لا يُطلب لشخصٍ آخر — المستلمُ هو الطرفُ الآخر")
+        prepared_parcel = await parcels.prepare(
+            session, rider=rider, parcel=parcel, vehicle_category=vehicle_category
+        )
     quote = await pricing.estimate(
         session,
         country_code=rider.country_code,
@@ -508,6 +517,7 @@ async def request_ride(
         pickup=pickup,
         dropoff=dropoff,
         stops=[Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops],
+        parcel=prepared_parcel is not None,
     )
     # تسعيرةُ الدولة تُقرأ مرةً واحدة: منها التقديرُ ومنها الحقولُ المجمَّدة
     rule = await pricing.get_rule(session, rider.country_code, vehicle_category)
@@ -570,6 +580,12 @@ async def request_ride(
         ride.passenger_name = prepared.name
         ride.passenger_phone = prepared.phone
         ride.payer = prepared.payer.value
+    if prepared_parcel is not None:
+        ride.ride_type = "parcel"
+        ride.recipient_name = prepared_parcel.recipient_name
+        ride.recipient_phone = prepared_parcel.recipient_phone
+        ride.recipient_address = prepared_parcel.recipient_address
+        ride.payer = prepared_parcel.payer.value
     session.add(ride)
 
     # **الكوبونُ يُجمَّد قبل الـflush** (12-ز): الرمزُ يُتحقق منه تحت قفل صفّه،
@@ -868,7 +884,7 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
         await guarantees.settle_on_complete(session, ride)
 
     # **ودفعةُ نقد الراكب الفعليّ تُفتح هنا** (§٦٣-ج/١): صاحبُها لا يحمل التطبيق ليفتحها — **وبعد الخصمين** فتحمل الباقي
-    if ride.payer == RidePayer.PASSENGER_CASH:
+    if ride.payer in (RidePayer.PASSENGER_CASH, RidePayer.RECIPIENT_CASH):
         from app.services import payments as payments_service
 
         await payments_service.open_payer_cash(session, ride)

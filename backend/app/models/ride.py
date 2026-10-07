@@ -152,11 +152,16 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         ),
         # **رحلةٌ لغير صاحبها وحدَها تحمل راكباً آخرَ ودافعاً نقدياً** (§٦٣-ج/١): رحلةٌ عاديّةٌ باسم راكبٍ غريب
         # أو «يدفعها الراكبُ نقداً» تناقضٌ يفتح دفعةَ نقدٍ لا يقف أحدٌ عند السيارة ليدفعها
+        # **والطردُ وحدَه يحمل مستلماً ودافعاً «المستلمُ نقداً»** (§٦٣-ج/٤، ترحيلة `0093`)
         CheckConstraint(
-            "payer IN ('requester', 'passenger_cash') AND (for_other OR ("
-            "passenger_name IS NULL AND passenger_phone IS NULL AND payer = 'requester'))",
+            "payer IN ('requester', 'passenger_cash', 'recipient_cash') "
+            "AND (for_other OR (passenger_name IS NULL AND passenger_phone IS NULL)) "
+            "AND (payer <> 'passenger_cash' OR for_other) "
+            "AND (payer <> 'recipient_cash' OR ride_type = 'parcel') "
+            "AND (ride_type = 'parcel' OR (recipient_name IS NULL AND recipient_phone IS NULL AND recipient_address IS NULL))",
             name="ride_for_other_fields",
         ),
+        CheckConstraint("ride_type IN ('standard', 'parcel')", name="ride_type_valid"),
         CheckConstraint("captain_fees_at_ride >= 0", name="ride_captain_fees_not_negative"),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
@@ -191,7 +196,7 @@ class Ride(UUIDMixin, TimestampMixin, Base):
         Index(
             "ix_rides_passenger_pending_erase",
             "created_at",
-            postgresql_where=text("for_other AND passenger_erased_at IS NULL"),
+            postgresql_where=text("(for_other OR ride_type = 'parcel') AND passenger_erased_at IS NULL"),
         ),
         # وحدُّ المجموعة نفسِها: راكبان لا أكثر، ولو كانا على كبتنين بخطأ.
         Index(
@@ -401,6 +406,15 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("facilities.id"), nullable=True
     )
+    # ---------------------------------------------- الطرد (§٦٣-ج/٤)
+    #: **نوعُ الرحلة** — `standard` لكلِّ ما سبق، و`parcel` للطرد. نصٌّ بقيدٍ لا `ENUM`: «بالساعة» يضيف قيمةً بتعديل القيد
+    ride_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="standard", server_default=text("'standard'")
+    )
+    # **المستلم** — يُرى بعد القبول وحدَه، **ويمحوه الكنسُ نفسُه بعد ٣٠ يوماً** (و`passenger_erased_at` يقول متى، للطرفين الثالثين معاً)
+    recipient_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    recipient_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    recipient_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     payer: Mapped[str] = mapped_column(
         String(16), nullable=False, default="requester", server_default=text("'requester'")
     )

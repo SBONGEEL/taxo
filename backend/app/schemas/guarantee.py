@@ -44,6 +44,8 @@ class ServiceSettingOut(BaseModel):
     guarantee_offer_hours: int
     guarantee_ban_threshold: int
     guarantee_ban_days: int
+    #: رسمُ الطرد للكبتن (§٦٣-ج/٤) — وصفرٌ يُخفيه
+    parcel_fee: Decimal
 
 
 class ServiceSettingUpdate(BaseModel):
@@ -54,3 +56,4 @@ class ServiceSettingUpdate(BaseModel):
     guarantee_offer_hours: int | None = Field(default=None, ge=1, le=72)
     guarantee_ban_threshold: int | None = Field(default=None, ge=1, le=10)
     guarantee_ban_days: int | None = Field(default=None, ge=1, le=365)
+    parcel_fee: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)

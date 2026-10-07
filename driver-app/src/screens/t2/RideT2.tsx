@@ -20,6 +20,9 @@
  *
  * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١، `ForOtherT2`) — بلا لوحة: «الراكب: الاسم» بزرِّ «اتصل بالراكب» (الاسمُ والرقمُ من القبول حتى
  * الانتهاء)، وسطرُ الدافع تحته.
+ *
+ * **والطرد** (§٦٣-ج/٤، `ParcelT2`) — بلا لوحة: «المستلم: الاسم» وعنوانُه بزرِّ «اتصل بالمستلم»، **ولا صورةَ للمرسل** (كرحلةٍ
+ * لغيره)، وسطرُ «يدفع المستلمُ نقداً» حين يدفع هو، **و«ارفض الطرد» بتأكيده في طور «وصل» وحدَه**.
  */
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
@@ -33,6 +36,7 @@ import { digitsOnly } from "@/lib/phone";
 import { currentStep, maneuverIcon, type NextInstruction, type RouteStep } from "@/lib/next-instruction";
 import { digits } from "@/lib/utils";
 import { PassengerRowT2, PayerNoteT2 } from "@/screens/t2/ForOtherT2";
+import { RecipientRowT2, RefuseParcelButtonT2, RefuseParcelSheetT2 } from "@/screens/t2/ParcelT2";
 import { Icon } from "@/taxo2";
 
 interface Props {
@@ -61,6 +65,8 @@ interface Props {
   onResume: () => void;
   onArriveStop: (stopId: string) => void;
   onResumeStop: (stopId: string) => void;
+  /** **«ارفض الطرد»** (§٦٣-ج/٤) — نداءُ `parcel-refuse` بعد تأكيده؛ وفي طور «وصل» على رحلة طردٍ وحدَه. */
+  onRefuseParcel: () => void;
 }
 
 export function RideT2({
@@ -84,9 +90,18 @@ export function RideT2({
   onResume,
   onArriveStop,
   onResumeStop,
+  onRefuseParcel,
 }: Props) {
   const { phase, riding, waiting, stopAction, picking, setPicking, reason, setReason, reasons, mapTarget } =
     useActiveRide(ride, genderPreference);
+  // **الطرد** (§٦٣-ج/٤): من الصفّ لا من المفتاح — طردٌ قُبل يبقى طرداً ولو أُطفئ المفتاحُ بعده. **وصورةُ المرسل ليست وجهَ
+  // أحدٍ في السيارة** — فلا تُعرض، كرحلةٍ لغيره
+  const parcel = ride.ride_type === "parcel";
+  const noRiderPhoto = ride.for_other || parcel;
+  // **«ارفض الطرد» عند الاستلام وحدَه** — والخلفيةُ ترفض غيرَه ٤٠٩
+  const canRefuse = parcel && ride.status === "arrived";
+  const [refusing, setRefusing] = useState(false);
+  useEffect(() => setRefusing(false), [ride.id, ride.status]);
   // **CW4 — رمزُ الرحلة** (§٦٢-ج/٥): عند الوصول لرحلةٍ تطلبه، **ولا بدءَ قبل خاناته الأربع**؛ ويُمحى إن تبدّلت الرحلة
   const needsCode = ride.status === "arrived" && ride.start_code_required;
   const [code, setCode] = useState("");
@@ -181,25 +196,27 @@ export function RideT2({
             {shared ? <span className="t2-rd-chip">{shareText}</span> : null}
             {/* **صورةُ الراكب بزرّها وبلاغها** في موضع شارة الراكب — **ولا اسمَ يصل الكبتن**: «راكب TAXO» كما في الشاشة القائمة */}
             <span className="t2-rd-chip avatar">
-              {/* **رحلةٌ لشخصٍ آخر: صورةُ الطالب ليست وجهَ من سيركب** (§٦٣-ج/١) — فلا تُعرض، والراكبُ الفعليُّ في صفّه باسمه */}
-              {ride.for_other ? null : (
+              {/* **رحلةٌ لشخصٍ آخر: صورةُ الطالب ليست وجهَ من سيركب** (§٦٣-ج/١) — فلا تُعرض، والراكبُ الفعليُّ في صفّه باسمه.
+                  **ولا في الطرد** (§٦٣-ج/٤) — المستلمُ في صفّه */}
+              {noRiderPhoto ? null : (
                 <span className="t2-rd-avatar">
                   <RiderAvatar rideId={ride.id} />
                 </span>
               )}
-              راكب TAXO
+              {/* **في الطرد صاحبُ الطلب مرسلٌ لا راكب** (§٦٣-ج/٤) */}
+              {ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}
             </span>
           </div>
         ) : (
           <div className="t2-rd-rider">
-            {/* **وفي رحلةٍ لشخصٍ آخر لا صورةَ للطالب** — ليس هو من يُلتقط (§٦٣-ج/١) */}
-            {ride.for_other ? null : (
+            {/* **وفي رحلةٍ لشخصٍ آخر لا صورةَ للطالب** — ليس هو من يُلتقط (§٦٣-ج/١). **ولا في الطرد** (§٦٣-ج/٤) */}
+            {noRiderPhoto ? null : (
               <span className="t2-rd-avatar">
                 <RiderAvatar rideId={ride.id} />
               </span>
             )}
             <div className="t2-rd-rider-main">
-              <div className="t2-rd-rider-name">راكب TAXO</div>
+              <div className="t2-rd-rider-name">{ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}</div>
               <div className="t2-rd-rider-sub">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
               {shared ? <div className="t2-rd-rider-share">{shareText}</div> : null}
             </div>
@@ -218,6 +235,14 @@ export function RideT2({
           <>
             <PassengerRowT2 ride={ride} />
             <PayerNoteT2 payer={ride.payer} />
+          </>
+        ) : null}
+
+        {/* **الطرد** (§٦٣-ج/٤): المستلمُ وعنوانُه بزرِّ الاتصال، **وسطرُ الدافع حين يدفع المستلمُ وحدَه** — ومرسلُه الدافعُ كأيِّ راكب */}
+        {parcel ? (
+          <>
+            <RecipientRowT2 ride={ride} />
+            {ride.payer === "recipient_cash" ? <PayerNoteT2 payer={ride.payer} /> : null}
           </>
         ) : null}
 
@@ -257,6 +282,9 @@ export function RideT2({
             {phase.action}
           </button>
         )}
+
+        {/* **«ارفض الطرد»** (§٦٣-ج/٤) — ثانويٌّ تحت «بدء الرحلة»، وتأكيدُه ورقةٌ تقول أثرَه */}
+        {canRefuse ? <RefuseParcelButtonT2 busy={busy} onOpen={() => setRefusing(true)} /> : null}
 
         {error && !codeError ? (
           <p className="t2-note danger t2-rd-error">
@@ -313,6 +341,17 @@ export function RideT2({
             </button>
           </div>
         </div>
+      ) : null}
+
+      {refusing && canRefuse ? (
+        <RefuseParcelSheetT2
+          busy={busy}
+          onConfirm={() => {
+            setRefusing(false);
+            onRefuseParcel();
+          }}
+          onClose={() => setRefusing(false)}
+        />
       ) : null}
     </>
   );

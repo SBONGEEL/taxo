@@ -388,6 +388,7 @@ export type FeatureKey =
   | "ride_for_other_enabled"
   | "airport_enabled"
   | "guaranteed_booking_enabled"
+  | "parcel_enabled"
   | "driver_map_nearby_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
@@ -833,7 +834,9 @@ export interface RidePoint {
   created_at: string;
 }
 
-export type CancelReasonCode = "gender_mismatch" | "other";
+/** سببُ الإلغاء المصنَّف — مرآةُ `CancelReasonCode`. و`parcel_refused` **رفضُ الكبتن الطردَ عند الاستلام** (§٦٣-ج/٤): بلا مالٍ
+ *  على أحد، ويُقرأ نصُّه في `cancelled_reason` كما كتبته الخلفية. */
+export type CancelReasonCode = "gender_mismatch" | "other" | "parcel_refused";
 
 /** محطةٌ وسيطة كما ينشرها بابُ اللوحة — **مرآةُ `RideStopOut` بحرفها**،
  *  ومصدرُها البانِي نفسُه الذي يقرؤه التطبيقان (`schemas/ride.stops_of`). */
@@ -1181,6 +1184,9 @@ export interface ServiceSetting {
   guarantee_ban_threshold: number;
   /** نافذةُ العدِّ ومدّةُ الحجب معاً بالأيام (١–٣٦٥). */
   guarantee_ban_days: number;
+  /** **رسمُ الطرد للكبتن** (§٦٣-ج/٤) — فوق سعر الاقتصادي، نصٌّ بثلاث خاناتٍ كأيِّ مال، **وصفرٌ يُخفي الخدمة** ولو اشتعل مفتاحُها.
+   *  ويُجمَّد على الرحلة لحظةَ طلبها، فتعديلُه يحكم ما يأتي. */
+  parcel_fee: string;
 }
 
 /** مآلُ دَينٍ لم يعد صاحبُه — **الإدارةُ تختار والكودُ لا يحسم** (قرارُ المالك).

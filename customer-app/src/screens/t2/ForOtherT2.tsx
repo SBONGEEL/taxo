@@ -25,10 +25,12 @@ import { SheetModalT2 } from "./MoneyT2";
 import "./t2.css";
 import "./for-other.css";
 
-/** **الدافعُ في سطرٍ قصيرٍ على شارة الطلب** — والجملةُ الكاملةُ في ورقته وفي التتبّع (`PAYER_LINE`). */
-const PAYER_SHORT: Record<RidePayer, string> = {
+/** **الدافعُ في سطرٍ قصيرٍ على شارة الطلب** — والجملةُ الكاملةُ في ورقته وفي التتبّع (`PAYER_LINE`). **وشارةُ الطرد تقرؤه
+ *  كذلك** (`ParcelT2`): «تدفع أنت» هي هي، و`recipient_cash` للطرد وحدَه. */
+export const PAYER_SHORT: Record<RidePayer, string> = {
   requester: "تدفع أنت",
   passenger_cash: "يدفع نقداً للكبتن",
+  recipient_cash: "يدفع المستلمُ نقداً",
 };
 
 /** **خيارُ «لشخص آخر» في ورقة الطلب** — بطاقةُ «المشاركة» نفسُها قبل الاختيار، **وشارةُ «لـ: الاسم» بعده** بتعديلها وإزالتها.
@@ -89,6 +91,79 @@ function splitPhone(phone: string, countries: CountryConfig[]): { code: CountryC
   return entry ? { code: entry.country_code, national: phone.slice(entry.dial_code.length + 1) } : null;
 }
 
+/** **رقمُ طرفٍ آخرَ بدولته** — حالُ حقل التحويل نفسِه (`WalletTransfer`): الدولةُ ومفتاحُها من `/config`، والرقمُ الوطنيّ، **وE.164
+ *  حين يكتمل**. **يقرؤه بابان**: الراكبُ الفعليُّ هنا، ومستلمُ الطرد (`ParcelT2`) — فلا يفترق حقلا رقمٍ في دولةٍ ولا في طول.
+ *  و`initial` رقمٌ كُتب قبلُ (E.164) يُفكّ لتعديله. */
+export function usePhoneDraft(initial: string | null) {
+  const { user } = useSession();
+  const { config } = useConfig();
+  const listed = config?.countries ?? [];
+  const held = initial ? splitPhone(initial, listed) : null;
+  const [code, setCode] = useState<CountryCode>(held?.code ?? user?.country_code ?? "JO");
+  const { dialCode, nationalLength } = usePhoneCountry(code);
+  const [phone, setPhone] = useState(held?.national ?? "");
+  const complete = dialCode !== null && looksComplete(phone, nationalLength);
+  return {
+    countries: listed.map((entry) => entry.country_code),
+    code,
+    setCode,
+    dialCode,
+    nationalLength,
+    phone,
+    setPhone,
+    complete,
+    full: complete && dialCode !== null ? toE164(phone, dialCode) : null,
+  };
+}
+
+/** **حقلا الرقم كما في شاشة التحويل** — الدولةُ زرّان حين تُنشر دولتان، والرقمُ بمفتاحه أمامه. **وحقلٌ معطَّلٌ خيرٌ من رقمٍ بمفتاحٍ
+ *  خاطئ** — قاعدةُ شاشة التحويل بعينها. والخطأُ نصٌّ يمرّره صاحبُ الورقة (رقمُه هو · مفتاحٌ غائب). */
+export function PhoneFieldsT2({
+  draft,
+  id,
+  label,
+  error,
+  valid,
+}: {
+  draft: ReturnType<typeof usePhoneDraft>;
+  id: string;
+  label: string;
+  error: string | null;
+  valid: boolean;
+}) {
+  const { countries, code, setCode, dialCode, nationalLength, phone, setPhone } = draft;
+  return (
+    <>
+      {/* **دولتان أو أكثر ⇒ تُختار دولةُ الرقم** — كشاشة التحويل (`AuthChoice`) */}
+      {countries.length > 1 ? (
+        <AuthBlock label="دولة الرقم">
+          <AuthChoice
+            label="دولة الرقم"
+            value={code}
+            options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
+            onChange={setCode}
+          />
+        </AuthBlock>
+      ) : null}
+      <AuthBlock label={label} htmlFor={id} error={error}>
+        <AuthPhone
+          id={id}
+          type="tel"
+          autoComplete="off"
+          dial={dialCode}
+          value={phone}
+          maxLength={nationalLength}
+          placeholder={"7".padEnd(nationalLength, "X")}
+          valid={valid}
+          disabled={dialCode === null}
+          invalid={Boolean(error)}
+          onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
+        />
+      </AuthBlock>
+    </>
+  );
+}
+
 /** **ورقةُ الراكب الفعليّ** — اسمُه ورقمُه ومن يدفع، **وسطرُ الحفظ والمحو** بنصّ الوعد (ثلاثون يوماً، `PASSENGER_RETENTION_DAYS`).
  *
  *  **والرقمُ بحقل التحويل نفسِه** (`WalletTransfer`): الدولةُ زرّان حين تُنشر دولتان، والمفتاحُ أمام الرقم من `/config` —
@@ -107,20 +182,14 @@ export function ForOtherSheetT2({
   onClose: () => void;
 }) {
   const { user } = useSession();
-  const { config } = useConfig();
-  const listed = config?.countries ?? [];
-  const countries = listed.map((entry) => entry.country_code);
-  const held = initial ? splitPhone(initial.phone, listed) : null;
-  const [code, setCode] = useState<CountryCode>(held?.code ?? user?.country_code ?? "JO");
-  const { dialCode, nationalLength } = usePhoneCountry(code);
+  // **حالُ الرقم من بيته** (`usePhoneDraft`) — ورقةُ الطرد تقرؤه كذلك
+  const phoneDraft = usePhoneDraft(initial?.phone ?? null);
+  const { dialCode, complete, full } = phoneDraft;
   const [name, setName] = useState(initial?.name ?? "");
-  const [phone, setPhone] = useState(held?.national ?? "");
   const [payer, setPayer] = useState<RidePayer>(
     initial?.payer ?? (requesterPayable ? "requester" : "passenger_cash"),
   );
 
-  const complete = dialCode !== null && looksComplete(phone, nationalLength);
-  const full = complete && dialCode !== null ? toE164(phone, dialCode) : null;
   const own = full !== null && full === user?.phone;
   const phoneError =
     dialCode === null
@@ -172,33 +241,13 @@ export function ForOtherSheetT2({
           onChange={(event) => setName(event.target.value)}
         />
       </AuthBlock>
-      {/* **دولتان أو أكثر ⇒ تُختار دولةُ الرقم** — كشاشة التحويل (`AuthChoice`) */}
-      {countries.length > 1 ? (
-        <AuthBlock label="دولة الرقم">
-          <AuthChoice
-            label="دولة الرقم"
-            value={code}
-            options={countries.map((entry) => ({ value: entry, label: COUNTRY_LABEL[entry] }))}
-            onChange={setCode}
-          />
-        </AuthBlock>
-      ) : null}
-      <AuthBlock label="رقم هاتفه" htmlFor="for-other-phone" error={phoneError}>
-        <AuthPhone
-          id="for-other-phone"
-          type="tel"
-          autoComplete="off"
-          dial={dialCode}
-          value={phone}
-          maxLength={nationalLength}
-          placeholder={"7".padEnd(nationalLength, "X")}
-          valid={complete && !own}
-          // **حقلٌ معطَّلٌ خيرٌ من رقمٍ بمفتاحٍ خاطئ** — قاعدةُ شاشة التحويل بعينها
-          disabled={dialCode === null}
-          invalid={Boolean(phoneError)}
-          onChange={(event) => (dialCode === null ? undefined : setPhone(toNational(event.target.value, dialCode)))}
-        />
-      </AuthBlock>
+      <PhoneFieldsT2
+        draft={phoneDraft}
+        id="for-other-phone"
+        label="رقم هاتفه"
+        error={phoneError}
+        valid={complete && !own}
+      />
 
       <div className="t2-pick-head">
         <span className="t2-pick-title">من يدفع؟</span>

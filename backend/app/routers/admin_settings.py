@@ -580,6 +580,7 @@ async def list_service_settings(_staff: StaffUser, session: DbSession) -> list[S
             guarantee_offer_hours=24,
             guarantee_ban_threshold=2,
             guarantee_ban_days=30,
+            parcel_fee=Decimal("0.000"),
         )
         out.append(ServiceSettingOut.model_validate(row))
     return out

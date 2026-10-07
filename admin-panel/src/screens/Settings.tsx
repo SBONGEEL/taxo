@@ -200,6 +200,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "الحجز المضمون",
     hint: "يختار الراكبُ عند حجز موعدٍ قبل ساعتين فأكثر أن يكون مضموناً: يُحفظ رسمُ الضمان من محفظته لحظةَ الحجز، ويقبله مسبقاً كبتنٌ مشتركٌ من «عروضٌ تنتظرك» ثمّ يؤكّد قبل الموعد، فيعرف الراكبُ اسمَ كبتنه قبل موعده. والرسمُ للكبتن حين تتمّ الرحلةُ معه في وقتها — يصله كاملاً ولا تُقتطع منه العمولة — ويُردّ إلى الراكب إن لم يوجد كبتنٌ أو تأخّر أو أُلغي الحجز. واعتذارُ الكبتن بعد التأكيد يأخذ منه الرسمَ للراكب ويُنذره، وتكرارُه يحجبه عن الحجوز المضمونة مدّةً. والأرقامُ في «الخدمات الجديدة» أدناه، ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً لا يُطلب حجزٌ مضمونٌ جديد، والقائمُ يكمل برسمه.",
   },
+  parcel_enabled: {
+    title: "الطرد",
+    hint: "يطلب الراكبُ توصيلَ غرضٍ بسيارةٍ اقتصاديّة: يقرأ شروطَ الطرد ويُقرّ بها قبل الطلب، ويكتب اسمَ المستلم ورقمَه وعنوانَ التسليم، ويختار من يدفع — هو، أو المستلمُ نقداً عند التسليم. ورسمُ الطرد فوق سعر الاقتصادي للكبتن — يصله كاملاً ولا تُقتطع منه العمولة، ولا يمسّه خصم. ويرى الكبتنُ المستلمَ بعد القبول وحدَه، ويُمحى بعد ثلاثين يوماً من انتهاء الرحلة. وللكبتن أن يرفض الطردَ عند الاستلام فتُلغى الرحلةُ بلا مالٍ على أحد. والرسمُ في «الخدمات الجديدة» أدناه، ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُ الطرد، والقائمُ يكمل برسمه.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -241,6 +245,7 @@ const FLAGS: FeatureKey[] = [
   "ride_for_other_enabled",
   "airport_enabled",
   "guaranteed_booking_enabled",
+  "parcel_enabled",
   "driver_map_nearby_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
@@ -793,6 +798,29 @@ export function SettingsScreen() {
                 لا إعدادَ خدماتٍ لهذه الدولة.
               </p>
             )}
+
+            {/* **الطرد** (§٦٣-ج/٤) — رقمٌ واحدٌ من الصفِّ نفسِه، **ونموذجٌ مستقلٌّ بحفظه**: حفظُ الرسم لا يمسّ أرقامَ الضمان */}
+            {serviceRow ? (
+              <div className="mt-18 border-t border-line pt-14">
+                <h3 className="mb-2 text-12.5 font-bold text-ink">الطرد</h3>
+                <p className="mb-12 text-11 leading-snug text-muted">
+                  رحلةٌ اقتصاديّةٌ تحمل غرضاً، برسمٍ للكبتن فوق سعرها.{" "}
+                  <b className="text-ink">وصفرُه يُخفي الخدمة</b> ولو اشتعل مفتاحُها.{" "}
+                  <b className="text-ink">ولا أثرَ رجعياً</b>: الرسمُ مجمَّدٌ على الرحلة
+                  لحظةَ طلبها.
+                </p>
+                <ParcelForm
+                  key={serviceRow.country_code}
+                  row={serviceRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+              </div>
+            ) : null}
           </section>
 
           {/* مشاركةُ الرحلة (12-ي) — بطاقةٌ مستقلةٌ لجدولٍ مستقل، وأرقامُ
@@ -1973,6 +2001,57 @@ function GuaranteeForm({
             .then(() =>
               onSaved("حُفظ الحجز المضمون — يسري على ما يُحجز بعده لا على حجزٍ قائم"),
             )
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **رسمُ الطرد** (§٦٣-ج/٤) — رقمٌ واحدٌ لسوقٍ واحد، **ويُرسل وحدَه** (`PATCH` جزئيّ كأخيه): حفظُه لا يكتب فوق أرقام الضمان ولو
+ *  غيّرها مشرفٌ آخرُ بين القراءة والحفظ. **والحدُّ في الخلفية** (`ServiceSettingUpdate.parcel_fee` ≥ ٠ بثلاث خانات) — ورفضُه يُقال
+ *  تحت حقله. و`key={country}` عليه كبقية النماذج. */
+function ParcelForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [fee, setFee] = useState(row.parcel_fee);
+  const [busy, setBusy] = useState(false);
+  // **الفرقُ بالمقارنة** — من كتب ثمّ أعاد الرقمَ كما كان لم يغيّر شيئاً
+  const dirty = fee.trim() !== row.parcel_fee;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-10">
+        <MoneyField
+          name="parcel_fee"
+          label="رسم الطرد"
+          value={fee}
+          onChange={(next) => setFee(next.replace(/[^0-9.,]/g, ""))}
+          currency={currencyOf(row.country_code)}
+          disabled={disabled}
+          hint="فوق سعر الاقتصادي، للكبتن كاملاً ولا تُقتطع منه العمولة. وصفرٌ يُخفي الخدمة."
+        />
+      </div>
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || fee.trim() === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, { parcel_fee: fee.trim() })
+            .then(() => onSaved("حُفظ رسم الطرد — يسري على ما يُطلب بعده لا على رحلةٍ قائمة"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}

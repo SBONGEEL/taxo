@@ -22,6 +22,9 @@
  *
  * **ورحلةُ المطار** (§٦٣-ج/٢) — شارةُ «مطار» بين أخواتها، بلا لوحة: لا تصل إلا من أشعل «طلبات المطار» بنفسه، **والشارةُ تقول
  * له لمَ وصلته** قبل أن يقبل. والرسمُ داخلَ الأجرة المعروضة، وسطرُه في التفصيل بعد الرحلة.
+ *
+ * **والطرد** (§٦٣-ج/٤) — شارةُ «طرد» بين أخواتها **وسطرُ «يدفع المستلمُ نقداً عند التسليم»** حين يدفع هو، بلا لوحة: من قَبِل
+ * وهو يعرف أنه يحمل غرضاً ويقبض من غير المرسل لا يشتكي. والمستلمُ يصله بعد القبول، ورسمُ الطرد داخلَ الأجرة المعروضة.
  */
 
 import type { Offer } from "@/lib/ride";
@@ -115,8 +118,9 @@ export function OfferT2({
 
           {/* **شاراتُ الطلب — بنصّها وشرطها من `OfferSheet` حرفاً**، وتُقرأ قبل القبول لا بعده */}
           <OfferTags offer={offer} currencyLabel={currencyLabel} />
-          {/* **من يدفع رحلةً لشخصٍ آخر — يُقرأ قبل القبول** (§٦٣-ج/١): نقدٌ من الراكب الفعليّ، أو لا شيءَ يُقبض أصلاً */}
-          {ride.for_other ? <PayerNoteT2 payer={ride.payer} /> : null}
+          {/* **من يدفع رحلةً لشخصٍ آخر — يُقرأ قبل القبول** (§٦٣-ج/١): نقدٌ من الراكب الفعليّ، أو لا شيءَ يُقبض أصلاً.
+              **وطردٌ يدفعه مستلمُه** (§٦٣-ج/٤) — ومرسلُه الدافعُ كأيِّ راكبٍ فلا سطر */}
+          {ride.for_other || ride.payer === "recipient_cash" ? <PayerNoteT2 payer={ride.payer} /> : null}
 
           <div className="t2-of-near">
             <Icon name="near_me" />
@@ -157,11 +161,14 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
   const { ride } = offer;
   const shared = Number(ride.share_discount_percent) > 0;
   const carried = Number(ride.carried_cancellation_fee ?? 0) > 0;
-  if (!shared && !ride.scheduled_for && ride.stops.length === 0 && !carried && !ride.for_other && !ride.airport) {
+  const parcel = ride.ride_type === "parcel";
+  if (!shared && !ride.scheduled_for && ride.stops.length === 0 && !carried && !ride.for_other && !ride.airport && !parcel) {
     return null;
   }
   return (
     <div className="t2-of-tags">
+      {/* **«طرد»** (§٦٣-ج/٤) — غرضٌ بدل راكب، **ومن صفِّ الرحلة لا من مفتاح السوق**: طلبٌ وصل قبل الإطفاء يبقى طرداً */}
+      {parcel ? <span className="t2-of-tag">طرد</span> : null}
       {/* **«مطار»** (§٦٣-ج/٢) — تبدأ أو تنتهي في مطار، **ورسمُه له كاملاً في الأجرة أعلاه**. ومن صفِّ الرحلة لا من مفتاح السوق:
           الرسمُ جُمِّد عليها يومَ طُلبت، **فإطفاءُ المفتاح بعدها لا يُسقط الشارةَ عن رحلةٍ تحمله** */}
       {ride.airport ? <span className="t2-of-tag">مطار</span> : null}

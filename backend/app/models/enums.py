@@ -338,6 +338,8 @@ class FareLineKind(StrEnum):
     PAUSE = "pause"
     #: **رسمُ المطار للكبتن** (§٦٣-ج/٢) — داخل الأجرة سطراً مستقلاً، **وخارج وعاء العمولة والخصم** (`rides.captain_fees_at_ride`)
     AIRPORT_FEE = "airport_fee"
+    #: **رسمُ الطرد للكبتن** (§٦٣-ج/٤) — كرسم المطار: داخل الأجرة، خارج العمولة والخصم
+    PARCEL_FEE = "parcel_fee"
 
 
 
@@ -449,6 +451,8 @@ class CancelReasonCode(StrEnum):
 
     GENDER_MISMATCH = "gender_mismatch"
     OTHER = "other"
+    #: **الكبتنُ يرفض الطردَ عند الاستلام** (§٦٣-ج/٤) — في طور «وصل» وحدَه، **بلا مالٍ على أحد** حتى جواب §٦٣-د/٦
+    PARCEL_REFUSED = "parcel_refused"
 
 
 class RidePayer(StrEnum):
@@ -462,6 +466,8 @@ class RidePayer(StrEnum):
     REQUESTER = "requester"
     #: **الراكبُ الفعليُّ نقداً** — فتُفتح دفعةُ النقد عند الإنهاء بلا أن يفتحها أحد: صاحبُها لا يحمل التطبيق
     PASSENGER_CASH = "passenger_cash"
+    #: **المستلمُ نقداً عند التسليم** (§٦٣-ج/٤) — للطرد وحدَه، ودفعتُه يفتحها الإنهاء
+    RECIPIENT_CASH = "recipient_cash"
 
 
 class FeatureKey(StrEnum):
@@ -628,6 +634,9 @@ class FeatureKey(StrEnum):
     # **الحجزُ المضمون** (§٦٣-ج/٣) — كبتنٌ محجوزٌ مسبقاً برسمٍ يحفظه TAXO. ومطفأً لا يُطلب حجزٌ مضمونٌ جديد، **والقائمُ يكمل**
     # (رسمُه محفوظٌ يُحسم كما قُرّر)، و`service_settings.guarantee_fee` صفرٌ يُخفيه ولو اشتعل
     GUARANTEED_BOOKING_ENABLED = "guaranteed_booking_enabled"
+    # **الطرد** (§٦٣-ج/٤) — رحلةٌ اقتصاديّةٌ تحمل غرضاً، برسمٍ للكبتن ومستلمٍ يُمحى بعد ٣٠ يوماً. ومطفأً يُرفض طلبُه، والقائمُ يكمل؛
+    # و`service_settings.parcel_fee` صفرٌ يُخفيه ولو اشتعل
+    PARCEL_ENABLED = "parcel_enabled"
 
 
 class BookingStatus(StrEnum):

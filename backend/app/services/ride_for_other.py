@@ -33,6 +33,7 @@ from app.core.exceptions import (
     RideForOtherUnavailable,
     TrackLinkUnavailable,
 )
+from app.core.digits import latin_digits
 from app.core.phone import InvalidPhoneNumber, normalize_phone
 from app.models.driver import Driver
 from app.models.enums import CountryCode, FeatureKey, RidePayer, RideStatus
@@ -87,7 +88,7 @@ async def prepare(
         session, rider.country_code, FeatureKey.RIDE_FOR_OTHER_ENABLED
     ):
         raise RideForOtherUnavailable()
-    name = " ".join(passenger.name.split())
+    name = latin_digits(" ".join(passenger.name.split()))
     if len(name) < 2:
         raise InvalidInput("اكتب اسمَ الراكب")
     try:
@@ -224,11 +225,19 @@ async def purge_passengers(session: AsyncSession, *, now: datetime | None = None
     result = await session.execute(
         update(Ride)
         .where(
-            Ride.for_other.is_(True),
+            Ride.for_other.is_(True) | (Ride.ride_type == "parcel"),
             Ride.passenger_erased_at.is_(None),
             ended_at | cancelled_at,
         )
-        .values(passenger_name=None, passenger_phone=None, passenger_erased_at=moment)
+        .values(
+            passenger_name=None,
+            passenger_phone=None,
+            # **ومستلمُ الطرد بالكنس نفسِه** (§٦٣-ج/٤)
+            recipient_name=None,
+            recipient_phone=None,
+            recipient_address=None,
+            passenger_erased_at=moment,
+        )
         .returning(Ride.id)
         .execution_options(synchronize_session=False)
     )

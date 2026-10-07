@@ -28,11 +28,12 @@ export type DriverStatus =
 /** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
 export type GenderPreference = "male" | "female" | "any";
 
-/** **من يدفع أجرةَ رحلةٍ طُلبت لشخصٍ آخر** (§٦٣-ج/١) — مرآةُ `RidePayer` في الخلفية بعضوَيها.
+/** **من يدفع أجرةَ رحلةٍ طُلبت لشخصٍ آخر أو طرد** (§٦٣-ج/١ و/٤) — مرآةُ `RidePayer` في الخلفية بأعضائها الثلاثة.
  *
- *  `requester` صاحبُ الطلب **من تطبيقه** (محفظةٌ أو بطاقة) — **فلا يقبض الكبتنُ شيئاً**؛ و`passenger_cash` الراكبُ الفعليُّ
- *  نقداً، **ودفعتُه تفتحها الخلفيةُ عند الإنهاء** فيؤكّدها الكبتنُ كأيِّ دفعةِ كاش. */
-export type RidePayer = "requester" | "passenger_cash";
+ *  `requester` صاحبُ الطلب — **في رحلةٍ لغيره من تطبيقه** (محفظةٌ أو بطاقة) **فلا يقبض الكبتنُ شيئاً**، **وفي الطرد عند
+ *  الالتقاط بأيِّ قناةٍ كأيِّ رحلة**؛ و`passenger_cash` الراكبُ الفعليُّ نقداً و`recipient_cash` مستلمُ الطرد نقداً عند التسليم،
+ *  **ودفعتُهما تفتحها الخلفيةُ عند الإنهاء** فيؤكّدها الكبتنُ كأيِّ دفعةِ كاش. */
+export type RidePayer = "requester" | "passenger_cash" | "recipient_cash";
 
 export type DocumentType =
   
@@ -414,6 +415,12 @@ export interface Ride {
   passenger_phone: string | null;
   /** **رحلةٌ تمسّ مطاراً** (§٦٣-ج/٢) — شارةُ «مطار» على بطاقة العرض قبل القبول، **والرسمُ سطرُه في `fare_lines`** لا هنا. */
   airport: boolean;
+  /** **الطرد** (§٦٣-ج/٤) — النوعُ على بطاقة العرض قبل القبول (شارةُ «طرد» وسطرُ دافعه)، **والمستلمُ اسمُه ورقمُه وعنوانُه بعد
+   *  القبول وحدَه وحتى الانتهاء** (`null` على العرض وبعده) — كالراكب الفعليّ. */
+  ride_type: "standard" | "parcel";
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  recipient_address: string | null;
 
   current_leg: number;
   waiting_charge: string;

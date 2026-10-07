@@ -39,6 +39,7 @@ import {
   beginPause,
   cancelRide,
   declineRide,
+  refuseParcel,
   resumeFromStop,
   resumePause,
 } from "@/api/endpoints";
@@ -428,6 +429,8 @@ export function HomeT2Screen() {
           onArriveStop={(stopId) => void run(async () => setRide(await arriveAtStop(ride.id, stopId)))}
           onResumeStop={(stopId) => void run(async () => setRide(await resumeFromStop(ride.id, stopId)))}
           onCancel={(reason) => void run(async () => setRide(await cancelRide(ride.id, reason.label, reason.code)))}
+          // **«ارفض الطرد»** (§٦٣-ج/٤) — بابُه وحدَه، والرحلةُ تعود ملغاةً كما يعيدها الإلغاء
+          onRefuseParcel={() => void run(async () => setRide(await refuseParcel(ride.id)))}
         />
       ) : null}
 

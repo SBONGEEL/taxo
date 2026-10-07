@@ -48,6 +48,8 @@ class RideEstimateRequest(BaseModel):
     # السقفُ في طبقة الإدخال **ومعه فحصٌ في الخدمة**: هذا يحرس الشكل وذاك
     # يحرس القاعدة، ومن اكتفى بالأول حرس ما يصل من تطبيقه هو
     stops: list[StopIn] = Field(default_factory=list, max_length=2)
+    # **تقديرُ طرد** (§٦٣-ج/٤) — يضيف رسمَه ويُعيد شروطَه. **ولا يُسمّى `parcel`**: طلبُ الرحلة يرث هذا المخطّط وله `parcel` بتفاصيله
+    is_parcel: bool = False
 
 
 class RideEstimateOut(BaseModel):
@@ -79,6 +81,9 @@ class RideEstimateOut(BaseModel):
     stop_max_wait_minutes: int
     # **رسمُ المطار للكبتن** (§٦٣-ج/٢) — داخل `estimated_fare` ويُنشر وحدَه ليُقال سطراً. و`null` بلا رسم
     airport_fee: Decimal | None = None
+    # **رسمُ الطرد للكبتن وشروطُه** (§٦٣-ج/٤) — `null` في غير تقدير طرد. **والشروطُ من الخلفية** فلا تكتبها واجهتان بلفظين
+    parcel_fee: Decimal | None = None
+    parcel_terms: list[str] | None = None
 
 
 class RideForOtherIn(BaseModel):
@@ -91,6 +96,16 @@ class RideForOtherIn(BaseModel):
     name: str = Field(min_length=2, max_length=80)
     phone: str = Field(min_length=6, max_length=20)
     payer: RidePayer = RidePayer.REQUESTER
+
+
+class ParcelIn(BaseModel):
+    """الطرد (§٦٣-ج/٤) — المستلمُ ومن يدفع، **وإقرارُ المرسل بالشروط** (طلبٌ بلا إقرارٍ يُرفض)."""
+
+    recipient_name: str = Field(min_length=2, max_length=80)
+    recipient_phone: str = Field(min_length=6, max_length=20)
+    recipient_address: str = Field(min_length=3, max_length=255)
+    payer: RidePayer = RidePayer.REQUESTER
+    accepted_terms: bool = False
 
 
 class RideCreateRequest(RideEstimateRequest):
@@ -114,6 +129,8 @@ class RideCreateRequest(RideEstimateRequest):
     share_gender_confirmed: bool = False
     # **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — `null` لرحلةٍ يركبها صاحبُها
     for_other: RideForOtherIn | None = None
+    # **الطرد** (§٦٣-ج/٤) — `null` لرحلةٍ عاديّة
+    parcel: ParcelIn | None = None
 
 
 class RideCancelRequest(BaseModel):
@@ -387,6 +404,11 @@ class RideOut(BaseModel):
     passenger_phone: str | None = None
     # **رحلةٌ تمسّ مطاراً** (§٦٣-ج/٢) — شارةُ «مطار» على بطاقة العرض، والرسمُ سطرُه في `fare_lines`
     airport: bool = False
+    # **الطرد** (§٦٣-ج/٤) — النوعُ دائماً، **والمستلمُ في أطوار القبول وحدَها** كالراكب الفعليّ
+    ride_type: str = "standard"
+    recipient_name: str | None = None
+    recipient_phone: str | None = None
+    recipient_address: str | None = None
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -483,6 +505,10 @@ class RideOut(BaseModel):
             start_code_required=ride.start_code is not None,
             for_other=ride.for_other,
             airport=ride.facility_id is not None,
+            ride_type=ride.ride_type,
+            recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
+            recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
+            recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,
             payer=RidePayer(ride.payer),
             passenger_name=(
                 ride.passenger_name if ride.status in PASSENGER_VISIBLE else None

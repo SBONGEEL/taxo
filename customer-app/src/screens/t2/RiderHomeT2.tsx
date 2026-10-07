@@ -9,6 +9,7 @@
  *
  * **والبلاطاتُ الأربعُ كما رُسمت** (§٦١-د/أ–ج): «المطار» بـ«جديد» و«طرد» و«بالساعة» **رسالةُ «قريباً» عند اللمس ولا شيءَ غيرُها**،
  * و«مجدولة» رحلاتُه المجدولة (بمفتاح سوقها)، و«نسائية» **تبدأ الطلبَ بـ«كبتنة فقط» وهي تغيّره بنفسها** — كما تعمل الخدمةُ اليوم.
+ * **و«طرد» حيث مفتاحُه مشتعلٌ تبدأ طلبَ طرد** (§٦٣-ج/٤، `onParcel`) — ومطفأً «قريباً» كما كانت.
  *
  * **وما نُزل بلغ من موضعٍ آخر** (§٦١-د/و): الأماكنُ المحفوظةُ في البحث وفي «حسابي»، وآخرُ الرحلات و«أعِد الرحلة» في «رحلاتي»
  * وتفاصيلها، والإحالةُ في «حسابي»، والرصيدُ في «المحفظة»، **والخريطةُ الكاملةُ بلمسة البطاقة** بدل زرِّ «توسيع».
@@ -25,6 +26,7 @@ import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
 import { useScheduledRides } from "@/lib/bookings";
 import { VEHICLE_LABEL } from "@/lib/labels";
+import { useParcel } from "@/lib/parcel";
 import { useSession } from "@/lib/session";
 import { useWomenService } from "@/lib/women";
 import { Wordmark } from "@/taxo2";
@@ -66,6 +68,8 @@ export interface RiderHomeProps {
   area?: string | null;
   onChangePickup?: () => void;
   onWomenRide?: () => void;
+  /** **بدءُ طلب طرد** (§٦٣-ج/٤) — منتقي الوجهة ثمّ ورقتُه؛ والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل. */
+  onParcel?: () => void;
 }
 
 
@@ -131,9 +135,12 @@ export function RiderHomeT2({
   area = null,
   onChangePickup,
   onWomenRide,
+  onParcel,
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
+  // **«طرد» بمفتاح سوقه** (§٦٣-ج/٤) — مطفأً تبقى البلاطةُ «قريباً» كما رُسمت ولا يظهر شيءٌ جديد
+  const parcel = useParcel();
   const scheduled = useScheduledRides();
   const { user } = useSession();
   // **«اقتصادي يصل خلال 3 د»** (§٦٢-ج/١٠): أوّلُ فئةٍ لها رقمٌ بترتيب الجواب، **وأسرعُها شارةُ «رحلة»**
@@ -222,7 +229,11 @@ export function RiderHomeT2({
             </span>
           ) : null}
         </button>
-        <button type="button" className="t2-home-ride" onClick={() => soon("طرد")}>
+        <button
+          type="button"
+          className="t2-home-ride"
+          onClick={() => (parcel && onParcel ? onParcel() : soon("طرد"))}
+        >
           <span className="t2-icon" aria-hidden="true">package_2</span>
           <span className="t2-home-ride-label">طرد</span>
         </button>

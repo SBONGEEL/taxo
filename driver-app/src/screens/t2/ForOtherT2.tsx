@@ -9,8 +9,19 @@ import type { Ride, RidePayer } from "@/api/types";
 import { Icon } from "@/taxo2";
 
 /** **من يدفع — سطرٌ يُقرأ قبل القبول وبعده**: نقدُ الراكب الفعليّ بنبرة النجاح (مالٌ في اليد كأيِّ كاش)، **ودفعُ صاحب الطلب
- *  بنبرة التنبيه** — فهو الحالُ الوحيدةُ التي يُطلب فيها من الكبتن ألّا يأخذ شيئاً. */
+ *  بنبرة التنبيه** — فهو الحالُ الوحيدةُ التي يُطلب فيها من الكبتن ألّا يأخذ شيئاً.
+ *
+ *  **ونقدُ مستلم الطرد بنبرة النجاح كذلك** (§٦٣-ج/٤، `ParcelT2`) — مالٌ في يده عند التسليم. **و`requester` في طردٍ لا يُرسم هنا**:
+ *  مرسلُه يدفع عند الالتقاط كأيِّ رحلة، و«لا تستلم شيئاً» عنه كذب. */
 export function PayerNoteT2({ payer }: { payer: RidePayer }) {
+  if (payer === "recipient_cash") {
+    return (
+      <p className="t2-fo-payer ok">
+        <Icon name="payments" />
+        <span>يدفع المستلمُ نقداً عند التسليم</span>
+      </p>
+    );
+  }
   if (payer === "requester") {
     return (
       <p className="t2-fo-payer warn">

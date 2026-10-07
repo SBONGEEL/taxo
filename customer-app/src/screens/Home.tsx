@@ -36,6 +36,7 @@ import type {
   MyReferrals,
   Ride,
   RideForOther,
+  RideParcel,
   Storefront,
   VehicleCategory,
   Wallet,
@@ -177,6 +178,14 @@ export function HomeScreen() {
   const [presetPreference, setPresetPreference] = useState<GenderPreference | undefined>();
   // **و«جدولي الرحلة لوقت لاحق» (RW3، §٦٢-ج/٢٣) تفتحها بفئة تلك الرحلة ومنتقي الموعد مفتوحاً** — `null` في كلِّ طلبٍ غيرِه
   const [presetSchedule, setPresetSchedule] = useState<VehicleCategory | null>(null);
+  // **وبلاطةُ «طرد» تبدأه طلبَ طرد** (§٦٣-ج/٤): الوجهةُ ثمّ ورقتُه. **ومسوّدتُه هنا لا في ورقة الطلب** — إضافةُ محطةٍ تطوي الورقةَ
+  // ثمّ تعيدها، فمسوّدةٌ فيها تضيع ويُعاد إقرارُ الشروط والمستلمُ من أوّله
+  const [parcelMode, setParcelMode] = useState(false);
+  const [parcelDraft, setParcelDraft] = useState<RideParcel | null>(null);
+  const endParcel = () => {
+    setParcelMode(false);
+    setParcelDraft(null);
+  };
 
   // **مسارُ الرحلة على الطرق** (البند ٨): يُقرأ **مرةً لكل رحلة** بعد القبول —
   // الخلفيةُ جمّدته على الرحلة لحظتَها، فقراءةٌ ثانية تعيد الشيءَ نفسَه.
@@ -231,6 +240,9 @@ export function HomeScreen() {
     setPickupAddress(again.pickupAddress);
     setDropoff(again.dropoff);
     setDropoffAddress(again.dropoffAddress);
+    // **«أعد الطلب» رحلةٌ لا طرد** — وطردٌ بدأته البلاطةُ قبلها لا يلحقها
+    setParcelMode(false);
+    setParcelDraft(null);
     setPhase("confirm");
     window.history.replaceState({}, "");
   }, [location.state]);
@@ -371,6 +383,7 @@ export function HomeScreen() {
     promoCode?: string,
     sharing?: { share: boolean; shareGenderConfirmed: boolean },
     forOther?: RideForOther,
+    parcel?: RideParcel,
   ) {
     if (!pickup || !dropoff) return;
     setRequesting(true);
@@ -393,6 +406,9 @@ export function HomeScreen() {
         share_gender_confirmed: sharing?.shareGenderConfirmed,
         // **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الراكبُ الفعليُّ ومن يدفع — والخلفيةُ تطبّع الرقمَ وتفحص المفتاحَ عند الإنشاء
         for_other: forOther,
+        // **الطرد** (§٦٣-ج/٤): المستلمُ ومن يدفع وإقرارُ الشروط — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والرسمَ
+        // والإقرارَ عند الإنشاء
+        parcel,
         stops: stops.map((stop) => ({
           lat: stop.lat,
           lng: stop.lng,
@@ -406,6 +422,7 @@ export function HomeScreen() {
       setDropoffAddress(null);
       setPresetPreference(undefined);
       setPresetSchedule(null);
+      endParcel();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر إرسال الطلب");
       // **رفضٌ بلا مخرجٍ ليس رفضاً**: تفضيلٌ نسائيٌّ بقي في ملفها من سوقٍ
@@ -446,6 +463,22 @@ export function HomeScreen() {
    */
   async function acceptAnyDriver(previous: Ride) {
     setError(null);
+    // **طردٌ لم يجد كبتناً لا يُعاد بنقطتيه وحدهما** (§٦٣-ج/٤): المستلمُ لا يُنشر بعد الانتهاء والإقرارُ لا يُنسخ — **وطلبٌ بلا
+    // أحدهما رحلةٌ عاديّةٌ صامتة**. فتُفتح ورقةُ الطرد بالنقطتين و«أي كبتن»، ويُكتب المستلمُ ويُقرّ بالشروط من جديد
+    if (previous.ride_type === "parcel") {
+      setPickup(previous.pickup);
+      setPickupAddress(previous.pickup_address);
+      setDropoff(previous.dropoff);
+      setDropoffAddress(previous.dropoff_address);
+      setStops([]);
+      setPresetPreference("any");
+      setPresetSchedule(null);
+      setParcelMode(true);
+      setParcelDraft(null);
+      setDismissed(previous.id);
+      setPhase("confirm");
+      return;
+    }
     try {
       const created = await requestRide({
         pickup: previous.pickup,
@@ -473,6 +506,7 @@ export function HomeScreen() {
     setStops([]);
     setPresetPreference(previous.gender_preference);
     setPresetSchedule(previous.vehicle_category);
+    endParcel();
     setError(null);
     setDismissed(previous.id);
     setPhase("confirm");
@@ -553,6 +587,7 @@ export function HomeScreen() {
     onAskDestination: () => {
       setPresetPreference(undefined);
       setPresetSchedule(null);
+      endParcel();
       setSearchOpen(true);
     },
     places,
@@ -575,6 +610,16 @@ export function HomeScreen() {
     onChangePickup: () => setPhase("pick-pickup"),
     onWomenRide: () => {
       setPresetPreference("female");
+      endParcel();
+      setSearchOpen(true);
+    },
+    // **«طرد»** (§٦٣-ج/٤) — منتقي الوجهة كما للرحلة، ثمّ ورقةُ الطلب بفئة الاقتصادي وورقةُ الطرد مفتوحة. **والبلاطةُ لا تناديه
+    // إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
+    onParcel: () => {
+      setPresetPreference(undefined);
+      setPresetSchedule(null);
+      setParcelDraft(null);
+      setParcelMode(true);
       setSearchOpen(true);
     },
   };
@@ -590,6 +635,7 @@ export function HomeScreen() {
     setStops([]);
     setPresetPreference(undefined);
     setPresetSchedule(null);
+    endParcel();
   };
 
   const locateMe = async () => {
@@ -623,6 +669,8 @@ export function HomeScreen() {
           initialCategory: presetSchedule ?? undefined,
           initialScheduling: presetSchedule !== null,
           pickupLine,
+          // **طلبُ طردٍ ومسوّدتُه** (§٦٣-ج/٤) — وغيابُه رحلةٌ عاديّة
+          parcel: parcelMode ? { draft: parcelDraft, onChange: setParcelDraft } : undefined,
         }
       : null;
 
@@ -758,7 +806,8 @@ export function HomeScreen() {
                 ride={outcome}
                 onDismiss={() => setDismissed(outcome.id)}
                 onAcceptAnyDriver={() => acceptAnyDriver(outcome)}
-                onScheduleAgain={() => scheduleAgain(outcome)}
+                // **ولا «جدولي» لطرد** (§٦٣-ج/٤) — الحجزُ لا يحمله، وحجزٌ بنقطتيه وحدهما رحلةٌ عاديّة
+                onScheduleAgain={outcome.ride_type === "parcel" ? undefined : () => scheduleAgain(outcome)}
                 error={error}
               />
             ) : picking ? (

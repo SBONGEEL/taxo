@@ -33,12 +33,15 @@ export function requesterCanPay(country: CountryConfig | null | undefined): bool
  *
  *  - `requester` في رحلةٍ لغيره ⇒ **المحفظةُ والبطاقةُ وحدهما**، والمحفوظُ إن كان غيرَهما يُقرأ أوّلَ المتاح منهما.
  *  - `passenger_cash` ⇒ **لا قناةَ أصلاً**: الدفعةُ تفتحها الخلفيةُ عند الإنهاء نقداً، وصاحبُ الحساب لا يختار شيئاً.
+ *  - `recipient_cash` (الطرد، §٦٣-ج/٤) ⇒ **مثلُه**: المستلمُ يدفع عند التسليم، وكلُّ قناةٍ من حساب المرسل ترتدّ ٤٠٩.
+ *
+ *  **ومرسلُ الطردِ الدافعُ لا يُمرَّر هنا** (`payerScope`): هو عند الالتقاط فيدفع بأيِّ قناةٍ كأيِّ رحلة.
  *
  *  **والاختيارُ يُحفظ تفضيلاً كما كان** (`choose`): من اختار البطاقةَ هنا اختارها عن قصد. */
 export function usePayerPreference(country: CountryConfig | null | undefined, payer: RidePayer | null) {
   const { available, resolved, choose } = usePaymentPreference(country);
   if (payer === null) return { available, resolved, choose };
-  if (payer === "passenger_cash") return { available: [], resolved: null, choose };
+  if (payer === "passenger_cash" || payer === "recipient_cash") return { available: [], resolved: null, choose };
   const allowed = available.filter((channel) => REQUESTER_METHODS.has(channel.method));
   return {
     available: allowed,
@@ -47,10 +50,18 @@ export function usePayerPreference(country: CountryConfig | null | undefined, pa
   };
 }
 
+/** **ما يضيّق قنواتِ الدفع في هذه الرحلة** — الدافعُ في رحلةٍ لغيره، **ومستلمُ الطرد إن دفع هو**؛ و`null` لكلِّ رحلةٍ
+ *  يدفعها صاحبُها كما يشاء — **ومنها طردٌ يدفعه مرسلُه**: هو عند الالتقاط، فلا يُضيَّق عليه شيء. */
+export function payerScope(ride: { for_other: boolean; payer: RidePayer }): RidePayer | null {
+  if (ride.for_other) return ride.payer;
+  return ride.payer === "recipient_cash" ? ride.payer : null;
+}
+
 /** **سطرُ الدافع على الرحلة الجارية** — يقول لصاحب الحساب ما عليه بعد الرحلة قبل أن تنتهي. */
 export const PAYER_LINE: Record<RidePayer, string> = {
   requester: "تدفع أنت بعد الرحلة — بالمحفظة أو البطاقة",
   passenger_cash: "يدفع الراكبُ نقداً للكبتن",
+  recipient_cash: "يدفع المستلمُ نقداً عند التسليم",
 };
 
 /** **رابطُ التتبّع من عنوان التطبيق نفسِه** (`/t/{token}`) — والخلفيةُ لا تكتب نطاقاً يفترق عن مكان التطبيق.

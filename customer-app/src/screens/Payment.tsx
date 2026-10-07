@@ -25,7 +25,8 @@
  * حرفاً.**
  *
  * **ورحلةٌ لشخصٍ آخر** (§٦٣-ج/١): الطالبُ يدفع بالمحفظة أو البطاقة وحدهما، **وإن دفع الراكبُ نقداً فالشاشةُ حالٌ تُقرأ** —
- * «يدفعها الراكبُ نقداً للكبتن» — **بلا قناةٍ ولا زرِّ دفع**.
+ * «يدفعها الراكبُ نقداً للكبتن» — **بلا قناةٍ ولا زرِّ دفع**. **والطردُ الذي يدفعه مستلمُه مثلُها** (§٦٣-ج/٤): «يدفعها المستلمُ
+ * نقداً للكبتن»؛ ومرسلُه الدافعُ يدفع بأيِّ قناةٍ كأيِّ رحلة.
  */
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -41,7 +42,7 @@ import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
-import { usePayerPreference } from "@/lib/for-other";
+import { payerScope, usePayerPreference } from "@/lib/for-other";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import type { PayableMethod } from "@/lib/payment";
 import { useRide } from "@/lib/ride";
@@ -146,9 +147,13 @@ export function PaymentScreen() {
   //
   // **وفي رحلةٍ لغيره تضيق القنواتُ بالدافع** (§٦٣-ج/١، `usePayerPreference`): الطالبُ يدفع بالمحفظة أو البطاقة وحدهما
   // (والخلفيةُ ترفض غيرَهما `payer_method_mismatch`)، **وإن دفع الراكبُ نقداً فلا قناةَ يختارها أحدٌ هنا** — دفعتُه فتحتها
-  // الخلفيةُ عند الإنهاء، **وكلُّ قناةٍ من هنا ترتدّ ٤٠٩**. فالشاشةُ تقول ذلك بدل زرٍّ يرتدّ
-  const payer = ride?.for_other ? ride.payer : null;
+  // الخلفيةُ عند الإنهاء، **وكلُّ قناةٍ من هنا ترتدّ ٤٠٩**. فالشاشةُ تقول ذلك بدل زرٍّ يرتدّ.
+  // **وطردٌ يدفعه مستلمُه** (§٦٣-ج/٤) **بالحكم نفسِه** — `payerScope` يمرّره، ومرسلُه الدافعُ لا يُضيَّق عليه
+  const payer = ride ? payerScope(ride) : null;
   const passengerCash = payer === "passenger_cash";
+  const recipientCash = payer === "recipient_cash";
+  // **نقدٌ يسلّمه غيرُ صاحب الحساب** — الراكبُ الفعليُّ أو مستلمُ الطرد
+  const cashByOther = passengerCash || recipientCash;
   const { available, resolved, choose } = usePayerPreference(country, payer);
 
   const load = useCallback(async () => {
@@ -189,8 +194,8 @@ export function PaymentScreen() {
    */
   const settlement = state?.settlement ?? "not_due";
   const awaiting = (state?.payments ?? []).filter((row) => row.status === "pending");
-  // **دفعةُ نقد الراكب الفعليّ** كما فتحتها الخلفيةُ عند الإنهاء (§٦٣-ج/١) — مبلغُها يُقرأ ولا يُحسب
-  const passengerDue = passengerCash ? awaiting.find((row) => row.method === "cash") : undefined;
+  // **دفعةُ نقد الراكب الفعليّ أو المستلم** كما فتحتها الخلفيةُ عند الإنهاء (§٦٣-ج/١ و/٤) — مبلغُها يُقرأ ولا يُحسب
+  const otherDue = cashByOther ? awaiting.find((row) => row.method === "cash") : undefined;
   const settled = settlement === "settled";
   const nothingToStart = settlement === "awaiting" || settlement === "disputed";
 
@@ -372,9 +377,9 @@ export function PaymentScreen() {
               </div>
             </div>
           ) : null}
-          {/* **نقدُ الراكب الفعليّ لا يسلّمه صاحبُ الحساب** (§٦٣-ج/١) — «سلّم كاشاً» أمرٌ لمن ليس في السيارة، فسطرُه أدناه */}
+          {/* **نقدُ الراكب الفعليّ أو المستلم لا يسلّمه صاحبُ الحساب** (§٦٣-ج/١ و/٤) — «سلّم كاشاً» أمرٌ لمن ليس هناك، فسطرُه أدناه */}
           {awaiting
-            .filter((row) => !(passengerCash && row.method === "cash"))
+            .filter((row) => !(cashByOther && row.method === "cash"))
             .map((row) => (
               <div key={row.id} className="t2-callout warn t2-m-callout">
                 <Icon name="hourglass_top" />
@@ -393,13 +398,16 @@ export function PaymentScreen() {
 
       {/* **يدفعها الراكبُ نقداً — حالٌ تُقرأ لا قناةٌ تُختار** (§٦٣-ج/١): دفعتُه تفتحها الخلفيةُ عند الإنهاء، **فلا زرَّ دفعٍ ولا
           «طريقة أخرى»** — كلُّ قناةٍ من هذا الحساب ترتدّ. **والمبلغُ مبلغُ دفعته كما فتحتها** حين تكون قد فُتحت */}
-      {passengerCash && !settled && settlement !== "disputed" ? (
+      {/* **ومستلمُ الطرد بالحال نفسِه** (§٦٣-ج/٤) — دفعتُه يفتحها الإنهاء، وصاحبُ الحساب لا يدفع شيئاً من هنا */}
+      {cashByOther && !settled && settlement !== "disputed" ? (
         <div className="t2-callout t2-m-callout">
           <Icon name="payments" />
           <div className="t2-callout-main">
-            <p className="t2-callout-title">يدفعها الراكبُ نقداً للكبتن</p>
+            <p className="t2-callout-title">
+              {recipientCash ? "يدفعها المستلمُ نقداً للكبتن" : "يدفعها الراكبُ نقداً للكبتن"}
+            </p>
             <p className="t2-callout-body">
-              {passengerDue ? `${formatMoney(passengerDue.amount, passengerDue.currency)} — ` : ""}
+              {otherDue ? `${formatMoney(otherDue.amount, otherDue.currency)} — ` : ""}
               لا شيءَ تدفعه من تطبيقك، ويكتمل دفعُ الرحلة حين يؤكد الكبتن استلامها.
             </p>
           </div>
@@ -413,7 +421,7 @@ export function PaymentScreen() {
 
       <div className="t2-m-push" />
 
-      {settled || nothingToStart || passengerCash ? (
+      {settled || nothingToStart || cashByOther ? (
         <button type="button" className="t2-button primary t2-m-cta" onClick={() => navigate(`/rides/${rideId}/rate`)}>
           قيّم رحلتك
         </button>

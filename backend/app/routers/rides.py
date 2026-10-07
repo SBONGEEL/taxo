@@ -18,7 +18,7 @@ from app.core import service_area
 from app.core.exceptions import Conflict, NotFound, PermissionDenied
 from app.models.driver import Driver
 from app.models.user import User
-from app.models.enums import CancellationChargeStatus, RideStatus, UserRole
+from app.models.enums import CancelReasonCode, CancellationChargeStatus, RideStatus, UserRole
 from app.models.ride import ACTIVE_DRIVER_STATUSES, TERMINAL_STATUSES, Ride
 from app.schemas.rating import RatingCreate, RatingOut
 from app.schemas.promo import PromoPreviewOut, PromoValidateRequest
@@ -51,6 +51,7 @@ from app.services import (
     pricing,
     promo as promo_service,
     ratings as ratings_service,
+    parcels,
     ride_for_other,
     ride_log,
     rides as rides_service,
@@ -114,6 +115,7 @@ async def estimate_ride(
         pickup=_coords(payload.pickup),
         dropoff=_coords(payload.dropoff),
         stops=[_coords(stop) for stop in payload.stops],
+        parcel=payload.is_parcel,
     )
     # **الخصمُ على الأجرة دون رسم المطار** (§٦٣-ب) — ثمّ يعود الرسمُ إلى «سعر المشاركة» كاملاً
     shared = await sharing.preview(
@@ -137,7 +139,10 @@ async def estimate_ride(
         stop_free_minutes=quote.stop_free_minutes,
         stop_price_per_min=quote.stop_price_per_min,
         stop_max_wait_minutes=quote.stop_max_wait_minutes,
-        airport_fee=quote.captain_fees if quote.captain_fees > 0 else None,
+        # **كلُّ رسمٍ من سطره** لا من طرحٍ بين مجموعين — السطرُ هو المبلغُ نفسُه
+        airport_fee=next((line.amount for line in quote.lines if line.kind == "airport_fee"), None),
+        parcel_fee=next((line.amount for line in quote.lines if line.kind == "parcel_fee"), None),
+        parcel_terms=list(parcels.TERMS) if payload.is_parcel else None,
     )
 
 
@@ -172,6 +177,17 @@ async def request_ride(
                 payer=payload.for_other.payer,
             )
             if payload.for_other is not None
+            else None
+        ),
+        parcel=(
+            parcels.ParcelRequest(
+                recipient_name=payload.parcel.recipient_name,
+                recipient_phone=payload.parcel.recipient_phone,
+                recipient_address=payload.parcel.recipient_address,
+                payer=payload.parcel.payer,
+                accepted_terms=payload.parcel.accepted_terms,
+            )
+            if payload.parcel is not None
             else None
         ),
         stops=[
@@ -572,6 +588,25 @@ async def mark_arrived(
     await notifications.publish_ride_event(
         session, redis, ride, events.RideEvent.DRIVER_ARRIVED
     )
+    return _to_out(ride)
+
+
+@router.post("/{ride_id}/parcel-refuse", response_model=RideOut)
+async def refuse_parcel(
+    ride_id: uuid.UUID, driver: CurrentDriver, session: DbSession, redis: RedisDep
+) -> RideOut:
+    """**الكبتنُ يرفض الطردَ عند الاستلام** (§٦٣-ج/٤) — في طور «وصل» وحدَه، **بلا مالٍ على أحد** (§٦٣-د/٦ حتى جوابه)."""
+    ride = await _assigned_ride(session, ride_id, driver)
+    if ride.ride_type != "parcel" or ride.status is not RideStatus.ARRIVED:
+        raise Conflict("يُرفض الطردُ عند الاستلام وحدَه")
+    ride = await rides_service.cancel_ride(
+        session, ride, by_role=UserRole.DRIVER, reason="رفض الكبتنُ الطردَ عند الاستلام",
+        reason_code=CancelReasonCode.PARCEL_REFUSED,
+    )
+    await session.commit()
+    await route.end(redis, driver_id=driver.id)
+    await tracking.stop(ride_id)
+    await notifications.publish_ride_event(session, redis, ride, events.RideEvent.RIDE_CANCELLED)
     return _to_out(ride)
 
 

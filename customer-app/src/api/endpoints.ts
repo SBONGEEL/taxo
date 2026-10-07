@@ -39,6 +39,7 @@ import type {
   RideForOther,
   RideGroup,
   RideListItem,
+  RideParcel,
   RidePayments,
   RiderSummary,
   SavedCard,
@@ -175,6 +176,9 @@ export const estimateRide = (payload: {
   vehicle_category: VehicleCategory;
   /** محطاتٌ **وسيطة** بترتيبها — والوجهةُ الأخيرة تبقى `dropoff`. */
   stops?: { lat: number; lng: number; address?: string | null }[];
+  /** **تقديرُ طرد** (§٦٣-ج/٤) — يضيف رسمَه إلى السعر ويعيد شروطَه (`parcel_fee` · `parcel_terms`). **ولا يُسمّى `parcel`**:
+   *  حمولةُ الطلب ترث هذا المخطّطَ في الخلفية، و`parcel` فيها تفاصيلُ الطرد. */
+  is_parcel?: boolean;
 }) => api.post<RideEstimate>("/rides/estimate", payload);
 
 export const requestRide = (payload: {
@@ -196,6 +200,9 @@ export const requestRide = (payload: {
   /** **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١) — غيابُه رحلةٌ يركبها صاحبُها. والخلفيةُ تفحص المفتاحَ **عند الإنشاء**، فرفضُه
    *  (`ride_for_other_unavailable`) يصل برسالته ولو أخفت الواجهةُ الخيار. */
   for_other?: RideForOther;
+  /** **الطرد** (§٦٣-ج/٤) — غيابُه رحلةٌ عاديّة. **والخلفيةُ هي الحارس**: مفتاحٌ مطفأٌ أو رسمٌ صفرٌ ⇒ `parcel_unavailable` (٤٠٣)،
+   *  وبلا إقرارٍ بالشروط أو بغير فئة الاقتصادي أو برقمٍ وعنوانٍ لا يصحّان ⇒ `invalid_input` — ويُقال نصُّها تحت الزرّ. */
+  parcel?: RideParcel;
 }) => api.post<Ride>("/rides", payload);
 
 /** **رمزُ رابط التتبّع** لرحلةٍ يطلبها لغيره (§٦٣-ج/١) — **الرمزُ نفسُه في كلِّ ضغطة**، والتطبيقُ يبني الرابطَ من عنوانه هو

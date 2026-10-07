@@ -66,11 +66,12 @@ export interface AuthMethod {
 /** تفضيلُ جنس الطرف الآخر — مرآةُ `GenderPreference` في الخلفية. */
 export type GenderPreference = "male" | "female" | "any";
 
-/** **من يدفع أجرةَ رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) — مرآةُ `RidePayer` في الخلفية بعضوَيها.
+/** **من يدفع أجرةَ رحلةٍ لشخصٍ آخر أو طرد** (§٦٣-ج/١ و/٤) — مرآةُ `RidePayer` في الخلفية بأعضائها الثلاثة.
  *
  *  `requester` صاحبُ الحساب (كلُّ رحلةٍ عاديّة)، **وفي رحلةٍ لغيره يدفع بالمحفظة أو البطاقة وحدهما**؛ و`passenger_cash`
- *  الراكبُ الفعليُّ نقداً، **ودفعتُه تفتحها الخلفيةُ عند الإنهاء** — فلا قناةَ يختارها صاحبُ الحساب أصلاً. */
-export type RidePayer = "requester" | "passenger_cash";
+ *  الراكبُ الفعليُّ نقداً، **ودفعتُه تفتحها الخلفيةُ عند الإنهاء** — فلا قناةَ يختارها صاحبُ الحساب أصلاً. **و`recipient_cash`
+ *  مستلمُ الطرد نقداً عند التسليم** — ودفعتُه يفتحها الإنهاءُ كذلك. */
+export type RidePayer = "requester" | "passenger_cash" | "recipient_cash";
 
 /** **الراكبُ الفعليُّ ومن يدفع** كما يُرسل مع الطلب (`RideForOtherIn`) — **والرقمُ يُطبَّع في الخلفية** إلى E.164
  *  بقواعد السوقين، ورقمٌ لا يُطبَّع يرفض الطلبَ كلَّه برسالتها. */
@@ -78,6 +79,17 @@ export interface RideForOther {
   name: string;
   phone: string;
   payer: RidePayer;
+}
+
+/** **الطرد** كما يُرسل مع الطلب (`ParcelIn`، §٦٣-ج/٤) — المستلمُ ومن يدفع **وإقرارُ المرسل بالشروط**: طلبٌ بلا إقرارٍ ترفضه
+ *  الخلفية، وبفئةٍ غيرِ الاقتصادي كذلك. **والرقمُ يُطبَّع هناك** بقواعد السوقين كرقم الراكب الفعليّ. والدافعُ المرسلُ (بأيِّ
+ *  قناةٍ — هو عند الالتقاط) **أو المستلمُ نقداً**؛ ولا `passenger_cash` في طرد. */
+export interface RideParcel {
+  recipient_name: string;
+  recipient_phone: string;
+  recipient_address: string;
+  payer: Exclude<RidePayer, "passenger_cash">;
+  accepted_terms: boolean;
 }
 
 export interface User {
@@ -299,6 +311,11 @@ export interface RideEstimate {
   /** **رسمُ المطار للكبتن** (§٦٣-ج/٢) — **داخلٌ في `estimated_fare` أصلاً**، ويُنشر وحدَه ليُقال سطراً لا ليُجمع إليه.
    *  و`null` تعني «لا رسم» (لا مطارَ في الطرفين، أو السوقُ لم يُشعله) — لا صفراً يُقرأ رسماً. */
   airport_fee: string | null;
+  /** **رسمُ الطرد للكبتن** (§٦٣-ج/٤) — كرسم المطار: **داخلٌ في `estimated_fare`** ويُنشر ليُقال سطراً. و`null` في غير تقدير طرد،
+   *  **أو حيث الخدمةُ مخفيّة** (مفتاحٌ مطفأٌ أو رسمٌ صفر) — فطلبُها يُرفض. */
+  parcel_fee: string | null;
+  /** **شروطُ الطرد بلفظ الخلفية** — تُعرض قبل الطلب ويُقرّ بها المرسل، **ولا تُكتب في الواجهة**. و`null` في غير تقدير طرد. */
+  parcel_terms: string[] | null;
 }
 
 export interface RideVehicle {
@@ -405,6 +422,12 @@ export interface Ride {
   payer: RidePayer;
   passenger_name: string | null;
   passenger_phone: string | null;
+  /** **الطرد** (§٦٣-ج/٤) — النوعُ يُنشر دائماً، **والمستلمُ في أطوار القبول وحدَها** كالراكب الفعليّ: `null` على البحث وبعد
+   *  الانتهاء، فغيابُه لا يعني أنها رحلةٌ عاديّة — `ride_type` وحدَه يقول ذلك. */
+  ride_type: "standard" | "parcel";
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  recipient_address: string | null;
 
   /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
    *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */
@@ -655,7 +678,16 @@ export interface Rating {
 export type RatingTag = "safe_driving" | "clean_car" | "friendly" | "fast_arrival" | "knows_way";
 
 /** صنفُ سطرِ تفصيل الأجرة — مرآةُ `FareLineKind` في الخلفية (`check:enums`). */
-export type FareLineKind = "base" | "distance" | "time" | "stops" | "minimum" | "waiting" | "pause" | "airport_fee";
+export type FareLineKind =
+  | "base"
+  | "distance"
+  | "time"
+  | "stops"
+  | "minimum"
+  | "waiting"
+  | "pause"
+  | "airport_fee"
+  | "parcel_fee";
 
 export interface FareLine {
   kind: FareLineKind;

@@ -28,6 +28,10 @@
  *
  * **و«حجزٌ مضمون»** (§٦٣-ج/٣) — لا لوحةَ له: مفتاحٌ داخل «موعد الانطلاق» بلغة صفِّ المشاركة ومفتاحِ الهوية (`Switch`)،
  * **بلا رقم رسمٍ** (لا بابَ عامٌّ ينشره قبل الحجز)، **ومعطَّلٌ بعلّته** لموعدٍ أقربَ من ساعتين.
+ *
+ * **و«الطرد»** (§٦٣-ج/٤، `ParcelT2.tsx`) — لا لوحةَ له: **الورقةُ نفسُها بفئة الاقتصادي وحدَها**، وورقةُ الطرد تُفتح أوّلَ ما تُفتح
+ * (الشروطُ والمستلمُ ومن يدفع) ثمّ شارتُه «إلى: الاسم»، **وسطرُ «يشمل رسمَ الطرد» كسطر المطار** — والسعرُ هو هو من التقدير.
+ * **ولا يُجمع مع «لشخص آخر» ولا المشاركة ولا الحجز** — كلٌّ معطَّلٌ بعلّته.
  */
 
 import { useEffect, useState } from "react";
@@ -46,6 +50,7 @@ import { useSession } from "@/lib/session";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
 
 import { ForOtherOptionT2, ForOtherSheetT2 } from "./ForOtherT2";
+import { ParcelOptionT2, ParcelSheetT2 } from "./ParcelT2";
 import { SheetT2 } from "./SheetT2";
 import { WomenRequestHeadT2 } from "./WomenRideT2";
 import { DateField, Icon, Switch } from "@/taxo2";
@@ -66,10 +71,12 @@ function shortDuration(minutes: string | number) {
  * الفئةَ سأل الخطّافُ الجديدةَ كما يسأل اليوم، **وبقي رقمُ القديمة ممّا سُئل قبل**. */
 function useCategoryFares(
   props: ConfirmRideProps,
+  /** **الفئاتُ المعروضةُ لا فئاتُ السوق** — والطردُ الاقتصاديُّ وحدَه، فلا تقديرَ لفئةٍ لا تُرسم. */
+  categories: VehicleCategory[],
   selected: VehicleCategory,
   selectedEstimate: RideEstimate | null,
 ): Partial<Record<VehicleCategory, RideEstimate>> {
-  const { pickup, dropoff, stops, categories } = props;
+  const { pickup, dropoff, stops } = props;
   const [fares, setFares] = useState<Partial<Record<VehicleCategory, RideEstimate>>>({});
   // **مفتاحٌ نصّيٌّ للفئات** لا المصفوفةُ نفسُها: بديلُها الافتراضيُّ (`["economy"]`) مصفوفةٌ جديدةٌ كلَّ رسم فتدور الحلقة
   const key = categories.join(",");
@@ -142,11 +149,18 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
   const { user } = useSession();
   const airport = useFeature(user?.country_code, "airport_enabled");
   const currency = c.estimate?.currency ?? countryConfig?.currency;
-  const fares = useCategoryFares(props, c.category, c.loading ? null : c.estimate);
+  // **الطردُ بفئة الاقتصادي وحدَها** (§٦٣-ج/٤) — ولو لم تكن أوّلَ فئات السوق؛ والخطّافُ يسأل تقديرَها بالرسم
+  const shown: VehicleCategory[] = c.parcelMode ? ["economy"] : categories;
+  const fares = useCategoryFares(props, shown, c.category, c.loading ? null : c.estimate);
   // **تفصيلُ الكوبون خلف لمسة «مطبّق»**: مقدارُ الخصم وإزالتُه — الشارةُ كما رُسمت، والفعلُ باقٍ
   const [promoOpen, setPromoOpen] = useState(false);
   // **ورقةُ «لشخص آخر»** (§٦٣-ج/١) — مفتوحةٌ للاختيار أو للتعديل؛ والمسوّدةُ نفسُها في `useConfirmRide`
   const [forOtherOpen, setForOtherOpen] = useState(false);
+  // **ورقةُ الطرد تُفتح أوّلَ ما تُفتح الورقة** (§٦٣-ج/٤: «الوجهةُ ثمّ ورقةُ الطرد») ما دام لا مستلمَ مكتوب — **وورقةٌ عادت بعد
+  // إضافة محطةٍ تجد مسوّدتَها** (`Home`) فلا تُفتح ثانيةً
+  const [parcelOpen, setParcelOpen] = useState(() => c.parcelMode && c.parcel === null);
+  const parcelPending = c.parcelMode && c.parcel === null;
+  const parcelOff = c.parcelMode ? "لا تُجمع مع الطرد." : null;
   // **RW2 — الطلبُ النسائيّ** (§٦٢-ج/٢٣): تفضيلُ هذا الطلب «كبتنة» لمن عُرضت عليها الخدمة — **وهي تغيّره من المنتقي نفسِه**
   const women = c.women.available && c.preference === "female";
   const meta = c.estimate && !c.loading ? `${formatDistance(c.estimate.distance_km)} · ${shortDuration(c.estimate.duration_min)}` : null;
@@ -155,30 +169,49 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     <SheetT2
       footer={
         <>
-          {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه */}
-          {blockedByPreference ? null : <ErrorNote message={c.error ?? requestError} className="t2-error" />}
+          {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ */}
+          {blockedByPreference ? null : (
+            <ErrorNote
+              message={c.error ?? requestError ?? (c.parcelUnavailable ? "الطرد غيرُ متاحٍ في بلدك الآن." : null)}
+              className="t2-error"
+            />
+          )}
           <button
             type="button"
             className={women ? "t2-cta women" : "t2-cta"}
-            disabled={!c.estimate || c.loading || requesting}
+            disabled={!c.estimate || c.loading || requesting || c.parcelUnavailable}
             aria-busy={requesting}
             onClick={() =>
-              props.onRequest(
-                c.category,
-                c.preference,
-                c.applied?.code,
-                // **والمشاركةُ لا تُرسل مع رحلةٍ لغيره** — الخياران لا يُجمعان في الورقة، وهذا يمنع ما قد يبقى منهما
-                {
-                  share: c.shareReady && !c.forOther,
-                  shareGenderConfirmed: c.shareReady && c.shareGuarded && !c.forOther,
-                },
-                c.forOther ?? undefined,
-              )
+              // **طردٌ بلا مستلمٍ يفتح ورقتَه** لا طلباً ترفضه الخلفية — والزرُّ يقول ذلك باسمه
+              parcelPending
+                ? setParcelOpen(true)
+                : props.onRequest(
+                    c.category,
+                    c.preference,
+                    c.applied?.code,
+                    // **والمشاركةُ لا تُرسل مع رحلةٍ لغيره ولا مع طرد** — الخياراتُ لا تُجمع في الورقة، وهذا يمنع ما قد يبقى منها
+                    {
+                      share: c.shareReady && !c.forOther,
+                      shareGenderConfirmed: c.shareReady && c.shareGuarded && !c.forOther,
+                    },
+                    c.forOther ?? undefined,
+                    c.parcel ?? undefined,
+                  )
             }
           >
-            <span>{requesting ? "نرسل طلبك…" : women ? "اطلبي كبتنة" : `اطلب ${VEHICLE_LABEL[c.category]}`}</span>
+            <span>
+              {requesting
+                ? "نرسل طلبك…"
+                : parcelPending
+                  ? "أكمل بيانات الطرد"
+                  : c.parcelMode
+                    ? "اطلب توصيل الطرد"
+                    : women
+                      ? "اطلبي كبتنة"
+                      : `اطلب ${VEHICLE_LABEL[c.category]}`}
+            </span>
             {/* **الرقمُ آخرُ ما تقع عليه العين** — ويختفي ما دام يُحسب: رقمٌ قديمٌ على زرِّ التزامٍ أسوأ من لا رقم */}
-            {c.shownFare && !c.loading ? (
+            {c.shownFare && !c.loading && !c.parcelUnavailable ? (
               <span className="t2-cta-price">{formatMoney(c.shownFare, currency)}</span>
             ) : null}
           </button>
@@ -223,7 +256,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
         {meta && !women ? <span className="t2-pick-meta">{meta}</span> : null}
       </div>
       <div className="t2-cats" role="radiogroup" aria-label="الفئة">
-        {categories.map((option) => {
+        {shown.map((option) => {
           const on = option === c.category;
           return (
             <button
@@ -271,6 +304,15 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           يشمل رسمَ المطار {formatMoney(c.estimate.airport_fee, c.estimate.currency)} للكبتن
         </p>
       ) : null}
+      {/* **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — داخلَ السعر أعلاه، للكبتن، **ومن التقدير لا من ثابت** (§14) */}
+      {c.parcelMode && c.estimate?.parcel_fee && !c.loading ? (
+        <p className="t2-sheet-fine">
+          يشمل رسمَ الطرد {formatMoney(c.estimate.parcel_fee, c.estimate.currency)} للكبتن
+        </p>
+      ) : null}
+
+      {/* **شارةُ الطرد** — «بيانات الطرد» قبل المستلم، و«إلى: الاسم» بعده بزرِّ التعديل */}
+      {c.parcelMode ? <ParcelOptionT2 draft={c.parcel} onOpen={() => setParcelOpen(true)} /> : null}
 
       {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}
       {c.women.available ? (
@@ -388,9 +430,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             <input
               type="checkbox"
               className="t2-check"
-              checked={c.share}
-              // **ولا تُجمع مع رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) — والعلّةُ مكتوبةٌ تحتها لا زرٌّ ميّتٌ بلا سبب
-              disabled={c.forOther !== null}
+              checked={c.share && !c.parcelMode}
+              // **ولا تُجمع مع رحلةٍ لشخصٍ آخر** (§٦٣-ج/١) **ولا مع طرد** (§٦٣-ج/٤) — والعلّةُ مكتوبةٌ تحتها لا زرٌّ ميّتٌ بلا سبب
+              disabled={c.forOther !== null || c.parcelMode}
               onChange={(event) => {
                 c.setShare(event.target.checked);
                 if (!event.target.checked) c.setShareGendered(false);
@@ -402,7 +444,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 شارك الرحلة ووفّر
               </span>
               <span className="t2-share-body">
-                {c.forOther !== null ? (
+                {parcelOff ? (
+                  parcelOff
+                ) : c.forOther !== null ? (
                   "لا تُجمع مع رحلةٍ لشخصٍ آخر."
                 ) : (
                   <>
@@ -414,7 +458,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               </span>
             </span>
           </label>
-          {c.share && c.shareGuarded ? (
+          {c.share && c.shareGuarded && !c.parcelMode ? (
             <label className="t2-share-row t2-share-guard">
               <input
                 type="checkbox"
@@ -434,7 +478,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {c.forOtherOffered ? (
         <ForOtherOptionT2
           draft={c.forOther}
-          blockedBy={c.share ? "لا تُجمع مع مشاركة الرحلة — ألغِ المشاركةَ لتطلبها لغيرك." : null}
+          blockedBy={
+            c.parcelMode
+              ? "لا تُجمع مع الطرد — المستلمُ هو الطرفُ الآخر."
+              : c.share
+                ? "لا تُجمع مع مشاركة الرحلة — ألغِ المشاركةَ لتطلبها لغيرك."
+                : null
+          }
           onOpen={() => setForOtherOpen(true)}
           onClear={() => c.setForOther(null)}
         />
@@ -525,8 +575,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             <button
               type="button"
               className="t2-button secondary t2-schedule-open"
-              // **الحجزُ لا يحمل رحلةً لغيره بعد** (`createBooking`) — وحجزٌ يُثبَّت بلا راكبه يُسقط ما كتبه صاحبُه صامتاً
-              disabled={c.forOther !== null}
+              // **الحجزُ لا يحمل رحلةً لغيره بعد** (`createBooking`) — وحجزٌ يُثبَّت بلا راكبه يُسقط ما كتبه صاحبُه صامتاً.
+              // **ولا طرداً** (§٦٣-ج/٤): حجزٌ يُثبَّت بلا مستلمٍ ولا إقرارٍ يصير رحلةً عاديّة
+              disabled={c.forOther !== null || c.parcelMode}
               onClick={() => {
                 c.setWhen(localInputValue(earliest()));
                 c.setScheduling(true);
@@ -535,7 +586,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               <span className="t2-icon" aria-hidden="true">event_upcoming</span>
               حدّد موعداً
             </button>
-            {c.forOther !== null ? (
+            {c.parcelMode ? (
+              <p className="t2-sheet-fine">الحجزُ لموعدٍ لا يحمل طرداً — يُطلب الطردُ الآن.</p>
+            ) : c.forOther !== null ? (
               <p className="t2-sheet-fine">الحجزُ لموعدٍ لا يحمل رحلةً لشخصٍ آخر بعد — أزِل «لـ: {c.forOther.name}» لتحجز.</p>
             ) : null}
           </>
@@ -563,6 +616,20 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             setForOtherOpen(false);
           }}
           onClose={() => setForOtherOpen(false)}
+        />
+      ) : null}
+
+      {/* **ورقةُ الطرد** — والشروطُ من تقدير الطرد نفسِه (`parcel_terms`)، و`null` ما دام يُحسب */}
+      {parcelOpen && c.parcelMode ? (
+        <ParcelSheetT2
+          terms={c.loading ? null : c.estimate?.parcel_terms ?? null}
+          failed={!c.loading && c.error !== null}
+          initial={c.parcel}
+          onSave={(next) => {
+            c.setParcel?.(next);
+            setParcelOpen(false);
+          }}
+          onClose={() => setParcelOpen(false)}
         />
       ) : null}
     </SheetT2>
