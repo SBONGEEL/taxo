@@ -30,6 +30,7 @@ import { ACTIVE_RIDE_STATUSES } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { RiderSocket, type SocketEvent } from "@/lib/socket";
 import { play, type Cue } from "@/lib/sound";
+import { dispatchTripComms, isTripCommsEvent, routeCommsPush } from "@/lib/trip-comms";
 
 export interface DriverPing {
   lat: number;
@@ -163,6 +164,8 @@ export function RideProvider({ children }: { children: ReactNode }) {
   const presentNotice = useCallback(
     (payload: { title?: string; body?: string; data?: Record<string, string> }) => {
       if (!payload.title || document.hidden) return;
+      // **إشعارُ المحادثة والمكالمة لا يُرسم بلاغاً عامّاً** (§٦٦): رسالةٌ تُعدّ في شارتها، ومكالمةٌ ترنّ على شاشتها
+      if (routeCommsPush(payload.data, "received")) return;
       if (!firstSighting(payload.title, payload.body)) return;
       notify(payload.title, payload.body);
       play(EVENT_SOUND[payload.data?.type ?? ""] ?? "notify");
@@ -226,6 +229,11 @@ export function RideProvider({ children }: { children: ReactNode }) {
           return;
 
         default: {
+          // **محادثةُ الرحلة ومكالمتُها على المقبس نفسِه** (§٦٦) — تُمرَّر إلى طبقتها (`lib/comms.tsx`) ولا تمرّ بأحداث الرحلة
+          if (isTripCommsEvent(event)) {
+            dispatchTripComms(event);
+            return;
+          }
           const withRide = event as { ride?: Ride };
           if (withRide.ride) {
             // الحدث النهائي يترك الرحلة معروضةً: شاشة الدفع والتقييم تبنيان

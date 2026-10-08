@@ -8,7 +8,8 @@
  * المسار المجمَّد على الرحلة وموضع الكبتن عليه — **حسابُ هندسةٍ للعرض لا يُسعَّر منه شيء** (`lib/route-line`).
  *
  * **وما رسمته اللوحةُ ولا مصدرَ له اليوم — لم يُرسم** (`TAXO2-DESIGN-CORRECTIONS.md` §٢٤): رمزُ الرحلة · مهلةُ الوصول ووقتُه ·
- * «اتصال» و«رسالة» و«أمان» و«طوارئ SOS» · «عادةً أقل من دقيقة».
+ * «أمان» و«طوارئ SOS» · «عادةً أقل من دقيقة». **و«رسالة» و«اتصال» صار لهما مصدر** (SPEC §٦٦، ٢٠٢٦-١٠-٠٨): `CommsButtonsT2` في
+ * R08 · R09 من قبول الكبتن حتى انتهاء الرحلة، وطبقتُهما فوق الشاشات (`lib/comms.tsx`).
  *
  * **وبُني منها بندان** (§٦٢-ج/٢٧): **السياراتُ حولك أثناء البحث** وعدُّها في سطر R07 («6 كباتن حولك الآن» — ممّا تُرسمه الخريطةُ
  * نفسُها، `Home.tsx`)، **وعددُ رحلات الكبتن** في بطاقة R08 («4.92 · 2,140 رحلة» — `GET /rides/{id}/driver/stats`).
@@ -50,6 +51,7 @@ import { distanceKm, lengthKm, trimRoute, type LatLng } from "@/lib/route-line";
 import { skinImageUrl } from "@/lib/skin";
 import { DISPLAY_LOCALE, currencyLabel, formatDistance, formatMoney, ratedAverage } from "@/lib/utils";
 
+import { CommsButtonsT2 } from "./CommsT2";
 import { ForOtherTrackT2 } from "./ForOtherT2";
 import { HourlyTrackT2 } from "./HourlyT2";
 import { ParcelTrackT2 } from "./ParcelT2";
@@ -351,6 +353,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             </div>
           </div>
         ) : null}
+        {/* **«رسالة» و«اتصال»** (§٦٦) — تحت الكبتن ما دامت الرحلةُ جارية، ويغيبان بانتهائها */}
+        <CommsButtonsT2 />
         {badges}
         <div className={progress || clock ? "t2-trk-stats" : "t2-trk-stats two"}>
           {/* **الساعةُ مكانَ «كم متبقية» للساعات** (§٦٣-ج/٥): الباقي من «البدء + الساعات»، **ثمّ «وقتٌ زائد» بنبرة التنبيه** — وما
@@ -511,6 +515,8 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
           ) : null}
         </div>
       ) : null}
+      {/* **«رسالة» و«اتصال»** (§٦٦) — من قبول الكبتن، تحت بطاقته (وبطاقةِ الكبتنة ورمزِ الرحلة في RW4) */}
+      {driver ? <CommsButtonsT2 /> : null}
       {/* **الراكبُ الفعليُّ والدافعُ ورابطُ التتبّع** (§٦٣-ج/١) — تحت بطاقة الكبتن */}
       {ride.for_other ? <ForOtherTrackT2 ride={ride} /> : null}
       {/* **مستلمُ الطرد ودافعُه** (§٦٣-ج/٤) — تحت بطاقة الكبتن */}

@@ -8,7 +8,7 @@
  * `require_permission` يقرأ الصفوفَ في كلِّ طلب، **فلا حالتان تختلفان**.
  * ومن أطفأ خليةً هنا أطفأ باباً حقيقياً.
  *
- * **والاثنتا عشرةَ مشتقّةٌ من الموجّهات لا مخترعة**، **والغيابُ يُقرأ «افتراضُ
+ * **والأربعَ عشرةَ مشتقّةٌ من الموجّهات لا مخترعة** (اثنتا عشرةَ بالدور، **واثنتان بالاسم وحدَه** — §٦٦)، **والغيابُ يُقرأ «افتراضُ
  * الدور»** لا «لا يملك شيئاً» — ولذلك يُعرض `explicit` صراحةً.
  *
  * **ولا زرَّ «دعوة مستخدم»**: الحساب يُنشأ بإثبات ملكية رقمٍ من التطبيق (القسم
@@ -31,6 +31,7 @@ import { Table } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { moment } from "@/lib/format";
+import { CALL_RECORDINGS_LISTEN, TRIP_CHATS_READ, refreshMyPermissions } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -41,7 +42,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 /** ما تفرضه الخلفية فعلاً — كلُّ سطرٍ يقابل حارساً في `core/deps.py`. */
-/** أسماءُ الصلاحيات الاثنتي عشرة كما يعرضها العربيُّ — **والمفاتيحُ من
+/** أسماءُ الصلاحيات الأربعَ عشرةَ كما يعرضها العربيُّ — **والمفاتيحُ من
  *  الخلفية**: قائمةٌ تُكتب هنا بيدٍ تفترق عن التعداد أوّلَ عضوٍ يُضاف. */
 const PERMISSION_LABEL: Record<string, string> = {
   "settings.write": "الإعدادات — التسعيرة والخطط والمفاتيح",
@@ -58,7 +59,13 @@ const PERMISSION_LABEL: Record<string, string> = {
   "errors.read": "شاشة الأعطال — قراءتها وحسمُها",
   // **لا تُعطى افتراضاً لأحد** (SPEC §٦٥-د/٧) — المشرفُ الكاملُ بلا صفوفٍ لا يملكها، فتُمنح هنا بالاسم
   "finance.summary": "الملخّصات المالية — قراءة المجاميع ومن وراءها وتصديرُها (لا تُعطى افتراضاً)",
+  // **A36 — الحسّاستان** (§٦٦-ب/١٠، §٦٦-ج/١٦): لا تأتيان بالدور (`permissions.SENSITIVE`)، فتُمنحان من هذه الخلايا بالاسم
+  [TRIP_CHATS_READ]: "قراءة محادثات الرحلات وبلاغاتها",
+  [CALL_RECORDINGS_LISTEN]: "الاستماع إلى تسجيلات المكالمات",
 };
+
+/** **ما لا يُعطى افتراضاً لأحد** — ولا للمشرف الكامل: يُرسم تحت اسمه سطرٌ يقول ذلك. */
+const NAMED_ONLY: ReadonlySet<string> = new Set([TRIP_CHATS_READ, CALL_RECORDINGS_LISTEN]);
 
 const COLUMNS = "1.6fr 1.2fr 1.2fr 1fr";
 
@@ -174,6 +181,8 @@ function PermissionsMatrix({
     try {
       await setAdminPermissions(row.user_id, next);
       onDone(`حُدِّثت صلاحياتُ ${row.name}`);
+      // **وما يرسمه الإطارُ يُقرأ من جديد** — تبويبُ المحادثة وصفحةُ البلاغات لا تبقى لمن نُزعت عنه للتوّ
+      refreshMyPermissions();
       await load();
     } catch (caught) {
       onError(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
@@ -214,7 +223,14 @@ function PermissionsMatrix({
             <tbody>
               {keys.map((key) => (
                 <tr key={key} className="border-t border-line">
-                  <td className="p-12 text-ink">{PERMISSION_LABEL[key]}</td>
+                  <td className="p-12 text-ink">
+                    {PERMISSION_LABEL[key]}
+                    {NAMED_ONLY.has(key) ? (
+                      <span className="block text-10.5 text-muted">
+                        لا تُعطى افتراضاً لأيِّ مشرف ولا للمشرف الكامل — تُمنح بالاسم، وكلُّ فتحٍ أو استماعٍ يُسجَّل باسم صاحبه
+                      </span>
+                    ) : null}
+                  </td>
                   {rows.map((row) => (
                     <td key={row.user_id} className="p-12">
                       <span className="flex justify-center">

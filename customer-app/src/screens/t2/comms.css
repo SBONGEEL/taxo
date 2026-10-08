@@ -1,0 +1,435 @@
+/* ═══ المحادثةُ والمكالمةُ داخل الرحلة (SPEC §٦٦) — `CommsT2.tsx` ════════════════════════════════════════════════════════
+ *
+ * **من رموز الهوية وحدَها** (`taxo2/tokens.css`) — فتتبع المظهرَ القائم بلا مفتاحٍ ثانٍ: **الفاتحُ والداكن**، **والنسائيُّ برقوقاً**
+ * لأن الجمرَ نفسَه يصير برقوقاً هناك. **ولا رمزَ داكنٌ وحدَه بلا بديل** (`check:t2-css`). **ولا لوحاتٍ لها بعد** (§٦٦-د/٧):
+ * المقاساتُ من أخواتها — ورقةُ الرحلة (R06–R09)، والبلاغُ (`t2-notice`)، والأزرار (`t2-button`) — وتُطابَق اللوحاتِ حين تصل.
+ *
+ * **ونسخةٌ واحدةٌ في التطبيقين حرفاً.**
+ */
+
+/* ── الزرّان في ورقة الرحلة ── */
+.t2-cm-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.t2-cm-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-cm-action .t2-icon { font-size: 20px; color: var(--t2-accent-text); }
+.t2-cm-action:active { transform: scale(0.98); }
+.t2-cm-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-family: var(--t2-font-num);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* ── ورقةُ المحادثة ── */
+.t2.t2-cm-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 0;
+  background: var(--t2-scrim);
+}
+.t2-cm-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 512px;
+  height: calc(var(--vvh, 100dvh) - 24px - env(safe-area-inset-top, 0px));
+  border-radius: 26px 26px 0 0;
+  background: var(--t2-bg);
+  box-shadow: var(--t2-sheet-shadow);
+  overflow: hidden;
+}
+.t2-cm-grab {
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 2px;
+  border-radius: 99px;
+  background: var(--t2-line);
+}
+.t2-cm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid var(--t2-divider);
+}
+.t2-cm-round {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-text);
+  cursor: pointer;
+}
+.t2-cm-round .t2-icon { font-size: 21px; }
+.t2-cm-round.accent { background: var(--t2-accent); color: var(--t2-on-accent); }
+.t2-cm-face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+}
+.t2-cm-face > * { width: 100%; height: 100%; }
+.t2-cm-face > .t2-icon { display: grid; place-items: center; font-size: 22px; }
+.t2-cm-face.lg { width: 96px; height: 96px; }
+.t2-cm-face.lg > .t2-icon { font-size: 44px; }
+.t2-cm-who { flex: 1; min-width: 0; }
+.t2-cm-name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-cm-meta { margin-top: 2px; font-size: 12px; color: var(--t2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-cm-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 14px 0;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: var(--t2-sunken);
+  color: var(--t2-muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.t2-cm-notice .t2-icon { flex: none; font-size: 16px; line-height: 1.4; }
+.t2-cm-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.t2-cm-empty { margin: auto 0; text-align: center; font-size: 12.5px; color: var(--t2-muted); }
+.t2-cm-loading {
+  width: 28px;
+  height: 28px;
+  margin: auto;
+  border: 3px solid var(--t2-line);
+  border-top-color: var(--t2-accent);
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .t2-cm-loading { animation: t2-cm-spin 0.9s linear infinite; }
+}
+@keyframes t2-cm-spin { to { transform: rotate(360deg); } }
+.t2-cm-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 82%; }
+.t2-cm-row.mine { align-self: flex-end; align-items: flex-end; }
+.t2-cm-bubble {
+  padding: 9px 12px;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px 18px 18px 6px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+/* **فقاعاتي بالجمر ونصِّ ما فوقه** — والجمرُ برقوقٌ في النسائيّ، وحبرُه إسفلتٌ ليلاً (الرموز نفسُها) */
+.t2-cm-row.mine .t2-cm-bubble {
+  border-color: transparent;
+  border-radius: 18px 18px 6px 18px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+}
+.t2-cm-when { margin-top: 3px; padding-inline: 4px; font-size: 10.5px; color: var(--t2-faint); }
+.t2-cm-read { color: var(--t2-muted); font-weight: 600; }
+.t2-cm-foot {
+  padding: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px) + var(--vv-bottom, 0px));
+  border-top: 1px solid var(--t2-divider);
+  background: var(--t2-surface);
+}
+.t2-cm-compose { display: flex; align-items: center; gap: 8px; }
+.t2-cm-input { height: 46px; border-radius: 16px; }
+.t2-cm-send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  cursor: pointer;
+}
+.t2-cm-send .t2-icon { font-size: 21px; transform: scaleX(-1); }
+.t2-cm-send:disabled { opacity: 0.45; cursor: default; }
+.t2-cm-error { margin: 0 2px 8px; }
+.t2-cm-chars { margin: 4px 4px 0; font-size: 10.5px; color: var(--t2-muted); text-align: end; }
+.t2-cm-closed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2-muted);
+}
+.t2-cm-closed .t2-icon { font-size: 17px; }
+
+/* ── ورقةُ البلاغ — داخل ورقة المحادثة ── */
+.t2-cm-report-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  background: var(--t2-scrim);
+}
+.t2-cm-report {
+  width: 100%;
+  padding: 0 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--t2-surface);
+}
+.t2-cm-report-title { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; font-size: 17px; font-weight: 700; }
+.t2-cm-report-title .t2-icon { font-size: 20px; color: var(--t2-danger); }
+.t2-cm-quote {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--t2-line);
+  color: var(--t2-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.t2-cm-reasons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.t2-cm-reason {
+  padding: 9px 14px;
+  border: 1.5px solid var(--t2-line);
+  border-radius: 99px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-cm-reason.on { border-color: var(--t2-accent); background: var(--t2-accent-soft); color: var(--t2-accent-text); }
+.t2-cm-note { width: 100%; box-sizing: border-box; }
+.t2-cm-wide { width: 100%; margin-top: 12px; }
+.t2-cm-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 44px;
+  margin-top: 4px;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-cm-text .t2-icon { font-size: 19px; }
+.t2-cm-report-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.t2-cm-report-done .t2-icon { font-size: 24px; color: var(--t2-success); }
+
+/* ── شاشةُ المكالمة — فوق كلِّ شيء ── */
+.t2.t2-cm-call {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 22px calc(22px + env(safe-area-inset-bottom, 0px));
+  background: var(--t2-bg);
+  box-sizing: border-box;
+}
+.t2-cm-call-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
+.t2-cm-rec {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--t2-danger-soft);
+  color: var(--t2-danger);
+  font-size: 12px;
+  font-weight: 700;
+}
+.t2-cm-rec .t2-icon { font-size: 14px; }
+.t2-cm-call-who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+.t2-cm-call-name { margin-top: 10px; font-size: 22px; font-weight: 700; }
+.t2-cm-call-meta { font-size: 13px; color: var(--t2-muted); }
+.t2-cm-call-line { margin-top: 6px; font-size: 15px; font-weight: 600; color: var(--t2-muted); }
+.t2-cm-call-line[dir="ltr"] { font-family: var(--t2-font-num); font-size: 26px; color: var(--t2-text); }
+.t2-cm-call-line.bad { color: var(--t2-danger); }
+.t2-cm-call-weak { font-size: 12px; font-weight: 600; color: var(--t2-warning); }
+.t2-cm-consent,
+.t2-cm-incoming,
+.t2-cm-controls,
+.t2-cm-after { display: flex; flex-direction: column; gap: 10px; }
+.t2-cm-consent-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--t2-surface);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.t2-cm-consent-text .t2-icon { flex: none; font-size: 16px; line-height: 1.5; color: var(--t2-danger); }
+.t2-cm-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.t2-cm-big { display: flex; justify-content: space-around; padding: 6px 0 4px; }
+.t2-cm-bigbtn,
+.t2-cm-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.t2-cm-bigbtn-dot {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  /* **لونُ الأرض فوق النجاح والخطر** — حجرٌ نهاراً على أخضرَ وأحمرَ غامقين، وإسفلتٌ ليلاً على فاتحيهما: التباينُ في المظهرين
+     من رموزٍ مرسومة، بلا أبيضَ يغرق في أخضر الليل */
+  color: var(--t2-bg);
+}
+.t2-cm-bigbtn-dot .t2-icon { font-size: 32px; }
+.t2-cm-bigbtn.decline .t2-cm-bigbtn-dot { background: var(--t2-danger); }
+.t2-cm-bigbtn.accept .t2-cm-bigbtn-dot { background: var(--t2-success); }
+.t2-cm-keys { display: flex; justify-content: space-around; }
+.t2-cm-key-dot {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--t2-surface);
+  border: 1px solid var(--t2-line);
+}
+.t2-cm-key-dot .t2-icon { font-size: 26px; }
+.t2-cm-key.on .t2-cm-key-dot { background: var(--t2-text); border-color: var(--t2-text); color: var(--t2-bg); }
+.t2-cm-key.end .t2-cm-key-dot { background: var(--t2-danger); border-color: var(--t2-danger); color: var(--t2-bg); }
+.t2-cm-key:disabled { opacity: 0.45; cursor: default; }
+
+/* ── الشريطُ المصغَّر أعلى الشاشة ── */
+.t2.t2-cm-strip {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 190;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 12px 6px;
+  /* **بالجمر ونصِّ ما فوقه** — فيصير برقوقاً في النسائيّ كبقية الفعل */
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  box-shadow: var(--t2-float-shadow);
+}
+.t2-cm-strip-open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-cm-strip-open .t2-icon { font-size: 19px; }
+.t2-cm-strip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t2-cm-strip-time { font-family: var(--t2-font-num); font-size: 12.5px; }
+.t2-cm-strip-rec { padding: 2px 7px; border-radius: 99px; background: var(--t2-bg); color: var(--t2-danger); font-size: 11px; }
+.t2-cm-strip-end {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t2-danger);
+  color: var(--t2-bg);
+  cursor: pointer;
+}
+.t2-cm-strip-end .t2-icon { font-size: 19px; }

@@ -23,17 +23,33 @@ importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-com
  * **و`navigate()` لا يعمل هنا**: لا يُنقل به إلا نافذةٌ يملكها العاملُ نفسُه، ونطاقُ هذا العامل نطاقُ الدفع لا التطبيق — فيرفض
  * دائماً. **فتُرسل الوجهةُ إلى النافذة** وموجّهُها ينقلها (`onNotificationTap` في `lib/firebase.ts`) بلا إعادة تحميل.
  */
+/* **ونقرةُ رسالةٍ أو مكالمةٍ في الرحلة** (SPEC §٦٦) لا تفتح صفحةَ الرحلة: **المحادثةُ تُفتح، والمكالمةُ ترنّ إن كانت ترنّ بعدُ**
+ * (`lib/trip-comms.ts → routeCommsPush`). **فالحمولةُ تُرسل مع الوجهة** إلى النافذة المفتوحة، **وفي نافذةٍ جديدة تُحمل في الرابط**
+ * (`?comms=…&ride=…&call=…`) فتقرؤها الطبقةُ عند الإقلاع (`components/ride/RideComms.tsx`). */
+const COMMS_TYPES = ["chat_message", "incoming_call"];
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const raw = event.notification.data || {};
   const data = (raw.FCM_MSG && raw.FCM_MSG.data) || raw;
-  const target = data.ride_id ? `/rides/${data.ride_id}` : data.booking_id ? "/account/bookings" : "/";
+  const comms = COMMS_TYPES.indexOf(data.type) >= 0 && data.ride_id;
+  const target = comms
+    ? `/?comms=${encodeURIComponent(data.type)}&ride=${encodeURIComponent(data.ride_id)}&call=${encodeURIComponent(data.call_id || "")}`
+    : data.ride_id
+      ? `/rides/${data.ride_id}`
+      : data.booking_id
+        ? "/account/bookings"
+        : "/";
+  const payload = {};
+  for (const key of ["type", "ride_id", "call_id", "caller_role", "recording"]) {
+    if (typeof data[key] === "string") payload[key] = data[key];
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       for (const client of windows) {
         if ("focus" in client) {
-          client.postMessage({ type: "taxo:notification-tap", target });
+          client.postMessage({ type: "taxo:notification-tap", target, data: payload });
           return client.focus();
         }
       }

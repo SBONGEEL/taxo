@@ -107,6 +107,10 @@ const RidersScreen = lazy(() =>
 const PhotoReportsScreen = lazy(() =>
   import("@/screens/PhotoReports").then((m) => ({ default: m.PhotoReports })),
 );
+// **الرسائلُ المبلَّغُ عنها** (A30، §٦٦-ب/١٣) — بصلاحية `trip_chats.read`، والشاشةُ تقول المنعَ لمن لا يملكها
+const ChatReportsScreen = lazy(() =>
+  import("@/screens/ChatReports").then((m) => ({ default: m.ChatReportsScreen })),
+);
 const OffersScreen = lazy(() =>
   import("@/screens/Offers").then((m) => ({ default: m.OffersScreen })),
 );
@@ -462,6 +466,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <PhotoReportsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/chat-reports"
+                    element={
+                      <Guarded>
+                        <ChatReportsScreen />
                       </Guarded>
                     }
                   />

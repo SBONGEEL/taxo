@@ -7,6 +7,10 @@
 import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  AdminCall,
+  AdminChatReport,
+  AdminChatThread,
+  ChatReportStatus,
   DriverActivity,
   ErrorGroupRow,
   ErrorGroupDetail,
@@ -1403,6 +1407,42 @@ export async function photoReportBlob(reportId: string): Promise<string> {
     headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
   });
   if (!answer.ok) throw new Error("تعذّر فتح الصورة المُبلَّغ عنها");
+  return URL.createObjectURL(await answer.blob());
+}
+
+// ---------------------------------------------- محادثاتُ الرحلات ومكالماتُها (SPEC §٦٦)
+
+/** **محادثةُ رحلة** — بصلاحية `trip_chats.read` وحدَها، **وكلُّ فتحٍ سطرٌ في التدقيق باسم من فتح** — فلا تُطلب إلا حين يُفتح
+ *  تبويبُها، ولا تُعلَّم مقروءةً لطرفيها. */
+export const getRideChat = (rideId: string) => api.get<AdminChatThread>(`/admin/rides/${rideId}/chat`);
+
+/** «الرسائلُ المبلَّغُ عنها» — المفتوحُ أوّلاً، **وفتحُ القائمة يُدقَّق** (فيها نصوصُ محادثات). */
+export const listChatReports = (filters: {
+  status?: ChatReportStatus;
+  country_code?: CountryCode;
+  limit?: number;
+  offset?: number;
+}) => api.get<AdminChatReport[]>("/admin/chat-reports", { query: filters });
+
+/** «عولج» بسطرٍ اختياريّ — مرّةً واحدة، **ومعه يبدأ عدّادُ حذف المحادثة**. */
+export const handleChatReport = (reportId: string, note: string) =>
+  api.post<AdminChatReport>(`/admin/chat-reports/${reportId}/handle`, { note });
+
+/** سجلُّ مكالمات رحلةٍ — بياناتٌ وصفيّةٌ بقراءة القوائم، **ولا صوتَ فيه**. */
+export const listRideCalls = (rideId: string) => api.get<AdminCall[]>(`/admin/rides/${rideId}/calls`);
+
+/** **الاستماعُ إلى تسجيل مكالمة** — بصلاحية `call_recordings.listen` وحدَها، **والسطرُ في التدقيق يُكتب قبل أن يُبثّ الملف**.
+ *
+ *  و`<audio src>` لا يحمل `Authorization` والبابُ إداريّ، **فالجلبُ إلى `blob` ضرورةٌ لا اختيار** — كصور الوثائق. **ومن يفتحها
+ *  يغلقها** (`URL.revokeObjectURL`). **ونصُّ رفض الخادم يُعاد كما هو** — «لا صلاحية» غيرُ «انتهت مدّةُ التسجيل». */
+export async function callRecordingBlob(callId: string): Promise<string> {
+  const answer = await fetch(`${API_URL}/admin/calls/${callId}/recording`, {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) {
+    const body = (await answer.json().catch(() => ({}))) as { message?: unknown };
+    throw new Error(typeof body.message === "string" ? body.message : "تعذّر فتح التسجيل");
+  }
   return URL.createObjectURL(await answer.blob());
 }
 

@@ -51,6 +51,8 @@ run "check:taxo2"          node tools/check-taxo2.mjs
 run "check:t2-css"         node tools/check-t2-css.mjs
 # **ولا نغمةَ مركّبةً في التطبيقات** (§٦٢/١٢): كلُّ صوتٍ ملفٌّ من العائلة، وكلُّ ملفٍّ في `public/`
 run "check:sounds"         node tools/check-sounds.mjs
+# **و«اتصال» في الغلاف بعلامةٍ تُشحن مع إذن الميكروفون لا برقمِ بناء** (§٦٦-د/٨) — والعلامةُ والبيانُ لا يفترقان
+run "check:mic-gate"       node tools/check-mic-gate.mjs
 run "check:ci-timeouts"     node tools/check-ci-timeouts.mjs
 run "check:env-leak"        node tools/check-env-leak.mjs
 run "check:exec-bit"        node tools/check-exec-bit.mjs

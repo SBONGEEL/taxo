@@ -49,7 +49,11 @@ export type Cue =
   | "error"
   | "notify"
   | "signature"
-  | "turn";
+  | "turn"
+  // **مكالمةُ الرحلة** (§٦٦-د/٤): رنينُ الوارد · نغمةُ «يرنّ» الصادرة · الإنهاء — من العائلة نفسِها لا أصواتٌ جديدة
+  | "callRing"
+  | "callDial"
+  | "callEnd";
 
 /** **ما اختاره المالك — يحلّ محلَّ نغمته في موضعها وتحت مفاتيحها** (§٦١-ي/١٢).
  *
@@ -80,6 +84,13 @@ const FILES: Record<Cue, string> = {
   signature: "sounds/welcome.mp3",
   // **المنعطفُ القادم** (§٦٢-ج/٣٤) — نغمةٌ واحدةٌ نقيّة لا يستعملها حدثٌ آخر: تُعرف من أوّل سماعٍ وهو يقود
   turn: "sounds/turn.mp3",
+  // **رنينُ المكالمة الواردة** (§٦٦-د/٤) — **ملفُّ الطلب الوارد نفسُه** (`request.mp3`): أطولُ أصوات العائلة وصُنع ليتكرّر بلا
+  // فاصل. **ولكن تحت «ما عدا الطلب» لا تحت مفتاح الطلب** (`allowed`): من أسكت الطلبَ قصد الطلب، والمكالمةُ ليست طلباً
+  callRing: "sounds/request.mp3",
+  // **«يرنّ…» عند المتصل** — نغمةُ «تأكيد الطلب» عند الراكب (`confirm.mp3`، نُسخت من تطبيقه): قصيرةٌ واحدة، «أُرسلت»
+  callDial: "sounds/confirm.mp3",
+  // **انتهت المكالمة** — نغمةُ الانتهاء نفسُها: خبرٌ هادئٌ لا إنذار
+  callEnd: "sounds/ended.mp3",
 };
 
 
@@ -264,7 +275,8 @@ function buzz(cue: Cue): void {
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
   try {
     navigator.vibrate(
-      cue === "offer" ? [350, 200, 350] : [120],
+      // **والمكالمةُ الواردةُ بنبضة الطلب** — حدثٌ ينتظر جواباً الآن، لا خبرٌ يُقرأ لاحقاً
+      cue === "offer" || cue === "callRing" ? [350, 200, 350] : [120],
     );
   } catch {
     // جهازٌ يعلن الدالّةَ ويمنعها — ولا شيءَ يُفعل، والصوتُ قائم
@@ -275,6 +287,37 @@ function buzz(cue: Cue): void {
  *  لطولٍ واحد يفترق عنه أوّلَ مرّةٍ يُستبدل الملفّ. وصفرٌ لملفٍّ لم يُفكّ بعد. */
 export function durationOf(cue: Cue): number {
   return buffers.get(FILES[cue])?.duration ?? 0;
+}
+
+/** **يكرّر نغمةً حتى يُوقفها من طلبها** — رنينُ المكالمة الواردة (§٦٦-د/٤). ويعيد ما يوقفها.
+ *
+ * **بـ`loop` المصدر نفسِه لا بمؤقّت** — بخلاف حلقة الطلب (`startOfferLoop`) التي تُعيد بالمؤقّت لأن الاهتزازَ يصحب كلَّ دورة:
+ * الرنينُ يهتزّ مرّةً عند بدئه (`buzz`) ويتكرّر صوتُه من الذاكرة بلا فاصل. **وبالمفتاح نفسِه** (`allowed`) — والمكالمةُ تُرى على
+ * شاشتها كاملةً فلا تفوته صامتة. **ووقفٌ يقع قبل فكّ الملفّ يمنع بدءَه** — لا رنينَ لمكالمةٍ رُدّ عليها. */
+export function loop(cue: Cue): () => void {
+  let stopped = false;
+  let source: AudioBufferSourceNode | null = null;
+  const ctx = context;
+  if (unlocked && ctx && allowed(cue)) {
+    buzz(cue);
+    void load(cue).then((buffer) => {
+      if (!buffer || stopped) return;
+      source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(ctx.destination);
+      source.start();
+    });
+  }
+  return () => {
+    stopped = true;
+    try {
+      source?.stop();
+    } catch {
+      // انتهت أو لم تبدأ — ولا شيءَ يُوقَف
+    }
+    source = null;
+  };
 }
 
 

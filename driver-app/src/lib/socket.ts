@@ -24,6 +24,7 @@ import { reportLocationOverRest } from "@/api/endpoints";
 import { onlineService } from "@/lib/online-service";
 import type { Ride } from "@/api/types";
 import { deviceId } from "@/lib/device";
+import type { TripCommsEvent } from "@/lib/trip-comms";
 
 export type DriverSocketEvent =
   | { type: "connected"; active_ride: Ride | null }
@@ -60,6 +61,8 @@ export type DriverSocketEvent =
     }
   // **بلاغٌ لما لا يُرسم من حدثٍ له** (§٦١-ل/٣) — الحمولةُ نفسُها التي يحملها إشعارُه
   | { type: "notice"; title: string; body: string; data: Record<string, string> }
+  // **محادثةُ الرحلة ومكالمتُها** (§٦٦) — على المقبس نفسِه، وطبقتُها في `lib/comms.tsx`
+  | TripCommsEvent
   | { type: "error"; detail: string };
 // ولا عضوَ جامع `{ type: string }` في الاتحاد: وجودُه يجعل كل فرعٍ في
 // `switch` غيرَ مُضيَّق فيصير كلُّ حقلٍ `unknown`. والأحداثُ غيرُ المعروفة

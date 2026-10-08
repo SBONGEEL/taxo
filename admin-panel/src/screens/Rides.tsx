@@ -48,14 +48,17 @@ import type {
   RideStatus,
 } from "@/api/types";
 import { OpenProfile } from "@/components/profile/OpenProfile";
+import { RideCallsSection, RideChatTab } from "@/components/RideComms";
 import { RouteCanvas } from "@/components/RouteCanvas";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Segmented } from "@/components/ui/Segmented";
 import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { useConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
+import { TRIP_CHATS_READ, useMyPermissions } from "@/lib/permissions";
 import { moment, money } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 
@@ -291,6 +294,10 @@ function RideModal({
 }) {
   const [ride, setRide] = useState<AdminRideDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // **A29 — تبويبُ المحادثة لمن يملك `trip_chats.read` وحدَه** (§٦٦-ب/١٠)، ولا يُطلب إلا حين يُختار: كلُّ فتحٍ سطرٌ في التدقيق
+  const held = useMyPermissions();
+  const canChat = held?.has(TRIP_CHATS_READ) === true;
+  const [tab, setTab] = useState<"details" | "chat">("details");
 
   useEffect(() => {
     getRide(rideId)
@@ -324,16 +331,36 @@ function RideModal({
         </div>
 
         <div className="ad-sheet-body">
-          <ErrorNote message={error} />
+          {canChat ? (
+            <div className="mb-12">
+              <Segmented
+                label="العرض"
+                value={tab}
+                onPick={setTab}
+                options={[
+                  { key: "details", label: "التفاصيل" },
+                  { key: "chat", label: "المحادثة" },
+                ]}
+              />
+            </div>
+          ) : null}
 
-          {ride === null ? (
-            error ? null : (
-              <div className="ad-sec-loading">
-                <Spinner />
-              </div>
-            )
+          {canChat && tab === "chat" ? (
+            <RideChatTab rideId={rideId} />
           ) : (
-            <RideBody ride={ride} />
+            <>
+              <ErrorNote message={error} />
+
+              {ride === null ? (
+                error ? null : (
+                  <div className="ad-sec-loading">
+                    <Spinner />
+                  </div>
+                )
+              ) : (
+                <RideBody ride={ride} />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -584,6 +611,9 @@ function RideBody({ ride }: { ride: AdminRideDetail }) {
           <p className="ad-kv-text">{ride.cancelled_reason}</p>
         </Section>
       ) : null}
+
+      {/* **A34 — المكالمات** (§٦٦-ج/١٦): من اتصل بمن ومتى وكم وكيف انتهت — **و«استماع» لمن يملك صلاحيتَه وحدَه** */}
+      <RideCallsSection rideId={ride.id} />
     </>
   );
 }

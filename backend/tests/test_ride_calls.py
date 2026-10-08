@@ -521,6 +521,73 @@ async def test_no_recording_is_kept_unless_both_sides_saw_the_notice(
     assert call.recording_path is None and call.recording_expires_at is None
 
 
+async def test_a_recorded_call_rings_only_after_the_caller_saw_the_notice(
+    client: AsyncClient, session_factory
+) -> None:
+    """**لا رنينَ قبل «متابعة»** (قِيس ٢٠٢٦-١٠-٠٨): كان الرنينُ يُبثّ مع البدء، **فيرنّ هاتفُ الطرف الآخر والمتصلُ بعدُ أمام
+    التنبيه**، و«إلغاء» يتركه بـ«مكالمةٌ فائتة» عن مكالمةٍ لم تُجرَ. **فالرنينُ يُبثّ من الإقرار، وثلاثونُه منه**، والمتروكةُ على
+    التنبيه تُكتب `cancelled` بلا فائتة."""
+    await _turn_recording_on(session_factory)
+    trip = await _trip(client, session_factory)
+    await enable_push_provider(session_factory)
+    await register_device(client, trip["driver"]["headers"], device_id="driver-phone", token="fcm-driver")
+    rider, driver_id = trip["rider"]["headers"], trip["driver"]["user_id"]
+    pubsub = await _listen_to(driver_id)
+
+    async def rings() -> list[str]:
+        return [event["call_id"] for event in await _drain(pubsub) if event["type"] == "incoming_call"]
+
+    async def missed_in_inbox() -> int:
+        return sum(1 for row in await inbox_of(session_factory, driver_id) if row.kind == "missed_call")
+
+    # ١) البدءُ لا يرنّ — و«إلغاء» على التنبيه لا يترك فائتة
+    first = (await _start(client, trip)).json()
+    assert first["recording"] is True
+    assert await rings() == []
+    assert await pushes_to("fcm-driver") == []
+    cancelled = await client.post(f"/calls/{first['call_id']}/end", json={}, headers=rider)
+    assert cancelled.status_code == 200 and cancelled.json()["end_reason"] == "cancelled"
+    assert await missed_in_inbox() == 0
+
+    # ٢) «متابعة» ترنّ مرّةً واحدة — **وثلاثونُها من الإقرار**: عشرون ثانيةً على التنبيه لا تُقتطع من رنين الطرف الآخر
+    second = (await _start(client, trip)).json()
+    await _age(session_factory, second["call_id"], 20)
+    assert await rings() == []
+    noticed = await client.post(f"/calls/{second['call_id']}/recording-notice", headers=rider)
+    assert noticed.status_code == 200, noticed.text
+    twice = await client.post(f"/calls/{second['call_id']}/recording-notice", headers=rider)
+    assert twice.status_code == 200, twice.text
+    assert await rings() == [second["call_id"]]
+    [push] = await pushes_to("fcm-driver")
+    assert push["data"]["type"] == "incoming_call" and push["data"]["call_id"] == second["call_id"]
+    call = await _call(session_factory, second["call_id"])
+    # **الرنينُ بدأ لحظةَ الإقرار** — لا قبل عشرين ثانية؛ ولحظةُ الضغط على «اتصال» باقيةٌ في `created_at`
+    assert call.started_at == call.caller_notice_at and call.started_at > call.created_at
+    assert datetime.now(UTC) - call.started_at < timedelta(seconds=10)
+    answered = await client.post(
+        f"/calls/{second['call_id']}/answer", json={"recording_notice_ack": True}, headers=trip["driver"]["headers"]
+    )
+    assert answered.status_code == 200, answered.text
+    await client.post(f"/calls/{second['call_id']}/end", json={}, headers=rider)
+
+    # ٣) مسجَّلةٌ تُركت على التنبيه ثلاثين ثانية: لا تُقَرّ بعدها، **والكنسُ يكتبها `cancelled` ولا يُرسل «فائتة»**
+    third = (await _start(client, trip)).json()
+    await _age(session_factory, third["call_id"], 31)
+    late = await client.post(f"/calls/{third['call_id']}/recording-notice", headers=rider)
+    assert late.status_code == 409 and late.json()["code"] == "call_not_active"
+    async with session_factory() as session:
+        swept = await ride_calls.expire_ringing(session)
+        await session.commit()
+        for lapsed in swept:
+            await ride_calls.publish_missed(session, get_redis_client(), lapsed)
+    assert [str(call.id) for call in swept] == [third["call_id"]]
+    assert (await _call(session_factory, third["call_id"])).end_reason.value == "cancelled"
+    assert await rings() == []
+    assert await missed_in_inbox() == 0
+    assert len(await pushes_to("fcm-driver")) == 1
+    await pubsub.aclose()
+
+
 # ═════════════════════════ ٦) سجلُّ المكالمات للّوحة — بياناتٌ وصفيّةٌ وحدَها
 
 

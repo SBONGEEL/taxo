@@ -23,19 +23,20 @@ import { getMyTotp } from "@/api/endpoints";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { useCountries } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
-import { useHolds } from "@/lib/permissions";
+import { TRIP_CHATS_READ, useMyPermissions } from "@/lib/permissions";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { Icon, Wordmark } from "@/taxo2";
 
 /** **صلاحيةُ «الملخّصات المالية»** (SPEC §٦٥-د/٧) — **لا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل**، فبندُها يُرسم لمن مُنحها بالاسم وحدَه
- *  (`useHolds`). **والدورُ لا يقولها**: `adminOnly` يرسم البندَ لكلِّ `admin`، وأكثرُهم يُردّ عنها. */
+ *  (`useMyPermissions` — بندٌ لا يُرسم قبل الجواب ولا يظهر ثمّ يختفي). **والدورُ لا يقولها**: `adminOnly` يرسم البندَ لكلِّ `admin`، وأكثرُهم يُردّ عنها. */
 const FINANCE_SUMMARY = "finance.summary";
 
 /** المجموعاتُ كما في `DESIGN.md` §3.1 — و`to` غائبةً تعني «لم تُبنَ بعد». **والأيقونةُ من الهوية** (Material Symbols Rounded). */
 const GROUPS: {
   label: string;
-  items: { label: string; icon: string; to?: string; adminOnly?: boolean; permission?: typeof FINANCE_SUMMARY }[];
+  /** **و`permission` لما لا يأتي بالدور**: صلاحيةٌ تُمنح بالاسم (§٦٦) — لا تُرسم لمن لا يملكها، والخادمُ يحرسها */
+  items: { label: string; icon: string; to?: string; adminOnly?: boolean; permission?: string }[];
 }[] = [
   {
     label: "العمليات",
@@ -52,6 +53,9 @@ const GROUPS: {
       { label: "الركّاب", icon: "group", to: "/riders" },
       { label: "النزاعات والدعم", icon: "gavel", to: "/disputes" },
       { label: "بلاغات الصور", icon: "hide_image", to: "/photo-reports", adminOnly: true },
+      // **الرسائلُ المبلَّغُ عنها** (A30، §٦٦-ب/١٣) — جوارَ بلاغات الصور: كلاهما بلاغٌ ينتظر قراراً. **وبصلاحيتها لا بالدور**:
+      // `trip_chats.read` لا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل، **وفتحُ القائمة نفسُه يُدقَّق** (فيها نصوصُ محادثات)
+      { label: "الرسائل المبلَّغ عنها", icon: "flag", to: "/chat-reports", permission: TRIP_CHATS_READ },
     ],
   },
   {
@@ -216,9 +220,8 @@ export function Shell({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, isAdmin, signOut } = useSession();
+  const held = useMyPermissions();
   const { dark, toggle } = useTheme();
-  // **قبل الجواب لا يُرسم البند** (`null`) — بندٌ يظهر ثمّ يختفي أسوأُ من بندٍ يتأخّر لحظة
-  const holdsSummary = useHolds(FINANCE_SUMMARY) === true;
   // **درجُ القائمة على الهاتف** — يُغلق بالتنقّل، وبالنقر خارجه، وبـEsc
   const [menu, setMenu] = useState(false);
   const nav = useRef<HTMLElement | null>(null);
@@ -277,7 +280,7 @@ export function Shell({
         <nav ref={nav} className="ad-nav scr">
           {GROUPS.map((group) => {
             const items = group.items.filter(
-              (item) => (!item.adminOnly || isAdmin) && (item.permission !== FINANCE_SUMMARY || holdsSummary),
+              (item) => (!item.adminOnly || isAdmin) && (!item.permission || held?.has(item.permission) === true),
             );
             if (items.length === 0) return null;
             return (

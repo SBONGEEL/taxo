@@ -35,7 +35,7 @@
 ## التسجيل — **مطفأٌ افتراضاً، والتنبيهُ يسبق دائماً بحكم الخادم**
 
 حين يُشعله المالكُ لسوق (`service_settings.call_recording_enabled`): البدءُ يردّ `recording: true` · **عرضُ المتصل لا يُمرَّر حتى
-يُقِرّ** (`recording-notice`) · **وردُّ المتصَل به يُرفض بلا `recording_notice_ack`** (`call_recording_notice_required`) · والتسجيلُ
+يُقِرّ** (`recording-notice`) **ولا ترنّ عند الطرف الآخر حتى يُقِرّ** (الرنينُ يُبثّ من الإقرار، وثلاثونُه منه) · **وردُّ المتصَل به يُرفض بلا `recording_notice_ack`** (`call_recording_notice_required`) · والتسجيلُ
 يُرفع بعد المكالمة من جهاز المتصل بسقفٍ وصيغتين (webm/ogg) وتاريخِ حذف · **والاستماعُ صلاحيةٌ مستقلّةٌ وكلُّ استماعٍ سطرٌ في التدقيق**.
 """
 
@@ -178,8 +178,20 @@ def ice_servers(user_id: uuid.UUID, *, now: datetime | None = None) -> list[dict
 
 
 def _stale(call: RideCall, now: datetime) -> bool:
-    """**ترنّ منذ أكثر من ثلاثين ثانية** — فائتةٌ وإن لم يكتبها أحدٌ بعد."""
+    """**ترنّ منذ أكثر من ثلاثين ثانية** — فائتةٌ وإن لم يكتبها أحدٌ بعد. **و`started_at` بدءُ الرنين**: في المسجَّلة لحظةُ إقرار
+    المتصل (`acknowledge_notice`)، وقبله ثلاثون ثانيةً من الضغط على «اتصال» يقرأ فيها التنبيه."""
     return call.status is RideCallStatus.RINGING and call.started_at <= now - timedelta(seconds=RING_TIMEOUT_SECONDS)
+
+
+def _rang(call: RideCall) -> bool:
+    """**أرنّت عند المتصَل به؟** — المسجَّلةُ لا ترنّ قبل إقرار المتصل بالتنبيه (`acknowledge_notice`)، **فما انتهى قبله لم يَفُت
+    أحداً**: لا يُكتب «لم يُجب» ولا يُرسل «مكالمةٌ فائتة» عن مكالمةٍ لم يعلم بها الطرفُ الآخر."""
+    return not call.recorded or call.caller_notice_at is not None
+
+
+def _lapsed(call: RideCall) -> RideCallEndReason:
+    """**سببُ رنينٍ فاتت ثلاثونُه** — `no_answer` لما رنّ، و`cancelled` لمسجَّلةٍ تركها متصلُها على التنبيه."""
+    return RideCallEndReason.NO_ANSWER if _rang(call) else RideCallEndReason.CANCELLED
 
 
 def _finish(call: RideCall, reason: RideCallEndReason, now: datetime) -> None:
@@ -236,7 +248,7 @@ async def read(session: AsyncSession, *, call_id: uuid.UUID, user: User) -> tupl
     call = await _lock_call(session, call_id)
     if not _stale(call, now):  # pragma: no cover - سبقه غيرُه إليها
         return found, False
-    _finish(call, RideCallEndReason.NO_ANSWER, now)
+    _finish(call, _lapsed(call), now)
     await session.flush()
     return CallParty(call=call, ride=found.ride, side=found.side, other_user_id=found.other_user_id), True
 
@@ -309,7 +321,7 @@ async def start(session: AsyncSession, redis: Redis, *, ride_id: uuid.UUID, user
             _finish(call, RideCallEndReason.FAILED, now)
             dropped.append(call)
         elif _stale(call, now):
-            _finish(call, RideCallEndReason.NO_ANSWER, now)
+            _finish(call, _lapsed(call), now)
             missed.append(call)
         else:
             raise CallBusy()
@@ -382,7 +394,7 @@ async def hang_up(
     if call.status is RideCallStatus.ACTIVE:
         reason = RideCallEndReason.COMPLETED
     elif _stale(call, now):
-        reason = RideCallEndReason.NO_ANSWER
+        reason = _lapsed(call)
     elif user.id == call.callee_id:
         reason = RideCallEndReason.DECLINED
     else:
@@ -392,16 +404,31 @@ async def hang_up(
     return done, True
 
 
-async def acknowledge_notice(session: AsyncSession, *, call_id: uuid.UUID, user: User) -> CallParty:
-    """**المتصلُ يُقِرّ بتنبيه التسجيل** — وبغيره لا يُمرَّر عرضُه (`signal`). ولمكالمةٍ غيرِ مسجَّلةٍ لا شيءَ يُكتب."""
+async def acknowledge_notice(
+    session: AsyncSession, *, call_id: uuid.UUID, user: User
+) -> tuple[CallParty, bool]:
+    """**المتصلُ يُقِرّ بتنبيه التسجيل** — وبغيره لا يُمرَّر عرضُه (`signal`) **ولا ترنّ عند الطرف الآخر**. ولمكالمةٍ غيرِ مسجَّلةٍ لا
+    شيءَ يُكتب.
+
+    **والثاني في العائد «أترنّ الآن؟»** — الإقرارُ الأوّلُ على مسجَّلةٍ ترنّ، **فيبثّ الراوترُ الرنينَ بعده لا مع البدء** (قِيس
+    ٢٠٢٦-١٠-٠٨): كان يُبثّ مع `POST /rides/{id}/calls`، **فيرنّ هاتفُ الطرف الآخر والمتصلُ بعدُ أمام «متابعة / إلغاء»**، و«إلغاء»
+    يتركه بـ«مكالمةٌ فائتة» عن مكالمةٍ لم تُجرَ. **و`started_at` يصير لحظةَ الإقرار**: الرنينُ يبدأ منها، فثلاثونُه (`_stale`
+    والكنس) تُحسب منها لا من الضغط على «اتصال» — **وتلك باقيةٌ في `created_at`**. **ومسجَّلةٌ فاتت ثلاثونُها على التنبيه لا تُقَرّ**
+    (`call_not_active`): لم ترنّ، ويكتبها الكنسُ `cancelled` بلا إشعار (`_lapsed`).
+    """
     found = await _for_party(session, call_id, user)
     call = await _lock_call(session, call_id)
-    if call.status not in LIVE_STATUSES:
+    now = _now()
+    if call.status not in LIVE_STATUSES or _stale(call, now):
         raise CallNotLive()
+    rings = False
     if call.recorded and user.id == call.caller_id and call.caller_notice_at is None:
-        call.caller_notice_at = _now()
+        call.caller_notice_at = now
+        if call.status is RideCallStatus.RINGING:
+            call.started_at = now
+            rings = True
         await session.flush()
-    return CallParty(call=call, ride=found.ride, side=found.side, other_user_id=found.other_user_id)
+    return CallParty(call=call, ride=found.ride, side=found.side, other_user_id=found.other_user_id), rings
 
 
 async def signal(
@@ -479,7 +506,8 @@ async def announce_ended_by_ride(session: AsyncSession, redis: Redis, ride: Ride
 
 
 async def expire_ringing(session: AsyncSession, *, now: datetime | None = None, limit: int = 200) -> list[RideCall]:
-    """**الرنينُ الفائت يُكتب `no_answer`** — دفعةٌ يأخذها هذا العاملُ وحدَه (`SKIP LOCKED`). الـcommit للمستدعي."""
+    """**الرنينُ الفائت يُكتب `no_answer`** — دفعةٌ يأخذها هذا العاملُ وحدَه (`SKIP LOCKED`). الـcommit للمستدعي. **ومسجَّلةٌ تركها
+    متصلُها على التنبيه تُكتب `cancelled`** (`_lapsed`): لم ترنّ عند أحد."""
     now = now or _now()
     calls = list(
         (
@@ -497,7 +525,7 @@ async def expire_ringing(session: AsyncSession, *, now: datetime | None = None, 
         ).all()
     )
     for call in calls:
-        _finish(call, RideCallEndReason.NO_ANSWER, now)
+        _finish(call, _lapsed(call), now)
     return calls
 
 
@@ -555,11 +583,12 @@ async def publish_ended(redis: Redis, call: RideCall) -> None:
 
 
 async def publish_missed(session: AsyncSession, redis: Redis, call: RideCall) -> None:
-    """**فاتت**: الطرفان على المقبس، **والمتصَلُ به في إشعارٍ عاديٍّ يبقى في صندوقه** (§٦٦-د/٤)."""
+    """**فاتت**: الطرفان على المقبس، **والمتصَلُ به في إشعارٍ عاديٍّ يبقى في صندوقه** (§٦٦-د/٤) — **إن رنّت عنده** (`_rang`):
+    مسجَّلةٌ تركها متصلُها على التنبيه لم يعلم بها، فلا «فائتةَ» تُقال له."""
     from app.services import notifications
 
     await publish_ended(redis, call)
-    if call.callee_id is not None:
+    if call.callee_id is not None and _rang(call):
         await notifications.publish_missed_call(
             session,
             redis,

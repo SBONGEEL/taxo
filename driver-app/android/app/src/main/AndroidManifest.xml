@@ -150,4 +150,34 @@
          النظامُ بثَّ الموقع بعد دقائق، **فيبدو الكبتنُ متصلاً وهو غائب** —
          وذاك أخطرُ من انقطاعٍ ظاهر. ولا يُطلب إلا من شاشة الأذونات. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- **المكالمةُ داخل الرحلة** (SPEC §٦٦-ج، §٦٦-د/٨ — أُضيف ٢٠٢٦-١٠-٠٨، **ولم تُبنَ بها حزمةٌ بعد**).
+         **العلّةُ مقيسة**: لا `RECORD_AUDIO` في أيِّ حزمةٍ مثبَّتة، فالويب‌فيو لا يبلغ الميكروفون — و`getUserMedia` تُرفض عند
+         النداء. والغلافُ (`BridgeWebChromeClient`) يطلب الإذنَ عند أوّل مكالمةٍ لا عند الإقلاع. **و`MODIFY_AUDIO_SETTINGS`** يطلبه
+         الويب‌فيو مع الصوت ليضبط مجرى المكالمة. **وزرُّ «اتصال» لا يظهر في غلافٍ لا يحمل علامتَهما في وكيل المستخدم**
+         (`capacitor.config.ts → android.appendUserAgent` = `src/lib/mic-gate.ts → CALLS_SHELL_MARK`) — لا رقمَ بناء: الرقمُ عددُ
+         إيداعاتِ الفرع فلا يفصل حزمةً فيها الإذنُ عن أخرى. **والعلامةُ والإذنُ يُضافان ويُنزعان معاً**، ويقيسهما
+         `tools/check-mic-gate.mjs`. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- **TODO(stage: native call package) — رنينُ المكالمة والتطبيقُ مغلق** (§٦٦-ج/١٧، §٦٦-د/٤): **مُخطَّطٌ لا مكتوب، بقصد**.
+         `USE_FULL_SCREEN_INTENT` مصرَّحٌ أعلاه لبطاقة الطلب، **ورنينُ المكالمة لا يُكتب اليومَ رغم ذلك** (قِيس ٢٠٢٦-١٠-٠٨ من المصدر):
+         ١. **الخادمُ يرسل كلَّ إشعارٍ بقسم `notification`** (`services/push/fcm.py → _payload`)، و`incoming_call` منه — **وأندرويد
+            يرسم إشعارَ `notification` والتطبيقُ في الخلفية أو مقتولٌ بنفسه، ولا يبلغ `onMessageReceived` أصلاً**. فشيفرةُ رنينٍ
+            تُصغي لرسالة بياناتٍ لن تصلها رسالةٌ حتى يرسل الخادمُ `incoming_call` بياناتٍ وحدَها.
+         ٢. **و`FirebaseMessagingService` واحدٌ يستقبل**: ملحقُ الإشعارات (`com.capacitorjs.plugins.pushnotifications.MessagingService`)
+            هو المسجَّل؛ وخدمةٌ ثانيةٌ تُسقطه أو تُسقط هي — **فتنقطع بطاقةُ الطلب نفسُها** إن أخطأ ترتيبُهما. وهذا أخطرُ ما في الكبتن.
+         ٣. **و`RemoteMessage` ليس على مسار ترجمة `app`**: الملحقُ يجلب `firebase-messaging` بـ`implementation` لا `api`، فصنفٌ هنا
+            يرثه لا يُترجَم بلا تبعيّةٍ تُضاف إلى `build.gradle` بنسخةٍ تطابق نسختَه — **ولا ترجمةَ تقيس ذلك قبل بناء حزمة**.
+         **الخطّةُ لحزمة الدمج** (تُبنى وتُقاس معها، لا قبلها):
+         أ) الخادم: `incoming_call` رسالةُ بياناتٍ بأولويّةٍ عالية **بلا `notification`**، ومعها `ttl` بمهلة الرنين (ثلاثون ثانية).
+         ب) `CallMessagingService extends com.capacitorjs.plugins.pushnotifications.MessagingService` — يستدعي `super` لكلِّ رسالةٍ
+            (فلا ينكسر ما يصل اليوم)، **ولـ`incoming_call` وحدَها** يرسم إشعاراً بـ`setFullScreenIntent` على قناةٍ للمكالمات
+            (`taxo.call`، مجرى الرنين، بصوت `taxo_request` القائم في `res/raw`) بزرَّي «ردّ» و«رفض» — **على غرار `OfferAlert`**
+            (القفلُ والنافذةُ و`canUseFullScreenIntent`)، ونيّتُه `MainActivity` بـ`call_id`.
+         ج) هنا: `<service android:name="com.capacitorjs.plugins.pushnotifications.MessagingService" tools:node="remove" />` وتسجيلُ
+            الخدمة الجديدة بالمرشّح نفسِه، و`firebase-messaging` في `build.gradle` بنسخة الملحق (`firebaseMessagingVersion`).
+         د) الويب: نقرةُ الإشعار تمرّ اليومَ بـ`routeCommsPush` (`src/lib/trip-comms.ts`) فتفتح شاشةَ الرنين إن كانت ترنّ بعدُ —
+            **فالنيّةُ الأصليّةُ تحمل `type` و`call_id` و`ride_id` نفسَها** ولا بابَ جديدٌ في الويب. -->
 </manifest>

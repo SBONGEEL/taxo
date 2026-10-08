@@ -23,6 +23,7 @@ import {
 import type { ReactNode } from "react";
 
 import { BottomNavT2 } from "@/components/BottomNavT2";
+import { RideComms } from "@/components/ride/RideComms";
 import { Welcome, type WelcomeNext } from "@/components/welcome/Welcome";
 import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/welcome/gate";
 import { tokens } from "@/api/client";
@@ -34,6 +35,7 @@ import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
 import { ConfigProvider, useConfig, useFeature } from "@/lib/config";
 import { onNotificationTap } from "@/lib/firebase";
+import { routeCommsPush } from "@/lib/trip-comms";
 import { UNCONFIRMED_FLAG, claimLaunchOpening, needsRider, refreshUnconfirmed } from "@/lib/payment";
 import { RideProvider, isActive, useRide } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
@@ -378,7 +380,15 @@ function WelcomeGate() {
 /** **لمسةُ إشعار النظام تنقل التطبيقَ المفتوح إلى وجهتها** (§٦٤-ج/٤-١، `onNotificationTap`) — تحت الموجّه لأنها تنقل به. */
 function NotificationTaps() {
   const navigate = useNavigate();
-  useEffect(() => onNotificationTap((path) => navigate(path)), [navigate]);
+  useEffect(
+    () =>
+      onNotificationTap((path, data) => {
+        // **نقرةُ رسالةٍ أو مكالمة** (§٦٦) تفتح المحادثةَ أو شاشةَ الرنين فوق ما هو أمامه — لا صفحةَ الرحلة
+        if (routeCommsPush(data, "tap")) return;
+        navigate(path);
+      }),
+    [navigate],
+  );
   return null;
 }
 
@@ -411,6 +421,9 @@ export default function App() {
               {/* تحت الجلسة: الأماكنُ والوجهاتُ الأخيرة كلاهما لحسابٍ بعينه */}
               <PlacesProvider>
               <RideProvider>
+                {/* **المحادثةُ والمكالمةُ داخل الرحلة** (§٦٦) — تحت الرحلة لأنها تقرأ رحلتَها ومقبسَها، **وفوق الشاشات** لأن المكالمةَ
+                    ترنّ في أيِّ شاشة، وطبقتُها مرسومةٌ داخلها (`CommsLayerT2`) */}
+                <RideComms>
                   <Toasts />
                   <NotificationTaps />
                   {/* **الحركةُ فوق `Suspense` لا تحته** (`ui/Motion.tsx`):
@@ -683,6 +696,7 @@ export default function App() {
                   <HardwareBack />
                   <UnconfirmedOpening />
                   <NavBar />
+                </RideComms>
               </RideProvider>
               </PlacesProvider>
             </Boot>

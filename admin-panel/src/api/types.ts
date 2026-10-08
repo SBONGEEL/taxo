@@ -1313,6 +1313,11 @@ export interface ServiceSetting {
    *  — فتعديلُهما يحكم ما يبدأ بعده. */
   cashback_amount: string;
   cashback_days: number;
+  /** **محادثةُ الرحلة ومكالمتُها** (§٦٦) — كم تبقى المحادثةُ وسجلُّ المكالمات بعد انتهاء الرحلة (٩٠ افتراضاً)، **والتسجيلُ (مطفأٌ
+   *  افتراضاً، ولا يُشعَل قبل نشر سطره)** ومدّةُ حفظ ملفّاته. */
+  chat_retention_days: number;
+  call_recording_enabled: boolean;
+  call_recording_retention_days: number;
 }
 
 /** مآلُ دَينٍ لم يعد صاحبُه — **الإدارةُ تختار والكودُ لا يحسم** (قرارُ المالك).
@@ -2252,4 +2257,82 @@ export interface FinanceTransactionsPage {
   limit: number;
   offset: number;
   rows: FinanceTransactionRow[];
+}
+
+// ═════════════════════════ محادثاتُ الرحلات ومكالماتُها (SPEC §٦٦) — مرايا `schemas/trip_chat.py` و`schemas/ride_call.py`
+//
+// **الأسماءُ وحدَها لا الأرقام** — ما يحتاجه من يعالج بلاغاً. **والقراءةُ بصلاحيةٍ مستقلّةٍ لا يملكها أحدٌ افتراضاً**
+// (`trip_chats.read`)، **والاستماعُ بأخرى** (`call_recordings.listen`) — وكلُّ فتحٍ وكلُّ استماعٍ سطرٌ في التدقيق.
+
+/** أسبابُ البلاغ الأربعةُ المُقَرّة — مرآةُ `RideMessageReportReason`. */
+export type ChatReportReason = "abuse" | "harassment" | "fraud" | "other";
+/** **مفتوحٌ يُبقي محادثتَه، ومعالَجٌ يُطلق عدّادَ حذفها** — مرآةُ `RideMessageReportStatus`. */
+export type ChatReportStatus = "open" | "handled";
+
+export interface AdminChatMessage {
+  id: string;
+  sender_role: "rider" | "driver";
+  sender_id: string | null;
+  sender_name: string | null;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+  /** بلاغاتٌ مفتوحةٌ على هذه الرسالة */
+  open_reports: number;
+}
+
+export interface AdminChatThread {
+  ride_id: string;
+  country_code: CountryCode;
+  status: RideStatus;
+  rider_id: string;
+  rider_name: string | null;
+  driver_user_id: string | null;
+  driver_name: string | null;
+  messages: AdminChatMessage[];
+}
+
+export interface AdminReportedMessage {
+  id: string;
+  body: string;
+  sender_role: "rider" | "driver";
+  sender_id: string | null;
+  sender_name: string | null;
+  created_at: string;
+}
+
+/** **صفُّ «الرسائل المبلَّغ عنها»** — الرسالةُ ومرسلُها، ومن أبلغ، والسبب، والرحلة، والحال. */
+export interface AdminChatReport {
+  id: string;
+  status: ChatReportStatus;
+  reason: ChatReportReason;
+  note: string | null;
+  created_at: string;
+  ride_id: string;
+  country_code: CountryCode;
+  message: AdminReportedMessage;
+  reporter_id: string | null;
+  reporter_name: string | null;
+  reporter_role: "rider" | "driver" | null;
+  handled_at: string | null;
+  handled_by_name: string | null;
+  handled_note: string | null;
+}
+
+/** **سجلُّ مكالمةٍ للّوحة — بياناتٌ وصفيّةٌ وحدَها** (`AdminCallOut`): من اتصل بمن، ومتى، وكم، وكيف انتهت، وهل سُجّلت. */
+export interface AdminCall {
+  id: string;
+  caller_role: "rider" | "driver";
+  caller_name: string | null;
+  callee_name: string | null;
+  status: "ringing" | "active" | "ended";
+  started_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  end_reason: "completed" | "declined" | "no_answer" | "failed" | "ride_ended" | "cancelled" | null;
+  recorded: boolean;
+  /** **أثمّة ملفٌّ يُستمع إليه الآن** — والاستماعُ بابٌ بصلاحيته وتدقيقه لا هذا الحقل */
+  has_recording: boolean;
+  recording_expires_at: string | null;
 }

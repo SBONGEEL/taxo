@@ -35,6 +35,7 @@ import { digits } from "@/lib/utils";
 import { CATEGORY_LABEL, CURRENCY_LABEL } from "@/lib/rideFormat";
 import { offerLoopToken, play, startOfferLoop, stopOfferLoop } from "@/lib/sound";
 import { heardFromSystem } from "@/lib/push";
+import { dispatchTripComms } from "@/lib/trip-comms";
 import { presentNotice } from "@/components/PushNotices";
 
 import { getActiveRide, goOfflineOverRest, goOnlineOverRest } from "@/api/endpoints";
@@ -210,6 +211,15 @@ export function RideProvider({ children }: { children: ReactNode }) {
       // **بلاغُ ما لا يُرسم من حدثٍ له** (§٦١-ل/٣) — اشتراكٌ، وثيقةٌ، بقشيش
       case "notice":
         presentNotice(event);
+        break;
+      // **محادثةُ الرحلة ومكالمتُها على المقبس نفسِه** (§٦٦) — تُمرَّر إلى طبقتها (`lib/comms.tsx`) ولا تمسّ حالَ الرحلة
+      case "chat_message":
+      case "chat_read":
+      case "incoming_call":
+      case "call_answered":
+      case "call_ended":
+      case "call_signal":
+        dispatchTripComms(event);
         break;
       case "cliq_transfer_submitted":
         setTransfer({

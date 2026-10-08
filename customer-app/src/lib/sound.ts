@@ -39,7 +39,11 @@ export type Cue =
   | "topup"
   | "error"
   | "notify"
-  | "signature";
+  | "signature"
+  // **مكالمةُ الرحلة** (§٦٦-د/٤): رنينُ الوارد · نغمةُ «يرنّ» الصادرة · الإنهاء — من العائلة نفسِها لا أصواتٌ جديدة
+  | "callRing"
+  | "callDial"
+  | "callEnd";
 
 /** **ما اختاره المالك — يحلّ محلَّ نغمته في موضعها وتحت مفاتيحها** (§٦١-ي/١٢).
  *
@@ -63,6 +67,13 @@ const FILES: Record<Cue, string> = {
   notify: "sounds/notify.mp3",
   // **توقيعُ العلامة** — أوّلُ ما يُسمع بعد الدخول (§9.2)
   signature: "sounds/welcome.mp3",
+  // **رنينُ المكالمة الواردة** (§٦٦-د/٤) — **ملفُّ «الطلب الوارد» عند الكبتن بعينه** (`request.mp3`، نُسخ من تطبيقه): أطولُ
+  // أصوات العائلة (٢٫٢ ث) وصُنع ليتكرّر بلا فاصلٍ مسموع — وهو ما يحتاجه رنين. **وتحت المفتاح العام** كبقية أصوات الرحلة
+  callRing: "sounds/request.mp3",
+  // **«يرنّ…» عند المتصل** — نغمةٌ قصيرةٌ واحدة: «أُرسلت» كتأكيد الطلب، لا رنينٌ يملأ أذنَ من ينتظر
+  callDial: "sounds/confirm.mp3",
+  // **انتهت المكالمة** — نغمةُ الانتهاء نفسُها: خبرٌ هادئٌ لا إنذار
+  callEnd: "sounds/ended.mp3",
 };
 
 /** النغماتُ التي يحكمها مفتاحُ الإشعارات لا المفتاحُ العام. */
@@ -170,4 +181,34 @@ export function play(cue: Cue): void {
 /** طولُ النغمة بالثواني — **من الملفّ نفسِه** (صفرٌ قبل فكّه). */
 export function durationOf(cue: Cue): number {
   return buffers.get(FILES[cue])?.duration ?? 0;
+}
+
+/** **يكرّر نغمةً حتى يُوقفها من طلبها** — رنينُ المكالمة الواردة (§٦٦-د/٤). ويعيد ما يوقفها.
+ *
+ * **بـ`loop` المصدر نفسِه لا بمؤقّت**: نغمةٌ تُعاد من مؤقّتٍ تنجرف عن طولها وتفغر فجوةً أو تتراكب، والمصدرُ الحلقيُّ يعيدها
+ * من الذاكرة بلا فاصل. **وبالمفتاح نفسِه** (`allowed`) — من أطفأ أصواتَ التطبيق لا يرنّ هاتفُه برنين الويب، **والمكالمةُ
+ * تُرى على شاشتها كاملةً** فلا تفوته. **ووقفٌ يقع قبل فكّ الملفّ يمنع بدءَه** (`stopped`) — لا رنينَ لمكالمةٍ رُدّ عليها. */
+export function loop(cue: Cue): () => void {
+  let stopped = false;
+  let source: AudioBufferSourceNode | null = null;
+  const ctx = context;
+  if (unlocked && ctx && allowed(cue)) {
+    void load(cue).then((buffer) => {
+      if (!buffer || stopped) return;
+      source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(ctx.destination);
+      source.start();
+    });
+  }
+  return () => {
+    stopped = true;
+    try {
+      source?.stop();
+    } catch {
+      // انتهت أو لم تبدأ — ولا شيءَ يُوقَف
+    }
+    source = null;
+  };
 }

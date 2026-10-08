@@ -1,0 +1,64 @@
+/* ═══ محادثاتُ الرحلات ومكالماتُها وبلاغاتُها في اللوحة (A29 · A30 · A34 — SPEC §٦٦) ════════════════════════════════════
+ *
+ * **من رموز الهوية وحدَها** فتتبع المظهرين، **ومن عُدّة التفاصيل القائمة** (`ad-kv` · `ad-dh` · `ad-hint`): لا لوحاتٍ لها بعد
+ * (§٦٦-د/٧)، وتُطابَق حين تصل.
+ */
+
+/* سطرُ «فتحُك … يُسجَّل باسمك» — قبل ما يُقرأ لا بعده */
+.ad-cm-audit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--t2-warning-soft);
+  color: var(--t2-warning);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ad-cm-audit .t2-icon { font-size: 17px; }
+
+.ad-cm-refusal {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--t2-surface);
+}
+.ad-cm-refusal > .t2-icon { font-size: 22px; color: var(--t2-danger); }
+.ad-cm-refusal-title { margin: 0; font-size: 14px; font-weight: 700; }
+
+/* المحادثة — **الراكبُ في جهةٍ والكبتنُ في الأخرى** كما يراها طرفاها */
+.ad-cm-thread { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; background: var(--t2-surface); }
+.ad-cm-msg { align-self: flex-start; max-width: 80%; padding: 8px 12px; border-radius: 14px; background: var(--t2-bg); }
+.ad-cm-msg.driver { align-self: flex-end; background: var(--t2-sunken); }
+.ad-cm-who { margin: 0; font-size: 11.5px; font-weight: 700; }
+.ad-cm-side { font-weight: 500; color: var(--t2-muted); }
+.ad-cm-body { margin: 3px 0 0; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ad-cm-when { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 0; font-size: 11px; color: var(--t2-muted); }
+
+/* المكالمات — صفٌّ لكلِّ مكالمة */
+.ad-cm-call { padding: 10px 0; border-bottom: 1px solid var(--t2-divider); }
+.ad-cm-call:last-child { border-bottom: 0; }
+.ad-cm-call-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ad-cm-call-who { display: flex; align-items: center; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.ad-cm-arrow { font-size: 15px; color: var(--t2-muted); transform: scaleX(-1); }
+.ad-cm-call-line { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--t2-muted); }
+.ad-cm-listen { margin-top: 8px; }
+.ad-cm-audio { display: block; width: 100%; margin-top: 4px; }
+
+/* البلاغات (A30) — قائمةٌ وتفصيل */
+.ad-cm-quote {
+  margin: 0;
+  padding: 10px 12px;
+  border-inline-start: 3px solid var(--t2-danger);
+  border-radius: 10px;
+  background: var(--t2-bg);
+  font-size: 13.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ad-cm-clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

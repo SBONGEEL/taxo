@@ -143,13 +143,20 @@ export async function onForegroundMessage(
  *  التطبيقُ على شاشته التي كان فيها، **ولم يبلغ إشعارُ «لم نطلب رحلتك» اختيارَها**.
  *
  *  **والوجهةُ مسارٌ داخليٌّ وحدَه** (`/…` لا `//…`): ما يصل من غير ذلك يُترك. ولا يحتاج Firebase — فلا استيرادَ كسول. */
-export function onNotificationTap(go: (path: string) => void): () => void {
+export function onNotificationTap(go: (path: string, data: Record<string, string>) => void): () => void {
   if (!("serviceWorker" in navigator)) return () => undefined;
   const listener = (event: MessageEvent) => {
-    const message = event.data as { type?: unknown; target?: unknown } | null;
+    const message = event.data as { type?: unknown; target?: unknown; data?: unknown } | null;
     if (message?.type !== "taxo:notification-tap" || typeof message.target !== "string") return;
     if (!message.target.startsWith("/") || message.target.startsWith("//")) return;
-    go(message.target);
+    // **وحمولةُ الإشعار معها** (§٦٦): نقرةُ رسالةٍ تفتح المحادثةَ ونقرةُ مكالمةٍ ترنّ — **قيمٌ نصّيةٌ وحدَها**، وما عداها يُترك
+    const data: Record<string, string> = {};
+    if (message.data && typeof message.data === "object") {
+      for (const [key, value] of Object.entries(message.data as Record<string, unknown>)) {
+        if (typeof value === "string") data[key] = value;
+      }
+    }
+    go(message.target, data);
   };
   navigator.serviceWorker.addEventListener("message", listener);
   return () => navigator.serviceWorker.removeEventListener("message", listener);

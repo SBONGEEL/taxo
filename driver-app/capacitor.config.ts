@@ -39,6 +39,10 @@ const config: CapacitorConfig = {
   webDir: "dist",
   android: {
     allowMixedContent: false,
+    // **علامةُ الغلاف الذي يحمل `RECORD_AUDIO`** (SPEC §٦٦-د/٨) — بها وحدَها يُرسم «اتصال» في الغلاف
+    // (`src/lib/mic-gate.ts → CALLS_SHELL_MARK`). **تُشحن مع البيان في الإيداع نفسِه**، فلا رقمَ بناءٍ يُخمَّن؛
+    // **وتُنزع إن نُزع الإذن** — `tools/check-mic-gate.mjs` يُسقط الحرّاسَ إن افترقا.
+    appendUserAgent: "TAXOCalls/1",
   },
   ...(bundled
     ? {}

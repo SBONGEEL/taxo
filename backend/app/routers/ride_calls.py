@@ -39,7 +39,9 @@ async def start_call(ride_id: uuid.UUID, user: CurrentUser, session: DbSession, 
     # **الجاريةُ التي أغلقها الاتصالُ الجديد (`failed`) تُبلَّغ للطرفين** — فيُغلق الطرفُ الآخر ما بقي مفتوحاً عنده
     for dropped in started.dropped:
         await ride_calls.publish_ended(redis, dropped)
-    await ride_calls.publish_incoming(session, redis, started.call)
+    # **والمسجَّلةُ لا ترنّ هنا** — ترنّ بعد إقرار المتصل بالتنبيه (`/recording-notice`): المتصلُ بعدُ أمام «متابعة / إلغاء»
+    if not started.call.recorded:
+        await ride_calls.publish_incoming(session, redis, started.call)
     return CallStartOut(
         call_id=started.call.id,
         ride_id=started.call.ride_id,
@@ -111,10 +113,15 @@ async def signal_call(
 
 
 @router.post("/calls/{call_id}/recording-notice", response_model=RideCallOut)
-async def acknowledge_recording_notice(call_id: uuid.UUID, user: CurrentUser, session: DbSession) -> RideCallOut:
-    """**المتصلُ أقرّ بأن المكالمةَ مسجَّلة** — وبغيره لا يُمرَّر عرضُه."""
-    found = await ride_calls.acknowledge_notice(session, call_id=call_id, user=user)
+async def acknowledge_recording_notice(
+    call_id: uuid.UUID, user: CurrentUser, session: DbSession, redis: RedisDep
+) -> RideCallOut:
+    """**المتصلُ أقرّ بأن المكالمةَ مسجَّلة** — وبغيره لا يُمرَّر عرضُه، **ولا ترنّ عند الطرف الآخر قبله**: الرنينُ يُبثّ هنا بعد
+    الالتزام، مرّةً عند أوّل إقرار."""
+    found, rings = await ride_calls.acknowledge_notice(session, call_id=call_id, user=user)
     await session.commit()
+    if rings:
+        await ride_calls.publish_incoming(session, redis, found.call)
     return RideCallOut.of(found.call, user.id)
 
 

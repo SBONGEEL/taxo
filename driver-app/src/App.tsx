@@ -52,6 +52,7 @@ import { setWelcomeOpen, subscribeWelcome, welcomeRequests } from "@/components/
 import { tokens } from "@/api/client";
 import { CelebrationSheet } from "@/components/skins/CelebrationSheet";
 import { BottomNavT2 } from "@/components/BottomNavT2";
+import { RideComms } from "@/components/ride/RideComms";
 import { showsNav } from "@/lib/tabs";
 import { ThemeProvider } from "@/lib/theme";
 import { UpdateGate } from "@/lib/update-gate";
@@ -59,6 +60,7 @@ import { bindHardwareBack } from "@/lib/hardware-back";
 import { PermissionsIntroScreen } from "@/screens/PermissionsIntro";
 import { walkDone } from "@/lib/permission-walk";
 import { destinationFor } from "@/lib/notification-route";
+import { routeCommsPush } from "@/lib/trip-comms";
 import { listenToPush } from "@/lib/push";
 import { PushNotices, presentNotice } from "@/components/PushNotices";
 import { useNavCovered } from "@/lib/navCover";
@@ -368,6 +370,8 @@ function PushRouter() {
       // — فلا يُرسم حدثٌ واحدٌ مرّتين إن وصل من الطريقين معاً.
       received: (data, { title, body }) => presentNotice({ title, body, data }),
       tapped: (data) => {
+        // **نقرةُ رسالةٍ أو مكالمة** (§٦٦) تفتح المحادثةَ أو شاشةَ الرنين فوق ما هو أمامه — لا صفحةَ الرحلة
+        if (routeCommsPush(data, "tap")) return;
         const to = destinationFor(data.type, data);
         if (to) navigate(to);
       },
@@ -496,6 +500,9 @@ export default function App() {
                     لجوابٍ واحد — وثلاثةُ نداءاتٍ له تفترق */}
                 <GarageProvider>
                 <RideProvider>
+                  {/* **المحادثةُ والمكالمةُ داخل الرحلة** (§٦٦) — تحت الرحلة لأنها تقرأ رحلتَها ومقبسَها، **وفوق الشاشات** لأن
+                      المكالمةَ ترنّ في أيِّ شاشة، وطبقتُها مرسومةٌ داخلها (`CommsLayerT2`) */}
+                  <RideComms>
                     {/* **الحركةُ فوق `Suspense` لا تحته**، و`Routes` مُثبَّتةٌ على
                         الموقع الذي تحمله الورقةُ الخارجة — نفسُ ما قِيس في تطبيق
                         الراكب: بلا الأولى يموت الانتقال عند أوّل مسارٍ كسول،
@@ -816,6 +823,7 @@ export default function App() {
                     <PushRouter />
                     <PushNotices />
                   <NavBar />
+                  </RideComms>
                 </RideProvider>
                 </GarageProvider>
               </DriverProvider>

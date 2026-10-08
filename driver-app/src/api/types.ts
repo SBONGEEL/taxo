@@ -1406,3 +1406,88 @@ export interface IntercityTrip {
   status: "open" | "departed" | "completed" | "cancelled";
   passengers: IntercityPassenger[];
 }
+
+// ═════════════════════════ محادثةُ الرحلة ومكالمتُها (SPEC §٦٦) — مرايا `schemas/trip_chat.py` و`schemas/ride_call.py`
+//
+// **ولا رقمَ هاتفٍ ولا اسمَ في شيءٍ منها**: الطرفان يقرآن الجانبَ لا الاسم، **واسمُ الكبتن عند الراكب من الرحلة نفسِها**
+// (`ride.driver`) كما يراه اليوم — لا من المحادثة. **والنسخةُ نفسُها في تطبيق الراكب حرفاً**.
+
+/** **جانبُ المرسل أو المتصل** — مرآةُ `RatingRaterType`. */
+export type CommsSide = "rider" | "driver";
+
+export interface ChatMessage {
+  id: string;
+  ride_id: string;
+  sender_role: CommsSide;
+  /** **منّي؟** — من الخادم، فلا يحسبها التطبيقُ من دوره */
+  mine: boolean;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+/** حالُ مكالمةٍ لأحد طرفَيها (`RideCallOut`) — **و`mine` تقول هل أنا المتصل**. */
+export interface RideCall {
+  id: string;
+  ride_id: string;
+  status: "ringing" | "active" | "ended";
+  caller_role: CommsSide;
+  mine: boolean;
+  recording: boolean;
+  started_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  end_reason: "completed" | "declined" | "no_answer" | "failed" | "ride_ended" | "cancelled" | null;
+}
+
+/** **المحادثةُ لطرفها** (`ChatThreadOut`) — وفتحُها يعلّم رسائلَ الطرف الآخر مقروءة، **فلا يُطلب إلا حين تُفتح**. */
+export interface ChatThread {
+  ride_id: string;
+  /** **يُكتب فيها؟** — في النافذة والمفتاحُ مشتعل */
+  open: boolean;
+  /** **يُرسم زرُّ الاتصال؟** — بالحكم نفسِه لمفتاح المكالمة */
+  can_call: boolean;
+  /** ما كان جديداً عند هذا الفتح — وقد علّمه الفتحُ مقروءاً */
+  unread: number;
+  /** سطرُ المراجعة بحرف التصميم المُقَرّ — من الخادم لا من التطبيق */
+  notice: string;
+  max_chars: number;
+  messages: ChatMessage[];
+  /** المكالمةُ الحيّةُ إن وُجدت — يعود إليها تطبيقٌ فُتح من إشعار */
+  active_call: RideCall | null;
+}
+
+/** أسبابُ البلاغ الأربعةُ المُقَرّة — مرآةُ `RideMessageReportReason`. */
+export type ChatReportReason = "abuse" | "harassment" | "fraud" | "other";
+
+export interface ChatReport {
+  id: string;
+  message_id: string;
+  reason: ChatReportReason;
+  status: "open" | "handled";
+  created_at: string;
+}
+
+/** `RTCIceServer` كما يقبله المتصفّح — **ببياناتٍ مؤقّتةٍ من مُرحِّلنا**، وقائمةٌ فارغةٌ في التطوير. */
+export interface IceServer {
+  urls: string[];
+  username: string;
+  credential: string;
+}
+
+export interface CallStart {
+  call_id: string;
+  ride_id: string;
+  ice_servers: IceServer[];
+  /** **مسجَّلة؟** — وإن كانت فلا يُمرَّر عرضي حتى أُقِرّ بالتنبيه */
+  recording: boolean;
+  ring_timeout_seconds: number;
+}
+
+export interface CallAnswer {
+  call_id: string;
+  ride_id: string;
+  ice_servers: IceServer[];
+  recording: boolean;
+}

@@ -6,8 +6,15 @@
 
 import type { RouteStep } from "@/lib/next-instruction";
 import type { UploadOptions } from "@/api/client";
-import { API_URL, api, upload } from "@/api/client";
+import { API_URL, ApiError, api, tokens, upload } from "@/api/client";
 import type {
+  CallAnswer,
+  CallStart,
+  ChatMessage,
+  ChatReport,
+  ChatReportReason,
+  ChatThread,
+  RideCall,
   ErrorReportBody,
   CaptainUnconfirmed,
   CliqDeclare,
@@ -752,3 +759,65 @@ export const postErrorReport = (body: ErrorReportBody) =>
   api.post<{ accepted: boolean }>("/telemetry/errors", body, {
     anonymous: true,
   });
+
+// ------------------------------------------------- محادثةُ الرحلة ومكالمتُها (SPEC §٦٦)
+//
+// **المساراتُ نفسُها للراكب وللكبتن** — الخلفيةُ تقرأ أيَّ طرفٍ أنا من الرحلة لا من الدور. **والنسخةُ نفسُها في تطبيق الراكب**.
+
+/** **فتحُ المحادثة** — ويعلّم رسائلَ الطرف الآخر مقروءةً ويُخبره («قُرئت»)، **فلا يُطلب إلا والورقةُ مفتوحة**: طلبُه لرسم زرٍّ
+ *  كان سيُري الطرفَ الآخر «قُرئت» عن رسالةٍ لم يرها أحد. */
+export const getTripChat = (rideId: string) => api.get<ChatThread>(`/rides/${rideId}/chat`);
+
+/** رسالةٌ — ورفضُها (`chat_closed` · `chat_phone_number` · `chat_link`) بنصّ الخادم العربيّ. */
+export const sendTripChat = (rideId: string, body: string) =>
+  api.post<ChatMessage>(`/rides/${rideId}/chat`, { body });
+
+/** «أبلغ» على رسالة الطرف الآخر — والضغطةُ الثانيةُ تعيد البلاغَ نفسَه. */
+export const reportTripChat = (rideId: string, messageId: string, reason: ChatReportReason, note: string | null) =>
+  api.post<ChatReport>(`/rides/${rideId}/chat/${messageId}/report`, { reason, note });
+
+/** **اتصل** — في نافذة الرحلة وحدَها؛ وبياناتُ المُرحِّل لي أنا، مؤقّتة. */
+export const startRideCall = (rideId: string) => api.post<CallStart>(`/rides/${rideId}/calls`);
+
+/** حالُ مكالمةٍ — **لنقرةِ إشعارٍ**: أترنّ بعدُ أم فاتت؟ */
+export const getRideCall = (callId: string) => api.get<RideCall>(`/calls/${callId}`);
+
+/** «ردّ» — **وفي المسجَّلة بإقرارٍ بالتنبيه** الذي رآه على شاشة الوارد. */
+export const answerRideCall = (callId: string, recordingNoticeAck: boolean) =>
+  api.post<CallAnswer>(`/calls/${callId}/answer`, { recording_notice_ack: recordingNoticeAck });
+
+export const declineRideCall = (callId: string) => api.post<RideCall>(`/calls/${callId}/decline`);
+
+export const endRideCall = (callId: string) => api.post<RideCall>(`/calls/${callId}/end`);
+
+/** **إشارةُ WebRTC إلى الطرف الآخر** — عرضٌ أو جوابٌ أو مرشّح؛ والخادمُ يمرّرها ولا يقرؤها. */
+export const signalRideCall = (callId: string, kind: "offer" | "answer" | "ice", payload: Record<string, unknown>) =>
+  api.post<void>(`/calls/${callId}/signal`, { kind, payload });
+
+/** **المتصلُ أقرّ بأن المكالمةَ مسجَّلة** — وبغيره لا يمرّر الخادمُ عرضَه. */
+export const ackRecordingNotice = (callId: string) => api.post<RideCall>(`/calls/${callId}/recording-notice`);
+
+/** **التسجيلُ يُرفع من جهاز المتصل بعد المكالمة** (webm أو ogg) — لمكالمةٍ أُعلنت مسجَّلةً وحدَها، ومرّةً واحدة.
+ *
+ *  **و`fetch` بـ`POST` لا `upload`**: عميلُ الرفع يفتح بـ`PUT` (رفعُ الوثائق والصور)، والبابُ هنا `POST` — **وفعلٌ خاطئٌ على
+ *  مسارٍ صحيح هو بعينه ما أنشأ `check:contract`**. والملفُّ يُبنى في الذاكرة بعد المكالمة، فلا نسبةَ تقدّمٍ يحتاجها أحد. */
+export async function uploadCallRecording(callId: string, recording: Blob): Promise<RideCall> {
+  const form = new FormData();
+  form.append("file", recording, recording.type.includes("ogg") ? "call.ogg" : "call.webm");
+  const answer = await fetch(`${API_URL}/calls/${callId}/recording`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+    body: form,
+  });
+  const body = (await answer.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!answer.ok) {
+    throw new ApiError(
+      answer.status,
+      String(body.code ?? "http_error"),
+      String(body.message ?? "تعذّر رفع التسجيل"),
+      undefined,
+      body,
+    );
+  }
+  return body as unknown as RideCall;
+}

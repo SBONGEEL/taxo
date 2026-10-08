@@ -15,6 +15,7 @@ import { useSyncExternalStore } from "react";
 
 import { play } from "@/lib/sound";
 import { firstSighting } from "@/lib/notice";
+import { routeCommsPush } from "@/lib/trip-comms";
 
 import "@/taxo2";
 
@@ -56,6 +57,8 @@ export function presentNotice(notice: {
 }): void {
   const { title, body, data } = notice;
   if (!title || document.hidden || data?.type === "ride_offer") return;
+  // **إشعارُ المحادثة والمكالمة لا يُرسم بلاغاً عامّاً** (§٦٦): رسالةٌ تُعدّ في شارتها، ومكالمةٌ ترنّ على شاشتها
+  if (routeCommsPush(data, "received")) return;
   if (!firstSighting(title, body)) return;
   showPushNotice(title, body);
   play(data?.type === "tip_received" ? "credited" : "notify");

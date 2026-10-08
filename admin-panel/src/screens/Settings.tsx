@@ -978,6 +978,32 @@ export function SettingsScreen() {
             ) : null}
           </section>
 
+          {/* **A35 — المحادثة والمكالمة** (§٦٦) — مدّتا الحفظ والتسجيلُ لسوقٍ واحد، من صفِّ الخدمات نفسِه (`service_settings`).
+              **والمفتاحان في «مفاتيح الميزات»** لا هنا: `check:flags` يُلزم كلَّ مفتاحٍ بزرٍّ في قائمتها، **وزرّان لمفتاحٍ واحدٍ
+              بابان يفترقان** — فيُشار إليهما بالاسم */}
+          <section className="rounded-16 border border-line bg-surface p-18">
+            <h2 className="mb-4 text-14 font-bold text-ink">المحادثة والمكالمة</h2>
+            <p className="mb-12 text-11 leading-snug text-muted">
+              مفتاحا «المحادثة داخل الرحلة» و«المكالمة داخل التطبيق» في «مفاتيح الميزات» —{" "}
+              <b className="text-ink">ويرفض الخادمُ إشعالَهما قبل نشر قسمهما في سياستَي الخصوصية</b> للراكب وللكبتن.
+              وهنا كم يبقى ما يُحفظ، وتسجيلُ المكالمات.
+            </p>
+            {serviceRow ? (
+              <ChatCallForm
+                key={serviceRow.country_code}
+                row={serviceRow}
+                disabled={!isAdmin}
+                onSaved={(message) => {
+                  setDone(message);
+                  void load();
+                }}
+                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+              />
+            ) : (
+              <p className="text-12.5 text-muted">لا إعدادَ خدماتٍ لهذه الدولة.</p>
+            )}
+          </section>
+
           {/* مشاركةُ الرحلة (12-ي) — بطاقةٌ مستقلةٌ لجدولٍ مستقل، وأرقامُ
               المعايرةِ الثلاثةُ **مع النسبة لا في شاشةٍ أخرى**: من يضبط الخصم
               يحتاج أن يرى ما يجعل المشاركةَ تقع أصلاً */}
@@ -2714,6 +2740,114 @@ function CashbackForm({
           setBusy(true);
           updateServiceSettings(row.country_code, changes)
             .then(() => onSaved("حُفظ الاسترداد الأسبوعي — يسري على ما يبدأ من سلاسلَ بعده لا على سلسلةٍ قائمة"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ
+      </Button>
+    </>
+  );
+}
+
+/** **A35 — المحادثة والمكالمة** (§٦٦-ب/١٢، §٦٦-ج/١٦) — لسوقٍ واحد: كم تبقى المحادثةُ بعد انتهاء الرحلة (٩٠ افتراضاً)، **وتسجيلُ
+ *  المكالمات مطفأً افتراضاً** ومدّةُ حفظ ملفّاته.
+ *
+ *  **والتسجيلُ مفتاحٌ يُكتب لحظةَ قلبه** (كمفاتيح الميزات) — **ولا يُشعَل قبل نشر سطره**: الخادمُ يرفض بنصٍّ يقول أيَّ السياستين
+ *  تنقصه (`trip_chat.require_published_line`)، **فيُقال تحته بحرفه**. والتحذيرُ الثابتُ فوقه بحرف التصميم. **ولا يُشعله إلا
+ *  المالك** — والشاشةُ لا تقرّر شيئاً عنه. والمدّتان تُرسلان ما تغيّر وحدَه (`PATCH` جزئيّ كإخوته)، والحدودُ في الخلفية (١–٣٦٥٠). */
+function ChatCallForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: ServiceSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [chatDays, setChatDays] = useState(String(row.chat_retention_days));
+  const [recordingDays, setRecordingDays] = useState(String(row.call_recording_retention_days));
+  const [busy, setBusy] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  const changes: Partial<Omit<ServiceSetting, "country_code">> = {};
+  if (Number(chatDays) !== row.chat_retention_days) changes.chat_retention_days = Number(chatDays);
+  if (Number(recordingDays) !== row.call_recording_retention_days) {
+    changes.call_recording_retention_days = Number(recordingDays);
+  }
+  const dirty = Object.keys(changes).length > 0;
+
+  return (
+    <>
+      <div>
+        <Field
+          name="chat_retention_days"
+          label="مدّة حفظ الرسائل (أيام)"
+          dir="ltr"
+          inputMode="numeric"
+          value={chatDays}
+          disabled={disabled}
+          onChange={(event) => setChatDays(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <p className="ad-hint">
+          90 افتراضاً — تُحذف المحادثةُ وسجلُّ مكالماتها بعدها آلياً، إلا ما فيه بلاغٌ مفتوحٌ فحتى يُعالَج ثمّ المدّة.
+        </p>
+      </div>
+
+      <div className="mt-18 flex items-start gap-12">
+        <span className="flex-1">
+          <span className="block text-13 font-semibold text-ink">تسجيل المكالمات</span>
+          {/* **التحذيرُ الثابت بحرف التصميم** (§٦ A35) — فوق المفتاح لا بعد قلبه */}
+          <span className="block text-11 leading-snug text-warn">
+            إشعالُه يُسمِع الطرفين تنبيهاً قبل كلِّ مكالمة، ويحتاج سطراً في سياسة الخصوصية يُنشر قبله.
+          </span>
+        </span>
+        <Switch
+          checked={row.call_recording_enabled}
+          disabled={disabled || switching}
+          label="تسجيل المكالمات"
+          onChange={(next) => {
+            setSwitching(true);
+            setRefusal(null);
+            updateServiceSettings(row.country_code, { call_recording_enabled: next })
+              .then(() =>
+                onSaved(next ? "اشتعل تسجيلُ المكالمات — يسبقه التنبيهُ عند الطرفين" : "أُطفئ تسجيلُ المكالمات"),
+              )
+              .catch((caught) => {
+                setRefusal(caught instanceof ApiError ? caught.message : "تعذّر الحفظ");
+                onError(caught);
+              })
+              .finally(() => setSwitching(false));
+          }}
+        />
+      </div>
+      {refusal ? <ErrorNote message={refusal} /> : null}
+
+      <div className="mt-14">
+        <Field
+          name="call_recording_retention_days"
+          label="مدّة حفظ التسجيلات (أيام)"
+          dir="ltr"
+          inputMode="numeric"
+          value={recordingDays}
+          disabled={disabled}
+          onChange={(event) => setRecordingDays(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <p className="ad-hint">تُجمَّد على التسجيل لحظةَ رفعه، ثمّ يُحذف ملفُّه آلياً — والسجلُّ الوصفيُّ يبقى بمدّة المحادثة.</p>
+      </div>
+
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !dirty || chatDays === "" || recordingDays === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updateServiceSettings(row.country_code, changes)
+            .then(() => onSaved("حُفظت مدّتا الحفظ — تسريان على الحذف الآليّ القادم"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}
