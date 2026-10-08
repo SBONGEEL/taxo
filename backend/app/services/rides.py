@@ -913,6 +913,11 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
     _require_transition(ride, RideStatus.COMPLETED)
     ride.status = RideStatus.COMPLETED
     ride.completed_at = _now()
+    # **ومكالمتُها الحيّةُ تُغلق معها** (SPEC §٦٦-أ/١: لا شيءَ بعد انتهاء الرحلة) — **وصفُّ المكالمة يلي صفَّ الرحلة مباشرةً** في
+    # ترتيب الأقفال، قبل كلِّ ما بعده. **إضافيّ**: بلا مكالمةٍ لا يكتب حرفاً، والإبلاغُ بعد الالتزام (`notifications.publish_ride_event`)
+    from app.services import ride_calls
+
+    await ride_calls.end_for_ride(session, ride)
 
     actual_km = await route.actual_distance_km(session, ride.id)
     ride.actual_distance_km = actual_km
@@ -1206,6 +1211,12 @@ async def cancel_ride(
     mismatch = reason_code is CancelReasonCode.GENDER_MISMATCH
     if mismatch and not _gender_mismatch_applies(ride, driver, by_role):
         raise CancelReasonNotApplicable()
+
+    # **ومكالمتُها الحيّةُ تُغلق مع الإلغاء** (SPEC §٦٦-أ/١) — بعد أن صحّ الإلغاءُ وقبل كلِّ قفلٍ بعده، فصفُّ المكالمة يلي صفَّ
+    # الرحلة مباشرةً كما في الإنهاء. **إضافيّ**: بلا مكالمةٍ لا يكتب حرفاً
+    from app.services import ride_calls
+
+    await ride_calls.end_for_ride(session, ride)
 
     # **الحجزُ المضمون** (§٦٣-ج/٣): كبتنٌ تأخّر عن مهلته ⇒ إلغاءُ الراكب مجّانيّ ويُردّ الرسم؛ **وكبتنٌ أكّد ثمّ ألغى ⇒ عقوبتُه**
     # — وفي كلِّ إلغاءٍ آخرَ يعود الرسمُ إلى صاحبه. بعد قفل الرحلة: الترتيبُ رحلةٌ ثمّ حجز

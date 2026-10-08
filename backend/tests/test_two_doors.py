@@ -152,6 +152,15 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — محادثةُ الرحلة ومكالمتُها (SPEC §٦٦، 2026-10-08)
+    "RideCallOut": (
+        "بانٍ واحد: `RideCallOut.of` يخدم أبوابَ المكالمة الخمسة (الحال والرفض والإنهاء والإقرار والتسجيل) "
+        "وسطرَ `active_call` في المحادثة. **و`null` حالٌ لا نسيان**: لم يُردّ عليها بعد، أو لم تنتهِ"
+    ),
+    "AdminChatReportOut": (
+        "بانٍ واحد: `AdminChatReportOut.of` من صفِّ `trip_chat._report_rows` نفسِه — يخدم القائمةَ وبابَ المعالجة. "
+        "و`handled_*` فارغةٌ لبلاغٍ مفتوح، و`reporter_*` لمُبلِّغٍ حُذف حسابُه"
+    ),
     # ✅ بانٍ واحد
     "CliqClaimOut": (
         "بانٍ واحد: `cliq_claims.claim_row` يخدم الأربعة — القائمتين "

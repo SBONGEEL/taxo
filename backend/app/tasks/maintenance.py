@@ -77,9 +77,21 @@ async def _sweep_orphan_documents() -> str:
     if not root.exists():
         return "0"
 
+    from app.models.ride_call import RideCall
+
     async with SessionLocal() as session:
         known = {
             row for row in (await session.scalars(select(DriverDocument.file_path)))
+        }
+        # **وتسجيلاتُ المكالمات معروفةٌ لا يتيمة** (SPEC §٦٦-ج/١٦) — تُكتب تحت الجذر نفسِه، ولها كنسُها بموعدها
+        # (`ride_calls.purge_expired`). **وبغير هذا السطر يمحوها هذا الكنسُ أسبوعياً قبل موعدها** ويبقى صفُّها يَعِد بملف
+        known |= {
+            row
+            for row in (
+                await session.scalars(
+                    select(RideCall.recording_path).where(RideCall.recording_path.is_not(None))
+                )
+            )
         }
 
     removed = 0

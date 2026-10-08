@@ -60,6 +60,10 @@ from app.routers import (
     wallet,
     public_site,
     storefront,
+    trip_chat,
+    ride_calls,
+    admin_trip_chat,
+    admin_ride_calls,
 )
 from app.ws.routes import ws_router
 
@@ -77,6 +81,11 @@ api_router.include_router(airports.router)
 api_router.include_router(missions.router)
 api_router.include_router(referrals.router)
 api_router.include_router(rides.router)
+# **محادثةُ الرحلة ومكالمتُها** (SPEC §٦٦) — موجّهٌ لكلِّ بابٍ في ملفِّه: الطرفان، واللوحة
+api_router.include_router(trip_chat.router)
+api_router.include_router(ride_calls.router)
+api_router.include_router(admin_trip_chat.router)
+api_router.include_router(admin_ride_calls.router)
 api_router.include_router(payments.router)
 api_router.include_router(card_payments.router)
 api_router.include_router(wallet.router)

@@ -102,6 +102,21 @@ class SubscriptionEvent(StrEnum):
     SUBSCRIPTION_RENEWAL_FAILED = "subscription_renewal_failed"
 
 
+class TripCommsEvent(StrEnum):
+    """**محادثةُ الرحلة ومكالمتُها** (SPEC §٦٦) — تُبثّ لطرفَي الرحلة وحدهما في قناتيهما القائمتين، **ولا تحمل رقماً ولا اسماً**.
+
+    نوعٌ مستقلٌّ لأنه لا يصف انتقالاً في حال الرحلة: رسالةٌ وصلت، أو قُرئت، أو مكالمةٌ ترنّ وتُجاب وتنتهي، **وإشارةُ WebRTC**
+    (`call_signal`: عرضٌ وجوابٌ ومرشّحو ICE) يمرّرها الخادمُ من طرفٍ إلى الآخر ولا يقرؤها.
+    """
+
+    CHAT_MESSAGE = "chat_message"
+    CHAT_READ = "chat_read"
+    INCOMING_CALL = "incoming_call"
+    CALL_ANSWERED = "call_answered"
+    CALL_ENDED = "call_ended"
+    CALL_SIGNAL = "call_signal"
+
+
 def user_channel(user_id: uuid.UUID | str) -> str:
     """قناة المستخدم — أحداث رحلاته وعروض الطلبات إن كان كبتناً."""
     return f"ws:user:{user_id}"
@@ -180,6 +195,24 @@ async def publish_ride_event(redis: Redis, ride: Ride, event: RideEvent) -> None
     await publish(redis, user_channel(ride.rider_id), payload)
     if ride.driver is not None:
         await publish(redis, user_channel(ride.driver.user_id), payload)
+
+
+async def publish_trip_comms(
+    redis: Redis,
+    user_ids: list[uuid.UUID | None],
+    *,
+    event: TripCommsEvent,
+    payload: dict[str, Any],
+) -> None:
+    """حدثُ محادثةٍ أو مكالمة إلى من سُمّي **من طرفَي الرحلة وحدهما** — والمستدعي هو من يختار الطرفَ أو الطرفين.
+
+    **والحمولةُ معرّفاتٌ وقيمٌ خام**: لا رقمَ ولا اسم — يحمل كلُّ طرفٍ معرّفَ الرحلة وحدَه (§٦٦-د/٢). و`None` يُتخطّى: حسابٌ
+    جُهِّل لا قناةَ له.
+    """
+    body = {"type": event.value, **payload}
+    for user_id in user_ids:
+        if user_id is not None:
+            await publish(redis, user_channel(user_id), body)
 
 
 async def publish_driver_approaching(redis: Redis, ride: Ride) -> None:

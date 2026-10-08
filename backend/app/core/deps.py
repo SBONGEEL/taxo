@@ -226,6 +226,9 @@ DisputeResolver = Annotated[User, _perm(AdminPermission.PAYMENTS_RESOLVE)]
 SecurityManager = Annotated[User, _perm(AdminPermission.SECURITY_MANAGE)]
 PermissionsManager = Annotated[User, _perm(AdminPermission.PERMISSIONS_MANAGE)]
 ErrorsReader = Annotated[User, _perm(AdminPermission.ERRORS_READ)]
+# **محادثاتُ الرحلات وتسجيلاتُ مكالماتها** (SPEC §٦٦) — **خارجَ افتراض `admin`** (`permissions.SENSITIVE`): لا تُفتح إلا بمنحٍ بالاسم
+TripChatsReader = Annotated[User, _perm(AdminPermission.TRIP_CHATS_READ)]
+RecordingsListener = Annotated[User, _perm(AdminPermission.CALL_RECORDINGS_LISTEN)]
 
 # ═══════════════════ قراءةُ القوائم — الفرع ٧ من بند التسهيل (§٤٧٫١٠)
 #

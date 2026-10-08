@@ -71,6 +71,10 @@ class ServiceSettingOut(BaseModel):
     #: الاسترداد الأسبوعي (§٦٣-ج/٨) — المبلغُ وأيامُ الأسبوع بلا جمعته
     cashback_amount: Decimal
     cashback_days: int
+    #: **محادثةُ الرحلة ومكالمتُها** (§٦٦) — مدّةُ الاحتفاظ بالمحادثة وسجلِّ المكالمات، **والتسجيلُ (مطفأٌ افتراضاً)** ومدّتُه
+    chat_retention_days: int
+    call_recording_enabled: bool
+    call_recording_retention_days: int
 
 
 class ServiceSettingUpdate(BaseModel):
@@ -92,3 +96,7 @@ class ServiceSettingUpdate(BaseModel):
     intercity_cancel_deadline_hours: int | None = Field(default=None, ge=1, le=48)
     cashback_amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
     cashback_days: int | None = Field(default=None, ge=2, le=14)
+    chat_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    #: **إشعالُه يشترط نشرَ «تسجيلُ المكالمات» في سياستَي السوق** — يحرسه بابُ الكتابة لا الشاشة
+    call_recording_enabled: bool | None = None
+    call_recording_retention_days: int | None = Field(default=None, ge=1, le=3650)

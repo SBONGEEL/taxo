@@ -199,6 +199,7 @@ async def publish(
     """
     if policy.is_published:
         raise Conflict("هذه النسخة منشورةٌ أصلاً.")
+    await _keep_trip_comms_line(session, policy, body_after=policy.body_ar)
 
     previous = await published(
         session,
@@ -239,8 +240,31 @@ async def withdraw(session: AsyncSession, policy: PrivacyPolicy) -> None:
     """
     if not policy.is_published:
         raise InvalidInput("هذه النسخة ليست منشورةً أصلاً.")
+    await _keep_trip_comms_line(session, policy, body_after=None)
     policy.is_published = False
     await session.flush()
+
+
+async def _keep_trip_comms_line(
+    session: AsyncSession, policy: PrivacyPolicy, *, body_after: str | None
+) -> None:
+    """**سطرُ المحادثة والمكالمة لا يُنزع وما يحفظه مشتعل** (SPEC §٦٦-ب/١١، §٦٦-ج/١٦).
+
+    **وهنا لا في الراوتر**: النشرُ والسحبُ يمرّان بهذه الخدمة وحدَها، **فكلُّ بابٍ يُبنى غداً
+    يرثه**. وشرطُ الإشعال (`trip_chat.require_published_line`) يُسأل مرّةً لحظةَ الإشعال —
+    **وبلا هذا الوجه يُبطله نشرُ نسخةٍ بلا السطر أو سحبُ المنشورة بعده** (قِيس ٢٠٢٦-١٠-٠٨).
+    """
+    if policy.doc_type != PolicyDocType.PRIVACY_POLICY:
+        return
+    from app.services import trip_chat
+
+    await trip_chat.require_line_kept(
+        session,
+        country=policy.country_code,
+        app=policy.app,
+        body_after=body_after,
+        withdrawing=body_after is None,
+    )
 
 
 async def delete_draft(session: AsyncSession, policy: PrivacyPolicy) -> None:

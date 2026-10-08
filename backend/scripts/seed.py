@@ -169,6 +169,10 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # يُرى الطابورُ أسبوعاً (`design/PAYMENTS-UNCONFIRMED.md` §١٠/٥)
         FeatureKey.UNCONFIRMED_PAYMENTS_ENABLED: False,
         FeatureKey.CASH_AUTO_CONFIRM_ENABLED: False,
+        # **المحادثةُ والمكالمةُ داخل الرحلة مطفأتان حتى يُنشر سطرُهما** (SPEC §٦٦) — وبابُ المفاتيح نفسُه يرفض إشعالَهما قبل أن
+        # تحمل سياستا الخصوصية المنشورتان «محادثةُ الرحلة ومكالمتُها». **والإشعالُ في الأردن فعلٌ في اللوحة مع الرفع، لا بذرة**
+        FeatureKey.TRIP_CHAT_ENABLED: False,
+        FeatureKey.RIDE_CALLS_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

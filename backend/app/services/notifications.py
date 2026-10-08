@@ -280,6 +280,17 @@ async def publish_ride_event(
     """
     await events.publish_ride_event(redis, ride, event)
 
+    # **ومكالمةٌ أغلقها انتهاءُ الرحلة يُخبَر بها الطرفان** (SPEC §٦٦-أ/١) — **هنا لأنه البابُ الذي تمرّ به كلُّ نهاية**: الإنهاءُ
+    # والإلغاءُ ورفضُ الطرد كلُّها تبثّ من هنا بعد الالتزام، **والإغلاقُ نفسُه وقع في معاملة الرحلة** (`ride_calls.end_for_ride`).
+    # **ولا يُسقط حدثَ الرحلة عطبٌ فيه**: ما فاته المقبسُ يقرؤه التطبيقُ من حال الرحلة نفسِها
+    if event in (RideEvent.RIDE_COMPLETED, RideEvent.RIDE_CANCELLED):
+        from app.services import ride_calls
+
+        try:
+            await ride_calls.announce_ended_by_ride(session, redis, ride)
+        except Exception:  # pragma: no cover - يعتمد على عطل قاعدة أو Redis
+            logger.exception("تعذّر إبلاغُ انتهاء مكالمة الرحلة %s", ride.id)
+
     text = RIDE_EVENT_TEXT.get(event)
     if text is None:
         return
@@ -1737,4 +1748,103 @@ async def publish_cashback_reminder(
         redis,
         user_id=rider_id,
         message=PushMessage(title=title, body=body, data={"type": "cashback_reminder", "kind": kind}),
+    )
+
+
+# ------------------------------------------------- محادثةُ الرحلة ومكالمتُها (SPEC §٦٦)
+#
+# **الإشعارُ لا يحمل نصَّ الرسالة أبداً** (`design/APPROVALS-DATA.md` §١): «رسالةٌ جديدة» وحدَها — **فلا يقرؤها من يرى شاشةَ
+# القفل**. **ولا رقمَ ولا اسمَ في `data`**: نوعٌ ومعرّفُ رحلةٍ وجانبُ المُرسِل أو المتصل — وهو كلُّ ما يحتاجه التطبيقُ ليفتح
+# المحادثةَ أو المكالمة (§٦٦-د/٢).
+
+#: **من الطرفِ الآخر** — العنوانُ وحدَه يقول من، والنصُّ لا يقول ماذا
+CHAT_PUSH_TITLE: dict[str, str] = {"driver": "رسالةٌ جديدة من الكبتن", "rider": "رسالةٌ جديدة من الراكب"}
+CHAT_PUSH_BODY = "افتح الرحلة لقراءتها"
+CALL_PUSH_TITLE: dict[str, str] = {"driver": "مكالمةٌ من الكبتن", "rider": "مكالمةٌ من الراكب"}
+CALL_PUSH_BODY = "افتح التطبيق للرد"
+MISSED_CALL_TITLE: dict[str, str] = {"driver": "مكالمةٌ فائتة من الكبتن", "rider": "مكالمةٌ فائتة من الراكب"}
+MISSED_CALL_BODY = "افتح الرحلة لتعاود الاتصال أو تراسل"
+
+
+async def publish_chat_push(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    recipient_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    sender_role: str,
+) -> None:
+    """**رسالةٌ وصلت — لمن ليس أمامَ تطبيقه** (`notify_user`: الشاشةُ المفتوحة يصلها الحدثُ على المقبس وحدَه).
+
+    **ولا صفَّ في صندوق الوارد ولا بلاغَ داخل التطبيق**: المحادثةُ نفسُها هي الأثر، وصفٌّ لكلِّ رسالةٍ يملأ الجرسَ بما يُقرأ في
+    مكانه. **ولا يُسقط فشلُه الإرسالَ** — الرسالةُ حُفظت ووصلت المقبس.
+    """
+    message = PushMessage(
+        title=CHAT_PUSH_TITLE.get(sender_role, CHAT_PUSH_TITLE["rider"]),
+        body=CHAT_PUSH_BODY,
+        data={"type": events.TripCommsEvent.CHAT_MESSAGE.value, "ride_id": str(ride_id), "sender_role": sender_role},
+    )
+    try:
+        await notify_user(session, redis, user_id=recipient_id, message=message)
+    except Exception:  # pragma: no cover - يعتمد على عطل خارجي
+        logger.exception("تعذّر إشعارُ رسالة محادثة إلى %s", recipient_id)
+
+
+async def publish_incoming_call(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    callee_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    call_id: uuid.UUID,
+    caller_role: str,
+    recording: bool,
+) -> None:
+    """**مكالمةٌ ترنّ والتطبيقُ مغلق** (§٦٦-ج/١٧) — إشعارُ بياناتٍ **بأولويّةٍ عالية** كطلب الرحلة: المهلةُ ثلاثون ثانية، وDoze
+    يؤجّل العاديَّ دقائق. **والرنينُ كمكالمة هاتفٍ شيفرةٌ أصليّةٌ تقرأ `type` هذا** — تُجهَّز في الفرع ولا تُبنى حزمةٌ الآن.
+
+    **و`recording` في الحمولة** لأن التنبيهَ يسبق الرنينَ عند الطرفين (§٦٦-د/٣) — فيُرسم قبل أن يُضغط «ردّ».
+    """
+    message = PushMessage(
+        title=CALL_PUSH_TITLE.get(caller_role, CALL_PUSH_TITLE["rider"]),
+        body=CALL_PUSH_BODY,
+        data={
+            "type": events.TripCommsEvent.INCOMING_CALL.value,
+            "ride_id": str(ride_id),
+            "call_id": str(call_id),
+            "caller_role": caller_role,
+            "recording": "true" if recording else "false",
+        },
+        high_priority=True,
+    )
+    try:
+        await notify_user(session, redis, user_id=callee_id, message=message)
+    except Exception:  # pragma: no cover - يعتمد على عطل خارجي
+        logger.exception("تعذّر إشعارُ مكالمةٍ واردة إلى %s", callee_id)
+
+
+async def publish_missed_call(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    callee_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    call_id: uuid.UUID,
+    caller_role: str,
+) -> None:
+    """**المكالمةُ الفائتةُ تُقال في إشعارٍ عاديّ** (§٦٦-د/٤) — وتُحفظ في الصندوق: من فاتته مكالمةٌ يبحث عنها بعد أن يفتح هاتفه."""
+    await _safe_notify(
+        session,
+        redis,
+        user_id=callee_id,
+        message=PushMessage(
+            title=MISSED_CALL_TITLE.get(caller_role, MISSED_CALL_TITLE["rider"]),
+            body=MISSED_CALL_BODY,
+            data={
+                "type": "missed_call",
+                "ride_id": str(ride_id),
+                "call_id": str(call_id),
+                "caller_role": caller_role,
+            },
+        ),
     )

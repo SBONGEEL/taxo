@@ -68,7 +68,7 @@ from app.schemas.driver import AdvanceSettingOut, AdvanceSettingUpdate
 from app.schemas.wallet import WalletSettingOut, WalletSettingUpdate
 from app.core.deps import RedisDep
 from app.core import storage
-from app.services import admin_search, audit, money_guards, otp_limits, settings_service
+from app.services import admin_search, audit, money_guards, otp_limits, settings_service, trip_chat
 from app.services.providers.credentials import provider_is_active
 
 router = APIRouter(prefix="/admin/settings", tags=["admin"])
@@ -269,6 +269,16 @@ async def upsert_feature_flag(
         raise InvalidInput(
             "لا يُشعَل التحقّق بالبريد بلا عقدِ مُرسِلٍ فعّال — "
             "أدخِل العقد من صفحة العقود وفعّله، ثم أشعِل المفتاح"
+        )
+
+    # **والمحادثةُ والمكالمةُ لا تُشعلان قبل نشر سطرهما** (SPEC §٦٦-ب/١١: «يُنشر السطرُ قبل أن تحفظ المحادثةُ شيئاً»).
+    #
+    # **وهنا لا في الشاشة**: المفتاحُ هو ما يجعل المحادثةَ تحفظ نصوصاً والمكالمةَ تكتب سجلّاً — **فشرطُ النشر على بابه يجعل «لا
+    # يُحفظ شيءٌ قبل أن يُخبَر الناس» بنيةً لا تذكّراً**. والمنشورةُ للراكب **وللكبتن** معاً (`trip_chat.require_published_line`).
+    # **والإطفاءُ بلا شرط**: إيقافُ الجمع لا يحتاج إذناً.
+    if payload.enabled and payload.feature_key in (FeatureKey.TRIP_CHAT_ENABLED, FeatureKey.RIDE_CALLS_ENABLED):
+        await trip_chat.require_published_line(
+            session, payload.country_code, trip_chat.CHAT_PRIVACY_MARKER
         )
 
     await settings_service.set_flag(
@@ -591,6 +601,9 @@ async def list_service_settings(_staff: StaffUser, session: DbSession) -> list[S
             intercity_cancel_deadline_hours=2,
             cashback_amount=Decimal("0.000"),
             cashback_days=6,
+            chat_retention_days=trip_chat.DEFAULT_RETENTION_DAYS,
+            call_recording_enabled=False,
+            call_recording_retention_days=trip_chat.DEFAULT_RECORDING_RETENTION_DAYS,
         )
         out.append(ServiceSettingOut.model_validate(row))
     return out
@@ -605,12 +618,17 @@ async def update_service_settings(
 ) -> ServiceSettingOut:
     """مبالغُ الخدمات الجديدة وعتباتُها لسوقٍ واحد (§٦٣). **وما يُعدَّل يحكم ما يأتي لا ما وقع**: رسمُ الضمان مجمَّدٌ على الحجز لحظةَ
     طلبه، فرفعُه اليومَ لا يمسّ حجزاً قائماً."""
+    changes = payload.model_dump(exclude_unset=True)
+    # **والتسجيلُ لا يُشعَل قبل نشر سطره** (SPEC §٦٦-ج/١٦: «يُضاف سطرُ الخصوصية للتسجيل قبل أيِّ تسجيل») — في البابِ الذي
+    # يكتبه، كمفتاحَي المحادثة والمكالمة. **وقبل أن يُنشأ صفٌّ**: ردٌّ بعد إنشاء صفِّ سوقٍ جديدٍ يترك أثراً لم يُطلب
+    if changes.get("call_recording_enabled") is True:
+        await trip_chat.require_published_line(session, country_code, trip_chat.RECORDING_PRIVACY_MARKER)
     setting = await session.get(ServiceSetting, country_code)
     if setting is None:
         setting = ServiceSetting(country_code=country_code)
         session.add(setting)
         await session.flush()
-    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+    changed = _apply_updates(setting, changes)
     await audit.record(
         session,
         actor=admin,

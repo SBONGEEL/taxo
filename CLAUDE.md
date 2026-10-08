@@ -764,6 +764,12 @@ payment row lock and then a ride lock. When a single operation touches two walle
 locks are taken in sorted UUID order (`wallet._lock_wallets`). Adding a new lock means fitting it
 into this order, not inventing a second one.
 
+<!--جديد-->
+**والصفوفُ الحيّةُ لمكالمة الرحلة تلي صفَّ الرحلة** (`ride_calls` رنيناً أو جارية، SPEC §٦٦ — أُدخلت ٢٠٢٦-١٠-٠٨): الترتيبُ صار **الرحلة ← المكالمةُ الحيّة ←
+الطلب/الدفع ← …**، ولا مسارَ يأخذ صفَّ مكالمةٍ حيّةٍ بعد قفلٍ تالٍ. **والاستثناءُ الوحيد** حذفُ الحساب: يكتب صفوفَ مكالماتٍ **منتهيةٍ ومسجَّلة** بعد قفلَي
+المستخدم والمحفظة — ولا تنتظرها مكالمةٌ حيّة.
+<!--/جديد-->
+
 The cancellation-charge row sits between the driver row and the wallet locks, and **all three of its
 paths enter from above it**: `collect_with_ride` from inside `payments.settle` (ride → payment →
 charge → wallets), `on_wallet_funded` from a topup (no ride, no payment), and the panel's waive /

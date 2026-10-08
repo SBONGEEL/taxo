@@ -1,0 +1,27 @@
+# coturn — مُرحِّلُ مكالمة الرحلة (SPEC §66-ج/15). **طبقةٌ مستقلّةٌ لا يذكرها `scripts/deploy.sh` ولا أيُّ قائمةِ ملفّات** —
+# **ولا تُشغَّل إلا بقرار المالك**، ومعها فتحُ المنافذ في جدار الخادم (أرقامُها في `turnserver.conf`):
+#
+#     3478/udp · 3478/tcp · 49160-49200/udp
+#
+# **ولمَ `network_mode: host`**: المُرحِّلُ يُعلن عنوانَه للطرفين، **ووراء جسر Docker يُعلن عنوانَ الحاوية الخاصّ** فلا يصله أحد —
+# إلا بـ`--external-ip` يُكتب يدوياً. والمضيفُ يُعلن عنوانَه نفسَه، **والجدارُ هو ما يحكم ما يُفتح**.
+# (وإن كان عنوانُ الخادم العامُّ غيرَ عنوانِ واجهته — NAT — يُضاف `--external-ip=<العامّ>/<الخاصّ>` إلى `command`.)
+#
+# **والسرُّ من بيئة الخادم لا من هذا الملف** — `${TURN_SHARED_SECRET:?…}` يُوقف `compose` إن غاب: لا احتياطَ صامتٌ لسرّ.
+#
+#     docker compose -f deploy/coturn/docker-compose.coturn.yml --env-file <ملفُّ أسرار الخادم> up -d
+name: taxo-coturn
+
+services:
+  coturn:
+    # **إصدارٌ مثبَّت** — الترقيةُ قرارٌ يُقاس لا سحبٌ صامتٌ لأحدث صورة
+    image: coturn/coturn:4.6.2
+    container_name: taxo-coturn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - "-c"
+      - "/etc/coturn/turnserver.conf"
+      - "--static-auth-secret=${TURN_SHARED_SECRET:?TURN_SHARED_SECRET غيرُ مضبوطٍ في بيئة الخادم}"

@@ -82,8 +82,19 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         # فصلاحيتُها ليست `read.only` (قرارُ المالك 2026-09-20): «بابٌ واحدٌ
         # صلاحيةٌ واحدة»، ومن يقرأ القوائمَ لا يلزم أن يقرأ هذه.
         "errors.read",
+        # **محادثاتُ الرحلات وتسجيلاتُ المكالمات** (SPEC §٦٦، 2026-10-08) —
+        # صارت أربعَ عشرة، **والاثنتان خارجَ افتراض `admin`** بنصِّ المالك
+        # («لا تُعطى لكلِّ مشرفٍ افتراضاً»)
+        "trip_chats.read",
+        "call_recordings.listen",
     }
-    assert permissions_service.DEFAULTS[UserRole.ADMIN] == permissions_service.ALL
+    assert permissions_service.DEFAULTS[UserRole.ADMIN] == (
+        permissions_service.ALL - permissions_service.SENSITIVE
+    )
+    assert permissions_service.SENSITIVE == {
+        AdminPermission.TRIP_CHATS_READ,
+        AdminPermission.CALL_RECORDINGS_LISTEN,
+    }
     assert permissions_service.DEFAULTS[UserRole.SUPPORT] == {
         AdminPermission.READ_ONLY,
         AdminPermission.PAYMENTS_RESOLVE,

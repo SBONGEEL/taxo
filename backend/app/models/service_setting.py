@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Numeric, SmallInteger, text
+from sqlalchemy import Boolean, CheckConstraint, Numeric, SmallInteger, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import MONEY, Base, TimestampMixin, pg_enum
@@ -36,6 +36,10 @@ class ServiceSetting(TimestampMixin, Base):
         ),
         CheckConstraint("intercity_cancel_deadline_hours BETWEEN 1 AND 48", name="service_settings_intercity_valid"),
         CheckConstraint("cashback_amount >= 0 AND cashback_days BETWEEN 2 AND 14", name="service_settings_cashback_valid"),
+        CheckConstraint(
+            "chat_retention_days BETWEEN 1 AND 3650 AND call_recording_retention_days BETWEEN 1 AND 3650",
+            name="service_settings_trip_comms_valid",
+        ),
     )
 
     country_code: Mapped[CountryCode] = mapped_column(
@@ -109,3 +113,17 @@ class ServiceSetting(TimestampMixin, Base):
     )
     #: **أيامُ «الأسبوع» بلا جمعته** — ٦ افتراضاً (§٦٣-د/٩)
     cashback_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=6, server_default=text("6"))
+
+    # ------------------------------------------------ محادثةُ الرحلة ومكالمتُها (§٦٦)
+    #: **كم تبقى المحادثةُ وسجلُّ المكالمات بعد انتهاء الرحلة** — تسعون بنصِّ التصميم المُقَرّ، ويضبطها المالكُ من اللوحة.
+    #: **ومدّةٌ واحدةٌ للاثنين**: «من اتصل بمن ومتى» أثرٌ من الرحلة كرسائلها، ومدّتان لأثرٍ واحدٍ تفترقان بلا سبب.
+    #: **ولا تمسّ ما لا يُحذف**: سجلُّ التدقيق يبقى كما يبقى اليوم (لا يحمل نصّاً)
+    chat_retention_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=90, server_default=text("90"))
+    #: **تسجيلُ المكالمات — مطفأٌ افتراضاً** (§٦٦-ج/١٦)، ولا يُشعَل قبل نشر سطر «تسجيلُ المكالمات» في السياستين
+    call_recording_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    #: كم يبقى التسجيلُ قبل حذفه آلياً — مجمَّدٌ على المكالمة لحظةَ رفعه
+    call_recording_retention_days: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=30, server_default=text("30")
+    )

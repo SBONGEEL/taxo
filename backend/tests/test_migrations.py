@@ -149,3 +149,56 @@ async def test_0068_refuses_to_reshape_a_table_that_has_rows() -> None:
                 await conn.execute(text("DELETE FROM privacy_policies"))
         await asyncio.to_thread(command.upgrade, config, "head")
         await engine.dispose()
+
+
+async def test_0102_downgrade_does_not_widen_an_admin() -> None:
+    """**النزولُ لا يوسّع أحداً** (قِيس ٢٠٢٦-١٠-٠٨): مشرفٌ كلُّ صفوفه من صلاحيتَي `0102` كان يصير بالحذف **بلا صفّ** — والغيابُ
+    «افتراضُ الدور»، **وافتراضُ `admin` قبلها الكلّ**. فمن مُنح قراءةَ المحادثات وحدَها كان سيعود مشرفاً كاملاً بنزول ترحيلة.
+
+    **ويُشترط الوجهان**: من لم يبقَ له شيءٌ يُكتب له `read.only` وحدَه، **ومن بقي له صفٌّ آخرُ لا يُزاد عليه شيء**.
+    """
+    from app.core.security import hash_password
+    from app.models.admin_permission import AdminPermissionGrant
+    from app.models.enums import AdminPermission, CountryCode, UserRole
+    from app.models.user import User
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    async with async_sessionmaker(bind=engine, expire_on_commit=False)() as session:
+        only_sensitive = User(
+            phone="+962790000061", name="قارئ المحادثات وحدَها", role=UserRole.ADMIN,
+            country_code=CountryCode.JO, password_hash=hash_password("StaffSecret123"),
+        )
+        mixed = User(
+            phone="+962790000062", name="مشرفٌ بصفوفٍ أخرى", role=UserRole.ADMIN,
+            country_code=CountryCode.JO, password_hash=hash_password("StaffSecret123"),
+        )
+        session.add_all([only_sensitive, mixed])
+        await session.flush()
+        session.add_all(
+            [
+                AdminPermissionGrant(user_id=only_sensitive.id, permission=AdminPermission.TRIP_CHATS_READ),
+                AdminPermissionGrant(user_id=only_sensitive.id, permission=AdminPermission.CALL_RECORDINGS_LISTEN),
+                AdminPermissionGrant(user_id=mixed.id, permission=AdminPermission.TRIP_CHATS_READ),
+                AdminPermissionGrant(user_id=mixed.id, permission=AdminPermission.SETTINGS_WRITE),
+            ]
+        )
+        await session.commit()
+        ids = {"only": only_sensitive.id, "mixed": mixed.id}
+    await engine.dispose()
+
+    config = alembic_config()
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0100")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            rows = (
+                await conn.execute(text("SELECT user_id, permission::text FROM admin_permissions"))
+            ).all()
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+
+    held: dict[str, set[str]] = {}
+    for user_id, permission in rows:
+        held.setdefault(str(user_id), set()).add(permission)
+    assert held == {str(ids["only"]): {"read.only"}, str(ids["mixed"]): {"settings.write"}}

@@ -26,6 +26,7 @@ import logging
 import re
 import tempfile
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -93,6 +94,21 @@ def sniff(head: bytes) -> tuple[str, str]:
     raise UnsupportedDocument()
 
 
+#: **تسجيلُ المكالمة** (SPEC §٦٦-ج/١٦): WebM (رأسُ EBML) أو Ogg — **ما يُخرجه `MediaRecorder` في المتصفّح وWebView**، ولا ثالث.
+_AUDIO_SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
+    (b"\x1a\x45\xdf\xa3", "audio/webm", ".webm"),
+    (b"OggS", "audio/ogg", ".ogg"),
+)
+
+
+def sniff_audio(head: bytes) -> tuple[str, str]:
+    """**كـ`sniff` لكن للصوت وحدَه** — بابٌ ثانٍ لا توسيعٌ للأول: وثيقةُ كبتنٍ لا تُقبل ملفَّ صوتٍ لأن التسجيلَ صار يُرفع."""
+    for signature, content_type, extension in _AUDIO_SIGNATURES:
+        if head.startswith(signature):
+            return content_type, extension
+    raise UnsupportedDocument("التسجيلُ يُقبل بصيغة webm أو ogg وحدَهما")
+
+
 def resolve(relative_path: str) -> Path:
     """المسار المطلق لملفٍ مخزَّن — أو `DocumentFileMissing` إن خرج عن الجذر.
 
@@ -109,11 +125,19 @@ def resolve(relative_path: str) -> Path:
     return candidate
 
 
-async def save(reader: AsyncReader, *, folder: str) -> StoredFile:
+async def save(
+    reader: AsyncReader,
+    *,
+    folder: str,
+    sniffer: Callable[[bytes], tuple[str, str]] = sniff,
+    max_bytes: int | None = None,
+) -> StoredFile:
     """يحفظ ملفاً مرفوعاً بعد التحقق من نوعه وحجمه.
 
     يُكتب باسمٍ مؤقت ثم يُنقل إلى اسمه النهائي: رفعٌ انقطع في منتصفه لا يترك
     ملفاً بنصف محتوى يحمل اسماً يشير إليه صفٌّ في القاعدة.
+
+    **و`sniffer`/`max_bytes` لتسجيل المكالمة وحدَه** (§٦٦): افتراضُهما هو سلوكُ الوثائق حرفاً، فلا يتغيّر على مستدعٍ قائمٍ شيء.
     """
     if not _SAFE_FOLDER.match(folder):  # pragma: no cover - حارس برمجي
         raise ValueError("مجلد التخزين يجب أن يكون UUID")
@@ -121,11 +145,11 @@ async def save(reader: AsyncReader, *, folder: str) -> StoredFile:
     target_dir = root() / folder
     await anyio.to_thread.run_sync(lambda: target_dir.mkdir(parents=True, exist_ok=True))
 
-    max_bytes = settings.document_max_bytes
+    max_bytes = max_bytes or settings.document_max_bytes
     first = await reader.read(CHUNK_BYTES)
     if not first:
         raise UnsupportedDocument("الملف فارغ")
-    content_type, extension = sniff(first)
+    content_type, extension = sniffer(first)
 
     handle = await anyio.to_thread.run_sync(
         lambda: tempfile.NamedTemporaryFile(

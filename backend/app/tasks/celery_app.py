@@ -100,6 +100,7 @@ celery_app = Celery(
         "app.tasks.activity",
         "app.tasks.cashback",
         "app.tasks.unconfirmed_payments",
+        "app.tasks.trip_comms",
     ],
 )
 
@@ -264,6 +265,16 @@ celery_app.conf.update(
         "watch-whatsapp-session": {
             "task": "app.tasks.whatsapp.watch_whatsapp_session",
             "schedule": WHATSAPP_WATCH_INTERVAL_SECONDS,
+        },
+        # **محادثةُ الرحلة ومكالمتُها** (SPEC §٦٦): الحذفُ في موعده **يوميّاً** («بمهمّةٍ يوميّة» — التصميمُ المُقَرّ §١)، بعد كنس
+        # الراكب الفعليّ بنصف ساعة فلا يتزاحمان. **والرنينُ الفائتُ كلَّ دقيقة**: المهلةُ ثلاثون ثانية، والحكمُ الكسولُ يسبق المهمّة
+        "sweep-trip-comms": {
+            "task": "app.tasks.trip_comms.sweep_trip_comms",
+            "schedule": crontab(hour=3, minute=40),
+        },
+        "expire-ringing-calls": {
+            "task": "app.tasks.trip_comms.expire_ringing_calls",
+            "schedule": 60.0,
         },
     },
 )

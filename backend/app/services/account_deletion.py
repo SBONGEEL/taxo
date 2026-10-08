@@ -419,6 +419,14 @@ async def _anonymize(
     ):
         await session.execute(delete(model).where(column == uid))
 
+    # ── محادثةُ الرحلة ومكالمتُها (SPEC §٦٦، `design/APPROVALS-DATA.md` §١ «وحذفُ الحساب»): **رسائلُه تُحذف** — إلا ما كان تحت
+    # بلاغٍ مفتوحٍ فيبقى حتى يُعالَج ثمّ يحذفه الكنس · **وسطرُه في بلاغاته يُمحى** · **وصوتُه في كلِّ تسجيلٍ كان طرفاً فيه يُمحى**
+    # (والملفّاتُ بعد الالتزام كالوثائق). **وسطرُ المكالمة يبقى** — من اتصل بمن ومتى، بلا اسمه بعد التجهيل — حتى يحلّ موعدُه
+    from app.services import ride_calls, trip_chat
+
+    await trip_chat.erase_for_account(session, uid)
+    files.extend(await ride_calls.erase_recordings_for_account(session, uid))
+
     # ── نصٌّ حرٌّ كتبه: يُمحى، **والدرجةُ تبقى** — منها متوسّطُ كبتنٍ آخر
     await session.execute(
         update(Rating).where(Rating.rater_id == uid).values(comment=None)
