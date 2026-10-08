@@ -8,6 +8,7 @@
 import { api, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
+  Airport,
   AppConfig,
   AppVersion,
   AuthMethod,
@@ -534,6 +535,9 @@ export const cancelIntercityBooking = (bookingId: string) =>
 /** **ما يُرسم بجانب النار** — الأيامُ الباقيةُ والمبلغُ المنتظَر وهل رُكب اليوم، **كلُّها من الخلفية بيوم السوق**. ومطفأً أو بمبلغٍ صفرٍ
  *  `{enabled: false}` لا خطأ — فلا نارَ تُرسم بلا وعد. */
 export const getWeeklyCashback = () => api.get<WeeklyCashback>("/me/cashback");
+
+/** **مطاراتُ سوق الراكب** (§٦٣-ج/٢) — اسمٌ ونقطةٌ داخل مضلّع كلٍّ منها، ومطفأُ المفتاح يعيد قائمةً فارغة. */
+export const getAirports = () => api.get<Airport[]>("/airports");
 
 // ------------------------------------------------ صندوق الإشعارات (9-ب)
 

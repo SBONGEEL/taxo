@@ -100,6 +100,22 @@ async def list_for(session: AsyncSession, *, country: CountryCode | None) -> lis
     return list(await session.scalars(query))
 
 
+async def airports_for_rider(session: AsyncSession, *, country: CountryCode) -> list[tuple[uuid.UUID, str, float, float]]:
+    """**مطاراتُ سوق الراكب ليختارها وجهةً** (§٦٣-ج/٢): اسمٌ ونقطةٌ **داخل** المضلّع (`ST_PointOnSurface` لا المركز — مركزُ مضلّعٍ
+    مقعّرٍ قد يقع خارجه فلا يُحسب الرسم). **والمطفأُ لا يُعرض**، ولا الرسمُ ولا المضلّعُ نفسُه: ما يحتاجه الراكبُ وجهةٌ لا حدود."""
+    point = func.ST_PointOnSurface(func.geometry(Facility.area))
+    rows = await session.execute(
+        select(Facility.id, Facility.name, func.ST_Y(point), func.ST_X(point))
+        .where(
+            Facility.country_code == country,
+            Facility.kind == FACILITY_AIRPORT,
+            Facility.is_active.is_(True),
+        )
+        .order_by(Facility.name)
+    )
+    return [(row[0], row[1], float(row[2]), float(row[3])) for row in rows.all()]
+
+
 async def get(session: AsyncSession, facility_id: uuid.UUID) -> Facility:
     row = await session.get(Facility, facility_id)
     if row is None:

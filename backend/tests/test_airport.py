@@ -268,3 +268,30 @@ async def test_the_admin_adds_and_edits_facilities_and_a_crossed_area_is_refused
     assert patched.json()["is_active"] is False and patched.json()["fee"] == "0.750"
     # ولا بابَ حذف
     assert (await client.delete(f"/admin/facilities/{row['id']}", headers=admin_headers)).status_code == 405
+
+
+async def test_the_rider_sees_her_markets_active_airports_with_a_point_inside_each(
+    client: AsyncClient, jordan_settings, session_factory
+) -> None:
+    """**«المطار» من الرئيسية** (قِيس على S21 ٢٠٢٦-١٠-٠٨: كانت «قريباً» والخدمةُ مشتعلة، والبحثُ يعيد شارعَ المطار لا المطار):
+    مطفأً لا شيء · مشتعلاً مطاراتُ سوقه وحدَها، **ونقطةُ كلٍّ داخل مضلّعه فيُحسب عليها الرسم** · والمطفأُ من المرافق لا يُعرض."""
+    rider = await rider_session(client)
+    headers = rider["headers"]
+    off = await client.get("/airports", headers=headers)
+    assert off.status_code == 200 and off.json() == []
+
+    await enable_features(session_factory, FLAG)
+    listed = (await client.get("/airports", headers=headers)).json()
+    assert [row["name"] for row in listed] == ["مطار الملكة علياء الدولي"], listed
+    point = listed[0]
+    async with session_factory() as session:
+        inside = await session.scalar(
+            select(func.ST_Covers(Facility.area, func.ST_GeogFromText(f"SRID=4326;POINT({point['lng']} {point['lat']})"))).where(
+                Facility.name == "مطار الملكة علياء الدولي"
+            )
+        )
+        assert inside is True
+        facility = await session.scalar(select(Facility).where(Facility.name == "مطار الملكة علياء الدولي"))
+        facility.is_active = False
+        await session.commit()
+    assert (await client.get("/airports", headers=headers)).json() == []

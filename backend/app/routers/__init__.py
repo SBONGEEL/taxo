@@ -29,6 +29,7 @@ from app.routers import (
     admin_security,
     admin_settings,
     admin_facilities,
+    airports,
     guarantees,
     commute,
     commute_driver,
@@ -72,6 +73,7 @@ api_router.include_router(account.router)
 api_router.include_router(drivers.router)
 api_router.include_router(bookings.router)
 api_router.include_router(places.router)
+api_router.include_router(airports.router)
 api_router.include_router(missions.router)
 api_router.include_router(referrals.router)
 api_router.include_router(rides.router)

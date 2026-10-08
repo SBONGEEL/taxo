@@ -37,6 +37,7 @@ export function DestinationSearch({
   onSkip,
   title = "إلى أين؟",
   onHere,
+  airports,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,6 +54,9 @@ export function DestinationSearch({
   title?: string;
   /** **«موقعي الحالي»** — للمشوار الثابت وحدَه: انطلاقُ الطلب موقعُ الجهاز سلفاً، والمشوارُ يُختار انطلاقُه كوجهته. */
   onHere?: () => void;
+  /** **مطاراتُ السوق أوّلاً** — من بلاطة «المطار» وحدَها (§٦٣-ج/٢): البحثُ بـ«مطار» يعيد شارعَ المطار قرب الراكب لا المطار
+   *  (قِيس على S21)، **فالمرافقُ من قاعدتنا بنقطةٍ داخل مضلّعها** صفوفاً فوق المحفوظة. وغيابُه لا قسمَ له. */
+  airports?: Place[];
 }) {
   const { places, recents } = usePlaces();
   const [query, setQuery] = useState("");
@@ -155,6 +159,30 @@ export function DestinationSearch({
           <span className="t2-dest-pin-label">بلا وجهة — تقولها للكبتن في الطريق</span>
           <Icon name="chevron_left" className="t2-chev" />
         </button>
+      ) : null}
+
+      {!typing && airports && airports.length > 0 ? (
+        <section>
+          <div className="t2-group t2-dest-group">المطارات</div>
+          <div className="t2-list">
+            {airports.map((airport) => (
+              <button
+                key={airport.id}
+                type="button"
+                onClick={() => {
+                  onPick(airport);
+                  onOpenChange(false);
+                }}
+                className="t2-dest-row"
+              >
+                <Icon name="flight_takeoff" className="mark" />
+                <span className="t2-dest-main">
+                  <span className="t2-dest-title">{airport.name}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {!typing && places.length > 0 ? (

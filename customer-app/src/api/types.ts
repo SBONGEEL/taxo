@@ -1255,3 +1255,11 @@ export type ErrorReportBody = {
   request_id?: string;
   note?: string;
 };
+
+/** مطارٌ يُختار وجهةً من بلاطة «المطار» (§٦٣-ج/٢) — نقطتُه داخل مضلّعه فيُحسب عليها رسمُه في الخلفية. */
+export interface Airport {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+}

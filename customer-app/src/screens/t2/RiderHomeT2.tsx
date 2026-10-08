@@ -10,7 +10,8 @@
  * **والبلاطاتُ الأربعُ كما رُسمت** (§٦١-د/أ–ج): «المطار» بـ«جديد» و«طرد» و«بالساعة» **رسالةُ «قريباً» عند اللمس ولا شيءَ غيرُها**،
  * و«مجدولة» رحلاتُه المجدولة (بمفتاح سوقها)، و«نسائية» **تبدأ الطلبَ بـ«كبتنة فقط» وهي تغيّره بنفسها** — كما تعمل الخدمةُ اليوم.
  * **و«طرد» حيث مفتاحُه مشتعلٌ تبدأ طلبَ طرد** (§٦٣-ج/٤، `onParcel`) — ومطفأً «قريباً» كما كانت. **و«بالساعة» مثلُها**
- * (§٦٣-ج/٥، `onHourly`): مشتعلاً تبدأ طلبَ ساعاتٍ بلا شارة «قريباً»، ومطفأً كما رُسمت.
+ * (§٦٣-ج/٥، `onHourly`): مشتعلاً تبدأ طلبَ ساعاتٍ بلا شارة «قريباً»، ومطفأً كما رُسمت. **و«المطار» مثلُهما** (§٦٣-ج/٢،
+ * `onAirport`): مشتعلاً يفتح البحثَ وفيه «مطار» — وكانت «قريباً» دائماً والخدمةُ مبنيّة (قِيس على S21 ٢٠٢٦-١٠-٠٨).
  *
  * **وما نُزل بلغ من موضعٍ آخر** (§٦١-د/و): الأماكنُ المحفوظةُ في البحث وفي «حسابي»، وآخرُ الرحلات و«أعِد الرحلة» في «رحلاتي»
  * وتفاصيلها، والإحالةُ في «حسابي»، والرصيدُ في «المحفظة»، **والخريطةُ الكاملةُ بلمسة البطاقة** بدل زرِّ «توسيع».
@@ -38,6 +39,7 @@ import { PromoBanners } from "@/components/home/PromoBanners";
 import { useExpandable } from "@/components/home/MapCard";
 import { fastestMinutes, type CategoryMinutes } from "@/lib/arrival";
 import { cashbackDaysText, useScheduledRides, useWeeklyCashback } from "@/lib/bookings";
+import { useFeature } from "@/lib/config";
 import { useHourly } from "@/lib/hourly";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { useParcel } from "@/lib/parcel";
@@ -91,6 +93,8 @@ export interface RiderHomeProps {
   onParcel?: () => void;
   /** **بدءُ طلب ساعات** (§٦٣-ج/٥) — منتقي الوجهة بـ«بلا وجهة» ثمّ ورقتُها؛ والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل. */
   onHourly?: () => void;
+  /** **بدءُ رحلةٍ إلى المطار** (§٦٣-ج/٢) — منتقي الوجهة وفيه «مطار»؛ ورسمُ المطار يُحسب في الخلفية حين تقع الوجهةُ في مضلّعه. */
+  onAirport?: () => void;
   /** **ما ينتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية؛ و`null` حيث المفتاحُ مطفأ. */
   unconfirmed?: RiderUnconfirmed | null;
   onOpenUnconfirmed?: () => void;
@@ -230,6 +234,7 @@ export function RiderHomeT2({
   onWomenRide,
   onParcel,
   onHourly,
+  onAirport,
   unconfirmed = null,
   onOpenUnconfirmed,
 }: RiderHomeProps) {
@@ -238,11 +243,14 @@ export function RiderHomeT2({
   // **«طرد» بمفتاح سوقه** (§٦٣-ج/٤) — مطفأً تبقى البلاطةُ «قريباً» كما رُسمت ولا يظهر شيءٌ جديد
   const parcel = useParcel();
   // **و«بالساعة» بمفتاح سوقها** (§٦٣-ج/٥) — بالحكم نفسِه
+  const { user } = useSession();
   const hourly = useHourly() && onHourly !== undefined;
+  // **و«المطار» بمفتاح سوقه** (§٦٣-ج/٢، صفُّه في جدول الخدمات: «يفتحها حين يُشعَل وإلا قريباً») — قِيس على S21 ٢٠٢٦-١٠-٠٨:
+  // البلاطةُ كانت «قريباً» دائماً والخدمةُ مشتعلةٌ ومبنيّة، فلا بابَ إليها من الرئيسية
+  const airport = useFeature(user?.country_code, "airport_enabled") && onAirport !== undefined;
   const scheduled = useScheduledRides();
   // **نارُ الاسترداد الأسبوعي** (§٦٣-ج/٨) — `null` حيث المفتاحُ مطفأٌ أو المبلغُ صفر، فلا يُرسم شيء
   const cashback = useWeeklyCashback();
-  const { user } = useSession();
   // **«اقتصادي يصل خلال 3 د»** (§٦٢-ج/١٠): أوّلُ فئةٍ لها رقمٌ بترتيب الجواب، **وأسرعُها شارةُ «رحلة»**
   const heroEta = (() => {
     if (!eta) return null;
@@ -345,7 +353,7 @@ export function RiderHomeT2({
       </div>
 
       <div className="t2-svc-row">
-        <button type="button" className="t2-svc" onClick={() => soon("المطار")}>
+        <button type="button" className="t2-svc" onClick={() => (airport && onAirport ? onAirport() : soon("المطار"))}>
           <span className="t2-icon t2-svc-icon" aria-hidden="true">flight_takeoff</span>
           <span className="t2-svc-title">المطار</span>
           <span className="t2-svc-badge new">جديد</span>

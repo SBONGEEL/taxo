@@ -21,6 +21,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import {
   createBooking,
+  getAirports,
   getMyReferrals,
   getRouteLine,
   getStorefront,
@@ -106,6 +107,8 @@ export function HomeScreen() {
   const [center, setCenter] = useState<Coordinates>(fallback);
   const [phase, setPhase] = useState<Phase>("idle");
   const [searchOpen, setSearchOpen] = useState(false);
+  /** **مطاراتُ السوق صفوفاً أولى في البحث** — من بلاطة «المطار» وحدَها، و`undefined` لكلِّ بابٍ غيرِه. */
+  const [airportPicks, setAirportPicks] = useState<Place[] | undefined>(undefined);
   const [pickup, setPickup] = useState<Coordinates | null>(null);
   const [pickupAddress, setPickupAddress] = useState<string | null>(null);
   const [dropoff, setDropoff] = useState<Coordinates | null>(null);
@@ -689,7 +692,29 @@ export function HomeScreen() {
       setPresetSchedule(null);
       endParcel();
       endHourly();
+      setAirportPicks(undefined);
       setSearchOpen(true);
+    },
+    // **«المطار»** (§٦٣-ج/٢) — طلبُ رحلةٍ كأيِّ رحلة، **ومطاراتُ السوق صفوفٌ أولى في البحث** (`GET /airports`)؛ والرسمُ وقصرُ العرض على من أشعل «طلبات المطار»
+    // يقعان في الخلفية حين تقع الوجهةُ في مضلّع المرفق. **والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
+    onAirport: () => {
+      setPresetPreference(undefined);
+      setPresetSchedule(null);
+      endParcel();
+      endHourly();
+      setSearchOpen(true);
+      getAirports()
+        .then((list) =>
+          setAirportPicks(
+            list.map((airport) => ({
+              id: `airport:${airport.id}`,
+              name: airport.name,
+              address: "",
+              coordinates: { lat: airport.lat, lng: airport.lng },
+            })),
+          ),
+        )
+        .catch(() => setAirportPicks([]));
     },
     places,
     onPickPlace: (saved) =>
@@ -711,6 +736,7 @@ export function HomeScreen() {
     onChangePickup: () => setPhase("pick-pickup"),
     onWomenRide: () => {
       setPresetPreference("female");
+      setAirportPicks(undefined);
       endParcel();
       endHourly();
       setSearchOpen(true);
@@ -719,6 +745,7 @@ export function HomeScreen() {
     // إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
     onParcel: () => {
       setPresetPreference(undefined);
+      setAirportPicks(undefined);
       setPresetSchedule(null);
       setParcelDraft(null);
       setParcelMode(true);
@@ -729,6 +756,7 @@ export function HomeScreen() {
     // موقعُ الجهاز أو ما وُضع بالدبوس كأيِّ رحلة. **والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل** (`RiderHomeT2`)
     onHourly: () => {
       setPresetPreference(undefined);
+      setAirportPicks(undefined);
       setPresetSchedule(null);
       endParcel();
       setHourlyDraft(HOURLY_START);
@@ -1001,6 +1029,7 @@ export function HomeScreen() {
         onPickOnMap={() => setPhase("pick-dropoff")}
         // **«بلا وجهة» للساعات وحدَها** (§٦٣-ج/٥) — وكلُّ طلبٍ غيرِها بلا صفِّه كما كان
         onSkip={hourlyMode ? skipDestination : undefined}
+        airports={airportPicks}
       />
 
     </div>

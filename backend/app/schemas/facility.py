@@ -39,3 +39,12 @@ class FacilityOut(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class AirportOut(BaseModel):
+    """مطارٌ يختاره الراكبُ وجهةً — اسمُه ونقطةٌ داخل مضلّعه، **لا الرسمُ ولا الحدود** (§٦٣-ج/٢)."""
+
+    id: uuid.UUID
+    name: str
+    lat: float
+    lng: float

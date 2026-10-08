@@ -232,12 +232,14 @@ div.t2-srow { cursor: default; }
   position: relative;
   margin: 6px 0 18px;
   font-family: var(--t2-font-num);
-  font-size: 34px;
+  /* **سطرٌ واحدٌ دائماً** (قِيس على S21 ٢٠٢٦-١٠-٠٨): ٣٤ بكسلاً بخطّ الأرقام العريض قسمت «YW8H7CDG» على سطرين في عرض ٣٦٠ —
+     ورمزٌ يُنسخ ويُملى لا يُقرأ نصفين. فالحجمُ ٣٤ ما اتّسع العرضُ، ويصغر معه حين يضيق */
+  font-size: min(34px, 8vw);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.06em;
   text-align: right;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .t2-prog {
   display: flex;
