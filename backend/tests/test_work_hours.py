@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -95,8 +95,13 @@ async def test_old_days_roll_up_into_months_and_the_staff_sees_them(
     client: AsyncClient, jordan_settings: None, admin_headers: dict, session_factory
 ) -> None:
     await enable_features(session_factory, FLAG)
+    from app.services.stats import _zone
+
     driver = await approved_driver(client, session_factory)
-    today = date(2026, 10, 7)
+    async with session_factory() as session:
+        # **يومُ السوق الحقيقيُّ لا تاريخٌ مثبَّت** (أمسكه CI ٢٠٢٦-١٠-٠٨ ٠٣:٤٣ بتوقيت عمّان): بابُ اللوحة يقرأ «اليوم» من
+        # الساعة، فيومٌ مثبَّتٌ على ٧ أكتوبر صار «أمس» بعد منتصف الليل وقرأ اليومُ صفراً — والاختبارُ أخضرُ محلياً لأنه شُغّل يومَه
+        today = datetime.now(UTC).astimezone(await _zone(session, CountryCode.JO)).date()
     old = today - timedelta(days=activity.DAILY_RETENTION_DAYS + 5)
     async with session_factory() as session:
         session.add_all(
