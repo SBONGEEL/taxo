@@ -65,8 +65,15 @@ ALL: frozenset[AdminPermission] = frozenset(AdminPermission)
 #:
 #: **فتُطرح من الافتراض هنا، وتُمنح بالاسم من مصفوفة الصلاحيات** (ومنحُها مدقَّقٌ كأيِّ منح). **وعضوٌ حسّاسٌ يُضاف غداً يُضاف
 #: هنا** — والاختبارُ يقرأ هذه المجموعةَ لا نسخةً منها (`test_trip_chat.py`).
+#:
+#: **والثالثةُ الملخّصاتُ المالية** (SPEC §٦٥-د/٧، ٢٠٢٦-١٠-٠٨) — بالنصِّ نفسِه: «صلاحيةٌ إداريةٌ مستقلّة لا تُعطى لكلِّ مشرفٍ
+#: افتراضاً». **ومن يدير المالَ** (`finance.manage`) **لا يقرأ بها مجاميعَ السوق كلَّها ومن وراءها** — تلك تُمنح بالاسم.
 SENSITIVE: frozenset[AdminPermission] = frozenset(
-    {AdminPermission.TRIP_CHATS_READ, AdminPermission.CALL_RECORDINGS_LISTEN}
+    {
+        AdminPermission.TRIP_CHATS_READ,
+        AdminPermission.CALL_RECORDINGS_LISTEN,
+        AdminPermission.FINANCE_SUMMARY_READ,
+    }
 )
 
 #: **ما يقع اليومَ حرفاً**، لا ما نتمنّاه: `support` يقرأ ويحسم النزاعات.

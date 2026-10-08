@@ -41,13 +41,20 @@ export function money(value: string, currency?: Currency | string) {
   return `${digits(value)}${label}`;
 }
 
-/** يومٌ وشهرٌ ووقت — ما يُقرأ في صفوف الجداول. */
-export function moment(iso: string) {
+/** يومٌ وشهرٌ ووقت — ما يُقرأ في صفوف الجداول.
+ *
+ * **`timeZone` اختياريّ — وبغيره يُقرأ الوقتُ بمِنطقة المتصفّح.** شاشةٌ تعرض حدودَ يوم سوقٍ بعينه (الملخّصاتُ المالية) تمرّر
+ * مِنطقتَه كما أرسلتها الخلفية: عرضُ ليبيا من متصفّحٍ في عمّان كان يبدأ «اليوم» الساعةَ 01:00 تحت عنوان `Africa/Tripoli`،
+ * **ويخالف الملفَّ المصدَّر بساعة** (`finance_export.py` يكتب بيوم السوق).
+ */
+export function moment(iso: string, timeZone?: string) {
   const at = new Date(iso);
+  const zone = timeZone ? { timeZone } : {};
   return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, {
     day: "numeric",
     month: "long",
-  }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit" }))}`;
+    ...zone,
+  }))} ${digits(at.toLocaleTimeString(DISPLAY_LOCALE, { hour: "numeric", minute: "2-digit", ...zone }))}`;
 }
 
 /** **متى كان ذلك** — «منذ 5 دقائق»، والدقيقُ يبقى في تلميح التمرير.

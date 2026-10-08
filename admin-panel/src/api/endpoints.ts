@@ -134,6 +134,11 @@ import type {
   VerificationCampaignRow,
   SiteSettings,
   SiteUpdate,
+  FinanceQuery,
+  FinanceSummary,
+  FinanceTransactionsPage,
+  FinanceUsersPage,
+  FinanceView,
 } from "@/api/types";
 
 // ------------------------------------------------------ الكوبونات (12-ز)
@@ -1822,3 +1827,66 @@ export const ignoreErrorGroup = (id: string) =>
 /** **البابُ في اتجاهه الثاني** — ولولاه لكان حسمٌ بالخطأ نهائيّاً. */
 export const reopenErrorGroup = (id: string) =>
   api.post<ErrorGroupRow>(`/admin/errors/${id}/reopen`);
+
+// ------------------------------------------- الملخّصاتُ المالية (SPEC §٦٥-د)
+//
+// **قراءةٌ وحدَها بصلاحيةٍ مستقلّة** (`finance.summary`) — **وكلُّ نداءٍ هنا سطرٌ في التدقيق باسم المشرف**، العرضُ والتصدير.
+// **والسوقُ إلزاميٌّ في كلِّ نداء**: لا رقمَ يجمع ديناراً أردنيّاً إلى ليبيّ.
+
+/** **المرشِّحاتُ كما يقرؤها الخادم** — والفارغُ لا يُرسل (`buildUrl` يُسقطه)، فـ«الكلّ» غيابُ المرشِّح لا قيمةٌ له. */
+function financeQuery(query: FinanceQuery): Record<string, string | undefined> {
+  return {
+    country_code: query.country_code,
+    period: query.period,
+    from_date: query.period === "custom" ? query.from_date : undefined,
+    to_date: query.period === "custom" ? query.to_date : undefined,
+    user_type: query.user_type,
+    method: query.method,
+    status: query.status,
+  };
+}
+
+export const getFinanceSummary = (query: FinanceQuery) =>
+  api.get<FinanceSummary>("/admin/finance/summary", { query: financeQuery(query) });
+
+/** **«المستخدمون»** وراء مجموع — مرتَّبين من الأكبر، مرقَّمين بـ`limit`/`offset`. */
+export const getFinanceUsers = (metric: string, query: FinanceQuery, limit: number, offset: number) =>
+  api.get<FinanceUsersPage>(`/admin/finance/summary/${encodeURIComponent(metric)}/users`, {
+    query: { ...financeQuery(query), limit, offset },
+  });
+
+/** **«المعاملات»** وراء مجموع — الأكبرُ قيمةً أوّلاً. */
+export const getFinanceTransactions = (metric: string, query: FinanceQuery, limit: number, offset: number) =>
+  api.get<FinanceTransactionsPage>(`/admin/finance/summary/${encodeURIComponent(metric)}/transactions`, {
+    query: { ...financeQuery(query), limit, offset },
+  });
+
+/** **تصديرُ العرض إلى Excel** — ملفٌّ يُجلب بالمفتاح ثمّ يُحفظ (`<a download>` لا يحمل ترويسةً، كصورة الوثيقة).
+ *
+ * **والخطأُ بنصِّ الخادم** لا «تعذّر» عامّة: ٤٠٣ يقول أيَّ صلاحيةٍ تنقص. **والملفُّ يُحرَّر من الذاكرة بعد حفظه.** */
+export async function exportFinance(query: FinanceQuery, view: FinanceView, metric?: string): Promise<void> {
+  const url = new URL(`${API_URL}/admin/finance/summary/export`);
+  for (const [key, value] of Object.entries({ ...financeQuery(query), view, metric })) {
+    if (value !== undefined && value !== "") url.searchParams.set(key, value);
+  }
+  const answer = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${tokens.access() ?? ""}` },
+  });
+  if (!answer.ok) {
+    let message = "تعذّر تصديرُ الملفّ";
+    try {
+      message = ((await answer.json()) as { message?: string }).message ?? message;
+    } catch {
+      /* ردٌّ غيرُ مقروء — الرسالةُ العامّةُ تكفي */
+    }
+    throw new Error(message);
+  }
+  const named = /filename="([^"]+)"/.exec(answer.headers.get("content-disposition") ?? "");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(await answer.blob());
+  link.download = named?.[1] ?? "taxo-finance.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}

@@ -202,3 +202,56 @@ async def test_0102_downgrade_does_not_widen_an_admin() -> None:
     for user_id, permission in rows:
         held.setdefault(str(user_id), set()).add(permission)
     assert held == {str(ids["only"]): {"read.only"}, str(ids["mixed"]): {"settings.write"}}
+
+
+async def test_0103_downgrade_does_not_widen_an_admin() -> None:
+    """**نزولُ `0103` لا يوسّع أحداً** — قاعدةُ `0102` حرفاً: من كانت «الملخّصاتُ المالية» صلاحيتَه الوحيدةَ يُكتب له `read.only`،
+    **وإلا صار بلا صفوفٍ فقُرئ افتراضَ دوره — وافتراضُ `admin` كلُّ ما ليس حسّاساً**. **ومن له صفٌّ آخرُ معها لا يُزاد عليه شيء.**"""
+    from app.core.security import hash_password
+    from app.models.admin_permission import AdminPermissionGrant
+    from app.models.enums import AdminPermission, CountryCode, UserRole
+    from app.models.user import User
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    async with async_sessionmaker(bind=engine, expire_on_commit=False)() as session:
+        only_summary = User(
+            phone="+962790000063", name="قارئ الملخّصات وحدَها", role=UserRole.ADMIN,
+            country_code=CountryCode.JO, password_hash=hash_password("StaffSecret123"),
+        )
+        mixed = User(
+            phone="+962790000064", name="مشرفٌ بصفوفٍ أخرى", role=UserRole.ADMIN,
+            country_code=CountryCode.JO, password_hash=hash_password("StaffSecret123"),
+        )
+        session.add_all([only_summary, mixed])
+        await session.flush()
+        session.add_all(
+            [
+                AdminPermissionGrant(user_id=only_summary.id, permission=AdminPermission.FINANCE_SUMMARY_READ),
+                AdminPermissionGrant(user_id=mixed.id, permission=AdminPermission.FINANCE_SUMMARY_READ),
+                AdminPermissionGrant(user_id=mixed.id, permission=AdminPermission.FINANCE_MANAGE),
+            ]
+        )
+        await session.commit()
+        ids = {"only": only_summary.id, "mixed": mixed.id}
+    await engine.dispose()
+
+    config = alembic_config()
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0102")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            rows = (
+                await conn.execute(text("SELECT user_id, permission::text FROM admin_permissions"))
+            ).all()
+            members = set(
+                (await conn.execute(text("SELECT unnest(enum_range(NULL::admin_permission))::text"))).scalars().all()
+            )
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+
+    assert "finance.summary" not in members
+    held: dict[str, set[str]] = {}
+    for user_id, permission in rows:
+        held.setdefault(str(user_id), set()).add(permission)
+    assert held == {str(ids["only"]): {"read.only"}, str(ids["mixed"]): {"finance.manage"}}

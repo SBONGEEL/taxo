@@ -2114,3 +2114,142 @@ export interface IntercityPermit {
   insurance_expires_on: string;
   revoked_at: string | null;
 }
+
+// ------------------------------------------- الملخّصاتُ المالية (SPEC §٦٥-د)
+//
+// **مرايا تعدادات `services/finance_summary.py` بأسمائها** — فيقابلها `check:enum-coverage` عضواً عضواً. **والفترةُ حرفيّةٌ هناك لا
+// تعداد** (`FinancePeriod = Literal[…]`، كبابِ «التقارير»): `today` عضواً في تعدادٍ كان سيجعل اتحادَ عرضٍ في التطبيقين مخلوطاً.
+
+export type FinancePeriod = "today" | "week" | "month" | "custom";
+export type FinanceUserType = "rider" | "driver";
+export type FinanceMethod = "cash" | "cliq" | "card" | "wallet";
+export type FinanceStatus = "confirmed" | "unconfirmed" | "disputed";
+export type FinanceRowSource = "ledger" | "payment" | "debt" | "subscription" | "charge" | "position" | "ride_fee";
+export type FinanceView = "summary" | "users" | "transactions";
+
+/** ما يُرسل مع كلِّ نداء — **والغائبُ «الكلّ»**؛ والتاريخان للفترة المخصَّصة وحدَها («YYYY-MM-DD» بيوم السوق). */
+export interface FinanceQuery {
+  country_code: CountryCode;
+  period: FinancePeriod;
+  from_date?: string;
+  to_date?: string;
+  user_type?: FinanceUserType;
+  method?: FinanceMethod;
+  status?: FinanceStatus;
+}
+
+export interface FinanceBreakdownLine {
+  key: string;
+  label: string;
+  amount: string;
+  count: number;
+}
+
+/** **مجموعٌ واحد كما حسبته الخلفية** — الرقمُ والعددُ ومن وراءه، **وتعريفُه نصّاً** فلا يُخترع في الشاشة. */
+export interface FinanceMetric {
+  key: string;
+  label: string;
+  definition: string;
+  unit: string;
+  /** **رصيدٌ الآن** لا حركةُ فترة — الفترةُ لا تنطبق عليه */
+  stock: boolean;
+  warn: boolean;
+  /** **أينطبق المرشِّحُ عليه؟** — وإلا يُرسم «لا ينطبق» بعلّته لا صفراً */
+  applicable: boolean;
+  reason: string | null;
+  amount: string;
+  count: number;
+  users: number;
+  breakdown: FinanceBreakdownLine[];
+}
+
+export interface FinanceGroup {
+  key: string;
+  title: string;
+  layout: string;
+  metrics: FinanceMetric[];
+}
+
+export interface FinanceDifference {
+  key: string;
+  label: string;
+  page_amount: string;
+  ledger_amount: string;
+  difference_amount: string;
+}
+
+export interface FinanceReconciliation {
+  reconciled: boolean;
+  checked_at: string;
+  checks: number;
+  differences: FinanceDifference[];
+}
+
+export interface FinanceWindow {
+  country_code: CountryCode;
+  currency: Currency;
+  period: FinancePeriod;
+  from_at: string;
+  to_at: string;
+  timezone: string;
+  filters: {
+    user_type: FinanceUserType | null;
+    method: FinanceMethod | null;
+    status: FinanceStatus | null;
+  };
+}
+
+export interface FinanceSummary {
+  window: FinanceWindow;
+  groups: FinanceGroup[];
+  reconciliation: FinanceReconciliation;
+}
+
+export interface FinanceUserRow {
+  user_id: string | null;
+  /** `drivers.id` لفتح ملفِّ الكبتن — والراكبُ بـ`user_id` */
+  driver_id: string | null;
+  name: string | null;
+  phone_masked: string | null;
+  role: FinanceUserType;
+  role_label: string;
+  count: number;
+  amount: string;
+}
+
+export interface FinanceTransactionRow {
+  ref_id: string;
+  occurred_at: string;
+  user_id: string | null;
+  driver_id: string | null;
+  name: string | null;
+  role: FinanceUserType;
+  role_label: string;
+  source: FinanceRowSource;
+  kind: string;
+  kind_label: string;
+  method: string | null;
+  method_label: string | null;
+  status: string | null;
+  status_label: string | null;
+  amount: string;
+  ride_id: string | null;
+}
+
+export interface FinanceUsersPage {
+  window: FinanceWindow;
+  metric: FinanceMetric;
+  total: number;
+  limit: number;
+  offset: number;
+  rows: FinanceUserRow[];
+}
+
+export interface FinanceTransactionsPage {
+  window: FinanceWindow;
+  metric: FinanceMetric;
+  total: number;
+  limit: number;
+  offset: number;
+  rows: FinanceTransactionRow[];
+}

@@ -478,7 +478,8 @@ async def test_default_admin_lacks_both_and_granting_one_keeps_the_rest(
 ) -> None:
     """**الإصلاحُ الخطر**: `admin` على افتراضه لا يملك الحسّاستين — **ومنحُ إحداهما من المصفوفة لا يُسقط ما سواها**."""
     assert permissions_service.DEFAULTS[UserRole.ADMIN] == permissions_service.ALL - permissions_service.SENSITIVE
-    assert permissions_service.SENSITIVE == {AdminPermission.TRIP_CHATS_READ, AdminPermission.CALL_RECORDINGS_LISTEN}
+    # **وصارت الحسّاسةُ ثلاثاً بالملخّصات المالية** (SPEC §٦٥-د/٧) — والاثنتان هنا منها، والعدُّ يُقرأ من المجموعة لا يُكتب بيد
+    assert {AdminPermission.TRIP_CHATS_READ, AdminPermission.CALL_RECORDINGS_LISTEN} <= permissions_service.SENSITIVE
 
     target = await _staff(client, "admin", "+962790000032", "مشرفٌ على افتراضه")
     rows = (await client.get("/admin/permissions", headers=admin_headers)).json()
@@ -486,7 +487,7 @@ async def test_default_admin_lacks_both_and_granting_one_keeps_the_rest(
     assert row["explicit"] is False
     assert "trip_chats.read" not in row["permissions"] and "call_recordings.listen" not in row["permissions"]
     before = set(row["permissions"])
-    assert len(before) == len(AdminPermission) - 2
+    assert len(before) == len(AdminPermission) - len(permissions_service.SENSITIVE)
 
     # **ولا يقرأ محادثةً** قبل المنح — ولو كان مشرفاً كاملاً
     trip = await _chat_ride(client, session_factory)

@@ -57,6 +57,10 @@ const MobilePaymentsScreen = lazy(() =>
 const FinanceScreen = lazy(() =>
   import("@/screens/Finance").then((m) => ({ default: m.FinanceScreen })),
 );
+// **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — صفحةُ قراءةٍ بصلاحيةٍ مستقلّة
+const FinanceSummaryScreen = lazy(() =>
+  import("@/screens/FinanceSummary").then((m) => ({ default: m.FinanceSummaryScreen })),
+);
 const PaymentsScreen = lazy(() =>
   import("@/screens/Payments").then((m) => ({ default: m.PaymentsScreen })),
 );
@@ -353,6 +357,15 @@ export default function App() {
                     element={
                       <Guarded>
                         <UnconfirmedPaymentsScreen />
+                      </Guarded>
+                    }
+                  />
+                  {/* **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — **والمنعُ من الخادم** (٤٠٣ ⇒ صفحةُ «تحتاج الصلاحية»)، لا من الدور */}
+                  <Route
+                    path="/finance/summary"
+                    element={
+                      <Guarded>
+                        <FinanceSummaryScreen />
                       </Guarded>
                     }
                   />

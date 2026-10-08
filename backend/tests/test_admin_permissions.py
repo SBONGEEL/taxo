@@ -87,6 +87,9 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
         # («لا تُعطى لكلِّ مشرفٍ افتراضاً»)
         "trip_chats.read",
         "call_recordings.listen",
+        # **الملخّصاتُ المالية** (SPEC §٦٥-د/٧، 2026-10-08) — خمسَ عشرة، **والثالثةُ خارجَ افتراض `admin`**
+        # بالنصِّ نفسِه: «صلاحيةٌ إداريةٌ مستقلّة لا تُعطى لكلِّ مشرفٍ افتراضاً»
+        "finance.summary",
     }
     assert permissions_service.DEFAULTS[UserRole.ADMIN] == (
         permissions_service.ALL - permissions_service.SENSITIVE
@@ -94,6 +97,7 @@ async def test_the_twelve_are_declared_and_admin_holds_them_all() -> None:
     assert permissions_service.SENSITIVE == {
         AdminPermission.TRIP_CHATS_READ,
         AdminPermission.CALL_RECORDINGS_LISTEN,
+        AdminPermission.FINANCE_SUMMARY_READ,
     }
     assert permissions_service.DEFAULTS[UserRole.SUPPORT] == {
         AdminPermission.READ_ONLY,

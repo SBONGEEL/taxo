@@ -64,6 +64,7 @@ from app.routers import (
     ride_calls,
     admin_trip_chat,
     admin_ride_calls,
+    admin_finance_summary,
 )
 from app.ws.routes import ws_router
 
@@ -120,6 +121,8 @@ api_router.include_router(admin_unconfirmed_payments.router)
 api_router.include_router(admin_live_map.router)
 api_router.include_router(admin_search.router)
 api_router.include_router(admin_stats.router)
+# **الملخّصاتُ المالية** (SPEC §٦٥-د) — قراءةٌ وحدَها بصلاحيةٍ مستقلّة، **موجّهٌ في ملفِّه** لا ثانٍ في `admin_stats`
+api_router.include_router(admin_finance_summary.router)
 api_router.include_router(admin_subscriptions.router)
 api_router.include_router(admin_account.router)
 api_router.include_router(admin_campaigns.router)

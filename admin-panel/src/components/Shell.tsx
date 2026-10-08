@@ -23,14 +23,19 @@ import { getMyTotp } from "@/api/endpoints";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { useCountries } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
+import { useHolds } from "@/lib/permissions";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { Icon, Wordmark } from "@/taxo2";
 
+/** **صلاحيةُ «الملخّصات المالية»** (SPEC §٦٥-د/٧) — **لا يملكها أحدٌ افتراضاً ولا المشرفُ الكامل**، فبندُها يُرسم لمن مُنحها بالاسم وحدَه
+ *  (`useHolds`). **والدورُ لا يقولها**: `adminOnly` يرسم البندَ لكلِّ `admin`، وأكثرُهم يُردّ عنها. */
+const FINANCE_SUMMARY = "finance.summary";
+
 /** المجموعاتُ كما في `DESIGN.md` §3.1 — و`to` غائبةً تعني «لم تُبنَ بعد». **والأيقونةُ من الهوية** (Material Symbols Rounded). */
 const GROUPS: {
   label: string;
-  items: { label: string; icon: string; to?: string; adminOnly?: boolean }[];
+  items: { label: string; icon: string; to?: string; adminOnly?: boolean; permission?: typeof FINANCE_SUMMARY }[];
 }[] = [
   {
     label: "العمليات",
@@ -53,6 +58,8 @@ const GROUPS: {
     label: "المالية",
     items: [
       { label: "المحافظ والسحب", icon: "account_balance_wallet", to: "/finance" },
+      // **الملخّصاتُ المالية** (A37–A39، SPEC §٦٥-د) — أوّلَ ما تحت المحافظ: مجاميعُ المال كلِّه قبل صفوفه. **ولمن مُنحها وحدَه**
+      { label: "الملخّصات المالية", icon: "receipt_long", to: "/finance/summary", permission: FINANCE_SUMMARY },
       { label: "الدفعات", icon: "payments", to: "/payments" },
       // **المدفوعاتُ غيرُ المؤكَّدة** (A10، `design/PAYMENTS-UNCONFIRMED.md` §٥) — جوارَ «الدفعات»: صفوفُها هي هي، وهذه ما ينتظر
       // أحداً منها. **وبلا `adminOnly`**: القراءةُ لـ`support` والأفعالُ يحرسها الخادم (`DisputeResolver`) كالنزاعات
@@ -210,6 +217,8 @@ export function Shell({
   const { pathname } = useLocation();
   const { user, isAdmin, signOut } = useSession();
   const { dark, toggle } = useTheme();
+  // **قبل الجواب لا يُرسم البند** (`null`) — بندٌ يظهر ثمّ يختفي أسوأُ من بندٍ يتأخّر لحظة
+  const holdsSummary = useHolds(FINANCE_SUMMARY) === true;
   // **درجُ القائمة على الهاتف** — يُغلق بالتنقّل، وبالنقر خارجه، وبـEsc
   const [menu, setMenu] = useState(false);
   const nav = useRef<HTMLElement | null>(null);
@@ -267,7 +276,9 @@ export function Shell({
 
         <nav ref={nav} className="ad-nav scr">
           {GROUPS.map((group) => {
-            const items = group.items.filter((item) => !item.adminOnly || isAdmin);
+            const items = group.items.filter(
+              (item) => (!item.adminOnly || isAdmin) && (item.permission !== FINANCE_SUMMARY || holdsSummary),
+            );
             if (items.length === 0) return null;
             return (
               <div key={group.label} className="ad-nav-group">
