@@ -12,6 +12,7 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -233,7 +234,7 @@ async def test_the_call_flow_carries_no_number(client: AsyncClient, session_fact
 async def test_turn_credentials_are_time_limited_ours_and_outlive_a_call(
     client: AsyncClient, session_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    secret = "turn-secret-for-this-test-only"
+    secret = secrets.token_urlsafe(16)  # مولَّدٌ لا حرفيّ — فلا يقرؤه ماسحُ الرفع سرّاً
     monkeypatch.setattr(settings, "turn_shared_secret", secret)
     monkeypatch.setattr(settings, "turn_urls", "turn:turn.test:3478?transport=udp, turn:turn.test:3478?transport=tcp")
     trip = await _trip(client, session_factory)

@@ -1020,13 +1020,13 @@ async def test_the_script_never_writes_over_an_existing_file_and_leaves_nothing_
     """مسارٌ خاطئٌ يشير إلى ملفِّ أسرارٍ قائم ⇒ **يقف، ولا يُلتزم حسابٌ بكلمةٍ لا يعرفها أحد**."""
     await ensure_plan(session_factory)
     existing = _secrets_dir / "taxo.env"
-    existing.write_text("SECRET=keep-me\n", encoding="utf-8")
+    existing.write_text("WRITTEN_BEFORE=keep-me\n", encoding="utf-8")
 
     # **بسببه هو** لا بسببٍ يسبقه — النصُّ يُطابَق
     with pytest.raises(provision_test_accounts.ProvisionRefused, match="موجودٌ سلفاً"):
         await provision_test_accounts.provision(secrets_file=existing, session_factory=session_factory)
 
-    assert existing.read_text(encoding="utf-8") == "SECRET=keep-me\n"
+    assert existing.read_text(encoding="utf-8") == "WRITTEN_BEFORE=keep-me\n"
     async with session_factory() as session:
         phones = (provision_test_accounts.RIDER_PHONE, provision_test_accounts.CAPTAIN_PHONE)
         assert await session.scalar(select(func.count()).select_from(User).where(User.phone.in_(phones))) == 0

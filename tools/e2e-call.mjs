@@ -26,6 +26,7 @@
 // ويُخدَمان بـ`vite preview` على 5173 و5174 — منفذا `cors_origins`):
 //
 //     set TAXO_PLAYWRIGHT=D:\prj\TAXO\.claude\skills\video-studio\node_modules\playwright
+//     set TAXO_DEV_PASSWORD=…                     (كلمةُ حسابات التطوير — `COMMANDS.md`)
 //     set TAXO_E2E_SHOTS=<مجلّدُ اللقطات>          (اختياريّ)
 //     node tools/e2e-call.mjs
 //
@@ -43,7 +44,12 @@ const API = process.env.TAXO_API || "http://127.0.0.1:8001/api/v1";
 const RIDER_URL = process.env.TAXO_RIDER_URL || "http://127.0.0.1:5173";
 const DRIVER_URL = process.env.TAXO_DRIVER_URL || "http://127.0.0.1:5174";
 const SHOTS = process.env.TAXO_E2E_SHOTS || null;
-const PASSWORD = "TaxoTest123"; // كلمةُ حسابات التطوير المكتوبة في COMMANDS.md — لا تصلح خارج هذا الجهاز
+// كلمةُ حسابات التطوير (`COMMANDS.md`) **من البيئة لا من الشيفرة** — ماسحُ الرفع يقرأ الحرفيّةَ سرّاً، وهو محقٌّ في الشكل
+const PASSWORD = process.env.TAXO_DEV_PASSWORD;
+if (!PASSWORD) {
+  console.error("✗ TAXO_DEV_PASSWORD غيرُ مضبوط — كلمةُ حسابات التطوير في COMMANDS.md");
+  process.exit(1);
+}
 const RIDER_PHONE = "+962790000021"; // عمر الراكب
 const DRIVER_PHONE = "+962790000011"; // زيد السائق
 const COUNTRY = "JO";

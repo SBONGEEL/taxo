@@ -402,7 +402,17 @@ SECRET_RE='BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?key|secret|token|password)[[:space:
 # **وتُوصف الأشكالُ ولا تُعرض**: مثالُ `اسم=قيمة` مكتوباً في هذا الملفّ نفسِه
 # **يوقف الرفعةَ التالية** — وقد وقع مرّتين اليوم. **فلا يُكتب الشكلُ الذي
 # يُحرَس منه في الملفّ الذي يحرسه.**
-BENIGN_RE='example|placeholder|getenv|environ|process\.env|secrets\.|token_urlsafe|randbytes|uuid|env\.[A-Za-z_]|ENV\[|import\.meta|<[a-z]|\$\{|[:=][[:space:]]*[A-Za-z_$][A-Za-z0-9_]*[[:space:]]*[,;)]|[:=][[:space:]]*[A-Za-z_][A-Za-z]*$'
+# **وثلاثةُ استثناءاتٍ ضيّقةٍ بقرار المالك (٢٠٢٦-١٠-٠٨)** بعد أن أوقف الماسحُ رفعاً بستّة عشرَ بلاغاً **لا قيمةَ سرٍّ في واحدٍ منها**
+# (`design/APPROVALS-62.md` §١٠) — **تُوصف ولا تُعرض** كما يقول ما فوقها:
+#   - **(أ) الإسنادُ من تعبيرٍ لا من قيمة**: خاصّيّةٌ على كائنٍ **من قائمةٍ مسمّاة** (الإعداداتُ والطلبُ وأشباهُهما) أو نداءٌ **لدالّةِ مسارٍ
+#     مسمّاة**. **والقائمةُ مسمّاةٌ قصداً لا «أيُّ معرِّفٍ ثمّ نقطة»**: رمزُ JWT عارياً بلا اقتباسٍ يبدو مقاطعَ بنقاط، فاستثناءٌ عامٌّ يُمرّره.
+#   - **(ب) حشوُ سلسلةٍ منسَّقة من مُعرِّفٍ وحدَه** (قوسان معقوفان حول اسم) — **وما بين القوسين قيمةً حرفيّةً يبقى ممسوكاً**.
+#   - **(ج) ثابتٌ يسمّي الشيءَ نفسَه**: قيمةٌ تبدأ بالكلمة المفتاحيّة ثمّ كلمةٌ أو كلمتان صغيرتان بشرطةٍ سفليّة (اسمُ سببٍ أو حدث)،
+#     **ورمزا الإكمال التلقائيِّ القياسيّان لكلمة المرور** في HTML. **ولا تُستثنى «أيُّ كلماتٍ بشرطة»**: عبارةُ مرورٍ كلماتٌ يكتبها
+#     إنسانٌ بشرطاتٍ سفليّةٍ أو عاديّة تبقى ممسوكة.
+# **ويقيسها `scripts/tests/secret-scan.test.sh` في الاتجاهين**: كلُّ استثناءٍ يمرّ شكلُه، **وسرٌّ حقيقيٌّ بالشكل نفسِه يُمسك** — وعيّناتُه
+# تُركَّب وقتَ التشغيل فلا يقع شكلُ السرّ في سطرٍ يمسحه هذا الماسحُ نفسُه.
+BENIGN_RE='example|placeholder|getenv|environ|process\.env|secrets\.|token_urlsafe|randbytes|uuid|env\.[A-Za-z_]|ENV\[|import\.meta|<[a-z]|\$\{|[:=][[:space:]]*[A-Za-z_$][A-Za-z0-9_]*[[:space:]]*[,;)]|[:=][[:space:]]*[A-Za-z_][A-Za-z]*$|[:=][[:space:]]*(self|settings|payload|config|cfg|request|body|data|form|args|options|params|row|user|ride|driver|ctx)\.[A-Za-z_][A-Za-z0-9_.]*[[:space:]]*([,;)]|$)|[:=][[:space:]]*(join|resolve|dirname|path\.join|os\.path\.join|Path)\(|[:=][[:space:]]*\{[A-Za-z_][A-Za-z0-9_]*\}|[:=][[:space:]]*"(password|passwd|secret|token)(_[a-z]+){1,2}"[[:space:]]*([,;)]|$)|[:=][[:space:]]*"(new|current)-password"'
 LEAKS="$(git diff "${REMOTE_SHA:-HEAD~1}..$HEAD_SHA" 2>/dev/null | grep -E "^\+" | grep -nE "$SECRET_RE" | grep -vE "$BENIGN_RE" | head -5 || true)"
 if [ -n "$LEAKS" ]; then
   say "$LEAKS"

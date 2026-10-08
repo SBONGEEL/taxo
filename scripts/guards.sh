@@ -64,6 +64,9 @@ run "check:ios"             node tools/check-ios.mjs
 # أوّلِ نداءٍ للخادم لا يشكو حتى يُرفع**. مستودعاتٌ مؤقّتةٌ وشواهدُ للشبكة —
 # ثوانٍ، **ولا خادمَ ولا دفع**.
 run "deploy-branch-gate"    bash scripts/tests/deploy-branch-gate.test.sh
+# **وماسحُ الأسرار يُقاس في الاتجاهين** (٢٠٢٦-١٠-٠٨): استثناءاتُه الضيّقةُ تمرّ أشكالُها، **وسرٌّ حقيقيٌّ بالشكل نفسِه
+# يُمسك** — فتوسيعُ استثناءٍ يسقط هنا قبل أن يمرّر سرّاً في رفع (`design/APPROVALS-62.md` §١٠).
+run "secret-scan"           bash scripts/tests/secret-scan.test.sh
 
 # ── لكلِّ تطبيقٍ حرّاسُه الساكنون ───────────────────────────────────────────
 for app in customer-app driver-app admin-panel; do
