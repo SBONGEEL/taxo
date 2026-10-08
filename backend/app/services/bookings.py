@@ -39,6 +39,7 @@ from app.core.exceptions import (
     InvalidInput,
     NotFound,
     RideAlreadyActive,
+    UnconfirmedPaymentBlocked,
     WomenServiceUnavailable,
 )
 from app.models.booking import RideBooking
@@ -414,16 +415,24 @@ async def execute(
             # لا من الحجز، فتبقى صحيحةً وإن تغيّر أصلُها (قرارُ المالك)
             scheduled_for=booking.scheduled_at,
         )
-    except RideAlreadyActive:
+    except (RideAlreadyActive, UnconfirmedPaymentBlocked) as refused:
         # **صاحبُه في رحلةٍ الآن**: الفهرسُ يمنع الثانية، فيصير الحجزُ `missed`
-        # بإشعار — لا يُحذف بصمتٍ ولا يُترك معلّقاً يُنفَّذ بعد ساعة
+        # بإشعار — لا يُحذف بصمتٍ ولا يُترك معلّقاً يُنفَّذ بعد ساعة.
+        #
+        # **أو دفعُ رحلةٍ سابقةٍ يمنعه** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج — مراجعةُ ٢٠٢٦-١٠-٠٧): كان يسقط
+        # خارج هذا الفرع فيُعاد الحجزُ كلَّ دقيقةٍ ويُكتب في السجلّ وحدَه، **وصاحبُه لا يُقال له شيء**. فالحكمُ حكمُ الأوّل:
+        # `missed` مرّةً، ويُقال له السببُ وما يرفعه
         booking.status = BookingStatus.MISSED
         booking.notified_at = _now()
         await session.flush()
         await session.commit()
         await _tell(
             publish_booking_missed(
-                session, redis, rider_id=booking.rider_id, booking_id=booking.id
+                session,
+                redis,
+                rider_id=booking.rider_id,
+                booking_id=booking.id,
+                unpaid=isinstance(refused, UnconfirmedPaymentBlocked),
             )
         )
         return None

@@ -165,6 +165,10 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         FeatureKey.WEEKLY_CASHBACK_ENABLED: False,
         # **ساعاتُ العمل مطفأةٌ حتى يُنشر سطرُ خصوصيّتها** (§٦٤-هـ/٤) — المفتاحُ يحكم الجمع
         FeatureKey.WORK_HOURS_ENABLED: False,
+        # **المدفوعاتُ غيرُ المؤكَّدة مطفأةٌ حتى يُشعلها المالكُ لسوقه** (§٦٤-ج) — **والإتمامُ الآليُّ مفتاحٌ ثانٍ** يُشعَل بعد أن
+        # يُرى الطابورُ أسبوعاً (`design/PAYMENTS-UNCONFIRMED.md` §١٠/٥)
+        FeatureKey.UNCONFIRMED_PAYMENTS_ENABLED: False,
+        FeatureKey.CASH_AUTO_CONFIRM_ENABLED: False,
         FeatureKey.REFERRED_REWARD_ENABLED: False,
         # **مطفأٌ صراحةً** (المرحلة 12-ط): الحجزُ وعدٌ بموعد، وسوقٌ لم يُجهَّز
         # عرضُه في الساعات الهادئة يُخلف الوعدَ — فالإشعالُ قرارُ تشغيل

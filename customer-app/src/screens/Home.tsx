@@ -47,7 +47,8 @@ import type { RiderHomeProps } from "@/screens/t2/RiderHomeT2";
 import type { ConfirmRideProps } from "@/components/home/useConfirmRide";
 import { MapView, type MapHandle } from "@/components/map/MapView";
 import type { DraftStop } from "@/components/home/StopsEditor";
-import { useCountryConfig, useMapboxToken } from "@/lib/config";
+import { useCountryConfig, useFeature, useMapboxToken } from "@/lib/config";
+import { UNCONFIRMED_FLAG, useUnconfirmed, type PayableMethod } from "@/lib/payment";
 import { useApproachMinutes, useNearestEta } from "@/lib/arrival";
 import { DEFAULT_CENTER, currentPosition, reverseArea, reverseGeocode, type Place } from "@/lib/geocode";
 import { noDestination } from "@/lib/hourly";
@@ -114,6 +115,11 @@ export function HomeScreen() {
   const [stops, setStops] = useState<DraftStop[]>([]);
   // ارتدّ الطلبُ بسبب تفضيلٍ لا تستطيع تغييره — فيُفتح لها الباب
   const [blockedByPreference, setBlockedByPreference] = useState(false);
+  // **ارتدّ بـ٤٠٢ لدفعِ رحلةٍ سابقة** (`design/PAYMENTS-UNCONFIRMED.md` §٧) — ويُفتح له بابُ «رحلةٌ لم يكتمل دفعها»
+  const [blockedByPayment, setBlockedByPayment] = useState(false);
+  // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): مفتاحُ السوق يحكم أتُرسل الطريقةُ مع الطلب وأيُرسم شريطُ «تأكيدٌ ينتظرك»
+  const unconfirmedOn = useFeature(user?.country_code, UNCONFIRMED_FLAG);
+  const unconfirmed = useUnconfirmed(unconfirmedOn);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -412,12 +418,14 @@ export function HomeScreen() {
     forOther?: RideForOther,
     parcel?: RideParcel,
     hourly?: RideHourly,
+    paymentMethod?: PayableMethod,
   ) {
     // **ساعاتٌ بلا وجهةٍ تُرسل نقطةَ الانطلاق وجهةً** (§٦٣-ج/٥، عقدُ `HourlyIn`) — وكلُّ طلبٍ غيرِها بوجهته كما كان
     const target = dropoff ?? (hourly ? pickup : null);
     if (!pickup || !target) return;
     setRequesting(true);
     setError(null);
+    setBlockedByPayment(false);
     try {
       const created = await requestRide({
         pickup,
@@ -442,6 +450,9 @@ export function HomeScreen() {
         // **بالساعة** (§٦٣-ج/٥): الساعاتُ ومن أين يُدفع محجوزُها — والفئةُ الاقتصاديُّ من الورقة؛ والخلفيةُ تفحص المفتاحَ والسعرَ
         // والسقفَ والجمعَ عند الإنشاء
         hourly,
+        // **طريقةُ الدفع تُرسل مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — **حيث المفتاحُ مشتعلٌ وحدَه**: مطفأً
+        // حمولةُ الطلب هي هي حرفاً. ومنها يولد صفُّ الكاش وكليك عند الإنهاء ويراها الكبتنُ على بطاقة العرض
+        payment_method: unconfirmedOn ? paymentMethod : undefined,
         stops: stops.map((stop) => ({
           lat: stop.lat,
           lng: stop.lng,
@@ -466,6 +477,8 @@ export function HomeScreen() {
         caught instanceof ApiError &&
           caught.code === "women_service_unavailable",
       );
+      // **ومنعُ الدفع السابق رفضٌ له مخرج** (§٧) — النصُّ من الخلفية أعلاه، والزرُّ إلى البطاقة في الورقة
+      setBlockedByPayment(caught instanceof ApiError && caught.code === "unconfirmed_payment_blocked");
     } finally {
       setRequesting(false);
     }
@@ -543,6 +556,8 @@ export function HomeScreen() {
         pickup_address: previous.pickup_address,
         dropoff_address: previous.dropoff_address,
         gender_preference: "any",
+        // **بالطريقة التي أُرسلت مع الأولى** (§٢-١) — ما اختاره قبل دقائق لا يُسأل عنه ثانيةً، ومطفأً لا شيء
+        payment_method: unconfirmedOn ? (previous.payment_method_hint ?? undefined) : undefined,
       });
       setDismissed(null);
       setRide(created);
@@ -720,6 +735,9 @@ export function HomeScreen() {
       setHourlyMode(true);
       setSearchOpen(true);
     },
+    // **شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — `null` حيث المفتاحُ مطفأ
+    unconfirmed,
+    onOpenUnconfirmed: () => navigate("/payments/unconfirmed"),
   };
 
   // «رجوع» (الحزمة ب): يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟».
@@ -727,6 +745,7 @@ export function HomeScreen() {
   // منه إلى ورقة التأكيد — أما المحطاتُ فمعها، إذ لا معنى
   // لمحطاتٍ بلا وجهة. **وفعلٌ واحدٌ للوجهين**: زرُّ الورقة القائمة وسهمُ الخريطة في TAXO 2.0
   const leaveConfirm = () => {
+    setBlockedByPayment(false);
     setPhase("idle");
     setDropoff(null);
     setDropoffAddress(null);
@@ -764,6 +783,8 @@ export function HomeScreen() {
           onAddStop: () => setPhase("pick-stop"),
           blockedByPreference,
           onClearPreference: () => void clearGenderPreference(),
+          blockedByPayment,
+          onOpenUnconfirmed: () => navigate("/payments/unconfirmed"),
           countryConfig,
           onBack: leaveConfirm,
           initialPreference: presetPreference,

@@ -38,6 +38,9 @@ const COVERING = [
   "/register",
   "/forgot-password",
   "/payments/card/return",
+  // **«رحلةٌ لم يكتمل دفعها»** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — صفحةٌ كاملةٌ بين الترحيب والرئيسية، **ومخرجُها «لاحقاً»**
+  // في قاعها حيث يطفو الشريط
+  "/payments/unconfirmed",
 ];
 
 /** هل يظهر الشريطُ على هذا المسار؟ */

@@ -85,6 +85,8 @@ import type {
   PaymentMethod,
   PaymentSetting,
   PaymentStatus,
+  UnconfirmedActionResult,
+  UnconfirmedQueueRow,
   PricingRule,
   PromoCode,
   ProviderCatalog,
@@ -525,6 +527,27 @@ export const resolveDispute = (
     note: note ?? null,
   });
 
+// ------------------------- المدفوعاتُ غيرُ المؤكَّدة (`design/PAYMENTS-UNCONFIRMED.md` §٥، SPEC §٦٤-ز)
+
+/** **«المدفوعات غير المؤكدة»** — الأقدمُ أوّلاً، لأسواقٍ اشتعل فيها المفتاح (والاعتراضاتُ المفتوحةُ أيّاً كان). */
+export const listUnconfirmedPayments = (country?: CountryCode, limit = 50, offset = 0) =>
+  api.get<UnconfirmedQueueRow[]>("/admin/payments/unconfirmed", {
+    query: { country_code: country, limit, offset },
+  });
+
+/** **«أرسل تذكيراً الآن»** للطرف المنتظَر — بسببٍ ٨ أحرفٍ يدخل التدقيق، **ولا يمسّ مواعيدَ الجدول**. */
+export const remindUnconfirmed = (paymentId: string, reason: string) =>
+  api.post<{ sent_to: ("captain" | "rider")[] }>(`/admin/payments/unconfirmed/${paymentId}/remind`, { reason });
+
+/** **«احسم: مدفوع» / «احسم: غيرُ مدفوع»** — الواقعةُ لا الحالة، بسببٍ ٨ أحرف. و«غيرُ مدفوع» على إتمامٍ آليٍّ معترَضٍ عليه
+ *  **يُردّ ٥٠١ `objection_counter_entry_pending`**: قيدُه المقابلُ لم يُبنَ — ويُقال نصُّه كما وصل. */
+export const resolveUnconfirmed = (paymentId: string, outcome: DisputeResolution, reason: string) =>
+  api.post<UnconfirmedActionResult>(`/admin/payments/unconfirmed/${paymentId}/resolve`, { outcome, reason });
+
+/** **«حوّل إلى نزاع»** — `disputed` ويُسأل الطرفان بنصّهما، بسببٍ ٨ أحرف. لا قيد. */
+export const disputeUnconfirmedPayment = (paymentId: string, reason: string) =>
+  api.post<UnconfirmedActionResult>(`/admin/payments/unconfirmed/${paymentId}/dispute`, { reason });
+
 // ------------------------------------------------------------ الإعدادات
 
 export const listFeatureFlags = () =>
@@ -584,6 +607,17 @@ export const updatePaymentSettings = (
     tip_preset_small?: string;
     tip_preset_medium?: string;
     tip_max?: string;
+    /** **عتباتُ المدفوعات غير المؤكَّدة** (§٩، SPEC §٦٤-ز) — والمواعيدُ أربعةٌ متصاعدةٌ أو تُردّ ٤٢٢ برسالتها. */
+    payment_reminder_minutes?: number[];
+    cash_auto_confirm_hours?: number;
+    cash_auto_confirm_max_amount?: string;
+    cliq_reference_minutes?: number;
+    driver_unconfirmed_block_count?: number;
+    driver_unconfirmed_block_hours?: number;
+    rider_unconfirmed_block_minutes?: number;
+    rider_unpaid_rulings_cash_off?: number;
+    rider_unpaid_rulings_window_days?: number;
+    dispute_window_hours?: number;
   },
 ) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
 

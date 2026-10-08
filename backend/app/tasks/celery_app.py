@@ -99,6 +99,7 @@ celery_app = Celery(
         "app.tasks.intercity",
         "app.tasks.activity",
         "app.tasks.cashback",
+        "app.tasks.unconfirmed_payments",
     ],
 )
 
@@ -203,6 +204,16 @@ celery_app.conf.update(
         "remind-cashback": {
             "task": "app.tasks.cashback.remind_cashback",
             "schedule": 900.0,
+        },
+        # **المدفوعاتُ غيرُ المؤكَّدة كلَّ خمس دقائق** (`design/PAYMENTS-UNCONFIRMED.md` §٣/§٢-٥، SPEC §٦٤-ج): التذكيراتُ
+        # مختومةٌ على الصفّ فلا تتكرّر، والإتمامُ الآليُّ بمفتاحه المستقلّ. ومطفأَين لا يقرآن إلا صفَّ المفتاح
+        "remind-unconfirmed-payments": {
+            "task": "app.tasks.unconfirmed_payments.remind_unconfirmed_payments",
+            "schedule": 300.0,
+        },
+        "auto-confirm-cash": {
+            "task": "app.tasks.unconfirmed_payments.auto_confirm_cash",
+            "schedule": 300.0,
         },
         # **ساعاتُ العمل** (§٦٢-ج/٣٧): دقيقةٌ كلَّ دقيقة — ومفتاحُ الدقيقة يمنع عدَّها مرّتين
         "record-activity-minute": {

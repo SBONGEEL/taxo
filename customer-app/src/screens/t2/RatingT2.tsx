@@ -73,11 +73,16 @@ export function RatingT2Screen() {
 
   const home = () => navigate("/", { replace: true });
 
-  // **طريقةُ الدفع كما سُجّلت** — القنواتُ بأسمائها (و«كاش للكبتن» كما رُسمت)، **ولا يُعدّ الخصمُ قناةً يدفعها الراكب**
+  // **طريقةُ الدفع كما سُجّلت** — القنواتُ بأسمائها (و«كاش للكبتن» كما رُسمت)، **ولا يُعدّ الخصمُ قناةً يدفعها الراكب**.
+  // **ولا ما أُلغي**: «غيّر طريقة الدفع» (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) يُبقي الصفَّ القديمَ `voided` — وبغير هذا
+  // تُقرأ رحلةٌ دُفعت من المحفظة وحدَها «كاش للكبتن + المحفظة»
   const methods = [
     ...new Set(
       (payments?.payments ?? [])
-        .filter((row) => row.method !== "promo" && row.method !== "share" && row.status !== "failed")
+        .filter(
+          (row) =>
+            row.method !== "promo" && row.method !== "share" && row.status !== "failed" && row.status !== "voided",
+        )
         .map((row) => row.method),
     ),
   ];

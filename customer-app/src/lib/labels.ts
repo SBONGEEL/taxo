@@ -68,6 +68,8 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   failed: "فاشلة",
   disputed: "قيد النزاع",
   refunded: "مستردّة",
+  // **بدّلتَ طريقتَها** (§٦٤-ز) — صفٌّ باقٍ في الإيصال لا مالٌ ضاع، والجديدةُ تحته بقناتها
+  voided: "بُدِّلت طريقتُها",
 };
 
 export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {

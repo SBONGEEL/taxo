@@ -20,7 +20,16 @@
  */
 
 import type { ReactNode } from "react";
-import type { MyReferrals, PromoBanner, Ride, SavedPlace, ServiceTile, Wallet, WeeklyCashback } from "@/api/types";
+import type {
+  MyReferrals,
+  PromoBanner,
+  Ride,
+  RiderUnconfirmed,
+  SavedPlace,
+  ServiceTile,
+  Wallet,
+  WeeklyCashback,
+} from "@/api/types";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -40,6 +49,7 @@ import { Wordmark } from "@/taxo2";
 import { DrawerT2 } from "./DrawerT2";
 import { PROMO_SKIN_T2 } from "./StorefrontT2";
 import { DeclareGenderSheetT2 } from "./WomenServiceT2";
+import { UnconfirmedStripT2 } from "./UnconfirmedT2";
 import "@/taxo2";
 import "./t2.css";
 import "./cashback.css";
@@ -81,6 +91,9 @@ export interface RiderHomeProps {
   onParcel?: () => void;
   /** **بدءُ طلب ساعات** (§٦٣-ج/٥) — منتقي الوجهة بـ«بلا وجهة» ثمّ ورقتُها؛ والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل. */
   onHourly?: () => void;
+  /** **ما ينتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية؛ و`null` حيث المفتاحُ مطفأ. */
+  unconfirmed?: RiderUnconfirmed | null;
+  onOpenUnconfirmed?: () => void;
 }
 
 
@@ -217,6 +230,8 @@ export function RiderHomeT2({
   onWomenRide,
   onParcel,
   onHourly,
+  unconfirmed = null,
+  onOpenUnconfirmed,
 }: RiderHomeProps) {
   const navigate = useNavigate();
   const women = useWomenService();
@@ -283,6 +298,10 @@ export function RiderHomeT2({
           {name.slice(0, 1)}
         </button>
       </div>
+
+      {/* **«تأكيدٌ ينتظرك» في أعلى الرئيسية** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — يفتح الصفحةَ التي أخفاها «لاحقاً»، **والحدُّ
+          يُقال هنا بسببه المكتوب** (§٧: «السببُ مكتوبٌ في الرئيسية»). ولا شيءَ يُرسم بلا شيءٍ ينتظر أو والمفتاحُ مطفأ */}
+      {onOpenUnconfirmed ? <UnconfirmedStripT2 data={unconfirmed} onOpen={onOpenUnconfirmed} /> : null}
 
       <button type="button" className="t2-home-hero" onClick={onAskDestination}>
         <span className="t2-home-hero-stripe" aria-hidden="true" />

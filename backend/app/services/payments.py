@@ -90,13 +90,26 @@ from app.services.pricing import round_money
 # آلة حالات الدفعة — ما ليس هنا ممنوع (SPEC القسم 4)
 ALLOWED_TRANSITIONS: dict[PaymentStatus, frozenset[PaymentStatus]] = {
     PaymentStatus.PENDING: frozenset(
-        {PaymentStatus.CONFIRMED, PaymentStatus.FAILED, PaymentStatus.DISPUTED}
+        {
+            PaymentStatus.CONFIRMED,
+            PaymentStatus.FAILED,
+            PaymentStatus.DISPUTED,
+            # **«غيّر طريقة الدفع»** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ج):
+            # من المعلَّقة وحدَها — ما أقرّ به الراكبُ أو أكّده الكبتنُ لا يُبدَّل
+            PaymentStatus.VOIDED,
+        }
     ),
-    # مخرجا النزاع حكمان لا ثالث لهما: وصل المال أو لم يصل
-    PaymentStatus.DISPUTED: frozenset({PaymentStatus.CONFIRMED, PaymentStatus.FAILED}),
+    # مخرجا النزاع حكمان: وصل المال أو لم يصل — **وثالثٌ للراكب وحدَه**: «سأدفع الآن» على نزاع كاش
+    # (`design/PAYMENTS-UNCONFIRMED.md` §٢-٣/§٦، SPEC §٦٤-ج) يُلغي المتنازَعَ عليه ويفتح ما يدفع به في معاملةٍ واحدة
+    # (`unconfirmed_payments.change_method`) — **لا حكمٌ يُكتب ولا قيد**، فالنزاعُ يسقط لأن المالَ يُدفع لا لأن أحداً حكم
+    PaymentStatus.DISPUTED: frozenset(
+        {PaymentStatus.CONFIRMED, PaymentStatus.FAILED, PaymentStatus.VOIDED}
+    ),
     PaymentStatus.CONFIRMED: frozenset({PaymentStatus.REFUNDED}),
     PaymentStatus.FAILED: frozenset(),
     PaymentStatus.REFUNDED: frozenset(),
+    # **نهائيّةٌ كـ`failed`**: الدفعةُ التي تحلّ محلَّها صفٌّ جديدٌ من `pay_ride`
+    PaymentStatus.VOIDED: frozenset(),
 }
 
 # القناة والمفتاح الذي يحكمها. الكاش ليس هنا: لا مفتاح له لأنه القناة الوحيدة
@@ -116,6 +129,10 @@ REFUNDABLE_METHODS: tuple[PaymentMethod, ...] = (
 
 
 STAFF_ROLES: tuple[UserRole, ...] = (UserRole.ADMIN, UserRole.SUPPORT)
+
+#: **أقلُّ طول سببٍ لحكم المشرف** (`design/PAYMENTS-UNCONFIRMED.md` §٥: «٨ أحرف على الأقل») — **يُفرض حين يشتعل §٦٤-ج
+#: في السوق** على بابَي الحكم كليهما (`resolve_dispute`)، ومطفأً يبقى البابُ القديمُ كما كان (`note` اختياريّ)
+MIN_RULING_REASON_LENGTH = 8
 
 
 def _now() -> datetime:
@@ -332,6 +349,15 @@ async def pay_ride(
     await _require_method_enabled(session, ride, method)
     _require_payer_method(ride, method)
 
+    # **قناةُ الكاش المطفأةُ لهذا الراكب تُطفأ هنا لا في الطلب وحدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج):
+    # «حكمان بـ"لم يدفع" في ٩٠ يوماً ⇒ محفظة/بطاقة/كليك فقط». **وهذا البابُ هو ما يفتح الكاش فعلاً** — فحصُ الطريقة المرسلة
+    # مع الطلب وحدَه يتركها مفتوحةً لمن لم يرسل طريقةً (تطبيقٌ قديم) أو أرسل غيرَها ثمّ دفع نقداً. **وباقي المحفظة كاشٌ
+    # كذلك** (`_pay_from_wallet`)، فلا يُفتح باقٍ نقديٌّ لمن أُطفئ له. ومطفأً المفتاحُ لا يُسأل شيء (`cash_allowed`)
+    from app.services import unconfirmed_payments
+
+    if method == PaymentMethod.CASH:
+        await unconfirmed_payments.require_cash_allowed(session, rider)
+
     if method == PaymentMethod.CARD:
         # استيرادٌ داخل الدالة عمداً: `card_payments` يستورد هذا الملف ليصل إلى
         # `settle` — وهو الاتجاه الصحيح، فالبطاقة تبني على التسوية لا العكس.
@@ -357,8 +383,10 @@ async def pay_ride(
             rider=rider,
             outstanding=outstanding,
             idempotency_key=idempotency_key,
-            # **رحلةٌ لغيره يدفعها هو لا يبقى منها نقد** (§٦٣-ج/١): الطالبُ ليس عند السيارة ليدفع الباقي
-            cash_remainder=not ride.for_other,
+            # **رحلةٌ لغيره يدفعها هو لا يبقى منها نقد** (§٦٣-ج/١): الطالبُ ليس عند السيارة ليدفع الباقي.
+            # **ولا لمن أُطفئ له الكاش** (§٧ أعلاه): رصيدٌ لا يغطّي يُردّ بـ«اشحن أو ادفع بالبطاقة» لا بباقٍ نقديّ
+            cash_remainder=not ride.for_other
+            and await unconfirmed_payments.cash_allowed(session, rider),
         )
     else:
         alias = (
@@ -909,16 +937,26 @@ async def expire_cliq_confirmation(
 async def dispute_by_driver(
     session: AsyncSession, *, payment: Payment, driver: Driver, reason: str
 ) -> Payment:
-    """«لم يصلني» على دفعة كليك (SPEC القسم 6.2).
+    """«لم يصلني» على دفعة كليك (SPEC القسم 6.2) — **و«لم يدفع» على الكاش حين يشتعل §٦٤-ج**.
 
-    كليك وحدها: التحويل يقع خارج التطبيق ولا API يشهد عليه، فبين قول الراكب
-    «حوّلت» وقول الكبتن «لم يصلني» فراغٌ يملؤه إنسان. الكاش يقع يداً بيد فلا
-    فراغ فيه، والمحفظة يشهد عليها الدفتر.
+    كليك: التحويل يقع خارج التطبيق ولا API يشهد عليه، فبين قول الراكب «حوّلت»
+    وقول الكبتن «لم يصلني» فراغٌ يملؤه إنسان. والمحفظة يشهد عليها الدفتر.
+
+    **والكاش صار له الفراغُ نفسُه** (`design/PAYMENTS-UNCONFIRMED.md` §٢-٣): كان «يداً بيد فلا فراغ»، **وصفُّ الدفع صار
+    يولد مع نهاية الرحلة** قبل أن تلتقي اليدان — فراكبٌ نزل بلا أن يدفع لا مخرجَ لكبتنه إلا «استلمت» أو صمتٌ إلى الأبد
+    (§٠/٢). **فـ«لم يدفع» نزاعٌ كنزاع كليك** يذهب إلى الإدارة ولا يكتب شيئاً. **وبمفتاح السوق وحدَه**: مطفأً يبقى الكاشُ كما
+    كان بلا نزاع.
     """
     ride = await _ride_of(session, payment)
     if ride.driver_id != driver.id:
         raise PermissionDenied("هذه الدفعة ليست على رحلة مُسندة إليك")
-    if payment.method != PaymentMethod.CLIQ:
+    cash_disputable = (
+        payment.method == PaymentMethod.CASH
+        and await settings_service.is_feature_enabled(
+            session, ride.country_code, FeatureKey.UNCONFIRMED_PAYMENTS_ENABLED
+        )
+    )
+    if payment.method != PaymentMethod.CLIQ and not cash_disputable:
         raise InvalidPaymentTransition("النزاع متاح على دفعات كليك وحدها")
     if not reason.strip():
         raise InvalidInput("سبب النزاع مطلوب")
@@ -952,15 +990,37 @@ async def resolve_dispute(
     actor: User,
     resolution: DisputeResolution,
     note: str | None,
+    allow_pending: bool = False,
+    details: dict[str, object] | None = None,
 ) -> Payment:
-    """فصل الإدارة في نزاع (SPEC القسم 6.2/13.4).
+    """فصل الإدارة في نزاع (SPEC القسم 6.2/13.4) — **بابُ الحكم الواحد** لبابَي اللوحة كليهما.
 
     `paid` تعني أن المال وصل الكبتن فعلاً فتُثبَّت الدفعة وتُحسب عمولتها،
     و`unpaid` تعني أنه لم يصل فتسقط الدفعة ويعود مبلغها ديناً على الرحلة —
     يفتح الراكب دفعةً جديدة بقناة أخرى.
+
+    **وطابورُ المعلَّقات يحكم من هنا لا من نسخة** (`design/PAYMENTS-UNCONFIRMED.md` §٥، SPEC §٦٤-ج، مراجعةُ ٢٠٢٦-١٠-٠٧):
+    كان له منطقٌ منسوخٌ بقواعدَ أخرى — **فنزاعُ كاشٍ في الطابور يُحكم من البابِ القديم بلا سبب**، وهو شكلُ «بابان ينشران
+    الشيءَ نفسَه ويفترقان» (`PATTERNS.md`). فـ`allow_pending` للطابور وحدَه (معلَّقٌ لم يصر نزاعاً — §٥ «احسم»)، و`details`
+    ما يضيفه إلى التدقيق (`via`·`action`·`reason`). **والسببُ ≥ ٨ أحرف على البابين حين يشتعل §٦٤-ج في السوق**؛ ومطفأً يبقى
+    البابُ القديمُ كما كان حرفاً.
     """
-    if payment.status != PaymentStatus.DISPUTED:
+    open_statuses = (
+        (PaymentStatus.DISPUTED, PaymentStatus.PENDING)
+        if allow_pending
+        else (PaymentStatus.DISPUTED,)
+    )
+    if payment.status not in open_statuses:
         raise InvalidPaymentTransition("لا نزاع قائم على هذه الدفعة")
+
+    ride = await _ride_of(session, payment)
+    cleaned = (note or "").strip()
+    if len(cleaned) < MIN_RULING_REASON_LENGTH and await settings_service.is_feature_enabled(
+        session, ride.country_code, FeatureKey.UNCONFIRMED_PAYMENTS_ENABLED
+    ):
+        raise InvalidInput(
+            f"اكتب سبباً من {MIN_RULING_REASON_LENGTH} أحرف على الأقل", field="note"
+        )
 
     target = (
         PaymentStatus.CONFIRMED
@@ -969,13 +1029,13 @@ async def resolve_dispute(
     )
     require_transition(payment, target)
 
+    # **الحكمُ يُختم كاملاً قبل `settle`**: قيدُ `payment_resolution_complete` يُفحص عند كلِّ `flush`، و`settle` يُفرغ في منتصفه
     payment.resolution = resolution
-    payment.resolution_note = (note or "").strip() or None
+    payment.resolution_note = cleaned[:255] or None
     payment.resolved_by = actor.id
     payment.resolved_at = _now()
 
     if target == PaymentStatus.CONFIRMED:
-        ride = await _ride_of(session, payment)
         rider = await session.get(User, ride.rider_id)
         await settle(
             session,
@@ -995,7 +1055,8 @@ async def resolve_dispute(
         entity_type="payment",
         entity_id=payment.id,
         # أسماء الحقول وحالاتها لا مبالغها (SPEC القسم 14)
-        details={"status": payment.status.value, "resolution": resolution.value},
+        details={"status": payment.status.value, "resolution": resolution.value}
+        | (details or {}),
     )
     return payment
 

@@ -42,6 +42,7 @@ from app.models.enums import (
     DriverStatus,
     FeatureKey,
     GenderPreference,
+    PaymentMethod,
     RidePayer,
     RideStatus,
     UserRole,
@@ -398,6 +399,7 @@ async def request_ride(
     parcel: "parcels.ParcelRequest | None" = None,
     hourly: "hourly_service.HourlyRequest | None" = None,
     widen_search: bool = False,
+    payment_method: PaymentMethod | None = None,
 ) -> Ride:
     """ينشئ رحلة بحالة `requested`.
 
@@ -434,6 +436,12 @@ async def request_ride(
         session, user_id=rider.id, country=rider.country_code
     ):
         raise CancellationDebtBlocked()
+
+    # **دفعُ رحلةٍ سابقةٍ لم يُقَرّ ولم يُدخَل مرجعُه بعد مهلته يمنع الطلبَ الجديد** (`design/PAYMENTS-UNCONFIRMED.md` §٧،
+    # SPEC §٦٤-ج) — **وهنا لا في الراوتر** للعلّة فوقه: الحجزُ المجدولُ ينشئ رحلاتِه من هذا الباب. ومطفأً لا يُسأل شيء
+    from app.services import unconfirmed_payments
+
+    await unconfirmed_payments.require_rider_not_blocked(session, rider)
 
     # **الفحصُ عند الإنشاء لا عند العرض** (SPEC القسم 4/`multi_stop_enabled`):
     # واجهةٌ تخفي زرَّ «إضافة محطة» لا تمنع طلباً مصنوعاً بيد. وإطفاءُ المفتاح
@@ -524,6 +532,10 @@ async def request_ride(
         hourly_terms = await hourly_service.prepare(
             session, rider=rider, request=hourly, vehicle_category=vehicle_category
         )
+        # **والمحجوزُ نقداً بابُ كاشٍ ثالث** (`hourly.prepay_on_start`: ما ليس محفظةً كاش) — **فإطفاءُ الكاش لهذا الراكب
+        # يُسأل هنا كما يُسأل في الدفع** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج). ومطفأً المفتاحُ لا يُسأل شيء
+        if hourly_terms.prepay != "wallet":
+            await unconfirmed_payments.require_cash_allowed(session, rider)
     quote = await pricing.estimate(
         session,
         country_code=rider.country_code,
@@ -609,6 +621,16 @@ async def request_ride(
         ride.recipient_phone = prepared_parcel.recipient_phone
         ride.recipient_address = prepared_parcel.recipient_address
         ride.payer = prepared_parcel.payer.value
+    # **الطريقةُ تُرسل مع الطلب وتُحفظ على الرحلة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — **بعد الدافع** لأنها تُفحص
+    # عليه: «يدفعها الطالبُ لغيره» محفظةٌ أو بطاقة، و«يدفعها راكبُها نقداً» يفتحها `open_payer_cash`. ومطفأً لا تُحفظ
+    # (`for_other` و`payer` يُكتبان أعلاه حين يُطلبان وحدَهما — وافتراضُهما عند الإدراج لا عند البناء، فيُقرآن هنا بافتراضهما)
+    ride.payment_method_hint = await unconfirmed_payments.validate_hint(
+        session,
+        rider=rider,
+        method=payment_method,
+        for_other=bool(ride.for_other),
+        payer=RidePayer(ride.payer or RidePayer.REQUESTER.value),
+    )
     session.add(ride)
 
     # **الكوبونُ يُجمَّد قبل الـflush** (12-ز): الرمزُ يُتحقق منه تحت قفل صفّه،
@@ -928,6 +950,13 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
         from app.services import payments as payments_service
 
         await payments_service.open_payer_cash(session, ride)
+    elif ride.payment_method_hint is not None:
+        # **وصفُّ دفع الكاش وكليك يولد مع نهاية الرحلة بالطريقة المختارة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC
+        # §٦٤-ج) — **بلا قيد**، وبعد الخصمين فيحمل الباقي. **والرحلةُ مقفولةٌ أعلاه** فالترتيبُ رحلةٌ ثمّ دفعة.
+        # **ولم يُبنَ الإنهاءُ الآليُّ للرحلة (§٢-٢) عمداً** — يحتاج قراءةَ الموقع والمسار، والإنهاءُ هنا من الكبتن وحدَه
+        from app.services import unconfirmed_payments
+
+        await unconfirmed_payments.open_on_completion(session, ride)
 
     driver.current_ride_id = None
     return await _flush_and_reload(session, ride)

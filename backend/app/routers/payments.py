@@ -27,6 +27,13 @@ from app.schemas.payment import (
     PaymentOut,
     RidePaymentsOut,
 )
+from app.schemas.unconfirmed_payment import (
+    CaptainUnconfirmedItem,
+    CaptainUnconfirmedOut,
+    PaymentObjectionRequest,
+    RiderUnconfirmedItem,
+    RiderUnconfirmedOut,
+)
 from app.services import cliq_claims
 from app.services.push.base import PushMessage
 from app.services import settlement
@@ -36,6 +43,7 @@ from app.services import (
     notifications,
     payments as payments_service,
     rides as rides_service,
+    unconfirmed_payments as unconfirmed_service,
 )
 
 router = APIRouter(tags=["payments"])
@@ -216,10 +224,161 @@ async def dispute_payment(
     payload: PaymentDisputeRequest,
     driver: CurrentDriver,
     session: DbSession,
+    redis: RedisDep,
 ) -> PaymentOut:
-    """«لم يصلني» على دفعة كليك → تنتقل للوحة الإدارة (SPEC القسم 6.2)."""
+    """«لم يصلني» على دفعة كليك → تنتقل للوحة الإدارة (SPEC القسم 6.2) — **و«لم يدفع» على الكاش حين يشتعل §٦٤-ج**."""
     payment = await payments_service.get_payment(session, payment_id, for_update=True)
     payment = await payments_service.dispute_by_driver(
+        session, payment=payment, driver=driver, reason=payload.reason
+    )
+    await session.commit()
+    # **«يُسأل الراكبُ فوراً»** (`design/PAYMENTS-UNCONFIRMED.md` §٢-٣) — للكاش وحدَه، وهو لا يقع إلا والمفتاحُ مشتعل؛
+    # **فكليك كما كان حرفاً**. وبعد الـcommit كبقية البثّ
+    notice = await unconfirmed_service.captain_dispute_notice(session, payment)
+    if notice is not None:
+        await unconfirmed_service.send(session, redis, [notice])
+    return PaymentOut.model_validate(payment)
+
+
+# ------------------------------------- المدفوعاتُ غيرُ المؤكَّدة (SPEC §٦٤-ج)
+# `design/PAYMENTS-UNCONFIRMED.md` — **كلُّ بابٍ هنا يقفل صفَّ الدفعة قبل أيِّ فحص** (قاعدةُ `CLAUDE.md`)، ولا قيدَ يُكتب
+# إلا من `payments.settle`. ومطفأً (`unconfirmed_payments_enabled`) تُردّ أفعالُها بـ`feature_disabled` وتعود قوائمُها فارغة.
+
+
+@router.get("/payments/me/unconfirmed", response_model=RiderUnconfirmedOut)
+async def rider_unconfirmed(rider: RiderUser, session: DbSession) -> RiderUnconfirmedOut:
+    """**«رحلةٌ لم يكتمل دفعها»** — ما يُعرض بعد الترحيب وقبل الرئيسية عند كلِّ فتح (§٦، R31)، الأقدمُ أوّلاً."""
+    blocked, items = await unconfirmed_service.rider_items(session, rider)
+    return RiderUnconfirmedOut(
+        blocked=blocked,
+        items=[_rider_unconfirmed_item(item) for item in items],
+    )
+
+
+def _rider_unconfirmed_item(item: unconfirmed_service.RiderItem) -> RiderUnconfirmedItem:
+    """**بانٍ واحدٌ للبطاقة** — وصفُّ الدفعة غائبٌ في `payment_due` (الأجرةُ مستحقّةٌ بلا صفّ)، فحقولُه فارغةٌ لا مخترعة."""
+    payment = item.payment
+    return RiderUnconfirmedItem(
+        payment_id=payment.id if payment else None,
+        ride_id=item.ride.id,
+        completed_at=item.ride.completed_at,
+        pickup_address=item.ride.pickup_address,
+        dropoff_address=item.ride.dropoff_address,
+        captain_name=item.captain_name,
+        amount=item.amount,
+        currency=payment.currency if payment else item.ride.currency,
+        method=item.method,
+        state=item.state,
+        status=payment.status if payment else None,
+        declared_at=payment.declared_at if payment else None,
+        cliq_alias=payment.cliq_alias if payment else None,
+        cliq_reference=payment.cliq_reference if payment else None,
+        cliq_transfer_reference=payment.cliq_transfer_reference if payment else None,
+        cliq_reference_at=payment.cliq_reference_at if payment else None,
+        dispute_reason=payment.dispute_reason if payment else None,
+        blocks_at=item.blocks_at,
+        blocks_requests=item.blocks_requests,
+    )
+
+
+@router.post("/payments/{payment_id}/declare", response_model=RidePaymentsOut)
+async def declare_cash_handover(
+    payment_id: uuid.UUID, rider: RiderUser, session: DbSession
+) -> RidePaymentsOut:
+    """**«سلّمتُ المبلغ»** (§٢-٣) — إقرارُ الراكب على دفعة كاش، **بلا قيد**. والضغطةُ الثانيةُ تعيد الحالَ نفسَها.
+
+    **قفلُ صفِّ الدفعة قبل الفحص**: بغيره يُختم إقرارٌ على دفعةٍ أكّدها الكبتنُ في اللحظة نفسِها.
+    """
+    payment = await payments_service.get_payment(session, payment_id, for_update=True)  # قفلُ الإقرار
+    payment = await unconfirmed_service.declare_cash(session, payment=payment, rider=rider)
+    await session.commit()
+    ride = await rides_service.get_ride(session, payment.ride_id)
+    return await _ride_payments_out(session, ride)
+
+
+@router.post("/payments/{payment_id}/change-method", response_model=RidePaymentsOut)
+async def change_payment_method(
+    payment_id: uuid.UUID,
+    payload: PaymentCreate,
+    rider: RiderUser,
+    session: DbSession,
+    redis: RedisDep,
+) -> RidePaymentsOut:
+    """**«غيّر طريقة الدفع»** (§٢-١) — **يُلغى المعلَّقُ ويُنشأ غيرُه في معاملةٍ واحدة**، وحملُه حملُ `POST /rides/{id}/payments`
+    حرفاً (`method` · `idempotency_key` · `save_card` · `saved_card_id`). **وعلى نزاع كاشٍ هو «سأدفع الآن»** (§٦).
+
+    **والردُّ حالُ الرحلة كلِّها** كردِّ الدفع: الملغاةُ باقيةٌ `voided`، والجديدةُ بحالها (معلَّقةٌ للكاش وكليك، مُسوّاةٌ للمحفظة،
+    و`card_order` برابط صفحة البطاقة). **وسقوطُ الدفع الجديد** (رصيدٌ لا يكفي، قناةٌ مطفأة، كاشٌ موقوف) **يُبقي القديمَ كما كان**.
+
+    **الأقفالُ في الخدمة بترتيبها**: الرحلةُ ثمّ صفُّ الدفعة — ثمّ الفحص (`unconfirmed_payments.change_method`).
+    """
+    entries = await unconfirmed_service.change_method(
+        session,
+        payment_id=payment_id,
+        rider=rider,
+        method=payload.method,
+        idempotency_key=payload.idempotency_key,
+        save_card=payload.save_card,
+        saved_card_id=payload.saved_card_id,
+    )
+    # **قبل الـcommit**: بعده تنتهي صلاحيةُ الصفوف المحمَّلة. ودفعاتُ الرحلة لا تخلو — الملغاةُ منها
+    ride_id = entries[0].ride_id
+    await session.commit()
+    # **ما يُعلَن بعد الدفع يُعلَن هنا**: المحفظةُ قد تحمل رسمَ إلغاءٍ سابقاً (`CANCELLATION-FEE.md` §5)
+    await cancellation.announce_ride_collection(session, redis, ride_id=ride_id)
+    ride = await rides_service.get_ride(session, ride_id)
+    return await _ride_payments_out(session, ride)
+
+
+@router.get("/drivers/me/payments/unconfirmed", response_model=CaptainUnconfirmedOut)
+async def captain_unconfirmed(
+    driver: CurrentDriver, session: DbSession
+) -> CaptainUnconfirmedOut:
+    """**«ركّابٌ ينتظرون تأكيدك»** (§٦، C33) — الأقدمُ أوّلاً، ومعه ما أُتمّ آلياً ونافذتُه مفتوحة. و`blocked` شرطُ التوزيع نفسُه."""
+    blocked, limits, items = await unconfirmed_service.captain_items(session, driver)
+    return CaptainUnconfirmedOut(
+        blocked=blocked,
+        block_count=limits.driver_block_count,
+        block_hours=limits.driver_block_hours,
+        items=[
+            CaptainUnconfirmedItem(
+                payment_id=item.payment.id,
+                ride_id=item.ride.id,
+                completed_at=item.ride.completed_at,
+                pickup_address=item.ride.pickup_address,
+                dropoff_address=item.ride.dropoff_address,
+                rider_first_name=(item.rider_name or "").split()[0]
+                if (item.rider_name or "").split()
+                else None,
+                amount=item.payment.amount,
+                currency=item.payment.currency,
+                method=item.payment.method,
+                state=item.state,
+                status=item.payment.status,
+                declared_at=item.payment.declared_at,
+                cliq_transfer_reference=item.payment.cliq_transfer_reference,
+                cliq_reference_at=item.payment.cliq_reference_at,
+                cliq_confirmation_expires_at=item.payment.cliq_confirmation_expires_at,
+                objection_deadline=item.objection_deadline,
+            )
+            for item in items
+        ],
+    )
+
+
+@router.post("/payments/{payment_id}/object", response_model=PaymentOut)
+async def object_auto_confirmation(
+    payment_id: uuid.UUID,
+    payload: PaymentObjectionRequest,
+    driver: CurrentDriver,
+    session: DbSession,
+) -> PaymentOut:
+    """**«لم أستلم هذا المبلغ»** — اعتراضُ الكبتن على إتمامٍ آليٍّ خلال نافذته (§٢-٥). **لا يُعكس قيد**: يذهب إلى طابور الإدارة.
+
+    **قفلُ صفِّ الدفعة قبل الفحص**: اعتراضان معاً لا يكتبان سببين ولا يتجاوزان النافذة.
+    """
+    payment = await payments_service.get_payment(session, payment_id, for_update=True)  # قفلُ الاعتراض
+    payment = await unconfirmed_service.object_auto_confirm(
         session, payment=payment, driver=driver, reason=payload.reason
     )
     await session.commit()

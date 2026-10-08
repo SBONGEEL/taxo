@@ -51,7 +51,13 @@ import { BannerImage, OfferCard, PromoBanners, type PromoSkin } from "@/componen
 import { MapView } from "@/components/map/MapView";
 import { PermissionNotice } from "@/components/PermissionNotice";
 import { PhonePendingNotice } from "@/components/PhonePendingNotice";
-import { useDemandHigh, useDocumentsAttention } from "@/lib/attention";
+import {
+  UNCONFIRMED_FLAG,
+  useCaptainUnconfirmed,
+  useDemandHigh,
+  useDocumentsAttention,
+} from "@/lib/attention";
+import { useFeature } from "@/lib/config";
 import { setTrafficLayer, trafficLayer } from "@/lib/driving-prefs";
 import { metersBetween } from "@/lib/eta";
 import { openIn } from "@/lib/external-maps";
@@ -73,6 +79,7 @@ import { CollectT2Screen } from "@/screens/t2/CollectT2";
 import { OfferT2 } from "@/screens/t2/OfferT2";
 import { RideT2 } from "@/screens/t2/RideT2";
 import { HOME_TILES, ServiceGrid, homeTiles } from "@/screens/t2/ServicesT2";
+import { UnconfirmedHomeNoteT2 } from "@/screens/t2/UnconfirmedT2";
 import { WomenModeChipT2, isWomenMode, womenGoText } from "@/screens/t2/WomenRideT2";
 import { Icon, Wordmark } from "@/taxo2";
 
@@ -175,6 +182,10 @@ export function HomeT2Screen() {
   const commute = useCommuteEntry(mode === "home");
   // **وبين المدن** (§٦٣-ج/٧) بالحكم نفسِه — **ورحلةٌ أعلنها ولم تنتهِ تُرى ولو أُطفئت الخدمة**
   const intercity = useIntercityEntry(mode === "home");
+  // **وما ينتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٦/§٧، SPEC §٦٤-ز) — يُسأل كلَّما عاد إلى رئيسيته، **ومطفأً لا نداء**؛
+  // وحجبُه «لا تصلك طلباتٌ جديدة…» يُقال فوق زرِّ الاستقبال بسببه
+  const unconfirmedOn = useFeature(user?.country_code, UNCONFIRMED_FLAG);
+  const unconfirmed = useCaptainUnconfirmed(unconfirmedOn, mode === "home");
   // **الطلبُ والرحلةُ يبدآن من أعلى الصفحة**: طبقاتُ الإطار مطلقةُ الموضع داخل جذرٍ يتمرّر، **ورئيسيةٌ مُمرَّرةٌ ثمّ طلبٌ وارد
   // كانت تُزيح البطاقةَ والورقةَ بمقدار التمرير**
   const root = useRef<HTMLDivElement | null>(null);
@@ -281,6 +292,9 @@ export function HomeT2Screen() {
           أن يعمل. **ولا يظهر شيءٌ هنا إلا حين يكون** — والفارغُ يختفي فتبقى البطاقةُ في موضعها المرسوم */}
       {mode === "home" ? (
         <div className="t2-hm-notes t2-legacy">
+          {/* **«لا تصلك طلباتٌ جديدةٌ حتى تؤكّد ما سبق»** (§٦/§٧) أوّلاً — هو ما يجعل زرَّ الاستقبال بلا طلبات، **أو «تأكيدٌ ينتظرك»**
+              يفتح الصفحةَ التي أخفاها «لاحقاً». ولا شيءَ يُرسم بلا شيءٍ ينتظر */}
+          <UnconfirmedHomeNoteT2 data={unconfirmed} onOpen={() => navigate("/payments/unconfirmed")} />
           {/* **وفي الوضع النسائيّ تقوله الحبّةُ والشارة** (CW2) — فلا شريطَ ثانٍ بالشيء نفسِه */}
           {womenService && preference !== "any" && !womenMode ? (
             <button type="button" className="t2-hm-pref" onClick={() => navigate("/account/settings")}>

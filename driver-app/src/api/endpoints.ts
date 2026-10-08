@@ -9,6 +9,7 @@ import type { UploadOptions } from "@/api/client";
 import { API_URL, api, upload } from "@/api/client";
 import type {
   ErrorReportBody,
+  CaptainUnconfirmed,
   CliqDeclare,
   CliqSubscriptionClaim,
   MyProgress,
@@ -372,9 +373,22 @@ export const getRidePayments = (rideId: string) =>
 export const confirmPayment = (paymentId: string) =>
   api.post<Payment>(`/payments/${paymentId}/confirm`);
 
-/** «لم يصلني» على دفعة كليك → تنتقل للوحة الإدارة (القسم 6.2). */
+/** «لم يصلني» على دفعة كليك → تنتقل للوحة الإدارة (القسم 6.2) — **و«لم يدفع» على الكاش** حيث `unconfirmed_payments_enabled`
+ *  مشتعل (§٦٤-ز)، ويُسأل الراكبُ فوراً «هل سلّمتَ المبلغ؟». */
 export const disputePayment = (paymentId: string, reason: string) =>
   api.post<Payment>(`/payments/${paymentId}/dispute`, { reason });
+
+// --------------------------- المدفوعاتُ غيرُ المؤكَّدة (`design/PAYMENTS-UNCONFIRMED.md`، SPEC §٦٤-ز)
+
+/** **«ركّابٌ ينتظرون تأكيدك»** (§٦، C33) — الأقدمُ أوّلاً، ومعه ما أُتمّ آلياً ونافذتُه مفتوحة. و`blocked` شرطُ التوزيع نفسُه.
+ *  ومطفأً تعود فارغةً بلا حجب. */
+export const getMyUnconfirmedPayments = () =>
+  api.get<CaptainUnconfirmed>("/drivers/me/payments/unconfirmed");
+
+/** **«لم أستلم هذا المبلغ»** — اعتراضٌ على إتمامٍ آليٍّ خلال نافذته (§٢-٥) بسببٍ مكتوب (٣–٢٥٥). **لا يُعكس قيد**: يذهب إلى طابور
+ *  الإدارة، والثاني ٤٠٩ `conflict`، وبعد النافذة ٤٠٩ `objection_window_closed`. */
+export const objectAutoConfirm = (paymentId: string, reason: string) =>
+  api.post<Payment>(`/payments/${paymentId}/object`, { reason });
 
 export const rateRide = (rideId: string, stars: number, comment?: string) =>
   api.post<Rating>(`/rides/${rideId}/ratings`, { stars, comment });

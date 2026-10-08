@@ -30,7 +30,9 @@ import { startOfToday, whenParts } from "./t2/when";
 import "./t2/fields.css";
 import "./t2/rides.css";
 
-const REASONS = [
+/** **مُصدَّرةٌ لـ«ركّابٌ ينتظرون تأكيدك»** (`screens/t2/UnconfirmedT2.tsx`، §٦٤-ز): «لم تصلني» هناك بالأسباب نفسِها حرفاً —
+ *  أسبابٌ تُكتب مرّتين تفترق أوّلَ تعديل، والإدارةُ تقرأ النصَّ من البابين. */
+export const CLIQ_DISPUTE_REASONS = [
   "لم تصلني الحوالة إطلاقاً",
   "وصلتني حوالة أقل من الأجرة",
   "المرجع الذي أدخله الراكب لا يطابق أي حوالة وصلتني",
@@ -178,7 +180,7 @@ export function DisputeScreen() {
             role="radiogroup"
             aria-label="سبب النزاع"
           >
-            {REASONS.map((option) => (
+            {CLIQ_DISPUTE_REASONS.map((option) => (
               <button
                 key={option}
                 type="button"

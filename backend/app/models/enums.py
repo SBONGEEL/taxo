@@ -279,13 +279,19 @@ class ProviderOrderStatus(StrEnum):
 
 
 class PaymentStatus(StrEnum):
-    """`pending → confirmed | failed | disputed | refunded` (SPEC القسم 4)."""
+    """`pending → confirmed | failed | disputed | voided`، و`confirmed → refunded` (SPEC القسم 4، §٦٤-ج)."""
 
     PENDING = "pending"
     CONFIRMED = "confirmed"
     FAILED = "failed"
     DISPUTED = "disputed"
     REFUNDED = "refunded"
+    # **أُلغيت لأن الراكبَ بدّل طريقةَ الدفع** قبل أن يُقرّ أو يؤكّد الكبتن
+    # (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ج). **حالةٌ مستقلّةٌ لا
+    # `failed`**: «سقطت» حكمٌ على مالٍ لم يصل، و«بُدِّلت» اختيارُ صاحبها —
+    # وخلطُهما يجعل عدَّ أحكام «لم يدفع» (إطفاءُ الكاش، §٧) يقرأ تبديلاً حكماً.
+    # **ولا تشغل مبلغاً** (خارج `OWING_PAYMENT_STATUSES`) فيُفتح غيرُها بقيمتها
+    VOIDED = "voided"
 
 
 class PaymentConfirmedBy(StrEnum):
@@ -294,6 +300,11 @@ class PaymentConfirmedBy(StrEnum):
     DRIVER = "driver"
     SYSTEM = "system"
     ADMIN = "admin"
+    # **قاعدةُ الإتمام التلقائيّ للكاش** (`design/PAYMENTS-UNCONFIRMED.md` §٢-٥):
+    # إقرارُ الراكب وصمتُ الكبتن رغم التذكيرات — **ومعاييرُها مجمَّدةٌ على الصفّ**
+    # (`payments.auto_confirm_criteria`). **قيمةٌ مستقلّةٌ لا `system`**: تلك
+    # قناةٌ يشهد عليها الدفترُ أو المزوّد، وهذه حكمُ قاعدةٍ للكبتن أن يعترض عليه
+    AUTO_RULE = "auto_rule"
 
 
 class DisputeResolution(StrEnum):
@@ -660,6 +671,13 @@ class FeatureKey(StrEnum):
     WEEKLY_CASHBACK_ENABLED = "weekly_cashback_enabled"
     # **ساعاتُ العمل** (§٦٢-ج/٣٧، §٦٤-ج) — **يحكم الجمعَ لا العرضَ وحدَه**: مطفأً لا دقيقةَ تُحسب، فلا بياناتٌ شخصيةٌ قبل نشر سطرها
     WORK_HOURS_ENABLED = "work_hours_enabled"
+    # **المدفوعاتُ غيرُ المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md`، SPEC §٦٤-ج) — **ميزةٌ لا حارس، مطفأةٌ لكلِّ سوق**:
+    # الطريقةُ تُرسل مع الطلب وصفُّ الدفع يولد مع نهاية الرحلة، والتذكيراتُ والحدودُ وطابورُ الإدارة.
+    # **ومطفأً كلُّ مسارٍ قائمٍ كما هو اليوم حرفاً** — لا طريقةَ تُحفظ، ولا صفَّ يولد، ولا حجبَ ولا تذكير
+    UNCONFIRMED_PAYMENTS_ENABLED = "unconfirmed_payments_enabled"
+    # **الإتمامُ التلقائيُّ للكاش** (§٢-٥) — **مفتاحٌ ثانٍ لا شرطٌ داخل الأول**: التصميمُ نفسُه يقول إنه يُشعَل **بعد أن
+    # يُرى الطابورُ أسبوعاً** (§١٠/٥)، فإشعالُ الأول لا يُشعله. ولا يعمل إلا والأولُ مشتعلٌ معه
+    CASH_AUTO_CONFIRM_ENABLED = "cash_auto_confirm_enabled"
 
 
 class BookingStatus(StrEnum):

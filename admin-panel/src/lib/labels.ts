@@ -21,6 +21,7 @@
 
 import type { Tone } from "@/components/ui/Badge";
 import type {
+  AdminUnconfirmedState,
   CancellationChargeStatus,
   SearchKind,
   TopupStatus,
@@ -81,6 +82,8 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   failed: "فاشلة",
   disputed: "متنازَعٌ عليها",
   refunded: "مردودة",
+  // **بدّل الراكبُ طريقتَها** (§٦٤-ز) — صفٌّ باقٍ لا مالٌ ضاع، والجديدةُ صفٌّ تحته بقناتها
+  voided: "بُدِّلت طريقتُها",
 };
 
 export const PAYMENT_STATUS_TONE: Record<PaymentStatus, Tone> = {
@@ -89,6 +92,26 @@ export const PAYMENT_STATUS_TONE: Record<PaymentStatus, Tone> = {
   failed: "danger",
   disputed: "danger",
   refunded: "muted",
+  voided: "muted",
+};
+
+/** **حالُ الصفّ في «المدفوعات غير المؤكدة»** — أسماءُ التصميم حرفاً (`design/PAYMENTS-UNCONFIRMED.md` §٥)، **خمسٌ من ستّ**:
+ *  «رحلةٌ لم تُنهَ» لا تقع (الإنهاءُ الآليُّ لم يُبنَ، SPEC §٦٤-ز). */
+export const UNCONFIRMED_STATE_LABEL: Record<AdminUnconfirmedState, string> = {
+  awaiting_captain: "بانتظار الكبتن",
+  awaiting_rider: "بانتظار الراكب",
+  cliq_no_reference: "كليك بلا مرجع",
+  disputed: "نزاع",
+  auto_confirmed_objected: "مُتمٌّ آلياً ومعترَضٌ عليه",
+};
+
+/** **ونغمتُه** — النزاعُ والاعتراضُ حكمٌ ينتظر بالأحمر، والانتظارُ بالكهرمان. */
+export const UNCONFIRMED_STATE_TONE: Record<AdminUnconfirmedState, Tone> = {
+  awaiting_captain: "warn",
+  awaiting_rider: "warn",
+  cliq_no_reference: "warn",
+  disputed: "danger",
+  auto_confirmed_objected: "danger",
 };
 
 // ─────────────────────────────────────────────── الدفتر

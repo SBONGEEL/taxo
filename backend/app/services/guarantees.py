@@ -23,7 +23,14 @@ from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import Conflict, FeatureDisabled, InsufficientBalance, NotFound, PermissionDenied
+from app.core.exceptions import (
+    Conflict,
+    FeatureDisabled,
+    InsufficientBalance,
+    NotFound,
+    PermissionDenied,
+    UnconfirmedPaymentBlocked,
+)
 from app.models.booking import RideBooking
 from app.models.driver import Driver
 from app.models.driver_warning import WARNING_GUARANTEE_WITHDRAWAL, DriverWarning
@@ -392,7 +399,13 @@ async def confirm(session: AsyncSession, *, booking_id: uuid.UUID, driver: Drive
     confirm_minutes = row.guarantee_confirm_minutes if row is not None else 60
     if _now() < booking.scheduled_at - timedelta(minutes=confirm_minutes):
         raise Conflict(f"التأكيدُ قبل الموعد بـ{confirm_minutes} دقيقة")
-    ride = await bookings_service.create_ride_for(session, booking)
+    try:
+        ride = await bookings_service.create_ride_for(session, booking)
+    except UnconfirmedPaymentBlocked as blocked:
+        # **منعُ الراكب بدفعٍ لم يُحسم يُقال للكبتن بلغته لا بلغة الراكب** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج —
+        # مراجعةُ ٢٠٢٦-١٠-٠٧): كان يصله ردُّ الراكب حرفاً — «لا يمكن طلبُ رحلةٍ جديدةٍ…» — **وفي جسمه معرّفا دفعةِ رحلةٍ أخرى
+        # للراكب**. فيُقال له ما يخصّه، **بلا معرّفٍ من مال غيره**؛ والحجزُ يبقى كما هو — دورةُ التنفيذ تحكم فيه عند موعده
+        raise Conflict("لا يمكن تأكيدُ هذا الحجز الآن — على الراكب دفعٌ لم يُحسم بعد") from blocked
     ride = await rides_service.take_reserved(session, ride.id, driver)
     booking.ride_id = ride.id
     booking.status = BookingStatus.DISPATCHED

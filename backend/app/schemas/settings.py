@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import (
     DispatchMode,
@@ -201,6 +201,17 @@ class PaymentSettingOut(BaseModel):
     tip_preset_small: Decimal
     tip_preset_medium: Decimal
     tip_max: Decimal
+    #: **عتباتُ المدفوعات غير المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md` §٩، SPEC §٦٤-ج) — من الصفِّ كلِّه كجيرانها
+    payment_reminder_minutes: list[int]
+    cash_auto_confirm_hours: int
+    cash_auto_confirm_max_amount: Decimal
+    cliq_reference_minutes: int
+    driver_unconfirmed_block_count: int
+    driver_unconfirmed_block_hours: int
+    rider_unconfirmed_block_minutes: int
+    rider_unpaid_rulings_cash_off: int
+    rider_unpaid_rulings_window_days: int
+    dispute_window_hours: int
     updated_at: datetime
 
 
@@ -224,6 +235,33 @@ class PaymentSettingUpdate(BaseModel):
     tip_preset_small: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_preset_medium: Decimal | None = Field(default=None, ge=0, le=1000)
     tip_max: Decimal | None = Field(default=None, ge=0, le=1000)
+
+    # ------------------- المدفوعاتُ غيرُ المؤكَّدة (`design/PAYMENTS-UNCONFIRMED.md` §٩، SPEC §٦٤-ج)
+    # **موجبةٌ كلُّها، وحدودُها العليا تمنع ما يشلّ الميزة**: مهلةٌ لا تنقضي أو حجبٌ لا يقع. **ولا أثرَ رجعيّ** على ما
+    # جُمّد على صفّ (نافذةُ الاعتراض ومعاييرُ الإتمام الآليّ)؛ وما يُشتقّ حيّاً (الحجبُ والمواعيد) يسري من لحظته.
+    #: **أربعةُ مواعيدَ متصاعدةٍ بالدقائق بعد نهاية الرحلة** — لكلٍّ نصُّه (§٣)، وحدُّها أسبوع
+    payment_reminder_minutes: list[int] | None = Field(default=None, min_length=4, max_length=4)
+    cash_auto_confirm_hours: int | None = Field(default=None, ge=1, le=168)
+    cash_auto_confirm_max_amount: Decimal | None = Field(default=None, gt=0, le=1000)
+    cliq_reference_minutes: int | None = Field(default=None, ge=1, le=1440)
+    driver_unconfirmed_block_count: int | None = Field(default=None, ge=1, le=50)
+    driver_unconfirmed_block_hours: int | None = Field(default=None, ge=1, le=168)
+    rider_unconfirmed_block_minutes: int | None = Field(default=None, ge=1, le=10080)
+    rider_unpaid_rulings_cash_off: int | None = Field(default=None, ge=1, le=50)
+    rider_unpaid_rulings_window_days: int | None = Field(default=None, ge=1, le=365)
+    dispute_window_hours: int | None = Field(default=None, ge=1, le=720)
+
+    @field_validator("payment_reminder_minutes")
+    @classmethod
+    def _reminders_ascend(cls, value: list[int] | None) -> list[int] | None:
+        """**متصاعدةٌ في أسبوع** — وإلا قال التذكيرُ الثالثُ «منذ 12 ساعة» قبل الثاني (قيدُ القاعدة يحرس الشيءَ نفسَه)."""
+        if value is None:
+            return value
+        if any(minute < 1 or minute > 10080 for minute in value):
+            raise ValueError("كلُّ موعدٍ بين دقيقةٍ وأسبوع")
+        if any(later <= earlier for earlier, later in zip(value, value[1:])):
+            raise ValueError("المواعيدُ متصاعدةٌ — كلٌّ بعد سابقه")
+        return value
 
 
 # --------------------------------------------------- سقوف طلب رمز التحقق

@@ -224,6 +224,14 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "ساعات العمل",
     hint: "نحسب كلَّ يومٍ كم دقيقةً كان الكبتنُ متصلاً يستقبل الطلبات — ومعها وقتُ رحلاته — فيرى ساعاتِ يومه في الرئيسية وساعاتِ نافذته في الأرباح، وتراها الإدارةُ في ملفّه. لا نحفظ موقعَه وهو ينتظر، الرقمُ وحدَه؛ ويُحفظ يومياً ثلاثةَ عشرَ شهراً ثمّ يُجمع شهرياً. والمفتاحُ يحكم الجمعَ نفسَه: مطفأً لا تُحسب دقيقة، فلا يُشعَل قبل نشر سطره في سياسة الخصوصية.",
   },
+  unconfirmed_payments_enabled: {
+    title: "المدفوعات غير المؤكدة",
+    hint: "الطريقةُ التي يختارها الراكبُ في ورقة الطلب تُرسل معه ويراها الكبتنُ على بطاقة العرض، ويولد صفُّ الدفع مع نهاية الرحلة. ويُعرض للطرفين عند كلِّ فتحٍ ما ينتظر تأكيدَهما: الراكبُ يُقرّ بتسليم الكاش أو يُدخل مرجعَ الحوالة أو يبدّل الطريقة، والكبتنُ يؤكّد الاستلام أو يعترض — وتصلهما تذكيراتٌ بمواعيدها. ومن تأخّر فوق الحدّ يُمنع: الراكبُ من طلبٍ جديد، والكبتنُ من العروض الجديدة، ويُرفع المنعُ فورَ الحسم؛ ومن حُكم عليه مرّتين بأنه لم يدفع تُطفأ له قناةُ الكاش مدّةَ النافذة. وما لم يُحسم يصل «المدفوعات غير المؤكدة» لتحسمه بسببٍ مكتوب. والأرقامُ في «سياسات الدفع» أدناه. ولا يُكتب في الدفتر شيءٌ إلا بتأكيدٍ أو حكم. ومطفأً يبقى كلُّ شيءٍ كما كان، وما تراكم قبله يُحسم من الطابور.",
+  },
+  cash_auto_confirm_enabled: {
+    title: "الإتمام الآلي للكاش",
+    hint: "يُشعَل بعد أن يُرى طابورُ «المدفوعات غير المؤكدة» أسبوعاً. كاشٌ أقرّ الراكبُ بتسليمه وصمت عنه الكبتنُ رغم أربعة تذكيراتٍ آخرُها التحذير، تحت سقف المبلغ أدناه، ولا حكمَ «لم يدفع» على الراكب في تسعين يوماً ولا نزاعَ على الرحلة — يُعدّ مستلَماً ويُكتب ما يكتبه تأكيدُ الكبتن حرفاً، ومعاييرُه مجمَّدةٌ على الدفعة. وللكبتن نافذةُ اعتراضٍ لا يُعكس فيها شيءٌ قبل حكمك. ولا يمسّ كليك أبداً، ولا يعمل إلا مع «المدفوعات غير المؤكدة» مشتعلاً.",
+  },
   driver_map_nearby_enabled: {
     title: "الكباتن على خريطة الكبتن",
     hint: "يرى الكبتنُ زملاءَه القريبين على خريطته — **مجهَّلين تماماً كما يراهم الراكب**: إحداثياتٌ واتجاهٌ وفئةُ مركبة، بلا اسمٍ ولا لوحةٍ ولا معرّفٍ يثبت بين طلبين. ويُشحن مطفأً لأن أثرَه سوقيٌّ لا عرضيّ: يُقرأ عوناً على اختيار موضعٍ، ويُقرأ مطاردةً على الزحام. ومطفأً يقول البابُ «غيرُ مفعّل» ولا يردّ قائمةً فارغة — الفارغةُ تُقرأ «لا أحدَ حولك» وهي خبرٌ كاذبٌ عن السوق.",
@@ -272,6 +280,9 @@ const FLAGS: FeatureKey[] = [
   "weekly_cashback_enabled",
   "work_hours_enabled",
   "driver_map_nearby_enabled",
+  // **المدفوعاتُ غيرُ المؤكَّدة** (§٦٤-ز) — المسارُ ثمّ إتمامُه الآليّ **بترتيب إشعالهما**: الثاني بعد أسبوعٍ من الأول
+  "unconfirmed_payments_enabled",
+  "cash_auto_confirm_enabled",
   // **والأخيرةُ حرّاسٌ لا ميزاتٌ تُجرَّب**: سوقٌ، وتحقُّق، وحارسا مال
   "country_visible",
   "otp_verification_enabled",
@@ -559,16 +570,31 @@ export function SettingsScreen() {
               ينتظر الآن.
             </p>
             {paymentRow ? (
-              <PaymentForm
-                key={paymentRow.country_code}
-                row={paymentRow}
-                disabled={!isAdmin}
-                onSaved={(message) => {
-                  setDone(message);
-                  void load();
-                }}
-                onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
-              />
+              <>
+                <PaymentForm
+                  key={paymentRow.country_code}
+                  row={paymentRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+                {/* **المدفوعاتُ غيرُ المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md` §٩، SPEC §٦٤-ز) — عتباتُها العشرُ من الصفِّ نفسِه
+                    (`payment_settings`) **بنموذجٍ مستقلٍّ بحفظه**: حفظُها لا يمسّ مهلةَ كليك ولا البقشيش. **وتُرسم ولو كان مفتاحُها
+                    مطفأً** — الأرقامُ تُضبط قبل الإشعال لا بعده */}
+                <UnconfirmedForm
+                  key={`unconfirmed-${paymentRow.country_code}`}
+                  row={paymentRow}
+                  disabled={!isAdmin}
+                  onSaved={(message) => {
+                    setDone(message);
+                    void load();
+                  }}
+                  onError={(caught) => form.capture(caught, "تعذّر الحفظ")}
+                />
+              </>
             ) : (
               <p className="text-12.5 text-muted">لا إعداد دفعٍ لهذه الدولة.</p>
             )}
@@ -1569,6 +1595,199 @@ function PaymentForm({
         </Button>
       </div>
     </>
+  );
+}
+
+/** **ترتيبُ التذكيرات الأربعة** — نصوصُها في التصميم (§٣) لكلِّ موعد: «١٠ د» سؤالٌ، و«٢ س» إعادتُه، و«١٢ س» إنذارُ الحدّ، و«٢٣ س»
+ *  التحذيرُ الأخير («بعد ساعةٍ يُعدّ المبلغُ مستلَماً» حين يصدق). */
+const REMINDER_LABEL = ["التذكير الأول", "التذكير الثاني", "التذكير الثالث", "التحذير الأخير"];
+
+/** **عتباتُ المدفوعات غير المؤكَّدة** — عشرةُ أعمدةٍ في `payment_settings` بقيم التصميم الابتدائية (`design/PAYMENTS-UNCONFIRMED.md` §٩،
+ *  SPEC §٦٤-ز).
+ *
+ * **المدّةُ عددٌ ووحدة** (`DurationField`) بوحدة عمودها على السلك — والمواعيدُ الأربعةُ بالدقائق بعد نهاية الرحلة (للكبتن على كاشٍ
+ * أقرّ به الراكبُ: من الإقرار). **ولا أثرَ رجعيّ** على ما جُمّد على صفّ (نافذةُ الاعتراض ومعاييرُ الإتمام الآليّ)، **وما يُشتقّ حيّاً
+ * يسري من لحظته** (الحجبُ والمواعيد) — والخلفيةُ تحرس الحدود وتصاعدَ المواعيد وتردّ برسالتها تحت الحقل.
+ */
+function UnconfirmedForm({
+  row,
+  disabled,
+  onSaved,
+  onError,
+}: {
+  row: PaymentSetting;
+  disabled: boolean;
+  onSaved: (message: string) => void;
+  onError: (caught: unknown) => void;
+}) {
+  const [reminders, setReminders] = useState<number[]>(row.payment_reminder_minutes);
+  const [autoHours, setAutoHours] = useState(row.cash_auto_confirm_hours);
+  const [autoMax, setAutoMax] = useState(row.cash_auto_confirm_max_amount);
+  const [referenceMinutes, setReferenceMinutes] = useState(row.cliq_reference_minutes);
+  const [blockCount, setBlockCount] = useState(String(row.driver_unconfirmed_block_count));
+  const [blockHours, setBlockHours] = useState(row.driver_unconfirmed_block_hours);
+  const [riderMinutes, setRiderMinutes] = useState(row.rider_unconfirmed_block_minutes);
+  const [rulings, setRulings] = useState(String(row.rider_unpaid_rulings_cash_off));
+  const [rulingsDays, setRulingsDays] = useState(row.rider_unpaid_rulings_window_days);
+  const [objectionHours, setObjectionHours] = useState(row.dispute_window_hours);
+  const [busy, setBusy] = useState(false);
+  const currency = currencyOf(row.country_code);
+  // **متصاعدةٌ كلٌّ بعد سابقه** — والخلفيةُ تحرسه أيضاً (`_reminders_ascend`)؛ هنا يُعطَّل الحفظُ ويُقال قبل الارتداد
+  const ascending = reminders.length === 4 && reminders.slice(1).every((minutes, at) => minutes > reminders[at]);
+
+  function setReminder(at: number, minutes: number) {
+    setReminders((current) => current.map((value, index) => (index === at ? minutes : value)));
+  }
+
+  return (
+    <div className="mt-18 border-t border-line pt-14">
+      <h3 className="mb-2 text-12.5 font-bold text-ink">المدفوعات غير المؤكدة</h3>
+      <p className="mb-12 text-11 leading-snug text-muted">
+        تذكيراتٌ ثمّ حدٌّ يمنع العملَ الجديد ويُرفع فورَ الحسم.{" "}
+        <b className="text-ink">والمواعيدُ بعد نهاية الرحلة</b> — وللكبتن على كاشٍ أقرّ به الراكبُ: بعد الإقرار.{" "}
+        <b className="text-ink">ولا أثرَ رجعياً</b> على ما جُمّد على دفعة: نافذةُ الاعتراض ومعاييرُ الإتمام الآليّ.
+      </p>
+
+      <h4 className="mb-6 text-12 font-bold text-ink">مواعيد التذكير</h4>
+      <div className="grid grid-cols-2 gap-10">
+        {reminders.map((minutes, at) => (
+          <DurationField
+            key={REMINDER_LABEL[at] ?? at}
+            name={`payment_reminder_minutes_${at}`}
+            label={REMINDER_LABEL[at]}
+            wire="minute"
+            value={minutes}
+            disabled={disabled}
+            onChange={(next) => setReminder(at, next)}
+          />
+        ))}
+      </div>
+      <p className={ascending ? "mt-6 text-11 text-muted" : "mt-6 text-11 text-warn"}>
+        {ascending
+          ? "أربعةُ مواعيدَ متصاعدة — لكلٍّ نصُّه، والرابعُ التحذيرُ الأخيرُ قبل الحدّ."
+          : "المواعيدُ متصاعدةٌ — كلٌّ بعد سابقه."}
+      </p>
+
+      <h4 className="mb-6 mt-14 text-12 font-bold text-ink">الحدّان</h4>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          name="driver_unconfirmed_block_count"
+          label="يُحجب الكبتنُ عند (معلَّقات)"
+          dir="ltr"
+          inputMode="numeric"
+          value={blockCount}
+          disabled={disabled}
+          onChange={(event) => setBlockCount(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <DurationField
+          name="driver_unconfirmed_block_hours"
+          label="أو حين يبلغ عمرُ أقدمها"
+          wire="hour"
+          value={blockHours}
+          disabled={disabled}
+          onChange={setBlockHours}
+        />
+        <DurationField
+          name="rider_unconfirmed_block_minutes"
+          label="يُمنع الراكبُ من الطلب بعد"
+          wire="minute"
+          value={riderMinutes}
+          disabled={disabled}
+          onChange={setRiderMinutes}
+        />
+        <DurationField
+          name="cliq_reference_minutes"
+          label="مهلةُ مرجع كليك قبل التذكير"
+          wire="minute"
+          value={referenceMinutes}
+          disabled={disabled}
+          onChange={setReferenceMinutes}
+        />
+      </div>
+
+      <h4 className="mb-6 mt-14 text-12 font-bold text-ink">إطفاءُ الكاش لراكبٍ لا يدفع</h4>
+      <div className="grid grid-cols-2 gap-10">
+        <Field
+          name="rider_unpaid_rulings_cash_off"
+          label="عند أحكام «لم يدفع»"
+          dir="ltr"
+          inputMode="numeric"
+          value={rulings}
+          disabled={disabled}
+          onChange={(event) => setRulings(event.target.value.replace(/[^0-9]/g, ""))}
+        />
+        <DurationField
+          name="rider_unpaid_rulings_window_days"
+          label="في نافذة"
+          wire="day"
+          value={rulingsDays}
+          disabled={disabled}
+          onChange={setRulingsDays}
+        />
+      </div>
+
+      <h4 className="mb-6 mt-14 text-12 font-bold text-ink">الإتمامُ الآليُّ للكاش والاعتراض</h4>
+      <div className="grid grid-cols-2 gap-10">
+        <DurationField
+          name="cash_auto_confirm_hours"
+          label="يُعدّ مستلَماً بعد الإقرار بـ"
+          wire="hour"
+          value={autoHours}
+          disabled={disabled}
+          onChange={setAutoHours}
+        />
+        <MoneyField
+          name="cash_auto_confirm_max_amount"
+          label="سقفُ الإتمام الآليّ"
+          currency={currency}
+          value={autoMax}
+          disabled={disabled}
+          onChange={setAutoMax}
+        />
+        <DurationField
+          name="dispute_window_hours"
+          label="نافذةُ اعتراض الكبتن"
+          wire="hour"
+          value={objectionHours}
+          disabled={disabled}
+          onChange={setObjectionHours}
+        />
+      </div>
+      <p className="mt-6 text-11 leading-snug text-muted">
+        فوق السقف لا يُتمّ آلياً أبداً — يذهب إلى «المدفوعات غير المؤكدة». الحالي:{" "}
+        <b className="text-ink" dir="ltr">
+          {money(row.cash_auto_confirm_max_amount, currency)}
+        </b>
+        . ولا يعمل الإتمامُ إلا بمفتاحه («الإتمام الآلي للكاش»).
+      </p>
+
+      <Button
+        className="mt-14"
+        size="sm"
+        disabled={disabled || !ascending || blockCount === "" || rulings === "" || autoMax === ""}
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          updatePaymentSettings(row.country_code, {
+            payment_reminder_minutes: reminders,
+            cash_auto_confirm_hours: autoHours,
+            cash_auto_confirm_max_amount: autoMax,
+            cliq_reference_minutes: referenceMinutes,
+            driver_unconfirmed_block_count: Number(blockCount),
+            driver_unconfirmed_block_hours: blockHours,
+            rider_unconfirmed_block_minutes: riderMinutes,
+            rider_unpaid_rulings_cash_off: Number(rulings),
+            rider_unpaid_rulings_window_days: rulingsDays,
+            dispute_window_hours: objectionHours,
+          })
+            .then(() => onSaved("حُفظت عتباتُ المدفوعات غير المؤكدة — يسري الحجبُ والمواعيدُ من الآن"))
+            .catch((caught) => onError(caught))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظ العتبات
+      </Button>
+    </div>
   );
 }
 

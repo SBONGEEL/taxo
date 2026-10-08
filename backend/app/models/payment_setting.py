@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
@@ -18,6 +19,20 @@ DEFAULT_CLIQ_CONFIRMATION_HOURS = 24
 # (SPEC القسم 6.5).
 DEFAULT_TIP_PRESET = Decimal("0")
 DEFAULT_TIP_MAX = Decimal("0")
+
+# **عتباتُ المدفوعات غير المؤكَّدة — نصُّ `design/PAYMENTS-UNCONFIRMED.md` §٩**:
+# عشرُ دقائق، ثمّ ساعتان، ثمّ اثنتا عشرة، ثمّ ثلاثٌ وعشرون — والرابعُ يسبق
+# الحسمَ بساعة (§٣). والسقفُ عشرون ديناراً فوقها لا إتمامَ آليّ (§٢-٥)
+DEFAULT_PAYMENT_REMINDER_MINUTES: tuple[int, ...] = (10, 120, 720, 1380)
+DEFAULT_CASH_AUTO_CONFIRM_HOURS = 24
+DEFAULT_CASH_AUTO_CONFIRM_MAX = Decimal("20.000")
+DEFAULT_CLIQ_REFERENCE_MINUTES = 30
+DEFAULT_DRIVER_UNCONFIRMED_BLOCK_COUNT = 3
+DEFAULT_DRIVER_UNCONFIRMED_BLOCK_HOURS = 24
+DEFAULT_RIDER_UNCONFIRMED_BLOCK_MINUTES = 30
+DEFAULT_RIDER_UNPAID_RULINGS_CASH_OFF = 2
+DEFAULT_RIDER_UNPAID_RULINGS_WINDOW_DAYS = 90
+DEFAULT_DISPUTE_WINDOW_HOURS = 72
 
 
 class PaymentSetting(UUIDMixin, TimestampMixin, Base):
@@ -57,6 +72,30 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
         CheckConstraint(
             "driver_debt_ceiling IS NULL OR driver_debt_ceiling > 0",
             name="payment_debt_ceiling_positive",
+        ),
+        # **عتباتُ المدفوعات غير المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md` §٩،
+        # SPEC §٦٤-ج) — **موجبةٌ كلُّها**: صفرُ ساعاتٍ في الحجب يحجب كلَّ كبتنٍ
+        # عليه دفعةٌ واحدة، وصفرٌ في المهلة إتمامٌ آليٌّ فوريّ — وهو أسوأُ ما يقع
+        # بالسكوت (حجّةُ `cliq_confirmation_hours` نفسُها)
+        CheckConstraint(
+            "cash_auto_confirm_hours > 0 AND cash_auto_confirm_max_amount > 0 "
+            "AND cliq_reference_minutes > 0 "
+            "AND driver_unconfirmed_block_count > 0 AND driver_unconfirmed_block_hours > 0 "
+            "AND rider_unconfirmed_block_minutes > 0 "
+            "AND rider_unpaid_rulings_cash_off > 0 AND rider_unpaid_rulings_window_days > 0 "
+            "AND dispute_window_hours > 0",
+            name="payment_unconfirmed_thresholds_positive",
+        ),
+        # **أربعةُ مواعيدَ متصاعدة** — لكلِّ موعدٍ نصُّه (§٣)، فعددُها جزءٌ من
+        # المعنى لا رقمٌ حرّ: الرابعُ هو «بعد ساعةٍ…» وليس بعده خامس
+        CheckConstraint(
+            "jsonb_typeof(payment_reminder_minutes) = 'array' "
+            "AND jsonb_array_length(payment_reminder_minutes) = 4 "
+            "AND (payment_reminder_minutes->>0)::int > 0 "
+            "AND (payment_reminder_minutes->>0)::int < (payment_reminder_minutes->>1)::int "
+            "AND (payment_reminder_minutes->>1)::int < (payment_reminder_minutes->>2)::int "
+            "AND (payment_reminder_minutes->>2)::int < (payment_reminder_minutes->>3)::int",
+            name="payment_reminder_minutes_valid",
         ),
     )
 
@@ -108,6 +147,79 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
     # سقفٌ يحرس من إصبعٍ تزلّ على شاشةٍ في سيارة — وصفرُه يعني «لم يُضبط»
     tip_max: Mapped[Decimal] = mapped_column(
         MONEY, nullable=False, server_default=text("0"), default=DEFAULT_TIP_MAX
+    )
+
+    # ------------------------------------- المدفوعاتُ غيرُ المؤكَّدة (§٦٤-ج)
+    # `design/PAYMENTS-UNCONFIRMED.md` §٩ — **كلُّ رقمٍ من اللوحة لكلِّ سوق**
+    # (المبدأ ٤)، والقيمُ الابتدائيةُ نصُّ التصميم. **ولا تعمل إلا والمفتاحُ
+    # `unconfirmed_payments_enabled` مشتعلٌ لسوقها**.
+
+    #: **مواعيدُ التذكير بالدقائق بعد نهاية الرحلة** (§٣) — أربعةٌ متصاعدة
+    payment_reminder_minutes: Mapped[list[int]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: list(DEFAULT_PAYMENT_REMINDER_MINUTES),
+        server_default=text("'[10, 120, 720, 1380]'::jsonb"),
+    )
+    #: **الإتمامُ الآليُّ للكاش بعد إقرار الراكب** (§٢-٥) — ساعاتٌ، وسقفٌ فوقه لا يُتمّ أبداً
+    cash_auto_confirm_hours: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_CASH_AUTO_CONFIRM_HOURS,
+        server_default=text("24"),
+    )
+    cash_auto_confirm_max_amount: Mapped[Decimal] = mapped_column(
+        MONEY,
+        nullable=False,
+        default=DEFAULT_CASH_AUTO_CONFIRM_MAX,
+        server_default=text("20.000"),
+    )
+    #: **مهلةُ إدخال مرجع كليك قبل التذكير** (§٢-٤)
+    cliq_reference_minutes: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_CLIQ_REFERENCE_MINUTES,
+        server_default=text("30"),
+    )
+    #: **حجبُ العروض عن الكبتن** (§٧): عددُ ما ينتظره، أو عمرُ أقدمِه بالساعات
+    driver_unconfirmed_block_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_DRIVER_UNCONFIRMED_BLOCK_COUNT,
+        server_default=text("3"),
+    )
+    driver_unconfirmed_block_hours: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_DRIVER_UNCONFIRMED_BLOCK_HOURS,
+        server_default=text("24"),
+    )
+    #: **منعُ الطلب الجديد عن الراكب** (§٧) — دقائقُ بعد الرحلة بلا إقرارٍ ولا مرجع
+    rider_unconfirmed_block_minutes: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_RIDER_UNCONFIRMED_BLOCK_MINUTES,
+        server_default=text("30"),
+    )
+    #: **إطفاءُ قناة الكاش للراكب** (§٧): عددُ أحكام «لم يدفع» في نافذةٍ من الأيام
+    rider_unpaid_rulings_cash_off: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_RIDER_UNPAID_RULINGS_CASH_OFF,
+        server_default=text("2"),
+    )
+    rider_unpaid_rulings_window_days: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_RIDER_UNPAID_RULINGS_WINDOW_DAYS,
+        server_default=text("90"),
+    )
+    #: **نافذةُ الاعتراض على إتمامٍ آليّ** (§٧) — ساعاتٌ، وتُجمَّد على الصفّ لحظةَ الإتمام
+    dispute_window_hours: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=DEFAULT_DISPUTE_WINDOW_HOURS,
+        server_default=text("72"),
     )
 
     @property

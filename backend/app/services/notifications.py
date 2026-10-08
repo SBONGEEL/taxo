@@ -857,19 +857,28 @@ async def publish_booking_missed(
     *,
     rider_id: uuid.UUID,
     booking_id: uuid.UUID,
+    unpaid: bool = False,
 ) -> None:
-    """حجزٌ حلَّ موعدُه وصاحبُه في رحلةٍ جارية (المرحلة 12-ط).
+    """حجزٌ حلَّ موعدُه وصاحبُه في رحلةٍ جارية (المرحلة 12-ط) — **أو ودفعُ رحلةٍ سابقةٍ يمنعه** (`unpaid`).
 
     **ولا يُترك بصمت**: من حجز موعداً ورتّب عليه يومَه يقف على الرصيف ينتظر
     سيارةً لم تُطلب. والصمتُ هنا ليس حياداً بل خبرٌ خاطئ.
+
+    **و`unpaid` يقول السببَ لا «لم يُنفَّذ» وحدَها** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج): من مُنع بدفعٍ لم يُحسم
+    يُقال له ما يرفعه — فيفتح التطبيقَ على «رحلةٌ لم يكتمل دفعها». **والحمولةُ نفسُها** (`booking_missed`) فالضغطُ يفتح الحجز.
     """
+    body = (
+        "حلَّ موعدُ حجزك ودفعُ رحلةٍ سابقةٍ لم يُحسم، فلم نطلب سيارة — افتح التطبيق لتحسمه."
+        if unpaid
+        else "حلَّ موعدُ حجزك وأنت في رحلةٍ جارية، فلم نطلب سيارةً أخرى."
+    )
     await _safe_notify(
         session,
         redis,
         user_id=rider_id,
         message=PushMessage(
             title="لم يُنفَّذ حجزك",
-            body="حلَّ موعدُ حجزك وأنت في رحلةٍ جارية، فلم نطلب سيارةً أخرى.",
+            body=body,
             data={"type": "booking_missed", "booking_id": str(booking_id)},
         ),
     )
@@ -1672,6 +1681,37 @@ async def publish_guarantee_refunded(
             title="رُدّ رسمُ الضمان",
             body="لم نجد كبتناً يضمن حجزَك، فعاد الرسمُ إلى محفظتك. ونطلب لك سيارةً في موعدك كالمعتاد.",
             data={"type": "guarantee_refunded", "booking_id": str(booking_id)},
+        ),
+    )
+
+
+async def publish_payment_notice(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    user_id: uuid.UUID,
+    kind: str,
+    title: str,
+    body: str,
+    payment_id: uuid.UUID,
+    ride_id: uuid.UUID,
+) -> None:
+    """**إشعاراتُ المدفوعات غير المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md` §٣/§٦، SPEC §٦٤-ج) — التذكيرُ والنزاعُ والإتمامُ الآليّ.
+
+    **`data` معرّفاتٌ ونوعٌ وحدَها**: الإشعارُ يفتح البطاقةَ نفسَها التي تُعرض عند الفتح (§٣)، والبطاقةُ تقرأ صفَّها من بابها —
+    فلا مبلغَ ولا اسمَ في الحمولة. **والنصُّ للدرج وحدَه** يصوغه `services/unconfirmed_payments.py` من نصوص §٣ حرفاً.
+
+    **وبلا قناة أندرويدٍ جديدة**: «قناةُ المدفوعات بصوت `notify` القائم — لا صوتَ جديد» (§٣). و`taxo.payment` قناةُ «مالٌ
+    وصل» (`push/channels.py`) لا تذكيرٌ بمالٍ لم يصل — فيقع في العامّة بصوتها القائم حتى تُنشئ الحزمُ قناتَه.
+    """
+    await _safe_notify(
+        session,
+        redis,
+        user_id=user_id,
+        message=PushMessage(
+            title=title,
+            body=body,
+            data={"type": kind, "payment_id": str(payment_id), "ride_id": str(ride_id)},
         ),
     )
 

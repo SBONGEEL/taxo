@@ -1,0 +1,52 @@
+/* «رحلةٌ لم يكتمل دفعها» (R31) وشريطُها في الرئيسية — `design/PAYMENTS-UNCONFIRMED.md` §٦، SPEC §٦٤-ز.
+ *
+ * **بلا لوحة**: الصفحةُ طبقةُ الدفع نفسُها (`t2-m-stage` · `t2-m-card` · `t2-m-amount` في `money.css`)، وهذا الملفُّ ما لا أختَ له
+ * هناك — سطرُ الرحلة، وصفُّ الأزرار، والشريط. **والرموزُ وحدَها** (`var(--t2-…)`) فتعمل في الفاتح والداكن والنسائيّ، **ولا رمزَ
+ * داكنٌ وحدَه** (`check:t2-css`). **وكلُّ اسمٍ يبدأ بـ`t2-uc-`** فلا يصطدم بأسماء `t2.css` و`money.css` المحمَّلَين معه.
+ */
+
+/* ── الصفحة ─────────────────────────────────────────────────────────────────────────────────────────── */
+.t2-uc-list { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.t2-uc-card { display: flex; flex-direction: column; gap: 6px; }
+/* «أمس · 21:58 · الشميساني ← دابوق · الكبتن زيد» — سطرٌ خافتٌ يلتفّ ولا يُقصّ: العنوانُ كلُّه يُقرأ */
+.t2-uc-trip { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-uc-method { font-size: 15px; font-weight: 600; color: var(--t2-muted); }
+.t2-uc-note { margin: 2px 0 0; font-size: 13px; line-height: 1.6; color: var(--t2-muted); }
+.t2 .t2-uc-callout { margin: 6px 0 0; }
+
+/* ── الأفعال: الأساسيُّ بعرض البطاقة، والثانويّان صفّاً تحته ───────────────────────────────────────── */
+.t2-uc-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.t2-uc-acts.pair { flex-direction: row; margin-top: 0; }
+.t2-uc-acts.pair > .t2-button { flex: 1; min-width: 0; height: 48px; padding: 0 10px; font-size: 14px; }
+.t2 .t2-uc-later { margin-top: 14px; }
+
+/* ── شريطُ الرئيسية: صغيرٌ، بسطح البطاقة، **والأحمرُ للحدِّ وحدَه** (§٦) ─────────────────────────────── */
+.t2-uc-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 10px 0 12px;
+  padding: 11px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: start;
+}
+button.t2-uc-strip { cursor: pointer; }
+button.t2-uc-strip:active { transform: scale(0.99); }
+.t2-uc-strip.danger { border-color: var(--t2-danger); background: var(--t2-danger-soft); }
+.t2-uc-strip.quiet { color: var(--t2-muted); }
+.t2-uc-strip-icon { flex: none; font-size: 20px; color: var(--t2-accent-text); }
+.t2-uc-strip.danger .t2-uc-strip-icon { color: var(--t2-danger); }
+.t2-uc-strip.quiet .t2-uc-strip-icon { color: var(--t2-muted); }
+.t2-uc-strip-text { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.t2-uc-strip.quiet .t2-uc-strip-text { display: block; }
+.t2-uc-strip-text b { font-weight: 700; color: var(--t2-text); }
+.t2-uc-strip-sub { font-size: 12px; color: var(--t2-muted); }
+.t2-uc-strip-go { flex: none; font-size: 20px; color: var(--t2-faint); }

@@ -17,6 +17,11 @@
  *
  * **بلغة TAXO 2.0** (لوحةُ `design/t2-new/rider/R19b`): بطاقةٌ بيضاءُ بزاوية R10 — الرمزُ، ثمّ ما يُنسخ، ثمّ «افتح تطبيق البنك»، ثمّ
  * المرجعُ بحقل R03 وسببُ خطئه تحته.
+ *
+ * **والرمزُ يُنزع حيث `unconfirmed_payments_enabled` مشتعل** (`design/PAYMENTS-UNCONFIRMED.md` §٤-٢، SPEC §٦٤-ز): يُعرض على هاتف
+ * الدافع نفسِه فلا يُمسح، **وقيمُه مخمَّنة** (ترتيبُ حقول Jo-QR غيرُ منشور) — «زرٌّ يبدو عاملاً ولا يعمل». **ومطفأً كما كان
+ * حرفاً**: المفتاحُ يحكم المسارَ كلَّه، و«مطفأً يبقى كلُّ شيءٍ كما كان» (§٦٤-ز). وما يُنسخ هو البديلُ الموثوق — الاسمُ المستعار
+ * والمبلغُ والمرجع.
  */
 
 import { motion } from "framer-motion";
@@ -26,6 +31,9 @@ import { ApiError } from "@/api/client";
 import { submitCliqReference } from "@/api/endpoints";
 import type { CliqCharge, RidePayments } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
+import { useFeature } from "@/lib/config";
+import { UNCONFIRMED_FLAG } from "@/lib/payment";
+import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
 import { BusyLabel } from "@/screens/t2/MoneyT2";
@@ -41,6 +49,9 @@ export function CliqPanel({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  // **الرمزُ المخمَّن خارجَ المسار الجديد** (§٤-٢) — والسوقُ المطفأُ يرى الشاشةَ كما كانت
+  const { user } = useSession();
+  const guessedQrRemoved = useFeature(user?.country_code, UNCONFIRMED_FLAG);
 
   const submitted = charge.transfer_reference !== null;
 
@@ -76,7 +87,7 @@ export function CliqPanel({
         مرجع الحوالة.
       </p>
 
-      <QrCode payload={charge.qr_payload} size={180} />
+      {guessedQrRemoved ? null : <QrCode payload={charge.qr_payload} size={180} />}
 
       <dl className="t2-m-copies">
         <CopyRow
@@ -151,7 +162,9 @@ export function CliqPanel({
   );
 }
 
-function CopyRow({
+/** **سطرُ نسخٍ واحد** — تسميتُه وقيمتُه وزرُّه. **مُصدَّرٌ لورقة «انسخ بيانات التحويل»** (`UnconfirmedT2`): الشكلُ هو هو في
+ *  الموضعين، وسطرٌ يُنسخ مرّتين يفترق أوّلَ تعديل. */
+export function CopyRow({
   label,
   value,
   copied,

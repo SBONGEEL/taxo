@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -92,6 +93,19 @@ class PaymentOut(BaseModel):
     resolution: DisputeResolution | None
     resolution_note: str | None
     resolved_at: datetime | None
+
+    # ---------------------------- المدفوعاتُ غيرُ المؤكَّدة (`design/PAYMENTS-UNCONFIRMED.md`، SPEC §٦٤-ج)
+    # **مطلوبةٌ بلا افتراض كجيرانها** — تُقرأ من الصفّ كلِّه (`model_validate`)، فلا حقلَ «يُملأ» في بابٍ ويُنسى في آخر
+    # (`tests/test_two_doors.py`).
+    # **«سلّمتُ المبلغ»** — إقرارُ الراكب بتسليم النقد، ويراه الطرفان («أقررتَ بالتسليم أمس 22:04»، §٦)
+    declared_at: datetime | None
+    # **معاييرُ قاعدة الإتمام الآليّ مجمَّدة** — تُقرأ حين `confirmed_by = auto_rule` وحدَه (§٢-٥/§٨)
+    auto_confirm_criteria: dict[str, Any] | None
+    # **اعتراضُ الكبتن على إتمامٍ آليّ** — زمنُه وسببُه، والصفُّ يبقى `confirmed` حتى حكم المشرف
+    objected_at: datetime | None
+    objection_reason: str | None
+    # **متى بُدِّلت الطريقة** — مع `status = voided`
+    voided_at: datetime | None
 
     created_at: datetime
 

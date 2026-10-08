@@ -44,6 +44,12 @@ const KIND_STYLE: Record<string, { icon: string; tone: Tone }> = {
   // **الحجزُ المضمون** (§٦٣-ج/٣) — سؤالُ «هل أنت في الطريق؟» بالجمر، وسحبُه بلا ردٍّ بالكهرمان
   guarantee_confirm: { icon: "schedule", tone: "hot" },
   guarantee_dropped: { icon: "event_upcoming", tone: "warn" },
+  // **المدفوعاتُ غيرُ المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md` §٣/§٦، SPEC §٦٤-ز) — التذكيرُ بالكهرمان (أجلٌ يقترب)، والنزاعُ
+  // بالأحمر، و«عُدّ مبلغُ رحلة … مستلَماً» بالكهرمان: نافذةُ اعتراضٍ تقترب. **ولمستُها تفتح «ركّابٌ ينتظرون تأكيدك»**
+  // (`notification-route`) — وأيقوناتُها من خطِّ التطبيق المقتطع (`index.html`)
+  payment_reminder: { icon: "payments", tone: "warn" },
+  payment_disputed: { icon: "error", tone: "danger" },
+  payment_auto_confirmed: { icon: "receipt_long", tone: "warn" },
   campaign: { icon: "campaign", tone: "plain" },
 };
 const DEFAULT_STYLE = { icon: "notifications", tone: "plain" as Tone };

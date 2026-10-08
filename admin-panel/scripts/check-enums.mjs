@@ -35,6 +35,11 @@ const UI_UNIONS = new Set([
   // `UserRole` و`WalletOwnerType`، **والمعنى مختلف**: هناك دورُ إنسان،
   // وهنا **إلى أيِّ شاشةٍ يقفز الدرج**
   "SearchKind",
+  // **حالُ صفٍّ في «المدفوعات غير المؤكدة»** (SPEC §٦٤-ز): مرآةُ `AdminUnconfirmedState` — **`Literal` في
+  // `schemas/unconfirmed_payment.py` لا `StrEnum`**، وهذا الحارسُ يقرأ التعداداتِ وحدَها فلا يعرف أعضاءه.
+  // **ويُعلَن لأنه مختلطٌ في عينه**: `disputed` يوافق `PaymentStatus` بالاسم، والأربعةُ الباقيةُ حالاتُ الطابور
+  // تشتقّها الخدمةُ (`_queue_state`). فالإعلانُ تصريحٌ بمرآة `Literal` لا قيمةٍ مخترعة
+  "AdminUnconfirmedState",
 ]);
 
 /** يمحو تعليقات `/* *\/` و`//` ويترك ما عداها بطوله.

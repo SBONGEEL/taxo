@@ -50,6 +50,7 @@ import type {
   RideParcel,
   RidePayments,
   RiderSummary,
+  RiderUnconfirmed,
   SavedCard,
   SavedPlace,
   SiteHelp,
@@ -221,6 +222,10 @@ export const requestRide = (payload: {
   /** **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣) — للطلب النسائيّ وحدَه (وغيرُه ٤٢٢ بنصّه): دائرةٌ أوسع بين الكبتنات لدقائق أخرى، **وشرطُ
    *  الجنس هو هو**. وغيابُه بحثٌ عاديٌّ كما كان. */
   widen_search?: boolean;
+  /** **طريقةُ الدفع المختارة في ورقة الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — كاش · كليك · محفظة · بطاقة،
+   *  **تُرسل حيث `unconfirmed_payments_enabled` مشتعلٌ وحدَه** فلا يتغيّر طلبُ سوقٍ مطفأ. ورفضُها يصل برسالته: قناةٌ مطفأة
+   *  (`feature_disabled`) · دافعٌ لا يطابقها (`payer_method_mismatch`) · **كاشٌ موقوفٌ لحسابه** (`cash_channel_off`). */
+  payment_method?: PaymentMethod;
 }) => api.post<Ride>("/rides", payload);
 
 /** **«ادفع الساعاتِ نقداً بدل المحفظة» وعكسُه** (§٦٣-ج/٥) — قبل البدء وحدَه؛ وبعده ٤٠٩ برسالته. **والبابُ للراكب صاحب الرحلة**
@@ -337,6 +342,30 @@ export const payRide = (
 export const submitCliqReference = (paymentId: string, transferReference: string) =>
   api.post<RidePayments>(`/payments/${paymentId}/cliq-reference`, {
     transfer_reference: transferReference,
+  });
+
+// --------------------------- المدفوعاتُ غيرُ المؤكَّدة (`design/PAYMENTS-UNCONFIRMED.md`، SPEC §٦٤-ز)
+
+/** **«رحلةٌ لم يكتمل دفعها»** — ما يُعرض بعد الترحيب وقبل الرئيسية (§٦)، **الأقدمُ أوّلاً**. ومطفأً تعود فارغةً بلا منع. */
+export const getMyUnconfirmed = () => api.get<RiderUnconfirmed>("/payments/me/unconfirmed");
+
+/** **«سلّمتُ المبلغ للكبتن»** — إقرارُ الراكب على دفعة كاش، **بلا قيد** (المستلمُ هو الحَكَم في النقد). والضغطةُ الثانيةُ تعيد
+ *  الحالَ نفسَها، **ويُقبل على النزاع** («سلّمتُه» — روايتُه للمشرف). */
+export const declareHandover = (paymentId: string) =>
+  api.post<RidePayments>(`/payments/${paymentId}/declare`);
+
+/** **«غيّر طريقة الدفع» و«سأدفع الآن»** (§٢-١ و§٦) — **حملُ `POST /rides/{id}/payments` حرفاً**: يُلغى المعلَّقُ ويُفتح الجديدُ في
+ *  معاملةٍ واحدة، **وسقوطُ الجديد يُبقي القديمَ كما كان**. والردُّ حالُ الرحلة كلِّها كردِّ الدفع (ومنه `card_order` برابطه). */
+export const changePaymentMethod = (
+  paymentId: string,
+  method: PaymentMethod,
+  idempotencyKey: string,
+  extras: { save_card?: boolean; saved_card_id?: string } = {},
+) =>
+  api.post<RidePayments>(`/payments/${paymentId}/change-method`, {
+    method,
+    idempotency_key: idempotencyKey,
+    ...extras,
   });
 
 export const getCardOrder = (cartId: string) =>

@@ -146,6 +146,8 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     onAddStop,
     blockedByPreference,
     onClearPreference,
+    blockedByPayment = false,
+    onOpenUnconfirmed,
     countryConfig,
     eta,
   } = props;
@@ -182,8 +184,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
     <SheetT2
       footer={
         <>
-          {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ */}
-          {blockedByPreference ? null : (
+          {/* **سطرُ الخطأ فوق الزرِّ مباشرةً** — بشرط الورقة القائمة نفسِه. **وطردٌ مخفيٌّ في السوق يُقال هنا** قبل طلبٍ يرتدّ.
+              **ومنعُ الدفع السابق يُقال في بطاقته بزرّه** (`blockedByPayment`) لا سطراً ثانياً بالنصِّ نفسِه */}
+          {blockedByPreference || blockedByPayment ? null : (
             <ErrorNote
               message={
                 c.error ??
@@ -220,6 +223,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                     c.parcel ?? undefined,
                     // **الساعاتُ ومن أين يُدفع محجوزُها** (§٦٣-ج/٥) — وغيابُها رحلةٌ عاديّة
                     c.hourly ?? undefined,
+                    // **والطريقةُ المرسومةُ على الورقة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — والرئيسيةُ تقرّر أتُرسل (المفتاح).
+                    // **ولا طريقةَ للساعات**: محجوزُها هو طريقتُها، والورقةُ لا ترسم منتقيَ الدفع لها
+                    c.hourlyMode ? undefined : c.payMethod?.method,
                   )
             }
           >
@@ -554,6 +560,24 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
             <button type="button" className="t2-button secondary t2-callout-action" onClick={onClearPreference}>
               اقبل أي كبتن
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* **٤٠٢ `unconfirmed_payment_blocked`** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ز) — **نصُّ الخلفية كما وصل**، وزرٌّ
+          إلى البطاقة نفسِها: من مُنع يعرف ما يفعله في ضغطة (يُقِرّ · يدفع · يبدّل الطريقة) ولا يكتشفه من الدعم. **وبلون الخطر**:
+          «بلا أحمرَ إلا للحدّ» (§٦) — وهذا هو الحدّ */}
+      {blockedByPayment ? (
+        <div className="t2-callout danger" role="alert">
+          <span className="t2-icon fill" aria-hidden="true">error</span>
+          <div className="t2-callout-main">
+            <div className="t2-callout-title">{requestError}</div>
+            <p className="t2-callout-body">يُرفع المنعُ فورَ أن تُقِرّ بالتسليم أو تدفع أو تبدّل طريقة الدفع.</p>
+            {onOpenUnconfirmed ? (
+              <button type="button" className="t2-button secondary t2-callout-action" onClick={onOpenUnconfirmed}>
+                افتح ما ينتظر تأكيدك
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

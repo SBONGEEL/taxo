@@ -56,6 +56,7 @@ from app.services import (
     notifications,
     settings_service,
     subscriptions,
+    unconfirmed_rules,
 )
 from app.schemas.ride import RideOut
 from app.ws import events
@@ -415,6 +416,10 @@ async def _eligible_levels(
         # محضَّرٌ ثالثٌ بالشكل نفسِه، **ويُشعل فوق سقف اللوحة وحدَه** — وسقفٌ
         # غيرُ مكتوبٍ (`NULL`) لا يحجب أحداً، فلا يتغيّر شيءٌ حتى يُكتب الرقم.
         Driver.debt_blocked.is_(False),
+        # **وموقوفٌ لمدفوعاتٍ تنتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٧، SPEC §٦٤-ج): ثلاثٌ أو أقدمُها فوق
+        # يومٍ، بعتبات سوقه. **مشتقٌّ هنا لا عمودٌ محضَّر** خلافَ إخوته فوقه — «يُرفع فور الحسم»، وعمودٌ تكتبه دورةٌ يُرفع
+        # بعدها. **ومطفأً لا يحجب أحداً**: المفتاحُ أوّلُ شروطه
+        ~unconfirmed_rules.driver_blocked_clause(),
         has_vehicle,
         subscribed,
         ~busy,

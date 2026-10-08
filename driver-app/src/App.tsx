@@ -38,7 +38,8 @@ import { RouteTransition } from "@/components/ui/Motion";
 import { StaleShellNotice } from "@/components/StaleShellNotice";
 import { WomenModeNotice } from "@/components/WomenModeNotice";
 import { BrandProvider } from "@/lib/brand";
-import { ConfigProvider, useConfig } from "@/lib/config";
+import { ConfigProvider, useConfig, useFeature } from "@/lib/config";
+import { UNCONFIRMED_FLAG, claimCaptainOpening, refreshCaptainUnconfirmed } from "@/lib/attention";
 import { isUnlocked, play, unlock } from "@/lib/sound";
 import { DriverProvider, useDriver } from "@/lib/driver";
 import { GarageProvider } from "@/lib/garage";
@@ -187,6 +188,9 @@ const NotificationsT2Screen = lazy(() =>
 const GarageScreen = lazy(() =>
   import("@/screens/Garage").then((m) => ({ default: m.GarageScreen })),
 );
+const UnconfirmedT2Screen = lazy(() =>
+  import("@/screens/t2/UnconfirmedT2").then((m) => ({ default: m.UnconfirmedT2Screen })),
+);
 
 function Loading() {
   return (
@@ -309,6 +313,39 @@ function DriverHome() {
  *  فلا معنى لها خارج `Router`. */
 function HardwareBack() {
   useEffect(() => bindHardwareBack(), []);
+  return null;
+}
+
+/** **«ركّابٌ ينتظرون تأكيدك» عند كلِّ فتح** (`design/PAYMENTS-UNCONFIRMED.md` §٦، SPEC §٦٤-ز) — **بعد الترحيب وقبل الرئيسية**:
+ *  الترحيبُ فوق المسارات كلِّها، فالصفحةُ تُفتح تحته وتظهر لحظةَ يذوب.
+ *
+ *  **مرّةً للفتحة** (`claimCaptainOpening`)، **وللمعتمد الذي أتمّ جولةَ أذوناته وحدَه** — شرطُ `DriverHome` بحرفه: الجولةُ تسبق
+ *  الرئيسيةَ ولا تُغطّى. **ولا تُفتح فوق طلبٍ واردٍ أو رحلةٍ جارية**: بطاقةُ العرض بمهلتها أَولى، والفتحةُ تنتظر أن تصفو الرئيسية.
+ *  **ومطفأً لا نداءَ أصلاً.** */
+function CaptainUnconfirmedOpening() {
+  const { user } = useSession();
+  const { profile } = useDriver();
+  const { ride, offer } = useRide();
+  const enabled = useFeature(user?.country_code, UNCONFIRMED_FLAG);
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  // **أين هو حين يصل الجواب** لا حين سُئل — من انتقل أو وصله عرضٌ في أثناء النداء لا يُنتزع منه
+  const here = useRef({ pathname, busy: false });
+  here.current = { pathname, busy: ride !== null || offer !== null };
+  const owner =
+    user && !user.deletion_due_at && profile?.driver.status === "approved" && walkDone() ? user.id : null;
+  const busy = ride !== null || offer !== null;
+  useEffect(() => {
+    if (owner === null || !enabled || busy || pathname !== "/") return;
+    if (!claimCaptainOpening(owner)) return;
+    refreshCaptainUnconfirmed(owner)
+      .then((data) => {
+        if (here.current.pathname === "/" && !here.current.busy && data.items.length > 0) {
+          navigate("/payments/unconfirmed");
+        }
+      })
+      .catch(() => undefined);
+  }, [owner, enabled, busy, pathname, navigate]);
   return null;
 }
 
@@ -759,12 +796,23 @@ export default function App() {
                             </Guarded>
                           }
                         />
+                        {/* **«ركّابٌ ينتظرون تأكيدك»** (C33، `design/PAYMENTS-UNCONFIRMED.md` §٦) — تفتحها الفتحةُ وسطرُ الرئيسية
+                            ونقرةُ إشعارها، **وبلا شريطٍ** (`showsNav` قائمةُ سماحٍ لا تذكرها)؛ ومطفأً تعيد نفسَها إلى الرئيسية */}
+                        <Route
+                          path="/payments/unconfirmed"
+                          element={
+                            <Guarded>
+                              <UnconfirmedT2Screen />
+                            </Guarded>
+                          }
+                        />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                       )}
                     </RouteTransition>
                     </BoundaryByRoute>
                     <HardwareBack />
+                    <CaptainUnconfirmedOpening />
                     <PushRouter />
                     <PushNotices />
                   <NavBar />

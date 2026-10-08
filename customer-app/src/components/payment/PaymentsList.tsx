@@ -25,6 +25,8 @@ const TONE: Record<PaymentStatus, string> = {
   disputed: "t2-chip danger",
   failed: "t2-chip danger",
   refunded: "t2-chip",
+  // **المُبدَّلةُ محايدةٌ كالمستردّة** (§٦٤-ز): اختيارُ صاحبها لا حكمٌ عليه — والجديدةُ بحالها تحتها
+  voided: "t2-chip",
 };
 
 /** أيقونةُ القناة — رموزُ منتقي الدفع، والخصمان بأيقونتيهما. */

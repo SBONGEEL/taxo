@@ -5,7 +5,9 @@
  * ينجرف)، **والقبولُ والرفضُ هما نداءا الشاشة القائمة** (يمرّرهما `HomeT2`).
  *
  * **وما رسمته اللوحةُ ولا مصدرَ له لا يُرسم مكانَه شيء** (§٦١-د/د):
- * - **«كاش»**: طريقةُ الدفع يختارها الراكبُ بعد الرحلة (§6) — لا تُعرف لحظةَ العرض (`methodLabel={null}` في الشاشة القائمة).
+ * - **«كاش»**: **صار له مصدرٌ حيث `unconfirmed_payments_enabled` مشتعل** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) —
+ *   الطريقةُ تُرسل مع الطلب وتصل على العرض (`payment_method_hint`)، فتُرسم «الدفع: كاش» كما تُرسم الفئة. **ومطفأً أو من تطبيقٍ لم
+ *   يرسلها `null`**: طريقةُ الدفع يختارها الراكبُ بعد الرحلة (§6) — فلا سطرَ كما كان.
  * - **«4 د» حتى الراكب بُني** (§٦٢-ج/١٠): مسارُ العرض يُطلب بعد أن يصل العرضُ (`getOfferRoute`) فيُضاف حين يُعرف — **وحيث
  *   المفتاحُ مطفأٌ تبقى المسافةُ وحدَها** كما كانت.
  * - **صفُّ الراكب** («ليلى · 4.8 · 36 رحلة»): **العرضُ لا يحمل هويةَ الراكب** عمداً (الشاشةُ القائمة) — لا اسمَ ولا تقييم.
@@ -32,7 +34,7 @@
 
 import type { Offer } from "@/lib/ride";
 import { useOfferCountdown } from "@/components/OfferSheet";
-import { bookedTime, trimDistance } from "@/lib/rideFormat";
+import { METHOD_LABEL, bookedTime, trimDistance } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
 import { PayerNoteT2 } from "@/screens/t2/ForOtherT2";
 import { hoursLabel, noDestination } from "@/screens/t2/HourlyT2";
@@ -70,6 +72,8 @@ export function OfferT2({
   const women = isWomenRide(ride);
   // **بالساعة** (§٦٣-ج/٥) — من صفِّ الرحلة لا من مفتاح السوق: طلبٌ وصل قبل الإطفاء يبقى بالساعة
   const hours = ride.ride_type === "hourly" ? ride.hourly_hours : null;
+  // **«الدفع: كاش» كما يرى الفئة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — من صفِّ الرحلة، و`null` لا يُرسم شيئاً
+  const methodLabel = ride.payment_method_hint ? `الدفع: ${METHOD_LABEL[ride.payment_method_hint]}` : null;
 
   return (
     <>
@@ -108,10 +112,18 @@ export function OfferT2({
               </span>
             </div>
             <div className="t2-of-head">
+              {/* **والطريقةُ سطرٌ تحت الحبّة لا داخلها** في الرحلة النسائية: الحبّةُ `nowrap` (`women.css`)، و«رحلة نسائية ·
+                  اقتصادي · الدفع: بطاقة» تتجاوز عرضَ البطاقة على هاتف 360 — **فتبقى الحبّةُ بالفئة وحدَها كما رُسمت** (CW3) */}
               {women ? (
-                <WomenOfferChipT2 categoryLabel={categoryLabel} />
+                <>
+                  <WomenOfferChipT2 categoryLabel={categoryLabel} />
+                  {methodLabel ? <div className="t2-of-kind">{methodLabel}</div> : null}
+                </>
               ) : (
-                <div className="t2-of-kind">طلب جديد · {categoryLabel}</div>
+                <div className="t2-of-kind">
+                  طلب جديد · {categoryLabel}
+                  {methodLabel ? ` · ${methodLabel}` : ""}
+                </div>
               )}
               <div className="t2-of-fare">
                 <span className="t2-of-fare-num" dir="ltr">

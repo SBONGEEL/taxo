@@ -33,8 +33,10 @@ export type RideStatus =
  *  خصم الكوبون فتظهر صفَّاً في الإيصال. لا تُعرض خياراً في شاشة الدفع. */
 export type PaymentMethod =
   "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute";
+/** و`voided` (§٦٤-ز): **دفعةٌ بدّل الراكبُ طريقتَها** قبل أن يُقِرّ أو يؤكّد الكبتن — صفٌّ باقٍ لا يشغل مبلغاً
+ *  (`design/PAYMENTS-UNCONFIRMED.md` §٢-١)، **وليس «فاشلة»**: تلك حكمٌ على مالٍ لم يصل. */
 export type PaymentStatus =
-  "pending" | "confirmed" | "failed" | "disputed" | "refunded";
+  "pending" | "confirmed" | "failed" | "disputed" | "refunded" | "voided";
 
 export type VerificationMethod =
   | "firebase"
@@ -455,6 +457,9 @@ export interface Ride {
   /** **بحثٌ موسَّعٌ اختارته هي** (§٦٤-ج/٤-٣) — «انتظري، نوسّع البحث» في RW3: دائرةٌ أوسع بين الكبتنات وحدهنّ، **فتقول شاشةُ البحث
    *  «نوسّع البحث» لا «نبحث»**. ومن الصفّ لا من المفتاح، **ولا عددَ ولا نصفَ قطرٍ يصل** (`APPROVALS-62` §٦-٢). */
   search_widened: boolean;
+  /** **طريقةُ الدفع التي أُرسلت مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — و`null` حين لم تُرسل أو
+   *  المفتاحُ مطفأ. **ومنها يُعاد الطلبُ بطريقته** («أقبل أي كبتن»): ما اختاره أوّلَ مرّةٍ لا يُسأل عنه ثانيةً. */
+  payment_method_hint: PaymentMethod | null;
 
   /** **تفصيلُ الأجرة مجمَّداً من الخلفية** (R10، §٦٢-ج/٢٥) — مجموعُ `amount` يساوي `estimated_fare` ثمّ `final_fare` حرفاً.
    *  **يُرسم ولا يُجمع ولا يُضرب**: `quantity` لتسمية السطر وحدَها. وفارغٌ لرحلةٍ أقدمَ من التجميد. */
@@ -596,6 +601,44 @@ export interface RidePayments {
   payments: Payment[];
   cliq_charge: CliqCharge | null;
   card_order: CardOrder | null;
+}
+
+/** **حالُ بطاقةٍ في «رحلةٌ لم يكتمل دفعها»** (`design/PAYMENTS-UNCONFIRMED.md` §٦، SPEC §٦٤-ز) — مرآةُ `RiderUnconfirmedState`
+ *  في `schemas/unconfirmed_payment.py` (`Literal` لا `StrEnum`): `awaiting_you` لم تُقِرّ أو بلا مرجع · `awaiting_captain`
+ *  «لا يلزمك شيء» · `disputed` الكبتنُ قال «لم يدفع» · `payment_due` الأجرةُ مستحقّةٌ ولا صفَّ عليها («ادفع الآن»). */
+export type RiderUnconfirmedState = "awaiting_you" | "awaiting_captain" | "disputed" | "payment_due";
+
+/** بطاقةُ رحلةٍ لم يكتمل دفعُها — **كلُّ قيمةٍ من الخلفية كما هي**: المبلغُ نصٌّ بثلاث خانات لا يُحسب منه شيء (§14). */
+export interface RiderUnconfirmedItem {
+  /** فارغٌ لـ`payment_due` وحدَها — لا صفَّ حيّاً على الرحلة */
+  payment_id: string | null;
+  ride_id: string;
+  completed_at: string;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  /** **اسمُ الكبتن كما سجّله** — «ستظهر في بنكك باسم: …» لكليك (§٤-٢) */
+  captain_name: string | null;
+  amount: string;
+  currency: Currency;
+  method: PaymentMethod;
+  state: RiderUnconfirmedState;
+  status: PaymentStatus | null;
+  /** «أقررتَ بالتسليم أمس 22:04» */
+  declared_at: string | null;
+  /** كليك: الاسمُ المستعارُ المجمَّد · مرجعُ TAXO (يُكتب في ملاحظة الحوالة) · ما أدخله الراكبُ ووقتُه */
+  cliq_alias: string | null;
+  cliq_reference: string | null;
+  cliq_transfer_reference: string | null;
+  cliq_reference_at: string | null;
+  dispute_reason: string | null;
+  blocks_at: string;
+  blocks_requests: boolean;
+}
+
+/** ما ينتظر الراكبَ **الأقدمُ أوّلاً** — و`blocked` حكمُ «اطلب رحلة» نفسُه (٤٠٢ `unconfirmed_payment_blocked`). */
+export interface RiderUnconfirmed {
+  blocked: boolean;
+  items: RiderUnconfirmedItem[];
 }
 
 export interface Wallet {

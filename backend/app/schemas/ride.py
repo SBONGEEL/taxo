@@ -152,6 +152,10 @@ class RideCreateRequest(RideEstimateRequest):
     hourly: HourlyIn | None = None
     # **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣) — للطلب النسائيّ وحدَه، ويُردّ على غيره
     widen_search: bool = False
+    # **طريقةُ الدفع المختارة في ورقة الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ج) — كاش · كليك · محفظة · بطاقة.
+    # **تُحفظ على الرحلة ويراها الكبتنُ على بطاقة العرض**، ومنها يولد صفُّ الكاش وكليك عند الإنهاء. `null` = لم تُختر، **ومطفأً
+    # (`unconfirmed_payments_enabled`) تُتجاهل** فلا يتغيّر شيءٌ لتطبيقٍ يرسلها في سوقٍ لم تُشعَل فيه
+    payment_method: PaymentMethod | None = None
 
 
 class RideCancelRequest(BaseModel):
@@ -438,6 +442,9 @@ class RideOut(BaseModel):
     commute: bool = False
     # **بحثٌ موسَّعٌ اختارته** (§٦٤-ج/٤-٣) — تقول شاشتُها «نوسّع البحث» لا «نبحث»
     search_widened: bool = False
+    # **طريقةُ الدفع التي اختارها الراكبُ مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — «الدفع: كاش» على بطاقة العرض كما
+    # يرى الكبتنُ الفئة. **و`null` حين لم تُرسل أو المفتاحُ مطفأ**، فلا يُرسم سطرٌ لطريقةٍ لا يُعرف عنها شيء
+    payment_method_hint: PaymentMethod | None = None
 
     # ------------------------------------ مشاركةُ الرحلة (12-ي)
     # **النسبةُ المجمَّدة لا ما في الإعدادات الآن**: بها يرسم التطبيقان شارةَ
@@ -542,6 +549,7 @@ class RideOut(BaseModel):
             hourly_prepay_method=ride.hourly_prepay_method,
             commute=ride.commute_id is not None,
             search_widened=ride.search_widened,
+            payment_method_hint=ride.payment_method_hint,
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,

@@ -329,9 +329,70 @@ export interface Withdrawal {
 
 export type PaymentMethod =
   "cash" | "cliq" | "card" | "wallet" | "promo" | "share" | "commute";
+/** و`voided` (§٦٤-ز): **دفعةٌ بدّل الراكبُ طريقتَها** قبل أن يُقِرّ أو يؤكّد الكبتن — صفٌّ باقٍ لا يشغل مبلغاً، **وليس «فاشلة»**. */
 export type PaymentStatus =
-  "pending" | "confirmed" | "failed" | "disputed" | "refunded";
+  "pending" | "confirmed" | "failed" | "disputed" | "refunded" | "voided";
 export type DisputeResolution = "paid" | "unpaid";
+/** **من أكّد الدفعة** — و`auto_rule` (§٦٤-ز): قاعدةُ الإتمام الآليِّ للكاش بمعاييرها المجمَّدة، **وللكبتن أن يعترض عليها**. */
+export type PaymentConfirmedBy = "driver" | "system" | "admin" | "auto_rule";
+
+// ------------------------------- المدفوعاتُ غيرُ المؤكَّدة (`design/PAYMENTS-UNCONFIRMED.md` §٥، SPEC §٦٤-ز)
+
+/** **حالُ الصفّ في الطابور** — مرآةُ `AdminUnconfirmedState` (`Literal` في `schemas/unconfirmed_payment.py`)، **خمسٌ من ستّ**:
+ *  «رحلةٌ لم تُنهَ» تحتاج الإنهاءَ الآليَّ (§٢-٢) ولم يُبنَ. */
+export type AdminUnconfirmedState =
+  "awaiting_captain" | "awaiting_rider" | "cliq_no_reference" | "disputed" | "auto_confirmed_objected";
+
+/** طرفٌ في الصفّ — **اسمٌ ورقمٌ مقنَّع ومجموعُ معلَّقاته** (§٥)، ومعرّفُه ليُفتح ملفُّه. */
+export interface QueueParty {
+  user_id: string;
+  /** للكبتن وحدَه — `drivers.id` غيرُ `users.id` */
+  driver_id: string | null;
+  name: string;
+  phone_masked: string;
+  /** **كلُّ ما ينتظر أحداً على رحلاته** — لا هذا الصفُّ وحدَه */
+  pending_count: number;
+}
+
+/** صفٌّ في «المدفوعات غير المؤكدة» — **الأقدمُ أوّلاً**، و`age_minutes` من نهاية الرحلة. */
+export interface UnconfirmedQueueRow {
+  payment_id: string;
+  ride_id: string;
+  state: AdminUnconfirmedState;
+  completed_at: string | null;
+  age_minutes: number;
+  amount: string;
+  currency: Currency;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  confirmed_by: PaymentConfirmedBy | null;
+  confirmed_at: string | null;
+  declared_at: string | null;
+  cliq_transfer_reference: string | null;
+  cliq_reference_at: string | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
+  objected_at: string | null;
+  objection_reason: string | null;
+  auto_confirm_criteria: Record<string, unknown> | null;
+  rider: QueueParty;
+  driver: QueueParty | null;
+  driver_reminders: number;
+  driver_reminded_at: string | null;
+  rider_reminders: number;
+  rider_reminded_at: string | null;
+  /** **الأثر**: كلُّ تذكيرٍ أُرسل بوقته — مجدولاً كان أو من «أرسل تذكيراً الآن» */
+  reminder_trail: { to: "captain" | "rider"; at: string }[];
+  /** **في التدفّق** — `false`: صفٌّ سبق المفتاحَ أو جاء من تطبيقٍ قديم، **لا تذكيرَ ولا حجبَ ولا إتمامَ آليَّ عليه** */
+  in_flow: boolean;
+}
+
+/** ما يردّه فعلٌ في الطابور (`PaymentOut`) — **الحالُ ومن أكّد وحدَهما** يقرؤهما الحوار؛ والصفُّ يُعاد من بابه بعده. */
+export interface UnconfirmedActionResult {
+  id: string;
+  status: PaymentStatus;
+  confirmed_by: PaymentConfirmedBy | null;
+}
 
 export interface Payment {
   id: string;
@@ -395,6 +456,9 @@ export type FeatureKey =
   | "weekly_cashback_enabled"
   | "work_hours_enabled"
   | "driver_map_nearby_enabled"
+  // **المدفوعاتُ غيرُ المؤكَّدة** (SPEC §٦٤-ز): المسارُ كلُّه، والإتمامُ الآليُّ للكاش **مفتاحاً ثانياً** يُشعَل بعد أسبوعٍ من الطابور
+  | "unconfirmed_payments_enabled"
+  | "cash_auto_confirm_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
@@ -515,6 +579,18 @@ export interface PaymentSetting {
   tip_preset_small: string;
   tip_preset_medium: string;
   tip_max: string;
+  /** **عتباتُ المدفوعات غير المؤكَّدة** (`design/PAYMENTS-UNCONFIRMED.md` §٩، SPEC §٦٤-ز) — أربعةُ مواعيدَ متصاعدةٍ بالدقائق بعد
+   *  نهاية الرحلة، ثمّ الإتمامُ الآليُّ وسقفُه، ومهلةُ المرجع، والحدّان، وإطفاءُ الكاش، ونافذةُ الاعتراض. */
+  payment_reminder_minutes: number[];
+  cash_auto_confirm_hours: number;
+  cash_auto_confirm_max_amount: string;
+  cliq_reference_minutes: number;
+  driver_unconfirmed_block_count: number;
+  driver_unconfirmed_block_hours: number;
+  rider_unconfirmed_block_minutes: number;
+  rider_unpaid_rulings_cash_off: number;
+  rider_unpaid_rulings_window_days: number;
+  dispute_window_hours: number;
   updated_at: string;
 }
 

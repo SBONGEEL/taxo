@@ -30,6 +30,12 @@ export function destinationFor(
   // **الحجزُ المضمون** (§٦٣-ج/٣): «هل أنت في الطريق؟» وسحبُه بلا ردّ — **إلى صفحته حيث يؤكّد أو يرى ما بقي**. والحمولةُ
   // تحمل `booking_id` لا رحلة: الرحلةُ تُنشأ بالتأكيد نفسِه
   if (kind.startsWith("guarantee_")) return "/guarantees";
+  // **المدفوعاتُ غيرُ المؤكَّدة** (`services/unconfirmed_payments.py`: التذكيرُ · النزاعُ · الإتمامُ الآليّ) — **«الإشعارُ يفتح
+  // البطاقةَ نفسَها»** (`design/PAYMENTS-UNCONFIRMED.md` §٣): «ركّابٌ ينتظرون تأكيدك» لا تفاصيلُ الرحلة، ولذلك قبل `ride_id`
+  // الذي تحمله الحمولةُ أيضاً
+  if (kind === "payment_reminder" || kind === "payment_disputed" || kind === "payment_auto_confirmed") {
+    return "/payments/unconfirmed";
+  }
   const rideId = data?.ride_id;
   if (rideId) return `/rides/${rideId}`;
   if (kind.startsWith("subscription_")) return "/subscription";

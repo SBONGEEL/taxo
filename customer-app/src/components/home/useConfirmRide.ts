@@ -27,6 +27,7 @@ import { requesterCanPay, usePayerPreference, useRideForOther } from "@/lib/for-
 import { useHourly } from "@/lib/hourly";
 import { useMultiStop } from "@/lib/multistop";
 import { useParcel } from "@/lib/parcel";
+import type { PayableMethod } from "@/lib/payment";
 import { usePromoCodes } from "@/lib/promo";
 import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
@@ -110,9 +111,15 @@ export interface ConfirmRideProps {
     parcel?: RideParcel,
     /** **بالساعة** (§٦٣-ج/٥) — الساعاتُ ومن أين يُدفع محجوزُها، أو غيابُه لرحلةٍ عاديّة. */
     hourly?: RideHourly,
+    /** **طريقةُ الدفع المرسومة على الورقة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — ويقرّر صاحبُ الورقة أتُرسل (المفتاح). وغيابُها
+     *  حيث لا قناةَ يختارها هو (دافعٌ غيرُه) أو الرحلةُ بالساعة (محجوزُها طريقتُها). */
+    paymentMethod?: PayableMethod,
   ) => void;
   requesting: boolean;
   requestError: string | null;
+  /** **٤٠٢ `unconfirmed_payment_blocked`** — دفعُ رحلةٍ سابقةٍ يمنع الطلب (§٧): رسالةُ الخلفية وزرٌّ إلى «رحلةٌ لم يكتمل دفعها». */
+  blockedByPayment?: boolean;
+  onOpenUnconfirmed?: () => void;
   stops: DraftStop[];
   onStopsChange: (next: DraftStop[]) => void;
   onAddStop: () => void;
@@ -219,7 +226,8 @@ export function useConfirmRide({
   const forOther = forOtherEnabled && !special ? forOtherDraft : null;
 
   // **طريقةُ الدفع تفضيلٌ محلّي** (قرار 3): تُعرض هنا وتُمرَّر إلى شاشة الدفع،
-  // ولا تُرسل مع الطلب ولا تُقيّد صاحبَها بعد الرحلة.
+  // ولا تُرسل مع الطلب **إلا حيث `unconfirmed_payments_enabled` مشتعل** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز —
+  // `onRequest` يحملها و`Home.tsx` يرسلها `payment_method`) — **ولا تُقيّد صاحبَها**: «غيّر طريقة الدفع» بابُه بعد الرحلة.
   // **ومضيَّقةٌ بالدافع في رحلةٍ لغيره** (`usePayerPreference`): المحفظةُ والبطاقةُ وحدهما، أو لا قناةَ إن دفع الراكبُ نقداً.
   // **وفي طردٍ يدفعه مستلمُه لا قناةَ كذلك**؛ ومرسلُه الدافعُ يختار ما يشاء — هو عند الالتقاط (`payerScope`)
   const { available: channels, resolved: payMethod, choose } = usePayerPreference(

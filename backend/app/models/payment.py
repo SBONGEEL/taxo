@@ -26,8 +26,9 @@ from sqlalchemy import (
     SmallInteger,
     String,
     UniqueConstraint,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
@@ -45,7 +46,8 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 # حالات تشغل مبلغاً من الرحلة: قائمةٌ تنتظر التحصيل أو محصَّلة فعلاً. ما عداها
-# (`failed`، `refunded`) لا يحجز شيئاً، فيجوز فتح دفعة جديدة بقيمته.
+# (`failed`، `refunded`، و`voided` — طريقةٌ بدّلها الراكب، §٦٤-ج) لا يحجز شيئاً،
+# فيجوز فتح دفعة جديدة بقيمته.
 OWING_PAYMENT_STATUSES: tuple[PaymentStatus, ...] = (
     PaymentStatus.PENDING,
     PaymentStatus.CONFIRMED,
@@ -120,6 +122,39 @@ class Payment(UUIDMixin, TimestampMixin, Base):
             name="payment_cliq_deadline_needs_reference",
         ),
         Index("ix_payments_ride_status", "ride_id", "status"),
+        # ------------------------------ المدفوعاتُ غيرُ المؤكَّدة (SPEC §٦٤-ج)
+        # **إقرارُ الراكب بالتسليم للنقد وحدَه**: إقرارُ كليك هو مرجعُ الحوالة
+        # القائم (`cliq_reference_at`)، **وحقلان لواقعةٍ واحدةٍ يفترقان**
+        CheckConstraint(
+            "declared_at IS NULL OR method::text = 'cash'",
+            name="payment_declared_cash_only",
+        ),
+        # **معاييرُ القاعدة مع حكمها لا بغيره** (`design/PAYMENTS-UNCONFIRMED.md`
+        # §٢-٥): إتمامٌ آليٌّ بلا معاييرَ مجمَّدةٍ لا يُحتجّ به في اعتراض،
+        # ومعاييرُ على صفٍّ لم تُتمّه القاعدةُ تقول ما لم يقع
+        CheckConstraint(
+            "(COALESCE(confirmed_by::text, '') = 'auto_rule') "
+            "= (auto_confirm_criteria IS NOT NULL)",
+            name="payment_auto_rule_criteria",
+        ),
+        # **الاعتراضُ على إتمامٍ آليٍّ وحدَه، وزمنُه مع سببه** (§٢-٥/§٧)
+        CheckConstraint(
+            "(objected_at IS NULL) = (objection_reason IS NULL) "
+            "AND (objected_at IS NULL OR confirmed_by::text = 'auto_rule')",
+            name="payment_objection_complete",
+        ),
+        CheckConstraint(
+            "driver_reminders >= 0 AND rider_reminders >= 0",
+            name="payment_reminders_not_negative",
+        ),
+        # **ما ينتظر أحداً** — يقرؤه الكنسُ كلَّ خمس دقائق، وحجبُ التوزيع، وطابورُ الإدارة
+        Index(
+            "ix_payments_unconfirmed",
+            "created_at",
+            postgresql_where=text(
+                "status = 'pending' AND method IN ('cash', 'cliq')"
+            ),
+        ),
     )
 
     ride_id: Mapped[uuid.UUID] = mapped_column(
@@ -209,6 +244,48 @@ class Payment(UUIDMixin, TimestampMixin, Base):
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # ------------------------------------- المدفوعاتُ غيرُ المؤكَّدة (§٦٤-ج)
+    # `design/PAYMENTS-UNCONFIRMED.md` — **كلُّ ما هنا أثرٌ لا مال**: لا قيدَ في
+    # الدفتر يُكتب من حقلٍ هنا، والتأكيدُ وحدَه يكتب عبر `payments.settle`.
+
+    #: **«سلّمتُ المبلغ»** — إقرارُ الراكب بتسليم النقد (§٢-٣). **ولا يُكتب به
+    #: شيء**: المستلمُ هو الحَكَم في النقد، والإقرارُ شرطُ الإتمام الآليّ وحدَه
+    declared_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: **التذكيراتُ مختومةٌ على الصفّ** (§٣) — عددُ ما أُرسل لكلِّ طرفٍ **حقاً**
+    #: (`+1` لكلِّ تذكير، لا مؤشّرُ موعد) وآخرُ وقت. **ووقتُ الأخير هو ما يمنع
+    #: التكرار**: الموعدُ الذي بلغه يُشتقّ منه على ساعة الطرف، والكنسُ يختمه
+    #: تحت قفل الصفّ — فكنسان معاً تذكيرٌ واحد. **وعدّادُ الكبتن يُصفَّر عند إقرار
+    #: الراكب بالكاش**: ساعتُه تبدأ من الإقرار، وشرطُ الإتمام الآليّ «أربعةٌ وصلته
+    #: بعده» (`design/PAYMENTS-UNCONFIRMED.md` §٢-٥/٢) يقرأ هذا العدد
+    driver_reminders: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default=text("0")
+    )
+    driver_reminded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rider_reminders: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default=text("0")
+    )
+    rider_reminded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: **معاييرُ قاعدة الإتمام الآليّ مجمَّدةً لحظتَها** (§٢-٥/§٨): المهلة
+    #: والسقف والتذكيرات ونافذةُ الاعتراض — **كما تُجمَّد `commission_percent_at_ride`**:
+    #: قاعدةٌ تُقرأ من إعدادٍ تغيّر بعدها لا يُحتجّ بها في نزاع
+    auto_confirm_criteria: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    #: **«لم أستلم هذا المبلغ»** — اعتراضُ الكبتن على إتمامٍ آليٍّ خلال نافذته
+    #: (§٢-٥). **ولا يُعكس به قيد**: نزاعٌ بعد التأكيد ينتظر حكمَ المشرف
+    objected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    objection_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    #: **متى بُدِّلت الطريقة** (§٢-١) — الحالةُ `voided` تقول «بُدِّلت»، وهذا يقول متى
+    voided_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

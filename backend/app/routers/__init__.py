@@ -13,6 +13,7 @@ from app.routers import (
     vehicle_skins,
     admin_live_map,
     admin_payments,
+    admin_unconfirmed_payments,
     admin_offers,
     admin_promo,
     bookings,
@@ -103,6 +104,8 @@ api_router.include_router(admin_releases.router)
 api_router.include_router(admin_sharing.router)
 api_router.include_router(admin_wallets.router)
 api_router.include_router(admin_payments.router)
+# **طابورُ المدفوعات غير المؤكَّدة** (SPEC §٦٤-ج) — موجّهٌ في ملفِّه لا ثانٍ في `admin_payments` (`check:contract`)
+api_router.include_router(admin_unconfirmed_payments.router)
 api_router.include_router(admin_live_map.router)
 api_router.include_router(admin_search.router)
 api_router.include_router(admin_stats.router)

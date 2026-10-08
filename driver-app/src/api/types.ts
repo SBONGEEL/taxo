@@ -430,6 +430,9 @@ export interface Ride {
   /** **رحلةٌ من المشوار الثابت** (§٦٣-ج/٦) — سعرُها المجمَّد دفعه الراكبُ مقدّماً مع اشتراكه، **وتُسوّى من المحفوظ عند الإنهاء**
    *  فيُقيَّد له ما يُقيَّد من أيِّ أجرة: **لا يستلم شيئاً من الراكب**. وتصل على العرض قبل القبول. */
   commute: boolean;
+  /** **طريقةُ الدفع التي اختارها الراكبُ مع الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ز) — «الدفع: كاش» على بطاقة
+   *  العرض كما يرى الفئة. **و`null` حين لم تُرسل أو المفتاحُ مطفأ** — فلا يُرسم سطرٌ لطريقةٍ لا يُعرف عنها شيء. */
+  payment_method_hint: PaymentMethod | null;
 
   current_leg: number;
   waiting_charge: string;
@@ -683,12 +686,13 @@ export interface RecordedRoute {
  *  تمرّ بالمنصة، فيراه في كشفه لا في «تقبض الآن». */
 export type PaymentMethod =
   "cash" | "wallet" | "card" | "cliq" | "promo" | "share" | "commute";
-/** مرآةُ `PaymentStatus` في `app/models/enums.py` — خمسُ قيمٍ لا ستّ.
+/** مرآةُ `PaymentStatus` في `app/models/enums.py` — **ستُّ قيمٍ منذ `voided`** (§٦٤-ز: دفعةٌ بدّل الراكبُ طريقتَها
+ * قبل تأكيدك، فلا تنتظر منك شيئاً).
  *
  * ولا `awaiting_confirmation` فيها: انتظارُ تأكيد الكبتن **ليس حالاً** بل
- * `pending` على قناةٍ يقبضها بيده — والتمييز من `method` لا من حقلٍ سادس. */
+ * `pending` على قناةٍ يقبضها بيده — والتمييز من `method` لا من حقلٍ سابع. */
 export type PaymentStatus =
-  "pending" | "confirmed" | "failed" | "refunded" | "disputed";
+  "pending" | "confirmed" | "failed" | "refunded" | "disputed" | "voided";
 
 /** صفٌّ في سجل الرحلات — الرحلةُ **ومعها حالُ دفعها**.
  *
@@ -734,6 +738,43 @@ export interface RidePayments {
   outstanding: string;
   settlement: SettlementState;
   payments: Payment[];
+}
+
+/** **حالُ صفٍّ في «ركّابٌ ينتظرون تأكيدك»** (`design/PAYMENTS-UNCONFIRMED.md` §٦، SPEC §٦٤-ز) — مرآةُ `CaptainUnconfirmedState`
+ *  (`Literal` في `schemas/unconfirmed_payment.py`): `awaiting_you` ينتظر «استلمت»/«وصلتني» · `auto_confirmed` أُتمّ آلياً ونافذةُ
+ *  اعتراضه مفتوحة. */
+export type CaptainUnconfirmedState = "awaiting_you" | "auto_confirmed";
+
+/** «ليلى · أمس 21:58 · 3.364 د.أ كاش» ← «استلمت المبلغ» · «لم يدفع» — **الاسمُ الأوّلُ للراكب وحدَه**، والمبلغُ كما هو (§14). */
+export interface CaptainUnconfirmedItem {
+  payment_id: string;
+  ride_id: string;
+  completed_at: string;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  rider_first_name: string | null;
+  amount: string;
+  currency: Currency;
+  method: PaymentMethod;
+  state: CaptainUnconfirmedState;
+  status: PaymentStatus;
+  /** **أقرّ الراكبُ بالتسليم** — ومنه يعرف الكبتنُ أن الصمتَ سيُتمّه آلياً */
+  declared_at: string | null;
+  /** كليك: «حوالةٌ بمرجع FT2410… · 21:47»، ومهلةُ التأكيد المجمَّدة */
+  cliq_transfer_reference: string | null;
+  cliq_reference_at: string | null;
+  cliq_confirmation_expires_at: string | null;
+  /** **«فاعترض قبل {الوقت}»** — لما أُتمّ آلياً وحدَه */
+  objection_deadline: string | null;
+}
+
+/** ما ينتظر تأكيدَه — **الأقدمُ أوّلاً**. و`blocked` شرطُ التوزيع نفسُه: «لا تصلك طلباتٌ جديدةٌ حتى تؤكّد ما سبق». */
+export interface CaptainUnconfirmed {
+  blocked: boolean;
+  /** عتبتا الحجب في سوقه — عددُ المعلَّقات وعمرُ أقدمِها بالساعات */
+  block_count: number;
+  block_hours: number;
+  items: CaptainUnconfirmedItem[];
 }
 
 export type RatingRaterType = "rider" | "driver";

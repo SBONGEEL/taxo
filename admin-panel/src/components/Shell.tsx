@@ -54,6 +54,9 @@ const GROUPS: {
     items: [
       { label: "المحافظ والسحب", icon: "account_balance_wallet", to: "/finance" },
       { label: "الدفعات", icon: "payments", to: "/payments" },
+      // **المدفوعاتُ غيرُ المؤكَّدة** (A10، `design/PAYMENTS-UNCONFIRMED.md` §٥) — جوارَ «الدفعات»: صفوفُها هي هي، وهذه ما ينتظر
+      // أحداً منها. **وبلا `adminOnly`**: القراءةُ لـ`support` والأفعالُ يحرسها الخادم (`DisputeResolver`) كالنزاعات
+      { label: "المدفوعات غير المؤكدة", icon: "request_quote", to: "/payments/unconfirmed" },
       { label: "الاشتراكات والباقات", icon: "card_membership", to: "/subscriptions" },
       { label: "عروض الاشتراكات", icon: "redeem", to: "/offers", adminOnly: true },
       { label: "التسعيرة", icon: "sell", to: "/pricing" },

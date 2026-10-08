@@ -33,6 +33,7 @@ from app.models.enums import (
     CountryCode,
     Currency,
     GenderPreference,
+    PaymentMethod,
     RideStatus,
     VehicleCategory,
 )
@@ -433,6 +434,12 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     commute_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rider_subscriptions.id"), nullable=True)
     payer: Mapped[str] = mapped_column(
         String(16), nullable=False, default="requester", server_default=text("'requester'")
+    )
+    #: **طريقةُ الدفع التي اختارها الراكبُ في ورقة الطلب** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١، SPEC §٦٤-ج) — **تُرسل مع
+    #: الطلب ويراها الكبتنُ على بطاقة العرض**، ومنها يولد صفُّ الدفع عند الإنهاء للكاش وكليك. **وفارغةٌ** حين لا يرسلها
+    #: التطبيق أو حين المفتاحُ `unconfirmed_payments_enabled` مطفأ — فالرحلةُ حينها كما كانت حرفاً
+    payment_method_hint: Mapped[PaymentMethod | None] = mapped_column(
+        pg_enum(PaymentMethod, "payment_method"), nullable=True
     )
     # أربعةُ حقولِ انتظارٍ مجمَّدةٌ لحظة الإنشاء كالعمولة (SPEC القسم 5.10):
     # مشرفٌ يرفع سعر الدقيقة ورحلةٌ واقفةٌ عند محطةٍ الآن لا يجوز أن يتغيّر

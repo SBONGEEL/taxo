@@ -81,6 +81,8 @@ _STATUS_ROLE: dict[PaymentStatus, _Role] = {
     PaymentStatus.DISPUTED: _Role.CONTESTED,
     PaymentStatus.FAILED: _Role.RELEASES,
     PaymentStatus.REFUNDED: _Role.RELEASES,
+    # **طريقةٌ بدّلها الراكب** (§٦٤-ج): لا تشغل شيئاً، فيُفتح صفُّ الطريقة الجديدة بقيمتها
+    PaymentStatus.VOIDED: _Role.RELEASES,
 }
 
 

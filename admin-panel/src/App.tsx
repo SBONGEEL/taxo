@@ -63,6 +63,9 @@ const PaymentsScreen = lazy(() =>
 const DisputesScreen = lazy(() =>
   import("@/screens/Disputes").then((m) => ({ default: m.DisputesScreen })),
 );
+const UnconfirmedPaymentsScreen = lazy(() =>
+  import("@/screens/UnconfirmedPayments").then((m) => ({ default: m.UnconfirmedPaymentsScreen })),
+);
 const OtpTemplatesScreen = lazy(() =>
   import("@/screens/OtpTemplatesScreen").then((m) => ({
     default: m.OtpTemplatesScreen,
@@ -340,6 +343,16 @@ export default function App() {
                     element={
                       <Guarded>
                         <DisputesScreen />
+                      </Guarded>
+                    }
+                  />
+                  {/* **«المدفوعات غير المؤكدة»** (A10، `design/PAYMENTS-UNCONFIRMED.md` §٥، SPEC §٦٤-ز) — الأقدمُ أوّلاً وأفعالُه
+                      الأربعة، كلٌّ بسببٍ مكتوب */}
+                  <Route
+                    path="/payments/unconfirmed"
+                    element={
+                      <Guarded>
+                        <UnconfirmedPaymentsScreen />
                       </Guarded>
                     }
                   />

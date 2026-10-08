@@ -1,0 +1,150 @@
+/* «ركّابٌ ينتظرون تأكيدك» (C33) وسطرُها في الرئيسية — `design/PAYMENTS-UNCONFIRMED.md` §٦، SPEC §٦٤-ز.
+ *
+ * **بلا لوحة**: الأزرارُ والمبلغُ من بطاقة حوالة كليك (`t2-cts-*` في `money.css`)، والحقلُ من `fields.css`، **وهذا الملفُّ ما لا
+ * أختَ له** — الصفحةُ وبطاقتُها وورقةُ السبب والسطر. **بالرموز وحدَها** فتعمل في المظهرين والنسائيّ، **ولا رمزَ داكنٌ وحدَه بلا
+ * بديل** (`check:t2-css`). **وكلُّ اسمٍ يبدأ بـ`t2-ucd-`**.
+ */
+
+/* ── الصفحة: عمودٌ يُمرَّر، و«لاحقاً» في قاعه ───────────────────────────────────────────────────────────── */
+.t2-ucd { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.t2-ucd-scroll {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 18px max(24px, env(safe-area-inset-bottom, 0px));
+}
+.t2-ucd-scroll > * { flex-shrink: 0; }
+.t2-ucd .t2-head { margin-bottom: 8px; }
+.t2-ucd-lede { margin: 0 2px 12px; font-size: 12.5px; line-height: 1.7; color: var(--t2-muted); }
+.t2-ucd-wait { display: flex; justify-content: center; padding: 48px 0; }
+.t2-ucd-done { color: var(--t2-success); }
+.t2 .t2-ucd-limit { margin-bottom: 12px; }
+.t2-ucd-push { flex: 1 0 12px; }
+.t2 .t2-ucd-later { width: 100%; margin-top: 12px; }
+
+/* ── البطاقة: الراكبُ والوقت · الطريق · المبلغ كبيراً · السطرُ الدالّ · الفعلان ─────────────────────────── */
+.t2-ucd-card {
+  margin-bottom: 10px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--t2-line);
+  border-radius: 24px;
+  background: var(--t2-surface);
+}
+.t2-ucd-card.auto { border-color: var(--t2-accent-line); }
+.t2-ucd-who { margin: 0; font-size: 13.5px; color: var(--t2-muted); }
+.t2-ucd-who b { font-weight: 700; color: var(--t2-text); }
+.t2-ucd-route { margin: 2px 0 0; font-size: 12px; line-height: 1.55; color: var(--t2-muted); }
+.t2-cts-num.t2-ucd-num { font-size: 38px; }
+.t2-ucd-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--t2-text);
+}
+.t2-ucd-line .t2-icon { font-size: 17px; color: var(--t2-success); }
+.t2-ucd-line.muted { margin-top: 4px; color: var(--t2-muted); }
+.t2-ucd-line.muted .t2-icon { color: var(--t2-warning); }
+.t2-ucd-ref { font-weight: 700; }
+.t2 .t2-ucd-callout { margin: 10px 0 0; }
+
+/* ── ورقةُ السبب: فوق الصفحة كلِّها، بأسباب النزاع صفوفاً وزرِّ الإرسال بلون الخطر ───────────────────── */
+.t2-ucd-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--t2-scrim);
+}
+.t2-ucd-sheet {
+  max-height: calc(100% - 40px);
+  overflow-y: auto;
+  padding: 10px 18px max(24px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  border-top: 1px solid var(--t2-line);
+  border-radius: 30px 30px 0 0;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+}
+.t2-ucd-grab { width: 40px; height: 5px; margin: 0 auto 14px; border-radius: 3px; background: var(--t2-dash); }
+.t2-ucd-sheet-title { margin: 0; font-size: 18px; font-weight: 700; }
+.t2-ucd-sheet-note { margin: 6px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--t2-muted); }
+.t2-ucd-reasons { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.t2-ucd-reason {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--t2-line);
+  border-radius: 16px;
+  background: none;
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-ucd-reason.on { border-color: var(--t2-accent-line); background: var(--t2-accent-soft); color: var(--t2-accent-text); font-weight: 700; }
+.t2-ucd-radio { width: 18px; height: 18px; flex: none; box-sizing: border-box; border: 2px solid var(--t2-dash); border-radius: 50%; }
+.t2-ucd-reason.on .t2-ucd-radio { border: 5px solid var(--t2-accent); }
+.t2-fld-label.t2-ucd-label { margin-top: 14px; }
+.t2-ucd-sheet .t2-note { margin-top: 10px; }
+.t2-ucd-send {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--t2-danger);
+  color: var(--t2-on-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.t2-ucd-send:disabled { opacity: 0.5; cursor: default; }
+.t2-ucd-cancel {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t2-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── سطرُ الرئيسية: صغيرٌ بسطح البطاقة، **والأحمرُ للحجب وحدَه** (`t2-callout danger`) ──────────────────── */
+.t2 .t2-ucd-home { margin-bottom: 10px; }
+.t2-ucd-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 11px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--t2-accent-line);
+  border-radius: 18px;
+  background: var(--t2-surface);
+  color: var(--t2-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+.t2-ucd-strip > .t2-icon:first-child { flex: none; font-size: 20px; color: var(--t2-accent-text); }
+.t2-ucd-strip-text { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.t2-ucd-strip-text b { font-weight: 700; }
+.t2-ucd-strip-text span { font-size: 12px; color: var(--t2-muted); }
+.t2-ucd-strip-go { flex: none; font-size: 20px; color: var(--t2-faint); }

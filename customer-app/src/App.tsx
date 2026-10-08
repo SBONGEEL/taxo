@@ -32,9 +32,10 @@ import { Toasts } from "@/components/Toasts";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { RouteTransition } from "@/components/ui/Motion";
 import { BrandProvider } from "@/lib/brand";
-import { ConfigProvider, useConfig } from "@/lib/config";
+import { ConfigProvider, useConfig, useFeature } from "@/lib/config";
 import { onNotificationTap } from "@/lib/firebase";
-import { RideProvider, useRide } from "@/lib/ride";
+import { UNCONFIRMED_FLAG, claimLaunchOpening, needsRider, refreshUnconfirmed } from "@/lib/payment";
+import { RideProvider, isActive, useRide } from "@/lib/ride";
 import { PlacesProvider } from "@/lib/places";
 import { SessionProvider, useSession } from "@/lib/session";
 import { RestoreAccountScreen } from "@/screens/RestoreAccount";
@@ -148,6 +149,9 @@ const WomenServiceT2Screen = lazy(() =>
 const PublicTrackScreen = lazy(() =>
   import("@/screens/t2/PublicTrackT2").then((m) => ({ default: m.PublicTrackScreen })),
 );
+const UnconfirmedT2Screen = lazy(() =>
+  import("@/screens/t2/UnconfirmedT2").then((m) => ({ default: m.UnconfirmedT2Screen })),
+);
 
 /** **رابطُ التتبّع العامّ** «/t/:token» (§٦٣-ج/١) — يفتحه **من لا حسابَ له** في متصفّحٍ عاديّ.
  *
@@ -253,6 +257,44 @@ function Anonymous({ children }: { children: ReactNode }) {
  *  فلا معنى لها خارج `Router`. */
 function HardwareBack() {
   useEffect(() => bindHardwareBack(), []);
+  return null;
+}
+
+/** **«رحلةٌ لم يكتمل دفعها» عند كلِّ فتح** (`design/PAYMENTS-UNCONFIRMED.md` §٦، SPEC §٦٤-ز) — **بعد الترحيب مباشرةً وقبل
+ *  الرئيسية**: الترحيبُ فوق المسارات كلِّها (`WelcomeGate`)، فالصفحةُ تُفتح تحته **فتظهر لحظةَ يذوب** لا بعد أن تُرسم الرئيسية.
+ *
+ *  **مرّةً للفتحة** (`claimLaunchOpening`) — و«لاحقاً» يعود إلى الرئيسية فلا تُفتح ثانيةً حتى الفتحةِ التالية؛ **وحين تُفتح
+ *  الرئيسيةُ وحدَها**: من دخل من رابطٍ أو عاد من صفحة البطاقة يصل حيث قصد. **وبعد الدخول كذلك** — المسارُ يصير `/` فيُسأل.
+ *  **ولما بيد الراكب وحدَه** (`needsRider`): «بانتظار تأكيد الكبتن» شريطٌ لا صفحة (§٦). **ومطفأً لا نداءَ أصلاً.**
+ *
+ *  **ولا تُفتح فوق رحلةٍ جارية** — قاعدةُ `NavBar` تحتها («لا إشعارَ فوق قرار: رحلةٌ جاريةٌ تعني ورقةَ تتبّع»)، **وأختُها عند
+ *  الكبتن** (`CaptainUnconfirmedOpening`). **ووقع بلا هذا**: راكبٌ أنهى رحلةً بلا إقرارٍ وطلب أخرى في مهلة السوق ثمّ أُعيد فتحُ
+ *  التطبيق — فغطّت الصفحةُ ورقةَ تتبّع رحلته الجارية. **والرحلةُ تُسأل من بابها قبل الانتقال** (`refresh`) لا من الحال وحدَها:
+ *  الحالُ فارغةٌ عند الإقلاع حتى يتكلّم المقبس، فـ«لا رحلة» قبل أن يُسأل أحدٌ ليست جواباً. */
+function UnconfirmedOpening() {
+  const { user } = useSession();
+  const { ride, refresh } = useRide();
+  const enabled = useFeature(user?.country_code, UNCONFIRMED_FLAG);
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const busy = isActive(ride);
+  // **أين هو حين يصل الجواب** لا حين سُئل — من انتقل أو بدأت رحلتُه في أثناء النداء لا يُنتزع من حيث ذهب
+  const here = useRef({ pathname, busy });
+  here.current = { pathname, busy };
+  const owner = user && !user.deletion_due_at ? user.id : null;
+  useEffect(() => {
+    if (owner === null || !enabled || busy || pathname !== "/") return;
+    if (!claimLaunchOpening(owner)) return;
+    refreshUnconfirmed(owner)
+      .then(async (data) => {
+        if (!data.items.some(needsRider)) return;
+        const active = await refresh();
+        if (here.current.pathname === "/" && !here.current.busy && !isActive(active)) {
+          navigate("/payments/unconfirmed");
+        }
+      })
+      .catch(() => undefined);
+  }, [owner, enabled, busy, pathname, navigate, refresh]);
   return null;
 }
 
@@ -452,6 +494,16 @@ export default function App() {
                           </Guarded>
                         }
                       />
+                      {/* **«رحلةٌ لم يكتمل دفعها»** (R31، `design/PAYMENTS-UNCONFIRMED.md` §٦) — تفتحها الفتحةُ (`UnconfirmedOpening`)
+                          وشريطُ الرئيسية ونقرةُ إشعارها ومنعُ الطلب، **وبلا شريطٍ** (`lib/tabs.ts`)؛ ومطفأً تعيد نفسَها إلى الرئيسية */}
+                      <Route
+                        path="/payments/unconfirmed"
+                        element={
+                          <Guarded>
+                            <UnconfirmedT2Screen />
+                          </Guarded>
+                        }
+                      />
                       <Route
                         path="/rides/:rideId/rate"
                         element={
@@ -629,6 +681,7 @@ export default function App() {
                   </RouteTransition>
                   </BoundaryByRoute>
                   <HardwareBack />
+                  <UnconfirmedOpening />
                   <NavBar />
               </RideProvider>
               </PlacesProvider>
