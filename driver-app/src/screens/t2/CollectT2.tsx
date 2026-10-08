@@ -27,6 +27,7 @@ import { ApiError } from "@/api/client";
 import { confirmPayment } from "@/api/endpoints";
 import type { Ride } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
+import { refreshAfterConfirm } from "@/lib/attention";
 import { useCoverNav } from "@/lib/navCover";
 import { METHOD_LABEL, trimDistance } from "@/lib/rideFormat";
 import { play } from "@/lib/sound";
@@ -71,6 +72,7 @@ export function CollectT2Screen({
       setBusy(true);
       try {
         await confirmPayment(pending.id);
+        refreshAfterConfirm();
         // **نغمةُ التحصيل عند وقوعه لا عند فتح الشاشة** — كما في الشاشة القائمة
         play("collected");
         setConfirmedId(pending.id);

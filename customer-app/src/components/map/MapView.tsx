@@ -383,6 +383,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   // `setStyle` يمسح الطبقات والمصادر المضافة يدوياً، فخط الرحلة يُعاد رسمه
   // على هذه الإشارة؛ والعلامات (`Marker`) تعيش خارج الستايل فتبقى.
   const [styleVersion, setStyleVersion] = useState(0);
+  // **والإشارةُ وحدَها لا تكفي** (قِيس على S21 ٢٠٢٦-١٠-٠٨): `setStyle` يبدأ التحميلَ والإشارةُ ما زالت من التحميل السابق،
+  // وأثرُ الخطّ في الدورة نفسِها (المظهرُ في تبعيّاته) نادى `addSource` على ستايلٍ لم يكتمل — «Style is not done loading»
+  // **أسقط شاشةَ الطلب كلَّها إلى حدِّ الخطأ**. فالجاهزيةُ تُنزَل مع `setStyle` وتُرفع مع `style.load`، والإشارةُ تعيد الرسمَ بعدها
+  const styleReady = useRef(false);
   const carMarkers = useRef(new Map<string, TweenedMarker>());
   const driverMarker = useRef<TweenedMarker | null>(null);
   /** معرّفُ المركبة المرسومة الآن — تبدُّلُه يعيد بناءَ العلامة. */
@@ -406,6 +410,8 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     if (!token || !container.current || map.current) return;
 
     mapboxgl.accessToken = token;
+    // لوحةٌ جديدةٌ ستايلُها لم يُحمَّل بعد — **ولو بقيت الإشارةُ مرفوعةً من لوحةٍ سبقتها**
+    styleReady.current = false;
     const instance = new mapboxgl.Map({
       container: container.current,
       style: dark ? STYLE_DARK : STYLE_LIGHT,
@@ -428,6 +434,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     });
 
     instance.on("style.load", () => {
+      styleReady.current = true;
       instance.resize();
       // **الصبغُ قبل الإشارة** — فطبقاتُ الرحلة تُضاف فوق خريطةٍ مصبوغة
       if (container.current) calmLook(instance, container.current);
@@ -477,6 +484,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       return;
     }
     // أنواعُ mapbox تُلزم حقلَي الخطّ المحلّي في الخيارات — والمكتبةُ تقبل `diff` وحدَه
+    if (map.current) styleReady.current = false;
     map.current?.setStyle(dark ? STYLE_DARK : STYLE_LIGHT, {
       diff: false,
     } as Parameters<mapboxgl.Map["setStyle"]>[1]);
@@ -763,7 +771,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
 
   useEffect(() => {
     const instance = map.current;
-    if (!instance || styleVersion === 0) return;
+    if (!instance || styleVersion === 0 || !styleReady.current) return;
 
     const id = "taxo-trip-line";
     // **المسارُ الحقيقيُّ يسبق المستقيم**، وما مضى منه يُقصّ عند موضع الكبتن

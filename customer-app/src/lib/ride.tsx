@@ -20,7 +20,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { getActiveRide, nearbyDrivers } from "@/api/endpoints";
+import { getActiveRide, getRide, nearbyDrivers } from "@/api/endpoints";
 import type { Coordinates, NearbyDriver, Ride } from "@/api/types";
 import { firebaseConfigOf, useConfig } from "@/lib/config";
 import { onForegroundMessage } from "@/lib/firebase";
@@ -78,6 +78,14 @@ const TERMINAL_EVENTS = new Set([
   "no_driver_found",
 ]);
 
+/** حالاتُ الرحلة التي لا تعود منها — **وما بلغها يبقى معروضاً حتى يطويه صاحبُه** (شاشةُ الدفع والتقييم أو «لم نجد كبتناً»). */
+const TERMINAL_STATUSES = new Set<Ride["status"]>([
+  "completed",
+  "cancelled_by_rider",
+  "cancelled_by_driver",
+  "no_driver_found",
+]);
+
 const EVENT_TOAST: Record<string, { title: string; body?: string }> = {
   driver_assigned: { title: "قَبِل كبتنٌ رحلتك", body: "هو الآن في طريقه إليك" },
   // **«الكبتن يقترب»** (§61-ي/١١) — مرّةً لكلِّ رحلة، وصوتُه في `EVENT_SOUND`
@@ -114,6 +122,9 @@ export function RideProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const { config } = useConfig();
   const [ride, setRide] = useState<Ride | null>(null);
+  /** المعروضُ الآن — يقرؤه `adopt` بلا أن يصير تبعيّةً تعيد بناءَ المقبس. */
+  const shown = useRef<Ride | null>(null);
+  shown.current = ride;
   const [drivers, setDrivers] = useState<NearbyDriver[]>([]);
   const [driverPing, setDriverPing] = useState<DriverPing | null>(null);
   const [connected, setConnected] = useState(false);
@@ -159,18 +170,39 @@ export function RideProvider({ children }: { children: ReactNode }) {
     [notify],
   );
 
+  /** **«لا رحلةَ جارية» لا تعني «لا شيءَ يُعرض»** (قِيس على S21 ٢٠٢٦-١٠-٠٨): رحلةٌ اكتملت والتطبيقُ في الجيب — مُجمَّداً
+   *  أو بلا شبكة — يفوته حدثُ النهاية، ثمّ يعود المقبسُ بـ`active_ride: null` (المكتملةُ ليست جارية) **فكانت تُمسح، ويعود
+   *  الراكبُ إلى الرئيسية بلا شاشة الدفع ولا التقييم** — والتعليقُ أدناه يقول إن الحدثَ النهائيَّ يتركها معروضةً لهذا بعينه.
+   *  فالنهائيّةُ المعروضةُ تبقى، **والجاريةُ المعروضةُ تُسأل عن مآلها** (`getRide`): انتهت ⇒ تُعرض نهايتُها، وإلا تُطوى. */
+  const adopt = useCallback(async (active: Ride | null): Promise<Ride | null> => {
+    if (active) {
+      setRide(active);
+      return active;
+    }
+    const before = shown.current;
+    if (before && TERMINAL_STATUSES.has(before.status)) return before;
+    if (!before) {
+      setRide(null);
+      return null;
+    }
+    const latest = await getRide(before.id).catch(() => null);
+    const ended = latest && TERMINAL_STATUSES.has(latest.status) ? latest : null;
+    setRide(ended);
+    return ended;
+  }, []);
+
   const refresh = useCallback(async () => {
     const active = await getActiveRide().catch(() => null);
-    setRide(active);
-    if (!active?.driver) setDriverPing(null);
-    return active;
-  }, []);
+    const settled = await adopt(active);
+    if (!settled?.driver || TERMINAL_STATUSES.has(settled.status)) setDriverPing(null);
+    return settled;
+  }, [adopt]);
 
   const onEvent = useCallback(
     (event: SocketEvent) => {
       switch (event.type) {
         case "connected":
-          setRide((event as { active_ride: Ride | null }).active_ride);
+          void adopt((event as { active_ride: Ride | null }).active_ride);
           return;
 
         case "nearby_drivers":
@@ -230,7 +262,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [notify, presentNotice],
+    [adopt, notify, presentNotice],
   );
 
   useEffect(() => {

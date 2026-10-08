@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { confirmPayment, getRidePayments } from "@/api/endpoints";
 import type { Payment, Ride } from "@/api/types";
+import { refreshAfterConfirm } from "@/lib/attention";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -146,6 +147,7 @@ export function HourlyCashCardT2({ ride, currencyLabel }: { ride: Ride; currency
     setError(null);
     try {
       await confirmPayment(pending.id);
+      refreshAfterConfirm();
       setPending(null);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "تعذّر تأكيد الدفعة");
