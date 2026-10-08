@@ -33,7 +33,7 @@ from app.models.driver import Driver
 from app.models.enums import AuditAction, CountryCode, RideStatus, VehicleCategory
 from app.models.ride import Ride
 from app.models.user import User
-from app.services import audit, geo
+from app.services import audit, geo, test_accounts
 
 # نافذةُ خنق قيد التدقيق: جلسةُ مراقبةٍ واحدة تكتب قيداً واحداً
 AUDIT_WINDOW_SECONDS = 900
@@ -138,7 +138,14 @@ async def drivers_now(
             select(Driver)
             .options(selectinload(Driver.user), selectinload(Driver.vehicles))
             .join(User, Driver.user_id == User.id)
-            .where(Driver.id.in_(live.keys()), User.country_code == country)
+            .where(
+                Driver.id.in_(live.keys()),
+                User.country_code == country,
+                # **كبتنُ التجربة ليس في الشارع** (SPEC §٦٥-ج): الخريطةُ تقول «من في السوق الآن» وتعدّه في «متصلون»،
+                # **ورقمُها يجب أن يساوي «متصلٌ الآن» في النظرة العامّة** (`stats.online_driver_count` يطرحه). ورحلتُه
+                # تُتابَع من صفحتها (`position_of` لا يمرّ من هنا)
+                User.is_test.is_(False),
+            )
         )
     ).all()
 
@@ -179,7 +186,12 @@ async def pending_rides(
     rows = (
         await session.scalars(
             select(Ride)
-            .where(Ride.country_code == country, Ride.status.in_(PENDING_STATUSES))
+            .where(
+                Ride.country_code == country,
+                Ride.status.in_(PENDING_STATUSES),
+                # **طلبُ راكبِ التجربة لا ينتظر سائقاً حقيقيّاً** (SPEC §٦٥-ج) — ولا يُعدّ في «بانتظار سائق»
+                test_accounts.real_user(Ride.rider_id),
+            )
             .order_by(Ride.created_at)
         )
     ).all()

@@ -1256,6 +1256,8 @@ class QueueParty:
     name: str
     phone: str | None
     pending_count: int
+    #: **شارةُ «حساب تجربة»** في صفِّ الطابور (SPEC §٦٥-ج) — بلا افتراض: بانٍ ينساه يسقط
+    is_test: bool
     driver_id: uuid.UUID | None = None
 
 
@@ -1428,6 +1430,7 @@ async def queue(
                 name=driver_user.name,
                 phone=driver_user.phone,
                 pending_count=int(driver_counts.get(driver.id, 0)),
+                is_test=driver_user.is_test,
                 driver_id=driver.id,
             )
         started = ride.completed_at or payment.created_at
@@ -1442,6 +1445,7 @@ async def queue(
                     name=rider.name,
                     phone=rider.phone,
                     pending_count=int(rider_counts.get(rider.id, 0)),
+                    is_test=rider.is_test,
                 ),
                 driver=driver_party,
                 trail=[

@@ -42,18 +42,14 @@ def _row(ride: Ride, summary: ride_log.PaymentSummary) -> AdminRideRow:
         country_code=ride.country_code,
         vehicle_category=ride.vehicle_category,
         currency=ride.currency,
-        rider=PartyOut(
-            user_id=ride.rider.id, name=ride.rider.name, phone=ride.rider.phone
-        ),
+        # **البانِيان الواحدان لا حقولٌ بيد** (`schemas/party.py`) — كان الطرفان يُبنيان هنا حقلاً حقلاً، **فحقلٌ يُضاف إلى
+        # البيت (`is_test`، SPEC §٦٥-ج) كان سيصل المدفوعاتِ وينسى الرحلات**: درسُ البند ٣ بنصِّه
+        rider=PartyOut.of(ride.rider),
         driver=(
             None
             if ride.driver is None
-            else DriverPartyOut(
-                user_id=ride.driver.user.id,
-                name=ride.driver.user.name,
-                phone=ride.driver.user.phone,
-                driver_id=ride.driver.id,
-                plate_number=ride_log.plate_of(ride),
+            else DriverPartyOut.of_driver(
+                ride.driver, plate_number=ride_log.plate_of(ride)
             )
         ),
         pickup_address=ride.pickup_address,

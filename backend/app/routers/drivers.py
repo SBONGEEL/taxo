@@ -211,7 +211,13 @@ async def my_demand(
 
     return DemandOut(
         high=await demand.high_near(
-            session, redis, driver=driver, country=user.country_code, now=datetime.now(UTC)
+            session,
+            redis,
+            driver=driver,
+            country=user.country_code,
+            now=datetime.now(UTC),
+            # **عالمُ الكبتن** (SPEC §٦٥-ج) — العدّان فيه وحدَه
+            test=user.is_test,
         )
     )
 
@@ -471,7 +477,14 @@ async def list_nearby_for_driver(
         raise PermissionDenied("عرضُ الكباتن حولك غيرُ مفعّلٍ في سوقك")
     salt = secrets.token_hex(16)
     presences = await drivers_service.nearby_available(
-        redis, session, country_code=user.country_code, lat=lat, lng=lng
+        redis,
+        session,
+        country_code=user.country_code,
+        lat=lat,
+        lng=lng,
+        # **عالمُ الكبتن الناظر** (SPEC §٦٥-ج): كبتنُ التجربة لا يُرى على خريطةِ
+        # زميلٍ حقيقيّ، ولا يرى هو إلا عالمَه
+        test=user.is_test,
     )
     return [
         NearbyDriverOut.of(

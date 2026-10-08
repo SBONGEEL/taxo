@@ -46,6 +46,7 @@ import { BulkNotify } from "@/components/BulkNotify";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { Field } from "@/components/ui/Field";
@@ -227,6 +228,8 @@ export function RidersScreen() {
                 {!row.phone_verified ? (
                   <Badge tone="warn">رقمٌ غير مُثبت</Badge>
                 ) : null}
+                {/* **راكبُ تجربة** (SPEC §٦٥-ج) */}
+                <TestAccountBadge isTest={row.is_test} />
               </span>
 
               <span className="ad-tone-muted">{moment(row.created_at)}</span>
@@ -349,6 +352,7 @@ function RiderDrawer({
           {wallet?.frozen ? (
             <Badge tone="warn">محفظةُ الراكب مجمّدة</Badge>
           ) : null}
+          <TestAccountBadge isTest={user.is_test} />
         </>
       }
       onClose={onClose}

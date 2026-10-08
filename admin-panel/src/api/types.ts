@@ -27,6 +27,8 @@ export interface User {
   roles: UserRole[];
   country_code: CountryCode;
   is_blocked: boolean;
+  /** **حسابُ تجربة** (SPEC §٦٥-ج) — قراءةٌ وحدَها: تُرسم به شارةُ «حساب تجربة»، ولا بابَ في اللوحة يكتبه. */
+  is_test: boolean;
   phone_verified: boolean;
   /** **الرقمُ محجوزٌ ولا يُملَك** — من سجّل ببريده (قرارُ المالك 2026-08-31).
    *
@@ -240,6 +242,8 @@ export interface AdminDriverRow {
   phone: string;
   country_code: CountryCode;
   status: DriverStatus;
+  /** **كبتنُ تجربة** (SPEC §٦٥-ج) — قراءةٌ وحدَها، وبها تُرسم شارتُه في القائمة والدرج. */
+  is_test: boolean;
   phone_verified: boolean;
   rating_avg: string;
   is_online: boolean;
@@ -352,6 +356,8 @@ export interface QueueParty {
   phone_masked: string;
   /** **كلُّ ما ينتظر أحداً على رحلاته** — لا هذا الصفُّ وحدَه */
   pending_count: number;
+  /** **حسابُ تجربة** (SPEC §٦٥-ج) — يُرسم شارةً بجانب الاسم، فالحكمُ على دفعة تجربةٍ يُعرف قبل أن يقع */
+  is_test: boolean;
 }
 
 /** صفٌّ في «المدفوعات غير المؤكدة» — **الأقدمُ أوّلاً**، و`age_minutes` من نهاية الرحلة. */
@@ -548,6 +554,9 @@ export interface AdminReferralRow {
   referrer_phone: string;
   referred_name: string;
   referred_phone: string;
+  /** **حسابا تجربة** (SPEC §٦٥-ج) — إحالةٌ يمسّها أحدُهما لا تُدفع أبداً، فتُوسَم كي لا تُقرأ «تنتظر» */
+  referrer_is_test: boolean;
+  referred_is_test: boolean;
   code_used: string;
   referral_type: string;
   driver_approved: boolean;
@@ -848,6 +857,8 @@ export interface Party {
   user_id: string;
   name: string;
   phone: string;
+  /** **حسابُ تجربة** (SPEC §٦٥-ج) — الرحلاتُ والمدفوعاتُ والنزاعاتُ وطلباتُ الصرف ترسمه شارةً من هذا البيت الواحد */
+  is_test: boolean;
 }
 
 /** كبتنٌ — **ومعه `drivers.id`**، وهو ما يفتح به الدرجُ ملفَّه.
@@ -1338,6 +1349,10 @@ export interface CancellationChargeRow {
   waive_reason: string | null;
   writeoff_reason: string | null;
   created_at: string;
+  /** **أوسامُ التجربة لكلِّ اسم** (SPEC §٦٥-ج) — رسمٌ يمسّه حسابُ تجربةٍ يبقى معلّقاً هنا لإعفاء المشرف، فيُعفى وهو معروف */
+  payer_is_test: boolean;
+  beneficiary_is_test: boolean;
+  carrier_is_test: boolean;
 }
 
 /** حالُ سدادِ رحلة — **محسوبةٌ في الخلفية، ومرآتُها هنا**
@@ -1587,6 +1602,8 @@ export type SkinPurchaseRow = {
   driver_id: string;
   driver_name: string;
   driver_phone: string;
+  /** **كبتنُ تجربة** (SPEC §٦٥-ج) — صفُّه باقٍ في السجلّ وخارجَ المجاميع، فيُوسَم حيث يبقى */
+  driver_is_test: boolean;
   skin_id: string;
   skin_name: string;
   rarity: SkinRarity;
@@ -1673,6 +1690,8 @@ export interface DriverDebtRow {
   driver_id: string;
   driver_name: string;
   driver_phone: string | null;
+  /** **كبتنُ تجربة** (SPEC §٦٥-ج) — دَينُ رحلةِ كاشٍ تجريبيّةٍ يُشطب وهو معروف */
+  driver_is_test: boolean;
   amount: string;
   collected: string;
   currency: string;
@@ -1692,6 +1711,8 @@ export interface DebtClaimRow {
   status: "created" | "paid" | "failed" | "cancelled";
   failure_reason: string | null;
   created_at: string;
+  /** **كبتنُ تجربة** (SPEC §٦٥-ج) — مطالبةٌ فُتحت قبل الوسم لا يقبلها التأكيد، فتُوسَم كي يُعرف لمَ */
+  driver_is_test: boolean;
 }
 
 /** نمطُ عرض الطلب (SPEC §5.3، قرارُ المالك 2026-08-30). */

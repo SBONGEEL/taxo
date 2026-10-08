@@ -429,6 +429,7 @@ async def list_drivers(
             phone=user.phone,
             country_code=user.country_code,
             status=driver.status,
+            is_test=user.is_test,
             phone_verified=user.phone_verified_at is not None,
             rating_avg=driver.rating_avg,
             is_online=driver.is_online,
@@ -986,6 +987,28 @@ async def set_advance_cap(
 # بيده كتب رقماً لا رحلةَ خلفه.
 
 
+def _debt_out(debt: DriverDebt, owner: User) -> AdminDebtOut:
+    """**بانٍ واحدٌ لصفِّ الدَّين** — القائمةُ والشطبُ يخدمهما هو.
+
+    كانا يبنيانه حقلاً حقلاً في موضعين، **فحقلٌ يُضاف (`driver_is_test`، SPEC §٦٥-ج) كان سيصل أحدَهما وينسى الآخر** —
+    الشكلُ الثامن بعينه (`test_two_doors`).
+    """
+    return AdminDebtOut(
+        id=debt.id,
+        driver_id=debt.driver_id,
+        driver_name=owner.name,
+        driver_phone=owner.phone,
+        driver_is_test=owner.is_test,
+        amount=debt.amount,
+        collected=debt.collected,
+        currency=debt.currency,
+        status=debt.status,
+        source=debt.source,
+        ride_id=debt.ride_id,
+        created_at=debt.created_at,
+    )
+
+
 @router.get("/drivers/debts", response_model=list[AdminDebtOut])
 async def list_driver_debts(
     _: UsersManager,
@@ -1020,22 +1043,7 @@ async def list_driver_debts(
         pattern = admin_search.like(term)
         stmt = stmt.where(or_(User.name.ilike(pattern), User.phone.ilike(pattern)))
     rows = (await session.execute(stmt.limit(limit).offset(offset))).all()
-    return [
-        AdminDebtOut(
-            id=debt.id,
-            driver_id=debt.driver_id,
-            driver_name=owner.name,
-            driver_phone=owner.phone,
-            amount=debt.amount,
-            collected=debt.collected,
-            currency=debt.currency,
-            status=debt.status,
-            source=debt.source,
-            ride_id=debt.ride_id,
-            created_at=debt.created_at,
-        )
-        for debt, owner in rows
-    ]
+    return [_debt_out(debt, owner) for debt, owner in rows]
 
 
 @router.get("/drivers/debts/claims", response_model=list[DebtClaimOut])
@@ -1095,19 +1103,7 @@ async def write_off_debt(
         details={"action": "write_off", "reason": payload.reason},
     )
     await session.commit()
-    return AdminDebtOut(
-        id=debt.id,
-        driver_id=debt.driver_id,
-        driver_name=owner.name,
-        driver_phone=owner.phone,
-        amount=debt.amount,
-        collected=debt.collected,
-        currency=debt.currency,
-        status=debt.status,
-        source=debt.source,
-        ride_id=debt.ride_id,
-        created_at=debt.created_at,
-    )
+    return _debt_out(debt, owner)
 
 
 # ═══════════════ مصفوفةُ الصلاحيات (البند ٥، §39٫٥)

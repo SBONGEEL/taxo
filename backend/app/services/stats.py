@@ -13,6 +13,11 @@
 **والمتصلون الآن من Redis لا من عمود.** `drivers.is_online` يقول «رفع المفتاح»
 لا «حاضرٌ الآن»: من أُغلق تطبيقه فجأةً يبقى عموده مرفوعاً حتى ينقضي مفتاح
 حضوره. والعدّ الصادق هو عدّ من له مفتاح حضورٍ حيّ (`geo:presence:*`).
+
+**وحسابا التجربة خارجَ كلِّ رقمٍ هنا** (SPEC §٦٥-ج): رحلةٌ بين راكب التجربة
+وكبتنها **كذبةٌ في إيراد اليوم وعددِ الرحلات وأفضل الكباتن**، وكبتنُ التجربة
+متصلاً يرفع «متصلٌ الآن» بواحدٍ لا يعمل. **والشرطُ من `services/test_accounts.py`
+لا مكتوبٌ هنا بصيغته** — رحلةٌ تُستثنى بطرفيها معاً، وحسابٌ بوسمه.
 """
 
 from __future__ import annotations
@@ -42,7 +47,7 @@ from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
 from app.models.wallet import WithdrawalRequest
 from app.core.currency import currency_for_country
-from app.services import campaigns, geo, subscriptions
+from app.services import campaigns, geo, subscriptions, test_accounts
 
 # نوافذ التقرير الثلاث كما في `DESIGN.md` §3.2 (اليوم/الأسبوع/الشهر)
 PERIOD_DAYS = {"today": 1, "week": 7, "month": 30}
@@ -185,6 +190,7 @@ async def overview(
         Ride.country_code == country,
         Ride.created_at >= from_at,
         Ride.created_at <= to_at,
+        test_accounts.real_ride(),
     )
 
     completed = await session.scalar(
@@ -218,7 +224,11 @@ async def overview(
     active_rides = await session.scalar(
         select(func.count())
         .select_from(Ride)
-        .where(Ride.country_code == country, Ride.status.in_(ACTIVE_RIDER_STATUSES))
+        .where(
+            Ride.country_code == country,
+            Ride.status.in_(ACTIVE_RIDER_STATUSES),
+            test_accounts.real_ride(),
+        )
     )
 
     # الاشتراك سؤالٌ عن الساعة لا عن عمود (القسم 8)
@@ -229,14 +239,22 @@ async def overview(
         .select_from(DriverSubscription)
         .join(Driver, DriverSubscription.driver_id == Driver.id)
         .join(User, Driver.user_id == User.id)
-        .where(User.country_code == country, *subscriptions.coverage_condition(now))
+        .where(
+            User.country_code == country,
+            User.is_test.is_(False),
+            *subscriptions.coverage_condition(now),
+        )
     )
 
     open_disputes = await session.scalar(
         select(func.count())
         .select_from(Payment)
         .join(Ride, Payment.ride_id == Ride.id)
-        .where(Ride.country_code == country, Payment.status == PaymentStatus.DISPUTED)
+        .where(
+            Ride.country_code == country,
+            Payment.status == PaymentStatus.DISPUTED,
+            test_accounts.real_ride(),
+        )
     )
 
     pending_documents = await session.scalar(
@@ -246,6 +264,7 @@ async def overview(
         .join(User, Driver.user_id == User.id)
         .where(
             User.country_code == country,
+            User.is_test.is_(False),
             DriverDocument.review_status == DocumentReviewStatus.PENDING,
         )
     )
@@ -256,6 +275,7 @@ async def overview(
         .join(User, Driver.user_id == User.id)
         .where(
             User.country_code == country,
+            User.is_test.is_(False),
             WithdrawalRequest.status == WithdrawalStatus.PENDING,
         )
     )
@@ -267,7 +287,9 @@ async def overview(
         completed_rides=int(completed or 0),
         cancelled_rides=int(cancelled or 0),
         revenue=_money(revenue),
-        online_drivers=await online_driver_count(redis, country),
+        online_drivers=await online_driver_count(
+            redis, country, exclude=await test_accounts.marked_driver_ids(session)
+        ),
         active_rides=int(active_rides or 0),
         active_subscriptions=int(active_subs or 0),
         open_disputes=int(open_disputes or 0),
@@ -300,6 +322,7 @@ async def _rides_by_hour(
             Ride.country_code == country,
             Ride.created_at >= start_local,
             Ride.created_at <= now,
+            test_accounts.real_ride(),
         )
         .group_by(hour)
     )
@@ -339,6 +362,7 @@ async def _payment_mix(
             Payment.status == PaymentStatus.CONFIRMED,
             Payment.created_at >= from_at,
             Payment.created_at <= to_at,
+            test_accounts.real_ride(),
         )
         .group_by(Payment.method)
     )
@@ -380,6 +404,8 @@ async def reports(
         Ride.country_code == country,
         Ride.created_at >= from_at,
         Ride.created_at <= to_at,
+        # **ومنه أفضلُ الكباتن والسائقون النشطون** — كلُّها تقرأ هذه النافذة
+        test_accounts.real_ride(),
     )
     fare = func.coalesce(Ride.final_fare, Ride.estimated_fare)
     day = func.date(func.timezone(str(zone), Ride.created_at)).label("day")
@@ -470,6 +496,8 @@ async def reports(
     # الآن — ذاك رقمُ «نظرة عامة»، وهذا إيرادُ الشهر
     sold_in_window = (
         User.country_code == country,
+        # **اشتراكُ كبتن التجربة ليس بيعاً** (صفرٌ أو تصحيحٌ موسوم) — وعدُّه يرفع «المباع» بواحدٍ لم يُبَع
+        User.is_test.is_(False),
         DriverSubscription.created_at >= from_at,
         DriverSubscription.created_at <= to_at,
     )
@@ -521,14 +549,27 @@ async def reports(
     )
 
 
-async def online_driver_count(redis: Redis, country: CountryCode) -> int:
+async def online_driver_count(
+    redis: Redis,
+    country: CountryCode,
+    *,
+    exclude: set[uuid.UUID] | frozenset[uuid.UUID] = frozenset(),
+) -> int:
     """عدّ من له مفتاح حضورٍ حيّ — لا من رفع `is_online` ثم اختفى.
 
     الفهرس الجغرافي لا يملك عمراً لكل عضو (Redis لا يدعمه)، ومفتاحُ الحضور
     يملكه؛ فالعضو الذي ذهب مفتاحُه صامتٌ ولو بقي في الفهرس. وهذا نفس ما يفعله
     `geo.nearby` حين يقصّ الصامتين.
+
+    **و`exclude` كباتنُ التجربة** (SPEC §٦٥-ج): الفهرسُ لا يعرف الوسم، فيُطرحون
+    بمعرّفاتهم — **ويُطرحون قبل السؤال عن حضورهم** فلا يُسأل عمّن لا يُعدّ.
     """
-    members = await redis.zrange(geo.geo_key(country), 0, -1)
+    excluded = {str(driver_id) for driver_id in exclude}
+    members = [
+        member
+        for member in await redis.zrange(geo.geo_key(country), 0, -1)
+        if (member.decode() if isinstance(member, bytes) else str(member)) not in excluded
+    ]
     if not members:
         return 0
 

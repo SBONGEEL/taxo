@@ -36,7 +36,7 @@ from app.models.enums import (
 )
 from app.models.provider_order import OPEN_ORDER_STATUSES, ProviderOrder
 from app.models.user import User
-from app.services import cancellation, settings_service, wallet
+from app.services import cancellation, settings_service, test_accounts, wallet
 from app.services.cliq import (
     CliqChargeRequest,
     CliqChargeState,
@@ -96,6 +96,10 @@ async def start_topup(
     كما في البطاقة: لا رصيد يتغيّر هنا بحال — الأثر الوحيد قيدُ `topup` عند
     تأكيد المزود في `apply_state`.
     """
+    # **حسابُ التجربة لا يُشحن بكليك** (SPEC §٦٥-ج/٢) — قبل فتح التحصيل عند الـacquirer، كبابِ البطاقة حرفاً
+    test_accounts.require_real_money(
+        owner, "حسابُ التجربة لا يُشحن بكليك — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
+    )
     await wallet.require_wallet_enabled(session, owner.country_code)
     if not await settings_service.is_feature_enabled(
         session, owner.country_code, FeatureKey.CLIQ_ENABLED

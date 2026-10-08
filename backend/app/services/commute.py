@@ -45,7 +45,7 @@ from app.models.ride import Ride, make_point
 from app.models.rider_subscription import ACTIVE, CANCELLED, ENDED, RiderSubscription
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
-from app.services import pricing, settings_service, wallet
+from app.services import pricing, settings_service, test_accounts, wallet
 from app.services.directions import Coordinates
 from app.services.pricing import round_money
 
@@ -388,7 +388,9 @@ async def settle_ride(session: AsyncSession, ride: Ride) -> None:
     if row is not None and incentive > 0 and ride.driver_id is not None and ride.driver_id == row.driver_id:
         driver = await session.get(Driver, ride.driver_id)
         driver_user = await session.get(User, driver.user_id) if driver is not None else None
-        if driver_user is not None:
+        # **كبتنُ التجربة لا حافزَ له** (SPEC §٦٥-ج/٢): الحافزُ مالٌ من TAXO بلا مدين — **يُتخطّى صامتاً**، والأجرةُ نفسُها
+        # (`settle` فوق) مالُ الراكب المحفوظ فتمضي كما هي
+        if driver_user is not None and not driver_user.is_test:
             await wallet.lock_wallet(session, driver_user.id)
             await wallet.record(
                 session,
@@ -406,13 +408,19 @@ async def settle_ride(session: AsyncSession, ride: Ride) -> None:
 
 
 async def open_offers(session: AsyncSession, *, driver: Driver, user: User) -> list[RiderSubscription]:
-    """اشتراكاتٌ قائمةٌ بلا كبتنٍ معتمد في سوقه — **والأقربُ بدءاً أوّلاً**."""
+    """اشتراكاتٌ قائمةٌ بلا كبتنٍ معتمد في سوقه — **والأقربُ بدءاً أوّلاً**.
+
+    **ومن عالمه وحدَه** (SPEC §٦٥-ج): مشوارُ راكبٍ حقيقيٍّ لا يُعرض على كبتن تجربة، ومشوارُ راكبِ التجربة لا يُعرض على
+    كبتنٍ حقيقيّ — **وهذا سوقٌ يلتقي فيه الطرفان خارج التوزيع**، فلا يحرسه شرطُ `dispatch` (و`approve` يسأل ثانيةً).
+    """
     if await settings_for(session, user.country_code) is None:
         return []
     return list(
         await session.scalars(
             select(RiderSubscription)
+            .join(User, User.id == RiderSubscription.rider_id)
             .where(
+                User.is_test.is_(user.is_test),
                 RiderSubscription.status == ACTIVE,
                 RiderSubscription.driver_id.is_(None),
                 RiderSubscription.country_code == user.country_code,
@@ -433,6 +441,12 @@ async def approve(session: AsyncSession, *, subscription_id: uuid.UUID, driver: 
         raise Conflict("المشاويرُ الثابتةُ للكباتن المشتركين")
     row = await locked(session, subscription_id)
     if row.status != ACTIVE:
+        raise NotFound("الاشتراك غير موجود")
+    # **ولا يُعتمد مشوارٌ من غير عالمه** (SPEC §٦٥-ج) — القائمةُ تخفيه، وهذا يمنع من التفَّ عليها بمعرّفٍ مكتوبٍ بيد.
+    # **و«غير موجود»** لا «غير مسموح»: مشوارُ العالم الآخر لا وجودَ له لمن ليس منه
+    if await test_accounts.is_test_user(session, row.rider_id) != await test_accounts.is_test_driver(
+        session, driver.id
+    ):
         raise NotFound("الاشتراك غير موجود")
     if row.driver_id is not None and row.driver_id != driver.id:
         raise Conflict("اعتمد هذا المشوارَ كبتنٌ آخر")

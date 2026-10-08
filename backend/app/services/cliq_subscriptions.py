@@ -45,7 +45,7 @@ from app.models.enums import (
 from app.models.provider_order import ProviderOrder
 from app.models.subscription import SubscriptionPlan
 from app.models.user import User
-from app.services import audit, offers, settings_service
+from app.services import audit, offers, settings_service, test_accounts
 from app.services import subscriptions as subscriptions_service
 from app.services.card_payments import _new_cart_id, _paying_side
 
@@ -69,6 +69,10 @@ async def start_subscription(
     **والمبلغُ يُشتقّ من الخطة بعد العرض** (§14): لا يكتبه الكبتنُ ولا
     يُخمَّن — **نفسُ حساب مسار البطاقة حرفاً**، فلا موضعان يحسبان ثمناً واحداً.
     """
+    # **كبتنُ التجربة لا يشترك بحوالة** (SPEC §٦٥-ج/٢) — بابُ البطاقة نفسُه: اشتراكُه من المحفظة
+    test_accounts.require_real_money(
+        owner, "حسابُ التجربة لا يشترك بكليك — اشترك من المحفظة"
+    )
     await require_cliq_manual_enabled(session, owner.country_code)
     subscriptions_service.require_purchasable(driver)
 

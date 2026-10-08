@@ -38,7 +38,17 @@ router = APIRouter(prefix="/admin/cancellation-charges", tags=["admin"])
 
 
 def _row(record) -> CancellationChargeRow:
-    charge, country, payer_name, payer_phone, beneficiary_name, carrier_name = record
+    (
+        charge,
+        country,
+        payer_name,
+        payer_phone,
+        beneficiary_name,
+        carrier_name,
+        payer_test,
+        beneficiary_test,
+        carrier_test,
+    ) = record
     return CancellationChargeRow(
         id=charge.id,
         ride_id=charge.ride_id,
@@ -58,6 +68,10 @@ def _row(record) -> CancellationChargeRow:
         waive_reason=charge.waive_reason,
         writeoff_reason=charge.writeoff_reason,
         created_at=charge.created_at,
+        # **`bool` لأن الضمَّ خارجيّ**: طرفٌ غائبٌ (حاملٌ في غير الكاش) يأتي `None` — ولا وسمَ لمن لا وجودَ له
+        payer_is_test=bool(payer_test),
+        beneficiary_is_test=bool(beneficiary_test),
+        carrier_is_test=bool(carrier_test),
     )
 
 
@@ -81,6 +95,10 @@ def _select():
             payer.phone,
             beneficiary_user.name,
             carrier_user.name,
+            # **أوسامُ التجربة آخِراً** (SPEC §٦٥-ج) — من الضمّ نفسِه، فلا استعلامَ لكلِّ صفّ
+            payer.is_test,
+            beneficiary_user.is_test,
+            carrier_user.is_test,
         )
         .join(Ride, Ride.id == RideCancellationCharge.ride_id)
         .outerjoin(payer, payer.id == RideCancellationCharge.payer_user_id)

@@ -58,7 +58,7 @@ from app.models.enums import (
 from app.models.payment import DIRECTLY_COLLECTED_METHODS, WALLET_FUNDED_METHODS
 from app.models.ride import Ride
 from app.models.user import User
-from app.services import audit, geo, wallet
+from app.services import audit, geo, test_accounts, wallet
 from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
@@ -302,6 +302,11 @@ async def try_collect(
     payer = await _debtor_user(session, charge)
     beneficiary = await _beneficiary_user(session, charge)
     if payer is None or beneficiary is None:  # pragma: no cover - حذفُ حسابٍ نادر
+        return False
+    # **ولا يعبر مالٌ بين عالمين** (SPEC §٦٥-ج) — قاعدةُ `wallet.transfer` نفسُها. العزلُ يمنع اليومَ رحلةً بين حسابِ تجربةٍ
+    # وحسابٍ حقيقيّ، **لكن رسماً كُتب قبل الوسم يبقى**: تحصيلُه من رصيد «تصحيحِ تجربة» لكبتنٍ حقيقيٍّ يصير مالاً يُسحب، وتحصيلُ
+    # راكبٍ حقيقيٍّ لكبتن تجربةٍ مالٌ حقيقيٌّ يدخل حساباً لا يُخرجه. **فيبقى معلّقاً لإعفاء المشرف** — كما يبقى ما لا يغطّيه رصيد
+    if payer.is_test != beneficiary.is_test:
         return False
 
     return await _move(
@@ -811,10 +816,17 @@ async def bear_by_company(
     وهو شكلُ `referral_bonus` و«خصم الكوبون» نفسُه: وعاءُ الشركة ليس محفظةً في
     هذا النظام، فالخسارةُ المعترَفُ بها تُكتب دائناً واحداً واسمُ من قرّرها في
     التدقيق. **ولا يُخصم من الراكب**: لو خُصم منه لما كانت الشركةُ تحمّلت شيئاً.
+
+    **ويعود `None` بلا كتابةٍ حين يمسّ الرسمَ حسابُ تجربة** — والدورةُ تتركه معلّقاً.
     """
     charge = await _locked_charge(session, charge_id)
     beneficiary = await _beneficiary_user(session, charge)
     if beneficiary is None:  # pragma: no cover - حذفُ حسابٍ نادر
+        return None
+    # **ولا تتحمّل الشركةُ رسماً يمسّه حسابُ تجربةٍ من أيِّ طرف** (SPEC §٦٥-ج: «ما يُعطي مالاً حقيقيّاً لا يصلهما») — الدائنُ هنا
+    # بلا مدين، **فهو مالٌ يخلقه TAXO**: لكبتن التجربة رصيدٌ ليس «تصحيحَ تجربة»، ولكبتنٍ حقيقيٍّ مالٌ يدفعه TAXO عن نشاط تجربة.
+    # **فيبقى معلّقاً ويُعفيه مشرفٌ باسمه** (`waive`) — والدورةُ تمرّ عليه كلَّ مرّةٍ ولا تكتب شيئاً
+    if beneficiary.is_test or await test_accounts.is_test_user(session, charge.payer_user_id):
         return None
 
     await wallet.lock_wallet(session, beneficiary.id)

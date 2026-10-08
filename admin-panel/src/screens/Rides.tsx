@@ -53,6 +53,7 @@ import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { useConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
 import { moment, money } from "@/lib/format";
@@ -222,6 +223,8 @@ export function RidesScreen() {
                   جديد. */}
               <span className="ad-party">
                 <span className="ad-party-name">{row.rider.name}</span>
+                {/* **طرفُ تجربة** (SPEC §٦٥-ج) — بجانب الاسم في كلِّ جدولٍ يحمله */}
+                <TestAccountBadge isTest={row.rider.is_test} />
                 <OpenProfile kind="rider" id={row.rider.user_id} />
               </span>
 
@@ -229,6 +232,7 @@ export function RidesScreen() {
                 {row.driver ? (
                   <>
                     <span className="ad-party-name">{row.driver.name}</span>
+                    <TestAccountBadge isTest={row.driver.is_test} />
                     <OpenProfile
                       kind="driver"
                       id={row.driver.driver_id}

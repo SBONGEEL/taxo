@@ -54,6 +54,7 @@ from app.services import cliq_subscriptions, commission_view
 from app.services import (
     audit,
     cancellation,
+    test_accounts,
     topups,
     wallet as wallet_service,
     withdrawals,
@@ -231,6 +232,7 @@ async def create_adjustment(
     payload: AdjustmentCreate,
     admin: FinanceManager,
     session: DbSession,
+    redis: RedisDep,
 ) -> WalletTransactionOut:
     """قيد تصحيح موجب أو سالب — المخرج الوحيد لتصحيح دفترٍ لا يُعدَّل.
 
@@ -245,9 +247,18 @@ async def create_adjustment(
         owner_type=payload.wallet,
         tx_type=WalletTransactionType.ADJUSTMENT,
         amount=payload.amount,
-        reference=payload.reason,
+        # **وحسابُ التجربة يُوسَم مرجعُه «تصحيحُ تجربة»** (SPEC §٦٥-ج/٢) — هذا البابُ **الوحيدُ** الذي يُعطيه رصيداً،
+        # والوسمُ يُضاف إلى سبب المشرف لا يحلّ محلَّه (`test_accounts.adjustment_reference`)
+        reference=test_accounts.adjustment_reference(user, payload.reason),
         created_by=admin.id,
     )
+    # **و«تصحيحُ تجربة» يقوم مقامَ الشحن لحساب التجربة** (SPEC §٦٥-ج/٢): أبوابُ الشحن الثلاثة التي تسدّد رسومَ الإلغاء
+    # المعلّقة (`cancellation.on_wallet_funded` — كليك والبطاقة وكاشُ اللوحة) مغلقةٌ عليه، **وهذا بابُ رصيده الوحيد** — فبغيره
+    # يبقى رسمُ راكب التجربة معلّقاً أبداً ويبلغ حدَّ الإيقاف. **والترتيبُ ترتيبُ `topups.confirm` حرفاً** (القيدُ ثم السداد).
+    # **وللحساب الحقيقيِّ لا**: التصحيحُ عنده تصويبُ دفترٍ لا شحن، ولم يكن يسدّد شيئاً قبل اليوم
+    funded = user.is_test and payload.amount > 0
+    if funded:
+        await cancellation.on_wallet_funded(session, user=user)
     await audit.record(
         session,
         actor=admin,
@@ -258,7 +269,11 @@ async def create_adjustment(
         details={"type": WalletTransactionType.ADJUSTMENT.value},
     )
     await session.commit()
-    return WalletTransactionOut.model_validate(entry)
+    out = WalletTransactionOut.model_validate(entry)
+    if funded:
+        # **بعد الالتزام** كبقية الشحن — من وصله مالُه يُخبَر (`confirm_topup` نفسُه)
+        await cancellation.announce_settled_for_debtor(session, redis, user=user)
+    return out
 
 
 # ------------------------------------------------------------ طلبات الشحن

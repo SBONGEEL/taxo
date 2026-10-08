@@ -353,6 +353,11 @@ async def rider_gender(session: AsyncSession, rider_id: uuid.UUID) -> Gender | N
     return await session.scalar(select(User.gender).where(User.id == rider_id))
 
 
+async def rider_is_test(session: AsyncSession, rider_id: uuid.UUID) -> bool:
+    """**أراكبُ تجربةٍ صاحبُ هذه الرحلة؟** (SPEC §٦٥-ج) — يحكم أيَّ العالمين يُعرض عليه طلبُه."""
+    return bool(await session.scalar(select(User.is_test).where(User.id == rider_id)))
+
+
 async def _eligible_levels(
     session: AsyncSession,
     driver_ids: list[uuid.UUID],
@@ -360,6 +365,7 @@ async def _eligible_levels(
     *,
     gender: GenderMatch | None = None,
     airport: bool = False,
+    test: bool = False,
 ) -> dict[uuid.UUID, int]:
     """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن — **ومستواه معه**.
 
@@ -382,6 +388,13 @@ async def _eligible_levels(
 
     فراكبٌ اختار «لا يهمّني» **لا يُعرض طلبُه** على كبتنةٍ اختارت النساء
     وحدهن — الاتجاه الثاني لا يُلغيه سكوتُ الأول.
+
+    **وعالمُ التجربة شرطٌ ثالثٌ في الموضع نفسِه** (SPEC §٦٥-ج): `test` وسمُ
+    **الطالب** — راكبِ الرحلة، أو راكبِ الخريطة، أو كبتنٍ ينظر إلى زملائه —
+    والمؤهَّلُ من وسمُه مثلُه. **فالعزلُ في الاتجاهين بسطرٍ واحد**: طلبٌ حقيقيٌّ
+    لا يبلغ كبتنَ تجربة، وطلبُ راكبِ التجربة لا يبلغ إلا كبتنَ تجربة. **والافتراضُ
+    `False`** فمسارٌ نسي أن يمرّره يعامل الطالبَ حقيقيّاً — **ولا يرى كبتنَ
+    التجربة أبداً**، وهو الاتجاهُ الآمن للخطأ.
     """
     if not driver_ids:
         return {}
@@ -400,6 +413,8 @@ async def _eligible_levels(
 
     conditions = [
         Driver.id.in_(driver_ids),
+        # **عالمُ الطالب وحدَه** (§٦٥-ج) — انظر آخرَ الشرح فوق
+        User.is_test.is_(test),
         Driver.status == DriverStatus.APPROVED,
         Driver.is_online.is_(True),
         Driver.current_ride_id.is_(None),
@@ -456,16 +471,20 @@ async def eligible_driver_ids(
     vehicle_category: VehicleCategory,
     *,
     gender: GenderMatch | None = None,
+    test: bool = False,
 ) -> set[uuid.UUID]:
     """المؤهَّلون وحدَهم — وهو ما تقرؤه خريطةُ الراكب.
 
     **و`_eligible_levels` تقرأ المستوى في الاستعلام نفسِه** (البند ٥٣، §٥-ج):
     `drivers.level` عمودٌ في الصفِّ الذي يُقرأ أصلاً، فلا ضمَّ جديدٌ ولا استعلامٌ
     ثانٍ — ومسارُ العرض هذا **لا يزيد استعلاماً واحداً** عمّا كان.
+
+    **و`test` يُمرَّر كما هو** (§٦٥-ج): الخريطةُ تعرض ما يُسنَد، فعالمُ من ينظر
+    هو عالمُ من يُرسم له.
     """
     return set(
         await _eligible_levels(
-            session, driver_ids, vehicle_category, gender=gender
+            session, driver_ids, vehicle_category, gender=gender, test=test
         )
     )
 
@@ -477,6 +496,7 @@ async def _ranked_candidates(
     ride: Ride,
     tried: set[uuid.UUID],
     gender: GenderMatch | None = None,
+    test: bool = False,
 ) -> list[geo.DriverPresence]:
     """المؤهَّلون مرتَّبين من الأقرب — **قائمةٌ لا واحد**.
 
@@ -521,6 +541,8 @@ async def _ranked_candidates(
             gender=gender,
             # **رحلةٌ تمسّ مطاراً لمن أشعل «طلبات المطار» وحدَه** (§٦٣-ج/٢)
             airport=ride.facility_id is not None,
+            # **عالمُ راكبِ الرحلة** (§٦٥-ج)
+            test=test,
         )
         ranked = [p for p in presences if p.driver_id in levels]
         if not ranked:
@@ -567,10 +589,11 @@ async def _next_candidate(
     ride: Ride,
     tried: set[uuid.UUID],
     gender: GenderMatch | None = None,
+    test: bool = False,
 ) -> geo.DriverPresence | None:
     """أقربُ مؤهَّلٍ واحد — **غلافٌ فوق الترتيب الواحد** لا ترتيبٌ ثانٍ."""
     ranked = await _ranked_candidates(
-        session, redis, ride=ride, tried=tried, gender=gender
+        session, redis, ride=ride, tried=tried, gender=gender, test=test
     )
     return ranked[0] if ranked else None
 
@@ -745,6 +768,10 @@ async def _run(ride_id: uuid.UUID) -> None:
         # التالية لا على هذه (انظر `services/dispatch_settings.py`)
         rules = await rules_for(session, locked.country_code)
         widened = locked.search_widened
+        # **عالمُ الراكب يُقرأ مرّةً هنا** (SPEC §٦٥-ج): الوسمُ لا يتبدّل أثناء
+        # بحثٍ عمرُه دقيقتان — لا بابَ في التطبيقات يكتبه — فقراءتُه في كلِّ
+        # دورةٍ استعلامٌ بلا جواب جديد
+        test = await rider_is_test(session, locked.rider_id)
         await session.commit()
 
     # **«انتظري، نوسّع البحث»** (§٦٤-ج/٤-٣): دقائقُ أكثر بمحاولاتٍ أكثر — اختارت أن تنتظر
@@ -783,6 +810,7 @@ async def _run(ride_id: uuid.UUID) -> None:
                     ride=ride,
                     tried=await cooled_drivers(redis, ride_id),
                     gender=match,
+                    test=test,
                 )
                 wanted = (
                     rules.broadcast_batch_size

@@ -106,6 +106,10 @@ class AdminReferralRow(BaseModel):
     referrer_phone: str
     referred_name: str
     referred_phone: str
+    #: **شارتا «حساب تجربة»** (SPEC §٦٥-ج) — إحالةٌ يمسّها حسابُ تجربةٍ من أيِّ طرفٍ **لا تُدفع أبداً** (`referrals.pay`) وتبقى
+    #: في الجدول، **فتُوسَم كي لا تُقرأ «تنتظر» ويُسأل عنها**
+    referrer_is_test: bool
+    referred_is_test: bool
     code_used: str
     driver_approved: bool
     has_subscription: bool

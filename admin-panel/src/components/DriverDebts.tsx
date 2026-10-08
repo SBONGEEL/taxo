@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/Badge";
 import { OpenProfile } from "@/components/profile/OpenProfile";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { Table, TableSearch } from "@/components/Table";
 import { DEBT_STATUS_LABEL } from "@/lib/labels";
 import { NO_RESULTS, useSearch } from "@/lib/search";
@@ -125,7 +126,11 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
         empty={{ title: "لا مطالبات", hint: "لا سداد ينتظر تأكيداً." }}
         render={(claim) => (
           <>
-            <span className="font-mono text-11.5">{claim.cart_id}</span>
+            <span className="flex items-baseline gap-6">
+              <span className="min-w-0 truncate font-mono text-11.5">{claim.cart_id}</span>
+              {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — مطالبتُه فُتحت قبل الوسم، والتأكيدُ يردّها: يُعرف لمَ قبل الضغط */}
+              <TestAccountBadge isTest={claim.driver_is_test} />
+            </span>
             <span className="text-12 text-ink">
               {money(claim.amount, claim.currency)}
             </span>
@@ -174,6 +179,8 @@ export function DriverDebts({ onError }: { onError: (message: string) => void })
           <>
             <span className="flex items-baseline gap-6 text-12 text-ink">
               <span className="min-w-0 truncate">{row.driver_name}</span>
+              {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — دَينُ رحلةِ كاشٍ تجريبيّةٍ يُشطب وهو معروف */}
+              <TestAccountBadge isTest={row.driver_is_test} />
               <OpenProfile
                 kind="driver"
                 id={row.driver_id}

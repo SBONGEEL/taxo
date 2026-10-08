@@ -34,7 +34,7 @@ from app.models.subscription_offer import (
     SubscriptionOffer,
     SubscriptionOfferGrant,
 )
-from app.services import settings_service
+from app.services import settings_service, test_accounts
 
 FEATURE_KEY = "subscription_offers_enabled"
 
@@ -179,6 +179,11 @@ async def resolve(
     if not await settings_service.is_feature_enabled(
         session, plan.country_code, FEATURE_KEY
     ):
+        return None
+    # **ولا عرضَ لكبتن التجربة** (SPEC §٦٥-ج/٢): الخصمُ تنازلٌ يدفعه TAXO، **وعرضٌ بحدِّ استعمالٍ أو ميزانيةٍ يستهلكه
+    # حسابُ التجربة من نصيب كبتنٍ حقيقيّ**. ويُتخطّى صامتاً — **ومن البابِ الواحد** الذي يقرؤه الشراءُ والشاشةُ معاً، فلا
+    # تعرض الشاشةُ خصماً لا يقع
+    if await test_accounts.is_test_driver(session, driver.id):
         return None
 
     now = _now()

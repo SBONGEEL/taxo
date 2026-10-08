@@ -41,6 +41,7 @@ def _party(party: unconfirmed_service.QueueParty) -> QueuePartyOut:
         # **مقنَّعاً** (§٥: «اسمٌ ورقمٌ مقنَّع») — البادئةُ وآخرُ ثلاث، والملفُّ يُفتح بالمعرّف
         phone_masked=mask_phone(party.phone),
         pending_count=party.pending_count,
+        is_test=party.is_test,
     )
 
 

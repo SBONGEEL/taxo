@@ -78,6 +78,10 @@ class DebtClaimOut(BaseModel):
     alias: str = ""
     review_min_minutes: int = 3
     review_max_minutes: int = 5
+    #: **شارةُ «حساب تجربة»** (SPEC §٦٥-ج) — بابُ الفتح يردّ كبتنَ التجربة، **لكن مطالبةً فُتحت قبل الوسم تبقى معلّقةً في
+    #: طابور اللوحة ولا يقبلها التأكيد** (`cliq_debts.confirm_payment`) — فتُوسَم كي يعرف المشرفُ لمَ قبل أن يضغط.
+    #: **ومطلوبٌ بلا افتراض**: البانِي الواحدُ (`claim_out`) يملؤه لأبوابه الأربعة، وبانٍ ينساه يسقط لا يرسم تجربةً حقيقيّة
+    driver_is_test: bool
 
 
 class DebtConfirmIn(BaseModel):
@@ -95,6 +99,8 @@ class AdminDebtOut(BaseModel):
     driver_id: uuid.UUID
     driver_name: str
     driver_phone: str | None = None
+    #: **شارةُ «حساب تجربة»** (SPEC §٦٥-ج) — عمولةُ رحلةِ كاشٍ تجريبيّةٍ دَينٌ يُرى هنا، **فمشرفٌ يشطبه يعرف أنه تجربة**
+    driver_is_test: bool
     amount: Decimal
     collected: Decimal
     currency: Currency

@@ -80,6 +80,7 @@ from app.services import (
     notifications,
     offers,
     settings_service,
+    test_accounts,
     wallet,
 )
 from app.ws import events
@@ -558,13 +559,22 @@ async def record_manual(
         session, driver=locked, plan=plan, for_update=True
     )
     suggested = plan.price - (offer.amount if offer is not None else Decimal("0"))
+    paid = suggested if amount_paid is None else amount_paid
+
+    # **اشتراكُ كبتن التجربة يُسجَّل بصفرٍ أو يُشترى من المحفظة** (SPEC §٦٥-ج/٢): هذا البابُ يسجّل مالاً **قبضته الإدارة**
+    # كاشاً أو كليكاً — مالاً حقيقيّاً — وحسابُ التجربة لا يدخله مالٌ حقيقيّ (`topups.create_confirmed` يردّ مثلَه).
+    # **والفارغُ يُقرأ سعرَ الخطة** فيُردّ أيضاً. **والصفرُ يبقى مقبولاً**: لا مالَ فيه، وبه يُنشئ سكربتُ الإنشاء اشتراكَه الأوّل
+    if paid != 0:
+        test_accounts.require_real_money(
+            user, "اشتراكُ حساب التجربة يُسجَّل بصفرٍ أو يُشترى من المحفظة"
+        )
 
     subscription = await _create(
         session,
         driver=locked,
         plan=plan,
         method=method,
-        amount_paid=suggested if amount_paid is None else amount_paid,
+        amount_paid=paid,
         reference=(reference or "").strip() or None,
         offer=offer,
     )

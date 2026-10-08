@@ -47,7 +47,7 @@ from app.models.ride import Ride
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import settings_service, subscriptions, wallet
+from app.services import settings_service, subscriptions, test_accounts, wallet
 from app.services.pricing import round_money
 
 #: **لا يُطلب حجزٌ مضمونٌ قبل ساعتين من موعده** — ليتّسع لقبول كبتنٍ وتأكيدِه قبل الموعد بساعة
@@ -199,7 +199,11 @@ async def open_offers(session: AsyncSession, *, driver: Driver, user: User) -> l
     return list(
         await session.scalars(
             select(RideBooking)
+            .join(User, User.id == RideBooking.rider_id)
             .where(
+                # **من عالمه وحدَه** (SPEC §٦٥-ج): حجزُ راكبٍ حقيقيٍّ لا يُعرض على كبتن تجربة ولا العكس — سوقٌ يلتقي
+                # فيه الطرفان خارج التوزيع، فلا يحرسه شرطُ `dispatch` (و`accept` يسأل ثانيةً)
+                User.is_test.is_(user.is_test),
                 RideBooking.guaranteed.is_(True),
                 RideBooking.status == BookingStatus.PENDING,
                 RideBooking.driver_id.is_(None),
@@ -219,6 +223,9 @@ async def accept(session: AsyncSession, *, booking_id: uuid.UUID, driver: Driver
     await _eligible(session, driver)
     booking = await _locked(session, booking_id)
     if booking.country_code != user.country_code:
+        raise NotFound("الحجز غير موجود")
+    # **ولا يُقبل حجزٌ من غير عالمه** (SPEC §٦٥-ج) — القائمةُ تخفيه، وهذا يمنع من التفَّ عليها بمعرّف
+    if await test_accounts.is_test_user(session, booking.rider_id) != user.is_test:
         raise NotFound("الحجز غير موجود")
     if booking.status is not BookingStatus.PENDING or booking.scheduled_at <= _now():
         raise Conflict("انتهى هذا الحجز")

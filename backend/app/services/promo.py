@@ -44,7 +44,7 @@ from app.models.payment import Payment
 from app.models.promo import PromoCode
 from app.models.ride import ACTIVE_RIDER_STATUSES, Ride
 from app.models.user import User
-from app.services import pricing, settings_service
+from app.services import pricing, settings_service, test_accounts
 
 # الرحلاتُ التي تُعدّ استعمالاً للرمز: الجاريةُ والمكتملة. **والجاريةُ منها
 # لازمة**: من عدَّ المكتملةَ وحدها فتح البابَ لمن يطلب ثلاث رحلاتٍ في اللحظة
@@ -237,6 +237,8 @@ async def preview(
     """
     if not await enabled_in(session, country):
         raise PromoUnavailable()
+    # **والردُّ نفسُه هنا وعند التطبيق** — زرٌّ يقول «مقبول» ثمّ يرتدّ عند الطلب (انظر `_refuse_test_rider`)
+    _refuse_test_rider(rider)
 
     promo = await find(session, code, country)
     if promo is None:
@@ -322,6 +324,18 @@ async def _check_limits(
         raise PromoAlreadyUsed()
 
 
+def _refuse_test_rider(rider: User) -> None:
+    """**خصمُ الكوبون يدفعه TAXO** (رأسُ الملف: «الشركةُ تتحمّله») — **ولا يدخل مالُه محفظةَ كبتن تجربة** (SPEC §٦٥-ج/٢).
+
+    **ويُردّ لا يُتخطّى**: الكوبونُ يكتبه الراكبُ بيده، ورمزٌ يُقبل ثمّ لا يخصم شيئاً يكذب على شاشته. **وأثرٌ ثانٍ يمنعه
+    الردُّ**: رحلةُ التجربة كانت ستُعدّ في `usage_count` و`committed` — **فتستهلك ميزانيةَ حملةٍ حقيقيّةٍ وحدَّ استعمالها**،
+    ويقرأ المالكُ في جدول الرموز مصروفاً لم يصرفه راكب.
+    """
+    test_accounts.require_real_money(
+        rider, "الكوبونُ يدفع TAXO خصمَه — وحسابُ التجربة لا يُدخله مالٌ حقيقيّ"
+    )
+
+
 # ------------------------------------------------------------- الكتابة
 
 
@@ -344,6 +358,9 @@ async def apply_to_ride(
     country = ride.country_code
     if not await enabled_in(session, country):
         raise PromoUnavailable()
+    # **قبل قفل صفِّ الرمز**: ردٌّ لا يحتاج الرمزَ لا يحجز صفّاً يحتاجه غيرُه. وكوبونُ ترحيب المُحال يمرّ من هنا فيُبتلع
+    # الردُّ هناك (`referrals.apply_welcome_promo` يلتقط `AppError`) — **فالتخطّي الصامتُ للهدية من الباب نفسِه**
+    _refuse_test_rider(rider)
 
     promo = await find(
         session, code, country, for_update=True, include_private=include_private

@@ -32,6 +32,7 @@ import type { CancellationChargeRow } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { Table, TableSearch } from "@/components/Table";
 import { useCountry } from "@/lib/country";
 import { CHARGE_STATUS_LABEL, CHARGE_STATUS_TONE } from "@/lib/labels";
@@ -123,6 +124,8 @@ export function CancellationCharges({
                     <span className="min-w-0 truncate">
                       {row.carrier_name ?? "كبتن"}
                     </span>
+                    {/* **طرفُ تجربة** (SPEC §٦٥-ج) — رسمٌ يمسّه لا تتحمّله الشركةُ ويبقى هنا لإعفاءٍ باسم مشرف */}
+                    <TestAccountBadge isTest={row.carrier_is_test} />
                     {/* **والدافعُ بلا زرّ بقصد** (§39٫١٢٫٤): الصفُّ يحمل
                         `payer_name` و`payer_phone` **ولا يحمل معرّفَه** —
                         وزرٌّ يبحث بالاسم وحدَه يفتح ملفَّ متشابهٍ في الاسم،
@@ -139,7 +142,10 @@ export function CancellationCharges({
                 </>
               ) : (
                 <>
-                  {row.payer_name ?? "راكب"}
+                  <span className="flex items-baseline gap-6">
+                    <span className="min-w-0 truncate">{row.payer_name ?? "راكب"}</span>
+                    <TestAccountBadge isTest={row.payer_is_test} />
+                  </span>
                   {row.payer_phone ? (
                     <span dir="ltr" className="block text-10.5 text-muted">
                       {row.payer_phone}
@@ -148,8 +154,9 @@ export function CancellationCharges({
                 </>
               )}
             </span>
-            <span className="text-12 text-ink">
-              {row.beneficiary_name ?? "كبتن"}
+            <span className="flex items-baseline gap-6 text-12 text-ink">
+              <span className="min-w-0 truncate">{row.beneficiary_name ?? "كبتن"}</span>
+              <TestAccountBadge isTest={row.beneficiary_is_test} />
             </span>
             <span className="flex items-center gap-6">
               <Badge tone={TONE[row.status]}>{LABEL[row.status]}</Badge>

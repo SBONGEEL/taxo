@@ -17,6 +17,7 @@ import { getReferralSummary, listReferrals } from "@/api/endpoints";
 import type { AdminReferralRow, ReferralSummary } from "@/api/types";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Feedback";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { TableSearch } from "@/components/Table";
 import { useCountry } from "@/lib/country";
 import { NO_RESULTS, useSearch } from "@/lib/search";
@@ -159,8 +160,10 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
                 return (
                   <tr key={row.id} className="border-t border-line">
                     <td className="p-8">
-                      <span className="block font-medium text-ink">
-                        {row.referrer_name}
+                      <span className="flex items-baseline gap-6 font-medium text-ink">
+                        <span className="min-w-0 truncate">{row.referrer_name}</span>
+                        {/* **طرفُ تجربة** (SPEC §٦٥-ج) — إحالةٌ يمسّها لا تُدفع أبداً، فلا تُقرأ «تنتظر» */}
+                        <TestAccountBadge isTest={row.referrer_is_test} />
                       </span>
                       {/* **الرقمُ لاتينيٌّ بلا تحويل**: يُطابقه المشرفُ خانةً
                           بخانة على شاشةٍ أخرى، والتحويلُ يجعله يقارن شكلين */}
@@ -169,8 +172,9 @@ export function Referrals({ onError }: { onError: (message: string) => void }) {
                       </span>
                     </td>
                     <td className="p-8">
-                      <span className="block font-medium text-ink">
-                        {row.referred_name}
+                      <span className="flex items-baseline gap-6 font-medium text-ink">
+                        <span className="min-w-0 truncate">{row.referred_name}</span>
+                        <TestAccountBadge isTest={row.referred_is_test} />
                       </span>
                       <span className="block text-11 text-muted" dir="ltr">
                         {row.referred_phone}

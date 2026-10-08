@@ -396,10 +396,14 @@ async def transfer(
     #
     # **والاستيرادُ داخل الدالّة** — `verification` يستورد `settings_service`
     # وهذا الملفُّ في سلسلته، وحلقةٌ عند الاستيراد تُسقط التطبيقَ عند الإقلاع.
-    from app.services import verification
+    from app.services import test_accounts, verification
 
     verification.require_usable_account(sender)
     verification.require_usable_account(recipient)
+    # **ولا تحويلَ يمسّ حسابَ تجربةٍ من أيِّ طرف** (SPEC §٦٥-ج/٢): رصيدُه «تصحيحُ تجربة» — **وتحويلُه إلى راكبٍ حقيقيٍّ
+    # يجعله مالاً حقيقيّاً بضغطة**، والتحويلُ إليه يُدخله مالاً حقيقيّاً لا يخرج. **والطرفان معاً** للعلّة فوقهما نفسِها
+    test_accounts.require_real_money(sender, "حسابُ التجربة لا يحوّل رصيداً — رصيدُه «تصحيحُ تجربة» لا مالٌ حقيقيّ")
+    test_accounts.require_real_money(recipient, "لا يُحوَّل رصيدٌ إلى حساب تجربة")
 
     amount = round_money(amount)
     if amount <= 0:

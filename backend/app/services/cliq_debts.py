@@ -43,10 +43,16 @@ from app.models.enums import (
 )
 from app.models.provider_order import ProviderOrder
 from app.models.user import User
-from app.services import audit, debts, settings_service
+from app.services import audit, debts, settings_service, test_accounts
 from app.services.card_payments import _new_cart_id, _paying_side
 from app.services.cliq_subscriptions import require_cliq_manual_enabled
 from app.services.pricing import round_money
+
+#: **نصٌّ واحدٌ للبابين** (الفتحُ والتأكيد). والدَّينُ يُحصَّل من رصيده عند تسوية رحلاته (`debts.collect_from_balance`)،
+#: ورصيدُه «تصحيحُ تجربة» من اللوحة — أو يُشطب بسببٍ مكتوب
+_NO_CLIQ_FOR_TEST = (
+    "حسابُ التجربة لا يسدّد دَينَه بكليك — يُحصَّل من رصيده («تصحيحُ تجربة») أو يُشطب من اللوحة"
+)
 
 
 async def start_payment(
@@ -57,6 +63,10 @@ async def start_payment(
     amount: Decimal,
 ) -> ProviderOrder:
     """يفتح مطالبةً يدويّةً بمبلغٍ يختاره الكبتن — **لا تتجاوز دَينَه**."""
+    # **كبتنُ التجربة لا يسدّد دَينَه بمالٍ حقيقيّ** (SPEC §٦٥-ج/٢: «لا مالَ حقيقيٌّ فيهما») — والمالُ هنا يدخل حسابَ TAXO،
+    # **والقاعدةُ في الاتجاهين** لا في الخروج وحدَه: حوالةُ دينارٍ حقيقيٍّ عن عمولة رحلةِ تجربة. **وقبل كلِّ سؤال** — قبل
+    # الدَّين نفسِه، فيُردّ باسم بابه لا بـ«لا مستحقّات عليك»
+    test_accounts.require_real_money(owner, _NO_CLIQ_FOR_TEST)
     await require_cliq_manual_enabled(session, owner.country_code)
 
     amount = round_money(amount)
@@ -145,6 +155,9 @@ async def confirm_payment(
         raise InvalidInput("المبلغ الواصل يجب أن يكون أكبر من صفر")
 
     owner = await session.get(User, order.user_id)
+    # **الحارسُ الثاني** — حارسُ `withdrawals.mark_paid` نفسُه: مطالبةٌ فُتحت قبل الوسم لا تُطبَّق بعده، **فلا يُقيَّد مالٌ
+    # حقيقيٌّ على حساب تجربة**. والمطالبةُ تبقى معلّقةً ظاهرةً للمشرف
+    test_accounts.require_real_money(owner, _NO_CLIQ_FOR_TEST)
     driver = await session.scalar(select(Driver).where(Driver.user_id == owner.id))
     if driver is None:  # pragma: no cover - مطالبةٌ بلا كبتن
         raise NotFound("لا كبتن لهذه المطالبة")
@@ -221,4 +234,6 @@ async def claim_out(session: AsyncSession, order: ProviderOrder):
         alias=(setting.cliq_alias if setting else "") or "",
         review_min_minutes=setting.cliq_review_min_minutes if setting else 3,
         review_max_minutes=setting.cliq_review_max_minutes if setting else 5,
+        # **وسمُ صاحب المطالبة** (SPEC §٦٥-ج) — من البيت الواحد (`test_accounts`)، صفٌّ بالمفتاح
+        driver_is_test=await test_accounts.is_test_user(session, order.user_id),
     )

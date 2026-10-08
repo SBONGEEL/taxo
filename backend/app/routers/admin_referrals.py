@@ -27,7 +27,7 @@ from app.schemas.referral import (
     ReferralSettingsIn,
     ReferralSettingsOut,
 )
-from app.services import admin_search, audit, referrals as referrals_service
+from app.services import admin_search, audit, referrals as referrals_service, test_accounts
 
 router = APIRouter(prefix="/admin/referrals", tags=["admin"])
 
@@ -83,6 +83,9 @@ async def list_referrals(
             referrer.c.country_code,
             referred.c.name,
             referred.c.phone,
+            # **وسما التجربة آخِراً** (SPEC §٦٥-ج) — كي لا تتزحزح فهارسُ ما قبلهما (`row[3]` دولةُ المُحيل أدناه)
+            referrer.c.is_test,
+            referred.c.is_test,
         )
         .join(referrer, referrer.c.id == Referral.referrer_user_id)
         .join(referred, referred.c.id == Referral.referred_user_id)
@@ -125,7 +128,7 @@ async def list_referrals(
     # **سياسةٌ واحدةٌ لكل دولةٍ لا لكل صف**: الدولتان اثنتان وصفحةُ الجدول
     # خمسون صفاً، فقراءةُ السياسة لكل صفٍّ خمسون استعلاماً لجوابين
     policies: dict[CountryCode, dict[str, referrals_service.Policy]] = {}
-    for _referral, _n, _p, rer_country, _n2, _p2 in rows:
+    for _referral, _n, _p, rer_country, _n2, _p2, _t, _t2 in rows:
         if rer_country not in policies:
             policies[rer_country] = await referrals_service.policies_for(
                 session, rer_country
@@ -141,7 +144,7 @@ async def list_referrals(
         )
 
     out: list[AdminReferralRow] = []
-    for referral, rer_name, rer_phone, rer_country, red_name, red_phone in rows:
+    for referral, rer_name, rer_phone, rer_country, red_name, red_phone, rer_test, red_test in rows:
         progress = progress_by_id[referral.id]
         out.append(
             AdminReferralRow(
@@ -151,6 +154,8 @@ async def list_referrals(
                 referrer_phone=rer_phone,
                 referred_name=red_name,
                 referred_phone=red_phone,
+                referrer_is_test=rer_test,
+                referred_is_test=red_test,
                 code_used=referral.code_used,
                 referral_type=progress.referral_type,
                 driver_approved=progress.driver_approved,
@@ -181,7 +186,13 @@ async def summary(
     scoped = (
         select(Referral)
         .join(referrer, referrer.c.id == Referral.referrer_user_id)
-        .where(referrer.c.country_code == country_code)
+        .where(
+            referrer.c.country_code == country_code,
+            # **إحالةٌ يمسّها حسابُ تجربةٍ من أيِّ طرفٍ ليست إحالة** (SPEC §٦٥-ج) — لا تُدفع أبداً
+            # (`referrals.pay`)، فعدُّها «تنتظر» يُبقي رقماً معلّقاً لا يتحرّك
+            referrer.c.is_test.is_(False),
+            test_accounts.real_user(Referral.referred_user_id),
+        )
         .subquery()
     )
     total = await session.scalar(

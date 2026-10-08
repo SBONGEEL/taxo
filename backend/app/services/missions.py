@@ -422,12 +422,18 @@ async def set_discount(
 async def level_counts(
     session: AsyncSession, country: CountryCode
 ) -> dict[int, int]:
-    """كم كبتناً في كل مستوى — لجدول اللوحة."""
+    """كم كبتناً في كل مستوى — لجدول اللوحة.
+
+    **وكبتنُ التجربة خارجَ الترتيب** (SPEC §٦٥-ج: «ولوحات الترتيب»): مستواه يُحسب له كغيره (`reevaluate`) — فلا يعيش
+    حسابُ التجربة بمنطقٍ لا يعيشه الإنتاج — **ولا يُعدّ في توزيع المستويات** الذي يقرأ منه المالكُ سوقَه.
+    """
     rows = await session.execute(
         select(Driver.level, func.count())
         .join(User, User.id == Driver.user_id)
         .where(
-            User.country_code == country, Driver.status == DriverStatus.APPROVED
+            User.country_code == country,
+            User.is_test.is_(False),
+            Driver.status == DriverStatus.APPROVED,
         )
         .group_by(Driver.level)
     )

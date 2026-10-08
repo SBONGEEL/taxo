@@ -44,6 +44,7 @@ import type {
 import { CancellationCharges } from "@/components/CancellationCharges";
 import { WalletDesk } from "@/components/WalletDesk";
 import { OpenProfile } from "@/components/profile/OpenProfile";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import {
@@ -261,6 +262,8 @@ export function FinanceScreen() {
                   <span className="min-w-0 truncate text-11.5 text-ink">
                     {row.driver.name}
                   </span>
+                  {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — السحبُ مغلقٌ عليه، وطلبٌ كُتب قبل الوسم يُرى موسوماً */}
+                  <TestAccountBadge isTest={row.driver.is_test} />
                   <OpenProfile
                     kind="driver"
                     id={row.driver.driver_id}

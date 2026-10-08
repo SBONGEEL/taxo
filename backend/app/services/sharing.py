@@ -480,6 +480,9 @@ async def find_lead(session: AsyncSession, ride: Ride, rider: User) -> Match | N
             .join(User, User.id == Ride.rider_id)
             .where(
                 Ride.id != ride.id,
+                # **راكبُ التجربة لا يشارك راكباً حقيقيّاً** (SPEC §٦٥-ج) — في الاستعلام لا بعده: مرشَّحٌ يُردّ بعد
+                # القراءة يأخذ مقعداً من `MAX_CANDIDATES` الثلاثة، فيضيع شريكٌ حقيقيٌّ خلفه
+                User.is_test.is_(rider.is_test),
                 Ride.country_code == ride.country_code,
                 Ride.vehicle_category == ride.vehicle_category,
                 Ride.status.in_(BEFORE_DEPARTURE),

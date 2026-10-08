@@ -61,7 +61,7 @@ from app.schemas.vehicle_skin import (
     SkinPurchasesOut,
     StoreOut,
 )
-from app.services import admin_search, geo, skin_artwork, wallet
+from app.services import admin_search, geo, skin_artwork, test_accounts, wallet
 from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
@@ -118,13 +118,20 @@ async def aggregates(
     """
     if skin_ids is not None and not skin_ids:
         return {}
-    query = select(
-        DriverVehicleSkin.skin_id,
-        func.count().label("owners"),
-        func.count(DriverVehicleSkin.price_paid).label("sold"),
-        DriverVehicleSkin.currency,
-        func.coalesce(func.sum(DriverVehicleSkin.price_paid), 0).label("revenue"),
-    ).group_by(DriverVehicleSkin.skin_id, DriverVehicleSkin.currency)
+    query = (
+        select(
+            DriverVehicleSkin.skin_id,
+            func.count().label("owners"),
+            func.count(DriverVehicleSkin.price_paid).label("sold"),
+            DriverVehicleSkin.currency,
+            func.coalesce(func.sum(DriverVehicleSkin.price_paid), 0).label("revenue"),
+        )
+        # **مِلكيّةُ كبتن التجربة لا تُعدّ** (SPEC §٦٥-ج) — لا في المباع ولا الإيراد (مالُه تصحيحُ تجربة)، **ولا في المتبقّي
+        # من الكميّة المحدودة**: مركبةٌ نادرةٌ يأخذها حسابُ التجربة لا تُنقَص من نصيب كبتنٍ حقيقيّ، **ولا تُعرض في
+        # «عدّاد الاقتناء» الذي يراه الكباتن**. فإن اقتناها كان المالكون الحقيقيّون `max_supply` وحسابُ التجربة فوقهم
+        .where(test_accounts.real_driver(DriverVehicleSkin.driver_id))
+        .group_by(DriverVehicleSkin.skin_id, DriverVehicleSkin.currency)
+    )
     if skin_ids is not None:
         query = query.where(DriverVehicleSkin.skin_id.in_(skin_ids))
 
@@ -199,6 +206,7 @@ async def purchase_log(
             base.add_columns(
                 User.name.label("driver_name"),
                 User.phone.label("driver_phone"),
+                User.is_test.label("driver_is_test"),
                 VehicleSkin.name.label("skin_name"),
                 VehicleSkin.rarity.label("rarity"),
                 Driver.active_skin_id.label("active_skin_id"),
@@ -219,6 +227,10 @@ async def purchase_log(
         func.sum(
             case((DriverVehicleSkin.source == SOURCE_GRANT, 1), else_=0)
         ).label("granted"),
+    ).where(
+        # **المجاميعُ بلا كبتن التجربة** (SPEC §٦٥-ج) — قاعدةُ `aggregates` نفسُها؛ **وصفوفُه في السجلّ باقية**: السجلُّ
+        # يقول ما وقع، والمجموعُ يقول ما يُقرأ إيراداً
+        test_accounts.real_driver(DriverVehicleSkin.driver_id)
     )
     if skin_id is not None:
         totals_query = totals_query.where(DriverVehicleSkin.skin_id == skin_id)
@@ -227,7 +239,10 @@ async def purchase_log(
     revenue_query = select(
         DriverVehicleSkin.currency,
         func.coalesce(func.sum(DriverVehicleSkin.price_paid), 0),
-    ).where(DriverVehicleSkin.currency.is_not(None)).group_by(
+    ).where(
+        DriverVehicleSkin.currency.is_not(None),
+        test_accounts.real_driver(DriverVehicleSkin.driver_id),
+    ).group_by(
         DriverVehicleSkin.currency
     )
     if skin_id is not None:
@@ -245,6 +260,7 @@ async def purchase_log(
                 driver_id=row.DriverVehicleSkin.driver_id,
                 driver_name=row.driver_name,
                 driver_phone=row.driver_phone,
+                driver_is_test=row.driver_is_test,
                 skin_id=row.DriverVehicleSkin.skin_id,
                 skin_name=row.skin_name,
                 rarity=row.rarity,

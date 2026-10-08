@@ -366,6 +366,8 @@ class AdminDriverRow(BaseModel):
     phone: str
     country_code: CountryCode
     status: DriverStatus
+    # **كبتنُ تجربة** (SPEC §٦٥-ج) — قراءةٌ وحدَها، وبها ترسم اللوحةُ شارتَه في القائمة
+    is_test: bool = False
     phone_verified: bool
     rating_avg: Decimal
     # **ولا `auto_renew` هنا**: مفتاحٌ يملكه الكبتن على محفظته هو، ولا يقرأ منه

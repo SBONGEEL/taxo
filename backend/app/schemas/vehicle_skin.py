@@ -206,6 +206,8 @@ class SkinPurchaseRow(BaseModel):
     driver_id: uuid.UUID
     driver_name: str
     driver_phone: str
+    #: **شارةُ «حساب تجربة»** (SPEC §٦٥-ج) — صفوفُ كبتن التجربة باقيةٌ في السجلّ وخارجَ المجاميع، **فتُوسَم حيث تبقى**
+    driver_is_test: bool
     skin_id: uuid.UUID
     skin_name: str
     rarity: Rarity

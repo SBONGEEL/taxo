@@ -73,6 +73,7 @@ from app.services import (
     payments as payments_service,
     settings_service,
     subscriptions as subscriptions_service,
+    test_accounts,
     wallet,
 )
 from app.services.card_gateway import (
@@ -290,6 +291,11 @@ async def start_ride_payment(
     تُستدعى من `payments.pay_ride` **تحت قفل صف الرحلة** وبعد حساب المتبقي،
     فالمبلغ هنا لا يأتي من عميل أبداً (SPEC القسم 14).
     """
+    # **راكبُ التجربة لا يدفع ببطاقة** (SPEC §٦٥-ج/٢): مالُ بطاقةٍ حقيقيّةٍ يصل محفظةَ كبتن التجربة أرباحاً **لا تخرج
+    # أبداً** (السحبُ مغلقٌ عليه). وقبل فتح الطلب عند المزوّد — فلا يبقى عند Telr طلبٌ لا يُقبل مالُه
+    test_accounts.require_real_money(
+        rider, "حسابُ التجربة لا يدفع ببطاقة — ادفع بالمحفظة أو نقداً"
+    )
     await require_card_enabled(session, ride.country_code)
 
     payment = Payment(
@@ -346,6 +352,11 @@ async def start_wallet_topup(
     كليك والكاش يمران بـ `wallet_topup_requests` لأن لا API يشهد عليهما؛ هذه
     يشهد عليها المزود، فأثرها الوحيد قيدُ `topup` عند تأكيده.
     """
+    # **حسابُ التجربة لا يُشحن ببطاقة** (SPEC §٦٥-ج/٢) — قبل فتح الطلب عند المزوّد. **ولا يُردّ عند الإشعار**: مالٌ وصل
+    # فعلاً يُقيَّد كما وصل (`_credit_wallet_topup`)، فالمنعُ هنا عند الباب وحدَه
+    test_accounts.require_real_money(
+        owner, "حسابُ التجربة لا يُشحن ببطاقة — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
+    )
     await wallet.require_wallet_enabled(session, owner.country_code)
     await require_card_enabled(session, owner.country_code)
     # **المحفظةُ المعلَنةُ تقول التطبيق**: شحنُ محفظةِ راكبٍ يبدأ من تطبيقه،
@@ -396,6 +407,10 @@ async def start_subscription(
     والمبلغ سعرُ الخطة من القاعدة لا من العميل: كل حساب مالي في الخلفية
     (القسم 14).
     """
+    # **كبتنُ التجربة لا يشترك ببطاقة** (SPEC §٦٥-ج/٢): اشتراكُه بالمحفظة (رصيدُ «تصحيحِ تجربة») أو يسجّله سكربتُ الإنشاء
+    test_accounts.require_real_money(
+        owner, "حسابُ التجربة لا يشترك ببطاقة — اشترك من المحفظة"
+    )
     await require_card_enabled(session, owner.country_code)
     subscriptions_service.require_purchasable(driver)
 

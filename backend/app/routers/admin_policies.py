@@ -28,7 +28,7 @@ from app.schemas.policy import (
     PolicyVersionIn,
     PolicyVersionOut,
 )
-from app.services import audit, policies as policies_service
+from app.services import audit, policies as policies_service, test_accounts
 
 router = APIRouter(prefix="/admin/policies", tags=["admin"])
 
@@ -45,7 +45,11 @@ async def _consent_counts(
         return {}
     rows = await session.execute(
         select(UserPolicyConsent.policy_id, func.count())
-        .where(UserPolicyConsent.policy_id.in_(ids))
+        .where(
+            UserPolicyConsent.policy_id.in_(ids),
+            # **موافقةُ حساب التجربة ليست موافقةَ مستخدم** (SPEC §٦٥-ج) — العدُّ يقرؤه المالكُ «كم قَبِل الناس»
+            test_accounts.real_user(UserPolicyConsent.user_id),
+        )
         .group_by(UserPolicyConsent.policy_id)
     )
     return {policy_id: count for policy_id, count in rows}

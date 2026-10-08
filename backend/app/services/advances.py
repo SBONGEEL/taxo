@@ -65,7 +65,7 @@ from app.models.payment import Payment
 from app.models.ride import Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
-from app.services import settings_service, wallet
+from app.services import settings_service, test_accounts, wallet
 from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
@@ -429,6 +429,11 @@ async def disburse(
     **و`approved_by` هو الفرقُ بين البابين** (القرار ٢): داخل السقف يفتح الطلبُ
     نفسَه البابَ، وفوقه لا يفتحه إلا مشرف — واسمُه يبقى على الصف.
     """
+    # **لا سلفةَ لكبتن التجربة** (SPEC §٦٥-ج/٢): السلفةُ مالٌ تُقرضه المنصّةُ حقيقيّاً — **ولا يُسدَّد إلا من أرباح رحلات
+    # تجربة**، فهو قرضٌ لا يعود. **والبابُ واحدٌ للطريقين** (الطلبُ داخل السقف وموافقةُ المشرف فوقه)، فالردُّ هنا يمسكهما
+    test_accounts.require_real_money(
+        user, "لا سلفةَ لحساب التجربة — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
+    )
     amount = round_money(amount)
     if amount <= 0:
         raise AdvanceNotAllowed("المبلغ غير صحيح")

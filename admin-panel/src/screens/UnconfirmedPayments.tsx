@@ -33,6 +33,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
 import { Segmented } from "@/components/ui/Segmented";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { moment, money } from "@/lib/format";
@@ -239,6 +240,8 @@ function PartyLine({ kind, party }: { kind: "rider" | "driver"; party: QueuePart
           {kind === "driver" ? "الكبتن " : ""}
           {party.name}
         </span>
+        {/* **طرفُ تجربة** (SPEC §٦٥-ج) — «لم يدفع» أو نزاعٌ على دفعة تجربةٍ يُحكم وهو معروف */}
+        <TestAccountBadge isTest={party.is_test} />
         {profileId ? (
           <OpenProfile kind={kind} id={profileId} search={kind === "driver" ? party.name : undefined} />
         ) : null}

@@ -156,6 +156,8 @@ class QueuePartyOut(BaseModel):
     phone_masked: str
     #: **كلُّ ما ينتظر أحداً على رحلاته** (كاشٌ أو كليك معلَّق) — لا هذا الصفُّ وحدَه
     pending_count: int
+    #: **شارةُ «حساب تجربة»** (SPEC §٦٥-ج) — المشرفُ يحكم هنا «لم يدفع» أو يفتح نزاعاً، **فيعرف أن الدفعةَ تجربةٌ قبل أن يحكم**
+    is_test: bool
 
 
 class ReminderStampOut(BaseModel):

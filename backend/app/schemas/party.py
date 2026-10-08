@@ -49,10 +49,14 @@ class PartyOut(BaseModel):
     user_id: uuid.UUID
     name: str
     phone: str
+    #: **شارةُ «حساب تجربة» في كلِّ جدولٍ يحمل الطرف** (SPEC §٦٥-ج: «وشارةُ «تجربة» عليهما في قوائم اللوحة») — الرحلاتُ
+    #: والمدفوعاتُ والنزاعاتُ وطلباتُ الصرف تقرأ هذا البيتَ الواحد، **فمشرفٌ يحكم في دفعةٍ يعرف أنها تجربة**. **ومطلوبٌ بلا
+    #: افتراض**: بانٍ ينساه يسقط عند البناء لا يرسم حسابَ تجربةٍ حقيقيّاً. **وللقراءة وحدَها** — لا مخطَّطَ طلبٍ يحمله
+    is_test: bool
 
     @classmethod
     def of(cls, user: "User") -> "PartyOut":
-        return cls(user_id=user.id, name=user.name, phone=user.phone)
+        return cls(user_id=user.id, name=user.name, phone=user.phone, is_test=user.is_test)
 
 
 class DriverPartyOut(PartyOut):
@@ -75,6 +79,7 @@ class DriverPartyOut(PartyOut):
             user_id=driver.user.id,
             name=driver.user.name,
             phone=driver.user.phone,
+            is_test=driver.user.is_test,
             driver_id=driver.id,
             plate_number=plate_number,
         )

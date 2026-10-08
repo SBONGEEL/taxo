@@ -39,7 +39,7 @@ from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRou
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import debts, settings_service, wallet
+from app.services import debts, settings_service, test_accounts, wallet
 from app.services.pricing import round_money
 
 MIN_VEHICLE_YEAR = 2015
@@ -314,6 +314,10 @@ async def book(
     trip = await locked_trip(session, trip_id)
     route = await session.get(IntercityRoute, trip.route_id)
     if trip.status != "open" or route.country_code != rider.country_code or trip.departs_at <= _now():
+        raise Conflict("الرحلةُ ليست متاحةً للحجز")
+    # **ولا مقعدَ في رحلةٍ من غير عالمه** (SPEC §٦٥-ج) — القائمةُ تخفيها، وهذا يمنع من التفَّ عليها بمعرّف؛ **والنصُّ نصُّ
+    # الرحلة غير المتاحة** فلا يُعرف منه أن وراءها حسابَ تجربة
+    if await test_accounts.is_test_driver(session, trip.driver_id) != rider.is_test:
         raise Conflict("الرحلةُ ليست متاحةً للحجز")
     taken = await booked_seats(session, trip.id)
     if whole_car:

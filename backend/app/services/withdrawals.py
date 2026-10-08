@@ -42,6 +42,7 @@ from app.services import (
     cancellation,
     money_guards,
     settings_service,
+    test_accounts,
     wallet,
 )
 from app.services.payout import (
@@ -198,6 +199,11 @@ async def create_request(
     method: WithdrawalMethod,
 ) -> WithdrawalRequest:
     """طلب سحب جديد — يُرفض إن جاوز المتاح أو نزل عن الحد الأدنى."""
+    # **وكبتنُ التجربة لا يسحب** (SPEC §٦٥-ج/٢): رصيدُه تصحيحُ تجربةٍ لا مالٌ دخل — **وسحبُه يُخرج من TAXO مالاً حقيقيّاً
+    # إلى حسابٍ بنكيٍّ مقابلَ رقمٍ لم يكن**. وأوّلَ الباب: لا طلبَ يُكتب فينتظر محاسباً
+    test_accounts.require_real_money(
+        user, "حسابُ التجربة لا يسحب — رصيدُه «تصحيحُ تجربة» لا مالٌ حقيقيّ"
+    )
     amount = round_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ السحب يجب أن يكون أكبر من صفر")
@@ -307,6 +313,11 @@ async def pay_via_provider(
     `approved` بلا قيدٍ في الدفتر — ورصيدُ الكبتن ما زال محجوزاً بطلبه، فلا
     يُصرف مرتين ولا يضيع.
     """
+    # **ولا حوالةَ لحساب تجربة** (SPEC §٦٥-ج/٢) — قبل نداء المزوّد: النداءُ نفسُه يُخرج المال. **وحارسٌ ثانٍ خلف
+    # `create_request`**: طلبٌ كُتب قبل الوسم (أو بيد مشرفٍ في القاعدة) لا يُصرف لأن بابَ إنشائه أُغلق بعده
+    test_accounts.require_real_money(
+        owner, "لا تُصرف حوالةٌ لحساب تجربة — رصيدُه «تصحيحُ تجربة» لا مالٌ حقيقيّ"
+    )
     # **الحارسُ عند الباب لا في الوسط**: يُقرأ قبل القفل وقبل نداء المزوّد،
     # فنداءٌ غادر يُكمَل ولا يُقطع (`money_guards`).
     await money_guards.require_withdrawal_payout(
@@ -366,6 +377,10 @@ async def mark_paid(
     reference: str,
 ) -> WithdrawalRequest:
     """المحاسب حوّل وسجّل المرجع → قيد `withdrawal` (SPEC القسم 9)."""
+    # **ولا قيدَ سحبٍ لحساب تجربة** (SPEC §٦٥-ج/٢) — حارسُ `pay_via_provider` نفسُه للمسار اليدويّ
+    test_accounts.require_real_money(
+        owner, "لا يُعلَّم سحبٌ مدفوعاً لحساب تجربة — رصيدُه «تصحيحُ تجربة» لا مالٌ حقيقيّ"
+    )
     await money_guards.require_withdrawal_payout(
         session,
         actor=actor,

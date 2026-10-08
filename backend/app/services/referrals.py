@@ -61,7 +61,7 @@ from app.models.referral import (
 from app.models.ride import Ride
 from app.models.subscription import DriverSubscription
 from app.models.user import User
-from app.services import settings_service, wallet
+from app.services import settings_service, test_accounts, wallet
 from app.core.app_scope import ClientApp
 from app.core.exceptions import AmbiguousRole
 
@@ -602,6 +602,12 @@ async def pay(session: AsyncSession, referral_id: uuid.UUID) -> Referral | None:
     if referrer is None or referred is None:  # pragma: no cover
         return None
 
+    # **أيُّ طرفٍ حسابُ تجربةٍ ⇒ لا مكافأة** (SPEC §٦٥-ج/٢): المكافأةُ مالٌ يدفعه TAXO من عدم، **ورحلاتُ التجربة ليست
+    # رحلات** — فلا يُكافأ حقيقيٌّ أحال حسابَ تجربة، ولا يدخل محفظةَ تجربةٍ مالٌ أحال بها حقيقيّاً. **وتُتخطّى صامتةً**:
+    # لا أحدَ طلبها فيُردّ، و`None` هنا حالٌ عاديّةٌ تمرّ عليها الدورةُ كغير المستحقّة
+    if referrer.is_test or referred.is_test:
+        return None
+
     # **دولةُ المُحيل هي الحاكمة**: المالُ يدخل محفظتَه، وعملتُه عملةُ بلده.
     # ولو حُكمت بدولة المُحال لدُفع بعملةٍ لا تُنفق في محفظةٍ أخرى
     country = referrer.country_code
@@ -781,6 +787,11 @@ async def apply_welcome_promo(
         select(Referral).where(Referral.referred_user_id == rider.id)
     )
     if referral is None:
+        return False
+    # **أيُّ طرفٍ حسابُ تجربةٍ ⇒ لا هدية** (SPEC §٦٥-ج/٢) — قاعدةُ `pay` نفسُها في الطرف الآخر من الإحالة. **وراكبُ
+    # التجربة يردّه بابُ الكوبون أيضاً**، لكن المُحيلَ لا يراه ذلك الباب: حقيقيٌّ أحاله حسابُ تجربةٍ كان سيأخذ خصماً
+    # يدفعه TAXO على إحالةٍ ليست إحالة
+    if rider.is_test or await test_accounts.is_test_user(session, referral.referrer_user_id):
         return False
 
     # **برنامجُ المُحال هو دورُه هو** — وهو راكبٌ بالضرورة هنا (`RiderUser`)

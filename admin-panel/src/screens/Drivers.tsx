@@ -86,6 +86,7 @@ import { Shell } from "@/components/Shell";
 import { Pills, Table, TableSearch } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { Checkbox, DateInput, Field, FieldError, Select } from "@/components/ui/Field";
@@ -494,10 +495,12 @@ export function DriversScreen() {
                 {row.phone}
               </span>
 
-              <span>
+              <span className="ad-chips">
                 <Badge tone={STATUS_TONE[row.status]}>
                   {STATUS_LABEL[row.status]}
                 </Badge>
+                {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — بجانب حاله لا بدلاً منها */}
+                <TestAccountBadge isTest={row.is_test} />
               </span>
 
               <span>
@@ -673,7 +676,10 @@ function DriverDrawer({
       name={row.name}
       phone={row.phone}
       badges={
-        <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
+        <>
+          <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
+          <TestAccountBadge isTest={row.is_test} />
+        </>
       }
       onClose={onClose}
     >

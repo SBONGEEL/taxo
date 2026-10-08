@@ -39,6 +39,7 @@ from app.services import (
     audit,
     cancellation,
     settings_service,
+    test_accounts,
     verification,
     wallet,
 )
@@ -154,6 +155,11 @@ async def create_request(
     declared: WalletOwnerType | None = None,
 ) -> WalletTopupRequest:
     """طلب شحن يفتحه الراكب بنفسه بعد أن يحوّل على alias الشركة."""
+    # **حسابُ التجربة لا يُشحن بقناةٍ حقيقيّة** (SPEC §٦٥-ج/٢) — قبل كلِّ شيء: حوالةٌ حقيقيّةٌ تُقيَّد في محفظة تجربة
+    # **مالٌ حقيقيٌّ لا يخرج أبداً** (السحبُ مغلقٌ عليه)
+    test_accounts.require_real_money(
+        owner, "حسابُ التجربة لا يُشحن بحوالة — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
+    )
     if method not in RIDER_METHODS:
         raise InvalidInput("قناة الشحن هذه لا تُطلب من التطبيق")
     # مرجع الحوالة هو كل ما تملكه الإدارة للمطابقة — طلبٌ بلا مرجع لا يُؤكَّد
@@ -221,6 +227,11 @@ async def confirm(
     """
     if request.status != TopupRequestStatus.PENDING:
         raise InvalidStatusTransition()
+    # **ولا يُؤكَّد شحنٌ لحساب تجربة** (SPEC §٦٥-ج/٢) — **وهنا يمرّ كاشُ اللوحة أيضاً** (`create_confirmed` يُكمل من هذا
+    # الباب): الرصيدُ الذي يلزمه يُكتب «تصحيحَ تجربة» من بابه، لا شحنةً تُقرأ في الدفتر مالاً وصل
+    test_accounts.require_real_money(
+        owner, "لا يُشحن حسابُ التجربة كاشاً ولا كليكاً — أعطه رصيداً بـ«تصحيحِ تجربة» من المحفظة"
+    )
 
     # **من الصفِّ لا من الدور**: الطلبُ يحمل محفظتَه منذ إنشائه
     wallet.require_not_frozen(owner, request.owner_type)
@@ -323,6 +334,10 @@ async def create_confirmed(
     """
     if method not in STAFF_METHODS:
         raise InvalidInput("قناة الشحن هذه لا تُنشأ من اللوحة")
+    # **قبل أن يُكتب الطلب** — و`confirm` يسأل ثانيةً لمن بلغه من بابٍ آخر (SPEC §٦٥-ج/٢)
+    test_accounts.require_real_money(
+        owner, "لا يُشحن حسابُ التجربة كاشاً ولا كليكاً — أعطه رصيداً بـ«تصحيحِ تجربة» من المحفظة"
+    )
 
     await wallet.require_wallet_enabled(session, owner.country_code)
     owner_type = wallet.owner_type_for(owner, declared=declared)

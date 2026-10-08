@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.driver import Driver
 from app.models.enums import CountryCode
 from app.models.ride import Ride
+from app.models.user import User
 from app.services import geo
 
 WINDOW_MINUTES = 15
@@ -50,8 +51,13 @@ async def high_near(
     driver: Driver,
     country: CountryCode,
     now: datetime,
+    test: bool = False,
 ) -> bool:
-    """أمرتفعٌ الطلبُ حول هذا الكبتن الآن؟ — **نعم/لا وحدَها** (انظر رأسَ الملف)."""
+    """أمرتفعٌ الطلبُ حول هذا الكبتن الآن؟ — **نعم/لا وحدَها** (انظر رأسَ الملف).
+
+    **والعدّان في عالمِ الكبتن وحدَه** (SPEC §٦٥-ج، `test` وسمُه): طلباتُ راكبِ التجربة لا تُقرأ «طلباً مرتفعاً» لكبتنٍ
+    حقيقيٍّ يتحرّك إليها — **ولن تُعرض عليه أصلاً** — وكبتنُ التجربة لا يُعدّ عرضاً يُخفي طلباً حقيقيّاً.
+    """
     here = await geo.last_position(redis, driver_id=driver.id, country_code=country)
     if here is None:
         return False
@@ -60,7 +66,10 @@ async def high_near(
     d_lat = RADIUS_KM / 111.0
     d_lng = RADIUS_KM / (111.0 * max(math.cos(math.radians(here.lat)), 0.01))
     rows = await session.execute(
-        select(Ride.pickup_lat, Ride.pickup_lng).where(
+        select(Ride.pickup_lat, Ride.pickup_lng)
+        .join(User, User.id == Ride.rider_id)
+        .where(
+            User.is_test.is_(test),
             Ride.country_code == country,
             Ride.created_at >= now - timedelta(minutes=WINDOW_MINUTES),
             Ride.created_at <= now,
@@ -88,6 +97,7 @@ async def high_near(
         lng=here.lng,
         radius_km=RADIUS_KM,
         max_count=SUPPLY_CAP,
+        test=test,
     )
     others = sum(1 for presence in available if presence.driver_id != driver.id)
     return requests > others

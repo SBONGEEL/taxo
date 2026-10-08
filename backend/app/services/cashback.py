@@ -63,6 +63,11 @@ async def record_day(
     session: AsyncSession, *, rider: User, day: date, row: ServiceSetting
 ) -> CashbackStreak | None:
     """**يومٌ فيه رحلةٌ مكتملة** — يبدأ سلسلةً أو يمدّها أو يُسقطها ويبدأ غيرَها، وينزل المبلغُ في يومها الأخير."""
+    # **راكبُ التجربة لا سلسلةَ له** (SPEC §٦٥-ج/٢): الاستردادُ مالٌ من TAXO بلا مدين — **يُتخطّى صامتاً**، ولا يُبدأ عدٌّ
+    # لن يُدفع فلا تذكيرَ يَعِد به (`reminders` تقرأ السلاسلَ القائمة وحدَها). **وهنا لا في المنادي**: هذا البابُ الوحيدُ
+    # الذي يكتب سلسلةً ويصرف مبلغَها، وشرطٌ فوقه يُنسى في منادٍ ثانٍ
+    if rider.is_test:
+        return None
     if day.weekday() == FRIDAY:
         return await _active(session, rider.id)
     streak = await _active(session, rider.id)
@@ -128,7 +133,9 @@ async def on_ride_completed(session: AsyncSession, ride: Ride) -> None:
 async def view(session: AsyncSession, rider: User) -> dict:
     """**ما تعرضه الشاشةُ بجانب النار** — الأيامُ الباقيةُ والمبلغُ المنتظَر وهل رُكب اليوم. وسلسلةٌ فاتها يومٌ تُقرأ «لا سلسلة»."""
     row = await settings_for(session, rider.country_code)
-    if row is None:
+    # **ولراكبِ التجربة مطفأةٌ كأنها لم تُشعل** (SPEC §٦٥-ج/٢): السلسلةُ لا تُعدّ له (`on_ride_completed`)، **ونارٌ ترسم
+    # وعداً لن يُدفع** هي ما يمنعه §٦٥-ب بعينه: «لا وعدَ باسترداد»
+    if row is None or rider.is_test:
         return {"enabled": False}
     from app.services.stats import country_today
 

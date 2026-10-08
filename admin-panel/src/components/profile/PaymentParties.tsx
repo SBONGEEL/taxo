@@ -17,18 +17,22 @@
 
 import type { Payment } from "@/api/types";
 import { OpenProfile } from "@/components/profile/OpenProfile";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 
 export function PaymentParties({ payment }: { payment: Payment }) {
   return (
     <span className="ad-parties">
       <span className="ad-party">
         <span className="ad-party-name">{payment.rider?.name ?? "—"}</span>
+        {/* **طرفُ تجربة** (SPEC §٦٥-ج) — مشرفٌ يفصل نزاعاً على دفعة تجربةٍ يعرف ذلك قبل أن يفصل */}
+        <TestAccountBadge isTest={payment.rider?.is_test ?? false} />
         {payment.rider ? (
           <OpenProfile kind="rider" id={payment.rider.user_id} />
         ) : null}
       </span>
       <span className="ad-party sub">
         <span className="ad-party-name">{payment.driver?.name ?? "—"}</span>
+        <TestAccountBadge isTest={payment.driver?.is_test ?? false} />
         {payment.driver ? (
           // **ويُضيَّق برقمه**: لا بابَ يقرأ صفَّ كبتنٍ واحد، فالدرجُ يُفتح
           // بمطابقة `drivers.id` **داخل القائمة المرشَّحة** — وقائمةٌ بلا

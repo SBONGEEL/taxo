@@ -70,7 +70,9 @@ async def _apply_unpaid_outcome() -> int:
             settled = await cancellation.bear_by_company(
                 session, charge_id=charge_id, reason=COMPANY_BEARS_REASON
             )
-            if settled is None:  # pragma: no cover
+            # **رسمٌ يمسّه حسابُ تجربةٍ لا تتحمّله الشركة** (SPEC §٦٥-ج) — يبقى معلّقاً لإعفاء المشرف،
+            # والتراجعُ يُطلق قفلَ صفِّه فلا يُحبس عن مشرفٍ يُعفيه
+            if settled is None:
                 await session.rollback()
                 continue
             await session.commit()

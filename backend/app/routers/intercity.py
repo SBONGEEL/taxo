@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app.core.currency import currency_for_country
 from app.core.deps import CurrentDriver, DbSession, RiderUser, SettingsWriter, StaffUser
 from app.core.exceptions import NotFound
+from app.models.driver import Driver
 from app.models.enums import AuditAction, CountryCode
 from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRoute, IntercityTrip
 from app.models.user import User
@@ -45,7 +46,12 @@ async def open_trips(rider: RiderUser, session: DbSession) -> list[TripOut]:
     rows = await session.scalars(
         select(IntercityTrip)
         .join(IntercityRoute, IntercityRoute.id == IntercityTrip.route_id)
+        .join(Driver, Driver.id == IntercityTrip.driver_id)
+        .join(User, User.id == Driver.user_id)
         .where(
+            # **رحلاتُ عالمه وحدَه** (SPEC §٦٥-ج): رحلةُ كبتنِ التجربة لا يحجز فيها راكبٌ حقيقيٌّ مقعداً بماله، وراكبُ
+            # التجربة لا يحجز عند كبتنٍ حقيقيّ — سوقٌ يلتقي فيه الطرفان خارج التوزيع (و`book` يسأل ثانيةً)
+            User.is_test.is_(rider.is_test),
             IntercityRoute.country_code == rider.country_code,
             IntercityTrip.status == "open",
             IntercityTrip.departs_at > intercity._now(),

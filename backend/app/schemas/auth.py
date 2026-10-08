@@ -197,6 +197,9 @@ class UserOut(BaseModel):
     roles: list[UserRole] = Field(default_factory=list, validation_alias='roles_list')
     country_code: CountryCode
     is_blocked: bool
+    # **حسابُ تجربة** (SPEC §٦٥-ج) — **قراءةٌ وحدَها**: تقرؤه اللوحةُ فترسم شارةَ «حساب تجربة»، **ولا مخطَّطَ طلبٍ يحمله**
+    # فلا يكتبه بابٌ في التطبيقات ولا في اللوحة. ويصل صاحبَه في `/me` كما يصله `is_blocked` — وسمٌ عن حسابه لا عن غيره
+    is_test: bool = False
     # يقرؤه التطبيق فيطالب صاحبه بالتحقق، وتفلتر به اللوحة (SPEC القسم 13)
     phone_verified: bool
     # **الرقمُ محجوزٌ ولا يُملَك** (قرارُ المالك 2026-08-31) — من سجّل ببريده.

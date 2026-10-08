@@ -60,7 +60,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
-from app.services import parcels, ride_for_other
+from app.services import parcels, ride_for_other, test_accounts
 from app.services import hourly as hourly_service
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
@@ -501,6 +501,13 @@ async def request_ride(
     if share:
         from app.services import sharing as sharing_service
 
+        # **خصمُ المشاركة يدفعه TAXO** (`PLATFORM_WRITTEN_METHODS`) ولو لم يوجد شريك — **وراكبُ التجربة لا شريكَ له
+        # أصلاً** (العزل، §٦٥-ج)، فطلبُه المشترك خصمٌ من مال TAXO إلى محفظة كبتن تجربة. **يُردّ باسمه** لا يُسقط الخصمُ
+        # صامتاً: شاشةٌ وعدت بخصمٍ ثمّ حاسبت بالأجرة كاملةً وعدٌ يُنقض أمام صاحبه
+        test_accounts.require_real_money(
+            rider, "المشاركةُ يدفع TAXO خصمَها — وحسابُ التجربة لا يُدخله مالٌ حقيقيّ؛ اطلبها رحلةً منفردة"
+        )
+
         await sharing_service.require_available(session, rider.country_code)
         # **أضيقُ من المواصفة بقرار المالك الرابع**: طلبٌ بتفضيلٍ نسائيٍّ لا
         # يُشارَك إلا بخيارٍ صريحٍ من صاحبته — والقبولُ الصامتُ لا يكفي أمناً
@@ -730,6 +737,13 @@ async def _take(
     driver_user = await session.get(User, driver.user_id)
     if driver_user is None or driver_user.country_code != ride.country_code:
         raise PermissionDenied("الرحلة خارج نطاق بلدك")
+
+    # **ولا يأخذ رحلةً من غير عالمه** (SPEC §٦٥-ج) — **حارسٌ ثانٍ تحت قفل الصفّ**، والأوّلُ في نقطة القرار
+    # (`dispatch._eligible_levels` وأسواقُ الحجز والمشوار). **ولمَ ثانٍ**: هذا البابُ يأخذه طريقان — العرضُ والحجزُ المحجوز —
+    # وحارسٌ في طريقٍ واحدٍ يُنسى في الآخر. **و«غير موجودة» لا «غير مسموح»**: رحلةُ العالم الآخر لا وجودَ لها لمن ليس منه
+    rider_is_test = await session.scalar(select(User.is_test).where(User.id == ride.rider_id))
+    if bool(rider_is_test) != driver_user.is_test:
+        raise NotFound("الرحلة غير موجودة")
 
     # **رحلةُ الحجز المضمون تُنشأ `requested` وتُسند فوراً** — فتمرّ بـ`searching` كما تمرّ كلُّ رحلةٍ قُبلت، بلا انتقالٍ جديد
     if reserved and ride.status is RideStatus.REQUESTED:

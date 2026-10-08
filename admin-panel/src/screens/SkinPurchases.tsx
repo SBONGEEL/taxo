@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/Badge";
 import type { Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyNote, ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { currencyLabel, moment, money } from "@/lib/format";
 import { NO_RESULTS, useSearch } from "@/lib/search";
 import { digits } from "@/lib/utils";
@@ -215,6 +216,8 @@ function Row({ row }: { row: SkinPurchaseRow }) {
       <td className="p-12">
         <p className="flex items-baseline gap-6 text-ink">
           <span className="min-w-0 truncate">{row.driver_name}</span>
+          {/* **كبتنُ تجربة** (SPEC §٦٥-ج) — صفُّه في السجلّ وخارجَ المجاميع أعلاه */}
+          <TestAccountBadge isTest={row.driver_is_test} />
           <OpenProfile
             kind="driver"
             id={row.driver_id}

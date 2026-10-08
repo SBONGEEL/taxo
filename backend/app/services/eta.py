@@ -205,8 +205,11 @@ async def nearest_minutes(
         closest.setdefault(presence.vehicle_category, presence)
 
     minutes: dict[VehicleCategory, int] = {}
+    # **والخليّةُ لكلِّ عالمٍ على حدة** (SPEC §٦٥-ج): الخريطةُ أعلاه تعزل كبتنَ التجربة، **والمخزَّنُ مشتركٌ بين كلِّ من في
+    # الخليّة** — فدقائقُ حسبها راكبُ التجربة من كبتن تجربةٍ كانت ستُعرض دقيقةً كاملةً على راكبٍ حقيقيٍّ بجانبه
+    world = ":test" if rider.is_test else ""
     for category, presence in closest.items():
-        key = f"eta:nearest:{country.value}:{category.value}:{_cell(lat)}:{_cell(lng)}"
+        key = f"eta:nearest:{country.value}:{category.value}:{_cell(lat)}:{_cell(lng)}{world}"
         cached = await redis.get(key)
         if cached is not None:
             minutes[category] = int(cached)

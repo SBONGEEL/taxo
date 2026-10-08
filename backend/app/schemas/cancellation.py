@@ -77,6 +77,12 @@ class CancellationChargeRow(BaseModel):
     waive_reason: str | None
     writeoff_reason: str | None
     created_at: datetime
+    #: **شاراتُ «حساب تجربة» لكلِّ اسمٍ في الصفّ** (SPEC §٦٥-ج) — رسمٌ يمسّه حسابُ تجربةٍ **لا تتحمّله الشركةُ ولا يعبر بين
+    #: عالمين** (`cancellation.bear_by_company` · `try_collect`)، **فيبقى معلّقاً هنا لإعفاء المشرف** — ومشرفٌ يُعفي يعرف أنه
+    #: تجربة. **وللقراءة وحدَها**، و`False` حين لا طرفَ (الحاملُ غائبٌ في غير الكاش)
+    payer_is_test: bool
+    beneficiary_is_test: bool
+    carrier_is_test: bool
 
 
 class ChargeReasonRequest(BaseModel):

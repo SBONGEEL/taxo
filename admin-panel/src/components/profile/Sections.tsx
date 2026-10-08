@@ -32,6 +32,7 @@ import {
   useLoader,
 } from "@/components/Profile";
 import { Badge } from "@/components/ui/Badge";
+import { TestAccountBadge } from "@/components/ui/TestAccountBadge";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { ErrorNote, SuccessNote } from "@/components/ui/Feedback";
@@ -118,6 +119,8 @@ export function AccountSection({
             {user.suspension ? (
               <Badge tone="warn">موقوفٌ بحملة تأكيد الأرقام</Badge>
             ) : null}
+            {/* **حسابُ تجربة** (SPEC §٦٥-ج) — وسمٌ يُقرأ ولا يُكتب من هنا */}
+            <TestAccountBadge isTest={user.is_test} />
             {user.roles.map((role) => (
               <Badge key={role} tone="ink">
                 {ROLE_LABEL[role] ?? role}
