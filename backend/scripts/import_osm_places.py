@@ -42,7 +42,11 @@ def _km(a: tuple[float, float], b: tuple[float, float]) -> float:
 async def main(path: str) -> int:
     data = json.load(open(path, encoding="utf-8"))
     places = data["places"]
-    cities = [c for c in data["cities"] if c.get("name_ar")]
+    # **مراكزُ المحافظات الاثنتي عشرة** — ضواحي عمّان (`place=town` كالجبيهة ودابوق) تُعدّ لعمّان، والكركُ مدينتُها ولو وُسمت بلدة.
+    # **للعدّ في التقرير وحدَه** — لا يُكتب في الصفّ
+    capitals = {"عمان", "عمّان", "إربد", "اربد", "الزرقاء", "السلط", "المفرق", "جرش", "عجلون", "مادبا", "الكرك", "الطفيلة", "معان", "العقبة"}
+    named = [c for c in data["cities"] if c.get("name_ar")]
+    cities = [c for c in named if c["name_ar"] in capitals] or named
     allowed = {c.value for c in MapPlaceCategory}
     bad = [p for p in places if p["category"] not in allowed or not (JO_BOX[0] <= p["lat"] <= JO_BOX[1] and JO_BOX[2] <= p["lng"] <= JO_BOX[3])]
     if bad:
