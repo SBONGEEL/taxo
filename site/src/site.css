@@ -1,0 +1,1982 @@
+/* ═══ الصفحةُ الرئيسة `taxo.tajora.ly` — عائلةُ TAXO 2.0 (SPEC §٦٩، اللوحات W01–W09) ════════════════════════════════════
+ *
+ * **مبنيّةٌ مطابقةً للوحات التصميم** (`TAXO — الموقع (W01–W09)`): كلُّ مقاسٍ وفراغٍ ولونٍ هنا من لوحته، والرموزُ رموزُ التطبيقين بحرفها.
+ *
+ * **الرموزُ منقولةٌ بقيمها من `customer-app/src/taxo2/tokens.css`** — الموقعُ شجرةٌ تُبنى وحدَها فلا يستورد من تطبيق، **و`check:site`
+ * يطابق كلَّ `--t2-*` هنا بقيمته هناك في المظهرين** (كما يطابق ورقةَ صفحة التحميل). **ورموزُ `--site-*` للموقع وحدَه** (من مواصفة
+ * المصمّم §١): ما لا يملكه التطبيقان — الحبرُ زرّاً، ونقشُ الخلفية، والطريق، والظلال.
+ *
+ * **ولا لونَ خارج الكتلتين** — سداسيّاً ولا دالّة: الشاشةُ تسأل «ما لونُ هذا؟» والمظهرُ يجيب. **والمظهرُ يتبع الهاتف**
+ * (`prefers-color-scheme`) كصفحة التحميل: الفاتحُ «نهارُ الراكب بلون الحجر الجيري»، والداكنُ «ليلُ الكبتن بلون الإسفلت».
+ *
+ * **والحركةُ لا يتوقّف عليها شيء**: كلُّ ما في الصفحة مرئيٌّ بلا JavaScript (§٥٢٫٧)، و«تقليل الحركة» يُطفئها كلَّها.
+ */
+
+/* ── الخطوط — من أصل الموقع لا من طرفٍ ثالث (`scripts/fonts.mjs`) ── */
+@font-face {
+  font-family: "Readex Pro";
+  font-weight: 160 700;
+  font-display: swap;
+  src: url("/fonts/ReadexPro-Variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Unbounded";
+  font-weight: 800;
+  font-display: swap;
+  src: url("/fonts/Unbounded-800.woff2") format("woff2");
+}
+
+/* ── المظهرُ الفاتح — نهارُ الراكب ── */
+:root {
+  --t2-font: "Readex Pro", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --t2-font-num: "Unbounded", "Readex Pro", system-ui, sans-serif;
+  --t2-bg: #f4f1ea;
+  --t2-surface: #ffffff;
+  --t2-sunken: #f4f1ea;
+  --t2-text: #14161a;
+  --t2-muted: #6a6862;
+  --t2-line: #e0dad0;
+  --t2-divider: #f0ece4;
+  --t2-accent: #f05a28;
+  --t2-accent-text: #c2410c;
+  --t2-on-accent: #14161a;
+  --t2-accent-soft: #fde6db;
+  --t2-accent-line: #f6c3ae;
+  --t2-success: #1e7f55;
+  --t2-success-soft: #dceee4;
+  --t2-women: #9c2c6e;
+  --t2-women-soft: #f7e3ee;
+  --t2-women-line: #e9bcd5;
+  --t2-on-women: #ffffff;
+  --t2-dash: #d2cbbe;
+  --t2-well: #ece8df;
+  --t2-fast: 120ms;
+  --t2-med: 240ms;
+  --t2-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ── رموزُ الموقع وحدَه (مواصفة المصمّم §١) ── */
+  --site-primary: #14161a; /* زرُّ الحبر «أساسي» وشارةُ «التحميل» وشريطُ الإعلان */
+  --site-on-primary: #f4f1ea;
+  --site-pattern: #14161a; /* لونُ قناع خلفية الهوية */
+  --site-pattern-o: 0.04; /* ٤٪: الرماديُّ فوق النقش يبقى ٤٫٥٦:١ */
+  --site-track: #d2cbbe; /* ما لم يُقطع من الطريق */
+  --site-car-ring: #ffffff; /* حلقةُ السيارة والدبابيس ودائرةِ الانطلاق والوجهة */
+  --site-car-glass: #14161a; /* زجاجُ السيارة — حبرٌ في المظهرين كما رُسمت في الهوية */
+  --site-shot-bg: #f4f1ea; /* الحافّةُ العليا الفارغةُ في إطار الهاتف — شريطُ الحالة مقصوصٌ ولا يُرسم بديله */
+  --site-bar-a: rgba(20, 22, 26, 0.1); /* قضيبا الـX على بطاقة الجمر */
+  --site-bar-b: rgba(244, 241, 234, 0.22);
+  --site-card-shadow: 0 1px 2px rgba(20, 22, 26, 0.04), 0 12px 28px rgba(20, 22, 26, 0.06);
+  --site-card-shadow-hover: 0 2px 4px rgba(20, 22, 26, 0.05), 0 18px 36px rgba(20, 22, 26, 0.1);
+  --site-phone-shadow: 0 0 0 9px #14161a, 0 0 0 10px #3b3e45, 0 40px 80px -30px rgba(20, 22, 26, 0.45);
+  --site-captain-card: #0e1013; /* بطاقةُ الإسفلت خلف لقطة الكبتن (W04) */
+  --site-captain-line: #0e1013;
+  --site-captain-ink: #f2efe8;
+  --site-captain-ember: rgba(255, 106, 51, 0.9);
+  --site-captain-stone: rgba(242, 239, 232, 0.07);
+  --site-shot-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.7);
+  /* أيقونتا التطبيقين (W08) — **ثابتتان في المظهرين**: هما أيقونتا الهاتف لا سطحان من الصفحة */
+  --site-icon-rider-bg: #f4f1ea;
+  --site-icon-rider-ring: #dad3c6;
+  --site-icon-rider-ink: #14161a;
+  --site-icon-rider-ember: #f05a28;
+  --site-icon-captain-bg: #0e1013;
+  --site-icon-captain-ring: #2b3038;
+  --site-icon-captain-ink: #f2efe8;
+  --site-icon-captain-ember: #ff6a33;
+  color-scheme: light dark;
+}
+
+/* ── المظهرُ الداكن — ليلُ الكبتن (وما لم يُعَد هنا يبقى بقيمة الفاتح، كما في العائلة) ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --t2-bg: #0e1013;
+    --t2-surface: #171a1f;
+    --t2-sunken: #20242b;
+    --t2-text: #f2efe8;
+    --t2-muted: #9097a1;
+    --t2-line: #2b3038;
+    --t2-divider: #20242b;
+    --t2-accent: #ff6a33;
+    --t2-accent-text: #ff6a33;
+    --t2-on-accent: #0e1013;
+    --t2-accent-soft: #2a1a12;
+    --t2-accent-line: #5a3322;
+    --t2-success: #3dbe7e;
+    --t2-success-soft: #16291f;
+    --t2-women: #f08cc0;
+    --t2-women-soft: rgba(240, 140, 192, 0.12);
+    --t2-women-line: rgba(240, 140, 192, 0.32);
+    --t2-on-women: #0e1013;
+    --t2-dash: #3a404a;
+    --t2-well: var(--t2-sunken);
+    --site-primary: #f2efe8;
+    --site-on-primary: #0e1013;
+    --site-pattern: #f2efe8;
+    --site-pattern-o: 0.045;
+    --site-track: #3a404a;
+    --site-car-ring: #0e1013;
+    --site-shot-bg: #0e1013;
+    --site-bar-a: rgba(14, 16, 19, 0.14);
+    --site-bar-b: rgba(242, 239, 232, 0.18);
+    --site-card-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.6);
+    --site-card-shadow-hover: 0 18px 40px -10px rgba(0, 0, 0, 0.7);
+    --site-phone-shadow: 0 0 0 9px #000000, 0 0 0 10px #34373d, 0 40px 80px -30px rgba(0, 0, 0, 0.7);
+    --site-captain-card: #171a1f;
+    --site-captain-line: #2b3038;
+  }
+}
+
+/* ═══ الأساس ═══════════════════════════════════════════════════════════════════════════════════════════════════════ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--t2-bg);
+  color: var(--t2-text);
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: var(--t2-font);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+img {
+  display: block;
+  max-width: 100%;
+}
+picture {
+  display: contents;
+}
+[hidden] {
+  display: none !important;
+}
+/* **حلقةُ التركيز بالحبر لا بالجمر**: الجمرُ يذوب على زرّ الجمر نفسِه */
+:focus-visible {
+  outline: 2px solid var(--t2-text);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+.ltr {
+  unicode-bidi: isolate;
+}
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+/* **الرموزُ متّجهاتُ Material Symbols Rounded** (الهوية) — مضمَّنةٌ لا خطٌّ من طرفٍ ثالث */
+.ic {
+  display: inline-block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+.skip {
+  position: absolute;
+  inset-inline-start: 16px;
+  top: -80px;
+  z-index: 50;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--site-primary);
+  color: var(--site-on-primary);
+  font-weight: 600;
+}
+.skip:focus {
+  top: 12px;
+}
+
+/* ── العلامةُ النصية — Unbounded 800، والـX قضيبان (نسبُ لوحة الهوية ÷ ٣١، كصفحة التحميل) ── */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--t2-font-num);
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.wordmark-x {
+  position: relative;
+  display: inline-block;
+  width: calc(25em / 31);
+  height: calc(24em / 31);
+  margin: 0 calc(2em / 31);
+}
+.wordmark-x > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1em;
+  height: calc(7em / 31);
+  border-radius: calc(4em / 31);
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(-50deg);
+}
+.wordmark-x > span + span {
+  background: var(--x-ember, var(--t2-accent));
+  transform: translate(-50%, -50%) rotate(50deg);
+}
+
+/* ═══ الإطار — هاتفٌ أوّلاً (390)، والحاسوبُ من 1024 ═════════════════════════════════════════════════════════════ */
+#taxo-root {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+/* **خلفيةُ الهوية** — بلاطةٌ واحدةٌ قناعاً بلونٍ وشفافيةٍ من الرمز، على خلفية الصفحة وحدَها (لا في بطاقةٍ ولا لقطة)، **بلا حركة** */
+#taxo-root::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--site-pattern);
+  opacity: var(--site-pattern-o);
+  -webkit-mask: url("/assets/identity-tile.svg") 0 0 / 200px 200px repeat;
+  mask: url("/assets/identity-tile.svg") 0 0 / 200px 200px repeat;
+}
+/* **الحافّةُ اليمنى ٣٢ تحمل حارةَ الطريق** على بُعد ١٤ من الحافّة، واليسرى ٢٠ */
+.sec {
+  position: relative;
+  padding: 72px 32px 72px 20px;
+  scroll-margin-top: 8px;
+}
+.sec > .wrap {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── الطريقُ والسيارة (W02) — فوق المحتوى في حارةٍ لا محتوى فيها ── */
+#taxo-route {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+#taxo-track {
+  fill: none;
+  stroke: var(--site-track);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+#taxo-drawn {
+  fill: none;
+  stroke: url(#taxo-grad);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.st-accent {
+  stop-color: var(--t2-accent);
+}
+.st-women {
+  stop-color: var(--t2-women);
+}
+.route-start {
+  fill: var(--t2-text);
+  stroke: var(--site-car-ring);
+  stroke-width: 3.5;
+}
+.route-pin {
+  fill: var(--t2-bg);
+  stroke: var(--t2-accent);
+  stroke-width: 2;
+  transition: fill var(--t2-med) var(--t2-ease-out), stroke var(--t2-med) var(--t2-ease-out),
+    stroke-width var(--t2-med) var(--t2-ease-out);
+}
+.route-pin.is-lit {
+  fill: var(--t2-accent);
+  stroke: var(--site-car-ring);
+  stroke-width: 3;
+}
+.route-pin.is-women {
+  stroke: var(--t2-women);
+}
+.route-pin.is-women.is-lit {
+  fill: var(--t2-women);
+  stroke: var(--site-car-ring);
+}
+.car-body {
+  fill: var(--t2-accent);
+  stroke: var(--site-car-ring);
+  stroke-width: 1.5;
+  transition: fill var(--t2-med) var(--t2-ease-out);
+}
+#taxo-car.is-women .car-body {
+  fill: var(--t2-women);
+}
+.car-glass {
+  fill: var(--site-car-glass);
+}
+.car-rear {
+  fill: var(--site-car-glass);
+  opacity: 0.55;
+}
+.route-dest {
+  fill: var(--t2-accent);
+  stroke: var(--site-car-ring);
+  stroke-width: 4;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.route-pulse {
+  fill: none;
+  stroke: var(--t2-accent);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.route-x {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.route-x .x-a {
+  fill: var(--t2-text);
+}
+.route-x .x-b {
+  fill: var(--t2-accent);
+}
+/* **الوصولُ مرّةً لكلِّ زيارة**: نبضتان، ثمّ يذوب المربّعُ ويتكوّن الـX كما في ترحيب الزيارة المتكرّرة */
+#taxo-route.is-arrived .route-pulse {
+  animation: txPulse 600ms ease-out both;
+}
+#taxo-route.is-arrived .route-pulse + .route-pulse {
+  animation-delay: 160ms;
+}
+#taxo-route.is-arrived .route-dest {
+  animation: txOut 240ms var(--t2-ease-out) 420ms both;
+}
+#taxo-route.is-arrived .route-x {
+  animation: txXIn 480ms cubic-bezier(0.2, 0.8, 0.2, 1) 520ms both;
+}
+#taxo-route.is-formed .route-dest {
+  opacity: 0;
+}
+#taxo-route.is-formed .route-x {
+  opacity: 1;
+}
+@keyframes txPulse {
+  from {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+@keyframes txOut {
+  to {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+@keyframes txXIn {
+  from {
+    transform: rotate(-90deg) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ═══ شريطُ الإعلان (`announce_*`) — فوق الرأس حين يُشعَل، ومطفأٌ لا يُرسم ═══════════════════════════════════════════ */
+.announce {
+  position: relative;
+  z-index: 3;
+  background: var(--site-primary);
+  color: var(--site-on-primary);
+}
+.announce-in {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 20px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+}
+.announce-in .ic {
+  width: 18px;
+  height: 18px;
+}
+
+/* ═══ W01 — الواجهة ═════════════════════════════════════════════════════════════════════════════════════════════════ */
+.hero {
+  padding: 0 32px 56px 20px;
+}
+.top {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.nav {
+  display: none;
+}
+.pill-dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--site-primary);
+  color: var(--site-on-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.pill-dl .ic {
+  width: 20px;
+  height: 20px;
+}
+.hero-text {
+  padding-top: 24px;
+}
+.note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--t2-surface);
+  border: 1px solid var(--t2-line);
+  font-size: 13px;
+  font-weight: 500;
+}
+.dot-ok {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t2-success);
+  box-shadow: 0 0 0 3px var(--t2-success-soft);
+}
+.hero h1 {
+  margin-top: 16px;
+  font-size: 36px;
+  line-height: 1.22;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.hero .lead {
+  margin-top: 14px;
+  font-size: 16.5px;
+  line-height: 1.75;
+}
+.lead {
+  color: var(--t2-muted);
+  text-wrap: pretty;
+}
+.hero-ctas {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hero-cap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+/* ── الأزرار — الحبرُ «أساسي»، والجمرُ لونُ الفعل ونصُّه حبرٌ دائماً ── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: transform var(--t2-fast) var(--t2-ease-out), filter var(--t2-fast) var(--t2-ease-out);
+}
+.btn .ic {
+  width: 22px;
+  height: 22px;
+}
+.btn:hover {
+  filter: brightness(1.05);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn-ink {
+  background: var(--site-primary);
+  color: var(--site-on-primary);
+}
+.btn-ember {
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-weight: 700;
+}
+.btn-women {
+  height: 52px;
+  padding: 0 18px;
+  border-radius: 16px;
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+/* **سطرُ العرض** — اسمُ العرض من الباب كما كتبه المشرف («أول أسبوع مجاناً»)، **ولا سطرَ بلا عرض** */
+.offer {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--t2-accent-soft);
+  border: 1px solid var(--t2-accent-line);
+  color: var(--t2-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.offer .ic {
+  width: 18px;
+  height: 18px;
+  color: var(--t2-accent-text);
+}
+
+/* ── وسائطُ الواجهة: بطاقةُ الجمر بقضيبَي الـX، والهاتفُ يرتفع فوقها ويُقصّ عند حافّتها ── */
+.hero-media {
+  position: relative;
+  margin-top: 36px;
+  height: 500px;
+  border-radius: 0 0 32px 32px;
+  overflow: hidden;
+}
+.ember {
+  position: absolute;
+  inset: 120px 0 0;
+  border-radius: 32px;
+  background: var(--t2-accent);
+  overflow: hidden;
+}
+.ember .bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 640px;
+  height: 78px;
+  border-radius: 39px;
+  background: var(--site-bar-a);
+  transform: translate(-50%, -50%) rotate(38deg);
+}
+.ember .bar + .bar {
+  background: var(--site-bar-b);
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+.phone {
+  border-radius: 40px;
+  overflow: hidden;
+  background: var(--site-shot-bg);
+  box-shadow: var(--site-phone-shadow);
+}
+.phone-inset {
+  height: 24px;
+}
+.phone img {
+  width: 100%;
+  height: auto;
+}
+.hero-phone {
+  position: absolute;
+  /* **صفرٌ كاللوحة** — بـ١٠ كانت حلقتُه العليا تظهر وتُقصّ تسمياتُ الشريط السفليّ (مقارنةُ W01) */
+  top: 0;
+  left: 50%;
+  width: 236px;
+  margin-left: -118px;
+}
+
+/* ═══ رأسُ القسم — العينُ حبرٌ بنقطة جمر (الجمرُ نصّاً صغيراً على الحجر دون AA) ═══════════════════════════════════════ */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--t2-text);
+}
+.eb-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t2-accent);
+}
+.sec h2 {
+  margin-top: 10px;
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.sec-head .lead {
+  margin-top: 10px;
+  font-size: 16.5px;
+  line-height: 1.7;
+}
+.card {
+  background: var(--t2-surface);
+  border: 1px solid var(--t2-line);
+  box-shadow: var(--site-card-shadow);
+  transition: transform var(--t2-med) var(--t2-ease-out), box-shadow var(--t2-med) var(--t2-ease-out);
+}
+.well {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-accent-text);
+}
+
+/* ═══ W03 — للراكب: كيف يعمل ═══════════════════════════════════════════════════════════════════════════════════════ */
+.steps {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.step {
+  border-radius: 24px;
+  overflow: hidden;
+}
+.step-media {
+  height: 200px;
+  background: var(--t2-sunken);
+  overflow: hidden;
+}
+.step-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+/* **مكانُ لقطةٍ لم تُلتقط — مستطيلٌ محايدٌ باسم الشاشة** (§٥٢٫٨)، ولا يُملأ بشيءٍ آخر. **و`check:shots` يمنع نشرَه**
+   حتى تصل اللقطةُ الحقيقيّة: البطاقةُ الفارغةُ تقول الحقيقةَ، والحارسُ يمنع أن تبلغ الناس. */
+.step-media--await {
+  padding: 14px;
+}
+.shot-await {
+  height: 100%;
+  border: 1.5px dashed var(--t2-dash);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--t2-muted);
+  text-align: center;
+}
+.shot-await .ic {
+  width: 26px;
+  height: 26px;
+}
+.shot-await b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.shot-await small {
+  font-size: 12.5px;
+}
+.step-body {
+  padding: 20px;
+}
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.step-n {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--t2-font-num);
+  font-weight: 800;
+  font-size: 14px;
+}
+.step-head h3 {
+  flex: 1;
+  font-size: 19px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+.step-head .ic {
+  color: var(--t2-muted);
+}
+.step-body p {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--t2-muted);
+}
+
+/* ═══ W04 — للكبتن: لماذا تقود مع TAXO (بلا رقمٍ في أيِّ موضع) ════════════════════════════════════════════════════════ */
+.cap-figure {
+  position: relative;
+  margin-top: 24px;
+  padding: 14px;
+  border-radius: 24px;
+  background: var(--site-captain-card);
+  border: 1px solid var(--site-captain-line);
+  overflow: hidden;
+}
+.cap-figure .bar {
+  display: none;
+}
+.cap-figure figcaption {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  color: var(--site-captain-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.cap-figure img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+/* **أيقونةُ تطبيق الكبتن الصغيرة** — العلامةُ على الإسفلت */
+.app-mini {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--site-icon-captain-bg);
+  box-shadow: 0 0 0 1px var(--site-icon-captain-ring);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--site-icon-captain-ink);
+  --x-ember: var(--site-icon-captain-ember);
+}
+.app-mini .wordmark {
+  font-size: 6.6px;
+  letter-spacing: -0.04em;
+}
+.benefits {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.benefit {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.benefit h3 {
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.benefit p {
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--t2-muted);
+}
+.cap-cta {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ═══ W05 — الخدمةُ النسائيّة: لوحُ البرقوق، والطريقُ يصير برقوقاً معه ════════════════════════════════════════════════ */
+.women-panel {
+  border-radius: 28px;
+  background: var(--t2-women-soft);
+  border: 1px solid var(--t2-women-line);
+  padding: 24px 20px;
+}
+.chip-women {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  background: var(--t2-women);
+  color: var(--t2-on-women);
+  font-size: 13px;
+  font-weight: 600;
+}
+.chip-women .ic {
+  width: 18px;
+  height: 18px;
+}
+.women-panel h2 {
+  margin-top: 14px;
+}
+.women-panel .lead {
+  margin-top: 10px;
+  font-size: 16.5px;
+  line-height: 1.7;
+}
+.women-points {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.women-points li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.women-points .well {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--t2-surface);
+  color: var(--t2-women);
+}
+.women-points .well .ic {
+  width: 21px;
+  height: 21px;
+}
+.women-points p {
+  margin-top: 6px;
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+.women-text .btn-women {
+  margin-top: 24px;
+}
+.women-media {
+  margin-top: 28px;
+}
+.women-phone {
+  width: 220px;
+  margin: 0 auto;
+  border-radius: 38px;
+}
+.women-phone .phone-inset {
+  height: 22px;
+}
+.women-cap {
+  margin-top: 24px;
+  padding: 12px;
+  border-radius: 20px;
+  background: var(--t2-surface);
+  border: 1px solid var(--t2-women-line);
+}
+.women-cap figcaption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: var(--t2-women);
+  font-size: 13px;
+  font-weight: 600;
+}
+.women-cap figcaption::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t2-women);
+}
+.women-cap img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+
+/* ═══ W06 — الأمان: بطاقةٌ بفواصل على الهاتف، وأربعُ بطاقاتٍ على الحاسوب ══════════════════════════════════════════════ */
+.safety {
+  margin-top: 24px;
+  padding: 6px 18px;
+  border-radius: 24px;
+}
+.safety li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--t2-divider);
+}
+.safety li:last-child {
+  border-bottom: 0;
+}
+.safety h3 {
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.safety p {
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--t2-muted);
+}
+
+/* ═══ W07 — الخدماتُ الجديدة: المشتعلُ يُرسم، والمطفأُ «قريباً»، والمخفيُّ لا يُرسم ═══════════════════════════════════ */
+.svc-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.svc {
+  border-radius: 22px;
+  padding: 16px;
+}
+.svc-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.svc h3 {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+.svc p {
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--t2-muted);
+}
+/* **عددٌ فرديٌّ على الهاتف ⇒ الأخيرةُ بعرض العمودين وأفقيّة** — والشبكةُ تنغلق على ما بقي بعد الإخفاء */
+.svc:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.svc:last-child:nth-child(odd) h3 {
+  margin-top: 0;
+}
+.badge-soon {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--t2-well);
+  color: var(--t2-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+/* **المطفأُ يُقرأ ولا يُنقر** — حافّةٌ متقطّعة وبئرٌ محايد (§٥٢٫٤) */
+.svc.is-soon {
+  background: transparent;
+  border: 1.5px dashed var(--t2-dash);
+  box-shadow: none;
+}
+.svc.is-soon .well {
+  background: var(--t2-well);
+  color: var(--t2-muted);
+}
+
+/* ═══ W08 — التحميل: الطريقُ ينتهي هنا ═══════════════════════════════════════════════════════════════════════════════ */
+.dl {
+  padding-top: 140px;
+}
+.dl-head {
+  text-align: center;
+}
+.dl-head h2 {
+  margin-top: 0;
+}
+.dl-head .lead {
+  margin-top: 8px;
+  font-size: 16.5px;
+  line-height: 1.7;
+}
+.dl-cards {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 18px;
+  border-radius: 22px;
+}
+.dl-card header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.app-icon {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--site-icon-rider-bg);
+  box-shadow: 0 0 0 1px var(--site-icon-rider-ring);
+  color: var(--site-icon-rider-ink);
+  --x-ember: var(--site-icon-rider-ember);
+}
+.app-icon .wordmark {
+  font-size: 13px;
+  letter-spacing: -0.04em;
+}
+.app-icon--captain {
+  background: var(--site-icon-captain-bg);
+  box-shadow: 0 0 0 1px var(--site-icon-captain-ring);
+  color: var(--site-icon-captain-ink);
+  --x-ember: var(--site-icon-captain-ember);
+}
+.chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--t2-accent-soft);
+  color: var(--t2-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.dl-card h3 {
+  margin-top: 4px;
+  font-size: 22px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.dl-card .kind {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--t2-muted);
+}
+/* **ارتفاعُ السطر طبيعيٌّ كاللوحة** — بـ١٫٦ الموروثة من الصفحة كان الرأسُ أطولَ بـ٨ (الراكب) و١٤ (الكبتن) — مقارنةُ W08.
+   **والحاويةُ معهما**: الشارةُ `inline-block` في سطرٍ دعامتُه من الحاوية، فبـ١٫٦ فيها يبقى ١٫٦ بكسل زائداً تحت الشارة */
+.dl-card header > div,
+.dl-card .chip,
+.dl-card .kind {
+  line-height: normal;
+}
+.get {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  border-radius: 16px;
+  background: var(--t2-accent);
+  color: var(--t2-on-accent);
+  font-size: 17px;
+  font-weight: 700;
+  transition: transform var(--t2-fast) var(--t2-ease-out), filter var(--t2-fast) var(--t2-ease-out);
+}
+.get .ic {
+  width: 22px;
+  height: 22px;
+}
+.get:hover {
+  filter: brightness(1.05);
+}
+.get:active {
+  transform: scale(0.97);
+}
+/* **شارةُ Google Play الرسمية — ملفُّ Google كما هو**، ومساحتُها الآمنةُ فيها */
+.play-badge {
+  align-self: center;
+  display: block;
+  min-height: 44px;
+}
+.play-badge img {
+  width: 172px;
+  height: auto;
+}
+.badge-off {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 16px;
+  border: 1.5px dashed var(--t2-dash);
+  color: var(--t2-muted);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: not-allowed;
+}
+/* **الرابطُ حبرٌ بخطِّ جمرٍ تحته** — الجمرُ نصّاً صغيراً على الحجر دون AA */
+.to-download {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--t2-text);
+  font-size: 15px;
+  font-weight: 600;
+  /* **النصُّ بمحاذاة البداية** — إن التفّ بقي إلى اليمين والسهمُ في أقصى اليسار، كما في W08 */
+  line-height: 1.3;
+  text-decoration: underline;
+  text-decoration-color: var(--t2-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+}
+.to-download .ic {
+  width: 18px;
+  height: 18px;
+}
+
+/* ═══ W09 — التذييل ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.foot {
+  padding: 40px 20px 32px;
+  background: var(--t2-surface);
+  border-top: 1px solid var(--t2-line);
+  color: var(--t2-text);
+}
+.foot .tagline {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--t2-muted);
+}
+.foot-nav {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.foot-h {
+  font-size: 13px;
+  line-height: normal;
+  font-weight: 600;
+  color: var(--t2-muted);
+}
+.foot-links {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 20px;
+}
+.foot-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 15px;
+}
+.foot-links .ic {
+  width: 20px;
+  height: 20px;
+  color: var(--t2-muted);
+}
+.foot-contact {
+  flex-direction: column;
+}
+.foot-social {
+  margin-top: 8px;
+  gap: 8px;
+}
+.foot-social a {
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--t2-line);
+  font-size: 14px;
+}
+.foot-base {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--t2-divider);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--t2-muted);
+}
+/* **سطرُ الحقوق بارتفاعٍ طبيعيّ، وسطرُ العلامة ١٢٫٥ على الهاتف** — كاللوحة؛ بـ١٫٧ للاثنين كان الأسفلُ أطولَ بـ٥ (مقارنةُ W09) */
+.foot-base p:first-child {
+  line-height: normal;
+}
+.foot-base p + p {
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+
+/* ═══ اللوحُ الرقميّ 768–1023 — تخطيطُ الهاتف بسلّم الحاسوب للعناوين ═════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .sec > .wrap,
+  .foot > .wrap {
+    max-width: 680px;
+    margin-inline: auto;
+  }
+  .hero h1 {
+    font-size: 52px;
+    line-height: 1.15;
+  }
+  .sec h2 {
+    font-size: 40px;
+    line-height: 1.2;
+  }
+  .hero-media {
+    max-width: 520px;
+    margin-inline: auto;
+  }
+}
+
+/* ═══ الحاسوب — من 1024: حاوٍ بعرض 1200 في الوسط، وحارتان للطريق في الهامشين ═════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  #taxo-root::before {
+    -webkit-mask-size: 240px 240px;
+    mask-size: 240px 240px;
+  }
+  .route-start {
+    stroke-width: 5;
+  }
+  .route-pin.is-lit {
+    stroke-width: 4;
+  }
+  .sec {
+    padding: 120px 0;
+  }
+  .sec > .wrap,
+  .foot > .wrap {
+    width: min(1200px, 100% - 96px);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  /* W01 */
+  .hero {
+    padding: 0 0 140px;
+  }
+  .top {
+    height: 88px;
+    gap: 24px;
+  }
+  .brand .wordmark,
+  .foot .brand .wordmark {
+    font-size: 28px;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--t2-muted);
+    transition: color var(--t2-fast) var(--t2-ease-out), background var(--t2-fast) var(--t2-ease-out);
+  }
+  .nav a:hover {
+    color: var(--t2-text);
+    background: var(--t2-surface);
+  }
+  .pill-dl {
+    gap: 8px;
+    height: 48px;
+    padding: 0 20px;
+    font-size: 15px;
+  }
+  .hero-grid {
+    margin-top: 72px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 500px;
+    gap: 64px;
+    align-items: start;
+  }
+  .hero-text {
+    padding-top: 60px;
+  }
+  .note {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  .hero h1 {
+    margin-top: 20px;
+    font-size: 60px;
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+    max-width: 11em;
+  }
+  .hero .lead {
+    margin-top: 20px;
+    font-size: 20px;
+    line-height: 1.7;
+    max-width: 34ch;
+  }
+  .hero-ctas {
+    margin-top: 36px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .hero-cap {
+    align-items: flex-start;
+  }
+  .btn {
+    min-width: 232px;
+    height: 60px;
+    padding: 0 22px;
+    font-size: 17px;
+  }
+  .offer {
+    height: 36px;
+    padding: 0 16px 0 12px;
+    font-size: 15px;
+  }
+  .offer .ic {
+    width: 19px;
+    height: 19px;
+  }
+  .hero-media {
+    /* **الهامشُ صفرٌ لا `auto`**: عنصرُ شبكةٍ بهامشٍ تلقائيٍّ يتقلّص إلى محتواه — والمحتوى كلُّه مطلقُ الموضع، فيصير عرضُه صفراً */
+    margin: 0;
+    max-width: none;
+    height: 600px;
+    border-radius: 0 0 40px 40px;
+  }
+  .ember {
+    inset: 90px 0 0;
+    border-radius: 40px;
+  }
+  .ember .bar {
+    width: 860px;
+    height: 100px;
+    border-radius: 50px;
+  }
+  .hero-phone {
+    width: 280px;
+    margin-left: -140px;
+    border-radius: 46px;
+  }
+  .hero-phone .phone-inset {
+    height: 28px;
+  }
+
+  /* رؤوسُ الأقسام */
+  .eyebrow {
+    font-size: 15px;
+  }
+  .sec h2 {
+    margin-top: 14px;
+    font-size: 44px;
+    line-height: 1.2;
+  }
+  .sec-head .lead {
+    margin-top: 14px;
+    font-size: 20px;
+    line-height: 1.7;
+  }
+  .sec-head.is-center {
+    max-width: 720px;
+    margin-inline: auto;
+    text-align: center;
+  }
+  .sec-head.is-center .eyebrow {
+    justify-content: center;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--site-card-shadow-hover);
+  }
+
+  /* W03 */
+  .steps {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .step {
+    border-radius: 28px;
+  }
+  .step-media {
+    height: 280px;
+  }
+  .step-media--await {
+    padding: 16px;
+  }
+  .shot-await {
+    gap: 8px;
+    border-radius: 20px;
+  }
+  .shot-await .ic {
+    width: 30px;
+    height: 30px;
+  }
+  .shot-await b {
+    font-size: 14px;
+  }
+  .shot-await small {
+    font-size: 13px;
+  }
+  .step-body {
+    padding: 24px 28px 28px;
+  }
+  .step-head {
+    gap: 14px;
+  }
+  .step-n {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+  }
+  .step-head h3 {
+    font-size: 22px;
+  }
+  .step-head .ic {
+    width: 26px;
+    height: 26px;
+  }
+  .step-body p {
+    margin-top: 12px;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* W04 */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 520px;
+    grid-template-areas: "head media" "list media" "cta media";
+    column-gap: 80px;
+  }
+  .cap-grid > .sec-head {
+    grid-area: head;
+  }
+  .cap-figure {
+    grid-area: media;
+    align-self: center;
+    margin-top: 0;
+    padding: 28px;
+    border-radius: 40px;
+  }
+  .cap-figure .bar {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 900px;
+    height: 96px;
+    border-radius: 48px;
+    background: var(--site-captain-ember);
+    transform: translate(-50%, -50%) rotate(50deg);
+  }
+  .cap-figure .bar + .bar {
+    background: var(--site-captain-stone);
+    transform: translate(-50%, -50%) rotate(-50deg);
+  }
+  .cap-figure figcaption {
+    gap: 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .cap-figure .app-mini {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+  .cap-figure .app-mini .wordmark {
+    font-size: 7.5px;
+  }
+  .cap-figure img {
+    border-radius: 22px;
+    box-shadow: var(--site-shot-shadow);
+  }
+  .benefits {
+    grid-area: list;
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 32px;
+  }
+  .benefit {
+    display: block;
+  }
+  .benefit .well {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+  }
+  .benefit .well .ic {
+    width: 26px;
+    height: 26px;
+  }
+  .benefit h3 {
+    margin-top: 14px;
+    font-size: 19px;
+    line-height: 1.45;
+  }
+  .benefit p {
+    margin-top: 6px;
+    font-size: 16px;
+  }
+  .cap-cta {
+    grid-area: cta;
+    margin-top: 40px;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .cap-cta .btn {
+    min-width: 260px;
+  }
+  /* **سطرُ العرض على خطِّ منتصف الزرّ** — `flex-start` الهاتفِ كان يرفعه ١٢ فوقه (مقارنةُ W04) */
+  .cap-cta .offer {
+    align-self: center;
+  }
+
+  /* W05 */
+  .women-panel {
+    border-radius: 40px;
+    padding: 64px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 480px;
+    gap: 64px;
+    align-items: center;
+  }
+  .chip-women {
+    height: 34px;
+    padding: 0 14px 0 12px;
+    font-size: 14px;
+  }
+  .chip-women .ic {
+    width: 19px;
+    height: 19px;
+  }
+  .women-panel h2 {
+    margin-top: 16px;
+  }
+  .women-panel .lead {
+    margin-top: 14px;
+    font-size: 20px;
+    max-width: 30ch;
+  }
+  .women-points {
+    margin-top: 32px;
+    gap: 14px;
+  }
+  .women-points li {
+    align-items: center;
+    gap: 14px;
+  }
+  .women-points .well {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+  .women-points .well .ic {
+    width: 24px;
+    height: 24px;
+  }
+  .women-points p {
+    margin-top: 0;
+    font-size: 17px;
+  }
+  .women-text .btn-women {
+    margin-top: 32px;
+    display: inline-flex;
+    min-width: 260px;
+    height: 56px;
+    padding: 0 22px;
+    border-radius: 18px;
+    font-size: 16.5px;
+  }
+  .women-media {
+    position: relative;
+    margin-top: 0;
+    height: 600px;
+  }
+  .women-phone {
+    position: absolute;
+    top: 0;
+    right: 24px;
+    width: 260px;
+    margin: 0;
+    border-radius: 44px;
+  }
+  .women-phone .phone-inset {
+    height: 26px;
+  }
+  .women-cap {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 300px;
+    margin: 0;
+    border-radius: 22px;
+    box-shadow: var(--site-card-shadow);
+  }
+
+  /* W06 */
+  .safety {
+    margin-top: 56px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .safety:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .safety li {
+    display: block;
+    padding: 28px;
+    border-radius: 24px;
+    background: var(--t2-surface);
+    border: 1px solid var(--t2-line);
+    box-shadow: var(--site-card-shadow);
+    transition: transform var(--t2-med) var(--t2-ease-out), box-shadow var(--t2-med) var(--t2-ease-out);
+  }
+  .safety li:last-child {
+    border-bottom: 1px solid var(--t2-line);
+  }
+  .safety li:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--site-card-shadow-hover);
+  }
+  .safety .well {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+  }
+  .safety .well .ic {
+    width: 28px;
+    height: 28px;
+  }
+  .safety h3 {
+    margin-top: 18px;
+    font-size: 20px;
+    line-height: 1.4;
+  }
+  .safety p {
+    margin-top: 8px;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* W07 */
+  .svc-grid {
+    margin-top: 48px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .svc {
+    border-radius: 28px;
+    padding: 28px;
+  }
+  .svc:last-child:nth-child(odd) {
+    grid-column: auto;
+    display: block;
+  }
+  .svc:last-child:nth-child(odd) h3 {
+    margin-top: 18px;
+  }
+  .svc .well {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+  .svc .well .ic {
+    width: 28px;
+    height: 28px;
+  }
+  .svc h3 {
+    margin-top: 18px;
+    font-size: 21px;
+  }
+  .svc p {
+    margin-top: 8px;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .badge-soon {
+    padding: 3px 10px;
+    font-size: 13px;
+  }
+
+  /* W08 */
+  .dl {
+    padding: 200px 0 120px;
+  }
+  /* **صفرٌ هنا أيضاً** — `.sec h2` الحاسوبِ (١٤) كان يغلب صفرَ الهاتف فينزل القسمُ كلُّه ١٤ (مقارنةُ W08) */
+  .dl-head h2 {
+    margin-top: 0;
+  }
+  .dl-head .lead {
+    margin-top: 12px;
+    font-size: 20px;
+  }
+  .dl-cards {
+    margin: 40px auto 0;
+    width: min(964px, 100%);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .dl-card {
+    gap: 20px;
+    padding: 28px;
+    border-radius: 28px;
+  }
+  .dl-card header {
+    gap: 16px;
+  }
+  .app-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+  }
+  .app-icon .wordmark {
+    font-size: 15px;
+  }
+  .chip {
+    font-size: 12.5px;
+  }
+  .dl-card h3 {
+    font-size: 26px;
+  }
+  .dl-card .kind {
+    font-size: 15px;
+  }
+  .get {
+    min-height: 60px;
+  }
+  .play-badge img {
+    width: 180px;
+  }
+  .to-download {
+    margin-top: 24px;
+  }
+
+  /* W09 */
+  .foot {
+    padding: 64px 0 48px;
+  }
+  .foot-grid {
+    display: grid;
+    grid-template-columns: 360px repeat(3, minmax(0, 1fr));
+    gap: 48px;
+  }
+  .foot .tagline {
+    margin-top: 10px;
+    font-size: 15px;
+    max-width: 30ch;
+  }
+  .foot-nav {
+    display: contents;
+  }
+  .foot-h {
+    margin-bottom: 6px;
+  }
+  .foot-links {
+    margin-top: 0;
+    flex-direction: column;
+  }
+  /* **٤٠ كاللوحة على الحاسوب** — والهاتفُ يبقى ٤٤ هدفَ لمس */
+  .foot-links a {
+    min-height: 40px;
+  }
+  .foot-social {
+    gap: 0;
+  }
+  .foot-social a {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    font-size: 15px;
+  }
+  .foot-base {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    font-size: 13.5px;
+  }
+  .foot-base p + p {
+    margin-top: 0;
+    font-size: 13px;
+  }
+}
+
+/* ═══ الحركة — من الترحيب، وتنطفئ كلُّها مع «تقليل الحركة» ═════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: no-preference) {
+  /* **نصُّ الواجهة يرتفع بـCSS — يعمل بلا JavaScript** (480ms، ٧٠ بين كلِّ اثنين من 120) */
+  .rise {
+    animation: txRise 480ms ease-out both;
+  }
+  .rise-1 {
+    animation-delay: 120ms;
+  }
+  .rise-2 {
+    animation-delay: 190ms;
+  }
+  .rise-3 {
+    animation-delay: 260ms;
+  }
+  .rise-4 {
+    animation-delay: 330ms;
+  }
+  .rise-5 {
+    animation-delay: 400ms;
+  }
+  .hero-phone {
+    animation: txPhone 600ms ease-out 240ms both;
+  }
+  /* **الـX يتكوّن** — من صفرٍ ومقاس ٠٫٦ إلى ±٣٨°، كما في الزيارة المتكرّرة للترحيب */
+  .ember .bar {
+    animation: txBarA 800ms cubic-bezier(0.2, 0.8, 0.2, 1) 100ms both;
+  }
+  .ember .bar + .bar {
+    animation-name: txBarB;
+  }
+  /* **الكشفُ عند الظهور لا يُخفي شيئاً قبل أن يعمل السكربت**: `js` يضعه سطرٌ في الرأس، ويُرفع إن لم يقلع السكربت */
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 450ms ease-out, transform 450ms ease-out;
+  }
+  .js [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes txRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes txPhone {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes txBarA {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(38deg) scale(1);
+  }
+}
+@keyframes txBarB {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-38deg) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .btn,
+  .get,
+  .card,
+  .safety li,
+  .route-pin,
+  .car-body {
+    transition: none;
+  }
+  .btn:active,
+  .get:active,
+  .card:hover,
+  .safety li:hover {
+    transform: none;
+  }
+}

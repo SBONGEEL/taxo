@@ -5,9 +5,10 @@
 1. **قائمةُ السماح مقيسةٌ في الاتجاهين** — لا حقلَ خارجها يخرج، ولا حقلَ فيها
    يغيب. **والاتجاهُ الثاني هو المنسيّ**: بابٌ ينشر أقلَّ ممّا وعد يترك الصفحةَ
    بفراغٍ لا يُفسَّر.
-2. **ولا رقمَ مالٍ يخرج غيرَ نسبة العمولة** — لا سعرٌ ولا سعرٌ مشطوب.
-3. **والعمولةُ والمفاتيحُ تُقرآن من مصدرهما** — يتغيّر المصدرُ فيتغيّر الباب،
-   بلا نسخةٍ ثانيةٍ تفترق.
+2. **ولا رقمَ مالٍ يخرج — ولا نسبةُ العمولة** (§٦٩-ب، ٢٠٢٦-١٠-٠٩) — لا سعرٌ
+   ولا سعرٌ مشطوب، **ولا نسبةٌ ولا ما يُشتقّ منها، مهما كانت النسبة**.
+3. **والمفاتيحُ تُقرأ من مصدرها** — يتغيّر المصدرُ فيتغيّر الباب، بلا نسخةٍ
+   ثانيةٍ تفترق. **والنسبةُ تبقى للمشرف من مصدرها**، لا من الباب العامّ.
 4. **وبابُ الكتابة يختم القيمةَ قبل وبعد** — وما لم يتغيّر لا يُذكر.
 5. **ولا صفَّ ثانٍ لهذا الجدول** — ولو حاول نداءان معاً.
 """
@@ -47,15 +48,11 @@ async def test_public_door_publishes_the_allowlist_and_nothing_else(
     assert response.status_code == 200
     body = response.json()
 
-    # **والمحسوبُ يُستثنى لا يُصرَّح**: `commission_percent` و`features`
-    # و`driver_keeps_per_100` **تُقرأ من مصادرها لا من أعمدة الجدول**،
-    # فقائمةُ السماح تحرس الأعمدةَ وحدَها. **والثالثُ مشتقٌّ من الأول**
-    # (`100 − النسبة`) فلا يمكن أن يفترق عنه ولا أن يُنشر وحدَه.
-    published = set(body) - {
-        "commission_percent",
-        "driver_keeps_per_100",
-        "features",
-    }
+    # **والمحسوبُ يُستثنى لا يُصرَّح**: `features` **تُقرأ من مصدرها لا من
+    # أعمدة الجدول**، فقائمةُ السماح تحرس الأعمدةَ وحدَها. **وكان معها
+    # `commission_percent` و`driver_keeps_per_100`** — نُزعا من الباب (§٦٩-ب)،
+    # **فلو عادا لسقط هذا الاختبارُ بأنهما «خارج القائمة»** لا بصمت.
+    published = set(body) - {"features"}
     allowed = set(site_service.PUBLIC_FIELDS)
 
     assert published - allowed == set(), "خرج حقلٌ خارج قائمة السماح"
@@ -77,11 +74,15 @@ async def test_a_new_column_is_not_published_until_it_is_allowed() -> None:
     assert columns - allowed == {"singleton"}
 
 
-# ─────────────────────────────────── ولا رقمَ مالٍ غيرَ النسبة
+# ─────────────────────────────────── ولا رقمَ مالٍ — ولا النسبة
+
+
+#: **ما نُزع من الباب العامّ مع الموقع الجديد** (§٦٩-ب): النسبةُ وما يُشتقّ منها
+_COMMISSION_FIELDS = ("commission_percent", "driver_keeps_per_100")
 
 
 async def test_no_money_number_leaves_the_public_doors(client: AsyncClient) -> None:
-    """**لا سعرٌ ولا سعرٌ مشطوبٌ ولا مكافأة** — والنسبةُ وحدَها مسموحة.
+    """**لا سعرٌ ولا سعرٌ مشطوبٌ ولا مكافأة — ولا نسبةُ العمولة** (§٦٩-ب).
 
     **ويُقاس على الحمولة لا على الشاشة**: صفحةٌ لا ترسم رقماً يصلها ما زالت
     تحمله، **ويقرؤه من يفتح أدوات المطوّر**.
@@ -89,59 +90,26 @@ async def test_no_money_number_leaves_the_public_doors(client: AsyncClient) -> N
     site = (await client.get("/public/site")).json()
     landing = (await client.get("/public/landing")).json()
 
-    for forbidden in ("price", "price_after", "amount", "reward", "currency"):
+    for forbidden in ("price", "price_after", "amount", "reward", "currency", *_COMMISSION_FIELDS):
         assert forbidden not in site
         if landing.get("offer") is not None:
             assert forbidden not in landing["offer"]
-
-    # **والمسموحُ الوحيدُ نصٌّ لا عائم** — قاعدةُ `NUMERIC` في هذا المستودع
-    assert isinstance(site["commission_percent"], str)
 
 
 # ─────────────────────────────────── تُقرأ من مصدرها لا تُنسخ
 
 
-async def test_commission_is_read_from_its_own_source(
+async def test_no_commission_on_the_public_door_at_any_commission(
     client: AsyncClient, session_factory
 ) -> None:
-    """**يتغيّر إعدادُ العمولة فيتغيّر الباب** — بلا مفتاحٍ ثانٍ ولا نسخة."""
-    before = (await client.get("/public/site")).json()["commission_percent"]
+    """**ولا نسبةَ عمولةٍ في الباب العامّ مهما كانت** — ولا رقمُها في أيِّ حقل.
 
-    async with session_factory() as session:
-        setting = await settings_service.get_or_create_commission(
-            session, CountryCode.JO
-        )
-        setting.commission_enabled = True
-        setting.commission_percent = Decimal("12.50")
-        await session.commit()
-
-    after = (await client.get("/public/site")).json()["commission_percent"]
-    assert Decimal(after) == Decimal("12.50")
-    assert after != before
-
-
-async def test_the_kept_amount_is_a_plain_number_at_every_commission(
-    client: AsyncClient, session_factory
-) -> None:
-    """**المتبقّي يُقرأ رقماً لا أُسّاً** — ومقيسٌ عند الصفر أوّلاً.
-
-    **والصفرُ هو الحالةُ التي كسرت** (٢٠٢٦-٠٩-٠٦): `Decimal("100.00")
-    .normalize()` = `Decimal("1E+2")`، **و`str()` عليه `"1E+2"`** — فالصفحةُ
-    كانت تقول «يبقى لك 1E+2». **وهو الشكلُ السابع** بثوبٍ مقلوب.
-
-    **ولم يمسكه اختبارُ قائمة السماح**: ذاك يسأل «أخرج الحقل؟»، **وهذا يسأل
-    «ماذا فيه؟»** — **وسؤالان لا يجيب أحدُهما عن الآخر**.
-
-    **والحدُّ الأعلى هو الفخّ**: كلُّ نسبةٍ تترك متبقّياً غيرَ مضاعفٍ للمئة
-    تُطبع سليمةً، **فاختبارٌ بنسبةٍ واحدةٍ غيرِ صفرٍ يخضرّ فوق العطب**.
+    **والصفرُ أوّلاً** (هو الذي كسر «1E+2» يومَ كان المتبقّي يُنشر)، ثمّ نسبتان
+    غيرُه: **بابٌ لا يُخرج الحقلَ عند نسبةٍ ويُخرجه عند أخرى يخضرّ اختبارُه بنسبةٍ
+    واحدة**. ويُبحث عن الرقم نفسِه في الحمولة كلِّها لا عن اسم الحقل وحدَه —
+    **فحقلٌ بعنوانٍ جديدٍ يحمل النسبةَ يسقط هنا** (§٦٩-ب).
     """
-    cases = (
-        # النسبة      المتبقّي المنتظَر
-        (Decimal("0.00"), "100"),  # ← **هي التي كسرت**
-        (Decimal("2.00"), "98"),
-        (Decimal("12.50"), "87.5"),
-    )
-    for percent, expected in cases:
+    for percent in (Decimal("0.00"), Decimal("2.00"), Decimal("12.50")):
         async with session_factory() as session:
             setting = await settings_service.get_or_create_commission(
                 session, CountryCode.JO
@@ -150,16 +118,41 @@ async def test_the_kept_amount_is_a_plain_number_at_every_commission(
             setting.commission_percent = percent
             await session.commit()
 
-        body = (await client.get("/public/site")).json()
-        kept = body["driver_keeps_per_100"]
+        response = await client.get("/public/site")
+        body = response.json()
+        for field in _COMMISSION_FIELDS:
+            assert field not in body, f"النسبة {percent}: خرج {field}"
+        for shown in {str(percent), format(percent.normalize(), "f")} - {"0"}:
+            assert f'"{shown}"' not in response.text, f"النسبة {percent} في الحمولة"
 
-        assert kept == expected, f"النسبة {percent}: المتبقّي {kept!r}"
-        # **ولا أُسَّ ولا حرفَ في رقمٍ يُعرض** — والشرطُ أعمُّ من القيمة
-        # المنتظَرة، فيمسك أشكالاً أخرى للأُسّ لم تخطر.
-        assert kept.replace(".", "").isdigit(), f"ليس رقماً عارياً: {kept!r}"
-        # **والرقمان من مصدرٍ واحد فلا يفترقان** — وهي العلّةُ التي حُسب
-        # المتبقّي في الخلفية من أجلها.
-        assert Decimal(kept) + Decimal(body["commission_percent"]) == Decimal("100")
+
+async def test_the_panel_reads_the_commission_from_its_source(
+    client: AsyncClient, admin_headers: dict, session_factory
+) -> None:
+    """**المشرفُ يرى النسبةَ السارية في شاشة «الموقع»** — من مصدرها لا من الباب.
+
+    **يتغيّر إعدادُ العمولة فيتغيّر ما تعرضه الشاشة** — بلا مفتاحٍ ثانٍ ولا نسخة،
+    **والبابُ العامُّ في اللحظة نفسِها لا يحملها**: النسبةُ تُعرض لمن يدير ولا
+    تُنشر لمن يزور.
+    """
+    before = (await client.get("/admin/site", headers=admin_headers)).json()[
+        "commission_percent"
+    ]
+    async with session_factory() as session:
+        setting = await settings_service.get_or_create_commission(
+            session, CountryCode.JO
+        )
+        setting.commission_enabled = True
+        setting.commission_percent = Decimal("12.50")
+        await session.commit()
+
+    after = (await client.get("/admin/site", headers=admin_headers)).json()[
+        "commission_percent"
+    ]
+    assert isinstance(after, str)  # **نصٌّ لا عائم** — قاعدةُ `NUMERIC` في هذا المستودع
+    assert Decimal(after) == Decimal("12.50")
+    assert after != before
+    assert "commission_percent" not in (await client.get("/public/site")).json()
 
 
 async def test_feature_flags_are_read_from_the_config_source(

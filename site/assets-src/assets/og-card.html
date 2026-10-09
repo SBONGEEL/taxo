@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- **بطاقةُ المشاركة 1200×630 بهويّة TAXO 2.0** (§٦٩) — تُرسم من هذا الملفّ بمتصفّحٍ إلى `og-card.png` جانبَه، ثمّ يضغطها
+     `scripts/assets.mjs` إلى `public/assets/og.png`. **ومصدرُها في الشجرة لتُعاد**: الخطّان من `../fonts/`، واللقطةُ الحقيقيّةُ
+     من `../screens/` (رئيسةُ الراكب كما التُقطت، مقصوصةً بإطار الهاتف). **ونصُّها من اللوحات وحدَها، بلا رقم.**
+     ورسمُها: متصفّحٌ بنافذة 1200×630 ومقياس 1، ثمّ لقطةُ الصفحة. -->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: "Readex Pro"; font-weight: 160 700; src: url("../fonts/ReadexPro-Variable.ttf"); }
+@font-face { font-family: "Unbounded"; font-weight: 800; src: url("../fonts/Unbounded-800.ttf"); }
+html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+body { position: relative; background: #f4f1ea; color: #14161a; font-family: "Readex Pro", system-ui, sans-serif; }
+body::before { content: ""; position: absolute; inset: 0; background: #14161a; opacity: .045;
+  -webkit-mask: url("identity-tile.svg") 0 0 / 240px 240px repeat; mask: url("identity-tile.svg") 0 0 / 240px 240px repeat; }
+.text { position: absolute; right: 88px; top: 112px; width: 600px; }
+.wordmark { display: inline-flex; align-items: center; font-family: "Unbounded"; font-weight: 800; font-size: 76px; line-height: 1; letter-spacing: -.03em; direction: ltr; }
+.x { position: relative; display: inline-block; width: calc(25em / 31); height: calc(24em / 31); margin: 0 calc(2em / 31); }
+.x span { position: absolute; left: 50%; top: 50%; width: 1em; height: calc(7em / 31); border-radius: calc(4em / 31); background: #14161a; transform: translate(-50%, -50%) rotate(-50deg); }
+.x span + span { background: #f05a28; transform: translate(-50%, -50%) rotate(50deg); }
+h1 { margin: 40px 0 0; font-size: 54px; line-height: 1.2; font-weight: 700; }
+.note { margin-top: 32px; display: inline-flex; align-items: center; gap: 12px; height: 52px; padding: 0 22px; border-radius: 999px; background: #ffffff; border: 1px solid #e0dad0; font-size: 24px; font-weight: 500; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: #1e7f55; box-shadow: 0 0 0 4px #dceee4; }
+.url { position: absolute; right: 88px; bottom: 56px; font-size: 22px; color: #6a6862; direction: ltr; }
+.media { position: absolute; left: 72px; top: 0; width: 380px; height: 630px; overflow: hidden; }
+.ember { position: absolute; left: 0; right: 0; top: 150px; bottom: 56px; border-radius: 40px; background: #f05a28; overflow: hidden; }
+.bar { position: absolute; left: 50%; top: 50%; width: 760px; height: 92px; border-radius: 46px; background: rgba(20, 22, 26, .10); transform: translate(-50%, -50%) rotate(38deg); }
+.bar + .bar { background: rgba(244, 241, 234, .22); transform: translate(-50%, -50%) rotate(-38deg); }
+.clip { position: absolute; left: 0; right: 0; top: 0; bottom: 56px; border-radius: 0 0 40px 40px; overflow: hidden; }
+.phone { position: absolute; left: 50%; top: 60px; width: 250px; margin-left: -125px; border-radius: 42px; overflow: hidden; background: #f4f1ea;
+  box-shadow: 0 0 0 9px #14161a, 0 0 0 10px #3b3e45, 0 40px 80px -30px rgba(20, 22, 26, .45); }
+.phone .inset { height: 26px; }
+.phone img { display: block; width: 250px; height: auto; }
+</style>
+</head>
+<body>
+  <div class="text">
+    <div class="wordmark" aria-label="TAXO">TA<span class="x"><span></span><span></span></span>O</div>
+    <h1>تاكسي بالتطبيق<br>للراكب والكبتن</h1>
+    <div class="note"><span class="dot"></span>في الأردن الآن</div>
+  </div>
+  <div class="url">taxo.tajora.ly</div>
+  <div class="media">
+    <div class="clip">
+      <div class="ember" style="bottom:0"><span class="bar"></span><span class="bar"></span></div>
+      <div class="phone"><div class="inset"></div><img src="../screens/t2-rider-light.png" alt=""></div>
+    </div>
+  </div>
+</body>
+</html>

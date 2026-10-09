@@ -11,8 +11,11 @@
  * ٤. **أكلُّ مفتاحٍ يقرؤه `site.js` موجودٌ في الصفحة؟** — ومقيسٌ في الاتجاهين:
  *    مفتاحٌ يُقرأ ولا يوجد **يترك قيمةً لا تُحدَّث**، وموضعٌ في الصفحة لا يقرؤه
  *    أحدٌ **يبقى مخبوزاً إلى الأبد**. **وهو «بابٌ بلا زرّ» بوجهيه.**
- * ٥. **أتُقرأ القوائمُ الخمسُ بلا JavaScript؟** — بُنيت في HTML وقتَ البناء،
+ * ٥. **أتُقرأ قوائمُ الأقسام بلا JavaScript؟** — بُنيت في HTML وقتَ البناء،
  *    **وحارسٌ يمنع أن تعود إلى الرسم في المتصفّح**.
+ *
+ * **والرئيسةُ بهويّة TAXO 2.0** (§٦٩، ٢٠٢٦-١٠-٠٩): ورقتُها تُحرس كورقة صفحة التحميل
+ * في ١٠، **و١٣ يمنع نسبةَ العمولة في الموقع وفي بابه العامّ** (§٦٩-ب).
  *
  * **وصفحةُ التحميل `/download`** (SPEC §٦٨-ج/٦، أُضيفت ٢٠٢٦-١٠-٠٩) تُحرس بالطريقة
  * نفسِها وأبعد — من ٦ إلى ١٢ أدناه: خاناتُها في الاتجاهين، ورابطُها المخبوزُ هو
@@ -35,11 +38,13 @@ const js = readFileSync(join(SITE, "src", "site.js"), "utf8");
 const dlHtml = readFileSync(join(SITE, "download.html"), "utf8");
 const dlJs = readFileSync(join(SITE, "src", "download.js"), "utf8");
 const dlCss = readFileSync(join(SITE, "src", "download.css"), "utf8");
-//: **ما يحكم عليه الحارسُ لكلِّ صفحة** — الملفّاتُ الثلاثةُ المقروءةُ أعلاه
+//: **ورقةُ الرئيسة بهويّة TAXO 2.0** (§٦٩، ٢٠٢٦-١٠-٠٩) — تُحرس كورقة صفحة التحميل في ١٠
+const siteCss = readFileSync(join(SITE, "src", "site.css"), "utf8");
+//: **ما يحكم عليه الحارسُ لكلِّ صفحة** — الملفّاتُ المقروءةُ أعلاه
 //: نفسُها، **ويُطابَق بوسوم الصفحة في ١٢**: حارسٌ يقرأ ملفّاً كفّت صفحتُه عن
 //: تحميله **يشهد لما لا يُخدَم**.
 const OWN = {
-  "index.html": { scripts: ["site.js"], sheets: [] },
+  "index.html": { scripts: ["site.js"], sheets: ["site.css"] },
   "download.html": { scripts: ["download.js"], sheets: ["download.css"] },
 };
 //: **كلُّ صفحةٍ في الجذر** — لا قائمةٌ تُكتب هنا فتنسى صفحةً تُضاف غداً
@@ -110,8 +115,16 @@ for (const file of PAGES) {
 // جملةً. فتُنزع الوسومُ ثم يُقرأ ما يراه الإنسان.
 // **وصفحةُ التحميل معها** — صفحةٌ عامّةٌ ثانيةٌ بالشرطين نفسَيهما.
 const text = html.replace(/<[^>]*>/g, " ") + " " + visible(dlHtml);
+// **والبلدُ كلمةً لا حروفاً** (قِيس ٢٠٢٦-١٠-٠٩): «يعلنها كبتنٌ **مصرَّح**» في بطاقة «بين المدن» اتُّهمت بـ«مصر» — `includes`
+// يجد الحروفَ الثلاثةَ في أوّل الكلمة، **وحارسٌ يصيح على السليم يُطفأ فيسقط معه ما يمسكه حقّاً**. فالاسمُ لا يليه حرفٌ عربيٌّ
+// (بعد التشكيل)، **ويسبقه ما يُسبق به في الجملة** — حرفُ عطفٍ أو جرٍّ أو «ال» — فـ«في الأردن **و**ليبيا» تُمسك كما أُمسكت.
+const AR = "\\u0621-\\u064A";
+const MARKS = "\\u064B-\\u0652\\u0670";
 for (const country of ["ليبيا", "طرابلس", "بنغازي", "Libya", "سوريا", "مصر", "السعودية"]) {
-  if (text.includes(country)) bad.push(`بلدٌ غير الأردن في نصِّ الصفحة: «${country}»`);
+  const word = /^[A-Za-z]/.test(country)
+    ? new RegExp(`\\b${country}\\b`, "i")
+    : new RegExp(`(?:^|[^${AR}${MARKS}])(?:[وفبلك]?(?:ال)?)${country}(?![${MARKS}]*[${AR}])`);
+  if (word.test(text)) bad.push(`بلدٌ غير الأردن في نصِّ الصفحة: «${country}»`);
 }
 
 /* ٣ — أرقامُ أسعار */
@@ -144,13 +157,18 @@ const missing = [...readKeys].filter(
 );
 if (missing.length) bad.push(`مفاتيحُ يقرؤها site.js ولا موضعَ لها: ${missing.join(" · ")}`);
 
-/* ٥ — القوائمُ الخمسُ مبنيّةٌ في HTML */
+/* ٥ — قوائمُ الأقسام مبنيّةٌ في HTML
+ *
+ * **بُدّلت مع الموقع الجديد** (§٦٩، ٢٠٢٦-١٠-٠٩): القوائمُ الخمسُ السابقةُ كانت تبحث عن «عمولة 0% بالاشتراك» و«هل التطبيق
+ * مجاني للراكب؟» — **والأولى نسبةُ عمولةٍ رقماً**، وما عادت في الصفحة ولا يجوز أن تعود. فالسؤالُ هو هو بقوائم اللوحات W03–W08:
+ * **أكلُّ قائمةٍ في HTML وقتَ البناء، لا يرسمها المتصفّح؟** */
 const lists = {
-  "بطاقات الراكب": /طلب رحلة على الخريطة/,
-  "بطاقات الكبتن": /عمولة 0% بالاشتراك|اشتراك يومي/,
-  "الأمان": /مراجعة المستندات قبل الاعتماد/,
-  "قريباً": /توصيل الطلبات والطرود/,
-  "الأسئلة": /هل التطبيق مجاني للراكب؟/,
+  "خطوات الراكب (W03)": /ثلاثُ خطواتٍ إلى وجهتك[\s\S]*ادفع كما تشاء/,
+  "لماذا تقود (W04)": /ساعاتُك بيدك[\s\S]*باقتُك باختيارك/,
+  "الخدمة النسائية (W05)": /كبتناتٌ لراكبات[\s\S]*رمزُ الرحلة/,
+  "الأمان (W06)": /مشاركةُ الرحلة[\s\S]*كبتنٌ موثَّق/,
+  "الخدمات الجديدة (W07)": /data-feature="airport_enabled"[\s\S]*data-feature="ride_for_other_enabled"/,
+  "التحميل (W08)": /data-dl-card="rider"[\s\S]*data-dl-card="driver"/,
 };
 for (const [name, re] of Object.entries(lists)) {
   if (!re.test(html)) bad.push(`قائمةٌ ليست في HTML (تسقط بلا JavaScript): ${name}`);
@@ -300,38 +318,75 @@ const apkTool = readFileSync(join(ROOT, "tools", "apk-manifest.mjs"), "utf8");
     bad.push("تعذّر قراءةُ رموز العائلة من customer-app/src/taxo2/tokens.css — **لا يُقاس بالظنّ**");
   }
 
-  const css = stripCss(dlCss);
+  // **والرئيسةُ معها منذ صارت من العائلة** (§٦٩، ٢٠٢٦-١٠-٠٩) — ورقتان تنقلان الرموزَ نفسَها **تبليان معاً أو تُحرسان معاً**.
+  // و`--site-*` رموزُ الموقع وحدَه (ما لا يملكه التطبيقان): تُعرَّف في الكتلتين نفسَيهما، **فلونُها داخل الرموز لا خارجها**،
+  // ولا تُطابَق بالعائلة لأنها ليست منها — **ويُطابَق ما يُستعمل منها بما عُرِّف**.
   const LIGHT = /(?:^|\n):root\s*\{([^}]*)\}/;
   const DARK = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root\s*\{([^}]*)\}\s*\}/;
-  const light = tokens(LIGHT.exec(css)?.[1]);
-  const dark = tokens(DARK.exec(css)?.[1]);
-  if (light.size === 0) bad.push("download.css بلا رموزٍ في `:root` — **لا يُقاس بالظنّ**");
-  if (dark.size === 0) bad.push("download.css بلا مظهرٍ داكن (`prefers-color-scheme: dark`)");
+  for (const [file, src] of [["download.css", dlCss], ["site.css", siteCss]]) {
+    const css = stripCss(src);
+    const light = tokens(LIGHT.exec(css)?.[1]);
+    const dark = tokens(DARK.exec(css)?.[1]);
+    if (light.size === 0) bad.push(`${file} بلا رموزٍ في \`:root\` — **لا يُقاس بالظنّ**`);
+    if (dark.size === 0) bad.push(`${file} بلا مظهرٍ داكن (\`prefers-color-scheme: dark\`)`);
 
-  if (famLight.size && famDark.size) {
-    for (const [k, v] of light) {
-      if (!famLight.has(k)) bad.push(`download.css: --${k} ليس رمزاً في العائلة`);
-      else if (norm(v) !== norm(famLight.get(k))) bad.push(`download.css: --${k} = ${v.trim()} — وفي العائلة ${famLight.get(k).trim()}`);
+    if (famLight.size && famDark.size) {
+      for (const [k, v] of light) {
+        if (!famLight.has(k)) bad.push(`${file}: --${k} ليس رمزاً في العائلة`);
+        else if (norm(v) !== norm(famLight.get(k))) bad.push(`${file}: --${k} = ${v.trim()} — وفي العائلة ${famLight.get(k).trim()}`);
+      }
+      for (const [k, v] of dark) {
+        if (!famDark.has(k)) bad.push(`${file}: --${k} داكنٌ لم ترسمه العائلة — قيمةٌ مخترعة`);
+        else if (norm(v) !== norm(famDark.get(k))) bad.push(`${file}: --${k} داكناً = ${v.trim()} — وفي العائلة ${famDark.get(k).trim()}`);
+      }
+      for (const k of light.keys()) {
+        if (famDark.has(k) && !dark.has(k)) bad.push(`${file}: --${k} تعيده العائلةُ في الداكن ولا يُعاد هنا — **يُرسم فاتحاً على الإسفلت**`);
+      }
     }
-    for (const [k, v] of dark) {
-      if (!famDark.has(k)) bad.push(`download.css: --${k} داكنٌ لم ترسمه العائلة — قيمةٌ مخترعة`);
-      else if (norm(v) !== norm(famDark.get(k))) bad.push(`download.css: --${k} داكناً = ${v.trim()} — وفي العائلة ${famDark.get(k).trim()}`);
-    }
-    for (const k of light.keys()) {
-      if (famDark.has(k) && !dark.has(k)) bad.push(`download.css: --${k} تعيده العائلةُ في الداكن ولا يُعاد هنا — **يُرسم فاتحاً على الإسفلت**`);
-    }
+
+    const used = new Set([...css.matchAll(/var\(--(t2-[a-z0-9-]+)/g)].map((m) => m[1]));
+    const undefinedTokens = [...used].filter((k) => !light.has(k));
+    if (undefinedTokens.length) bad.push(`${file} يستعمل رموزاً لم تُعرَّف: ${undefinedTokens.map((k) => `--${k}`).join(" · ")}`);
+    const siteDefined = new Set([
+      ...[...(LIGHT.exec(css)?.[1] ?? "").matchAll(/--(site-[a-z0-9-]+)\s*:/g)].map((m) => m[1]),
+    ]);
+    const siteUsed = new Set([...css.matchAll(/var\(--(site-[a-z0-9-]+)/g)].map((m) => m[1]));
+    const siteMissing = [...siteUsed].filter((k) => !siteDefined.has(k));
+    if (siteMissing.length) bad.push(`${file} يستعمل رموزَ موقعٍ لم تُعرَّف: ${siteMissing.map((k) => `--${k}`).join(" · ")}`);
+    const outside = css.replace(DARK, "").replace(LIGHT, "");
+    const raw = outside.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
+    if (raw.length) bad.push(`${file}: لونٌ خارج الرموز: ${[...new Set(raw)].join(" · ")}`);
+    // **والدالّةُ بحرفها لا باسم الخاصّية**: `color-mix(in srgb, var(--t2-…) …)`
+    // لونٌ من رمز، و`srgb` فيه ليس `rgb(` — فالاسمُ يُقرأ بلا حرفٍ قبله وقوسُه بعده.
+    const fnColors = outside.match(/(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([^)]*\)/gi) ?? [];
+    if (fnColors.length) bad.push(`${file}: لونٌ بدالّةٍ خارج الرموز: ${[...new Set(fnColors)].join(" · ")}`);
   }
+}
 
-  const used = new Set([...css.matchAll(/var\(--(t2-[a-z0-9-]+)/g)].map((m) => m[1]));
-  const undefinedTokens = [...used].filter((k) => !light.has(k));
-  if (undefinedTokens.length) bad.push(`download.css يستعمل رموزاً لم تُعرَّف: ${undefinedTokens.map((k) => `--${k}`).join(" · ")}`);
-  const outside = css.replace(DARK, "").replace(LIGHT, "");
-  const raw = outside.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
-  if (raw.length) bad.push(`download.css: لونٌ خارج الرموز: ${[...new Set(raw)].join(" · ")}`);
-  // **والدالّةُ بحرفها لا باسم الخاصّية**: `color-mix(in srgb, var(--t2-…) …)`
-  // لونٌ من رمز، و`srgb` فيه ليس `rgb(` — فالاسمُ يُقرأ بلا حرفٍ قبله وقوسُه بعده.
-  const fnColors = outside.match(/(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([^)]*\)/gi) ?? [];
-  if (fnColors.length) bad.push(`download.css: لونٌ بدالّةٍ خارج الرموز: ${[...new Set(fnColors)].join(" · ")}`);
+/* ١٣ — لا نسبةَ عمولةٍ في الموقع ولا في بابه (SPEC §٦٩-ب، ٢٠٢٦-١٠-٠٩)
+ *
+ * **«لا نسبةَ عمولةٍ رقماً في أيِّ موضع»** — والنزعُ من الباب لا من الرسم وحدَه (قاعدةُ §٥٢٫٣ في النزع): صفحةٌ لا ترسم رقماً
+ * يصلها **تبقى تحمله في حمولتها** ويقرؤه من يفتح أدوات المطوّر. **وكانت الصفحةُ تكتبه في ثلاثة مواضعَ وتعدّ إليه عدّاداً.**
+ * فيُقاس في الطرفين:
+ *   · **السكربتان لا يقرآن نسبةً ولا ما يُشتقّ منها** (`commission` · `driver_keeps`)، والصفحتان لا تحملان خانةً لها؛
+ *   · **ولا رقمَ ملتصقٌ بعلامة نسبةٍ في نصٍّ مرئيٍّ** — ولا نسبةَ أصلاً في صفحتين لا تتحدّثان عن أرقام؛
+ *   · **والبابُ لا يُخرجها**: لا اسمَ لها في `PUBLIC_FIELDS` ولا `payload["…"]` يكتبها في `services/site.py`. */
+{
+  for (const [file, src] of [["site.js", code(js)], ["download.js", dlCode]]) {
+    const hit = src.match(/commission|driver_keeps/);
+    if (hit) bad.push(`${file} يذكر «${hit[0]}» — **ولا نسبةَ عمولةٍ في الموقع** (§٦٩-ب)`);
+  }
+  for (const [file, src] of [["index.html", html], ["download.html", dlHtml]]) {
+    const attr = src.match(/data-[a-z-]+="[^"]*(?:commission|driver_keeps)[^"]*"/);
+    if (attr) bad.push(`${file} يحمل خانةً للعمولة: ${attr[0]} — §٦٩-ب`);
+    const pct = visible(src).match(/\d[\d.,]*\s*[%٪]|[%٪]\s*\d/);
+    if (pct) bad.push(`${file}: نسبةٌ رقماً في نصٍّ مرئيّ «${pct[0]}» — §٦٩-ب`);
+  }
+  const sitePy = readFileSync(join(ROOT, "backend", "app", "services", "site.py"), "utf8");
+  const fields = /^PUBLIC_FIELDS\b[^=\n]*=\s*\(([\s\S]*?)^\)/m.exec(sitePy)?.[1] ?? "";
+  if (/commission|driver_keeps/.test(fields)) bad.push("PUBLIC_FIELDS في services/site.py يسمّي العمولة — **البابُ العامُّ لا يُخرجها** (§٦٩-ب)");
+  const writes = [...sitePy.matchAll(/payload\["([a-z0-9_]+)"\]\s*=/g)].map((m) => m[1]).filter((k) => /commission|keeps/.test(k));
+  if (writes.length) bad.push(`services/site.py يكتب في الحمولة العامّة: ${writes.join(" · ")} — **البابُ العامُّ لا يُخرج نسبةَ العمولة** (§٦٩-ب)`);
 }
 
 /* ١١ — الخطوطُ والأرقام
@@ -442,7 +497,8 @@ if (bad.length) {
 const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
 console.log(
   `✓ check:site · ${PAGES.length} صفحةً بلا قالبٍ ولا وسمِ مُشغِّل وكلُّها في البناء · الأردنُ وحدَه · لا رمزَ عملة · ` +
-    `${pageKeys.size} مفتاحاً موصولاً · والقوائمُ الخمسُ في HTML · ` +
-    `/download: خاناتُها وروابطُها وأبوابُها ورموزُها مطابقة · ${FONTS.length} خطوطٍ لها مصدر · ` +
+    `${pageKeys.size} مفتاحاً موصولاً · وقوائمُ الأقسام الستّ في HTML · ` +
+    `/download: خاناتُها وروابطُها وأبوابُها مطابقة · رموزُ الورقتين رموزُ العائلة · لا نسبةَ عمولةٍ في الموقع ولا في بابه · ` +
+    `${FONTS.length} خطوطٍ لها مصدر · ` +
     `وسومُ ${Object.keys(OWN).length} صفحاتٍ تحمّل ما يُحكم عليه · ${stamp}Z`,
 );

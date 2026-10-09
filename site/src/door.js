@@ -25,24 +25,35 @@ export async function readDoor() {
   return null;
 }
 
+/** **رابطُ متجرٍ يبدأ بـ`https://play.google.com/`** — والمخطَّطُ يفحصه عند الكتابة (§٥٢٫٥)، **وهذا يفحصه عند الرسم**:
+ * زرٌّ يقول «Google Play» ويفتح غيرَه يكذب على من ضغطه، **ولو وصل الرابطُ من بابٍ لم يمرّ بالمخطَّط**. */
+export function isStoreUrl(url) {
+  return typeof url === "string" && /^https:\/\/play\.google\.com\//.test(url);
+}
+
 /** شارةُ Google Play الرسمية — **من ملفّ Google كما هو**.
  *
  * **ولا زرَّ مرسومٌ يحاكيها** (شرطُ المالك): الشارةُ ملفٌّ رسميٌّ بمساحته
  * الآمنة، **ورسمُ بديلٍ يشبهها مخالفةُ علامةٍ تجارية**.
+ *
+ * **والارتفاعُ من نسبة الملفّ لا مكتوبٌ بيد** (٦٤٦×٢٥٠): كان `180×53` فيُحجز
+ * للشارة مكانٌ أقصرُ من رسمها ثمّ تقفز الصفحةُ حين تُحمَّل. والعرضُ وسيطٌ: ١٨٠
+ * في صفحة التحميل، و٢٠٠ مكانَ الزرّ في وضع `play` على الرئيسية (W08).
  */
-export function playBadge(href, label) {
+export function playBadge(href, label, width = 180) {
   const a = document.createElement("a");
   a.href = href;
   a.rel = "noopener";
+  a.className = "play-badge";
   a.setAttribute("aria-label", label);
   a.style.cssText = "display:inline-block;margin-top:auto;min-height:44px";
   const img = document.createElement("img");
   img.src = "/assets/google-play-badge.png";
   img.alt = label;
-  img.width = 180;
-  img.height = 53;
+  img.width = width;
+  img.height = Math.round((width * 250) / 646);
   img.loading = "lazy";
-  img.style.cssText = "display:block;width:180px;height:auto";
+  img.style.cssText = `display:block;width:${width}px;height:auto`;
   a.appendChild(img);
   return a;
 }

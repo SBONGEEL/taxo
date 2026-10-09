@@ -1,463 +1,416 @@
-/** منطقُ صفحة `taxo.tajora.ly` — **الحركةُ منقولةٌ من التصميم، والبياناتُ موصولة**.
+/** منطقُ صفحة `taxo.tajora.ly` — **بهويّة TAXO 2.0، مطابقاً للوحات W01–W09** (SPEC §٦٩).
  *
- * ## والصفحةُ تُقرأ كاملةً بلا JavaScript
+ * ## والصفحةُ تُقرأ كاملةً بلا JavaScript (§٥٢٫٧)
  *
- * **القوائمُ الخمسُ مبنيّةٌ في HTML وقتَ البناء** لا وقتَ التشغيل — فهذا الملفُّ
- * يضيف الحركةَ ويحدّث القيم، **ولا يرسم قسماً**. ومن أطفأ JavaScript يقرأ
- * الصفحةَ كلَّها بقيمها المخبوزة.
+ * **كلُّ قسمٍ مبنيٌّ في HTML وقتَ البناء** — فهذا الملفُّ يضيف الحركةَ ويحدّث القيم، **ولا يرسم قسماً**. ومن أطفأ JavaScript يقرأ
+ * الصفحةَ كلَّها بقيمها المخبوزة؛ والطريقُ وحدَه لا يُرسم له، **وهو زينةٌ لا محتوى**.
  *
  * ## وما يُحدَّث من الباب العام
  *
- * `GET /public/site` يعطي النصوصَ والروابطَ والمفاتيح. **والقيمُ المخبوزةُ
- * احتياطٌ لا مصدر**: لا يجيب البابُ ⇒ تبقى المخبوزة، **ولا وميضَ ولا فراغ**.
- * وهي قاعدةُ `app.js` القائمة بحرفها: «الفشلُ صامتٌ… وما لا يصل لا يُرسم».
+ * `GET /api/site` يعطي النصوصَ والروابطَ والمفاتيح، و`/api/landing` اسمَ العرض. **والقيمُ المخبوزةُ احتياطٌ لا مصدر**: لا يجيب
+ * البابُ ⇒ تبقى المخبوزة، **ولا وميضَ ولا فراغ**. «الفشلُ صامتٌ… وما لا يصل لا يُرسم».
  *
- * ## ولا مفتاحَ ثانٍ لمفهومٍ قائم
+ * ## ولا نسبةَ عمولةٍ هنا ولا في الباب (§٦٩-ب)
  *
- * **مصدرُ قسم التحميل هو المبنيُّ سلفاً**: `distribution_mode` من الإعدادات
- * (وكان `source` في `landing/config.js`، **نُقل ولم يُخترع ثانياً**). **وبيانُ
- * الحزم تقرؤه صفحةُ التحميل وحدَها** (`download.js`) — والقسمُ هنا يقود إليها.
+ * **كان هذا الملفُّ يكتب النسبةَ في ثلاثة مواضعَ ويعدّ إليها عدّاداً** — والنسبةُ نُزعت من الباب نفسِه لا من الرسم وحدَه، فلا
+ * يقرؤها شيءٌ هنا ولا يجدها لو قرأ. و`check:site` يمنع عودتَها بالاسم.
  */
 
-import { playBadge, readDoor, trademark } from "./door.js";
+import { isStoreUrl, playBadge, readDoor, trademark } from "./door.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const desktopMq = window.matchMedia("(min-width: 1024px)");
 
-/* ═══════════════════ الشاشةُ الأولى — تُتخطّى بأيِّ لمسة ═══════════════ */
-
-(function splash() {
-  const el = $('[data-screen-label="splash"]');
-  if (!el) return;
-  let gone = false;
-  const skip = () => {
-    if (gone) return;
-    gone = true;
-    el.style.opacity = "0";
-    setTimeout(() => el.remove(), 320);
-  };
-  ["pointerdown", "keydown"].forEach((e) => window.addEventListener(e, skip, { once: true }));
-  window.addEventListener("wheel", skip, { passive: true, once: true });
-  window.addEventListener("touchstart", skip, { passive: true, once: true });
-  setTimeout(skip, reduced ? 0 : 750);
-})();
-
-/* ═══════════════════ التحويم — أصنافٌ مولَّدةٌ وقتَ البناء ═══════════════ */
-//
-// **التصميمُ يكتب `style-hover` على العنصر**، وهي خاصّيةُ مُشغِّلِ DC لا CSS.
-// فحُوِّلت إلى قواعدَ حقيقيةٍ في الورقة، **ويحملها العنصرُ في `data-hov`**.
-
-/* ═══════════════════ ما يُقرأ من الأبواب ═══════════════════════════════ */
-//
-// **`readDoor` في `door.js`** — تقرؤه صفحةُ التحميل أيضاً، فنسخةٌ واحدة.
+/* ═══════════════════ القيمُ من الباب ═══════════════════════════════════ */
 
 function setText(sel, value) {
   if (value === undefined || value === null || value === "") return;
-  const el = $(sel);
-  if (el && el.textContent.trim() !== String(value)) el.textContent = value;
+  for (const el of $$(sel)) {
+    if (el.textContent.trim() !== String(value)) el.textContent = value;
+  }
 }
 
-/** يخفي ما أعلنته اللوحةُ مخفيّاً — **ولا يرسم مكاناً محجوزاً**. */
+/** يخفي ما أعلنته اللوحةُ مخفيّاً — **ولا يرسم مكاناً محجوزاً** (والطريقُ يُعاد بناؤه بلا محطّته). */
 function applyHidden(list, attr) {
   (list || []).forEach((key) => {
     $$(`[${attr}="${key}"]`).forEach((el) => el.remove());
   });
 }
 
-/** يبدّل بطاقةً إلى «قريباً» — **مطفأٌ يُرسم بشارة، ومخفيٌّ لا يُرسم**. */
-function markSoon(el) {
-  if (!el || el.dataset.soon === "1") return;
-  el.dataset.soon = "1";
-  el.style.background = "#faf9f6";
-  el.style.borderStyle = "dashed";
-  const h = el.querySelector("h3");
-  if (h && !h.querySelector("[data-soon-badge]")) {
+/** يبدّل بطاقةً إلى «قريباً» — **مطفأٌ يُرسم بشارة، ومخفيٌّ لا يُرسم** (§٥٢٫٤). يُقرأ ولا يُنقر. */
+function markSoon(card) {
+  if (!card || card.classList.contains("is-soon")) return;
+  card.classList.add("is-soon");
+  card.setAttribute("aria-disabled", "true");
+  const h = $("h3", card);
+  if (h && !$(".badge-soon", h)) {
     const badge = document.createElement("span");
-    badge.dataset.soonBadge = "1";
+    badge.className = "badge-soon";
     badge.textContent = "قريباً";
-    badge.style.cssText =
-      "margin-inline-start:8px;font-size:11px;font-weight:700;color:#9a6b00;" +
-      "background:#ffffff;border:1px solid #ddd8cf;border-radius:8px;padding:2px 8px";
     h.appendChild(badge);
   }
 }
 
-/* ═══════════════════ قسمُ التحميل — يقود إلى `/download` ════════════════ */
+/* ═══════════════════ قسمُ التحميل (W08) — يقود إلى `/download` ═══════════ */
 //
-// **بابٌ واحدٌ للحزمتين** (SPEC §٦٨-ج/٦): البيانُ والإصدارُ والبصمةُ في صفحة
-// التحميل وحدَها، **والقسمُ هنا يقود إليها كما خُبز** — فلا نسختان من البصمة
-// تفترقان. **وكانت هنا نسخةٌ ثانية** تقرأ البيانَ وتعرض ثمانيةَ أحرفٍ منه،
-// **وتُبقي `{version}` حرفيّاً لمن لم يصله البيان** (مقيسٌ ٢٠٢٦-١٠-٠٩).
+// **بابٌ واحدٌ للحزمتين** (SPEC §٦٨-ج/٦): البيانُ والإصدارُ والبصمةُ في صفحة التحميل وحدَها، **والزرّان هنا يقودان إليها كما
+// خُبزا** — رابطٌ يعمل بلا JavaScript. **وشارةُ المتجر الرسمية تحت الزرّ** برابطٍ من اللوحة؛ فارغُه يُسقط الشارة.
 //
-// **ووضعُ `play` كما كان بحرفه**: الشارةُ الرسميةُ مكانَ الزرّ، وما يخصّ
-// الحزمةَ يذهب، وسطرُ العلامة التجارية يظهر — **ويذكر الشعارَ إن رُسمت شارة**.
+// **ووضعُ `play`** (§٥٢٫٥): الشارةُ الرسميةُ **مكانَ الزرّ** (٢٠٠)، وما يخصّ الحزمةَ يذهب، **ولا زرَّ بلا رابطٍ أبداً** — الفارغُ
+// شارةٌ معطَّلةٌ بنصِّها. **وسطرُ العلامة التجارية يتبع ما رُسم**: بالشعار حين تُرسم شارةٌ رسمية، وباسمه وحدَه حين تبقى
+// المعطَّلةُ وحدَها، ولا سطرَ حين لا يُذكر المتجرُ أصلاً.
 
-function disabledBadge(text) {
+function offBadge() {
   const span = document.createElement("span");
+  span.className = "badge-off";
   span.setAttribute("aria-disabled", "true");
-  span.textContent = text;
-  span.style.cssText =
-    "display:inline-flex;align-items:center;justify-content:center;min-height:52px;" +
-    "margin-top:auto;padding:0 20px;border-radius:14px;background:#0d1014;color:#8b949e;" +
-    "border:1px dashed #2a313a;font-size:15px;font-weight:500;cursor:not-allowed";
+  span.textContent = "قريباً على Google Play";
   return span;
 }
 
 function download(site) {
-  const isPlay = site?.distribution_mode === "play";
-
-  // **وضعُ الحزمة لا يُمسّ هنا**: الزرّان يقودان إلى `/download#rider`
-  // و`/download#driver` كما خُبزا — **رابطٌ يعمل بلا JavaScript**.
-  if (isPlay) {
-    // **ما يخصّ الحزمةَ يذهب مع المتجر** — ومعه الإشارةُ إلى صفحة التحميل.
-    $$("[data-apk-only]").forEach((el) => el.remove());
-
-    let logo = false;
-    for (const card of $$("[data-dl-card]")) {
-      const key = card.dataset.dlCard; // rider | driver
-      const cta = card.querySelector("[data-dl-cta]");
-      if (!cta) continue;
-      const url = key === "rider" ? site?.play_url_rider : site?.play_url_driver;
-      const label = key === "rider" ? "تطبيق الراكب على Google Play" : "تطبيق الكبتن على Google Play";
-      // **لا زرَّ بلا رابطٍ أبداً** — الفارغُ شارةٌ معطَّلةٌ بنصِّها.
-      cta.replaceWith(url ? playBadge(url, label) : disabledBadge("قريباً على Google Play"));
-      if (url) logo = true;
+  const isPlay = site.distribution_mode === "play";
+  const urls = { rider: site.play_url_rider, driver: site.play_url_driver };
+  const labels = { rider: "تطبيق الراكب على Google Play", driver: "تطبيق الكبتن على Google Play" };
+  let badges = 0;
+  for (const card of $$("[data-dl-card]")) {
+    const key = card.dataset.dlCard; // rider | driver
+    const url = isStoreUrl(urls[key]) ? urls[key] : "";
+    const badge = $("[data-play-badge]", card);
+    if (isPlay) {
+      badge?.remove();
+      $("[data-dl-cta]", card)?.replaceWith(url ? playBadge(url, labels[key], 200) : offBadge());
+    } else if (badge) {
+      if (url) badge.href = url;
+      else badge.remove();
     }
-    // **«والشعار» حين تُرسم شارةٌ رسميةٌ وحدَها** — الشارةُ المعطَّلةُ نصٌّ بلا شعار
-    trademark($("[data-trademark]"), logo);
+    if (url) badges += 1;
   }
+  if (isPlay) $$("[data-apk-only]").forEach((el) => el.remove());
 
-  // **iOS: شارةٌ معطَّلةٌ حتى يُملأ الرابط** — ولا زرَّ يفتح لا شيء.
-  const ios = $("[data-ios-cta]");
-  if (ios && site?.ios_url) {
-    const a = document.createElement("a");
-    a.href = site.ios_url;
-    a.rel = "noopener";
-    a.textContent = "نزّل من App Store";
-    a.style.cssText = "display:inline-flex;align-items:center;min-height:44px;color:#e6edf3";
-    ios.replaceWith(a);
-  }
+  const line = $("[data-trademark]");
+  if (badges) trademark(line, true);
+  else if (isPlay) trademark(line, false);
+  else if (line) line.hidden = true;
 }
 
 /* ═══════════════════ سطرُ العرض — بلا رقم ═════════════════════════════ */
 //
-// **قرارُ المالك ٢٠٢٦-٠٩-٠٥**: «اعرضه بلا رقم — الشهر الأول مجاناً فقط».
-// والبابُ نفسُه لم يعد يُخرج سعراً، **فالمنعُ في الطرفين لا في الرسم وحدَه**.
+// **اسمُ العرض كما كتبه المشرف** («أول أسبوع مجاناً»)، **ولا سطرَ بلا عرض**: عرضٌ أُطفئ أو نفد يختفي سطرُه من نفسه. والبابُ لا
+// يُخرج سعراً أصلاً (§٥٢٫٣).
 
 async function offer() {
-  const slot = $("[data-offer]");
-  if (!slot) return;
+  const slots = $$("[data-offer]");
+  if (!slots.length) return;
   try {
     const res = await fetch("/api/landing?country_code=JO", { cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
-    if (!data?.offer) return; // **لا سطر** — وهو المطلوب
-    slot.textContent = data.offer.name;
-    slot.removeAttribute("hidden");
+    const name = typeof data?.offer?.name === "string" ? data.offer.name.trim() : "";
+    if (!name) return; // **لا سطر** — وهو المطلوب
+    for (const slot of slots) {
+      const text = $("[data-offer-text]", slot);
+      if (text) text.textContent = name;
+      slot.removeAttribute("hidden");
+    }
+    route?.build();
   } catch { /* صامت */ }
 }
 
-/* ═══════════════════ الحركة — منقولةٌ من التصميم ═══════════════════════ */
+/* ═══════════════════ الكشفُ عند الظهور ═════════════════════════════════ */
+//
+// **450ms بارتفاع ١٦، وبين الإخوة ٧٠** (حتى ثمانية). والإخفاءُ قبله بصنف `js` في الرأس — **فلا شيءَ يختفي قبل أن يعمل هذا**،
+// والرأسُ يرفع الصنفَ وحدَه إن لم يقلع هذا خلال ثانيتين ونصف.
 
-class Motion {
-  constructor() {
-    this.root = $("#taxo-root");
-    this.svg = $("#taxo-route");
-    this.track = $("#taxo-track");
-    this.drawn = $("#taxo-drawn");
-    this.car = $("#taxo-car");
-    this.body = $("#taxo-car-body");
-    this.progress = $("#taxo-progress");
-    this.women = $("#taxo-women");
-    this.womenBadge = $("#taxo-women-badge");
-    this.womenPhone = $("#taxo-women-phone");
-    this.womenDots = $$("#taxo-women-list span");
-    this.ctaBar = $("#taxo-cta-bar");
-    this.download = $("#download");
-    this.phones = $$("[data-phone]");
-    this.story = $("#taxo-story");
-    this.storyFill = $("#taxo-story-fill");
-    this.storyCar = $("#taxo-story-car");
-    this.storyLine = $("#taxo-story-line");
-    if (!this.root) return;
+function reveal() {
+  const items = $$("[data-reveal]");
+  if (reduced || !("IntersectionObserver" in window)) {
+    items.forEach((el) => el.classList.add("is-in"));
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        const el = en.target;
+        io.unobserve(el);
+        const sibs = [...(el.parentElement?.children ?? [])].filter((n) => n.hasAttribute("data-reveal"));
+        el.style.transitionDelay = `${Math.min(Math.max(0, sibs.indexOf(el)), 8) * 70}ms`;
+        el.classList.add("is-in");
+      }
+    },
+    { rootMargin: "0px 0px -12% 0px", threshold: 0.15 },
+  );
+  items.forEach((el) => io.observe(el));
+}
+
+/* ═══════════════════ W02 — الطريقُ والسيارة ═════════════════════════════ */
+//
+// **الهندسةُ من مواضع الأقسام وقتَ التشغيل** (مواصفة المصمّم §٦)، وتُعاد مع كلِّ تغيّرٍ في الحجم — فقسمٌ أخفته اللوحةُ يأخذ
+// محطّتَه معه، **ولا فراغَ محجوزٌ في الطريق**.
+//
+//   · **الهاتف**: حارةٌ واحدةٌ على بُعد ١٤ من الحافّة اليمنى، ودبوسٌ عند عين كلِّ قسم، ثمّ منعطفٌ إلى الوسط فوق «حمّل TAXO».
+//   · **الحاسوب**: حارتان في الهامشين — يمينٌ ثمّ يسارٌ بالتناوب — **والعبورُ منحنى S داخل حشوة الـ٢٤٠ بين قسمين**، فلا يقطع
+//     محتوى. والأخيرُ إلى الوسط.
+//   · **السيارة**: عند `scrollY + 0.58 × ارتفاع الشاشة`، **وتبدأ واقفةً تحت دائرة الانطلاق** ثمّ تلحق الموضعَ خلال أوّل تمرير؛
+//     مقدّمتُها مع اتّجاه السير، والمقطوعُ يُرسم خلفها، والدبابيسُ تضيء حين تتجاوزها.
+//   · **في مدى الخدمة النسائية** يصير المرسومُ والسيارةُ والدبابيسُ برقوقاً (تدرّجٌ بحدّين قاطعين).
+//   · **الوصول** مرّةً لكلِّ زيارة: نبضتان، ثمّ يتكوّن الـX مكانَ مربّع الوجهة.
+//   · **«تقليل الحركة»**: الطريقُ مرسومٌ كاملاً، والدبابيسُ مضاءة، والسيارةُ واقفةٌ فوق الوجهة، والـX متكوّن — **ولا شيءَ يتحرّك**.
+
+const SVG = "http://www.w3.org/2000/svg";
+
+class Route {
+  constructor(root) {
+    this.root = root;
+    this.svg = $("#taxo-route", root);
+    this.track = $("#taxo-track", root);
+    this.drawn = $("#taxo-drawn", root);
+    this.pins = $("#taxo-pins", root);
+    this.start = $("#taxo-start", root);
+    this.end = $("#taxo-end", root);
+    this.car = $("#taxo-car", root);
+    this.carScale = $(".car-scale", this.car);
+    this.grad = $("#taxo-grad", root);
+    this.arrived = false;
+    if (!this.svg || !this.drawn) return;
 
     this.build();
-    this.ro = new ResizeObserver(() => this.build());
-    this.ro.observe(this.root);
-    this._onScroll = () => {
-      if (!this._raf) this._raf = requestAnimationFrame(() => { this._raf = 0; this.update(); });
-    };
-    window.addEventListener("scroll", this._onScroll, { passive: true });
-    // **إعادتان بعد استقرار الخطوط والصور** — من التصميم، وتبقيان.
-    setTimeout(() => this.build(), 900);
-    setTimeout(() => this.build(), 2200);
-
-    if (!reduced) { this.setupReveal(); this.setupTilt(); }
-    this.setupStory();
-    this.setupAccordions();
-    this.startSlides();
+    this.ro = new ResizeObserver(() => this.schedule());
+    this.ro.observe(root);
+    window.addEventListener("resize", () => this.schedule(), { passive: true });
+    document.fonts?.ready?.then(() => this.build());
+    window.addEventListener("load", () => this.build(), { once: true });
+    if (!reduced) {
+      window.addEventListener("scroll", () => this.tick(), { passive: true });
+    }
   }
 
-  setupReveal() {
-    const items = $$("[data-reveal]", this.root);
-    items.forEach((el) => {
-      el.style.opacity = "0";
-      el.style.transform = "translateY(16px)";
-      el.style.transition = "opacity .45s ease-out, transform .45s ease-out";
+  schedule() {
+    if (this._b) return;
+    this._b = requestAnimationFrame(() => {
+      this._b = 0;
+      this.build();
     });
-    // **طولُ المسار يُقرأ عند ظهور الأيقونة لا عند الإقلاع** (قِيس ٢٠٢٦-٠٩-٠٥).
-    //
-    // `getTotalLength()` **يفرض تخطيطاً** لكلِّ مسار، وفي الصفحة عشراتُ
-    // المسارات — فقراءتُها جميعاً في الإقلاع تُثقِل الخيطَ الرئيس، **وهو
-    // `TBT` في قياس Lighthouse**.
-    //
-    // **ولا يتغيّر شكلُ الحركة بحرف**: الطولُ يُكتب **قبل أن تُطلق** الرسمةُ
-    // مباشرةً، فالنتيجةُ المرئيةُ هي هي — **وما تغيّر متى يُحسب لا كم**.
-    // **ولا يُستعمل ثابتُ ٩٠ الاحتياطيّ**: مسارٌ أطولُ منه يبدو مرسوماً نصفَه.
-    const prime = (node) => {
-      node.querySelectorAll("[data-draw] path, [data-draw] circle, [data-draw] rect")
-        .forEach((p) => {
-          if (p.dataset.primed) return;
-          p.dataset.primed = "1";
-          const L = p.getTotalLength ? p.getTotalLength() : 90;
-          p.style.strokeDasharray = L;
-          p.style.strokeDashoffset = L;
-          p.style.transition = "stroke-dashoffset .7s ease-out";
-        });
-    };
-    this._prime = prime;
-    const waves = $$("[data-wave]", this.root);
-
-    this.io = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (!en.isIntersecting) return;
-        const el = en.target;
-        this.io.unobserve(el);
-        if (el.hasAttribute("data-reveal")) {
-          const sibs = [...(el.parentElement ? el.parentElement.children : [])]
-            .filter((n) => n.hasAttribute && n.hasAttribute("data-reveal"));
-          const i = Math.max(0, sibs.indexOf(el));
-          setTimeout(() => {
-            el.style.opacity = "1";
-            el.style.transform = "translateY(0)";
-          }, Math.min(i, 8) * 70);
-          // **يُقاس الطولُ الآن ثمّ تُطلق الرسمة** — إطارٌ واحدٌ بينهما كي
-          // يلتقط المتصفّحُ قيمةَ البداية، **وبغيره تقفز الرسمةُ بلا حركة**.
-          this._prime(el);
-          requestAnimationFrame(() => {
-            el.querySelectorAll("[data-draw] path, [data-draw] circle, [data-draw] rect")
-              .forEach((p, j) => setTimeout(() => { p.style.strokeDashoffset = "0"; }, 180 + j * 110));
-          });
-        }
-        if (el.hasAttribute("data-wave")) el.style.animation = "txWave .9s ease-out 1";
-        if (el.id === "taxo-commission") this.countCommission();
-      });
-    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.15 });
-
-    items.forEach((el) => this.io.observe(el));
-    waves.forEach((el) => this.io.observe(el));
-    const com = $("#taxo-commission");
-    if (com) this.io.observe(com);
   }
 
-  /** العدّادُ يهبط إلى **النسبة الفعّالة** لا إلى صفرٍ مفترض.
+  tick() {
+    if (this._r) return;
+    this._r = requestAnimationFrame(() => {
+      this._r = 0;
+      this.update();
+    });
+  }
+
+  /** موضعُ عنصرٍ في إحداثيات الجذر — **من `offsetTop` لا من `getBoundingClientRect`**.
    *
-   * **والفرقُ ليس تجميلاً**: الصفحةُ تَعِد بما تقوله القاعدة، **ورقمٌ مكتوبٌ
-   * في صفحةٍ يخالف إعدادَ العمولة يَعِد بما لا يقع**.
-   */
-  countCommission() {
-    const el = $("#taxo-commission");
-    if (!el || el.dataset.done) return;
-    el.dataset.done = "1";
-    const target = Number(el.dataset.target ?? "0");
-    const from = 25;
-    if (reduced) { el.textContent = String(target); return; }
-    const t0 = performance.now(), dur = 900;
-    const step = (now) => {
-      const k = Math.min(1, (now - t0) / dur);
-      const e = 1 - Math.pow(1 - k, 3);
-      el.textContent = String(Math.round(from - (from - target) * e));
-      if (k < 1) requestAnimationFrame(step);
-      else { el.textContent = String(target); el.style.animation = "txGlowOnce 1.1s ease-out 1"; }
-    };
-    el.textContent = String(from);
-    requestAnimationFrame(step);
-  }
-
-  setupTilt() {
-    $$("[data-tilt]", this.root).forEach((el) => {
-      el.addEventListener("pointermove", (ev) => {
-        const r = el.getBoundingClientRect();
-        const rx = ((ev.clientY - r.top) / r.height - 0.5) * -4;
-        const ry = ((ev.clientX - r.left) / r.width - 0.5) * 4;
-        el.style.transform = `perspective(700px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
-      });
-      el.addEventListener("pointerleave", () => { el.style.transform = "translateY(0)"; });
-    });
-  }
-
-  setupStory() {
-    if (!this.story || !this.storyLine) return;
-    this._onStory = () => {
-      const max = this.story.scrollWidth - this.story.clientWidth;
-      const k = max > 4 ? Math.min(1, Math.abs(this.story.scrollLeft) / max) : 0;
-      const w = this.storyLine.clientWidth;
-      this.storyFill.style.width = k * w + "px";
-      this.storyCar.style.translate = -k * (w - 20) + "px 0";
-    };
-    this.story.addEventListener("scroll", this._onStory, { passive: true });
-    this._onStory();
-  }
-
-  setupAccordions() {
-    $$("[data-acc]", this.root).forEach((d) => {
-      const body = d.querySelector("[data-acc-body]");
-      const bar = d.querySelector("[data-acc-bar]");
-      const sum = d.querySelector("summary");
-      if (!body || !sum) return;
-      body.style.height = "0px";
-      body.style.transition = reduced ? "none" : "height .34s ease-out";
-      sum.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        const open = d.hasAttribute("open");
-        if (open) {
-          body.style.height = body.scrollHeight + "px";
-          requestAnimationFrame(() => { body.style.height = "0px"; });
-          if (bar) bar.style.opacity = "1";
-          setTimeout(() => d.removeAttribute("open"), reduced ? 0 : 340);
-        } else {
-          d.setAttribute("open", "");
-          body.style.height = "0px";
-          requestAnimationFrame(() => { body.style.height = body.scrollHeight + "px"; });
-          if (bar) bar.style.opacity = "0";
-        }
-      });
-    });
-  }
-
-  startSlides() {
-    this.slides = $$("[data-slide]", this.root);
-    if (this.slides.length < 2 || reduced) return;
-    let i = 0;
-    this._slides = setInterval(() => {
-      this.slides[i].style.opacity = "0";
-      i = (i + 1) % this.slides.length;
-      this.slides[i].style.opacity = "1";
-    }, 3000);
+   * **قِيس ٢٠٢٦-١٠-٠٩**: الدبوسُ رُسم أسفلَ عين قسمه بستّة عشرَ بكسلاً — العينُ كانت في حركة الكشف (`translateY(16px)`)
+   * لحظةَ القياس، **والمستطيلُ يقيس ما يُرسم لا ما تخطّط له الصفحة**. والإزاحةُ لا تمسّ `offsetTop`. */
+  box(el) {
+    let top = 0;
+    for (let n = el; n && n !== this.root; n = n.offsetParent) top += n.offsetTop;
+    return { top, height: el.offsetHeight, cy: top + el.offsetHeight / 2 };
   }
 
   build() {
     const root = this.root;
-    if (!root || !this.drawn) return;
-    const rr = root.getBoundingClientRect();
-    const ox = rr.left, oy = rr.top;
-    const pts = $$("[data-pin]", root).map((el) => {
-      const r = el.getBoundingClientRect();
-      return { x: r.left + r.width / 2 - ox, y: r.top + r.height / 2 - oy, el, color: el.dataset.color || "#e6edf3" };
+    const W = root.clientWidth;
+    const H = root.scrollHeight;
+    const desktop = desktopMq.matches;
+    const rootTop = root.getBoundingClientRect().top + window.scrollY;
+    const sections = $$("[data-route]", root).map((el) => {
+      const b = this.box(el);
+      return { el, key: el.dataset.route, lane: el.dataset.lane || "right", top: b.top, bottom: b.top + b.height };
     });
-    if (pts.length < 2) return;
-    let d = `M${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1], b = pts[i];
-      const ym = (a.y + b.y) / 2;
-      d += ` C${a.x} ${ym} ${b.x} ${ym} ${b.x} ${b.y}`;
+    const hero = sections.find((s) => s.key === "hero");
+    const startEl = hero && $("[data-pin]", hero.el);
+    if (!hero || !startEl || sections.length < 2) return;
+
+    // **الحارتان في نصف الهامش**: ٦٠ من كلِّ حافّةٍ على 1440 (الهامشُ ١٢٠)
+    const margin = Math.max(48, (W - 1200) / 2);
+    const inset = desktop ? margin / 2 : 14;
+    const laneX = (s) => {
+      if (!desktop) return W - inset;
+      if (s.lane === "center") return W / 2;
+      return s.lane === "left" ? inset : W - inset;
+    };
+    const band = 120;
+    const startY = this.box(startEl).cy;
+    const last = sections[sections.length - 1];
+    const destEl = $("[data-dest]", last.el);
+    // **الوجهةُ فوق «حمّل TAXO»** (هاتف ١٠٤ من رأس القسم، حاسوب ١٥٠) — ومن العنوان نفسِه، فتتبعه أينما انزاح
+    let destY = destEl ? this.box(destEl).top - (desktop ? 50 : 36) : last.bottom - (desktop ? band : 72);
+    let destX = destEl ? W / 2 : laneX(last);
+
+    let d;
+    const fx = (n) => n.toFixed(1);
+    if (desktop) {
+      let prev = hero;
+      d = `M${fx(laneX(hero))} ${fx(startY)}`;
+      for (const s of sections.slice(1)) {
+        const x1 = laneX(prev);
+        const x2 = destEl && s === last ? W / 2 : laneX(s);
+        const B = s.top;
+        d += ` L${fx(x1)} ${fx(B - band)} C${fx(x1)} ${fx(B)} ${fx(x2)} ${fx(B)} ${fx(x2)} ${fx(B + band)}`;
+        prev = s;
+      }
+      if (!destEl) destX = laneX(last);
+      d += ` L${fx(destX)} ${fx(destY)}`;
+    } else {
+      const x = W - inset;
+      if (destEl) {
+        // **ذيلٌ عموديٌّ فوق الـX** (٦٦) — فتقف السيارةُ عند `endY` قائمةً فوقه كما في W02، لا مائلةً على المنحنى.
+        // ونقاطُ التحكّم تُبقي الصادَ متزايداً على المنحنى كلِّه، و`lenAt` يبحث بالتنصيف فيشترطه.
+        d =
+          `M${fx(x)} ${fx(startY)} L${fx(x)} ${fx(destY - 150)} ` +
+          `C${fx(x)} ${fx(destY - 96)} ${fx(W / 2)} ${fx(destY - 120)} ${fx(W / 2)} ${fx(destY - 66)} ` +
+          `L${fx(W / 2)} ${fx(destY)}`;
+      } else {
+        destX = x;
+        d = `M${fx(x)} ${fx(startY)} L${fx(x)} ${fx(destY)}`;
+      }
     }
-    this.svg.setAttribute("width", root.clientWidth);
-    this.svg.setAttribute("height", root.scrollHeight);
+
+    this.svg.setAttribute("width", String(W));
+    this.svg.setAttribute("height", String(H));
+    this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     this.track.setAttribute("d", d);
     this.drawn.setAttribute("d", d);
     this.len = this.drawn.getTotalLength();
-    this.pts = pts;
-    this.drawn.style.strokeDasharray = this.len;
-    const s = root.clientWidth >= 1024 ? 1.25 : 0.9;
-    this.body.setAttribute("transform", `scale(${s})`);
+    this.drawn.style.strokeDasharray = `${this.len} ${this.len}`;
+    this.drawn.style.strokeWidth = desktop ? "3" : "2.5";
+
+    // **برقوقٌ في مدى الخدمة النسائية** — تدرّجٌ بإحداثيات الصفحة وحدّين قاطعين
+    const women = sections.find((s) => s.key === "women");
+    this.grad.setAttribute("y2", String(H));
+    const stops = Object.fromEntries($$("stop[data-w]", this.grad).map((s) => [s.dataset.w, s]));
+    const a = women ? women.top / H : 1;
+    const b = women ? women.bottom / H : 1;
+    stops.a.setAttribute("offset", String(a));
+    stops.b.setAttribute("offset", String(a));
+    stops.c.setAttribute("offset", String(b));
+    stops.d.setAttribute("offset", String(b));
+    this.women = women ? [women.top, women.bottom] : null;
+
+    // دائرةُ الانطلاق
+    this.start.setAttribute("cx", fx(desktop ? laneX(hero) : W - inset));
+    this.start.setAttribute("cy", fx(startY));
+    this.start.setAttribute("r", desktop ? "11" : "8");
+    this.start.style.strokeWidth = desktop ? "5" : "3.5";
+
+    // الدبابيس — عند عين كلِّ قسم، على حارته
+    const pins = [];
+    this.pins.replaceChildren();
+    for (const s of sections.slice(1)) {
+      const anchor = $("[data-pin]", s.el);
+      if (!anchor) continue;
+      const y = this.box(anchor).cy;
+      const c = document.createElementNS(SVG, "circle");
+      c.setAttribute("class", `route-pin${s.key === "women" ? " is-women" : ""}`);
+      c.setAttribute("cx", fx(desktop ? laneX(s) : W - inset));
+      c.setAttribute("cy", fx(y));
+      c.setAttribute("r", desktop ? "8" : "6");
+      this.pins.appendChild(c);
+      pins.push({ el: c, y });
+    }
+    this.pinList = pins;
+
+    // الوجهة — مربّعٌ ٢٢ على الهاتف و٢٦ على الحاسوب، والـX بقضيبين ٣٨ و٥٢ (المقاسُ على الأب، والحركةُ على الأبناء)
+    this.end.setAttribute("transform", `translate(${fx(destX)} ${fx(destY)})`);
+    $(".end-scale", this.end).setAttribute("transform", desktop ? "scale(1.2)" : "");
+    this.destY = destY;
+
+    // السيارة: ٢٠×٣٨ على الحاسوب و١٤×٢٦ على الهاتف — **تقف تحت دائرة الانطلاق** وفوق الوجهة
+    this.carScale.setAttribute("transform", desktop ? "scale(1.43)" : "");
+    this.parkY = startY + (desktop ? 55 : 38);
+    this.endY = destY - (desktop ? 50 : 44);
+    this.lenAt = (y) => {
+      let lo = 0;
+      let hi = this.len;
+      for (let i = 0; i < 24; i++) {
+        const m = (lo + hi) / 2;
+        if (this.drawn.getPointAtLength(m).y < y) lo = m;
+        else hi = m;
+      }
+      return lo;
+    };
+    this.rootTop = rootTop;
     this.update();
+  }
+
+  placeCar(L) {
+    const p = this.drawn.getPointAtLength(L);
+    const q = this.drawn.getPointAtLength(Math.min(this.len, L + 3));
+    const back = this.drawn.getPointAtLength(Math.max(0, L - 3));
+    const [dx, dy] = q.x === p.x && q.y === p.y ? [p.x - back.x, p.y - back.y] : [q.x - p.x, q.y - p.y];
+    // **المقدّمةُ مع اتّجاه السير**: الزاويةُ المماسّة + ٩٠° (مقدّمةُ الرسم نحو الأعلى)
+    const ang = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+    this.car.setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+    this.car.classList.toggle("is-women", !!this.women && p.y >= this.women[0] && p.y <= this.women[1]);
+    return p;
   }
 
   update() {
     if (!this.len) return;
-    const sy = window.scrollY, vh = window.innerHeight;
-    const rootTop = this.root.getBoundingClientRect().top + sy;
-    const docH = Math.max(1, document.documentElement.scrollHeight - vh);
-    this.progress.style.transform = `scaleX(${Math.min(1, sy / docH)})`;
-    const y0 = this.pts[0].y, y1 = this.pts[this.pts.length - 1].y;
-    let ty = sy + vh * 0.58 - rootTop;
-    ty = Math.max(y0, Math.min(y1, ty));
-
     if (reduced) {
-      this.drawn.style.strokeDashoffset = 0;
-      const p0 = this.pts[0];
-      this.car.setAttribute("transform", `translate(${p0.x} ${p0.y})`);
-      this.pts.forEach((pt) => this.light(pt, true));
-    } else {
-      let lo = 0, hi = this.len;
-      for (let i = 0; i < 24; i++) {
-        const m = (lo + hi) / 2;
-        if (this.drawn.getPointAtLength(m).y < ty) lo = m; else hi = m;
-      }
-      const L = lo;
-      const p = this.drawn.getPointAtLength(L);
-      const q = this.drawn.getPointAtLength(Math.min(this.len, L + 3));
-      const ang = (Math.atan2(q.y - p.y, q.x - p.x) * 180) / Math.PI - 90;
-      this.car.setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
-      this.drawn.style.strokeDashoffset = this.len - L;
-      this.pts.forEach((pt) => this.light(pt, pt.y <= p.y + 4));
-      this.phones.forEach((ph, i) => { ph.style.translate = `0 ${(-sy * (i ? 0.12 : 0.07)).toFixed(1)}px`; });
+      // **لا شيءَ يتحرّك**: المرسومُ كاملاً، والسيارةُ واقفةٌ فوق الوجهة، والـX متكوّن
+      this.drawn.style.strokeDashoffset = "0";
+      this.placeCar(this.lenAt(this.endY));
+      this.pinList.forEach((pt) => pt.el.classList.add("is-lit"));
+      this.svg.classList.add("is-formed");
+      return;
     }
-
-    if (this.women) {
-      const wr = this.women.getBoundingClientRect();
-      const t = Math.max(0, Math.min(1, 1 - Math.abs(wr.top + wr.height / 2 - vh / 2) / (vh * 0.8)));
-      const k = Math.round(t * 100) / 100;
-      if (k !== this._wk) {
-        this._wk = k;
-        this.women.style.background = `color-mix(in oklab, #14181d ${k * 100}%, #f2f0eb)`;
-        const dark = k > 0.5;
-        this.women.style.color = dark ? "#e6edf3" : "#171b20";
-        if (this.womenBadge) {
-          this.womenBadge.style.color = dark ? "#ff6fae" : "#d81b73";
-          this.womenBadge.style.background = dark ? "#2a1a22" : "#fdeaf2";
-          this.womenBadge.style.borderColor = dark ? "#4d2b39" : "#f2b7d1";
-        }
-        this.womenDots.forEach((s) => { s.style.background = dark ? "#ff6fae" : "#d81b73"; });
-        if (this.womenPhone) {
-          this.womenPhone.style.boxShadow = dark
-            ? "0 0 0 7px #4d2b39,0 0 0 9px #ff6fae,0 24px 54px rgba(255,111,174,.22)"
-            : "0 0 0 7px #24262a,0 0 0 9px #3a3d42,0 24px 54px rgba(23,27,32,.24)";
-        }
-      }
-    }
-
-    if (this.ctaBar && this.download) {
-      const past = sy > vh * 0.85;
-      const atDl = this.download.getBoundingClientRect().top < vh * 0.9;
-      const show = past && !atDl;
-      if (show !== this._cta) {
-        this._cta = show;
-        this.ctaBar.style.transform = show ? "translateY(0)" : "translateY(120%)";
-      }
+    const sy = window.scrollY;
+    const vh = window.innerHeight;
+    // **تبدأ واقفةً ثمّ تلحق ٥٨٪ من الشاشة** خلال أوّل ٥٨٪ من التمرير — منحدرٌ رتيبٌ لا قفزة
+    const parkDoc = this.rootTop + this.parkY;
+    const want = sy + 0.58 * vh;
+    const lag = Math.max(0, 0.58 * vh - parkDoc);
+    const ramp = Math.max(1, 0.58 * vh);
+    const ty = Math.max(this.parkY, Math.min(this.endY, want - lag * Math.max(0, 1 - sy / ramp) - this.rootTop));
+    const L = this.lenAt(ty);
+    const p = this.placeCar(L);
+    const atEnd = ty >= this.endY - 1;
+    // **واقفةً لا مرسومَ خلفها** — في أعلى الصفحة يظهر المسارُ الباهتُ وحده كما في W01، لا خطٌّ من دائرة الانطلاق إليها
+    const parked = ty <= this.parkY + 0.5;
+    this.drawn.style.strokeDashoffset = atEnd ? "0" : parked ? String(this.len) : String(this.len - L);
+    this.pinList.forEach((pt) => pt.el.classList.toggle("is-lit", pt.y <= p.y + 4));
+    if (atEnd && !this.arrived) {
+      this.arrived = true;
+      this.svg.classList.add("is-arrived");
     }
   }
+}
 
-  light(pt, on) {
-    if (pt.lit === on) return;
-    pt.lit = on;
-    if (pt.el.dataset.pin === "hero") return;
-    const c = pt.color;
-    const off = pt.el.dataset.pin === "women" || pt.el.dataset.pin === "dest" ? "transparent" : "#f2f0eb";
-    pt.el.style.background = on ? c : off;
-    pt.el.style.boxShadow = on ? `0 0 0 6px ${c}33, 0 0 22px ${c}99` : "none";
-    const inner = pt.el.firstElementChild;
-    if (inner) inner.style.background = on ? (pt.el.dataset.pin === "dest" ? "#0d1014" : "#f2f0eb") : c;
-  }
+/* ═══════════════════ الواجهةُ على الحاسوب — الهاتفُ يرتفع أبطأ من الصفحة ═══ */
+
+function parallax() {
+  const phone = $("[data-parallax]");
+  if (!phone || reduced) return;
+  let raf = 0;
+  const run = () => {
+    raf = 0;
+    const sy = window.scrollY;
+    phone.style.translate = desktopMq.matches && sy < window.innerHeight * 1.5 ? `0 ${(-0.07 * sy).toFixed(1)}px` : "";
+  };
+  window.addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(run); }, { passive: true });
+  run();
 }
 
 /* ═══════════════════ الإقلاع ═══════════════════════════════════════════ */
 
-(async function boot() {
-  const site = await readDoor();
+let route = null;
 
+(async function boot() {
+  window.__taxoMotion = true;
+  reveal();
+  parallax();
+  const root = $("#taxo-root");
+  if (root) route = new Route(root);
+
+  const site = await readDoor();
   if (site) {
     setText("[data-site='hero_title']", site.hero_title);
     setText("[data-site='hero_subtitle']", site.hero_subtitle);
@@ -470,87 +423,53 @@ class Motion {
     const privacy = $("a[data-site-href='privacy_email']");
     if (privacy && site.privacy_email) privacy.href = `mailto:${site.privacy_email}`;
 
-    // **الشريطُ الإعلانيّ** — ثلاثةُ حقولٍ: نصٌّ ورابطٌ ومفتاح.
+    // **الشريطُ الإعلانيّ** — ثلاثةُ حقول: مفتاحٌ ونصٌّ ورابط. ومطفأٌ لا يُرسم.
     const bar = $("[data-announce]");
     if (bar) {
       if (site.announce_enabled && site.announce_text) {
         $("[data-announce-text]", bar).textContent = site.announce_text;
-        const link = $("a", bar);
-        if (link) {
-          if (site.announce_url) link.href = site.announce_url;
-          else link.removeAttribute("href");
+        const link = $("[data-announce-link]", bar);
+        if (site.announce_url) link.href = site.announce_url;
+        else {
+          link.removeAttribute("href");
+          $("[data-announce-arrow]", bar)?.remove();
         }
         bar.removeAttribute("hidden");
       } else bar.remove();
     }
 
-    // **أيقونةٌ لما له رابطٌ فقط** — ولا أيقونةَ معطَّلةٌ محجوزة.
+    // **رابطٌ لما له رابطٌ فقط** — ولا رابطَ معطَّلٌ محجوز، ولا عنوانُ «تابعنا» فوق لا شيء.
+    let social = 0;
     for (const net of ["facebook", "instagram", "tiktok", "x", "whatsapp"]) {
       const el = $(`[data-social="${net}"]`);
       if (!el) continue;
       const url = site[`social_${net}`];
-      if (url) { el.href = url; el.removeAttribute("hidden"); } else el.remove();
+      if (url) {
+        el.href = url;
+        el.removeAttribute("hidden");
+        if (net !== "whatsapp") social += 1;
+      } else el.remove();
     }
+    if (social) $("[data-social-group]")?.removeAttribute("hidden");
+    else $("[data-social-group]")?.remove();
 
-    // **السياساتُ خلف مفتاحها** — ولا تُعرض على مستخدمٍ قبل المراجعة.
+    // **السياساتُ خلف مفتاحها** (§٥٢٫٦) — ولا تُعرض على مستخدمٍ قبل المراجعة. وحذفُ الحساب ليس خلفه.
     if (!site.policies_public) $$("[data-policy-link]").forEach((el) => el.remove());
 
     applyHidden(site.hidden_sections, "data-section");
     applyHidden(site.hidden_cards, "data-card");
 
-    // **بطاقةٌ لمفتاحٍ مطفأٍ تُرسم «قريباً»** — ولا تختفي بلا أثر.
+    // **خدمةٌ مطفأةٌ في الأردن تُرسم «قريباً»** — ولا تختفي بلا أثر. والمخفيّةُ أُزيلت أعلاه.
     $$("[data-feature]").forEach((el) => {
-      const key = el.dataset.feature;
-      if (site.features && site.features[key] === false) markSoon(el);
+      if (site.features && site.features[el.dataset.feature] === false) markSoon(el);
     });
+    // **قسمٌ بلا بطاقةٍ لا يُرسم عنوانُه فوق فراغ**
+    const services = $("[data-services]");
+    if (services && !services.children.length) $$('[data-section="services"]').forEach((el) => el.remove());
 
-    // **نسبةُ المشترِك من الباب** — وهي نسبةُ السوق نفسُها تُجمَّد لحظةَ
-    // الشراء (§25.11). **ولا رقمَ مخبوزٌ في الصفحة**: بُدّلت من اللوحة
-    // فتبعتها البطاقتان والعدّادُ والسطرُ معاً.
-    if (site.commission_percent !== undefined) {
-      setText("[data-site='subscriber_commission']", `${site.commission_percent}٪`);
-    }
-    // **وما يبقى للكبتن يأتي محسوباً** — `100 − النسبة` حسابُ مالٍ، **و§14
-    // يحصره في الخلفية**، فلا يُحسب هنا ولو كان طرحاً واحداً.
-    if (site.driver_keeps_per_100 !== undefined) {
-      setText("[data-site='driver_keeps_per_100']", String(site.driver_keeps_per_100));
-    }
-
-    // **العمولةُ من الباب** — والعدّادُ يهبط إليها لا إلى رقمٍ مكتوب.
-    const com = $("#taxo-commission");
-    if (com && site.commission_percent !== undefined) {
-      const pct = Math.round(Number(site.commission_percent));
-      com.dataset.target = String(pct);
-      if (!com.dataset.done) com.textContent = String(pct);
-    }
-
-    // **الأسئلةُ من اللوحة حين تُكتب** — والمخبوزةُ حتى ذلك.
-    if (Array.isArray(site.faq) && site.faq.length) {
-      const host = $("[data-faq]");
-      if (host) {
-        const tpl = host.firstElementChild;
-        if (tpl) {
-          const items = [...site.faq].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-          const built = items.map((row) => {
-            const node = tpl.cloneNode(true);
-            const q = node.querySelector("summary span, summary");
-            const a = node.querySelector("[data-acc-body] p, [data-acc-body]");
-            if (q) q.textContent = row.q ?? "";
-            if (a) a.textContent = row.a ?? "";
-            return node;
-          });
-          if (built.length) { host.replaceChildren(...built); }
-        }
-      }
-    }
+    download(site);
+    route?.build();
   }
 
-  download(site);
   await offer();
-
-  // **جُرّب تأجيلُ الحركة إلى `requestIdleCallback` فساءت النتيجة** (قِيس
-  // ٢٠٢٦-٠٩-٠٥): `TBT` ٦٥٠ → ١٤٠٠ و`Speed Index` ٢٫٥ → ٦٫٢ — **الخمولُ يقع
-  // داخل نافذة القياس فيصير مهمّةً واحدةً طويلةً بدل مهامَّ موزّعة**.
-  // **فأُعيدت كما رسمها التصميم**، والفكرةُ تُقيَّد مسقَطةً لا تُعاد.
-  new Motion();
 })();

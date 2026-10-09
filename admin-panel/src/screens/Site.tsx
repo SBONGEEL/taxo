@@ -7,8 +7,9 @@
  * ## وثلاثةُ حقولٍ تُعرض ولا تُكتب هنا
  *
  * **نسبةُ العمولة** بيتُها `commission_settings` في شاشة الإعدادات —
- * **وشاشتان تكتبان قاعدةَ مالٍ واحدةً حالان يمكن أن تختلفا**. تُعرض هنا لأن
- * الصفحةَ تنشرها، **ويُقال أين تُغيَّر**.
+ * **وشاشتان تكتبان قاعدةَ مالٍ واحدةً حالان يمكن أن تختلفا**. **ولم تعد
+ * الصفحةُ تنشرها** (§٦٩-ب، ٢٠٢٦-١٠-٠٩: «لا نسبةَ عمولةٍ رقماً في أيِّ موضع»)
+ * — تُعرض هنا للمشرف وحدَه، **ويُقال ذلك ويُقال أين تُغيَّر**.
  *
  * **ومفاتيحُ الميزات** من صفحة العقود والإعدادات — والصفحةُ ترسم «قريباً»
  * لِما أُطفئ. **ولا مفتاحَ ثانٍ يُخترع هنا لمفهومٍ قائم.**
@@ -38,19 +39,29 @@ const MODE_EFFECT: Record<string, string> = {
   play: "المتجر: شارات Google Play",
 };
 
-/** أقسامُ الصفحة بمفاتيحها — **والمفتاحُ هو ما يقرؤه الموقع**. */
+/** أقسامُ الصفحة بمفاتيحها — **والمفتاحُ هو ما يقرؤه الموقع** (`data-section` في `site/index.html`).
+ *
+ * **بُدّلت مع الموقع الجديد** (§٦٩، ٢٠٢٦-١٠-٠٩): اللوحاتُ W03–W08 ستّةُ أقسامٍ تُخفى، والواجهةُ والتذييلُ لا يُخفيان.
+ * **وكانت هنا مفاتيحُ أقسامٍ لم تعد في الصفحة** (`why` · `story` · `how` · `wallet` · `soon` · `faq`) — **زرٌّ يُطفئ قسماً لا
+ * وجودَ له يُقرأ عملاً وهو لا شيء**، و`services` الجديدُ لم يكن له زرّ. */
 const SECTIONS: { key: string; label: string }[] = [
-  { key: "why", label: "لماذا TAXO" },
-  { key: "story", label: "قصة الرحلة" },
-  { key: "rider", label: "للراكب" },
-  { key: "captain", label: "للكبتن" },
+  { key: "rider", label: "للراكب — كيف يعمل" },
+  { key: "captain", label: "للكبتن — لماذا تقود مع TAXO" },
   { key: "women", label: "الخدمة النسائية" },
-  { key: "how", label: "كيف تعمل" },
-  { key: "trust", label: "الأمان والثقة" },
-  { key: "wallet", label: "المحفظة والدفع" },
-  { key: "soon", label: "قريباً" },
+  { key: "trust", label: "الأمان" },
+  { key: "services", label: "الخدمات الجديدة" },
   { key: "download", label: "التحميل" },
-  { key: "faq", label: "الأسئلة الشائعة" },
+];
+
+/** بطاقاتُ «الخدمات الجديدة» (W07) — **`hidden_cards` يُخفيها، ومفتاحُ الميزة في سوق الأردن يجعلها «قريباً»**.
+ * والمفتاحُ هو `data-card` في الصفحة. **ولم يكن لهذا الحقل زرٌّ قطّ** — فصار له. */
+const CARDS: { key: string; label: string }[] = [
+  { key: "airport", label: "المطار" },
+  { key: "guaranteed_booking", label: "الحجز المضمون" },
+  { key: "parcel", label: "الطرد" },
+  { key: "hourly", label: "بالساعة" },
+  { key: "intercity", label: "بين المدن" },
+  { key: "ride_for_other", label: "لغيرك" },
 ];
 
 const SOCIALS: { key: keyof SiteUpdate; label: string }[] = [
@@ -345,11 +356,38 @@ export function SiteScreen() {
           </div>
         </section>
 
+        {/* ── بطاقاتُ الخدمات الجديدة (W07) ─────────────────────────── */}
+        <section className="rounded-14 border border-line bg-surface p-16">
+          <h2 className="mb-4 text-13 font-semibold text-ink">بطاقات «الخدمات الجديدة»</h2>
+          <p className="mb-12 text-11.5 leading-note text-muted">
+            <b>المخفيّةُ لا تُرسم</b>، والشبكةُ تنغلق على ما بقي. <b>والمطفأةُ في الأردن تُرسم «قريباً»</b>
+            — وذاك مفتاحُ الخدمة في صفحة الإعدادات لا هنا. ولا بطاقةَ ظاهرةً ⇒ لا يُرسم القسم.
+          </p>
+          <div className="grid gap-8">
+            {CARDS.map((row) => {
+              const hidden = (
+                (draft.hidden_cards ?? site.hidden_cards ?? []) as string[]
+              ).includes(row.key);
+              return (
+                <Checkbox
+                  key={row.key}
+                  checked={!hidden}
+                  onChange={() => toggleHidden("hidden_cards", row.key)}
+                >
+                  {row.label}
+                </Checkbox>
+              );
+            })}
+          </div>
+        </section>
+
         {/* ── الأسئلة ─────────────────────────────────────────────── */}
         <section className="rounded-14 border border-line bg-surface p-16">
           <h2 className="mb-4 text-13 font-semibold text-ink">الأسئلة الشائعة</h2>
           <p className="mb-12 text-11.5 leading-note text-muted">
             الترتيبُ ترتيبُ الصفوف هنا. وحذفُ سؤالٍ يفرّغ حقلَيه ثم يُحفظ.
+            <b> ولا موضعَ لها في الموقع الجديد</b> (لوحاتُ W01–W09 بلا قسم أسئلة) — تُحفظ هنا ولا تظهر
+            حتى يُقرَّر لها موضع.
           </p>
           <div className="grid gap-12">
             {faq.map((row, index) => (
@@ -413,10 +451,11 @@ export function SiteScreen() {
         <section className="rounded-14 border border-line bg-surface p-16">
           <h2 className="mb-4 text-13 font-semibold text-ink">يُقرأ ولا يُكتب هنا</h2>
           <p className="text-11.5 leading-note text-muted">
-            نسبةُ العمولة التي تعرضها الصفحة:{" "}
-            <b className="text-ink">{digits(site.commission_percent)}%</b> — بيتُها{" "}
-            <b>شاشةُ الإعدادات</b>، وشاشتان تكتبان قاعدةَ مالٍ واحدةً حالان يمكن
-            أن تختلفا.
+            نسبةُ العمولة السارية:{" "}
+            <b className="text-ink">{digits(site.commission_percent)}%</b> —{" "}
+            <b>لا تعرضها الصفحةُ ولا يُخرجها بابُها العامّ</b> (لا نسبةَ عمولةٍ رقماً في أيِّ موضعٍ من
+            الموقع). وبيتُها <b>شاشةُ الإعدادات</b>، وشاشتان تكتبان قاعدةَ مالٍ واحدةً حالان يمكن أن
+            تختلفا.
           </p>
           <p className="mt-6 text-11.5 leading-note text-muted">
             آخر تعديل: {moment(site.updated_at)}

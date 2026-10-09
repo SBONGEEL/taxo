@@ -4,8 +4,9 @@
  *   ١) الخطوطُ TTF → woff2 — **الحجمُ وحدَه يتغيّر، لا الحروف** (وما وصل
  *      woff2 يُنسخ). والقائمةُ في `fonts.mjs`.
  *   ٢) الصورُ PNG → WebP — **والشعارُ يبقى شعارَه**، تحويلُ ترميزٍ لا رسم.
- *   ٣) بطاقةُ المشاركة 1200×630 — **تركيبُ الشعار الحقيقيِّ على لون الهوية**
- *      بنصِّ التصميم نفسِه. **ولا شعارَ يُولَّد ولا واجهةَ تُرسم.**
+ *      **واللقطاتُ الحقيقيّة** قصّاً وتصغيراً بـAVIF وWebP من بيانها (`screens/shots.json`).
+ *   ٣) بطاقةُ المشاركة 1200×630 — **صورةٌ مودَعةٌ بهويّة TAXO 2.0 تُضغط وتُنسخ**.
+ *      **ولا شعارَ يُولَّد ولا واجهةَ تُرسم.**
  */
 
 import {
@@ -114,8 +115,9 @@ for (const name of Object.keys(WIDTH)) {
 }
 
 // **وما لا يُحوَّل يُنسخ كما هو** — `car.svg` و`logo.svg` أصولٌ متجهةٌ لا
-// صور، **ونسخُها لازمٌ لأن `public/` مخرَجٌ لا يُودَع**.
-for (const name of ["car.svg", "logo.svg"]) {
+// صور، **ونسخُها لازمٌ لأن `public/` مخرَجٌ لا يُودَع**. و`identity-tile.svg`
+// بلاطةُ خلفية الهوية (§٦٩) تُستعمل قناعاً فتأخذ لونَها من الرمز.
+for (const name of ["car.svg", "logo.svg", "identity-tile.svg"]) {
   const src = join(SA, name);
   if (!existsSync(src)) continue;
   writeFileSync(join(A, name), readFileSync(src));
@@ -132,60 +134,82 @@ for (const name of ["car.svg", "logo.svg"]) {
 // لها خاناتٌ بأسمائها** — فلقطةٌ بلا خانةٍ **حمولةٌ لا يراها أحد**، وهي
 // «حقلٌ يُحسب ولا يقرؤه أحد» في ثوب صورة. **وتُذكر بالاسم لا تُبتلع صمتاً**،
 // وإلا صار الفائضُ عُرفاً.
+//
+// ## والموقعُ الجديد (§٦٩) — `shots.json` بيانُ اللقطات وعروضِها
+//
+// **كلُّ لقطةٍ ملفٌّ واحدٌ كما التُقط**، والبيانُ يقول من أين جاء ومتى (`captures`)، وما يُنتظر بعدُ (`awaited`)، وما يُشحن منه
+// (`renders`): **قصٌّ بإحداثياتٍ مكتوبة** — فلقطةُ الكبتن الكاملةُ فيها تقييمُ «1.00» من بيانات التجربة، **ولا يُشحن منها إلا
+// ما دون ذلك الصفّ** — **وتصغيرٌ إلى ضِعف ما يُعرض** بـAVIF وWebP. ولا بكسلَ يُرسم ولا يُعدَّل.
+//
+// **ولا يُشحن عرضٌ لا تطلبه الصفحة** — يُقرأ `data-shot` و`data-shot-dark` منها، فعرضٌ مصدرُه لقطةٌ لا موضعَ لها **حمولةٌ لا
+// يراها أحد**، ويُذكر بالاسم.
 const SITE = join(SRC, "..");
 const SS = join(SRC, "screens");
 const PS = join(PUB, "screens");
 if (existsSync(SS)) {
   mkdirSync(PS, { recursive: true });
   const page = readFileSync(join(SITE, "index.html"), "utf8");
-  const wanted = new Set([...page.matchAll(/data-shot="([a-z-]+)"/g)].map((m) => m[1]));
-  const unused = [];
-  for (const file of readdirSync(SS).filter((f) => f.endsWith(".png"))) {
-    const name = file.replace(/\.png$/, "");
-    if (!wanted.has(name)) {
-      unused.push(name);
+  const wanted = new Set([...page.matchAll(/data-shot(?:-dark)?="([a-z0-9-]+)"/g)].map((m) => m[1]));
+  const manifest = JSON.parse(readFileSync(join(SS, "shots.json"), "utf8"));
+  const skipped = [];
+  for (const [name, spec] of Object.entries(manifest.renders ?? {})) {
+    if (!wanted.has(spec.from)) {
+      skipped.push(name);
       continue;
     }
-    const from = join(SS, file);
-    const to = join(PS, `${name}.webp`);
+    const from = join(SS, `${spec.from}.png`);
+    if (!existsSync(from)) {
+      // **يُسمّى ولا يُبتلع** — و`check:shots` بعده يُسقط البناءَ على الغياب نفسِه
+      console.log(`  ⚠ عرضُ ${name} بلا مصدر: assets-src/screens/${spec.from}.png`);
+      continue;
+    }
     const before = readFileSync(from).length;
-    await sharp(from).webp({ quality: 82, effort: 6 }).toFile(to);
-    console.log(`  لقطة ${name}: ${before} → ${readFileSync(to).length} بايت`);
-    made++;
+    const sizes = [];
+    for (const width of spec.widths) {
+      let img = sharp(from);
+      if (spec.crop) {
+        const [left, top, w, h] = spec.crop;
+        img = img.extract({ left, top, width: w, height: h });
+      }
+      img = img.resize({ width, withoutEnlargement: true });
+      const webp = join(PS, `${name}-${width}.webp`);
+      const avif = join(PS, `${name}-${width}.avif`);
+      await img.clone().webp({ quality: 80, effort: 6 }).toFile(webp);
+      await img.clone().avif({ quality: 52, effort: 5 }).toFile(avif);
+      sizes.push(`${width}: ${readFileSync(avif).length}/${readFileSync(webp).length}`);
+      made += 2;
+    }
+    console.log(`  لقطة ${name} ← ${spec.from}${spec.crop ? ` (قصّ ${spec.crop.join(",")})` : ""}: ${before} → avif/webp ${sizes.join(" · ")} بايت`);
   }
-  if (unused.length) {
-    console.log(`  … مُلتقَطةٌ بلا خانةٍ في الصفحة (لا تُشحن): ${unused.join(" · ")}`);
+  if (skipped.length) {
+    console.log(`  … عروضٌ مصدرُها بلا موضعٍ في الصفحة (لا تُشحن): ${skipped.join(" · ")}`);
+  }
+  const listed = new Set([...Object.keys(manifest.captures ?? {}), ...Object.keys(manifest.awaited ?? {})]);
+  const stale = readdirSync(SS)
+    .filter((f) => f.endsWith(".png"))
+    .map((f) => f.replace(/\.png$/, ""))
+    .filter((n) => !listed.has(n));
+  if (stale.length) {
+    // **لقطاتُ الهوية السابقة** — باقيةٌ في الشجرة ولا تُشحن: لا موضعَ لها في صفحة TAXO 2.0
+    console.log(`  … لقطاتٌ ليست في shots.json (لا تُشحن): ${stale.join(" · ")}`);
   }
 }
 
 /* ── ٣) بطاقةُ المشاركة ────────────────────────────────────────────────── */
 //
-// **1200×630 بلون الـHero وشعارِ الموقع الحقيقيّ** — والنصُّ من `النصوص.md`.
-// **ولا يُرسم شيءٌ لم يوجد**: خلفيةٌ بلونٍ مصرَّحٍ وشعارٌ قائمٌ ونصٌّ مكتوب.
+// **1200×630 بهويّة TAXO 2.0** (§٦٩) — مرسومةٌ من `assets-src/assets/og-card.html` بخطّي العائلة ولقطةِ رئيسة الراكب الحقيقيّة،
+// وتُودَع صورةً (`og-card.png`) لأن الخادمَ الذي يبني الموقعَ لا يملك متصفّحاً ولا خطَّيْ العائلة. **وهنا تُضغط وتُنسخ لا تُرسم.**
+//
+// **وكانت تُركَّب هنا بنصٍّ يقول «صفر عمولة على الكبتن المشترِك»** على لون الهوية السابقة — وعدٌ بنسبةٍ في صورةٍ تُعرض كلَّما
+// شورك الرابط، **ولم يقرأها `check:commission-text` لأنها نصٌّ داخل سكربت بناء**. فالنصُّ الآن من اللوحات وحدَها، بلا رقم.
 const og = join(A, "og.png");
-const logo = join(SA, "logo.png");
-if (existsSync(logo)) {
-  const svg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
-       <rect width="1200" height="630" fill="#14181d"/>
-       <rect x="0" y="0" width="1200" height="6" fill="#3fb970"/>
-       <text x="1100" y="330" text-anchor="end" fill="#e6edf3"
-             font-family="IBM Plex Sans Arabic, Segoe UI, sans-serif"
-             font-size="52" font-weight="700" direction="rtl">تاكسي بالتطبيق للراكب والكبتن</text>
-       <text x="1100" y="400" text-anchor="end" fill="#8b949e"
-             font-family="IBM Plex Sans Arabic, Segoe UI, sans-serif"
-             font-size="30" direction="rtl">صفر عمولة على الكبتن المشترِك · خدمة نسائية · محفظة ودفع</text>
-       <text x="1100" y="560" text-anchor="end" fill="#8b949e"
-             font-family="IBM Plex Sans Arabic, Segoe UI, sans-serif" font-size="26">taxo.tajora.ly</text>
-     </svg>`,
-  );
-  const mark = await sharp(logo).resize({ width: 260 }).toBuffer();
-  await sharp(svg)
-    .composite([{ input: mark, top: 120, left: 840 }])
-    .png()
-    .toFile(og);
-  console.log(`  og.png: ${readFileSync(og).length} بايت (1200×630)`);
+const ogSrc = join(SA, "og-card.png");
+if (existsSync(ogSrc)) {
+  await sharp(ogSrc).resize({ width: 1200, height: 630, fit: "cover" }).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(og);
+  console.log(`  og.png: ${readFileSync(ogSrc).length} → ${readFileSync(og).length} بايت (1200×630)`);
   made++;
+} else {
+  console.log("\n  ⚠ ناقص: assets-src/assets/og-card.png — **بطاقةُ المشاركة لا تُرسم هنا بنصٍّ مخبوز**.\n");
 }
 
 /* ── ٤) شارةُ Google Play — **الملفُّ الرسميُّ كما هو** ─────────────────── */

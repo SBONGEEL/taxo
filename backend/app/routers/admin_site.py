@@ -34,10 +34,10 @@ async def read_site(_staff: StaffUser, session: DbSession) -> SiteAdminOut:
     row = await site_service.get_or_create(session)
     await session.commit()
     await session.refresh(row)
-    public = await site_service.public_payload(session)
     return SiteAdminOut(
         **{field: getattr(row, field) for field in site_service.PUBLIC_FIELDS},
-        commission_percent=public["commission_percent"],
+        # **من مصدرها لا من الباب العامّ** — الذي لم يعد يحملها (§٦٩-ب)
+        commission_percent=await site_service.commission_for_panel(session),
         updated_at=row.updated_at,
     )
 
@@ -65,9 +65,9 @@ async def update_site(
         )
     await session.commit()
     await session.refresh(row)
-    public = await site_service.public_payload(session)
     return SiteAdminOut(
         **{field: getattr(row, field) for field in site_service.PUBLIC_FIELDS},
-        commission_percent=public["commission_percent"],
+        # **من مصدرها لا من الباب العامّ** — الذي لم يعد يحملها (§٦٩-ب)
+        commission_percent=await site_service.commission_for_panel(session),
         updated_at=row.updated_at,
     )

@@ -49,6 +49,17 @@
   --t2-inverse: #14161a;
   --t2-fast: 120ms;
   --t2-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* ── رموزُ الموقع وحدَه — كالرئيسة (`site.css`)، ليتّفق البابُ والقسمُ الذي يقود إليه (W08) ── */
+  --site-pattern: #14161a; /* خلفيةُ الهوية: لونُ القناع وشفافيتُه */
+  --site-pattern-o: 0.04;
+  --site-icon-rider-bg: #f4f1ea; /* أيقونتا التطبيقين — ثابتتان في المظهرين: هما أيقونتا الهاتف */
+  --site-icon-rider-ring: #dad3c6;
+  --site-icon-rider-ink: #14161a;
+  --site-icon-rider-ember: #f05a28;
+  --site-icon-captain-bg: #0e1013;
+  --site-icon-captain-ring: #2b3038;
+  --site-icon-captain-ink: #f2efe8;
+  --site-icon-captain-ember: #ff6a33;
   color-scheme: light dark;
 }
 
@@ -69,6 +80,8 @@
     --t2-accent-line: #5a3322;
     --t2-dash: #3a404a;
     --t2-well: var(--t2-sunken);
+    --site-pattern: #f2efe8;
+    --site-pattern-o: 0.045;
   }
 }
 
@@ -84,6 +97,22 @@ body {
   padding: 0;
   background: var(--t2-bg);
   color: var(--t2-text);
+}
+/* **خلفيةُ الهوية الخافتة** — البلاطةُ نفسُها التي في الرئيسة قناعاً، على خلفية الصفحة وحدَها (لا في بطاقة)، بلا حركة */
+body {
+  position: relative;
+  isolation: isolate;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--site-pattern);
+  opacity: var(--site-pattern-o);
+  -webkit-mask: url("/assets/identity-tile.svg") 0 0 / 200px 200px repeat;
+  mask: url("/assets/identity-tile.svg") 0 0 / 200px 200px repeat;
 }
 body {
   font-family: var(--t2-font);
@@ -187,7 +216,7 @@ a {
   transform: translate(-50%, -50%) rotate(-50deg);
 }
 .wordmark-x > span:last-child {
-  background: var(--t2-accent);
+  background: var(--x-ember, var(--t2-accent));
   transform: translate(-50%, -50%) rotate(50deg);
 }
 
@@ -251,9 +280,40 @@ h1 {
     0 0 0 1px var(--t2-accent),
     0 12px 28px color-mix(in srgb, var(--t2-inverse) 8%, transparent);
 }
+/* **رأسُ البطاقة كبطاقة الرئيسة (W08)**: أيقونةُ التطبيق ثمّ الشارةُ والاسمُ والوصف */
 .app-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.app-head > div {
   display: grid;
   gap: 4px;
+  min-width: 0;
+}
+.app-icon {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--site-icon-rider-bg);
+  box-shadow: 0 0 0 1px var(--site-icon-rider-ring);
+  color: var(--site-icon-rider-ink);
+  --x-ember: var(--site-icon-rider-ember);
+}
+.app-icon .wordmark {
+  font-size: 13px;
+  letter-spacing: -0.04em;
+  color: inherit;
+}
+.app-icon--captain {
+  background: var(--site-icon-captain-bg);
+  box-shadow: 0 0 0 1px var(--site-icon-captain-ring);
+  color: var(--site-icon-captain-ink);
+  --x-ember: var(--site-icon-captain-ember);
 }
 /* **نصُّ الشارة حبرٌ لا جمر**: الجمرُ نصّاً على خافته يقيس ٤٫٣ على الفاتح، دون ٤٫٥ لنصٍّ بهذا الحجم */
 .chip {
