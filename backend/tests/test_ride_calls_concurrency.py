@@ -10,18 +10,22 @@
 - **قفلُ الرحلة في البدء** — بدءان معاً يرنّان مرّةً، والثاني `call_busy` لا `call_start_raced`.
 - **قفلُ الرحلة في الردّ والبدء أمام إنهاء الرحلة** — `call_window_closed`، والمكالمةُ `ride_ended` بلا ردّ.
 - **`FOR UPDATE` في `end_for_ride`** — إنهاءُ الرحلة لا يكتب `ride_ended` فوق مكالمةٍ أنهاها طرفُها للتوّ.
+- **`FOR UPDATE` في `erase_recording`** (§٧١-ب/٧) — حذفان معاً لتسجيلٍ واحد: حذفٌ واحدٌ وسطرُ تدقيقٍ واحد.
 """
 
 from __future__ import annotations
 
 import asyncio
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.core.exceptions import NotFound
 from app.core.redis_client import get_redis_client
+from app.models.audit import AdminAuditLog
 from app.models.driver import Driver
 from app.models.ride_call import RideCall
 from app.models.user import User
@@ -240,3 +244,48 @@ async def test_completion_racing_a_hang_up_keeps_the_hang_ups_reason(
     assert call is not None
     assert call.status.value == "ended" and call.end_reason.value == "completed"
     _coherent(call)
+
+
+async def test_two_erases_at_once_erase_once(client: AsyncClient, session_factory) -> None:
+    """**`FOR UPDATE` في `erase_recording`** (§٧١-ب/٧): حذفان معاً لتسجيلٍ واحد — **حذفٌ واحدٌ وسطرُ تدقيقٍ واحد**، والثاني
+    `NotFound`. الأوّلُ يمسك معاملتَه مفتوحةً بعد الحذف، والثاني يبدأ وهي مفتوحة. **وبحذف القفل** يقرأ الثاني المسارَ قائماً
+    (لم يُلتزم الأوّلُ بعد) فيكتب سطرَ «حذف» ثانياً لملفٍّ محاه غيرُه، ويعيد مساراً ممحوّاً — **ويسقط هذا الاختبار**."""
+    trip = await _ringing(client, session_factory)
+    async with session_factory() as session:
+        call = await session.get(RideCall, trip["call_id"])
+        call.recorded = True
+        call.recording_path = "call-recordings/race.webm"
+        call.recording_expires_at = datetime.now(UTC) + timedelta(days=90)
+        await session.commit()
+
+    async def _erase_holding_the_row() -> str:
+        async with session_factory() as session:
+            await ride_calls.erase_recording(session, call_id=trip["call_id"], actor=None, reason="تسجيلُ تجربةٍ انتهت")
+            await asyncio.sleep(0.4)
+            await session.commit()
+            return "erased"
+
+    async def _erase_meanwhile() -> str:
+        await asyncio.sleep(0.1)
+        async with session_factory() as session:
+            try:
+                await ride_calls.erase_recording(session, call_id=trip["call_id"], actor=None, reason="تسجيلُ تجربةٍ انتهت")
+            except NotFound:
+                return "not_found"
+            await session.commit()
+            return "erased"
+
+    outcomes = await asyncio.wait_for(
+        asyncio.gather(_erase_holding_the_row(), _erase_meanwhile()), timeout=DEADLOCK_TIMEOUT
+    )
+    assert sorted(outcomes) == ["erased", "not_found"]
+    async with session_factory() as session:
+        audits = (
+            await session.scalars(
+                select(AdminAuditLog).where(
+                    AdminAuditLog.entity_type == "call_recording", AdminAuditLog.entity_id == trip["call_id"]
+                )
+            )
+        ).all()
+        call = await session.get(RideCall, trip["call_id"])
+    assert len(audits) == 1 and call.recording_path is None

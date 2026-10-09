@@ -2,6 +2,7 @@
 
 **سجلُّ المكالمة بياناتٌ وصفيّة** (من اتصل بمن ومتى وكم وكيف انتهت) — كسجلِّ الرحلة نفسِها، فيكفيه `read.only`. **والتسجيلُ صوتُ
 إنسان**: صلاحيةٌ مستثناةٌ من افتراض المشرف (`call_recordings.listen`)، **وكلُّ استماعٍ سطرٌ في التدقيق** قبل أن يُبثّ الملف.
+**والحذفُ قبل الموعد بالصلاحية نفسِها**: من يملك أن يسمع يملك أن يمحو ما سمع، بسببٍ مكتوب (§٧١-ب/٧).
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from fastapi.responses import FileResponse
 
 from app.core import storage
 from app.core.deps import DbSession, ListReader, RecordingsListener
-from app.schemas.ride_call import AdminCallOut
+from app.schemas.ride_call import AdminCallOut, RecordingEraseIn
 from app.services import ride_calls
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -53,3 +54,11 @@ async def listen_to_recording(call_id: uuid.UUID, admin: RecordingsListener, ses
     path = storage.resolve(call.recording_path or "")
     await session.commit()
     return FileResponse(path, media_type=_MEDIA_TYPES.get(path.suffix, "application/octet-stream"))
+
+
+@router.post("/calls/{call_id}/recording/erase", status_code=204)
+async def erase_recording(call_id: uuid.UUID, payload: RecordingEraseIn, admin: RecordingsListener, session: DbSession) -> None:
+    """**حذفُ التسجيل قبل موعده** — السطرُ في التدقيق والصفُّ يُلتزمان **ثمّ** يُمحى الملفّ: صفٌّ يشير إلى ملفٍّ ممحوٍّ عطل."""
+    path = await ride_calls.erase_recording(session, call_id=call_id, actor=admin, reason=payload.reason.strip())
+    await session.commit()
+    await storage.delete(path)

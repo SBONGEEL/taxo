@@ -116,7 +116,7 @@ export function SiteScreen() {
     return Boolean(draft[key] ?? site?.[key] ?? false);
   }
 
-  function toggleHidden(list: "hidden_sections" | "hidden_cards", key: string) {
+  function toggleHidden(list: "hidden_sections" | "hidden_cards" | "new_cards", key: string) {
     const current = (draft[list] ?? site?.[list] ?? []) as string[];
     const next = current.includes(key)
       ? current.filter((k) => k !== key)
@@ -381,14 +381,38 @@ export function SiteScreen() {
           </div>
         </section>
 
+        {/* ── شارةُ «جديد» (§٧١-ج/٨) ──────────────────────────────── */}
+        <section className="rounded-14 border border-line bg-surface p-16">
+          <h2 className="mb-4 text-13 font-semibold text-ink">شارةُ «جديد» على البطاقات</h2>
+          <p className="mb-12 text-11.5 leading-note text-muted">
+            البطاقةُ المؤشَّرةُ تُرسم بشارة <b>«جديد»</b>. <b>ولا شارةَ على بطاقةٍ «قريباً»</b> — الجديدُ ما يُطلب اليوم.
+            وانزعها حين تكفّ الخدمةُ عن أن تكون جديدة.
+          </p>
+          <div className="grid gap-8">
+            {CARDS.map((row) => {
+              const marked = ((draft.new_cards ?? site.new_cards ?? []) as string[]).includes(row.key);
+              return (
+                <Checkbox key={row.key} checked={marked} onChange={() => toggleHidden("new_cards", row.key)}>
+                  {row.label}
+                </Checkbox>
+              );
+            })}
+          </div>
+        </section>
+
         {/* ── الأسئلة ─────────────────────────────────────────────── */}
         <section className="rounded-14 border border-line bg-surface p-16">
           <h2 className="mb-4 text-13 font-semibold text-ink">الأسئلة الشائعة</h2>
           <p className="mb-12 text-11.5 leading-note text-muted">
             الترتيبُ ترتيبُ الصفوف هنا. وحذفُ سؤالٍ يفرّغ حقلَيه ثم يُحفظ.
-            <b> ولا موضعَ لها في الموقع الجديد</b> (لوحاتُ W01–W09 بلا قسم أسئلة) — تُحفظ هنا ولا تظهر
-            حتى يُقرَّر لها موضع.
+            <b> والقسمُ مطفأٌ حتى تُشعله</b> — والأسئلةُ لا تُرسم ولا تخرج من البابِ العامّ ما دام مطفأً.
+            <b> ولا وعدَ في جوابٍ ولا رقمَ عمولة</b>: الجوابُ يصف ما يفعله التطبيقُ اليوم.
           </p>
+          <div className="mb-12">
+            <Checkbox checked={boolOf("faq_enabled")} onChange={(next) => edit("faq_enabled", next)}>
+              اعرض قسمَ الأسئلة في الموقع
+            </Checkbox>
+          </div>
           <div className="grid gap-12">
             {faq.map((row, index) => (
               <div key={index} className="rounded-12 border border-line p-12">

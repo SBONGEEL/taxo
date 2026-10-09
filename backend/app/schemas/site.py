@@ -10,6 +10,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.site import NEW_CARDS_DEFAULT
+
 #: **`https` وحدَها** — صفحةٌ عامّةٌ تفتح `http` تُنذر المتصفّحُ زائرَها.
 _HTTPS = "https://"
 
@@ -57,7 +59,11 @@ class SiteUpdateIn(BaseModel):
 
     hidden_sections: list[str] | None = None
     hidden_cards: list[str] | None = None
+    #: **شارةُ «جديد»** — مفاتيحُ بطاقاتٍ معروفةٌ وحدَها (§٧١-ج/٨): مفتاحٌ لا بطاقةَ له زرٌّ يُضغط فلا يقع شيء
+    new_cards: list[str] | None = None
     faq: list[dict[str, Any]] | None = None
+    #: **قسمُ الأسئلة** — مطفأٌ افتراضاً (§٧١-ج/٩)
+    faq_enabled: bool | None = None
 
     distribution_mode: Literal["apk", "play"] | None = None
     play_url_rider: str | None = Field(default=None, max_length=300)
@@ -82,6 +88,16 @@ class SiteUpdateIn(BaseModel):
         if value is None:
             return None
         return _https_or_empty(value, label="الرابط")
+
+    @field_validator("new_cards")
+    @classmethod
+    def _check_cards(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        unknown = sorted(set(value) - set(NEW_CARDS_DEFAULT))
+        if unknown:
+            raise ValueError(f"بطاقةٌ غيرُ معروفة: {' · '.join(unknown)}")
+        return [card for card in NEW_CARDS_DEFAULT if card in value]
 
     @field_validator("play_url_rider", "play_url_driver")
     @classmethod
@@ -123,7 +139,9 @@ class SiteAdminOut(BaseModel):
     social_whatsapp: str
     hidden_sections: list[str]
     hidden_cards: list[str]
+    new_cards: list[str]
     faq: list[dict[str, Any]]
+    faq_enabled: bool
     distribution_mode: str
     play_url_rider: str
     play_url_driver: str

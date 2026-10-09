@@ -81,7 +81,7 @@ RECORDING_PRIVACY_MARKER = "تسجيلُ المكالمات"
 
 #: **مدّةُ الاحتفاظ لسوقٍ بلا صفّ** — افتراضُ العمود نفسُه (`ServiceSetting.chat_retention_days`)
 DEFAULT_RETENTION_DAYS = 90
-DEFAULT_RECORDING_RETENTION_DAYS = 30
+DEFAULT_RECORDING_RETENTION_DAYS = 90
 
 #: **دفعةُ الحذف** — لا `DELETE` مكشوفٌ بمئات الألوف في معاملةٍ واحدة (سابقةُ `inbox.trim`)
 PURGE_BATCH = 1000

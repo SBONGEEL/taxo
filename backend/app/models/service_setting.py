@@ -123,7 +123,7 @@ class ServiceSetting(TimestampMixin, Base):
     call_recording_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
-    #: كم يبقى التسجيلُ قبل حذفه آلياً — مجمَّدٌ على المكالمة لحظةَ رفعه
+    #: كم يبقى التسجيلُ قبل حذفه آلياً — مجمَّدٌ على المكالمة لحظةَ رفعه. **تسعون افتراضاً** (أمرُ المالك ٢٠٢٦-١٠-٠٩، `0105`)
     call_recording_retention_days: Mapped[int] = mapped_column(
-        SmallInteger, nullable=False, default=30, server_default=text("30")
+        SmallInteger, nullable=False, default=90, server_default=text("90")
     )

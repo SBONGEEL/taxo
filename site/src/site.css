@@ -1033,6 +1033,16 @@ picture {
   font-size: 12px;
   font-weight: 700;
 }
+/* **شارةُ «جديد»** (§٧١-ج/٨) — جمرٌ ليّنٌ بحبر الجمر، أخت «قريباً» بالمقاس نفسِه */
+.badge-new {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--t2-accent-soft);
+  border: 1px solid var(--t2-accent-line);
+  color: var(--t2-accent-text);
+  font-size: 12px;
+  font-weight: 700;
+}
 /* **المطفأُ يُقرأ ولا يُنقر** — حافّةٌ متقطّعة وبئرٌ محايد (§٥٢٫٤) */
 .svc.is-soon {
   background: transparent;
@@ -1041,6 +1051,58 @@ picture {
 }
 .svc.is-soon .well {
   background: var(--t2-well);
+  color: var(--t2-muted);
+}
+
+/* ═══ الأسئلةُ الشائعة (§٧١-ج/٩) — بعد نهاية الطريق، عمودُ قراءة ═══════════════════════════════════════════════════════ */
+.faq .wrap {
+  max-width: 760px;
+}
+.faq-list {
+  margin-top: 22px;
+  display: grid;
+  gap: 10px;
+}
+.faq-item {
+  border-radius: 18px;
+  border: 1px solid var(--t2-line);
+  background: var(--t2-surface);
+  box-shadow: var(--site-card-shadow);
+}
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+.faq-item summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-inline-end: 2px solid var(--t2-muted);
+  border-bottom: 2px solid var(--t2-muted);
+  transform: rotate(45deg);
+  transition: transform var(--t2-fast) var(--t2-ease-out);
+}
+.faq-item[open] summary::after {
+  transform: rotate(-135deg);
+}
+.faq-item p {
+  margin: 0;
+  padding: 0 18px 18px;
+  font-size: 14.5px;
+  line-height: 1.75;
   color: var(--t2-muted);
 }
 

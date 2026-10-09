@@ -22,6 +22,7 @@ from sqlalchemy import select, update
 
 from app.core import storage
 from app.core.config import settings
+from app.core.exceptions import DocumentFileMissing
 from app.core.redis_client import get_redis_client
 from app.models.audit import AdminAuditLog
 from app.models.enums import CountryCode
@@ -368,7 +369,7 @@ async def test_recording_is_off_by_default(client: AsyncClient, session_factory,
         session.add(row)
         await session.flush()
         await session.refresh(row)
-        assert row.call_recording_enabled is False and row.call_recording_retention_days == 30
+        assert row.call_recording_enabled is False and row.call_recording_retention_days == 90
         assert row.chat_retention_days == 90
         await session.rollback()
 
@@ -445,7 +446,7 @@ async def test_when_recording_is_on_the_notice_always_comes_first(
     call = await _call(session_factory, call_id)
     assert call.recording_path is not None
     remaining = call.recording_expires_at - datetime.now(UTC)
-    assert timedelta(days=29, hours=23) < remaining <= timedelta(days=30)
+    assert timedelta(days=89, hours=23) < remaining <= timedelta(days=90)
 
     # **والاستماعُ صلاحيةٌ مستقلّة — لا يملكها المشرفُ الكامل افتراضاً — وكلُّ استماعٍ سطر**
     refused = await client.get(f"/admin/calls/{call_id}/recording", headers=admin_headers)
@@ -491,12 +492,65 @@ async def test_when_recording_is_on_the_notice_always_comes_first(
 
     # **والحذفُ في موعده** — الملفُّ والمسار
     async with session_factory() as session:
-        _, files = await ride_calls.purge_expired(session, now=datetime.now(UTC) + timedelta(days=31))
+        _, files = await ride_calls.purge_expired(session, now=datetime.now(UTC) + timedelta(days=91))
         await session.commit()
     assert files == [call.recording_path]
     for path in files:
         await storage.delete(path)
     assert (await _call(session_factory, call_id)).recording_path is None
+
+
+async def test_a_recording_is_erased_before_its_time_only_by_a_listener_with_a_reason(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**حذفُ التسجيل قبل موعده** (§٧١-ب/٧): بصلاحية الاستماع وحدَها، وبسببٍ مكتوب، وسطرٍ في التدقيق — **والملفُّ يُمحى من القرص**،
+    **وسطرُ المكالمة يبقى**. وحذفٌ ثانٍ لا يجد شيئاً."""
+    await _turn_recording_on(session_factory)
+    trip = await _trip(client, session_factory)
+    call_id = (await _start(client, trip)).json()["call_id"]
+    await client.post(f"/calls/{call_id}/answer", json={"recording_notice_ack": True}, headers=trip["driver"]["headers"])
+    await client.post(f"/calls/{call_id}/recording-notice", headers=trip["rider"]["headers"])
+    await client.post(f"/calls/{call_id}/end", json={}, headers=trip["rider"]["headers"])
+    uploaded = await client.post(
+        f"/calls/{call_id}/recording", files={"file": ("c.webm", WEBM_BYTES, "audio/webm")}, headers=trip["rider"]["headers"]
+    )
+    assert uploaded.status_code == 200, uploaded.text
+    path = (await _call(session_factory, call_id)).recording_path
+    assert path is not None and storage.resolve(path).exists()
+
+    reason = {"reason": "تسجيلُ تجربةٍ انتهت"}
+    refused = await client.post(f"/admin/calls/{call_id}/recording/erase", json=reason, headers=admin_headers)
+    assert refused.status_code == 403, refused.text
+    listener_headers = await _staff_headers("admin", "+962790000052", "ماحٍ مخوَّل")
+    me = (await client.get("/auth/me", headers=listener_headers)).json()
+    rows = (await client.get("/admin/permissions", headers=admin_headers)).json()
+    row = next(item for item in rows if item["user_id"] == me["id"])
+    await client.put(
+        f"/admin/permissions/{me['id']}",
+        json={"permissions": sorted(set(row["permissions"]) | {"call_recordings.listen"})},
+        headers=admin_headers,
+    )
+    bare = await client.post(f"/admin/calls/{call_id}/recording/erase", json={"reason": "قصير"}, headers=listener_headers)
+    assert bare.status_code == 422, bare.text
+
+    erased = await client.post(f"/admin/calls/{call_id}/recording/erase", json=reason, headers=listener_headers)
+    assert erased.status_code == 204, erased.text
+    call = await _call(session_factory, call_id)
+    assert call.recording_path is None and call.recording_expires_at is None and call.recorded is True
+    with pytest.raises(DocumentFileMissing):
+        storage.resolve(path)
+    async with session_factory() as session:
+        audits = (
+            await session.scalars(select(AdminAuditLog).where(AdminAuditLog.entity_type == "call_recording"))
+        ).all()
+    assert [(entry.action, str(entry.actor_id), entry.details["reason"]) for entry in audits] == [
+        ("delete", me["id"], reason["reason"])
+    ]
+
+    again = await client.post(f"/admin/calls/{call_id}/recording/erase", json=reason, headers=listener_headers)
+    assert again.status_code == 404, again.text
+    heard = await client.get(f"/admin/calls/{call_id}/recording", headers=listener_headers)
+    assert heard.status_code == 404, heard.text
 
 
 async def test_no_recording_is_kept_unless_both_sides_saw_the_notice(

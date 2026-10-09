@@ -42,14 +42,53 @@ export const POLICY_PAGES = {
 const esc = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** يحوّل النصَّ الخامَ إلى فقرات — **وسطرٌ فارغٌ يفصل**، كما كتبه المُحرِّر. */
-function paragraphs(body) {
-  return body
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => `<p>${esc(block).replace(/\n/g, "<br>")}</p>`)
-    .join("\n");
+/** **سطرُ القسم** — «١) …» أو كتلةٌ من سطرٍ واحدٍ قصيرٍ بلا علامةِ وقف («محادثةُ الرحلة ومكالمتُها»). */
+const NUMBERED = /^[0-9٠-٩]+\)\s/;
+const isHeading = (line, alone) => NUMBERED.test(line) || (alone && line.length <= 60 && !/[.:،؛!?؟—-]$/.test(line));
+
+/** يحوّل النصَّ الخامَ إلى وسم — **والحروفُ كما كتبها المُحرِّر بلا زيادةٍ ولا نقص** (SPEC §٧١-ج/١٠: الشكلُ يتغيّر لا الصياغة).
+ *
+ * · **سطرٌ فارغٌ يفصل الكتل**، كما كان.
+ * · **سطرُ القسم عنوانٌ** (`<h2>`): أوّلُ سطرٍ يبدأ برقمٍ وقوس، أو كتلةٌ من سطرٍ واحدٍ قصيرٍ بلا وقف.
+ * · **«- » يبدأ بنداً** (`<li>`)، **والسطرُ الذي يليه بلا «- » تكملتُه** — المحرِّرُ يكسر الأسطرَ بيده عند ثمانين حرفاً،
+ *   فكسرُه مسافةٌ لا `<br>`: نصٌّ مكسورٌ بيدٍ على شاشة هاتفٍ يُقرأ أسطراً مبتورة. **وكذلك في الفقرة.**
+ * · **و«- » نفسُها تُنزع من البند** — النقطةُ ترسمها الورقة؛ وهذا الحرفُ وحدَه ما لا يظهر، وهو علامةٌ لا كلمة.
+ */
+export function paragraphs(body) {
+  const out = [];
+  for (const block of body.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean)) {
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    let i = 0;
+    if (isHeading(lines[0], lines.length === 1)) {
+      out.push(`<h2>${esc(lines[0])}</h2>`);
+      i = 1;
+    }
+    let para = [];
+    let items = null;
+    const flushPara = () => {
+      if (para.length) out.push(`<p>${esc(para.join(" "))}</p>`);
+      para = [];
+    };
+    const flushList = () => {
+      if (items) out.push(`<ul>${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`);
+      items = null;
+    };
+    for (; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (line.startsWith("- ")) {
+        flushPara();
+        items = items || [];
+        items.push(line.slice(2));
+      } else if (items) {
+        items[items.length - 1] += ` ${line}`;
+      } else {
+        para.push(line);
+      }
+    }
+    flushPara();
+    flushList();
+  }
+  return out.join("\n");
 }
 
 async function fetchPolicy({ doc, app }) {

@@ -1962,7 +1962,11 @@ export interface SiteSettings {
   social_whatsapp: string;
   hidden_sections: string[];
   hidden_cards: string[];
+  /** **شارةُ «جديد»** على بطاقات الخدمات (SPEC §٧١-ج/٨) — الستُّ افتراضاً. */
+  new_cards: string[];
   faq: { q?: string; a?: string; order?: number }[];
+  /** **قسمُ الأسئلة في الموقع** — مطفأٌ افتراضاً (§٧١-ج/٩)، والبابُ العامُّ لا ينشر الأسئلةَ ما دام مطفأً. */
+  faq_enabled: boolean;
   distribution_mode: string;
   play_url_rider: string;
   play_url_driver: string;

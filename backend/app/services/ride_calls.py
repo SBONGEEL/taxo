@@ -754,6 +754,44 @@ async def recording_for_listen(session: AsyncSession, *, call_id: uuid.UUID, act
     return call
 
 
+async def erase_recording(session: AsyncSession, *, call_id: uuid.UUID, actor: User | None, reason: str) -> str:
+    """**حذفُ تسجيلٍ قبل موعده** (SPEC §٧١-ب/٧) — بصلاحية الاستماع نفسِها، **وبسببٍ مكتوبٍ وسطرٍ في التدقيق**. يعيد مسارَ الملفّ
+    ليُمحى **بعد الالتزام** كالكنس (`purge_expired`). **وسطرُ المكالمة يبقى** (من اتصل بمن ومتى) حتى يحلّ موعدُه كسائر سجلّ الرحلة.
+
+    **ويُقفل صفُّ المكالمة قبل أن يُفحص** (قاعدةُ كلِّ تغيير حال): حذفان معاً لا يكتبان سطرين لملفٍّ واحد، وحذفٌ مع رفعٍ متأخّرٍ لا
+    يترك ملفّاً بلا صفّ. **ولا قفلَ بعده** — كسائر أبواب المكالمة. و`actor=None` لسكربتٍ بأمر المالك، وسببُه في القيد.
+    """
+    call = (
+        await session.scalars(
+            select(RideCall)
+            .where(RideCall.id == call_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).first()
+    if call is None or call.recording_path is None:
+        raise NotFound("لا تسجيلَ لهذه المكالمة")
+    path = call.recording_path
+    expired_at = call.recording_expires_at
+    call.recording_path = None
+    call.recording_expires_at = None
+    await audit.record(
+        session,
+        actor=actor,
+        action=AuditAction.DELETE,
+        entity_type="call_recording",
+        entity_id=call.id,
+        details={
+            "call_id": str(call.id),
+            "ride_id": str(call.ride_id),
+            "reason": reason,
+            "was_due": None if expired_at is None else expired_at.isoformat(),
+        },
+    )
+    await session.flush()
+    return path
+
+
 async def calls_of_ride(session: AsyncSession, ride_id: uuid.UUID) -> tuple[list[RideCall], dict[uuid.UUID, str]]:
     """**سجلُّ مكالمات رحلةٍ للّوحة** — من اتصل بمن ومتى وكم وكيف انتهت وهل سُجّلت. **بياناتٌ وصفيّةٌ وحدَها، ولا صوت.**"""
     ride = await rides_service.get_ride(session, ride_id)

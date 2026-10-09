@@ -1,0 +1,80 @@
+/* ═══ صفحاتُ الوثائق — الخصوصيةُ والشروط بعائلة TAXO 2.0 (SPEC §٧١-ج/١٠) ═════════════════════════════════════════
+ *
+ * **فوق `download.css` لا بدلاً منه**: الرموزُ والأساسُ والرأسُ والعلامةُ والتذييلُ من هناك — **فلا نسخةٌ ثالثةٌ من الرموز
+ * تبلى**، والحارسُ يطابق تلك بالعائلة. وهنا ما يخصّ الوثيقةَ وحدَها: عمودُ قراءةٍ بطول ٦٥ حرفاً، وعناوينُ الأقسام، والقوائم.
+ *
+ * **والنصُّ لا يتغيّر بحرف** (أمرُ المالك): ما يتغيّر هو الوسم — سطرُ القسم عنوانٌ، و«- » بندٌ في قائمة (`inline-policy.mjs`).
+ * **ولا لونَ خارج الرموز.**
+ */
+
+.doc {
+  max-width: 68ch;
+}
+.doc .hero {
+  margin-bottom: 24px;
+}
+.doc-body {
+  padding: 22px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--t2-line);
+  background: var(--t2-surface);
+}
+.doc-body h2 {
+  margin: 28px 0 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--t2-divider);
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.doc-body h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.doc-body p {
+  margin: 0 0 12px;
+  font-size: 15.5px;
+  line-height: 1.85;
+}
+.doc-body ul {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.doc-body li {
+  position: relative;
+  padding-inline-start: 18px;
+  font-size: 15.5px;
+  line-height: 1.8;
+}
+.doc-body li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 2px;
+  top: 0.75em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--t2-accent);
+}
+.doc-meta {
+  margin: 16px 0 0;
+  color: var(--t2-muted);
+  font-size: 13.5px;
+}
+
+@media (min-width: 860px) {
+  .doc {
+    max-width: 76ch;
+  }
+  .doc-body {
+    padding: 32px 36px;
+  }
+  .doc-body h2 {
+    font-size: 20px;
+  }
+}

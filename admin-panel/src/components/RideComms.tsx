@@ -7,16 +7,18 @@
  *   يُسجَّل باسمك». **ومنعٌ واضحٌ** إن ردّ الخادم (مصفوفةٌ تغيّرت بعد القراءة).
  * - **A34 المكالمات** — بياناتٌ وصفيّةٌ بقراءة القوائم: من اتصل بمن، ومتى، وكم، ورُدّ أم لا، وكيف انتهت، وهل سُجّلت. **و«استماع»
  *   لمن يملك `call_recordings.listen` وحدَه**، وفوقه «استماعُك يُسجَّل باسمك» — والملفُّ يُجلب بالجلسة إلى `blob` ويُغلق بإغلاقه.
+ *   **و«حذف التسجيل» بالصلاحية نفسِها** (§٧١-ب/٧): تأكيدٌ داخل الصفحة وسببٌ مكتوب، ثمّ يُقرأ السجلُّ من جديد.
  */
 
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { callRecordingBlob, getRideChat, listRideCalls } from "@/api/endpoints";
+import { callRecordingBlob, eraseCallRecording, getRideChat, listRideCalls } from "@/api/endpoints";
 import type { AdminCall, AdminChatThread, ChatReportReason } from "@/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
+import { Field } from "@/components/ui/Field";
 import { moment } from "@/lib/format";
 import { CALL_RECORDINGS_LISTEN, useMyPermissions } from "@/lib/permissions";
 import { digits } from "@/lib/utils";
@@ -174,7 +176,21 @@ export function RideCallsSection({ rideId }: { rideId: string }) {
               بدأت {moment(call.started_at)} · المدّة <span dir="ltr">{duration(call.duration_seconds)}</span>
               {call.end_reason ? ` · ${END_LABEL[call.end_reason]}` : call.status === "ended" ? "" : " · جارية"}
             </p>
-            {call.has_recording && listener ? <Listen callId={call.id} /> : null}
+            {call.has_recording && listener ? (
+              <>
+                <Listen callId={call.id} />
+                <Erase
+                  callId={call.id}
+                  onErased={() =>
+                    setCalls((now) =>
+                      (now ?? []).map((row) =>
+                        row.id === call.id ? { ...row, has_recording: false, recording_expires_at: null } : row,
+                      ),
+                    )
+                  }
+                />
+              </>
+            ) : null}
             {call.recorded && !call.has_recording ? (
               <p className="ad-hint">لا ملفَّ يُستمع إليه — لم يُرفع، أو حُذف بعد مدّة الحفظ.</p>
             ) : null}
@@ -224,6 +240,58 @@ function Listen({ callId }: { callId: string }) {
           استماع
         </Button>
       )}
+      <ErrorNote message={error} />
+    </div>
+  );
+}
+
+/** «حذف التسجيل» — **تأكيدٌ داخل الصفحة وسببٌ مكتوب** (لا `confirm()`): حذفٌ لا رجعةَ فيه لا يقع بضغطةٍ واحدة. */
+function Erase({ callId, onErased }: { callId: string; onErased: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ready = reason.trim().length >= 8;
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+        <Icon name="close" />
+        حذف التسجيل
+      </Button>
+    );
+  }
+  return (
+    <div className="ad-cm-listen">
+      <p className="ad-hint">يُمحى الملفُّ نهائياً ويبقى سطرُ المكالمة. والحذفُ يُسجَّل باسمك وسببِه.</p>
+      <Field
+        label="السبب"
+        id={`erase-${callId}`}
+        placeholder="مثال: تسجيلُ تجربةٍ انتهت"
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+      />
+      <div className="ad-cm-call-head">
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={!ready}
+          loading={busy}
+          onClick={() => {
+            setBusy(true);
+            setError(null);
+            eraseCallRecording(callId, reason.trim())
+              .then(onErased)
+              .catch((caught: unknown) => setError(caught instanceof ApiError ? caught.message : "تعذّر حذف التسجيل"))
+              .finally(() => setBusy(false));
+          }}
+        >
+          احذف نهائياً
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => setOpen(false)}>
+          تراجع
+        </Button>
+      </div>
       <ErrorNote message={error} />
     </div>
   );

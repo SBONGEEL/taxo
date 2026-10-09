@@ -300,3 +300,37 @@ async def test_the_public_door_writes_nothing(
 async def test_policies_stay_private_by_default(client: AsyncClient) -> None:
     """**مطفأٌ افتراضاً بقرارِ المالك المكتوب** — ولا نصَّ يُعرض قبل مراجعته."""
     assert (await client.get("/public/site")).json()["policies_public"] is False
+
+
+async def test_every_new_service_card_carries_the_new_badge_until_the_panel_removes_it(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """**شارةُ «جديد»** (SPEC §٧١-ج/٨): الستُّ كلُّها افتراضاً على البابين، **والمشرفُ ينزعها بطاقةً بطاقة** — ومفتاحٌ لا بطاقةَ
+    له يُرفض: زرٌّ يُضغط فلا يقع شيء. **والترتيبُ ترتيبُ الصفحة** لا ترتيبُ الضغط."""
+    await client.get("/admin/site", headers=admin_headers)
+    assert (await client.get("/public/site")).json()["new_cards"] == list(site_service.NEW_CARDS_DEFAULT)
+
+    unknown = await client.patch("/admin/site", json={"new_cards": ["airport", "teleport"]}, headers=admin_headers)
+    assert unknown.status_code == 422, unknown.text
+
+    fewer = await client.patch("/admin/site", json={"new_cards": ["parcel", "airport"]}, headers=admin_headers)
+    assert fewer.status_code == 200, fewer.text
+    assert (await client.get("/public/site")).json()["new_cards"] == ["airport", "parcel"]
+
+
+async def test_the_faq_stays_off_the_public_door_until_it_is_switched_on(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """**قسمُ الأسئلة مطفأٌ افتراضاً** (SPEC §٧١-ج/٩): الأسئلةُ تُكتب في اللوحة وتُقرأ فيها، **والبابُ العامُّ يعطي قائمةً فارغةً**
+    حتى يُشعَل — نصٌّ لم يُشعَل لا يصل حمولةَ زائرٍ ولو لم يُرسم."""
+    faq = [{"q": "هل التطبيق مجاني للراكب؟", "a": "نعم.", "order": 1}]
+    saved = await client.patch("/admin/site", json={"faq": faq}, headers=admin_headers)
+    assert saved.status_code == 200, saved.text
+    panel = (await client.get("/admin/site", headers=admin_headers)).json()
+    assert panel["faq"] == faq and panel["faq_enabled"] is False
+    public = (await client.get("/public/site")).json()
+    assert public["faq"] == [] and public["faq_enabled"] is False
+
+    await client.patch("/admin/site", json={"faq_enabled": True}, headers=admin_headers)
+    public = (await client.get("/public/site")).json()
+    assert public["faq"] == faq and public["faq_enabled"] is True

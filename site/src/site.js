@@ -33,6 +33,46 @@ function setText(sel, value) {
 }
 
 /** يخفي ما أعلنته اللوحةُ مخفيّاً — **ولا يرسم مكاناً محجوزاً** (والطريقُ يُعاد بناؤه بلا محطّته). */
+/** **شارةُ «جديد»** (§٧١-ج/٨) — على البطاقة المؤشَّرة في اللوحة، **ولا شارةَ على «قريباً»**: الجديدُ ما يُطلب اليوم. */
+function markNew(keys) {
+  (keys || []).forEach((key) => {
+    const card = $(`[data-card="${key}"]`);
+    if (!card || card.classList.contains("is-soon")) return;
+    const h = $("h3", card);
+    if (h && !$(".badge-new", h)) {
+      const badge = document.createElement("span");
+      badge.className = "badge-new";
+      badge.textContent = "جديد";
+      h.appendChild(badge);
+    }
+  });
+}
+
+/** **الأسئلةُ الشائعة** (§٧١-ج/٩) — **مطفأٌ يُزال لا يُخفى**، والنصُّ `textContent` لا HTML: ما يكتبه المشرفُ يُقرأ ولا يُنفَّذ. */
+function faq(site) {
+  const section = $("[data-faq-section]");
+  if (!section) return;
+  const items = (site.faq || [])
+    .filter((row) => row && row.q && row.a)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  if (!site.faq_enabled || !items.length) {
+    section.remove();
+    return;
+  }
+  const list = $("[data-faq]", section);
+  for (const row of items) {
+    const item = document.createElement("details");
+    item.className = "faq-item";
+    const q = document.createElement("summary");
+    q.textContent = row.q;
+    const a = document.createElement("p");
+    a.textContent = row.a;
+    item.append(q, a);
+    list.appendChild(item);
+  }
+  section.removeAttribute("hidden");
+}
+
 function applyHidden(list, attr) {
   (list || []).forEach((key) => {
     $$(`[${attr}="${key}"]`).forEach((el) => el.remove());
@@ -463,10 +503,12 @@ let route = null;
     $$("[data-feature]").forEach((el) => {
       if (site.features && site.features[el.dataset.feature] === false) markSoon(el);
     });
+    markNew(site.new_cards);
     // **قسمٌ بلا بطاقةٍ لا يُرسم عنوانُه فوق فراغ**
     const services = $("[data-services]");
     if (services && !services.children.length) $$('[data-section="services"]').forEach((el) => el.remove());
 
+    faq(site);
     download(site);
     route?.build();
   }

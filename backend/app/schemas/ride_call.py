@@ -100,3 +100,9 @@ class AdminCallOut(BaseModel):
     #: **أثمّة ملفٌّ يُستمع إليه الآن** — والاستماعُ بابٌ بصلاحيته وتدقيقه لا هذا الحقل
     has_recording: bool
     recording_expires_at: datetime | None = None
+
+
+class RecordingEraseIn(BaseModel):
+    """**حذفُ تسجيلٍ قبل موعده — بسببٍ مكتوب** يُحفظ في سطر التدقيق (§٧١-ب/٧)."""
+
+    reason: str = Field(min_length=8, max_length=300)

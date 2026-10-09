@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, CheckConstraint, String, Text
+from sqlalchemy import Boolean, CheckConstraint, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
+
+
+#: **بطاقاتُ «الخدمات الجديدة» الستُّ** بمفاتيح `data-card` في `site/index.html` — افتراضُ شارة «جديد» (SPEC §٧١-ج/٨)
+NEW_CARDS_DEFAULT: tuple[str, ...] = ("airport", "guaranteed_booking", "parcel", "hourly", "intercity", "ride_for_other")
 
 
 class SiteSettings(UUIDMixin, TimestampMixin, Base):
@@ -81,11 +85,26 @@ class SiteSettings(UUIDMixin, TimestampMixin, Base):
         JSONB, nullable=False, default=list, server_default="[]"
     )
 
+    #: **شارةُ «جديد» على بطاقات الخدمات** (SPEC §٧١-ج/٨) — مفاتيحُ `data-card` التي تُرسم بها. **والستُّ كلُّها افتراضاً**:
+    #: القسمُ قسمُ «الخدمات الجديدة» نفسُه، والمشرفُ ينزع الشارةَ من اللوحة حين تكفّ الخدمةُ عن أن تكون جديدة.
+    #: **ولا شارةَ على بطاقةٍ «قريباً»**: الجديدُ ما يُطلب اليوم (`site.js`).
+    new_cards: Mapped[list] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: list(NEW_CARDS_DEFAULT),
+        server_default=text("""'["airport", "guaranteed_booking", "parcel", "hourly", "intercity", "ride_for_other"]'::jsonb"""),
+    )
+
     # ── الأسئلة الشائعة ────────────────────────────────────────────────────
     #: `[{"q": "...", "a": "...", "order": 1}]` — الترتيبُ من الحقل لا من موضع
     #: العنصر، فإعادةُ ترتيبٍ لا تعني إعادةَ كتابةِ المصفوفة.
     faq: Mapped[list] = mapped_column(
         JSONB, nullable=False, default=list, server_default="[]"
+    )
+    #: **قسمُ الأسئلة مطفأٌ افتراضاً** (SPEC §٧١-ج/٩): الأسئلةُ تُكتب وتُراجع في اللوحة **ولا تُرسم ولا تُنشر** حتى يُشعَل —
+    #: والبابُ العامُّ يعطي قائمةً فارغةً ما دام مطفأً (`services/site.public_payload`).
+    faq_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
     )
 
     # ── 11 · التحميل ───────────────────────────────────────────────────────

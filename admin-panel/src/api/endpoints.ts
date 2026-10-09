@@ -1451,6 +1451,11 @@ export async function callRecordingBlob(callId: string): Promise<string> {
   return URL.createObjectURL(await answer.blob());
 }
 
+/** **حذفُ تسجيل مكالمةٍ قبل موعده** — بصلاحية الاستماع نفسِها **وسببٍ مكتوب** يُحفظ في سطر التدقيق (SPEC §٧١-ب/٧).
+ *  والملفُّ يُمحى من القرص، **وسطرُ المكالمة يبقى**. */
+export const eraseCallRecording = (callId: string, reason: string) =>
+  api.post<void>(`/admin/calls/${callId}/recording/erase`, { reason });
+
 /** عنوانُ تنزيل نسخةٍ احتياطية — **يُبنى هنا ويُفتح هناك**.
  *
  * التنزيلُ ملاحةُ متصفّحٍ لا نداءُ `api` (المتصفّحُ هو من يحفظ الملفّ)، فلا

@@ -38,7 +38,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import CountryCode
-from app.models.site import SiteSettings
+from app.models.site import NEW_CARDS_DEFAULT, SiteSettings
 from app.services import settings_service
 
 #: **سوقُ الصفحة** — الأردنُ وحدَه بقرار المالك، ومنه تُقرأ المفاتيح.
@@ -67,7 +67,9 @@ PUBLIC_FIELDS: tuple[str, ...] = (
     "social_whatsapp",
     "hidden_sections",
     "hidden_cards",
+    "new_cards",
     "faq",
+    "faq_enabled",
     "distribution_mode",
     "play_url_rider",
     "play_url_driver",
@@ -154,7 +156,9 @@ def _default_payload() -> dict[str, Any]:
             "announce_enabled",
             "hidden_sections",
             "hidden_cards",
+            "new_cards",
             "faq",
+            "faq_enabled",
             "distribution_mode",
             "apk_page_enabled",
             "policies_public",
@@ -166,7 +170,9 @@ def _default_payload() -> dict[str, Any]:
         "announce_enabled": False,
         "hidden_sections": [],
         "hidden_cards": [],
+        "new_cards": list(NEW_CARDS_DEFAULT),
         "faq": [],
+        "faq_enabled": False,
         "distribution_mode": "apk",
         "apk_page_enabled": False,
         "policies_public": False,
@@ -188,6 +194,9 @@ async def public_payload(session: AsyncSession) -> dict[str, Any]:
         payload = _default_payload()
     else:
         payload = {field: getattr(row, field) for field in PUBLIC_FIELDS}
+    # **الأسئلةُ لا تُنشر ما دام قسمُها مطفأً** (§٧١-ج/٩): نصٌّ يُراجع في اللوحة لا يصل حمولةَ زائرٍ قبل أن يُشعَل
+    if not payload["faq_enabled"]:
+        payload["faq"] = []
 
     payload["features"] = await settings_service.get_flags(session, SITE_COUNTRY)
     return payload
