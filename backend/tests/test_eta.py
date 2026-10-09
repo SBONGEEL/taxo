@@ -127,3 +127,22 @@ async def test_a_driver_has_no_eta_door(client: AsyncClient, jordan_settings: No
     driver = await approved_driver(client, session_factory)
     response = await client.get("/rides/eta", params=PICKUP, headers=driver["headers"])
     assert response.status_code == 403
+
+
+async def test_accepting_without_opening_the_offer_route_does_not_fail(
+    client: AsyncClient, jordan_settings: None, session_factory
+) -> None:
+    """**القبولُ لا يسقط بالاقتراب** (قِيس على الإنتاج ٢٠٢٦-١٠-٠٩: ٥٠٠ بـ`MissingGreenlet`): كبتنٌ قبل بلا أن يفتح مسارَ العرض — **فلا مسارَ
+    عرضٍ مخزَّن**، والاقترابُ يُحسب من نقطة الالتقاط **بعد commit ثانٍ أبطل أعمدتَها المحسوبة**. كان يقرؤها كسولاً فيسقط القبولُ كلُّه،
+    ويقول التعليقُ فوقه «فشلُه لا يمسّ القبول»."""
+    await enable_features(session_factory, "eta_enabled")
+    driver = await approved_driver(client, session_factory)
+    await bring_online(client, driver)
+    rider = auth(await register(client, RIDER))
+
+    ride = await request_ride(client, rider)
+    await wait_for_offer(ride["id"], driver["driver_id"])
+    accepted = await client.post(f"/rides/{ride['id']}/accept", headers=driver["headers"])
+    assert accepted.status_code == 200, accepted.text
+    approach = await client.get(f"/rides/{ride['id']}/approach", headers=driver["headers"])
+    assert approach.status_code == 200, approach.text

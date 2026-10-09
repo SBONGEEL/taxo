@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
+import logging
 import uuid
 from decimal import Decimal
 
@@ -70,6 +71,7 @@ from app.ws import events
 from app.core.exceptions import AmbiguousRole
 
 router = APIRouter(prefix="/rides", tags=["rides"])
+logger = logging.getLogger(__name__)
 
 
 def _coords(value: CoordinatesIn) -> Coordinates:
@@ -631,8 +633,15 @@ async def accept_ride(
     # وفشلُه لا يمسّ القبول — `ensure` تبتلع خطأ المزوّد وتعيد `None`
     if await route_line.ensure(session, ride.id) is not None:
         await session.commit()
-    # **ومسارُ الاقتراب لحظةَ القبول** (§٦٢-ج/١٠) — مسارُ العرض الطازجُ نفسُه إن طُلب، فلا نداءَ ثانٍ؛ وفشلُه لا يمسّ القبول
-    await eta.approach(session, redis, ride=ride)
+    # **ومسارُ الاقتراب لحظةَ القبول** (§٦٢-ج/١٠) — مسارُ العرض الطازجُ نفسُه إن طُلب، فلا نداءَ ثانٍ؛ **وفشلُه لا يمسّ القبول — بنيةً
+    # لا تعليقاً** (قِيس على الإنتاج ٢٠٢٦-١٠-٠٩): الـcommit أعلاه أبطل الأعمدةَ المحسوبة (`pickup_lat`)، **فتُعاد قراءةُ الرحلة** قبل أن
+    # تُقرأ — وكانت تُقرأ كسولاً خارج السياق فيسقط القبولُ ٥٠٠ (`MissingGreenlet`). **وأيُّ خطأٍ بعدها يُكتب ولا يُرفع**: الرحلةُ
+    # قُبلت والتزمت، والاقترابُ يُطلب ثانيةً من `GET /approach`
+    try:
+        await session.refresh(ride)
+        await eta.approach(session, redis, ride=ride)
+    except Exception:  # noqa: BLE001 — زينةُ خريطةٍ لا شرطُ قبول
+        logger.exception("approach failed after accept ride=%s", ride_id)
     return out
 
 

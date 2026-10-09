@@ -25,3 +25,7 @@ services:
       - "-c"
       - "/etc/coturn/turnserver.conf"
       - "--static-auth-secret=${TURN_SHARED_SECRET:?TURN_SHARED_SECRET غيرُ مضبوطٍ في بيئة الخادم}"
+      # **العنوانُ العامُّ وحدَه** (قِيس ٢٠٢٦-١٠-٠٩): بلا هذين يستمع coturn **ويرحّل** على كلِّ واجهةٍ في المضيف — ومنها جسرا Docker
+      # (`172.17.0.1` · `172.18.0.1`): «4 relay addresses discovered». **فالمُرحِّلُ على العنوان الذي يفتحه الجدارُ وحدَه**
+      - "--listening-ip=${TURN_PUBLIC_IP:?TURN_PUBLIC_IP غيرُ مضبوطٍ في بيئة الخادم}"
+      - "--relay-ip=${TURN_PUBLIC_IP:?TURN_PUBLIC_IP غيرُ مضبوطٍ في بيئة الخادم}"
