@@ -8,6 +8,8 @@ import { API_URL, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
   AdminCall,
+  MapPlace,
+  MapPlaceCategory,
   AdminChatReport,
   AdminChatThread,
   ChatReportStatus,
@@ -1585,6 +1587,33 @@ export const deletePromoBanner = (id: string) =>
 // ── المرافقُ الحيويّة ورسمُ المطار (§٦٣-ج/٢) — **ولا بابَ حذفٍ لها بقصد**: المرفقُ يُطفأ ولا يُمحى
 
 /** مرافقُ السوق **بما فيها المطفأة** — فالمشرفُ يرى ما أطفأه. */
+/** **أماكنُ السوق بما فيها المخفيّة** — فالمشرفُ يرى ما أخفاه (SPEC §٧١-د/١٤). */
+export const listMapPlaces = (country: CountryCode) =>
+  api.get<MapPlace[]>("/admin/map-places", { query: { country } });
+
+export const createMapPlace = (payload: {
+  country_code: CountryCode;
+  name_ar: string;
+  name_en: string | null;
+  category: MapPlaceCategory;
+  lat: number;
+  lng: number;
+  is_hidden: boolean;
+}) => api.post<MapPlace>("/admin/map-places", payload);
+
+/** **ما تغيّر وحدَه** — والتدقيقُ يقول ما تغيّر قبلاً وبعداً. */
+export const updateMapPlace = (
+  placeId: string,
+  payload: Partial<{
+    name_ar: string;
+    name_en: string | null;
+    category: MapPlaceCategory;
+    lat: number;
+    lng: number;
+    is_hidden: boolean;
+  }>,
+) => api.patch<MapPlace>(`/admin/map-places/${placeId}`, payload);
+
 export const listFacilities = (country: CountryCode) =>
   api.get<Facility[]>("/admin/facilities", { query: { country } });
 

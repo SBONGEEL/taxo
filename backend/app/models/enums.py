@@ -778,6 +778,32 @@ class FeatureKey(StrEnum):
     TRIP_CHAT_ENABLED = "trip_chat_enabled"
     # **مكالمةُ الرحلة** (SPEC §٦٦-ج) — صوتٌ داخل التطبيق بلا رقم، والمُرحِّلُ على خادمنا. **وبالشرط نفسِه قبل إشعالها**
     RIDE_CALLS_ENABLED = "ride_calls_enabled"
+    # **أسماءُ الأماكن على الخريطة** (SPEC §٧١-د) — الأسماءُ بالتكبير بدل الخريطة الهادئة بلا أسماء، **وأماكنُ المالك** فوقها وفي أوّل
+    # البحث (`map_places`). **مطفأٌ لكلِّ سوق**: مطفأً تبقى الخريطةُ كما كانت حرفاً، ولا يُقرأ جدولُ الأماكن
+    MAP_PLACES_ENABLED = "map_places_enabled"
+
+
+class MapPlaceCategory(StrEnum):
+    """**فئةُ مكانٍ للمالك على الخريطة** (SPEC §٧١-د/١٤) — من نصِّه: «سوق · محلّ · مسجد · مستشفى · مدرسة · معلَم · حيّ · شارع …» وما تمّمه.
+    **ونصٌّ بقيدٍ في القاعدة لا `ENUM`** (`map_places.category`): فئةٌ جديدةٌ قيمةٌ هنا وترحيلةُ قيدٍ، لا نوعٌ يُعاد بناؤه."""
+
+    MARKET = "market"
+    SHOP = "shop"
+    MALL = "mall"
+    MOSQUE = "mosque"
+    CHURCH = "church"
+    HOSPITAL = "hospital"
+    CLINIC = "clinic"
+    SCHOOL = "school"
+    UNIVERSITY = "university"
+    HOTEL = "hotel"
+    RESTAURANT = "restaurant"
+    LANDMARK = "landmark"
+    GOVERNMENT = "government"
+    STATION = "station"
+    NEIGHBORHOOD = "neighborhood"
+    STREET = "street"
+    OTHER = "other"
 
 
 class BookingStatus(StrEnum):

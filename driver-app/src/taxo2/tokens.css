@@ -85,6 +85,10 @@
   --t2-map-car-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   --t2-map-pin-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   --t2-map-me-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  /* **أسماءُ الأماكن** (SPEC §٧١-د) — حبرٌ خافتٌ على الحجر بهالةٍ من لون الأرض، والشوارعُ أخفت؛ وأماكنُ المالك بالجمر (`--t2-accent-text`) */
+  --t2-map-label: #4a4741;
+  --t2-map-label-minor: #7b776f;
+  --t2-map-label-halo: #f4f1ea;
 
   /* الحركة: سريعةٌ للّمس، ومتوسّطةٌ للتبدّل، وبطيئةٌ للانتظار */
   --t2-fast: 120ms;
@@ -155,6 +159,9 @@ html.dark .t2:not(.t2-day),
   --t2-map-park: #16201b;
   --t2-map-road: #252a32;
   --t2-map-road-minor: #1e2229;
+  --t2-map-label: #c9c4ba;
+  --t2-map-label-minor: #8d8a83;
+  --t2-map-label-halo: #13161b;
 
   /* **ما رسمته شاشاتُ الكبتن C09–C12 ولا رمزَ له** — بقيم اللوحة (`design/REDESIGN-PARITY.md` §أ٢)، **في الداكن وحدَه**:
      الشاشاتُ مثبَّتةٌ عليه، **وتسقط في غيره إلى أقرب رمز** (`var(--x, var(--أقرب))`) فلا يُخترع لها فاتحٌ لم يُرسم */

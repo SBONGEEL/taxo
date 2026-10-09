@@ -33,6 +33,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
 // عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
+import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, RideDriverSkin } from "@/api/types";
 import { trimRoute } from "@/lib/route-line";
@@ -58,7 +59,7 @@ const ARTERIAL_ROADS = ["motorway", "motorway_link", "trunk", "trunk_link", "pri
 /** **صبغُ الخريطة بلغة الهوية** — الأرضُ والحدائقُ والطرقُ من رموز `--t2-map-*` على الحاوية (`t2 t2-map`)، **وكلُّ اسمٍ
  *  ومَعلمٍ ومبنى وحدٍّ يُخفى**. والألوانُ تُقرأ من الرموز لا تُكتب هنا: `paint` في mapbox لا يقرأ `var()`. **وبلا رموزٍ لا صبغ**
  *  — تبقى القاعدةُ الهادئةُ كما هي، ولا لونَ يُخترع. */
-function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
+function calmLook(instance: mapboxgl.Map, host: HTMLElement, labels: boolean) {
   const css = getComputedStyle(host);
   const token = (name: string) => css.getPropertyValue(name).trim();
   const land = token("--t2-map-land");
@@ -66,11 +67,15 @@ function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
   const road = token("--t2-map-road");
   const minor = token("--t2-map-road-minor");
   if (!land || !park || !road || !minor) return;
+  const colors = labelColors(host, labels);
   const clutter = /building|^admin|waterway|-case|road-(path|steps|pedestrian|rail|construction)|aeroway|ferry|aerialway|transit|hillshade|contour/;
   for (const layer of instance.getStyle()?.layers ?? []) {
     const { id, type } = layer;
     try {
-      if (type === "symbol" || clutter.test(id)) {
+      // **الأسماءُ بمفتاحها** (SPEC §٧١-د، `lib/map-labels`): مشتعلاً تظهر بألوان الهوية، ومطفأً تُخفى كما كانت
+      if (type === "symbol") {
+        styleSymbolLayer(instance, id, colors);
+      } else if (clutter.test(id)) {
         instance.setLayoutProperty(id, "visibility", "none");
       } else if (type === "background") {
         instance.setPaintProperty(id, "background-color", land);
@@ -401,6 +406,10 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
   // **لغةُ TAXO 2.0 في المظهرين** — العلاماتُ والدبابيسُ والخطّ؛ والمظهرُ يُقرأ في معالجِ `style.load` المسجَّل مرّةً واحدة
   const darkRef = useRef(dark);
   darkRef.current = dark;
+  // **أسماءُ الأماكن وأماكنُ المالك** (§٧١-د) — والمفتاحُ يُقرأ في معالج `style.load` من المرجع
+  const { labels, places } = useMapPlaces();
+  const labelsRef = useRef(labels);
+  labelsRef.current = labels;
   const t2 = true;
 
   moveEnd.current = onMoveEnd;
@@ -437,7 +446,7 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
       styleReady.current = true;
       instance.resize();
       // **الصبغُ قبل الإشارة** — فطبقاتُ الرحلة تُضاف فوق خريطةٍ مصبوغة
-      if (container.current) calmLook(instance, container.current);
+      if (container.current) calmLook(instance, container.current, labelsRef.current);
       setStyleVersion((version) => version + 1);
     });
     instance.on("moveend", () => {
@@ -471,6 +480,14 @@ export const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(
     // مرةً واحدة: التوكن لا يتبدل داخل الجلسة، وبقية التغييرات تُطبَّق أدناه
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // **الأسماءُ وأماكنُ المالك** — حين يتبدّل المفتاحُ أو تصل الأماكن، ومع كلِّ ستايلٍ يُحمَّل (`styleVersion`)
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !container.current || styleVersion === 0 || !styleReady.current) return;
+    applyLabels(instance, container.current, labels);
+    drawOwnPlaces(instance, container.current, labels ? places : []);
+  }, [labels, places, styleVersion]);
 
   // تبديل الستايل مع الوضع الليلي
   //

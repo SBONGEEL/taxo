@@ -29,6 +29,7 @@ from app.routers import (
     admin_security,
     admin_settings,
     admin_facilities,
+    admin_map_places,
     airports,
     guarantees,
     commute,
@@ -51,6 +52,7 @@ from app.routers import (
     drivers,
     notifications,
     payments,
+    map_places,
     places,
     missions,
     referrals,
@@ -78,6 +80,7 @@ api_router.include_router(account.router)
 api_router.include_router(drivers.router)
 api_router.include_router(bookings.router)
 api_router.include_router(places.router)
+api_router.include_router(map_places.router)
 api_router.include_router(airports.router)
 api_router.include_router(missions.router)
 api_router.include_router(referrals.router)
@@ -95,6 +98,7 @@ api_router.include_router(telemetry.router)
 api_router.include_router(admin_errors.router)
 api_router.include_router(admin_settings.router)
 api_router.include_router(admin_facilities.router)
+api_router.include_router(admin_map_places.router)
 api_router.include_router(guarantees.router)
 api_router.include_router(commute.router)
 api_router.include_router(commute_driver.router)

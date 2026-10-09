@@ -478,6 +478,8 @@ export type FeatureKey =
   // **محادثةُ الرحلة ومكالمتُها** (SPEC §٦٦) — لا تُشعلان قبل نشر «محادثةُ الرحلة ومكالمتُها» في السياستين (يرفضه الخادم)
   | "trip_chat_enabled"
   | "ride_calls_enabled"
+  // **أسماءُ الأماكن على الخريطة** (SPEC §٧١-د) — الأسماءُ بالتكبير وأماكنُ المالك فوقها وفي أوّل البحث
+  | "map_places_enabled"
   | "country_visible"
   // **حارسا المال** (2026-08-23): تجميدُ التسعير وإيقافُ الصرف. غيابُ صفِّهما
   // **يعمل**، وإطفاؤهما يحتاج سبباً مكتوباً — `design/KILL-SWITCHES.md`
@@ -2100,6 +2102,42 @@ export interface Facility {
   /** **رسمُ الكبتن بعملة السوق** — نصٌّ بثلاث خاناتٍ كأيِّ مال (`NUMERIC(12,3)`)، وصفرٌ لا يُطبَّق. */
   fee: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ------------------------------------------------ الأماكن (§٧١-د/١٤)
+
+/** **مرآةُ `MAP_PLACE_CATEGORIES`** في الخلفية. */
+export type MapPlaceCategory =
+  | "market"
+  | "shop"
+  | "mall"
+  | "mosque"
+  | "church"
+  | "hospital"
+  | "clinic"
+  | "school"
+  | "university"
+  | "hotel"
+  | "restaurant"
+  | "landmark"
+  | "government"
+  | "station"
+  | "neighborhood"
+  | "street"
+  | "other";
+
+export interface MapPlace {
+  id: string;
+  country_code: CountryCode;
+  name_ar: string;
+  name_en: string | null;
+  category: MapPlaceCategory;
+  lat: number;
+  lng: number;
+  /** **الإخفاءُ هو الإيقاف** — لا يُرسم ولا يُبحث، ويبقى في القائمة. */
+  is_hidden: boolean;
   created_at: string;
   updated_at: string;
 }

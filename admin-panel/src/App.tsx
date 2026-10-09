@@ -82,6 +82,10 @@ const SettingsScreen = lazy(() =>
 const FacilitiesScreen = lazy(() =>
   import("@/screens/Facilities").then((m) => ({ default: m.FacilitiesScreen })),
 );
+// **الأماكن** (§٧١-د/١٤) — حزمةٌ كسولةٌ كأختها
+const PlacesScreen = lazy(() =>
+  import("@/screens/Places").then((m) => ({ default: m.PlacesScreen })),
+);
 // **مساراتُ بين المدن** (§٦٣-ج/٧) — حزمةٌ كسولةٌ كأختها
 const IntercityScreen = lazy(() =>
   import("@/screens/Intercity").then((m) => ({ default: m.IntercityScreen })),
@@ -410,6 +414,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <SettingsScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/places"
+                    element={
+                      <Guarded>
+                        <PlacesScreen />
                       </Guarded>
                     }
                   />

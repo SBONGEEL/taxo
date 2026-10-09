@@ -9,6 +9,7 @@ import type { UploadOptions } from "@/api/client";
 import { API_URL, ApiError, api, tokens, upload } from "@/api/client";
 import type {
   CallAnswer,
+  MapPlaceSpot,
   CallStart,
   ChatMessage,
   ChatReport,
@@ -821,3 +822,6 @@ export async function uploadCallRecording(callId: string, recording: Blob): Prom
   }
   return body as unknown as RideCall;
 }
+
+/** **أماكنُ الخريطة لسوق الكبتن** (SPEC §٧١-د) — فارغةٌ حين مفتاحُها مطفأ. */
+export const mapPlaces = () => api.get<MapPlaceSpot[]>("/map-places");

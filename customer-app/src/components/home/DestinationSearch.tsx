@@ -15,7 +15,9 @@
 import { useEffect, useState } from "react";
 
 import type { CountryCode, Coordinates } from "@/api/types";
-import { searchPlaces, type Place } from "@/lib/geocode";
+import { searchMapPlaces } from "@/api/endpoints";
+import { mergeSearch, searchPlaces, type Place } from "@/lib/geocode";
+import { useMapPlaces } from "@/lib/map-labels";
 import { usePlaces } from "@/lib/places";
 import { DrawerT2 } from "@/screens/t2/DrawerT2";
 import { BlankT2, LoaderT2 } from "@/screens/t2/KitT2";
@@ -59,6 +61,8 @@ export function DestinationSearch({
   airports?: Place[];
 }) {
   const { places, recents } = usePlaces();
+  // **أماكنُ المالك في رأس النتائج** (SPEC §٧١-د/١٣) — بمفتاح السوق؛ ومطفأً البحثُ بحثُ المزوّد كما كان
+  const { labels } = useMapPlaces();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
@@ -73,7 +77,7 @@ export function DestinationSearch({
   }, [open]);
 
   useEffect(() => {
-    if (!token || query.trim().length < 2) {
+    if ((!token && !labels) || query.trim().length < 2) {
       setResults([]);
       return;
     }
@@ -81,14 +85,15 @@ export function DestinationSearch({
     const controller = new AbortController();
     setSearching(true);
     const timer = window.setTimeout(async () => {
-      const found = await searchPlaces(
-        token,
-        query,
-        country,
-        near ?? undefined,
-        controller.signal,
-      );
-      setResults(found);
+      // **البابان معاً لا تتابعاً** — وفشلُ أحدهما يترك الآخرَ يجيب: البحثُ مكمّلٌ للدبوس، ولا خطأَ يُعرض منه
+      const [own, found] = await Promise.all([
+        labels
+          ? searchMapPlaces(query.trim(), near ?? undefined, controller.signal).catch(() => [])
+          : Promise.resolve([]),
+        token ? searchPlaces(token, query, country, near ?? undefined, controller.signal) : Promise.resolve([]),
+      ]);
+      if (controller.signal.aborted) return;
+      setResults(mergeSearch(own, found, near));
       setSearching(false);
     }, DEBOUNCE_MS);
 
@@ -97,7 +102,7 @@ export function DestinationSearch({
       window.clearTimeout(timer);
       setSearching(false);
     };
-  }, [query, token, country, near]);
+  }, [query, token, country, near, labels]);
 
   return (
     <DrawerT2 open={open} onOpenChange={onOpenChange} title={title}>

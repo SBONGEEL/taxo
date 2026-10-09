@@ -1529,3 +1529,16 @@ export interface CallAnswer {
   ice_servers: IceServer[];
   recording: boolean;
 }
+
+/** **مكانٌ يُرسم فوق الخريطة ويتقدّم البحث** (SPEC §٧١-د) — من أماكن المالك أو مطاراتِ السوق المفعَّلة (`source`). */
+export interface MapPlaceSpot {
+  id: string;
+  name_ar: string;
+  name_en: string | null;
+  category: string;
+  lat: number;
+  lng: number;
+  source: "place" | "facility";
+  /** بالمتر من نقطة البحث — في البحث وحدَه. */
+  distance_m: number | null;
+}

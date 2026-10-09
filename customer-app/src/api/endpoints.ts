@@ -9,6 +9,7 @@ import { API_URL, ApiError, api, tokens, upload } from "@/api/client";
 import type { UploadOptions } from "@/api/client";
 import type {
   Airport,
+  MapPlaceSpot,
   AppConfig,
   AppVersion,
   AuthMethod,
@@ -252,6 +253,13 @@ export const getPublicTrack = (token: string, signal?: AbortSignal) =>
   api.get<PublicTrack>(`/public/track/${encodeURIComponent(token)}`, { anonymous: true, signal });
 
 // ------------------------------------------------------- الأماكن المحفوظة
+
+/** **أماكنُ الخريطة لسوق الراكب** (SPEC §٧١-د) — فارغةٌ حين مفتاحُها مطفأ. */
+export const mapPlaces = () => api.get<MapPlaceSpot[]>("/map-places");
+
+/** **رأسُ نتائج البحث**: ما طابق من أماكن السوق، الأقربُ أوّلاً — ونتائجُ المزوّد تحتها. */
+export const searchMapPlaces = (q: string, near?: { lat: number; lng: number }, signal?: AbortSignal) =>
+  api.get<MapPlaceSpot[]>("/map-places/search", { query: { q, ...(near ?? {}) }, signal });
 
 export const listPlaces = () => api.get<SavedPlace[]>("/me/places");
 

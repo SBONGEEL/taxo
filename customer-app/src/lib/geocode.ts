@@ -9,7 +9,7 @@
  * الخلفية وحدها (القسم 14).
  */
 
-import type { CountryCode, Coordinates } from "@/api/types";
+import type { CountryCode, Coordinates, MapPlaceSpot } from "@/api/types";
 
 const FORWARD = "https://api.mapbox.com/search/geocode/v6/forward";
 const REVERSE = "https://api.mapbox.com/search/geocode/v6/reverse";
@@ -72,6 +72,35 @@ export async function searchPlaces(
   } catch {
     return [];
   }
+}
+
+/** مسافةُ الدائرة العظمى بالمتر — **للترتيب وحدَه** («الأقرب أوّلاً»)، لا تُعرض مسافةَ طريق. */
+function meters(a: Coordinates, b: Coordinates): number {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(h));
+}
+
+/** **ترتيبُ البحث** (SPEC §٧١-د/١٣): **أماكنُ المالك أوّلاً** كما رتّبتها الخلفية (ما يبدأ بالنصّ ثمّ الأقرب)، **ثمّ نتائجُ المزوّد الأقربُ
+ *  أوّلاً** — ونتيجةُ مزوّدٍ باسمِ مكانٍ للمالك على بُعد ٣٠٠ مترٍ منه تُسقط: هو هو، واسمُ المالك يصحّحه. */
+export function mergeSearch(own: MapPlaceSpot[], provider: Place[], near: Coordinates | null): Place[] {
+  const mine: Place[] = own.map((spot) => ({
+    id: `own-${spot.id}`,
+    name: spot.name_ar,
+    address: spot.name_en ?? "",
+    coordinates: { lat: spot.lat, lng: spot.lng },
+  }));
+  const fold = (text: string) => text.replace(/[\u064b-\u0652\u0670\u0640]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").trim();
+  const others = provider.filter(
+    (place) =>
+      !mine.some((m) => fold(m.name) === fold(place.name) && meters(m.coordinates, place.coordinates) < 300),
+  );
+  const ordered = near
+    ? [...others].sort((a, b) => meters(near, a.coordinates) - meters(near, b.coordinates))
+    : others;
+  return [...mine, ...ordered];
 }
 
 /** عنوانٌ نصّي لدبوسٍ على الخريطة — يُعرض ويُرسل اختيارياً مع الرحلة. */

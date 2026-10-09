@@ -36,6 +36,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // **يقع باستيراد الاسم كما يقع بالاستيراد المجرَّد**: الوحدةُ تُقيَّم مرّةً
 // عند أوّل استيرادٍ أياً كانت صيغتُه، فيسبق كلَّ `new mapboxgl.Map` هنا.
 import { MAP_LANGUAGE } from "@/lib/map-rtl";
+import { applyLabels, drawOwnPlaces, labelColors, styleSymbolLayer, useMapPlaces } from "@/lib/map-labels";
 
 import type { Coordinates, NearbyDriver, VehicleSkin } from "@/api/types";
 import { type FollowMode, labelFor, nextMode } from "@/lib/follow";
@@ -157,7 +158,7 @@ const ARTERIAL_ROADS = ["motorway", "motorway_link", "trunk", "trunk_link", "pri
 /** **صبغُ الخريطة بلغة الهوية** — منقولٌ من خريطة الراكب بحرفه: الأرضُ والحدائقُ والطرقُ من رموز `--t2-map-*` على الحاوية
  *  (وفي الليليّ قيمُ «TaxoMap» الداكنة)، **وكلُّ اسمٍ ومَعلمٍ ومبنى وحدٍّ يُخفى**. والألوانُ تُقرأ من الرموز لا تُكتب هنا:
  *  `paint` في mapbox لا يقرأ `var()`. **وبلا رموزٍ لا صبغ** — تبقى القاعدةُ كما هي، ولا لونَ يُخترع. */
-function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
+function calmLook(instance: mapboxgl.Map, host: HTMLElement, labels: boolean) {
   const css = getComputedStyle(host);
   const token = (name: string) => css.getPropertyValue(name).trim();
   const land = token("--t2-map-land");
@@ -165,11 +166,15 @@ function calmLook(instance: mapboxgl.Map, host: HTMLElement) {
   const road = token("--t2-map-road");
   const minor = token("--t2-map-road-minor");
   if (!land || !park || !road || !minor) return;
+  const colors = labelColors(host, labels);
   const clutter = /building|^admin|waterway|-case|road-(path|steps|pedestrian|rail|construction)|aeroway|ferry|aerialway|transit|hillshade|contour/;
   for (const layer of instance.getStyle()?.layers ?? []) {
     const { id, type } = layer;
     try {
-      if (type === "symbol" || clutter.test(id)) {
+      // **الأسماءُ بمفتاحها** (SPEC §٧١-د، `lib/map-labels`): مشتعلاً تظهر بألوان الهوية، ومطفأً تُخفى كما كانت
+      if (type === "symbol") {
+        styleSymbolLayer(instance, id, colors);
+      } else if (clutter.test(id)) {
         instance.setLayoutProperty(id, "visibility", "none");
       } else if (type === "background") {
         instance.setPaintProperty(id, "background-color", land);
@@ -296,6 +301,12 @@ export function MapView({
   const onTapRef = useRef(onTap);
   onTapRef.current = onTap;
   const tapMarker = useRef<mapboxgl.Marker | null>(null);
+  // **أسماءُ الأماكن وأماكنُ المالك** (§٧١-د) — بمرجعين كالتفضيل: يقرؤهما معالجُ `style.load` المسجَّلُ مرّةً عند البناء
+  const { labels, places } = useMapPlaces();
+  const labelsRef = useRef(labels);
+  labelsRef.current = labels;
+  const placesRef = useRef(places);
+  placesRef.current = places;
 
   // **طورُ المتابعة** (البند ١٧-٢) — و`ref` بجانب الحالة لأن مُعالِج السحب
   // يُسجَّل مرةً واحدةً عند بناء الخريطة، فقراءتُه للحالة تُجمّد أوّلَ قيمة
@@ -347,7 +358,10 @@ export function MapView({
     if (t2) {
       const instance = map.current;
       instance.on("style.load", () => {
-        if (host.current) calmLook(instance, host.current);
+        if (host.current) {
+          calmLook(instance, host.current, labelsRef.current);
+          drawOwnPlaces(instance, host.current, labelsRef.current ? placesRef.current : []);
+        }
         // **والزحامُ مع كلِّ ستايلٍ يُحمَّل** — التبديلُ يمسح الطبقات كما يمسح الصبغ
         if (host.current && trafficRef.current) addTraffic(instance, host.current);
       });
@@ -611,6 +625,19 @@ export function MapView({
       }
     }
   }, [pickup, dropoff, t2]);
+
+  // **الأسماءُ وأماكنُ المالك حين يتبدّل المفتاحُ أو تصل الأماكن** — وتحميلُ الستايل يعيدها من معالجه
+  useEffect(() => {
+    const instance = map.current;
+    const element = host.current;
+    if (!instance || !element || !t2) return;
+    const run = () => {
+      applyLabels(instance, element, labels);
+      drawOwnPlaces(instance, element, labels ? places : []);
+    };
+    if (instance.isStyleLoaded()) run();
+    else instance.once("style.load", run);
+  }, [labels, places, t2]);
 
   // **خطُّ المسار** (البند ٨) — يُضاف حين يصل ويُحدَّث حين يتقدّم الكبتن.
   // و`styleVersion` ليست هنا كما في تطبيق الراكب لأن هذا المكوّن لا يعيد بناء
