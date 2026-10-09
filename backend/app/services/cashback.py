@@ -17,11 +17,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cashback import CashbackStreak
-from app.models.enums import CountryCode, FeatureKey, WalletOwnerType, WalletTransactionType
+from app.models.enums import CountryCode, FeatureKey, RoundingSource, WalletOwnerType, WalletTransactionType
 from app.models.ride import Ride
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
-from app.services import settings_service, wallet
+from app.services import rounding, settings_service, wallet
 from app.services.pricing import round_money
 
 FRIDAY = 4  # `date.weekday()`
@@ -101,15 +101,32 @@ async def record_day(
 
 
 async def _win(session: AsyncSession, streak: CashbackStreak, rider: User) -> None:
+    """ينزل المبلغُ في اليوم الأخير — **مقرَّباً لحظةَ نزوله** (SPEC §٧٠-ج/٥): المجمَّدُ على السلسلة بدقّته (`amount`)، والنزولُ هو
+    المعاملة — سلسلةٌ بدأت قبل الإشعال تُقرَّب إن نزلت بعده، كالرحلة. وفرقُه صفٌّ بمعرّف السلسلة. ومطفأً كما كان حرفاً."""
     streak.status = WON
     streak.won_at = datetime.now(UTC)
+    policy = await rounding.policy_for(session, streak.country_code)
+    amount = rounding.rounded(streak.amount, policy)
+    await rounding.record(
+        session,
+        country=streak.country_code,
+        source=RoundingSource.CASHBACK,
+        source_id=streak.id,
+        user_id=rider.id,
+        precise=streak.amount,
+        rounded_amount=amount,
+        policy=policy,
+    )
+    if amount <= 0:
+        # **مبلغٌ قُرِّب إلى صفر** (للأدنى، ومبلغٌ دون الوحدة) — لا قيدَ بصفر، والفرقُ مكتوبٌ في السجلّ فوق
+        return
     await wallet.lock_wallet(session, rider.id)
     await wallet.record(
         session,
         owner=rider,
         owner_type=WalletOwnerType.RIDER,
         tx_type=WalletTransactionType.CASHBACK,
-        amount=streak.amount,
+        amount=amount,
         created_by=None,
         idempotency_key=f"cashback:{streak.id}",
     )
@@ -144,12 +161,14 @@ async def view(session: AsyncSession, rider: User) -> dict:
         select(CashbackStreak).where(CashbackStreak.rider_id == rider.id, CashbackStreak.status == ACTIVE)
     )
     alive = streak is not None and (today <= next_required(streak.last_day))
+    # **المنتظَرُ كما سينزل** — مقرَّباً بإعداد السوق (`_win`)، فلا تَعِد النارُ بغير ما يُقيَّد. ومطفأً كما كان حرفاً
+    policy = await rounding.policy_for(session, rider.country_code)
     return {
         "enabled": True,
         "days_required": row.cashback_days if not alive else streak.days_required,
         "days_done": streak.days_done if alive else 0,
         "days_left": (streak.days_required - streak.days_done) if alive else row.cashback_days,
-        "amount": streak.amount if alive else round_money(row.cashback_amount),
+        "amount": rounding.rounded(streak.amount if alive else round_money(row.cashback_amount), policy),
         "rode_today": bool(alive and streak.last_day == today),
         "friday": today.weekday() == FRIDAY,
     }

@@ -870,6 +870,8 @@ LEDGER_LABEL: dict[str, str] = {
     "intercity_refund": "ردُّ حجزٍ بين المدن",
     "intercity_earning": "أجرةُ رحلةٍ بين المدن",
     "cashback": "الاسترداد الأسبوعي",
+    # **زائدُ «ادفع كلَّ ما عليك» مقرَّباً، مردوداً إلى المحفظة** (SPEC §٧٠-ج/٦) — بالإشارتين في التعداد، وموجبٌ اليوم وحدَه
+    "rounding": "تقريب",
 }
 
 METHOD_LABEL: dict[str, str] = {

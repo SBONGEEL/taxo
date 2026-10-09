@@ -41,7 +41,7 @@ from app.core.exceptions import (
     SkinUnavailable,
 )
 from app.models.driver import Driver
-from app.models.enums import CountryCode, Gender, WalletOwnerType, WalletTransactionType
+from app.models.enums import CountryCode, Gender, RoundingSource, WalletOwnerType, WalletTransactionType
 from app.models.user import User
 from app.models.vehicle_skin import (
     RARITIES,
@@ -61,7 +61,7 @@ from app.schemas.vehicle_skin import (
     SkinPurchasesOut,
     StoreOut,
 )
-from app.services import admin_search, geo, skin_artwork, test_accounts, wallet
+from app.services import admin_search, geo, rounding, skin_artwork, test_accounts, wallet
 from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
@@ -288,12 +288,14 @@ async def purchase_log(
 async def _prices(
     session: AsyncSession, country: CountryCode
 ) -> dict[uuid.UUID, Decimal]:
+    """أثمانُ السوق **كما تُدفع** — مقرَّبةً بإعداده (SPEC §٧٠-ج/٥)، فالبطاقةُ تعرض ما يخصمه `buy`. ومطفأً كما ضُبطت حرفاً."""
+    policy = await rounding.policy_for(session, country)
     rows = await session.execute(
         select(VehicleSkinPrice.skin_id, VehicleSkinPrice.price).where(
             VehicleSkinPrice.country_code == country
         )
     )
-    return {skin_id: price for skin_id, price in rows}
+    return {skin_id: rounding.rounded(price, policy) for skin_id, price in rows}
 
 
 def _shuffle_key(skin_id: uuid.UUID) -> str:
@@ -622,6 +624,10 @@ async def buy(
     if price is None:
         # **لا تُباع في هذا السوق** — والهديةُ والبديلُ المنشورُ من هذا الصنف
         raise SkinUnavailable()
+    # **الثمنُ يُقرَّب لحظةَ الشراء** (SPEC §٧٠-ج/٥) ويُجمَّد مقرَّباً على صفِّ المِلكيّة — وهو ما تعرضه البطاقةُ (`_prices`).
+    # وفرقُه صفٌّ بمعرّف المِلكيّة. ومطفأً هو الثمنُ نفسُه حرفاً
+    policy = await rounding.policy_for(session, user.country_code)
+    precise, price = price, rounding.rounded(price, policy)
 
     if skin.max_supply is not None:
         owners = (await _owners_counts(session, [skin.id])).get(skin.id, 0)
@@ -641,6 +647,16 @@ async def buy(
         await session.flush()
     except IntegrityError as exc:  # pragma: no cover - يسبقه فحصُ المِلكيّة
         raise SkinAlreadyOwned() from exc
+    await rounding.record(
+        session,
+        country=user.country_code,
+        source=RoundingSource.SKIN_PURCHASE,
+        source_id=row.id,
+        user_id=user.id,
+        precise=precise,
+        rounded_amount=price,
+        policy=policy,
+    )
 
     entry = await wallet.record(
         session,

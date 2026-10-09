@@ -120,6 +120,11 @@ async def start_topup(
     amount = round_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ الشحن يجب أن يكون أكبر من صفر")
+    # **مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — **قبل أن يُفتح التحصيلُ عند الـacquirer**: ما يعود منه يُقارَن بمبلغ الطلب
+    # حرفاً (`apply_state`)، فلا موضعَ بعد الفتح يُقرَّب فيه
+    from app.services import rounding
+
+    await rounding.require_multiple_in(session, owner.country_code, amount)
 
     provider = await get_cliq_provider(session, owner.country_code)
     order = ProviderOrder(

@@ -31,12 +31,13 @@ import type { CliqTopup } from "@/api/types";
 import { QrCode } from "@/components/QrCode";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
+import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import { play } from "@/lib/sound";
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
 import { formatMoney } from "@/lib/utils";
 import { AuthBlock, AuthInput, Icon } from "@/taxo2";
-import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2 } from "@/screens/t2/MoneyT2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, QuickAmountsT2, UnitNoteT2 } from "@/screens/t2/MoneyT2";
 
 // **بيتٌ واحدٌ للورقة والشاشة** — وثلاثةٌ لا أربعة (قرار 20 والتصميم)
 const QUICK_AMOUNTS = QUICK_TOPUP_AMOUNTS;
@@ -67,6 +68,10 @@ export function WalletTopupScreen() {
   const cardEnabled = country?.features.card_enabled === true;
   const cliqEnabled = country?.features.cliq_enabled === true;
   const currency = country?.currency;
+  // **المبلغُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٦) — في القنوات الثلاث: البطاقةُ وكليك الآليُّ يُفحصان قبل فتح
+  // الطلب، واليدويُّ عند تسجيله. **والخلفيةُ هي التي تردّ**؛ وهذا يمنع الوصولَ إلى الردّ ويقول الخطوات قبله
+  const unit = roundingUnit(country);
+  const unitError = notMultipleMessage(amount, unit, currency);
 
   async function submit() {
     setBusy(true);
@@ -165,6 +170,7 @@ export function WalletTopupScreen() {
           <AmountCardT2 id="topup-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency}>
             <QuickAmountsT2 amounts={QUICK_AMOUNTS} value={amount} onPick={setAmount} label={(value) => formatMoney(value)} />
           </AmountCardT2>
+          <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
 
           <h2 className="t2-section">طريقة الشحن</h2>
           <div className="t2-m-chans" role="radiogroup" aria-label="طريقة الشحن">
@@ -221,6 +227,7 @@ export function WalletTopupScreen() {
               disabled={
                 busy ||
                 Number(amount) <= 0 ||
+                unitError !== null ||
                 (channel === "manual" && reference.trim().length < 3)
               }
               aria-busy={busy}

@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -115,6 +116,11 @@ def final_fare(ride: Ride, rule: PricingRule, actual_km: Decimal | None) -> tupl
     return round_money(base + km_charge + min_charge), lines
 
 
+def prepay_key(ride_id: uuid.UUID) -> str:
+    """**مفتاحُ تكرار دفعة المقدَّم** — به يُعرف صفُّها بين دفعات الرحلة (وعاءُ العمولة في `payments`)."""
+    return f"hourly-prepay:{ride_id}"
+
+
 def cancel_fee(ride: Ride) -> Decimal:
     """**دقائقُ الإلغاء من سعر الساعة المجمَّد** — نصفُ ساعةٍ افتراضاً، للكبتن بمسار رسم الإلغاء القائم."""
     rate = ride.hourly_rate_at_ride or Decimal(0)
@@ -125,12 +131,23 @@ def cancel_fee(ride: Ride) -> Decimal:
 async def prepay_on_start(session: AsyncSession, ride: Ride) -> None:
     """**المحجوزُ عند البدء** — محفظةٌ تُسوّى فوراً، أو نقدٌ معلَّقٌ يؤكّده الكبتن. **ومفتاحُ التكرار على الرحلة** فبدءٌ يُعاد لا يدفع مرّتين؛
     والرحلةُ مقفولةٌ قبلها (`rides.start_ride`)، فالترتيبُ رحلةٌ ثمّ دفعةٌ ثمّ محفظة."""
-    from app.services import payments
+    from app.services import payments, rounding
 
-    amount = booked(ride.hourly_hours or 0, ride.hourly_rate_at_ride or Decimal(0))
+    # **المقدَّمُ مبلغٌ يدفعه الراكبُ الآن فيُقرَّب الآن** (SPEC §٧٠-ج/٤) بإعداد السوق — **ولا يُقرَّب مرّتين**: هو قسطٌ من الأجرة،
+    # والإنهاءُ يقرّب ما بقي بعده (`rounding.apply_to_ride`)، ومضاعفٌ + تقريبُ الباقي = تقريبُ المجموع مرّةً حرفاً. **ولا صفَّ له
+    # في السجلّ**: فرقُه يدخل فرقَ الرحلة كلِّها عند الإنهاء (سطرُ «تقريب» واحد). ومطفأً المحجوزُ كما كان حرفاً
+    #
+    # **والسياسةُ تُجمَّد على الرحلة الآن** (`rounding_*_at_ride`، مراجعةُ المال البند ٢): الإنهاءُ يقرّب الباقي **بها لا بإعداد
+    # لحظته** — فإطفاءٌ أو اتجاهٌ آخرُ أو وحدةٌ أخرى في أثناء الرحلة لا تفصل المقدَّمَ عن باقيه، ولا يبقى فرقُه بلا سطر. والعدّادُ
+    # يقرؤها من هنا أيضاً، فيعرض ما سيُحسب
+    policy = await rounding.policy_for(session, ride.country_code)
+    rounding.freeze_on(ride, policy)
+    amount, _ = rounding.round_amount(
+        booked(ride.hourly_hours or 0, ride.hourly_rate_at_ride or Decimal(0)), policy
+    )
     if amount <= 0:
         return
-    key = f"hourly-prepay:{ride.id}"
+    key = prepay_key(ride.id)
     if await payments._find_by_idempotency_key(session, key) is not None:
         return
     rider = await session.get(User, ride.rider_id)

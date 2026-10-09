@@ -130,7 +130,17 @@ export interface CountryConfig {
    *  والبريدُ يُثبت البريد — وخلطُهما يفتح حساباً كاملَ الصلاحية برقمٍ لم
    *  يملكه أحد. */
   email_signup: boolean;
+  /** **التقريبُ في هذا السوق كما يصل التطبيقين** (SPEC §٧٠-ج/٢) — من `payment_settings` بعينه وبانيه الواحد
+   *  (`country_config.build`). **مرآةٌ لما يُنشر** (`check:config`)، **ولا تقرؤه اللوحةُ من هنا**: يُضبط ويُقرأ في «سياسات الدفع»
+   *  من الصفِّ نفسِه (`PaymentSetting.rounding_*`) — كإخوته في هذا النوع. */
+  rounding_enabled: boolean;
+  /** الوحدةُ نصّاً بثلاث خانات (`"0.500"`) — مضبوطةً ولو كان مطفأً */
+  rounding_unit: string;
+  rounding_mode: RoundingMode;
 }
+
+/** **اتجاهُ التقريب** — مرآةُ `RoundingMode` في الخلفية (`check:enums`)، واسمُه بالعربية في `ROUNDING_MODE_LABEL`. */
+export type RoundingMode = "nearest" | "up" | "down";
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
 export interface FieldRule {
@@ -603,6 +613,12 @@ export interface PaymentSetting {
   rider_unpaid_rulings_cash_off: number;
   rider_unpaid_rulings_window_days: number;
   dispute_window_hours: number;
+  /** **التقريب** (SPEC §٧٠-ج/٢) — مفتاحُه ووحدتُه واتجاهُه، **ولحظةُ آخرِ إشعال** تختمها الخلفيةُ حين ينقلب المفتاح
+   *  (`null`: لم يُشعَل قطّ). **والوحدةُ مالٌ بثلاث خانات** (`"0.500"`)، أكبرُ من صفرٍ ولا تتجاوز عشرة. */
+  rounding_enabled: boolean;
+  rounding_unit: string;
+  rounding_mode: RoundingMode;
+  rounding_enabled_at: string | null;
   updated_at: string;
 }
 
@@ -961,6 +977,9 @@ export interface AdminRideDetail extends AdminRideRow {
   stops_charge: string;
   waiting_charge: string;
   pause_charge: string;
+  /** **فرقُ التقريب من سجلّه** (SPEC §٧٠-ج/٣ و٤) — سطرُ «تقريب» في الأجرة النهائية، موجبٌ أو سالب. **و`null` بلا صفّ** (سوقٌ
+   *  مطفأ، أو فرقٌ صفريّ، أو رحلةٌ لم تنتهِ). يُقرأ ولا يُحسب من «النهائيّة − المقدَّرة» (§١٤). */
+  rounding_amount: string | null;
   /** صفوفُ المحطات — **لا عددُها وحدَه**. بغيرها يفصل المشرفُ في نزاع
    *  انتظارٍ وهو يرى المجموع ولا يرى عند أيِّ محطةٍ وقف ولا كم. */
   stops: AdminRideStop[];
@@ -1021,7 +1040,10 @@ export type WalletTransactionType =
   | "intercity_refund"
   | "intercity_earning"
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
-  | "cashback";
+  | "cashback"
+  // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّينُ بكليك أو السلفة) يعود إلى محفظة الكبتن قيداً صريحاً، **ومعه صفٌّ في سجلّ
+  // التقريب** (`money_roundings`). دائنٌ بلا مدينٍ يقابله في الدفتر: ما دُفع زائداً خارجَ المحفظة يعود إليها
+  | "rounding";
 
 /** الرصيد **مجموعُ الدفتر** لا عمودٌ — لا كاش له في الواجهة كذلك. */
 export interface Wallet {

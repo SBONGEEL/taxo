@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 from pydantic import BaseModel
 
-from app.models.enums import CountryCode, Currency, VehicleCategory
+from app.models.enums import CountryCode, Currency, RoundingMode, VehicleCategory
+from app.models.payment_setting import DEFAULT_ROUNDING_UNIT
 from app.schemas.auth import AuthMethodResponse
 
 
@@ -55,6 +57,12 @@ class CountryConfigOut(BaseModel):
     # **ويجمع العقدَ والمفتاح**: العقدُ عامٌّ يقول «نستطيع»، والمفتاحُ
     # per-country يقول «نفعل هنا» — والتطبيقُ يحتاج جوابَ الاثنين لا أحدَهما.
     email_signup: bool = False
+    # **التقريبُ في هذا السوق** (SPEC §٧٠-ج/٢ و٦) — من `payment_settings` بعينه. **يُنشر ليعرض التطبيقُ خطواتِ الوحدة** فيما
+    # يختاره الشخصُ بيده (الشحنُ والسحبُ والتحويلُ والبقشيشُ ودفعةُ الدَّين: «مضاعفٌ للوحدة وإلا رُدّ») — **لا ليحسب به مبلغاً**:
+    # كلُّ مبلغٍ مقرَّبٍ يصل من الخلفية جاهزاً (§١٤). و`rounding_enabled = false` يعني «كما كان»: لا خطوات، ولا شيءَ يُرسم
+    rounding_enabled: bool = False
+    rounding_unit: Decimal = DEFAULT_ROUNDING_UNIT
+    rounding_mode: RoundingMode = RoundingMode.NEAREST
 
 
 class DispatchOut(BaseModel):

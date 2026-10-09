@@ -112,6 +112,8 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   intercity_earning: "أجرةُ رحلةٍ بين المدن",
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — من TAXO له في اليوم الأخير من أسبوعه
   cashback: "الاسترداد الأسبوعي",
+  // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إلى المحفظة؛ يقع للكبتن ويُسمّى للعلّة أعلاه
+  rounding: "تقريب",
 };
 
 export const TOPUP_STATUS_LABEL: Record<string, string> = {

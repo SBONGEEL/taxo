@@ -32,6 +32,7 @@ from app.models.enums import (
     DriverDebtStatus,
     DriverStatus,
     FeatureKey,
+    RoundingSource,
     WalletOwnerType,
     WalletTransactionType,
 )
@@ -39,7 +40,7 @@ from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRou
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import debts, settings_service, test_accounts, wallet
+from app.services import debts, rounding, settings_service, test_accounts, wallet
 from app.services.pricing import round_money
 
 MIN_VEHICLE_YEAR = 2015
@@ -228,6 +229,21 @@ async def depart(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver) -
     return trip
 
 
+async def _booking_differences(session: AsyncSession, booking_ids: list[uuid.UUID]) -> dict[uuid.UUID, Decimal]:
+    """**فرقُ تقريب كلِّ حجزٍ من السجلّ** (`intercity_booking`) — وحجزٌ بلا صفٍّ غائبٌ عن القاموس (فرقُه صفر)."""
+    if not booking_ids:
+        return {}
+    from app.models.rounding import MoneyRounding
+
+    rows = await session.execute(
+        select(MoneyRounding.source_id, MoneyRounding.difference).where(
+            MoneyRounding.source_kind == RoundingSource.INTERCITY_BOOKING.value,
+            MoneyRounding.source_id.in_(booking_ids),
+        )
+    )
+    return {source_id: difference for source_id, difference in rows}
+
+
 async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver) -> Decimal:
     """**يصل الكبتنَ مالُ المقاعد المحفوظ وعليه العمولة؛ والنقدُ في يده وعمولتُه دَين** — مرّةً واحدة (الحالُ ومفاتيحُ التكرار)."""
     trip = await locked_trip(session, trip_id)
@@ -243,6 +259,17 @@ async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver)
     )
     held = round_money(sum((b.amount for b in rows if b.payment == "wallet"), Decimal(0)))
     cash = round_money(sum((b.amount for b in rows if b.payment == "cash"), Decimal(0)))
+    # **والعمولةُ على المسعَّر لا على المقرَّب** (SPEC §٧٠-ج/٤ و/٧، مراجعةُ المال البند ٤): الكبتنُ يقبض ما دفعه الركّابُ مقرَّباً،
+    # **وفرقُ تقريب كلِّ حجزٍ له أو عليه** — فيُطرح من وعاء العمولة، **المحفظةُ وحدَها والنقدُ وحدَه**. ومن السجلّ لا من عمودٍ ثانٍ؛
+    # **وبلا صفٍّ (مطفأٌ أو مضاعفٌ أصلاً) الوعاءُ هو المبلغُ حرفاً كما كان**
+    differences = await _booking_differences(session, [b.id for b in rows])
+
+    def _priced(total: Decimal, channel: str) -> Decimal:
+        return round_money(
+            total - sum((differences.get(b.id, Decimal(0)) for b in rows if b.payment == channel), Decimal(0))
+        )
+
+    held_priced, cash_priced = _priced(held, "wallet"), _priced(cash, "cash")
     for booking in rows:
         booking.status = "completed"
     trip.status = "completed"
@@ -266,7 +293,7 @@ async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver)
             created_by=driver_user.id,
             idempotency_key=f"intercity-earning:{trip.id}",
         )
-        commission = round_money(held * percent / 100) if applies is not None else Decimal(0)
+        commission = round_money(held_priced * percent / 100) if applies is not None else Decimal(0)
         if commission > 0:
             await wallet.record(
                 session,
@@ -278,7 +305,7 @@ async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver)
                 idempotency_key=f"intercity-commission:{trip.id}",
             )
     if cash > 0 and applies is not None and applies != CommissionAppliesTo.CASHLESS_RIDES:
-        owed = round_money(cash * percent / 100)
+        owed = round_money(cash_priced * percent / 100)
         if owed > 0:
             session.add(
                 DriverDebt(
@@ -323,14 +350,29 @@ async def book(
     if whole_car:
         if taken > 0:
             raise Conflict("حُجزت مقاعدُ في هذه الرحلة — احجز مقعداً")
-        seats, amount, payment = trip.seats_offered, trip.price_car_at_trip, "cash"
+        seats, precise, payment = trip.seats_offered, trip.price_car_at_trip, "cash"
     else:
         if not 1 <= seats <= trip.seats_offered - taken:
             raise Conflict(f"المتاح {trip.seats_offered - taken} مقعداً")
-        amount, payment = round_money(trip.price_seat_at_trip * seats), "wallet"
+        precise, payment = round_money(trip.price_seat_at_trip * seats), "wallet"
+    # **ما يدفعه الراكبُ يُقرَّب مرّةً على مجموعه** (SPEC §٧٠-ج/٥) — المقاعدُ × السعر ثمّ التقريب، لا كلُّ مقعدٍ وحدَه؛ **والسيارةُ
+    # النقديّةُ كذلك** (نقدٌ في يد الكبتن). **وردُّه وأجرُ الكبتن منه بعينه** (`_refund` · `complete`) بلا تقريبٍ ثانٍ، والعمولةُ
+    # عليه بدقّتها (§٧٠-ج/٧). ومطفأً كما كان حرفاً
+    policy = await rounding.policy_for(session, rider.country_code)
+    amount = rounding.rounded(precise, policy)
     booking = IntercityBooking(trip_id=trip.id, rider_id=rider.id, seats=seats, whole_car=whole_car, amount=amount, payment=payment)
     session.add(booking)
     await session.flush()
+    await rounding.record(
+        session,
+        country=rider.country_code,
+        source=RoundingSource.INTERCITY_BOOKING,
+        source_id=booking.id,
+        user_id=rider.id,
+        precise=precise,
+        rounded_amount=amount,
+        policy=policy,
+    )
     if payment == "wallet":
         wallet.require_not_frozen(rider, WalletOwnerType.RIDER)
         await wallet.lock_wallet(session, rider.id)

@@ -6,6 +6,9 @@
  * أو قسمتَه في الواجهة، وهو ممنوع (القسم 14). فالبلاطتان هنا **الحد الأدنى** و**كل المتاح** — كلاهما حقلٌ في `GET /wallet/me/driver`
  * يُنسخ كما هو — وبينهما حقلُ مبلغٍ حرّ.
  *
+ * **وحين يُشعَل التقريبُ في سوقه** (SPEC §٧٠-ج/٦، المثال ج): «كلُّ المتاح» يصل **أكبرَ مضاعفٍ لوحدة السوق** محسوباً في الخلفية
+ * (`37.842 ⇐ 37.500`، والكسرُ يبقى له)، **والحقلُ الحرُّ يقول خطواتِ الوحدة** ويُفحص قبل الإرسال (`lib/rounding.ts`).
+ *
  * **والقناةُ كليك وحدها**: `WithdrawalMethod` فيه `bank` أيضاً، ولا حقلَ لبيانات حسابٍ بنكي على `drivers` — فطلبٌ بنكيٌّ من التطبيق
  * طلبٌ بلا وجهة. والحوالةُ البنكية تبقى ممكنةً من الإدارة حيث تُعرف الوجهة بغير الجدول.
  *
@@ -20,6 +23,9 @@ import { useState } from "react";
 import { ApiError } from "@/api/client";
 import { requestWithdrawal, updateDriver } from "@/api/endpoints";
 import type { DriverWallet } from "@/api/types";
+import { useCountryConfig } from "@/lib/config";
+import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
+import { useSession } from "@/lib/session";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -59,6 +65,11 @@ export function WithdrawSheet({
   const [alias, setAlias] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // **المسحوبُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٦، المثال ج) — و«كلُّ المتاح» يصل من الخلفية أكبرَ مضاعفٍ
+  // فيُختار كما هو؛ والمكتوبُ بيده يُفحص هنا قبل أن تردّه الخلفية، **والكسرُ الباقي له في محفظته**
+  const { user } = useSession();
+  const unit = roundingUnit(useCountryConfig(user?.country_code));
+  const unitError = notMultipleMessage(amount, unit, currencyLabel);
 
   const hasAlias = (cliqAlias ?? "").trim().length > 0;
 
@@ -146,6 +157,14 @@ export function WithdrawSheet({
           value={amount}
           onChange={(event) => setAmount(cleanAmount(event.target.value))}
         />
+        {unitError ? (
+          <p className="t2-note danger" role="alert">
+            <Icon name="error" fill />
+            {unitError}
+          </p>
+        ) : unit !== null ? (
+          <p className="t2-fld-hint">{unitHint(unit, currencyLabel)}</p>
+        ) : null}
 
         {hasAlias ? (
           <p className="t2-wds-alias">
@@ -184,6 +203,7 @@ export function WithdrawSheet({
             busy ||
             blocked ||
             !amount ||
+            unitError !== null ||
             (!hasAlias && alias.trim().length === 0)
           }
           onClick={() => void submit()}

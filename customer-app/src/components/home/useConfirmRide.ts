@@ -28,6 +28,7 @@ import { useHourly } from "@/lib/hourly";
 import { useMultiStop } from "@/lib/multistop";
 import { useParcel } from "@/lib/parcel";
 import type { PayableMethod } from "@/lib/payment";
+import { roundingUnit } from "@/lib/rounding";
 import { usePromoCodes } from "@/lib/promo";
 import { useSession } from "@/lib/session";
 import { useRideSharing } from "@/lib/sharing";
@@ -273,11 +274,13 @@ export function useConfirmRide({
   const [checking, setChecking] = useState(false);
 
   // **الخصمُ يُعاد التحقق منه إن تغيّر التقدير**: تبديلُ الفئة أو إضافةُ محطةٍ
-  // يغيّر الأجرة، وخصمُ نسبةٍ محسوبٌ عليها — فرقمٌ قديمٌ يبقى معروضاً يكذب
+  // يغيّر الأجرة، وخصمُ نسبةٍ محسوبٌ عليها — فرقمٌ قديمٌ يبقى معروضاً يكذب.
+  // **والمُرسَلُ الأجرةُ الدقيقة `priced_fare` لا المعروضةُ المقرَّبة** (SPEC §٧٠-أ/١٠): النسبةُ على الدقيقة ثمّ يُقرَّب الباقي
+  // مرّةً في الخلفية (`fare_after`) — ومن يرسل المقرَّبَ يرى خصماً على غير ما سيُحسب
   useEffect(() => {
     if (applied === null || estimate === null) return;
     let cancelled = false;
-    validatePromo(applied.code, estimate.estimated_fare, country)
+    validatePromo(applied.code, estimate.priced_fare, country)
       .then((next) => !cancelled && setApplied(next))
       .catch(() => !cancelled && setApplied(null));
     return () => {
@@ -285,7 +288,7 @@ export function useConfirmRide({
     };
     // `applied.code` لا `applied`: الكائنُ يتبدّل بكل تحقّقٍ فتدور الحلقة
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estimate?.estimated_fare, applied?.code]);
+  }, [estimate?.priced_fare, applied?.code]);
 
   useEffect(() => {
     let cancelled = false;
@@ -324,7 +327,7 @@ export function useConfirmRide({
     try {
       // **الخلفيةُ تحسب الخصم** — والشاشةُ تعرض ما ردّته (القسم 14)
       setApplied(
-        await validatePromo(couponInput.trim(), estimate.estimated_fare, country),
+        await validatePromo(couponInput.trim(), estimate.priced_fare, country),
       );
       setCouponOpen(false);
     } catch (caught) {
@@ -365,6 +368,10 @@ export function useConfirmRide({
   //
   // **وفي رحلةٍ لغيره لا باقيَ نقداً** (`cash_remainder=False`): محفظةٌ لا تغطّي **ترتدّ** (`insufficient_balance`) — فالسطرُ
   // القائمُ («تدفع الباقي كاشاً») يَعِد بما لا يقع، ويُقال بدله ما يقع
+  //
+  // **ورصيدٌ أقلُّ من وحدة التقريب لا يدفع شيئاً** (SPEC §٧٠-ج/٤): المحفظةُ تدفع أكبرَ مضاعفٍ للوحدة لا يتجاوزها، وهو صفرٌ هنا —
+  // فترتدّ الخلفيةُ بـ«رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك»، **والسطرُ يقول ذلك قبلها** لا «سيُخصم منه ما يغطّيه». مقارنةٌ لا حساب
+  const unit = roundingUnit(countryConfig);
   const walletNote =
     payMethod?.method !== "wallet" || balance === null || shownFare === null
       ? null
@@ -372,6 +379,8 @@ export function useConfirmRide({
         ? forOther
           ? "لا رصيد في محفظتك — اشحنها قبل الدفع أو ادفع بالبطاقة."
           : "لا رصيد في محفظتك — اشحنها أو اختر طريقةً أخرى عند الدفع."
+        : !forOther && unit !== null && Number(balance) < Number(unit)
+          ? "رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك — اشحنها أو اختر طريقةً أخرى عند الدفع."
         : Number(balance) < Number(shownFare)
           ? forOther
             ? "رصيدك لا يغطّي الأجرة المقدَّرة — الرحلةُ لغيرك تُدفع كاملةً من المحفظة أو بالبطاقة، بلا باقٍ نقداً."

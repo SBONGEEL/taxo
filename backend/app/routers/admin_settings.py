@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -18,7 +19,7 @@ from app.models.cancellation import CancellationSetting
 from app.models.commission import CommissionSetting
 from app.models.map_setting import MapSetting
 from app.models.otp_setting import OtpSetting
-from app.models.enums import AuditAction, CountryCode, FeatureKey, ProviderKey
+from app.models.enums import AuditAction, CountryCode, FeatureKey, ProviderKey, RoundingMode
 from app.models.pricing import PricingRule
 from app.models.service_setting import ServiceSetting
 from app.schemas.guarantee import ServiceSettingOut, ServiceSettingUpdate
@@ -673,7 +674,24 @@ async def update_payment_settings(
     setting = await settings_service.get_or_create_payment_settings(
         session, country_code
     )
-    changed = _apply_updates(setting, payload.model_dump(exclude_unset=True))
+    updates = payload.model_dump(exclude_unset=True)
+    # **إعداداتُ التقريب الثلاثة لا تقبل `null`** (SPEC §٧٠-ج/٢): أعمدتُها `NOT NULL`، و`null` صريحٌ يُقرأ «لم يُذكر» لا «امحُه»
+    for key in ("rounding_enabled", "rounding_unit", "rounding_mode"):
+        if key in updates and updates[key] is None:
+            del updates[key]
+    if isinstance(updates.get("rounding_mode"), RoundingMode):
+        updates["rounding_mode"] = updates["rounding_mode"].value
+    was_enabled = setting.rounding_enabled
+    changed = _apply_updates(setting, updates)
+    # **ويُختم وقتُ الإشعال** حين ينقلب المفتاحُ من مطفأٍ إلى مشتعل — **ومعه في سجلِّ التدقيق** قبلاً وبعداً: منه يُعرف أيُّ
+    # معاملةٍ قُرِّبت (§٧٠-أ/١١: «التقريبُ للمعاملات الجديدة وحدَها من لحظة إشعاله»)
+    if setting.rounding_enabled and not was_enabled:
+        stamped = datetime.now(UTC)
+        changed["rounding_enabled_at"] = {
+            "before": audit.redact("rounding_enabled_at", setting.rounding_enabled_at),
+            "after": audit.redact("rounding_enabled_at", stamped),
+        }
+        setting.rounding_enabled_at = stamped
 
     await audit.record(
         session,

@@ -276,6 +276,17 @@ class InvalidInput(AppError):
     message = "بيانات غير صالحة"
 
 
+class AmountNotMultiple(InvalidInput):
+    """**مبلغٌ يختاره صاحبُه ليس من مضاعفات وحدة الدفع في سوقه** (SPEC §٧٠-ج/٦) — يُردّ ولا يُقرَّب من وراء ظهره.
+
+    **رمزٌ بذاته لا `invalid_input`**: الشاشةُ تعرض خطواتِ الوحدة، وتقرأ من الجسم `unit` والمضاعفَين المجاورَين (`lower` ·
+    `upper`) فتقترحهما — **والجملةُ تقولهما أيضاً** لمن يقرأ النصَّ وحدَه. يرفعه `rounding.require_multiple` وحدَه.
+    """
+
+    code = "amount_not_multiple"
+    message = "المبلغُ يكون من مضاعفات وحدة الدفع في بلدك"
+
+
 class OutsideServiceArea(InvalidInput):
     """نقطةٌ خارج نطاق خدمة السوق — **حدٌّ بالبلد لا بالمسافة**.
 

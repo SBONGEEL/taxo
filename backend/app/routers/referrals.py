@@ -21,6 +21,7 @@ from app.schemas.referral import (
     ReferralStageOut,
 )
 from app.services import referrals as referrals_service
+from app.services import rounding as rounding_service
 
 from fastapi import APIRouter
 
@@ -86,11 +87,13 @@ async def my_referrals(user: CurrentUser, session: DbSession) -> MyReferralsOut:
         for referral_type, policy in policies.items()
     }
 
+    # **المبالغُ كما ستُدفع** (SPEC §٧٠-ج/٥) — بسوق المُحيل، وهو سوقُ الدفع (`referrals.pay`)
+    unit_policy = await rounding_service.policy_for(session, user.country_code)
     return MyReferralsOut(
         code=user.referral_code or "",
         programs=[
-            _program(policies[REFERRAL_TYPE_RIDER]),
-            _program(policies[REFERRAL_TYPE_DRIVER]),
+            _program(referrals_service.shown(policies[REFERRAL_TYPE_RIDER], unit_policy)),
+            _program(referrals_service.shown(policies[REFERRAL_TYPE_DRIVER], unit_policy)),
         ],
         paid_this_month=paid_this_month,
         total_rewarded=await referrals_service.rewarded_total(session, user.id),

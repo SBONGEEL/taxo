@@ -28,6 +28,7 @@ from app.schemas.storefront import (
     StorefrontOut,
 )
 from app.services import offers as offers_service, storefront
+from app.services import subscriptions as subscriptions_service
 
 router = APIRouter(prefix="/storefront", tags=["storefront"])
 
@@ -56,7 +57,12 @@ async def _offer_card(
     )
     if best is None:
         return None
-    after = best.plan.price - best.amount
+    # **الثمنُ من بيته الواحد** (`subscriptions.price_to_pay`) — العرضُ ثمّ التقريب (SPEC §٧٠-ج/٥)، فالصندوقُ يَعِد بما يُخصم
+    after = (
+        await subscriptions_service.price_to_pay(
+            session, best.plan, offers_service.ResolvedOffer(offer=best.offer, amount=best.amount)
+        )
+    ).payable
     return StorefrontOfferOut(
         name=best.offer.name,
         plan_name=best.plan.name,

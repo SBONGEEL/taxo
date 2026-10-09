@@ -36,6 +36,7 @@ from app.models.enums import (
     PaymentMethod,
     PaymentStatus,
     RideStatus,
+    RoundingSource,
     VehicleCategory,
     WalletOwnerType,
     WalletTransactionType,
@@ -45,7 +46,7 @@ from app.models.ride import Ride, make_point
 from app.models.rider_subscription import ACTIVE, CANCELLED, ENDED, RiderSubscription
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
-from app.services import pricing, settings_service, test_accounts, wallet
+from app.services import pricing, rounding, settings_service, test_accounts, wallet
 from app.services.directions import Coordinates
 from app.services.pricing import round_money
 
@@ -74,6 +75,9 @@ class Quote:
     rides_total: int
     total: Decimal
     ends_on: date
+    #: **الشهرُ بالسعر الدقيق قبل تقريبه** (SPEC §٧٠-ج/٥) — يُكتب فرقُه في السجلّ عند الشراء، ولا يُعرض
+    precise_total: Decimal | None = None
+    rounding_policy: rounding.RoundingPolicy = rounding.DISABLED
 
 
 async def settings_for(session: AsyncSession, country: CountryCode) -> ServiceSetting | None:
@@ -125,7 +129,11 @@ async def quote(session: AsyncSession, *, rider: User, plan: Plan) -> Quote:
         dropoff=plan.dropoff,
     )
     base = pricing.discountable(estimate.fare, estimate.captain_fees)
-    per_ride = round_money(base * (Decimal(100) - row.commute_discount_percent) / 100)
+    precise_per_ride = round_money(base * (Decimal(100) - row.commute_discount_percent) / 100)
+    # **الخصمُ أوّلاً ثمّ يُقرَّب سعرُ الرحلة مرّةً** (SPEC §٧٠-أ/١٠ و§٧٠-ج/٥) — فالشهرُ مضاعفٌ بالبناء، **وكلُّ رحلةٍ تُدفع
+    # للكبتن بسعرها المقرَّب** (`settle_ride`)، **وما لم يُستعمل يعود به** (`settle_unused`) بلا تقريبٍ ثانٍ. ومطفأً كما كان
+    policy = await rounding.policy_for(session, rider.country_code)
+    per_ride = rounding.rounded(precise_per_ride, policy)
     ends_on = _month_end(plan.starts_on)
     legs = 2 if plan.return_time is not None else 1
     rides_total = len(ride_days(plan.weekdays, plan.starts_on, ends_on)) * legs
@@ -137,6 +145,8 @@ async def quote(session: AsyncSession, *, rider: User, plan: Plan) -> Quote:
         rides_total=rides_total,
         total=round_money(per_ride * rides_total),
         ends_on=ends_on,
+        precise_total=round_money(precise_per_ride * rides_total),
+        rounding_policy=policy,
     )
 
 
@@ -171,6 +181,18 @@ async def purchase(session: AsyncSession, *, rider: User, plan: Plan) -> RiderSu
     )
     session.add(row)
     await session.flush()
+    # **فرقُ الشهر كلِّه صفٌّ واحد** — ما دفعه الراكبُ فعلاً ناقصَ ما كان يدفعه بالسعر الدقيق
+    if priced.precise_total is not None:
+        await rounding.record(
+            session,
+            country=rider.country_code,
+            source=RoundingSource.COMMUTE_PRICE,
+            source_id=row.id,
+            user_id=rider.id,
+            precise=priced.precise_total,
+            rounded_amount=priced.total,
+            policy=priced.rounding_policy,
+        )
     await wallet.record(
         session,
         owner=rider,
@@ -234,6 +256,8 @@ async def settle_unused(session: AsyncSession, row: RiderSubscription, *, status
         return Decimal("0.000")
     used = await completed_rides(session, row.id)
     unused = max(row.rides_total - used, 0)
+    # **يُردّ كما دُفع ولا يُقرَّب ثانيةً** (SPEC §٧٠-أ/١٠): السعرُ المجمَّدُ قُرِّب عند الشراء (`quote`) فالرصيدُ مضاعفٌ بالبناء؛
+    # **وشهرٌ اشتُري قبل الإشعال يعود بكسوره** — تقريبُ ردِّه يغيّر مالاً دُفع (§٧٠-أ/١١)
     credit = round_money(row.price_per_ride * unused)
     row.status = status
     row.settled_at = datetime.now().astimezone()
@@ -360,6 +384,22 @@ async def on_ride_created(session: AsyncSession, ride: Ride, booking: RideBookin
     return await rides_service.take_reserved(session, ride.id, driver)
 
 
+async def ride_price_difference(session: AsyncSession, ride: Ride) -> Decimal:
+    """**فرقُ تقريب سعر الرحلة الواحدة** — سعرُها المقرَّب (`price_per_ride`) ناقصَ الدقيق (مراجعةُ المال البند ٥).
+
+    **يُقرأ من صفِّ الشهر في السجلّ** (`commute_price`: فرقُ الشهر = فرقُ الرحلة × عددِها حرفاً، فالقسمةُ تامّة) — فلا عمودَ
+    ثانٍ يحمل الدقيق. **ومنه يُخرج وعاءُ العمولة الفرقَ** (`payments._commission_amount`): العمولةُ على السعر المسعَّر `7.200`
+    لا على المقرَّب `7.000` (§٧٠-ج/٧). **وصفرٌ بلا صفّ** — شهرٌ اشتُري مطفأً، أو سعرُه مضاعفٌ أصلاً، فالوعاءُ كما كان حرفاً.
+    """
+    row = await session.get(RiderSubscription, ride.commute_id) if ride.commute_id is not None else None
+    if row is None or row.rides_total <= 0:
+        return Decimal("0.000")
+    month = await rounding.difference_of(session, RoundingSource.COMMUTE_PRICE, row.id)
+    if month == 0:
+        return Decimal("0.000")
+    return round_money(month / row.rides_total)
+
+
 async def settle_ride(session: AsyncSession, ride: Ride) -> None:
     """**رحلةٌ من الاشتراك اكتملت ⇒ تُدفع من المحفوظ** بقناة `commute` — ويقبض الكبتنُ سعرَها المجمَّد وعليه العمولة؛ **والحافزُ** إن
     ضبطه المالكُ للكبتن المعتمد. يُنادى من `complete_ride` والرحلةُ مقفولة."""
@@ -384,7 +424,10 @@ async def settle_ride(session: AsyncSession, ride: Ride) -> None:
     )
     row = await session.get(RiderSubscription, ride.commute_id)
     settings = await session.get(ServiceSetting, ride.country_code)
-    incentive = round_money(settings.commute_captain_incentive) if settings is not None else Decimal(0)
+    precise_incentive = round_money(settings.commute_captain_incentive) if settings is not None else Decimal(0)
+    # **الحافزُ مالٌ يقبضه الكبتنُ فيُقرَّب** (SPEC §٧٠-ج/٥)، وفرقُه صفٌّ بمعرّف الرحلة حين يُدفع. ومطفأً كما كان
+    policy = await rounding.policy_for(session, ride.country_code)
+    incentive = rounding.rounded(precise_incentive, policy)
     if row is not None and incentive > 0 and ride.driver_id is not None and ride.driver_id == row.driver_id:
         driver = await session.get(Driver, ride.driver_id)
         driver_user = await session.get(User, driver.user_id) if driver is not None else None
@@ -401,6 +444,16 @@ async def settle_ride(session: AsyncSession, ride: Ride) -> None:
                 ride_id=ride.id,
                 created_by=None,
                 idempotency_key=f"commute-incentive:{ride.id}",
+            )
+            await rounding.record(
+                session,
+                country=ride.country_code,
+                source=RoundingSource.COMMUTE_INCENTIVE,
+                source_id=ride.id,
+                user_id=driver_user.id,
+                precise=precise_incentive,
+                rounded_amount=incentive,
+                policy=policy,
             )
 
 

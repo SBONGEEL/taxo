@@ -27,6 +27,7 @@ import type { SavedCard, TopupRequest, Wallet, WalletTransaction, WalletTransact
 import { TopupSheet } from "@/components/wallet/TopupSheet";
 import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { useCountryConfig } from "@/lib/config";
+import { roundingUnit } from "@/lib/rounding";
 import { TOPUP_STATUS_LABEL, TRANSACTION_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { currencyLabel, formatMoney } from "@/lib/utils";
@@ -294,6 +295,7 @@ export function WalletT2Screen() {
       {topupOpen ? (
         <TopupSheet
           currency={currency}
+          unit={roundingUnit(country)}
           cardEnabled={cardEnabled}
           cliqEnabled={cliqEnabled}
           onClose={() => setTopupOpen(false)}

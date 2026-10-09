@@ -44,6 +44,13 @@ export function BannerT2({ tone, message }: { tone: "danger" | "ok"; message: st
   );
 }
 
+/** **خطواتُ وحدة التقريب تحت حقل المبلغ** (SPEC §٧٠-ج/٦) — سطرُ تلميحٍ (`t2-m-hint`)، **وحين لا يكون المكتوبُ مضاعفاً يصير
+ *  بلاغَ خطأٍ** بلفظ رسالة الخلفية (`lib/rounding.ts`). ومطفأً لا يُرسم شيء. */
+export function UnitNoteT2({ hint, error }: { hint: string | null; error: string | null }) {
+  if (error) return <BannerT2 tone="danger" message={error} />;
+  return hint ? <p className="t2-m-hint">{hint}</p> : null;
+}
+
 /** **ورقةٌ فوق الشاشة** — ظلٌّ يُغلق بالضغط، والورقةُ ملتصقةٌ بالقاع (R06) وتعلو لوحةَ المفاتيح (`--vv-bottom`).
  *
  * **وتُنقل إلى `body`** كمنتقي الدفع: الشاشةُ داخل انتقالٍ يحمل `transform`، و`fixed` تحته يُقاس عليه لا على الشاشة.

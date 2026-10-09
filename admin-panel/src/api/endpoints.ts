@@ -102,6 +102,7 @@ import type {
   Reports,
   RideSharingSetting,
   RideStatus,
+  RoundingMode,
   SearchHits,
   SecurityPolicy,
   StatsPeriod,
@@ -627,6 +628,10 @@ export const updatePaymentSettings = (
     rider_unpaid_rulings_cash_off?: number;
     rider_unpaid_rulings_window_days?: number;
     dispute_window_hours?: number;
+    /** **التقريب** (SPEC §٧٠-ج/٢) — والإشعالُ تختم الخلفيةُ لحظتَه (`rounding_enabled_at`) وتدقّقه قبلاً وبعداً */
+    rounding_enabled?: boolean;
+    rounding_unit?: string;
+    rounding_mode?: RoundingMode;
   },
 ) => api.patch<PaymentSetting>(`/admin/settings/payments/${country}`, payload);
 

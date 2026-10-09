@@ -109,7 +109,7 @@ export function collectView(state: RidePayments, ride: Ride) {
           }
         : {
             caption: "الأجرة النهائية",
-            amount: state.final_fare ?? ride.estimated_fare,
+            amount: state.final_fare ?? ride.current_fare,
             hand: false,
           };
 
@@ -160,7 +160,7 @@ export function CollectScreen({
         ) : null}
         <Row
           label="السعر النهائي"
-          value={`${digits(state.final_fare ?? ride.estimated_fare)} ${currencyLabel}`}
+          value={`${digits(state.final_fare ?? ride.current_fare)} ${currencyLabel}`}
           strong
         />
 

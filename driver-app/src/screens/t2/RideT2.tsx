@@ -230,10 +230,11 @@ export function RideT2({
               <div className="t2-rd-rider-sub">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
               {shared ? <div className="t2-rd-rider-share">{shareText}</div> : null}
             </div>
-            {/* **الأجرةُ المقدَّرة** — كانت تحت اسم الراكب في الورقة القائمة، وتبقى في صفّه */}
+            {/* **الأجرةُ المقدَّرة** — كانت تحت اسم الراكب في الورقة القائمة، وتبقى في صفّه. **ومقرَّبةً كما تنشرها الخلفية**
+                (`current_fare`، SPEC §٧٠-ج/٤) — قبل البدء لا انتظارَ ولا وقفةَ فيها، فهي المقدَّرةُ بقاعدة السوق */}
             <div className="t2-rd-rider-fare">
               <span className="t2-rd-rider-fare-num" dir="ltr">
-                {digits(ride.estimated_fare)}
+                {digits(ride.current_fare)}
               </span>{" "}
               <span className="t2-rd-fare-cur">{currencyLabel}</span>
             </div>

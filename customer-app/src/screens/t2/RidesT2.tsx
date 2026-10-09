@@ -268,7 +268,7 @@ export function RidesT2Screen() {
                         {/* **ولا أجرةَ على رحلةٍ لم تُخدَم** كما في اللوحة — كان السجلُّ يعرض تقديرَها */}
                         {unserved ? null : (
                           <span className="t2-fare">
-                            {formatMoney(ride.final_fare ?? ride.estimated_fare, ride.currency)}
+                            {formatMoney(ride.final_fare ?? ride.rider_estimate, ride.currency)}
                           </span>
                         )}
                       </span>

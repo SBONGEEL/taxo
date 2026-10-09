@@ -408,6 +408,10 @@ async def transfer(
     amount = round_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ التحويل يجب أن يكون أكبر من صفر")
+    # **مبلغٌ يختاره المرسلُ: مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — بسوق المرسل، والطرفان من سوقٍ واحدٍ بشرطٍ تحته
+    from app.services import rounding
+
+    await rounding.require_multiple_in(session, sender.country_code, amount)
     if sender.id == recipient.id:
         raise InvalidInput("لا يمكن التحويل إلى نفسك")
     if not sender.has_role(UserRole.RIDER) or not recipient.has_role(UserRole.RIDER):

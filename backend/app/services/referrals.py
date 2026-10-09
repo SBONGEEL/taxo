@@ -28,11 +28,11 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +45,7 @@ from app.models.enums import (
     FeatureKey,
     Gender,
     RideStatus,
+    RoundingSource,
     UserRole,
     WalletOwnerType,
     WalletTransactionType,
@@ -59,9 +60,10 @@ from app.models.referral import (
     ReferralSetting,
 )
 from app.models.ride import Ride
+from app.models.rounding import MoneyRounding
 from app.models.subscription import DriverSubscription
 from app.models.user import User
-from app.services import settings_service, test_accounts, wallet
+from app.services import rounding, settings_service, test_accounts, wallet
 from app.core.app_scope import ClientApp
 from app.core.exceptions import AmbiguousRole
 
@@ -592,9 +594,15 @@ async def pay(session: AsyncSession, referral_id: uuid.UUID) -> Referral | None:
 
     يعيد `None` إن لم تستحقّ أو كانت مدفوعة أو تجاوزت سقفَ شهرها — فالمهمةُ
     الدورية تمرّ على صفوفٍ كثيرةٍ وأكثرُها ليس جاهزاً، وذلك حالةٌ عادية لا خطأ.
+
+    **ويعيد الصفَّ بلا `rewarded_at`** حين قُرِّبت مكافأتُه إلى صفرٍ فأُغلقت بصفٍّ في السجلّ (مراجعةُ المال البند ١٠) — فيُثبِّته
+    المستدعي ولا يُشعر صاحبَه.
     """
     referral = await _locked(session, referral_id)
     if referral.rewarded_at is not None:
+        return None
+    # **وأُغلقت بتقريبٍ إلى صفر** (صفُّها في السجلّ) — لا تُدفع بعدها ولو تغيّر الإعداد: المعاملةُ وقعت وقُيِّدت
+    if await _closed_at_zero(session, referral.id):
         return None
 
     referrer = await session.get(User, referral.referrer_user_id)
@@ -629,9 +637,27 @@ async def pay(session: AsyncSession, referral_id: uuid.UUID) -> Referral | None:
         if await _paid_this_month(session, referrer.id) >= policy.monthly_cap:
             return None
 
-    amount = policy.amount_for(female_verified=progress.female_verified)
-    if amount <= 0:  # pragma: no cover - يمنعه `pays`
-        return None
+    precise = policy.amount_for(female_verified=progress.female_verified)
+    # **المكافأةُ قيدٌ واحدٌ يُقرَّب مرّةً** (SPEC §٧٠-ج/٥) — الأساسُ والعلاوةُ معاً ثمّ التقريب، لا كلٌّ وحدَه. وفرقُه صفٌّ
+    # بمعرّف الإحالة. ومطفأً هي المبلغُ نفسُه حرفاً
+    rounding_policy = await rounding.policy_for(session, country)
+    amount = rounding.rounded(precise, rounding_policy)
+    if amount <= 0:
+        # **مكافأةٌ قُرِّبت إلى صفر تُغلق بصفٍّ صريحٍ في السجلّ** (مراجعةُ المال البند ١٠): الدقيقُ ⇐ `0.000`، والفرقُ ما استحقّه
+        # ولم يُدفع — **لا فلسَ يختفي بلا سطر**. **ولا تُسأل بعدها أبداً** (`due_ids` تتخطّاها، و`closed_at_zero` أعلاه): كانت تبقى
+        # مستحقّةً فتمرّ عليها الدورةُ كلَّ مرّةٍ إلى الأبد. **ولا عمودَ جديد**: صفُّ الإحالة لا يحمل مكافأةً بصفر (`reward_positive`)،
+        # والسجلُّ هو القيدُ الذي يقول ما وقع. ويُعاد الصفُّ **بلا `rewarded_at`** فيُثبَّت ولا يُشعَر صاحبُه بمكافأةٍ لم تصله
+        await rounding.record(
+            session,
+            country=country,
+            source=RoundingSource.REFERRAL_BONUS,
+            source_id=referral.id,
+            user_id=referrer.id,
+            precise=precise,
+            rounded_amount=Decimal("0.000"),
+            policy=rounding_policy,
+        )
+        return referral
 
     # محفظةٌ مجمَّدة لا تُستقبل فيها مكافأة؟ **بل تُستقبل**: التجميدُ يمنع
     # الإخراج، ومنعُ الإدخال يجعل الحقَّ يضيع لا يُؤجَّل
@@ -658,7 +684,28 @@ async def pay(session: AsyncSession, referral_id: uuid.UUID) -> Referral | None:
     referral.reward_currency = currency_for_country(country).value
     referral.transaction_id = entry.id
     await session.flush()
+    await rounding.record(
+        session,
+        country=country,
+        source=RoundingSource.REFERRAL_BONUS,
+        source_id=referral.id,
+        user_id=referrer.id,
+        precise=precise,
+        rounded_amount=amount,
+        policy=rounding_policy,
+    )
     return referral
+
+
+def shown(policy: Policy, rounding_policy: rounding.RoundingPolicy) -> Policy:
+    """**البرنامجُ كما يُعرض لصاحب الرمز** — مبالغُه كما ستُدفع (SPEC §٧٠-ج/٥): الأساسُ مقرَّباً، **والمجموعُ للمُحالة الموثَّقة
+    مقرَّباً مرّةً** (`pay` يقرّب القيدَ الواحد لا جزأيه)، والعلاوةُ فرقُهما — **فتُجمع العلاوةُ والأساسُ إلى المجموع حرفاً**
+    كما يقرؤهما المُحيل جنباً إلى جنب. وإعداداتُ اللوحة لا تمرّ هنا: المشرفُ يرى ما ضبطه بدقّته. ومطفأً البرنامجُ نفسُه."""
+    if not rounding_policy.enabled:
+        return policy
+    base = rounding.rounded(policy.reward_amount, rounding_policy)
+    total = rounding.rounded(policy.female_total_amount, rounding_policy)
+    return replace(policy, reward_amount=base, female_bonus_amount=_money(total - base))
 
 
 async def due_ids(session: AsyncSession, *, limit: int = 200) -> list[uuid.UUID]:
@@ -669,20 +716,45 @@ async def due_ids(session: AsyncSession, *, limit: int = 200) -> list[uuid.UUID]
     """
     rows = await session.scalars(
         select(Referral.id)
-        .where(Referral.rewarded_at.is_(None))
+        .where(
+            Referral.rewarded_at.is_(None),
+            # **ولا ما أُغلق بتقريبٍ إلى صفر** (`pay`) — كان يُسأل في كلِّ دورةٍ إلى الأبد
+            ~exists().where(
+                MoneyRounding.source_kind == RoundingSource.REFERRAL_BONUS.value,
+                MoneyRounding.source_id == Referral.id,
+            ),
+        )
         .order_by(Referral.created_at)
         .limit(limit)
     )
     return list(rows)
 
 
+async def _closed_at_zero(session: AsyncSession, referral_id: uuid.UUID) -> bool:
+    """**أأُغلقت هذه الإحالةُ بمكافأةٍ قُرِّبت إلى صفر؟** — صفُّها في السجلّ ولا `rewarded_at` (يُسأل بعد فحص المدفوعة)."""
+    return (
+        await session.scalar(
+            select(MoneyRounding.id).where(
+                MoneyRounding.source_kind == RoundingSource.REFERRAL_BONUS.value,
+                MoneyRounding.source_id == referral_id,
+            )
+        )
+        is not None
+    )
+
+
 async def pay_due(session: AsyncSession) -> list[uuid.UUID]:
-    """يدفع ما استحقّ ويعيد معرّفاتِ ما دُفع — لتُشعَر أصحابُها بعد الالتزام."""
+    """يدفع ما استحقّ ويعيد معرّفاتِ ما دُفع — لتُشعَر أصحابُها بعد الالتزام.
+
+    **وما أُغلق بتقريبٍ إلى صفر يُثبَّت ولا يُعاد** (`pay` يعيده بلا `rewarded_at`): صفُّه في السجلّ يبقى، ولا إشعارَ بمكافأةٍ لم تُدفع.
+    """
     paid: list[uuid.UUID] = []
     for referral_id in await due_ids(session):
-        if await pay(session, referral_id) is not None:
+        result = await pay(session, referral_id)
+        if result is not None:
             await session.commit()
-            paid.append(referral_id)
+            if result.rewarded_at is not None:
+                paid.append(referral_id)
         else:
             # **تُنهى المعاملةُ حتى في حالة «لم يستحقّ»**: القفلُ الذي أخذه
             # `_locked` يبقى إلى نهاية المعاملة

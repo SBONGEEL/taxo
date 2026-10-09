@@ -22,7 +22,7 @@ from app.models.booking import RideBooking
 from app.models.ride import Ride
 from app.schemas.booking import BookingCreate, BookingOut
 from app.services import bookings as bookings_service
-from app.services import settings_service
+from app.services import rounding, settings_service
 from app.services.directions import Coordinates
 
 router = APIRouter(prefix="/me/bookings", tags=["bookings"])
@@ -51,13 +51,19 @@ async def _out(session, booking: RideBooking) -> BookingOut:
                 "dropoff_lat",
                 "dropoff_lng",
                 "dropoff_address",
-                "estimated_fare_at_booking",
                 "ride_id",
                 "cancelled_at",
                 "created_at",
             )
         },
         ride_status=ride_status,
+        # **التقديرُ معروضاً كما سيُدفع** (SPEC §٧٠-ج/٤، مراجعةُ المال البند ١٣): المحفوظُ بدقّته، والمعروضُ مقرَّباً بإعداد السوق
+        # الآن — كالتقدير قبل الطلب. **وحجزُ المشوار الثابت بسعره المجمَّد** (مدفوعٌ مع الاشتراك، لا يُقرَّب ثانيةً). ومطفأً كما كان
+        estimated_fare_at_booking=(
+            booking.estimated_fare_at_booking
+            if booking.commute_id is not None
+            else await rounding.shown_in(session, booking.country_code, booking.estimated_fare_at_booking)
+        ),
         awaiting_choice=bookings_service.awaiting_choice(
             booking,
             await settings_service.is_feature_enabled(

@@ -377,10 +377,8 @@ async def apply_to_ride(
     return promo
 
 
-async def settle_discount(
-    session: AsyncSession, ride: Ride, *, rider: User
-) -> Payment | None:
-    """يُنشئ دفعةَ `promo` ويؤكّدها لحظةَ الإنهاء — أو `None` بلا كوبون.
+async def open_discount(session: AsyncSession, ride: Ride) -> Payment | None:
+    """يُنشئ دفعةَ `promo` **معلَّقةً** لحظةَ الإنهاء — أو `None` بلا كوبون. **ويسوّيها `rides.complete_ride`** بـ`payments.settle`.
 
     **وتمرّ من `payments.settle` نفسِه** لا من كتابةٍ مستقلة في الدفتر: بابٌ
     واحدٌ لتسوية كل القنوات، وقيدٌ يُكتب من مكانٍ ثانٍ هو حالةٌ ثانيةٌ يمكن أن
@@ -390,6 +388,11 @@ async def settle_discount(
     التطبيق، ورحلةٌ تحمل الرمز تُنهى بخصمها كاملاً) بل ليكون **جمعُ المصروف
     وتسجيلُ الدفعة متسلسلين**: بغيره تقرأ إنهاءاتٌ متزامنة مصروفاً واحداً،
     فيُعرض في اللوحة رقمٌ أقلُّ من الحقيقة بلا أن يخطئ أحد.
+
+    **ولمَ يُفتح ولا يُسوّى هنا** (SPEC §٧٠-ج/٤، «النِّسَبُ أوّلاً ثمّ يُقرَّب المبلغُ النهائيُّ مرّةً»): مبلغُه على الأجرة
+    **الدقيقة**، **ثمّ يُقرَّب ما بقي على الراكب** (`rounding.apply_to_ride`) — **وتسويتُه تقرأ وعاءَ العمولة الذي يُخرج منه فرقُ
+    التقريب**، فتقع بعده. وكانت الدالّةُ `settle_discount` تفعل الاثنين معاً؛ **وبلا فرقٍ (سوقٌ مطفأ) لا يتغيّر شيءٌ عمّا كان**:
+    الصفُّ نفسُه والتسويةُ نفسُها في المعاملة نفسِها، والقفلُ على الرمز في موضعه.
     """
     if ride.promo_code_id is None or ride.final_fare is None:
         return None
@@ -408,8 +411,6 @@ async def settle_discount(
         .with_for_update()
     )
 
-    from app.services import payments as payments_service
-
     payment = Payment(
         ride_id=ride.id,
         method=PaymentMethod.PROMO,
@@ -421,15 +422,4 @@ async def settle_discount(
     )
     session.add(payment)
     await session.flush()
-
-    from app.models.enums import PaymentConfirmedBy
-
-    await payments_service.settle(
-        session,
-        payment=payment,
-        ride=ride,
-        rider=rider,
-        confirmed_by=PaymentConfirmedBy.SYSTEM,
-        actor_id=None,
-    )
     return payment

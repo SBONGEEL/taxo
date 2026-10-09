@@ -41,7 +41,6 @@ from app.models.enums import (
     FeatureKey,
     Gender,
     GenderPreference,
-    PaymentConfirmedBy,
     PaymentMethod,
     PaymentStatus,
     RideStatus,
@@ -149,10 +148,8 @@ async def preview(
     return discount, pricing.round_money(fare - discount)
 
 
-async def settle_discount(
-    session: AsyncSession, ride: Ride, *, rider: User
-) -> Payment | None:
-    """يُنشئ دفعةَ `share` ويؤكّدها لحظةَ الإنهاء — أو `None` بلا مشاركة.
+async def open_discount(session: AsyncSession, ride: Ride) -> Payment | None:
+    """يُنشئ دفعةَ `share` **معلَّقةً** لحظةَ الإنهاء — أو `None` بلا مشاركة. **ويسوّيها `rides.complete_ride`** بـ`payments.settle`.
 
     **وتمرّ من `payments.settle` نفسِه** لا من كتابةٍ مستقلة في الدفتر: بابٌ
     واحدٌ لتسوية كل القنوات (قاعدةُ 12-ز).
@@ -160,6 +157,9 @@ async def settle_discount(
     **والنسبةُ المجمَّدة هي الحكم** لا ما في الإعدادات الآن: مشرفٌ يعدّل النسبة
     ورحلةٌ سائرةٌ الآن لا يجوز أن يتغيّر خصمُها تحت عين راكبها — نفسُ قاعدةِ
     `commission_percent_at_ride` ورسومِ الانتظار المجمَّدة (12-ب).
+
+    **ويُفتح ولا يُسوّى هنا** — علّتُه علّةُ `promo.open_discount` حرفاً (SPEC §٧٠-ج/٤): مبلغُه على الأجرة الدقيقة، ثمّ يُقرَّب
+    ما بقي على الراكب، ثمّ يُسوّى. وكانت الدالّةُ `settle_discount` تفعل الاثنين معاً.
     """
     if ride.share_discount_percent_at_ride <= 0 or ride.final_fare is None:
         return None
@@ -172,8 +172,6 @@ async def settle_discount(
     if discount <= 0:  # pragma: no cover - نسبةٌ مجمَّدةٌ تعطي صفراً
         return None
 
-    from app.services import payments as payments_service
-
     payment = Payment(
         ride_id=ride.id,
         method=PaymentMethod.SHARE,
@@ -185,15 +183,6 @@ async def settle_discount(
     )
     session.add(payment)
     await session.flush()
-
-    await payments_service.settle(
-        session,
-        payment=payment,
-        ride=ride,
-        rider=rider,
-        confirmed_by=PaymentConfirmedBy.SYSTEM,
-        actor_id=None,
-    )
     return payment
 
 
@@ -249,7 +238,7 @@ async def on_member_cancelled(
     تأخذ قفلَها وتُفلته في نفسها، وشرطُها على الحالة يجعلها **جامدةَ التكرار**:
     الثانيةُ لا تجد صفّاً مطابقاً لأن الأولى أخرجته من الحالات النشطة.
 
-    **وتصفيرُ النسبة المجمَّدة هو رفعُ السعر نفسُه**: `settle_discount` تقرؤها
+    **وتصفيرُ النسبة المجمَّدة هو رفعُ السعر نفسُه**: `open_discount` تقرؤها
     عند الإنهاء، فصفرُها يعني ألّا صفَّ خصمٍ يُكتب — ولا مكانَ ثانٍ يقرّر.
     """
     if cancelled.share_group_id is None:

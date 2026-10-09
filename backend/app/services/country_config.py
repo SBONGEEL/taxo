@@ -23,6 +23,10 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
     quiet = await campaigns.get_settings(session, country)
     # **يُقرأ من الإعداد لا من نصّ** — والقناةُ تُخفى حين لا يُضبط
     pay = await settings_service.get_payment_settings(session, country)
+    # **قاعدةُ التقريب من بيتها الواحد** (`rounding.policy_of`) — مطفأةٌ لسوقٍ بلا صفّ
+    from app.services import rounding
+
+    policy = rounding.policy_of(pay)
     channels = await verification.available_methods(session, country)
     method = channels[0] if channels else verification.NONE
     return CountryConfigOut(
@@ -46,6 +50,10 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
         # **بانٍ واحدٌ لبابين** — فاللوحةُ ترى ما يراه التطبيق، ولا يُملأ حقلٌ
         # في أحدهما ويُنسى في الآخر (الشكلُ الثامن)
         email_signup=await verification.email_signup_available(session, country),
+        rounding_enabled=policy.enabled,
+        # **الوحدةُ والاتجاهُ المضبوطان ولو كان مطفأً** — اللوحةُ تقرأ الوصفَ نفسَه، والتطبيقُ لا يقرؤهما إلا مشتعلاً
+        rounding_unit=pay.rounding_unit if pay is not None else policy.unit,
+        rounding_mode=pay.rounding_mode if pay is not None else policy.mode,
     )
 
 

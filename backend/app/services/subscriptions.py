@@ -64,11 +64,14 @@ from app.models.enums import (
     CountryCode,
     DriverStatus,
     PaymentMethod,
+    RoundingMode,
+    RoundingSource,
     SubscriptionDurationType,
     SubscriptionStatus,
     WalletOwnerType,
     WalletTransactionType,
 )
+from app.models.provider_order import ProviderOrder
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
@@ -79,6 +82,7 @@ from app.services import (
     geo,
     notifications,
     offers,
+    rounding,
     settings_service,
     test_accounts,
     wallet,
@@ -353,6 +357,50 @@ def require_purchasable(driver: Driver) -> None:
         raise PermissionDenied("لا يمكن الاشتراك قبل اعتماد حسابك")
 
 
+@dataclass(frozen=True, slots=True)
+class PriceToPay:
+    """**ما يدفعه الكبتنُ لخطةٍ بعد عرضه** — الدقيقُ والمقرَّبُ وسياسةُ السوق التي قرّبته (SPEC §٧٠-ج/٥)."""
+
+    precise: Decimal
+    payable: Decimal
+    policy: rounding.RoundingPolicy
+
+
+async def price_to_pay(
+    session: AsyncSession, plan: SubscriptionPlan, offer: "offers.ResolvedOffer | None"
+) -> PriceToPay:
+    """**بيتٌ واحدٌ لثمن الاشتراك في القنوات الأربع وشاشتها** — السعرُ ناقصَ العرض، **ثمّ يُقرَّب مرّةً**.
+
+    كان الطرحُ مكتوباً في أربعة مواضع (المحفظة · اللوحة · البطاقة · كليك) وخامسٍ للعرض (`routers/subscriptions`) — **وتقريبٌ
+    يُضاف في أربعةٍ ويُنسى في الخامس يجعل الشاشةَ تَعِد بغير ما يُخصم**. فالخمسةُ تسأل هنا. ومطفأً هو الطرحُ نفسُه حرفاً.
+    """
+    precise = plan.price - (offer.amount if offer is not None else Decimal("0"))
+    policy = await rounding.policy_for(session, plan.country_code)
+    return PriceToPay(precise=precise, payable=rounding.rounded(precise, policy), policy=policy)
+
+
+def freeze_price(order: ProviderOrder, price: PriceToPay) -> None:
+    """**يجمّد على طلب الاشتراك ثمنَه الدقيقَ وسياسةَ تقريبه لحظةَ فتحه** (مراجعةُ المال البند ٦) — و`amount` هو المقرَّب.
+
+    **ومطفأً لا يُجمَّد شيء** (`NULL`): لا تقريبَ وقع، فلا صفَّ يُكتب عند التفعيل ولو أُشعل الإعدادُ قبل الدفع."""
+    if not price.policy.enabled:
+        return
+    order.rounding_precise = price.precise
+    order.rounding_unit_at_open = price.policy.unit
+    order.rounding_mode_at_open = price.policy.mode.value
+
+
+def frozen_price(order: ProviderOrder) -> PriceToPay | None:
+    """**الثمنُ كما فُتح به الطلب** — منه يُكتب صفُّ السجلّ عند التفعيل، **لا من إعداد لحظة الدفع**: إطفاءٌ أو اتجاهٌ آخرُ بين الفتح
+    والدفع لا يُسقط فرقاً دفعه الكبتنُ فعلاً، ولا يكتب فرقاً لم يقع. و`None` لطلبٍ فُتح مطفأً."""
+    if order.rounding_precise is None or order.rounding_unit_at_open is None or order.rounding_mode_at_open is None:
+        return None
+    policy = rounding.RoundingPolicy(
+        enabled=True, unit=order.rounding_unit_at_open, mode=RoundingMode(order.rounding_mode_at_open)
+    )
+    return PriceToPay(precise=order.rounding_precise, payable=order.amount, policy=policy)
+
+
 async def _create(
     session: AsyncSession,
     *,
@@ -364,10 +412,15 @@ async def _create(
     idempotency_key: str | None = None,
     transaction_id: uuid.UUID | None = None,
     offer: "offers.ResolvedOffer | None" = None,
+    price: PriceToPay | None = None,
 ) -> DriverSubscription:
     """يكتب صف الاشتراك — **يُستدعى وصفُّ الكبتن مقفول**.
 
     بدايته من حيث تنتهي تغطيته القائمة إن وُجدت، وإلا فمن الآن.
+
+    **وفرقُ التقريب يُكتب هنا** (`price`) — البابُ الوحيدُ الذي يكتب صفَّ الاشتراك في القنوات الأربع، فصفُّ السجلّ يحمل
+    معرّفَه. **ويُكتب حين يكون المدفوعُ هو الثمنَ مقرَّباً وحدَه**: مبلغٌ قرّره المشرفُ بيده (`record_manual`)، أو ثمنٌ تغيّر
+    عرضُه بين فتح الطلب ودفعه، **تسويةٌ لا تقريب** — يقرؤها التقريرُ كما يقرؤها اليوم.
     """
     # **لا اشتراكَ يوميٌّ وعليه سلفةٌ تجاوزت مهلتها** (القرار ٥، البند ١٥):
     # وإلا موّلت السلفةُ نفسَها — سلفةٌ بقيمة يوميٍّ تُشترى بها يوميّاتٌ إلى ما
@@ -445,6 +498,18 @@ async def _create(
         await session.rollback()
         raise SubscriptionAlreadyPurchased() from exc
 
+    if price is not None and price.payable == amount_paid:
+        await rounding.record(
+            session,
+            country=plan.country_code,
+            source=RoundingSource.SUBSCRIPTION,
+            source_id=subscription.id,
+            user_id=driver.user_id,
+            precise=price.precise,
+            rounded_amount=amount_paid,
+            policy=price.policy,
+        )
+
     # **هديةُ أوّلِ اشتراك** (البند: مركباتُ الكراج، 2026-08-22) — موضعُها هنا
     # لأن هذا **البابُ الوحيدُ** الذي يكتب صفَّ اشتراكٍ في القنوات الأربع،
     # فتشمل بلا شرطٍ إضافيٍّ اشتراكَ **عرضِ الشهر المجاني**: الهديةُ على حدث
@@ -491,7 +556,9 @@ async def purchase_with_wallet(
     offer = await offers.resolve(
         session, driver=locked, plan=plan, for_update=True
     )
-    payable = plan.price - (offer.amount if offer is not None else Decimal("0"))
+    # **العرضُ أوّلاً ثمّ التقريبُ مرّةً** (SPEC §٧٠-أ/١٠) — والمخصومُ هو المقرَّب
+    price = await price_to_pay(session, plan, offer)
+    payable = price.payable
 
     # خطةٌ بلا ثمن (القسم 4 يجيز `price >= 0`) لا قيد لها: الدفتر يرفض قيداً
     # بصفر عن حق — لم يتحرك مال. والاشتراك يُفتح كما لو دُفع لأنه دُفع بثمنه
@@ -523,6 +590,7 @@ async def purchase_with_wallet(
         idempotency_key=idempotency_key,
         transaction_id=entry.id if entry is not None else None,
         offer=offer,
+        price=price,
     )
 
 
@@ -558,7 +626,12 @@ async def record_manual(
     offer = await offers.resolve(
         session, driver=locked, plan=plan, for_update=True
     )
-    suggested = plan.price - (offer.amount if offer is not None else Decimal("0"))
+    # **المقترَحُ هو الثمنُ مقرَّباً** (SPEC §٧٠-ج/٥)، **وما يكتبه المشرفُ بيده مضاعفٌ للوحدة وإلا رُدّ** (§٧٠-ج/٦): حريةُ
+    # تسوية الفرق قائمةٌ، والكسرُ وحدَه يُردّ — مالٌ قُبض نقداً أو بكليك في سوقٍ لا كسورَ فيه. **ولا يُقرَّب رقمُه من وراء ظهره**
+    price = await price_to_pay(session, plan, offer)
+    if amount_paid is not None:
+        rounding.require_multiple(amount_paid, price.policy, field="amount_paid")
+    suggested = price.payable
     paid = suggested if amount_paid is None else amount_paid
 
     # **اشتراكُ كبتن التجربة يُسجَّل بصفرٍ أو يُشترى من المحفظة** (SPEC §٦٥-ج/٢): هذا البابُ يسجّل مالاً **قبضته الإدارة**
@@ -577,6 +650,7 @@ async def record_manual(
         amount_paid=paid,
         reference=(reference or "").strip() or None,
         offer=offer,
+        price=price,
     )
     await audit.record(
         session,
@@ -599,11 +673,15 @@ async def activate_paid_order(
     reference: str | None,
     idempotency_key: str,
     method: PaymentMethod = PaymentMethod.CARD,
+    price: PriceToPay | None = None,
 ) -> DriverSubscription:
     """اشتراكٌ دفعه المزود بالبطاقة — يُستدعى من `card_payments.apply_state`.
 
     **لا قيد في الدفتر**: مال الكبتن خرج من بطاقته لا من محفظته، فقيدُ خصمٍ
     عليها يخصم منه مرتين — نفس ما تفعله دفعة الرحلة بالبطاقة مع الراكب.
+
+    **و`price` هو الثمنُ المجمَّدُ على الطلب عند فتحه** (`frozen_price`) — منه يُكتب فرقُ التقريب، **لا من إعداد لحظة الدفع**.
+    و`None` لطلبٍ فُتح مطفأً: لا تقريبَ وقع فلا صفّ.
     """
     driver = await session.scalar(
         select(Driver).where(Driver.user_id == driver_user.id)
@@ -632,6 +710,10 @@ async def activate_paid_order(
         session,
         driver=locked,
         plan=plan,
+        # **والثمنُ كما فُتح به الطلب** (`frozen_price`، مراجعةُ المال البند ٦) — لا يُعاد حسابُه بإعداد لحظة الدفع: إطفاءٌ أو
+        # تغييرٌ بين الفتح والدفع كان يُسقط صفَّ فرقٍ دفعه الكبتنُ فيُقرأ «تسويةً يدويّة». والمبلغُ يبقى ما دُفع، فإن خالف المجمَّدَ
+        # مقرَّباً فهو تسويةٌ كما كان (`_create`)
+        price=price,
         # **الطريقةُ تُمرَّر ولا تُفترض** (صُحّح 2026-08-29): كان هذا المسارُ
         # للبطاقة وحدَها، **فلمّا شاركه كليكُ اليدويُّ صار الختمُ يكذب** —
         # واشتراكٌ دُفع بكليك يُقرأ «بطاقة» في كلِّ تقريرٍ بعده.
@@ -1035,6 +1117,8 @@ class CancellationLine:
     refund: Decimal
     #: **أبدأ بعد؟** — يفرّق «تناسبٌ» من «كاملٌ بلا تناسب» في شاشة التأكيد
     started: bool
+    #: **الردُّ بدقّته قبل تقريبه إلى الوحدة** (SPEC §٧٠-ج/٥) — يُكتب فرقُه في السجلّ عند التنفيذ، ولا يُعرض
+    precise_refund: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -1049,10 +1133,14 @@ class CancellationPlan:
     lines: tuple[CancellationLine, ...]
     total_refund: Decimal
     currency: str
+    #: **سياسةُ التقريب التي حُسب بها الردّ** — يكتب التنفيذُ فرقَها في السجلّ (للأعلى، `_refund_for`)
+    policy: rounding.RoundingPolicy = rounding.DISABLED
 
 
-def _refund_for(row: DriverSubscription, now: datetime) -> tuple[Decimal, bool]:
-    """ما يُردّ عن صفٍّ واحد، وهل بدأ.
+def _refund_for(
+    row: DriverSubscription, now: datetime, policy: rounding.RoundingPolicy = rounding.DISABLED
+) -> tuple[Decimal, bool, Decimal]:
+    """ما يُردّ عن صفٍّ واحد، وهل بدأ — **وما كان يُردّ بدقّته** (الثالث) ليُكتب فرقُ تقريبه.
 
     **والقاعدةُ بنصِّ المالك**: «الردّ بنسبة الأيام غير المستعملة **من المدفوع
     فعلاً بعد أي خصم عرض**، والكسور تُقرَّب لصالح الكبتن».
@@ -1063,22 +1151,27 @@ def _refund_for(row: DriverSubscription, now: datetime) -> tuple[Decimal, bool]:
     * **والمدفوعُ فعلاً هو `amount_paid`** لا `list_price`: عرضُ الشهر المجاني
       يجعله **صفراً**، فالردُّ صفرٌ ولا قيدَ يُكتب — **مقيسٌ لا مستنتَج**
       (§27.5: `money_percent` بقيمة `100`).
+
+    **والتقريبُ إلى وحدة السوق** (SPEC §٧٠-ج/٥) **للجاري وحدَه، وللأعلى أيّاً كان اتجاهُ السوق**: شرطُ المالك القائم
+    «الكسورُ لصالح الكبتن» أخصُّ من الاتجاه العامّ، **وسقفُه ما دفع** — فلا يُردّ أكثرُ ممّا دُفع ولو دُفع كسراً قبل الإشعال.
+    **ولم يبدأ ⇒ يُردّ ما دُفع كما دُفع** بلا تقريب: عكسُ مبلغٍ لا مبلغٌ يُحسب. ومطفأً هو الردُّ نفسُه حرفاً.
     """
     if row.amount_paid <= 0:
-        return Decimal("0"), row.starts_at <= now
+        return Decimal("0"), row.starts_at <= now, Decimal("0")
     if row.starts_at > now:
-        return row.amount_paid.quantize(_MONEY_UNIT), False
+        whole = row.amount_paid.quantize(_MONEY_UNIT)
+        return whole, False, whole
 
     span = (row.expires_at - row.starts_at).total_seconds()
     if span <= 0:  # pragma: no cover - يمنعه بناءُ المدّة
-        return Decimal("0"), True
+        return Decimal("0"), True, Decimal("0")
     unused = max((row.expires_at - now).total_seconds(), 0.0)
     share = Decimal(str(unused)) / Decimal(str(span))
     # **التقريبُ لصالح الكبتن** (شرطُ المالك): `ROUND_CEILING` لا `HALF_UP` —
     # والفرقُ مليمٌ في الصفّ الواحد، **وهو الفرقُ بين «أخذ حقَّه» و«نقص منه»**
-    return (row.amount_paid * share).quantize(
-        _MONEY_UNIT, rounding=ROUND_CEILING
-    ), True
+    precise = (row.amount_paid * share).quantize(_MONEY_UNIT, rounding=ROUND_CEILING)
+    up = rounding.toward(policy, RoundingMode.UP)
+    return min(rounding.rounded(precise, up), row.amount_paid), True, precise
 
 
 async def plan_cancellation(
@@ -1107,8 +1200,14 @@ async def plan_cancellation(
     lines: list[CancellationLine] = []
     total = Decimal("0")
     currency = ""
+    # **سياسةُ سوق الخطة** — والمعاينةُ والتنفيذُ يقرآنها من هنا، فلا يفترقان (`CancellationPlan`)
+    policy = (
+        await rounding.policy_for(session, rows[0].plan.country_code)
+        if rows and rows[0].plan is not None
+        else rounding.DISABLED
+    )
     for row in rows:
-        refund, started = _refund_for(row, moment)
+        refund, started, precise_refund = _refund_for(row, moment, policy)
         total += refund
         # **العملةُ من الخطة لا من الصفّ**: `driver_subscriptions` بلا عمودِ
         # عملة — الخطةُ تحملها، و`SubscriptionOut` يقرؤها منها منذ يومه
@@ -1122,10 +1221,14 @@ async def plan_cancellation(
                 amount_paid=row.amount_paid,
                 refund=refund,
                 started=started,
+                precise_refund=precise_refund,
             )
         )
     return CancellationPlan(
-        lines=tuple(lines), total_refund=total.quantize(_MONEY_UNIT), currency=currency
+        lines=tuple(lines),
+        total_refund=total.quantize(_MONEY_UNIT),
+        currency=currency,
+        policy=policy,
     )
 
 
@@ -1179,6 +1282,18 @@ async def cancel_for_driver(
                 idempotency_key=f"subscription_refund:{row.id}",
             )
             row.refund_transaction_id = entry.id
+        if line.started and line.precise_refund is not None:
+            # **فرقُ تقريب الجاري** — للأعلى كما حُسب (`_refund_for`)؛ وما لم يبدأ يُردّ كما دُفع فلا فرقَ له
+            await rounding.record(
+                session,
+                country=owner.country_code,
+                source=RoundingSource.SUBSCRIPTION_REFUND,
+                source_id=row.id,
+                user_id=owner.id,
+                precise=line.precise_refund,
+                rounded_amount=line.refund,
+                policy=rounding.toward(plan.policy, RoundingMode.UP),
+            )
 
     # **مخرجُ الانتهاء نفسُه** — لا ثانٍ بجانبه
     driver.commission_percent_from_subscription = None

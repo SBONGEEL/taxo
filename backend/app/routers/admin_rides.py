@@ -30,7 +30,7 @@ from app.schemas.admin_ride import (
 )
 from app.schemas.party import DriverPartyOut, PartyOut
 from app.schemas.ride import stops_of
-from app.services import pricing, ride_log, rides as rides_service
+from app.services import pricing, ride_log, rides as rides_service, rounding
 
 router = APIRouter(prefix="/admin/rides", tags=["admin"])
 
@@ -144,6 +144,8 @@ async def get_ride(
         ),
         waiting_charge=await rides_service.waiting_charge_for(session, ride),
         pause_charge=await rides_service.pause_charge_for(session, ride),
+        # **من سجلّ التقريب لا بحسبة** (SPEC §٧٠-ج/٣) — والصفرُ «لا صفّ» فيُنشر `null`
+        rounding_amount=await rounding.ride_difference(session, ride.id) or None,
         # **من البانِي نفسِه الذي يقرؤه التطبيقان** (`schemas/ride.stops_of`):
         # فما يراه المشرفُ عند كلِّ محطةٍ هو ما رآه الراكبُ والكبتن — لا رقمٌ
         # ثانٍ يشبهه

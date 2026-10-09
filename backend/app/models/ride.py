@@ -169,6 +169,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             name="ride_hourly_fields",
         ),
         CheckConstraint("captain_fees_at_ride >= 0", name="ride_captain_fees_not_negative"),
+        # **سياسةُ التقريب للعرض مجمَّدةٌ معاً أو غائبةٌ معاً** (SPEC §٧٠-ج/٤، الترحيلة `0104`)
+        CheckConstraint(
+            "(rounding_unit_at_ride IS NULL) = (rounding_mode_at_ride IS NULL) "
+            "AND (rounding_unit_at_ride IS NULL OR rounding_unit_at_ride > 0) "
+            "AND (rounding_mode_at_ride IS NULL OR rounding_mode_at_ride IN ('nearest', 'up', 'down'))",
+            name="ride_rounding_policy",
+        ),
         # حارس ضد سباق طلبين متزامنين — الخدمة تفحص أيضاً لترجع رسالة مفهومة
         Index(
             "uq_rides_active_rider",
@@ -408,6 +415,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     captain_fees_at_ride: Mapped[Decimal] = mapped_column(
         MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
     )
+    # ---------------------------------------------- التقريب (SPEC §٧٠-ج/٤، الترحيلة `0104`)
+    #
+    # **سياسةُ السوق لحظةَ الطلب — للعرض وحدَه**: العدّادُ الحيُّ (`RideOut.current_fare`) يُبنى أيضاً في بثِّ المقبس **حيث
+    # لا جلسةَ تقرأ الإعداد**، فتُجمَّد على الرحلة كالعمولة. **أمّا التقريبُ المحفوظُ فبإعداد لحظة الإنهاء** (§٧٠-ج/٧:
+    # «الإنهاءُ هو المعاملة»؛ `rounding.apply_to_ride`)، فرحلةٌ طُلبت قبل الإشعال تُقرَّب عند إنهائها بعده. و`null` = مطفأ
+    rounding_unit_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    rounding_mode_at_ride: Mapped[str | None] = mapped_column(String(8), nullable=True)
     #: المرفقُ الذي جاء منه الرسم — يقرؤه التوزيعُ («طلبات المطار») وشارةُ «مطار» عند الكبتن
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("facilities.id"), nullable=True

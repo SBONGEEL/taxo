@@ -39,11 +39,14 @@ from app.models.enums import (
     ProviderOrderPurpose,
     ProviderOrderSource,
     ProviderOrderStatus,
+    RoundingMode,
+    RoundingSource,
     UserRole,
+    WalletOwnerType,
 )
 from app.models.provider_order import ProviderOrder
 from app.models.user import User
-from app.services import audit, debts, settings_service, test_accounts
+from app.services import audit, debts, rounding, settings_service, test_accounts
 from app.services.card_payments import _new_cart_id, _paying_side
 from app.services.cliq_subscriptions import require_cliq_manual_enabled
 from app.services.pricing import round_money
@@ -72,11 +75,16 @@ async def start_payment(
     amount = round_money(amount)
     if amount <= 0:
         raise InvalidInput("المبلغ يجب أن يكون أكبر من صفر")
+    # **مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — حوالةٌ من بنكه في سوقٍ لا كسورَ فيه
+    policy = await rounding.require_multiple_in(session, owner.country_code, amount)
 
     outstanding = await debts.outstanding_of(session, driver.id)
     if outstanding <= 0:
         raise InvalidInput("لا مستحقّات عليك")
-    if amount > outstanding:
+    # **«ادفع الدَّين كلَّه» مقرَّباً للأعلى** (§٧٠-ج/٦): دَينٌ بكسورٍ (`3.342`) لا يُسدَّد كلُّه بمضاعف — فمبلغُه
+    # `pay_all_amount` (`3.500`) يُقبل فوق الدَّين بأقلَّ من وحدة، **والزائدُ يُردّ إلى محفظته قيداً صريحاً عند التأكيد**
+    # (`confirm_payment`). ومطفأً هو الدَّينُ نفسُه فلا يتغيّر الحدّ
+    if amount > outstanding and amount != rounding.ceil_to_unit(outstanding, policy):
         # **ولا يُقصّ صامتاً إلى الدَّين**: من كتب رقماً أكبر أخطأ في القراءة،
         # وتصحيحُه له خيرٌ من قبضِ ما لم يُقصَد
         raise InvalidInput("المبلغ أكبر من المستحقّ عليك")
@@ -166,7 +174,10 @@ async def confirm_payment(
         session, driver=driver, country=owner.country_code, amount=credited
     )
     order.status = ProviderOrderStatus.PAID
-    if applied < credited:
+    returned = await _return_rounding_excess(
+        session, order=order, owner=owner, driver=driver, credited=credited, applied=applied, actor=actor
+    )
+    if applied < credited and returned is None:
         # **الفرقُ يُكتب حيث يُقرأ** — `failure_reason` حقلُ «ما لم يمضِ»
         order.failure_reason = (
             f"وصل {credited} وطُبّق {applied} — الزائد {credited - applied} "
@@ -185,9 +196,57 @@ async def confirm_payment(
             "credited": str(credited),
             "applied": str(applied),
             "purpose": order.purpose.value,
+            # **زائدُ التقريب المردودُ إلى محفظته** (§٧٠-ج/٦) — يُذكر حين وقع وحدَه، فالقيدُ القديمُ كما كان حرفاً
+            **({"rounding_returned": str(returned.amount)} if returned is not None else {}),
         },
     )
     return order, applied
+
+
+async def _return_rounding_excess(
+    session: AsyncSession,
+    *,
+    order: ProviderOrder,
+    owner: User,
+    driver: Driver,
+    credited: Decimal,
+    applied: Decimal,
+    actor: User,
+):
+    """**زائدُ «ادفع الدَّين كلَّه» يُردّ إلى محفظته قيداً صريحاً** (SPEC §٧٠-ج/٦) — **لا يُبتلع ولا يبقى «زائداً لا يُقيَّد»**.
+
+    **ويُعرف بثلاثة شروطٍ معاً**: الدَّينُ صار صفراً بهذا السداد، **والواصلُ مضاعفٌ للوحدة**، **والزائدُ أقلُّ من وحدة** — أي أنّ
+    ما وصل هو الدَّينُ مقرَّباً للأعلى (`pay_all_amount`). **وما عدا ذلك زائدٌ حقيقيٌّ لا تقريب** (حوّل أكثرَ ممّا عليه بوحدةٍ
+    فأكثر، أو كسراً لا مضاعفاً): يبقى كما كان — يُكتب في `failure_reason` ويقوله المشرفُ لصاحبه. ومطفأً لا شيء.
+
+    **والأقفالُ في ترتيبها**: صفُّ المطالبة مقفولٌ قبلُ (`_locked`)، وصفوفُ الدَّين في `apply_settlement`، **وقفلُ المحفظة آخرُها**
+    في `wallet.record`. **ومفتاحُ التكرار على المطالبة**، والمطالبةُ لا تُؤكَّد مرّتين (`created` وحدَها تُؤكَّد).
+    """
+    excess = round_money(credited - applied)
+    if excess <= 0:
+        return None
+    policy = await rounding.policy_for(session, owner.country_code)
+    if (
+        not policy.enabled
+        or excess >= policy.unit
+        or not rounding.is_multiple(credited, policy)
+        or await debts.outstanding_of(session, driver.id) > 0
+    ):
+        return None
+    return await rounding.return_excess(
+        session,
+        owner=owner,
+        owner_type=WalletOwnerType.DRIVER,
+        country=owner.country_code,
+        source=RoundingSource.DEBT_SETTLEMENT,
+        source_id=order.id,
+        precise=applied,
+        paid=credited,
+        policy=rounding.toward(policy, RoundingMode.UP),
+        idempotency_key=f"debt-rounding:{order.id}",
+        reference="زائدُ تقريب سداد الدَّين — رُدّ إلى محفظتك",
+        created_by=actor.id,
+    )
 
 
 async def list_pending(session: AsyncSession, *, country=None) -> list[ProviderOrder]:

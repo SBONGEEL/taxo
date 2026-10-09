@@ -62,7 +62,11 @@ class RideEstimateOut(BaseModel):
     currency: Currency
     distance_km: Decimal
     duration_min: Decimal
+    #: **ما سيدفعه الراكبُ بلا خصم — مقرَّباً بقاعدة سوقه** (SPEC §٧٠-ج/٤: «التقديرُ قبل الطلب»). ومطفأً هو `priced_fare` حرفاً
     estimated_fare: Decimal
+    #: **الأجرةُ المسعَّرةُ بدقّتها** (`0.001`) — **منها تُحسب معاينةُ القسيمة** (`POST /rides/promo/validate` بحقلها `fare`): الخصمُ
+    #: على الدقيقة ثمّ يُقرَّب الباقي مرّةً (§٧٠-أ/١٠). **ومن يرسل المقرَّبَ بدلها يرى خصماً على غير ما سيُحسب**
+    priced_fare: Decimal
     minimum_fare_applied: bool
     # **سعرُ المشاركة يُحسب هنا لا في التطبيق** (القسم 14): نسبةٌ مضروبةٌ في
     # أجرةٍ حسابُ مال، وواجهةٌ تضربها تصير طرفاً في تحديد ما يُدفع. و`null`
@@ -414,6 +418,11 @@ class RideOut(BaseModel):
     # مقدَّمٌ لا عدّادُ مسافة** (القسم 5.7): فلا يكبر بالكيلومتر، ويكبر بما يتراكم
     # وحدَه — وانحرافُ الطريق يُحكم عند الإنهاء لا قبله
     current_fare: Decimal = Decimal("0.000")
+    #: **ما يعرضه عدّادُ الراكب قبل الأجرة النهائيّة** (مراجعةُ المال ٢٠٢٦-١٠-٠٩، البند ٨؛ `rounding.rider_estimate`) — **مطفأً هو
+    #: `estimated_fare` حرفاً** (ما عرضه العدّادُ قبل §٧٠، فلا تغيّرَ بلا إذن المالك)، **ومشتعلاً ما سيدفعه الراكبُ من التقدير**:
+    #: المقدَّرةُ ناقصَ الخصم المجمَّد على الرحلة **مقرَّبةً مرّةً** — مضاعفٌ للوحدة. **ولا يدخله انتظارٌ ولا وقفات** (العدّادُ لم
+    #: يعرضها قبل §٧٠). وتطبيقُ الكبتن يقرأ `current_fare`: الأجرةُ كلُّها كما ستُحفظ
+    rider_estimate: Decimal = Decimal("0.000")
     # **أيُطلب رمزُ الرحلة قبل البدء؟** (§٦٢-ج/٥، CW4) — **السؤالُ وحدَه لا الرمز**: هذا التمثيلُ يصل الطرفين وبثَّ المقبس، والرمزُ ما
     # تُدخله الكبتنة؛ فيُقرأ للراكبة من بابها (`GET /rides/{id}/start-code`)
     start_code_required: bool = False
@@ -476,7 +485,7 @@ class RideOut(BaseModel):
         # **`pricing` يبقى هنا** رغم انتقال بناء المحطات إلى `stops_of`:
         # `pause_charge` أدناه يستعمله. وحذفُه مع النقل كسر `from_ride` كلَّها
         # بـ`NameError` — ظهر ٥٠٠ على **إلغاء رحلة** لأن البثَّ يمرّ من هنا.
-        from app.services import pricing
+        from app.services import pricing, rounding
 
         moment = now or datetime.now(UTC)
         stops = stops_of(ride, moment)
@@ -534,10 +543,12 @@ class RideOut(BaseModel):
             pause_price_per_min=ride.pause_price_per_min_at_ride,
             pause_max_minutes=ride.pause_max_minutes_at_ride,
             # **بالقيم نفسِها التي تُنشر بجانبه** — لحظةٌ واحدةٌ للثلاثة، فلا يفترق
-            # العدّادُ عن السطرين اللذين يشرحانه
-            current_fare=pricing.round_money(
-                ride.estimated_fare + waiting_charge + pause_charge
+            # العدّادُ عن السطرين اللذين يشرحانه. **ومقرَّبٌ بالقاعدة نفسِها** (SPEC §٧٠-ج/٤): الأجرةُ كما ستُحفظ لو انتهت
+            # الآن — بسياسة السوق المجمَّدةِ على الرحلة، فهذا التمثيلُ يُبنى في بثٍّ بلا جلسة (`rounding.ride_display_fare`)
+            current_fare=rounding.ride_display_fare(
+                ride, pricing.round_money(ride.estimated_fare + waiting_charge + pause_charge)
             ),
+            rider_estimate=rounding.rider_estimate(ride),
             start_code_required=ride.start_code is not None,
             for_other=ride.for_other,
             airport=ride.facility_id is not None,

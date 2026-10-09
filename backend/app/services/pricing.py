@@ -67,7 +67,8 @@ class FareEstimate:
 class FareLine:
     """سطرٌ من تفصيل الأجرة — **يُحسب حيث يُحسب المبلغ** (`fare_breakdown`) فلا يفترقان (§١٤: المالُ في الخلفية).
 
-    `kind`: `base` · `distance` · `time` · `stops` · `minimum` · `waiting` · `pause`. و`quantity` كيلومتراتٌ أو دقائقُ أو عددٌ
+    `kind`: `base` · `distance` · `time` · `stops` · `minimum` · `waiting` · `pause` — **و`rounding`** يكتبه `rounding.apply_to_ride`
+    عند الإنهاء وحدَه (SPEC §٧٠-ج/٤)، موجباً أو سالباً. و`quantity` كيلومتراتٌ أو دقائقُ أو عددٌ
     **لتسمية السطر وحدَها** («المسافة · 6.8 كم») — **لا يُضرب في الشاشة**؛ المبلغُ هو `amount`.
     """
 

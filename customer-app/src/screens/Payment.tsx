@@ -44,6 +44,7 @@ import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { PaymentsList } from "@/components/payment/PaymentsList";
 import { useGoBack } from "@/lib/back";
 import { useCountryConfig } from "@/lib/config";
+import { roundingRow } from "@/lib/fareLines";
 import { payerScope, usePayerPreference } from "@/lib/for-other";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import type { PayableMethod } from "@/lib/payment";
@@ -118,6 +119,9 @@ function stopBreakdown(
       value: formatMoney(ride.pause_charge, ride.currency),
       strong: false,
     });
+  // **وسطرُ «تقريب»** (SPEC §٧٠-ج/٤) — داخلَ `final_fare` كسطور الوقوف، **فرقٌ كتبته الخلفيةُ سطراً** فيُقرأ ولا يُحسب. وبلا سطرٍ لا يُرسم
+  const rounding = roundingRow(ride);
+  if (rounding) rows.push({ ...rounding, strong: false });
   return rows;
 }
 

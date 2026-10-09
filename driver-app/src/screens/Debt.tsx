@@ -21,7 +21,10 @@ import { getDebtState, listMyDebtClaims, payDebtWithCliq } from "@/api/endpoints
 import type { DebtClaim, DriverDebtSource, DriverDebtState } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { useGoBack } from "@/lib/back";
+import { useCountryConfig } from "@/lib/config";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
+import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
+import { useSession } from "@/lib/session";
 import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
@@ -50,7 +53,9 @@ export function DebtScreen() {
     setClaims(rows);
     // **الحقلُ يُملأ بالمستحقّ كلِّه** — والأغلبُ أن يسدّده كاملاً، ومن أراد
     // أقلَّ عدّله. **ولا يُقفل**: الجزئيُّ مقبولٌ بقرار المالك.
-    setAmount((current) => current || next.total);
+    // **و«كلُّه» هو `pay_all_amount`** (SPEC §٧٠-ج/٦): الدَّينُ مقرَّباً للأعلى إلى وحدة السوق **محسوباً في الخلفية**، والزائدُ
+    // يعود إلى محفظته قيداً صريحاً عند التأكيد. ومطفأً هو `total` حرفاً — فلا يتغيّر شيءٌ في سوقٍ لم يُشعَل
+    setAmount((current) => current || next.pay_all_amount);
   }, []);
 
   useEffect(() => {
@@ -74,6 +79,10 @@ export function DebtScreen() {
 
   const currency = state ? CURRENCY_LABEL[state.currency] : "";
   const pending = claims.filter((claim) => claim.status === "created");
+  // **الدفعةُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٦) — حوالةٌ من بنكه في سوقٍ لا كسورَ فيه، والخلفيةُ تردّ غيرَها
+  const { user } = useSession();
+  const unit = roundingUnit(useCountryConfig(user?.country_code));
+  const unitError = notMultipleMessage(amount, unit, currency);
 
   return (
     <div className="t2 t2-debt scr">
@@ -158,6 +167,26 @@ export function DebtScreen() {
               <label className="t2-fld-label" htmlFor="debt-amount">
                 كم تريد أن تسدّد الآن؟
               </label>
+              {/* **«سدّد كلَّه» بلاطةُ ورقة السحب نفسُها** (`t2-wds-tile`) — حين يُشعَل التقريبُ وحدَه: رقمُها `pay_all_amount` كما
+                  حسبته الخلفية (الدَّينُ مقرَّباً للأعلى)، **وتعيد الحقلَ إليه** إن عدّله. ومطفأً الحقلُ يُملأ بالمستحقّ كما كان */}
+              {unit !== null ? (
+                <div className="t2-wds-quick">
+                  <button
+                    type="button"
+                    aria-pressed={amount === state.pay_all_amount}
+                    onClick={() => setAmount(state.pay_all_amount)}
+                    className="t2-wds-tile"
+                  >
+                    <span className="t2-wds-tile-k">سدّد كلَّه</span>
+                    <span className="t2-wds-tile-v">
+                      <span className="t2-wds-tile-num" dir="ltr">
+                        {digits(state.pay_all_amount)}
+                      </span>{" "}
+                      <span className="t2-wds-tile-cur">{currency}</span>
+                    </span>
+                  </button>
+                </div>
+              ) : null}
               <input
                 id="debt-amount"
                 className="t2-fld on-card t2-debt-input"
@@ -166,6 +195,19 @@ export function DebtScreen() {
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
               />
+              {unitError ? (
+                <p className="t2-note danger" role="alert">
+                  <Icon name="error" fill />
+                  {unitError}
+                </p>
+              ) : unit !== null ? (
+                <p className="t2-fld-hint">
+                  {unitHint(unit, currency)}
+                  {state.pay_all_amount !== state.total
+                    ? " — و«سدّد كلَّه» مقرَّبٌ للأعلى، والفرقُ يعود إلى محفظتك قيداً صريحاً عند التأكيد."
+                    : ""}
+                </p>
+              ) : null}
               <p className="t2-fld-hint">
                 تُفتح مطالبة بكليك، تحوّل المبلغ إلى الحساب المكتوب فيها، ثم
                 يراجعها مشرف خلال {digits(String(state.review_min_minutes))} إلى{" "}
@@ -175,7 +217,7 @@ export function DebtScreen() {
                 type="button"
                 className="t2-debt-cta"
                 onClick={() => void pay()}
-                disabled={busy || !state.cliq_alias}
+                disabled={busy || !state.cliq_alias || unitError !== null}
               >
                 {busy ? "جارٍ…" : "سدّد بكليك"}
               </button>

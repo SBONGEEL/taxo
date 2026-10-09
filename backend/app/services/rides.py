@@ -42,12 +42,14 @@ from app.models.enums import (
     DriverStatus,
     FeatureKey,
     GenderPreference,
+    PaymentConfirmedBy,
     PaymentMethod,
     RidePayer,
     RideStatus,
     UserRole,
     VehicleCategory,
 )
+from app.models.payment import Payment
 from app.models.ride import (
     ACTIVE_DRIVER_STATUSES,
     ACTIVE_RIDER_STATUSES,
@@ -608,6 +610,11 @@ async def request_ride(
         captain_fees_at_ride=quote.captain_fees,
         facility_id=quote.facility_id,
     )
+    # **سياسةُ التقريب للعرض مجمَّدةً** (SPEC §٧٠-ج/٤): العدّادُ الحيُّ يُبنى أيضاً في بثٍّ بلا جلسة فيقرؤها من الرحلة.
+    # **والتقريبُ المحفوظُ لا يقرؤها**: يُحسب بإعداد لحظة الإنهاء (`rounding.apply_to_ride`). ومطفأً `NULL` — الرحلةُ كما كانت
+    from app.services import rounding
+
+    rounding.freeze_on(ride, await rounding.policy_for(session, rider.country_code))
     # **رحلةٌ لشخصٍ آخر** (§٦٣-ج/١): يُفحص مفتاحُها ويُطبَّع رقمُ راكبها **قبل** أن تُضاف — طلبٌ مرفوضٌ لا يترك صفّاً
     if passenger is not None:
         prepared = await ride_for_other.prepare(session, rider=rider, passenger=passenger)
@@ -928,24 +935,50 @@ async def complete_ride(session: AsyncSession, ride: Ride, driver: Driver) -> Ri
     # **خصمُ الكوبون دفعةٌ تُنشأ هنا وتؤكَّد** (12-ز، القسم 6.6): الأجرةُ صارت
     # معلومةً للتوّ، والقاعدةُ مجمَّدةٌ على الرحلة. وبها يصير ما على الراكب
     # الأجرةَ ناقصَ الخصم تلقائياً، وتُجمع أرباحُ الكبتن من الصفَّين كأن لا كوبون
-    if ride.promo_code_id is not None:
-        from app.services import promo as promo_service
-
-        rider = await session.get(User, ride.rider_id)
-        if rider is not None:
-            await promo_service.settle_discount(session, ride, rider=rider)
-
+    #
     # **وخصمُ المشاركة صفٌّ ثانٍ مستقل** (12-ي) بنفس الآلية وبقناته `share`.
     # ويجتمعان على رحلةٍ واحدة بلا قاعدةٍ جديدة: الدفعُ المختلط من 6-أ يجمع
     # الصفوفَ ويطرحها من `final_fare`، فتُخصم النسبتان معاً ويقبض الكبتنُ كأن
     # لا خصمَ في واحدةٍ منهما. **ومستقلٌّ لا مدموج** لأن `promo.spent()` يقيس
     # ميزانيةَ الكوبون بجمع دفعات `promo` وحدَها
-    if ride.share_discount_percent_at_ride > 0:
-        from app.services import sharing as sharing_service
+    #
+    # **ثلاثُ خطواتٍ لا اثنتان** (SPEC §٧٠-ج/٤): يُفتح الصفّان بمبلغيهما على الأجرة **الدقيقة**، **ثمّ يُقرَّب ما بقي على الراكب
+    # مرّةً** (`rounding.apply_to_ride`: سطرُ «تقريب» وصفٌّ في السجلّ)، **ثمّ يُسوّى الصفّان** — فتسويتُهما تقرأ وعاءَ العمولة
+    # بعد أن خرج منه فرقُ التقريب. **وترتيبُ الأقفال كما كان**: الرحلةُ ثمّ صفُّ الرمز ثمّ الدفعتان ثمّ المحافظ، والتقريبُ لا
+    # يقفل شيئاً (صفٌّ جديدٌ في سجلّه). **ومطفأً لا يكتب حرفاً**، فالصفّان يُسوَّيان كما كانا في المعاملة نفسِها
+    from app.services import promo as promo_service
+    from app.services import rounding
+    from app.services import sharing as sharing_service
 
+    discounts: list[Payment] = []
+    if ride.promo_code_id is not None or ride.share_discount_percent_at_ride > 0:
         rider = await session.get(User, ride.rider_id)
         if rider is not None:
-            await sharing_service.settle_discount(session, ride, rider=rider)
+            for opened in (
+                await promo_service.open_discount(session, ride),
+                await sharing_service.open_discount(session, ride),
+            ):
+                if opened is not None:
+                    discounts.append(opened)
+
+    await rounding.apply_to_ride(session, ride)
+
+    from app.services import payments as payments_service
+
+    for payment in discounts:
+        await payments_service.settle(
+            session,
+            payment=payment,
+            ride=ride,
+            rider=rider,
+            confirmed_by=PaymentConfirmedBy.SYSTEM,
+            actor_id=None,
+        )
+
+    # **وعمولةُ مقدَّم الساعة المؤجَّلة تُكتب الآن** (مراجعةُ المال البند ١) — بعد أن عُرفت الأجرةُ وفرقُ تقريبها: على المسعَّر لا
+    # على المقرَّب المدفوع. **ويقفل صفَّ المقدَّم النقديّ المعلَّق بعد صفِّ الرحلة** (الترتيبُ العامّ) — تأكيدُ الكبتن له في اللحظة
+    # نفسِها لا يُضيّع العمولة. ومطفأً لا شيءَ مؤجَّلٌ فلا يكتب حرفاً
+    await payments_service.settle_deferred_commission(session, ride)
 
     # **ورسمُ الضمان يُحسم هنا** (§٦٣-ج/٣): لكبتنه كاملاً إن جاء في وقته، وإلا يُردّ — بعد قفل الرحلة، والحجزُ بعدها
     if ride.scheduled_for is not None:

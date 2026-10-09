@@ -51,6 +51,7 @@ from app.models.enums import (
     CancellationChargeStatus,
     CountryCode,
     PaymentMethod,
+    RoundingSource,
     UnpaidCancellationOutcome,
     WalletOwnerType,
     WalletTransactionType,
@@ -166,11 +167,37 @@ async def charge_for(
         await session.refresh(ride)
         return None
 
+    # **والرسمُ يُقرَّب هنا لا عند حسابه** (SPEC §٧٠-ج/٥): بعد الإعفاء وقبل الصفّ — **فلا يُكتب في السجلّ تقريبُ رسمٍ أُعفي
+    # منه** (والسجلُّ لا يُمحى منه)، والمجمَّدُ على الرحلة يصير المقرَّبَ فتقرأ الشاشةُ ما يُحصَّل. **وللساعيّة الطريقُ نفسُه**:
+    # `cancel_ride` يحسب دقائقها ويمرّرها هنا. ومطفأً الرسمُ كما كان حرفاً
+    from app.services import rounding
+
+    unit_policy = await rounding.policy_for(session, ride.country_code)
+    precise = round_money(fee)
+    amount, difference = rounding.round_amount(precise, unit_policy)
+    if difference != 0:
+        await rounding.record(
+            session,
+            country=ride.country_code,
+            source=RoundingSource.CANCELLATION_FEE,
+            source_id=ride.id,
+            user_id=ride.rider_id,
+            precise=precise,
+            rounded_amount=amount,
+            policy=unit_policy,
+        )
+        ride.cancellation_fee = amount
+        await session.flush()
+        await session.refresh(ride)
+    if amount <= 0:
+        # **رسمٌ قُرِّب إلى صفر** (للأدنى، ورسمٌ دون الوحدة) — لا صفَّ تحصيل؛ والفرقُ مكتوبٌ في السجلّ فوق
+        return None
+
     charge = RideCancellationCharge(
         ride_id=ride.id,
         payer_user_id=ride.rider_id,
         beneficiary_driver_id=ride.driver_id,
-        amount=round_money(fee),
+        amount=amount,
         currency=ride.currency,
         status=CancellationChargeStatus.PENDING,
     )

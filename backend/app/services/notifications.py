@@ -304,14 +304,17 @@ async def publish_ride_event(
     if text is None:
         return
 
+    from app.services import rounding
+
     message = PushMessage(
         title=text[0],
         body=text[1],
         data={
             "type": event.value,
             "ride_id": str(ride.id),
-            # القيمُ خامٌ لتصوغها الواجهة بلغتها وخاناتها (انظر ترويسة الملف)
-            "amount": str(ride.final_fare or ride.estimated_fare),
+            # القيمُ خامٌ لتصوغها الواجهة بلغتها وخاناتها (انظر ترويسة الملف). **وقبل الإنهاء مقرَّبةٌ بقاعدة السوق** (SPEC
+            # §٧٠-ج/٤) — كالعدّاد الحيّ؛ وبعده `final_fare` نفسُها وفيها سطرُ التقريب
+            "amount": str(ride.final_fare or rounding.ride_display_fare(ride, ride.estimated_fare)),
             "currency": ride.currency.value,
             "status": ride.status.value,
         },
@@ -343,6 +346,10 @@ async def publish_ride_offer(
     expires_in_seconds: int,
 ) -> None:
     """بطاقة الطلب الواردة — **بأولوية عالية** (SPEC القسم 10/12.3)."""
+    from app.services import rounding
+
+    # **السعرُ على البطاقة مقرَّبٌ بقاعدة السوق** (SPEC §٧٠-ج/٤) — ما سيُحفظ لو انتهت الرحلةُ على تقديرها
+    shown = rounding.ride_display_fare(ride, ride.estimated_fare)
     await events.publish_ride_offer(
         redis,
         driver_user_id=driver_user_id,
@@ -359,13 +366,13 @@ async def publish_ride_offer(
             title="طلب رحلة جديد",
             body=(
                 f"نقطة الانطلاق على بُعد {distance_to_pickup_km} كم — "
-                f"{ride.estimated_fare} {ride.currency.value}"
+                f"{shown} {ride.currency.value}"
             ),
             data={
                 "type": RideEvent.RIDE_OFFER.value,
                 "ride_id": str(ride.id),
                 "expires_in_seconds": str(expires_in_seconds),
-                "amount": str(ride.estimated_fare),
+                "amount": str(shown),
                 "currency": ride.currency.value,
                 "distance_to_pickup_km": str(distance_to_pickup_km),
             },

@@ -8,6 +8,7 @@ import type {
   Currency,
   GenderPreference,
   PaymentMethod,
+  Ride,
   RideStatus,
   VehicleCategory,
 } from "@/api/types";
@@ -95,6 +96,17 @@ export function formatWhen(iso: string): string {
   if (sameDay(at, today)) return `اليوم ${time}`;
   if (sameDay(at, yesterday)) return `أمس ${time}`;
   return `${digits(at.toLocaleDateString(DISPLAY_LOCALE, { day: "numeric", month: "long" }))} ${time}`;
+}
+
+/** **سطرُ «تقريب» في تفصيل الأجرة** (SPEC §٧٠-ج/٤) — مبلغُه **كما كتبته الخلفية** (`fare_lines`)، و`null` حين لا سطر: سوقٌ مطفأ،
+ *  أو فرقٌ صفريّ، أو رحلةٌ لم تنتهِ. **وهو للكبتن أو عليه** (قرارُ المالك ٢٠٢٦-١٠-٠٩): موجبٌ زاد ما قبضه، وسالبٌ نقصه — فالإشارةُ
+ *  تُرسم محرفَ طرحٍ (`−`) كما يرسمها تطبيقُ الراكب، **ولا حسابَ هنا**: تبديلُ خاناتٍ ومحرفٍ لا غير. */
+export function roundingLine(ride: Pick<Ride, "fare_lines">): string | null {
+  // **و`?.` لرحلةٍ محفوظةٍ من نسخةٍ أقدم** — تمثيلٌ بلا الحقل لا يُسقط شاشةَ المال، يُقرأ «لا سطر»
+  const line = ride.fare_lines?.find((entry) => entry.kind === "rounding");
+  if (!line) return null;
+  const negative = line.amount.trimStart().startsWith("-");
+  return `${negative ? "−" : ""}${digits(line.amount.replace("-", "").trim())}`;
 }
 
 /** المسافة بمنزلةٍ واحدة: `5.700` تُقرأ مبلغاً و`5.7` تُقرأ مسافة.

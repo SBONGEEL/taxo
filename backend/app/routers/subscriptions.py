@@ -64,10 +64,18 @@ async def _plans_with_offers(
     for plan in plans:
         row = SubscriptionPlanOut.model_validate(plan)
         resolved = await offers.resolve(session, driver=driver, plan=plan)
+        # **الثمنُ من بيته الواحد** (`subscriptions.price_to_pay`) — العرضُ ثمّ التقريب، **فما يُرى هو ما يُخصم** (SPEC §٧٠-ج/٥)
+        price = await subscriptions.price_to_pay(session, plan, resolved)
+        # **ما يُخصم في حقله وحدَه** (`price_to_pay`) عرضٌ أو لا عرض — **و`price_after_discount` للعرض الحقيقيّ وحدَه**: الشاشاتُ
+        # تشطب `price` حين يُملأ، فملؤه بالمقرَّب بلا عرضٍ كان يرسم خصماً كاذباً (`9.800` مشطوبةً بجانب `10.000` — مراجعةُ المال
+        # البند ٧). ومطفأً بلا عرضٍ `price_to_pay = price` حرفاً و`price_after_discount = null` كما كان
+        row.price_to_pay = price.payable
         if resolved is not None:
             row.offer_name = resolved.offer.name
             row.offer_discount = resolved.amount
-            row.price_after_discount = plan.price - resolved.amount
+            # **ولا شطبَ حيث لا ينقص شيء**: عرضٌ صغيرٌ يردّه التقريبُ إلى السعر نفسِه (`10.000 − 0.200 = 9.800 ⇐ 10.000`) لا يُرسم
+            # خصماً — والمخصومُ يبقى في `price_to_pay`. ومطفأً لا يقع (العرضُ ينقص السعرَ دائماً) فهو كما كان
+            row.price_after_discount = price.payable if price.payable != plan.price else None
             row.offer_ends_at = resolved.offer.ends_at
         else:
             # **يُسأل حين لا خصمَ فقط**: سطرٌ عن عرضٍ استُنفد فوق خصمٍ قائمٍ

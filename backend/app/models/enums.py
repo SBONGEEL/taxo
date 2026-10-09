@@ -405,6 +405,57 @@ class FareLineKind(StrEnum):
     HOURLY_EXTRA_TIME = "hourly_extra_time"
     #: **سعرُ رحلة المشوار الثابت المجمَّد** (§٦٣-ج/٦) — سطرٌ واحدٌ لا تفصيلَ طريق: السعرُ لا يتبع الطريق
     COMMUTE = "commute"
+    #: **«تقريب»** (SPEC §٧٠-ج/٤) — **فرقُ تقريب ما على الراكب، موجبٌ أو سالب**، سطرٌ بذاته فتُجمع السطورُ إلى `final_fare`
+    #: حرفاً. **وخارج وعاء العمولة** كرسوم الكبتن (`payments._commission_amount`)، ويُكتب صفُّه في `money_roundings`
+    ROUNDING = "rounding"
+
+
+class RoundingMode(StrEnum):
+    """اتجاهُ التقريب إلى وحدة الدولة (SPEC §٧٠-ج/٢) — **و«الأقرب» نصفُه للأعلى**: بوحدة `0.500` تصير `2.250` ⇐ `2.500`."""
+
+    NEAREST = "nearest"
+    UP = "up"
+    DOWN = "down"
+
+
+class RoundingSource(StrEnum):
+    """مصدرُ صفٍّ في سجلِّ التقريب (`money_roundings`، SPEC §٧٠-ج/٣) — **ومع المعرّف مفتاحٌ فريد** فلا يُكتب تقريبٌ مرّتين.
+
+    **نصٌّ بلا قيدٍ في القاعدة عمداً**: كلُّ مصدرٍ يُضاف هنا وحدَه بلا ترحيلة — والتعدادُ هو الحارسُ في الكتابة
+    (`rounding.record` لا يقبل غيرَه). والمصادرُ **من §٧٠-ج/٥ و/٦ بأسمائها**، **ومعرّفُ كلٍّ مكتوبٌ بجانبه** (ما يُقرأ به الصفّ).
+
+    **ولا مصدرَ لما يُردّ كما أُخذ** (قاعدةٌ لا سهو): ردُّ رسم الضمان ووصولُه الكبتنَ، وردُّ مقعد بين المدن، ورصيدُ رحلات
+    المشوار غير المستعملة، واستردادُ اشتراكٍ لم يبدأ، واستردادُ دفعة رحلة — **كلُّها عكسُ مبلغٍ قُرِّب يومَ أُخذ**، فهي مضاعفٌ
+    بلا تقريب؛ **وتقريبُها ثانيةً تقريبٌ مرّتين** (§٧٠-أ/١٠)، وعلى ما أُخذ قبل الإشعال **تغييرٌ لمالٍ قائم** (§٧٠-أ/١١).
+    """
+
+    #: **الرحلةُ** (`rides.id`) — ما بقي على الراكب بعد الخصم، يُقرَّب مرّةً عند الإنهاء (§٧٠-ج/٤)
+    RIDE = "ride"
+    #: رسمُ الإلغاء والساعيّة (`rides.id` — رسمٌ واحدٌ لكلِّ رحلة)، ولو قُرِّب إلى صفرٍ فلا صفَّ تحصيل
+    CANCELLATION_FEE = "cancellation_fee"
+    #: رسمُ الضمان لحظةَ الحجز (`ride_bookings.id`). **ولا مصدرَ لغرامة الاعتذار**: الرسمُ مضاعفٌ منذ الحجز، **وما يجعلها كسراً
+    #: رصيدُه لا تقريب** — فما لم يُحصَّل منها (الكسرُ معه) مكتوبٌ في `driver_warnings.penalty_shortfall` وحدَه (مراجعةُ المال البند ٩)
+    GUARANTEE_HOLD = "guarantee_hold"
+    #: سعرُ اشتراك الكبتن بعد العرض في القنوات الأربع (`driver_subscriptions.id`)
+    SUBSCRIPTION = "subscription"
+    #: استردادُه النسبيّ عند الإلغاء (`driver_subscriptions.id`) — **للأعلى**: لصالح الكبتن
+    SUBSCRIPTION_REFUND = "subscription_refund"
+    #: سعرُ المشوار الثابت: الفرقُ على الشهر كلِّه (`rider_subscriptions.id`)
+    COMMUTE_PRICE = "commute_price"
+    #: حافزُ الكبتن المعتمد (`rides.id`)
+    COMMUTE_INCENTIVE = "commute_incentive"
+    #: الاستردادُ الأسبوعيّ (`cashback_streaks.id`)
+    CASHBACK = "cashback"
+    #: مكافأةُ الإحالة (`referrals.id`)
+    REFERRAL_BONUS = "referral_bonus"
+    #: حجزُ بين المدن — مقاعدُ أو سيارةٌ كاملة (`intercity_bookings.id`)
+    INTERCITY_BOOKING = "intercity_booking"
+    #: مركبةٌ من المتجر (`driver_vehicle_skins.id`)
+    SKIN_PURCHASE = "skin_purchase"
+    #: سدادُ السلفة الكامل — للأعلى والزائدُ يُردّ (`driver_advances.id`)
+    ADVANCE_REPAYMENT = "advance_repayment"
+    #: «ادفع الدَّين كلَّه» بكليك — للأعلى والزائدُ يُردّ (`provider_orders.id`)
+    DEBT_SETTLEMENT = "debt_settlement"
 
 
 
@@ -821,6 +872,9 @@ class WalletTransactionType(StrEnum):
     INTERCITY_EARNING = "intercity_earning"
     #: **الاسترداد الأسبوعي** (§٦٣-ج/٨) — دائنٌ للراكب **من TAXO** بلا مدين، لا يُخصم من كبتن
     CASHBACK = "cashback"
+    #: **فرقُ تقريبٍ قيداً صريحاً** (SPEC §٧٠-ج/٦) — **بالإشارتين** كالتصحيح: الزائدُ من «ادفع الدَّين كلَّه» مقرَّباً للأعلى يُردّ
+    #: إلى محفظة الكبتن به **ولا يُبتلع**. **ولا تكتبه الرحلة**: فرقُها سطرُ أجرةٍ وصفٌّ في `money_roundings`
+    ROUNDING = "rounding"
 
 
 class CancellationChargeStatus(StrEnum):

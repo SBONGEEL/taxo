@@ -77,7 +77,9 @@ async def start_subscription(
     subscriptions_service.require_purchasable(driver)
 
     offer = await offers.resolve(session, driver=driver, plan=plan)
-    payable = plan.price - (offer.amount if offer is not None else Decimal("0"))
+    # **الثمنُ من بيته الواحد مقرَّباً** (SPEC §٧٠-ج/٥) — نفسُ ما يفتح به بابُ البطاقة، وفرقُه يُكتب عند التفعيل
+    price = await subscriptions_service.price_to_pay(session, plan, offer)
+    payable = price.payable
 
     order = ProviderOrder(
         # **القضيبُ كليك والمصدرُ يدويّ** — ويومَ يصل العقدُ يتبدّل المصدرُ وحدَه
@@ -93,6 +95,8 @@ async def start_subscription(
         plan_id=plan.id,
         opened_from_app=_paying_side(owner, UserRole.DRIVER.value),
     )
+    # **والثمنُ الدقيقُ وسياستُه يُجمَّدان على المطالبة** (مراجعةُ المال البند ٦) — منهما يُكتب صفُّ السجلّ عند التأكيد
+    subscriptions_service.freeze_price(order, price)
     session.add(order)
     await session.flush()
     return order
@@ -189,6 +193,8 @@ async def confirm_payment(
             reference=order.cart_id,
             idempotency_key=f"cliq-manual-subscription:{order.id}",
             method=PaymentMethod.CLIQ,
+            # **الثمنُ كما فُتحت به المطالبة** — لا كما هو لحظةَ التأكيد (مراجعةُ المال البند ٦)
+            price=subscriptions_service.frozen_price(order),
         )
 
     await audit.record(

@@ -28,6 +28,7 @@ from app.core.exceptions import (
 from app.models.driver import Driver
 from app.models.enums import (
     AuditAction,
+    CountryCode,
     DriverStatus,
     WalletOwnerType,
     WalletTransactionType,
@@ -41,6 +42,7 @@ from app.services import (
     audit,
     cancellation,
     money_guards,
+    rounding,
     settings_service,
     test_accounts,
     wallet,
@@ -187,7 +189,19 @@ async def available_balance(
     # **صحيح** (عمولةُ رحلاتٍ نقديةٍ بلا أرباحَ تقابلها، ومحفظتُه تنقص فعلاً)،
     # وإخفاؤه يترك الكبتنَ يرى رصيدَه ينزل بلا سبب. هنا السالبُ **غيرُ صحيح**:
     # لا أحدَ يطالبه بخمسة. القاعدةُ واحدةٌ في الحالتين — **يُعرض ما يقع**.
-    return max(Decimal("0.000"), current - held - reserve - carried)
+    #
+    # **وأكبرُ مضاعفٍ للوحدة لا يتجاوزه** (SPEC §٧٠-ج/٦، المثال ج): `37.842 ⇐ 37.500`، **والكسرُ `0.342` يبقى في محفظته
+    # له** (اشتراكٌ أو دَينٌ لاحق، أو يكتمل بأرباحٍ قادمة) — **ولا فرقَ تقريبٍ ولا صفَّ في السجلّ**: المسحوبُ اختيارُه، وما لم
+    # يُسحب لم يتحرّك. ومطفأً هو المتاحُ نفسُه حرفاً
+    available = max(Decimal("0.000"), current - held - reserve - carried)
+    return rounding.floor_to_unit(available, await rounding.policy_for(session, user.country_code))
+
+
+async def minimum_withdrawal(session: AsyncSession, country: CountryCode, setting: Decimal) -> Decimal:
+    """**الحدُّ الأدنى للسحب كما يُفرض ويُنشر** (مراجعةُ المال البند ١٢) — إعدادُ اللوحة **مقرَّباً للأعلى إلى الوحدة** حين يشتعل
+    التقريب: السحبُ مضاعفٌ للوحدة (§٧٠-ج/٦)، **فأصغرُ ما يُسحب فعلاً أصغرُ مضاعفٍ لا ينقص عن الإعداد** — وهو ما يقرؤه الكبتنُ في
+    بلاطة «الحد الأدنى» فيكتبه ولا يُردّ. **وإعدادُ اللوحة لا يُمسّ** (المشرفُ يرى ما ضبطه بدقّته)، ومطفأً هو الإعدادُ حرفاً."""
+    return rounding.ceil_to_unit(setting, await rounding.policy_for(session, country))
 
 
 async def create_request(
@@ -207,6 +221,8 @@ async def create_request(
     amount = round_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ السحب يجب أن يكون أكبر من صفر")
+    # **مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦، المثال ج) — والمتاحُ يُعرض مضاعفاً (`available_balance`)، والكسرُ يبقى له
+    await rounding.require_multiple_in(session, user.country_code, amount)
 
     # **محفظةُ الكبتن وحدَها**: لا سحبَ من محفظة راكب أصلاً (SPEC §7)
     wallet.require_not_frozen(user, WalletOwnerType.DRIVER)
@@ -217,10 +233,9 @@ async def create_request(
     limits = await settings_service.get_or_create_wallet_settings(
         session, user.country_code
     )
-    if amount < limits.min_withdrawal_amount:
-        raise WalletLimitExceeded(
-            f"الحد الأدنى للسحب {limits.min_withdrawal_amount}"
-        )
+    minimum = await minimum_withdrawal(session, user.country_code, limits.min_withdrawal_amount)
+    if amount < minimum:
+        raise WalletLimitExceeded(f"الحد الأدنى للسحب {minimum}")
 
     # القفل قبل الفحص: طلبان متزامنان لا يعبران معاً على نفس الرصيد
     await wallet.lock_wallet(session, user.id)

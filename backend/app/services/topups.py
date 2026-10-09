@@ -184,6 +184,11 @@ async def create_request(
     wallet.require_not_frozen(owner, owner_type)
 
     amount = _validated_amount(amount)
+    # **ما يكتبه الراكبُ مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦). **وهنا وحدَه لا في `_validated_amount`**: ذاك يخدم أيضاً
+    # **ما وصل فعلاً** كما يقرؤه المشرفُ في كشفه (`confirm`، وكاشُ اللوحة) — والمقيَّدُ ما وصل حرفاً، لا يُردّ ولا يُقرَّب
+    from app.services import rounding
+
+    await rounding.require_multiple_in(session, owner.country_code, amount)
     request = WalletTopupRequest(
         owner_id=owner.id,
         owner_type=owner_type,

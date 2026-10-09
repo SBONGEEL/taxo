@@ -12,24 +12,29 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { QUICK_TOPUP_AMOUNTS } from "@/lib/wallet";
+import { notMultipleMessage, unitHint } from "@/lib/rounding";
 import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/taxo2";
-import { AmountCardT2, QuickAmountsT2, SheetModalT2 } from "@/screens/t2/MoneyT2";
+import { AmountCardT2, QuickAmountsT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2";
 
 export function TopupSheet({
   currency,
+  unit,
   cardEnabled,
   cliqEnabled,
   onClose,
 }: {
   currency: string | undefined;
+  /** **وحدةُ التقريب مشتعلاً** (`lib/rounding.ts`) و`null` مطفأً — المبلغُ مضاعفٌ لها وإلا لا تُفتح قناة (SPEC §٧٠-ج/٦) */
+  unit: string | null;
   cardEnabled: boolean;
   cliqEnabled: boolean;
   onClose: () => void;
 }) {
   const navigate = useNavigate();
   const [amount, setAmount] = useState("10");
-  const valid = Number(amount) > 0;
+  const unitError = notMultipleMessage(amount, unit, currency);
+  const valid = Number(amount) > 0 && unitError === null;
 
   return (
     <SheetModalT2 onClose={onClose}>
@@ -44,6 +49,7 @@ export function TopupSheet({
           label={(value) => formatMoney(value, currency)}
         />
       </AmountCardT2>
+      <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
 
       {/* **القنواتُ صفوفٌ لا حبّات** كما في التصميم: لكلٍّ سطرُ شرحٍ يقول ما يقع بعد الضغط — «فوريّ» أم «بعد التأكد».
           والقناةُ الغائبةُ لا تُرسم معطّلةً: مفتاحُها مطفأٌ في هذا السوق */}

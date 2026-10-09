@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -51,12 +52,14 @@ from app.core.exceptions import (
     RideNotPayable,
 )
 from app.models.commission import CommissionSetting
+from app.models.debt import DriverDebt
 from app.models.driver import Driver
 from app.models.enums import (
     AuditAction,
     CommissionAppliesTo,
     CountryCode,
     DisputeResolution,
+    DriverDebtSource,
     FeatureKey,
     PaymentConfirmedBy,
     PaymentMethod,
@@ -75,6 +78,7 @@ from app.models.payment import (
 )
 from app.models.ride import Ride
 from app.models.user import User
+from app.models.wallet import WalletTransaction
 from app.services import (
     admin_search,
     advances,
@@ -85,6 +89,7 @@ from app.services import (
     settings_service,
     wallet,
 )
+from app.services import rounding as rounding_service
 from app.services.pricing import round_money
 
 # آلة حالات الدفعة — ما ليس هنا ممنوع (SPEC القسم 4)
@@ -509,7 +514,16 @@ async def _pay_from_wallet(
     if not cash_remainder and balance < outstanding:
         raise InsufficientBalance("رصيدُك لا يغطّي الأجرة — اشحن محفظتك أو ادفع بالبطاقة")
 
-    wallet_amount = min(balance, outstanding)
+    # **رصيدٌ لا يغطّي الأجرةَ يدفع أكبرَ مضاعفٍ للوحدة لا يتجاوزه** (SPEC §٧٠-ج/٤) — **فالباقي نقداً مضاعفٌ أيضاً**، والكسرُ
+    # القديمُ يبقى في المحفظة لصاحبه كما هو. ومطفأً `floor_to_unit` هويّةٌ: `min(الرصيد، الأجرة)` حرفاً كما كان
+    if balance >= outstanding:
+        wallet_amount = outstanding
+    else:
+        wallet_amount = rounding_service.floor_to_unit(
+            balance, await rounding_service.policy_for(session, ride.country_code)
+        )
+    if wallet_amount <= 0:
+        raise InsufficientBalance("رصيدُك أقلُّ من أصغر مبلغٍ يُدفع في بلدك — اختر قناة أخرى")
     payments = [
         _new_payment(
             ride,
@@ -595,17 +609,119 @@ async def _commission_for(
     return percent
 
 
-def _commission_amount(ride: Ride, amount: Decimal, percent: Decimal) -> Decimal:
-    """عمولةُ دفعةٍ **على حصّتها من الأجرة دون رسوم الكبتن** (§٦٣-ب: «للكبتن» = كاملاً بلا عمولة).
+#: **قناتا الخصم** — ما تتحمّله المنصّةُ عن الراكب (القسيمةُ والمشاركة). **لا `PLATFORM_WRITTEN_METHODS` كلُّها**: المشوارُ الثابت
+#: فيها لأن المنصّةَ تكتبه، **لكنه مالُ الراكب نفسِه مدفوعاً مقدّماً** — فوعاءُ عمولته وعاءُ ما يدفعه الراكب لا وعاءُ خصم
+DISCOUNT_METHODS: tuple[PaymentMethod, ...] = (PaymentMethod.PROMO, PaymentMethod.SHARE)
 
-    الرسمُ داخل `final_fare` فيُحصَّل بقناة الأجرة نفسِها، **وكلُّ دفعةٍ تحمل منه حصّتَها** — فالوعاءُ نسبةُ الأجرة دون الرسم إلى
-    الأجرة كلِّها، تُضرب في الدفعة. **وبلا رسمٍ هي `الدفعة × النسبة` حرفاً** كما كانت قبل المطار.
+
+@dataclass(frozen=True, slots=True)
+class _PricedShares:
+    """**ما يحتاجه وعاءُ العمولة من الرحلة كلِّها** حين يقع فيها تقريب (SPEC §٧٠-ج/٤ و/٧، مراجعةُ المال البند ٣).
+
+    - `difference`: **فرقُ التقريب داخل `final_fare`** (`D`) — فرقُ الرحلة من السجلّ، **أو فرقُ سعر المشوار الثابت للرحلة
+      الواحدة** (سعرُها المقرَّب ناقصَ الدقيق، من صفِّ الشهر في السجلّ). فالأجرةُ المسعَّرة `F = final − D`.
+    - `discounts`: **صفّا الخصم القائمان** (`P` — القسيمةُ والمشاركة)، على الأجرة الدقيقة.
     """
-    if ride.captain_fees_at_ride > 0 and ride.final_fare:
-        base = amount * (ride.final_fare - ride.captain_fees_at_ride) / ride.final_fare
+
+    difference: Decimal
+    discounts: Decimal
+
+
+async def _priced_shares(session: AsyncSession, ride: Ride) -> _PricedShares:
+    from app.services import commute
+
+    if ride.commute_id is not None:
+        difference = await commute.ride_price_difference(session, ride)
     else:
-        base = amount
+        difference = await rounding_service.ride_difference(session, ride.id)
+    discounts = await session.scalar(
+        select(func.coalesce(func.sum(Payment.amount), 0)).where(
+            Payment.ride_id == ride.id,
+            Payment.status.in_(OWING_PAYMENT_STATUSES),
+            Payment.method.in_(DISCOUNT_METHODS),
+        )
+    )
+    return _PricedShares(difference=difference, discounts=round_money(Decimal(discounts or 0)))
+
+
+def _commission_amount(
+    ride: Ride, payment: Payment, percent: Decimal, shares: _PricedShares
+) -> Decimal:
+    """عمولةُ دفعةٍ **على حصّتها من الأجرة المسعَّرة دون رسوم الكبتن** (§٦٣-ب: «للكبتن» = كاملاً بلا عمولة؛ §٧٠-ج/٤: «العمولةُ
+    على الأجرة المسعَّرة بلا سطر التقريب — بدقّتها كما اليوم»).
+
+    **بلا فرقٍ في الرحلة — الفرعُ الذي كان حرفاً**: الرسمُ داخل `final_fare` فيُحصَّل بقناة الأجرة نفسِها، **وكلُّ دفعةٍ تحمل منه
+    حصّتَها** — الوعاءُ `الدفعة × (الأجرة − الرسم) / الأجرة`، **وبلا رسمٍ `الدفعة` حرفاً**. وقبل الأجرة (مقدَّمُ الساعة عند البدء
+    والتقريبُ مطفأٌ عليها) الدفعةُ كلُّها.
+
+    **ومع فرق** (`F = final − D` المسعَّرة، `P` الخصمان):
+
+    - **صفُّ الخصم وعاؤه كاليوم**: `الدفعة × (F − الرسم) / F` — مبلغُه على الدقيقة أصلاً، **فعمولتُه لا تتغيّر بتقريبٍ وقع بعده**
+      (كان التوزيعُ الموحَّد يحمّله من الفرق: `0.095` بدل `0.097` في المثال (ب)، **وعمولةُ رحلةٍ عمولتُها على غير النقد ودفعها
+      الراكبُ نقداً هبطت من `0.097` إلى `0.095`** على قسيمةٍ لم يتغيّر مبلغُها).
+    - **وما يدفعه الراكبُ يحمل الفرقَ كلَّه خارج وعائه**: `الدفعة × (F − الرسم) / F × (F − P) / (final − P)` — حصّتُه من الدقيقة
+      الباقية على الراكب بنسبة ما دفع، **فمجموعُ أوعية صفوفه = ما على الراكب بدقّته**. المثال (ب): `4.000 × 3.896 / 4.000 = 3.896`
+      ⇐ `0.390`، والقسيمةُ `0.097` — **`0.487` = عمولةُ `4.870` حرفاً، وصفّاً صفّاً كاليوم**. **ومقدَّمُ الساعة صفُّ راكبٍ كغيره**:
+      عمولتُه تُؤجَّل إلى الإنهاء حين يُقرَّب (`settle_deferred_commission`)، فتُحسب بهذه الصيغة نفسِها.
+    - **والمشوارُ الثابتُ صفُّ راكب** (مالُه مدفوعاً مقدّماً): `7.000 × 7.200 / 7.000 = 7.200` — العمولةُ على السعر المسعَّر.
+    """
+    amount = payment.amount
+    if ride.final_fare is None or shares.difference == 0 or ride.final_fare - shares.difference <= 0:
+        if ride.captain_fees_at_ride > 0 and ride.final_fare:
+            base = amount * (ride.final_fare - ride.captain_fees_at_ride) / ride.final_fare
+        else:
+            base = amount
+    else:
+        priced = ride.final_fare - shares.difference
+        fee_share = (priced - ride.captain_fees_at_ride) / priced
+        if payment.method in DISCOUNT_METHODS:
+            base = amount * fee_share
+        else:
+            paid = ride.final_fare - shares.discounts
+            precise = priced - shares.discounts
+            base = amount * fee_share * precise / paid if paid > 0 else amount * fee_share
     return round_money(base * percent / 100)
+
+
+def _commission_waits_for_fare(ride: Ride, payment: Payment) -> bool:
+    """**عمولةُ مقدَّم الساعة تنتظر الأجرةَ حين يُقرَّب** (مراجعةُ المال البند ١) — يُسوّى المقدَّمُ عند البدء ولا أجرةَ بعد، **فعمولتُه
+    لو حُسبت الآن حُسبت على المقرَّب المدفوع** (`8.000` لا `7.875`)، **ولا يُعرف بعدُ ما سيُقرَّب منه الباقي** (زيادةٌ تُقرَّب إلى صفرٍ
+    تبقى بلا صفٍّ يحمل عمولتَها). فتُكتب عند الإنهاء بالصيغة نفسِها التي تُكتب بها كلُّ دفعة (`settle_deferred_commission`).
+
+    **ومطفأً لا تنتظر** — تُكتب عند البدء على المبلغ كلِّه كما كانت حرفاً. والسياسةُ هي المجمَّدةُ عند البدء (`hourly.prepay_on_start`).
+    """
+    from app.services import hourly
+
+    return (
+        ride.final_fare is None
+        and payment.idempotency_key == hourly.prepay_key(ride.id)
+        and rounding_service.frozen_policy(ride).enabled
+    )
+
+
+async def _written_commission(session: AsyncSession, payment: Payment) -> Decimal:
+    """**العمولةُ التي كُتبت فعلاً لهذه الدفعة عند تسويتها** — قيدُها في الدفتر (`commission:{id}`)، أو دَينُها حين لم يغطّها
+    الرصيد (`driver_debts`)، أو صفرٌ حين لم تُكتب عمولة.
+
+    **يقرؤها الاستردادُ ولا يعيد حسابَها** (مراجعةُ المال البند ١): ما يتغيّر بين التسوية والردّ — أجرةٌ نهائيّةٌ لم تكن عند تسوية
+    مقدَّم الساعة، وفرقُ تقريبٍ كُتب بعده، ودفعةٌ رُدّت قبلها فخرجت من الصفوف القائمة، ونطاقُ عمولةٍ بدّله المشرف — **يجعل الحسابَ
+    الثاني غيرَ الأول**، والفرقُ فلسٌ يبقى على الكبتن أو له بلا سطرٍ يقوله.
+    """
+    entry = await session.scalar(
+        select(WalletTransaction.amount).where(
+            WalletTransaction.idempotency_key == f"commission:{payment.id}",
+            WalletTransaction.type == WalletTransactionType.COMMISSION,
+        )
+    )
+    if entry is not None:
+        return -entry
+    debt = await session.scalar(
+        select(DriverDebt.amount).where(
+            DriverDebt.payment_id == payment.id,
+            DriverDebt.source == DriverDebtSource.RIDE_COMMISSION,
+        )
+    )
+    return debt if debt is not None else Decimal("0.000")
 
 
 async def settle(
@@ -732,8 +848,27 @@ async def _distribute(
     percent = await _commission_for(session, ride, payment.method)
     if percent <= 0:
         return
+    # **مقدَّمُ الساعة والتقريبُ مشتعلٌ عليها: عمولتُه عند الإنهاء** (`_commission_waits_for_fare`) — والأجرُ قُيِّد أعلاه كما كان
+    if _commission_waits_for_fare(ride, payment):
+        return
 
-    commission = _commission_amount(ride, payment.amount, percent)
+    commission = _commission_amount(ride, payment, percent, await _priced_shares(session, ride))
+    await _charge_commission(
+        session, ride=ride, payment=payment, driver_user=driver_user, actor_id=actor_id, commission=commission
+    )
+
+
+async def _charge_commission(
+    session: AsyncSession,
+    *,
+    ride: Ride,
+    payment: Payment,
+    driver_user: User,
+    actor_id: uuid.UUID | None,
+    commission: Decimal,
+) -> None:
+    """**يكتب عمولةَ دفعةٍ واحدة** — قيداً من محفظة الكبتن، أو دَيناً حين قبض بيده أو لم يغطّها رصيدُه. بابُ `_distribute` وبابُ
+    العمولة المؤجَّلة (`settle_deferred_commission`) معاً، فلا يفترق ما يُكتب بينهما."""
     if commission <= 0:
         return
 
@@ -785,6 +920,54 @@ async def _distribute(
     # منه في هذه المعاملة نفسِها كما كان يُخصم قبل اليوم، **ولا يرى فرقاً**.
     # والدَّينُ يبقى لمن لا رصيدَ له، وهو وحدَه من كان يُمنع من إنهاء رحلته.
     await debts.collect_from_balance(session, driver=driver_row, user=driver_user)
+
+
+async def settle_deferred_commission(session: AsyncSession, ride: Ride) -> None:
+    """**عمولةُ مقدَّم الساعة المؤجَّلة تُكتب عند الإنهاء** (مراجعةُ المال البند ١) — بعد أن صارت الأجرةُ وفرقُ تقريبها معلومَين.
+
+    يُنادى من `rides.complete_ride` **وصفُّ الرحلة مقفول**، بعد التقريب وتسوية الخصمين. **ومن يسابقه، وما يحرس كلّاً** (مقيسٌ لا
+    مفترض، `test_rounding_paths_concurrency`):
+
+    - **تأكيدُ الكبتن لمقدَّمٍ نقديٍّ معلَّق** — يقرأ `final_fare` بلا قفل الرحلة، فلو قرأه فارغاً (الإنهاءُ لم يُثبَّت) أجّل العمولة،
+      **ولو قرأ الإنهاءُ الصفَّ معلَّقاً تخطّاه — فلا تُكتب عمولةٌ أبداً**. **فالصفُّ المعلَّقُ يُقفل هنا** (الرحلةُ ثمّ الدفعة —
+      الترتيبُ العامّ) وتُعاد قراءةُ حاله: تأكيدٌ ثُبِّت قبلنا نكتب عمولتَه، وتأكيدٌ ينتظر قفلَنا يجد الأجرةَ بعد التثبيت فيكتبها بنفسه.
+      **وبحذف هذا القفل تضيع العمولةُ** (قِيس ٢٠٢٦-١٠-٠٩).
+    - **ردُّ مقدَّم المحفظة من اللوحة** — **ولا يُقفل له الصفّ**: قيدُ الردّ يحمل `ride_id`، ففحصُ مفتاحه يطلب `FOR KEY SHARE` على صفِّ
+      الرحلة المقفول هنا — فإمّا ينتظر الردُّ تثبيتَنا ثمّ يقرأ العمولةَ المكتوبة ويعكسها، وإمّا ننتظر نحن تثبيتَه فنقرأ الصفَّ مردوداً.
+      **وقفلُ الصفِّ له كان يصنع جموداً**: الردُّ يمسك الدفعةَ وينتظر الرحلة، ونحن نمسك الرحلةَ وننتظر الدفعة.
+
+    **وحدُّه مكتوب**: تأكيدُ مقدَّمٍ نقديٍّ في اللحظة نفسِها **وعلى الراكب دَينُ إلغاءٍ يُحصَّل معه** (`collect_with_ride` يكتب قيداً
+    بـ`ride_id` وهو ممسكٌ بالدفعة) — جمودٌ يكسره PostgreSQL بإسقاط أحدهما فيُعاد؛ لا مالَ يضيع فيه.
+
+    **وعمولتُه بالصيغة نفسِها التي تُكتب بها كلُّ دفعةٍ بعد الأجرة** (`_commission_amount`): المقدَّمُ صفُّ راكبٍ يحمل حصّتَه من
+    الأجرة المسعَّرة — `7.875` لا `8.000`، **وزيادةٌ قُرِّبت إلى صفرٍ تبقى عمولتُها عليه** فلا تضيع. ومطفأً لا شيءَ مؤجَّلٌ أصلاً.
+    """
+    from app.services import hourly
+
+    if ride.ride_type != "hourly" or not rounding_service.frozen_policy(ride).enabled:
+        return
+    payment = await session.scalar(select(Payment).where(Payment.idempotency_key == hourly.prepay_key(ride.id)))
+    if payment is not None and payment.status is PaymentStatus.PENDING:
+        payment = await session.scalar(
+            select(Payment)
+            .where(Payment.id == payment.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    if payment is None or payment.status is not PaymentStatus.CONFIRMED:
+        return
+    if await _written_commission(session, payment) > 0:  # pragma: no cover - لا يُكتب مرّتين
+        return
+    driver_user = await _driver_user(session, ride)
+    if driver_user is None:  # pragma: no cover - رحلةٌ مكتملةٌ لها كبتنٌ دائماً
+        return
+    percent = await _commission_for(session, ride, payment.method)
+    if percent <= 0:
+        return
+    commission = _commission_amount(ride, payment, percent, await _priced_shares(session, ride))
+    await _charge_commission(
+        session, ride=ride, payment=payment, driver_user=driver_user, actor_id=None, commission=commission
+    )
 
 
 # --------------------------------------------------------- قناة كليك اليدوية
@@ -1113,8 +1296,8 @@ async def refund(
 
     driver_user = await _driver_user(session, ride)
     if driver_user is not None:
-        percent = await _commission_for(session, ride, payment.method)
-        net = round_money(payment.amount - _commission_amount(ride, payment.amount, percent))
+        # **العمولةُ التي كُتبت عند التسوية تُقرأ ولا يُعاد حسابُها** (مراجعةُ المال البند ١) — فيُعكس ما قُيِّد له حرفاً
+        net = round_money(payment.amount - await _written_commission(session, payment))
         if net > 0:
             await wallet.record(
                 session,

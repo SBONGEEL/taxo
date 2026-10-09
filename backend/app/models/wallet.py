@@ -96,8 +96,12 @@ DEBIT_TYPES: tuple[WalletTransactionType, ...] = (
     WalletTransactionType.INTERCITY_HOLD,
 )
 
-# `adjustment` وحده يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص
-SIGNED_TYPES: tuple[WalletTransactionType, ...] = (WalletTransactionType.ADJUSTMENT,)
+# `adjustment` يقبل الاتجاهين — تصحيح الإدارة قد يزيد أو ينقص. **و`rounding` معه** (SPEC §٧٠-ج/٦، الترحيلة `0104`):
+# فرقُ التقريب قيدٌ صريحٌ قد يكون للمالك أو عليه، **ولا صفرَ فيه** (فرقٌ صفريٌّ لا يُكتب أصلاً)
+SIGNED_TYPES: tuple[WalletTransactionType, ...] = (
+    WalletTransactionType.ADJUSTMENT,
+    WalletTransactionType.ROUNDING,
+)
 
 # حالات طلب السحب التي تحجز مبلغاً لم يُخصم بعد: القيد لا يُكتب إلا عند
 # `paid` (SPEC القسم 9)، فبدون عدّها يطلب الكبتن رصيده مرتين

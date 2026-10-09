@@ -87,7 +87,8 @@ import { Checkbox, Field, Select, Switch } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { currencyLabel, currencyOf, money } from "@/lib/format";
+import { currencyLabel, currencyOf, moment, money } from "@/lib/format";
+import { ROUNDING_MODE_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { digits, cn } from "@/lib/utils";
 
@@ -1405,9 +1406,21 @@ function PaymentForm({
   const [medium, setMedium] = useState(row.tip_preset_medium);
   const [max, setMax] = useState(row.tip_max);
   const [busy, setBusy] = useState(false);
+  // **التقريب** (SPEC §٧٠-ج/٢) — المفتاحُ والوحدةُ والاتجاه، **نموذجٌ واحدٌ بزرِّ حفظٍ واحد** (لا مفتاحٌ يحفظ عند قلبه): إشعالُه
+  // يغيّر ما يدفعه الناس، فيُقرأ مع وحدته واتجاهه قبل أن يُرسل
+  const [roundingOn, setRoundingOn] = useState(row.rounding_enabled);
+  const [roundingUnit, setRoundingUnit] = useState(row.rounding_unit);
+  const [roundingMode, setRoundingMode] = useState(row.rounding_mode);
 
   /** مبلغُ مالٍ كما يُكتب — **بلا أرقامٍ عربية-هندية**: حقلٌ يُكتب فيه لا يُقرأ. */
   const money = (value: string) => value.replace(/[^0-9.]/g, "");
+
+  // **الفرقُ بالمقارنة** (نمطُ `CashbackForm`) — يُرسل ما تغيّر وحدَه، فلا يُكتب في سجلّ التدقيق ما لم يُمسّ
+  const rounding: Parameters<typeof updatePaymentSettings>[1] = {};
+  if (roundingOn !== row.rounding_enabled) rounding.rounding_enabled = roundingOn;
+  if (roundingUnit.trim() !== row.rounding_unit) rounding.rounding_unit = roundingUnit.trim();
+  if (roundingMode !== row.rounding_mode) rounding.rounding_mode = roundingMode;
+  const roundingDirty = Object.keys(rounding).length > 0;
 
   function save(
     payload: Parameters<typeof updatePaymentSettings>[1],
@@ -1629,6 +1642,81 @@ function PaymentForm({
           }
         >
           حفظ المبالغ
+        </Button>
+      </div>
+
+      {/* **التقريب** (SPEC §٧٠) — في **سياسات الدفع** لأن جدولَه `payment_settings`. **مطفأٌ في كلِّ سوقٍ بالترحيلة**، وإشعالُه
+          على الإنتاج قرارُ المالك (§٧٠-ب). **والخلفيةُ تحرس الوحدة** (أكبرُ من صفر، لا تتجاوز ١٠، ثلاثُ خانات) وتختم لحظةَ الإشعال
+          وتدقّق كلَّ تغيير — **والحسابُ كلُّه هناك**: هذه الشاشةُ تضبط ولا تحسب */}
+      <div className="mt-18 border-t border-line pt-14">
+        <h3 className="mb-2 text-12.5 font-bold text-ink">التقريب</h3>
+        <p className="mb-12 text-11 leading-snug text-muted">
+          ما يدفعه الناسُ ويقبضونه يصير من مضاعفات وحدةٍ واحدة: الأجرةُ تُقرَّب مرّةً بعد الخصم وفرقُها سطرُ «تقريب» في
+          تفصيلها، والرسومُ والاشتراكاتُ تُقرَّب عند حسابها، وما يكتبه الشخصُ بيده (الشحنُ والسحبُ والتحويلُ والبقشيشُ
+          وسدادُ الدَّين) يكون مضاعفاً وإلا رُدّ. والعمولةُ بدقّتها، وكلُّ فرقٍ يُقيَّد في سجلّ التقريب.{" "}
+          <strong>ولا يتغيّر رصيدٌ ولا قيدٌ قائم</strong> — يسري على ما يأتي بعد الإشعال.
+        </p>
+        <div className="flex items-start gap-12">
+          <span className="flex-1">
+            <span className="block text-13 font-semibold text-ink">تقريب المبالغ في هذا السوق</span>
+            {/* **لحظةُ الإشعال من الخلفية** (`rounding_enabled_at`) — منها يُعرف أيُّ معاملةٍ قُرِّبت (§٧٠-أ/١١) */}
+            <span className="block text-11 leading-snug text-muted">
+              {row.rounding_enabled_at
+                ? `${row.rounding_enabled ? "مشتعلٌ منذ" : "آخرُ إشعالٍ"} ${moment(row.rounding_enabled_at)}`
+                : "لم يُشعَل في هذا السوق قطّ"}
+            </span>
+          </span>
+          <Switch
+            checked={roundingOn}
+            disabled={disabled || busy}
+            label="تقريب المبالغ"
+            onChange={setRoundingOn}
+          />
+        </div>
+        <div className="mt-12 grid grid-cols-2 gap-10">
+          <MoneyField
+            name="rounding_unit"
+            label="وحدة التقريب"
+            value={roundingUnit}
+            onChange={(next) => setRoundingUnit(money(next))}
+            currency={currencyOf(row.country_code)}
+            disabled={disabled}
+            hint="0.500 · 1.000 · 0.250 — أكبر من صفر"
+          />
+          <Select
+            name="rounding_mode"
+            label="الاتجاه"
+            value={roundingMode}
+            disabled={disabled}
+            onChange={(event) => setRoundingMode(event.target.value as PaymentSetting["rounding_mode"])}
+          >
+            {(Object.keys(ROUNDING_MODE_LABEL) as PaymentSetting["rounding_mode"][]).map((key) => (
+              <option key={key} value={key}>
+                {ROUNDING_MODE_LABEL[key]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <p className="mt-6 text-11 leading-snug text-muted">
+          «الأقرب» نصفُ الوحدة فيه للأعلى: بوحدة 0.500 — 2.249 ← 2.000 · 2.250 ← 2.500 · 2.750 ← 3.000.
+        </p>
+        <Button
+          className="mt-14"
+          size="sm"
+          disabled={disabled || !roundingDirty || roundingUnit.trim() === ""}
+          loading={busy}
+          onClick={() =>
+            save(
+              rounding,
+              rounding.rounding_enabled === true
+                ? "اشتعل التقريب — يسري على المعاملات الجديدة وحدَها"
+                : rounding.rounding_enabled === false
+                  ? "أُطفئ التقريب"
+                  : "حُفظ التقريب",
+            )
+          }
+        >
+          حفظ التقريب
         </Button>
       </div>
     </>

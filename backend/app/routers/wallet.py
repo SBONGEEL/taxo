@@ -363,8 +363,12 @@ async def get_my_driver_wallet(
         pending_compensation=await cancellation.pending_for_driver(session, driver.id),
         carrier_dues=await cancellation.carrier_dues_of(session, driver.id),
         available_for_withdrawal=available,
+        # **الحدُّ كما يُفرض** (`withdrawals.minimum_withdrawal`): مشتعلاً مقرَّباً للأعلى إلى الوحدة، فبلاطةُ «الحد الأدنى» مضاعفٌ
+        # يُكتب ولا يُردّ (مراجعةُ المال البند ١٢). ومطفأً الإعدادُ حرفاً
         min_withdrawal_amount=(
-            limits.min_withdrawal_amount if limits is not None else Decimal("0.000")
+            await withdrawals.minimum_withdrawal(session, user.country_code, limits.min_withdrawal_amount)
+            if limits is not None
+            else Decimal("0.000")
         ),
         withdrawal_reserve_amount=(
             limits.withdrawal_reserve_amount

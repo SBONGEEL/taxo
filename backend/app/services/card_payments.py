@@ -71,6 +71,7 @@ from app.services import (
     cancellation,
     offers,
     payments as payments_service,
+    rounding,
     settings_service,
     subscriptions as subscriptions_service,
     test_accounts,
@@ -364,6 +365,9 @@ async def start_wallet_topup(
     owner_type = wallet.owner_type_for(owner, declared=declared)
     # **والتجميدُ للمحفظة المعلَنة وحدَها** (1-أ/6)
     wallet.require_not_frozen(owner, owner_type)
+    # **مبلغٌ يختاره صاحبُه: مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — **قبل أن يُفتح الطلبُ عند المزوّد**: ما يعود منه يُقيَّد
+    # كما دُفع حرفاً، فلا موضعَ بعد الفتح يُقرَّب فيه
+    await rounding.require_multiple_in(session, owner.country_code, amount)
 
     order = ProviderOrder(
         provider=PaymentProvider.TELR,
@@ -419,7 +423,10 @@ async def start_subscription(
     # ما لم يُخصم. ولا `for_update` هنا: لا صفَّ يُكتب بعدُ فلا ميزانيةَ تُستهلك،
     # والحجزُ يقع لحظةَ التفعيل.
     offer = await offers.resolve(session, driver=driver, plan=plan)
-    payable = plan.price - (offer.amount if offer is not None else Decimal("0"))
+    # **والطلبُ يُفتح بالثمن مقرَّباً** (SPEC §٧٠-ج/٥) — قبل المزوّد: ما يعود منه يُقارَن بمبلغ الطلب حرفاً (`apply_state`)،
+    # فتقريبٌ بعد الفتح يُقرأ مبلغاً مخالفاً. وفرقُه يُكتب عند التفعيل حين يولد صفُّ الاشتراك
+    price = await subscriptions_service.price_to_pay(session, plan, offer)
+    payable = price.payable
 
     order = ProviderOrder(
         provider=PaymentProvider.TELR,
@@ -435,6 +442,8 @@ async def start_subscription(
         # **الاشتراكُ شأنُ كبتنٍ بتعريفه**، فتطبيقُه هو المُبتدئ
         opened_from_app=_paying_side(owner, UserRole.DRIVER.value),
     )
+    # **والثمنُ الدقيقُ وسياستُه يُجمَّدان على الطلب** (مراجعةُ المال البند ٦) — منهما يُكتب صفُّ السجلّ عند التفعيل
+    subscriptions_service.freeze_price(order, price)
     session.add(order)
     await session.flush()
 
@@ -598,6 +607,8 @@ async def _activate_subscription(
         reference=order.provider_order_ref,
         # الطلب نفسه مفتاح عدم التكرار: إشعاران لا يفتحان اشتراكين
         idempotency_key=f"card-subscription:{order.id}",
+        # **الثمنُ كما فُتح به الطلب** — لا كما هو لحظةَ الدفع (مراجعةُ المال البند ٦)
+        price=subscriptions_service.frozen_price(order),
     )
 
 

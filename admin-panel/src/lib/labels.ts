@@ -28,6 +28,7 @@ import type {
   PaymentMethod,
   PaymentStatus,
   RideStatus,
+  RoundingMode,
   SubscriptionDurationType,
   WalletTransactionType,
 } from "@/api/types";
@@ -158,6 +159,15 @@ export const WALLET_TX_LABEL: Record<WalletTransactionType, string> = {
   intercity_earning: "أجرةُ رحلةٍ بين المدن",
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب من TAXO في اليوم الأخير من أسبوعه
   cashback: "الاسترداد الأسبوعي",
+  // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» يعود إلى محفظة الكبتن؛ **اسمُ الخلفية نفسُه** (`finance_summary`: «تقريب»)
+  rounding: "تقريب",
+};
+
+/** **اتجاهُ التقريب** (SPEC §٧٠-ج/٢) — بنصّ المالك: «الأقرب» نصفُه للأعلى (`2.250 ⇐ 2.500`)، و«للأعلى» سقفٌ، و«للأدنى» أرضيّة. */
+export const ROUNDING_MODE_LABEL: Record<RoundingMode, string> = {
+  nearest: "الأقرب",
+  up: "للأعلى",
+  down: "للأدنى",
 };
 
 // ─────────────────────────────────────────────── الاشتراك

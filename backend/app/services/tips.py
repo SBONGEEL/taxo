@@ -42,7 +42,7 @@ from app.models.payment_setting import PaymentSetting
 from app.models.ride import Ride
 from app.models.tip import Tip
 from app.models.user import User
-from app.services import pricing, settings_service, wallet
+from app.services import pricing, rounding, settings_service, wallet
 
 # **نافذةٌ ثابتةٌ في الخدمة لا إعدادٌ**: البقشيشُ قريبٌ من الرحلة أو لا يكون —
 # وخصمٌ من محفظةٍ بعد ثلاثة أسابيع يفاجئ صاحبَها ولا يذكّره بشيء. ورقمٌ كهذا
@@ -103,6 +103,28 @@ async def for_ride(session: AsyncSession, ride_id: uuid.UUID) -> Tip | None:
     return await session.scalar(select(Tip).where(Tip.ride_id == ride_id))
 
 
+async def amounts_for(
+    session: AsyncSession, country: CountryCode, row: PaymentSetting
+) -> tuple[list[Decimal], Decimal]:
+    """**الأزرارُ والسقفُ كما تُرسم** — `(المقترحات، الأقصى)` (SPEC §٧٠-ج/٦).
+
+    **المقترحاتُ نفسُها مقرَّبة** بإعداد السوق — زرٌّ يُرسل مبلغاً يردّه `create` («ليس مضاعفاً») بابٌ بلا زرٍّ مقلوب.
+    **والأقصى أكبرُ مضاعفٍ لا يتجاوز `tip_max`**، **ومقترحٌ قُرِّب فوقه يُنزَل إليه** — فلا زرَّ يُرفض بالسقف. وما صار صفراً
+    يسقط، والمكرَّرُ يُرسم مرّةً. ومطفأً الأزرارُ والسقفُ كما كانت حرفاً.
+    """
+    policy = await rounding.policy_for(session, country)
+    raw = [amount for amount in (row.tip_preset_small, row.tip_preset_medium) if amount > 0]
+    if not policy.enabled:
+        return raw, row.tip_max
+    ceiling = rounding.floor_to_unit(row.tip_max, policy)
+    presets: list[Decimal] = []
+    for amount in raw:
+        shown = min(rounding.rounded(amount, policy), ceiling)
+        if shown > 0 and shown not in presets:
+            presets.append(shown)
+    return presets, ceiling
+
+
 # ------------------------------------------------------------ الكتابة
 
 
@@ -138,6 +160,8 @@ async def create(
     amount = pricing.round_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ البقشيش يجب أن يكون أكبر من صفر")
+    # **مبلغٌ يختاره الراكب: مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — والأزرارُ نفسُها مقرَّبة (`options`)
+    await rounding.require_multiple_in(session, country, amount)
     if amount > row.tip_max:
         raise InvalidInput(
             f"أقصى بقشيش {pricing.round_money(row.tip_max)} "

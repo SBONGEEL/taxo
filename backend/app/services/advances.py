@@ -56,6 +56,8 @@ from app.models.enums import (
     FeatureKey,
     PaymentStatus,
     RideStatus,
+    RoundingMode,
+    RoundingSource,
     SubscriptionDurationType,
     SubscriptionStatus,
     WalletOwnerType,
@@ -65,7 +67,7 @@ from app.models.payment import Payment
 from app.models.ride import Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
-from app.services import settings_service, test_accounts, wallet
+from app.services import rounding, settings_service, test_accounts, wallet
 from app.services.pricing import round_money
 
 logger = logging.getLogger(__name__)
@@ -262,11 +264,17 @@ async def repaid_count(session: AsyncSession, driver_id: uuid.UUID) -> int:
 
 
 async def repaid_amount(session: AsyncSession, advance_id: uuid.UUID) -> Decimal:
-    """ما سُدِّد من سلفةٍ بعينها — **مجموعٌ من الدفتر لا عمودٌ عليها**."""
+    """ما سُدِّد من سلفةٍ بعينها — **مجموعٌ من الدفتر لا عمودٌ عليها**.
+
+    **ومعه زائدُ تقريب السداد الكامل المردود** (`rounding`، بمعرّف السلفة — `repay_in_full`): سدادٌ بـ`3.500` عن متبقٍّ
+    `3.342` ردّ `0.158`، **فالمسدَّدُ `3.342` لا `3.500`** — وإلا قرأت اللوحةُ متبقّياً سالباً. ومطفأً لا قيدَ تقريبٍ أصلاً.
+    """
     total = await session.scalar(
         select(func.coalesce(func.sum(wallet.WalletTransaction.amount), 0)).where(
             wallet.WalletTransaction.advance_id == advance_id,
-            wallet.WalletTransaction.type == WalletTransactionType.ADVANCE_REPAYMENT,
+            wallet.WalletTransaction.type.in_(
+                (WalletTransactionType.ADVANCE_REPAYMENT, WalletTransactionType.ROUNDING)
+            ),
         )
     )
     return round_money(-Decimal(total or 0))
@@ -380,7 +388,13 @@ async def eligibility(
     return Eligibility(
         offered=True,
         requirements=requirements,
-        cap=await cap_for(session, driver=driver, policy=policy, base=base),
+        # **والسقفُ أكبرُ مضاعفٍ للوحدة لا يتجاوزه** (SPEC §٧٠-ج/٥): المطلوبُ مضاعفٌ (`disburse`)، فسقفٌ بكسرٍ يَعِد بما لا
+        # يُطلب. **ولا يُقرَّب للأعلى** — سقفٌ يرتفع بالتقريب يُقرض ما لم تُجِزه السياسة. **ولا صفَّ في السجلّ**: لا مالَ تحرّك
+        # (السلفةُ نفسُها اختيارُه). ومطفأً هو السقفُ حرفاً
+        cap=rounding.floor_to_unit(
+            await cap_for(session, driver=driver, policy=policy, base=base),
+            await rounding.policy_for(session, country),
+        ),
         currency=currency,
         deduction_percent=policy.deduction_percent,
         min_kept_amount=policy.min_kept_amount,
@@ -437,6 +451,9 @@ async def disburse(
     amount = round_money(amount)
     if amount <= 0:
         raise AdvanceNotAllowed("المبلغ غير صحيح")
+    # **مبلغٌ يختاره الكبتنُ — أو المشرفُ فوق السقف — مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٥ و/٦): السلفةُ مالٌ يقبضه إنسان،
+    # **والسقفُ المعروضُ مضاعفٌ** (`eligibility`) فمن طلبه كاملاً مرّ
+    await rounding.require_multiple_in(session, country, amount)
 
     state = await eligibility(session, driver=driver, country=country)
     if not state.offered:
@@ -615,13 +632,35 @@ async def repay_in_full(
         )
         return advance
 
+    # **السدادُ الكاملُ يُقرَّب للأعلى إلى الوحدة، والزائدُ يُردّ قيداً صريحاً** (SPEC §٧٠-ج/٥ و/٦ — قاعدةُ «ادفع الدَّين كلَّه»
+    # نفسُها): المتبقّي يحمل كسورَ الاقتطاع من الرحلات (نسبةٌ تبقى بدقّتها كالعمولة)، **ولا يُقرَّب للأدنى** فتبقى سلفةٌ
+    # «مسدَّدة» وعليها كسر، **ولا للأعلى بلا ردّ** فيُؤخذ منه ما ليس عليه. فالخارجُ مضاعفٌ (`paid`) **والزائدُ يعود قبله في
+    # المعاملة نفسِها** — فصافيه المتبقّي حرفاً، **ويكفيه الرصيدُ الذي كان يكفي** (القيدُ الدائنُ أوّلاً، `balance_after >= 0`).
+    # ومطفأً لا زائدَ ولا قيدَ زائد: سدادُ اليوم حرفاً
+    up = rounding.toward(await rounding.policy_for(session, user.country_code), RoundingMode.UP)
+    paid = rounding.ceil_to_unit(remaining, up)
+    await rounding.return_excess(
+        session,
+        owner=user,
+        owner_type=WalletOwnerType.DRIVER,
+        country=user.country_code,
+        source=RoundingSource.ADVANCE_REPAYMENT,
+        source_id=advance.id,
+        precise=remaining,
+        paid=paid,
+        policy=up,
+        idempotency_key=f"advance_repay_rounding:{advance.id}",
+        reference="زائدُ تقريب سداد السلفة — رُدّ إلى محفظتك",
+        created_by=user.id,
+        advance_id=advance.id,
+    )
     await wallet.record(
         session,
         owner=user,
         # **سدادٌ يدويٌّ كامل** — من محفظة الكبتن كالاقتطاع سواءً
         owner_type=WalletOwnerType.DRIVER,
         tx_type=WalletTransactionType.ADVANCE_REPAYMENT,
-        amount=-remaining,
+        amount=-paid,
         advance_id=advance.id,
         created_by=user.id,
         reference="سدادٌ يدويٌّ كامل",

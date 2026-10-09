@@ -105,10 +105,11 @@ export function PlansPreviewT2Screen() {
                         </span>
                       </span>
                       <span className="t2-sub-price">
-                        {/* **المشطوبُ بجانب المخفَّض** — والمخفَّضُ من الخلفية، فلا طرحَ هنا (§14) */}
+                        {/* **المشطوبُ بجانب المخفَّض** — والمخفَّضُ من الخلفية، فلا طرحَ هنا (§14). **ولا شطبَ بلا عرض**،
+                            والمرسومُ ما يُخصم (`price_to_pay`، SPEC §٧٠-ج/٥) */}
                         {row.price_after_discount ? <span className="t2-sub-was">{digits(row.price)}</span> : null}
                         <span className="t2-sub-num" dir="ltr">
-                          {digits(row.price_after_discount ?? row.price)}
+                          {digits(row.price_to_pay ?? row.price)}
                         </span>{" "}
                         <span className="t2-sub-cur">{CURRENCY_LABEL[row.currency]}</span>
                       </span>

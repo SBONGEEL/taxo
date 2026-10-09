@@ -287,7 +287,12 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
               {commute ? " · مدفوعة من اشتراكك" : payMethod ? ` · ${PAYMENT_METHOD_LABEL[payMethod.method]}` : ""}
             </div>
             <div className="t2-trk-route-price">
-              <span dir="ltr" className="t2-num">{formatMoney(ride.estimated_fare)}</span> {currencyLabel(ride.currency)}
+              {/* **ما سيدفعه كما تنشره الخلفية** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
+                  ومشتعلاً بعد الخصم مقرَّباً (SPEC §٧٠-ج/٤). والمشوارُ الثابتُ بسعره المجمَّد في الحالين */}
+              <span dir="ltr" className="t2-num">
+                {formatMoney(ride.rider_estimate)}
+              </span>{" "}
+              {currencyLabel(ride.currency)}
             </div>
           </div>
         </div>
@@ -378,7 +383,10 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
             </div>
           ) : null}
           <div className="t2-trk-stat">
-            <div dir="ltr" className="t2-trk-stat-value">{formatMoney(ride.estimated_fare)}</div>
+            {/* **التقديرُ كما سيدفعه** (`rider_estimate`، مراجعةُ المال البند ٨): **مطفأً `estimated_fare` حرفاً** — ما عرضه العدّادُ قبل
+                §٧٠، فلا انتظارَ ولا وقفاتٍ تدخله بلا إذن المالك؛ **ومشتعلاً المقدَّرةُ بعد الخصم المجمَّد مقرَّبةً** (SPEC §٧٠-ج/٤).
+                **والمشوارُ الثابتُ بسعره المجمَّد** — لا يُقرَّب (مدفوعٌ مع الاشتراك) */}
+            <div dir="ltr" className="t2-trk-stat-value">{formatMoney(ride.rider_estimate)}</div>
             {/* **سعرُ المشوار مجمَّدٌ لا تقدير** (§٦٣-ج/٦) — دُفع مع الاشتراك */}
             <div className="t2-trk-stat-label">
               {currencyLabel(ride.currency)} {commute ? "من اشتراكك" : "تقديرياً"}

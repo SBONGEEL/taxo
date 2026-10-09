@@ -69,6 +69,7 @@ from app.services import (
     documents as documents_service,
     drivers as drivers_service,
     earnings as earnings_service,
+    rounding as rounding_service,
     settings_service,
     vehicles as vehicles_service,
 )
@@ -624,8 +625,13 @@ async def my_debt(
     """
     rows = await debts_service.outstanding_rows(session, driver.id)
     setting = await settings_service.get_payment_settings(session, user.country_code)
+    total = await debts_service.outstanding_of(session, driver.id)
     return DriverDebtStateOut(
-        total=await debts_service.outstanding_of(session, driver.id),
+        total=total,
+        # **«ادفع الدَّين كلَّه»** مقرَّباً للأعلى (§٧٠-ج/٦) — `cliq_debts.start_payment` يقبله فوق الدَّين بأقلَّ من وحدة
+        pay_all_amount=rounding_service.ceil_to_unit(
+            total, await rounding_service.policy_for(session, user.country_code)
+        ),
         currency=currency_for_country(user.country_code),
         blocked=driver.debt_blocked,
         ceiling=setting.driver_debt_ceiling if setting else None,

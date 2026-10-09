@@ -87,6 +87,14 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
             name="provider_order_plan_matches_purpose",
         ),
         Index("ix_provider_orders_provider_ref", "provider", "provider_order_ref"),
+        # **تقريبُ ثمن الاشتراك مجمَّدٌ عند الفتح** (SPEC §٧٠-ج/٥، الترحيلة `0104`) — الثلاثةُ معاً أو لا شيء
+        CheckConstraint(
+            "(rounding_precise IS NULL) = (rounding_unit_at_open IS NULL) "
+            "AND (rounding_unit_at_open IS NULL) = (rounding_mode_at_open IS NULL) "
+            "AND (rounding_unit_at_open IS NULL OR rounding_unit_at_open > 0) "
+            "AND (rounding_mode_at_open IS NULL OR rounding_mode_at_open IN ('nearest', 'up', 'down'))",
+            name="provider_order_rounding_frozen",
+        ),
     )
 
     provider: Mapped[PaymentProvider] = mapped_column(
@@ -142,6 +150,14 @@ class ProviderOrder(UUIDMixin, TimestampMixin, Base):
         pg_enum(CountryCode, "country_code"), nullable=False
     )
     amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    # ------------------------------------- التقريب (SPEC §٧٠-ج/٥، الترحيلة `0104`)
+    #
+    # **ثمنُ الاشتراك بدقّته وسياسةُ التقريب التي فُتح بها الطلب** — `amount` هو المقرَّب. **ويُكتب منها صفُّ السجلّ عند التفعيل**
+    # (`subscriptions.frozen_price`): كان التفعيلُ يعيد حسابَ الثمن بإعداد لحظته، **فإطفاءٌ أو تغييرٌ بين الفتح والدفع** يُسقط الصفّ
+    # ويُقرأ الفرقُ «تسويةً يدويّة» (مراجعةُ المال البند ٦). و`null` للثلاثة: طلبٌ فُتح مطفأً (لا تقريبَ وقع)، أو ليس اشتراكاً
+    rounding_precise: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    rounding_unit_at_open: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
+    rounding_mode_at_open: Mapped[str | None] = mapped_column(String(8), nullable=True)
     # من دولة الرحلة أو دولة صاحب المحفظة — لا تُقبل من عميل (SPEC القسم 4)
     currency: Mapped[Currency] = mapped_column(
         pg_enum(Currency, "currency"), nullable=False

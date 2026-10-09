@@ -13,6 +13,7 @@ from app.models.enums import (
     CountryCode,
     Currency,
     FeatureKey,
+    RoundingMode,
     SubscriptionDurationType,
     VehicleCategory,
 )
@@ -172,9 +173,14 @@ class SubscriptionPlanOut(BaseModel):
     # السعرَ عارياً ولا يعلم أن ثمّة عرضاً.
     offer_name: str | None = None
     offer_discount: Decimal | None = None
-    # السعرُ بعد الخصم — **يُحسب في الخلفية** كبقية المال (§14)
+    # السعرُ بعد الخصم — **يُحسب في الخلفية** كبقية المال (§14). **و`null` بلا عرض**: الشاشةُ تشطب السعرَ حين يُملأ وحدَه،
+    # فلا يُملأ بغير عرضٍ حقيقيّ (مراجعةُ المال البند ٧: كان يُملأ بالمقرَّب بلا عرض فيُشطب `9.800` بجانب `10.000` الأعلى)
     price_after_discount: Decimal | None = None
     offer_ends_at: datetime | None = None
+    #: **ما يُخصم فعلاً لهذه الخطة** (SPEC §٧٠-ج/٥) — السعرُ ناقصَ العرض **مقرَّباً مرّةً** (`subscriptions.price_to_pay`)، **عرضٌ أو
+    #: لا عرض**. **هو الرقمُ الذي ترسمه الشاشةُ وتشتري به**، والمشطوبُ بجانبه `price` حين يوجد عرضٌ (`price_after_discount`).
+    #: ومطفأً بلا عرضٍ هو `price` حرفاً. و`null` حيث لا يُحسب لكبتن (خططُ اللوحة)
+    price_to_pay: Decimal | None = None
     # **اسمُ عرضٍ استفاد منه هذا الكبتنُ سلفاً فاستنفد حدَّه** — يُذكر ولا
     # يُطبَّق. و`None` لمن لم يستحقّ قطُّ: التمييزُ بينهما هو الغرض.
     exhausted_offer_name: str | None = None
@@ -212,6 +218,11 @@ class PaymentSettingOut(BaseModel):
     rider_unpaid_rulings_cash_off: int
     rider_unpaid_rulings_window_days: int
     dispute_window_hours: int
+    #: **التقريب** (SPEC §٧٠-ج/٢) — مفتاحُه ووحدتُه واتجاهُه، **ولحظةُ آخرِ إشعال** (`null`: لم يُشعَل قطّ)
+    rounding_enabled: bool
+    rounding_unit: Decimal
+    rounding_mode: RoundingMode
+    rounding_enabled_at: datetime | None = None
     updated_at: datetime
 
 
@@ -250,6 +261,12 @@ class PaymentSettingUpdate(BaseModel):
     rider_unpaid_rulings_cash_off: int | None = Field(default=None, ge=1, le=50)
     rider_unpaid_rulings_window_days: int | None = Field(default=None, ge=1, le=365)
     dispute_window_hours: int | None = Field(default=None, ge=1, le=720)
+
+    # ------------------- التقريب (SPEC §٧٠-ج/٢) — **إعدادٌ يمسّ ما يدفعه الناس**: يُدقَّق كجيرانه، ويُختم وقتُ الإشعال
+    # **والوحدةُ موجبةٌ بثلاث خانات وحدُّها عشرةٌ**: صفرٌ يقسم عليه الحساب، وأكبرُ من ذلك ليس «كسوراً» بل تسعيرٌ ثانٍ
+    rounding_enabled: bool | None = None
+    rounding_unit: Decimal | None = Field(default=None, gt=0, le=10, max_digits=12, decimal_places=3)
+    rounding_mode: RoundingMode | None = None
 
     @field_validator("payment_reminder_minutes")
     @classmethod

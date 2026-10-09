@@ -161,7 +161,40 @@ async def _net_by_day(
     by_day: dict[date, Decimal] = {}
     for value, kind, total in rows.all():
         by_day[value] = by_day.get(value, Decimal(0)) + NET_SIGN[kind] * Decimal(total)
+    # **وزائدُ تقريب سداد السلفة المردودُ يُنقص سدادَها** (SPEC §٧٠-ج/٦، `advances.repay_in_full`) — قيدُ `rounding` بمعرّف
+    # السلفة. ومطفأً لا قيدَ منه فلا صفَّ هنا
+    returned = await session.execute(
+        select(day, func.sum(WalletTransaction.amount))
+        .where(
+            WalletTransaction.owner_id == user_id,
+            WalletTransaction.owner_type == WalletOwnerType.DRIVER,
+            WalletTransaction.type == WalletTransactionType.ROUNDING,
+            WalletTransaction.advance_id.is_not(None),
+            WalletTransaction.created_at >= from_at,
+            WalletTransaction.created_at <= to_at,
+        )
+        .group_by(day)
+    )
+    for value, total in returned.all():
+        by_day[value] = by_day.get(value, Decimal(0)) + Decimal(total)
     return by_day
+
+
+async def _advance_rounding_returned(
+    session: AsyncSession, user_id: uuid.UUID, from_at: datetime, to_at: datetime
+) -> Decimal:
+    """**زائدُ تقريب سداد السلفة المردود** في النافذة — يُطرح من «سُدِّد للسلفة» فيُقرأ المسدَّدُ لا المقرَّب."""
+    total = await session.scalar(
+        select(func.coalesce(func.sum(WalletTransaction.amount), 0)).where(
+            WalletTransaction.owner_id == user_id,
+            WalletTransaction.owner_type == WalletOwnerType.DRIVER,
+            WalletTransaction.type == WalletTransactionType.ROUNDING,
+            WalletTransaction.advance_id.is_not(None),
+            WalletTransaction.created_at >= from_at,
+            WalletTransaction.created_at <= to_at,
+        )
+    )
+    return Decimal(total or 0)
 
 
 def _change_percent(current: Decimal, previous: Decimal) -> int | None:
@@ -208,6 +241,10 @@ async def summary(
     advance_repaid = await _ledger_sum(
         session, user_id, WalletTransactionType.ADVANCE_REPAYMENT, from_at, to_at
     )
+    # **ناقصَ زائد التقريب المردود** (§٧٠-ج/٦) — ومطفأً صفرٌ فالرقمُ كما كان حرفاً
+    returned = await _advance_rounding_returned(session, user_id, from_at, to_at)
+    if returned:
+        advance_repaid = pricing.round_money(advance_repaid - returned)
 
     # ما قبضه بيده: دفعاتٌ مؤكدة بقناةٍ لا تمر بالمنصة، على رحلاته هو
     directly_collected = await session.scalar(

@@ -16,14 +16,14 @@ from app.models.booking import RideBooking
 from app.models.user import User
 from app.schemas.guarantee import GuaranteeCancelCostOut, GuaranteeOfferOut
 from app.schemas.ride import RideOut
-from app.services import approach, dispatch, guarantees, notifications
+from app.services import approach, dispatch, guarantees, notifications, rounding
 from app.services import rides as rides_service
 from app.ws import events
 
 router = APIRouter(prefix="/drivers/me", tags=["guarantees"])
 
 
-def _offer(row: RideBooking) -> GuaranteeOfferOut:
+async def _offer(session, row: RideBooking) -> GuaranteeOfferOut:
     return GuaranteeOfferOut(
         id=row.id,
         scheduled_at=row.scheduled_at,
@@ -34,7 +34,9 @@ def _offer(row: RideBooking) -> GuaranteeOfferOut:
         dropoff_lat=row.dropoff_lat,
         dropoff_lng=row.dropoff_lng,
         dropoff_address=row.dropoff_address,
-        estimated_fare_at_booking=row.estimated_fare_at_booking,
+        # **التقديرُ معروضاً كما سيُدفع** (SPEC §٧٠-ج/٤، مراجعةُ المال البند ١٣) — المحفوظُ بدقّته، والمعروضُ مقرَّباً بإعداد السوق
+        # الآن كما يراه الراكبُ في حجزه. ومطفأً كما كان حرفاً
+        estimated_fare_at_booking=await rounding.shown_in(session, row.country_code, row.estimated_fare_at_booking),
         guarantee_fee=row.guarantee_fee_at_booking,
         currency=currency_for_country(row.country_code),
         accepted=row.driver_id is not None,
@@ -52,7 +54,7 @@ async def _user(session, driver) -> User:
 async def guarantee_offers(driver: CurrentDriver, session: DbSession) -> list[GuaranteeOfferOut]:
     """«عروضٌ تنتظرك» — حجوزٌ مضمونةٌ بلا كبتنٍ في نافذة العرض. **وفارغةٌ لمن حُجب أو حيث الخدمةُ مطفأة.**"""
     rows = await guarantees.open_offers(session, driver=driver, user=await _user(session, driver))
-    return [_offer(row) for row in rows]
+    return [await _offer(session, row) for row in rows]
 
 
 @router.get("/guarantees", response_model=list[GuaranteeOfferOut])
@@ -64,7 +66,7 @@ async def my_guarantees(driver: CurrentDriver, session: DbSession) -> list[Guara
         .where(RideBooking.status == "pending")
         .order_by(RideBooking.scheduled_at)
     )
-    return [_offer(row) for row in rows]
+    return [await _offer(session, row) for row in rows]
 
 
 @router.post("/guarantees/{booking_id}/accept", response_model=GuaranteeOfferOut)
@@ -73,7 +75,7 @@ async def accept_guarantee(
 ) -> GuaranteeOfferOut:
     user = await _user(session, driver)
     booking = await guarantees.accept(session, booking_id=booking_id, driver=driver, user=user)
-    out = _offer(booking)
+    out = await _offer(session, booking)
     rider_id = booking.rider_id
     await session.commit()
     await notifications.publish_guarantee_accepted(
@@ -90,7 +92,7 @@ async def withdraw_guarantee(
     await guarantees.withdraw(session, booking_id=booking_id, driver=driver)
     booking = await session.get(RideBooking, booking_id)
     assert booking is not None
-    out = _offer(booking)
+    out = await _offer(session, booking)
     rider_id = booking.rider_id
     await session.commit()
     await notifications.publish_guarantee_reopened(session, redis, rider_id=rider_id, booking_id=booking_id)

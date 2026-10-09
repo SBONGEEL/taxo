@@ -140,7 +140,7 @@ export function DisputeScreen() {
           </span>
           <span className="t2-dsp-sum">
             <span className="t2-dsp-num" dir="ltr">
-              {digits(payment?.amount ?? ride.final_fare ?? ride.estimated_fare)}
+              {digits(payment?.amount ?? ride.final_fare ?? ride.current_fare)}
             </span>{" "}
             <span className="t2-dsp-cur">{currency}</span>
           </span>

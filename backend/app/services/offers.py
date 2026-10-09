@@ -23,7 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.driver import Driver
-from app.models.enums import CountryCode
+from app.models.enums import CountryCode, RoundingSource
+from app.models.rounding import MoneyRounding
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.subscription_offer import (
     AUDIENCE_ALL,
@@ -329,12 +330,21 @@ async def list_offers(
                     func.coalesce(
                         func.sum(DriverSubscription.discount_amount), 0
                     ).label("given"),
+                    # **وفرقُ التقريب ليس تسويةً يدوية** (SPEC §٧٠-ج/٥): ثمنٌ قُرِّب يجعل `list − paid` يخالف خصمَ العرض بالفرق
+                    # نفسِه، **وفرقُه مكتوبٌ في السجلّ** — فيُعاد إليه قبل المقارنة، ولا يُعدّ إلا ما قرّره المشرفُ بيده.
+                    # ومطفأً لا صفَّ في السجلّ فالمقارنةُ هي هي
                     func.count()
                     .filter(
                         DriverSubscription.discount_amount
+                        + func.coalesce(MoneyRounding.difference, 0)
                         != DriverSubscription.offer_discount_amount
                     )
                     .label("adjusted"),
+                )
+                .outerjoin(
+                    MoneyRounding,
+                    (MoneyRounding.source_kind == RoundingSource.SUBSCRIPTION.value)
+                    & (MoneyRounding.source_id == DriverSubscription.id),
                 )
                 .where(DriverSubscription.offer_id.isnot(None))
                 .group_by(DriverSubscription.offer_id)

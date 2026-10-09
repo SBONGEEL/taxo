@@ -33,6 +33,11 @@ from sqlalchemy import text
 from app.core.db import SessionLocal, engine
 
 LEDGER = "wallet_transactions"
+#: **سجلُّ التقريب** (SPEC §٧٠-ج/٣، الترحيلة `0104`) — **يُضاف إليه ولا يُعدَّل** كالدفتر (مشغّلٌ في القاعدة)، فيُقاس كالدفتر:
+#: يُقصر على ما كُتب حتى لحظة «قبل»، **وتغيّرُ ما كان فيه مخالفةٌ دائماً** لا ملاحظةُ حركةٍ حيّة
+ROUNDINGS = "money_roundings"
+#: **الجداولُ التي لا يُحرَّر صفٌّ فيها** — `as_of` يقصرها على لحظة «قبل»، ومقارنتُها صارمةٌ حتى على الإنتاج
+APPEND_ONLY: frozenset[str] = frozenset({LEDGER, ROUNDINGS})
 
 #: **جداولُ المال وأعمدتُها القائمةُ قبل `redesign`** — أعمدةٌ تُضاف بعده لا تدخل البصمة، فلا يُقرأ «عمودٌ جديد» تغيّراً
 TABLES: dict[str, list[str]] = {
@@ -45,6 +50,11 @@ TABLES: dict[str, list[str]] = {
     "driver_advances": ["id", "amount", "status"],
     "ride_cancellation_charges": ["id", "amount", "status"],
     "tips": ["id", "amount"],
+    # **وغائبٌ قبل `0104`** — فبصمةُ «قبل» تقول `absent`، **وجدولٌ جديدٌ لا يُقرأ تغيّراً** (`compare`)
+    ROUNDINGS: [
+        "id", "country_code", "source_kind", "source_id", "user_id",
+        "precise", "rounded", "difference", "unit", "mode", "created_at",
+    ],
 }
 
 
@@ -85,7 +95,7 @@ async def fingerprint(*, as_of: str | None = None, dispose: bool = False) -> dic
                 continue
             cols = [c for c in wanted if c in present]
             select = ", ".join(f"COALESCE({c}::text, '∅')" for c in cols)
-            where = cutoff if table == LEDGER else ""
+            where = cutoff if table in APPEND_ONLY else ""
             digest = hashlib.sha256()
             count = 0
             result = await session.stream(text(f"SELECT {select} FROM {table}{where} ORDER BY id"), params)  # noqa: S608
@@ -102,7 +112,8 @@ async def fingerprint(*, as_of: str | None = None, dispose: bool = False) -> dic
 def compare(before: dict, after: dict) -> tuple[list[str], list[str]]:
     """`(مخالفات، ملاحظات)` — **ما كان قبل يجب أن يبقى حرفاً**، والجديدُ بعده لا يُعدّ تغيّراً.
 
-    الدفترُ ومحافظُه مخالفةٌ دائماً. **والجداولُ الأخرى مخالفةٌ حيث لا `as_of`** (نسخةٌ بلا حركة)، **وملاحظةٌ حيث `as_of`** (إنتاجٌ حيّ)."""
+    الدفترُ ومحافظُه **وسجلُّ التقريب** مخالفةٌ دائماً (لا يُحرَّر صفٌّ فيها). **والجداولُ الأخرى مخالفةٌ حيث لا `as_of`** (نسخةٌ بلا
+    حركة)، **وملاحظةٌ حيث `as_of`** (إنتاجٌ حيّ). **وجدولٌ غائبٌ قبلُ لا يُقارَن**: لم يكن فيه ما يتغيّر (`money_roundings` قبل `0104`)."""
     problems: list[str] = []
     notes: list[str] = []
     for key, value in before["wallets"].items():
@@ -112,9 +123,11 @@ def compare(before: dict, after: dict) -> tuple[list[str], list[str]]:
         if after["ledger_by_type"].get(key) != value:
             problems.append(f"ledger {key}: {value} → {after['ledger_by_type'].get(key)}")
     for table, value in before["tables"].items():
+        if value.get("absent"):
+            continue
         if after["tables"].get(table) != value:
             line = f"table {table}: {value} → {after['tables'].get(table)}"
-            (notes if after.get("as_of") and table != LEDGER else problems).append(line)
+            (notes if after.get("as_of") and table not in APPEND_ONLY else problems).append(line)
     return problems, notes
 
 

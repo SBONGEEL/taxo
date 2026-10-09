@@ -451,10 +451,11 @@ export function SubscriptionScreen() {
                     <span className="me-6 text-12 font-medium text-muted line-through">
                       {digits(plan.price)}
                     </span>
-                    {digits(plan.price_after_discount)}
+                    {digits(plan.price_to_pay ?? plan.price_after_discount)}
                   </>
                 ) : (
-                  digits(plan.price)
+                  // **بلا عرضٍ يُرسم ما يُخصم بلا شطب** — مقرَّباً إن اشتعل التقريب (SPEC §٧٠-ج/٥)، و`price` حرفاً مطفأً
+                  digits(plan.price_to_pay ?? plan.price)
                 )}{" "}
                 <span className="text-11 font-medium text-muted">
                   {CURRENCY_LABEL[plan.currency]}
@@ -593,7 +594,7 @@ export function ConfirmSubscriptionSheet({
             <span className="text-12.5 text-muted">المبلغ</span>
             <span className="text-17 font-bold text-ink">
               {digits(
-                plan.price_after_discount ?? plan.price,
+                plan.price_to_pay ?? plan.price,
               )}{" "}
               <span className="text-11 font-medium text-muted">
                 {CURRENCY_LABEL[plan.currency]}

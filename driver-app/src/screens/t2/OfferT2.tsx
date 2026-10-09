@@ -126,8 +126,10 @@ export function OfferT2({
                 </div>
               )}
               <div className="t2-of-fare">
+                {/* **ما سيقبضه مقرَّباً كما يُعرض على الراكب** (`current_fare`، SPEC §٧٠-ج/٤) — لا `estimated_fare` الدقيقة؛
+                    ومطفأً هما سواء. وإشعارُ العرض في الخلفية يقول الرقمَ نفسَه */}
                 <span className="t2-of-fare-num" dir="ltr">
-                  {digits(ride.estimated_fare)}
+                  {digits(ride.current_fare)}
                 </span>
                 <span className="t2-of-fare-cur">{currencyLabel}</span>
               </div>

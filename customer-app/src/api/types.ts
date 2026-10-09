@@ -237,7 +237,19 @@ export interface CountryConfig {
    *  والبريدُ يُثبت البريد — وخلطُهما يفتح حساباً كاملَ الصلاحية برقمٍ لم
    *  يملكه أحد. */
   email_signup: boolean;
+  /** **التقريبُ في هذا السوق** (SPEC §٧٠-ج/٢ و٦) — من `payment_settings` بعينه. **يُقرأ ليعرض التطبيقُ خطواتِ الوحدة ويفحص ما
+   *  يكتبه الراكبُ بيده** (مبلغُ الشحن والتحويل: «مضاعفٌ للوحدة وإلا رُدّ») — **لا ليحسب به مبلغاً**: كلُّ مبلغٍ مقرَّبٍ يصل من
+   *  الخلفية جاهزاً (§١٤). و`false` = كما كان حرفاً: لا خطوات ولا فحص. */
+  rounding_enabled: boolean;
+  /** **وحدةُ التقريب نصّاً بثلاث خانات** (`"0.500"`) — تُقرأ مشتعلةً وحدَها (`lib/rounding.ts`). */
+  rounding_unit: string;
+  /** **اتجاهُه** — مرآةٌ لما يُنشر؛ **ولا يقرؤه هذا التطبيق**: الأجرةُ تصل مقرَّبةً وسطرُ «تقريب» يقول فرقَها، والاتجاهُ يُضبط
+   *  ويُقرأ في اللوحة. */
+  rounding_mode: RoundingMode;
 }
+
+/** اتجاهُ التقريب — مرآةُ `RoundingMode` في الخلفية (`check:enums`). */
+export type RoundingMode = "nearest" | "up" | "down";
 
 /** قاعدةُ حقلٍ واحدة كما تنشرها `GET /config`. */
 export interface FieldRule {
@@ -303,7 +315,11 @@ export interface RideEstimate {
   currency: Currency;
   distance_km: string;
   duration_min: string;
+  /** **ما سيدفعه بلا خصم — مقرَّباً بقاعدة سوقه** (SPEC §٧٠-ج/٤). ومطفأً هو `priced_fare` حرفاً. */
   estimated_fare: string;
+  /** **الأجرةُ المسعَّرةُ بدقّتها** (`0.001`) — **تُرسل وحدَها إلى معاينة القسيمة** (`validatePromo`): الخصمُ على الدقيقة ثمّ
+   *  يُقرَّب الباقي مرّةً (§٧٠-أ/١٠). ومن يرسل المقرَّبَ بدلها يرى خصماً على غير ما سيُحسب. **ولا تُعرض** — المعروضُ مقرَّب. */
+  priced_fare: string;
   minimum_fare_applied: boolean;
   /** سعرُ المشاركة **محسوباً في الخلفية** (12-ي): الخصمُ والأجرةُ بعده.
    *
@@ -484,6 +500,10 @@ export interface Ride {
    *  المجموعُ يأتي من الخلفية: الشاشةُ لا تضرب مالاً (§14). */
   stop_fee: string;
   stops_charge: string;
+  /** **ما يعرضه عدّادُ الراكب قبل الأجرة النهائيّة** (مراجعةُ المال البند ٨، `rounding.rider_estimate`) — **مطفأً هو
+   *  `estimated_fare` حرفاً** (ما عرضه العدّادُ قبل §٧٠، فلا تغيّرَ بلا إذن المالك)، **ومشتعلاً ما سيدفعه من التقدير**: المقدَّرةُ
+   *  ناقصَ الخصم المجمَّد مقرَّبةً مرّةً — مضاعفٌ للوحدة. **يُرسم كما وصل** ولا يُحسب منه شيء (§14)؛ ولا يدخله انتظارٌ ولا وقفات. */
+  rider_estimate: string;
 
   created_at: string;
   accepted_at: string | null;
@@ -689,7 +709,9 @@ export type WalletTransactionType =
   | "intercity_refund"
   | "intercity_earning"
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨): دائنٌ له **من TAXO** في اليوم الأخير من أسبوعه — لا يُخصم من كبتن
-  | "cashback";
+  | "cashback"
+  // **التقريب** (§٧٠-ج/٦): زائدُ «سدّد كلَّه» يُردّ إلى محفظة صاحبه قيداً صريحاً — يقع للكبتن، ويُسمّى للعلّة أعلاه
+  | "rounding";
 
 export interface WalletTransaction {
   id: string;
@@ -771,7 +793,9 @@ export type FareLineKind =
   | "hourly"
   | "hourly_extra_km"
   | "hourly_extra_time"
-  | "commute";
+  | "commute"
+  // **التقريب** (§٧٠-ج/٤): فرقُ تقريب ما على الراكب — **موجبٌ أو سالب**، فتُجمع السطورُ إلى الأجرة النهائيّة حرفاً
+  | "rounding";
 
 export interface FareLine {
   kind: FareLineKind;

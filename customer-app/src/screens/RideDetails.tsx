@@ -220,12 +220,14 @@ export function RideDetailsScreen() {
         </div>
         <div className="t2-m-ride-when">{formatDateTime(ride.created_at)}</div>
 
-        {/* **الأجرةُ أوّلاً وكبيرة** (بطاقةُ R10): الرقمُ هو ما يُفتح له هذا السجلُّ أصلاً، فيُقرأ قبل أن تُقرأ الحقول */}
+        {/* **الأجرةُ أوّلاً وكبيرة** (بطاقةُ R10): الرقمُ هو ما يُفتح له هذا السجلُّ أصلاً، فيُقرأ قبل أن تُقرأ الحقول.
+            **وقبل النهائيّة تقديرُه كما سيدفعه** (`rider_estimate`، مراجعةُ المال البند ٨) — مطفأً `estimated_fare` حرفاً كما كان،
+            ومشتعلاً بعد الخصم مقرَّباً (SPEC §٧٠-ج/٤) */}
         <div className="t2-m-card t2-m-fare">
           <div className="t2-m-label">{ride.final_fare ? "الأجرة النهائية" : "السعر المقدّر"}</div>
           <div className="t2-m-amount">
             <span dir="ltr" className="t2-m-num lg">
-              {formatMoney(ride.final_fare ?? ride.estimated_fare)}
+              {formatMoney(ride.final_fare ?? ride.rider_estimate)}
             </span>
             <span className="t2-m-cur">{currencyLabel(ride.currency)}</span>
           </div>

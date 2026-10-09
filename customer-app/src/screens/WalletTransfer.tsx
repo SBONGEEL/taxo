@@ -21,6 +21,7 @@ import type { CountryCode, TransferRecipient } from "@/api/types";
 import { useGoBack } from "@/lib/back";
 import { useConfig, useCountryConfig, usePhoneCountry } from "@/lib/config";
 import { COUNTRY_LABEL, looksComplete, toNational } from "@/lib/phone";
+import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
 import {
   currencyLabel,
@@ -29,7 +30,7 @@ import {
   subtractMoney,
 } from "@/lib/utils";
 import { AuthBlock, AuthChoice, AuthPhone, Icon } from "@/taxo2";
-import { AmountCardT2, BannerT2, BusyLabel, HeadT2, SheetModalT2 } from "@/screens/t2/MoneyT2";
+import { AmountCardT2, BannerT2, BusyLabel, HeadT2, SheetModalT2, UnitNoteT2 } from "@/screens/t2/MoneyT2";
 
 export function WalletTransferScreen() {
   const navigate = useNavigate();
@@ -117,6 +118,9 @@ export function WalletTransferScreen() {
         ? null
         : error;
   const currency = country?.currency;
+  // **المبلغُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٦) — والخلفيةُ تردّ غيرَه؛ هذا يقول الخطواتِ قبل الردّ
+  const unit = roundingUnit(country);
+  const unitError = notMultipleMessage(amount, unit, currency);
 
   return (
     <div className="t2 t2-m-page">
@@ -178,6 +182,7 @@ export function WalletTransferScreen() {
             {/* **الرمزُ لا الكود**: كلُّ سطحٍ ماليٍّ آخر يقول «د.أ» */}
             <AmountCardT2 id="transfer-amount" label="المبلغ" value={amount} onChange={setAmount} currency={currency} />
           </div>
+          <UnitNoteT2 hint={unitHint(unit, currency)} error={unitError} />
           <p className="t2-m-hint">الحدّان اليومي والشهري يضبطهما فريق TAXO</p>
         </>
       ) : null}
@@ -207,7 +212,7 @@ export function WalletTransferScreen() {
             className="t2-button primary t2-m-cta"
             // **ولا زرَّ حيٌّ على عمليةٍ سترتدّ** — الخلفيةُ ترفض ما يتجاوز
             // الرصيد، **وزرٌّ يعمل ثم يردّ ٤٠٩ يعلّم صاحبَه أن يعيد الضغط**.
-            disabled={busy || Number(amount) <= 0 || short}
+            disabled={busy || Number(amount) <= 0 || short || unitError !== null}
             aria-busy={busy}
             onClick={() => setConfirming(true)}
           >

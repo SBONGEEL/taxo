@@ -127,7 +127,7 @@ export function OutcomeSheetT2({
           <div className="t2-out-fare-label">الأجرة النهائية</div>
           <div className="t2-out-fare-amount">
             <span dir="ltr" className="t2-num">
-              {formatMoney(ride.final_fare ?? ride.estimated_fare)}
+              {formatMoney(ride.final_fare ?? ride.rider_estimate)}
             </span>
             <span className="t2-out-fare-cur">{currencyLabel(ride.currency)}</span>
           </div>

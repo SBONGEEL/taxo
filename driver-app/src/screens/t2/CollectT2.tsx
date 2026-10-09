@@ -29,7 +29,7 @@ import type { Ride } from "@/api/types";
 import { Spinner } from "@/components/ui/Feedback";
 import { refreshAfterConfirm } from "@/lib/attention";
 import { useCoverNav } from "@/lib/navCover";
-import { METHOD_LABEL, trimDistance } from "@/lib/rideFormat";
+import { METHOD_LABEL, roundingLine, trimDistance } from "@/lib/rideFormat";
 import { play } from "@/lib/sound";
 import { DISPLAY_LOCALE, digits } from "@/lib/utils";
 import { collectView, useCollectScreen } from "@/screens/Collect";
@@ -63,7 +63,10 @@ export function CollectT2Screen({
   }
 
   const { pending, credited, kept, commission, mixed, headline } = collectView(state, ride);
-  const final = state.final_fare ?? ride.estimated_fare;
+  // **وقبل النهائيّة عدّادُ الخلفية مقرَّباً** (`current_fare`، SPEC §٧٠-ج/٤) — لا المقدَّرةُ الدقيقة
+  const final = state.final_fare ?? ride.current_fare;
+  // **وفرقُ التقريب سطرٌ بذاته** (§٧٠-ج/٤) — من `fare_lines` كما كتبته الخلفية، له أو عليه
+  const rounding = roundingLine(ride);
   const rest = pending ?? kept[0];
 
   async function finish() {
@@ -173,6 +176,14 @@ export function CollectT2Screen({
             <span className="t2-co-k">السعر المقدّر</span>
             <span className="t2-co-v" dir="ltr">
               {digits(ride.estimated_fare)}
+            </span>
+          </>
+        ) : null}
+        {rounding !== null ? (
+          <>
+            <span className="t2-co-k">تقريب</span>
+            <span className="t2-co-v" dir="ltr">
+              {rounding}
             </span>
           </>
         ) : null}

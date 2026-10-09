@@ -57,6 +57,7 @@ from app.services import (
     ride_for_other,
     ride_log,
     rides as rides_service,
+    rounding,
     route,
     pauses,
     route_line,
@@ -92,9 +93,41 @@ async def _assigned_ride(
 # ------------------------------------------------------------------ التسعير
 
 
+#: **ما نشره التقديرُ لهذا الراكب: المقرَّبُ ⇐ الدقيق** — لمعاينة القسيمة من نسخٍ قديمةٍ ترسل `estimated_fare` (مراجعةُ المال البند ١١)
+_PRICED_KEY = "rides:estimate-priced:{rider_id}"
+#: نافذةُ ورقة التأكيد — من رأى التقديرَ يطبّق قسيمتَه في دقائق لا ساعات
+_PRICED_TTL_SECONDS = 1800
+
+
+async def _remember_priced(redis, rider_id: uuid.UUID, rounded_fare: Decimal, priced: Decimal) -> None:
+    """**يحفظ لكلِّ تقديرٍ مقرَّبٍ أجرتَه الدقيقة** — فمعاينةُ القسيمة تجد الدقيقةَ وإن أُرسل إليها المقرَّب. ومطفأً لا يُحفظ شيء
+    (المقرَّبُ هو الدقيقُ). **وغيابُ Redis لا يُسقط التقدير**: المعاينةُ تعود إلى ما أُرسل كما كانت."""
+    if rounded_fare == priced:
+        return
+    key = _PRICED_KEY.format(rider_id=rider_id)
+    try:
+        await redis.hset(key, str(rounded_fare), str(priced))
+        await redis.expire(key, _PRICED_TTL_SECONDS)
+    except Exception:  # noqa: BLE001 — عرضٌ لا مال: المعاينةُ تعود إلى ما أُرسل
+        return
+
+
+async def _priced_for_preview(redis, rider_id: uuid.UUID, fare: Decimal, policy) -> Decimal:
+    """**الأجرةُ الدقيقةُ لمعاينة القسيمة** (مراجعةُ المال البند ١١) — النسخُ الجديدة ترسل `priced_fare` فتمرّ كما هي، **والقديمةُ
+    ترسل `estimated_fare` وقد صار مقرَّباً**: فيُقرأ ما نشره التقديرُ لهذا الراكب للمقرَّب نفسِه، فلا يُحسب الخصمُ على مقرَّبٍ ثمّ
+    يُقرَّب الباقي ثانيةً. **ومبلغٌ ليس مضاعفاً دقيقٌ بطبعه** فلا يُسأل عنه، ومطفأً لا شيءَ يُسأل."""
+    if not policy.enabled or not rounding.is_multiple(fare, policy):
+        return fare
+    try:
+        priced = await redis.hget(_PRICED_KEY.format(rider_id=rider_id), str(pricing.round_money(fare)))
+    except Exception:  # noqa: BLE001
+        return fare
+    return Decimal(priced) if priced else fare
+
+
 @router.post("/estimate", response_model=RideEstimateOut)
 async def estimate_ride(
-    payload: RideEstimateRequest, rider: RiderUser, session: DbSession
+    payload: RideEstimateRequest, rider: RiderUser, session: DbSession, redis: RedisDep
 ) -> RideEstimateOut:
     """سعر مقدّر قبل تأكيد الطلب — بلا أي كتابة في القاعدة."""
     # **الحارسُ نفسُه الذي يمنع عند الطلب** (`rides.reject_stop_at_dropoff`):
@@ -135,8 +168,15 @@ async def estimate_ride(
         fare=pricing.discountable(quote.fare, quote.captain_fees),
         country=rider.country_code,
     )
+    # **والسعران المعروضان مقرَّبان بقاعدة السوق** (SPEC §٧٠-ج/٤): النسبةُ أوّلاً على الدقيقة ثمّ يُقرَّب ما سيدفعه الراكب مرّةً.
+    # **والدقيقةُ تُنشر معهما** (`priced_fare`) فتُحسب منها معاينةُ القسيمة. ومطفأً الثلاثةُ كما كانت حرفاً
+    policy = await rounding.policy_for(session, rider.country_code)
     if shared:
-        shared = (shared[0], pricing.round_money(shared[1] + quote.captain_fees))
+        shared = (
+            shared[0],
+            rounding.rounded(pricing.round_money(shared[1] + quote.captain_fees), policy),
+        )
+    await _remember_priced(redis, rider.id, rounding.rounded(quote.fare, policy), quote.fare)
     return RideEstimateOut(
         share_discount=shared[0] if shared else None,
         share_fare=shared[1] if shared else None,
@@ -145,7 +185,8 @@ async def estimate_ride(
         currency=quote.currency,
         distance_km=quote.route.distance_km,
         duration_min=quote.route.duration_min,
-        estimated_fare=quote.fare,
+        estimated_fare=rounding.rounded(quote.fare, policy),
+        priced_fare=quote.fare,
         minimum_fare_applied=quote.minimum_fare_applied,
         stop_fee=quote.stop_fee,
         stop_free_minutes=quote.stop_free_minutes,
@@ -922,7 +963,7 @@ async def rate_ride(
 
 @router.post("/promo/validate", response_model=PromoPreviewOut)
 async def validate_promo(
-    payload: PromoValidateRequest, rider: RiderUser, session: DbSession
+    payload: PromoValidateRequest, rider: RiderUser, session: DbSession, redis: RedisDep
 ) -> PromoPreviewOut:
     """زرُّ «تطبيق» في ورقة التأكيد — **تحقّقٌ لا يستهلك شيئاً**.
 
@@ -932,18 +973,23 @@ async def validate_promo(
     **والمسارُ تحت `/rides` لأن الرمزَ يخصّ رحلةً لم توجد بعد**، والخصمُ يُحسب
     على تقديرها. و`RiderUser`: الكبتنُ لا يطبّق كوبوناً على راكب.
     """
+    # **ما سيدفعه بعد الخصم مقرَّباً مرّةً** (SPEC §٧٠-أ/١٠): الخصمُ على الأجرة الدقيقة ثمّ يُقرَّب الباقي. **والمرسَلةُ من النسخ
+    # الجديدة `priced_fare`**، **ومن القديمة `estimated_fare` المقرَّب** — فتُستردّ دقيقتُه ممّا نشره التقديرُ (`_priced_for_preview`)
+    # ولا يُقرَّب مرّتين. ومطفأً كما كان حرفاً
+    policy = await rounding.policy_for(session, payload.country_code)
+    fare = await _priced_for_preview(redis, rider.id, payload.fare, policy)
     promo, discount = await promo_service.preview(
         session,
         code=payload.code,
         country=payload.country_code,
         rider=rider,
-        fare=payload.fare,
+        fare=fare,
     )
     return PromoPreviewOut(
         code=promo.code,
         discount_type=promo.discount_type,
         discount=discount,
-        fare_after=pricing.round_money(payload.fare - discount),
+        fare_after=rounding.rounded(pricing.round_money(fare - discount), policy),
         currency=currency_for_country(payload.country_code).value,
     )
 
@@ -966,21 +1012,19 @@ async def tip_options(
     given = await tips_service.for_ride(session, ride.id)
     row = await tips_service.settings_for(session, country)
     offered = await tips_service.offered_in(session, country)
+    # **الأزرارُ والسقفُ مقرَّبان في الخدمة** (SPEC §٧٠-ج/٦) — بيتٌ واحدٌ يقرؤه هذا الباب
+    presets, ceiling = (
+        await tips_service.amounts_for(session, country, row)
+        if offered and row
+        else ([], Decimal("0.000"))
+    )
 
     return TipOptionsOut(
         offered=offered,
         currency=currency_for_country(country).value,
-        presets=(
-            [
-                amount
-                for amount in (row.tip_preset_small, row.tip_preset_medium)
-                if row and amount > 0
-            ]
-            if offered and row
-            else []
-        ),
+        presets=presets,
         # مُكمَّمٌ كبقية المال — `"0"` بين `"0.000"` عطبُ عرضٍ لا حساب
-        max_amount=row.tip_max if offered and row else Decimal("0.000"),
+        max_amount=ceiling,
         given=TipOut.model_validate(given) if given else None,
     )
 

@@ -42,6 +42,10 @@ function fareLineLabel(line: FareLine): string {
     // **المشوارُ الثابت** (§٦٣-ج/٦) — سطرٌ واحدٌ لا تفصيلَ طريق: السعرُ جُمِّد يومَ الاشتراك ولا يتبع الطريقَ ولا الذروة
     case "commute":
       return "سعرُ المشوار المجمَّد";
+    // **التقريب** (§٧٠-ج/٤) — فرقُ تقريب ما على الراكب إلى وحدة سوقه، **كتبته الخلفيةُ سطراً** فتُجمع السطورُ إلى الأجرة حرفاً.
+    // **وقد يكون سالباً** (قُرِّب للأدنى) — و`formatMoney` يرسم علامتَه كما وصلت، ولا يُحسب هنا شيء
+    case "rounding":
+      return "تقريب";
   }
 }
 
@@ -49,4 +53,11 @@ function fareLineLabel(line: FareLine): string {
 export function fareLineRows(ride: Ride): { label: string; value: string }[] | null {
   if (ride.fare_lines.length === 0) return null;
   return ride.fare_lines.map((line) => ({ label: fareLineLabel(line), value: formatMoney(line.amount, ride.currency) }));
+}
+
+/** **سطرُ «تقريب» وحدَه** (SPEC §٧٠-ج/٤) — لشاشةٍ تفصّل الأجرةَ بسطورٍ مختارةٍ لا بالتفصيل كلِّه (شاشةُ الدفع: المحطاتُ والانتظارُ
+ *  والوقفات). **باسمه من بيته هنا** ومبلغِه كما كتبته الخلفية، و`null` حين لا سطر: سوقٌ مطفأ، أو فرقٌ صفريّ، أو رحلةٌ لم تنتهِ. */
+export function roundingRow(ride: Ride): { label: string; value: string } | null {
+  const line = ride.fare_lines.find((entry) => entry.kind === "rounding");
+  return line ? { label: fareLineLabel(line), value: formatMoney(line.amount, ride.currency) } : null;
 }

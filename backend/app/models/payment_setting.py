@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Integer, String, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +34,8 @@ DEFAULT_RIDER_UNCONFIRMED_BLOCK_MINUTES = 30
 DEFAULT_RIDER_UNPAID_RULINGS_CASH_OFF = 2
 DEFAULT_RIDER_UNPAID_RULINGS_WINDOW_DAYS = 90
 DEFAULT_DISPUTE_WINDOW_HOURS = 72
+#: **وحدةُ التقريب الافتراضية** (SPEC §٧٠-أ/٦): «إلى أقرب نصف دينار» — والتقريبُ نفسُه مطفأٌ حتى يُشعَل
+DEFAULT_ROUNDING_UNIT = Decimal("0.500")
 
 
 class PaymentSetting(UUIDMixin, TimestampMixin, Base):
@@ -96,6 +99,11 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
             "AND (payment_reminder_minutes->>1)::int < (payment_reminder_minutes->>2)::int "
             "AND (payment_reminder_minutes->>2)::int < (payment_reminder_minutes->>3)::int",
             name="payment_reminder_minutes_valid",
+        ),
+        # **التقريب** (SPEC §٧٠-ج/٢، الترحيلة `0104`): وحدةٌ موجبةٌ — صفرٌ يقسم عليه الحسابُ — واتجاهٌ من ثلاثة
+        CheckConstraint(
+            "rounding_unit > 0 AND rounding_mode IN ('nearest', 'up', 'down')",
+            name="payment_rounding_valid",
         ),
     )
 
@@ -220,6 +228,28 @@ class PaymentSetting(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         default=DEFAULT_DISPUTE_WINDOW_HOURS,
         server_default=text("72"),
+    )
+
+    # ------------------------------------- التقريب (SPEC §٧٠، الترحيلة `0104`)
+    # **مطفأٌ في كلِّ سوقٍ بالترحيلة**: إشعالُ الأردن كتابةٌ على الإنتاج يُقرّها المالك (§٧٠-ب)، وليبيا لا يُمسّ صفُّها.
+    # **والإعدادُ وحدَه يحكم** (`services/rounding.policy_for`): مطفأً لا يتغيّر مبلغٌ واحد عمّا كان.
+
+    #: **أيُقرَّب ما يدفعه الناسُ ويقبضونه في هذا السوق؟**
+    rounding_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    #: **وحدةُ التقريب** — نصفُ دينارٍ افتراضاً (`0.500`)، و`1.000` و`0.250` أمثلةُ المالك
+    rounding_unit: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=DEFAULT_ROUNDING_UNIT, server_default=text("0.500")
+    )
+    #: **اتجاهُه** — `nearest` (نصفُه للأعلى) · `up` · `down` (`RoundingMode`)
+    rounding_mode: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="nearest", server_default=text("'nearest'")
+    )
+    #: **لحظةُ آخرِ إشعال** — تُختم في اللوحة حين ينقلب المفتاحُ من مطفأٍ إلى مشتعل. **ومنها يُعرف ما قبلها**: قيدٌ أقدمُ منها
+    #: لم يُقرَّب ولا يُقرَّب (§٧٠-أ/١١). و`null` لسوقٍ لم يُشعَل قطّ
+    rounding_enabled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     @property

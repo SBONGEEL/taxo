@@ -29,7 +29,7 @@ from app.schemas.intercity import (
     TripIn,
     TripOut,
 )
-from app.services import audit, intercity
+from app.services import audit, intercity, rounding
 
 
 async def trip_out(session, trip: IntercityTrip, *, for_driver: bool = False) -> TripOut:
@@ -50,8 +50,11 @@ async def trip_out(session, trip: IntercityTrip, *, for_driver: bool = False) ->
         seats_offered=trip.seats_offered,
         seats_booked=await intercity.booked_seats(session, trip.id),
         min_seats=trip.min_seats,
-        price_car=trip.price_car_at_trip,
-        price_seat=trip.price_seat_at_trip,
+        # **السعران معروضَين كما يُدفعان** (SPEC §٧٠-ج/٤، مراجعةُ المال البند ١٣): السيارةُ مقرَّبةً كما يُقرَّب حجزُها حرفاً،
+        # **والمقعدُ مقرَّباً** — والحجزُ يقرّب مجموعَ المقاعد مرّةً، فلمقعدٍ واحدٍ هو هو، ولأكثرَ يفترق بأقلَّ من وحدة (مكتوبٌ في
+        # التقرير قراراً للمالك). والمجمَّدُ على الرحلة بدقّته لا يُمسّ، ومطفأً كما كان حرفاً
+        price_car=await rounding.shown_in(session, route.country_code, trip.price_car_at_trip),
+        price_seat=await rounding.shown_in(session, route.country_code, trip.price_seat_at_trip),
         currency=currency_for_country(route.country_code),
         status=trip.status,
         passengers=passengers,

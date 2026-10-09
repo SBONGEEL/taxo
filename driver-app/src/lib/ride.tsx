@@ -144,7 +144,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
           const since = offerLoopToken();
           void showOfferAlert({
             rideId: event.ride.id,
-            fare: digits(event.ride.estimated_fare),
+            fare: digits(event.ride.current_fare),
             currency: CURRENCY_LABEL[event.ride.currency],
             // **فارغةٌ اليومَ عن قصد**: طريقةُ الدفع يختارها الراكبُ في شاشة
             // الدفع بعد الرحلة (§6)، **فلا تُعرف لحظةَ العرض** — والتصميمُ

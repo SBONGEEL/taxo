@@ -233,14 +233,15 @@ export function SubscriptionT2Screen() {
                     "…"
                   ) : (
                     <>
-                      {/* **المشطوبُ بجانب المخفَّض** — والمخفَّضُ من الخلفية، فلا طرحَ هنا (§14) */}
+                      {/* **المشطوبُ بجانب المخفَّض** — والمخفَّضُ من الخلفية، فلا طرحَ هنا (§14). **ولا شطبَ بلا عرض**:
+                          `price_after_discount` للعرض الحقيقيّ وحدَه، **والمرسومُ ما يُخصم** (`price_to_pay`، مقرَّباً — SPEC §٧٠-ج/٥) */}
                       {row.price_after_discount ? (
                         <span className="t2-sub-was">
                           {digits(row.price)}
                         </span>
                       ) : null}
                       <span className="t2-sub-num" dir="ltr">
-                        {digits(row.price_after_discount ?? row.price)}
+                        {digits(row.price_to_pay ?? row.price)}
                       </span>{" "}
                       <span className="t2-sub-cur">
                         {CURRENCY_LABEL[row.currency]}
@@ -342,7 +343,7 @@ export function SubscriptionT2Screen() {
           onClick={() => plan && s.setConfirming(plan)}
         >
           {plan
-            ? `اشترك ب${definite(plan.name)} — ${digits(plan.price_after_discount ?? plan.price)} ${
+            ? `اشترك ب${definite(plan.name)} — ${digits(plan.price_to_pay ?? plan.price)} ${
                 CURRENCY_LABEL[plan.currency]
               }`
             : "اختر خطة"}

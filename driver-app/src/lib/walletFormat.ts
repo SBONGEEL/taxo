@@ -62,6 +62,9 @@ export const TRANSACTION_LABEL: Record<WalletTransactionType, string> = {
   intercity_refund: "ردُّ حجزٍ بين المدن",
   // **الاسترداد الأسبوعي** (§٦٣-ج/٨) — للراكب وحدَه من TAXO، ويُسمّى للعلّة أعلاه
   cashback: "الاسترداد الأسبوعي",
+  // **التقريب** (§٧٠-ج/٦) — زائدُ «سدّد كلَّه» (الدَّين بكليك أو السلفة) يعود إلى محفظته: دفع المبلغَ مقرَّباً للأعلى، والفرقُ له.
+  // **واسمُه اسمُ الخلفية** (`finance_summary`: «تقريب») — والإشارةُ على المبلغ تقول اتجاهَه
+  rounding: "تقريب",
 };
 
 /** أيقونةُ كل نوع — lucide لا محرفاً يونيكودياً (قرار `DESIGN-DECISIONS` 19).
@@ -105,6 +108,8 @@ export const TRANSACTION_ICON: Record<WalletTransactionType, LucideIcon> = {
   intercity_refund: Car,
   // **والاسترداد الأسبوعيُّ حافزٌ من TAXO** — أيقونةُ المكافأة كالإحالة
   cashback: Gift,
+  // **والتقريبُ زائدُ سدادٍ يعود** — أيقونةُ الردّ كالاسترجاع
+  rounding: Undo2,
 };
 
 export const WITHDRAWAL_STATUS_LABEL: Record<WithdrawalStatus, string> = {

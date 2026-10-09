@@ -16,6 +16,7 @@ from app.models.rider_subscription import RiderSubscription  # noqa: F401
 from app.models.intercity import IntercityBooking, IntercityPermit, IntercityRoute, IntercityTrip  # noqa: F401
 from app.models.activity import DriverActivityDay, DriverActivityMonth  # noqa: F401
 from app.models.cashback import CashbackStreak  # noqa: F401
+from app.models.rounding import MoneyRounding  # noqa: F401
 from app.models.advance import AdvanceSetting, DriverAdvance
 from app.models.debt import DriverDebt  # noqa: F401
 from app.models.dispatch_setting import DispatchSetting  # noqa: F401

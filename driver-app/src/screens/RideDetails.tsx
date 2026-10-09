@@ -44,6 +44,7 @@ import {
   METHOD_LABEL,
   RIDE_STATUS_LABEL,
   formatWhen,
+  roundingLine,
   trimDistance,
 } from "@/lib/rideFormat";
 import { digits } from "@/lib/utils";
@@ -179,6 +180,7 @@ export function RideDetailsScreen() {
   // تقييمُ الكبتن للراكب — لا تقييمُ الراكب له
   const mine = ratings.find((rating) => rating.rater_type === "driver");
   const commission = Number(ride.commission_percent_at_ride);
+  const rounding = roundingLine(ride);
   const when = whenParts(ride.created_at, startOfToday());
   // **القرارُ في القاع حين يكون مالٌ بانتظار قوله** — وفصلُ الإدارة ونزاعُها المفتوح يسبقانه كما سبقاه
   const deciding = !resolved && !disputed && (collectable ?? disputable);
@@ -221,7 +223,7 @@ export function RideDetailsScreen() {
           </div>
           <div className="t2-rdt-fare">
             <span className="t2-rdt-fare-num" dir="ltr">
-              {digits(ride.final_fare ?? ride.estimated_fare)}
+              {digits(ride.final_fare ?? ride.current_fare)}
             </span>
             <span className="t2-rdt-fare-cur">{currency}</span>
           </div>
@@ -273,6 +275,9 @@ export function RideDetailsScreen() {
                 value={digits(ride.pause_charge)}
               />
             ) : null}
+            {/* **وفرقُ التقريب سطرٌ بذاته** (SPEC §٧٠-ج/٤): ما قبضه مقرَّباً إلى وحدة السوق، **والفرقُ له أو عليه** — يقرأ هنا لماذا
+                صار النهائيُّ غيرَ المقدَّر بعد الرسوم. **من `fare_lines` كما كتبته الخلفية**، وبلا سطرٍ لا يُرسم */}
+            {rounding !== null ? <Row label="تقريب" value={rounding} /> : null}
             {/* **النسبةُ المجمَّدةُ على هذه الرحلة** (`commission_percent_at_ride`) — سجلٌّ لما حوسب به، لا وعدٌ تسويقيّ */}
             <Row
               label="العمولة"
@@ -285,7 +290,7 @@ export function RideDetailsScreen() {
             />
             <Row
               label="السعر النهائي"
-              value={digits(ride.final_fare ?? ride.estimated_fare)}
+              value={digits(ride.final_fare ?? ride.current_fare)}
               strong
             />
           </div>

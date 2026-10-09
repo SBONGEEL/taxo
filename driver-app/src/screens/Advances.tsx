@@ -24,7 +24,10 @@ import { ApiError } from "@/api/client";
 import { getAdvanceState, repayAdvance, requestAdvance } from "@/api/endpoints";
 import type { AdvanceRequirement, AdvanceState } from "@/api/types";
 import { useGoBack } from "@/lib/back";
+import { useCountryConfig } from "@/lib/config";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
+import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
+import { useSession } from "@/lib/session";
 import type { Currency } from "@/api/types";
 import { digits,
   DISPLAY_LOCALE,
@@ -88,6 +91,10 @@ export function AdvancesScreen() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // **المطلوبُ مضاعفٌ لوحدة التقريب حين تكون مشتعلة** (SPEC §٧٠-ج/٥ و٦) — والسقفُ يصل من الخلفية أكبرَ مضاعف (`cap`) فيُختار
+  // كما هو. **قبل الخروج المبكر**: خطّافٌ بعد `return` يكسر ترتيبَ الخطّافات
+  const { user } = useSession();
+  const unit = roundingUnit(useCountryConfig(user?.country_code));
 
   const load = useCallback(() => {
     getAdvanceState()
@@ -149,6 +156,7 @@ export function AdvancesScreen() {
   }
 
   const currency = CURRENCY_LABEL[state.currency as Currency] ?? state.currency;
+  const unitError = notMultipleMessage(amount, unit, currency);
   const debt = state.debt;
   // **الطلبُ ذيلٌ مثبَّتٌ لمن عُرضت عليه ولا دَينَ عليه** — شرطُ قسم الطلب نفسُه
   const asking = state.offered && !debt;
@@ -225,6 +233,14 @@ export function AdvancesScreen() {
                 disabled={busy || !state.eligible}
                 onChange={(event) => setAmount(event.target.value)}
               />
+              {unitError ? (
+                <p className="t2-note danger" role="alert">
+                  <Icon name="error" />
+                  {unitError}
+                </p>
+              ) : unit !== null ? (
+                <p className="t2-ax-hint">{unitHint(unit, currency)}</p>
+              ) : null}
             </section>
           </>
         ) : null}
@@ -237,7 +253,7 @@ export function AdvancesScreen() {
           <button
             type="button"
             className="t2-ax-cta"
-            disabled={busy || !state.eligible || Number(amount) <= 0}
+            disabled={busy || !state.eligible || Number(amount) <= 0 || unitError !== null}
             onClick={() => setConfirming(true)}
           >
             {busy ? "…" : "اطلب السلفة"}

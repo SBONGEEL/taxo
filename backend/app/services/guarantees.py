@@ -40,6 +40,8 @@ from app.models.enums import (
     DriverStatus,
     FeatureKey,
     RideStatus,
+    RoundingMode,
+    RoundingSource,
     WalletOwnerType,
     WalletTransactionType,
 )
@@ -47,7 +49,7 @@ from app.models.ride import Ride
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.services import settings_service, subscriptions, test_accounts, wallet
+from app.services import rounding, settings_service, subscriptions, test_accounts, wallet
 from app.services.pricing import round_money
 
 #: **لا يُطلب حجزٌ مضمونٌ قبل ساعتين من موعده** — ليتّسع لقبول كبتنٍ وتأكيدِه قبل الموعد بساعة
@@ -110,8 +112,13 @@ async def hold(session: AsyncSession, *, booking: RideBooking, rider: User, sche
     """يحفظ الرسمَ من محفظة الراكب لحظةَ الحجز (§٦٣-د/٢، توصيتي) — **ويُرفض الحجزُ إن لم يكفِ الرصيد**.
 
     يُنادى من `bookings.create` قبل الـflush، **والقيدُ في المعاملة نفسِها**: حجزٌ بلا رسمٍ محفوظ أو رسمٌ بلا حجزٍ لا يقعان.
+
+    **والرسمُ يُقرَّب هنا مرّةً** (SPEC §٧٠-ج/٥) ويُجمَّد مقرَّباً على الحجز — **فردُّه ووصولُه الكبتنَ وغرامتُه كلُّها من
+    المجمَّد**: ما يُردّ يُردّ كما أُخذ بلا تقريبٍ ثانٍ. وصفُّه في السجلّ بمعرّف الحجز.
     """
-    fee = await fee_for(session, rider.country_code)
+    precise = await fee_for(session, rider.country_code)
+    policy = await rounding.policy_for(session, rider.country_code)
+    fee, _ = rounding.round_amount(precise, policy)
     if fee <= 0:
         raise GuaranteeUnavailable()
     if scheduled_at - _now() < MIN_LEAD:
@@ -125,6 +132,16 @@ async def hold(session: AsyncSession, *, booking: RideBooking, rider: User, sche
     booking.guarantee_fee_at_booking = fee
     booking.guarantee_state = HELD
     await session.flush()
+    await rounding.record(
+        session,
+        country=rider.country_code,
+        source=RoundingSource.GUARANTEE_HOLD,
+        source_id=booking.id,
+        user_id=rider.id,
+        precise=precise,
+        rounded_amount=fee,
+        policy=policy,
+    )
     await wallet.record(
         session,
         owner=rider,
@@ -137,7 +154,10 @@ async def hold(session: AsyncSession, *, booking: RideBooking, rider: User, sche
 
 
 async def _refund(session: AsyncSession, booking: RideBooking) -> bool:
-    """يردّ الرسمَ المحفوظ إلى صاحبه — **مرّةً واحدة** (الحالُ ومفتاحُ التكرار معاً)."""
+    """يردّ الرسمَ المحفوظ إلى صاحبه — **مرّةً واحدة** (الحالُ ومفتاحُ التكرار معاً).
+
+    **كما أُخذ بلا تقريبٍ ثانٍ** (SPEC §٧٠-أ/١٠): المجمَّدُ قُرِّب عند الحجز (`hold`)، **وحجزٌ قبل الإشعال يعود بكسوره** — تقريبُ
+    ردِّه يغيّر مالاً أُخذ (§٧٠-أ/١١). وكذلك وصولُه الكبتنَ (`settle_on_complete`)."""
     if booking.guarantee_state != HELD:
         return False
     rider = await session.get(User, booking.rider_id)
@@ -274,7 +294,18 @@ async def _penalize(session: AsyncSession, *, booking: RideBooking, driver: Driv
     amount = booking.guarantee_fee_at_booking
     await wallet.lock_wallets(session, driver_user.id, rider.id)
     balance = await wallet.balance_of(session, driver_user, declared=WalletOwnerType.DRIVER)
-    moved = round_money(min(max(balance, Decimal(0)), amount))
+    capped = round_money(min(max(balance, Decimal(0)), amount))
+    # **الغرامةُ تُقرَّب للأدنى دائماً، أيّاً كان اتجاهُ السوق** (SPEC §٧٠-ج/٥): الرسمُ نفسُه مضاعفٌ (قُرِّب عند الحجز)، فلا
+    # كسرَ إلا حين **يحدّها رصيدُه** — والرصيدُ هو ما جعلها كسراً. **وللأعلى أو للأقرب يأخذ أكثرَ ممّا يملك** فيرفضه الدفتر
+    # (`balance_after >= 0`) أو يُسقط الاعتذار؛ **فللأدنى**: أكبرُ مضاعفٍ لا يتجاوز الرصيد — قاعدةُ المحفظة في الأجرة نفسُها
+    # (§٧٠-ج/٤). **والكسرُ يبقى في محفظته**.
+    #
+    # **ويُكتب في موضعٍ واحد: `penalty_shortfall`** (= الرسم − المنقول) **لا في السجلّ أيضاً** (مراجعةُ المال البند ٩). كان صفٌّ في
+    # `money_roundings` (المحدودُ ⇐ المنقول) **والنقصُ معاً يحملان الكسرَ نفسَه** — فمن يجمع ما لم يُحصَّل من الموضعين يعدّه مرّتين.
+    # **والنقصُ هو الموضعُ لا السجلّ**: لم يُقرَّب مبلغٌ دفعه أحد (الرسمُ مضاعفٌ وصفُّ تقريبه كُتب عند الحجز)؛ **الكسرُ جزءٌ من غرامةٍ
+    # لم تُحصَّل**، بقي في محفظة صاحبه ولم يتحرّك — وهو بعينه ما يعنيه «الباقي يُسجَّل» (§٥-١/١٣) وما يقرؤه كلُّ من يقرأ النقص
+    down = rounding.toward(await rounding.policy_for(session, booking.country_code), RoundingMode.DOWN)
+    moved, _ = rounding.round_amount(capped, down)
     warning = DriverWarning(
         driver_id=driver.id,
         kind=WARNING_GUARANTEE_WITHDRAWAL,
