@@ -152,6 +152,11 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — أماكنُ الخريطة (SPEC §٧١-د، 2026-10-09)
+    "MapPlaceOut": (
+        "بانٍ واحد: `routers/map_places._out` يخدم ما يُرسم (`GET /map-places`) وما يُبحث (`/map-places/search`) من "
+        "`map_places.Spot` نفسِه. **و`distance_m` فارغٌ حالٌ لا نسيان**: لا نقطةَ بحثٍ في الرسم، ولا في بحثٍ بلا موقع"
+    ),
     # ✅ بانٍ واحد — محادثةُ الرحلة ومكالمتُها (SPEC §٦٦، 2026-10-08)
     "RideCallOut": (
         "بانٍ واحد: `RideCallOut.of` يخدم أبوابَ المكالمة الخمسة (الحال والرفض والإنهاء والإقرار والتسجيل) "
