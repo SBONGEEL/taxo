@@ -15,12 +15,11 @@
  * ## ولا مفتاحَ ثانٍ لمفهومٍ قائم
  *
  * **مصدرُ قسم التحميل هو المبنيُّ سلفاً**: `distribution_mode` من الإعدادات
- * (وكان `source` في `landing/config.js`، **نُقل ولم يُخترع ثانياً**)، وبيانُ
- * الحزمة من `downloads/manifest.json` الذي يكتبه CI. **والتصميمُ يُلبَس فوقهما.**
+ * (وكان `source` في `landing/config.js`، **نُقل ولم يُخترع ثانياً**). **وبيانُ
+ * الحزم تقرؤه صفحةُ التحميل وحدَها** (`download.js`) — والقسمُ هنا يقود إليها.
  */
 
-const DOOR = "/api/site";
-const BAKED = "/site.json";
+import { playBadge, readDoor, trademark } from "./door.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -50,19 +49,8 @@ const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // فحُوِّلت إلى قواعدَ حقيقيةٍ في الورقة، **ويحملها العنصرُ في `data-hov`**.
 
 /* ═══════════════════ ما يُقرأ من الأبواب ═══════════════════════════════ */
-
-async function readDoor() {
-  // **المخبوزُ أوّلاً فلا وميض**، ثمّ الحيُّ يصحّحه إن اختلف.
-  try {
-    const res = await fetch(DOOR, { cache: "no-store" });
-    if (res.ok) return await res.json();
-  } catch { /* الفشلُ صامت */ }
-  try {
-    const res = await fetch(BAKED, { cache: "no-store" });
-    if (res.ok) return await res.json();
-  } catch { /* والمخبوزُ قد يغيب في التطوير */ }
-  return null;
-}
+//
+// **`readDoor` في `door.js`** — تقرؤه صفحةُ التحميل أيضاً، فنسخةٌ واحدة.
 
 function setText(sel, value) {
   if (value === undefined || value === null || value === "") return;
@@ -95,35 +83,15 @@ function markSoon(el) {
   }
 }
 
-/* ═══════════════════ قسمُ التحميل — الحالتان ═══════════════════════════ */
-
-const mb = (n) => (n / 1048576).toFixed(1);
-const day = (iso) =>
-  new Date(iso).toLocaleDateString("ar-u-nu-latn", {
-    year: "numeric", month: "long", day: "numeric",
-  });
-
-/** شارةُ Google Play الرسمية — **من ملفّ Google كما هو**.
- *
- * **ولا زرَّ مرسومٌ يحاكيها** (شرطُ المالك): الشارةُ ملفٌّ رسميٌّ بمساحته
- * الآمنة، **ورسمُ بديلٍ يشبهها مخالفةُ علامةٍ تجارية**.
- */
-function playBadge(href, label) {
-  const a = document.createElement("a");
-  a.href = href;
-  a.rel = "noopener";
-  a.setAttribute("aria-label", label);
-  a.style.cssText = "display:inline-block;margin-top:auto;min-height:44px";
-  const img = document.createElement("img");
-  img.src = "/assets/google-play-badge.png";
-  img.alt = label;
-  img.width = 180;
-  img.height = 53;
-  img.loading = "lazy";
-  img.style.cssText = "display:block;width:180px;height:auto";
-  a.appendChild(img);
-  return a;
-}
+/* ═══════════════════ قسمُ التحميل — يقود إلى `/download` ════════════════ */
+//
+// **بابٌ واحدٌ للحزمتين** (SPEC §٦٨-ج/٦): البيانُ والإصدارُ والبصمةُ في صفحة
+// التحميل وحدَها، **والقسمُ هنا يقود إليها كما خُبز** — فلا نسختان من البصمة
+// تفترقان. **وكانت هنا نسخةٌ ثانية** تقرأ البيانَ وتعرض ثمانيةَ أحرفٍ منه،
+// **وتُبقي `{version}` حرفيّاً لمن لم يصله البيان** (مقيسٌ ٢٠٢٦-١٠-٠٩).
+//
+// **ووضعُ `play` كما كان بحرفه**: الشارةُ الرسميةُ مكانَ الزرّ، وما يخصّ
+// الحزمةَ يذهب، وسطرُ العلامة التجارية يظهر — **ويذكر الشعارَ إن رُسمت شارة**.
 
 function disabledBadge(text) {
   const span = document.createElement("span");
@@ -136,59 +104,28 @@ function disabledBadge(text) {
   return span;
 }
 
-async function download(site) {
-  const mode = site?.distribution_mode ?? "apk";
-  const cards = $$("[data-dl-card]");
-  const isPlay = mode === "play";
+function download(site) {
+  const isPlay = site?.distribution_mode === "play";
 
-  // **خطواتُ التثبيت وسطرُ الإزالة يخصّان APK وحدَه** — ويذهبان مع المتجر.
+  // **وضعُ الحزمة لا يُمسّ هنا**: الزرّان يقودان إلى `/download#rider`
+  // و`/download#driver` كما خُبزا — **رابطٌ يعمل بلا JavaScript**.
   if (isPlay) {
+    // **ما يخصّ الحزمةَ يذهب مع المتجر** — ومعه الإشارةُ إلى صفحة التحميل.
     $$("[data-apk-only]").forEach((el) => el.remove());
-    $("[data-trademark]")?.removeAttribute("hidden");
-  }
 
-  let manifest = null;
-  if (!isPlay) {
-    try {
-      const res = await fetch("/downloads/manifest.json", { cache: "no-store" });
-      if (res.ok) manifest = await res.json();
-    } catch { /* صامت */ }
-  }
-
-  for (const card of cards) {
-    const key = card.dataset.dlCard; // rider | driver
-    const meta = card.querySelector("[data-dl-meta]");
-    const cta = card.querySelector("[data-dl-cta]");
-    if (!cta) continue;
-
-    if (isPlay) {
+    let logo = false;
+    for (const card of $$("[data-dl-card]")) {
+      const key = card.dataset.dlCard; // rider | driver
+      const cta = card.querySelector("[data-dl-cta]");
+      if (!cta) continue;
       const url = key === "rider" ? site?.play_url_rider : site?.play_url_driver;
-      meta?.remove();
       const label = key === "rider" ? "تطبيق الراكب على Google Play" : "تطبيق الكبتن على Google Play";
       // **لا زرَّ بلا رابطٍ أبداً** — الفارغُ شارةٌ معطَّلةٌ بنصِّها.
       cta.replaceWith(url ? playBadge(url, label) : disabledBadge("قريباً على Google Play"));
-      continue;
+      if (url) logo = true;
     }
-
-    const app = manifest?.apps?.find((a) => a.key === key);
-    if (!app) {
-      // **زرٌّ بلا ملفٍّ يُخفى ولا يشير إلى لا شيء** — قاعدةُ `app.js` القائمة.
-      cta.remove();
-      meta?.remove();
-      continue;
-    }
-    cta.href = `/downloads/${app.file}`;
-    cta.setAttribute("download", app.file);
-    if (meta) {
-      const rows = meta.querySelectorAll("[data-dl-value]");
-      const values = [
-        app.version_name ?? "1.0",
-        app.sha256.slice(0, 8),
-        day(app.built_at),
-        `${mb(app.size_bytes)} م.ب`,
-      ];
-      rows.forEach((el, i) => { if (values[i]) el.textContent = values[i]; });
-    }
+    // **«والشعار» حين تُرسم شارةٌ رسميةٌ وحدَها** — الشارةُ المعطَّلةُ نصٌّ بلا شعار
+    trademark($("[data-trademark]"), logo);
   }
 
   // **iOS: شارةٌ معطَّلةٌ حتى يُملأ الرابط** — ولا زرَّ يفتح لا شيء.
@@ -608,7 +545,7 @@ class Motion {
     }
   }
 
-  await download(site);
+  download(site);
   await offer();
 
   // **جُرّب تأجيلُ الحركة إلى `requestIdleCallback` فساءت النتيجة** (قِيس

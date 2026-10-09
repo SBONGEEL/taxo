@@ -19,4 +19,10 @@ ext {
     androidxJunitVersion = '1.2.1'
     androidxEspressoCoreVersion = '3.6.1'
     cordovaAndroidVersion = '10.1.1'
+    // **نسخةُ `firebase-messaging` بيتٌ واحدٌ للملحق وللتطبيق** (§٦٦-ج/١٧، الحزمةُ «2.0»): خدمةُ رنين المكالمة
+    // (`CallMessagingService`) ترث خدمةَ ملحق الإشعارات، **والملحقُ يجلب المكتبةَ بـ`implementation` فلا تبلغ
+    // ترجمةَ التطبيق** — فيُضيفها التطبيقُ بنفسه. **وهذا السطرُ يقرؤه الملحقُ أيضاً**
+    // (`project.hasProperty('firebaseMessagingVersion')`)، فلا تفترق نسختان. **و`24.1.0` هي افتراضُ الملحق 7.0.7
+    // نفسُه** — تُرفع هنا وحدَها، ومعها الملحق.
+    firebaseMessagingVersion = '24.1.0'
 }

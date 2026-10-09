@@ -179,7 +179,7 @@ SSH_OPTS=(-o StrictHostKeyChecking=yes -o ConnectTimeout=20
 # فيصير فعلين.
 ssh_try() {
   local n=0
-  until _ssh "$@"; do
+  until if [ -n "${SSH_TRY_LIMIT:-}" ]; then _ssh_within "$SSH_TRY_LIMIT" "$@"; else _ssh "$@"; fi; do
     n=$((n+1)); [ "$n" -ge 3 ] && return 1
     # **والإعادةُ بعد الحدِّ لا قبله**: `ufw` يحجب ستّاً في ثلاثين ثانية،
     # فإعادةٌ سريعةٌ **تُطيل الحجبَ الذي تحاول تجاوزه**.
@@ -229,6 +229,38 @@ _ssh() {
   "$SSH" "${SSH_OPTS[@]}" "$HOST" "$@"
 }
 
+# **قراءةٌ قصيرةٌ بسقفٍ لكلِّ محاولة** (قِيس ٢٠٢٦-١٠-٠٨): `cat` لملفِّ حالِ البناء
+# **علق عشرين دقيقة** بعميل ويندوز والبناءُ منتهٍ على الخادم — و`ServerAliveInterval`
+# لا يقطع قناةً حيّةً لا تُغلق. **فبقيت الواجهاتُ الجديدةُ أمام خلفيةٍ قديمةٍ** حتى
+# أُنهي العميلُ بيد. وهي علّةُ `_launch_ssh` نفسُها في القراءة.
+#
+# **والمخرجُ إلى ملفٍّ لا إلى الأنبوب**: من يلتقط الجوابَ بـ`$(…)` ينتظر كلَّ من يحمل
+# طرفَ الكتابة — وعميلٌ عالقٌ يحمله فيعلق الالتقاطُ معه. **والسقفُ للقراءات وحدَها**
+# (`SSH_TRY_LIMIT=60 ssh_try …`): نقلُ النسخة يطول بحقّ ولا يُقطع.
+_ssh_within() {
+  local limit="$1" now gap out pid waited=0 rc
+  shift
+  now=$(date +%s); gap=$(( now - _LAST_SSH ))
+  [ "$gap" -lt "$_SSH_GAP" ] && sleep $(( _SSH_GAP - gap ))
+  _LAST_SSH=$(date +%s)
+  out="$(mktemp)"
+  "$SSH" "${SSH_OPTS[@]}" "$HOST" "$@" > "$out" &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt "$limit" ]; do
+    sleep 1; waited=$((waited + 1))
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    rm -f "$out" 2>/dev/null || true
+    printf '%s\n' "    (قراءةٌ لم تعد خلال ${limit}ث — قُطعت)" >&2
+    return 1
+  fi
+  wait "$pid"; rc=$?
+  cat "$out"; rm -f "$out" 2>/dev/null || true
+  return "$rc"
+}
+
 say() { printf '%s\n' "$*"; }
 die() { printf '\n✗ %s\n' "$*" >&2; exit 1; }
 
@@ -275,7 +307,12 @@ say "  ترحيلة  : ${MIGRATIONS:-0}"
 # **وسكوتُ الاثنين معاً هو الجواب**، وإلّا وقف.
 PENDING="$(_ssh   "cd $REMOTE && docker compose $COMPOSE_FILES exec -T db psql -U taxo -d taxo -tAc 'SELECT version_num FROM alembic_version;' 2>/dev/null"   | tr -d '
  ' || true)"
-TREE_HEAD="$(ls backend/alembic/versions/ | sort | tail -1 | cut -d_ -f1)"
+# **ملفّاتُ الترحيلات وحدَها** (قِيس ٢٠٢٦-١٠-٠٨): `__pycache__` غيرُ المتتبَّع يُرتَّب
+# بعد `0103_…` فكان الرأسُ **فارغاً** — فتُقرأ الترحيلةُ «معلَّقة» في كلِّ رفع، ويُشغَّل
+# `alembic upgrade head` على الإنتاج بلا حاجة، **ويمرّ فحصُ ما بعد الرفع أيّاً كان رقمُ القاعدة**
+# لأن `${TREE_HEAD:-$DB_HEAD}` يقارن القاعدةَ بنفسها.
+TREE_HEAD="$(ls backend/alembic/versions/ | grep -E '^[0-9]{4}_.*[.]py$' | sort | tail -1 | cut -d_ -f1)"
+[ -n "$TREE_HEAD" ] || die "رأسُ الترحيلات في الشجرة غيرُ مقروء — لا يُرفع على رقمٍ فارغ."
 if [ -z "$PENDING" ]; then
   say "  ترحيلة  : **رأسُ القاعدة غيرُ مقروء** — يُعامَل كأن ثمّة معلَّقاً"
   MIGRATION_PENDING=1
@@ -859,7 +896,7 @@ _launch_ssh "cd $REMOTE && rm -rf /tmp/taxo-build && mkdir -p /tmp/taxo-build &&
 BUILT=""
 for _ in $(seq 1 30); do        # حتى ٣٠ دقيقةً — والبناءُ المقيسُ ثلاثُ دقائق
   sleep 60
-  BUILT="$(ssh_try "cat $BUILD_STATE 2>/dev/null || true" | tr -d '\r ')"
+  BUILT="$(SSH_TRY_LIMIT=60 ssh_try "cat $BUILD_STATE 2>/dev/null || true" | tr -d '\r ')"
   [ -n "$BUILT" ] && break
 done
 

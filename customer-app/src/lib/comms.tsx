@@ -38,6 +38,7 @@ import type { CallStart, ChatMessage, ChatReportReason, ChatThread, CommsSide, I
 import { CallSession, speakerOutput } from "@/lib/call-session";
 import { useFeature } from "@/lib/config";
 import { useCallsSupported } from "@/lib/mic-gate";
+import { ringsNatively } from "@/lib/push";
 import { loop, play } from "@/lib/sound";
 import { onTripComms, setCommsPushRoute, type TripCommsEvent } from "@/lib/trip-comms";
 
@@ -150,6 +151,26 @@ const MIC_REFUSED = "لا إذنَ للميكروفون — اسمح به من �
 
 /** **كم يُنتظر المقبسُ لرنينٍ وصل من إشعار** — الإقلاعُ البارد يفتحه في ثوانٍ؛ وبعدها لا يُرنّ هنا: «ردّ» بلا مقبسٍ لا تصله إشارة. */
 const LIVE_WAIT_MS = 10_000;
+
+/** **حلقةُ رنين الوارد — إلا والتطبيقُ غائبٌ وهاتفُه يرنّ بخدمته الأصليّة** (§٦٦-ج/١٧، الحزمةُ «2.0»). ويعيد ما يوقفها.
+ *
+ *  جهازٌ بلّغ بالمجموعة الثالثة (`ringsNatively`) يصله الرنينُ والتطبيقُ غائبٌ إشعاراً يرنّ على مجرى الرنين (`CallAlert.java`)،
+ *  **والمقبسُ ما زال حيّاً في الخلفية فيصله الحدثُ نفسُه** — فحلقةُ الويب فوقه رنينان لمكالمةٍ واحدة. **فلا تبدأ وهو غائب،
+ *  وتبدأ حين يظهر إن كانت ترنّ بعدُ** (`still`)، **ويوقفها ما يوقف الحلقةَ اليوم** (`stopRing` في `clearTimers`) — والمُصغي معها.
+ *  **وما دون الثالثة كما كان حرفاً**: لا خدمةَ هناك ترنّ، والحلقةُ وحدَها الرنين ظاهراً كان أو غائباً. */
+function ringTone(still: () => boolean): () => void {
+  if (!ringsNatively() || !document.hidden) return loop("callRing");
+  let stop: (() => void) | null = null;
+  const shown = () => {
+    if (document.hidden || stop || !still()) return;
+    stop = loop("callRing");
+  };
+  document.addEventListener("visibilitychange", shown);
+  return () => {
+    document.removeEventListener("visibilitychange", shown);
+    stop?.();
+  };
+}
 
 /** **رفعُ التسجيل** — بعد أن يُكتب انتهاؤها عند الخادم (`_require_recordable` يشترط `ended`)، **ومرّةً ثانيةً إن رُفض**: إنهاءٌ
  *  ضاع في الشبكة يُعاد (لا يكتب شيئاً على منتهية) ثمّ يُرفع. **وكان يُفقد** (قِيس ٢٠٢٦-١٠-٠٨): «إنهاء» يرسل الإنهاءَ ولا ينتظره،
@@ -615,7 +636,10 @@ export function CommsProvider({
       extras.current.answered = false;
       extras.current.talked = false;
       setCall({ ...blankCall(event.ride_id, false), stage: "incoming", callId: event.call_id, recording: event.recording });
-      extras.current.stopRing = loop("callRing");
+      extras.current.stopRing = ringTone(() => {
+        const now = callRef.current;
+        return now?.callId === event.call_id && now.stage === "incoming";
+      });
       extras.current.ringTimer = window.setTimeout(() => {
         const now = callRef.current;
         if (now?.callId === event.call_id && now.stage === "incoming") {

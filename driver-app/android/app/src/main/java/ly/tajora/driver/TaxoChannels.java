@@ -30,10 +30,19 @@ final class TaxoChannels {
     static final String PAYMENT = "taxo.payment";
     /** <b>العامّ — وقناةُ الافتراض في البيان</b>: ما لا قناةَ له يقع فيها بصوت «الإشعار». */
     static final String GENERAL = "taxo.general";
+    /**
+     * <b>المكالمةُ الواردة — المجموعةُ الثالثة</b> (§٦٦-ج/١٧، الحزمةُ «2.0»). <b>يرسمها {@link CallAlert}
+     * لا النظام</b>: الخادمُ يرسلها بياناتٍ وحدَها لجهازٍ بلّغ بهذه القناة ({@code src/lib/push.ts → channelSet})،
+     * <b>فوجودُها شاهدٌ على الخدمة</b> — وهما في الحزمة نفسِها.
+     */
+    static final String CALL = "taxo.call";
 
     private TaxoChannels() {}
 
-    /** يُنادى من {@link MainActivity#onCreate} — <b>ولا يكلّف شيئاً بعد أوّل مرّة</b>. */
+    /**
+     * يُنادى من {@link MainActivity#onCreate}، <b>ومن {@link CallAlert#show} قبل أن يرسم</b>: الرنينُ يصل والتطبيقُ مقتول
+     * فلا {@code onCreate} قبله، وإشعارٌ على قناةٍ لم تُنشأ لا يُرسم — <b>ولا يكلّف شيئاً بعد أوّل مرّة</b>.
+     */
     static void ensure(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager manager = context.getSystemService(NotificationManager.class);
@@ -45,6 +54,28 @@ final class TaxoChannels {
                 NotificationManager.IMPORTANCE_HIGH, R.raw.taxo_payment);
         create(context, manager, GENERAL, "إشعارات عامة",
                 NotificationManager.IMPORTANCE_DEFAULT, R.raw.taxo_notify);
+        createCall(context, manager);
+    }
+
+    /**
+     * <b>قناةُ المكالمة — على مجرى الرنين لا الإشعار ولا المنبّه</b>: تسكت حيث يسكت رنينُ الهاتف (الصامت)
+     * وتهتزّ حيث يهتزّ، <b>كمكالمةٍ حقيقيّة</b> — <b>بخلاف الطلب</b> الذي يصيح على مجرى المنبّه ولو كان صامتاً.
+     * <b>وصوتُها رنينُ المكالمة داخل التطبيق نفسُه</b> ({@code taxo_call} = {@code request.mp3} في
+     * {@code src/lib/sound.ts → callRing}) — فلا تفترق نغمتان لحدثٍ واحد. <b>وتكرارُه من الإشعار</b>
+     * ({@code FLAG_INSISTENT} في {@link CallAlert}) لا من الملفّ.
+     */
+    private static void createCall(Context context, NotificationManager manager) {
+        if (manager.getNotificationChannel(CALL) != null) return;
+        NotificationChannel channel = new NotificationChannel(
+                CALL, "المكالمات الواردة", NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("مكالمةُ الراكب أثناء الرحلة — ترنّ والتطبيقُ مغلق.");
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[] {0, 350, 200, 350});
+        channel.setSound(sound(context, R.raw.taxo_call), new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+        manager.createNotificationChannel(channel);
     }
 
     /** عنوانُ صوتٍ من {@code res/raw} — <b>باسم الحزمة المثبَّتة</b> (حزمةُ التجربة {@code .test}). */

@@ -25,6 +25,10 @@
 `no_answer` في معاملته). **وقراءةٌ كسولةٌ وحدَها لا تكفي**: مكالمةٌ لا يلمسها أحدٌ تبقى «ترنّ» في السجلّ، **ولا يُرسل إشعارُ
 «مكالمةٌ فائتة»** (§٦٦-د/٤) — فمهمّةٌ صغيرةٌ كلَّ دقيقة (`expire_ringing`) تُغلقها وتُخبر. **والكسولُ هو الحكم، والمهمّةُ تُنظّف.**
 
+**والتطبيقُ مغلقٌ يرنّ بخدمته الأصليّة** (§٦٦-ج/١٧، الحزمةُ «2.0»): الرنينُ يصلها بياناتٍ وحدَها بعمره، **وكلُّ ما يُسكته يُسكتها**
+— الردُّ والرفضُ وقطعُ المتصل والفواتُ وانتهاءُ الرحلة (`publish_answered`/`publish_ended` ← `_silence`). **ومن فتح مقبسَه
+ورنينٌ قائمٌ له يصله إطارُه** (`ringing_frame`): الخدمةُ تطوي رنينَها حين يظهر التطبيق، فالشاشةُ هي من يرنّ بعدها.
+
 ## المُرحِّلُ — coturn على خادمنا، وبياناتُ دخولٍ مؤقّتة
 
 `use-auth-secret`: اسمُ المستخدم `"{انتهاء}:{معرّف}"` وكلمتُه `base64(hmac_sha1(السرّ، الاسم))` بعمر ساعتين (أطولُ من أطول مكالمة:
@@ -45,6 +49,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -502,7 +507,7 @@ async def announce_ended_by_ride(session: AsyncSession, redis: Redis, ride: Ride
         )
     ).all()
     for call in calls:
-        await publish_ended(redis, call)
+        await publish_ended(session, redis, call)
 
 
 async def expire_ringing(session: AsyncSession, *, now: datetime | None = None, limit: int = 200) -> list[RideCall]:
@@ -543,8 +548,37 @@ def call_payload(call: RideCall) -> dict[str, Any]:
     }
 
 
+def seconds_left(call: RideCall, now: datetime | None = None) -> int:
+    """**ما بقي من ثلاثين الرنين** — بالثانية مقرَّبةً إلى أعلى، **ولا أقلَّ من واحدة**: ما يُرسل به رنينٌ لم يفُت بعد (`_stale`
+    حكمُه)، وصفرٌ يُقرأ «بلا عمر» عند من يعدّ (`fcm._lifetime`)."""
+    elapsed = ((now or _now()) - call.started_at).total_seconds()
+    return max(1, math.ceil(RING_TIMEOUT_SECONDS - elapsed))
+
+
+async def ringing_frame(session: AsyncSession, ride: Ride | None, user_id: uuid.UUID) -> dict[str, Any] | None:
+    """**رنينٌ قائمٌ لمن يفتح مقبسَه الآن** (§٦٦-ج/١٧) — إطارُ `incoming_call` نفسُه **بما بقي من ثلاثينه**، أو `None`.
+
+    **والعلّةُ**: الحدثُ يُبثّ مرّةً على القناة، **ومقبسٌ فُتح بعده لا يصله** — فمن فتح التطبيقَ من أيقونته وهاتفُه يرنّ (لا من
+    الإشعار) **كان يرى شاشةً بلا مكالمة**، والخدمةُ الأصليّةُ تطوي رنينَها حين يظهر التطبيق. **وهو ما يفعله المقبسُ بالعرض المعلَّق**
+    (`dispatch.pending_offer_frame`). **وللمتصَل به وحدَه، وإن رنّت عنده** (`_rang`): مسجَّلةٌ متصلُها بعدُ أمام التنبيه لم ترنّ.
+    """
+    if ride is None:
+        return None
+    call = await current_for_ride(session, ride.id)
+    if call is None or call.status is not RideCallStatus.RINGING or call.callee_id != user_id or not _rang(call):
+        return None
+    from app.ws import events
+
+    return {
+        "type": events.TripCommsEvent.INCOMING_CALL.value,
+        **call_payload(call),
+        "ring_timeout_seconds": seconds_left(call),
+    }
+
+
 async def publish_incoming(session: AsyncSession, redis: Redis, call: RideCall) -> None:
-    """**ترنّ عند المتصَل به**: الحدثُ على المقبس (التطبيقُ مفتوح)، وإشعارُ بياناتٍ لمن ليس أمامَ تطبيقه."""
+    """**ترنّ عند المتصَل به**: الحدثُ على المقبس (التطبيقُ مفتوح)، وإشعارٌ لمن ليس أمامَ تطبيقه — **بياناتٌ وحدَها لما يرنّ
+    بخدمته الأصليّة** (`notifications.publish_incoming_call`)."""
     from app.services import notifications
     from app.ws import events
 
@@ -563,23 +597,46 @@ async def publish_incoming(session: AsyncSession, redis: Redis, call: RideCall) 
             call_id=call.id,
             caller_role=call.caller_role.value,
             recording=call.recorded,
+            seconds_left=seconds_left(call),
         )
 
 
-async def publish_answered(redis: Redis, call: RideCall) -> None:
+async def _silence(session: AsyncSession, redis: Redis, call: RideCall) -> None:
+    """**كفّت عن الرنين ⇒ يُسكَت رنينُها الأصليّ** عند المتصَل به (§٦٦-ج/١٧) — لما رنّ عنده وحدَه (`_rang`)."""
+    from app.services import notifications
+
+    if call.callee_id is None or not _rang(call):
+        return
+    await notifications.publish_call_ring_stopped(
+        session,
+        redis,
+        callee_id=call.callee_id,
+        ride_id=call.ride_id,
+        call_id=call.id,
+        ring_seconds=RING_TIMEOUT_SECONDS,
+    )
+
+
+async def publish_answered(session: AsyncSession, redis: Redis, call: RideCall) -> None:
+    """**رُدّ عليها** — الطرفان على المقبس، **وأجهزةُ المتصَل به الأخرى تكفّ عن الرنين**: ردٌّ من هاتفٍ لا يُسكت لوحاً بجانبه."""
     from app.ws import events
 
     await events.publish_trip_comms(
         redis, [call.caller_id, call.callee_id], event=events.TripCommsEvent.CALL_ANSWERED, payload=call_payload(call)
     )
+    await _silence(session, redis, call)
 
 
-async def publish_ended(redis: Redis, call: RideCall) -> None:
+async def publish_ended(session: AsyncSession, redis: Redis, call: RideCall) -> None:
+    """**انتهت** — الطرفان على المقبس، **وما انتهى قبل أن يُردّ عليه يُسكَت رنينُه** (رفضٌ، أو قطعه المتصل، أو فات، أو انتهت
+    الرحلة). **وما رُدّ عليه سكت رنينُه عند الردّ** (`publish_answered`) — فلا أمرَ ثانٍ."""
     from app.ws import events
 
     await events.publish_trip_comms(
         redis, [call.caller_id, call.callee_id], event=events.TripCommsEvent.CALL_ENDED, payload=call_payload(call)
     )
+    if call.answered_at is None:
+        await _silence(session, redis, call)
 
 
 async def publish_missed(session: AsyncSession, redis: Redis, call: RideCall) -> None:
@@ -587,7 +644,7 @@ async def publish_missed(session: AsyncSession, redis: Redis, call: RideCall) ->
     مسجَّلةٌ تركها متصلُها على التنبيه لم يعلم بها، فلا «فائتةَ» تُقال له."""
     from app.services import notifications
 
-    await publish_ended(redis, call)
+    await publish_ended(session, redis, call)
     if call.callee_id is not None and _rang(call):
         await notifications.publish_missed_call(
             session,

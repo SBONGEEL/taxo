@@ -84,18 +84,39 @@ const CHANNELS_V2 = [
   "taxo.general",
 ];
 
+/** **قناةُ المجموعة الثالثة** (§٦٦-ج/١٧، الحزمةُ «2.0») — تُنشئها الحزمةُ التي تحمل خدمةَ رنين المكالمة
+ *  (`CallMessagingService`)، **فوجودُها شاهدٌ على الخدمة**: بها يرسل الخادمُ الرنينَ بياناتٍ وحدَها ترسمها الخدمة.
+ *  **ولا تُبلَّغ دون الثانية كاملةً** — الثالثةُ تزيد عليها ولا تحلّ محلّها. */
+const CALL_CHANNEL = "taxo.call";
+
+/** **ما أجاب به `channelSet` آخرَ مرّة** — وهو ما يُرسَل مع رمز الجهاز (`session.tsx`). */
+let reported: number | undefined;
+
 /** **إصدارُ مجموعة القنوات على الجهاز فعلاً** (§٦١-ل/٥) — يُسأل أندرويد ولا يُفترض:
  *  الحزمُ تُحمِّل شاشاتها من خادم، فهذه الشيفرةُ قد تكون أحدثَ من الحزمة التي تحملها.
- *  **و`undefined` حزمةٌ أقدم** يُرسل إليها الخادمُ كما اليوم. */
+ *  **و`undefined` حزمةٌ أقدم** يُرسل إليها الخادمُ كما اليوم. **و`2` كما كانت حرفاً** — حزمةٌ بقنوات
+ *  الأحداث بلا خدمة الرنين يصلها الرنينُ إشعاراً يرسمه النظام؛ **و`3`** يصلها بياناتٍ ترسمها الخدمة. */
 export async function channelSet(): Promise<number | undefined> {
   if (Capacitor.getPlatform() !== "android") return undefined;
+  reported = undefined;
   try {
     const { channels } = await PushNotifications.listChannels();
     const present = new Set(channels.map((channel) => channel.id));
-    return CHANNELS_V2.every((id) => present.has(id)) ? 2 : undefined;
+    if (!CHANNELS_V2.every((id) => present.has(id))) return undefined;
+    reported = present.has(CALL_CHANNEL) ? 3 : 2;
+    return reported;
   } catch {
     return undefined;
   }
+}
+
+/** **أيرنّ هذا الجهازُ المكالمةَ بخدمته الأصليّة والتطبيقُ غائب؟** (§٦٦-ج/١٧، الحزمةُ «2.0»)
+ *
+ *  بلّغ الخادمَ بالمجموعة الثالثة **ووصله رمزُه** (`markPushReady` بعد التسجيل) — فالخادمُ يرسل إليه الرنينَ بياناتٍ ترسمها
+ *  خدمتُه على مجرى الرنين (`CallAlert.java`). **فلا تُعزف حلقةُ الويب فوقها وهو غائب** (`comms.tsx → ringTone`)، وإلا رنّ
+ *  الهاتفُ رنينين لمكالمةٍ واحدة. **وما دون الثالثة `false`** — لا خدمةَ هناك ترنّ، فالحلقةُ وحدَها الرنين كما كانت. */
+export function ringsNatively(): boolean {
+  return ready && reported !== undefined && reported >= 3;
 }
 
 /** ما يصل والتطبيقُ مفتوح — **النظامُ لا يرسمه**، فتعرضه الشاشة.

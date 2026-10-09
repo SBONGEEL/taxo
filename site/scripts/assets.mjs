@@ -1,7 +1,8 @@
 /** أصولُ الموقع — **تُولَّد من الأصول الحقيقية، ولا تُرسم واحدةٌ منها**.
  *
  * ثلاثةُ أعمال:
- *   ١) الخطوطُ TTF → woff2 — **الحجمُ وحدَه يتغيّر، لا الحروف**.
+ *   ١) الخطوطُ TTF → woff2 — **الحجمُ وحدَه يتغيّر، لا الحروف** (وما وصل
+ *      woff2 يُنسخ). والقائمةُ في `fonts.mjs`.
  *   ٢) الصورُ PNG → WebP — **والشعارُ يبقى شعارَه**، تحويلُ ترميزٍ لا رسم.
  *   ٣) بطاقةُ المشاركة 1200×630 — **تركيبُ الشعار الحقيقيِّ على لون الهوية**
  *      بنصِّ التصميم نفسِه. **ولا شعارَ يُولَّد ولا واجهةَ تُرسم.**
@@ -19,6 +20,8 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import ttf2woff2 from "ttf2woff2";
 
+import { FONTS } from "./fonts.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 //: **المُدخَلُ يُودَع ولا يُنشر، والمخرَجُ يُنشر ولا يُودَع.**
 const SRC = join(HERE, "..", "assets-src");
@@ -33,18 +36,38 @@ mkdirSync(F, { recursive: true });
 let made = 0;
 
 /* ── ١) الخطوط ─────────────────────────────────────────────────────────── */
-for (const weight of ["400", "500", "700"]) {
-  const ttf = join(SF, `IBMPlexSansArabic-${weight}.ttf`);
-  const woff2 = join(F, `IBMPlexSansArabic-${weight}.woff2`);
-  if (!existsSync(ttf)) continue;
-  const before = readFileSync(ttf);
-  const after = Buffer.from(ttf2woff2(before));
-  writeFileSync(woff2, after);
+//
+// **القائمةُ من `fonts.mjs`** — وهي نفسُها التي يطابقها `check:site` بما
+// تطلبه الصفحات، فلا خطَّ يُطلب ولا يُولَّد. **والمصدرُ TTF يُضغط، أو WOFF2
+// يُنسخ كما هو** (خطٌّ وصل مضغوطاً لا يُضغط ثانيةً).
+const missingFonts = [];
+for (const name of FONTS) {
+  const ttf = join(SF, `${name}.ttf`);
+  const ready = join(SF, `${name}.woff2`);
+  const woff2 = join(F, `${name}.woff2`);
+  if (existsSync(ttf)) {
+    const before = readFileSync(ttf);
+    const after = Buffer.from(ttf2woff2(before));
+    writeFileSync(woff2, after);
+    console.log(
+      `  خط ${name}: ${before.length} → ${after.length} بايت ` +
+        `(−${Math.round((1 - after.length / before.length) * 100)}٪)`,
+    );
+    made++;
+  } else if (existsSync(ready)) {
+    writeFileSync(woff2, readFileSync(ready));
+    console.log(`  خط ${name}: نُسخ كما هو (${readFileSync(ready).length} بايت)`);
+    made++;
+  } else {
+    missingFonts.push(name);
+  }
+}
+if (missingFonts.length) {
+  // **يُسمّى ولا يُبتلع** — و`check:site` بعده يُسقط البناءَ على الغياب نفسِه
   console.log(
-    `  خط ${weight}: ${before.length} → ${after.length} بايت ` +
-      `(−${Math.round((1 - after.length / before.length) * 100)}٪)`,
+    `\n  ⚠ خطوطٌ بلا مصدرٍ في assets-src/fonts/: ${missingFonts.join(" · ")}\n` +
+      "     يُوضع `<الاسم>.ttf` أو `<الاسم>.woff2` — **ولا يُجلب خطٌّ من طرفٍ ثالثٍ وقتَ العرض**.\n",
   );
-  made++;
 }
 
 /* ── ٢) الصور ──────────────────────────────────────────────────────────── */

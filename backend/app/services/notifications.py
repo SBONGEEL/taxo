@@ -172,6 +172,10 @@ async def notify_user(
     الأصليُّ يرنّ من المقبس والتطبيقُ في الخلفية (`OfferAlert`)، فإشعارٌ معه
     بلاغان لطلبٍ واحد — فيبقى على قاعدة المقبس كما كان.
 
+    **وأمرُ إسكات الرنين لا يُحجب عن أحد** (`channels.NATIVE_ONLY_KINDS`، §٦٦-ج/١٧): الويبُ لا يراه
+    والخدمةُ الأصليّةُ تستهلكه، **فجهازٌ يحسبه الخادمُ أمامَ صاحبه قد يكون رنينُه الأصليُّ قائماً** —
+    فُتح التطبيقُ والرنينُ يدوّي (فتحُ القفل يتخطّى طيَّه)، ثمّ قطعها المتصل. وحجبُه هناك رنينٌ بلا مكالمة.
+
     الـ commit هنا مقصود ومحدود: تعطيلُ رمزٍ ميت أثرٌ يخص هذا الملف وحده،
     ويقع بعد أن أنهى المستدعي معاملته (البثّ دائماً بعد الـ commit) — فلا
     معاملةَ تُقطع، ولا يبقى تعطيلٌ معلّقاً حتى يمر عليه commit غريب.
@@ -180,7 +184,10 @@ async def notify_user(
     if provider is None:
         return PushResult()  # لا عقد FCM — الحدث وصل على WebSocket
 
-    if message.data.get("type") == RideEvent.RIDE_OFFER.value:
+    kind = message.data.get("type")
+    if kind in channels.NATIVE_ONLY_KINDS:
+        open_devices: set[str] = set()
+    elif kind == RideEvent.RIDE_OFFER.value:
         open_devices = await presence.active_devices(redis, user_id)
     else:
         open_devices = await presence.foreground_devices(redis, user_id)
@@ -196,10 +203,12 @@ async def notify_user(
     groups: dict[int, list[str]] = {}
     for token, push_channels in targets:
         groups.setdefault(channels.level_of(push_channels), []).append(token)
-    sent = [
-        await provider.send(tokens, channels.for_level(message, level))
-        for level, tokens in groups.items()
-    ]
+    sent: list[PushResult] = []
+    for level, tokens in groups.items():
+        shaped = channels.for_level(message, level)
+        # **أمرٌ لخدمةٍ أصليّةٍ لا يحملها هذا الجهاز** (إسكاتُ الرنين، §٦٦-ج/١٧) — لا يُرسل إليه شيء
+        if shaped is not None:
+            sent.append(await provider.send(tokens, shaped))
     result = PushResult(
         delivered=sum(part.delivered for part in sent),
         failed=sum(part.failed for part in sent),
@@ -1799,9 +1808,14 @@ async def publish_incoming_call(
     call_id: uuid.UUID,
     caller_role: str,
     recording: bool,
+    seconds_left: int,
 ) -> None:
-    """**مكالمةٌ ترنّ والتطبيقُ مغلق** (§٦٦-ج/١٧) — إشعارُ بياناتٍ **بأولويّةٍ عالية** كطلب الرحلة: المهلةُ ثلاثون ثانية، وDoze
-    يؤجّل العاديَّ دقائق. **والرنينُ كمكالمة هاتفٍ شيفرةٌ أصليّةٌ تقرأ `type` هذا** — تُجهَّز في الفرع ولا تُبنى حزمةٌ الآن.
+    """**مكالمةٌ ترنّ والتطبيقُ مغلق** (§٦٦-ج/١٧) — **بأولويّةٍ عالية** كطلب الرحلة: المهلةُ ثلاثون ثانية، وDoze يؤجّل العاديَّ
+    دقائق.
+
+    **وشكلُها بما يحمله الجهاز** (`push/channels.py`): **الحزمةُ «2.0» فما بعدها يصلها بياناتٍ وحدَها** على `taxo.call`، **ومعها
+    عمرُ الرنين** (`expires_in_seconds` — ما بقي من ثلاثينه): منه `ttl` فلا يصل بعد أن فات، **وبه تطوي الخدمةُ رنينَها**؛
+    **وما دونها يصله الإشعارُ نفسُه حرفاً** كما كان قبل الخدمة.
 
     **و`recording` في الحمولة** لأن التنبيهَ يسبق الرنينَ عند الطرفين (§٦٦-د/٣) — فيُرسم قبل أن يُضغط «ردّ».
     """
@@ -1816,11 +1830,49 @@ async def publish_incoming_call(
             "recording": "true" if recording else "false",
         },
         high_priority=True,
+        native_data={"expires_in_seconds": str(seconds_left)},
     )
     try:
         await notify_user(session, redis, user_id=callee_id, message=message)
     except Exception:  # pragma: no cover - يعتمد على عطل خارجي
         logger.exception("تعذّر إشعارُ مكالمةٍ واردة إلى %s", callee_id)
+
+
+async def publish_call_ring_stopped(
+    session: AsyncSession,
+    redis: Redis,
+    *,
+    callee_id: uuid.UUID,
+    ride_id: uuid.UUID,
+    call_id: uuid.UUID,
+    ring_seconds: int,
+) -> None:
+    """**«أسكتْ رنينَ هذه المكالمة»** — لأجهزة المتصَل به التي ترنّ بخدمتها الأصليّة وحدَها (§٦٦-ج/١٧).
+
+    **ولمَ رسالةٌ لا مهلةٌ وحدَها**: الخدمةُ تطوي رنينَها بعمره، **لكنّ المتصلَ قد يقطع في الثانية الثالثة** — فبلا هذه يرنّ هاتفُ
+    الطرف الآخر سبعاً وعشرين ثانيةً لمكالمةٍ انتهت. **ولا تصل ما دون المجموعة الثالثة** (`channels.NATIVE_ONLY_KINDS`): إشعارُها
+    رسمه النظامُ ولا خدمةَ تفهم الأمر. **ولا نصَّ فيها** ولا صفَّ في الصندوق — أمرٌ لا خبر.
+
+    **وبأولويّةٍ عاديّةٍ لا عالية**: FCM يخفض أولويّةَ تطبيقٍ تصله رسائلُ عاليةٌ لا يُرى منها شيء — **وهذه لا يُرى منها شيءٌ
+    بطبعها**، فعاليةً كانت تُبطئ ما يحتاج العاليةَ حقّاً: طلبَ الرحلة والرنينَ نفسَه. **والثمنُ مكتوب**: هاتفٌ في Doze يؤجّلها
+    إلى نافذته، فيبقى الرنينُ حتى عمره (`CallAlert` يطويه بنفسه). **وعمرُها مهلةُ الرنين**: بعدها طوت الخدمةُ رنينَها بنفسها،
+    فوصولُها متأخّرةً لا يُسكت شيئاً.
+    """
+    message = PushMessage(
+        title="",
+        body="",
+        data={
+            "type": channels.CALL_RING_STOPPED,
+            "ride_id": str(ride_id),
+            "call_id": str(call_id),
+        },
+        high_priority=False,
+        native_data={"expires_in_seconds": str(ring_seconds)},
+    )
+    try:
+        await notify_user(session, redis, user_id=callee_id, message=message)
+    except Exception:  # pragma: no cover - يعتمد على عطل خارجي
+        logger.exception("تعذّر إسكاتُ رنين مكالمةٍ عند %s", callee_id)
 
 
 async def publish_missed_call(

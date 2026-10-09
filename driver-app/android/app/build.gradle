@@ -51,7 +51,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // **مشتقٌّ من عدد الإيداعات لا مكتوبٌ بيد** — التفصيلُ فوق الملف.
         versionCode taxoVersionCode(rootProject.projectDir)
-        versionName "1.1"
+        // **«2.0» — حزمةُ TAXO 2.0** (حزمةُ الدمج، ٢٠٢٦-١٠-٠٩): وفيها رنينُ المكالمة والتطبيقُ مغلق (§٦٦-ج/١٧).
+        // **اسمٌ يقرؤه الناس لا رقمٌ يفصل الحزم** — الفاصلُ `versionCode` المشتقّ أعلاه
+        versionName "2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -132,6 +134,9 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // **لخدمة رنين المكالمة** (`CallMessagingService`، §٦٦-ج/١٧): ترث خدمةَ ملحق الإشعارات وتقرأ `RemoteMessage`،
+    // **والملحقُ يجلب المكتبةَ بـ`implementation`** فلا تبلغ ترجمةَ التطبيق. **بنسخة الملحق نفسِها** (`variables.gradle`)
+    implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
@@ -161,14 +166,16 @@ if (servicesJSON.exists() && servicesJSON.length() > 0) {
 } else if (System.getenv('TAXO_ALLOW_NO_FIREBASE') == '1') {
     logger.lifecycle('⚠ بلا google-services.json — بإذنٍ صريح. لا إشعارات في هذه الحزمة.')
 } else {
-    // **الرسالةُ تسمّي سببَها** (صُحّحت ٢٠٢٦-٠٩-٠٧): كانت تقول
-    // «google-services.json مفقود» — **وهي رسالةُ حارسٍ آخرَ نُسخت هنا**،
-    // فمن يبني بلا تاريخِ `git` يُرسَل يبحث عن ملفِّ Firebase.
-    // **وخطأٌ يسمّي غيرَ سببه أغلى من خطأٍ صامت**: الصامتُ يُبحث عنه،
-    // وهذا **يُوجَّه إلى الباب الخطأ فيُصلَح ما ليس معطوباً**.
-    throw new GradleException("""versionCode لا يُشتقّ — لا تاريخَ `git` في ${root}.
-  والرقمُ عددُ الإيداعات (`git rev-list --count HEAD`)، **ولا قيمةَ احتياطيةَ صامتة**:
-  رقمٌ يعود إلى 1 يجعل بناءَين حزمةً واحدةً عند أندرويد فلا يُثبَّت الثاني تحديثاً.
-  · استنساخٌ ضحل؟  git fetch --unshallow
-  · بلا git بقصد؟  TAXO_VERSION_CODE=<رقم> — **ويجب أن يزيد عن آخر ما رُفع**""")
+    // **الرسالةُ تسمّي سببَها هي** (صُحّحت ٢٠٢٦-١٠-٠٩): تصحيحُ ٢٠٢٦-٠٩-٠٧ (`998b5f5`) أعاد رسالةَ `versionCode` إلى بيتها في
+    // `taxoVersionCode` — **بالاستبدال نفسِه هنا أيضاً**، فكُتبت فوق رسالة هذا الفرع الصحيحة، وصار يقول «versionCode لا يُشتقّ»
+    // عن ملفِّ Firebase غائب.
+    // **وفيها `${root}` ولا `root` في هذا الموضع**، فلا تُطبع أصلاً: يسقط البناءُ بـ«خاصيّةٌ مجهولة» بدلها.
+    // **فالعائلةُ نفسُها مرّتين**: خطأٌ يسمّي غيرَ سببه **يُوجَّه إلى الباب الخطأ فيُصلَح ما ليس معطوباً**.
+    // **والسقوطُ باقٍ كما كان** — بغيره تُبنى حزمةٌ بلا Firebase خضراءَ صامتة: لا إشعاراتِ فيها ولا طلباتِ رحلةٍ والتطبيقُ مغلق.
+    throw new GradleException("""لا `google-services.json` في ${servicesJSON.parentFile} — أو هو فارغ.
+  وبغيره تُبنى الحزمةُ بلا Firebase: **لا رمزَ جهاز، فلا إشعاراتٍ ولا طلباتٍ والتطبيقُ مغلق ولا رنينَ مكالمة**،
+  والبناءُ أخضرُ صامت (وقع مقيساً في حزم `v0.2.0` المنشورة — التفصيلُ فوق هذا الفرع).
+  · في CI: يُفكّ من السرّ GOOGLE_SERVICES_B64.
+  · محلياً: الملفُّ لا يدخل git — يُنزَّل من Firebase Console (تطبيقُ أندرويد بهذا المعرّف) ويوضع هنا.
+  · حزمةٌ بلا إشعاراتٍ بقصد؟  TAXO_ALLOW_NO_FIREBASE=1""")
 }

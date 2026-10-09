@@ -93,8 +93,9 @@ def _android(message: PushMessage) -> dict[str, Any]:
     if seconds is not None:
         android["ttl"] = f"{seconds}s"
     # **القناةُ تُذكر في الحمولة لا في التطبيق**: الإشعارُ الواصلُ والتطبيقُ في
-    # الخلفية يرسمه النظامُ لا شيفرتُنا
-    if message.android_channel_id is not None:
+    # الخلفية يرسمه النظامُ لا شيفرتُنا. **إلا البياناتِ وحدَها** (§٦٦-ج/١٧): `android.notification`
+    # يجعلها إشعاراً يرسمه النظامُ فلا تبلغ `onMessageReceived` — **والخدمةُ تعرف قناتَها بنفسها**
+    if message.android_channel_id is not None and not message.data_only:
         android["notification"] = {"channel_id": message.android_channel_id}
     return android
 
@@ -163,6 +164,17 @@ class FcmPushProvider:
     # -------------------------------------------------------------- الإرسال
 
     def _payload(self, token: str, message: PushMessage) -> dict[str, Any]:
+        if message.data_only:
+            # **بياناتٌ وحدَها لخدمة التطبيق الأصليّة** (§٦٦-ج/١٧): لا `notification` — وبه كان أندرويد يرسمها
+            # بنفسه والتطبيقُ في الخلفية فلا تبلغ الخدمةَ أصلاً. **ولا `apns` ولا `webpush`**: لا يُضبط هذا إلا لجهازٍ
+            # بلّغ بقنوات أندرويد (`channels.for_level`)، **وتنبيهُ iOS بلا نصٍّ يُرسم فارغاً**
+            return {
+                "message": {
+                    "token": token,
+                    "data": {k: str(v) for k, v in message.data.items()},
+                    "android": _android(message),
+                }
+            }
         return {
             "message": {
                 "token": token,

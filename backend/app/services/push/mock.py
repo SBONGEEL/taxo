@@ -51,6 +51,8 @@ class MockPushProvider:
                         "high_priority": message.high_priority,
                         # **والقناةُ كما يراها الجهاز** (§٦١-ل): بها يُقاس أن الأقدمَ بقي على قناته
                         "android_channel_id": message.android_channel_id,
+                        # **ومن يرسمه** (§٦٦-ج/١٧): النظامُ، أم خدمةُ التطبيق من بياناتٍ وحدَها
+                        "data_only": message.data_only,
                     },
                     ensure_ascii=False,
                 ),

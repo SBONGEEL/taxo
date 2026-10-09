@@ -39,16 +39,32 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         OfferAlert.markLeftApp(this);
+        CallAlert.onAppHidden();
     }
 
     /**
      * <b>وعودتُه إلى الشاشة تطوي ما فوقها</b>: من فتح التطبيق يرى البطاقةَ
      * داخله (الشاشة ٠١)، <b>وورقةٌ أو فقاعةٌ باقيةٌ فوقها تُقرأ طلباً ثانياً</b>
      * — وهو نصُّ «أوّلُ طريقةٍ متاحةٍ تُستعمل والبقيّةُ تُلغى».
+     *
+     * <p><b>ورنينُ المكالمة كذلك</b> (§٦٦-ج/١٧): الشاشةُ ترنّ بعد الآن، فرنينان لمكالمةٍ واحدةٍ لا يُسمعان —
+     * <b>إلا خلف القفل</b>: ملءُ الشاشة قد يُطلق هذا النشاطَ والهاتفُ مقفل، ورنينٌ يسكت قبل أن يُرى لا رنين.
      */
     @Override
     public void onResume() {
         super.onResume();
         OfferAlert.hide(this);
+        CallAlert.onAppShown(this);
+    }
+
+    /**
+     * <b>وفتحُ القفل والتطبيقُ أمامه يطوي رنينَ المكالمة أيضاً</b> ({@link CallAlert#onAppFocused}): {@code onResume} قد يقع
+     * والقفلُ لم يزل بعد فيتخطّى الطيّ، <b>ولا يتكرّر حين يزول</b> — والتركيزُ لا يُنال إلا بعده. <b>وتنبيهُ الطلب لا يُمسّ هنا</b>:
+     * طيُّه في {@code onResume} كما كان.
+     */
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) CallAlert.onAppFocused(this);
     }
 }

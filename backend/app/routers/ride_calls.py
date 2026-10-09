@@ -38,7 +38,7 @@ async def start_call(ride_id: uuid.UUID, user: CurrentUser, session: DbSession, 
         await ride_calls.publish_missed(session, redis, missed)
     # **الجاريةُ التي أغلقها الاتصالُ الجديد (`failed`) تُبلَّغ للطرفين** — فيُغلق الطرفُ الآخر ما بقي مفتوحاً عنده
     for dropped in started.dropped:
-        await ride_calls.publish_ended(redis, dropped)
+        await ride_calls.publish_ended(session, redis, dropped)
     # **والمسجَّلةُ لا ترنّ هنا** — ترنّ بعد إقرار المتصل بالتنبيه (`/recording-notice`): المتصلُ بعدُ أمام «متابعة / إلغاء»
     if not started.call.recorded:
         await ride_calls.publish_incoming(session, redis, started.call)
@@ -70,7 +70,7 @@ async def answer_call(
         session, call_id=call_id, user=user, notice_ack=payload.recording_notice_ack
     )
     await session.commit()
-    await ride_calls.publish_answered(redis, found.call)
+    await ride_calls.publish_answered(session, redis, found.call)
     return CallAnswerOut(
         call_id=found.call.id,
         ride_id=found.call.ride_id,
@@ -85,7 +85,7 @@ async def decline_call(call_id: uuid.UUID, user: CurrentUser, session: DbSession
     found, changed = await ride_calls.hang_up(session, call_id=call_id, user=user, decline=True)
     await session.commit()
     if changed:
-        await ride_calls.publish_ended(redis, found.call)
+        await ride_calls.publish_ended(session, redis, found.call)
     return RideCallOut.of(found.call, user.id)
 
 
@@ -95,7 +95,7 @@ async def end_call(call_id: uuid.UUID, user: CurrentUser, session: DbSession, re
     found, changed = await ride_calls.hang_up(session, call_id=call_id, user=user, decline=False)
     await session.commit()
     if changed:
-        await ride_calls.publish_ended(redis, found.call)
+        await ride_calls.publish_ended(session, redis, found.call)
     return RideCallOut.of(found.call, user.id)
 
 

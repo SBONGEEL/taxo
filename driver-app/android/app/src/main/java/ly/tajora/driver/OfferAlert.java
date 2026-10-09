@@ -179,7 +179,8 @@ public final class OfferAlert {
                 .setContentText(offer.fare + " " + offer.currency
                         + " · " + offer.meta(true)
                         + " · " + offer.seconds + " ث")
-                .setSmallIcon(context.getApplicationInfo().icon)
+                // **أيقونةُ الشريط أحاديّةُ اللون** (`ic_stat_taxo`): أيقونةُ التشغيل التكيّفيّة هنا تُسقط واجهةَ النظام على أندرويد ٨٫٠
+                .setSmallIcon(R.drawable.ic_stat_taxo)
                 .setAutoCancel(true)
                 .setCategory(Notification.CATEGORY_CALL)
                 .setContentIntent(pending)

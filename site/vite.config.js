@@ -50,6 +50,9 @@ export default defineConfig({
         // **صفحةُ طلب الحذف** (٢٠٢٦-٠٩-٠٧): يشترطها المتجرُ رابطاً في نموذج
         // أمان البيانات — **وصفحةٌ لا تدخل البناءَ رابطٌ يقود إلى ٤٠٤**.
         "delete-account": resolve(__dirname, "delete-account.html"),
+        // **صفحةُ التحميل** (SPEC §٦٨-ج/٦): بابٌ واحدٌ للحزمتين على `/download`،
+        // **وقسمُ التحميل في الرئيسية يقود إليها** فلا نسختان من البصمة.
+        download: resolve(__dirname, "download.html"),
         404: resolve(__dirname, "404.html"),
       },
     },

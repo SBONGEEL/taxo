@@ -35,6 +35,7 @@ from app.core.exceptions import AppError
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import UserRole
+from app.models.ride import Ride
 from app.models.user import User
 from app.schemas.driver import DriverLocationIn, NearbyDriverOut
 from app.schemas.ride import RideOut
@@ -42,6 +43,7 @@ from app.services import (
     dispatch,
     drivers as drivers_service,
     presence as socket_presence,
+    ride_calls,
     rides as rides_service,
 )
 from app.services import token_service
@@ -189,6 +191,19 @@ async def _serve(websocket: WebSocket, *coros) -> None:
                 await task
 
 
+async def _ringing_now(active: Ride | None, user_id: uuid.UUID) -> dict[str, Any] | None:
+    """**الرنينُ القائمُ لمن فتح مقبسَه** (§٦٦-ج/١٧، `ride_calls.ringing_frame`) — **يُقرأ بعد الاشتراك في قناته لا قبله**.
+
+    **والعلّةُ ترتيبٌ لا قيمة**: قراءتُه قبل الاشتراك تترك بينهما فجوةً — مكالمةٌ رُدّ عليها أو قُطعت فيها **يُبثّ انتهاؤها
+    والمقبسُ لم يشترك بعد فلا يصله**، ثمّ يُرسَل إطارُ رنينٍ قُرئ قبلها: **شاشةٌ ترنّ لمكالمةٍ انتهت** حتى تنقضي مهلتُها. وبعده
+    يصل الانتهاءُ من القناة بعد الإطار مهما وقع. **ومعاملةٌ جديدةٌ لا جلسةُ المصادقة**: تلك أُغلقت، وهذه ترى ما التُزم بعدها.
+    """
+    if active is None:
+        return None
+    async with SessionLocal() as session:
+        return await ride_calls.ringing_frame(session, active, user_id)
+
+
 # ------------------------------------------------------------- مقبس الكبتن
 
 
@@ -266,10 +281,14 @@ async def driver_socket(
     try:
         async with Subscription(redis) as subscription:
             await subscription.subscribe(events.user_channel(user.id))
+            # **والرنينُ القائمُ يُستعاد كما يُستعاد العرض** (§٦٦-ج/١٧) — **بعد الاشتراك لا قبله** (`_ringing_now`)
+            ringing = await _ringing_now(active, user.id)
             # آخر حالة معروفة مع أول رسالة — عليها يعتمد الاسترجاع بعد انقطاع
             await websocket.send_json({"type": "connected", "active_ride": snapshot})
             if pending is not None:
                 await websocket.send_json(pending)
+            if ringing is not None:
+                await websocket.send_json(ringing)
             await _serve(
                 websocket,
                 _pump(websocket, subscription),
@@ -436,7 +455,12 @@ async def rider_socket(
                 await subscription.subscribe(
                     events.driver_location_channel(state.driver_id)
                 )
+            # **مكالمةٌ ترنّ له والتطبيقُ فُتح للتوّ** (§٦٦-ج/١٧) — فتحُه من أيقونته لا من الإشعار لا يجد غيرَ هذا،
+            # **ويُقرأ بعد الاشتراك لا قبله** (`_ringing_now`)
+            ringing = await _ringing_now(active, user.id)
             await websocket.send_json({"type": "connected", "active_ride": snapshot})
+            if ringing is not None:
+                await websocket.send_json(ringing)
             await _serve(
                 websocket,
                 _rider_loop(websocket, redis, user, state, subscription),

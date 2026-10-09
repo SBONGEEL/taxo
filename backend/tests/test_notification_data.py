@@ -26,6 +26,10 @@ SERVICE = pathlib.Path(__file__).resolve().parents[1] / "app" / "services"
 #: مفاتيحُ يجوز أن تحمل نصّاً مؤلَّفاً — وهي **ما يرسمه النظامُ لا التطبيق**.
 TRAY_KEYS = {"title", "body"}
 
+#: **بابا `data` لا بابُه وحدَه** (§٦٦-ج/١٧، ٢٠٢٦-١٠-٠٩): `native_data` يُدمج في `data` حين يُرسل الإشعارُ بياناتٍ وحدَها
+#: (`push/channels.for_level`) — **فجملةٌ مؤلَّفةٌ فيه تصل التطبيقَ كما تصله من `data` حرفاً**، ومسحٌ يقرأ `data=` وحدَه لا يراها.
+DATA_KEYWORDS = {"data", "native_data"}
+
 
 def _composed(node: ast.AST) -> bool:
     """أهذا تعبيرٌ **يؤلّف** نصّاً؟ — قالبٌ، أو جمعُ نصوص، أو `format`/`join`."""
@@ -47,7 +51,7 @@ def test_notification_data_carries_raw_values_not_sentences() -> None:
     for path in sorted(SERVICE.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if not isinstance(node, ast.keyword) or node.arg != "data":
+            if not isinstance(node, ast.keyword) or node.arg not in DATA_KEYWORDS:
                 continue
             if not isinstance(node.value, ast.Dict):
                 continue  # `data=dict(...)` أو متغيّر — يُفحص عند تعريفه
@@ -56,7 +60,7 @@ def test_notification_data_carries_raw_values_not_sentences() -> None:
                 if name in TRAY_KEYS:
                     continue
                 if _composed(value):
-                    offenders.append(f"{path.name}:{value.lineno}  data[{name!r}]")
+                    offenders.append(f"{path.name}:{value.lineno}  {node.arg}[{name!r}]")
 
     assert not offenders, (
         "جملةٌ مؤلَّفةٌ داخل `data` الإشعار — والتطبيقُ هو من يؤلّف:\n  "
@@ -77,6 +81,6 @@ def test_the_sweep_actually_read_something() -> None:
     for path in sorted(SERVICE.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if isinstance(node, ast.keyword) and node.arg == "data":
+            if isinstance(node, ast.keyword) and node.arg in DATA_KEYWORDS:
                 seen += 1
     assert seen >= 10, f"لم يُقرأ إلا {seen} من `data=` — المسحُ لا يرى الشجرة"
