@@ -625,6 +625,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **وهذه تعلو على القائمة التي تحتها حيث تخالفها.**
 <!--/جديد-->
 
+<!--جديد-->
+**Claude Design بيدي** (قرارُ المالك ٢٠٢٦-١٠-٠٩): «Never wait for the owner to draw, paste or sync a design.» — غاب تصميمٌ ⇐ أرسمه في مشروع TAXO 2.0 بأدواتي ثمّ أبني منه؛ **وخطوةٌ لا يقدر عليها إلا هو ⇐ أصمّم من الهويّة التي عندي وأبني، وأقول ما تعذّر مرّةً في التقرير**. **وإذنُه للمال والقاعدة والبيانات الشخصيّة والصياغة العامّة وحدَها.**
+<!--/جديد-->
+
 ### When to stop and ask — the owner's rule, restated (2026-08-20)
 
 **Stopping is expensive and it was being overused.** The rule the owner set, verbatim in effect:
