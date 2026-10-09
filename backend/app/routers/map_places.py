@@ -30,7 +30,7 @@ def _out(spot: map_places.Spot, distance: int | None = None) -> MapPlaceOut:
 @router.get("", response_model=list[MapPlaceOut])
 async def places_on_map(user: CurrentUser, session: DbSession) -> list[MapPlaceOut]:
     """**ما يرسمه التطبيقُ فوق خريطته** — أماكنُ سوق المستخدم ومطاراتُه."""
-    return [_out(spot) for spot in await map_places.visible(session, user.country_code)]
+    return [_out(spot) for spot in await map_places.visible(session, user.country_code, for_map=True)]
 
 
 @router.get("/search", response_model=list[MapPlaceOut])

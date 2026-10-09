@@ -29,8 +29,8 @@ def test_the_migration_constraint_lists_every_category() -> None:
     import importlib.util
     import pathlib
 
-    path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0107_map_places.py"
-    spec = importlib.util.spec_from_file_location("m0107", path)
+    path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0108_map_places_osm.py"
+    spec = importlib.util.spec_from_file_location("m0108", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # type: ignore[union-attr]
     assert set(module._CATEGORIES) == set(MAP_PLACE_CATEGORIES)
@@ -109,3 +109,24 @@ async def test_the_panel_edits_hides_and_audits_and_refuses_an_empty_name(
         ).all()
     assert [entry.action.value for entry in audits] == ["create", "update"]
     assert audits[1].details["changes"] == {"is_hidden": {"before": False, "after": True}}
+
+
+async def test_imported_places_are_searched_but_not_drawn(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**المستوردُ من OSM للبحث** (§٧١-ح/٤): يُوجد بالاسم، **ولا يُرسم** — أسماءُ OSM في خريطة المزوّد أصلاً. ويظهر في اللوحة بأصله."""
+    from app.models.enums import CountryCode
+    from app.models.map_place import SOURCE_OSM, MapPlace
+
+    await enable_features(session_factory, "map_places_enabled")
+    async with session_factory() as session:
+        session.add(MapPlace(country_code=CountryCode.JO, name_ar="مستشفى الأردن", name_en="Jordan Hospital",
+                             category="hospital", lat=31.9686, lng=35.8960, source=SOURCE_OSM, osm_ref="way/1"))
+        await session.commit()
+    rider = await rider_session(client)
+    drawn = (await client.get("/map-places", headers=rider["headers"])).json()
+    assert all(row["name_ar"] != "مستشفى الأردن" for row in drawn)
+    found = (await client.get("/map-places/search", params={"q": "مستشفى الاردن"}, headers=rider["headers"])).json()
+    assert [row["name_ar"] for row in found] == ["مستشفى الأردن"]
+    listed = (await client.get("/admin/map-places", params={"country": "JO"}, headers=admin_headers)).json()
+    assert [(row["source"], row["osm_ref"]) for row in listed] == [("osm", "way/1")]

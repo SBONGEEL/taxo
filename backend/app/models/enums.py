@@ -804,6 +804,8 @@ class MapPlaceCategory(StrEnum):
     NEIGHBORHOOD = "neighborhood"
     STREET = "street"
     OTHER = "other"
+    #: **المطار** (§٧١-ح/٤) — من المستورد؛ والمطاراتُ برسومها بيتُها `facilities` كما هي
+    AIRPORT = "airport"
 
 
 class BookingStatus(StrEnum):

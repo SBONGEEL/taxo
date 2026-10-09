@@ -22,11 +22,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.enums import CountryCode, FeatureKey
-from app.models.map_place import MapPlace
+from app.models.map_place import SOURCE_OWNER, MapPlace
 from app.services import facilities, settings_service
 
 #: سقفُ نتائج البحث — ما يتّسع له رأسُ القائمة فوق نتائج المزوّد
-SEARCH_LIMIT = 5
+SEARCH_LIMIT = 6
 
 _MARKS = re.compile("[ً-ْٰـ]")  # التشكيلُ والألفُ الخنجريّةُ والتطويل
 _FOLD = str.maketrans({"أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا", "ة": "ه", "ى": "ي", "ؤ": "و", "ئ": "ي"})
@@ -58,15 +58,19 @@ def _meters(lat1: float, lng1: float, lat2: float, lng2: float) -> int:
     return int(2 * r * math.asin(math.sqrt(a)))
 
 
-async def visible(session: AsyncSession, country: CountryCode) -> list[Spot]:
-    """**ما يُرسم ويُبحث فيه** — فارغٌ حين المفتاحُ مطفأ."""
+async def visible(session: AsyncSession, country: CountryCode, *, for_map: bool = False) -> list[Spot]:
+    """**ما يُبحث فيه** — فارغٌ حين المفتاحُ مطفأ. **و`for_map` ما يُرسم**: أماكنُ المالك وحدَها ومطاراتُ السوق — **لا المستورد**
+    (§٧١-ح/٤): أسماءُ OSM في خريطة المزوّد أصلاً، ورسمُها ثانيةً نسخةٌ فوق أصلها."""
     if not await settings_service.is_feature_enabled(session, country, FeatureKey.MAP_PLACES_ENABLED):
         return []
-    rows = await session.scalars(
+    query = (
         select(MapPlace)
         .where(MapPlace.country_code == country, MapPlace.is_hidden.is_(False))
         .order_by(MapPlace.name_ar)
     )
+    if for_map:
+        query = query.where(MapPlace.source == SOURCE_OWNER)
+    rows = await session.scalars(query)
     spots = [Spot(row.id, row.name_ar, row.name_en, row.category, row.lat, row.lng, "place") for row in rows]
     for facility_id, name, lat, lng in await facilities.airports_for_rider(session, country=country):
         spots.append(Spot(facility_id, name, None, "airport", float(lat), float(lng), "facility"))

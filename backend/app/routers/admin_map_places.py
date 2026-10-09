@@ -29,6 +29,8 @@ def _out(row: MapPlace) -> MapPlaceAdminOut:
         lat=row.lat,
         lng=row.lng,
         is_hidden=row.is_hidden,
+        source=row.source,
+        osm_ref=row.osm_ref,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )

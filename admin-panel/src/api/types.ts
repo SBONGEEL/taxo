@@ -2126,7 +2126,8 @@ export type MapPlaceCategory =
   | "station"
   | "neighborhood"
   | "street"
-  | "other";
+  | "other"
+  | "airport";
 
 export interface MapPlace {
   id: string;
@@ -2138,6 +2139,10 @@ export interface MapPlace {
   lng: number;
   /** **الإخفاءُ هو الإيقاف** — لا يُرسم ولا يُبحث، ويبقى في القائمة. */
   is_hidden: boolean;
+  /** **`owner` أضفتَه بيدك** (يُرسم ويتقدّم البحث) — **`osm` مستوردٌ من OpenStreetMap** للبحث، يُراجَع ويُعدَّل ويُخفى. */
+  source: "owner" | "osm";
+  /** أصلُ المستورد في OSM — «node/123» */
+  osm_ref: string | null;
   created_at: string;
   updated_at: string;
 }

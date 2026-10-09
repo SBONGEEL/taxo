@@ -80,6 +80,9 @@ class MapPlaceAdminOut(BaseModel):
     lat: float
     lng: float
     is_hidden: bool
+    #: **`owner` أو `osm`** — والمستوردُ يحمل أصلَه (`osm_ref`) ليُراجع
+    source: str
+    osm_ref: str | None
     created_at: datetime
     updated_at: datetime
 

@@ -27,6 +27,7 @@ import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
 import { day } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { digits } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 /** **مرآةُ `MAP_PLACE_CATEGORIES`** بترتيب الخلفية — والاسمُ العربيُّ لكلٍّ. */
@@ -48,7 +49,11 @@ export const CATEGORY_LABEL: Record<MapPlaceCategory, string> = {
   neighborhood: "حيّ",
   street: "شارع",
   other: "أخرى",
+  airport: "مطار",
 };
+
+/** **أصلُ المستورد في OpenStreetMap** — رابطٌ يفتح العنصرَ نفسَه للمراجعة. */
+const osmUrl = (ref: string) => `https://www.openstreetmap.org/${ref}`;
 
 const NAME_MAX = 80;
 
@@ -69,6 +74,8 @@ export function PlacesScreen() {
   const { isAdmin } = useSession();
   const [rows, setRows] = useState<MapPlace[] | null>(null);
   const [query, setQuery] = useState("");
+  // **المستوردُ يُراجَع** (§٧١-ح/٤): مصفاةٌ تعرضه وحدَه
+  const [origin, setOrigin] = useState<"all" | "owner" | "osm">("all");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [editing, setEditing] = useState<MapPlace | "new" | null>(null);
@@ -86,9 +93,14 @@ export function PlacesScreen() {
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!rows || !needle) return rows;
-    return rows.filter((row) => row.name_ar.includes(needle) || (row.name_en ?? "").toLowerCase().includes(needle));
-  }, [rows, query]);
+    if (!rows) return rows;
+    return rows.filter(
+      (row) =>
+        (origin === "all" || row.source === origin) &&
+        (!needle || row.name_ar.includes(needle) || (row.name_en ?? "").toLowerCase().includes(needle)),
+    );
+  }, [rows, query, origin]);
+  const imported = rows?.filter((row) => row.source === "osm").length ?? 0;
 
   return (
     <Shell
@@ -119,15 +131,35 @@ export function PlacesScreen() {
       <ErrorNote message={error} />
       <SuccessNote message={done} />
 
-      <div className="mb-12 max-w-[360px]">
-        <Field
-          label="ابحث في الأماكن"
-          name="places_query"
-          value={query}
-          placeholder="بالعربيّة أو الإنجليزيّة"
-          onChange={(event) => setQuery(event.target.value)}
-        />
+      <div className="mb-12 flex flex-wrap items-end gap-12">
+        <div className="w-full max-w-[360px]">
+          <Field
+            label="ابحث في الأماكن"
+            name="places_query"
+            value={query}
+            placeholder="بالعربيّة أو الإنجليزيّة"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className="w-full max-w-[220px]">
+          <Select
+            label="المصدر"
+            name="places_origin"
+            value={origin}
+            onChange={(event) => setOrigin(event.target.value as typeof origin)}
+          >
+            <option value="all">الكلّ</option>
+            <option value="owner">أضفتُها بيدي</option>
+            <option value="osm">مستوردة للمراجعة</option>
+          </Select>
+        </div>
       </div>
+      {imported ? (
+        <p className="ad-hint mb-12">
+          {digits(imported)} مكاناً مستورداً من OpenStreetMap بمواقعه الدقيقة — <b>للبحث</b>: يتقدّم نتائجَ البحث ولا يُرسم على الخريطة
+          (أسماءُ OpenStreetMap في الخريطة أصلاً). راجِعه وعدّله أو أخفِه. بياناتُه © مساهمو OpenStreetMap، برخصة ODbL.
+        </p>
+      ) : null}
 
       <Table
         columns="1.5fr 1.2fr 0.7fr 1.1fr 0.7fr 0.9fr auto"
@@ -150,7 +182,17 @@ export function PlacesScreen() {
             <span className="ad-tone-muted" dir="ltr">
               {row.name_en ?? "—"}
             </span>
-            <span className="ad-tone-muted">{CATEGORY_LABEL[row.category] ?? row.category}</span>
+            <span className="ad-tone-muted">
+              {CATEGORY_LABEL[row.category] ?? row.category}
+              {row.source === "osm" && row.osm_ref ? (
+                <>
+                  {" · "}
+                  <a href={osmUrl(row.osm_ref)} target="_blank" rel="noreferrer">
+                    مستورد
+                  </a>
+                </>
+              ) : null}
+            </span>
             <span className="ad-tone-muted" dir="ltr">
               {pointText(row)}
             </span>
