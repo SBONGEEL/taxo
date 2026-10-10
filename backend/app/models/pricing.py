@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, SmallInteger, UniqueConstraint
+from sqlalchemy import CheckConstraint, SmallInteger, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import MONEY, Base, TimestampMixin, UUIDMixin, pg_enum
-from app.models.enums import CountryCode, VehicleCategory
+from app.models.enums import CountryCode
 
 
 class PricingRule(UUIDMixin, TimestampMixin, Base):
@@ -38,9 +38,8 @@ class PricingRule(UUIDMixin, TimestampMixin, Base):
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False, index=True
     )
-    vehicle_category: Mapped[VehicleCategory] = mapped_column(
-        pg_enum(VehicleCategory, "vehicle_category"), nullable=False
-    )
+    #: **مفتاحُ فئة الرحلة** (§٦٧، `ride_categories.key`) — نصٌّ لا نوعٌ منذ `0110`
+    vehicle_category: Mapped[str] = mapped_column(String(32), nullable=False)
 
     base_fare: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     price_per_km: Mapped[Decimal] = mapped_column(MONEY, nullable=False)

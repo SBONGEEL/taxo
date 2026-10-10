@@ -3,11 +3,11 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin, UUIDMixin, pg_enum
+from app.models.base import Base, TimestampMixin, UUIDMixin
 from app.models.enums import VehicleCategory
 
 if TYPE_CHECKING:
@@ -18,6 +18,7 @@ class Vehicle(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "vehicles"
     __table_args__ = (
         CheckConstraint("year >= 1990 AND year <= 2100", name="vehicle_year_range"),
+        CheckConstraint("seats IS NULL OR seats BETWEEN 1 AND 20", name="vehicle_seats_range"),
     )
 
     driver_id: Mapped[uuid.UUID] = mapped_column(
@@ -33,10 +34,15 @@ class Vehicle(UUIDMixin, TimestampMixin, Base):
     plate_number: Mapped[str] = mapped_column(
         String(32), unique=True, index=True, nullable=False
     )
-    category: Mapped[VehicleCategory] = mapped_column(
-        pg_enum(VehicleCategory, "vehicle_category"),
+    #: **مفتاحُ الفئة المدمجة** — `economy` أو `comfort` (§٦٧: نصٌّ لا نوعٌ في القاعدة، `0110`)
+    category: Mapped[str] = mapped_column(
+        String(32),
         nullable=False,
         default=VehicleCategory.ECONOMY,
     )
+    # ── **صفاتٌ يضعها المشرفُ في مراجعة المركبة** (§٦٧-ج/٥) — **ليست من حقول الهويّة** فلا تُسقط اعتماداً، **وفارغةً لا تستوفي شرطاً**
+    body_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    fuel: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    seats: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     driver: Mapped["Driver"] = relationship(back_populates="vehicles")

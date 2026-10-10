@@ -14,9 +14,9 @@ from app.models.enums import (
     GenderPreference,
     PaymentMethod,
     RideStatus,
-    VehicleCategory,
 )
 from app.schemas.ride import CoordinatesIn
+from app.schemas.category import CategoryKey
 
 
 class BookingCreate(BaseModel):
@@ -29,7 +29,7 @@ class BookingCreate(BaseModel):
     pickup: CoordinatesIn
     dropoff: CoordinatesIn
     scheduled_at: datetime
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     pickup_address: str | None = Field(default=None, max_length=255)
     dropoff_address: str | None = Field(default=None, max_length=255)
     gender_preference: GenderPreference | None = None
@@ -51,7 +51,7 @@ class BookingOut(BaseModel):
     id: uuid.UUID
     status: BookingStatus
     scheduled_at: datetime
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     gender_preference: GenderPreference
     payment_method_hint: PaymentMethod | None
     pickup_lat: float

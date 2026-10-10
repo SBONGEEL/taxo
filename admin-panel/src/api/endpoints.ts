@@ -121,7 +121,11 @@ import type {
   User,
   UserRole,
   Vehicle,
+  VehicleBodyType,
   VehicleCategory,
+  VehicleFuel,
+  RideCategory,
+  CategoryAccess,
   Wallet,
   WalletSetting,
   WalletTransaction,
@@ -1969,3 +1973,49 @@ export async function exportFinance(query: FinanceQuery, view: FinanceView, metr
   link.remove();
   URL.revokeObjectURL(link.href);
 }
+
+// ------------------------------------------------------------ فئاتُ الرحلة (SPEC §٦٧)
+
+export const listRideCategories = (country: CountryCode) =>
+  api.get<RideCategory[]>("/admin/settings/ride-categories", { query: { country_code: country } });
+
+export const createRideCategory = (payload: {
+  country_code: CountryCode;
+  key: string;
+  name: string;
+  icon: string;
+  description: string | null;
+  seats: number;
+  allowed_body_types: VehicleBodyType[];
+  allowed_fuels: VehicleFuel[];
+  min_year: number | null;
+  min_seats: number | null;
+}) => api.post<RideCategory>("/admin/settings/ride-categories", payload);
+
+export const updateRideCategory = (
+  id: string,
+  payload: Partial<{
+    name: string;
+    icon: string;
+    description: string | null;
+    seats: number;
+    sort_order: number;
+    is_active: boolean;
+    allowed_body_types: VehicleBodyType[];
+    allowed_fuels: VehicleFuel[];
+    min_year: number | null;
+    min_seats: number | null;
+  }>,
+) => api.patch<RideCategory>(`/admin/settings/ride-categories/${id}`, payload);
+
+export const listCategoryAccess = (id: string) =>
+  api.get<CategoryAccess[]>(`/admin/settings/ride-categories/${id}/access`);
+
+export const setCategoryAccess = (id: string, payload: { driver_id: string; granted: boolean | null; reason: string }) =>
+  api.put<CategoryAccess[]>(`/admin/settings/ride-categories/${id}/access`, payload);
+
+export const setVehicleAttributes = (
+  driverId: string,
+  vehicleId: string,
+  payload: { body_type: VehicleBodyType | null; fuel: VehicleFuel | null; seats: number | null },
+) => api.patch<Vehicle>(`/admin/drivers/${driverId}/vehicles/${vehicleId}/attributes`, payload);

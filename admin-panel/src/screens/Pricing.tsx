@@ -28,6 +28,7 @@ import {
   createPricing,
   deletePricing,
   listPricing,
+  listRideCategories,
   updatePricing,
 } from "@/api/endpoints";
 import type { CountryCode, PricingRule, VehicleCategory } from "@/api/types";
@@ -40,7 +41,8 @@ import { FormErrors, useFormError } from "@/lib/form-errors";
 import { currencyLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
 
-const CATEGORIES: VehicleCategory[] = ["economy", "comfort"];
+/** **المدمجتان دائماً** — وما أضافه المشرفُ في «فئات الرحلة» بعدهما (SPEC §٦٧): لكلِّ فئةٍ صفُّ أسعارها هنا. */
+const BUILTINS: VehicleCategory[] = ["economy", "comfort"];
 
 const CATEGORY_LABEL: Record<VehicleCategory, string> = {
   economy: "اقتصادية",
@@ -119,9 +121,13 @@ export function PricingScreen() {
   const setError = form.setMessage;
   const [done, setDone] = useState<string | null>(null);
 
+  const [categories, setCategories] = useState<VehicleCategory[]>(BUILTINS);
   const load = useCallback(async () => {
     setRules(null);
-    setRules(await listPricing(country));
+    const [nextRules, rows] = await Promise.all([listPricing(country), listRideCategories(country)]);
+    for (const row of rows) if (!BUILTINS.includes(row.key)) CATEGORY_LABEL[row.key] = row.name;
+    setCategories([...BUILTINS, ...rows.filter((row) => !BUILTINS.includes(row.key)).map((row) => row.key)]);
+    setRules(nextRules);
   }, [country]);
 
   useEffect(() => {
@@ -150,7 +156,7 @@ export function PricingScreen() {
         <Spinner className="mx-auto my-38" />
       ) : (
         <div className="mt-12 grid gap-16 lg:grid-cols-2">
-          {CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <CategoryCard
               key={category}
               country={country}

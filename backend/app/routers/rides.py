@@ -47,6 +47,7 @@ from app.schemas.ride import (
 from app.services import approach, avatar, cancellation, rider_photo
 from app.services import eta
 from app.services import (
+    categories,
     dispatch,
     documents as documents_service,
     notifications,
@@ -135,6 +136,8 @@ async def estimate_ride(
     # **الحارسُ نفسُه الذي يمنع عند الطلب** (`rides.reject_stop_at_dropoff`):
     # قبولٌ هنا ورفضٌ عند التأكيد يجعل الراكبَ يبني على رقمٍ ثم يُردّ
     rides_service.reject_stop_at_dropoff(payload.stops, _coords(payload.dropoff))
+    # **وفئةٌ لا تُطلب لا تُقدَّر** (SPEC §٦٧) — الحارسُ نفسُه الذي يمنع عند الطلب
+    await categories.require_requestable(session, rider.country_code, payload.vehicle_category)
     # **ونفسُ حدِّ الطلب هنا** — فمن قُبل تقديرُه ورُدَّ طلبُه بنى على
     # رقمٍ ثم رُدّ، وهو أسوأُ من ألّا يُمنع.
     service_area.require_inside_market(

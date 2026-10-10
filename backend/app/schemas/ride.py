@@ -20,6 +20,7 @@ from app.models.enums import (
     RideStatus,
     VehicleCategory,
 )
+from app.schemas.category import CategoryKey
 
 if TYPE_CHECKING:
     from app.models.ride import Ride
@@ -43,7 +44,7 @@ class StopIn(BaseModel):
 class RideEstimateRequest(BaseModel):
     pickup: CoordinatesIn
     dropoff: CoordinatesIn
-    vehicle_category: VehicleCategory = VehicleCategory.ECONOMY
+    vehicle_category: CategoryKey = VehicleCategory.ECONOMY
     # المحطاتُ الوسيطة — والوجهةُ الأخيرة تبقى `dropoff` (SPEC القسم 5.10).
     # السقفُ في طبقة الإدخال **ومعه فحصٌ في الخدمة**: هذا يحرس الشكل وذاك
     # يحرس القاعدة، ومن اكتفى بالأول حرس ما يصل من تطبيقه هو
@@ -60,7 +61,7 @@ class RideEstimateOut(BaseModel):
     """السعر المقدّر — محسوب في الخلفية بالكامل (SPEC القسم 5)."""
 
     country_code: CountryCode
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     currency: Currency
     distance_km: Decimal
     duration_min: Decimal
@@ -354,7 +355,7 @@ class RideOut(BaseModel):
     rider_id: uuid.UUID
     status: RideStatus
     country_code: CountryCode
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     currency: Currency
 
     pickup: CoordinatesIn
@@ -646,7 +647,7 @@ class ApproachOut(BaseModel):
 
 
 class EtaCategoryOut(BaseModel):
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     #: دقائقُ أقربِ كبتنٍ متاحٍ من هذه الفئة — **دقيقةٌ واحدةٌ حدٌّ أدنى**
     minutes: int
 

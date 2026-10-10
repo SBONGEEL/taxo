@@ -71,6 +71,8 @@ const GROUPS: {
       { label: "الاشتراكات والباقات", icon: "card_membership", to: "/subscriptions" },
       { label: "عروض الاشتراكات", icon: "redeem", to: "/offers", adminOnly: true },
       { label: "التسعيرة", icon: "sell", to: "/pricing" },
+      // **فئاتُ الرحلة** (A40، SPEC §٦٧) — جوارَ «التسعيرة»: أسعارُ الفئة هناك، والفئةُ وشروطُها ومن يأخذها هنا
+      { label: "فئات الرحلة", icon: "directions_car", to: "/ride-categories" },
       // **تحت «المالية» لا «النظام»**: المركبةُ منتَجٌ له سعرٌ وكميّةٌ وإيراد،
       // ومن يبحث عن «كم بعنا منها» يبحث حيث تُقرأ الأرقام
       { label: "مركبات المتجر", icon: "directions_car", to: "/vehicle-skins", adminOnly: true },

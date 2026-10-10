@@ -88,7 +88,7 @@ async def fee_for(session: AsyncSession, country: CountryCode, *, fetch: bool = 
 
 
 async def prepare(
-    session: AsyncSession, *, rider: User, parcel: ParcelRequest, vehicle_category: VehicleCategory
+    session: AsyncSession, *, rider: User, parcel: ParcelRequest, vehicle_category: str
 ) -> PreparedParcel:
     from app.services.ride_for_other import _normalize_any
 
@@ -96,7 +96,7 @@ async def prepare(
         raise ParcelFetchUnavailable() if parcel.fetch else ParcelUnavailable()
     if not parcel.accepted_terms:
         raise InvalidInput("اقرأ الشروطَ ووافق عليها قبل الطلب" if parcel.fetch else "اقرأ شروطَ الطرد ووافق عليها قبل الطلب")
-    if vehicle_category is not VehicleCategory.ECONOMY:
+    if vehicle_category != VehicleCategory.ECONOMY:
         raise InvalidInput("«أحضر غرضي» بسعر الاقتصادي وحدَه" if parcel.fetch else "الطردُ بسعر الاقتصادي وحدَه")
     # **«أحضر غرضي» يدفعه صاحبُه وحدَه** — هو من يستلم، فلا «مستلمُ نقداً» غيرُه (القيدُ `ride_parcel_fetch` يحرسه في القاعدة أيضاً)
     if parcel.fetch and parcel.payer is not RidePayer.REQUESTER:

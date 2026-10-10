@@ -72,6 +72,10 @@ class VehicleOut(BaseModel):
     color: str
     plate_number: str
     category: VehicleCategory
+    # **صفاتٌ يضعها المشرفُ في مراجعة المركبة** (SPEC §٦٧-ج/٥) — يراها الكبتنُ قراءةً، وتحكم الفئاتِ الجديدة وحدَها
+    body_type: str | None = None
+    fuel: str | None = None
+    seats: int | None = None
     created_at: datetime
 
 

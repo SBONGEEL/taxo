@@ -10,8 +10,7 @@ import type {
   PaymentMethod,
   Ride,
   RideStatus,
-  VehicleCategory,
-} from "@/api/types";
+  VehicleCategory, RideCategoryFace } from "@/api/types";
 import { currencyLabel, digits,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
@@ -41,6 +40,15 @@ export const CATEGORY_LABEL: Record<VehicleCategory, string> = {
   economy: "اقتصادي",
   comfort: "مريح",
 };
+
+/** **الفئاتُ الجديدةُ تُسمّى من `/config`** (SPEC §٦٧) — تُضاف إلى الجداول أعلاه **ولا تمسّ المدمجتين**: «اقتصادي» و«مريح» تبقيان بنصّهما
+ *  اليومَ حرفاً. ويُستدعى حين تصل الإعدادات (`ConfigProvider`)، فكلُّ شاشةٍ تقرأ الجدولَ نفسَه بلا بابٍ ثانٍ. */
+export function registerCategoryFaces(faces: RideCategoryFace[]): void {
+  for (const face of faces) {
+    if (face.key === "economy" || face.key === "comfort") continue;
+    CATEGORY_LABEL[face.key] = face.name;
+  }
+}
 
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "كاش",

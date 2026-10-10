@@ -34,8 +34,8 @@ from app.models.enums import (
     PaymentStatus,
     RatingRaterType,
     RideStatus,
-    VehicleCategory,
 )
+from app.schemas.category import CategoryKey
 
 
 # **الطرفانِ نُقلا إلى `schemas/party.py`** (٢٠٢٦-٠٩-٠٤، §٤٧٫١٩) باسمَي
@@ -52,7 +52,7 @@ class AdminRideRow(BaseModel):
     id: uuid.UUID
     status: RideStatus
     country_code: CountryCode
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     currency: Currency
 
     rider: PartyOut

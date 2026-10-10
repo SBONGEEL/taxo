@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from app.core.currency import currency_for_country
 from app.core.phone import dial_code_for, national_length_for
-from app.models.enums import CountryCode, FeatureKey, VehicleCategory
+from app.models.enums import CountryCode, FeatureKey
 from app.schemas.config import CountryConfigOut
-from app.services import campaigns, otp, settings_service, verification
+from app.services import campaigns, categories, otp, settings_service, verification
 
 
 async def build(session, country: CountryCode) -> CountryConfigOut:
@@ -28,12 +28,16 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
 
     policy = rounding.policy_of(pay)
     channels = await verification.available_methods(session, country)
+    # **فئاتُ الرحلة المطلوبة الآن** (SPEC §٦٧) — المدمجتان بوجهيهما الافتراضيّين ما لم يُبذر لهما صفّ
+    keys = await categories.requestable_keys(session, country)
+    rows = {row.key: row for row in await categories.for_country(session, country)}
     method = channels[0] if channels else verification.NONE
     return CountryConfigOut(
         country_code=country,
         currency=currency_for_country(country),
         features=await settings_service.get_flags(session, country),
-        vehicle_categories=list(VehicleCategory),
+        vehicle_categories=keys,
+        ride_categories=[categories.public_face(key, rows.get(key)) for key in keys],
         dial_code=dial_code_for(country),
         national_number_length=national_length_for(country),
         quiet_hours_start=(

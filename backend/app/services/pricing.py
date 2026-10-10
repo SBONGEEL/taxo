@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.currency import currency_for_country
 from app.core.exceptions import PricingRuleMissing
-from app.models.enums import CountryCode, Currency, VehicleCategory
+from app.models.enums import CountryCode, Currency
 from app.models.pricing import PricingRule
 from app.services.directions import Coordinates, Route, route_between
 
@@ -39,7 +39,7 @@ MONEY_STEP = Decimal("0.001")
 @dataclass(frozen=True, slots=True)
 class FareEstimate:
     country_code: CountryCode
-    vehicle_category: VehicleCategory
+    vehicle_category: str
     currency: Currency
     route: Route
     fare: Decimal
@@ -142,7 +142,7 @@ def calculate_fare(
 
 
 async def get_rule(
-    session: AsyncSession, country_code: CountryCode, vehicle_category: VehicleCategory
+    session: AsyncSession, country_code: CountryCode, vehicle_category: str
 ) -> PricingRule:
     rule = await session.scalar(
         select(PricingRule).where(
@@ -159,7 +159,7 @@ async def estimate(
     session: AsyncSession,
     *,
     country_code: CountryCode,
-    vehicle_category: VehicleCategory,
+    vehicle_category: str,
     pickup: Coordinates,
     dropoff: Coordinates,
     stops: Sequence[Coordinates] = (),
@@ -211,7 +211,7 @@ async def estimate(
 
     return FareEstimate(
         country_code=CountryCode(country_code),
-        vehicle_category=VehicleCategory(vehicle_category),
+        vehicle_category=str(vehicle_category),
         currency=currency_for_country(country_code),
         route=route,
         fare=fare,

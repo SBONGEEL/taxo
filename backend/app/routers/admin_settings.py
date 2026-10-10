@@ -40,7 +40,7 @@ from app.schemas.storefront import (
     ServiceTileIn,
     ServiceTilePatch,
 )
-from app.services import storefront
+from app.services import categories, storefront
 from app.schemas.settings import (
     DispatchSettingOut,
     DispatchSettingUpdate,
@@ -148,7 +148,7 @@ async def create_pricing_rule(
         entity_id=rule.id,
         details={
             "country_code": payload.country_code.value,
-            "vehicle_category": payload.vehicle_category.value,
+            "vehicle_category": str(payload.vehicle_category),
         },
     )
     await _commit(session, rule)
@@ -170,6 +170,8 @@ async def update_pricing_rule(
         session, actor=admin, country_code=rule.country_code, entity_id=rule.id
     )
     changed = _apply_updates(rule, payload.model_dump(exclude_unset=True))
+    # **ولا تصير فئةٌ مشتعلةٌ بسعرٍ صفر** (SPEC §٦٧-ب/٣) — الشرطُ نفسُه الذي يحرس إشعالَها، على بابِ تعديل أسعارها
+    await _require_priced_if_active(session, rule)
     await audit.record(
         session,
         actor=admin,
@@ -180,6 +182,13 @@ async def update_pricing_rule(
     )
     await _commit(session, rule)
     return PricingRuleOut.model_validate(rule)
+
+
+async def _require_priced_if_active(session, rule: PricingRule) -> None:
+    category = await categories.get(session, rule.country_code, str(rule.vehicle_category))
+    if category is not None and category.is_active and not category.is_builtin:
+        await session.flush()
+        await categories.require_priced(session, rule.country_code, rule.vehicle_category)
 
 
 @router.delete("/pricing/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -193,6 +202,10 @@ async def delete_pricing_rule(
     await money_guards.require_pricing_writes(
         session, actor=admin, country_code=rule.country_code, entity_id=rule.id
     )
+    # **ولا تُحذف أسعارُ فئةٍ جديدةٍ مشتعلة** (SPEC §٦٧) — تُطفأ الفئةُ أوّلاً
+    category = await categories.get(session, rule.country_code, str(rule.vehicle_category))
+    if category is not None and category.is_active and not category.is_builtin:
+        raise InvalidInput("أطفئ هذه الفئةَ أوّلاً — لا تُحذف أسعارُ فئةٍ مشتعلة")
     await audit.record(
         session,
         actor=admin,
@@ -201,7 +214,7 @@ async def delete_pricing_rule(
         entity_id=rule.id,
         details={
             "country_code": rule.country_code.value,
-            "vehicle_category": rule.vehicle_category.value,
+            "vehicle_category": str(rule.vehicle_category),
         },
     )
     await session.delete(rule)

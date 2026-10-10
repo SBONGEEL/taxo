@@ -15,9 +15,9 @@ from app.models.enums import (
     FeatureKey,
     RoundingMode,
     SubscriptionDurationType,
-    VehicleCategory,
 )
 from app.schemas.config import CountryConfigOut
+from app.schemas.category import CategoryKey
 
 # كل مبلغ NUMERIC(12,3) — نفس قيد القاعدة معبَّراً عنه في طبقة الإدخال
 Money = Field(ge=0, max_digits=12, decimal_places=3)
@@ -34,7 +34,7 @@ StopMinutes = Field(default=0, ge=0, le=240)
 
 class PricingRuleCreate(BaseModel):
     country_code: CountryCode
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     base_fare: Decimal = Money
     price_per_km: Decimal = Money
     price_per_min: Decimal = Money
@@ -78,7 +78,7 @@ class PricingRuleOut(BaseModel):
 
     id: uuid.UUID
     country_code: CountryCode
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     base_fare: Decimal
     price_per_km: Decimal
     price_per_min: Decimal

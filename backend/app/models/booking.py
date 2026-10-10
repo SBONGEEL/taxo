@@ -42,7 +42,6 @@ from app.models.enums import (
     CountryCode,
     GenderPreference,
     PaymentMethod,
-    VehicleCategory,
 )
 from app.models.ride import _latitude, _longitude, _point_column
 
@@ -119,9 +118,8 @@ class RideBooking(UUIDMixin, TimestampMixin, Base):
     dropoff_point: Mapped[str] = mapped_column(_point_column(), nullable=False)
     dropoff_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    vehicle_category: Mapped[VehicleCategory] = mapped_column(
-        pg_enum(VehicleCategory, "vehicle_category"), nullable=False
-    )
+    #: **مفتاحُ فئة الرحلة** (§٦٧، `ride_categories.key`) — نصٌّ لا نوعٌ منذ `0110`
+    vehicle_category: Mapped[str] = mapped_column(String(32), nullable=False)
     # تفضيلُ الجنس **يُخزَّن كما اختارته**: الخدمةُ قد تُطفأ بين الحجز والتنفيذ،
     # وحينها تُنشأ الرحلةُ بلا تفضيلٍ **ويُبلَّغ صاحبُها** (القسم 5.11) — ولا
     # يُمحى المخزَّن، فهو اختيارُها ويعود إن عادت الخدمة

@@ -7,6 +7,7 @@
 import type {
   PaymentMethod,
   PaymentStatus,
+  RideCategoryFace,
   RideStatus,
   VehicleCategory,
   WalletTransactionType,
@@ -47,6 +48,20 @@ export const VEHICLE_HINT: Record<VehicleCategory, string> = {
   economy: "الخيار الأوفر",
   comfort: "سيارة أوسع وأحدث",
 };
+
+/** أيقونةُ الفئة في «اختر الفئة» (R06) — والجديدةُ من صفّها. */
+export const CATEGORY_ICON: Record<VehicleCategory, string> = { economy: "local_taxi", comfort: "directions_car" };
+
+/** **الفئاتُ الجديدةُ تُسمّى من `/config`** (SPEC §٦٧) — تُضاف إلى الجداول أعلاه **ولا تمسّ المدمجتين**: «اقتصادي» و«مريح» تبقيان بنصّهما
+ *  اليومَ حرفاً. ويُستدعى حين تصل الإعدادات (`ConfigProvider`)، فكلُّ شاشةٍ تقرأ الجدولَ نفسَه بلا بابٍ ثانٍ. */
+export function registerCategoryFaces(faces: RideCategoryFace[]): void {
+  for (const face of faces) {
+    if (face.key === "economy" || face.key === "comfort") continue;
+    VEHICLE_LABEL[face.key] = face.name;
+    VEHICLE_HINT[face.key] = face.description ? `${face.description} · ${face.seats} مقاعد` : `${face.seats} مقاعد`;
+    CATEGORY_ICON[face.key] = face.icon;
+  }
+}
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   wallet: "المحفظة",

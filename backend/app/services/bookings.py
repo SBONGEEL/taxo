@@ -49,11 +49,10 @@ from app.models.enums import (
     GenderPreference,
     PaymentMethod,
     RideStatus,
-    VehicleCategory,
 )
 from app.models.ride import Ride, make_point
 from app.models.user import User
-from app.services import dispatch, pricing, rides as rides_service, settings_service
+from app.services import categories, dispatch, pricing, rides as rides_service, settings_service
 from app.services.directions import Coordinates
 from app.services.notifications import (
     publish_booking_missed,
@@ -160,7 +159,7 @@ async def create(
     pickup: Coordinates,
     dropoff: Coordinates,
     scheduled_at: datetime,
-    vehicle_category: VehicleCategory,
+    vehicle_category: str,
     pickup_address: str | None = None,
     dropoff_address: str | None = None,
     gender_preference: GenderPreference | None = None,
@@ -216,6 +215,12 @@ async def create(
     # **والالتقاطُ ضيّقٌ لا `Exception` عريضة**: العريضةُ ابتلعت خطأً في اسم حقلٍ
     # في أول تشغيل (`estimated_fare` مكانَ `fare`) فخُزّن `NULL` بلا أن يقول
     # شيءٌ شيئاً — وهو بعينه العطبُ الذي تحرسه قاعدةُ «لا تبتلع ما ليس عطبَ مزوّد».
+    # **والحجزُ لفئةٍ تُطلب الآن وحدَها** (SPEC §٦٧) — وحجزٌ قائمٌ لفئةٍ أُطفئت بعده يمضي كما هو
+    await categories.require_requestable(session, rider.country_code, vehicle_category)
+    # **والمضمونُ للمدمجتين وحدهما** (§٦٧-د): «عروضٌ تنتظرك» تعرض الحجزَ على من فئةُ مركبته فئتُه — فمضمونٌ في فئةٍ جديدةٍ لا يأخذه
+    # أحدٌ وينتهي ردّاً. **فيُقال قبل أن يُحفظ رسمُه** لا بعد ساعات
+    if guaranteed and not categories.is_builtin(vehicle_category):
+        raise InvalidInput("الحجزُ المضمون لـ«اقتصادي» و«مريح» وحدهما الآن")
     estimate: Decimal | None = None
     try:
         quote = await pricing.estimate(

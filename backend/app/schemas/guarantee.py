@@ -8,13 +8,14 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import Currency, VehicleCategory
+from app.models.enums import Currency
+from app.schemas.category import CategoryKey
 
 
 class GuaranteeOfferOut(BaseModel):
     id: uuid.UUID
     scheduled_at: datetime
-    vehicle_category: VehicleCategory
+    vehicle_category: CategoryKey
     pickup_lat: float
     pickup_lng: float
     pickup_address: str | None

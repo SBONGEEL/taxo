@@ -112,6 +112,8 @@ export interface CountryConfig {
   currency: Currency;
   features: Record<string, boolean>;
   vehicle_categories: string[];
+  /** **وجوهُ ما يُطلب في السوق** (SPEC §٦٧) — ما يراه التطبيقان؛ واللوحةُ تقرأ الفئاتِ كاملةً من «فئات الرحلة». */
+  ride_categories: Array<{ key: string; name: string; icon: string; description: string | null; seats: number }>;
   dial_code: string;
   national_number_length: number;
   quiet_hours_start: string | null;
@@ -762,8 +764,39 @@ export interface Overview {
 
 // ------------------------------------------------------------ الخريطة الحيّة
 
-/** منسوختان حرفياً من `app/models/enums.py` — و`check:enums` يحرسهما. */
-export type VehicleCategory = "economy" | "comfort";
+/** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً، فالمفتاحُ نصّ. */
+export type VehicleCategory = string;
+
+/** **نوعُ الهيكل والوقود** — منسوختان حرفياً من `app/models/enums.py` (`check:enums` يحرسهما). */
+export type VehicleBodyType = "sedan" | "hatchback" | "suv" | "minivan" | "van";
+export type VehicleFuel = "petrol" | "diesel" | "hybrid" | "electric";
+
+/** **فئةُ رحلةٍ كما تراها اللوحة** (`RideCategoryOut`، صفحة A40). */
+export interface RideCategory {
+  id: string;
+  country_code: CountryCode;
+  key: string;
+  name: string;
+  icon: string;
+  description: string | null;
+  seats: number;
+  sort_order: number;
+  is_active: boolean;
+  is_builtin: boolean;
+  allowed_body_types: VehicleBodyType[];
+  allowed_fuels: VehicleFuel[];
+  min_year: number | null;
+  min_seats: number | null;
+}
+
+/** **منحُ فئةٍ لكبتنٍ أو نزعُها** (`CategoryAccessOut`). */
+export interface CategoryAccess {
+  driver_id: string;
+  driver_name: string | null;
+  driver_phone: string | null;
+  granted: boolean;
+  reason: string | null;
+}
 
 /** مركبةُ كبتن — يقرؤها **قسمُ المركبة في الملفِّ الشخصيّ** (§37).
  *
@@ -781,6 +814,10 @@ export interface Vehicle {
   /** **لا تُحوَّل خاناتُه** (§20): يُقارَن حرفاً بحرفٍ بلوحةٍ معدنيةٍ في يد. */
   plate_number: string;
   category: VehicleCategory;
+  /** **صفاتٌ يضعها المشرفُ في مراجعة المركبة** (SPEC §٦٧-ج/٥) — تحكم الفئاتِ الجديدةَ وحدَها. */
+  body_type: VehicleBodyType | null;
+  fuel: VehicleFuel | null;
+  seats: number | null;
   created_at: string;
 }
 

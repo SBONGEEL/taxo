@@ -312,6 +312,13 @@ export function VehicleT2Screen() {
                 <span>رقم اللوحة</span>
                 <span dir="ltr">{s.vehicle.plate_number}</span>
               </div>
+              {/* **صفاتُ المراجعة قراءةً** (SPEC §٦٧-ج/٥) — يضعها المشرف، وبها تصلك الفئاتُ الجديدة؛ ولا تُرسم ما دامت فارغة */}
+              {s.vehicle.seats !== null ? (
+                <div className="t2-vdocs-pair">
+                  <span>المقاعد</span>
+                  <span>{digits(String(s.vehicle.seats))}</span>
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="t2-more t2-vdocs-edit"

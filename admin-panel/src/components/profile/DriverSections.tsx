@@ -6,7 +6,7 @@
  * الشجرة (`ARCHITECTURE.md`: «passing the latter silently returns zero»).
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getDriverLiveRide,
@@ -14,8 +14,13 @@ import {
   listDriverDebts,
   listDriverVehicles,
   listSubscriptions,
+  setVehicleAttributes,
 } from "@/api/endpoints";
-import type { DriverLiveRide } from "@/api/types";
+import type { DriverLiveRide, Vehicle, VehicleBodyType, VehicleFuel } from "@/api/types";
+import { Button } from "@/components/ui/Button";
+import { Field, Select } from "@/components/ui/Field";
+import { ErrorNote } from "@/components/ui/Feedback";
+import { BODY_LABEL, FUEL_LABEL } from "@/screens/RideCategories";
 import {
   CappedNote,
   Facts,
@@ -86,15 +91,81 @@ export function VehiclesSection({ driverId }: { driverId: string }) {
                       label: "الفئة",
                       value: CATEGORY_LABEL[vehicle.category] ?? vehicle.category,
                     },
+                    {
+                      label: "الهيكل · الوقود · المقاعد",
+                      value: [
+                        vehicle.body_type ? BODY_LABEL[vehicle.body_type] : "—",
+                        vehicle.fuel ? FUEL_LABEL[vehicle.fuel] : "—",
+                        vehicle.seats !== null ? digits(String(vehicle.seats)) : "—",
+                      ].join(" · "),
+                    },
                     { label: "أُضيفت", value: day(vehicle.created_at) },
                   ]}
                 />
+              ))}
+              {rows.map((vehicle) => (
+                <VehicleAttributes key={`attrs-${vehicle.id}`} driverId={driverId} vehicle={vehicle} />
               ))}
             </div>
           )}
         </>
       )}
     </ProfileSection>
+  );
+}
+
+/** **صفاتُ المركبة** يضعها المشرفُ في مراجعتها (SPEC §٦٧-ج/٥) — **ليست من حقول الهويّة**: لا تُسقط اعتماداً ولا تمرّ بقفله، **وتحكم
+ *  الفئاتِ الجديدةَ وحدَها**؛ وفارغةً لا تستوفي شرطاً. */
+function VehicleAttributes({ driverId, vehicle }: { driverId: string; vehicle: Vehicle }) {
+  const [body, setBody] = useState<VehicleBodyType | "">(vehicle.body_type ?? "");
+  const [fuel, setFuel] = useState<VehicleFuel | "">(vehicle.fuel ?? "");
+  const [seats, setSeats] = useState(vehicle.seats === null ? "" : String(vehicle.seats));
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="rounded-13 border border-line p-12">
+      <div className="grid gap-10 md:grid-cols-3">
+        <Select label="الهيكل" value={body} onChange={(event) => setBody(event.target.value as VehicleBodyType | "")}>
+          <option value="">—</option>
+          {(Object.keys(BODY_LABEL) as VehicleBodyType[]).map((key) => (
+            <option key={key} value={key}>
+              {BODY_LABEL[key]}
+            </option>
+          ))}
+        </Select>
+        <Select label="الوقود" value={fuel} onChange={(event) => setFuel(event.target.value as VehicleFuel | "")}>
+          <option value="">—</option>
+          {(Object.keys(FUEL_LABEL) as VehicleFuel[]).map((key) => (
+            <option key={key} value={key}>
+              {FUEL_LABEL[key]}
+            </option>
+          ))}
+        </Select>
+        <Field label="المقاعد" inputMode="numeric" dir="ltr" value={seats} onChange={(event) => setSeats(event.target.value)} />
+      </div>
+      <ErrorNote message={error} />
+      {note ? <p className="mt-6 text-11.5 text-muted">{note}</p> : null}
+      <Button
+        className="mt-10"
+        size="sm"
+        loading={busy}
+        onClick={() => {
+          setBusy(true);
+          setError(null);
+          setVehicleAttributes(driverId, vehicle.id, {
+            body_type: body || null,
+            fuel: fuel || null,
+            seats: seats.trim() === "" ? null : Number(seats),
+          })
+            .then(() => setNote("حُفظت صفاتُ المركبة — تحكم الفئاتِ الجديدةَ من الطلب التالي"))
+            .catch((caught: Error) => setError(caught.message))
+            .finally(() => setBusy(false));
+        }}
+      >
+        حفظُ صفات المركبة
+      </Button>
+    </div>
   );
 }
 

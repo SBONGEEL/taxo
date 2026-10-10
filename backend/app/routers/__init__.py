@@ -27,6 +27,7 @@ from app.routers import (
     admin_search,
     admin_otp_templates,
     admin_security,
+    admin_categories,
     admin_settings,
     admin_facilities,
     admin_map_places,
@@ -97,6 +98,8 @@ api_router.include_router(subscriptions.router)
 api_router.include_router(telemetry.router)
 api_router.include_router(admin_errors.router)
 api_router.include_router(admin_settings.router)
+# **فئاتُ الرحلة** (SPEC §٦٧) — صفحتُها في اللوحة وصفاتُ المركبة
+api_router.include_router(admin_categories.router)
 api_router.include_router(admin_facilities.router)
 api_router.include_router(admin_map_places.router)
 api_router.include_router(guarantees.router)

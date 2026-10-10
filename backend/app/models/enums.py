@@ -64,8 +64,30 @@ class DriverStatus(StrEnum):
 
 
 class VehicleCategory(StrEnum):
+    """**الفئتان المدمجتان** (SPEC §٦٧) — **والفئةُ صارت بياناً** (`ride_categories`): الأعمدةُ نصٌّ يحمل مفتاحَ الفئة، وهذان ثابتان
+    يُقرآن بالاسم حيث القاعدةُ لهما وحدَهما («الاقتصاديُّ وحدَه» في الطرد والساعات والمشوار)."""
+
     ECONOMY = "economy"
     COMFORT = "comfort"
+
+
+class VehicleBodyType(StrEnum):
+    """**نوعُ هيكل المركبة** (§٦٧-ج/٥) — يضعه المشرفُ في مراجعة المركبة، وشرطٌ لفئةٍ جديدة."""
+
+    SEDAN = "sedan"
+    HATCHBACK = "hatchback"
+    SUV = "suv"
+    MINIVAN = "minivan"
+    VAN = "van"
+
+
+class VehicleFuel(StrEnum):
+    """**وقودُ المركبة** (§٦٧-ج/٥) — بالحكم نفسِه."""
+
+    PETROL = "petrol"
+    DIESEL = "diesel"
+    HYBRID = "hybrid"
+    ELECTRIC = "electric"
 
 
 class DocumentType(StrEnum):

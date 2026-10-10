@@ -19,6 +19,7 @@ import { Capacitor } from "@capacitor/core";
 
 import { ApiError } from "@/api/client";
 import { getConfig } from "@/api/endpoints";
+import { registerCategoryFaces } from "@/lib/labels";
 import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 import { onSplashRetry, setSplashStatus } from "@/lib/splash";
@@ -90,6 +91,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     getConfig()
       .then((value) => {
         if (cancelled) return;
+        // **الفئاتُ الجديدةُ تُسمّى قبل أن تُرسم أيُّ شاشة** (SPEC §٦٧)
+        registerCategoryFaces(value.countries.flatMap((country) => country.ride_categories ?? []));
         setConfig(value);
         // آخرُ نسخةٍ من القواعد تُخزَّن لحظةَ وصولها (SPEC ١٧.٣)
         cacheRules(value.validation);

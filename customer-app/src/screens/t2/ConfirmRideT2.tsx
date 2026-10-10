@@ -48,7 +48,7 @@ import { useConfirmRide, waitingNote, type ConfirmRideProps } from "@/components
 import { PAY_ICON_T2, PaymentPicker } from "@/components/payment/PaymentPicker";
 import { earliest, latest, localInputValue } from "@/lib/bookings";
 import { useFeature } from "@/lib/config";
-import { PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
+import { CATEGORY_ICON, PAYMENT_METHOD_LABEL, VEHICLE_HINT, VEHICLE_LABEL } from "@/lib/labels";
 import { MAX_STOPS } from "@/lib/multistop";
 import { useSession } from "@/lib/session";
 import { currencyLabel, formatDistance, formatDuration, formatMoney } from "@/lib/utils";
@@ -62,7 +62,6 @@ import { DateField, Icon, Switch } from "@/taxo2";
 import "./t2.css";
 
 /** رمزُ كلِّ فئةٍ كما رسمته اللوحة. */
-const CATEGORY_ICON: Record<string, string> = { economy: "local_taxi", comfort: "directions_car" };
 
 /** «14 د» كما رسمتها اللوحة — والساعةُ فما فوقها بصيغة التطبيق نفسِها. */
 function shortDuration(minutes: string | number) {

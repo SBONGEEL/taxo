@@ -13,7 +13,8 @@ import type { Crumb } from "@/lib/breadcrumbs";
 
 export type CountryCode = "JO" | "LY";
 export type Currency = "JOD" | "LYD";
-export type VehicleCategory = "economy" | "comfort";
+/** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
+export type VehicleCategory = string;
 export type UserRole = "rider" | "driver" | "admin" | "support";
 
 export type RideStatus =
@@ -211,6 +212,8 @@ export interface CountryConfig {
   currency: Currency;
   features: Record<string, boolean>;
   vehicle_categories: VehicleCategory[];
+  /** **وجوهُ ما يُطلب** بترتيبه (SPEC §٦٧) — منها تُسمّى الفئاتُ الجديدة. */
+  ride_categories: RideCategoryFace[];
   /** بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` عبر `/config`. */
   dial_code: string;
   national_number_length: number;
@@ -1391,4 +1394,13 @@ export interface MapPlaceSpot {
   source: "place" | "facility";
   /** بالمتر من نقطة البحث — في البحث وحدَه. */
   distance_m: number | null;
+}
+
+/** **وجهُ فئة الرحلة** كما تنشره `/config` (SPEC §٦٧) — الاسمُ والأيقونةُ والوصفُ والمقاعد بترتيب السوق. */
+export interface RideCategoryFace {
+  key: VehicleCategory;
+  name: string;
+  icon: string;
+  description: string | null;
+  seats: number;
 }

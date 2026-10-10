@@ -35,7 +35,6 @@ from app.models.enums import (
     GenderPreference,
     PaymentMethod,
     RideStatus,
-    VehicleCategory,
 )
 
 if TYPE_CHECKING:
@@ -250,9 +249,8 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     country_code: Mapped[CountryCode] = mapped_column(
         pg_enum(CountryCode, "country_code"), nullable=False, index=True
     )
-    vehicle_category: Mapped[VehicleCategory] = mapped_column(
-        pg_enum(VehicleCategory, "vehicle_category"), nullable=False
-    )
+    #: **مفتاحُ فئة الرحلة** (§٦٧، `ride_categories.key`) — نصٌّ لا نوعٌ منذ `0110`
+    vehicle_category: Mapped[str] = mapped_column(String(32), nullable=False)
 
     pickup_point: Mapped[str] = mapped_column(_point_column(), nullable=False)
     pickup_address: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -47,7 +47,6 @@ from app.models.enums import (
     RidePayer,
     RideStatus,
     UserRole,
-    VehicleCategory,
 )
 from app.models.payment import Payment
 from app.models.ride import (
@@ -62,7 +61,7 @@ from app.models.ride import (
 from app.models.user import User
 from app.services import cancellation
 from app.services import dispatch, pricing, route, settings_service, verification
-from app.services import parcels, ride_for_other, test_accounts
+from app.services import categories, parcels, ride_for_other, test_accounts
 from app.services import hourly as hourly_service
 from app.services.directions import Coordinates, Route
 from app.core.exceptions import AmbiguousRole
@@ -388,7 +387,7 @@ async def request_ride(
     rider: User,
     pickup: Coordinates,
     dropoff: Coordinates,
-    vehicle_category: VehicleCategory,
+    vehicle_category: str,
     pickup_address: str | None = None,
     dropoff_address: str | None = None,
     gender_preference: GenderPreference | None = None,
@@ -524,6 +523,8 @@ async def request_ride(
         assert row is not None  # `require_available` تحقّق منه
         share_percent = row.discount_percent
 
+    # **فئةٌ مطفأةٌ أو مجهولةٌ لا تُطلب** (SPEC §٦٧-ج/٧) — والمدمجتان كما اليوم
+    await categories.require_requestable(session, rider.country_code, vehicle_category)
     # السعر يُعاد حسابه هنا ولا يُقرأ من طلب العميل مهما أرسل
     # **الطردُ يُفحص قبل التسعير** (§٦٣-ج/٤): مفتاحُه وإقرارُ الشروط والفئة — ثمّ يُسعَّر برسمه
     prepared_parcel = None

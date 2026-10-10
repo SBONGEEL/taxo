@@ -152,6 +152,19 @@ def test_every_multi_door_computed_payload_is_classified() -> None:
 
 #: التصنيفُ بعلّته — والعلّةُ نصٌّ يُقرأ لا مجرّد وجودٍ في قائمة.
 CLASSIFIED: dict[str, str] = {
+    # ✅ بانٍ واحد — فئاتُ الرحلة (SPEC §٦٧، 2026-10-10)
+    "VehicleOut": (
+        "بانٍ واحد: `VehicleOut.model_validate(vehicle)` من صفِّ `vehicles` في كلِّ باب (`from_attributes`). **وفراغُ `body_type` و`fuel` "
+        "و`seats` حالٌ لا نسيان**: مركبةٌ لم يراجع المشرفُ صفاتِها — وفارغةً لا تستوفي شرطَ فئةٍ جديدة (§٦٧-ج/٥)"
+    ),
+    "RideCategoryOut": (
+        "بانٍ واحد: `RideCategoryOut.model_validate(row)` من صفِّ `ride_categories` في الأبواب الثلاثة. **و`description` فارغٌ حال**: "
+        "فئةٌ بلا وصف"
+    ),
+    "CategoryAccessOut": (
+        "بانٍ واحد: `admin_categories.list_access` — و`PUT …/access` يعيده هو بعينه بعد الكتابة. **والاسمُ والرقمُ فارغان حال**: "
+        "حسابٌ مُحي اسمُه"
+    ),
     # ✅ بانٍ واحد — أماكنُ الخريطة (SPEC §٧١-د، 2026-10-09)
     "MapPlaceOut": (
         "بانٍ واحد: `routers/map_places._out` يخدم ما يُرسم (`GET /map-places`) وما يُبحث (`/map-places/search`) من "

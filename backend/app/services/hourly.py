@@ -67,12 +67,12 @@ async def settings_for(session: AsyncSession, country: CountryCode) -> ServiceSe
 
 
 async def prepare(
-    session: AsyncSession, *, rider: User, request: HourlyRequest, vehicle_category: VehicleCategory
+    session: AsyncSession, *, rider: User, request: HourlyRequest, vehicle_category: str
 ) -> HourlyTerms:
     row = await settings_for(session, rider.country_code)
     if row is None:
         raise HourlyUnavailable()
-    if vehicle_category is not VehicleCategory.ECONOMY:
+    if vehicle_category != VehicleCategory.ECONOMY:
         raise InvalidInput("الرحلةُ بالساعة بسعر الاقتصادي وحدَه")
     if not 1 <= request.hours <= row.hourly_max_hours:
         raise InvalidInput(f"الساعاتُ من 1 إلى {row.hourly_max_hours}")

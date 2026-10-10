@@ -43,7 +43,6 @@ from app.models.enums import (
     Gender,
     GenderPreference,
     RideStatus,
-    VehicleCategory,
 )
 from app.models.ride import ACTIVE_DRIVER_STATUSES, Ride
 from app.models.user import User
@@ -51,6 +50,7 @@ from app.models.vehicle import Vehicle
 from app.services.dispatch_settings import DEFAULTS as _DEFAULTS
 from app.services.dispatch_settings import DispatchRules, rules_for
 from app.services import (
+    categories,
     geo,
     missions,
     notifications,
@@ -361,11 +361,12 @@ async def rider_is_test(session: AsyncSession, rider_id: uuid.UUID) -> bool:
 async def _eligible_levels(
     session: AsyncSession,
     driver_ids: list[uuid.UUID],
-    vehicle_category: VehicleCategory,
+    vehicle_category: str,
     *,
     gender: GenderMatch | None = None,
     airport: bool = False,
     test: bool = False,
+    country: CountryCode | None = None,
 ) -> dict[uuid.UUID, int]:
     """من بين الحاضرين جغرافياً: من يحق له استقبال طلب الآن — **ومستواه معه**.
 
@@ -404,11 +405,9 @@ async def _eligible_levels(
         .where(Ride.driver_id == Driver.id, Ride.status.in_(ACTIVE_DRIVER_STATUSES))
         .exists()
     )
-    has_vehicle = (
-        select(Vehicle.id)
-        .where(Vehicle.driver_id == Driver.id, Vehicle.category == vehicle_category)
-        .exists()
-    )
+    # **من يأخذ هذه الفئة** (SPEC §٦٧-ج/٣، `categories.driver_clause`): المدمجتان بمطابقة فئة المركبة حرفاً كما كانت، والجديدةُ بشروطها
+    # أو بمنحٍ يدويٍّ ما لم تُنزع — **والدولةُ تُسمّي الفئةَ الجديدة** (مفتاحُها فريدٌ في سوقه)
+    has_vehicle = await categories.driver_clause(session, country, vehicle_category)
     subscribed = subscriptions.covered_driver_ids_subquery().exists()
 
     conditions = [
@@ -468,7 +467,7 @@ async def _eligible_levels(
 async def eligible_driver_ids(
     session: AsyncSession,
     driver_ids: list[uuid.UUID],
-    vehicle_category: VehicleCategory,
+    vehicle_category: str,
     *,
     gender: GenderMatch | None = None,
     test: bool = False,
@@ -529,7 +528,8 @@ async def _ranked_candidates(
                 radius_km=radius,
             )
             if presence.driver_id not in tried
-            and presence.vehicle_category == ride.vehicle_category
+            # **فئةُ المركبة في الحضور تحسم المدمجتين وحدهما** (§٦٧-ج/٣) — والجديدةُ يحسمها شرطُها في `_eligible_levels`
+            and (not categories.is_builtin(ride.vehicle_category) or presence.vehicle_category == ride.vehicle_category)
         ]
         if not presences:
             continue
@@ -543,6 +543,7 @@ async def _ranked_candidates(
             airport=ride.facility_id is not None,
             # **عالمُ راكبِ الرحلة** (§٦٥-ج)
             test=test,
+            country=ride.country_code,
         )
         ranked = [p for p in presences if p.driver_id in levels]
         if not ranked:

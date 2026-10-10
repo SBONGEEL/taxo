@@ -5,16 +5,20 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.models.enums import CountryCode, Currency, RoundingMode, VehicleCategory
+from app.models.enums import CountryCode, Currency, RoundingMode
 from app.models.payment_setting import DEFAULT_ROUNDING_UNIT
 from app.schemas.auth import AuthMethodResponse
+from app.schemas.category import RideCategoryPublic
 
 
 class CountryConfigOut(BaseModel):
     country_code: CountryCode
     currency: Currency
     features: dict[str, bool]
-    vehicle_categories: list[VehicleCategory]
+    #: **مفاتيحُ ما يُطلب الآن في السوق بترتيبه** (SPEC §٦٧) — المدمجتان والمشتعلةُ من الجديدة
+    vehicle_categories: list[str]
+    #: **وجوهُها**: الاسمُ والأيقونةُ والوصفُ والمقاعد — منها يرسم الراكبُ «اختر الفئة» والكبتنُ بطاقةَ الطلب
+    ride_categories: list[RideCategoryPublic] = []
     # بادئةُ الدولة وطولُ رقمها الوطني — من `core/phone.py` وحده، ليرسم
     # التطبيقان الحقل بلا كتابة «962» في كودهما
     dial_code: str

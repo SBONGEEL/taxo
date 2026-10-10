@@ -126,6 +126,10 @@ const SubscriptionsScreen = lazy(() =>
 const PricingScreen = lazy(() =>
   import("@/screens/Pricing").then((m) => ({ default: m.PricingScreen })),
 );
+// **فئاتُ الرحلة** (A40، SPEC §٦٧)
+const RideCategoriesScreen = lazy(() =>
+  import("@/screens/RideCategories").then((m) => ({ default: m.RideCategoriesScreen })),
+);
 const ReportsScreen = lazy(() =>
   import("@/screens/Reports").then((m) => ({ default: m.ReportsScreen })),
 );
@@ -518,6 +522,14 @@ export default function App() {
                     element={
                       <Guarded>
                         <PricingScreen />
+                      </Guarded>
+                    }
+                  />
+                  <Route
+                    path="/ride-categories"
+                    element={
+                      <Guarded>
+                        <RideCategoriesScreen />
                       </Guarded>
                     }
                   />
