@@ -28,10 +28,12 @@ from app.models.enums import (
     BannerLinkKind,
     CampaignAudience,
     CountryCode,
+    FeatureKey,
     ServiceTileStatus,
     UserRole,
 )
 from app.models.storefront import PromoBanner, ServiceTile
+from app.services import settings_service
 
 #: **المقاصدُ المبنيّةُ في التطبيقين** — والقائمةُ عقدٌ بين الخلفية والواجهة.
 #:
@@ -114,6 +116,32 @@ SERVICE_DESTINATIONS: dict[str, tuple[UserRole, ...]] = {
     "/wallet/earnings": (UserRole.DRIVER,),
 }
 
+#: **خدماتٌ بعنوانٍ منطقيٍّ واحدٍ في التطبيقين — وحالُها من مفتاح السوق لا من الصفّ** (أمرُ المالك ٢٠٢٦-١٠-١٠، SPEC §٧٢).
+#:
+#: **العلّةُ مقيسةٌ على الإنتاج**: بلاطاتُ «خدماتك» كانت صفوفاً تكتبها اللوحةُ «قريباً» بلا مقصد، **والخدماتُ مشتعلةٌ ومبنيّة** —
+#: فرأى المالكُ «قريباً» على المطار والطرد والرحلات وقد أشعل كلَّ شيء. **فالبلاطةُ هنا لا تحمل حالَها**: مقصدُها `/services/<خدمة>`،
+#: وكلُّ تطبيقٍ يفتح شاشتَه له، **ومفتاحُ سوق الناظر يقول «تُفتح» أو «قريباً»** — فلا «قريباً» يُكتب بيدٍ ويبقى بعد الإشعال.
+#: **والدورُ الذي لا شاشةَ له في خدمةٍ لا يرى بلاطتَها** (كـ«عروض» عند الراكب): بلاطةٌ لا تُفتح لأحدٍ أسوأُ من غيابها.
+SERVICE_ROUTES: dict[str, dict[UserRole, FeatureKey]] = {
+    # المطار: الراكبُ يبحث عن مطارات سوقه، والكبتنُ يُشعل «طلبات المطار»
+    "/services/airport": {UserRole.RIDER: FeatureKey.AIRPORT_ENABLED, UserRole.DRIVER: FeatureKey.AIRPORT_ENABLED},
+    # الطرد: الراكبُ يطلب طرداً، والكبتنُ يرى ما يصله من الطرود وما سلّمه
+    "/services/parcel": {UserRole.RIDER: FeatureKey.PARCEL_ENABLED, UserRole.DRIVER: FeatureKey.PARCEL_ENABLED},
+    # الرحلاتُ بموعد: حجوزُ الراكب المجدولة، **وعروضُ الحجز المضمون** للكبتن
+    "/services/bookings": {
+        UserRole.RIDER: FeatureKey.SCHEDULED_RIDES_ENABLED,
+        UserRole.DRIVER: FeatureKey.GUARANTEED_BOOKING_ENABLED,
+    },
+    # بين المدن: مقاعدُ الراكب، **ورحلاتُ الكبتن التي يعلنها**
+    "/services/intercity": {UserRole.RIDER: FeatureKey.INTERCITY_ENABLED, UserRole.DRIVER: FeatureKey.INTERCITY_ENABLED},
+    # العروض: عروضُ اشتراك الكبتن وخططُه — **ولا شاشةَ عروضٍ للراكب**، فلا يراها
+    "/services/offers": {UserRole.DRIVER: FeatureKey.SUBSCRIPTION_OFFERS_ENABLED},
+    # بالساعة: للراكب وحدَه — الكبتنُ يستقبلها عرضاً كغيرها
+    "/services/hourly": {UserRole.RIDER: FeatureKey.HOURLY_ENABLED},
+}
+for _route, _roles in SERVICE_ROUTES.items():
+    SERVICE_DESTINATIONS[_route] = tuple(_roles)
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -190,11 +218,14 @@ def require_banner_link(kind: BannerLinkKind, link: str | None) -> None:
 
 async def tiles_for(
     session: AsyncSession, *, country: CountryCode, role: UserRole
-) -> list[ServiceTile]:
-    """**ما يراه صاحبُ هذا الدور في سوقه** — والمخفيّةُ لا تُرسل أصلاً.
+) -> list[tuple[ServiceTile, ServiceTileStatus]]:
+    """**ما يراه صاحبُ هذا الدور في سوقه، وحالُ كلِّ بلاطةٍ كما يراها** — والمخفيّةُ لا تُرسل أصلاً.
 
-    **و«قريباً» تُرسل**: هي خبرٌ مقصودٌ يُقرأ ولا يُنقر — والتطبيقُ يعرف
-    ذلك من `status` فلا يفتح لها باباً.
+    **وثلاثُ قواعدَ تجعل «قريباً» خبراً صادقاً لا نصّاً عالقاً** (أمرُ المالك ٢٠٢٦-١٠-١٠):
+    1. **بلاطةُ خدمةٍ** (`SERVICE_ROUTES`) **حالُها من مفتاح السوق**: مشتعلٌ ⇐ تُفتح، مطفأ ⇐ «قريباً» — أيّاً كان ما كُتب في صفّها.
+       **ودورٌ لا شاشةَ له فيها لا يراها.**
+    2. **«قريباً» بلا مقصدٍ لا تُرسل**: لا خدمةَ وراءها تشتعل يوماً، فهي «قريباً» إلى الأبد — **تُخفى حتى تُبنى**.
+    3. **ومقصدٌ ليس مبنيّاً لهذا الدور لا يُرسل** — بلاطةٌ تقع على صفحةٍ مفقودة.
     """
     rows = await session.scalars(
         select(ServiceTile)
@@ -204,7 +235,24 @@ async def tiles_for(
         )
         .order_by(ServiceTile.sort_order, ServiceTile.created_at)
     )
-    return [tile for tile in rows if _audience_matches(tile.audience, role)]
+    flags = await settings_service.get_flags(session, country)
+    shown: list[tuple[ServiceTile, ServiceTileStatus]] = []
+    for tile in rows:
+        if not _audience_matches(tile.audience, role):
+            continue
+        service = SERVICE_ROUTES.get(tile.destination or "")
+        if service is not None:
+            key = service.get(role)
+            if key is None:
+                continue
+            shown.append((tile, ServiceTileStatus.ACTIVE if flags.get(key.value) else ServiceTileStatus.SOON))
+            continue
+        if not tile.destination:
+            continue
+        if role not in SERVICE_DESTINATIONS.get(tile.destination, ()):
+            continue
+        shown.append((tile, tile.status))
+    return shown
 
 
 async def get_tile(session: AsyncSession, tile_id: uuid.UUID) -> ServiceTile:

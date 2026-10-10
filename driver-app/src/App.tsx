@@ -103,6 +103,9 @@ const GuaranteesT2Screen = lazy(() =>
 const CommutesT2Screen = lazy(() =>
   import("@/screens/t2/CommutesT2").then((m) => ({ default: m.CommutesT2Screen })),
 );
+const ServiceRouteT2 = lazy(() =>
+  import("@/screens/t2/ServiceRouteT2").then((m) => ({ default: m.ServiceRouteT2 })),
+);
 const IntercityT2Screen = lazy(() =>
   import("@/screens/t2/IntercityT2").then((m) => ({ default: m.IntercityT2Screen })),
 );
@@ -603,6 +606,16 @@ export default function App() {
                           element={
                             <Guarded>
                               <IntercityT2Screen />
+                            </Guarded>
+                          }
+                        />
+                        {/* **بلاطاتُ «خدماتك» تفتح ما يفعله الكبتنُ بكلِّ خدمة** (أمرُ المالك ٢٠٢٦-١٠-١٠، SPEC §٧٢) — عنوانٌ منطقيٌّ واحدٌ في
+                            التطبيقين (`storefront.SERVICE_ROUTES`)، وحالُ البلاطة من مفتاح السوق في الخلفية */}
+                        <Route
+                          path="/services/:service"
+                          element={
+                            <Guarded>
+                              <ServiceRouteT2 />
                             </Guarded>
                           }
                         />

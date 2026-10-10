@@ -110,11 +110,12 @@ async def my_storefront(
                 title=tile.title,
                 subtitle=tile.subtitle,
                 icon=tile.icon,
-                status=tile.status,
+                # **الحالُ كما يراها هذا الدورُ في سوقه** — من مفتاح الخدمة لا من الصفّ (`storefront.tiles_for`)
+                status=status,
                 destination=tile.destination,
                 is_new=storefront.is_new(tile),
             )
-            for tile in tiles
+            for tile, status in tiles
         ],
         banners=[
             PromoBannerOut(

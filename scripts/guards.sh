@@ -43,6 +43,7 @@ run "check:money-math"      node tools/check-money-math.mjs
 run "check:money-visible"   node tools/check-money-visible.mjs
 run "check:published-readers" node tools/check-published-readers.mjs
 run "check:destinations"    node tools/check-destinations.mjs
+run "check:service-tiles"   node tools/check-service-tiles.mjs
 run "check:fields"          node tools/check-fields.mjs
 run "check:storefront-card" node tools/check-storefront-card.mjs
 run "check:update-gate"     node tools/check-update-gate.mjs

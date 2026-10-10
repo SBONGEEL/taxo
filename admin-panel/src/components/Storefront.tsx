@@ -612,13 +612,19 @@ function TileEditor({
             setForm((f) => ({ ...f, destination: e.target.value }))
           }
         >
-          <option value="">— بلا مقصد («قريباً») —</option>
+          <option value="">— بلا مقصد (لا تُعرض حتى تُبنى) —</option>
           {usable.map((path) => (
             <option key={path} value={path}>
               {path}
             </option>
           ))}
         </Select>
+        {/* **بلاطةُ خدمةٍ حالُها من مفتاح السوق** (أمرُ المالك ٢٠٢٦-١٠-١٠): تُفتح حيث الخدمةُ مشتعلةٌ و«قريباً» حيث مطفأة — أيّاً كان ما يُختار هنا */}
+        {form.destination.startsWith("/services/") ? (
+          <p className="ad-hint col-span-full">
+            مقصدُ خدمة: حالُها يتبع مفتاحَ الخدمة في سوقها — تُفتح حيث تشتعل و«قريباً» حيث تُطفأ، ولا يراها من لا شاشةَ له فيها.
+          </p>
+        ) : null}
         <DateInput
           name="new_until"
           label="«جديد» حتى"

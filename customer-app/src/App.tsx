@@ -55,6 +55,9 @@ import { LoginScreen } from "@/screens/Login";
 const DriverNotInstalledScreen = lazy(() =>
   import("@/screens/SwitchApp").then((m) => ({ default: m.DriverNotInstalledScreen })),
 );
+const ServiceRouteT2 = lazy(() =>
+  import("@/screens/t2/ServiceRouteT2").then((m) => ({ default: m.ServiceRouteT2 })),
+);
 const HomeScreen = lazy(() =>
   import("@/screens/Home").then((m) => ({ default: m.HomeScreen })),
 );
@@ -602,6 +605,15 @@ export default function App() {
                       />
                       {/* **بين المدن** (§٦٣-ج/٧) — الرحلاتُ والحجزُ خلف مفتاحها (مطفأً تعيد الشاشةُ إلى «حسابي»)، **و«حجوزاتي بين المدن»
                           تُقرأ ولو أُطفئ** — المالكُ يراجع القانونَ قبل الإشعال، ومالُ القائم محفوظ */}
+                      {/* **بلاطاتُ «خدماتك»** (أمرُ المالك ٢٠٢٦-١٠-١٠، SPEC §٧٢) — عنوانٌ منطقيٌّ واحدٌ في التطبيقين (`storefront.SERVICE_ROUTES`) */}
+                      <Route
+                        path="/services/:service"
+                        element={
+                          <Guarded>
+                            <ServiceRouteT2 />
+                          </Guarded>
+                        }
+                      />
                       <Route
                         path="/account/intercity"
                         element={

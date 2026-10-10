@@ -768,6 +768,18 @@ export function HomeScreen() {
     onOpenUnconfirmed: () => navigate("/payments/unconfirmed"),
   };
 
+  // **بلاطةُ خدمةٍ من «خدماتك» أو رابطٌ إليها** (`/services/<خدمة>` ⇐ هنا بـ`state.start`، أمرُ المالك ٢٠٢٦-١٠-١٠): تبدأ الطلبَ كما
+  // تبدؤه بلاطةُ الرئيسية حرفاً. **والشرطُ في المسار قبلها** (`ServiceRouteT2`): مطفأً لا `start` فلا يبدأ شيء. و`replace` كـ«أعد الطلب»
+  useEffect(() => {
+    const start = (location.state as { start?: string } | null)?.start;
+    if (!start) return;
+    window.history.replaceState({}, "");
+    if (start === "airport") homeProps.onAirport?.();
+    else if (start === "parcel") homeProps.onParcel?.();
+    else if (start === "hourly") homeProps.onHourly?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
   // «رجوع» (الحزمة ب): يترك التخطيطَ كلَّه ويعود إلى «إلى أين؟».
   // ويمسح الوجهةَ لأن بقاءها يترك الشاشةَ في حالٍ لا زرَّ يعيدها
   // منه إلى ورقة التأكيد — أما المحطاتُ فمعها، إذ لا معنى
