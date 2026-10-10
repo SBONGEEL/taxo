@@ -5,6 +5,8 @@
  * `t2-fo-call`)، و«ارفض الطرد» زرُّ «نقطة توقف» الثانويّ (`t2-rd-btn ghost`)، **وتأكيدُه ورقةُ أسباب الإلغاء** (`t2-rd-cx-*`).
  * وشارةُ «طرد» على العرض وسطرُ دافعه في بيتيهما (`OfferT2` · `PayerNoteT2`).
  *
+ * **و«أحضر غرضي»** (§٧٢-ج/١، لوحتُه C2) — الصفُّ نفسُه بلغة الغرض: «يسلّمك: الاسم» وعنوانُ الاستلام **والغرضُ**، و«ارفض الغرض».
+ *
  * **والرفضُ إلغاءٌ تكتب الخلفيةُ سببَه** (`parcel_refused`) **بلا مالٍ على أحد** — فليس سبباً بين أسباب «إلغاء الرحلة».
  */
 
@@ -18,14 +20,21 @@ export function RecipientRowT2({ ride }: { ride: Ride }) {
   return (
     <div className="t2-rd-rider t2-fo-passenger t2-pc-recipient">
       <span className="t2-fo-passenger-icon" aria-hidden="true">
-        <Icon name="package_2" />
+        <Icon name={ride.parcel_fetch ? "inventory_2" : "package_2"} />
       </span>
       <div className="t2-rd-rider-main">
-        <div className="t2-rd-rider-name">المستلم: {ride.recipient_name}</div>
+        <div className="t2-rd-rider-name">
+          {ride.parcel_fetch ? "يسلّمك" : "المستلم"}: {ride.recipient_name}
+        </div>
         {ride.recipient_address ? <div className="t2-rd-rider-sub">{ride.recipient_address}</div> : null}
+        {ride.parcel_fetch && ride.parcel_item ? <div className="t2-rd-rider-sub">الغرض: {ride.parcel_item}</div> : null}
       </div>
       {ride.recipient_phone ? (
-        <a className="t2-fo-call" href={`tel:${ride.recipient_phone}`} aria-label="اتصل بالمستلم">
+        <a
+          className="t2-fo-call"
+          href={`tel:${ride.recipient_phone}`}
+          aria-label={ride.parcel_fetch ? "اتصل بمن يسلّمك الغرض" : "اتصل بالمستلم"}
+        >
           <Icon name="call" />
         </a>
       ) : null}
@@ -34,10 +43,18 @@ export function RecipientRowT2({ ride }: { ride: Ride }) {
 }
 
 /** **«ارفض الطرد»** — فعلٌ ثانويٌّ تحت «بدء الرحلة» في طور «وصل» وحدَه: من شكّ في طردٍ عند استلامه لا يحمله. */
-export function RefuseParcelButtonT2({ busy, onOpen }: { busy: boolean; onOpen: () => void }) {
+export function RefuseParcelButtonT2({
+  busy,
+  fetch = false,
+  onOpen,
+}: {
+  busy: boolean;
+  fetch?: boolean;
+  onOpen: () => void;
+}) {
   return (
     <button type="button" className="t2-rd-btn ghost" onClick={onOpen} disabled={busy}>
-      ارفض الطرد
+      {fetch ? "ارفض الغرض" : "ارفض الطرد"}
     </button>
   );
 }
@@ -45,21 +62,23 @@ export function RefuseParcelButtonT2({ busy, onOpen }: { busy: boolean; onOpen: 
 /** **تأكيدُ الرفض** — ورقةُ أسباب الإلغاء بلغتها، **بلا أسباب**: السببُ واحدٌ تكتبه الخلفية، والجملةُ تقول أثرَه قبل أن يقع. */
 export function RefuseParcelSheetT2({
   busy,
+  fetch = false,
   onConfirm,
   onClose,
 }: {
   busy: boolean;
+  fetch?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }) {
   return (
     <div className="t2-rd-cx-shade">
-      <div className="t2-rd-cx-sheet" role="dialog" aria-label="ارفض الطرد">
+      <div className="t2-rd-cx-sheet" role="dialog" aria-label={fetch ? "ارفض الغرض" : "ارفض الطرد"}>
         <div className="t2-rd-grab" />
-        <h2 className="t2-rd-cx-title">ترفض الطرد عند الاستلام؟</h2>
+        <h2 className="t2-rd-cx-title">{fetch ? "ترفض الغرض عند الاستلام؟" : "ترفض الطرد عند الاستلام؟"}</h2>
         <p className="t2-rd-cx-note">تُلغى الرحلةُ بلا مالٍ على أحد.</p>
         <button type="button" className="t2-rd-cx-confirm" disabled={busy} onClick={onConfirm}>
-          نعم، ارفض الطرد
+          {fetch ? "نعم، ارفض الغرض" : "نعم، ارفض الطرد"}
         </button>
         <button type="button" className="t2-rd-cancel" onClick={onClose}>
           تراجع

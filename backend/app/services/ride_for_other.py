@@ -236,6 +236,8 @@ async def purge_passengers(session: AsyncSession, *, now: datetime | None = None
             recipient_name=None,
             recipient_phone=None,
             recipient_address=None,
+            # **ووصفُ غرض «أحضر غرضي» معهم** (§٧٢-ج/١) — ومن يسلّمه في حقول المستلم نفسِها
+            parcel_item=None,
             passenger_erased_at=moment,
         )
         .returning(Ride.id)

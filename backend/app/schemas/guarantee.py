@@ -57,6 +57,8 @@ class ServiceSettingOut(BaseModel):
     guarantee_ban_days: int
     #: رسمُ الطرد للكبتن (§٦٣-ج/٤) — وصفرٌ يُخفيه
     parcel_fee: Decimal
+    #: **رسمُ «أحضر غرضي» للكبتن** (§٧٢-ج/١) — كرسم الطرد افتراضاً، وصفرٌ يُخفيه
+    parcel_fetch_fee: Decimal
     #: بالساعة (§٦٣-ج/٥) — السعرُ وكيلومتراتُ الساعة ودقائقُ الإلغاء وأقصى الساعات
     hourly_rate: Decimal
     hourly_km_per_hour: int
@@ -86,6 +88,7 @@ class ServiceSettingUpdate(BaseModel):
     guarantee_ban_threshold: int | None = Field(default=None, ge=1, le=10)
     guarantee_ban_days: int | None = Field(default=None, ge=1, le=365)
     parcel_fee: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
+    parcel_fetch_fee: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
     hourly_rate: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=3)
     hourly_km_per_hour: int | None = Field(default=None, ge=0, le=200)
     hourly_cancel_minutes: int | None = Field(default=None, ge=0, le=240)

@@ -153,6 +153,7 @@ async def estimate_ride(
         dropoff=_coords(payload.dropoff),
         stops=[_coords(stop) for stop in payload.stops],
         parcel=payload.is_parcel,
+        parcel_fetch=payload.is_parcel and payload.parcel_fetch,
         hourly=(
             await hourly_service.prepare(
                 session,
@@ -256,6 +257,8 @@ async def request_ride(
                 recipient_address=payload.parcel.recipient_address,
                 payer=payload.parcel.payer,
                 accepted_terms=payload.parcel.accepted_terms,
+                fetch=payload.parcel.fetch,
+                item=payload.parcel.item,
             )
             if payload.parcel is not None
             else None

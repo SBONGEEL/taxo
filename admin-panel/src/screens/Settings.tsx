@@ -205,6 +205,10 @@ const FLAG_LABEL: Record<FeatureKey, { title: string; hint: string }> = {
     title: "الطرد",
     hint: "يطلب الراكبُ توصيلَ غرضٍ بسيارةٍ اقتصاديّة: يقرأ شروطَ الطرد ويُقرّ بها قبل الطلب، ويكتب اسمَ المستلم ورقمَه وعنوانَ التسليم، ويختار من يدفع — هو، أو المستلمُ نقداً عند التسليم. ورسمُ الطرد فوق سعر الاقتصادي للكبتن — يصله كاملاً ولا تُقتطع منه العمولة، ولا يمسّه خصم. ويرى الكبتنُ المستلمَ بعد القبول وحدَه، ويُمحى بعد ثلاثين يوماً من انتهاء الرحلة. وللكبتن أن يرفض الطردَ عند الاستلام فتُلغى الرحلةُ بلا مالٍ على أحد. والرسمُ في «الخدمات الجديدة» أدناه، ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُ الطرد، والقائمُ يكمل برسمه.",
   },
+  parcel_fetch_enabled: {
+    title: "أحضر غرضي",
+    hint: "الطردُ معكوساً: يطلب الراكبُ أن يأخذ الكبتنُ غرضاً له من مكانٍ يسمّيه — بيتِه مثلاً — ويوصله إليه حيث هو أو إلى عنوانٍ يختاره. يقرأ شروطَ الطرد نفسَها ويُقرّ بها، ويكتب الغرضَ واسمَ من يسلّمه للكبتن ورقمَه وعنوانَ الاستلام، ويدفع هو — بالمحفظة أو البطاقة أو نقداً عند التسليم إليه. ورسمُه فوق سعر الاقتصادي للكبتن كاملاً ولا تُقتطع منه العمولة ولا يمسّه خصم. ويرى الكبتنُ من يسلّمه والغرضَ بعد القبول وحدَه، ويُمحى ذلك بعد ثلاثين يوماً من انتهاء الطلب، وله أن يرفض الغرضَ عند الاستلام فيُلغى الطلبُ بلا مالٍ على أحد. ومفتاحُه مستقلٌّ عن الطرد، والرسمُ في «الخدمات الجديدة» أدناه، ورسمٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُه، والقائمُ يكمل برسمه.",
+  },
   hourly_enabled: {
     title: "بالساعة",
     hint: "يحجز الراكبُ سيارةً اقتصاديّةً بالساعة: يختار عددَ الساعات حتى سقفٍ تضبطه، ووجهتُه اختياريّةٌ يقولها للكبتن في الطريق. والمحجوزُ — الساعاتُ في سعرها — يُدفع عند البدء: من محفظته يُسوّى فوراً ورصيدٌ لا يكفيه يمنع البدء، أو نقداً يؤكّد الكبتنُ استلامَه. وما زاد على كيلومترات الساعات أو دقائقها يُحسب عند الإنهاء بتعرفة الاقتصادي العاديّة، وتُقتطع العمولةُ من أجرتها كأيِّ رحلة. وإلغاءُ الراكب بعد وصول الكبتن يكلّفه دقائقَ من سعر الساعة تذهب إلى الكبتن. والأرقامُ في «الخدمات الجديدة» أدناه، وسعرٌ صفرٌ يُخفي الخدمةَ ولو اشتعل المفتاح. ومطفأً يُرفض طلبُها، والقائمةُ تكمل بأسعارها.",
@@ -287,6 +291,7 @@ const FLAGS: FeatureKey[] = [
   "airport_enabled",
   "guaranteed_booking_enabled",
   "parcel_enabled",
+  "parcel_fetch_enabled",
   "hourly_enabled",
   "rider_subscription_enabled",
   "intercity_enabled",
@@ -2494,9 +2499,13 @@ function ParcelForm({
   onError: (caught: unknown) => void;
 }) {
   const [fee, setFee] = useState(row.parcel_fee);
+  // **ورسمُ «أحضر غرضي»** (§٧٢-ج/١) بجانبه — مستقلٌّ عنه، ويُرسل ما تغيّر منهما وحدَه
+  const [fetchFee, setFetchFee] = useState(row.parcel_fetch_fee);
   const [busy, setBusy] = useState(false);
   // **الفرقُ بالمقارنة** — من كتب ثمّ أعاد الرقمَ كما كان لم يغيّر شيئاً
-  const dirty = fee.trim() !== row.parcel_fee;
+  const feeDirty = fee.trim() !== row.parcel_fee;
+  const fetchDirty = fetchFee.trim() !== row.parcel_fetch_fee;
+  const dirty = feeDirty || fetchDirty;
 
   return (
     <>
@@ -2510,16 +2519,28 @@ function ParcelForm({
           disabled={disabled}
           hint="فوق سعر الاقتصادي، للكبتن كاملاً ولا تُقتطع منه العمولة. وصفرٌ يُخفي الخدمة."
         />
+        <MoneyField
+          name="parcel_fetch_fee"
+          label="رسم «أحضر غرضي»"
+          value={fetchFee}
+          onChange={(next) => setFetchFee(next.replace(/[^0-9.,]/g, ""))}
+          currency={currencyOf(row.country_code)}
+          disabled={disabled}
+          hint="الطردُ معكوساً — فوق سعر الاقتصادي للكبتن كاملاً، مستقلٌّ عن رسم الطرد. وصفرٌ يُخفي الخدمة."
+        />
       </div>
       <Button
         className="mt-14"
         size="sm"
-        disabled={disabled || !dirty || fee.trim() === ""}
+        disabled={disabled || !dirty || fee.trim() === "" || fetchFee.trim() === ""}
         loading={busy}
         onClick={() => {
           setBusy(true);
-          updateServiceSettings(row.country_code, { parcel_fee: fee.trim() })
-            .then(() => onSaved("حُفظ رسم الطرد — يسري على ما يُطلب بعده لا على رحلةٍ قائمة"))
+          updateServiceSettings(row.country_code, {
+            ...(feeDirty ? { parcel_fee: fee.trim() } : {}),
+            ...(fetchDirty ? { parcel_fetch_fee: fetchFee.trim() } : {}),
+          })
+            .then(() => onSaved("حُفظ رسم الطرد و«أحضر غرضي» — يسري على ما يُطلب بعده لا على رحلةٍ قائمة"))
             .catch((caught) => onError(caught))
             .finally(() => setBusy(false));
         }}

@@ -127,6 +127,8 @@ SERVICE_ROUTES: dict[str, dict[UserRole, FeatureKey]] = {
     "/services/airport": {UserRole.RIDER: FeatureKey.AIRPORT_ENABLED, UserRole.DRIVER: FeatureKey.AIRPORT_ENABLED},
     # الطرد: الراكبُ يطلب طرداً، والكبتنُ يرى ما يصله من الطرود وما سلّمه
     "/services/parcel": {UserRole.RIDER: FeatureKey.PARCEL_ENABLED, UserRole.DRIVER: FeatureKey.PARCEL_ENABLED},
+    # **«أغراضي» = «أحضر غرضي»** (§٧٢-ج/١): الراكبُ يبدؤه، والكبتنُ يرى طلباتِه بين طروده
+    "/services/fetch": {UserRole.RIDER: FeatureKey.PARCEL_FETCH_ENABLED, UserRole.DRIVER: FeatureKey.PARCEL_FETCH_ENABLED},
     # الرحلاتُ بموعد: حجوزُ الراكب المجدولة، **وعروضُ الحجز المضمون** للكبتن
     "/services/bookings": {
         UserRole.RIDER: FeatureKey.SCHEDULED_RIDES_ENABLED,

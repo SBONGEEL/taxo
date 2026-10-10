@@ -553,6 +553,7 @@ async def request_ride(
         dropoff=dropoff,
         stops=[Coordinates(lat=stop.lat, lng=stop.lng) for stop in stops],
         parcel=prepared_parcel is not None,
+        parcel_fetch=prepared_parcel is not None and prepared_parcel.fetch,
         hourly=hourly_terms,
     )
     # تسعيرةُ الدولة تُقرأ مرةً واحدة: منها التقديرُ ومنها الحقولُ المجمَّدة
@@ -635,6 +636,8 @@ async def request_ride(
         ride.recipient_phone = prepared_parcel.recipient_phone
         ride.recipient_address = prepared_parcel.recipient_address
         ride.payer = prepared_parcel.payer.value
+        ride.parcel_fetch = prepared_parcel.fetch
+        ride.parcel_item = prepared_parcel.item
     # **الطريقةُ تُرسل مع الطلب وتُحفظ على الرحلة** (`design/PAYMENTS-UNCONFIRMED.md` §٢-١) — **بعد الدافع** لأنها تُفحص
     # عليه: «يدفعها الطالبُ لغيره» محفظةٌ أو بطاقة، و«يدفعها راكبُها نقداً» يفتحها `open_payer_cash`. ومطفأً لا تُحفظ
     # (`for_other` و`payer` يُكتبان أعلاه حين يُطلبان وحدَهما — وافتراضُهما عند الإدراج لا عند البناء، فيُقرآن هنا بافتراضهما)

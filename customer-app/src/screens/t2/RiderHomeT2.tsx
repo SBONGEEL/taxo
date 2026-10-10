@@ -42,7 +42,7 @@ import { cashbackDaysText, useScheduledRides, useWeeklyCashback } from "@/lib/bo
 import { useFeature } from "@/lib/config";
 import { useHourly } from "@/lib/hourly";
 import { VEHICLE_LABEL } from "@/lib/labels";
-import { useParcel } from "@/lib/parcel";
+import { useParcel, useParcelFetch } from "@/lib/parcel";
 import { useSession } from "@/lib/session";
 import { formatMoney } from "@/lib/utils";
 import { useWomenService } from "@/lib/women";
@@ -93,6 +93,8 @@ export interface RiderHomeProps {
   onParcel?: () => void;
   /** **بدءُ طلب ساعات** (§٦٣-ج/٥) — منتقي الوجهة بـ«بلا وجهة» ثمّ ورقتُها؛ والبلاطةُ لا تناديه إلا حيث المفتاحُ مشتعل. */
   onHourly?: () => void;
+  /** **بدءُ «أحضر غرضي»** (§٧٢-ج/١، لوحتُه R1) — «أين غرضك؟» ثمّ ورقتُه؛ والبلاطةُ لا تُرسم إلا حيث مفتاحُه مشتعل. */
+  onFetch?: () => void;
   /** **بدءُ رحلةٍ إلى المطار** (§٦٣-ج/٢) — منتقي الوجهة وفيه «مطار»؛ ورسمُ المطار يُحسب في الخلفية حين تقع الوجهةُ في مضلّعه. */
   onAirport?: () => void;
   /** **ما ينتظر تأكيدَه** (`design/PAYMENTS-UNCONFIRMED.md` §٦) — شريطُ «تأكيدٌ ينتظرك» أعلى الرئيسية؛ و`null` حيث المفتاحُ مطفأ. */
@@ -234,6 +236,7 @@ export function RiderHomeT2({
   onWomenRide,
   onParcel,
   onHourly,
+  onFetch,
   onAirport,
   unconfirmed = null,
   onOpenUnconfirmed,
@@ -245,6 +248,8 @@ export function RiderHomeT2({
   // **و«بالساعة» بمفتاح سوقها** (§٦٣-ج/٥) — بالحكم نفسِه
   const { user } = useSession();
   const hourly = useHourly() && onHourly !== undefined;
+  // **و«أغراضي» (أحضر غرضي) بمفتاحها** (§٧٢-ج/١) — **مطفأةً لا تُرسم أصلاً**: لا «قريباً» لخدمةٍ جديدة (§٧٢-أ/٢)
+  const fetchOn = useParcelFetch() && onFetch !== undefined;
   // **و«المطار» بمفتاح سوقه** (§٦٣-ج/٢، صفُّه في جدول الخدمات: «يفتحها حين يُشعَل وإلا قريباً») — قِيس على S21 ٢٠٢٦-١٠-٠٨:
   // البلاطةُ كانت «قريباً» دائماً والخدمةُ مشتعلةٌ ومبنيّة، فلا بابَ إليها من الرئيسية
   const airport = useFeature(user?.country_code, "airport_enabled") && onAirport !== undefined;
@@ -352,7 +357,8 @@ export function RiderHomeT2({
         </button>
       </div>
 
-      <div className="t2-svc-row">
+      {/* **خمسُ بلاطاتٍ خمسةُ أعمدة** (لوحةُ «أحضر غرضي» R1) — لا بلاطةَ وحيدةٌ في صفٍّ ثانٍ */}
+      <div className={3 + (women.enabled ? 1 : 0) + (fetchOn ? 1 : 0) === 5 ? "t2-svc-row five" : "t2-svc-row"}>
         <button type="button" className="t2-svc" onClick={() => (airport && onAirport ? onAirport() : soon("المطار"))}>
           <span className="t2-icon t2-svc-icon" aria-hidden="true">flight_takeoff</span>
           <span className="t2-svc-title">المطار</span>
@@ -386,6 +392,12 @@ export function RiderHomeT2({
             <span className="t2-svc-badge soon">قريباً</span>
           </button>
         )}
+        {fetchOn ? (
+          <button type="button" className="t2-svc" onClick={onFetch}>
+            <span className="t2-icon t2-svc-icon" aria-hidden="true">inventory_2</span>
+            <span className="t2-svc-title">أغراضي</span>
+          </button>
+        ) : null}
       </div>
 
       {cashback ? <CashbackChipT2 cashback={cashback} /> : null}

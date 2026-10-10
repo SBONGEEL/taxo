@@ -1,7 +1,7 @@
 /** **بلاطةُ خدمةٍ تفتح ما يفعله الكبتنُ بها** (أمرُ المالك ٢٠٢٦-١٠-١٠، SPEC §٧٢) — `/services/<خدمة>` عنوانٌ واحدٌ في التطبيقين، وكلٌّ يفتح شاشتَه.
  *
  * - **المطار** ⇐ الإعدادات: مفتاحُ «طلبات المطار» هناك (بشرط سوقه).
- * - **الطرد** ⇐ «الطرود»: كيف تصل، وما سلّمه منها.
+ * - **الطرد** و**«أحضر غرضي»** ⇐ «الطرود»: كيف تصل، وما سلّمه منها — و«أحضر غرضي» معلَّمٌ بينها (§٧٢-ج/١).
  * - **الرحلاتُ بموعد** ⇐ «الحجز المضمون»: عروضُ الحجوز في فئة مركبته.
  * - **بين المدن** ⇐ رحلاتُه التي يعلنها.
  * - **العروض** ⇐ خططُ الاشتراك وعروضُها.
@@ -22,8 +22,11 @@ export const DRIVER_SERVICE_TARGETS: Record<string, string> = {
   offers: "/subscription/plans",
 };
 
+/** **ما تفتحه شاشةُ «الطرود»** — الطردُ و«أحضر غرضي» (§٧٢-ج/١). */
+export const DRIVER_PARCEL_SERVICES: readonly string[] = ["parcel", "fetch"];
+
 export function ServiceRouteT2() {
   const { service = "" } = useParams();
-  if (service === "parcel") return <ParcelsT2Screen />;
+  if (DRIVER_PARCEL_SERVICES.includes(service)) return <ParcelsT2Screen />;
   return <Navigate to={DRIVER_SERVICE_TARGETS[service] ?? "/services"} replace />;
 }

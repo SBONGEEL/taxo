@@ -163,6 +163,13 @@ class Ride(UUIDMixin, TimestampMixin, Base):
             name="ride_for_other_fields",
         ),
         CheckConstraint("ride_type IN ('standard', 'parcel', 'hourly')", name="ride_type_valid"),
+        # **«أحضر غرضي» طردٌ يدفعه صاحبُه** (§٧٢-ج/١، ترحيلة `0109`) — ووصفُ الغرض للطرد وحدَه. **ولا يُشترط الوصفُ على «أحضر غرضي»**:
+        # الكنسُ يمحوه بعد ٣٠ يوماً والرحلةُ باقية
+        CheckConstraint(
+            "(NOT parcel_fetch OR (ride_type = 'parcel' AND payer = 'requester')) "
+            "AND (parcel_item IS NULL OR ride_type = 'parcel')",
+            name="ride_parcel_fetch",
+        ),
         # **رحلةُ الساعة وحدَها تحمل ساعات** (§٦٣-ج/٥) — والمحجوزُ من المحفظة أو نقداً
         CheckConstraint(
             "(ride_type = 'hourly') = (hourly_hours IS NOT NULL) AND (hourly_prepay_method IS NULL OR hourly_prepay_method IN ('wallet', 'cash'))",
@@ -435,6 +442,11 @@ class Ride(UUIDMixin, TimestampMixin, Base):
     recipient_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     recipient_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recipient_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    #: **«أحضر غرضي»** (§٧٢-ج/١) — الطردُ معكوساً: **الاستلامُ من مكانٍ يسمّيه الراكب والتسليمُ إليه**. وفيه حقولُ المستلم الثلاثة
+    #: **لمن يسلّم الغرضَ للكبتن** (اسمُه ورقمُه وعنوانُ الاستلام)، **والدافعُ صاحبُ الطلب وحدَه** — هو من يستلم
+    parcel_fetch: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    #: **وصفُ الغرض** بكلمات الراكب — للطرد وحدَه، **ويمحوه الكنسُ مع المستلم بعد ٣٠ يوماً**
+    parcel_item: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # ---------------------------------------------- بالساعة (§٦٣-ج/٥) — **مجمَّدةٌ لحظةَ الطلب** كالعمولة
     hourly_hours: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     hourly_rate_at_ride: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)

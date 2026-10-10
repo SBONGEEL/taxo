@@ -78,6 +78,15 @@ RIDE_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
     RideEvent.STOP_RESUMED: ("استُؤنفت الرحلة", "في الطريق إلى الوجهة التالية"),
 }
 
+# **«أحضر غرضي» يقول للراكب ما يقع على غرضه** (SPEC §٧٢-ج/١: «إشعارٌ عند الاستلام وعند التسليم») — الراكبُ ليس عند نقطة الانطلاق
+# ليُقال له «الكبتن بانتظارك» ولا «رحلة موفقة»: **الاستلامُ هو بدءُ الرحلة، والتسليمُ انتهاؤها**. وما ليس هنا يُقال بنصّ الرحلة
+FETCH_EVENT_TEXT: dict[RideEvent, tuple[str, str]] = {
+    RideEvent.DRIVER_ASSIGNED: ("قَبِل كبتنٌ طلبك", "في طريقه إلى مكان غرضك"),
+    RideEvent.DRIVER_ARRIVED: ("وصل الكبتن إلى مكان غرضك", "بانتظار من يسلّمه الغرض"),
+    RideEvent.RIDE_STARTED: ("استلم الكبتن غرضك", "في الطريق إليك"),
+    RideEvent.RIDE_COMPLETED: ("وصل غرضك", "شاشة الدفع بانتظارك"),
+}
+
 # **ونصُّ الكبتن غيرُ نصِّ الراكب** — وجدته المرحلةُ ١٣ في صندوق الوارد على
 # الجهاز: كانت الرسالةُ الواحدة تُرسل للطرفين، فيقرأ الكبتنُ في هاتفه «تم قبول
 # رحلتك — الكبتن في طريقه إلى نقطة الانطلاق» **عن نفسه**. وهي القاعدةُ نفسُها
@@ -300,7 +309,7 @@ async def publish_ride_event(
         except Exception:  # pragma: no cover - يعتمد على عطل قاعدة أو Redis
             logger.exception("تعذّر إبلاغُ انتهاء مكالمة الرحلة %s", ride.id)
 
-    text = RIDE_EVENT_TEXT.get(event)
+    text = (FETCH_EVENT_TEXT.get(event) if ride.parcel_fetch else None) or RIDE_EVENT_TEXT.get(event)
     if text is None:
         return
 

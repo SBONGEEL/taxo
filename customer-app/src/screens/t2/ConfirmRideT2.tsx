@@ -192,7 +192,9 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
                 c.error ??
                 requestError ??
                 (c.parcelUnavailable
-                  ? "الطرد غيرُ متاحٍ في بلدك الآن."
+                  ? c.parcelFetch
+                    ? "«أحضر غرضي» غيرُ متاحةٍ في بلدك الآن."
+                    : "الطرد غيرُ متاحٍ في بلدك الآن."
                   : c.hourlyBlocked
                     ? "الرحلةُ بالساعة غيرُ متاحةٍ في بلدك الآن."
                     : null)
@@ -233,9 +235,13 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
               {requesting
                 ? "نرسل طلبك…"
                 : parcelPending
-                  ? "أكمل بيانات الطرد"
+                  ? c.parcelFetch
+                    ? "أكمل بيانات الغرض"
+                    : "أكمل بيانات الطرد"
                   : c.parcelMode
-                    ? "اطلب توصيل الطرد"
+                    ? c.parcelFetch
+                      ? "اطلب إحضار غرضك"
+                      : "اطلب توصيل الطرد"
                     : c.hourlyMode
                       ? "اطلب بالساعة"
                       : women
@@ -358,12 +364,14 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
       {/* **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — داخلَ السعر أعلاه، للكبتن، **ومن التقدير لا من ثابت** (§14) */}
       {c.parcelMode && c.estimate?.parcel_fee && !c.loading ? (
         <p className="t2-sheet-fine">
-          يشمل رسمَ الطرد {formatMoney(c.estimate.parcel_fee, c.estimate.currency)} للكبتن
+          يشمل رسمَ {c.parcelFetch ? "التوصيل" : "الطرد"} {formatMoney(c.estimate.parcel_fee, c.estimate.currency)} للكبتن
         </p>
       ) : null}
 
       {/* **شارةُ الطرد** — «بيانات الطرد» قبل المستلم، و«إلى: الاسم» بعده بزرِّ التعديل */}
-      {c.parcelMode ? <ParcelOptionT2 draft={c.parcel} onOpen={() => setParcelOpen(true)} /> : null}
+      {c.parcelMode ? (
+        <ParcelOptionT2 draft={c.parcel} fetch={c.parcelFetch} onOpen={() => setParcelOpen(true)} />
+      ) : null}
 
       {/* **تفضيلُ الكبتن** — لمن عُرضت عليها الخدمةُ وحدَها، بقرار `lib/women.ts` (§61: كما هو اليوم) */}
       {c.women.available ? (
@@ -712,6 +720,7 @@ export function ConfirmRideT2(props: ConfirmRideProps) {
           terms={c.loading ? null : c.estimate?.parcel_terms ?? null}
           failed={!c.loading && c.error !== null}
           initial={c.parcel}
+          fetch={c.parcelFetch}
           onSave={(next) => {
             c.setParcel?.(next);
             setParcelOpen(false);

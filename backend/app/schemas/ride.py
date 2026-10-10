@@ -50,6 +50,8 @@ class RideEstimateRequest(BaseModel):
     stops: list[StopIn] = Field(default_factory=list, max_length=2)
     # **تقديرُ طرد** (§٦٣-ج/٤) — يضيف رسمَه ويُعيد شروطَه. **ولا يُسمّى `parcel`**: طلبُ الرحلة يرث هذا المخطّط وله `parcel` بتفاصيله
     is_parcel: bool = False
+    # **«أحضر غرضي»** (§٧٢-ج/١) — مع `is_parcel`: رسمُه هو ومفتاحُه هو
+    parcel_fetch: bool = False
     # **تقديرُ ساعات** (§٦٣-ج/٥) — `null` لرحلةٍ عاديّة
     hourly_hours: int | None = Field(default=None, ge=1, le=24)
 
@@ -116,6 +118,9 @@ class ParcelIn(BaseModel):
     recipient_address: str = Field(min_length=3, max_length=255)
     payer: RidePayer = RidePayer.REQUESTER
     accepted_terms: bool = False
+    #: **«أحضر غرضي»** (§٧٢-ج/١) — والحقولُ الثلاثةُ أعلاه حينها **لمن يسلّم الغرضَ للكبتن** وعنوانِ الاستلام، و`item` وصفُ الغرض
+    fetch: bool = False
+    item: str | None = Field(default=None, max_length=120)
 
 
 class HourlyIn(BaseModel):
@@ -443,6 +448,9 @@ class RideOut(BaseModel):
     recipient_name: str | None = None
     recipient_phone: str | None = None
     recipient_address: str | None = None
+    # **«أحضر غرضي»** (§٧٢-ج/١) — العلمُ دائماً (شارةُ العرض)، **ووصفُ الغرض مع المستلم في أطوار القبول وحدَها**
+    parcel_fetch: bool = False
+    parcel_item: str | None = None
     # **بالساعة** (§٦٣-ج/٥) — الساعاتُ والكيلومتراتُ المشمولة (محسوبةٌ هنا، فلا تضرب الشاشة) ومن أين يُدفع المحجوز
     hourly_hours: int | None = None
     hourly_included_km: int | None = None
@@ -564,6 +572,8 @@ class RideOut(BaseModel):
             recipient_name=ride.recipient_name if ride.status in PASSENGER_VISIBLE else None,
             recipient_phone=ride.recipient_phone if ride.status in PASSENGER_VISIBLE else None,
             recipient_address=ride.recipient_address if ride.status in PASSENGER_VISIBLE else None,
+            parcel_fetch=ride.parcel_fetch,
+            parcel_item=ride.parcel_item if ride.status in PASSENGER_VISIBLE else None,
             payer=RidePayer(ride.payer),
             passenger_name=(
                 ride.passenger_name if ride.status in PASSENGER_VISIBLE else None

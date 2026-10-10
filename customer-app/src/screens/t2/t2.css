@@ -1044,6 +1044,10 @@ html.pink .t2-avatar { background: var(--t2-women-soft); }
 .t2-home-map-tap { position: absolute; inset: 0; z-index: 1; padding: 0; border: 0; background: none; cursor: pointer; }
 .t2-home-near { z-index: 2; }
 .t2-svc-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+/* **خمسُ بلاطاتٍ في صفٍّ واحد** (لوحةُ «أحضر غرضي» R1) — حشوٌ وخطٌّ أصغر فلا تُكسر «بالساعة» */
+.t2-svc-row.five { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.t2-svc-row.five .t2-svc { padding: 10px 8px; }
+.t2-svc-row.five .t2-svc-title { font-size: 12px; }
 .t2-svc {
   position: relative;
   display: flex;

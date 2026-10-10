@@ -15,3 +15,9 @@ export function useParcel(): boolean {
   const { user } = useSession();
   return useFeature(user?.country_code, "parcel_enabled");
 }
+
+/** **«أحضر غرضي»** (§٧٢-ج/١) — مفتاحُه هو، **ولا يحتاج مفتاحَ الطرد**: يُشعَل وحدَه في مجموعته. ومطفأً لا بلاطةَ ولا طلب. */
+export function useParcelFetch(): boolean {
+  const { user } = useSession();
+  return useFeature(user?.country_code, "parcel_fetch_enabled");
+}

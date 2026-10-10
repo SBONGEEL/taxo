@@ -170,7 +170,7 @@ export function TrackingSheetT2({ ride, onChanged, driverPing, routePoints, pick
         {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — رحلةٌ من اشتراكه، من الصفّ لا من المفتاح */}
         {commute ? <span className="t2-trk-badge">مشوارٌ ثابت</span> : null}
         {/* **«طرد»** (§٦٣-ج/٤) — وصفٌ لما طُلب كأخواتها، من الصفّ لا من المفتاح */}
-        {parcel ? <span className="t2-trk-badge">طرد</span> : null}
+        {parcel ? <span className="t2-trk-badge">{ride.parcel_fetch ? "أحضر غرضي" : "طرد"}</span> : null}
         {/* **«بالساعة»** (§٦٣-ج/٥) — بالحكم نفسِه */}
         {hourly ? <span className="t2-trk-badge">بالساعة</span> : null}
         {t.women ? <span className="t2-trk-badge women">رحلة نسائية</span> : null}
@@ -590,10 +590,12 @@ export function TripCardT2({
   return (
     <div className="t2 t2-trk-card">
       <div className="t2-trk-card-label">
-        {parcel ? "طردك في الطريق" : hourly ? `بالساعة · ${hoursLabel(ride.hourly_hours!)}` : "في الطريق إلى"}
+        {parcel ? (ride.parcel_fetch ? "غرضك في الطريق إليك" : "طردك في الطريق") : hourly ? `بالساعة · ${hoursLabel(ride.hourly_hours!)}` : "في الطريق إلى"}
       </div>
       <div className="t2-trk-card-dest">
-        {parcel && ride.recipient_name
+        {parcel && ride.parcel_fetch
+          ? (ride.dropoff_address ?? "إليك")
+          : parcel && ride.recipient_name
           ? `إلى: ${ride.recipient_name}`
           : hourly && noDestination(ride)
             ? "بلا وجهة — تقولها للكبتن"

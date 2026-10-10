@@ -45,6 +45,14 @@ const PHASES = {
 
 type Phase = keyof typeof PHASES;
 
+/** **«أحضر غرضي»** (§٧٢-ج/١، لوحتُه C2) — الأطوارُ نفسُها بلغة الغرض: الانطلاقُ مكانُه والوجهةُ صاحبُه. */
+const FETCH_PHASES: Record<Phase, { title: string; action: string }> = {
+  accepted: { title: "في الطريق إلى مكان الغرض", action: "وصلتُ إلى مكان الغرض" },
+  arrived: { title: "بانتظار من يسلّمك الغرض", action: "استلمتُ الغرض — ابدأ" },
+  in_progress: { title: "في الطريق إلى صاحب الغرض", action: "سلّمتُ الغرض — إنهاء" },
+  at_stop: PHASES.at_stop,
+};
+
 interface Props {
   ride: Ride;
   currencyLabel: string;
@@ -66,7 +74,8 @@ interface Props {
 
 /** **طورُ الرحلة وزرُّها وأسبابُ إلغائها — بيتٌ واحدٌ للورقتين** (القائمة، وC06/C07 في `screens/t2`). */
 export function useActiveRide(ride: Ride, genderPreference: GenderPreference) {
-  const phase = PHASES[ride.status as Phase] ?? PHASES.accepted;
+  const phases: Record<Phase, { title: string; action: string }> = ride.parcel_fetch ? FETCH_PHASES : PHASES;
+  const phase = phases[ride.status as Phase] ?? phases.accepted;
   const riding = ride.status === "in_progress" || ride.status === "at_stop";
   // المحطةُ التي يقف عندها الآن، وأولُ محطةٍ لم يصلها بعد
   const waiting = ride.stops.find(

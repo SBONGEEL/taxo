@@ -144,7 +144,9 @@ export function OfferT2({
 
           <div className="t2-of-near">
             <Icon name="near_me" />
-            {digits(offer.distanceKm.toFixed(1))} كم{minutes !== null ? ` · ${digits(String(minutes))} د` : ""} حتى الراكب
+            {digits(offer.distanceKm.toFixed(1))} كم{minutes !== null ? ` · ${digits(String(minutes))} د` : ""}{" "}
+            {/* **«أحضر غرضي»** (§٧٢-ج/١، C1): الانطلاقُ مكانُ الغرض لا راكب */}
+            {ride.parcel_fetch ? "حتى مكان الغرض" : "حتى الراكب"}
           </div>
 
           <div className="t2-of-route">
@@ -206,7 +208,7 @@ function OfferTags({ offer, currencyLabel }: { offer: Offer; currencyLabel: stri
       {/* **«مشوارٌ ثابت»** (§٦٣-ج/٦) — مدفوعةٌ مقدّماً من اشتراك راكبها، **فلا نقدَ يُستلم**؛ والسعرُ أعلاه مجمَّدٌ لا تقدير */}
       {ride.commute ? <span className="t2-of-tag">مشوارٌ ثابت — مدفوعة مقدّماً</span> : null}
       {/* **«طرد»** (§٦٣-ج/٤) — غرضٌ بدل راكب، **ومن صفِّ الرحلة لا من مفتاح السوق**: طلبٌ وصل قبل الإطفاء يبقى طرداً */}
-      {parcel ? <span className="t2-of-tag">طرد</span> : null}
+      {parcel ? <span className="t2-of-tag">{ride.parcel_fetch ? "أحضر غرضي" : "طرد"}</span> : null}
       {/* **«بالساعة»** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ لا طريق، **ومن صفِّ الرحلة** بالحكم نفسِه */}
       {hourly ? <span className="t2-of-tag">بالساعة</span> : null}
       {/* **«مطار»** (§٦٣-ج/٢) — تبدأ أو تنتهي في مطار، **ورسمُه له كاملاً في الأجرة أعلاه**. ومن صفِّ الرحلة لا من مفتاح السوق:

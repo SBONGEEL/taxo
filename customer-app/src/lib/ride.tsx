@@ -106,6 +106,16 @@ const EVENT_TOAST: Record<string, { title: string; body?: string }> = {
   driver_reconnected: { title: "عاد اتصال الكبتن" },
 };
 
+/** **«أحضر غرضي»** (§٧٢-ج/١) — الراكبُ ليس عند نقطة الانطلاق: **الاستلامُ بدءُ الرحلة والتسليمُ انتهاؤها**، ونصُّها نصُّ إشعار
+ *  الخلفية نفسُه (`notifications.FETCH_EVENT_TEXT`) — وما ليس هنا يُقال بنصّ الرحلة. */
+const FETCH_TOAST: Record<string, { title: string; body?: string }> = {
+  driver_assigned: { title: "قَبِل كبتنٌ طلبك", body: "في طريقه إلى مكان غرضك" },
+  driver_approaching: { title: "الكبتن يقترب من مكان غرضك", body: "نبّه من سيسلّمه الغرض." },
+  driver_arrived: { title: "وصل الكبتن إلى مكان غرضك", body: "بانتظار من يسلّمه الغرض" },
+  ride_started: { title: "استلم الكبتن غرضك", body: "في الطريق إليك" },
+  ride_completed: { title: "وصل غرضك", body: "شاشة الدفع بانتظارك" },
+};
+
 /** **أصواتُ الراكب** (§٦١-ي/١٠) — وكانت في الجدول منذ المرحلة ٩ **ولا سلكَ إليها**،
  *  وشاشةُ الإعدادات تَعِد بها («عند قبول الكبتن ووصوله»). **تحت «أصوات التطبيق»
  *  القائم** (`play` يسأله)، **ومع الحدث الذي يُرسم له بلاغُه**: صوتٌ بلا بلاغٍ يُرى
@@ -242,7 +252,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
           }
           if (TERMINAL_EVENTS.has(event.type)) setDriverPing(null);
 
-          const toast = EVENT_TOAST[event.type];
+          const toast = (withRide.ride?.parcel_fetch ? FETCH_TOAST[event.type] : undefined) ?? EVENT_TOAST[event.type];
           if (toast) {
             // «لم نجد كبتناً» على طلبٍ نسائي يحتاج سببَه: نصٌّ عامّ يقول
             // «لم يقبل أحد» يُقرأ رفضاً شخصياً، والصحيحُ أن المتاحات كنّ

@@ -81,10 +81,12 @@ export function ParcelsT2Screen() {
                 onClick={() => navigate(`/rides/${ride.id}`)}
               >
                 <span className="t2-icon t2-srow-icon" aria-hidden="true">
-                  package_2
+                  {ride.parcel_fetch ? "inventory_2" : "package_2"}
                 </span>
                 <span className="t2-srow-main">
                   <span className="t2-srow-title">
+                    {/* **«أحضر غرضي» معلَّمٌ بين طروده** (§٧٢-ج/١، لوحتُه C3) */}
+                    {ride.parcel_fetch ? "أحضر غرضي · " : ""}
                     {ride.status === "completed" ? DELIVERED : (RIDE_STATUS_LABEL[ride.status] ?? "طرد")}
                   </span>
                   <span className="t2-srow-hint">

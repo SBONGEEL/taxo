@@ -214,7 +214,7 @@ export function RideT2({
                 </span>
               )}
               {/* **في الطرد صاحبُ الطلب مرسلٌ لا راكب** (§٦٣-ج/٤) */}
-              {ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}
+              {ride.parcel_fetch ? "صاحب الغرض" : ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}
             </span>
           </div>
         ) : (
@@ -226,7 +226,9 @@ export function RideT2({
               </span>
             )}
             <div className="t2-rd-rider-main">
-              <div className="t2-rd-rider-name">{ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}</div>
+              <div className="t2-rd-rider-name">
+                {ride.parcel_fetch ? "صاحب الغرض" : ride.ride_type === "parcel" ? "مرسل الطرد" : "راكب TAXO"}
+              </div>
               <div className="t2-rd-rider-sub">{ride.pickup_address ?? "نقطة الانطلاق"}</div>
               {shared ? <div className="t2-rd-rider-share">{shareText}</div> : null}
             </div>
@@ -321,7 +323,9 @@ export function RideT2({
         )}
 
         {/* **«ارفض الطرد»** (§٦٣-ج/٤) — ثانويٌّ تحت «بدء الرحلة»، وتأكيدُه ورقةٌ تقول أثرَه */}
-        {canRefuse ? <RefuseParcelButtonT2 busy={busy} onOpen={() => setRefusing(true)} /> : null}
+        {canRefuse ? (
+          <RefuseParcelButtonT2 busy={busy} fetch={ride.parcel_fetch} onOpen={() => setRefusing(true)} />
+        ) : null}
 
         {error && !codeError ? (
           <p className="t2-note danger t2-rd-error">
@@ -391,6 +395,7 @@ export function RideT2({
       {refusing && canRefuse ? (
         <RefuseParcelSheetT2
           busy={busy}
+          fetch={ride.parcel_fetch}
           onConfirm={() => {
             setRefusing(false);
             onRefuseParcel();

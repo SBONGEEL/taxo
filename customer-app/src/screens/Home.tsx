@@ -197,10 +197,17 @@ export function HomeScreen() {
   // ثمّ تعيدها، فمسوّدةٌ فيها تضيع ويُعاد إقرارُ الشروط والمستلمُ من أوّله
   const [parcelMode, setParcelMode] = useState(false);
   const [parcelDraft, setParcelDraft] = useState<RideParcel | null>(null);
+  // **«أحضر غرضي»** (§٧٢-ج/١، لوحتُه R3): طردٌ معكوس — **أوّلُ ما يُختار مكانُ الغرض فيصير انطلاقاً، وموقعُه الحاليُّ وجهةً**؛
+  // و`fetchPlaced` يقول إن مكانَ الغرض اختير — فما يُختار بعده وجهةٌ كأيِّ طلب («أو عنوانٌ يختاره»)
+  const [parcelFetch, setParcelFetch] = useState(false);
+  const [fetchPlaced, setFetchPlaced] = useState(false);
   const endParcel = () => {
     setParcelMode(false);
     setParcelDraft(null);
+    setParcelFetch(false);
+    setFetchPlaced(false);
   };
+  const fetchItemStage = parcelMode && parcelFetch && !fetchPlaced;
   // **وبلاطةُ «بالساعة» تبدأ طلبَ ساعات** (§٦٣-ج/٥): الوجهةُ اختياريّةٌ («بلا وجهة» في منتقيها)، ثمّ ورقةُ الطلب بكتلة الساعات.
   // **ومسوّدتُها هنا كمسوّدة الطرد** — الساعاتُ ومن أين يُدفع محجوزُها تبقى إن طُويت الورقةُ لتعديل الوجهة. **ووجهةٌ لم تُختر
   // تبقى `null` هنا** (فلا يُرسم دبوسُها) **وتُرسل نقطةُ الانطلاق مكانَها** بعقد الخلفية (`target` أدناه)
@@ -309,7 +316,27 @@ export function HomeScreen() {
     [token],
   );
 
+  /** **مكانُ الغرض انطلاقاً، وموقعُه الحاليُّ وجهةً** (§٧٢-ج/١) — وبلا موقعٍ معروفٍ تُختار الوجهةُ بالدبوس بعده. */
+  function placeItem(point: Coordinates, address: string | null) {
+    const here = pickup;
+    setFetchPlaced(true);
+    setPickup(point);
+    setPickupAddress(address);
+    if (!here) {
+      setPhase("pick-dropoff");
+      return;
+    }
+    setDropoff(here);
+    setDropoffAddress(pickupAddress ?? pickupLine ?? "موقعي الحالي");
+    setPhase("confirm");
+    map.current?.fitBounds(point, here);
+  }
+
   function pickPlace(place: Place) {
+    if (fetchItemStage) {
+      placeItem(place.coordinates, place.address || place.name);
+      return;
+    }
     setDropoff(place.coordinates);
     setDropoffAddress(place.address || place.name);
     setPhase("confirm");
@@ -356,6 +383,12 @@ export function HomeScreen() {
           ),
         );
       }
+      return;
+    }
+    // **ومكانُ الغرض بالدبوس انطلاقٌ** (§٧٢-ج/١) — وعنوانُه يُسأل بعده كعنوان كلِّ انطلاق
+    if (fetchItemStage) {
+      placeItem(point, null);
+      void describe(point, "pickup");
       return;
     }
     setDropoff(point);
@@ -525,6 +558,9 @@ export function HomeScreen() {
       setPresetSchedule(null);
       setParcelMode(true);
       setParcelDraft(null);
+      // **و«أحضر غرضي» يعود «أحضر غرضي»** بنقطتيه — مكانُ الغرض اختير
+      setParcelFetch(previous.parcel_fetch);
+      setFetchPlaced(previous.parcel_fetch);
       endHourly();
       setDismissed(previous.id);
       setPhase("confirm");
@@ -748,6 +784,21 @@ export function HomeScreen() {
       setAirportPicks(undefined);
       setPresetSchedule(null);
       setParcelDraft(null);
+      setParcelFetch(false);
+      setFetchPlaced(false);
+      setParcelMode(true);
+      endHourly();
+      setSearchOpen(true);
+    },
+    // **«أحضر غرضي»** (§٧٢-ج/١) — «أين غرضك؟» أوّلاً فيصير انطلاقاً وموقعُه وجهةً، ثمّ ورقةُ الطلب بالاقتصادي وورقتُه مفتوحة.
+    // **والبلاطةُ لا تناديه إلا حيث مفتاحُه مشتعل** (`RiderHomeT2`)
+    onFetch: () => {
+      setPresetPreference(undefined);
+      setAirportPicks(undefined);
+      setPresetSchedule(null);
+      setParcelDraft(null);
+      setParcelFetch(true);
+      setFetchPlaced(false);
       setParcelMode(true);
       endHourly();
       setSearchOpen(true);
@@ -777,6 +828,7 @@ export function HomeScreen() {
     if (start === "airport") homeProps.onAirport?.();
     else if (start === "parcel") homeProps.onParcel?.();
     else if (start === "hourly") homeProps.onHourly?.();
+    else if (start === "fetch") homeProps.onFetch?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
@@ -832,7 +884,7 @@ export function HomeScreen() {
           initialScheduling: presetSchedule !== null,
           pickupLine,
           // **طلبُ طردٍ ومسوّدتُه** (§٦٣-ج/٤) — وغيابُه رحلةٌ عاديّة
-          parcel: parcelMode ? { draft: parcelDraft, onChange: setParcelDraft } : undefined,
+          parcel: parcelMode ? { draft: parcelDraft, onChange: setParcelDraft, fetch: parcelFetch } : undefined,
           // **طلبُ ساعاتٍ ومسوّدتُه** (§٦٣-ج/٥) — و`destination` أاختيرت وجهة؛ وغيابُه رحلةٌ عاديّة
           hourly: hourlyMode
             ? { draft: hourlyDraft, onChange: setHourlyDraft, destination: dropoff !== null }
@@ -1042,6 +1094,8 @@ export function HomeScreen() {
         // **«بلا وجهة» للساعات وحدَها** (§٦٣-ج/٥) — وكلُّ طلبٍ غيرِها بلا صفِّه كما كان
         onSkip={hourlyMode ? skipDestination : undefined}
         airports={airportPicks}
+        // **«أحضر غرضي»** (§٧٢-ج/١): السؤالُ الأوّلُ عن مكان الغرض، وما بعده عن مكان التسليم
+        title={fetchItemStage ? "أين غرضك؟" : parcelMode && parcelFetch ? "إلى أين يصلك؟" : undefined}
       />
 
     </div>

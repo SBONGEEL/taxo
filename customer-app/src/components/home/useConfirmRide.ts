@@ -26,7 +26,7 @@ import { earliest, guaranteeLeadOk, localInputValue, useGuaranteedBooking, useSc
 import { requesterCanPay, usePayerPreference, useRideForOther } from "@/lib/for-other";
 import { useHourly } from "@/lib/hourly";
 import { useMultiStop } from "@/lib/multistop";
-import { useParcel } from "@/lib/parcel";
+import { useParcel, useParcelFetch } from "@/lib/parcel";
 import type { PayableMethod } from "@/lib/payment";
 import { roundingUnit } from "@/lib/rounding";
 import { usePromoCodes } from "@/lib/promo";
@@ -156,7 +156,7 @@ export interface ConfirmRideProps {
   eta?: Partial<Record<VehicleCategory, number>> | null;
   /** **طلبُ طرد** (§٦٣-ج/٤) بدأته بلاطةُ «طرد» — وغيابُه رحلةٌ عاديّة. **والمسوّدةُ عند صاحب الورقة لا فيها** (`Home`): إضافةُ
    *  محطةٍ تطوي الورقةَ ثمّ تعيدها، ومسوّدةٌ فيها كانت تضيع معها — فيُعاد كتابةُ المستلم وإقرارُ الشروط من أوّله. */
-  parcel?: { draft: RideParcel | null; onChange: (next: RideParcel) => void };
+  parcel?: { draft: RideParcel | null; onChange: (next: RideParcel) => void; fetch?: boolean };
   /** **طلبُ ساعات** (§٦٣-ج/٥) بدأته بلاطةُ «بالساعة» — وغيابُه رحلةٌ عاديّة. **والمسوّدةُ عند صاحب الورقة** كمسوّدة الطرد (`Home`):
    *  الساعاتُ ومن أين يُدفع محجوزُها تبقى إن طُويت الورقةُ لتعديل الوجهة. و`destination` **أاختار الراكبُ وجهةً** — وبلاها
    *  `dropoff` نقطةُ الانطلاق نفسُها بعقد الخلفية. */
@@ -177,7 +177,11 @@ export function useConfirmRide({
 }: ConfirmRideProps) {
   // **الطرد** (§٦٣-ج/٤): طلبٌ بدأته البلاطة **وحيث المفتاحُ مشتعلٌ وحدَه** — مفتاحٌ أُطفئ بعد البدء يعيد الورقةَ رحلةً عاديّة
   // ولا يُرسل طرداً سيُرفض. **وفئتُه الاقتصاديُّ وحدَه** (الخلفيةُ ترفض غيرَها)، **ولا يُجمع مع «لشخص آخر» ولا المشاركة ولا الحجز**
-  const parcelEnabled = useParcel();
+  const parcelOn = useParcel();
+  // **و«أحضر غرضي» بمفتاحه هو** (§٧٢-ج/١) — طردٌ معكوسٌ بالحكم نفسِه
+  const fetchOn = useParcelFetch();
+  const parcelFetch = parcelProp?.fetch === true;
+  const parcelEnabled = parcelFetch ? fetchOn : parcelOn;
   const parcelMode = parcelEnabled && parcelProp !== undefined;
   const parcel = parcelMode ? parcelProp.draft : null;
   // **بالساعة** (§٦٣-ج/٥) بالحكم نفسِه: طلبٌ بدأته البلاطةُ **وحيث المفتاحُ مشتعل** — وبالاقتصادي وحدَه، **ولا يُجمع مع «لشخص آخر»
@@ -302,6 +306,7 @@ export function useConfirmRide({
       stops: stops.map((stop) => ({ lat: stop.lat, lng: stop.lng })),
       // **تقديرُ طردٍ يحمل رسمَه وشروطَه** (§٦٣-ج/٤) — وغيرُه بحمولته كما كانت
       is_parcel: parcelMode || undefined,
+      parcel_fetch: (parcelMode && parcelFetch) || undefined,
       // **وتقديرُ ساعاتٍ بعددها** (§٦٣-ج/٥) — «الساعات × سعرها» من الخلفية، ويُعاد السؤالُ بكلِّ ضغطةٍ على العدّاد
       hourly_hours: hourly?.hours,
     })
@@ -318,7 +323,7 @@ export function useConfirmRide({
     };
     // المحطاتُ في التبعيات: إضافةُ محطةٍ أو ترتيبُها يغيّر المسار والرسم،
     // فيُعاد السؤال — ولا يُجمع فرقٌ في الواجهة
-  }, [pickup, dropoff, category, stops, parcelMode, hourly?.hours]);
+  }, [pickup, dropoff, category, stops, parcelMode, parcelFetch, hourly?.hours]);
 
   async function apply() {
     if (!estimate) return;
@@ -450,6 +455,7 @@ export function useConfirmRide({
     setForOther,
     requesterPayable: requesterCanPay(countryConfig),
     parcelMode,
+    parcelFetch: parcelMode && parcelFetch,
     parcel,
     setParcel: parcelProp?.onChange,
     // **تقديرُ طردٍ بلا رسمٍ ⇒ الخدمةُ مخفيّةٌ في السوق** (رسمٌ صفرٌ أو مفتاحٌ أُطفئ بعد البدء) — والطلبُ سيُرفض

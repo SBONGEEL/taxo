@@ -92,6 +92,10 @@ export interface RideParcel {
   recipient_address: string;
   payer: Exclude<RidePayer, "passenger_cash">;
   accepted_terms: boolean;
+  /** **«أحضر غرضي»** (§٧٢-ج/١) — الحقولُ الثلاثةُ حينها **لمن يسلّم الغرضَ للكبتن** وعنوانِ الاستلام، و`item` وصفُ الغرض؛
+   *  والدافعُ `requester` وحدَه. وغيابُهما طردٌ كما كان. */
+  fetch?: boolean;
+  item?: string;
 }
 
 /** **من أين يُدفع محجوزُ الساعات عند البدء** (§٦٣-ج/٥) — `wallet` دفعةٌ تُسوّى لحظةَ يبدأ الكبتن (ورصيدٌ لا يكفي يرفض البدءَ
@@ -462,6 +466,9 @@ export interface Ride {
   recipient_name: string | null;
   recipient_phone: string | null;
   recipient_address: string | null;
+  /** **«أحضر غرضي»** (§٧٢-ج/١) — العلمُ دائماً، **والمستلمُ حينها من يسلّم الغرض** ووصفُه في أطوار القبول وحدَها. */
+  parcel_fetch: boolean;
+  parcel_item: string | null;
   /** **بالساعة** (§٦٣-ج/٥) — الساعاتُ المحجوزة، **والكيلومتراتُ المشمولةُ محسوبةً في الخلفية** (فلا تضرب الشاشةُ ساعاتٍ في
    *  كيلومترات)، ومن أين يُدفع المحجوزُ عند البدء. و`null` في غير رحلة الساعة — و`ride_type` وحدَه يقول أيّها. */
   hourly_hours: number | null;

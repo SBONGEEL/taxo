@@ -164,6 +164,7 @@ async def estimate(
     dropoff: Coordinates,
     stops: Sequence[Coordinates] = (),
     parcel: bool = False,
+    parcel_fetch: bool = False,
     hourly: "HourlyTerms | None" = None,
 ) -> FareEstimate:
     """تسعيرة الدولة + مسار Mapbox → سعر مقدّر.
@@ -201,7 +202,8 @@ async def estimate(
     if parcel:
         from app.services import parcels
 
-        parcel_fee = await parcels.fee_for(session, country_code)
+        # **و«أحضر غرضي» برسمه هو** (§٧٢-ج/١) — والسطرُ سطرُ الطرد نفسُه: رسمٌ للكبتن خارجَ العمولة والخصم
+        parcel_fee = await parcels.fee_for(session, country_code, fetch=parcel_fetch)
         if parcel_fee > 0:
             fare = round_money(fare + parcel_fee)
             captain_fees = round_money(captain_fees + parcel_fee)

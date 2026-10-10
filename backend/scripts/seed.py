@@ -159,6 +159,7 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         FeatureKey.AIRPORT_ENABLED: False,
         FeatureKey.GUARANTEED_BOOKING_ENABLED: False,
         FeatureKey.PARCEL_ENABLED: False,
+        FeatureKey.PARCEL_FETCH_ENABLED: False,
         FeatureKey.HOURLY_ENABLED: False,
         FeatureKey.RIDER_SUBSCRIPTION_ENABLED: False,
         FeatureKey.INTERCITY_ENABLED: False,

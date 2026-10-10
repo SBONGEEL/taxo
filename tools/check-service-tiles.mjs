@@ -51,7 +51,8 @@ const riderSrc = read("customer-app/src/screens/t2/ServiceRouteT2.tsx");
 const has = {
   driver: new Set([
     ...keysOf(driverSrc, "DRIVER_SERVICE_TARGETS", "driver-app"),
-    ...(driverSrc.includes("ParcelsT2Screen") ? ["parcel"] : []),
+    // **ما تفتحه شاشةُ «الطرود»** — قائمةٌ في الملفّ نفسِه (`DRIVER_PARCEL_SERVICES`)، لا اسمٌ يُخمَّن
+    ...[...(driverSrc.match(/DRIVER_PARCEL_SERVICES: readonly string\[\] = \[([^\]]*)\]/)?.[1] ?? "").matchAll(/"(\w+)"/g)].map((m) => m[1]),
   ]),
   rider: new Set([
     ...keysOf(riderSrc, "RIDER_SERVICE_TARGETS", "customer-app"),

@@ -25,6 +25,7 @@ class ServiceSetting(TimestampMixin, Base):
             name="service_settings_guarantee_valid",
         ),
         CheckConstraint("parcel_fee >= 0", name="service_settings_parcel_fee_valid"),
+        CheckConstraint("parcel_fetch_fee >= 0", name="service_settings_parcel_fetch_fee_valid"),
         CheckConstraint(
             "hourly_rate >= 0 AND hourly_km_per_hour >= 0 AND hourly_cancel_minutes >= 0 AND hourly_max_hours BETWEEN 1 AND 24",
             name="service_settings_hourly_valid",
@@ -78,6 +79,10 @@ class ServiceSetting(TimestampMixin, Base):
     # ------------------------------------------------ الطرد (§٦٣-ج/٤)
     #: **رسمُ الطرد للكبتن** فوق سعر الاقتصادي — وصفرٌ يُخفي الخدمة
     parcel_fee: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
+    )
+    #: **رسمُ «أحضر غرضي» للكبتن** (§٧٢-ج/١) — **كرسم الطرد افتراضاً** (نسختُه الترحيلةُ `0109` منه)، ويُضبط وحدَه من اللوحة. وصفرٌ يُخفيه
+    parcel_fetch_fee: Mapped[Decimal] = mapped_column(
         MONEY, nullable=False, default=Decimal("0.000"), server_default=text("0")
     )
 
