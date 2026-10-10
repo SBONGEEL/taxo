@@ -72,6 +72,8 @@ DEFAULT_QUIET_END = time(8, 0)
 DEFAULT_TIMEZONES: dict[CountryCode, str] = {
     CountryCode.JO: "Asia/Amman",
     CountryCode.LY: "Africa/Tripoli",
+    # **UTC+1 بلا توقيتٍ صيفيّ** — وغيابُها كان يُنشئ صفَّ الجزائر بـ`UTC` فيتأخّر «يومُ الدولة» ساعة (SPEC §٧٣-ج/٩)
+    CountryCode.DZ: "Africa/Algiers",
 }
 _FALLBACK_TIMEZONE = "UTC"
 

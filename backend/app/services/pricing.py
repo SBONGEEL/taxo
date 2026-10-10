@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import STORAGE_STEP, currency_for_country, round_to_currency
 from app.core.exceptions import PricingRuleMissing
 from app.models.enums import CountryCode, Currency
 from app.models.pricing import PricingRule
@@ -32,8 +32,9 @@ if TYPE_CHECKING:
     from app.services.hourly import HourlyTerms
     from app.models.ride import RideStop
 
-# دقة الأعمدة المالية نفسها — التقريب مرة واحدة في النهاية لا في كل حد
-MONEY_STEP = Decimal("0.001")
+# دقة الأعمدة المالية نفسها — التقريب مرة واحدة في النهاية لا في كل حد.
+# **وخاناتُ كلِّ عملةٍ بيتُها `core/currency.py`** (SPEC §٧٣-ج/٢)؛ وهذه دقّةُ التخزين وحدَها
+MONEY_STEP = STORAGE_STEP
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,8 +89,23 @@ def lines_json(lines: Sequence[FareLine]) -> list[dict[str, str]]:
     return [line.as_json() for line in lines]
 
 
-def round_money(amount: Decimal) -> Decimal:
-    return amount.quantize(MONEY_STEP, rounding=ROUND_HALF_UP)
+def round_money(amount: Decimal, currency: Currency | str) -> Decimal:
+    """**تقريبُ مبلغٍ محسوبٍ إلى أصغر وحدةٍ في عملته** (SPEC §٧٣-ج/٤) — `0.001` للأردنيّ والليبيّ كما كان حرفاً، ودينارٌ للجزائريّ.
+
+    **والعملةُ وسيطٌ إلزاميّ**: كلُّ حسابٍ يُنشئ كسراً جديداً (نسبةٌ، معدّلٌ في كيلومترات أو دقائق، قسمة) يعرف عملتَه، ومن نسيها
+    لا يقع على ثلاث خاناتٍ صامتاً — **يسقط**. وما لا يُنشئ كسراً (مجموعُ قيودٍ أو فرقُ محفوظَين) يمرّ بـ`as_money`.
+    """
+    return round_to_currency(amount, currency)
+
+
+def as_money(amount: Decimal) -> Decimal:
+    """**ضبطُ دقّة التخزين لمبلغٍ دقيقٍ أصلاً — لا تقريب**: مجموعُ قيودٍ من القاعدة، أو فرقُ مبلغين محفوظين، أو مضاعفٌ صحيحٌ لمحفوظ.
+
+    **لا يُنشئ قيمةً**: ما دخله بخانات عملته خرج بها (دينارٌ جزائريٌّ صحيحٌ يبقى صحيحاً). وهو `quantize(0.001, ROUND_HALF_UP)`
+    حرفاً كما كانت `round_money` قبل §٧٣ — **فلا يتغيّر بايتٌ في الأردن وليبيا**. ومن مرّر به حساباً يُنشئ كسراً في الجزائر
+    أمسكه حارسُ الكتابة (`core/money_guard.py`) وحارسُ السلك (`tests/money_format.py`).
+    """
+    return amount.quantize(STORAGE_STEP, rounding=ROUND_HALF_UP)
 
 
 def fare_breakdown(
@@ -105,15 +121,20 @@ def fare_breakdown(
     # يحمل قيمة، أما صفٌّ بُني في الذاكرة ولم يُفلَش بعد فحقلُه `None` —
     # والأجرةُ لا يجوز أن تتعلق بلحظة الفلش
     stop_fee = rule.stop_fee or Decimal(0)
+    currency = currency_for_country(rule.country_code)
     raw = [
         ("base", rule.base_fare, None),
         ("distance", route.distance_km * rule.price_per_km, route.distance_km),
         ("time", route.duration_min * rule.price_per_min, route.duration_min),
         ("stops", stop_fee * stops_count, Decimal(stops_count) if stops_count else None),
     ]
-    fare = round_money(sum((amount for _, amount, _ in raw), Decimal(0)))
+    fare = round_money(sum((amount for _, amount, _ in raw), Decimal(0)), currency)
 
-    lines = [FareLine(kind, round_money(amount), quantity) for kind, amount, quantity in raw if amount != 0]
+    lines = [
+        FareLine(kind, round_money(amount, currency), quantity)
+        for kind, amount, quantity in raw
+        if amount != 0
+    ]
     residual = fare - sum((line.amount for line in lines), Decimal(0))
     if residual and lines:
         variable = [i for i, line in enumerate(lines) if line.kind in ("distance", "time")] or list(range(len(lines)))
@@ -121,7 +142,7 @@ def fare_breakdown(
         line = lines[target]
         lines[target] = FareLine(line.kind, line.amount + residual, line.quantity)
 
-    minimum = round_money(rule.minimum_fare)
+    minimum = round_money(rule.minimum_fare, currency)
     if fare < minimum:
         lines.append(FareLine("minimum", minimum - fare))
         return minimum, True, lines
@@ -176,6 +197,7 @@ async def estimate(
     مسافةُ الطريق كلِّه ومدتُه) و**الرسمَ المقطوع** معاً.
     """
     rule = await get_rule(session, country_code, vehicle_category)
+    currency = currency_for_country(country_code)
     # **بالساعة سعرُها ساعاتٌ لا طريق** (§٦٣-ج/٥) — فلا نداءَ مسارٍ يُدفع ثمنُه، والمدّةُ ساعاتُها
     if hourly is not None:
         from app.services import hourly as hourly_service
@@ -194,9 +216,9 @@ async def estimate(
     facility = await facilities.fee_for(
         session, country_code=country_code, pickup=pickup, dropoff=dropoff
     )
-    captain_fees = round_money(facility.fee if facility is not None else Decimal(0))
+    captain_fees = round_money(facility.fee if facility is not None else Decimal(0), currency)
     if captain_fees > 0:
-        fare = round_money(fare + captain_fees)
+        fare = round_money(fare + captain_fees, currency)
         lines = [*lines, FareLine("airport_fee", captain_fees)]
     # **ورسمُ الطرد بالطريقة نفسِها** (§٦٣-ج/٤) — سطرٌ ثانٍ، ويُجمع إلى رسوم الكبتن: طردٌ إلى المطار يحمل الرسمين
     if parcel:
@@ -205,14 +227,14 @@ async def estimate(
         # **و«أحضر غرضي» برسمه هو** (§٧٢-ج/١) — والسطرُ سطرُ الطرد نفسُه: رسمٌ للكبتن خارجَ العمولة والخصم
         parcel_fee = await parcels.fee_for(session, country_code, fetch=parcel_fetch)
         if parcel_fee > 0:
-            fare = round_money(fare + parcel_fee)
-            captain_fees = round_money(captain_fees + parcel_fee)
+            fare = round_money(fare + parcel_fee, currency)
+            captain_fees = round_money(captain_fees + parcel_fee, currency)
             lines = [*lines, FareLine("parcel_fee", parcel_fee)]
 
     return FareEstimate(
         country_code=CountryCode(country_code),
         vehicle_category=str(vehicle_category),
-        currency=currency_for_country(country_code),
+        currency=currency,
         route=route,
         fare=fare,
         minimum_fare_applied=minimum_applied,
@@ -223,9 +245,10 @@ async def estimate(
         #
         # و`or 0`: الأعمدةُ `server_default="0"` فكلُّ صفٍّ يحملها، والحارسُ
         # هنا لصفٍّ قديمٍ في قاعدةٍ رُقّيت ولم تُملأ حقولُه بعد
-        stop_fee=round_money(rule.stop_fee or Decimal(0)),
+        stop_fee=round_money(rule.stop_fee or Decimal(0), currency),
         stop_free_minutes=rule.stop_free_minutes or 0,
-        stop_price_per_min=round_money(rule.stop_price_per_min or Decimal(0)),
+        # **معدّلٌ لا مبلغ** — يبقى بدقّة التخزين في كلِّ عملة (ربعُ دينارٍ جزائريٍّ للدقيقة معدّلٌ صحيح)، وما يُحسب به يُقرَّب
+        stop_price_per_min=as_money(rule.stop_price_per_min or Decimal(0)),
         stop_max_wait_minutes=rule.stop_max_wait_minutes or 0,
         lines=tuple(lines),
         captain_fees=captain_fees,
@@ -234,8 +257,10 @@ async def estimate(
 
 
 def discountable(fare: Decimal, captain_fees: Decimal) -> Decimal:
-    """**وعاءُ الخصم: الأجرةُ دون رسوم الكبتن** (§٦٣-ب) — الرسمُ «للكبتن» يصله كاملاً، فلا يُخصم منه."""
-    return round_money(max(fare - captain_fees, Decimal(0)))
+    """**وعاءُ الخصم: الأجرةُ دون رسوم الكبتن** (§٦٣-ب) — الرسمُ «للكبتن» يصله كاملاً، فلا يُخصم منه.
+
+    **فرقُ مبلغين محفوظين** — لا يُنشئ كسراً، فيمرّ بـ`as_money` لا بعملة."""
+    return as_money(max(fare - captain_fees, Decimal(0)))
 
 
 def waiting_minutes(stop: "RideStop", now: datetime) -> Decimal:
@@ -259,6 +284,7 @@ def waiting_charge(
     free_minutes: int,
     price_per_min: Decimal,
     now: datetime,
+    currency: Currency | str,
 ) -> Decimal:
     """رسمُ الانتظار على محطات رحلةٍ — **بالمعدلات المجمَّدة عليها**.
 
@@ -276,4 +302,4 @@ def waiting_charge(
         over = waiting_minutes(stop, now) - free_minutes
         if over > 0:
             billable += over
-    return round_money(billable * price_per_min)
+    return round_money(billable * price_per_min, currency)

@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 
+# **حارسُ الكتابة يُسجَّل حيث تولد الجلسة** (SPEC §٧٣-ج/٧): كلُّ من يكتب يمرّ بها، فلا مستوردَ ينساه
+import app.core.money_guard  # noqa: E402,F401
+
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=settings.sql_echo,

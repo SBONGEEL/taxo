@@ -50,6 +50,7 @@ from app.models.advance import (
 )
 from app.models.driver import Driver
 from app.models.enums import (
+    Currency,
     AdvanceStatus,
     CountryCode,
     DriverStatus,
@@ -68,7 +69,7 @@ from app.models.ride import Ride
 from app.models.subscription import DriverSubscription, SubscriptionPlan
 from app.models.user import User
 from app.services import rounding, settings_service, test_accounts, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money, round_money
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,8 @@ class Policy:
     """سياسةُ دولةٍ كما تُقرأ لحظةَ السؤال — لا يُجمَّد منها إلا ما صُرف."""
 
     enabled: bool
+    #: **عملةُ السوق** — بها تُقرَّب النسبةُ والسقفُ المحسوب (SPEC §٧٣-ج/٤)؛ تُقرأ من الدولة لا تُفترض
+    currency: Currency
     deduction_percent: int
     min_kept_amount: Decimal
     term_days: int
@@ -121,6 +124,7 @@ async def policy_for(session: AsyncSession, country: CountryCode) -> Policy:
         select(AdvanceSetting).where(AdvanceSetting.country_code == country)
     )
     return Policy(
+        currency=currency_for_country(country),
         enabled=await settings_service.is_feature_enabled(
             session, country, FeatureKey.DRIVER_ADVANCES_ENABLED
         ),
@@ -277,7 +281,7 @@ async def repaid_amount(session: AsyncSession, advance_id: uuid.UUID) -> Decimal
             ),
         )
     )
-    return round_money(-Decimal(total or 0))
+    return as_money(-Decimal(total or 0))
 
 
 async def outstanding_for(
@@ -304,7 +308,7 @@ async def debt_for(session: AsyncSession, driver_id: uuid.UUID) -> Debt | None:
     advance = await outstanding_for(session, driver_id)
     if advance is None:
         return None
-    remaining = round_money(advance.amount - await repaid_amount(session, advance.id))
+    remaining = as_money(advance.amount - await repaid_amount(session, advance.id))
     return Debt(
         advance=advance, remaining=remaining, overdue=advance.due_at <= _now()
     )
@@ -416,7 +420,7 @@ async def cap_for(
         session, driver.id
     )
     multiplier = min(multiplier, policy.max_multiplier_percent)
-    computed = round_money(base * Decimal(multiplier) / 100)
+    computed = round_money(base * Decimal(multiplier) / 100, policy.currency)
     if driver.advance_cap_override is None:
         return computed
     return min(computed, driver.advance_cap_override)
@@ -448,7 +452,7 @@ async def disburse(
     test_accounts.require_real_money(
         user, "لا سلفةَ لحساب التجربة — رصيدُه من «تصحيحِ تجربة» في اللوحة وحدَه"
     )
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise AdvanceNotAllowed("المبلغ غير صحيح")
     # **مبلغٌ يختاره الكبتنُ — أو المشرفُ فوق السقف — مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٥ و/٦): السلفةُ مالٌ يقبضه إنسان،
@@ -529,8 +533,8 @@ def deduction_for(
     """
     if earning <= 0 or remaining <= 0:
         return Decimal("0")
-    by_percent = round_money(earning * Decimal(policy.deduction_percent) / 100)
-    room = round_money(earning - policy.min_kept_amount)
+    by_percent = round_money(earning * Decimal(policy.deduction_percent) / 100, policy.currency)
+    room = as_money(earning - policy.min_kept_amount)
     return max(Decimal("0"), min(by_percent, remaining, room))
 
 
@@ -568,7 +572,7 @@ async def deduct_from_earning(
         return Decimal("0")
 
     policy = await policy_for(session, country)
-    remaining = round_money(advance.amount - await repaid_amount(session, advance.id))
+    remaining = as_money(advance.amount - await repaid_amount(session, advance.id))
     amount = deduction_for(earning=earning, remaining=remaining, policy=policy)
     if amount <= 0:
         return Decimal("0")
@@ -595,7 +599,7 @@ async def deduct_from_earning(
             amount=-amount,
             ride_id=ride_id,
             advance_id=advance.id,
-            reference=note.format(remaining=round_money(remaining - amount)),
+            reference=note.format(remaining=as_money(remaining - amount)),
             idempotency_key=f"advance_repay:{payment_id}",
         )
     except InsufficientBalance:
@@ -608,7 +612,7 @@ async def deduct_from_earning(
         session,
         advance=advance,
         driver=driver,
-        remaining=round_money(remaining - amount),
+        remaining=as_money(remaining - amount),
     )
     return amount
 
@@ -625,7 +629,7 @@ async def repay_in_full(
     if advance is None:
         raise NotFound("لا سلفةَ قائمة")
 
-    remaining = round_money(advance.amount - await repaid_amount(session, advance.id))
+    remaining = as_money(advance.amount - await repaid_amount(session, advance.id))
     if remaining <= 0:  # pragma: no cover - يُغلق الصفُّ لحظةَ بلوغه صفراً
         await _settle_if_clear(
             session, advance=advance, driver=driver, remaining=remaining

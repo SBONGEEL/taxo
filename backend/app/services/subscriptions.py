@@ -37,8 +37,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, Decimal
 
-# وحدةُ التكميم للمال — `NUMERIC(12,3)`
-_MONEY_UNIT = Decimal("0.001")
+# وحدةُ التكميم للمال — `NUMERIC(12,3)`، **من بيتها الواحد** (SPEC §٧٣-ج/٤). وتقريبُ ما يُحسب يتبع العملة (`step_of`)
+from app.core.currency import STORAGE_STEP as _MONEY_UNIT
+from app.core.currency import step_of
 
 import logging
 
@@ -630,6 +631,8 @@ async def record_manual(
     # تسوية الفرق قائمةٌ، والكسرُ وحدَه يُردّ — مالٌ قُبض نقداً أو بكليك في سوقٍ لا كسورَ فيه. **ولا يُقرَّب رقمُه من وراء ظهره**
     price = await price_to_pay(session, plan, offer)
     if amount_paid is not None:
+        # **وبخانات العملة قبل الوحدة** (§٧٣-ج/٧): دينارٌ جزائريٌّ بكسرٍ يُردّ ولا يُقرَّب من وراء ظهر من كتبه
+        rounding.require_precise(amount_paid, plan.currency, field="amount_paid")
         rounding.require_multiple(amount_paid, price.policy, field="amount_paid")
     suggested = price.payable
     paid = suggested if amount_paid is None else amount_paid
@@ -1169,7 +1172,10 @@ def _refund_for(
     share = Decimal(str(unused)) / Decimal(str(span))
     # **التقريبُ لصالح الكبتن** (شرطُ المالك): `ROUND_CEILING` لا `HALF_UP` —
     # والفرقُ مليمٌ في الصفّ الواحد، **وهو الفرقُ بين «أخذ حقَّه» و«نقص منه»**
-    precise = (row.amount_paid * share).quantize(_MONEY_UNIT, rounding=ROUND_CEILING)
+    # **إلى أصغر وحدةٍ في عملة الخطة** (§٧٣-ج/٤) — مليمٌ للأردنيّ والليبيّ كما كان حرفاً، ودينارٌ للجزائريّ؛ وصفٌّ بلا خطّةٍ محمَّلةٍ
+    # يبقى بدقّة التخزين كما كان
+    step = step_of(row.plan.currency) if row.plan is not None else _MONEY_UNIT
+    precise = (row.amount_paid * share).quantize(step, rounding=ROUND_CEILING).quantize(_MONEY_UNIT)
     up = rounding.toward(policy, RoundingMode.UP)
     return min(rounding.rounded(precise, up), row.amount_paid), True, precise
 

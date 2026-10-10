@@ -36,6 +36,7 @@ from app.models.ride import Ride, RideRoutePoint
 from app.models.payment import OWING_PAYMENT_STATUSES
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.core.currency import STORAGE_STEP
 from app.services import admin_search, settlement
 from app.services.settlement import SettlementState
 
@@ -183,9 +184,9 @@ async def payment_summaries(
             methods=[PaymentMethod(value) for value in sorted(methods or [])],
             # ثلاثُ منازل كبقية المال: `Decimal(0)` يخرج «0» فيقرأ الصفَّ
             # مختلفاً عن جاره في نفس العمود
-            paid_amount=Decimal(paid).quantize(Decimal("0.001")),
+            paid_amount=Decimal(paid).quantize(STORAGE_STEP),
             has_open_dispute=bool(disputed),
-            held_amount=Decimal(held).quantize(Decimal("0.001")),
+            held_amount=Decimal(held).quantize(STORAGE_STEP),
         )
         for ride_id, methods, paid, disputed, held in rows.all()
     }

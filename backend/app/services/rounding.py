@@ -23,13 +23,22 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import (
+    CURRENCY_LABEL,
+    STORAGE_DECIMALS,
+    currency_for_country,
+    decimals_of,
+    is_precise,
+    money_text,
+    step_of,
+)
 from app.core.exceptions import AmountNotMultiple, Conflict
-from app.models.enums import CountryCode, FareLineKind, RoundingMode, RoundingSource
+from app.models.enums import CountryCode, Currency, FareLineKind, RoundingMode, RoundingSource
 from app.models.payment import OWING_PAYMENT_STATUSES, PLATFORM_WRITTEN_METHODS, Payment
 from app.models.payment_setting import DEFAULT_ROUNDING_UNIT, PaymentSetting
 from app.models.ride import Ride
 from app.models.rounding import MoneyRounding
-from app.services.pricing import FareLine, round_money
+from app.services.pricing import FareLine, as_money
 
 if TYPE_CHECKING:
     from app.models.enums import WalletOwnerType
@@ -118,8 +127,8 @@ def round_amount(amount: Decimal, policy: RoundingPolicy) -> tuple[Decimal, Deci
         whole = steps.to_integral_value(rounding=ROUND_FLOOR)
     else:
         whole = (steps + _HALF).to_integral_value(rounding=ROUND_FLOOR)
-    rounded = round_money(whole * policy.unit)
-    return rounded, round_money(rounded - amount)
+    rounded = as_money(whole * policy.unit)
+    return rounded, as_money(rounded - amount)
 
 
 def rounded(amount: Decimal, policy: RoundingPolicy) -> Decimal:
@@ -144,7 +153,7 @@ def floor_to_unit(amount: Decimal, policy: RoundingPolicy) -> Decimal:
     if not policy.enabled:
         return amount
     whole = (amount / policy.unit).to_integral_value(rounding=ROUND_FLOOR)
-    return round_money(whole * policy.unit)
+    return as_money(whole * policy.unit)
 
 
 def ceil_to_unit(amount: Decimal, policy: RoundingPolicy) -> Decimal:
@@ -153,7 +162,7 @@ def ceil_to_unit(amount: Decimal, policy: RoundingPolicy) -> Decimal:
     if not policy.enabled:
         return amount
     whole = (amount / policy.unit).to_integral_value(rounding=ROUND_CEILING)
-    return round_money(whole * policy.unit)
+    return as_money(whole * policy.unit)
 
 
 def toward(policy: RoundingPolicy, mode: RoundingMode) -> RoundingPolicy:
@@ -172,31 +181,62 @@ def is_multiple(amount: Decimal, policy: RoundingPolicy) -> bool:
     return not policy.enabled or amount % policy.unit == 0
 
 
-def require_multiple(amount: Decimal, policy: RoundingPolicy, *, field: str | None = None) -> None:
+def require_multiple(
+    amount: Decimal,
+    policy: RoundingPolicy,
+    *,
+    field: str | None = None,
+    currency: Currency | str | None = None,
+) -> None:
     """**ما يختاره الشخصُ مضاعفٌ للوحدة وإلا رُدّ برسالةٍ عربيّة** (§٧٠-ج/٦) — **لا يُبدَّل رقمٌ كتبه أحدٌ بيده من وراء ظهره**.
 
     **ورمزُه `amount_not_multiple`** (`AmountNotMultiple`) ومعه الوحدةُ والمضاعفان المجاوران — فالشاشةُ تقترحهما ولا تحسبهما
-    (§14). ومطفأً لا يُردّ شيء.
+    (§14). ومطفأً لا يُردّ شيء. **و`currency` للنصّ وحدَه** (§٧٣-ج/٥): «10 أو 20» للجزائريّ لا «10.000»، والأردنيُّ كما كان حرفاً.
     """
     if not is_multiple(amount, policy):
         lower = floor_to_unit(amount, policy)
-        upper = round_money(lower + policy.unit)
+        upper = as_money(lower + policy.unit)
+        text = (lambda value: money_text(value, currency)) if currency else (lambda value: str(as_money(value)))
         raise AmountNotMultiple(
-            f"المبلغُ يكون من مضاعفات {round_money(policy.unit)} — {lower} أو {upper}",
-            unit=str(round_money(policy.unit)),
-            lower=str(lower),
-            upper=str(upper),
+            f"المبلغُ يكون من مضاعفات {text(policy.unit)} — {text(lower)} أو {text(upper)}",
+            unit=text(policy.unit),
+            lower=text(lower),
+            upper=text(upper),
             **({"field": field} if field else {}),
         )
+
+
+def require_precise(amount: Decimal, currency: Currency | str, *, field: str | None = "amount") -> None:
+    """**ما يختاره الشخصُ بخانات عملته وإلا رُدّ** (SPEC §٧٣-ج/٧) — «150.5 د.ج» يُردّ ولا يُقرَّب من وراء ظهر من كتبه.
+
+    **بالرمز نفسِه** (`amount_not_multiple`) ومعه الوحدةُ والعددان المجاوران — فالشاشةُ التي تقترح مضاعفَي §٧٠ تقترح هذين بلا
+    سطرٍ جديد. **ولا عملَ له في عملةٍ بثلاث خانات**: كلُّ مبلغٍ فيها دقيقٌ بخاناتها، فلا يتغيّر جوابٌ أردنيٌّ ولا ليبيّ.
+    """
+    if decimals_of(currency) >= STORAGE_DECIMALS or is_precise(amount, currency):
+        return
+    step = step_of(currency)
+    lower = (Decimal(amount) / step).to_integral_value(rounding=ROUND_FLOOR) * step
+    upper = lower + step
+    places = decimals_of(currency)
+    rule = "بلا كسور" if places == 0 else f"بـ{places} خاناتٍ بعد الفاصلة"
+    raise AmountNotMultiple(
+        f"المبلغُ بـ«{CURRENCY_LABEL[Currency(currency)]}» {rule} — {money_text(lower, currency)} أو {money_text(upper, currency)}",
+        unit=money_text(step, currency),
+        lower=money_text(lower, currency),
+        upper=money_text(upper, currency),
+        **({"field": field} if field else {}),
+    )
 
 
 async def require_multiple_in(
     session: AsyncSession, country: CountryCode, amount: Decimal, *, field: str | None = "amount"
 ) -> RoundingPolicy:
     """`require_multiple` بإعداد السوق الآن — **لأبواب ما يختاره الشخص** (الشحنُ والسحبُ والتحويلُ والبقشيشُ والسلفةُ وسدادُ
-    الدَّين). ويعيد السياسةَ لمن يحتاجها بعده."""
+    الدَّين). ويعيد السياسةَ لمن يحتاجها بعده. **وخاناتُ العملة قبل الوحدة** (§٧٣-ج/٧): كسرُ دينارٍ جزائريٍّ يُردّ هنا أوّلاً."""
+    currency = currency_for_country(country)
+    require_precise(amount, currency, field=field)
     policy = await policy_for(session, country)
-    require_multiple(amount, policy, field=field)
+    require_multiple(amount, policy, field=field, currency=currency)
     return policy
 
 
@@ -224,7 +264,7 @@ async def record(
     **وصفٌّ قائمٌ بقيمٍ أخرى يُرفض لا يُبتلع** — تقريبان مختلفان لمعاملةٍ واحدةٍ هما بعينهما الفلسُ الضائعُ بصمت. والقيدُ الفريدُ
     في القاعدة آخرُ الحرّاس.
     """
-    difference = round_money(rounded_amount - precise)
+    difference = as_money(rounded_amount - precise)
     if difference == 0 or not policy.enabled:
         return None
     existing = await session.scalar(
@@ -233,7 +273,7 @@ async def record(
         )
     )
     if existing is not None:
-        if existing.precise == round_money(precise) and existing.difference == difference:
+        if existing.precise == as_money(precise) and existing.difference == difference:
             return existing
         raise Conflict("تقريبٌ آخرُ مسجَّلٌ لهذه المعاملة بقيمٍ أخرى")
     row = MoneyRounding(
@@ -241,8 +281,8 @@ async def record(
         source_kind=source.value,
         source_id=source_id,
         user_id=user_id,
-        precise=round_money(precise),
-        rounded=round_money(rounded_amount),
+        precise=as_money(precise),
+        rounded=as_money(rounded_amount),
         difference=difference,
         unit=policy.unit,
         mode=policy.mode.value,
@@ -296,7 +336,7 @@ async def return_excess(
     **و`advance_id` لسداد السلفة**: الزائدُ جزءٌ من سدادها، فيحمل معرّفَها — وما سُدِّد منها (`advances.repaid_amount`) وأرباحُ
     الكبتن (`earnings`) يقرآنه معه، **فالمسدَّدُ المتبقّي بعينه لا المقرَّب**.
     """
-    excess = round_money(paid - precise)
+    excess = as_money(paid - precise)
     if excess <= 0 or not policy.enabled:
         return None
     from app.models.enums import WalletTransactionType
@@ -374,15 +414,15 @@ async def apply_to_ride(session: AsyncSession, ride: Ride) -> MoneyRounding | No
     platform = sum((amount for method, amount in rows if method in PLATFORM_WRITTEN_METHODS), ZERO)
     covered = sum((amount for _, amount in rows), ZERO)
 
-    rider_total = round_money(ride.final_fare - platform)
+    rider_total = as_money(ride.final_fare - platform)
     if rider_total <= 0:
         return None
-    remaining = round_money(ride.final_fare - covered)
+    remaining = as_money(ride.final_fare - covered)
     _, difference = round_amount(remaining, policy)
     if difference == 0 or rider_total + difference < 0:
         return None
 
-    ride.final_fare = round_money(ride.final_fare + difference)
+    ride.final_fare = as_money(ride.final_fare + difference)
     # **سطرٌ بذاته** (§٧٠-أ/٩) — وقائمةٌ جديدةٌ لا إلحاقٌ في مكانها: عمودُ JSONB لا يرى تغيّراً داخل القائمة نفسِها
     if ride.fare_lines:
         ride.fare_lines = [*ride.fare_lines, FareLine(FareLineKind.ROUNDING.value, difference).as_json()]
@@ -419,7 +459,7 @@ def _frozen_discounts(ride: Ride, fare: Decimal) -> Decimal:
     base = pricing.discountable(fare, ride.captain_fees_at_ride)
     discounts = promo.discount_on_ride(ride, base)
     if ride.share_discount_percent_at_ride > 0:
-        discounts += sharing.discount_on(base, ride.share_discount_percent_at_ride)
+        discounts += sharing.discount_on(base, ride.share_discount_percent_at_ride, ride.currency)
     return discounts
 
 
@@ -438,7 +478,7 @@ def rider_estimate(ride: Ride) -> Decimal:
     policy = frozen_policy(ride)
     if not policy.enabled:
         return ride.estimated_fare
-    rider = round_money(ride.estimated_fare - _frozen_discounts(ride, ride.estimated_fare))
+    rider = as_money(ride.estimated_fare - _frozen_discounts(ride, ride.estimated_fare))
     if rider <= 0:
         return ZERO
     return rounded(rider, policy)
@@ -449,8 +489,8 @@ def ride_fare_with_rounding(fare: Decimal, discounts: Decimal, policy: RoundingP
 
     بلا خصمٍ هي الأجرةُ مقرَّبة. **ومقدَّمُ الساعة لا يدخلها**: مضاعفٌ للوحدة فلا يغيّر الفرق.
     """
-    rider = round_money(fare - discounts)
+    rider = as_money(fare - discounts)
     if not policy.enabled or rider <= 0:
         return fare
     _, difference = round_amount(rider, policy)
-    return round_money(fare + difference)
+    return as_money(fare + difference)

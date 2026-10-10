@@ -40,6 +40,7 @@ from app.models.pause import (
     RidePause,
 )
 from app.models.ride import Ride
+from app.models.enums import Currency
 from app.services import pricing
 
 # **نطاقُ الالتقاء الذي يصحّ عنده «وصلت»** — مئتا متر. أضيقُ منه يمنع كبتناً
@@ -74,7 +75,7 @@ def minutes_of(pause: RidePause, now: datetime) -> Decimal:
     return (Decimal(seconds) / Decimal(60)).quantize(Decimal("0.001"))
 
 
-def charge_of(pause: RidePause, now: datetime) -> Decimal:
+def charge_of(pause: RidePause, now: datetime, currency: Currency | str) -> Decimal:
     """رسمُ وقفةٍ واحدة — **بمعدلاتها هي** لا بمعدلات الرحلة.
 
     والمهلةُ المجانيةُ **لكل وقفةٍ على حدة**، كما هي لكل محطة: من وقف دقيقتين
@@ -85,7 +86,7 @@ def charge_of(pause: RidePause, now: datetime) -> Decimal:
     billable = minutes_of(pause, now) - Decimal(pause.free_minutes_at_pause)
     if billable <= 0:
         return Decimal("0.000")
-    return pricing.round_money(billable * pause.price_per_min_at_pause)
+    return pricing.round_money(billable * pause.price_per_min_at_pause, currency)
 
 
 async def of_ride(session: AsyncSession, ride_id: uuid.UUID) -> list[RidePause]:
@@ -122,9 +123,10 @@ async def charge_for(
     moment = now or _now()
     return pricing.round_money(
         sum(
-            (charge_of(pause, moment) for pause in await of_ride(session, ride.id)),
+            (charge_of(pause, moment, ride.currency) for pause in await of_ride(session, ride.id)),
             Decimal("0.000"),
-        )
+        ),
+        ride.currency,
     )
 
 

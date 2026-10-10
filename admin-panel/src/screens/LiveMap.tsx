@@ -44,6 +44,7 @@ import type { CountryCode } from "@/api/types";
 const CENTER: Record<CountryCode, { lat: number; lng: number }> = {
   JO: { lat: 31.9539, lng: 35.9106 },
   LY: { lat: 32.8872, lng: 13.1913 },
+  DZ: { lat: 36.7538, lng: 3.0588 },
 };
 
 const REFRESH_MS = 5_000;

@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import SessionLocal
 from app.core.exceptions import AppError
+from app.core import money_wire
 from app.core.redis_client import get_redis_client
 from app.models.driver import Driver
 from app.models.enums import UserRole
@@ -175,7 +176,7 @@ async def _pump(websocket: WebSocket, subscription: Subscription) -> None:
             await websocket.close(code=WS_UNAUTHORIZED, reason="انتهت الجلسة")
             return
         if revoked is None:
-            await websocket.send_json(payload)
+            await websocket.send_json(money_wire.normalize(payload))
 
 
 async def _serve(websocket: WebSocket, *coros) -> None:
@@ -284,11 +285,11 @@ async def driver_socket(
             # **والرنينُ القائمُ يُستعاد كما يُستعاد العرض** (§٦٦-ج/١٧) — **بعد الاشتراك لا قبله** (`_ringing_now`)
             ringing = await _ringing_now(active, user.id)
             # آخر حالة معروفة مع أول رسالة — عليها يعتمد الاسترجاع بعد انقطاع
-            await websocket.send_json({"type": "connected", "active_ride": snapshot})
+            await websocket.send_json(money_wire.normalize({"type": "connected", "active_ride": snapshot}))
             if pending is not None:
-                await websocket.send_json(pending)
+                await websocket.send_json(money_wire.normalize(pending))
             if ringing is not None:
-                await websocket.send_json(ringing)
+                await websocket.send_json(money_wire.normalize(ringing))
             await _serve(
                 websocket,
                 _pump(websocket, subscription),
@@ -391,7 +392,7 @@ async def _rider_loop(
                 return
             if revoked is None:
                 await _apply_event(payload, state, subscription)
-                await websocket.send_json(payload)
+                await websocket.send_json(money_wire.normalize(payload))
 
         # أثناء الرحلة يرى الراكب كبتنه وحده — لا سيارات أخرى (SPEC القسم 10)
         if state.driver_id is None and state.lat is not None:
@@ -458,9 +459,9 @@ async def rider_socket(
             # **مكالمةٌ ترنّ له والتطبيقُ فُتح للتوّ** (§٦٦-ج/١٧) — فتحُه من أيقونته لا من الإشعار لا يجد غيرَ هذا،
             # **ويُقرأ بعد الاشتراك لا قبله** (`_ringing_now`)
             ringing = await _ringing_now(active, user.id)
-            await websocket.send_json({"type": "connected", "active_ride": snapshot})
+            await websocket.send_json(money_wire.normalize({"type": "connected", "active_ride": snapshot}))
             if ringing is not None:
-                await websocket.send_json(ringing)
+                await websocket.send_json(money_wire.normalize(ringing))
             await _serve(
                 websocket,
                 _rider_loop(websocket, redis, user, state, subscription),

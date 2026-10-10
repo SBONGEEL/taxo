@@ -59,7 +59,7 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.core.currency import currency_for_country
+from app.core.currency import STORAGE_STEP, currency_for_country
 from app.core.exceptions import InvalidInput, NotFound
 from app.core.phone import mask_phone
 from app.models.cancellation import RideCancellationCharge
@@ -97,7 +97,7 @@ from app.services.payments import REFUNDABLE_METHODS
 
 _MONEY = Numeric(12, 3)
 _UUID = PgUUID(as_uuid=True)
-_STEP = Decimal("0.001")
+_STEP = STORAGE_STEP
 
 #: **سقفُ الفترة المخصَّصة** — سنةٌ وزيادةُ يوم: مقارنةُ عامٍ بعامٍ ممكنة، وطلبُ عشر سنواتٍ يمسح الدفترَ كلَّه في نداءٍ واحد
 MAX_CUSTOM_DAYS = 366

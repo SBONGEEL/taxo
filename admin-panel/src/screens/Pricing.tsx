@@ -38,7 +38,7 @@ import { Field } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { currencyLabel } from "@/lib/format";
+import { currencyLabel, currencyOf } from "@/lib/format";
 import { useSession } from "@/lib/session";
 
 /** **المدمجتان دائماً** — وما أضافه المشرفُ في «فئات الرحلة» بعدهما (SPEC §٦٧): لكلِّ فئةٍ صفُّ أسعارها هنا. */
@@ -234,7 +234,7 @@ function CategoryCard({
     );
   }, [rule]);
 
-  const currency = currencyLabel(country === "JO" ? "JOD" : "LYD");
+  const currency = currencyLabel(currencyOf(country));
   const filled = FIELDS.every(({ key }) => values[key].trim() !== "");
 
   /** الدقائقُ أعدادٌ صحيحة والمبالغُ نصوص — والخلفيةُ ترفض النصَّ مكان العدد. */

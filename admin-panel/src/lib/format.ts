@@ -15,24 +15,71 @@ import type { CountryCode, Currency } from "@/api/types";
 
 import { counted, digits, DISPLAY_LOCALE } from "@/lib/utils";
 
-/** العملةُ **بعد** الرقم وبمقاسٍ أصغر ولونٍ `--mut` (DESIGN.md §4). */
-export const CURRENCY_LABEL: Record<Currency, string> = {
-  JOD: "د.أ",
-  LYD: "د.ل",
-};
+/** **وجوهُ العملات من الخلفية لا من هنا** (SPEC §٧٣-ج/١٢) — علامتُها واسمُها وخاناتُها تُنشر مع كلِّ دولةٍ في `/config`
+ *  (`core/currency.py`)، **ويُملأ هذا السجلُّ لحظةَ وصولها** قبل أن تُرسم شاشة (`registerCurrencies` في `lib/config.tsx` و`lib/countries.tsx`).
+ *
+ *  **كانت العلامةُ مكتوبةً هنا بالسوقين** (`{ JOD: "د.أ", LYD: "د.ل" }`) — **فسوقٌ ثالثٌ يُرسم رمزاً خاماً** ولا يفشل شيء. */
+interface CurrencyFace {
+  label: string;
+  name: string;
+  decimals: number;
+}
+const CURRENCY_FACES = new Map<string, CurrencyFace>();
 
-/** عملةُ الدولة — **الخلفيةُ لا تُرسلها مع كل إعدادٍ per-country**، فتُشتق هنا.
+export function registerCurrencies(
+  countries: ReadonlyArray<{
+    currency: string;
+    currency_label: string;
+    currency_name: string;
+    currency_decimals: number;
+  }>,
+): void {
+  for (const country of countries) {
+    CURRENCY_FACES.set(country.currency, {
+      label: country.currency_label,
+      name: country.currency_name,
+      decimals: country.currency_decimals,
+    });
+  }
+}
+
+/** **خاناتُ العملة** — وثلاثٌ لما لا يُعرف بعد، كما كانت الصياغةُ قبل §٧٣ حرفاً. */
+export function currencyDecimals(currency: string | null | undefined): number {
+  return (currency ? CURRENCY_FACES.get(currency)?.decimals : undefined) ?? 3;
+}
+
+/** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
+export function zeroAmount(currency: string | null | undefined): string {
+  const places = currencyDecimals(currency);
+  return places > 0 ? `0.${"0".repeat(places)}` : "0";
+}
+
+/** **أصفرٌ هذا المبلغ؟** — نصّيّاً لا بعائم: «0» و«0.000» و«-0.000» صفرٌ بأيِّ خانات. */
+export function isZeroAmount(amount: string | null | undefined): boolean {
+  return /^-?0+(\.0+)?$/.test((amount ?? "").trim());
+}
+
+const COUNTRY_CURRENCY = new Map<string, Currency>();
+
+/** **ويُسجَّل معها عملةُ كلِّ دولة** — من `/config` (الظاهرة) ومن `/admin/countries` (كلُّها، والمخفيّةُ منها). */
+export function registerCountryCurrencies(countries: ReadonlyArray<{ country_code: string; currency: Currency }>): void {
+  for (const country of countries) COUNTRY_CURRENCY.set(country.country_code, country.currency);
+}
+
+/** عملةُ الدولة — **من وصفها المنشور لا من شرطٍ بدولتين** (SPEC §٧٣-ج/١٢).
  *
  * وبيتٌ واحدٌ لها لا نسخةٌ في كل شاشة: النسخةُ المحلية في `PromoCodes.tsx` هي
  * ما جعل تمريرَ **التسمية** مكانَ **الرمز** ممكناً، فطُبعت المبالغُ بلا عملةٍ
  * أصلاً. والفرقُ بين `"JOD"` و`"د.أ"` لا يراه المصرِّف.
- */
-export function currencyOf(country: CountryCode): Currency {
-  return country === "JO" ? "JOD" : "LYD";
+ *
+ * **وكانت `country === "JO" ? "JOD" : "LYD"`** — فسوقٌ ثالثٌ يُرسم بعملة ليبيا ولا يفشل شيء. و`undefined` لدولةٍ لم يصل وصفُها بعد،
+ * **لا عملةُ سوقٍ آخر تُخمَّن**. */
+export function currencyOf(country: CountryCode): Currency | undefined {
+  return COUNTRY_CURRENCY.get(country);
 }
 
 export function currencyLabel(currency: Currency | string | null | undefined) {
-  return CURRENCY_LABEL[(currency ?? "JOD") as Currency] ?? "";
+  return currency ? (CURRENCY_FACES.get(currency)?.label ?? currency) : "";
 }
 
 /** مبلغٌ بخاناتٍ عربية-هندية ورمزِ عملته — والقيمةُ تبقى نصّاً كما وصلت. */

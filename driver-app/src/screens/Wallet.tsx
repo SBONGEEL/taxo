@@ -37,7 +37,7 @@ import {
   isDebit,
   unsigned,
 } from "@/lib/walletFormat";
-import { digits, cn } from "@/lib/utils";
+import { digits, cn, zeroAmount } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
@@ -250,7 +250,7 @@ export function WalletScreen() {
             </p>
           ) : Number(profile?.commission_percent ?? 0) === 0 ? (
             <p className="mt-8 text-11.5 leading-note text-muted">
-              عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — صفر عمولة ما
+              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — صفر عمولة ما
               دام اشتراكك سارياً.
             </p>
           ) : (
@@ -260,7 +260,7 @@ export function WalletScreen() {
                الأخرى من التطبيق نفسِه. **فالوعدُ يُشرط بالنسبة لا بالمجموع**،
                والنسبةُ تُقرأ من بابها لا تُكتب هنا. */
             <p className="mt-8 text-11.5 leading-note text-muted">
-              عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — ونسبتُك{" "}
+              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — ونسبتُك{" "}
               {digits(String(Number(profile?.commission_percent)))}٪ على ما
               تقبضه.
             </p>

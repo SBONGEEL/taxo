@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from app.models.enums import CountryCode, VehicleCategory
+from app.models.enums import CountryCode, Currency, VehicleCategory
 from app.models.pricing import PricingRule
 from app.services.directions import Route
 from app.services.pricing import calculate_fare, round_money
@@ -66,4 +66,4 @@ def test_zero_length_route_still_charges_minimum() -> None:
 
 def test_round_money_uses_half_up_not_bankers_rounding() -> None:
     # التقريب المصرفي في بايثون يعطي 0.002 هنا؛ المطلوب 0.003
-    assert round_money(Decimal("0.0025")) == Decimal("0.003")
+    assert round_money(Decimal("0.0025"), Currency.JOD) == Decimal("0.003")

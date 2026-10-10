@@ -14,6 +14,11 @@ from app.schemas.category import RideCategoryPublic
 class CountryConfigOut(BaseModel):
     country_code: CountryCode
     currency: Currency
+    #: **علامةُ العملة واسمُها وخاناتُها** (SPEC §٧٣-ج/٢) — من `core/currency.py` وحدَه: «د.أ» · «دينار أردني» · `3`، و«د.ج» ·
+    #: «دينار جزائري» · `0`. **فلا تكتب واجهةٌ علامةً ولا خاناتٍ ولا شرطاً بدولة** — كانت العلامةُ مكتوبةً خمسَ مرّاتٍ في الثلاث
+    currency_label: str
+    currency_name: str
+    currency_decimals: int
     features: dict[str, bool]
     #: **مفاتيحُ ما يُطلب الآن في السوق بترتيبه** (SPEC §٦٧) — المدمجتان والمشتعلةُ من الجديدة
     vehicle_categories: list[str]

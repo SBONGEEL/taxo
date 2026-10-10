@@ -62,7 +62,7 @@ from app.schemas.vehicle_skin import (
     StoreOut,
 )
 from app.services import admin_search, geo, rounding, skin_artwork, test_accounts, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +248,7 @@ async def purchase_log(
     if skin_id is not None:
         revenue_query = revenue_query.where(DriverVehicleSkin.skin_id == skin_id)
     revenue = {
-        code: round_money(amount)
+        code: as_money(amount)
         for code, amount in (await session.execute(revenue_query))
         if amount
     }
@@ -378,7 +378,7 @@ def _to_out(
         # مالٌ عبر عائم. و`quantize` لأن `Decimal` مبنيّاً في بايثون يُسلسَل
         # `"0"` لا `"0.000"` — **الشكلُ السابع**، وقد وقع في هذا الملفّ نفسِه.
         balance_after=(
-            None if price is None else round_money(balance - price)
+            None if price is None else as_money(balance - price)
         ),
         remaining=remaining,
         owners_count=owners,

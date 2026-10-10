@@ -87,7 +87,7 @@ import { Checkbox, Field, Select, Switch } from "@/components/ui/Field";
 import { ErrorNote, Spinner, SuccessNote } from "@/components/ui/Feedback";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { currencyLabel, currencyOf, moment, money } from "@/lib/format";
+import { currencyDecimals, currencyLabel, currencyOf, moment, money } from "@/lib/format";
 import { ROUNDING_MODE_LABEL } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { digits, cn } from "@/lib/utils";
@@ -1353,7 +1353,7 @@ function ReferralForm({
       {isDriver && Number(bonus) > 0 ? (
         <p className="mt-8 text-11 text-ok">
           المُحصَّل للإحالة النسائية ={" "}
-          <b>{money(String(total.toFixed(3)), currency)}</b> — الأساسُ{" "}
+          <b>{money(String(total.toFixed(currencyDecimals(currency))), currency)}</b> — الأساسُ{" "}
           {money(amount || "0", currency)} + العلاوةُ {money(bonus, currency)}.
           والعلاوةُ تُضاف إليه ولا تحلّ محلَّه.
         </p>

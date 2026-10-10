@@ -150,8 +150,13 @@ def build_payload(
 
 
 def _country_of(currency: Currency) -> str:
-    """كليك أردنيٌّ بطبيعته؛ والحقل إلزامي في المعيار فيتبع عملة الرحلة."""
-    return "JO" if currency == Currency.JOD else "LY"
+    """كليك أردنيٌّ بطبيعته؛ والحقل إلزامي في المعيار فيتبع عملة الرحلة.
+
+    **من جدول العملات نفسِه لا من شرطٍ بدولتين** (SPEC §٧٣-ج): كان `"JO" if JOD else "LY"` — فيُكتب «LY» لأيِّ عملةٍ ثالثة.
+    """
+    from app.core.currency import country_for_currency
+
+    return country_for_currency(currency).value
 
 
 def build_deep_link(

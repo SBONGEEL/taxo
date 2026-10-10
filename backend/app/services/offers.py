@@ -15,12 +15,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency import STORAGE_STEP, round_to_currency
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.driver import Driver
 from app.models.enums import CountryCode, RoundingSource
@@ -39,7 +40,8 @@ from app.services import settings_service, test_accounts
 
 FEATURE_KEY = "subscription_offers_enabled"
 
-_CENT = Decimal("0.001")
+# دقّةُ التخزين **من بيتها الواحد** (SPEC §٧٣-ج/٤)؛ وخصمُ العرض يُقرَّب بعملة الخطة (`round_to_currency`)
+_CENT = STORAGE_STEP
 
 
 def _now() -> datetime:
@@ -74,9 +76,8 @@ def discount_on(offer: SubscriptionOffer, plan: SubscriptionPlan) -> Decimal:
     """
     if offer.discount_type != DISCOUNT_MONEY_PERCENT:
         return Decimal("0")
-    raw = (plan.price * offer.discount_value / Decimal("100")).quantize(
-        _CENT, rounding=ROUND_HALF_UP
-    )
+    # **إلى أصغر وحدةٍ في عملة الخطة** (§٧٣-ج/٤) — `quantize(0.001, ROUND_HALF_UP)` للأردنيّ والليبيّ حرفاً كما كان
+    raw = round_to_currency(plan.price * offer.discount_value / Decimal("100"), plan.currency)
     if offer.max_discount is not None:
         raw = min(raw, offer.max_discount)
     return min(raw, plan.price)

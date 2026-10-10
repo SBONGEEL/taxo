@@ -48,7 +48,7 @@ from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.services import pricing, rounding, settings_service, test_accounts, wallet
 from app.services.directions import Coordinates
-from app.services.pricing import round_money
+from app.services.pricing import as_money, round_money
 
 
 class CommuteUnavailable(FeatureDisabled):
@@ -129,7 +129,10 @@ async def quote(session: AsyncSession, *, rider: User, plan: Plan) -> Quote:
         dropoff=plan.dropoff,
     )
     base = pricing.discountable(estimate.fare, estimate.captain_fees)
-    precise_per_ride = round_money(base * (Decimal(100) - row.commute_discount_percent) / 100)
+    currency = estimate.currency
+    precise_per_ride = round_money(
+        base * (Decimal(100) - row.commute_discount_percent) / 100, currency
+    )
     # **الخصمُ أوّلاً ثمّ يُقرَّب سعرُ الرحلة مرّةً** (SPEC §٧٠-أ/١٠ و§٧٠-ج/٥) — فالشهرُ مضاعفٌ بالبناء، **وكلُّ رحلةٍ تُدفع
     # للكبتن بسعرها المقرَّب** (`settle_ride`)، **وما لم يُستعمل يعود به** (`settle_unused`) بلا تقريبٍ ثانٍ. ومطفأً كما كان
     policy = await rounding.policy_for(session, rider.country_code)
@@ -143,9 +146,9 @@ async def quote(session: AsyncSession, *, rider: User, plan: Plan) -> Quote:
         discount_percent=row.commute_discount_percent,
         price_per_ride=per_ride,
         rides_total=rides_total,
-        total=round_money(per_ride * rides_total),
+        total=round_money(per_ride * rides_total, currency),
         ends_on=ends_on,
-        precise_total=round_money(precise_per_ride * rides_total),
+        precise_total=round_money(precise_per_ride * rides_total, currency),
         rounding_policy=policy,
     )
 
@@ -258,7 +261,7 @@ async def settle_unused(session: AsyncSession, row: RiderSubscription, *, status
     unused = max(row.rides_total - used, 0)
     # **يُردّ كما دُفع ولا يُقرَّب ثانيةً** (SPEC §٧٠-أ/١٠): السعرُ المجمَّدُ قُرِّب عند الشراء (`quote`) فالرصيدُ مضاعفٌ بالبناء؛
     # **وشهرٌ اشتُري قبل الإشعال يعود بكسوره** — تقريبُ ردِّه يغيّر مالاً دُفع (§٧٠-أ/١١)
-    credit = round_money(row.price_per_ride * unused)
+    credit = as_money(row.price_per_ride * unused)
     row.status = status
     row.settled_at = datetime.now().astimezone()
     if credit > 0:
@@ -397,7 +400,7 @@ async def ride_price_difference(session: AsyncSession, ride: Ride) -> Decimal:
     month = await rounding.difference_of(session, RoundingSource.COMMUTE_PRICE, row.id)
     if month == 0:
         return Decimal("0.000")
-    return round_money(month / row.rides_total)
+    return round_money(month / row.rides_total, ride.currency)
 
 
 async def settle_ride(session: AsyncSession, ride: Ride) -> None:
@@ -424,7 +427,7 @@ async def settle_ride(session: AsyncSession, ride: Ride) -> None:
     )
     row = await session.get(RiderSubscription, ride.commute_id)
     settings = await session.get(ServiceSetting, ride.country_code)
-    precise_incentive = round_money(settings.commute_captain_incentive) if settings is not None else Decimal(0)
+    precise_incentive = as_money(settings.commute_captain_incentive) if settings is not None else Decimal(0)
     # **الحافزُ مالٌ يقبضه الكبتنُ فيُقرَّب** (SPEC §٧٠-ج/٥)، وفرقُه صفٌّ بمعرّف الرحلة حين يُدفع. ومطفأً كما كان
     policy = await rounding.policy_for(session, ride.country_code)
     incentive = rounding.rounded(precise_incentive, policy)

@@ -27,9 +27,9 @@ import { ApiError } from "@/api/client";
 import { Stagger, StaggerItem } from "@/components/ui/Motion";
 import { getMyReferrals } from "@/api/endpoints";
 import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
-import { CURRENCY_LABEL } from "@/lib/rideFormat";
+import { useCountryConfig } from "@/lib/config";
 import { useSession } from "@/lib/session";
-import { digits } from "@/lib/utils";
+import { currencyLabel, digits } from "@/lib/utils";
 import { useGoBack } from "@/lib/back";
 import { Icon } from "@/taxo2";
 
@@ -71,8 +71,7 @@ export function ReferralsScreen() {
   const goBack = useGoBack();
   const { user } = useSession();
   // العملةُ من دولة الحساب — والخلفيةُ ترسلها على المكافأة المدفوعة وحدها
-  const currency =
-    user?.country_code === "LY" ? CURRENCY_LABEL.LYD : CURRENCY_LABEL.JOD;
+  const currency = currencyLabel(useCountryConfig(user?.country_code)?.currency);
   const [data, setData] = useState<MyReferrals | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -288,9 +287,7 @@ export function ReferralsScreen() {
                             </span>
                             <span className="t2-ref-amount-cur">
                               {row.reward_currency
-                                ? CURRENCY_LABEL[
-                                    row.reward_currency as "JOD" | "LYD"
-                                  ]
+                                ? currencyLabel(row.reward_currency)
                                 : currency}
                             </span>
                           </span>

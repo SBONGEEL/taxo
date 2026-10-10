@@ -9,7 +9,7 @@ import { useId, useState } from "react";
 
 import { FieldError } from "@/components/ui/Field";
 import { useFieldError } from "@/lib/form-errors";
-import { currencyLabel } from "@/lib/format";
+import { currencyDecimals, currencyLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@/api/types";
 
@@ -39,8 +39,8 @@ export function MoneyField({
   label?: string;
   value: string;
   onChange: (next: string) => void;
-  /** رمزُ العملة — **يُمرَّر ولا يُخمَّن**، والسوقُ هو من يعرفه. */
-  currency: Currency | string;
+  /** رمزُ العملة — **يُمرَّر ولا يُخمَّن**، والسوقُ هو من يعرفه. و`undefined` لسوقٍ لم يصل وصفُه بعد: بلا علامةٍ وبثلاث خانات. */
+  currency: Currency | string | undefined;
   name?: string;
   error?: string | null;
   disabled?: boolean;
@@ -74,8 +74,8 @@ export function MoneyField({
             if (!text) return;
             const parsed = Number(text.replace(",", "."));
             if (!Number.isFinite(parsed)) return;
-            // **الصياغةُ عند الخروج وحدَه** — وثلاثُ خاناتٍ كصيغة القاعدة
-            onChange(parsed.toFixed(3));
+            // **الصياغةُ عند الخروج وحدَه** — **بخانات العملة** (ثلاثٌ للأردنيّ والليبيّ كما كانت، ولا شيءَ للجزائريّ — SPEC §٧٣)
+            onChange(parsed.toFixed(currencyDecimals(currency)));
           }}
           className="ad-money-input"
           aria-invalid={reason ? true : undefined}

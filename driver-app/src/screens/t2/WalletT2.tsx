@@ -23,7 +23,7 @@ import type { Earnings, WalletTransactionType } from "@/api/types";
 import { WithdrawSheet } from "@/components/WithdrawSheet";
 import { Spinner } from "@/components/ui/Feedback";
 import { CURRENCY_LABEL, formatWhen } from "@/lib/rideFormat";
-import { digits } from "@/lib/utils";
+import { digits, zeroAmount } from "@/lib/utils";
 import { TRANSACTION_LABEL, isDebit, unsigned } from "@/lib/walletFormat";
 import { PERIOD_LABEL, useEarningsScreen } from "@/screens/Earnings";
 import { useWalletScreen } from "@/screens/Wallet";
@@ -339,12 +339,12 @@ export function WalletT2Screen() {
             </p>
           ) : Number(w.profile?.commission_percent ?? 0) === 0 ? (
             <p className="t2-wal-fine">
-              عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — صفر عمولة ما
+              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — صفر عمولة ما
               دام اشتراكك سارياً.
             </p>
           ) : (
             <p className="t2-wal-fine">
-              عمولة TAXO هذا الشهر: {digits("0.000")} {currency} — ونسبتُك{" "}
+              عمولة TAXO هذا الشهر: {digits(zeroAmount(wallet.currency))} {currency} — ونسبتُك{" "}
               {digits(String(Number(w.profile?.commission_percent)))}٪ على ما
               تقبضه.
             </p>

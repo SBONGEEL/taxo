@@ -66,7 +66,49 @@ export function digits(value: string | number | null | undefined): string {
  */
 export const DISPLAY_LOCALE = "ar-u-nu-latn";
 
-const CURRENCY_LABEL_MAP: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
+/** **وجوهُ العملات من الخلفية لا من هنا** (SPEC §٧٣-ج/١٢) — علامتُها واسمُها وخاناتُها تُنشر مع كلِّ دولةٍ في `/config`
+ *  (`core/currency.py`)، **ويُملأ هذا السجلُّ لحظةَ وصولها** قبل أن تُرسم شاشة (`registerCurrencies` في `lib/config.tsx`).
+ *
+ *  **كانت العلامةُ مكتوبةً هنا بالسوقين** (`{ JOD: "د.أ", LYD: "د.ل" }`) — **فسوقٌ ثالثٌ يُرسم رمزاً خاماً** ولا يفشل شيء. */
+interface CurrencyFace {
+  label: string;
+  name: string;
+  decimals: number;
+}
+const CURRENCY_FACES = new Map<string, CurrencyFace>();
+
+export function registerCurrencies(
+  countries: ReadonlyArray<{
+    currency: string;
+    currency_label: string;
+    currency_name: string;
+    currency_decimals: number;
+  }>,
+): void {
+  for (const country of countries) {
+    CURRENCY_FACES.set(country.currency, {
+      label: country.currency_label,
+      name: country.currency_name,
+      decimals: country.currency_decimals,
+    });
+  }
+}
+
+/** **خاناتُ العملة** — وثلاثٌ لما لا يُعرف بعد، كما كانت الصياغةُ قبل §٧٣ حرفاً. */
+export function currencyDecimals(currency: string | null | undefined): number {
+  return (currency ? CURRENCY_FACES.get(currency)?.decimals : undefined) ?? 3;
+}
+
+/** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
+export function zeroAmount(currency: string | null | undefined): string {
+  const places = currencyDecimals(currency);
+  return places > 0 ? `0.${"0".repeat(places)}` : "0";
+}
+
+/** **أصفرٌ هذا المبلغ؟** — نصّيّاً لا بعائم: «0» و«0.000» و«-0.000» صفرٌ بأيِّ خانات. */
+export function isZeroAmount(amount: string | null | undefined): boolean {
+  return /^-?0+(\.0+)?$/.test((amount ?? "").trim());
+}
 
 /** تسميةُ العملة للعرض — **بيتٌ واحدٌ يقرؤه الجميع**.
  *
@@ -80,7 +122,12 @@ const CURRENCY_LABEL_MAP: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" 
  * الحارس** — وتطبيقُ الراكب يقرؤها من `@/lib/utils` منذ البداية.
  */
 export function currencyLabel(currency: string | null | undefined): string {
-  return currency ? (CURRENCY_LABEL_MAP[currency] ?? currency) : "";
+  return currency ? (CURRENCY_FACES.get(currency)?.label ?? currency) : "";
+}
+
+/** اسمُ العملة كاملاً — من السجلِّ نفسِه. */
+export function currencyName(currency: string | null | undefined): string {
+  return currency ? (CURRENCY_FACES.get(currency)?.name ?? currency) : "";
 }
 
 /** العكسُ: يقبل ما يكتبه المستخدم بأيِّ الخانتين ويعيد `[0-9]` وحدها.

@@ -200,4 +200,5 @@ export function currentPosition(): Promise<Coordinates | null> {
 export const DEFAULT_CENTER: Record<CountryCode, Coordinates> = {
   JO: { lat: 31.9539, lng: 35.9106 }, // عمّان
   LY: { lat: 32.8872, lng: 13.1913 }, // طرابلس
+  DZ: { lat: 36.7538, lng: 3.0588 }, // الجزائر العاصمة
 };

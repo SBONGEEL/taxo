@@ -52,7 +52,7 @@ import { MoneyField } from "@/components/ui/Inputs";
 import { Picker, type PickerOption } from "@/components/ui/Picker";
 import { useCountry } from "@/lib/country";
 import { FormErrors, useFormError } from "@/lib/form-errors";
-import { currencyLabel, day, days, daysUntil, money } from "@/lib/format";
+import { currencyLabel, currencyOf, day, days, daysUntil, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { PAYMENT_METHOD_LABEL } from "@/lib/labels";
 import { NO_RESULTS, useSearch } from "@/lib/search";
@@ -474,7 +474,7 @@ function PlanForm({
           ))}
         </Select>
         <Field
-          label={`السعر (${currencyLabel(country === "JO" ? "JOD" : "LYD")})`}
+          label={`السعر (${currencyLabel(currencyOf(country))})`}
           name="price"
           inputMode="decimal"
           dir="ltr"
@@ -649,7 +649,7 @@ function RecordModal({
             // **عملةُ الباقة المختارة لا عملةُ الشاشة**: الباقةُ تحمل عملتَها،
             // **ولا تُخمَّن هنا** — واحتياطُها أوّلُ باقةٍ في السوق لأن الحقلَ
             // يُرسم قبل أن تُختار باقة.
-            currency={plan?.currency ?? plans[0]?.currency ?? "JOD"}
+            currency={plan?.currency ?? plans[0]?.currency ?? currencyOf(country)}
           />
 
           <Field

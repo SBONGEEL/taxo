@@ -90,7 +90,7 @@ from app.services import (
     wallet,
 )
 from app.services import rounding as rounding_service
-from app.services.pricing import round_money
+from app.services.pricing import as_money, round_money
 
 # آلة حالات الدفعة — ما ليس هنا ممنوع (SPEC القسم 4)
 ALLOWED_TRANSITIONS: dict[PaymentStatus, frozenset[PaymentStatus]] = {
@@ -254,7 +254,7 @@ async def outstanding_amount(session: AsyncSession, ride: Ride) -> Decimal:
         )
     )
     due = ride.final_fare or Decimal("0.000")
-    return round_money(due - Decimal(covered))
+    return as_money(due - Decimal(covered))
 
 
 # ------------------------------------------------------------------ الإنشاء
@@ -532,7 +532,7 @@ async def _pay_from_wallet(
             idempotency_key=idempotency_key,
         )
     ]
-    remainder = round_money(outstanding - wallet_amount)
+    remainder = as_money(outstanding - wallet_amount)
     if remainder > 0:
         payments.append(
             _new_payment(
@@ -641,7 +641,7 @@ async def _priced_shares(session: AsyncSession, ride: Ride) -> _PricedShares:
             Payment.method.in_(DISCOUNT_METHODS),
         )
     )
-    return _PricedShares(difference=difference, discounts=round_money(Decimal(discounts or 0)))
+    return _PricedShares(difference=difference, discounts=as_money(Decimal(discounts or 0)))
 
 
 def _commission_amount(
@@ -680,7 +680,7 @@ def _commission_amount(
             paid = ride.final_fare - shares.discounts
             precise = priced - shares.discounts
             base = amount * fee_share * precise / paid if paid > 0 else amount * fee_share
-    return round_money(base * percent / 100)
+    return round_money(base * percent / 100, ride.currency)
 
 
 def _commission_waits_for_fare(ride: Ride, payment: Payment) -> bool:
@@ -1297,7 +1297,7 @@ async def refund(
     driver_user = await _driver_user(session, ride)
     if driver_user is not None:
         # **العمولةُ التي كُتبت عند التسوية تُقرأ ولا يُعاد حسابُها** (مراجعةُ المال البند ١) — فيُعكس ما قُيِّد له حرفاً
-        net = round_money(payment.amount - await _written_commission(session, payment))
+        net = as_money(payment.amount - await _written_commission(session, payment))
         if net > 0:
             await wallet.record(
                 session,

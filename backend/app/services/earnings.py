@@ -130,7 +130,7 @@ async def _ledger_sum(
     # **ثلاثُ منازل دائماً**: `Decimal(0)` يخرج «0» فتعرضه الشاشة «٠» بينما
     # كلُّ مالٍ آخر فيها «٠.٠٠٠». والتقريبُ في الخدمة لا في الواجهة —
     # تنسيقُ المال قرارُ عرض، لكن **عددَ منازله جزءٌ من القيمة** هنا
-    return pricing.round_money(Decimal(total or 0))
+    return pricing.as_money(Decimal(total or 0))
 
 
 async def _net_by_day(
@@ -244,7 +244,7 @@ async def summary(
     # **ناقصَ زائد التقريب المردود** (§٧٠-ج/٦) — ومطفأً صفرٌ فالرقمُ كما كان حرفاً
     returned = await _advance_rounding_returned(session, user_id, from_at, to_at)
     if returned:
-        advance_repaid = pricing.round_money(advance_repaid - returned)
+        advance_repaid = pricing.as_money(advance_repaid - returned)
 
     # ما قبضه بيده: دفعاتٌ مؤكدة بقناةٍ لا تمر بالمنصة، على رحلاته هو
     directly_collected = await session.scalar(
@@ -275,7 +275,7 @@ async def summary(
     # ── أيّامُ النافذة، ثمّ النافذةُ السابقةُ المساويةُ لها (§٦٢-ج/٣٨) ──
     found = await _net_by_day(session, user_id, zone, from_at, to_at)
     nets = [
-        (value, pricing.round_money(found.get(value, Decimal(0))))
+        (value, pricing.as_money(found.get(value, Decimal(0))))
         for value in _days_in(zone, from_at, to_at)
     ]
     peak = max((abs(net) for _, net in nets), default=Decimal(0))
@@ -297,7 +297,7 @@ async def summary(
         (from_at.astimezone(zone) - span).astimezone(from_at.tzinfo),
         (to_at.astimezone(zone) - span).astimezone(to_at.tzinfo),
     )
-    current_net = pricing.round_money(
+    current_net = pricing.as_money(
         wallet_earnings + tips - commission - advance_repaid
     )
     # **ساعاتُ العمل بأيّام النافذة نفسِها** (§٦٢-ج/٣٧) — من يوم السوق الأول فيها إلى آخره
@@ -329,11 +329,11 @@ async def summary(
         # **والاقتطاعُ يدخل الصافي**: مالٌ خرج من المحفظة فعلاً، وصافيٌّ لا
         # يطرحه لا يطابق ما يراه صاحبُه في رصيده — نفسُ حجّة إدخال البقشيش
         net=current_net,
-        directly_collected=pricing.round_money(Decimal(directly_collected or 0)),
+        directly_collected=pricing.as_money(Decimal(directly_collected or 0)),
         completed_rides=int(completed or 0),
         days=days,
         change_percent=_change_percent(
-            current_net, pricing.round_money(sum(previous.values(), Decimal(0)))
+            current_net, pricing.as_money(sum(previous.values(), Decimal(0)))
         ),
         online_minutes=online_minutes,
     )

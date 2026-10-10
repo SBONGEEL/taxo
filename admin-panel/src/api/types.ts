@@ -11,8 +11,8 @@
 // و`import type` يُمحى عند التصريف، **فلا مستوردَ في وقت التشغيل ولا دورة**.
 import type { Crumb } from "@/lib/breadcrumbs";
 
-export type CountryCode = "JO" | "LY";
-export type Currency = "JOD" | "LYD";
+export type CountryCode = "JO" | "LY" | "DZ";
+export type Currency = "JOD" | "LYD" | "DZD";
 export type UserRole = "rider" | "driver" | "admin" | "support";
 
 export interface User {
@@ -110,6 +110,11 @@ export interface SecurityPolicy {
 export interface CountryConfig {
   country_code: CountryCode;
   currency: Currency;
+  /** **علامةُ العملة واسمُها وخاناتُها من الخلفية** (SPEC §٧٣-ج/٢) — «د.أ» · «دينار أردني» · `3`، و«د.ج» · `0`.
+   *  **ولا تُكتب في الواجهة**: منها يُملأ سجلُّ العملات (`registerCurrencies`) فتقرؤه كلُّ صياغةٍ للمال. */
+  currency_label: string;
+  currency_name: string;
+  currency_decimals: number;
   features: Record<string, boolean>;
   vehicle_categories: string[];
   /** **وجوهُ ما يُطلب في السوق** (SPEC §٦٧) — ما يراه التطبيقان؛ واللوحةُ تقرأ الفئاتِ كاملةً من «فئات الرحلة». */

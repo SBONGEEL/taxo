@@ -1047,7 +1047,7 @@ async def _final_fare(
         fare, hourly_lines = hourly_service.final_fare(ride, rule, actual_km)
         fees = [line for line in (ride.fare_lines or []) if line.get("kind") == "airport_fee"]
         ride.fare_lines = hourly_lines + fees
-        return pricing.round_money(fare + ride.captain_fees_at_ride)
+        return pricing.round_money(fare + ride.captain_fees_at_ride, ride.currency)
 
     base = ride.estimated_fare
     base_lines: list[dict[str, str]] = list(ride.fare_lines or [])
@@ -1063,7 +1063,7 @@ async def _final_fare(
         base_lines = pricing.lines_json(recomputed)
         # **ورسومُ الكبتن لا يمسّها انحرافُ الطريق** (§٦٣-ج/٢): مجمَّدةٌ لحظةَ الطلب، فتُضاف إلى أجرة الطريق المعادة بسطرها
         if ride.captain_fees_at_ride > 0:
-            base = pricing.round_money(base + ride.captain_fees_at_ride)
+            base = pricing.round_money(base + ride.captain_fees_at_ride, ride.currency)
             base_lines += [
                 line for line in (ride.fare_lines or []) if line.get("kind") == "airport_fee"
             ]
@@ -1072,7 +1072,7 @@ async def _final_fare(
     # المجموعُ واحدٌ والسببُ ظاهرٌ في التفصيل — لا مبلغان يُجمعان بيد
     waiting = await waiting_charge_for(session, ride)
     pause = await pause_charge_for(session, ride)
-    final = pricing.round_money(base + waiting + pause)
+    final = pricing.round_money(base + waiting + pause, ride.currency)
 
     lines = list(base_lines)
     if waiting:
@@ -1111,6 +1111,7 @@ async def waiting_charge_for(
         free_minutes=ride.stop_free_minutes_at_ride,
         price_per_min=ride.stop_price_per_min_at_ride,
         now=now or _now(),
+        currency=ride.currency,
     )
 
 
@@ -1275,7 +1276,7 @@ async def cancel_ride(
         and ride.status in (RideStatus.ACCEPTED, RideStatus.ARRIVED)
     ):
         rule = await pricing.get_rule(session, ride.country_code, ride.vehicle_category)
-        fee = pricing.round_money(rule.cancellation_fee)
+        fee = pricing.round_money(rule.cancellation_fee, ride.currency)
         # **بالساعة بعد وصول الكبتن: دقائقُ الإلغاء من سعر الساعة** (§٦٣-ج/٥) — بمسار رسم الإلغاء نفسِه، للكبتن
         if ride.ride_type == "hourly" and ride.status is RideStatus.ARRIVED:
             fee = hourly_service.cancel_fee(ride)

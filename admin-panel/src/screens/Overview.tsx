@@ -27,10 +27,9 @@ import { ErrorNote, Spinner } from "@/components/ui/Feedback";
 import { Segmented } from "@/components/ui/Segmented";
 import { useCountryConfig } from "@/lib/config";
 import { useCountry } from "@/lib/country";
+import { currencyLabel } from "@/lib/format";
 import { digits, cn } from "@/lib/utils";
 import { Icon } from "@/taxo2";
-
-const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
 
 /** ألوانُ توزيع طرق الدفع كما في `DESIGN.md` §3.4 — لا اجتهادَ فيها: الكاشُ تنبيه، والمحفظةُ نجاح، والبطاقةُ نصّ، وكليكُ خافت
  *  (`t2/screens.css` — `.ad-mix-fill.ad-pay-*`). */
@@ -52,7 +51,8 @@ export function OverviewScreen() {
   const navigate = useNavigate();
   const { country } = useCountry();
   const countryConfig = useCountryConfig(country);
-  const currency = CURRENCY_LABEL[countryConfig?.currency ?? "JOD"] ?? "";
+  // **من بيت العلامات الواحد** (SPEC §٧٣-ج/١٢) — كانت هنا نسخةٌ خامسةٌ بالسوقين
+  const currency = currencyLabel(countryConfig?.currency);
 
   const [period, setPeriod] = useState<StatsPeriod>("today");
   const [data, setData] = useState<Overview | null>(null);

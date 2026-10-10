@@ -73,7 +73,7 @@ from app.models.totp import UserRecoveryCode, UserTotp
 from app.models.user import User
 from app.models.wallet import WalletTopupRequest, WithdrawalRequest
 from app.services import deactivation, settings_service, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +250,7 @@ async def request(
     if rider_balance > 0:
         # **المبلغُ كما هو لا أقلّ ولا أكثر** — والموافقةُ على غير ما في
         # المحفظة ليست موافقة
-        if forfeit_amount is None or round_money(forfeit_amount) != rider_balance:
+        if forfeit_amount is None or as_money(forfeit_amount) != rider_balance:
             raise DeletionBalanceUnacknowledged(balance=str(rider_balance))
         acknowledged = rider_balance
 

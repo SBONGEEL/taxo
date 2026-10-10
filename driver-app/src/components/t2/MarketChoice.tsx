@@ -10,6 +10,7 @@ import { AuthBlock, AuthChoice } from "@/taxo2";
 const COUNTRY_LABEL: Record<CountryCode, string> = {
   JO: "الأردن",
   LY: "ليبيا",
+  DZ: "الجزائر",
 };
 
 export function MarketChoice({

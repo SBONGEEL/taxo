@@ -11,23 +11,24 @@ import type {
   Ride,
   RideStatus,
   VehicleCategory, RideCategoryFace } from "@/api/types";
-import { currencyLabel, digits,
+import { currencyLabel, currencyName, digits,
   DISPLAY_LOCALE,
 } from "@/lib/utils";
 
 /** **يُقرأ من `currencyLabel` ولا يُكتب هنا** (2026-09-07): البيتُ نزل إلى
  *  `@/lib/utils` كي يقرأه صندوقُ اللافتات المتطابقُ بايتاً في التطبيقين،
- *  **وهذا الاسمُ باقٍ لأن ثلاثين قارئاً يستوردونه**. */
-export const CURRENCY_LABEL: Record<Currency, string> = {
-  JOD: currencyLabel("JOD"),
-  LYD: currencyLabel("LYD"),
-};
+ *  **وهذا الاسمُ باقٍ لأن ثلاثين قارئاً يستوردونه**.
+ *
+ *  **ويُقرأ لحظةَ القراءة لا لحظةَ التحميل** (SPEC §٧٣-ج/١٢): كان جدولاً يُبنى حين تُحمَّل الوحدة — **قبل أن تصل `/config`** —
+ *  والعلاماتُ اليومَ تأتي منها، **فجدولٌ يُبنى مبكّراً يُرسم رموزاً خاماً**. فصار وكيلاً يسأل السجلَّ عند كلِّ قراءة. */
+export const CURRENCY_LABEL: Record<Currency, string> = new Proxy({} as Record<Currency, string>, {
+  get: (_, code) => currencyLabel(String(code)),
+});
 
-/** الاسمُ الكامل — تحت الرقم الكبير حيث يتسع المكان لكلمة. */
-export const CURRENCY_FULL: Record<Currency, string> = {
-  JOD: "دينار أردني",
-  LYD: "دينار ليبي",
-};
+/** الاسمُ الكامل — تحت الرقم الكبير حيث يتسع المكان لكلمة. **ومن السجلِّ نفسِه** لا جدولٍ ثانٍ. */
+export const CURRENCY_FULL: Record<Currency, string> = new Proxy({} as Record<Currency, string>, {
+  get: (_, code) => currencyName(String(code)),
+});
 
 /** تفضيلُ جنس الركاب كما يُقرأ في الشاشات — مصدرٌ واحد للثلاث. */
 export const PREFERENCE_LABEL: Record<GenderPreference, string> = {

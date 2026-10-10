@@ -11,7 +11,8 @@
  *
  * ---
  *
- * **ومفرداتُ المال تُقرأ من بيتها الواحد** — `backend/tests/money_format.py`.
+ * **ومفرداتُ المال تُقرأ من بيتها الواحد** — `backend/app/core/money_wire.py` (انتقلت إليه من
+ * `tests/money_format.py` حين احتاجها التشغيل، SPEC §٧٣-ج/٥ — والاختبارُ يستوردها من هناك).
  * نسختان من قائمةٍ تفترقان أوّلَ إضافة، ثم يحرس أحدُهما ما لا يحرسه الآخر
  * **بلا أن يفشل شيء**؛ وهي القاعدةُ نفسُها التي جعلت `otp-template-rules.json`
  * ملفاً واحداً تقرؤه لغتان.
@@ -61,7 +62,7 @@ function loadTypeScript() {
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const APPS = ["customer-app", "driver-app", "admin-panel"];
 const SCHEMAS = join(ROOT, "backend", "app", "schemas");
-const VOCAB = join(ROOT, "backend", "tests", "money_format.py");
+const VOCAB = join(ROOT, "backend", "app", "core", "money_wire.py");
 const ts = loadTypeScript();
 
 /** استثناءاتٌ تحمل عللَها نصّاً — وقائمةٌ بلا عللٍ تصير قائمةَ أعذار. */

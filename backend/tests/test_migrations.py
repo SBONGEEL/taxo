@@ -255,3 +255,61 @@ async def test_0103_downgrade_does_not_widen_an_admin() -> None:
     for user_id, permission in rows:
         held.setdefault(str(user_id), set()).add(permission)
     assert held == {str(ids["only"]): {"read.only"}, str(ids["mixed"]): {"finance.manage"}}
+
+
+async def test_0111_hides_algeria_the_moment_it_exists() -> None:
+    """**الإخفاءُ يولد مع السوق** (SPEC §٧٣-ج/١): الترحيلةُ نفسُها تكتب `country_visible = false` للجزائر — لأن «السكوتُ ظهور»
+    (§٢٤)، والإنتاجُ لا يُبذر في الرفع. **ويُقاس بالنزول والصعود** لا بقراءة الملفّ: صفٌّ تكتبه الترحيلةُ يوجد بعدها أو لا يوجد."""
+    config = alembic_config()
+    try:
+        await asyncio.to_thread(command.downgrade, config, "0110")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            before = (
+                await conn.execute(
+                    text("SELECT count(*) FROM feature_flags WHERE country_code::text = 'DZ'")
+                )
+            ).scalar_one()
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+        async with engine.connect() as conn:
+            rows = (
+                await conn.execute(
+                    text(
+                        "SELECT feature_key, enabled FROM feature_flags WHERE country_code::text = 'DZ'"
+                    )
+                )
+            ).all()
+    finally:
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()
+
+    assert before == 0
+    assert [tuple(row) for row in rows] == [("country_visible", False)]
+
+
+async def test_0111_downgrade_stops_while_algeria_holds_data() -> None:
+    """**نزولٌ يترك بياناتٍ بقيمةٍ لم تعد الشيفرةُ تعرفها أسوأُ من نزولٍ يقف** (درسُ `0104`) — فيُزرع صفٌّ جزائريٌّ غيرُ صفِّ
+    الإخفاء ويُشترط الوقوفُ **بنصِّه**، ثمّ يُزال فيمرّ النزول."""
+    config = alembic_config()
+    seeded = False
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO feature_flags (id, country_code, feature_key, enabled, created_at, updated_at) "
+                    "VALUES (gen_random_uuid(), 'DZ', 'tips_enabled', false, now(), now())"
+                )
+            )
+        seeded = True
+        with pytest.raises(Exception) as raised:
+            await asyncio.to_thread(command.downgrade, config, "0110")
+        assert "0111" in str(raised.value) and "feature_flags" in str(raised.value)
+    finally:
+        if seeded:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    text("DELETE FROM feature_flags WHERE country_code::text = 'DZ' AND feature_key = 'tips_enabled'")
+                )
+        await asyncio.to_thread(command.upgrade, config, "head")
+        await engine.dispose()

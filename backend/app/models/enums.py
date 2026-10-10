@@ -6,11 +6,15 @@ from enum import StrEnum
 class CountryCode(StrEnum):
     LY = "LY"
     JO = "JO"
+    # **ثالثُ الأسواق، ومخفيٌّ من لحظة إضافته** (SPEC §٧٣): الترحيلةُ `0111` تكتب صفَّ إخفائه، لأن «السكوتُ ظهور» (§٢٤)
+    DZ = "DZ"
 
 
 class Currency(StrEnum):
     LYD = "LYD"
     JOD = "JOD"
+    # **بلا كسور** (§٧٣-أ/١) — خاناتُه في `core/currency.py::CURRENCY_DECIMALS` لا هنا
+    DZD = "DZD"
 
 
 class AccountKind(StrEnum):

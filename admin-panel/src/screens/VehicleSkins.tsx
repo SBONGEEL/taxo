@@ -360,7 +360,7 @@ export function VehicleSkinsScreen() {
                 {(markets ?? []).map((market) => (
                   <Field
                     key={market.country_code}
-                    label={`السعر في ${market.name} (${currencyOf(market.country_code as CountryCode)})`}
+                    label={`السعر في ${market.name} (${currencyOf(market.country_code as CountryCode) ?? ""})`}
                     name={`price_${market.country_code}`}
                     dir="ltr"
                     inputMode="decimal"

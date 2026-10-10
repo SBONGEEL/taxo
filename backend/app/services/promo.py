@@ -32,7 +32,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError, FeatureDisabled
+from app.core.currency import currency_for_country
 from app.models.enums import (
+    Currency,
     CountryCode,
     FeatureKey,
     PaymentMethod,
@@ -109,6 +111,7 @@ def discount_for(
     value: Decimal,
     cap: Decimal | None,
     fare: Decimal,
+    currency: Currency | str,
 ) -> Decimal:
     """مبلغُ الخصم على أجرةٍ معلومة — **دالةٌ خالصةٌ تُختبر وحدها**.
 
@@ -125,7 +128,7 @@ def discount_for(
     else:
         amount = value
 
-    return pricing.round_money(min(amount, fare))
+    return pricing.round_money(min(amount, fare), currency)
 
 
 def discount_on_ride(ride: Ride, fare: Decimal) -> Decimal:
@@ -141,6 +144,7 @@ def discount_on_ride(ride: Ride, fare: Decimal) -> Decimal:
         value=ride.promo_value_at_ride or Decimal("0"),
         cap=ride.promo_cap_at_ride,
         fare=fare,
+        currency=ride.currency,
     )
 
 
@@ -201,7 +205,7 @@ async def spent(session: AsyncSession, promo_id: uuid.UUID) -> Decimal:
             Payment.status == PaymentStatus.CONFIRMED,
         )
     )
-    return pricing.round_money(Decimal(total or 0))
+    return pricing.as_money(Decimal(total or 0))
 
 
 async def usage_count(
@@ -250,6 +254,7 @@ async def preview(
         value=promo.discount_value,
         cap=promo.max_discount,
         fare=fare,
+        currency=currency_for_country(promo.country_code),
     )
 
 
@@ -286,10 +291,14 @@ async def committed(session: AsyncSession, promo: PromoCode) -> Decimal:
         if kind is None or fare is None:  # pragma: no cover - صفٌّ نصفُ مكتوب
             continue
         total += discount_for(
-            discount_type=kind, value=value or Decimal("0"), cap=cap, fare=fare
+            discount_type=kind,
+            value=value or Decimal("0"),
+            cap=cap,
+            fare=fare,
+            currency=currency_for_country(promo.country_code),
         )
 
-    return pricing.round_money(total)
+    return pricing.as_money(total)
 
 
 async def _check_limits(
@@ -311,6 +320,7 @@ async def _check_limits(
             value=promo.discount_value,
             cap=promo.max_discount,
             fare=fare,
+            currency=currency_for_country(promo.country_code),
         )
     if exposure > promo.budget_total:
         raise PromoExhausted()

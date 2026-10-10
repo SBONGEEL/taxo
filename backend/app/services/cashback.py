@@ -22,7 +22,7 @@ from app.models.ride import Ride
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.services import rounding, settings_service, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 FRIDAY = 4  # `date.weekday()`
 ACTIVE = "active"
@@ -86,7 +86,7 @@ async def record_day(
             last_day=day,
             days_done=1,
             days_required=row.cashback_days,
-            amount=round_money(row.cashback_amount),
+            amount=as_money(row.cashback_amount),
             status=ACTIVE,
         )
         session.add(streak)
@@ -168,7 +168,7 @@ async def view(session: AsyncSession, rider: User) -> dict:
         "days_required": row.cashback_days if not alive else streak.days_required,
         "days_done": streak.days_done if alive else 0,
         "days_left": (streak.days_required - streak.days_done) if alive else row.cashback_days,
-        "amount": rounding.rounded(streak.amount if alive else round_money(row.cashback_amount), policy),
+        "amount": rounding.rounded(streak.amount if alive else as_money(row.cashback_amount), policy),
         "rode_today": bool(alive and streak.last_day == today),
         "friday": today.weekday() == FRIDAY,
     }

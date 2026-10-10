@@ -43,7 +43,7 @@ from app.models.enums import (
 from app.models.user import User
 from app.models.wallet import CREDIT_TYPES, DEBIT_TYPES, WalletTransaction
 from app.services import settings_service
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 from app.core.exceptions import AmbiguousRole
 
 # نوافذ منزلقة لا تقويمية: لا مِنطقة زمنية لكل دولة في النظام، ومنتصفُ ليلٍ
@@ -210,7 +210,7 @@ async def balance(
             WalletTransaction.owner_type == owner_type,
         )
     )
-    return round_money(Decimal(total))
+    return as_money(Decimal(total))
 
 
 async def balance_of(
@@ -267,6 +267,20 @@ def _validate_sign(tx_type: WalletTransactionType, amount: Decimal) -> None:
         raise InvalidInput(f"القيد «{tx_type.value}» يجب أن يكون سالباً")
 
 
+def _require_ledger_precision(owner: User, amount: Decimal) -> None:
+    """**لا قيدَ بكسرٍ في عملةٍ بلا كسور** (SPEC §٧٣-ج/٣) — الدفترُ بخانات عملة صاحبه، **وهذا البابُ الوحيدُ الذي يكتبه**.
+
+    صفوفُ الدفتر لا تحمل دولةً ولا عملة، **فحارسُ الكتابة في الجلسة (`core/money_guard.py`) لا يراها** — فيُفحص هنا بدولة
+    صاحب المحفظة. **ولا يصلح شيئاً**: مبلغٌ جزائريٌّ بكسرٍ وصل إلى هنا خطأُ تقريبٍ قبله، فيُردّ ولا يُقيَّد مقرَّباً بصمت.
+    **ولا عملَ له في عملةٍ بثلاث خانات** — فلا يتغيّر قيدٌ أردنيٌّ ولا ليبيّ.
+    """
+    from app.core.currency import STORAGE_DECIMALS, currency_for_country, decimals_of, is_precise
+
+    currency = currency_for_country(owner.country_code)
+    if decimals_of(currency) < STORAGE_DECIMALS and not is_precise(amount, currency):
+        raise InvalidInput(f"قيدٌ بكسرٍ في عملةٍ بلا كسور ({currency.value}): {amount}")
+
+
 async def record(
     session: AsyncSession,
     *,
@@ -285,8 +299,9 @@ async def record(
     `amount` موقّعة: موجبة للإضافة وسالبة للخصم، ويُفحص توافقها مع النوع.
     """
     owner_type = owner_type_for(owner, declared=owner_type)
-    amount = round_money(amount)
+    amount = as_money(amount)
     _validate_sign(tx_type, amount)
+    _require_ledger_precision(owner, amount)
 
     await lock_wallet(session, owner.id)
 
@@ -305,7 +320,7 @@ async def record(
         if existing is not None:
             return existing
 
-    balance_after = round_money(
+    balance_after = as_money(
         await balance(session, owner.id, owner_type) + amount
     )
     if balance_after < 0:
@@ -343,7 +358,7 @@ async def _transferred_since(
             WalletTransaction.created_at >= since,
         )
     )
-    return abs(round_money(Decimal(total)))
+    return abs(as_money(Decimal(total)))
 
 
 async def _check_transfer_limits(
@@ -405,7 +420,7 @@ async def transfer(
     test_accounts.require_real_money(sender, "حسابُ التجربة لا يحوّل رصيداً — رصيدُه «تصحيحُ تجربة» لا مالٌ حقيقيّ")
     test_accounts.require_real_money(recipient, "لا يُحوَّل رصيدٌ إلى حساب تجربة")
 
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ التحويل يجب أن يكون أكبر من صفر")
     # **مبلغٌ يختاره المرسلُ: مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — بسوق المرسل، والطرفان من سوقٍ واحدٍ بشرطٍ تحته

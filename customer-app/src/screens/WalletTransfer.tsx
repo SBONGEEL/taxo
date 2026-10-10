@@ -266,7 +266,7 @@ export function WalletTransferScreen() {
                     <span dir="ltr" className="t2-m-num sm">
                       {formatMoney(amount)}
                     </span>{" "}
-                    <span className="t2-m-sum-sub t2-m-strong">{currencyLabel(country?.currency ?? "JOD")}</span>
+                    <span className="t2-m-sum-sub t2-m-strong">{currencyLabel(country?.currency)}</span>
                   </span>
                 </div>
                 {balance ? (
@@ -281,7 +281,7 @@ export function WalletTransferScreen() {
                     <span className={short ? "t2-m-sum-after short" : "t2-m-sum-after"}>
                       {short
                         ? "لا يكفي رصيدك"
-                        : formatMoney(subtractMoney(balance, amount), country?.currency ?? "JOD")}
+                        : formatMoney(subtractMoney(balance, amount), country?.currency)}
                     </span>
                   </div>
                 ) : null}

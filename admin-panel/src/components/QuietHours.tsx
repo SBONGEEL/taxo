@@ -24,7 +24,7 @@ import { Spinner } from "@/components/ui/Feedback";
 import { useSession } from "@/lib/session";
 
 /** مناطقُ السوقين وحدَهما — قائمةٌ عالميةٌ تجعل الاختيارَ بحثاً لا قراراً. */
-const ZONES = ["Asia/Amman", "Africa/Tripoli", "UTC"];
+const ZONES = ["Asia/Amman", "Africa/Tripoli", "Africa/Algiers", "UTC"];
 
 export function QuietHours({
   country,

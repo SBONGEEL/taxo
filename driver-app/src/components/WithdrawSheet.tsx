@@ -26,7 +26,7 @@ import type { DriverWallet } from "@/api/types";
 import { useCountryConfig } from "@/lib/config";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
-import { digits } from "@/lib/utils";
+import { currencyDecimals, digits, zeroAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "@/screens/t2/fields.css";
@@ -41,11 +41,13 @@ interface Props {
   onClose: () => void;
 }
 
-/** المبلغ كما يكتبه الكبتن: خاناتٌ ونقطةٌ واحدة، بلا `Number` ولا تقريب. */
-function cleanAmount(raw: string): string {
+/** المبلغ كما يكتبه الكبتن: خاناتٌ ونقطةٌ واحدة، بلا `Number` ولا تقريب — **وبخانات عملته** (ثلاثٌ للأردنيّ كما كانت، ولا نقطةَ
+ *  للجزائريّ — SPEC §٧٣-ج/١٢). */
+function cleanAmount(raw: string, places: number): string {
   const digits = raw.replace(/[^0-9.]/g, "");
   const [whole, ...rest] = digits.split(".");
-  return rest.length > 0 ? `${whole}.${rest.join("").slice(0, 3)}` : whole;
+  if (places === 0) return whole;
+  return rest.length > 0 ? `${whole}.${rest.join("").slice(0, places)}` : whole;
 }
 
 export function WithdrawSheet({
@@ -153,9 +155,9 @@ export function WithdrawSheet({
           className="t2-fld on-card"
           inputMode="decimal"
           dir="ltr"
-          placeholder="0.000"
+          placeholder={zeroAmount(wallet.currency)}
           value={amount}
-          onChange={(event) => setAmount(cleanAmount(event.target.value))}
+          onChange={(event) => setAmount(cleanAmount(event.target.value, currencyDecimals(wallet.currency)))}
         />
         {unitError ? (
           <p className="t2-note danger" role="alert">

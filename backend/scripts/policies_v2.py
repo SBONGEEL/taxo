@@ -64,7 +64,11 @@ from app.core.db import SessionLocal, engine
 from app.models.enums import CountryCode, PolicyApp, PolicyDocType
 from app.models.privacy import PrivacyPolicy
 from app.services import policies as policies_service
-from scripts.seed_policies import DRAFTS, MARKETS
+from scripts.seed_policies import DRAFTS
+
+#: **الأردنُ وحدَه كما كُتب هذا السكربتُ له** — كأخويه (`policies_v3` · `policies_recording`). كان يستورد `MARKETS` من البذر،
+#: **فلمّا دخلته الجزائرُ (§٧٣) صار يكتب لها نسخةً ثانيةً بلا أن يقرّره أحد** — فثُبِّت ولم يُترك يتبع.
+MARKETS = (CountryCode.JO,)
 
 DRY = "--dry" in sys.argv
 

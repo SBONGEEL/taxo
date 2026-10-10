@@ -25,7 +25,7 @@ import { useCountryConfig } from "@/lib/config";
 import { CURRENCY_LABEL } from "@/lib/rideFormat";
 import { notMultipleMessage, roundingUnit, unitHint } from "@/lib/rounding";
 import { useSession } from "@/lib/session";
-import { digits } from "@/lib/utils";
+import { digits, isZeroAmount } from "@/lib/utils";
 import { Icon } from "@/taxo2";
 
 import "./t2/fields.css";
@@ -120,7 +120,7 @@ export function DebtScreen() {
               </span>
               <span className="t2-debt-cur">{currency}</span>
             </span>
-            {state.total === "0.000" ? (
+            {isZeroAmount(state.total) ? (
               <p className="t2-debt-clear">
                 <Icon name="check_circle" fill />
                 لا مستحقّات عليك.
@@ -162,7 +162,7 @@ export function DebtScreen() {
             </section>
           ) : null}
 
-          {state.total !== "0.000" ? (
+          {!isZeroAmount(state.total) ? (
             <section className="t2-debt-pay">
               <label className="t2-fld-label" htmlFor="debt-amount">
                 كم تريد أن تسدّد الآن؟

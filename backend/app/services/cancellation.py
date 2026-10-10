@@ -60,7 +60,7 @@ from app.models.payment import DIRECTLY_COLLECTED_METHODS, WALLET_FUNDED_METHODS
 from app.models.ride import Ride
 from app.models.user import User
 from app.services import audit, geo, test_accounts, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money, round_money
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +173,7 @@ async def charge_for(
     from app.services import rounding
 
     unit_policy = await rounding.policy_for(session, ride.country_code)
-    precise = round_money(fee)
+    precise = round_money(fee, ride.currency)
     amount, difference = rounding.round_amount(precise, unit_policy)
     if difference != 0:
         await rounding.record(
@@ -386,7 +386,7 @@ async def debt_of(session: AsyncSession, user_id: uuid.UUID) -> Decimal:
             *_rider_debt_predicate(user_id)
         )
     )
-    return round_money(Decimal(total or 0))
+    return as_money(Decimal(total or 0))
 
 
 async def carrier_dues_of(session: AsyncSession, driver_id: uuid.UUID) -> Decimal:
@@ -401,7 +401,7 @@ async def carrier_dues_of(session: AsyncSession, driver_id: uuid.UUID) -> Decima
             RideCancellationCharge.status == CancellationChargeStatus.PENDING,
         )
     )
-    return round_money(Decimal(total or 0))
+    return as_money(Decimal(total or 0))
 
 
 async def pending_for_driver(
@@ -418,7 +418,7 @@ async def pending_for_driver(
             RideCancellationCharge.status == CancellationChargeStatus.PENDING,
         )
     )
-    return round_money(Decimal(total or 0))
+    return as_money(Decimal(total or 0))
 
 
 async def unpaid_count(session: AsyncSession, user_id: uuid.UUID) -> int:

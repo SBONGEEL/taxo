@@ -25,86 +25,51 @@
 
 وحدُّه معلَنٌ لا مخفيّ: **ما لا تمسّه المجموعةُ لا يُفحص**. فهو يحرس ما يُختبر،
 ولا يدّعي حراسةَ ما لا يُختبر.
+
+---
+
+**ويعرف العملةَ منذ §٧٣** (SPEC §٧٣-ج/٦): **ثلاثُ خاناتٍ بالضبط للأردنيّ والليبيّ ولِما لا عملةَ في سياقه** — كما كان حرفاً —
+**وصفرٌ بالضبط للجزائريّ** (`"150"`). والعملةُ تُقرأ كما تقرؤها الصياغةُ على السلك (`app/core/money_wire.py`): حقلُ `currency`
+(أو `…_currency`) في الكائن أو في أصله. **ومفرداتُ المال انتقلت إلى هناك** — التشغيلُ يحتاجها لا الاختبارُ وحدَه — وتُستورد هنا.
+
+**ولمَ لا يُقرأ تساوي الحارس والصياغة تحصيلَ حاصل**: الصياغةُ تحذف أصفاراً ولا تصلح كسراً، **فمبلغٌ جزائريٌّ لم يمرّ بعملته
+(`"150.500"`) يخرج كما هو ويُسقطه هذا الحارس**؛ والصياغةُ لا تمسّ عملةً بثلاث خانات، **فصفرُ الشكل السابع (`"0"`) يبقى مُمسَكاً
+هنا كما كان**.
 """
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-# أسماءُ المال — وتُطابَق على **الاسم الكامل أو نهايته**، لا بالاحتواء المجرّد:
-# `discount_value` نسبةٌ لا مبلغ، و`rating_avg` تقييم.
-MONEY_SUFFIXES = (
-    "_amount",
-    "_fare",
-    "_price",
-    "_fee",
-    "_balance",
-    "_total",
-    "_budget",
-    "_bonus",
-    "_reward",
-    # **`_charge` أُضيفت 2026-08-21 بعد قياس**: `waiting_charge` و`pause_charge`
-    # و`stops_charge` مبالغُ تُحصَّل من راكبٍ منذ 12-ب، **ولم تكن هذه المفردات
-    # تعدّها مالاً** — فلا هذا الحارسُ ولا `check:money-visible` كان يراها.
-    # وقياسُ الحارس في الاتجاه الثاني هو ما أظهر الثغرة، لا مراجعةُ القائمة.
-    "_charge",
-    # **`_revenue` و`revenue` أُضيفتا 2026-10-07** (§٦٢-ب/٥٢): إيرادُ «نظرة عامة» خرج «0» ليومٍ بلا رحلات (رآه وكيلُ اللوحة) —
-    # **ولم تكن المفرداتُ تعدّه مالاً**، فمرّ من هذا الحارس كما مرّت الرسومُ قبل `_charge`
-    "_revenue",
-)
-MONEY_NAMES = frozenset(
-    {
-        "amount",
-        "revenue",
-        "balance",
-        "fare",
-        "price",
-        "list_price",
-        "amount_paid",
-        "final_fare",
-        "estimated_fare",
-        "paid_amount",
-        "outstanding",
-        "commission",
-        "total_given_up",
-        "total_list_price",
-        "available_for_withdrawal",
-        "min_withdrawal_amount",
-        "withdrawal_reserve_amount",
-    }
-)
-
-# **استثناءاتٌ مسمّاةٌ بسببها** — لا كنسٌ صامت:
-# `discount_value` نسبةٌ مئوية، و`max_discount` سقفٌ قد يكون `null`،
-# و`total_budget` مبلغٌ يقبل `null` (يُفحص حين لا يكون فارغاً).
-NOT_MONEY = frozenset({"discount_value", "duration_min", "distance_km"})
-
-_DECIMAL_TEXT = re.compile(r"^-?\d+(\.\d+)?$")
+from app.core.currency import CURRENCY_DECIMALS, STORAGE_DECIMALS
+from app.core.money_wire import DECIMAL_TEXT, currency_in, is_money_key
+from app.core.money_wire import MONEY_NAMES, MONEY_SUFFIXES, NOT_MONEY  # noqa: F401 — يُقرأ من هنا لمن اعتاده
+from app.models.enums import Currency
 
 
-def _is_money_key(key: str) -> bool:
-    if key in NOT_MONEY:
-        return False
-    return key in MONEY_NAMES or key.endswith(MONEY_SUFFIXES)
+def places_for(currency: str | None) -> int:
+    """خاناتُ المبلغ المنتظرة — **ثلاثٌ لما لا عملةَ في سياقه**، كما كان الحارسُ قبل أن يعرف العملة."""
+    return CURRENCY_DECIMALS[Currency(currency)] if currency is not None else STORAGE_DECIMALS
 
 
-def offenders(payload: Any, path: str = "") -> list[str]:
-    """أسماءُ الحقول المالية التي خرجت بغير ثلاث خانات — وموضعُها."""
+def offenders(payload: Any, path: str = "", currency: str | None = None) -> list[str]:
+    """أسماءُ الحقول المالية التي خرجت بغير خانات عملتها — وموضعُها."""
     found: list[str] = []
     if isinstance(payload, dict):
+        here_currency = currency_in(payload) or currency
+        places = places_for(here_currency)
         for key, value in payload.items():
             here = f"{path}.{key}" if path else key
             if (
-                _is_money_key(str(key))
+                is_money_key(str(key))
                 and isinstance(value, str)
-                and _DECIMAL_TEXT.match(value)
+                and DECIMAL_TEXT.match(value)
             ):
-                integer, _, fraction = value.partition(".")
-                if len(fraction) != 3:
-                    found.append(f"{here} = {value!r}")
-            found.extend(offenders(value, here))
+                _, dot, fraction = value.partition(".")
+                if len(fraction) != places or (places == 0 and dot):
+                    found.append(f"{here} = {value!r} ({here_currency or 'بلا عملة'}: {places} خانات)")
+            found.extend(offenders(value, here, here_currency))
     elif isinstance(payload, list):
         for index, item in enumerate(payload):
-            found.extend(offenders(item, f"{path}[{index}]"))
+            found.extend(offenders(item, f"{path}[{index}]", currency))
     return found

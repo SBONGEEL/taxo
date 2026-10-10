@@ -14,6 +14,8 @@ from decimal import Decimal
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.core.currency import currency_for_country
+from app.models.enums import CountryCode
 from app.models.pricing import PricingRule
 from app.models.ride import Ride, RideStop
 from app.services import pricing
@@ -41,7 +43,9 @@ def _rule(**values: str) -> PricingRule:
         "stop_fee": "0.000",
     }
     base.update(values)
-    return PricingRule(**{key: Decimal(value) for key, value in base.items()})
+    # **الدولةُ تُعلَن** (SPEC §٧٣-ج/٤): `fare_breakdown` يقرّب بعملة سوق التسعيرة، وصفٌّ حقيقيٌّ يحملها دائماً (`NOT NULL`).
+    # والأرقامُ الأردنيّةُ هي هي — فهذا الاختبارُ نفسُه شاهدٌ على أن الأردنَّ لم يتغيّر
+    return PricingRule(country_code=CountryCode.JO, **{key: Decimal(value) for key, value in base.items()})
 
 
 def _sum(lines) -> Decimal:
@@ -68,7 +72,10 @@ def test_the_lines_add_up_to_the_fare_for_every_route() -> None:
         assert _sum(lines) == fare
         assert (fare, minimum_applied) == pricing.calculate_fare(rule, route, stops)
         assert all(line.amount != 0 for line in lines)
-        assert all(line.amount == pricing.round_money(line.amount) for line in lines)
+        assert all(
+            line.amount == pricing.round_money(line.amount, currency_for_country(rule.country_code))
+            for line in lines
+        )
 
 
 def test_the_minimum_is_its_own_line() -> None:

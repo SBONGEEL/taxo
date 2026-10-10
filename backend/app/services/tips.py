@@ -29,7 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import currency_for_country, money_text
 from app.core.exceptions import Conflict, FeatureDisabled, InvalidInput, NotFound
 from app.models.enums import (
     CountryCode,
@@ -157,14 +157,14 @@ async def create(
     row = await settings_for(session, country)
     assert row is not None  # `offered_in` تضمنه
 
-    amount = pricing.round_money(amount)
+    amount = pricing.as_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ البقشيش يجب أن يكون أكبر من صفر")
     # **مبلغٌ يختاره الراكب: مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — والأزرارُ نفسُها مقرَّبة (`options`)
     await rounding.require_multiple_in(session, country, amount)
     if amount > row.tip_max:
         raise InvalidInput(
-            f"أقصى بقشيش {pricing.round_money(row.tip_max)} "
+            f"أقصى بقشيش {money_text(row.tip_max, currency_for_country(country))} "
             f"{currency_for_country(country).value}"
         )
 

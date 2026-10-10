@@ -254,12 +254,12 @@ def test_the_discount_maths_is_a_pure_function() -> None:
     from app.models.enums import PromoDiscountType
     from app.services.promo import discount_for
 
-    percent = dict(discount_type=PromoDiscountType.PERCENT, value=Decimal("50"))
+    percent = dict(discount_type=PromoDiscountType.PERCENT, value=Decimal("50"), currency="JOD")
     assert discount_for(**percent, cap=None, fare=Decimal("10.000")) == Decimal("5.000")
     # السقفُ يحكم — بغيره يبتلع كوبونُ ٥٠٪ رحلةً طويلة
     assert discount_for(**percent, cap=Decimal("2.000"), fare=Decimal("10.000")) == Decimal("2.000")
 
-    fixed = dict(discount_type=PromoDiscountType.FIXED, value=Decimal("20.000"))
+    fixed = dict(discount_type=PromoDiscountType.FIXED, value=Decimal("20.000"), currency="JOD")
     # ولا يزيد الخصمُ على الأجرة: خصمٌ أكبرُ منها يجعل المدفوعَ ديناً على المنصة
     assert discount_for(**fixed, cap=None, fare=Decimal("6.000")) == Decimal("6.000")
 

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 import { getConfig } from "@/api/endpoints";
 import { useCountries } from "@/lib/countries";
+import { registerCountryCurrencies, registerCurrencies } from "@/lib/format";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 
 interface ConfigState {
@@ -33,7 +34,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     getConfig()
-      .then((value) => !cancelled && (setConfig(value), setError(null)))
+      .then((value) => {
+        if (cancelled) return;
+        // **العملاتُ قبل أن تُرسم شاشة** (SPEC §٧٣-ج/١٢) — والظاهرةُ هنا، والمخفيّةُ من `/admin/countries`
+        registerCurrencies(value.countries);
+        registerCountryCurrencies(value.countries);
+        setConfig(value);
+        setError(null);
+      })
       .catch((err: Error) => !cancelled && setError(err.message));
     return () => {
       cancelled = true;

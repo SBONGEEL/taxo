@@ -10,12 +10,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import type { ReactNode } from "react";
 
 import type { CountryCode } from "@/api/types";
+import { useCountries } from "@/lib/countries";
 
 const KEY = "taxo.admin.country";
 
@@ -38,9 +40,16 @@ export function CountryProvider({
   fallback: CountryCode;
 }) {
   const [country, setStored] = useState<CountryCode>(() => {
+    // **أيُّ رمزِ دولةٍ لا السوقان** (SPEC §٧٣-ج/١٢): كان `saved === "JO" || saved === "LY"` فيضيع اختيارُ سوقٍ ثالثٍ عند كلِّ
+    // تحديث. **ولا قائمةَ دولٍ هنا** — الصحّةُ تُحكم أدناه حين تصل الأسواقُ من مصدرها
     const saved = sessionStorage.getItem(KEY);
-    return saved === "JO" || saved === "LY" ? saved : fallback;
+    return saved && /^[A-Z]{2}$/.test(saved) ? (saved as CountryCode) : fallback;
   });
+  const { rows } = useCountries();
+  // **سوقٌ محفوظٌ لم يعد موجوداً يعود إلى الافتراض** — حين يُعرف الموجودُ من الخلفية لا قبلها
+  useEffect(() => {
+    if (rows && !rows.some((row) => row.country_code === country)) setStored(fallback);
+  }, [rows, country, fallback]);
 
   const setCountry = useCallback((next: CountryCode) => {
     sessionStorage.setItem(KEY, next);

@@ -52,6 +52,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.currency import CURRENCY_LABEL, money_text
 from app.core.exceptions import (
     CashChannelOff,
     Conflict,
@@ -126,14 +127,11 @@ ESCALATION_HOURS = 24
 #: (`payments.resolve_dispute`) فلا رقمان لسببٍ واحد
 MIN_REASON_LENGTH = payments_service.MIN_RULING_REASON_LENGTH
 
-#: **علامةُ العملة في نصِّ الدرج وحدَه** — النظامُ يرسمه والتطبيقُ مغلق فلا واجهةَ تصوغه (`notifications.py`). و`data` يحمل المعرّفات
-_TRAY_CURRENCY: dict[Currency, str] = {Currency.JOD: "د.أ", Currency.LYD: "د.ل"}
-
-#: **توقيتُ السوق حين لا صفَّ `notification_settings` له** — موعدُ «اعترض قبل» يُقرأ بساعة كبتنه لا بساعة الخادم
-_MARKET_TIMEZONE: dict[CountryCode, str] = {
-    CountryCode.JO: "Asia/Amman",
-    CountryCode.LY: "Africa/Tripoli",
-}
+#: **علامةُ العملة في نصِّ الدرج** — النظامُ يرسمه والتطبيقُ مغلق فلا واجهةَ تصوغه (`notifications.py`). و`data` يحمل المعرّفات.
+#: **وبيتُها `core/currency.py`** (SPEC §٧٣-ج/٢): كانت هنا نسخةٌ بالسوقين **فيُكتب «DZD» خاماً** لسوقٍ ثالث.
+#:
+#: **وتوقيتُ السوق حين لا صفَّ `notification_settings` له** يُقرأ من `campaigns.DEFAULT_TIMEZONES` — **بيتٌ واحد**: كانت
+#: هنا نسخةٌ ثانيةٌ بالسوقين تفترق عن الأولى أوّلَ سوقٍ يُضاف (§٧٣-ج/٩).
 
 
 def _now() -> datetime:
@@ -217,7 +215,8 @@ async def _enabled_markets(session: AsyncSession, *keys: FeatureKey) -> list[Cou
 
 
 def _money(amount: Decimal, currency: Currency) -> str:
-    return f"{amount} {_TRAY_CURRENCY.get(currency, currency.value)}"
+    """«3.364 د.أ» و«150 د.ج» — **بخانات العملة** (`money_text`)، والأردنيُّ والليبيُّ كما كانا حرفاً."""
+    return f"{money_text(amount, currency)} {CURRENCY_LABEL[Currency(currency)]}"
 
 
 def _first_name(name: str | None) -> str:
@@ -1238,12 +1237,14 @@ async def _local(session: AsyncSession, country: CountryCode, moment: datetime |
     zone_name = (
         setting.timezone
         if setting is not None
-        else _MARKET_TIMEZONE.get(CountryCode(country), _MARKET_TIMEZONE[CountryCode.JO])
+        else campaigns.DEFAULT_TIMEZONES.get(
+            CountryCode(country), campaigns.DEFAULT_TIMEZONES[CountryCode.JO]
+        )
     )
     try:
         zone = ZoneInfo(zone_name)
     except (ZoneInfoNotFoundError, ValueError):  # pragma: no cover - إعدادٌ خاطئ
-        zone = ZoneInfo(_MARKET_TIMEZONE[CountryCode.JO])
+        zone = ZoneInfo(campaigns.DEFAULT_TIMEZONES[CountryCode.JO])
     return moment.astimezone(zone).strftime("%Y-%m-%d %H:%M")
 
 

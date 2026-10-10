@@ -36,7 +36,7 @@ from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import STORAGE_STEP, currency_for_country
 from app.core.exceptions import Conflict, InvalidInput, NotFound
 from app.models.driver import Driver
 from app.models.enums import (
@@ -539,7 +539,7 @@ async def rewarded_total(session: AsyncSession, user_id: uuid.UUID) -> Decimal:
 
 
 def _money(value) -> Decimal:
-    return Decimal(value).quantize(Decimal("0.001"))
+    return Decimal(value).quantize(STORAGE_STEP)
 
 
 def _month_start(moment: datetime) -> datetime:

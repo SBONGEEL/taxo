@@ -98,7 +98,7 @@ async def this_month(
     )
     # **ثلاثُ منازلَ دائماً** — الشكلُ السابع: `Decimal(0)` يُسلسَل «0» بينما
     # كلُّ مالٍ آخر «0.000»، فيقرأ الكبتنُ «0» في عمودٍ كلُّه بثلاث منازل
-    return pricing.round_money(Decimal(total or 0))
+    return pricing.as_money(Decimal(total or 0))
 
 
 async def rows_with_percent(

@@ -41,7 +41,7 @@ from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.services import debts, rounding, settings_service, test_accounts, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money, round_money
 
 MIN_VEHICLE_YEAR = 2015
 MIN_SEATS = 4
@@ -257,15 +257,16 @@ async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver)
             select(IntercityBooking).where(IntercityBooking.trip_id == trip.id, IntercityBooking.status == "booked").with_for_update()
         )
     )
-    held = round_money(sum((b.amount for b in rows if b.payment == "wallet"), Decimal(0)))
-    cash = round_money(sum((b.amount for b in rows if b.payment == "cash"), Decimal(0)))
+    held = as_money(sum((b.amount for b in rows if b.payment == "wallet"), Decimal(0)))
+    cash = as_money(sum((b.amount for b in rows if b.payment == "cash"), Decimal(0)))
+    currency = currency_for_country(route.country_code)
     # **والعمولةُ على المسعَّر لا على المقرَّب** (SPEC §٧٠-ج/٤ و/٧، مراجعةُ المال البند ٤): الكبتنُ يقبض ما دفعه الركّابُ مقرَّباً،
     # **وفرقُ تقريب كلِّ حجزٍ له أو عليه** — فيُطرح من وعاء العمولة، **المحفظةُ وحدَها والنقدُ وحدَه**. ومن السجلّ لا من عمودٍ ثانٍ؛
     # **وبلا صفٍّ (مطفأٌ أو مضاعفٌ أصلاً) الوعاءُ هو المبلغُ حرفاً كما كان**
     differences = await _booking_differences(session, [b.id for b in rows])
 
     def _priced(total: Decimal, channel: str) -> Decimal:
-        return round_money(
+        return as_money(
             total - sum((differences.get(b.id, Decimal(0)) for b in rows if b.payment == channel), Decimal(0))
         )
 
@@ -293,7 +294,7 @@ async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver)
             created_by=driver_user.id,
             idempotency_key=f"intercity-earning:{trip.id}",
         )
-        commission = round_money(held_priced * percent / 100) if applies is not None else Decimal(0)
+        commission = round_money(held_priced * percent / 100, currency) if applies is not None else Decimal(0)
         if commission > 0:
             await wallet.record(
                 session,
@@ -305,7 +306,7 @@ async def complete(session: AsyncSession, *, trip_id: uuid.UUID, driver: Driver)
                 idempotency_key=f"intercity-commission:{trip.id}",
             )
     if cash > 0 and applies is not None and applies != CommissionAppliesTo.CASHLESS_RIDES:
-        owed = round_money(cash_priced * percent / 100)
+        owed = round_money(cash_priced * percent / 100, currency)
         if owed > 0:
             session.add(
                 DriverDebt(
@@ -354,7 +355,7 @@ async def book(
     else:
         if not 1 <= seats <= trip.seats_offered - taken:
             raise Conflict(f"المتاح {trip.seats_offered - taken} مقعداً")
-        precise, payment = round_money(trip.price_seat_at_trip * seats), "wallet"
+        precise, payment = as_money(trip.price_seat_at_trip * seats), "wallet"
     # **ما يدفعه الراكبُ يُقرَّب مرّةً على مجموعه** (SPEC §٧٠-ج/٥) — المقاعدُ × السعر ثمّ التقريب، لا كلُّ مقعدٍ وحدَه؛ **والسيارةُ
     # النقديّةُ كذلك** (نقدٌ في يد الكبتن). **وردُّه وأجرُ الكبتن منه بعينه** (`_refund` · `complete`) بلا تقريبٍ ثانٍ، والعمولةُ
     # عليه بدقّتها (§٧٠-ج/٧). ومطفأً كما كان حرفاً

@@ -343,10 +343,10 @@ export function OffersScreen() {
                     {/* **العملةُ تُمرَّر خاماً**: `money` تحلّ التسميةَ بنفسها،
                         وتمريرُ تسميةٍ محلولةٍ يطبع الرقمَ عارياً */}
                     <td className="p-12">
-                      {money(offer.total_list_price, country === "JO" ? "JOD" : "LYD")}
+                      {money(offer.total_list_price, currencyOf(country))}
                     </td>
                     <td className="p-12 font-bold text-ink">
-                      {money(offer.total_given_up, country === "JO" ? "JOD" : "LYD")}
+                      {money(offer.total_given_up, currencyOf(country))}
                     </td>
                     <td className="p-12">
                       {offer.manual_adjustments > 0 ? (

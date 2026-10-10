@@ -65,7 +65,7 @@ from app.models.payment import Payment
 from app.models.ride import Ride
 from app.models.user import User
 from app.services import settings_service, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ async def outstanding_of(session: AsyncSession, driver_id: uuid.UUID) -> Decimal
             DriverDebt.status == DriverDebtStatus.OUTSTANDING,
         )
     )
-    return round_money(Decimal(total or 0))
+    return as_money(Decimal(total or 0))
 
 
 async def ceiling_for(session: AsyncSession, country: CountryCode) -> Decimal | None:
@@ -128,7 +128,7 @@ async def record_from_ride(
     **والتفرُّدُ في القاعدة** (`driver_debt_once_per_payment`): تسويةٌ تُعاد لا
     تكتب دَيناً ثانياً. ويُقرأ الصفُّ القائمُ قبل الإدراج فلا استثناءَ يُبتلع.
     """
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         return None
 
@@ -183,7 +183,7 @@ async def collect_from_balance(
 
     taken = Decimal("0")
     for debt in rows:
-        remaining = round_money(debt.amount - debt.collected)
+        remaining = as_money(debt.amount - debt.collected)
         if remaining <= 0:  # pragma: no cover - يحرسه قيدُ القاعدة
             await _close(session, debt)
             continue
@@ -214,7 +214,7 @@ async def collect_from_balance(
 
     if taken > 0:
         await refresh_block(session, driver=driver, country=user.country_code)
-    return round_money(taken)
+    return as_money(taken)
 
 
 async def apply_settlement(
@@ -232,7 +232,7 @@ async def apply_settlement(
 
     **والمنعُ يُرفع عند الصفر لا قبله** — فمن سدَّد نصفَه يبقى ممنوعاً.
     """
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ السداد يجب أن يكون أكبر من صفر")
 
@@ -240,12 +240,12 @@ async def apply_settlement(
     for debt in await outstanding_rows(session, driver.id, for_update=True):
         if left <= 0:
             break
-        remaining = round_money(debt.amount - debt.collected)
+        remaining = as_money(debt.amount - debt.collected)
         if remaining <= 0:  # pragma: no cover
             await _close(session, debt)
             continue
         take = min(left, remaining)
-        debt.collected = round_money(debt.collected + take)
+        debt.collected = as_money(debt.collected + take)
         if debt.collected >= debt.amount:
             debt.status = DriverDebtStatus.SETTLED
             debt.settled_at = _now()
@@ -254,7 +254,7 @@ async def apply_settlement(
 
     await refresh_block(session, driver=driver, country=country)
     # **ما زاد عن الدَّين لا يُبتلع ولا يُقيَّد** — يُعاد رقماً ليقوله المشرف
-    return round_money(amount - left)
+    return as_money(amount - left)
 
 
 async def refresh_block(

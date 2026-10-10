@@ -25,6 +25,7 @@ import { ApiError } from "@/api/client";
 import { getMyReferrals } from "@/api/endpoints";
 import type { MyReferrals, ReferralProgram, ReferralStage } from "@/api/types";
 import { useGoBack } from "@/lib/back";
+import { useCountryConfig } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { currencyLabel, formatMoney } from "@/lib/utils";
 import { BlankT2, NoteT2, SubHeadT2 } from "@/screens/t2/KitT2";
@@ -72,7 +73,8 @@ function Amount({ value, currency, off = false }: { value: string; currency: str
 export function ReferralsScreen() {
   const goBack = useGoBack("/account");
   const { user } = useSession();
-  const currency = user?.country_code === "LY" ? "LYD" : "JOD";
+  // **عملةُ دولة الحساب من `/config`** لا من شرطٍ بدولتين (SPEC §٧٣-ج/١٢)
+  const currency = useCountryConfig(user?.country_code)?.currency;
   const [data, setData] = useState<MyReferrals | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -128,7 +130,7 @@ export function ReferralsScreen() {
   }
 
   function amountOf(program: ReferralProgram) {
-    return <Amount value={program.reward_amount} currency={currency} />;
+    return <Amount value={program.reward_amount} currency={currency ?? ""} />;
   }
 
   return (
@@ -233,7 +235,7 @@ export function ReferralsScreen() {
                       <p className="t2-ref-who">{row.referral_type === "driver" ? "كبتن" : "راكب"}</p>
                     </div>
                     {row.rewarded && row.reward_amount ? (
-                      <Amount value={row.reward_amount} currency={row.reward_currency ?? currency} />
+                      <Amount value={row.reward_amount} currency={row.reward_currency ?? currency ?? ""} />
                     ) : null}
                   </div>
                 );

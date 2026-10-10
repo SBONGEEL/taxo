@@ -140,7 +140,7 @@ async def get_ride(
         stops_count=ride.stops_count,
         stop_fee=ride.stop_fee_at_ride,
         stops_charge=pricing.round_money(
-            ride.stop_fee_at_ride * ride.stops_count
+            ride.stop_fee_at_ride * ride.stops_count, ride.currency
         ),
         waiting_charge=await rides_service.waiting_charge_for(session, ride),
         pause_charge=await rides_service.pause_charge_for(session, ride),

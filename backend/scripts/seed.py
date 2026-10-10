@@ -192,10 +192,18 @@ FEATURE_DEFAULTS: dict[CountryCode, dict[FeatureKey, bool]] = {
         # **مطفأٌ صراحةً** (مركباتُ الكراج، 2026-08-22) — انظر تعليقَ ليبيا
         FeatureKey.VEHICLE_SKINS_ENABLED: False,
     },
+    # **الجزائرُ مخفيّةٌ ومطفأةٌ كلُّها** (SPEC §٧٣-ب): ثالثُ الأسواق يُبنى ولا يظهر. **والإخفاءُ مكتوبٌ صريحاً** وإن كتبته الترحيلةُ
+    # `0111` قبله — «السكوتُ ظهور» (§٢٤)، فالقرارُ يُكتب في الموضعين؛ **والتحقّقُ حارسٌ يبقى مشتعلاً** كما في ليبيا
+    CountryCode.DZ: {key: False for key in FeatureKey}
+    | {
+        FeatureKey.OTP_VERIFICATION_ENABLED: True,
+        FeatureKey.COUNTRY_VISIBLE: False,
+    },
 }
 
 # قيم مبدئية للتطوير — تُضبط نهائياً من لوحة الإدارة
-PRICING_DEFAULTS: dict[tuple[CountryCode, VehicleCategory], dict[str, str]] = {
+#: **و`None` = «لا تسعيرةَ تُبذر»** — تُضاف من اللوحة (SPEC §٧٣-ب: لا قيمةَ ماليّةً جزائريّةً تُخترع)
+PRICING_DEFAULTS: dict[tuple[CountryCode, VehicleCategory], dict[str, str] | None] = {
     (CountryCode.LY, VehicleCategory.ECONOMY): {
         "base_fare": "3.000",
         "price_per_km": "1.000",
@@ -224,6 +232,8 @@ PRICING_DEFAULTS: dict[tuple[CountryCode, VehicleCategory], dict[str, str]] = {
         "minimum_fare": "2.500",
         "cancellation_fee": "1.000",
     },
+    (CountryCode.DZ, VehicleCategory.ECONOMY): None,
+    (CountryCode.DZ, VehicleCategory.COMFORT): None,
 }
 
 # حدود المحفظة — قيم تطوير تُضبط نهائياً من اللوحة. التحويل معطّل في
@@ -239,6 +249,12 @@ WALLET_DEFAULTS: dict[CountryCode, dict[str, str]] = {
         "transfer_monthly_limit": "2000.000",
         "min_withdrawal_amount": "10.000",
     },
+    # **أصفارٌ = «لم يُضبط بعد»** (`settings_service.get_or_create_wallet_settings`): التحويلُ مرفوضٌ حتى يُكتب حدُّه من اللوحة
+    CountryCode.DZ: {
+        "transfer_daily_limit": "0.000",
+        "transfer_monthly_limit": "0.000",
+        "min_withdrawal_amount": "0.000",
+    },
 }
 
 PLAN_DEFAULTS: dict[CountryCode, list[tuple[str, SubscriptionDurationType, str]]] = {
@@ -252,6 +268,8 @@ PLAN_DEFAULTS: dict[CountryCode, list[tuple[str, SubscriptionDurationType, str]]
         ("اشتراك أسبوعي", SubscriptionDurationType.WEEKLY, "9.000"),
         ("اشتراك شهري", SubscriptionDurationType.MONTHLY, "30.000"),
     ],
+    # **لا خططَ تُبذر للجزائر** — أسعارُها قرارُ المالك من اللوحة (SPEC §٧٣-ب)
+    CountryCode.DZ: [],
 }
 
 
@@ -356,6 +374,12 @@ TIP_DEFAULTS: dict[CountryCode, dict[str, str]] = {
         "tip_preset_medium": "2.000",
         "tip_max": "10.000",
     },
+    # **أصفارٌ = «لم يُضبط»** فتُخفى الأزرارُ كلُّها (`PaymentSetting.tips_configured`)
+    CountryCode.DZ: {
+        "tip_preset_small": "0.000",
+        "tip_preset_medium": "0.000",
+        "tip_max": "0.000",
+    },
 }
 
 
@@ -364,6 +388,8 @@ TIP_DEFAULTS: dict[CountryCode, dict[str, str]] = {
 DEBT_CEILING_DEFAULTS: dict[CountryCode, Decimal | None] = {
     CountryCode.JO: Decimal("5.000"),
     CountryCode.LY: None,
+    # **فارغٌ حتى يكتبه المالك** — والمسارُ مبنيٌّ ومعطَّلٌ حتى يُكتب الرقم (`PaymentSetting.driver_debt_ceiling`)
+    CountryCode.DZ: None,
 }
 
 
@@ -519,6 +545,9 @@ async def seed_notification_settings(session: AsyncSession) -> None:
 
 async def seed_pricing(session: AsyncSession) -> None:
     for (country, category), amounts in PRICING_DEFAULTS.items():
+        if amounts is None:
+            _log(f"تسعيرة: {country.value}/{category.value} — لا تُبذر، تُضاف من اللوحة")
+            continue
         exists = await session.scalar(
             select(PricingRule.id).where(
                 PricingRule.country_code == country,

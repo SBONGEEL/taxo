@@ -32,7 +32,7 @@ from app.models.ride import Ride
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.services import settings_service, wallet
-from app.services.pricing import FareLine, round_money
+from app.services.pricing import FareLine, as_money, round_money
 
 PREPAY_METHODS = ("wallet", "cash")
 
@@ -80,7 +80,7 @@ async def prepare(
         raise InvalidInput("الساعاتُ المحجوزةُ تُدفع من المحفظة أو نقداً عند البدء")
     return HourlyTerms(
         hours=request.hours,
-        rate=round_money(row.hourly_rate),
+        rate=as_money(row.hourly_rate),
         km_per_hour=row.hourly_km_per_hour,
         cancel_minutes=row.hourly_cancel_minutes,
         prepay=request.prepay,
@@ -88,7 +88,8 @@ async def prepare(
 
 
 def booked(hours: int, rate: Decimal) -> Decimal:
-    return round_money(rate * hours)
+    # **ساعاتٌ صحيحةٌ × سعرٌ محفوظ** — لا يُنشئ كسراً، فلا عملةَ يحتاجها
+    return as_money(rate * hours)
 
 
 def booked_line(hours: int, rate: Decimal) -> FareLine:
@@ -107,13 +108,13 @@ def final_fare(ride: Ride, rule: PricingRule, actual_km: Decimal | None) -> tupl
         end = ride.completed_at or datetime.now(UTC)
         elapsed = Decimal(int((end - ride.started_at).total_seconds() // 60))
     extra_min = max(elapsed - Decimal(hours * 60), Decimal(0))
-    km_charge = round_money(extra_km * rule.price_per_km)
-    min_charge = round_money(extra_min * rule.price_per_min)
+    km_charge = round_money(extra_km * rule.price_per_km, ride.currency)
+    min_charge = round_money(extra_min * rule.price_per_min, ride.currency)
     if km_charge > 0:
-        lines.append(FareLine("hourly_extra_km", km_charge, round_money(extra_km)).as_json())
+        lines.append(FareLine("hourly_extra_km", km_charge, as_money(extra_km)).as_json())
     if min_charge > 0:
         lines.append(FareLine("hourly_extra_time", min_charge, extra_min).as_json())
-    return round_money(base + km_charge + min_charge), lines
+    return round_money(base + km_charge + min_charge, ride.currency), lines
 
 
 def prepay_key(ride_id: uuid.UUID) -> str:
@@ -125,7 +126,7 @@ def cancel_fee(ride: Ride) -> Decimal:
     """**دقائقُ الإلغاء من سعر الساعة المجمَّد** — نصفُ ساعةٍ افتراضاً، للكبتن بمسار رسم الإلغاء القائم."""
     rate = ride.hourly_rate_at_ride or Decimal(0)
     minutes = ride.hourly_cancel_minutes_at_ride or 0
-    return round_money(rate * minutes / 60)
+    return round_money(rate * minutes / 60, ride.currency)
 
 
 async def prepay_on_start(session: AsyncSession, ride: Ride) -> None:

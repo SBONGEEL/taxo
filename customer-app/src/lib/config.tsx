@@ -20,6 +20,7 @@ import { Capacitor } from "@capacitor/core";
 import { ApiError } from "@/api/client";
 import { getConfig } from "@/api/endpoints";
 import { registerCategoryFaces } from "@/lib/labels";
+import { registerCurrencies } from "@/lib/utils";
 import { cacheRules } from "@/lib/validation";
 import type { AppConfig, CountryCode, CountryConfig } from "@/api/types";
 import { onSplashRetry, setSplashStatus } from "@/lib/splash";
@@ -93,6 +94,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         // **الفئاتُ الجديدةُ تُسمّى قبل أن تُرسم أيُّ شاشة** (SPEC §٦٧)
         registerCategoryFaces(value.countries.flatMap((country) => country.ride_categories ?? []));
+        // **والعملاتُ كذلك** (SPEC §٧٣-ج/١٢) — علامتُها وخاناتُها من الخلفية قبل أن يُرسم مبلغ
+        registerCurrencies(value.countries);
         setConfig(value);
         // آخرُ نسخةٍ من القواعد تُخزَّن لحظةَ وصولها (SPEC ١٧.٣)
         cacheRules(value.validation);

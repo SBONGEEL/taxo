@@ -13,6 +13,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { getCountries } from "@/api/endpoints";
+import { registerCountryCurrencies, registerCurrencies } from "@/lib/format";
 import type { CountryCode, CountryRow } from "@/api/types";
 
 interface CountriesState {
@@ -43,7 +44,13 @@ export function CountriesProvider({
     }
     let cancelled = false;
     getCountries()
-      .then((value) => !cancelled && setRows(value.countries))
+      .then((value) => {
+        if (cancelled) return;
+        // **والمخفيّةُ تُسجَّل عملتُها هنا** — لا تصل `/config` (SPEC §٧٣-ج/١٢)
+        registerCurrencies(value.countries.map((row) => row.config));
+        registerCountryCurrencies(value.countries.map((row) => row.config));
+        setRows(value.countries);
+      })
       // **وفشلُ النداء لا يُعطّل اللوحة**: `rows` تبقى `null` فتُقرأ الدولُ
       // من `/config` كما كانت — أضيقُ ممّا يجب، ولا شاشةَ بيضاء
       .catch(() => undefined);

@@ -50,7 +50,7 @@ from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.services import rounding, settings_service, subscriptions, test_accounts, wallet
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 #: **لا يُطلب حجزٌ مضمونٌ قبل ساعتين من موعده** — ليتّسع لقبول كبتنٍ وتأكيدِه قبل الموعد بساعة
 MIN_LEAD = timedelta(hours=2)
@@ -102,7 +102,7 @@ async def fee_for(session: AsyncSession, country: CountryCode) -> Decimal:
     if not await settings_service.is_feature_enabled(session, country, FeatureKey.GUARANTEED_BOOKING_ENABLED):
         return Decimal("0.000")
     row = await settings_for(session, country)
-    return round_money(row.guarantee_fee) if row is not None else Decimal("0.000")
+    return as_money(row.guarantee_fee) if row is not None else Decimal("0.000")
 
 
 # ------------------------------------------------------------------ الراكب
@@ -294,7 +294,7 @@ async def _penalize(session: AsyncSession, *, booking: RideBooking, driver: Driv
     amount = booking.guarantee_fee_at_booking
     await wallet.lock_wallets(session, driver_user.id, rider.id)
     balance = await wallet.balance_of(session, driver_user, declared=WalletOwnerType.DRIVER)
-    capped = round_money(min(max(balance, Decimal(0)), amount))
+    capped = as_money(min(max(balance, Decimal(0)), amount))
     # **الغرامةُ تُقرَّب للأدنى دائماً، أيّاً كان اتجاهُ السوق** (SPEC §٧٠-ج/٥): الرسمُ نفسُه مضاعفٌ (قُرِّب عند الحجز)، فلا
     # كسرَ إلا حين **يحدّها رصيدُه** — والرصيدُ هو ما جعلها كسراً. **وللأعلى أو للأقرب يأخذ أكثرَ ممّا يملك** فيرفضه الدفتر
     # (`balance_after >= 0`) أو يُسقط الاعتذار؛ **فللأدنى**: أكبرُ مضاعفٍ لا يتجاوز الرصيد — قاعدةُ المحفظة في الأجرة نفسُها
@@ -311,7 +311,7 @@ async def _penalize(session: AsyncSession, *, booking: RideBooking, driver: Driv
         kind=WARNING_GUARANTEE_WITHDRAWAL,
         booking_id=booking.id,
         penalty_amount=moved,
-        penalty_shortfall=round_money(amount - moved),
+        penalty_shortfall=as_money(amount - moved),
     )
     session.add(warning)
     await session.flush()

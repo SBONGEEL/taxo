@@ -232,12 +232,14 @@ def stops_of(ride: "Ride", moment: datetime) -> list["RideStopOut"]:
             address=stop.address,
             arrived_at=stop.arrived_at,
             resumed_at=stop.resumed_at,
-            waited_minutes=pricing.round_money(pricing.waiting_minutes(stop, moment)),
+            # **دقائقُ لا مال** — بدقّة التخزين في كلِّ عملة
+            waited_minutes=pricing.as_money(pricing.waiting_minutes(stop, moment)),
             waiting_charge=pricing.waiting_charge(
                 [stop],
                 free_minutes=ride.stop_free_minutes_at_ride,
                 price_per_min=ride.stop_price_per_min_at_ride,
                 now=moment,
+                currency=ride.currency,
             ),
             over_max_wait=(
                 ride.stop_max_wait_minutes_at_ride > 0
@@ -509,7 +511,7 @@ class RideOut(BaseModel):
                 kind=current.kind,
                 started_at=current.started_at,
                 waited_minutes=pauses_service.minutes_of(current, moment),
-                charge=pauses_service.charge_of(current, moment),
+                charge=pauses_service.charge_of(current, moment, ride.currency),
                 free_minutes=current.free_minutes_at_pause,
                 over_max=(
                     current.max_minutes_at_pause > 0
@@ -522,15 +524,17 @@ class RideOut(BaseModel):
         )
         pause_charge = pricing.round_money(
             sum(
-                (pauses_service.charge_of(row, moment) for row in ride.pauses),
+                (pauses_service.charge_of(row, moment, ride.currency) for row in ride.pauses),
                 Decimal("0.000"),
-            )
+            ),
+            ride.currency,
         )
         waiting_charge = pricing.waiting_charge(
             ride.stops,
             free_minutes=ride.stop_free_minutes_at_ride,
             price_per_min=ride.stop_price_per_min_at_ride,
             now=moment,
+            currency=ride.currency,
         )
 
         return cls(
@@ -545,7 +549,7 @@ class RideOut(BaseModel):
             stop_max_wait_minutes=ride.stop_max_wait_minutes_at_ride,
             stop_fee=ride.stop_fee_at_ride,
             stops_charge=pricing.round_money(
-                ride.stop_fee_at_ride * ride.stops_count
+                ride.stop_fee_at_ride * ride.stops_count, ride.currency
             ),
             open_pause=open_pause,
             pause_charge=pause_charge,
@@ -555,7 +559,10 @@ class RideOut(BaseModel):
             # العدّادُ عن السطرين اللذين يشرحانه. **ومقرَّبٌ بالقاعدة نفسِها** (SPEC §٧٠-ج/٤): الأجرةُ كما ستُحفظ لو انتهت
             # الآن — بسياسة السوق المجمَّدةِ على الرحلة، فهذا التمثيلُ يُبنى في بثٍّ بلا جلسة (`rounding.ride_display_fare`)
             current_fare=rounding.ride_display_fare(
-                ride, pricing.round_money(ride.estimated_fare + waiting_charge + pause_charge)
+                ride,
+                pricing.round_money(
+                    ride.estimated_fare + waiting_charge + pause_charge, ride.currency
+                ),
             ),
             rider_estimate=rounding.rider_estimate(ride),
             start_code_required=ride.start_code is not None,

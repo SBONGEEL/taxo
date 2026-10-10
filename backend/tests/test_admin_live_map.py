@@ -17,7 +17,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 
 from app.models.audit import AdminAuditLog
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, CountryCode
 from app.services import live_map
 from tests.helpers import (
     DRIVER,
@@ -98,9 +98,13 @@ async def test_opening_the_map_writes_one_audit_entry_per_session(
 async def test_a_second_country_is_a_separate_session(
     client: AsyncClient, jordan_settings: None, admin_headers: dict, session_factory
 ) -> None:
-    """فتحُ سوقٍ آخر قراءةٌ أخرى — الخنقُ بالدولة لا بالمشرف وحده."""
-    await _map(client, admin_headers, "JO")
-    await _map(client, admin_headers, "LY")
+    """فتحُ سوقٍ آخر قراءةٌ أخرى — الخنقُ بالدولة لا بالمشرف وحده.
+
+    **والأسواقُ من مصدرها لا من قائمةٍ تُكتب هنا** (SPEC §٧٣-ج): كان `["JO", "LY"]` حرفاً، فيسقط أوّلَ سوقٍ يُضاف ولا يقول إن
+    الخنقَ عطب — يقول إن القائمةَ قديمة. **فكلُّ سوقٍ في التعداد يُفتح، وكلُّ سوقٍ يترك قيدَه.**
+    """
+    for country in CountryCode:
+        await _map(client, admin_headers, country.value)
 
     async with session_factory() as session:
         countries = (
@@ -111,7 +115,7 @@ async def test_a_second_country_is_a_separate_session(
             )
         ).all()
 
-    assert sorted(row["country_code"] for row in countries) == ["JO", "LY"]
+    assert sorted(row["country_code"] for row in countries) == sorted(c.value for c in CountryCode)
 
 
 async def test_rider_facing_paths_still_carry_no_identity(

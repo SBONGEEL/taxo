@@ -408,6 +408,7 @@ async def test_above_the_cap_needs_an_admin(
 def test_the_deduction_has_three_ceilings_not_one() -> None:
     """النسبةُ، والمتبقّي، **وما يجب أن يبقى له** — واقتطاعٌ يستنزف يمنع السداد."""
     policy = advances_service.Policy(
+        currency=Currency.JOD,
         enabled=True,
         deduction_percent=20,
         min_kept_amount=Decimal("1.000"),
@@ -714,6 +715,7 @@ async def test_the_per_driver_cap_lowers_and_never_raises(
     from app.services import advances as advances_service
 
     policy = advances_service.Policy(
+        currency=Currency.JOD,
         enabled=True,
         deduction_percent=20,
         min_kept_amount=Decimal("1.000"),

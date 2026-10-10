@@ -11,8 +11,8 @@
 // و`import type` يُمحى عند التصريف، **فلا مستوردَ في وقت التشغيل ولا دورة**.
 import type { Crumb } from "@/lib/breadcrumbs";
 
-export type CountryCode = "JO" | "LY";
-export type Currency = "JOD" | "LYD";
+export type CountryCode = "JO" | "LY" | "DZ";
+export type Currency = "JOD" | "LYD" | "DZD";
 /** **مفتاحُ فئة الرحلة** (SPEC §٦٧) — `economy` · `comfort` **أو فئةٌ أضافها المشرف**: الفئةُ صارت بياناً في الخلفية، فالمفتاحُ نصّ. */
 export type VehicleCategory = string;
 export type UserRole = "rider" | "driver" | "admin" | "support";
@@ -210,6 +210,11 @@ export interface Tip {
 export interface CountryConfig {
   country_code: CountryCode;
   currency: Currency;
+  /** **علامةُ العملة واسمُها وخاناتُها من الخلفية** (SPEC §٧٣-ج/٢) — «د.أ» · «دينار أردني» · `3`، و«د.ج» · `0`.
+   *  **ولا تُكتب في الواجهة**: منها يُملأ سجلُّ العملات (`registerCurrencies`) فتقرؤه كلُّ صياغةٍ للمال. */
+  currency_label: string;
+  currency_name: string;
+  currency_decimals: number;
   features: Record<string, boolean>;
   vehicle_categories: VehicleCategory[];
   /** **وجوهُ ما يُطلب** بترتيبه (SPEC §٦٧) — منها تُسمّى الفئاتُ الجديدة. */

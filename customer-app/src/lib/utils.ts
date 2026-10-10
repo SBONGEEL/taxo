@@ -16,7 +16,49 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
+/** **وجوهُ العملات من الخلفية لا من هنا** (SPEC §٧٣-ج/١٢) — علامتُها واسمُها وخاناتُها تُنشر مع كلِّ دولةٍ في `/config`
+ *  (`core/currency.py`)، **ويُملأ هذا السجلُّ لحظةَ وصولها** قبل أن تُرسم شاشة (`registerCurrencies` في `lib/config.tsx`).
+ *
+ *  **كانت العلامةُ مكتوبةً هنا بالسوقين** (`{ JOD: "د.أ", LYD: "د.ل" }`) — **فسوقٌ ثالثٌ يُرسم رمزاً خاماً** ولا يفشل شيء. */
+interface CurrencyFace {
+  label: string;
+  name: string;
+  decimals: number;
+}
+const CURRENCY_FACES = new Map<string, CurrencyFace>();
+
+export function registerCurrencies(
+  countries: ReadonlyArray<{
+    currency: string;
+    currency_label: string;
+    currency_name: string;
+    currency_decimals: number;
+  }>,
+): void {
+  for (const country of countries) {
+    CURRENCY_FACES.set(country.currency, {
+      label: country.currency_label,
+      name: country.currency_name,
+      decimals: country.currency_decimals,
+    });
+  }
+}
+
+/** **خاناتُ العملة** — وثلاثٌ لما لا يُعرف بعد، كما كانت الصياغةُ قبل §٧٣ حرفاً. */
+export function currencyDecimals(currency: string | null | undefined): number {
+  return (currency ? CURRENCY_FACES.get(currency)?.decimals : undefined) ?? 3;
+}
+
+/** **صفرُ العملة نصّاً** — «0.000» للأردنيّ والليبيّ و«0» للجزائريّ. **ولا `"0.000"` مكتوبةٌ في شاشة** (الحارس `check:market-literals`). */
+export function zeroAmount(currency: string | null | undefined): string {
+  const places = currencyDecimals(currency);
+  return places > 0 ? `0.${"0".repeat(places)}` : "0";
+}
+
+/** **أصفرٌ هذا المبلغ؟** — نصّيّاً لا بعائم: «0» و«0.000» و«-0.000» صفرٌ بأيِّ خانات. */
+export function isZeroAmount(amount: string | null | undefined): boolean {
+  return /^-?0+(\.0+)?$/.test((amount ?? "").trim());
+}
 
 /** تسميةُ العملة للعرض — **لا يُعرض الرمزُ الخام في واجهةٍ عربية**.
  *
@@ -25,19 +67,14 @@ const CURRENCY_LABEL: Record<string, string> = { JOD: "د.أ", LYD: "د.ل" };
  * البيتُ الواحد للتسمية هو الإصلاح: `formatMoney` يقرؤه، وكذلك أيُّ لاحقةِ حقل.
  */
 export function currencyLabel(currency: string | null | undefined): string {
-  return currency ? (CURRENCY_LABEL[currency] ?? currency) : "";
+  return currency ? (CURRENCY_FACES.get(currency)?.label ?? currency) : "";
 }
-
-const CURRENCY_NAME: Record<string, string> = {
-  JOD: "دينار أردني",
-  LYD: "دينار ليبي",
-};
 
 /** اسمُ العملة كاملاً — لسطرٍ واحدٍ تحت المبلغ الكبير في طبقة الدفع
  *  (`t.jodFull` في تصميم الراكب). ويسكن هنا لا في الشاشة، لأن تسميةَ العملة
  *  دَينٌ أُغلق مرةً بجعلها بيتاً واحداً؛ وبيتان لها يفترقان كما افترقا. */
 export function currencyName(currency: string | null | undefined): string {
-  return currency ? (CURRENCY_NAME[currency] ?? currency) : "";
+  return currency ? (CURRENCY_FACES.get(currency)?.name ?? currency) : "";
 }
 
 /** **المصفى الوحيد لكل رقمٍ يُعرض** (قرارُ المالك 2026-08-19).
@@ -80,8 +117,8 @@ export const DISPLAY_LOCALE = "ar-u-nu-latn";
 /** المبالغ نصوصٌ من الخلفية ولا تُحوَّل إلى `number` (SPEC القسم 4).
  *
  * `Intl.NumberFormat` يأخذ رقماً فيمرّ المال بالفاصلة العائمة ولو للعرض —
- * فالتنسيق هنا نصّيٌّ بحت: ثلاث خانات كسرية دائماً، وفاصلة كل ثلاث خانات
- * صحيحة. الرقم يبقى كما حسبته الخلفية حرفاً بحرف.
+ * فالتنسيق هنا نصّيٌّ بحت: **خاناتُ العملة** (ثلاثٌ للأردنيّ والليبيّ كما كانت حرفاً، ولا شيءَ للجزائريّ — SPEC §٧٣)،
+ * وفاصلة كل ثلاث خانات صحيحة. الرقم يبقى كما حسبته الخلفية حرفاً بحرف — **ولا يُخفى كسرٌ في عملةٍ بلا كسور**: يُعرض كما وصل.
  */
 export function formatMoney(amount: string | null | undefined, currency?: string) {
   if (amount === null || amount === undefined || amount === "") return "—";
@@ -89,9 +126,11 @@ export function formatMoney(amount: string | null | undefined, currency?: string
   const negative = amount.trimStart().startsWith("-");
   const [whole = "0", fraction = ""] = amount.replace("-", "").split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const padded = (fraction + "000").slice(0, 3);
-  const label = currency ? ` ${CURRENCY_LABEL[currency] ?? currency}` : "";
-  return `${negative ? "−" : ""}${grouped}.${padded}${label}`;
+  const places = currencyDecimals(currency);
+  const padded = (fraction + "000").slice(0, places);
+  const shown = places < 3 && /[1-9]/.test(fraction.slice(places)) ? fraction : padded;
+  const label = currency ? ` ${currencyLabel(currency)}` : "";
+  return `${negative ? "−" : ""}${grouped}${shown ? `.${shown}` : ""}${label}`;
 }
 
 /** مسافة للعرض: بالأمتار تحت الكيلومتر، وبكسرٍ واحد فوقه. */

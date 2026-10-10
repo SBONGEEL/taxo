@@ -43,7 +43,7 @@ from app.services import (
     verification,
     wallet,
 )
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 # القنوات التي يفتح الراكب طلبها بنفسه: كليك وحدها. الكاش يُنشئه الموظف
 # مؤكداً عند استلام المال، والبطاقة لا تمر بطلبٍ أصلاً (شحن فوري، المرحلة 6).
@@ -203,7 +203,7 @@ async def create_request(
 
 
 def _validated_amount(amount: Decimal) -> Decimal:
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ الشحن يجب أن يكون أكبر من صفر")
     return amount

@@ -122,7 +122,7 @@ async def _priced_for_preview(redis, rider_id: uuid.UUID, fare: Decimal, policy)
     if not policy.enabled or not rounding.is_multiple(fare, policy):
         return fare
     try:
-        priced = await redis.hget(_PRICED_KEY.format(rider_id=rider_id), str(pricing.round_money(fare)))
+        priced = await redis.hget(_PRICED_KEY.format(rider_id=rider_id), str(pricing.as_money(fare)))
     except Exception:  # noqa: BLE001
         return fare
     return Decimal(priced) if priced else fare
@@ -180,7 +180,7 @@ async def estimate_ride(
     if shared:
         shared = (
             shared[0],
-            rounding.rounded(pricing.round_money(shared[1] + quote.captain_fees), policy),
+            rounding.rounded(pricing.round_money(shared[1] + quote.captain_fees, quote.currency), policy),
         )
     await _remember_priced(redis, rider.id, rounding.rounded(quote.fare, policy), quote.fare)
     return RideEstimateOut(
@@ -1004,7 +1004,9 @@ async def validate_promo(
         code=promo.code,
         discount_type=promo.discount_type,
         discount=discount,
-        fare_after=rounding.rounded(pricing.round_money(fare - discount), policy),
+        fare_after=rounding.rounded(
+            pricing.round_money(fare - discount, currency_for_country(payload.country_code)), policy
+        ),
         currency=currency_for_country(payload.country_code).value,
     )
 

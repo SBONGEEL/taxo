@@ -36,7 +36,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError, RoutingFailed, RoutingUnavailable
+from app.core.currency import currency_for_country
 from app.models.enums import (
+    Currency,
     CountryCode,
     FeatureKey,
     Gender,
@@ -127,9 +129,9 @@ def guard_gender_choice(
         raise SharingNotAllowedForGendered()
 
 
-def discount_on(fare: Decimal, percent: Decimal) -> Decimal:
-    """قيمةُ الخصم من أجرةٍ ونسبة — **حسابٌ في الخلفية وحدها** (القسم 14)."""
-    return pricing.round_money(fare * percent / Decimal("100"))
+def discount_on(fare: Decimal, percent: Decimal, currency: Currency | str) -> Decimal:
+    """قيمةُ الخصم من أجرةٍ ونسبة — **حسابٌ في الخلفية وحدها** (القسم 14)، **مقرَّبٌ إلى أصغر وحدةٍ في العملة** (§٧٣-ج/٤)."""
+    return pricing.round_money(fare * percent / Decimal("100"), currency)
 
 
 async def preview(
@@ -144,8 +146,8 @@ async def preview(
         return None
     row = await settings_for(session, country)
     assert row is not None  # `enabled_in` تحقّق منه
-    discount = discount_on(fare, row.discount_percent)
-    return discount, pricing.round_money(fare - discount)
+    discount = discount_on(fare, row.discount_percent, currency_for_country(country))
+    return discount, pricing.as_money(fare - discount)
 
 
 async def open_discount(session: AsyncSession, ride: Ride) -> Payment | None:
@@ -168,6 +170,7 @@ async def open_discount(session: AsyncSession, ride: Ride) -> Payment | None:
     discount = discount_on(
         pricing.discountable(ride.final_fare, ride.captain_fees_at_ride),
         ride.share_discount_percent_at_ride,
+        ride.currency,
     )
     if discount <= 0:  # pragma: no cover - نسبةٌ مجمَّدةٌ تعطي صفراً
         return None

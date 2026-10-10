@@ -49,7 +49,7 @@ from app.models.user import User
 from app.services import audit, debts, rounding, settings_service, test_accounts
 from app.services.card_payments import _new_cart_id, _paying_side
 from app.services.cliq_subscriptions import require_cliq_manual_enabled
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 #: **نصٌّ واحدٌ للبابين** (الفتحُ والتأكيد). والدَّينُ يُحصَّل من رصيده عند تسوية رحلاته (`debts.collect_from_balance`)،
 #: ورصيدُه «تصحيحُ تجربة» من اللوحة — أو يُشطب بسببٍ مكتوب
@@ -72,7 +72,7 @@ async def start_payment(
     test_accounts.require_real_money(owner, _NO_CLIQ_FOR_TEST)
     await require_cliq_manual_enabled(session, owner.country_code)
 
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise InvalidInput("المبلغ يجب أن يكون أكبر من صفر")
     # **مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — حوالةٌ من بنكه في سوقٍ لا كسورَ فيه
@@ -158,7 +158,7 @@ async def confirm_payment(
     if order.status is not ProviderOrderStatus.CREATED:
         raise InvalidStatusTransition()
 
-    credited = round_money(credited)
+    credited = as_money(credited)
     if credited <= 0:
         raise InvalidInput("المبلغ الواصل يجب أن يكون أكبر من صفر")
 
@@ -222,7 +222,7 @@ async def _return_rounding_excess(
     **والأقفالُ في ترتيبها**: صفُّ المطالبة مقفولٌ قبلُ (`_locked`)، وصفوفُ الدَّين في `apply_settlement`، **وقفلُ المحفظة آخرُها**
     في `wallet.record`. **ومفتاحُ التكرار على المطالبة**، والمطالبةُ لا تُؤكَّد مرّتين (`created` وحدَها تُؤكَّد).
     """
-    excess = round_money(credited - applied)
+    excess = as_money(credited - applied)
     if excess <= 0:
         return None
     policy = await rounding.policy_for(session, owner.country_code)

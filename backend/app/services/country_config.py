@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from app.core.currency import currency_for_country
+from app.core.currency import CURRENCY_LABEL, CURRENCY_NAME, currency_for_country, decimals_of
 from app.core.phone import dial_code_for, national_length_for
 from app.models.enums import CountryCode, FeatureKey
 from app.schemas.config import CountryConfigOut
@@ -32,9 +32,13 @@ async def build(session, country: CountryCode) -> CountryConfigOut:
     keys = await categories.requestable_keys(session, country)
     rows = {row.key: row for row in await categories.for_country(session, country)}
     method = channels[0] if channels else verification.NONE
+    currency = currency_for_country(country)
     return CountryConfigOut(
         country_code=country,
-        currency=currency_for_country(country),
+        currency=currency,
+        currency_label=CURRENCY_LABEL[currency],
+        currency_name=CURRENCY_NAME[currency],
+        currency_decimals=decimals_of(currency),
         features=await settings_service.get_flags(session, country),
         vehicle_categories=keys,
         ride_categories=[categories.public_face(key, rows.get(key)) for key in keys],

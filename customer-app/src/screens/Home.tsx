@@ -717,7 +717,7 @@ export function HomeScreen() {
     place: pickupAddress,
     unread: unreadNotifications,
     wallet,
-    currency: countryConfig?.currency ?? "JOD",
+    currency: countryConfig?.currency ?? "",
     nearby: drivers.length,
     eta: nearestEta,
     onOpenNotifications: () => navigate("/account/notifications"),

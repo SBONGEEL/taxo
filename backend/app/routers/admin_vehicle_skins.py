@@ -39,7 +39,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.currency import currency_for_country
+from app.core.currency import STORAGE_STEP, currency_for_country
 from app.core.deps import FleetManager, DbSession
 from app.core.exceptions import InvalidInput, NotFound
 from app.models.enums import AuditAction
@@ -112,7 +112,7 @@ async def _rows(session: AsyncSession) -> list[AdminSkinOut]:
                 # في بايثون تُسلسَل `"0"` لا `"0.000"`، فيقرأ المشرفُ صفراً
                 # عارياً في عمودٍ كلُّه ثلاثُ خانات
                 revenue={
-                    code: amount.quantize(Decimal("0.001"))
+                    code: amount.quantize(STORAGE_STEP)
                     for code, amount in sorted(
                         (totals[skin.id].revenue if skin.id in totals else {}).items()
                     )
@@ -204,7 +204,7 @@ async def skin_stats(_: FleetManager, session: DbSession) -> SkinStatsOut:
         # يضع مركبةً لم تُبَع قطُّ على رأس قائمةِ المبيعات
         top_selling=sorted(rows, key=lambda row: row.sold_count, reverse=True)[:5],
         revenue_by_currency={
-            code: amount.quantize(Decimal("0.001"))
+            code: amount.quantize(STORAGE_STEP)
             for code, amount in sorted(revenue.items())
         },
         total_owned=sum(row.owners_count for row in rows),

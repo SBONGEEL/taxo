@@ -79,6 +79,8 @@ class MarketBox:
 MARKET_BOX: dict[CountryCode, MarketBox] = {
     CountryCode.JO: MarketBox(min_lat=29.18, max_lat=33.38, min_lng=34.95, max_lng=39.30),
     CountryCode.LY: MarketBox(min_lat=19.50, max_lat=33.17, min_lng=9.31, max_lng=25.15),
+    # **حدودُ الجزائر الجغرافيّة بهامش** (SPEC §٧٣-ج/١٠) — من ١٨٫٩٦ إلى ٣٧٫٠٩ شمالاً ومن −٨٫٦٧ إلى ١١٫٩٨ شرقاً
+    CountryCode.DZ: MarketBox(min_lat=18.90, max_lat=37.20, min_lng=-8.70, max_lng=12.00),
 }
 
 

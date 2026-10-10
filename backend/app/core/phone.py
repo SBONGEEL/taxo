@@ -9,6 +9,8 @@ _COUNTRY_RULES: dict[CountryCode, tuple[str, tuple[int, ...], tuple[str, ...]]] 
     # code: (dial_code, national_lengths, allowed_prefixes)
     CountryCode.LY: ("218", (9,), ("9",)),   # 09X XXX XXXX
     CountryCode.JO: ("962", (9,), ("7",)),   # 07X XXX XXXX
+    # **الجوّالُ وحدَه** (SPEC §٧٣-ج/٨): `05X`/`06X`/`07X XX XX XX` — والأرضيُّ (`021…`، ثمانيةُ أرقام) لا يستقبل رمزَ تحقّق
+    CountryCode.DZ: ("213", (9,), ("5", "6", "7")),
 }
 
 _NON_DIGITS = re.compile(r"[\s\-()._]")

@@ -25,6 +25,7 @@ import type { CountryCode } from "@/api/types";
 export const COUNTRY_LABEL: Record<CountryCode, string> = {
   JO: "الأردن",
   LY: "ليبيا",
+  DZ: "الجزائر",
 };
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";

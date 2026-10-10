@@ -31,6 +31,7 @@ from decimal import Decimal
 from fastapi import APIRouter
 from sqlalchemy import select
 
+from app.core.currency import currency_for_country
 from app.core.deps import DbSession, RedisDep
 from app.models.enums import (
     ClientApp,
@@ -131,10 +132,11 @@ async def landing(
         for plan in plans:
             if offer.plan_id is not None and offer.plan_id != plan.id:
                 continue
-            cut = pricing.round_money(plan.price * offer.discount_value / 100)
+            currency = currency_for_country(country_code)
+            cut = pricing.round_money(plan.price * offer.discount_value / 100, currency)
             if offer.max_discount is not None:
                 cut = min(cut, offer.max_discount)
-            after = pricing.round_money(max(Decimal("0.000"), plan.price - cut))
+            after = pricing.round_money(max(Decimal("0.000"), plan.price - cut), currency)
             saving = plan.price - after
             if saving > best_saving:
                 best_saving = saving

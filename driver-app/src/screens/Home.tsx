@@ -80,12 +80,12 @@ import { OfferSheet } from "@/components/OfferSheet";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useConfig, useFeature, useMapboxToken } from "@/lib/config";
 import { useDriver } from "@/lib/driver";
-import { CATEGORY_LABEL, CURRENCY_FULL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
+import { CATEGORY_LABEL, CURRENCY_LABEL, PREFERENCE_LABEL } from "@/lib/rideFormat";
 import { isActive, useRide } from "@/lib/ride";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { PermissionNotice } from "@/components/PermissionNotice";
-import { digits, ratedAverage } from "@/lib/utils";
+import { currencyLabel, currencyName, digits, ratedAverage } from "@/lib/utils";
 
 /** **حالُ الرئيسية وأفعالُها — بيتٌ واحدٌ للشاشتين** (القائمة، وC04–C08 في `screens/t2`).
  *
@@ -163,10 +163,8 @@ export function useHomeScreen() {
   const [actionErrorCode, setActionErrorCode] = useState<string | null>(null);
 
   // عملةُ الدولة من `/config` — لا تُشتق في الواجهة (`currency_for_country`)
-  const currencyCode =
-    config?.countries.find((c) => c.country_code === user?.country_code)
-      ?.currency ?? "JOD";
-  const currency = CURRENCY_LABEL[currencyCode];
+  const currencyCode = config?.countries.find((c) => c.country_code === user?.country_code)?.currency;
+  const currency = currencyLabel(currencyCode);
 
   useEffect(() => {
     getMySubscription()
@@ -571,7 +569,7 @@ export function HomeScreen() {
       <CollectScreen
         ride={settling}
         currencyLabel={currency}
-        currencyFull={CURRENCY_FULL[currencyCode] ?? ""}
+        currencyFull={currencyName(currencyCode)}
         onDone={() => {
           setRating(settling);
           setSettling(null);

@@ -55,8 +55,9 @@ const ts = loadTypeScript();
 
 /** مفرداتُ المال — **تُقرأ من بيتها الواحد** لا تُكتب هنا. */
 function moneyVocabulary() {
+  // **بيتُها انتقل إلى التشغيل** (SPEC §٧٣-ج/٥): صيغةُ المال على السلك تحتاجها، والاختبارُ يستوردها من هناك
   const source = readFileSync(
-    join(ROOT, "backend/tests/money_format.py"),
+    join(ROOT, "backend/app/core/money_wire.py"),
     "utf8",
   );
   const block = (name) => {
@@ -154,7 +155,7 @@ const ARITHMETIC = new Set([
 
 const vocab = moneyVocabulary();
 if (vocab === null) {
-  console.error("✗ لم تُقرأ مفرداتُ المال من `tests/money_format.py` — المسحُ أعمى.");
+  console.error("✗ لم تُقرأ مفرداتُ المال من `app/core/money_wire.py` — المسحُ أعمى.");
   process.exit(1);
 }
 

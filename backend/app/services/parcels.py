@@ -33,7 +33,7 @@ from app.models.enums import CountryCode, FeatureKey, RidePayer, VehicleCategory
 from app.models.service_setting import ServiceSetting
 from app.models.user import User
 from app.services import settings_service
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 #: **الشروطُ كما يقرؤها المرسلُ قبل أن يطلب** — نصُّ المالك بلفظه، **ومصدرُها هنا** فتنشرها الخلفيةُ ولا تكتبها الواجهة
 TERMS: tuple[str, ...] = (
@@ -84,7 +84,7 @@ async def fee_for(session: AsyncSession, country: CountryCode, *, fetch: bool = 
     row = await session.get(ServiceSetting, country)
     if row is None:
         return Decimal("0.000")
-    return round_money(row.parcel_fetch_fee if fetch else row.parcel_fee)
+    return as_money(row.parcel_fetch_fee if fetch else row.parcel_fee)
 
 
 async def prepare(

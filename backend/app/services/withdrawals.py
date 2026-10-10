@@ -53,7 +53,7 @@ from app.services.payout import (
     PayoutState,
     get_payout_provider,
 )
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 # ما ليس هنا ممنوع — نفس نهج آلة حالات الرحلة
 ALLOWED_TRANSITIONS: dict[WithdrawalStatus, frozenset[WithdrawalStatus]] = {
@@ -152,7 +152,7 @@ async def _reserved_amount(session: AsyncSession, driver_id: uuid.UUID) -> Decim
             WithdrawalRequest.status.in_(PENDING_WITHDRAWAL_STATUSES),
         )
     )
-    return round_money(Decimal(total))
+    return as_money(Decimal(total))
 
 
 async def available_balance(
@@ -218,7 +218,7 @@ async def create_request(
     test_accounts.require_real_money(
         user, "حسابُ التجربة لا يسحب — رصيدُه «تصحيحُ تجربة» لا مالٌ حقيقيّ"
     )
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ السحب يجب أن يكون أكبر من صفر")
     # **مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦، المثال ج) — والمتاحُ يُعرض مضاعفاً (`available_balance`)، والكسرُ يبقى له

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.db import engine
 from app.core.exceptions import register_exception_handlers
+from app.core.money_wire import MoneyWireMiddleware
 from app.core.redis_client import close_redis_client, get_redis_client
 from app.core.request_id import HEADER as REQUEST_ID_HEADER
 from app.core.request_id import RequestIdMiddleware
@@ -33,6 +34,9 @@ app = FastAPI(
     description="TAXO — واجهة برمجية لتطبيق توصيل التاكسي",
     lifespan=lifespan,
 )
+
+# **أقربُ الوسطاء إلى التطبيق** (يُضاف أوّلاً): صيغةُ المال بعملته على السلك (SPEC §٧٣-ج/٥) — ولا يفتح جسماً أردنيّاً ولا ليبيّاً
+app.add_middleware(MoneyWireMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

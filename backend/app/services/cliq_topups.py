@@ -42,7 +42,7 @@ from app.services.cliq import (
     CliqChargeState,
     get_cliq_provider,
 )
-from app.services.pricing import round_money
+from app.services.pricing import as_money
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ async def start_topup(
     # **والتجميدُ للمحفظة المعلَنة وحدَها** (1-أ/6) — بعد أن تُعرف
     wallet.require_not_frozen(owner, owner_type)
 
-    amount = round_money(amount)
+    amount = as_money(amount)
     if amount <= 0:
         raise InvalidInput("مبلغ الشحن يجب أن يكون أكبر من صفر")
     # **مضاعفٌ للوحدة وإلا رُدّ** (SPEC §٧٠-ج/٦) — **قبل أن يُفتح التحصيلُ عند الـacquirer**: ما يعود منه يُقارَن بمبلغ الطلب

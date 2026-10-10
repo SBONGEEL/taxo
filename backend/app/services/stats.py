@@ -57,7 +57,8 @@ DEFAULT_TIMEZONE = "Asia/Amman"
 TOP_DRIVERS = 5
 
 
-_MONEY_STEP = Decimal("0.001")
+from app.core.currency import STORAGE_STEP as _MONEY_STEP
+from app.core.currency import step_of
 
 
 def _money(value: object) -> Decimal:
@@ -532,7 +533,9 @@ async def reports(
         revenue_by_day=revenue_by_day,
         # القسمةُ على `Decimal` لا على float: هذه أرقامُ مال (القسم 14)
         avg_ride_fare=(
-            (revenue / completed).quantize(Decimal("0.001"))
+            # **قسمةٌ تُنشئ كسراً ⇐ إلى أصغر وحدةٍ في العملة** (§٧٣-ج/٤)، **وبالتقريب نفسِه الذي كان** (`quantize` بلا وسيط):
+            # فالأردنيُّ والليبيُّ كما كانا حرفاً
+            (revenue / completed).quantize(step_of(currency_for_country(country))).quantize(_MONEY_STEP)
             if completed
             else Decimal("0.000")
         ),
