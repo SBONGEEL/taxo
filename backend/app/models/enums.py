@@ -756,6 +756,9 @@ class FeatureKey(StrEnum):
     # **«أحضر غرضي»** (SPEC §٧٢-ج/١) — **الطردُ معكوساً**: يأخذ الكبتنُ غرضَ الراكب من مكانٍ يسمّيه ويوصله إليه. مفتاحٌ مستقلٌّ يُشعل
     # وحدَه في مجموعته، **ورسمُه `service_settings.parcel_fetch_fee`** — صفرٌ يُخفيه. ومطفأً يُرفض طلبُه، والقائمُ يكمل
     PARCEL_FETCH_ENABLED = "parcel_fetch_enabled"
+    # **التوصيل — TAXO MARKET و«Taxo Man»** (SPEC §٧٢-هـ، `SPEC-DELIVERY.md` §D21) — **مؤجَّلٌ بأمر المالك ولم يُبنَ**. مطفأٌ في كلِّ سوق،
+    # **وبابُ الإشعال يرفضه ما دام غيرَ مبنيّ**؛ وبلاطتا «تسوّق» و«Taxo Man» تقرآنه فتُرسمان «قريباً»
+    DELIVERY_ENABLED = "delivery_enabled"
     # **بالساعة** (§٦٣-ج/٥) — ساعاتٌ محجوزةٌ تُدفع عند البدء وما زاد في النهاية. ومطفأً يُرفض طلبُها والقائمةُ تكمل؛
     # و`service_settings.hourly_rate` صفرٌ يُخفيها ولو اشتعل
     HOURLY_ENABLED = "hourly_enabled"

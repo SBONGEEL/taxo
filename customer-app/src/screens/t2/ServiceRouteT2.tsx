@@ -15,6 +15,8 @@ import { useSession } from "@/lib/session";
 export const RIDER_SERVICE_TARGETS: Record<string, string> = {
   bookings: "/account/bookings",
   intercity: "/account/intercity",
+  // **«تسوّق» — TAXO MARKET مؤجَّلٌ ولم يُبنَ** (§٧٢-هـ): مفتاحُه يرفض الإشعال، فلا يصل أحدٌ هنا إلا بعنوانٍ يكتبه — فيعود إلى الرئيسية
+  market: "/",
 };
 
 /** **ما يبدأ من الرئيسية** — ومفتاحُه في السوق. */

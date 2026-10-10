@@ -57,3 +57,23 @@ async def test_a_hidden_service_tile_stays_hidden_whatever_the_switch(
     await enable_features(session_factory, "airport_enabled")
     driver = await approved_driver(client, session_factory)
     assert await _seen(client, driver["headers"], "driver") == {}
+
+
+async def test_market_and_taxo_man_say_soon_and_the_delivery_switch_refuses_to_turn_on(
+    client: AsyncClient, session_factory, admin_headers: dict
+) -> None:
+    """**«تسوّق» و«Taxo Man» «قريباً» بمفتاح التوصيل** (SPEC §٧٢-هـ) — **وبابُ الإشعال يرفضه** ما دام التوصيلُ غيرَ مبنيّ."""
+    await _tile(client, admin_headers, key="shop", title="تسوق", audience="all_riders", destination="/services/market")
+    await _tile(client, admin_headers, key="taxo_man", title="Taxo Man", audience="all_drivers", destination="/services/delivery")
+    driver = await approved_driver(client, session_factory)
+    rider = await rider_session(client)
+    assert await _seen(client, driver["headers"], "driver") == {"taxo_man": "soon"}
+    assert await _seen(client, rider["headers"], "rider") == {"shop": "soon"}
+
+    on = await client.put(
+        "/admin/settings/feature-flags",
+        json={"country_code": "JO", "feature_key": "delivery_enabled", "enabled": True},
+        headers=admin_headers,
+    )
+    assert on.status_code == 422 and "مؤجَّل" in on.json()["message"]
+    assert await _seen(client, driver["headers"], "driver") == {"taxo_man": "soon"}

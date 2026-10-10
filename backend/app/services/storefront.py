@@ -129,6 +129,9 @@ SERVICE_ROUTES: dict[str, dict[UserRole, FeatureKey]] = {
     "/services/parcel": {UserRole.RIDER: FeatureKey.PARCEL_ENABLED, UserRole.DRIVER: FeatureKey.PARCEL_ENABLED},
     # **«أغراضي» = «أحضر غرضي»** (§٧٢-ج/١): الراكبُ يبدؤه، والكبتنُ يرى طلباتِه بين طروده
     "/services/fetch": {UserRole.RIDER: FeatureKey.PARCEL_FETCH_ENABLED, UserRole.DRIVER: FeatureKey.PARCEL_FETCH_ENABLED},
+    # **«تسوّق» و«Taxo Man»** (§٧٢-هـ) — بابا TAXO MARKET ووضعِ التوصيل، **ومفتاحُهما مطفأٌ لا يُشعَل حتى يُبنى**: فهما «قريباً»
+    "/services/market": {UserRole.RIDER: FeatureKey.DELIVERY_ENABLED},
+    "/services/delivery": {UserRole.DRIVER: FeatureKey.DELIVERY_ENABLED},
     # الرحلاتُ بموعد: حجوزُ الراكب المجدولة، **وعروضُ الحجز المضمون** للكبتن
     "/services/bookings": {
         UserRole.RIDER: FeatureKey.SCHEDULED_RIDES_ENABLED,

@@ -57,6 +57,13 @@ export function ServiceGrid({
   attention: boolean;
   navigate: NavigateFunction;
 }) {
+  // **«قريباً» تُنقر فتقول «قريباً» ولا شيءَ غيرَه** (أمرُ المالك ٢٠٢٦-١٠-١٠، §٧٢-هـ) — وتختفي وحدَها
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 2_500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   return (
     <div className="t2-hm-tiles">
       {tiles.map((tile) => {
@@ -96,11 +103,16 @@ export function ServiceGrid({
             {body}
           </button>
         ) : (
-          <div key={tile.id} className="t2-hm-tile">
+          <button key={tile.id} type="button" className="t2-hm-tile" onClick={() => setNotice(`${tile.title} — قريباً`)}>
             {body}
-          </div>
+          </button>
         );
       })}
+      {notice ? (
+        <div className="t2-toast" role="status" aria-live="polite">
+          {notice}
+        </div>
+      ) : null}
     </div>
   );
 }

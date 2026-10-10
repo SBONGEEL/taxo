@@ -1100,3 +1100,21 @@ div.t2-srow { cursor: default; }
 .t2-navpick-dot { width: 18px; height: 18px; flex: none; border: 2px solid var(--t2-line); border-radius: 50%; }
 .t2-navpick-opt.on .t2-navpick-dot { border-color: var(--t2-accent); box-shadow: inset 0 0 0 4px var(--t2-bg), inset 0 0 0 9px var(--t2-accent); }
 .t2-navpick-sub { margin-inline-start: auto; font-size: 12px; color: var(--t2-muted); }
+
+/* **بلاغٌ قصير** — «قريباً» لبلاطةٍ لم تُفتح بعد (§٧٢-هـ)، **بشكل بلاغ الراكب حرفاً** */
+.t2-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  max-width: calc(100% - 48px);
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: var(--t2-inverse);
+  color: var(--t2-on-inverse);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transform: translateX(-50%);
+  box-shadow: var(--t2-float-shadow);
+}

@@ -250,6 +250,9 @@ export function RiderHomeT2({
   const hourly = useHourly() && onHourly !== undefined;
   // **و«أغراضي» (أحضر غرضي) بمفتاحها** (§٧٢-ج/١) — **مطفأةً لا تُرسم أصلاً**: لا «قريباً» لخدمةٍ جديدة (§٧٢-أ/٢)
   const fetchOn = useParcelFetch() && onFetch !== undefined;
+  // **«تسوّق» — بابُ TAXO MARKET** (§٧٢-هـ، لوحتُه E1): شريطٌ تحت صفّ الخدمات **بمفتاح التوصيل** — مطفأً (وهو مطفأٌ حتى يُبنى) «قريباً»
+  // والنقرُ يقول «قريباً» ولا شيءَ غيرَه؛ ومشتعلاً يفتح `/services/market`
+  const market = useFeature(user?.country_code, "delivery_enabled");
   // **و«المطار» بمفتاح سوقه** (§٦٣-ج/٢، صفُّه في جدول الخدمات: «يفتحها حين يُشعَل وإلا قريباً») — قِيس على S21 ٢٠٢٦-١٠-٠٨:
   // البلاطةُ كانت «قريباً» دائماً والخدمةُ مشتعلةٌ ومبنيّة، فلا بابَ إليها من الرئيسية
   const airport = useFeature(user?.country_code, "airport_enabled") && onAirport !== undefined;
@@ -399,6 +402,21 @@ export function RiderHomeT2({
           </button>
         ) : null}
       </div>
+
+      <button
+        type="button"
+        className="t2-promo t2-mk-strip"
+        onClick={() => (market ? navigate("/services/market") : soon("تسوّق"))}
+      >
+        <span className="t2-promo-row">
+          <span className="t2-icon t2-mk-strip-icon" aria-hidden="true">shopping_bag</span>
+          <span className="t2-promo-text">
+            <span className="t2-promo-title">تسوّق — TAXO MARKET</span>
+            <span className="t2-promo-body">مطاعم ومتاجر قريبة، يوصلها كباتن TAXO.</span>
+          </span>
+          {market ? null : <span className="t2-svc-badge soon t2-mk-strip-soon">قريباً</span>}
+        </span>
+      </button>
 
       {cashback ? <CashbackChipT2 cashback={cashback} /> : null}
 

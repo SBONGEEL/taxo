@@ -467,6 +467,7 @@ export type FeatureKey =
   | "guaranteed_booking_enabled"
   | "parcel_enabled"
   | "parcel_fetch_enabled"
+  | "delivery_enabled"
   | "hourly_enabled"
   | "rider_subscription_enabled"
   | "intercity_enabled"

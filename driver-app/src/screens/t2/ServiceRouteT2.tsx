@@ -20,6 +20,8 @@ export const DRIVER_SERVICE_TARGETS: Record<string, string> = {
   bookings: "/guarantees",
   intercity: "/intercity",
   offers: "/subscription/plans",
+  // **«Taxo Man» — وضعُ التوصيل مؤجَّلٌ ولم يُبنَ** (§٧٢-هـ): مفتاحُه يرفض الإشعال، فلا يصل أحدٌ هنا إلا بعنوانٍ يكتبه — فيعود إلى «خدماتك»
+  delivery: "/services",
 };
 
 /** **ما تفتحه شاشةُ «الطرود»** — الطردُ و«أحضر غرضي» (§٧٢-ج/١). */
